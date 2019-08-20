@@ -1158,7 +1158,7 @@ val TIMES_2EXP1 =
 val word_reduce = Q.prove(
   `!b. $FCP (K b) = n2w (if b then 1 else 0) : 1 word`,
   SRW_TAC [fcpLib.FCP_ss]
-     [word_index, DECIDE ``x < 1 = (x = 0n)``, fcpTheory.index_one,
+     [word_index, DECIDE ``x < 1 <=> (x = 0n)``, fcpTheory.index_one,
       bitTheory.BITS_THM, bitTheory.BIT_def]);
 
 val bit_field_insert = Q.prove(
@@ -1509,6 +1509,5 @@ val _ = eCAML "sorting" defs;
 
 (* restore "standard" set type abbreviation to have pride of place *)
 val _ = type_abbrev("set", alpha --> bool)
-val _ = disable_tyabbrev_printing "set"
 
 val _ = export_theory ();

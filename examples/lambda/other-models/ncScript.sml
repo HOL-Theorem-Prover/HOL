@@ -149,7 +149,7 @@ RW_TAC std_ss [SUB_THM]);
 (* carrying terms. Open question: prove the independence of ALPHA.       *)
 (* --------------------------------------------------------------------- *)
 
-val ALPHAa =
+val ALPHA =
  Q.store_thm ("ALPHA",
   `!x y ^u.
        ~(y IN (FV (LAM x u))) ==> (LAM x u = LAM y ([VAR y/x]u))`,
@@ -162,7 +162,7 @@ RW_TAC std_ss [FV_THM,DE_MORGAN_THM,IN_DELETE,FV, LAM, SUB_DEF, VARR]
 
 val ALPHA_LEMMA = Q.prove(
     `!x u. LAM x ([VAR x/x]u) = LAM x u`,
-PROVE_TAC [ALPHAa,FV_THM,IN_DELETE]);
+PROVE_TAC [ALPHA,FV_THM,IN_DELETE]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -173,7 +173,7 @@ val SIMPLE_ALPHA =
  Q.store_thm ("SIMPLE_ALPHA",
    `!y u.
       ~(y IN FV u) ==> !x. LAM x u = LAM y ([VAR y/x]u)`,
-PROVE_TAC [ALPHAa,FV_THM,IN_DELETE]);
+PROVE_TAC [ALPHA,FV_THM,IN_DELETE]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -249,7 +249,7 @@ val ABS_DEF = new_specification ("ABS_DEF", ["ABS"], ABS_EXISTS);
 val (ALT_FV,ALT_SUB_THM,ALT_ALPHA,ALT_ITERATOR)
   = let val f = REWRITE_RULE [GSYM ABS_DEF]
     in
-       (f FV_THM, f SUB_THM, f ALPHAa, f nc_ITERATOR)
+       (f FV_THM, f SUB_THM, f ALPHA, f nc_ITERATOR)
     end;
 val _ = save_thm("ALT_FV", ALT_FV);
 val _ = save_thm("ALT_SUB_THM", ALT_SUB_THM);
@@ -381,7 +381,7 @@ val COPY_BUILD = Q.prove(
               lam(\y. (FST p([VAR y/x]u),SND p([VAR y/x]u)))))`,
 RW_TAC std_ss [DECIDE (Term
                   `(a /\ b /\ c /\ d) /\ (e /\ f /\ g /\ h)
-                        =
+                        ⇔
                    (a /\ e) /\ (b /\ f) /\ (c /\ g) /\ (d /\ h)`),
                REWRITE_RULE pairTheory.pair_rws COPY_BUILD_lemma]);
 
@@ -407,7 +407,7 @@ val COPY_ID = Q.prove(
     (!x. hom(VAR x) = VAR x) /\
     (!t u. hom(t @@ u) = (hom t) @@ (hom u)) /\
     (!x u. hom(LAM x u) = ABS(\y. hom([VAR y/x]u)))
-         =
+         ⇔
     (hom = \x.x)`,
 GEN_TAC THEN EQ_TAC THEN STRIP_TAC
   THENL [MATCH_MP_TAC lemma, ALL_TAC]
@@ -593,7 +593,7 @@ val nc_INDUCTION =
      val th5 = GEN_ALL (REWRITE_RULE [] (BETA_RULE th4))
  in
     GEN_ALL
-      (REWRITE_RULE [ABS_DEF,DECIDE (Term`(A = B \/ A) = (B ==> A)`)]
+      (REWRITE_RULE [ABS_DEF,DECIDE (Term`(A ⇔ B \/ A) ⇔ (B ==> A)`)]
                     (DISCH_ALL th5))
  end;
 
@@ -607,8 +607,8 @@ val _ = save_thm("nc_INDUCTION", nc_INDUCTION);
 fun nc_INDUCT_TAC (A,g) =
  let val (_,P) = dest_comb g
       val ith = ISPEC P nc_INDUCTION
-      fun bconv tm
-        = if not(rator tm = P) then
+      fun bconv tm =
+        if rator tm !~ P then
           raise HOL_ERR{origin_structure = "ncScript.sml",
                         origin_function = "nc_INDUCT_TAC",
                         message = "function bconv failed"}
@@ -794,11 +794,11 @@ val nc_INDUCTION2 = Q.store_thm (
 fun nc_INDUCT_TAC2 q (A,g) =
   let val (_,P) = dest_comb g
       val ith = ISPEC P nc_INDUCTION2
-      fun bconv tm
-        = if not(rator tm = P) then
-            raise mk_HOL_ERR "ncScript.sml" "nc_INDUCT_TAC2"
-                             "function bconv failed"
-          else BETA_CONV tm
+      fun bconv tm =
+        if rator tm !~ P then
+          raise mk_HOL_ERR "ncScript.sml" "nc_INDUCT_TAC2"
+                           "function bconv failed"
+        else BETA_CONV tm
       val bth = CONV_RULE (ONCE_DEPTH_CONV bconv) ith
   in
         (MATCH_MP_TAC bth THEN Q.EXISTS_TAC q THEN REPEAT CONJ_TAC
@@ -995,13 +995,13 @@ val RENAMING_THM = store_thm(
   "RENAMING_THM",
   ``RENAMING ([]:'a renaming) /\
     (!(R:'a renaming) h.
-       RENAMING (h::R) = RENAMING R /\ ?y x. h = (VAR y,x)) /\
+       RENAMING (h::R) ⇔ RENAMING R /\ ?y x. h = (VAR y,x)) /\
     (!R1 R2:'a renaming.
-       RENAMING (APPEND R1 R2) = RENAMING R1 /\ RENAMING R2)``,
+       RENAMING (APPEND R1 R2) ⇔ RENAMING R1 /\ RENAMING R2)``,
   Q.SUBGOAL_THEN
     `RENAMING ([]:'a renaming) /\
     (!R:'a renaming h.
-       RENAMING (h::R) = RENAMING R /\ ?y x. h = (VAR y,x))`
+       RENAMING (h::R) ⇔ RENAMING R /\ ?y x. h = (VAR y,x))`
     (fn th => STRIP_ASSUME_TAC th THEN ASM_REWRITE_TAC [])
   THENL [
     SIMP_TAC (srw_ss()) [RENAMING_DEF] THEN REPEAT GEN_TAC THEN

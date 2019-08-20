@@ -14,16 +14,6 @@
 (* DATE          : September 11, 1991                                    *)
 (* Many micro-optimizations added, February 24, 1992, KLS                *)
 
-(* This file as a whole is assumed to be under the license in the file
-"COPYRIGHT" in the HOL4 distribution (note added by Mario Castelán         UOK
-Castro).
-
-For the avoidance of legal uncertainty, I (Mario Castelán Castro) hereby   UOK
-place my modifications to this file in the public domain per the Creative
-Commons CC0 1.0 public domain dedication <https://creativecommons.org/publ
-icdomain/zero/1.0/legalcode>. This should not be interpreted as a personal
-endorsement of permissive (non-Copyleft) licenses. *)
-
 (* ===================================================================== *)
 
 structure Conv :> Conv =
@@ -36,6 +26,10 @@ exception UNCHANGED
 fun QCONV c tm = c tm handle UNCHANGED => REFL tm
 
 val ERR = mk_HOL_ERR "Conv"
+fun w nm c t = c t handle UNCHANGED => raise UNCHANGED
+                   | e as HOL_ERR _ => Portable.reraise e
+                   | Fail s => raise Fail (s ^ " --> " ^ nm)
+                   | e => raise Fail (nm ^ ": " ^ General.exnMessage e)
 
 (*----------------------------------------------------------------------*
  * Conversion for rewrite rules of the form |- !x1 ... xn. t == u       *
@@ -52,20 +46,22 @@ val ERR = mk_HOL_ERR "Conv"
  *         (PART_MATCH (fst o dest_eq));;                               *
  *----------------------------------------------------------------------*)
 
+
 fun REWR_CONV0 (part_matcher, fn_name) th =
    let
       val instth = part_matcher lhs th
                    handle e =>
                      raise (wrap_exn "Conv"
                               (fn_name ^ ": bad theorem argument: " ^
-                               term_to_string (concl th)) e)
+                               trace ("PP.avoid_unicode", 1)
+                                     term_to_string (concl th)) e)
    in
       fn tm =>
          let
             val eqn = instth tm
             val l = lhs (concl eqn)
          in
-            if l = tm then eqn else TRANS (ALPHA tm l) eqn
+            if identical l tm then eqn else TRANS (ALPHA tm l) eqn
          end
          handle HOL_ERR _ => raise ERR fn_name "lhs of thm doesn't match term"
    end
@@ -259,6 +255,8 @@ fun CHANGED_CONV conv tm =
       else th
    end
 
+(* val CHANGED_CONV = fn c => w "Conv.CHANGED_CONV" (CHANGED_CONV c) *)
+
 (*----------------------------------------------------------------------*
  *  Cause a failure if the conversion causes the UNCHANGED exception to *
  *  be raised.  Doesn't "waste time" doing an equality check.           *
@@ -272,7 +270,6 @@ fun testconv (f:conv) x =
   SOME (SOME (f x))
   handle UNCHANGED => SOME NONE
        | HOL_ERR _ => NONE
-       | e => raise e
 
 fun IFC (conv1:conv) conv2 conv3 tm =
   case testconv conv1 tm of
@@ -706,7 +703,7 @@ fun AND_FORALL_CONV tm =
       val {Bvar = x, Body = P} = dest_forall conj1
       val {Bvar = y, Body = Q} = dest_forall conj2
    in
-      if x <> y
+      if not (aconv x y)
          then raise ERR "AND_FORALL_CONV" "forall'ed variables not the same"
       else let
               val specx = SPEC x
@@ -786,8 +783,8 @@ fun OR_EXISTS_CONV tm =
       val {Bvar = x, Body = P} = dest_exists disj1
       val {Bvar = y, Body = Q} = dest_exists disj2
    in
-      if x <> y
-         then raise ERR "OR_EXISTS_CONV" ""
+      if not (aconv x y) then
+        raise ERR "OR_EXISTS_CONV" "Variables not the same"
       else let
               val aP = ASSUME P
               and aQ = ASSUME Q
@@ -943,8 +940,7 @@ in
          val {Bvar = y, Body = Q} = dest_exists conj2
                                     handle HOL_ERR_ => raise AE_ERR
       in
-         if x <> y
-            then raise AE_ERR
+         if not (aconv x y) then raise AE_ERR
          else if free_in x P orelse free_in x Q
             then raise ERR "AND_EXISTS_CONV"
                           ("`" ^ (#Name (dest_var x)) ^ "` free in conjunct(s)")
@@ -1116,8 +1112,7 @@ in
       val {Bvar = y, Body = Q} = dest_forall disj2
                                  handle HOL_ERR _ => raise OF_ERR
    in
-      if x <> y
-         then raise OF_ERR
+      if not (aconv x y) then raise OF_ERR
       else if free_in x P orelse free_in x Q
          then raise ERR "OR_FORALL_CONV"
                         ("`" ^ (#Name (dest_var x)) ^ "` free in disjuncts(s)")
@@ -1497,6 +1492,7 @@ in
                          {origin_structure = "Conv",
                           origin_function = "X_SKOLEM_CONV", ...} => raise e
                  | HOL_ERR _ => err ""
+   (* val X_SKOLEM_CONV = w "X_SKOLEM_CONV" X_SKOLEM_CONV *)
 end
 
 (*----------------------------------------------------------------------*
@@ -1522,6 +1518,7 @@ in
          X_SKOLEM_CONV (variant (free_vars tm) fv) tm
       end
       handle HOL_ERR _ => raise ERR "SKOLEM_CONV" ""
+   (* val SKOLEM_CONV = w "SKOLEM_CONV" SKOLEM_CONV *)
 end
 
 (*----------------------------------------------------------------------*
@@ -1538,6 +1535,16 @@ fun SYM_CONV tm =
       SPECL [lhs, rhs] th
    end
    handle HOL_ERR _ => raise ERR "SYM_CONV" ""
+
+(*-----------------------------------------------------------------------*
+ * GSYM - General symmetry rule                                          *
+ *                                                                       *
+ * Reverses the first equation(s) encountered in a top-down search.      *
+ *                                                                       *
+ * [JRH 92.03.28]                                                        *
+ *-----------------------------------------------------------------------*)
+
+val GSYM = CONV_RULE (ONCE_DEPTH_CONV SYM_CONV)
 
 (*----------------------------------------------------------------------*
  *     A |- t1 = t2                                                     *
@@ -1589,7 +1596,7 @@ in
    fun X_FUN_EQ_CONV x tm =
       if not (is_var x)
          then err "first arg is not a variable"
-      else if mem x (free_vars tm)
+      else if op_mem aconv x (free_vars tm)
          then err (#Name (dest_var x) ^ " is a free variable")
       else let
               val (ty, _) = with_exn dom_rng (type_of (lhs tm))
@@ -1672,6 +1679,29 @@ in
       end
       handle HOL_ERR _ => raise ERR "SELECT_CONV" ""
 end
+
+(*----------------------------------------------------------------------*
+ * SPLICE_CONJ_CONV: Normalize to right associativity a conjunction     *
+ * without recursing in the right conjunct.                             *
+ *                                                                      *
+ * SPLICE_CONJ_CONV "(a1 /\ a2 /\ ...) /\ b"                            *
+ * --> |- = "(a1 /\ a2 /\ ...) /\ b = a1 /\ a2 /\ ... /\ b"             *
+ *                                                                      *
+ * Fails if the term is not a conjunction.                              *
+ *----------------------------------------------------------------------*)
+local
+  val conv = REWR_CONV (GSYM CONJ_ASSOC)
+in
+fun SPLICE_CONJ_CONV t =
+  let
+    fun recurse t = IFC conv (RAND_CONV recurse) ALL_CONV t
+  in
+    if is_conj t then
+      recurse t
+    else
+      raise mk_HOL_ERR "Conv" "SPLICE_CONJ_CONV" "Not a conjunction"
+  end
+end (* local *)
 
 (*----------------------------------------------------------------------*
  * CONTRAPOS_CONV: convert an implication to its contrapositive.        *
@@ -2170,12 +2200,9 @@ in
                     then ()
                  else raise ERR "bool_EQ_CONV" "does not have boolean type"
       in
-         if lhs = rhs
-            then EQT_INTRO (REFL lhs)
-         else if lhs = T
-            then SPEC rhs Tb
-         else if rhs = T
-            then SPEC lhs bT
+         if aconv lhs rhs then EQT_INTRO (REFL lhs)
+         else if aconv lhs T then SPEC rhs Tb
+         else if aconv rhs T then SPEC lhs bT
          else raise ERR "bool_EQ_CONV" "inapplicable"
       end
       handle e => raise (wrap_exn "Conv" "bool_EQ_CONV" e)
@@ -2261,19 +2288,9 @@ in
          val {cond, larm, rarm} = dest_cond tm
          val INST_TYPE' = INST_TYPE [alpha |-> type_of larm]
       in
-         if cond = T
-            then SPEC rarm (SPEC larm (INST_TYPE' CT))
-         else if cond = F
-            then SPEC rarm (SPEC larm (INST_TYPE' CF))
-         else if larm = rarm
-            then SPEC larm (SPEC cond (INST_TYPE' COND_ID))
-         else if aconv larm rarm
-            then let
-                    val cnd = AP_TERM (rator tm) (ALPHA rarm larm)
-                    val th = SPEC larm (SPEC cond (INST_TYPE' COND_ID))
-                 in
-                    TRANS cnd th
-                 end
+         if aconv cond T then SPEC rarm (SPEC larm (INST_TYPE' CT))
+         else if aconv cond F then SPEC rarm (SPEC larm (INST_TYPE' CF))
+         else if aconv larm rarm then SPEC larm (SPEC cond (INST_TYPE' COND_ID))
          else raise ERR "" ""
       end
       handle HOL_ERR _ => raise ERR "COND_CONV" ""
@@ -2395,16 +2412,6 @@ fun AC_CONV (associative, commutative) =
    end
    handle e => raise (wrap_exn "Conv" "AC_CONV" e)
 
-(*-----------------------------------------------------------------------*
- * GSYM - General symmetry rule                                          *
- *                                                                       *
- * Reverses the first equation(s) encountered in a top-down search.      *
- *                                                                       *
- * [JRH 92.03.28]                                                        *
- *-----------------------------------------------------------------------*)
-
-val GSYM = CONV_RULE (ONCE_DEPTH_CONV SYM_CONV)
-
 (*--------------------------------------------------------------------------*
  * Conversions for messing with bound variables.                            *
  *                                                                          *
@@ -2497,7 +2504,7 @@ end
 
 val PAT_CONV = let
   fun PCONV (xs, pat) conv =
-    if mem pat xs then conv
+    if op_mem aconv pat xs then conv
     else if not(exists (fn x => free_in x pat) xs) then ALL_CONV
     else if is_comb pat then
       COMB2_CONV (PCONV (xs, rator pat) conv, PCONV (xs, rand pat) conv)

@@ -6,3 +6,21 @@ all: $(UOFILES) selftest.exe
 
 selftest.exe: selftest.uo Redblackset.uo
 	$(MOSMLC) -o $@ $<
+
+Table.uo Table.ui: Table.sml Portable.ui HOLPP.ui
+	$(MOSMLC) -toplevel -c $<
+
+Graph.uo Graph.ui: Graph.sml Table.ui Portable.ui HOLPP.ui
+	$(MOSMLC) -toplevel -c Table.ui $<
+
+Inttab.uo: Inttab.sml Table.ui
+	$(MOSMLC) Table.ui -c $<
+
+Symtab.uo: Symtab.sml Table.ui
+	$(MOSMLC) Table.ui -c $<
+
+Symreltab.uo: Symreltab.sml Table.ui
+	$(MOSMLC) Table.ui -c $<
+
+Int_Graph.uo: Int_Graph.sml Graph.ui
+	$(MOSMLC) -c Graph.ui $<

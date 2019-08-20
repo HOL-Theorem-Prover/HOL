@@ -6,10 +6,11 @@ OUT2="$DIR/out2"
 OUT="$DIR/out"
 STATUS="$DIR/status"
 ERROR="$DIR/error"
+ERROR1="$DIR/error1"
 
 # Running Z3 (4.0)
 timeout $1 ./z3 -tptp DISPLAY_UNSAT_CORE=true ELIM_QUANTIFIERS=true PULL_NESTED_QUANTIFIERS=true \
--T:$1 $IN > $OUT1 2> $ERROR
+-T:$1 $IN > $OUT1 2> $ERROR1
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS 2> $ERROR
 sed -i -e 's/^[ ]*SZS[ ]*status\(.*\)[ ]*for.*$/\1/' $STATUS 2> $ERROR

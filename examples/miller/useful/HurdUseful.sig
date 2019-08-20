@@ -230,6 +230,8 @@ sig
   val vars_after_subst : vars -> substitution -> vars
   val type_invert_subst : hol_type list -> type_subst -> type_subst
   val invert_subst : vars -> substitution -> substitution
+  val clean_tsubst : term_subst -> term_subst
+  val tfind_redex : term -> (term, 'b) subst -> (term, 'b) maplet
 
   (* Logic variables *)
   val empty_vars : vars
@@ -238,6 +240,8 @@ sig
   val type_new_vars : hol_type list -> hol_type list * (type_subst * type_subst)
   val term_new_vars : term list -> term list * (term_subst * term_subst)
   val new_vars : vars -> vars * (substitution * substitution)
+  val vars_eq : vars -> vars -> bool
+  val vars_union : vars -> vars -> vars
 
   (* Bound variables *)
   val dest_bv : term list -> term -> int

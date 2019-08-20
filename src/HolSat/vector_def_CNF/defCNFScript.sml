@@ -4,6 +4,8 @@ open HolKernel Parse boolLib simpLib numLib rich_listTheory
 open TotalDefn BasicProvers
 val _ = new_theory "defCNF";
 
+val _ = ParseExtras.temp_loose_equality()
+
 infixr 0 ++ || << |-> THENC;
 infixr 1 >> ;
 

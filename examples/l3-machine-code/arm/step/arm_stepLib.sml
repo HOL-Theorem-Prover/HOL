@@ -14,8 +14,10 @@ structure Parse =
 struct
    open Parse
    val (tyg, (tmg, _)) =
-      (I ## term_grammar.mfupdate_overload_info
-               (Overload.remove_overloaded_form "add"))
+      apsnd (term_grammar.mfupdate_overload_info
+               (Overload.remove_overloaded_form "add") o
+             ParseExtras.grammar_loose_equality
+            )
       arm_stepTheory.arm_step_grammars
    val (Type, Term) = parse_from_grammars (tyg, tmg)
 end
@@ -1164,8 +1166,7 @@ local
    val le_tm = boolSyntax.mk_neg be_tm
    fun endian_rule thm =
       REWRITE_RULE
-         [ASSUME (if Lib.exists (Lib.equal le_tm) (Thm.hyp thm)
-                     then le_tm
+         [ASSUME (if Lib.exists (aconv le_tm) (Thm.hyp thm) then le_tm
                   else be_tm)] thm
    fun NO_FREE_VARS_CONV tm =
       if List.null (Term.free_vars tm)
@@ -1464,7 +1465,7 @@ in
    fun fetch tms =
       let
          val tms = List.map fix_datatype tms
-         val e = List.exists (equal big_tm) tms
+         val e = List.exists (aconv big_tm) tms
          val thms = fetch_thm tms
       in
          fn v =>
@@ -1872,7 +1873,10 @@ in
                         | NONE => raise ERR "mk_arm_pattern_opcode"
                                             (a ^ "; not found"))
       in
-         (if unconditional c then x else doubleup x, v)
+         (if unconditional c then x
+          else if s = "LoadWord (imm,post)" then
+            [true, true, false]
+          else doubleup x, v)
       end
 end
 
@@ -2463,7 +2467,7 @@ local
          then s ^ ";" ^
               snd (List.foldr
                      (fn (t, (i, s)) =>
-                         (i + 1, if t = boolSyntax.T then comma i s else s))
+                         (i + 1, if Teq t then comma i s else s))
                      (0, "") (List.drop (opc, 16)))
       else s
    val prefixes = List.rev (mlibUseful.sort_map String.size Int.compare
@@ -3536,10 +3540,10 @@ val SignedSatQ_32_rwt =
 val ev =
   EV [FPToFixed32_def, FPToFixed64_def, RoundingMode,
       UnsignedSatQ_32_rwt, SignedSatQ_32_rwt, SatQ_def,
-      intLib.ARITH_PROVE ``i > 4294967295i = ~(i <= 4294967295i)``,
-      intLib.ARITH_PROVE ``i > 2147483647i = ~(i <= 2147483647i)``,
-      intLib.ARITH_PROVE ``i < -2147483648i = ~(-2147483648i <= i)``,
-      intLib.ARITH_PROVE ``i < 0i = ~(0i <= i)``
+      intLib.ARITH_PROVE ``i > 4294967295i <=> ~(i <= 4294967295i)``,
+      intLib.ARITH_PROVE ``i > 2147483647i <=> ~(i <= 2147483647i)``,
+      intLib.ARITH_PROVE ``i < -2147483648i <=> ~(-2147483648i <= i)``,
+      intLib.ARITH_PROVE ``i < 0i <=> ~(0i <= i)``
      ]
      [[``fp32_to_int
            (if round_towards_zero then roundTowardZero
@@ -3968,7 +3972,7 @@ val thms =
 
 fun is_j tm =
    case Lib.total fcpSyntax.dest_fcp_index tm of
-      SOME (_, i) => i = numLib.term_of_int 24
+      SOME (_, i) => i ~~ numLib.term_of_int 24
     | NONE => false
 
 fun unset_j_conv tm =
@@ -4223,7 +4227,8 @@ in
    fun arm_eval config =
       let
          val tms =
-            Lib.mk_set (default_tms @ arm_configLib.mk_config_terms config)
+            Lib.op_mk_set aconv
+                          (default_tms @ arm_configLib.mk_config_terms config)
          val ftch = fetch tms
          val dec = arm_decode tms
          val run = eval enc tms

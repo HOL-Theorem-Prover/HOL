@@ -1,11 +1,11 @@
 val DIVIDES_ZERO = store_thm
  ("DIVIDES_ZERO",
-  ``!x. 0 divides x = (x = 0)``,
+  ``!x. 0 divides x <=> (x = 0)``,
   METIS_TAC [divides_def,MULT_CLAUSES]);
 
 val DIVIDES_ONE = store_thm
  ("DIVIDES_ONE",
-  ``!x. x divides 1 = (x = 1)``,
+  ``!x. x divides 1 <=> (x = 1)``,
   METIS_TAC [divides_def,MULT_CLAUSES,MULT_EQ_1]);
 
 val DIVIDES_REFL = store_thm

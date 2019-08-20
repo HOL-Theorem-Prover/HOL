@@ -3,6 +3,7 @@ open HolKernel Parse bossLib boolLib pairTheory pred_setTheory arithmeticTheory 
 open wordTheory generalHelpersTheory
 
 val _ = new_theory "buechiA"
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = Datatype
   `GBA = <| states      : 's set;
@@ -463,7 +464,7 @@ val ALPH_COUNTER_FST_LEMM2 = store_thm
 
 (* ) *)
 (* ) *)
- 
+
 
 (*               >> `!a. (i <= a) ==> *)
 (*                     (SND (alph_counter N f g (SUC a)) = *)
@@ -487,7 +488,7 @@ val ALPH_COUNTER_FST_LEMM2 = store_thm
 
 
 (* ) *)
-                   
+
 
 (* `?k. i <= k *)
 (*                    ∧ (g (f (SND (alph_counter N f g k))) *)

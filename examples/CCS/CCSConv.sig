@@ -7,10 +7,10 @@ signature CCSConv =
 sig
   include Abbrev
 
-  val eqf_elim			: thm -> thm
-  val strip_trans		: thm -> (term * term) list
-  val CCS_TRANS_CONV		: conv
-  val CCS_TRANS			: term -> thm * (term * term) list
+  val eqf_elim                  : thm -> thm
+  val strip_trans               : thm -> (term * term) list
+  val CCS_TRANS_CONV            : conv
+  val CCS_TRANS                 : term -> thm * (term * term) list
 end
 
 (* last updated: May 15, 2017 *)

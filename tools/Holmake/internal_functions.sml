@@ -15,17 +15,18 @@ val spacify = String.concat o spacify0 []
 fun dropWhile P [] = []
   | dropWhile P (l as (h::t)) = if P h then dropWhile P t else l
 
-fun find_unescaped cset = let
+fun find_unescaped cset ss = let
   open Substring
-  fun recurse i ss =
-      case getc ss of
-        NONE => NONE
-      | SOME(c', ss') => if member c' cset then SOME i
-                         else if c' = #"\\" then
-                           case getc ss' of
-                             NONE => NONE
-                           | SOME (_, ss'') => recurse (i + 2) ss''
-                         else recurse (i + 1) ss'
+  val sz = size ss
+  fun recurse i =
+    if i >= sz then NONE
+    else
+      let val c = Substring.sub(ss,i)
+      in
+        if member c cset then SOME i
+        else if c = #"\\" then recurse (i + 2)
+        else recurse (i + 1)
+      end
 in
   recurse 0
 end
@@ -181,6 +182,8 @@ end
 fun safeIsDir s =
     OS.FileSys.isDir s handle OS.SysErr _ => false
 
+fun diag s = TextIO.output(TextIO.stdErr, s)
+
 fun wildcard s =
     if s = "" then [""]
     else let
@@ -235,7 +238,7 @@ fun wildcard s =
     in
       case rest of
           [] => (* happens if input was a series of forward slashes *) [s]
-        | _ => (case recurse pfx starting_dir rest of [] => [s] | x => x)
+        | _ => case recurse pfx starting_dir rest of [] => [] | x => x
     end
 
 fun get_first f [] = NONE
@@ -354,9 +357,10 @@ in
   | "wildcard" => if length args <> 1 then
                     raise Fail "Bad number of arguments to 'wildcard' function"
                   else let
-                    val arg_evalled = eval (hd args)
+                    val args' = tokenize (Substring.string (hd args))
+                    val args_evalled = map (eval o Substring.full) args'
                   in
-                    spacify (wildcard arg_evalled)
+                    spacify (List.concat (map wildcard args_evalled))
                   end
   | "shell" => if length args <> 1 then
                  raise Fail "Bad number of arguments to 'shell' function"

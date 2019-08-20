@@ -1,0 +1,4 @@
+.PHONY: all
+
+all:
+	[ "$(proj1)" = "$(HOLDIR)/tools/Holmake/tests/holpathdb/proj1" ]

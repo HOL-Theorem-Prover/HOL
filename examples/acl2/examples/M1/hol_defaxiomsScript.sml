@@ -54,7 +54,7 @@ val iff_def =
  acl2Define "ACL2::IFF"
   `iff p q = itel [(p,andl [q; t]); (q,nil)] t`;
 
-val iff =
+val iff_thm =
  store_thm
   ("iff_thm",
    ``iff p q = ite p (ite q t nil) (ite q nil t)``,

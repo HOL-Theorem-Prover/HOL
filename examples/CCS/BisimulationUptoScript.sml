@@ -29,11 +29,11 @@ val STRONG_BISIM_UPTO = new_definition (
    "STRONG_BISIM_UPTO",
   ``STRONG_BISIM_UPTO (Bsm :('a, 'b) simulation) =
     !E E'.
-	Bsm E E' ==>
-	!u. (!E1. TRANS E u E1 ==> 
-		  ?E2. TRANS E' u E2 /\ (STRONG_EQUIV O Bsm O STRONG_EQUIV) E1 E2) /\
-	    (!E2. TRANS E' u E2 ==> 
-		  ?E1. TRANS E u E1 /\ (STRONG_EQUIV O Bsm O STRONG_EQUIV) E1 E2)``);
+        Bsm E E' ==>
+        !u. (!E1. TRANS E u E1 ==>
+                  ?E2. TRANS E' u E2 /\ (STRONG_EQUIV O Bsm O STRONG_EQUIV) E1 E2) /\
+            (!E2. TRANS E' u E2 ==>
+                  ?E1. TRANS E u E1 /\ (STRONG_EQUIV O Bsm O STRONG_EQUIV) E1 E2)``);
 
 val IDENTITY_STRONG_BISIM_UPTO_lemma = store_thm (
    "IDENTITY_STRONG_BISIM_UPTO_lemma",
@@ -47,7 +47,7 @@ val IDENTITY_STRONG_BISIM_UPTO = store_thm (
  >> rpt STRIP_TAC (* 2 sub-goals *)
  >| [ (* goal 1 *)
       ASSUME_TAC (REWRITE_RULE [ASSUME ``E:('a, 'b) CCS = E'``]
-			       (ASSUME ``TRANS E u E1``)) \\
+                               (ASSUME ``TRANS E u E1``)) \\
       EXISTS_TAC ``E1 :('a, 'b) CCS`` \\
       ASM_REWRITE_TAC [] \\
       REWRITE_TAC [IDENTITY_STRONG_BISIM_UPTO_lemma],
@@ -59,7 +59,7 @@ val IDENTITY_STRONG_BISIM_UPTO = store_thm (
 
 val CONVERSE_STRONG_BISIM_UPTO_lemma = Q.prove (
    `!Wbsm E E'. (STRONG_EQUIV O (inv Wbsm) O STRONG_EQUIV) E E' =
-		(STRONG_EQUIV O Wbsm O STRONG_EQUIV) E' E`,
+                (STRONG_EQUIV O Wbsm O STRONG_EQUIV) E' E`,
     rpt GEN_TAC
  >> EQ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -98,21 +98,21 @@ val STRONG_BISIM_UPTO_LEMMA = store_thm (
  >> rpt STRIP_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       qpat_x_assum `STRONG_EQUIV E y'`
-	(STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [PROPERTY_STAR])) \\
+        (STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [PROPERTY_STAR])) \\
       POP_ASSUM (STRIP_ASSUME_TAC o (Q.SPEC `u`)) \\
       POP_ASSUM K_TAC \\
       RES_TAC \\
       qpat_x_assum `STRONG_BISIM_UPTO Bsm`
-	(STRIP_ASSUME_TAC o (REWRITE_RULE [STRONG_BISIM_UPTO])) \\
+        (STRIP_ASSUME_TAC o (REWRITE_RULE [STRONG_BISIM_UPTO])) \\
       RES_TAC \\
       NTAC 4 (POP_ASSUM K_TAC) \\
       POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [O_DEF])) \\
       qpat_x_assum `STRONG_EQUIV y E'`
-	(STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [PROPERTY_STAR])) \\
+        (STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [PROPERTY_STAR])) \\
       POP_ASSUM (STRIP_ASSUME_TAC o (Q.SPEC `u`)) \\
       POP_ASSUM K_TAC \\
       POP_ASSUM (STRIP_ASSUME_TAC o
-		 (fn th => MATCH_MP th (ASSUME ``TRANS y u E2'``))) \\
+                 (fn th => MATCH_MP th (ASSUME ``TRANS y u E2'``))) \\
 (***
                   E    ~   y'    Bsm    y    ~   E'
                   |       /              \       |
@@ -127,21 +127,21 @@ val STRONG_BISIM_UPTO_LEMMA = store_thm (
       Q.EXISTS_TAC `y'''` >> art [],
       (* goal 2 (of 2) *)
       qpat_x_assum `STRONG_EQUIV y E'`
-	(STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [PROPERTY_STAR])) \\
+        (STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [PROPERTY_STAR])) \\
       POP_ASSUM (STRIP_ASSUME_TAC o (Q.SPEC `u`)) \\
       qpat_x_assum `!E1. TRANS y u E1 ==> P` K_TAC \\
       RES_TAC \\
       qpat_x_assum `STRONG_BISIM_UPTO Bsm`
-	(STRIP_ASSUME_TAC o (REWRITE_RULE [STRONG_BISIM_UPTO])) \\
+        (STRIP_ASSUME_TAC o (REWRITE_RULE [STRONG_BISIM_UPTO])) \\
       RES_TAC \\
       NTAC 2 (POP_ASSUM K_TAC) \\
       POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [O_DEF])) \\
       qpat_x_assum `STRONG_EQUIV E y'`
-	(STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [PROPERTY_STAR])) \\
+        (STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [PROPERTY_STAR])) \\
       POP_ASSUM (STRIP_ASSUME_TAC o (Q.SPEC `u`)) \\
       qpat_x_assum `!E1. TRANS E u E1 ==> P` K_TAC \\
       POP_ASSUM (STRIP_ASSUME_TAC o
-		 (fn th => MATCH_MP th (ASSUME ``TRANS y' u E1'``))) \\
+                 (fn th => MATCH_MP th (ASSUME ``TRANS y' u E1'``))) \\
 (***
                E    ~     y'     Bsm    y   ~   E'
                |         /               \      |
@@ -189,49 +189,49 @@ val STRONG_BISIM_UPTO_THM = store_thm (
 val WEAK_BISIM_UPTO = new_definition ("WEAK_BISIM_UPTO",
   ``WEAK_BISIM_UPTO (Wbsm: ('a, 'b) simulation) =
     !E E'. Wbsm E E' ==>
-	(!l.
-	  (!E1. TRANS E  (label l) E1 ==>
-		?E2. WEAK_TRANS E' (label l) E2 /\ (WEAK_EQUIV O Wbsm O STRONG_EQUIV) E1 E2) /\
-	  (!E2. TRANS E' (label l) E2 ==>
-		?E1. WEAK_TRANS E  (label l) E1 /\ (STRONG_EQUIV O Wbsm O WEAK_EQUIV) E1 E2)) /\
-	(!E1. TRANS E  tau E1 ==>
-	      ?E2. EPS E' E2 /\ (WEAK_EQUIV O Wbsm O STRONG_EQUIV) E1 E2) /\
-	(!E2. TRANS E' tau E2 ==>
-	      ?E1. EPS E  E1 /\ (STRONG_EQUIV O Wbsm O WEAK_EQUIV) E1 E2)``);
+        (!l.
+          (!E1. TRANS E  (label l) E1 ==>
+                ?E2. WEAK_TRANS E' (label l) E2 /\ (WEAK_EQUIV O Wbsm O STRONG_EQUIV) E1 E2) /\
+          (!E2. TRANS E' (label l) E2 ==>
+                ?E1. WEAK_TRANS E  (label l) E1 /\ (STRONG_EQUIV O Wbsm O WEAK_EQUIV) E1 E2)) /\
+        (!E1. TRANS E  tau E1 ==>
+              ?E2. EPS E' E2 /\ (WEAK_EQUIV O Wbsm O STRONG_EQUIV) E1 E2) /\
+        (!E2. TRANS E' tau E2 ==>
+              ?E1. EPS E  E1 /\ (STRONG_EQUIV O Wbsm O WEAK_EQUIV) E1 E2)``);
 
 (* Extracted above definition into smaller pieces for easier uses *)
 val WEAK_BISIM_UPTO_TRANS_label = store_thm (
    "WEAK_BISIM_UPTO_TRANS_label",
   ``!Wbsm. WEAK_BISIM_UPTO Wbsm ==>
-	!E E'. Wbsm E E' ==>
-	       !l E1. TRANS E (label l) E1 ==>
-		      ?E2. WEAK_TRANS E' (label l) E2 /\
-			   (WEAK_EQUIV O Wbsm O STRONG_EQUIV) E1 E2``,
+        !E E'. Wbsm E E' ==>
+               !l E1. TRANS E (label l) E1 ==>
+                      ?E2. WEAK_TRANS E' (label l) E2 /\
+                           (WEAK_EQUIV O Wbsm O STRONG_EQUIV) E1 E2``,
     PROVE_TAC [WEAK_BISIM_UPTO]);
 
 val WEAK_BISIM_UPTO_TRANS_label' = store_thm (
    "WEAK_BISIM_UPTO_TRANS_label'",
   ``!Wbsm. WEAK_BISIM_UPTO Wbsm ==>
-	!E E'. Wbsm E E' ==>
-	       !l E2. TRANS E' (label l) E2 ==>
-		      ?E1. WEAK_TRANS E  (label l) E1 /\
-			   (STRONG_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
+        !E E'. Wbsm E E' ==>
+               !l E2. TRANS E' (label l) E2 ==>
+                      ?E1. WEAK_TRANS E  (label l) E1 /\
+                           (STRONG_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
     PROVE_TAC [WEAK_BISIM_UPTO]);
 
 val WEAK_BISIM_UPTO_TRANS_tau = store_thm (
    "WEAK_BISIM_UPTO_TRANS_tau",
   ``!Wbsm. WEAK_BISIM_UPTO Wbsm ==>
-	!E E'. Wbsm E E' ==>
-	       !E1. TRANS E tau E1 ==>
-		    ?E2. EPS E' E2 /\ (WEAK_EQUIV O Wbsm O STRONG_EQUIV) E1 E2``,
+        !E E'. Wbsm E E' ==>
+               !E1. TRANS E tau E1 ==>
+                    ?E2. EPS E' E2 /\ (WEAK_EQUIV O Wbsm O STRONG_EQUIV) E1 E2``,
     PROVE_TAC [WEAK_BISIM_UPTO]);
 
 val WEAK_BISIM_UPTO_TRANS_tau' = store_thm (
    "WEAK_BISIM_UPTO_TRANS_tau'",
   ``!Wbsm. WEAK_BISIM_UPTO Wbsm ==>
-	!E E'. Wbsm E E' ==>
-	       !E2. TRANS E' tau E2 ==>
-		    ?E1. EPS E  E1 /\ (STRONG_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
+        !E E'. Wbsm E E' ==>
+               !E2. TRANS E' tau E2 ==>
+                    ?E1. EPS E  E1 /\ (STRONG_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
     PROVE_TAC [WEAK_BISIM_UPTO]);
 
 val IDENTITY_WEAK_BISIM_UPTO_lemma = store_thm (
@@ -254,7 +254,7 @@ val IDENTITY_WEAK_BISIM_UPTO = store_thm (
  >> rpt STRIP_TAC (* 4 sub-goals here *)
  >| [ (* goal 1 (of 4) *)
       ASSUME_TAC (REWRITE_RULE [ASSUME ``E :('a, 'b) CCS = E'``]
-			       (ASSUME ``TRANS E (label l) E1``)) \\
+                               (ASSUME ``TRANS E (label l) E1``)) \\
       IMP_RES_TAC TRANS_IMP_WEAK_TRANS \\
       Q.EXISTS_TAC `E1` >> art [] \\
       REWRITE_TAC [IDENTITY_WEAK_BISIM_UPTO_lemma],
@@ -264,7 +264,7 @@ val IDENTITY_WEAK_BISIM_UPTO = store_thm (
       REWRITE_TAC [IDENTITY_WEAK_BISIM_UPTO_lemma'],
       (* goal 3 (of 4) *)
       ASSUME_TAC (REWRITE_RULE [ASSUME ``E :('a, 'b) CCS = E'``]
-			       (ASSUME ``TRANS E tau E1``)) \\
+                               (ASSUME ``TRANS E tau E1``)) \\
       IMP_RES_TAC ONE_TAU \\
       Q.EXISTS_TAC `E1` >> art [] \\
       REWRITE_TAC [IDENTITY_WEAK_BISIM_UPTO_lemma],
@@ -276,7 +276,7 @@ val IDENTITY_WEAK_BISIM_UPTO = store_thm (
 val CONVERSE_WEAK_BISIM_UPTO_lemma = store_thm (
    "CONVERSE_WEAK_BISIM_UPTO_lemma",
   ``!Wbsm E E'. (WEAK_EQUIV O (inv Wbsm) O STRONG_EQUIV) E E' =
-		(STRONG_EQUIV O Wbsm O WEAK_EQUIV) E' E``,
+                (STRONG_EQUIV O Wbsm O WEAK_EQUIV) E' E``,
     rpt GEN_TAC
  >> EQ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -295,7 +295,7 @@ val CONVERSE_WEAK_BISIM_UPTO_lemma = store_thm (
 val CONVERSE_WEAK_BISIM_UPTO_lemma' = store_thm (
    "CONVERSE_WEAK_BISIM_UPTO_lemma'",
   ``!Wbsm E E'. (STRONG_EQUIV O (inv Wbsm) O WEAK_EQUIV) E E' =
-		(WEAK_EQUIV O Wbsm O STRONG_EQUIV) E' E``,
+                (WEAK_EQUIV O Wbsm O STRONG_EQUIV) E' E``,
     rpt GEN_TAC
  >> EQ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -335,8 +335,8 @@ val CONVERSE_WEAK_BISIM_UPTO = store_thm (
 val WEAK_BISIM_UPTO_EPS = store_thm ((* NEW *)
    "WEAK_BISIM_UPTO_EPS",
   ``!Wbsm. WEAK_BISIM_UPTO Wbsm ==>
-	!E E'. Wbsm E E' ==>
-	       !E1. EPS E E1 ==> ?E2. EPS E' E2 /\ (WEAK_EQUIV O Wbsm O STRONG_EQUIV) E1 E2``,
+        !E E'. Wbsm E E' ==>
+               !E1. EPS E E1 ==> ?E2. EPS E' E2 /\ (WEAK_EQUIV O Wbsm O STRONG_EQUIV) E1 E2``,
     rpt STRIP_TAC
  >> PAT_X_ASSUM ``WEAK_BISIM_UPTO Wbsm`` MP_TAC
  >> qpat_x_assum `Wbsm E E'` MP_TAC
@@ -355,11 +355,11 @@ val WEAK_BISIM_UPTO_EPS = store_thm ((* NEW *)
       RES_TAC \\
       POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [O_DEF])) \\
       STRIP_ASSUME_TAC (ONCE_REWRITE_RULE [PROPERTY_STAR]
-					  (ASSUME ``STRONG_EQUIV E1 y'``)) \\
+                                          (ASSUME ``STRONG_EQUIV E1 y'``)) \\
       RES_TAC \\
       NTAC 2 (POP_ASSUM K_TAC) \\
       STRIP_ASSUME_TAC (REWRITE_RULE [WEAK_BISIM_UPTO]
-				     (ASSUME ``WEAK_BISIM_UPTO Wbsm``)) \\
+                                     (ASSUME ``WEAK_BISIM_UPTO Wbsm``)) \\
       POP_ASSUM (STRIP_ASSUME_TAC o (Q.SPECL [`y'`, `y`])) \\
       RES_TAC \\
       NTAC 7 (POP_ASSUM K_TAC) \\
@@ -390,8 +390,8 @@ val WEAK_BISIM_UPTO_EPS = store_thm ((* NEW *)
 val WEAK_BISIM_UPTO_EPS' = store_thm ((* NEW *)
    "WEAK_BISIM_UPTO_EPS'",
   ``!Wbsm. WEAK_BISIM_UPTO Wbsm ==>
-	!E E'. Wbsm E E' ==>
-	       !E2. EPS E' E2 ==> ?E1. EPS E E1 /\ (STRONG_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
+        !E E'. Wbsm E E' ==>
+               !E2. EPS E' E2 ==> ?E1. EPS E E1 /\ (STRONG_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
     GEN_TAC >> DISCH_TAC
  >> POP_ASSUM (ASSUME_TAC o (MATCH_MP CONVERSE_WEAK_BISIM_UPTO))
  >> IMP_RES_TAC WEAK_BISIM_UPTO_EPS
@@ -422,14 +422,14 @@ val WEAK_BISIM_UPTO_EPS' = store_thm ((* NEW *)
 val WEAK_BISIM_UPTO_WEAK_TRANS_label = store_thm ((* NEW *)
    "WEAK_BISIM_UPTO_WEAK_TRANS_label",
   ``!Wbsm. WEAK_BISIM_UPTO Wbsm ==>
-	!E E'. Wbsm E E' ==>
-	       !l E1. WEAK_TRANS E (label l) E1 ==>
-		      ?E2. WEAK_TRANS E' (label l) E2 /\
-			   (WEAK_EQUIV O Wbsm O STRONG_EQUIV) E1 E2``,
+        !E E'. Wbsm E E' ==>
+               !l E1. WEAK_TRANS E (label l) E1 ==>
+                      ?E2. WEAK_TRANS E' (label l) E2 /\
+                           (WEAK_EQUIV O Wbsm O STRONG_EQUIV) E1 E2``,
     rpt STRIP_TAC
  >> IMP_RES_TAC WEAK_TRANS
  >> IMP_RES_TAC (MATCH_MP WEAK_BISIM_UPTO_EPS (* lemma 1 used here *)
-			  (ASSUME ``WEAK_BISIM_UPTO Wbsm``))
+                          (ASSUME ``WEAK_BISIM_UPTO Wbsm``))
  >> POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [O_DEF]))
  >> IMP_RES_TAC PROPERTY_STAR_LEFT
  >> IMP_RES_TAC WEAK_BISIM_UPTO_TRANS_label
@@ -445,13 +445,13 @@ val WEAK_BISIM_UPTO_WEAK_TRANS_label = store_thm ((* NEW *)
  >> DISCH_TAC
  >> POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [O_DEF]))
  >> IMP_RES_TAC (MATCH_MP STRONG_EQUIV_EPS
-			  (ASSUME ``STRONG_EQUIV E2 y'''``))
+                          (ASSUME ``STRONG_EQUIV E2 y'''``))
  >> IMP_RES_TAC (Q.SPECL [`y'''`, `y''`]
-			 (MATCH_MP WEAK_BISIM_UPTO_EPS (* lemma 1 used here *)
-				   (ASSUME ``WEAK_BISIM_UPTO Wbsm``)))
+                         (MATCH_MP WEAK_BISIM_UPTO_EPS (* lemma 1 used here *)
+                                   (ASSUME ``WEAK_BISIM_UPTO Wbsm``)))
  >> NTAC 3 (POP_ASSUM K_TAC)
  >> IMP_RES_TAC (MATCH_MP WEAK_EQUIV_EPS
-			  (ASSUME ``WEAK_EQUIV y'' E2''''``))
+                          (ASSUME ``WEAK_EQUIV y'' E2''''``))
  >> Know `(WEAK_EQUIV O Wbsm O STRONG_EQUIV) E1 E2'''''''`
  >- ( qpat_x_assum `X E2''''' E2''''''` MP_TAC \\
       REWRITE_TAC [O_DEF] >> BETA_TAC >> rpt STRIP_TAC \\
@@ -469,10 +469,10 @@ val WEAK_BISIM_UPTO_WEAK_TRANS_label = store_thm ((* NEW *)
 val WEAK_BISIM_UPTO_WEAK_TRANS_label' = store_thm ((* NEW *)
    "WEAK_BISIM_UPTO_WEAK_TRANS_label'",
   ``!Wbsm. WEAK_BISIM_UPTO Wbsm ==>
-	!E E'. Wbsm E E' ==>
-	       !l E2. WEAK_TRANS E' (label l) E2 ==>
-		      ?E1. WEAK_TRANS E (label l) E1 /\
-			   (STRONG_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
+        !E E'. Wbsm E E' ==>
+               !l E2. WEAK_TRANS E' (label l) E2 ==>
+                      ?E1. WEAK_TRANS E (label l) E1 /\
+                           (STRONG_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
     GEN_TAC >> DISCH_TAC
  >> POP_ASSUM (ASSUME_TAC o (MATCH_MP CONVERSE_WEAK_BISIM_UPTO))
  >> IMP_RES_TAC WEAK_BISIM_UPTO_WEAK_TRANS_label
@@ -494,9 +494,9 @@ val WEAK_BISIM_UPTO_LEMMA = store_thm (
  >| [ (* goal 1 (of 4) *)
       IMP_RES_TAC (MATCH_MP WEAK_EQUIV_TRANS_label (ASSUME ``WEAK_EQUIV E y'``)) \\
       IMP_RES_TAC (MATCH_MP WEAK_BISIM_UPTO_WEAK_TRANS_label
-			    (ASSUME ``WEAK_BISIM_UPTO Wbsm``)) \\
+                            (ASSUME ``WEAK_BISIM_UPTO Wbsm``)) \\
       IMP_RES_TAC (MATCH_MP WEAK_EQUIV_WEAK_TRANS_label
-			    (ASSUME ``WEAK_EQUIV y E'``)) \\
+                            (ASSUME ``WEAK_EQUIV y E'``)) \\
       Q.EXISTS_TAC `E2''` >> art [] \\
       qpat_x_assum `X E2 E2'` (STRIP_ASSUME_TAC o (REWRITE_RULE [O_DEF])) \\
 (***
@@ -514,9 +514,9 @@ val WEAK_BISIM_UPTO_LEMMA = store_thm (
       (* goal 2 (of 4) *)
       IMP_RES_TAC (MATCH_MP WEAK_EQUIV_TRANS_label' (ASSUME ``WEAK_EQUIV y E'``)) \\
       IMP_RES_TAC (MATCH_MP WEAK_BISIM_UPTO_WEAK_TRANS_label'
-			    (ASSUME ``WEAK_BISIM_UPTO Wbsm``)) \\
+                            (ASSUME ``WEAK_BISIM_UPTO Wbsm``)) \\
       IMP_RES_TAC (MATCH_MP WEAK_EQUIV_WEAK_TRANS_label'
-			    (ASSUME ``WEAK_EQUIV E y'``)) \\
+                            (ASSUME ``WEAK_EQUIV E y'``)) \\
       Q.EXISTS_TAC `E1''` >> art [] \\
       qpat_x_assum `X E1' E1` (STRIP_ASSUME_TAC o (REWRITE_RULE [O_DEF])) \\
 (***
@@ -599,54 +599,54 @@ val WEAK_BISIM_UPTO_THM = store_thm (
 val WEAK_BISIM_UPTO_ALT = new_definition ("WEAK_BISIM_UPTO_ALT",
   ``WEAK_BISIM_UPTO_ALT (Wbsm: ('a, 'b) simulation) =
     !E E'. Wbsm E E' ==>
-	(!l.
-	  (!E1. WEAK_TRANS E  (label l) E1 ==>
-		?E2. WEAK_TRANS E' (label l) E2 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2) /\
-	  (!E2. WEAK_TRANS E' (label l) E2 ==>
-		?E1. WEAK_TRANS E  (label l) E1 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2)) /\
-	(!E1. WEAK_TRANS E  tau E1 ==>
-	      ?E2. EPS E' E2 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2) /\
-	(!E2. WEAK_TRANS E' tau E2 ==>
-	      ?E1. EPS E  E1 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2)``);
+        (!l.
+          (!E1. WEAK_TRANS E  (label l) E1 ==>
+                ?E2. WEAK_TRANS E' (label l) E2 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2) /\
+          (!E2. WEAK_TRANS E' (label l) E2 ==>
+                ?E1. WEAK_TRANS E  (label l) E1 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2)) /\
+        (!E1. WEAK_TRANS E  tau E1 ==>
+              ?E2. EPS E' E2 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2) /\
+        (!E2. WEAK_TRANS E' tau E2 ==>
+              ?E1. EPS E  E1 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2)``);
 
 (* Extracted above definition into smaller pieces for easier uses *)
 val WEAK_BISIM_UPTO_ALT_WEAK_TRANS_label = store_thm (
    "WEAK_BISIM_UPTO_ALT_WEAK_TRANS_label",
   ``!Wbsm. WEAK_BISIM_UPTO_ALT Wbsm ==>
-	!E E'. Wbsm E E' ==>
-	       !l E1. WEAK_TRANS E (label l) E1 ==>
-		      ?E2. WEAK_TRANS E' (label l) E2 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
+        !E E'. Wbsm E E' ==>
+               !l E1. WEAK_TRANS E (label l) E1 ==>
+                      ?E2. WEAK_TRANS E' (label l) E2 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
     PROVE_TAC [WEAK_BISIM_UPTO_ALT]);
 
 val WEAK_BISIM_UPTO_ALT_WEAK_TRANS_label' = store_thm (
    "WEAK_BISIM_UPTO_ALT_WEAK_TRANS_label'",
   ``!Wbsm. WEAK_BISIM_UPTO_ALT Wbsm ==>
-	!E E'. Wbsm E E' ==>
-	       !l E2. WEAK_TRANS E' (label l) E2 ==>
-		      ?E1. WEAK_TRANS E  (label l) E1 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
+        !E E'. Wbsm E E' ==>
+               !l E2. WEAK_TRANS E' (label l) E2 ==>
+                      ?E1. WEAK_TRANS E  (label l) E1 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
     PROVE_TAC [WEAK_BISIM_UPTO_ALT]);
 
 val WEAK_BISIM_UPTO_ALT_WEAK_TRANS_tau = store_thm (
    "WEAK_BISIM_UPTO_ALT_WEAK_TRANS_tau",
   ``!Wbsm. WEAK_BISIM_UPTO_ALT Wbsm ==>
-	!E E'. Wbsm E E' ==>
-	       !E1. WEAK_TRANS E tau E1 ==>
-		    ?E2. EPS E' E2 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
+        !E E'. Wbsm E E' ==>
+               !E1. WEAK_TRANS E tau E1 ==>
+                    ?E2. EPS E' E2 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
     PROVE_TAC [WEAK_BISIM_UPTO_ALT]);
 
 val WEAK_BISIM_UPTO_ALT_WEAK_TRANS_tau' = store_thm (
    "WEAK_BISIM_UPTO_ALT_WEAK_TRANS_tau'",
   ``!Wbsm. WEAK_BISIM_UPTO_ALT Wbsm ==>
-	!E E'. Wbsm E E' ==>
-	       !E2. WEAK_TRANS E' tau E2 ==>
-		    ?E1. EPS E  E1 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
+        !E E'. Wbsm E E' ==>
+               !E2. WEAK_TRANS E' tau E2 ==>
+                    ?E1. EPS E  E1 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
     PROVE_TAC [WEAK_BISIM_UPTO_ALT]);
 
 val WEAK_BISIM_UPTO_ALT_EPS = store_thm ((* NEW *)
    "WEAK_BISIM_UPTO_ALT_EPS",
   ``!Wbsm. WEAK_BISIM_UPTO_ALT Wbsm ==>
-	!E E'. Wbsm E E' ==>
-	       !E1. EPS E E1 ==> ?E2. EPS E' E2 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
+        !E E'. Wbsm E E' ==>
+               !E1. EPS E E1 ==> ?E2. EPS E' E2 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
     rpt STRIP_TAC
  >> IMP_RES_TAC EPS_IMP_WEAK_TRANS (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -660,8 +660,8 @@ val WEAK_BISIM_UPTO_ALT_EPS = store_thm ((* NEW *)
 val WEAK_BISIM_UPTO_ALT_EPS' = store_thm ((* NEW *)
    "WEAK_BISIM_UPTO_ALT_EPS'",
   ``!Wbsm. WEAK_BISIM_UPTO_ALT Wbsm ==>
-	!E E'. Wbsm E E' ==>
-	       !E2. EPS E' E2 ==> ?E1. EPS E E1 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
+        !E E'. Wbsm E E' ==>
+               !E2. EPS E' E2 ==> ?E1. EPS E E1 /\ (WEAK_EQUIV O Wbsm O WEAK_EQUIV) E1 E2``,
     rpt STRIP_TAC
  >> IMP_RES_TAC EPS_IMP_WEAK_TRANS (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -684,9 +684,9 @@ val WEAK_BISIM_UPTO_ALT_LEMMA = store_thm (
  >| [ (* goal 1 (of 4) *)
       IMP_RES_TAC (MATCH_MP WEAK_EQUIV_TRANS_label (ASSUME ``WEAK_EQUIV E y'``)) \\
       IMP_RES_TAC (MATCH_MP WEAK_BISIM_UPTO_ALT_WEAK_TRANS_label
-			    (ASSUME ``WEAK_BISIM_UPTO_ALT Wbsm``)) \\
+                            (ASSUME ``WEAK_BISIM_UPTO_ALT Wbsm``)) \\
       IMP_RES_TAC (MATCH_MP WEAK_EQUIV_WEAK_TRANS_label
-			    (ASSUME ``WEAK_EQUIV y E'``)) \\
+                            (ASSUME ``WEAK_EQUIV y E'``)) \\
       Q.EXISTS_TAC `E2''` >> art [] \\
       qpat_x_assum `X E2 E2'` (STRIP_ASSUME_TAC o (REWRITE_RULE [O_DEF])) \\
 (***
@@ -703,9 +703,9 @@ val WEAK_BISIM_UPTO_ALT_LEMMA = store_thm (
       (* goal 2 (of 4) *)
       IMP_RES_TAC (MATCH_MP WEAK_EQUIV_TRANS_label' (ASSUME ``WEAK_EQUIV y E'``)) \\
       IMP_RES_TAC (MATCH_MP WEAK_BISIM_UPTO_ALT_WEAK_TRANS_label'
-			    (ASSUME ``WEAK_BISIM_UPTO_ALT Wbsm``)) \\
+                            (ASSUME ``WEAK_BISIM_UPTO_ALT Wbsm``)) \\
       IMP_RES_TAC (MATCH_MP WEAK_EQUIV_WEAK_TRANS_label'
-			    (ASSUME ``WEAK_EQUIV E y'``)) \\
+                            (ASSUME ``WEAK_EQUIV E y'``)) \\
       Q.EXISTS_TAC `E1''` >> art [] \\
       qpat_x_assum `X E1' E1` (STRIP_ASSUME_TAC o (REWRITE_RULE [O_DEF])) \\
 (***
@@ -785,24 +785,24 @@ val OBS_BISIM_UPTO = new_definition ("OBS_BISIM_UPTO",
   ``OBS_BISIM_UPTO (Obsm: ('a, 'b) simulation) =
     !E E'. Obsm E E' ==>
       !u. (!E1. TRANS E  u E1 ==>
-		?E2. WEAK_TRANS E' u E2 /\ (WEAK_EQUIV O Obsm O STRONG_EQUIV) E1 E2) /\
-	  (!E2. TRANS E' u E2 ==>
-		?E1. WEAK_TRANS E  u E1 /\ (STRONG_EQUIV O Obsm O WEAK_EQUIV) E1 E2)``);
+                ?E2. WEAK_TRANS E' u E2 /\ (WEAK_EQUIV O Obsm O STRONG_EQUIV) E1 E2) /\
+          (!E2. TRANS E' u E2 ==>
+                ?E1. WEAK_TRANS E  u E1 /\ (STRONG_EQUIV O Obsm O WEAK_EQUIV) E1 E2)``);
 
 val OBS_BISIM_UPTO_TRANS = store_thm (
    "OBS_BISIM_UPTO_TRANS",
   ``!Obsm. OBS_BISIM_UPTO Obsm ==>
-	!E E'. Obsm E E' ==>
-	       !u E1. TRANS E u E1 ==>
-		      ?E2. WEAK_TRANS E' u E2 /\ (WEAK_EQUIV O Obsm O STRONG_EQUIV) E1 E2``,
+        !E E'. Obsm E E' ==>
+               !u E1. TRANS E u E1 ==>
+                      ?E2. WEAK_TRANS E' u E2 /\ (WEAK_EQUIV O Obsm O STRONG_EQUIV) E1 E2``,
     PROVE_TAC [OBS_BISIM_UPTO]);
 
 val OBS_BISIM_UPTO_TRANS' = store_thm (
    "OBS_BISIM_UPTO_TRANS'",
   ``!Obsm. OBS_BISIM_UPTO Obsm ==>
-	!E E'. Obsm E E' ==>
-	       !u E2. TRANS E' u E2 ==>
-		      ?E1. WEAK_TRANS E  u E1 /\ (STRONG_EQUIV O Obsm O WEAK_EQUIV) E1 E2``,
+        !E E'. Obsm E E' ==>
+               !u E2. TRANS E' u E2 ==>
+                      ?E1. WEAK_TRANS E  u E1 /\ (STRONG_EQUIV O Obsm O WEAK_EQUIV) E1 E2``,
     PROVE_TAC [OBS_BISIM_UPTO]);
 
 val IDENTITY_OBS_BISIM_UPTO = store_thm (
@@ -811,7 +811,7 @@ val IDENTITY_OBS_BISIM_UPTO = store_thm (
  >> rpt STRIP_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 4) *)
       ASSUME_TAC (REWRITE_RULE [ASSUME ``E :('a, 'b) CCS = E'``]
-			       (ASSUME ``TRANS E u E1``)) \\
+                               (ASSUME ``TRANS E u E1``)) \\
       IMP_RES_TAC TRANS_IMP_WEAK_TRANS \\
       Q.EXISTS_TAC `E1` >> art [] \\
       REWRITE_TAC [IDENTITY_WEAK_BISIM_UPTO_lemma],
@@ -838,8 +838,8 @@ val CONVERSE_OBS_BISIM_UPTO = store_thm (
 val OBS_BISIM_UPTO_EPS = store_thm ((* NEW *)
    "OBS_BISIM_UPTO_EPS",
   ``!Obsm. OBS_BISIM_UPTO Obsm ==>
-	!E E'. Obsm E E' ==>
-	       !E1. EPS E E1 ==> ?E2. EPS E' E2 /\ (WEAK_EQUIV O Obsm O STRONG_EQUIV) E1 E2``,
+        !E E'. Obsm E E' ==>
+               !E1. EPS E E1 ==> ?E2. EPS E' E2 /\ (WEAK_EQUIV O Obsm O STRONG_EQUIV) E1 E2``,
     rpt STRIP_TAC
  >> PAT_X_ASSUM ``OBS_BISIM_UPTO Obsm`` MP_TAC
  >> qpat_x_assum `Obsm E E'` MP_TAC
@@ -883,8 +883,8 @@ val OBS_BISIM_UPTO_EPS = store_thm ((* NEW *)
 val OBS_BISIM_UPTO_EPS' = store_thm ((* NEW *)
    "OBS_BISIM_UPTO_EPS'",
   ``!Obsm. OBS_BISIM_UPTO Obsm ==>
-	!E E'. Obsm E E' ==>
-	       !E2. EPS E' E2 ==> ?E1. EPS E E1 /\ (STRONG_EQUIV O Obsm O WEAK_EQUIV) E1 E2``,
+        !E E'. Obsm E E' ==>
+               !E2. EPS E' E2 ==> ?E1. EPS E E1 /\ (STRONG_EQUIV O Obsm O WEAK_EQUIV) E1 E2``,
     GEN_TAC >> DISCH_TAC
  >> POP_ASSUM (ASSUME_TAC o (MATCH_MP CONVERSE_OBS_BISIM_UPTO))
  >> IMP_RES_TAC OBS_BISIM_UPTO_EPS
@@ -915,14 +915,14 @@ val OBS_BISIM_UPTO_EPS' = store_thm ((* NEW *)
 val OBS_BISIM_UPTO_WEAK_TRANS_label = store_thm ((* NEW *)
    "OBS_BISIM_UPTO_WEAK_TRANS_label",
   ``!Obsm. OBS_BISIM_UPTO Obsm ==>
-	!E E'. Obsm E E' ==>
-	       !l E1. WEAK_TRANS E (label l) E1 ==>
-		      ?E2. WEAK_TRANS E' (label l) E2 /\
-			   (WEAK_EQUIV O Obsm O STRONG_EQUIV) E1 E2``,
+        !E E'. Obsm E E' ==>
+               !l E1. WEAK_TRANS E (label l) E1 ==>
+                      ?E2. WEAK_TRANS E' (label l) E2 /\
+                           (WEAK_EQUIV O Obsm O STRONG_EQUIV) E1 E2``,
     rpt STRIP_TAC
  >> IMP_RES_TAC WEAK_TRANS
  >> IMP_RES_TAC (MATCH_MP OBS_BISIM_UPTO_EPS (* lemma 1 used here *)
-			  (ASSUME ``OBS_BISIM_UPTO Obsm``))
+                          (ASSUME ``OBS_BISIM_UPTO Obsm``))
  >> POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [O_DEF]))
  >> IMP_RES_TAC PROPERTY_STAR_LEFT
  >> IMP_RES_TAC OBS_BISIM_UPTO_TRANS
@@ -938,13 +938,13 @@ val OBS_BISIM_UPTO_WEAK_TRANS_label = store_thm ((* NEW *)
  >> DISCH_TAC
  >> POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [O_DEF]))
  >> IMP_RES_TAC (MATCH_MP STRONG_EQUIV_EPS
-			  (ASSUME ``STRONG_EQUIV E2 y'''``))
+                          (ASSUME ``STRONG_EQUIV E2 y'''``))
  >> IMP_RES_TAC (Q.SPECL [`y'''`, `y''`]
-			 (MATCH_MP OBS_BISIM_UPTO_EPS (* lemma 1 used here *)
-				   (ASSUME ``OBS_BISIM_UPTO Obsm``)))
+                         (MATCH_MP OBS_BISIM_UPTO_EPS (* lemma 1 used here *)
+                                   (ASSUME ``OBS_BISIM_UPTO Obsm``)))
  >> NTAC 3 (POP_ASSUM K_TAC)
  >> IMP_RES_TAC (MATCH_MP WEAK_EQUIV_EPS
-			  (ASSUME ``WEAK_EQUIV y'' E2''''``))
+                          (ASSUME ``WEAK_EQUIV y'' E2''''``))
  >> Know `(WEAK_EQUIV O Obsm O STRONG_EQUIV) E1 E2'''''''`
  >- ( qpat_x_assum `X E2''''' E2''''''` MP_TAC \\
       REWRITE_TAC [O_DEF] >> BETA_TAC >> rpt STRIP_TAC \\
@@ -962,10 +962,10 @@ val OBS_BISIM_UPTO_WEAK_TRANS_label = store_thm ((* NEW *)
 val OBS_BISIM_UPTO_WEAK_TRANS_label' = store_thm ((* NEW *)
    "OBS_BISIM_UPTO_WEAK_TRANS_label'",
   ``!Obsm. OBS_BISIM_UPTO Obsm ==>
-	!E E'. Obsm E E' ==>
-	       !l E2. WEAK_TRANS E' (label l) E2 ==>
-		      ?E1. WEAK_TRANS E (label l) E1 /\
-			   (STRONG_EQUIV O Obsm O WEAK_EQUIV) E1 E2``,
+        !E E'. Obsm E E' ==>
+               !l E2. WEAK_TRANS E' (label l) E2 ==>
+                      ?E1. WEAK_TRANS E (label l) E1 /\
+                           (STRONG_EQUIV O Obsm O WEAK_EQUIV) E1 E2``,
     GEN_TAC >> DISCH_TAC
  >> POP_ASSUM (ASSUME_TAC o (MATCH_MP CONVERSE_OBS_BISIM_UPTO))
  >> IMP_RES_TAC OBS_BISIM_UPTO_WEAK_TRANS_label
@@ -1002,10 +1002,10 @@ val OBS_BISIM_UPTO_THM = store_thm (
         qpat_x_assum `WEAK_TRANS y u E2` K_TAC \\
         IMP_RES_TAC WEAK_EQUIV_WEAK_TRANS_label \\
 (***
-	E    ~   y''    Obsm     y'   ~~   E'
-	|        |               ||        || 
-	l        l               l         l
-	|        |               ||        ||
+        E    ~   y''    Obsm     y'   ~~   E'
+        |        |               ||        ||
+        l        l               l         l
+        |        |               ||        ||
        !E1'  ~   E2' (~ Obsm ~~) E2'' ~~  E2'''
  ***)
         Q.EXISTS_TAC `E2'''` >> art [] \\
@@ -1019,11 +1019,11 @@ val OBS_BISIM_UPTO_THM = store_thm (
         IMP_RES_TAC OBS_BISIM_UPTO_WEAK_TRANS_label' \\
         IMP_RES_TAC STRONG_EQUIV_WEAK_TRANS' \\
 (***
-	E    ~   y''          Obsm         y'   ~~   E'
-	||       ||                        ||        |
-	l        l                         l         l
-	||       ||                        ||        |
-	E1''' ~  E1'' ~ y'''' Obsm y''' ~~ E1'  ~~  !E2'
+        E    ~   y''          Obsm         y'   ~~   E'
+        ||       ||                        ||        |
+        l        l                         l         l
+        ||       ||                        ||        |
+        E1''' ~  E1'' ~ y'''' Obsm y''' ~~ E1'  ~~  !E2'
  ***)
         Q.EXISTS_TAC `E1'''` >> art [] \\
         qpat_x_assum `X E1'' E1'` MP_TAC \\
@@ -1043,10 +1043,10 @@ val OBS_BISIM_UPTO_THM = store_thm (
         qpat_x_assum `WEAK_TRANS y u E2` K_TAC \\
         IMP_RES_TAC WEAK_EQUIV_WEAK_TRANS_tau \\
 (***
-	E    ~   y''    Obsm     y'   ~~   E'
-	|        |               ||        || 
-	tau     tau              tau       eps
-	|        |               ||        ||
+        E    ~   y''    Obsm     y'   ~~   E'
+        |        |               ||        ||
+        tau     tau              tau       eps
+        |        |               ||        ||
        !E1'  ~   E2' (~ Obsm ~~) E2'' ~~  E2'''
  ***)
         Q.EXISTS_TAC `E2'''` >> art [] \\
@@ -1060,11 +1060,11 @@ val OBS_BISIM_UPTO_THM = store_thm (
         IMP_RES_TAC OBS_BISIM_UPTO_EPS' \\
         IMP_RES_TAC STRONG_EQUIV_EPS' \\
 (***
-	E    ~   y''          Obsm         y'   ~~   E'
-	||       ||                        ||        |
-	eps      eps                       eps      tau
-	||       ||                        ||        |
-	E1''' ~  E1'' ~ y'''' Obsm y''' ~~ E1'  ~~  !E2'
+        E    ~   y''          Obsm         y'   ~~   E'
+        ||       ||                        ||        |
+        eps      eps                       eps      tau
+        ||       ||                        ||        |
+        E1''' ~  E1'' ~ y'''' Obsm y''' ~~ E1'  ~~  !E2'
  ***)
         Q.EXISTS_TAC `E1'''` >> art [] \\
         qpat_x_assum `X E1'' E1'` MP_TAC \\
@@ -1090,10 +1090,10 @@ val OBS_BISIM_UPTO_THM = store_thm (
         qpat_x_assum `WEAK_TRANS x u E1` K_TAC \\
         IMP_RES_TAC STRONG_EQUIV_WEAK_TRANS \\
 (***
-	E    ~~  y''    Obsm     y'   ~    E'
-	|        ||              ||        || 
-	l        l               l         l
-	|        ||              ||        ||
+        E    ~~  y''    Obsm     y'   ~    E'
+        |        ||              ||        ||
+        l        l               l         l
+        |        ||              ||        ||
        !E1'  ~~  E2' (~ Obsm ~~) E2'' ~   E2'''
  ***)
         Q.EXISTS_TAC `E2'''` >> art [] \\
@@ -1113,11 +1113,11 @@ val OBS_BISIM_UPTO_THM = store_thm (
         IMP_RES_TAC OBS_BISIM_UPTO_TRANS' \\
         IMP_RES_TAC WEAK_EQUIV_WEAK_TRANS_label' \\
 (***
-	E    ~~  y''          Obsm         y'   ~   E'
-	||       ||                        |        |
-	l        l                         l        l
-	||       ||                        |        |
-	E1''' ~~ E1'' ~ y'''' Obsm y''' ~~ E1'  ~  !E2'
+        E    ~~  y''          Obsm         y'   ~   E'
+        ||       ||                        |        |
+        l        l                         l        l
+        ||       ||                        |        |
+        E1''' ~~ E1'' ~ y'''' Obsm y''' ~~ E1'  ~  !E2'
  ***)
         Q.EXISTS_TAC `E1'''` >> art [] \\
         NTAC 2 (ONCE_REWRITE_TAC [O_DEF]) \\
@@ -1131,10 +1131,10 @@ val OBS_BISIM_UPTO_THM = store_thm (
         qpat_x_assum `WEAK_TRANS x u E1` K_TAC \\
         IMP_RES_TAC STRONG_EQUIV_EPS \\
 (***
-	E    ~~  y''    Obsm     y'   ~    E'
-	|        ||              ||        || 
+        E    ~~  y''    Obsm     y'   ~    E'
+        |        ||              ||        ||
        tau       eps            eps        eps
-	|        ||              ||        ||
+        |        ||              ||        ||
        !E1'  ~~  E2' (~ Obsm ~~) E2'' ~   E2'''
  ***)
         Q.EXISTS_TAC `E2'''` >> art [] \\
@@ -1154,11 +1154,11 @@ val OBS_BISIM_UPTO_THM = store_thm (
         IMP_RES_TAC OBS_BISIM_UPTO_TRANS' \\
         IMP_RES_TAC WEAK_EQUIV_WEAK_TRANS_tau' \\
 (***
-	E    ~~  y''          Obsm         y'   ~   E'
-	||       ||                        |        |
-	eps      tau                       tau     tau
-	||       ||                        |        |
-	E1''' ~~ E1'' ~ y'''' Obsm y''' ~~ E1'  ~  !E2'
+        E    ~~  y''          Obsm         y'   ~   E'
+        ||       ||                        |        |
+        eps      tau                       tau     tau
+        ||       ||                        |        |
+        E1''' ~~ E1'' ~ y'''' Obsm y''' ~~ E1'  ~  !E2'
  ***)
         Q.EXISTS_TAC `E1'''` >> art [] \\
         NTAC 2 (ONCE_REWRITE_TAC [O_DEF]) \\
@@ -1171,7 +1171,7 @@ val OBS_BISIM_UPTO_THM = store_thm (
 .* [2] Gorrieri, R., Versari, C.: Introduction to Concurrency Theory. Springer, Cham (2015).
  * [3] Sangiorgi, D.: Introduction to Bisimulation and Coinduction. Cambridge University Press (2011).
  * [4] Sangiorgi, D., Rutten, J.: Advanced Topics in Bisimulation and Coinduction.
-				  Cambridge University Press (2011).
+                                  Cambridge University Press (2011).
  *)
 
 val _ = export_theory ();

@@ -20,7 +20,8 @@ val set_proof : string -> sat_config -> sat_config
 val set_flag_is_cnf : bool -> sat_config -> sat_config
 val set_flag_is_proved : bool -> sat_config -> sat_config
 
-val dest_config : sat_config -> (Term.term * SatSolvers.sat_solver * string option *
-				 string option * bool * bool)
+val dest_config : sat_config ->
+                  (Term.term * SatSolvers.sat_solver * string option *
+                   string option * bool * bool)
 
 end

@@ -616,7 +616,7 @@ fun mk_PMATCH_ROW_COND_EX_PABS_MOVE_TO_GUARDS find vars (i, p_t, g_t) = let
     val (p: term) = case find vars p_t of
                 NONE => failwith "not found"
               | SOME p => p
-    val _ = if (mem p vars) then failwith "loop" else ()
+    val _ = if tmem p vars then failwith "loop" else ()
     val x = mk_var ("x", type_of p)
     val x = variant (fr_vs @ vars) x
     val p_t' = Term.subst [p |-> x] p_t
@@ -812,9 +812,12 @@ fun pmatch_printer
                 val vs =  get_real_vars vars
                 val pvs = get_real_vars pat
             in
-              if HOLset.isSubset(pvs,vs) andalso HOLset.isSubset(vs,pvs) then (false, false)
+              if HOLset.isSubset(pvs,vs) andalso HOLset.isSubset(vs,pvs) then
+                (false, false)
               else
-                (true, HOLset.find (not o varname_starts_with_uscore) vs = NONE)
+                (true,
+                 not (isSome
+                        (HOLset.find (not o varname_starts_with_uscore) vs)))
             end
         val patsys = if print_vars then sys else bsys
       in

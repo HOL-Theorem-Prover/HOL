@@ -9,6 +9,7 @@ open simpLib boolSimps BasicProvers TotalDefn
 local open listTheory in end;
 
 val _ = new_theory "Omega";
+val _ = ParseExtras.temp_loose_equality()
 
 val ARITH_ss = numSimps.ARITH_ss
 

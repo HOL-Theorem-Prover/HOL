@@ -65,8 +65,8 @@ in
 end
 
 fun thy_consts s = let
-  fun f (k, info, acc) =
-      if #Thy k = s then Const info :: acc
+  fun f (k, info as (_, ty), acc) =
+      if #Thy k = s andalso Type.uptodate_type ty then Const info :: acc
       else acc
 in
   KernelSig.foldl f [] const_table
@@ -77,14 +77,15 @@ fun del_segment s = KernelSig.del_segment(const_table, s)
 fun prim_decls s = KernelSig.listName const_table s
 
 fun decls s = let
-  fun foldthis (k,v,acc) =
-      if #Name k = s then Const v::acc else acc
+  fun foldthis (k,cinfo as (_, v),acc) =
+      if #Name k = s andalso Type.uptodate_type v then Const cinfo::acc else acc
 in
   KernelSig.foldl foldthis  [] const_table
 end
 
 fun all_consts () = let
-  fun foldthis (_,v,acc) = Const v :: acc
+  fun foldthis (_,cinfo as (_, v),acc) =
+      if Type.uptodate_type v then Const cinfo :: acc else acc
 in
   KernelSig.foldl foldthis [] const_table
 end
@@ -116,11 +117,6 @@ fun same_const t1 t2 =
 
 (* constructors - variables *)
 val mk_var = Var
-fun mk_primed_var (Name,Ty) =
-  let val next = Lexis.nameStrm Name
-      fun spin s = if inST s then spin (next()) else s
-  in mk_var(spin Name, Ty)
-  end;
 
 local val genvar_prefix = "%%genvar%%"
       fun num2name i = genvar_prefix^Lib.int_to_string i
@@ -497,9 +493,7 @@ let vsubst =
 *)
 
 fun set_name_variant nmset n = let
-  val next = Lexis.nameStrm n
-  fun loop n = if HOLset.member(nmset, n) then loop (next())
-               else n
+  fun loop n = if HOLset.member(nmset, n) then loop (n ^ "'") else n
 in
   loop n
 end
@@ -833,13 +827,10 @@ fun gen_variant P caller =
   let fun var_name _ (Var(Name,_)) = Name
         | var_name caller _ = raise ERR caller "not a variable"
       fun vary vlist (Var(Name,Ty)) =
-          let val next = Lexis.nameStrm Name
-              val L = map (var_name caller) vlist
-              fun away s = if mem s L then away (next()) else s
-              fun loop name =
-                 let val s = away name
-                 in if P s then loop (next()) else s
-                 end
+          let val L = map (var_name caller) vlist
+              fun loop s =
+                  if mem s L orelse P s then loop (s ^ "'")
+                  else s
           in mk_var(loop Name, Ty)
           end
         | vary _ _ = raise ERR caller "2nd argument should be a variable"
@@ -848,6 +839,24 @@ fun gen_variant P caller =
 
 val variant      = gen_variant inST "variant"
 val prim_variant = gen_variant (K false) "prim_variant";
+
+fun numvariant avoids (Var(Name,Ty)) =
+    let
+      fun var_name (Var(Name,_)) = Name
+        | var_name _ =
+             raise ERR "numvariant" "Avoids list contains non-variable"
+      val nms = map var_name avoids
+      fun vary s = let val s' = Lexis.tmvar_vary s
+                   in
+                     if inST s' then vary s' else s'
+                   end
+    in
+      mk_var(Lexis.gen_variant vary nms Name, Ty)
+    end
+  | numvariant _ _ =
+      raise ERR "numvariant" "2nd argument should be a variable"
+
+fun mk_primed_var p = gen_variant inST "mk_primed_var" [] (mk_var p)
 
 
 (* In the name-carrying implementation this operation is no longer constant

@@ -17,11 +17,9 @@ val false_imp = store_thm ("false_imp", ``!t. F ==> t``, REWRITE_TAC[]);
 
 
 val NOT_CLAUSES_THML = CONJUNCTS NOT_CLAUSES
-val NOT_CLAUSES_X = save_thm ("NOT_CLAUSES_X", el 1 NOT_CLAUSES_THML)
-val NOT_CLAUSES_T = save_thm ("NOT_CLAUSES_T", el 2 NOT_CLAUSES_THML)
-val NOT_CLAUSES_F = save_thm ("NOT_CLAUSES_F", el 3 NOT_CLAUSES_THML)
-
-
+Theorem NOT_CLAUSES_X = el 1 NOT_CLAUSES_THML
+Theorem NOT_CLAUSES_T = el 2 NOT_CLAUSES_THML
+Theorem NOT_CLAUSES_F = el 3 NOT_CLAUSES_THML
 
 val IMP_CONG_conj_strengthen = store_thm ("IMP_CONG_conj_strengthen",
 ``!x x' y y'.
@@ -39,11 +37,11 @@ Ho_Rewrite.REWRITE_TAC [FORALL_BOOL]);
 val AND_CLAUSES_THML =
      (CONJUNCTS (Ho_Rewrite.PURE_REWRITE_RULE [FORALL_AND_THM] AND_CLAUSES))
 
-val AND_CLAUSES_TX = save_thm ("AND_CLAUSES_TX", el 1 AND_CLAUSES_THML)
-val AND_CLAUSES_XT = save_thm ("AND_CLAUSES_XT", el 2 AND_CLAUSES_THML)
-val AND_CLAUSES_FX = save_thm ("AND_CLAUSES_FX", el 3 AND_CLAUSES_THML)
-val AND_CLAUSES_XF = save_thm ("AND_CLAUSES_XF", el 4 AND_CLAUSES_THML)
-val AND_CLAUSES_XX = save_thm ("AND_CLAUSES_XX", el 5 AND_CLAUSES_THML)
+Theorem AND_CLAUSES_TX = el 1 AND_CLAUSES_THML;
+Theorem AND_CLAUSES_XT = el 2 AND_CLAUSES_THML;
+Theorem AND_CLAUSES_FX = el 3 AND_CLAUSES_THML;
+Theorem AND_CLAUSES_XF = el 4 AND_CLAUSES_THML;
+Theorem AND_CLAUSES_XX = el 5 AND_CLAUSES_THML;
 
 
 val IMP_CONG_disj_strengthen = store_thm ("IMP_CONG_disj_strengthen",

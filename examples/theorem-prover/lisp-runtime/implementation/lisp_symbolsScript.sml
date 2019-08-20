@@ -1,4 +1,5 @@
 open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_symbols";
+val _ = ParseExtras.temp_loose_equality()
 open lisp_sexpTheory lisp_consTheory lisp_invTheory;
 
 (* --- *)
@@ -494,7 +495,8 @@ val io_stats_tm =
 
 (* definition of IO assertions *)
 
-fun genall tm v = foldr mk_forall tm (filter (fn x => not (x = v)) (free_vars tm));
+fun genall tm v =
+    foldr mk_forall tm (filter (fn x => x !~ v) (free_vars tm));
 
 val io_assums_def = Define `
   io_assums ^IO = ^(genall io_stats_tm IO) /\

@@ -46,8 +46,8 @@
 (*    across recursive calls:                                                *)
 (*        1) : |- a + b <= LENGTH c ==> ~((?n. a = SUC n) /\ (c = []))       *)
 (*        2) : |- (?d. a = SUC d) /\ (b = 0) /\                              *)
-(*    	          (?x y. c = x :: y) /\ a + b <= LENGTH c ==>                *)
-(*    	                            PRE a + 0 <= LENGTH (TL c)               *)
+(*                (?x y. c = x :: y) /\ a + b <= LENGTH c ==>                *)
+(*                                  PRE a + 0 <= LENGTH (TL c)               *)
 (*    Recursive calls are characterised by the limit being applied to        *)
 (*    destructed arguments (PRE and TL). For a given type, t, these can be   *)
 (*    found by using the function:                                           *)
@@ -160,12 +160,12 @@ sig
 (*****************************************************************************)
 
     val translate_simple_function
-    	: (term * string) list -> thm -> thm
+        : (term * string) list -> thm -> thm
     val translate_conditional_function
-    	: (term * string) list -> thm list -> thm -> thm
+        : (term * string) list -> thm list -> thm -> thm
     val translate_limit_function
-    	: (term * string) list ->
-	  (term * term list) list -> thm list -> thm -> thm
+        : (term * string) list ->
+          (term * term list) list -> thm list -> thm -> thm
 
 (*****************************************************************************)
 (* translate_simple/conditional/limit_polymorphic_function :                 *)
@@ -196,12 +196,12 @@ sig
 (*****************************************************************************)
 
     val translate_simple_polymorphic_function
-    	: (term * string) list -> (term * thm) list -> thm -> thm
+        : (term * string) list -> (term * thm) list -> thm -> thm
     val translate_conditional_polymorphic_function
-    	: (term * string) list -> (term * thm) list -> thm list -> thm -> thm
+        : (term * string) list -> (term * thm) list -> thm list -> thm -> thm
     val translate_limit_polymorphic_function
-    	: (term * string) list ->
-	  (term * thm) list -> (term * term list) list -> thm list -> thm -> thm
+        : (term * string) list ->
+          (term * thm) list -> (term * term list) list -> thm list -> thm -> thm
 
 (*****************************************************************************)
 (* translate_simple/conditional/limit/recursive_fcp_function :               *)
@@ -232,12 +232,12 @@ sig
     val translate_simple_fcp_function
         : string -> thm -> thm
     val translate_conditional_fcp_function
-    	: string -> thm list -> thm -> thm
+        : string -> thm list -> thm -> thm
     val translate_limit_fcp_function
-    	: string -> term list -> thm list -> thm -> thm
+        : string -> term list -> thm list -> thm -> thm
     val translate_recursive_fcp_function
         : string -> term list -> thm list -> thm ->
-  	  thm list -> tactic -> (thm -> thm -> tactic) -> thm
+          thm list -> tactic -> (thm -> thm -> tactic) -> thm
 
 (*****************************************************************************)
 (* flatten_[fcp]_recognizers :                                               *)
@@ -254,9 +254,9 @@ sig
 (*****************************************************************************)
 
     val flatten_recognizers
-    	: (hol_type -> string) -> hol_type -> thm list
+        : (hol_type -> string) -> hol_type -> thm list
     val flatten_fcp_recognizers
-    	: (hol_type -> string) -> hol_type -> thm list
+        : (hol_type -> string) -> hol_type -> thm list
 
 (*****************************************************************************)
 (* Tactics to assist proof of recursive FCP functions:                       *)

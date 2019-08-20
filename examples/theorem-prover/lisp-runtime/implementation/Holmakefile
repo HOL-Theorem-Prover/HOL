@@ -22,10 +22,7 @@ BARE_THYS = ../parse/lisp_sexpTheory \
             ../bytecode/lisp_compilerTheory
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-
-all: $(TARGETS) $(HOLHEAP)
+all: $(DEFAULT_TARGETS) $(HOLHEAP)
 .PHONY: all
 
 $(HOLHEAP): $(DEPS)

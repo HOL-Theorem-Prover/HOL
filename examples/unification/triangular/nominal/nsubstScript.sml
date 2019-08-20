@@ -2,7 +2,7 @@ open HolKernel boolLib bossLib Parse finite_mapTheory arithmeticTheory prim_recT
 
 val _ = new_theory "nsubst"
 
-val _ = type_abbrev ("nsubst", ``:(num |-> 'a nterm)``);
+val _ = type_abbrev_pp ("nsubst", ``:(num |-> 'a nterm)``);
 
 val nvR_def = Define`
   nvR s y x = case FLOOKUP s x of SOME t => y IN nvars t | _ => F`;

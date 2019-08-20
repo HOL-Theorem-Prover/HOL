@@ -36,6 +36,17 @@ val HOLDIR0 = Systeml.HOLDIR;
 val DEPDIR = ".HOLMK";
 val LOGDIR = ".hollogs";
 
+local
+  val sigobj = OS.Path.concat(HOLDIR0, "sigobj")
+  val frakS = String.implode (map Char.chr [0xF0,0x9D,0x94,0x96])
+in
+fun ppath s = if String.isPrefix sigobj s then
+                frakS ^ String.extract(s,size sigobj,NONE)
+              else s
+fun pflist fs = String.concatWith ", " (map (ppath o fromFile) fs)
+end
+
+
 (**** get_dependencies *)
 (* figures out whether or not a dependency file is a suitable place to read
    information about current target or not, and then either does so, or makes
@@ -66,6 +77,10 @@ end
 
 val (master_cline_options, targets) = getcline (CommandLine.arguments())
 
+val master_cline_nohmf =
+    HM_Cline.default_options |> apply_updates master_cline_options
+
+
 val (cline_hmakefile, cline_nohmf) =
     List.foldl (fn (f,(hmf,nohmf)) =>
                    ((case #hmakefile f of NONE => hmf | SOME s => SOME s),
@@ -73,20 +88,9 @@ val (cline_hmakefile, cline_nohmf) =
                (NONE,false)
                master_cline_options
 
-fun get_hmf_cline_updates () =
+fun get_hmf_cline_updates hmenv =
   let
-    val hmakefile =
-        case cline_hmakefile of
-            NONE => "Holmakefile"
-          | SOME s =>
-            if exists_readable s then s
-            else die ("Can't read holmakefile: "^s)
-    val hmenv0 =
-        if exists_readable hmakefile andalso not cline_nohmf then
-          #1 (ReadHMF.read hmakefile (base_environment()))
-        else
-          base_environment()
-    val hmf_cline = envlist hmenv0 "CLINE_OPTIONS"
+    val hmf_cline = envlist hmenv "CLINE_OPTIONS"
     val (hmf_options, hmf_rest) = getcline hmf_cline
     val _ = if null hmf_rest then ()
             else
@@ -96,6 +100,36 @@ fun get_hmf_cline_updates () =
     hmf_options
   end
 
+fun read_holpathdb() =
+    let
+      val holpathdb_extensions =
+          holpathdb.search_for_extensions (fn s => []) [OS.FileSys.getDir()]
+      val _ = List.app holpathdb.extend_db holpathdb_extensions
+      open Holmake_types
+      fun foldthis ({vname,path}, env) = env_extend (vname, [LIT path]) env
+    in
+      List.foldl foldthis
+                 (HM_BaseEnv.make_base_env master_cline_nohmf)
+                 holpathdb_extensions
+    end
+
+val starting_holmakefile =
+    if cline_nohmf then NONE
+    else
+      case cline_hmakefile of
+          NONE => if exists_readable "Holmakefile" then SOME "Holmakefile"
+                  else NONE
+        | x => x
+
+val starting_dir_hmenv =
+    let
+      val env0 = read_holpathdb()
+    in
+      case starting_holmakefile of
+          NONE => (env0, Holmake_types.empty_ruledb, NONE)
+        | SOME hmf => ReadHMF.read hmf env0
+    end
+
 fun chattiness_level switches =
   case (#debug switches, #verbose switches, #quiet switches) of
       (true, _, _) => 3
@@ -104,8 +138,9 @@ fun chattiness_level switches =
     | _ => 1
 
 val option_value =
-    HM_Cline.default_options |> apply_updates (get_hmf_cline_updates())
-                             |> apply_updates master_cline_options
+    HM_Cline.default_options
+      |> apply_updates (get_hmf_cline_updates (#1 starting_dir_hmenv))
+      |> apply_updates master_cline_options
 val coption_value = #core option_value
 val usepfx =
   #jobs (#core
@@ -237,6 +272,12 @@ let
             incdirmap =
               extend_idmap dir (idm_lookup incdirmap newdir) incdirmap}
     else let
+      val _ = OS.FileSys.access
+                (hmdir.toAbsPath newdir, [OS.FileSys.A_READ, OS.FileSys.A_EXEC])
+              orelse
+                die ("Attempt to recurse into non-existent directory: " ^
+                     hmdir.toString newdir ^
+                     "\n  (Probably a result of bad INCLUDES spec.)")
       val _ = diag (fn _ => "Recursive call in " ^ hmdir.pretty_dir newdir)
       val _ = diag (fn _ => "Visited set = " ^ print_set visited)
       val _ = terminal_log ("Holmake: "^nice_dir (hmdir.toString newdir))
@@ -294,25 +335,44 @@ end
 
 (* directory specific stuff here *)
 type res = holmake_result
-fun Holmake nobuild dir dirinfo cline_additional_includes targets : res = let
-  val _ = OS.FileSys.chDir (hmdir.toAbsPath dir)
+fun Holmake hmenvopt nobuild dir dirinfo cline_additional_includes targets: res=
+let
+  val abs_dir = hmdir.toAbsPath dir
+  val _ = OS.FileSys.chDir abs_dir
+
+  val (hmakefile_env, extra_rules, first_target) =
+      case hmenvopt of
+        SOME x => x
+      | _ =>
+        (* as hmenvopt is NONE, this is a recursive call, so user hasn't
+           had option to specify different Holmakefile for this directory*)
+        let
+          val env0 = read_holpathdb()
+        in
+          if exists_readable "Holmakefile" andalso not cline_nohmf
+          then
+              (diag
+                 (fn _ => "Reading additional information fromHolmakefile");
+               ReadHMF.read "Holmakefile" env0)
+          else (env0, Holmake_types.empty_ruledb, NONE)
+        end
+
+  val envlist = envlist hmakefile_env
 
   val option_value =
-      pass_option_value |> apply_updates (get_hmf_cline_updates())
+      pass_option_value |> apply_updates (get_hmf_cline_updates hmakefile_env)
   val coption_value = #core option_value
 
   val allfast = #fast coption_value
   val always_rebuild_deps = #rebuild_deps coption_value
   val cline_recursive = #recursive coption_value
   val debug = #debug coption_value
-  val dontmakes = #dontmakes coption_value
   val user_hmakefile = #hmakefile coption_value
   val cmdl_HOLDIR = #holdir coption_value
   val cline_additional_includes =
       cline_additional_includes @ #includes coption_value
   val keep_going_flag = #keep_going coption_value
   val no_action = #no_action coption_value
-  val no_hmakefile = #no_hmakefile coption_value
   val no_overlay = #no_overlay coption_value
   val no_prereqs = #no_prereqs coption_value
   val opentheory = #opentheory coption_value
@@ -340,25 +400,6 @@ val () = if do_logging_flag then
 
 
 
-val hmakefile =
-  case user_hmakefile of
-    NONE => "Holmakefile"
-  | SOME s =>
-      if exists_readable s then s
-      else die_with ("Couldn't read/find makefile: "^s)
-
-val base_env = HM_BaseEnv.make_base_env option_value
-
-val (hmakefile_env, extra_rules, first_target) =
-  if exists_readable hmakefile andalso not no_hmakefile
-  then let
-      val () = diag (fn _ => "Reading additional information from "^hmakefile)
-    in
-      ReadHMF.read hmakefile base_env
-    end
-  else (base_env, Holmake_types.empty_ruledb, NONE)
-
-val envlist = envlist hmakefile_env
 
 val hmake_includes = envlist "INCLUDES"
 val hmake_options = envlist "OPTIONS"
@@ -478,11 +519,12 @@ end
    in DEPDIR somewhere. *)
 
 fun get_implicit_dependencies incinfo (f: File) : File list = let
-  val _ = diag (fn _ => "Calling get_implicit_dependencies on "^fromFile f)
   val file_dependencies0 =
       get_direct_dependencies {incinfo = incinfo, extra_targets = extra_targets,
                                output_functions = outputfns,
                                DEPDIR = DEPDIR} f
+  val _ = diag (fn _ => "get_implicit_dependencies("^fromFile f^"), " ^
+                        "directdeps = " ^ pflist file_dependencies0)
   val file_dependencies =
       case actual_overlay of
         NONE => file_dependencies0
@@ -505,10 +547,16 @@ in
           get_direct_dependencies {incinfo = incinfo, DEPDIR = DEPDIR,
                                    output_functions = outputfns,
                                    extra_targets = extra_targets}
+      val starters = get_direct_dependencies f
+      (* ignore theories as we don't want to depend on the script files
+         behind them *)
       fun collect_all_dependencies sofar tovisit =
           case tovisit of
             [] => sofar
-          | (f::fs) => let
+          | (UO (Theory _)::fs) => collect_all_dependencies sofar fs
+          | (UI (Theory _)::fs) => collect_all_dependencies sofar fs
+          | f::fs =>
+            let
               val deps =
                   if Path.dir (string_part f) <> "" then []
                   else
@@ -521,7 +569,9 @@ in
               collect_all_dependencies (sofar @ newdeps)
                                        (set_union newdeps fs)
             end
-      val tcdeps = collect_all_dependencies [] [f]
+      val tcdeps = collect_all_dependencies starters starters
+      val _ = diag (fn _ => "get_implicit_dependencies("^fromFile f^"), " ^
+                            "tcdeps = " ^ pflist tcdeps)
       val uo_deps =
           List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) tcdeps
       val alldeps = set_union (set_union tcdeps uo_deps)
@@ -549,9 +599,16 @@ in
 end
 
 fun get_explicit_dependencies (f : File) : File list =
-    case (extra_deps (fromFile f)) of
-      SOME deps => map toFile deps
-    | NONE => []
+    let
+      val result = case (extra_deps (fromFile f)) of
+                       SOME deps => map toFile deps
+                     | NONE => []
+    in
+      diag (fn _ => fromFile f ^ " -explicitdeps-> " ^ pflist result);
+      result
+    end
+
+
 
 (** Build graph *)
 
@@ -629,6 +686,8 @@ in
           val (g1, pnode) = build pdep g0
           val secondaries = set_union (get_implicit_dependencies incinfo target)
                                       (get_explicit_dependencies target)
+          val _ = diag (fn _ => target_s ^ "-secondaries-> " ^
+                                pflist secondaries)
           fun foldthis (d, (g, secnodes)) =
             let
               val (g', n) = build d g
@@ -802,7 +861,7 @@ val recurse_into_dirs = allincludes @ hmake_preincludes
 fun hm_recur ctgt k : holmake_result = let
   val nobuild = toplevel_no_prereqs orelse no_prereqs
   fun hm dir dirinfo targets =
-      Holmake nobuild dir dirinfo [] targets
+      Holmake NONE nobuild dir dirinfo [] targets
   val warn = if nobuild then (fn _ => ()) else warn
 in
   maybe_recurse
@@ -910,7 +969,10 @@ in
     | xs => let
         val cleanTarget_opt =
             List.find (fn x => member x ["clean", "cleanDeps", "cleanAll"]) xs
-        fun canon i = hmdir.extendp {base = dir, extension = i}
+        fun transform_thy_target s =
+            if String.isSuffix "Theory" s then s ^ ".dat"
+            else s
+        val xs = map transform_thy_target xs
       in
         if isSome cleanTarget_opt andalso not cline_recursive then
           (List.app (ignore o do_clean_target) xs;
@@ -933,7 +995,8 @@ in
   else let
       open Process
       val result =
-          Holmake false (* yes, build something *)
+          Holmake (SOME starting_dir_hmenv)
+                  false (* yes, build something *)
                   (hmdir.curdir())
                   {visited = Binaryset.empty hmdir.compare,
                    incdirmap = empty_incdirmap}

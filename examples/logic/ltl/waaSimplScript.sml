@@ -3,6 +3,7 @@ open HolKernel Parse bossLib boolLib pairTheory relationTheory set_relationTheor
 open alterATheory ltlTheory ltl2waaTheory
 
 val _ = new_theory "waaSimpl"
+val _ = ParseExtras.temp_loose_equality()
 
 (*
   Reducing the amount of transitions
@@ -501,7 +502,7 @@ val EQUIV_STATES_SYMM = store_thm
   );
 
 val EQUIV_STATES_REFL = store_thm
-  ("EQUIV_STATES_SYMM",
+  ("EQUIV_STATES_REFL",
   ``!f t x. equivalentStates f t x x``,
    metis_tac[equivalentStates_def]
   );

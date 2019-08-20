@@ -60,4 +60,7 @@ sig
    val CaseEq             : string -> thm
    val CaseEqs            : string list -> thm
    val AllCaseEqs         : unit -> thm
+
+   val update_induction   : thm -> unit
+   val update_axiom       : thm -> unit
 end

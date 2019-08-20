@@ -6,7 +6,12 @@ sig
   val apfst : ('a -> 'b) -> 'a * 'c -> 'b * 'c
   val apsnd : ('a -> 'b) -> 'c * 'a -> 'c * 'b
   val $  : ('a -> 'b) * 'a -> 'b
+  val ?  : (bool * ('a -> 'a)) -> 'a -> 'a
   val |> : 'a * ('a -> 'b) -> 'b
+  val |>> : ('a * 'b) * ('a -> 'c) -> ('c * 'b)
+  val ||> : ('a * 'b) * ('b -> 'c) -> ('a * 'c)
+  val ||-> : ('a * 'b) * ('a -> 'b -> 'c) -> 'c
+  val B2 : ('c -> 'd) -> ('a -> 'b -> 'c) -> 'a -> 'b -> 'd
   val C : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
   val I : 'a -> 'a
   val K : 'a -> 'b -> 'a
@@ -29,23 +34,40 @@ sig
   val can : ('a -> 'b) -> 'a -> bool
   val total : ('a -> 'b) -> 'a -> 'b option
   val partial : exn -> ('a -> 'b option) -> 'a -> 'b
+  val these : 'a list option -> 'a list
 
   val assert_exn : ('a -> bool) -> 'a -> exn -> 'a
   val with_exn : ('a -> 'b) -> 'a -> exn -> 'b
+  val finally : (unit -> unit) -> ('a -> 'b) -> ('a -> 'b)
+     (* first argument (the finally finisher) must terminate, and preferably
+        quickly, or you may mask/hide user-generated Interrupt exceptions *)
 
   val list_of_singleton : 'a -> 'a list
+  val single : 'a -> 'a list (* synonym of list_of_singleton *)
+  val the_single : 'a list -> 'a        (* exn List.Empty if list length <> 1 *)
+  val singleton : ('a list -> 'b list) -> 'a -> 'b
+                (* singleton f x raises exn List.Empty if length (f [x]) <> 1 *)
   val list_of_pair : 'a * 'a -> 'a list
   val list_of_triple : 'a * 'a * 'a -> 'a list
   val list_of_quadruple : 'a * 'a * 'a * 'a -> 'a list
+  val the_list : 'a option -> 'a list
+  val the_default : 'a -> 'a option -> 'a
 
   val all : ('a -> bool) -> 'a list -> bool
   val exists : ('a -> bool) -> 'a list -> bool
   val first_opt : (int -> 'a -> 'b option) -> 'a list -> 'b option
   val itlist : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val rev_itlist : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+  val foldl' : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+  val foldr' : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+  val foldl2' : ('a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c
+                                              (* exn ListPair.UnequalLengths *)
+  val foldr2' : ('a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c
+                                              (* exn ListPair.UnequalLengths *)
   val foldl_map : ('a * 'b -> 'a * 'c) -> 'a * 'b list -> 'a * 'c list
   val separate : 'a -> 'a list -> 'a list
   val filter : ('a -> bool) -> 'a list -> 'a list
+  val filter_out : ('a -> bool) -> 'a list -> 'a list
   val partition : ('a -> bool) -> 'a list -> 'a list * 'a list
   val unzip : ('a * 'b) list -> 'a list * 'b list
   val split : ('a * 'b) list -> 'a list * 'b list
@@ -72,6 +94,8 @@ sig
 
   val for : int -> int -> (int -> 'a) -> 'a list
   val for_se : int -> int -> (int -> unit) -> unit
+  val make_counter : {init:int,inc:int} -> unit -> int
+  val syncref : 'a -> {get:unit -> 'a, upd:('a -> 'b * 'a) -> 'b}
 
   val assoc1 : ''a -> (''a * 'b) list -> (''a * 'b) option
   val assoc2 : ''a -> ('b * ''a) list -> ('b * ''a) option
@@ -109,10 +133,13 @@ sig
   val op_U : ('a -> 'a -> bool) -> 'a list list -> 'a list
   val op_intersect : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
   val op_set_diff : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
+  val op_remove : ('a -> 'b -> bool) -> 'a -> 'b list -> 'b list
+  val op_update : ('a -> 'a -> bool) -> 'a -> 'a list -> 'a list
 
   val int_to_string : int -> string
   val quote : string -> string
   val mlquote : string -> string
+  val enclose : string -> string -> string -> string (* enclose ld rd mid *)
   val is_substring : string -> string -> bool
   val prime : string -> string
   val commafy : string list -> string list
@@ -176,6 +203,7 @@ sig
   val time_max : time * time -> time
   val time_maxl : time list -> time
   val time : ('a -> 'b) -> 'a -> 'b
+  val realtime : ('a -> 'b) -> 'a -> 'b
 
   val getEnv: string -> string option
   val getArgs: unit -> string list
@@ -220,4 +248,6 @@ sig
     val delay : (unit -> 'a) -> 'a susp
     val force : 'a susp -> 'a
   end
+
+  val reraise : exn -> 'a
 end

@@ -385,15 +385,16 @@ val R_ap_F_11 = store_thm("R_ap_F_11",
   REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ IMP_RES_TAC R_ap_T_11 \\ FULL_SIMP_TAC std_ss []);
 
-val R_ev_T_cases = store_thm("R_ev_T_cases",
-  ``(R_ev (x,env,k,io,ok) (r,k',io',T) =
+Theorem R_ev_T_cases:
+  (R_ev (x,env,k,io,ok) (r,k',io',T) ⇔
      R_ev (x,env,k,io,T) (r,k',io',T) /\ ok) /\
-    (R_evl (xs,env,k,io,ok) (rs,k',io',T) =
+  (R_evl (xs,env,k,io,ok) (rs,k',io',T) ⇔
      R_evl (xs,env,k,io,T) (rs,k',io',T) /\ ok) /\
-    (R_ap (f,args,env,k,io,ok) (r,k',io',T) =
-     R_ap (f,args,env,k,io,T) (r,k',io',T) /\ ok)``,
-  REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
-  \\ IMP_RES_TAC R_ev_OK \\ FULL_SIMP_TAC std_ss []);
+  (R_ap (f,args,env,k,io,ok) (r,k',io',T) ⇔
+     R_ap (f,args,env,k,io,T) (r,k',io',T) /\ ok)
+Proof REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
+      \\ IMP_RES_TAC R_ev_OK \\ FULL_SIMP_TAC std_ss []
+QED
 
 
 val _ = export_theory();

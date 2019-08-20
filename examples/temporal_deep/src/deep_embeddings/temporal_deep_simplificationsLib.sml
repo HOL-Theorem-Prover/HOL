@@ -10,12 +10,12 @@ loadPath := (concat home_dir "src/deep_embeddings") ::
 
 map load
  ["congLib", "temporal_deep_simplificationsLibTheory",
-  "prop_logicTheory", "xprop_logicTheory", "ltlTheory", "Travrules",
+  "prop_logicTheory", "xprop_logicTheory", "full_ltlTheory", "Travrules",
   "congToolsLib", "Traverse", "tuerk_tacticsLib"];
 *)
 
 open HolKernel boolLib bossLib temporal_deep_simplificationsLibTheory
-  congLib prop_logicTheory xprop_logicTheory ltlTheory Travrules congToolsLib
+  congLib prop_logicTheory xprop_logicTheory full_ltlTheory Travrules congToolsLib
   Traverse tuerk_tacticsLib
 
 (*

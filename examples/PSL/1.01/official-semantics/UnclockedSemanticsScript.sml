@@ -17,11 +17,11 @@ functions on lists (commented out for compilation)
 (*
 quietdec := true;
 map load
- ["SyntaxTheory", "SyntacticSugarTheory", "PathTheory", "KripkeTheory",
+ ["SyntaxTheory", "SyntacticSugarTheory", "PSLPathTheory", "KripkeTheory",
   "rich_listTheory", "intLib"];
 
 open SyntaxTheory SyntacticSugarTheory
-     PathTheory KripkeTheory listTheory rich_listTheory intLib;
+     PSLPathTheory KripkeTheory listTheory rich_listTheory intLib;
 
 val _ = intLib.deprecate_int();
 quietdec := false;
@@ -35,7 +35,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories of sequences and lists
 ******************************************************************************)
-open SyntaxTheory SyntacticSugarTheory PathTheory KripkeTheory
+open SyntaxTheory SyntacticSugarTheory PSLPathTheory KripkeTheory
      listTheory rich_listTheory intLib;
 
 (******************************************************************************
@@ -51,6 +51,7 @@ val _ = intLib.deprecate_int();
 * Start a new theory called UnclockedSugarSemantics
 ******************************************************************************)
 val _ = new_theory "UnclockedSemantics";
+val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
 * pureDefine doesn't export definitions to theCompset (for EVAL).
@@ -240,4 +241,3 @@ val O_SEM_def =
      ?p. PATH M p s /\ !j :: (0 to LENGTH p). O_SEM M f (ELEM p j))`;
 
 val _ = export_theory();
-

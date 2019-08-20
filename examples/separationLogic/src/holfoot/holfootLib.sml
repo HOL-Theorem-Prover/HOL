@@ -1076,7 +1076,7 @@ local
       val (is_interval, (e1, e2, data)) = dest_holfoot_ap_data_array_interval sf;
       val (dataL, data_ty) = listSyntax.dest_list data;
       val data_pL = map pairSyntax.dest_pair dataL;
-      val data_opt = SOME (assoc tag_t data_pL) handle HOL_ERR _ => NONE;
+      val data_opt = SOME (tassoc tag_t data_pL) handle HOL_ERR _ => NONE;
       val need_intro = not (isSome data_opt);
 
       val (thm0,data) = if need_intro then
@@ -1793,20 +1793,22 @@ let
                 VAR_RES_FRAME_SPLIT___imp_CONV (BAG_RESORT_CONV [m])) tt;
    val (list_tagL, points_to_tagL) =
       let
-         val (_, _, _, _, _, split_sfb', imp_sfb', _) =  dest_VAR_RES_FRAME_SPLIT
-            (rhs (concl thm0a));
+         val (_, _, _, _, _, split_sfb', imp_sfb', _) =
+             dest_VAR_RES_FRAME_SPLIT (rhs (concl thm0a))
          val (pt_t,_) = bagSyntax.dest_insert split_sfb';
          val (_, L) = dest_holfoot_ap_points_to pt_t;
-         val pt_tagL = map (fst o pairSyntax.dest_pair) (snd (finite_mapSyntax.strip_fupdate L));
+         val pt_tagL =
+             map (fst o pairSyntax.dest_pair)
+                 (snd (finite_mapSyntax.strip_fupdate L))
 
-         val (l_t,_) = bagSyntax.dest_insert imp_sfb';
-         val (l_tag, _, d_t, _) = dest_holfoot_ap_data_list_seg l_t;
+         val (l_t,_) = bagSyntax.dest_insert imp_sfb'
+         val (l_tag, _, d_t, _) = dest_holfoot_ap_data_list_seg l_t
          val l_tagL_0 = map (fst o pairSyntax.dest_pair)
-                (fst (listSyntax.dest_list d_t));
+                (fst (listSyntax.dest_list d_t))
       in
          (l_tag::l_tagL_0, pt_tagL)
       end;
-   val new_tagL = set_diff list_tagL points_to_tagL;
+   val new_tagL = op_set_diff aconv list_tagL points_to_tagL
    val thm0 = CONV_RULE (RHS_CONV (VAR_RES_FRAME_SPLIT_INFERENCE___points_to___ADD_TAG_LIST_split___CONV new_tagL)) thm0a;
 
 
@@ -2207,32 +2209,42 @@ end;
    val tt = find_term is_VAR_RES_FRAME_SPLIT (snd (top_goal ()))
 *)
 local
-   val array_compset = computeLib.bool_compset ()
-   val _ = computeLib.add_thms [pairTheory.SND, pairTheory.FST, MAP] array_compset
+  val array_compset = computeLib.bool_compset ()
+  val _ = computeLib.add_thms [pairTheory.SND, pairTheory.FST, MAP] array_compset
 
-   fun try_split context i1 i2 (ec1,nc1) (ec2,nc2,data2) =
-   let
-       val (guard_opt, inf_thm) =
-          if (ec1 = ec2) then (
-             if i2 then
-                (if i1 then (SOME (mk_eq (nc1, nc2)), ISPECL [ec2, nc2, nc1]
-                            holfoot_ap_data_array_interval___same_start___SPLIT___ii) else
-                            (NONE, ISPECL [ec2, nc2, nc1]
-                            holfoot_ap_data_array_interval___same_start___SPLIT___ia))
-             else
-                (if i1 then (NONE, ISPECL [ec2, nc2, nc1]
-                            holfoot_ap_data_array_interval___same_start___SPLIT___ai) else
-                            (SOME (mk_disj (mk_eq (nc1, nc2), mk_eq (nc1, numSyntax.zero_tm))), ISPECL [ec2, nc2, nc1]
-                            holfoot_ap_data_array_interval___same_start___SPLIT___aa))
-          ) else (
-             if i2 then (SOME (mk_disj (numSyntax.mk_less (nc2, ec1), mk_eq (ec2, ec1))),
-                ISPECL [ec2, nc2, ec1]
-                holfoot_ap_data_interval___SPLIT___intro_same_start)
-             else
-                (SOME (mk_eq (ec1, numSyntax.mk_plus (ec2, nc2))), ISPECL [ec2, nc2, ec1]
+  fun try_split context i1 i2 (ec1,nc1) (ec2,nc2,data2) =
+    let
+      val (guard_opt, inf_thm) =
+          if ec1 ~~ ec2 then
+            if i2 then
+              if i1 then
+                (SOME (mk_eq (nc1, nc2)),
+                 ISPECL [ec2, nc2, nc1]
+                     holfoot_ap_data_array_interval___same_start___SPLIT___ii)
+              else
+                (NONE,
+                 ISPECL [ec2, nc2, nc1]
+                     holfoot_ap_data_array_interval___same_start___SPLIT___ia)
+            else
+              if i1 then
+                (NONE,
+                 ISPECL [ec2, nc2, nc1]
+                      holfoot_ap_data_array_interval___same_start___SPLIT___ai)
+              else
+                (SOME (mk_disj (mk_eq (nc1, nc2),
+                                mk_eq (nc1, numSyntax.zero_tm))),
+                 ISPECL [ec2, nc2, nc1]
+                     holfoot_ap_data_array_interval___same_start___SPLIT___aa)
+          else
+            if i2 then
+              (SOME (mk_disj (numSyntax.mk_less (nc2, ec1), mk_eq (ec2, ec1))),
+               ISPECL [ec2, nc2, ec1]
+                 holfoot_ap_data_interval___SPLIT___intro_same_start)
+            else
+              (SOME (mk_eq (ec1, numSyntax.mk_plus (ec2, nc2))),
+               ISPECL [ec2, nc2, ec1]
                   holfoot_ap_data_array___SPLIT___intro_same_start)
-          );
-       val pre = (fst o dest_imp o snd o strip_forall) (concl inf_thm);
+       val pre = (fst o dest_imp o snd o strip_forall) (concl inf_thm)
        val pre_thm = array_bound_DECIDE context pre
        val guard_ok = if not (isSome guard_opt) then true else
                       not (can (array_bound_DECIDE context) (valOf guard_opt));
@@ -2250,10 +2262,10 @@ local
 
    fun try_prove_eq_start ss context ec1 ec2 ttt =
    let
-      val _ = if (ec1 = ec2) then Feedback.fail() else ();
-      val eq_t = mk_eq (ec1, ec2);
-      val eq_thm = array_bound_DECIDE context eq_t;
-      val xthm0 = ISPECL [eq_t, ttt] asl_trivial_cond___INTRO;
+      val _ = if ec1 ~~ ec2 then Feedback.fail() else ()
+      val eq_t = mk_eq (ec1, ec2)
+      val eq_thm = array_bound_DECIDE context eq_t
+      val xthm0 = ISPECL [eq_t, ttt] asl_trivial_cond___INTRO
       val xthm1 = MP xthm0 eq_thm
       val xthm2 = CONV_RULE ((RHS_CONV o RAND_CONV o RATOR_CONV o RATOR_CONV o
              RAND_CONV o RAND_CONV) (K eq_thm)) xthm1
@@ -2264,10 +2276,11 @@ local
 
    fun try_prove_eq_end ss context i1 i2 ec1 ec2 nc1 nc2 ttt =
    let
-      val _ = if (i1 = i2) andalso (ec1 = ec2) andalso not (nc1 = nc2) then () else Feedback.fail();
-      val eq_t = mk_eq (nc1, nc2);
-      val eq_thm = array_bound_DECIDE context eq_t;
-      val xthm0 = ISPECL [eq_t, ttt] asl_trivial_cond___INTRO;
+      val _ = if i1 = i2 andalso ec1 ~~ ec2 andalso nc1 !~ nc2 then ()
+              else Feedback.fail()
+      val eq_t = mk_eq (nc1, nc2)
+      val eq_thm = array_bound_DECIDE context eq_t
+      val xthm0 = ISPECL [eq_t, ttt] asl_trivial_cond___INTRO
       val xthm1 = MP xthm0 eq_thm
       val xthm2 = CONV_RULE ((RHS_CONV o RAND_CONV o RATOR_CONV o
              RAND_CONV o RAND_CONV) (K eq_thm)) xthm1

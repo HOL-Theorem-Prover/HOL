@@ -7,20 +7,37 @@
    ---------------------------------------------------------------------- *)
 
 infix ++ && |-> THEN THEN1 THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC
-  THEN_TCL ORELSE_TCL ?> |>
-infixr ## $
+  THEN_TCL ORELSE_TCL ?> |> |>> ||> ||->
+infixr ## $ ?
 infixr 3 -->;
 infix 8 via by suffices_by
 
 (* infixes for THEN shorthands *)
 infix >> >- >| \\ >>> >>- ??
 
-infix ~~ !~ Un Isct -- IN
+infix ~~ !~ Un Isct -- IN -*
 
-structure Tag = Tag :> FinalTag where type tag = Tag.tag
-structure Type = Type :> FinalType where type hol_type = Type.hol_type
-structure Term = Term :> FinalTerm where type term = Term.term
-                                         and type hol_type = Type.hol_type
+signature KERNEL =
+sig
+  structure Tag : FinalTag
+  structure Type : FinalType
+  structure Term : FinalTerm where type hol_type = Type.hol_type
+  structure Net : FinalNet where type term = Term.term
+  structure Thm : Thm where type tag = Tag.tag
+                            and type hol_type = Type.hol_type
+                            and type term = Term.term
+end
+
+structure Kernel :> KERNEL =
+struct
+  structure Tag = Tag
+  structure Type = Type
+  structure Term = Term
+  structure Net = Net
+  structure Thm = Thm
+end
+
+open Kernel
 
 structure Process = OS.Process
 structure FileSys = OS.FileSys

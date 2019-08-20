@@ -1,12 +1,16 @@
 signature testutils =
 sig
 
-datatype 'a testresult = Normal of 'a | Exn of exn
+datatype testresult = datatype Exn.result
+datatype die_mode = ProcessExit | FailException | Remember of int ref
+
+val is_result : 'a testresult -> bool
 
 val linewidth : int ref
-val really_die : bool ref
+val diemode : die_mode ref
 val OK : unit -> unit
-val die : string -> 'a
+val exit_count0 : int ref -> unit
+val die : string -> unit
 val tprint : string -> unit
 val tadd : string -> unit
 val tpp : string -> unit
@@ -17,6 +21,20 @@ val raw_backend : ('a -> 'b) -> 'a -> 'b
 val convtest : (string * (Term.term -> Thm.thm) * Term.term * Term.term) -> unit
 val timed : ('a -> 'b) -> ('b testresult -> unit) -> 'a -> unit
 val exncheck : ('a -> unit) -> 'a testresult -> unit
+val shouldfail : {testfn: 'a -> 'b, printresult: 'b -> string,
+                  printarg : 'a -> string,
+                  checkexn: exn -> bool} -> 'a -> unit
+
+val is_struct_HOL_ERR : string -> exn -> bool
+val check_HOL_ERRexn : (string * string * string -> bool) -> exn -> bool
+val check_HOL_ERR : (string * string * string -> bool) -> 'a testresult ->
+                    bool
+val check_result : ('a -> bool) -> ('a testresult -> bool)
+val require : ('b testresult -> bool) -> ('a -> 'b) -> 'a -> unit
+val require_msg : ('b testresult -> bool) -> ('b -> string) -> ('a -> 'b) ->
+                  'a -> unit
+val require_msgk : ('b testresult -> bool) -> ('b -> string) -> ('a -> 'b) ->
+                   ('b testresult -> unit) -> 'a -> unit
 
 val bold : string -> string
 val boldred : string -> string

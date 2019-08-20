@@ -15,8 +15,6 @@ struct
 
 open mlibUseful;
 
-infix |-> ::> @> oo ## ::* ::@;
-
 (* ------------------------------------------------------------------------- *)
 (* Search limits                                                             *)
 (* ------------------------------------------------------------------------- *)
@@ -87,10 +85,11 @@ fun new_time_meter () =
 
 fun new_inference_meter () =
   let
-    val infs = ref 0
+    open Uref
+    val infs = Uref.new 0
     fun read () = !infs
   in
-    (read, fn n => infs := !infs + n)
+    (read, fn n => infs := !infs + n) (* OK *)
   end;
 
 fun new_meter lim : meter =

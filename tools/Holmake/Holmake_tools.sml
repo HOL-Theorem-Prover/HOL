@@ -35,7 +35,7 @@ fun checkterm pfx s =
   case OS.Process.getEnv "TERM" of
       NONE => s
     | SOME term =>
-      if String.isPrefix "xterm" term then
+      if String.isPrefix "xterm" term orelse term = "screen" then
         pfx ^ s ^ "\027[0m"
       else
         s
@@ -54,7 +54,7 @@ fun optbind x f =
     | _ => NONE
 fun optchoice (opt1, opt2) =
   case opt1 of
-      NONE => opt2
+      NONE => opt2()
     | _ => opt1
 infix ++
 val op++ = optchoice
@@ -74,7 +74,9 @@ fun run s =
         let
           val istrm = TextIO.openIn outfile
         in
-          TextIO.inputAll istrm before TextIO.closeIn istrm
+          TextIO.inputAll istrm before
+          TextIO.closeIn istrm before
+          OS.FileSys.remove outfile
         end handle IO.Io _ => ""
   in
     if OS.Process.isSuccess res then SOME output else NONE
@@ -92,8 +94,8 @@ fun getWidth0 () =
     fun positive m x = optbind (m x) (optassert (fn i => i > 0))
   in
     optbind (run "stty size") (positive sttyresult) ++
-    optbind (run "tput cols") (positive tputresult) ++
-    SOME 80
+    (fn _ => optbind (run "tput cols") (positive tputresult)) ++
+    (fn _ => SOME 80)
   end
 
 fun getWidth() = valOf (getWidth0())
@@ -224,6 +226,7 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
                 else
                   (warn ("*** Switching to execute "^path);
                    warn ("*** (Honouring last Holmake call in this directory)");
+                   warn ("*** (Use --nolmbc flag to stop this.)");
                    Systeml.exec(path,
                                 path::"--nolmbc"::CommandLine.arguments()))
               else (warn "Garbage in Last Maker file";

@@ -14,6 +14,10 @@ structure Parse = struct
 end
 open Parse
 
+val allow_schema_definition = ref false
+val _ = Feedback.register_btrace ("Define.allow_schema_definition",
+                                  allow_schema_definition)
+
 val ERR    = mk_HOL_ERR "TotalDefn";
 val ERRloc = mk_HOL_ERRloc "TotalDefn";
 val WARN   = HOL_WARNING "TotalDefn";
@@ -59,7 +63,7 @@ fun rm x [] = []
   | rm x (h::t) = if aconv x h then rm x t else h::rm x t;
 
 fun mk_term_set [] = []
-  | mk_term_set (h::t) = h::mk_set (rm h t);
+  | mk_term_set (h::t) = h::mk_term_set (rm h t);
 
 fun imk_var(i,ty) = mk_var("v"^Int.toString i,ty);
 
@@ -119,7 +123,7 @@ fun is_recd_proj tm1 tm2 =
       val projlist = mapfilter
          (fst o dest_comb o boolSyntax.lhs o snd o strip_forall o concl)
          (TypeBase.accessors_of aty)
-  in TypeBase.is_record_type aty andalso mem proj projlist
+  in TypeBase.is_record_type aty andalso op_mem aconv proj projlist
   end
   handle HOL_ERR _ => false;
 
@@ -371,7 +375,7 @@ fun guessR defn =
        let val domty = fst(dom_rng(type_of R))
            val (_,tcs0) = Lib.pluck isWFR (tcs_of defn)
            val tcs = map (rhs o concl o QCONV (SIMP_CONV bool_ss [])) tcs0
-           val tcs = filter (not o equal T) tcs
+           val tcs = filter (not o aconv T) tcs
            val matrix  = map dest tcs
            val check1  = map (map (uncurry proper_subterm)) matrix
            val chf1    = projects check1
@@ -515,7 +519,8 @@ local open Defn
      let
         val tcs = tcs_of defn
      in
-        not(null tcs) andalso null (intersect (free_varsl tcs) rhs_frees)
+        not(null tcs) andalso
+        null (op_intersect aconv (free_varsl tcs) rhs_frees)
      end
   fun fvs_on_rhs V =
      let
@@ -640,6 +645,47 @@ fun tDefine stem q tac =
     (Theory.try_theory_extension thunk) ()
   handle e => Raise (wrap_exn "TotalDefn" "tDefine" e)
  end;
+
+(* ----------------------------------------------------------------------
+    version of Define that allows control of options with "attributes"
+    attached to the name, and provides an optional termination tactic
+   ---------------------------------------------------------------------- *)
+fun test_remove n sl =
+    if mem n sl then (true, set_diff sl [n]) else (false, sl)
+
+fun find_indoption sl =
+    case List.find (String.isPrefix "induction=") sl of
+        NONE => (NONE, sl)
+      | SOME s => (
+          SOME (String.extract(s,size "induction=",NONE)),
+          set_diff sl [s]
+      )
+
+fun qDefine stem q tacopt =
+    let
+      val (corename, attrs) = ThmAttribute.extract_attributes stem
+      val (nocomp, attrs) = test_remove "nocompute" attrs
+      val (svarsok, attrs) = test_remove "schematic" attrs
+      val (indopt,attrs) = find_indoption attrs
+      fun fmod f =
+          f |> (if nocomp then trace ("computeLib.auto_import_definitions", 0)
+                else (fn f => f))
+            |> (if svarsok then trace ("Define.allow_schema_definition", 1)
+                else (fn f => f))
+            |> with_flag(Defn.def_suffix, "")
+            |> (case indopt of NONE => with_flag(Defn.ind_suffix, "")
+                             | SOME s => with_flag(Defn.ind_suffix, " " ^ s))
+      val thm =
+          case tacopt of
+              NONE => fmod (xDefine corename) q
+            | SOME tac => fmod (tDefine corename q) tac
+      fun proc_attr a =
+          ThmAttribute.store_at_attribute{name = corename, attrname = a,
+                                          thm = thm}
+    in
+      List.app proc_attr attrs;
+      thm
+    end
 
 (*---------------------------------------------------------------------------*)
 (* Version of Define that supports multiple definitions, failing if any do.  *)

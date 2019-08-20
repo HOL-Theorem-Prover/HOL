@@ -1,0 +1,12 @@
+\DOC wlog_tac
+
+\TYPE {wlog_tac : term quotation -> term quotation list -> tactic}
+
+\SYNOPSIS
+Enrich the hypotheses with a proposition that can be assumed without loss of
+generality.
+
+\DESCRIBE
+{wlogLib.wlog_tac} is identical to {bossLib.wlog_tac}
+
+\ENDDOC

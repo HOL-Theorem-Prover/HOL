@@ -46,7 +46,7 @@ val nwfs_extend = Q.store_thm(
 );
 
 val _ = type_abbrev("fe",``:(string # num) set``);
-val _ = type_abbrev("pkg", ``:('a nsubst # fe)``);
+val _ = type_abbrev_pp("pkg", ``:('a nsubst # fe)``);
 
 val term_fcs_def = tDefine "term_fcs" `
   term_fcs a t =
@@ -549,8 +549,9 @@ SRW_TAC [][uR_def,SUBMAP_REFL] THEN
 METIS_TAC [sysvars_SUBSET_ties,nwalkstar_subtie])
 
 val uP_def = Define`
-uP sx s t1 t2 = nwfs sx /\ s SUBMAP sx /\
-  FDOM sx UNION BIGUNION (FRANGE (nvars o_f sx)) SUBSET sysvars s t1 t2`
+  uP sx s t1 t2 <=> nwfs sx ∧ s SUBMAP sx ∧
+                    FDOM sx ∪ BIGUNION (FRANGE (nvars o_f sx)) ⊆ sysvars s t1 t2
+`;
 
 val lem5 = Q.prove(
 `nwfs s ∧ (nvwalk s l n = Sus p v ) ⇒

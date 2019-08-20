@@ -38,6 +38,7 @@ open zfset_axiomsTheory pred_setLib pred_setTheory pairLib
 (* Create zfset_extras_theory.                                               *)
 (*****************************************************************************)
 val _ = new_theory "zfset";
+val _ = ParseExtras.temp_loose_equality()
 
 (*---------------------------------------------------------------------------*)
 (* Hack to hide constant ``W``, where: |- W = (\f x. f x x)                  *)
@@ -1540,4 +1541,3 @@ val ApChoose =
    RW_TAC std_ss [Choose_def,GraphFnAp,bool2Bool_def,Bool_CLAUSES]);
 
 val _ = export_theory();
-

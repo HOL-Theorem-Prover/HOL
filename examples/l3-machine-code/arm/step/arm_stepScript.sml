@@ -9,7 +9,7 @@ open wordsLib blastLib
 open state_transformerTheory updateTheory alignmentTheory armTheory
 
 val _ = new_theory "arm_step"
-
+val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
 val _ = List.app (fn f => f ())
@@ -260,7 +260,7 @@ val ITAdvance_0 = ustore_thm("ITAdvance_0",
 
 (* ------------------------------------------------------------------------ *)
 
-val RoudingMode = Q.store_thm("RoundingMode",
+val RoundingMode = Q.store_thm("RoundingMode",
    `!s. RoundingMode s = DecodeRoundingMode s.FP.FPSCR.RMode`,
    rw [DecodeRoundingMode_def, RoundingMode_def]
    \\ blastLib.FULL_BBLAST_TAC
@@ -1265,6 +1265,7 @@ local
           (LDM1 (R_mode m) b registers s r n RName_PC = r RName_PC)`,
       REPEAT strip_tac
       \\ RULE_ASSUM_TAC (Conv.CONV_RULE wordsLib.LESS_CONV)
+      \\ full_simp_tac bool_ss []
       \\ fs [R_mode_def, LDM1_def, combinTheory.UPDATE_def]
       \\ lrw [])
 in

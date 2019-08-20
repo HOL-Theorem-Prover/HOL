@@ -183,17 +183,17 @@ val inner_lt = Q.prove
 
 val outer_lt = Q.prove
 (`!n. dom n /\ n<>0 ==> rdepth (zero_0 (n-1)) < rdepth n`,
- RW_TAC std_ss [dom_def] THEN IMP_RES_TAC rdepth_thm THEN
-   `rdepth n <> 0` by METIS_TAC [IS_SOME_IZERO] THEN
-   `rdepth n - 1 < rdepth n` by DECIDE_TAC THEN
+ RW_TAC std_ss [dom_def] >> IMP_RES_TAC rdepth_thm >>
+   `rdepth n <> 0` by METIS_TAC [IS_SOME_IZERO] >>
+   `rdepth n - 1 < rdepth n` by DECIDE_TAC >>
    `IS_SOME (izero (rdepth n - 1) (zero_0 (n-1)))`
-     by (Q.PAT_ASSUM `IS_SOME (izero (rdepth n) n)` MP_TAC THEN
-         SIMP_TAC arith_ss [Once izero_def] THEN CASE_TAC THEN
-         RW_TAC std_ss [zero_0_def] THEN
-        `IS_SOME (izero (rdepth n - 1) (n-1))` by METIS_TAC [IS_SOME_EXISTS] THEN
-        `IS_SOME (izero (rdepth (n-1)) (n-1))` by METIS_TAC [rdepth_thm] THEN
-        METIS_TAC [izero_determ,THE_DEF]) THEN
-   `rdepth (zero_0(n-1)) <= rdepth n - 1` by METIS_TAC [rdepth_thm] THEN
+     by (Q.PAT_ASSUM `IS_SOME (izero (rdepth n) n)` MP_TAC >>
+         SIMP_TAC arith_ss [Once izero_def] >> CASE_TAC >>
+         RW_TAC std_ss [zero_0_def] >>
+        `IS_SOME (izero (rdepth n - 1) (n-1))` by METIS_TAC [IS_SOME_EXISTS] >>
+        `IS_SOME (izero (rdepth (n-1)) (n-1))` by METIS_TAC [rdepth_thm] >>
+        METIS_TAC [izero_determ,THE_DEF]) >>
+   `rdepth (zero_0(n-1)) <= rdepth n - 1` by METIS_TAC [rdepth_thm] >>
  DECIDE_TAC);
 
 (*---------------------------------------------------------------------------*)

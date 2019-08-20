@@ -2,6 +2,7 @@
 *)
 open HolKernel Parse boolLib;
 val _ = new_theory "extra_list";
+val _ = ParseExtras.temp_loose_equality()
 
 (* interactive mode
 val () = loadPath := union ["..", "../finished"] (!loadPath);
@@ -128,7 +129,7 @@ val FILTER_OUT_ELT = store_thm
    STRIP_TAC
    ++ Induct >> RW_TAC list_ss [FILTER]
    ++ (RW_TAC list_ss [MEM, FILTER]
-	 ++ PROVE_TAC []));
+         ++ PROVE_TAC []));
 
 val IS_PREFIX_NIL = store_thm
   ("IS_PREFIX_NIL",
@@ -185,8 +186,8 @@ val IS_PREFIX_SNOC = store_thm
    ``!(x:'a) y z. IS_PREFIX (SNOC x y) z = IS_PREFIX y z \/ (z = SNOC x y)``,
    Induct_on `y`
      >> (Cases_on `z`
-	 ++ RW_TAC list_ss [SNOC, IS_PREFIX_NIL, IS_PREFIX]
-	 ++ PROVE_TAC [])
+         ++ RW_TAC list_ss [SNOC, IS_PREFIX_NIL, IS_PREFIX]
+         ++ PROVE_TAC [])
    ++ Cases_on `z` >> RW_TAC list_ss [IS_PREFIX]
    ++ RW_TAC list_ss [SNOC, IS_PREFIX]
    ++ PROVE_TAC []);

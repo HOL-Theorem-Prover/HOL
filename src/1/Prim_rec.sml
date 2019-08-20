@@ -130,7 +130,7 @@ fun prove_raw_recursive_functions_exist ax tm = let
   val rawcls = conjuncts tm
   val spcls = map (snd o strip_forall) rawcls
   val lpats = map (strip_comb o lhand) spcls
-  val ufns = itlist (insert o fst) lpats []
+  val ufns = itlist (op_insert aconv o fst) lpats []
   val axth = SPEC_ALL ax
   val (exvs,axbody) = strip_exists (concl axth)
   val axcls = conjuncts axbody
@@ -143,8 +143,11 @@ fun prove_raw_recursive_functions_exist ax tm = let
   val raxs0 = rev_itlist gax (map (repeat rator o hd o snd) lpats) ([],table)
   val raxs = List.rev (fst raxs0)
   val axfns = map (repeat rator o lhand o snd o strip_forall) raxs
-  val urfns = map (fn v => assoc v (mk_set (zip axfns (map fst lpats)))
-                           handle HOL_ERR _ => v) exvs
+  val dict = ListPair.foldl (fn (a,(b,_),d) => Binarymap.insert(d,a,b))
+                            (Binarymap.mkDict Term.compare)
+                            (axfns, lpats)
+  val urfns =
+      map (fn v => Binarymap.find(dict,v) handle Binarymap.NotFound => v) exvs
   val axtm = list_mk_exists(exvs,list_mk_conj raxs)
   and urtm = list_mk_exists(urfns,tm)
   val ixth = mymatch_and_instantiate axth axtm urtm
@@ -198,8 +201,8 @@ fun universalise_clauses tm =
  let val rawcls = conjuncts tm
      val spcls = map (snd o strip_forall) rawcls
      val lpats = map (strip_comb o lhand) spcls
-     val ufns = itlist (insert o fst) lpats []
-     val fvs = map (fn t => subtract (free_vars_lr t) ufns) rawcls
+     val ufns = itlist (op_insert aconv o fst) lpats []
+     val fvs = map (fn t => op_set_diff aconv (free_vars_lr t) ufns) rawcls
      val gcls = map2 (curry list_mk_forall) fvs rawcls
  in
    list_mk_conj gcls
@@ -208,10 +211,10 @@ fun universalise_clauses tm =
 val prove_recursive_functions_exist =
  let fun reshuffle fnn args acc =
       let val args' = uncurry (C (curry op@)) (Lib.partition is_var args)
-      in if args = args' then acc
+      in if ListPair.allEq (uncurry aconv) (args, args') then acc
          else
           let val gvs = map (genvar o type_of) args
-              val gvs' = map (C assoc (zip args gvs)) args'
+              val gvs' = map (C (op_assoc aconv) (zip args gvs)) args'
               val lty = itlist (curry (op -->) o type_of) gvs'
                          (funpow (length gvs)
                                  (hd o tl o snd o dest_type) (type_of fnn))
@@ -229,8 +232,8 @@ val prove_recursive_functions_exist =
       let val rawcls = conjuncts tm
           val spcls = map (snd o strip_forall) rawcls
           val lpats = map (strip_comb o lhand) spcls
-          val ufns = itlist (insert o fst) lpats []
-          val uxargs = map (C assoc lpats) ufns
+          val ufns = itlist (op_insert aconv o fst) lpats []
+          val uxargs = map (C (op_assoc aconv) lpats) ufns
           val oxargs = map (uncurry (C (curry op@)) o Lib.partition is_var) uxargs
           val trths = itlist2 reshuffle ufns uxargs []
           val tth = QCONV
@@ -480,7 +483,7 @@ fun BETAS fnn body =
  if is_var body orelse is_const body then REFL else
  if is_abs body then ABS_CONV (BETAS fnn (#2(dest_abs body)))
  else let val (Rator,Rand) = dest_comb body
-      in if Rator = fnn then BETA_CONV
+      in if aconv Rator fnn then BETA_CONV
          else let val cnv1 = BETAS fnn Rator
                   and cnv2 = BETAS fnn Rand
                   fun f (Rator,Rand) = (cnv1 Rator, cnv2 Rand)
@@ -501,8 +504,11 @@ fun BETAS fnn body =
 fun GTAC y (A,g) =
    let val (Bvar,Body) = dest_forall g
        and y' = Term.variant (free_varsl (g::A)) y
-   in ([(A, subst[Bvar |-> y'] Body)],
-       fn [th] => GEN Bvar (INST [y' |-> Bvar] th) | _ => raise Match)
+   in
+     if type_of Bvar = type_of y' then
+       ([(A, subst[Bvar |-> y'] Body)],
+        fn [th] => GEN Bvar (INST [y' |-> Bvar] th) | _ => raise Match)
+     else GEN_TAC (A,g)
    end;
 
 (* ---------------------------------------------------------------------*)
@@ -606,16 +612,20 @@ fun GOALS A [] tm = raise ERR "GOALS" "empty list"
 (* GALPH "!x1 ... xn. A ==> B":   alpha-converts the x's to genvars.    *)
 (* --------------------------------------------------------------------- *)
 
-local fun rule v =
-       let val gv = genvar(type_of v)
-       in fn eq => let val th = FORALL_EQ v eq
-                   in TRANS th (GEN_ALPHA_CONV gv (rhs(concl th)))
-                   end
-       end
+local
+  fun rule vty v =
+      if type_of v = vty then
+        let
+          val gv = genvar(type_of v)
+        in fn eq => let val th = FORALL_EQ v eq
+                    in TRANS th (GEN_ALPHA_CONV gv (rhs(concl th)))
+                    end
+        end
+      else I
 in
-fun GALPH tm =
+fun GALPH vty tm =
    let val (vs,hy) = strip_forall tm
-   in if (is_imp hy) then Lib.itlist rule vs (REFL hy) else REFL tm
+   in if (is_imp hy) then Lib.itlist (rule vty) vs (REFL hy) else REFL tm
    end
 end;
 
@@ -625,11 +635,13 @@ end;
 (* Applies the conversion GALPH to each conjunct in a sequence.         *)
 (* ---------------------------------------------------------------------*)
 
-fun f (conj1,conj2) = (GALPH conj1, GALPHA conj2)
-and GALPHA tm =
-   let val (c,cs) = f(dest_conj tm)
-   in MK_COMB(AP_TERM boolSyntax.conjunction c, cs)
-   end handle HOL_ERR _ => GALPH tm
+fun GALPHA vty tm =
+   let
+     fun f (conj1,conj2) = (GALPH vty conj1, GALPHA vty conj2)
+     val (c,cs) = f(dest_conj tm)
+   in
+     MK_COMB(AP_TERM boolSyntax.conjunction c, cs)
+   end handle HOL_ERR _ => GALPH vty tm
 
 (* --------------------------------------------------------------------- *)
 (* INDUCT_THEN : general induction tactic for concrete recursive types.  *)
@@ -639,6 +651,7 @@ local val boolvar = genvar Type.bool
 in
 fun INDUCT_THEN th =
  let val (Bvar,Body) = dest_forall(concl th)
+     val ty = Bvar |> type_of |> dom_rng |> #1
      val (hy,_) = dest_imp Body
      val bconv = BETAS Bvar hy
      val tacsf = TACS hy
@@ -647,7 +660,7 @@ fun INDUCT_THEN th =
      val (asm,con) = case dest_thm eta_th
                      of ([asm],con) => (asm,con)
                       | _ => raise Match
-     val ind = GEN v (SUBST [boolvar |-> GALPHA asm]
+     val ind = GEN v (SUBST [boolvar |-> GALPHA ty asm]
                             (mk_imp(boolvar, con))
                             (DISCH asm eta_th))
  in fn ttac => fn (A,t) =>
@@ -874,7 +887,7 @@ local val v = genvar Type.bool
       val EQ_T = GEN v (CONJUNCT1 (CONJUNCT2 (SPEC v EQ_CLAUSES)))
       fun R_SIMP tm =
          let val (lhs,rhs) = dest_eq tm
-         in if rhs = T
+         in if aconv rhs T
             then SPEC lhs EQ_T
             else SPECL [lhs, fst(dest_disj rhs)] OR_IMP_THM
          end
@@ -1190,7 +1203,7 @@ local
     val (l,r) = dest_eq bod
     val (lf,largs) = strip_comb l
     val (rf,rargs) = strip_comb r
-    val _ = (lf=rf) orelse raise ERR "prove_triv" ""
+    val _ = (aconv lf rf) orelse raise ERR "prove_triv" ""
     val ths = map (ASSUME o mk_eq) (zip rargs largs)
     val th1 = rev_itlist (C (curry MK_COMB)) ths (REFL lf)
   in
@@ -1219,9 +1232,9 @@ local
     val cls = map (snd o strip_forall) (conjuncts(lhand bod))
     val pats = map (fn t => if is_imp t then rand t else t) cls
     val spats = map dest_comb pats
-    val preds = itlist (insert o fst) spats []
+    val preds = itlist (op_insert aconv o fst) spats []
     val rpatlist = map
-                     (fn pr => map snd (filter (fn (p,x) => p = pr) spats))
+                     (fn pr => map snd (filter (fn (p,x) => aconv p pr) spats))
                      preds
     val xs = make_args "x" (free_varsl pats) (map (type_of o hd) rpatlist)
     val xpreds = map2 mk_exclauses xs rpatlist
@@ -1314,7 +1327,7 @@ fun EQ_EXISTS_LINTRO (thm,(vlist,theta)) =
                 of [veq] => veq
                  | _ => raise Match
       fun CHOOSER v (tm,thm) =
-        let val w = (case (subst_assoc (fn w => v=w) theta)
+        let val w = (case (subst_assoc (aconv v) theta)
                       of SOME w => w
                        | NONE => v)
             val ex_tm = mk_exists(w,tm)
@@ -1331,7 +1344,7 @@ fun OKform case_def =
       fun rhs_head c = fst(strip_comb(rhs(snd(strip_forall c))))
       val rhs_heads = map rhs_head clauses
       fun check [] = true
-        | check ((x,y)::rst) = (x=y) andalso check rst
+        | check ((x,y)::rst) = aconv x y andalso check rst
   in
      check (zip opvars rhs_heads)
   end

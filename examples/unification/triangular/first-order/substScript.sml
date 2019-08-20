@@ -9,7 +9,7 @@ val FUNPOW_extends_mono = Q.store_thm(
 `∀P f. (∀x. P x ⇒ P (f x)) ∧ P x ⇒ P (FUNPOW f n x)`,
 STRIP_TAC THEN Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC]);
 
-val _ = type_abbrev ("subst", ``:(num |-> 'a term)``);
+val _ = type_abbrev_pp ("subst", ``:(num |-> 'a term)``);
 
 val rangevars_def = Define`
   rangevars s = BIGUNION (IMAGE vars (FRANGE s))`;
@@ -215,7 +215,7 @@ FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THEN
 SRW_TAC [][] THEN METIS_TAC []);
 
 val vR1_def = Define`
-  vR1 s y x = vR s y x ∧ y NOTIN FDOM s`;
+  vR1 s y x <=> vR s y x ∧ y NOTIN FDOM s`;
 
 val vR_selfapp = Q.store_thm(
 "vR_selfapp",

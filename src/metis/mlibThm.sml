@@ -3,18 +3,12 @@
 (* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
-(*
-app load ["mlibUseful", "mlibTerm", "mlibKernel", "mlibMatch"];
-*)
-
-(*
-*)
 structure mlibThm :> mlibThm =
 struct
 
 open mlibUseful mlibTerm mlibKernel mlibMatch;
 
-infixr |-> ::> oo ##;
+infixr ::>
 
 structure T = mlibTermnet; local open mlibTermnet in end;
 
@@ -30,7 +24,7 @@ val pp_subst      = mlibSubst.pp_subst;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibThm";
-val () = traces := {module = module, alignment = I} :: !traces;
+val () = add_trace {module = module, alignment = I}
 fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 

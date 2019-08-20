@@ -13,7 +13,7 @@ datatype delta =
          NEW_TYPE of KernelSig.kernelname
        | NEW_INFIX of {Name : string, ParseName : string,
                        Assoc : HOLgrammars.associativity, Prec : int}
-       | TYABBREV of KernelSig.kernelname * Type.hol_type
+       | TYABBREV of KernelSig.kernelname * Type.hol_type * bool
        | DISABLE_TYPRINT of string
        | RM_KNM_TYABBREV of KernelSig.kernelname
        | RM_TYABBREV of string

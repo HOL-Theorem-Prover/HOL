@@ -15,7 +15,7 @@ OBJS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
 
 all: $(HOLHEAP)
 
-$(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state0)
+$(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state)
 	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
 endif
 

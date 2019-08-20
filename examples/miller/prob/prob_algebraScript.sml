@@ -25,6 +25,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "prob_algebra";
+val _ = ParseExtras.temp_loose_equality()
 
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 val std_ss' = std_ss ++ boolSimps.ETA_ss;
@@ -56,26 +57,26 @@ val prob_premeasure_def = Define
 
 val prob_measure_def = Define
    `prob_measure s =
-	inf {r | ?c. (s = prob_embed c) /\ (prob_premeasure c = r)}`;
+        inf {r | ?c. (s = prob_embed c) /\ (prob_premeasure c = r)}`;
 
 val premeasurable_def = Define
    `premeasurable a b = {f | algebra a /\ algebra b /\
-			     f IN (space a -> space b) /\
-			     !s. s IN subsets b ==> ((PREIMAGE f s)INTER(space a)) IN subsets a}`;
+                             f IN (space a -> space b) /\
+                             !s. s IN subsets b ==> ((PREIMAGE f s)INTER(space a)) IN subsets a}`;
 
 val IN_PREMEASURABLE = store_thm
   ("IN_PREMEASURABLE",
    ``!a b f. f IN premeasurable a b =
-		algebra a /\ algebra b /\
-		f IN (space a -> space b) /\
-		(!s. s IN subsets b ==> (PREIMAGE f s) INTER (space a) IN subsets a)``,
+                algebra a /\ algebra b /\
+                f IN (space a -> space b) /\
+                (!s. s IN subsets b ==> (PREIMAGE f s) INTER (space a) IN subsets a)``,
    RW_TAC std_ss [premeasurable_def, GSPECIFICATION]);
 
 val MEASURABLE_IMP_PREMEASURABLE = store_thm
   ("MEASURABLE_IMP_PREMEASURABLE", ``!f a b. f IN measurable a b ==> f IN premeasurable a b``,
    rpt GEN_TAC
    >> RW_TAC std_ss [measurable_def, premeasurable_def, GSPECIFICATION,
-		     SIGMA_ALGEBRA_ALGEBRA]);
+                     SIGMA_ALGEBRA_ALGEBRA]);
 
 val MEASURABLE_IS_PREMEASURABLE = store_thm
   ("MEASURABLE_IS_PREMEASURABLE",
@@ -98,7 +99,7 @@ val PREMEASURABLE_SIGMA = store_thm
 val PREMEASURABLE_SUBSET = store_thm
   ("PREMEASURABLE_SUBSET",
    ``!a b. sigma_algebra a ==>
-	premeasurable a b SUBSET premeasurable a (sigma (space b) (subsets b))``,
+        premeasurable a b SUBSET premeasurable a (sigma (space b) (subsets b))``,
    RW_TAC std_ss [SUBSET_DEF]
    >> MATCH_MP_TAC PREMEASURABLE_SIGMA
    >> PROVE_TAC [IN_PREMEASURABLE, algebra_def]);
@@ -114,10 +115,10 @@ val PREMEASURABLE_I = store_thm
   ("PREMEASURABLE_I",
    ``!a. algebra a ==> I IN premeasurable a a``,
    RW_TAC std_ss [IN_PREMEASURABLE, I_THM, PREIMAGE_I, IN_FUNSET,
-		  GSPEC_ID, SPACE, SUBSET_REFL]
+                  GSPEC_ID, SPACE, SUBSET_REFL]
    >> Know `s INTER space a = s`
    >- (FULL_SIMP_TAC std_ss [Once EXTENSION, algebra_def, IN_INTER,
-      		     	     subset_class_def, SUBSET_DEF]
+                             subset_class_def, SUBSET_DEF]
        >> METIS_TAC [])
    >> RW_TAC std_ss []);
 
@@ -127,10 +128,10 @@ val PREMEASURABLE_COMP = store_thm
        f IN premeasurable a b /\ g IN premeasurable b c ==>
        (g o f) IN premeasurable a c``,
    RW_TAC std_ss [IN_PREMEASURABLE, GSYM PREIMAGE_COMP, IN_FUNSET,
-		  algebra_def, space_def, subsets_def, GSPECIFICATION]
+                  algebra_def, space_def, subsets_def, GSPECIFICATION]
    >> `PREIMAGE f (PREIMAGE g s) INTER space a =
        PREIMAGE f (PREIMAGE g s INTER space b) INTER space a`
-	by (RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_PREIMAGE] >> METIS_TAC [])
+        by (RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_PREIMAGE] >> METIS_TAC [])
    >> METIS_TAC []);
 
 val prob_preserving_def = Define
@@ -170,7 +171,7 @@ val PROB_SPACE_REDUCE = store_thm
    >> Q.SPEC_TAC (`r`, `r`)
    >> Cases
    >> RW_TAC std_ss [p_space_def, events_def, prob_def,
-		     m_space_def, measurable_sets_def, measure_def]);
+                     m_space_def, measurable_sets_def, measure_def]);
 
 val ALGEBRA_REDUCE = store_thm
   ("ALGEBRA_REDUCE", ``!a. algebra a ==> ((space a, subsets a) = a)``,
@@ -186,8 +187,8 @@ val PROB_PRESERVING_LIFT = store_thm (
    RW_TAC std_ss []
    >> REVERSE (Cases_on `algebra (p_space p2, a)`)
    >- ( Q.PAT_X_ASSUM `f IN P`
-	  (ASSUME_TAC o (REWRITE_RULE [IN_PROB_PRESERVING, events_def, p_space_def, m_space_def,
-				       measurable_sets_def, prob_def, measure_def])) \\
+          (ASSUME_TAC o (REWRITE_RULE [IN_PROB_PRESERVING, events_def, p_space_def, m_space_def,
+                                       measurable_sets_def, prob_def, measure_def])) \\
         POP_ASSUM (STRIP_ASSUME_TAC o (REWRITE_RULE [IN_PREMEASURABLE])) \\
         FULL_SIMP_TAC std_ss [p_space_def] )
    >> Suff `f IN prob_preserving p1 (p_space p2, events p2, prob p2)`
@@ -195,7 +196,7 @@ val PROB_PRESERVING_LIFT = store_thm (
    >> ASM_REWRITE_TAC []
    >> Q.PAT_X_ASSUM `f IN X` MP_TAC
    >> REWRITE_TAC [IN_PROB_PRESERVING, measurable_sets_def, measure_def, m_space_def,
-		   p_space_def, events_def, prob_def]
+                   p_space_def, events_def, prob_def]
    >> STRIP_TAC
    >> STRONG_CONJ_TAC
    >- (REWRITE_TAC [SIGMA_REDUCE]
@@ -210,7 +211,7 @@ val PROB_PRESERVING_LIFT = store_thm (
    >> REWRITE_TAC [IN_PREMEASURABLE, space_def, subsets_def]
    >> STRIP_TAC
    >> Suff `subsets (sigma (m_space p2) a) SUBSET
-      	   	 {s | measure p1 ((PREIMAGE f s) INTER (m_space p1)) = measure p2 s}`
+                 {s | measure p1 ((PREIMAGE f s) INTER (m_space p1)) = measure p2 s}`
    >- RW_TAC std_ss [SUBSET_DEF, GSPECIFICATION]
    >> MATCH_MP_TAC SIGMA_PROPERTY_DISJOINT
    >> FULL_SIMP_TAC std_ss [p_space_def, prob_space_def, events_def]
@@ -218,10 +219,10 @@ val PROB_PRESERVING_LIFT = store_thm (
                      IN_UNIV, PREIMAGE_COMPL, PREIMAGE_BIGUNION, IMAGE_IMAGE] >| (* 3 sub-goals here *)
    [(* goal 1 (of 3) *)
     Q.PAT_X_ASSUM `mersurable_sets p2 = subsets (sigma (m_space p2) a)`
-	(fn thm => FULL_SIMP_TAC std_ss [SYM thm])
+        (fn thm => FULL_SIMP_TAC std_ss [SYM thm])
     >> RW_TAC std_ss [MEASURE_COMPL]
     >> Q.PAT_X_ASSUM `measure p1 (PREIMAGE f s INTER m_space p1) = measure p2 s`
-	(fn thm => ONCE_REWRITE_TAC [GSYM thm])
+        (fn thm => ONCE_REWRITE_TAC [GSYM thm])
     >> Know `m_space p2 IN a` >- PROVE_TAC [ALGEBRA_SPACE, subsets_def, space_def]
     >> STRIP_TAC
     >> Q.PAT_X_ASSUM `measure p2 (m_space p2) = 1` K_TAC
@@ -230,18 +231,18 @@ val PROB_PRESERVING_LIFT = store_thm (
     >- (FULL_SIMP_TAC std_ss [Once EXTENSION, IN_INTER, IN_PREIMAGE, IN_FUNSET] >> METIS_TAC [])
     >> RW_TAC std_ss [PREIMAGE_DIFF]
     >> `((PREIMAGE f (m_space p2) DIFF PREIMAGE f s) INTER m_space p1) =
-	((PREIMAGE f (m_space p2) INTER m_space p1) DIFF (PREIMAGE f s INTER m_space p1))`
-	by (RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_DIFF, IN_PREIMAGE] >> DECIDE_TAC)
+        ((PREIMAGE f (m_space p2) INTER m_space p1) DIFF (PREIMAGE f s INTER m_space p1))`
+        by (RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_DIFF, IN_PREIMAGE] >> DECIDE_TAC)
     >> RW_TAC std_ss [MEASURE_COMPL],
     (* goal 2 (of 3) *)
     `BIGUNION (IMAGE (PREIMAGE f o f') UNIV) INTER m_space p1 =
      BIGUNION (IMAGE (\x:num. (PREIMAGE f o f') x INTER m_space p1) UNIV)`
-	by (RW_TAC std_ss [Once EXTENSION, IN_BIGUNION, IN_INTER, IN_IMAGE, IN_UNIV]
-	    >> FULL_SIMP_TAC std_ss [IN_FUNSET]
-	    >> EQ_TAC
-	    >- (RW_TAC std_ss [] >> Q.EXISTS_TAC `PREIMAGE f (f' x') INTER m_space p1`
-		>> ASM_REWRITE_TAC [IN_INTER] >> Q.EXISTS_TAC `x'` >> RW_TAC std_ss [])
-	    >> RW_TAC std_ss [] >> METIS_TAC [IN_PREIMAGE, IN_INTER])
+        by (RW_TAC std_ss [Once EXTENSION, IN_BIGUNION, IN_INTER, IN_IMAGE, IN_UNIV]
+            >> FULL_SIMP_TAC std_ss [IN_FUNSET]
+            >> EQ_TAC
+            >- (RW_TAC std_ss [] >> Q.EXISTS_TAC `PREIMAGE f (f' x') INTER m_space p1`
+                >> ASM_REWRITE_TAC [IN_INTER] >> Q.EXISTS_TAC `x'` >> RW_TAC std_ss [])
+            >> RW_TAC std_ss [] >> METIS_TAC [IN_PREIMAGE, IN_INTER])
     >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
     >> Suff
     `(measure p2 o f') --> measure p2 (BIGUNION (IMAGE f' UNIV)) /\
@@ -264,12 +265,12 @@ val PROB_PRESERVING_LIFT = store_thm (
     (* goal 3 (of 3) *)
     `BIGUNION (IMAGE (PREIMAGE f o f') UNIV) INTER m_space p1 =
      BIGUNION (IMAGE (\x:num. (PREIMAGE f o f') x INTER m_space p1) UNIV)`
-	by (RW_TAC std_ss [Once EXTENSION, IN_BIGUNION, IN_INTER, IN_IMAGE, IN_UNIV]
-	    >> FULL_SIMP_TAC std_ss [IN_FUNSET]
-	    >> EQ_TAC
-	    >- (RW_TAC std_ss [] >> Q.EXISTS_TAC `PREIMAGE f (f' x') INTER m_space p1`
-		>> ASM_REWRITE_TAC [IN_INTER] >> Q.EXISTS_TAC `x'` >> RW_TAC std_ss [])
-	    >> RW_TAC std_ss [] >> METIS_TAC [IN_PREIMAGE, IN_INTER])
+        by (RW_TAC std_ss [Once EXTENSION, IN_BIGUNION, IN_INTER, IN_IMAGE, IN_UNIV]
+            >> FULL_SIMP_TAC std_ss [IN_FUNSET]
+            >> EQ_TAC
+            >- (RW_TAC std_ss [] >> Q.EXISTS_TAC `PREIMAGE f (f' x') INTER m_space p1`
+                >> ASM_REWRITE_TAC [IN_INTER] >> Q.EXISTS_TAC `x'` >> RW_TAC std_ss [])
+            >> RW_TAC std_ss [] >> METIS_TAC [IN_PREIMAGE, IN_INTER])
     >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
     >> Suff
     `(measure p2 o f') sums measure p2 (BIGUNION (IMAGE f' UNIV)) /\
@@ -301,13 +302,13 @@ val PROB_PRESERVING_SUBSET = store_thm (
 val PREMEASURABLE_UP_LIFT = store_thm
   ("PREMEASURABLE_UP_LIFT",
    ``!sp a b c f. f IN premeasurable (sp, a) c /\
-	       algebra (sp, b) /\ a SUBSET b ==> f IN premeasurable (sp, b) c``,
+               algebra (sp, b) /\ a SUBSET b ==> f IN premeasurable (sp, b) c``,
    RW_TAC std_ss [IN_PREMEASURABLE, GSPECIFICATION, SUBSET_DEF, IN_FUNSET, space_def, subsets_def]);
 
 val PREMEASURABLE_UP_SUBSET = store_thm
   ("PREMEASURABLE_UP_SUBSET",
    ``!sp a b c. a SUBSET b /\ algebra (sp, b)
-	==> premeasurable (sp, a) c SUBSET premeasurable (sp, b) c``,
+        ==> premeasurable (sp, a) c SUBSET premeasurable (sp, b) c``,
    RW_TAC std_ss [PREMEASURABLE_UP_LIFT, SUBSET_DEF]
    >> MATCH_MP_TAC PREMEASURABLE_UP_LIFT
    >> Q.EXISTS_TAC `a`
@@ -355,8 +356,8 @@ val PROB_PRESERVING_UP_SIGMA = store_thm (
    >> MATCH_MP_TAC PROB_PRESERVING_UP_LIFT
    >> ASM_REWRITE_TAC [SIGMA_SUBSET_SUBSETS, SIGMA_REDUCE]
    >> FULL_SIMP_TAC std_ss [IN_PROB_PRESERVING, IN_PREMEASURABLE, p_space_def,
-      		    	    measurable_sets_def, space_def, subsets_def, prob_def,
-			    events_def, measure_def, m_space_def]
+                            measurable_sets_def, space_def, subsets_def, prob_def,
+                            events_def, measure_def, m_space_def]
    >> Q.EXISTS_TAC `a` >> ASM_REWRITE_TAC []
    >> CONJ_TAC
    >- ( MATCH_MP_TAC SIGMA_ALGEBRA_ALGEBRA \\
@@ -727,7 +728,7 @@ val PROB_ALGEBRA_EMPTY = store_thm
 val PROB_ALGEBRA_UNION = store_thm
   ("PROB_ALGEBRA_UNION",
    ``!s t. s IN (subsets prob_algebra) /\ t IN (subsets prob_algebra)
-	==> (s UNION t) IN (subsets prob_algebra)``,
+        ==> (s UNION t) IN (subsets prob_algebra)``,
     PSET_TAC [IN_PROB_ALGEBRA, EXTENSION, subsets_def]
  >> Q.EXISTS_TAC `APPEND b b'`
  >> PSET_TAC [PROB_EMBED_APPEND, EXTENSION]);
@@ -764,7 +765,7 @@ val PROB_ALGEBRA_UNIV = store_thm
 val PROB_ALGEBRA_ALGEBRA = store_thm
   ("PROB_ALGEBRA_ALGEBRA", ``algebra prob_algebra``,
     RW_TAC std_ss [algebra_def, subset_class_def, prob_algebra_def, space_def, subsets_def,
-		   PROB_ALGEBRA_EMPTY, PROB_ALGEBRA_UNION, IN_UNIV, SUBSET_UNIV]
+                   PROB_ALGEBRA_EMPTY, PROB_ALGEBRA_UNION, IN_UNIV, SUBSET_UNIV]
  >> REWRITE_TAC [GSYM COMPL_DEF]
  >> POP_ASSUM MP_TAC
  >> REWRITE_TAC [GSYM (REWRITE_CONV [subsets_def, prob_algebra_def] ``subsets prob_algebra``)]
@@ -778,7 +779,7 @@ val PROB_ALGEBRA_UNIV = store_thm
 val PROB_ALGEBRA_INTER = store_thm
   ("PROB_ALGEBRA_INTER",
   ``!s t. s IN (subsets prob_algebra) /\ t IN (subsets prob_algebra)
-	==> (s INTER t) IN (subsets prob_algebra)``,
+        ==> (s INTER t) IN (subsets prob_algebra)``,
     ASSUME_TAC PROB_ALGEBRA_ALGEBRA
  >> ASSUME_TAC (ISPEC ``prob_algebra`` ALGEBRA_INTER)
  >> FULL_SIMP_TAC std_ss [subsets_def]);
@@ -995,7 +996,7 @@ val PROB_CANON1_MONO = store_thm
    >> Induct >- RW_TAC list_ss [REAL_LE_REFL, FOLDR]
    >> RW_TAC list_ss [FOLDR]
    >> Suff `prob_premeasure (h::FOLDR prob_canon_find [] l)
-		   <= prob_premeasure (h::l)`
+                   <= prob_premeasure (h::l)`
    >- PROVE_TAC [PROB_CANON_FIND_MONO, REAL_LE_TRANS]
    >> PROVE_TAC [prob_premeasure_def, REAL_LE_LADD]);
 
@@ -1018,7 +1019,7 @@ val PROB_CANON2_MONO = store_thm
    >> Induct >- RW_TAC list_ss [REAL_LE_REFL, FOLDR]
    >> RW_TAC list_ss [FOLDR]
    >> Suff `prob_premeasure (h::FOLDR prob_canon_merge [] l)
-		   <= prob_premeasure (h::l)`
+                   <= prob_premeasure (h::l)`
    >- PROVE_TAC [PROB_CANON_MERGE_MONO, REAL_LE_TRANS]
    >> PROVE_TAC [prob_premeasure_def, REAL_LE_LADD]);
 
@@ -1134,7 +1135,7 @@ val PROB_PREMEASURE_ADDITIVE = store_thm
            prob_canonical d ==>
            (prob_embed c INTER prob_embed d = {}) /\
            (prob_embed b = prob_embed c UNION prob_embed d) ==>
-	   (prob_premeasure b = prob_premeasure c + prob_premeasure d)``,
+           (prob_premeasure b = prob_premeasure c + prob_premeasure d)``,
    HO_MATCH_MP_TAC PROB_CANONICAL_INDUCT
    >> CONJ_TAC
    >- (PSET_TAC [PROB_PREMEASURE_BASIC, PROB_EMBED_BASIC, EXTENSION]
@@ -1595,7 +1596,7 @@ val PREMEASURABLE_PROB_ALGEBRA_STL = store_thm
   ("PREMEASURABLE_PROB_ALGEBRA_STL",
   ``stl IN premeasurable prob_algebra prob_algebra``,
     RW_TAC std_ss [IN_PREMEASURABLE, PROB_ALGEBRA_ALGEBRA, PREIMAGE_def,
-		   SPACE_PROB_ALGEBRA, space_def, subsets_def, IN_FUNSET, IN_UNIV]
+                   SPACE_PROB_ALGEBRA, space_def, subsets_def, IN_FUNSET, IN_UNIV]
  >> Suff `{x | stl x IN s} = (s o stl)`
  >- PROVE_TAC [PROB_ALGEBRA_STL, PROB_ALGEBRA_UNIV, INTER_COMM, INTER_UNIV]
  >> ONCE_REWRITE_TAC [EXTENSION]
@@ -1718,11 +1719,11 @@ val PROB_MEASURE_SDROP = store_thm
 val PROB_PRESERVING_PROB_ALGEBRA_STL = store_thm
   ("PROB_PRESERVING_PROB_ALGEBRA_STL",
   ``stl IN prob_preserving (space prob_algebra, subsets prob_algebra, prob_measure)
-			   (space prob_algebra, subsets prob_algebra, prob_measure)``,
+                           (space prob_algebra, subsets prob_algebra, prob_measure)``,
     ASSUME_TAC SPACE_SUBSETS_PROB_ALGEBRA
  >> RW_TAC std_ss [PROB_PRESERVING, GSPECIFICATION, EVENTS, PROB,
                    PREMEASURABLE_PROB_ALGEBRA_STL, PREIMAGE_ALT,
-		   p_space_def, m_space_def]
+                   p_space_def, m_space_def]
  >> ASSUME_TAC SPACE_PROB_ALGEBRA
  >> POP_ORW
  >> RW_TAC std_ss [PROB_MEASURE_STL, INTER_UNIV]);
@@ -1731,7 +1732,7 @@ val PROB_PRESERVING_PROB_ALGEBRA_SDROP = store_thm
   ("PROB_PRESERVING_PROB_ALGEBRA_SDROP",
   ``!n. sdrop n IN
        prob_preserving (space prob_algebra, subsets prob_algebra, prob_measure)
-		       (space prob_algebra, subsets prob_algebra, prob_measure)``,
+                       (space prob_algebra, subsets prob_algebra, prob_measure)``,
     ASSUME_TAC SPACE_SUBSETS_PROB_ALGEBRA
  >> RW_TAC std_ss [PROB_PRESERVING, GSPECIFICATION, EVENTS, PROB,
                    PREMEASURABLE_PROB_ALGEBRA_SDROP, PREIMAGE_ALT,
@@ -1772,7 +1773,7 @@ val PREMEASURABLE_PROB_ALGEBRA_MIRROR = store_thm
   ("PREMEASURABLE_PROB_ALGEBRA_MIRROR",
   ``mirror IN premeasurable prob_algebra prob_algebra``,
     RW_TAC std_ss [IN_PREMEASURABLE, IN_PROB_ALGEBRA, PROB_ALGEBRA_ALGEBRA,
-		   IN_FUNSET, IN_UNIV, INTER_UNIV, SPACE_PROB_ALGEBRA]
+                   IN_FUNSET, IN_UNIV, INTER_UNIV, SPACE_PROB_ALGEBRA]
  >> Suff
       `!b.
          prob_canonical b ==>
@@ -1828,11 +1829,11 @@ val PROB_PRESERVING_PROB_ALGEBRA_MIRROR = store_thm
   ("PROB_PRESERVING_PROB_ALGEBRA_MIRROR",
    ``mirror IN
      prob_preserving (space prob_algebra, subsets prob_algebra, prob_measure)
-		     (space prob_algebra, subsets prob_algebra, prob_measure)``,
+                     (space prob_algebra, subsets prob_algebra, prob_measure)``,
     ASSUME_TAC SPACE_SUBSETS_PROB_ALGEBRA
  >> RW_TAC std_ss [PROB_PRESERVING, GSPECIFICATION, EVENTS, PROB,
                    PREMEASURABLE_PROB_ALGEBRA_MIRROR, PREIMAGE_ALT,
-		   p_space_def, m_space_def]
+                   p_space_def, m_space_def]
  >> ASSUME_TAC SPACE_PROB_ALGEBRA
  >> POP_ORW
  >> RW_TAC std_ss [PROB_MEASURE_MIRROR, INTER_UNIV]);

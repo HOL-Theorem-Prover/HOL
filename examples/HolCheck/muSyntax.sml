@@ -229,45 +229,45 @@ fun RVNEG ty rv f =
          | "And" => mu_conj (RVNEG ty rv (List.hd args)) (RVNEG ty rv (List.last args))
          | "Or" =>  mu_disj (RVNEG ty rv (List.hd args)) (RVNEG ty rv (List.last args))
          | "RV" => if (Term.compare(rv,List.hd args)=EQUAL)
-		   then mu_neg(mu_RV ty (hd args))
-		   else mu_RV ty (hd args)
+                   then mu_neg(mu_RV ty (hd args))
+                   else mu_RV ty (hd args)
          | "AP" => f
          | "DIAMOND" => mu_dmd (hd args) (RVNEG ty rv (last args))
          | "BOX" => mu_box (hd args) (RVNEG ty rv (last args))
          | "mu" => if (Term.compare(rv,List.hd args)=EQUAL)
-		   then mu_lfp (hd args) (last args)
+                   then mu_lfp (hd args) (last args)
                    else mu_lfp (hd args) (RVNEG ty rv (last args))
          | "nu" => if (Term.compare(rv,List.hd args)=EQUAL)
-		   then mu_gfp (hd args) (last args)
+                   then mu_gfp (hd args) (last args)
                    else mu_gfp (hd args) (RVNEG ty rv (last args))
          | _         => (print "ERROR:"; print_term f; print "\n"; Raise Match) end
 
 
 (* return list of propositional subterms of f with size >= n, with duplicates/T/F removed, in decreasing order of size *)
 fun prop_subtmset f n = let val p_ty = get_prop_type f
-			in List.rev(fst(ListPair.unzip(Listsort.sort (fn((_,l),(_,r))=>Int.compare(l,r))
+                        in List.rev(fst(ListPair.unzip(Listsort.sort (fn((_,l),(_,r))=>Int.compare(l,r))
                                       (Binaryset.listItems(Binaryset.addList(Binaryset.empty
                                          (fn ((l,_),(r,_)) => Term.compare(l,r)),
                                           (List.filter (fn (t,sz)=> (sz>=n)
-								  andalso not (Term.compare(t,get_mu_ty_T_tm p_ty)=EQUAL)
-								  andalso not (Term.compare(t,get_mu_ty_F_tm p_ty)=EQUAL))
-						       (prop_subtms f))))))))
-			end
+                                                                  andalso not (Term.compare(t,get_mu_ty_T_tm p_ty)=EQUAL)
+                                                                  andalso not (Term.compare(t,get_mu_ty_F_tm p_ty)=EQUAL))
+                                                       (prop_subtms f))))))))
+                        end
 
 (* take a propositional mu formula and convert it to a single ap (but not a mu AP, just \state. prop_tm) *)
 fun prop2ap f state =
     let fun mk_ap f =
-	    let val (opr,args) = strip_comb f
-		in case (fst(dest_const opr)) of
-		       "TR" => T
-		     | "FL"  => F
-		     | "And" => mk_conj (mk_ap (hd args),mk_ap (last args))
-		     | "Or" => mk_disj (mk_ap (hd args),mk_ap (last args))
-		     | "AP" => (pairSyntax.pbody o hd) args
-		     | "Not" => mk_neg (mk_ap (hd args))
-		     | _ => failwith "Not a propositional formula"
-	       end
-	val ap = mk_AP state (mk_ap f)
+            let val (opr,args) = strip_comb f
+                in case (fst(dest_const opr)) of
+                       "TR" => T
+                     | "FL"  => F
+                     | "And" => mk_conj (mk_ap (hd args),mk_ap (last args))
+                     | "Or" => mk_disj (mk_ap (hd args),mk_ap (last args))
+                     | "AP" => (pairSyntax.pbody o hd) args
+                     | "Not" => mk_neg (mk_ap (hd args))
+                     | _ => failwith "Not a propositional formula"
+               end
+        val ap = mk_AP state (mk_ap f)
     in ap end
 
 (* give negation normal form of f *)
@@ -368,58 +368,58 @@ fun mk_hol_proxy f =
         | "DIAMOND" => mk_comb (mk_comb(``DD:string -> bool -> bool``,List.hd args),mk_hol_proxy (List.last args))
         | "BOX"     => mk_comb (mk_comb(``BB:string -> bool -> bool``,List.hd args),mk_hol_proxy (List.last args))
         | "mu"      => mk_exists(mk_bool_var(fromHOLstring(List.hd args)),
-				 mk_comb(``MM:bool -> bool``,mk_hol_proxy (List.last args)))
+                                 mk_comb(``MM:bool -> bool``,mk_hol_proxy (List.last args)))
         | "nu"      => mk_forall(mk_bool_var(fromHOLstring(List.hd args)),
-				 mk_comb(``NN:bool -> bool``,mk_hol_proxy (List.last args)))
+                                 mk_comb(``NN:bool -> bool``,mk_hol_proxy (List.last args)))
         | _         => Raise Match
   end
 
 fun mu_unproxy f =
     let val (opr,args) = HolKernel.strip_comb f
-	val nm = if is_const opr then fst (dest_const opr) else fst (dest_var opr)
+        val nm = if is_const opr then fst (dest_const opr) else fst (dest_var opr)
     in case nm of
            "PP"  => ``AP ^(List.hd args)``
-	 | "QQ"  => ``RV ^(fromMLstring(term_to_string2(List.hd args)))``
-	 | "/\\" => mu_conj (mu_unproxy (List.hd args)) (mu_unproxy (List.last args))
-	 | "\\/" => mu_disj (mu_unproxy (List.hd args)) (mu_unproxy (List.last args))
-	 | "~"   => mu_neg (mu_unproxy (List.hd args))
-	 | "T"   => ``TR``
-	 | "F"   => ``FL``
-	 | "DD"  => mu_dmd (List.hd args) (mu_unproxy (List.last args))
-	 | "BB"  => mu_box (List.hd args) (mu_unproxy (List.last args))
-	 | "?"   => mu_lfp (fromMLstring(term_to_string2(fst(dest_abs(List.hd args)))))
-			   (mu_unproxy (snd(dest_comb(snd(dest_abs(List.hd args))))))
-	 | "!"   => mu_gfp (fromMLstring(term_to_string2(fst(dest_abs(List.hd args)))))
-			   (mu_unproxy (snd(dest_comb(snd(dest_abs(List.hd args))))))
-	 | _ => Raise Match
+         | "QQ"  => ``RV ^(fromMLstring(term_to_string2(List.hd args)))``
+         | "/\\" => mu_conj (mu_unproxy (List.hd args)) (mu_unproxy (List.last args))
+         | "\\/" => mu_disj (mu_unproxy (List.hd args)) (mu_unproxy (List.last args))
+         | "~"   => mu_neg (mu_unproxy (List.hd args))
+         | "T"   => ``TR``
+         | "F"   => ``FL``
+         | "DD"  => mu_dmd (List.hd args) (mu_unproxy (List.last args))
+         | "BB"  => mu_box (List.hd args) (mu_unproxy (List.last args))
+         | "?"   => mu_lfp (fromMLstring(term_to_string2(fst(dest_abs(List.hd args)))))
+                           (mu_unproxy (snd(dest_comb(snd(dest_abs(List.hd args))))))
+         | "!"   => mu_gfp (fromMLstring(term_to_string2(fst(dest_abs(List.hd args)))))
+                           (mu_unproxy (snd(dest_comb(snd(dest_abs(List.hd args))))))
+         | _ => Raise Match
     end
 
 (* this will rename bound variables so that alpha-equivalent terms can be cached via a strict term-matcher that knows nothing about
    alpha equivlance e.g. Term.compare *)
 fun rename f =
     let val l1 = (find_terms (can (match_term ``mu Q .. t``)) f) @  (find_terms (can (match_term ``nu Q .. t``)) f)
-	val l2 = List.filter (fn t => List.null (fv t)) l1
-	val l2 = List.map mk_hol_proxy l2
-	val fp = mk_hol_proxy f
+        val l2 = List.filter (fn t => List.null (fv t)) l1
+        val l2 = List.map mk_hol_proxy l2
+        val fp = mk_hol_proxy f
     in List.foldl (fn (sf,f) => subst (List.map (fn t => (t |-> (mu_unproxy sf)))
-						(List.map mu_unproxy (find_terms (aconv sf) fp))) f) f l2
+                                                (List.map mu_unproxy (find_terms (aconv sf) fp))) f) f l2
     end
 
 (* given f, returns |- !Q. SUBFORMULA (~RV Q) (NNF f) = (RV Q = RV P1) ... where the P_i are free in f and occur -vely *)
 fun NNF_RVNEG_CONV f =
     let val _ = print "NNF_RVNEG_CONV\n"
-	val _ = print_term f val _ = print " f\n"(*DBG*)
-	val fvl = fv f
-	val rvnl = List.map (fn t => snd(dest_comb(snd(dest_comb t))))
-			    ((find_terms (can (match_term (``~(RV a)``)))) (NNF f))
-	val frvnl = Binaryset.foldl (fn (t,al) => t::al) []
-	    (Binaryset.intersection((Binaryset.addList(Binaryset.empty Term.compare,fvl)),
-				    (Binaryset.addList(Binaryset.empty Term.compare,rvnl))))
-	val _ = List.app print_term frvnl val _ = print " frvnl\n"(*DBG*)
-	val gl = ``!Q. SUBFORMULA (~(RV Q)) (NNF ^f) = ^(list_mk_disj2 (List.map (fn t => mk_eq(``Q:string``,t)) frvnl))``
-	val _ = print_term gl val _ = print " goal\n"(*DBG*)
-	val res = prove(gl,SIMP_TAC std_ss (MU_SUB_def::RVNEG_def::NNF_def::(tsimps ``:'a mu``)) THEN PROVE_TAC [])
-	val _ = print "NNF_RVNEG_CONV done\n"(*DBG*)
+        val _ = print_term f val _ = print " f\n"(*DBG*)
+        val fvl = fv f
+        val rvnl = List.map (fn t => snd(dest_comb(snd(dest_comb t))))
+                            ((find_terms (can (match_term (``~(RV a)``)))) (NNF f))
+        val frvnl = Binaryset.foldl (fn (t,al) => t::al) []
+            (Binaryset.intersection((Binaryset.addList(Binaryset.empty Term.compare,fvl)),
+                                    (Binaryset.addList(Binaryset.empty Term.compare,rvnl))))
+        val _ = List.app print_term frvnl val _ = print " frvnl\n"(*DBG*)
+        val gl = ``!Q. SUBFORMULA (~(RV Q)) (NNF ^f) = ^(list_mk_disj2 (List.map (fn t => mk_eq(``Q:string``,t)) frvnl))``
+        val _ = print_term gl val _ = print " goal\n"(*DBG*)
+        val res = prove(gl,SIMP_TAC std_ss (MU_SUB_def::RVNEG_def::NNF_def::(tsimps ``:'a mu``)) THEN PROVE_TAC [])
+        val _ = print "NNF_RVNEG_CONV done\n"(*DBG*)
     in  res end
 
 
@@ -457,8 +457,8 @@ fun qdepth f =
 
 (* return a list of all terms of the form AP p that occur in f *)
 fun find_APs f = let val p_ty  = get_prop_type f
-		     val pvar = mk_var("p",p_ty)
-		 in find_terms (can (match_term (mk_comb(get_mu_ty_ap_tm p_ty,pvar)))) f end
+                     val pvar = mk_var("p",p_ty)
+                 in find_terms (can (match_term (mk_comb(get_mu_ty_ap_tm p_ty,pvar)))) f end
 
 (* return a string term that is not the same as any in l, formed by priming mv enough times *)
 fun mk_subs mv l =

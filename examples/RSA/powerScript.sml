@@ -25,8 +25,8 @@ val POWER_0 = store_thm("POWER_0",
                         Cases_on `n` THEN ARW[MULT_CLAUSES,POWER]);
 
 val POWER_1 = store_thm("POWER_1",
-			Term `!n. $EXP 1 n = 1`,
-			Induct_on `n` THEN ARW[POWER]);
+                        Term `!n. $EXP 1 n = 1`,
+                        Induct_on `n` THEN ARW[POWER]);
 val POWER_LT_0 = store_thm("POWER_LT_0",
                         Term `!x n. 0<x ==> 0 < $EXP x n`,
                         Induct_on `n` THEN ARW[POWER,LESS_MULT2]);

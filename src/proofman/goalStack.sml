@@ -15,7 +15,7 @@ val show_nsubgoals = ref 10;
 val chatting = ref true;
 val show_stack_subgoal_count = ref true
 val print_fvs = ref false
-val print_goal_at_top = ref true;
+val print_goal_at_top = ref false;
 val reverse_assums = ref false;
 val print_number_assums = ref 1000000;
 val other_subgoals_pretty_limit = ref 100;
@@ -225,127 +225,113 @@ fun extract_thm (GSTK{prop=PROVED(th,_), ...}) = th
 
 local
 
+open Portable smpp
+fun ty2s ty = String.extract(Parse.type_to_string ty, 1, NONE)
 
-fun ppgoal (asl,w) =
-   let open Portable smpp
-       val check_vars =
-         let
-           val fvs = FVL (w::asl) empty_tmset
-           fun ty2s ty = String.extract(Parse.type_to_string ty, 1, NONE)
-           fun foldthis (v,acc) =
-             let
-               val (nm,ty_s) = (I ## ty2s) (dest_var v)
-             in
-               case Binarymap.peek(acc, nm) of
-                   NONE => Binarymap.insert(acc, nm, [ty_s])
-                 | SOME vs => Binarymap.insert(acc, nm, ty_s::vs)
-             end
-           val m = HOLset.foldl foldthis (Binarymap.mkDict String.compare) fvs
-           fun foldthis (nm,vtys,msg) =
-             if length vtys > 1 then
-               ("  " ^ nm ^ " : " ^ String.concatWith ", " vtys) :: msg
-             else msg
-           val msg = Binarymap.foldl foldthis [] m
-         in
-           if null msg then nothing
-           else
-             (add_newline >>
-              add_string ("WARNING: goal contains variables of same name \
-                          \but different types") >>
-              add_newline >>
-              List.foldl (fn (s,m) => m >> add_string s >> add_newline)
-                         nothing
-                         msg)
-         end
-       val pr = lift Parse.pp_term
-       fun max (a,b) = if a < b then a else b
-       val length_asl = length asl;
-       val length_assums = max (length_asl, !print_number_assums)
-       val assums = List.rev (List.take (asl, length_assums))
-       fun pr_index last (i,tm) =
-         let
-           val istr = StringCvt.padLeft #" " 2 (Int.toString i)^".  "
-         in
-           block CONSISTENT 0 (
-             add_string istr >>
-             block CONSISTENT (size istr) (pr tm) >>
-             (if last then nothing else add_newline)
-           )
-         end
-       fun pr_indexes [] = raise ERR "pr_indexes" ""
-         | pr_indexes [x] = pr x
-         | pr_indexes L =
-               let
-                 val l = Lib.enumerate (length_asl - length_assums) L
-                 val l = if !reverse_assums then List.rev l else l
-               in
-                 pr_list (pr_index false) nothing (Lib.butlast l) >>
-                 pr_index
-                   (not (!reverse_assums) orelse
-                    length_asl <= (!print_number_assums))
-                   (List.last l)
-               end
-       fun pr_hidden_indexes L =
-               (if !reverse_assums then pr_indexes L else nothing) >>
-               (if (!print_number_assums) < length_asl then
-                  block CONSISTENT 0 (
-                    add_string ("...") >>
-                    (if not (!reverse_assums) andalso (!print_number_assums > 0)
-                     then add_newline
-                     else nothing)
-                  )
-                else nothing) >>
-               (if !reverse_assums then nothing else pr_indexes L)
-   in
-     block CONSISTENT 0 (
-       add_newline >>
-       (if not (!print_goal_at_top) then nothing
-        else
-          pr w >> add_newline >>
-          (if List.null assums then nothing
-           else
-             block CONSISTENT 1 (
-               add_string (!Globals.goal_line) >> add_newline >>
-               pr_hidden_indexes assums
-             )
-          ) >> add_newline) >>
-
-       (if !print_fvs then
+fun check_vars (g as (asl,w)) =
+    let
+      val fvs = FVL (w::asl) empty_tmset
+      fun foldthis (v,acc) =
           let
-            val fvs = Listsort.sort Term.compare (free_varsl (w::asl))
-            fun pr_v v = let
-              val (n, ty) = dest_var v
-            in
-              block INCONSISTENT 2 (
-                add_string n >> add_break(1,0) >>
-                lift Parse.pp_type ty
-              )
-            end
+            val (nm,ty_s) = (I ## ty2s) (dest_var v)
           in
-            if not (null fvs) then
-              (if not (null asl) then add_newline else nothing) >>
-              add_string "Free variables" >> add_newline >>
-              add_string "  " >>
-              block CONSISTENT 0 (pr_list pr_v (add_break(5,0)) fvs) >>
-              add_newline >> add_newline
-            else nothing
+            case Binarymap.peek(acc, nm) of
+                NONE => Binarymap.insert(acc, nm, [ty_s])
+              | SOME vs => Binarymap.insert(acc, nm, ty_s::vs)
           end
-        else nothing) >>
+      val m = HOLset.foldl foldthis (Binarymap.mkDict String.compare) fvs
+      fun foldthis (nm,vtys,msg) =
+          if length vtys > 1 then
+            ("  " ^ nm ^ " : " ^ String.concatWith ", " vtys) :: msg
+          else msg
+      val msg = Binarymap.foldl foldthis [] m
+    in
+      if null msg then nothing
+      else (
+        add_newline >> add_newline >>
+        add_string ("WARNING: goal contains variables of same name \
+                    \but different types") >>
+        add_newline >>
+        List.foldl (fn (s,m) => m >> add_string s >> add_newline)
+                   nothing
+                   msg
+      )
+    end
+val pr = lift Parse.pp_term
+fun min (a,b) = if a < b then a else b
+fun pr_numbered_assum (i,tm) =
+    let
+      val istr = StringCvt.padLeft #" " 2 (Int.toString i)^".  "
+    in
+      block CONSISTENT 0 (
+        add_string istr >>
+        block CONSISTENT (size istr) (pr tm)
+      )
+    end
+fun pr_maybe_hidden_assum (SOME a) = pr_numbered_assum a
+  | pr_maybe_hidden_assum NONE = add_string "..."
 
-       (if (!print_goal_at_top) then nothing
-        else
-          (if List.null assums then nothing
-           else
-             block CONSISTENT 1 (
-               add_string "  " >>
-               pr_hidden_indexes assums
-             ) >> add_newline >> add_string (!Globals.goal_line)) >>
-             add_newline >>
-             pr w >>
-             add_newline) >>
-       check_vars
-     )
-   end
+fun pr_assums asl =
+    let
+      val length_asl = length asl
+      val length_assums = min (length_asl, !print_number_assums)
+      val assums = List.rev (List.take (asl, length_assums))
+      val l = Lib.enumerate (length_asl - length_assums) assums
+      val l = if !reverse_assums then List.rev l else l
+      val has = if !print_number_assums < length_asl then NONE :: map SOME l
+                else map SOME l
+    in
+      pr_list pr_maybe_hidden_assum add_newline has
+    end
+
+fun pr_v v = let
+  val (n, ty) = dest_var v
+in
+  block INCONSISTENT 2 (
+    add_string n >> add_break(1,0) >> lift Parse.pp_type ty
+  )
+end
+
+fun print_fvs0 fvs =
+    block CONSISTENT 0 (
+      add_string "Free variables:" >> add_break(1,2) >>
+      block INCONSISTENT 0 (pr_list pr_v (add_break(3,0)) fvs)
+    )
+fun print_goalfvs (asl,w) =
+    let
+      val fvs = free_varsl (w::asl) |> Listsort.sort Term.compare
+    in
+      if !print_fvs andalso not (null fvs) then
+        add_newline >> add_newline >> print_fvs0 fvs
+      else nothing
+    end
+
+val pr_goal = pr
+fun indent n p = add_string (CharVector.tabulate(n, fn _ => #" ")) >>
+                 block CONSISTENT n p
+
+
+fun ppgoal_assums_first (g as (asl,w)) =
+      block CONSISTENT 0 (
+        block CONSISTENT 0 (pr_assums asl) >> add_newline >>
+        add_string (!Globals.goal_line) >> add_newline >>
+        indent 5 (pr_goal w) >>
+        print_goalfvs g >> check_vars g
+      )
+
+fun ppgoal_assums_last (g as (asl,w)) =
+    block CONSISTENT 0 (
+      indent 5 (pr_goal w) >> add_newline >>
+      add_string (!Globals.goal_line) >> add_newline >>
+      block CONSISTENT 0 (pr_assums asl) >>
+      print_goalfvs g >> check_vars g
+    )
+
+fun ppgoal (g as (asl,w)) =
+    if null asl then pr_goal w >> print_goalfvs g >> check_vars g
+    else
+      if !print_goal_at_top then ppgoal_assums_last g
+      else ppgoal_assums_first g
    handle e => (Lib.say "\nError in attempting to print a goal!\n";  raise e);
 
    val goal_printer = ref (Parse.mlower o ppgoal)
@@ -356,13 +342,14 @@ in
  fun set_goal_pp pp = !goal_printer before (goal_printer := pp)
 end;
 
+(* not clear that this function is used; certainly, default interactive system
+   uses Manager.sml's printer instead. *)
 fun pp_gstk gstk =
  let open smpp
      val pr_goal = mppgoal
      fun pr (GSTK{prop = POSED g, stack = [], ...}) =
              block Portable.CONSISTENT 0 (
-               add_string"Initial goal:" >>
-               add_newline >> add_newline >>
+               add_string"Initial goal:" >> add_newline >> add_newline >>
                pr_goal g
              )
        | pr (GSTK{prop = POSED _, stack = ({goals,...}::_), ...}) =
@@ -377,10 +364,11 @@ fun pp_gstk gstk =
                       rev (List.take (goals, !show_nsubgoals)))
                    end
                  else
-                   (nothing, rev goals)
+                   (add_newline, rev goals)
                val (pfx,lastg) = front_last goals_to_print
                fun start() =
-                 (ellipsis_action >> pr_list pr_goal add_newline pfx)
+                 (ellipsis_action >>
+                  pr_list pr_goal (add_newline >> add_newline) pfx)
                val size = List.foldl (fn (g,acc) => goal_size g + acc) 0 pfx
            in
              block Portable.CONSISTENT 0 (
@@ -389,12 +377,14 @@ fun pp_gstk gstk =
                   with_flag(Parse.current_backend, PPBackEnd.raw_terminal)
                            start()
                 else start()) >>
-               add_newline >>
+               (if not (null pfx) then add_newline >> add_newline
+                else nothing) >>
                pr_goal lastg >>
               (if length goals > 1 andalso !show_stack_subgoal_count then
-                 add_string ("\n" ^ Int.toString (length goals) ^ " subgoals")>>
+                 add_string ("\n\n" ^ Int.toString (length goals) ^
+                             " subgoals")>>
                  add_newline
-               else nothing)
+               else add_newline >> add_newline)
              )
            end
        | pr (GSTK{prop = PROVED (th,_), ...}) =

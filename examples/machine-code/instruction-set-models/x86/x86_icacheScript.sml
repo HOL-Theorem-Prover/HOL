@@ -5,6 +5,7 @@ open wordsTheory pred_setTheory pairTheory;
 open x86_coretypesTheory x86_astTheory x86_seq_monadTheory;
 
 val _ = new_theory "x86_icache";
+val _ = ParseExtras.temp_loose_equality()
 
 
 (* instruction cache definitions *)

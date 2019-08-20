@@ -20,7 +20,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "decidable_separationLogicLib";
-
+val _ = ParseExtras.temp_loose_equality()
 
 val nchotomy_thm = prove (``!x.
       (x = sf_emp) \/ (?d l. x = sf_points_to d l) \/
@@ -178,7 +178,7 @@ val EL_DELETE_ELEMENT = store_thm ("EL_DELETE_ELEMENT",
 
 
 
-val DELETE_ELEMENT_DELETE_ELEMENT = store_thm ("EL_DELETE_ELEMENT",
+val DELETE_ELEMENT_DELETE_ELEMENT = store_thm ("DELETE_ELEMENT_DELETE_ELEMENT",
    ``!n1 n2 l. ((n1 <= n2) ==> (DELETE_ELEMENT n2 (DELETE_ELEMENT n1 l) =
                                DELETE_ELEMENT n1 (DELETE_ELEMENT (SUC n2) l)))``,
 
@@ -1457,7 +1457,7 @@ Induct_on `l` THENL [
 
 
 
-val EL2___SF_POINTS_TO_LIST = store_thm ("EL___SF_POINTS_TO_LIST",
+val EL2___SF_POINTS_TO_LIST = store_thm ("EL2___SF_POINTS_TO_LIST",
 
 ``!l n m. ((m < LENGTH (SF_POINTS_TO_LIST l)) /\ (n < m)) ==>
      ?n' m' e e'. (m' < LENGTH l) /\ (n <= n') /\ (m <= m') /\
@@ -1821,7 +1821,7 @@ val LIST_PRODUCT_def = Define `
    (LIST_PRODUCT (e::l1) l2 =
       (MAP (\x. (e, x)) l2)++(LIST_PRODUCT l1 l2))`;
 
-val MEM___LIST_PRODUCT = store_thm ("MEM___DISJOINT_LIST_PRODUCT",
+val MEM___LIST_PRODUCT = store_thm ("MEM___LIST_PRODUCT",
    ``!l1 l2 e1 e2. (MEM (e1, e2) (LIST_PRODUCT l1 l2) =
       (MEM e1 l1 /\ MEM e2 l2))``,
 

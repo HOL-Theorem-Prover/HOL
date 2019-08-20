@@ -78,6 +78,61 @@ fun Cong th = EQ_MP (SYM(SPEC (concl th) markerTheory.Cong_def)) th;
 
 fun unCong th = PURE_REWRITE_RULE [Cong_def] th;
 
+fun Excl nm =
+    let val v = mk_var(nm, alpha)
+    in
+      EQT_ELIM (SPEC v markerTheory.Exclude_def)
+    end
+
+fun mk_marker_const nm = prim_mk_const{Thy = "marker", Name = nm}
+val Excl_t = mk_marker_const "Exclude"
+fun destExcl th =
+    let val c = concl th
+        val f = rator c
+    in
+      if same_const Excl_t f then SOME (#1 (dest_var (rand c)))
+      else NONE
+    end handle HOL_ERR _ => NONE
+
+val Req0_t = mk_marker_const "Req0"
+val Req0_th = EQT_ELIM markerTheory.Req0_def
+val ReqD_t = mk_marker_const "ReqD"
+val ReqD_th = EQT_ELIM markerTheory.ReqD_def
+val mk_Req0 = ADD_ASSUM Req0_t
+val mk_ReqD = ADD_ASSUM ReqD_t
+
+fun dest_Req0 th =
+    if HOLset.member(hypset th, Req0_t) then SOME (PROVE_HYP Req0_th th)
+    else NONE
+fun dest_ReqD th =
+    if HOLset.member(hypset th, ReqD_t) then SOME (PROVE_HYP ReqD_th th)
+    else NONE
+
+fun req0_modify tac th =
+    case dest_Req0 th of
+        NONE => (tac,th)
+      | SOME th => (Ho_Rewrite.REQUIRE0_TAC th o tac, th)
+fun reqD_modify tac th =
+    case dest_ReqD th of
+        NONE => (tac,th)
+      | SOME th => (Ho_Rewrite.REQUIRE_DECREASE_TAC th o tac, th)
+
+fun mk_require_tac tac thl =
+    let
+      fun recurse (accths,acctac) ths =
+          case ths of
+              [] => acctac (List.rev accths)
+            | th::rest =>
+              let
+                val (tac,th) = req0_modify tac th
+                val (tac,th) = reqD_modify tac th
+              in
+                recurse (th::accths,tac) rest
+              end
+    in
+      recurse ([], tac) thl
+    end
+
 (*---------------------------------------------------------------------------*)
 (* Support for abbreviations.                                                *)
 (*---------------------------------------------------------------------------*)
@@ -138,7 +193,7 @@ in
 end
 
 fun fixed_tyvars ctxt pattern =
-  Lib.U (map type_vars_in_term (Lib.intersect ctxt (free_vars pattern)))
+  Lib.U (map type_vars_in_term (op_intersect aconv ctxt (free_vars pattern)))
 
 fun ABB' {redex=l,residue=r} = ABB l r
 

@@ -36,14 +36,14 @@ val FUPDATE_tm = ``$FUPDATE:('a |-> 'b) -> 'a # 'b -> ('a |-> 'b)``;
 
 fun strip_finite_map t =
     let
-	val (op_term, args) = strip_comb t;
+        val (op_term, args) = strip_comb t;
     in
        if (same_const op_term FUPDATE_tm) then
-	   let
-	       val (slist, rest) = (strip_finite_map (el 1 args));
-	   in
+           let
+               val (slist, rest) = (strip_finite_map (el 1 args));
+           in
                ((pairLib.dest_pair (el 2 args))::slist, rest)
-	   end
+           end
        else if (same_const op_term FEMPTY_tm) then ([], NONE)
        else ([], SOME t)
     end handle HOL_ERR _ => ([], SOME t);

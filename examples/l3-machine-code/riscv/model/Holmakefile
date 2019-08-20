@@ -1,9 +1,6 @@
-INCLUDES = ../../common
+INCLUDES = ../../common ../../lib
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-
-all: $(TARGETS) riscv.ui
+all: $(DEFAULT_TARGETS) riscv.ui
 .PHONY: all
 
 riscv.uo: ../../lib/assemblerLib.uo ../../lib/MutableMap16.uo riscv.sml

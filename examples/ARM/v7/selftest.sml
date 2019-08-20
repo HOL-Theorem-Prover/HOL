@@ -1,6 +1,8 @@
 open HolKernel Parse boolLib bossLib
 open armLib arm_random_testingLib;
 
+val ERR = mk_HOL_ERR "selftest"
+
 val _ = wordsLib.guess_lengths();
 
 val _ = set_trace "Unicode" 0;

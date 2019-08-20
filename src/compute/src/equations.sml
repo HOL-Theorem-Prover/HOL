@@ -87,7 +87,7 @@ fun comb_ct {Head,Args,Rws=NeedArg tail, Skip} arg =
 
 fun mk_clos(env,t) =
   case t of
-    Cst (hc,ref(db,b)) => CST{Head=hc, Args=[], Rws= db, Skip = b}
+    Cst (hc,r) => let val (db,b) = !r in CST{Head=hc, Args=[], Rws= db, Skip = b} end
   | Bv i => List.nth(env,i)
   | Fv => NEUTR
   | _ => CLOS{Env=env, Term=t}
@@ -105,11 +105,11 @@ fun inst_rw (th,monitoring,{Rule=RW{thm,rhs,...}, Inst=(bds,tysub)}) =
   let val tirhs = inst_type_dterm (tysub,rhs)
       val tithm = INST_TYPE tysub thm
       val (spec_thm,venv) = Array.foldl inst_one_var (tithm,[]) bds
-      val _ = if monitoring
-               then (Hol_pp.print_term(concl spec_thm); print"\n")
-               else ()
   in
-  (trans_thm th spec_thm, mk_clos(venv,tirhs))
+    if monitoring then
+      !Feedback.MESG_outstream (Parse.term_to_string (concl spec_thm) ^ "\n")
+    else ();
+    (trans_thm th spec_thm, mk_clos(venv,tirhs))
   end
 end;
 

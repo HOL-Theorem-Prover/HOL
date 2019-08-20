@@ -19,8 +19,6 @@ fun mk_atom tm =
   with_exn mk_comb (inst [alpha |-> type_of tm] atom_tm, tm)
           (ERR "mk_atom" "Non-boolean argument");
 
-val _ = (Globals.priming := SOME "");
-
 val branch_join = ref false
 
 (*---------------------------------------------------------------------------*)
@@ -153,9 +151,9 @@ fun K_Normalize exp =
        val (th0, th1) = (K_Normalize (mk_C M), K_Normalize (mk_C N))
        val _ = branch_join := branch_flag   (* restore the branch_join flag *)
        val th3 = SIMP_CONV bool_ss [Once C_LET] exp
-	         handle Conv.UNCHANGED (* case let (v1,v2,..) = ... in ... *)
-		 =>
-		     let val t1 = mk_pabs(v,N)
+                 handle Conv.UNCHANGED (* case let (v1,v2,..) = ... in ... *)
+                 =>
+                     let val t1 = mk_pabs(v,N)
                          val th = INST_TYPE [alpha |-> type_of N,
                                             (* beta  |-> type_of N, *)
                                             gamma |-> type_of v]
@@ -163,9 +161,9 @@ fun K_Normalize exp =
                          val t2 = rhs (concl (SPECL [t1, M] th))
                          (* val theta = match_type (type_of exp) (type_of t2) *)
                          val th2 = prove (mk_eq(exp,t2), (* set_goal([],mk_eq(exp,t2)) *)
-					  SIMP_TAC bool_ss [LET_THM, C_def])
+                                          SIMP_TAC bool_ss [LET_THM, C_def])
                      in
-			 PBETA_RULE th2
+                         PBETA_RULE th2
                      end
        val th4 = (SUBST_2_RULE (th0, th1)) th3
        val th5 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th4
@@ -306,7 +304,7 @@ fun identify_atom tm =
                val M' = if is_atomic M then
                            mk_atom M
                         else if is_pair v andalso is_pair M then
-		           trav M        (* to be revised *)
+                           trav M        (* to be revised *)
                         else trav M
            in mk_plet (v, M', trav N)
            end
@@ -415,7 +413,7 @@ fun SSA_RULE def =
       val body = if flag then #2 (dest_pabs t2) else t2
       val lem1 = if flag then def
                  else prove (mk_eq (fname, mk_pabs(args,body)),
-	           	SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD, Once def])
+                        SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD, Once def])
       val t3 = if flag then t2 else mk_pabs (args,body)
       val lem2 = QCONV SIMP_CONV std_ss [LAMBDA_PROD] t3
                   (* handle HOL_ERR _ => REFL t3 *)

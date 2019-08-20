@@ -270,6 +270,10 @@ fun put_induction th (DFACTS dty) = DFACTS (update_DTY dty (U #induction th) $$)
   | put_induction (COPY th) (NFACTS _) =
       raise ERR "put_induction" "non-datatype but mutrec"
 
+fun put_axiom th (DFACTS dty) = DFACTS (update_DTY dty (U #axiom th) $$)
+  | put_axiom _ (NFACTS(ty,ntyr)) =
+      raise ERR "put_axiom" "updating non-datatype"
+
 fun put_size szinfo (DFACTS dty) =
       DFACTS (update_DTY dty (U #size (SOME szinfo)) $$)
   | put_size (size_tm,ORIG size_rw) (NFACTS(ty,ntyr)) =

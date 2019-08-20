@@ -23,6 +23,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "prob_uniform";
+val _ = ParseExtras.temp_loose_equality()
 
 val std_ss' = std_ss ++ boolSimps.ETA_ss;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
@@ -45,7 +46,7 @@ val (prob_unif_def, prob_unif_ind) = Defn.tprove
   let val d = Hol_defn "prob_unif"
         `(prob_unif 0 s = (0:num, s))
          /\ (prob_unif n s = let (m, s') = prob_unif (n DIV 2) s
-	                in (if shd s' then 2 * m + 1 else 2 * m, stl s'))`
+                        in (if shd s' then 2 * m + 1 else 2 * m, stl s'))`
       val g = `measure (\(x,y). x)`
   in (d, WF_REL_TAC g >> STRIP_TAC)
   end;
@@ -494,7 +495,7 @@ val PROB_BERN_UNIFORM_CUT_PAIR = store_thm
        >> RW_TAC bool_ss [SPECIFICATION])
    >> Rewr
    >> ASSUME_TAC (Q.ISPECL [`bern`, `(\m. m < SUC n) o FST o prob_unif n`, `(1 :real) / 2`]
-			   PROB_COMPL_LE1)
+                           PROB_COMPL_LE1)
    >> POP_ASSUM (MP_TAC o (REWRITE_RULE [PROB_SPACE_BERN, SPACE_BERN_UNIV, GSYM COMPL_DEF]))
    >> MP_TAC (Q.ISPEC `prob_unif n` INDEP_FN_FST_EVENTS)
    >> RW_TAC bool_ss [INDEP_FN_PROB_UNIF, o_ASSOC, PROB_SPACE_BERN]
@@ -522,21 +523,21 @@ val PROB_BERN_UNIFORM_CUT_SUC = store_thm
           prob bern {s | FST (prob_uniform_cut t (SUC n) s) = k} <
           1 / & (SUC n)`
     >- (RW_TAC bool_ss [real_lt]
-	>> STRIP_TAC
-	>> Know
+        >> STRIP_TAC
+        >> Know
            `(1 / 2) pow t <
             prob bern {s | FST (prob_uniform_cut t (SUC n) s) = k'} -
             prob bern {s | FST (prob_uniform_cut t (SUC n) s) = k}`
-	>- (Q.PAT_X_ASSUM `x < y - z` MP_TAC
-	    >> RW_TAC bool_ss [GSYM REAL_LT_ADD_SUB]
-	    >> PROVE_TAC [REAL_ADD_SYM, REAL_LTE_TRANS])
+        >- (Q.PAT_X_ASSUM `x < y - z` MP_TAC
+            >> RW_TAC bool_ss [GSYM REAL_LT_ADD_SUB]
+            >> PROVE_TAC [REAL_ADD_SYM, REAL_LTE_TRANS])
         >> STRIP_TAC
-	>> MP_TAC (Q.SPECL [`t`, `n`, `k'`, `k`] PROB_BERN_UNIFORM_CUT_PAIR)
-	>> RW_TAC bool_ss [GSYM real_lt, abs]
-	>> Suff `F` >- PROVE_TAC []
-	>> POP_ASSUM MP_TAC
-	>> RW_TAC bool_ss []
-	>> PROVE_TAC [POW_HALF_POS, REAL_LT_TRANS, REAL_LT_LE])
+        >> MP_TAC (Q.SPECL [`t`, `n`, `k'`, `k`] PROB_BERN_UNIFORM_CUT_PAIR)
+        >> RW_TAC bool_ss [GSYM real_lt, abs]
+        >> Suff `F` >- PROVE_TAC []
+        >> POP_ASSUM MP_TAC
+        >> RW_TAC bool_ss []
+        >> PROVE_TAC [POW_HALF_POS, REAL_LT_TRANS, REAL_LT_LE])
     >> STRIP_TAC
     >> Suff `prob bern {s | FST (prob_uniform_cut t (SUC n) s) < SUC n} < 1`
     >- RW_TAC bool_ss [PROB_UNIFORM_CUT_RANGE, GUNIV, PROB_BERN_BASIC,
@@ -554,12 +555,12 @@ val PROB_BERN_UNIFORM_CUT_SUC = store_thm
           1 / & (SUC n) <
           prob bern {s | FST (prob_uniform_cut t (SUC n) s) = k}`
     >- (RW_TAC bool_ss [real_lt]
-	>> STRIP_TAC
-	>> Know
+        >> STRIP_TAC
+        >> Know
            `(1 / 2) pow t <
             prob bern {s | FST (prob_uniform_cut t (SUC n) s) = k} -
             prob bern {s | FST (prob_uniform_cut t (SUC n) s) = k'}`
-	>- (RW_TAC bool_ss [GSYM REAL_LT_ADD_SUB]
+        >- (RW_TAC bool_ss [GSYM REAL_LT_ADD_SUB]
             >> ONCE_REWRITE_TAC [REAL_ADD_SYM]
             >> MP_TAC
                (Q.SPECL
@@ -567,14 +568,14 @@ val PROB_BERN_UNIFORM_CUT_SUC = store_thm
                  `1 / & (SUC n)`, `(1 / 2) pow t`]
                 REAL_LE_RADD)
             >> RW_TAC bool_ss []
-	    >> PROVE_TAC [REAL_ADD_SYM, REAL_LET_TRANS])
+            >> PROVE_TAC [REAL_ADD_SYM, REAL_LET_TRANS])
         >> STRIP_TAC
-	>> MP_TAC (Q.SPECL [`t`, `n`, `k`, `k'`] PROB_BERN_UNIFORM_CUT_PAIR)
-	>> RW_TAC bool_ss [GSYM real_lt, abs]
-	>> Suff `F` >- PROVE_TAC []
-	>> POP_ASSUM MP_TAC
-	>> RW_TAC bool_ss []
-	>> PROVE_TAC [POW_HALF_POS, REAL_LT_TRANS, REAL_LT_LE])
+        >> MP_TAC (Q.SPECL [`t`, `n`, `k`, `k'`] PROB_BERN_UNIFORM_CUT_PAIR)
+        >> RW_TAC bool_ss [GSYM real_lt, abs]
+        >> Suff `F` >- PROVE_TAC []
+        >> POP_ASSUM MP_TAC
+        >> RW_TAC bool_ss []
+        >> PROVE_TAC [POW_HALF_POS, REAL_LT_TRANS, REAL_LT_LE])
     >> STRIP_TAC
     >> Suff `1 < prob bern {s | FST (prob_uniform_cut t (SUC n) s) < SUC n}`
     >- RW_TAC bool_ss [PROB_UNIFORM_CUT_RANGE, GUNIV, PROB_BERN_BASIC,

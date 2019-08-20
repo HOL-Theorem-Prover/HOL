@@ -52,8 +52,8 @@ THEN Q.EXISTS_TAC `s` THEN REFL_TAC]))
 
 (* KS analogue of bisimulation (used in muScript) *)
 val BISIM_def = Define `BISIM M1 M2 BS =
-		(!a s1 s2.
-		     (!s1'. BS(s1,s2) /\ (M1.T a)(s1,s1') ==> (?s2'. (M2.T a)(s2,s2') /\ BS(s1',s2')))  /\
-		     (!s2'. BS(s1,s2) /\ (M2.T a)(s2,s2') ==> (?s1'. (M1.T a)(s1,s1') /\ BS(s1',s2')))) `
+                (!a s1 s2.
+                     (!s1'. BS(s1,s2) /\ (M1.T a)(s1,s1') ==> (?s2'. (M2.T a)(s2,s2') /\ BS(s1',s2')))  /\
+                     (!s2'. BS(s1,s2) /\ (M2.T a)(s2,s2') ==> (?s1'. (M1.T a)(s1,s1') /\ BS(s1',s2')))) `
 
 val _ = export_theory();

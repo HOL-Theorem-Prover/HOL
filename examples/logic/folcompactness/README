@@ -1,0 +1,6 @@
+This material is a port of HOL Light material made available in commit
+
+   https://github.com/jrh13/hol-light/commit/013324af7ff715346383fb963d323138
+
+and described in John Harrison's paper “Formalizing Basic First Order
+Model Theory” from TPHOLs 1998 (DOI: 10.1007/BFb0055135).

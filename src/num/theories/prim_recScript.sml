@@ -343,7 +343,7 @@ val SIMP_REC_REL =
  new_definition
   ("SIMP_REC_REL",
    Term`!(fun:num->'a) (x:'a) (f:'a->'a) (n:num).
-            SIMP_REC_REL fun x f n =
+            SIMP_REC_REL fun x f n <=>
                 (fun 0 = x) /\
                 !m. (m < n) ==> (fun(SUC m) = f(fun m))`);
 
@@ -544,6 +544,7 @@ Q.new_definition
   ("wellfounded_def",
    `wellfounded (R:'a->'a->bool) = ~?f. !n. R (f (SUC n)) (f n)`);
 
+val _ = overload_on ("Wellfounded", ``wellfounded``);
 
 (*---------------------------------------------------------------------------
  * First half of showing that the two definitions of wellfoundedness agree.
@@ -636,12 +637,11 @@ REWRITE_TAC[measure_def]
  THEN ACCEPT_TAC WF_LESS);
 val _ = BasicProvers.export_rewrites ["WF_measure"]
 
-val measure_thm = Q.store_thm
-("measure_thm",
- `!f x y. measure f x y = f x < f y`,
- REWRITE_TAC [measure_def,relationTheory.inv_image_def]
-   THEN BETA_TAC
-   THEN REWRITE_TAC []);
-val _ = BasicProvers.export_rewrites ["measure_thm"]
+Theorem measure_thm[simp]:
+   !f x y. measure f x y <=> f x < f y
+Proof
+ REWRITE_TAC [measure_def,relationTheory.inv_image_def] THEN BETA_TAC THEN
+ REWRITE_TAC []
+QED
 
 val _ = export_theory() ;

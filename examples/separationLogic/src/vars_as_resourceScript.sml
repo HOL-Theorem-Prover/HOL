@@ -23,6 +23,7 @@ open Sanity
 *)
 
 val _ = new_theory "vars_as_resource";
+val _ = ParseExtras.temp_loose_equality()
 
 val IS_PERMISSION_STRUCTURE_def = Define `
    IS_PERMISSION_STRUCTURE (f:'a option -> 'a option -> 'a option, total_perm:'a) =
@@ -4146,7 +4147,7 @@ ASM_SIMP_TAC std_ss [IN_INTER]);
 
 
 val VAR_RES_IS_STACK_IMPRECISE___var_res_exp_full_prop =
-store_thm ("VAR_RES_IS_STACK_IMPRECISE___var_res_exp_prop",
+store_thm ("VAR_RES_IS_STACK_IMPRECISE___var_res_exp_full_prop",
 ``!eL P. EVERY (\e. IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e)) eL ==>
          VAR_RES_IS_STACK_IMPRECISE (var_res_exp_full_prop P eL)``,
 

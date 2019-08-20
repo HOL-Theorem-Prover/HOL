@@ -43,9 +43,9 @@ fun rewrite_eq t1 t2 =
 
   fun findMatches ([], l2) = []
     | findMatches (a::l1, l2) =
-	 let val l1' = filter (fn e => not (e = a)) l1;
+         let val l1' = filter (fn e => not (e = a)) l1;
              val l2' = filter (fn e => not (e = a)) l2;
-	     val l = (findMatches (l1',l2')); in
+             val l = (findMatches (l1',l2')); in
          if logical_mem a l2 then a::l else l end;
 
   fun find_negation_pair [] = NONE |
@@ -56,7 +56,7 @@ fun rewrite_eq t1 t2 =
 
   fun dest_quant t = dest_abs (snd (dest_comb t));
   fun is_quant t = is_forall t orelse is_exists t orelse
-		 is_exists1 t;
+                 is_exists1 t;
 
 
   (*returns a list of terms that imply the whole term and
@@ -70,38 +70,38 @@ fun rewrite_eq t1 t2 =
 
   fun get_impl_terms t =
       if is_disj t then
-	  (let val (t1,t2)=dest_disj t;
+          (let val (t1,t2)=dest_disj t;
                val (l11,l12)= get_impl_terms t1;
                val (l21,l22)= get_impl_terms t2;
-	   in
+           in
               (t::(l11 @ l21), t::findMatches (l12, l22))
            end)
       else
       if is_conj t then
-	  (let val (t1,t2)=dest_conj t;
+          (let val (t1,t2)=dest_conj t;
                val (l11,l12)= get_impl_terms t1;
                val (l21,l22)= get_impl_terms t2;
-	   in
+           in
               (t::findMatches (l11, l21), t::(l12 @ l22))
            end)
       else
       if is_neg t then
-	  (let val (l1,l2) = get_impl_terms (dest_neg t) in
-	      (map logical_mk_neg l2, map logical_mk_neg l1)
+          (let val (l1,l2) = get_impl_terms (dest_neg t) in
+              (map logical_mk_neg l2, map logical_mk_neg l1)
           end)
       else
       if is_imp t then
-	  (let val (t1,t2)=dest_imp t;
+          (let val (t1,t2)=dest_imp t;
                val neg_t1 = logical_mk_neg t1;
                val new_t = mk_disj (neg_t1, t2)
            in get_impl_terms new_t end)
       else
       if is_quant t then
           (let
-	      val (v, b) = dest_quant t;
-	      val (l1,l2) = get_impl_terms b;
-	      fun filter_pred t = not (mem v (free_vars t));
-	  in
+              val (v, b) = dest_quant t;
+              val (l1,l2) = get_impl_terms b;
+              fun filter_pred t = not (mem v (free_vars t));
+          in
               (t::(filter filter_pred l1), t::(filter filter_pred l2))
           end)
       else
@@ -126,12 +126,12 @@ fun neg_eq_ASSUME_TAC tac =
 
 fun bool_eq_imp_case_TAC h =
       let
-	  val (h', n) = strip_neg h;
+          val (h', n) = strip_neg h;
           val org_cases_tac = ASM_CASES_TAC h';
           val cases_tac = if (n mod 2 = 0) then org_cases_tac else
                           Tactical.REVERSE org_cases_tac;
       in
-	  cases_tac
+          cases_tac
       end;
 
 
@@ -139,7 +139,7 @@ fun bool_eq_imp_case_TAC h =
 fun bool_eq_imp_solve_CONV c t =
    let
       val thm = prove (t, bool_eq_imp_case_TAC c THEN
-			  bool_eq_imp_solve_TAC);
+                          bool_eq_imp_solve_TAC);
    in
       EQT_INTRO thm
    end;
@@ -183,9 +183,9 @@ fun clean_disj_matches [] acc = acc
     let
        val (disj_imp,_) = get_impl_terms t;
        val acc' = if (null_intersection disj_imp (ts@acc)) then
-		     t::acc
+                     t::acc
                   else
-		     acc;
+                     acc;
     in
        clean_disj_matches ts acc'
     end;
@@ -196,9 +196,9 @@ fun clean_conj_matches [] acc = acc
     let
        val (_, conj_imp) = get_impl_terms t;
        val acc' = if (null_intersection conj_imp (ts@acc)) then
-		     t::acc
+                     t::acc
                   else
-		     acc;
+                     acc;
     in
        clean_conj_matches ts acc'
     end;
@@ -236,13 +236,13 @@ fun bool_neg_pair_CONV t =
       val solving_case_split = find_negation_pair disj_t;
       val disj = isSome solving_case_split;
       val solving_case_split = if disj then solving_case_split else
-			       find_negation_pair conj_t;
+                               find_negation_pair conj_t;
 
       val _ = if (isSome solving_case_split) then () else raise UNCHANGED;
 
       val thm_term = mk_eq (t, if disj then T else F);
       val thm = prove (thm_term, bool_eq_imp_case_TAC (valOf solving_case_split) THEN
-			  bool_eq_imp_solve_TAC);
+                          bool_eq_imp_solve_TAC);
    in
       thm
    end;
@@ -286,16 +286,16 @@ val bool_neg_pair_ss = simpLib.conv_ss {name = "bool_neg_pair_CONV",
 
 
 val imp_thm_conj = prove (``!b1 c1 b2 c2. (b1 ==> c1) ==>
-					   (b2 ==> c2) ==>
-			                   (b1 /\ b2) ==>
-					   (c1 /\ c2)``, SIMP_TAC std_ss []);
+                                           (b2 ==> c2) ==>
+                                           (b1 /\ b2) ==>
+                                           (c1 /\ c2)``, SIMP_TAC std_ss []);
 val imp_thm_disj = prove (``!b1 c1 b2 c2. (b1 ==> c1) ==>
-					   (b2 ==> c2) ==>
-			                   (b1 \/ b2) ==>
-					   (c1 \/ c2)``, SIMP_TAC std_ss [DISJ_IMP_THM]);
+                                           (b2 ==> c2) ==>
+                                           (b1 \/ b2) ==>
+                                           (c1 \/ c2)``, SIMP_TAC std_ss [DISJ_IMP_THM]);
 
 val imp_thm_forall = prove (``(!x. (b1 x ==> b2 x)) ==> ((!x. b1 x) ==> (!x. b2 x))``,
-			      SIMP_TAC std_ss []);
+                              SIMP_TAC std_ss []);
 
 
 fun GEN_IMP v thm =
@@ -329,15 +329,15 @@ let
 in
    if (is_imp thm_term) then
       let
-	 val (t1, t2) = dest_imp thm_term;
-	 val _ = if not (t2 = t) then raise UNCHANGED else ();
-	 val _ = if (t1 = t2) then raise UNCHANGED else ();
+         val (t1, t2) = dest_imp thm_term;
+         val _ = if not (t2 = t) then raise UNCHANGED else ();
+         val _ = if (t1 = t2) then raise UNCHANGED else ();
       in
          thm
       end
    else if (is_eq thm_term) then
       if ((lhs thm_term = t) andalso not (rhs thm_term = t)) then
-	 snd (EQ_IMP_RULE thm)
+         snd (EQ_IMP_RULE thm)
       else raise UNCHANGED
    else if (thm_term = t andalso not (t = T)) then
       snd (EQ_IMP_RULE (EQT_INTRO thm))
@@ -349,36 +349,36 @@ end;
 fun DEPTH_STRENGTHEN_CONV conv t =
   if (is_conj t) then
      let
-	 val (b1,b2) = dest_conj t;
+         val (b1,b2) = dest_conj t;
          val thm1 = DEPTH_STRENGTHEN_CONV conv b1;
          val thm2 = DEPTH_STRENGTHEN_CONV conv b2;
 
-	 val (b1,c1) = dest_imp (concl thm1);
-	 val (b2,c2) = dest_imp (concl thm2);
+         val (b1,c1) = dest_imp (concl thm1);
+         val (b2,c2) = dest_imp (concl thm2);
          val thm3 = ISPECL [b1,c1,b2,c2] imp_thm_conj;
-	 val thm4 = MP thm3 thm1;
-	 val thm5 = MP thm4 thm2;
+         val thm4 = MP thm3 thm1;
+         val thm5 = MP thm4 thm2;
      in
         thm5
      end handle HOL_ERR _ => (raise UNCHANGED)
    else if (is_disj t) then
      let
-	 val (b1,b2) = dest_disj t;
+         val (b1,b2) = dest_disj t;
          val thm1 = DEPTH_STRENGTHEN_CONV conv b1;
          val thm2 = DEPTH_STRENGTHEN_CONV conv b2;
 
-	 val (b1,c1) = dest_imp (concl thm1);
-	 val (b2,c2) = dest_imp (concl thm2);
+         val (b1,c1) = dest_imp (concl thm1);
+         val (b2,c2) = dest_imp (concl thm2);
          val thm3 = ISPECL [b1,c1,b2,c2] imp_thm_disj;
-	 val thm4 = MP thm3 thm1;
-	 val thm5 = MP thm4 thm2;
+         val thm4 = MP thm3 thm1;
+         val thm5 = MP thm4 thm2;
      in
         thm5
      end
    else if (is_forall t) then
      let
         val (var, body) = dest_forall t;
-	val thm_body = DEPTH_STRENGTHEN_CONV conv body;
+        val thm_body = DEPTH_STRENGTHEN_CONV conv body;
         val thm = GEN_ASSUM var thm_body;
         val thm2 = HO_MATCH_MP imp_thm_forall thm;
      in
@@ -386,10 +386,10 @@ fun DEPTH_STRENGTHEN_CONV conv t =
      end
    else
      ((let
-	 val thm = (STRENGTHEN_CONV_WRAPPER conv) t;
+         val thm = (STRENGTHEN_CONV_WRAPPER conv) t;
          val (ante,_) = dest_imp (concl thm);
          val thm2 = DEPTH_STRENGTHEN_CONV conv ante;
-	 val thm3 = IMP_TRANS thm2 thm;
+         val thm3 = IMP_TRANS thm2 thm;
      in
          thm3
      end handle HOL_ERR _ => REFL_IMP_CONV t)
@@ -420,11 +420,11 @@ let
     val new_hyps = filter (fn t => not (mem t preserve_hyps)) (hyp thm);
     val hyp_thms = map (fn t =>
                        ((SOME (CONJ_ASSUMPTIONS_STRENGTHEN_CONV conv preserve_hyps t))
-		        handle HOL_ERR _ => NONE)
+                        handle HOL_ERR _ => NONE)
                         handle UNCHANGED => NONE) new_hyps;
 
     val hyp_thms2 = filter (fn thm_opt => (isSome thm_opt andalso
-					   let val (l,r) = dest_imp (concl (valOf thm_opt)) in (not (l = r)) end handle HOL_ERR _ => false)) hyp_thms;
+                                           let val (l,r) = dest_imp (concl (valOf thm_opt)) in (not (l = r)) end handle HOL_ERR _ => false)) hyp_thms;
     val hyp_thms3 = map (UNDISCH o valOf) hyp_thms2;
 
     val thm2 = foldr (fn (thm1,thm2) => PROVE_HYP thm1 thm2) thm hyp_thms3;
@@ -469,7 +469,7 @@ fun COND_REWR_CONV___with_match thm =
   if (is_imp (concl thm)) then
      if (is_eq (snd (dest_imp (concl thm)))) then
         (UNDISCH o (PART_MATCH (lhs o snd o dest_imp) thm),
-	 (lhs o snd o dest_imp o concl) thm)
+         (lhs o snd o dest_imp o concl) thm)
      else
         (EQT_INTRO o UNDISCH o (PART_MATCH (snd o dest_imp) thm),
          (snd o dest_imp o concl) thm)
@@ -479,7 +479,7 @@ fun COND_REWR_CONV___with_match thm =
          (lhs o concl) thm)
      else
         (EQT_INTRO o PART_MATCH I thm,
-	 concl thm)
+         concl thm)
 
 
 fun COND_REWR_CONV thm =
@@ -496,10 +496,10 @@ fun COND_REWRITE_CONV thmL =
    in
      REPEATC (fn t =>
         let
-	  val convL = Net.match t net;
-	in
+          val convL = Net.match t net;
+        in
           FIRST_CONV convL t
-	end)
+        end)
    end
 
 

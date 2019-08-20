@@ -3,8 +3,7 @@ open set_sepTheory progTheory
 
 val _ = new_theory "state"
 
-infix \\
-val op \\ = op THEN;
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------
    We use Hoare triples defined in examples/machine-code/hoare-triple/progTheory

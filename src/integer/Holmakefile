@@ -1,7 +1,10 @@
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
 
-all: $(TARGETS)
+intLib.uo: int_arithTheory.uo intLib.sml
+
+selftest.exe: selftest.uo intLib.uo
+	$(HOLMOSMLC) -o $@ $<
 
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))

@@ -106,7 +106,7 @@ val ndiv64 = Q.SPEC `n` div64;
 val n1div64 = Q.SPEC `n+1` div64;
 
 val swap_lem =
-  DECIDE (Term `!a b c d : num. a < b /\ c < d ==> (b-a < d-c = b+c < d+a)`);
+  DECIDE (Term `!a b c d : num. a < b /\ c < d ==> (b-a < d-c <=> b+c < d+a)`);
 
 (*---------------------------------------------------------------------------*)
 (* Gross termination proof. Would be better in the integers.                 *)
@@ -123,8 +123,8 @@ val (pBits_def, pBits_ind) =
     `measure \n. if n MOD 64 <= 56 then 56 - n MOD 64 else 120 - n MOD 64`
    THEN RW_TAC std_ss [] THEN FULL_SIMP_TAC arith_ss [] THENL
    [`n MOD 64 < 56` by DECIDE_TAC
-      THEN WEAKEN_TAC (equal (Term `n MOD 64 <= 56`))
-      THEN WEAKEN_TAC (equal (Term `~(n MOD 64 = 56)`))
+      THEN WEAKEN_TAC (aconv (Term `n MOD 64 <= 56`))
+      THEN WEAKEN_TAC (aconv (Term `~(n MOD 64 = 56)`))
       THEN FULL_SIMP_TAC std_ss [LESS_OR_EQ] THENL
       [RW_TAC arith_ss [swap_lem]
         THEN Induct_on `n DIV 64` THEN RW_TAC std_ss [] THENL
@@ -239,7 +239,7 @@ val _ = save_thm("expand_def",expand_def);
 val _ = computeLib.add_persistent_funs ["expand_def"];
 
 (*---------------------------------------------------------------------------*)
-(* Digest a block	                                                     *)
+(* Digest a block                                                            *)
 (*---------------------------------------------------------------------------*)
 
 val digestBlock_def =

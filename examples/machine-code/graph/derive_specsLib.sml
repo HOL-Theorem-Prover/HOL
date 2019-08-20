@@ -1,18 +1,18 @@
-structure derive_specsLib =
+structure derive_specsLib :> derive_specsLib =
 struct
 
 open HolKernel boolLib bossLib Parse;
-open listTheory wordsTheory pred_setTheory arithmeticTheory wordsLib pairTheory;
-open set_sepTheory progTheory helperLib addressTheory;
-
-open backgroundLib file_readerLib stack_introLib stack_analysisLib writerLib;
-
-infix \\ val op \\ = op THEN;
+open wordsTheory pred_setTheory arithmeticTheory pairSyntax;
+open set_sepTheory progTheory addressTheory;
+open helperLib backgroundLib file_readerLib stack_introLib stack_analysisLib
+open writerLib;
+open GraphLangTheory
 
 fun spec_rule x =
   case !arch_name of
-    ARM => arm_spec x
-  | M0  => m0_spec x;
+    ARM   => arm_spec x
+  | M0    => m0_spec x
+  | RISCV => riscv_spec x;
 
 (* code abbrevs *)
 
@@ -28,13 +28,13 @@ fun DISCH_ALL_AS_SINGLE_IMP th = let
 (* thm traces *)
 
 fun next_possible_pcs f (th,i,SOME j,p) =
-     if can (find_term (fn tm => tm = ``GUARD``)) (concl th)
+     if can (find_term (fn tm => aconv tm ``GUARD``)) (concl th)
      then all_distinct [j,p+i] else [j]
   | next_possible_pcs f (th,i,NONE,p) =
     ((th |> concl |> cdr |> find_terms (can (match_term ``p+(n2w n):word32``))
          |> filter (fn tm => wordsSyntax.is_word_add tm)
          |> filter (fn tm => wordsSyntax.is_n2w (cdr tm))
-         |> filter (fn tm => cdr (car tm) = mk_var("p",``:word32``))
+         |> filter (fn tm => aconv (cdr (car tm)) (mk_var("p",``:word32``)))
          |> map (numSyntax.int_of_term o cdr o cdr)
          |> map f
          |> sort (fn x => fn y => x <= y))
@@ -88,23 +88,26 @@ fun construct_thm_trace thms = let
     val (_,p,_,q) = dest_spec (concl th)
     val pv = free_vars p |> filter (fn tm => type_of tm = ``:bool``)
     val qv = free_vars q |> filter (fn tm => type_of tm = ``:bool``)
-    in not (diff pv qv = []) end
+    in not (null (term_diff pv qv)) end
   fun guard_conj guard (th,pre) =
     (th,if resets_status_bits th then pre else bool_normal_form (mk_conj(pre,guard)))
   fun next_directions th =
     ((th |> concl |> cdr |> find_terms (can (match_term ``p+(n2w n):word32``))
          |> filter (fn tm => wordsSyntax.is_word_add tm)
          |> filter (fn tm => wordsSyntax.is_n2w (cdr tm))
-         |> filter (fn tm => cdr (car tm) = mk_var("p",``:word32``))
+         |> filter (fn tm => aconv (cdr (car tm)) (mk_var("p",``:word32``)))
          |> map (numSyntax.int_of_term o cdr o cdr)
          |> sort (fn x => fn y => x <= y)))
   fun mk_TRACE_SPLIT [] = TRACE_END T
     | mk_TRACE_SPLIT [x] = x
     | mk_TRACE_SPLIT xs = TRACE_SPLIT xs
   val aux_calls = ref (tl [(0,T)])
+  fun int_term_mem (p,tm) [] = false
+    | int_term_mem (p,tm) ((x,y)::xs) =
+        (p = x andalso aconv tm y) orelse int_term_mem (p,tm) xs
   (* warning: the handling of guards is not perfect, but maybe good enough *)
   fun aux (p:int) (seen:int list) (guard:term) =
-    if mem (p,guard) (!aux_calls) then TRACE_CUT p else
+    if int_term_mem (p,guard) (!aux_calls) then TRACE_CUT p else
     (aux_calls := (p,guard)::(!aux_calls);
      if mem p seen then TRACE_CUT p else let
        (* finds theorems describing program point p *)
@@ -114,14 +117,14 @@ fun construct_thm_trace thms = let
        (* combine with current guard if theorem does not reset status bits *)
        val xs = map (guard_conj guard) xs
        (* remove dead paths *)
-       val xs = filter (fn (_,pre) => not (pre = F)) xs
+       val xs = filter (fn (_,pre) => not (aconv pre F)) xs
        (* reads the next pcs *)
        val ys = map (fn (th,gg) => (th,gg,next_directions th)) xs
        in mk_TRACE_SPLIT (map (fn (th,gs,nexts) =>
             TRACE_STEP (p, gs, th, mk_TRACE_SPLIT (map
               (fn n => aux (n:int) (p::seen) (gs:term)) nexts))) ys) end)
-  fun is_nop th = (hyp th = []) andalso
-                  can (find_term (fn tm => tm = ``GUARD``)) (concl th)
+  fun is_nop th = (null (hyp th)) andalso
+                  can (find_term (fn tm => aconv tm ``GUARD``)) (concl th)
   fun filter_nops (TRACE_CUT p) = TRACE_CUT p
     | filter_nops (TRACE_END d) = TRACE_END d
     | filter_nops (TRACE_SPLIT ts) = TRACE_SPLIT (map filter_nops ts)
@@ -146,13 +149,13 @@ fun pair_jump_apply (f:int->int) ((th1,x1:int,x2:int option),NONE) = ((th1,x1,ju
 val switch_input = ref (0:int ,[]:string list);
 
 val CARRY_OUT_LEMMA =
-  ``CARRY_OUT x y T``
+  ``CARRY_OUT (x : 'a word) y T``
   |> ONCE_REWRITE_CONV [GSYM WORD_NOT_NOT]
   |> RW [ADD_WITH_CARRY_SUB]
   |> RW [WORD_NOT_NOT]
 
 val OVERFLOW_LEMMA =
-  ``OVERFLOW x y T``
+  ``OVERFLOW (x : 'a word) y T``
   |> ONCE_REWRITE_CONV [GSYM WORD_NOT_NOT]
   |> RW [ADD_WITH_CARRY_SUB]
   |> RW [WORD_NOT_NOT]
@@ -174,23 +177,29 @@ end
 
 local
   val d32 = CONJ (EVAL ``dimindex (:32)``) (EVAL ``dimword (:32)``)
+  val d64 = CONJ (EVAL ``dimindex (:64)``) (EVAL ``dimword (:64)``)
   val word32_mem_pat = ``word32 (READ8 w1 m) (READ8 w2 m) (READ8 w3 m) (READ8 w4 m)``
+  val word64_mem_pat = ``word64 (READ8 w1 m) (READ8 w2 m) (READ8 w3 m) (READ8 w4 m)
+                                (READ8 w5 m) (READ8 w6 m) (READ8 w7 m) (READ8 w8 m)``
   val Align_pat1 = ``arm$Align (w:'a word,n)``
   val Align_pat2 = ``m0$Align (w:'a word,n)``
   (* ``b /\ ~(w ' 0) /\ b2 /\ (b3 ==> ALIGNED w) /\ ~(w ' 1)`` *)
   val clean_ALIGNED_CONV =
     SIMP_CONV (bool_ss++boolSimps.CONJ_ss) [BITS_01_IMP_ALIGNED] THENC
     SIMP_CONV (bool_ss++boolSimps.CONJ_ss) [ALIGNED_IMP_BITS_01]
+  val n2w_64 =
+    n2w_11 |> INST_TYPE [alpha|->``:64``] |> REWRITE_RULE [EVAL ``dimword (:64)``]
   val word_arith_lemma_CONV =
     SIMP_CONV std_ss [word_arith_lemma1] THENC
-    SIMP_CONV std_ss [word_arith_lemma3,word_arith_lemma4]
+    SIMP_CONV std_ss [word_arith_lemma3,word_arith_lemma4,WORD_EQ_SUB_ZERO,n2w_64]
   val flag_conv =
     SIMP_CONV std_ss
       [OVERFLOW_EQ,WORD_MSB_1COMP,WORD_NOT_NOT,
        GSYM carry_out_def,WORD_0_POS,WORD_SUB_RZERO,
-       GSYM (EVAL ``~(0w:word32)``),d32] THENC
+       GSYM (EVAL ``~(0w:word32)``),d32,
+       GSYM (EVAL ``~(0w:word64)``),d64] THENC
     ONCE_REWRITE_CONV [word_1comp_n2w,word32_msb_n2w] THENC
-    SIMP_CONV std_ss [d32]
+    SIMP_CONV std_ss [d32,d64]
   val finalise_pre_cond =
     PRE_CONV (SIMP_CONV (pure_ss++sep_cond_ss) [] THENC
               TRY_CONV (STAR_cond_CONV wordsLib.WORD_SUB_CONV))
@@ -213,15 +222,31 @@ local
   val lemma31 = blastLib.BBLAST_PROVE
     ``(((((31 >< 1) (w:word32)):31 word) @@ (0w:1 word)) : word32) =
       w && 0xFFFFFFFEw``
+  val fix_sub_word64 = prove(
+    ``(n2w n + w = if n < dimword (:'a) DIV 2 then n2w n + (w:'a word)
+                   else w - n2w (dimword (:'a) - n MOD dimword (:'a))) /\
+      (w + n2w n = if n < dimword (:'a) DIV 2 then w + n2w n
+                   else w - n2w (dimword (:'a) - n MOD dimword (:'a)))``,
+    simp [Once WORD_ADD_COMM] \\ rw []
+    \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [GSYM WORD_NEG_NEG]))
+    \\ rewrite_tac [WORD_EQ_NEG,word_2comp_n2w])
+    |> INST_TYPE [alpha|->``:64``]
+    |> SIMP_RULE std_ss [EVAL ``dimword (:64)``]
+  val riscv_mask_byte =
+    blastLib.BBLAST_PROVE ``w2w (w && 2w ≪ 7 − 1w) = (w2w (w:word64)) : word8``
 in
   fun clean_spec_thm th = let
-    val th = th |> REWRITE_RULE [GSYM word32_def,decomp_simp1,GSYM READ32_def,
-                     GSYM WRITE32_def,word_extract_thm,GSYM word_add_with_carry_def]
+    val th = th |> REWRITE_RULE [GSYM word32_def, GSYM word64_def,
+                     decomp_simp1,GSYM READ32_def,GSYM READ64_def,
+                     GSYM WRITE32_def,GSYM WRITE64_def,WRITE64_intro,riscv_mask_byte,
+                     word_extract_thm,GSYM word_add_with_carry_def]
                 |> CONV_RULE (DEPTH_CONV READ8_INTRO_CONV)
                 |> REWRITE_RULE [GSYM WRITE8_def]
-                |> SIMP_RULE std_ss [AC CONJ_COMM CONJ_ASSOC,word_bit_def,d32,
+                |> SIMP_RULE std_ss [AC CONJ_COMM CONJ_ASSOC,word_bit_def,d32,d64,
+                     SHIFT_ZERO(*,WORD_MUL_LSL,word_mul_n2w*),
                      GSYM ADD_ASSOC,lemma31,count_leading_zero_bits_thm]
-    val tms = find_terms (can (match_term word32_mem_pat)) (concl th)
+    val tms32 = find_terms (can (match_term word32_mem_pat)) (concl th)
+    val tms64 = find_terms (can (match_term word64_mem_pat)) (concl th)
     fun READ32_RW tm = let
       val (y,x) = tm |> rand |> dest_comb
       val goal = mk_eq(tm,``READ32 ^(rand y) ^x``)
@@ -229,14 +254,26 @@ in
         SIMP_CONV std_ss [READ32_def,word_arith_lemma1,READ8_def] THENC
         SIMP_CONV std_ss [word_arith_lemma2,word_arith_lemma3,word_arith_lemma4]
       in MATCH_MP EQ_T (c goal) end handle HOL_ERR _ => TRUTH;
-    val th = th |> PURE_REWRITE_RULE (ALIGNED_Align::map READ32_RW tms)
+    fun READ64_RW tm = let
+      val (y,x) = tm |> rand |> dest_comb
+      val goal = mk_eq(tm,``READ64 ^(rand y) ^x``)
+      val c =
+        SIMP_CONV std_ss [READ64_def,word_arith_lemma1,READ8_def] THENC
+        SIMP_CONV std_ss [word_arith_lemma2,word_arith_lemma3,word_arith_lemma4]
+      in MATCH_MP EQ_T (c goal) end handle HOL_ERR _ => TRUTH;
+    val th = th |> PURE_REWRITE_RULE ([ALIGNED_Align] @ map READ32_RW tms32
+                                                      @ map READ64_RW tms64)
     val th = remove_Align th
     val th = CONV_RULE final_conv th
+    val th = SIMP_RULE std_ss [word_cancel_extra] th
+             |> CONV_RULE word_arith_lemma_CONV
+    val th = th |> ONCE_REWRITE_RULE [fix_sub_word64]
+                |> SIMP_RULE std_ss [m0_preprocessing]
     in th end
 end
 
 fun remove_arm_CONFIGURE th =
-  if can (find_term (fn tm => tm = ``arm_CONFIG``)) (concl th) then let
+  if can (find_term (fn tm => aconv tm ``arm_CONFIG``)) (concl th) then let
     val var = ``var:bool``
     val pat = ``arm_CONFIG (VFPv3,ARMv7_A,F,^var,mode)``
     val m = match_term pat
@@ -313,7 +350,7 @@ fun get_spec_for_switch (pos,switch_code) = let
        |> CONV_RULE ((RATOR_CONV o RAND_CONV) (SIMP_CONV std_ss [word_add_n2w]))
        |> RW [GSYM SPEC_MOVE_COND]
   val (_,_,c,_) = dest_spec (concl th)
-  val code_list = find_terms pairSyntax.is_pair c |> all_distinct
+  val code_list = find_terms pairSyntax.is_pair c |> term_all_distinct
   val code_set = code_list |> pred_setSyntax.mk_set
   val th = MATCH_MP SPEC_SUBSET_CODE th |> SPEC code_set
      |> CONV_RULE (BINOP1_CONV (REWRITE_CONV [UNION_SUBSET,
@@ -341,7 +378,7 @@ fun inst_pc_var tools thms = let
     val new_p = subst [mk_var("n",``:num``)|-> numSyntax.mk_numeral (Arbnum.fromInt y)] pattern
     val th = INST [mk_var("p",type_of new_p)|->new_p] th
     val (_,_,_,q) = dest_spec (concl th)
-    val tm = find_term (fn tm => car tm = pc handle HOL_ERR e => false) q handle HOL_ERR _ => ``T``
+    val tm = find_term (fn tm => aconv (car tm) pc handle HOL_ERR e => false) q handle HOL_ERR _ => ``T``
     val cc = SIMP_CONV std_ss [word_arith_lemma1,word_arith_lemma3,word_arith_lemma4]
     val th = CONV_RULE ((RATOR_CONV o RAND_CONV) cc) th
     val thi = QCONV cc tm
@@ -360,14 +397,21 @@ fun pull_let_wider_CONV tm = let
   in lemma end handle HOL_ERR _ => NO_CONV tm;
 
 local
-  val pc_var1 = mk_var("pc",``:word32``)
-  val pc_var2 = mk_var("p",``:word32``)
-  val arm_PC_pat = ``arm_PC t``
+  val pc_var1_32 = mk_var("pc",``:word32``)
+  val pc_var2_32 = mk_var("p",``:word32``)
+  val pc_var1_64 = mk_var("pc",``:word64``)
+  val pc_var2_64 = mk_var("p",``:word64``)
+  fun get_pc_pat () = let
+    val (_,_,_,pc) = get_tools ()
+    in ``^pc w`` end
 in
   fun inst_pc pos th = let
-    val new_pc = ``n2w ^(numSyntax.term_of_int pos):word32``
-    val th = INST [pc_var1 |-> new_pc, pc_var2 |-> new_pc] th
-    val tms = find_terms (can (match_term ``arm_PC t``)) (rand (concl th))
+    val new_pc_32 = ``n2w ^(numSyntax.term_of_int pos):word32``
+    val new_pc_64 = ``n2w ^(numSyntax.term_of_int pos):word64``
+    val th = INST [pc_var1_32 |-> new_pc_32, pc_var2_32 |-> new_pc_32,
+                   pc_var1_64 |-> new_pc_64, pc_var2_64 |-> new_pc_64] th
+    val pc_pat = get_pc_pat ()
+    val tms = find_terms (can (match_term pc_pat)) (rand (concl th))
     val rws = map (QCONV (RAND_CONV EVAL)) tms
     val th = ONCE_REWRITE_RULE rws th
     in th end
@@ -381,10 +425,17 @@ fun mk_call_tag fname is_tail_call = let
 fun dest_call_tag tm = let
   val (xy,z) = dest_comb tm
   val (x,y) = dest_comb xy
-  val _ = (x = ``CALL_TAG``) orelse fail()
+  val _ = (aconv x ``CALL_TAG``) orelse fail()
   in (stringSyntax.fromHOLstring y,
-      if z = T then true else
-      if z = F then false else fail()) end
+      if aconv z T then true else
+      if aconv z F then false else fail()) end
+
+exception NoInstructionSpec
+
+fun wrap_get_spec f asm = f asm
+  handle HOL_ERR e => if #origin_structure e = "arm_progLib"
+  then raise NoInstructionSpec
+  else failwith ("Unable to derive spec for " ^ asm ^ ": " ^ format_ERR e)
 
 fun derive_individual_specs code = let
   val tools = get_tools()
@@ -434,11 +485,16 @@ fun derive_individual_specs code = let
 
   fun remove_tab s =
     s |> explode |> map (fn c => if c = #"\t" then #" " else c) |> implode
-  fun placeholder_spec asm = let
+  fun placeholder_spec asm len = let
     val t = String.tokens (fn x => x = #":") asm |> last |> remove_tab
-    in (SPEC (stringSyntax.fromMLstring t) SKIP_SPEC,4,SOME 4) end
+    in (SPECL [stringSyntax.fromMLstring t, numSyntax.term_of_int len]
+          (case !arch_name of
+             ARM => SKIP_SPEC_ARM
+           | M0 => SKIP_SPEC_M0
+           | RISCV => SKIP_SPEC_RISCV), len, SOME len) end
 
 (*
+  val ((pos,instruction,asm)::code) = code
   val ((pos,instruction,asm)::code) = drop 1 code
   val ((pos,instruction,asm)::code) = drop 17 code
 *)
@@ -457,8 +513,7 @@ fun derive_individual_specs code = let
                   remove_arm_CONFIGURE o
                   inst_pc_rel_const o
                   inst_pc pos o RW [precond_def]
-          val res = f instruction handle HOL_ERR e =>
-                    failwith ("Unable to derive spec for " ^ asm)
+          val res = wrap_get_spec f instruction
           val (x,y) = pair_apply g res
           in (pos,x,y) :: get_specs code end
         else if String.isPrefix "const:" instruction then
@@ -479,18 +534,23 @@ fun derive_individual_specs code = let
              (pos+4,(g (pos+4) th2,4,NONE),SOME (g (pos+4) th2a,4,SOME 4)) ::
              (pos+8,(g (pos+8) th3,4*l-8,SOME 4),NONE) ::
                get_specs code end
-        else if String.isPrefix "dmb" asm then failwith("not supported")
+        else if String.isPrefix "dmb" asm then raise NoInstructionSpec
         else let
           val g = clean_spec_thm o
                   remove_arm_CONFIGURE o
                   inst_pc_rel_const o
                   inst_pc pos o RW [precond_def]
-          val res = f instruction handle HOL_ERR e =>
-                    failwith ("Unable to derive spec for " ^ asm)
+          val res = wrap_get_spec f instruction
+                    handle HOL_ERR _ => raise NoInstructionSpec
           val (x,y) = pair_apply g res
           in (pos,x,y) :: get_specs code end
-      end handle HOL_ERR _ => let
-        val (thi,x1,x2) = (placeholder_spec asm)
+      end handle NoInstructionSpec => let
+        val asm = String.translate (fn c =>
+                      if c = #"\r" then "" else
+                      if c = #"\t" then " " else implode [c]) asm
+        val _ = write_line ("Skipping " ^ instruction ^ " " ^ asm)
+        val len = if size instruction (* in hex *) < 8 then 2 else 4 (* bytes *)
+        val (thi,x1,x2) = (placeholder_spec asm len)
         in (pos,(inst_pc pos thi,x1,x2),NONE) :: get_specs code end
 
 (*
@@ -516,7 +576,7 @@ fun derive_individual_specs code = let
   fun basic_find_pc_rel_load v =
     first (fn (n,(th,i,k),y) => let
       val vs = free_vars (concl th)
-      in mem pc_rel_var vs andalso mem (mk_new_var "new" v) vs end) res
+      in term_mem pc_rel_var vs andalso term_mem (mk_new_var "new" v) vs end) res
   fun find_pc_rel_load nn v = let
     fun exit_pc_is_var th = let
       val v = cdr (find_term (can (match_term ``arm_PC w``)) (cdr (concl th)))
@@ -527,7 +587,7 @@ fun derive_individual_specs code = let
       else (nn,(th,i,x),y)) (butlast res) @ [last res]
     fun is_assign th = let
       val vs = free_vars (concl th)
-      in mem pc_rel_var vs andalso mem (mk_new_var "new" v) vs end
+      in term_mem pc_rel_var vs andalso term_mem (mk_new_var "new" v) vs end
     fun assign curr (TRACE_CUT p) = []
       | assign curr (TRACE_END _) = []
       | assign curr (TRACE_SPLIT qs) = append_lists (map (assign curr) qs)
@@ -577,7 +637,7 @@ fun inst_pc_rel_const tools thms code = let
   fun find_instr [] p = hd []
     | find_instr (x::xs) p = if p < 4 then x else find_instr xs (p-4)
   val pc_rel = mk_var("pc_rel",``:word32``)
-  val has_pc_rel = can (find_term (fn x => x = pc_rel))
+  val has_pc_rel = can (find_term (fn x => aconv x pc_rel))
   fun foo y th =
     if not (has_pc_rel (concl th)) then th else let
       val (_,_,c,_) = dest_spec (concl th)
@@ -599,6 +659,10 @@ fun UNABBREV_CODE_RULE th = let
   val th = CONV_RULE ((RATOR_CONV o RAND_CONV) c) th
   in th end;
 
+fun tidy_up_name name = let
+  val name = if String.isPrefix "_" name then "fun" ^ name else name
+  in String.translate (fn c => if c = #"-" then "_" else implode [c]) name end
+
 fun abbreviate_code name thms = let
   fun extract_code (_,(th,_,_),_) = let val (_,_,c,_) = dest_spec (concl th) in c end
   val cs = map extract_code thms
@@ -611,10 +675,11 @@ fun abbreviate_code name thms = let
   val model_name = (to_lower o implode o take_until (fn x => x = #"_") o explode o fst o dest_const) m
   val x = list_mk_pair (free_vars c)
   val def_name = name ^ "_" ^ model_name
-  val v = if x = ``():unit`` then mk_var(def_name,type_of c)
+  val def_name = tidy_up_name def_name
+  val v = if aconv x ``():unit`` then mk_var(def_name,type_of c)
           else mk_var(def_name,type_of(mk_pabs(x,c)))
   val code_def = new_definition(def_name ^ "_def",
-        if x = ``():unit`` then mk_eq(v,c)
+        if aconv x ``():unit`` then mk_eq(v,c)
         else mk_eq(mk_comb(v,x),c))
   val _ = add_code_abbrev [code_def]
   fun triple_apply f (y,(th1,x1:int,x2:int option),NONE) = (y,(f th1,x1,x2),NONE)
@@ -634,7 +699,7 @@ fun abbreviate_code name thms = let
     val thi = UNDISCH_ALL (PURE_REWRITE_RULE [GSYM AND_IMP_INTRO] (MP thi lemma))
     in thi end
   val thms = map (triple_apply foo) thms
-  val _ = (x = ``():unit``) orelse failwith "code contains variables"
+  val _ = (aconv x ``():unit``) orelse failwith "code contains variables"
   in (code_def,thms) end
 
 fun apply_thms f (i:int,(th,l:int,j:int option),NONE) = (i,(f th,l,j),NONE)
@@ -666,7 +731,8 @@ fun clear_stack_intro_fails () = (stack_intro_fails := []);
 fun print_stack_intro_report () =
   (if length (!stack_intro_fails) = 0 then
     (write_line "No stack intro failures."; [])
-   else (map print_stack_intro_fail (!stack_intro_fails)))
+   else (has_failures := true;
+         map print_stack_intro_fail (!stack_intro_fails)))
 
 fun derive_specs_for sec_name = let
   val code = section_body sec_name
@@ -690,9 +756,38 @@ fun derive_specs_for sec_name = let
 
 (*
 
-  val base_name = ...
+  val base_name = "loop-riscv/example"
+  val base_name = "kernel-riscv/kernel-riscv"
   val _ = read_files base_name []
   val _ = open_current "test"
+  val sec_name = "lookupSlot"
+  val sec_name = "memzero"
+  val sec_name = "memcpy"
+  val sec_name = "isIRQPending"
+  val sec_name = "createNewObjects"
+  val sec_name = "get_num_avail_p_regs"
+  val sec_name = "ensureEmptySlot"
+
+  val _ = file_readerLib.show_code sec_name
+
+  val base_name = "loop/example"
+  val _ = read_files base_name []
+  val _ = open_current "test"
+  val sec_name = "g"
+
+val l3_arm_tools = arm_decompLib.l3_arm_tools
+val (arm_spec,_,_,_) = l3_arm_tools
+val instruction = "e200300f"
+val th = arm_spec instruction
+
+  val (f,_,_,_) = l3_arm_tools
+
+  ``increment``
+
+
+   [(0, "e200300f", "and\tr3, r0, #15"),
+    (4, "e0830180", "add\tr0, r3, r0, lsl #3"),
+    (8, "e12fff1e", "bx\tlr")]:
 
 *)
 

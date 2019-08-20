@@ -131,11 +131,11 @@ local
    val pc_tm = Term.mk_var ("pc", word)
    fun is_big_end tm =
       case Lib.total dest_arm_CPSR_E tm of
-         SOME t => t = boolSyntax.T
+         SOME t => Teq t
        | NONE => false
    fun is_pc_relative tm =
       case Lib.total dest_arm_MEM tm of
-         SOME (t, _) => fst (utilsLib.strip_add_or_sub t) = pc_tm
+         SOME (t, _) => fst (utilsLib.strip_add_or_sub t) ~~ pc_tm
        | NONE => false
    fun rwt (w, a) =
       [Drule.SPECL [a, w] arm_progTheory.MOVE_TO_TEMPORAL_ARM_CODE_POOL,
@@ -173,8 +173,7 @@ in
             Conv.CONV_RULE cnv
                (Drule.SPECL [a, pc_tm, x, y] arm_progTheory.DISJOINT_arm_instr)
       in
-         if Thm.concl thm = tm
-            then Drule.EQT_INTRO thm
+         if Thm.concl thm ~~ tm then Drule.EQT_INTRO thm
          else raise err
       end
    fun extend_arm_code_pool thm =
@@ -302,7 +301,7 @@ local
    val cpsr_footprint =
       stateLib.write_footprint arm_1 arm_2 []
         (mk_rec ("PSR", "CPSR") PSR_components) [] []
-        (fn (s, l) => s = "arm$arm_state_CPSR" andalso l = [st])
+        (fn (s, l) => s = "arm$arm_state_CPSR" andalso tml_eq l [st])
    val fpscr_footprint =
       stateLib.write_footprint arm_1 arm_2 []
         (mk_rec ("FPSCR", "FP_FPSCR") FPSCR_components) [] []
@@ -311,7 +310,7 @@ local
       stateLib.write_footprint arm_1 arm_2
         [("arm$FP_REG_fupd", "arm_FP_REG", ``^st.FP.REG``)] [] []
         [("arm$FP_FPSCR_fupd", fpscr_footprint)]
-        (fn (s, l) => s = "arm$arm_state_FP" andalso l = [st])
+        (fn (s, l) => s = "arm$arm_state_FP" andalso tml_eq l [st])
 in
    val arm_write_footprint =
       stateLib.write_footprint arm_1 arm_2
@@ -468,7 +467,7 @@ local
          (helperLib.POST_CONV (helperLib.MOVE_OUT_CONV ``arm_REG RName_PC``))
    fun is_big_end tm =
       case Lib.total (pairSyntax.strip_pair o dest_arm_CONFIG) tm of
-         SOME [_, _, t, _, _] => t = boolSyntax.T
+         SOME [_, _, t, _, _] => Teq t
        | _ => false
    val le_word_memory_introduction =
       stateLib.introduce_map_definition
@@ -540,6 +539,8 @@ in
       end
 end
 
+fun tdistinct tl = HOLset.numItems (listset tl) = length tl
+
 local
    val RName_PC_tm = Term.prim_mk_const {Thy = "arm", Name = "RName_PC"}
    fun spec_rewrites thm tms = List.map (REWRITE_CONV [thm]) tms
@@ -559,14 +560,14 @@ local
          val rp = List.mapPartial (Lib.total (fst o dest_arm_REG)) p
          val dp = List.mapPartial (Lib.total (fst o dest_arm_FP_REG)) p
       in
-         if not (Lib.mem RName_PC_tm rp) andalso
-            Lib.mk_set rp = rp andalso Lib.mk_set dp = dp
+         if not (tmem RName_PC_tm rp) andalso
+            tdistinct rp andalso tdistinct dp
             then Conv.ALL_CONV tm
          else raise ERR "check_unique_reg_CONV" "duplicate register"
       end
    exception FalseTerm
    fun NOT_F_CONV tm =
-      if tm = boolSyntax.F then raise FalseTerm else Conv.ALL_CONV tm
+      if Feq tm then raise FalseTerm else Conv.ALL_CONV tm
    val WGROUND_RW_CONV =
       Conv.DEPTH_CONV (utilsLib.cache 10 Term.compare bitstringLib.v2w_n2w_CONV)
       THENC utilsLib.WGROUND_CONV
@@ -777,7 +778,7 @@ local
          val opt = process_rule_options options
          val cfg = arm_configLib.mk_config_terms config
       in
-         if !current_config = cfg andalso
+         if tml_eq (!current_config) cfg andalso
             #temporal (get_current_opt ()) = #temporal opt
             then ()
          else ( reset_specs ()

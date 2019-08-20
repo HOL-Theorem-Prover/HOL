@@ -20,6 +20,7 @@ open HolKernel Parse boolLib bossLib arithmeticTheory realTheory
      real_sigmaTheory util_probTheory extrealTheory;
 
 val _ = new_theory "measure";
+val _ = ParseExtras.temp_loose_equality()
 
 val REVERSE = Tactical.REVERSE;
 

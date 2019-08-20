@@ -14,6 +14,7 @@ open arithmeticTheory bitTheory;
 open arm_astTheory;
 
 val _ = new_theory "arm_decoder";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------ *)
 
@@ -22,9 +23,9 @@ val _ = wordsLib.prefer_word();
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = type_abbrev ("word1",  ``:1 word``);
-val _ = type_abbrev ("word10", ``:10 word``);
-val _ = type_abbrev ("word11", ``:11 word``);
+val _ = type_abbrev_pp ("word1",  ``:1 word``);
+val _ = type_abbrev_pp ("word10", ``:10 word``);
+val _ = type_abbrev_pp ("word11", ``:11 word``);
 
 val _ = temp_overload_on("DP",
          ``\opc setflags rn rd mode1.
@@ -651,7 +652,7 @@ val thumbee_decode_def = zDefine`
 (* ------------------------------------------------------------------------ *)
 
 (* Load/store multiple, dual and exclusive, table branch *)
-val thumb2_decode_aux1_def = with_flag (priming, SOME "_") Define`
+val thumb2_decode_aux1_def = Define`
   thumb2_decode_aux1 IT (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
     and b n = ireg2 ' n
@@ -711,7 +712,7 @@ val thumb2_decode_aux1_def = with_flag (priming, SOME "_") Define`
        | _ => Undefined`;
 
 (* Data-processing (shifted register) *)
-val thumb2_decode_aux2_def = with_flag (priming, SOME "_") Define`
+val thumb2_decode_aux2_def = Define`
   thumb2_decode_aux2 (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
     and b n = ireg2 ' n
@@ -777,7 +778,7 @@ val thumb2_decode_aux2_def = with_flag (priming, SOME "_") Define`
        | _ => Undefined`;
 
 (* Coprocessor *)
-val thumb2_decode_aux3_def = with_flag (priming, SOME "_") Define`
+val thumb2_decode_aux3_def = Define`
   thumb2_decode_aux3 (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
     and b n = ireg2 ' n
@@ -825,7 +826,7 @@ val thumb2_decode_aux3_def = with_flag (priming, SOME "_") Define`
 val _ = wordsLib.guess_lengths();
 
 (* Data-processing (modified immediate) *)
-val thumb2_decode_aux4_def = with_flag (priming, SOME "_") Define`
+val thumb2_decode_aux4_def = Define`
   thumb2_decode_aux4 (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
     and ia1 n = ( n + 0  >< n ) ireg1 : word1
@@ -885,7 +886,7 @@ val thumb2_decode_aux4_def = with_flag (priming, SOME "_") Define`
        | _ => Undefined`;
 
 (* Data-processing (plain binary immediate) *)
-val thumb2_decode_aux5_def = with_flag (priming, SOME "_") Define`
+val thumb2_decode_aux5_def = Define`
   thumb2_decode_aux5 (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
     and ia1 n = ( n + 0  >< n ) ireg1 : word1
@@ -922,7 +923,7 @@ val thumb2_decode_aux5_def = with_flag (priming, SOME "_") Define`
          | _ => Undefined`;
 
 (* Branches and miscellaneous control *)
-val thumb2_decode_aux6_def = with_flag (priming, SOME "_") Define`
+val thumb2_decode_aux6_def = Define`
   thumb2_decode_aux6 IT (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
     and b n = ireg2 ' n
@@ -1006,7 +1007,7 @@ val thumb2_decode_aux6_def = with_flag (priming, SOME "_") Define`
                   (S @@ I1 @@ I2 @@ ia10 0 @@ ib10 1)))`;
 
 (* Load/store, memory hints *)
-val thumb2_decode_aux7_def = with_flag (priming, SOME "_") Define`
+val thumb2_decode_aux7_def = Define`
   thumb2_decode_aux7 IT (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
     and b n = ireg2 ' n
@@ -1202,7 +1203,7 @@ val thumb2_decode_aux7_def = with_flag (priming, SOME "_") Define`
            | _ => Undefined`;
 
 (* Data-processing (register) *)
-val thumb2_decode_aux8_def = with_flag (priming, SOME "_") Define`
+val thumb2_decode_aux8_def = Define`
   thumb2_decode_aux8 (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n
     and b n = ireg2 ' n
@@ -1280,7 +1281,7 @@ val thumb2_decode_aux8_def = with_flag (priming, SOME "_") Define`
          | _ => Undefined`;
 
 (* Multiplies, divide and absolute difference *)
-val thumb2_decode_aux9_def = with_flag (priming, SOME "_") Define`
+val thumb2_decode_aux9_def = Define`
   thumb2_decode_aux9 (ireg1 : word16, ireg2 : word16) =
     let a n = ireg1 ' n in
       if ~a 8 then thumb2_decode_aux8 (ireg1,ireg2)
@@ -1346,7 +1347,7 @@ val thumb2_decode_aux9_def = with_flag (priming, SOME "_") Define`
 
 (* ........................................................................ *)
 
-val thumb2_decode_def = with_flag (priming, SOME "_") Define`
+val thumb2_decode_def = Define`
   thumb2_decode arch IT (ireg1 : word16, ireg2 : word16) =
     let IT = if arch IN thumb2_support then IT else 0w
     and a n = ireg1 ' n

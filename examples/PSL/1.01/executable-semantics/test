@@ -242,7 +242,7 @@ EVAL
 quietdec:=true;;
 loadPath := "../official-semantics" :: "../regexp" :: !loadPath;
 app load ["res_quanTools","PropertiesTheory"];
-open PathTheory;
+open PSLPathTheory;
 val resq_SS =
  simpLib.merge_ss
   [res_quanTools.resq_SS,

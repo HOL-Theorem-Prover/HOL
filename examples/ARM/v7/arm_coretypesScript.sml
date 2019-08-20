@@ -131,7 +131,6 @@ val _ = type_abbrev ("proc", ``:num``);
 
 val _ = Hol_datatype `iiid = <| proc : num |>`;
 
-val _ = disable_tyabbrev_printing "proc";
 
 (* ------------------------------------------------------------------------ *)
 

@@ -24,23 +24,23 @@ quietdec := false;
 *)
 
 fun sep_compile def prove_equiv =
-	let
-		val comp = pp_compile def prove_equiv;
-		val _ = print "Translating specification to separation logic\n";
-		val spec = spec_sep comp
-	in
-		spec
-	end
+        let
+                val comp = pp_compile def prove_equiv;
+                val _ = print "Translating specification to separation logic\n";
+                val spec = spec_sep comp
+        in
+                spec
+        end
 
 
 
 val ex1_field_neg_eval = REWRITE_RULE [ex1_prime_def,
-	example1_prime_def] ex1_field_neg_def
+        example1_prime_def] ex1_field_neg_def
 val ex1_field_neg_spec = sep_compile ex1_field_neg_eval true
 
 
 val ex1_field_add_eval = REWRITE_RULE [ex1_prime_def,
-	example1_prime_def] ex1_field_add_def
+        example1_prime_def] ex1_field_add_def
 val ex1_field_add_spec = sep_compile ex1_field_add_eval true;
 
 
@@ -49,14 +49,14 @@ val ex1_field_sub_spec___pre = sep_compile ex1_field_sub_eval false;
 
 
 val ex1_field_sub_spec = PROVE_HYP (
-	prove (hd (hyp ex1_field_sub_spec___pre),
+        prove (hd (hyp ex1_field_sub_spec___pre),
 
 REWRITE_TAC[FUN_EQ_THM] THEN
 Cases_on `x` THEN
 SIMP_TAC std_ss [ex1_field_sub_eval] THEN
 Cases_on `r = 0w` THEN (
-	ASM_SIMP_TAC std_ss [WORD_ADD_0, LET_THM] THEN
-	WORDS_TAC
+        ASM_SIMP_TAC std_ss [WORD_ADD_0, LET_THM] THEN
+        WORDS_TAC
 ))) ex1_field_sub_spec___pre
 
 
@@ -80,17 +80,17 @@ Defn.tprove (fact_def,
 val fact_spec___pre =  sep_compile fact_def false;
 
 val fact_spec =
-	PROVE_HYP
-		(prove (hd (hyp fact_spec___pre),
-			SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD] THEN
-			HO_MATCH_MP_TAC fact_ind THEN
-			REPEAT STRIP_TAC THEN
-			ONCE_REWRITE_TAC [fact_def, WHILE] THEN
-			RW_TAC std_ss [] THEN
-			Q.PAT_ASSUM `~(x = 0w) ==> P x` MP_TAC THEN
-			WORDS_TAC THEN
-			ASM_SIMP_TAC std_ss []))
-		fact_spec___pre
+        PROVE_HYP
+                (prove (hd (hyp fact_spec___pre),
+                        SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD] THEN
+                        HO_MATCH_MP_TAC fact_ind THEN
+                        REPEAT STRIP_TAC THEN
+                        ONCE_REWRITE_TAC [fact_def, WHILE] THEN
+                        RW_TAC std_ss [] THEN
+                        Q.PAT_ASSUM `~(x = 0w) ==> P x` MP_TAC THEN
+                        WORDS_TAC THEN
+                        ASM_SIMP_TAC std_ss []))
+                fact_spec___pre
 
 
 (*

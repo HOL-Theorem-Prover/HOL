@@ -10,8 +10,6 @@ struct
 
 open HolKernel Parse boolLib;
 
-infix THENR ## |->;
-
 type tySubst = (hol_type, hol_type) subst;
 type Subst   = (term, term) subst * tySubst;
 
@@ -23,7 +21,7 @@ local
   open mlibUseful;
   val module = "matchTools";
 in
-  val () = traces := {module = module, alignment = I} :: !traces;
+  val () = add_trace {module = module, alignment = I}
   fun chatting l = tracing {module = module, level = l};
   fun chat s = (trace s; true)
   val ERR = mk_HOL_ERR module;
@@ -189,7 +187,7 @@ fun vunifyl (tmvarP, tyvarP) =
       | unify sub ((tm, tm') :: work) =
       unify' sub work (pinst sub tm) (pinst sub tm')
     and unify' sub work tm tm' =
-      if tm = tm' then unify sub work
+      if aconv tm tm' then unify sub work
       else if tmvarP tm then
         if tmvarP tm' andalso varname tm = varname tm' then
           unify (unify_type sub [type_of tm, type_of tm']) work
@@ -214,9 +212,7 @@ fun vunifyl (tmvarP, tyvarP) =
 fun vunify varP = vunifyl varP ([], []) o chain;
 
 local
-  val uniq = ref 0;
-  fun new_num () = let val n = !uniq val () = uniq := (n + 1) in n end;
-  fun new_name () = "XXfrozenXX" ^ int_to_string (new_num ())
+  fun new_name () = "XXfrozenXX" ^ int_to_string (mlibUseful.new_int ())
   fun correspond tmvarP = map (fn n => (n, new_name ())) o vfree_names tmvarP;
   fun revc c = map (fn (a, b) => (b, a)) c;
   fun csub c tm =

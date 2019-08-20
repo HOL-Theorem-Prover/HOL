@@ -25,6 +25,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "prob";
+val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
@@ -193,13 +194,13 @@ val SPACE_BERN_UNIV = save_thm
 val SIGMA_ALGEBRA_BERN = store_thm
   ("SIGMA_ALGEBRA_BERN", ``sigma_algebra (p_space bern, events bern)``,
    `subset_class (space prob_algebra) (subsets prob_algebra)`
-	by REWRITE_TAC [subset_class_def, SPACE_PROB_ALGEBRA, SUBSET_UNIV]
+        by REWRITE_TAC [subset_class_def, SPACE_PROB_ALGEBRA, SUBSET_UNIV]
    >> RW_TAC std_ss [bern_def, SIGMA_ALGEBRA_SIGMA]);
 
 val SIGMA_PROB_ALGEBRA = store_thm
   ("SIGMA_PROB_ALGEBRA", ``sigma_algebra (sigma (space prob_algebra) (subsets prob_algebra))``,
    `subset_class (space prob_algebra) (subsets prob_algebra)`
-	by REWRITE_TAC [subset_class_def, SPACE_PROB_ALGEBRA, SUBSET_UNIV]
+        by REWRITE_TAC [subset_class_def, SPACE_PROB_ALGEBRA, SUBSET_UNIV]
    >> RW_TAC std_ss [SIGMA_ALGEBRA_SIGMA]);
 
 val PROB_BERN_ALGEBRA = store_thm
@@ -302,7 +303,7 @@ val EVENTS_BERN_SDROP = store_thm
 val PROB_PRESERVING_BERN_SUBSET = store_thm
   ("PROB_PRESERVING_BERN_SUBSET",
    ``prob_preserving (space prob_algebra, subsets prob_algebra, prob_measure)
-		     (space prob_algebra, subsets prob_algebra, prob_measure)
+                     (space prob_algebra, subsets prob_algebra, prob_measure)
      SUBSET prob_preserving bern bern``,
    MATCH_MP_TAC SUBSET_TRANS
    >> Q.EXISTS_TAC `prob_preserving bern (space prob_algebra, subsets prob_algebra, prob bern)`
@@ -311,13 +312,13 @@ val PROB_PRESERVING_BERN_SUBSET = store_thm
         MATCH_MP_TAC PROB_PRESERVING_SUBSET \\
         RW_TAC std_ss [EVENTS_BERN, SPACE_BERN, PROB_SPACE_BERN, PROB_ALGEBRA_ALGEBRA] )
    >> Know `(space prob_algebra, subsets (sigma (space prob_algebra) (subsets prob_algebra)))
-		= (sigma (space prob_algebra) (subsets prob_algebra))`
+                = (sigma (space prob_algebra) (subsets prob_algebra))`
    >- ( REWRITE_TAC [sigma_def, PAIR_EQ, subsets_def] )
    >> Know `subset_class (space prob_algebra) (subsets prob_algebra)`
    >- ( REWRITE_TAC [subset_class_def, SPACE_PROB_ALGEBRA, SUBSET_UNIV] )
    >> RW_TAC std_ss [SUBSET_DEF, PROB_PRESERVING, GSPECIFICATION, EVENTS, PROB, SPACE_BERN,
                      EVENTS_BERN, IN_PREMEASURABLE, p_space_def, m_space_def, space_def,
-		     SIGMA_ALGEBRA_SIGMA, SPACE_SUBSETS_PROB_ALGEBRA] (* 3 goals here *)
+                     SIGMA_ALGEBRA_SIGMA, SPACE_SUBSETS_PROB_ALGEBRA] (* 3 goals here *)
    >- PROVE_TAC [SIGMA_PROB_ALGEBRA, SIGMA_ALGEBRA_ALGEBRA]
    >- (MATCH_MP_TAC IN_SIGMA >> PROVE_TAC [])
    >> PROVE_TAC [PROB_BERN_ALGEBRA]);
@@ -327,7 +328,7 @@ val PROB_PRESERVING_BERN_LIFT = store_thm
    ``!f.
        f IN
        prob_preserving (space prob_algebra, subsets prob_algebra, prob_measure)
-		       (space prob_algebra, subsets prob_algebra, prob_measure)
+                       (space prob_algebra, subsets prob_algebra, prob_measure)
        ==>
        f IN prob_preserving bern bern``,
    MP_TAC PROB_PRESERVING_BERN_SUBSET
@@ -538,7 +539,7 @@ val PROB_BERN_INTER_HALVES = store_thm
    ``!p.
        p IN events bern ==>
        (prob bern (halfspace T INTER p) + prob bern (halfspace F INTER p) =
-	prob bern p)``,
+        prob bern p)``,
    RW_TAC std_ss []
    >> MATCH_MP_TAC EQ_SYM
    >> MATCH_MP_TAC PROB_ADDITIVE
@@ -622,7 +623,7 @@ val EVENTS_BERN_MIRROR = store_thm
    RW_TAC std_ss []
    >> MP_TAC MEASURABLE_BERN_MIRROR
    >> RW_TAC std_ss [IN_MEASURABLE, PREIMAGE_ALT, subsets_def, space_def,
-		     SPACE_BERN, SPACE_PROB_ALGEBRA, INTER_UNIV]
+                     SPACE_BERN, SPACE_PROB_ALGEBRA, INTER_UNIV]
    >> REVERSE EQ_TAC >- RW_TAC std_ss []
    >> POP_ASSUM (MP_TAC o Q.SPEC `s o mirror`)
    >> RW_TAC std_ss [GSYM o_ASSOC, MIRROR_o_MIRROR, I_o_ID]);
@@ -661,7 +662,7 @@ val INDEP_FUNCTION_BERN_SDEST = store_thm
    >> RW_TAC std_ss [PREIMAGE_ALT] (* 3 sub-goals here *)
    >> RW_TAC std_ss [INDEP_EMPTY, INDEP_BERN_UNIV, EVENTS_BERN_STL, PROB_SPACE_BERN] (* 1 left *)
    >> RW_TAC std_ss [indep_def, EVENTS_BERN_BASIC, EVENTS_BERN_STL,
-		     PROB_BERN_HALFSPACE, PROB_BERN_STL_HALFSPACE,
+                     PROB_BERN_HALFSPACE, PROB_BERN_STL_HALFSPACE,
                      PROB_BERN_STL, INTER_UNIV, PROB_BERN_UNIV]);
 
 val INDEP_FUNCTION_BERN_SCONS = store_thm
@@ -848,8 +849,8 @@ val IN_MEASURABLE_BERN_BERN = store_thm
          f IN (p_space bern -> p_space bern) /\
         !s. s IN events bern ==> PREIMAGE f s IN events bern``,
    MP_TAC (REWRITE_RULE [SIGMA_ALGEBRA_BERN, space_def, subsets_def]
-			(Q.ISPECL [`(p_space bern,events bern)`, `(p_space bern,events bern)`]
-				  IN_MEASURABLE))
+                        (Q.ISPECL [`(p_space bern,events bern)`, `(p_space bern,events bern)`]
+                                  IN_MEASURABLE))
    >> RW_TAC std_ss [SPACE_BERN, SPACE_PROB_ALGEBRA, INTER_UNIV]);
 
 val IN_PREMEASURABLE_BERN_BERN = store_thm
@@ -864,7 +865,7 @@ val INDEP_FN_PROB_PRESERVING = store_thm
   ("INDEP_FN_PROB_PRESERVING",
    ``!f. f IN indep_fn ==> (SND o f) IN prob_preserving bern bern``,
    RW_TAC std_ss [indep_fn_def, IN_PROB_PRESERVING, GSPECIFICATION,
-		  MEASURABLE_PREMEASURABLE_BERN]
+                  MEASURABLE_PREMEASURABLE_BERN]
    >> REWRITE_TAC [space_def, subsets_def, SPACE_BERN, SPACE_PROB_ALGEBRA, INTER_UNIV]
    >> Know `PREIMAGE (SND o f) s IN (events bern)`
    >- PROVE_TAC [IN_PREMEASURABLE_BERN_BERN]
@@ -948,8 +949,8 @@ val IN_MEASURABLE_BERN_UNIV = store_thm
          f IN (p_space bern -> UNIV) /\ !s. PREIMAGE f s IN events bern``,
    GEN_TAC
    >> REWRITE_TAC [REWRITE_RULE [SIGMA_ALGEBRA_BERN, space_def, subsets_def]
-				(ISPECL [``(p_space bern, events bern)``, ``(univ(:'a), univ(:'a set))``]
-					IN_MEASURABLE)]
+                                (ISPECL [``(p_space bern, events bern)``, ``(univ(:'a), univ(:'a set))``]
+                                        IN_MEASURABLE)]
    >> EQ_TAC
    >- RW_TAC std_ss [IN_UNIV, SPACE_BERN, SPACE_PROB_ALGEBRA, INTER_UNIV]
    >> RW_TAC std_ss [SPACE_BERN, SPACE_PROB_ALGEBRA, INTER_UNIV]
@@ -1138,7 +1139,7 @@ val INDEP_FN_SDEST = store_thm
    RW_TAC bool_ss [indep_fn_def, GSPECIFICATION, FST_o_SDEST, SND_o_SDEST,
                    IN_MEASURABLE, PREIMAGE_ALT, EVENTS_BERN_STL, EVENTS_BERN_SHD,
                    COUNTABLE_BOOL, UNIV_SIGMA_ALGEBRA, SIGMA_ALGEBRA_BERN,
-		   space_def, subsets_def, SPACE_BERN_UNIV, IN_FUNSET, IN_UNIV, INTER_UNIV]
+                   space_def, subsets_def, SPACE_BERN_UNIV, IN_FUNSET, IN_UNIV, INTER_UNIV]
    >> Q.EXISTS_TAC `{[T]; [F]}`
    >> RW_TAC bool_ss [IN_INSERT, NOT_IN_EMPTY, prefix_cover_def,
                       IMAGE_INSERT, IMAGE_EMPTY, BIGUNION_INSERT,
@@ -1400,18 +1401,18 @@ val INDEP_FN_BIND = store_thm
     >> Q.EXISTS_TAC `range (FST o f) CROSS UNIV`
     >> CONJ_TAC
     >- ( ASSUME_TAC (ISPECL [``(p_space bern, events bern)``,
-			     ``(univ(:'a), univ(:'a set))``, ``(p_space bern, events bern)``]
-			    MEASURABLE_PROD_SIGMA) \\
+                             ``(univ(:'a), univ(:'a set))``, ``(p_space bern, events bern)``]
+                            MEASURABLE_PROD_SIGMA) \\
          POP_ASSUM (ASSUME_TAC o (REWRITE_RULE [space_def, subsets_def])) \\
          POP_ASSUM MATCH_MP_TAC \\
          RW_TAC std_ss [SIGMA_ALGEBRA_BERN] )
     >> REWRITE_TAC [UNIV_SIGMA_ALGEBRA]
     >> CONJ_TAC
     >- RW_TAC std_ss [SUBSET_DEF, IN_CROSS, IN_UNIV, range_def, IN_IMAGE, o_THM,
-		      space_def, IN_FUNSET]
+                      space_def, IN_FUNSET]
     >> CONJ_TAC
     >- ( RW_TAC std_ss [SUBSET_DEF, IN_CROSS, IN_UNIV, range_def, IN_IMAGE, o_THM,
-			space_def, IN_FUNSET] \\
+                        space_def, IN_FUNSET] \\
          Q.EXISTS_TAC `x'` >> RW_TAC std_ss [] )
     >> Q.PAT_X_ASSUM `countable X` MP_TAC
     >> Know `!x. FST o g x IN measurable (p_space bern, events bern) (univ(:'b), univ(:'b set))`
@@ -1443,7 +1444,7 @@ val INDEP_FN_BIND = store_thm
     >> POP_ASSUM MP_TAC
     >> POP_ASSUM (MP_TAC o Q.SPEC `f' (n:num)`)
     >> RW_TAC std_ss [IN_MEASURABLE, IN_UNIV, subsets_def, space_def,
-		      SPACE_BERN_UNIV, INTER_UNIV, IN_FUNSET],
+                      SPACE_BERN_UNIV, INTER_UNIV, IN_FUNSET],
     (* goal 3 (of 4) *)
     RW_TAC bool_ss [BIND_DEF, o_ASSOC]
     >> MATCH_MP_TAC MEASURABLE_COMP_STRONGER
@@ -1451,19 +1452,19 @@ val INDEP_FN_BIND = store_thm
     >> Q.EXISTS_TAC `range (FST o f) CROSS UNIV`
     >> CONJ_TAC
     >- ( ASSUME_TAC (ISPECL [``(p_space bern, events bern)``,
-			     ``(univ(:'a), univ(:'a set))``, ``(p_space bern, events bern)``]
-			    MEASURABLE_PROD_SIGMA) \\
+                             ``(univ(:'a), univ(:'a set))``, ``(p_space bern, events bern)``]
+                            MEASURABLE_PROD_SIGMA) \\
          POP_ASSUM (ASSUME_TAC o (REWRITE_RULE [space_def, subsets_def])) \\
          POP_ASSUM MATCH_MP_TAC \\
          RW_TAC std_ss [SIGMA_ALGEBRA_BERN] )
     >> REWRITE_TAC [SIGMA_ALGEBRA_BERN]
     >> CONJ_TAC
     >- ( RW_TAC std_ss [SUBSET_DEF, IN_CROSS, IN_UNIV, range_def, IN_IMAGE, o_THM,
-			space_def, IN_FUNSET]
+                        space_def, IN_FUNSET]
          >> REWRITE_TAC [SPACE_BERN_UNIV, IN_UNIV] )
     >> CONJ_TAC
     >- ( RW_TAC std_ss [SUBSET_DEF, IN_CROSS, IN_UNIV, range_def, IN_IMAGE, o_THM,
-			space_def, IN_FUNSET] \\
+                        space_def, IN_FUNSET] \\
          Q.EXISTS_TAC `x'` >> RW_TAC std_ss [] )
     >> Q.PAT_X_ASSUM `countable X` MP_TAC
     >> Know `!x. SND o g x IN measurable (p_space bern, events bern) (p_space bern, events bern)`
@@ -1498,7 +1499,7 @@ val INDEP_FN_BIND = store_thm
     >> POP_ASSUM K_TAC
     >> POP_ASSUM (MP_TAC o Q.SPEC `f' (n:num)`)
     >> RW_TAC std_ss [IN_MEASURABLE, IN_UNIV, subsets_def, space_def,
-		      SPACE_BERN_UNIV, INTER_UNIV, IN_FUNSET],
+                      SPACE_BERN_UNIV, INTER_UNIV, IN_FUNSET],
     (* goal 4 (of 4) *)
     POP_ASSUM (MP_TAC o CONV_RULE (REDEPTH_CONV FORALL_AND_CONV))
     >> RW_TAC std_ss []
@@ -1903,7 +1904,7 @@ val INDEP_FN_ENUM_RANGE = store_thm
 val PROB_COMPL_BERN = save_thm
   ("PROB_COMPL_BERN",
     REWRITE_RULE [PROB_SPACE_BERN, SPACE_BERN_UNIV, GSYM COMPL_DEF]
-		 (SPEC ``bern`` (INST_TYPE [``:'a`` |-> ``:num set``] PROB_COMPL)));
+                 (SPEC ``bern`` (INST_TYPE [``:'a`` |-> ``:num set``] PROB_COMPL)));
 
 val PROB_BERN_BIND_UPPER = store_thm
   ("PROB_BERN_BIND_UPPER",
@@ -2192,7 +2193,7 @@ val PROB_BERN_PROB_WHILE_CUT = store_thm
        >> Rewr
        >> Q.PAT_X_ASSUM `!a. b a IN indep_fn` (MP_TAC o Q.SPEC `a`)
        >> RW_TAC std_ss [indep_fn_def, GSPECIFICATION, IN_MEASURABLE, IN_UNIV,
-			 IN_FUNSET, space_def, subsets_def, SPACE_BERN_UNIV, INTER_UNIV])
+                         IN_FUNSET, space_def, subsets_def, SPACE_BERN_UNIV, INTER_UNIV])
    >> STRIP_TAC
    >> Q.SPEC_TAC (`a`, `a`)
    >> Induct_on `n`
@@ -2528,7 +2529,7 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
        >> Suff `(FUNPOW (UNCURRY b) n o UNIT a') IN indep_fn`
        >- ( RW_TAC std_ss [indep_fn_def, GSPECIFICATION, IN_MEASURABLE, IN_UNIV] \\
             FULL_SIMP_TAC std_ss [space_def, subsets_def, IN_FUNSET, IN_UNIV,
-	                          SPACE_BERN_UNIV, INTER_UNIV] )
+                                  SPACE_BERN_UNIV, INTER_UNIV] )
        >> MATCH_MP_TAC INDEP_FN_FUNPOW
        >> RW_TAC std_ss [])
    >> RW_TAC std_ss []
@@ -2890,7 +2891,7 @@ val PROB_WHILE_WITNESS_MEASURABLE_FST = store_thm
        (!a. b a IN indep_fn) ==>
        FST o prob_while_witness c b a IN measurable (p_space bern, events bern) (UNIV, UNIV)``,
    RW_TAC std_ss [IN_MEASURABLE, IN_UNIV, UNIV_SIGMA_ALGEBRA, SIGMA_ALGEBRA_BERN,
-		 space_def, subsets_def, SPACE_BERN_UNIV, INTER_UNIV, IN_FUNSET]
+                 space_def, subsets_def, SPACE_BERN_UNIV, INTER_UNIV, IN_FUNSET]
    >> Know
       `PREIMAGE (FST o prob_while_witness c b a) s =
        (if FST (ARB : 'a # (num -> bool)) IN s then
@@ -2929,7 +2930,7 @@ val PROB_WHILE_WITNESS_MEASURABLE_FST = store_thm
        >> POP_ASSUM (MP_TAC o Q.SPEC `n`)
        >> RW_TAC std_ss [indep_fn_def, GSPECIFICATION, IN_MEASURABLE, IN_UNIV]
        >> FULL_SIMP_TAC std_ss [space_def, subsets_def, IN_FUNSET, IN_UNIV,
-				SPACE_BERN_UNIV, INTER_UNIV])
+                                SPACE_BERN_UNIV, INTER_UNIV])
    >> STRIP_TAC
    >> Know `{x | ?n. ~c (FST (FUNPOW (UNCURRY b) n (a, x)))} IN events bern`
    >- (RW_TAC std_ss [GBIGUNION_IMAGE]
@@ -2992,7 +2993,7 @@ val PROB_WHILE_WITNESS_MEASURABLE_SND = store_thm
        SND o prob_while_witness c b a IN
        measurable (p_space bern, events bern) (p_space bern, events bern)``,
    RW_TAC bool_ss [IN_MEASURABLE, IN_UNIV, SIGMA_ALGEBRA_BERN, space_def, subsets_def,
-		   SPACE_BERN_UNIV, INTER_UNIV, IN_FUNSET, IN_UNIV]
+                   SPACE_BERN_UNIV, INTER_UNIV, IN_FUNSET, IN_UNIV]
    >> Know
       `PREIMAGE (SND o prob_while_witness c b a) s =
        (if SND (ARB : 'a # (num -> bool)) IN s then
@@ -3381,7 +3382,7 @@ val PROB_BERN_MIRROR = store_thm
    RW_TAC std_ss []
    >> MP_TAC PROB_PRESERVING_BERN_MIRROR
    >> RW_TAC std_ss [PROB_PRESERVING, GSPECIFICATION, PREIMAGE_ALT,
-		     SPACE_BERN_UNIV, INTER_UNIV]);
+                     SPACE_BERN_UNIV, INTER_UNIV]);
 
 val NONEVENT_SEQ_ALT = store_thm
   ("NONEVENT_SEQ_ALT",

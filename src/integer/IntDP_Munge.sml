@@ -32,12 +32,15 @@ fun land tm = rand (rator tm)
 
 fun non_zero tm =
     if is_negated tm then non_zero (rand tm)
-    else tm <> zero_tm
+    else tm !~ zero_tm
 
 (* returns a list of pairs, where the first element of each pair is a non-
    Presburger term that occurs in tm, and where the second is a boolean
    that is true if none of the variables that occur in the term are
    bound by a quantifier. *)
+fun bcmp (b1, b2) = if b1 = b2 then EQUAL else if not b1 then LESS else GREATER
+val cmp = pair_compare (Term.compare, bcmp)
+val E = HOLset.empty cmp
 fun non_presburger_subterms0 ctxt tm =
   if
     (is_forall tm orelse is_exists1 tm orelse is_exists tm) andalso
@@ -45,35 +48,40 @@ fun non_presburger_subterms0 ctxt tm =
   then let
     val abst = rand tm
   in
-    non_presburger_subterms0 (Lib.union [bvar abst] ctxt) (body abst)
+    non_presburger_subterms0 (listset [bvar abst] Un ctxt) (body abst)
   end
   else if is_neg tm orelse is_absval tm orelse is_negated tm then
     non_presburger_subterms0 ctxt (rand tm)
   else if (is_cond tm) then let
     val (b, t1, t2) = dest_cond tm
   in
-    Lib.U [non_presburger_subterms0 ctxt b, non_presburger_subterms0 ctxt t1,
-           non_presburger_subterms0 ctxt t2]
+    non_presburger_subterms0 ctxt b Un non_presburger_subterms0 ctxt t1 Un
+    non_presburger_subterms0 ctxt t2
   end
   else if (is_great tm orelse is_geq tm orelse is_eq tm orelse
            is_less tm orelse is_leq tm orelse is_conj tm orelse
            is_disj tm orelse is_imp tm orelse is_plus tm orelse
            is_minus tm orelse is_linear_mult tm) then
-    Lib.union (non_presburger_subterms0 ctxt (land tm))
-              (non_presburger_subterms0 ctxt (rand tm))
+    non_presburger_subterms0 ctxt (land tm) Un
+    non_presburger_subterms0 ctxt (rand tm)
   else if (is_divides tm andalso is_int_literal (land tm)) then
     non_presburger_subterms0 ctxt (rand tm)
   else if ((is_div tm orelse is_mod tm) andalso
            is_int_literal (rand tm) andalso
            non_zero (rand tm)) then
     non_presburger_subterms0 ctxt (land tm)
-  else if is_int_literal tm then []
-  else if is_var tm andalso type_of tm = int_ty then []
-  else if (tm = true_tm orelse tm = false_tm) then []
-  else [(tm, not (List.exists (fn v => free_in v tm) ctxt))]
+  else if is_int_literal tm then E
+  else if is_var tm andalso type_of tm = int_ty then E
+  else if Teq tm orelse Feq tm then E
+  else HOLset.add(E,
+                  (tm, not (HOLset.foldl
+                              (fn (v,acc) => acc orelse free_in v tm)
+                              false
+                              ctxt)))
 
-val is_presburger = null o non_presburger_subterms0 []
-val non_presburger_subterms = map #1 o non_presburger_subterms0 []
+val is_presburger = HOLset.isEmpty o non_presburger_subterms0 ES
+fun non_presburger_subterms t =
+  HOLset.foldl (fn ((t,b),A) => t::A) [] (non_presburger_subterms0 ES t)
 
 fun is_natlin_mult tm =
     numSyntax.is_mult tm andalso
@@ -163,7 +171,7 @@ end
 
 fun decide_fv_presburger DPname DP tm = let
   fun is_int_const tm = type_of tm = int_ty andalso is_const tm
-  val fvs = free_vars tm @ (Lib.mk_set (find_terms is_int_const tm))
+  val fvs = free_vars tm @ (Lib.op_mk_set aconv (find_terms is_int_const tm))
   fun dest_atom tm = dest_const tm handle HOL_ERR _ => dest_var tm
   fun gen(bv, t) =
     if is_var bv then mk_forall(bv, t)
@@ -330,7 +338,7 @@ in
     open Rsyntax
     val {Bvar=v,Body=bdy} = dest_abs tm
     val {cond,larm=x,rarm=y} = Rsyntax.dest_cond bdy
-    val b = assert (not o Lib.mem v o free_vars) cond
+    val b = assert (not o tmem v o free_vars) cond
     val _ = assert (fn t => type_of t <> bool) x
     val xf = mk_abs{Bvar=v,Body=x}
     val yf = mk_abs{Bvar=v,Body=y}
@@ -414,7 +422,7 @@ fun decide_nonpbints_presburger DPname DP subterms tm = let
   fun tactic subtm tm =
     (* return both a new term and a function that will convert a theorem
        of the form <new term> = T into tm = T *)
-    if is_comb subtm andalso rator subtm = int_injection then let
+    if is_comb subtm andalso rator subtm ~~ int_injection then let
       val n = rand subtm
       val thm0 = abs_inj subtm tm (* |- tm = P subtm *)
       val tm0 = rhs (concl thm0)
@@ -456,14 +464,15 @@ fun BASIC_CONV DPname DP tm = let
   val stage1 = PURE_REWRITE_CONV int_rewrites THENC
                ONCE_DEPTH_CONV normalise_mult
   fun stage2 tm =
-    case non_presburger_subterms0 [] tm of
-      [] => decide_fv_presburger DPname DP tm
-    | non_pbs => let
-      in
-        case List.find (fn (t,_) => type_of t <> int_ty) non_pbs of
+    let
+      val non_pbs = non_presburger_subterms0 ES tm
+    in
+      if HOLset.isEmpty non_pbs then decide_fv_presburger DPname DP tm
+      else
+        case HOLset.find (fn (t,_) => type_of t <> int_ty) non_pbs of
           NONE => let
             val (igoal, initvfn) =
-                case List.find (fn (_, b) => not b) non_pbs of
+                case HOLset.find (fn (_, b) => not b) non_pbs of
                   NONE => (tm, I)
                 | SOME _ =>
                   if goal_qtype tm = qsUNIV then
@@ -471,7 +480,8 @@ fun BASIC_CONV DPname DP tm = let
                   else tacRGEN tm
             val init_nonpbs =
                 Listsort.sort (inv_img_cmp #1 subtm_rel)
-                              (non_presburger_subterms0 [] igoal)
+                              (HOLset.listItems
+                                 (non_presburger_subterms0 ES igoal))
           in
             case List.find (fn (_, b) => not b) init_nonpbs of
               NONE =>
@@ -496,18 +506,14 @@ fun ok_asm th = let
   fun check(t, free_p) =
       mem (type_of t) [intSyntax.int_ty, numSyntax.num] andalso
       (exists_th orelse free_p)
-  val dodgy_subterms0 = non_presburger_subterms0 [] (concl th)
+  val dodgy_subterms0 = non_presburger_subterms0 ES (concl th)
   fun ignore_nats ((t, free_p), acc) = let
     val nat_set = nat_nonpresburgers t
     fun foldthis (nt, acc) = HOLset.add(acc, (nt, free_p))
   in
     HOLset.foldl foldthis acc nat_set
   end
-  fun bcompare (b1, b2) = if b1 = b2 then EQUAL
-                          else if b1 then GREATER
-                          else LESS
-  val empty_pairs = HOLset.empty (pair_compare(Term.compare, bcompare))
-  val dodgy_subterms = List.foldl ignore_nats empty_pairs dodgy_subterms0
+  val dodgy_subterms = HOLset.foldl ignore_nats E dodgy_subterms0
 in
   not (isSome (HOLset.find (not o check) dodgy_subterms))
 end

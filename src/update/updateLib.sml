@@ -39,10 +39,8 @@ in
       let
          val b = Lib.with_exn boolSyntax.dest_neg tm (ERR "NOT_CONV" "")
       in
-         if b = boolSyntax.T
-            then thm1
-         else if b = boolSyntax.F
-            then thm2
+         if Teq b then thm1
+         else if Feq b then thm2
          else raise ERR "NOT_CONV" ""
       end
 end
@@ -78,8 +76,7 @@ in
                val ((a, _), _) =
                   Lib.with_exn combinSyntax.dest_update_comb u Conv.UNCHANGED
             in
-               if a = v
-                  then cnv1 tm
+               if a ~~ v then cnv1 tm
                else (cnv3 THENC Conv.TRY_CONV APPLY_CONV) tm
             end
       in

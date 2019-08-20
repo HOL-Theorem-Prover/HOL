@@ -2,47 +2,35 @@
 (*    Tests                                                                  *)
 (*---------------------------------------------------------------------------*)
 
-app load ["regexpLib", "Interval"];
+app load ["regexpLib"];
 
-open regexpLib Interval;
+open regexpLib Regexp_Numerics;
 
 fun matcher q = #matchfn(regexpLib.matcher SML (Regexp_Type.fromQuote q));
 fun dom q = Regexp_Match.domBrz (Regexp_Type.fromQuote q);
 
-val _ = 
-let fun pp2polypp (ppfn: PP.ppstream -> 'a -> unit) =
-     let fun f pps x = Parse.respect_width_ref Globals.linewidth ppfn pps x
-                       handle e => Raise e
-     in
-       fn depth => fn printArgTypes => fn e:'a =>
-        PolyML.PrettyString (PP.pp_to_string (!Globals.linewidth) f e)
-     end
- in 
-   PolyML.addPrettyPrinter (pp2polypp Regexp_Type.pp_regexp)
- end;
-
 val test = matcher `foobar`;
- not (test "fo2b") 
+ not (test "fo2b")
  andalso (test "foobar")
  andalso not(test "foobar1");
 
 val test = matcher `\d*`;
-  test"" 
-andalso test"1" 
+  test""
+andalso test"1"
 andalso test"11434123412341234235456337467456745675256245"
 andalso not(test "a")
 andalso not(test "_[");
 
 val test = matcher `\w{1,20}`;
   not(test "")
-andalso test "a" 
+andalso test "a"
 andalso test "foobar"
 andalso test "fo12_obar_567abcdef"
 andalso test "fo12_obar_567abcdefg"
 andalso not(test "fo12_obar_567abcdefgh");
 
 val test = matcher `.*1`;
-test"asdfasdfasd1" 
+test"asdfasdfasd1"
 andalso not(test"")
 andalso test"1";
 
@@ -75,7 +63,7 @@ andalso test "a"
 andalso test "baa";
 
 val test = matcher `b*ab*ab*`;
-test"bbbaa" 
+test"bbbaa"
 andalso test"aa"
 andalso test"bababb";
 
@@ -98,13 +86,13 @@ andalso test"bababababa";
 
 (* Beware the juxtaposition of * and ) in the quotation for some SML lexers. *)
 val test = matcher `~((.*aa.*)|(.*bb.*))`;
-             (true  = test ("")) 
+             (true  = test (""))
    andalso   (true  = test ("a"))
    andalso   (true  = test ("b"))
-   andalso   (false = test ("aa")) 
-   andalso   (true  = test ("ab")) 
-   andalso   (true  = test ("ba")) 
-   andalso   (false = test ("bb")) 
+   andalso   (false = test ("aa"))
+   andalso   (true  = test ("ab"))
+   andalso   (true  = test ("ba"))
+   andalso   (false = test ("bb"))
    andalso   (true  = test ("ababababababababababababababababababababababababababab"))
    andalso   (false = test ("abababababababababababbababababababababababababababab"));
 
@@ -192,27 +180,31 @@ val ilist = [0x59, 0x55, 0x56, 0x34, 0x4d, 0x50, 0x45, 0x47, 0x32,
 
 test (String.implode (map Char.chr ilist));
 
-val date_matcher = time matcher 
+val date_matcher = time matcher
    `(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)`;
 
   date_matcher "2016-5-21 20:23:24"
-  andalso 
+  andalso
   date_matcher "2010-12-1 0:0:0"
-  andalso 
+  andalso
   date_matcher "2019-1-22 11:11:11"
-  andalso 
+  andalso
   date_matcher "2016-5-21 20:23:24"
-  andalso 
+  andalso
   not (date_matcher "20162107-501-2100 20000:23000:")
-  andalso 
+  andalso
   not (date_matcher "foo-bar-baz")
-; 
+;
+
+(*---------------------------------------------------------------------------*)
+(* Time-stamped data in JSON format                                          *)
+(*---------------------------------------------------------------------------*)
 
 val time_matcher = time matcher
   `\[\{"time":\d{13}(:\d{3})?,\w{1,20}:\{(\w{1,25}:\w{1,30},?)+\}\}\]`;
 
 time_matcher "[{\"time\":1234567890123:000,foo:{ted:teddy,sam:sammy}}]"
-  andalso 
+  andalso
 not (time_matcher "[{\"time\":1234567890123:000,foo:{ted:teddy,   sam:sammy}}]")
   andalso
 time_matcher "[{\"time\":1234567890123,foo:{ted:teddy,sam:sammy}}]"
@@ -237,9 +229,7 @@ time_matcher "[{\"time\":1234567890123,foo:{ted:teddy}}]";
 (* There are further requirements, e.g., characters need to be "minimally"   *)
 (* (or canonically) encoded. This is also known as the "overlong" encoding   *)
 (* issue. I am not yet sure whether this can be handled nicely with a regex. *)
-
 (*---------------------------------------------------------------------------*)
-
 
 val utf8_matcher =
  time matcher
@@ -275,70 +265,91 @@ Lib.all (equal false) (map (test o int2string 3) (upto 2500001 2502999));
 (*---------------------------------------------------------------------------*)
 
 val test = matcher `\i{~4,0}`;
-signed_width_256 ~4 = 1;
 Lib.all (equal true) (map (test o int2string 1) (upto ~4 0));
 Lib.all (equal false) (map (test o int2string 1) [~5, ~6, ~64, 1, 2, 3, 4]);
 
 val test = matcher `\i{~90,0}`;
-signed_width_256 ~90 = 1;
 Lib.all (equal true) (map (test o int2string 1) (upto ~90 0));
 Lib.all (equal false) (map (test o int2string 1) (upto ~128 ~91));
 Lib.all (equal false) (map (test o int2string 1) (upto 1 127));
 
 val test = matcher `\i{~90,90}`;
-signed_width_256 ~90 = 1;
 Lib.all (equal true) (map (test o int2string 1) (upto ~90 90));
 Lib.all (equal false) (map (test o int2string 1) (upto ~128 ~91));
 Lib.all (equal false) (map (test o int2string 1) (upto 91 127));
 
 val test = matcher `\i{~180,0}`;
-signed_width_256 ~180 = 2;
 Lib.all (equal true) (map (test o int2string 2) (upto ~180 0));
 Lib.all (equal false) (map (test o int2string 2) (upto ~32768 ~181));
 Lib.all (equal false) (map (test o int2string 2) (upto 181 1027));
 
 val test = matcher `\i{~180,180}`;
-signed_width_256 ~180 = 2;
 Lib.all (equal true) (map (test o int2string 2) (upto ~180 180));
 Lib.all (equal false) (map (test o int2string 2) [~181,181,192,18000,~1888]);
 
 val test = matcher `\i{~2500000,2500000}`;
-signed_width_256 ~2500000 = 3;
 Lib.all (equal true) (map (test o int2string 3) (upto ~2500000 2500000));
-Lib.all (equal false) (map (test o int2string 3) 
+Lib.all (equal false) (map (test o int2string 3)
                       [~2500001,~2500001, 2500001,2500002,2599999]);
 
 val test = matcher `\i{~3,300}`;
-signed_width_256 300 = 2;
 Lib.all (equal true) (map (test o int2string 2) (upto ~3 300));
 Lib.all (equal false) (map (test o int2string 2) (upto ~300 ~4));
 Lib.all (equal false) (map (test o int2string 2) (upto 301 16534));
 
 val test = matcher `\i{~3,800}`;
-signed_width_256 800 = 2;
 Lib.all (equal true) (map (test o int2string 2) (upto ~3 800));
 Lib.all (equal false) (map (test o int2string 2) (upto ~12000 ~4));
 Lib.all (equal false) (map (test o int2string 2) (upto 801 16534));
 
 val test = matcher `\i{~17999,0}`;
-signed_width_256 ~17999 = 2;
 Lib.all (equal true) (map (test o int2string 2) (upto ~17999 0));
 Lib.all (equal false) (map (test o int2string 2) (upto ~34000 ~18000));
 Lib.all (equal false) (map (test o int2string 2) (upto 1 18000));
 
 val test = matcher `\i{~17999,~123}`;
-signed_width_256 ~17999 = 2;
 Lib.all (equal true) (map (test o int2string 2) (upto ~17999 ~123));
 Lib.all (equal false) (map (test o int2string 2) (upto ~34000 ~18000));
 Lib.all (equal false) (map (test o int2string 2) (upto ~122 ~1));
 Lib.all (equal false) (map (test o int2string 2) (upto ~122 1000));
 
 val test = matcher `\i{~116535,~23}`;
-signed_width_256 ~116535 = 3;
 Lib.all (equal true) (map (test o int2string 3) (upto ~116535 ~23));
 Lib.all (equal false) (map (test o int2string 3) (upto ~119999 ~116536));
-Lib.all (equal false) (map (test o int2string 3) (upto ~122 ~1));
-Lib.all (equal false) (map (test o int2string 3) (upto ~122 1000));
+Lib.exists (equal false) (map (test o int2string 3) (upto ~122 ~1));
+Lib.exists (equal false) (map (test o int2string 3) (upto ~122 1000));
+
+(* Tests showing that "full intervals" get mapped to "dot" *)
+
+fun twoE i = IntInf.pow (IntInf.fromInt 2,i);
+
+val lo = ~(twoE 15)
+val hi = twoE 15 -1;
+
+Regexp_Numerics.twos_comp_interval
+   Regexp_Numerics.LSB
+   (twos_comp_interval_width (lo,hi))
+   lo hi;
+
+val lo = ~(twoE 31)
+val hi = twoE 31 -1;
+
+Regexp_Numerics.twos_comp_interval
+   Regexp_Numerics.LSB
+   (twos_comp_interval_width (lo,hi))
+   lo hi;
+
+val lo = ~(twoE 63)
+val hi = twoE 63 -1;
+
+Regexp_Numerics.twos_comp_interval
+   Regexp_Numerics.LSB
+   (twos_comp_interval_width (lo,hi))
+   lo hi;
+
+(* 64 bit signed 2scomp *)
+
+val test = matcher `\i{~9223372036854775808,9223372036854775807}`;
 
 (*---------------------------------------------------------------------------*)
 (* Test numeric constants                                                    *)
@@ -358,7 +369,6 @@ Lib.all (equal false) (map (test o int2string 1) (upto 1 127));
 Lib.all (equal false) (map (test o int2string 1) (upto ~128 ~24));
 
 val test = matcher `\k{~128}`;
-signed_width_256 ~128;
 test (int2string 1 ~128);
 equal false (test (int2string 1 ~22));
 equal false (test (int2string 1 22));;
@@ -366,7 +376,6 @@ Lib.all (equal false) (map (test o int2string 1) (upto ~22 127));
 Lib.all (equal false) (map (test o int2string 1) (upto ~127 ~24));
 
 val test = matcher `\k{116535}`;
-3 = signed_width_256 116535;
 equal true (test (int2string 3 116535));
 equal false (test (int2string 3 ~22));
 equal false (test (int2string 3 22));;
@@ -374,7 +383,6 @@ Lib.all (equal false) (map (test o int2string 3) (upto ~22 116534));
 Lib.all (equal false) (map (test o int2string 3) (upto ~127 ~24));
 
 val test = matcher `\k{~116535}`;
-signed_width_256 ~116535;
 equal true (test (int2string 3 ~116535));
 equal false (test (int2string 3 ~22));
 equal false (test (int2string 3 22));;
@@ -384,8 +392,15 @@ equal false (test (int2string 3 ~116538));
 Lib.all (equal false) (map (test o int2string 3) (upto ~22 127));
 Lib.all (equal false) (map (test o int2string 3) (upto ~127 ~24));
 
-val test = matcher `\k{~116535,MSB}`;
-3 = signed_width_256 ~116535;
+(*---------------------------------------------------------------------------*)
+(* An MSB example                                                            *)
+(*---------------------------------------------------------------------------*)
+
+val default_intervalFn = get_intervalFn()
+val () = set_intervalFn (fn (i,j) =>
+          twos_comp_interval MSB (twos_comp_interval_width(i,j)) i j);
+
+val test = matcher `\k{~116535}`;
 equal true (test (int2string_msb 3 ~116535));
 equal false (test (int2string_msb 3 ~22));
 equal false (test (int2string_msb 3 22));;
@@ -394,6 +409,8 @@ equal false (test (int2string 3 ~116537));
 equal false (test (int2string 3 ~116538));
 Lib.all (equal false) (map (test o int2string 3) (upto ~22 127));
 Lib.all (equal false) (map (test o int2string 3) (upto ~127 ~24));
+
+val () = set_intervalFn default_intervalFn;
 
 (*---------------------------------------------------------------------------*)
 (* CANBUS GPS message format. Taken from                                     *)
@@ -407,72 +424,61 @@ Lib.all (equal false) (map (test o int2string 3) (upto ~127 ~24));
 
 (*
  * CAN ID Name Position (Format) Range of Values Units (Result)
- * Identifier 1800 
- * Time Day Byte 0 (unsigned char) 1 ... 31 
- * Time Month Byte 1 (unsigned char) 1 ... 12 
- * Time Year Byte 2 (unsigned char) 0 ... 99 
- * Time Hour Byte 3 (unsigned char) 0 … 23 
- * Time Minute Byte 4 (unsigned char) 0 … 59 
- * Time Second Byte 5 (unsigned char) 0 … 59 
+ * Identifier 1800
+ * Time Day Byte 0 (unsigned char) 1 ... 31
+ * Time Month Byte 1 (unsigned char) 1 ... 12
+ * Time Year Byte 2 (unsigned char) 0 ... 99
+ * Time Hour Byte 3 (unsigned char) 0 … 23
+ * Time Minute Byte 4 (unsigned char) 0 … 59
+ * Time Second Byte 5 (unsigned char) 0 … 59
  * Altitude Byte 6, 7 (LSB, MSB) 0 … 17999 "m" (1 m)
  *
- * Identifier 1801 
+ * Identifier 1801
  * Latitude Degrees Byte 0 (Bit 0 ...7) -90 ... +90 "Deg" (1°)
  * Latitude Minutes Byte 1 (Bit 8 ... 13) 0 ... 59 "Min" (1’)
  * Latitude Seconds Byte 2, 3 (Bit 16 ... 28) 0 ... 5999 "Sec" (0.01“)
  * Longitude Degrees Byte 4 (Bit 32 ... 40) -180 ... +180 "Deg" (1°)
  * Longitude Minutes Byte 5 (Bit 41 ... 46) 0 ... 59 "Min" (1’)
  * Longitude Seconds Byte 6, 7 (Bit 48 ... 60) 0 ... 5999 "Sec" (0.01“)
- * 
- * Identifier 1802 
+ *
+ * Identifier 1802
  * Speed Byte 0, 1 (LSB, MSB) 0 ... 9999 "km/h" (0.1 km/h)
  * Heading Byte 2, 3 (LSB, MSB) 0 ... 3599 "Deg" (0.1°)
- * 
- * Identifier 1803 
- * Number of Active Satellites Byte 0 (Bit 0 ... 3) 0 ... 12 
- *                             Byte 0 (Bit 4 ... 7) 0 
- * Number of Visible Satellites Byte 1 (unsigned char) 0 ... 16 
+ *
+ * Identifier 1803
+ * Number of Active Satellites Byte 0 (Bit 0 ... 3) 0 ... 12
+ *                             Byte 0 (Bit 4 ... 7) 0
+ * Number of Visible Satellites Byte 1 (unsigned char) 0 ... 16
  * PDOP (vertical accuracy) Byte 2, 3 (LSB, MSB) 0 ... 999 "m" (0.1 m)
  * HDOP (horizontal accuracy) Byte 4, 5 (LSB,MSB) 0 ... 999 "m" (0.1 m)
  * VDOP (positional accuracy) Byte 6, 7 (LSB, MSB) 0 ... 999 "m" (0.1 m)
  *)
- 
-val match_1800        = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}`;
+
+val match_1800        = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999}`;
 val match_1801        = matcher `\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}`;
-val match_1801_packed = 
+val match_1801_packed =
  matcher `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}`;
-val match_1802    = matcher `\i{0,9999,LSB}\i{0,3599,LSB}.{4}`;
+val match_1802    = matcher `\i{0,9999}\i{0,3599}.{4}`;
 val test_1802_alt = matcher `\i{0,9999}\i{0,3599}\k{0}{4}`;
-val match_1803    = matcher `\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
+val match_1803    = matcher `\i{0,12}\i{0,16}\i{0,999}\i{0,999}\i{0,999}`;
 
-Lib.all (equal true)
- (map match_1800 
-   (PROD 
-     [map (int2string 1) (upto 1 10),
-      map (int2string 1) (upto 1 10),
-      map (int2string 1) (upto 0 9),
-      map (int2string 1) (upto 0 9),
-      map (int2string 1) (upto 0 9),
-      map (int2string 1) (upto 0 9),
-      map (int2string 2) (upto 0 9)]));
+val match_18xx_disjunctive = matcher
+ `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999}|\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}|\i{0,9999}\i{0,3599}|\i{0,12}\i{0,16}\i{0,999}\i{0,999}\i{0,999}`;
 
-val match_18xx_disjunctive = matcher 
- `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}|\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}|\i{0,9999,LSB}\i{0,3599,LSB}|\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
-
-val match_18xx_concat = matcher 
- `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}\i{0,9999,LSB}\i{0,3599,LSB}\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
+val match_18xx_concat = matcher
+ `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999}\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}\i{0,9999}\i{0,3599}\i{0,12}\i{0,16}\i{0,999}\i{0,999}\i{0,999}`;
 
 (*---------------------------------------------------------------------------*)
 (* Hard cases for Brzozowski? These seem to take exponential time.           *)
 (*---------------------------------------------------------------------------*)
 
-time matcher `\w{1,20}`; 
-time matcher `\w{1,50}`; 
-time matcher `\w{1,75}`; 
+time matcher `\w{1,20}`;
+time matcher `\w{1,50}`;
+time matcher `\w{1,75}`;
 time matcher `\w{1,100}`;
 time matcher `\w{1,200}`;
 
-set_trace "regexp-compiler" 0;;
+set_trace "regexp-compiler" 0;
 
 dom `\w{20}`;
 dom `\w{50}`;
@@ -480,50 +486,38 @@ dom `\w{75}`;
 dom `\w{100}`;
 dom `\w{200}`;
 
-dom `\w{1,20}`;  (* 256: 0.02s ; 0.12s ; 128: 0.052s *)
-dom `\w{1,50}`;  (* 256: 0.14s ; 1.8s  ; 128: 0.73600s *)
-dom `\w{1,75}`;  (* 256: 0.37s ; 6.2s  ; 128: 2.784s *)
-dom `\w{1,100}`; (* 256: 0.72s ; 13.6s ; 128: 6.912s *)
-dom `\w{1,200}`; (* 256: 4.4s  ; 123s  ; 128: 62 s *)
-dom `\w{1,300}`; (* 256: 12.8s *)
-dom `\w{1,400}`; (* 256: 28.2s *)
-dom `\w{1,500}`; (* 256: 55.5ss *)
+dom `\w{1,20}`;
+dom `\w{1,50}`;
+dom `\w{1,75}`;
+dom `\w{1,100}`;
+dom `\w{1,200}`;
+dom `\w{1,300}`;
+dom `\w{1,400}`;
+dom `\w{1,500}`;
+
+(*---------------------------------------------------------------------------*)
+(* Other examples with dom                                                   *)
+(*---------------------------------------------------------------------------*)
+
+dom `(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)`;
+(* 0.016s; 24 states *)
+
+dom `\[\{"time":"\d{13}(:\d{3})?","\w{1,20}":\{("\w{1,25}":"\w{1,30}",?)+\}\}\]`;
+(* 119 states *)
 
 (*---------------------------------------------------------------------------*)
 (* packed intervals                                                          *)
 (*---------------------------------------------------------------------------*)
-
-map interval_bit_width [(0,63),(~32,31),(35,60),(~12,27)];
-
-val test = int_cat (int_cat (int_cat 63 6 31) 6 45) 6 ~1;
-
+(*
 matcher `\p{(~180,180)(0,59).{1}}`;
-
-matcher `\p{(0,63)(~32,31)(35,60)(~12,27)}`;
-
-matcher `\p{(0,1)(0,2)(0,3)(~1,1)}`
-
-map interval_bit_width [(0,1),(0,2),(0,3),(~1,1)];
-
-matcher `\p{(0,7)(0,1)(0,15)}`
-matcher `\p{(1,5)(0,1)(0,15)}`
+matcher `\p{(0,1)(0,2)(0,3).{1}(~1,1)}`;
+matcher `\p{(0,7)(0,1)(0,15)}`;
+matcher `\p{(1,5)(0,1)(0,15)}`;
 matcher `\p{(1,5)(0,1)(0,15)}\i{0,999}`;
 
 dom `\p{(0,5)(0,3)(3,5)}`;
-(* 0.002s. 1 byte needed *)
-
 dom `\p{(0,5)(0,63)(0,127)}`;  (* Weird regexp generated *)
-(* 7.5s. 2 bytes needed. 1 interval *)
-(* 8.5s. 2 bytes needed. 1 interval *)
-(* 8.7s. 2 bytes needed. 442371 intervals  (smallest total size) *)
-(* 0.52s. 2 bytes needed. 49152 elements; 3911 nodes in regexp *)
-(* 0.068s. ditto the rest *)
-
-dom `\p{(0,127)(0,63)(0,5)}`;    (* Another weird regexp generated *)
-(* 1.3s. 2 bytes. 8192 intervals *)
-(* 0.17s. 2 bytes. 192 intervals *)
-(* 0.29s. 2 bytes. 442944 intervals (smallest total size) *)
-(* 0.384s. 2 bytes needed. 49152 elements; 4035 nodes in regexp *)
+dom `\p{(0,127)(0,63)(0,5)}`;  (* Another weird regexp generated *)
 
 dom `\p{(0,360)(0,59).{1}}`;
 dom `\p{(0,360)(0,59)(1,1)}`;
@@ -531,42 +525,15 @@ dom `\p{(0,360).{1}(0,59)}`;
 dom `\p{.{1}(0,360)(0,59)}`;
 
 dom `\p{(~180,180)(0,59)(0,0)}`;
-(* 0.12s. 2 bytes needed. 361 intervals *)
-(* 0.08s. 2 bytes needed. 120 intervals *)
-(* 0.15s. 2 bytes needed. 195300 intervals (smallest total size) *)
-(* 0.039s. 2 bytes needed. 21660 elements; 2403 nodes in regexp *)
-
 dom `\p{(0,59)(~180,180).{1}}`;
-(* 3.4s. 2 bytes needed. 61 intervals *)
-(* 4.9s. 2 bytes needed. 61 intervals *)
-(* 3.5s. 2 bytes needed. 195,123 intervals (smallest total size) *)
-(* 0.012s. 2 bytes needed. 21660 elements;  2449 nodes in regexp *)
-
-dom `\p{(0,41)(0,127)(0,255)(0,0)(0,0)(0,0)}`;
-dom `\p{(0,41)(0,127)(0,255),(0,7)}`;
-dom `\p{(0,41)(0,127)(0,255).{3}}`;
-(* 12.2s. 3 bytes. 79464 intervals generated *)
-(* 11.5s. 5376 intervals *)
-(* 263s. 168 intervals *)
-(* 228s. 16,515,576 intervals (smallest total size) *)
-(* 5.1s. 1,376,256 elements; 161923 nodes in regexp *)
-
-dom `\p{(0,41)(0,42)(0,43)(0,48)}`;
-(* 56s. 3 bytes. 79464 intervals generated *)
-(* 113s 3 bytes. 26,080,059 intervals generated *)
-(* 34.3s. 3 bytes. 3,893,736 elements ;  2,216,899 nodes in regexp *)
-
-dom `\p{(0,63)(0,42)(0,63)(0,63)}`;
-(* 261s. 3 bytes, 11,272,192 elements in set, 33,993,813 nodes in regexp *)
-
-dom `(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)`;
-(* 0.25s; 24 states *)
-
-dom `\[\{"time":"\d{13}(:\d{3})?","\w{1,20}":\{("\w{1,25}":"\w{1,30}",?)+\}\}\]`;
-(* 119 states; 0.68s *)
 
 dom `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}`;
-(* 14 states ; 0.46s *)
-(* 13 states ; 0.54s *)
-(* 0.27s. 195,300 intervals *)
-(* 0.17s. 21660 elements; 2403 nodes in regexp *)
+
+(* Following are expensive
+   matcher `\p{(0,63)(~32,31)(35,60)(~12,27)}`;
+   dom `\p{(0,41)(0,127)(0,255)(0,7)}`;
+   dom `\p{(0,41)(0,127)(0,255).{3}}`;
+   dom `\p{(0,41)(0,42)(0,43)(0,48)}`;
+   dom `\p{(0,63)(0,42)(0,63)(0,63)}`;
+*)
+*)

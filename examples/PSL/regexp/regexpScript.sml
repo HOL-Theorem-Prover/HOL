@@ -13,17 +13,14 @@ open bossLib metisLib pairTheory combinTheory listTheory rich_listTheory
      arithmeticTheory;
 
 val () = new_theory "regexp";
+val _ = ParseExtras.temp_loose_equality()
 
 (*---------------------------------------------------------------------------*)
 (* Symbolic tacticals.                                                       *)
 (*---------------------------------------------------------------------------*)
 
-infixr 0 ++ << || THENC ORELSEC ORELSER ##;
-infix 1 >>;
+infixr 0 || THENC ORELSEC ORELSER;
 
-val op ++ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
 val op || = op ORELSE;
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
@@ -222,13 +219,13 @@ val One_def  = Define `One = Repeat Zero`;
 (* from the grammar and thus allow | to be used for "or" patterns.           *)
 (*---------------------------------------------------------------------------*)
 
-val _ = remove_termtok{term_name = "COND",tok="=>"};
-val _ = overload_on ("|", Term`$Or`);
+(* "|" is conflicting with pred_setTheory and many other things, use "||". *)
+val _ = overload_on ("||", Term`$Or`);
 val _ = overload_on ("&", Term`$And`);
 val _ = overload_on ("#", Term`$Cat`);
 val _ = overload_on ("%", Term`$Fuse`);
 
-val _ = set_fixity "|" (Infixr 501);
+val _ = set_fixity "||" (Infixr 501);
 val _ = set_fixity "&" (Infixr 511);
 val _ = set_fixity "#" (Infixr 601);
 val _ = set_fixity "%" (Infixr 602);
@@ -247,7 +244,7 @@ val sem_def =
      ?w1 w2. (w = w1<>w2) /\ sem r1 w1 /\ sem r2 w2)                      /\
    (sem (r1%r2) w    =
      ?w1 w2 l. (w = w1<>[l]<>w2) /\ sem r1 (w1<>[l]) /\ sem r2 ([l]<>w2)) /\
-   (sem (r1|r2) w    =
+   (sem (r1||r2) w    =
      sem r1 w \/ sem r2 w)                                                /\
    (sem (r1&r2) w    =
      sem r1 w /\ sem r2 w)                                                /\
@@ -270,14 +267,14 @@ val sem_One = store_thm
   ("sem_One",
    ``!l. sem One l = (l = [])``,
    RW_TAC std_ss [sem_def, One_def]
-   ++ REVERSE EQ_TAC
-   >> (RW_TAC std_ss []
-       ++ Q.EXISTS_TAC `[]`
-       ++ RW_TAC std_ss [CONCAT_def, ALL_EL])
-   ++ RW_TAC std_ss []
-   ++ POP_ASSUM MP_TAC
-   ++ Cases_on `wlist`
-   ++ RW_TAC std_ss [CONCAT_def, ALL_EL, sem_Zero]);
+   >> REVERSE EQ_TAC
+   >- (RW_TAC std_ss []
+       >> Q.EXISTS_TAC `[]`
+       >> RW_TAC std_ss [CONCAT_def, ALL_EL])
+   >> RW_TAC std_ss []
+   >> POP_ASSUM MP_TAC
+   >> Cases_on `wlist`
+   >> RW_TAC std_ss [CONCAT_def, ALL_EL, sem_Zero]);
 
 (*---------------------------------------------------------------------------*)
 (* Misc. semantics lemmas                                                    *)
@@ -327,7 +324,7 @@ val Then_ASSOC = Count.apply Q.prove
 *)
 
 val Or_lemma = prove
-  (``!r1 r2 r3. sem ((r1 | r2) # r3) w = sem (r1 # r3) w \/ sem (r2 # r3) w``,
+  (``!r1 r2 r3. sem ((r1 || r2) # r3) w = sem (r1 # r3) w \/ sem (r2 # r3) w``,
    RW_TAC list_ss [sem_def] THEN PROVE_TAC []);
 
 (*---------------------------------------------------------------------------*)
@@ -337,7 +334,7 @@ val Or_lemma = prove
 val match_defn = Hol_defn
    "match"
   `(match (Atom b) l = (LENGTH l = 1) /\ b(HD l))
-/\ (match (r1|r2) l  = match r1 l \/ match r2 l)
+/\ (match (r1||r2) l  = match r1 l \/ match r2 l)
 /\ (match (r1&r2) l  = match r1 l /\ match r2 l)
 /\ (match (r1#r2) l  =
      EXISTS (\(s1,s2). match r1 s1 /\ match r2 s2) (SPLITS l))
@@ -368,7 +365,7 @@ val sem_match = store_thm
    ``!r w. sem r w = match r w``,
    recInduct match_ind THEN REPEAT CONJ_TAC THENL
    [(* Atom c *) RW_TAC list_ss [sem_def,match_def],
-    (* r | r' *) RW_TAC list_ss [sem_def,match_def],
+    (* r || r' *) RW_TAC list_ss [sem_def,match_def],
     (* r & r' *) RW_TAC list_ss [sem_def,match_def],
     (* r # r' *) RW_TAC list_ss [sem_def,match_def,EXISTS_ELIM_THM]
     THEN EQ_TAC THEN RW_TAC list_ss [] THENL

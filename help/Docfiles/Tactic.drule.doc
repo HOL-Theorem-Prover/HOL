@@ -9,14 +9,14 @@ Performs one step of resolution (or modus ponens) against implication theorem.
 tactic
 
 \DESCRIBE
-If theorem {th} is of the form {A |- t}, there t is of the form
+If theorem {th} is of the form {A |- t}, where {t} is of the form
 {!x1..xn. P .. /\ ... ==> Q} or {!x1..xn. P .. ==> Q}, then a call to
 {drule th (asl,g)} looks for an assumption in {asl} that matches the
 pattern {P ..} in {t}. It then performs instantiation of {th}'s
-universally quantified variables, transforms any conjunctions on the
-left into a minimal number of chained implications, and calls {MP}
-once to generate a consequent theorem {A |- t'}. This theorem is then
-passed to {MP_TAC}, turning the goal into {(asl, t' ==> g)}. (We
+universally quantified and free variables, transforms any conjunctions
+on the left into a minimal number of chained implications, and calls
+{MP} once to generate a consequent theorem {A |- t'}. This theorem is
+then passed to {MP_TAC}, turning the goal into {(asl, t' ==> g)}. (We
 assume that {A} is a subset of {asl}; otherwise the tactic is
 invalid.)
 

@@ -87,16 +87,15 @@ fun infix_pair infixity = case infixity of
      "ttt_infixr" ^ Int.toString n ^ "_close")
 
 (*----------------------------------------------------------------------------
-  Infixity from Overlay.sml. To add to the README to keep up-to-date.
+  Infixity from src/thm/Overlay.sml.
   ----------------------------------------------------------------------------*)
 
-(* becareful to escape \\ to \\\\ in the following list *)
 val l0 = String.tokens Char.isSpace
   (
   String.concatWith " "
   [
    "++ && |-> THEN THEN1 THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC",
-   "THEN_TCL ORELSE_TCL ?> |>",
+   "THEN_TCL ORELSE_TCL ?> |> |>> ||> ||->",
    ">> >- >| \\\\ >>> >>- ??",
    "~~ !~ Un Isct -- IN"
   ]

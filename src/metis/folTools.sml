@@ -3,14 +3,6 @@
 (* Created by Joe Hurd, October 2001                                         *)
 (* ========================================================================= *)
 
-(*
-loadPath := ["../basic", "../fol", "../metis", "../normalize"] @ !loadPath;
-app load
-["mlibUseful", "mlibSolver", "normalForms", "normalFormsTheory", "folMapping"];
-*)
-
-(*
-*)
 structure folTools :> folTools =
 struct
 
@@ -22,8 +14,6 @@ structure Parse = struct
   val (Type,Term) = parse_from_grammars normalFormsTheory.normalForms_grammars
 end
 open Parse
-
-infix THEN ORELSE THENC ##;
 
 type 'a pp       = 'a mlibUseful.pp;
 type 'a stream   = 'a mlibStream.stream;
@@ -42,7 +32,7 @@ local
   open mlibUseful;
   val module = "folTools";
 in
-  val () = traces := {module = module, alignment = I} :: !traces;
+  val () = add_trace {module = module, alignment = I}
   fun chatting l = tracing {module = module, level = l};
   fun chat s = (trace s; true)
   val ERR = mk_HOL_ERR module;
@@ -179,9 +169,9 @@ fun mk_vthm th =
 fun list_mk_conj' [] = T
   | list_mk_conj' tms = list_mk_conj tms;
 
-fun strip_disj' tm = if tm = F then [] else strip_disj tm;
+fun strip_disj' tm = if aconv tm F then [] else strip_disj tm;
 
-fun CONJUNCTS' th = if concl th = T then [] else CONJUNCTS th;
+fun CONJUNCTS' th = if aconv (concl th) T then [] else CONJUNCTS th;
 
 fun GSPEC' th =
   let
@@ -204,10 +194,12 @@ type fol_problem = {thms : thm1 list, hyps : thm1 list, query : formula1 list};
 
 val recent_fol_problems : fol_problem list option ref = ref NONE;
 
+(* no code actually sets this reference to SOME, but it may of course be useful
+   for debugging *)
 fun save_fol_problem (t, h, q) =
   case !recent_fol_problems of NONE => ()
   | SOME l
-    => recent_fol_problems := SOME ({thms = t, hyps = h, query = q} :: l);
+    => recent_fol_problems := SOME ({thms = t, hyps = h, query = q} :: l);(*OK*)
 
 (* ------------------------------------------------------------------------- *)
 (* Logic maps manage the interface between HOL and first-order logic.        *)
@@ -323,13 +315,15 @@ val EQ_COMB = prove
 val EQ_EXTENSION = CONV_RULE CNF_CONV EXT_POINT_DEF;
 
 local
+  fun tmi_eq (tm1,i1) (tm2,i2:int) = aconv tm1 tm2 andalso i1 = i2
+
   fun break tm (res, subtms) =
     let
       val (f, args) = strip_comb tm
       val n = length args
       val f = if is_const f then const_scheme_n n f else f
     in
-      (insert (f, n) res, args @ subtms)
+      (op_insert tmi_eq (f, n) res, args @ subtms)
     end;
 
   fun boolify (tm, len) =
@@ -349,7 +343,7 @@ in
 end;
 
 local
-  val imp_elim_CONV = REWR_CONV (tautLib.TAUT `(a ==> b) = ~a \/ b`);
+  val imp_elim_CONV = REWR_CONV (tautLib.TAUT `(a ==> b) <=> ~a \/ b`);
   val eq_elim_RULE = MATCH_MP (tautLib.TAUT `(a = b) ==> b \/ ~a`);
   fun paired_C f (x, y) = f (y, x);
 
@@ -402,7 +396,7 @@ in
         let
           val atoms = flatten (map (thm_atoms o snd o snd) axioms)
         in
-          if not (exists (equal eq_tm o fst) (rels_in_atoms atoms)) then []
+          if not (exists (aconv eq_tm o fst) (rels_in_atoms atoms)) then []
           else if higher_order then eq_ho
           else eq_fo @ substitution_thms consts (relfuns_in_atoms atoms)
         end
@@ -496,7 +490,7 @@ fun FOL_SOLVE solv lmap lim =
     fn query =>
     let
       val q =
-        if snd query = [F] then [mlibTerm.False]
+        if ListPair.allEq (uncurry aconv) (snd query, [F]) then [mlibTerm.False]
         else hol_literals_to_fol (#mapping_parm parm) query
       val () = save_fol_problem (thms, hyps, q)
       val lift = fol_thms_to_hol (#mapping_parm parm) (C assoc axioms) query

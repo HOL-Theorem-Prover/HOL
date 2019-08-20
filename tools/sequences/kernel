@@ -1,12 +1,16 @@
 !tools/Holmake/tests/holdep
 !tools/Holmake/tests/depchainloop
 !tools/Holmake/tests/recursiveclean
+!tools/Holmake/tests/wildcard
+!tools/Holmake/tests/dashn_works
 tools/set_mtime
 tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml
 [poly]src/portableML/poly
 src/portableML
 src/portableML/monads
+[poly]src/portableML/poly/concurrent
+[mosml]src/portableML/mosml/concurrent
 !src/portableML/testsrc
 src/prekernel
 **KERNEL**
@@ -14,6 +18,7 @@ src/thm
 src/postkernel
 # these three directories are required to even run hol.bare.unquote
 src/parse
+!tools/Holmake/tests/badincludes
 src/opentheory
 (otknl)src/opentheory/logging
 src/bool
@@ -21,11 +26,9 @@ src/1
 (otknl)src/opentheory/postbool
 src/proofman
 [poly]bin/hol.bare
-src/proofman/tests
-[poly]src/tactictoe/src
-[poly]src/holyhammer/hh/hh1
-[poly]src/holyhammer/hh
-[poly]src/holyhammer
+!src/proofman/tests
+!tools/Holmake/tests/holpathdb/proj2
+!tools/Holmake/tests/holpathdb/proj2/proj2A
 !tools/Holmake/tests/depchain1/dir3
 !tools/Holmake/tests/depchain2/dir1
 !tools/Holmake/tests/altquote1
@@ -34,6 +37,7 @@ src/proofman/tests
 !tools/Holmake/tests/nullary_tgt
 !tools/Holmake/tests/phony_tgt
 !tools/Holmake/tests/quote-filter
+!tools/Holmake/tests/theorytarget
 [poly]!tools/Holmake/tests/cheatspotting
 [poly]!tools/Holmake/tests/depchain_heap/
 [poly]!tools/Holmake/tests/depchain_heap/dir2
@@ -44,4 +48,9 @@ src/proofman/tests
 !tools/Holmake/tests/noprereqs/dir4
 !tools/Holmake/tests/indepchildren
 !tools/Holmake/tests/empty_script
+!tools/Holmake/tests/deps_of_depthys
+!tools/Holmake/tests/gh604
+!tools/Holmake/tests/ignore_errors/j1
+!tools/Holmake/tests/qfreadTheoremsyntax
+[poly]!tools/Holmake/tests/ignore_errors/j4
 !src/1/theory_tests

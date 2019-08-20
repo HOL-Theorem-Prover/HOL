@@ -16,7 +16,7 @@ open Q arithmeticTheory wordsLib;
 open io_onestepTheory wordsTheory armTheory coreTheory lemmasTheory;
 
 val _ = new_theory "interrupts";
-
+val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------- *)
 
 infix \\
@@ -26,6 +26,8 @@ val std_ss = std_ss ++ boolSimps.LET_ss;
 val arith_ss = arith_ss ++ boolSimps.LET_ss;
 val ICLASS_ss = armLib.ICLASS_ss;
 val SIZES_ss = wordsLib.SIZES_ss;
+
+val ERR = mk_HOL_ERR "interrupts"
 
 fun Cases_on_arm6inp tm = FULL_STRUCT_CASES_TAC (SPEC tm arm6inp_nchotomy);
 fun Cases_arm6 (g as (_,w)) =

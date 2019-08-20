@@ -6,35 +6,35 @@
 
 signature imperativeLib =
 sig
-	include Abbrev
+        include Abbrev
 
-	val APPLY_DEFINITIONS_TO_THEOREM : thm list -> thm -> thm
+        val APPLY_DEFINITIONS_TO_THEOREM : thm list -> thm -> thm
 
-	val APPLY_DEFINITIONS_TAC : thm list -> tactic
+        val APPLY_DEFINITIONS_TAC : thm list -> tactic
 
-	val REFINEMENT_RATOR : term
+        val REFINEMENT_RATOR : term
 
-	val REFINEMENT_NOT_RATOR : term
+        val REFINEMENT_NOT_RATOR : term
 
-	val REFINEMENT_RULE : thm -> thm
+        val REFINEMENT_RULE : thm -> thm
 
-	val REFINEMENT_TAC : tactic
+        val REFINEMENT_TAC : tactic
 
-	val SWAPLR_RULE : thm -> thm
+        val SWAPLR_RULE : thm -> thm
 
-	val EXHAUSTIVELY : tactic -> tactic
+        val EXHAUSTIVELY : tactic -> tactic
 
-	val REP_EVAL_TAC : tactic
+        val REP_EVAL_TAC : tactic
 
-	val USE_CONTEXT : term list -> thm -> thm
+        val USE_CONTEXT : term list -> thm -> thm
 
-	val VSUB : term -> term -> thm -> thm
+        val VSUB : term -> term -> thm -> thm
 
-	val MAKE_IT_SO  : thm -> tactic
+        val MAKE_IT_SO  : thm -> tactic
 
-	val MAKE_IT_NO  : thm -> tactic
+        val MAKE_IT_NO  : thm -> tactic
 
-	val EVAL_FOR_STATEVARS : term list -> tactic
+        val EVAL_FOR_STATEVARS : term list -> tactic
 
-	val DECL_STATEVARS : term -> term list -> term list
+        val DECL_STATEVARS : term -> term list -> term list
 end;

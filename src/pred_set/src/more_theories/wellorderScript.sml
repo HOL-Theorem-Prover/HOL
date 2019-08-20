@@ -1,24 +1,41 @@
 open HolKernel Parse boolLib bossLib
-open boolSimps
+open boolSimps mesonLib numLib InductiveDefinition tautLib jrhUtils
 
-open set_relationTheory pred_setTheory (* cardinalTheory *)
+open relationTheory set_relationTheory pred_setTheory pairTheory
+     arithmeticTheory
 
 val _ = new_theory "wellorder"
+
+fun K_TAC _ = ALL_TAC;
+fun MESON ths tm = prove(tm,MESON_TAC ths);
+fun METIS ths tm = prove(tm,METIS_TAC ths);
+
+fun SET_TAC L =
+    POP_ASSUM_LIST(K ALL_TAC) THEN REPEAT COND_CASES_TAC THEN
+    REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
+    SING_DEF] L) THEN
+    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
+      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
+      GSPECIFICATION, IN_DEF, EXISTS_PROD] THEN METIS_TAC [];
 
 val FORALL_PROD = pairTheory.FORALL_PROD
 val EXISTS_PROD = pairTheory.EXISTS_PROD
 val EXISTS_SUM = sumTheory.EXISTS_SUM
 val FORALL_SUM = sumTheory.FORALL_SUM
 
+(* there's another ``wellfounded`` in prim_recTheory with different type *)
+val _ = hide "wellfounded";
+
 val wellfounded_def = Define`
   wellfounded R <=>
    !s. (?w. w IN s) ==> ?min. min IN s /\ !w. (w,min) IN R ==> w NOTIN s
 `;
+val _ = overload_on ("Wellfounded", ``wellfounded``);
 
 val wellfounded_WF = store_thm(
   "wellfounded_WF",
-  ``wellfounded R <=> WF (CURRY R)``,
-  rw[wellfounded_def, relationTheory.WF_DEF, SPECIFICATION]);
+  ``!R. wellfounded R <=> WF (CURRY R)``,
+  rw[wellfounded_def, WF_DEF, SPECIFICATION]);
 
 val wellorder_def = Define`
   wellorder R <=>
@@ -35,7 +52,7 @@ val wellorder_EMPTY = store_thm(
 
 val wellorder_SING = store_thm(
   "wellorder_SING",
-  ``wellorder {(x,y)} <=> (x = y)``,
+  ``!x y. wellorder {(x,y)} <=> (x = y)``,
   rw[wellorder_def, wellfounded_def, strict_def, reflexive_def,
      domain_def, range_def] >>
   eq_tac >| [
@@ -45,7 +62,7 @@ val wellorder_SING = store_thm(
 
 val rrestrict_SUBSET = store_thm(
   "rrestrict_SUBSET",
-  ``rrestrict r s SUBSET r``,
+  ``!r s. rrestrict r s SUBSET r``,
   rw[SUBSET_DEF,rrestrict_def] >> rw[]);
 
 val wellfounded_subset = store_thm(
@@ -98,7 +115,7 @@ val WIN_trichotomy = store_thm(
 
 val WIN_REFL = store_thm(
   "WIN_REFL",
-  ``(x,x) WIN w = F``,
+  ``(x,x) WIN w <=> F``,
   `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
   fs[wellorder_def, strict_def]);
 val _ = export_rewrites ["WIN_REFL"]
@@ -530,18 +547,18 @@ val wo2wo_def = Define`
 
 val restrict_away = prove(
   ``IMAGE (RESTRICT f (\x y. (x,y) WIN w) x) (iseg w x) = IMAGE f (iseg w x)``,
-  rw[EXTENSION, relationTheory.RESTRICT_DEF, iseg_def] >> srw_tac[CONJ_ss][]);
+  rw[EXTENSION, RESTRICT_DEF, iseg_def] >> srw_tac[CONJ_ss][]);
 
 val wo2wo_thm = save_thm(
   "wo2wo_thm",
   wo2wo_def |> concl |> strip_forall |> #2 |> rhs |> strip_comb |> #2
-            |> C ISPECL relationTheory.WFREC_THM
+            |> C ISPECL WFREC_THM
             |> C MATCH_MP WIN_WF2
             |> SIMP_RULE (srw_ss()) []
             |> REWRITE_RULE [GSYM wo2wo_def, restrict_away])
 
 val WO_INDUCTION =
-    relationTheory.WF_INDUCTION_THM |> C MATCH_MP WIN_WF2 |> Q.GEN `w`
+    WF_INDUCTION_THM |> C MATCH_MP WIN_WF2 |> Q.GEN `w`
                                     |> BETA_RULE
 
 val wleast_IN_wo = store_thm(
@@ -790,7 +807,7 @@ val orderlt_WF = store_thm(
   spose_not_then strip_assume_tac >>
   qabbrev_tac `w0 = f 0` >>
   qsuff_tac `~ WF (\x y. (x,y) WIN w0)` >- rw[WIN_WF2] >>
-  simp[relationTheory.WF_DEF] >>
+  simp[WF_DEF] >>
   `!n. orderlt (f (SUC n)) w0`
      by (Induct >- metis_tac [arithmeticTheory.ONE] >>
          metis_tac [orderlt_TRANS]) >>
@@ -896,7 +913,7 @@ val seteq_wlog = store_thm(
 
 val wo_INDUCTION = save_thm(
   "wo_INDUCTION",
-  MATCH_MP relationTheory.WF_INDUCTION_THM WIN_WF2
+  MATCH_MP WF_INDUCTION_THM WIN_WF2
            |> SIMP_RULE (srw_ss()) []
            |> Q.SPEC `\x. x IN elsOf w ==> P x`
            |> SIMP_RULE (srw_ss()) []
@@ -1277,5 +1294,301 @@ val allsets_wellorderable = store_thm(
         `!x. ~((x,a) WIN M)` by metis_tac [WIN_elsOf] >> simp[] >>
         metis_tac[WIN_elsOf]) >>
   metis_tac[]);
+
+(* ------------------------------------------------------------------------- *)
+(*    Wellfoundedness (WF) from hol-light's iterateTheory                    *)
+(* ------------------------------------------------------------------------- *)
+
+val _ = set_fixity "<<" (Infix(NONASSOC, 450));
+
+val WF = store_thm ("WF",
+  ``WF(<<) <=> !P:'a->bool. (?x. P(x)) ==> (?x. P(x) /\ !y. y << x ==> ~P(y))``,
+    METIS_TAC [WF_DEF]);
+
+(* ------------------------------------------------------------------------- *)
+(* Strengthen it to equality.                                                *)
+(* ------------------------------------------------------------------------- *)
+
+val WF_EQ = store_thm ("WF_EQ",
+ ``WF(<<) <=> !P:'a->bool. (?x. P(x)) <=> (?x. P(x) /\ !y. y << x ==> ~P(y))``,
+  REWRITE_TAC[WF] THEN MESON_TAC[]);
+
+(* ------------------------------------------------------------------------- *)
+(* Equivalence of wellfounded induction.                                     *)
+(* ------------------------------------------------------------------------- *)
+
+val WF_IND = store_thm ("WF_IND",
+ ``WF(<<) <=> !P:'a->bool. (!x. (!y. y << x ==> P(y)) ==> P(x)) ==> !x. P(x)``,
+  REWRITE_TAC[WF] THEN EQ_TAC THEN DISCH_TAC THEN GEN_TAC THEN
+  POP_ASSUM(MP_TAC o SPEC ``\x:'a. ~(P:'a->bool)(x)``) THEN REWRITE_TAC[] THEN MESON_TAC[]);
+
+(* ------------------------------------------------------------------------- *)
+(* Equivalence of the "infinite descending chains" version.                  *)
+(* ------------------------------------------------------------------------- *)
+
+val WF_DCHAIN = store_thm ("WF_DCHAIN",
+ ``WF(<<) <=> ~(?s:num->'a. !n. s(SUC n) << s(n))``,
+  SIMP_TAC std_ss [WF, TAUT `(a <=> ~b) <=> (~a <=> b)`, NOT_FORALL_THM] THEN
+  EQ_TAC THEN DISCH_THEN CHOOSE_TAC THENL
+   [POP_ASSUM(MP_TAC o REWRITE_RULE[NOT_IMP]) THEN
+    DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_TAC ``a:'a``) ASSUME_TAC) THEN
+    SUBGOAL_THEN ``!x:'a. ?y. P(x) ==> P(y) /\ y << x`` MP_TAC THENL
+     [ASM_MESON_TAC[], SIMP_TAC std_ss [SKOLEM_THM]] THEN
+    DISCH_THEN(X_CHOOSE_THEN ``f:'a->'a`` STRIP_ASSUME_TAC) THEN
+    KNOW_TAC ``?s. (s (0:num) = a) /\ (!n. s (SUC n) = f (s n))`` THENL
+    [ASSUME_TAC prim_recTheory.num_Axiom_old THEN
+     POP_ASSUM (MP_TAC o Q.SPECL [`a:'a`, `(\m n. f m)`]) THEN
+     METIS_TAC [], STRIP_TAC] THEN
+    EXISTS_TAC ``s:num->'a`` THEN ASM_REWRITE_TAC[] THEN
+    SUBGOAL_THEN ``!n. P(s n) /\ s(SUC n):'a << s(n)``
+      (fn th => ASM_MESON_TAC[th]) THEN
+    INDUCT_TAC THEN ASM_REWRITE_TAC[] THEN ASM_MESON_TAC[],
+    EXISTS_TAC ``\y:'a. ?n:num. y = s(n)`` THEN REWRITE_TAC[] THEN
+    ASM_MESON_TAC[]]);
+
+(* ------------------------------------------------------------------------- *)
+(* Equivalent to just *uniqueness* part of recursion.                        *)
+(* ------------------------------------------------------------------------- *)
+
+val WF_UREC = store_thm ("WF_UREC",
+ ``WF(<<) ==>
+       !H. (!f g x. (!z. z << x ==> (f z = g z)) ==> (H f x = H g x))
+            ==> !(f:'a->'b) g. (!x. f x = H f x) /\ (!x. g x = H g x)
+                              ==> (f = g)``,
+  REWRITE_TAC[WF_IND] THEN REPEAT STRIP_TAC THEN REWRITE_TAC [FUN_EQ_THM] THEN
+  UNDISCH_TAC `` !(P :'a -> bool).
+            (!(x :'a). (!(y :'a). y << x ==> P y) ==> P x) ==> !(x :'a). P x`` THEN
+  DISCH_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `(\x. (f:'a->'b) x = g x)`) THEN
+  SIMP_TAC std_ss [] THEN
+  DISCH_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN GEN_TAC THEN
+  DISCH_THEN(ANTE_RES_THEN MP_TAC) THEN ASM_REWRITE_TAC[]);
+
+val WF_UREC_WF = store_thm ("WF_UREC_WF",
+ ``(!H. (!f g x. (!z. z << x ==> (f z = g z)) ==> (H f x = H g x))
+        ==> !(f:'a->bool) g. (!x. f x = H f x) /\ (!x. g x = H g x)
+                          ==> (f = g)) ==> WF(<<)``,
+  REWRITE_TAC[WF_IND] THEN DISCH_TAC THEN GEN_TAC THEN DISCH_TAC THEN
+  FIRST_X_ASSUM(MP_TAC o SPEC ``\f x. P(x:'a) \/ !z:'a. z << x ==> f(z)``) THEN
+  BETA_TAC THEN
+  W(C SUBGOAL_THEN (fn t => REWRITE_TAC[t]) o funpow 2 lhand o snd) THENL
+   [MESON_TAC[], DISCH_THEN(MP_TAC o SPECL [``P:'a->bool``, ``\x:'a. T``]) THEN
+    REWRITE_TAC[FUN_EQ_THM] THEN ASM_MESON_TAC[]]);
+
+(* ------------------------------------------------------------------------- *)
+(* Stronger form of recursion with "inductive invariant" (Krstic/Matthews).  *)
+(* ------------------------------------------------------------------------- *)
+
+val lemma = prove_nonschematic_inductive_relations_exist bool_monoset
+   ``!f:'a->'b x. (!z. z << x ==> R z (f z)) ==> R x (H f x)``;
+
+val WF_REC_INVARIANT = store_thm ("WF_REC_INVARIANT",
+ ``WF(<<)
+   ==> !H S. (!f g x. (!z. z << x ==> (f z = g z) /\ S z (f z))
+                      ==> (H f x = H g x) /\ S x (H f x))
+             ==> ?f:'a->'b. !x. (f x = H f x)``,
+  REWRITE_TAC[WF_IND] THEN REPEAT STRIP_TAC THEN
+  X_CHOOSE_THEN ``R:'a->'b->bool`` STRIP_ASSUME_TAC lemma THEN
+  SUBGOAL_THEN ``!x:'a. ?!y:'b. R x y`` (fn th => ASM_MESON_TAC[th]) THEN
+  ONCE_REWRITE_TAC [METIS [] ``(?!y. R x y) = (\x. ?!y. R x y) x``] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN BETA_TAC THEN REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM(fn th => GEN_REWR_TAC BINDER_CONV [th]) THEN
+  SUBGOAL_THEN ``!x:'a y:'b. R x y ==> S' x y`` MP_TAC THEN METIS_TAC[]);
+
+(* ------------------------------------------------------------------------- *)
+(* Equivalent to just *existence* part of recursion.                         *)
+(* ------------------------------------------------------------------------- *)
+
+val WF_REC = store_thm ("WF_REC",
+ ``WF(<<)
+   ==> !H. (!f g x. (!z. z << x ==> (f z = g z)) ==> (H f x = H g x))
+           ==> ?f:'a->'b. !x. f x = H f x``,
+  REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP WF_REC_INVARIANT) THEN
+  EXISTS_TAC ``\x:'a y:'b. T`` THEN ASM_REWRITE_TAC[]);
+
+(* ------------------------------------------------------------------------- *)
+(* Wellfoundedness properties of natural numbers.                            *)
+(* ------------------------------------------------------------------------- *)
+
+val WF_num = store_thm ("WF_num",
+ ``WF((<):num->num->bool)``,
+  REWRITE_TAC[WF_IND, arithmeticTheory.COMPLETE_INDUCTION]);
+
+val WF_REC_num = store_thm ("WF_REC_num",
+ ``!H. (!f g n. (!m. m < n ==> (f m = g m)) ==> (H f n = H g n))
+        ==> ?f:num->'a. !n. f n = H f n``,
+  MATCH_ACCEPT_TAC(MATCH_MP WF_REC WF_num));
+
+(* ------------------------------------------------------------------------ *)
+(* Field of an uncurried binary relation                                    *)
+(* ------------------------------------------------------------------------ *)
+
+val fl = new_definition ("fl",
+  ``fl(l:'a#'a->bool) x <=> ?y:'a. l(x,y) \/ l(y,x)``);
+
+(* ------------------------------------------------------------------------ *)
+(* Partial order (we infer the domain from the field of the relation)       *)
+(* ------------------------------------------------------------------------ *)
+
+val poset = new_definition ("poset",
+  ``poset (l:'a#'a->bool) <=>
+       (!x. fl(l) x ==> l(x,x)) /\
+       (!x y z. l(x,y) /\ l(y,z) ==> l(x,z)) /\
+       (!x y. l(x,y) /\ l(y,x) ==> (x = y))``);
+
+(* ------------------------------------------------------------------------ *)
+(* Chain in a poset (Defined as a subset of the field, not the ordering)    *)
+(* ------------------------------------------------------------------------ *)
+
+val chain = new_definition ("chain",
+  ``Chain (l:'a#'a->bool) P <=> (!x y. P x /\ P y ==> l(x,y) \/ l(y,x))``);
+
+val _ = overload_on ("chain",``Chain``);
+
+(* ======================================================================== *)
+(* HAUSDORFF MAXIMAL PRINCIPLE ==> ZORN'S LEMMA                             *)
+(* ======================================================================== *)
+
+val lemma1 = prove (
+ ``!r:'a#'a->bool. (?y:'a. fl(r) y /\ !x. r(y,x) ==> (y = x)) =
+                   (?x:'a. x IN maximal_elements (\x. fl r x) r)``,
+  REWRITE_TAC [maximal_elements_def, fl] THEN SET_TAC []);
+
+val lemma2 = prove (
+ ``!P r:'a#'a->bool. (?y. fl r y /\ !x. P x ==> r (x,y)) = (upper_bounds P r <> {})``,
+  REWRITE_TAC [upper_bounds_def, fl, range_def] THEN SET_TAC []);
+
+val lemma3 = prove (
+  ``!r:'a#'a->bool s:'a->bool. chain r s = chain s r``,
+  REWRITE_TAC [chain, chain_def] THEN SET_TAC []);
+
+val lemma4 = prove (
+ ``!r:'a#'a->bool. poset r = partial_order r (\x. fl r x)``,
+  REWRITE_TAC [partial_order_def, poset, fl] THEN
+  REWRITE_TAC [domain_def, range_def, transitive_def, reflexive_def, antisym_def] THEN
+  SET_TAC []);
+
+val lemma5 = prove (
+ ``!r:'a#'a->bool.
+     ((\x. fl r x) <> {} /\ partial_order r (\x. fl r x) /\
+      (!P. chain P r ==> upper_bounds P r <> {}) ==>
+      ?x. x IN maximal_elements (\x. fl r x) r) =
+     (poset r /\ (?x. (\x. fl r x) x) /\
+           (!P. chain(r) P ==> (?y. fl(r) y /\ !x. P x ==> r(x,y))) ==>
+        ?y. fl(r) y /\ !x. r(y,x) ==> (y = x))``,
+    SIMP_TAC std_ss [lemma1, lemma2, lemma3, lemma4] THEN SET_TAC []);
+
+(* val zorns_lemma = Q.store_thm ("zorns_lemma",
+`!r s. (s <> {}) /\ partial_order r s /\
+  (!t. chain t r ==> upper_bounds t r <> {})
+  ==>
+  (?x. x IN maximal_elements s r)`,
+ *)
+val ZL = store_thm ("ZL",
+ ``!l:'a#'a->bool. poset l /\ (?x. (\x. fl l x) x) /\
+           (!P. chain(l) P ==> (?y. fl(l) y /\ !x. P x ==> l(x,y))) ==>
+        ?y. fl(l) y /\ !x. l(y,x) ==> (y = x)``,
+  METIS_TAC [lemma5, zorns_lemma]);
+
+
+(* ------------------------------------------------------------------------- *)
+(* Special case of Zorn's Lemma for restriction of subset lattice.           *)
+(* ------------------------------------------------------------------------- *)
+
+val POSET_RESTRICTED_SUBSET = store_thm ("POSET_RESTRICTED_SUBSET",
+ ``!P. poset(\(x,y). P(x) /\ P(y) /\ x SUBSET y)``,
+  GEN_TAC THEN REWRITE_TAC[poset, fl] THEN
+  SIMP_TAC std_ss [] THEN
+  REWRITE_TAC[SUBSET_DEF, EXTENSION] THEN METIS_TAC[]);
+
+val FL_RESTRICTED_SUBSET = store_thm ("FL_RESTRICTED_SUBSET",
+ ``!P. fl(\(x,y). P(x) /\ P(y) /\ x SUBSET y) = P``,
+  REWRITE_TAC[fl, FORALL_PROD, FUN_EQ_THM] THEN
+  SIMP_TAC std_ss [] THEN METIS_TAC[SUBSET_REFL]);;
+
+val ZL_SUBSETS = store_thm ("ZL_SUBSETS",
+ ``!P. (!c. (!x. x IN c ==> P x) /\
+            (!x y. x IN c /\ y IN c ==> x SUBSET y \/ y SUBSET x)
+            ==> ?z. P z /\ (!x. x IN c ==> x SUBSET z))
+       ==> ?a:'a->bool. P a /\ (!x. P x /\ a SUBSET x ==> (a = x))``,
+  GEN_TAC THEN
+  MP_TAC(ISPEC ``\(x,y). P(x:'a->bool) /\ P(y) /\ x SUBSET y`` ZL) THEN
+  SIMP_TAC std_ss [POSET_RESTRICTED_SUBSET, FL_RESTRICTED_SUBSET] THEN
+  REWRITE_TAC[chain] THEN SIMP_TAC std_ss [IN_DEF] THEN
+  MATCH_MP_TAC MONO_IMP THEN METIS_TAC []);
+
+val ZL_SUBSETS = store_thm ("ZL_SUBSETS",
+ ``!P. (!c. (!x. x IN c ==> P x) /\
+            (!x y. x IN c /\ y IN c ==> x SUBSET y \/ y SUBSET x)
+            ==> ?z. P z /\ (!x. x IN c ==> x SUBSET z))
+       ==> ?a:'a->bool. P a /\ (!x. P x /\ a SUBSET x ==> (a = x))``,
+  GEN_TAC THEN
+  MP_TAC(ISPEC ``\(x,y). P(x:'a->bool) /\ P(y) /\ x SUBSET y`` ZL) THEN
+  SIMP_TAC std_ss [POSET_RESTRICTED_SUBSET, FL_RESTRICTED_SUBSET] THEN
+  REWRITE_TAC[chain] THEN SIMP_TAC std_ss [IN_DEF] THEN
+  MATCH_MP_TAC MONO_IMP THEN METIS_TAC []);
+
+val ZL_SUBSETS_BIGUNION = store_thm ("ZL_SUBSETS_BIGUNION",
+ ``!P. (!c. (!x. x IN c ==> P x) /\
+            (!x y. x IN c /\ y IN c ==> x SUBSET y \/ y SUBSET x)
+            ==> P(BIGUNION c))
+       ==> ?a:'a->bool. P a /\ (!x. P x /\ a SUBSET x ==> (a = x))``,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC ZL_SUBSETS THEN
+  REPEAT STRIP_TAC THEN EXISTS_TAC ``BIGUNION(c:('a->bool)->bool)`` THEN
+  METIS_TAC[SUBSET_DEF, IN_BIGUNION]);
+
+val ZL_SUBSETS_BIGUNION_NONEMPTY = store_thm ("ZL_SUBSETS_BIGUNION_NONEMPTY",
+ ``!P. (?x. P x) /\
+       (!c. (?x. x IN c) /\
+            (!x. x IN c ==> P x) /\
+            (!x y. x IN c /\ y IN c ==> x SUBSET y \/ y SUBSET x)
+            ==> P(BIGUNION c))
+       ==> ?a:'a->bool. P a /\ (!x. P x /\ a SUBSET x ==> (a = x))``,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC ZL_SUBSETS THEN
+  REPEAT STRIP_TAC THEN ASM_CASES_TAC ``?x:'a->bool. x IN c`` THENL
+   [EXISTS_TAC ``BIGUNION (c:('a->bool)->bool)`` THEN
+    ASM_SIMP_TAC std_ss [] THEN METIS_TAC[SUBSET_DEF, IN_BIGUNION],
+    METIS_TAC[]]);
+
+(* ------------------------------------------------------------------------- *)
+(* Useful lemma to reduce some higher order stuff to first order.            *)
+(* ------------------------------------------------------------------------- *)
+
+val FLATTEN_LEMMA = store_thm ("FLATTEN_LEMMA",
+ ``!s. (!x. x IN s ==> (g(f(x)) = x)) <=> !y x. x IN s /\ (y = f x) ==> (g y = x)``,
+  MESON_TAC[]);
+
+(* ------------------------------------------------------------------------- *)
+(* Knaster-Tarski fixpoint theorem (used in Schroeder-Bernstein below).      *)
+(* ------------------------------------------------------------------------- *)
+
+val TARSKI_SET = store_thm ("TARSKI_SET",
+  ``!f. (!s t. s SUBSET t ==> f(s) SUBSET f(t)) ==> ?s:'a->bool. f(s) = s``,
+  REPEAT STRIP_TAC THEN MAP_EVERY ABBREV_TAC
+   [``Y = {b:'a->bool | f(b) SUBSET b}``, ``a:'a->bool = BIGINTER Y``] THEN
+  SUBGOAL_THEN ``!b:'a->bool. b IN Y <=> f(b) SUBSET b`` ASSUME_TAC THENL
+   [EXPAND_TAC "Y" THEN SIMP_TAC std_ss [GSPECIFICATION], ALL_TAC] THEN
+  SUBGOAL_THEN ``!b:'a->bool. b IN Y ==> f(a:'a->bool) SUBSET b`` ASSUME_TAC THENL
+   [ASM_MESON_TAC[SUBSET_TRANS, IN_BIGINTER, SUBSET_DEF], ALL_TAC] THEN
+  SUBGOAL_THEN ``f(a:'a->bool) SUBSET a``
+   (fn th => ASM_MESON_TAC[SUBSET_ANTISYM, IN_BIGINTER, th]) THEN
+  ASM_MESON_TAC[IN_BIGINTER, SUBSET_DEF]);
+
+(* ------------------------------------------------------------------------- *)
+(* We need a nonemptiness hypothesis for the nicest total function form.     *)
+(* ------------------------------------------------------------------------- *)
+
+val INJECTIVE_LEFT_INVERSE_NONEMPTY = store_thm ("INJECTIVE_LEFT_INVERSE_NONEMPTY",
+ ``!f s t. (?x. x IN s)
+   ==> ((!x y. x IN s /\ y IN s /\ ((f)(x) = f(y)) ==> (x = y)) <=>
+        (?g. (!y. y IN t ==> g(y) IN s) /\
+            (!x. x IN s ==> (g(f(x)) = x))))``,
+  REWRITE_TAC [FLATTEN_LEMMA] THEN SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN
+  REWRITE_TAC [METIS [] ``(?g. !y.
+         (y IN t ==> g y IN s) /\ !x. x IN s /\ (y = f x) ==> (g (f x) = x)) =
+            (?g. !y.
+  (\x z. (y IN t ==> z IN s) /\ !x. x IN s /\ (y = f x) ==> (z = x)) y (g y))``] THEN
+  SIMP_TAC std_ss [GSYM SKOLEM_THM] THEN
+  METIS_TAC[]);
 
 val _ = export_theory()

@@ -52,8 +52,7 @@ fun abbrev_tac n p (asl,g) =
   let
     val t = find_subterm p g
     val v =
-      with_flag (Globals.priming, SOME "")
-      (variant (free_varsl (g :: asl))) (mk_var (n, type_of t))
+        numvariant (free_varsl (g :: asl)) (mk_var (n, type_of t))
     val th = EXISTS (mk_exists (v, mk_eq (t, v)), t) (REFL t)
   in
     MP_TAC th THEN CONV_TAC LEFT_IMP_EXISTS_CONV THEN GEN_TAC

@@ -28,22 +28,7 @@ local
                  TextIO.output(TextIO.stdOut, "META_DEBUG: " ^ s() ^ "\n")
                else ()
 
-  (* used to stand for "has double quote", but the same analysis is necessary
-     even for files that contain single quotes because of the special
-     treatment that the filter gives to things like `s1 ^ s2`
-  *)
   fun try_remove f = ((OS.FileSys.remove f) handle OS.SysErr _ => ());
-  fun has_dq file =
-      let
-        val istrm = TextIO.openIn file
-        fun loop() =
-            case TextIO.input1 istrm of
-              NONE => false
-            | SOME #"`" => true
-            | SOME c => Char.ord c > 127 orelse loop()
-      in
-        loop() before TextIO.closeIn istrm
-      end handle IO.Io _ => false
   infix ++
   fun p1 ++ p2 = OS.Path.concat (p1, p2)
   open Systeml
@@ -62,7 +47,7 @@ fun quse s = let
   val full = OS.Path.mkCanonical
                (OS.Path.mkAbsolute{path = s, relativeTo = OS.FileSys.getDir()})
 in
-  if has_dq s then QUse.use s else PolyML.use s ;
+  QUse.use s ;
   loadpathdb := Binarymap.insert(!loadpathdb,OS.Path.file full,OS.Path.dir full)
 end handle OS.Path.Path => die ("Path exception in quse "^s)
              | e => (TextIO.output(TextIO.stdErr,

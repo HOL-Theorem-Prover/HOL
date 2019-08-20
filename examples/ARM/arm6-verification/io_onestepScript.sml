@@ -15,6 +15,7 @@ open simpLib numLib combinTheory pairTheory arithmeticTheory;
 open prim_recTheory pred_setTheory rich_listTheory onestepTheory;
 
 val _ = new_theory "io_onestep";
+val _ = ParseExtras.temp_loose_equality();
 
 (* vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv *)
 

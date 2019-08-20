@@ -93,6 +93,8 @@ open bagLib
 open separationLogicLib
 open ConseqConv
 
+val ERR = mk_HOL_ERR "vars_as_resourceBase"
+
 (*
 quietdec := false;
 *)
@@ -522,7 +524,7 @@ fun var_res_exp_vars___is_equals_const vL n t =
       val v' = dest_var_res_exp_var l;
       val c = dest_var_res_exp_const r;
    in
-      if (mem v' vL) then SOME (n, v', c) else NONE
+      if tmem v' vL then SOME (n, v', c) else NONE
    end handle HOL_ERR _ => NONE;
 
 

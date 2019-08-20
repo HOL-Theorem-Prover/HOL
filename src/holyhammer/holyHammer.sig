@@ -2,53 +2,29 @@ signature holyHammer =
 sig
 
   include Abbrev
-  datatype prover = Eprover | Z3 | Satallax
+  datatype prover = Eprover | Z3 | Vampire
 
-  type lbl_t = (string * real * goal * goal list)
-  type fea_t = int list
-  type feav_t = (lbl_t * fea_t)
+  val set_timeout : int -> unit
 
-  (* Caching features of theorems *)
-  val update_thmdata : unit ->
-    (int, real) Redblackmap.dict *
-    (string * fea_t) list *
-    (string, (goal * int list)) Redblackmap.dict
+  val holyhammer  : term -> thm
+  val hh          : tactic
+  (* For running holyhammer in the backgroup with a high time limit *)
+  val hh_fork     : goal -> Thread.thread
+  (* string list is a list of premises of the form "fooTheory.bar" *)
+  val hh_pb       : prover list -> string list -> goal -> tactic
 
-  (* Export a problem to TT files *)
-  val export_problem : string -> string list -> term -> unit
+  (* remembers how goals were proven *)
+  val clean_hh_goaltac_cache : unit -> unit
+  (* remembers features of goals (shared with tactictoe) *)
+  val clean_goalfea_cache : unit -> unit
 
-  (* Export theories to TT files *)
-  val export_theories : string -> string list -> unit
+  (* Evaluation of holyhammer (without premise selection) *)
+  val hh_pb_eval_thm : prover list -> string * thm -> unit
+  val hh_pb_eval_thy : prover list -> string -> unit
 
-  (* Translate the problem from THF to FOF via HOL/Light *)
-  val translate_fof     : string -> string -> Process.status
-  val translate_thf     : string -> string -> Process.status
-
-  (* Calling an automated theorem prover such as "eprover" *)
-  val launch_atp        : string -> prover -> int -> Process.status
-
-  (* Reconstruct and minimize the proof using Metis *)
-  val reconstruct_dir   : string -> goal -> tactic
-
-  (* Main function and options *)
-  val holyhammer        : term -> tactic
-  val hh                : tactic
-
-  (* Holyhammer for Tactictoe with parallel calls *)
-  val hh_stac           :
-    string ->
-      (int, real) Redblackmap.dict *
-      (string * fea_t) list *
-      (string, (goal * int list)) Redblackmap.dict
-    -> int -> goal -> string option
-  
-  (* Exporting fof problems *)
-  val create_fof        : string -> thm -> unit
-
-
-  (* State *)
-  val clean_cache       : unit -> unit
-  val set_timeout       : int -> unit
-
+  (* Evaluation of holyhammer (with premise selection).
+     This function is used inside the tactictoe evaluation framework. *)
+  val hh_eval : (mlThmData.thmdata * mlTacticData.tacdata) ->
+     (string * string) -> goal -> unit
 
 end

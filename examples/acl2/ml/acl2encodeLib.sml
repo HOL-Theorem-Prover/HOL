@@ -74,41 +74,41 @@ fun add_num_translations () =
 let val _ = perform "add_num_translations"
     val _ = add_translation sexp num
     val _ = add_coding_function sexp num "encode"
-	{const = ``nat``,definition = sexpTheory.nat_def,induction = NONE};
+        {const = ``nat``,definition = sexpTheory.nat_def,induction = NONE};
     val _ = add_coding_function sexp num "decode"
-	{const = ``sexp_to_nat``,definition = translateTheory.sexp_to_nat_def,
-	 induction = NONE};
+        {const = ``sexp_to_nat``,definition = translateTheory.sexp_to_nat_def,
+         induction = NONE};
     val _ = add_coding_function sexp num "detect"
-	{const = ``sexp_to_bool o natp``,
+        {const = ``sexp_to_bool o natp``,
          definition = hol_defaxiomsTheory.natp_def,
-	 induction = NONE};
+         induction = NONE};
 
     val _ = add_source_function num "map"
-	{const = ``I``,definition = I_THM,induction = NONE};
+        {const = ``I``,definition = I_THM,induction = NONE};
     val _ = add_source_function num "all"
-	{const = ``K T``,definition = K_THM,induction = NONE};
+        {const = ``K T``,definition = K_THM,induction = NONE};
     val _ = add_coding_function sexp num "fix"
-	{const = ``nfix``,definition = hol_defaxiomsTheory.nfix_def,
-	 induction = NONE};
+        {const = ``nfix``,definition = hol_defaxiomsTheory.nfix_def,
+         induction = NONE};
 
     val _ = add_coding_theorem sexp num "encode_decode_map"
-    	    translateTheory.ENCDECMAP_NAT;
+            translateTheory.ENCDECMAP_NAT;
     val _ = add_coding_theorem sexp num "encode_detect_all"
-    	    translateTheory.ENCDETALL_NAT;
+            translateTheory.ENCDETALL_NAT;
     val _ = add_coding_theorem sexp num "decode_encode_fix"
-    	    translateTheory.DECENCFIX_NAT;
+            translateTheory.DECENCFIX_NAT;
     val _ = add_coding_theorem sexp num "encode_map_encode"
-    	    (simple_encode_map_encode ``nat``)
+            (simple_encode_map_encode ``nat``)
     val _ = add_coding_theorem sexp num "fix_id"
-    	    translateTheory.FIXID_NAT;
+            translateTheory.FIXID_NAT;
     val _ = add_source_theorem sexp "map_compose" (simple_map_compose sexp);
     val _ = add_source_theorem num "map_compose" (simple_map_compose num);
 
     val _ = add_coding_theorem sexp num "detect_dead"
-    	    translateTheory.DETDEAD_NAT;
+            translateTheory.DETDEAD_NAT;
     val _ = add_coding_theorem sexp num "general_detect"
-    	    (DECIDE ``!x. (sexp_to_bool o natp) x ==>
-	    	    	  (sexp_to_bool o natp) x``)
+            (DECIDE ``!x. (sexp_to_bool o natp) x ==>
+                          (sexp_to_bool o natp) x``)
 in
     ()
 end handle ExistsAlready => ()
@@ -121,40 +121,40 @@ fun add_int_translations () =
 let val _ = perform "add_int_translations"
     val _ = add_translation sexp int
     val _ = add_coding_function sexp int "encode"
-	{const = ``int``,definition = sexpTheory.int_def,induction = NONE};
+        {const = ``int``,definition = sexpTheory.int_def,induction = NONE};
     val _ = add_coding_function sexp int "decode"
-	{const = ``sexp_to_int``,definition = translateTheory.sexp_to_int_def,
-	 induction = NONE};
+        {const = ``sexp_to_int``,definition = translateTheory.sexp_to_int_def,
+         induction = NONE};
     val _ = add_coding_function sexp int "detect"
-	{const = ``sexp_to_bool o integerp``,
+        {const = ``sexp_to_bool o integerp``,
          definition = sexpTheory.integerp_def,
-	 induction = NONE};
+         induction = NONE};
 
     val _ = add_source_function int "map"
-	{const = ``I``,definition = I_THM,induction = NONE};
+        {const = ``I``,definition = I_THM,induction = NONE};
     val _ = add_source_function int "all"
-	{const = ``K T``,definition = K_THM,induction = NONE};
+        {const = ``K T``,definition = K_THM,induction = NONE};
     val _ = add_coding_function sexp int "fix"
-	{const = ``ifix``,definition = hol_defaxiomsTheory.ifix_def,
-	 induction = NONE};
+        {const = ``ifix``,definition = hol_defaxiomsTheory.ifix_def,
+         induction = NONE};
 
     val _ = add_coding_theorem sexp int "encode_decode_map"
-    	    translateTheory.ENCDECMAP_INT;
+            translateTheory.ENCDECMAP_INT;
     val _ = add_coding_theorem sexp int "encode_detect_all"
-    	    translateTheory.ENCDETALL_INT;
+            translateTheory.ENCDETALL_INT;
     val _ = add_coding_theorem sexp int "decode_encode_fix"
-    	    translateTheory.DECENCFIX_INT;
+            translateTheory.DECENCFIX_INT;
     val _ = add_coding_theorem sexp int "encode_map_encode"
-    	    (simple_encode_map_encode ``int``)
+            (simple_encode_map_encode ``int``)
     val _ = add_coding_theorem sexp int "fix_id"
-    	    translateTheory.FIXID_INT;
+            translateTheory.FIXID_INT;
     val _ = add_source_theorem int "map_compose" (simple_map_compose int);
 
     val _ = add_coding_theorem sexp int "detect_dead"
-    	    translateTheory.DETDEAD_INT;
+            translateTheory.DETDEAD_INT;
     val _ = add_coding_theorem sexp int "general_detect"
-    	    (DECIDE ``!x. (sexp_to_bool o integerp) x ==>
-	    	    	  (sexp_to_bool o integerp) x``)
+            (DECIDE ``!x. (sexp_to_bool o integerp) x ==>
+                          (sexp_to_bool o integerp) x``)
     val _ = set_bottom_value int ``0i``
 in
     ()
@@ -168,41 +168,41 @@ fun add_bool_translations () =
 let val _ = perform "add_bool_translations"
     val _ = add_translation sexp bool
     val _ = add_coding_function sexp bool "encode"
-	{const = ``bool``,definition = translateTheory.bool_def,
-	 induction = NONE};
+        {const = ``bool``,definition = translateTheory.bool_def,
+         induction = NONE};
     val _ = add_coding_function sexp bool "decode"
-	{const = ``sexp_to_bool``,definition = translateTheory.sexp_to_bool_def,
-	 induction = NONE};
+        {const = ``sexp_to_bool``,definition = translateTheory.sexp_to_bool_def,
+         induction = NONE};
     val _ = add_coding_function sexp bool "detect"
-	{const = ``sexp_to_bool o booleanp``,
+        {const = ``sexp_to_bool o booleanp``,
          definition = hol_defaxiomsTheory.booleanp_def,
-	 induction = NONE};
+         induction = NONE};
 
     val _ = add_source_function bool "map"
-	{const = ``I``,definition = I_THM,induction = NONE};
+        {const = ``I``,definition = I_THM,induction = NONE};
     val _ = add_source_function bool "all"
-	{const = ``K T``,definition = K_THM,induction = NONE};
+        {const = ``K T``,definition = K_THM,induction = NONE};
     val _ = add_coding_function sexp bool "fix"
-	{const = ``fix_bool``,definition = translateTheory.fix_bool_def,
-	 induction = NONE};
+        {const = ``fix_bool``,definition = translateTheory.fix_bool_def,
+         induction = NONE};
 
     val _ = add_coding_theorem sexp bool "encode_decode_map"
-    	    translateTheory.ENCDECMAP_BOOL;
+            translateTheory.ENCDECMAP_BOOL;
     val _ = add_coding_theorem sexp bool "encode_detect_all"
-    	    translateTheory.ENCDETALL_BOOL;
+            translateTheory.ENCDETALL_BOOL;
     val _ = add_coding_theorem sexp bool "decode_encode_fix"
-    	    translateTheory.DECENCFIX_BOOL;
+            translateTheory.DECENCFIX_BOOL;
     val _ = add_coding_theorem sexp bool "encode_map_encode"
-    	    (simple_encode_map_encode ``bool``)
+            (simple_encode_map_encode ``bool``)
     val _ = add_coding_theorem sexp bool "fix_id"
-    	    translateTheory.FIXID_BOOL;
+            translateTheory.FIXID_BOOL;
     val _ = add_source_theorem bool "map_compose" (simple_map_compose bool);
 
     val _ = add_coding_theorem sexp bool "detect_dead"
-    	    translateTheory.DETDEAD_BOOL;
+            translateTheory.DETDEAD_BOOL;
     val _ = add_coding_theorem sexp bool "general_detect"
-    	    (DECIDE ``!x. (sexp_to_bool o booleanp) x ==>
-	    	    	  (sexp_to_bool o booleanp) x``)
+            (DECIDE ``!x. (sexp_to_bool o booleanp) x ==>
+                          (sexp_to_bool o booleanp) x``)
 in
     ()
 end handle ExistsAlready => ()
@@ -215,40 +215,40 @@ fun add_string_translations () =
 let val _ = perform "add_string_translations"
     val _ = add_translation_precise sexp string
     val _ = add_coding_function_precise sexp string "encode"
-	{const = ``str``,definition = combinTheory.I_THM, induction = NONE};
+        {const = ``str``,definition = combinTheory.I_THM, induction = NONE};
     val _ = add_coding_function_precise sexp string "decode"
-	{const = ``sexp_to_string``,definition = translateTheory.sexp_to_string_def,
-	 induction = NONE};
+        {const = ``sexp_to_string``,definition = translateTheory.sexp_to_string_def,
+         induction = NONE};
     val _ = add_coding_function_precise sexp string "detect"
-	{const = ``sexp_to_bool o stringp``,
+        {const = ``sexp_to_bool o stringp``,
          definition = sexpTheory.stringp_def,
-	 induction = NONE};
+         induction = NONE};
 
     val _ = add_source_function_precise string "map"
-	{const = ``I``,definition = I_THM,induction = NONE};
+        {const = ``I``,definition = I_THM,induction = NONE};
     val _ = add_source_function_precise string "all"
-	{const = ``K T``,definition = K_THM,induction = NONE};
+        {const = ``K T``,definition = K_THM,induction = NONE};
     val _ = add_coding_function_precise sexp string "fix"
-	{const = ``fix_string``,definition = translateTheory.fix_string_def,
-	 induction = NONE};
+        {const = ``fix_string``,definition = translateTheory.fix_string_def,
+         induction = NONE};
 
     val _ = add_coding_theorem_precise sexp string "encode_decode_map"
-    	    translateTheory.ENCDECMAP_STRING;
+            translateTheory.ENCDECMAP_STRING;
     val _ = add_coding_theorem_precise sexp string "encode_detect_all"
-    	    translateTheory.ENCDETALL_STRING;
+            translateTheory.ENCDETALL_STRING;
     val _ = add_coding_theorem_precise sexp string "decode_encode_fix"
-    	    translateTheory.DECENCFIX_STRING;
+            translateTheory.DECENCFIX_STRING;
     val _ = add_coding_theorem_precise sexp string "encode_map_encode"
-    	    (simple_encode_map_encode ``str``)
+            (simple_encode_map_encode ``str``)
     val _ = add_coding_theorem_precise sexp string "fix_id"
-    	    translateTheory.FIXID_STRING;
+            translateTheory.FIXID_STRING;
     val _ = add_source_theorem_precise string "map_compose" (simple_map_compose string);
 
     val _ = add_coding_theorem_precise sexp string "detect_dead"
-    	    translateTheory.DETDEAD_STRING;
+            translateTheory.DETDEAD_STRING;
     val _ = add_coding_theorem_precise sexp string "general_detect"
-    	    (DECIDE ``!x. (sexp_to_bool o stringp) x ==>
-	    	    	  (sexp_to_bool o stringp) x``)
+            (DECIDE ``!x. (sexp_to_bool o stringp) x ==>
+                          (sexp_to_bool o stringp) x``)
 
     val _ = functionEncodeLib.add_terminal
             ("str ?", op&&& o (equal ``str`` ## stringSyntax.is_string_literal) o dest_comb);
@@ -264,40 +264,40 @@ fun add_char_translations () =
 let val _ = perform "add_char_translations"
     val _ = add_translation_precise sexp char
     val _ = add_coding_function_precise sexp char "encode"
-	{const = ``chr``,definition = combinTheory.I_THM, induction = NONE};
+        {const = ``chr``,definition = combinTheory.I_THM, induction = NONE};
     val _ = add_coding_function_precise sexp char "decode"
-	{const = ``sexp_to_char``,definition = translateTheory.sexp_to_char_def,
-	 induction = NONE};
+        {const = ``sexp_to_char``,definition = translateTheory.sexp_to_char_def,
+         induction = NONE};
     val _ = add_coding_function_precise sexp char "detect"
-	{const = ``sexp_to_bool o characterp``,
+        {const = ``sexp_to_bool o characterp``,
          definition = sexpTheory.characterp_def,
-	 induction = NONE};
+         induction = NONE};
 
     val _ = add_source_function_precise char "map"
-	{const = ``I``,definition = I_THM,induction = NONE};
+        {const = ``I``,definition = I_THM,induction = NONE};
     val _ = add_source_function_precise char "all"
-	{const = ``K T``,definition = K_THM,induction = NONE};
+        {const = ``K T``,definition = K_THM,induction = NONE};
     val _ = add_coding_function_precise sexp char "fix"
-	{const = ``fix_char``,definition = translateTheory.fix_char_def,
-	 induction = NONE};
+        {const = ``fix_char``,definition = translateTheory.fix_char_def,
+         induction = NONE};
 
     val _ = add_coding_theorem_precise sexp char "encode_decode_map"
-    	    translateTheory.ENCDECMAP_CHAR;
+            translateTheory.ENCDECMAP_CHAR;
     val _ = add_coding_theorem_precise sexp char "encode_detect_all"
-    	    translateTheory.ENCDETALL_CHAR;
+            translateTheory.ENCDETALL_CHAR;
     val _ = add_coding_theorem_precise sexp char "decode_encode_fix"
-    	    translateTheory.DECENCFIX_CHAR;
+            translateTheory.DECENCFIX_CHAR;
     val _ = add_coding_theorem_precise sexp char "encode_map_encode"
-    	    (simple_encode_map_encode ``chr``)
+            (simple_encode_map_encode ``chr``)
     val _ = add_coding_theorem_precise sexp char "fix_id"
-    	    translateTheory.FIXID_CHAR;
+            translateTheory.FIXID_CHAR;
     val _ = add_source_theorem_precise char "map_compose" (simple_map_compose char);
 
     val _ = add_coding_theorem_precise sexp char "detect_dead"
-    	    translateTheory.DETDEAD_CHAR;
+            translateTheory.DETDEAD_CHAR;
     val _ = add_coding_theorem_precise sexp char "general_detect"
-    	    (DECIDE ``!x. (sexp_to_bool o characterp) x ==>
-	    	    	  (sexp_to_bool o characterp) x``)
+            (DECIDE ``!x. (sexp_to_bool o characterp) x ==>
+                          (sexp_to_bool o characterp) x``)
 in
     ()
 end handle ExistsAlready => ()
@@ -310,40 +310,40 @@ fun add_rat_translations () =
 let val _ = perform "add_rat_translations"
     val _ = add_translation sexp rat
     val _ = add_coding_function sexp rat "encode"
-	{const = ``rat``,definition = sexpTheory.rat_def,induction = NONE};
+        {const = ``rat``,definition = sexpTheory.rat_def,induction = NONE};
     val _ = add_coding_function sexp rat "decode"
-	{const = ``sexp_to_rat``,definition = translateTheory.sexp_to_rat_def,
-	 induction = NONE};
+        {const = ``sexp_to_rat``,definition = translateTheory.sexp_to_rat_def,
+         induction = NONE};
     val _ = add_coding_function sexp rat "detect"
-	{const = ``sexp_to_bool o rationalp``,
+        {const = ``sexp_to_bool o rationalp``,
          definition = sexpTheory.rationalp_def,
-	 induction = NONE};
+         induction = NONE};
 
     val _ = add_source_function rat "map"
-	{const = ``I``,definition = I_THM,induction = NONE};
+        {const = ``I``,definition = I_THM,induction = NONE};
     val _ = add_source_function rat "all"
-	{const = ``K T``,definition = K_THM,induction = NONE};
+        {const = ``K T``,definition = K_THM,induction = NONE};
     val _ = add_coding_function sexp rat "fix"
-	{const = ``fix_rat``,definition = translateTheory.fix_rat_def,
-	 induction = NONE};
+        {const = ``fix_rat``,definition = translateTheory.fix_rat_def,
+         induction = NONE};
 
     val _ = add_coding_theorem sexp rat "encode_decode_map"
-    	    translateTheory.ENCDECMAP_RAT;
+            translateTheory.ENCDECMAP_RAT;
     val _ = add_coding_theorem sexp rat "encode_detect_all"
-    	    translateTheory.ENCDETALL_RAT;
+            translateTheory.ENCDETALL_RAT;
     val _ = add_coding_theorem sexp rat "decode_encode_fix"
-    	    translateTheory.DECENCFIX_RAT;
+            translateTheory.DECENCFIX_RAT;
     val _ = add_coding_theorem sexp rat "encode_map_encode"
-    	    (simple_encode_map_encode ``rat``)
+            (simple_encode_map_encode ``rat``)
     val _ = add_coding_theorem sexp rat "fix_id"
-    	    translateTheory.FIXID_RAT;
+            translateTheory.FIXID_RAT;
     val _ = add_source_theorem rat "map_compose" (simple_map_compose rat);
 
     val _ = add_coding_theorem sexp rat "detect_dead"
-    	    translateTheory.DETDEAD_RAT;
+            translateTheory.DETDEAD_RAT;
     val _ = add_coding_theorem sexp rat "general_detect"
-    	    (DECIDE ``!x. (sexp_to_bool o rationalp) x ==>
-	    	    	  (sexp_to_bool o rationalp) x``)
+            (DECIDE ``!x. (sexp_to_bool o rationalp) x ==>
+                          (sexp_to_bool o rationalp) x``)
 in
     ()
 end handle ExistsAlready => ()
@@ -356,54 +356,54 @@ fun add_product_translations () =
 let val _ = perform "add_product_translations"
     val _ = add_translation sexp pair
     val _ = add_coding_function sexp pair "encode"
-		{const = ``pair``,
-		 definition = translateTheory.pair_thm,
+                {const = ``pair``,
+                 definition = translateTheory.pair_thm,
                  induction = NONE};
     val _ = add_coding_function sexp pair "decode"
-		{const = ``sexp_to_pair``,
-		 definition = translateTheory.sexp_to_pair_def,
-		 induction = NONE};
+                {const = ``sexp_to_pair``,
+                 definition = translateTheory.sexp_to_pair_def,
+                 induction = NONE};
     val _ = add_coding_function sexp pair "detect"
-	      	{const = ``pairp``,
-		 definition = translateTheory.pairp_def,
-		 induction = NONE};
+                {const = ``pairp``,
+                 definition = translateTheory.pairp_def,
+                 induction = NONE};
     val _ = add_source_function pair "map"
-	        {const = ``$##``,
-		 definition = pairTheory.PAIR_MAP_THM,
-		 induction = NONE};
+                {const = ``$##``,
+                 definition = pairTheory.PAIR_MAP_THM,
+                 induction = NONE};
     val _ = add_source_function pair "all"
-	      {const = ``all_pair``,
-	       definition = translateTheory.all_pair_def,
-	       induction = NONE};
+              {const = ``all_pair``,
+               definition = translateTheory.all_pair_def,
+               induction = NONE};
     val _ = add_coding_function sexp pair "fix"
-	      {const = ``fix_pair``,definition = translateTheory.fix_pair_def,
-	       induction = NONE};
+              {const = ``fix_pair``,definition = translateTheory.fix_pair_def,
+               induction = NONE};
 
     val _ = add_coding_theorem sexp pair "encode_decode_map"
-    	    translateTheory.ENCDECMAP_PAIR;
+            translateTheory.ENCDECMAP_PAIR;
     val _ = add_coding_theorem sexp pair "encode_detect_all"
-    	    translateTheory.ENCDETALL_PAIR;
+            translateTheory.ENCDETALL_PAIR;
     val _ = add_coding_theorem sexp pair "decode_encode_fix"
-    	    translateTheory.DECENCFIX_PAIR;
+            translateTheory.DECENCFIX_PAIR;
     val _ = add_coding_theorem sexp pair "encode_map_encode"
-    	    translateTheory.ENCMAPENC_PAIR;
+            translateTheory.ENCMAPENC_PAIR;
 
     val _ = add_coding_theorem sexp pair "fix_id"
-    	    translateTheory.FIXID_PAIR;
+            translateTheory.FIXID_PAIR;
     val _ = add_source_theorem pair "map_id"
-    	    quotient_pairTheory.PAIR_MAP_I;
+            quotient_pairTheory.PAIR_MAP_I;
     val _ = add_source_theorem pair "all_id"
-    	    translateTheory.ALLID_PAIR;
+            translateTheory.ALLID_PAIR;
 
     val _ = add_source_theorem pair "map_compose"
-    	    (prove(``(a ## b) o (c ## d) = ((a o c) ## (b o d))``,
-	         REWRITE_TAC [boolTheory.FUN_EQ_THM] THEN Cases THEN
-	         REWRITE_TAC [pairTheory.PAIR_MAP_THM,combinTheory.o_THM]));
+            (prove(``(a ## b) o (c ## d) = ((a o c) ## (b o d))``,
+                 REWRITE_TAC [boolTheory.FUN_EQ_THM] THEN Cases THEN
+                 REWRITE_TAC [pairTheory.PAIR_MAP_THM,combinTheory.o_THM]));
 
     val _ = add_coding_theorem sexp pair "detect_dead"
-    	    translateTheory.DETDEAD_PAIR;
+            translateTheory.DETDEAD_PAIR;
     val _ = add_coding_theorem sexp pair "general_detect"
-    	    translateTheory.GENERAL_DETECT_PAIR;
+            translateTheory.GENERAL_DETECT_PAIR;
 in
     ()
 end handle ExistsAlready => ()
@@ -416,16 +416,16 @@ val list_ind = translateTheory.sexp_list_ind;
 
 val decode_list_ind =
     (list_ind,[(``P0:sexp -> bool``,(``sexp_to_list f``,list)),
-    	       (``P1:sexp -> bool``,(``sexp_to_pair f (sexp_to_list f)``,
-	       		     			    ``:'a # 'a list``))]);
+               (``P1:sexp -> bool``,(``sexp_to_pair f (sexp_to_list f)``,
+                                                    ``:'a # 'a list``))]);
 val detect_list_ind =
     (list_ind,[(``P0:sexp -> bool``,(``listp f``,list)),
-    	       (``P1:sexp -> bool``,(``pairp f (listp f)``,
-	       		     		       ``:'a # 'a list``))]);
+               (``P1:sexp -> bool``,(``pairp f (listp f)``,
+                                               ``:'a # 'a list``))]);
 val fix_list_ind =
     (list_ind,[(``P0:sexp -> bool``,(``fix_list f``,list)),
                (``P1:sexp -> bool``,(``fix_pair f (fix_list f)``,
-	       		     			``:'a # 'a list``))]);
+                                                ``:'a # 'a list``))]);
 
 val encode_list_ind =
     (TypeBase.induction_of list,
@@ -441,53 +441,53 @@ fun add_list_translations () =
 let val _ = perform "add_list_translations"
     val _ = add_translation sexp list
     val _ = add_coding_function sexp list "encode"
-		{const = ``list``,
-		 definition = translateTheory.list_thm,
+                {const = ``list``,
+                 definition = translateTheory.list_thm,
                  induction = SOME encode_list_ind};
     val _ = add_coding_function sexp list "decode"
-		{const = ``sexp_to_list``,
-		 definition = translateTheory.sexp_to_list_thm,
-		 induction = SOME decode_list_ind};
+                {const = ``sexp_to_list``,
+                 definition = translateTheory.sexp_to_list_thm,
+                 induction = SOME decode_list_ind};
     val _ = add_coding_function sexp list "detect"
-	      	{const = ``listp``,
-		 definition = translateTheory.listp_thm,
-		 induction = SOME detect_list_ind};
+                {const = ``listp``,
+                 definition = translateTheory.listp_thm,
+                 induction = SOME detect_list_ind};
     val _ = add_source_function list "map"
-	        {const = ``MAP``,
-		 definition = listTheory.MAP,
-		 induction = SOME map_list_ind};
+                {const = ``MAP``,
+                 definition = listTheory.MAP,
+                 induction = SOME map_list_ind};
     val _ = add_source_function list "all"
-	      {const = ``EVERY``,
-	       definition = listTheory.EVERY_DEF,
-	       induction = SOME every_list_ind};
+              {const = ``EVERY``,
+               definition = listTheory.EVERY_DEF,
+               induction = SOME every_list_ind};
     val _ = add_coding_function sexp list "fix"
-	      {const = ``fix_list``,
-	       definition = translateTheory.fix_list_thm,
-	       induction = SOME fix_list_ind};
+              {const = ``fix_list``,
+               definition = translateTheory.fix_list_thm,
+               induction = SOME fix_list_ind};
 
     val _ = add_coding_theorem sexp list "encode_decode_map"
-    	    translateTheory.ENCDECMAP_LIST;
+            translateTheory.ENCDECMAP_LIST;
     val _ = add_coding_theorem sexp list "encode_detect_all"
-    	    translateTheory.ENCDETALL_LIST;
+            translateTheory.ENCDETALL_LIST;
     val _ = add_coding_theorem sexp list "decode_encode_fix"
-    	    translateTheory.DECENCFIX_LIST;
+            translateTheory.DECENCFIX_LIST;
     val _ = add_coding_theorem sexp list "encode_map_encode"
-    	    translateTheory.ENCMAPENC_LIST;
+            translateTheory.ENCMAPENC_LIST;
 
     val _ = add_coding_theorem sexp list "fix_id"
-    	    translateTheory.FIXID_LIST;
+            translateTheory.FIXID_LIST;
     val _ = add_source_theorem list "map_id"
-    	    quotient_listTheory.LIST_MAP_I;
+            quotient_listTheory.LIST_MAP_I;
     val _ = add_source_theorem list "all_id"
-    	    translateTheory.ALLID_LIST;
+            translateTheory.ALLID_LIST;
 
     val _ = add_source_theorem list "map_compose"
-    	    (GSYM rich_listTheory.MAP_o);
+            (GSYM rich_listTheory.MAP_o);
 
     val _ = add_coding_theorem sexp list "detect_dead"
-    	    translateTheory.DETDEAD_LIST;
+            translateTheory.DETDEAD_LIST;
     val _ = add_coding_theorem sexp list "general_detect"
-    	    translateTheory.GENERAL_DETECT_LIST;
+            translateTheory.GENERAL_DETECT_LIST;
 in
     ()
 end handle ExistsAlready => ()
@@ -500,51 +500,51 @@ fun add_fcp_translations () =
 let val _ = perform "add_fcp_translations"
     val _ = add_translation sexp fcp
     val _ = add_coding_function sexp fcp "encode"
-	{const = ``fcp_encode``,
-	 definition = extendTranslateTheory.fcp_encode_def,
-	 induction = NONE};
+        {const = ``fcp_encode``,
+         definition = extendTranslateTheory.fcp_encode_def,
+         induction = NONE};
     val _ = add_coding_function sexp fcp "decode"
-	{const = ``fcp_decode``,
-	 definition = extendTranslateTheory.fcp_decode_def,
-	 induction = NONE};
+        {const = ``fcp_decode``,
+         definition = extendTranslateTheory.fcp_decode_def,
+         induction = NONE};
     val _ = add_coding_function sexp fcp "detect"
-	{const = ``fcp_detect : (sexp -> bool) -> 'b itself -> sexp -> bool``,
+        {const = ``fcp_detect : (sexp -> bool) -> 'b itself -> sexp -> bool``,
          definition = extendTranslateTheory.fcp_detect_def,
-	 induction = NONE};
+         induction = NONE};
 
     val _ = add_source_function fcp "map"
-	{const = ``FCP_MAP : ('a -> 'c) -> 'a ** 'b -> 'c ** 'b``,
-	 definition = fcpTheory.FCP_MAP,induction = NONE};
+        {const = ``FCP_MAP : ('a -> 'c) -> 'a ** 'b -> 'c ** 'b``,
+         definition = fcpTheory.FCP_MAP,induction = NONE};
     val _ = add_source_function fcp "all"
-	{const = ``FCP_EVERY : ('a -> bool) -> 'a ** 'b -> bool``,
-	 definition = fcpTheory.FCP_EVERY,induction = NONE};
+        {const = ``FCP_EVERY : ('a -> bool) -> 'a ** 'b -> bool``,
+         definition = fcpTheory.FCP_EVERY,induction = NONE};
     val _ = add_coding_function sexp fcp "fix"
-	{const = ``fcp_fix : (sexp -> sexp) -> 'b itself -> sexp -> sexp``,
-	 definition = extendTranslateTheory.fcp_fix_def,
-	 induction = NONE};
+        {const = ``fcp_fix : (sexp -> sexp) -> 'b itself -> sexp -> sexp``,
+         definition = extendTranslateTheory.fcp_fix_def,
+         induction = NONE};
 
     val _ = add_coding_theorem sexp fcp "encode_decode_map"
-    	    extendTranslateTheory.ENCDECMAP_FCP;
+            extendTranslateTheory.ENCDECMAP_FCP;
     val _ = add_coding_theorem sexp fcp "encode_detect_all"
-    	    extendTranslateTheory.ENCDETALL_FCP;
+            extendTranslateTheory.ENCDETALL_FCP;
     val _ = add_coding_theorem sexp fcp "decode_encode_fix"
-    	    extendTranslateTheory.DECENCFIX_FCP;
+            extendTranslateTheory.DECENCFIX_FCP;
     val _ = add_coding_theorem sexp fcp "encode_map_encode"
-    	    extendTranslateTheory.ENCMAPENC_FCP;
+            extendTranslateTheory.ENCMAPENC_FCP;
     val _ = add_coding_theorem sexp fcp "fix_id"
-    	    extendTranslateTheory.FIXID_FCP;
+            extendTranslateTheory.FIXID_FCP;
     val _ = add_source_theorem fcp "map_compose"
-    	    extendTranslateTheory.MAP_COMPOSE_FCP;
+            extendTranslateTheory.MAP_COMPOSE_FCP;
     val _ = add_source_theorem fcp "map_id"
-    	    extendTranslateTheory.MAPID_FCP;
+            extendTranslateTheory.MAPID_FCP;
     val _ = add_source_theorem fcp "all_id"
-    	    extendTranslateTheory.ALLID_FCP;
+            extendTranslateTheory.ALLID_FCP;
 
 
     val _ = add_coding_theorem sexp fcp "detect_dead"
-    	    extendTranslateTheory.DETDEAD_FCP;
+            extendTranslateTheory.DETDEAD_FCP;
     val _ = add_coding_theorem sexp fcp "general_detect"
-    	    extendTranslateTheory.GENERAL_DETECT_FCP;
+            extendTranslateTheory.GENERAL_DETECT_FCP;
 
     val _ = set_bottom_value ``:'a word`` ``\a. FCP i. a``;
 in
@@ -559,47 +559,47 @@ fun add_word_translations () =
 let val _ = perform "add_word_translations"
     val _ = add_translation_precise sexp word handle _ => ()
     val _ = add_coding_function_precise sexp word "encode"
-	{const = ``word_encode``,
-	 definition = extendTranslateTheory.word_encode_def,
-	 induction = NONE};
+        {const = ``word_encode``,
+         definition = extendTranslateTheory.word_encode_def,
+         induction = NONE};
     val _ = add_coding_function_precise sexp word "decode"
-	{const = ``word_decode``,
-	 definition = extendTranslateTheory.word_decode_def,
-	 induction = NONE};
+        {const = ``word_decode``,
+         definition = extendTranslateTheory.word_decode_def,
+         induction = NONE};
     val _ = add_coding_function_precise sexp word "detect"
-	{const = ``word_detect``,
+        {const = ``word_detect``,
          definition = extendTranslateTheory.word_detect_def,
-	 induction = NONE};
+         induction = NONE};
 
     val _ = add_source_function_precise word "map"
-	{const = ``I``,definition = I_THM,induction = NONE};
+        {const = ``I``,definition = I_THM,induction = NONE};
     val _ = add_source_function_precise word "all"
-	{const = ``K T``,definition = K_THM,induction = NONE};
+        {const = ``K T``,definition = K_THM,induction = NONE};
     val _ = add_coding_function_precise sexp word "fix"
-	{const = ``word_fix``,
-	 definition = extendTranslateTheory.word_fix_def,
-	 induction = NONE};
+        {const = ``word_fix``,
+         definition = extendTranslateTheory.word_fix_def,
+         induction = NONE};
 
     val _ = add_coding_theorem_precise sexp word "encode_decode_map"
-    	    extendTranslateTheory.ENCDECMAP_WORD;
+            extendTranslateTheory.ENCDECMAP_WORD;
     val _ = add_coding_theorem_precise sexp word "encode_detect_all"
-    	    extendTranslateTheory.ENCDETALL_WORD;
+            extendTranslateTheory.ENCDETALL_WORD;
     val _ = add_coding_theorem_precise sexp word "decode_encode_fix"
-    	    extendTranslateTheory.DECENCFIX_WORD;
+            extendTranslateTheory.DECENCFIX_WORD;
     val _ = add_coding_theorem_precise sexp word "encode_map_encode"
-    	    (simple_encode_map_encode ``word_encode (:'a)``)
+            (simple_encode_map_encode ``word_encode (:'a)``)
     val _ = add_coding_theorem_precise sexp word "fix_id"
-    	    extendTranslateTheory.FIXID_WORD;
+            extendTranslateTheory.FIXID_WORD;
     val _ = add_source_theorem_precise word "map_compose"
-    	    (simple_map_compose word);
+            (simple_map_compose word);
 
     val _ = add_coding_theorem_precise sexp word "detect_dead"
-    	    extendTranslateTheory.DETDEAD_WORD;
+            extendTranslateTheory.DETDEAD_WORD;
     val _ = add_coding_theorem_precise sexp word "general_detect"
-    	    (DECIDE ``!x. word_detect (:'b) x ==>
-	    	    	  word_detect (:'b) x``)
+            (DECIDE ``!x. word_detect (:'b) x ==>
+                          word_detect (:'b) x``)
     val _ = add_source_theorem_precise ``:'a word`` "map_id"
-    	    (REFL ``I:'a word -> 'a word``);
+            (REFL ``I:'a word -> 'a word``);
 
     val _ = set_bottom_value ``:'a word`` ``0w``;
 in
@@ -614,23 +614,23 @@ fun initialise_sexp() =
 let val _ = perform "initialise_sexp"
     val _ = add_translation_scheme sexp
                 translateTheory.SEXP_REDUCE
-	        translateTheory.SEXP_TERMINAL;
+                translateTheory.SEXP_TERMINAL;
     val _ = add_product_translations();
     val _ = add_translation sexp sexp
     val _ = add_coding_theorem sexp sexp "decode_encode_fix"
-    	    (prove(``I o I = I:sexp -> sexp``,
-	    	   REWRITE_TAC [combinTheory.I_o_ID]));
+            (prove(``I o I = I:sexp -> sexp``,
+                   REWRITE_TAC [combinTheory.I_o_ID]));
     val _ = add_coding_theorem sexp sexp "fix_id"
-    	    (prove(``!x. (K T) x ==> (I x = x)``,
-	           REWRITE_TAC [combinTheory.I_THM,combinTheory.K_THM]));
+            (prove(``!x. (K T) x ==> (I x = x)``,
+                   REWRITE_TAC [combinTheory.I_THM,combinTheory.K_THM]));
     val _ = add_source_function ``:sexp`` "map"
-    	    {const = ``I:sexp -> sexp``,
-	     definition = combinTheory.I_THM,
-	     induction = NONE};
+            {const = ``I:sexp -> sexp``,
+             definition = combinTheory.I_THM,
+             induction = NONE};
     val _ = add_source_function ``:sexp`` "all"
-    	    {const = ``(K T):sexp -> bool``,
-	     definition = combinTheory.K_THM,
-	     induction = NONE};
+            {const = ``(K T):sexp -> bool``,
+             definition = combinTheory.K_THM,
+             induction = NONE};
 
     val _ = initialise_source_function_generators ();
     val _ = initialise_coding_function_generators sexp;
@@ -841,10 +841,10 @@ fun add_num_rewrites () =
 let val _ = tryperform "add_num_rewrites"
     val _ = add_standard_rewrite 1 "num =0" translateTheory.NAT_EQUAL_0;
     val _ = add_standard_rewrite 1 "num 0="
-    	    (prove(``bool (0 = a) = zp (nat a)``,
-	     REWRITE_TAC [GSYM translateTheory.NAT_EQUAL_0,
-	     		  translateTheory.BOOL_CONG] THEN
-	     DECIDE_TAC))
+            (prove(``bool (0 = a) = zp (nat a)``,
+             REWRITE_TAC [GSYM translateTheory.NAT_EQUAL_0,
+                          translateTheory.BOOL_CONG] THEN
+             DECIDE_TAC))
     val _ = add_standard_rewrite 1 "num 0 <" translateTheory.NAT_0_LT;
     val _ = add_standard_rewrite 0 "num <" translateTheory.NAT_LT;
     val _ = add_standard_rewrite 0 "num <=" translateTheory.NAT_LE;
@@ -890,7 +890,7 @@ let val _ = tryperform "add_bool_rewrites"
     val _ = add_standard_rewrite 1 "if F" translateTheory.COND_F;
     val _ = add_conditional_rewrite 1 "/\\-left" translateTheory.BOOL_LEFT_AND;
     val _ = add_conditional_rewrite 0 "/\\-right"
-    	    translateTheory.BOOL_RIGHT_AND;
+            translateTheory.BOOL_RIGHT_AND;
     val _ = add_conditional_rewrite 1 "\\/-left" translateTheory.BOOL_LEFT_OR;
     val _ = add_conditional_rewrite 0 "\\/-right" translateTheory.BOOL_RIGHT_OR;
     val _ = add_conditional_rewrite 0 "==>implies" translateTheory.BOOL_IMPLIES;
@@ -947,7 +947,7 @@ end handle ExistsAlready => ()
 fun add_polytypic_rewrites() =
 let val _ = perform "add_polytypic_rewrites"
     val _ = add_standard_conversion 0 "nesting"
-      				(nested_constructor_rewrite ``:sexp``);
+                                (nested_constructor_rewrite ``:sexp``);
     val _ = add_standard_rewrite 0 "=" translateTheory.BOOL_EQUALITY;
     val _ = add_polytypic_rewrite 0 "\\x." make_lambda_propagation_theorem;
     val _ = add_polytypic_rewrite 0 "dec enc" polytypic_decodeencode;
@@ -1084,36 +1084,36 @@ let val _ = perform "add_word_rewrites"
     val _ = add_standard_rewrite 0 "n2w" extendTranslateTheory.WORD_N2W;
     val _ = add_standard_rewrite 0 "w2n" extendTranslateTheory.NAT_W2N;
     val _ = add_standard_rewrite 0 "int sw2i"
-    	          (GSYM extendTranslateTheory.word_encode_def)
+                  (GSYM extendTranslateTheory.word_encode_def)
     val _ = add_standard_conversion 0 "index"
-    	    	  (Conv.RAND_CONV wordsLib.SIZES_CONV);
+                  (Conv.RAND_CONV wordsLib.SIZES_CONV);
 
     local
       open intLib integerTheory Tactic Tactical
       val i2n_lemma = prove(``0 <= (i + 1) rem 2 ** l - 1 + 2 ** l``,
         REWRITE_TAC [ARITH_PROVE ``0i <= a - 1 + b = ~a < b``] THEN
-    	MATCH_MP_TAC
-	  (ARITH_PROVE ``!a b c. a <= b /\ b < c ==> a < c:int``) THEN
+        MATCH_MP_TAC
+          (ARITH_PROVE ``!a b c. a <= b /\ b < c ==> a < c:int``) THEN
         Q.EXISTS_TAC `ABS ((i + 1) rem 2 ** l)` THEN
-    	METIS_TAC [INT_REMQUOT,INT_ABS_NUM,INT_EXP,INT_EXP_EQ0,
+        METIS_TAC [INT_REMQUOT,INT_ABS_NUM,INT_EXP,INT_EXP_EQ0,
           ARITH_PROVE ``~(2 = 0i)``,INT_ABS,INT_NOT_LT,INT_NEGNEG,INT_LE_REFL,
-	  INT_LE_NEGL]);
+          INT_LE_NEGL]);
     in
        val i2n_thms = [INT_EXP_EQ0,ARITH_PROVE ``~(2 = 0i)``,
             REWRITE_CONV [integerTheory.INT_POS,integerTheory.INT_EXP]
                  ``0 <= 2 ** a``,
             prove(``~(b = 0) /\ 0i <= b ==> 0 <= a % b``,
-		     METIS_TAC [INT_MOD_BOUNDS,INT_NOT_LT]),i2n_lemma]
+                     METIS_TAC [INT_MOD_BOUNDS,INT_NOT_LT]),i2n_lemma]
     end;
 
     val _ = translate_conditional_function
-    	    [(``i2n``,"translated_i2n")]
-	    i2n_thms
-	    signedintTheory.i2n_def;
+            [(``i2n``,"translated_i2n")]
+            i2n_thms
+            signedintTheory.i2n_def;
 
     val _ = translate_simple_function
-    	    [(``extend``,"translated_extend")]
-	    signedintTheory.extend_def;
+            [(``extend``,"translated_extend")]
+            signedintTheory.extend_def;
 in
     ()
 end handle ExistsAlready => ();
@@ -1133,7 +1133,7 @@ val fmap = mk_type("fmap", [alpha,beta])
 
 fun ONEONE_DECENC_THM t =
 let val _ = if type_vars t = [] then () else
-    	       raise (polyExn (Standard, [], "Not a ground type: " ^ type_to_string t))
+               raise (polyExn (Standard, [], "Not a ground type: " ^ type_to_string t))
     val thm1 = generate_coding_theorem sexp "encode_decode_map" t
     val thm2 = generate_source_theorem "map_id" t
     val thm3 = Q.AP_TERM `ONE_ONE` (TRANS thm1 thm2);
@@ -1161,27 +1161,27 @@ in
 fun CODINGTHEOREM_FMAP s t =
 let val cc = if exists_coding_theorem_conclusion sexp s
                 then get_coding_theorem_conclusion sexp s t
-    	        else get_source_theorem_conclusion s t
+                else get_source_theorem_conclusion s t
     val t1 = if exists_coding_theorem_conclusion sexp s
                 then generate_coding_theorem sexp s (base_type t)
-		else generate_source_theorem s (base_type t);
+                else generate_source_theorem s (base_type t);
     val t2 = REWRITE_RULE [fmap_encodeTheory.ONE_ONE_I]
              (PART_MATCH (lhs o snd o strip_imp) (SPEC_ALL t1)
-    	     		 (lhs (snd (strip_imp (snd (strip_forall cc))))))
+                         (lhs (snd (strip_imp (snd (strip_forall cc))))))
 
     val thm1 = if null (type_vars (fdom t))
                   then ONEONE_DECENC_THM (fdom t)
                   else ASSUME (fst (dest_imp (concl t2)))
 
     val matched = MATCH_MP t2 thm1 handle _ =>
-    		  MATCH_MP t2 (MATCH_MP fmap_encodeTheory.ONE_ONE_RING thm1) handle _ =>
-		  t2
+                  MATCH_MP t2 (MATCH_MP fmap_encodeTheory.ONE_ONE_RING thm1) handle _ =>
+                  t2
 
 
     val fthm = generate_coding_theorem sexp s (fdom t) handle _ =>
-    	       generate_source_theorem s (fdom t)
+               generate_source_theorem s (fdom t)
     val tthm = generate_coding_theorem sexp s (frng t) handle _ =>
-    	       generate_source_theorem s (frng t)
+               generate_source_theorem s (frng t)
 
     val rterm = repeat rator (rhs (snd (strip_imp (snd (strip_forall cc)))));
 
@@ -1203,12 +1203,12 @@ let val (vars,prev) = strip_forall (previous target t)
     val pdec = if is_fmap t then map snd (filter (curry op= (valOf enc) o fst) sdec) @ map fst (filter (curry op= (valOf enc) o snd) sdec) else []
 
     val _ = if is_fmap t andalso null (find_terms (can (match_term (valOf enc))) prev)
-    	       then raise (polyExn (Standard, [], "No encoder in conclusion of theorem"))
-	       else ()
+               then raise (polyExn (Standard, [], "No encoder in conclusion of theorem"))
+               else ()
     val pdecs = if is_fmap t andalso null pdec
-    	      	   then (find_terms (can (match_term (encodeLib.get_decode_function target (fdom t)))) prev @
+                   then (find_terms (can (match_term (encodeLib.get_decode_function target (fdom t)))) prev @
                          [encodeLib.get_decode_function target (fdom t)])
-		   else pdec
+                   else pdec
     val vars' = union vars (if is_fmap t then free_vars (hd pdecs) else [])
 in
     list_mk_forall(vars', if not (is_fmap t) orelse null (type_vars (fdom t))
@@ -1326,17 +1326,17 @@ end
 val _ = Feedback.set_trace "functionEncodeLib.Trace" 1;
 
 val _ = (initialise_sexp() handle e =>
-      	Raise (mkStandardExn "initialise_sexp"
-	      ("Failed to add the translations for :sexp\n" ^
-	       ("Original exception: \n" ^ exn_to_string e))));
+        Raise (mkStandardExn "initialise_sexp"
+              ("Failed to add the translations for :sexp\n" ^
+               ("Original exception: \n" ^ exn_to_string e))));
 
 fun add_translations f t =
     (trace 1 "Adding translations for the type: " ;
      trace 1 (type_to_string t) ; trace 1 "\n" ;
      f ()) handle e =>
-      	Raise (mkStandardExn "Initialisation"
-	      ("Failed to add the translations for " ^ type_to_string t ^
-	       ("\nOriginal exception: \n" ^ exn_to_string e)));
+        Raise (mkStandardExn "Initialisation"
+              ("Failed to add the translations for " ^ type_to_string t ^
+               ("\nOriginal exception: \n" ^ exn_to_string e)));
 
 val _ = add_translations add_num_translations num;
 val _ = add_translations add_int_translations int;
@@ -1353,16 +1353,16 @@ fun add_rewrites f t =
     (trace 1 "Adding rewrites for the type: " ;
      trace 1 (type_to_string t) ; trace 1 "\n" ;
      f ()) handle e =>
-      	Raise (mkStandardExn "Initialisation"
-	      ("Failed to add the rewrites for " ^ type_to_string t ^
-	       ("\nOriginal exception: \n" ^ exn_to_string e)));
+        Raise (mkStandardExn "Initialisation"
+              ("Failed to add the rewrites for " ^ type_to_string t ^
+               ("\nOriginal exception: \n" ^ exn_to_string e)));
 
 val _ = add_rewrites add_num_rewrites num;
 val _ = add_rewrites add_bool_rewrites bool;
 val _ = (trace 1 "Adding polytypic rewrites\n" ;
-      	 add_polytypic_rewrites())
-	handle e => Raise (mkStandardExn "Initialisation"
-	       	    ("Failed to add polytypic rewrites"));
+         add_polytypic_rewrites())
+        handle e => Raise (mkStandardExn "Initialisation"
+                    ("Failed to add polytypic rewrites"));
 val _ = add_rewrites add_list_rewrites list;
 val _ = add_rewrites add_pair_rewrites pair
 val _ = add_rewrites add_int_rewrites int;
@@ -1387,20 +1387,20 @@ fun mapff f1 f2 [] = []
   | mapff f1 f2 (x::xs) = f1 x :: f2 x:: mapff f1 f2 xs;
 
 val GCONST = map (fst o strip_comb o lhs o snd o strip_forall)
-    	     o strip_conj o concl
+             o strip_conj o concl
 
 fun order_defs [] = []
   | order_defs L =
 let val (head,rest) =
-    	with_exn
+        with_exn
         (pluck (fn x =>
-	     all (fn y => null (find_terms (C mem (GCONST x)) (concl y))
-	     	       	  orelse (concl x = concl y)) L))
+             all (fn y => null (find_terms (C mem (GCONST x)) (concl y))
+                          orelse (concl x = concl y)) L))
         L
         (mkStandardExn "order_defs"
-	       ("Could not order the function list: " ^
-	       	xlist_to_string thm_to_string L ^
-		"\n as it appears to contain cycles..."))
+               ("Could not order the function list: " ^
+                xlist_to_string thm_to_string L ^
+                "\n as it appears to contain cycles..."))
 in  head::order_defs rest
 end;
 
@@ -1430,63 +1430,63 @@ end
 
 fun mk_mlsexp_mbe_term body =
     mk_mlsexp_list
-	    [mksym "ACL2" "MUST-BE-EQUAL",
-	     term_to_mlsexp body,
-	     term_to_mlsexp (rand (rator body))]
+            [mksym "ACL2" "MUST-BE-EQUAL",
+             term_to_mlsexp body,
+             term_to_mlsexp (rand (rator body))]
 
 fun mk_mlsexp_guard body =
     mk_mlsexp_list
        [mksym "ACL2" "DECLARE",
         mk_mlsexp_list
-	   [mksym "ACL2" "XARGS",
-	    mksym "ACL2" ":GUARD",
+           [mksym "ACL2" "XARGS",
+            mksym "ACL2" ":GUARD",
             term_to_mlsexp (rand (rator (rator body)))]];
 
 fun def_to_mlsexp_mbe_defun thm =
 let val (asl,concl) = dest_thm (SPEC_ALL thm)
     val _ = if null asl then ()
-    	       else raise (mkStandardExn "def_to_mlsexp_mbe_defun"
-	       	    ("The theorem supplied:\n" ^ thm_to_string thm ^
-		     "\nhas a non-empty hypothesis set."))
+               else raise (mkStandardExn "def_to_mlsexp_mbe_defun"
+                    ("The theorem supplied:\n" ^ thm_to_string thm ^
+                     "\nhas a non-empty hypothesis set."))
     val (opr,args) = strip_comb (lhs concl)
 in
     mk_mlsexp_list
        [mksym "COMMON-LISP" "DEFUN",
         string_to_mlsym(get_name opr),
-	mk_mlsexp_list(map term_to_mlsexp args),
-	mk_mlsexp_guard (rhs concl),
-	mk_mlsexp_mbe_term (rhs concl)]
+        mk_mlsexp_list(map term_to_mlsexp args),
+        mk_mlsexp_guard (rhs concl),
+        mk_mlsexp_mbe_term (rhs concl)]
 end;
 
 fun all_definitions (thm:thm) =
 let val consts = GCONST thm
     val {Name,Thy,Ty} = dest_thy_const (hd consts)
     val consts = mk_set (find_terms (fn x => is_const x andalso
-    	       	 	    	     (curry op= Thy o #Thy o dest_thy_const) x)
-    	       	 	    (concl thm))
+                                     (curry op= Thy o #Thy o dest_thy_const) x)
+                            (concl thm))
     val all_defs = DB.definitions Thy
     val filtered1 = tryfilter (not o null o intersect consts o GCONST o snd)
-    		    	      all_defs
+                              all_defs
     val filtered2 = tryfilter (String.isPrefix "translated_" o fst) filtered1
 
     val recursive = map all_definitions
-    		    	(op_set_diff (fn a => fn b => concl a = concl b)
-				     (map snd filtered2) [thm]);
+                        (op_set_diff (fn a => fn b => concl a = concl b)
+                                     (map snd filtered2) [thm]);
 in
     op_mk_set (fn a => fn b => concl a = concl b)
-    	      (thm::flatten recursive)
+              (thm::flatten recursive)
 end;
 
 fun print_all_defs filename print convert thm =
 let val ordered = order_defs (all_definitions thm)
     val rewritten = map (REWRITE_RULE [sexpTheory.andl_def] o
-    		         CONV_RULE ACL2_BVARS_CONV o GEN_ALL) ordered
+                         CONV_RULE ACL2_BVARS_CONV o GEN_ALL) ordered
     val preamble = mk_mlsexp_list
-    	[mksym "ACL2" "IN-PACKAGE",
-	 mlstr (!current_package)];
+        [mksym "ACL2" "IN-PACKAGE",
+         mlstr (!current_package)];
     fun post_def thm = mk_mlsexp_list
-    	[mksym "ACL2" "VERIFY-GUARDS",
-	 string_to_mlsym(get_name (hd (GCONST thm)))]
+        [mksym "ACL2" "VERIFY-GUARDS",
+         string_to_mlsym(get_name (hd (GCONST thm)))]
 
     fun mprint out x = (print out x ; out "\n\n")
 
@@ -1497,7 +1497,7 @@ end handle e => wrapException "print_all_defs" e
 
 fun print_all_defs_standard filename thm =
     print_all_defs filename print_mlsexp def_to_mlsexp_defun thm
-		   handle e => wrapException "print_all_defs_standard" e
+                   handle e => wrapException "print_all_defs_standard" e
 
 fun can_mbe thm =
     can (C match_term (rhs (concl (SPEC_ALL thm)))) ``ite a b c`` andalso
@@ -1510,8 +1510,8 @@ fun can_mbe thm =
 
 fun print_allow_keyword (out:string->unit) (sym as mlsym(_,v))  =
      if String.isPrefix ":" v
-     	then out v
-     	else out (mlsym_to_string sym)
+        then out v
+        else out (mlsym_to_string sym)
  | print_allow_keyword (out:string->unit) (mlstr s) =
      (out "\""; out s; out "\"")
  | print_allow_keyword (out:string->unit) (mlchr c) =
@@ -1536,13 +1536,13 @@ fun print_allow_keyword (out:string->unit) (sym as mlsym(_,v))  =
                      ())
              end
         else (print_allow_keyword out p1; out " . ";
-	      print_allow_keyword out p2));
+              print_allow_keyword out p2));
       out ")");
 
 fun print_all_defs_mbe filename thm =
     print_all_defs filename print_allow_keyword
         (fn y => if can_mbe y then def_to_mlsexp_mbe_defun y else
-		       	   	     	  def_to_mlsexp_defun y) thm
+                                          def_to_mlsexp_defun y) thm
     handle e => wrapException "print_all_defs_mbe" e;
 
 val Raise = polytypicLib.Raise;

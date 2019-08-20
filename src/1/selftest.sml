@@ -1,26 +1,21 @@
 open HolKernel Parse boolTheory boolLib
 
+open testutils
 val _ = set_trace "Unicode" 0
 
-val tprint = testutils.tprint
-val OK = testutils.OK
-val die = testutils.die
-
 val _ = tprint "Preterm free variables 1"
-val fvs = Preterm.ptfvs (Parse.Preterm`\x. x`)
-val _ = if null fvs then OK() else die "FAILED!\n"
+val _ = require (check_result null) (Preterm.ptfvs o Parse.Preterm) ‘\x. x’
 
 val _ = tprint "Preterm free variables 2"
-val fvs = Preterm.ptfvs (Parse.Preterm`\x:bool. x`)
-val _ = if null fvs then OK() else die "FAILED!\n"
+val _ = require (check_result null) (Preterm.ptfvs o Parse.Preterm) ‘\x:bool. x’
 
 fun substtest (M, x, N, result) = let
+  open testutils
 in
   tprint("Testing ["^term_to_string M^"/"^term_to_string x^"] ("^
          term_to_string N^") = "^term_to_string result);
-  if aconv (Term.subst[x |-> M] N) result then (OK(); true)
-  else (print "FAILED!\n"; false)
-end
+  require (check_result (aconv result)) (Term.subst[x |-> M]) N
+end;
 
 val x = mk_var("x", Type.alpha)
 val xfun = mk_var("x", Type.alpha --> Type.alpha)
@@ -85,9 +80,9 @@ val inst_type_test = let
   val th4 = REWRITE_RULE [EQ_IMP_THM, ximpnx, nximpx, xandnx] th3
   val final_th = CHOOSE (nonempty_t, nonempty_exists) th4
 in
-  if same_const (concl final_th) (mk_const("F", bool)) then die "FAILED!"
+  if same_const (concl final_th) (mk_const("F", bool)) then die ""
   else OK()
-end
+end;
 
 (* Test for the experimental kernel's INST_TYPE bug (discovered by Peter
    Homeier in June 2009). *)
@@ -110,8 +105,8 @@ val _ = let
   val bad2 = INST_TYPE [alpha |-> bool] bad1
   val Falsity = EQ_MP (INST [x bool |-> T, y bool |-> F] bad2) TRUTH
 in
-  if aconv (concl Falsity) F then die "FAILED!" else die "Huh???"
-end handle ExitOK => OK()
+  if aconv (concl Falsity) F then die "" else die "Huh???"
+end handle ExitOK => OK();
 
 val _ = Process.atExit (fn () => let
                              fun rm s = FileSys.remove ("scratchTheory." ^ s)
@@ -120,7 +115,8 @@ val _ = Process.atExit (fn () => let
                              app rm ["sml", "sig", "dat"]
                            end)
 
-fun test f x = f x orelse (print "FAILED!\n"; Process.exit Process.failure)
+exception InternalDie
+fun test f x = f x orelse raise InternalDie
 val oldconstants_test = let
   val _ = tprint "Identity of old constants test"
   val defn1_t = mk_eq(mk_var("foo", bool), boolSyntax.T)
@@ -149,50 +145,46 @@ val oldconstants_test = let
   val _ = test (not o uncurry aconv) (c1, c2)
 in
   OK()
-end
+end handle InternalDie => die "Internal test failed";
 
 val _ = tprint "Testing functional-pretype 1 (pattern)"
-val t = Parse.Term `x <> y ==> x <> y` handle HOL_ERR _ => die "FAILED"
-val _ = OK()
+val _ = require (check_result (fn _ => true)) Parse.Term `x <> y ==> x <> y`
 
 val _ = tprint "Testing functional-pretype 2 (simple case)"
-val t = Parse.Term `case x of T => F` handle HOL_ERR _ => die "FAILED"
-val _ = OK()
+val _ = require (check_result (fn _ => true)) Parse.Term `case x of T => F`
 
 val _ = tprint "Testing functional-pretype 3 (ignored constraint)"
 val quiet_parse = trace ("show_typecheck_errors", 0) Parse.Term
-val _ = case Lib.total quiet_parse `(\x.x) : 'a -> 'b` of
-            NONE => OK()
-          | SOME _ => die "FAILED!\n  (\\x.x):'a->'b checked"
+val _ = shouldfail {testfn = quiet_parse, printresult = term_to_string,
+                    printarg = (fn _ => ""),
+                    checkexn = is_struct_HOL_ERR "Preterm"}
+                   ‘(\x.x) : 'a -> 'b’;
 
 val _ = tprint "Testing parsing of case expressions with function type"
-val t = Parse.Term `(case T of T => (\x. x) | F => (~)) y`
-val _ = case Lib.total (find_term (same_const boolSyntax.bool_case)) t of
-          NONE => die "FAILED"
-        | SOME _ => OK()
+val _ = require_msg
+          (check_result (Lib.can (find_term (same_const boolSyntax.bool_case))))
+          term_to_string
+          Parse.Term
+          ‘(case T of T => (\x. x) | F => (~)) y’;
 
 val _ = tprint "Testing parsing of case expressions with leading bar"
-val t_opt = SOME (trace ("syntax_error", 0) Parse.Term
-                        `case T of | T => F | F => T`)
-    handle HOL_ERR _ => NONE
-val _ = case t_opt of
-          SOME t =>
-            if Lib.can (find_term (same_const boolSyntax.bool_case)) t then
-              OK()
-            else die "FAILED"
-        | NONE => die "FAILED"
+val _ = require_msg
+          (check_result (Lib.can (find_term (same_const boolSyntax.bool_case))))
+          term_to_string
+          (trace ("syntax_error", 0) Parse.Term)
+          ‘case T of | T => F | F => T’;
 
 val _ = tprint "Testing parsing of _ variables (1)"
 val t = case Lib.total Parse.Term `case b of T => F | _ => T` of
-          NONE => die "FAILED"
+          NONE => die ""
         | SOME _ => OK()
 val _ = tprint "Testing parsing of _ variables (2)"
 val t = case Lib.total Parse.Term `case b of T => F | _1 => T` of
-          NONE => die "FAILED"
+          NONE => die ""
         | SOME _ => OK()
 val _ = tprint "Testing independence of case branch vars"
 val t = case Lib.total Parse.Term `v (case b of T => F | v => T)` of
-          NONE => die "FAILED"
+          NONE => die ""
         | SOME _ => OK()
 
 val _ = tprint "Testing higher-order match 1"
@@ -260,19 +252,11 @@ val int_ty = let val () = new_type ("int", 0)
 val _ =
     case Lib.total (VALID (HO_MATCH_MP_TAC th)) ([], goal) of
       SOME ([([],subgoal)],_) => if aconv subgoal expected then OK()
-                                 else die "FAILED!"
-    | _ => die "FAILED!"
-end (* local *)
+                                 else die ""
+    | _ => die ""
+end; (* local *)
 
-fun convtest (nm,conv,tm,expected) =
-  let
-    val _ = tprint nm
-    val res = conv tm
-  in
-    if aconv (rhs (concl res)) expected then OK()
-    else die "FAILED!"
-  end
-val _ = app convtest [
+val _ = app testutils.convtest [
   ("COND_CONV(1)", Conv.COND_CONV, “if b then (\x:'a. x) else (\y.y)”,
    “(\a:'a.a)”)
 ];
@@ -286,7 +270,7 @@ fun checkparse () = let
                          `!x. P x`
   val randty =  type_of (rand tm)
 in
-  if Type.compare(randty, alpha --> bool) <> EQUAL then die "FAILED!"
+  if Type.compare(randty, alpha --> bool) <> EQUAL then die ""
   else OK()
 end
 val _ = checkparse()
@@ -302,7 +286,7 @@ val _ = tprint "Testing stale type abbreviations bug"
 val _ = new_type ("foo", 1)
 val _ = type_abbrev("bar", ``:bool foo``)
 val _ = new_type ("foo", 0)
-val _ = type_abbrev("baz", ``:foo``) handle _ => die "FAILED!"
+val _ = type_abbrev("baz", ``:foo``) handle _ => die ""
 val _ = OK()
 
 
@@ -318,7 +302,7 @@ fun typp s = let
   val _ = tprint ("Testing p/printing of "^s)
   val res = unicode_off (raw_backend type_to_string) ty
 in
-  if s <> res then die "FAILED!\n" else OK()
+  if s <> res then die "" else OK()
 end
 
 val _ = app typp [":bool", ":bool -> bool", ":'a -> bool",
@@ -337,7 +321,7 @@ local
   val s = pfn ty
 in
 val _ = if s = "('a -> 'b) "^ct()^"$option" then OK()
-        else die ("FAILED! - "^s)
+        else die s
 end
 
 
@@ -356,13 +340,18 @@ val _ = app tpp ["(if P then q else r) s",
                  "P (!x. Q x)",
                  "\\x. ?y. P x y",
                  "P (\\x. ?y. Q x y)",
-                 "(:'a)"]
+                 "(:'a)",
+                 "$var$(\\172)"]
 
 val _ = tpp "x = y"
 val _ = Lib.with_flag (testutils.linewidth, 10) tpp "xxxxxx =\nyyyyyy"
 
+val _ = temp_overload_on ("RM*", ``\x y. x /\ y``)
+val _ = tpp "RM* p q"
+val _ = clear_overloads_on "RM*"
+
 val _ = add_rule {term_name = "=",
-                  fixity = Infix(NONASSOC, 100),
+                  fixity = Infix(NONASSOC, 450),
                   block_style = (AroundSamePrec, (PP.CONSISTENT,0)),
                   paren_style = OnlyIfNecessary,
                   pp_elements = [HardSpace 1, TOK "=", BreakSpace(1,2)]}
@@ -391,6 +380,15 @@ in
   temp_clear_overloads_on "⊤"
 end
 
+val _ = print "** Tests with Unicode on\n"
+val _ = let
+  open testutils
+  fun md f = trace ("Unicode", 1) f
+in
+  app (md tpp) ["¬¬p", "¬p"]
+end
+
+
 val _ = print "** Tests with pp_dollar_escapes = 0.\n"
 val _ = set_trace "pp_dollar_escapes" 0
 val _ = app tpp ["(/\\)", "(if)"]
@@ -414,8 +412,7 @@ fun tpp (s,expected) = let
   val res = ppstring pp_term t
 in
   if res = expected then OK()
-  else die ("\nFAILED\n" ^
-            testutils.clear ("  Expected >" ^ expected ^ "<; got >"^res^"<"))
+  else die (testutils.clear ("  Expected >" ^ expected ^ "<; got >"^res^"<"))
 end
 
 fun bound s = "\^[[0;32m" ^ s ^ "\^[[0m"
@@ -432,8 +429,8 @@ val _ = app tpp [
   ("!x. x /\\ y", concat ["!", bx, ". ", bx, " /\\ ", fy]),
   ("let x = p in x /\\ y",
    concat ["let ",bx, " = ", fp, " in ", bx, " /\\ ", fy]),
-  ("let f x = x /\\ p in f x /\\ y",
-   concat ["let ",bound "f", " ", bx, " = ", bx, " /\\ ", fp, " in ",
+  ("let f x = (x /\\ p) in f x /\\ y",
+   concat ["let ",bound "f", " ", bx, " = (", bx, " /\\ ", fp, ") in ",
            bound "f", " ", fx, " /\\ ", fy]),
   ("!(x:'a)::p (x:'a). q x",
    concat ["!",bx,"::",fp, " ", fx,". ",free "q"," ",bx]),
@@ -452,29 +449,29 @@ val condprinter_tests =
     [
       {input = "if oless e1 e2 /\\ oless x y /\\ foobabbbbbbb\n\
                \then p /\\ q /\\ r /\\ ppppp xxxx yyyyy\n\
-               \else if (e1 = e2) /\\ k1 <> k2\n\
-               \then T else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2\n\
+               \else if (e1:'a) = e2 /\\ (k1:'a) <> k2\n\
+               \then T else if e1 = e2 /\\ k1 = k2 /\\ oless t1 t2\n\
                \then T else F",
        testf = K ("Large COND 1"),
        output = "if oless e1 e2 /\\ oless x y /\\ foobabbbbbbb then\n\
                 \  p /\\ q /\\ r /\\ ppppp xxxx yyyyy\n\
-                \else if (e1 = e2) /\\ k1 <> k2 then T\n\
-                \else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2 then T\n\
+                \else if e1 = e2 /\\ k1 <> k2 then T\n\
+                \else if e1 = e2 /\\ k1 = k2 /\\ oless t1 t2 then T\n\
                 \else F"},
       {input = "if oless e1 e2 /\\ oless x y /\\ foobabb\n\
                \then p /\\ q /\\ r /\\ ppppp xxxx\n\
-               \else if (e1 = e2) /\\ k1 <> k2\n\
-               \then T else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2\n\
+               \else if e1 = e2 /\\ k1 <> k2\n\
+               \then T else if e1 = e2 /\\ k1 = k2 /\\ oless t1 t2\n\
                \then T else F",
        testf = K ("Large COND 2"),
        output = "if oless e1 e2 /\\ oless x y /\\ foobabb then\
                 \ p /\\ q /\\ r /\\ ppppp xxxx\n\
-                \else if (e1 = e2) /\\ k1 <> k2 then T\n\
-                \else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2 then T\n\
+                \else if e1 = e2 /\\ k1 <> k2 then T\n\
+                \else if e1 = e2 /\\ k1 = k2 /\\ oless t1 t2 then T\n\
                 \else F"},
       {input = "if really quite a long guard when looked at closely then\n\
-               \  let quite_a_long_variable_name = another_long_name \\/ x ;\n\
-               \      another_longish_name = y \\/ z\n\
+               \  let quite_a_long_variable_name = (another_long_name \\/ x);\n\
+               \      another_longish_name = (y \\/ z)\n\
                \  in\n\
                \      f x\n\
                \else\n\
@@ -482,8 +479,8 @@ val condprinter_tests =
        testf = K "Large then-branch",
        output = "if really quite a long guard when looked at closely then\n\
                 \  (let\n\
-                \     quite_a_long_variable_name = another_long_name \\/ x ;\n\
-                \     another_longish_name = y \\/ z\n\
+                \     quite_a_long_variable_name = (another_long_name \\/ x) ;\
+              \\n     another_longish_name = (y \\/ z)\n\
                 \   in\n\
                 \     f x)\n\
                 \else g y"},
@@ -491,7 +488,7 @@ val condprinter_tests =
                \  (if really quite a long guard when looked at closely then\n\
                \     a moderately complicated then_branch\n\
                \   else an else_branch)",
-       testf = K "Ladge COND as rand",
+       testf = K "Large COND as rand",
        output = "f\n\
                 \  (if really quite a long guard when looked at closely then\n\
                 \     a moderately complicated then_branch\n\
@@ -504,7 +501,7 @@ val _ = let
   val _ = tprint (standard_tpp_message "|- p")
   val res = thm_to_string (ASSUME (mk_var("p", Type.bool)))
 in
-  if res = " [.] |- p" then OK() else die "FAILED!"
+  if res = " [.] |- p" then OK() else die ""
 end
 
 val _ = temp_add_rule { paren_style = NotEvenIfRand, fixity = Prefix 2200,
@@ -543,7 +540,7 @@ val _ = test {
       input = "\\x:'a. T",
       testf = (K "Constant T with type :'a -> bool w/special user printer"),
       output = "\\x. T"
-    }
+    };
 
 
 
@@ -556,15 +553,16 @@ val _ = let
   val readresult = DiskThms.read_file filename
   val ((nm1,th1), (nm2, th2)) =
       case readresult of
-        [x,y] => (x,y)
-      | _ => die "FAILED"
+          [x,y] => (x,y)
+        | _ => raise InternalDie
 in
-  nm1 = "AND_CLAUSES" andalso nm2 = "OR_CLAUSES" andalso
-  aconv (th1 |> concl) (concl boolTheory.AND_CLAUSES) andalso
-  aconv (th2 |> concl) (concl boolTheory.OR_CLAUSES) andalso
-  (OK(); true) orelse
-  die "FAILED"
-end
+  if nm1 = "AND_CLAUSES" andalso nm2 = "OR_CLAUSES" andalso
+     aconv (th1 |> concl) (concl boolTheory.AND_CLAUSES) andalso
+     aconv (th2 |> concl) (concl boolTheory.OR_CLAUSES)
+  then
+    OK()
+  else die ""
+end handle InternalDie => die ""
 
 val _ = let
   val _ = tprint "REWRITE with T (if this appears to hang it has failed)"
@@ -572,8 +570,8 @@ val _ = let
   val (sgs,vfn) = REWRITE_TAC [TRUTH] ([], t)
 in
   if null sgs andalso aconv (concl (vfn [])) t then OK()
-  else die "FAILED"
-end
+  else die ""
+end;
 
 val _ = let
   val _ = tprint "EVERY_CONJ_CONV"
@@ -589,8 +587,8 @@ val _ = let
   val expected = mk_conj(mk_comb(I, p), mk_comb(I, q))
 in
   if aconv (rhs (concl result)) expected then OK()
-  else die "FAILED"
-end
+  else die ""
+end;
 
 val _ = let
   fun B i = mk_var("x" ^ Int.toString i, bool)
@@ -608,7 +606,7 @@ val _ = let
         val res = QCONV (c (TRY_CONV BETA_CONV)) t |> concl |> rhs
     in
       if aconv expected res then OK()
-      else die ("FAILED!\n got " ^ term_to_string res)
+      else die ("got " ^ term_to_string res)
     end
     fun row i = List.tabulate (4, fn j => (i,j))
     val pairs = List.tabulate (4, row) |> List.concat
@@ -623,12 +621,13 @@ end
 
 
 val _ = tprint "Testing (foo THENL [...]) when foo solves"
-val _ = (ACCEPT_TAC TRUTH THENL [ACCEPT_TAC TRUTH]) ([], ``T``) handle HOL_ERR _ => die "FAILED!"
-val _ = OK()
+val _ = require (check_result (fn _ => true))
+                (ACCEPT_TAC TRUTH THENL [ACCEPT_TAC TRUTH]) ([], ``T``)
 
 val _ = tprint "Testing save_thm rejecting names"
 val badnames = ["::", "nil", "true", "false", "ref", "="]
-fun test s = (save_thm(s, TRUTH); die "FAILED!") handle HOL_ERR _ => ()
+fun test s = (save_thm(s, TRUTH); die ("Failed to reject: "^s))
+             handle HOL_ERR _ => ()
 val _ = List.app test badnames
 val _ = OK()
 
@@ -646,7 +645,7 @@ val _ = let
   val true = (VALID (FIRST (map ACCEPT_TAC [uth', uth])) g' ; false)
     handle HOL_ERR _ => true ;
 in OK()
-end handle _ => die "FAILED!"
+end handle _ => die ""
 
 fun goal_equal ((asms1, g1), (asms2, g2)) =
   ListPair.allEq (fn p => Term.compare p = EQUAL) (asms1,asms2) andalso
@@ -665,8 +664,8 @@ val _ = let
   val (ngs2, _) = VALID tac2 g
 in
   if ListPair.allEq goal_equal (ngs1, ngs2) then OK()
-  else die "FAILED final equality"
-end handle _ => die "FAILED!"
+  else die "final equality"
+end handle _ => die ""
 
 val _ = let
   val _ = tprint "Testing structural list-tactics"
@@ -677,8 +676,8 @@ val _ = let
       (REPEAT_LT (ALLGOALS (POP_ASSUM (fn _ => ALL_TAC))
           THEN_LT HEADGOAL (POP_ASSUM ACCEPT_TAC))) ] ;
   val th = prove (``a ==> b ==> c ==> d ==> a /\ b /\ c /\ d``, tac) ;
-in if hyp th = [] then OK() else die "FAILED"
-end handle _ => die "FAILED!"
+in if null (hyp th) then OK() else die ""
+end handle _ => die ""
 
 val _ = let
   val _ = tprint "Testing USE_SG_THEN"
@@ -686,8 +685,8 @@ val _ = let
     THENL [POP_ASSUM MATCH_MP_TAC THEN CONJ_TAC, DISJ1_TAC]
     THEN (FIRST_ASSUM ACCEPT_TAC)
   val th = prove (``p ==> q ==> (p /\ q ==> r) ==> r /\ (r \/ s)``, tac) ;
-in if hyp th = [] then OK() else die "FAILED"
-end handle _ => die "FAILED!"
+in if null (hyp th) then OK() else die ""
+end handle _ => die ""
 
 val _ = let
   val _ = tprint "Testing USE_SG_THEN and VALIDATE_LT"
@@ -700,19 +699,19 @@ val _ = let
   val g = ``(p ==> q ==> (p /\ q ==> r) ==> r) /\
     (p ==> q ==> (p ==> r) ==> r)``
   val th = prove (g, tac) ;
-in if hyp th = [] then OK() else die "FAILED"
-end handle _ => die "FAILED!"
+in if null (hyp th) then OK() else die ""
+end handle _ => die ""
 
 val _ = let
   val _ = tprint "Removing type abbreviation"
-  val _ = temp_type_abbrev ("foo", ``:'a -> bool``)
+  val _ = temp_type_abbrev_pp ("foo", ``:'a -> bool``)
   val s1 = type_to_string ``:bool -> bool``
-  val _ = s1 = ":bool foo" orelse die "FAILED!"
+  val _ = s1 = ":bool foo" orelse raise InternalDie
   val _ = temp_remove_type_abbrev "foo"
   val s2 = type_to_string ``:bool -> bool``
 in
-  if s2 = ":bool -> bool" then OK() else die "FAILED!"
-end
+  if s2 = ":bool -> bool" then OK() else die ""
+end handle InternalDie => die ""
 
 fun nc (s,ty) =
   (new_constant(s,ty); prim_mk_const{Name = s, Thy = current_theory()})
@@ -736,7 +735,7 @@ val _ = let
                         end
         | _ => false
 in
-  if verdict then OK() else die "FAILED!"
+  if verdict then OK() else die ""
 end
 
 val _ = let
@@ -746,8 +745,8 @@ val _ = let
   val (sgs, vf) = irule EQ_TRANS g
 in
   case sgs of
-      [([], sg)] => if aconv sg expected then OK() else die "FAILED!"
-    | _ => die "FAILED!"
+      [([], sg)] => if aconv sg expected then OK() else die ""
+    | _ => die ""
 end
 
 val _ = let
@@ -758,13 +757,13 @@ val _ = let
   val (sgs, vf) = POP_ASSUM irule g
   val rth = vf (map mk_thm sgs)
   val _ = aconv (concl rth) (#2 g) andalso length (hyp rth) = 1 andalso
-          aconv (hd (hyp rth)) (hd (#1 g)) orelse die "FAILED!"
+          aconv (hd (hyp rth)) (hd (#1 g)) orelse raise InternalDie
 in
   case sgs of
       [([], sg)] => if aconv sg ``^P (b:'a)`` then OK()
-                    else die "FAILED!"
-    | _ => die "FAILED!"
-end
+                    else die ""
+    | _ => die ""
+end handle InternalDie => die ""
 
 val _ = let
   val _ = tprint "irule 4 (thm from goal, extra vars)"
@@ -775,8 +774,8 @@ val _ = let
 in
   case sgs of
       [([], sg)] => if aconv sg ``?x:'a. PP x (a:'a)`` then OK()
-                    else die "FAILED!"
-    | _ => die "FAILED!"
+                    else die ""
+    | _ => die ""
 end
 
 val _ = hide "P"
@@ -784,12 +783,13 @@ val _ = hide "f"
 val _ = hide "c"
 
 val _ = let
+  open testutils
   val _ = tprint "irule 5 (as match_accept_tac)"
   val g = ``(!x:'a. P x) ==> P a``
-  val th = prove(g, DISCH_THEN irule)
-           handle HOL_ERR _ => die "FAILED!"
 in
-  if aconv g (concl th) then OK() else die "FAILED!"
+  require (check_result (aconv g o concl))
+          (fn g => prove(g, DISCH_THEN irule))
+          g
 end
 
 val _ = let
@@ -801,7 +801,7 @@ val _ = let
   val (sgs, vf) = irule thm ([], g)
   val r_thm = vf (map mk_thm sgs)
 in
-  if aconv (concl r_thm) g then OK() else die "FAILED!"
+  if aconv (concl r_thm) g then OK() else die ""
 end
 
 val _ = let
@@ -813,7 +813,7 @@ val _ = let
   val (sgs, vf) = irule thm ([], g)
   val r_thm = vf (map mk_thm sgs)
 in
-  if aconv (concl r_thm) g then OK() else die "FAILED!"
+  if aconv (concl r_thm) g then OK() else die ""
 end
 
 val _ = hide "Q"
@@ -831,11 +831,11 @@ in
       [(asl',g')] =>
       (case Lib.list_compare Term.compare (asl,asl') of
            EQUAL => if aconv expected g' then OK()
-                    else die ("FAILED\n  Got "^term_to_string g'^
+                    else die ("Got "^term_to_string g'^
                               "; expected "^term_to_string expected)
-         | _ => die ("FAILED\n  Got back changed asm list: " ^
+         | _ => die ("Got back changed asm list: " ^
                      String.concatWith ", " (map term_to_string asl')))
-    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals ("^
+    | _ => die ("Tactic returned wrong number of sub-goals ("^
                 Int.toString (length res)^")")
 end
 
@@ -853,11 +853,11 @@ in
       [(asl', g')] =>
       (case Lib.list_compare Term.compare (asl,asl') of
            EQUAL => if aconv g' expectedg then OK()
-                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                    else die ("Got " ^ term_to_string g'^
                               "; expected " ^ term_to_string expectedg)
-         | _ => die ("FAILED\n  Got back changed asm list: "^
+         | _ => die ("Got back changed asm list: "^
                      String.concatWith ", " (map term_to_string asl')))
-    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+    | _ => die ("Tactic returned wrong number of sub-goals (" ^
                 Int.toString (length res))
 end;
 
@@ -877,11 +877,11 @@ in
       [(asl', g')] =>
       (case Lib.list_compare Term.compare (asl,asl') of
            EQUAL => if aconv g' expectedg then OK()
-                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                    else die ("Got " ^ term_to_string g'^
                               "; expected " ^ term_to_string expectedg)
-         | _ => die ("FAILED\n  Got back changed asm list: "^
+         | _ => die ("Got back changed asm list: "^
                      String.concatWith ", " (map term_to_string asl')))
-    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+    | _ => die ("Tactic returned wrong number of sub-goals (" ^
                 Int.toString (length res))
 end;
 
@@ -896,11 +896,11 @@ in
       [(asl', g')] =>
       (case Lib.list_compare Term.compare ([``~p``], asl') of
            EQUAL => if aconv g' expectedg then OK()
-                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                    else die ("Got " ^ term_to_string g'^
                               "; expected " ^ term_to_string expectedg)
-         | _ => die ("FAILED\n  Got back changed asm list: "^
+         | _ => die ("Got back changed asm list: "^
                      String.concatWith ", " (map term_to_string asl')))
-    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+    | _ => die ("Tactic returned wrong number of sub-goals (" ^
                 Int.toString (length res))
 end;
 
@@ -916,11 +916,11 @@ in
       [(asl', g')] =>
       (case Lib.list_compare Term.compare ([``~q``], asl') of
            EQUAL => if aconv g' expectedg then OK()
-                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                    else die ("Got " ^ term_to_string g'^
                               "; expected " ^ term_to_string expectedg)
-         | _ => die ("FAILED\n  Got back changed asm list: "^
+         | _ => die ("Got back changed asm list: "^
                      String.concatWith ", " (map term_to_string asl')))
-    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+    | _ => die ("Tactic returned wrong number of sub-goals (" ^
                 Int.toString (length res))
 end;
 
@@ -936,13 +936,106 @@ in
       [(asl', g')] =>
       (case Lib.list_compare Term.compare ([``q:bool``], asl') of
            EQUAL => if aconv g' expectedg then OK()
-                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                    else die ("Got " ^ term_to_string g'^
                               "; expected " ^ term_to_string expectedg)
-         | _ => die ("FAILED\n  Got back changed asm list: "^
+         | _ => die ("Got back changed asm list: "^
                      String.concatWith ", " (map term_to_string asl')))
-    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+    | _ => die ("Tactic returned wrong number of sub-goals (" ^
                 Int.toString (length res))
 end;
+
+
+val _ = let
+  open mp_then
+  val _ = tprint "mp_then (pat) 1"
+  val asl = [``P (x:'a) /\ ~p /\ r ==> ~q``, ``~p:bool``, ``r:bool``]
+  val g = (asl, ``r:bool``)
+  val (res, _) = pop_assum (first_assum o mp_then (Pat `$~`) mp_tac) g
+  val expectedg = ``(P(x:'a) /\ r ==> ~q) ==> r``
+in
+  case res of
+      [(asl', g')] =>
+      (case Lib.list_compare Term.compare ([``~p``, ``r:bool``], asl') of
+           EQUAL => if aconv g' expectedg then OK()
+                    else die ("Got " ^ term_to_string g'^
+                              "; expected " ^ term_to_string expectedg)
+         | _ => die ("Got back changed asm list: "^
+                     String.concatWith ", " (map term_to_string asl')))
+    | _ => die ("Tactic returned wrong number of sub-goals (" ^
+                Int.toString (length res))
+end;
+
+
+val _ = let
+  open mp_then
+  val _ = tprint "mp_then (pat) 2"
+  val asl = [``!x. P (x:'a) /\ ~p /\ r ==> ~q``, ``P(c:'a):bool``, ``r:bool``]
+  val g = (asl, ``r:bool``)
+  val (res, _) =
+      pop_assum (first_assum o mp_then (Pat `P (x:'a) : bool`) mp_tac) g
+  val expectedg = ``(~p /\ r ==> ~q) ==> r``
+in
+  case res of
+      [(asl', g')] =>
+      (case Lib.list_compare Term.compare ([“P(c:'a):bool”, “r:bool”], asl') of
+           EQUAL => if aconv g' expectedg then OK()
+                    else die ("Got " ^ term_to_string g'^
+                              "; expected " ^ term_to_string expectedg)
+         | _ => die ("Got back changed asm list: "^
+                     String.concatWith ", " (map term_to_string asl')))
+    | _ => die ("Tactic returned wrong number of sub-goals (" ^
+                Int.toString (length res))
+end;
+
+val _ = let
+  open mp_then
+  val _ = tprint "mp_then (pat) 3"
+  val _ = new_type("list", 1)
+  val _ = new_type("ti", 0)
+  val _ = hide "foo"
+  val _ = new_constant("EVERY", ``:('a -> bool) -> 'a list -> bool``)
+  val asl = [``EVERY (x:'a -> bool) ls``,
+             ``!x:ti y. foo x y /\ EVERY y (ls:'a list) ==> gg x``,
+             ``foo (a:ti) (x:'a -> bool):bool``, ``bar (x:'a -> bool):bool``]
+  val g = (List.rev asl, ``gg (a:ti):bool``)
+  val (res, _) =
+      first_x_assum (first_assum o mp_then (Pat `EVERY`) mp_tac) g
+  val expectedg = ``(!x':ti. foo x' (x:'a -> bool) ==> gg x') ==> gg a``
+  val expectedasl = [``bar (x:'a -> bool):bool``,
+                     ``foo (a:ti) (x:'a -> bool):bool``,
+                     ``EVERY (x:'a -> bool) ls``]
+in
+  case res of
+      [(asl', g')] =>
+      (case Lib.list_compare Term.compare (expectedasl, asl') of
+           EQUAL => if aconv g' expectedg then OK()
+                    else die ("Got " ^ term_to_string g'^
+                              "; expected " ^ term_to_string expectedg)
+         | _ => die ("Got back changed asm list: "^
+                     String.concatWith ", " (map term_to_string asl')))
+    | _ => die ("Tactic returned wrong number of sub-goals (" ^
+                Int.toString (length res))
+end;
+
+val _ = let
+  open mp_then Portable
+  val _ = tprint "mp_then (backtracking pat)"
+  val gh567_1_def = new_definition("gh567_1_def", “gh567_1 p <=> p /\ F”)
+  val gh567_2_def = new_definition("gh567_2_def", “gh567_2 p <=> p /\ T”)
+  val _ = temp_overload_on ("gh567", “gh567_1”)
+  val _ = temp_overload_on ("gh567", “gh567_2”)
+  val tm1 = gh567_1_def |> SPEC_ALL |> concl |> lhs |> rator
+  val asl = [“!b. ^tm1 b ==> b”, “^tm1 F”]
+  val g = boolSyntax.F
+  val tac = first_x_assum (first_x_assum o mp_then (Pat ‘gh567’) assume_tac)
+in
+  case verdict tac (fn _ => ()) (asl,g) of
+      FAIL ((), e) => die ("Got exception: " ^ General.exnMessage e)
+    | PASS (sgs, _) =>
+      if list_eq (pair_eq (list_eq aconv) aconv) sgs [([F], F)] then
+        OK()
+      else die ("Wrong subgoals")
+end
 
 
 val _ = let
@@ -958,11 +1051,11 @@ in
       [(asl', g')] =>
       (case Lib.list_compare Term.compare (asl,asl') of
            EQUAL => if aconv g' expectedg then OK()
-                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                    else die ("Got " ^ term_to_string g'^
                               "; expected " ^ term_to_string expectedg)
-         | _ => die ("FAILED\n  Got back changed asm list: "^
+         | _ => die ("Got back changed asm list: "^
                      String.concatWith ", " (map term_to_string asl')))
-    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+    | _ => die ("Tactic returned wrong number of sub-goals (" ^
                 Int.toString (length res))
 end;
 
@@ -979,11 +1072,11 @@ in
       [(asl', g')] =>
       (case Lib.list_compare Term.compare (expected_asl,asl') of
            EQUAL => if aconv g' expectedg then OK()
-                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                    else die ("Got " ^ term_to_string g'^
                               "; expected " ^ term_to_string expectedg)
-         | _ => die ("FAILED\n  Got back wrong asm list: "^
+         | _ => die ("Got back wrong asm list: "^
                      String.concatWith ", " (map term_to_string asl')))
-    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+    | _ => die ("Tactic returned wrong number of sub-goals (" ^
                 Int.toString (length res))
 end;
 
@@ -997,11 +1090,13 @@ fun dolvtests(modname,empty,insert,match) = let
                      ]
   fun test (nm, pat, expected) =
     let
+      open testutils
       val _ = tprint (modname ^ ": " ^ nm)
-      val result = List.map snd (match (n,pat))
-                   handle e => die ("FAILED\n  EXN "^General.exnMessage e)
     in
-      if result = expected then OK() else die "FAILED"
+      require (check_result (equal expected))
+              (fn pat => List.map snd (match (n,pat)))
+              pat;
+      ()
     end
 in
   List.app test [("exact", ``f x y : bool``, [1]),
@@ -1050,14 +1145,34 @@ val res = let
 in
   case checked Pretype.Env.empty of
       Error (OvlNoType(s,_), _) => if s = "<" orelse s = "+" then OK()
-                                   else die "FAILED"
-    | _ => die "FAILED"
+                                   else die ""
+    | _ => die ""
 end
 
-val _ = if List.all substtest tests then ()
-        else die "Substitution test failed"
+val _ = List.app (ignore o substtest) tests
 
 val _ = print "Testing cond-printer after set_grammar_ancestry\n"
 val _ = set_trace "PP.avoid_unicode" 1
 val _ = set_grammar_ancestry ["bool"]
 val _ = app condprinter_test condprinter_tests
+
+val _ = let
+  open Exn
+  fun badtac (asl,g) = ([], fn [] => ASSUME ``p:bool`` | _ => raise Fail "")
+  val vtac = VALID badtac
+  fun checkmsg P f (os, ofn, m) = os = "Tactical" andalso ofn = f andalso P m
+  fun checkv P = checkmsg P "VALID"
+  fun checkvl P = checkmsg P "VALID_LT"
+  val _ = tprint "VALID-checking (normal)"
+  val _ = require is_result vtac ([``p:bool``], ``p:bool``)
+  val _ = tprint "VALID-checking (bad concl)"
+  val expectedmsg1 = "Invalid tactic: theorem has wrong conclusion p"
+  val _ = require (check_HOL_ERR (checkv (equal expectedmsg1))) vtac
+                  ([``p:bool``, ``q:bool``], ``P:bool``)
+  val _ = tprint "VALID-checking (bad hyp)"
+  val expectedmsg2 = "Invalid tactic: theorem has bad hypothesis p"
+  val _ = require (check_HOL_ERR (checkv (equal expectedmsg2))) vtac
+                  ([], ``p:bool``)
+in
+  ()
+end

@@ -2,6 +2,7 @@
 open HolKernel Parse boolLib bossLib;
 
 val _ = new_theory "prog_x64_extra";
+val _ = ParseExtras.temp_loose_equality()
 
 open prog_x64Theory prog_x64Lib x64_encodeLib;
 open helperLib progTheory set_sepTheory addressTheory temporalTheory;
@@ -993,7 +994,8 @@ val io_putchar_tm =
        (zPC x * ~zR1 RAX * ~zR1 RDI * ^caller_saver_tm * ^callee_saved_tm *
         ^IO (pi,input,po,output ++ [c]) * ~zS * zSTACK (base,stack))``;
 
-fun genall tm v = foldr mk_forall tm (filter (fn x => not (x = v)) (free_vars tm));
+fun genall tm v =
+  foldr mk_forall tm (filter (fn x => x !~ v) (free_vars tm));
 
 val IO_ASSUMS_def = Define `
   IO_ASSUMS ^IO = ^(genall io_getchar_tm IO) /\ ^(genall io_putchar_tm IO)`

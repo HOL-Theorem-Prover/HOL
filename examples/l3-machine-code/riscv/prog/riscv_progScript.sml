@@ -2,7 +2,7 @@ open HolKernel boolLib bossLib
 open stateLib set_sepTheory progTheory riscv_stepTheory
 
 val () = new_theory "riscv_prog"
-
+val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
 val _ = stateLib.sep_definitions "riscv" []
@@ -12,12 +12,13 @@ val _ = stateLib.sep_definitions "riscv" []
               "c_HCSR", "c_ExitCode"])
           riscv_stepTheory.NextRISCV_def
 
+val riscv_mem_def = Define`
+   riscv_mem a (l: word8 list) =
+   set (GENLIST (\i. (riscv_c_MEM8 (a + n2w i),
+                      riscv_d_word8 (EL i l))) (LENGTH l))`;
+
 val riscv_instr_def = Define`
-   riscv_instr (a, i: word32) =
-   { (riscv_c_MEM8 a, riscv_d_word8 ((7 >< 0) i));
-     (riscv_c_MEM8 (a + 1w), riscv_d_word8 ((15 >< 8) i));
-     (riscv_c_MEM8 (a + 2w), riscv_d_word8 ((23 >< 16) i));
-     (riscv_c_MEM8 (a + 3w), riscv_d_word8 ((31 >< 24) i)) }`;
+  riscv_instr (a, i) = riscv_mem a i`;
 
 val riscv_proj_def = DB.definition "riscv_proj_def"
 
@@ -48,7 +49,7 @@ val riscv_ID_def = Define`
    riscv_c_MCSR id mcsr * cond (mcsr.mstatus.VM = 0w)`
 
 val riscv_ID_PC_def = Define`
-  riscv_ID_PC id pc = riscv_c_PC id pc * cond (aligned 2 pc)`
+  riscv_ID_PC id pc = riscv_c_PC id pc * cond (aligned 1 pc) * ~ riscv_c_Skip id`
 
 (* ------------------------------------------------------------------------
    Specialize to RV64I, core 0
@@ -62,52 +63,61 @@ val riscv_PC_def = Define`riscv_PC = riscv_ID_PC 0w`
 
 (* ------------------------------------------------------------------------ *)
 
+val aligned_1_intro = store_thm("aligned_1_intro",
+  ``~word_bit 0 pc <=> aligned 1 (pc:word64)``,
+  fs [alignmentTheory.aligned_bitwise_and] \\ blastLib.BBLAST_TAC);
+
 val RISCV_PC_INTRO = Q.store_thm("RISCV_PC_INTRO",
-   `SPEC m (p1 * riscv_ID_PC c pc) code (p2 * riscv_c_PC c pc') ==>
-    (aligned 2 pc ==> aligned 2 pc') ==>
+   `SPEC m (p1 * riscv_ID_PC c pc) code
+           (p2 * riscv_c_PC c pc' * ~ riscv_c_Skip c) ==>
+    (aligned 1 pc ==> aligned 1 pc') ==>
     SPEC m (p1 * riscv_ID_PC c pc) code (p2 * riscv_ID_PC c pc')`,
    REPEAT STRIP_TAC
-   \\ FULL_SIMP_TAC std_ss
+   \\ FULL_SIMP_TAC (std_ss++helperLib.sep_cond_ss)
         [riscv_ID_PC_def, SPEC_MOVE_COND, STAR_ASSOC, SEP_CLAUSES]
    )
 
 val RISCV_TEMPORAL_PC_INTRO = Q.store_thm("RISCV_TEMPORAL_PC_INTRO",
-   `TEMPORAL_NEXT m (p1 * riscv_ID_PC c pc) code (p2 * riscv_c_PC c pc') ==>
-    (aligned 2 pc ==> aligned 2 pc') ==>
+   `TEMPORAL_NEXT m (p1 * riscv_ID_PC c pc) code
+                    (p2 * riscv_c_PC c pc' * ~ riscv_c_Skip c) ==>
+    (aligned 1 pc ==> aligned 1 pc') ==>
     TEMPORAL_NEXT m (p1 * riscv_ID_PC c pc) code (p2 * riscv_ID_PC c pc')`,
    REPEAT STRIP_TAC
-   \\ FULL_SIMP_TAC std_ss
+   \\ FULL_SIMP_TAC (std_ss++helperLib.sep_cond_ss)
         [riscv_ID_PC_def, temporal_stateTheory.TEMPORAL_NEXT_MOVE_COND,
          STAR_ASSOC, SEP_CLAUSES]
    )
 
 val cond_branch_aligned = Q.store_thm("cond_branch_aligned",
-  `(aligned 2 (pc: word64) ==>
-    aligned 2
-      (if b then
-         pc +
-         sw2sw (v2w [x0; x21; x1; x2; x3; x4;
-                     x5; x6; x17; x18; x19; x20] : word12) << 1
-       else pc + 4w)) = (aligned 2 pc /\ b ==> ~x20)`,
+  `((aligned 1 (pc: word64) ==>
+     aligned 1 (if b then pc + w << 1 else pc + 4w)) = T) /\
+   ((aligned 1 (pc: word64) ==>
+     aligned 1 (if b then pc + w << 1 else pc + 2w)) = T)`,
   rw [alignmentTheory.aligned_extract]
   \\ blastLib.FULL_BBLAST_TAC
   )
 
 val jal_aligned = Q.store_thm("jal_aligned",
-  `(aligned 2 (pc: word64) ==> aligned 2 (pc + sw2sw (a: word20) << 1)) =
-   aligned 2 pc ==> ~word_lsb a`,
-  rw [alignmentTheory.aligned_extract]
+  `(aligned 1 (pc: word64) ==> aligned 1 (pc + w << 1)) = T`,
+  rw [alignmentTheory.aligned_extract] \\ pop_assum mp_tac
   \\ blastLib.BBLAST_TAC
   )
 
 val jalr_aligned = Q.store_thm("jalr_aligned",
-  `~(a: word12) ' 1 /\ (b \/ aligned 2 (v: word64)) /\
-   (c ==> aligned 2 (if b then sw2sw a && 0xFFFFFFFFFFFFFFFEw
+  `~(a: word12) ' 1 /\ (b \/ aligned 1 (v: word64)) /\
+   (c ==> aligned 1 (if b then sw2sw a && 0xFFFFFFFFFFFFFFFEw
                      else v + sw2sw a && 0xFFFFFFFFFFFFFFFEw)) =
-   ~(a: word12) ' 1 /\ (b \/ aligned 2 (v: word64))`,
+   ~(a: word12) ' 1 /\ (b \/ aligned 1 (v: word64))`,
   rw [alignmentTheory.aligned_extract]
   \\ blastLib.FULL_BBLAST_TAC
   )
+
+(* ------------------------------------------------------------------------ *)
+
+val riscv_MEM8_def = fetch "-" "riscv_MEM8_def";
+
+val (riscv_MEMORY_def, riscv_MEMORY_INSERT) =
+   stateLib.define_map_component ("riscv_MEMORY", "mem", riscv_MEM8_def)
 
 (* ------------------------------------------------------------------------ *)
 

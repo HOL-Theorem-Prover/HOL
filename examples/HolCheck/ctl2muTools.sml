@@ -67,23 +67,23 @@ val _ = set_trace "notify type variable guesses" 1;
 (* convert ctl formula to mu formula *)
 fun ctl2mu_CONV f =
     let val jf = (fn _ => REWRITE_CONV [CTL2MU_def,BEXP2MU_def,C_IMP2_def,B_IMP2_def,B_AND2_def,B_OR2_def,C_AND2_def,C_OR2_def,C_AX_def,
-					C_AG_def,C_AU_def,C_EF_def,C_IMP_def,C_IFF_def,C_AF_def,B_IMP_def,B_IFF_def,C_OR_def,B_OR_def,
-					B_FALSE_def] (mk_comb(inst [alpha|->get_prop_type f] ctl2mu_tm,f)))
+                                        C_AG_def,C_AU_def,C_EF_def,C_IMP_def,C_IFF_def,C_AF_def,B_IMP_def,B_IFF_def,C_OR_def,B_OR_def,
+                                        B_FALSE_def] (mk_comb(inst [alpha|->get_prop_type f] ctl2mu_tm,f)))
     in mk_lthm (fn _ => (mk_eq(mk_comb(inst [alpha|->get_prop_type f] ctl2mu_tm,f),ctl2mu f),jf)) jf end
 
 
 (* convert ctl model to mu model *)
 fun ctl2muks_CONV Ithm Rthm cks_def =
     let val _ = dbgTools.DEN dpfx "c2mks"(*DBG*)
-	val th1 = (ISPEC (rhs(concl cks_def)) ctl2muks_def)
-	val th2 = PURE_REWRITE_RULE [SYM cks_def,combinTheory.K_THM,kripke_structure_accfupds] th1
-	val th3 =  CONV_RULE (RHS_CONV (T_CONV (PURE_REWRITE_CONV [SYM Rthm]))) th2
-	val _ = dbgTools.DTH (dpfx^"c2mks_th3") th3 (*DBG*)
-	val th4 = CONV_RULE (RHS_CONV (S0_CONV (PURE_REWRITE_CONV [SYM Ithm]))) th3
-	val _ = dbgTools.DTH (dpfx^"c2mks_th4") th4 (*DBG*)
-	val th5 = CONV_RULE (RHS_CONV (S0_CONV lzPETA_CONV)) th4
-	val th6 = CONV_RULE (RHS_CONV (T_CONV (ABS_CONV lzPETA_CONV))) th5
-	val _ = dbgTools.DEX dpfx "c2mks"(*DBG*)
+        val th1 = (ISPEC (rhs(concl cks_def)) ctl2muks_def)
+        val th2 = PURE_REWRITE_RULE [SYM cks_def,combinTheory.K_THM,kripke_structure_accfupds] th1
+        val th3 =  CONV_RULE (RHS_CONV (T_CONV (PURE_REWRITE_CONV [SYM Rthm]))) th2
+        val _ = dbgTools.DTH (dpfx^"c2mks_th3") th3 (*DBG*)
+        val th4 = CONV_RULE (RHS_CONV (S0_CONV (PURE_REWRITE_CONV [SYM Ithm]))) th3
+        val _ = dbgTools.DTH (dpfx^"c2mks_th4") th4 (*DBG*)
+        val th5 = CONV_RULE (RHS_CONV (S0_CONV lzPETA_CONV)) th4
+        val th6 = CONV_RULE (RHS_CONV (T_CONV (ABS_CONV lzPETA_CONV))) th5
+        val _ = dbgTools.DEX dpfx "c2mks"(*DBG*)
     in th5 end
 
 end

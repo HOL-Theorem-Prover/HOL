@@ -4,17 +4,17 @@ val Or_def = Define  `Or (a, b) (c, d) = (a\/c, b/\d)`;;
 
 val Or_bool_def =  Define `Or_bool s_b s_b' =
     !node. ((node = "out") ==>
-	    (s_b' node = ((s_b "i0") \/ (s_b "i1"))))`;
+            (s_b' node = ((s_b "i0") \/ (s_b "i1"))))`;
 
 val Or_lattice_def = Define `(Or_lattice s node =
-			    if (node = "i0")
-				then X
-			    else if (node = "i1") then X
-			    else if (node = "out")
-				     then
-					 Or (s "i0")(s "i1")
-				 else
-				     X)`;
+                            if (node = "i0")
+                                then X
+                            else if (node = "i1") then X
+                            else if (node = "out")
+                                     then
+                                         Or (s "i0")(s "i1")
+                                 else
+                                     X)`;
 
 val comp_list = [Or_lattice_def, Or_bool_def, Or_lattice_def];
 

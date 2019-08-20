@@ -40,8 +40,6 @@ open HolBddLib;
 open pairSyntax;
 open bossLib;
 
-val _ = (Globals.priming := SOME "");
-
 val _ = new_theory "Solitaire";
 
 val var_list as

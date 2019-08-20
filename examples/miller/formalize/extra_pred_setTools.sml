@@ -42,7 +42,7 @@ fun rewr_ss ths =
     convs = [],
     dprocs = [],
     filter = NONE,
-    rewrs = set_rewrs @ elt_rewrs,
+    rewrs = map (fn th => (NONE, th)) (set_rewrs @ elt_rewrs),
     congs = []});
 
 val pset_set_ss = rewr_ss set_rewrs;

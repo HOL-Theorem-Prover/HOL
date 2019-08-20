@@ -48,7 +48,7 @@ val _ = new_theory "hol_defaxioms_thms";
      [axioms: ] [] |- |= implies (character_listp x) (eqlable_listp x),
 *)
 
-val character_listp_forward_to_eqlable_listp_defthm =
+val character_listp_forward_to_eqlable_listp_defaxiom =
  store_thm
   ("character_listp_forward_to_eqlable_listp_defaxiom",
    ``|= implies (character_listp x) (eqlable_listp x)``,
@@ -70,7 +70,7 @@ val character_listp_forward_to_eqlable_listp_defthm =
      [axioms: ] [] |- |= implies (standard_char_listp x) (character_listp x),
 *)
 
-val standard_char_listp_forward_to_character_listp_defthm =
+val standard_char_listp_forward_to_character_listp_defaxiom =
  store_thm
   ("standard_char_listp_forward_to_character_listp_defaxiom",
    ``|= implies (standard_char_listp x) (character_listp x)``,

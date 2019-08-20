@@ -12,6 +12,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "extra_num";
+val _ = ParseExtras.temp_loose_equality()
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
 infix 1 >>;
@@ -702,7 +703,7 @@ val LOG2_UPPER = store_thm
    >> (POP_ASSUM MP_TAC
        ++ RW_TAC std_ss [SUC_DIV_TWO_ZERO]
        ++ RW_TAC arith_ss [DECIDE ``SUC 0 = 1``, DIV_TWO_BASIC,
-			   log2_def, EXP])
+                           log2_def, EXP])
    ++ RES_TAC
    ++ POP_ASSUM MP_TAC
    ++ KILL_TAC

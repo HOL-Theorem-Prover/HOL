@@ -101,8 +101,6 @@ val mk_icomb = Lib.uncurry HolKernel.mk_monop
 
 fun mk_IN (t1, t2) = mk_comb(mk_icomb(IN_tm, t1), t2)
 
-
-
 (*--------------------------------------------------------------------------*
  *                Destructors                                               *
  *--------------------------------------------------------------------------*)
@@ -468,5 +466,112 @@ fun singt t = HOLset.add(ES, t)
 fun listset ts = HOLset.addList(ES, ts)
 fun FVLset ts = FVL ts ES
 fun FVs t = FVLset [t]
+
+(* ===================================================================== *)
+(* Type unification algorithms, and derived constructors.                *)
+(* There are two versions of the algorithm:                              *)
+(* one performs classical unification (type_unify), and the other        *)
+(* (sep_type_unify) renames all type variables to allow "unification"    *)
+(* of types with type variables in common. The latter returns two        *)
+(* substitutions, to be performed on the types separately                *)
+(* --------------------------------------------------------------------- *)
+
+local
+
+  fun UERR s = ERR "type_unify" s
+
+  fun type_refine_subst [] tyS' = tyS'
+    | type_refine_subst tyS [] = tyS
+    | type_refine_subst tyS tyS' =
+      tyS' @
+      (List.map (fn {redex, residue} => redex |-> type_subst tyS' residue) tyS)
+
+  fun zip_aux _ [] [] = []
+    | zip_aux f (x::xs) (y::ys) = f (x, y) (zip_aux f xs ys)
+    | zip_aux _ _ _ = raise UERR "zip - lists different lengths"
+  fun zipwith f xs ys = zip_aux (Lib.cons o (Lib.uncurry f)) xs ys
+
+  fun type_new_vars vars =
+    let
+      val gvars = List.map (fn _ => gen_tyvar ()) vars
+      val old_to_new = zipwith (curry op|->) vars gvars
+      val new_to_old = zipwith (curry op|->) gvars vars
+    in
+      (gvars, (old_to_new, new_to_old))
+    end;
+
+  fun is_tyvar vars ty = is_vartype ty andalso Lib.mem ty vars
+  fun find_redex r = Lib.first (fn rr as {redex, residue} => r = redex)
+  fun clean_subst s = Lib.filter (fn {redex, residue} => redex <> residue) s
+  fun maplet_map (redf, resf) {redex, residue} = (redf redex |-> resf residue)
+  fun subst_map fg = List.map (maplet_map fg)
+
+  fun solve _ sub [] = sub
+    | solve vars sub (tys :: rest) =
+        solve' vars sub (((type_subst sub) ## (type_subst sub)) tys) rest
+    and solve' vars sub (ty1, ty2) rest =
+      if is_tyvar vars ty1 then
+        if ty1 = ty2 then solve vars sub rest
+        else if type_var_in ty1 ty2 then raise UERR "occurs check"
+        else
+          (case total (find_redex ty1) sub of NONE
+             => solve vars (type_refine_subst sub [ty1 |-> ty2]) rest
+           | SOME {residue, ...}
+             => solve' vars sub (ty2, residue) rest)
+      else if is_tyvar vars ty2 then solve' vars sub (ty2, ty1) rest
+      else if is_vartype ty1 then
+        let
+          val _ = (ty1 = ty2) orelse raise UERR "(vartype, non-vartype)"
+        in
+          solve vars sub rest
+        end
+      else
+        let
+          val (ty2_n, ty2_a) = dest_type ty2
+          val (ty1_n, ty1_a) = dest_type ty1
+          val _ = (ty1_n = ty2_n) orelse
+            raise UERR "different type constructors"
+        in
+          solve vars sub (zip ty1_a ty2_a @ rest)
+        end
+
+  fun var_type_unify vars ty1 ty2 = solve' vars [] (ty1, ty2) []
+
+  fun sep_var_type_unify (vars1, ty1) (vars2, ty2) =
+    let
+      val (gvars1, (old_to_new1, new_to_old1)) = type_new_vars vars1
+      val (gvars2, (old_to_new2, new_to_old2)) = type_new_vars vars2
+      val ty1' = type_subst old_to_new1 ty1
+      val ty2' = type_subst old_to_new2 ty2
+      val sub = var_type_unify (gvars1 @ gvars2) ty1' ty2'
+      val (sub1, sub2) = partition (C mem gvars1 o #redex) sub
+      val renaming_sub = new_to_old1 @ new_to_old2
+    in
+      (fn f => f ## f)
+        (clean_subst o subst_map ((fn x => (x,x))
+        (type_subst renaming_sub))) (sub1, sub2)
+    end
+
+in
+
+  fun type_unify ty1 ty2 =
+    var_type_unify (union (type_vars ty1) (type_vars ty2)) ty1 ty2
+
+  fun sep_type_unify ty1 ty2 =
+    sep_var_type_unify (type_vars ty1, ty1) (type_vars ty2, ty2)
+
+  fun mk_ucomb (f, a) =
+    let
+      val fty = Term.type_of f
+      val aty = Term.type_of a
+      val (dty, rty) = dom_rng fty
+      val (dsub, asub) = sep_type_unify dty aty
+    in
+      mk_comb (Term.inst dsub f, Term.inst asub a)
+    end
+
+  fun list_mk_ucomb (f, args) = List.foldl (mk_ucomb o swap) f args
+
+end
 
 end

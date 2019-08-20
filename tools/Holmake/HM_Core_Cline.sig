@@ -5,7 +5,6 @@ sig
 type t = {
   debug : bool,
   do_logging : bool,
-  dontmakes : string list,
   fast : bool,
   help : bool,
   holdir : string option,

@@ -56,6 +56,7 @@ sig
   val mk_res_abstract        : term * term * term -> term
   val mk_icomb               : term * term -> term
   val mk_IN                  : term * term -> term
+  val mk_ucomb               : term * term -> term
 
   (* Destruction routines *)
 
@@ -126,7 +127,7 @@ sig
   val list_mk_res_forall     : (term * term) list * term -> term
   val list_mk_res_exists     : (term * term) list * term -> term
   val list_mk_icomb          : term * term list -> term
-
+  val list_mk_ucomb          : term * term list -> term
   val gen_all                : term -> term
 
   (* Destructing a term to a list of terms *)
@@ -184,5 +185,9 @@ sig
   val FVLset : term list -> term HOLset.set
   val ES : term HOLset.set
 
+  (* Type unification *)
+  val type_unify : hol_type -> hol_type -> (hol_type, hol_type) Lib.subst
+  val sep_type_unify : hol_type -> hol_type ->
+              (hol_type, hol_type) Lib.subst * (hol_type, hol_type) Lib.subst
 
 end

@@ -7,32 +7,38 @@ type 'a cline_result = { update : (string -> unit) * 'a -> 'a }
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate8 z
+  fun makeUpdateT z = makeUpdate9 z
 in
 fun updateT z = let
-  fun from build_theory_graph debug help jobcount kernelspec relocbuild selftest
+  fun from build_theory_graph debug help jobcount kernelspec multithread
+           relocbuild selftest
            seqname =
     {build_theory_graph = build_theory_graph,
      debug = debug,
      help = help,
      jobcount = jobcount,
      kernelspec = kernelspec,
+     multithread = multithread,
      relocbuild = relocbuild,
      selftest = selftest,
      seqname = seqname}
-  fun from' seqname selftest relocbuild kernelspec jobcount help debug
+  fun from' seqname selftest relocbuild multithread kernelspec jobcount help
+            debug
             build_theory_graph =
     {build_theory_graph = build_theory_graph,
      debug = debug,
      help = help,
      jobcount = jobcount,
      kernelspec = kernelspec,
+     multithread = multithread,
      relocbuild = relocbuild,
      selftest = selftest,
      seqname = seqname}
-  fun to f {build_theory_graph, debug, help, jobcount, kernelspec, relocbuild,
+  fun to f {build_theory_graph, debug, help, jobcount, kernelspec, multithread,
+            relocbuild,
             selftest, seqname} =
-    f build_theory_graph debug help jobcount kernelspec relocbuild selftest
+    f build_theory_graph debug help jobcount kernelspec multithread relocbuild
+      selftest
       seqname
 in
   makeUpdateT (from, from', to)
@@ -64,19 +70,24 @@ fun mkIntOpt nm sel =
                            else updateT t (U sel (SOME i)) $$ }),
           "int")
 
-val optSelftestInt = let
-  fun doit i_s (wn,t) =
-    case Int.fromString i_s of
-        NONE => (wn ("Couldn't read integer from "^i_s); t)
-      | SOME i => if i < 0 then
-                    (wn "Ignoring negative number for selftest level"; t)
-                  else
-                    updateT t (U #selftest i) $$
+datatype res = Bad of string | OK of int
+fun optInt nm dflt sel = let
+  fun doit ires (wn,t) =
+    case ires of
+        Bad s => (wn ("Couldn't read integer from "^s); t)
+      | OK i => if i < 0 then
+                  (wn ("Ignoring negative number for " ^ nm); t)
+                else
+                  updateT t (U sel (SOME i)) $$
+  fun readInt s =
+    case Int.fromString s of
+        NONE => Bad s
+      | SOME i => OK i
 in
   OptArg ((fn sopt =>
               case sopt of
-                  NONE => {update = doit "1"}
-                | SOME i_s => {update = doit i_s}), "int")
+                  NONE => {update = doit (OK dflt)}
+                | SOME i_s => {update = doit (readInt i_s)}), "int")
 end
 
 val setSeqNameOnce =
@@ -116,6 +127,8 @@ val cline_opt_descrs = [
    desc = mkBool #help true},
   {help = "specify concurrency limit", long = [], short = "j",
    desc = mkIntOpt "-j" #jobcount},
+  {help = "thread count", long = ["mt"], short = "",
+   desc = optInt "thread count" 0 #multithread},
   {help = "don't build a thy dep. graph", long = ["nograph"], short = "",
    desc = mkBoolOpt #build_theory_graph false},
   {help = "build with logging kernel", long = ["otknl"], short = "",
@@ -125,7 +138,7 @@ val cline_opt_descrs = [
    desc = mkBool #relocbuild true},
   {help = "specify selftest level (default = 1)", long = ["selftest"],
    short = "t",
-   desc = optSelftestInt},
+   desc = optInt "selftest level" 1 #selftest},
   {help = "build this directory sequence", long = ["seq"], short = "",
    desc = setSeqNameOnce},
   {help = "build with standard kernel", long = ["stdknl"], short = "",

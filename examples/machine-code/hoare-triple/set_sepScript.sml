@@ -1,11 +1,7 @@
-
 open HolKernel boolLib bossLib Parse pred_setTheory pairTheory wordsTheory;
+
 val _ = new_theory "set_sep";
-
-
-infix \\
-val op \\ = op THEN;
-
+val _ = ParseExtras.temp_loose_equality()
 
 (* ---- definitions ---- *)
 
@@ -14,7 +10,7 @@ val emp_def    = Define `emp = \s. (s = {})`;
 val cond_def   = Define `cond c = \s. (s = {}) /\ c`;
 val SEP_F_def  = Define `SEP_F s = F`;
 val SEP_T_def  = Define `SEP_T s = T`;
-val SPLIT_def  = Define `SPLIT (s:'a set) (u,v) = (u UNION v = s) /\ DISJOINT u v`;
+val SPLIT_def  = Define `SPLIT (s:'a set) (u,v) ⇔ (u ∪ v = s) ∧ DISJOINT u v`;
 val STAR_def   = Define `STAR p q = (\s. ?u v. SPLIT s (u,v) /\ p u /\ q v)`;
 val SEP_EQ_def = Define `SEP_EQ x = \s. s = x`;
 
@@ -47,7 +43,7 @@ val SPLIT_ss = rewrites [SPLIT_def,SUBSET_DEF,DISJOINT_DEF,DELETE_DEF,IN_INSERT,
 
 val SPLIT_TAC = FULL_SIMP_TAC (pure_ss++SPLIT_ss) [] \\ METIS_TAC [];
 
-val STAR_SYM = store_thm("STAR_COMM",
+val STAR_COMM = store_thm("STAR_COMM",
   ``!p:'a set->bool q. p * q = q * p``,
   REWRITE_TAC [STAR_def,SPLIT_def,DISJOINT_DEF]
   \\ METIS_TAC [UNION_COMM,INTER_COMM,CONJ_SYM,CONJ_ASSOC]);
@@ -62,7 +58,7 @@ val STAR_ASSOC_LEMMA = prove(
 
 val STAR_ASSOC = store_thm("STAR_ASSOC",
   ``!p:'a set->bool q r. p * (q * r) = (p * q) * r``,
-  ONCE_REWRITE_TAC [FUN_EQ_THM] \\ METIS_TAC [STAR_ASSOC_LEMMA,STAR_SYM]);
+  ONCE_REWRITE_TAC [FUN_EQ_THM] \\ METIS_TAC [STAR_ASSOC_LEMMA,STAR_COMM]);
 
 val SEP_CLAUSES = store_thm("SEP_CLAUSES",
   ``!p q t c c'.
@@ -182,7 +178,7 @@ val read_fun2set = store_thm("read_fun2set",
 val write_fun2set = store_thm("write_fun2set",
   ``!y a x p f. (one (a,x) * p) (fun2set (f,d)) ==> (p * one (a,y)) (fun2set ((a =+ y) f,d))``,
   SIMP_TAC std_ss [one_STAR,IN_DEF,fun2set_thm,combinTheory.APPLY_UPDATE_THM]
-  \\ ONCE_REWRITE_TAC [STAR_SYM]
+  \\ ONCE_REWRITE_TAC [STAR_COMM]
   \\ SIMP_TAC std_ss [one_STAR,IN_DEF,fun2set_thm,combinTheory.APPLY_UPDATE_THM]
   \\ NTAC 4 STRIP_TAC \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (t /\ p x ==> p y)``)
   \\ SIMP_TAC std_ss [EXTENSION] \\ Cases
@@ -291,4 +287,3 @@ val IMP_IMP = store_thm("IMP_IMP",
   METIS_TAC []);
 
 val _ = export_theory();
-

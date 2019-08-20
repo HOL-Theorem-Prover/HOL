@@ -1802,22 +1802,14 @@ val ADDEDGE_GBA_LEMM = store_thm
     >> metis_tac[FIND_LEMM,NOT_SOME_NONE]
    )
    >- (
-    Cases_on `x` >> fs[] >> simp[addEdge_def]
-    >> `?fl_old. lookup id g.followers = SOME fl_old`
-       by metis_tac[wfg_def,domain_lookup]
-    >> qexists_tac `g with followers updated_by insert id ((eL,q)::fl_old)`
-    >> fs[findNode_def]
-    >> `MEM (q,r) (toAList g.nodeInfo)` by metis_tac[FIND_LEMM2]
-    >> `q ∈ domain g.nodeInfo` by metis_tac[MEM_toAList,domain_lookup]
-    >> fs[wfg_def,INSERT_DEF] >> strip_tac >> fs[wfAdjacency_def]
-    >- (simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[])
-    >- (rpt strip_tac >> Cases_on `n = id` >> fs[]
-        >> Cases_on `k = id` >> fs[]
-        >- (rw[] >> fs[] >> metis_tac[])
-        >- (rw[] >> metis_tac[lookup_insert])
-       )
-   )
-  );
+    Cases_on `x` >> fs[] >>
+    ‘∃g2. addEdge id (eL,q) g = SOME g2’ suffices_by
+      metis_tac[addEdge_preserves_wfg, addEdge_preserves_nodeInfo] >>
+    dsimp[addEdge_def] >> fs [findNode_def] >>
+    drule_then strip_assume_tac FIND_LEMM2 >>
+    metis_tac[wfg_def,domain_lookup, MEM_toAList]
+  )
+);
 
 val ADDEDGE_GBA_FOLDR_LEMM = store_thm
   ("ADDEDGE_GBA_FOLDR_LEMM",

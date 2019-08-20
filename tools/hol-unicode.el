@@ -2,7 +2,6 @@
 (global-set-key (kbd "C-?") "∃")
 (global-set-key (kbd "C-&") "∧")
 (global-set-key (kbd "C-|") "∨")
-(global-set-key (kbd "C->") "→")
 (global-set-key (kbd "C-M->") "⇒")
 (global-set-key (kbd "C-+") "⇔")
 (global-set-key (kbd "C-M-+") "⁺")
@@ -13,6 +12,8 @@
 (global-set-key (kbd "C-S-c") "⊆")
 (global-set-key (kbd "C-S-q") "≤")
 (global-set-key (kbd "C-M-~") "∼")
+(global-set-key (kbd "C-M-S-b") "□")
+(global-set-key (kbd "C-M-S-m") "◇") ; diaMond
 
 (global-set-key (kbd "C-{") "⟦")
 (global-set-key (kbd "C-}") "⟧")
@@ -24,19 +25,33 @@
 (define-prefix-command 'hol-unicode-not-map)
 (define-prefix-command 'hol-unicode-subscript-map)
 (define-prefix-command 'hol-unicode-superscript-map)
+(define-prefix-command 'hol-unicode-C-map)
 (define-prefix-command 'hol-unicode-U-map)
+(define-prefix-command 'hol-unicode-leftarrow-map)
+(define-prefix-command 'hol-unicode-rightarrow-map)
 (define-prefix-command 'hol-unicode-lparen-map)
 (define-prefix-command 'hol-unicode-rparen-map)
 (define-prefix-command 'hol-unicode-shift-map)
+(define-prefix-command 'hol-unicode-dquote-map)
+(define-prefix-command 'hol-unicode-squote-map)
+(define-prefix-command 'hol-unicode-frak-map)
+(define-prefix-command 'hol-unicode-bboard-map)
+(define-prefix-command 'hol-unicode-specialalphabet-map)
 (define-key global-map (kbd "C-S-f") 'hol-unicode-shift-map)
 (define-key global-map (kbd "C-S-p") 'hol-unicode-p-map)
 (define-key global-map (kbd "C-M-S-p") 'hol-unicode-P-map)
 (define-key global-map (kbd "C-M-|") 'hol-unicode-not-map)
 (define-key global-map (kbd "C-M-_") 'hol-unicode-subscript-map)
 (define-key global-map (kbd "C-M-^") 'hol-unicode-superscript-map)
+(define-key global-map (kbd "C-S-M-c") 'hol-unicode-C-map)
 (define-key global-map (kbd "C-S-M-u") 'hol-unicode-U-map)
+(define-key global-map (kbd "C-<") 'hol-unicode-leftarrow-map)
+(define-key global-map (kbd "C->") 'hol-unicode-rightarrow-map)
 (define-key global-map (kbd "C-M-(") 'hol-unicode-lparen-map)
 (define-key global-map (kbd "C-M-)") 'hol-unicode-rparen-map)
+(define-key global-map (kbd "C-\"") 'hol-unicode-squote-map)
+(define-key global-map (kbd "C-M-\"") 'hol-unicode-dquote-map)
+(define-key global-map (kbd "C-M-a") 'hol-unicode-specialalphabet-map)
 
 ;; Greek : C-S-<char> for lower case version of Greek <char>
 ;;         add the Meta modifier for upper case Greek letter.
@@ -45,6 +60,7 @@
 (global-set-key (kbd "C-S-g") "γ")
 (global-set-key (kbd "C-S-d") "δ")
 (global-set-key (kbd "C-S-e") "ε")
+(global-set-key (kbd "C-S-h") "χ")
 (global-set-key (kbd "C-S-l") "λ")
 (global-set-key (kbd "C-S-m") "μ")
 (global-set-key (kbd "C-S-n") "ν")
@@ -75,6 +91,10 @@
 (define-key hol-unicode-not-map "~" "≁")
 (define-key hol-unicode-not-map "<" "≮")
 (define-key hol-unicode-not-map ">" "≯")
+(define-key hol-unicode-not-map (kbd "C-<") "↚")
+(define-key hol-unicode-not-map (kbd "C->") "↛")
+(define-key hol-unicode-not-map (kbd "C-M-<") "⇍")
+(define-key hol-unicode-not-map (kbd "C-M->") "⇏")
 (define-key hol-unicode-not-map (kbd "C-S-q") "≰")
 (define-key hol-unicode-not-map (kbd "C-+") "⇎")
 (define-key hol-unicode-not-map (kbd ",") "◁")
@@ -89,8 +109,26 @@
 (define-key hol-unicode-subscript-map "8" "₈")
 (define-key hol-unicode-subscript-map "9" "₉")
 (define-key hol-unicode-subscript-map "0" "₀")
+(define-key hol-unicode-subscript-map "a" "ₐ")
+(define-key hol-unicode-subscript-map "e" "ₑ")
+(define-key hol-unicode-subscript-map "h" "ₕ")
+(define-key hol-unicode-subscript-map "i" "ᵢ")
+(define-key hol-unicode-subscript-map "j" "ⱼ")
+(define-key hol-unicode-subscript-map "k" "ₖ")
+(define-key hol-unicode-subscript-map "l" "ₗ")
+(define-key hol-unicode-subscript-map "m" "ₘ")
+(define-key hol-unicode-subscript-map "n" "ₙ")
+(define-key hol-unicode-subscript-map "o" "ₒ")
+(define-key hol-unicode-subscript-map "p" "ₚ")
 (define-key hol-unicode-subscript-map "r" "ᵣ")
+(define-key hol-unicode-subscript-map "s" "ₛ")
 (define-key hol-unicode-subscript-map "t" "ₜ")
+(define-key hol-unicode-subscript-map "u" "ᵤ")
+(define-key hol-unicode-subscript-map "v" "ᵥ")
+(define-key hol-unicode-subscript-map "x" "ₓ")
+(define-key hol-unicode-subscript-map "+" "₊")
+(define-key hol-unicode-subscript-map "=" "₌")
+(define-key hol-unicode-subscript-map "-" "₋")
 
 (define-key hol-unicode-superscript-map "1"
   (lambda () (interactive) (insert "¹")))
@@ -181,8 +219,168 @@
 (define-key hol-unicode-rparen-map (kbd "C-M->") "⟫")
 (define-key hol-unicode-lparen-map (kbd "C-M-^") "⎡")
 (define-key hol-unicode-rparen-map (kbd "C-M-^") "⎤")
+(define-key hol-unicode-lparen-map (kbd "C-M-[") "⦗")
+(define-key hol-unicode-rparen-map (kbd "C-M-]") "⦘")
 
 ; shift map
 (define-key hol-unicode-shift-map (kbd "a") "≫")
 (define-key hol-unicode-shift-map (kbd "l") "≪")
 (define-key hol-unicode-shift-map (kbd "r") "⋙")
+
+; curly/curvy relational operator map
+(define-key hol-unicode-C-map (kbd "_") "⊆")
+(define-key hol-unicode-C-map (kbd "-") "≃")
+(define-key hol-unicode-C-map (kbd ".") "⪽")
+(define-key hol-unicode-C-map (kbd "c") "⊂")
+(define-key hol-unicode-C-map (kbd "l") "ℓ")
+(define-key hol-unicode-C-map (kbd "p") "⊂")  ; "p" for proper
+(define-key hol-unicode-C-map (kbd "q") "≼")  ; "q" for less-or-eQual
+(define-key hol-unicode-C-map (kbd "=") "≈")
+(define-key hol-unicode-C-map (kbd "<") "≺")
+
+; double quotation marks map
+(define-key hol-unicode-dquote-map (kbd "C-M-{") "“")
+(define-key hol-unicode-dquote-map (kbd "C-M-}") "”")
+(define-key hol-unicode-dquote-map (kbd "C-M-<")
+  (lambda () (interactive) (insert "«")))
+(define-key hol-unicode-dquote-map (kbd "C-M->")
+  (lambda () (interactive) (insert "»")))
+
+; single quotation marks map
+(define-key hol-unicode-squote-map (kbd "C-{") "‘")
+(define-key hol-unicode-squote-map (kbd "C-}") "’")
+(define-key hol-unicode-squote-map (kbd "C-<")
+  (lambda () (interactive) (insert "‹")))
+(define-key hol-unicode-squote-map (kbd "C->")
+  (lambda () (interactive) (insert "›")))
+
+(define-key hol-unicode-specialalphabet-map (kbd "f") hol-unicode-frak-map)
+; fraktur map
+; app (fn (s1,s2,s3) =>
+;        print ("(define-key hol-unicode-frak-map (kbd \"" ^ s1 ^ "\") \"" ^
+;               s2 ^ "\")  ; U+" ^ s3 ^ "\n"))
+;     (List.tabulate (26, (fn i => (UTF8.chr (i + 65),
+;                                   UTF8.chr (i + 0x1D56C),
+;                                   Int.fmt StringCvt.HEX (i + 0x1D56C)))));
+(define-key hol-unicode-frak-map (kbd "A") "𝕬")  ; U+1D56C
+(define-key hol-unicode-frak-map (kbd "B") "𝕭")  ; U+1D56D
+(define-key hol-unicode-frak-map (kbd "C") "𝕮")  ; U+1D56E
+(define-key hol-unicode-frak-map (kbd "D") "𝕯")  ; U+1D56F
+(define-key hol-unicode-frak-map (kbd "E") "𝕰")  ; U+1D570
+(define-key hol-unicode-frak-map (kbd "F") "𝕱")  ; U+1D571
+(define-key hol-unicode-frak-map (kbd "G") "𝕲")  ; U+1D572
+(define-key hol-unicode-frak-map (kbd "H") "𝕳")  ; U+1D573
+(define-key hol-unicode-frak-map (kbd "I") "𝕴")  ; U+1D574
+(define-key hol-unicode-frak-map (kbd "J") "𝕵")  ; U+1D575
+(define-key hol-unicode-frak-map (kbd "K") "𝕶")  ; U+1D576
+(define-key hol-unicode-frak-map (kbd "L") "𝕷")  ; U+1D577
+(define-key hol-unicode-frak-map (kbd "M") "𝕸")  ; U+1D578
+(define-key hol-unicode-frak-map (kbd "N") "𝕹")  ; U+1D579
+(define-key hol-unicode-frak-map (kbd "O") "𝕺")  ; U+1D57A
+(define-key hol-unicode-frak-map (kbd "P") "𝕻")  ; U+1D57B
+(define-key hol-unicode-frak-map (kbd "Q") "𝕼")  ; U+1D57C
+(define-key hol-unicode-frak-map (kbd "R") "𝕽")  ; U+1D57D
+(define-key hol-unicode-frak-map (kbd "S") "𝕾")  ; U+1D57E
+(define-key hol-unicode-frak-map (kbd "T") "𝕿")  ; U+1D57F
+(define-key hol-unicode-frak-map (kbd "U") "𝖀")  ; U+1D580
+(define-key hol-unicode-frak-map (kbd "V") "𝖁")  ; U+1D581
+(define-key hol-unicode-frak-map (kbd "W") "𝖂")  ; U+1D582
+(define-key hol-unicode-frak-map (kbd "X") "𝖃")  ; U+1D583
+(define-key hol-unicode-frak-map (kbd "Y") "𝖄")  ; U+1D584
+(define-key hol-unicode-frak-map (kbd "Z") "𝖅")  ; U+1D585
+; app (fn (s1,s2,s3) =>
+;        print ("(define-key hol-unicode-frak-map (kbd \"" ^ s1 ^ "\") \"" ^
+;               s2 ^ "\")  ; U+" ^ s3 ^ "\n"))
+;     (List.tabulate (26, (fn i => (UTF8.chr (i + 97),
+;                                   UTF8.chr (i + 0x1D586),
+;                                   Int.fmt StringCvt.HEX (i + 0x1D586)))));
+(define-key hol-unicode-frak-map (kbd "a") "𝖆")  ; U+1D586
+(define-key hol-unicode-frak-map (kbd "b") "𝖇")  ; U+1D587
+(define-key hol-unicode-frak-map (kbd "c") "𝖈")  ; U+1D588
+(define-key hol-unicode-frak-map (kbd "d") "𝖉")  ; U+1D589
+(define-key hol-unicode-frak-map (kbd "e") "𝖊")  ; U+1D58A
+(define-key hol-unicode-frak-map (kbd "f") "𝖋")  ; U+1D58B
+(define-key hol-unicode-frak-map (kbd "g") "𝖌")  ; U+1D58C
+(define-key hol-unicode-frak-map (kbd "h") "𝖍")  ; U+1D58D
+(define-key hol-unicode-frak-map (kbd "i") "𝖎")  ; U+1D58E
+(define-key hol-unicode-frak-map (kbd "j") "𝖏")  ; U+1D58F
+(define-key hol-unicode-frak-map (kbd "k") "𝖐")  ; U+1D590
+(define-key hol-unicode-frak-map (kbd "l") "𝖑")  ; U+1D591
+(define-key hol-unicode-frak-map (kbd "m") "𝖒")  ; U+1D592
+(define-key hol-unicode-frak-map (kbd "n") "𝖓")  ; U+1D593
+(define-key hol-unicode-frak-map (kbd "o") "𝖔")  ; U+1D594
+(define-key hol-unicode-frak-map (kbd "p") "𝖕")  ; U+1D595
+(define-key hol-unicode-frak-map (kbd "q") "𝖖")  ; U+1D596
+(define-key hol-unicode-frak-map (kbd "r") "𝖗")  ; U+1D597
+(define-key hol-unicode-frak-map (kbd "s") "𝖘")  ; U+1D598
+(define-key hol-unicode-frak-map (kbd "t") "𝖙")  ; U+1D599
+(define-key hol-unicode-frak-map (kbd "u") "𝖚")  ; U+1D59A
+(define-key hol-unicode-frak-map (kbd "v") "𝖛")  ; U+1D59B
+(define-key hol-unicode-frak-map (kbd "w") "𝖜")  ; U+1D59C
+(define-key hol-unicode-frak-map (kbd "x") "𝖝")  ; U+1D59D
+(define-key hol-unicode-frak-map (kbd "y") "𝖞")  ; U+1D59E
+(define-key hol-unicode-frak-map (kbd "z") "𝖟")  ; U+1D59F
+
+
+; blackboard map
+(define-key hol-unicode-specialalphabet-map (kbd "b") hol-unicode-bboard-map)
+;app (fn (s1,s2,s3) =>
+;       print ("(define-key hol-unicode-bboard-map (kbd \"" ^ s1 ^ "\") \"" ^
+;              s2 ^ "\")  ; U+" ^ s3 ^ "\n"))
+;    (List.tabulate (26, (fn i => (UTF8.chr (i + 65),
+;                                  UTF8.chr (i + 0x1D538),
+;                                  Int.fmt StringCvt.HEX (i + 0x1D538)))))
+; except special cases: C, H, N, P, Q, R and Z
+(define-key hol-unicode-bboard-map (kbd "A") "𝔸")  ; U+1D538
+(define-key hol-unicode-bboard-map (kbd "B") "𝔹")  ; U+1D539
+(define-key hol-unicode-bboard-map (kbd "C") "ℂ")  ; U+2102
+(define-key hol-unicode-bboard-map (kbd "D") "𝔻")  ; U+1D53B
+(define-key hol-unicode-bboard-map (kbd "E") "𝔼")  ; U+1D53C
+(define-key hol-unicode-bboard-map (kbd "F") "𝔽")  ; U+1D53D
+(define-key hol-unicode-bboard-map (kbd "G") "𝔾")  ; U+1D53E
+(define-key hol-unicode-bboard-map (kbd "H") "ℍ")  ; U+210D
+(define-key hol-unicode-bboard-map (kbd "I") "𝕀")  ; U+1D540
+(define-key hol-unicode-bboard-map (kbd "J") "𝕁")  ; U+1D541
+(define-key hol-unicode-bboard-map (kbd "K") "𝕂")  ; U+1D542
+(define-key hol-unicode-bboard-map (kbd "L") "𝕃")  ; U+1D543
+(define-key hol-unicode-bboard-map (kbd "M") "𝕄")  ; U+1D544
+(define-key hol-unicode-bboard-map (kbd "N") "ℕ")  ; U+1D545
+(define-key hol-unicode-bboard-map (kbd "O") "𝕆")  ; U+1D546
+(define-key hol-unicode-bboard-map (kbd "P") "ℙ")  ; U+1D547
+(define-key hol-unicode-bboard-map (kbd "Q") "ℚ")  ; U+1D548
+(define-key hol-unicode-bboard-map (kbd "R") "ℝ")  ; U+1D549
+(define-key hol-unicode-bboard-map (kbd "S") "𝕊")  ; U+1D54A
+(define-key hol-unicode-bboard-map (kbd "T") "𝕋")  ; U+1D54B
+(define-key hol-unicode-bboard-map (kbd "U") "𝕌")  ; U+1D54C
+(define-key hol-unicode-bboard-map (kbd "V") "𝕍")  ; U+1D54D
+(define-key hol-unicode-bboard-map (kbd "W") "𝕎")  ; U+1D54E
+(define-key hol-unicode-bboard-map (kbd "X") "𝕏")  ; U+1D54F
+(define-key hol-unicode-bboard-map (kbd "Y") "𝕐")  ; U+1D550
+(define-key hol-unicode-bboard-map (kbd "Z") "ℤ")  ; U+1D551
+
+
+
+; arrow maps
+(define-key hol-unicode-leftarrow-map (kbd "-") "←")
+(define-key hol-unicode-leftarrow-map (kbd "C-<") "↞")
+(define-key hol-unicode-leftarrow-map (kbd "<") "↢")
+(define-key hol-unicode-leftarrow-map (kbd "|") "↤")
+(define-key hol-unicode-leftarrow-map (kbd "`") "↼")
+(define-key hol-unicode-leftarrow-map (kbd ",") "↽")
+(define-key hol-unicode-leftarrow-map (kbd ".") "⇠")
+(define-key hol-unicode-leftarrow-map (kbd "=") "⇐")
+(define-key hol-unicode-leftarrow-map (kbd "a") "↫")
+(define-key hol-unicode-leftarrow-map (kbd "c") "↩")
+(define-key hol-unicode-leftarrow-map (kbd "~") "↜")
+
+(define-key hol-unicode-rightarrow-map (kbd "-") "→")
+(define-key hol-unicode-rightarrow-map (kbd "C->") "↠")
+(define-key hol-unicode-rightarrow-map (kbd ">") "↣")
+(define-key hol-unicode-rightarrow-map (kbd "|") "↦")
+(define-key hol-unicode-rightarrow-map (kbd "`") "⇀")
+(define-key hol-unicode-rightarrow-map (kbd ",") "⇁")
+(define-key hol-unicode-rightarrow-map (kbd ".") "⇢")
+(define-key hol-unicode-rightarrow-map (kbd "=") "⇒")
+(define-key hol-unicode-rightarrow-map (kbd "a") "↬")
+(define-key hol-unicode-rightarrow-map (kbd "c") "↪")
+(define-key hol-unicode-rightarrow-map (kbd "~") "↝")

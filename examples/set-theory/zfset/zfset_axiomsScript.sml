@@ -41,7 +41,7 @@ open HolKernel Parse boolLib bossLib;
 (* Create zfset_axiomsTheory                                                 *)
 (*****************************************************************************)
 val _ = new_theory "zfset_axioms";
-
+val _ = ParseExtras.temp_loose_equality()
 (*****************************************************************************)
 (* The Universe ``:zfset``.                                                  *)
 (*****************************************************************************)

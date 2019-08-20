@@ -359,9 +359,12 @@ in
   Normal {build_theory_graph = buildgraph,
           cmdline = rest,
           debug = #debug option_record,
-          selftest_level = #selftest option_record,
+          selftest_level = case #selftest option_record of
+                               NONE => 0
+                             | SOME i => i,
           extra = {seqname = seqspec, kernelspec = knlspec},
           jobcount = jcount,
+          multithread = #multithread option_record,
           relocbuild = #relocbuild option_record}
 end handle DoClean s => (Clean s before safedelete Holmake_tools.kernelid_fname)
 
@@ -515,14 +518,11 @@ fun clean_sigobj() = let
   open Systeml
   val _ = print ("Cleaning out "^SIGOBJ^"\n")
   val lowcase = String.map Char.toLower
-  val sigobj_extras =
-      if ML_SYSNAME = "mosml" then ["basis2002"] else []
   fun sigobj_rem_file s = let
     val f = Path.file s
     val n = lowcase (hd (String.fields (equal #".") f))
   in
-    if mem n (["systeml", "readme"] @ sigobj_extras) then ()
-    else rem_file s
+    if mem n (["systeml", "readme"]) then () else rem_file s
   end
   val toolsuffix = if ML_SYSNAME = "poly" then "-poly" else ""
   fun write_initial_srcfiles () = let
@@ -871,7 +871,7 @@ fun process_cline () =
         post_action();
         Process.exit Process.success
       end
-    | Normal {extra = {seqname,kernelspec}, cmdline,
+    | Normal {extra = {seqname,kernelspec}, cmdline, multithread,
               build_theory_graph, jobcount, relocbuild, debug,
               selftest_level} =>
       let
@@ -884,10 +884,11 @@ fun process_cline () =
           {build_theory_graph=build_theory_graph,
            cmdline=cmdline,
            debug = debug,
-           selftest_level = selftest_level,
            extra = {SRCDIRS = SRCDIRS},
            jobcount = jobcount,
-           relocbuild = relocbuild
+           multithread = multithread,
+           relocbuild = relocbuild,
+           selftest_level = selftest_level
           }
       end
 

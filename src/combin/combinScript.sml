@@ -30,11 +30,43 @@ val UPDATE_def = Q.new_definition("UPDATE_def",
    `UPDATE a b = \f c. if a = c then b else f c`);
 
 val _ = set_fixity ":>" (Infixl 310);
-val _ = set_fixity "=+" (Infix(NONASSOC, 320));
-val _ = overload_on("=+", ``UPDATE``);
+val _ = set_mapped_fixity {tok = "=+", fixity = Infix(NONASSOC, 320),
+                           term_name = "UPDATE"}
 val _ = Parse.Unicode.unicode_version {tmnm = "o", u = UTF8.chr 0x2218}
 val _ = TeX_notation {hol = "o", TeX = ("\\HOLTokenCompose", 1)}
 val _ = TeX_notation {hol = UTF8.chr 0x2218, TeX = ("\\HOLTokenCompose", 1)}
+
+val _ = let
+  open combinpp
+  fun addlform l r =
+      add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                fixity = Suffix 2100,
+                paren_style = OnlyIfNecessary,
+                pp_elements = [
+                  TOK l,
+                  ListForm {
+                    separator = [TOK ";", BreakSpace(1,0)],
+                    block_info = (PP.CONSISTENT, 1),
+                    cons = internal_consupd,
+                    nilstr = internal_idupd
+                  },
+                  TOK r],
+                term_name = toplevel_updname};
+in
+  set_mapped_fixity {fixity = Infix(NONASSOC,100),
+                     term_name = mapsto_special,
+                     tok = "|->"};
+  set_mapped_fixity {fixity = Infix(NONASSOC,100),
+                     term_name = mapsto_special,
+                     tok = "↦"}; (* UOK *)
+  addlform "(|" "|)";
+  addlform UnicodeChars.lensel UnicodeChars.lenser;
+  add_ML_dependency "combinpp";
+  add_absyn_postprocessor "combin.UPDATE";
+  inferior_overload_on (update_constname, ``UPDATE``);
+  add_user_printer ("combin.updpp", “UPDATE k v f”)
+end;
+
 
 local open OpenTheoryMap in
   val _ = OpenTheory_const_name {const={Thy="combin",Name="K"},name=(["Function"],"const")}
@@ -189,11 +221,12 @@ val APPLY_UPDATE_ID = Q.store_thm("APPLY_UPDATE_ID",
   `!f a. (a =+ f a) f = f`,
   REWRITE_TAC [GSYM UPDATE_APPLY_ID]);
 
-val UPD11_SAME_BASE = Q.store_thm("UPD11_SAME_BASE",
-  `!f a b c d.
-      ((a =+ c) f = (b =+ d) f) =
-      (a = b) /\ (c = d) \/
-      ~(a = b) /\ ((a =+ c) f = f) /\ ((b =+ d) f = f)`,
+Theorem UPD11_SAME_BASE:
+  !f a b c d.
+      ((a =+ c) f = (b =+ d) f) <=>
+        a = b /\ c = d \/
+        a <> b /\ (a =+ c) f = f /\ (b =+ d) f = f
+Proof
   REPEAT GEN_TAC
   THEN PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
   THEN BETA_TAC THEN EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC []
@@ -207,7 +240,9 @@ val UPD11_SAME_BASE = Q.store_thm("UPD11_SAME_BASE",
     THEN POP_ASSUM (fn th => RULE_ASSUM_TAC (PURE_REWRITE_RULE [th]))
     THEN FIRST_ASSUM (Q.SPEC_THEN `x` ASSUME_TAC)
     THEN Q.PAT_ASSUM `~(a = x)` (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th]))
-    THEN ASM_REWRITE_TAC []]);
+    THEN ASM_REWRITE_TAC []
+  ]
+QED
 
 val SAME_KEY_UPDATE_DIFFER = Q.store_thm("SAME_KEY_UPDATE_DIFFER",
   `!f1 f2 a b c. ~(b = c) ==> ~((a =+ b) f = (a =+ c) f)`,

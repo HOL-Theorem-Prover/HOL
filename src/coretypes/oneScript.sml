@@ -23,6 +23,8 @@
 
 open Lib HolKernel Parse boolLib BasicProvers
 
+local open satTheory in end
+
 val _ = new_theory "one";
 
 local open OpenTheoryMap in
@@ -130,7 +132,7 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
  ---------------------------------------------------------------------------*)
 
 val _ = overload_on ("()", ``one``);
-val _ = type_abbrev("unit",``:one``);
+val _ = type_abbrev_pp("unit",``:one``);
 
 val one_induction = Q.store_thm
 ("one_induction",

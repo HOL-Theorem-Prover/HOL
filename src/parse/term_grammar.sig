@@ -144,6 +144,9 @@ sig
   val give_num_priority : grammar -> char -> grammar
   val remove_numeral_form : grammar -> char -> grammar
 
+  val add_strlit_injector: {ldelim: string, tmnm: string} -> grammar -> grammar
+  val strlit_map : grammar -> {tmnm:string} -> string option
+
   (*------------------------------------------------------------------------*
    * this removes all those rules which give special status to the          *
    * given string.  If there is a rule saying that COND is written          *

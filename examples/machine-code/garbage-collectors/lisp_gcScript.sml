@@ -1,5 +1,6 @@
 
 open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_gc";
+val _ = ParseExtras.temp_loose_equality()
 
 open decompilerLib compilerLib prog_armLib;
 

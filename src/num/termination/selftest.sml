@@ -4,11 +4,10 @@ val _ = Feedback.emit_MESG := false
 val _ = print "\n"
 val _ = tprint "Testing mutually recursive function definition"
 
-val f_def = Define`
+val f_def = require (check_result (K true)) Define`
   (f x = if x = 0 then T else ~g(x - 1)) /\
   (g x = if x = 0 then F else ~f(x - 1))
-` handle _ => die "FAILED!"
-val _ = OK();
+`
 
 val _ = tprint "Testing definition over literals"
 
@@ -18,8 +17,8 @@ val h_def = Define`
 
 val _ = let
   val cs = strip_conj (concl h_def)
-  val _ = length cs = 2 orelse die "FAILED!"
-  val _ = List.all (is_const o rhs) cs orelse die "FAILED!"
+  val _ = if length cs = 2 then () else die "FAILED!"
+  val _ = if List.all (is_const o rhs) cs then () else die "FAILED!"
 in
   OK()
 end
@@ -38,21 +37,18 @@ val gs_def = DefineSchema`(gs 0 y = x + y) /\ (gs x y = x)`;
 
 val _ = tprint "Testing 0-arg recursive function with lambda"
 
-val f1_def = Define`
+val f1_def = require (check_result (K true)) Define`
   f1 = \x. case x of 0 => 0n | SUC n => f1 n
-` handle _ => die "FAILED!"
-val _ = OK();
+`
 
 val _ = tprint "Testing 1-arg recursive function with lambda"
 
-val f1_def = Define`
+val f1_def = require (check_result (K true)) Define`
   f2 (y : 'a) = \x. case x of 0 => 0n | SUC n => f2 y n
-` handle _ => die "FAILED!"
-val _ = OK();
+`;
 
 val _ = tprint "Testing 2-arg recursive function with lambda"
 
-val f1_def = Define`
+val f1_def = require (check_result (K true)) Define`
   f3 (y : 'a) (z : 'a) = \x. case x of 0 => 0n | SUC n => f3 y z n
-` handle _ => die "FAILED!"
-val _ = OK();
+`;

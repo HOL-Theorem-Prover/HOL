@@ -802,7 +802,7 @@ fun ASL_PROGRAM_ABSTRACTION___var_res_cond_critical_section pf abstL sys xenv pe
       val (wpL,P) =
            (pairSyntax.dest_pair o snd o pairSyntax.dest_pair) (
            first (fn tt =>
-              (fst (pairSyntax.dest_pair tt) = res))
+              (fst (pairSyntax.dest_pair tt) ~~ res))
               (fst (listSyntax.dest_list lock_decls)))
 
       val thm0 = ISPECL [
@@ -3222,7 +3222,7 @@ val VAR_RES_STRUCTURE_NORMALISE_CONV =
 fun QUANT_INSTANTIATE_HEURISTIC___VAR_RES_FRAME_SPLIT___bool (sys:quant_heuristic_base) v tt =
 let
    val (_,_,_,_,_,_,sfb_imp,_) = dest_VAR_RES_FRAME_SPLIT tt
-			  handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
+                          handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
    val (sfs,_) = bagSyntax.dest_bag sfb_imp;
    val sfs' = filter is_var_res_bool_proposition sfs;
@@ -4116,5 +4116,3 @@ val VAR_RES_ENTAILMENT_INIT_TAC =
    CONSEQ_CONV_TAC (K VAR_RES_ENTAILMENT_INIT___CONSEQ_CONV);
 
 end
-
-

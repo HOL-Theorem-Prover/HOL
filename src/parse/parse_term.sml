@@ -86,16 +86,19 @@ val complained_already = ref false;
 
 structure Polyhash =
 struct
-   fun peek (ref dict) k = Binarymap.peek(dict,k)
-   fun peekInsert (r as ref dict) (k,v) =
-       case Binarymap.peek(dict,k) of
-         NONE => (r := Binarymap.insert(dict,k,v); NONE)
-       | x => x
-   fun insert (r as ref dict) (k,v) =
-       r := Binarymap.insert(dict,k,v)
-   fun listItems (ref dict) = Binarymap.listItems dict
+   open Uref
+   fun peek (dict) k = Binarymap.peek(!dict,k)
+   fun peekInsert r (k,v) =
+       let val dict = !r in
+         case Binarymap.peek(dict,k) of
+           NONE => (r := Binarymap.insert(dict,k,v); NONE)
+         | x => x
+       end
+   fun insert r (k,v) =
+       r := Binarymap.insert(!r,k,v)
+   fun listItems dict = Binarymap.listItems (!dict)
    fun mkDict cmp = let
-     val newref = ref (Binarymap.mkDict cmp)
+     val newref = Uref.new (Binarymap.mkDict cmp)
    in
      newref
    end
@@ -191,7 +194,7 @@ fun mk_prec_matrix G = let
   exception NotFound = Binarymap.NotFound
   exception BadTokList
   type dict = ((stack_terminal * bool) * stack_terminal,
-               mx_order) Binarymap.dict ref
+               mx_order) Binarymap.dict Uref.t
   val {lambda, endbinding, type_intro, restr_binders, ...} = specials G
   val specs = grammar_tokens G
   val Grules = term_grammar.grammar_rules G
@@ -209,10 +212,10 @@ fun mk_prec_matrix G = let
       *)
 
   val rule_elements = term_grammar.rule_elements o #elements
-  val complained_this_iteration = ref false
+  val complained_this_iteration = Uref.new false
   fun insert_bail k =
       (Polyhash.insert matrix (k, PM_LESS MS_Multi);
-       complained_this_iteration := true;
+       let open Uref in complained_this_iteration := true end;
        if not (!complained_already) andalso
           (!Globals.interactive orelse !ambigrm = 2)
        then let
@@ -504,7 +507,7 @@ in
   insert_rhs_relns () ;
   insert_lhs_relns () ;
   apply_them_all process_rule Grules;
-  if (not (!complained_this_iteration)) then complained_already := false
+  if (not (Uref.!complained_this_iteration)) then complained_already := false
   else ();
   matrix
 end
@@ -554,7 +557,7 @@ fun suffix_rule (rels,nm) =
 
 fun mk_ruledb (G:grammar) = let
   val Grules = term_grammar.grammar_rules G
-  val table:(rule_element list, rule_summary)Binarymap.dict ref =
+  val table:(rule_element list, rule_summary)Binarymap.dict Uref.t =
        Polyhash.mkDict (Lib.list_compare RE_compare)
   fun insert_rule mkfix (rr:rule_record) =
     let
@@ -804,6 +807,7 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
         | Antiquote _ => (Id, locn, SOME tt)
         | Numeral _ => (Id, locn, SOME tt)
         | Fraction _ => (Id, locn, SOME tt)
+        | StrLit _ => (Id, locn, SOME tt)
         | QIdent _ => (Id, locn, SOME tt)
       end
     | SOME (tt as PreType ty,locn) => (TypeTok, locn, SOME tt)
@@ -991,9 +995,24 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
         val args_w_seglocs0 = seglocs rhs' [] NONE
         fun CCOMB((x,locn),y) = (COMB(y,x),locn.between (#2 y) locn)
         fun process_lspinfos A i lspis args =
+            (* let
+                fun pr (VAR s, _) = s
+                  | pr (COMB(t1,t2), _) = pr t1 ^ " $ " ^ pr t2
+                fun prl p l = "[" ^ String.concatWith "," (map p l) ^ "]"
+            in
+              if not (null lspis) then
+                (print ("\nA = "^prl (pr o #1) A^", i="^Int.toString i^"\n");
+                 print ("lspinfo = (" ^ #cons (#1 (hd lspis)) ^ "," ^
+                        #nilstr (#1 (hd lspis)) ^
+                        "), ");
+                 print ("i = " ^ Int.toString (#2 (hd lspis)) ^ ", ");
+                 print ("c = " ^ Int.toString (#3 (hd lspis)) ^ ", ");
+                 print ("args = " ^ prl (pr o #1) args ^ "\n"))
+              else (); *)
+
           case lspis of
               [] => List.revAppend(A,args)
-            | ({cons,nilstr,...}, is) :: more_lsps =>
+            | ({cons,nilstr,...}, start, cnt) :: more_lsps =>
               let
                 fun mk_list [] = ((VAR nilstr,rlocn), rlocn)
                   | mk_list ((lpt,l)::xs) =
@@ -1005,20 +1024,17 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
                        locn.between (#2 lpt) rlocn)
                     end
               in
-                case is of
-                    [] => process_lspinfos (mk_list []::A) i more_lsps args
-                  | i1 :: _ =>
-                    if i1 = i then
-                      let
-                        val (listtms, rest) = Lib.split_after (length is) args
-                      in
-                        process_lspinfos (mk_list listtms :: A) (i + length is)
-                                         more_lsps
-                                         rest
-                      end
-                    else
-                      process_lspinfos (hd args :: A) (i + 1) lspis (tl args)
+                if start = i then
+                  let
+                    val (listtms, rest) = Lib.split_after cnt args
+                  in
+                    process_lspinfos (mk_list listtms :: A) (i + cnt)
+                                     more_lsps
+                                     rest
+                  end
+                else process_lspinfos (hd args :: A) (i + 1) lspis (tl args)
               end
+            (* end *)
         val args_w_seglocs = process_lspinfos [] 0 lspinfo args_w_seglocs0
         val newterm =
             case rule of
@@ -1072,6 +1088,8 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
                    NUMERAL  = (QIDENT ("arithmetic", "NUMERAL"),locn),
                    BIT1     = (QIDENT ("arithmetic", "BIT1")  ,locn),
                    BIT2     = (QIDENT ("arithmetic", "BIT2")  ,locn)}
+          val mk_string = Literal.mk_stringlit_term
+          val mk_char = Literal.mk_charlit_term
           fun inject_np NONE t = t
             | inject_np (SOME s) t = (COMB((VAR s,locn), t),locn)
         in
@@ -1148,6 +1166,15 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
                     | (VSRES_VS, _) =>
                         (NonTermVS [(SIMPLE (token_string tt),locn)],locn)
                     | (_, QIdent x) => (NonTerminal (QIDENT x),locn)
+                    | (_, StrLit{ldelim,contents}) =>
+                      if ldelim = "#\"" then
+                        (NonTerminal (AQ (mk_char (String.sub(contents,0)))),
+                         locn)
+                      else
+                        liftlocn NonTerminal
+                                 (inject_np
+                                    (SOME (mk_stringinjn_name ldelim))
+                                    (AQ (mk_string contents), locn))
                     | _ => (NonTerminal (VAR (token_string tt)),locn)
               (* tt is not an antiquote because of the wider context;
                  antiquotes are dealt with in the wider case statement

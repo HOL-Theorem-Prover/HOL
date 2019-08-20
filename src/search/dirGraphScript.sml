@@ -16,8 +16,8 @@ val _ = new_theory "dirGraph";
 (* A node of G is a parent iff it has children.                              *)
 (*---------------------------------------------------------------------------*)
 
-val Parents_def = 
- Define 
+val Parents_def =
+ Define
    `Parents G = {x | ~(G x = [])}`;
 
 (*---------------------------------------------------------------------------*)

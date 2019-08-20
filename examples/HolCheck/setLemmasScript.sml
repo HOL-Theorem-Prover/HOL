@@ -14,18 +14,18 @@ val DIFF_OVER_INTER = save_thm("DIFF_OVER_INTER",prove(``!s t u. s SUBSET u /\ t
 val DIFF_OVER_UNION = save_thm("DIFF_OVER_UNION",prove(``!s t u. s SUBSET u /\ t SUBSET u ==> (u DIFF (s UNION t) = (u DIFF s) INTER (u DIFF t))``, RW_TAC std_ss [SUBSET_DEF,IN_DIFF,IN_INTER,IN_UNION,DIFF_DEF,EXTENSION,SET_SPEC] THEN PROVE_TAC []));
 
 val DIFF_OVER_BIGUNION = save_thm("DIFF_OVER_BIGUNION",prove (``!P. (UNIV DIFF (BIGUNION {s | ?(n:num). s = (P n)})) = (BIGINTER {s | ?(n:num). (s = (UNIV DIFF (P n)))})``,RW_TAC std_ss [prove(``!P. BIGINTER {s | ?(n:num). s = UNIV DIFF P n} = {x | !(n:num). x IN UNIV DIFF P n}``,
-			   RW_TAC std_ss [BIGINTER,EXTENSION,SET_SPEC] THEN RW_TAC std_ss [IN_DEF] THEN PROVE_TAC []),
+                           RW_TAC std_ss [BIGINTER,EXTENSION,SET_SPEC] THEN RW_TAC std_ss [IN_DEF] THEN PROVE_TAC []),
                   prove(``!P. UNIV DIFF BIGUNION {s | ?n. s = P n} = {x | !n. x IN UNIV DIFF P n}``,
-			   RW_TAC std_ss [BIGINTER,IN_UNIV,DIFF_DEF,EXTENSION,SET_SPEC,BIGUNION]
-			   THEN RW_TAC std_ss [IN_DEF] THEN PROVE_TAC [])]));
+                           RW_TAC std_ss [BIGINTER,IN_UNIV,DIFF_DEF,EXTENSION,SET_SPEC,BIGUNION]
+                           THEN RW_TAC std_ss [IN_DEF] THEN PROVE_TAC [])]));
 
 
 val DIFF_OVER_BIGINTER = save_thm("DIFF_OVER_BIGINTER",prove(``!P. (UNIV DIFF (BIGINTER {s | ?n. s = (P n)})) = (BIGUNION {s | ?n. (s = (UNIV DIFF (P n)))})``,
 RW_TAC std_ss [prove(``!P. BIGUNION {s | ?n. s = UNIV DIFF P n} = {x | ?n. x IN UNIV DIFF P n}``,
-			   RW_TAC std_ss [BIGUNION,EXTENSION,SET_SPEC] THEN RW_TAC std_ss [IN_DEF] THEN PROVE_TAC []),
+                           RW_TAC std_ss [BIGUNION,EXTENSION,SET_SPEC] THEN RW_TAC std_ss [IN_DEF] THEN PROVE_TAC []),
                   prove(``!P. UNIV DIFF BIGINTER {s | ?n. s = P n} = {x | ?n. x IN UNIV DIFF P n}``,
-			   RW_TAC std_ss [BIGINTER,IN_UNIV,DIFF_DEF,EXTENSION,SET_SPEC,BIGUNION]
-			   THEN RW_TAC std_ss [IN_DEF] THEN PROVE_TAC [])]));
+                           RW_TAC std_ss [BIGINTER,IN_UNIV,DIFF_DEF,EXTENSION,SET_SPEC,BIGUNION]
+                           THEN RW_TAC std_ss [IN_DEF] THEN PROVE_TAC [])]));
 
 val SET_GSPEC = save_thm("SET_GSPEC",prove(``!P x. { x | P x} = \x. P x``,
 RW_TAC std_ss [EXTENSION,SET_SPEC,SPECIFICATION]));

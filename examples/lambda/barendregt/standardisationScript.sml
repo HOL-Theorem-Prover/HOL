@@ -29,7 +29,7 @@ val _ = new_theory "standardisation"
 structure NewQ = Q
 structure Q = struct open Q open OldAbbrevTactics end
 
-val _ = set_fixity "=" (Infix(NONASSOC, 100))
+val _ = ParseExtras.temp_loose_equality()
 
 
 val RUNION_def = relationTheory.RUNION

@@ -24,9 +24,17 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        $(dprot $(SIGOBJ)/Tactic.uo) \
        $(dprot $(SIGOBJ)/Tactical.uo) \
        $(dprot $(SIGOBJ)/ParseDatatype.uo) \
-       $(dprot $(SIGOBJ)/type_grammar.uo)
+       $(dprot $(SIGOBJ)/type_grammar.uo) \
+       $(dprot $(SIGOBJ)/Symtab.uo) \
+       $(dprot $(SIGOBJ)/Inttab.uo) \
+       $(dprot $(SIGOBJ)/KNametab.uo) \
+       $(dprot $(SIGOBJ)/term_tokens.uo) \
+       $(dprot $(SIGOBJ)/DB.uo) \
+       $(dprot $(HOLDIR)/bin/buildheap)
 
-UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack
+UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack \
+         $(protect $(SIGOBJ)/KNametab) $(protect $(SIGOBJ)/Symtab) \
+         $(protect $(SIGOBJ)/Inttab)
 
 EXTRA_CLEANS = $(TARGET)
 

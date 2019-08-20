@@ -68,7 +68,7 @@ fun liftstatus f x =
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 12
+val version_number = 13
 val release_string = "Kananaskis"
 
 (*
@@ -192,23 +192,18 @@ local
    val machine_env = Posix.ProcEnv.uname ()
    val sysname = assoc "sysname" machine_env
    val intOf = Option.valOf o Int.fromString
+   val number = PolyML.Compiler.compilerVersionNumber
+   val _ = number >= 570 orelse die "PolyML version must be at least 5.7.0"
 in
    val machine_flags =
        if sysname = "Darwin" (* Mac OS X *) then
          let
-           val number = PolyML.Compiler.compilerVersionNumber
            val stdsuffix = ["-Wl,-rpath,"^polymllibdir, "-Wl,-no_pie"]
          in
-           (if number >= 560 then
-              case pkgconfig_info of
+           (case pkgconfig_info of
                   SOME list => list @ stdsuffix
                 | NONE => ["-L"^polymllibdir, "-lpolymain", "-lpolyml",
-                           "-lstdc++"] @ stdsuffix
-            else if number >= 551
-               then ["-lpthread", "-lm", "-ldl", "-lstdc++", "-Wl,-no_pie"]
-            else if number >= 550
-               then ["-Wl,-no_pie"]
-            else ["-segprot", "POLY", "rwx", "rwx"]) @
+                           "-lstdc++"] @ stdsuffix) @
            (if PolyML.architecture() = "I386" then ["-arch", "i386"] else [])
          end
        else if sysname = "Linux" then
@@ -460,7 +455,7 @@ end (* local *)
 
 val _ =
  let open TextIO
-     val _ = echo "Making hol-mode.el (for Emacs/XEmacs)"
+     val _ = echo "Making hol-mode.el (for Emacs)"
      val src = fullPath [holdir, "tools", "hol-mode.src"]
     val target = fullPath [holdir, "tools", "hol-mode.el"]
  in
@@ -526,7 +521,7 @@ val _ =
       val target_boss = fullPath [holdir, "bin", "hol"]
       val hol0_heap   = protect(fullPath[HOLDIR,"bin", "hol.state0"])
       val hol_heapcalc=
-            "$(" ^ protect(fullPath[HOLDIR,"bin","heapname"]) ^ ")"
+            "\"$(" ^ protect(fullPath[HOLDIR,"bin","heapname"]) ^ ")\""
       fun TP s = protect(fullPath[HOLDIR, "tools-poly", s])
       val prelude = ["Arbint", "Arbrat", TP "prelude.ML"]
       val prelude2 = prelude @ [TP "prelude2.ML"]

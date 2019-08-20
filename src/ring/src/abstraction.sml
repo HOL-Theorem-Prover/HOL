@@ -27,7 +27,7 @@ fun set_assums asl =
 
 fun add_assums asl =
   (curr_assums := rev asl @ !curr_assums;
-   fv_ass := subtract (free_varsl asl) (!fv_ass) @ !fv_ass)
+   fv_ass := op_set_diff aconv (free_varsl asl) (!fv_ass) @ !fv_ass)
 ;
 
 
@@ -61,8 +61,9 @@ fun head tm =
 fun param_eq eqs0 =
  let val nm = head eqs0
      val eqs = map (snd o strip_forall) (strip_conj eqs0)
-     val fvrhs = subtract (free_varsl (map rhs eqs)) (free_varsl (map lhs eqs))
-     val pv = filter (C mem fvrhs) (!fv_ass)
+     val fvrhs =
+         op_set_diff aconv (free_varsl (map rhs eqs)) (free_varsl (map lhs eqs))
+     val pv = filter (C tmem fvrhs) (!fv_ass)
      val ty = type_of(fst(strip_comb(lhs(hd eqs))))
      val old_var = mk_var(nm, ty)
      val newvar = mk_var(nm, foldr (op -->) ty (map type_of pv))
@@ -83,25 +84,25 @@ fun is_defd sub v = exists (fn {redex,residue} => v=redex) sub;
 
 fun except_assoc x [] = raise ABS_ERR "except_assoc" ""
   | except_assoc x ((s as {redex,residue})::l) =
-      if x=redex then (residue,l)
+      if x ~~ redex then (residue,l)
       else
         let val (v,nsub) = except_assoc x l in
         (v,s::nsub)
         end
 ;
 
-fun majo NONE o2 = o2
-  | majo o1 NONE = o1
-  | majo (SOME x1) (SOME x2) =
-      if x1=x2 then (SOME x1)
+fun majo eq NONE o2 = o2
+  | majo eq o1 NONE = o1
+  | majo eq (SOME x1) (SOME x2) =
+      if eq x1 x2 then (SOME x1)
       else raise ABS_ERR "under_conj"
           "vars were instantiated differently in conjuncts"
 ;
 
-fun under_conj f th =
+fun under_conj eq f th =
   case (f (CONJUNCT1 th), f (CONJUNCT2 th)) of
     ((NONE, _),(NONE, _)) => (NONE, th)
-  | ((o1,th1),(o2,th2)) => (majo o1 o2, CONJ th1 th2)
+  | ((o1,th1),(o2,th2)) => (majo eq o1 o2, CONJ th1 th2)
 ;
 
 
@@ -123,9 +124,9 @@ fun under_forall f th =
   end
 ;
 
-fun under_all f th =
-  if is_forall (concl th) then under_forall (under_all f) th
-  else if is_conj (concl th) then under_conj (under_all f) th
+fun under_all eq f th =
+  if is_forall (concl th) then under_forall (under_all eq f) th
+  else if is_conj (concl th) then under_conj eq (under_all eq f) th
   else f th
 ;
 
@@ -133,7 +134,7 @@ fun under_all f th =
 fun first_match env mfun [] = raise ABS_ERR "first_match" "no match"
   | first_match env mfun (x::l) =
       (let val (vi,ti) = mfun x in
-      if exists (fn {redex,residue} => mem redex env) vi then
+      if exists (fn {redex,residue} => tmem redex env) vi then
         raise ABS_ERR "" ""
       else (vi,ti)
       end
@@ -160,8 +161,10 @@ fun inst_thm inst thm =
   | SOME(vi,ti) => (SOME (vi,ti), INST_TYPE ti thm)
 ;
 
+fun insteq p1 p2 = pair_eq (subst_eq aconv aconv) equal p1 p2
+
 fun inst_all ctab thm =
-  let val (osub,thm) = under_all (inst_thm ctab) thm in
+  let val (osub,thm) = under_all insteq (inst_thm ctab) thm in
   case osub of
     SOME (sub,ti) =>
       foldl (fn ({redex,residue},th) => SPEC residue (GEN redex th))
@@ -232,7 +235,7 @@ val functor_header = [S "fun IMPORT P =", NL]
 fun compute_cst_arg_map (fv,impargs) =
   let val thcsts = map (#Name o dest_thy_const) (constants(current_theory()))
       fun is_param_cst (x,iargs) =
-        mem x thcsts andalso all (C mem fv) iargs
+        mem x thcsts andalso all (C tmem fv) iargs
       val ptab = filter is_param_cst impargs
       val pr_var = S o fst o dest_var
       val sep = [S ",", NL, S "          "]

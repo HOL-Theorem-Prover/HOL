@@ -1,7 +1,7 @@
 signature FinalTerm =
 sig
 
-  eqtype term
+  type term
   eqtype hol_type
   type ('a,'b)subst = ('a,'b)Lib.subst
   type 'a set       = 'a HOLset.set
@@ -24,6 +24,7 @@ sig
   val genvar        : hol_type -> term
   val genvars       : hol_type -> int -> term list
   val variant       : term list -> term -> term
+  val numvariant    : term list -> term -> term
   val prim_variant  : term list -> term -> term
   val gen_variant   : (string -> bool) -> string -> term list -> term -> term
 

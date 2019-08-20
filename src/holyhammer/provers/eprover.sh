@@ -7,10 +7,11 @@ OUT2="$DIR/out2"
 OUT="$DIR/out"
 STATUS="$DIR/status"
 ERROR="$DIR/error"
+ERROR1="$DIR/error1"
 
 # Running eprover
 timeout $1 ./eprover -s --cpu-limit=$1 --auto-schedule --tptp3-in \
--R --print-statistics -p --tstp-format $IN 2> $ERROR | grep "file[(]'\|# SZS" > $OUT1 2> $ERROR
+-R --print-statistics -p --tstp-format $IN 2> $ERROR | grep "file[(]'\|# SZS" > $OUT1 2> $ERROR1
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS 2> $ERROR
 sed -i -e 's/^.*SZS status\(.*\).*/\1/' $STATUS 2> $ERROR

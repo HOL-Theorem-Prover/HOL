@@ -71,16 +71,16 @@ fun apply_absargs f abs =
 
 val casesplit_munger = ref (NONE: (term -> term * (term * term)list) option)
 fun init_casesplit_munger f =
-    case casesplit_munger of
-      ref NONE => casesplit_munger := SOME f
+    case !casesplit_munger of
+      NONE => casesplit_munger := SOME f
     | _ => raise PP_ERR "init_casesplit_munger"
                         "casesplit munger already initialised"
 
 exception CaseConversionFailed
 fun convert_case tm =
-    case casesplit_munger of
-      ref NONE => raise CaseConversionFailed
-    | ref (SOME f) => let
+    case !casesplit_munger of
+      NONE => raise CaseConversionFailed
+    | (SOME f) => let
         val (split_on, splits) = f tm
             handle HOL_ERR _ => raise CaseConversionFailed
         val _ = not (null splits) orelse raise CaseConversionFailed
@@ -210,17 +210,8 @@ in
 end
 
 
-
-(* ----------------------------------------------------------------------
-    A flag controlling printing of set comprehensions
-   ---------------------------------------------------------------------- *)
-
-val unamb_comp = ref 0
-val _ = Feedback.register_trace ("pp_unambiguous_comprehensions", unamb_comp, 2)
-
 fun grav_name (Prec(n, s)) = s | grav_name _ = ""
 fun grav_prec (Prec(n,s)) = n | grav_prec _ = ~1
-
 
 fun pneeded_by_style (rr: term_grammar.rule_record, pgrav, fname, fprec) =
   case #paren_style rr of
@@ -366,6 +357,8 @@ val is_list = fn G => fn (r as {nilstr,cons}) => fn tm =>
 
 fun str_unicode_ok s = CharVector.all Char.isPrint s
 
+fun overloads_to_string_form G = term_grammar.strlit_map G
+
 fun oi_strip_comb' oinfo t =
     if current_trace "PP.avoid_unicode" = 0 then Overload.oi_strip_comb oinfo t
     else Overload.oi_strip_combP oinfo str_unicode_ok t
@@ -432,6 +425,92 @@ val pp_print_firstcasebar = ref false
 val _ = register_btrace ("PP.print_firstcasebar", pp_print_firstcasebar)
 
 val unfakeconst = Option.map #fake o GrammarSpecials.dest_fakeconst_name
+
+fun badpc_encode s =
+    let val sz = String.size s
+        fun recurse seendigit i =
+            if i <= 0 then false
+            else
+              let val c = String.sub(s,i)
+              in
+                if Char.isDigit c then recurse true (i - 1)
+                else c = #"'" andalso seendigit
+              end
+    in
+      sz >= 4 andalso String.sub(s, sz - 1) = #"'" andalso
+      recurse false (sz - 2)
+    end
+
+fun is_identish_var s =
+    (let val v0 = #1 (valOf (UTF8.firstChar s))
+     in
+       UnicodeChars.isAlpha v0 orelse v0 = "_"
+     end) andalso
+    UTF8.all UnicodeChars.isMLIdent s andalso
+    not (badpc_encode s)
+
+fun is_symbolish_var s =
+    UTF8.all UnicodeChars.isSymbolic s andalso
+    not (String.isSubstring "(*" s) andalso
+    not (String.isSubstring "*)" s)
+
+fun is_safe_varname s =
+    s <> "" andalso (is_identish_var s orelse is_symbolish_var s)
+    handle UTF8.BadUTF8 _ => false
+fun unsafe_style s =
+    let
+      open UTF8
+      fun trans (CP c) =
+          if c = 10(* NL *) then "\\n"
+          else if c = 9 (* TAB *) then "\\t"
+          else if c = 41 (* ")" *) then "\\)"
+          else if UnicodeChars.isSpace_i c andalso c <> 32 (* SPC *) then
+            String.translate
+              (fn c => "\\" ^
+                       StringCvt.padLeft #"0" 3 (Int.toString (Char.ord c)))
+              (UTF8.chr c)
+          else UTF8.chr c
+        | trans (RB b) = "\\" ^ Int.toString b
+      val scpts = safe_explode s
+      val s' = String.concat (map trans scpts)
+      val s'' = if not (null scpts) andalso last scpts = CP 42 (* * *) then
+                  s' ^ "\\z"
+                else s'
+    in
+      "$var$(" ^ s'' ^ ")"
+    end
+fun unicode_supdigit 0 = UnicodeChars.sup_0
+  | unicode_supdigit 1 = UnicodeChars.sup_1
+  | unicode_supdigit 2 = UnicodeChars.sup_2
+  | unicode_supdigit 3 = UnicodeChars.sup_3
+  | unicode_supdigit 4 = UnicodeChars.sup_4
+  | unicode_supdigit 5 = UnicodeChars.sup_5
+  | unicode_supdigit 6 = UnicodeChars.sup_6
+  | unicode_supdigit 7 = UnicodeChars.sup_7
+  | unicode_supdigit 8 = UnicodeChars.sup_8
+  | unicode_supdigit 9 = UnicodeChars.sup_9
+  | unicode_supdigit _ = raise Fail "unicode_supdigit: i < 0 or i > 9"
+fun prettynumbers false i = Int.toString i
+  | prettynumbers true i =
+    let
+      fun recurse A i =
+          if i = 0 then String.concat A
+          else
+            recurse (unicode_supdigit (i mod 10) :: A) (i div 10)
+    in
+      if i = 0 then UnicodeChars.sup_0
+      else if i < 0 then UnicodeChars.sup_minus ^ recurse [] (~i)
+      else recurse [] i
+    end
+
+fun vname_styling unicode s =
+    if not (is_safe_varname s) then unsafe_style s
+    else
+      let val (s0,n) = Lib.extract_pc s
+      in
+        if n > 2 then s0 ^ "'" ^ prettynumbers unicode n ^ "'"
+        else s
+      end
 
 fun atom_name tm = let
   val (vnm, _) = dest_var tm
@@ -594,6 +673,7 @@ fun pp_term (G : grammar) TyG backend = let
                              (pgrav, lgrav, rgrav)
                              depth tm
          fun runfirst [] = pr0 tm
+           | runfirst ((_, "", _) :: _) = pr0 tm
            | runfirst ((_,_,f)::t) =
                   (printwith f
                    handle UserPP_Failed => runfirst t) || runfirst t
@@ -941,7 +1021,7 @@ fun pp_term (G : grammar) TyG backend = let
                         PPBackEnd.Literal PPBackEnd.NumLit) >>
         (if showtypes then
            add_string (" "^type_intro) >> add_break (0,0) >>
-           doTy (#2 (dom_rng injty))
+           doTy (#2 (dom_rng injty)) >> setlaststring " "
          else nothing)
       )
     end
@@ -1263,7 +1343,7 @@ fun pp_term (G : grammar) TyG backend = let
                        prec prec rprec (decdepth depth) >>
           (if comb_show_type then
              add_string (" "^type_intro) >> add_break (0,0) >>
-             doTy (type_of tm)
+             doTy (type_of tm) >> setlaststring " "
            else nothing)
         )
       )
@@ -1507,7 +1587,8 @@ fun pp_term (G : grammar) TyG backend = let
               handle Option => (false, vname)
           val vrule = lookup_term vname
           val add_type=
-            add_string (" "^type_intro) >>  add_break(0,0) >> doTy Ty
+            add_string (" "^type_intro) >>  add_break(0,0) >> doTy Ty >>
+            setlaststring " "
           fun new_freevar ({seen_frees,current_bvars,...}:printing_info) =
             showtypes andalso not isfake andalso
             not (HOLset.member(seen_frees, tm)) andalso
@@ -1517,6 +1598,8 @@ fun pp_term (G : grammar) TyG backend = let
             showtypes andalso not isfake andalso (binderp orelse nfv)
           val adds =
               if is_constish tm then constann tm else var_ann tm
+          val uok = current_trace "PP.avoid_unicode" = 0
+          val styled_name = if isfake then vname else vname_styling uok vname
         in
           fupdate (fn x => x) >- return o new_freevar >-
           (fn is_new =>
@@ -1529,8 +1612,8 @@ fun pp_term (G : grammar) TyG backend = let
                     pr_sole_name tm vname (map #3 (valOf vrule))
                   else
                     if HOLset.member(spec_table, vname) then
-                      dollarise adds add_string vname
-                    else adds vname) >>
+                      dollarise adds add_string styled_name
+                    else adds styled_name) >>
                  (if print_type then add_type else nothing)
                )
              )
@@ -1595,48 +1678,6 @@ fun pp_term (G : grammar) TyG backend = let
               case oi_strip_comb' overload_info tm of
                 NONE => (f, args @ [Rand], false)
               | SOME (f, args) => (f, args, true)
-
-          fun check_for_setcomprehensions () =
-              if grammar_name G oif = SOME "GSPEC" andalso my_is_abs Rand
-              then let
-                  val (vs, body) = my_dest_abs Rand
-                  val vfrees = FVL [vs] empty_tmset
-                  val bvars_seen_here = HOLset.listItems vfrees
-
-                  val (l, r) = dest_pair body
-                  val lfrees = FVL [l] empty_tmset
-                  val rfrees = FVL [r] empty_tmset
-                  open HOLset
-                in
-                  if ((equal(intersection(lfrees,rfrees), vfrees) orelse
-                       (isEmpty lfrees andalso equal(rfrees, vfrees)) orelse
-                       (isEmpty rfrees andalso equal(lfrees, vfrees)))
-                      andalso !unamb_comp = 0) orelse
-                     !unamb_comp = 2
-                  then
-                    block CONSISTENT 0
-                       (record_bvars bvars_seen_here
-                        (set_gspec
-                           (add_string "{" >>
-                            block CONSISTENT 0
-                              (pr_term l Top Top Top (decdepth depth) >>
-                               hardspace 1 >> add_string "|" >> spacep true >>
-                               pr_term r Top Top Top (decdepth depth)) >>
-                            add_string "}")))
-                  else
-                    block CONSISTENT 0
-                      (record_bvars bvars_seen_here
-                       (set_gspec
-                         (add_string "{" >>
-                          block CONSISTENT 0
-                            (pr_term l Top Top Top (decdepth depth) >>
-                             hardspace 1 >> add_string "|" >> spacep true >>
-                             pr_term vs Top Top Top (decdepth depth) >>
-                             hardspace 1 >> add_string "|" >> spacep true >>
-                             pr_term r Top Top Top (decdepth depth)) >>
-                          add_string "}")))
-                end handle HOL_ERR _ => fail
-              else fail
 
           fun is_atom tm = is_const tm orelse is_var tm
           fun pr_atomf (f,args0) = let
@@ -1798,8 +1839,23 @@ fun pp_term (G : grammar) TyG backend = let
           (case total Literal.dest_string_lit tm of
              NONE => fail
            | SOME s =>
-             add_ann_string (Literal.string_literalpp s,
-                             PPBackEnd.Literal PPBackEnd.StringLit)) |||
+             add_ann_string
+               (Literal.string_literalpp {ldelim="\"", rdelim = "\""} s,
+                PPBackEnd.Literal PPBackEnd.StringLit)) |||
+
+          (* overloaded strings - with special designated rator to a rand
+             which is in turn a string literal *)
+          (fn _ => case total Literal.dest_string_lit (rand tm) of
+                       SOME s =>
+                       (case overloads_to_string_form G {tmnm=atom_name f} of
+                            NONE => fail
+                          | SOME ldelim =>
+                            add_ann_string
+                              (Literal.string_literalpp
+                                 (Literal.delim_pair {ldelim=ldelim})
+                                 s,
+                               PPBackEnd.Literal PPBackEnd.StringLit))
+                     | NONE => fail) |||
 
           (* characters *)
           (fn _ => case total Literal.dest_char_lit tm of
@@ -1829,8 +1885,6 @@ fun pp_term (G : grammar) TyG backend = let
                   check_for_field_selection (list_mk_comb(oif,args)) Rand
                 end) |||
           (fn _ => check_for_record_update tm Rator Rand) |||
-
-          check_for_setcomprehensions |||
 
           (* case expressions *)
           (fn () =>

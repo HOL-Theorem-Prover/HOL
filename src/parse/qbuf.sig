@@ -6,6 +6,7 @@ signature qbuf = sig
   val new_buffer : 'a HOLPP.frag list -> 'a qbuf
 
   val current : 'a qbuf -> 'a base_tokens.base_token locn.located
+  val push : 'a base_tokens.base_token locn.located -> 'a qbuf -> unit
 
   val replace_current : 'a base_tokens.base_token locn.located -> 'a qbuf -> unit
 

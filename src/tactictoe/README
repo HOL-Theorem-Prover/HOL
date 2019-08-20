@@ -1,46 +1,25 @@
 TacticToe is a tactic-based prover.
 
-It explores proof trees by repeatly selecting tactics that are
-appropriate to solve the current goal.
-The selection is performed on a dataset of recorded human tactics.
+It searches for a proof by repeatedly applying suitable tactics for each goal state that it produces. 
 
-RECORDING: 
-  Because of some issue, you sometimes need to restart "hol" after recording.
-  
-  load "tacticToe"; open tacticToe;
-  load "yourTheory";
-  ttt_record (); 
-    (* takes a long time (4-8h) if you have many ancestors to yourTheory *)
-  
-FAST RECORDING: 
-  It is an instant way to test tactictoe for theories of the standard library.
-  Disclaimer: pre-recored data may get outdated and 
-  some recorded tactics may become unusable after some time.
-  1) Download pre-recorded standard HOL4 library:
-    wget -O ttt_data.tar.gz "http://www.thibaultgauthier.fr/ttt_data_2018_04_11.tar.gz"
-  2) Extract ttt_data.tar.gz and 
-     move the 3 folders in ttt_data to HOL/src/tactictoe
-  3) In the end, you should have the directories:
-    HOL/src/tactictoe/fea_theorem
-    HOL/src/tactictoe/fea_tactic
-    HOL/src/tactictoe/fea_goallist (this directory is empty for now)
-  4) Apply the RECORDING step.
-  
+RECORDING:
+  load "tttUnfold"; open tttUnfold;
+  load "fooTheory";
+  ttt_record (); (* takes a long time (2-12h) *)
+
 USAGE: (after RECORDING) 
   load "tacticToe"; open tacticToe;
   tactictoe ``1+1=2``;
-  
-  See more examples in examples/ttt_demoScript.sml.
 
-EVALUATION of a theory (after RECORDING):
-  Evaluates how much tactictoe can automatically re-prove 
-  from previous theorems
-  The result is stored in src/tactictoe/search_log/proof/your.
+CLEANING: 
+  - TacticToe calls depends on the data stored in 
+    src/tactictoe/ttt_tacdata 
+  - TacticToe recording and evaluation depends on data stored in 
+    src/AI/sml_inspection/open
+  After updating HOL, it is usually necessary to 
+  remove these directories and start afresh 
 
-  load "tacticToe"; open tacticToe;
-  load "yourTheory";
-  ttt_eval_thy "your";
+EXAMPLE: see examples in src/tactictoe/examples.
 
 NOTES FOR DEVELOPERS:
-  Keep up-to-date: infix tokens in hhsInfix.sml, polyml values in hhsUnfold.sml.
-  Issue: Arith.clean cache.
+  Keep up-to-date: infix tokens in tttInfix.sml, polyml values in tttUnfold.sml.

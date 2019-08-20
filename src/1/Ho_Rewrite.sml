@@ -226,11 +226,11 @@ val HIGHER_REWRITE_CONV =
                     (lookup t mnet)
       in fn tm =>
           let val ts = find_terms
-                        (fn t => not (look_fn t = []) andalso free_in t tm) tm
+                        (fn t => not (null (look_fn t)) andalso free_in t tm) tm
               val stm = Lib.trye hd (sort free_in ts)
               val pat = Lib.trye hd (look_fn stm)
               val (tmin,tyin) = ho_match_term [] empty_tmset pat stm
-              val (pred,(th,beta_fn)) = assoc pat ass_list
+              val (pred,(th,beta_fn)) = op_assoc aconv pat ass_list
               val gv = genvar(type_of stm)
               val abs = mk_abs(gv,subst[stm |-> gv] tm)
               val (tmin0,tyin0) = ho_match_term [] empty_tmset pred abs
@@ -239,5 +239,39 @@ val HIGHER_REWRITE_CONV =
       end
       handle e => raise (wrap_exn "Ho_Rewrite" "HIGHER_REWRITE_CONV" e)
   end;
+
+fun strip t =
+    if is_forall t then t |> strip_forall |> #2 |> strip
+    else if is_conj t then t |> strip_conj |> map strip |> List.concat
+    else if is_imp t then t |> strip_imp |> #2 |> strip
+    else if is_eq t then [lhs t]
+    else [t]
+
+fun num_matches th t =
+    let
+      val fvs = hyp_frees th
+      val tyvs = HOLset.foldl
+                   (fn (v,A) => HOLset.addList(A, type_vars_in_term v))
+                   (HOLset.empty Type.compare)
+                   fvs
+      val pats = strip (concl th)
+      fun match subt =
+          List.exists (fn p => can (ho_match_term (HOLset.listItems tyvs) fvs p)
+                                   subt)
+                      pats
+    in
+      length (find_terms match t)
+    end
+
+val thm_to_string = trace ("Unicode", 0) Parse.thm_to_string
+fun REQUIRE0_TAC th =
+    check_delta (ERR "REQUIRE0_TAC"
+                     ("LHS of " ^ thm_to_string th ^ " remains in goal"))
+                (count0 (num_matches th))
+
+fun REQUIRE_DECREASE_TAC th =
+    check_delta (ERR "REQUIRE_DECREASE_TAC"
+                     ("LHSes from " ^ thm_to_string th ^ " didn't decrease"))
+                (count_decreases (num_matches th))
 
 end (* Ho_Rewrite *)

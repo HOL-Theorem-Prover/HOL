@@ -78,6 +78,7 @@ sig
    val add_rewrs       : thm list -> tyinfo -> tyinfo
    val add_ssfrag_convs: simpfrag.convdata list -> tyinfo -> tyinfo
    val put_induction   : shared_thm -> tyinfo -> tyinfo
+   val put_axiom       : shared_thm -> tyinfo -> tyinfo
    val put_size        : term * shared_thm -> tyinfo -> tyinfo
    val put_encode      : term * shared_thm -> tyinfo -> tyinfo
    val put_lift        : term -> tyinfo -> tyinfo

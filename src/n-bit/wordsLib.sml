@@ -8,11 +8,9 @@ open numposrepTheory numposrepLib
 open ASCIInumbersTheory ASCIInumbersSyntax ASCIInumbersLib
 open stringSyntax
 
-structure Parse = struct
-  open Parse
-  val (Type, Term) = parse_from_grammars wordsTheory.words_grammars
-end
-open Parse
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars wordsTheory.words_grammars
 
 val () = ignore (Lib.with_flag (Feedback.emit_MESG, false) bossLib.srw_ss ())
 
@@ -169,8 +167,7 @@ in
       let
          val (n, a) = Lib.with_exn bitSyntax.dest_mod_2exp_max tm err_max
       in
-         if n = numSyntax.zero_tm
-            then mod_2exp_max0_conv tm
+         if n ~~ numSyntax.zero_tm then mod_2exp_max0_conv tm
          else let
                  val m = Lib.with_exn Term.rand n err_max
                  val odd_thm = odd_conv (numSyntax.mk_odd a)
@@ -179,10 +176,10 @@ in
                                then mod_2exp_max1_conv
                             else mod_2exp_max2_conv
                  val cnv2 =
-                    if odd_rhs = boolSyntax.T
+                    if Teq odd_rhs
                        then Conv.FORK_CONV
                               (K odd_thm, args_max_conv THENC mod_2exp_max_conv)
-                    else if odd_rhs = boolSyntax.F
+                    else if Feq odd_rhs
                        then Conv.LAND_CONV (K odd_thm)
                     else raise err_max
               in
@@ -193,9 +190,9 @@ in
       let
          val (n, a, b) = Lib.with_exn bitSyntax.dest_mod_2exp_eq tm err
       in
-         if n = numSyntax.zero_tm
+         if n ~~ numSyntax.zero_tm
             then mod_2exp_eq0_conv tm
-         else if a = b
+         else if a ~~ b
             then mod_2exp_eq_eq_conv tm
          else let
                  val m = Lib.with_exn Term.rand n err
@@ -208,10 +205,10 @@ in
                                then mod_2exp_eq1_conv
                             else mod_2exp_eq2_conv
                  val cnv2 =
-                    if odd_rhs = boolSyntax.T
+                    if Teq odd_rhs
                        then Conv.FORK_CONV
                               (K odd_thm, args_conv THENC mod_2exp_eq_conv)
-                    else if odd_rhs = boolSyntax.F
+                    else if Feq odd_rhs
                        then Conv.LAND_CONV (K odd_thm)
                     else raise err
               in
@@ -235,7 +232,7 @@ in
       let
          val (l, r) = Lib.with_exn boolSyntax.dest_eq tm err
       in
-         if l = r
+         if l ~~ r
             then Drule.ISPEC l boolTheory.REFL_CLAUSE
          else if is_uintmax l andalso wordsSyntax.is_word_literal r
             then cnv1 tm
@@ -508,7 +505,7 @@ local
   fun is_hex_digit_literal t =
      numSyntax.int_of_term t < 16 handle HOL_ERR _ => false
 
-  fun is_bool t = t = boolSyntax.T orelse t = boolSyntax.F
+  fun is_bool t = Teq t orelse Feq t
 
   fun is_ground_list t =
      let
@@ -949,7 +946,7 @@ local
       if is_known_word_size x
          then gen_is_negative false (wordsSyntax.mk_word_sub (x, z))
       else Arbint.< (gen_dest_word_literal x, gen_dest_word_literal z)
-   fun partition_same t l = List.partition (fn (_, y) => y = t) l
+   fun partition_same t l = List.partition (fn (_, y) => y ~~ t) l
    fun pick_coeff_terms a =
       fn ([], l) => a @ List.filter (gen_is_negative true o fst) l
        | ((x, y) :: t, l) =>
@@ -962,8 +959,7 @@ local
                  ((if pick_left_coeff x z then x else z, y) :: a) (t, r)
            | _ => raise ERR "pick_coeff_terms" "")
    fun join_coeff_terms (z as (_, y)) l =
-      if Lib.all (fn (_, x) => x <> y) l
-         then z::l
+      if Lib.all (fn (_, x) => x !~ y) l then z::l
       else raise ERR "join_coeff_terms" ""
    fun mk_one tm = wordsSyntax.mk_n2w (``1n``, wordsSyntax.dim_of tm)
    fun get_coeff_terms a tm =
@@ -1988,7 +1984,7 @@ local
   val word_div_le2_lem = Q.prove(
     `!n. 0 < (SUC (2 * n)) MOD dimword (:'a)`,
     SRW_TAC [] [arithmeticTheory.ADD1, bitTheory.MOD_PLUS_1, ZERO_LT_dimword,
-                DECIDE ``0n < n = (n <> 0)``]
+                DECIDE ``0n < n <=> (n <> 0)``]
     THEN STRIP_ASSUME_TAC EXISTS_HB
     THEN ASM_SIMP_TAC arith_ss
          [arithmeticTheory.EXP, GSYM arithmeticTheory.MOD_COMMON_FACTOR,
@@ -2437,7 +2433,7 @@ local
 in
   fun mk_bounds_thms t =
   let val l = t |> find_terms wordsSyntax.is_w2n
-                |> Lib.mk_set
+                |> Lib.op_mk_set aconv
                 |> Lib.mapfilter mk_bounds_thm
   in
     if null l then
@@ -2612,7 +2608,7 @@ fun is_word_term tm =
 
 fun MP_ASSUM_TAC tm (asl, w) =
    let
-      val (ob, asl') = Lib.pluck (Lib.equal tm) asl
+      val (ob, asl') = Lib.pluck (aconv tm) asl
    in
       MP_TAC (Thm.ASSUME ob) (asl', w)
    end
@@ -2641,7 +2637,7 @@ fun mk_word_size n =
                      (SIMP_RULE std_ss [INT_MIN] o
                       Thm.INST_TYPE [``:'a`` |-> typ]) dimword_IS_TWICE_INT_MIN)
    in
-      type_abbrev ("word" ^ SN, TYPE)
+      type_abbrev_pp ("word" ^ SN, TYPE)
    end
 
 val dest_word_literal = fst o wordsSyntax.dest_mod_word_literal
@@ -2982,5 +2978,7 @@ fun prefer_word () =
          handle HOL_ERR _ => ()) operators
 
 val _ = Defn.const_eq_ref := (!Defn.const_eq_ref ORELSEC word_EQ_CONV)
+
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end

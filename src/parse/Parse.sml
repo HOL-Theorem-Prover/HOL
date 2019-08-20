@@ -612,21 +612,24 @@ fun replace_exnfn fnm f x =
                             origin_structure = s}
 
 fun thytype_abbrev0 r = [TYABBREV r]
-
 val temp_thytype_abbrev = mk_temp_tyd thytype_abbrev0
 val thytype_abbrev = mk_perm_tyd thytype_abbrev0
 
-fun temp_type_abbrev (s, ty) =
-  replace_exnfn "temp_type_abbrev" temp_thytype_abbrev
-                ({Thy = Theory.current_theory(), Name = s}, ty)
-
-fun type_abbrev (s, ty) =
-  replace_exnfn "type_abbrev" thytype_abbrev
-                ({Thy = Theory.current_theory(), Name = s}, ty)
+fun mktyabbrev_rec p (s,ty) = ({Thy = Theory.current_theory(), Name = s}, ty, p)
+val temp_type_abbrev =
+  replace_exnfn "temp_type_abbrev" temp_thytype_abbrev o mktyabbrev_rec false
+val type_abbrev =
+  replace_exnfn "type_abbrev" thytype_abbrev o mktyabbrev_rec false
 
 fun disable_tyabbrev_printing0 s = [DISABLE_TYPRINT s]
 val temp_disable_tyabbrev_printing = mk_temp_tyd disable_tyabbrev_printing0
 val disable_tyabbrev_printing = mk_perm_tyd disable_tyabbrev_printing0
+
+val temp_type_abbrev_pp =
+    replace_exnfn "temp_type_abbrev_pp" temp_thytype_abbrev o
+    mktyabbrev_rec true
+val type_abbrev_pp =
+    replace_exnfn "type_abbrev_pp" thytype_abbrev o mktyabbrev_rec true
 
 fun remove_type_abbrev0 s = [RM_TYABBREV s]
 val temp_remove_type_abbrev = mk_temp_tyd remove_type_abbrev0
@@ -742,6 +745,19 @@ fun add_bare_numeral_form0 x = [ADD_NUMFORM x]
 val temp_add_bare_numeral_form = mk_temp add_bare_numeral_form0
 val add_bare_numeral_form = mk_perm add_bare_numeral_form0
 
+fun add_strliteral_form0 {ldelim,inj} =
+    let
+      val (nm, _) = dest_const inj
+      val _ = Literal.delim_pair{ldelim=ldelim} (* checks it's legit *)
+              handle Fail s => raise ERROR "add_strliteral_form" s
+      val injname = GrammarSpecials.mk_stringinjn_name ldelim
+    in
+      [IOVERLOAD_ON(injname,inj),
+       ADD_STRLIT{ldelim=ldelim,tmnm=nm}]
+    end
+val temp_add_strliteral_form = mk_temp add_strliteral_form0
+val add_strliteral_form = mk_perm add_strliteral_form0
+
 fun temp_give_num_priority c = let open term_grammar in
     the_term_grammar := give_num_priority (term_grammar()) c;
     term_grammar_changed := true
@@ -812,6 +828,7 @@ fun temp_remove_absyn_postprocessor s =
     val (g, res) = term_grammar.remove_absyn_postprocessor s (!the_term_grammar)
   in
     the_term_grammar := g;
+    term_grammar_changed := true;
     res
   end
 
@@ -823,6 +840,7 @@ fun temp_remove_preterm_processor k =
     val (g, res) = term_grammar.remove_preterm_processor k (!the_term_grammar)
   in
     the_term_grammar := g;
+    term_grammar_changed := true;
     res
   end
 
@@ -1124,7 +1142,13 @@ fun merge_into (gname, (G, gset)) =
 fun merge_grammars slist =
   case slist of
       [] => raise ERROR "merge_grammars" "Empty grammar list"
-    | h::t => List.foldl merge_into (valOf (grammarDB h), gancestry h) t |> #1
+    | h::t =>
+      let
+        val g = valOf (grammarDB h)
+          handle Option => raise ERROR "merge_grammars" ("No such theory: "^h)
+      in
+        List.foldl merge_into (g, gancestry h) t |> #1
+      end
 
 fun set_grammar_ancestry slist =
   let

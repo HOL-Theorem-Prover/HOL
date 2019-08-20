@@ -6,7 +6,7 @@
 Establishes a type abbreviation.
 
 \KEYWORDS
-Parsing, pretty-printing.
+Parsing, HOL types.
 
 \LIBRARY
 Parse
@@ -29,11 +29,11 @@ Fails if the given type is just a type variable.
 \EXAMPLE
 This is a simple abbreviation.
 {
-   - type_abbrev ("set", ``:'a -> bool``);
-   > val it = () : unit
+   > type_abbrev ("set", ``:'a -> bool``);
+   val it = () : unit
 
-   - ``:num set``;
-   > val it = ``:num set`` : hol_type
+   > ``:num set``;
+   val it = ``:num -> bool`` : hol_type
 }
 Here, the abbreviation is set up and provided with its own infix
 symbol.
@@ -46,7 +46,7 @@ symbol.
    > val it = () : unit
 
    - ``:'a <- bool``;
-   > val it = ``:'a <- bool`` : hol_type
+   > val it = ``:bool -> 'a`` : hol_type
 
    - dest_thy_type it;
    > val it = {Args = [``:bool``, ``:'a``], Thy = "min", Tyop = "fun"} :
@@ -58,11 +58,9 @@ symbol.
 As is common with most of the parsing and printing functions, there is
 a companion {temp_type_abbrev} function that does not cause the
 abbreviation effect to persist when the theory is exported.  As the
-examples show, type abbreviations also affect the pretty-printing of
-types.  The pretty-printer can be instructed not to print particular
-abbreviations (using {Parse.disable_tyabbrev_printing}), or to not
-print any (by setting the trace variable {"print_tyabbrevs"}).
+examples show, this entrypoint does not affect the pretty-printing of
+types.  If printing of abbreviations is desired as well as parsing, the  entrypoint {type_abbrev_pp} should be used.
 
 \SEEALSO
-Parse.add_infix_type, Parse.disable_tyabbrev_printing, Parse.remove_type_abbrev, Parse.thytype_abbrev.
+Parse.add_infix_type, Parse.disable_tyabbrev_printing, Parse.remove_type_abbrev, Parse.thytype_abbrev, Parse.type_abbrev_pp.
 \ENDDOC

@@ -64,8 +64,6 @@ open pairTheory;
 
 val _ = new_theory "KatiPuzzle";
 
-val _ = Globals.priming := SOME "";
-
 (*****************************************************************************)
 (* Varmap (i.e. variable ordering) for later use                             *)
 (*****************************************************************************)

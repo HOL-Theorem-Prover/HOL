@@ -42,6 +42,7 @@ val _ = prim_new_type (minseg "ind") 0
 
 val funref = #1 (KernelSig.find(operator_table, {Thy="min", Name = "fun"}))
 
+fun uptodate_kname knm = isSome (KernelSig.peek(operator_table, knm))
 fun uptodate_type (Tyv s) = true
   | uptodate_type (Tyapp(info, args)) = KernelSig.uptodate_id info andalso
                                         List.all uptodate_type args

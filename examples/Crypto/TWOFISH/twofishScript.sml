@@ -79,7 +79,7 @@ val fromLarge_def = Define`fromLarge (a:word32) =
    ((31 >< 24) a, (23 >< 16) a, (15 >< 8) a, (7 >< 0) a)`;
 
 (*---------------------------------------------------------------------------*)
-(* Multiply a byte representing a polynomial by x. 			     *)
+(* Multiply a byte representing a polynomial by x.                           *)
 (*---------------------------------------------------------------------------*)
 
 (* For MDS multiplication, v(x) = x^8 + x^6 + x^5 + x^3 + 1 , i.e. 0wx165    *)
@@ -140,8 +140,8 @@ val RSMul_def = Define`RSMul(m0,m1,m2,m3,m4,m5,m6,m7) =
    (0x58w *** m4) ?? (0xDBw *** m5) ?? (0x9Ew *** m6) ?? (0x03w *** m7))`;
 
 (*---------------------------------------------------------------------------*)
-(* The permutations q0 and q1 are fixed permutations on 8-bit values.	     *)
-(* They are constructed from four different 4-bit permutations each. 	     *)
+(* The permutations q0 and q1 are fixed permutations on 8-bit values.        *)
+(* They are constructed from four different 4-bit permutations each.         *)
 (*---------------------------------------------------------------------------*)
 
 (* The 4-bit S-boxes For the permutation q0 *)
@@ -520,7 +520,7 @@ val TwofishDecrypt_def = Define`
   in  In_Whiten(bwd(Out_Whiten(b,k),ROTKEYS8(k),ss), k)`;
 
 (*---------------------------------------------------------------------------*)
-(* Main Lemma				                                     *)
+(* Main Lemma                                                                *)
 (*---------------------------------------------------------------------------*)
 
 val TWOFISH_LEMMA = Q.store_thm("TWOFISH_LEMMA",

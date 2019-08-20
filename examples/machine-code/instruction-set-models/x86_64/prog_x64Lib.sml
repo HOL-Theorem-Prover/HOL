@@ -7,6 +7,16 @@ open set_sepTheory x64_Theory x64_Lib helperLib;
 open x64_seq_monadTheory x64_coretypesTheory x64_astTheory x64_icacheTheory;
 open prog_x64Theory wordsTheory x64_encodeLib;
 
+structure Parse = struct
+  open Parse
+  val (Type,Term) =
+      prog_x64Theory.prog_x64_grammars
+        |> apsnd ParseExtras.grammar_loose_equality
+        |> parse_from_grammars
+end
+open Parse
+
+
 infix \\
 val op \\ = op THEN;
 
@@ -50,7 +60,7 @@ fun pre_process_thm th = let
                wordsTheory.ZERO_SHIFT,wordsTheory.WORD_OR_CLAUSES,word2bytes_lemma,EL_thm] th
   val x = ref 0
   fun all_distinct [] = []
-    | all_distinct (x::xs) = x :: all_distinct (filter (fn y => not (x = y)) xs)
+    | all_distinct (x::xs) = x :: all_distinct (filter (fn y => x !~ y) xs)
   val rs = find_terml (fn tm => type_of tm = ``:Zreg``) (concl th)
   val fs = find_terml (fn tm => type_of tm = ``:Zeflags``) (concl th)
   val ws = find_terml (can (match_term ``ZREAD_MEM2_WORD32 a``)) (concl th)
@@ -124,7 +134,8 @@ fun x64_pre_post g s = let
   val post = subst ss post
   val pre = mk_star (``zPC rip``,pre)
   val post = mk_star (mk_comb(``zPC``,new_rip),post)
-  val pre = if pre_conds = [] then pre else mk_cond_star(pre,mk_comb(``Abbrev``,list_mk_conj pre_conds))
+  val pre = if null pre_conds then pre
+            else mk_cond_star(pre,mk_comb(``Abbrev``,list_mk_conj pre_conds))
   in (pre,post) end;
 
 val SING_SUBSET = prove(
@@ -144,7 +155,7 @@ fun introduce_zBYTE_MEMORY_ANY th = if
   fun foo tm = (fst o pairSyntax.dest_pair o cdr o cdr o cdr) tm |->
                mk_comb(mk_var("g",``:word64->word8``),(cdr o car o cdr) tm)
   val th = INST (map foo xs) th
-  in if xs = [] then th else let
+  in if null xs then th else let
     val (_,p,_,q) = dest_spec(concl th)
     val xs = (rev o list_dest dest_star) p
     val tm = ``~(zM1 a x)``
@@ -205,7 +216,7 @@ fun introduce_zMEMORY th = if
   fun foo tm = cdr tm |->
                mk_comb(mk_var("f",``:word64->word32``),(cdr o car) tm)
   val th = INST (map foo xs) th
-  in if xs = [] then th else let
+  in if null xs then th else let
     val (_,p,_,q) = dest_spec(concl th)
     val xs = (rev o list_dest dest_star) p
     val tm = ``zM a x``
@@ -298,7 +309,7 @@ fun introduce_zMEMORY64_spec_or_spec_1 th is_spec_1 =
   fun foo tm = cdr tm |->
                mk_comb(mk_var("f",``:word64->word64``),(cdr o car) tm)
   val th = INST (map foo xs) th
-  in if xs = [] then th else let
+  in if null xs then th else let
     val (_,p,_,q) = dest_spec(concl th) handle HOL_ERR _ => dest_spec_1(concl th)
     val xs = (rev o list_dest dest_star) p
     val tm = ``zM64 a x``
@@ -501,7 +512,8 @@ fun x64_prove_specs mpred no_status s = let
 (* val th = x64_prove_one_spec th c *)
   in if (is_cond o cdr o cdr o snd o dest_imp o concl) th then let
        val (x,y,z) = dest_cond (find_term is_cond (concl th))
-       fun replace_conv th tm = if (fst o dest_eq o concl) th = tm then th else ALL_CONV tm
+       fun replace_conv th tm =
+         if (fst o dest_eq o concl) th ~~ tm then th else ALL_CONV tm
        fun prove_branch cth th = let
          val tm1 = (fst o dest_imp o concl o ISPECL [x,y,z]) cth
          val th1 = CONV_RULE (DEPTH_CONV (replace_conv (UNDISCH (ISPECL [x,y,z] cth)))) th

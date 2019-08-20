@@ -14,7 +14,7 @@ open HolKernel boolLib bossLib Parse;
 open Q wordsTheory rich_listTheory updateTheory;
 
 val _ = new_theory "arm";
-
+val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------- *)
 (*  The ARM State Space                                                      *)
 (* ------------------------------------------------------------------------- *)

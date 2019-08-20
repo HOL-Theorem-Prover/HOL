@@ -15,6 +15,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "prob_canon";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 (* Definition of the canonicalisation of algebra elements.                   *)
@@ -46,12 +47,12 @@ val prob_longest_def = Define `prob_longest
 
 val prob_canon_prefs_def = Define `(prob_canon_prefs (l:bool list) [] = [l])
   /\ (prob_canon_prefs l (h::t) = if IS_PREFIX h l then prob_canon_prefs l t
-				 else l::h::t)`;
+                                 else l::h::t)`;
 
 val prob_canon_find_def = Define `(prob_canon_find l [] = [l])
   /\ (prob_canon_find l (h::t) = if prob_order h l then
           if IS_PREFIX l h then (h::t) else h::(prob_canon_find l t)
-	else prob_canon_prefs l (h::t))`;
+        else prob_canon_prefs l (h::t))`;
 
 val prob_canon1_def = Define `prob_canon1 = FOLDR prob_canon_find []`;
 
@@ -201,7 +202,7 @@ val PROB_ORDER_PREFIX_ANTI = store_thm
    Induct >- RW_TAC list_ss [IS_PREFIX_NIL]
    >> Cases_on `y` >- RW_TAC list_ss [IS_PREFIX_NIL, prob_order_def]
    >> (RW_TAC list_ss [IS_PREFIX, prob_order_def]
-	 >> PROVE_TAC []))
+         >> PROVE_TAC []))
 
 val PROB_ORDER_PREFIX_MONO = store_thm
   ("PROB_ORDER_PREFIX_MONO",
@@ -286,7 +287,7 @@ val PROB_SORTED_APPEND = store_thm
                    /\ prob_order (LAST (h::t)) h'``,
    Induct_on `t`
      >- (RW_TAC list_ss [prob_sorted_def, LAST_CONS]
-	 >> PROVE_TAC [])
+         >> PROVE_TAC [])
    >> RW_TAC list_ss [prob_sorted_def]
    >> RW_TAC std_ss [(GSYM o CONJUNCT2) APPEND, LAST_CONS]
    >> PROVE_TAC []);
@@ -357,7 +358,7 @@ val PROB_PREFIXFREE_APPEND = store_thm
                    /\ ~IS_PREFIX h' (LAST (h::t))``,
    Induct_on `t`
      >- (RW_TAC list_ss [prob_prefixfree_def, LAST_CONS]
-	 >> PROVE_TAC [])
+         >> PROVE_TAC [])
    >> RW_TAC list_ss [prob_prefixfree_def]
    >> RW_TAC std_ss [(GSYM o CONJUNCT2) APPEND, LAST_CONS]
    >> PROVE_TAC []);
@@ -752,14 +753,14 @@ val PROB_CANON2_SORTED_PREFIXFREE_TWINFREE = store_thm
      >- (Suff `!x. MEM x (prob_canon2 l)
                         ==> ~IS_PREFIX h x /\ ~IS_PREFIX (x:bool list) h`
            >- (REWRITE_TAC [prob_canon2_def] >> PROVE_TAC [MEM])
-	 >> Suff
+         >> Suff
              `!x. MEM x l ==> ~IS_PREFIX h x /\ ~IS_PREFIX (x:bool list) h`
            >- PROVE_TAC [PROB_CANON2_PREFIXFREE_PRESERVE]
          >> PROVE_TAC [PROB_PREFIXFREE_ELT])
    >> RW_TAC list_ss [prob_sorted_def, prob_prefixfree_def]
    >> Know `?x. MEM x l /\ IS_PREFIX x (h':bool list)`
      >- (Know `MEM h' (prob_canon2 l)` >- PROVE_TAC [prob_canon2_def, MEM]
-	 >> PROVE_TAC [PROB_CANON2_SHORTENS])
+         >> PROVE_TAC [PROB_CANON2_SHORTENS])
    >> STRIP_TAC
    >> Know `prob_order h x` >- PROVE_TAC [PROB_SORTED_DEF_ALT]
    >> PROVE_TAC [PROB_ORDER_PREFIX_TRANS]);
@@ -778,8 +779,8 @@ val PROB_CANON_SORTED_PREFIXFREE_TWINFREE = store_thm
          /\ prob_prefixfree (prob_canon l)
          /\ prob_twinfree (prob_canon l)``,
    RW_TAC list_ss [prob_canon_def,
-		   PROB_CANON1_SORTED, PROB_CANON1_PREFIXFREE,
-		   PROB_CANON2_SORTED_PREFIXFREE_TWINFREE]);
+                   PROB_CANON1_SORTED, PROB_CANON1_PREFIXFREE,
+                   PROB_CANON2_SORTED_PREFIXFREE_TWINFREE]);
 
 val PROB_CANON_CONSTANT = store_thm
   ("PROB_CANON_CONSTANT",
@@ -807,7 +808,7 @@ val PROB_CANONICAL_BASIC = store_thm
   ("PROB_CANONICAL_BASIC",
    ``prob_canonical [] /\ prob_canonical [[]] /\ !x. prob_canonical [x]``,
    RW_TAC list_ss [PROB_CANONICAL_DEF_ALT, prob_sorted_def,
-		   prob_prefixfree_def, prob_twinfree_def]);
+                   prob_prefixfree_def, prob_twinfree_def]);
 
 val PROB_CANON_BASIC = store_thm
   ("PROB_CANON_BASIC",
@@ -869,14 +870,14 @@ val PROB_CANONICAL_STEP2 = store_thm
    >- PROVE_TAC [PROB_CANONICAL_NIL_MEM]
    >> POP_ASSUM MP_TAC
    >> RW_TAC std_ss [PROB_CANONICAL_DEF_ALT, PROB_SORTED_STEP,
-		     PROB_PREFIXFREE_STEP]
+                     PROB_PREFIXFREE_STEP]
    >> PROVE_TAC [PROB_TWINFREE_STEP2]);
 
 val PROB_CANONICAL_STEP = store_thm
   ("PROB_CANONICAL_STEP",
    ``!l1 l2. ~(l1 = [[]]) \/ ~(l2 = [[]])
              ==> (prob_canonical (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))
-		  = prob_canonical l1 /\ prob_canonical l2)``,
+                  = prob_canonical l1 /\ prob_canonical l2)``,
    PROVE_TAC [PROB_CANONICAL_STEP1, PROB_CANONICAL_STEP2]);
 
 val PROB_CANONICAL_CASES_THM = store_thm
@@ -929,7 +930,7 @@ val PROB_CANONICAL_CASES = store_thm
   ("PROB_CANONICAL_CASES",
    ``!P. P [] /\ P [[]]
          /\ (!l1 l2. prob_canonical l1 /\ prob_canonical l2
-	       /\ prob_canonical (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))
+               /\ prob_canonical (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))
                ==> P (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2)))
          ==> (!l. prob_canonical l ==> P l)``,
    RW_TAC list_ss []
@@ -940,8 +941,8 @@ val PROB_CANONICAL_INDUCT = store_thm
   ("PROB_CANONICAL_INDUCT",
    ``!P. P [] /\ P [[]]
          /\ (!l1 l2. prob_canonical l1 /\ prob_canonical l2 /\ P l1 /\ P l2
-	       /\ prob_canonical (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))
-	       ==> P (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2)))
+               /\ prob_canonical (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))
+               ==> P (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2)))
          ==> (!l. prob_canonical l ==> P l)``,
    RW_TAC list_ss []
    >> completeInduct_on `prob_longest l`
@@ -950,8 +951,8 @@ val PROB_CANONICAL_INDUCT = store_thm
             prob_canonical l1 /\ prob_canonical l2 /\
             (l = APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))`)
      >- (POP_ASSUM (MP_TAC
-		    o MP (SPEC ``l:bool list list`` PROB_CANONICAL_CASES_THM))
-	 >> PROVE_TAC [])
+                    o MP (SPEC ``l:bool list list`` PROB_CANONICAL_CASES_THM))
+         >> PROVE_TAC [])
    >> DISCH_THEN DISJ_CASES_TAC >- PROVE_TAC []
    >> POP_ASSUM MP_TAC
    >> STRIP_TAC
@@ -962,14 +963,14 @@ val PROB_CANONICAL_INDUCT = store_thm
     >> POP_ASSUM MP_TAC
     >> KILL_TAC
     >> MP_TAC (SPECL [``MAP (CONS T) (h::t)``, ``MAP (CONS F) l2``]
-		 PROB_LONGEST_APPEND)
+                 PROB_LONGEST_APPEND)
     >> RW_TAC arith_ss [PROB_LONGEST_TLS],
     Cases_on `l2` >- PROVE_TAC []
     >> Suff `prob_longest (h::t) < prob_longest l` >- PROVE_TAC []
     >> POP_ASSUM MP_TAC
     >> KILL_TAC
     >> MP_TAC (SPECL [``MAP (CONS T) l1``, ``MAP (CONS F) (h::t)``]
-		 PROB_LONGEST_APPEND)
+                 PROB_LONGEST_APPEND)
     >> RW_TAC arith_ss [PROB_LONGEST_TLS]]);
 
 val MEM_NIL_STEP = store_thm

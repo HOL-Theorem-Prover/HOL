@@ -34,9 +34,9 @@ fun check_arg_form trm =
       chk Rator (pat1::stk) free'
       end
     else if (is_var t)
-         then if stk=[]
+         then if null stk
               then let val newi = length free
-                   in (free, Pvar (newi - index (equal t) free - 1))
+                   in (free, Pvar (newi - index (aconv t) free - 1))
                       handle HOL_ERR _ => (t::free, Pvar newi)
                    end
               else raise CL_ERR "check_arg_form"
@@ -132,7 +132,7 @@ and rewrite =
 fun add_in_db (n,cst,act,EndDb) =
       funpow n NeedArg (Try{Hcst=cst, Rws=act, Tail=EndDb})
   | add_in_db (0,cst,act as Rewrite nrws,Try{Hcst,Rws as Rewrite rws,Tail}) =
-      if cst=Hcst then Try{ Hcst=Hcst, Rws=Rewrite(nrws@rws), Tail=Tail }
+      if aconv cst Hcst then Try{ Hcst=Hcst, Rws=Rewrite(nrws@rws), Tail=Tail }
       else Try { Hcst=Hcst, Rws=Rws, Tail=add_in_db(0,cst,act,Tail) }
   | add_in_db (n,cst,act,Try{Hcst,Rws,Tail}) =
       Try { Hcst=Hcst, Rws=Rws, Tail=add_in_db(n,cst,act,Tail) }
@@ -188,13 +188,15 @@ fun assoc_clause (RWS rws) cst =
 ;
 
 fun add_in_db_upd rws (name,arity,hcst) act =
-  let val (rl as ref(db,sk)) = assoc_clause rws name
+  let val rl = assoc_clause rws name
+    val (db, sk) = !rl
   in rl := (add_in_db (arity,hcst,act,db), sk)
   end
 ;
 
 fun set_skip (rws as RWS htbl) p sk =
-  let val (rl as ref(db,_)) = assoc_clause rws p
+  let val rl = assoc_clause rws p
+    val (db,_) = !rl
   in rl := (db,sk)
   end;
 
@@ -206,7 +208,7 @@ fun scrub_const (RWS htbl) c =
 fun from_term (rws,env,t) =
   let fun down (env,t,c) =
         case dest_term t of
-          VAR _ => up((Bv (index (equal t) env) handle HOL_ERR _ => Fv), c)
+          VAR _ => up((Bv (index (aconv t) env) handle HOL_ERR _ => Fv), c)
         | CONST{Name,Thy,...} => up(Cst (t,assoc_clause rws (Name,Thy)),c)
         | COMB(Rator,Rand) => down(env,Rator,Zrator{Rand=(env,Rand),Ctx=c})
         | LAMB(Bvar,Body) => down(Bvar :: env, Body, Zabs{Bvar=(), Ctx=c})
@@ -267,9 +269,9 @@ fun add_thms lthm rws =
 
 fun add_thmset setname rws = let
   open ThmSetData
-  val data = all_data setname
+  val data = all_data {settype = setname}
 in
-  app (fn (s, namedths) => add_thms (map #2 namedths) rws) data
+  app (fn (s, deltas) => add_thms (added_thms deltas) rws) data
 end
 
 fun add_extern (cst,arity,fconv) rws =
@@ -301,9 +303,10 @@ fun scrub_thms lthm rws =
 (* Support for analysis of compsets                                          *)
 (*---------------------------------------------------------------------------*)
 
-fun rws_of (RWS (ref rbmap)) =
- let val thinglist = Redblackmap.listItems rbmap
-     fun db_of_entry (ss, ref (db,opt)) = db
+fun rws_of (RWS rrbmap) =
+ let val rbmap = !rrbmap
+     val thinglist = Redblackmap.listItems rbmap
+     fun db_of_entry (ss, r) = let val (db,opt) = !r in db end
      val dblist = List.map db_of_entry thinglist
      fun get_actions db =
       case db
@@ -331,9 +334,10 @@ datatype transform
 (* to make all the dependencies explicit.                                    *)
 (*---------------------------------------------------------------------------*)
 
-fun deplist (RWS (ref rbmap)) =
- let val thinglist = Redblackmap.listItems rbmap
-     fun db_of_entry (ss, ref (db,opt)) = (ss,db)
+fun deplist (RWS rrbmap) =
+ let val rbmap = !rrbmap
+     val thinglist = Redblackmap.listItems rbmap
+     fun db_of_entry (ss, r) = let val (db,opt) = !r in (ss,db) end
      val dblist = List.map db_of_entry thinglist
      fun get_actions db =
       case db
