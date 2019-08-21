@@ -134,7 +134,7 @@ val backend_use_styles = ref true
 val _ = Feedback.register_btrace ("PPBackEnd use styles", backend_use_styles)
 
 val backend_use_css = ref true
-val _ = Feedback.register_btrace ("PPBackEnd use css", backend_use_styles)
+val _ = Feedback.register_btrace ("PPBackEnd use css", backend_use_css)
 
 fun add_ssz (s,sz) =
   case sz of NONE => smpp.add_string s | SOME sz => smpp.add_stringsz (s,sz)
