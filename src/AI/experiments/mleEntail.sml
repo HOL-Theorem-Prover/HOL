@@ -35,8 +35,18 @@ fun parse_ex s =
          (Term [QUOTE s'] handle HOL_ERR _ => raise ERR "read_ex" s')
        end
   in
-    (mk_eq (dm_to_hol s1, dm_to_hol s2), [Real.fromInt (string_to_int s3)])
+    (mk_imp (dm_to_hol s1, dm_to_hol s2), [Real.fromInt (string_to_int s3)])
   end;
+
+
+fun read_true_exl file =
+  let
+    val exl1 = map parse_ex (readl file)
+    val exl2 = map fst (filter (fn (_,x) => hd x > 0.5) exl1)
+  in
+    map rename_allvar exl2
+  end
+
 
 (* -------------------------------------------------------------------------
    Normalize examples

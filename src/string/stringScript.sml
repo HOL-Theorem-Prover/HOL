@@ -180,6 +180,13 @@ val _ = overload_on ("STRING", ``CONS : char -> string -> string``)
 val _ = overload_on ("EMPTYSTRING", ``[] : string``)
 val _ = overload_on ("CONCAT", ``FLAT : string list -> string``);
 
+val _ = new_definition(GrammarSpecials.string_elim_term,
+                       “^(mk_var(GrammarSpecials.string_elim_term,
+                                  “:string -> string”)) s = s”);
+val _ = overload_on(GrammarSpecials.std_stringinjn_name,
+                    mk_const(GrammarSpecials.string_elim_term,
+                             “:string -> string”))
+
 val SUB_def = Define `SUB (s:string, n) = EL n s`;
 val STR_def = Define `STR (c:char) = [c]`;
 val TOCHAR_def = Define `TOCHAR [c] = c: char`;

@@ -25,6 +25,7 @@ sig
   val compare_imax : (('a * int) * ('a * int)) -> order
   val list_rmax : real list -> real
   val list_imax : int list -> int
+  val list_imin : int list -> int
 
   (* time *)
   val add_time : ('a -> 'b) -> 'a -> 'b * real
@@ -103,6 +104,7 @@ sig
   val sort_thyl : string list -> string list
   val fold_left : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val mk_batch : int -> 'a list -> 'a list list
+  val mk_batch_full : int -> 'a list -> 'a list list
   val cut_n : int -> 'a list -> 'a list list
   val number_partition : int -> int -> int list list
   val duplicate : int -> 'a list -> 'a list
@@ -117,8 +119,9 @@ sig
   val random_real : unit -> real
   val shuffle   : 'a list -> 'a list
   val random_elem : 'a list -> 'a
-  val random_int : (int * int) -> int (* slow uses random_elem *)
+  val random_int : (int * int) -> int (* uses random_elem *)
   val select_in_distrib : ('a * real) list -> 'a
+  val best_in_distrib : ('a * real) list -> 'a
   val random_percent : real -> 'a list -> 'a list * 'a list
 
   (* input/output *)
@@ -140,6 +143,9 @@ sig
     string -> (TextIO.outstream -> unit) -> string list
   val write_texgraph :
     string -> string * string -> (int * int) list -> unit
+  val readl_rm : string -> string list
+  val writel_atomic : string -> string list -> unit
+
 
   (* parse *)
   val unquote_string : string -> string
@@ -170,11 +176,17 @@ sig
   val sum_int : int list -> int
   val int_div : int -> int -> real
   val int_pow : int -> int -> int
+  val int_product : int list -> int
   val bin_rep : int -> int -> real list
   val pow : real -> int -> real
   val approx : int -> real -> real
   val percent : real -> real
   val pad : int -> string -> string -> string
+  val tts : term -> string
+  val its : int -> string
+  val rts : real -> string
+  val rts_round : int -> real -> string
+  val pretty_real : real -> string
 
   (* term *)
   val rename_bvarl : (string -> string) -> term -> term
@@ -183,12 +195,6 @@ sig
   val strip_type : hol_type -> (hol_type list * hol_type)
   val has_boolty : term -> bool
   val only_concl : thm -> term
-
-  (* printing *)
-  val tts : term -> string
-  val its : int -> string
-  val rts : real -> string
-  val rts_round : int -> real -> string
 
   (* thread *)
   val interruptkill : Thread.thread -> unit

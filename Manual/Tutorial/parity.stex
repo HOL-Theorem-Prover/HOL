@@ -496,15 +496,16 @@ interactively:
 \end{session}
 
 Armed with {\small\verb|PARITY_LEMMA|}, the final theorem is easily
-proved.
-This will be done in one step using the \ML{} function \ml{prove}.
+proved:
 
 \begin{session}
 \begin{alltt}
->> val PARITY_CORRECT = prove(
-     “!inp out. PARITY_IMP(inp,out) ==> (!t. out t = PARITY t inp)”,
+>> Theorem PARITY_CORRECT:
+     ∀inp out. PARITY_IMP(inp,out) ⇒ ∀t. out t = PARITY t inp
+   Proof
      rpt strip_tac >> match_mp_tac UNIQUENESS_LEMMA >>
-     irule PARITY_LEMMA >> rw[]);
+     irule PARITY_LEMMA >> rw[]
+   QED
 \end{alltt}
 \end{session}
 

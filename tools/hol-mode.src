@@ -115,10 +115,11 @@ evaluations.")
         (goto-char (match-beginning 0)))))
 (defvar hol-beg-pos nil) ; ugh, global, but easiest this way
 (defvar hol-quoted-theorem-proof-re-begin
-  "Theorem[[:space:]]+[A-Za-z0-9'_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
+  "\\(Theorem\\|Triviality\\)[[:space:]]+[A-Za-z0-9'_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
 (defvar hol-quoted-definition-re-begin
   (concat "Definition[[:space:]]+[A-Za-z0-9'_]+"
-          "\\(\\[[A-Za-z0-9_,=]+\\]\\)?[[:space:]]*:"))
+          "\\(\\[[A-Za-z0-9_,=]+\\]\\)?[[:space:]]*:"
+          "\\|\\(Co\\)?Inductive[[:space:]]+[A-Za-z0-9'_]+[[:space]]*:"))
 (put 'hol-term 'beginning-op
      (function
       (lambda ()
@@ -549,8 +550,8 @@ With a prefix ARG, uses `expandf' rather than `e'."
 
 (defun hol-string-contains-term-delimiters-p (s)
   (< 0 (count-text-match
-        (concat "^Theorem\\|^Definition\\|^Proof\\|"
-                "^Termination\\|^End\\|[“”‘’`]")
+        (concat "^Theorem\\|^Definition\\|^Proof\\|^\\(Co\\)?Inductive\\|"
+                "^Termination\\|^End\\|[“”‘’`]\\|^Triviality")
         s)))
 
 
@@ -665,11 +666,12 @@ the region contains no term delimiters, then send region instead."
       (if (not done) (message "Incomplete comment in region given"))
       done))
 
-(defun remove-quoted-hol-term (bq eq end-marker)
+(defun remove-quoted-hol-term (bq eq end-marker &optional extra)
   (let ((start (point))
-        (bqsize (length bq)))
+        (bqsize (length bq))
+        (i (if extra extra 0)))
     (if (re-search-forward eq end-marker t)
-        (delete-region (- start bqsize) (point))
+        (delete-region (- start (- bqsize i)) (point))
       (error
        (format "Incomplete (%s...%s-quoted) HOL term in region given; \
 starts >%s%s<"
@@ -703,9 +705,15 @@ starts >%s%s<"
                 ((string= ms "“") (remove-quoted-hol-term "“" "”" m))
                 ((string= ms "‘") (remove-quoted-hol-term "‘" "’" m))
                 ((string-prefix-p "Theorem" ms)
-                 (remove-quoted-hol-term ms "^Proof" m))
+                 (remove-quoted-hol-term ms "^Proof" m 7))
+                ((string-prefix-p "Triviality" ms)
+                 (remove-quoted-hol-term ms "^Proof" m 10))
                 ((string-prefix-p "Definition" ms)
-                 (remove-quoted-hol-term ms "^\\(Termination\\|End\\)" m))
+                 (remove-quoted-hol-term ms "^\\(Termination\\|End\\)" m 10))
+                ((string-prefix-p "Inductive" ms)
+                 (remove-quoted-hol-term ms "^End" m 9))
+                ((string-prefix-p "CoInductive" ms)
+                 (remove-quoted-hol-term ms "^End" m 11))
                 (t ; must be a back-tick
                  (if (not (looking-at "`"))
                      (remove-quoted-hol-term "`" "`" m)
@@ -721,7 +729,8 @@ starts >%s%s<"
               (word-list-to-regexp
                '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
                  "datatype" "nonfix" "exception" "end" "structure"
-                 "Theorem"))))
+                 "Theorem" "Definition" "Inductive" "CoInductive"
+                 "Triviality" "Datatype" "Type"))))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
@@ -1118,7 +1127,7 @@ region instead. With prefix ARG prompt for a file-name to load."
   (hol '((lambda (b al)
            (let ((split-height-threshold nil)
                  (split-width-threshold 1))
-             (display-buffer-pop-up-window b al))))
+             (display-buffer-in-side-window b (cons '(side . right) al)))))
        '((window-width . 80))))
 
 (defvar hol-new-buffer-style hol-new-buffer-style-default)
@@ -1516,16 +1525,15 @@ second is to show the new term.
    (insert ":\n\nProof\nQED\n"))
 
 (defun hol-template-hol-relnish (style name)
-  (insert (format "\nval (%s_rules,%s_ind,%s_cases) = %s‘\n  ...\n’;\n"
-                  name name name style)))
+  (insert (format "\n%s %s:\n  ...\nEnd\n" style name)))
 
 (defun hol-template-hol-reln (name)
   (interactive "sConstant name: ")
-  (hol-template-hol-relnish "Hol_reln" name))
+  (hol-template-hol-relnish "Inductive" name))
 
 (defun hol-template-hol-coreln (name)
   (interactive "sConstant name: ")
-  (hol-template-hol-relnish "Hol_coreln" name))
+  (hol-template-hol-relnish "CoInductive" name))
 
 (defun hol-template-new-datatype ()
    (interactive)
@@ -1932,8 +1940,8 @@ second is to show the new term.
 
 (font-lock-add-keywords
  'sml-mode
- '("^Theorem\\>" "^Proof\\>" "^QED\\>" "^Definition\\>"
-   "^Termination\\>" "^End\\>"))
+ '("^Theorem\\>" "^Proof\\>" "^QED\\>" "^Definition\\>" "^\\(Co\\)?Inductive\\>"
+   "^Termination\\>" "^End\\>" "^Datatype\\>" "^Type\\>" "^Triviality\\>"))
 
 (defgroup hol-faces nil "Faces used in pretty-printing HOL values"
   :group 'faces

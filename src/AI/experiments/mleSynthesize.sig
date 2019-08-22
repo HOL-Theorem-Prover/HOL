@@ -6,17 +6,13 @@ sig
   type board = ((term * int) * term)
   type move = (term * int)
 
-  val mk_startsit : term -> board psMCTS.sit
+  (* interface *)
+  val mk_startsit : term -> board
   val gamespec : (board,move) mlReinforce.gamespec
+  val extspec : board mlReinforce.extgamespec
 
   (* statistics *)
   val maxeval_atgen : unit -> int list
   val stats_eval : string -> (int * int) list
-
-  (* search *)
-  val explore_gamespec : term -> unit
-  val reinforce_fixed : string -> int ->
-    (term * real list * real list) list * mlTreeNeuralNetwork.dhtnn
-  val final_eval : string -> int * int -> string -> ((int * int) * real)
 
 end

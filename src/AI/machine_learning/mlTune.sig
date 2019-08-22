@@ -10,28 +10,18 @@ sig
   val grid_param : int list * int list * int list * int list * int list ->
     ml_param list
 
-  (* I/O *)
-  val read_paraml : unit -> ml_param list
-  val read_state : unit ->
-    (term * real list) list * (term * real list) list *
-    (term * int) list
-  val train_tnn_extern :
+  type set_param =
     (int * int) *
-      ((term * real list) list * (term * real list) list *
-      (term * int) list) ->
-    int * int -> ml_param -> unit
-
+    ((term * real list) list * (term * real list) list * (term * int) list)
 
   (* training function *)
-  val train_tnn_parallel :
-    int ->
-     (int * int) *
-     ((term * real list) list * (term * real list) list *
-     (term * int) list) ->
-    ml_param list -> (real * real * real) list
+  val train_tnn_param : set_param -> ml_param -> (real * real * real)
+
+  (* external parallelization *)
+  val extspec : (set_param, ml_param, real * real * real) smlParallel.extspec
 
   (* statistics *)
-  val write_param_results :
+  val write_summary :
     string -> (ml_param * (real * real * real )) list -> unit
 
 end

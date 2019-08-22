@@ -158,7 +158,7 @@ fun count_dict startdict l =
    ------------------------------------------------------------------------- *)
 
 fun incr x = x := (!x) + 1
-fun decr x = x := (!x) + 1
+fun decr x = x := (!x) - 1
 
 (* -------------------------------------------------------------------------
    List
@@ -419,6 +419,11 @@ fun list_imax l = case l of
   | [a] => a
   | a :: m => Int.max (a,list_imax m)
 
+fun list_imin l = case l of
+    [] => raise ERR "list_imin" ""
+  | [a] => a
+  | a :: m => Int.min (a,list_imin m)
+
 fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
 
 fun average_real l = sum_real l / Real.fromInt (length l)
@@ -430,6 +435,10 @@ fun standard_deviation l =
   in
     Math.sqrt variance
   end
+
+fun int_product nl = case nl of
+    [] => 1
+  | a :: m => a * int_product m
 
 fun int_div n1 n2 =
    (if n2 = 0 then 0.0 else Real.fromInt n1 / Real.fromInt n2)
@@ -465,6 +474,7 @@ fun percent x = approx 2 (100.0 * x)
 
 fun rts r = Real.toString r
 fun rts_round n r = rts (approx n r)
+fun pretty_real r = pad 8 "0" (rts_round 6 r)
 
 (* -------------------------------------------------------------------------
    Terms
@@ -612,8 +622,6 @@ fun stream_to_string path f =
     f oc; TextIO.closeOut oc; readl path
   end
 
-
-
 fun erase_file file = write_file file "" handle _ => ()
 
 fun writel file sl =
@@ -659,6 +667,13 @@ fun debug_in_dir dir file s =
 
 fun write_texgraph file (s1,s2) l =
   writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => its a ^ " " ^ its b) l);
+
+fun writel_atomic file sl =
+  (writel (file ^ "_temp") sl;
+   OS.FileSys.rename {old = file ^ "_temp", new=file})
+
+fun readl_rm file =
+  let val sl = readl file in OS.FileSys.remove file; sl end
 
 (* --------------------------------------------------------------------------
    Profiling
@@ -717,18 +732,18 @@ fun rpt_split_sl s sl =
     if null b then [a] else a :: rpt_split_sl s b
   end
 
-
-fun split_level_aux i s pl sl = case sl of
-    []     => raise ERR "split_level_aux" s
-  | a :: m => if a = s andalso i <= 0
+fun split_level_aux parl s pl sl = case sl of
+    []     => raise ERR "split_level_aux"
+      ("delim: " ^ s ^ ", parl: " ^ String.concatWith " " parl)
+  | a :: m => if a = s andalso null parl
                 then (rev pl, m)
               else if mem a ["let","local","struct","(","[","{"]
-                then split_level_aux (i + 1) s (a :: pl) m
+                then split_level_aux (a :: parl) s (a :: pl) m
               else if mem a ["end",")","]","}"]
-                then split_level_aux (i - 1) s (a :: pl) m
-              else split_level_aux i s (a :: pl) m
+                then split_level_aux (tl parl) s (a :: pl) m
+              else split_level_aux parl s (a :: pl) m
 
-fun split_level s sl = split_level_aux 0 s [] sl
+fun split_level s sl = split_level_aux [] s [] sl
 
 fun rpt_split_level s sl =
   let val (a,b) = split_level s sl handle _ => (sl,[])
@@ -820,7 +835,8 @@ fun random_elem l = hd (shuffle l)
   handle Empty => raise ERR "random_elem" "empty"
 
 fun random_int (a,b) =
-  if a >= b then raise ERR "random_int" "" else
+  if a > b then raise ERR "random_int" "" else
+  if a = b then a else
   let
     val (ar,br) = (Real.fromInt a, Real.fromInt b)
     val c = Real.floor (ar + random_real () * (br - ar + 1.0))
@@ -843,6 +859,11 @@ fun select_in_distrib l =
     val (_,tot) = last l'
   in
     find_cumul (random_real () * tot) l'
+  end
+
+fun best_in_distrib distrib =
+  let fun cmp (a,b) = Real.compare (snd b,snd a) in
+    fst (hd (dict_sort cmp distrib))
   end
 
 fun random_percent percent l =

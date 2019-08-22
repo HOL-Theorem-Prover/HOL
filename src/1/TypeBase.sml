@@ -320,6 +320,44 @@ fun is_record x   = TypeBasePure.is_record (theTypeBase()) x;
 fun dest_record_type x = TypeBasePure.dest_record_type (theTypeBase()) x;
 fun is_record_type x = TypeBasePure.is_record_type (theTypeBase()) x;
 
+fun ty2knm ty =
+    let
+      val {Thy,Tyop,...} = dest_thy_type ty
+    in
+      {Thy = Thy, Tyop = Tyop}
+    end
+
+fun update_induction th =
+    let
+      open boolSyntax
+      val (Ps, _) = strip_forall (concl th)
+      fun upd1 knm =
+          case read knm of
+              NONE => HOL_WARNING "TypeBase" "update_induction"
+                                  ("No type corresponding to " ^
+                                   #Thy knm ^ "$" ^ #Tyop knm ^ " to update")
+            | SOME tyi =>
+                export [TypeBasePure.put_induction (TypeBasePure.ORIG th) tyi]
+    in
+      List.app (fn v => v |> type_of |> dom_rng |> #1 |> ty2knm |> upd1) Ps
+    end
+
+fun update_axiom th =
+    let
+      open boolSyntax
+      val (_, b) = strip_forall (concl th)
+      val (exvs, _) = strip_exists b
+      fun upd1 knm =
+          case read knm of
+              NONE => HOL_WARNING "TypeBase" "update_axiom"
+                                  ("No type corresponding to " ^
+                                   #Thy knm ^ "$" ^ #Tyop knm ^ " to update")
+            | SOME tyi =>
+                export [TypeBasePure.put_axiom (TypeBasePure.ORIG th) tyi]
+    in
+      List.app (fn v => v |> type_of |> dom_rng |> #1 |> ty2knm |> upd1) exvs
+    end
+
 (* ----------------------------------------------------------------------
     Initialise the case-split munger in the pretty-printer
    ---------------------------------------------------------------------- *)

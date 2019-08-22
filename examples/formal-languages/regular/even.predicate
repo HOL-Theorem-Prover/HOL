@@ -5,7 +5,7 @@
 app load ["numposrepTheory","regexpLib", "wordsLib"];
 
 open Regexp_Type regexpSyntax regexpTheory FormalLangTheory
-     numposrepTheory  stringTheory arithmeticTheory;
+     numposrepTheory stringTheory arithmeticTheory;
 
 (*---------------------------------------------------------------------------*)
 (* Boilerplate                                                               *)
@@ -22,13 +22,13 @@ val dot_star_lem = regexp_lang_dot_star
 ;
 
 (*---------------------------------------------------------------------------*)
-(* Build regexp                                                              *)
+(* Build regexp (LSB)                                                        *)
 (*---------------------------------------------------------------------------*)
 
 val small_evens = filter (fn x => x mod 2 = 0) (upto 0 255);
 val sme_charset = Regexp_Type.charset_of (map Char.chr small_evens);
 val even_regexp = Cat(Chset sme_charset,Star DOT);
-val even_regexp_term = regexpSyntax.mk_regexp even_regexp;
+val even_regexp_term = regexpSyntax.regexp_to_term even_regexp;
 
 (*---------------------------------------------------------------------------*)
 (* Support lemmas                                                            *)
@@ -60,7 +60,7 @@ val lemB = Q.prove
 (*---------------------------------------------------------------------------*)
 
 val lemC = Q.prove
-(`!s. s IN regexp_lang(^(mk_regexp (Chset sme_charset))) 
+(`!s. s IN regexp_lang(^(regexp_to_term (Chset sme_charset))) 
         <=> 
       ?c. (s = [c]) /\ EVEN(ORD c)`,
  rw_tac (list_ss ++ pred_setLib.PRED_SET_ss ++ regexpLib.charset_conv_ss) 

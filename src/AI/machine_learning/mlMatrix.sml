@@ -43,9 +43,7 @@ fun scalar_mult (k:real) v = Vector.map (fn x => (k:real) * x) v
  *---------------------------------------------------------------------------*)
 
 fun mat_mult m inv =
-  let fun f line = scalar_product line inv in
-    Vector.map f m
-  end
+  let fun f line = scalar_product line inv in Vector.map f m end
 
 fun mat_map f m = Vector.map (Vector.map f) m
 

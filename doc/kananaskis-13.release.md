@@ -1,11 +1,11 @@
-% Release notes for HOL4, ??????
+% Release notes for HOL4, Kananaskis-13
 
-<!-- search and replace ?????? strings corresponding to release name -->
+<!-- search and replace Kananaskis-13 strings corresponding to release name -->
 <!-- indent code within bulleted lists to column 11 -->
 
-(Released: ???)
+(Released: 20 August 2019)
 
-We are pleased to announce the ?????? release of HOL 4.
+We are pleased to announce the Kananaskis-13 release of HOL 4.
 
 Contents
 --------
@@ -56,6 +56,11 @@ New features:
 
     These names can also be given attributes in the same way.
 
+    There is also a new `local` attribute available for use with `store_thm`, `save_thm` and the `Theorem` syntax above.
+    This attribute causes a theorem to not be exported when `export_theory` is called, making it local-only.
+    Use of `Theorem`-`local` is thus an alternative to using `prove` or `Q.prove`.
+    In addition, the `Theorem`-`local` combination can be abbreviated with `Triviality`; one can write `Triviality foo[...]` instead of `Theorem foo[local,...]`.
+
 -   Relatedly, there is a similar syntax for making definitions.
     The idiom is to write
 
@@ -82,6 +87,42 @@ New features:
 
     Whether or not the `induction=` attribute is used, the induction theorem is also made available as an SML binding under the appropriate name.
     This means that one does not need to follow one’s definition with a call to something like `DB.fetch` or `theorem` just to make the induction theorem available at the SML level.
+
+-   Similarly, there are analogous `Inductive` and `CoInductive` syntaxes for defining inductive and coinductive relations (using `Hol_reln` and `Hol_coreln` underneath).
+    The syntax is
+
+           Inductive stem:
+              quoted term material
+           End
+
+    or
+
+           CoInductive stem:
+              quoted term material
+           End
+
+    where, as above, the `Inductive`, `CoInductive` and `End` keywords must be in the leftmost column of the script file.
+    The `stem` part of the syntax drives the selection of the various theorem names (*e.g.*, `stem_rules`, `stem_ind`, `stem_cases` and `stem_strongind` for inductive definitions) for both the SML environment and the exported theory.
+    The actual names of new constants in the quoted term material do not affect these bindings.
+
+-   Finally, there are new syntaxes for `Datatype` and type-abbreviation.
+    Users can replace ``val _ = Datatype`...` `` with
+
+           Datatype: ...
+           End
+
+    and `val _ = type_abbrev("name", ty)` with
+
+           Type name = ty
+
+    if the abbreviation should introduce pretty-printing (which would be done with `type_abbrev_pp`), the syntax is
+
+           Type name[pp] = ty
+
+    Note that in both `Type` forms the `ty` is a correct ML value, and may thus require quoting.
+    For example, the `set` abbreviation is established with
+
+           Type set = “:α -> bool”
 
 -   Holmake now understands targets whose suffixes are the string `Theory` to be instructions to build all of the files associated with a theory.
     Previously, to specifically get `fooTheory` built, it was necessary to write
@@ -114,7 +155,7 @@ New features:
     The `ReqD` form requires that the number of matching sub-terms should have decreased.
     (This latter is implicitly a requirement that the original goal *did* have some matching sub-terms.)
     We hope that both forms will be useful in creating maintainable tactics.
-    See the DESCRIPTION manual for more details.
+    See the *DESCRIPTION* manual for more details.
 
     Thanks to Magnus Myreen for this feature suggestion ([Github issue](https://github.com/HOL-Theorem-Prover/HOL/issues/680)).
 
@@ -129,10 +170,19 @@ New features:
 -   Holmakefiles can now refer to the new variable `DEFAULT_TARGETS` in order to generate a list of the targets in the current directory that Holmake would attempt to build by default.
     This provides an easier way to adjust makefiles than that suggested in the [release notes for Kananaskis-10](http://hol-theorem-prover.org/kananaskis-10.release.html).
 
+-   String literals can now be injected into other types (in much the same way as numeric literals are injected into types such as `real` and `rat`).
+    Either the standard double-quotes can be used, or two flavours of guillemet, allowing *e.g.*, `“‹foo bar›”`, and `“«injected-HOL-string\n»”`.
+    Ambiguous situations are resolved with the standard overloading resolution machinery.
+    See the *REFERENCE* manual’s description of the `add_strliteral_form` function for details.
 
+-   The `Q.SPEC_THEN` function (also available as `qspec_then` in `bossLib`) now type-instantiates provided theorems à la `ISPEC`, and tries all possible parses of the provided quotation in order to make this work.
+    The `Q.ISPEC_THEN` function is deprecated.
 
 Bugs fixed:
 -----------
+
+*   `smlTimeout.timeout`: The thread attributes are now given which eliminates concurrency issues during TacticToe recording.
+    This function now raises the exception `FunctionTimeout` instead of `Interrupt` if the argument function exceeds the time limit.
 
 New theories:
 -------------
@@ -148,11 +198,61 @@ New theories:
     the metric-related results in previous `topologyTheory` should now
     open `metricTheory` instead. (Thanks to Chun Tian for this work.)
 
+*   `nlistTheory`: a development of the bijection between lists of natural numbers and natural numbers.
+    Many operations on lists transfer across to the numbers in obvious ways.
+    The functions demonstrating the bijection are
+
+           listOfN : num -> num list
+
+    and
+
+           nlist_of : num list -> num
+
+    This material is an extension of a basic treatment that was already part of the computability example.
+    Thanks to Elliot Catt and Yiming Xu for help with this theory’s development.
+
+*   `bisimulationTheory`: a basic theory of bisimulation (strong and weak)
+    defined on general labeled transitions (of type `:'a->'b->'a->bool`),
+    mostly abstracted from `examples/CCS`.
+    (Thanks to James Shaker and Chun Tian for this work.)
+
 New tools:
 ----------
 
+*   HolyHammer is now able to exports HOL4 formulas to the TPTP formats: TFF0, TFF1, THF0 and THF1.
+    Type encodings have been adapted from the existing FOF translation to make use of the increase in type
+    expressivity provided by these different formats.
+
+*   It is now possible to train feedforward neural networks with `mlNeuralNetwork` and tree neural networks with `mlTreeNeuralNetwork`.
+    The shape of a tree neural network is described by a term, making it handy to train
+    functions from terms to real numbers.
+
+*   An implementation of Monte Carlo tree search relying on an existing policy and value is now provided in `psMCTS`.
+    The policy is a function that given a particular situation returns a prior probability for each possible choice.
+    The value is a function that evaluates how promising a situation is by a real number between 0 and 1.
+
+*   Tactic to automate some routine `pred_set` theorems by reduction
+    to FOL (`bossLib`): `SET_TAC`, `ASM_SET_TAC` and `SET_RULE`,
+    ported from HOL Light. Many simple set-theoretic results can be
+    directly proved without finding needed lemmas in `pred_setTheory`.
+    (Thanks to HVG concordia and Chun Tian for this work.)
+
 New examples:
----------
+-------------
+
+*   [`examples/logic/folcompactness`] A port of some material from HOL Light ([this commit](https://github.com/jrh13/hol-light/commit/013324af7ff715346383fb963d323138)), about compactness and canonical models for First Order Logic.
+    This is work described in John Harrison’s [*Formalizing Basic First Order Model Theory*](https://doi.org/10.1007/BFb0055135).
+
+    Results include
+
+           ⊢ INFINITE 𝕌(:α) ∧ ffinsat (:α) s ⇒ satisfiable (:α) s
+
+    and
+
+           ⊢ INFINITE 𝕌(:α) ⇒
+               (entails (:α) Γ ϕ ⇔ ∃Γ₀. FINITE Γ₀ ∧ Γ₀ ⊆ Γ ∧ entails (:α) Γ₀ ϕ)
+
+
 
 Incompatibilities:
 ------------------
@@ -244,6 +344,11 @@ Incompatibilities:
     If the user wants the new `foo_def` to appear in the `EVAL`-compset in future theories, they must change the call to `save_thm` to use the name `"foo_def[compute]"`.
     Now, as before, the old `foo_def` cannot be seen by future theories at all, and so certainly will not be in the `EVAL`-compset.
 
+*   In some circumstances, the function definition machinery would create a theorem called `foo_def_compute`.
+    (Such theorems would be rewrites for functions that were defined using the `SUC` constructor, and would be useful for rewriting with numeral arguments.)
+    Now, such theorems are called `foo_compute`.
+    As before, such theorems are automatically added to `EVAL`’s built-in compset.
+
 *   The global toggle `allow_schema_definition` has turned into a feedback trace variable.
     Users typically use the `DefineSchema` entrypoint and can continue to do so.
     Users can also pass the `schematic` attribute with the new `Definition` syntax (see above).
@@ -257,10 +362,21 @@ Incompatibilities:
 
            MEM x (DROP n ls) ⇒ MEM x ls
 
+*   The `drule` family of tactics (and the underlying `mp_then`) now generalise the implicational theorem argument (with `GEN_ALL`) before looking for instantiations.
+    If the old behaviour is desired, where free variables are fixed, replacing `drule` with `FREEZE_THEN drule` will stop generalisation of all the implicational theorem’s variables.
+    Unfortunately, this may then prevent the matching from occurring at all.
+    In this situation (where some free variables need to be instantiated to make the match go through and the remainder have to be appear as new “local constants” serendipitously linking up with existing free variables in the goal, or if there are type variables that need to be instantiated), `drule` may need to be replaced with
+
+           drule_then (qspecl_then [‘a’, ‘b’,...] mp_tac)
+
+    where `‘a’`, `‘b’` *etc.* respecialise the original theorem.
+
+    Alternatively, there is a more involved code that more robustly reimplements the old behaviour [available as part of the CakeML project](https://github.com/CakeML/cakeml/blob/349c6adc73366d9c689a0c8bd11d85c75fd0f71b/misc/preamble.sml#L534-L572).
+
 * * * * *
 
 <div class="footer">
-*[HOL4, ??????](http://hol-theorem-prover.org)*
+*[HOL4, Kananaskis-13](http://hol-theorem-prover.org)*
 
 [Release notes for the previous version](kananaskis-12.release.html)
 

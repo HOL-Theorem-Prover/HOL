@@ -28,7 +28,7 @@ val _ = new_theory "iterate";
 val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
-(* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)
+(* MESON, METIS, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                         *)
 (* ------------------------------------------------------------------------- *)
 
 fun K_TAC _ = ALL_TAC;
@@ -38,17 +38,7 @@ fun METIS ths tm = prove(tm,METIS_TAC ths);
 val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
 
-fun SET_TAC L =
-    POP_ASSUM_LIST(K ALL_TAC) THEN REPEAT COND_CASES_TAC THEN
-    REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
-    SING_DEF] L) THEN
-    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
-      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
-      GSPECIFICATION, IN_DEF, EXISTS_PROD] THEN METIS_TAC [];
-
 fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
-fun SET_RULE tm = prove(tm,SET_TAC []);
-fun ASM_SET_TAC L = REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC L;
 
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 val ASM_REAL_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC;

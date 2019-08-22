@@ -3,66 +3,49 @@ sig
 
   include Abbrev
 
+  (* outcome *)
   datatype status = Undecided | Win | Lose
 
   (* globals *)
   val exploration_coeff : real ref
-
-  (* debug *)
-  val string_of_status : status -> string
+  val temperature_flag : bool ref
+  val alpha_glob : real ref
+  val stopatwin_flag : bool ref
 
   (* 'a is the representation of a board *)
-  type 'a sit = bool * 'a
-
-  (* ''b is the representation of a move *)
-  type 'b choice = (('b * real) * int list)
-
+  (* 'b is the representation of a move *)
+  type id = int list
+  type 'b pol = (('b * real) * id) list
+  type 'b dis = ((('b * real) * id) * real) list
   type ('a,'b) node =
-  {
-    pol   : 'b choice list,
-    sit   : 'a sit,
-    sum   : real,
-    vis   : real,
-    status : status
-  }
-
-  type ('a,'b) tree = (int list, ('a,'b) node) Redblackmap.dict
+    {pol : 'b pol, sit : 'a, sum : real, vis : real, status : status}
+  type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
 
   (* search function *)
-  val starttree_of :
-    (int * real * bool *
-      ('a sit -> status) * ('b -> 'a sit -> 'a sit) *
-      ('a sit -> real * ('b * real) list)
-    ) ->
-    'a sit ->
-    ('a,'b) tree
+  type ('a,'b) mctsparam =
+    {
+    nsim : int, decay : real, noise : bool,
+    status_of : 'a -> status,
+    apply_move : 'b -> 'a -> 'a,
+    fevalpoli : 'a -> real * ('b * real) list
+    }
+  val starttree_of : ('a,'b) mctsparam -> 'a -> ('a,'b) tree
+  val mcts : ('a,'b) mctsparam -> ('a,'b) tree -> ('a,'b) tree
 
-  val mcts :
-    (int * real * bool *
-      ('a sit -> status) * ('b -> 'a sit -> 'a sit) *
-      ('a sit -> real * ('b * real) list)
-    ) ->
-    ('a,'b) tree -> ('a,'b) tree
-
-  (* restart *)
-  val cut_tree : ('a,'b) tree -> int list -> ('a,'b) tree
+  (* dirichlet noise *)
+  val gamma_distrib : real -> (real * real) list
+  val dirichlet_noise : real -> int -> real list
 
   (* statistics *)
-  val backuptime : real ref
-  val selecttime : real ref
-  datatype wintree = Wleaf of int list | Wnode of (int list * wintree list)
-  val wtree_of : ('a,'b) tree -> int list -> wintree
-  val root_variation : ('a,'b) tree -> (int list) list
+  val root_variation : ('a,'b) tree -> id list
+  val max_depth : ('a,'b) tree -> id -> int
+  val trace_win : ('a -> status) -> ('a,'b) tree -> id -> ('a,'b) node list
 
-  (* constructing a training example *)
-  val move_of_cid : ('a,'b) node -> int list -> 'b
-  val evalpoli_example : ('a,'b) tree -> (real * ('b * real) list) option
+  (* training example *)
+  val evalpoli_example : ('a,'b) tree -> (real * ('b * real) list)
 
-  (* choosing a big step *)
-  val print_distrib : ('b -> string) ->
-    ((('b * real) * int list) * real) list -> unit
-  val select_bigstep : ('a,'b) tree -> int list ->
-    ('b choice * real) list * int list option
-
+  (* big step *)
+  val print_distrib : ('b -> string) -> 'b dis -> unit
+  val select_bigstep : ('a,'b) tree -> (id * 'b dis)
 
 end

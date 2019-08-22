@@ -7,27 +7,27 @@ sig
   val parmap_batch : int -> ('a -> 'b) -> 'a list -> 'b list
   val parmap_queue : int -> ('a -> 'b) -> 'a list -> 'b list
   val parapp_queue : int -> ('a -> 'b) -> 'a list -> unit
-  val parmap_gen : int -> (('b -> 'c) -> 'b list -> 'c list) * (unit -> unit)
 
   (* external *)
   val parallel_dir : string ref
-  val wid_dir : int -> string
-  val widout_file : int -> string
-  val argl_file : unit -> string
-  val readl_rm : string -> string list
-  val writel_atomic : string -> string list -> unit
-  val result_file : (int * int) -> string
-  val worker_start : int -> (int * int -> 'a -> 'b) * 'a list -> unit
+  (* 'a: type of parameter, 'b: type of arguments, 'c: returned type *)
+  type ('a,'b,'c) extspec =
+    {
+    self: string,
+    reflect_globals : unit -> string,
+    function : 'a -> 'b -> 'c,
+    write_param : string -> 'a -> unit,
+    read_param : string -> 'a,
+    write_argl : string -> 'b list -> unit,
+    read_argl : string -> 'b list,
+    write_result : string ->'c -> unit,
+    read_result : string -> 'c
+    }
+  val worker_start : int -> ('a,'b,'c) extspec -> unit
   val parmap_queue_extern :
-    int ->
-    (int -> string list) ->
-    ((unit -> unit) * ('a list -> unit))
-    -> ((int * int) -> 'b) ->
-    'a list -> 'b list
-
-  val standard_code_of : string * string * string -> int -> string list
+    int -> ('a,'b,'c) extspec -> 'a -> 'b list -> 'c list
 
   (* example *)
-  val id_parallel : int -> int list -> int list
+  val idspec : (unit,int,int) extspec
 
 end

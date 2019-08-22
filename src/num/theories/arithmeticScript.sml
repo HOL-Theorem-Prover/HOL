@@ -108,6 +108,7 @@ val _ = add_numeral_form (#"n", NONE);
 val _ = set_fixity "-" (Infixl 500);
 val _ = Unicode.unicode_version {u = UTF8.chr 0x2212, tmnm = "-"};
 val _ = TeX_notation {hol = "-", TeX = ("\\ensuremath{-}", 1)}
+val _ = TeX_notation {hol = UTF8.chr 0x2212, TeX = ("\\ensuremath{-}", 1)}
 
 val SUB = new_recursive_definition
    {name = "SUB",
@@ -1927,6 +1928,15 @@ val MOD_UNIQUE = store_thm ("MOD_UNIQUE",
    PURE_ONCE_REWRITE_TAC [th] THEN
    DISCH_THEN (STRIP_THM_THEN (fn th => fn g => ACCEPT_TAC (SYM th) g))
    end);
+
+val DIV2_DOUBLE = store_thm (* from probabilityTheory *)
+  ("DIV2_DOUBLE", “!n. DIV2 (2 * n) = n”,
+    GEN_TAC >> REWRITE_TAC [DIV2_def]
+ >> MATCH_MP_TAC DIV_UNIQUE
+ >> Q.EXISTS_TAC `0`
+ >> `0:num < 2` by METIS_TAC [TWO, ONE, LESS_0]
+ >> ASM_REWRITE_TAC [Once MULT_COMM, ADD_0]);
+val _ = export_rewrites ["DIV2_DOUBLE"];
 
 (* ---------------------------------------------------------------------*)
 (* Properties of MOD and DIV proved using uniqueness.                   *)

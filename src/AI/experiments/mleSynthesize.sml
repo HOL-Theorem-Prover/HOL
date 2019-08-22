@@ -21,16 +21,15 @@ type board = ((term * int) * term)
 
 val active_var = ``active_var:num``;
 
-fun mk_startsit tm =
-  (true,((tm,mleArithData.eval_numtm tm),active_var))
-fun dest_startsit (_,((tm,_),_)) = tm
+fun mk_startsit tm = ((tm,mleArithData.eval_numtm tm),active_var)
+fun dest_startsit ((tm,_),_) = tm
 
 fun is_ground tm = not (tmem active_var (free_vars_lr tm))
 
 val synt_operl = [(active_var,0)] @ operl_of ``SUC 0 + 0 = 0 * 0``
-fun nntm_of_sit (_,((ctm,_),tm)) = mk_eq (ctm,tm)
+fun nntm_of_sit ((ctm,_),tm) = mk_eq (ctm,tm)
 
-fun status_of (_,((ctm,n),tm)) =
+fun status_of ((ctm,n),tm) =
   let val ntm = mk_sucn n in
     if term_eq ntm tm then Win
     else if is_ground tm orelse term_size tm > 2 * n + 1 then Lose
@@ -53,20 +52,19 @@ fun action_oper (oper,n) tm =
     subst_occs [[1]] sub tm
   end
 
-fun apply_move move (_,(ctmn,tm)) = (true, (ctmn, action_oper move tm))
+fun apply_move move (ctmn,tm) = (ctmn, action_oper move tm)
 
-
-fun filter_sit sit = (fn l => l) (* filter moves *)
+fun filter_sit sit = (fn l => l)
 
 fun string_of_move (tm,_) = tts tm
 
-fun write_targetl targetl =
+fun write_targetl file targetl =
   let val tml = map dest_startsit targetl in
-    export_terml (!parallel_dir ^ "/targetl") tml
+    export_terml (file ^ "_targetl") tml
   end
 
-fun read_targetl () =
-  let val tml = import_terml (!parallel_dir ^ "/targetl") in
+fun read_targetl file =
+  let val tml = import_terml (file ^ "_targetl") in
     map mk_startsit tml
   end
 
@@ -114,9 +112,15 @@ val gamespec : (board,move) mlReinforce.gamespec =
   write_targetl = write_targetl,
   read_targetl = read_targetl,
   string_of_move = string_of_move,
-  opens = "mleSynthesize",
   max_bigsteps = max_bigsteps
   }
+
+type dhex = (term * real list * real list) list
+type dhtnn = mlTreeNeuralNetwork.dhtnn
+type flags = bool * bool * bool
+
+val extspec : (flags * dhtnn, board, bool * dhex)
+  smlParallel.extspec = mk_extspec "mleSynthesize.extspec" gamespec
 
 (* -------------------------------------------------------------------------
    Statistics
@@ -139,90 +143,5 @@ fun stats_eval file =
   in
     map_snd length l2
   end
-
-(* -------------------------------------------------------------------------
-   Basic exploration
-   ------------------------------------------------------------------------- *)
-
-fun explore_gamespec tm =
-  let val dhtnn = random_dhtnn_gamespec gamespec in
-    explore_test gamespec dhtnn (mk_startsit tm)
-  end
-
-(* -------------------------------------------------------------------------
-   Reinforcement learning loop with fixed parameters
-   ------------------------------------------------------------------------- *)
-
-fun reinforce_fixed runname ngen =
-  (
-  logfile_glob := runname;
-  parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
-  (!logfile_glob);
-  ncore_mcts_glob := 8;
-  ncore_train_glob := 4;
-  ntarget_compete := 400;
-  ntarget_explore := 400;
-  exwindow_glob := 40000;
-  uniqex_flag := false;
-  dim_glob := 12;
-  lr_glob := 0.02;
-  batchsize_glob := 16;
-  decay_glob := 0.99;
-  level_glob := 1;
-  nsim_glob := 1600;
-  nepoch_glob := 100;
-  ngen_glob := ngen;
-  start_rl_loop gamespec
-  )
-
-(* -------------------------------------------------------------------------
-   Final evaluation
-   ------------------------------------------------------------------------- *)
-
-fun final_eval dhtnn_name (a,b) testbase =
-  let
-    val eval_dir = HOLDIR ^ "/src/AI/machine_learning/eval"
-    val file = eval_dir ^ "/" ^ dhtnn_name
-    val dhtnn = mlTreeNeuralNetwork.read_dhtnn file
-    val l1 = import_terml (dataarith_dir ^ "/" ^ testbase)
-    val l2 = map (fn tm => (tm,eval_numtm tm)) l1
-    val l3 = filter (fn x => snd x >= a andalso snd x <= b) l2
-    val nwin = compete_one gamespec dhtnn (map mk_startsit (map fst l3))
-    val ntot = length l3
-  in
-    ((nwin,ntot), int_div nwin ntot)
-  end
-
-(*
-load "mleRewrite"; load "mleSynthesize";
-load "mlReinforce"; open mlReinforce;
-
-val synt_name = "synthesize_run3_gen38_dhtnn";
-fun synt_eval nsim =
-  (
-  nsim_glob := nsim;
-    (
-    mleSynthesize.final_eval synt_name (0,10) "test",
-    mleSynthesize.final_eval synt_name (11,20) "test",
-    mleSynthesize.final_eval synt_name (0,10) "big",
-    mleSynthesize.final_eval synt_name (11,20) "big"
-    )
-  );
-
-val rw_name = "rewrite_run3_gen20_dhtnn";
-fun rw_eval nsim =
-  (nsim_glob := nsim;
-    (
-    mleRewrite.final_eval rw_name (0,100) "test",
-    mleRewrite.final_eval rw_name (101,200) "test",
-    mleRewrite.final_eval rw_name (0,100) "big",
-    mleRewrite.final_eval rw_name (101,200) "big"
-    )
-  );
-
-ncore_mcts_glob := 20;
-val rl1 = map synt_eval [1,16];
-val rl2 = map rw_eval [1,16];
-*)
 
 end (* struct *)

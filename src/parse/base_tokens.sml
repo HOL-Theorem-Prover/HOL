@@ -15,6 +15,8 @@ fun toString (BT_Ident s) = s
   | toString (BT_DecimalFraction{wholepart,fracpart,places}) =
       Arbnum.toString wholepart ^ "." ^
       StringCvt.padLeft #"0" places (Arbnum.toString fracpart)
+  | toString (BT_StrLit{ldelim,contents}) =
+      "BTStrL(" ^ ldelim ^ ",\"" ^ String.toString contents ^ "\")"
   | toString (BT_AQ x) = "<AntiQuote>"
   | toString BT_EOI = "<End of Input>"
 

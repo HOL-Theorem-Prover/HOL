@@ -119,12 +119,23 @@ val def_suffix = ref "_def"
 
 local
 open Feedback Theory
+fun prove_local (n,th) =
+    if not (!Globals.interactive) then
+      (print ("Proved triviality _ \"" ^ String.toString n ^ "\"\n"); th)
+    else th
 in
 fun save_thm_attrs fname (n, attrs, th) = let
-  fun do_attr a =
-    ThmAttribute.store_at_attribute {thm = th, name = n, attrname = a}
+  val (save, attrf, attrs) = let
+    val nonlocal = List.filter (not o Lib.equal "local") attrs
+  in
+    if length nonlocal = length attrs then
+      (Theory.save_thm, ThmAttribute.store_at_attribute, attrs)
+    else
+      (prove_local, ThmAttribute.local_attribute, nonlocal)
+  end
+  fun do_attr a = attrf {thm = th, name = n, attrname = a}
 in
-  Theory.save_thm(n,th) before app do_attr attrs
+  save(n,th) before app do_attr attrs
 end
 fun store_thm(n0,t,tac) = let
   val (n, attrs) = ThmAttribute.extract_attributes n0

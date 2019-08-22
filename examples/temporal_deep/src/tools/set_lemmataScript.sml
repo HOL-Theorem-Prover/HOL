@@ -361,15 +361,6 @@ val DIFF_DIFF_INTER =
     SIMP_TAC std_ss [DIFF_DEF, INTER_DEF, EXTENSION, GSPECIFICATION] THEN
     PROVE_TAC[]);
 
-
-val IMAGE_SING =
-  store_thm
-    ("IMAGE_SING",
-     ``!f x. IMAGE f {x} = {f x}``,
-      SIMP_TAC std_ss [EXTENSION, IN_SING, IN_IMAGE]);
-
-
-
 val INJECTIVE_IMAGE_EQ =
   store_thm ("INJECTIVE_IMAGE_EQ",
     ``!f s1 s2. (!x y.  ((x IN (s1 UNION s2) /\ y IN (s1 UNION s2)) ==>

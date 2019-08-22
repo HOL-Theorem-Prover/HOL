@@ -12,17 +12,19 @@ val _ = set_fixity "#"  (Infixl 1100);
 val _ = set_mapped_fixity {tok = "-->", fixity = Infix(NONASSOC, 450),
                            term_name = "redn"}
 
-val (redn_rules, _, _) = Hol_reln `
+Inductive redn:
     (!x y f. x --> y   ==>    f # x --> f # y) /\
     (!f g x. f --> g   ==>    f # x --> g # x) /\
     (!x y.   K # x # y --> x) /\
-    (!f g x. S # f # g # x --> (f # x) # (g # x))`;
+    (!f g x. S # f # g # x --> (f # x) # (g # x))
+End
 
 val _ = hide "RTC";
 
-val (RTC_rules, _, RTC_cases) = Hol_reln `
+Inductive RTC:
     (!x.     RTC R x x) /\
-    (!x y z. R x y /\ RTC R y z ==> RTC R x z)`;
+    (!x y z. R x y /\ RTC R y z ==> RTC R x z)
+End
 
 val confluent_def = Define`
   confluent R =
@@ -50,45 +52,40 @@ val confluent_diamond_RTC = store_thm(
   ``!R. confluent R = diamond (RTC R)``,
   rw[confluent_def, diamond_def]);
 
-val R_RTC_diamond = store_thm(
-  "R_RTC_diamond",
-  ``!R. diamond R ==>
-         !x p. RTC R x p ==>
-               !z. R x z ==>
-                   ?u. RTC R p u /\ RTC R z u``,
+Theorem R_RTC_diamond:
+  ∀R. diamond R ==>
+      ∀x p z. RTC R x p ∧ R x z ⇒
+              ∃u. RTC R p u /\ RTC R z u
+Proof
   GEN_TAC >> STRIP_TAC >> Induct_on `RTC` >>
-  metis_tac [diamond_def,RTC_rules]);
+  metis_tac [diamond_def,RTC_rules]
+QED
 
-val RTC_RTC = store_thm(
-  "RTC_RTC",
-  ``!R x y z. RTC R x y /\ RTC R y z ==> RTC R x z``,
-  SIMP_TAC std_ss [GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] >>
-  GEN_TAC >> Induct_on `RTC` >> metis_tac [RTC_rules]);
+Theorem RTC_RTC:
+  ∀R x y z. RTC R x y ∧ RTC R y z ⇒ RTC R x z
+Proof
+  gen_tac >> Induct_on `RTC R x y` >> metis_tac [RTC_rules]
+QED
 
-val diamond_RTC_lemma = prove(
-  ``!R.
-       diamond R ==>
-       !x y. RTC R x y ==> !z. RTC R x z ==>
-                               ?u. RTC R y u /\ RTC R z u``,
-  GEN_TAC >> STRIP_TAC >> Induct_on `RTC` >> rw[] >| [
+Theorem diamond_RTC:
+  !R. diamond R ==> diamond (RTC R)
+Proof
+  strip_tac >> strip_tac >> simp[diamond_def] >>
+  Induct_on `RTC R x y` >> rw[] >| [
     metis_tac[RTC_rules],
     `?v. RTC R x' v /\ RTC R z v` by metis_tac[R_RTC_diamond] >>
     metis_tac [RTC_RTC, RTC_rules]
-  ]);
-
-val diamond_RTC = store_thm(
-  "diamond_RTC",
-  ``!R. diamond R ==> diamond (RTC R)``,
-  metis_tac [diamond_def,diamond_RTC_lemma]);
+  ]
+QED
 
 val _ = set_mapped_fixity {tok = "-||->", fixity = Infix(NONASSOC, 450),
                            term_name = "predn"}
-val (predn_rules, predn_ind, predn_cases) = Hol_reln `
+Inductive predn:
   (!x. x -||-> x) /\
   (!x y u v. x -||-> y /\ u -||-> v ==> x # u -||-> y # v) /\
   (!x y. K # x # y -||-> x) /\
   (!f g x. S # f # g # x -||-> (f # x) # (g # x))
-`;
+End
 
 val RTC_monotone = store_thm(
   "RTC_monotone",

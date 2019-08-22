@@ -510,6 +510,12 @@ has special tokens (the ``if'', ``then'' and ``else'') that are not names for va
 In order to make sure that the operations of printing and parsing tokens are suitably inverse to each other, users should not create tokens that include whitespace, or the comment strings (\ml{(*} and \ml{*)}).
 \index{tokens|)}
 
+\subsubsection{Literals}
+
+There are two classes of literal in HOL's term syntax: numbers and strings (which latter also includes a treatment of character literals).
+String literals are a convenient way to write large terms of type \holtxt{char~list}; numerals are a convenient way to write values of type \holtxt{num}.
+In addition, both string and numeric literals can be injected into other types, so that, for example, it is possible to write \holtxt{23} and have the system see it as a rational number.
+For more on these syntaxes, see Section~\ref{sec:numerals} for numerals, and Section~\ref{sec:strings} for strings.
 
 
 \subsection{Unicode \emph{vs} ASCII}
@@ -1710,6 +1716,7 @@ Once a theorem has been proved, it can be saved with the function
 \index{theorems, in HOL logic@theorems, in \HOL{} logic!saving of|(}%
 \index{saving theorems|(}%
 \index{save_thm@\ml{save\_thm}|pin}
+\index{save_thm@\ml{save\_thm}|seealso{\ml{Theorem} syntax}}
 \begin{verbatim}
    save_thm : (string * thm) -> thm
 \end{verbatim}
@@ -1731,7 +1738,12 @@ Thus, to indicate the \ml{simp} attribute (for which, see discussion of the stat
 \end{alltt}
 Multiple attributes can be listed between the square brackets, separated by commas.
 
-\index{Theorem keyword@\ml{Theorem} keyword|(}
+\index{local (theorem attribute)@\ml{local} (theorem attribute)}
+Another attribute, \ml{local}, can be used to create theorems that will \emph{not} be exported to disk, but which are important locally.
+Such local theorems can have other attributes attached to them, which will have their effect within the given session/script-file.
+
+\index{Theorem syntax@\ml{Theorem} syntax|(}
+\index{special syntactic forms for scripts!Theorem@\ml{Theorem}}
 \smallskip\noindent
 Equivalently, a special \ml{Theorem} syntax is available for use in script files.
 One can write
@@ -1751,6 +1763,7 @@ Attributes can also be added; for example:
 If one wishes to prove a goal with a tactic (see Chapter~\ref{tactics-and-tacticals}), and store the resulting theorem, the combination of these actions can be achieved with the \ml{store\_thm} function:
 \begin{holboxed}
 \index{store_thm@\ml{store\_thm}|pin}
+\index{store_thm@\ml{store\_thm}|seealso{\ml{Theorem} syntax}}
 \begin{verbatim}
    store_thm : (string * term * tactic) -> thm
 \end{verbatim}
@@ -1759,8 +1772,13 @@ A call to \ml{store\_thm(\mname,$t$,\mtac)} results in the application of \mtac{
 If the tactic is successful, the resulting theorem is saved under the name \mname, as before.
 Also as before, theorem attributes can be added to the name.
 
-Finally, there is a ml{Theorem} syntax for use in script files to reduce the need to write the same name twice.
-One can write\index{Proof keyword@\ml{Proof} keyword}\index{QED keyword@\ml{QED} keyword}
+\index{special syntactic forms for scripts!Theorem@\ml{Theorem}}
+\index{Theorem syntax@\ml{Theorem} syntax}
+Finally, again for use in script files only, there is a \ml{Theorem} syntax to replace \ml{store\_thm}, reducing the need to write the same name twice, and giving a cleaner appearance.
+One can write %
+\index{Proof keyword@\ml{Proof} keyword}\index{QED keyword@\ml{QED} keyword}%
+\index{special syntactic forms for scripts!Proof@\ml{Proof}}
+\index{special syntactic forms for scripts!QED@\ml{QED}}
 \begin{alltt}
    Theorem \mname[attr1,attr2,...]:
      ...goal statement...
@@ -1777,14 +1795,19 @@ For example:
      rpt strip_tac
    QED
 \end{alltt}
-Note further that the \ml{Proof} and \ml{QED} keywords must occur in column 1 of the script file so that the parser can know when the term and tactic arguments terminate.
+Note further that the \ml{Proof} and \ml{QED} keywords must occur in the leftmost column of the script file so that the parser can know when the term and tactic arguments terminate.
 
-The choice to use \ml{Theorem} syntax, or to use \ml{store\_thm} directly is a matter of users' aesthetic preference.
+\index{special syntactic forms for scripts!Triviality@\ml{Triviality}}
+One last special form is available to abbreviate the \ml{Theorem}-\ml{local} combination (with either the \ml{=} or \ml{:} following).
+Instead of writing \ml{Theorem~foo[local,\dots]}, one can write \ml{Triviality~foo[\dots]}.
+
+The choice to use \ml{Theorem} (or \ml{Triviality}) syntax, or to use \ml{store\_thm} or \ml{save\_thm} directly is a matter of users' aesthetic preference.
 But recall: if writing library code to prove and store theorems, the underlying \ml{store\_thm} must be used, as the special treatment of the \ml{Theorem} keyword is only available in script files.
 %
 \index{theorems, in HOL logic@theorems, in \HOL{} logic!saving of|)}%
 \index{saving theorems|)}%
 \index{theorem attributes|)}
+\index{Theorem syntax@\ml{Theorem} syntax|)}
 %
 } % end local definition of mname, mth macros etc
 

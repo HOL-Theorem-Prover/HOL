@@ -41,11 +41,16 @@ fun findvc3 avoids ss =
     (c1,c2,c3)
   end
 
-fun mktheta (com,argl,argr) =
-    [(UnicodeChars.ldquo, com ^ "ldquo" ^ argl ^ argr),
-     (UnicodeChars.rdquo, com ^ "rdquo" ^ argl ^ argr),
-     (UnicodeChars.sup_minus ^ UnicodeChars.sup_1,
-      com ^ "(" ^ com ^ "sp" ^ argl ^ "-1" ^ argr ^ com ^ ")")]
+fun mktheta (com,argl,argr) = [
+  (UnicodeChars.ldquo, com ^ "ldquo" ^ argl ^ argr),
+  (UnicodeChars.rdquo, com ^ "rdquo" ^ argl ^ argr),
+  (UnicodeChars.sup_minus ^ UnicodeChars.sup_1,
+   com ^ "(" ^ com ^ "sp" ^ argl ^ "-1" ^ argr ^ com ^ ")"),
+  ("\194\171", com ^ "guillemotleft" ^ argl ^ argr),
+  ("\194\187", com ^ "guillemotright" ^ argl ^ argr),
+  ("\226\128\185", com ^ "guilsinglleft" ^ argl ^ argr),
+  ("\226\128\186", com ^ "guilsinglright" ^ argl ^ argr)
+]
 
 fun print_verb1(ss, ostr) = let
   val vd = find_verbchar [] ss
