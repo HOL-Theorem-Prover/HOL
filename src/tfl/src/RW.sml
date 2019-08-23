@@ -276,8 +276,8 @@ fun stringulate _ [] = []
 
 val drop_opt = List.mapPartial Lib.I
 
-local fun sys_var tm = (is_var tm andalso
-                        not(Lexis.ok_identifier(fst(dest_var tm))))
+local fun sys_var tm =
+          is_var tm andalso not (Lexis.is_clean_varname (fst (dest_var tm)))
       val failed = RW_ERR "RW_STEP" "all applications failed"
 in
 fun RW_STEP {context=(cntxt,_),prover,simpls as RW{rw_net,...}} tm = let
