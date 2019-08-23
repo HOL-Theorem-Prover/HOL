@@ -13,7 +13,8 @@ sig
   | NumberClue of int
 
   val compare_move : (move * move) -> order
- 
+  val movel : move list  
+
   type obsc = move option * card * int
   type obs = card * int
   type obsc_dict = (obsc, (card,int) Redblackmap.dict) Redblackmap.dict
@@ -54,7 +55,6 @@ sig
   
   (* player *)
   val random_player : unit -> player
-  val random_playerdict : unit -> (int * int, player) Redblackmap.dict
   (* guesses *)
   val guess_board : obsc_dict -> board -> board
   
@@ -65,31 +65,26 @@ sig
   val best_move : player -> board -> move
   val apply_move : move -> board -> board
   val example_game : int -> player -> unit
-  val pd_play_game : (int * int, player) Redblackmap.dict -> int
 
   (* statistics *)
   val stats_player : int -> player -> unit
   val symdiff_player : int -> player ->  player -> unit
   (* reinforcement learning *)
   val rl_loop : int -> player * board * int list
+  val rla_loop : int -> player * board * int list
 
   (* parallelization *)
   val extspec : (player, unit, (ex list * ex list) * int) smlParallel.extspec
   val rl_para : int -> int -> player * int list
-
-  (* *)
-  val slice_board : board -> int * int
-  val collect_boardl_forced : unit -> board list
-  val pd_collect_example : (int * int, player) Redblackmap.dict -> board list 
-    -> (ex list * ex list)
-  val pd_train_player : player -> (ex list * ex list) -> player
-  
 
   (* test *)
   val oh_pile : card vector -> real list
   val random_pile : unit -> card vector
   val oh_card : card -> real list
   val random_card : unit -> card
-
+  val infer_eval : player -> board -> real list
+  val infer_poli : player -> board -> real list
+  val eval_expectancy : real list -> real
+  val maxscore : int
 
 end

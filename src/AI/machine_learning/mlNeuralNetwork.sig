@@ -6,6 +6,7 @@ sig
 
   (* hyperparameters *)
   val learningrate_glob : real ref
+  val show_stats : bool ref
 
   (* activation *)
   val tanh : real -> real

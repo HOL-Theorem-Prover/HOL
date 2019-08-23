@@ -345,6 +345,33 @@ print_obs empty_obs board 0;
 oh_board empty_obs (random_startboard ());
 *)
 
+(* todo
+- learn from single move:
+  
+  
+  
+value update: (sample over a)
+  value(s) = sum (policy(a) * value(a))
+  
+policy update:
+  - advantage(a) = value(a) - value(s)
+  - learning_rate = advantage * learning_rate 
+    * (Vaction);
+*)
+
+(* calculate a dw *)
+
+
+(* -------------------------------------------------------------------------
+   Sample a deterministic function from private knowledge to action
+   ------------------------------------------------------------------------- *)
+
+
+
+
+
+
+
 (* -------------------------------------------------------------------------
    Move
    ------------------------------------------------------------------------- *)
@@ -571,12 +598,16 @@ fun select_in_pol board vtot pol =
     best_in_distrib dis2
   end
 
+val lookahead_cache = ref (dempty compare_move)
+
 fun lookahead_once move player board =
+  dfind move (!lookahead_cache) handle NotFound =>
   let 
     val board1 = guess_board (fst (fst player)) board  
-    val board2 = apply_move move board1 
+    val board2 = apply_move move board1
+    val r = infer_eval player board2
   in
-    infer_eval player board2
+    lookahead_cache :=  dadd move r (!lookahead_cache); r
   end
 
 fun lookahead_loop nsim player board vtot pol rewarddisl =
@@ -603,6 +634,7 @@ fun add_noise pol =
 
 fun lookahead_aux nsim player board =
   let
+    val _ = lookahead_cache := dempty compare_move
     val pol1 = combine (movel, infer_poli player board)
     val pol2 = add_noise pol1
     val pol3 = dnew compare_move (map (fn (a,b) => (a,(b,0.0,0.0))) pol2)
@@ -651,7 +683,6 @@ fun lookahead nsim (player as ((d1,d2),_)) board =
      extract_evalex (d1,d2) board rewarddisl,
      extract_poliex (d1,d2) board pol)
   end
-
 
 (* -------------------------------------------------------------------------
    Play game with lookahead and output the result to a file
@@ -818,12 +849,85 @@ fun rl_loop n =
     rl_loop_aux (0,n) (rl_start ())
   end
 
+(* -------------------------------------------------------------------------
+   Reinforcement learning loop with q-learning
+   ------------------------------------------------------------------------- *)
+
+fun softmax l = normalize_proba (map Math.exp l)
+fun squash_eval x = (eval_expectancy x / Real.fromInt maxscore)
+
+fun average_coeff coeffl l = 
+  sum_real (map (fn (a,b) => a * b) (combine (coeffl,l))) 
+        
+fun produce_newplayer player board =
+  let 
+    val (_,(nne,nnp)) = player
+    fun qvaluem player x = infer_eval player (apply_move x board)
+    val input = oh_board empty_obs board
+    val poli  = infer_poli player board
+    val dis1 = combine (movel,poli)
+    val dis2 = filter (is_applicable board o fst) dis1
+    val dis3 = normalize_distrib dis2
+    (* eval update *)
+    val evalm = infer_eval player board
+    val eval  = squash_eval evalm
+    val qvalueml = map (qvaluem player) (map fst dis3)
+    val eout = map (average_coeff (map snd dis3)) (list_combine qvalueml)
+    val newnne = train_nn 1 1 nne 1 [(input, eout)]
+    (* policy update *)
+    val l2 = combine (map fst dis3, softmax (map squash_eval qvalueml))
+    val l3 = map (fn x => (x,assoc x l2 handle _ => 0.0)) movel
+    val l4 = normalize_distrib l3
+    val newnnp = train_nn 1 1 nnp 1 [(input,map snd l4)]
+  in
+    (if random_int (0,9) = 0 
+     then select_in_distrib l2
+     else best_in_distrib l2,
+     (empty_obs,(newnne,newnnp)))
+  end
+
+fun rla_loop_once k (player,board,scl) =
+  let
+    val (move,newplayer) = produce_newplayer player board
+    val board1 = apply_move move board 
+    val _ = print (string_of_move move ^ "-" ^ its (#score board1) ^ " ")
+    val board2 = if is_endboard board1 then random_startboard () else board1
+    val newscl = if is_endboard board1 
+                 then first_n 1000 (#score board1 :: scl) 
+                 else scl
+    val _ = if is_endboard board1 then (print "\n";
+      summary "score" (its k ^ "," ^ sr (average_int newscl)))
+      else ()
+    val _ = if k mod 10000 = 0 andalso k <> 0
+      then (write_stats k scl player; player_mem := player)
+      else ()
+  in
+    (newplayer,board2,newscl)
+  end
+
+
+
+fun rla_loop_aux (k,n) x = 
+  if k >= n then x else rla_loop_aux (k+1,n) (rla_loop_once k x)
+
+fun clean_expdir () =
+  (
+  mkDir_err hanabi_dir; 
+  mkDir_err (!summary_dir);
+  erase_file (!summary_dir ^ "/score");
+  erase_file (!summary_dir ^ "/stats")
+  )
+
+fun rla_loop n = 
+  let val _ = clean_expdir () in rla_loop_aux (0,n) (rl_start ()) end
+
 (*
 load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
+val _ = learningrate_glob := 0.0002;
 summary_dir := hanabi_dir ^ "/runtest";
-val (player,board,scl) = rl_loop 100000;
+val (player,board,scl) = rla_loop 100000;
 write_nn (hanabi_dir ^ "/run1_nne") nne;
 write_nn (hanabi_dir ^ "/run1_nnp") nnp;
 *)
@@ -932,144 +1036,6 @@ fun rl_para ncore n =
     loop (0,n) (player,[])
   end
 
-(* -------------------------------------------------------------------------
-   Experiment: trying to learn each step backward from the endgame.
-   ------------------------------------------------------------------------- *)
-
-fun is_endgame (board:board) = 
-  #clues board = 0 andalso length (#deck board) = 1 
-
-fun collect_boardl_forced () =
-  let fun loop board = 
-    if is_endgame board then [board] else
-    let 
-      fun test move = 
-        is_applicable board move andalso
-        not (is_endboard (apply_move move board))             
-      fun random_move () = random_elem (filter test movel)    
-      val newboard = apply_move (random_move ()) board 
-    in
-      if is_endboard newboard then loop board else board :: loop newboard
-    end
-  in
-    loop (random_startboard ())
-  end
-
-fun random_playerdict () = 
-  let val l = cartesian_product 
-    (List.tabulate (16, fn x => x + 1)) (List.tabulate (9,I)) 
-  in
-    dnew (cpl_compare Int.compare Int.compare) 
-    (map_assoc (fn x => random_player ()) l)
-  end
-
-fun slice_board board = (length (#deck board), #clues board)
-
-fun pd_infer_eval playerdict board =
-  if is_endboard board 
-  then onehot (#score board,maxscore + 1)
-  else 
-    let val (obs,(nne,_)) =  dfind (slice_board board) playerdict in
-      (normalize_proba o infer_nn nne o oh_board obs) board
-    end
-
-fun pd_infer_poli playerdict board =
-  let val (obs,(_,nnp)) = dfind (slice_board board) playerdict in
-    normalize_proba (infer_nn nnp (oh_board obs board))
-  end
-
-fun pd_lookahead_once move playerdict board =
-  let 
-    val ((d1,_),_) = dfind (slice_board board) playerdict
-    val board1 = guess_board d1 board
-    val board2 = apply_move move board1 
-  in
-    pd_infer_eval playerdict board2
-  end
-
-fun pd_lookahead_loop nsim playerdict board 
-  (sumtot,vtot) pol rewarddisl =
-  if nsim <= 0 then ((sumtot,vtot),pol,rewarddisl) else
-  let 
-    val move = select_in_pol board vtot pol
-    val rewarddis = pd_lookahead_once move playerdict board 
-    val reward = eval_expectancy rewarddis / (Real.fromInt maxscore)
-    val (polv,sum,vis) = dfind move pol
-    val newpol = dadd move (polv, sum + reward, vis + 1.0) pol
-  in
-    pd_lookahead_loop (nsim - 1) playerdict board 
-    (sumtot + reward, vtot + 1.0) newpol (rewarddis :: rewarddisl)
-  end
-
-fun pd_lookahead_aux nsim playerdict board =
-  let
-    val (sumtot,vtot) = 
-      (eval_expectancy (pd_infer_eval playerdict board), 1.0)
-    val pol1 = combine (movel, pd_infer_poli playerdict board)
-    val pol2 = add_noise pol1
-    val pol3 = dnew compare_move (map (fn (a,b) => (a,(b,0.0,0.0))) pol2)
-  in
-    pd_lookahead_loop nsim playerdict board (sumtot,vtot) pol3 []
-  end
-
-fun pd_lookahead nsim playerdict board =
-  let 
-    val (_,pol,rewarddisl) =
-      pd_lookahead_aux nsim playerdict board
-    fun f m = #3 (dfind m pol)
-    val dis1 = combine (movel, normalize_proba (map f movel))
-    val dis2 = filter (fn (x,_) => is_applicable board x) dis1
-  in
-    (if random_int (0,9) = 0 
-     then select_in_distrib dis2
-     else best_in_distrib dis2,
-     extract_evalex empty_obs board rewarddisl,
-     extract_poliex empty_obs board pol)
-  end
-
-fun pd_collect_example_aux acc1 acc2 playerdict boardl =
-  if null boardl then (acc1,acc2) else
-  let val (_,evalex,poliex) = pd_lookahead 400 playerdict (hd boardl) in
-    print_endline (its (length boardl));
-    pd_collect_example_aux (evalex :: acc1) (poliex :: acc2) 
-      playerdict (tl boardl)
-  end
-
-fun pd_collect_example playerdict boardl = 
-  pd_collect_example_aux [] [] playerdict boardl;
-
-
-fun pd_play_game playerdict =
-  let
-    val _ = print_endline "new_game"
-    val nsim = 400
-    fun loop board =
-      if is_endboard board then #score board else
-      let
-        val (a,b) = slice_board board
-        val _ = print_endline (its a ^ " " ^ its b)
-        val (move,_,_) = pd_lookahead nsim playerdict board
-        val _ = print_endline (string_of_move move)
-        val newboard = apply_move move board 
-      in
-        loop newboard
-      end
-  in
-    loop (random_startboard ())
-  end
-
-fun pd_train_player (obs,(nne,nnp)) (eex,pex) =
-  let
-    val ncore = 4
-    val nepoch = 100
-    val bsize = 16
-    val newnne = train_nn ncore nepoch nne bsize eex
-    val newnnp = train_nn ncore nepoch nnp bsize pex
-  in  
-    (obs,(newnne,newnnp)) 
-  end
-
-
 (*
 load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
@@ -1175,6 +1141,17 @@ idea:
 -- one nn and per player (per maximal number of available moves): 
    games end when no clues are available and no moves are available.
    force games to end on the last turn.
+*)
+
+(*
+load "mleHanabi"; open mleHanabi;
+load "mlNeuralNetwork"; open mlNeuralNetwork;
+load "aiLib"; open aiLib;
+summary_dir := hanabi_dir ^ "/looking";
+val ncore = 20;
+val ngen = 500;
+learningrate_glob := 0.002;
+val (player,scl) = rl_para ncore ngen;
 *)
 
 

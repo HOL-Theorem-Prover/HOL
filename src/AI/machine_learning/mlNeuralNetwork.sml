@@ -244,6 +244,8 @@ fun update_nn nn wu = map update_layer (combine (nn,wu))
    Statistics
    ------------------------------------------------------------------------- *)
 
+val show_stats = ref false
+
 fun sr r = pad 5 "0" (rts_round 3 r)
 
 fun stats_exl exl = 
@@ -252,8 +254,7 @@ fun stats_exl exl =
     fun f l = 
       print_endline (sr (average_real l ) ^ " " ^ sr (absolute_deviation l)) 
   in
-    print_endline "mean deviation";
-    app f ll
+    print_endline "mean deviation"; app f ll
   end
 
 (* -------------------------------------------------------------------------
@@ -291,7 +292,10 @@ fun train_nn_aux ncore nepoch nn bsize exl =
   let
     val batchl = mk_batch bsize (shuffle exl)
     val (new_nn,loss) = train_nn_epoch ncore [] nn batchl
-    val _ = print_endline (its nepoch ^ " " ^ Real.toString loss)
+    val _ = 
+      if !show_stats 
+      then print_endline (its nepoch ^ " " ^ Real.toString loss)
+      else ()
   in
     train_nn_aux ncore (nepoch - 1) new_nn bsize exl
   end
@@ -311,7 +315,7 @@ fun scale_ex (l1,l2) = (scale_in l1, scale_out l2)
 
 fun train_nn ncore nepoch nn bsize exl =
   let
-    val _ = stats_exl exl
+    val _ = if !show_stats then stats_exl exl else ()
     val newexl = map scale_ex exl
   in      
     train_nn_aux ncore nepoch nn bsize newexl

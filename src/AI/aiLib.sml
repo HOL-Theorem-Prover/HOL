@@ -868,6 +868,14 @@ fun select_in_distrib l =
     find_cumul (random_real () * tot) l'
   end
 
+fun select_in_distrib_seeded r l =
+  let
+    val l' = cumul_proba 0.0 l
+    val (_,tot) = last l'
+  in
+    find_cumul (r * tot) l'
+  end
+
 fun best_in_distrib distrib =
   let fun cmp (a,b) = Real.compare (snd b,snd a) in
     fst (hd (dict_sort cmp distrib))

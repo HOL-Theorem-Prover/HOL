@@ -121,6 +121,7 @@ sig
   val random_elem : 'a list -> 'a
   val random_int : (int * int) -> int (* uses random_elem *)
   val select_in_distrib : ('a * real) list -> 'a
+  val select_in_distrib_seeded : real -> ('a * real) list -> 'a
   val best_in_distrib : ('a * real) list -> 'a
   val random_percent : real -> 'a list -> 'a list * 'a list
   val uniform_proba : int -> real list

@@ -62,7 +62,7 @@ val ex4 = store_thm("ex4",
   );
 
 (* --------------------------------------------------------------------------
-   Example 5: closed form sums. tactictoe was not able to minimize the proof.
+   Example 5: sums
    -------------------------------------------------------------------------- *)
 
 open sum_numTheory;
