@@ -233,9 +233,9 @@ series of tokens.  For more on lexing, see Section~\ref{HOL-lex}.
   It is possible for names that occur in the \ml{Absyn} value to be
   different from any of the tokens that appeared in the original
   input.  For example, the input
-\begin{verbatim}
-   ``if P then Q else R``
-\end{verbatim} will turn into
+\begin{alltt}
+   \fholquote{if P then Q else R}
+\end{alltt} will turn into
 \begin{verbatim}
    APP (APP (APP (IDENT "COND", IDENT "P"), IDENT "Q"), IDENT "R")
 \end{verbatim}
@@ -253,7 +253,7 @@ series of tokens.  For more on lexing, see Section~\ref{HOL-lex}.
 \index{tokens!suppressing parsing behaviour of|(}%
 %
 then this phase of the parser will not treat strings as part of a
-special form.  For example, \holtxt{\holquote{\dol{}if~P}} turns into
+special form.  For example, \holtxt{\fholquote{\dol{}if~P}} turns into
 the \ml{Absyn} form
 \begin{verbatim}
    APP(IDENT "if", IDENT "P")
@@ -261,7 +261,7 @@ the \ml{Absyn} form
   \emph{not} a form involving \holtxt{COND}.
 
   More typically, one often writes something like
-  \holtxt{\holquote{\$+~x}}, which generates the abstract syntax
+  \holtxt{\fholquote{\$+~x}}, which generates the abstract syntax
 \begin{verbatim}
    APP(IDENT "+", IDENT "x")
 \end{verbatim}
@@ -272,7 +272,7 @@ the \ml{Absyn} form
   give the input its desired meaning.
 
   Symbols can also be ``escaped'' by enclosing them in parentheses.
-  Thus, the above could be written \holtxt{\holquote{(+)~x}} for the
+  Thus, the above could be written \holtxt{\fholquote{(+)~x}} for the
   same effect.
 \index{tokens!suppressing parsing behaviour of|)}
 
@@ -473,22 +473,22 @@ which is a different constant.  However, the system has extra
 flexibility because names can map to arbitrary terms.  For example, it
 is possible to map to specific type-instances of constants.  Thus, the
 string \ml{"<=>"} maps to equality, but where the arguments are forced
-to be of type \holquote{:bool}.
+to be of type \fholquote{:bool}.
 
 Moreover, if the term mapped to is a lambda-abstraction (\ie, of the
 form $\lambda x.\;M$), then the parser will perform all possible
 $\beta$-reductions for that term and the arguments accompanying it.  For
 example, in \theoryimp{boolTheory} and its descendants, the string
-\ml{"<>"} is overloaded to the term \holquote{\holtxt{\bs{}x~y.~\td{}(x~=~y)}}.
+\ml{"<>"} is overloaded to the term \fholquote{\holtxt{\bs{}x~y.~\td{}(x~=~y)}}.
 Additionally, \ml{"<>"} is set up at the concrete syntax level as an
-infix.  When the user inputs \holquote{\holtxt{x~\lt\gt~y}}, the resulting
+infix.  When the user inputs \fholquote{\holtxt{x~\lt\gt~y}}, the resulting
 \ml{Absyn} value is
 \begin{verbatim}
    APP(APP(IDENT "<>", IDENT "x"), IDENT "x")
 \end{verbatim}
 The \ml{"x"}  and \ml{"y"} identifiers will map to free variables, but
 the \ml{"<>"} identifier maps to a list containing
-\holquote{\holtxt{\bs{}x~y.~\td(x~=~y)}}. This term has type
+\fholquote{\holtxt{\bs{}x~y.~\td(x~=~y)}}. This term has type
 \begin{verbatim}
    :'a -> 'a -> bool
 \end{verbatim}
@@ -498,7 +498,7 @@ Assuming that this option is the only overloading for \ml{"<>"} left
 after type inference, then the resulting term will be
 \holtxt{\td(x~=~y)}.  Better, though this will be the underlying
 structure of the term in memory, it will actually print as
-\holquote{\holtxt{x~\lt\gt~y}}.
+\fholquote{\holtxt{x~\lt\gt~y}}.
 
 If the term mapped to in the overload map contains any free variables,
 these variables will not be instantiated in any way.  In particular,
@@ -551,14 +551,14 @@ happens with every constant definition).  But after the call
 establishing the new pattern for \holtxt{IS\_PREFIX}, the
 \holtxt{isPREFIX} form will no longer be printed.  Nor is it enough,
 to repeat the call
-\begin{verbatim}
-   overload_on("isPREFIX", ``isPREFIX``)
-\end{verbatim}
+\begin{alltt}
+   overload_on("isPREFIX", \fholquote{isPREFIX})
+\end{alltt}
 Instead (assuming that \holtxt{isPREFIX} is indeed the preferred
 printing form), the call must be
-\begin{verbatim}
-   overload_on("isPREFIX", ``\x y. isPREFIX x y``)
-\end{verbatim}
+\begin{alltt}
+   overload_on("isPREFIX", \fholquote{\bs{}x y. isPREFIX x y})
+\end{alltt}
 so that \ml{isPREFIX}'s pattern is as long as \ml{IS\_PREFIX}'s.
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!syntactic patterns|)}
 
@@ -833,9 +833,9 @@ parser in \HOL{}.
   \texttt{MEM} for \texttt{IS\_EL}.  We need to use the function
   \texttt{overload\_on} to overload the original constant for the new
   name:
-\begin{verbatim}
-   val _ = overload_on ("MEM", Term`IS_EL`);
-\end{verbatim}
+\begin{alltt}
+   val _ = overload_on ("MEM", \fholquote{IS_EL});
+\end{alltt}
 
 \item[Making addition right associative] If one has a number of old
   scripts that assume addition is right associative because this is

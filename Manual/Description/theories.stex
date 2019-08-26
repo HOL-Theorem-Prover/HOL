@@ -3608,7 +3608,7 @@ built from the empty set by a finite number of insertions.
 \end{hol}
 %
 \noindent
-A set is infinite iff it is not finite, and there is an abbreviation in the system that parses \holtxt{\holquote{INFINITE~s}} into  \holtxt{\holquote{\td{}FINITE~s}}.
+A set is infinite iff it is not finite, and there is an abbreviation in the system that parses \holtxt{\fholquote{INFINITE~s}} into  \holtxt{\fholquote{\td{}FINITE~s}}.
 The pretty-printer reverses this transformation.
 
 \medskip\noindent
