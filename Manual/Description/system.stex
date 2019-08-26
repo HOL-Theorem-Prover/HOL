@@ -1738,7 +1738,7 @@ Thus, to indicate the \ml{simp} attribute (for which, see discussion of the stat
 \end{alltt}
 Multiple attributes can be listed between the square brackets, separated by commas.
 
-\index{local (theorem attribute)@\ml{local} (theorem attribute)}
+\index{local@\ml{local}!as theorem attribute}
 Another attribute, \ml{local}, can be used to create theorems that will \emph{not} be exported to disk, but which are important locally.
 Such local theorems can have other attributes attached to them, which will have their effect within the given session/script-file.
 

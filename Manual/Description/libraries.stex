@@ -134,6 +134,8 @@ associativity. See \REFERENCE{} for more details.
 
 \paragraph{Type abbreviations}
 \index{type abbreviations}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!type abbreviations}
+\index{abbreviations!for types}
 
 Users can abbreviate common type patterns with \emph{abbreviations}.
 This is done with the \ML{} function \ml{type\_abbrev}:
@@ -161,22 +163,25 @@ For more information, see \ml{type\_abbrev}'s entry in \REFERENCE.
 There are special syntactic forms available for both type abbreviation entry-points.
 Instead of
 \begin{hol}
-\begin{verbatim}
-   val _ = type_abbrev("set", ``:'a -> bool``)
-\end{verbatim}
+\begin{alltt}
+   val _ = type_abbrev("set", \fldq:'a -> bool\frdq)
+\end{alltt}
 \end{hol}
 one can write
 \begin{hol}
-\begin{verbatim}
-   Type set = ``:'a -> bool``
-\end{verbatim}
+\begin{alltt}
+   Type set = \fldq:'a -> bool\frdq
+\end{alltt}
 \end{hol}
 and if an underlying call to \ml{type\_abbrev\_pp} is desired, the \ml{[pp]} ``attribute'' should be added to the name, thus:
 \begin{hol}
-\begin{verbatim}
-   Type set[pp] = ``:'a -> bool``
-\end{verbatim}
+\begin{alltt}
+   Type set[pp] = \fldq:'a -> bool\frdq
+\end{alltt}
 \end{hol}
+
+\index{local@\ml{local}!as attribute for type abbreviations}
+If a ``temporary'' abbreviation is required (one whose effect will not be apparent in descendent theories), then the \ml{local} attribute can also be added to the \ml{Type} syntax, or the \ML{} functions \ml{temp\_type\_abbrev} and \ml{temp\_type\_abbrev\_pp} can be used.
 
 
 \subsection{Parsing terms}
@@ -450,7 +455,9 @@ allow strings like \holtxt{$\lambda$x.x} to lex into \emph{four} tokens.)
 
 \subsubsection{Syntactic patterns (``macros'')}
 \label{sec:parser:syntactic-patterns}
+\index{abbreviations!for terms}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!overloading}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!term abbreviations}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!syntactic patterns|(}
 
 The ``overload map'' mentioned previously is actually a combination of
