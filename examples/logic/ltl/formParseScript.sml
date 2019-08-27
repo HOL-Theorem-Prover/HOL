@@ -31,12 +31,12 @@ val _ = new_theory "formParse";
 val _ = ParseExtras.tight_equality()
 val _ = add_monadsyntax()
 
-val _ = temp_inferior_overload_on ("return",``errorStateMonad$UNIT``)
-val _ = temp_inferior_overload_on ("fail", ``errorStateMonad$ES_FAIL``)
-val _ = temp_overload_on ("monad_bind", ``errorStateMonad$BIND``)
-val _ = temp_overload_on ("monad_unitbind", ``errorStateMonad$IGNORE_BIND``);
-val _ = temp_overload_on ("assert", ``errorStateMonad$ES_GUARD``);
-val _ = temp_overload_on ("++", ``errorStateMonad$ES_CHOICE``);
+Overload return[local,inferior] = “errorStateMonad$UNIT”
+Overload fail[local,inferior] = “errorStateMonad$ES_FAIL”
+Overload monad_bind[local] = “errorStateMonad$BIND”
+Overload monad_unitbind[local] = “errorStateMonad$IGNORE_BIND”
+Overload assert[local] = “errorStateMonad$ES_GUARD”
+Overload "++"[local] = “errorStateMonad$ES_CHOICE”
 
 val token_def = Define‘
   (token p [] = p []) ∧

@@ -984,7 +984,7 @@ val EMPTY_REL_DEF =
 Q.new_definition
         ("EMPTY_REL_DEF", `EMPTY_REL (x:'a) (y:'a) = F`);
 val _ = export_rewrites ["EMPTY_REL_DEF"]
-val _ = overload_on ("REMPTY", ``EMPTY_REL``)
+Overload REMPTY = ``EMPTY_REL``
 val _ = Unicode.unicode_version {u = UnicodeChars.emptyset ^ UnicodeChars.sub_r,
                                  tmnm = "EMPTY_REL"}
 
@@ -1594,7 +1594,7 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                    paren_style = OnlyIfNecessary,
                    pp_elements = [TOK (UTF8.chr 0x1D40)],
                    term_name = "relinv"}
-val _ = overload_on("relinv", ``inv``)
+Overload relinv = ``inv``
 val _ = TeX_notation { hol = (UTF8.chr 0x1D40),
                        TeX = ("\\HOLTokenRInverse{}", 1) }
 
@@ -1721,10 +1721,10 @@ val IDEM = store_thm (
   SRW_TAC [][IDEM_DEF, FUN_EQ_THM]);
 
 (* set up Id as a synonym for equality... *)
-val _ = overload_on("Id", ``(=)``)
+Overload Id = “(=)”
 
 (*  but prefer = as the printing form when with two arguments *)
-val _ = overload_on("=", ``(=)``);
+Overload "=" = “(=)”
 
 (* code below even sets things up so that Id is preferred printing form when
    an equality term does not have two arguments.  It causes grief in
@@ -2190,7 +2190,7 @@ val _ = export_rewrites ["RDOM_DELETE_DEF"]
 
 (* this syntax is compatible (easily confused) with that for finite maps *)
 val _ = set_fixity "\\\\" (Infixl 600)
-val _ = overload_on("\\\\", ``RDOM_DELETE``)
+Overload "\\\\" =  “RDOM_DELETE”
 
 val IN_RDOM_DELETE = store_thm(
   "IN_RDOM_DELETE",

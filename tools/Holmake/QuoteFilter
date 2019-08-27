@@ -49,8 +49,12 @@ fun dest_ml_thm_binding s =
                  |> Substring.dropl Char.isAlpha
                  |> Substring.dropl Char.isSpace
       val (nmss, attrs) = Substring.position "[" ss
+      val nms0 = Substring.string nmss
+      val nms = if String.sub(nms0, 0) = #"\"" then
+                  String.substring(nms0, 1, size nms0 - 2)
+                else nms0
     in
-      (Substring.string nmss, Substring.string ss,
+      (nms, Substring.string ss (* bogus if quotes used *),
        if Substring.isEmpty attrs then []
        else
          Substring.slice(attrs, 1, SOME (Substring.size attrs - 2))
@@ -149,6 +153,7 @@ digit = [0-9];
 symbol = [-!%&$+/:<=>?@~|#*\\^];
 alphaMLid = {letter} ({letter} | {digit} | _ | "'")*;
 alphaMLid_list = {alphaMLid} (","{alphaMLid})*;
+quotedsymbolid = "\"" [^\034]+ "\"";
 defn_attribute = {alphaMLid} ("=" {alphaMLid})?;
 defn_attribute_list = {defn_attribute} (","{defn_attribute})*;
 MLid =  {alphaMLid} | {symbol}+;
@@ -206,27 +211,32 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
    else yytext
   )
 );
-<INITIAL,thmval>^"Type"{ws}+{alphaMLid}("["{alphaMLid_list}"]")?{ws}*"=" => (
+<INITIAL,thmval>^("Type"|"Overload"){ws}+({alphaMLid}|{quotedsymbolid})("["{alphaMLid_list}"]")?{ws}*"=" => (
   (yypos,
    if inscript then
      let
        infix |> fun x |> f = f x
+       fun extract (s,p) l =
+           if List.exists (fn a => a = s) l then
+             (p, List.filter (fn a => a <> s) l)
+           else ("", l)
        val pfx = mlswitch (!mltype_stack) "" "" ");"
        val s0 = String.substring(yytext,0,size yytext - 1) (* drop = *)
        val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
                   |> Substring.string (* drop wspace after name *)
        val (tyname, _, attrs) = dest_ml_thm_binding s
-       val (nmpfx, attrs) =
-           if List.exists (fn a => a = "local") attrs then
-             ("temp_", List.filter (fn a => a <> "local") attrs)
-           else ("", attrs)
+       val core_name = if String.isPrefix "Overload" yytext then "overload_on"
+                       else "type_abbrev"
+       val (infpfx, attrs) = extract ("inferior", "inferior_") attrs
+       val (temppfx, attrs) = extract ("local", "temp_") attrs
        val fnm =
-           nmpfx ^ "type_abbrev" ^ String.concat (map (fn s => "_" ^ s) attrs)
+           temppfx ^ infpfx ^ core_name ^
+           String.concat (map (fn s => "_" ^ s) attrs)
      in
        mltype_stack := [];
        YYBEGIN INITIAL;
        ECHO yyarg (
-         pfx ^ "val _ = (fn ty => Parse." ^fnm ^ "(\"" ^ tyname ^ "\", ty ))"
+         pfx ^ "val _ = (fn x => Parse." ^fnm ^ "(\"" ^ tyname ^ "\", x))"
        )
      end
    else yytext

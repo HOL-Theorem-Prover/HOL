@@ -32,6 +32,16 @@ New features:
 
     Thanks to Magnus Myreen for the feature suggestion.
 
+*   We have added a special syntactic form `Overload` to replace various flavours of `overload_on` calls.
+    The core syntax is exemplified by
+
+           Overload foo = “myterm”
+
+    Attributes can be added after the name.
+    Possible attributes are `local` (for overloads that won’t be exported) and `inferior` to cause a call `inferior_overload_on` (which makes the overload the pretty-printer’s last choice).
+
+    Thanks to Magnus Myreen for the feature suggestion.
+
 Bugs fixed:
 -----------
 

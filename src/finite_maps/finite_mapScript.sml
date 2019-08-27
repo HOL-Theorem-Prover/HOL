@@ -157,7 +157,7 @@ val FUPDATE_DEF = Q.new_definition
  `FUPDATE (f:'a |-> 'b) (x,y)
     = fmap_ABS (\a. if a=x then INL y else fmap_REP f a)`);
 
-val _ = overload_on ("|+", ``FUPDATE``);
+Overload "|+" = “FUPDATE”
 
 val FEMPTY_DEF = Q.new_definition
 ("FEMPTY_DEF",
@@ -167,7 +167,7 @@ val FAPPLY_DEF = Q.new_definition
 ("FAPPLY_DEF",
  `FAPPLY (f:'a |-> 'b) x = OUTL (fmap_REP f x)`);
 
-val _ = overload_on ("'", ``FAPPLY``);
+Overload "'" = “FAPPLY”
 
 val FDOM_DEF = Q.new_definition
 ("FDOM_DEF",
@@ -1402,10 +1402,10 @@ val f_o_ASSOC = Q.store_thm(
     Domain subtraction (at a single point)
    ---------------------------------------------------------------------- *)
 
-val fmap_domsub = new_definition(
-  "fmap_domsub",
-  ``fdomsub fm k = DRESTRICT fm (COMPL {k})``);
-val _ = overload_on ("\\\\", ``fdomsub``);
+Definition fmap_domsub:
+  fdomsub fm k = DRESTRICT fm (COMPL {k})
+End
+Overload "\\\\" = “fdomsub”
 (* this has been set up as an infix in relationTheory *)
 
 val DOMSUB_FEMPTY = store_thm(
@@ -1550,12 +1550,11 @@ val SUBMAP_FUPDATE = Q.store_thm
     Iterated updates
    ---------------------------------------------------------------------- *)
 
-val FUPDATE_LIST =
- new_definition
-  ("FUPDATE_LIST",
-   ``FUPDATE_LIST = FOLDL FUPDATE``);
+Definition FUPDATE_LIST:
+  FUPDATE_LIST = FOLDL FUPDATE
+End
 
-val _ = overload_on ("|++", ``FUPDATE_LIST``);
+Overload "|++" = “FUPDATE_LIST”
 
 val FUPDATE_LIST_THM = store_thm(
   "FUPDATE_LIST_THM",

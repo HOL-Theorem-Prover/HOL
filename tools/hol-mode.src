@@ -730,7 +730,7 @@ starts >%s%s<"
                '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
                  "datatype" "nonfix" "exception" "end" "structure"
                  "Theorem" "Definition" "Inductive" "CoInductive"
-                 "Triviality" "Datatype" "Type"))))
+                 "Triviality" "Datatype" "Type" "Overload"))))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
@@ -1941,7 +1941,8 @@ second is to show the new term.
 (font-lock-add-keywords
  'sml-mode
  '("^Theorem\\>" "^Proof\\>" "^QED\\>" "^Definition\\>" "^\\(Co\\)?Inductive\\>"
-   "^Termination\\>" "^End\\>" "^Datatype\\>" "^Type\\>" "^Triviality\\>"))
+   "^Termination\\>" "^End\\>" "^Datatype\\>" "^Type\\>" "^Triviality\\>"
+   "^Overload\\>"))
 
 (defgroup hol-faces nil "Faces used in pretty-printing HOL values"
   :group 'faces

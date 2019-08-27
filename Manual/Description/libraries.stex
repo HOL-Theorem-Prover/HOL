@@ -379,7 +379,7 @@ the \ml{Absyn} form
 \subsubsection{Unicode characters}
 \label{sec:parser:unicode-characters}
 
-\index{Unicode}\index{UTF-8}
+\index{Unicode|(}\index{UTF-8}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!Unicode characters|(}
 It is possible to have the \HOL{} parsing and printing infrastructure
 use Unicode characters (written in the UTF-8 encoding).  This makes it
@@ -406,6 +406,7 @@ Unicode syntax for the underlying constant.
 If users have fonts with the appropriate repertoire of characters to display their syntax, and are confident that any other users of their theories will too, then this is perfectly reasonable.
 However, if users wish to retain some backwards compatibility a provide a pure ASCII syntax, they can do so by defining that pure ASCII syntax first.
 Having done this, they can create a Unicode version of the syntax with the function \ml{Unicode.unicode\_version}.
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!Unicode in pretty-printing}
 Then, either Unicode or ASCII characters can be used to input the syntax, and, while the trace variable \ml{"PP.avoid_unicode"} is $1$, the ASCII syntax will be used for printing.
 If the trace is set to $0$, then again, both syntaxes can be used to \emph{write} the terms, but the pretty-printer will prefer the Unicode syntax when the terms are printed by the system.
 
@@ -452,43 +453,30 @@ everything else is symbolic.  (The exception for \holtxt{$\lambda$} is to
 allow strings like \holtxt{$\lambda$x.x} to lex into \emph{four} tokens.)
 
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!Unicode characters|)}
+\index{Unicode|)}
 
-\subsubsection{Syntactic patterns (``macros'')}
+\subsubsection{Overloading and Syntactic Patterns (``macros'')}
 \label{sec:parser:syntactic-patterns}
 \index{abbreviations!for terms}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!overloading}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!term abbreviations}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!syntactic patterns|(}
 
-The ``overload map'' mentioned previously is actually a combination of
-maps, one for parsing, and one for printing.  The parsing map is from
-names to lists of terms, and determines how the names that appear in a
-\ml{Preterm} will translate into terms.  In essence, bound names turn
-into bound variables, unbound names not in the domain of the map turn
-into free variables, and unbound names in the domain of the map turn
-into one of the elements of the set associated with the given name.
-Each term in the set of possibilities may have a different type, so
-type inference will choose from those that have types consistent with
-the rest of the given term.  If the resulting list contains more than
-one element, then the term appearing earlier in the list will be
-chosen.
+The ``overload map'' mentioned previously is actually a combination of maps, one for parsing, and one for printing.
+The parsing map is from names to lists of terms, and determines how the names that appear in a \ml{Preterm} will translate into terms.
+In essence, bound names turn into bound variables, unbound names not in the domain of the map turn into free variables, and unbound names in the domain of the map turn into one of the elements of the set associated with the given name.
+Each term in the set of possibilities may have a different type, so type inference will choose from those that have types consistent with the rest of the given term.
+If the resulting list contains more than one element, then the term appearing earlier in the list will be chosen.
 
-The most common use-case for the overload map is have names map to
-constants.  In this way, for example, the various numeric theories can
-map the string \ml{"+"} to the relevant notions of addition, each of
-which is a different constant.  However, the system has extra
-flexibility because names can map to arbitrary terms.  For example, it
-is possible to map to specific type-instances of constants.  Thus, the
-string \ml{"<=>"} maps to equality, but where the arguments are forced
-to be of type \fholquote{:bool}.
+The most common use-case for the overload map is have names map to constants.
+In this way, for example, the various numeric theories can map the string \ml{"+"} to the relevant notions of addition, each of which is a different constant.
+However, the system has extra flexibility because names can map to arbitrary terms.
+For example, it is possible to map to specific type-instances of constants.  Thus, the string \ml{"<=>"} maps to equality, but where the arguments are forced to be of type \fholquote{:bool}.
 
-Moreover, if the term mapped to is a lambda-abstraction (\ie, of the
-form $\lambda x.\;M$), then the parser will perform all possible
-$\beta$-reductions for that term and the arguments accompanying it.  For
-example, in \theoryimp{boolTheory} and its descendants, the string
-\ml{"<>"} is overloaded to the term \fholquote{\holtxt{\bs{}x~y.~\td{}(x~=~y)}}.
-Additionally, \ml{"<>"} is set up at the concrete syntax level as an
-infix.  When the user inputs \fholquote{\holtxt{x~\lt\gt~y}}, the resulting
+Moreover, if the term mapped to is a lambda-abstraction (\ie, of the form $\lambda x.\;M$), then the parser will perform all possible $\beta$-reductions for that term and the arguments accompanying it.
+For example, in \theoryimp{boolTheory} and its descendants, the string \ml{"<>"} is overloaded to the term \fholquote{\holtxt{\bs{}x~y.~\td{}(x~=~y)}}.
+Additionally, \ml{"<>"} is set up at the concrete syntax level as an infix.
+When the user inputs \fholquote{\holtxt{x~\lt\gt~y}}, the resulting
 \ml{Absyn} value is
 \begin{verbatim}
    APP(APP(IDENT "<>", IDENT "x"), IDENT "x")
@@ -513,6 +501,23 @@ if these variables have polymorphic types, then the type variables in
 those types will be constant: not subject to instantiation by type
 inference.
 
+\index{special syntactic forms for scripts!Overload@\ml{Overload}}
+\index{Overload (special syntactic form)@\ml{Overload} (special syntactic form)}
+The prettiest way to introduce entries into the overload map is to use the \ml{Overload} syntactic form:
+\begin{alltt}
+   Overload name[attrs] = \fholquote{term/pattern}
+\end{alltt}
+Depending on the choice of attributes, this will map into a call to one of a variety of underlying ``overload-on'' functions.
+\index{overload_on (ML function)@\ml{overload\_on} (\ML{} function)}
+The default (without any attributes) calls \ml{overload\_on}, whose effect is to make an entry in the map that will be exported with the theory.
+The overloading effect thus persists in descendent theories.
+\index{local@\ml{local}!as overloading attribute}
+If the \ml{local} attribute is used, this export doesn't occur, and the overloading effect is only visible for the rest of the containing script file.%
+\footnote{The use of \ml{local} induces a call to the \ml{temp\_overload\_on} function.}
+
+\index{inferior@\ml{inferior}!as overloading attribute}
+The other attribute that can be used is \ml{inferior}, which causes the entry to be made, but makes it the pretty-printer's last choice when matching terms are printed.
+
 \paragraph{Pretty-printing and syntactic patterns} The second part of
 the ``overload map'' is a map from terms to strings, specifying how
 terms should be turned back into identifiers.  (Though it does not
@@ -533,7 +538,7 @@ most specific match (the one that requires least instantiation of the
 pattern's variables).  If this still results in multiple, equally
 specific, possibilities, the most recently added pattern takes
 precedence.  (Users can thus manipulate the printer's preferences by
-making otherwise redundant calls to the \ml{overload\_on} function.)
+making otherwise redundant \ml{Overload} declarations.)
 
 In the example of the not-equal-to operator above, the pattern will be
 \holtxt{\~{}(?x = ?y)}, where the question-marks indicate instantiable
