@@ -578,6 +578,7 @@ Therefore, it is recommended that new, user-proved theorems that mention big rec
 
 Better yet, users should define their own system of hierarchically nested sub-records if their records are getting too large.
 
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!pretty-printing big records}
 The pretty-printing of big records can be controlled with the
 \texttt{pp\_bigrecs} trace-flag.
 \index{Datatype@\ml{Datatype}|)}
