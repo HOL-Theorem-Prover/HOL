@@ -84,7 +84,7 @@ the types \holtxt{bool}, \holtxt{prod}, \holtxt{num}, \holtxt{option},
 and \holtxt{list}.
 
 \paragraph{Example: Binary trees}
-The following ML declaration of a data type of binary trees
+The following \ML{} declaration of a data type of binary trees
 \begin{hol}
 \begin{verbatim}
   datatype ('a,'b) btree = Leaf of 'a
@@ -125,7 +125,8 @@ example, if one defines
 %
 \begin{hol}
 \begin{verbatim}
-   Datatype `sum = C1 'left | C2 'right`;
+   Datatype: sum = C1 'left | C2 'right
+   End
 \end{verbatim}
 \end{hol}
 %
@@ -142,20 +143,22 @@ Thus, in the example given, the \ml{'a} of \ml{('a,'b)sum} will be the argument 
  To start, enumerated types can be defined as in the following example:
 \begin{hol}
 \begin{verbatim}
-  Datatype
-    `enum = A1  | A2  | A3  | A4  | A5
-          | A6  | A7  | A8  | A9  | A10
-          | A11 | A12 | A13 | A14 | A15
-          | A16 | A17 | A18 | A19 | A20
-          | A21 | A22 | A23 | A24 | A25
-          | A26 | A27 | A28 | A29 | A30`
+  Datatype:
+    enum = A1  | A2  | A3  | A4  | A5
+         | A6  | A7  | A8  | A9  | A10
+         | A11 | A12 | A13 | A14 | A15
+         | A16 | A17 | A18 | A19 | A20
+         | A21 | A22 | A23 | A24 | A25
+         | A26 | A27 | A28 | A29 | A30
+  End
 \end{verbatim}
 \end{hol}
 %
 Other non-recursive types may be defined as well:
 \begin{hol}
 \begin{verbatim}
-  Datatype`foo = N num | B bool | Fn ('a -> 'b) | Pr ('a # 'b)`
+  Datatype: foo = N num | B bool | Fn ('a -> 'b) | Pr ('a # 'b)
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -164,7 +167,8 @@ trees having polymorphic values at internal nodes. This time, we will
 declare it in ``paired'' format.
 \begin{hol}
 \begin{verbatim}
-  Datatype `tree = Leaf 'a | Node (tree # 'b # tree)`
+  Datatype: tree = Leaf 'a | Node (tree # 'b # tree)
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -176,10 +180,11 @@ The basic syntax of the named lambda calculus is easy to describe:
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `lambda = Var string
+  Datatype: lambda = Var string
                    | Const 'a
                    | Comb lambda lambda
-                   | Abs lambda lambda`
+                   | Abs lambda lambda
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -187,11 +192,12 @@ The syntax for `de Bruijn' terms is roughly similar:
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `dB = Var string
+  Datatype: dB = Var string
                | Const 'a
                | Bound num
                | Comb dB dB
-               | Abs dB`
+               | Abs dB
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -201,7 +207,8 @@ explicitly declared.
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `ntree = Node 'a (ntree list)`
+  Datatype: ntree = Node 'a (ntree list)
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -209,7 +216,8 @@ A type of `first order terms' can be declared as follows:
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `term = Var string | Fnapp (string # term list)`
+  Datatype: term = Var string | Fnapp (string # term list)
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -219,8 +227,8 @@ Core ML.
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype
-    `atexp = var_exp string
+  Datatype:
+     atexp = var_exp string
            | let_exp dec exp ;
 
        exp = aexp    atexp
@@ -241,7 +249,8 @@ Core ML.
            | rec_bind valbind ;
 
        pat = wild_pat
-           | var_pat string`
+           | var_pat string
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -249,8 +258,9 @@ Simple record types may be introduced using the \holtxt{<| ... |>} notation.
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype
-    `state = <| Reg1 : num; Reg2 : num; Waiting : bool |>`
+  Datatype:
+    state = <| Reg1 : num; Reg2 : num; Waiting : bool |>
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -260,10 +270,11 @@ declaration could be used to formalize a simple file system.
 \begin{hol}
 \begin{verbatim}
   Datatype
-    `file = Text string | Dir directory
+     file = Text string | Dir directory
        ;
      directory = <| owner : string ;
-                    files : (string # file) list |>`
+                    files : (string # file) list |>
+  End
 \end{verbatim}
 \end{hol}
 
@@ -279,7 +290,8 @@ is doomed to fail.
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `foo = A foo`
+  Datatype: foo = A foo
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -288,7 +300,8 @@ at present be built with \ml{Datatype}:
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `btree = Leaf 'a | Node (('a # 'a) btree)`
+  Datatype: btree = Leaf 'a | Node (('a # 'a) btree)
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -299,7 +312,8 @@ require it.  Thus, examples such as the following will fail:
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `flist = Nil | Cons 'a ('b -> flist)`
+  Datatype: flist = Nil | Cons 'a ('b -> flist)
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -310,10 +324,11 @@ lambda calculus (note the \holtxt{->} in the clause for the
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `lambda = Var string
+  Datatype: lambda = Var string
                    | Const 'a
                    | Comb lambda lambda
-                   | Abs (lambda -> lambda)`
+                   | Abs (lambda -> lambda)
+  End
 \end{verbatim}
 \end{hol}
 
@@ -334,7 +349,8 @@ For example, invoking
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `tree = Leaf num | Node tree tree`
+  Datatype: tree = Leaf num | Node tree tree
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -424,7 +440,8 @@ previously discussed.  For example, to create a record type called
   employed}, {\tt name} and {\tt age}, one would enter:
 \begin{hol}
 \begin{verbatim}
-  Datatype `person = <| employed : bool ; age : num ; name : string |>`
+  Datatype: person = <| employed : bool ; age : num ; name : string |>
+  End
 \end{verbatim}
 \end{hol}
 The order in which the fields are entered is not significant. As well
