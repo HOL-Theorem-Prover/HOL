@@ -471,7 +471,7 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
   (comdepth := 0;
    YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval);
    ECHO yyarg "\"]")));
-<tmcomment,tycomment,qcomment>[\128-\255] => ((yypos,
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>[\128-\255] => ((yypos,
   (ECHO yyarg (bslash_escape yytext))));
 <datatypecomment>{newline}"End" => (
   (yypos,
