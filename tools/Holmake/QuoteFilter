@@ -45,14 +45,24 @@ fun print (QFS _) s = s
 
 fun dest_ml_thm_binding s =
     let
+      (* s matches {keyword}{ws}+{ident}[attrs]
+         ident is either a standard ML identifier, or something in double quotes
+         NB: If it's in double quotes, the thing in quotes might include square
+         brackets!
+      *)
       val ss = s |> Substring.full
                  |> Substring.dropl Char.isAlpha
                  |> Substring.dropl Char.isSpace
-      val (nmss, attrs) = Substring.position "[" ss
-      val nms0 = Substring.string nmss
-      val nms = if String.sub(nms0, 0) = #"\"" then
-                  String.substring(nms0, 1, size nms0 - 2)
-                else nms0
+      val (nmss, attrs) =
+          if Substring.sub(ss, 0) = #"\"" then
+            let val ss' = Substring.slice(ss, 1, NONE)
+                val (nm,rest) = Substring.position "\"" ss'
+            in
+              (nm, Substring.slice(rest,1,NONE))
+            end
+          else
+            Substring.position "[" ss
+      val nms = Substring.string nmss
     in
       (nms, Substring.string ss (* bogus if quotes used *),
        if Substring.isEmpty attrs then []
