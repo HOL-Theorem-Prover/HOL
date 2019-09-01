@@ -4,8 +4,10 @@ val _ = new_theory "OverloadSQB";
 
 Overload "[.]" = “(+)”
 
+Overload "↝₁" = “$*”  (* UOK *)
+
 Theorem foo:
-  [.] 4 5 = 9
+  [.] 4 (↝₁ 5 2) = 14   (* UOK *)
 Proof
   EVAL_TAC
 QED

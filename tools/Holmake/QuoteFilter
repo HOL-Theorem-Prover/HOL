@@ -4,7 +4,14 @@ fun dec r = (r := !r - 1)
 infix |>
 fun x |> f = f x
 
-fun bslash_escape s = "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord(String.sub(s,0))))
+fun bslash_escape c =
+    "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord c))
+
+fun bslash_escape_s s = bslash_escape (String.sub(s, 0))
+
+val mk_strsafe =
+    String.translate (fn c => if Char.isPrint c then str c else
+                              bslash_escape c)
 
 datatype quotetype = inQUOTE | inTMQUOTE | inTYQUOTE | inDFQUOTE | inDTYQUOTE;
 datatype mltype = inTHMVAL | inTERMINATION_VAL | inINITIAL;
@@ -62,7 +69,7 @@ fun dest_ml_thm_binding s =
             end
           else
             Substring.position "[" ss
-      val nms = Substring.string nmss
+      val nms = nmss |> Substring.string |> mk_strsafe
     in
       (nms, Substring.string ss (* bogus if quotes used *),
        if Substring.isEmpty attrs then []
@@ -427,7 +434,7 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
   )
 );
 <string>{newline} => ((yypos, (newline yyarg (yypos,yytext))));
-<string>[\128-\255] => ((yypos, (ECHO yyarg (bslash_escape yytext))));
+<string>[\128-\255] => ((yypos, (ECHO yyarg (bslash_escape_s yytext))));
 <string>[^\\"\n\015\128-\255]{1,100} => ((yypos, (ECHO yyarg yytext)));
 <string>. => ((yypos, (ECHO yyarg yytext)));
 <comment,tmcomment,tycomment,qcomment>"(*" => ((yypos, (inc comdepth; ECHO yyarg yytext)));
@@ -482,7 +489,7 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
    YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval);
    ECHO yyarg "\"]")));
 <tmcomment,tycomment,qcomment,defncomment,datatypecomment>[\128-\255] => ((yypos,
-  (ECHO yyarg (bslash_escape yytext))));
+  (ECHO yyarg (bslash_escape_s yytext))));
 <datatypecomment>{newline}"End" => (
   (yypos,
    (
@@ -574,7 +581,7 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
    )
   )
 );
-<quote,tmquote,tyquote,defnquote,datatypequote>[\128-\255] => ((yypos, (ECHO yyarg (bslash_escape yytext))));
+<quote,tmquote,tyquote,defnquote,datatypequote>[\128-\255] => ((yypos, (ECHO yyarg (bslash_escape_s yytext))));
 <quote,tmquote,tyquote,defnquote,datatypequote>[^`\n\015^ \t(*\128-\255]+ => ((yypos,
   (ECHO yyarg (String.toString yytext))));
 <quote,tmquote,tyquote,defnquote,datatypequote>. => (
