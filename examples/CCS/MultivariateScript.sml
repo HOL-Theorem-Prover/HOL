@@ -8,7 +8,6 @@
 open HolKernel Parse boolLib bossLib;
 
 open relationTheory pred_setTheory pred_setLib listTheory finite_mapTheory;
-
 open combinTheory arithmeticTheory; (* for o_DEF and FUNPOW *)
 
 open CCSLib CCSTheory StrongEQTheory StrongLawsTheory WeakEQTheory TraceTheory
@@ -20,13 +19,13 @@ val _ = new_theory "Multivariate";
 (* ========================================================================== *)
 (*                             TABLE OF CONTENTS                              *)
 (* -------------------------------------------------------------------------- *)
-(*  Prologue:    Design Notes . . . . . . . . . . . . . . . . . . . . . L42   *)
-(*  Section I:   Multivariate variable substitution . . . . . . . . . . L161  *)
-(*  Section II:  Multivariate CCS contexts. . . . . . . . . . . . . . . L634  *)
-(*  Section III: Weakly-guarded contexts. . . . . . . . . . . . . . . . L1239 *)
-(*  Section IV:  Unique Solution of Equations . . . . . . . . . . . . . L1664 *)
-(*  Section V:   Unique Solution of (Rooted) Contractions . . . . . . . L2764 *)
-(*  Appendix:    Bibliography and some unfinished work. . . . . . . . . L3458 *)
+(*  Prologue:    Design Notes . . . . . . . . . . . . . . . . . . . . . L41   *)
+(*  Section I:   Multivariate variable substitution . . . . . . . . . . L160  *)
+(*  Section II:  Multivariate CCS contexts. . . . . . . . . . . . . . . L635  *)
+(*  Section III: Weakly-guarded contexts. . . . . . . . . . . . . . . . L1240 *)
+(*  Section IV:  Unique Solution of Equations . . . . . . . . . . . . . L1687 *)
+(*  Section V:   Unique Solution of (Rooted) Contractions . . . . . . . L2791 *)
+(*  Appendix:    Bibliography and some unfinished work. . . . . . . . . L3485 *)
 (* ========================================================================== *)
 
 val lset_ss = list_ss ++ PRED_SET_ss; (* list + pred_set *)
@@ -335,7 +334,8 @@ QED
 (* CCS_SUBST_reduce in another form *)
 val lemma1 = Q.prove (
    `!E E' map. map <> [] /\
-          ~MEM (FST (HD map)) (MAP FST (TL map)) /\ ALL_DISTINCT (MAP FST (TL map)) /\
+         ~MEM (FST (HD map)) (MAP FST (TL map)) /\
+          ALL_DISTINCT (MAP FST (TL map)) /\
           EVERY (\e. (FST (HD map)) NOTIN (FV e)) (MAP SND (TL map)) /\
           DISJOINT (BV E) (set (MAP FST map)) /\
          (CCS_SUBST (FEMPTY |++ (TL map)) E = E')
@@ -368,7 +368,8 @@ val lemma2 = Q.prove (
    `!E map. ALL_DISTINCT (MAP FST map) /\
             EVERY (\(x,p). FV p SUBSET {x}) map /\
             DISJOINT (BV E) (set (MAP FST map)) ==>
-           (CCS_SUBST (FEMPTY |++ map) E = FOLDR (\l e. CCS_Subst e (SND l) (FST l)) E map)`,
+           (CCS_SUBST (FEMPTY |++ map) E =
+            FOLDR (\l e. CCS_Subst e (SND l) (FST l)) E map)`,
  (* proof *)
     GEN_TAC >> Induct_on `map`
  >- SRW_TAC [] [FUPDATE_LIST_THM, CCS_SUBST_FEMPTY]
@@ -559,25 +560,25 @@ Proof
      Q.PAT_X_ASSUM `_ ==> _ SUBSET _` MP_TAC >> RW_TAC bool_ss [] \\
      MATCH_MP_TAC SUBSET_TRANS \\
      Q.EXISTS_TAC
-       `FV E DIFF set Xs UNION BIGUNION (IMAGE FV (set Ps))` >> art [] \\
+      `FV E DIFF set Xs UNION BIGUNION (IMAGE FV (set Ps))` >> art [] \\
      SET_TAC [])
  >- (Q.PAT_X_ASSUM `_ ==> _ SUBSET _` MP_TAC >> RW_TAC bool_ss [] \\
      Q.PAT_X_ASSUM `_ ==> _ SUBSET _` MP_TAC >> RW_TAC bool_ss [] \\
      MATCH_MP_TAC SUBSET_TRANS \\
      Q.EXISTS_TAC
-       `FV E' DIFF set Xs UNION BIGUNION (IMAGE FV (set Ps))` >> art [] \\
+      `FV E' DIFF set Xs UNION BIGUNION (IMAGE FV (set Ps))` >> art [] \\
      SET_TAC [])
  >- (Q.PAT_X_ASSUM `_ ==> _ SUBSET _` MP_TAC >> RW_TAC bool_ss [] \\
      Q.PAT_X_ASSUM `_ ==> _ SUBSET _` MP_TAC >> RW_TAC bool_ss [] \\
      MATCH_MP_TAC SUBSET_TRANS \\
      Q.EXISTS_TAC
-       `FV E DIFF set Xs UNION BIGUNION (IMAGE FV (set Ps))` >> art [] \\
+      `FV E DIFF set Xs UNION BIGUNION (IMAGE FV (set Ps))` >> art [] \\
      SET_TAC [])
  >- (Q.PAT_X_ASSUM `_ ==> _ SUBSET _` MP_TAC >> RW_TAC bool_ss [] \\
      Q.PAT_X_ASSUM `_ ==> _ SUBSET _` MP_TAC >> RW_TAC bool_ss [] \\
      MATCH_MP_TAC SUBSET_TRANS \\
      Q.EXISTS_TAC
-       `FV E' DIFF set Xs UNION BIGUNION (IMAGE FV (set Ps))` >> art [] \\
+      `FV E' DIFF set Xs UNION BIGUNION (IMAGE FV (set Ps))` >> art [] \\
      SET_TAC [])
  >> Q.PAT_X_ASSUM `_ ==> _ SUBSET _` MP_TAC >> RW_TAC bool_ss []
  >> ASM_SET_TAC [] (* ?! *)
@@ -1484,7 +1485,33 @@ QED
  *)
 Theorem weakly_guarded_rec :
     !Xs Y E. weakly_guarded Xs (rec Y E) ==>
-             ~MEM Y Xs /\ DISJOINT (FV E) (set Xs) /\ weakly_guarded Xs E
+            ~MEM Y Xs /\ DISJOINT (FV E) (set Xs)
+Proof
+    rpt GEN_TAC >> DISCH_TAC >> STRONG_CONJ_TAC
+ >- (fs [weakly_guarded_def, EVERY_MEM] \\
+    `Y IN BV (rec Y E)` by PROVE_TAC [BV_REC] \\
+     CCONTR_TAC >> METIS_TAC [IN_DISJOINT])
+ >> DISCH_TAC
+ >> fs [weakly_guarded_def, EVERY_MEM]
+ >> CCONTR_TAC >> fs [IN_DISJOINT, BV_def]
+ >> RES_TAC
+ >> `Y <> x` by PROVE_TAC []
+ >> fs [CCS_Subst_def]
+ >> Q.ABBREV_TAC `e = \t. CCS_Subst E t x`
+ >> Know `WG (\t. rec Y (e t))` >- (Q.UNABBREV_TAC `e` >> fs [])
+ >> Q.PAT_X_ASSUM `WG (\t. P)` K_TAC (* clean up *)
+ >> DISCH_TAC
+ >> IMP_RES_TAC WG8_IMP_CONST
+ >> Q.UNABBREV_TAC `e` >> fs [IS_CONST_def]
+ >> POP_ASSUM (STRIP_ASSUME_TAC o (MATCH_MP CCS_Subst_IMP_NO_FV))
+QED
+
+(* This lemma is not used on purpose: `weakly_guarded Xs E` doesn't hold
+   if we didn't have `DISJOINT (BV E) (set Xs)` in weakly_guarded_def.
+ *)
+Theorem weakly_guarded_rec' :
+    !Xs Y E. weakly_guarded Xs (rec Y E) ==>
+            ~MEM Y Xs /\ DISJOINT (FV E) (set Xs) /\ weakly_guarded Xs E
 Proof
  (* Part I *)
     rpt GEN_TAC >> DISCH_TAC >> STRONG_CONJ_TAC
@@ -2031,7 +2058,7 @@ Proof
      Q.EXISTS_TAC `CCS_SUBST (fromList Xs Qs) G` >> art [STRONG_EQUIV_REFL] \\
      Q.EXISTS_TAC `CCS_SUBST (fromList Xs Ps) G` >> art [STRONG_EQUIV_REFL] \\
      DISJ2_TAC >> Q.EXISTS_TAC `G` >> rw [])
-(* Case 3: E = G + G' (not hard) *)
+ (* Case 3: E = G + G' (not hard) *)
  >- (DISCH_THEN (STRIP_ASSUME_TAC o (REWRITE_RULE [context_sum_rewrite])) \\
      DISCH_THEN (STRIP_ASSUME_TAC o (REWRITE_RULE [UNION_SUBSET, FV_def])) \\
      DISCH_THEN (STRIP_ASSUME_TAC o
@@ -2952,20 +2979,20 @@ Proof
      Know `CCS_SUBST (fromList Xs Qs) P' = P'`
      >- (irule CCS_SUBST_elim >> art []) >> Rewr' \\
      Know `CCS_SUBST (fromList Xs Ps) E = E`
-     >- (irule CCS_SUBST_elim >> fs [weakly_guarded_def]) \\
+     >- (irule CCS_SUBST_elim >> fs [weakly_guarded_def, BV_def]) \\
      DISCH_THEN ((FULL_SIMP_TAC bool_ss) o wrap) \\
      Know `CCS_SUBST (fromList Xs Qs) E = E`
-     >- (irule CCS_SUBST_elim >> fs [weakly_guarded_def]) \\
+     >- (irule CCS_SUBST_elim >> fs [weakly_guarded_def, BV_def]) \\
      DISCH_THEN ((FULL_SIMP_TAC bool_ss) o wrap))
  (* cleanups and renames before the final battle *)
  >> rename1 `~MEM Y Xs`
- >> Q.PAT_X_ASSUM `!Ps u P'. LENGTH Ps = LENGTH Xs /\ _ ==> _` K_TAC
+ >> Q.PAT_X_ASSUM `weakly_guarded Xs E ==> _` K_TAC
  (* hard left goal *)
  >> Q.ABBREV_TAC `P = CCS_SUBST (fromList Xs Ps) E`
  >> IMP_RES_TAC TRANS_FV
  >> IMP_RES_TAC TRANS_BV
  >> FULL_SIMP_TAC bool_ss [FV_def, BV_def]
- >> `DISJOINT (BV E) (set Xs)` by PROVE_TAC [weakly_guarded_def]
+ >> `DISJOINT (BV E) (set Xs)` by fs [weakly_guarded_def, BV_def]
  (* applying CCS_SUBST_[FV|BV]_SUBSET *)
  >> Know `BV P SUBSET (BV E) UNION (BIGUNION (IMAGE BV (set Ps)))`
  >- (Q.UNABBREV_TAC `P` \\
@@ -2975,9 +3002,9 @@ Proof
      MATCH_MP_TAC FV_SUBSET_BIGUNION >> art []) >> DISCH_TAC
  >> FULL_SIMP_TAC bool_ss [ALL_PROC_def, EVERY_MEM, IS_PROC_def]
  (* more cleanups before the final magic *)
- >> NTAC 2 (Q.PAT_X_ASSUM `weakly_guarded _ _` K_TAC) (* used *)
- >> Q.PAT_X_ASSUM `TRANS (rec Y P) u P'`       K_TAC  (* useless *)
- >> Q.PAT_X_ASSUM `LENGTH Ps = LENGTH Xs`      K_TAC  (* useless *)
+ >> Q.PAT_X_ASSUM `weakly_guarded _ _`    K_TAC (* used *)
+ >> Q.PAT_X_ASSUM `TRANS (rec Y P) u P'`  K_TAC (* useless *)
+ >> Q.PAT_X_ASSUM `LENGTH Ps = LENGTH Xs` K_TAC (* useless *)
  >> CONJ_TAC (* DISJOINT (FV P') (set Xs) *)
  >- (Know `BIGUNION (IMAGE FV (set Ps)) = EMPTY`
      >- rw [NOT_IN_EMPTY, IN_BIGUNION_IMAGE, IMAGE_EQ_SING] \\
