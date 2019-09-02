@@ -1567,7 +1567,7 @@ QED
 val weakly_guarded_rules = save_thm
   ("weakly_guarded_rules",
     LIST_CONJ [weakly_guarded_nil,
-               weakly_guarded_var,
+               weakly_guarded_var_rule,
                weakly_guarded_prefix_rule,
                weakly_guarded_sum_rule,
                weakly_guarded_par_rule,
@@ -1578,7 +1578,8 @@ val weakly_guarded_rules = save_thm
 (* a collection of all backward rules of `weakly_guarded` *)
 val weakly_guarded_backward_rules = save_thm
   ("weakly_guarded_backward_rules",
-    LIST_CONJ [weakly_guarded_prefix_rule,
+    LIST_CONJ [weakly_guarded_var,
+               weakly_guarded_prefix,
                weakly_guarded_sum,
                weakly_guarded_par,
                weakly_guarded_restr,
@@ -3462,7 +3463,6 @@ Proof
        (* goal 2 (of 2) *)
       `OBS_contracts Q (CCS_SUBST (fromList Xs Qs) E)` by METIS_TAC [EL_MAP] \\
        IMP_RES_TAC OBS_contracts_TRANS_LEFT \\
-
        MP_TAC (Q.SPECL [`Xs`, `E`] strong_unique_solution_lemma) \\
       `MEM E Es` by PROVE_TAC [MEM_EL] \\
       `FV E SUBSET (set Xs)` by PROVE_TAC [] \\
@@ -3484,8 +3484,7 @@ QED
 
 (* Bibliography:
 
- [1] Milner, Robin. Communication and concurrency. Vol. 84. New York
-     etc.: Prentice hall, 1989.
+ [1] Milner, Robin. Communication and concurrency. Prentice hall, 1989.
 
  [2] Sangiorgi, Davide. "Equations, contractions, and unique
      solutions." ACM Transactions on Computational Logic (TOCL) 18.1
