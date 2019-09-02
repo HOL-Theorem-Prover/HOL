@@ -163,8 +163,11 @@ fun pp_theory_as_html theory_name = let
             add_string "</center>" >> add_newline
         ) >> add_newline
 
-  fun dl_block(header, ob_pr, obs) =
-      block CONSISTENT 0 (
+  fun dl_block(header, ob_pr, obs0 : (string * 'a) list) =
+      let
+        val obs = Listsort.sort (inv_img_cmp #1 String.compare) obs0
+      in
+        block CONSISTENT 0 (
           title header >>
           add_newline >>
           add_string"<DL>" >> add_newline >>
@@ -174,11 +177,13 @@ fun pp_theory_as_html theory_name = let
                    add_string"<DT>" >> strong x >> add_newline >>
                    add_string"<DD>" >> add_newline >>
                    ob_pr ob
-                ))
+                )
+            )
             add_newline obs >>
           add_newline >>
           add_string"</DL>"
-      ) >> add_newline >> add_newline
+        ) >> add_newline >> add_newline
+      end
 
   fun pr_thm (heading, ths) =
       dl_block(heading,
