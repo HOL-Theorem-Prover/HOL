@@ -251,16 +251,17 @@ val EXPANSION_IMP_WEAK_BISIM = store_thm (
  * it means "P is at least as fast as Q", or more generally "Q uses at least as much
  * resources as P".
  *)
-val (expands_rules, expands_coind, expands_cases) = Hol_coreln `
-    (!(E :('a, 'b) CCS) (E' :('a, 'b) CCS).
+CoInductive expands :
+    !(E :('a, 'b) CCS) (E' :('a, 'b) CCS).
        (!l.
          (!E1. TRANS E  (label l) E1 ==>
-                ?E2. TRANS E' (label l) E2 /\ $expands E1 E2) /\
+               ?E2. TRANS E' (label l) E2 /\ $expands E1 E2) /\
          (!E2. TRANS E' (label l) E2 ==>
-                ?E1. WEAK_TRANS E (label l) E1 /\ $expands E1 E2)) /\
+               ?E1. WEAK_TRANS E (label l) E1 /\ $expands E1 E2)) /\
        (!E1. TRANS E  tau E1 ==> $expands E1 E' \/ ?E2. TRANS E' tau E2 /\ $expands E1 E2) /\
        (!E2. TRANS E' tau E2 ==> ?E1. WEAK_TRANS E tau E1 /\ $expands E1 E2)
-      ==> $expands E E')`;
+      ==> $expands E E'
+End
 
 val _ = set_fixity "expands" (Infixl 500);
 val _ = Unicode.unicode_version { u = UTF8.chr 0x2AB0 ^ UTF8.chr 0x1D49, tmnm = "expands" };
@@ -664,7 +665,7 @@ val expands_PRESD_BY_PAR = store_thm (
         IMP_RES_TAC (MATCH_MP expands_TRANS_label' (ASSUME ``F1 expands F1'``)) \\
         IMP_RES_TAC (MATCH_MP expands_TRANS_label' (ASSUME ``F2 expands F2'``)) \\
         EXISTS_TAC ``par E1''' E1''''`` \\
-        Rev CONJ_TAC
+        Reverse CONJ_TAC
         >- ( take [`E1'''`, `E1''`, `E1''''`, `E2'''`] >> ASM_REWRITE_TAC [] ) \\
         ONCE_ASM_REWRITE_TAC [] \\
         REWRITE_TAC [WEAK_TRANS] \\
@@ -723,7 +724,7 @@ val expands_SUBST_RESTR = store_thm (
       (* goal 3 (of 4) *)
       ASSUME_TAC (REWRITE_RULE [ASSUME ``E'' = restr L' E1``]
                                (ASSUME ``TRANS E'' tau E1'``)) \\
-      Rev (IMP_RES_TAC TRANS_RESTR) >- IMP_RES_TAC Action_distinct \\
+      Reverse (IMP_RES_TAC TRANS_RESTR) >- IMP_RES_TAC Action_distinct \\
       IMP_RES_TAC (MATCH_MP expands_TRANS_tau (ASSUME ``E1 expands E2``))
       >- ( DISJ1_TAC >> ASM_REWRITE_TAC [] \\
            take [`E''''`, `E2`, `L'`] >> ASM_REWRITE_TAC [] ) \\
@@ -735,10 +736,10 @@ val expands_SUBST_RESTR = store_thm (
       (* goal 4 (of 4) *)
       ASSUME_TAC (REWRITE_RULE [ASSUME ``E''' = restr L' E2``]
                                (ASSUME ``TRANS E''' tau E2'``)) \\
-      Rev (IMP_RES_TAC TRANS_RESTR) >- IMP_RES_TAC Action_distinct \\
+      Reverse (IMP_RES_TAC TRANS_RESTR) >- IMP_RES_TAC Action_distinct \\
       IMP_RES_TAC (MATCH_MP expands_TRANS_tau' (ASSUME ``E1 expands E2``)) \\
       Q.EXISTS_TAC `restr L' E1'` \\
-      Rev CONJ_TAC
+      Reverse CONJ_TAC
       >- ( take [`E1'`, `E''''`, `L'`] >> ASM_REWRITE_TAC [] ) \\
       ONCE_ASM_REWRITE_TAC [] \\
       REWRITE_TAC [WEAK_TRANS] \\
@@ -769,7 +770,7 @@ val expands_SUBST_RELAB = store_thm (
                                (ASSUME ``TRANS E1 u' E''''``)) \\
       IMP_RES_TAC (MATCH_MP expands_TRANS_label (ASSUME ``E1 expands E2``)) \\
       EXISTS_TAC ``relab E2' rf'`` \\
-      Rev CONJ_TAC
+      Reverse CONJ_TAC
       >- ( take [`E''''`, `E2'`, `rf'`] >> ASM_REWRITE_TAC [] ) \\
       ASM_REWRITE_TAC [] \\
       qpat_x_assum `relabel rf' u' = label l` (REWRITE_TAC o wrap o SYM) \\
@@ -784,7 +785,7 @@ val expands_SUBST_RELAB = store_thm (
                                (ASSUME ``TRANS E2 u' E''''``)) \\
       IMP_RES_TAC (MATCH_MP expands_TRANS_label' (ASSUME ``E1 expands E2``)) \\
       EXISTS_TAC ``relab E1' rf'`` \\
-      Rev CONJ_TAC
+      Reverse CONJ_TAC
       >- ( take [`E1'`, `E''''`, `rf'`] >> ASM_REWRITE_TAC [] ) \\
       ASM_REWRITE_TAC [] \\
       IMP_RES_TAC WEAK_RELAB_rf >> PROVE_TAC [],
@@ -800,7 +801,7 @@ val expands_SUBST_RELAB = store_thm (
       >- ( DISJ1_TAC >> ASM_REWRITE_TAC [] \\
            take [`E''''`, `E2`, `rf'`] >> ASM_REWRITE_TAC [] ) \\
       DISJ2_TAC >> EXISTS_TAC ``relab E2' rf'`` \\
-      Rev CONJ_TAC
+      Reverse CONJ_TAC
       >- ( take [`E''''`, `E2'`, `rf'`] >> ASM_REWRITE_TAC [] ) \\
       ASM_REWRITE_TAC [] \\
       qpat_x_assum `relabel rf' u' = tau` (REWRITE_TAC o wrap o SYM) \\
@@ -815,7 +816,7 @@ val expands_SUBST_RELAB = store_thm (
                                (ASSUME ``TRANS E2 u' E''''``)) \\
       IMP_RES_TAC (MATCH_MP expands_TRANS_tau' (ASSUME ``E1 expands E2``)) \\
       EXISTS_TAC ``relab E1' rf'`` \\
-      Rev CONJ_TAC
+      Reverse CONJ_TAC
       >- ( take [`E1'`, `E''''`, `rf'`] >> ASM_REWRITE_TAC [] ) \\
       ASM_REWRITE_TAC [] \\
       qpat_x_assum `relabel rf' u' = tau` (REWRITE_TAC o wrap o SYM) \\
@@ -847,8 +848,8 @@ val expands_SUBST_GCONTEXT = store_thm (
       MATCH_MP_TAC expands_SUBST_RELAB >> ASM_REWRITE_TAC [] ]);
 
 val expands_precongruence = store_thm (
-   "expands_precongruence", ``precongruence1 $expands``,
-    PROVE_TAC [precongruence1_def, expands_PreOrder, expands_SUBST_GCONTEXT]);
+   "expands_precongruence", ``precongruence' $expands``,
+    PROVE_TAC [precongruence'_def, expands_PreOrder, expands_SUBST_GCONTEXT]);
 
 (******************************************************************************)
 (*                                                                            *)
@@ -877,7 +878,7 @@ val expands_AND_TRACE_tau_lemma = Q.prove (
       take [`tau :: xs'`, `E2'`] >> ASM_REWRITE_TAC [] \\
       CONJ_TAC
       >- ( MATCH_MP_TAC TRACE2 >> Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [] ) \\
-      Rev CONJ_TAC
+      Reverse CONJ_TAC
       >- ( POP_ASSUM MP_TAC >> KILL_TAC \\
            REWRITE_TAC [NO_LABEL_def, MEM, Action_distinct_label] ) \\
       REWRITE_TAC [LENGTH] \\

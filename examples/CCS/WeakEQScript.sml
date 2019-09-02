@@ -50,45 +50,45 @@ local
     val trans = (REWRITE_RULE [GSYM EPS_def]) o BETA_RULE o (ISPEC EPS_defn);
 in
 
-(* |- ∀x y z. EPS x y ∧ EPS y z ⇒ EPS x z
+(* !x y z. EPS x y /\ EPS y z ==> EPS x z
  *)
 val EPS_TRANS = save_thm ((* NEW *)
    "EPS_TRANS", trans (REWRITE_RULE [transitive_def] RTC_TRANSITIVE));
 
-(* |- ∀P.
-     (∀x. P x x) ∧ (∀x y z. x --τ-> y ∧ P y z ⇒ P x z) ⇒
-     ∀x y. EPS x y ⇒ P x y
+(* !P.
+     (!x. P x x) /\ (!x y z. x --'t-> y /\ P y z ==> P x z) ==>
+     !x y. EPS x y ==> P x y
  *)
 val EPS_ind = save_thm ((* NEW *)
    "EPS_ind", trans RTC_INDUCT);
 
-(* |- ∀P.
-     (∀x. P x x) ∧ (∀x y z. x --τ-> y ∧ EPS y z ∧ P y z ⇒ P x z) ⇒
-     ∀x y. EPS x y ⇒ P x y
+(* !P.
+     (!x. P x x) /\ (!x y z. x --'t-> y /\ EPS y z /\ P y z ==> P x z) ==>
+     !x y. EPS x y ==> P x y
  *)
 val EPS_strongind = save_thm ((* NEW *)
    "EPS_strongind", trans RTC_STRONG_INDUCT);
 
-(* |- ∀P.
-     (∀x. P x x) ∧ (∀x y z. P x y ∧ y --τ-> z ⇒ P x z) ⇒
-     ∀x y. EPS x y ⇒ P x y
+(* !P.
+     (!x. P x x) /\ (!x y z. P x y /\ y --'t-> z ==> P x z) ==>
+     !x y. EPS x y ==> P x y
  *)
 val EPS_ind_right = save_thm ((* NEW *)
    "EPS_ind_right", trans RTC_INDUCT_RIGHT1);
 
-(* |- ∀P.
-     (∀x. P x x) ∧ (∀x y z. P x y ∧ EPS x y ∧ y --τ-> z ⇒ P x z) ⇒
-     ∀x y. EPS x y ⇒ P x y
+(* !P.
+     (!x. P x x) /\ (!x y z. P x y /\ EPS x y /\ y --'t-> z ==> P x z) ==>
+     !x y. EPS x y ==> P x y
  *)
 val EPS_strongind_right = save_thm ((* NEW *)
    "EPS_strongind_right", trans RTC_STRONG_INDUCT_RIGHT1);
 
-(* ∀x y. EPS x y ⇔ (x = y) ∨ ∃u. x --τ-> u ∧ EPS u y
+(* !x y. EPS x y <=> (x = y) \/ ?u. x --'t-> u /\ EPS u y
  *)
 val EPS_cases1 = save_thm ((* NEW *)
    "EPS_cases1", trans RTC_CASES1);
 
-(* ∀x y. EPS x y ⇔ (x = y) ∨ ∃u. EPS x u ∧ u --τ-> y
+(* !x y. EPS x y <=> (x = y) \/ ?u. EPS x u /\ u --'t-> y
  *)
 val EPS_cases2 = save_thm ((* NEW *)
    "EPS_cases2", trans RTC_CASES2);
@@ -150,7 +150,7 @@ val _ =
         block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
 
 val _ = TeX_notation { hol = "==", TeX = ("\\HOLTokenWeakTransBegin", 1) };
-val _ = TeX_notation { hol = "=>", TeX = ("\\HOLTokenWeakTransEnd", 1) };
+(* val _ = TeX_notation { hol = "=>", TeX = ("\\HOLTokenWeakTransEnd", 1) }; *)
 
 Theorem WEAK_TRANS_WTS :
     WEAK_TRANS = WTS TRANS tau
@@ -1280,11 +1280,11 @@ val WEAK_EQUIV_PRESD_BY_PAR = store_thm (
             ASM_REWRITE_TAC [] ] ] ] ]);
 
 (* Observation equivalence is substitutive under parallel operator on the right:
-   |- ∀E E'. WEAK_EQUIV E E' ⇒ ∀E''. WEAK_EQUIV (E || E'') (E' || E'')
+   !E E'. WEAK_EQUIV E E' ==> !E''. WEAK_EQUIV (E || E'') (E' || E'')
  *)
 val WEAK_EQUIV_SUBST_PAR_R = save_thm (
    "WEAK_EQUIV_SUBST_PAR_R",
-    Q_GENL [`E`, `E'`]
+    Q.GENL [`E`, `E'`]
       (DISCH ``WEAK_EQUIV E E'``
         (Q.GEN `E''`
            (MATCH_MP WEAK_EQUIV_PRESD_BY_PAR
@@ -1292,11 +1292,11 @@ val WEAK_EQUIV_SUBST_PAR_R = save_thm (
                            (Q.SPEC `E''` WEAK_EQUIV_REFL))))));
 
 (* Observation equivalence is substitutive under parallel operator on the left:k
-   |- ∀E E'. WEAK_EQUIV E E' ⇒ ∀E''. WEAK_EQUIV (E'' || E) (E'' || E')
+   !E E'. WEAK_EQUIV E E' ==> !E''. WEAK_EQUIV (E'' || E) (E'' || E')
  *)
 val WEAK_EQUIV_SUBST_PAR_L = save_thm (
    "WEAK_EQUIV_SUBST_PAR_L",
-    Q_GENL [`E`, `E'`]
+    Q.GENL [`E`, `E'`]
       (DISCH ``WEAK_EQUIV E E'``
         (Q.GEN `E''`
            (MATCH_MP WEAK_EQUIV_PRESD_BY_PAR
@@ -1814,5 +1814,3 @@ val STRONG_EQUIV_WEAK_TRANS' = store_thm ((* NEW *)
 
 val _ = export_theory ();
 val _ = html_theory "WeakEQ";
-
-(* last updated: Jun 18, 2017 *)

@@ -125,69 +125,6 @@ val WEAK_TRANS_IN_NODES = store_thm ((* NEW *)
 
 (******************************************************************************)
 (*                                                                            *)
-(*            N-steps transition of CCS, based on arithmetic.NRC              *)
-(*                                                                            *)
-(******************************************************************************)
-
-val STEP_defn = ``\E E'. ?u. TRANS E u E'``;
-val STEP_def = Define `STEP P n Q = NRC ^STEP_defn n P Q`;
-
-local
-    val trans = (REWRITE_RULE [GSYM STEP_def]) o BETA_RULE o (ISPEC STEP_defn);
-in
-(* |- ∀x y. x --0--> y ⇔ (x = y) *)
-val STEP0 = save_thm ("STEP0", trans NRC_0);
-
-(* |- x --1--> y ⇔ ∃u. x --u--> y *)
-val STEP1 = save_thm ("STEP1", trans (Q.GEN `R` NRC_1));
-
-(* |- ∀n x y. x --SUC n--> y ⇔ ∃z. (∃u. x --u--> z) ∧ z --n--> y *)
-val STEP_SUC = save_thm (
-   "STEP_SUC", trans (CONJUNCT2 NRC));
-
-(* |- ∀n x y. x --SUC n--> y ⇔ ∃z. x --n--> z ∧ ∃u. z --u--> y *)
-val STEP_SUC_LEFT = save_thm (
-   "STEP_SUC_LEFT", trans (Q_GENL [`R`, `n`, `x`, `y`] NRC_SUC_RECURSE_LEFT));
-
-(* |- ∀m n x z. x --m + n--> z ⇒ ∃y. x --m--> y ∧ y --n--> z *)
-val STEP_ADD_E = save_thm (
-   "STEP_ADD_E", trans (Q.GEN `R` NRC_ADD_E));
-
-(* |- ∀m n x z. x --m + n--> z ⇔ ∃y. x --m--> y ∧ y --n--> z *)
-val STEP_ADD_EQN = save_thm (
-   "STEP_ADD_EQN", trans (Q_GENL [`R`, `m`, `n`, `x`, `z`] NRC_ADD_EQN));
-
-(* |- ∀m n x y z. x --m--> y ∧ y --n--> z ⇒ x --m + n--> z *)
-val STEP_ADD_I = save_thm (
-   "STEP_ADD_I", trans (Q.GEN `R` NRC_ADD_I));
-end;
-
-val EPS_AND_STEP = store_thm (
-   "EPS_AND_STEP", ``!E E'. EPS E E' ==> ?n. STEP E n E'``,
-    HO_MATCH_MP_TAC EPS_ind
- >> rpt STRIP_TAC
- >| [ (* goal 1 (of 2) *)
-      Q.EXISTS_TAC `0` >> PROVE_TAC [STEP0],
-      (* goal 2 (of 2) *)
-      Q.EXISTS_TAC `SUC n` \\
-      ONCE_REWRITE_TAC [STEP_SUC] \\
-      Q.EXISTS_TAC `E'` >> ASM_REWRITE_TAC [] \\
-      Q.EXISTS_TAC `tau` >> ASM_REWRITE_TAC [] ]);
-
-val WEAK_TRANS_AND_STEP = store_thm (
-   "WEAK_TRANS_AND_STEP", ``!E u E'. WEAK_TRANS E u E' ==> ?n. STEP E n E'``,
-    REWRITE_TAC [WEAK_TRANS]
- >> rpt STRIP_TAC
- >> IMP_RES_TAC EPS_AND_STEP
- >> Q.EXISTS_TAC `n' + 1 + n`
- >> REWRITE_TAC [STEP_ADD_EQN]
- >> Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC []
- >> Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC []
- >> ONCE_REWRITE_TAC [STEP1]
- >> Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC []);
-
-(******************************************************************************)
-(*                                                                            *)
 (*               Reflexive Transitive Closure with a List (LRTC)              *)
 (*                                                                            *)
 (******************************************************************************)
@@ -296,7 +233,7 @@ val LRTC_ONE = store_thm (
    "LRTC_ONE",
   ``!R x t y. LRTC R x [t] y = R x t y``,
     rpt GEN_TAC
- >> Rev EQ_TAC
+ >> Reverse EQ_TAC
  >- ( DISCH_TAC >> MATCH_MP_TAC LRTC_SINGLE >> ASM_REWRITE_TAC [] )
  >> ONCE_REWRITE_TAC [LRTC_CASES1]
  >> SIMP_TAC list_ss []
@@ -362,7 +299,7 @@ val LRTC_APPEND_CASES = store_thm (
    "LRTC_APPEND_CASES",
   ``!R l1 l2 (x :'a) y. LRTC R x (l1 ++ l2) y = ?u. LRTC R x l1 u /\ LRTC R u l2 y``,
     SIMP_TAC bool_ss [EQ_IMP_THM, FORALL_AND_THM]
- >> Rev CONJ_TAC
+ >> Reverse CONJ_TAC
  >- ( rpt STRIP_TAC >> Q.ABBREV_TAC `l = l1 ++ l2` \\
       ONCE_REWRITE_TAC [LRTC_CASES_LRTC_TWICE] \\
       take [`u`, `l1`, `l2`] >> Q.UNABBREV_TAC `l` >> ASM_REWRITE_TAC [] )
@@ -394,8 +331,8 @@ val _ = TeX_notation { hol = "epsilon",
 
 val TRACE_def = Define `TRACE = LRTC TRANS`;
 
-val _ = type_abbrev ("trace",
-                    ``:('a, 'b) CCS -> 'b Action list -> ('a, 'b) CCS -> bool``);
+val _ = type_abbrev_pp ("trace",
+      ``:('a, 'b) CCS -> 'b Action list -> ('a, 'b) CCS -> bool``);
 
 local
     val trans = (REWRITE_RULE [SYM TRACE_def]) o (ISPEC ``TRANS``);

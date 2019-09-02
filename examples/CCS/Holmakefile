@@ -1,6 +1,4 @@
-# INCLUDES = $(HOLDIR)/examples/set-theory/hol_sets
 OPTIONS = QUIT_ON_FAILURE
-# CLINE_OPTIONS = -j1
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
@@ -10,7 +8,7 @@ EXTRA_CLEANS = heap munge.exe selftest.exe \
 
 ifdef POLY
 HOLHEAP = heap
-OBJNAMES = finite_mapTheory llistTheory
+OBJNAMES = finite_mapTheory bisimulationTheory
 OBJS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
 
 all: $(HOLHEAP)
@@ -29,7 +27,8 @@ MUNGE_DEPS = CCSTheory StrongEQTheory StrongLawsTheory \
 	     BisimulationUptoTheory \
 	     CongruenceTheory CoarsestCongrTheory \
 	     TraceTheory ExpansionTheory ContractionTheory \
-	     UniqueSolutionsTheory ExampleTheory
+	     UniqueSolutionsTheory MultivariateTheory \
+             ExampleTheory
 
 munge.exe: $(patsubst %,%.uo,$(MUNGE_DEPS))
 	$(HOLDIR)/bin/mkmunge.exe $(MUNGE_DEPS)
