@@ -304,11 +304,11 @@ val OBS_CONGR_PRESD_BY_SUM = store_thm (
         MATCH_MP_TAC WEAK_SUM2 >> art [] ] ]);
 
 (* Observation congruence is substitutive under binary summation on the left:
-   |- !E E'. OBS_CONGR E E' ==> !E''. OBS_CONGR (sum E'' E) (sum E'' E')
+   !E E'. OBS_CONGR E E' ==> !E''. OBS_CONGR (sum E'' E) (sum E'' E')
  *)
 val OBS_CONGR_SUBST_SUM_L = save_thm (
    "OBS_CONGR_SUBST_SUM_L",
-    Q_GENL [`E`, `E'`]
+    Q.GENL [`E`, `E'`]
        (DISCH ``OBS_CONGR E E'``
         (Q.GEN `E''`
          (MATCH_MP OBS_CONGR_PRESD_BY_SUM
@@ -316,11 +316,11 @@ val OBS_CONGR_SUBST_SUM_L = save_thm (
                          (ASSUME ``OBS_CONGR E E'``))))));
 
 (* Observation congruence is substitutive under binary summation on the right:
-   |- !E E'. OBS_CONGR E E' ==> !E''. OBS_CONGR (sum E E'') (sum E' E'')
+   !E E'. OBS_CONGR E E' ==> !E''. OBS_CONGR (sum E E'') (sum E' E'')
  *)
 val OBS_CONGR_SUBST_SUM_R = save_thm (
    "OBS_CONGR_SUBST_SUM_R",
-    Q_GENL [`E`, `E'`]
+    Q.GENL [`E`, `E'`]
        (DISCH ``OBS_CONGR E E'``
         (Q.GEN `E''`
          (MATCH_MP OBS_CONGR_PRESD_BY_SUM
@@ -460,11 +460,11 @@ val OBS_CONGR_PRESD_BY_PAR = store_thm (
         EXISTS_TAC ``l: 'b Label`` >> ASM_REWRITE_TAC [] ] ]);
 
 (* Observation congruence is substitutive under parallel operator on the left:
-   |- !E E'. OBS_CONGR E E' ==> (!E''. OBS_CONGR (par E'' E) (par E'' E'))
+   !E E'. OBS_CONGR E E' ==> (!E''. OBS_CONGR (par E'' E) (par E'' E'))
  *)
 val OBS_CONGR_SUBST_PAR_L = save_thm (
    "OBS_CONGR_SUBST_PAR_L",
-    Q_GENL [`E`, `E'`]
+    Q.GENL [`E`, `E'`]
        (DISCH ``OBS_CONGR E E'``
         (Q.GEN `E''`
          (MATCH_MP OBS_CONGR_PRESD_BY_PAR
@@ -472,11 +472,11 @@ val OBS_CONGR_SUBST_PAR_L = save_thm (
                          (ASSUME ``OBS_CONGR E E'``))))));
 
 (* Observation congruence is substitutive under parallel operator on the right:
-   |- !E E'. OBS_CONGR E E' ==> (!E''. OBS_CONGR (par E E'') (par E' E''))
+   !E E'. OBS_CONGR E E' ==> (!E''. OBS_CONGR (par E E'') (par E' E''))
  *)
 val OBS_CONGR_SUBST_PAR_R = save_thm (
    "OBS_CONGR_SUBST_PAR_R",
-    Q_GENL [`E`, `E'`]
+    Q.GENL [`E`, `E'`]
        (DISCH ``OBS_CONGR E E'``
         (Q.GEN `E''`
          (MATCH_MP OBS_CONGR_PRESD_BY_PAR

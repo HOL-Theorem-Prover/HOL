@@ -1,6 +1,6 @@
 (* ========================================================================== *)
 (* FILE          : BisimulationUptoScript.sml                                 *)
-(* DESCRIPTION   : Bisimulation up to Strong, weak (2 versions) and OBS_CONGR *)
+(* DESCRIPTION   : Bisimulation up to Strong, Weak (2 versions) and OBS_CONGR *)
 (*                                                                            *)
 (* THESIS        : A Formalization of Unique Solutions of Equations in        *)
 (*                 Process Algebra                                            *)
@@ -16,7 +16,6 @@ open WeakEQTheory WeakEQLib WeakLawsTheory;
 open ObsCongrTheory ObsCongrLib ObsCongrLawsTheory;
 
 val _ = new_theory "BisimulationUpto";
-val _ = temp_loose_equality ();
 
 (******************************************************************************)
 (*                                                                            *)
@@ -175,6 +174,13 @@ val STRONG_BISIM_UPTO_THM = store_thm (
  >> Q.EXISTS_TAC `y` >> art []
  >> Q.EXISTS_TAC `x` >> art []);
 
+val STRONG_EQUIV_BY_BISIM_UPTO = store_thm (
+   "STRONG_EQUIV_BY_BISIM_UPTO",
+  ``!Bsm P Q. STRONG_BISIM_UPTO Bsm /\ Bsm P Q ==> STRONG_EQUIV P Q``,
+    rpt STRIP_TAC
+ >> irule (REWRITE_RULE [RSUBSET] STRONG_BISIM_UPTO_THM)
+ >> Q.EXISTS_TAC `Bsm` >> art []);
+
 (******************************************************************************)
 (*                                                                            *)
 (*                     2. Bisimulation Upto WEAK_EQUIV                        *)
@@ -186,7 +192,8 @@ val STRONG_BISIM_UPTO_THM = store_thm (
    IMPORTANT: in HOL's big "O", the second argument to composition acts on the "input" first,
          so we need to revert the order of (?a O Wbsm O ?b) when ?a and ?b are different.
  *)
-val WEAK_BISIM_UPTO = new_definition ("WEAK_BISIM_UPTO",
+val WEAK_BISIM_UPTO = new_definition (
+   "WEAK_BISIM_UPTO",
   ``WEAK_BISIM_UPTO (Wbsm: ('a, 'b) simulation) =
     !E E'. Wbsm E E' ==>
         (!l.
@@ -588,6 +595,13 @@ val WEAK_BISIM_UPTO_THM = store_thm (
  >> Q.EXISTS_TAC `y` >> art []
  >> Q.EXISTS_TAC `x` >> art []);
 
+val WEAK_EQUIV_BY_BISIM_UPTO = store_thm (
+   "WEAK_EQUIV_BY_BISIM_UPTO",
+  ``!Bsm P Q. WEAK_BISIM_UPTO Bsm /\ Bsm P Q ==> WEAK_EQUIV P Q``,
+    rpt STRIP_TAC
+ >> irule (REWRITE_RULE [RSUBSET] WEAK_BISIM_UPTO_THM)
+ >> Q.EXISTS_TAC `Bsm` >> art []);
+
 (******************************************************************************)
 (*                                                                            *)
 (*            3. Bisimulation Upto WEAK_EQUIV (double-weak version)           *)
@@ -596,7 +610,8 @@ val WEAK_BISIM_UPTO_THM = store_thm (
 
 (* NOTE: the (original) definition in Milner's 1989 book [1] is wrong, this is the
          corrected Definition 5.8 in the ERRATA (1990) of [1]. *)
-val WEAK_BISIM_UPTO_ALT = new_definition ("WEAK_BISIM_UPTO_ALT",
+val WEAK_BISIM_UPTO_ALT = new_definition (
+   "WEAK_BISIM_UPTO_ALT",
   ``WEAK_BISIM_UPTO_ALT (Wbsm: ('a, 'b) simulation) =
     !E E'. Wbsm E E' ==>
         (!l.
@@ -774,6 +789,13 @@ val WEAK_BISIM_UPTO_ALT_THM = store_thm (
  >> Q.EXISTS_TAC `y` >> art []
  >> Q.EXISTS_TAC `x` >> art []);
 
+val WEAK_EQUIV_BY_BISIM_UPTO_ALT = store_thm (
+   "WEAK_EQUIV_BY_BISIM_UPTO_ALT",
+  ``!Bsm P Q. WEAK_BISIM_UPTO_ALT Bsm /\ Bsm P Q ==> WEAK_EQUIV P Q``,
+    rpt STRIP_TAC
+ >> irule (REWRITE_RULE [RSUBSET] WEAK_BISIM_UPTO_ALT_THM)
+ >> Q.EXISTS_TAC `Bsm` >> art []);
+
 (******************************************************************************)
 (*                                                                            *)
 (*          4. Bisimulation upto WEAK_EQUIV, contained in OBS_CONGR           *)
@@ -781,7 +803,8 @@ val WEAK_BISIM_UPTO_ALT_THM = store_thm (
 (******************************************************************************)
 
 (* this work is now useless *)
-val OBS_BISIM_UPTO = new_definition ("OBS_BISIM_UPTO",
+val OBS_BISIM_UPTO = new_definition (
+   "OBS_BISIM_UPTO",
   ``OBS_BISIM_UPTO (Obsm: ('a, 'b) simulation) =
     !E E'. Obsm E E' ==>
       !u. (!E1. TRANS E  u E1 ==>
@@ -1164,6 +1187,13 @@ val OBS_BISIM_UPTO_THM = store_thm (
         NTAC 2 (ONCE_REWRITE_TAC [O_DEF]) \\
         Q.EXISTS_TAC `E1'` >> art [] \\
         Q.EXISTS_TAC `E1''` >> art [] ] ]);
+
+val OBS_CONGR_BY_BISIM_UPTO = store_thm (
+   "OBS_CONGR_BY_BISIM_UPTO",
+  ``!Obsm P Q. OBS_BISIM_UPTO Obsm /\ Obsm P Q ==> OBS_CONGR P Q``,
+    rpt STRIP_TAC
+ >> irule (REWRITE_RULE [RSUBSET] OBS_BISIM_UPTO_THM)
+ >> Q.EXISTS_TAC `Obsm` >> art []);
 
 (* Bibliography:
  *
