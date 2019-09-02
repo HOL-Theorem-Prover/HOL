@@ -485,7 +485,7 @@ val DISJOINT_SUBSET' = Q.prove (
 
 (* Now consider a (non-trivial) generalization of FV_SUBSET and BV_SUBSET:
 
-   [FV_SUBSET]  Theorem      
+   [FV_SUBSET]  Theorem
       ⊢ !X E E'. FV (CCS_Subst E E' X) SUBSET FV E UNION FV E'
 
    [BV_SUBSET]  Theorem
@@ -539,7 +539,7 @@ Proof
  >- (fs [MEM_EL, fromList_FAPPLY_EL] \\
     `MEM (EL n Ps) Ps` by PROVE_TAC [MEM_EL] >> ASM_SET_TAC [])
  (* 5 subgoals left ... *)
- >> ASM_SET_TAC [] 
+ >> ASM_SET_TAC []
 QED
 
 (* A more precise estimation with `set Xs` *)
@@ -1665,7 +1665,7 @@ QED
 
 Theorem disjoint_imp_weakly_guarded :
     !Xs E. DISJOINT (FV E) (set Xs) /\
-           DISJOINT (BV E) (set Xs) ==> weakly_guarded Xs E 
+           DISJOINT (BV E) (set Xs) ==> weakly_guarded Xs E
 Proof
     RW_TAC std_ss [weakly_guarded_def, BV_def, EVERY_MEM]
  >> MATCH_MP_TAC WG_CONST
@@ -1676,7 +1676,7 @@ QED
 
 Theorem disjoint_imp_context :
     !Xs E. DISJOINT (FV E) (set Xs) /\
-           DISJOINT (BV E) (set Xs) ==> context Xs E 
+           DISJOINT (BV E) (set Xs) ==> context Xs E
 Proof
     rpt STRIP_TAC
  >> MATCH_MP_TAC weakly_guarded_imp_context
@@ -1702,7 +1702,7 @@ End
  *)
 Definition CCS_solution_def :
     CCS_solution Xs Es R Ps <=>
-        ALL_PROC Ps /\ 
+        ALL_PROC Ps /\
         EVERY (\e. DISJOINT (BV e) (set Xs)) Ps /\
         LIST_REL R Ps (MAP (CCS_SUBST (fromList Xs Ps)) Es)
 End
@@ -1774,7 +1774,7 @@ Proof
        CONJ_TAC (* context Xs (E' || E2) *)
        >- (MATCH_MP_TAC context_par_rule >> art [] \\
            MATCH_MP_TAC weakly_guarded_imp_context >> art []) \\
-       CONJ_TAC >- ASM_SET_TAC [FV_def] \\ 
+       CONJ_TAC >- ASM_SET_TAC [FV_def] \\
        ASM_SIMP_TAC std_ss [CCS_SUBST_def, FV_def] \\
        GEN_TAC >> DISCH_TAC >> DISJ1_TAC \\
        Q.EXISTS_TAC `CCS_SUBST (fromList Xs Qs) E'` >> REWRITE_TAC [] \\
@@ -1793,7 +1793,7 @@ Proof
        CONJ_TAC (* context Xs (E1 || E'') *)
        >- (MATCH_MP_TAC context_par_rule >> art [] \\
            MATCH_MP_TAC weakly_guarded_imp_context >> art []) \\
-       CONJ_TAC >- ASM_SET_TAC [FV_def] \\ 
+       CONJ_TAC >- ASM_SET_TAC [FV_def] \\
        ASM_SIMP_TAC std_ss [CCS_SUBST_def, FV_def] \\
        GEN_TAC >> DISCH_TAC >> DISJ2_TAC >> DISJ1_TAC \\
        Q.EXISTS_TAC `CCS_SUBST (fromList Xs Qs) E''` >> REWRITE_TAC [] \\
@@ -1803,7 +1803,7 @@ Proof
          `!Ps. _ ==> !u P'. TRANS (CCS_SUBST (fromList Xs Ps) E1) u P' ==> _`
          (MP_TAC o (Q.SPEC `Ps`)) >> RW_TAC std_ss [] \\
        POP_ASSUM (MP_TAC o (Q.SPECL [`label l`, `E1'`])) \\
-       RW_TAC std_ss [] \\       
+       RW_TAC std_ss [] \\
        Q.PAT_X_ASSUM
          `!Ps. _ ==> !u P'. TRANS (CCS_SUBST (fromList Xs Ps) E2) u P' ==> _`
          (MP_TAC o (Q.SPEC `Ps`)) >> RW_TAC std_ss [] \\
@@ -1811,7 +1811,7 @@ Proof
        RW_TAC std_ss [] \\
        Q.EXISTS_TAC `E' || E''` \\
        CONJ_TAC >- (MATCH_MP_TAC context_par_rule >> art []) \\
-       CONJ_TAC >- ASM_SET_TAC [FV_def] \\ 
+       CONJ_TAC >- ASM_SET_TAC [FV_def] \\
        ASM_SIMP_TAC std_ss [CCS_SUBST_def, FV_def] \\
        GEN_TAC >> DISCH_TAC >> NTAC 2 DISJ2_TAC \\
        take [`CCS_SUBST (fromList Xs Qs) E'`,
@@ -1904,7 +1904,7 @@ Proof
  >> Q.ABBREV_TAC `P = EL n Ps`
  >> Q.ABBREV_TAC `Q = EL n Qs`
  >> irule (REWRITE_RULE [RSUBSET] STRONG_BISIM_UPTO_THM)
- (* 
+ (*
     `FV G SUBSET (set Xs)` is necessary for the case of `par`;
 
     `IS_PROC x /\ DISJOINT (BV x) (set Xs)` is for the same case: they
@@ -3123,7 +3123,7 @@ Proof
      ASM_SIMP_TAC lset_ss [EL_MAP] \\
      Q.ABBREV_TAC `E = EL i Es` \\
      fs [ALL_PROC_def, EVERY_MEM, IS_PROC_def, weakly_guarded_def] \\
-    `MEM E Es` by PROVE_TAC [MEM_EL] \\         
+    `MEM E Es` by PROVE_TAC [MEM_EL] \\
      Suff `(BV (CCS_SUBST (fromList Xs Ps) E)) SUBSET
            (BV E) UNION (BIGUNION (IMAGE BV (set Ps)))` >- ASM_SET_TAC [] \\
      MATCH_MP_TAC BV_SUBSET_BIGUNION >> METIS_TAC []) >> DISCH_TAC
