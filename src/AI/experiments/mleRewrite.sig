@@ -4,7 +4,7 @@ sig
   include Abbrev
 
   type pos = int list
-  type board = (term * pos)
+  type board = ((term * pos) * int)
   datatype move = Arg of int | Paramod of (int * bool)
 
   val mk_startsit : term -> board

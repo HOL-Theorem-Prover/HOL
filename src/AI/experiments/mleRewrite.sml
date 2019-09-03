@@ -20,12 +20,16 @@ val ERR = mk_HOL_ERR "mleRewrite"
    ------------------------------------------------------------------------- *)
 
 type pos = int list
-type board = (term * pos)
+type board = ((term * pos) * int)
 
-fun mk_startsit tm = (tm,[])
-fun dest_startsit (tm,_) = tm
+fun mk_startsit tm = ((tm,[]), 2 * lo_prooflength 200 tm + 2)
+fun dest_startsit ((tm,_),_) = tm
 
-fun status_of (tm,_) = if is_suc_only tm then Win else Undecided
+(* search and networks have to be aware of the length of the proof *)
+fun status_of ((tm,_),n) = 
+  if is_suc_only tm then Win 
+  else if n <= 0 then Lose
+  else Undecided
 
 (* -------------------------------------------------------------------------
    Neural network units and inputs
@@ -47,7 +51,7 @@ val rewrite_operl =
     mk_fast_set oper_compare operl'
   end
 
-fun nntm_of_sit (tm,pos) = tag_pos (tm,pos)
+fun nntm_of_sit ((tm,pos),_) = tag_pos (tm,pos)
 
 (* -------------------------------------------------------------------------
    Move
@@ -69,11 +73,9 @@ fun move_compare (m1,m2) = case (m1,m2) of
   | (Paramod (i1,b1), Paramod (i2,b2)) =>
     (cpl_compare Int.compare bool_compare) ((i1,b1),(i2,b2))
 
-fun bts b = if b then "t" else "f"
-
 fun string_of_move move = case move of
     Arg n => ("A" ^ its n)
-  | Paramod (i,b) => ("P" ^ its i ^ bts b)
+  | Paramod (i,b) => ("P" ^ its i ^ (if b then "t" else "f"))
 
 fun narg tm = length (snd (strip_comb tm))
 
@@ -87,21 +89,19 @@ fun paramod_pb (i,b) (tm,pos) =
     (valOf tmo,[])
   end
 
-fun available (tm,pos) (move,r:real) = case move of
+fun available ((tm,pos),_) (move,r:real) = case move of
     Arg i => (narg (find_subtm (tm,pos)) >= i + 1)
   | Paramod (i,b) => can (paramod_pb (i,b)) (tm,pos)
 
-fun apply_move move (tm,pos) = case move of
-    Arg n => argn_pb n (tm,pos)
-  | Paramod (i,b) => paramod_pb (i,b) (tm,pos)
+fun apply_move move ((tm,pos),step) = case move of
+    Arg n => (argn_pb n (tm,pos), step - 1)
+  | Paramod (i,b) => (paramod_pb (i,b) (tm,pos), step - 1)
 
-fun filter_sit (tm,pos) = List.filter (available (tm,pos))
+fun filter_sit sit = List.filter (available sit)
 
 (* -------------------------------------------------------------------------
    Target
    ------------------------------------------------------------------------- *)
-
-fun lo_prooflength_target (tm,_) = lo_prooflength 200 tm
 
 fun write_targetl file targetl =
   let val tml = map dest_startsit targetl in
@@ -113,7 +113,7 @@ fun read_targetl file =
     map mk_startsit tml
   end
 
-fun max_bigsteps target = 2 * lo_prooflength_target target + 1
+fun max_bigsteps target = snd target + 1
 
 (* -------------------------------------------------------------------------
    Level
@@ -191,9 +191,8 @@ load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "mlReinforce"; open mlReinforce;
 load "aiLib"; open aiLib;
 
-logfile_glob := "mleRewrite_run40";
-parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
-(!logfile_glob);
+logfile_glob := "mleRewrite_run41";
+parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
 ncore_mcts_glob := 8;
 ncore_train_glob := 4;
 ntarget_compete := 400;
@@ -207,8 +206,8 @@ decay_glob := 0.99;
 level_glob := 1;
 nsim_glob := 1600;
 nepoch_glob := 100;
-ngen_glob := 20
-start_rl_loop (gamespec,extspec);
+ngen_glob := 20;
+val r = start_rl_loop (gamespec,extspec);
 *)
 
 (* -------------------------------------------------------------------------

@@ -40,7 +40,7 @@ type 'a extgamespec =
    ------------------------------------------------------------------------- *)
 
 val logfile_glob = ref "mlReinforce"
-val eval_dir = HOLDIR ^ "/src/AI/machine_learning/eval"
+val eval_dir = HOLDIR ^ "/src/AI/experiments/eval"
 fun log_eval file s =
   let val path = eval_dir ^ "/" ^ file in
     mkDir_err eval_dir;
