@@ -42,9 +42,9 @@ Q.EXISTS_TAC `n` THEN
 `subst m SUBMAP subst n` by METIS_TAC [] THEN
 `FDOM (subst m) PSUBSET FDOM (subst n)`
    by METIS_TAC [SUBMAP_DEF,SUBSET_DEF,PSUBSET_DEF,EQ_FDOM_SUBMAP] THEN
-`CARD (FDOM(subst n) UNION source n) = CARD (FDOM(subst n)) + CARD (source n) /\
- CARD (FDOM(subst m) UNION source m) = CARD (FDOM(subst m)) + CARD (source m) /\
- CARD (FDOM(subst m) UNION source m) = CARD (FDOM(subst n) UNION source n))`
+`CARD (FDOM(subst n) UNION source n) = CARD (FDOM(subst n)) + CARD (source n) ∧
+ CARD (FDOM(subst m) UNION source m) = CARD (FDOM(subst m)) + CARD (source m) ∧
+ CARD (FDOM(subst m) UNION source m) = CARD (FDOM(subst n) UNION source n)`
    by METIS_TAC [CARD_UNION,ADD_0,DISJOINT_DEF,CARD_EMPTY,FDOM_FINITE] THEN
 `CARD (FDOM (subst m)) < CARD (FDOM (subst n))`
    by METIS_TAC [CARD_PSUBSET,FDOM_FINITE]
