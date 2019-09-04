@@ -510,7 +510,7 @@ fun get_charset strm =
                     of SOME i =>
                         if Int.<(i,256) then chr(i)::elim_decimal_chars t
                         else raise ERR "elim_decimal_chars"
-                              "malformed charset element: looking for \\ddd"
+                              "malformed charset element: looking for \\ddd less than 256"
                      | NONE => raise ERR "elim_decimal_chars"
                               "number from \\ddd is too big"
                    )

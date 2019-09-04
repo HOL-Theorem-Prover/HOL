@@ -4,9 +4,8 @@ struct
 open HolKernel boolLib bossLib;
 open pairLib optionLib pred_setLib listLib stringLib wordsLib;
 open listTheory stringTheory arithmeticTheory pred_setTheory
-     sortingTheory mergesortTheory comparisonTheory balanced_mapTheory
-     vec_mapTheory charsetTheory
-     regexpTheory regexp_compilerTheory regexp_parserTheory;
+     sortingTheory mergesortTheory comparisonTheory balanced_mapTheory vec_mapTheory
+     charsetTheory regexpTheory regexp_compilerTheory regexp_parserTheory;
 
 open Regexp_Type regexpSyntax regexpMisc;
 
@@ -36,14 +35,14 @@ val numeral_cmp_thm = Q.prove
   (num_cmp x (NUMERAL y) = num_cmp x y) /\
   (num_cmp 0 n = num_cmp ZERO n) /\
   (num_cmp n 0 = num_cmp n ZERO) /\
-  (num_cmp ZERO ZERO = Equal) ∧
-  (num_cmp ZERO (BIT1 y) = Less) ∧
-  (num_cmp ZERO (BIT2 y) = Less) ∧
-  (num_cmp (BIT1 x) ZERO = Greater) ∧
-  (num_cmp (BIT2 x) ZERO = Greater) ∧
-  (num_cmp (BIT1 x) (BIT1 y) = num_cmp x y) ∧
-  (num_cmp (BIT2 x) (BIT2 y) = num_cmp x y) ∧
-  (num_cmp (BIT1 x) (BIT2 y) = case num_cmp x y of Greater => Greater | _ => Less) ∧
+  (num_cmp ZERO ZERO = Equal) /\
+  (num_cmp ZERO (BIT1 y) = Less) /\
+  (num_cmp ZERO (BIT2 y) = Less) /\
+  (num_cmp (BIT1 x) ZERO = Greater) /\
+  (num_cmp (BIT2 x) ZERO = Greater) /\
+  (num_cmp (BIT1 x) (BIT1 y) = num_cmp x y) /\
+  (num_cmp (BIT2 x) (BIT2 y) = num_cmp x y) /\
+  (num_cmp (BIT1 x) (BIT2 y) = case num_cmp x y of Greater => Greater | _ => Less) /\
   (num_cmp (BIT2 x) (BIT1 y) = case num_cmp x y of Less => Less | _ => Greater)`,
  METIS_TAC [arithmeticTheory.NUMERAL_DEF,comparisonTheory.num_cmp_numOrd,
             totoTheory.numeralOrd,arithmeticTheory.ALT_ZERO]);
@@ -62,12 +61,12 @@ val regexp_compute_thms =
    charset_sing_def, merge_charsets_def,
 
    charset_cmp_def, numeral_cmp_thm, len_cmp_def,
-   regexp_compare_def,regexp_compareW_def,regexp_compare_eq,regexp_leq_def,
+   regexp_compare_def, regexp_leq_def, regexp_compareW_compute,
 
    build_char_set_def, DOT_def, Empty_def, Epsilon_def, catstring_def,
    assoc_cat_def, build_cat_def, build_neg_def, build_star_def,
    flatten_or_def, remove_dups_def, build_or_def,
-   nullable_def, nullableW_def, smart_deriv_thm, (* smart_deriv_def *) normalize_def,
+   nullable_def, nullableW_def, smart_deriv_thm, normalize_def,
    transitions_def, build_table_def, extend_states_def,
    insert_regexp_def, mem_regexp_def, relationTheory.inv_image_def,
 
@@ -78,6 +77,7 @@ val regexp_compute_thms =
    compile_regexp_def, exec_dfa_def, regexp_matcher_def,
 
    mergesort_def, mergesortN_def,sort2_def,sort3_def,merge_def,
+   balanced_mapTheory.null_def,
    balanced_mapTheory.empty_def,
    balanced_mapTheory.member_def,
    balanced_mapTheory.insert_def,
@@ -89,6 +89,26 @@ val regexp_compute_thms =
    balanced_mapTheory.size_def,
    balanced_mapTheory.delta_def,
    balanced_mapTheory.foldrWithKey_def,
+   balanced_mapTheory.deleteFindMin_def,
+   balanced_mapTheory.fromList_def,
+
+   (* union reductions *)
+   balanced_mapTheory.union_def,
+   balanced_mapTheory.hedgeUnion_def,
+   balanced_mapTheory.filterGt_def,
+   balanced_mapTheory.filterGt_help_def,
+   balanced_mapTheory.filterLt_def,
+   balanced_mapTheory.filterLt_help_def,
+   balanced_mapTheory.link_def,
+   balanced_mapTheory.insertMin_def,
+   balanced_mapTheory.insertMax_def,
+   balanced_mapTheory.insertR_def,
+   balanced_mapTheory.trim_def,
+   balanced_mapTheory.trim_help_greater_def,
+   balanced_mapTheory.trim_help_lesser_def,
+   balanced_mapTheory.trim_help_middle_def,
+   balanced_mapTheory.bin_def,
+
    (* adding stuff revealed by computeLib.unmapped *)
    combinTheory.o_DEF, combinTheory.I_THM, combinTheory.C_DEF, combinTheory.FAIL_DEF,
    rich_listTheory.SPLITP_AUX_def, rich_listTheory.SPLITP_compute,rich_listTheory.SEG_compute
@@ -144,6 +164,13 @@ fun compile q =
   regexpEval ``compile_regexp ^(regexp_to_term(Regexp_Type.fromQuote q))``;
 
 val regexp_tm = regexp_to_term(Regexp_Type.fromQuote `a`);
+val regexp_tm = regexp_to_term(Regexp_Type.fromQuote `ab`);
+val regexp_tm = regexp_to_term(Regexp_Type.fromQuote `abc`);
+val regexp_tm = regexp_to_term(Regexp_Type.fromQuote `f00bar`);
+val regexp_tm = regexp_to_term(Regexp_Type.fromQuote `f00barbaz`);
+
+Count.apply regexpEval ``regexp_compiler$compile_regexp ^regexp_tm``;
+Count.apply regexpEval ``dom_Brz_alt empty (singleton (normalize ^regexp_tm) ())``;
 *)
 
 val Brzozowski_partial_eval_alt =
@@ -158,7 +185,7 @@ fun hol_matcher r =
      val [t1,t2,t3] = strip_pair triple
      val start_state_thm = regexpEval ``lookup regexp_compare (normalize ^regexp_tm) ^t1``
      val dom_Brz_thm = EQT_ELIM (Count.apply regexpEval
-                      ``dom_Brz_alt empty [normalize ^regexp_tm]``)
+                      ``dom_Brz_alt empty (singleton (normalize ^regexp_tm) ())``)
      val hyps_thm = LIST_CONJ [compile_thm, start_state_thm,dom_Brz_thm]
      val thm = SIMP_RULE list_ss [fromList_Vector,ORD_BOUND,alphabet_size_def]
                        (SPEC regexp_tm Brzozowski_partial_eval_conseq)
@@ -212,18 +239,18 @@ fun matcher HOL = hol_matcher
 fun dfa_by_proof (name,r) =
  let val name = if Lexis.ok_identifier name then name
                else (HOL_MESG (Lib.quote name^
-                       " is not a suitable identifier, using \"foo\" instead");
+                       " is not a suitable identifier, using \"DFA\" instead");
                      "foo")
      val {certificate, start,table,final,matchfn} = hol_matcher r
      val SOME thm = certificate
      val eqn = snd(dest_forall(concl thm))
      val (exec_dfa,[finals,table,start,s]) = strip_comb(lhs eqn)
      val finals_var = mk_var(name^"_finals",type_of finals)
-     val table_var = mk_var(name^"_table",type_of table)
-     val start_var = mk_var(name^"_start",type_of start)
+     val table_var  = mk_var(name^"_table",type_of table)
+     val start_var  = mk_var(name^"_start",type_of start)
      val finals_def = Define `^finals_var = ^finals`
-     val table_def = Define `^table_var = ^table`
-     val start_def = Define `^start_var = ^start`
+     val table_def  = Define `^table_var = ^table`
+     val start_def  = Define `^start_var = ^start`
      val thm' = CONV_RULE (BINDER_CONV
                   (LHS_CONV (REWRITE_CONV [GSYM finals_def, GSYM table_def, GSYM start_def])))
                   thm
