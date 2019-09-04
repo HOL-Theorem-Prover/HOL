@@ -9,13 +9,13 @@ val _ = Feedback.register_btrace
 
 (* re-exporting types from clauses *)
 
-type compset = comp_rws;
+type compset = comp_rws rwlock.t;
 type transform = clauses.transform
 
-val new_compset = from_list;
+val new_compset = rwlock.new o from_list;
 
-val listItems = clauses.deplist;
-val unmapped  = clauses.no_transform;
+val listItems = Lib.C rwlock.read clauses.deplist;
+val unmapped  = Lib.C rwlock.read clauses.no_transform;
 
 
 type cbv_stack =
@@ -129,7 +129,10 @@ and strong_up (th, Ztop) = th
  * using rewrites rws.
  *---------------------------------------------------------------------------*)
 
-fun CBV_CONV rws = evaluate o strong o cbv_wk o initial_state rws;
+fun CBV_CONV0 rws = evaluate o strong o cbv_wk o initial_state rws;
+
+fun CBV_CONV cs t =
+    rwlock.read cs (fn rws => CBV_CONV0 rws t)
 
 (*---------------------------------------------------------------------------
  * WEAK_CBV_CONV is the same as CBV_CONV except that it does not reduce
@@ -137,11 +140,14 @@ fun CBV_CONV rws = evaluate o strong o cbv_wk o initial_state rws;
  * Reduction whenever we reach a state where a strong reduction is needed.
  *---------------------------------------------------------------------------*)
 
-fun WEAK_CBV_CONV rws =
+fun WEAK_CBV_CONV0 rws =
       evaluate
     o (fn ((th,_),stk) => stack_out(th,stk))
     o cbv_wk
     o initial_state rws;
+
+fun WEAK_CBV_CONV cs t =
+    rwlock.read cs (fn rws => WEAK_CBV_CONV0 rws t)
 
 (*---------------------------------------------------------------------------
  * Adding an arbitrary conv
@@ -153,11 +159,11 @@ fun extern_of_conv rws conv tm =
   end;
 
 fun add_conv (cst,arity,conv) rws =
-  add_extern (cst,arity,extern_of_conv rws conv) rws;
+    add_extern (cst,arity,extern_of_conv rws conv) rws
 
 fun set_skip compset c opt =
  let val {Name,Thy,...} = dest_thy_const c
- in clauses.set_skip compset (Name,Thy) opt
+ in rwlock.write compset (fn rws => clauses.set_skip rws (Name,Thy) opt)
  end
  handle HOL_ERR _ => raise ERR "set_skip" "";
 
@@ -173,22 +179,47 @@ val bool_redns =
       [COND_CLAUSES, COND_ID, NOT_CLAUSES,
        AND_CLAUSES, OR_CLAUSES, IMP_CLAUSES, EQ_CLAUSES];
 
-fun bool_compset() = let
+fun bool_compset0() = let
   val base = from_list bool_redns
-  val _ = set_skip base boolSyntax.conditional NONE
+  val _ = clauses.set_skip base ("bool", "COND") NONE
           (* change last parameter to SOME 1 to stop CBV_CONV looking at
              conditionals' branches before the guard is fully true or false *)
 in
   base
 end
 
+fun bool_compset() = rwlock.new (bool_compset0())
+
 val the_compset = bool_compset();
 
-val add_funs = Lib.C add_thms the_compset;
-val add_convs = List.app (Lib.C add_conv the_compset);
+fun add_thms ths cs =
+    rwlock.write cs (clauses.add_thms ths)
 
-val del_consts = List.app (scrub_const the_compset);
-val del_funs = Lib.C scrub_thms the_compset;
+fun add_thmset nm cs =
+    rwlock.write cs (clauses.add_thmset nm)
+
+val add_funs = Lib.C add_thms the_compset
+
+fun add_convs0 cs convs =
+    rwlock.write cs (
+      fn rws => List.app (fn c => add_conv c rws) convs
+    )
+
+val add_conv = fn c => fn cs => rwlock.write cs (add_conv c)
+val add_convs = add_convs0 the_compset
+
+fun scrub_const cs c =
+    rwlock.write cs (fn rws => clauses.scrub_const rws c)
+
+fun del_consts cnsts =
+    rwlock.write the_compset (
+      fn rws => List.app (fn cnst => clauses.scrub_const rws cnst) cnsts
+    )
+val del_funs =
+    rwlock.write the_compset o scrub_thms
+
+fun scrub_thms ths cs =
+    rwlock.write cs (clauses.scrub_thms ths)
 
 val EVAL_CONV = CBV_CONV the_compset;
 val EVAL_RULE = Conv.CONV_RULE EVAL_CONV;
@@ -245,7 +276,7 @@ in
                           simpls
         val case_thm = List.map lazyfy_thm case_thm
     in
-        List.app (fn c => add_conv c cs) (translate_convs convs)
+        add_convs0 cs (translate_convs convs)
       ; add_thms (size_opt @ boolify_opt @ case_thm @ simpls) cs
     end
     val write_datatype_info = add_datatype_info the_compset
@@ -321,7 +352,7 @@ local
 in
   fun extend_compset frags cmp =
     List.app
-      (fn Convs l => List.app (fn x => add_conv x cmp) l
+      (fn Convs l => add_convs0 cmp l
         | Defs l => add_thms l cmp
         | Tys l => List.app (add_datatype cmp) l
         | Extenders l => List.app (fn f => f cmp) l) frags
