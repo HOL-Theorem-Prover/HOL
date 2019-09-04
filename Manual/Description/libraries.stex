@@ -134,6 +134,8 @@ associativity. See \REFERENCE{} for more details.
 
 \paragraph{Type abbreviations}
 \index{type abbreviations}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!type abbreviations}
+\index{abbreviations!for types}
 
 Users can abbreviate common type patterns with \emph{abbreviations}.
 This is done with the \ML{} function \ml{type\_abbrev}:
@@ -153,9 +155,34 @@ in Section~\ref{sec:theory-of-sets}, the abbreviation \holtxt{set}, of
 one argument, is such that \holtxt{:'a set} expands into the type
 \holtxt{:'a -> bool}, for any type \holtxt{:'a}.
 
-When types come to be printed, the expansion of abbreviations done by the parser is reversed.
+When types come to be printed, the expansion of abbreviations done by the parser is reversed if the \ml{type\_abbrev\_pp} entry-point is used; otherwise the abbreviation is for input only.
 For more information, see \ml{type\_abbrev}'s entry in \REFERENCE.
 \index{types, in HOL logic@types, in \HOL{} logic!parsing of|)}
+
+\index{special syntactic forms for scripts!Type@\ml{Type}}
+There are special syntactic forms available for both type abbreviation entry-points.
+Instead of
+\begin{hol}
+\begin{alltt}
+   val _ = type_abbrev("set", \fldq:'a -> bool\frdq)
+\end{alltt}
+\end{hol}
+one can write
+\begin{hol}
+\begin{alltt}
+   Type set = \fldq:'a -> bool\frdq
+\end{alltt}
+\end{hol}
+and if an underlying call to \ml{type\_abbrev\_pp} is desired, the \ml{[pp]} ``attribute'' should be added to the name, thus:
+\begin{hol}
+\begin{alltt}
+   Type set[pp] = \fldq:'a -> bool\frdq
+\end{alltt}
+\end{hol}
+
+\index{local@\ml{local}!as attribute for type abbreviations}
+If a ``temporary'' abbreviation is required (one whose effect will not be apparent in descendent theories), then the \ml{local} attribute can also be added to the \ml{Type} syntax, or the \ML{} functions \ml{temp\_type\_abbrev} and \ml{temp\_type\_abbrev\_pp} can be used.
+
 
 \subsection{Parsing terms}
 
@@ -211,9 +238,9 @@ series of tokens.  For more on lexing, see Section~\ref{HOL-lex}.
   It is possible for names that occur in the \ml{Absyn} value to be
   different from any of the tokens that appeared in the original
   input.  For example, the input
-\begin{verbatim}
-   ``if P then Q else R``
-\end{verbatim} will turn into
+\begin{alltt}
+   \fholquote{if P then Q else R}
+\end{alltt} will turn into
 \begin{verbatim}
    APP (APP (APP (IDENT "COND", IDENT "P"), IDENT "Q"), IDENT "R")
 \end{verbatim}
@@ -231,7 +258,7 @@ series of tokens.  For more on lexing, see Section~\ref{HOL-lex}.
 \index{tokens!suppressing parsing behaviour of|(}%
 %
 then this phase of the parser will not treat strings as part of a
-special form.  For example, \holtxt{\holquote{\dol{}if~P}} turns into
+special form.  For example, \holtxt{\fholquote{\dol{}if~P}} turns into
 the \ml{Absyn} form
 \begin{verbatim}
    APP(IDENT "if", IDENT "P")
@@ -239,7 +266,7 @@ the \ml{Absyn} form
   \emph{not} a form involving \holtxt{COND}.
 
   More typically, one often writes something like
-  \holtxt{\holquote{\$+~x}}, which generates the abstract syntax
+  \holtxt{\fholquote{\$+~x}}, which generates the abstract syntax
 \begin{verbatim}
    APP(IDENT "+", IDENT "x")
 \end{verbatim}
@@ -250,7 +277,7 @@ the \ml{Absyn} form
   give the input its desired meaning.
 
   Symbols can also be ``escaped'' by enclosing them in parentheses.
-  Thus, the above could be written \holtxt{\holquote{(+)~x}} for the
+  Thus, the above could be written \holtxt{\fholquote{(+)~x}} for the
   same effect.
 \index{tokens!suppressing parsing behaviour of|)}
 
@@ -352,7 +379,7 @@ the \ml{Absyn} form
 \subsubsection{Unicode characters}
 \label{sec:parser:unicode-characters}
 
-\index{Unicode}\index{UTF-8}
+\index{Unicode|(}\index{UTF-8}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!Unicode characters|(}
 It is possible to have the \HOL{} parsing and printing infrastructure
 use Unicode characters (written in the UTF-8 encoding).  This makes it
@@ -376,17 +403,12 @@ practice to only use alphanumerics in the names of constants, and to
 then use functions like \ml{overload\_on} and \ml{add\_rule} to create
 Unicode syntax for the underlying constant.
 
-If users have fonts with the appropriate repertoire of characters to
-display their syntax, and are confident that any other users of their
-theories will too, then this is perfectly reasonable.  However, if
-users wish to retain some backwards compatibility with pure ASCII
-syntax, they can do so by defining a pure ASCII syntax first.  Having
-done this, they can create a Unicode version of the syntax with the
-function \ml{Unicode.unicode\_version}.  Then, while the trace
-variable \ml{"Unicode"} is $0$, the ASCII syntax will be used for
-parsing and printing.  If the trace is set to $1$, then the Unicode
-syntax will also work in the parser, and the pretty-printer will
-prefer it when terms are printed.
+If users have fonts with the appropriate repertoire of characters to display their syntax, and are confident that any other users of their theories will too, then this is perfectly reasonable.
+However, if users wish to retain some backwards compatibility a provide a pure ASCII syntax, they can do so by defining that pure ASCII syntax first.
+Having done this, they can create a Unicode version of the syntax with the function \ml{Unicode.unicode\_version}.
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!Unicode in pretty-printing}
+Then, either Unicode or ASCII characters can be used to input the syntax, and, while the trace variable \ml{"PP.avoid_unicode"} is $1$, the ASCII syntax will be used for printing.
+If the trace is set to $0$, then again, both syntaxes can be used to \emph{write} the terms, but the pretty-printer will prefer the Unicode syntax when the terms are printed by the system.
 
 For example, in \ml{boolScript.sml}, the Unicode character for logical
 and (\texttt{$\land$}), is set up as a Unicode alternative for
@@ -431,48 +453,37 @@ everything else is symbolic.  (The exception for \holtxt{$\lambda$} is to
 allow strings like \holtxt{$\lambda$x.x} to lex into \emph{four} tokens.)
 
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!Unicode characters|)}
+\index{Unicode|)}
 
-\subsubsection{Syntactic patterns (``macros'')}
+\subsubsection{Overloading and Syntactic Patterns (``macros'')}
 \label{sec:parser:syntactic-patterns}
+\index{abbreviations!for terms}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!overloading}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!term abbreviations}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!syntactic patterns|(}
 
-The ``overload map'' mentioned previously is actually a combination of
-maps, one for parsing, and one for printing.  The parsing map is from
-names to lists of terms, and determines how the names that appear in a
-\ml{Preterm} will translate into terms.  In essence, bound names turn
-into bound variables, unbound names not in the domain of the map turn
-into free variables, and unbound names in the domain of the map turn
-into one of the elements of the set associated with the given name.
-Each term in the set of possibilities may have a different type, so
-type inference will choose from those that have types consistent with
-the rest of the given term.  If the resulting list contains more than
-one element, then the term appearing earlier in the list will be
-chosen.
+The ``overload map'' mentioned previously is actually a combination of maps, one for parsing, and one for printing.
+The parsing map is from names to lists of terms, and determines how the names that appear in a \ml{Preterm} will translate into terms.
+In essence, bound names turn into bound variables, unbound names not in the domain of the map turn into free variables, and unbound names in the domain of the map turn into one of the elements of the set associated with the given name.
+Each term in the set of possibilities may have a different type, so type inference will choose from those that have types consistent with the rest of the given term.
+If the resulting list contains more than one element, then the term appearing earlier in the list will be chosen.
 
-The most common use-case for the overload map is have names map to
-constants.  In this way, for example, the various numeric theories can
-map the string \ml{"+"} to the relevant notions of addition, each of
-which is a different constant.  However, the system has extra
-flexibility because names can map to arbitrary terms.  For example, it
-is possible to map to specific type-instances of constants.  Thus, the
-string \ml{"<=>"} maps to equality, but where the arguments are forced
-to be of type \holquote{:bool}.
+The most common use-case for the overload map is have names map to constants.
+In this way, for example, the various numeric theories can map the string \ml{"+"} to the relevant notions of addition, each of which is a different constant.
+However, the system has extra flexibility because names can map to arbitrary terms.
+For example, it is possible to map to specific type-instances of constants.  Thus, the string \ml{"<=>"} maps to equality, but where the arguments are forced to be of type \fholquote{:bool}.
 
-Moreover, if the term mapped to is a lambda-abstraction (\ie, of the
-form $\lambda x.\;M$), then the parser will perform all possible
-$\beta$-reductions for that term and the arguments accompanying it.  For
-example, in \theoryimp{boolTheory} and its descendants, the string
-\ml{"<>"} is overloaded to the term \holquote{\holtxt{\bs{}x~y.~\td{}(x~=~y)}}.
-Additionally, \ml{"<>"} is set up at the concrete syntax level as an
-infix.  When the user inputs \holquote{\holtxt{x~\lt\gt~y}}, the resulting
+Moreover, if the term mapped to is a lambda-abstraction (\ie, of the form $\lambda x.\;M$), then the parser will perform all possible $\beta$-reductions for that term and the arguments accompanying it.
+For example, in \theoryimp{boolTheory} and its descendants, the string \ml{"<>"} is overloaded to the term \fholquote{\holtxt{\bs{}x~y.~\td{}(x~=~y)}}.
+Additionally, \ml{"<>"} is set up at the concrete syntax level as an infix.
+When the user inputs \fholquote{\holtxt{x~\lt\gt~y}}, the resulting
 \ml{Absyn} value is
 \begin{verbatim}
    APP(APP(IDENT "<>", IDENT "x"), IDENT "x")
 \end{verbatim}
 The \ml{"x"}  and \ml{"y"} identifiers will map to free variables, but
 the \ml{"<>"} identifier maps to a list containing
-\holquote{\holtxt{\bs{}x~y.~\td(x~=~y)}}. This term has type
+\fholquote{\holtxt{\bs{}x~y.~\td(x~=~y)}}. This term has type
 \begin{verbatim}
    :'a -> 'a -> bool
 \end{verbatim}
@@ -482,13 +493,30 @@ Assuming that this option is the only overloading for \ml{"<>"} left
 after type inference, then the resulting term will be
 \holtxt{\td(x~=~y)}.  Better, though this will be the underlying
 structure of the term in memory, it will actually print as
-\holquote{\holtxt{x~\lt\gt~y}}.
+\fholquote{\holtxt{x~\lt\gt~y}}.
 
 If the term mapped to in the overload map contains any free variables,
 these variables will not be instantiated in any way.  In particular,
 if these variables have polymorphic types, then the type variables in
 those types will be constant: not subject to instantiation by type
 inference.
+
+\index{special syntactic forms for scripts!Overload@\ml{Overload}}
+\index{Overload (special syntactic form)@\ml{Overload} (special syntactic form)}
+The prettiest way to introduce entries into the overload map is to use the \ml{Overload} syntactic form:
+\begin{alltt}
+   Overload name[attrs] = \fholquote{term/pattern}
+\end{alltt}
+Depending on the choice of attributes, this will map into a call to one of a variety of underlying ``overload-on'' functions.
+\index{overload_on (ML function)@\ml{overload\_on} (\ML{} function)}
+The default (without any attributes) calls \ml{overload\_on}, whose effect is to make an entry in the map that will be exported with the theory.
+The overloading effect thus persists in descendent theories.
+\index{local@\ml{local}!as overloading attribute}
+If the \ml{local} attribute is used, this export doesn't occur, and the overloading effect is only visible for the rest of the containing script file.%
+\footnote{The use of \ml{local} induces a call to the \ml{temp\_overload\_on} function.}
+
+\index{inferior@\ml{inferior}!as overloading attribute}
+The other attribute that can be used is \ml{inferior}, which causes the entry to be made, but makes it the pretty-printer's last choice when matching terms are printed.
 
 \paragraph{Pretty-printing and syntactic patterns} The second part of
 the ``overload map'' is a map from terms to strings, specifying how
@@ -510,7 +538,7 @@ most specific match (the one that requires least instantiation of the
 pattern's variables).  If this still results in multiple, equally
 specific, possibilities, the most recently added pattern takes
 precedence.  (Users can thus manipulate the printer's preferences by
-making otherwise redundant calls to the \ml{overload\_on} function.)
+making otherwise redundant \ml{Overload} declarations.)
 
 In the example of the not-equal-to operator above, the pattern will be
 \holtxt{\~{}(?x = ?y)}, where the question-marks indicate instantiable
@@ -535,14 +563,14 @@ happens with every constant definition).  But after the call
 establishing the new pattern for \holtxt{IS\_PREFIX}, the
 \holtxt{isPREFIX} form will no longer be printed.  Nor is it enough,
 to repeat the call
-\begin{verbatim}
-   overload_on("isPREFIX", ``isPREFIX``)
-\end{verbatim}
+\begin{alltt}
+   overload_on("isPREFIX", \fholquote{isPREFIX})
+\end{alltt}
 Instead (assuming that \holtxt{isPREFIX} is indeed the preferred
 printing form), the call must be
-\begin{verbatim}
-   overload_on("isPREFIX", ``\x y. isPREFIX x y``)
-\end{verbatim}
+\begin{alltt}
+   overload_on("isPREFIX", \fholquote{\bs{}x y. isPREFIX x y})
+\end{alltt}
 so that \ml{isPREFIX}'s pattern is as long as \ml{IS\_PREFIX}'s.
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!syntactic patterns|)}
 
@@ -817,9 +845,9 @@ parser in \HOL{}.
   \texttt{MEM} for \texttt{IS\_EL}.  We need to use the function
   \texttt{overload\_on} to overload the original constant for the new
   name:
-\begin{verbatim}
-   val _ = overload_on ("MEM", Term`IS_EL`);
-\end{verbatim}
+\begin{alltt}
+   val _ = overload_on ("MEM", \fholquote{IS_EL});
+\end{alltt}
 
 \item[Making addition right associative] If one has a number of old
   scripts that assume addition is right associative because this is
@@ -1132,7 +1160,6 @@ terms, antiquoting a type into a term quotation requires the use of
 >>+ ``!P:^pred. P x ==> Q x``;
 
 >> ``!P:^(ty_antiq pred). P x ==> Q x``;
-> val it = `!P. P x ==> Q x` : term
 \end{alltt}
 \end{session}
 %
@@ -2106,17 +2133,27 @@ added in future sessions when the current theory is reloaded.
 \end{alltt}
 \end{session}
 
-Alternatively, the user may also flag theorems directly when using \ml{store\_thm} or \ml{save\_thm} by appending the \ml{simp} attribute to the name of the theorem.
+\index{theorem attributes!simp@\ml{simp}}
+Alternatively, the user may also flag theorems directly when using \ml{store\_thm}, \ml{save\_thm}, or the \ml{Theorem} and \ml{Definition} syntaxes by appending the \ml{simp} attribute to the name of the theorem.
 Thus:
 \begin{session}
 \begin{verbatim}
-val useful_rwt = store_thm(
-  "useful_rwt[simp]",
-  ...term...,
-  ...tactic...);
+Theorem useful_rwt[simp]:
+  ...term...
+Proof ...tactic...
+QED
 \end{verbatim}
 \end{session}
 is a way of avoiding having to write a call to \ml{export\_rewrites}.
+Equally, the example above could be written:
+\begin{session}
+\begin{alltt}
+>>_ Definition tsize_def[simp]:
+      (tsize Leaf = 0) /\
+      (tsize (Node n t1 t2) = n + tsize t1 + tsize t2)
+    End
+\end{alltt}
+\end{session}
 
 As a general rule, \ml{(srw\_ss())} includes all of its context's
 ``obvious rewrites'', as well as code to do standard calculations
@@ -2202,6 +2239,65 @@ fragment that just includes a list of rewrites:
    rewrites : thm list -> ssfrag
 \end{verbatim}
 \end{hol}
+
+\subsubsection{Removing rewrites and conversions from \simpset{}s}
+\index{simplification!removing rewrites|(}
+The \ml{-*} (infix) function can be used to remove elements from \simpset{}s.
+This can be done to temporarily affect the simplifier when it is applied to a particular goal.
+For example:
+\begin{session}
+\begin{alltt}
+>> SIMP_CONV (srw_ss()) [] “x ++ (y ++ z)”;
+
+>>+ SIMP_CONV (srw_ss() -* ["APPEND_ASSOC"]) [] “x ++ (y ++ z)”;
+\end{alltt}
+\end{session}
+The second argument to \ml{-*} is a list of strings, naming rewrite theorems or conversions.
+The names to use are visible if \simpset{} values are printed out in the interactive session.
+The example below demonstrates removing the beta-conversion:
+\begin{session}
+\begin{alltt}
+##assert Exn.capture (SIMP_CONV (bool_ss -* ["BETA_CONV"]) []) “(\x. x + 3) 10” |> Exn.get_exn |> isSome
+>>+ SIMP_CONV (bool_ss -* ["BETA_CONV"]) [] “(\x. x + 3) 10”;
+\end{alltt}
+\end{session}
+Further, because a theorem like \ml{AND\_CLAUSES}
+\begin{alltt}
+>>__ val oldlw = !linewidth; linewidth := 60;
+##thm AND_CLAUSES
+>>__ linewidth := oldlw;
+\end{alltt}
+has multiple conjuncts, one theorem can generate multiple different rewrites.
+Specific sub-rewrites can be removed from a \simpset{} without affecting  others derived from the same original theorem by appending numbers to the theorem name:
+\begin{session}
+\begin{alltt}
+>>+ SIMP_CONV (bool_ss -* ["AND_CLAUSES"]) [] “(T ∧ p) ∧ (q ∧ T)”;
+
+##assert SIMP_CONV (bool_ss -* ["AND_CLAUSES.1"]) [] “(T ∧ p) ∧ (q ∧ T)” |> concl |> rhs |> aconv “(T ∧ p) ∧ q”
+>> SIMP_CONV (bool_ss -* ["AND_CLAUSES.1"]) [] “(T ∧ p) ∧ (q ∧ T)”;
+\end{alltt}
+\end{session}
+
+If using a ``power tactic'' such as \ml{simp}, there is no \simpset{} value visible to modify with \ml{-*}.
+Instead, one must use a special theorem form (see Section~\ref{sec:simp-special-rewrite-forms} below), \ml{Excl} to exclude a rewrite.
+For example, sometimes the associativity of list-append can be annoying (here it masks the rewrite defining list-append):
+\begin{session}
+\begin{alltt}
+>>__ proofManagerLib.dropn (case proofManagerLib.status() of
+           Manager.PRFS l => List.length l)
+>>_ g `f (x ++ (h::t ++ y)) = f (x ++ h::(t ++ y))`;
+>> e (simp[]);
+\end{alltt}
+\end{session}
+
+We can prevent the application of this normalising rewrite with the \ml{Excl} form:
+\begin{session}
+\begin{alltt}
+>>_ b();
+>> e (simp[Excl "APPEND_ASSOC"]);
+\end{alltt}
+\end{session}
+\index{simplification!removing rewrites|)}
 
 \subsection{Rewriting with the simplifier}
 \label{sec:simplifier-rewriting}
@@ -2826,6 +2922,31 @@ once when the simplifier is applied to a given term.  A theorem
 wrapped in \ml{Ntimes} will be applied as many times as given in the
 integer parameter.
 
+\index{simplification!requiring rewrite application}
+Another pair of special forms allow the user to \emph{require} that certain rewrites are applied.
+Both forms check the count of instances of rewrite-redexes appearing in the goal that results after simplification has happened.
+If the requirement is not satisfied, the relevant tactic fails.
+In this context, a rewrite redex is the LHS of a theorem being used as a rewrite, so that, for example, the redex of the theorem $\vdash x + 0 = x$ is $x + 0$.
+\index{Req0 (simplification theorem modifier)@\ml{Req0} (simplification theorem modifier)}
+The \ml{Req0} form checks that the number of redexes of the corresponding rewrite is zero in the resulting goal.
+For unconditional rewrites, such a requirement is usually redundant, but this form can be useful when rewrites are conditional and the simplifier may have failed to discharge side-conditions.
+For example:
+\begin{session}
+\begin{alltt}
+>> val th = arithmeticTheory.ZERO_MOD;
+>>+ simp[Req0 th] ([], ``0 MOD z``);
+
+>> simp[Req0 th] ([], ``0 MOD (z + 1)``)
+    (* succeeds because arithmetic d.p. knows z + 1 is nonzero *);
+\end{alltt}
+\end{session}
+
+\index{ReqD (simplification theorem modifier)@\ml{ReqD} (simplification theorem modifier)}
+The \ml{ReqD} modifier requires that the redex count should have decreased.
+This is implicitly a check on the original goal as well: it must have a non-zero count of redexes itself.
+
+Both \ml{Req0} and \ml{ReqD} can be combined with \ml{Once} and \ml{Ntimes}.
+
 \paragraph{Simplifying at particular sub-terms}
 \index{simplification!at particular sub-terms}
 We have already seen (Section~\ref{sec:simp-congruences} above) that
@@ -3191,16 +3312,23 @@ over Peano numbers to one over numerals, which is the format that
 
 \paragraph{Storing definitions}
 
-\ml{Define} automatically adds its definition to the global compset
-used by \ml{EVAL} and \ml{EVAL\_TAC}. However, when \ml{Hol\_defn} is
-used to define a function, its defining equations are not added to the
-global compset until \ml{tprove} is used to prove the termination
-constraints.  Moreover, \ml{tprove} does not add the definition
-persistently into the global compset. Therefore, one must use
-\ml{add\_persistent\_funs} in a theory to be sure that definitions
-made by \ml{Hol\_defn} are available to \ml{EVAL} in descendant
-theories.  Another point: one must call \ml{add\_persistent\_funs}
-before \ml{export\_theory} is called.
+\HOL{}'s top-level definition facilities (\ie, the \ml{Define} function and the \ml{Definition} syntax) automatically add definitions to the global compset
+used by \ml{EVAL} and \ml{EVAL\_TAC}.
+However, when \ml{Hol\_defn} is used to define a function, its defining equations are not added to the global compset until \ml{tprove} is used to prove the termination constraints.
+Moreover, \ml{tprove} does not add the definition persistently into the global compset.
+Therefore, one must use \ml{add\_persistent\_funs} in a theory to be sure that definitions made by \ml{Hol\_defn} are available to \ml{EVAL} in descendant theories.
+Another point: one must call \ml{add\_persistent\_funs} before \ml{export\_theory} is called.
+
+Occasionally, one does \emph{not} want a definition automatically added to the global compset.
+\index{theorem attributes!nocompute@\ml{nocompute}}
+The easiest way to achieve this is to use the \ml{nocompute} ``pseudo-attribute'':
+\begin{session}
+\begin{alltt}
+>> Definition f_def[nocompute]: f x = x + 10
+   End
+>> EVAL ``f 6``;
+\end{alltt}
+\end{session}
 
 
 \section{Arithmetic Libraries---\texttt{numLib}, \texttt{intLib} and \texttt{realLib}}
@@ -3460,7 +3588,7 @@ The following examples show \ml{BBLAST\_PROVE} in use:
 \begin{session}
 \begin{alltt}
 >>_ load "blastLib";
->> blastLib.BBLAST_PROVE ``a + 2w <+ 4w = a <+ 2w \/ 13w <+ a :word4``;
+>> blastLib.BBLAST_PROVE ``a + 2w <+ 4w <=> a <+ 2w \/ 13w <+ a :word4``;
 
 >> blastLib.BBLAST_PROVE ``w2w (a:word8) <+ 256w : word16``;
 \end{alltt}

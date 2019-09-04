@@ -27,7 +27,7 @@ fun S_SYM thm = MATCH_MP STRONG_EQUIV_SYM thm;
 (* Define S_TRANS such that, when given the theorems thm1 and thm2, applies
    STRONG_EQUIV_TRANS on them, if possible. *)
 fun S_TRANS thm1 thm2 =
-    if rhs_tm thm1 = lhs_tm thm2 then
+    if rhs_tm thm1 ~~ lhs_tm thm2 then
        MATCH_MP STRONG_EQUIV_TRANS (CONJ thm1 thm2)
     else
        failwith "transitivity of strong equivalence not applicable";
@@ -55,30 +55,31 @@ fun S_LHS_CONV_TAC (c :conv) :tactic =
   fn (asl, w) => let
       val (opt, t1, t2) = args_equiv w
   in
-      if (opt = ``STRONG_EQUIV``) then
-          let val thm = c t1;
-              val (t1', t') = args_thm thm (* t1' = t1 *)
-          in
-              if (t' = t2) then
-                  ([], fn [] => S_TRANS thm (ISPEC t' STRONG_EQUIV_REFL))
-              else
-                  ([(asl, ``STRONG_EQUIV ^t' ^t2``)],
-                   fn [thm'] => S_TRANS thm thm')
-          end
-      else
-          failwith "the goal is not a STRONG_EQUIV relation"
+    if opt ~~ ``STRONG_EQUIV`` then
+      let
+        val thm = c t1
+        val (t1', t') = args_thm thm (* t1' = t1 *)
+      in
+        if t' ~~ t2 then ([], fn _ => S_TRANS thm (ISPEC t' STRONG_EQUIV_REFL))
+        else
+          ([(asl, ``STRONG_EQUIV ^t' ^t2``)],
+           fn ths =>
+              case ths of [thm'] => S_TRANS thm thm'
+                        | _ => failwith "S_LHS_CONV_TAC: weird!")
+      end
+    else
+      failwith "the goal is not a STRONG_EQUIV relation"
   end;
 
 fun S_RHS_CONV_TAC (c :conv) :tactic =
   fn (asl, w) => let
       val (opt, t1, t2) = args_equiv w
   in
-      if (opt = ``STRONG_EQUIV``) then
+      if (opt ~~ ``STRONG_EQUIV``) then
           let val thm = c t2;
               val (t2', t'') = args_thm thm (* t2' = t2 *)
           in
-              if (t'' = t1) then
-                  ([], fn [] => S_SYM thm)
+              if t'' ~~ t1 then ([], fn _ => S_SYM thm)
               else
                   ([(asl, ``STRONG_EQUIV ^t1 ^t''``)],
                    fn [thm'] => S_TRANS thm' (S_SYM thm))
@@ -143,7 +144,7 @@ fun S_TOP_DEPTH_CONV (c :conv) t =
 fun S_SUBST thm tm :thm = let
     val (ti, ti') = args_thm thm
 in
-    if (tm = ti) then thm
+    if tm ~~ ti then thm
     else if is_prefix tm then
         let val (u, t) = args_prefix tm;
             val thm1 = S_SUBST thm t
@@ -186,11 +187,11 @@ fun S_LHS_SUBST1_TAC thm :tactic =
   fn (asl, w) => let
       val (opt, t1, t2) = args_equiv w
   in
-      if (opt = ``STRONG_EQUIV``) then
+      if (opt ~~ ``STRONG_EQUIV``) then
           let val thm' = S_SUBST thm t1;
               val (t1', t') = args_thm thm' (* t1' = t1 *)
           in
-              if (t' = t2) then
+              if t' ~~ t2 then
                   ([], fn [] => S_TRANS thm' (ISPEC t' STRONG_EQUIV_REFL))
               else
                   ([(asl, ``STRONG_EQUIV ^t' ^t2``)],

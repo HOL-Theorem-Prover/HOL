@@ -6,7 +6,7 @@ open testutils
 
 
 val hard_fail = true;
-val _ = really_die := true;
+val _ = testutils.diemode := ProcessExit
 val quiet = false;
 val _ = Parse.current_backend := PPBackEnd.vt100_terminal;
 
@@ -14,7 +14,7 @@ val _ = Parse.current_backend := PPBackEnd.vt100_terminal;
 
 set_trace "use pmatch_pp" 0
 val hard_fail = false;
-val _ = really_die := false;
+val _ = testutils.diemode := FailException
 val quiet = false;
 val _ = Parse.current_backend := PPBackEnd.emacs_terminal;
 

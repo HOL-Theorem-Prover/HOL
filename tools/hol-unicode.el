@@ -12,6 +12,8 @@
 (global-set-key (kbd "C-S-c") "⊆")
 (global-set-key (kbd "C-S-q") "≤")
 (global-set-key (kbd "C-M-~") "∼")
+(global-set-key (kbd "C-M-S-b") "□")
+(global-set-key (kbd "C-M-S-m") "◇") ; diaMond
 
 (global-set-key (kbd "C-{") "⟦")
 (global-set-key (kbd "C-}") "⟧")
@@ -58,6 +60,7 @@
 (global-set-key (kbd "C-S-g") "γ")
 (global-set-key (kbd "C-S-d") "δ")
 (global-set-key (kbd "C-S-e") "ε")
+(global-set-key (kbd "C-S-h") "χ")
 (global-set-key (kbd "C-S-l") "λ")
 (global-set-key (kbd "C-S-m") "μ")
 (global-set-key (kbd "C-S-n") "ν")
@@ -229,6 +232,7 @@
 (define-key hol-unicode-C-map (kbd "-") "≃")
 (define-key hol-unicode-C-map (kbd ".") "⪽")
 (define-key hol-unicode-C-map (kbd "c") "⊂")
+(define-key hol-unicode-C-map (kbd "l") "ℓ")
 (define-key hol-unicode-C-map (kbd "p") "⊂")  ; "p" for proper
 (define-key hol-unicode-C-map (kbd "q") "≼")  ; "q" for less-or-eQual
 (define-key hol-unicode-C-map (kbd "=") "≈")

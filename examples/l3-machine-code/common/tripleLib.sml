@@ -66,16 +66,16 @@ fun spec_to_triple_rule (pc, assert_thm, model_def) =
          Conv.CONV_RULE (helperLib.PRE_POST_CONV ASSERT_INTRO_CONV)
       (* abbreviate posts *)
       fun abbrev_conv pat post =
-         if pat = pc
+         if pat ~~ pc
             then ALL_CONV post
          else if is_var pat
-            then if pat = post
+            then if pat ~~ post
                     then ALL_CONV post
                  else ASSUME (mk_eq (post, add_prime pat))
          else if is_comb pat
             then (RAND_CONV (abbrev_conv (rand pat))
                   THENC RATOR_CONV (abbrev_conv (rator pat))) post
-         else if pat = post
+         else if pat ~~ post
             then ALL_CONV post
          else NO_CONV post
    in

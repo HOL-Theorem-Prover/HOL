@@ -88,7 +88,7 @@ fun uptodate_check t =
         val (good, bad) = partition ThyDataSexp.uptodate tyis
       in
         case bad of
-            [] => t
+            [] => NONE
           | _ =>
             let
               val tyinames = map getMITname bad
@@ -96,7 +96,7 @@ fun uptodate_check t =
               HOL_WARNING "monadsyntax" "uptodate_check"
                           ("Monad information for: " ^
                            String.concatWith ", " tyinames ^ " discarded");
-              ThyDataSexp.List good
+              SOME (ThyDataSexp.List good)
             end
       end
     | _ => raise Fail "TypeBase.uptodate_check : shouldn't happen"
@@ -111,7 +111,7 @@ fun check_thydelta (t, tdelta) =
       | NewTypeOp _ => uptodate_check t
       | DelConstant _ => uptodate_check t
       | DelTypeOp _ => uptodate_check t
-      | _ => t
+      | _ => NONE
   end
 
 val {export = export_minfo, ...} = ThyDataSexp.new{
@@ -265,13 +265,14 @@ fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
       case v of
         NONE => syspr false (Top,Top,Top) action
       | SOME v => let
-          val bvars = free_vars v
+          val new_bvars = free_vars v
         in
-          addbvs bvars >>
           ublock PP.INCONSISTENT 0
-            (syspr true (Top,Top,Prec(100, "monad_assign")) v >>
+            (record_bvars new_bvars
+                          (syspr true (Top,Top,Prec(100, "monad_assign")) v) >>
              strn " " >> strn "<-" >> brk(1,2) >>
-             syspr false (Top,Prec(100, "monad_assign"),Top) action)
+             syspr false (Top,Prec(100, "monad_assign"),Top) action) >>
+          addbvs new_bvars
         end
   fun brk_bind binder arg1 arg2 =
       if binder = monad_bind then let

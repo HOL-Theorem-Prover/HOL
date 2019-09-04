@@ -27,10 +27,10 @@ val FUN_EQ_TAC = CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV)
                    THEN GEN_TAC THEN BETA_TAC;
 
 val MAX_00 = Q.prove(
-  `!m n. (MAX m n = 0) = (m=0) /\ (n=0)`,  RW_TAC arith_ss [MAX_DEF]);
+  `!m n. (MAX m n = 0) ⇔ (m=0) /\ (n=0)`,  RW_TAC arith_ss [MAX_DEF]);
 
 val MAX_LESS_EQ = Q.prove(
-  `!m n p. MAX m n <= p = m <= p /\ n <= p`,  RW_TAC arith_ss [MAX_DEF]);
+  `!m n p. MAX m n <= p ⇔ m <= p /\ n <= p`,  RW_TAC arith_ss [MAX_DEF]);
 
 
 val UNION_DELETE = Q.store_thm("UNION_DELETE",
@@ -39,7 +39,7 @@ ZAP_TAC
    (std_ss && [EXTENSION,IN_UNION,IN_DELETE]) []);
 
 val UNION_SUBSET = Q.prove(
- `!X Y Z. (X UNION Y) SUBSET Z = X SUBSET Z /\ Y SUBSET Z`,
+ `!X Y Z. (X UNION Y) SUBSET Z ⇔ X SUBSET Z /\ Y SUBSET Z`,
 PROVE_TAC
    [SUBSET_DEF, IN_UNION]);
 
@@ -256,7 +256,7 @@ Induct
 val dOK_dSUB = Q.store_thm("dOK_dSUB",
  `!t u x. dOK t /\ dOK u ==> dOK ([x |-> u] t)`,
 ZAP_TAC (arith_ss && [dDEG_dOK, dSUB])
-     [DECIDE (Term `(x=0) = x <= 0`), dOK_dSUB_lemma, ADD_CLAUSES]);
+     [DECIDE (Term `(x=0) ⇔ x <= 0`), dOK_dSUB_lemma, ADD_CLAUSES]);
 
 
 (* --------------------------------------------------------------------- *)

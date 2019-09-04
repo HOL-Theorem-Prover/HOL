@@ -20,11 +20,11 @@ val gfp_def = new_definition(
 
 val closed_def = new_definition(
   "closed_def",
-  ``closed f X = f X SUBSET X``);
+  ``closed f X <=> f X SUBSET X``);
 
 val dense_def = new_definition(
   "dense_def",
-  ``dense f X = X SUBSET f X``);
+  ``dense f X <=> X SUBSET f X``);
 
 val lfp_least_closed = store_thm(
   "lfp_least_closed",

@@ -53,7 +53,7 @@ val COMPL_MEM = prove (
 
 (* localized notion of open sets (one set being open in another) *)
 val istopology = new_definition("istopology",
-  ``!L. istopology L =
+  ``!L. istopology L <=>
              {} IN L /\
              (!s t. s IN L /\ t IN L ==> (s INTER t) IN L) /\
              (!k. k SUBSET L ==> (BIGUNION k) IN L)``);
@@ -305,7 +305,7 @@ val CLOSED_IN_BIGINTER = store_thm ("CLOSED_IN_BIGINTER",
   ONCE_REWRITE_TAC [CONJ_SYM] THEN SIMP_TAC std_ss [EXISTS_IN_IMAGE] THEN
   REWRITE_TAC [
     METIS [SPECIFICATION]
-          “(topspace top DIFF s) x = x IN (topspace top DIFF s)”] THEN
+          “(topspace top DIFF s) x <=> x IN (topspace top DIFF s)”] THEN
   REWRITE_TAC [IN_DIFF, IN_BIGINTER] THEN PROVE_TAC[]);
 
 val BIGINTER_2 = store_thm ("BIGINTER_2",
@@ -392,9 +392,9 @@ val CLOSED_LIMPT = store_thm
  >> REWRITE_TAC [OPEN_NEIGH, SUBSET_applied]
  >> AP_TERM_TAC >> ABS_TAC
  >> ASM_CASES_TAC “(S':'a->bool) x” >> ASM_REWRITE_TAC []
- >> REWRITE_TAC [TAUT_CONV “a \/ b \/ ~c = c ==> a \/ b”]
+ >> REWRITE_TAC [TAUT_CONV “a \/ b \/ ~c <=> c ==> a \/ b”]
  >> EQUAL_TAC
- >> REWRITE_TAC [TAUT_CONV “(a = b \/ a) = b ==> a”]
+ >> REWRITE_TAC [TAUT_CONV “(a <=> b \/ a) <=> b ==> a”]
  >> DISCH_THEN (SUBST1_TAC o SYM)
  >> POP_ASSUM ACCEPT_TAC);
 
@@ -402,7 +402,7 @@ val CLOSED_LIMPT = store_thm
 (* A generic notion of "hull" (convex, affine, conic hull and closure).      *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = set_fixity "hull" (Infix(NONASSOC, 450));
+val _ = set_fixity "hull" (Infix(NONASSOC, 499));
 
 val hull = new_definition ("hull",
   ``P hull s = BIGINTER {t | P t /\ s SUBSET t}``);

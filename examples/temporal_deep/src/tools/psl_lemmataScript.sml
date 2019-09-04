@@ -36,6 +36,7 @@ quietdec := false;
 
 
 val _ = new_theory "psl_lemmata";
+val _ = ParseExtras.temp_loose_equality()
 
 
 val IS_INFINITE_PROPER_PATH_def =

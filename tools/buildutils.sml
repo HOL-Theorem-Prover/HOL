@@ -518,15 +518,11 @@ fun clean_sigobj() = let
   open Systeml
   val _ = print ("Cleaning out "^SIGOBJ^"\n")
   val lowcase = String.map Char.toLower
-  val sigobj_extras =
-      if ML_SYSNAME = "mosml" andalso not HAVE_BASIS2002 then ["basis2002"]
-      else []
   fun sigobj_rem_file s = let
     val f = Path.file s
     val n = lowcase (hd (String.fields (equal #".") f))
   in
-    if mem n (["systeml", "readme"] @ sigobj_extras) then ()
-    else rem_file s
+    if mem n (["systeml", "readme"]) then () else rem_file s
   end
   val toolsuffix = if ML_SYSNAME = "poly" then "-poly" else ""
   fun write_initial_srcfiles () = let

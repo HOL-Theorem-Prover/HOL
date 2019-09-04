@@ -87,6 +87,10 @@ val _ = term_grammar.userSyntaxFns.register_userPP
 
 fun letprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
   let
+    val eqprec =
+        case term_grammar.get_precedence tmg "=" of
+            SOME (Infix(_, i)) => Prec(i, "=")
+          | _  => raise UserPP_Failed
     fun syspr gravs t =
       printer { gravs = gravs, depth = decdepth depth, binderp = false } t
     fun pr_vstruct v =
@@ -166,7 +170,7 @@ fun letprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
              (pr_list pr_vstruct (spacep true) args >>
               spacep (not (null args)) >>
               add_string "=" >> add_break (1, 0) >>
-              block PP.INCONSISTENT 0 (syspr (Top, Top, Top) rhs_t))) >>
+              block PP.INCONSISTENT 0 (syspr (eqprec, eqprec, Top) rhs_t))) >>
         return bvfvs
     end
 

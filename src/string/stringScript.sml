@@ -77,37 +77,52 @@ val ranged_char_nchotomy = Q.store_thm("ranged_char_nchotomy",
 val ordn = term_of_int o Char.ord;
 
 val isLower_def = Define`
-  isLower c = ^(ordn #"a") <= ORD c /\ ORD c <= ^(ordn #"z")`;
+  isLower c <=> ^(ordn #"a") <= ORD c /\ ORD c <= ^(ordn #"z")`;
 
 val isUpper_def = Define`
-  isUpper c = ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"Z")`;
+  isUpper c <=> ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"Z")`;
 
 val isDigit_def = Define`
-  isDigit c = ^(ordn #"0") <= ORD c /\ ORD c <= ^(ordn #"9")`;
+  isDigit c <=> ^(ordn #"0") <= ORD c /\ ORD c <= ^(ordn #"9")`;
 
-val isAlpha_def = Define `isAlpha c = isLower c \/ isUpper c`;
+val isAlpha_def = Define `isAlpha c <=> isLower c \/ isUpper c`;
 
 val isHexDigit_def = Define`
-  isHexDigit c = ^(ordn #"0") <= ORD c /\ ORD c <= ^(ordn #"9") \/
-                 ^(ordn #"a") <= ORD c /\ ORD c <= ^(ordn #"f") \/
-                 ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"F")`;
+  isHexDigit c <=> ^(ordn #"0") <= ORD c /\ ORD c <= ^(ordn #"9") \/
+                   ^(ordn #"a") <= ORD c /\ ORD c <= ^(ordn #"f") \/
+                   ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"F")`;
 
-val isAlphaNum_def = Define `isAlphaNum c = isAlpha c \/ isDigit c`;
+val isAlphaNum_def = Define `isAlphaNum c <=> isAlpha c \/ isDigit c`;
 
 val isPrint_def = Define`
-  isPrint c = ^(ordn #" ") <= ORD c /\ ORD c < 127`;
+  isPrint c <=> ^(ordn #" ") <= ORD c /\ ORD c < 127`;
+
+Theorem isAlphaNum_isPrint:
+  !x. isAlphaNum x ==> isPrint x
+Proof EVAL_TAC \\ rw[]
+QED
+
+Theorem isHexDigit_isAlphaNum:
+  !x. isHexDigit x ==> isAlphaNum x
+Proof EVAL_TAC \\ rw[]
+QED
+
+Theorem isHexDigit_isPrint:
+  !x. isHexDigit x ==> isPrint x
+Proof metis_tac[isAlphaNum_isPrint, isHexDigit_isAlphaNum]
+QED
 
 val isSpace_def = Define`
-  isSpace c = (ORD c = ^(ordn #" ")) \/ 9 <= ORD c /\ ORD c <= 13`;
+  isSpace c <=> (ORD c = ^(ordn #" ")) \/ 9 <= ORD c /\ ORD c <= 13`;
 
-val isGraph_def = Define `isGraph c = isPrint c /\ ~isSpace c`;
+val isGraph_def = Define `isGraph c <=> isPrint c /\ ~isSpace c`;
 
-val isPunct_def = Define `isPunct c = isGraph c /\ ~isAlphaNum c`;
+val isPunct_def = Define `isPunct c <=> isGraph c /\ ~isAlphaNum c`;
 
-val isAscii_def = Define `isAscii c = ORD c <= 127`;
+val isAscii_def = Define `isAscii c <=> ORD c <= 127`;
 
 val isCntrl_def = Define`
-  isCntrl c = ORD c < ^(ordn #" ") \/ 127 <= ORD c`;
+  isCntrl c <=> ORD c < ^(ordn #" ") \/ 127 <= ORD c`;
 
 val toLower_def = Define`
   toLower c = if isUpper c then CHR (ORD c + 32) else c`;
@@ -115,10 +130,10 @@ val toLower_def = Define`
 val toUpper_def = Define`
   toUpper c = if isLower c then CHR (ORD c - 32) else c`;
 
-val char_lt_def = Define `char_lt a b = ORD a < ORD b`;
-val char_le_def = Define `char_le a b = ORD a <= ORD b`;
-val char_gt_def = Define `char_gt a b = ORD a > ORD b`;
-val char_ge_def = Define `char_ge a b = ORD a >= ORD b`;
+val char_lt_def = Define `char_lt a b <=> ORD a < ORD b`;
+val char_le_def = Define `char_le a b <=> ORD a <= ORD b`;
+val char_gt_def = Define `char_gt a b <=> ORD a > ORD b`;
+val char_ge_def = Define `char_ge a b <=> ORD a >= ORD b`;
 
 val _ = overload_on ("<", Term`char_lt`);
 val _ = overload_on (">", Term`char_gt`);
@@ -165,6 +180,13 @@ val _ = overload_on ("STRING", ``CONS : char -> string -> string``)
 val _ = overload_on ("EMPTYSTRING", ``[] : string``)
 val _ = overload_on ("CONCAT", ``FLAT : string list -> string``);
 
+val _ = new_definition(GrammarSpecials.string_elim_term,
+                       “^(mk_var(GrammarSpecials.string_elim_term,
+                                  “:string -> string”)) s = s”);
+val _ = overload_on(GrammarSpecials.std_stringinjn_name,
+                    mk_const(GrammarSpecials.string_elim_term,
+                             “:string -> string”))
+
 val SUB_def = Define `SUB (s:string, n) = EL n s`;
 val STR_def = Define `STR (c:char) = [c]`;
 val TOCHAR_def = Define `TOCHAR [c] = c: char`;
@@ -191,6 +213,8 @@ val TOKENS_def = tDefine "TOKENS"
   (WF_REL_TAC `measure (LENGTH o SND)`
     THEN SRW_TAC [] [NULL_EQ_NIL, SPLITP]
     THEN METIS_TAC [SPLITP_MONO, DECIDE ``a <= b ==> a < SUC b``]);
+
+val TOKENS_ind = theorem"TOKENS_ind";
 
 val FIELDS_def = tDefine "FIELDS"
   `(FIELDS P ([]:string) = [[]]) /\
@@ -240,6 +264,67 @@ val IMPLODE_11 = stac("IMPLODE_11", ``(IMPLODE cs1 = IMPLODE cs2) = (cs1 = cs2)`
 
 val _ = export_rewrites ["EXPLODE_11", "IMPLODE_11", "IMPLODE_EXPLODE",
                          "EXPLODE_IMPLODE"]
+
+Theorem TOKENS_APPEND:
+  !P l1 x l2.
+    P x ==>
+      (TOKENS P (l1 ++ x::l2) = TOKENS P l1 ++ TOKENS P l2)
+Proof
+  ho_match_mp_tac TOKENS_ind
+  \\ rw[TOKENS_def] >- (fs[SPLITP])
+  \\ pairarg_tac  \\ fs[]
+  \\ pairarg_tac  \\ fs[]
+  \\ fs[NULL_EQ, SPLITP]
+  \\ Cases_on `P h` \\ full_simp_tac bool_ss []
+  \\ rw[]
+  \\ fs[TL]
+  \\ Cases_on `EXISTS P t` \\ rw[SPLITP_APPEND, SPLITP]
+  \\ fs[NOT_EXISTS] \\ imp_res_tac (GSYM SPLITP_NIL_SND_EVERY) \\ rw[]
+  \\ fs[NOT_EXISTS] \\ imp_res_tac (GSYM SPLITP_NIL_SND_EVERY) \\ rw[]
+QED
+
+Theorem TOKENS_NIL:
+  !ls. (TOKENS f ls = []) <=> EVERY f ls
+Proof
+  Induct \\ rw[TOKENS_def]  \\ pairarg_tac
+  \\ fs[NULL_EQ, SPLITP]
+  \\ BasicProvers.EVERY_CASE_TAC \\ fs[] \\ rw[]
+QED
+
+Theorem TOKENS_FRONT:
+  ~NULL ls /\ P (LAST ls) ==>
+    (TOKENS P (FRONT ls) = TOKENS P ls)
+Proof
+  Induct_on`ls` \\ rw[]
+  \\ Cases_on`ls` \\ fs[]
+  >- rw[TOKENS_def,SPLITP]
+  \\ rw[TOKENS_def]
+  \\ pairarg_tac
+  \\ simp[Once SPLITP]
+  \\ CASE_TAC \\ fs[NULL_EQ]
+  >- (
+    imp_res_tac SPLITP_NIL_FST_IMP
+    \\ imp_res_tac SPLITP_IMP
+    \\ rfs[] )
+  \\ imp_res_tac SPLITP_JOIN
+  \\ Cases_on`l` \\ fs[] \\ rpt BasicProvers.VAR_EQ_TAC
+  \\ imp_res_tac SPLITP_IMP
+  \\ CASE_TAC \\ fs[]
+  \\ qmatch_goalsub_rename_tac`SPLITP P (x::xs)`
+  \\ `?y ys. x::xs = SNOC y ys` by metis_tac[SNOC_CASES,list_distinct]
+  \\ full_simp_tac std_ss [FRONT_SNOC,LAST_SNOC] \\ rpt BasicProvers.VAR_EQ_TAC
+  \\ qmatch_goalsub_rename_tac`SPLITP P (SNOC y (w ++ z))`
+  \\ Cases_on`NULL z` \\ fs[NULL_EQ]
+  >- (
+    simp[SPLITP_APPEND]
+    \\ full_simp_tac std_ss [GSYM NOT_EXISTS]
+    \\ simp[SPLITP,TOKENS_def] )
+  \\ Cases_on`z` \\ fs[]
+  \\ simp[SPLITP_APPEND]
+  \\ full_simp_tac std_ss [GSYM NOT_EXISTS]
+  \\ simp[SPLITP,TOKENS_def]
+  \\ simp[TOKENS_APPEND,TOKENS_NIL]
+QED
 
 (*---------------------------------------------------------------------------
     Definability of prim. rec. functions over strings.
@@ -437,14 +522,14 @@ val isPREFIX_STRCAT = Q.store_thm
  ---------------------------------------------------------------------------*)
 
 val string_lt_def = Define`
-  (string_lt s EMPTYSTRING = F) /\
-  (string_lt EMPTYSTRING (STRING c s) = T) /\
-  (string_lt (STRING c1 s1) (STRING c2 s2) =
+  (string_lt s EMPTYSTRING <=> F) /\
+  (string_lt EMPTYSTRING (STRING c s) <=> T) /\
+  (string_lt (STRING c1 s1) (STRING c2 s2) <=>
      c1 < c2 \/ (c1 = c2) /\ string_lt s1 s2)`;
 
-val string_le_def = Define `string_le s1 s2 = (s1 = s2) \/ string_lt s1 s2`;
-val string_gt_def = Define `string_gt s1 s2 = string_lt s2 s1`;
-val string_ge_def = Define `string_ge s1 s2 = string_le s2 s1`;
+val string_le_def = Define `string_le s1 s2 <=> (s1 = s2) \/ string_lt s1 s2`;
+val string_gt_def = Define `string_gt s1 s2 <=> string_lt s2 s1`;
+val string_ge_def = Define `string_ge s1 s2 <=> string_le s2 s1`;
 
 val _ = overload_on ("<", Term`string_lt`);
 val _ = overload_on (">", Term`string_gt`);

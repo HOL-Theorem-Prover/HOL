@@ -16,7 +16,7 @@ open Q arithmeticTheory wordsLib;
 open io_onestepTheory wordsTheory armTheory coreTheory lemmasTheory;
 
 val _ = new_theory "interrupts";
-
+val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------- *)
 
 infix \\

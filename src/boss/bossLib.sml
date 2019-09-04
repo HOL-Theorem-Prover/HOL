@@ -77,6 +77,7 @@ val srw_ss          = BasicProvers.srw_ss
 val augment_srw_ss  = BasicProvers.augment_srw_ss
 val diminish_srw_ss = BasicProvers.diminish_srw_ss
 val export_rewrites = BasicProvers.export_rewrites
+val delsimps        = BasicProvers.delsimps
 
 val EVAL           = computeLib.EVAL_CONV;
 val EVAL_RULE      = computeLib.EVAL_RULE
@@ -241,5 +242,35 @@ val wlog_then = wlog_then
   fun qx_choosel_then [] ttac = ttac
     | qx_choosel_then (q::qs) ttac = qx_choose_then q (qx_choosel_then qs ttac)
 
+(* Derived search functions *)
+fun find_consts_thy thl t =
+  let
+    val theConsts = List.concat (List.map constants thl)
+  in
+    List.filter (can (match_type t) o type_of) theConsts
+end
+
+val find_consts = find_consts_thy ("-" :: ancestry "-")
+
+(*---------------------------------------------------------------------------*)
+(* Tactic to automate some routine set theory by reduction to FOL            *)
+(* (Ported from HOL Light)                                                   *)
+(*---------------------------------------------------------------------------*)
+
+local open pairTheory pred_setTheory in
+fun SET_TAC L =
+    POP_ASSUM_LIST (K ALL_TAC) \\
+    rpt COND_CASES_TAC \\
+    REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
+                         SING_DEF] L) \\
+    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
+      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
+      GSPECIFICATION, IN_DEF, EXISTS_PROD] \\
+    METIS_TAC [];
+
+fun ASM_SET_TAC L = rpt (POP_ASSUM MP_TAC) >> SET_TAC L;
+
+fun SET_RULE tm = prove (tm, SET_TAC []);
+end (* local *)
 
 end

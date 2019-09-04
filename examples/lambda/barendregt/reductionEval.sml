@@ -96,7 +96,11 @@ fun betafy ss =
 fun bsrw_ss() = betafy(srw_ss())
 
 val {export = export_betarwt,...} =
-    ThmSetData.new_exporter "betasimp" (K add_rwts)
+    ThmSetData.new_exporter {
+      settype = "betasimp",
+      efns = {add = (fn {named_thms,...} => add_rwts named_thms),
+              remove = (fn _ => ())}
+    }
 fun bstore_thm (trip as (n,t,tac)) = store_thm trip before export_betarwt n
 
 (* ----------------------------------------------------------------------
@@ -118,8 +122,9 @@ in
                subsets = [],
                rewrs = [MATCH_MP RTC_SINGLE
                                  (SPEC_ALL (CONJUNCT1 weak_head_rules))]} ss ++
-  SSFRAG {dprocs = [], ac = [], rewrs = [lemma14b, bnf_whnf], congs = congs,
-          filter = NONE, name = NONE, convs = []}
+  SSFRAG {dprocs = [], ac = [],
+          rewrs = [(SOME "lemma14b", lemma14b), (SOME "bnf_whnf", bnf_whnf)],
+          congs = congs, filter = NONE, name = NONE, convs = []}
 end
 
 (* ----------------------------------------------------------------------
@@ -264,7 +269,8 @@ val NORMSTAR_ss = SSFRAG {
             key = SOME([], mk_comb(noreduct_t, Mv_t)),
             name = "noreduct_CONV", trace = 2}],
   filter = SOME normstar_filter, dprocs = [], name = SOME "NORMSTAR_ss",
-  rewrs = [normstar_nopath, termTheory.lemma14b]};
+  rewrs = [(SOME "normstar_nopath", normstar_nopath),
+           (SOME "lemma14b", termTheory.lemma14b)]};
 
 (* ----------------------------------------------------------------------
     unvarify_tac
@@ -290,7 +296,7 @@ fun unvarify_tac th (w as (asl,g)) = let
   val (strs, sets) =
       List.foldl binderLib.find_avoids (empty_tmset, empty_tmset) (g::asl)
   val finite_sets = List.mapPartial (total pred_setSyntax.dest_finite) asl
-  fun filterthis t = not (is_var t) orelse mem t finite_sets
+  fun filterthis t = not (is_var t) orelse tmem t finite_sets
   val sets = List.filter filterthis (HOLset.listItems sets)
   fun do_them (strs,sets) ys (w as (asl,g)) =
       case ys of
@@ -299,7 +305,7 @@ fun unvarify_tac th (w as (asl,g)) = let
           val newname = Lexis.gen_variant Lexis.tmvar_vary
                                           (goalnames w)
                                           (#1 (dest_var y) ^ "s")
-          val sets = List.filter (fn t => rand t <> y) sets
+          val sets = List.filter (fn t => rand t !~ y) sets
           val new_tac = let
             open pred_setSyntax
           in

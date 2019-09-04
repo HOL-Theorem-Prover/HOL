@@ -126,7 +126,6 @@ val dec_clock_store = Q.store_thm ("dec_clock_store[simp]",
  rw [dec_clock_def]);
 
 (* Statement evaluation -- with redundant check_clock *)
-
 val sem_t_def = tDefine "sem_t" `
 (sem_t s (Exp e) = sem_e s e) ∧
 (sem_t s (Dec x t) =
@@ -214,8 +213,7 @@ val sem_t_def_with_stop = store_thm ("sem_t_def_with_stop",
  fs [] >>
  `F` by decide_tac);
 
-val sem_t_def =
-  save_thm("sem_t_def",REWRITE_RULE [STOP_def] sem_t_def_with_stop);
+Theorem sem_t_def[compute] = REWRITE_RULE [STOP_def] sem_t_def_with_stop;
 
 (* We also remove the redundant checks from the induction theorem. *)
 

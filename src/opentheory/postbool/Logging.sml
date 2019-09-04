@@ -517,7 +517,7 @@ val (log_term, log_thm, log_clear,
         ALPHA source template
       handle HOL_ERR _ =>
         if is_var template
-        then valOf(subst_assoc (equal template) map)
+        then valOf(subst_assoc (aconv template) map)
       else let
         val (sf,sa) = dest_comb source
         val (tf,ta) = dest_comb template

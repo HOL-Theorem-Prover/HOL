@@ -89,7 +89,7 @@ val fv_rtypm = prove(
   Induct_on `ty` THEN SRW_TAC [][pmact_INSERT, pmact_UNION, pmact_DIFF]);
 
 val okpm_def = Define`
-  okpm pi bvs avds t =
+  okpm pi bvs avds t ⇔
      (!s. s IN bvs /\ s IN fv t ==> ~(stringpm pi s IN avds)) /\
      (!s. ~(s IN bvs) /\ s IN fv t ==> (stringpm pi s = s))
 `;

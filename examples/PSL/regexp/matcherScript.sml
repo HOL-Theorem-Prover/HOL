@@ -18,6 +18,7 @@ open regexpTheory;
 open pred_setTheory;
 
 val () = new_theory "matcher";
+val _ = ParseExtras.temp_loose_equality()
 
 (*---------------------------------------------------------------------------*)
 (* Symbolic tacticals.                                                       *)

@@ -9,7 +9,7 @@ open wordsLib blastLib updateTheory
 open state_transformerTheory alignmentTheory m0Theory
 
 val _ = new_theory "m0_step"
-
+val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
 val _ = List.app (fn f => f ())
@@ -873,6 +873,7 @@ local
           n < 15 ==> (LDM1 (R_name p) b registers s r n RName_PC = r RName_PC)`,
       REPEAT strip_tac
       \\ RULE_ASSUM_TAC (Conv.CONV_RULE wordsLib.LESS_CONV)
+      \\ full_simp_tac bool_ss []
       \\ fs [R_name_def, LDM1_def, combinTheory.UPDATE_def]
       \\ lrw [])
 in

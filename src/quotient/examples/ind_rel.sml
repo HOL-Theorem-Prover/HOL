@@ -31,8 +31,6 @@ structure ind_rel :> ind_rel =
 struct
 
 open HolKernel Parse boolLib;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-infixr -->;
 
 val nth = List.nth;
 
@@ -151,16 +149,12 @@ fun check_inductive_relations patterns rules_term =
 
 let
 
-fun member item (thing::more_things) =
-    if item = thing then true else member item more_things
-  | member item [] = false
-
 (* if neither A_list nor B_list have any duplicates, but possibly
    A_list and B_list have some common elements, then the result will
    be a list with no common elements *)
 fun append_no_dup (A_list, B_list) =
     let fun helper (A::As) B_list As_to_add =
-            if member A B_list then helper As B_list As_to_add
+            if tmem A B_list then helper As B_list As_to_add
             else helper As B_list (A::As_to_add)
           | helper [] B_list As_to_add = (rev As_to_add)@B_list
     in
@@ -221,7 +215,7 @@ val all_variables = all_vars rules_term
 
 (* relations are variables at this point *)
 fun relations_in_tm tm =
-    if is_var tm then member tm relations else
+    if is_var tm then tmem tm relations else
     if is_const tm then false else
     if is_abs tm then relations_in_tm (body tm) else
     (* must be comb *)
@@ -233,7 +227,7 @@ fun relations_in_tm tm =
 fun check_rule rule_num rule =
     let fun check_hyp (hyp1::hyps) =
             let val (rator, rands) = strip_comb hyp1 in
-                if member rator relations then
+                if tmem rator relations then
                     (* check that the relations don't occur in rands *)
                     if (foldr (fn (tm, acc) => relations_in_tm tm orelse acc)
                         false rands) then
@@ -256,7 +250,7 @@ fun check_rule rule_num rule =
             check_hyp [] = true
         fun check_concl tm =
             let val (rator, rands) = strip_comb tm in
-                if not (member rator relations) then raise HOL_ERR
+                if not (tmem rator relations) then raise HOL_ERR
                     {message = "must have relation as operator in "^
                      "conclusion of rule "^(Lib.int_to_string rule_num),
                      origin_function = "check_rule",
@@ -290,9 +284,9 @@ val _ = check_rules 0 orig_rules
 (* now sort the rules according to the relation that they are for *)
 fun rule_defines_relation rule relation =
     if is_imp rule then
-        relation = fst (strip_comb (snd (dest_imp rule)))
+      relation ~~ fst (strip_comb (snd (dest_imp rule)))
     else
-        relation = fst (strip_comb rule)
+      relation ~~ fst (strip_comb rule)
 
 val sorted_rules = map
     (fn rel => (filter (fn x => rule_defines_relation x rel) orig_rules))
@@ -306,11 +300,11 @@ val rules = foldr (fn (l1, l2) => l1@l2) [] sorted_rules
 fun quantify_rule rule =
     if is_imp rule then
         let val (t1, t2) = dest_imp rule
-            val vars_in_t2 = filter (fn v => not (member v relations))
-                (free_vars t2)
+            val vars_in_t2 = filter (fn v => not (tmem v relations))
+                                    (free_vars t2)
             val total_vars = vars_in_t2@relations
             val vars_in_t1 = filter
-                (fn v => not (member v total_vars)) (free_vars t1)
+                               (fn v => not (tmem v total_vars)) (free_vars t1)
             val new_t1 = list_mk_exists (rev vars_in_t1, t1)
             val new_imp = mk_imp (new_t1, t2)
         in
@@ -318,7 +312,7 @@ fun quantify_rule rule =
         end
     else
         let val vars_in_rule = filter
-            (fn v => not (member v relations)) (free_vars rule)
+            (fn v => not (tmem v relations)) (free_vars rule)
         in
             list_mk_forall (rev vars_in_rule, rule)
         end
@@ -402,16 +396,12 @@ fun define_inductive_relations patterns rules_term =
 
 let
 
-fun member item (thing::more_things) =
-    if item = thing then true else member item more_things
-  | member item [] = false
-
 (* if neither A_list nor B_list have any duplicates, but possibly
    A_list and B_list have some common elements, then the result will
    be a list with no common elements *)
 fun append_no_dup (A_list, B_list) =
     let fun helper (A::As) B_list As_to_add =
-            if member A B_list then helper As B_list As_to_add
+            if tmem A B_list then helper As B_list As_to_add
             else helper As B_list (A::As_to_add)
           | helper [] B_list As_to_add = (rev As_to_add)@B_list
     in
@@ -472,7 +462,7 @@ val all_variables = all_vars rules_term
 
 (* relations are variables at this point *)
 fun relations_in_tm tm =
-    if is_var tm then member tm relations else
+    if is_var tm then tmem tm relations else
     if is_const tm then false else
     if is_abs tm then relations_in_tm (body tm) else
     (* must be comb *)
@@ -484,7 +474,7 @@ fun relations_in_tm tm =
 fun check_rule rule_num rule =
     let fun check_hyp (hyp1::hyps) =
             let val (rator, rands) = strip_comb hyp1 in
-                if member rator relations then
+                if tmem rator relations then
                     (* check that the relations don't occur in rands *)
                     if (foldr (fn (tm, acc) => relations_in_tm tm orelse acc)
                         false rands) then
@@ -507,7 +497,7 @@ fun check_rule rule_num rule =
             check_hyp [] = true
         fun check_concl tm =
             let val (rator, rands) = strip_comb tm in
-                if not (member rator relations) then raise HOL_ERR
+                if not (tmem rator relations) then raise HOL_ERR
                     {message = "must have relation as operator in "^
                      "conclusion of rule "^(Lib.int_to_string rule_num),
                      origin_function = "check_rule",
@@ -541,9 +531,9 @@ val _ = check_rules 0 orig_rules
 (* now sort the rules according to the relation that they are for *)
 fun rule_defines_relation rule relation =
     if is_imp rule then
-        relation = fst (strip_comb (snd (dest_imp rule)))
+      relation ~~ fst (strip_comb (snd (dest_imp rule)))
     else
-        relation = fst (strip_comb rule)
+      relation ~~ fst (strip_comb rule)
 
 val sorted_rules = map
     (fn rel => (filter (fn x => rule_defines_relation x rel) orig_rules))
@@ -557,11 +547,11 @@ val rules = foldr (fn (l1, l2) => l1@l2) [] sorted_rules
 fun quantify_rule rule =
     if is_imp rule then
         let val (t1, t2) = dest_imp rule
-            val vars_in_t2 = filter (fn v => not (member v relations))
+            val vars_in_t2 = filter (fn v => not (tmem v relations))
                 (free_vars t2)
             val total_vars = vars_in_t2@relations
             val vars_in_t1 = filter
-                (fn v => not (member v total_vars)) (free_vars t1)
+                (fn v => not (tmem v total_vars)) (free_vars t1)
             val new_t1 = list_mk_exists (rev vars_in_t1, t1)
             val new_imp = mk_imp (new_t1, t2)
         in
@@ -569,7 +559,7 @@ fun quantify_rule rule =
         end
     else
         let val vars_in_rule = filter
-            (fn v => not (member v relations)) (free_vars rule)
+            (fn v => not (tmem v relations)) (free_vars rule)
         in
             list_mk_forall (rev vars_in_rule, rule)
         end
@@ -633,7 +623,7 @@ fun mk_more_tactics num_hyps count (hyp1::hyps) =
                  end)::mk_still_more_tactics (count + 1)
             else []
         (* new_rules have vars for relations *)
-        val is_sentence = member rator relations
+        val is_sentence = tmem rator relations
         val yet_more_tactics =
             if is_sentence then mk_still_more_tactics num_hyps
             else []
@@ -663,8 +653,8 @@ fun mk_tactics count (rule::rules) =
                 mk_more_tactics hyp_count 0 hyps
             else []
     in
-        if ((not is_an_imp) andalso (forall_vars = [])) then
-            (mk_tactics (count + 1) rules)
+        if not is_an_imp andalso null forall_vars then
+          (mk_tactics (count + 1) rules)
         else
             (fn (asms, gl) =>
              let val rule_thm = ASSUME (nth (rev asms, hyp_count + count))
@@ -899,7 +889,7 @@ end;
 (* relations are constants *)
 fun rel_in_term rel tm =
     if is_var tm then false else
-    if is_const tm then rel = tm else
+    if is_const tm then rel ~~ tm else
     if is_abs tm then rel_in_term rel (body tm) else
     (* must be comb *)
         let val (t1, t2) = dest_comb tm in
@@ -1165,9 +1155,9 @@ fun reduce vs ths res subf =
    if (null ths)
    then (rev res, subf)
    else let val (lhs,rhs) = dest_eq(concl(hd ths))
-            val (sth,pai) = if (mem lhs vs)
+            val (sth,pai) = if tmem lhs vs
                             then (hd ths,{redex=lhs,residue=rhs})
-                            else if (mem rhs vs)
+                            else if tmem rhs vs
                                  then (SYM(hd ths),{redex=rhs,residue=lhs})
                                  else bad_error ("reduce")
         in if (free_in (#redex pai) (#residue pai))
@@ -1182,8 +1172,7 @@ fun reduce vs ths res subf =
 fun subst_assoc tm =
    let fun assc [] = NONE
          | assc ({redex,residue}::rst) =
-            if (tm = redex)
-            then (SOME residue)
+            if tm ~~ redex then (SOME residue)
             else assc rst
    in assc
    end;
@@ -1226,7 +1215,7 @@ fun efn ss v (pat,th) =
 fun prove ths cs =
    (uncurry CONJ ((prove ths ## prove ths) (dest_conj cs)))
    handle _
-   => (Lib.first (fn t => concl t = cs) ths)
+   => (Lib.first (fn t => concl t ~~ cs) ths)
    handle _
    => (REFL (rand cs))
 in
@@ -1315,7 +1304,7 @@ val info_list = map2
 (* sfn is used to substitute vars used in rules for vars used in terms
    in conclusion of thm4 below *)
 fun sfn eqs rel =
-    let val (argvars, hyp) = assoc rel info_list
+    let val (argvars, hyp) = tassoc rel info_list
     in
 (* following line changed by PVH Feb 3, 2000 from {var=v, thm=th} *)
         SUBST(map2 (fn th => fn v => {redex=v, residue=th})
@@ -1333,7 +1322,7 @@ fun has_this_rel rel thm1 =
                 snd (dest_imp bdy)
             else bdy
     in
-        rel = fst (strip_comb applied_rel)
+        rel ~~ fst (strip_comb applied_rel)
     end
 val divided_rules = map
     (fn rel => (filter (fn thm1 => has_this_rel rel thm1) rule_thms)) set
@@ -1535,8 +1524,7 @@ fun do_one_conjunct tm =
     end
 
 fun prove_conj_imp (tm::tms) =
-    if tms = [] then
-        do_one_conjunct tm
+    if null tms then do_one_conjunct tm
     else
         let val thm1 = do_one_conjunct tm
             val thm2 = prove_conj_imp tms
@@ -1622,12 +1610,8 @@ fun delete_conjs pred conj_thm =
     end
 *)
 
-fun member item (thing::more_things) =
-    if item = thing then true else member item more_things
-  | member item [] = false
-
 fun props_in_tm tm =
-    if is_var tm then member tm prop_vars else
+    if is_var tm then tmem tm prop_vars else
     if is_const tm then false else
     if is_abs tm then props_in_tm (body tm) else
     (* must be comb *)
@@ -1741,7 +1725,7 @@ local
     fun process_term tm =
         (fst (strip_comb (fst (dest_imp (snd (strip_forall tm))))), tm)
     fun get_correct_tm ((rel, tm)::more_info) rel2 =
-        if rel = rel2 then tm
+        if rel ~~ rel2 then tm
         else get_correct_tm more_info rel2
       | get_correct_tm [] rel2 = raise HOL_ERR
         {origin_structure = "inductive_relations",

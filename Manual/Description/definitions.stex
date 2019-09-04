@@ -84,20 +84,36 @@ the types \holtxt{bool}, \holtxt{prod}, \holtxt{num}, \holtxt{option},
 and \holtxt{list}.
 
 \paragraph{Example: Binary trees}
-The following ML declaration of a data type of binary trees
+The following \ML{} declaration of a data type of binary trees
 \begin{hol}
 \begin{verbatim}
   datatype ('a,'b) btree = Leaf of 'a
                          | Node of ('a,'b) btree * 'b * ('a,'b) btree
 \end{verbatim}
 \end{hol}
-\noindent would be declared in \HOL{} as
+\noindent could be declared in \HOL{} with a call to the \ml{Datatype} function:
 \begin{hol}
 \begin{verbatim}
    Datatype `btree = Leaf 'a | Node btree 'b btree`
 \end{verbatim}
 \end{hol}
-\noindent Note that any type parameters for the new type are not
+Also: good practice in script files is to make sure that everything is an \ML{} declaration, so the above should really appear as
+\begin{hol}
+\begin{verbatim}
+   val _ = Datatype `btree = Leaf 'a | Node btree 'b btree`
+\end{verbatim}
+\end{hol}
+\index{special syntactic forms for scripts!Datatype@\ml{Datatype}}
+To reduce the verbiage of the above, there is a special syntax (akin to \ml{Theorem} and \ml{Definition}), allowing one to instead write
+\begin{hol}
+\begin{verbatim}
+   Datatype: btree = Leaf 'a | Node btree 'b btree
+   End
+\end{verbatim}
+\end{hol}
+As with the other forms, the keywords here must be in column $1$.
+
+Note that in all forms, any type parameters for the new type are not
 mentioned: the type variables are always ordered alphabetically.
 
 This subtle point bears repeating: the format of datatype definitions
@@ -109,7 +125,8 @@ example, if one defines
 %
 \begin{hol}
 \begin{verbatim}
-   Datatype `sum = C1 'left | C2 'right`;
+   Datatype: sum = C1 'left | C2 'right
+   End
 \end{verbatim}
 \end{hol}
 %
@@ -126,20 +143,22 @@ Thus, in the example given, the \ml{'a} of \ml{('a,'b)sum} will be the argument 
  To start, enumerated types can be defined as in the following example:
 \begin{hol}
 \begin{verbatim}
-  Datatype
-    `enum = A1  | A2  | A3  | A4  | A5
-          | A6  | A7  | A8  | A9  | A10
-          | A11 | A12 | A13 | A14 | A15
-          | A16 | A17 | A18 | A19 | A20
-          | A21 | A22 | A23 | A24 | A25
-          | A26 | A27 | A28 | A29 | A30`
+  Datatype:
+    enum = A1  | A2  | A3  | A4  | A5
+         | A6  | A7  | A8  | A9  | A10
+         | A11 | A12 | A13 | A14 | A15
+         | A16 | A17 | A18 | A19 | A20
+         | A21 | A22 | A23 | A24 | A25
+         | A26 | A27 | A28 | A29 | A30
+  End
 \end{verbatim}
 \end{hol}
 %
 Other non-recursive types may be defined as well:
 \begin{hol}
 \begin{verbatim}
-  Datatype`foo = N num | B bool | Fn ('a -> 'b) | Pr ('a # 'b)`
+  Datatype: foo = N num | B bool | Fn ('a -> 'b) | Pr ('a # 'b)
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -148,7 +167,8 @@ trees having polymorphic values at internal nodes. This time, we will
 declare it in ``paired'' format.
 \begin{hol}
 \begin{verbatim}
-  Datatype `tree = Leaf 'a | Node (tree # 'b # tree)`
+  Datatype: tree = Leaf 'a | Node (tree # 'b # tree)
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -160,10 +180,11 @@ The basic syntax of the named lambda calculus is easy to describe:
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `lambda = Var string
+  Datatype: lambda = Var string
                    | Const 'a
                    | Comb lambda lambda
-                   | Abs lambda lambda`
+                   | Abs lambda lambda
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -171,11 +192,12 @@ The syntax for `de Bruijn' terms is roughly similar:
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `dB = Var string
+  Datatype: dB = Var string
                | Const 'a
                | Bound num
                | Comb dB dB
-               | Abs dB`
+               | Abs dB
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -185,7 +207,8 @@ explicitly declared.
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `ntree = Node 'a (ntree list)`
+  Datatype: ntree = Node 'a (ntree list)
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -193,7 +216,8 @@ A type of `first order terms' can be declared as follows:
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `term = Var string | Fnapp (string # term list)`
+  Datatype: term = Var string | Fnapp (string # term list)
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -203,8 +227,8 @@ Core ML.
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype
-    `atexp = var_exp string
+  Datatype:
+     atexp = var_exp string
            | let_exp dec exp ;
 
        exp = aexp    atexp
@@ -225,7 +249,8 @@ Core ML.
            | rec_bind valbind ;
 
        pat = wild_pat
-           | var_pat string`
+           | var_pat string
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -233,8 +258,9 @@ Simple record types may be introduced using the \holtxt{<| ... |>} notation.
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype
-    `state = <| Reg1 : num; Reg2 : num; Waiting : bool |>`
+  Datatype:
+    state = <| Reg1 : num; Reg2 : num; Waiting : bool |>
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -244,10 +270,11 @@ declaration could be used to formalize a simple file system.
 \begin{hol}
 \begin{verbatim}
   Datatype
-    `file = Text string | Dir directory
+     file = Text string | Dir directory
        ;
      directory = <| owner : string ;
-                    files : (string # file) list |>`
+                    files : (string # file) list |>
+  End
 \end{verbatim}
 \end{hol}
 
@@ -263,7 +290,8 @@ is doomed to fail.
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `foo = A foo`
+  Datatype: foo = A foo
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -272,7 +300,8 @@ at present be built with \ml{Datatype}:
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `btree = Leaf 'a | Node (('a # 'a) btree)`
+  Datatype: btree = Leaf 'a | Node (('a # 'a) btree)
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -283,7 +312,8 @@ require it.  Thus, examples such as the following will fail:
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `flist = Nil | Cons 'a ('b -> flist)`
+  Datatype: flist = Nil | Cons 'a ('b -> flist)
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -294,10 +324,11 @@ lambda calculus (note the \holtxt{->} in the clause for the
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `lambda = Var string
+  Datatype: lambda = Var string
                    | Const 'a
                    | Comb lambda lambda
-                   | Abs (lambda -> lambda)`
+                   | Abs (lambda -> lambda)
+  End
 \end{verbatim}
 \end{hol}
 
@@ -318,7 +349,8 @@ For example, invoking
 %
 \begin{hol}
 \begin{verbatim}
-  Datatype `tree = Leaf num | Node tree tree`
+  Datatype: tree = Leaf num | Node tree tree
+  End
 \end{verbatim}
 \end{hol}
 %
@@ -408,7 +440,8 @@ previously discussed.  For example, to create a record type called
   employed}, {\tt name} and {\tt age}, one would enter:
 \begin{hol}
 \begin{verbatim}
-  Datatype `person = <| employed : bool ; age : num ; name : string |>`
+  Datatype: person = <| employed : bool ; age : num ; name : string |>
+  End
 \end{verbatim}
 \end{hol}
 The order in which the fields are entered is not significant. As well
@@ -562,6 +595,7 @@ Therefore, it is recommended that new, user-proved theorems that mention big rec
 
 Better yet, users should define their own system of hierarchically nested sub-records if their records are getting too large.
 
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!pretty-printing big records}
 The pretty-printing of big records can be controlled with the
 \texttt{pp\_bigrecs} trace-flag.
 \index{Datatype@\ml{Datatype}|)}
@@ -1071,37 +1105,53 @@ For more details, please consult the \texttt{patternMatchesLib} documentation in
 
 \section{Recursive Functions}\label{TFL}
 
-\HOL{} provides a function definition mechanism based on the
-wellfounded recursion theorem proved in \theoryimp{relationTheory},
-discussed in Section~\ref{relation}.  \ml{Define} takes a high-level,
-possibly recursive, specification of a function, and attempts to
-define the function in the logic. \ml{Define} may be used to define
-abbreviations, recursive functions, and mutually recursive
-functions. An induction theorem may be generated as a by-product of
-\ml{Define}'s activity. This induction theorem follows the recursion
-structure of the function, and may be useful when proving properties
-of the function. \ml{Define} is not always successful in attempting
+\HOL{} provides a function definition mechanism based on the wellfounded recursion theorem proved in \theoryimp{relationTheory}, discussed in Section~\ref{relation}.
+With the \ml{Definition} syntax, users provide a high-level, possibly recursive, specification of a function, and \HOL{} attempts to define the function in the logic.
+This technology may be used to define abbreviations, recursive functions, and mutually recursive functions.
+An induction theorem may be generated as a by-product of this activity.
+This induction theorem follows the recursion structure of the function, and may be useful when proving properties of the function.
+The definition technology is not always successful in attempting
 to make the specified definition, usually because an automatic
 termination proof fails; in that case, another entrypoint, \ml{Hol\_defn},
-which defers the termination proof to the user, can be used.
-The technology underlying \ml{Define} and \ml{Hol\_defn} is explained
+which defers the termination proof to the user, can be used. %
+\index{special syntactic forms for scripts!Definition@\ml{Definition}}%
+Once a termination argument is found, it can be provided as part of the final \ml{Definition} syntax.
+The technology underlying \ml{Definition} and \ml{Hol\_defn} is explained
 in detail in Slind~\cite{slind-thesis}.
 
-
 \index{Define@\ml{Define}}
-
- In particular, \ml{Define} takes as input a quotation representing a
-conjunction of equations. The specified function(s) may be phrased
-using ML-style pattern-matching. A call
-\ml{Define `}\textit{spec}\ml{`} should conform with the grammar in Table
+\index{Definition@\ml{Definition}}
+The basic form of a \ml{Definition} (without a termination argument) is
+\begin{alltt}
+  Definition defname:
+    \textit{fn-spec}
+  End
+\end{alltt}
+Note that this is \emph{not} valid \ML{} syntax.
+Instead, \HOL{} is using lexical pre-processing to transform the above into something more complicated underneath.
+To make this reasonable, there are constraints introduced on the syntax above: both keywords (\ml{Definition} and \ml{End}) must appear in column $1$ of the input (hard against the left margin in one's input source file).
+For example
+\begin{session}
+\begin{alltt}
+>> Definition last0_def:
+     (last0 [] = 0) /\
+     (last0 [x] = x) /\
+     (last0 (h::t) = last0 t)
+   End
+\end{alltt}
+\end{session}
+The \textit{fn-spec} above is quoted syntax representing a
+conjunction of equations.
+The specified function(s) may be phrased using ML-style pattern-matching.
+The \textit{fn-spec} should conform with the grammar in Table
 \ref{define:syntax}.
 \begin{table}[htbp]
 \begin{center}
 $
 \begin{array}{|rll|}
 \hline
-\mathit{spec} & ::= &  \mathit{eqn} \\
-              & \mid  & (\mathit{eqn}) \land \mathit{spec} \\
+\textit{fn-spec} & ::= &  \mathit{eqn} \\
+              & \mid  & (\mathit{eqn}) \land \textit{fn-spec} \\
   & & \\
 \mathit{eqn} & ::= & \mathit{alphanumeric}\ \mathit{pat} \ldots \mathit{pat} = \mathit{term} \\
   & & \\
@@ -1124,14 +1174,16 @@ $
 \end{table}
 
 \paragraph{Pattern expansion}
-In general, \ml{Define} attempts to derive exactly the specified
-conjunction of equations. However, the rich syntax of patterns allows
-some ambiguity. For example, the input
+In general, \ml{Definition} attempts to derive exactly the specified conjunction of equations.
+However, the rich syntax of patterns allows some ambiguity.
+For example, the input
 %
 \begin{hol}
 \begin{verbatim}
-  Define `(f 0 _ = 1)
-    /\    (f _ 0 = 2)`
+Definition f_def:
+  (f 0 _ = 1) /\
+  (f _ 0 = 2)
+End
 \end{verbatim}
 \end{hol}
 %
@@ -1144,18 +1196,12 @@ value of \holtxt{f 0 0} is \holtxt{1}. In the implementation,
 ambiguities arising from such overlapping patterns are systematically
 translated away in a pre-processing step.
 
- Another case of ambiguity in patterns is shown above: the specification
-is incomplete since it does not tell how \holtxt{f} should behave when
-applied to two non-zero arguments: e.g., \holtxt{f (SUC m) (SUC n)}. In the
-implementation, such missing clauses are filled in, and have the value
-\holtxt{ARB}. This `pattern-completion` step is a way of turning descriptions
-of partial functions into total functions suitable for \HOL. However,
-since the user has not completely specified the function, the system
-takes that as a hint that the user is not interested in using the
-function at the missing-but-filled-in clauses, and so such clauses are
-dropped from the final theorem.
+Another case of ambiguity in patterns is shown above: the specification is incomplete since it does not tell how \holtxt{f} should behave when applied to two non-zero arguments: e.g., \holtxt{f (SUC m) (SUC n)}.
+In the implementation, such missing clauses are filled in, and have the value \holtxt{ARB}.
+This `pattern-completion' step is a way of turning descriptions of partial functions into total functions suitable for \HOL.
+However, since the user has not completely specified the function, the system takes that as a hint that the user is not interested in using the function at the missing-but-filled-in clauses, and so such clauses are dropped from the final theorem.
 
-In summary, \ml{Define} will derive the unambiguous and complete
+In summary, \ml{Definition} will derive the unambiguous and complete
 equations
 %
 \begin{hol}
@@ -1182,18 +1228,18 @@ specified by the original input.
 
 \paragraph{Termination}
 
-When processing the specification of a recursive function, \ml{Define}
+When processing the specification of a recursive function, \ml{Definition}
 must perform a termination proof. It automatically constructs
 termination conditions for the function, and invokes a termination
 prover in an attempt to prove the termination conditions.  If the
 function is primitive recursive, in the sense that it exactly follows
 the recursion pattern of a previously declared \HOL{} datatype, then this
-proof always succeeds, and \ml{Define} stores the derived equations in
+proof always succeeds, and \ml{Definition} stores the derived equations in
 the current theory segment.
 Otherwise, the function is not an
 instance of primitive recursion, and the termination prover may
-succeed or fail. If the termination proof fails, then \ml{Define} fails.
-If it succeeds, then \ml{Define} stores the specified equations in the
+succeed or fail. If the termination proof fails, then \ml{Definition} fails.
+If it succeeds, then \ml{Definition} stores the specified equations in the
 current theory segment. An induction theorem customized for the defined
 function is also stored in the current segment. Note, however, that an
 induction theorem is not stored for primitive recursive functions, since
@@ -1203,32 +1249,15 @@ the declaration of the datatype.
 
 \paragraph{Storing definitions in the theory segment}
 
- \ml{Define} automatically generates names with which to store the
-definition and, (if it exists) the associated induction theorem, in
-the current theory. The name for storing the definition is built by
-concatenating the name of the function with the value of the reference
-variable \ml{Defn.def\_suffix}. The name for storing the induction theorem
-is built by concatenating the name of the function with the value of
-the reference variable \ml{Defn.ind\_suffix}. For mutually recursive
-functions, where there is a choice of names, the name of the function
-in the first clause is taken.
-
- Since the names used to store elements in the current theory segment
-are transformed into ML bindings after the theory is exported, it is
-required that every invocation of \ml{Define} generate names that are
-valid ML identifiers. For this reason, \ml{Define} requires
-alphanumeric function names. If one wishes to define symbolic
-identifiers, the ML function \ml{xDefine} should be used.
-
-\index{xDefine@\ml{xDefine}}
-\begin{hol}
-\begin{verbatim}
-  xDefine : string -> term quotation -> thm
-\end{verbatim}
-\end{hol}
-The \ml{xDefine} function is identical to
-\ml{Define} except that it takes an explicit name to use when
-storing the definition in the current theory.
+The name given in the use of the \ml{Definition} syntax is used both to store the definition in the current theory and is also bound to the same theorem within the \ML{} environment.
+If there is an associated induction theorem, its name is derived as follows:
+\begin{itemize}
+\item
+If the principal name ends with \ml{\_def} or with \ml{\_DEF}, then the induction theorem is the same as the principal name with the suffix replaced by \ml{\_ind} or \ml{\_IND} respectively.
+\item Otherwise, the induction theorem is the principal name with \ml{\_ind} added as a suffix.
+\index{theorem attributes!induction_thm@\ml{induction\_thm}}
+\item Finally, the user may override these choices by adding an \ml{induction\_thm=\textit{name}} ``attribute'' to the principal name.
+\end{itemize}
 
 \subsection{Function definition examples}
  We will give a number of examples that display the range of functions
@@ -1237,7 +1266,9 @@ that uses ``destructors'' in the recursive call.
 
 \begin{hol}
 \begin{alltt}
->> Define `fact x = if x = 0 then 1 else x * fact(x-1)`;
+>> Definition fact_def:
+     fact x = if x = 0 then 1 else x * fact(x-1)
+   End
 \end{alltt}
 \end{hol}
 %
@@ -1247,19 +1278,22 @@ stored in the current theory.
 %
 \begin{hol}
 \begin{alltt}
->> DB.fetch "-" "fact_ind";
+>> fact_ind; (* DB.fetch "-" "fact_ind" would also work *)
 \end{alltt}
 \end{hol}
 
 Next we have a recursive function with relatively complex
-pattern-matching. We omit to examine the generated induction
-theorem.
+pattern-matching.
+We use the \ml{induction=} ``attribute'' to require a non-standard name for the generated induction theorem.
 %
 \begin{hol}
 \begin{alltt}
->> Define `(flatten  []           = [])
-      /\   (flatten ([]::rst)     = flatten rst)
-      /\   (flatten ((h::t)::rst) = h::flatten(t::rst))`;
+>> Definition flatten[induction=flat_ind]:
+      (flatten  []           = [])
+   /\ (flatten ([]::rst)     = flatten rst)
+   /\ (flatten ((h::t)::rst) = h::flatten(t::rst))
+   End
+>> flat_ind;
 \end{alltt}
 \end{hol}
 
@@ -1268,8 +1302,9 @@ wildcard expansion and pattern-matching pre-processing.
 %
 \begin{hol}
 \begin{alltt}
->> Define `(min (SUC x) (SUC y) = min x y + 1)
-      /\   (min  ____    ____   = 0)`;
+>> Definition min_def: (min (SUC x) (SUC y) = min x y + 1)
+                  /\   (min  ____    ____   = 0)
+   End
 \end{alltt}
 \end{hol}
 
@@ -1278,12 +1313,15 @@ induction theorem is generated in this case.
 %
 \begin{hol}
 \begin{alltt}
->> Define `(filter P [] = [])
-     /\    (filter P (h::t) = if P h then h::filter P t else filter P t)`;
+>> Definition filter:
+     (filter P [] = [])
+     /\    (filter P (h::t) = if P h then h::filter P t
+                              else filter P t)
+   End
 \end{alltt}
 \end{hol}
 
-\ml{Define} may also be used to define mutually recursive functions.
+\ml{Definition} may also be used to define mutually recursive functions.
 For example, we can define a datatype of propositions and a function for
 putting a proposition into negation normal form as follows.
 First we define a datatype, named \ml{prop}, of boolean formulas:
@@ -1299,9 +1337,9 @@ Then two mutually recursive functions \holtxt{nnfpos} and \holtxt{nnfneg}
 are defined:
 %
 \begin{hol}
-\begin{verbatim}
-  Define
-     `(nnfpos (VAR x)   = VAR x)
+\begin{alltt}
+>> Definition nnfpos_def:
+      (nnfpos (VAR x)   = VAR x)
    /\ (nnfpos (NOT p)   = nnfneg p)
    /\ (nnfpos (AND p q) = AND (nnfpos p) (nnfpos q))
    /\ (nnfpos (OR p q)  = OR  (nnfpos p) (nnfpos q))
@@ -1309,57 +1347,30 @@ are defined:
    /\ (nnfneg (VAR x)   = NOT (VAR x))
    /\ (nnfneg (NOT p)   = nnfpos p)
    /\ (nnfneg (AND p q) = OR  (nnfneg p) (nnfneg q))
-   /\ (nnfneg (OR p q)  = AND (nnfneg p) (nnfneg q))`
-\end{verbatim}
-\end{hol}
-%
-The system makes the definition and returns the theorem
-%
-\begin{hol}
-\begin{verbatim}
-  |- (nnfpos (VAR x) = VAR x) /\
-     (nnfpos (NOT p) = nnfneg p) /\
-     (nnfpos (AND p q) = AND (nnfpos p) (nnfpos q)) /\
-     (nnfpos (OR p q) = OR (nnfpos p) (nnfpos q)) /\
-     (nnfneg (VAR x) = NOT (VAR x)) /\
-     (nnfneg (NOT p) = nnfpos p) /\
-     (nnfneg (AND p q) = OR (nnfneg p) (nnfneg q)) /\
-     (nnfneg (OR p q) = AND (nnfneg p) (nnfneg q)) : thm
-\end{verbatim}
+   /\ (nnfneg (OR p q)  = AND (nnfneg p) (nnfneg q))
+   End
+\end{alltt}
 \end{hol}
 
-\ml{Define} may also be used to define non-recursive functions.
+\noindent \ml{Definition} may also be used to define non-recursive functions:
 %
 \begin{hol}
-\begin{verbatim}
-  Define `f x (y,z) = (x + 1 = y DIV z)`;
-\end{verbatim}
+\begin{alltt}
+>> Definition f: f x (y,z) = (x + 1 = y DIV z)
+   End
+\end{alltt}
 \end{hol}
 
-\ml{Define} may also be used to define non-recursive functions
-with complex pattern-matching. The pattern-matching pre-processing of
-{Define} can be convenient for this purpose, but can also generate a
-large number of equations. For example:
-%
-\begin{hol}
-\begin{verbatim}
-  Define
-    `(g (0,_,_,_,_) = 1) /\
-     (g (_,0,_,_,_) = 2) /\
-     (g (_,_,0,_,_) = 3) /\
-     (g (_,_,_,0,_) = 4) /\
-     (g (_,_,_,_,0) = 5)`
-\end{verbatim}
-\end{hol}
-%
-yields a definition with thirty-one clauses.
-
+Finally, \ml{Definition} may also be used to define non-recursive functions with complex pattern-matching.
+The pattern-matching pre-processing of {Define} can be convenient for this purpose, but can also generate a large number of equations.
+It may also return theorems that do not look quite like what was originally input.
+For more on this, see the discussion of case expressions (into which the clauses in a \ml{Definition} are converted internally) in Section~\ref{CaseExp}.
 
 \subsection{When termination is not automatically proved}
 
-If the termination proof for a prospective definition
-fails, the invocation of \ml{Define} (or \ml{xDefine}) fails. In such
-situations, the \ML{} function \ml{Hol\_defn} should be used.
+If the termination proof for a prospective definition fails, the invocation of the definitional machinery fails.
+In such situations, the user must supply a termination argument explicitly.
+The primitive machinery for beginning this operation is the \ML{} function \ml{Hol\_defn}:
 %
 \index{Hol_defn@\ml{Hol\_defn}}
 
@@ -1390,45 +1401,20 @@ prover. Instead, we make an application of {\small\verb+Hol_defn+}:
 
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
- val qsort_def =
-  Hol_defn "qsort"
-    `(qsort ord [] = []) /\
-     (qsort ord (h::t) =
-         qsort ord (FILTER (\x. ord x h) t)
-         ++ [h] ++
-         qsort ord (FILTER (\x. ~(ord x h)) t))`
-\end{verbatim}
+\begin{alltt}
+>>__ Feedback.emit_WARNING := false;
+>> val qsort_defn =
+     Hol_defn "qsort"
+       `(qsort ord [] = []) /\
+        (qsort ord (h::t) =
+            qsort ord (FILTER (\x. ord x h) t)
+            ++ [h] ++
+            qsort ord (FILTER (\x. ~(ord x h)) t))`;
+>>__ Feedback.emit_WARNING := true;
+\end{alltt}
 \end{session}
-which returns the following value of type \ml{defn}, but does not try
+which returns a value of type \ml{defn}, but does not try
 to prove termination.
-\begin{session}
-\begin{verbatim}
-  HOL function definition (recursive)
-
-  Equation(s) :
-   [...] |- qsort ord [] = []
-   [...]
-  |- qsort ord (h::t) =
-     qsort ord (FILTER (\x. ord x h) t) ++ [h] ++
-     qsort ord (FILTER (\x. ~ord x h) t)
-
-  Induction :
-   [...]
-  |- !P.
-       (!ord. P ord []) /\
-       (!ord h t.
-          P ord (FILTER (\x. ~ord x h) t) /\
-          P ord (FILTER (\x. ord x h) t) ==>
-          P ord (h::t)) ==>
-       !v v1. P v v1
-
-  Termination conditions :
-    0. !t h ord. R (ord,FILTER (\x. ~ord x h) t) (ord,h::t)
-    1. !t h ord. R (ord,FILTER (\x. ord x h) t) (ord,h::t)
-    2. WF R
-\end{verbatim}
-\end{session}
 
 The type \ml{defn} has a prettyprinter installed for it: the above
 output is typical, showing the components of a \ml{defn} in an understandable
@@ -1437,17 +1423,9 @@ type \ml{defn}, it is more convenient to invoke
 \ml{Defn.tgoal}, which sets up a termination proof in a goalstack.
 %
 \begin{session}
-\begin{verbatim}
-  Defn.tgoal qsort_def;
-
-  > val it =
-    Proof manager status: 1 proof.
-    1. Incomplete:
-         Initial goal:
-         ?R.
-           (!t h ord. R (ord,FILTER (\x. ~ord x h) t) (ord,h::t)) /\
-           (!t h ord. R (ord,FILTER (\x. ord x h) t) (ord,h::t)) /\ WF R
-\end{verbatim}
+\begin{alltt}
+>> Defn.tgoal qsort_defn;
+\end{alltt}
 \end{session}
 %
 The goal is to find a wellfounded relation on the arguments to \holtxt{qsort}
@@ -1459,65 +1437,49 @@ measure function results in two subgoals, both of which are easy to
 prove.
 
 \begin{session}
-\begin{verbatim}
-  - e (WF_REL_TAC `measure (LENGTH o SND)`);
-  OK..
-  2 subgoals:
-  > val it =
-     !t h ord. LENGTH (FILTER (\x. ord x h) t) < LENGTH (h::t)
-
-     !t h ord. LENGTH (FILTER (\x. ~ord x h) t) < LENGTH (h::t)
-\end{verbatim}
+\begin{alltt}
+>> e (WF_REL_TAC `measure (LENGTH o SND)`);
+\end{alltt}
 \end{session}
 %
 Execution of \ml{WF\_REL\_TAC} has automatically proved the
 wellfoundedness of the termination relation
 \holtxt{measure (LENGTH o SND)}
 and the remainder of the goal has been simplified into a
-pair of easy goals. Once both goals are proved, we can encapsulate
-the termination proof with \ml{tDefine}, which takes a quotation
-(representing desired recursion equations) and a tactic $t$,
-defines the specified function, calculates the termination conditions,
-and applies $t$ to them. If the termination conditions are proved by
-$t$ then the recursion equations and induction theorem are stored
+pair of easy goals. %
+\index{special syntactic forms for scripts!Termination@\ml{Termination}}%
+Once both goals are proved, we can encapsulate
+the termination proof/tactic into the \ml{Termination} section of a \ml{Definition}.
+As long as the tactic does indeed prove the termination conditions, the recursion equations and induction theorem are stored
 in the current theory segment before the recursion equations are returned:
 
 \begin{session}
-\begin{verbatim}
-  - val qsort_def =  tDefine "qsort"
-     `(qsort ord [] = []) /\
-      (qsort ord (h::t) =
+\begin{alltt}
+>>__ delete_const "qsort"; Feedback.emit_WARNING := false;
+>> Definition qsort_def:
+     (qsort ord [] = []) /\
+     (qsort ord (h::t) =
           qsort ord (FILTER (\x. ord x h) t) ++ [h] ++
-          qsort ord (FILTER (\x. ~(ord x h)) t))`
-     (WF_REL_TAC `measure (LENGTH o SND)` THEN ...);
-
-  > val qsort_def =
-      |- (qsort ord [] = []) /\
-         (qsort ord (h::t) =
-            qsort ord (FILTER (\x. ord x h) t) ++ [h] ++
-            qsort ord (FILTER (\x. ~ord x h) t)) : thm
-\end{verbatim}
+          qsort ord (FILTER (\x. ~(ord x h)) t))
+   Termination
+     WF_REL_TAC `measure (LENGTH o SND)` THEN cheat
+   End
+>>__ Feedback.emit_WARNING := true;
+\end{alltt}
 \end{session}
 
-The custom induction theorem for a function can be obtained by using \holtxt{fetch},
+As we have not specified a special name for it, the custom induction theorem for our function can be obtained under the name \ml{qsort\_ind}, or by using \holtxt{fetch},
 which returns named elements in the specified theory.\footnote{In a call to \texttt{fetch}, the
 first argument denotes a theory; the current theory may be specified by \texttt{"-"}.}
 \begin{session}
-\begin{verbatim}
-  - fetch "-" "qsort_ind";
-  >  val qsort_ind =
-      |- !P.
-           (!ord. P ord []) /\
-           (!ord h t.
-              P ord (FILTER (\x. ~ord x h) t) /\
-              P ord (FILTER (\x. ord x h) t) ==> P ord (h::t))
-            ==>
-           !v v1. P v v1  : thm
-\end{verbatim}
+\begin{alltt}
+>> DB.fetch "-" "qsort_ind";
+\end{alltt}
 \end{session}
 
-\noindent The induction theorem produced by \holtxt{Define} and \holtxt{tDefine} can
-be applied by \ml{recInduct}. See Section \ref{sec:bossLib} for details.
+\noindent The induction theorem produced by \ml{Definition} can
+be applied by \ml{recInduct}.
+See Section \ref{sec:bossLib} for details.
 
 \subsubsection{Techniques for proving termination}
 
@@ -1540,6 +1502,7 @@ numbers:
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
+>>__ proofManagerLib.drop_all()
 >> val gcd_defn =
       Hol_defn "gcd"
          `(gcd (0,n) = n) /\
@@ -1584,14 +1547,18 @@ branch. At the end of execution the tree has been linearized.
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
->> Datatype `btree = Leaf | Brh btree btree`;
+>>_ Datatype `btree = Leaf | Brh btree btree`;
 
 >> val Unbal_defn =
       Hol_defn "Unbal"
         `(Unbal Leaf = Leaf)
      /\  (Unbal (Brh Leaf bt) = Brh Leaf (Unbal bt))
      /\  (Unbal (Brh (Brh bt1 bt2) bt) = Unbal (Brh bt1 (Brh bt2 bt)))`;
-
+\end{alltt}
+\end{session}
+The termination conditions above can be turned into an interactive goal with \ml{Defn.tgoal}:
+\begin{session}
+\begin{alltt}
 >> Defn.tgoal Unbal_defn;
 \end{alltt}
 \end{session}
@@ -1603,9 +1570,10 @@ can assign weights to nodes in the tree such that the recursive calls of
 %
 \begin{session}
 \begin{alltt}
-##eval Define
-         `(Weight (Leaf) = 0) /\
-          (Weight (Brh x y) = (2 * Weight x) + (Weight y) + 1)`;
+##eval Definition Weight_def:
+          (Weight (Leaf) = 0) /\
+          (Weight (Brh x y) = (2 * Weight x) + (Weight y) + 1)
+       End
 \end{alltt}
 \end{session}
 %
@@ -1620,11 +1588,9 @@ Now we can invoke \ml{WF\_REL\_TAC}:
 %
 Both conjuncts of this goal are quite easy to prove.
 %
-The technique of `weighting` nodes in a datatype in order to prove
-termination also goes by the name of \emph{polynomial interpretation}. It
-must be admitted that finding the correct weighting for a termination
-proof is more an art than a science. Typically, one makes a guess and
-then tries the termination proof to see if it works.
+The technique of `weighting' nodes in a datatype in order to prove termination also goes by the name of \emph{polynomial interpretation}.
+It must be admitted that finding the correct weighting for a termination proof is more an art than a science.
+Typically, one makes a guess and then tries the termination proof to see if it works.
 
 \paragraph{Lexicographic combinations}
 
@@ -1640,7 +1606,7 @@ The fourth argument, $s$, is the string being searched.
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
->>_  val match_defn =
+>>_ val match_defn =
        Hol_defn "match"
          `(match [] __ __ __ = T)  /\
           (match __ [] __ __ = F)  /\
@@ -1651,8 +1617,8 @@ The fourth argument, $s$, is the string being searched.
               else
             match p0 (TL s) p0 (TL s))`;
 
->> val Match_def =
-     Define `Match pat str = match pat str pat str`;
+>> Definition Match_def:  Match pat str = match pat str pat str
+   End
 \end{alltt}
 \end{session}
 %
@@ -1667,9 +1633,9 @@ failed to match, so the algorithm advances one character ahead in
 $\mathit{s}$ and starts matching from the beginning of $p_0$. If
 $\mathit{s}$ is empty, however, then we return \holtxt{F}. Note that
 $\mathit{rst}$ and $s$ both represent the string being
-searched: $\mathit{rst}$ is a `local` version of $s$: we recurse into
+searched: $\mathit{rst}$ is a `local' version of $s$: we recurse into
 $\mathit{rst}$  as long as there are matches with the pattern $p$. However,
-if the search eventually fails, then $s$, which `remembers` where the search
+if the search eventually fails, then $s$, which `remembers' where the search
 started from, is used to restart the search.
 
 So much for the behaviour of the function. Why does it terminate? There
@@ -1811,7 +1777,7 @@ The `add' and `drop' functions only affect the current state of the congruence d
 
 \paragraph{Higher-order recursion and congruence rules}
 
-A `higher-order` recursion is one in which a higher-order function is
+A `higher-order' recursion is one in which a higher-order function is
 used to apply the recursive function to arguments. In order for the
 correct termination conditions to be proved for such a recursion,
 congruence rules for the higher order function must be known to the
@@ -1826,10 +1792,12 @@ summing the results of a function in a list.
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-  Define `(SIGMA f [] = 0) /\
-          (SIGMA f (h::t) = f h + SIGMA f t)`;
-\end{verbatim}
+\begin{alltt}
+>>_ Definition SIGMA_def:
+     (SIGMA f [] = 0) /\
+     (SIGMA f (h::t) = f h + SIGMA f t)
+    End
+\end{alltt}
 \end{session}
 %
 We then use \holtxt{SIGMA} in the definition of a function for
@@ -1837,13 +1805,13 @@ summing the results of a function in a arbitrarily
 (finitely) branching tree.
 %
 \begin{session}
-\begin{verbatim}
-  Datatype `ltree = Node 'a (ltree list)`;
+\begin{alltt}
+  >>_ Datatype `ltree = Node 'a (ltree list)`;
 
   Defn.Hol_defn
     "ltree_sigma"
     `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
-\end{verbatim}
+\end{alltt}
 \end{session}
 %
 In this definition, \holtxt{SIGMA} is applied to a partial application
@@ -1854,20 +1822,11 @@ to be made to extract the correct termination conditions. Otherwise,
 the following unhappy situation results:
 %
 \begin{session}
-\begin{verbatim}
-  HOL function definition (recursive)
-
-  Equation(s) :
-    [..] |- ltree_sigma f (Node v tl)
-              = f v + SIGMA (\a. ltree_sigma f a) tl
-
-  Induction :
-    [..] |- !P. (!f v tl. (!a. P f a) ==> P f (Node v tl)) ==> !v v1. P v v1
-
-  Termination conditions :
-    0. WF R
-    1. !tl v f a. R (f,a) (f,Node v tl) : defn
-\end{verbatim}
+\begin{alltt}
+  >>- with_flag(Feedback.emit_WARNING, false) (Defn.Hol_defn
+    "ltree_sigma")
+    `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
+\end{alltt}
 \end{session}
 %
 \index{congruence rules!in termination analysis}
@@ -1886,29 +1845,23 @@ for \holtxt{SIGMA}. Such a congruence theorem is the following:
    |- !l1 l2 f g.
        (l1=l2) /\ (!x. MEM x l2 ==> (f x = g x)) ==>
        (SIGMA f l1 = SIGMA g l2)
+>>__ val SIGMA_CONG = mk_thm([], ``!l1 l2 f g.
+       (l1=l2) /\ (!x. MEM x l2 ==> (f x = g x)) ==>
+       (SIGMA f l1 = SIGMA g l2)``);
 \end{verbatim}
 \end{hol}
 %
-Once \ml{Hol\_defn} has been told about this theorem, via \ml{DefnBase}'s \ml{add\_cong} or \ml{export\_cong} functions, the termination conditions extracted for the definition are now provable, since \holtxt{a} is a proper subterm of \holtxt{Node v tl}.
+Once \ml{Hol\_defn} has been told about this theorem, via \ml{DefnBase}'s \ml{add\_cong} or \ml{export\_cong} functions, or by using a `defncong` attribute on a theorem when it is saved,%
+\index{theorem attributes!defncong@\ml{defncong}}%
+the termination conditions extracted for the definition are now provable, since \holtxt{a} is a proper subterm of \holtxt{Node v tl}.
 %
+>>__ structure Defn = struct open Defn val Hol_defn = fn s => with_flag(Feedback.emit_WARNING, false) (Hol_defn s) end;
 \begin{session}
-\begin{verbatim}
-  val _ = DefnBase.add_cong SIGMA_CONG;
-
-  Defn.Hol_defn
-    "ltree_sigma"
+\begin{alltt}
+>> val _ = DefnBase.add_cong SIGMA_CONG;
+>> Defn.Hol_defn "ltree_sigma"
     `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
-
-  > val it =
-      HOL function definition (recursive)
-
-      Equation(s) :  ...  (* as before *)
-      Induction :    ...  (* as before *)
-
-      Termination conditions :
-        0. WF R
-        1. !v f tl a. MEM a tl ==> R (f,a) (f,Node v tl)
-\end{verbatim}
+\end{alltt}
 \end{session}
 
 \subsection{Recursion schemas}
@@ -1934,31 +1887,19 @@ $g(x) = x$, then the resulting instantiation of
   \konst{linRec} (x) = \konst{linRec}(x) + 1
 \]
 %
-This is not, however, derivable in \HOL{}, because recursion schemas
-are defined by instantiating the wellfounded recursion theorem, and
-therefore certain abstract termination constraints arise that
-must be satisfied before recursion equations can be used in an
-unfettered manner. The entrypoint for defining a schema is
-\ml{TotalDefn.DefineSchema}. On the \konst{linRec} example it
-behaves as follows (note that the schematic variables should
-only occur on the right-hand side of the definition when making
-the definition of a schema):
+This is not, however, derivable in \HOL{}, because recursion schemas are defined by instantiating the wellfounded recursion theorem, and therefore certain abstract termination constraints arise that must be satisfied before recursion equations can be used in an unfettered manner.
+The entrypoint for defining a schema is \ml{TotalDefn.DefineSchema}, which can also be targeted by using the \ml{schematic} attribute with the \ml{Definition} syntax.
+\index{theorem attributes!schematic@\ml{schematic}}
+On the \konst{linRec} example it behaves as follows (note that the schematic variables should only occur on the right-hand side of the definition when making the definition of a schema):
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-  - TotalDefn.DefineSchema
-      `linRec (x:'a) = if d(x) then e(x) else f(linRec(g x))`;
-
-  <<HOL message: Definition is schematic in the following variables:
-      "d", "e", "f", "g">>
-
-  Equations stored under "linRec_def".
-  Induction stored under "linRec_ind".
-  > val it =
-     [..]
-    |- linRec d e f g x = if d x then e x else f (linRec d e f g (g x))
-\end{verbatim}
+\begin{alltt}
+>>__ delete_const "f";
+>> Definition linRec_def[schematic]:
+     linRec (x:'a) = if d(x) then e(x) else f(linRec(g x))
+   End
+\end{alltt}
 \end{session}
 %
 The hypotheses of the returned theorem hold the abstract termination
@@ -1966,10 +1907,9 @@ constraints. A similarly constrained induction theorem is also
 stored in the current theory segment.
 %
 \begin{session}
-\begin{verbatim}
-  hyp it;
-  > val it = [``!x. ~d x ==> R (g x) x``, ``WF R``] : term list
-\end{verbatim}
+\begin{alltt}
+>> hyp linRec_def;
+\end{alltt}
 \end{session}
 %
 These constraints are abstract, since they place termination requirements
@@ -1982,14 +1922,13 @@ proving the other constraints.
 \index{inductive relations|(}
 
 \index{Hol_reln, defining inductive relations@\ml{Hol\_reln}, defining inductive relations}
+\index{inductive relations!Inductive syntax@\ml{Inductive} syntax}
 \index{inductive relations!Hol_reln (ML function)@\ml{Hol\_reln} (ML function)}
-Inductive definitions are made with the function \ml{Hol\_reln}, found
-in the \ml{bossLib} structure, and the resulting definitions and
-theorems are handled with functions defined in the library
-\ml{IndDefLib}. The \ml{Hol\_reln} function takes a
-term quotation as input and attempts to define the relations there
-specified.  The input term quotation must parse to a term that
-conforms to the following grammar:
+Inductive definitions are made with the special \ml{Inductive} syntax form, which wraps the underlying function \ml{Hol\_reln}, which is in turn found
+in the \ml{bossLib} structure.
+The resulting definitions and theorems are handled with functions defined in the library \ml{IndDefLib}.
+The \ml{Inductive} syntax and \ml{Hol\_reln} function take a term quotation as input and attempt to define the relations there specified.
+The input term quotation must parse to a term that conforms to the following grammar:
 \newcommand{\nonterm}[1]{\ensuremath{\langle\mathit{#1}\rangle}}
 \begin{eqnarray*}
    \nonterm{inputFormat} &::=& \nonterm{clause} \;\holtxt{/\bk}\; \nonterm{inputFormat} \;\;|\;\; \nonterm{clause}\\
@@ -2013,14 +1952,13 @@ free variables, but it is also permissible to use existential
 quantification in the hypotheses.  If a clause has no free variables,
 it is permissible to have no universal quantification.)
 
-A successful invocation of \ml{Hol\_reln} returns three theorems
-$(\mathit{rules},\mathit{ind},\mathit{cases})$. Each is also stored in
-the current theory segment.
+A successful invocation of this definitional principle returns three important theorems $\mathit{rules}$, $\mathit{ind}$ and $\mathit{cases})$.
+Each is also stored in the current theory segment.
 \begin{itemize}
 \item $\mathit{rules}$ is a conjunction of implications
 that will be the same as the input term quotation; the theorem is
 saved under the name \ml{<stem>\_rules}, where \ml{<stem>} is the name of the
-first relation defined by the function.
+first relation defined by the function (if using \ml{Hol\_reln}), or as provided by the user, when using the \ml{Inductive} syntax.
 \item $\mathit{ind}$ is the induction principle for the relations,
 saved under the name \ml{<stem>\_ind}.
 \item $\mathit{cases}$ is the so-called `cases' or `inversion' theorem
@@ -2046,8 +1984,25 @@ possible ways of obtaining it by the rules.
 If the ``stem'' of the first constant defined in a set of clauses is such that resulting \ML{} bindings in an exported theory file will result in illegal \ML{}, then the \ml{xHol\_reln} function should be used.
 The \ml{xHol\_reln} function is analogous to the \ml{xDefine} function for defining recursive functions (see Section~\ref{TFL}).
 
+\index{inductive relations!Inductive syntax@\ml{Inductive} syntax}
+Alternatively, the \ml{Inductive} syntax can be used, requiring the user to specify the stem, but saving on verbosity: instead of writing
+\begin{verbatim}
+   val (foo_rules,foo_ind,foo_cases) = Hol_reln`
+     ...
+   `;
+\end{verbatim}
+one writes
+\begin{verbatim}
+   Inductive foo:
+     ...
+   End
+\end{verbatim}
+where, as with other special syntaxes, the keywords (\ml{Inductive} and \ml{End}) have to be in the leftmost column of the source file.
+
 \paragraph{Strong induction principles}
-So called ``strong'' versions of induction principles (in which instances of the relation being defined appear as extra hypotheses), are automatically proved when a definition is made with \ml{Hol\_reln}. The strong induction principle for a relation is used when the \ml{Induct\_on} tactic is used.
+So called ``strong'' versions of induction principles (in which instances of the relation being defined appear as extra hypotheses), are automatically proved when an inductive definition is made.
+\index{Induct_on (ML induction tactic)@\ml{Induct\_on} (\ML{} induction tactic)}
+The strong induction principle for a relation is used when the \ml{Induct\_on} tactic is used.
 
 \paragraph{Adding monotone operators}
 \index{inductive relations!monotone operators for}
@@ -2102,68 +2057,31 @@ the following:
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-  Hol_reln
-    `EVEN 0 /\
+\begin{alltt}
+>> Inductive EVEN_ODD:
+     EVEN 0 /\
      (!n. ODD n ==> EVEN (n + 1)) /\
-     (!n. EVEN n ==> ODD (n + 1))`;
-\end{verbatim}
+     (!n. EVEN n ==> ODD (n + 1))
+   End
+\end{alltt}
 \end{session}
 %
-The result is three theorems
+The next example shows how to inductively define the reflexive and transitive closure of relation $R$, which we write as \holtxt{rtc}.
+Note that \holtxt{R}, as a schematic variable, is not quantified in the rules. This is appropriate because it is \holtxt{rtc R} that has the inductive characterisation, not \holtxt{rtc} itself.
 %
 \begin{session}
-\begin{verbatim}
-  > val it =
-    (|- EVEN 0 /\
-        (!n. ODD n ==> EVEN (n + 1)) /\
-        (!n. EVEN n ==> ODD (n + 1)),
-
-     |- !EVEN' ODD'.
-           EVEN' 0 /\
-           (!n. ODD' n ==> EVEN' (n + 1)) /\
-           (!n. EVEN' n ==> ODD' (n + 1))
-           ==>
-           (!a0. EVEN a0 ==> EVEN' a0) /\
-           (!a1. ODD a1 ==> ODD' a1),
-
-     |- (!a0. EVEN a0 = (a0 = 0) \/
-                        ?n. (a0 = n + 1) /\ ODD n) /\
-        (!a1. ODD a1 = ?n. (a1 = n + 1) /\ EVEN n)
-    ) : thm * thm * thm
-\end{verbatim}
+\begin{alltt}
+  >> Inductive rtc:
+       (!x. rtc R x x) /\
+       (!x z. (?y. R x y /\ rtc R y z) ==> rtc R x z)
+     End
+\end{alltt}
 \end{session}
 %
-The next example shows how to inductively define the reflexive and
-transitive closure of relation $R$. Note that \holtxt{R}, as a
-schematic variable, is not quantified in the rules. This is
-appropriate because it is \holtxt{RTC R} that has the inductive
-characterisation, not \holtxt{RTC} itself.
-%
-\begin{session}
-\begin{verbatim}
-  - Hol_reln `(!x. RTC R x x) /\
-             (!x z. (?y. R x y /\ RTC R y z) ==> RTC R x z)`;
-
-  > val it =
-     (|- !R. (!x. RTC R x x) /\
-             !x z. (?y. R x y /\ RTC R y z) ==> RTC R x z,
-
-      |- !R RTC'.
-           (!x. RTC' x x) /\
-           (!x z. (?y. R x y /\ RTC' y z) ==> RTC' x z)
-           ==>
-           (!a0 a1. RTC R a0 a1 ==> RTC' a0 a1),
-
-      |- !R a0 a1. RTC R a0 a1 = (a1 = a0) \/ ?y. R a0 y /\ RTC R y a1
-     ) : thm * thm * thm
-\end{verbatim}
-\end{session}
-%
-The \ml{Hol\_reln} function may be used to define multiple relations,
-as in the definition of \holtxt{EVEN} and \holtxt{ODD}.  The relations
-may or may not be mutually recursive.  The clauses for each relation
-need not be contiguous.
+Inductive definitions may be used to define multiple relations,
+as in the definition of \holtxt{EVEN} and \holtxt{ODD}.
+The relations may or may not be mutually recursive.
+The clauses for each relation need not be contiguous.
 
 \subsection{Proofs with inductive relations}
 \label{sec:proofs-with-inductive-relations}
@@ -2193,19 +2111,14 @@ The low-level approach to goals of this form is to apply
 \end{verbatim}
 \index{Induct_on (ML induction tactic)@\ml{Induct\_on} (\ML{} induction tactic)}
 A slightly more high-level approach is use the \ml{Induct\_on} tactic, which will actually use the automatically generated ``strong'' induction principle.%
-\footnote{Thus, to get the equivalent of the \ml{Induct_on} call, one might write something like \ml{HO_MATCH_MP_TAC~(theorem "R_strongind")}.}
+\footnote{To get an approximation of the \ml{Induct_on} call, one might write something like \ml{HO_MATCH_MP_TAC~R_strongind}.}
 (This tactic is also used to perform structural inductions over algebraic data types; see Section~\ref{sec:bossLib}.)
-When performing a rule induction, the quotation passed to \ml{Induct\_on} should be of the constant being used.
-For the sake of aesthetics, the constant may also be applied to arguments.
-Thus, one can write
+When performing a rule induction, the quotation passed to \ml{Induct\_on} should be of the constant, perhaps also applied to arguments.
+Indeed, if there are multiple instances of an \holtxt{R}-term in the goal, then quoting arguments allows selection of the correct term to induct on.
+Thus, one can write invocations such as
 \begin{verbatim}
-   Induct_on `R`
+   Induct_on `R (f x) y`
 \end{verbatim}
-or
-\begin{verbatim}
-   Induct_on `R x y`
-\end{verbatim}
-and the effect will be the same.
 \index{inductive relations|)}
 
 

@@ -107,26 +107,33 @@ fun read_status r = case r of
    Interface
    ------------------------------------------------------------------------- *)
 
-val ttt_tacdata_cache = ref (dempty String.compare)
-fun clean_ttt_tacdata_cache () = ttt_tacdata_cache := dempty String.compare
+val ttt_tacdata_cache = ref (dempty (list_compare String.compare))
+fun clean_ttt_tacdata_cache () =
+  ttt_tacdata_cache := dempty (list_compare String.compare)
 
 val ttt_goaltac_cache = ref (dempty goal_compare)
 fun clean_ttt_goaltac_cache () = ttt_goaltac_cache := dempty goal_compare
 
+fun has_boolty x = type_of x = bool
+fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
+
 fun tactictoe_aux goal =
+  if not (has_boolty_goal goal)
+  then raise ERR "tactictoe" "a term is not of type bool"
+  else
   let val (stac,tac) = dfind goal (!ttt_goaltac_cache) in
     print_endline ("goal already solved by:\n  " ^ stac); tac
   end
   handle NotFound =>
   let
     val _ = hide_out QUse.use infix_file
-    val cthy = current_theory ()
+    val cthyl = current_theory () :: ancestry (current_theory ())
     val _ = init_metis ()
     val thmdata = create_thmdata ()
     val tacdata =
-      dfind cthy (!ttt_tacdata_cache) handle NotFound =>
+      dfind cthyl (!ttt_tacdata_cache) handle NotFound =>
       let val tacdata_aux = ttt_create_tacdata () in
-        ttt_tacdata_cache := dadd cthy tacdata_aux (!ttt_tacdata_cache);
+        ttt_tacdata_cache := dadd cthyl tacdata_aux (!ttt_tacdata_cache);
         tacdata_aux
       end
     val proofstatus = hide_out (main_tactictoe (thmdata,tacdata)) goal
@@ -144,29 +151,35 @@ fun tactictoe term =
 
 (* -------------------------------------------------------------------------
    Evaluation
+   Warning : ttt_record should be run on all theories before evaluation
    ------------------------------------------------------------------------- *)
 
 val ttt_eval_dir = tactictoe_dir ^ "/eval"
 fun log_eval s =
   let val file = ttt_eval_dir ^ "/" ^ current_theory () in
     print_endline s;
-    mkDir_err ttt_eval_dir;
-    append_endline file s
+    mkDir_err ttt_eval_dir; append_endline file s
   end
 
-fun log_status r = case r of
+fun log_status tptpname r = case r of
    ProofError     => log_eval "  tactictoe: error"
  | ProofSaturated => log_eval "  tactictoe: saturated"
  | ProofTimeOut   => log_eval "  tactictoe: time out"
- | Proof s        => log_eval ("  tactictoe found a proof:\n  " ^ s)
+ | Proof s        =>
+   (
+   log_eval ("  tactictoe found a proof:\n  " ^ s);
+   log_eval ("Proven: " ^ tptpname)
+   )
 
-fun ttt_eval (thmdata,tacdata) goal =
+fun ttt_eval (thmdata,tacdata) (thy,name) goal =
   let
+    val tptpname = escape ("thm." ^ thy ^ "." ^ name)
+    val _ = log_eval ("Theorem: " ^ tptpname)
     val _ = log_eval ("Goal: " ^ string_of_goal goal)
     val (status,t) = add_time (main_tactictoe (thmdata,tacdata)) goal
   in
-    log_status status;
-    log_eval ("  time: " ^ Real.toString t)
+    log_status tptpname status;
+    log_eval ("  time: " ^ Real.toString t ^ "\n")
   end
 
 (* -------------------------------------------------------------------------

@@ -5,6 +5,7 @@ open wordsTheory bit_listTheory;
 open x86_coretypesTheory x86_astTheory x86_seq_monadTheory;
 
 val _ = new_theory "x86_opsem";
+val _ = ParseExtras.temp_loose_equality()
 
 
 (* ---------------------------------------------------------------------------------- *>

@@ -7,7 +7,9 @@ open listLib wordsLib bitSyntax bitstringSyntax;
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars blastTheory.blast_grammars
+  val (Type,Term) =
+      parse_from_grammars
+        (apsnd ParseExtras.grammar_loose_equality blast_grammars)
 end
 
 open Parse
@@ -279,10 +281,10 @@ fun mk_summation rwts (max, x, y, c) =
                       val y_concl = rhsc y_thm
                       val c_concl = rhsc c_thm
                       val (thm1,thm2) =
-                         if c_concl = boolSyntax.T
+                         if Teq c_concl
                             then SP [i, n, x_concl, y_concl]
                                     (iBSUM_mp_carry, iBCARRY_mp_carry)
-                         else if c_concl = boolSyntax.F
+                         else if Feq c_concl
                             then SP [i, n, x_concl, y_concl]
                                     (iBSUM_mp_not_carry, iBCARRY_mp_not_carry)
                          else SP [i, n, x_concl, y_concl, c_concl]
@@ -339,10 +341,10 @@ fun mk_carry rwts (max, x, y, c) =
                       val y_concl = rhsc y_thm
                       val c_concl = rhsc c_thm
                       val thm =
-                         if c_concl = boolSyntax.T
+                         if Teq c_concl
                             then Drule.SPECL [i, n, x_concl, y_concl]
                                    iBCARRY_mp_carry
-                         else if c_concl = boolSyntax.F
+                         else if Feq c_concl
                             then Drule.SPECL [i, n, x_concl, y_concl]
                                    iBCARRY_mp_not_carry
                          else Drule.SPECL [i, n, x_concl, y_concl, c_concl]
@@ -388,7 +390,7 @@ local
         let
            val (l,r) = List.partition
                           (fn (_, (n2, x2, y2, c2)) =>
-                             x = x2 andalso y = y2 andalso c = c2) t
+                             x ~~ x2 andalso y ~~ y2 andalso c ~~ c2) t
         in
            pick_max l h :: remove_redundant r
         end
@@ -397,7 +399,7 @@ in
       let
          val rws = mk_testbit_thms tm
          val tms = HolKernel.find_terms is_sum tm
-         val tms = tms |> Lib.mk_set
+         val tms = tms |> Lib.op_mk_set aconv
                        |> Listsort.sort
                             (Int.compare o (Term.term_size ## Term.term_size))
                        |> List.map dest_sum
@@ -437,7 +439,7 @@ local
 
    fun mk_bit_sets tm =
       let
-         val tms = Lib.mk_set (HolKernel.find_terms is_bit_lit tm)
+         val tms = Lib.op_mk_set aconv (HolKernel.find_terms is_bit_lit tm)
       in
          List.map BIT_SET_CONV tms
       end
@@ -885,7 +887,7 @@ in
          val thm = Conv.QCONV (REWRITE_CONV [lem]) tm
          val c = rhsc thm
       in
-         if c = boolSyntax.T orelse c = boolSyntax.F
+         if Teq c orelse Feq c
             then thm
          else Conv.RIGHT_CONV_RULE
                 (Conv.REWR_CONV (Drule.EQT_INTRO (conv c))) thm
@@ -966,8 +968,7 @@ in
      let
         val tm = snd (boolSyntax.strip_forall tm)
      in
-        if tm = boolSyntax.F orelse tm = boolSyntax.T
-           then []
+        if Feq tm orelse Teq tm then []
         else let
                 val insts = HOLset.listItems (non_prop_terms tm)
                 val vars = Term.genvars Type.bool (List.length insts)
@@ -1082,8 +1083,7 @@ local
                    val ri = wordsSyntax.mk_index (r, ii)
                    val idx_thm = BIT_TAUT_CONV (boolSyntax.mk_eq (li, ri))
                 in
-                   if rhsc idx_thm = boolSyntax.F
-                      then Lib.FAIL (ii, idx_thm)
+                   if Feq (rhsc idx_thm) then Lib.FAIL (ii, idx_thm)
                    else bit_theorem (Arbnum.plus1 i) (idx_thm :: a)
                 end
      in
@@ -1137,7 +1137,8 @@ in
                 raise ERR "BBLAST_CONV" "not a bool term"
         val (vars,tm') = boolSyntax.strip_forall tm
         val thm = Conv.QCONV WORD_SIMP_CONV tm'
-        val tms = Lib.mk_set (HolKernel.find_terms is_blastable (rhsc thm))
+        val tms =
+            Lib.op_mk_set aconv (HolKernel.find_terms is_blastable (rhsc thm))
         val thms = Lib.mapfilter BIT_BLAST_CONV tms
         val res = FORALL_EQ_RULE vars
                     (Conv.RIGHT_CONV_RULE
@@ -1167,7 +1168,7 @@ local
     | order_ctr [] _ _ = raise ERR "BBLAST_PROVE" "Couldn't prove goal."
     | order_ctr (v::vars) counter a =
         let
-           val (c,rest) = Lib.pluck (fn {redex,residue} => (redex = v)) counter
+           val (c,rest) = Lib.pluck (fn {redex,residue} => (redex ~~ v)) counter
         in
            order_ctr vars rest (c :: a)
         end
@@ -1218,7 +1219,7 @@ in
         else let
                 val ctm = rhsc thm
              in
-                if ctm = boolSyntax.T
+                if Teq ctm
                    then Drule.EQT_ELIM
                            ((PURE_ONCE_REWRITE_CONV [thm]
                              THENC REPEATC Conv.EXISTS_SIMP_CONV) tm)

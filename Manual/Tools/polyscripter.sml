@@ -2,8 +2,8 @@ val _ = use "../../tools-poly/prelude.ML";
 val _ = use "../../tools-poly/prelude2.ML";
 val _ = PolyML.print_depth 0;
 
-fun exnMessage (e:exn) = 
-  let 
+fun exnMessage (e:exn) =
+  let
     fun p (e:exn) = PolyML.prettyRepresentation (e, 10000)
   in
     PP.pp_to_string 75 p e
@@ -15,9 +15,10 @@ fun lnumdie linenum extra exn =
   die ("Exception raised on line " ^ Int.toString linenum ^ ": "^
        extra ^ exnMessage exn)
 
-val outputPrompt = ref ">"
+val outputPrompt = ref "> "
 
 val quote = QFRead.fromString
+val default_linewidth = 77
 
 fun quoteFile lnum fname =
   QFRead.inputFile fname handle e => lnumdie lnum "" e
@@ -55,17 +56,24 @@ end
 
 fun compiler {push = obufPush, read = obufRD, reset = obufRST} handler infn =
   let
+    fun pushback c infn =
+        let val used = ref false
+        in
+          fn () => if !used then infn() else (used := true; SOME c)
+        end
     fun record_error {message,...} = PolyML.prettyPrint(obufPush,70) message
-    fun rpt acc =
+    fun rpt infn acc =
       (obufRST();
        PolyML.compiler(infn,
                        [PolyML.Compiler.CPErrorMessageProc record_error,
                         PolyML.Compiler.CPOutStream obufPush]) ()
        handle e => handler (obufRD()) e;
-       if obufRD() = "" then String.concat (List.rev acc)
-       else rpt (obufRD() :: acc))
+       case infn() of
+           NONE => String.concat (List.rev (obufRD() :: acc))
+         | SOME c => rpt (pushback c infn) (obufRD() :: acc)
+      )
   in
-    rpt []
+    rpt infn []
   end
 
 fun silentUse lnum s =
@@ -133,7 +141,7 @@ fun cruftSuffix sfxs s =
     | SOME (sfx,rep) => SOME (String.substring(s, 0, size s - size sfx) ^ rep)
 
 val cruftySuffixes = ref [
-      ("\n   : proofs\n", ""),
+      ("\n   : proofs\n", "\n"),
       ("\n   : proof\n", "\n"),
       (":\n   proof\n", "\n")
     ]
@@ -232,70 +240,121 @@ fun strip_for_thm s =
     remove_colonthm s0
   end
 
-fun process_line umap obuf origline lbuf = let
+fun tailmap f [] = []
+  | tailmap f (h::t) = h :: map f t
+
+fun poss_space_extract n s =
+    let val s = String.extract(s,n,NONE)
+    in
+      if s <> "" andalso String.sub(s,0) = #" " then
+        (String.extract(s, 1, NONE), n + 1)
+      else (s, n)
+    end
+
+fun strcat s1 s2 = s1 ^ s2
+
+fun dropWhile0 P a [] = (List.rev a,[])
+  | dropWhile0 P a (l as h::t) = if P h then dropWhile0 P (h::a) t
+                                 else (List.rev a, l)
+fun dropWhile P l = dropWhile0 P [] l
+
+fun process_line debugp umap obuf origline lbuf = let
   val {reset = obRST, ...} = obuf
   val (ws,line) = getIndent origline
   val indent = String.size ws
   val oPsize = size (!outputPrompt)
+  val oPws = CharVector.tabulate(oPsize, fn _ => #" ")
   fun getRest userPromptSize acc =
     let
       val _ = advance lbuf
-      val handlePromptSize =
-        if userPromptSize > oPsize then
-          fn i => fn s =>
-             if i < userPromptSize then dropLWS s
-             else
-               String.extract(s, userPromptSize - oPsize, NONE)
-        else
+      (* know that we're being called on something with > indent many space
+         characters at the start of the line; that number is wssz *)
+      fun handlePromptSize wssz line =
+          (* strip indent many characters from line first *)
           let
-            val ws_n =
-                CharVector.tabulate(oPsize - userPromptSize, fn _ => #" ")
+            val line = String.extract(line, indent, NONE)
+            val remws = wssz - indent
+            val tostrip = Int.min(remws, userPromptSize)
           in
-            fn i => fn s => ws_n ^ s
+            String.extract(line, tostrip, NONE)
+          end
+      fun extract_trailing_blanklines l =
+          let
+            val (blanks, rest) = dropWhile (CharVector.all Char.isSpace) l
+          in
+            (List.rev rest, blanks |> List.rev |> String.concat)
           end
     in
       case current lbuf of
-          NONE => String.concat (List.rev acc)
+          NONE => extract_trailing_blanklines acc
         | SOME s =>
           let
             val (ws',_) = getIndent s
             val wssz = String.size ws'
           in
-            if indent < wssz
-            then getRest userPromptSize (handlePromptSize wssz s::acc)
-            else String.concat (List.rev acc)
+            if indent < wssz then
+              getRest userPromptSize (handlePromptSize wssz s::acc)
+            else if CharVector.all Char.isSpace s then
+              getRest userPromptSize ("\n" :: acc)
+            else extract_trailing_blanklines acc
           end
     end
   val assertcmd = "##assert "
   val assertcmdsz = size assertcmd
+  val stringCReader = #read o QFRead.stringToReader true
+  fun compile exnhandle input =
+      (if debugp then
+         TextIO.output(TextIO.stdErr, input)
+       else ();
+       compiler obuf exnhandle (stringCReader input))
 in
   if String.isPrefix ">>>" line then
-    (advance lbuf; (ws ^ String.extract(line, 1, NONE), NONE))
+    (advance lbuf; (ws ^ String.extract(line, 1, NONE), ""))
   else if String.isPrefix "###" line then
-    (advance lbuf; (ws ^ String.extract(line, 1, NONE), NONE))
+    (advance lbuf; (ws ^ String.extract(line, 1, NONE), ""))
   else if String.isPrefix assertcmd line then
     let
       val e = String.substring(line, assertcmdsz, size line - assertcmdsz - 1)
                               (* for \n at end *)
-      val _ = compiler obuf (lnumdie (linenum lbuf))
-                (QFRead.stringToReader ("val _ = if (" ^ e ^ ") then () " ^
-                                        "else die \"Assertion failed: line " ^
-                                        Int.toString (linenum lbuf) ^ "\";"))
+      val _ = compile (lnumdie (linenum lbuf))
+                      ("val _ = if (" ^ e ^ ") then () " ^
+                       "else die \"Assertion failed: line " ^
+                       Int.toString (linenum lbuf) ^ "\";\n")
       val _ = advance lbuf
     in
-      ("", NONE)
+      ("", "")
     end
   else if String.isPrefix "##thm" line then
     let
-      val thm_name = String.extract(line, 5, NONE) |> dropLWS
-      val raw_output = compiler obuf (lnumdie (linenum lbuf))
-                                (QFRead.stringToReader (thm_name ^ " :Thm.thm"))
+      val suffix = String.extract(line, 5, NONE)
+      val ((guffp,guffs), thm_name) =
+          if Char.isDigit (String.sub(suffix,0)) then
+            let
+              val (w,nm) =
+                  case String.tokens Char.isSpace suffix of
+                      [ds,nm] => ((valOf (Int.fromString ds), nm)
+                                  handle Option =>
+                                         lnumdie (linenum lbuf)
+                                                 "Bad integer for linewidth"
+                                                 Option)
+                    | _ => lnumdie (linenum lbuf)
+                                   "Malformed ##thm line"
+                                   (Fail "")
+            in
+              (("val _ = linewidth := " ^ Int.toString w ^"; ",
+                "val _ = linewidth := " ^ Int.toString default_linewidth ^ ";"),
+               nm ^ "\n")
+            end
+          else (("",""), dropLWS suffix)
+      val raw_output =
+          compile (lnumdie (linenum lbuf))
+                  (guffp ^ thm_name ^ " :Thm.thm;" ^ guffs)
       val output = transformOutput umap ws (strip_for_thm raw_output)
-                        |> deleteTrailingWhiteSpace 
+                        |> deleteTrailingWhiteSpace
                         |> (fn s => "  " ^ s)
       val _ = advance lbuf
     in
-      (ws ^ umunge umap thm_name, SOME output)
+      (ws ^ umunge umap thm_name, output)
     end
   else if String.isPrefix "##eval" line then
     let
@@ -315,14 +374,13 @@ in
             end
           else
             ("", String.extract(line, 1, NONE), 7)
-              handle Subcript =>
+              handle Subscript =>
                      lnumdie (linenum lbuf) "Mal-formed ##eval directive" e
-      val input = getRest (indent + 1) [firstline]
-      val _ = compiler obuf
-                       (lnumdie (linenum lbuf))
-                       (QFRead.stringToReader (inputpfx ^ input))
+      val (input, blankstr) = getRest indent [firstline]
+      val input = input |> map (fn s => ws ^ s) |> String.concat
+      val _ = compile (lnumdie (linenum lbuf)) (inputpfx ^ input)
     in
-      (ws ^ umunge umap input, NONE)
+      (umunge umap input, blankstr)
     end
   else if String.isPrefix "##parse" line then
     let
@@ -332,11 +390,11 @@ in
           else if String.isPrefix "ty " line then ":"
           else lnumdie (linenum lbuf) "Mal-formed ##parse directive" (Fail "")
       val (firstline, indent) = (String.extract(line, 3, NONE), 10)
-      val input = getRest (indent + 1) [firstline]
-      val _ = compiler obuf (lnumdie (linenum lbuf))
-                       (QFRead.stringToReader ("``" ^ pfx ^ input ^ "``"))
+      val (input, blankstr) = getRest indent [firstline]
+      val input = input |> map (fn s => ws ^ s) |> String.concat
+      val _ = compile (lnumdie (linenum lbuf)) ("``" ^ pfx ^ input ^ "``")
     in
-      (ws ^ umunge umap input, NONE)
+      (umunge umap input, blankstr)
     end
   else if String.isPrefix "##use " line then
     let
@@ -344,58 +402,60 @@ in
       val _ = silentUse (linenum lbuf) fname
       val _ = advance lbuf
     in
-      ("", NONE)
+      ("", "")
     end
   else if String.isPrefix ">>-" line then
     let
       val firstline = String.extract(line, 3, NONE)
-      val input = getRest 3 [firstline]
-      val raw_output = compiler obuf (lnumdie (linenum lbuf))
-                                (QFRead.stringToReader input)
+      val (input, blankstr) = getRest 3 [firstline]
+      val raw_output = compile (lnumdie (linenum lbuf)) (String.concat input)
     in
-      ("", SOME (transformOutput umap ws raw_output))
+      ("", transformOutput umap ws raw_output ^ blankstr)
     end
   else if String.isPrefix ">>__" line then
     let
-      val firstline = String.extract(line, 4, NONE)
-      val input = getRest 4 [firstline]
-      val _ = compiler obuf (lnumdie (linenum lbuf))
-                       (QFRead.stringToReader input)
+      val (firstline,d) = poss_space_extract 4 line
+      val (input, blankstr) = getRest d [firstline]
+      val _ = compile (lnumdie (linenum lbuf)) (String.concat input)
     in
-      ("", NONE)
+      ("", blankstr)
     end
   else if String.isPrefix ">>_" line then
     let
-      val firstline = String.extract(line, 3, NONE)
-      val input = getRest 3 [firstline]
-      val _ = compiler obuf (lnumdie (linenum lbuf))
-                       (QFRead.stringToReader input)
+      val (firstline,d) = poss_space_extract 3 line
+      val (input, blankstr) = getRest d [firstline]
+      val inp_to_print = input |> tailmap (strcat (oPws ^ ws)) |> String.concat
+      val _ = compile (lnumdie (linenum lbuf)) (String.concat input)
       fun removeNL s = String.substring(s, 0, size s - 1)
     in
-      (ws ^ ">" ^ removeNL (umunge umap input), SOME (!elision_string1))
+      (ws ^ !outputPrompt ^ removeNL (umunge umap inp_to_print),
+       !elision_string1 ^ blankstr)
     end
   else if String.isPrefix ">>+" line then
     let
-      val firstline = String.extract(line, 3, NONE)
-      val input = getRest 3 [firstline]
+      val (firstline,d) = poss_space_extract 3 line
+      val (input,blankstr) = getRest d [firstline]
+      val inp_to_print = input |> tailmap (strcat (oPws ^ ws)) |> String.concat
       fun handle_exn extra exn = raise Fail (extra ^ exnMessage exn)
-      val raw_output = compiler obuf handle_exn (QFRead.stringToReader input)
+      val raw_output = compile handle_exn (String.concat input)
                        handle Fail s => "Exception- " ^ s ^ " raised\n"
     in
-      (ws ^ ">" ^ umunge umap input, SOME (transformOutput umap ws raw_output))
+      (ws ^ !outputPrompt ^ umunge umap inp_to_print,
+       transformOutput umap ws raw_output ^ blankstr)
     end
   else if String.isPrefix ">>" line then
     let
       val _ = obRST()
-      val firstline = String.extract(line, 2, NONE)
-      val input = getRest 2 [firstline]
-      val raw_output = compiler obuf (lnumdie (linenum lbuf))
-                                (QFRead.stringToReader input)
+      val (firstline, d) = poss_space_extract 2 line
+      val (input,blankstr) = getRest d [firstline]
+      val inp_to_print = input |> tailmap (strcat (oPws ^ ws)) |> String.concat
+      val raw_output = compile (lnumdie (linenum lbuf)) (String.concat input)
     in
-      (ws ^ ">" ^ umunge umap input, SOME (transformOutput umap ws raw_output))
+      (ws ^ !outputPrompt ^ umunge umap inp_to_print,
+       transformOutput umap ws raw_output ^ blankstr)
     end
   else
-    (advance lbuf; (origline, NONE))
+    (advance lbuf; (origline, ""))
 end
 
 fun read_umap fname =
@@ -425,19 +485,21 @@ fun read_umap fname =
 
 
 fun usage() =
-  "Usage:\n  "^ CommandLine.name() ^ " [umapfile]"
+  "Usage:\n  "^ CommandLine.name() ^ " [-d] [umapfile]"
 
 fun main () =
   let
     val _ = PolyML.print_depth 100;
     val _ = Parse.current_backend := PPBackEnd.raw_terminal
-    val umap =
+    val (debugp,umap) =
         case CommandLine.arguments() of
-            [] => Binarymap.mkDict String.compare
-          | [name] => read_umap name
+            [] => (false, Binarymap.mkDict String.compare)
+          | ["-d"] => (true, Binarymap.mkDict String.compare)
+          | [name] => (false, read_umap name)
+          | ["-d", name] => (true, read_umap name)
           | _ => die (usage())
     val (obuf as {push = obPush, ...}) = HM_SimpleBuffer.mkBuffer()
-    val _ = ReadHMF.extend_path_with_includes {quietp = true, lpref = loadPath}
+    val _ = ReadHMF.extend_path_with_includes {verbosity = 0, lpref = loadPath}
     val _ = Feedback.ERR_outstream := obPush
     val _ = Feedback.WARNING_outstream := obPush
     val _ = Feedback.MESG_outstream := obPush
@@ -451,14 +513,12 @@ fun main () =
           NONE => ()
         | SOME line =>
           let
-            val (i, coutopt) = process_line umap obuf line lb
+            val (i, output) = process_line debugp umap obuf line lb
                handle e => die ("Untrapped exception: line "^
                                 Int.toString (linenum lb) ^ ": " ^
                                 exnMessage e)
           in
-            (case coutopt of
-                NONE => print i
-              | SOME out => print (i ^ out));
+            print (i ^ output);
             recurse lb
           end
   in

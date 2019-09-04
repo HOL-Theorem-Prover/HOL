@@ -8,5 +8,6 @@ sig
        (int * (Thm.thm * int * int option) *
               (Thm.thm * int * int option) option) list
   val print_stack_intro_report : unit -> unit list
+  val tidy_up_name : string -> string
 
 end

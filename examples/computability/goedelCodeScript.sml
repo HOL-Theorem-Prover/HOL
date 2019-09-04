@@ -168,7 +168,7 @@ val GDECODE_def =
            of NONE => NONE
             | SOME l => SOME (n::l)`
 (WF_REL_TAC `measure SND` THEN
- RW_TAC arith_ss [DECIDE ``x <> 0 = 0 < x``] THEN
+ RW_TAC arith_ss [DECIDE “x ≠ 0 ⇔ 0 < x”] THEN
  MATCH_MP_TAC DIV_LESS THEN
  RW_TAC arith_ss [ONE_LT_EXP,ONE_LT_PRIMES,ZERO_LT_EXP]);
 
@@ -194,7 +194,7 @@ val lem10 = Q.prove
  completeInduct_on `gn` THEN RW_TAC arith_ss [Once GDECODE_def] THENL
  [
   FULL_SIMP_TAC list_ss [GCODE_EQ_1],
-  METIS_TAC [ZERO_LT_GCODE,DECIDE ``0 < x = x <> 0``],
+  METIS_TAC [ZERO_LT_GCODE,DECIDE ``0 < x ⇔ x ≠ 0``],
   `?h t. nl = h::t` by METIS_TAC [listTheory.list_CASES,GCODE_EQ_1] THEN
   Q.PAT_X_ASSUM `a <> b` (K ALL_TAC) THEN POP_ASSUM SUBST_ALL_TAC THEN
   REPEAT CASE_TAC THENL

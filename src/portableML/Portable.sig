@@ -11,6 +11,7 @@ sig
   val |>> : ('a * 'b) * ('a -> 'c) -> ('c * 'b)
   val ||> : ('a * 'b) * ('b -> 'c) -> ('a * 'c)
   val ||-> : ('a * 'b) * ('a -> 'b -> 'c) -> 'c
+  val B2 : ('c -> 'd) -> ('a -> 'b -> 'c) -> 'a -> 'b -> 'd
   val C : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
   val I : 'a -> 'a
   val K : 'a -> 'b -> 'a

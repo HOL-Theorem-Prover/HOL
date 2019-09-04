@@ -1,0 +1,78 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html>
+<head><title>Theory: gh725</title><meta http-equiv="content-type" content="text/html;charset=UTF-8">
+<style type="text/css">
+<!--
+  body {background: #faf0e6; color: #191970; }
+  span.freevar  { color: blue}
+  span.boundvar { color: green}
+  span.typevar  { color: purple}
+  span.type     { color: teal}
+  span.strong   { color: black; font-weight: bold}
+  span.vstrong  { color: black; 
+                  font-weight: bold;
+                  font-size: larger}
+  h1 {color: black}
+  th {color: crimson}
+-->
+</style>
+</head>
+<body>
+<h1>Theory "gh725"</h1>
+<span class="vstrong">Parents</span>&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href = "boolTheory.html"><span class="strong">bool</span></a>
+
+<h1>Signature</h1>
+<center>
+    <table BORDER=4 CELLPADDING=10 CELLSPACING=1>
+    
+    <tr> <th> Constant <th> Type<tr><td>
+    <span class="strong">bar</span>
+    <td>
+    :(β -> α) -> β -> α
+    <tr><td> <span class="strong">foo</span> <td> :bool -> bool
+    
+</table>
+</center>
+
+<h1>Definitions</h1>
+<DL>
+<DT><span class="strong">bar_def</span>
+<DD>
+<pre>
+⊢ ∀f x. bar f x = f x
+</pre>
+
+<DT><span class="strong">foo_def</span>
+<DD>
+<pre>
+⊢ ∀x. foo x ⇔ x ∧ T
+</pre>
+
+</DL>
+
+
+<hr>
+
+<hr>
+<h1>Theorems</h1>
+<DL>
+<DT><span class="strong">th1</span>
+<DD>
+<pre>
+⊢ T
+</pre>
+
+<DT><span class="strong">th2</span>
+<DD>
+<pre>
+⊢ T ∧ x = x
+</pre>
+
+</DL>
+
+
+
+<hr>
+</body>
+</html>

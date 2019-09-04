@@ -50,7 +50,7 @@ val literal_case_ss =
     simpLib.SSFRAG
     {name = SOME"literal_case",
      ac = [], congs = [literal_cong], convs = [], filter = NONE,
-     dprocs = [], rewrs = [literal_I_thm]}
+     dprocs = [], rewrs = [(SOME "literal_I_thm", literal_I_thm)]}
 
 (* ----------------------------------------------------------------------
     BOOL_ss
@@ -62,24 +62,24 @@ val literal_case_ss =
 
 val BOOL_ss = SSFRAG
   {name = SOME"BOOL",
-   convs=[{name="BETA_CONV (beta reduction)",
+   convs=[{name="BETA_CONV",
            trace=2,
            key=SOME ([],``(\x:'a. y:'b) z``),
            conv=K (K BETA_CONV)}],
-   rewrs=[REFL_CLAUSE,  EQ_CLAUSES,
-          NOT_CLAUSES,  AND_CLAUSES,
-          OR_CLAUSES,   IMP_CLAUSES,
-          COND_CLAUSES, FORALL_SIMP,
-          EXISTS_SIMP,  COND_ID,
-          EXISTS_REFL, GSYM EXISTS_REFL,
-          EXISTS_UNIQUE_REFL, GSYM EXISTS_UNIQUE_REFL,
-          COND_BOOL_CLAUSES,
-          literal_I_thm,
-          EXCLUDED_MIDDLE,
-          ONCE_REWRITE_RULE [DISJ_COMM] EXCLUDED_MIDDLE,
-          bool_case_thm,
-          NOT_AND,
-          SELECT_REFL, SELECT_REFL_2, RES_FORALL_TRUE, RES_EXISTS_FALSE],
+   rewrs= map (fn s => (SOME s, DB.fetch "bool" s)) [
+     "REFL_CLAUSE", "EQ_CLAUSES", "NOT_CLAUSES",  "AND_CLAUSES",
+     "OR_CLAUSES", "IMP_CLAUSES", "COND_CLAUSES", "FORALL_SIMP",
+     "EXISTS_SIMP",  "COND_ID", "EXISTS_REFL", "EXISTS_UNIQUE_REFL",
+     "EXCLUDED_MIDDLE", "bool_case_thm", "NOT_AND",
+     "SELECT_REFL", "SELECT_REFL_2", "RES_FORALL_TRUE",
+     "RES_EXISTS_FALSE"
+   ] @ [
+     (SOME "EXISTS_REFL'", GSYM EXISTS_REFL),
+     (SOME "EXISTS_UNIQUE_REFL'", GSYM EXISTS_UNIQUE_REFL),
+     (SOME "EXCLUDED_MIDDLE'", ONCE_REWRITE_RULE [DISJ_COMM] EXCLUDED_MIDDLE),
+     (SOME "literal_I_thm", literal_I_thm),
+     (SOME "COND_BOOL_CLAUSES", COND_BOOL_CLAUSES)
+   ],
    congs = [literal_cong], filter = NONE, ac = [], dprocs = []};
 
 
@@ -153,7 +153,7 @@ val let_I_thm = prove(
 val LET_ss =
     simpLib.SSFRAG {name = SOME"LET",
                     ac = [], congs = [let_cong], convs = [], filter = NONE,
-                    dprocs = [], rewrs = [let_I_thm]}
+                    dprocs = [], rewrs = [(SOME "let_I_thm", let_I_thm)]}
 
 (* ----------------------------------------------------------------------
     bool_ss
@@ -230,7 +230,7 @@ fun COND_ABS_CONV tm = let
   infix |-> THENC
   val {Bvar=v,Body=bdy} = dest_abs tm
   val {cond,larm=x,rarm=y} = Rsyntax.dest_cond bdy
-  val b = assert (not o Lib.mem v o free_vars) cond
+  val b = assert (not o op_mem aconv v o free_vars) cond
   val xf = mk_abs{Bvar=v,Body=x}
   val yf = mk_abs{Bvar=v,Body=y}
   val th1 = INST_TYPE [alpha |-> type_of v, beta |-> type_of x] COND_ABS
@@ -256,8 +256,9 @@ val COND_elim_ss =
                                         Term`\x:'a. COND p (q x:'b) (r x)`),
                              trace = 2}],
                   dprocs = [], filter = NONE,
-                  rewrs = [boolTheory.COND_RATOR, boolTheory.COND_EXPAND,
-                           NESTED_COND]}
+                  rewrs = [(SOME "COND_RATOR", boolTheory.COND_RATOR),
+                           (SOME "COND_EXPAND", boolTheory.COND_EXPAND),
+                           (SOME "NESTED_COND", NESTED_COND)]}
 
 val LIFT_COND_ss = simpLib.SSFRAG
   {name=SOME"LIFT_COND",
@@ -271,7 +272,8 @@ val LIFT_COND_ss = simpLib.SSFRAG
              key = SOME([], Term`\x:'a. COND p (q x:'b) (r x)`),
              trace = 2}],
    dprocs = [], filter = NONE,
-   rewrs = [boolTheory.COND_RATOR, NESTED_COND]}
+   rewrs = [(SOME "COND_RATOR", boolTheory.COND_RATOR),
+            (SOME "NESTED_COND", NESTED_COND)]}
 
 
 (* ----------------------------------------------------------------------

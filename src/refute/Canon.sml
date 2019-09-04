@@ -56,8 +56,8 @@ val (args,ONEWAY_SKOLEM_CONV) =
         val (eq,atm) = dest_comb tm
         val (v,bod) = dest_abs atm
         val fvs = free_vars bod
-    in if mem v fvs then
-        let val nfvs = intersect fvs gvs
+    in if op_mem aconv v fvs then
+        let val nfvs = op_intersect aconv fvs gvs
             val eps = mk_thy_const{Name="@",Thy="min",
                          Ty=(type_of v --> Type.bool) --> type_of v}
             val etm = mk_comb(eps,atm)
@@ -110,23 +110,23 @@ val (args,ONEWAY_SKOLEM_CONV) =
 val (NNF_CONV,NNF_SKOLEM_CONV) =
     let val p = ``p:bool`` and q = ``q:bool`` and q' = ``q':bool``
         val P = ``P:'a->bool`` and aty = ``:'a``
-        val pth_pimp = TAUT`(p ==> q) = q \/ ~p`
-        val pth_peq1 = TAUT`(p = q) = (p \/ ~q) /\ (~p \/ q)`
-        val pth_peq2 = TAUT`(p = q) = (p /\ q) \/ (~p /\ ~q)`
+        val pth_pimp = TAUT`(p ==> q) <=> q \/ ~p`
+        val pth_peq1 = TAUT`(p = q) <=> (p \/ ~q) /\ (~p \/ q)`
+        val pth_peq2 = TAUT`(p = q) <=> (p /\ q) \/ (~p /\ ~q)`
         val pth_pcond1 =
-          TAUT`(if p then q else q') = (p \/ q') /\ (~p \/ q)`
+          TAUT`(if p then q else q') <=> (p \/ q') /\ (~p \/ q)`
         val pth_pcond2 =
-          TAUT`(if p then q else q') = (p /\ q) \/ (~p /\ q')`
-        val pth_nnot = TAUT`~~p:bool = p`
-        val pth_nand = TAUT`~(p /\ q) = ~p \/ ~q`
-        val pth_nor = TAUT`~(p \/ q) = ~p /\ ~q`
-        val pth_nimp = TAUT`~(p ==> q) = ~q /\ p`
-        val pth_neq1 = TAUT`~(p = q) = (p \/ q) /\ (~p \/ ~q)`
-        val pth_neq2 = TAUT`~(p = q) = (p /\ ~q) \/ (~p /\ q)`
+          TAUT`(if p then q else q') <=> (p /\ q) \/ (~p /\ q')`
+        val pth_nnot = TAUT`~~p:bool <=> p`
+        val pth_nand = TAUT`~(p /\ q) <=> ~p \/ ~q`
+        val pth_nor = TAUT`~(p \/ q) <=> ~p /\ ~q`
+        val pth_nimp = TAUT`~(p ==> q) <=> ~q /\ p`
+        val pth_neq1 = TAUT`~(p = q) <=> (p \/ q) /\ (~p \/ ~q)`
+        val pth_neq2 = TAUT`~(p = q) <=> (p /\ ~q) \/ (~p /\ q)`
         val pth_ncond1 =
-          TAUT`~(if p then q else q') = (p \/ ~q') /\ (~p \/ ~q)`
+          TAUT`~(if p then q else q') <=> (p \/ ~q') /\ (~p \/ ~q)`
         val pth_ncond2 =
-          TAUT`~(if p then q else q') = (p /\ ~q) \/ (~p /\ ~q')`
+          TAUT`~(if p then q else q') <=> (p /\ ~q) \/ (~p /\ ~q')`
         val EXISTS_UNIQUE_THM2 = prove
             (``!P. (?!x:'a. P x) = (?x. P x /\ !y. P y ==> (y = x))``,
                 GEN_TAC THEN REWRITE_TAC [EXISTS_UNIQUE_DEF,
@@ -165,13 +165,13 @@ val (NNF_CONV,NNF_SKOLEM_CONV) =
             end
         val LOCAL_COND_ELIM_THM1 = prove
             (``!P:'a->bool.
-                   P(if a then b else c) = (~a \/ P(b)) /\ (a \/ P(c))``,
+                   P(if a then b else c) <=> (~a \/ P(b)) /\ (a \/ P(c))``,
                 GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[])
         val LOCAL_COND_ELIM_CONV1 =
             HIGHER_REWRITE_CONV[LOCAL_COND_ELIM_THM1]
         val LOCAL_COND_ELIM_THM2 = prove
             (``!P:'a->bool.
-                   P(if a then b else c) = a /\ P(b) \/ ~a /\ P(c)``,
+                   P(if a then b else c) <=> a /\ P(b) \/ ~a /\ P(c)``,
                 GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[])
         val LOCAL_COND_ELIM_CONV2 = HIGHER_REWRITE_CONV[LOCAL_COND_ELIM_THM2]
         fun NNF_CONV_OPT baseconv skolemize cnflag =
@@ -369,8 +369,8 @@ val PRENEX_CONV = let
  * ------------------------------------------------------------------------- *)
 
 val PROP_CNF_CONV =
-  let val th1 = TAUT`a \/ (b /\ c) = (a \/ b) /\ (a \/ c)`
-      and th2 = TAUT`(a /\ b) \/ c = (a \/ c) /\ (b \/ c)`
+  let val th1 = TAUT`a \/ (b /\ c) <=> (a \/ b) /\ (a \/ c)`
+      and th2 = TAUT`(a /\ b) \/ c <=> (a \/ c) /\ (b \/ c)`
       val f =  DISTRIB_CONV(th1,th2) THENC
           DEPTH_BINOP_CONV conj_tm (ASSOC_CONV DISJ_ASSOC) THENC
           ASSOC_CONV CONJ_ASSOC
@@ -384,8 +384,8 @@ val PROP_CNF_CONV =
  * ------------------------------------------------------------------------- *)
 
 val PROP_DNF_CONV =
-    let val th1 = TAUT`a /\ (b \/ c) = (a /\ b) \/ (a /\ c)`
-        and th2 = TAUT`(a \/ b) /\ c = (a /\ c) \/ (b /\ c)`
+    let val th1 = TAUT`a /\ (b \/ c) <=> (a /\ b) \/ (a /\ c)`
+        and th2 = TAUT`(a \/ b) /\ c <=> (a /\ c) \/ (b /\ c)`
         val f =  DISTRIB_CONV(th1,th2) THENC
             DEPTH_BINOP_CONV disj_tm (ASSOC_CONV CONJ_ASSOC) THENC
             ASSOC_CONV DISJ_ASSOC
@@ -488,12 +488,15 @@ val SKELIM =
         end
     in fn skols => fn th =>
         let val vars = map lhand skols
-            val markup = map (fn skol =>
-                              (skol,lhand skol,
-                               intersect vars (free_vars(rand skol)))) skols
+            val markup =
+                map (fn skol =>
+                        (skol,lhand skol,
+                         op_intersect aconv vars (free_vars(rand skol))))
+                    skols
             fun take sofar l =
-                let val ((skol,v,var),rest) = Lib.pluck
-                      (fn (skol,v,vars) => null (subtract vars sofar)) l
+                let val ((skol,v,var),rest) =
+                        Lib.pluck (fn (skol,v,vars) =>
+                                      null (op_set_diff aconv vars sofar)) l
                 in
                    skol::take (v::sofar) rest
                 end
@@ -520,7 +523,13 @@ fun CONV_THEN_REFUTE (conv:conv) refuter tm =
  * Wrapper for a refuter which takes a list of theorems in CNF.
  * ------------------------------------------------------------------------- *)
 
-fun thm_eq th1 th2 = (dest_thm th1 = dest_thm th2);
+fun thm_eq th1 th2 =
+  let
+    val hyps1 = hypset th1 and c1 = concl th1
+    val hyps2 = hypset th2 and c2 = concl th2
+  in
+    HOLset.equal(hyps1,hyps2) andalso aconv c1 c2
+  end
 
 local fun split_thms [] dun = dun
         | split_thms (th::thl) dun =
@@ -553,7 +562,7 @@ val REFUTE =
   let val pth = TAUT`(~p ==> F) ==> p`
       val p = Term`p:bool`
       val CONJ_AC = EQT_ELIM o AC_CONV(CONJ_ASSOC,CONJ_SYM)
-      val pth_d = TAUT`(a \/ b) /\ c = (a /\ c) \/ (b /\ c)`
+      val pth_d = TAUT`(a \/ b) /\ c <=> (a /\ c) \/ (b /\ c)`
       fun refute refuter tm =
           let (* val _ = trace (1,"refute -- ",tm)  *)
               val (l,r) = dest_disj tm
@@ -576,7 +585,7 @@ val REFUTE =
         val th2 = RATSKOL th1
         val (l,r) = dest_eq(concl th2)
         val _ = latest := SOME (th1,th2,r)
-        val rth = if r = false_tm then ASSUME r else refute refuter r
+        val rth = if aconv r false_tm then ASSUME r else refute refuter r
         val th3 = PROVE_HYP (EQ_MP th2 (ASSUME l)) rth
         val th4 = SKELIM (hyp th1) th3
         val th5 = DISCH ntm th4 (* (itlist DISCH (subtract (hyp th4) [ntm])*)
@@ -665,7 +674,7 @@ val FOL_CONV =
         end
         fun get_heads x tm sofar =
             let val (v,bod) = dest_forall tm
-            in if x = v then sofar else get_heads x bod sofar
+            in if aconv x v then sofar else get_heads x bod sofar
             end
         handle HOL_ERR _ =>
             let val (l,r) = dest_disj tm
@@ -682,7 +691,7 @@ val FOL_CONV =
         handle HOL_ERR _ =>
             let val (hop,args) = strip_comb tm
                 val sofar' =
-                    if hop = x then insert (length args) sofar else sofar
+                    if aconv hop x then insert (length args) sofar else sofar
             in itlist (get_heads x) args sofar'
             end
 

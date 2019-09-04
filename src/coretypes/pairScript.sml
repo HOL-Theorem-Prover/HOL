@@ -88,7 +88,7 @@ val _ = add_rule {term_name = ",", fixity = Infixr 50,
 
 val PAIR_EQ = Q.store_thm
 ("PAIR_EQ",
- `((x,y) = (a,b)) = (x=a) /\ (y=b)`,
+ `((x,y) = (a,b)) <=> (x=a) /\ (y=b)`,
  EQ_TAC THENL
  [REWRITE_TAC[COMMA_DEF]
    THEN DISCH_THEN(MP_TAC o Q.AP_TERM `REP_prod`)
@@ -146,7 +146,7 @@ val _ = ot0 "SND" "snd"
 
 val PAIR_FST_SND_EQ = store_thm(
   "PAIR_FST_SND_EQ",
-  ``!(p:'a # 'b) q. (p = q) = (FST p = FST q) /\ (SND p = SND q)``,
+  ``!(p:'a # 'b) q. (p = q) <=> (FST p = FST q) /\ (SND p = SND q)``,
   REPEAT GEN_TAC THEN
   X_CHOOSE_THEN ``p1:'a`` (X_CHOOSE_THEN ``p2:'b`` SUBST_ALL_TAC)
                 (SPEC ``p:'a # 'b`` ABS_PAIR_THM) THEN
@@ -627,7 +627,7 @@ Q.new_infixr_definition
 
 val LEX_DEF_THM = Q.store_thm
 ("LEX_DEF_THM",
- `(R1 LEX R2) (a,b) (c,d) = R1 a c \/ (a = c) /\ R2 b d`,
+ `(R1 LEX R2) (a,b) (c,d) <=> R1 a c \/ (a = c) /\ R2 b d`,
   REWRITE_TAC [LEX_DEF,UNCURRY_DEF] THEN BETA_TAC THEN
   REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC THEN REFL_TAC);
 
@@ -793,7 +793,7 @@ S "val strip_pair = strip_binop (total dest_pair);", NL,
 S "val spine_pair = spine_binop (total dest_pair);", NL,
 NL,
 S "local fun check [] = true", NL,
-S "        | check (h::t) = is_var h andalso not(mem h t) andalso check t", NL,
+S "        | check (h::t) = is_var h andalso not(tmem h t) andalso check t", NL,
 S "in", NL,
 S "fun is_vstruct M = check (strip_pair M)",
 S "end;", NL,
@@ -850,7 +850,7 @@ S "     arguments in definitions.", NL,
 S " ---------------------------------------------------------------------------*)", NL,
 NL,
 S "fun inter s1 [] = []", NL,
-S "  | inter s1 (h::t) = case intersect s1 h of [] => inter s1 t | X => X", NL,
+S "  | inter s1 (h::t) = case op_intersect aconv s1 h of [] => inter s1 t | X => X", NL,
 NL,
 S "fun joint_vars []  = []", NL,
 S "  | joint_vars [_] = []", NL,

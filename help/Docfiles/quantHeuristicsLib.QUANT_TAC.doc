@@ -3,7 +3,7 @@
 \TYPE {QUANT_TAC : (string * Parse.term Lib.frag list * Parse.term Parse.frag list list) list -> tactic}
 
 \SYNOPSIS
-A tactic to intantiate quantifiers in a term using an explitly given list of (partial) instantiations.
+A tactic to instantiate quantifiers in a term using an explitly given list of (partial) instantiations.
 
 \KEYWORDS
 tactic, quantifier, existential, choose, witness.

@@ -93,6 +93,11 @@ sig
   val SUBGOAL_THEN   : term -> thm_tactic -> tactic
   val USE_SG_THEN    : thm_tactic -> int -> int -> list_tactic
   val CHANGED_TAC    : tactic -> tactic
+  val check_delta    : exn -> (goal * goal list -> bool) -> tactic -> tactic
+  val count0         : (term -> int) -> (goal * goal list -> bool)
+  val count_decreases: (term -> int) -> (goal * goal list -> bool)
+
+
   val Q_TAC0         : {traces : (string * int) list} -> hol_type option ->
                        (term -> tactic) -> term quotation -> tactic
   val Q_TAC          : (term -> tactic) -> term quotation -> tactic

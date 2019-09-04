@@ -1,4 +1,12 @@
-selftest.exe: selftest.uo
+INCLUDES = $(HOLDIR)/tools/cmp
+
+all: selftest.exe $(DEFAULT_TARGETS)
+.PHONY: all gh725
+
+selftest.exe: selftest.uo gh725
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe
+gh725: gh725Theory.dat gh725_expected.html
+	$(protect $(HOLDIR)/tools/cmp/cmp.exe) gh725_expected.html gh725Theory.html
+
+EXTRA_CLEANS = selftest.exe gh725Theory.html

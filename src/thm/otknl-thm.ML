@@ -12,7 +12,7 @@
 (*               : July 2000, Konrad Slind                               *)
 (* ===================================================================== *)
 
-structure Thm :> Thm =
+structure Thm =
 struct
 
 open Feedback Lib Term Tag Dep
@@ -1043,9 +1043,9 @@ fun Mk_comb thm =
        val (Rator,Rand) = dest_comb rhs
        fun mkthm th1' th2' =
          let val (lhs1, rhs1, _) = Term.dest_eq_ty (concl th1')
-             val _ = Assert (EQ lhs1 Rator) "" ""
+             val _ = Assert (aconv lhs1 Rator) "" ""
              val (lhs2, rhs2, _) = Term.dest_eq_ty (concl th2')
-             val _ = Assert (EQ lhs2 Rand) "" ""
+             val _ = Assert (aconv lhs2 Rand) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1', th2']
          in make_thm Count.MkComb
            (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)), Mk_comb_prf (thm,th1',th2'))
@@ -1077,7 +1077,7 @@ fun Mk_abs thm =
        val (Bvar,Body) = dest_abs rhs
        fun mkthm th1' =
          let val (lhs1, rhs1, _) = Term.dest_eq_ty (concl th1')
-             val _ = Assert (EQ lhs1 Body) "" ""
+             val _ = Assert (aconv lhs1 Body) "" ""
              val _ = Assert (not (var_occursl Bvar (hypset th1'))) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1']
          in make_thm Count.Abs

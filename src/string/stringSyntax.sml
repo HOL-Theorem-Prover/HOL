@@ -103,7 +103,7 @@ in
   (e,f,s)
 end
 
-val is_emptystring = equal emptystring_tm
+val is_emptystring = same_const emptystring_tm
 val is_string      = can dest_string
 val is_string_case = can dest_string_case
 val is_strlen      = can dest_strlen

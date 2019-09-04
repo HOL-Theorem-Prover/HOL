@@ -1,8 +1,7 @@
-structure mp_then =
+structure mp_then :> mp_then =
 struct
 
-local
-  open HolKernel Drule Conv Parse boolTheory boolSyntax
+open HolKernel Drule Conv Parse boolTheory boolSyntax
 
 fun avSPEC_ALL avds th =
   let
@@ -26,7 +25,7 @@ fun PART_MATCH' f th t =
     val hypfvs = HOLset.listItems hypfvs_set
     val hyptyvs = HOLset.listItems (hyp_tyvars th)
     val tfvs = free_vars t
-    val dontspec = union tfvs hypfvs
+    val dontspec = op_union aconv tfvs hypfvs
     val (vs, speccedth) = avSPEC_ALL dontspec th
     val s as (tmsig,tysig) =
         match_terml hyptyvs hypfvs_set (f (concl speccedth)) t
@@ -44,8 +43,6 @@ val imp_clauses = IMP_CLAUSES |> SPEC_ALL |> CONJUNCTS
 val Timp = el 1 imp_clauses
 val impF = last imp_clauses
 
-in
-
 datatype match_position =
   Any
 | Pat of term quotation
@@ -54,7 +51,7 @@ datatype match_position =
 
 fun mp_then pos (ttac : thm_tactic) ith0 rth (g as (asl,w)) =
   let
-    val ith = MP_CANON ith0
+    val ith = MP_CANON (GEN_ALL ith0)
     val rth_eqT = EQT_INTRO rth
     val rth_eq = EQF_INTRO rth handle HOL_ERR _ => rth_eqT
     fun m f k t =
@@ -116,7 +113,5 @@ fun mp_then pos (ttac : thm_tactic) ith0 rth (g as (asl,w)) =
                    (fn _ => raise fail)
                    (dest_neg t handle HOL_ERR _ => mk_neg t)
   end
-
-end (* local *)
 
 end

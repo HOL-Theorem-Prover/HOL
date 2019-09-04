@@ -68,7 +68,7 @@ fun liftstatus f x =
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 12
+val version_number = 13
 val release_string = "Kananaskis"
 
 (*
@@ -455,7 +455,7 @@ end (* local *)
 
 val _ =
  let open TextIO
-     val _ = echo "Making hol-mode.el (for Emacs/XEmacs)"
+     val _ = echo "Making hol-mode.el (for Emacs)"
      val src = fullPath [holdir, "tools", "hol-mode.src"]
     val target = fullPath [holdir, "tools", "hol-mode.el"]
  in

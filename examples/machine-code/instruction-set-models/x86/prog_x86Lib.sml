@@ -30,7 +30,7 @@ fun name_for_resource counter tm = let
 fun pre_process_thm th = let
   val x = ref 0
   fun all_distinct [] = []
-    | all_distinct (x::xs) = x :: all_distinct (filter (fn y => not (x = y)) xs)
+    | all_distinct (x::xs) = x :: all_distinct (filter (fn y => x !~ y) xs)
   val rs = find_terml (fn tm => type_of tm = ``:Xreg``) (concl th)
   val fs = find_terml (fn tm => type_of tm = ``:Xeflags``) (concl th)
   val ws = find_terml (can (match_term ``XREAD_MEM2_WORD a``)) (concl th)
@@ -102,7 +102,7 @@ fun x86_pre_post g s = let
   val post = subst ss post
   val pre = mk_star (pre,``xPC eip``)
   val post = mk_star (post,mk_comb(``xPC``,new_eip))
-  val pre = if pre_conds = [] then pre else mk_cond_star(pre,mk_comb(``Abbrev``,list_mk_conj pre_conds))
+  val pre = if null pre_conds then pre else mk_cond_star(pre,mk_comb(``Abbrev``,list_mk_conj pre_conds))
   in (pre,post) end;
 
 fun introduce_xMEMORY th = let
@@ -147,8 +147,8 @@ fun introduce_xSTACK th =
   if not (!x86_use_stack) then th else let
   val (_,p,c,q) = dest_spec(concl th)
   val ebp = mk_var("ebp",``:word32``)
-  fun access_ebp tm = (tm = ebp) orelse
-    (can (match_term ``(v:word32) - n2w n``) tm andalso (ebp = (cdr o car) tm))
+  fun access_ebp tm = (tm ~~ ebp) orelse
+    (can (match_term ``(v:word32) - n2w n``) tm andalso (ebp ~~ (cdr o car) tm))
   val tm1 = find_term (fn tm =>
               can (match_term ``xM x y``) tm andalso (access_ebp o cdr o car) tm) p
   val tm2 = find_term (can (match_term (mk_comb(car tm1,genvar(``:word32``))))) q
@@ -269,7 +269,7 @@ fun x86_prove_specs s = let
   val th = x86_step s
   val c = calc_code th
   val th = pre_process_thm th
-  fun replace_conv th tm = if (fst o dest_eq o concl) th = tm then th else ALL_CONV tm
+  fun replace_conv th tm = if (fst o dest_eq o concl) th ~~ tm then th else ALL_CONV tm
   in if (is_cond o cdr o cdr o snd o dest_imp o concl) th then let
        val (x,y,z) = dest_cond (find_term is_cond (concl th))
        fun prove_branch cth th = let

@@ -80,7 +80,7 @@ in
   else if is_mult tm then let
     val (l,r) = (rand (rator tm), rand tm)
   in
-    if r = var then int_of_term l else zero
+    if r ~~ var then int_of_term l else zero
   end else zero
 end
 
@@ -446,7 +446,7 @@ fun minimise_divides tm = let
        sub-term *)
     val z = rand tm
   in
-    if (lhand z = l handle HOL_ERR _ => false) then
+    if (lhand z ~~ l handle HOL_ERR _ => false) then
       REWR_CONV INT_ADD_COMM THENC REWR_CONV INT_ADD_ASSOC THENC
       LAND_CONV (REWR_CONV (GSYM INT_LDISTRIB))
     else REWR_CONV (GSYM INT_ADD_ASSOC)
@@ -611,12 +611,12 @@ val phase1_CONV = Profile.profile "phase1" phase1_CONV
 
 val INT_DIVIDES_NEG = CONV_RULE (DEPTH_CONV FORALL_AND_CONV) INT_DIVIDES_NEG
 val INT_NEG_FLIP_LTL = prove(
-  ``!x y. ~x < y = ~y < x``,
+  ``!x y. ~x < y <=> ~y < x``,
   REPEAT GEN_TAC THEN
   CONV_TAC (RAND_CONV (RAND_CONV (REWR_CONV (GSYM INT_NEGNEG)))) THEN
   REWRITE_TAC [INT_LT_NEG]);
 val INT_NEG_FLIP_LTR = prove(
-  ``!x y. x < ~y = y < ~x``,
+  ``!x y. x < ~y <=> y < ~x``,
   REPEAT GEN_TAC THEN
   CONV_TAC (RAND_CONV (LAND_CONV (REWR_CONV (GSYM INT_NEGNEG)))) THEN
   REWRITE_TAC [INT_LT_NEG]);
@@ -782,9 +782,9 @@ fun find_coeff_binop var term = let
   val arg1 = hd args
   val arg2 = hd (tl args)
 in
-  if is_mult arg1 andalso rand arg1 = var then
+  if is_mult arg1 andalso rand arg1 ~~ var then
     SOME (int_of_term (rand (rator arg1)))
-  else if is_mult arg2 andalso rand arg2 = var then
+  else if is_mult arg2 andalso rand arg2 ~~ var then
     SOME (int_of_term (rand (rator arg2)))
   else
     NONE
@@ -796,7 +796,7 @@ fun find_coeff_divides var term = let
                              just a constant *)
   fun recurse_on_rhs t =
     if is_plus t then recurse_on_rhs (rand (rator t))
-    else if is_mult t andalso rand t = var then
+    else if is_mult t andalso rand t ~~ var then
       SOME (int_of_term (rand (rator t)))
     else
       NONE
@@ -1051,7 +1051,7 @@ fun simplify_constrained_disjunct tm = let
       (* have another go at this, recursively, but allow for the fact that
          we may have reduced the term to true or false or whatever *)
       TRY_CONV simplify_constrained_disjunct
-    else if List.all (not o mem var o free_vars) body_conjuncts then
+    else if List.all (not o tmem var o free_vars) body_conjuncts then
       (* case where existential only has scope over constraint, and
          bound variable doesn't appear elsewhere, which can happen if
          the F term is something like (\x. F), which tends to happen in

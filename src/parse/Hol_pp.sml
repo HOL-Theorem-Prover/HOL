@@ -10,6 +10,8 @@ open HolKernel DB Parse;
 val CONSISTENT   = Portable.CONSISTENT
 val INCONSISTENT = Portable.INCONSISTENT;
 
+fun print s = !Feedback.MESG_outstream s
+
 fun pp_theory (THEORY(name, {parents, types, consts,
                              axioms,definitions,theorems})) =
 let
@@ -74,11 +76,12 @@ end;
      Support for print_theory
  ---------------------------------------------------------------------------*)
 
+fun print_theory0 pfn thy =
+    HOLPP.prettyPrint(pfn, 80) (pp_theory (dest_theory thy))
 fun print_theory_to_outstream thy ostrm =
-  HOLPP.prettyPrint((fn s => TextIO.output(ostrm, s)), 80)
-                   (pp_theory (dest_theory thy))
+    print_theory0 (fn s => TextIO.output(ostrm, s)) thy
 
-fun print_theory thy = print_theory_to_outstream thy TextIO.stdOut;
+val print_theory = print_theory0 print
 
 fun print_theory_to_file thy file =
   let open TextIO
@@ -160,8 +163,11 @@ fun pp_theory_as_html theory_name = let
             add_string "</center>" >> add_newline
         ) >> add_newline
 
-  fun dl_block(header, ob_pr, obs) =
-      block CONSISTENT 0 (
+  fun dl_block(header, ob_pr, obs0 : (string * 'a) list) =
+      let
+        val obs = Listsort.sort (inv_img_cmp #1 String.compare) obs0
+      in
+        block CONSISTENT 0 (
           title header >>
           add_newline >>
           add_string"<DL>" >> add_newline >>
@@ -171,11 +177,13 @@ fun pp_theory_as_html theory_name = let
                    add_string"<DT>" >> strong x >> add_newline >>
                    add_string"<DD>" >> add_newline >>
                    ob_pr ob
-                ))
+                )
+            )
             add_newline obs >>
           add_newline >>
           add_string"</DL>"
-      ) >> add_newline >> add_newline
+        ) >> add_newline >> add_newline
+      end
 
   fun pr_thm (heading, ths) =
       dl_block(heading,

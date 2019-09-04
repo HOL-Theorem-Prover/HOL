@@ -5,6 +5,7 @@ struct
 
   datatype 'a base_token =
     BT_Ident of string
+  | BT_StrLit of {ldelim: string, contents : string}
   | BT_Numeral of (Arbnum.num * char option)
   | BT_DecimalFraction of fracinfo
   | BT_AQ of 'a

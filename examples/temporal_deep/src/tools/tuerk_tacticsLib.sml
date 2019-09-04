@@ -69,10 +69,11 @@ struct
 
 
 
-   fun findMatch ([], l2, c) = raise ERR "findMatch" "" |
-      findMatch (l1, [], c) = raise ERR "findMatch" "" |
-      findMatch (a::l1, b::l2, []) = findMatch (l1, b::l2, b::l2) |
-      findMatch (a::l1, l2, b::c) = (if (a = b) then a else findMatch (a::l1, l2, c))
+   fun findMatch ([], l2, c) = raise ERR "findMatch" ""
+     | findMatch (l1, [], c) = raise ERR "findMatch" ""
+     | findMatch (a::l1, b::l2, []) = findMatch (l1, b::l2, b::l2)
+     | findMatch (a::l1, l2, b::c) = if a ~~ b then a
+                                     else findMatch (a::l1, l2, c)
 
 
    val DISJ_EQ_STRIP_TAC :tactic = fn (asl,t) =>

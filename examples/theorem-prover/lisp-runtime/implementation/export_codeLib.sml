@@ -20,11 +20,17 @@ fun write_code_to_file filename th = let
                                (print ("\n\nBad address: "^(term_to_string x)^"\n\n"); fail()),y)) vs
   val vs = map (fn (x,y) => (Arbnum.toInt (numSyntax.dest_numeral x),y)) vs
   val vs = sort (fn (x,_) => fn (y:int,_) => x <= y) vs
-  fun del_repetations (x::y::xs) = if x = y then del_repetations (x::xs) else
-                                            x :: del_repetations (y::xs)
+  fun del_repetations (x::y::xs) =
+        if pair_eq equal aconv x y then del_repetations (x::xs)
+        else x :: del_repetations (y::xs)
     | del_repetations zs = zs
   val vs = del_repetations vs
-  fun no_duplicates (x::y::xs) = if fst x = fst y then (print ("\n\nDuplication at " ^ (int_to_hexstring (fst x)) ^ ": " ^ (term_to_string (snd x)) ^ " and " ^ (term_to_string (snd y)) ^ "\n\n"); fail()) else no_duplicates (y::xs)
+  fun no_duplicates (x::y::xs) =
+      if fst x = fst y then
+        (print ("\n\nDuplication at " ^ (int_to_hexstring (fst x)) ^ ": " ^
+                (term_to_string (snd x)) ^ " and " ^ (term_to_string (snd y)) ^
+                "\n\n"); fail())
+      else no_duplicates (y::xs)
     | no_duplicates _ = true
   val _ = no_duplicates vs
   fun term_byte_size tm =
@@ -33,7 +39,9 @@ fun write_code_to_file filename th = let
       foldr (fn (x,y) => x + y) 0 (map term_byte_size (fst (listSyntax.dest_list tm)))
   fun no_holes i [] = true
     | no_holes i ((j,c)::xs) =
-       if i = j then no_holes (i + (term_byte_size c)) xs else (print ("\n\nNo code at location: "^(int_to_hexstring i)^" (next instruction: "^(int_to_hexstring j)^")\n\n");fail())
+       if i = j then no_holes (i + (term_byte_size c)) xs
+       else (print ("\n\nNo code at location: "^(int_to_hexstring i)^
+                    " (next instruction: "^(int_to_hexstring j)^")\n\n");fail())
   val _ = no_holes 0 vs
   val byte_count = ref 0;
   val big_endian_format = ``[(w2w ((w:word32) >>> 24)):word8;

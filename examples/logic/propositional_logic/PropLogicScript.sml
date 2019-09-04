@@ -234,7 +234,7 @@ val Ded2 = Q.prove
  METIS_TAC [Ded2_lemma]);
 
 val DEDUCTION = Q.prove
-(`!H p q. is_thm (p INSERT H) q = H ||- (p --> q)`,
+(`!H p q. is_thm (p INSERT H) q <=> H ||- (p --> q)`,
  METIS_TAC [Ded1, Ded2]);
 
 (*---------------------------------------------------------------------------*)

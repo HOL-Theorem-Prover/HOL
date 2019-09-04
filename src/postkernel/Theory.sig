@@ -58,13 +58,14 @@ sig
 (* -- and persistent data added to theories *)
   structure LoadableThyData : sig
     type t
-    val new : {thydataty : string,
+    val new : {thydataty : string, pp : 'a -> string,
                merge : 'a * 'a -> 'a,
                terms : 'a -> term list,
                read : (string -> term) -> string -> 'a option,
                write : (term -> string) -> 'a -> string} ->
               ('a -> t) * (t -> 'a option)
     val segment_data : {thy: string, thydataty: string} -> t option
+    val segment_data_string : {thy:string,thydataty:string} -> string option
 
     val write_data_update : {thydataty : string, data : t} -> unit
     val set_theory_data : {thydataty : string, data : t} -> unit

@@ -5,6 +5,7 @@ open wordsTheory bit_listTheory listTheory opmonTheory combinTheory;
 open x64_coretypesTheory;
 
 val _ = new_theory "x64_seq_monad";
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = type_abbrev("Zimm",``:word64``);
 

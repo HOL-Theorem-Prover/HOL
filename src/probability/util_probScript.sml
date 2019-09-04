@@ -4,11 +4,12 @@
 (* HVG Group, Concordia University, Montreal                                 *)
 (* ------------------------------------------------------------------------- *)
 
-open HolKernel Parse boolLib bossLib metisLib combinTheory pred_setTheory seqTheory
+open HolKernel Parse boolLib bossLib metisLib combinTheory seqTheory
      res_quanTools pairTheory arithmeticTheory realTheory realLib transcTheory
-     real_sigmaTheory;
+     real_sigmaTheory pred_setTheory;
 
 val _ = new_theory "util_prob";
+val _ = ParseExtras.temp_loose_equality()
 
 val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
 val Strip = S_TAC;
@@ -735,15 +736,6 @@ val MINIMAL_SUC_IMP = store_thm
 (*   Disjoint subsets (from lebesgue_measureTheory)                          *)
 (* ------------------------------------------------------------------------- *)
 
-fun SET_TAC L =
-    POP_ASSUM_LIST (K ALL_TAC) THEN REPEAT COND_CASES_TAC \\
-    REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
-                         SING_DEF] L) \\
-    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
-                     IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION,
-                     IN_IMAGE, GSPECIFICATION, IN_DEF, EXISTS_PROD, IN_FUNSET] \\
-    METIS_TAC [];
-
 (* moved here from lebesgue_measureTheory *)
 val disjoint_def = Define
    `disjoint A = !a b. a IN A /\ b IN A /\ (a <> b) ==> DISJOINT a b`;
@@ -771,5 +763,38 @@ val disjoint_union = store_thm
 val disjoint_sing = store_thm
   ("disjoint_sing", ``!a. disjoint {a}``,
     SET_TAC [disjoint_def]);
+
+(* ------------------------------------------------------------------------- *)
+(* Segment of natural numbers starting at a specific number                  *)
+(* ------------------------------------------------------------------------- *)
+
+val from_def = Define
+   `from n = {m:num | n <= m}`;
+
+val FROM_0 = store_thm ("FROM_0",
+  ``from 0 = univ(:num)``,
+    REWRITE_TAC [from_def, ZERO_LESS_EQ, GSPEC_T]);
+
+val IN_FROM = store_thm ("IN_FROM",
+  ``!m n. m IN from n <=> n <= m``,
+    SIMP_TAC std_ss [from_def, GSPECIFICATION]);
+
+val DISJOINT_COUNT_FROM = store_thm
+  ("DISJOINT_COUNT_FROM", ``!n. DISJOINT (count n) (from n)``,
+    RW_TAC arith_ss [from_def, count_def, DISJOINT_DEF, Once EXTENSION, NOT_IN_EMPTY,
+                     GSPECIFICATION, IN_INTER]);
+
+val DISJOINT_FROM_COUNT = store_thm
+  ("DISJOINT_FROM_COUNT", ``!n. DISJOINT (from n) (count n)``,
+    RW_TAC std_ss [Once DISJOINT_SYM, DISJOINT_COUNT_FROM]);
+
+val UNION_COUNT_FROM = store_thm
+  ("UNION_COUNT_FROM", ``!n. (count n) UNION (from n) = UNIV``,
+    RW_TAC arith_ss [from_def, count_def, Once EXTENSION, NOT_IN_EMPTY,
+                     GSPECIFICATION, IN_UNION, IN_UNIV]);
+
+val UNION_FROM_COUNT = store_thm
+  ("UNION_FROM_COUNT", ``!n. (from n) UNION (count n) = UNIV``,
+    RW_TAC std_ss [Once UNION_COMM, UNION_COUNT_FROM]);
 
 val _ = export_theory ();

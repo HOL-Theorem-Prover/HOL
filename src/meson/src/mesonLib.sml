@@ -37,7 +37,8 @@ fun assoc2 item =
     in assc
     end;
 
-fun allpairs f l1 l2 = itlist (union o C map l2 o f) l1 [];;
+fun tmpair_eq (t11,t12) (t21,t22) = aconv t11 t21 andalso aconv t12 t22
+fun allpairs f l1 l2 = itlist (op_union tmpair_eq o C map l2 o f) l1 []
 
 fun thm_eq th1 th2 = let
   val (h1, c1) = dest_thm th1
@@ -49,6 +50,8 @@ fun thm_eq th1 th2 = let
 in
   all_aconv h1 h2 andalso aconv c1 c2
 end
+
+fun tmi_eq (tm1,i1:int) (tm2,i2) = aconv tm1 tm2 andalso i1 = i2
 
 val the_true = T
 val the_false = F
@@ -128,6 +131,7 @@ datatype fol_form = Atom   of fol_atom
 local
   fun inc_vcounter vcounter =
     let
+      open Uref
       val n = !vcounter
       val m = n + 1
     in
@@ -137,28 +141,31 @@ local
         (vcounter := m; n)
     end
   fun hol_of_var (vstore,gstore,_) v =
-     case assoc2 v (!vstore)
-      of NONE => assoc2 v (!gstore)
+     case assoc2 v (Uref.!vstore)
+      of NONE => assoc2 v (Uref.!gstore)
        | x => x
   fun hol_of_bumped_var (vdb as (_, gstore, _)) v =
-    case hol_of_var vdb v of
-        SOME x => x
-      | NONE =>
-         let val v' = v mod offinc
-             val hv' = case hol_of_var vdb v' of
-                           SOME y => y
-                         | NONE => failwith "hol_of_bumped_var"
-             val gv = genvar (type_of hv')
-         in
-            gstore := (gv, v)::(!gstore);
-            gv
-         end
+    let open Uref in
+      case hol_of_var vdb v of
+          SOME x => x
+        | NONE =>
+           let val v' = v mod offinc
+               val hv' = case hol_of_var vdb v' of
+                             SOME y => y
+                           | NONE => failwith "hol_of_bumped_var"
+               val gv = genvar (type_of hv')
+           in
+              gstore := (gv, v)::(!gstore);
+              gv
+           end
+    end
 in
-  type vardb = (term * int) list ref * (term * int) list ref * int ref
-  fun new_vardb () : vardb = (ref [], ref [], ref 0)
+  type vardb = (term * int) list Uref.t * (term * int) list Uref.t * int Uref.t
+  fun new_vardb () : vardb = (Uref.new [], Uref.new [], Uref.new 0)
   fun fol_of_var ((vstore,_,vcounter):vardb) (v:term) =
-    let val currentvars = !vstore
-    in case assoc1 v currentvars
+    let open Uref
+        val currentvars = !vstore
+    in case op_assoc1 aconv v currentvars
         of SOME x => x
          | NONE =>
             let val n = inc_vcounter vcounter
@@ -168,10 +175,11 @@ in
   val hol_of_var = hol_of_bumped_var
 end;
 
-type cdb = ((term * int) list ref * int ref)
-fun new_cdb () : cdb = (ref [(the_false, 1)], ref 2)
+type cdb = ((term * int) list Uref.t * int Uref.t)
+fun new_cdb () : cdb = (Uref.new [(the_false, 1)], Uref.new 2)
 fun fol_of_const ((cstore,ccounter) : cdb) c =
   let
+    open Uref
     val currentconsts = !cstore
   in
     case assoc1_eq Term.compare c currentconsts of
@@ -185,15 +193,15 @@ fun fol_of_const ((cstore,ccounter) : cdb) c =
       end
   end
 fun hol_of_const ((cstore,_):cdb) c =
-   case assoc2 c (!cstore)
+   case assoc2 c (Uref.!cstore)
     of SOME x => x
      | NONE => failwith "hol_of_const"
 
 fun fol_of_term env consts (cvdb as (cdb,vdb)) tm =
-  if is_var tm andalso not (mem tm consts) then Var(fol_of_var vdb tm)
+  if is_var tm andalso not (op_mem aconv tm consts) then Var(fol_of_var vdb tm)
   else
     let val (f,args) = strip_comb tm
-    in if mem f env then failwith "fol_of_term: higher order"
+    in if op_mem aconv f env then failwith "fol_of_term: higher order"
        else let val ff = fol_of_const cdb f
             in Fnapp(ff, map (fol_of_term env consts cvdb) args)
             end
@@ -201,7 +209,7 @@ fun fol_of_term env consts (cvdb as (cdb,vdb)) tm =
 
 fun fol_of_atom env consts (cvdb as (cdb,_)) tm =
   let val (f,args) = strip_comb tm
-  in if mem f env then failwith "fol_of_atom: higher order"
+  in if op_mem aconv f env then failwith "fol_of_atom: higher order"
      else (fol_of_const cdb f, map (fol_of_term env consts cvdb) args)
   end
 
@@ -398,13 +406,14 @@ fun fol_atom_eq insts (p1,args1) (p2,args2) =
 
 fun cacheconts f =
  if !cache
- then let val memory = ref []
+ then let
+        val memory = Uref.new []
       in fn input as (gg, (insts,offset,(size:int))) =>
            if exists (fn (_,(insts',_,size')) =>
                        insts=insts' andalso (size <= size' orelse !depth))
-                     (!memory)
+                     (Uref.!memory)
            then failwith "cachecont"
-           else (memory := input::(!memory); f input)
+           else (let open Uref in memory := input::(!memory) end; f input)
       end
  else f;;
 
@@ -464,6 +473,7 @@ fun meson_single_expand infs rule ((g,ancestors),(insts,offset,size)) =
          in (h', checkan insts h' ancestors)
          end
      val newhyps =  map mk_ihyp hyps
+     open Uref
   in
     infs := !infs + 1;
     (newhyps, (globin, offset+offinc, size - length hyps))
@@ -593,10 +603,10 @@ fun say_solved infs n =
 fun solve_goal infs rules incdepth min max incsize =
  let fun solve n g =
       if n > max then failwith "solve_goal: Too deep"
-      else let val _ = chat (!infs) n
+      else let val _ = chat (Uref.!infs) n
                val gi = if incdepth then expand_goal infs rules g n 100000 I
                                     else expand_goal infs rules g 100000 n I
-               val _ = say_solved (!infs) (!chatting)
+               val _ = say_solved (Uref.!infs) (!chatting)
            in
              gi
            end
@@ -678,17 +688,19 @@ local
                                      (SPEC_ALL boolTheory.IMP_F);
 
   val DISJ_AC   = EQT_ELIM o AC_CONV (DISJ_ASSOC', DISJ_SYM')
-  val imp_CONV  = REWR_CONV(TAUT `a \/ b = ~b ==> a`)
+  val imp_CONV  = REWR_CONV(TAUT `a \/ b <=> ~b ==> a`)
   val push_CONV = GEN_REWRITE_CONV TOP_SWEEP_CONV [DEMORG_DISJ, NOT2]
   and pull_CONV = GEN_REWRITE_CONV DEPTH_CONV [DEMORG_AND]
   and imf_CONV  = REWR_CONV NOT_IMP
 in
-  fun new_contrapos_cache() = ref ([] : ((int * term) * thm) list)
+  fun new_contrapos_cache() = Uref.new ([] : ((int * term) * thm) list)
   fun make_hol_contrapos memory (n,th) =
-    let val tm = concl th
+    let open Uref
+        val tm = concl th
         val key = (n,tm)
+        fun key_eq (i1,tm1) (i2,tm2) = aconv tm1 tm2 andalso i1 = i2
     in
-     case (assoc1 key (!memory))
+     case op_assoc1 key_eq key (!memory)
       of SOME x => x
        | NONE =>
          if n < 0 then CONV_RULE (pull_CONV THENC imf_CONV) th
@@ -726,7 +738,7 @@ in
         val (cdv, vdb) = cvdb
         val ths    = map (meson_to_hol newins cpos_cache cvdb) gs
         val hth =
-           if concl th = the_true then ASSUME hol_g
+           if aconv (concl th) the_true then ASSUME hol_g
            else let val cth = make_hol_contrapos cpos_cache (n,th)
                 in if null ths then cth
                    else Drule.MATCH_MP cth (Lib.end_itlist Thm.CONJ ths)
@@ -787,17 +799,18 @@ val create_equality_axioms =
       REWRITE_TAC[] THEN ASM_CASES_TAC ``x:'a = y`` THEN
       ASM_REWRITE_TAC[ONCE_REWRITE_RULE[boolTheory.DISJ_SYM]
                        (REWRITE_RULE[] boolTheory.BOOL_CASES_AX)])
-    val imp_elim_CONV = REWR_CONV (TAUT `(a ==> b) = ~a \/ b`)
+    val imp_elim_CONV = REWR_CONV (TAUT `(a ==> b) <=> ~a \/ b`)
     val eq_elim_RULE = MATCH_MP(TAUT `(a = b) ==> b \/ ~a`)
     val veq_tm = rator(rator(concl(hd eq_thms)))
     fun create_equivalence_axioms (eq,_) =
       let val tyins = type_match (type_of veq_tm) (type_of eq) []
       in map (INST_TYPE tyins) eq_thms
       end
+    val insert_tmi = op_insert tmi_eq
     fun tm_consts tm acc =
       let val (fnc,args) = strip_comb tm
-      in if args = [] then acc
-        else itlist tm_consts args (insert (fnc,length args) acc)
+      in if null args then acc
+        else itlist tm_consts args (insert_tmi (fnc,length args) acc)
       end
     fun fm_consts tm (acc as (preds,funs)) =
       fm_consts(snd(dest_forall tm)) acc
@@ -817,8 +830,8 @@ val create_equality_axioms =
            end
         handle HOL_ERR _ =>
            let val (pred,args) = strip_comb tm
-           in if args = [] then acc
-              else (insert (pred,length args) preds,
+           in if null args then acc
+              else (insert_tmi (pred,length args) preds,
                     itlist tm_consts args funs)
            end;
 
@@ -841,13 +854,13 @@ val create_equality_axioms =
     fn tms =>
     let val (preds,funs) = itlist fm_consts tms ([],[])
         val (eqs0,noneqs) = partition (is_eqc o fst) preds
-    in if eqs0 = [] then []
+    in if null eqs0 then []
        else let val pcongs = map (create_congruence_axiom true) noneqs
                 and fcongs = map (create_congruence_axiom false) funs
                 val (preds1,_) =
                   itlist fm_consts (map concl (pcongs @ fcongs)) ([],[])
                 val eqs1 = filter (is_eqc o fst) preds1
-                val eqs = union eqs0 eqs1
+                val eqs = op_union tmi_eq eqs0 eqs1
                 val equivs = itlist
                   (Lib.op_union thm_eq o create_equivalence_axioms) eqs []
             in
@@ -872,7 +885,7 @@ val (POLY_ASSUME_TAC:thm list -> jrhTactics.Tactic) =
         else
           if is_neg tm then
             grab_constants (rand tm) acc
-          else union (find_terms is_const tm) acc
+          else op_union aconv (find_terms is_const tm) acc
     fun match_consts (tm1,tm2) =
       let val {Name=s1,Thy=thy1,Ty=ty1} = dest_thy_const tm1
           and {Name=s2,Thy=thy2,Ty=ty2} = dest_thy_const tm2
@@ -882,8 +895,8 @@ val (POLY_ASSUME_TAC:thm list -> jrhTactics.Tactic) =
         else failwith "match_consts"
       end
     fun polymorph mconsts th =
-      let val tvs = subtract (type_vars_in_term (concl th))
-                             (Lib.U (map type_vars_in_term (hyp th)))
+      let val tvs = Lib.subtract (type_vars_in_term (concl th))
+                                 (Lib.U (map type_vars_in_term (hyp th)))
       in
         if tvs = [] then [th] else
           let
@@ -957,11 +970,11 @@ fun PURE_MESON_TAC infs min max inc gl =
 
 fun inform tac g =
   let val _ = if (!chatting = 1) then say "Meson search level: " else ()
-      val infs = ref 0
+      val infs = Uref.new 0
       val res = tac infs g
       val _ = if (!chatting = 0) then ()
          else if (!chatting = 1) then say"\n"
-              else say  ("  solved with " ^ Int.toString (!infs) ^
+              else say  ("  solved with " ^ Int.toString (Uref.!infs) ^
                          " MESON inferences.\n")
   in  res  end;
 

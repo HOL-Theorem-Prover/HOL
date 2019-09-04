@@ -76,10 +76,11 @@ val GCONJUNCTS  =
             total (HolKernel.find_term (fn t => is_T t orelse is_F t)) tm
         fun GCONJUNCTS'' th = GCONJUNCTS' th []
     in fn tm => fn th =>
-          let val ths0 = if is_neg tm andalso is_neg (rand tm)
+          let open Uref
+              val ths0 = if is_neg tm andalso is_neg (rand tm)
                          then CONJUNCTSR (CONV_RULE NOT_NOT_CONV th) else [th]
               val ths1 = List.map GCONJUNCTS'' ths0
-              val is_cnf = ref true
+              val is_cnf = Uref.new true
               val ths2 =
                   List.map (fn th =>
                                if is_clausal (concl th) then (true,th)

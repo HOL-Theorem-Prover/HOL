@@ -29,6 +29,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "mult_group";
+val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 

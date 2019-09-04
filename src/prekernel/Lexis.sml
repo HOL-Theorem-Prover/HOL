@@ -316,4 +316,41 @@ end
 fun gen_variant vfn avoids s =
   if Lib.mem s avoids then gen_variant vfn avoids (vfn s) else s
 
+(* pc = "prime count", i.e. count of number of prime characters *)
+(* a variable whose name is actually what gets printed to abbreviate a
+   big prime count, e.g., v'4', or v'⁴' are abbreviations for v'''', have  (UOK)
+   to be treated as "bad" *)
+fun badpc_encode s =
+    let val sz = String.size s
+        fun recurse seendigit i =
+            if i <= 0 then false
+            else
+              let val c = String.sub(s,i)
+              in
+                if Char.isDigit c then recurse true (i - 1)
+                else c = #"'" andalso seendigit
+              end
+    in
+      sz >= 4 andalso String.sub(s, sz - 1) = #"'" andalso
+      recurse false (sz - 2)
+    end
+
+fun is_identish_var s =
+    (let val v0 = #1 (valOf (UTF8.firstChar s))
+     in
+       UnicodeChars.isAlpha v0 orelse v0 = "_"
+     end) andalso
+    UTF8.all UnicodeChars.isMLIdent s andalso
+    not (badpc_encode s)
+
+fun is_symbolish_var s =
+    UTF8.all UnicodeChars.isSymbolic s andalso
+    not (String.isSubstring "(*" s) andalso
+    not (String.isSubstring "*)" s)
+
+fun is_clean_varname s =
+    s <> "" andalso (is_identish_var s orelse is_symbolish_var s)
+    handle UTF8.BadUTF8 _ => false
+
+
 end; (* Lexis *)

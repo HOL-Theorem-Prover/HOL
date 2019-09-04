@@ -45,7 +45,7 @@ val WEAK_SUM_COMM = save_thm (
  *)
 val WEAK_EQUIV_SUBST_SUM_L = save_thm (
    "WEAK_EQUIV_SUBST_SUM_L",
-    Q_GENL [`E`, `E'`]
+    Q.GENL [`E`, `E'`]
      (DISCH_ALL
       (Q.GEN `E''`
        (OE_TRANS

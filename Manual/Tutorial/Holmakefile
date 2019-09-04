@@ -1,6 +1,6 @@
 INCLUDES = ../Tools
 
-EXTRA_CLEANS = tutorial.pdf euclid.tex parity.tex ml.tex combin.tex proof-tools.tex
+EXTRA_CLEANS = tutorial.pdf euclid.tex parity.tex ml.tex combin.tex proof-tools.tex $(wildcard *.aux)
 
 tutorial.pdf: tutorial.tex euclid.tex logic.tex preface.tex proof-tools.tex theories.tex combin.tex parity.tex ml.tex more-examples.tex intro.tex writinghol.tex
 	latexmk -pdf tutorial
@@ -20,5 +20,5 @@ ml.tex: ml.stex ../Tools/umap ../Tools/polyscripter
 combin.tex: combin.stex ../Tools/umap ../Tools/polyscripter
 	../Tools/polyscripter ../Tools/umap < $< > $@
 
-proof-tools.tex: proof-tools.stex ../Tools/umap ../Tools/polyscripter
+proof-tools.tex: proof-tools.stex ../Tools/umap ../Tools/polyscripter ../../examples/dpll.sml
 	../Tools/polyscripter ../Tools/umap < $< > $@

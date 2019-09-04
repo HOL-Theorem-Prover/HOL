@@ -108,20 +108,19 @@ local val inI = pred_setTheory.IN_INSERT
              let val eql = conv (mk_eq(x, y))
                  val res = rand(concl eql)
              in
-             if res=T
-               then EQT_INTRO (EQ_MP (SYM thm) (DISJ1 (EQT_ELIM eql) rectm))
-             else
-             if res=F
-             then let val rthm = in_conv conv (eth,ith) x S'
-                      val thm2 = MK_COMB (DISJ eql,rthm)
-                      val thm3 = INST[gv |-> rand(concl rthm)] F_OR
-                  in TRANS thm (TRANS thm2 thm3)
-                  end
-              else raise ERR "IN_CONV" ""
+               if aconv res T then
+                 EQT_INTRO (EQ_MP (SYM thm) (DISJ1 (EQT_ELIM eql) rectm))
+               else if aconv res F then
+                 let val rthm = in_conv conv (eth,ith) x S'
+                     val thm2 = MK_COMB (DISJ eql,rthm)
+                     val thm3 = INST[gv |-> rand(concl rthm)] F_OR
+                 in TRANS thm (TRANS thm2 thm3)
+                 end
+               else raise ERR "IN_CONV" ""
              end
              handle HOL_ERR _ =>
               let val rthm = in_conv conv (eth,ith) x S'
-              in if rand(concl rthm) = T
+              in if aconv (rand(concl rthm)) T
                  then let val eqn = mk_eq(x,y)
                           val thm2 = MK_COMB(DISJ (REFL eqn), rthm)
                           val thm3 = TRANS thm2 (INST [gv |-> eqn] OR_T)
@@ -273,9 +272,9 @@ in
 fun INSERT_CONV conv tm =
   let val (x,s) = dest_insert tm
       val thm = IN_CONV conv (mk_in (x,s))
-  in if rand(concl thm) = boolSyntax.T
-       then MP (SPEC s (ISPEC x absth)) (EQT_ELIM thm)
-       else raise ERR "INSERT_CONV" "failed"
+  in if aconv (rand(concl thm)) boolSyntax.T then
+       MP (SPEC s (ISPEC x absth)) (EQT_ELIM thm)
+     else raise ERR "INSERT_CONV" "failed"
   end
   handle e => raise wrap_exn "PFset_conv" "INSERT_CONV" e
 end;

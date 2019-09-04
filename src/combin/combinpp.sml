@@ -60,7 +60,13 @@ fun upd_processor G a =
       | APP(l,a1,a2) =>
         (case break_binop toplevel_updname a of
              NONE => APP(l, upd_processor G a1, upd_processor G a2)
-           | SOME (_, arg1, arg2) => process_updates arg1 arg2)
+           | SOME (_, arg10, arg20) =>
+             let
+               val arg1 = upd_processor G arg10
+               val arg2 = upd_processor G arg20
+             in
+               process_updates arg1 arg2
+             end)
       | _ => a;
 
 val _ = term_grammar.userSyntaxFns.register_absynPostProcessor
@@ -101,7 +107,7 @@ fun upd_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
       val unicodep = get_tracefn "PP.avoid_unicode" () = 0
       val (kvs, f) = strip_upd tmg tm
       val _ = not (null kvs) orelse raise UserPP_Failed
-      val {add_string,add_break,...} = ppfns
+      val {add_string,add_break,...} = ppfns : term_pp_types.ppstream_funs
       val (arrow_s,ld_s,rd_s) = if unicodep then ("↦", "⦇", "⦈") (* UOK *)
                                 else ("|->", "(|", "|)")
       val paren =
@@ -114,6 +120,9 @@ fun upd_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
                             else (fn p => p)
             | _ => fn p => p
       val arrow_grav = Prec(100, mapsto_special)
+      val mygrav = case Parse.fixity ld_s of
+                       SOME (term_grammar.Suffix i) => Prec(i, ld_s)
+                     | _ => raise UserPP_Failed
       fun prkv (k,v) =
           block PP.INCONSISTENT 2 (
             printer {gravs = (arrow_grav,Top,arrow_grav),
@@ -125,13 +134,13 @@ fun upd_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
     in
       paren (
         block PP.CONSISTENT 0 (
-          printer {gravs = (pgr,lgr,Top), depth = decdepth depth,
+          printer {gravs = (pgr,lgr,mygrav), depth = decdepth depth,
                    binderp = false} f >>
-          block PP.INCONSISTENT (UTF8.size ld_s) (
-            add_string ld_s >>
-            pr_list prkv (add_string ";" >> add_break(1,0)) kvs >>
-            add_string rd_s
-          )
+          add_string ld_s >> add_break(0,2) >>
+          block PP.INCONSISTENT 0 (
+            pr_list prkv (add_string ";" >> add_break(1,0)) kvs
+          ) >> add_break (0,0) >>
+          add_string rd_s
         )
       )
     end

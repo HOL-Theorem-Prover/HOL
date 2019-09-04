@@ -30,7 +30,7 @@ fun OC_SYM thm = MATCH_MP OBS_CONGR_SYM thm;
 (* Define OC_TRANS such that, when given the theorems thm1 and thm2, applies
    OBS_CONGR_TRANS on them, if possible. *)
 fun OC_TRANS thm1 thm2 =
-  if (rhs_tm thm1 = lhs_tm thm2) then
+  if (rhs_tm thm1 ~~ lhs_tm thm2) then
       MATCH_MP OBS_CONGR_TRANS (CONJ thm1 thm2)
   else
       failwith "transitivity of observation congruence not applicable";
@@ -60,11 +60,11 @@ fun OC_LHS_CONV_TAC (c :conv) :tactic =
   fn (asl, w) => let
       val (opt, t1, t2) = args_equiv w
   in
-      if (opt = ``OBS_CONGR``) then
+      if (opt ~~ ``OBS_CONGR``) then
           let val thm = c t1;
               val (t1', t') = args_thm thm (* t1' = t1 *)
           in
-              if (t' = t2) then
+              if (t' ~~ t2) then
                   ([], fn [] => OC_TRANS thm (ISPEC t' OBS_CONGR_REFL))
               else
                   ([(asl, ``OBS_CONGR ^t' ^t2``)],
@@ -78,11 +78,11 @@ fun OC_RHS_CONV_TAC (c :conv) :tactic =
   fn (asl, w) => let
       val (opt, t1, t2) = args_equiv w
   in
-      if (opt = ``OBS_CONGR``) then
+      if (opt ~~ ``OBS_CONGR``) then
           let val thm = c t2;
               val (t2', t'') = args_thm thm (* t2' = t2 *)
           in
-              if (t'' = t1) then
+              if (t'' ~~ t1) then
                   ([], fn [] => OC_SYM thm)
               else
                   ([(asl, ``OBS_CONGR ^t1 ^t''``)],

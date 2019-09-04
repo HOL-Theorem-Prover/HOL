@@ -97,16 +97,6 @@ val l2n_DIGIT = Q.store_thm("l2n_DIGIT",
         [EXP, GSYM DIV_DIV_DIV_MULT, ZERO_LT_EXP, LESS_DIV_EQ_ZERO,
          SIMP_RULE arith_ss [] (CONJ MOD_TIMES ADD_DIV_ADD_DIV)]);
 
-val DIV_0_IMP_LT = Q.store_thm("DIV_0_IMP_LT",
-  `!b n. 1 < b /\ (n DIV b = 0) ==> n < b`,
-  REPEAT STRIP_TAC \\ SPOSE_NOT_THEN ASSUME_TAC
-    \\ FULL_SIMP_TAC std_ss [NOT_LESS]
-    \\ IMP_RES_TAC LESS_EQUAL_ADD
-    \\ `0 < b` by DECIDE_TAC
-    \\ IMP_RES_TAC ADD_DIV_ADD_DIV
-    \\ POP_ASSUM (Q.SPECL_THEN [`1`,`p`] (ASSUME_TAC o SIMP_RULE std_ss []))
-    \\ FULL_SIMP_TAC arith_ss []);
-
 val lem = Q.prove(
   `!b n. 1 < b ==> PRE (LENGTH (n2l b n)) <= LENGTH (n2l b (n DIV b))`,
   SRW_TAC [ARITH_ss] [LENGTH_n2l]
@@ -262,15 +252,17 @@ val l2n_pow2_compute = Q.store_thm("l2n_pow2_compute",
 val lem = (GEN_ALL o REWRITE_RULE [EXP] o Q.SPECL [`n`,`0`] o
            REWRITE_RULE [DECIDE ``1 < 2``] o Q.SPEC `2`) EXP_BASE_LT_MONO
 
-val n2l_pow2_compute = Q.store_thm("n2l_pow2_compute",
-   `!p n. 0 < p ==>
+Theorem n2l_pow2_compute:
+   !p n. 0 < p ==>
          (n2l (2 ** p) n =
           let (q,r) = DIVMOD_2EXP p n in
-            if q = 0 then [r] else r::n2l (2 ** p) q)`,
+            if q = 0 then [r] else r::n2l (2 ** p) q)
+Proof
    SRW_TAC [] [Once n2l_def, DIVMOD_2EXP_def,
-               DECIDE ``x < 2 = (x = 0) \/ (x = 1)``]
+               DECIDE ``x < 2 <=> (x = 0) \/ (x = 1)``]
    \\ SRW_TAC [ARITH_ss] [LESS_DIV_EQ_ZERO]
-   \\ FULL_SIMP_TAC arith_ss [lem, DIV_0_IMP_LT])
+   \\ FULL_SIMP_TAC arith_ss [lem, DIV_0_IMP_LT]
+QED
 
 val l2n2_def = new_definition ("l2n2", ``l2n2 = l2n 2``)
 

@@ -294,7 +294,7 @@ fun auto_prove (goal,tac) = let
      else failwith("auto_prove failed") end
 
 val sexp_lex_parse_chars = let
-  fun is_true tm = (tm = T)
+  fun is_true tm = (tm ~~ T)
   fun is_identifier_char c =
     ``identifier_char ^c`` |> EVAL |> concl |> rand |> is_true
   fun all_ichars_below 0 xs = xs
@@ -374,14 +374,14 @@ in
     val input = dest_string input_tm
     val input_length = length input - 1
     val fst_line = input
-          |> take_until (fn c => (c = ``#"\n"``) orelse (type_of c = ``:string``))
+          |> take_until (fn c => c ~~ ``#"\n"`` orelse type_of c = ``:string``)
           |> map stringSyntax.fromHOLchar |> implode
     val _ = print (fst_line ^ " ... \n")
     val sp_chr_tm = ``#" "``
     fun split_after n k [] acc = [implode (rev acc)]
       | split_after n k [x] acc = [implode (rev acc)]
       | split_after n k (x::xs) acc =
-          if n < k orelse not (x = sp_chr_tm)
+          if n < k orelse x !~ sp_chr_tm
           then split_after (n+1) k xs ((stringSyntax.fromHOLchar x)::acc)
           else implode (rev ((stringSyntax.fromHOLchar x)::acc))
                :: split_after 0 k xs []
@@ -457,7 +457,7 @@ in
     in if not pair then CONV_RULE (RAND_CONV (REWR_CONV (GSYM lemma))) th else let
     val th = CONV_RULE (RAND_CONV PairRules.PBETA_CONV THENC RAND_CONV COND_CONV) th
     val t = th |> concl |> rand
-    in if not (can (find_term (fn tm => tm = ``read_sexps``)) t) then th else let
+    in if not (can (find_term (aconv ``read_sexps``)) t) then th else let
     val th = CONV_RULE (RAND_CONV (RAND_CONV sexp_lex_parse_conv
                                    THENC PairRules.PBETA_CONV)) th
     in CONV_RULE ((RAND_CONV o RAND_CONV) read_sexps_conv) th end end end

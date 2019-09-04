@@ -1,11 +1,12 @@
 (*
  * Copyright 1991-1995  University of Cambridge (Author: Monica Nesi)
- * Copyright 2016-2017  University of Bologna   (Author: Chun Tian)
+ * Copyright 2016-2017  University of Bologna, Italy (Author: Chun Tian)
+ * Copyright 2018-2019  Fondazione Bruno Kessler, Italy (Author: Chun Tian)
  *)
 
 open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory relationTheory listTheory IndDefRules;
+open pred_setTheory relationTheory bisimulationTheory listTheory IndDefRules;
 open CCSLib CCSTheory StrongEQTheory;
 
 val _ = new_theory "WeakEQ";
@@ -26,60 +27,68 @@ val _ = set_mapped_fixity { fixity = Infix (NONASSOC, 450),
 val _ = TeX_notation { hol = ("=" ^ (UTF8.chr 0x03B5) ^ "=>"),
                        TeX = ("\\HOLTokenEPS", 1) };
 
-val ONE_TAU = store_thm ((* NEW *)
-   "ONE_TAU", ``!E E'. TRANS E tau E' ==> EPS E E'``,
-    REWRITE_TAC [EPS_def]
- >> REPEAT STRIP_TAC
- >> MATCH_MP_TAC RTC_SINGLE
- >> BETA_TAC >> ASM_REWRITE_TAC []);
+Theorem EPS_ETS :
+    EPS = ETS TRANS tau
+Proof
+    REWRITE_TAC [ETS_def, EPS_def]
+QED
 
-val EPS_REFL = store_thm ((* NEW *)
-   "EPS_REFL", ``!E. EPS E E``,
-    REWRITE_TAC [EPS_def, RTC_REFL]);
+Theorem ONE_TAU :
+    !E E'. TRANS E tau E' ==> EPS E E'
+Proof
+    RW_TAC std_ss [EPS_ETS]
+ >> MATCH_MP_TAC TS_IMP_ETS >> art []
+QED
+
+Theorem EPS_REFL :
+    !E. EPS E E
+Proof
+    REWRITE_TAC [EPS_ETS, ETS_REFL]
+QED
 
 local
     val trans = (REWRITE_RULE [GSYM EPS_def]) o BETA_RULE o (ISPEC EPS_defn);
 in
 
-(* |- ∀x y z. EPS x y ∧ EPS y z ⇒ EPS x z
+(* !x y z. EPS x y /\ EPS y z ==> EPS x z
  *)
 val EPS_TRANS = save_thm ((* NEW *)
    "EPS_TRANS", trans (REWRITE_RULE [transitive_def] RTC_TRANSITIVE));
 
-(* |- ∀P.
-     (∀x. P x x) ∧ (∀x y z. x --τ-> y ∧ P y z ⇒ P x z) ⇒
-     ∀x y. EPS x y ⇒ P x y
+(* !P.
+     (!x. P x x) /\ (!x y z. x --'t-> y /\ P y z ==> P x z) ==>
+     !x y. EPS x y ==> P x y
  *)
 val EPS_ind = save_thm ((* NEW *)
    "EPS_ind", trans RTC_INDUCT);
 
-(* |- ∀P.
-     (∀x. P x x) ∧ (∀x y z. x --τ-> y ∧ EPS y z ∧ P y z ⇒ P x z) ⇒
-     ∀x y. EPS x y ⇒ P x y
+(* !P.
+     (!x. P x x) /\ (!x y z. x --'t-> y /\ EPS y z /\ P y z ==> P x z) ==>
+     !x y. EPS x y ==> P x y
  *)
 val EPS_strongind = save_thm ((* NEW *)
    "EPS_strongind", trans RTC_STRONG_INDUCT);
 
-(* |- ∀P.
-     (∀x. P x x) ∧ (∀x y z. P x y ∧ y --τ-> z ⇒ P x z) ⇒
-     ∀x y. EPS x y ⇒ P x y
+(* !P.
+     (!x. P x x) /\ (!x y z. P x y /\ y --'t-> z ==> P x z) ==>
+     !x y. EPS x y ==> P x y
  *)
 val EPS_ind_right = save_thm ((* NEW *)
    "EPS_ind_right", trans RTC_INDUCT_RIGHT1);
 
-(* |- ∀P.
-     (∀x. P x x) ∧ (∀x y z. P x y ∧ EPS x y ∧ y --τ-> z ⇒ P x z) ⇒
-     ∀x y. EPS x y ⇒ P x y
+(* !P.
+     (!x. P x x) /\ (!x y z. P x y /\ EPS x y /\ y --'t-> z ==> P x z) ==>
+     !x y. EPS x y ==> P x y
  *)
 val EPS_strongind_right = save_thm ((* NEW *)
    "EPS_strongind_right", trans RTC_STRONG_INDUCT_RIGHT1);
 
-(* ∀x y. EPS x y ⇔ (x = y) ∨ ∃u. x --τ-> u ∧ EPS u y
+(* !x y. EPS x y <=> (x = y) \/ ?u. x --'t-> u /\ EPS u y
  *)
 val EPS_cases1 = save_thm ((* NEW *)
    "EPS_cases1", trans RTC_CASES1);
 
-(* ∀x y. EPS x y ⇔ (x = y) ∨ ∃u. EPS x u ∧ u --τ-> y
+(* !x y. EPS x y <=> (x = y) \/ ?u. EPS x u /\ u --'t-> y
  *)
 val EPS_cases2 = save_thm ((* NEW *)
    "EPS_cases2", trans RTC_CASES2);
@@ -141,16 +150,21 @@ val _ =
         block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
 
 val _ = TeX_notation { hol = "==", TeX = ("\\HOLTokenWeakTransBegin", 1) };
-val _ = TeX_notation { hol = "=>", TeX = ("\\HOLTokenWeakTransEnd", 1) };
+(* val _ = TeX_notation { hol = "=>", TeX = ("\\HOLTokenWeakTransEnd", 1) }; *)
+
+Theorem WEAK_TRANS_WTS :
+    WEAK_TRANS = WTS TRANS tau
+Proof
+    ASM_SIMP_TAC std_ss [WTS_def, WEAK_TRANS, FUN_EQ_THM, EPS_ETS]
+QED
 
 (* A transition is a particular weak transition. *)
-val TRANS_IMP_WEAK_TRANS = store_thm (
-   "TRANS_IMP_WEAK_TRANS", ``!E u E'. TRANS E u E' ==> WEAK_TRANS E u E'``,
-    REPEAT STRIP_TAC
- >> PURE_ONCE_REWRITE_TAC [WEAK_TRANS]
- >> Q.EXISTS_TAC `E`
- >> Q.EXISTS_TAC `E'`
- >> ASM_REWRITE_TAC [EPS_REFL]);
+Theorem TRANS_IMP_WEAK_TRANS :
+    !E u E'. TRANS E u E' ==> WEAK_TRANS E u E'
+Proof
+    RW_TAC std_ss [WEAK_TRANS_WTS]
+ >> MATCH_MP_TAC TS_IMP_WTS >> art []
+QED
 
 (* A weak transition on tau implies the epsilon relation. *)
 val WEAK_TRANS_IMP_EPS = store_thm (
@@ -385,17 +399,11 @@ val WEAK_SUM2 = store_thm ((* NEW *)
 (*                                                                            *)
 (******************************************************************************)
 
-val WEAK_SIM_def = Define
-   `WEAK_SIM (R: ('a, 'b) simulation) =
-    !E E'. R E E' ==>
-           (!l E1. TRANS E (label l) E1 ==> ?E2. WEAK_TRANS E' (label l) E2 /\ R E1 E2) /\
-           !E1. TRANS E tau E1 ==> ?E2. EPS E' E2 /\ R E1 E2`;
-
 val WEAK_BISIM_def = Define
-   `WEAK_BISIM (R :('a, 'b) simulation) = WEAK_SIM R /\ WEAK_SIM (inv R)`;
+   `WEAK_BISIM (R :('a, 'b) simulation) = WBISIM TRANS tau R`;
 
-val WEAK_BISIM = store_thm ("WEAK_BISIM",
-  ``WEAK_BISIM (Wbsm: ('a, 'b) simulation) =
+Theorem WEAK_BISIM :
+    WEAK_BISIM (Wbsm: ('a, 'b) simulation) =
     !E E'. Wbsm E E' ==>
        (!l.
          (!E1. TRANS E  (label l) E1 ==>
@@ -403,79 +411,31 @@ val WEAK_BISIM = store_thm ("WEAK_BISIM",
          (!E2. TRANS E' (label l) E2 ==>
                 (?E1. WEAK_TRANS E  (label l) E1 /\ Wbsm E1 E2))) /\
        (!E1. TRANS E  tau E1 ==> (?E2. EPS E' E2 /\ Wbsm E1 E2)) /\
-       (!E2. TRANS E' tau E2 ==> (?E1. EPS E  E1 /\ Wbsm E1 E2))``,
-    Rev EQ_TAC (* 2 sub-goals here *)
- >- ( REWRITE_TAC [WEAK_BISIM_def, WEAK_SIM_def, inv_DEF] >> METIS_TAC [] )
- >> REWRITE_TAC [WEAK_BISIM_def]
- >> rpt STRIP_TAC (* 4 sub-goals here *)
- >| [ (* goal 1 (of 4) *)
-      qpat_x_assum `WEAK_SIM Wbsm`
-        (STRIP_ASSUME_TAC o (REWRITE_RULE [WEAK_SIM_def])) \\
-      RES_TAC \\
-      Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [],
-      (* goal 2 (of 4) *)
-      Q.ABBREV_TAC `Wbsm' = inv Wbsm` \\
-      `Wbsm' E' E` by PROVE_TAC [inv_DEF] \\
-      qpat_x_assum `WEAK_SIM Wbsm'`
-        (STRIP_ASSUME_TAC o (REWRITE_RULE [WEAK_SIM_def])) \\
-      RES_TAC \\
-      Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC [] \\
-      Q.UNABBREV_TAC `Wbsm'` \\
-      POP_ASSUM K_TAC \\
-      POP_ASSUM (MP_TAC o BETA_RULE o (REWRITE_RULE [inv_DEF])) \\
-      REWRITE_TAC [],
-      (* goal 3 (of 4) *)
-      qpat_x_assum `WEAK_SIM Wbsm`
-        (STRIP_ASSUME_TAC o (REWRITE_RULE [WEAK_SIM_def])) \\
-      RES_TAC \\
-      Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [],
-      (* goal 4 (of 4) *)
-      Q.ABBREV_TAC `Wbsm' = inv Wbsm` \\
-      `Wbsm' E' E` by PROVE_TAC [inv_DEF] \\
-      qpat_x_assum `WEAK_SIM Wbsm'`
-        (STRIP_ASSUME_TAC o (REWRITE_RULE [WEAK_SIM_def])) \\
-      RES_TAC \\
-      Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC [] \\
-      Q.UNABBREV_TAC `Wbsm'` \\
-      POP_ASSUM (MP_TAC o BETA_RULE o (REWRITE_RULE [inv_DEF])) \\
-      REWRITE_TAC [] ]);
+       (!E2. TRANS E' tau E2 ==> (?E1. EPS E  E1 /\ Wbsm E1 E2))
+Proof
+    RW_TAC bool_ss [WEAK_BISIM_def, WBISIM_def, SYM EPS_ETS, SYM WEAK_TRANS_WTS]
+ >> EQ_TAC >> RW_TAC std_ss []
+ >- METIS_TAC [Action_distinct_label]
+ >- METIS_TAC [Action_distinct_label]
+ >- METIS_TAC []
+ >- METIS_TAC []
+ >- (Cases_on `l` >> fs [] >> METIS_TAC [])
+ >- (Cases_on `l` >> fs [] >> METIS_TAC [])
+ >- METIS_TAC []
+ >> METIS_TAC []
+QED
 
-(* The identity relation is a weak bisimulation. *)
-val IDENTITY_WEAK_BISIM = store_thm ("IDENTITY_WEAK_BISIM",
-  ``WEAK_BISIM (\x y. x = y)``,
-    PURE_ONCE_REWRITE_TAC [WEAK_BISIM]
- >> BETA_TAC
- >> REPEAT STRIP_TAC (* 4 sub-goals here *)
- >| [ (* goal 1 (of 4) *)
-      ASSUME_TAC (REWRITE_RULE [ASSUME ``E: ('a, 'b) CCS = E'``]
-                               (ASSUME ``TRANS E (label l) E1``)) \\
-      IMP_RES_TAC TRANS_IMP_WEAK_TRANS \\
-      Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [],
-      (* goal 2 (of 4) *)
-      IMP_RES_TAC TRANS_IMP_WEAK_TRANS \\
-      Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [],
-      (* goal 3 (of 4) *)
-      ASSUME_TAC (REWRITE_RULE [ASSUME ``E: ('a, 'b) CCS = E'``]
-                               (ASSUME ``TRANS E tau E1``)) \\
-      IMP_RES_TAC ONE_TAU \\
-      Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [],
-      (* goal 4 (of 4) *)
-      IMP_RES_TAC ONE_TAU \\
-      Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [] ]);
+Theorem IDENTITY_WEAK_BISIM :
+    WEAK_BISIM Id
+Proof
+    REWRITE_TAC [WEAK_BISIM_def, WBISIM_ID]
+QED
 
-(* The converse of a weak bisimulation is a weak bisimulation. *)
-val CONVERSE_WEAK_BISIM = store_thm ("CONVERSE_WEAK_BISIM",
-  ``!Wbsm. WEAK_BISIM Wbsm ==> WEAK_BISIM (inv Wbsm)``,
-    GEN_TAC
- >> PURE_ONCE_REWRITE_TAC [WEAK_BISIM]
- >> REWRITE_TAC [inv_DEF] >> BETA_TAC
- >> rpt STRIP_TAC
- >> RES_TAC (* 4 sub-goals here shared the same end tactical *)
- >| [ Q.EXISTS_TAC `E1'`,
-      Q.EXISTS_TAC `E2'`,
-      Q.EXISTS_TAC `E1'`,
-      Q.EXISTS_TAC `E2'` ]
- >> art []);
+Theorem CONVERSE_WEAK_BISIM :
+    !Wbsm. WEAK_BISIM Wbsm ==> WEAK_BISIM (inv Wbsm)
+Proof
+    REWRITE_TAC [WEAK_BISIM_def, WBISIM_INV]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -570,7 +530,7 @@ val WEAK_TRANS_AUX_SYM = store_thm (
   ``!E' l E1.
         WEAK_TRANS E' (label l) E1 ==>
          !Wbsm E. WEAK_BISIM Wbsm /\ Wbsm E E' ==>
-          (?E2. WEAK_TRANS E(label l)E2 /\ Wbsm E2 E1)``,
+          (?E2. WEAK_TRANS E (label l) E2 /\ Wbsm E2 E1)``,
     rpt STRIP_TAC
  >> IMP_RES_TAC (GSYM INVERSE_REL)
  >> IMP_RES_TAC CONVERSE_WEAK_BISIM
@@ -583,125 +543,47 @@ val WEAK_TRANS_AUX_SYM = store_thm (
  >> EXISTS_TAC ``E2' :('a, 'b) CCS`` >> art []);
 
 (* The composition of two weak bisimulations is a weak bisimulation. *)
-val COMP_WEAK_BISIM = store_thm (
-   "COMP_WEAK_BISIM",
-  ``!Wbsm1 Wbsm2. WEAK_BISIM Wbsm1 /\ WEAK_BISIM Wbsm2 ==> WEAK_BISIM (Wbsm2 O Wbsm1)``,
-    rpt STRIP_TAC
- >> PURE_ONCE_REWRITE_TAC [WEAK_BISIM]
- >> REWRITE_TAC [O_DEF] >> BETA_TAC
- >> rpt STRIP_TAC (* 4 sub-goals here *)
- >| [ (* goal 1 (of 4) *)
-      IMP_RES_TAC TRANS_IMP_WEAK_TRANS \\
-      STRIP_ASSUME_TAC
-        (MATCH_MP (MATCH_MP WEAK_TRANS_AUX (ASSUME ``WEAK_TRANS E (label l) E1``))
-                  (CONJ (ASSUME ``WEAK_BISIM Wbsm1``)
-                        (ASSUME ``(Wbsm1: ('a, 'b) simulation) E y``))) \\
-      STRIP_ASSUME_TAC
-        (MATCH_MP (MATCH_MP WEAK_TRANS_AUX (ASSUME ``WEAK_TRANS y (label l) E2``))
-                  (CONJ (ASSUME ``WEAK_BISIM Wbsm2``)
-                        (ASSUME ``(Wbsm2: ('a, 'b) simulation) y E'``))) \\
-      Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC [] \\
-      Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [],
-      (* goal 2 (of 4) *)
-      IMP_RES_TAC TRANS_IMP_WEAK_TRANS \\
-      STRIP_ASSUME_TAC
-        (MATCH_MP (MATCH_MP WEAK_TRANS_AUX_SYM
-                            (ASSUME ``WEAK_TRANS E' (label l) E2``))
-                  (CONJ (ASSUME ``WEAK_BISIM Wbsm2``)
-                        (ASSUME ``(Wbsm2: ('a, 'b) simulation) y E'``))) \\
-      STRIP_ASSUME_TAC
-        (MATCH_MP
-         (MATCH_MP WEAK_TRANS_AUX_SYM (ASSUME ``WEAK_TRANS y (label l) E2'``))
-         (CONJ (ASSUME ``WEAK_BISIM Wbsm1``)
-               (ASSUME ``(Wbsm1: ('a, 'b) simulation) E y``))) \\
-      Q.EXISTS_TAC `E2''` >> ASM_REWRITE_TAC [] \\
-      Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC [],
-      (* goal 3 (of 4) *)
-      IMP_RES_TAC ONE_TAU \\
-      STRIP_ASSUME_TAC
-        (MATCH_MP
-         (MATCH_MP EPS_TRANS_AUX (ASSUME ``EPS E E1``))
-         (CONJ (ASSUME ``WEAK_BISIM Wbsm1``)
-               (ASSUME ``(Wbsm1: ('a, 'b) simulation) E y``))) \\
-      STRIP_ASSUME_TAC
-        (MATCH_MP
-         (MATCH_MP EPS_TRANS_AUX (ASSUME ``EPS y E2``))
-         (CONJ (ASSUME ``WEAK_BISIM Wbsm2``)
-               (ASSUME ``(Wbsm2: ('a, 'b) simulation) y E'``))) \\
-      Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC [] \\
-      Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [],
-      (* goal 4 (of 4) *)
-      IMP_RES_TAC ONE_TAU \\
-      STRIP_ASSUME_TAC
-        (MATCH_MP
-         (MATCH_MP EPS_TRANS_AUX_SYM (ASSUME ``EPS E' E2``))
-         (CONJ (ASSUME ``WEAK_BISIM Wbsm2``)
-               (ASSUME ``(Wbsm2: ('a, 'b) simulation) y E'``))) \\
-      STRIP_ASSUME_TAC
-        (MATCH_MP
-         (MATCH_MP EPS_TRANS_AUX_SYM (ASSUME ``EPS y E2'``))
-         (CONJ (ASSUME ``WEAK_BISIM Wbsm1``)
-               (ASSUME ``(Wbsm1: ('a, 'b) simulation) E y``))) \\
-      Q.EXISTS_TAC `E2''` >> ASM_REWRITE_TAC [] \\
-      Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC [] ]);
+Theorem COMP_WEAK_BISIM :
+    !Wbsm1 Wbsm2. WEAK_BISIM Wbsm1 /\ WEAK_BISIM Wbsm2 ==> WEAK_BISIM (Wbsm2 O Wbsm1)
+Proof
+    REWRITE_TAC [WEAK_BISIM_def, WBISIM_O]
+QED
 
 (* The union of two weak bisimulations is a weak bisimulation. *)
-val UNION_WEAK_BISIM = store_thm (
-   "UNION_WEAK_BISIM",
-  ``!Wbsm1 Wbsm2. WEAK_BISIM Wbsm1 /\ WEAK_BISIM Wbsm2 ==> WEAK_BISIM (Wbsm1 RUNION Wbsm2)``,
-    rpt GEN_TAC
- >> PURE_ONCE_REWRITE_TAC [WEAK_BISIM]
- >> REWRITE_TAC [RUNION] >> BETA_TAC
- >> rpt STRIP_TAC
- >> RES_TAC (* 8 sub-goals here, sharing the same end tactical *)
- >| [ Q.EXISTS_TAC `E2`, Q.EXISTS_TAC `E1`,
-      Q.EXISTS_TAC `E2`, Q.EXISTS_TAC `E1`,
-      Q.EXISTS_TAC `E2`, Q.EXISTS_TAC `E1`,
-      Q.EXISTS_TAC `E2`, Q.EXISTS_TAC `E1` ]
- >> art []);
+Theorem UNION_WEAK_BISIM :
+    !Wbsm1 Wbsm2. WEAK_BISIM Wbsm1 /\ WEAK_BISIM Wbsm2 ==>
+                  WEAK_BISIM (Wbsm1 RUNION Wbsm2)
+Proof
+    REWRITE_TAC [WEAK_BISIM_def, WBISIM_RUNION]
+QED
 
 (* Define the weak equivalence relation for CCS processes.
-
-  Old definition:
-val OBS_EQUIV = new_definition ("OBS_EQUIV",
-  ``OBS_EQUIV E E' = (?Bsm. Bsm E E' /\ OBS_BISIM Bsm)``);
 
   Obsevations on new definition:
    1. WEAK_EQUIV_cases ==> WEAK_EQUIV_rules (by EQ_IMP_LR)
    2. WEAK_EQUIV_cases is the same as WEAK_PROPERTY_STAR
    3. WEAK_EQUIV_coind is new (the co-inductive principle)
  *)
-val (WEAK_EQUIV_rules, WEAK_EQUIV_coind, WEAK_EQUIV_cases) = Hol_coreln `
-    (!(E :('a, 'b) CCS) (E' :('a, 'b) CCS).
+CoInductive WEAK_EQUIV :
+    !(E :('a, 'b) CCS) (E' :('a, 'b) CCS).
        (!l.
          (!E1. TRANS E  (label l) E1 ==>
-               (?E2. WEAK_TRANS E' (label l) E2 /\ WEAK_EQUIV E1 E2)) /\
+               ?E2. WEAK_TRANS E' (label l) E2 /\ WEAK_EQUIV E1 E2) /\
          (!E2. TRANS E' (label l) E2 ==>
-               (?E1. WEAK_TRANS E  (label l) E1 /\ WEAK_EQUIV E1 E2))) /\
+               ?E1. WEAK_TRANS E  (label l) E1 /\ WEAK_EQUIV E1 E2)) /\
        (!E1. TRANS E  tau E1 ==> (?E2. EPS E' E2 /\ WEAK_EQUIV E1 E2)) /\
        (!E2. TRANS E' tau E2 ==> (?E1. EPS E  E1 /\ WEAK_EQUIV E1 E2))
-      ==> WEAK_EQUIV E E')`;
-(* next version
-val (WEAK_EQUIV_rules, WEAK_EQUIV_coind, WEAK_EQUIV_cases) = Hol_coreln `
-    (!(P :('a, 'b) CCS) (Q :('a, 'b) CCS).
-       (!l.
-         (!P'. TRANS P (label l) P' ==>
-               (?Q'. WEAK_TRANS Q (label l) Q' /\ WEAK_EQUIV P' Q')) /\
-         (!Q'. TRANS Q (label l) Q' ==>
-               (?P'. WEAK_TRANS P (label l) P' /\ WEAK_EQUIV P' Q'))) /\
-       (!P'. TRANS P tau P' ==> (?Q'. EPS Q Q' /\ WEAK_EQUIV P' Q')) /\
-       (!Q'. TRANS Q tau Q' ==> (?P'. EPS P P' /\ WEAK_EQUIV P' Q'))
-      ==> WEAK_EQUIV P Q)`;
- *)
+      ==> WEAK_EQUIV E E'
+End
 
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                    fixity = Infix (NONASSOC, 450),
                    paren_style = OnlyIfNecessary,
                    pp_elements = [HardSpace 1, TOK (UTF8.chr 0x2248), BreakSpace (1,0)],
-                   term_name = "WEAK_EQUIV" }
+                   term_name = "WEAK_EQUIV" };
 
 val _ = TeX_notation { hol = UTF8.chr 0x2248,
-                       TeX = ("\\HOLTokenWeakEQ", 1) }
+                       TeX = ("\\HOLTokenWeakEQ", 1) };
 
 (* "Weak bisimilarity is a weak bisimulation" *)
 val WEAK_EQUIV_IS_WEAK_BISIM = store_thm (
@@ -728,36 +610,46 @@ val WEAK_EQUIV = store_thm ((* NEW *)
       HO_MATCH_MP_TAC WEAK_EQUIV_coind \\ (* co-induction used here! *)
       PROVE_TAC [WEAK_BISIM] ]);
 
+Theorem WEAK_EQUIV_IS_WBISIM_REL :
+    WEAK_EQUIV = WBISIM_REL TRANS tau
+Proof
+    RW_TAC std_ss [FUN_EQ_THM, WBISIM_REL_def, WEAK_EQUIV, WEAK_BISIM_def]
+ >> EQ_TAC >> RW_TAC std_ss []
+ >| [ Q.EXISTS_TAC `Wbsm` >> art [],
+      Q.EXISTS_TAC `R` >> art [] ]
+QED
+
+Theorem WEAK_EQUIV_equivalence :
+    equivalence WEAK_EQUIV
+Proof
+    REWRITE_TAC [WEAK_EQUIV_IS_WBISIM_REL, WBISIM_REL_IS_EQUIV_REL]
+QED
+
+Theorem WEAK_EQUIV_REFL :
+    !E. WEAK_EQUIV E E
+Proof
+    PROVE_TAC [REWRITE_RULE [equivalence_def, reflexive_def]
+                            WEAK_EQUIV_equivalence]
+QED
+
+Theorem WEAK_EQUIV_SYM :
+    !E E'. WEAK_EQUIV E E' ==> WEAK_EQUIV E' E
+Proof
+    PROVE_TAC [REWRITE_RULE [equivalence_def, symmetric_def]
+                            WEAK_EQUIV_equivalence]
+QED
+
+Theorem WEAK_EQUIV_TRANS :
+    !E E' E''. WEAK_EQUIV E E' /\ WEAK_EQUIV E' E'' ==> WEAK_EQUIV E E''
+Proof
+    PROVE_TAC [REWRITE_RULE [equivalence_def, transitive_def]
+                            WEAK_EQUIV_equivalence]
+QED
+
 val WEAK_BISIM_SUBSET_WEAK_EQUIV = store_thm ((* NEW *)
    "WEAK_BISIM_SUBSET_WEAK_EQUIV",
   ``!Wbsm. WEAK_BISIM Wbsm ==> Wbsm RSUBSET WEAK_EQUIV``,
     PROVE_TAC [RSUBSET, WEAK_EQUIV]);
-
-(******************************************************************************)
-(*                                                                            *)
-(*               Weak equivalence is an equivalence relation                  *)
-(*                                                                            *)
-(******************************************************************************)
-
-(* Observation equivalence is a reflexive relation. *)
-val WEAK_EQUIV_REFL = store_thm (
-   "WEAK_EQUIV_REFL", ``!E. WEAK_EQUIV E E``,
-    GEN_TAC
- >> PURE_ONCE_REWRITE_TAC [WEAK_EQUIV]
- >> EXISTS_TAC ``\x y: ('a, 'b) CCS. x = y``
- >> BETA_TAC
- >> REWRITE_TAC [IDENTITY_WEAK_BISIM]);
-
-(* Observation equivalence is a symmetric relation. *)
-val WEAK_EQUIV_SYM = store_thm (
-   "WEAK_EQUIV_SYM",
-  ``!E E'. WEAK_EQUIV E E' ==> WEAK_EQUIV E' E``,
-    rpt GEN_TAC
- >> PURE_ONCE_REWRITE_TAC [WEAK_EQUIV]
- >> STRIP_TAC
- >> Q.EXISTS_TAC `inv Wbsm`
- >> CONJ_TAC >- ( REWRITE_TAC [inv_DEF] >> BETA_TAC >> art [] )
- >> IMP_RES_TAC CONVERSE_WEAK_BISIM);
 
 val WEAK_EQUIV_SYM' = store_thm ((* NEW *)
    "WEAK_EQUIV_SYM'",
@@ -771,34 +663,6 @@ val EQUAL_IMP_WEAK_EQUIV = store_thm (
    "EQUAL_IMP_WEAK_EQUIV", ``!E E'. (E = E') ==> WEAK_EQUIV E E'``,
     REPEAT STRIP_TAC
  >> PURE_ASM_REWRITE_TAC [WEAK_EQUIV_REFL]);
-
-(* Observation equivalence is a transitive relation. *)
-val WEAK_EQUIV_TRANS = store_thm (
-   "WEAK_EQUIV_TRANS",
-  ``!E E' E''. WEAK_EQUIV E E' /\ WEAK_EQUIV E' E'' ==> WEAK_EQUIV E E''``,
-    REPEAT GEN_TAC
- >> PURE_ONCE_REWRITE_TAC [WEAK_EQUIV]
- >> STRIP_TAC
- >> Q.EXISTS_TAC `Wbsm' O Wbsm`
- >> CONJ_TAC (* 2 sub-goals here *)
- >| [ (* goal 1 (of 2) *)
-      REWRITE_TAC [O_DEF] >> BETA_TAC \\
-      Q.EXISTS_TAC `E'` >> art [],
-      (* goal 2 (of 2) *)
-      IMP_RES_TAC COMP_WEAK_BISIM ]);
-
-val WEAK_EQUIV_equivalence = store_thm ((* NEW *)
-   "WEAK_EQUIV_equivalence", ``equivalence WEAK_EQUIV``,
-    REWRITE_TAC [equivalence_def]
- >> REPEAT STRIP_TAC (* 3 sub-goals here *)
- >| [ (* goal 1 (of 3) *)
-      REWRITE_TAC [reflexive_def, WEAK_EQUIV_REFL],
-      (* goal 2 (of 3) *)
-      REWRITE_TAC [symmetric_def] \\
-      REPEAT GEN_TAC \\
-      EQ_TAC >> REWRITE_TAC [WEAK_EQUIV_SYM],
-      (* goal 3 (of 3) *)
-      REWRITE_TAC [transitive_def, WEAK_EQUIV_TRANS] ]);
 
 (* Observation equivalence satisfies the property [*] *)
 val WEAK_PROPERTY_STAR = save_thm ((* NEW *)
@@ -1416,11 +1280,11 @@ val WEAK_EQUIV_PRESD_BY_PAR = store_thm (
             ASM_REWRITE_TAC [] ] ] ] ]);
 
 (* Observation equivalence is substitutive under parallel operator on the right:
-   |- ∀E E'. WEAK_EQUIV E E' ⇒ ∀E''. WEAK_EQUIV (E || E'') (E' || E'')
+   !E E'. WEAK_EQUIV E E' ==> !E''. WEAK_EQUIV (E || E'') (E' || E'')
  *)
 val WEAK_EQUIV_SUBST_PAR_R = save_thm (
    "WEAK_EQUIV_SUBST_PAR_R",
-    Q_GENL [`E`, `E'`]
+    Q.GENL [`E`, `E'`]
       (DISCH ``WEAK_EQUIV E E'``
         (Q.GEN `E''`
            (MATCH_MP WEAK_EQUIV_PRESD_BY_PAR
@@ -1428,11 +1292,11 @@ val WEAK_EQUIV_SUBST_PAR_R = save_thm (
                            (Q.SPEC `E''` WEAK_EQUIV_REFL))))));
 
 (* Observation equivalence is substitutive under parallel operator on the left:k
-   |- ∀E E'. WEAK_EQUIV E E' ⇒ ∀E''. WEAK_EQUIV (E'' || E) (E'' || E')
+   !E E'. WEAK_EQUIV E E' ==> !E''. WEAK_EQUIV (E'' || E) (E'' || E')
  *)
 val WEAK_EQUIV_SUBST_PAR_L = save_thm (
    "WEAK_EQUIV_SUBST_PAR_L",
-    Q_GENL [`E`, `E'`]
+    Q.GENL [`E`, `E'`]
       (DISCH ``WEAK_EQUIV E E'``
         (Q.GEN `E''`
            (MATCH_MP WEAK_EQUIV_PRESD_BY_PAR
@@ -1754,40 +1618,20 @@ val WEAK_EQUIV_SUBST_RELAB = store_thm (
 (*                                                                            *)
 (******************************************************************************)
 
-(* Prove that a strong bisimulation is a particular weak bisimulation. *)
-val STRONG_IMP_WEAK_BISIM = store_thm (
-   "STRONG_IMP_WEAK_BISIM",
-  ``!Bsm. STRONG_BISIM Bsm ==> WEAK_BISIM Bsm``,
-    GEN_TAC
- >> PURE_ONCE_REWRITE_TAC [WEAK_BISIM]
- >> REPEAT STRIP_TAC (* 4 sub-goals here, sharing initial tactical *)
- >> IMP_RES_TAC
-       (MATCH_MP (REWRITE_RULE [STRONG_BISIM] (ASSUME ``STRONG_BISIM Bsm``))
-                 (ASSUME ``(Bsm: ('a, 'b) simulation) E E'``))
- >| [ (* goal 1 (of 4) *)
-      IMP_RES_TAC TRANS_IMP_WEAK_TRANS \\
-      Q.EXISTS_TAC `E2`,
-      (* goal 2 (of 4) *)
-      IMP_RES_TAC TRANS_IMP_WEAK_TRANS \\
-      Q.EXISTS_TAC `E1`,
-      (* goal 3 (of 4) *)
-      IMP_RES_TAC ONE_TAU \\
-      Q.EXISTS_TAC `E2`,
-      (* goal 4 (of 4) *)
-      IMP_RES_TAC ONE_TAU \\
-      Q.EXISTS_TAC `E1` ]
- >> ASM_REWRITE_TAC []);
+(* A strong bisimulation is a particular weak bisimulation. *)
+Theorem STRONG_IMP_WEAK_BISIM :
+    !Bsm. STRONG_BISIM Bsm ==> WEAK_BISIM Bsm
+Proof
+    REWRITE_TAC [STRONG_BISIM_def, WEAK_BISIM_def, BISIM_IMP_WBISIM]
+QED
 
-(* Prove that strong equivalence implies weak/observation equivalence. *)
-val STRONG_IMP_WEAK_EQUIV = store_thm (
-   "STRONG_IMP_WEAK_EQUIV",
-  ``!E E'. STRONG_EQUIV E E' ==> WEAK_EQUIV E E'``,
-    REPEAT GEN_TAC
- >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV, WEAK_EQUIV]
- >> STRIP_TAC
- >> IMP_RES_TAC STRONG_IMP_WEAK_BISIM
- >> Q.EXISTS_TAC `Bsm`
- >> ASM_REWRITE_TAC []);
+(* Strong equivalence implies weak/observation equivalence. *)
+Theorem STRONG_IMP_WEAK_EQUIV :
+    !E E'. STRONG_EQUIV E E' ==> WEAK_EQUIV E E'
+Proof
+    REWRITE_TAC [STRONG_EQUIV_def, WEAK_EQUIV_IS_WBISIM_REL,
+                 BISIM_REL_IMP_WBISIM_REL]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1970,5 +1814,3 @@ val STRONG_EQUIV_WEAK_TRANS' = store_thm ((* NEW *)
 
 val _ = export_theory ();
 val _ = html_theory "WeakEQ";
-
-(* last updated: Jun 18, 2017 *)

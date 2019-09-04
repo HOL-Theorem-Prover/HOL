@@ -13,6 +13,7 @@ open bossLib metisLib pairTheory combinTheory listTheory rich_listTheory
      arithmeticTheory;
 
 val () = new_theory "regexp";
+val _ = ParseExtras.temp_loose_equality()
 
 (*---------------------------------------------------------------------------*)
 (* Symbolic tacticals.                                                       *)

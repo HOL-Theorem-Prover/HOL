@@ -6,6 +6,7 @@ open HolKernel boolLib bossLib
 open intrealTheory realLib wordsLib
 
 val () = new_theory "binary_ieee"
+val _ = ParseExtras.temp_loose_equality()
 
 local
    open String

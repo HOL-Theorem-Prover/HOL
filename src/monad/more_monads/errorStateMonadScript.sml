@@ -9,7 +9,7 @@ val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val () = Parse.temp_type_abbrev ("M",``:'state -> ('a # 'state) option``)
+Type M[local] = “:'state -> ('a # 'state) option”
 
 val UNIT_DEF = DEF `UNIT (x:'b) : ('b,'a) M = \(s:'a). SOME (x, s)`;
 

@@ -91,20 +91,22 @@ in
 end
 
 local
+  exception InternalDie of string
+  fun idie s = raise InternalDie s
   fun test_conv (conv: conv) tm =
     let
       val (t, expected) = boolSyntax.dest_eq tm
       val s = fst (boolSyntax.dest_strip_comb t)
       val s = case String.tokens (Lib.equal #"$") s of
                  [_, s] => s
-               | _ => die "FAILED\n  Couldn't get name."
+               | _ => idie "FAILED\n  Couldn't get name."
       val _ = tprint s
-      val th = conv t handle _ => die "FAILED - exception raised"
-      val r = rhs (concl th) handle HOL_ERR _ => die "FAILED - no RHS"
+      val th = conv t handle _ => idie "FAILED - exception raised"
+      val r = rhs (concl th) handle HOL_ERR _ => idie "FAILED - no RHS"
     in
       if aconv r expected then OK()
       else die ("FAILED\n  Got ``" ^ term_to_string r ^ "``")
-    end
+    end handle InternalDie s => die s
   fun getlocpragma s =
       let
         open Substring
@@ -146,6 +148,7 @@ val _ = blast_fail ``?x: word8. 3w > 4w : word4``
 val _ = blast_fail ``x + x = x :'a word``
 
 (* Fail, can't solve *)
+val _ = ParseExtras.temp_loose_equality()
 val _ = blast_fail ``?x. !y. x <=+ y : word8``
 val _ = blast_fail ``!y. ?x. x <=+ y : word8``
 val _ = blast_fail ``?x. x <=+ y : word8``

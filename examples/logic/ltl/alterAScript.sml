@@ -3,6 +3,7 @@ open HolKernel Parse boolLib bossLib pred_setTheory arithmeticTheory relationThe
 open generalHelpersTheory wordTheory
 
 val _ = new_theory "alterA"
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = Datatype
   `ALTER_A = <| states      : 's set;

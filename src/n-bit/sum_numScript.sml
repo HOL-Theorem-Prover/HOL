@@ -53,8 +53,11 @@ val GSUM_MONO2 = prove(
            REWRITE_RULE [DECIDE (Term `!a b. a + (b + 1) = SUC a + b`)] th]))
     THEN DECIDE_TAC);
 
-val GSUM_LESS = store_thm("GSUM_LESS",
-  `!p m n f. (?q. m + p <= q /\ q < n + p /\ ~(f q = 0)) = GSUM (p,m) f < GSUM (p,n) f`,
+Theorem GSUM_LESS:
+  !p m n f.
+      (?q. m + p <= q /\ q < n + p /\ ~(f q = 0)) <=>
+      GSUM (p,m) f < GSUM (p,n) f
+Proof
   Induct_on `n` THEN1 SIMP_TAC arith_ss [GSUM_def]
     THEN REPEAT STRIP_TAC
     THEN EQ_TAC THEN REPEAT STRIP_TAC
@@ -77,7 +80,8 @@ val GSUM_LESS = store_thm("GSUM_LESS",
             THEN ASM_SIMP_TAC arith_ss []
             THEN FULL_SIMP_TAC bool_ss [GSYM GSUM_def]
             THEN IMP_RES_TAC GSUM_MONO2
-            THEN DECIDE_TAC]]);
+            THEN DECIDE_TAC]]
+QED
 
 val GSUM_EQUAL_LEM = prove(
   `!p m n f. n < m /\ (!q. p + n <= q /\ q < p + m ==> (f q = 0)) ==>

@@ -6,7 +6,7 @@ sig
              LZ_TEXT             of unit -> string
            | TEXT                of string
            | REDUCE              of (string * term)
-           | REWRITING           of (term * thm)
+           | REWRITING           of (string * term * thm)
            | SIDECOND_ATTEMPT    of term
            | SIDECOND_SOLVED     of thm
            | SIDECOND_NOT_SOLVED of term

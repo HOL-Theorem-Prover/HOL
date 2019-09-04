@@ -62,6 +62,7 @@ sig
 
   val ++              : simpset * ssfrag -> simpset    (* infix *)
   val &&              : simpset * thm list -> simpset  (* infix *)
+  val -*              : simpset * string list -> simpset (* infix *)
   val pure_ss         : simpset
   val bool_ss         : simpset
   val std_ss          : simpset           (* bool + option + pair + sum *)
@@ -78,6 +79,7 @@ sig
   val augment_srw_ss  : ssfrag list -> unit
   val diminish_srw_ss : string list -> ssfrag list
   val export_rewrites : string list -> unit
+  val delsimps        : string list -> unit
   val limit           : int -> simpset -> simpset
 
   (* use these in simplifier's argument list *)
@@ -88,6 +90,9 @@ sig
 
   val Cong           : thm -> thm
   val AC             : thm -> thm -> thm
+  val Excl           : string -> thm
+  val Req0           : thm -> thm
+  val ReqD           : thm -> thm
 
   val SIMP_CONV         : simpset -> thm list -> conv
   val SIMP_RULE         : simpset -> thm list -> thm -> thm
@@ -115,6 +120,11 @@ sig
   val EVAL           : conv
   val EVAL_RULE      : thm -> thm
   val EVAL_TAC       : tactic
+
+  (* Automate some routine set theory by reduction to FOL *)
+  val SET_TAC        : thm list -> tactic
+  val ASM_SET_TAC    : thm list -> tactic
+  val SET_RULE       : term -> thm
 
   (* Miscellaneous *)
 
@@ -183,4 +193,7 @@ sig
   val qx_genl_tac : term quotation list -> tactic
   val qx_choosel_then : term quotation list -> thm_tactic -> thm_tactic
 
+  (* Derived search functions *)
+  val find_consts_thy : string list -> hol_type -> term list
+  val find_consts : hol_type -> term list
 end

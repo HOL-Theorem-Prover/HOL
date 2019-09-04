@@ -50,7 +50,7 @@ val _ = new_theory "eq_cmp_bmap";
 
 val eq_cmp_def =
  Define
-  `eq_cmp cmp = good_cmp cmp /\ !x y. (cmp x y = Equal) <=> (x=y)`;
+  `eq_cmp cmp <=> good_cmp cmp /\ !x y. (cmp x y = Equal) <=> (x=y)`;
 
 val [frange_def,fdom_def] =
  TotalDefn.multiDefine

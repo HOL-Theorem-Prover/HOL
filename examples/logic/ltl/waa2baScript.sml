@@ -3,6 +3,7 @@ open HolKernel Parse bossLib boolLib pairTheory relationTheory set_relationTheor
 open wordTheory buechiATheory alterATheory generalHelpersTheory
 
 val _ = new_theory "waa2ba"
+val _ = ParseExtras.temp_loose_equality()
 
 val d_gen_def = Define`
   d_gen (waa : (α,β) ALTER_A) qs

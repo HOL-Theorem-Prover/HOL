@@ -42,7 +42,7 @@ fun read_status atp_status =
 fun read_lemmas atp_out =
   let
     val l = filter not_reserved (map unescape (readl atp_out))
-    fun f s = String.concatWith "." (tl (butlast (String.fields is_dot s)))
+    fun f s = String.concatWith "." (tl (String.fields is_dot s))
   in
     mk_string_set (map f l)
   end
@@ -66,6 +66,8 @@ fun hh_reconstruct lemmas g =
       val t1 = !minimization_timeout
       val t2 = !reconstruction_timeout
       val newstac = hide_out (psMinimize.minimize_stac t1 stac g) []
+        handle Interrupt => raise Interrupt
+             | _ => raise ERR "hh_reconstruct" "minimization failed"
       val tac = hide_out tactic_of_sml newstac
     in
       case hide_out (timeout_tactic t2 tac) g of

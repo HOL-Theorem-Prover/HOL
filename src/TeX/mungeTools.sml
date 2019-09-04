@@ -8,6 +8,7 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | Indent of int * bool
                  (* true: add spaces; false: just alter block indent *)
              | NoSpec
+             | NoDefSym
              | Inst of string * string
              | OverrideUpd of (string * int) * string
              | TraceSet of string * int
@@ -48,6 +49,7 @@ fun stringOpt pos s =
   | "def" => SOME Def
   | "K" => SOME TermThm
   | "merge" => SOME Merge
+  | "nodefsym" => SOME NoDefSym
   | "nodollarparens" => SOME NoDollarParens
   | "nomerge" => SOME NoMerge
   | "nomath" => SOME NoMath
@@ -324,6 +326,22 @@ in
 end
 
 local
+  val sm_t = prim_mk_const{Name = "stmarker", Thy = "marker"}
+  val exn = mk_HOL_ERR "EmitTeX" "replace_topeq"
+                       "Definition clause not an equality"
+in
+fun replace_topeq tm =
+    let val (eqt,l,r) =
+            case strip_comb tm of
+                (f, [x,y]) => if same_const boolSyntax.equality f then (f, x, y)
+                              else raise exn
+              | _ => raise exn
+    in
+      list_mk_comb(mk_icomb(sm_t, eqt), [l,r])
+    end
+end
+
+local
   open EmitTeX PP
   val _ = set_trace "EmitTeX: print datatype names as types" 1
   exception BadSpec
@@ -469,7 +487,9 @@ in
               val newline = if OptSet.has SpacedDef opts then
                               B [add_newline, add_newline]
                             else add_newline
-              val lines = thm |> CONJUNCTS |> map (concl o SPEC_ALL)
+              val m = if OptSet.has NoDefSym opts then (fn t => t)
+                      else replace_topeq
+              val lines = thm |> CONJUNCTS |> map (m o concl o SPEC_ALL)
             in
               ind_bl (
                 block_list (block INCONSISTENT 0) stdtermprint newline lines

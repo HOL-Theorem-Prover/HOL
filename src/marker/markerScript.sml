@@ -17,36 +17,36 @@ val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="stmarker"}
    is marked at the same level *)
 val move_left_conj = store_thm(
   "move_left_conj",
-  ``!p q m. (p /\ stmarker m = stmarker m /\ p) /\
-            ((stmarker m /\ p) /\ q = stmarker m /\ (p /\ q)) /\
-            (p /\ (stmarker m /\ q) = stmarker m /\ (p /\ q))``,
+  ``!p q m. (p /\ stmarker m <=> stmarker m /\ p) /\
+            ((stmarker m /\ p) /\ q <=> stmarker m /\ (p /\ q)) /\
+            (p /\ (stmarker m /\ q) <=> stmarker m /\ (p /\ q))``,
   REWRITE_TAC [stmarker_def, CONJ_ASSOC] THEN
   REPEAT STRIP_TAC THEN REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
   MATCH_ACCEPT_TAC CONJ_COMM);
 
 val move_right_conj = store_thm(
   "move_right_conj",
-  ``!p q m. (stmarker m /\ p = p /\ stmarker m) /\
-            (p /\ (q /\ stmarker m) = (p /\ q) /\ stmarker m) /\
-            ((p /\ stmarker m) /\ q = (p /\ q) /\ stmarker m)``,
+  ``!p q m. (stmarker m /\ p <=> p /\ stmarker m) /\
+            (p /\ (q /\ stmarker m) <=> (p /\ q) /\ stmarker m) /\
+            ((p /\ stmarker m) /\ q <=> (p /\ q) /\ stmarker m)``,
   REWRITE_TAC [stmarker_def, GSYM CONJ_ASSOC] THEN
   REPEAT STRIP_TAC THEN REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
   MATCH_ACCEPT_TAC CONJ_COMM);
 
 val move_left_disj = store_thm(
   "move_left_disj",
-  ``!p q m. (p \/ stmarker m = stmarker m \/ p) /\
-            ((stmarker m \/ p) \/ q = stmarker m \/ (p \/ q)) /\
-            (p \/ (stmarker m \/ q) = stmarker m \/ (p \/ q))``,
+  ``!p q m. (p \/ stmarker m <=> stmarker m \/ p) /\
+            ((stmarker m \/ p) \/ q <=> stmarker m \/ (p \/ q)) /\
+            (p \/ (stmarker m \/ q) <=> stmarker m \/ (p \/ q))``,
   REWRITE_TAC [stmarker_def, DISJ_ASSOC] THEN
   REPEAT STRIP_TAC THEN REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
   MATCH_ACCEPT_TAC DISJ_COMM);
 
 val move_right_disj = store_thm(
   "move_right_disj",
-  ``!p q m. (stmarker m \/ p = p \/ stmarker m) /\
-            (p \/ (q \/ stmarker m) = (p \/ q) \/ stmarker m) /\
-            ((p \/ stmarker m) \/ q = (p \/ q) \/ stmarker m)``,
+  ``!p q m. (stmarker m \/ p <=> p \/ stmarker m) /\
+            (p \/ (q \/ stmarker m) <=> (p \/ q) \/ stmarker m) /\
+            ((p \/ stmarker m) \/ q <=> (p \/ q) \/ stmarker m)``,
   REWRITE_TAC [stmarker_def, GSYM DISJ_ASSOC] THEN
   REPEAT STRIP_TAC THEN REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
   MATCH_ACCEPT_TAC DISJ_COMM);
@@ -102,8 +102,11 @@ val IfCases_def = new_definition("IfCases_def", ``IfCases = T``)
 (* Support for the simplifier                                                *)
 (*---------------------------------------------------------------------------*)
 
-val AC_DEF = new_definition("AC_DEF", ``AC b1 b2 = b1 /\ b2``);
+val AC_DEF = new_definition("AC_DEF", ``AC b1 b2 <=> b1 /\ b2``);
+val Req0_def = new_definition("Req0_def", “Req0 = T”);
+val ReqD_def = new_definition("ReqD_def", “ReqD = T”);
 val Cong_def = new_definition("Cong_def", ``Cong (x:bool) = x``);
+val Exclude_def = new_definition("Exclude_def", “Exclude (x:'a) = T”);
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="AC"},name=(["Data","Bool"],"/\\")}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="bool",Name="/\\"},name=(["Data","Bool"],"/\\")}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="Cong"},name=(["Unwanted"],"id")}
@@ -119,7 +122,7 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 2)),
                    pp_elements = [HardSpace 1, TOK ":-", BreakSpace(1,0)],
                    term_name = ":-"};
 
-val _ = Parse.temp_type_abbrev ("label", ``:ind``);
+Type label[local] = “:ind”
 
 val label_def = new_definition(
   "label_def",

@@ -425,7 +425,7 @@ val noreduct_thm = store_thm(
   SRW_TAC [][noreduct_def] THENL [
     SRW_TAC [][normorder_rwts] THEN
     `∃N. M -n-> N` by METIS_TAC [normorder_bnf] THEN
-    `∀N'. M -n-> N' = (N' = N)` by METIS_TAC [normorder_det] THEN
+    `∀N'. M -n-> N' ⇔ (N' = N)` by METIS_TAC [normorder_det] THEN
     SRW_TAC [][],
 
     SRW_TAC [][normorder_rwts],
@@ -885,11 +885,11 @@ val whnf_is_abs_appstr = store_thm(
 val normorder_strong_ind =
     IndDefLib.derive_strong_induction (normorder_rules,normorder_ind)
 
-val bnf_appstar = Store_thm(
-  "bnf_appstar",
-  ``∀args f.
-      bnf (f ·· args) = bnf f ∧ EVERY bnf args ∧ (is_abs f ⇒ (args = []))``,
-  Induct THEN SRW_TAC [][] THEN METIS_TAC []);
+Theorem bnf_appstar[simp]:
+    ∀args f.
+      bnf (f ·· args) ⇔ bnf f ∧ EVERY bnf args ∧ (is_abs f ⇒ (args = []))
+Proof Induct THEN SRW_TAC [][] THEN METIS_TAC []
+QED
 
 val norm_varhead0 = prove(
   ``∀M N. M -n-> N ⇒

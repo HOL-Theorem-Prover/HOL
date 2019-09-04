@@ -7,6 +7,7 @@ sig
   | Numeral of (Arbnum.num * char option)
   | Fraction of {wholepart : Arbnum.num, fracpart : Arbnum.num,
                  places : int}
+  | StrLit of {ldelim : string, contents : string}
   | QIdent of (string * string)
 
   val lex : string list -> 'a qbuf.qbuf -> 'a term_token locn.located option

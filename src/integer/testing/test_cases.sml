@@ -2,7 +2,7 @@ structure test_cases :> test_cases =
 struct
 
 open Abbrev
-open HolKernel Parse;
+open HolKernel Parse boolLib
 
 fun test_term c (n,t,b) = let
   val _ = print (StringCvt.padRight #" " 25 n)
@@ -19,11 +19,8 @@ fun test_term c (n,t,b) = let
       in
         case Lib.total boolSyntax.rhs (concl th) of
           SOME r =>
-          if b andalso r = boolSyntax.T orelse
-             not b andalso r = boolSyntax.F
-          then
-            ("OK", true)
-          else ("Bad EQN", false)
+            if b andalso Teq r orelse not b andalso Feq r then ("OK", true)
+            else ("Bad EQN", false)
         | NONE => ("Not an EQN", false)
       end
     | SOME NONE => ("Interrupted", false)
@@ -58,8 +55,8 @@ val terms_to_test =
    T ("INT MAX 1", ``x <= int_max x y``),
    T ("INT MAX 2", ``!y. ?x:int. x < int_max x y``),
    T ("BUG1",
-    ``(?x. y <= x /\ x <= z /\ 2i * z + 1 <= x /\ x <= 2 * y) =
-    y <= z /\ 2 * z + 1 <= 2 * y /\ y <= 2 * y /\ 2 * z + 1 <= z``),
+    ``(?x. y <= x /\ x <= z /\ 2i * z + 1 <= x /\ x <= 2 * y) <=>
+      y <= z /\ 2 * z + 1 <= 2 * y /\ y <= 2 * y /\ 2 * z + 1 <= z``),
    T ("ILP1", Term`?z y x. 2n * x + 3 * y < 4 * z ==> 5 * x < 3 * y + z`),
    T ("ILP2",
       Term`?z y x v u. ~9 * u + ~12 * v + 4 * x + 5 * y + ~10 * z = 17`),
@@ -83,8 +80,8 @@ val terms_to_test =
            !x1.
              (if 100 < x then x1 = x - 10 else x1 = 91) ==>
              (if 100 < y0 then x1 = y0 - 10 else x1 = 91))`),
-   ("DIV1", Term`!x. 0 <= x = x / 2 <= x`, false),
-   ("DIV2", Term`!x. (x / 2 = x) = (x = 0)`, false),
+   ("DIV1", Term`!x. 0 <= x <=> x / 2 <= x`, false),
+   ("DIV2", Term`!x. (x / 2 = x) <=> (x = 0)`, false),
    T ("DIV3", Term`!i. (i % 10) % 10 = i % 10`),
    T ("DIV4", Term`?!i. 2 < i /\ (i / 2 = 1)`),
    T ("NDIV1", Term`!x. 0 < x ==> x DIV 2 < x`),
@@ -117,24 +114,24 @@ val terms_to_test =
    T ("NUM1", Term`!n:num m. n + m > 10 ==> n + 2 * m > 10`),
    T ("ABS1", Term `!p. 0 <= ABS(p)`),
    T ("ABS2", Term `!p. ABS (ABS(p)) = ABS(p)`),
-   T ("ABS3", Term `!p. (ABS(p) = 0) = (p = 0)`),
-   T ("ABS4", Term `!p. (ABS(p) = p) = 0 <= p`),
+   T ("ABS3", Term `!p. (ABS(p) = 0) <=> (p = 0)`),
+   T ("ABS4", Term `!p. (ABS(p) = p) <=> 0 <= p`),
    T ("ABS5", Term `!p. ABS ~p = ABS p`),
-   T ("ABS6", Term `!p. ABS(p) <= 0 = (p = 0)`),
+   T ("ABS6", Term `!p. ABS(p) <= 0 <=> (p = 0)`),
    T ("ABS7", Term `!p. ~(ABS(p) < 0)`),
    T ("ABS8", Term `!p q.
-           (ABS(p) < q = p < q /\ ~q < p) /\
-           (q < ABS(p) = q < p \/ p < ~q) /\
-      (~1*ABS(p) < q = ~q < p \/ p < q) /\
-      (q < ~1*ABS(p) = p < ~q /\ q < p)`),
+           (ABS(p) < q <=> p < q /\ ~q < p) /\
+           (q < ABS(p) <=> q < p \/ p < ~q) /\
+      (~1*ABS(p) < q <=> ~q < p \/ p < q) /\
+      (q < ~1*ABS(p) <=> p < ~q /\ q < p)`),
    T ("ABS9", Term `!p q.
-            (ABS(p) <= q = p <= q /\ ~q <= p) /\
-            (q <= ABS(p) = q <= p \/ p <= ~q) /\
-         (~1*ABS(p) <= q = ~q <= p \/ p <= q) /\
-         (q <= ~1*ABS(p) = p <= ~q /\ q <= p)`),
+            (ABS(p) <= q <=> p <= q /\ ~q <= p) /\
+            (q <= ABS(p) <=> q <= p \/ p <= ~q) /\
+         (~1*ABS(p) <= q <=> ~q <= p \/ p <= q) /\
+         (q <= ~1*ABS(p) <=> p <= ~q /\ q <= p)`),
    T ("ABS10", Term `!p q.
-           ((ABS(p) = q) = (p = q) /\ 0 < q \/ (p = ~q) /\ 0 <= q) /\
-           ((q = ABS(p)) = (p = q) /\ 0 < q \/ (p = ~q) /\ 0 <= q)`),
+           ((ABS(p) = q) <=> (p = q) /\ 0 < q \/ (p = ~q) /\ 0 <= q) /\
+           ((q = ABS(p)) <=> (p = q) /\ 0 < q \/ (p = ~q) /\ 0 <= q)`),
    A "ADD",
    A "EVEN",
    A "EQ_ADD_LCANCEL",
@@ -252,7 +249,8 @@ val terms_to_test =
   L (``0i < & (Num (ABS a1 - 1)) + 1``, "Num3"),
   L (``0i < &(Num (f (x:'a) - 1)) + 1``, "Num4a"),
   L (``0i < (if 0 <= f (x:'a) - 1i then f x - 1 else &(g (f x - 1))) + 1``,
-     "Num4b")
+     "Num4b"),
+  L (“n MOD 5 = 1  ==> 5 * ((n - 1) DIV 5) + 1 = n”, "Github677")
 ];
 
 val omega_test_terms = [

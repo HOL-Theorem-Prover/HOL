@@ -585,9 +585,9 @@ $t\ t_1 \cdots t_n$ &
 for conjunctions, disjunctions, and implications respectively.
 The corresponding destructor functions are called \ml{strip\_comb} \etc
 %
-\index{term constructors, in HOL logic@term constructors, in \HOL{} logic|)}
+\index{term constructors, in HOL logic@term constructors, in \HOL{} logic}
 %
-\index{terms, in HOL logic@terms, in \HOL{} logic!constructors for|)}
+\index{terms, in HOL logic@terms, in \HOL{} logic!constructors for}
 %
 \index{quotation, in HOL logic@quotation, in \HOL{} logic!of non-primitive terms|)}
 
@@ -682,6 +682,7 @@ and \ml{C},
 
 ##thm UPDATE_EQ
 ##thm UPDATE_COMMUTES
+##thm APPLY_UPDATE_THM
 
 ##thm K_THM
 ##thm S_THM
@@ -707,7 +708,7 @@ There are no theorems about \ml{:>}; its use is as a convenient syntax for funct
 For example, chains of updates can lose some parentheses if written
 \begin{hol}
 \begin{verbatim}
-   f :> (k1 += v1) :> (k2 += v2) :> (k3 += v3)
+   f :> (k1 =+ v1) :> (k2 =+ v2) :> (k3 =+ v3)
 \end{verbatim}
 \end{hol}
 This presentation also makes the order in which functions are applied read from left-to-right.
@@ -1161,35 +1162,45 @@ The following theorem is proved in the theory \ml{sum}. It provides a
 complete and abstract characterization of the disjoint sum type, and
 is used to justify the definition of functions over sums.
 
+>>__ open sumTheory
 \begin{hol}
-\begin{verbatim}
-  sum_Axiom  |- !f g. ?! h. (!x. h(INL x) = f x) /\ (!x. h(INR x) = g x)
-\end{verbatim}
+\begin{alltt}
+   ##thm sum_Axiom
+\end{alltt}
 \end{hol}
 
 \noindent Also provided are the following theorems having to
 do with the discriminator functions \ml{ISL} and \ml{ISR}:
 
 \begin{hol}
-\begin{verbatim}
-   ISL         |- (!x. ISL(INL x)) /\ (!y. ~ISL(INR y))
-   ISR         |- (!x. ISR(INR x)) /\ (!y. ~ISR(INL y))
+\begin{alltt}
+   ##thm ISL
+   ##thm ISR
 
-   ISL_OR_ISR  |- !x. ISL x \/ ISR x
-\end{verbatim}
+   ##thm ISL_OR_ISR
+\end{alltt}
 \end{hol}
 
 \noindent The \ml{sum} theory also provides the following theorems
 relating the projection functions and the discriminators.
 
 \begin{hol}
-\begin{verbatim}
-   OUTL        |- !x. OUTL(INL x) = x
-   OUTR        |- !x. OUTR(INR x) = x
+\begin{alltt}
+   ##thm OUTL
+   ##thm OUTR
 
-   INL         |- !x. ISL x ==> (INL(OUTL x) = x)
-   INR         |- !x. ISR x ==> (INR(OUTR x) = x)
-\end{verbatim}
+   ##thm INL
+   ##thm INR
+\end{alltt}
+\end{hol}
+
+The sum type operator can be seen as functorial over its arguments and so has a ``map'' function, \holtxt{SUM\_MAP}, with definition and results showing its functoriality:
+\begin{hol}
+\begin{alltt}
+   ##thm SUM_MAP_def
+   ##thm SUM_MAP_I
+   ##thm SUM_MAP_o
+\end{alltt}
 \end{hol}
 
 \index{disjoint unions, the HOL theory of@disjoint unions, the \HOL{} theory of|)}
@@ -1198,26 +1209,27 @@ relating the projection functions and the discriminators.
 
 \subsection{The one-element type}%
 \index{one, the HOL theory and type@\ml{one}, the \HOL{} theory and type}%
+\index{unit, the HOL type (alias for one)@\ml{unit}, the \HOL{} type (alias for \holtxt{one})}%
 
 The theory \ml{one} defines  the type  \ml{one} which  contains one element.
-The constant  \ml{one}  is specified  to denote  this element.   The pre-proved
-theorems in the theory \ml{one} are:
+The type is also abbreviated as \ml{unit}, which is the name of the analogous type in \ML{}, and this is the type's preferred printing form.
+The constant \ml{one} denotes this one element, but, again by analogy with \ML{}, the preferred parsing and printing form for this constant is \holtxt{()}.\footnote{When using the parenthesis-version, the \holtxt{one} value's syntax consists of two parenthesis tokens, so that one can write the value with white-space between the parentheses if desired.}
+The pre-proved theorems in the theory \ml{one} are:
 
 \begin{hol}
 \index{one_Axiom@\ml{one\_Axiom}}
-\begin{verbatim}
-   one_axiom   |- !(f:'a->one) (g:'a->one). f = g
-   one         |- !(v:one). v = one
-   one_Axiom   |- !(e:'a). ?!(fn:one->'a). fn one = e
-\end{verbatim}
+\begin{alltt}
+>>__ open oneTheory; show_types := true;
+##thm one_axiom
+##thm one
+##thm one_Axiom
+>>__ show_types := false;
+\end{alltt}
 \end{hol}
 
-\noindent These three theorems are equivalent characterizations of the type
-with only one value. The theory \ml{one} is typically used in
-constructing more elaborate types.  The one value of the type
-\ml{one}, can also be written as \ml{()} by analogy with the unit
-value in \ML.  This is also the default way in which this value is
-printed by the system pretty-printer.
+\noindent
+These three theorems are equivalent characterizations of the type with only one value.
+The theory \ml{one} is typically used in constructing more elaborate types.
 
 \subsubsection{The itself type}
 \index{itself, the HOL type operator@\holtxt{itself}, the \HOL{} type operator}%
@@ -1268,13 +1280,10 @@ An inductive type, options have a recursion theorem supporting the
 definition of primitive recursive functions over option values.
 %
 \begin{hol}
-\begin{verbatim}
-   option_Axiom
-     |- !e f.
-         ?h:'a option -> 'b.
-           (!x. h (SOME x) = f x) /\
-           (h NONE = e)
-\end{verbatim}
+\begin{alltt}
+>>__ open optionTheory
+##thm option_Axiom
+\end{alltt}
 \end{hol}
 The \theoryimp{option} theory also defines a case constant that allows
 one to inspect option values in a ``pattern-matching'' style.
@@ -1289,28 +1298,26 @@ one to inspect option values in a ``pattern-matching'' style.
 The constant underlying this syntactic sugar is \verb+option_CASE+
 with definition
 \begin{hol}
-\begin{verbatim}
-   option_case_def |- (option_CASE NONE u f = u) /\
-                      (option_CASE (SOME x) u f = f x)
-\end{verbatim}
+\begin{alltt}
+##thm option_case_def
+\end{alltt}
 \end{hol}
 %
 Another useful function maps a function over an option:
 %
 \index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for options}
 \begin{hol}
-\begin{verbatim}
-   OPTION_MAP_DEF  |- (OPTION_MAP f NONE = NONE) /\
-                      (OPTION_MAP f (SOME x) = SOME (f x))
-\end{verbatim}
+\begin{alltt}
+##thm OPTION_MAP_DEF
+\end{alltt}
 \end{hol}
 Finally, the \holtxt{THE} function takes a \holtxt{SOME}
 value to that constructor's argument, and is unspecified on
 \holtxt{NONE}:
 \begin{hol}
-\begin{verbatim}
-   THE_DEF   |- THE (SOME x) = x
-\end{verbatim}
+\begin{alltt}
+##thm THE_DEF
+\end{alltt}
 \end{hol}
 
 \section{Numbers}
@@ -1350,11 +1357,12 @@ pre-proved in the form:
 \index{NOT_SUC@\ml{NOT\_SUC}}
 \index{INV_SUC@\ml{INV\_SUC}}
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for natural numbers}
-\begin{verbatim}
-   NOT_SUC    |- !n. ~(SUC n = 0)
-   INV_SUC    |- !m n. (SUC m = SUC n) ==> (m = n)
-   INDUCTION  |- !P. P 0 /\ (!n. P n ==> P(SUC n)) ==> (!n. P n)
-\end{verbatim}
+\begin{alltt}
+>>__ open numTheory
+##thm NOT_SUC
+##thm INV_SUC
+##thm INDUCTION
+\end{alltt}
 \end{hol}
 
 In higher order logic, Peano's axioms are sufficient for developing
@@ -1407,9 +1415,10 @@ axioms.
 
 \begin{hol}\index{num_Axiom@\ml{num\_Axiom}}
 \index{characterizing theorem!for numbers}
-\begin{verbatim}
-   num_Axiom  |- !x f. ?fn. (fn 0 = x) /\ (!n. fn(SUC n) = f n (fn n))
-\end{verbatim}
+\begin{alltt}
+>>__ open prim_recTheory
+##thm num_Axiom
+\end{alltt}
 \end{hol}
 
 \noindent The theorem states the validity of primitive recursive
@@ -1430,10 +1439,9 @@ development it is needed for the proof of the
   therefore contains the following non-recursive definition of \ml{<}:
 
 \begin{hol}
-\index{LESS@\ml{LESS}}
-\begin{verbatim}
-   LESS  |- !m n. m < n = ?P. (!n. P(SUC n) ==> P n) /\ P m /\ ~P n
-\end{verbatim}
+\begin{alltt}
+##thm LESS_DEF
+\end{alltt}
 \end{hol}
 
 \noindent
@@ -1556,12 +1564,9 @@ justifying recursive definitions. For example, the theory
 \begin{hol}
 \index{axiom of dependent choice (DC)@axiom of dependent choice (\ml{DC})}
 \index{axioms!of choice}
-\begin{verbatim}
-   DC  |- !P R a.
-            P a /\ (!x. P x ==> ?y. P y /\ R x y)
-             ==>
-           ?f. (f 0 = a) /\ !n. P (f n) /\ R (f n) (f (SUC n))
-\end{verbatim}
+\begin{alltt}
+##thm DC
+\end{alltt}
 \end{hol}
 
 The proof uses {\small\verb+SELECT_AX+}. The theorem {\small\verb+DC+}
@@ -1571,14 +1576,11 @@ wellfoundedness of a relation $R$ is to say that it has no infinite
 decreasing $R$ chains.
 %
 \begin{hol}
-\index{wellfounded@\ml{wellfounded}}
-\begin{verbatim}
-   wellfounded_def
-     |- wellfounded (R:'a->'a->bool) = ~?f. !n. R (f (SUC n)) (f n)
-
-   WF_IFF_WELLFOUNDED
-     |- !R. WF R = wellfounded R
-\end{verbatim}
+\index{wellfounded, the HOL constant@\holtxt{wellfounded}, the \HOL{} constant}
+\begin{alltt}
+##thm wellfounded_def
+##thm WF_IFF_WELLFOUNDED
+\end{alltt}
 \end{hol}
 By use of {\small\verb+DC+}, this statement can be proved
 to be equal to the notion of wellfoundedness {\small\verb+WF+}
@@ -1590,18 +1592,15 @@ the less-than relation, as well as the wellfoundedness of measure
 functions are also proved in \theoryimp{prim\_rec}.
 
 \begin{hol}
-\index{WF_PRED@\ml{WF\_PRED}}
-\index{WF_LESS@\ml{WF\_LESS}}
-\index{measure_def@\ml{measure\_def}}
-\index{WF_measure@\ml{WF\_measure}}
-\begin{verbatim}
-   WF_PRED     |- WF (\x y. y = SUC x)
-   WF_LESS     |- WF $<
+\index{measure, the HOL constant@\holtxt{measure}, the \HOL{} constant}
+\begin{alltt}
+##thm WF_PRED
+##thm WF_LESS
 
-   measure_def |- measure = inv_image $<
-   measure_thm |- !f x y. measure f x y = f x < f y
-   WF_measure  |- !m. WF (measure m)
-\end{verbatim}
+##thm measure_def
+##thm measure_thm
+##thm WF_measure
+\end{alltt}
 \end{hol}
 
 
@@ -1612,31 +1611,32 @@ The \HOL{} theory \theoryimp{arithmetic} contains primitive recursive
 definitions of the following standard arithmetic operators.
 
 \begin{hol}
-\index{ADD@\ml{ADD}}
-\index{SUB@\ml{SUB}}
-\index{MULT@\ml{MULT}}
 \index{EXP, the HOL constant@\holtxt{EXP}, the \HOL{} constant}
+\index{ addition, in HOL logic@\holtxt{+} (addition, in \HOL{} logic)}
 \index{ subtraction, in HOL logic@\holtxt{-} (subtraction, in \HOL{} logic)}
 \index{ multiplication, in HOL logic@\holtxt{*} (multiplication, in \HOL{} logic)}
 \index{ exponentiation, in HOL logic@\holtxt{**} (exponentiation, in \HOL{} logic)}
-\begin{verbatim}
-   ADD    |- (!n. 0 + n = n) /\
-             (!m n. (SUC m) + n = SUC(m + n))
+\index{addition, in HOL logic@addition, in \HOL{} logic}
+\index{subtraction, in HOL logic@subtraction, in \HOL{} logic}
+\index{multiplication, in HOL logic@multiplication, in \HOL{} logic}
+\index{exponentiation, in HOL logic@exponentiation, in \HOL{} logic}
+\begin{alltt}
+>>__ open arithmeticTheory
+##thm ADD
 
-   SUB    |- (!m. 0 - m = 0) /\
-             (!m n. (SUC m) - n = if m < n then 0 else SUC(m - n))
+##thm SUB
 
-   MULT   |- (!n. 0 * n = 0) /\
-             (!m n. (SUC m) * n = (m * n) + n)
+##thm MULT
 
-   EXP    |- (!m. m EXP 0 = 1) /\
-             (!m n. m EXP (SUC n) = m * (m EXP n))
-\end{verbatim}
+##thm EXP
+\end{alltt}
 \end{hol}
 %
-Note that \holtxt{EXP} is an infix. The infix notation
-\holtxt{**} may be used in place of \holtxt{EXP}. Thus
-(\holtxt{x EXP y}) means $x^y$, and so does (\holtxt{x ** y}).
+Note that \holtxt{EXP} is an infix.
+The infix notation \holtxt{**} may be used in place of \holtxt{EXP}.
+Thus (\holtxt{x EXP y}) means $x^y$, and so does (\holtxt{x ** y}).
+In addition, the parser special-cases superscript 2 and 3 notations, so that \holtxt{x$^2$} is actually the same term as \holtxt{x EXP 2}, and \holtxt{x$^3$} is the same term as \holtxt{x EXP 3}.
+
 
 \paragraph{Comparison operators}
 
@@ -1646,11 +1646,11 @@ A full set of comparison operators is defined in terms of \verb+<+.
 \index{ greater than, in HOL logic@\ml{>} (greater than, in \HOL{} logic)}
 \index{ less or equal, in HOL logic@\ml{<=} (less or equal, in \HOL{} logic)}
 \index{ greater or equal, in HOL logic@\ml{>=} (greater or equal, in \HOL{} logic)}
-\begin{verbatim}
-   GREATER_DEF    |- !m n. m > n = (n < m)
-   LESS_OR_EQ     |- !m n. m <= n = (m < n \/ (m = n))
-   GREATER_OR_EQ  |- !m n. m >= n = (m > n \/ (m = n))
-\end{verbatim}
+\begin{alltt}
+##thm GREATER_DEF
+##thm LESS_OR_EQ
+##thm GREATER_OR_EQ
+\end{alltt}
 \end{hol}
 
 \paragraph{Division and modulus}
@@ -1661,10 +1661,9 @@ characterizing property.
 \begin{hol}
 \index{MOD, the HOL constant@\ml{MOD}, the \HOL{} constant}
 \index{DIV, the HOL constant@\ml{DIV}, the \HOL{} constant}
-\begin{verbatim}
-   DIVISION
-     |- !n. 0 < n ==> !k. (k = ((k DIV n) * n) + (k MOD n)) /\ (k MOD n) < n
-\end{verbatim}
+\begin{alltt}
+##thm DIVISION
+\end{alltt}
 \end{hol}
 
 \paragraph{Even and odd}
@@ -1674,11 +1673,11 @@ The properties of a number being even or odd are defined recursively.
 \begin{hol}
 \index{EVEN, the HOL constant@\ml{EVEN}, the \HOL{} constant}
 \index{ODD, the HOL constant@\ml{ODD}, the \HOL{} constant}
-\begin{verbatim}
-   EVEN |- (EVEN 0 = T) /\ !n. EVEN (SUC n) = ~EVEN n
+\begin{alltt}
+##thm EVEN
 
-   ODD  |- (ODD 0 = F) /\ !n. ODD (SUC n) = ~ODD n
-\end{verbatim}
+##thm ODD
+\end{alltt}
 \end{hol}
 
 \paragraph{Maximum and minimum}
@@ -1688,10 +1687,10 @@ The minimum and maximum of two numbers are defined in the usual way.
 \begin{hol}
 \index{MIN, the HOL constant@\ml{MIN}, the \HOL{} constant}
 \index{MAX, the HOL constant@\ml{MAX}, the \HOL{} constant}
-\begin{verbatim}
-   MAX_DEF |- !m n. MAX m n = (if m < n then n else m)
-   MIN_DEF |- !m n. MIN m n = (if m < n then m else n)
-\end{verbatim}
+\begin{alltt}
+##thm MAX_DEF
+##thm MIN_DEF
+\end{alltt}
 \end{hol}
 
 \paragraph{Factorial}
@@ -1700,28 +1699,25 @@ The minimum and maximum of two numbers are defined in the usual way.
 The factorial of a number is a primitive recursive definition.
 %
 \begin{hol}
-\begin{verbatim}
-   FACT |- (FACT 0 = 1) /\ !n. FACT (SUC n) = SUC n * FACT n
-\end{verbatim}
+\begin{alltt}
+##thm FACT
+\end{alltt}
 \end{hol}
 
 \paragraph{Function iteration}
 \index{FUNPOW, the HOL constant@\ml{FUNPOW}, the \HOL{} constant}
 
-The iterated application $f^n x$ of a function $f : \alpha \to
+The iterated application $f^n(x)$ of a function $f : \alpha \to
 \alpha$ is defined by primitive recursion. The definition
 (\ml{FUNPOW}) is tail-recursive, which can be awkward to reason
 about. An alternative characterization (\ml{FUNPOW\_SUC}) may be easier
 to apply when doing proofs.
 %
 \begin{hol}
-\begin{verbatim}
-   FUNPOW
-     |- (!f x. FUNPOW f 0 x = x) /\
-        (!f n x. FUNPOW f (SUC n) x = FUNPOW f n (f x))
-   FUNPOW_SUC
-     |- !f n x. FUNPOW f (SUC n) x = f (FUNPOW f n x)
-\end{verbatim}
+\begin{alltt}
+##thm FUNPOW
+##thm FUNPOW_SUC
+\end{alltt}
 \end{hol}
 
 \medskip
@@ -1759,19 +1755,20 @@ Operator & Strength & Associativity \\ \hline
 
 The type \ml{num}
 \index{num, the type in \HOL{} logic@\ml{num}, the type in \HOL{} logic}
+\index{numerals, in HOL logic@numerals, in \HOL{} logic}
 is usually thought of as being supplied with an infinite collection of
 numerals: \ml{1}, \ml{2}, \ml{3}, etc. However, the \HOL{} logic has
 no way to define such infinite families of constants; instead, all
 numerals other than $0$ are actually built up from the constants
 introduced by the following definitions:
-\begin{verbatim}
-   NUMERAL_DEF |- !x. NUMERAL x = x
+\begin{alltt}
+##thm NUMERAL_DEF
 
-   BIT1        |- !n. BIT1 n = n + (n + SUC 0)
-   BIT2        |- !n. BIT2 n = n + (n + SUC(SUC 0))
+##thm BIT1
+##thm BIT2
 
-   ALT_ZERO    |- ZERO = 0
-\end{verbatim}
+##thm ALT_ZERO
+\end{alltt}
 
 \noindent For example, the numeral $5$ is represented by the term
 \[
@@ -1805,7 +1802,7 @@ functionality is provided by the functions \ml{mk\_numeral},
 following session shows how \HOL{} numerals are constructed from elements of
 type \verb+num+ and how numerals are destructed. The structure
 {\small\verb+Arbnum+} provides a full collection of arithmetic
-operations, using the usual names for the operations, \eg \verb|+|,
+operations, using the usual names for the operations, \eg, \verb|+|,
 \verb|*|, \verb|-|, \etc
 
 \begin{session}
@@ -1828,13 +1825,10 @@ operations, using the usual names for the operations, \eg \verb|+|,
 Simple digit sequences are parsed as decimal numbers, but the parser
 also supports the input of numbers in binary, octal and hexadecimal
 notation.  Numbers may be written in binary and hexadecimal form by
-prefixing them with the strings \holtxt{0b} and \holtxt{0x} respectively.  The
-`digits' A--F in hexadecimal numbers may be written in upper or lower
-case.  Binary numbers have their most significant digits left-most. In
-the interests of backwards compatibility, octal numbers are not
-enabled by default, but if the reference
-\ml{base\_tokens.allow\_octal\_input} is set to \ml{true}, then octal
-numbers are those that appear with leading zeroes.
+prefixing them with the strings \holtxt{0b} and \holtxt{0x} respectively.
+The `digits' \texttt{A}--\texttt{F} in hexadecimal numbers may be written in upper or lower case.
+Binary numbers have their most significant digits left-most.
+In the interests of backwards compatibility, octal numbers are not enabled by default, but if the reference \ml{base\_tokens.allow\_octal\_input} is set to \ml{true}, then octal numbers are those that appear with leading zeroes.
 
 Finally, all numbers may be padded with underscore characters
 (\ml{\_}).  These can be used to groups digits for added legibility
@@ -2585,11 +2579,11 @@ The predicate \ml{NULL} and the selectors
 \index{NULL, the HOL constant@\ml{NULL}, the \HOL{} constant}
 \index{HD, the HOL constant@\ml{HD}, the \HOL{} constant}
 \index{TL, the HOL constant@\ml{TL}, the \HOL{} constant}
-\begin{verbatim}
-   NULL |- NULL [] /\ (!h t. ~NULL(h::t))
-   HD   |- !h t. HD(h::t) = h
-   TL   |- !h t. TL(h::t) = t
-\end{verbatim}
+\begin{alltt}
+##thm NULL
+##thm HD
+##thm TL
+\end{alltt}
 \end{hol}
 
 \noindent The following functions on lists are also defined in the theory \ml{list}.
@@ -2702,17 +2696,12 @@ There are functions for mapping a function $f : \alpha \to \beta$ over
 a single list (\holtxt{MAP}) or a function $f : \alpha \to \beta
 \to \gamma$ over two lists (\holtxt{MAP2}).
 \begin{hol}
-\begin{verbatim}
-   MAP
-     |- (!f. MAP f [] = []) /\
-        (!f h t. MAP f (h::t) = f h::MAP f t)
-   MAP2
-     |- (!f. MAP2 f [] [] = []) /\
-        !f h1 t1 h2 t2. MAP2 f (h1::t1) (h2::t2) = f h1 h2::MAP2 f t1 t2
-\end{verbatim}
+\begin{alltt}
+##thm MAP
+##thm MAP2_DEF
+\end{alltt}
 \end{hol}
-The behaviour of \holtxt{MAP2} in the cases when it is given lists of
-unequal lengths is unspecified.
+If passed lists of unequal length, \holtxt{MAP2} returns a list of length equal to that of the shorter list.
 
 \paragraph {Predicates over lists}
 \index{FILTER, the HOL constant@\ml{FILTER}, the \HOL{} constant}
@@ -2834,20 +2823,14 @@ collections may be found in the \theoryimp{container} theory.
 
 \paragraph {Pairs and lists}
 
-Two lists of equal length may be component-wise paired by
-the {\small\verb+ZIP+} operation. The result is unspecified
-when the lists are not the same length. The inverse operation,
-{\small\verb+UNZIP+}, translates a list of pairs into a pair of
-lists.
+Two lists of equal length may be component-wise paired by the {\small\verb+ZIP+} operation.
+As with \holtxt{MAP2}, the result of zipping lists of unequal lengths is a list whose length is that of the shorter argument.
+The inverse operation, {\small\verb+UNZIP+}, translates a list of pairs into a pair of lists.
 \begin{hol}
-\begin{verbatim}
-  ZIP
-    |- (ZIP ([],[]) = []) /\
-       (!x1 l1 x2 l2. ZIP (x1::l1,x2::l2) = (x1,x2)::ZIP (l1,l2))
-  UNZIP_THM
-    |- (UNZIP [] = ([],[])) /\
-       (UNZIP ((x,y)::t) = let (L1,L2) = UNZIP t in (x::L1,y::L2))
-\end{verbatim}
+\begin{alltt}
+##thm ZIP_def
+##thm UNZIP_THM
+\end{alltt}
 \end{hol}
 
 \paragraph {Alternate access}
@@ -2859,14 +2842,11 @@ times it is convenient to access the last element
 (\holtxt{LAST}) of a non-empty list directly. The last element
 of a non-empty list is dropped by \holtxt{FRONT}.
 \begin{hol}
-\begin{verbatim}
-  LAST_DEF
-    |- !h t. LAST (h::t) = if t = [] then h else LAST t
-  FRONT_DEF
-    |- !h t. FRONT (h::t) = if t = [] then [] else h::FRONT t
-  APPEND_FRONT_LAST
-    |- !l. ~(l = []) ==> (FRONT l ++ [LAST l] = l)
-\end{verbatim}
+\begin{alltt}
+##thm LAST_DEF
+##thm FRONT_DEF
+##thm APPEND_FRONT_LAST
+\end{alltt}
 \end{hol}
 %
 Joining the front part and the last element of a non-empty list yields
@@ -2878,18 +2858,15 @@ are unspecified on empty lists.
 
 \index{isPREFIX, the HOL constant@\ml{isPREFIX}, the \HOL{} constant}
 The relation capturing whether a list $\ell_1$ is a prefix of $\ell_2$
-({\holtxt{isPREFIX}) can be defined by recursion. The infix
-\holtxt{<{}<=} can also be used as notation for this partial order.
+({\holtxt{isPREFIX}) can be defined by recursion.
+The infix symbols \holtxt{<{}<=} (ASCII) and \holtxt{$\preccurlyeq$} (U+227C) can also be used as notation for this partial order.
 % use of {} above is just a trick to stop Emacs font-lock colouring
 % this file disgustingly
 %
 \begin{hol}
-\begin{verbatim}
-   isPREFIX_THM
-     |- ([] <<= l <=> T) /\
-        (h::t <<= [] <=> F) /\
-        (h1::t1 <<= h2::t2 <=> (h1 = h2) /\ t1 <<= t2)
-\end{verbatim}
+\begin{alltt}
+##thm68 isPREFIX_THM
+\end{alltt}
 \end{hol}
 The above theorem states that: the empty list is a prefix of any other
 list (clause 1); that no non-empty list is a prefix of the empty list
@@ -2921,18 +2898,11 @@ definition (\holtxt{PERM}) that captures this relationship is the
 following:
 %
 \begin{hol}
-\begin{verbatim}
-   PERM_DEF
-     |- !L1 L2. PERM L1 L2 = !x. FILTER ($= x) L1 = FILTER ($= x) L2
-   PERM_IND =
-     |- !P.
-          P [] [] /\
-          (!x l1 l2. P l1 l2 ==> P (x::l1) (x::l2)) /\
-          (!x y l1 l2. P l1 l2 ==> P (x::y::l1) (y::x::l2)) /\
-          (!l1 l2 l3. P l1 l2 /\ P l2 l3 ==> P l1 l3)
-         ==>
-         !l1 l2. PERM l1 l2 ==> P l1 l2
-\end{verbatim}
+\begin{alltt}
+>>__ load "sortingTheory"; open sortingTheory
+##thm PERM_DEF
+##thm PERM_IND
+\end{alltt}
 \end{hol}
 %
 A derived induction theorem (\holtxt{PERM\_IND}) is very
@@ -2954,14 +2924,10 @@ is a sorting function (\holtxt{SORTS}) with respect to $R$ if
 it delivers a permutation of its input, and the result is $R$-sorted.
 %
 \begin{hol}
-\begin{verbatim}
-   SORTED_DEF
-     |- (SORTED R [] = T) /\
-        (SORTED R [x] = T) /\
-        (SORTED R (x::y::rst) = R x y /\ SORTED R (y::rst))
-   SORTS_DEF
-     |- !f R. SORTS f R = !l. PERM l (f R l) /\ SORTED R (f R l)
-\end{verbatim}
+\begin{alltt}
+##thm SORTED_DEF
+##thm SORTS_DEF
+\end{alltt}
 \end{hol}
 %
 Quicksort is defined in the usual functional programming style, and
@@ -2969,16 +2935,10 @@ it is indeed a sorting function, provided $R$ is a transitive and
 total relation.
 %
 \begin{hol}
-\begin{verbatim}
-   QSORT_DEF =
-     |- (QSORT ord [] = []) /\
-        (QSORT ord (h::t) =
-           let (l1,l2) = PARTITION (\y. ord y h) t
-           in
-             QSORT ord l1 ++ [h] ++ QSORT ord l2)
-   QSORT_SORTS
-     |- !R. transitive R /\ total R ==> SORTS QSORT R
-\end{verbatim}
+\begin{alltt}
+##thm QSORT_DEF
+##thm QSORT_SORTS
+\end{alltt}
 \end{hol}
 
 
@@ -3345,6 +3305,7 @@ co-induction principle:
 
 \subsection{Character strings (\theoryimp{string})}
 \index{strings, the HOL theory of@strings, the \HOL{} theory of|(}
+\label{sec:strings}
 
 The theory \theoryimp{string} defines a type of characters and a type
 of finite strings built from those characters, along with a useful suite of
@@ -3374,7 +3335,7 @@ Thus:
 >> load "stringTheory";
 >> val t = ``f #"c" #"\n"``;
 
->> dest_term ``#"\t"``;
+>> dest_comb ``#"\t"``;
 \end{alltt}
 \end{session}
 
@@ -3430,6 +3391,10 @@ Note that if one wants to use the control-character syntax with the
 caret that the pretty-printer has chosen to use in printing the given
 string, and this occurs inside a quotation, then the caret will need
 to be doubled.  (See Section~\ref{sec:quotation-antiquotation}.)
+
+As with numerals, string literals can be injected into other types, where it might make sense to have string literals appear to inhabit types in addition to the core system's \holtxt{string} type.
+Such literals can be written with different delimiters to make it clear that such an injection has occurred.
+For more on this facility, see \REFERENCE's description of the \ml{add_strliteral_form} function.
 
 There is also a destructor function {\small\verb+DEST_STRING+} for
 strings which returns an option type.
@@ -3489,6 +3454,7 @@ Several different notions of a collection of elements are available in
 \subsection{Sets (\theoryimp{pred\_set})}
 \label{sec:theory-of-sets}
 \index{sets, the HOL theory of@sets, the \HOL{} theory of|(}
+>>__ open pred_setTheory
 
 An extensive development of set theory is available in the theory
 \theoryimp{pred\_set}. Sets are represented by functions of the type
@@ -3506,34 +3472,36 @@ is based on. In \HOL, membership is represented by a the infix
 constant \holtxt{IN}, defined in theory \theoryimp{bool} for
 convenience.
 \begin{hol}
-\begin{verbatim}
-   IN_DEF   |- IN = \x f. f x
-\end{verbatim}
+\begin{alltt}
+  ##thm IN_DEF
+\end{alltt}
 \end{hol}
 The \holtxt{IN} operator is merely a way of applying the
 characteristic function to an item, as the following trivial
 consequence of the definition shows:
 \begin{hol}
-\begin{verbatim}
-   SPECIFICATION   |- !P x. x IN P = P x
-\end{verbatim}
+\begin{alltt}
+  ##thm SPECIFICATION
+\end{alltt}
 \end{hol}
 Two sets are equal if they have the same elements.
 \begin{hol}
-\begin{verbatim}
-   EXTENSION   |- !s t. (s = t) = (!x. (x IN s) = (x IN t))
-\end{verbatim}
+\begin{alltt}
+  ##thm EXTENSION
+\end{alltt}
 \end{hol}
+The negation of set-membership is not a separate constant, but is available as a convenient overload (in both ASCII and Unicode forms).
+Thus, instead of writing \holtxt{\td(e IN s)}, one can instead write \holtxt{e NOTIN s} or \holtxt{e \(\notin\) s}.
 
 \paragraph{Empty and universal sets}
 \index{universal set}
 The empty set is the characteristic function that is constantly false. The constant \holtxt{EMPTY} denotes the empty set; it may be written as \holtxt{\{\}} and \holtxt{$\emptyset$} (U+2205).
 The universal set, \holtxt{UNIV}, on a type is the characteristic function that is always true for elements of that type.
 \begin{hol}
-\begin{verbatim}
-   EMPTY_DEF   |- {} = (\x. F)
-   UNIV_DEF    |- UNIV = (\x. T)
-\end{verbatim}
+\begin{alltt}
+  ##thm EMPTY_DEF
+  ##thm UNIV_DEF
+\end{alltt}
 \end{hol}
 In addition to \holtxt{UNIV} (perhaps with a type annotation \holtxt{:'a~set}), one may also write \holtxt{univ(:'a)} to represent the universal set over type \holtxt{:'a}.
 The Unicode syntax \holtxt{$\mathbb{U}$(:'a)} means the same.
@@ -3560,21 +3528,21 @@ discussed in the next subsection. Set union ({\small\verb+UNION+},
 written infix) and intersection ({\small\verb+INTER+}, also infix)
 are given their usual definitions by set comprehension.
 \begin{hol}
-\begin{verbatim}
-   INSERT_DEF  |- !x s. x INSERT s = {y | (y = x) \/ y IN s}
-   UNION_DEF   |- !s t. s UNION t = {x | x IN s \/ x IN t}
-   INTER_DEF   |- !s t. s INTER t = {x | x IN s /\ x IN t}
-\end{verbatim}
+\begin{alltt}
+  ##thm INSERT_DEF
+  ##thm UNION_DEF
+  ##thm INTER_DEF
+\end{alltt}
 \end{hol}
 \holtxt{UNION} and \holtxt{INTER} are binary
 operations. Indexed union and intersection operations, \ie,
 $\bigcup_{i \in P}$ and $\bigcap_{i \in P}$ are provided by the
 definitions of  \holtxt{BIGUNION} and \holtxt{BIGINTER}.
 \begin{hol}
-\begin{verbatim}
-   BIGUNION    |- !P. BIGUNION P = {x | ?s. s IN P /\ x IN s}
-   BIGINTER    |- !P. BIGINTER P = {x | !s. s IN P ==> x IN s}
-\end{verbatim}
+\begin{alltt}
+  ##thm BIGUNION
+  ##thm BIGINTER
+\end{alltt}
 \end{hol}
 Both \holtxt{BIGUNION} and \holtxt{BIGINTER} reduce a set of sets to a
 set and thus have the type
@@ -3587,11 +3555,11 @@ Set inclusion (\holtxt{SUBSET}, infix), proper set inclusion
 follows:
 %
 \begin{hol}
-\begin{verbatim}
-   SUBSET_DEF  |- !s t. s SUBSET t = !x. x IN s ==> x IN t
-   PSUBSET_DEF |- !s t. s PSUBSET t = s SUBSET t /\ ~(s = t)
-   POW_DEF     |- !set. POW set = {s | s SUBSET set}
-\end{verbatim}
+\begin{alltt}
+  ##thm SUBSET_DEF
+  ##thm PSUBSET_DEF
+  ##thm POW_DEF
+\end{alltt}
 \end{hol}
 
 \paragraph{Set difference and complement}
@@ -3602,40 +3570,30 @@ set comprehension. Based on that, the deletion of a single element
 universe of a type is always available via \holtxt{UNIV}, the
 complement (\holtxt{COMPL}) of a set may be taken.
 \begin{hol}
-\begin{verbatim}
-   DIFF_DEF    |- !s t. s DIFF t = {x | x IN s /\ ~(x IN t)}
-   DELETE_DEF  |- !s x. s DELETE x = s DIFF {x}
-   COMPL_DEF   |- !P. COMPL P = UNIV DIFF P
-\end{verbatim}
+\begin{alltt}
+  ##thm DIFF_DEF
+  ##thm DELETE_DEF
+  ##thm COMPL_DEF
+\end{alltt}
 \end{hol}
 
 \paragraph{Functions on sets}
 The image of a function $f :\alpha \to \beta$ on
 a set (\holtxt{IMAGE}) is defined with a set comprehension.
 \begin{hol}
-\begin{verbatim}
-   IMAGE_DEF   |- !f s. IMAGE f s = {f x | x IN s}
-\end{verbatim}
+\begin{alltt}
+  ##thm IMAGE_DEF
+\end{alltt}
 \end{hol}
 %
-Injections, surjections, and bijections between sets are defined
-as follows:
+Injections, surjections, and bijections between sets are defined as follows:
 %
 \begin{hol}
-\begin{verbatim}
-   INJ_DEF
-        |- !f s t.
-             INJ f s t =
-             (!x. x IN s ==> f x IN t) /\
-             !x y. x IN s /\ y IN s ==> (f x = f y) ==> (x = y)
-   SURJ_DEF
-        |- !f s t.
-             SURJ f s t =
-             (!x. x IN s ==> f x IN t) /\
-             !x. x IN t ==> ?y. y IN s /\ (f y = x)
-
-   BIJ_DEF |- !f s t. BIJ f s t = INJ f s t /\ SURJ f s t
-\end{verbatim}
+\begin{alltt}
+  ##thm INJ_DEF
+  ##thm68 SURJ_DEF
+  ##thm BIJ_DEF
+\end{alltt}
 \end{hol}
 
 \paragraph{Finite sets}
@@ -3644,14 +3602,13 @@ The finite sets (\holtxt{FINITE}) are defined inductively as those
 built from the empty set by a finite number of insertions.
 %
 \begin{hol}
-\begin{verbatim}
-   FINITE_DEF
-     |- !s. FINITE s = !P. P {} /\ (!s. P s ==> !e. P (e INSERT s)) ==> P s
-\end{verbatim}
+\begin{alltt}
+  ##thm FINITE_DEF
+\end{alltt}
 \end{hol}
 %
 \noindent
-A set is infinite iff it is not finite, and there is an abbreviation in the system that parses \holtxt{\holquote{INFINITE~s}} into  \holtxt{\holquote{\td{}FINITE~s}}.
+A set is infinite iff it is not finite, and there is an abbreviation in the system that parses \holtxt{\fholquote{INFINITE~s}} into  \holtxt{\fholquote{\td{}FINITE~s}}.
 The pretty-printer reverses this transformation.
 
 \medskip\noindent
@@ -3660,12 +3617,9 @@ The finite sets have an induction theorem:
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for finite sets}
 %
 \begin{hol}
-\begin{verbatim}
-   FINITE_INDUCT
-     |- !P. P {} /\
-           (!s. FINITE s /\ P s ==> !e. ~(e IN s) ==> P (e INSERT s))
-           ==>  !s. FINITE s ==> P s
-\end{verbatim}
+\begin{alltt}
+##thm FINITE_INDUCT
+\end{alltt}
 \end{hol}
 %
 As mentioned, set operations apply to both finite and infinite
@@ -3675,12 +3629,9 @@ cardinality of an infinite set is not specified.
 \index{cardinality of (finite) sets}
 %
 \begin{hol}
-\begin{verbatim}
-   CARD_DEF
-     |- (CARD {} = 0) /\
-        !s. FINITE s ==>
-            !x. CARD (x INSERT s) = if x IN s then CARD s else SUC (CARD s)
-\end{verbatim}
+\begin{alltt}
+  ##thm CARD_DEF
+\end{alltt}
 \end{hol}
 %
 Since the finite and infinite sets are dealt with uniformly in
@@ -3690,10 +3641,9 @@ following theorem relating cardinality and subsets is only true for
 finite sets.
 %
 \begin{hol}
-\begin{verbatim}
-   CARD_PSUBSET
-     |- !s. FINITE s ==> !t. t PSUBSET s ==> CARD t < CARD s
-\end{verbatim}
+\begin{alltt}
+  ##thm CARD_PSUBSET
+\end{alltt}
 \end{hol}
 %
 An extensive suite of theorems dealing with finiteness and cardinality
@@ -3704,17 +3654,16 @@ The product of two sets ({\small\verb+CROSS+}, infix) is defined
 with a set comprehension.
 %
 \begin{hol}
-\begin{verbatim}
-   CROSS_DEF   |- !P Q. P CROSS Q = {p | FST p IN P /\ SND p IN Q}
-\end{verbatim}
+\begin{alltt}
+  ##thm CROSS_DEF
+\end{alltt}
 \end{hol}
 %
 \noindent Cardinality and cross product are related by the following theorem:
 \begin{hol}
-\begin{verbatim}
-   CARD_CROSS
-     |- !P Q. FINITE P /\ FINITE Q ==> (CARD (P CROSS Q) = CARD P * CARD Q)
-\end{verbatim}
+\begin{alltt}
+  ##thm CARD_CROSS
+\end{alltt}
 \end{hol}
 
 \paragraph{Recursive functions on sets}
@@ -3728,22 +3677,16 @@ known as \emph{left-commutativity}, namely, $f\;x\;(f\;y\;z) =
 f\;y\;(f\;x\;z)$, then $f$ can be applied by folding it on the set
 in a tail-recursive fashion.
 \begin{hol}
-\begin{verbatim}
-   ITSET_EMPTY
-     |- !f b. ITSET f {} b = b
-   COMMUTING_ITSET_INSERT
-     |- !f s. (!x y z. f x (f y z) = f y (f x z)) /\ FINITE s ==>
-              !x b. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b)
-\end{verbatim}
+\begin{alltt}
+  ##thm ITSET_EMPTY
+  ##thm COMMUTING_ITSET_INSERT
+\end{alltt}
 \end{hol}
 A recursive version is also available:
 \begin{hol}
-\begin{verbatim}
-   COMMUTING_ITSET_RECURSES
-     |- !f e s b.
-          (!x y z. f x (f y z) = f y (f x z)) /\ FINITE s ==>
-          (ITSET f (e INSERT s) b = f e (ITSET f (s DELETE e) b))
-\end{verbatim}
+\begin{alltt}
+  ##thm COMMUTING_ITSET_RECURSES
+\end{alltt}
 \end{hol}
 For the full derivation, see the sources of {\small\verb+pred_set+}.
 The definition of {\small\verb+ITSET+} allows, for example, the
@@ -3752,14 +3695,10 @@ elements, from which a recursive characterization and other useful
 theorems are derived.
 %
 \begin{hol}
-\begin{verbatim}
-   SUM_IMAGE_DEF
-     |- !f s. SIGMA f s = ITSET (\e acc. f e + acc) s 0
-   SUM_IMAGE_THM
-     |- !f. (SIGMA f {} = 0) /\
-            !e s. FINITE s ==>
-                  (SIGMA f (e INSERT s) = f e + SIGMA f (s DELETE e))
-\end{verbatim}
+\begin{alltt}
+  ##thm SUM_IMAGE_DEF
+  ##thm SUM_IMAGE_THM
+\end{alltt}
 \end{hol}
 
 \paragraph{Other definitions and theorems}
@@ -3772,25 +3711,14 @@ each other, but do not express any deep theorems of set theory.
 However, one notable theorem is Koenig's Lemma, which states that
 every finitely branching infinite tree has an infinite path. There are
 many ways to formulate this theorem, depending on how the notion of
-tree is formalized. In \theoryimp{pred\_set}, finite branching is
-defined as a predicate on a relation.
-%
-\begin{hol}
-\begin{verbatim}
-   finite_branching_def
-     |- !R. finitely_branching R = !x. FINITE {y | R x y}
-\end{verbatim}
-\end{hol}
-%
-From this, the following version of Koenig's Lemma is stated and
+tree is formalized.
+In \HOL's formulation, the tree is characterised by making various assumptions about the finite-ness or otherwise of elements reachable using a relation \holtxt{R}.
+Then the following version of Koenig's Lemma is stated and
 proved:
 \begin{hol}
-\begin{verbatim}
-   KoenigsLemma
-     |- finitely_branching R ==>
-          !x. ~FINITE {y | RTC R x y} ==>
-              ?f. (f 0 = x) /\ !n. R (f n) (f (SUC n))
-\end{verbatim}
+\begin{alltt}
+  ##thm KoenigsLemma
+\end{alltt}
 \end{hol}
 
 
@@ -3848,9 +3776,9 @@ parses to:
 where \ml{GSPEC} is characterized by:
 %
 \begin{hol}
-\begin{verbatim}
-   GSPECIFICATION  |- !f v. (v IN GSPEC f) = (?x. (v,T) = f x)
-\end{verbatim}
+\begin{alltt}
+  ##thm GSPECIFICATION
+\end{alltt}
 \end{hol}
 
 This somewhat cryptic specification can be understood by exercising an
@@ -3864,9 +3792,9 @@ example. The syntax
 %
 is mapped by the \HOL{} parser to
 \begin{hol}
-\begin{verbatim}
-   a IN GSPEC(\(p,q). ((p+q), (p < q /\ q < r)))
-\end{verbatim}
+\begin{alltt}
+   ##parsetm a IN GSPEC(\(p,q). ((p+q), (p < q /\ q < r)))
+\end{alltt}
 \end{hol}
 %
 which, by \ml{GSPECIFICATION}, is equal to
@@ -4214,24 +4142,17 @@ basic results used in Term Rewriting.
 The following basic properties of relations are defined.
 %
 \begin{hol}
-\begin{verbatim}
-   transitive_def
-     |- transitive R = !x y z. R x y /\ R y z ==> R x z
-   reflexive_def
-     |- reflexive R = (!x. R x x)
-   irreflexive_def
-     |- irreflexive R = (!x. ~R x x)
-   symmetric_def
-     |- symmetric R = (!x y. R x y = R y x)
-   antisymmetric_def
-     |- antisymmetric R = (!x y. R x y /\ R y x ==> (x = y))
-   equivalence_def
-     |- equivalence R = reflexive R /\ symmetric R /\ transitive R
-   trichotomous
-     |- trichotomous R = !a b. R a b \/ R b a \/ (a = b)
-   total_def
-     |- total R = (!x y. R x y \/ R y x)
-\end{verbatim}
+\begin{alltt}
+>>__ open relationTheory
+##thm transitive_def
+##thm reflexive_def
+##thm irreflexive_def
+##thm symmetric_def
+##thm antisymmetric_def
+##thm equivalence_def
+##thm trichotomous
+##thm total_def
+\end{alltt}
 \end{hol}
 
 \paragraph{Basic operations}
@@ -4243,18 +4164,13 @@ infix), inversion (\holtxt{inv}, or $\_^{\mathsf{T}}$ (suffix superscript `T')),
 (\holtxt{RRANGE}).
 %
 \begin{hol}
-\begin{verbatim}
-   EMPTY_REL_DEF
-     |- !x y. EMPTY_REL x y = F
-   O_DEF
-     |- $O R1 R2 x z = ?y. R2 x y /\ R1 y z
-   inv_DEF
-     |- inv R x y = R y x
-   RDOM_DEF
-     |- RDOM R x = ?y. R x y
-   RRANGE
-     |- RRANGE R y = ?x. R x y
-\end{verbatim}
+\begin{alltt}
+##thm EMPTY_REL_DEF
+##thm O_DEF
+##thm inv_DEF
+##thm RDOM_DEF
+##thm RRANGE
+\end{alltt}
 \end{hol}
 
 \noindent Set operations lifted to work on relations include subset
@@ -4263,18 +4179,13 @@ intersection (\holtxt{RINTER}, or $\cap\subr$, infix), complement (\holtxt{RCOMP
 and universe (\holtxt{RUNIV}, or $\mathbb{U}\subr$).
 %
 \begin{hol}
-\begin{verbatim}
-   RSUBSET
-     |- $RSUBSET R1 R2 = !x y. R1 x y ==> R2 x y
-   RUNION
-     |- $RUNION R1 R2 x y = R1 x y \/ R2 x y
-   RINTER
-     |- $RINTER R1 R2 x y = R1 x y /\ R2 x y
-   RCOMPL
-     |- RCOMPL R x y = ~R x y
-   RUNIV
-     |- RUNIV x y = T
-\end{verbatim}
+\begin{alltt}
+##thm RSUBSET
+##thm RUNION
+##thm RINTER
+##thm RCOMPL
+##thm RUNIV
+\end{alltt}
 \end{hol}
 
 \paragraph {Orders}
@@ -4283,22 +4194,15 @@ A sequence of definitions capturing various notions of order are made
 in \theoryimp{relation}.
 %
 \begin{hol}
-\begin{verbatim}
-   PreOrder
-     |- PreOrder R = reflexive R /\ transitive R
-   Order
-     |- Order Z = antisymmetric Z /\ transitive Z
-   WeakOrder
-     |- WeakOrder Z = reflexive Z /\ antisymmetric Z /\ transitive Z
-   StrongOrder
-     |- StrongOrder Z = irreflexive Z /\ antisymmetric Z /\ transitive Z
-   LinearOrder
-     |- LinearOrder R = Order R /\ trichotomous R
-   WeakLinearOrder
-     |- WeakLinearOrder R = WeakOrder R /\ trichotomous R
-   StrongLinearOrder
-     |- StrongLinearOrder R = StrongOrder R /\ trichotomous R
-\end{verbatim}
+\begin{alltt}
+##thm PreOrder
+##thm Order
+##thm WeakOrder
+##thm StrongOrder
+##thm LinearOrder
+##thm WeakLinearOrder
+##thm StrongLinearOrder
+\end{alltt}
 \end{hol}
 
 \paragraph {Closures}
@@ -4311,69 +4215,43 @@ reflexive-transitive closure (\holtxt{RTC}) is defined to be the least
 relation closed under transitivity and reflexivity.
 The ASCII syntax for the transitive closure \holtxt{R\^{}+} is meant to suggest the prettier \holtxt{R${}^+$}.
 Similarly, \holtxt{R\^{}*} is meant to suggest \holtxt{R${}^*$}.
-Indeed, with Unicode enabled, transitive closure will print with a superscript \texttt{+}.
-%
-\begin{hol}
-\begin{verbatim}
-   TC_DEF
-     |- R^+ a b =
-          !P. (!x y. R x y ==> P x y) /\
-              (!x y z. P x y /\ P y z ==> P x z) ==> P a b
-   RTC_DEF
-     |- R^* a b =
-          !P. (!x. P x x) /\
-              (!x y z. R x y /\ P y z ==> P x z) ==> P a b
-\end{verbatim}
-\end{hol}
+Indeed, with Unicode enabled, transitive closure will print with a superscript \texttt{+}, and \holtxt{RTC} will print as a superscript asterisk.
 
-\noindent
-From these definitions, one can recover the initial rules.
+From the underlying definitions, one can recover the initial rules:
 %
 \begin{hol}
-\begin{verbatim}
-   TC_RULES
-     |- !R. (!x y. R x y ==> R^+ x y) /\
-            (!x y z. R^+ x y /\ R^+ y z ==> R^+ x z)
-   RTC_RULES
-     |- !R. (!x. R^* x x) /\
-            (!x y z. R x y /\ R^* y z ==> R^* x z)
-   RTC_RULES_RIGHT1
-     |- !R. (!x. R^* x x) /\
-            (!x y z. R^* x y /\ R y z ==> R^* x z)
-\end{verbatim}
+\begin{alltt}
+##thm TC_RULES
+##thm RTC_RULES
+##thm RTC_RULES_RIGHT1
+\end{alltt}
 \end{hol}
 %
 Notice that {\small\verb+RTC_RULES+}, in keeping with the definition
 of {\small\verb+RTC+}, extends an \verb+R+-step from \verb+x+ to
 \verb+y+ with a sequence of \verb+R+-steps from \verb+y+ to \verb+z+
-to construct \verb+R^* x z+. The theorem
+to construct \holtxt{R$^*$ x z}. The theorem
 {\small\verb+RTC_RULES_RIGHT1+} first makes a sequence of \verb+R+
-steps and then a single \verb+R+ step to form \verb+R^* x z+. Similar
-alternative theorems are proved for case analysis and induction.
+steps and then a single \verb+R+ step to form \holtxt{R$^*$ x z}.
+Similar alternative theorems are proved for case analysis and induction.
 
 For example, {\small\verb+TC_CASES1+} and {\small\verb+TC_CASES2+} in the
-following decompose {\small\verb!R^+ x z!} to either
-{\small\verb+R x y+} followed by {\small\verb!R^+ y z!}
-({\small\verb+TC_CASES1+})
+following decompose \holtxt{R$^+$ x z} to either
+\holtxt{R x y} followed by \holtxt{R$^+$ y z}
+(\ml{TC\_CASES1})
 or
-{\small\verb!R^+ x y!} followed by {\small\verb+R y z+}
-({\small\verb+TC_CASES2+}).
+\holtxt{R$^+$ x y} followed by \holtxt{R y z} (\ml{TC\_CASES2}).
 
 %
 \begin{hol}
-\begin{verbatim}
-   TC_CASES1
-     |- !R x z. R^+ x z ==> R x z \/ ?y. R x y /\ R^+ y z
-   TC_CASES2
-     |- !R x z. R^+ x z ==> R x z \/ ?y. R^+ x y /\ R y z
+\begin{alltt}
+##thm TC_CASES1
+##thm TC_CASES2
 
-   RTC_CASES1
-     |- !R x y. R^* x y = (x = y) \/ ?u. R x u /\ R^* u y
-   RTC_CASES2
-     |- !R x y. R^* x y = (x = y) \/ ?u. R^* x u /\ R u y
-   RTC_CASES_RTC_TWICE
-     |- !R x y. R^* x y = ?u. R^* x u /\ R^* u y
-\end{verbatim}
+##thm RTC_CASES1
+##thm RTC_CASES2
+##thm RTC_CASES_RTC_TWICE
+\end{alltt}
 \end{hol}
 
 As well as the basic induction theorems for {\small\verb+TC+} and
@@ -4381,24 +4259,12 @@ As well as the basic induction theorems for {\small\verb+TC+} and
 theorems, which have stronger induction hypotheses.
 %
 \begin{hol}
-\begin{verbatim}
-   TC_INDUCT
-     |- !R P. (!x y. R x y ==> P x y) /\
-              (!x y z. P x y /\ P y z ==> P x z)
-              ==> !u v. R^+ u v ==> P u v
-   RTC_INDUCT
-     |- ! R P. (!x. P x x) /\
-               (!x y z. R x y /\ P y z ==> P x z) ==>
-               (!x y. R^* x y ==> P x y)
-   TC_STRONG_INDUCT
-     |- !R P. (!x y. R x y ==> P x y) /\
-              (!x y z. P x y /\ P y z /\ R^+ x y /\ R^+ y z ==> P x z) ==>
-              (!u v. R^+ u v ==> P u v)
-   RTC_STRONG_INDUCT
-     |- !R P. (!x. P x x) /\
-              (!x y z. R x y /\ R^* y z /\ P y z ==> P x z) ==>
-              (!x y. R^* x y ==> P x y)
-\end{verbatim}
+\begin{alltt}
+##thm TC_INDUCT
+##thm68 RTC_INDUCT
+##thm TC_STRONG_INDUCT
+##thm RTC_STRONG_INDUCT
+\end{alltt}
 \end{hol}
 Variants of these induction theorems are also available which break
 apart the closure from the left or right, as for the case analysis theorems.
@@ -4413,11 +4279,11 @@ When applied to an argument, as in \holtxt{EQC~R}, \holtxt{EQC} is written with 
 Note how the suffix binds more tightly than function application, so that in \ml{EQC_DEF}, \holtxt{RC} really is applied to the transitive closure of the symmetric closure of \holtxt{R}.
 %
 \begin{hol}
-\begin{verbatim}
-   RC_DEF   |- RC R x y = (x = y) \/ R x y
-   SC_DEF   |- SC R x y = R x y \/ R y x
-   EQC_DEF  |- R^= = RC (SC R)^+
-\end{verbatim}
+\begin{alltt}
+##thm RC_DEF
+##thm SC_DEF
+##thm EQC_DEF
+\end{alltt}
 \end{hol}
 
 \paragraph {Wellfounded relations}
@@ -4427,12 +4293,10 @@ has an $R$-minimal element. Wellfoundedness is used to justify the
 principle of wellfounded induction ({\small\verb+WF_INDUCTION_THM+}).
 %
 \begin{hol}
-\begin{verbatim}
-   WF_DEF
-     |- !R. WF R = !B. (?w. B w) ==> ?min. B min /\ !b. R b min ==> ~B b
-   WF_INDUCTION_THM
-     |- !R WF R ==> !P. (!x. (!y. R y x ==> P y) ==> P x) ==> !x. P x
-\end{verbatim}
+\begin{alltt}
+##thm WF_DEF
+##thm WF_INDUCTION_THM
+\end{alltt}
 \end{hol}
 
 The \emph{wellfounded part} ({\small\verb+WFP+}) of a relation can be
@@ -4440,20 +4304,13 @@ inductively defined, from which its rules, case-analysis theorem and
 induction theorems may be derived.
 %
 \begin{hol}
-\begin{verbatim}
-   WFP_DEF
-     |- WFP R a = !P. (!x. (!y. R y x ==> P y) ==> P x) ==> P a
-   WFP_RULES
-     |- !R x. (!y. R y x ==> WFP R y) ==> WFP R x
-   WFP_CASES
-     |- !R x. WFP R x = !y. R y x ==> WFP R y
-   WFP_INDUCT
-     |- !R P. (!x. (!y. R y x ==> P y) ==> P x)
-              ==> !x. WFP R x ==> P x
-   WFP_STRONG_INDUCT
-     |- !R. (!x. WFP R x /\ (!y. R y x ==> P y) ==> P x)
-            ==> !x. WFP R x ==> P x
-\end{verbatim}
+\begin{alltt}
+##thm WFP_DEF
+##thm WFP_RULES
+##thm WFP_CASES
+##thm WFP_INDUCT
+##thm WFP_STRONG_INDUCT
+\end{alltt}
 \end{hol}
 
 Wellfoundedness can also be used to justify a general recursion
@@ -4472,33 +4329,29 @@ restriction ({\small\verb+RESTRICT+}) in order to force the recursive
 function to be applied to $R$-smaller arguments in recursive calls..
 %
 \begin{hol}
-\begin{verbatim}
-   RESTRICT_DEF
-     |- !f R x. RESTRICT f R x = \y. if R y x then f y else ARB
+\begin{alltt}
+##thm RESTRICT_DEF
+##thm WFREC_COROLLARY
 
-   WFREC_COROLLARY
-     |- !M R f. (f = WFREC R M) ==> WF R ==> !x. f x = M (RESTRICT f R x) x
-
-   WF_RECURSION_THM
-     |- !R. WF R ==> !M. ?!f. !x. f x = M (RESTRICT f R x) x
-\end{verbatim}
+##thm WF_RECURSION_THM
+\end{alltt}
 \end{hol}
 
 \noindent The theorems {\small\verb+WF_INDUCTION_THM+} and
 {\small\verb+WFREC_COROLLARY+} are used to automate recursive
-definitions; see Section \ref{TFL}. A few basic operators for
+definitions; see Section~\ref{TFL}. A few basic operators for
 wellfounded relations are also defined, along with theorems stating
 that they propagate wellfoundedness.
 
 \begin{hol}
-\begin{verbatim}
-   inv_image_def  |- !R f. inv_image R f = \x y. R (f x) (f y)
+\begin{alltt}
+##thm inv_image_def
 
-   WF_inv_image   |- !R f. WF R ==> WF (inv_image R f)
-   WF_SUBSET      |- !R P. WF R /\ (!x y. P x y ==> R x y) ==> WF P
-   WF_TC          |- !R. WF R ==> WF (TC R)
-   WF_Empty       |- WF EMPTY_REL
-\end{verbatim}
+##thm WF_inv_image
+##thm WF_SUBSET
+##thm WF_TC
+##thm WF_EMPTY_REL
+\end{alltt}
 \end{hol}
 
 \paragraph {Term Rewriting}
@@ -4510,24 +4363,20 @@ Normalization ({\small\verb+SN+})) appear
 in \theoryimp{relation}.
 %
 \begin{hol}
-\begin{verbatim}
-   diamond_def
-     |- diamond R = !x y z. R x y /\ R x z ==> ?u. R y u /\ R z u
-   CR_def
-     |- CR R = diamond (RTC R)
-   WCR_def
-     |- WCR R = !x y z. R x y /\ R x z ==> ?u. RTC R y u /\ RTC R z u
-   SN_def
-     |- SN R = WF (inv R)
-\end{verbatim}
+\begin{alltt}
+##thm diamond_def
+##thm CR_def
+##thm WCR_def
+##thm SN_def
+\end{alltt}
 \end{hol}
 %
 From those, Newman's Lemma is proved.
 %
 \begin{hol}
-\begin{verbatim}
-   Newmans_lemma  |- !R. WCR R /\ SN R ==> CR R
-\end{verbatim}
+\begin{alltt}
+##thm Newmans_lemma
+\end{alltt}
 \end{hol}
 
 \subsection{Finite maps (\theoryimp{finite\_map})}

@@ -1,17 +1,35 @@
 (* this is an -*- sml -*- file, or near enough *)
 fun inc r = (r := !r + 1)
 fun dec r = (r := !r - 1)
+infix |>
+fun x |> f = f x
 
-fun bslash_escape s = "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord(String.sub(s,0))))
+fun bslash_escape c =
+    "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord c))
 
-datatype quotetype = inQUOTE | inTMQUOTE | inTYQUOTE
+fun bslash_escape_s s = bslash_escape (String.sub(s, 0))
+
+val mk_strsafe =
+    String.translate (fn c => if Char.isPrint c then str c else
+                              bslash_escape c)
+
+datatype quotetype = inQUOTE | inTMQUOTE | inTYQUOTE | inDFQUOTE | inDTYQUOTE;
+datatype mltype = inTHMVAL | inTERMINATION_VAL | inINITIAL;
 
 datatype qfs = QFS of {comdepth : int ref,
                        pardepth : int ref,
                        antiquote_stack : quotetype list ref,
+                       mltype_stack : mltype list ref,
+                       induction_thm : string ref,
                        row      : int ref,
                        rowstart : int ref,
                        inscript : bool}
+
+fun mlswitch tys init tval thval =
+    case tys of
+        inTERMINATION_VAL :: _ => tval
+      | inTHMVAL :: _ => thval
+      | _ => init
 
 fun newstate inscriptp =
   QFS {comdepth = ref 0,
@@ -19,26 +37,70 @@ fun newstate inscriptp =
        antiquote_stack = ref [],
        row = ref 0,
        rowstart = ref 0,
-       inscript = inscriptp}
+       inscript = inscriptp,
+       induction_thm = ref "",
+       mltype_stack = ref []}
 
 fun linenum (QFS{row,...}) = !row + 1
 
-fun resetstate (QFS{comdepth, pardepth, antiquote_stack,...}) =
-    (comdepth := 0; pardepth := 0; antiquote_stack := [])
+fun resetstate (QFS{comdepth, pardepth, antiquote_stack, mltype_stack,...}) =
+    (comdepth := 0; pardepth := 0; antiquote_stack := []; mltype_stack := []);
 
 
 fun ECHO (QFS _) s = s
 fun print (QFS _) s = s
-fun ifscript (QFS {inscript,...}) s1 s2 =
-  if inscript then s1 else s2
 
 fun dest_ml_thm_binding s =
     let
-      val ss = Substring.dropl Char.isSpace (Substring.extract(s, 7, NONE))
-      val (nmss, _) = Substring.position "[" ss
+      (* s matches {keyword}{ws}+{ident}[attrs]
+         ident is either a standard ML identifier, or something in double quotes
+         NB: If it's in double quotes, the thing in quotes might include square
+         brackets!
+      *)
+      val ss = s |> Substring.full
+                 |> Substring.dropl Char.isAlpha
+                 |> Substring.dropl Char.isSpace
+      val (nmss, attrs) =
+          if Substring.sub(ss, 0) = #"\"" then
+            let val ss' = Substring.slice(ss, 1, NONE)
+                val (nm,rest) = Substring.position "\"" ss'
+            in
+              (nm, Substring.slice(rest,1,NONE))
+            end
+          else
+            Substring.position "[" ss
+      val nms = nmss |> Substring.string |> mk_strsafe
     in
-      (Substring.string nmss, Substring.string ss)
+      (nms, Substring.string ss (* bogus if quotes used *),
+       if Substring.isEmpty attrs then []
+       else
+         Substring.slice(attrs, 1, SOME (Substring.size attrs - 2))
+                        |> Substring.string
+                        |> String.fields (fn c => c = #",")
+      )
     end
+
+fun dest_ml_thm_binding_triv s =
+    let
+      val (thmname, with_attrs, attrs) = dest_ml_thm_binding s
+      val (with_attrs, attrs) =
+          if String.isPrefix "Triviality" s then
+            if null attrs then (thmname ^ "[local]", ["local"])
+            else
+              (String.substring(with_attrs, 0, size with_attrs - 1) ^ ",local]",
+               attrs @ ["local"])
+          else (with_attrs,attrs)
+    in
+      (thmname, with_attrs, attrs)
+    end
+
+
+fun indthm_munge s =
+    if String.isSuffix "_def" s then
+      String.extract(s,0,SOME(size s - 4)) ^ "_ind"
+    else if String.isSuffix "_DEF" s then
+      String.extract(s,0,SOME(size s - 4)) ^ "_IND"
+    else s ^ "_ind"
 
 fun makesafe c =
     if not (Char.isPrint c) then "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord c))
@@ -88,13 +150,19 @@ fun dolocpragma (arg as QFS {row, rowstart, ...}) (s,pos)
       ECHO arg s
     end
 
-type lexresult = string
+fun magic_bind (arg as QFS{induction_thm,...}) =
+    Systeml.bindstr ("val " ^ !induction_thm ^
+                     " = DB.fetch \"-\" \"" ^
+                     !induction_thm ^
+                     "\" handle HOL_ERR _ => TRUTH;") ^ ";"
 
-fun eof arg = ""
+type lexresult = int*string
+
+fun eof arg = (~1, "")
 %%
 %structure QuoteFilter
-%s string comment qcomment tmcomment tycomment tyquote tmquote quote ANTIQ;
-%arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart, inscript});
+%s string comment qcomment tmcomment tycomment defncomment datatypecomment tyquote tmquote quote defnquote datatypequote ANTIQ thmval TERMINATION_VAL;
+%arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart, inscript, mltype_stack, induction_thm});
 %full
 
 letter = [A-Za-z];
@@ -102,6 +170,9 @@ digit = [0-9];
 symbol = [-!%&$+/:<=>?@~|#*\\^];
 alphaMLid = {letter} ({letter} | {digit} | _ | "'")*;
 alphaMLid_list = {alphaMLid} (","{alphaMLid})*;
+quotedsymbolid = "\"" [^\034]+ "\"";
+defn_attribute = {alphaMLid} ("=" {alphaMLid})?;
+defn_attribute_list = {defn_attribute} (","{defn_attribute})*;
 MLid =  {alphaMLid} | {symbol}+;
 ws = [\ \t];
 newline = "\n" | "\015\n";
@@ -111,151 +182,424 @@ fullquotebegin = "``" | "\226\128\156" ;
 fullquoteend = "``" | "\226\128\157";
 quotebegin = "`" | "\226\128\152";
 quoteend = "`" | "\226\128\153";
-
+Theorempfx = ("Theorem"|"Triviality"){ws}+{alphaMLid}("["{alphaMLid_list}"]")?;
+Definitionpfx =
+  "Definition"{ws}+{alphaMLid}("["{defn_attribute_list}"]")?{ws}*":";
+declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"exception"|"open"|";"|"infix"[lr]?|"local";
+Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 %%
 
-{locpragma} => (dolocpragma yyarg (yytext, yypos));
+{locpragma} => ((yypos,
+               (dolocpragma yyarg (yytext, yypos))));
 
-<INITIAL>"(*" => (inc comdepth; YYBEGIN comment; ECHO yyarg yytext);
-<INITIAL>"(" => (inc pardepth; ECHO yyarg yytext);
-<INITIAL>")" => (dec pardepth;
+<INITIAL,thmval,TERMINATION_VAL>"(*" => (
+  (yypos,
+   (inc comdepth;
+    YYBEGIN comment;
+    ECHO yyarg yytext)));
+<INITIAL,thmval,TERMINATION_VAL>"(" => (
+  (yypos, (inc pardepth; ECHO yyarg yytext))
+);
+<INITIAL,thmval,TERMINATION_VAL>")" => ((yypos,
+                (dec pardepth;
                  if !pardepth < 1 then
                    case !antiquote_stack of
                      [] => ECHO yyarg yytext
                    | h::t => (antiquote_stack := t;
                               YYBEGIN (case h of
                                          inQUOTE => quote
+                                       | inDFQUOTE => defnquote
                                        | inTYQUOTE => tyquote
-                                       | inTMQUOTE => tmquote);
+                                       | inTMQUOTE => tmquote
+                                       | inDTYQUOTE => datatypequote);
                               ECHO yyarg
                                 (")),QUOTE \""^
                                  locpragma yyarg (yytext, yypos) 0)
-)
-                 else ECHO yyarg yytext);
-<INITIAL>"Theorem"{ws}+{alphaMLid}("["{alphaMLid_list}"]")? => (
-  ifscript yyarg
-    (let
-      val (thmname,with_attrs_string) = dest_ml_thm_binding yytext
-    in
-      ECHO yyarg ("val " ^ thmname ^ " = " ^
-                  "(fn q => fn tac => Q.store_thm(\"" ^ with_attrs_string ^
-                  "\",q,tac))")
-    end) yytext
+                             )
+                 else ECHO yyarg yytext)));
+<INITIAL,thmval>^"Datatype"{ws}*":" => (
+  (yypos,
+   if inscript then
+     (YYBEGIN datatypequote;
+      mltype_stack := [];
+      ECHO yyarg (mlswitch (!mltype_stack) "" "" ");" ^
+                  "val _ = bossLib.Datatype [QUOTE \"" ^
+                  locpragma yyarg (yytext, yypos) 0))
+   else yytext
+  )
 );
-<INITIAL>{fullquotebegin} {ws}* ":" ({letter} | {ws} | [('] | {digit} | {lowergreek}) => (
+<INITIAL,thmval>^("Type"|"Overload"){ws}+({alphaMLid}|{quotedsymbolid})("["{alphaMLid_list}"]")?{ws}*"=" => (
+  (yypos,
+   if inscript then
+     let
+       infix |> fun x |> f = f x
+       fun extract (s,p) l =
+           if List.exists (fn a => a = s) l then
+             (p, List.filter (fn a => a <> s) l)
+           else ("", l)
+       val pfx = mlswitch (!mltype_stack) "" "" ");"
+       val s0 = String.substring(yytext,0,size yytext - 1) (* drop = *)
+       val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
+                  |> Substring.string (* drop wspace after name *)
+       val (tyname, _, attrs) = dest_ml_thm_binding s
+       val core_name = if String.isPrefix "Overload" yytext then "overload_on"
+                       else "type_abbrev"
+       val (infpfx, attrs) = extract ("inferior", "inferior_") attrs
+       val (temppfx, attrs) = extract ("local", "temp_") attrs
+       val fnm =
+           temppfx ^ infpfx ^ core_name ^
+           String.concat (map (fn s => "_" ^ s) attrs)
+     in
+       mltype_stack := [];
+       YYBEGIN INITIAL;
+       ECHO yyarg (
+         pfx ^ "val _ = (fn x => Parse." ^fnm ^ "(\"" ^ tyname ^ "\", x))"
+       )
+     end
+   else yytext
+  )
+);
+<INITIAL,thmval>{Theorempfx}{ws}*":" => ((yypos,
+(
+  if inscript then
+    let
+      infix |> fun x |> f = f x
+      val pfx = mlswitch (!mltype_stack) "" "" ");"
+      val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop colon *)
+      val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
+                 |> Substring.string (* drop wspace between name and lparen *)
+       val (thmname,with_attrs,attrs) = dest_ml_thm_binding_triv s
+    in
+      mltype_stack := [];
+      YYBEGIN quote;
+      ECHO yyarg (pfx ^
+                  "val " ^ thmname ^ " = Q.store_thm(\"" ^ with_attrs ^
+                  "\"," ^
+                  "[QUOTE \""^locpragma yyarg (yytext,yypos) 0)
+    end
+  else
+    yytext
+)));
+<INITIAL>^"QED" => (
+  (yypos, if inscript then ECHO yyarg ");" else yytext)
+);
+<INITIAL,thmval>^{Definitionpfx} => (
+  (yypos,
+   if inscript then
+     let
+       infix |> fun x |> f = f x
+       val pfx = case !mltype_stack of inTHMVAL :: _ => ");" | _ => ""
+       val s0 = String.extract(yytext,0,SOME(size yytext - 1)) (* drop : *)
+       val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
+                  |> Substring.string (* drop w/space between name and : *)
+       val (thname, with_attrs_string, attrs) = dest_ml_thm_binding s
+       val ind_thm =
+           case List.find (String.isPrefix "induction=") attrs of
+               NONE => indthm_munge thname
+             | SOME s => String.extract(s, size "induction=", NONE)
+     in
+       mltype_stack := [];
+       induction_thm := ind_thm;
+       YYBEGIN defnquote;
+       ECHO yyarg (pfx ^
+                   "val " ^ thname ^ " = TotalDefn.qDefine \"" ^
+                   with_attrs_string ^ "\" [QUOTE \"" ^
+                   locpragma yyarg (yytext, yypos) 0)
+     end
+   else yytext
+  )
+);
+<INITIAL,thmval>{Theorempfx}({ws}|{newline})+"=" => (
+  (yypos,
+   if inscript then
+     let
+       infix |> fun x |> f = f x
+       val pfx = case !mltype_stack of inTHMVAL :: _ => ");" | _ => ""
+       val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop = *)
+       val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
+                  |> Substring.string (* drop wspace between name and = *)
+       val (thmname,with_attrs,attrs) = dest_ml_thm_binding_triv s
+     in
+       YYBEGIN thmval;
+       mltype_stack := [inTHMVAL];
+       ECHO yyarg (
+         pfx ^ "val " ^ thmname ^ " = " ^ "(fn rule => boolLib.save_thm(\"" ^
+         with_attrs ^ "\",rule)) ("
+       )
+     end else yytext
+  )
+);
+<INITIAL,thmval>^{Inductivepfx} => (
+  (yypos,
+   if inscript then
+     let
+       infix |> fun x |> f = f x
+       val pfx = case !mltype_stack of inTHMVAL :: _ => ");" | _ => ""
+       val s0 = String.substring(yytext,0,size yytext - 1) (* drop : *)
+       val s =
+           s0 |> Substring.full
+              |> Substring.dropl (not o Char.isSpace) (* drop keyword *)
+              |> Substring.dropl Char.isSpace (* space before name *)
+              |> Substring.dropr Char.isSpace (* space after name *)
+              |> Substring.string
+       val (entrypoint,indsfx) =
+           if String.isPrefix "Ind" yytext then ("IndDefLib.xHol_reln", "_ind")
+           else ("CoIndDefLib.xHol_coreln", "_coind")
+     in
+       mltype_stack := [];
+       YYBEGIN defnquote;
+       induction_thm := s ^ "_strongind";
+       ECHO yyarg
+            (pfx ^ "val (" ^ s ^ "_rules," ^ s ^ indsfx ^ "," ^
+             s ^ "_cases) = (fn q => fn _ => " ^ entrypoint ^ " \"" ^
+             String.toString s ^ "\" q) [QUOTE \"" ^
+             locpragma yyarg (yytext, yypos) 0)
+     end
+   else yytext)
+);
+<INITIAL,thmval,TERMINATION_VAL>{fullquotebegin} {ws}* ":" ({letter} | {ws} | [('] | {digit} | {lowergreek}) =>
+             ((yypos,
+               (
                  YYBEGIN tyquote;
                  ECHO yyarg
                    ("(Parse.Type [QUOTE \""^locpragma yyarg (yytext,yypos) 2 ^
-                    safeprint yyarg (drop_upto #":" yytext)));
-<INITIAL>{fullquotebegin} {ws}* ":" {newline} =>
+                    safeprint yyarg (drop_upto #":" yytext)))));
+<INITIAL,thmval,TERMINATION_VAL>{fullquotebegin} {ws}* ":" {newline} => ((yypos,
      (YYBEGIN tyquote;
       ECHO yyarg ("(Parse.Type [QUOTE \""^locpragma yyarg (yytext,yypos) 2) ^
-      ":" ^ qnewline yyarg (yypos, yytext));
-<INITIAL>{fullquotebegin} {ws}* ":^" =>
+      ":" ^ qnewline yyarg (yypos, yytext))));
+<INITIAL,thmval,TERMINATION_VAL>{fullquotebegin} {ws}* ":^" => ((yypos,
               (antiquote_stack := inTYQUOTE :: !antiquote_stack;
                YYBEGIN ANTIQ;
                ECHO yyarg
                 ("(Parse.Type [QUOTE \""^locpragma yyarg (yytext,yypos) 2^
-                               ":\", ANTIQUOTE ("));
-<INITIAL>{fullquotebegin} =>
+                               ":\", ANTIQUOTE ("))));
+<INITIAL,thmval,TERMINATION_VAL>{fullquotebegin} => ((yypos,
    (YYBEGIN tmquote;
-    ECHO yyarg ("(Parse.Term [QUOTE \""^locpragma yyarg (yytext,yypos) 0));
-<INITIAL>{quotebegin} =>
-   (YYBEGIN quote; ECHO yyarg ("[QUOTE \""^locpragma yyarg (yytext,yypos) 0));
-<INITIAL>"\"" => (YYBEGIN string; ECHO yyarg yytext);
-<INITIAL>{newline} => (newline yyarg (yypos,yytext));
-<INITIAL>"op"{ws}+"THEN1" => (ECHO yyarg yytext);
-<INITIAL>"val"{ws}+"THEN1" => (ECHO yyarg yytext);
-<INITIAL>"infix"[lr]?{ws}+({digit}+{ws}*)?"THEN1" => (yytext);
-<INITIAL>"op"{ws}*">-" => (ECHO yyarg yytext);
-<INITIAL>"val"{ws}*">-" => (ECHO yyarg yytext);
-<INITIAL>"infix"[lr]?{ws}+({digit}+{ws}*)?">-" => (yytext);
-<INITIAL>"THEN1" => (ifscript yyarg
-                              (">>- " ^ Int.toString (linenum yyarg) ^ " ??")
-                              yytext);
-<INITIAL>">-" => (ifscript yyarg
-                           (">>- " ^ Int.toString (linenum yyarg) ^ " ??")
-                           yytext);
-<INITIAL>{MLid} => (yytext);
-<INITIAL>. => (ECHO yyarg yytext);
+    ECHO yyarg ("(Parse.Term [QUOTE \""^locpragma yyarg (yytext,yypos) 0))));
+<INITIAL,thmval,TERMINATION_VAL>{quotebegin} => ((yypos,
+   (YYBEGIN quote; ECHO yyarg ("[QUOTE \""^locpragma yyarg (yytext,yypos) 0))));
+<INITIAL,thmval,TERMINATION_VAL>"\"" => ((yypos, (YYBEGIN string; ECHO yyarg yytext)));
+<INITIAL,thmval,TERMINATION_VAL>{newline} => ((yypos, newline yyarg (yypos,yytext)));
+<INITIAL,thmval,TERMINATION_VAL>"op"{ws}+"THEN1" => (
+  (yypos, (ECHO yyarg yytext))
+);
+<INITIAL>"val"{ws}+"THEN1" => ((yypos, (ECHO yyarg yytext)));
+<INITIAL>"infix"[lr]?{ws}+({digit}+{ws}*)?"THEN1" => ((yypos, (yytext)));
+<INITIAL,thmval,TERMINATION_VAL>"op"{ws}*">-" => ((yypos, (ECHO yyarg yytext)));
+<INITIAL>"val"{ws}*">-" => ((yypos, (ECHO yyarg yytext)));
+<INITIAL>"infix"[lr]?{ws}+({digit}+{ws}*)?">-" => ((yypos, (yytext)));
+<INITIAL,thmval,TERMINATION_VAL>"THEN1" => (
+  (yypos,
+   if inscript then ">>- " ^ Int.toString (linenum yyarg) ^ " ??"
+   else yytext)
+);
+<INITIAL,thmval,TERMINATION_VAL>">-" => (
+  (yypos,
+   if inscript then
+     ">>- " ^ Int.toString (linenum yyarg) ^ " ??"
+   else
+     yytext)
+);
+<thmval>{declforms} => ((yypos,
+(
+  mltype_stack := List.tl (!mltype_stack);
+  YYBEGIN INITIAL;
+  ECHO yyarg (");" ^ yytext)
+)));
+<INITIAL,thmval,TERMINATION_VAL>{MLid} => ((yypos, (yytext)));
+<TERMINATION_VAL>{newline}"End" => (
+  YYBEGIN INITIAL;
+  mltype_stack := List.tl (!mltype_stack);
+  (yypos, ECHO yyarg ("\n));" ^ magic_bind yyarg))
+);
+<INITIAL,thmval,TERMINATION_VAL>. => ((yypos, (ECHO yyarg yytext)));
 
-<string>"\\\\" => (ECHO yyarg yytext);
-<string>"\\\"" => (ECHO yyarg yytext);
-<string>"\"" => (YYBEGIN INITIAL; ECHO yyarg yytext);
-<string>{newline} => (newline yyarg (yypos,yytext));
-<string>[\128-\255] => (ECHO yyarg (bslash_escape yytext));
-<string>[^\\"\n\015\128-\255]{1,100} => (ECHO yyarg yytext);
-<string>. => (ECHO yyarg yytext);
 
-<comment,tmcomment,tycomment,qcomment>"(*" =>
-                (inc comdepth; ECHO yyarg yytext);
-<comment>"*)" => (dec comdepth;
-                  if !comdepth < 1 then YYBEGIN INITIAL else ();
-                  ECHO yyarg yytext);
-<tmcomment>"*)" => (dec comdepth;
+<string>"\\\\" => ((yypos, (ECHO yyarg yytext)));
+<string>"\\\"" => ((yypos, (ECHO yyarg yytext)));
+<string>"\"" => (
+  (yypos,
+   (let
+     val v =
+         case !mltype_stack of
+             inTERMINATION_VAL :: _ => TERMINATION_VAL
+           | inTHMVAL :: _ => thmval
+           | inINITIAL :: _ => INITIAL
+           | [] => INITIAL
+   in
+     YYBEGIN v;
+     ECHO yyarg yytext
+   end)
+  )
+);
+<string>{newline} => ((yypos, (newline yyarg (yypos,yytext))));
+<string>[\128-\255] => ((yypos, (ECHO yyarg (bslash_escape_s yytext))));
+<string>[^\\"\n\015\128-\255]{1,100} => ((yypos, (ECHO yyarg yytext)));
+<string>. => ((yypos, (ECHO yyarg yytext)));
+<comment,tmcomment,tycomment,qcomment>"(*" => ((yypos, (inc comdepth; ECHO yyarg yytext)));
+<comment>"*)" => (
+ (yypos, (
+    dec comdepth;
+    if !comdepth < 1 then
+      YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval)
+    else ();
+    ECHO yyarg yytext
+  ))
+);
+<tmcomment>"*)" => ((yypos, (dec comdepth;
                     if !comdepth < 1 then YYBEGIN tmquote else ();
-                    ECHO yyarg yytext);
-<tycomment>"*)" => (dec comdepth;
+                    ECHO yyarg yytext)));
+<tycomment>"*)" => ((yypos, (dec comdepth;
                     if !comdepth < 1 then YYBEGIN tyquote else ();
-                    ECHO yyarg yytext);
-<qcomment>"*)" => (dec comdepth;
+                    ECHO yyarg yytext)));
+<qcomment>"*)" => ((yypos, (dec comdepth;
                    if !comdepth < 1 then YYBEGIN quote else ();
-                   ECHO yyarg yytext);
-<comment>{newline} => (newline yyarg (yypos,yytext));
-<tmcomment,tycomment,qcomment>{newline} =>
-   (qnewline yyarg (yypos,yytext));
-<tmcomment,tycomment,qcomment>"\\" => (ECHO yyarg "\\\\");
-<tmcomment,tycomment,qcomment>"\"" => (ECHO yyarg "\\\"");
-<tmcomment,tycomment,qcomment>"\t" => (ECHO yyarg "\\t");
-<tmcomment,tycomment,qcomment>"^`" => (ECHO yyarg "`");
-<tmcomment,tycomment>{fullquoteend} =>
-   (comdepth := 0; YYBEGIN INITIAL; ECHO yyarg "\"])");
-<qcomment>{quoteend} => (comdepth := 0; YYBEGIN INITIAL; ECHO yyarg "\"]");
-<tmcomment,tycomment,qcomment>[\128-\255] =>
-  (ECHO yyarg (bslash_escape yytext));
-<comment,tmcomment,tycomment,qcomment>. => (ECHO yyarg yytext);
+                   ECHO yyarg yytext)));
+<defncomment>"*)" => ((yypos, (dec comdepth;
+                   if !comdepth < 1 then YYBEGIN defnquote else ();
+                   ECHO yyarg yytext)));
+<datatypecomment>"*)" => (
+  (yypos, (
+     dec comdepth;
+     if !comdepth < 1 then YYBEGIN datatypecomment else ();
+     ECHO yyarg yytext
+   )
+  )
+);
+<comment>{newline} => ((yypos, (newline yyarg (yypos,yytext))));
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>{newline} => ((yypos,
+   (qnewline yyarg (yypos,yytext))));
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>"\\" => ((yypos, (ECHO yyarg "\\\\")));
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>"\"" => ((yypos, (ECHO yyarg "\\\"")));
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>"\t" => ((yypos, (ECHO yyarg "\\t")));
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>"^`" => ((yypos, (ECHO yyarg "`")));
+<tmcomment,tycomment>{fullquoteend} => ((yypos,
+   (comdepth := 0;
+    YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval);
+    ECHO yyarg "\"])"))
+);
+<qcomment>{newline}"Proof" => ((yypos,
+(
+  comdepth := 0; YYBEGIN INITIAL; nextline yyarg (yypos + size yytext);
+  ECHO yyarg "\"],"
+)));
+<qcomment>{quoteend} => ((yypos,
+  (comdepth := 0;
+   YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval);
+   ECHO yyarg "\"]")));
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>[\128-\255] => ((yypos,
+  (ECHO yyarg (bslash_escape_s yytext))));
+<datatypecomment>{newline}"End" => (
+  (yypos,
+   (
+     comdepth := 0;
+     YYBEGIN INITIAL;
+     nextline yyarg (yypos + size yytext);
+     ECHO yyarg "\"\n];"
+   )
+  )
+);
+<comment,tmcomment,tycomment,qcomment,defncomment,datatypecomment>. => ((yypos, (ECHO yyarg yytext)));
 
-<quote,tmquote,tyquote>"^"+{ws} => (ECHO yyarg yytext);
-<quote,tmquote,tyquote>"^"+{newline} =>
+<quote,tmquote,tyquote,defnquote,datatypequote>"^"+{ws} => ((yypos, (ECHO yyarg yytext)));
+<quote,tmquote,tyquote,defnquote,datatypequote>"^"+{newline} => ((yypos,
    (ECHO yyarg (String.substring(yytext,0,size yytext - 1) ^
-                qnewline yyarg (yypos,yytext)));
-<quote,tmquote,tyquote>"^^" => (ECHO yyarg "^");
-<quote,tmquote,tyquote>"^`" => (ECHO yyarg "`");
-<quote,tmquote,tyquote>"^"{symbol} => (ECHO yyarg yytext);
-<quote,tmquote,tyquote>{newline} => (qnewline yyarg (yypos,yytext));
+                qnewline yyarg (yypos,yytext)))));
+<quote,tmquote,tyquote,defnquote,datatypequote>"^^" => ((yypos, (ECHO yyarg "^")));
+<quote,tmquote,tyquote,defnquote,datatypequote>"^`" => ((yypos, (ECHO yyarg "`")));
+<quote,tmquote,tyquote,defnquote,datatypequote>"^"{symbol} => ((yypos, (ECHO yyarg yytext)));
+<quote,tmquote,tyquote,defnquote,datatypequote>{newline} => (
+  (yypos, (qnewline yyarg (yypos,yytext)))
+);
 
-<quote>{quoteend} => (YYBEGIN INITIAL; ECHO yyarg "\"]");
-<tmquote,tyquote>{fullquoteend} => (YYBEGIN INITIAL; ECHO yyarg "\"])");
+<quote>{quoteend} => (
+   (yypos, (
+      YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval);
+      ECHO yyarg "\"]"))
+);
+<datatypequote>{newline}"End" => (
+  (
+    yypos, (
+      YYBEGIN INITIAL;
+      nextline yyarg (yypos + size yytext);
+      ECHO yyarg "\"\n];"
+    )
+  )
+);
+<defnquote>{newline}"End" => (
+  (yypos, (
+     YYBEGIN INITIAL;
+     nextline yyarg (yypos + size yytext);
+     ECHO yyarg ("\"\n] NONE; " ^ magic_bind yyarg)
+     )
+  )
+);
+<defnquote>{newline}"Termination" => (
+  (yypos, (
+     YYBEGIN TERMINATION_VAL;
+     mltype_stack := inTERMINATION_VAL :: (!mltype_stack);
+     nextline yyarg (yypos + size yytext);
+     ECHO yyarg "\"] (SOME ("
+   ))
+);
+<quote>{newline}"Proof" => ((yypos,
+(
+  (* can't happen in a thmval *)
+  YYBEGIN INITIAL; nextline yyarg (yypos + size yytext);
+  ECHO yyarg "\"],\n"
+)));
+<tmquote,tyquote>{fullquoteend} => ((yypos,
+  (YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval);
+   ECHO yyarg "\"])")));
+<quote>"(*" => ((yypos, (inc comdepth; YYBEGIN qcomment; ECHO yyarg yytext)));
+<tmquote>"(*" => ((yypos, (inc comdepth; YYBEGIN tmcomment; ECHO yyarg yytext)));
+<tyquote>"(*" => ((yypos, (inc comdepth; YYBEGIN tycomment; ECHO yyarg yytext)));
+<datatypequote>"(*" => (
+  (yypos, (inc comdepth; YYBEGIN datatypecomment; ECHO yyarg yytext))
+);
+<defnquote>"(*" => (
+  (yypos, (inc comdepth; YYBEGIN defncomment; ECHO yyarg yytext))
+);
 
-<quote>"(*" => (inc comdepth; YYBEGIN qcomment; ECHO yyarg yytext);
-<tmquote>"(*" => (inc comdepth; YYBEGIN tmcomment; ECHO yyarg yytext);
-<tyquote>"(*" => (inc comdepth; YYBEGIN tycomment; ECHO yyarg yytext);
-
-<quote>"^" => (YYBEGIN ANTIQ; antiquote_stack := inQUOTE :: !antiquote_stack;
-               ECHO yyarg "\", ANTIQUOTE (");
-<tmquote>"^" => (YYBEGIN ANTIQ;
+<quote>"^" => ((yypos,(YYBEGIN ANTIQ; antiquote_stack := inQUOTE :: !antiquote_stack;
+               ECHO yyarg "\", ANTIQUOTE (")));
+<tmquote>"^" => ((yypos,(YYBEGIN ANTIQ;
                  antiquote_stack := inTMQUOTE :: !antiquote_stack;
-                 ECHO yyarg "\", ANTIQUOTE (");
-<tyquote>"^" => (YYBEGIN ANTIQ;
+                 ECHO yyarg "\", ANTIQUOTE (")));
+<tyquote>"^" => ((yypos, (YYBEGIN ANTIQ;
                  antiquote_stack := inTYQUOTE :: !antiquote_stack;
-                 ECHO yyarg "\", ANTIQUOTE (");
+                 ECHO yyarg "\", ANTIQUOTE (")));
+<defnquote>"^" => ((yypos, (YYBEGIN ANTIQ;
+                   antiquote_stack := inDFQUOTE :: !antiquote_stack;
+                   ECHO yyarg "\", ANTIQUOTE (")));
+<datatypequote>"^" => (
+  (yypos, (
+    YYBEGIN ANTIQ;
+    antiquote_stack := inDTYQUOTE :: !antiquote_stack;
+    ECHO yyarg "\", ANTIQUOTE("
+   )
+  )
+);
+<quote,tmquote,tyquote,defnquote,datatypequote>[\128-\255] => ((yypos, (ECHO yyarg (bslash_escape_s yytext))));
+<quote,tmquote,tyquote,defnquote,datatypequote>[^`\n\015^ \t(*\128-\255]+ => ((yypos,
+  (ECHO yyarg (String.toString yytext))));
+<quote,tmquote,tyquote,defnquote,datatypequote>. => (
+  (yypos, (ECHO yyarg (String.toString yytext)))
+);
 
-
-<quote,tmquote,tyquote>[\128-\255] => (ECHO yyarg (bslash_escape yytext));
-<quote,tmquote,tyquote>[^`\n\015^ \t(*\128-\255]+ =>
-  (ECHO yyarg (String.toString yytext));
-<quote,tmquote,tyquote>. => (ECHO yyarg (String.toString yytext));
-
-<ANTIQ>{MLid} => (case !antiquote_stack of
+<ANTIQ>{MLid} => ((yypos, (case !antiquote_stack of
                     [] => YYBEGIN quote (* error in all likelihood *)
                   | h :: t => (antiquote_stack := t;
                                YYBEGIN (case h of
                                           inQUOTE => quote
                                         | inTMQUOTE => tmquote
-                                        | inTYQUOTE => tyquote));
+                                        | inTYQUOTE => tyquote
+                                        | inDFQUOTE => defnquote
+                                        | inDTYQUOTE => datatypequote));
                   ECHO yyarg (yytext ^
-                              "),QUOTE \""^locpragma yyarg (yytext,yypos) 0));
-<ANTIQ>"(" => (pardepth := 1; YYBEGIN INITIAL; ECHO yyarg yytext);
+                              "),QUOTE \""^locpragma yyarg (yytext,yypos) 0))));
+<ANTIQ>"(" => ((yypos, (pardepth := 1; YYBEGIN INITIAL; ECHO yyarg yytext)));
 <ANTIQ>{ws}+ => (continue());
-<ANTIQ>{newline} => (newline yyarg (yypos,yytext));
-<ANTIQ>. => (ECHO yyarg yytext);
+<ANTIQ>{newline} => ((yypos, (newline yyarg (yypos,yytext))));
+<ANTIQ>. => ((yypos, (ECHO yyarg yytext)));

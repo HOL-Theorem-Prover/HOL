@@ -23,6 +23,7 @@ open Sanity
 *)
 
 val _ = new_theory "vars_as_resource";
+val _ = ParseExtras.temp_loose_equality()
 
 val IS_PERMISSION_STRUCTURE_def = Define `
    IS_PERMISSION_STRUCTURE (f:'a option -> 'a option -> 'a option, total_perm:'a) =

@@ -10,7 +10,7 @@ structure tttUnfold :> tttUnfold =
 struct
 
 open HolKernel Abbrev boolLib aiLib
-  smlLexer smlInfix smlOpen
+  smlLexer smlInfix smlOpen smlParallel
   mlTacticData
   tttSetup
 
@@ -344,15 +344,15 @@ fun split_codelevel_aux i s pl program = case program of
       then split_codelevel_aux (i - 1) s (Code (a,tag) :: pl) m
     else split_codelevel_aux i s (Code (a,tag) :: pl) m
   | x :: m => (let_flag := true; split_codelevel_aux i s (x :: pl) m)
-    (* raise an error on this line not to simulate buggy version 2
-       that has better results than v3 *)
 
 fun split_codelevel s sl =
   (let_flag := false; split_codelevel_aux 0 s [] sl)
+  handle HOL_ERR _ =>
+   raise ERR "split_codelevel"
+      (s ^ " : " ^ (String.concatWith " " (original_program sl)))
 
 fun rpt_split_codelevel s sl =
-  let val (a,b) = split_codelevel s sl handle _ => (sl,[])
-  in
+  let val (a,b) = split_codelevel s sl handle _ => (sl,[]) in
     if null b then [a] else a :: rpt_split_codelevel s b
   end
 
@@ -372,6 +372,12 @@ fun extract_store_thm sl =
     then SOME (rm_bbra_str (rm_squote name), namel, term, qtac, lflag, cont)
     else NONE
   end
+  handle HOL_ERR _ =>
+    (
+    print_endline ("Warning: extract_store_thm: " ^
+      (String.concatWith " "(map original_code (first_n 10 sl))));
+    NONE
+    )
 
 fun extract_prove sl =
   let
@@ -454,12 +460,13 @@ fun sketch sl = case sl of
   | "handle" :: m => (bfun := false; sketch_pattern "handle" "=>" m)
   | "local" :: m  => Start "local" :: sketch m
   | "let" :: m    => Start "let" :: sketch m
-  | "structure" :: m => (* removing structures *)
-    let
-      val (l,cont) = split_level "end" m
-      val (head,body) = split_level "=" l
-    in
-      sketch body @ [Code(";",Protect)] @ sketch cont
+  | "structure" :: a :: "=" :: "struct" :: m =>
+    let val (body,cont) = split_level "end" m in
+      if String.isSuffix "Theory" a orelse String.isSuffix "Script" a
+      then sketch body @ [Code (";",Protect)] @ sketch cont
+      else map (fn x => Code (x,Protect))
+             (["structure",a,"=","struct"] @ body @ ["end"]) @
+           sketch cont
     end
   | "in" :: m     => In  :: sketch m
   | "end" :: m    => End :: sketch m
@@ -871,9 +878,6 @@ fun extract_thy file =
 fun os oc s = TextIO.output (oc, s)
 fun osn oc s = TextIO.output (oc, s ^ "\n")
 
-fun rm_endline s =
-  let fun f c = if c = #"\n" then #" " else c in implode (map f (explode s)) end
-
 fun is_break s =
   mem s [
    "end", "in", "val", "fun",
@@ -885,6 +889,12 @@ fun print_sl oc sl = case sl of
     []     => ()
   | a :: m => (if is_break a then os oc ("\n" ^ a) else os oc (" " ^ a);
                print_sl oc m)
+
+fun write_sl file sl =
+  let val oc = TextIO.openOut file in
+    print_sl oc sl;
+    TextIO.closeOut oc
+  end
 
 fun string_of_bool flag = if flag then "true" else "false"
 
@@ -943,43 +953,45 @@ fun end_unfold_thy () =
     val n = !n_store_thm
     fun f s r = debug (s ^ ": " ^ Real.toString (!r))
   in
-    print_endline (int_to_string n ^ " proofs unfolded");
-    debug (int_to_string n ^ " proofs unfolded");
+    print_endline (int_to_string n ^ " proofs recognized");
+    debug (int_to_string n ^ " proofs recognized");
     f "Push" push_time;
     f "Open" open_time;
     f "Replace special" replace_special_time;
     f "Replace id" replace_id_time
   end
 
-fun unquoteString thy s =
+fun unquoteString thy file =
   let
     val dir = tactictoe_dir ^ "/code"
     val _ = mkDir_err dir
-    val fin  = dir ^ "/quoteString1" ^ thy
-    val fout = dir ^ "/quoteString2" ^ thy
-    val cmd = HOLDIR ^ "/bin/unquote" ^ " " ^ fin ^ " " ^ fout
+    val fout = dir ^ "/unquote_" ^ thy
+    val cmd = HOLDIR ^ "/bin/unquote" ^ " -i " ^ file ^ " " ^ fout
   in
-    writel fin [s];
     ignore (OS.Process.system cmd);
     String.concatWith " " (readl fout)
   end
 
+fun rm_spaces s =
+  let fun f c = if mem c [#"\n",#"\t",#"\r"] then #" " else c in
+    implode (map f (explode s))
+  end
+
 fun sketch_wrap thy file =
   let
-    val sl = readl file
-    val s1 = String.concatWith " " sl
-    val s2 = unquoteString thy s1
-    val s3 = rm_endline (rm_comment s2)
-    val sl3 = partial_sml_lexer s3
+    val s1 = unquoteString thy file
+    val s3 = rm_spaces (rm_comment s1)
+    val sl = partial_sml_lexer s3
+    val _ = write_sl (tactictoe_dir ^ "/code/before_sketch_" ^ thy) sl
   in
-    sketch sl3
+    sketch sl
   end
 
 fun unfold_wrap p = unfold 0 [dnew String.compare (map protect basis)] p
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Rewriting script
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun tttsml_of file = OS.Path.base file ^ "_ttt.sml"
 
@@ -1023,12 +1035,10 @@ fun rewrite_script thy fileorg =
 fun find_script x =
   let val dir =
     Binarymap.find(fileDirMap(),x ^ "Theory.sml")
-    handle NotFound => raise ERR "find_script" x
+    handle NotFound => raise ERR "find_script" ("please load " ^ x ^ "Theory")
   in
     dir ^ "/" ^ x ^ "Script.sml"
   end
-
-fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 
 fun ttt_rewrite_thy thy =
   if mem thy ["bool","min"] then () else
@@ -1053,8 +1063,7 @@ fun ttt_rewrite () =
   end
 
 (* ------------------------------------------------------------------------
-   Extra safety during recording
-   (in case of export_theory is not catched)
+   Extra safety during recording (if export_theory is not catched)
    ------------------------------------------------------------------------ *)
 
 fun save_file file =
@@ -1085,20 +1094,46 @@ fun ttt_record_thy thy =
   if mem thy ["bool","min"] then () else
   let val scriptorg = find_script thy in
     let
+      val infofile = HOLDIR ^ "/src/tactictoe/info/" ^ thy
       val _ = save_scripts scriptorg
       val _ = print_endline ("TacticToe: ttt_record_thy: " ^ thy ^
         "\n  " ^ scriptorg)
     in
       run_rm_script (mem thy core_theories) (tttsml_of scriptorg);
-      restore_scripts scriptorg
+      restore_scripts scriptorg;
+      print_endline (String.concatWith "\n" (readl infofile))
     end
-    handle e => (restore_scripts scriptorg; raise e)
   end
 
 fun ttt_record_thyl thyl = app ttt_record_thy thyl
 
 fun ttt_record () =
   let val thyl = ttt_rewrite () in ttt_record_thyl thyl end
+
+(* ------------------------------------------------------------------------
+   Evaluation (warning: only call this function after recording the theories)
+   ------------------------------------------------------------------------ *)
+
+fun ttt_parallel_eval ncore thyl =
+  let
+    val _ = ttt_ttteval_flag := true
+    fun f thy = (ttt_rewrite_thy thy; ttt_record_thy thy)
+  in
+    parapp_queue ncore f thyl; ttt_ttteval_flag := false
+  end
+
+(* -------------------------------------------------------------------------
+   Usage:
+      load "tttSetup"; open tttSetup;
+      load "tttUnfold"; open tttUnfold;
+      load_sigobj ();
+      ttt_record (); (* only if not already called previously *)
+      val thyl = ancestry (current_theory ());
+      ttt_search_time := 15.0;
+      val ncore = 20;
+      ttt_parallel_eval ncore thyl;
+   Results can be found in HOLDIR/src/tactictoe/eval.
+  ------------------------------------------------------------------------- *)
 
 (* ------------------------------------------------------------------------
    Theories of the standard library
@@ -1125,5 +1160,6 @@ fun load_sigobj () =
   in
     app load l1
   end
+
 
 end (* struct *)

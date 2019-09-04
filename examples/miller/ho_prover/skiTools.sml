@@ -89,10 +89,10 @@ local
     solve' vars sub (Df (pinst sub) current) next
   and solve' vars sub (tm1, tm2) rest =
     if is_tmvar vars tm1 then
-      if tm1 = tm2 then solve vars sub rest
+      if tm1 ~~ tm2 then solve vars sub rest
       else if occurs tm1 tm2 then raise ERR "ski_unify" "occurs check"
       else
-        (case total (find_redex tm1) (fst sub) of SOME {residue, ...}
+        (case total (tfind_redex tm1) (fst sub) of SOME {residue, ...}
            => solve' vars sub (tm2, residue) rest
          | NONE =>
            let
@@ -147,6 +147,14 @@ datatype ski_pattern
 datatype 'a ski_discrim =
   SKI_DISCRIM of int * (ski_pattern, vars * 'a) tree list;
 
+fun skipat_eq p1 p2 =
+  case (p1, p2) of
+      (SKI_COMB_BEGIN, SKI_COMB_BEGIN) => true
+    | (SKI_COMB_END, SKI_COMB_END) => true
+    | (SKI_CONST t1, SKI_CONST t2) => aconv t1 t2
+    | (SKI_VAR t1, SKI_VAR t2) => aconv t1 t2
+    | _ => false
+
 val empty_ski_discrim = SKI_DISCRIM (0, []);
 fun ski_discrim_size (SKI_DISCRIM (i, _)) = i;
 
@@ -178,7 +186,7 @@ fun ski_pattern_term_break ((tm_vars, _) : vars) (RIGHT tm :: rest) =
      LEFT SKI_COMB_BEGIN :: RIGHT Rator :: RIGHT Rand ::
      LEFT SKI_COMB_END :: rest
    | LAMB _ => raise BUG "ski_pattern_term_break" "can't break a lambda"
-   | _ => LEFT (if mem tm tm_vars then SKI_VAR tm else SKI_CONST tm) :: rest)
+   | _ => LEFT (if tmem tm tm_vars then SKI_VAR tm else SKI_CONST tm) :: rest)
   | ski_pattern_term_break _ [] =
   raise BUG "ski_pattern_term_break" "nothing to break"
   | ski_pattern_term_break _ (LEFT _ :: _) =
@@ -201,7 +209,7 @@ local
   fun add a [] leaves = LEAF a :: leaves
     | add a (pat :: next) [] = [BRANCH (pat, add a next [])]
     | add a (pats as pat :: next) ((b as BRANCH (pat', trees)) :: branches) =
-    if pat = pat' then BRANCH (pat', add a next trees) :: branches
+    if skipat_eq pat pat' then BRANCH (pat', add a next trees) :: branches
     else b :: add a pats branches
     | add _ (_::_) (LEAF _::_) =
     raise BUG "discrim_add" "expected a branch, got a leaf"
@@ -245,22 +253,22 @@ end;
 
 local
   fun advance _ pat (SOME (v, lstate), rstate, work) =
-    (case ski_pattern_term_build pat lstate of [RIGHT tm]
-       => (NONE, rstate, (v, tm) :: work)
-     | lstate' => (SOME (v, lstate'), rstate, work))
+    (case ski_pattern_term_build pat lstate of
+         [RIGHT tm] => (NONE, rstate, (v, tm) :: work)
+       | lstate' => (SOME (v, lstate'), rstate, work))
     | advance _ (SKI_VAR v) (NONE, RIGHT tm :: rest, work) =
-    (NONE, rest, (v, tm) :: work)
+        (NONE, rest, (v, tm) :: work)
     | advance vars pat (NONE, rstate as RIGHT _ :: _, work) =
-    advance vars pat (NONE, ski_pattern_term_break vars rstate, work)
+        advance vars pat (NONE, ski_pattern_term_break vars rstate, work)
     | advance vars pat (NONE, LEFT (SKI_VAR v) :: rest, work) =
-    advance vars pat (SOME (v, []), rest, work)
+        advance vars pat (SOME (v, []), rest, work)
     | advance _ (SKI_CONST c) (NONE, LEFT (SKI_CONST c') :: rest, work) =
-    (NONE, rest, (c, c') :: work)
+        (NONE, rest, (c, c') :: work)
     | advance _ pat (NONE, LEFT pat' :: rest, work) =
-    if pat = pat' then (NONE, rest, work)
-    else raise ERR "ski_discrim_unify" "terms fundamentally different"
+        if skipat_eq pat pat' then (NONE, rest, work)
+        else raise ERR "ski_discrim_unify" "terms fundamentally different"
     | advance _ _ (NONE, [], _) =
-    raise BUG "ski_discrim_match" "no patterns left in list";
+        raise BUG "ski_discrim_match" "no patterns left in list";
 
   fun finally (vars, a) (NONE, [], work) = SOME ((vars, work), a)
     | finally _ _ = raise BUG "ski_discrim_unify" "patterns left at end";
@@ -271,7 +279,8 @@ in
   fun ski_discrim_unify (sd as SKI_DISCRIM (_, d)) (vars, tm) =
     let
       val shortlist = (flatten o map (tree_search vars tm)) d
-      fun select ((vars', work), a) = (ski_unifyl (union2 vars vars') work, a)
+      fun select ((vars', work), a) =
+        (ski_unifyl (vars_union vars vars') work, a)
       val res = partial_map (total select) shortlist
       val _ = trace
         "ski_discrim_unify: ((vars, tm), map fst res)"

@@ -40,7 +40,7 @@ fun mk_term_rsubst ctxt = let
   fun f {redex,residue} = let
     val redex' = contextTerm ctxt redex
   in
-    if mem redex' ctxt then let
+    if op_mem aconv redex' ctxt then let
         val residue' = ptm_with_ctxtty ctxt (type_of redex') residue
       in
         SOME (redex' |-> residue')
@@ -86,11 +86,72 @@ val ISPEC = Drule.ISPEC o ptm;
 val ISPECL = Drule.ISPECL o map ptm;
 val ID_SPEC = W(Thm.SPEC o (fst o dest_forall o concl))
 
+fun em_getState s = errormonad.Some((s,s))
+fun sm_getState s = seq.result(s,s)
+
 fun SPEC_THEN q ttac thm (g as (asl,w)) = let
+  infix >>- >>~
+  fun em >>- f = let open errormonad in em >- f end
+  fun sm >>~ f = let open seqmonad in sm >- f end
+  val a = Parse.Absyn q
+  val ctxt = HOLset.listItems (hyp_frees thm) @ free_varsl(w::asl)
   val (Bvar,_) = dest_forall (concl thm)
+  val bty = type_of Bvar
+  val pbty0 = Pretype.fromType bty
+  val fixed_tyvars = hyp_tyvars thm |> HOLset.listItems
+  val pbty = Pretype.rename_typevars (List.map dest_vartype fixed_tyvars) pbty0
+  val fixup_map0 =
+      let open errormonad
+      in
+        pbty >>- (fn pty =>
+        Pretype.unify pbty0 pty >>
+        em_getState >>- (return o Pretype.Env.toList))
+      end Pretype.Env.empty
+  val fixup_map =
+      case fixup_map0 of
+          errormonad.Some(_, alist) =>
+            List.map (fn (i,v) => (Pretype.toType (valOf v) |-> i)) alist
+        | _ => raise Fail "SPEC_THEN invariant failure"
+  fun parse_with_unify_check a =
+      let
+          val ptmm = TermParse.absyn_to_preterm (Parse.term_grammar()) a
+          open Preterm seqmonad
+      in
+        fromErr pbty >>~ (fn pty =>
+        fromErr ptmm >>~ (fn ptm =>
+        fromErr
+          (TermParse.ctxt_preterm_to_term NONE NONE ctxt
+                (Constrained{Locn = locn.Loc_None,Ptm = ptm, Ty = pty}))))
+      end
+  fun Ecompose theta0 E =
+      List.mapPartial
+        (fn {redex,residue} =>
+            case Pretype.toTypeM (Pretype.UVar residue) E of
+                errormonad.Some(_, ty) => SOME{redex=redex, residue = ty}
+              | _ => NONE)
+        theta0
+  fun inst_spec_n_ttac t =
+      let
+        open seqmonad
+      in
+        sm_getState >>~ (fn env =>
+        let val theta = Ecompose fixup_map env
+        in
+          case Lib.total ttac (Thm.SPEC t (INST_TYPE theta thm)) of
+              NONE => fail
+            | SOME tac => (case Lib.total tac g of
+                              NONE => fail
+                            | SOME result => return result)
+        end)
+      end
+  val sm = parse_with_unify_check a >>~ inst_spec_n_ttac
 in
-  QTY_TAC (type_of Bvar) (fn t => ttac (Thm.SPEC t thm)) q g
+  case seq.cases (sm Pretype.Env.empty) of
+      NONE => raise ERR "SPEC_THEN" "No parse succeeds"
+    | SOME ((_, res),_) => res
 end
+
+val SPEC_THEN : term quotation -> thm_tactic -> thm_tactic = SPEC_THEN;
 
 fun SPECL_THEN ql =
   case ql of
@@ -169,7 +230,7 @@ fun REFINE_EXISTS_TAC q (asl, w) = let
   val (qvar, body) = dest_exists w
   val ctxt = free_varsl (w::asl)
   val t = ptm_with_ctxtty' ctxt (type_of qvar) q
-  val qvars = set_diff (free_vars t) ctxt
+  val qvars = op_set_diff aconv (free_vars t) ctxt
   val newgoal = subst [qvar |-> t] body
   fun chl [] ttac = ttac
     | chl (h::t) ttac = X_CHOOSE_THEN h (chl t ttac)
@@ -243,7 +304,7 @@ fun X_FUN_EQ_CONV q tm =
 
 fun skolem_ty tm =
  let val (V,tm') = strip_forall tm
- in if V<>[]
+ in if not (null V)
     then list_mk_fun (map type_of V, type_of(fst(dest_exists tm')))
     else raise ERR"XSKOLEM_CONV" "no universal prefix"
   end;
@@ -459,7 +520,8 @@ fun prep_rename q nm (asl, t) = let
   fun mapthis pat = let
     val patfvs = free_vars pat
     val pat_binds =
-        filter (fn v => not (mem v fvs) andalso isnt_uscore_var v) patfvs
+        filter (fn v => not (op_mem aconv v fvs) andalso isnt_uscore_var v)
+               patfvs
   in
     (pat, length pat_binds)
   end

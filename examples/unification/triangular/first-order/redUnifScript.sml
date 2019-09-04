@@ -4,7 +4,7 @@ val _ = new_theory "redUnif"
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 
 val istep_def = Define`
-  istep (sl,bl) (sr,br) =
+  istep (sl,bl) (sr,br) <=>
   (∃t. (br + {|(t, t)|} = bl) ∧
        (sr = sl)) ∨
   (∃t1a t1d t2a t2d.
@@ -18,7 +18,7 @@ val istep_def = Define`
     (sr = sl |+ (v,t)))`;
 
 val tstep_def = Define`
-  tstep (sl,bl) (sr,br) =
+  tstep (sl,bl) (sr,br) <=>
   (∃t1 t2.
     (walk sl t1 = walk sl t2) ∧
     (br + {|(t1,t2)|} = bl) ∧

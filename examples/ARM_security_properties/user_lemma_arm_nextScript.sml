@@ -10,6 +10,7 @@ open user_lemma_instructionsTheory;
 open wordsTheory wordsLib;
 
 val _ =  new_theory("user_lemma_arm_next");
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = temp_overload_on ("return", ``constT``);
 val _ = diminish_srw_ss ["one"]

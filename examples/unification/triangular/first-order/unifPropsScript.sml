@@ -317,8 +317,8 @@ THEN1 (
 
 val _ = set_fixity "COMPAT" (Infix(NONASSOC,450))
 val COMPAT_def = Define`
-  s COMPAT s0 = wfs s /\ wfs s0 /\
-                (!t.walkstar s (walkstar s0 t) = walkstar s t)`
+  s COMPAT s0 <=> wfs s /\ wfs s0 /\
+                  (!t.walkstar s (walkstar s0 t) = walkstar s t)`
 val _ = TeX_notation {hol = "COMPAT", TeX = ("\\ensuremath{\\Supset}",1)}
 
 val SUBMAP_COMPAT = Q.store_thm(
