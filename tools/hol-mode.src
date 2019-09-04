@@ -110,9 +110,14 @@ evaluations.")
 (put 'hol-term 'end-op
      (function
       (lambda ()
-        (re-search-forward "[`’”]\\|^Proof\\|^End\\|^Termination" nil t)
-        (setq hol-term-end-delim (match-string 0))
-        (goto-char (match-beginning 0)))))
+        (let ((pthm-point (save-excursion
+                            (re-search-forward "^Proof\\|^Theorem" nil t))))
+          (if (and pthm-point (equal (match-string 0) "Proof"))
+              (progn (goto-char (match-beginning 0))
+                     (setq hol-term-end-delim "Proof"))
+            (re-search-forward "[`’”]\\|^End\\|^Termination" nil t)
+            (setq hol-term-end-delim (match-string 0))
+            (goto-char (match-beginning 0)))))))
 (defvar hol-beg-pos nil) ; ugh, global, but easiest this way
 (defvar hol-quoted-theorem-proof-re-begin
   "\\(Theorem\\|Triviality\\)[[:space:]]+[A-Za-z0-9'_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
