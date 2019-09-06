@@ -29,12 +29,24 @@ fun is_ground tm = not (tmem active_var (free_vars_lr tm))
 val synt_operl = [(active_var,0)] @ operl_of ``SUC 0 + 0 = 0 * 0``
 fun nntm_of_sit ((ctm,_),tm) = mk_eq (ctm,tm)
 
-fun status_of ((ctm,n),tm) =
+fun normal_status_of ((ctm,n),tm) =
   let val ntm = mk_sucn n in
     if term_eq ntm tm then Win
     else if is_ground tm orelse term_size tm > 2 * n + 1 then Lose
     else Undecided
   end
+
+fun copy_status_of ((ctm,n),tm) =
+  if term_eq ctm tm then Win
+  else if is_ground tm orelse term_size tm > 2 * (term_size ctm) + 1 then Lose
+  else Undecided
+
+fun eval_status_of ((ctm,n),tm) =
+  if mleArithData.eval_numtm tm = n then Win
+  else if is_ground tm orelse 
+    term_size tm > 2 * Int.max (n,term_size ctm) + 1 
+    then Lose
+  else Undecided
 
 (* -------------------------------------------------------------------------
    Move
@@ -59,7 +71,7 @@ fun filter_sit sit = (fn l => l)
 fun string_of_move (tm,_) = tts tm
 
 fun write_targetl file targetl =
-  let val tml = map dest_startsit targetl in
+  let val tml = map dest_startsit targetl in 
     export_terml (file ^ "_targetl") tml
   end
 
@@ -96,14 +108,14 @@ fun mk_targetl level ntarget =
   end
 
 (* -------------------------------------------------------------------------
-   Interface
+   Interfaces: normal, copy, eval
    ------------------------------------------------------------------------- *)
 
-val gamespec : (board,move) mlReinforce.gamespec =
+val normal_gamespec =
   {
   movel = movel,
   move_compare = move_compare,
-  status_of = status_of,
+  status_of = normal_status_of,
   filter_sit = filter_sit,
   apply_move = apply_move,
   operl = synt_operl,
@@ -115,12 +127,43 @@ val gamespec : (board,move) mlReinforce.gamespec =
   max_bigsteps = max_bigsteps
   }
 
-type dhex = (term * real list * real list) list
-type dhtnn = mlTreeNeuralNetwork.dhtnn
-type flags = bool * bool * bool
+val normal_extspec = mk_extspec "mleSynthesize.normal_extspec" normal_gamespec
 
-val extspec : (flags * dhtnn, board, bool * dhex)
-  smlParallel.extspec = mk_extspec "mleSynthesize.extspec" gamespec
+val copy_gamespec =
+  {
+  movel = movel,
+  move_compare = move_compare,
+  status_of = copy_status_of,
+  filter_sit = filter_sit,
+  apply_move = apply_move,
+  operl = synt_operl,
+  nntm_of_sit = nntm_of_sit,
+  mk_targetl = mk_targetl,
+  write_targetl = write_targetl,
+  read_targetl = read_targetl,
+  string_of_move = string_of_move,
+  max_bigsteps = max_bigsteps
+  }
+
+val copy_extspec = mk_extspec "mleSynthesize.copy_extspec" copy_gamespec
+
+val eval_gamespec =
+  {
+  movel = movel,
+  move_compare = move_compare,
+  status_of = eval_status_of,
+  filter_sit = filter_sit,
+  apply_move = apply_move,
+  operl = synt_operl,
+  nntm_of_sit = nntm_of_sit,
+  mk_targetl = mk_targetl,
+  write_targetl = write_targetl,
+  read_targetl = read_targetl,
+  string_of_move = string_of_move,
+  max_bigsteps = max_bigsteps
+  }
+
+val eval_extspec = mk_extspec "mleSynthesize.eval_extspec" eval_gamespec
 
 (* -------------------------------------------------------------------------
    Statistics
@@ -143,5 +186,71 @@ fun stats_eval file =
   in
     map_snd length l2
   end
+
+(* -------------------------------------------------------------------------
+   Reinforcement learning
+   ------------------------------------------------------------------------- *)
+
+(*
+load "mleSynthesize"; open mleSynthesize;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "mlReinforce"; open mlReinforce;
+load "smlParallel"; open smlParallel;
+load "aiLib"; open aiLib;
+
+ncore_mcts_glob := 8;
+ncore_train_glob := 4;
+ntarget_compete := 400;
+ntarget_explore := 400;
+exwindow_glob := 40000;
+uniqex_flag := false;
+dim_glob := 12;
+lr_glob := 0.02;
+batchsize_glob := 16;
+decay_glob := 0.99;
+level_glob := 1;
+nsim_glob := 1600;
+nepoch_glob := 100;
+ngen_glob := 100;
+
+logfile_glob := "mleSynthesize_normal1";
+parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
+val r = start_rl_loop (normal_gamespec,normal_extspec);
+
+logfile_glob := "mleSynthesize_copy1";
+parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
+val r = start_rl_loop (copy_gamespec,copy_extspec);
+
+logfile_glob := "mleSynthesize_eval1";
+parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
+val r = start_rl_loop (eval_gamespec,eval_extspec);
+*)
+
+(* -------------------------------------------------------------------------
+   Small test
+   ------------------------------------------------------------------------- *)
+
+(*
+load "mleRewrite"; open mleRewrite;
+load "mlReinforce"; open mlReinforce;
+load "psMCTS"; open psMCTS;
+nsim_glob := 10000;
+decay_glob := 0.9;
+val _ = n_bigsteps_test gamespec (random_dhtnn_gamespec gamespec)
+(mk_startsit ``SUC 0 * SUC 0``);
+
+dim_glob := 4;
+val tree = mcts_test 10000 gamespec (random_dhtnn_gamespec gamespec)
+(mk_startsit ``SUC (SUC 0) + SUC 0``);
+val nodel = trace_win (#status_of gamespec) tree [];
+
+*)
+
+
+
+
+
+
+
 
 end (* struct *)

@@ -189,11 +189,12 @@ fun stats_prooflength file =
 load "mleRewrite"; open mleRewrite;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "mlReinforce"; open mlReinforce;
+load "smlParallel"; open smlParallel;
 load "aiLib"; open aiLib;
 
 logfile_glob := "mleRewrite_run41";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
-ncore_mcts_glob := 8;
+ncore_mcts_glob := 16;
 ncore_train_glob := 4;
 ntarget_compete := 400;
 ntarget_explore := 400;
@@ -206,7 +207,7 @@ decay_glob := 0.99;
 level_glob := 1;
 nsim_glob := 1600;
 nepoch_glob := 100;
-ngen_glob := 20;
+ngen_glob := 100;
 val r = start_rl_loop (gamespec,extspec);
 *)
 

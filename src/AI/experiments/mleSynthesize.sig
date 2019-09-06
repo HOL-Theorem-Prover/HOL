@@ -8,8 +8,14 @@ sig
 
   (* interface *)
   val mk_startsit : term -> board
-  val gamespec : (board,move) mlReinforce.gamespec
-  val extspec : board mlReinforce.extgamespec
+  
+  (* with different winning conditions *)
+  val normal_gamespec : (board,move) mlReinforce.gamespec
+  val normal_extspec : board mlReinforce.extgamespec
+  val copy_gamespec : (board,move) mlReinforce.gamespec
+  val copy_extspec : board mlReinforce.extgamespec
+  val eval_gamespec : (board,move) mlReinforce.gamespec
+  val eval_extspec : board mlReinforce.extgamespec
 
   (* statistics *)
   val maxeval_atgen : unit -> int list
