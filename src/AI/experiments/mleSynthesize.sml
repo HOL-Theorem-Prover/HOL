@@ -44,7 +44,7 @@ fun copy_status_of ((ctm,n),tm) =
 fun eval_status_of ((ctm,n),tm) =
   if mleArithData.eval_numtm tm = n then Win
   else if is_ground tm orelse 
-    term_size tm > 2 * Int.max (n,term_size ctm) + 1 
+    term_size tm > 2 * Int.min (n,term_size ctm) + 1 
     then Lose
   else Undecided
 
@@ -80,32 +80,39 @@ fun read_targetl file =
     map mk_startsit tml
   end
 
-fun max_bigsteps target = 2 * term_size (dest_startsit target) + 1
+fun max_bigsteps ((ctm,n),_) = 4 * Int.max (n,term_size ctm) + 5
 
 (* -------------------------------------------------------------------------
    Level
    ------------------------------------------------------------------------- *)
 
-fun create_train_evalsorted () =
+val train_file = dataarith_dir ^ "/train"
+fun min_sizeeval x = Int.min (term_size x, eval_numtm x)
+
+fun order_train baseout f =
   let
-    val filein = dataarith_dir ^ "/train"
-    val fileout = dataarith_dir ^ "/train_evalsorted"
-    val l1 = import_terml filein ;
-    val l2 = map (fn x => (x, eval_numtm x)) l1
-    val l3 = filter (fn x => snd x <= 100) l2
-    val l4 = dict_sort compare_imin l3
+    val l1 = import_terml train_file
+    val l2 = map (fn x => (x, f x)) l1
+    val l3 = dict_sort compare_imin l2
   in
-    export_terml fileout (map fst l4)
+    export_terml (dataarith_dir ^ "/" ^ baseout) (map fst l3)
   end
 
-fun mk_targetl level ntarget =
+fun mk_targetl basein level ntarget =
   let
-    val tml = mlTacticData.import_terml (dataarith_dir ^ "/train_evalsorted")
-    val tmll = map shuffle (first_n level (mk_batch 400 tml))
-    val tml2 = List.concat (list_combine tmll)
+    val tml1 = import_terml (dataarith_dir ^ "/" ^ basein)
+    val tmll2 = map shuffle (first_n level (mk_batch 400 tml1))
+    val tml3 = List.concat (list_combine tmll2)
   in
-    map mk_startsit (first_n ntarget tml2)
+    map mk_startsit (first_n ntarget tml3)
   end
+
+fun create_sorteddata () =
+  (
+  order_train "train_evalsorted" eval_numtm;
+  order_train "train_sizesorted" term_size;
+  order_train "train_sizeevalsorted" min_sizeeval
+  )
 
 (* -------------------------------------------------------------------------
    Interfaces: normal, copy, eval
@@ -120,7 +127,7 @@ val normal_gamespec =
   apply_move = apply_move,
   operl = synt_operl,
   nntm_of_sit = nntm_of_sit,
-  mk_targetl = mk_targetl,
+  mk_targetl = mk_targetl "train_evalsorted",
   write_targetl = write_targetl,
   read_targetl = read_targetl,
   string_of_move = string_of_move,
@@ -138,7 +145,7 @@ val copy_gamespec =
   apply_move = apply_move,
   operl = synt_operl,
   nntm_of_sit = nntm_of_sit,
-  mk_targetl = mk_targetl,
+  mk_targetl = mk_targetl "train_sizesorted",
   write_targetl = write_targetl,
   read_targetl = read_targetl,
   string_of_move = string_of_move,
@@ -156,7 +163,7 @@ val eval_gamespec =
   apply_move = apply_move,
   operl = synt_operl,
   nntm_of_sit = nntm_of_sit,
-  mk_targetl = mk_targetl,
+  mk_targetl = mk_targetl "train_sizeevalsorted",
   write_targetl = write_targetl,
   read_targetl = read_targetl,
   string_of_move = string_of_move,
@@ -198,7 +205,9 @@ load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 load "aiLib"; open aiLib;
 
-ncore_mcts_glob := 8;
+create_sorteddata ();
+
+ncore_mcts_glob := 12;
 ncore_train_glob := 4;
 ntarget_compete := 400;
 ntarget_explore := 400;

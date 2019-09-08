@@ -9,6 +9,9 @@ sig
   (* interface *)
   val mk_startsit : term -> board
   
+  (* create training sets with gradual difficulty *)
+  val create_sorteddata : unit -> unit
+
   (* with different winning conditions *)
   val normal_gamespec : (board,move) mlReinforce.gamespec
   val normal_extspec : board mlReinforce.extgamespec
