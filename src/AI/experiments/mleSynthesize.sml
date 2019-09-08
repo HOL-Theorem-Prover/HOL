@@ -42,7 +42,7 @@ fun copy_status_of ((ctm,n),tm) =
   else Undecided
 
 fun eval_status_of ((ctm,n),tm) =
-  if mleArithData.eval_numtm tm = n then Win
+  if is_ground tm andalso mleArithData.eval_numtm tm = n then Win
   else if is_ground tm orelse 
     term_size tm > 2 * Int.min (n,term_size ctm) + 1 
     then Lose
@@ -205,7 +205,7 @@ load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 load "aiLib"; open aiLib;
 
-create_sorteddata ();
+(* create_sorteddata (); *)
 
 ncore_mcts_glob := 12;
 ncore_train_glob := 4;
