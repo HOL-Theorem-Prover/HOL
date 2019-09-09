@@ -1818,6 +1818,62 @@ Proof
        >> metis_tac [THE_DEF])
 QED
 
+Theorem compile_regexp_good_vec :
+ !r state_map table final_states.
+    dom_Brz empty (singleton (normalize r) ())
+                 (1,singleton (normalize r) 0,[]) /\
+    (compile_regexp r = (state_map, table, final_states))
+    ==>
+    good_vec table final_states /\
+    (!r n. (lookup regexp_compare r state_map = SOME n) ==> n < LENGTH table) /\
+    normalize r IN fdom regexp_compare state_map
+Proof
+ simp [compile_regexp_def]
+  >> rpt gen_tac >> strip_tac
+  >> fs []
+  >> `?seen next_state state_map table.
+         Brzozowski empty
+               (singleton (normalize r) ())
+               (1,singleton (normalize r) 0,[]) = (seen,next_state,state_map,table)`
+       by metis_tac [pair_CASES]
+  >> fs []
+  >> `Brz_invariant empty (singleton (normalize r) ()) (1,singleton (normalize r) 0,[])`
+     by
+      (fs [Brz_invariant_def,invar_def,dom_def, normalize_thm, fmap_inj_def, good_table_def,
+          singleton_thm,empty_def,invariant_def,mem_regexp_def,member_iff_lookup]
+        >> rw [lookup_def]
+           >- (fs[singleton_def,oin_def,member_def]
+                >> BasicProvers.EVERY_CASE_TAC
+                >- metis_tac[]
+                >- metis_tac[eq_cmp_regexp_compare,eq_cmp_def,normalize_thm]
+                >- metis_tac[])
+           >- (fs [fdom_def, singleton_def,lookup_def]
+                >> BasicProvers.EVERY_CASE_TAC
+                >> rw []
+                >> metis_tac [eq_cmp_regexp_compare, eq_cmp_def,normalize_thm])
+           >- (rw [union_def,set_def,GSYM empty_def, GSYM oempty_def] >>
+               rw [EXTENSION,fdom_def, osingleton_def, singleton_def, lookup_def] >>
+               CASE_TAC)
+           >- (rw [range_def,frange_def, EXTENSION, singleton_def,lookup_def,EQ_IMP_THM]
+                >- (BasicProvers.EVERY_CASE_TAC >> rw [])
+                >- (Q.EXISTS_TAC `normalize r` >> rw [regexp_compare_id] >> decide_tac))
+           >- (rw [GSYM empty_def, GSYM oempty_def]
+               >> rw [fdom_def, lookup_def, empty_def, oempty_def])
+           >- (ntac 2 (pop_assum mp_tac)
+                >> simp_tac set_ss [fdom_def,singleton_def,lookup_def]
+                >> BasicProvers.EVERY_CASE_TAC
+                >> rw[]
+                >> metis_tac [eq_cmp_def, eq_cmp_regexp_compare]))
+ >> imp_res_tac Brz_inv_thm
+ >> imp_res_tac Brz_mono
+ >> imp_res_tac Brz_inv_to_good_vec
+ >> fs []
+ >> rw []
+    >- metis_tac []
+    >- (`normalize r IN fdom regexp_compare (singleton (normalize r) 0)`
+         by rw [submap_def,fdom_def,singleton_def,lookup_def,regexp_compare_id]
+         >> metis_tac [submap_def])
+QED
 
 Theorem vec_lang_correct :
  !table final_states max_char vec final_states'.
@@ -2082,6 +2138,18 @@ Theorem Brzozowski_partial_eval_256 =
    SIMP_RULE list_ss [ORD_BOUND,alphabet_size_def] Brzozowski_partial_eval_conseq
   else TRUTH;
 
+
+Theorem regexp_matcher_correct:
+   dom_Brz_alt empty (singleton (normalize r) ()) ==>
+               (regexp_matcher r s <=> s IN regexp_lang r)
+Proof
+  rw[regexp_matcher_def]
+  \\ pairarg_tac \\ fs[]
+  \\ imp_res_tac compile_regexp_good_vec
+  \\ rfs[dom_Brz_alt_equal,fdom_def]
+  \\ imp_res_tac Brzozowski_partial_eval_256
+  \\ simp[IN_DEF]
+QED
 
 (* val _ = EmitTeX.tex_theory"-"; *)
 

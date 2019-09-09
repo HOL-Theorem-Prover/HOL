@@ -602,6 +602,65 @@ Proof
        >> rw[] >> fs [charset_cmp_eq])
 QED
 
+(*
+The following is cleaner than regexp_compareW_compute and may be better wrt to EVAL. 
+Still to be proved. Also there is yet another optimization, for <regexp>{1,n} constructions,
+which expand to Or[r,rr,rrr, .... r^n] which, when compared to Or [r, ... r^(n-1)], or even to itself,
+cost n^2 work. Scott Owens suggested reversing the Or'd elements, which still gives an OK comparison
+function.
+
+Theorem regexp_compareW_compute_revised :
+ !plist.
+   regexp_compareW plist =
+    case plist of
+     | [] => Equal
+     | pair::t =>
+        if FST pair = SND pair then regexp_compareW t
+        else
+        case pair of
+        | (Chset cs1, Chset cs2) => charset_cmp cs1 cs2
+        | (Chset cs, r)          => Less
+        | (Cat r s, Chset cs)    => Greater
+        | (Cat r1 r2, Cat r3 r4) => regexp_compareW [(r1,r3) ; (r2,r4)]
+        | (Cat r s, r1)          => Less
+        | (Star r, Chset cs)     => Greater
+        | (Star r, Cat r1 s)     => Greater
+        | (Star r, Star s)       => regexp_compareW [(r,s)]
+        | (Star r, s)            => Less
+        | (Or rs, Chset cs)      => Greater
+        | (Or rs, Cat r s)       => Greater
+        | (Or rs, Star r)        => Greater
+        | (Or rs1, Or rs2) =>
+            (case len_cmp rs1 rs2 of
+              | Equal => regexp_compareW (ZIP (rs1,rs2))
+              | verdict => verdict)
+        | (Or rs, r)     => Less
+        | (Neg r, Neg s) => regexp_compareW [(r,s)]
+        | (Neg r, r1)    => Greater
+Proof
+ recInduct regexp_compareW_ind
+  >> rw[]
+  >- rw [regexp_compareW_def]
+  >- (`?r s. pair = (r,s)` by metis_tac [pairTheory.ABS_PAIR_THM]
+      >> fs[] >> rw[]
+      >> Cases_on `r`>> fs[]
+      >- (match_mp_tac regexp_compareW_prefix_eq
+          >> qexists_tac `[(Chset c,Chset c)]` >> rw[])
+      >- (match_mp_tac regexp_compareW_prefix_eq
+          >> qexists_tac `[(Cat r' r0,Cat r' r0)]` >> rw[])
+      >- rw [Once regexp_compareW_def]
+      >- (match_mp_tac regexp_compareW_prefix_eq
+          >> qexists_tac `[(Or l,Or l)]` >> rw[])
+      >- rw [Once regexp_compareW_def])
+  >- (rw [Once regexp_compareW_def]
+       >> `?r s. pair = (r,s)` by metis_tac [pairTheory.ABS_PAIR_THM]
+       >> fs[] >> rw[]
+       >> Cases_on `r`>> fs[]
+       >> BasicProvers.EVERY_CASE_TAC
+       >> rw[] >> fs [charset_cmp_eq])
+QED
+*)
+
 
 Theorem regexp_compareW_eq :
  !plist l1 l2.
