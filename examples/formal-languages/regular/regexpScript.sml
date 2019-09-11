@@ -603,7 +603,7 @@ Proof
 QED
 
 (*
-The following is cleaner than regexp_compareW_compute and may be better wrt to EVAL. 
+The following is cleaner than regexp_compareW_compute and may be better wrt to EVAL.
 Still to be proved. Also there is yet another optimization, for <regexp>{1,n} constructions,
 which expand to Or[r,rr,rrr, .... r^n] which, when compared to Or [r, ... r^(n-1)], or even to itself,
 cost n^2 work. Scott Owens suggested reversing the Or'd elements, which still gives an OK comparison
