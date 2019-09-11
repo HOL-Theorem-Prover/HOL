@@ -201,6 +201,7 @@ process in it."
 (defun is-a-then (s)
   (and s (or (string-equal s "THEN")
              (string-equal s "THENL")
+             (string-equal s "QED")
              (string-equal s "val")
              (string-equal s ">-")
              (string-equal s ">>")
