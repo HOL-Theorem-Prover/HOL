@@ -2,6 +2,9 @@ TacticToe is a tactic-based prover.
 
 It searches for a proof by repeatedly applying suitable tactics for each goal state that it produces. 
 
+WARNING: Switch to the last tested commit 3971206043e478ced916b0f9bfafd03a890441a4
+as TacticToe easily breaks with HOL4 updates to the style of theories.
+
 RECORDING:
   load "tttUnfold"; open tttUnfold;
   load "fooTheory";
@@ -9,7 +12,7 @@ RECORDING:
 
 USAGE: (after RECORDING) 
   load "tacticToe"; open tacticToe;
-  tactictoe ``1+1=2``;
+  ttt ([],``1+1=2``);
 
 CLEANING: 
   - TacticToe calls depends on the data stored in 
