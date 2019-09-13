@@ -10,6 +10,10 @@ RECORDING:
   load "fooTheory";
   ttt_record (); (* takes a long time (2-12h) *)
 
+RECORDING (only one theory):
+  ttt_rewrite_thy "foo";
+  ttt_record_thy "foo";
+
 USAGE: (after RECORDING) 
   load "tacticToe"; open tacticToe;
   ttt ([],``1+1=2``);
