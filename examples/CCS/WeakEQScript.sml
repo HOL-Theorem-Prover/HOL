@@ -150,7 +150,7 @@ val _ =
         block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
 
 val _ = TeX_notation { hol = "==", TeX = ("\\HOLTokenWeakTransBegin", 1) };
-(* val _ = TeX_notation { hol = "=>", TeX = ("\\HOLTokenWeakTransEnd", 1) }; *)
+val _ = TeX_notation { hol = "=>", TeX = ("\\HOLTokenWeakTransEnd", 1) };
 
 Theorem WEAK_TRANS_WTS :
     WEAK_TRANS = WTS TRANS tau

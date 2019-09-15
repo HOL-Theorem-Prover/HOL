@@ -1,3 +1,5 @@
+INCLUDES = $(HOLDIR)/examples/lambda/basics
+
 OPTIONS = QUIT_ON_FAILURE
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))

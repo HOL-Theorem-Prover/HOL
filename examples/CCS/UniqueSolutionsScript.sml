@@ -712,10 +712,10 @@ val GSEQ_EPS_lemma = Q.prove (
    in E, then:
         If P = E{P/X} and Q = E{Q/X} then P = Q. (here "=" means WEAK_EQUIV)
  *)
-val WEAK_UNIQUE_SOLUTION = store_thm (
-   "WEAK_UNIQUE_SOLUTION",
-  ``!E. SG E /\ GSEQ E ==>
-        !P Q. WEAK_EQUIV P (E P) /\ WEAK_EQUIV Q (E Q) ==> WEAK_EQUIV P Q``,
+Theorem WEAK_UNIQUE_SOLUTION :
+    !E P Q. SG E /\ GSEQ E /\ WEAK_EQUIV P (E P) /\ WEAK_EQUIV Q (E Q)
+        ==> WEAK_EQUIV P Q
+Proof
     rpt STRIP_TAC
  >> irule (REWRITE_RULE [RSUBSET] WEAK_BISIM_UPTO_ALT_THM)
  >> Q.EXISTS_TAC `\x y. ?H. GSEQ H /\ (x = H P) /\ (y = H Q)`
@@ -845,7 +845,8 @@ val WEAK_UNIQUE_SOLUTION = store_thm (
       `WEAK_EQUIV E3 E2` by PROVE_TAC [WEAK_EQUIV_SYM] \\
       Q.EXISTS_TAC `E3` >> art [] \\
       Q.EXISTS_TAC `H' P` >> art [] \\
-      Q.EXISTS_TAC `H'` >> art [] ]);
+      Q.EXISTS_TAC `H'` >> art [] ]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -955,18 +956,20 @@ val SEQ_EPS_lemma = Q.prove (
       PROVE_TAC [WEAK_EQUIV_REFL] ]);
 
 (* Proposition 7.13 in Milner's book [1]:
-   Let the expression E contains at most the variable X, and let X be guarded and sequential
-   in E, then:
-        If P = E{P/X} and Q = E{Q/X} then P = Q. (here "=" means OBS_CONGR)
+   Let the expression E contains at most the variable X, and let X be
+   guarded and sequential in E, then:
 
-   This proof doesn't use "bisimulation up to" at all, instead it constructed a bisimulation
-   directly and then verify it against OBS_CONGR_BY_WEAK_BISIM. -- Chun Tian
+     If P = E{P/X} and Q = E{Q/X} then P = Q. (here "=" means OBS_CONGR)
+
+   This proof doesn't use "bisimulation up to" at all, instead it
+   constructed a bisimulation directly and then verify it against
+   OBS_CONGR_BY_WEAK_BISIM.
  *)
-val OBS_UNIQUE_SOLUTION = store_thm (
-   "OBS_UNIQUE_SOLUTION",
-  ``!E. SG E /\ SEQ E ==>
-        !P Q. OBS_CONGR P (E P) /\ OBS_CONGR Q (E Q) ==> OBS_CONGR P Q``,
-    REPEAT STRIP_TAC
+Theorem OBS_UNIQUE_SOLUTION :
+    !E P Q. SG E /\ SEQ E /\ OBS_CONGR P (E P) /\ OBS_CONGR Q (E Q)
+        ==> OBS_CONGR P Q
+Proof
+    rpt STRIP_TAC
  >> irule OBS_CONGR_BY_WEAK_BISIM
  >> Q.EXISTS_TAC `\x y. ?H. SEQ H /\ WEAK_EQUIV x (H P) /\ WEAK_EQUIV y (H Q)`
  >> Reverse CONJ_TAC (* 2 sub-goals here *)
@@ -1178,7 +1181,7 @@ val OBS_UNIQUE_SOLUTION = store_thm (
         REWRITE_TAC [O_DEF] >> BETA_TAC >> rpt STRIP_TAC \\
         Q.PAT_X_ASSUM `R y' y` MP_TAC \\
         Q.UNABBREV_TAC `R` >> BETA_TAC >> rpt STRIP_TAC \\
-        PROVE_TAC [WEAK_EQUIV_SYM, WEAK_EQUIV_TRANS] ] ]);
+        PROVE_TAC [WEAK_EQUIV_SYM, WEAK_EQUIV_TRANS] ] ]
 (*
   (goal 2.2)
       P ------------------- u --------------> P''
@@ -1195,6 +1198,7 @@ val OBS_UNIQUE_SOLUTION = store_thm (
       |                                       |
       Q ------------------- u --------------> E2
  *)
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1447,18 +1451,16 @@ val UNIQUE_SOLUTION_OF_CONTRACTIONS_LEMMA = store_thm (
 (* Theorem 3.10 of [2], the proof relies on above lemma, and "contracts_IMP_WEAK_EQUIV",
    the definition of contraction is not used.
  *)
-val UNIQUE_SOLUTION_OF_CONTRACTIONS = store_thm (
-   "UNIQUE_SOLUTION_OF_CONTRACTIONS",
-  ``!E. WGS E ==>
-        !P Q. P contracts (E P) /\ Q contracts (E Q) ==> WEAK_EQUIV P Q``,
-    REPEAT STRIP_TAC
+Theorem UNIQUE_SOLUTION_OF_CONTRACTIONS :
+    !E P Q. WGS E /\ P contracts (E P) /\ Q contracts (E Q) ==> WEAK_EQUIV P Q
+Proof
+    rpt STRIP_TAC
  >> REWRITE_TAC [WEAK_EQUIV]
  >> Q.EXISTS_TAC `\R S. ?C. GCONTEXT C /\ WEAK_EQUIV R (C P) /\ WEAK_EQUIV S (C Q)`
  >> BETA_TAC >> CONJ_TAC
- >- ( Q.EXISTS_TAC `E` \\
-      CONJ_TAC >- IMP_RES_TAC WGS_IMP_GCONTEXT \\
-      IMP_RES_TAC contracts_IMP_WEAK_EQUIV \\
-      art [] )
+ >- (Q.EXISTS_TAC `E` \\
+     CONJ_TAC >- IMP_RES_TAC WGS_IMP_GCONTEXT \\
+     IMP_RES_TAC contracts_IMP_WEAK_EQUIV >> art [])
  >> REWRITE_TAC [WEAK_BISIM]
  >> BETA_TAC >> rpt STRIP_TAC (* 4 sub-goals here *)
  >| [ (* goal 1 (of 4) *)
@@ -1552,7 +1554,8 @@ val UNIQUE_SOLUTION_OF_CONTRACTIONS = store_thm (
       Q.EXISTS_TAC `C'` >> art [] \\
       `WEAK_EQUIV E1 (C' P)` by PROVE_TAC [WEAK_EQUIV_TRANS] >> art [] \\
       `WEAK_EQUIV E2' (C' Q)` by PROVE_TAC [contracts_IMP_WEAK_EQUIV] \\
-      PROVE_TAC [WEAK_EQUIV_TRANS] ]);
+      PROVE_TAC [WEAK_EQUIV_TRANS] ]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1652,18 +1655,16 @@ val UNIQUE_SOLUTION_OF_EXPANSIONS_LEMMA = store_thm (
       MATCH_MP_TAC expands_IMP_WEAK_EQUIV >> art [] ]); (* extra steps *)
 
 (* The proof is essentially the same with UNIQUE_SOLUTION_OF_CONTRACTIONS *)
-val UNIQUE_SOLUTION_OF_EXPANSIONS = store_thm (
-   "UNIQUE_SOLUTION_OF_EXPANSIONS",
-  ``!E. WGS E ==>
-        !P Q. P expands (E P) /\ Q expands (E Q) ==> WEAK_EQUIV P Q``,
-    REPEAT STRIP_TAC
+Theorem UNIQUE_SOLUTION_OF_EXPANSIONS :
+    !E P Q. WGS E /\ P expands (E P) /\ Q expands (E Q) ==> WEAK_EQUIV P Q
+Proof
+    rpt STRIP_TAC
  >> REWRITE_TAC [WEAK_EQUIV]
  >> Q.EXISTS_TAC `\R S. ?C. GCONTEXT C /\ WEAK_EQUIV R (C P) /\ WEAK_EQUIV S (C Q)`
  >> BETA_TAC >> CONJ_TAC
- >- ( Q.EXISTS_TAC `E` \\
-      CONJ_TAC >- IMP_RES_TAC WGS_IMP_GCONTEXT \\
-      IMP_RES_TAC expands_IMP_WEAK_EQUIV \\
-      art [] )
+ >- (Q.EXISTS_TAC `E` \\
+     CONJ_TAC >- IMP_RES_TAC WGS_IMP_GCONTEXT \\
+     IMP_RES_TAC expands_IMP_WEAK_EQUIV >> art [])
  >> REWRITE_TAC [WEAK_BISIM]
  >> BETA_TAC >> rpt STRIP_TAC (* 4 sub-goals here *)
  >| [ (* goal 1 (of 4) *)
@@ -1757,7 +1758,8 @@ val UNIQUE_SOLUTION_OF_EXPANSIONS = store_thm (
       Q.EXISTS_TAC `C'` >> art [] \\
       `WEAK_EQUIV E1 (C' P)` by PROVE_TAC [WEAK_EQUIV_TRANS] >> art [] \\
       `WEAK_EQUIV E2' (C' Q)` by PROVE_TAC [expands_IMP_WEAK_EQUIV] \\
-      PROVE_TAC [WEAK_EQUIV_TRANS] ]);
+      PROVE_TAC [WEAK_EQUIV_TRANS] ]
+QED
 
 (* Another way to prove above theorem using UNIQUE_SOLUTION_OF_CONTRACTIONS, this method
    works for any relation coarser than `contracts`, partial-ordering and precogruence of
@@ -2110,10 +2112,9 @@ val shared_lemma = Q.prove (
       IMP_RES_TAC contracts_IMP_WEAK_EQUIV \\
       PROVE_TAC [WEAK_EQUIV_TRANS] ]);
 
-val UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS = store_thm (
-   "UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS",
-  ``!E. WG E ==>
-       !P Q. OBS_contracts P (E P) /\ OBS_contracts Q (E Q) ==> WEAK_EQUIV P Q``,
+Theorem UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS :
+    !E P Q. WG E /\ OBS_contracts P (E P) /\ OBS_contracts Q (E Q) ==> WEAK_EQUIV P Q
+Proof
     rpt STRIP_TAC
  >> REWRITE_TAC [WEAK_EQUIV]
  >> Q.EXISTS_TAC `\R S. ?C. CONTEXT C /\ WEAK_EQUIV R (C P) /\ WEAK_EQUIV S (C Q)`
@@ -2121,7 +2122,8 @@ val UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS = store_thm (
  >- (Q.EXISTS_TAC `E` \\
      CONJ_TAC >- IMP_RES_TAC WG_IMP_CONTEXT \\
      IMP_RES_TAC OBS_contracts_IMP_WEAK_EQUIV >> art [])
- >> MATCH_MP_TAC shared_lemma >> art []);
+ >> MATCH_MP_TAC shared_lemma >> art []
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -2132,9 +2134,9 @@ val UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS = store_thm (
 (* This is a stronger version of previous theorem: conclusion is `OBS_CONGR P Q`
    OBS_CONGR_BY_WEAK_BISIM and STRONG_UNIQUE_SOLUTION_LEMMA must be used here.
  *)
-val UNIQUE_SOLUTION_OF_ROOTED_CONTRACTIONS = store_thm (
-   "UNIQUE_SOLUTION_OF_ROOTED_CONTRACTIONS",
-  ``!E. WG E ==> !P Q. OBS_contracts P (E P) /\ OBS_contracts Q (E Q) ==> OBS_CONGR P Q``,
+Theorem UNIQUE_SOLUTION_OF_ROOTED_CONTRACTIONS :
+    !E P Q. WG E /\ OBS_contracts P (E P) /\ OBS_contracts Q (E Q) ==> OBS_CONGR P Q
+Proof
     rpt STRIP_TAC
  >> irule OBS_CONGR_BY_WEAK_BISIM
  >> Q.EXISTS_TAC `\R S. ?C. CONTEXT C /\ WEAK_EQUIV R (C P) /\ WEAK_EQUIV S (C Q)`
@@ -2156,13 +2158,8 @@ val UNIQUE_SOLUTION_OF_ROOTED_CONTRACTIONS = store_thm (
        Q.EXISTS_TAC `E1'` >> art [] \\
        Q.EXISTS_TAC `E'` >> art [] \\
        fs [contracts_IMP_WEAK_EQUIV] ])
- >> MATCH_MP_TAC shared_lemma >> art []);
-
-(* A simple way to prove the original UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS *)
-val UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS' = store_thm (
-   "UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS'",
-  ``!E. WG E ==> !P Q. OBS_contracts P (E P) /\ OBS_contracts Q (E Q) ==> WEAK_EQUIV P Q``,
-    PROVE_TAC [UNIQUE_SOLUTION_OF_ROOTED_CONTRACTIONS, OBS_CONGR_IMP_WEAK_EQUIV]);
+ >> MATCH_MP_TAC shared_lemma >> art []
+QED
 
 (* Bibliography:
  *
