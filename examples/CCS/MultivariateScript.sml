@@ -2818,7 +2818,7 @@ Proof
        Q.EXISTS_TAC `par C' E'` \\
        CONJ_TAC >- (MATCH_MP_TAC context_par_rule >> art [] \\
                     MATCH_MP_TAC weakly_guarded_imp_context >> art []) \\
-       RW_TAC std_ss [BV_def, CCS_SUBST_par, DISJOINT_UNION] \\       
+       RW_TAC std_ss [BV_def, CCS_SUBST_par, DISJOINT_UNION] \\
        MATCH_MP_TAC PAR1 \\
        FIRST_X_ASSUM MATCH_MP_TAC >> art [],
        (* goal 2 (of 3) *)
