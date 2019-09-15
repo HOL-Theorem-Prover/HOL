@@ -64,7 +64,7 @@ end;
 
 (* Define the set of states reachable from any CCS process *)
 val NODES_def = Define `
-    NODES (p :('a, 'b) CCS) = { q | Reach p q }`;
+    NODES (p :('a, 'b) CCS) = {(q :('a, 'b) CCS) | Reach p q}`;
 
 (* Finite-state CCS *)
 val finite_state_def = Define `

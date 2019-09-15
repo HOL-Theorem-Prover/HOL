@@ -849,7 +849,7 @@ val expands_SUBST_GCONTEXT = store_thm (
 
 val expands_precongruence = store_thm (
    "expands_precongruence", ``precongruence' $expands``,
-    PROVE_TAC [precongruence'_def, expands_PreOrder, expands_SUBST_GCONTEXT]);
+    PROVE_TAC [precongruence', expands_PreOrder, expands_SUBST_GCONTEXT]);
 
 (******************************************************************************)
 (*                                                                            *)

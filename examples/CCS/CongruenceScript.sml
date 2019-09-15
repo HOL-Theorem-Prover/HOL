@@ -302,12 +302,12 @@ val OH_CONTEXT_IMP_CONTEXT = store_thm (
       BETA_TAC >> REWRITE_TAC [],
       (* goal 5 (of 8) *)
       `CONTEXT (\y. x)` by REWRITE_TAC [CONTEXT2] \\
-      Know `CONTEXT (\t. c t || (\y. x) t)`
+      Know `CONTEXT (\t. par (c t) ((\y. x) t))`
       >- ( MATCH_MP_TAC CONTEXT5 >> ASM_REWRITE_TAC [] ) \\
       BETA_TAC >> REWRITE_TAC [],
       (* goal 6 (of 8) *)
       `CONTEXT (\y. x)` by REWRITE_TAC [CONTEXT2] \\
-      Know `CONTEXT (\t. (\y. x) t || c t)`
+      Know `CONTEXT (\t. par ((\y. x) t) (c t))`
       >- ( MATCH_MP_TAC CONTEXT5 >> ASM_REWRITE_TAC [] ) \\
       BETA_TAC >> REWRITE_TAC [],
       (* goal 7 (of 8) *)
@@ -456,38 +456,42 @@ val WEAK_EQUIV_SUBST_GCONTEXT = store_thm (
 (*                                                                            *)
 (******************************************************************************)
 
-val precongruence_def = Define `
+Definition precongruence :
     precongruence R = PreOrder R /\
-        !x y ctx. CONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)`;
+        !x y ctx. CONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)
+End
 
 (* a special version of precongruence with only guarded sums *)
-val precongruence'_def = Define `
+Definition precongruence' :
     precongruence' R = PreOrder R /\
-        !x y ctx. GCONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)`;
+        !x y ctx. GCONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)
+End
 
 (* The definition of congruence for CCS, TODO: use precongruence *)
-val congruence_def = Define `
+Definition congruence :
     congruence R = equivalence R /\
-        !x y ctx. CONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)`;
+        !x y ctx. CONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)
+End
 
 (* a special version of congruence with only guarded sums *)
-val congruence'_def = Define `
+Definition congruence' :
     congruence' R = equivalence R /\
-        !x y ctx. GCONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)`;
+        !x y ctx. GCONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)
+End
 
 val STRONG_EQUIV_congruence = store_thm (
    "STRONG_EQUIV_congruence", ``congruence STRONG_EQUIV``,
-    REWRITE_TAC [congruence_def, STRONG_EQUIV_equivalence]
+    REWRITE_TAC [congruence, STRONG_EQUIV_equivalence]
  >> PROVE_TAC [STRONG_EQUIV_SUBST_CONTEXT]);
 
 val WEAK_EQUIV_congruence = store_thm (
    "WEAK_EQUIV_congruence", ``congruence' WEAK_EQUIV``,
-    REWRITE_TAC [congruence'_def, WEAK_EQUIV_equivalence]
+    REWRITE_TAC [congruence', WEAK_EQUIV_equivalence]
  >> PROVE_TAC [WEAK_EQUIV_SUBST_GCONTEXT]);
 
 val OBS_CONGR_congruence = store_thm (
    "OBS_CONGR_congruence", ``congruence OBS_CONGR``,
-    REWRITE_TAC [congruence_def, OBS_CONGR_equivalence]
+    REWRITE_TAC [congruence, OBS_CONGR_equivalence]
  >> PROVE_TAC [OBS_CONGR_SUBST_CONTEXT]);
 
 (* Building (pre)congruence closure from any relation on CCS *)
@@ -499,7 +503,7 @@ val GCC_def = Define `
 
 val CC_precongruence = store_thm (
    "CC_precongruence", ``!R. PreOrder R ==> precongruence (CC R)``,
-    REWRITE_TAC [precongruence_def, CC_def]
+    REWRITE_TAC [precongruence, CC_def]
  >> RW_TAC std_ss []
  >| [ (* goal 1 (of 2) *)
       REWRITE_TAC [PreOrder] \\
@@ -519,7 +523,7 @@ val CC_precongruence = store_thm (
 (* The built relation is indeed congruence *)
 val CC_congruence = store_thm (
    "CC_congruence", ``!R. equivalence R ==> congruence (CC R)``,
-    REWRITE_TAC [congruence_def, CC_def]
+    REWRITE_TAC [congruence, CC_def]
  >> RW_TAC std_ss [] (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       REWRITE_TAC [equivalence_def] \\
@@ -556,13 +560,13 @@ val CC_is_finer = store_thm (
 val CC_is_coarsest = store_thm (
    "CC_is_coarsest",
   ``!R R'. congruence R' /\ R' RSUBSET R ==> R' RSUBSET (CC R)``,
-    REWRITE_TAC [congruence_def, RSUBSET, CC_def]
+    REWRITE_TAC [congruence, RSUBSET, CC_def]
  >> RW_TAC std_ss []);
 
 Theorem PCC_is_coarsest :
     !R R'. precongruence R' /\ R' RSUBSET R ==> R' RSUBSET (CC R)
 Proof
-    REWRITE_TAC [precongruence_def, RSUBSET, CC_def]
+    REWRITE_TAC [precongruence, RSUBSET, CC_def]
  >> RW_TAC std_ss []
 QED
 
