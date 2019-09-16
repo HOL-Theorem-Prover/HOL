@@ -1130,11 +1130,12 @@ region instead. With prefix ARG prompt for a file-name to load."
 (defun hol-horizontal ()
   "Runs a HOL session after splitting the window"
   (interactive)
-  (hol '((lambda (b al)
+  (hol '(display-buffer-reuse-window
+         (lambda (b al)
            (let ((split-height-threshold nil)
                  (split-width-threshold 0))
              (display-buffer-pop-up-window b al))))
-       '((window-width . 80))))
+       '((window-width . 80) (reusable-frames . nil))))
 
 (defvar hol-new-buffer-style hol-new-buffer-style-default)
 
