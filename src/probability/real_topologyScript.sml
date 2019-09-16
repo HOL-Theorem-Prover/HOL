@@ -19629,7 +19629,22 @@ val SETDIST_SUBSETS_EQ = store_thm ("SETDIST_SUBSETS_EQ",
   ASM_CASES_TAC ``s':real->bool = {}`` THENL [ASM_SET_TAC[], ALL_TAC] THEN
   ASM_CASES_TAC ``t':real->bool = {}`` THENL [ASM_SET_TAC[], ALL_TAC] THEN
   ASM_REWRITE_TAC[setdist] THEN MATCH_MP_TAC INF_EQ THEN
-  SIMP_TAC std_ss [FORALL_IN_GSPEC] THEN ASM_MESON_TAC[SUBSET_DEF, REAL_LE_TRANS]);
+  SIMP_TAC std_ss [FORALL_IN_GSPEC] THEN
+  CONJ_TAC >- (SIMP_TAC std_ss [EXTENSION, GSPECIFICATION,
+                                EXISTS_PROD, NOT_IN_EMPTY] \\
+               fs [GSYM MEMBER_NOT_EMPTY] \\
+               rename1 `a IN s'` >> Q.EXISTS_TAC `a` \\
+               rename1 `b IN t'` >> Q.EXISTS_TAC `b` \\
+               ASM_REWRITE_TAC []) \\
+  CONJ_TAC >- (Q.EXISTS_TAC `0` >> rw [DIST_POS_LE]) \\
+  CONJ_TAC >- (SIMP_TAC std_ss [EXTENSION, GSPECIFICATION,
+                                EXISTS_PROD, NOT_IN_EMPTY] \\
+               fs [GSYM MEMBER_NOT_EMPTY] \\
+               rename1 `a IN s` >> Q.EXISTS_TAC `a` \\
+               rename1 `b IN t` >> Q.EXISTS_TAC `b` \\
+               ASM_REWRITE_TAC []) \\
+  CONJ_TAC >- (Q.EXISTS_TAC `0` >> rw [DIST_POS_LE]) \\
+  ASM_MESON_TAC[SUBSET_DEF, REAL_LE_TRANS]);
 
 val REAL_LE_SETDIST = store_thm ("REAL_LE_SETDIST",
   ``!s t:real->bool d.
