@@ -14,7 +14,7 @@
 !examples/logic/propositional_logic
 !!examples/logic/ltl
 !!examples/logic/ltl-transformations
-## !!examples/fun-op-sem  works only with the standard kernel
+!!examples/fun-op-sem
 
 # Crypto examples
 !!examples/Crypto/AES
