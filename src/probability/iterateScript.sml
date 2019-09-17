@@ -45,6 +45,7 @@ val ASM_REAL_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC;
 
 fun wrap a = [a];
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
+val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
@@ -604,12 +605,11 @@ val inf_tm = ``@a:real. (!x. x IN s ==> a <= x) /\
 (* `inf s` exists iff s is non-empty and has a lower bound b *)
 val inf_criteria = ``s <> {} /\ (?b. !x. x IN s ==> b <= x)``;
 
-(* renamed `inf` to `inf'`, a local definition *)
-val inf' = new_definition ("inf'", ``inf' s = ^inf_tm``);
-
-val inf_convert = Q.prove (
-   `!s. ^inf_criteria ==> (inf s = inf' s)`,
-    RW_TAC std_ss [inf']
+(* alternative definition of `inf` *)
+Theorem inf_alt :
+    !s. ^inf_criteria ==> (inf s = ^inf_tm)
+Proof
+    RW_TAC std_ss []
  >> Suff `(\f. inf s = f) (^inf_tm)` >- METIS_TAC []
  >> MATCH_MP_TAC SELECT_ELIM_THM
  >> RW_TAC std_ss []
@@ -637,7 +637,8 @@ val inf_convert = Q.prove (
        MATCH_MP_TAC >> fs [IN_APP])
  >> MATCH_MP_TAC REAL_IMP_LE_INF
  >> CONJ_TAC >- METIS_TAC [MEMBER_NOT_EMPTY, IN_APP]
- >> fs [IN_APP]);
+ >> fs [IN_APP]
+QED
 
 (* added `s <> EMPTY /\ (?b. !x. x IN s ==> b <= x) /\
           t <> EMPTY /\ (?b. !x. x IN t ==> b <= x)`
@@ -649,8 +650,11 @@ Theorem INF_EQ :
                 ==> (inf s = inf t)
 Proof
     rpt STRIP_TAC
- >> `(inf s = inf' s) /\ (inf t = inf' t)` by METIS_TAC [inf_convert]
- >> ASM_SIMP_TAC std_ss [inf']
+ >> Know `(inf s = ^inf_tm) /\
+          (inf t = @a:real. (!x. x IN t ==> a <= x) /\
+                        !b. (!x. x IN t ==> b <= x) ==> b <= a)`
+ >- (CONJ_TAC >> MATCH_MP_TAC inf_alt >> PROVE_TAC [])
+ >> ASM_SIMP_TAC std_ss []
 QED
 
 val INF = store_thm ("INF",
@@ -658,10 +662,8 @@ val INF = store_thm ("INF",
        ==> (!x. x IN s ==> inf s <= x) /\
            !b. (!x. x IN s ==> b <= x) ==> b <= inf s``,
   GEN_TAC THEN STRIP_TAC THEN
- `inf s = inf' s` by METIS_TAC [inf_convert]
-  THEN POP_ORW THEN
-  REWRITE_TAC[inf'] THEN
-  CONV_TAC(ONCE_DEPTH_CONV SELECT_CONV) THEN
+  Know `inf s = ^inf_tm` >- (MATCH_MP_TAC inf_alt >> PROVE_TAC []) >> Rewr'
+  THEN CONV_TAC(ONCE_DEPTH_CONV SELECT_CONV) THEN
   ONCE_REWRITE_TAC[GSYM REAL_LE_NEG2] THEN
   EXISTS_TAC ``-(sup (IMAGE (\x:real. -x) s))`` THEN
   MP_TAC(SPEC ``IMAGE (\x. -x) (s:real->bool)`` SUP) THEN
@@ -712,8 +714,9 @@ val REAL_INF_UNIQUE = store_thm ("REAL_INF_UNIQUE",
       POP_ASSUM (MP_TAC o (Q.SPEC `b + 1`)) \\
       RW_TAC real_ss [REAL_LT_ADDR, REAL_LT_01] \\
       Q.EXISTS_TAC `x` >> ASM_REWRITE_TAC []) >> DISCH_TAC \\
- `inf s = inf' s` by METIS_TAC [inf_convert] >> POP_ORW \\
-  REWRITE_TAC[inf'] THEN MATCH_MP_TAC SELECT_UNIQUE THEN
+  Know `inf s = ^inf_tm`
+  >- (MATCH_MP_TAC inf_alt >> PROVE_TAC []) >> Rewr' \\
+  MATCH_MP_TAC SELECT_UNIQUE THEN
   METIS_TAC[REAL_NOT_LE, REAL_LE_ANTISYM]);
 
 val REAL_LE_INF = store_thm ("REAL_LE_INF",
