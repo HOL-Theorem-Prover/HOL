@@ -7,9 +7,6 @@ open pairTheory optionTheory finite_mapTheory arithmeticTheory;
 open rich_listTheory;
 open cbvTheory logrelTheory;
 
-val _ = set_trace "Goalstack.print_goal_at_top" 0;
-val _ = ParseExtras.temp_tight_equality();
-
 val _ = new_theory "opt";
 
 val funpow_comm = Q.prove (
@@ -288,8 +285,8 @@ val subst_lemma = Q.prove (
  >- (fs [sem_def] >>
      rw [sem_def, subst_def, res_rel_rw, val_rel_refl] >>
      imp_res_tac LIST_REL_LENGTH >>
-     fs [] >>
-     rw [] >>
+     fs [] >> rw [] >>
+     fs[] >> rw[] >>
      full_simp_tac (srw_ss()++ARITH_ss) [EL_APPEND1, EL_APPEND2] >>
      rw [res_rel_rw]
      >- fs [LIST_REL_EL_EQN]
@@ -301,7 +298,8 @@ val subst_lemma = Q.prove (
      >- (fs [LIST_REL_EL_EQN] >>
          `n − (LENGTH vs2 + 1) < LENGTH env2` by decide_tac >>
          metis_tac [])
-     >- fs [state_rel_rw])
+     >- fs [state_rel_rw]
+     )
  >- (fs [sem_def] >>
      rw [sem_def, subst_def, res_rel_rw, val_rel_refl] >>
      last_assum (qspecl_then [`c`, `e`] mp_tac) >>
