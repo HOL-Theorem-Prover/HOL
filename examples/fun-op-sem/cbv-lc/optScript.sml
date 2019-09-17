@@ -194,14 +194,15 @@ val shift_lemma = Q.prove (
      rw [sem_def, shift_def, res_rel_def, val_rel_refl]
      >- fs [state_rel_rw] >>
      rw [val_rel_rw, exec_rel_rw] >>
-     Cases_on `sem (a::(vs1 ++ env1)) (s with clock := i'') e'` >>
-     last_x_assum (qspecl_then [`i''`, `e'`] mp_tac) >>
+     rename1 `i ≤ j` >>
+     Cases_on `sem (a::(vs1 ++ env1)) (s with clock := i) e'` >>
+     last_x_assum (qspecl_then [`i`, `e'`] mp_tac) >>
      simp [LEX_DEF_THM] >>
      rw [] >>
      pop_assum (qspecl_then [`env1`, `env2`, `s`, `s'`, `a::vs1`, `a'::vs2`, `v`] mp_tac) >>
      simp [] >>
      rw [] >>
-     `i'' ≤ c` by decide_tac >>
+     `i ≤ c` by decide_tac >>
      imp_res_tac val_rel_mono >>
      imp_res_tac val_rel_mono_list2 >>
      imp_res_tac is_val_shift >>
@@ -347,7 +348,8 @@ val subst_lemma = Q.prove (
      rw [] >>
      Cases_on `v''` >>
      fs [val_rel_rw, exec_rel_rw, LET_THM, PULL_FORALL] >>
-     first_x_assum (qspecl_then [`r''.clock - 1`, `v'''`, `v''''`, `r''`, `s''`, `r''.clock - 1`] mp_tac) >>
+     first_x_assum (qspecl_then [
+      `r''.clock - 1`,`v'''`,`v''''`,`r''`,`s''`,`r''.clock - 1`] mp_tac) >>
      `r''.clock - 1 ≤ r''.clock` by decide_tac >>
      imp_res_tac val_rel_mono >>
      simp [])
@@ -357,14 +359,15 @@ val subst_lemma = Q.prove (
          `c ≤ i` by decide_tac >>
          metis_tac [val_rel_mono_list]) >>
      rw [val_rel_rw, exec_rel_rw] >>
-     Cases_on `sem (a::(vs1 ++ [v] ++ env1)) (s with clock := i'') e` >>
-     last_x_assum (qspecl_then [`i''`, `e`] mp_tac) >>
+     rename1 `i ≤ j` >>
+     Cases_on `sem (a::(vs1 ++ [v] ++ env1)) (s with clock := i) e` >>
+     last_x_assum (qspecl_then [`i`, `e`] mp_tac) >>
      simp [LEX_DEF_THM] >>
      rw [] >>
      pop_assum (qspecl_then [`e2`, `env1`, `env2`, `s`, `s'`, `v`, `a::vs1`, `a'::vs2`, `q`, `r`] mp_tac) >>
      simp [] >>
      rw [] >>
-     `i'' ≤ c` by decide_tac >>
+     `i ≤ c` by decide_tac >>
      imp_res_tac val_rel_mono >>
      imp_res_tac val_rel_mono_list2 >>
      imp_res_tac is_val_shift >>

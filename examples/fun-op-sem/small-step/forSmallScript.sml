@@ -634,7 +634,6 @@ val sem_t_for_no_break = Q.prove(
    DECIDE_TAC>>
  fs[dec_clock_def])
 
-local val rw = srw_tac[] val fs = fsrw_tac[] in
 val big_small_lem = Q.store_thm ("big_small_lem",
 `!s t r.
   sem_t s t = r
@@ -662,7 +661,7 @@ val big_small_lem = Q.store_thm ("big_small_lem",
     qpat_abbrev_tac`A = (s.store,B)`>>
     fs[store_var_def]>>
     qexists_tac`A::tr`>>fs[Abbr`A`,check_trace_def]>>
-    CONJ_TAC >- DECIDE_TAC>>
+    TRY (CONJ_TAC >- DECIDE_TAC) >>
     reverse (CONJ_TAC) >- fs[LAST_DEF] >>
     Cases_on`tr`>>
     simp[check_trace_def,optionTheory.some_def]>>
@@ -677,8 +676,8 @@ val big_small_lem = Q.store_thm ("big_small_lem",
     >- (
       qpat_abbrev_tac`p = t_to_small_t t'`>>
       qexists_tac`MAP (λst,t. (st,Seq t p)) tr ++ tr'`>>
-      fs[HD_MAP,HD_APPEND,LAST_APPEND]>>rw[]
-      >- DECIDE_TAC
+      fs[HD_MAP,HD_APPEND,LAST_APPEND]>>rw[] >>
+      TRY (DECIDE_TAC)
       >- (
         match_mp_tac check_trace_append2>>
         fs[check_trace_seq,LAST_MAP]>>
@@ -694,8 +693,8 @@ val big_small_lem = Q.store_thm ("big_small_lem",
     >- (
       qpat_abbrev_tac `p = t_to_small_t t'`>>
       qexists_tac`(MAP (λst,t. (st,Seq t p)) tr)++[r.store,Break]`>>
-      fs[HD_APPEND,HD_MAP]>>rw[]
-      >- DECIDE_TAC
+      fs[HD_APPEND,HD_MAP]>>rw[] >>
+      TRY (DECIDE_TAC)
       >- (
         match_mp_tac check_trace_append2>>
         fs[check_trace_seq,LAST_MAP,check_trace_def]>>
@@ -711,6 +710,7 @@ val big_small_lem = Q.store_thm ("big_small_lem",
       qexists_tac`(MAP (λst,t. (st,Seq t p)) tr)`>>
       fs[HD_APPEND,HD_MAP,check_trace_def,check_trace_seq]>>rw[]>>
       fs[Once res_rel_t_cases,LAST_MAP]>>
+      rename1 `step_t _ (s',_)` >>
       `step_t (r.store,Seq t'' p) (s',Seq t''' p)` by simp[Once step_t_cases]>>
       metis_tac[]
       )
@@ -730,8 +730,8 @@ val big_small_lem = Q.store_thm ("big_small_lem",
     qpat_abbrev_tac`p2 = t_to_small_t t2`
     >- (
       qexists_tac`(MAP (λst,e. (st,(If e p1 p2))) tr') ++ tr`>>
-      fs[HD_MAP,HD_APPEND,LAST_MAP,LAST_APPEND]>>rw[]
-      >- DECIDE_TAC >>
+      fs[HD_MAP,HD_APPEND,LAST_MAP,LAST_APPEND]>>rw[] >>
+      TRY (DECIDE_TAC) >>
       match_mp_tac check_trace_append2>>fs[res_rel_e_cases]>>CONJ_TAC
       >- metis_tac[check_trace_if1] >>
       match_mp_tac some_to_SOME_step_t>>fs[LAST_MAP]>>
@@ -739,8 +739,8 @@ val big_small_lem = Q.store_thm ("big_small_lem",
       )
     >- (
       qexists_tac`(MAP (λst,e. (st,(If e p1 p2))) tr') ++ tr`>>
-      fs[HD_MAP,HD_APPEND,LAST_MAP,LAST_APPEND]>>rw[]
-      >- DECIDE_TAC >>
+      fs[HD_MAP,HD_APPEND,LAST_MAP,LAST_APPEND]>>rw[] >>
+      TRY (DECIDE_TAC) >>
       match_mp_tac check_trace_append2>>fs[res_rel_e_cases]>>CONJ_TAC
       >- metis_tac[check_trace_if1] >>
       match_mp_tac some_to_SOME_step_t>>fs[LAST_MAP]>>
@@ -813,16 +813,16 @@ val big_small_lem = Q.store_thm ("big_small_lem",
       )
     >- (
       qexists_tac`ls++e1tr++ttr`>>unabbrev_all_tac>>
-      fs[LAST_APPEND,LAST_MAP,res_rel_t_cases]>>CONJ_TAC
-      >- DECIDE_TAC >>
+      fs[LAST_APPEND,LAST_MAP,res_rel_t_cases]>>CONJ_TAC >>
+      TRY (DECIDE_TAC) >>
       fs[is_val_t_def]>>match_mp_tac no_step_t_handle>>
       fs[is_val_t_def]>>match_mp_tac no_step_t_seq>>
       metis_tac[]
       )
     >- (
       qexists_tac`ls++e1tr++ttr`>>unabbrev_all_tac>>
-      fs[LAST_APPEND,LAST_MAP,res_rel_t_cases]>>CONJ_TAC
-      >- DECIDE_TAC >>
+      fs[LAST_APPEND,LAST_MAP,res_rel_t_cases]>>
+      TRY (CONJ_TAC >> DECIDE_TAC) >>
       ntac 2 (simp[Once step_t_cases,is_val_t_def])>>
       metis_tac[]
       )
@@ -854,8 +854,8 @@ val big_small_lem = Q.store_thm ("big_small_lem",
     >- (
       qexists_tac`ls++e1tr++ttr++e2tr`>>fs[res_rel_e_cases]>>
       unabbrev_all_tac>>
-      fs[LAST_APPEND,LAST_MAP,res_rel_t_cases,is_val_t_def]>>rw[]
-      >- DECIDE_TAC >>
+      fs[LAST_APPEND,LAST_MAP,res_rel_t_cases,is_val_t_def]>>rw[] >>
+      TRY (DECIDE_TAC) >>
       metis_tac[no_step_t_exp,no_step_t_handle, no_step_t_seq,is_val_t_def]
       ) >>
     (* e2 ok *)
@@ -934,7 +934,6 @@ val big_small_lem = Q.store_thm ("big_small_lem",
       )
     )
   )
-end
 
 val big_timeout_0 = Q.prove (
 `!st p r.

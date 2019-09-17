@@ -958,6 +958,7 @@ val big_small_lem = Q.prove (
      qexists_tac`(MAP (λst,t. (st,Seq t p)) tr)`>>
      fs[HD_APPEND,HD_MAP,check_trace_def,check_trace_seq]>>rw[]>>
      fs[Once res_rel_t_cases,LAST_MAP]>>
+     rename1 `step_t _ _ (s',_)` >>
      `step_t (r,Seq t'' p) l (s',Seq t''' p)` by
        simp[Once step_t_cases]>>
      metis_tac[])

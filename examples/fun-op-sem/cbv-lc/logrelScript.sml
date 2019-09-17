@@ -333,6 +333,7 @@ Proof
   fs [exp_rel_def] >>
   first_x_assum match_mp_tac >>
   rw [] >>
+  rename1 `i' < i` >>
   `i' ≤ i` by decide_tac >>
   metis_tac [val_rel_mono_list2]
 QED
@@ -544,6 +545,8 @@ Proof
      rw [] >>
      first_x_assum match_mp_tac >>
      rw [] >>
+     rename1 `i' < i` >>
+     rename1 `∃ i' . i'' < i' ∧ _` >>
      qexists_tac `i'' + 1` >>
      simp [] >>
      metis_tac [val_rel_refl, state_rel_refl])
