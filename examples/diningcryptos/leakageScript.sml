@@ -2,34 +2,19 @@
 (* Create "leakageTheory" setting up the theory of information leakage       *)
 (* ========================================================================= *)
 
-(* ------------------------------------------------------------------------- *)
-(* Load and open relevant theories                                           *)
-(* (Comment out "load" and "loadPath"s for compilation)                      *)
-(* ------------------------------------------------------------------------- *)
-(*
-
-app load ["bossLib", "metisLib", "arithmeticTheory", "pred_setTheory",
-          "listTheory", "state_transformerTheory", "probabilityTheory",
-          "formalizeUseful", "combinTheory", "pairTheory", "realTheory",
-          "realLib", "extra_boolTheory", "jrhUtils", "extra_pred_setTheory", "extra_listTheory",
-          "realSimps", "extra_realTheory", "measureTheory", "numTheory",
-          "simpLib", "seqTheory", "subtypeTheory", "transcTheory",
-          "limTheory", "stringTheory", "rich_listTheory", "stringSimps",
-          "listSimps", "lebesgueTheory", "informationTheory",
-          "extra_stringTheory", "extra_stringLib"];
-
-*)
-
 open HolKernel Parse boolLib bossLib metisLib arithmeticTheory pred_setTheory
-     listTheory state_transformerTheory
-     probabilityTheory formalizeUseful extra_numTheory combinTheory
-     pairTheory realTheory realLib extra_boolTheory jrhUtils
-     extra_pred_setTheory realSimps extra_realTheory measureTheory numTheory
-     simpLib seqTheory subtypeTheory extra_listTheory
+     listTheory state_transformerTheory combinTheory pairTheory realTheory
+     realLib jrhUtils realSimps numTheory simpLib seqTheory subtypeTheory
      transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps
-     lebesgueTheory informationTheory extra_stringTheory extra_stringLib;
+     informationTheory;
+
+open extra_boolTheory extra_numTheory extra_pred_setTheory extra_realTheory
+     extra_listTheory extra_stringTheory extra_stringLib;
 
 open real_sigmaTheory;
+
+open hurdUtils util_probTheory real_measureTheory real_lebesgueTheory
+     real_probabilityTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "information"                                   *)
@@ -37,31 +22,8 @@ open real_sigmaTheory;
 
 val _ = new_theory "leakage";
 
-(* ------------------------------------------------------------------------- *)
-(* Helpful proof tools                                                       *)
-(* ------------------------------------------------------------------------- *)
-
-val REVERSE = Tactical.REVERSE;
-val Simplify = RW_TAC arith_ss;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
-val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val Cond =
-  DISCH_THEN
-  (fn mp_th =>
-   let
-     val cond = fst (dest_imp (concl mp_th))
-   in
-     KNOW_TAC cond >| [ALL_TAC, DISCH_THEN (MP_TAC o MP mp_th)]
-   end);
-
-val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-
-(* ************************************************************************* *)
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)
-(* ************************************************************************* *)
 (* ************************************************************************* *)
 
 val () = type_abbrev ("state", Type `:string -> 'a`);

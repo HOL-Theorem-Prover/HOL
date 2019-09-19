@@ -7,7 +7,7 @@ struct
 
 open HolKernel Parse boolTheory boolLib bossLib metisLib arithmeticTheory
      pred_setTheory pred_setLib pairTheory extra_pred_setTheory
-     listTheory numTheory simpLib extra_listTheory formalizeUseful
+     listTheory numTheory simpLib extra_listTheory hurdUtils
      stringTheory rich_listTheory stringSimps realTheory realLib
      listSimps extra_stringTheory extra_stringLib leakageTheory;
 

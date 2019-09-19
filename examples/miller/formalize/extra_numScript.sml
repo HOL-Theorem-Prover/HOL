@@ -4,7 +4,7 @@ app load ["bossLib","subtypeTheory","HurdUseful","extra_boolTheory"];
 quietdec := true;
 *)
 
-open HolKernel Parse boolLib bossLib arithmeticTheory HurdUseful
+open HolKernel Parse boolLib bossLib arithmeticTheory hurdUtils
      pred_setTheory subtypeTheory extra_boolTheory combinTheory;
 
 (*

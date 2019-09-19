@@ -1,1 +1,2 @@
-INCLUDES=miller
+PRE_INCLUDES = ../../src/probability 
+INCLUDES = miller

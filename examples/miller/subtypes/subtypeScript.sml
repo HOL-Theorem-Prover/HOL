@@ -12,7 +12,7 @@ app load
    "res_quanTheory", "ho_proverTools", "pairTheory"];
 *)
 
-open bossLib combinTheory pred_setTheory seqTheory HurdUseful
+open bossLib combinTheory pred_setTheory seqTheory hurdUtils
      res_quanTheory ho_proverTools pairTheory;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;

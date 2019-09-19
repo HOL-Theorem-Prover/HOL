@@ -1,21 +1,13 @@
-(* interactive mode
-loadPath := ["../ho_prover","../subtypes","../formalize"] @ !loadPath;
-app load
-  ["bossLib","realLib","ho_proverTools","extra_pred_setTools",
-   "sequenceTools","prob_canonTools","prob_algebraTheory","probTheory"];
-quietdec := true;
-*)
-
 open HolKernel Parse boolLib bossLib;
 
 open arithmeticTheory pred_setTheory
      listTheory sequenceTheory state_transformerTheory
-     HurdUseful extra_numTheory combinTheory
+     hurdUtils extra_numTheory combinTheory
      pairTheory realTheory realLib extra_boolTheory
      extra_pred_setTheory extra_realTheory extra_pred_setTools numTheory
      simpLib;
 
-open util_probTheory measureTheory probabilityTheory;
+open util_probTheory real_measureTheory real_probabilityTheory;
 open prob_algebraTheory probTheory;
 
 (* interactive mode
@@ -482,7 +474,7 @@ val PROB_BERN_UNIFORM_CUT_PAIR = store_thm
    >> RW_TAC bool_ss [REAL_ADD2_SUB2, REAL_SUB_REFL, REAL_ADD_RID]
    >> RW_TAC bool_ss [GSYM REAL_SUB_LDISTRIB, ABS_MUL, pow]
    >> MATCH_MP_TAC REAL_LE_MUL2
-   >> REVERSE (RW_TAC bool_ss [ABS_POS])
+   >> Reverse (RW_TAC bool_ss [ABS_POS])
    >- (POP_ASSUM MP_TAC
        >> RW_TAC bool_ss [o_DEF, GSPEC_DEST])
    >> KILL_TAC

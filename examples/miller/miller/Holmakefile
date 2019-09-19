@@ -1,5 +1,5 @@
-PRE_INCLUDES = ../prob ../formalize
-INCLUDES = ../ho_prover ../subtypes ../../RSA ../groups ../useful
+PRE_INCLUDES = ../../../src/probability 
+INCLUDES = ../prob ../formalize ../ho_prover ../subtypes ${HOLDIR}/examples/RSA ../groups
 OPTIONS = QUIT_ON_FAILURE
 
 all: $(DEFAULT_TARGETS) selftest.exe

@@ -17,7 +17,7 @@ app load
 "primeTheory", "dividesTheory", "gcdTheory"];
 *)
 
-open bossLib listTheory HurdUseful subtypeTools
+open bossLib listTheory hurdUtils subtypeTools
      pred_setTheory dividesTheory gcdTheory extra_pred_setTheory
      arithContext listContext relationTheory
      ho_proverTools extra_listTheory

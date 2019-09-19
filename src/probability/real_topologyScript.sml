@@ -26,10 +26,7 @@ open numTheory numLib unwindLib tautLib Arith prim_recTheory
      sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
      seqTheory limTheory transcTheory realLib topologyTheory;
 
-open wellorderTheory cardinalTheory util_probTheory;
-
-(* these two theories must be loaded at last, because they may have redefined
-   something in real theories, e.g. "inf" *)
+open wellorderTheory cardinalTheory hurdUtils util_probTheory;
 open iterateTheory productTheory;
 
 val _ = new_theory "real_topology";
@@ -39,8 +36,6 @@ val _ = ParseExtras.temp_loose_equality()
 (* MESON, METIS, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                         *)
 (* ------------------------------------------------------------------------- *)
 
-val Reverse = Tactical.REVERSE;
-fun K_TAC _ = ALL_TAC;
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
@@ -51,14 +46,6 @@ fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
 
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 val ASM_REAL_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC;
-
-val KILL_TAC = POP_ASSUM_LIST K_TAC;
-val Know = Q_TAC KNOW_TAC;
-val Suff = Q_TAC SUFF_TAC;
-
-fun wrap a = [a];
-val Rewr  = DISCH_THEN (REWRITE_TAC o wrap);
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
 
 fun PRINT_TAC s gl =                            (* from cardinalTheory *)
   (print ("** " ^ s ^ "\n"); ALL_TAC gl);

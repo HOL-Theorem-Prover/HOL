@@ -18,7 +18,7 @@ installPP subtypeTools.pp_context;
 *)
 
 open bossLib res_quanTheory pred_setTheory subtypeTheory
-     res_quanTools subtypeTools ho_proverTools HurdUseful
+     res_quanTools subtypeTools ho_proverTools hurdUtils
      ho_basicTools boolContext combinTheory;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;

@@ -1,8 +1,7 @@
-signature HurdUseful =
+signature hurdUtils =
 sig
 
   (* GENERAL *)
-
   type 'a thunk = unit -> 'a
   type 'a susp = 'a Susp.susp
   type ('a, 'b) maplet = {redex : 'a, residue : 'b}
@@ -190,8 +189,7 @@ sig
   val is_renaming_subst : ''b list -> ('a, ''b) subst -> bool
   val invert_renaming_subst : ''b list -> ('a, ''b) subst -> (''b, 'a) subst
 
-  (* HOL *)
-
+  (* HOL Types *)
   type 'a set = 'a HOLset.set
   type hol_type = Type.hol_type
   type term = Term.term
@@ -216,6 +214,7 @@ sig
   (* General *)
   val profile : ('a -> 'b) -> 'a -> 'b
   val parse_with_goal : term frag list -> goal -> term
+  val PARSE_TAC : (term -> tactic) -> term frag list -> tactic
 
   (* Term/type substitutions *)
   val empty_subst : substitution
@@ -247,8 +246,6 @@ sig
   val dest_bv : term list -> term -> int
   val is_bv : term list -> term -> bool
   val mk_bv : term list -> int -> term
-
-  (* Types *)
 
   (* Terms *)
   val type_vars_in_terms : term list -> hol_type list
@@ -338,9 +335,10 @@ sig
   val PURE_CONV_TAC : conv -> tactic
   val ASMLIST_CASES : tactic -> (term -> tactic) -> tactic
   val POP_ASSUM_TAC : tactic -> tactic
-  val THEN1 : tactic * tactic -> tactic
-  val REVERSE : tactic -> tactic
+  val Reverse : tactic -> tactic
   val TRUTH_TAC : tactic
+  val S_TAC : tactic
+  val Strip : tactic
   val K_TAC : 'a -> tactic
   val KILL_TAC : tactic
   val CONJUNCTS_TAC : tactic
@@ -349,9 +347,15 @@ sig
   val CHECK_ASMS_TAC : tactic
   val EXACT_MP_TAC : thm_tactic
   val STRONG_CONJ_TAC : tactic
+  val STRONG_DISJ_TAC : tactic
   val FORWARD_TAC : (thm list -> thm list) -> tactic
   val Know : term quotation -> tactic
   val Suff : term quotation -> tactic
+  val POP_ORW : tactic
+  val Cond : tactic
+  val Rewr  : tactic
+  val Rewr' : tactic
+  val art : thm list -> tactic
 
   (* Simple CNF conversion *)
   val CNF_CONV : conv
@@ -363,5 +367,10 @@ sig
   val MATCH_MP_DEPTH : int -> thm list -> thm list -> thm list
   val ASM_MATCH_MP_TAC_N : int -> thm list -> tactic
   val ASM_MATCH_MP_TAC : thm list -> tactic
+
+  (* Tacticals for better expressivity, added by Chun Tian *)
+  val fix                       : Q.tmquote list -> tactic
+  val set                       : Q.tmquote list -> tactic
+  val take                      : Q.tmquote list -> tactic
 
 end
