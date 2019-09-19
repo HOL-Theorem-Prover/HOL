@@ -126,9 +126,22 @@ fun delsml_sfx s =
 
 val width_check_delay = Time.fromMilliseconds 1000
 
+type procinfo = {os : TextIO.outstream, tb : tailbuffer.t,
+                 status : monitor_status, start_time : Time.time}
+
+fun pinfo_upd (tb', stat) ({os,tb,status,start_time}:procinfo) =
+    {os = os, tb = tb', status = stat, start_time = start_time}
+
+
+fun squash_to wdth s =
+    if size s < wdth then StringCvt.padRight #" " wdth s
+    else "..." ^ String.extract(s, size s - (wdth - 4), NONE) ^ " "
+
+
 fun new {info,warn,genLogFile,time_limit} =
   let
-    val monitor_map = ref (Binarymap.mkDict String.compare)
+    val monitor_map =
+        ref (Binarymap.mkDict String.compare : (string,procinfo)Binarymap.dict)
     val last_width_check = ref (Time.now())
     val width = ref (getWidth())
     val last_child_cputime = ref Time.zeroTime
@@ -155,23 +168,23 @@ fun new {info,warn,genLogFile,time_limit} =
           let
             val tgtw = width div job_count - 4
           in
-            Binarymap.app (fn (k,(_,v)) =>
-                              print (polish tgtw k ^ statusString v ^ " "))
+            Binarymap.app (fn (k,{status,...}) =>
+                              print (polish tgtw k ^ statusString status ^ " "))
                           (!monitor_map);
             print CLR_EOL
           end
         else
           case Binarymap.listItems (!monitor_map) of
               [] => ()
-            | (k,((strm,tb),stat)) :: _ =>
+            | (k,{tb,status,...}) :: _ =>
               let
                 val s = case tailbuffer.last_line tb of NONE => "" | SOME s => s
                 val tgtw = width div 4
               in
                 print (polish tgtw k ^
                        rtrunc (width - tgtw - 5) (": " ^ s) ^ " " ^
-                       (case stat of
-                            Stalling _ => statusString stat
+                       (case status of
+                            Stalling _ => statusString status
                           | _ => "   "));
                 print CLR_EOL
               end
@@ -191,10 +204,8 @@ fun new {info,warn,genLogFile,time_limit} =
         | SOME info => f info
     fun taginfo tag colour pfx s =
       info (infopfx ^
-            StringCvt.padRight #" "
-                               (Width() - (10 + String.size pfx) - 1)
-                               (delsml_sfx tag) ^
-            pfx ^ colour (StringCvt.padLeft #" " 10 s) ^ CLR_EOL)
+            squash_to (Width() - (7 + String.size pfx) - 1) (delsml_sfx tag) ^
+            pfx ^ colour (StringCvt.padLeft #" " 7 s) ^ CLR_EOL)
     fun monitor msg =
       case msg of
           StartJob (_, tag) =>
@@ -206,14 +217,16 @@ fun new {info,warn,genLogFile,time_limit} =
                 }
           in
             monitor_map :=
-              Binarymap.insert(!monitor_map, tag, ((strm, tb), MRunning #"|"));
+              Binarymap.insert(!monitor_map, tag,
+                               {os = strm, tb = tb, status = MRunning #"|",
+                                start_time = Time.now()});
             startmsg tag;
             display_map();
             NONE
           end
         | Output((_, tag), t, chan, msg) =>
           stdhandle tag
-            (fn ((strm,tb),stat) =>
+            (fn (pinfo as {os = strm,tb,status=stat,...}) =>
                 let
                   val stat' = case stat of MRunning c => MRunning (nextchar c)
                                          | Stalling _ => MRunning #"|"
@@ -223,13 +236,13 @@ fun new {info,warn,genLogFile,time_limit} =
                   TextIO.flushOut strm;
                   monitor_map :=
                     Binarymap.insert(!monitor_map, tag,
-                                     (((strm,append msg tb), stat')));
+                                     pinfo_upd (append msg tb, stat') pinfo);
                   display_map();
                   NONE
                 end)
         | NothingSeen(jkey as (_, tag), {delay,...}) =>
           let
-            fun after_check strm stat =
+            fun after_check (pi as {os = strm, status = stat, tb, start_time}) =
               let
                 val stat' =
                     case stat of
@@ -239,19 +252,19 @@ fun new {info,warn,genLogFile,time_limit} =
                       | Stalling _ => Stalling delay
               in
                 monitor_map :=
-                  Binarymap.insert(!monitor_map, tag, (strm, stat'));
+                  Binarymap.insert(!monitor_map, tag, pinfo_upd (tb, stat') pi);
                 display_map();
                 NONE
               end
           in
             stdhandle
               tag
-              (fn (strm,stat) =>
-                  check_time (delay, jkey, (fn () => after_check strm stat)))
+              (fn pinfo =>
+                  check_time (delay, jkey, (fn () => after_check pinfo)))
           end
         | Terminated((_, tag), st, _) =>
           stdhandle tag
-            (fn ((strm,tb),stat) =>
+            (fn {os = strm,tb,status=stat,start_time} =>
                 let
                   val {fulllines,lastpartial,patterns_seen} =
                     tailbuffer.output tb
@@ -261,8 +274,10 @@ fun new {info,warn,genLogFile,time_limit} =
                   val {cutime,...} = Posix.ProcEnv.times()
                   val this_childs_time = Time.-(cutime, !last_child_cputime)
                   val _ = last_child_cputime := cutime
-                  val tstr = compact_time 5 true this_childs_time
-                  val pfx = "user-time: " ^ tstr
+                  val utstr = compact_time 5 true this_childs_time
+                  val rtstr = compact_time 5 true
+                                           (Time.-(Time.now(), start_time))
+                  val pfx = "real: " ^ rtstr ^ "  user: " ^ utstr
                 in
                   if st = W_EXITED then
                     if seen cheat_string orelse seen used_cheat_string then
@@ -271,7 +286,7 @@ fun new {info,warn,genLogFile,time_limit} =
                       taginfo
                         (if seen oracle_string then boldyellow else green)
                         pfx "OK"
-                  else (taginfo red pfx ("FAILED! <" ^ status_string ^ ">");
+                  else (taginfo red pfx ("FAIL<" ^ status_string ^ ">");
                         List.app (fn s => info (" " ^ dim s)) fulllines;
                         if lastpartial <> "" then info (" " ^ dim lastpartial)
                         else ());
@@ -282,7 +297,7 @@ fun new {info,warn,genLogFile,time_limit} =
                 end)
         | MonitorKilled((_, tag), _) =>
           stdhandle tag
-            (fn ((strm,tb), stat) =>
+            (fn {os = strm,tb, status = stat,...} =>
                 (taginfo tag red "" "M-KILLED";
                  TextIO.closeOut strm;
                  monitor_map := #1 (Binarymap.remove(!monitor_map, tag));
