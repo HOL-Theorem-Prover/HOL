@@ -39,6 +39,31 @@ fun nextchar #"|" = #"/"
   | nextchar #"\\" = #"|"
   | nextchar c = c
 
+val time_units = [("m", 60), ("h", 60), ("d", 24)]
+
+fun compact_time sz withsecs t =
+    let
+      val numSecs = Time.toSeconds t
+      val n_s = LargeInt.toString numSecs
+      val (su,sn) = if withsecs then ("s", 1) else ("", 0)
+      fun helper i n =
+          if i > 2 then CharVector.tabulate(sz-1, fn _ => #"9") ^ "d"
+          else let
+            val (u, f) = List.nth(time_units, i)
+            val n' = LargeInt.div(n,f)
+            val n'_s = LargeInt.toString n'
+          in
+            if size n'_s + 1 > sz then helper (i + 1) n'
+            else StringCvt.padLeft #" " sz (n'_s ^ u)
+          end
+    in
+      if size n_s + sn > sz then helper 0 numSecs
+      else StringCvt.padLeft #" " sz (n_s ^ su)
+    end
+
+val yellow_timelimit = Time.fromSeconds 10
+val red_timelimit = Time.fromSeconds 30
+
 datatype monitor_status = MRunning of char
                         | Stalling of Time.time
 (* statusString is always 3 characters; with a nonspace rightmost, except
@@ -46,19 +71,12 @@ datatype monitor_status = MRunning of char
 fun statusString (MRunning c) = StringCvt.padLeft #" " 3 (str c)
   | statusString (Stalling t) =
     let
-      val numSecs = Time.toSeconds t
-      open LargeInt
-      val n_s = toString numSecs
+      val colourf = if Time.<(t, yellow_timelimit) then (fn x => x)
+                    else if Time.<(t,red_timelimit) then boldyellow
+                    else red
     in
-      if numSecs < 5 then "   "
-      else if numSecs < 10 then "  " ^ n_s
-      else if numSecs < 30 then " " ^ boldyellow n_s
-      else if numSecs < 1000 then red (StringCvt.padLeft #" " 3 n_s)
-      else if numSecs < 100 * 60 then
-        red (StringCvt.padLeft #" " 2 (toString (numSecs div 60) ^ "m"))
-      else if numSecs <= 4 * 24 * 60 * 60 then
-        red (StringCvt.padLeft #" " 2 (toString (numSecs div 3600) ^ "h"))
-      else red ">4d"
+      if Time.<(t, Time.fromSeconds 5) then "   "
+      else colourf (compact_time 3 false t)
     end
 
 fun rtrunc n s =
@@ -113,6 +131,7 @@ fun new {info,warn,genLogFile,time_limit} =
     val monitor_map = ref (Binarymap.mkDict String.compare)
     val last_width_check = ref (Time.now())
     val width = ref (getWidth())
+    val last_child_cputime = ref Time.zeroTime
     fun Width () =
       let
         val t = Time.now()
@@ -170,12 +189,12 @@ fun new {info,warn,genLogFile,time_limit} =
       case Binarymap.peek (!monitor_map, tag) of
           NONE => (warn ("Lost monitor info for "^tag); NONE)
         | SOME info => f info
-    fun taginfo tag colour s =
+    fun taginfo tag colour pfx s =
       info (infopfx ^
             StringCvt.padRight #" "
-                               (Width() - String.size s - 1)
+                               (Width() - (10 + String.size pfx) - 1)
                                (delsml_sfx tag) ^
-            colour s ^ CLR_EOL)
+            pfx ^ colour (StringCvt.padLeft #" " 10 s) ^ CLR_EOL)
     fun monitor msg =
       case msg of
           StartJob (_, tag) =>
@@ -239,14 +258,20 @@ fun new {info,warn,genLogFile,time_limit} =
                   fun seen s = Holmake_tools.member s patterns_seen
                   val taginfo = taginfo tag
                   val status_string = Pstatus_to_string st
+                  val {cutime,...} = Posix.ProcEnv.times()
+                  val this_childs_time = Time.-(cutime, !last_child_cputime)
+                  val _ = last_child_cputime := cutime
+                  val tstr = compact_time 5 true this_childs_time
+                  val pfx = "user-time: " ^ tstr
                 in
                   if st = W_EXITED then
                     if seen cheat_string orelse seen used_cheat_string then
-                      taginfo boldyellow "CHEATED"
+                      taginfo boldyellow pfx "CHEATED"
                     else
                       taginfo
-                        (if seen oracle_string then boldyellow else green) "OK"
-                  else (taginfo red ("FAILED! <" ^ status_string ^ ">");
+                        (if seen oracle_string then boldyellow else green)
+                        pfx "OK"
+                  else (taginfo red pfx ("FAILED! <" ^ status_string ^ ">");
                         List.app (fn s => info (" " ^ dim s)) fulllines;
                         if lastpartial <> "" then info (" " ^ dim lastpartial)
                         else ());
@@ -258,7 +283,7 @@ fun new {info,warn,genLogFile,time_limit} =
         | MonitorKilled((_, tag), _) =>
           stdhandle tag
             (fn ((strm,tb), stat) =>
-                (taginfo tag red "M-KILLED";
+                (taginfo tag red "" "M-KILLED";
                  TextIO.closeOut strm;
                  monitor_map := #1 (Binarymap.remove(!monitor_map, tag));
                  display_map();
