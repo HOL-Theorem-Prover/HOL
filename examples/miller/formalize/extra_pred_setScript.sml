@@ -7,7 +7,7 @@ quietdec := true;
 *)
 
 open HolKernel Parse boolLib bossLib arithmeticTheory combinTheory
-     pred_setTheory HurdUseful boolContext listTheory
+     pred_setTheory hurdUtils boolContext listTheory
      res_quanTools res_quanTheory subtypeTheory subtypeTools
      extra_listTheory ho_proverTools listContext extra_numTheory
      pairTheory state_transformerTheory simpLib;

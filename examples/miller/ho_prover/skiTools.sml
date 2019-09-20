@@ -14,7 +14,7 @@ val () = app load
 val () = show_assums := true;
 *)
 
-open HurdUseful ho_basicTools unifyTools skiTheory;
+open hurdUtils ho_basicTools unifyTools skiTheory;
 
 infixr 0 oo ## ++ << || THENC ORELSEC THENR ORELSER;
 infix 1 >> |->;

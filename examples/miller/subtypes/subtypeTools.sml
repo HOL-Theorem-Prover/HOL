@@ -21,7 +21,7 @@ val () = show_assums := true;
 *)
 
 open Susp combinTheory pred_setTheory BasicProvers
-     HurdUseful subtypeTheory ho_discrimTools
+     hurdUtils subtypeTheory ho_discrimTools
      ho_proverTools ho_basicTools;
 
 infixr 0 oo ## ++ << || THENC ORELSEC THENR ORELSER -->;

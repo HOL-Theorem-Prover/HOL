@@ -20,7 +20,7 @@ val () = app load
 val () = show_assums := true;
 *)
 
-open bossLib listTheory numTheory arithmeticTheory formalizeUseful
+open bossLib listTheory numTheory arithmeticTheory hurdUtils
      pred_setTheory subtypeTheory extra_numTheory rich_listTheory
      realTheory realLib pairTheory;
 

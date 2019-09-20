@@ -1,4 +1,4 @@
-This example is a verification of the Miller-Rabin probabilistic
+This example is a verification of the Miller-Rabin probabilistic [1]
 primality test, incorporating some cute example probabilistic programs.
 
 The most convenient way to build it is change to the examples/miller/miller
@@ -10,4 +10,7 @@ but sadly it might become more trouble than it's worth.
 
 Joe Hurd, 9 January 2002
 
+[1] Hurd, J.: Formal verification of probabilistic algorithms, (2001). http://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-566.pdf
+
 (ported to latest probabilityTheory by Chun Tian (binghe), 21 July 2017)
+(ported to old_probabilityTheory by Chun Tian (binghe), 27 January 2019)

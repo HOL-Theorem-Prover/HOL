@@ -7,7 +7,7 @@ quietdec := true;
 *)
 
 open HolKernel Parse boolLib bossLib realTheory realLib
-     HurdUseful subtypeTheory extra_numTheory transcTheory
+     hurdUtils subtypeTheory extra_numTheory transcTheory
      pred_setTheory arithmeticTheory seqTheory combinTheory pairTheory
      extra_pred_setTheory extra_boolTheory extra_pred_setTools
      sumTheory;

@@ -2,33 +2,18 @@
 (* Create "informationTheory" setting up the theory of information           *)
 (* ========================================================================= *)
 
-(* ------------------------------------------------------------------------- *)
-(* Load and open relevant theories                                           *)
-(* (Comment out "load" and "loadPath"s for compilation)                      *)
-(* ------------------------------------------------------------------------- *)
-(*
-
-app load ["bossLib", "metisLib", "arithmeticTheory", "pred_setTheory", "listTheory",
-          "state_transformerTheory", "probabilityTheory", "formalizeUseful",
-          "combinTheory", "pairTheory", "realTheory", "realLib", "extra_boolTheory", "jrhUtils",
-          "extra_pred_setTheory", "realSimps", "extra_realTheory",
-          "measureTheory", "numTheory", "simpLib",
-          "seqTheory", "subtypeTheory",
-          "transcTheory", "limTheory", "stringTheory", "rich_listTheory", "stringSimps",
-          "listSimps", "lebesgueTheory", "borelTheory"];
-
-*)
-
 open HolKernel Parse boolLib bossLib metisLib arithmeticTheory pred_setTheory
-     listTheory state_transformerTheory
-     probabilityTheory formalizeUseful extra_numTheory combinTheory
-     pairTheory realTheory realLib extra_boolTheory jrhUtils
-     extra_pred_setTheory realSimps extra_realTheory measureTheory numTheory
-     simpLib seqTheory subtypeTheory
-     transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps
-     lebesgueTheory borelTheory;
+     listTheory state_transformerTheory combinTheory
+     pairTheory realTheory realLib jrhUtils
+     realSimps numTheory simpLib seqTheory subtypeTheory
+     transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps;
 
+open extra_boolTheory extra_numTheory extra_pred_setTheory extra_realTheory;
 open real_sigmaTheory;
+
+open hurdUtils util_probTheory sigma_algebraTheory real_measureTheory
+     real_borelTheory real_lebesgueTheory
+     real_probabilityTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "information"                                   *)
@@ -36,41 +21,13 @@ open real_sigmaTheory;
 
 val _ = new_theory "information";
 
-(* ------------------------------------------------------------------------- *)
-(* Helpful proof tools                                                       *)
-(* ------------------------------------------------------------------------- *)
-
-val REVERSE = Tactical.REVERSE;
-val Simplify = RW_TAC arith_ss;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
-val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val Cond =
-  DISCH_THEN
-  (fn mp_th =>
-   let
-     val cond = fst (dest_imp (concl mp_th))
-   in
-     KNOW_TAC cond >| [ALL_TAC, DISCH_THEN (MP_TAC o MP mp_th)]
-   end);
-
-val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-
-val safe_list_ss = bool_ss ++ LIST_ss;
-val safe_string_ss = bool_ss ++ STRING_ss;
-val arith_string_ss = arith_ss ++ STRING_ss;
-
-(* ************************************************************************* *)
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)
-(* ************************************************************************* *)
 (* ************************************************************************* *)
 
 val KL_divergence_def = Define
    `KL_divergence b s u v =
         integral (space s, subsets s, u) (\x. logr b ((RN_deriv (space s, subsets s, v) u) x))`;
-
 
 val mutual_information_def = Define
    `mutual_information b p s1 s2 X Y  =
@@ -96,15 +53,12 @@ val conditional_mutual_information_def = Define
 
 
 (* ************************************************************************* *)
-(* ************************************************************************* *)
 (* Proofs                                                                    *)
-(* ************************************************************************* *)
 (* ************************************************************************* *)
 
 (* ************************************************************************* *)
 (* Reductions                                                                *)
 (* ************************************************************************* *)
-
 
 val finite_mutual_information_reduce = store_thm
   ("finite_mutual_information_reduce",

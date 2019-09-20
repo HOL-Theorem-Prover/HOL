@@ -45,8 +45,43 @@ New features:
 Bugs fixed:
 -----------
 
+*  `extrealTheory`: the old definition of `extreal_add` wrongly allows
+   `PosInf + NegInf = PosInf`, while the definition of `extreal_sub` wrongly
+    allows `PosInf - PosInf = PosInf` and `NegInf - NegInf = PosInf`. Now
+    these cases are unspecified, so is division-by-zero (which is indeed
+    allowed for reals in `realTheory`). As a consequence, now all
+   `EXTREAL_SUM_IAMGE`-related theorems require that there must be no
+    mixing of `PosInf` and `NegInf` in the sum elements.
+    A bug in `ext_suminf` with non-positive functions is also fixed.
+
+    There is a major backwards-incompatibility: the above changes may
+    lead to more complicated proofs when using extreals, while better 
+    alignments with textbook proofs are achieved, on the other hand.
+
 New theories:
 -------------
+
+*  `measureTheory`, `lebesgueTheory`, `martingaleTheory` and `probabilityTheory`:
+    the type of measure/probability has been upgrade
+    from `('a set) -> real` to `('a set) -> extreal`, better aligned with
+    modern textbooks. Many new theorems were added.
+
+    There is a major backwards-incompatibility: old proof scripts
+    using real-valued measure and probability theory should now
+    instead open `sigma_algebraTheory`, `real_measureTheory`,
+    `real_borelTheory`, `real_lebesgueTheory` and `real_probabilityTheory`.
+
+*  `sigma_algebraTheory`: the pure set-theoretic theory of sigma-algebra
+    has been moved from `measureTheory` into a dedicated `sigma_algebraTheory`,
+    adding also some other system of sets (ring, semiring, and dynkin system).
+    This theory is now shared by both `measureTheory` and `real_measureTheory`.
+
+*  `borelTheory`: the extreal-based Borel space and Borel-measurable
+    sets is now moved from `measureTheory` into `borelTheory` with
+    many new theorems added.
+
+    There is a minor backwards-incompatibility: some old proof scripts using
+   `measureTheory` should now also open `sigma_algebraTheory` and `borelTheory`.
 
 New tools:
 ----------

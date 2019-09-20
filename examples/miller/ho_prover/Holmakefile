@@ -1,2 +1,2 @@
+INCLUDES = ../../../src/probability
 OPTIONS = QUIT_ON_FAILURE
-INCLUDES = ../useful

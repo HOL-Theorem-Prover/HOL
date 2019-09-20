@@ -1,0 +1,3 @@
+PRE_INCLUDES = ../../src/probability 
+INCLUDES = ../miller/subtypes
+OPTIONS = QUIT_ON_FAILURE
