@@ -144,7 +144,12 @@ fun new {info,warn,genLogFile,time_limit} =
         ref (Binarymap.mkDict String.compare : (string,procinfo)Binarymap.dict)
     val last_width_check = ref (Time.now())
     val width = ref (getWidth())
-    val last_child_cputime = ref Time.zeroTime
+    val last_child_cputime = let
+      val {cutime,...} = Posix.ProcEnv.times()
+    in
+      ref cutime
+    end
+
     fun Width () =
       let
         val t = Time.now()
