@@ -23,17 +23,23 @@ val transitive_def =
 Q.new_definition
 ("transitive_def",
    `transitive (R:'a->'a->bool) = !x y z. R x y /\ R y z ==> R x z`);
-val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="transitive"},name=(["Relation"],"transitive")}
+val _ = OpenTheoryMap.OpenTheory_const_name
+          {const={Thy="relation",Name="transitive"},
+           name=(["Relation"],"transitive")}
 
 val reflexive_def = new_definition(
   "reflexive_def",
   ``reflexive (R:'a->'a->bool) = !x. R x x``);
-val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="reflexive"},name=(["Relation"],"reflexive")}
+val _ = OpenTheoryMap.OpenTheory_const_name
+          {const={Thy="relation",Name="reflexive"},
+           name=(["Relation"],"reflexive")}
 
 val irreflexive_def = new_definition(
   "irreflexive_def",
   ``irreflexive (R:'a->'a->bool) = !x. ~R x x``);
-val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="irreflexive"},name=(["Relation"],"irreflexive")}
+val _ = OpenTheoryMap.OpenTheory_const_name
+          {const={Thy="relation",Name="irreflexive"},
+           name=(["Relation"],"irreflexive")}
 
 val symmetric_def = new_definition(
   "symmetric_def",
@@ -81,7 +87,9 @@ val _ = Unicode.unicode_version {u = Unicode.UChar.sup_plus, tmnm = "TC"}
 val _ = TeX_notation {hol = Unicode.UChar.sup_plus,
                       TeX = ("\\HOLTokenSupPlus{}", 1)}
 val _ = TeX_notation {hol = "^+", TeX = ("\\HOLTokenSupPlus{}", 1)}
-val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="TC"},name=(["Relation"],"transitiveClosure")}
+val _ = OpenTheoryMap.OpenTheory_const_name
+          {const={Thy="relation",Name="TC"},
+           name=(["Relation"],"transitiveClosure")}
 
 
 Inductive RTC:
@@ -864,7 +872,8 @@ val RTC_lifts_invariants = Q.store_thm(
 val WF_DEF =
 Q.new_definition
  ("WF_DEF", `WF R = !B. (?w:'a. B w) ==> ?min. B min /\ !b. R b min ==> ~B b`);
-val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="WF"},name=(["Relation"],"wellFounded")}
+val _ = OpenTheoryMap.OpenTheory_const_name
+          {const={Thy="relation",Name="WF"},name=(["Relation"],"wellFounded")}
 
 (*---------------------------------------------------------------------------*)
 (* Misc. proof tools, from pre-automation days.                              *)
@@ -948,7 +957,8 @@ val WF_INDUCT_TAC =
                               (BETA_CONV o assert (eqRand o rator))) thi
     in MATCH_MP_TAC thf (asl,w)
     end
-    handle _ => raise mk_HOL_ERR "" "WF_INDUCT_TAC" "Unanticipated term structure"
+    handle _ => raise mk_HOL_ERR "" "WF_INDUCT_TAC"
+                      "Unanticipated term structure"
  in tac
  end;
 
@@ -1318,30 +1328,32 @@ REWRITE_TAC[RESTRICT_DEF,transitive_def] THEN REPEAT STRIP_TAC
  * Every x has an approximation. This is the crucial theorem.
  *---------------------------------------------------------------------------*)
 
-val EXISTS_LEMMA = Q.prove(
-`!R M. WF R /\ transitive R ==> !x. ?f:'a->'b. approx R M x f`,
-REPEAT GEN_TAC THEN STRIP_TAC
-  THEN WF_INDUCT_TAC
-  THEN Q.EXISTS_TAC`R` THEN ASM_REWRITE_TAC[] THEN GEN_TAC
-  THEN DISCH_THEN  (* Adjust IH by applying Choice *)
-    (ASSUME_TAC o Q.GEN`y` o Q.DISCH`R (y:'a) (x:'a)`
-                o (fn th => REWRITE_RULE[GSYM the_fun_def] th)
-                o SELECT_RULE o UNDISCH o Q.ID_SPEC)
-  THEN Q.EXISTS_TAC`\p. if R p x then M (the_fun R M p) p else ARB` (* witness *)
-  THEN REWRITE_TAC[approx_ext] THEN BETA_TAC THEN GEN_TAC
-  THEN COND_CASES_TAC
-  THEN ASM_REWRITE_TAC[]
-  THEN EXPOSE_CUTS_TAC
-  THEN RES_THEN (SUBST1_TAC o REWRITE_RULE[approx_def])     (* use IH *)
-  THEN REWRITE_TAC[CUTS_EQ]
-  THEN Q.X_GEN_TAC`v` THEN BETA_TAC THEN DISCH_TAC
-  THEN RULE_ASSUM_TAC(REWRITE_RULE[transitive_def]) THEN RES_TAC
-  THEN ASM_REWRITE_TAC[]
-  THEN EXPOSE_CUTS_TAC
-  THEN MATCH_MP_TAC RESTRICT_FUN_EQ
-  THEN MAP_EVERY Q.EXISTS_TAC[`M`,`w`]
-  THEN ASM_REWRITE_TAC[transitive_def]
-  THEN RES_TAC);
+Theorem EXISTS_LEMMA[local]:
+  !R M. WF R /\ transitive R ==> !x. ?f:'a->'b. approx R M x f
+Proof
+REPEAT GEN_TAC >> STRIP_TAC
+  >> WF_INDUCT_TAC
+  >> Q.EXISTS_TAC`R` >> ASM_REWRITE_TAC[] >> GEN_TAC
+  >> DISCH_THEN  (* Adjust IH by applying Choice *)
+       (ASSUME_TAC o Q.GEN`y` o Q.DISCH`R (y:'a) (x:'a)`
+                   o (fn th => REWRITE_RULE[GSYM the_fun_def] th)
+                   o SELECT_RULE o UNDISCH o Q.ID_SPEC)
+  >> Q.EXISTS_TAC`\p. if R p x then M (the_fun R M p) p else ARB` (* witness *)
+  >> REWRITE_TAC[approx_ext] >> BETA_TAC >> GEN_TAC
+  >> COND_CASES_TAC
+  >> ASM_REWRITE_TAC[]
+  >> EXPOSE_CUTS_TAC
+  >> RES_THEN (SUBST1_TAC o REWRITE_RULE[approx_def])     (* use IH *)
+  >> REWRITE_TAC[CUTS_EQ]
+  >> Q.X_GEN_TAC`v` >> BETA_TAC >> DISCH_TAC
+  >> RULE_ASSUM_TAC(REWRITE_RULE[transitive_def]) >> RES_TAC
+  >> ASM_REWRITE_TAC[]
+  >> EXPOSE_CUTS_TAC
+  >> MATCH_MP_TAC RESTRICT_FUN_EQ
+  >> MAP_EVERY Q.EXISTS_TAC[`M`,`w`]
+  >> ASM_REWRITE_TAC[transitive_def]
+  >> RES_TAC
+QED
 
 
 val the_fun_unroll = Q.prove(
@@ -1534,25 +1546,30 @@ val INDUCTIVE_INVARIANT_WFREC = Q.store_thm
    THEN FULL_SIMP_TAC bool_ss [INDUCTIVE_INVARIANT_DEF]
    THEN METIS_TAC [WFREC_THM,RESTRICT_DEF]);
 
-val TFL_INDUCTIVE_INVARIANT_WFREC = Q.store_thm
-("TFL_INDUCTIVE_INVARIANT_WFREC",
- `!f R P M x. (f = WFREC R M) /\ WF R /\ INDUCTIVE_INVARIANT R P M ==> P x (f x)`,
- PROVE_TAC [INDUCTIVE_INVARIANT_WFREC]);
+Theorem TFL_INDUCTIVE_INVARIANT_WFREC:
+  !f R P M x. (f = WFREC R M) /\ WF R /\ INDUCTIVE_INVARIANT R P M ==> P x (f x)
+Proof PROVE_TAC [INDUCTIVE_INVARIANT_WFREC]
+QED
 
-val lem = BETA_RULE (REWRITE_RULE[INDUCTIVE_INVARIANT_DEF]
-             (Q.SPEC `\x y. D x ==> P x y` (Q.SPEC `R` INDUCTIVE_INVARIANT_WFREC)));
+val lem =
+  INDUCTIVE_INVARIANT_WFREC |> Q.SPEC ‘R’ |> Q.SPEC ‘\x y. D x ==> P x y’
+                            |> REWRITE_RULE[INDUCTIVE_INVARIANT_DEF]
+                            |> BETA_RULE
 
-val INDUCTIVE_INVARIANT_ON_WFREC = Q.store_thm
-("INDUCTIVE_INVARIANT_ON_WFREC",
- `!R P M D x. WF R /\ INDUCTIVE_INVARIANT_ON R D P M /\ D x ==> P x (WFREC R M x)`,
- SIMP_TAC bool_ss [INDUCTIVE_INVARIANT_ON_DEF] THEN PROVE_TAC [lem]);
+Theorem INDUCTIVE_INVARIANT_ON_WFREC:
+  !R P M D x. WF R /\ INDUCTIVE_INVARIANT_ON R D P M /\ D x ==>
+              P x (WFREC R M x)
+Proof
+ SIMP_TAC bool_ss [INDUCTIVE_INVARIANT_ON_DEF] THEN PROVE_TAC [lem]
+QED
 
 
-val TFL_INDUCTIVE_INVARIANT_ON_WFREC = Q.store_thm
-("TFL_INDUCTIVE_INVARIANT_ON_WFREC",
- `!f R D P M x.
-     (f = WFREC R M) /\ WF R /\ INDUCTIVE_INVARIANT_ON R D P M /\ D x ==> P x (f x)`,
- PROVE_TAC [INDUCTIVE_INVARIANT_ON_WFREC]);
+Theorem TFL_INDUCTIVE_INVARIANT_ON_WFREC:
+  !f R D P M x.
+     f = WFREC R M /\ WF R /\ INDUCTIVE_INVARIANT_ON R D P M /\ D x ==>
+     P x (f x)
+Proof PROVE_TAC [INDUCTIVE_INVARIANT_ON_WFREC]
+QED
 
 local val lem =
   GEN_ALL
@@ -1772,7 +1789,9 @@ val RSUBSET = new_definition(
   "RSUBSET",
   ``(RSUBSET) R1 R2 = !x y. R1 x y ==> R2 x y``);
 val _ = set_fixity "RSUBSET" (Infix(NONASSOC, 450));
-val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RSUBSET"},name=(["Relation"],"subrelation")}
+val _ = OpenTheoryMap.OpenTheory_const_name
+          {const={Thy="relation",Name="RSUBSET"},
+           name=(["Relation"],"subrelation")}
 val _ = Unicode.unicode_version {u = UnicodeChars.subset ^ UnicodeChars.sub_r,
                                  tmnm = "RSUBSET"}
 val _ = TeX_notation { hol = UnicodeChars.subset ^ UnicodeChars.sub_r,
@@ -1791,7 +1810,8 @@ val RUNION = new_definition(
   "RUNION",
   ``(RUNION) R1 R2 x y <=> R1 x y \/ R2 x y``);
 val _ = set_fixity "RUNION" (Infixl 500)
-val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RUNION"},name=(["Relation"],"union")}
+val _ = OpenTheoryMap.OpenTheory_const_name
+          {const={Thy="relation",Name="RUNION"},name=(["Relation"],"union")}
 
 val RUNION_COMM = store_thm(
   "RUNION_COMM",
@@ -1816,7 +1836,8 @@ val RINTER = new_definition(
   "RINTER",
   ``(RINTER) R1 R2 x y <=> R1 x y /\ R2 x y``);
 val _ = set_fixity "RINTER" (Infixl 600)
-val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RINTER"},name=(["Relation"],"intersect")}
+val _ = OpenTheoryMap.OpenTheory_const_name
+          {const={Thy="relation",Name="RINTER"},name=(["Relation"],"intersect")}
 val _ = Unicode.unicode_version {u = UnicodeChars.inter ^ UnicodeChars.sub_r,
                                  tmnm = "RINTER"}
 val _ = TeX_notation { hol = UnicodeChars.inter ^ UnicodeChars.sub_r,
@@ -2134,7 +2155,8 @@ val RUNIV = new_definition(
   "RUNIV",
   ``RUNIV x y = T``);
 val _ = export_rewrites ["RUNIV"]
-val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RUNIV"},name=(["Relation"],"universe")}
+val _ = OpenTheoryMap.OpenTheory_const_name
+          {const={Thy="relation",Name="RUNIV"},name=(["Relation"],"universe")}
 val _ = Unicode.unicode_version {
   u = UnicodeChars.universal_set ^ UnicodeChars.sub_r,
   tmnm = "RUNIV"}

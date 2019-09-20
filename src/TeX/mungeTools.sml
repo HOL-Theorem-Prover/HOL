@@ -37,7 +37,8 @@ fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
              OS.Process.exit OS.Process.failure)
 fun usage() =
     die ("Usage:\n  "^
-         CommandLine.name()^" [-w<linewidth>] [-m[<math-spacing>]] [--nomergeanalysis] " ^
+         CommandLine.name()^
+         " [-w<linewidth>] [-m[<math-spacing>]] [--nomergeanalysis] " ^
          "[overridesfile]\nor\n  "^
          CommandLine.name()^" -index filename")
 
@@ -143,7 +144,7 @@ fun stringOpt pos s =
             else
               (warn (pos, s ^ " is not a valid option"); NONE)
           else if size sfx > 2 andalso sub(sfx,1) = #"/" then
-            SOME(OverrideUpd((rmws pfx, size sfx - 2), rmws (slice(sfx,2,NONE))))
+            SOME(OverrideUpd((rmws pfx, size sfx - 2),rmws (slice(sfx,2,NONE))))
           else
             SOME (Inst (rmws pfx, rmws (slice(sfx,1,NONE))))
         end
@@ -259,7 +260,8 @@ fun mkinst loc opts tm = let
     fun foldthis ((nm1, nm2), (tyacc, instacc)) =
         if CharVector.sub(nm1,0) = #":" then
           if CharVector.sub(nm2,0) = #":" then
-            ((Parse.Type [QUOTE nm2] |-> Parse.Type [QUOTE nm1]) :: tyacc, instacc)
+            ((Parse.Type [QUOTE nm2] |-> Parse.Type [QUOTE nm1]) :: tyacc,
+             instacc)
           else (warn (loc, "Type substitution mal-formed"); die "")
         else if CharVector.sub(nm2,0) = #":" then
           (warn (loc, "Type substitution mal-formed"); die "")
