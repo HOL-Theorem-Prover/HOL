@@ -303,21 +303,10 @@ fun update_data_store p t tyname key upf =
             (sds_thm, sds_term,
              update_data_substore
                (allow_new, unknown_def ("Type", error_fun)) sds_type key upf)
-        | _ => Feedback.failwith ("Unkwown entry_type '"^ty^"'!")
+        | _ => Feedback.failwith ("Unkwown entry_type '"^tyname^"'!")
     end
 
 end;
-
-
-
-
-
-
-
-
-
-
-
 
 type parse_entry =
    {id          : (string * string),
