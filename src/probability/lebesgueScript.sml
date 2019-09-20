@@ -3310,10 +3310,10 @@ Proof
  >> Know `!n. 0 <= (\i. pos_fn_integral m (f i)) n`
  >- (RW_TAC std_ss [] \\
      MATCH_MP_TAC pos_fn_integral_pos >> art [])
- >> DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_alt_pos)) >> Rewr'
+ >> DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_def)) >> Rewr'
  >> Know `!x. suminf (\i. f i x) =
               sup (IMAGE (\n. SIGMA (\i. f i x) (count n)) univ(:num))`
- >- (GEN_TAC >> MATCH_MP_TAC ext_suminf_alt_pos \\
+ >- (GEN_TAC >> MATCH_MP_TAC ext_suminf_def \\
      RW_TAC std_ss []) >> Rewr'
  >> Know `!n. SIGMA (\i. pos_fn_integral m (f i)) (count n) =
               pos_fn_integral m (\x. SIGMA (\i. f i x) (count n))`

@@ -557,7 +557,7 @@ Proof
      MATCH_MP_TAC PROB_POSITIVE >> art [] \\
      POP_ASSUM MATCH_MP_TAC \\
      Q.EXISTS_TAC `n` >> art [])
- >> DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_alt_pos)) >> Rewr'
+ >> DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_def)) >> Rewr'
  >> Suff `prob p (BIGUNION (IMAGE f UNIV)) =
                   sup (IMAGE (prob p o (\n. BIGUNION (IMAGE f (count n)))) UNIV)`
  >- (RW_TAC std_ss []
@@ -622,7 +622,7 @@ Proof
  >> Know `!n. 0 <= (prob p o f) n`
  >- RW_TAC std_ss [o_DEF, le_refl] >> DISCH_TAC
  >> Know `suminf (prob p o f) = 0`
- >- RW_TAC std_ss [ext_suminf_alt_pos, o_DEF, EXTREAL_SUM_IMAGE_ZERO, FINITE_COUNT,
+ >- RW_TAC std_ss [ext_suminf_def, o_DEF, EXTREAL_SUM_IMAGE_ZERO, FINITE_COUNT,
                    sup_const_over_set, UNIV_NOT_EMPTY]
  >> RW_TAC std_ss []
  >> POP_ASSUM (REWRITE_TAC o wrap o SYM)
@@ -3860,7 +3860,7 @@ val Borel_Cantelli_Lemma2p = store_thm
      POP_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC `n` >> REWRITE_TAC []) >> DISCH_TAC
  >> Know `!x. suminf (\n. X n x) = S' x`
  >- (GEN_TAC >> Q.UNABBREV_TAC `S'` >> Q.UNABBREV_TAC `S` >> BETA_TAC \\
-     MATCH_MP_TAC ext_suminf_alt_pos \\
+     MATCH_MP_TAC ext_suminf_def \\
      Q.UNABBREV_TAC `X` >> RW_TAC std_ss [INDICATOR_FN_POS])
  >> DISCH_TAC >> fs []
  (* S' is also Borel-measurable (needed later) *)
@@ -3886,7 +3886,7 @@ val Borel_Cantelli_Lemma2p = store_thm
  >- (Q.PAT_X_ASSUM `!n. M n = P` (ONCE_REWRITE_TAC o wrap) \\
      Suff `suminf (prob p o E) =
            sup (IMAGE (\n. SIGMA (prob p o E) (count n)) univ(:num))` >- rw [] \\
-     MATCH_MP_TAC ext_suminf_alt_pos \\
+     MATCH_MP_TAC ext_suminf_def \\
      GEN_TAC >> SIMP_TAC std_ss [o_DEF] \\
      MATCH_MP_TAC PROB_POSITIVE >> art [])
  >> REWRITE_TAC [ETA_THM] >> DISCH_TAC
@@ -4151,7 +4151,6 @@ val Borel_0_1_Law = store_thm
 (* TO BE CONTINUED *)
 
 val _ = export_theory ();
-val _ = html_theory "probability";
 
 (* References:
 
