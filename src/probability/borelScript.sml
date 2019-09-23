@@ -217,7 +217,7 @@ Proof
     rpt STRIP_TAC
  >> Know `!n. 0 <= (\i. indicator_fn (a i) x) n`
  >- RW_TAC std_ss [INDICATOR_FN_POS]
- >> DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_alt_pos)) >> Rewr'
+ >> DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_def)) >> Rewr'
  >> RW_TAC std_ss [sup_eq', IN_UNIV, IN_IMAGE]
  >- (Cases_on `~(x IN BIGUNION (IMAGE a univ(:num)))`
      >- (FULL_SIMP_TAC std_ss [IN_BIGUNION_IMAGE, IN_UNIV] \\
@@ -2638,7 +2638,7 @@ Proof
               f x = sup (IMAGE (\n. SIGMA (\i. fn i x) (count n)) univ(:num))`
  >- (rpt STRIP_TAC \\
      RES_TAC >> Q.PAT_X_ASSUM `f x = Y` (ONCE_REWRITE_TAC o wrap) \\
-     MATCH_MP_TAC ext_suminf_alt_pos >> rw []) >> DISCH_TAC
+     MATCH_MP_TAC ext_suminf_def >> rw []) >> DISCH_TAC
  >> Q.PAT_X_ASSUM `!x. x IN space a ==> f x = suminf (\n. fn n x)` K_TAC
  >> MATCH_MP_TAC IN_MEASURABLE_BOREL_MONO_SUP
  >> Q.EXISTS_TAC `\n x. SIGMA (\i. fn i x) (count n)`
@@ -4028,7 +4028,6 @@ val limsup_suminf_indicator_space = store_thm
       MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `&n` >> art [] ]);
 
 val _ = export_theory ();
-val _ = html_theory "borel";
 
 (* References:
 

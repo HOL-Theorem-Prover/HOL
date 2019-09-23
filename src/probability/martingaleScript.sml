@@ -528,7 +528,6 @@ val EXTREAL_SUP_FUN_SEQ_MONO_IMAGE = store_thm
   >> METIS_TAC [le_antisym]);
 
 val _ = export_theory ();
-val _ = html_theory "martingale";
 
 (* References:
 

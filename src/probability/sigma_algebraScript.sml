@@ -2200,7 +2200,6 @@ Proof
 QED
 
 val _ = export_theory ();
-val _ = html_theory "sigma_algebra";
 
 (* References:
 

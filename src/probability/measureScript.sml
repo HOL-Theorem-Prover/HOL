@@ -369,7 +369,7 @@ val COUNTABLY_ADDITIVE_ADDITIVE_lemma = Q.prove (
  >> Know `!i:num. 0 <= (measure m o (\n. if n = 0 then s else if n = 1
                                          then t else {})) i`
  >- RW_TAC std_ss [o_DEF]
- >> DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_alt_pos)) >> Rewr'
+ >> DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_def)) >> Rewr'
  >> RW_TAC std_ss [sup_eq', o_DEF, IN_IMAGE, IN_UNIV]
  >- (Cases_on `2 <= n` >- METIS_TAC [le_refl] \\
     `(n = 0) \/ (n = 1)` by RW_TAC real_ss []
@@ -460,7 +460,7 @@ val COUNTABLY_ADDITIVE_FINITE_ADDITIVE_lemma = Q.prove (
     rpt STRIP_TAC
  >> Know `!j. 0 <= (measure m o (\i. if i < n then f i else {})) j`
  >- RW_TAC std_ss [o_DEF, le_refl]
- >> DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_alt_pos)) >> Rewr
+ >> DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_def)) >> Rewr
  >> RW_TAC std_ss [sup_eq, o_DEF, IN_IMAGE, IN_UNIV]
  >- (`y IN IMAGE (\n'. SIGMA (\i. measure m (if i < n then f i else {})) (count n')) univ(:num)`
         by METIS_TAC [IN_DEF] \\
@@ -784,7 +784,7 @@ Proof
      fs [positive_def] \\
      FIRST_X_ASSUM MATCH_MP_TAC \\
      MATCH_MP_TAC MEASURE_SPACE_DIFF >> art [])
- >> DISCH_THEN (MP_TAC o SYM o (MATCH_MP ext_suminf_alt_pos)) >> Rewr'
+ >> DISCH_THEN (MP_TAC o SYM o (MATCH_MP ext_suminf_def)) >> Rewr'
  >> MATCH_MP_TAC COUNTABLY_ADDITIVE
  >> CONJ_TAC >- FULL_SIMP_TAC std_ss [measure_space_def]
  >> CONJ_TAC
@@ -1597,7 +1597,7 @@ Proof
  (* stage work *)
  >> Know `!n. 0 <= (m o f) n`
  >- fs [positive_def, measure_def, measurable_sets_def]
- >> DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_alt_pos)) >> Rewr'
+ >> DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_def)) >> Rewr'
  >> RW_TAC std_ss [sup_eq', IN_IMAGE, IN_UNIV]
  >- (Cases_on `N <= n`
      >- (`count n = (count N) UNION (count n DIFF count N)`
@@ -2742,7 +2742,7 @@ Proof
      fs [positive_def] >> FIRST_X_ASSUM MATCH_MP_TAC \\
      MATCH_MP_TAC (REWRITE_RULE [subsets_def]
                     (Q.SPEC `(m_space m,measurable_sets m)` RING_DIFF)) >> art [])
- >> DISCH_THEN (MP_TAC o SYM o (MATCH_MP ext_suminf_alt_pos)) >> Rewr'
+ >> DISCH_THEN (MP_TAC o SYM o (MATCH_MP ext_suminf_def)) >> Rewr'
  >> MATCH_MP_TAC COUNTABLY_ADDITIVE >> art []
  >> CONJ_TAC
  >- (RW_TAC std_ss [IN_UNIV, IN_FUNSET] \\
@@ -2870,7 +2870,7 @@ Proof
  >- (RW_TAC std_ss [o_DEF] \\
      fs [positive_def] >> FIRST_X_ASSUM MATCH_MP_TAC \\
      fs [IN_FUNSET, IN_UNIV])
- >> DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_alt_pos)) >> Rewr'
+ >> DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_def)) >> Rewr'
  >> MATCH_MP_TAC sup_mono
  >> GEN_TAC
  >> GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [o_DEF]
@@ -2961,12 +2961,12 @@ val MEASURE_SPACE_RESTRICTION = store_thm
          and (*3*) is not needed by CARATHEODORY_SEMIRING.
  *)
 Theorem OUTER_MEASURE_CONSTRUCTION :
-  !sp sts m u. subset_class sp sts /\ {} IN sts /\ positive (sp,sts,m) /\
-               (u = outer_measure m (countable_covers sts)) ==>
-   (*1*) outer_measure_space (sp,POW sp,u) /\ (!x. x IN sts ==> u x <= m x) /\
-   (*2*) measure_space (sp,caratheodory_sets sp u,u) /\
-   (*3*) !v. outer_measure_space (sp,POW sp,v) /\ (!x. x IN sts ==> v x <= m x)
-             ==> !x. x SUBSET sp ==> v x <= u x
+    !sp sts m u. subset_class sp sts /\ {} IN sts /\ positive (sp,sts,m) /\
+                 (u = outer_measure m (countable_covers sts)) ==>
+         outer_measure_space (sp,POW sp,u) /\ (!x. x IN sts ==> u x <= m x) /\
+         measure_space (sp,caratheodory_sets sp u,u) /\
+         !v. outer_measure_space (sp,POW sp,v) /\ (!x. x IN sts ==> v x <= m x) ==>
+             !x. x SUBSET sp ==> v x <= u x
 Proof
     rpt GEN_TAC >> STRIP_TAC
  >> rename1 `positive (sp,sts,mu)` >> rename1 `m = _` (* m -> mu, u -> m *)
@@ -3065,7 +3065,7 @@ Proof
                  FULL_SIMP_TAC std_ss [positive_def, measure_def,
                                        GSPECIFICATION, IN_FUNSET,
                                        IN_UNIV, measurable_sets_def]) \\
-             DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_alt_pos)) >> Rewr' \\
+             DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_def)) >> Rewr' \\
              MATCH_MP_TAC le_sup_imp' \\
              REWRITE_TAC [IN_IMAGE, IN_UNIV] \\
              Q.EXISTS_TAC `0` >> BETA_TAC \\
@@ -3126,12 +3126,11 @@ Proof
          >- (MATCH_MP_TAC EQ_SYM \\
              MATCH_MP_TAC ext_suminf_add >> BETA_TAC \\
              GEN_TAC >> Reverse CONJ_TAC >- PROVE_TAC [le_mul, lt_le, pow_half_pos_le] \\
-             METIS_TAC [o_DEF]) >> Rewr' \\
+             SIMP_TAC std_ss [o_DEF] \\
+             fs [positive_def]) >> Rewr' \\
          MATCH_MP_TAC ext_suminf_mono >> BETA_TAC \\
-         GEN_TAC >> Reverse CONJ_TAC >- METIS_TAC [] \\
-         Suff `0 <= suminf (mu o f' n)`
-         >- PROVE_TAC [lt_infty,extreal_of_num_def,extreal_not_infty,lte_trans] \\
-         MATCH_MP_TAC ext_suminf_pos \\
+         Reverse CONJ_TAC >- METIS_TAC [] \\
+         GEN_TAC >> MATCH_MP_TAC ext_suminf_pos \\
          GEN_TAC >> REWRITE_TAC [o_DEF] >> BETA_TAC \\
          Suff `f' n n' IN sts` >- PROVE_TAC [positive_def, measurable_sets_def, measure_def] \\
         `f' n IN C (f n)` by METIS_TAC [] >> POP_ASSUM MP_TAC \\
@@ -3402,7 +3401,7 @@ Proof
          >- (GEN_TAC >> SIMP_TAC std_ss [o_DEF] \\
              FIRST_X_ASSUM MATCH_MP_TAC \\
              ASM_SET_TAC []) \\
-         DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_alt_pos)) >> Rewr' \\
+         DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_def)) >> Rewr' \\
          REWRITE_TAC [sup_le'] >> GEN_TAC \\
          SIMP_TAC std_ss [IN_IMAGE, IN_UNIV, IN_COUNT] >> STRIP_TAC \\
          POP_ASSUM (ONCE_REWRITE_TAC o wrap) \\
@@ -3460,7 +3459,7 @@ Proof
      >- (GEN_TAC >> SIMP_TAC std_ss [o_DEF] \\
          FIRST_X_ASSUM MATCH_MP_TAC \\
          FULL_SIMP_TAC std_ss [subset_class_def]) \\
-     DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_alt_pos)) >> Rewr' \\
+     DISCH_THEN (MP_TAC o (MATCH_MP ext_suminf_def)) >> Rewr' \\
      REWRITE_TAC [sup_le'] >> GEN_TAC \\
      SIMP_TAC std_ss [IN_IMAGE, IN_UNIV, IN_COUNT] \\
      STRIP_TAC >> POP_ASSUM (ONCE_REWRITE_TAC o wrap) \\
@@ -3503,7 +3502,6 @@ Proof
  >> Reverse CONJ_TAC
  >- (MATCH_MP_TAC ext_suminf_mono \\
      RW_TAC std_ss [o_DEF] \\
-     MATCH_MP_TAC pos_not_neginf \\
     `positive (sp,POW sp,v)` by PROVE_TAC [outer_measure_space_def] \\
      METIS_TAC [positive_def, measurable_sets_def, measure_def, subset_class_def, IN_POW])
  >> MATCH_MP_TAC le_trans
@@ -4386,13 +4384,13 @@ Proof
          MATCH_MP_TAC (REWRITE_RULE [subsets_def] (Q.SPEC `(sp,sts)` SEMIRING_INTER)) \\
          art []) >> Rewr' \\
   (* suminf (mu o (\i. f i INTER x)) <= suminf (mu o f) *)
-     MATCH_MP_TAC ext_suminf_mono >> GEN_TAC >> SIMP_TAC std_ss [o_DEF] \\
+     MATCH_MP_TAC ext_suminf_mono >> SIMP_TAC std_ss [o_DEF] \\
      STRONG_CONJ_TAC
-     >- (MATCH_MP_TAC pos_not_neginf \\
-         fs [positive_def, measure_def, measurable_sets_def] \\
+     >- (GEN_TAC >> fs [positive_def, measure_def, measurable_sets_def] \\
          Q.PAT_X_ASSUM `!s. s IN sts ==> 0 <= mu s` MATCH_MP_TAC \\
          MATCH_MP_TAC (REWRITE_RULE [subsets_def] (Q.SPEC `(sp,sts)` SEMIRING_INTER)) \\
          METIS_TAC [SUBSET_DEF]) >> DISCH_TAC \\
+     GEN_TAC \\
     `increasing (sp,sts,mu)`
         by PROVE_TAC [SEMIRING_PREMEASURE_INCREASING, premeasure_def,
                       m_space_def, measurable_sets_def] \\
@@ -4529,7 +4527,7 @@ Proof
            PROVE_TAC [subset_class_def] ]) \\
      Know `suminf (mu o f) = suminf (m o f)`
      >- (MATCH_MP_TAC ext_suminf_eq >> SIMP_TAC std_ss [o_DEF] \\
-         CONJ_TAC >- (DISJ1_TAC >> GEN_TAC >> MATCH_MP_TAC pos_not_neginf \\
+         CONJ_TAC >- (GEN_TAC \\
                       PROVE_TAC [positive_def, measure_def, measurable_sets_def]) \\
          GEN_TAC >> METIS_TAC []) >> Rewr' \\
      REWRITE_TAC [BIGUNION_OVER_INTER_L, BIGUNION_OVER_DIFF] \\
@@ -4558,17 +4556,16 @@ Proof
      Know `suminf (m o (\i. f i INTER s)) + suminf (m o (\i. f i DIFF s)) =
            suminf (\n. (m o (\i. f i INTER s)) n + (m o (\i. f i DIFF s)) n)`
      >- (MATCH_MP_TAC EQ_SYM >> MATCH_MP_TAC ext_suminf_add \\
-         GEN_TAC >> SIMP_TAC std_ss [o_DEF] \\
-         CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC \\
-                      MATCH_MP_TAC SUBSET_INTER_SUBSET_R >> PROVE_TAC [subset_class_def]) \\
+         RW_TAC std_ss [o_DEF]
+         >- (FIRST_X_ASSUM MATCH_MP_TAC \\
+             MATCH_MP_TAC SUBSET_INTER_SUBSET_R >> PROVE_TAC [subset_class_def]) \\
          FIRST_X_ASSUM MATCH_MP_TAC \\
          MATCH_MP_TAC SUBSET_DIFF_SUBSET >> PROVE_TAC [subset_class_def]) >> Rewr' \\
   (* suminf (\n. (m o (\i. f i INTER s)) n + (m o (\i. f i DIFF s)) n) <= suminf (m o f) *)
      MATCH_MP_TAC ext_suminf_mono \\
-     GEN_TAC >> SIMP_TAC std_ss [o_DEF] \\
+     SIMP_TAC std_ss [o_DEF] \\
      Reverse CONJ_TAC >- PROVE_TAC [] \\
-     MATCH_MP_TAC pos_not_neginf \\
-     MATCH_MP_TAC le_add \\
+     GEN_TAC >> MATCH_MP_TAC le_add \\
      CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC \\
                   MATCH_MP_TAC SUBSET_INTER_SUBSET_R >> PROVE_TAC [subset_class_def]) \\
      FIRST_X_ASSUM MATCH_MP_TAC \\
@@ -4809,7 +4806,6 @@ val SIGMA_FINITE_ALT2 = store_thm
       Q.EXISTS_TAC `n` >> REWRITE_TAC [] ]);
 
 val _ = export_theory ();
-val _ = html_theory "measure";
 
 (* References:
 
