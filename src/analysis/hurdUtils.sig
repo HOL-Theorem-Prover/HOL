@@ -347,6 +347,7 @@ sig
   val CHECK_ASMS_TAC : tactic
   val EXACT_MP_TAC : thm_tactic
   val STRONG_CONJ_TAC : tactic
+  val DISJ_TAC : tactic
   val STRONG_DISJ_TAC : tactic
   val FORWARD_TAC : (thm list -> thm list) -> tactic
   val Know : term quotation -> tactic

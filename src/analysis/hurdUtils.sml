@@ -1059,6 +1059,12 @@ in
   val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
 end;
 
+local
+  val th = prove (``!a b. (~a ==> b) ==> a \/ b``, PROVE_TAC [])
+in
+  val DISJ_TAC :tactic = MATCH_MP_TAC th >> DISCH_TAC
+end;
+
 val STRONG_DISJ_TAC = CONV_TAC (REWR_CONV (GSYM IMP_DISJ_THM)) >> STRIP_TAC;
 
 (* --------------------------------------------------------------------- *)

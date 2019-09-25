@@ -29,5 +29,6 @@ src/floating-point
 !examples/l3-machine-code/common
 !!examples/l3-machine-code/decompilers
 [poly]src/floating-point/native
+src/analysis
 src/probability
 src/temporal/src

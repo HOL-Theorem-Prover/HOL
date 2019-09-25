@@ -2043,22 +2043,22 @@ Constant & Overloaded symbol & Strength & Associativity \\ \hline
 \end{tabular}}
 \end{center}
 
-On the basis of {\small\verb+realTheory+}, the following  sequence of
+On the basis of {\small\verb+realTheory+}, the following sequence of
 theories is constructed:
 
 \begin{description}
-\item [topology] Topologies and metric spaces, including metric on
-the real line.
+\item [topology] General topology (ported from HOL Light).
+\item [metric] Metric spaces, including metric on the real line.
 \item [nets] Moore-Smith convergence nets, and special cases like
 sequences.
 \item [seq] Sequences and series of real numbers.
 \item [lim] Limits, continuity and differentiation.
 \item [powser] Power series.
 \item [transc] Transcendental functions, e.g., exp, sin,
-cos, ln, root, sqrt, pi, tan, asn, acs, atn. Also the Kurzweil-Henstock
-gauge integral the fundamental theorem of calculus, and McLaurin's
-theorem.
-
+cos, ln, root, sqrt, pi, tan, asn, acs, atn.
+\item [real_sigma] Summation of real numbers (the $\Sigma$ operator).
+\item [real_topology] Elementary topology in Euclidean space (ported
+  from HOL Light).
 \end{description}
 \index{real numbers, the HOL theory of@real numbers, the \HOL{} theory of|)}
 
@@ -2069,25 +2069,83 @@ The $\sqrt{-1}$ value is the \HOL{} constant \holtxt{i}.
 Numerals are supported (with the suffix \holtxt{c} available to force numerals to be parsed as complex numbers).
 The standard arithmetic operations are defined, with the appropriate theorems proved about them.
 
-\subsection{Probability theory}\label{prob}
-\index{probability, the HOL theory of@probability, the \HOL{} theory of}
+\subsection{Extended real numbers}
+\label{extreals}
+\index{extended real numbers, the HOL theory of@extreal numbers, the \HOL{} theory of|(}
 
-A foundational construction of probability theory developed by Joe
-Hurd~\cite{hurd-thesis}. First a type of boolean sequences is defined
-to model an infinite sequence of coin flips. Next a probability
-function is formalized which takes as input a set of boolean
-sequences, and returns a real number between 0 and 1. Unfortunately
-not all sets can be assigned a probability (the Banach-Tarski
-paradox), rather the sets that can be assigned a probability are
-called \emph{measurable sets}, and this is also formalized in the
-HOL theory.
+It is often helpful to use the values $+\infty$ and $-\infty$ in
+calculations. To do this properly, we have to consider the
+\emph{extended real line} $\overline{\mathbb{R}} := [-\infty,
++\infty]$. If we agree that $-\infty < x$ and $y < +\infty$ for all
+$x,y\in\mathbb{R}$, then $\overline{\mathbb{R}}$ inherits the ordering
+from $\mathbb{R}$ as well as the usual rules of addition, subtraction,
+multiplication and division of elements from $\mathbb{R}$. The latter needs to be
+augmented as shown in Table~\ref{tab:extrealAdd}~\cite[p.~61]{Schilling:2017}:
 
-Building on this foundation, the probability theory is used to define
-a sampling function that takes an infinite sequence of coin flips and
-a positive integer $N$, and returns an integer $n$ in the range $0\le
-n < N$, picked uniformly at random from the available choices. This
-sampling function for the uniform distribution is later used to verify
-the Miller-Rabin primality test.
+\begin{table}[ht]
+\begin{center}
+{\small
+\begin{tabular}{@{}c|cccc}    
+$+$ & 0 & $y$ & $+\infty$ & $-\infty$ \\ \hline
+  0 & 0 & $y$ & $+\infty$ & $-\infty$ \\
+  $x$ & $x$ & $x + y$ & $+\infty$ & $-\infty$ \\
+  $+\infty$ & $+\infty$ & $+\infty$ & $+\infty$ & $\nexists$ \\
+  $-\infty$ & $-\infty$ & $-\infty$ & $\nexists$ & $-\infty$ \\
+\end{tabular}
+\qquad
+\begin{tabular}{@{}c|cccc}    
+$-$ & 0 & $y$ & $+\infty$ & $-\infty$ \\ \hline
+  0 & 0 & $-y$ & $-\infty$ & $+\infty$ \\
+  $x$ & $x$ & $x - y$ & $-\infty$ & $+\infty$ \\
+  $+\infty$ & $+\infty$ & $+\infty$ & $\nexists$ & $+\infty$ \\
+  $-\infty$ & $-\infty$ & $-\infty$ & $-\infty$ & $\nexists$ \\
+\end{tabular}
+
+\vspace{1em}
+
+\begin{tabular}{@{}c|cccc}    
+$\cdot$ & 0 & $\pm b$ & $+\infty$ & $-\infty$ \\ \hline
+  0 & 0 & 0 & 0 & 0 \\
+  $\pm a$ & 0 & $a\cdot b$ & $\pm\infty$ & $\mp\infty$ \\
+  $+\infty$ & 0 & $\pm\infty$ & $+\infty$ & $-\infty$ \\
+  $-\infty$ & 0 & $\mp\infty$ & $-\infty$ & $+\infty$ \\
+\end{tabular}
+\qquad
+\begin{tabular}{@{}c|cccc}    
+$/$ & 0 & $\pm b$ & $+\infty$ & $-\infty$ \\ \hline
+  0 & $\nexists$ & 0 & 0 & 0 \\
+  $\pm a$ & $\nexists$ & $a / b$ & 0 & 0 \\
+  $+\infty$ & $\nexists$ & $\pm\infty$ & $\nexists$ & $\nexists$ \\
+  $-\infty$ & $\nexists$ & $\mp\infty$ & $\nexists$ & $\nexists$ \\
+\end{tabular}}
+\end{center}
+\caption{$+$, $-$, $\cdot$ and $/$ in $\overline{\mathbb{R}}$, where
+  $x, y\in\mathbb{R}$ and $a,b\in(0, \infty)$}
+\label{tab:extrealAdd}
+\end{table}
+
+\begin{center}
+{\small
+\begin{tabular}{@{}cccc}
+Constant & Overloaded symbol & Strength & Associativity \\ \hline
+{\small\verb+extreal_le+} &{\small\verb+<=+} & 450 & non \\
+{\small\verb+extreal_lt+} &{\small\verb+<+}  & 450 & non \\
+{\small\verb+extreal_add+} &{\small\verb%+%} & 500 & left \\
+{\small\verb+extreal_sub+} &{\small\verb%-%} & 500 & left \\
+{\small\verb+extreal_mul+} &{\small\verb%*%} & 600 & left \\
+{\small\verb+extreal_div+} & {\small\verb%/%} & 600 & left \\
+{\small\verb+extreal_of_num+} &{\small\verb%&%} & 900 & prefix \\
+{\small\verb+extreal_ainv+} &{\small\verb%~%} and {\small\verb%-%} & 900 & prefix \\
+{\small\verb+extreal_inv+} &{\small\verb+inv+} & & prefix \\
+{\small\verb+extreal_abs+} &{\small\verb+abs+} & & prefix \\
+{\small\verb+extreal_pow+} & {\small\verb+pow+} & 700 & right \\
+{\small\verb+extreal_exp+} &{\small\verb+exp+} & & prefix \\
+{\small\verb+extreal_sqrt+} &{\small\verb%sqrt%} & & prefix \\
+{\small\verb+extreal_logr+} &{\small\verb+logr+} & & prefix \\
+{\small\verb+extreal_lg+} &{\small\verb+lg+} & & prefix \\
+{\small\verb+extreal_ln+} &{\small\verb+ln+} & & prefix \\
+\end{tabular}}
+\end{center}
 
 \subsection{Bit vectors}
 \label{sec:bit-vectors}
@@ -4857,6 +4915,132 @@ See Figure~\ref{fig:bind-defns} for the bind definitions for a number of differe
 \end{figure}
 
 \index{monads|)}
+
+\section{Higher Mathematics}
+\label{sec:mathematics}
+
+\subsection{Univariate differential and integral calculus}
+\label{calculus}
+\index{calculus, the HOL theory of@calculus, the \HOL{} theory of}
+
+An extensive development of (univariate) differential and integral
+calculus, ported from HOL Light, is available in the theory \theoryimp{derivative} and
+\theoryimp{integration}.
+
+\subsubsection{Derivatives}
+
+A quintessentially analytic property is the derivative of a function. One might
+expect to find a higher-order `derivative' function \texttt{deriv}
+$\colon
+(\mathbb{R}\rightarrow\mathbb{R})\rightarrow(\mathbb{R}\rightarrow\mathbb{R})$
+mapping a function $f$ to its derivative $f'$. Actually, no such thing
+is defined in HOL, but rather a ternary operator
+\holtxt{has_derivative} where \holtxt{(f has_derivative f') (at x)}
+means `the function $f$ has a derivative $f'$ at the point $x$', or 
+\holtxt{(f has_derivative f') (at x within s)} means `the function $f$
+has a derivative $f'$ at the point $x$ within the set $s$'.
+Expanding out the definition, we see that
+the definition is much as an analyst might expect:
+
+\begin{hol}
+\begin{alltt}
+>>__ load "derivativeTheory";
+>>__ open derivativeTheory;
+##thm has_derivative_at
+
+##thm has_derivative_within
+\end{alltt}
+\end{hol}
+
+A similar operator is \holtxt{has_vector_derivative}, where
+\holtxt{(f has_vector_derivative f') (at x)} means `the function $f$
+has a derivative with value $f'$ at the point $x$'.
+The usual kinds of combining theorems are proved. For example, the derivative
+of a sum is the sum of the derivatives:
+\begin{hol}
+\begin{alltt}
+##thm HAS_DERIVATIVE_ADD
+\end{alltt}
+\end{hol}
+
+\subsubsection{Integrals}
+
+The version of integral calculus formalized in HOL is a 
+generalized Riemann integral called \emph{Henstock-Kurzweil Integral},
+or \emph{gauge integral}~\cite{Bartle:2001um}. Many functions which
+are not Riemann integrable can be shown to be Henstock-Kurzweil
+integrable. (In particular, a function is Lebesgue integrable if and
+only if the function and its absolute value are Henstock-Kurzweil
+integrable.)
+
+\holtxt{f integrable_on s} means `the function $f$ is integrable on a
+real set $s$',  similar for \holtxt{f absolutely_integrable_on s}.
+The fundamental theorem of calculus (in the equivalent forms of
+Riemann integral) is expressed below:
+\begin{hol}
+\begin{alltt}
+>>__ load "integrationTheory";
+>>__ open integrationTheory;
+##thm FUNDAMENTAL_THEOREM_OF_CALCULUS
+\end{alltt}
+\end{hol}
+
+The above theorem requires that, the function $f$ must be everywhere
+differentiable (i.e. has derivative) in the closed interval
+$[a,b]$. In fact, Henstock-Kurzweil Integral permits a
+countable number of exceptional points. This yields a significant
+improvement, as shown in the following strong version of the
+ fundamental theorem of calculus:
+\begin{hol}
+\begin{alltt}
+##thm FUNDAMENTAL_THEOREM_OF_CALCULUS_STRONG
+\end{alltt}
+\end{hol}
+
+\subsection{Probability Theory}
+\label{prob}
+\index{probability, the HOL theory of@probability, the \HOL{} theory of}
+
+A foundational construction of probability theory developed by Joe
+Hurd~\cite{hurd-thesis}, Aaron R. Coble~\cite{coble-thesis} and
+others.
+
+Unfortunately
+not all sets can be assigned a probability (the Banach-Tarski
+paradox), rather the sets that can be assigned a probability are
+called \emph{measurable sets}, and this is also formalized in the
+\HOL{} theory.
+
+\begin{description}
+\item [measure] Measure theory based on extended reals.
+\item [borel] The theory of Borel sets and Borel measurable functions
+  based on extended reals.
+\item [lebesgue] The theory of Lebesgue integration based on extended reals.
+\item [probability] Probability theory based on extended reals.
+\end{description}
+
+HOL also supports the old real-based Probability Theory:
+
+\begin{description}
+\item [real_measure] Measure theory based on reals.
+\item [real_borel] The theory of Borel sets and Borel measurable
+  functions based on reals.
+\item [real_lebesgue] The theory of Lebesgue integration based on reals.
+\item [real_probability] Probability theory based on reals.
+\end{description}
+
+In the \ml{examples/miller} directory, done by Hurd~\cite{hurd-thesis},
+first a type of boolean sequences is defined
+to model an infinite sequence of coin flips. Next a probability
+function is formalized which takes as input a set of boolean
+sequences, and returns a real number between 0 and 1. 
+Building on this foundation, the probability theory is used to define
+a sampling function that takes an infinite sequence of coin flips and
+a positive integer $N$, and returns an integer $n$ in the range $0\le
+n < N$, picked uniformly at random from the available choices. This
+sampling function for the uniform distribution is later used to verify
+the Miller-Rabin primality test.
+
 \section{Further Theories}
 Other theories of interest in \HOL{} are listed and briefly described
 in Figure~\ref{fig:further-hol-theories}.
