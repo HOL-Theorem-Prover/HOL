@@ -1104,6 +1104,19 @@ into
 If the special equality is not desired, the option \texttt{nodefsym} can be used to turn this off.
 The special equality symbol can also be redefined by changing the \LaTeX{} definition of the macro \ml{\bs{}HOLTokenDefEquality}.
 
+There are two variations on the \texttt{def} option:
+\begin{description}
+\item[\texttt{spaceddef}:]%
+\index{spaceddef, HOL in LaTeX option@\ml{spaceddef}, \HOL{} in \LaTeX{} option}%
+This option adds extra blank lines between successive conjuncts of a definition.
+\item[\ml{aligneddef}:]%
+\index{aligneddef, HOL in LaTeX option@\ml{aligneddef}, \HOL{} in \LaTeX{} option}%
+This option puts ampersands around the \ml{\bs{}HOLTokenDefEquality} macro call in the emitted \LaTeX{}.
+If the \LaTeX{} environment is an \texttt{array} or similar, this can ensure a nice column-based layout for one's definitions.
+\end{description}
+Both options can be used together, but \ml{aligneddef} will not work if \ml{nodefsym} is also used; if this combination is really required, it would be better to temporarily redefine (use \ml{\bs{}renewcommand}) \ml{\bs{}HOLTokenDefEquality}.
+
+
 \item[\texttt{depth}=$n$]
 Causes printing to be done with a maximum print depth of $n$; see Section~\ref{sec:pretty-print-depth}.
 

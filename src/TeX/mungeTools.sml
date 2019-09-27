@@ -4,7 +4,8 @@ struct
 open Lib Feedback HolKernel Parse boolLib
 
 datatype command = Theorem | Term | Type
-datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
+datatype opt = Turnstile | Case | TT | Def | SpacedDef | AlignedDef
+             | TypeOf | TermThm
              | Indent of int * bool
                  (* true: add spaces; false: just alter block indent *)
              | NoSpec
@@ -45,6 +46,7 @@ fun usage() =
 fun stringOpt pos s =
   case s of
     "|-" => SOME Turnstile
+  | "aligneddef" => SOME AlignedDef
   | "alltt" => SOME AllTT
   | "case" => SOME Case
   | "def" => SOME Def
@@ -485,16 +487,29 @@ in
           val (ind,iact) = optset_indent opts
           fun ind_bl p = block CONSISTENT ind [iact, p]
         in
-          if OptSet.has Def opts orelse OptSet.has SpacedDef opts then let
+          if OptSet.has Def opts orelse OptSet.has SpacedDef opts orelse
+             OptSet.has AlignedDef opts
+          then let
               val newline = if OptSet.has SpacedDef opts then
                               B [add_newline, add_newline]
                             else add_newline
               val m = if OptSet.has NoDefSym opts then (fn t => t)
                       else replace_topeq
               val lines = thm |> CONJUNCTS |> map (m o concl o SPEC_ALL)
+              val pr =
+                  if OptSet.has AlignedDef opts then
+                    let val overrides' =
+                            updatef(("(HOLDefEquality)",
+                                     ("&\\HOLTokenDefEquality{}&", 1)),
+                                    overrides)
+                    in
+                      optprintermod (raw_pp_term_as_tex overrides')
+                    end
+                  else
+                    stdtermprint
             in
               ind_bl (
-                block_list (block INCONSISTENT 0) stdtermprint newline lines
+                block_list (block INCONSISTENT 0) pr newline lines
               )
             end
           else if rulep then ind_bl (rule_print stdtermprint (concl thm))
