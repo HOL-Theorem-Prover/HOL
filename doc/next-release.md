@@ -62,7 +62,7 @@ New theories:
 -------------
 
 *  `measureTheory`, `lebesgueTheory`, `martingaleTheory` and `probabilityTheory`:
-    the type of measure/probability has been upgrade
+    the type of measure/probability has been upgraded
     from `('a set) -> real` to `('a set) -> extreal`, better aligned with
     modern textbooks. Many new theorems were added.
 
