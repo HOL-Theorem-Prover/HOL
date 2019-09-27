@@ -4,15 +4,7 @@ load "regexpLib";
 (* Matchers                                                                  *)
 (*---------------------------------------------------------------------------*)
 
-fun matcher q = #matchfn(regexpLib.matcher regexpLib.HOL (Regexp_Type.fromQuote q));
-
-val dom =
- let open regexpSyntax Regexp_Type regexpLib
-     val regexpEval = Count.apply (computeLib.CBV_CONV (regexp_compset()))
- in fn quote => regexpEval 
-                ``dom_Brz_alt empty
-                   (singleton (normalize ^(regexp_to_term(fromQuote quote))) ())``
-end;
+fun matcher q = #matchfn(regexpLib.gen_dfa regexpLib.HOL (Regexp_Type.fromQuote q));
 
 val test = matcher `foobar`;
  not (test "fo2b")
@@ -168,6 +160,25 @@ val utf8_matcher =
   `([\000-\127]|[\192-\223][\128-\191]|[\224-\239][\128-\191][\128-\191]|[\240-\244][\128-\191][\128-\191][\128-\191])*`;
 
 (*---------------------------------------------------------------------------*)
+(* Time-stamped data in JSON format                                          *)
+(*---------------------------------------------------------------------------*)
+(* Expensive, so commented out
+
+val time_matcher = time matcher
+  `\[\{"time":\d{13}(:\d{3})?,\w{1,20}:\{(\w{1,25}:\w{1,30},?)+\}\}\]`;
+
+time_matcher "[{\"time\":1234567890123:000,foo:{ted:teddy,sam:sammy}}]"
+  andalso
+not (time_matcher "[{\"time\":1234567890123:000,foo:{ted:teddy,   sam:sammy}}]")
+  andalso
+time_matcher "[{\"time\":1234567890123,foo:{ted:teddy,sam:sammy}}]"
+  andalso
+time_matcher "[{\"time\":1234567890123,foo:{ted:teddy}}]";
+*)
+
+(* message formats via intervals *)
+
+(*---------------------------------------------------------------------------*)
 (* CANBUS GPS message format. Taken from                                     *)
 (*                                                                           *)
 (* http://www.caemax.de/Downloads/QIC/QIC_GPS_DE.pdf                         *)
@@ -209,214 +220,23 @@ val utf8_matcher =
 
 val test_1800 = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999}`;
 val test_1801 = matcher `\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}`;
-val test_1801_packed = matcher `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}`;
 val test_1802 = matcher `\i{0,9999}\i{0,3599}.{4}`;
 val test_1802_alt = matcher `\i{0,9999}\i{0,3599}\k{0}{4}`;
 val test_1803 = matcher `\i{0,12}\i{0,16}\i{0,999}\i{0,999}\i{0,999}`;
 
 val test_18xx = matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999}\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}\i{0,9999}\i{0,3599}\i{0,12}\i{0,16}\i{0,999}\i{0,999}\i{0,999}`;
 
-(*---------------------------------------------------------------------------*)
-(* Time-stamped data in JSON format                                          *)
-(*---------------------------------------------------------------------------*)
-(* Expensive, so commented out
 
-val time_matcher = time matcher
-  `\[\{"time":\d{13}(:\d{3})?,\w{1,20}:\{(\w{1,25}:\w{1,30},?)+\}\}\]`;
+matcher `\i{1,31}`;
+matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}`;
+matcher `\i{~90,90}`;
+matcher `\i{~180,180}`;
+matcher `\i{0,17999}`;
+matcher `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999}`;
+matcher `.{8}\i{0,1}\i{~90,90}\i{0,360}`;
+matcher `.{8}(t|f)\i{~90,90}\i{0,360}`;
 
-time_matcher "[{\"time\":1234567890123:000,foo:{ted:teddy,sam:sammy}}]"
-  andalso
-not (time_matcher "[{\"time\":1234567890123:000,foo:{ted:teddy,   sam:sammy}}]")
-  andalso
-time_matcher "[{\"time\":1234567890123,foo:{ted:teddy,sam:sammy}}]"
-  andalso
-time_matcher "[{\"time\":1234567890123,foo:{ted:teddy}}]";
-*)
-
-(*---------------------------------------------------------------------------*)
-(* Timing tests for search-only                                              *)
-(*---------------------------------------------------------------------------*)
-(*
-
-val dom =
- let open regexpSyntax Regexp_Type regexpLib
-     val regexpEval = Count.apply (computeLib.CBV_CONV (regexp_compset()))
- in fn quote => ignore
-                (regexpEval ``dom_Brz_alt empty
-                                (singleton (normalize ^(regexp_to_term(fromQuote quote))) ())``)
-end;
-
-open Regexp_Type regexpSyntax regexpLib;
-val regexpEval = Count.apply (computeLib.CBV_CONV (regexp_compset()));
-
-time dom `foobar`;
-
-val regexp = fromQuote `foo`;
-val term = regexp_to_term regexp;
-
-Count.apply regexpEval ``dom_Brz_alt empty (singleton (normalize ^term) ())``;
-Count.apply regexpEval ``transitions ^term``;
-Count.apply regexpEval ``insert_regexp ^term empty``;
-val thm = Count.apply regexpEval 
- ``let arcs = transitions ^term in (insert_regexp ^term empty, MAP SND arcs)``;
-
-val (seen,wlist) = pairSyntax.dest_pair(rhs (concl thm))
-val (r,t) = listSyntax.dest_cons wlist;
-val thm1 = Count.apply regexpEval 
- ``let arcs = transitions ^r in 
-    (insert_regexp ^r ^seen, MAP SND arcs)``;
-
-fun step (seen,wlist) =
- let val (r,t) = listSyntax.dest_cons wlist
-     val thm = regexpEval 
-       ``if mem_regexp ^r ^seen then
-             (^seen,^t) 
-         else let arcs = transitions ^r
-              in (insert_regexp ^r ^seen, MAP SND arcs ++ ^t)``
-     val (seen',wlist') = pairSyntax.dest_pair(rhs (concl thm))
-     val len = length (fst(listSyntax.dest_list wlist'))
-     val _ = print ("worklist length: "^Int.toString len^"\n")
- in    
-   (seen',wlist')
- end;
-
-val seen0 = ``balanced_map$empty : regexp oset``;
-val wlist0 = ``[^term]``;
-
-val (seen,wlist) = step (seen0,wlist0);
-val (seen,wlist) = step (seen,wlist);
-
-
-ntimes step 500 (seen0,wlist0);
-
-val regexp = fromQuote `foo`;
-val term = regexp_to_term regexp;
-
-val seen0 = ``balanced_map$empty : regexp oset``;
-val tm = ``insert_regexp ^term empty``;
-val work0 = rhs(concl (regexpEval tm))
-
-fun step (seen,work) =
- let val thm = regexpEval 
-       ``let (m,t) = deleteFindMin ^work;
-             r = FST m;
-         in if mem_regexp r ^seen then
-             (^seen,t) 
-         else let arcs = transitions r
-              in (insert_regexp r ^seen, 
-                  FOLDR (\a wset. insert_regexp (SND a) wset) t arcs)``
-     val (seen',work') = pairSyntax.dest_pair(rhs (concl thm))
- in    
-   (seen',work')
- end;
-
-fun stepA (seen,work) =
- let val thm = regexpEval 
-       ``let (m,t) = deleteFindMin ^work;
-             r = FST m;
-         in if mem_regexp r ^seen then
-             (^seen,t) 
-         else let arcs = transitions r;
-                  awork = fromList regexp_compare (MAP (\a. (SND a,())) arcs);
-              in (insert_regexp r ^seen, 
-                  union regexp_compare t awork)``
-     val (seen',work') = pairSyntax.dest_pair(rhs (concl thm))
- in    
-   (seen',work')
- end;
-
-fun step (seen,work) =
- let val thm = regexpEval 
-       ``let (m0,t0) = deleteFindMin ^work;
-             r0 = FST m0;
-             arcs0 = transitions r0;
-             arc_work = fromList regexp_compare (MAP (\a. (SND a,())) arcs0);
-             seen1 = insert_regexp r0 ^seen ;
-             work1 = union regexp_compare t0 arc_work ;
-         in (r0,mem_regexp r0 ^seen, seen1,work1)``
- in    
-   thm
- end;
-
-fun step (seen,work) =
- let val thm = regexpEval 
-       ``let (m0,t0) = deleteFindMin ^work;
-             r0 = FST m0;
-             arcs0 = transitions r0;
-             seen1 = insert_regexp r0 ^seen ;
-             work1 = FOLDL (\wset a. insert_regexp (SND a) wset) t0 arcs0 ;
-         in (r0,mem_regexp r0 ^seen, seen1,work1)``
- in    
-   thm
- end;
-
-
-(* extra check somewhat slower
-fun step (seen,work) =
- let val thm = regexpEval 
-       ``let (m,t) = deleteFindMin ^work;
-             r = FST m;
-         in if mem_regexp r ^seen then
-             (^seen,t) 
-         else let arcs = transitions r
-              in (insert_regexp r ^seen, 
-                  FOLDL (\work a. if mem_regexp (SND a) ^seen
-                                   then work 
-                                   else insert_regexp (SND a) work) t arcs)``
-     val (seen',work') = pairSyntax.dest_pair(rhs (concl thm))
- in    
-   (seen',work')
- end;
-*)
-
-val (seen,work) = ntimes step 9 (seen0,work0);
-
-fun steps quote = 
- let val term = regexp_to_term (Regexp_Type.fromQuote quote)
-     val seen0 = ``balanced_map$empty : regexp oset``
-     val tm = ``insert_regexp ^term empty``
-     val work0 = rhs(concl (regexpEval tm))
-     fun iter (seen,work) = 
-      if same_const work ``balanced_map$Tip``
-       then (seen,work)
-       else iter (step (seen,work));
- in iter (seen0,work0)
- end;
- 
-time steps `foo`;
-time steps `foobar`;
-time steps `foobarbazxsdfasdf`;
-time steps `1`;
-time steps `.*1`;
-time steps `[0-9]`;
-time steps `[0-9]*`;
-time steps `(.*1)(12)*`;
-val _ =
- List.app dom
-  [`1`,
-   `.*1`,
-   `[0-9]`,
-   `[0-9]*`,
-   `(.*1)(12)*`,
-   `b*|b*(a|ab*a)b*`,
-   `b*ab*ab*`,
-   `[]*|.|..|...`,
-   `.?|..|...`,
-   `.|(ab)*|(ba)*`,
-   `~(.*(aa|bb).*)`,
-   `(.*00.*)&~(.*01)`,
-   `(.*111.*)&~(.*01|11*)`
-  ];
-
-print "\nDONE.\n"
-
-dom `\w{1,2}`;
-dom `\w{1,3}`;
-dom `\w{1,4}`;
-dom `\w{1,5}`;
-dom `\w{1,6}`;
-dom `\w{1,10}`;
-dom `\w{1,15}`;
-dom `\w{1,20}`;
-
-*)
+(* gps *)
+matcher `\i{~90,90}\i{~180,180}\{0,17999}`;
+matcher `(\i{~90,90}\i{~180,180}\{0,17999}){4}`;  (* slow *)
+matcher `.{8}(t|f)(\i{~90,90}\i{~180,180}\{0,17999}){4}`; (* slow *)

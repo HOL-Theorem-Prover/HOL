@@ -8,18 +8,6 @@ fun failwithERR e =
   (stdErr_print (Feedback.exn_to_string e);
    regexpMisc.fail());
 
-fun check_compset() =
- let fun join (s1,s2) = s2^"."^s1
- in case computeLib.unmapped (regexpLib.regexp_compset())
-     of [] => ()
-      | check_these =>
-         (stdErr_print "Unmapped consts in regexp_compset: \n  ";
-          stdErr_print (String.concat
-             (spreadlnWith {sep=", ", ln = "\n  ", width = 5}
-                           join check_these));
-          stdErr_print "\n\n")
- end
-
 fun HOLfile name quote (certificate,_,finals,table) =
  case certificate
   of NONE => ""
@@ -72,7 +60,7 @@ fun parse_args () =
       | otherwise  => NONE
  end
 
-fun deconstruct {certificate, final, matchfn, start, table} =
+fun deconstruct {certificate, final, matchfn, start, table, aux} =
  let fun toList V = List.map (curry Vector.sub V) (upto 0 (Vector.length V - 1))
  in (certificate,start, toList final, toList (Vector.map toList table))
  end;
@@ -84,10 +72,9 @@ fun main () =
      fun parse_regexp s =
        Regexp_Type.fromString s handle e => failwithERR e
      fun compile_regexp J r =
-       regexpLib.matcher J r handle e => failwithERR e
+       regexpLib.gen_dfa J r handle e => failwithERR e
  in
     stdErr_print "regexp2dfa: \n"
-(*  ; check_compset() *)
   ; case parse_args()
     of NONE => (printHelp(); regexpMisc.fail())
      | SOME (justify,lang,name,rstring) =>

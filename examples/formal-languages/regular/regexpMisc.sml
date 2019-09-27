@@ -55,4 +55,13 @@ val intervals =
 
 fun twoE i = IntInf.pow (IntInf.fromInt 2,i);
 
+fun ntimes f i x = if i <= 0 then x else ntimes f (i-1) (f x);
+
+fun cross L1 L2 = List.concat (map (fn x => map (pair x) L2) L1);
+
+fun transpose ll =
+  if Lib.all null ll then
+     []
+  else map hd ll :: transpose (map tl ll);
+
 end

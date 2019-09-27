@@ -230,26 +230,38 @@ Proof
   rw_tac list_ss [transitions_def] >> metis_tac [Empty_arcs_thm]
 QED
 
+(*---------------------------------------------------------------------------*)
+(* Given the outgoing arcs (c_1,r_1) ... (c_n,r_n) from node r, add all the  *)
+(* not-yet-seen r_i regexps to the state map and return the row as a list of *)
+(* (c_i, state_map(r_i)) pairs                                               *)
+(*---------------------------------------------------------------------------*)
+
 Definition extend_states_def :
- (extend_states next_state state_map trans [] = (next_state,state_map,trans)) /\
- (extend_states next_state state_map trans ((c,r')::t) =
-   case balanced_map$lookup regexp_compare r' state_map
-    of SOME n => extend_states next_state state_map ((c,n)::trans) t
-     | NONE   => extend_states (next_state + 1n)
-                   (balanced_map$insert regexp_compare r' next_state state_map)
-                   ((c,next_state)::trans)
+ (extend_states next_state state_map row [] = (next_state,state_map,row)) /\
+ (extend_states next_state state_map row ((c,r')::t) =
+   case lookup regexp_compare r' state_map
+    of SOME n => extend_states next_state state_map ((c,n)::row) t
+     | NONE   => extend_states
+                   (next_state + 1n)
+                   (insert regexp_compare r' next_state state_map)
+                   ((c,next_state)::row)
                    t)
 End
 
+(*---------------------------------------------------------------------------*)
+(* Compute the row corresponding to state r and cons it on to the table      *)
+(* under construction. Also keep the state_map uptodate.                     *)
+(*---------------------------------------------------------------------------*)
+
 Definition build_table_def :
-  build_table arcs r (next_state,state_map,table) =
-    let (next_state,state_map,trans) =
+ build_table arcs r (next_state,state_map,table) =
+   let (next_state',state_map',row) =
              extend_states next_state state_map [] arcs
-    in case balanced_map$lookup regexp_compare r state_map
-        of SOME n => (next_state, state_map, (n,trans)::table)
-         | NONE   => (next_state + 1n,
-                     insert regexp_compare r next_state state_map,
-                      (next_state,trans)::table)
+   in case lookup regexp_compare r state_map'
+       of SOME n => (next_state', state_map', (n,row)::table)
+        | NONE   => (next_state' + 1n,
+                     insert regexp_compare r next_state' state_map',
+                     (next_state',row)::table)
 End
 
 (*---------------------------------------------------------------------------*)

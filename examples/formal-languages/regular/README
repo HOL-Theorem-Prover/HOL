@@ -5,7 +5,7 @@ The code in this directory generates DFAs from regular expressions
 using the technique of Brzozowski derivatives. There is a full formal
 definition and correctness proof of a regexp compiler, along with some
 ML support code.  In particular, there are two mechanisms---meeting a
-single interface---available for compiling regexps to DFAs. 
+single interface---available for compiling regexps to DFAs.
 
   1. HOL proof
   2. SML code with no proofs generated
@@ -20,18 +20,18 @@ Concrete syntax of regular expressions
 
 See test.ml and test.hol for examples.
 
-  [...] = character set 
+  [...] = character set
   [^...] = complement char set
   .  = any char
   \d = [0-9]
-  \w = [a-zA-Z0-9_] 
+  \w = [a-zA-Z0-9_]
   \s = whitespace = [ \n\r\t\f]  (* Note the space character! *)
   \c = escape c, for c in {\,`,.,^,$,*,+,?,|,~,{,},[,],(,)}
   \ddd = ASCII character given in decimal representation (\000 to \255)
-  \i{lo,hi} = Interval of numbers between lo and hi inclusive. Details of endianess and 
+  \i{lo,hi} = Interval of numbers between lo and hi inclusive. Details of endianess and
      the representation of signed numbers are set to defaults which can be
      changed by Regexp_Type.{get,set}_intervalFn.
-    
+
   r|s = alternation
   r&s = intersection
   r* = Kleene star
@@ -43,7 +43,7 @@ See test.ml and test.hol for examples.
   r{,n} = r{0,n}
   rs  = concatenation
   ~r = complement
-  (r) = grouping 
+  (r) = grouping
 
 Note: For now, as traditional, spaces are significant in regexp
 concrete syntax.
@@ -79,14 +79,14 @@ Regexp_Match.
 
    * SML implementation of the regexp match compiler. Does not
      generate proofs. Is close to the algorithms in regexpTheory and
-     regexp_compilerTheory, having been derived from them. 
+     regexp_compilerTheory, having been derived from them.
 
    * A version that only runs the search and doesn't post-process to
      obtain the DFA is in the function domBrz. This is useful for
      performance debugging, and for visualizing the workings of the
      algorithm. Visualization is controlled by the "regexp-compiler"
      trace (default is "on").
-     
+
 Regexp_Numerics.
 
    * Provides support for encoding numbers into strings in various ways
@@ -97,7 +97,7 @@ DFA_Codegen.
 
    * Program support for generating state machines in Ada, C, Java, SML.
 
-charset{Script,Theory}. 
+charset{Script,Theory}.
 
    * The type of regular expressions uses character sets. Since there
      is more than one way to implement this, we have broken it out
@@ -120,7 +120,7 @@ vec_map{Script,Theory}
 
 regexp_compiler{Script,Theory}.
 
-   * HOL theory proving correctness of derivative-based compiler 
+   * HOL theory proving correctness of derivative-based compiler
     from regexps to DFAs.
 
 regexpSyntax.
@@ -128,7 +128,7 @@ regexpSyntax.
     * Support for manipulating regexp abstract syntax trees in HOL.
       Also maps between Regexp_Type.regexp and the HOL regexp type.
 
-regexpLib. 
+regexpLib.
 
    * HOL evaluator for the regexp compilation and matching functions
      defined in regexpTheory.
@@ -159,7 +159,7 @@ codegen
 Status.
 ========
 
-Jan 31. 2017.  
+Jan 31. 2017.
 
 * Added some more optimizations to Regexp_Match that aren't in the
   corresponding theories. See regexp_compare and build_or. See also
@@ -174,7 +174,7 @@ Jan 31. 2017.
 * Regexp_Type : exploring different ways of generating packed intervals. Not
   in its final form, or thoroughly tested.
 
-Feb 13. 2017.  
+Feb 13. 2017.
 
 * Moved formalization of charsets to be word64#word64#word64#word64. This
   will support CakeML translation. However, the implementation of the
@@ -198,7 +198,7 @@ July 1, 2017
 * Replaced regexp2{c,java,ml} by an all-inclusive regexp2dfa. Added options
   for theorem generation and Ada. The usage message looks like
 
-    regexp2dfa: 
+    regexp2dfa:
     Usage: regexp2dfa [-dfagen (HOL | SML)] (Ada | C | Java | ML | Thm) <name> '<regexp>'
 
 * Updated syntax for some examples.
@@ -213,3 +213,15 @@ July 1, 2019
   was incomplete and overly specialized. Padding has been removed.
 
 * Codegen now available from DFA_Codegen structure, as well as regexp2dfa.
+
+Sept 27, 2019
+
+* Extensive optimizations to speed up dfa generation by proof. Charset
+  membership and union are memoized and also the outgoing transitions
+  of a regexp are memoized in order to prevent them from being
+  generated twice (once when running dom_Brz_alt and once when running
+  exec_Brz). Smart derivatives of "Or" regexps are also dealt with
+  specially.  More can certainly still be done but at least now some
+  useful examples will go through in finite time.
+
+* The regexp_compset() has been removed and replaced by gen_dfa_conv.
