@@ -5,8 +5,6 @@ open HOLgrammars GrammarSpecials Lib Feedback term_grammar_dtype
 
 val ERROR = mk_HOL_ERR "term_grammar"
 
-type ppstream = Portable.ppstream
-
 type term = Term.term
 
 type nthy_rec = {Name : string, Thy : string}
@@ -121,6 +119,7 @@ datatype grammar = GCONS of
   {rules : (int option * grammar_rule) list,
    specials : special_info,
    numeral_info : (char * string option) list,
+   strlit_map : string Symtab.table,
    overload_info : overload_info,
    user_printers : (type_grammar.grammar * grammar, grammar) printer_info,
    absyn_postprocessors : (string * postprocessor) list,
@@ -160,27 +159,29 @@ fun preterm_processor (GCONS g) k =
 
 (* fupdates *)
 open FunctionalRecordUpdate
-fun gcons_mkUp z = makeUpdate8 z
+fun gcons_mkUp z = makeUpdate9 z
 fun update_G z = let
   fun from rules specials numeral_info overload_info user_printers
-           absyn_postprocessors preterm_processors next_timestamp =
+           absyn_postprocessors preterm_processors next_timestamp
+           strlit_map =
     {rules = rules, specials = specials, numeral_info = numeral_info,
      overload_info = overload_info, user_printers = user_printers,
-     absyn_postprocessors = absyn_postprocessors,
+     absyn_postprocessors = absyn_postprocessors, strlit_map = strlit_map,
      preterm_processors = preterm_processors, next_timestamp = next_timestamp}
   (* fields in reverse order to above *)
-  fun from' next_timestamp preterm_processors absyn_postprocessors user_printers
+  fun from' strlit_map next_timestamp preterm_processors absyn_postprocessors
+            user_printers
             overload_info numeral_info specials rules =
     {rules = rules, specials = specials, numeral_info = numeral_info,
      overload_info = overload_info, user_printers = user_printers,
-     absyn_postprocessors = absyn_postprocessors,
+     absyn_postprocessors = absyn_postprocessors, strlit_map = strlit_map,
      preterm_processors = preterm_processors, next_timestamp = next_timestamp }
   (* first order *)
   fun to f {rules, specials, numeral_info,
             overload_info, user_printers, absyn_postprocessors,
-            preterm_processors, next_timestamp} =
+            preterm_processors, next_timestamp, strlit_map} =
     f rules specials numeral_info overload_info user_printers
-      absyn_postprocessors preterm_processors next_timestamp
+      absyn_postprocessors preterm_processors next_timestamp strlit_map
 in
   gcons_mkUp (from, from', to)
 end z
@@ -191,6 +192,8 @@ fun fupdate_specials f (GCONS g) =
   GCONS (update_G g (U #specials (f (#specials g))) $$)
 fun fupdate_numinfo f (GCONS g) =
   GCONS (update_G g (U #numeral_info (f (#numeral_info g))) $$)
+fun fupdate_strlit_map f (GCONS g) =
+  GCONS (update_G g (U #strlit_map (f (#strlit_map g))) $$)
 
 fun mfupdate_overload_info f (GCONS g) = let
   val (new_oinfo,result) = f (#overload_info g)
@@ -417,6 +420,14 @@ val stdhol : grammar =
   {rules = [(SOME 0, PREFIX (BINDER [LAMBDA])),
             (SOME 4, INFIX RESQUAN_OP),
             (SOME 5, INFIX VSCONS),
+            (SOME 60,
+             INFIX (STD_infix([{term_name = fnapp_special,
+                                elements = [RE (TOK "$")],
+                                timestamp = 0,
+                                (* pp info irrelevant as will never print *)
+                                block_style =
+                                  (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                                paren_style = OnlyIfNecessary}], RIGHT))),
             (SOME 460,
              INFIX (STD_infix([{term_name = recwith_special,
                                 elements = [RE (TOK "with")],
@@ -454,7 +465,7 @@ val stdhol : grammar =
                         block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                         paren_style = Always}]),
             (NONE,
-             CLOSEFIX [{term_name = "",
+             CLOSEFIX [{term_name = recd_lform_name,
                         elements = [RE (TOK "<|"),
                                     ListForm {
                                       separator = [RE (TOK ";"),
@@ -470,6 +481,7 @@ val stdhol : grammar =
    specials = {lambda = ["\\"], type_intro = ":", endbinding = ".",
                restr_binders = [], res_quanop = "::"},
    numeral_info = [],
+   strlit_map = Symtab.empty,
    overload_info = Overload.null_oinfo,
    user_printers = (FCNet.empty, Binaryset.empty String.compare),
    absyn_postprocessors = [],
@@ -673,7 +685,13 @@ end
 
 
 fun remove_tok P tok r = let
-  fun rels_safe rels = not (List.exists (fn e => e = TOK tok) rels)
+  fun rel_matches rel =
+    case rel of
+        TOK t => t = tok
+      | ListTM{cons,nilstr,sep,...} => cons = tok orelse nilstr = tok orelse
+                                       sep = tok
+      | _ => false
+  fun rels_safe rels = not (List.exists rel_matches rels)
   fun rr_safe ({term_name = s, elements,...}:rule_record) =
     not (P s) orelse rels_safe (rule_elements elements)
   fun binder_safe b =
@@ -756,7 +774,7 @@ fun rules_for G nm = let
   fun search_rrlist rf acc rrl = let
     fun check rrec a =
       if #term_name rrec = nm then rrec2delta rf rrec :: a
-      else if #term_name rrec = "" then
+      else if term_name_is_lform (#term_name rrec) then
         case extract_lspec (rule_elements (#elements rrec)) of
             NONE => a
           | SOME {cons,nilstr,...} => if nm = cons orelse nilstr = nm then
@@ -862,12 +880,14 @@ fun listform_to_rule (lform : listspec) =
     val _ = app check_els [separator, leftdelim, rightdelim]
     val _ = app one_tok [separator, leftdelim, rightdelim]
     val els =
-        leftdelim @ [ListForm { separator = separator,
-                                block_info = binfo,
-                                cons = cons, nilstr = nilstr}] @
-        rightdelim
+        [PPBlock (leftdelim @ [ListForm { separator = separator,
+                                          block_info = binfo,
+                                          cons = cons, nilstr = nilstr}] @
+                  rightdelim,
+                  binfo)]
   in
-    {term_name = "", pp_elements = els, fixity = Closefix,
+    {term_name = GrammarSpecials.mk_lform_name {cons=cons,nilstr=nilstr},
+     pp_elements = els, fixity = Closefix,
      block_style = (AroundEachPhrase, binfo),
      paren_style = OnlyIfNecessary}
   end
@@ -880,7 +900,7 @@ fun rename_to_fixity_field
    paren_style = paren_style, block_style = block_style}
 
 fun standard_mapped_spacing {term_name,tok,fixity}  = let
-  val bstyle = (AroundSamePrec, (Portable.INCONSISTENT, 0))
+  val bstyle = (AroundSamePrec, (PP.INCONSISTENT, 0))
   val pstyle = OnlyIfNecessary
   val ppels =
       case fixity of
@@ -1000,6 +1020,9 @@ fun check c =
 
 fun add_numeral_form G (c, stropt) =
   fupdate_numinfo (update_assoc (check c, stropt)) G
+fun strlit_map (GCONS g) {tmnm} = Symtab.lookup (#strlit_map g) tmnm
+fun add_strlit_injector {tmnm,ldelim} =
+    fupdate_strlit_map (Symtab.update(tmnm,ldelim))
 
 structure userSyntaxFns = struct
   type 'a getter = string -> 'a
@@ -1042,14 +1065,18 @@ fun add_delta ud G =
     | CLR_OVL s =>
         fupdate_overload_info (#1 o Overload.remove_overloaded_form s) G
     | ADD_UPRINTER {codename = s, pattern} =>
-      let
-        val code = userSyntaxFns.get_userPP s
-          handle Binarymap.NotFound =>
-                 raise ERROR "add_delta"
-                    ("No code named "^s^" registered for add user-printer")
-      in
-        add_user_printer (s,pattern,code) G
-      end
+      if s = "" then
+        add_user_printer("", pattern, term_pp_types.dummyprinter) G
+      else
+        let
+          val code = userSyntaxFns.get_userPP s
+                     handle Binarymap.NotFound =>
+                            raise ERROR "add_delta"
+                                  ("No code named "^s^
+                                   " registered for add user-printer")
+        in
+          add_user_printer (s,pattern,code) G
+        end
     | ADD_ABSYN_POSTP {codename} =>
       let
         val code = userSyntaxFns.get_absynPostProcessor codename
@@ -1060,6 +1087,7 @@ fun add_delta ud G =
       in
         new_absyn_postprocessor (codename, code) G
       end
+    | ADD_STRLIT r => add_strlit_injector r G
 
 fun add_deltas uds G = List.foldl (uncurry add_delta) G uds
 
@@ -1146,7 +1174,10 @@ in
                                             (absyn_postprocessors0 G2),
          preterm_processors =
            bmap_merge (#preterm_processors g1) (#preterm_processors g2),
-         next_timestamp = Int.max(#next_timestamp g1, #next_timestamp g2)}
+         next_timestamp = Int.max(#next_timestamp g1, #next_timestamp g2),
+         strlit_map = Symtab.join (fn _ => fn (_,v2) => v2)
+                                  (#strlit_map g1, #strlit_map g2)
+        }
 end
 
 (* ----------------------------------------------------------------------
@@ -1155,10 +1186,8 @@ end
 
 datatype ruletype_info = add_prefix | add_suffix | add_both | add_nothing
 
-fun prettyprint_grammar_rules tmprint pstrm (GRS(rules,specials)) = let
-  open Portable
-  val {add_string, add_break, begin_block, end_block,
-       add_newline,...} = with_ppstream pstrm
+fun prettyprint_grammar_rules tmprint (GRS(rules,specials)) = let
+  open Portable HOLPP smpp
 
   fun pprint_rr m (rr:rule_record) = let
     val rels = rule_elements (#elements rr)
@@ -1181,34 +1210,31 @@ fun prettyprint_grammar_rules tmprint pstrm (GRS(rules,specials)) = let
           | SOME {fake,original = SOME{Thy,Name}} =>
               Thy ^ "$" ^ Name ^ " - %" ^ fake ^ "%"
 
-    val tmid_suffix0 = "  ["^ special_case (#term_name rr)^"]"
+    val tmid_suffix0 = "["^ special_case (#term_name rr)^"]"
     val tmid_suffix =
       case rels of
         [TOK s] => if s <> #term_name rr then tmid_suffix0 else ""
       | _ => tmid_suffix0
   in
-    begin_block INCONSISTENT 2;
-    add_string pfx;
-    pr_list (fn (TOK s) => add_string ("\""^s^"\"")
-              | TM => add_string "TM"
-              | ListTM {nilstr,cons,sep} =>
+    block PP.INCONSISTENT 0 (
+      add_string pfx >>
+      pr_list (fn (TOK s) => add_string ("\""^s^"\"")
+                | TM => add_string "TM"
+                | ListTM {nilstr,cons,sep} =>
                   add_string ("LTM<" ^
                               String.concatWith "," [nilstr,cons,sep] ^
                               ">"))
-            (fn () => add_string " ") (fn () => ()) rels;
-    add_string sfx;
-    add_string tmid_suffix;
-    end_block ()
+              (add_string " ") rels >>
+      add_string sfx >> add_break(2,4) >>
+      add_string tmid_suffix
+    )
   end
 
 
-  fun pprint_rrl (m:ruletype_info) (rrl : rule_record list) = let
-  in
-    begin_block INCONSISTENT 0;
-    pr_list (pprint_rr m) (fn () => add_string " |")
-            (fn () => add_break(1,0)) rrl;
-    end_block ()
-  end
+  fun pprint_rrl (m:ruletype_info) (rrl : rule_record list) =
+    block PP.INCONSISTENT 0 (
+      pr_list (pprint_rr m) (add_break(1,0) >> add_string "| ") rrl
+    )
 
   fun print_binder b = let
     open Lib
@@ -1222,20 +1248,14 @@ fun prettyprint_grammar_rules tmprint pstrm (GRS(rules,specials)) = let
     fun one_binder (s, tnminfo) =
         add_string (quote s ^ " <..binders..> " ^ endb ^ " TM" ^ tnminfo)
   in
-    pr_list one_binder
-            (fn () => add_string " |")
-            (fn () => add_break (1,0))
-            bnames
+    pr_list one_binder (add_break (1,0) >> add_string "| ") bnames
   end
 
 
-  fun print_binderl bl = let
-  in
-    begin_block INCONSISTENT 0;
-    pr_list print_binder (fn () => add_string " |")
-            (fn () => add_break (1,0)) bl;
-    end_block()
-  end
+  fun print_binderl bl =
+    block PP.INCONSISTENT 0 (
+      pr_list print_binder (add_break (1,0) >> add_string "| ") bl
+    )
 
 
   fun pprint_grule (r: grammar_rule) =
@@ -1255,11 +1275,11 @@ fun prettyprint_grammar_rules tmprint pstrm (GRS(rules,specials)) = let
           | RIGHT => "R-"
           | NONASSOC => "non-"
       in
-        begin_block CONSISTENT 0;
-        pprint_rrl add_both rrl;
-        add_break (3,0);
-        add_string ("("^assocstring^"associative)");
-        end_block()
+        block CONSISTENT 0 (
+          pprint_rrl add_both rrl >>
+          add_break (3,4) >>
+          add_string ("("^assocstring^"associative)")
+        )
       end
     | INFIX RESQUAN_OP => let
         val rsqstr = #res_quanop specials
@@ -1270,14 +1290,14 @@ fun prettyprint_grammar_rules tmprint pstrm (GRS(rules,specials)) = let
     | CLOSEFIX rrl => pprint_rrl add_nothing rrl
     | INFIX (FNAPP rrl) => let
       in
-        begin_block CONSISTENT 0;
-        add_string "TM TM  (function application)";
-        case rrl of [] => ()
-                  | _ => (add_string " |"; add_break(1,0);
-                          pprint_rrl add_both rrl);
-        add_break(3,0);
-        add_string ("(L-associative)");
-        end_block()
+        block CONSISTENT 0 (
+          add_string "TM TM  (function application)" >>
+          (case rrl of [] => nothing
+                     | _ => (add_string " |" >> add_break(1,0) >>
+                             pprint_rrl add_both rrl)) >>
+          add_break(3,0) >>
+          add_string ("(L-associative)")
+        )
       end
     | INFIX VSCONS => add_string "TM TM  (binder argument concatenation)"
 
@@ -1288,108 +1308,92 @@ fun prettyprint_grammar_rules tmprint pstrm (GRS(rules,specials)) = let
       | SOME n => "("^Int.toString n^")"
     val precstr = StringCvt.padRight #" " 7 precstr0
   in
-    begin_block CONSISTENT 0;
-    add_string precstr;
-    add_string "TM  ::=  ";
-    pprint_grule rule;
-    end_block()
+    block CONSISTENT 0 (
+      add_string precstr >>
+      add_string "TM  ::= " >>
+      block CONSISTENT 13 (pprint_grule rule)
+    )
   end
 
 in
-  pr_list print_whole_rule (fn () => ()) (fn () => add_break (1,0)) rules
+  pr_list print_whole_rule (add_break (1,0)) rules
 end
 
-fun prettyprint_grammar tmprint pstrm (G :grammar) = let
-  open Portable
-  val {add_string, add_break, begin_block, end_block,
-       add_newline,...} = with_ppstream pstrm
+fun prettyprint_grammar tmprint (G :grammar) = let
+  open Portable HOLPP smpp
   fun uninteresting_overload (k,r:Overload.overloaded_op_info) =
     length (#actual_ops r) = 1 andalso
     #Name (Term.dest_thy_const (hd (#actual_ops r))) = k
       handle HOL_ERR _ => false andalso
     length (Term.decls k) = 1
   fun print_overloading oinfo0 =
-    if List.all uninteresting_overload oinfo0 then ()
+    if List.all uninteresting_overload oinfo0 then nothing
     else let
       open Lib infix ##
-      fun nblanks n = String.implode (List.tabulate(n, (fn _ => #" ")))
+      fun nblanks n = CharVector.tabulate(n, fn _ => #" ")
       val oinfo1 = List.filter (not o uninteresting_overload) oinfo0
       val oinfo = Listsort.sort (String.compare o (#1 ## #1)) oinfo1
       val max =
         List.foldl (fn (oi,n) => Int.max(UTF8.size (#1 oi), n))
                    0
                    oinfo
-      fun pr_ov (overloaded_op,
+      fun pr_ov (overloaded_op0,
                 (r as {actual_ops,...}:Overload.overloaded_op_info)) =
-       let
-        fun pr_name t = let
-          val {Thy,Name,Ty} = Term.dest_thy_const t
+        let
+          val overloaded_op =
+              if overloaded_op0 = "" then "  <won't print>  "
+              else overloaded_op0
+          fun pr_name t =
+            trace ("types", 1) (tmprint (strip_overload_info G)) t
         in
-          case Term.decls Name of
-            [] => raise Fail "term_grammar.prettyprint: should never happen"
-          | [_] => add_string Name
-          | _ => add_string (Thy ^ "$" ^ Name)
-        end handle HOL_ERR _ => (add_string "(";
-                                 trace ("types", 1)
-                                       (tmprint (strip_overload_info G) pstrm)
-                                       t;
-                                 add_string ")")
-      in
-        begin_block INCONSISTENT 0;
-        add_string (overloaded_op^
-                    nblanks (max - UTF8.size overloaded_op)^
-                    " -> ");
-        add_break(1,2);
-        begin_block INCONSISTENT 0;
-        pr_list pr_name (fn () => ()) (fn () => add_break (1,0)) actual_ops;
-        end_block();
-        end_block()
-      end
+          block INCONSISTENT (max + 5) (
+            add_string (overloaded_op^
+                        nblanks (max - UTF8.size overloaded_op)^
+                        " ->  ") >>
+            pr_list pr_name (add_break (1,0)) actual_ops
+          )
+        end
     in
-      add_newline();
-      add_string "Overloading:";
-      add_break(1,2);
-      begin_block CONSISTENT 0;
-      pr_list pr_ov (fn () => ()) add_newline oinfo;
-      end_block ()
+      add_newline >>
+      add_string "Overloading:" >>
+      add_break(1,2) >>
+      block CONSISTENT 0 (pr_list pr_ov add_newline oinfo)
     end
   fun print_user_printers printers = let
     fun pr (pat,nm,f) =
-        (tmprint G pstrm pat; add_string ("       ->  "^nm))
+        (tmprint G pat >> add_string ("       ->  "^nm))
   in
-    if FCNet.size printers = 0 then ()
+    if FCNet.size printers = 0 then nothing
     else
-      (add_newline();
-       add_string "User printing functions:";
-       add_newline();
-       add_string "  ";
-       begin_block INCONSISTENT 0;
-       pr_list pr (fn () => ()) (fn () => add_newline())
-               (FCNet.itnet cons printers []);
-       end_block())
+      add_newline >>
+      add_string "User printing functions:" >>
+      add_newline >>
+      add_string "  " >>
+      block INCONSISTENT 2 (
+        pr_list pr add_newline (FCNet.itnet cons printers [])
+      )
   end
 in
-  begin_block CONSISTENT 0;
-  (* rules *)
-  prettyprint_grammar_rules tmprint pstrm (ruleset G);
-  add_newline();
-  (* known constants *)
-  add_string "Known constants:";
-  add_break(1,2);
-  begin_block INCONSISTENT 0;
-  pr_list add_string (fn () => ()) (fn () => add_break(1,0))
-                     (Listsort.sort String.compare (known_constants G));
-  end_block ();
-  (* overloading *)
-  print_overloading (Overload.oinfo_ops (overload_info G));
-  print_user_printers (user_printers G);
-  end_block ()
+  block CONSISTENT 0 (
+    (* rules *)
+    prettyprint_grammar_rules tmprint (ruleset G) >> add_newline >>
+    (* known constants *)
+    add_string "Known constants:" >>
+    add_break(1,2) >>
+    block INCONSISTENT 0 (
+      pr_list add_string (add_break(1,0))
+              (Listsort.sort String.compare (known_constants G))
+    ) >>
+    (* overloading *)
+    print_overloading (Overload.oinfo_ops (overload_info G)) >>
+    print_user_printers (user_printers G)
+  )
 end
 
 fun add_const (s,t) =
     fupdate_overload_info (Overload.add_overloading(s,t))
 val min_grammar = let
-  open Term Portable
+  open Term Portable PP
 in
   stdhol |> add_const ("==>", prim_mk_const{Name = "==>", Thy = "min"})
          |> add_const ("=", prim_mk_const{Name = "=", Thy = "min"})
@@ -1409,7 +1413,7 @@ in
                       paren_style = OnlyIfNecessary}
          |> add_rule {term_name   = "=",
                       block_style = (AroundSamePrec, (CONSISTENT, 0)),
-                      fixity = Infix(NONASSOC, 100),
+                      fixity = Infix(NONASSOC, 450),
                       pp_elements = [HardSpace 1, RE (TOK "="),
                                      BreakSpace(1,0)],
                       paren_style = OnlyIfNecessary}
@@ -1424,12 +1428,12 @@ infix || >- >> >* >->
 
 fun binfo_encode (brks,i) =
     (case brks of
-       Portable.CONSISTENT => "C"
-     | Portable.INCONSISTENT => "I") ^
+       PP.CONSISTENT => "C"
+     | PP.INCONSISTENT => "I") ^
     IntData.encode i
 val binfo_reader =
-    ((literal "C" >> return Portable.CONSISTENT) ||
-     (literal "I" >> return Portable.INCONSISTENT)) >*
+    ((literal "C" >> return PP.CONSISTENT) ||
+     (literal "I" >> return PP.INCONSISTENT)) >*
     IntData.reader
 
 fun block_style_encode (pbs, binfo) =
@@ -1621,6 +1625,8 @@ fun user_delta_encode write_tm ud =
       ADD_ABSYN_POSTP {codename} => "AAPP" ^ StringData.encode codename
     | ADD_NUMFORM (c,s) =>
         "AN" ^ CharData.encode c ^ OptionData.encode StringData.encode s
+    | ADD_STRLIT {tmnm,ldelim} =>
+        "AS" ^ StringData.encode tmnm ^ StringData.encode ldelim
     | ADD_UPRINTER{codename=s,pattern=tm} =>
         "AUP" ^ StringData.encode s ^ StringData.encode (write_tm tm)
     | ASSOC_RESTR {binder,resbinder} =>
@@ -1653,6 +1659,9 @@ in
   (literal "AR" >>
    Coding.map (fn (b,rb) => ASSOC_RESTR {binder = b, resbinder = rb})
               (OptionData.reader StringData.reader >* StringData.reader)) ||
+  (literal "AS" >>
+   Coding.map (fn (tmnm,ldelim) => ADD_STRLIT{tmnm=tmnm,ldelim=ldelim})
+              (StringData.reader >* StringData.reader)) ||
   (literal "AUP" >>
    Coding.map (fn (s,p) => ADD_UPRINTER {codename = s, pattern = p})
               (StringData.reader >* Coding.map read_tm StringData.reader)) ||
@@ -1722,12 +1731,12 @@ fun debugprint G tm =
 (** quick-and-dirty removal of all "non-trivial" overloadings **)
 
 (* add overloading of constant and its name *)
-fun grm_self_ovl (tm : term, tmG : grammar) =      
+fun grm_self_ovl (tm : term, tmG : grammar) =
   let val (str, ty) = Term.dest_const tm ;
   in fupdate_overload_info (Overload.add_overloading (str, tm)) tmG end ;
 
 (* add in overloading of all constants with their names *)
-fun self_ovl_all_consts (tmG : grammar) = 
+fun self_ovl_all_consts (tmG : grammar) =
   List.foldr grm_self_ovl tmG (Term.all_consts ()) ;
 
 (* clear all overloading info in a term grammar *)

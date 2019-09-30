@@ -12,6 +12,7 @@ struct
                    ("<=", intSyntax.leq_tm),
                    (">", intSyntax.great_tm),
                    (">=", intSyntax.geq_tm),
+                   ("**", intSyntax.exp_tm),
                    (GrammarSpecials.fromNum_str, intSyntax.int_injection),
                    (GrammarSpecials.num_injection, intSyntax.int_injection)];
 

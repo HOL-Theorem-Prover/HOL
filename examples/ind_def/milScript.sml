@@ -1,10 +1,10 @@
 (* =====================================================================*)
-(* FILE		: milScript.sml						*)
-(* DESCRIPTION  : Defines a proof system for minimal intuitionistic 	*)
-(*                logic, and proves the Curry-Howard isomorphism for	*)
-(*                this and typed combinatory logic.			*)
-(* AUTHOR	: Tom Melham and Juanito Camilleri			*)
-(* DATE		: 90.12.03						*)
+(* FILE         : milScript.sml                                         *)
+(* DESCRIPTION  : Defines a proof system for minimal intuitionistic     *)
+(*                logic, and proves the Curry-Howard isomorphism for    *)
+(*                this and typed combinatory logic.                     *)
+(* AUTHOR       : Tom Melham and Juanito Camilleri                      *)
+(* DATE         : 90.12.03                                              *)
 (* =====================================================================*)
 
 (*
@@ -15,13 +15,13 @@ open HolKernel Parse boolLib bossLib
      IndDefLib IndDefRules clTheory;
 
 (* --------------------------------------------------------------------- *)
-(* Open a new theory and load the inductive definitions library.	 *)
+(* Open a new theory and load the inductive definitions library.         *)
 (* --------------------------------------------------------------------- *)
 
 val _ = new_theory "mil";
 
 (* ===================================================================== *)
-(* Combinatory logic types and type judgements.				 *)
+(* Combinatory logic types and type judgements.                          *)
 (* ===================================================================== *)
 
 val _ =
@@ -32,7 +32,7 @@ val _ = set_fixity "->" (Infixr 800);
 val _ = set_MLname "->" "ARROW_DEF";
 
 (* ===================================================================== *)
-(* Definition of well-typed terms of combinatory logic.			 *)
+(* Definition of well-typed terms of combinatory logic.                  *)
 (* ===================================================================== *)
 
 val _ = set_fixity "IN" (Infixr 700);
@@ -49,7 +49,7 @@ val TYrules = CONJUNCTS TYrules;
 (* Mimimal intuitionistic logic.  We now reinterpret -> as implication,     *)
 (* types P:('a)ty as terms of the logic (i.e. propositions), and define a   *)
 (* provability predicate `THM` on these terms. The definition is done       *)
-(* inductively by the proof rules for the logic.			    *)
+(* inductively by the proof rules for the logic.                            *)
 (* ======================================================================== *)
 
 val (THMrules, THMind, THMcases) =
@@ -61,11 +61,11 @@ val (THMrules, THMind, THMcases) =
 val THMrules = CONJUNCTS THMrules;
 
 (* ===================================================================== *)
-(* Derivation of the Curry-Howard isomorphism.				 *)
+(* Derivation of the Curry-Howard isomorphism.                           *)
 (* ===================================================================== *)
 
 (* --------------------------------------------------------------------- *)
-(* The left-to-right direction is proved by rule induction for the	 *)
+(* The left-to-right direction is proved by rule induction for the       *)
 (* inductively defined relation THM, followed by use of the typing rules *)
 (* to prove the conclusion. The proof is completely straightforward.     *)
 (* --------------------------------------------------------------------- *)
@@ -75,8 +75,8 @@ val ISO_THM1 = Q.prove
  HO_MATCH_MP_TAC THMind THEN RW_TAC std_ss [] THEN METIS_TAC TYrules);
 
 (* --------------------------------------------------------------------- *)
-(* The proof for the other direction proceeds by induction over the 	 *)
-(* typing relation.  Again, simple.					 *)
+(* The proof for the other direction proceeds by induction over the      *)
+(* typing relation.  Again, simple.                                      *)
 (* --------------------------------------------------------------------- *)
 
 val ISO_THM2 = Q.prove
@@ -85,7 +85,7 @@ val ISO_THM2 = Q.prove
 
 
 (* --------------------------------------------------------------------- *)
-(* The final result.							 *)
+(* The final result.                                                     *)
 (* --------------------------------------------------------------------- *)
 
 val CURRY_HOWARD = Q.store_thm
@@ -94,7 +94,7 @@ val CURRY_HOWARD = Q.store_thm
  METIS_TAC [ISO_THM1,ISO_THM2]);
 
 (* --------------------------------------------------------------------- *)
-(* End of example.							 *)
+(* End of example.                                                       *)
 (* --------------------------------------------------------------------- *)
 
 val _ = export_theory();

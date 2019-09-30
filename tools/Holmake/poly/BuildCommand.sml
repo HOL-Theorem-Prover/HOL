@@ -235,7 +235,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                default)
   end
 
-
+  val extra_poly_cline = envlist "POLY_CLINE_OPTIONS"
 
   fun poly_link quietp result files =
   let
@@ -253,9 +253,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     p "#!/bin/sh";
     p ("set -e");
     p (protect(fullPath [HOLDIR, "bin", "buildheap"]) ^ " --gcthreads=1 " ^
-       (if polynothol then "--poly" else "--holstate="^protect(HOLSTATE)) ^
-       (if debug then "--dbg" else "") ^
-       " " ^ String.concatWith " " (map protect files));
+       (if polynothol then "--poly" else "--holstate="^protect(HOLSTATE))^" "^
+       (if debug then "--dbg " else "") ^
+       String.concatWith " " extra_poly_cline ^ " " ^
+       String.concatWith " " (map protect files));
     p ("exit 0");
     TextIO.closeOut out;
     Systeml.mk_xable result;
@@ -263,6 +264,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   end handle IO.Io _ => OS.Process.failure
 
   fun build_command g (ii as {preincludes,includes}) c arg = let
+    val _ = diag (fn _ => "build_command on "^fromFile arg)
     val include_flags = preincludes @ includes
     val overlay_stringl = case actual_overlay of NONE => [] | SOME s => [s]
     exception CompileFailed
@@ -302,8 +304,13 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         val _ = app safedelete expected_results
         val useScript = fullPath [HOLDIR, "bin", "buildheap"]
         val cline = useScript::"--gcthreads=1"::
+                    (case #multithread optv of
+                         NONE => []
+                       | SOME i => ["--mt=" ^ Int.toString i]) @
                     (if polynothol then "--poly" else "--holstate="^HOLSTATE)::
-                    ((if debug then ["--dbg"] else []) @ objectfiles)
+                    extra_poly_cline @
+                    ((if debug then ["--dbg"] else []) @ objectfiles) @
+                    List.concat (map (fn f => ["-c", f]) expected_results)
         fun cont wn res =
           let
             val _ =
@@ -315,15 +322,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                       app safedelete (script :: intermediates)
                     else ()
           in
-            isSuccess res andalso
-            List.all (fn file =>
-                         exists_readable file orelse
-                         (wn ("Script file "^script^" didn't produce "^file^
-                              "; \n\
-                              \  maybe need export_theory() at end of "^
-                              script ^ ".sml");
-                          false))
-                     expected_results
+            isSuccess res
           end
         val script_part =
             if String.isSuffix "Script" script then
@@ -359,7 +358,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           let
             val (scriptetc,objectfiles) = setup_script s deps []
           in
-            run_script g scriptetc objectfiles [s^"Theory.sml", s^"Theory.sig"]
+            run_script g scriptetc objectfiles
+                       [s^"Theory.sml", s^"Theory.sig", s^"Theory.dat"]
           end
         | BuildArticle (s0, deps) =>
           let
@@ -432,9 +432,12 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val jobs = #jobs (#core optv)
   open HM_DepGraph
   fun pr s = s
-  fun interpret_graph g =
+  fun interpret_graph (g,ok) =
     case List.filter (fn (_,nI) => #status nI <> Succeeded) (listNodes g) of
-        [] => OS.Process.success
+        [] => (if not ok then
+                 warn ("*** ProcessMultiplexor thinks state is not ok")
+               else ();
+               OS.Process.success)
       | ns =>
         let
           fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString pr nI
@@ -487,16 +490,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                     time_limit = time_limit,
                                     quiet = quiet_flag, hmenv = hmenv,
                                     jobs = jobs } ii g |> interpret_graph)
-  fun extend_holpaths () =
-    List.app holpathdb.extend_db
-             (holpathdb.search_for_extensions
-                (fn s => [])
-                [OS.FileSys.getDir()])
-
 in
   {extra_impl_deps = if relocbuild orelse HOLSTATE = POLY then []
                      else [Unhandled HOLSTATE],
-   build_graph = (fn arg => (extend_holpaths(); build_graph arg))}
+   build_graph = build_graph}
 end
 
 end (* struct *)

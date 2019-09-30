@@ -58,4 +58,22 @@ fun time f x =
 
 structure HOLSusp = Susp
 
+fun reraise e = PolyML.Exception.reraise e
+
+fun make_counter {inc,init} =
+  let
+    val counter = Synchronized.var "counter" init
+    fun next () = Synchronized.change_result counter (fn i => (i, i + inc))
+  in
+    next
+  end
+
+fun syncref init =
+  let
+    val v = Synchronized.var "Portable.syncref" init
+  in
+    {get = fn () => Synchronized.value v,
+     upd = fn f => Synchronized.change_result v f}
+  end
+
 end

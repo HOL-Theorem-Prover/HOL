@@ -162,37 +162,71 @@ val ror = U 0x21C4
 
 val doubleplus = U 0x29FA
 
-fun isAlpha s = let
-  val ((_, i), _) = valOf (UTF8.getChar s)
-in
-  if i < 128 then Char.isAlpha (String.sub(s,0))
+fun isAlpha_i i =
+  if i < 128 then Char.isAlpha (Char.chr i)
   else
     0x370 <= i andalso i <= 0x3ff andalso i <> 0x37E (* Greek *) orelse
     i = 0xAA (* ordinal a *) orelse
     i = 0xB5 (* Latin-1 mu *) orelse
     i = 0xBA (* ordinal o *) orelse
     0xC0 <= i andalso i <= 0xFF andalso i <> 0xD7 andalso i <> 0xF7
-    (* Latin-1 *)
-end
-
-fun isDigit s = let
-  val ((_, i), _) = valOf (UTF8.getChar s)
-in
-  if i < 128 then Char.isDigit (String.sub(s,0))
+     (* Latin-1 *) orelse
+    0x1D400 <= i andalso i <= 0x1D7CB
+     (* beyond BMP "Math Alphanumeric Symbols", excluding digits starting at
+        U+1D7CE *)
+fun isDigit_i i =
+  if i < 128 then Char.isDigit (Char.chr i)
   else
     0x2080 <= i andalso i <= 0x2089 (* subscripts *)
+fun isAlphaNum_i i = isAlpha_i i orelse isDigit_i i
+fun isSymbolic_i i =
+  if i < 128 then Char.isPunct (Char.chr i)
+  else not (isAlphaNum_i i)
+val c' = Char.ord #"'"
+val c_ = Char.ord #"_"
+fun isMLIdent_i i = isAlphaNum_i i orelse i = c' orelse i = c_
 
-end
-
+fun flip2itest P s =
+    case UTF8.getChar s of
+        NONE => false
+      | SOME ((_, i), _) => P i
+val isAlpha = flip2itest isAlpha_i
+val isDigit = flip2itest isDigit_i
+val isSymbolic = flip2itest isSymbolic_i
 fun isAlphaNum s = isAlpha s orelse isDigit s
-
 fun isMLIdent s = isAlphaNum s orelse s = "'" orelse s = "_"
 
-fun isSymbolic s = let
-  val ((_, i), _) = valOf (UTF8.getChar s)
-in
-  if i < 128 then Char.isPunct (String.sub(s,0))
-  else not (isAlphaNum s)
-end
+
+(* see Unicode section of
+      https://en.wikipedia.org/wiki/Whitespace_character
+*)
+val individual_pts = [0x20, 0x85, 0xA0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F,
+                      0x3000]
+fun mem i [] = false
+  | mem i (h::t) = i = h orelse mem i t
+fun isSpace_i i =
+    0x9 <= i andalso i <= 0xD orelse
+    0x2000 <= i andalso i <= 0x200A orelse
+    mem i individual_pts
+val isSpace = flip2itest isSpace_i
+
+fun foldthis (s, (sm,im,i)) =
+    let
+      val ((_, k), _) = valOf (UTF8.getChar s)
+    in
+      (Binarymap.insert(sm,s,i), Binarymap.insert(im,k,i), i + 1)
+    end
+val (supdigits_smap, supdigits_imap, _) =
+    List.foldl foldthis (Binarymap.mkDict String.compare,
+                         Binarymap.mkDict Int.compare,
+                         0)
+               [sup_0, sup_1, sup_2, sup_3, sup_4, sup_5, sup_6, sup_7,
+                sup_8, sup_9]
+fun supDigitVal s = Binarymap.peek(supdigits_smap, s)
+fun supDigitVal_i i = Binarymap.peek(supdigits_imap, i)
+
+fun isSupDigit_i i = isSome (Binarymap.peek(supdigits_imap, i))
+fun isSupDigit s = isSome (supDigitVal s)
+
 
 end (* struct *)

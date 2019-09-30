@@ -23,6 +23,7 @@ open tautLib AC
 open boolSimps
 
 val _ = new_theory "complex";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------ *)
 (* Definition of complex number type.                                 *)
@@ -910,11 +911,11 @@ val COMPLEX_SCALAR_RMUL_ADD = store_thm("COMPLEX_SCALAR_RMUL_ADD",
   ``!k:real l:real z:complex. z * (k + l) = z * k + z * l``,
   REWRITE_TAC [GSYM COMPLEX_SCALAR_MUL_COMM, COMPLEX_SCALAR_LMUL_ADD]);
 
-val COMPLEX_SCALAR_RMUL_SUB = store_thm("COMPLEX_RSCALAR_RMUL_SUB",
+val COMPLEX_RSCALAR_RMUL_SUB = store_thm("COMPLEX_RSCALAR_RMUL_SUB",
   ``!k: real l:real z:complex. z * (k - l) = z * k - z * l ``,
   REWRITE_TAC [GSYM COMPLEX_SCALAR_MUL_COMM, COMPLEX_SCALAR_LMUL_SUB]);
 
-val COMPLEX_ADD_SCALAR_RMUL = store_thm("COMPLEX_ADD_RSCALAR_RMUL",
+val COMPLEX_ADD_RSCALAR_RMUL = store_thm("COMPLEX_ADD_RSCALAR_RMUL",
   ``!k:real z:complex w:complex. (z + w) * k = z * k + w * k``,
   REWRITE_TAC [GSYM COMPLEX_SCALAR_MUL_COMM, COMPLEX_ADD_SCALAR_LMUL]);
 
@@ -1002,7 +1003,7 @@ val COMPLEX_MUL_RCONJ = store_thm("COMPLEX_MUL_RCONJ",
                REAL_SUB_RNEG] THEN
   PROVE_TAC [POW_2, REAL_MUL_COMM, REAL_ADD_LINV]);
 
-val COMPLEX_MUL_LCONJ = store_thm("COMPLEX_MUL_RCONJ",
+val COMPLEX_MUL_LCONJ = store_thm("COMPLEX_MUL_LCONJ",
   ``!z:complex.
          conj z * z = complex_of_real ((RE z) pow 2 + (IM z) pow 2)``,
   PROVE_TAC [COMPLEX_MUL_COMM, COMPLEX_MUL_RCONJ]);
@@ -1382,7 +1383,7 @@ val COMPLEX_POW_DIV = store_thm("COMPLEX_POW_DIV",
   ``!z:complex w:complex n:num. (z / w) pow n = (z pow n) / (w pow n)``,
   REWRITE_TAC[complex_div, COMPLEX_POW_MUL, COMPLEX_POW_INV]);
 
-val COMPLEX_POW_SCALAR_LMUL = store_thm("COMPLEX_POW_L",
+val COMPLEX_POW_L = store_thm("COMPLEX_POW_L",
   ``!n:num k:real z:complex. (k * z) pow n = (k pow n) * (z pow n)``,
   INDUCT_TAC THEN
   REWRITE_TAC[complex_pow, pow, COMPLEX_SCALAR_LMUL_ONE] THEN
@@ -1419,7 +1420,7 @@ val DE_MOIVRE_THM = store_thm("DE_MOIVRE_THM",
   ``!z:complex n:num.
      (modu z * (cos (arg z),sin (arg z))) pow n =
           modu z pow n * (cos (&n * arg z),sin(&n * arg z))``,
-  REWRITE_TAC[COMPLEX_POW_SCALAR_LMUL, DE_MOIVRE_LEMMA]);
+  REWRITE_TAC[COMPLEX_POW_L, DE_MOIVRE_LEMMA]);
 
 (*--------------------------------------------------------------------*)
 (*Exponential form of complex numbers                                 *)
@@ -1461,7 +1462,7 @@ val COMPLEX_EXP_N = store_thm("COMPLEX_EXP_N",
   ``!z:complex n:num. exp (&n : real * z) = exp z pow n``,
   REWRITE_TAC[complex_scalar_lmul] THEN
   REWRITE_TAC[complex_exp, RE, IM, EXP_N, GSYM DE_MOIVRE_LEMMA,
-              COMPLEX_POW_SCALAR_LMUL]);
+              COMPLEX_POW_L]);
 
 val COMPLEX_EXP_N2 = store_thm("COMPLEX_EXP_N2",
   ``!z:complex n:num. exp (&n :complex * z) = exp z pow n``,

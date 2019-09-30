@@ -31,6 +31,12 @@ fun condprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm = let
             else raise UserPP_Failed
         | NONE => raise UserPP_Failed
   val {add_string, ublock, add_break, ...} = ppfns:ppstream_funs
+  fun paren c b p =
+    if b then
+      ublock c 1 (
+        add_string "(" >> p >> add_string ")"
+      )
+    else p
   val paren_required =
       (case rgr of
          Prec(p, _) => p > 70
@@ -38,8 +44,6 @@ fun condprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm = let
       (case lgr of
          Prec(_, n) => n = GrammarSpecials.fnapp_special
        | _ => false)
-  val doparen = if paren_required then (fn c => add_string c)
-                else (fn c => nothing)
   fun syspr gravs t =
     printer { gravs = gravs, depth = decdepth depth, binderp = false } t
   fun doguard needs_else (g,t) =
@@ -51,11 +55,11 @@ fun condprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm = let
                      else
                        add_string "if") >>
                     add_break (1,2) >>
-                    syspr (Top,Top,Top) g >>
+                    block PP.CONSISTENT 0 (syspr (Top,Top,Top) g) >>
                     add_break (1,0) >>
                     add_string "then") >>
              add_break (1,2) >>
-             syspr (Top,Top,Top) t)
+             block PP.CONSISTENT 0 (syspr (Top,Top,Top) t))
 
   fun doelse e = let
     val prec = Prec(70, "COND")
@@ -65,14 +69,13 @@ fun condprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm = let
                               doelse e_next)
       | NONE => block PP.CONSISTENT 0
                       (add_string "else" >> add_break (1,2) >>
-                       syspr (prec,prec,rgr) e)
+                       block PP.CONSISTENT 0 (syspr (prec,prec,rgr) e))
   end
   val (g,t,e) = dest_cond tm
 in
-  doparen "(" >>
-  block PP.CONSISTENT 0
-    (doguard false (g,t) >> add_break(1,0) >> doelse e) >>
-  doparen ")"
+  paren PP.CONSISTENT paren_required (
+    block PP.CONSISTENT 0 (doguard false (g,t) >> add_break(1,0) >> doelse e)
+  )
 end
 
 val _ = term_grammar.userSyntaxFns.register_userPP
@@ -84,6 +87,10 @@ val _ = term_grammar.userSyntaxFns.register_userPP
 
 fun letprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
   let
+    val eqprec =
+        case term_grammar.get_precedence tmg "=" of
+            SOME (Infix(_, i)) => Prec(i, "=")
+          | _  => raise UserPP_Failed
     fun syspr gravs t =
       printer { gravs = gravs, depth = decdepth depth, binderp = false } t
     fun pr_vstruct v =
@@ -124,8 +131,12 @@ fun letprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
     val is_let = is_let0 1
 
     val {add_string, ublock, add_break, ...} = ppfns:ppstream_funs
-    fun pbegin b = if b then add_string "(" else nothing
-    fun pend b = if b then add_string ")" else nothing
+    fun paren c b p =
+      if b then
+        ublock c 1 (
+          add_string "(" >> p >> add_string ")"
+        )
+      else p
     fun spacep b = if b then add_break(1, 0) else nothing
     fun find_base acc tm =
       if is_let tm then let
@@ -158,8 +169,8 @@ fun letprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
            record_bvars fnarg_bvars
              (pr_list pr_vstruct (spacep true) args >>
               spacep (not (null args)) >>
-              add_string "=" >> spacep true >>
-              block PP.INCONSISTENT 2 (syspr (Top, Top, Top) rhs_t))) >>
+              add_string "=" >> add_break (1, 0) >>
+              block PP.INCONSISTENT 0 (syspr (eqprec, eqprec, Top) rhs_t))) >>
         return bvfvs
     end
 
@@ -177,25 +188,27 @@ fun letprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
            record_bvars
 
     fun pr_let0 tm =
-      (* put a block around the "let ... in" phrase *)
-      block PP.CONSISTENT 0
-        (add_string "let" >> add_break(1,2) >>
+         add_string "let" >> add_break(1,2) >>
+         (* let bindings list does not get a block to itself because you
+            don't want something like
+               let
+                 x = e1 ; y = e2 ; z = e3
+               in
+                 e4
+            Instead, all 6 components above are in the same printing block,
+            and some are indented two, and some are in column 0
+         *)
          pr_list pr_letandseq
                  (add_string " " >> add_string ";" >> add_break (1, 2))
                  andbindings >>
-         add_break(1,0) >>
-         add_string "in" >> add_break(1,2) >>
-         syspr (RealTop, RealTop, RealTop) body)
+         add_break(1,0) >> add_string "in" >> add_break(1,2) >>
+         block PP.INCONSISTENT 0 (syspr (RealTop, RealTop, RealTop) body)
 
     fun pr_let lgrav rgrav tm = let
       val addparens = lgrav <> RealTop orelse rgrav <> RealTop
     in
       getbvs >-
-      (fn oldbvs =>
-          pbegin addparens >>
-          block PP.CONSISTENT 0 (pr_let0 tm) >>
-          pend addparens >>
-          setbvs oldbvs)
+      (fn oldbvs => paren PP.CONSISTENT addparens (pr_let0 tm) >> setbvs oldbvs)
     end
 in
   if is_let tm then pr_let lgr rgr tm

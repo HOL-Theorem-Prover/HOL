@@ -315,7 +315,7 @@ fun guess_thm2term (guess_thm(ty, i, fvL, thm)) =
 (* A dummy version that just uses mk_thm. *)
 fun make_set_guess_thm___dummy guess =
     ((say_HOL_WARNING "make_set_guess_thm_opt___dummy"
-		    "mk_thm was used to create a guess");
+                    "mk_thm was used to create a guess");
     make_set_guess_thm guess (fn x => mk_thm ([], x)));
 
 fun make_guess___dummy gty v t i fvL =
@@ -342,9 +342,9 @@ fun make_guess___simple gty v t i fvL =
 fun GUESS_REWRITE_PROVE t =
 let
    open metisLib
-   val thm = SIMP_CONV std_ss [GUESS_REWRITES] t handle UNCHANGED => REFL t;
+   val thm = SIMP_CONV std_ss [GUESS_REWRITES] t handle UNCHANGED => REFL t
    val t2 = rhs (concl thm)
-   val thm2 = if t2 = T then TRUTH else METIS_PROVE [] t2;
+   val thm2 = if Teq t2 then TRUTH else METIS_PROVE [] t2
 in
    EQ_MP (GSYM thm) thm2
 end;
@@ -382,7 +382,7 @@ fun check_guess v t (guess_general _) = true
       val thm_term = make_guess_thm_term ty v t i fvL
    in
       (type_of v = type_of i) andalso
-      (all (fn x => (mem x fvL_i)) fvL) andalso
+      (all (fn x => tmem x fvL_i) fvL) andalso
       (aconv thm_term thm_term2)
    end handle HOL_ERR _ => false;
 
@@ -640,10 +640,11 @@ local
 fun elim_double_guesses_int r [] = r
   | elim_double_guesses_int r ([]::gLL) =
     elim_double_guesses_int r gLL
-  | elim_double_guesses_int r ((((i, fvL),g)::gL)::gLL) =
+  | elim_double_guesses_int r ((((i:term, fvL),g)::gL)::gLL) =
 let
-   val already_present = (fvL = [i]) orelse
-      exists (fn ((i', fvL'), _) => (i = i') andalso (fvL = fvL')) r
+   val already_present =
+       tml_eq fvL [i] orelse
+       exists (fn ((i', fvL'), _) => i ~~ i' andalso tml_eq fvL fvL') r
    val r' = if already_present then r else ((i, fvL), g)::r
 in
    elim_double_guesses_int r' (gL::gLL)
@@ -652,8 +653,7 @@ end;
 fun elim_double_guesses gL =
 let
    val gL' = map (fn g => (guess_extract g, g)) gL
-   val (gL1, gL2) = partition (fn ((_,_),g) =>
-               guess_has_thm g) gL';
+   val (gL1, gL2) = partition (fn ((_,_),g) => guess_has_thm g) gL'
 in
    map snd (elim_double_guesses_int [] [gL1, gL2])
 end;
@@ -811,14 +811,19 @@ val sys = dummy_sys
 
 fun QUANT_INSTANTIATE_HEURISTIC___EQUATION sys v t =
 let
-   val _ = if (is_eq t) then () else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
-   val (l,r) = dest_eq t;
+   val _ = if (is_eq t) then ()
+           else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
+   val (l,r) = dest_eq t
 
-   val (turn,top,i,s) = if (l = v) then (false, true, r,r) else
-		        if (r = v) then (true,  true, l,l) else
-		      (false, false, match_term_var v l r, r) handle HOL_ERR _ =>
-		      (true,  false, match_term_var v r l, l) handle HOL_ERR _ =>
-		      raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
+   val (turn,top,i,s) =
+       if (l ~~ v) then (false, true, r,r)
+       else if (r ~~ v) then (true,  true, l,l)
+       else
+         (false, false, match_term_var v l r, r)
+         handle HOL_ERR _ =>
+                (true,  false, match_term_var v r l, l)
+                handle HOL_ERR _ =>
+                       raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
 
    val _ = if (free_in v i) then Feedback.fail () else ();
    val u_genvar = genvar unit_ty;
@@ -887,22 +892,24 @@ let
    val _ = if is_eq t then () else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
    val (l,r) = dest_eq t;
 
-   val (i,turn) = if (l = v) then (r,false) else
-                  if (r = v) then (l,true) else
-	          raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
+   val (i,turn) = if (l ~~ v) then (r,false) else
+                  if (r ~~ v) then (l,true) else
+                  raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
    val thm' = ISPEC v (intro_fresh_ty_vars thm);
    val (eeq1,eeq2) = dest_disj (concl thm');
-   val left_right_flag = if ((is_eq eeq1) andalso (lhs eeq1 = v) andalso (rhs eeq1 = i)) then false else
-                         if ((is_eq eeq2) andalso (lhs eeq2 = v) andalso (rhs eeq2 = i)) then true else
-                         Feedback.fail ();
+   val left_right_flag =
+       if is_eq eeq1 andalso lhs eeq1 ~~ v andalso rhs eeq1 ~~ i then false
+       else if is_eq eeq2 andalso lhs eeq2 ~~ v andalso rhs eeq2 ~~ i then true
+       else Feedback.fail ()
    val (eeq1,eeq2,thm2) = if left_right_flag then
-			     (eeq2, eeq1, CONV_RULE (PART_MATCH lhs DISJ_COMM) thm') else
+                             (eeq2, eeq1, CONV_RULE (PART_MATCH lhs DISJ_COMM) thm') else
                              (eeq1, eeq2, thm')
 
    val (fvL, eeq2b) = strip_exists eeq2;
    val (v',ni) = dest_eq eeq2b;
-   val _ = if (v = v') then () else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
+   val _ = if v ~~ v' then ()
+           else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
    val v_name = (fst o dest_var) v
    val (fvL', ni') = prefix_free_vars (v_name, fvL, ni);
@@ -1065,9 +1072,9 @@ let
    val _ = if is_eq t then () else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
    val (l,r) = dest_eq t;
 
-   val (i,turn) = if (l = v) then (r,false) else
-                  if (r = v) then (l,true) else
-	          raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
+   val (i,turn) = if (l ~~ v) then (r,false) else
+                  if (r ~~ v) then (l,true) else
+                  raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
    val thmL' = flatten (map BODY_CONJUNCTS thmL)
    val thmL'' = append thmL' (map GSYM thmL');
@@ -1272,16 +1279,20 @@ let
                in (type_of i_v = unit_ty) andalso (is_var i_b) end
     val _ = if (i_ok) then () else Feedback.fail();
     val (_, tL) = strip_comb t
-    val tL_simple = all (fn tx => is_var tx orelse
-               let val (tx_b, tx_v) = dest_comb tx
-               in (tx_v = v) andalso (is_var tx_b) end) tL
+    val tL_simple =
+        all (fn tx => is_var tx orelse
+                      let val (tx_b, tx_v) = dest_comb tx
+                      in
+                        tx_v ~~ v andalso is_var tx_b
+                      end) tL
 
     val preL = strip_conj pre
     fun check_internal pre_tm =
     let
-       val (gty', i', v', t') = dest_guess_tm pre_tm;
-       val _ = if (aconv i i') andalso (v = v') then () else Feedback.fail();
-       val index_opt = SOME (index (fn t'' => aconv t' t'') tL) handle HOL_ERR _ => NONE;
+       val (gty', i', v', t') = dest_guess_tm pre_tm
+       val _ = if i ~~ i' andalso v ~~ v' then () else Feedback.fail()
+       val index_opt =
+           SOME (index (fn t'' => t' ~~ t'') tL) handle HOL_ERR _ => NONE
     in
        (gty', index_opt)
     end;
@@ -1320,8 +1331,9 @@ let
     fun group_thmL L [] = L
       | group_thmL L ((thm, _, P_t, _, _)::thmPL) =
         let
-           val ((P_t', thmL), L') = pluck (fn (P_t', thmL) => (P_t = P_t')) L handle HOL_ERR _ =>
-                       ((P_t, []), L)
+           val ((P_t', thmL), L') =
+               pluck (fn (P_t', thmL) => P_t ~~ P_t') L
+               handle HOL_ERR _ => ((P_t, []), L)
         in
            group_thmL ((P_t', thm::thmL)::L') thmPL
         end
@@ -1460,10 +1472,10 @@ fun strip_comb_abs t =
 
 fun dest_comb_abs fv fb =
   let
-     val (t1, t2) = dest_comb fb;
-     val _ = if (t2 = fv) then () else Feedback.fail();
+     val (t1, t2) = dest_comb fb
+     val _ = if t2 ~~ fv then () else Feedback.fail()
      val t3 = strip_comb_abs t1
-     val (fv', _) = dest_abs (t3);
+     val (fv', _) = dest_abs t3
   in
      fv'
   end
@@ -1478,16 +1490,18 @@ fun local_cache_sys sys =
    val lc_ref = ref []
   in fn v => fn t =>
   let
-    val gc_opt = assoc t (!lc_ref)
+    val gc_opt = tassoc t (!lc_ref)
   in
-    if (isSome gc_opt) then valOf gc_opt else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
+    if (isSome gc_opt) then valOf gc_opt
+    else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
   end handle HOL_ERR _ =>
   let
      val gc_opt = SOME (sys v t) handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE
                                       | HOL_ERR _ => NONE;
      val _ = lc_ref := (t,gc_opt)::(!lc_ref);
   in
-     if (isSome gc_opt) then valOf gc_opt else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
+     if (isSome gc_opt) then valOf gc_opt
+     else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
 
   end
 end;
@@ -1621,17 +1635,22 @@ in
 
 fun QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_COMPLEX guesses_net_complex sys v t =
 let
-   val v_t = mk_abs (v, t);
-   val possible_thmL = Ho_Net.lookup v_t guesses_net_complex;
-   val tvset = FVL [t] empty_tmset;
-   val _ = if HOLset.member (tvset, v) then () else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
+   val v_t = mk_abs (v, t)
+   val possible_thmL = Ho_Net.lookup v_t guesses_net_complex
+   val tvset = FVL [t] empty_tmset
+   val _ = if v IN tvset then ()
+           else raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
 
-   val current_thmL = flatten (map (test_thmL (type_of v_t) tvset v t) possible_thmL);
+   val current_thmL = flatten (map (test_thmL (type_of v_t) tvset v t)
+                                   possible_thmL)
 
-   val sys' = local_cache_sys sys;
-   val results = elim_preconds sys' v [] (map (fn y => (NONE, true, y)) current_thmL)
+   val sys' = local_cache_sys sys
+   val results = elim_preconds sys' v []
+                               (map (fn y => (NONE, true, y)) current_thmL)
 in
-   guess_list2collection ([], (map (fn (ifv_opt, ok, thm) => guess_thm_to_guess ok ifv_opt thm) results))
+   guess_list2collection
+     ([], (map (fn (ifv_opt, ok, thm) => guess_thm_to_guess ok ifv_opt thm)
+               results))
 end
 
 end;
@@ -1707,6 +1726,7 @@ local
           RATOR_CONV (fL_BETA_CONV fL)
      | fL_BETA_CONV (false::fL) =
           RATOR_CONV (fL_BETA_CONV fL)
+   fun tmtml_eq (tm1,tml1) (tm2,tml2) = tm1 ~~ tm2 andalso tml_eq tml1 tml2
 in
 
 fun QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_SIMPLE guesses_net_simple sys v t =
@@ -1729,11 +1749,14 @@ let
 
       fun process_guess guess =
       (let
-         val (i, fvL) = guess_extract guess;
-         val _ = if not i_f andalso not (null fvL) then Feedback.fail() else ();
+         val (i, fvL) = guess_extract guess
+         val _ = if not i_f andalso not (null fvL) then Feedback.fail() else ()
 
-         val gL' = map (fn (gty, n) =>
-               first (fn g => guess_extract g = (i, fvL)) ((guess_collection_guess_type gty) (el (n+1) gcL))) pre_checkL_tl;
+         val gL' =
+             map (fn (gty, n) =>
+                     first (fn g => tmtml_eq (guess_extract g) (i, fvL))
+                           ((guess_collection_guess_type gty) (el (n+1) gcL)))
+                 pre_checkL_tl
 
          val final_gL = guess::gL';
          val do_proof = all guess_has_thm final_gL;
@@ -2382,7 +2405,7 @@ fun quant_heuristic_cache___insert (cache:quant_heuristic_cache) (v:term) (t:ter
 let
    val t_cache_opt = Redblackmap.peek (cache,t)
    val t_cache = if isSome t_cache_opt then valOf t_cache_opt else
-		 (Redblackmap.mkDict Term.compare);
+                 (Redblackmap.mkDict Term.compare);
 
    val t_cache' = Redblackmap.insert (t_cache, v, gc)
    val cache' = Redblackmap.insert (cache, t, t_cache')
@@ -2410,7 +2433,7 @@ fun cut_term_to_string t =
        val n = !QUANT_INSTANTIATE_HEURISTIC___print_term_length;
        val st = term_to_string t;
        val st' = if (String.size st > n) then
-		     (substring (st,0,n)^"...") else st
+                     (substring (st,0,n)^"...") else st
     in
        st'
     end;
@@ -2419,9 +2442,9 @@ fun cut_term_to_string t =
 fun COMBINE_HEURISTIC_FUNS L =
 let
    val gcL = map (fn h =>
-	    ((SOME (h ())
+            ((SOME (h ())
               handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE
-	           | HOL_ERR _ => NONE
+                   | HOL_ERR _ => NONE
                    | UNCHANGED => NONE
             ))) L;
    val gc = guess_collection_flatten gcL;
@@ -2489,46 +2512,46 @@ else let
    val cache_found = isSome gc_opt;
 
    val _ = if ((!QUANT_INSTANTIATE_HEURISTIC___debug > 0) andalso (n <= !QUANT_INSTANTIATE_HEURISTIC___debug_depth)) then
-	       say ((prefix_string n)^"searching guesses for ``"^
-	           (term_to_string v)^"`` in ``"^(cut_term_to_string t)^"``\n")
+               say ((prefix_string n)^"searching guesses for ``"^
+                   (term_to_string v)^"`` in ``"^(cut_term_to_string t)^"``\n")
            else ();
 
    val sys = BOUNDED_QUANT_INSTANTIATE_HEURISTIC___COMBINE (n+1) (t :: tL) filterL inst_filterL [] heuristicL [] ctx_heuristicL (SOME cache_ref) ctx;
    val gc = if (isSome gc_opt) then valOf gc_opt else
-	    let
+            let
                val hL  = map (fn h => (fn () => (h sys v t))) (top_heuristicL @ heuristicL);
                val gc  = COMBINE_HEURISTIC_FUNS hL;
-	       val _   = let
-                 	    val c = quant_heuristic_cache___insert (!cache_ref) v t gc;
-		            val _ = cache_ref := c
-			 in
-	 		      ()
-  		         end;
-	    in
-	       gc
-	    end;
+               val _   = let
+                            val c = quant_heuristic_cache___insert (!cache_ref) v t gc;
+                            val _ = cache_ref := c
+                         in
+                              ()
+                         end;
+            in
+               gc
+            end;
 
    val gc_context = let
                val hLc = map (fn h => (fn () => (h ctx sys v t))) (ctx_top_heuristicL @ ctx_heuristicL);
                val gc  = COMBINE_HEURISTIC_FUNS (hLc);
-	    in
-	       gc
-	    end;
+            in
+               gc
+            end;
    val gc  = correct_guess_collection v t (guess_collection_clean (guess_collection_append gc gc_context));
    val gc = filter_guess_collection inst_filterL v t gc;
 
    val _ = if (!QUANT_INSTANTIATE_HEURISTIC___debug > 0) andalso (n <= !QUANT_INSTANTIATE_HEURISTIC___debug_depth) then
                let
                   val gL = (snd (guess_collection2list gc));
-		  val prefix = prefix_string n;
+                  val prefix = prefix_string n;
                   val guesses_found_string = if null gL then "no" else Int.toString (length gL);
                   val _ = say (prefix^guesses_found_string^" guesses found for ``"^
-	           (term_to_string v)^"`` in ``"^(cut_term_to_string t)^"``\n")
+                   (term_to_string v)^"`` in ``"^(cut_term_to_string t)^"``\n")
 
-	          val show_thm = (!QUANT_INSTANTIATE_HEURISTIC___debug > 1);
+                  val show_thm = (!QUANT_INSTANTIATE_HEURISTIC___debug > 1);
                   fun say_guess guess = say (prefix^" - "^
-	           (guess_to_string show_thm guess)^"\n")
-		  val _ = foldl (fn (guess,_) => say_guess guess) () (snd (guess_collection2list gc))
+                   (guess_to_string show_thm guess)^"\n")
+                  val _ = foldl (fn (guess,_) => say_guess guess) () (snd (guess_collection2list gc))
                in
                   ()
                end
@@ -2746,7 +2769,7 @@ in
       val b = rhs (concl b_thm);
 
       val guessC = correct_guess_collection v b
-		       (heuristic ctx v b)
+                       (heuristic ctx v b)
                    handle QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => raise UNCHANGED;
 
       val exists_pointL = #exists_point guessC;
@@ -2773,7 +2796,7 @@ in
                 val xthm0 = MATCH_MP GUESS_EXISTS_POINT_THM proof
              in
                 SOME xthm0
-  	     end
+             end
           else (*exists*)
              let
                 val proof = (valOf proof_opt);
@@ -2792,17 +2815,17 @@ in
       val thm = if isSome thm_opt then valOf thm_opt else
                 if need_eq then
                    if not expand_eq then raise UNCHANGED else
-		   let
+                   let
                       val thm0 = HO_PART_MATCH lhs (ISPEC i quantHeuristicsTheory.UNWIND_EXISTS_THM) (mk_exists (v,b))
 
                       val thm1 = foldl (fn (fv,th) =>
                           let
                              val thm2 = AP_TERM (inst [alpha |-> type_of fv] boolSyntax.existential) (ABS fv th);
-		             val thm3 = CONV_RULE (LHS_CONV QUANT_SIMP_CONV) thm2
-    		             val thm4 = CONV_RULE (RHS_CONV (HO_PART_MATCH lhs quantHeuristicsTheory.MOVE_EXISTS_IMP_THM)) thm3
+                             val thm3 = CONV_RULE (LHS_CONV QUANT_SIMP_CONV) thm2
+                             val thm4 = CONV_RULE (RHS_CONV (HO_PART_MATCH lhs quantHeuristicsTheory.MOVE_EXISTS_IMP_THM)) thm3
                           in
                              thm4
-			  end) thm0 fvL;
+                          end) thm0 fvL;
                    in
                       thm1
                    end
@@ -2815,7 +2838,7 @@ in
                       val ib_thm = ASSUME ib
                       val thm0 = EXISTS ((mk_exists (v,b)),i') ib_thm
                       val thm1 = foldr (fn (v,th) => SIMPLE_CHOOSE v th)
-				 thm0 fvL';
+                                 thm0 fvL';
                       val thm2 = DISCH_ALL thm1
                    in
                       thm2
@@ -2828,15 +2851,15 @@ in
                    CONV_RULE (RAND_CONV b_thm_conv) thm
 
       val thm3 = if (null qvL) then thm2 else
-		 let
-		    val EXISTS_INTRO_FUN =
+                 let
+                    val EXISTS_INTRO_FUN =
                        if is_eq (concl thm2) then
                           EQ_EXISTS_INTRO else IMP_EXISTS_INTRO;
-		    val thm3 = foldr EXISTS_INTRO_FUN thm2 qvL;
-	            val ex_move_thm = move_exists_to_end t;
-		 in
-		    THEN_CONSEQ_CONV___combine ex_move_thm thm3 t
-		 end;
+                    val thm3 = foldr EXISTS_INTRO_FUN thm2 qvL;
+                    val ex_move_thm = move_exists_to_end t;
+                 in
+                    THEN_CONSEQ_CONV___combine ex_move_thm thm3 t
+                 end;
 
       val thm4 = CONSEQ_CONV___APPLY_CONV_RULE thm3 t (BOOL_SIMP_CONV rwL guessC)
    in
@@ -2857,27 +2880,27 @@ in
       val thm2 = if is_eq (concl thm) then
                     let
                        val thm3 = TRANS neg_t_thm thm;
-		       val thm4 = AP_TERM boolSyntax.negation thm3;
+                       val thm4 = AP_TERM boolSyntax.negation thm3;
                        val thm5 = CONV_RULE (LHS_CONV NEG_NEG_ELIM_CONV) thm4
-		       val thm6 = CONV_RULE (RHS_CONV new_conv) thm5;
+                       val thm6 = CONV_RULE (RHS_CONV new_conv) thm5;
                     in
                        thm6
                     end
-		 else if (rand (rator (concl thm))) = neg_t then
+                 else if rand (rator (concl thm)) ~~ neg_t then
                     let
                        val thm3 = IMP_TRANS (fst (EQ_IMP_RULE neg_t_thm)) thm;
-		       val thm4 = CONTRAPOS thm3;
+                       val thm4 = CONTRAPOS thm3;
                        val thm5 = CONV_RULE (RAND_CONV NEG_NEG_ELIM_CONV) thm4
-		       val thm6 = CONV_RULE (RATOR_CONV (RAND_CONV new_conv)) thm5
+                       val thm6 = CONV_RULE (RATOR_CONV (RAND_CONV new_conv)) thm5
                     in
                        thm6
                     end
-                 else if (rand (concl thm)) = neg_t then
+                 else if rand (concl thm) ~~ neg_t then
                     let
                        val thm3 = IMP_TRANS thm (snd (EQ_IMP_RULE neg_t_thm));
-		       val thm4 = CONTRAPOS thm3;
+                       val thm4 = CONTRAPOS thm3;
                        val thm5 = CONV_RULE (RATOR_CONV (RAND_CONV NEG_NEG_ELIM_CONV)) thm4
-		       val thm6 = CONV_RULE (RAND_CONV new_conv) thm5
+                       val thm6 = CONV_RULE (RAND_CONV new_conv) thm5
                     in
                        thm6
                     end
@@ -2889,7 +2912,7 @@ in
       val (v,qb) = dest_exists1 t;
 
       val guessC = correct_guess_collection v qb
-		       (heuristic ctx v qb);
+                       (heuristic ctx v qb);
 
       val guess = first guess_has_thm_no_free_vars (#exists_gap guessC) handle HOL_ERR _ =>
                   first guess_has_thm_no_free_vars (#exists_point guessC) handle HOL_ERR _ =>
@@ -3140,7 +3163,7 @@ val ctxt = []
 val try_proof = false;
 val L = [("x", `0`, []), ("t", `xxx n`:term frag list, ["n"])]
 val L = [("pdata'", `idata_h::pdata22`:term frag list, [`pdata22`]),
-	   ("idata'", `idata_t`, [])]
+           ("idata'", `idata_t`, [])]
 *)
 
 

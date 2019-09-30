@@ -31,7 +31,8 @@ prime number, we first need to define the \emph{divisibility} relation:
 
 \begin{session}
 \begin{alltt}
->> val divides_def = Define`divides a b = ?x. b = a * x`;
+>> Definition divides_def: divides a b = ?x. b = a * x
+   End
 \end{alltt}
 \end{session}
 Note how we are using ASCII notation to input our terms (\holtxt{?} is the ASCII way to write the existential quantifier), but the system responds with pleasant Unicode.
@@ -39,14 +40,9 @@ Unicode characters can also be used in the input.
 Also note how equality on booleans gets printed as the if-and-only-if arrow, while equality on natural numbers stays as an equality.
 The underlying constant is the same (equality) (as is implied by the fact that one can use \holtxt{=} in both places in the input), but the system tries to be helpful when printing.
 
-The definition is added to the current theory with the name
-\ml{divides\_def}, and also returned from the invocation of
-\ml{Define}. We take advantage of this and make an \ML{} binding of
-the name \ml{divides\_def} to the definition. In the usual way of
-interacting with \HOL, such an \ML{} binding is made for each
-definition and (useful) proved theorem: the \ML{} environment is thus
-being used as a convenient place to hold definitions and theorems for
-later reference in the session.
+The definition is added to the current theory with the name \ml{divides\_def}, and also available as an \ML{} binding with the name \ml{divides\_def}.
+In the usual way of interacting with \HOL, such an \ML{} binding is made for each definition and (useful) proved theorem: the \ML{} environment is thus being used as a convenient place to hold definitions and theorems for later reference in the session.
+Note that the \ml{Definition} syntax requires its keywords to be in column zero.
 
 We want to treat \ml{divides} as a (non-associating) infix:
 \begin{session}
@@ -60,8 +56,9 @@ than $1$ and itself:
 
 \begin{session}
 \begin{alltt}
->> val prime_def =
-    Define `prime p = p <> 1 /\ !x. x divides p ==> (x=1) \/ (x=p)`;
+>> Definition prime_def:
+     prime p <=> p <> 1 /\ !x. x divides p ==> (x=1) \/ (x=p)
+   End
 \end{alltt}
 \end{session}
 There is more ASCII syntax to observe here: \holtxt{\lt\gt} for not-equals, and \holtxt{!} for the universal quantifier.
@@ -339,16 +336,19 @@ Because both are so generally useful, \ml{rw} already has both rewrites in its i
 
 That was gratifyingly easy!
 The process of {\it finding\/} the proof has now finished, and all that remains is for the proof to be packaged up into the single tactic we saw above.
-Rather than use \ml{top\_thm} and the goalstack, we can bypass it and use the \ml{store\_thm} function.
-This function takes a string, a term and a tactic and applies the tactic to the term to get a theorem, and then stores the theorem in the current theory under the given name.
+Rather than use \ml{top\_thm} and the goalstack, we can bypass it and use the \ml{Theorem} syntax to store the proved theorem for future use.
+This syntax names the theorem, states the goal and provides the tactic that will prove that goal.
+It then stores the theorem in the current theory under the given name.
 \begin{session}
 \begin{alltt}
->> val DIVIDES_LE = store_thm(
-     "DIVIDES_LE",
-      ``!m n. m divides n ==> m <= n \/ (n = 0)``,
-      rw[divides_def] >> rw[]);
+>> Theorem DIVIDES_LE:
+     !m n. m divides n ==> m <= n \/ (n = 0)
+   Proof rw[divides_def] >> rw[]
+   QED
 \end{alltt}
 \end{session}
+(Note how the statement of the goal is not given with enclosing quotation symbols (the \ml{Theorem} and \ml{Proof} lines take on that role).
+Also, all of the keywords in the \ml{Theorem}-syntax have to be present starting at column 0 of the input.)
 Storing theorems in our script record of the session in this style
 (rather than with the goalstack) results in a more concise script, and
 also makes it easier to turn our script into a theory file, as we do
@@ -562,11 +562,7 @@ tactic:
 \end{session}
 
 For many users, this would be the end of dealing with this proof: the
-tactic can now be packaged into an invocation of
-\ml{prove}\footnote{The \ml{prove} function takes a term and a tactic
-and attempts to prove the term using the supplied tactic.  It
-returns the proved theorem if the tactic succeeds.  It doesn't save
-the theorem to the developing theory.} or \ml{store\_thm} and that
+tactic can now be packaged into a \ml{Theorem} declaration, and that
 would be the end of it.
 However, another user might notice that this tactic could be shortened.
 
@@ -636,10 +632,8 @@ Thus, we can merge the two sub-cases of the base-case into a single invocation o
 \end{alltt}
 \end{hol}
 
-We have now finished our exercise in tactic revision. Certainly, it
-would be hard to foresee that this final tactic would prove the
-goal; the required lemmas for the final invocation of \ml{metis\_tac}
-have been found by an incremental process of revision.
+We have now finished our exercise in tactic revision.
+Certainly, it would be hard to foresee that this final tactic would prove the goal; the lemmas passed to our invocations of the simplifier, and the final structure of the tactic have been found by an incremental process of revision.
 
 \subsection{Divisibility and factorial (again!)}
 
@@ -755,8 +749,8 @@ primes are positive. These are all quite simple to prove.
 \end{tabular}
 >>__ val PRIME_2 = prove(``prime 2``,
    rw[prime_def] >>
-   metis_tac[DIVIDES_LE, DIVIDES_ZERO, DECIDE ``~(2=0)``,
-             DECIDE ``x <= 2 = (x=0) \/ (x=1) \/ (x=2)``])
+   metis_tac[DIVIDES_LE, DIVIDES_ZERO, DECIDE ``2<>0``,
+             DECIDE ``x <= 2 <=> x=0 \/ x=1 \/ x=2``])
 
 \item [\small{({\it PRIME\_POS\/})}]
 \begin{tabular}[t]{l}
@@ -899,10 +893,9 @@ Let's prise this apart and look at it in some detail. A proof by
 contradiction can be started by using the \ml{bossLib} function
 \ml{spose\_not\_then}. With it, one assumes the negation of the
 current goal and then uses that in an attempt to prove falsity
-(\verb+F+). The assumed negation $\neg(\forall n.\ \exists p.\ n < p
-\land \mbox{\tt prime}\ p)$ is simplified a bit into $\exists n.\
-\forall p.\ n < p \supset \, \neg \,\mbox{\tt prime}\ p$ and then is
-passed to the tactic \ml{strip\_assume\_tac}. This moves its argument
+(\verb+F+).
+The assumed negation $\neg(\forall n.\ \exists p.\ n < p \land \mbox{\tt prime}\ p)$ is simplified a bit into $\exists n.\ \forall p.\ n < p \,\Rightarrow \, \neg \,\mbox{\tt prime}\ p$ and then is passed to the tactic \ml{strip\_assume\_tac}.
+This moves its argument
 to the assumption list of the goal after eliminating the existential
 quantification on $n$.
 \begin{session}
@@ -953,7 +946,7 @@ Now we simplify:
     solve the top goal by simplification:
 \begin{session}
 \begin{alltt}
->> e (rw[FACT_LESS, DECIDE ``!x. ~(x=0) = 0 < x``]);
+>> e (rw[FACT_LESS, DECIDE ``!x. x<>0 <=> 0 < x``]);
 \end{alltt}
 \end{session}
 Notice the `on-the-fly' use of \verb+DECIDE+ to provide an \textit{ad hoc}

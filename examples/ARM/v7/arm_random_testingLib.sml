@@ -33,8 +33,8 @@ local
   val ty_g = Parse.type_grammar ()
 in
   val term_to_string =
-        Portable.pp_to_string 70
-          (term_pp.pp_term tm_g ty_g PPBackEnd.raw_terminal)
+        PP.pp_to_string 70
+          (Parse.mlower o term_pp.pp_term tm_g ty_g PPBackEnd.raw_terminal)
 end
 
 val generator = Random.newgen();
@@ -206,8 +206,8 @@ let val rand_term = random_term arch enc
                                              else
                                                if enc = ARM orelse
                                                   enc = Thumb2 andalso
-            	                                  wide andalso not unpriv
-	                                       then 12
+                                                  wide andalso not unpriv
+                                               then 12
                                                else
                                                  if enc = ARM orelse
                                                     enc = Thumb2  orelse
@@ -626,7 +626,7 @@ end
 local
   fun filter_mk_set [] = []
     | filter_mk_set ((x as (a,_))::rst) =
-        x::filter_mk_set (List.filter (fn (b,_) => b <> a) rst)
+        x::filter_mk_set (List.filter (fn (b,_) => b !~ a) rst)
 
   val uint_of_word = wordsSyntax.uint_of_word
   fun try_dest_label thm = markerLib.DEST_LABEL thm handle HOL_ERR _ => thm;
@@ -752,11 +752,11 @@ local
     | encoding ARM     = armSyntax.Encoding_ARM_tm
 
   fun block enc =
-        if enc = armSyntax.Encoding_Thumb_tm orelse
-           enc = armSyntax.Encoding_Thumb2_tm
+        if enc ~~ armSyntax.Encoding_Thumb_tm orelse
+           enc ~~ armSyntax.Encoding_Thumb2_tm
         then
           "THUMB"
-        else if enc = armSyntax.Encoding_ThumbEE_tm then
+        else if enc ~~ armSyntax.Encoding_ThumbEE_tm then
           "THUMBX"
         else
           "ARM"
@@ -780,7 +780,7 @@ local
           (let val (_,toarm,_) =
                       arm_astSyntax.dest_Branch_Link_Exchange_Immediate tm
            in
-             toarm = F
+             Feq toarm
            end) orelse
         arm_astSyntax.is_Preload_Instruction tm orelse
         term_eq arm_astSyntax.Clear_Exclusive_tm tm orelse
@@ -868,7 +868,7 @@ local
   fun generate_opcode_cond pass arch enc opc = let
     val _ = valid_arch_ecoding enc arch orelse
               raise ERR "generate_opcode"
-		        "Architecture does not support encoding"
+                        "Architecture does not support encoding"
     val b = block (encoding enc)
     val ass = case b
               of "ARM"    => armLib.arm_disassemble_decode opc
@@ -882,7 +882,7 @@ in
   fun generate_random arch enc class =
     let val _ = valid_arch_ecoding enc arch orelse
                   raise ERR "generate_random"
-		            "Architecture does not support encoding"
+                            "Architecture does not support encoding"
         val a = arch_to_string arch
         val aa = String.concat ["ARCH ", a, "\n "]
         val typ = case class

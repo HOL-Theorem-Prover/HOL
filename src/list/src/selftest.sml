@@ -42,9 +42,17 @@ fun test nm cmp pr f (x, e) = test0 nm cmp pr f (x, SOME e)
 
 val _ = set_trace "Unicode" 0
 
-val _ = app tpp ["MEM a l", "~MEM a l", "x NOTIN {1; 2; 3}",
-                 "case l of [] => 0 | h::t => h + LENGTH t",
-                 "[1; 2]"]
+val _ = app tpp [
+  "MEM a l", "~MEM a l", "x NOTIN {1; 2; 3}",
+  "case l of [] => 0 | h::t => h + LENGTH t",
+  "[1; 2]",
+  "[aaaa; bbbbb; cccc; dddd; eeee; ffff; gggg; hhhh; iiii; \
+  \jjjj; kkkk; llll; mmmm;\n nnnn; oooo]",
+  "f\n\
+  \  [aaaa; bbbb; cccc; dddd; eeee; ffff; gggg; hhhh; iiii; jjjj; kkkk; llll; \
+     \mmmm;\n\
+  \   nnnn; oooo; pppp]"
+]
 
 val _ = tpp_expected {input = "SINGL 3", output = "[3]",
                       testf = standard_tpp_message}
@@ -118,5 +126,13 @@ val _ = List.app ct [
   ("MAP2i-CONS", “MAP2i (\i x y. x + i * y) [1;2;3] [4;5;6]”,
                  “[1;7;15] : num list”),
   ("FOLDL1", “FOLDL $+ 0 [1;2;3;4]”, “10n”),
-  ("FOLDR1", “FOLDR (\n a. (n * 2) :: a) [] [1;2;3;4]”, “[2;4;6;8]”)
+  ("FOLDR1", “FOLDR (\n a. (n * 2) :: a) [] [1;2;3;4]”, “[2;4;6;8]”),
+  ("GENLIST", “GENLIST (\n. 2 * n + 4) 6”, “[4; 6; 8; 10; 12; 14]”),
+  ("CONS-eq-NIL", “h::t = []”, “F”),
+  ("LUPDATE(1)", “LUPDATE 9 2 [1;2;3;4]”, “[1;2;9;4]”),
+  ("LUPDATE(2)", “LUPDATE 9 4 [1;2;3;4]”, “[1;2;3;4]”),
+  ("SHORTLEX(1)", “SHORTLEX (<) [1;1] [1;2;3]”, “T”),
+  ("SHORTLEX(2)", “SHORTLEX (<) [1;1;4] [1;1;3]”, “F”),
+  ("SHORTLEX(3)", “SHORTLEX (<) [1;1;4] [1;1]”, “F”),
+  ("LLEX(1)", “LLEX (<) [1;1;1] [1;2]”, “T”)
 ]

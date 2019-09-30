@@ -17,9 +17,10 @@ val _ = Hol_datatype`
 
 val Ctermeq_def = RWDefine`
   (Ctermeq (CNom a1) (CNom a2) = (a1 = a2)) ∧
-  (Ctermeq (CSus p1 v1) (CSus p2 v2) = (p1 == p2) ∧ (v1 = v2)) ∧
-  (Ctermeq (CTie a1 t1) (CTie a2 t2) = (a1 = a2) ∧ Ctermeq t1 t2) ∧
-  (Ctermeq (CnPair t1a t1d) (CnPair t2a t2d) = Ctermeq t1a t2a ∧ Ctermeq t1d t2d) ∧
+  (Ctermeq (CSus p1 v1) (CSus p2 v2) <=> (p1 == p2) ∧ (v1 = v2)) ∧
+  (Ctermeq (CTie a1 t1) (CTie a2 t2) <=> (a1 = a2) ∧ Ctermeq t1 t2) ∧
+  (Ctermeq (CnPair t1a t1d) (CnPair t2a t2d) <=>
+     Ctermeq t1a t2a ∧ Ctermeq t1d t2d) ∧
   (Ctermeq (CnConst c1) (CnConst c2) = (c1 = c2)) ∧
   (Ctermeq t1 t2 = F)`;
 
@@ -280,7 +281,7 @@ val _ = write [mk_datatype_info {
 
 val _ = adjoin_to_theory {
   sig_ps = NONE,
-  struct_ps = SOME (fn pps => PP.add_string pps
+  struct_ps = SOME (fn _ => PP.add_string
 "local open TypeBase open TypeBasePure open Drule in\
 \ val _ = write [mk_datatype_info {\
 \  ax = ORIG nterm_rec_exists,\

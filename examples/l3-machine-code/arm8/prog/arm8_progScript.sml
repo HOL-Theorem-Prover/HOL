@@ -3,7 +3,7 @@ open blastLib stateLib
 open set_sepTheory progTheory temporal_stateTheory arm8_stepTheory
 
 val () = new_theory "arm8_prog"
-
+val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
 val _ =

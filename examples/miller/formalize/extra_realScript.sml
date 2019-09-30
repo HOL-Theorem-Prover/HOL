@@ -7,7 +7,7 @@ quietdec := true;
 *)
 
 open HolKernel Parse boolLib bossLib realTheory realLib
-     HurdUseful subtypeTheory extra_numTheory transcTheory
+     hurdUtils subtypeTheory extra_numTheory transcTheory
      pred_setTheory arithmeticTheory seqTheory combinTheory pairTheory
      extra_pred_setTheory extra_boolTheory extra_pred_setTools
      sumTheory;
@@ -17,6 +17,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "extra_real";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
@@ -110,7 +111,7 @@ val REAL_SUP_MAX = store_thm
     >- PROVE_TAC []
     >> STRIP_TAC
     >> ASSUME_TAC ((SPEC ``P:real->bool`` o CONV_RULE
-		      (DEPTH_CONV EXISTS_UNIQUE_CONV)) REAL_SUP_EXISTS_UNIQUE)
+                      (DEPTH_CONV EXISTS_UNIQUE_CONV)) REAL_SUP_EXISTS_UNIQUE)
     >> RES_TAC);
 
 val REAL_INF_MIN = store_thm

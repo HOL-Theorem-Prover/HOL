@@ -2,23 +2,23 @@ signature subtypeTools =
 sig
 
   (* Types *)
-  type 'a thunk = 'a HurdUseful.thunk
-  type hol_type = HurdUseful.hol_type
-  type term = HurdUseful.term
-  type thm = HurdUseful.thm
-  type conv = HurdUseful.conv
-  type rule = HurdUseful.rule
-  type tactic = HurdUseful.tactic
-  type thm_tactic = HurdUseful.thm_tactic
-  type thm_tactical = HurdUseful.thm_tactical
-  type vars = HurdUseful.vars
-  type vterm = HurdUseful.vterm
-  type vthm = HurdUseful.vthm
-  type type_subst = HurdUseful.type_subst
-  type substitution = HurdUseful.substitution
-  type raw_substitution = HurdUseful.raw_substitution
-  type ho_substitution = HurdUseful.ho_substitution
-  type ho_raw_substitution = HurdUseful.ho_raw_substitution
+  type 'a thunk = 'a hurdUtils.thunk
+  type hol_type = hurdUtils.hol_type
+  type term = hurdUtils.term
+  type thm = hurdUtils.thm
+  type conv = hurdUtils.conv
+  type rule = hurdUtils.rule
+  type tactic = hurdUtils.tactic
+  type thm_tactic = hurdUtils.thm_tactic
+  type thm_tactical = hurdUtils.thm_tactical
+  type vars = hurdUtils.vars
+  type vterm = hurdUtils.vterm
+  type vthm = hurdUtils.vthm
+  type type_subst = hurdUtils.type_subst
+  type substitution = hurdUtils.substitution
+  type raw_substitution = hurdUtils.raw_substitution
+  type ho_substitution = hurdUtils.ho_substitution
+  type ho_raw_substitution = hurdUtils.ho_raw_substitution
 
   (* General *)
   val dest_in : term -> term * term
@@ -83,7 +83,7 @@ sig
   val pattern_rewr : term * (conv -> (term -> thm) -> conv) -> vterm * c_rewr
   val pattern_rule : term * (vthm -> vthm list) -> vterm * c_rule
   val new_context : unit -> context
-  val pp_context : ppstream -> context -> unit
+  val pp_context : context PP.pprinter
   val context_subtypes : context -> subtype_context
   val context_add_fact : vthm -> context -> context
   val context_add_element : context_element -> context -> context
@@ -113,7 +113,7 @@ sig
 
   (* Operations *)
   val empty_precontext : precontext
-  val pp_precontext : ppstream -> precontext -> unit
+  val pp_precontext : precontext PP.pprinter
   val precontext_add : string * context_element list -> precontext -> precontext
   val precontext_compile : precontext -> context
   val precontext_merge : precontext -> precontext -> precontext

@@ -4,6 +4,15 @@ structure boolContext :> boolContext =
 struct
 open HolKernel Parse boolLib;
 
+structure Parse = struct
+  open Parse
+  val (Type,Term) =
+      pred_setTheory.pred_set_grammars
+        |> apsnd ParseExtras.grammar_loose_equality
+        |> parse_from_grammars
+end
+open Parse
+
 (* interactive mode
 if !show_assums then () else
  (loadPath := ".."::"../../prob"::(!loadPath);
@@ -15,7 +24,7 @@ if !show_assums then () else
 *)
 
 open pairTheory pred_setTheory
-     res_quanTheory HurdUseful ho_proverTools res_quanTools subtypeTools
+     res_quanTheory hurdUtils ho_proverTools res_quanTools subtypeTools
      subtypeTheory;
 
 infixr 0 ++ || ORELSEC ## THENC THEN_TCL ORELSE_TCL;

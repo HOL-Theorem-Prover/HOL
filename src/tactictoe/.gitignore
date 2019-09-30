@@ -1,8 +1,6 @@
-code
-mc
-features
-mdict
-record_log
-search_log
-unfold_log
-open
+debug/*
+code/*
+info/*
+eval/*
+scripts/*
+ttt_tacdata/*

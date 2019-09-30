@@ -1,9 +1,9 @@
 (* =====================================================================*)
-(* FILE		: gspec.ml						*)
-(* DESCRIPTION  : Generalized set specification : {tm[xi...xn] | P}	*)
-(*								        *)
-(* REWRITTEN    : T Melham (adapted for pred_set: January 1992)	        *)
-(* DATE		: 90.07.30						*)
+(* FILE         : gspec.ml                                              *)
+(* DESCRIPTION  : Generalized set specification : {tm[xi...xn] | P}     *)
+(*                                                                      *)
+(* REWRITTEN    : T Melham (adapted for pred_set: January 1992)         *)
+(* DATE         : 90.07.30                                              *)
 (* TRANSLATED   : Feb 20 1992, Konrad Slind                             *)
 (*                                                                      *)
 (* WARNING      : This code cannot statically depend on pred_setTheory, *)
@@ -14,7 +14,13 @@
 structure PGspec :> PGspec =
 struct
 
-open HolKernel Parse boolLib pairSyntax PairedLambda
+open HolKernel boolLib pairSyntax PairedLambda
+
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars pairTheory.pair_grammars
+end
+open Parse
 
 val PAIR = pairTheory.PAIR;
 
@@ -25,15 +31,15 @@ val dest_in =
              (ERR "dest_in" "not an IN term");
 
 (* --------------------------------------------------------------------- *)
-(* Local function: MK_PAIR						 *)
-(*									 *)
-(* A call to:								 *)
-(* 									 *)
-(*     MK_PAIR (``[x1,x2,...,xn]``) (``v:(ty1 # ty2 # ... # tyn)``)	 *)
-(*									 *)
-(* returns:								 *)
-(*									 *)
-(*     |- v = FST v, FST(SND v), ..., SND(SND...(SND v))		 *)
+(* Local function: MK_PAIR                                               *)
+(*                                                                       *)
+(* A call to:                                                            *)
+(*                                                                       *)
+(*     MK_PAIR (``[x1,x2,...,xn]``) (``v:(ty1 # ty2 # ... # tyn)``)      *)
+(*                                                                       *)
+(* returns:                                                              *)
+(*                                                                       *)
+(*     |- v = FST v, FST(SND v), ..., SND(SND...(SND v))                 *)
 (* --------------------------------------------------------------------- *)
 
 fun MK_PAIR vs v =
@@ -50,15 +56,15 @@ fun MK_PAIR vs v =
    end;
 
 (* ---------------------------------------------------------------------*)
-(* Local function: EXISTS_TUPLE_CONV					*)
-(*									*)
-(* A call to:								*)
+(* Local function: EXISTS_TUPLE_CONV                                    *)
+(*                                                                      *)
+(* A call to:                                                           *)
 (*                                                                      *)
 (*  EXISTS_TUPLE_CONV [`x1`,...,`xn`] `?v. tm' = (\(x1,...,xn). tm) v   *)
-(*									*)
-(* returns:								*)
-(*									*)
-(*  |- (?v. tm' = (\(x1,...,xn). tm) v ) = ?x1...xn. tm' = tm		*)
+(*                                                                      *)
+(* returns:                                                             *)
+(*                                                                      *)
+(*  |- (?v. tm' = (\(x1,...,xn). tm) v ) = ?x1...xn. tm' = tm           *)
 (* ---------------------------------------------------------------------*)
 
 local fun EX v tm th = EXISTS (mk_exists(v,subst[tm |-> v] (concl th)),tm) th
@@ -84,11 +90,11 @@ fun EXISTS_TUPLE_CONV vs tm =
 end;
 
 (* --------------------------------------------------------------------- *)
-(* Local function: PAIR_EQ_CONV.					 *)
-(*									 *)
-(* A call to PAIR_EQ_CONV (``?x1...xn. a,b = c,T``) returns:		 *)
-(*									 *)
-(*    |- (?x1...xn. a,T = b,c) = (?x1...xn. (a = b) /\ c)		 *)
+(* Local function: PAIR_EQ_CONV.                                         *)
+(*                                                                       *)
+(* A call to PAIR_EQ_CONV (``?x1...xn. a,b = c,T``) returns:             *)
+(*                                                                       *)
+(*    |- (?x1...xn. a,T = b,c) = (?x1...xn. (a = b) /\ c)                *)
 (* --------------------------------------------------------------------- *)
 
 local
@@ -113,11 +119,11 @@ fun PAIR_EQ_CONV tm =
 end;
 
 (* ---------------------------------------------------------------------*)
-(* Local function: ELIM_EXISTS_CONV.					*)
-(*									*)
+(* Local function: ELIM_EXISTS_CONV.                                    *)
+(*                                                                      *)
 (* ELIM_EXISTS_CONV (``?x. (x = tm) /\ P[x]``) returns:                 *)
-(*									*)
-(*   |- (?x. x = tm /\ P[x]) = P[tm/x]					*)
+(*                                                                      *)
+(*   |- (?x. x = tm /\ P[x]) = P[tm/x]                                  *)
 (* ---------------------------------------------------------------------*)
 
 fun ELIM_EXISTS_CONV tm =
@@ -134,11 +140,11 @@ fun ELIM_EXISTS_CONV tm =
    end
 
 (* ---------------------------------------------------------------------*)
-(* Local function: PROVE_EXISTS.					*)
-(*									*)
-(* PROVE_EXISTS `?x. tm` (x not free in tm) returns:		        *)
-(*									*)
-(*   |- ?x.tm = tm							*)
+(* Local function: PROVE_EXISTS.                                        *)
+(*                                                                      *)
+(* PROVE_EXISTS `?x. tm` (x not free in tm) returns:                    *)
+(*                                                                      *)
+(*   |- ?x.tm = tm                                                      *)
 (* ---------------------------------------------------------------------*)
 
 fun PROVE_EXISTS tm =
@@ -151,10 +157,10 @@ fun PROVE_EXISTS tm =
    end;
 
 (* ---------------------------------------------------------------------*)
-(* Internal function: list_variant					*)
-(*									*)
-(* makes variants of the variables in l2 such that they are all not in	*)
-(* l1 and are all different.						*)
+(* Internal function: list_variant                                      *)
+(*                                                                      *)
+(* makes variants of the variables in l2 such that they are all not in  *)
+(* l1 and are all different.                                            *)
 (* ---------------------------------------------------------------------*)
 
 fun list_variant l1 l2 =
@@ -164,29 +170,29 @@ fun list_variant l1 l2 =
         end;
 
 (* ---------------------------------------------------------------------*)
-(* SET_SPEC_CONV: implements the axiom of specification for generalized	*)
-(* set specifications.							*)
-(*									*)
-(* There are two cases:							*)
-(*									*)
-(*   1) SET_SPEC_CONV `t IN {v | p[v]}`  (v a variable, t a term)	*)
-(* 									*)
-(*      returns:							*)
-(*									*)
-(*      |- t IN {v | p[v]} = p[t/v]					*)
-(*									*)
-(*									*)
-(*   2) SET_SPEC_CONV `t IN {tm[x1,...,xn] | p[x1,...xn]}`        	*)
-(*									*)
-(*      returns:							*)
-(*									*)
-(*      |- t IN {tm[x1,...,xn] | p[x1,...xn]} 				*)
-(*	     =								*)
-(*         ?x1...xn. t = tm[x1,...,xn] /\ p[x1,...xn]			*)
-(*									*)
-(* Note that {t[x1,...,xm] | p[x1,...,xn]} means:			*)
-(*									*)
-(*   GSPEC (\(x1,...,xn). (t[x1,...,xn], p[x1,...,xn]))		        *)
+(* SET_SPEC_CONV: implements the axiom of specification for generalized *)
+(* set specifications.                                                  *)
+(*                                                                      *)
+(* There are two cases:                                                 *)
+(*                                                                      *)
+(*   1) SET_SPEC_CONV `t IN {v | p[v]}`  (v a variable, t a term)       *)
+(*                                                                      *)
+(*      returns:                                                        *)
+(*                                                                      *)
+(*      |- t IN {v | p[v]} = p[t/v]                                     *)
+(*                                                                      *)
+(*                                                                      *)
+(*   2) SET_SPEC_CONV `t IN {tm[x1,...,xn] | p[x1,...xn]}`              *)
+(*                                                                      *)
+(*      returns:                                                        *)
+(*                                                                      *)
+(*      |- t IN {tm[x1,...,xn] | p[x1,...xn]}                           *)
+(*           =                                                          *)
+(*         ?x1...xn. t = tm[x1,...,xn] /\ p[x1,...xn]                   *)
+(*                                                                      *)
+(* Note that {t[x1,...,xm] | p[x1,...,xn]} means:                       *)
+(*                                                                      *)
+(*   GSPEC (\(x1,...,xn). (t[x1,...,xn], p[x1,...,xn]))                 *)
 (* ---------------------------------------------------------------------*)
 
 val checkIN = assert (fn tm =>

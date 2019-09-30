@@ -21,8 +21,8 @@ local
   val ty_g = Parse.type_grammar ()
 in
   val term_to_string =
-        Portable.pp_to_string 70
-          (term_pp.pp_term tm_g ty_g PPBackEnd.raw_terminal)
+        PP.pp_to_string 70
+          (Parse.mlower o term_pp.pp_term tm_g ty_g PPBackEnd.raw_terminal)
 end
 
 fun quote_to_string l =
@@ -165,7 +165,7 @@ val read_mnemonic : instruction_mnemonic M =
 
 val read_InITBlock : bool M =
   read_itstate >>= (fn (c,l) =>
-    return (not (null l) andalso c <> boolSyntax.arb));
+    return (not (null l) andalso c !~ boolSyntax.arb));
 
 val read_OutsideOrLastInITBlock : bool M =
   read_itstate >>= (fn (_,l) => return (length l <= 1));
@@ -435,10 +435,6 @@ let fun recurse [] a = a
 in
   recurse l 0
 end;
-
-infix ==;
-
-val op == = uncurry term_eq;
 
 val is_T   = term_eq T;
 val is_F   = term_eq F;
@@ -1094,7 +1090,7 @@ in
                               (outside orelse
                                (m <> B orelse length l = 1) andalso
                                if hd l then
-                                 itcond = cond
+                                 itcond ~~ cond
                                else
                                  opposite_condition (itcond,cond))
                               ("arm_parse_condition",
@@ -1278,7 +1274,7 @@ fun mode1_register rm = mk_Mode1_register (mk_word5 0,mk_word2 0,rm);
 fun is_mode1_register mode1 =
   is_Mode1_register mode1 andalso
   let val (sh,typ,_) = dest_Mode1_register mode1 in
-    sh == mk_word5 0 andalso typ = mk_word2 0
+    sh ~~ mk_word5 0 andalso typ ~~ mk_word2 0
   end;
 
 fun shift_to_word2 LSL_shift = mk_word2 0
@@ -1320,12 +1316,12 @@ val arm_parse_mode1_shift : term -> term M =
         else
           tryT arm_parse_constant
             (fn i =>
-               let val shift32 = i == ``32i``
+               let val shift32 = i ~~ ``32i``
                    val imm5 = if shift32 then
                                 szero
                               else
                                 uint_to_word ``:5`` i
-                   val stype = if not shift32 andalso imm5 == szero then
+                   val stype = if not shift32 andalso imm5 ~~ szero then
                                  mk_word2 0
                                else
                                  stype
@@ -1369,7 +1365,7 @@ fun add_sub_literal m (rd,i) =
                                 ~1020 <= v andalso v <= 0
             val wide_okay = ~4095 <= v andalso v <= 4095
             val add = narrow_okay orelse
-                      if 0 <= v andalso not (i == ``-0i``) then
+                      if 0 <= v andalso not (i ~~ ``-0i``) then
                         m = ADD
                       else
                         m <> ADD
@@ -1382,7 +1378,7 @@ fun add_sub_literal m (rd,i) =
     else
       let val (opc,imm12) = mode1_immediate2 false m i in
         return (Encoding_ARM_tm,
-          mk_Add_Sub (mk_bool (opc = mk_word4 4),mk_word4 15,rd,imm12))
+          mk_Add_Sub (mk_bool (opc ~~ mk_word4 4),mk_word4 15,rd,imm12))
       end handle HOL_ERR {message,...} =>
             other_errorT ("arm_parse_add_sub", message));
 
@@ -1395,10 +1391,10 @@ let val v = sint_of_term i handle HOL_ERR _ => 1024 in
         ~508 <= v andalso v <= 508
       else
         narrow_register rd andalso ~1020 <= v andalso v <= 1020 andalso
-        fst (mode1_immediate2 false m i) = dp_opcode ADD
+        fst (mode1_immediate2 false m i) ~~ dp_opcode ADD
     else
       narrow_register rn andalso
-      if rd = rn then
+      if rd ~~ rn then
         ~255 <= v andalso v <= 255
       else
         ~7 <= v andalso v <= 7
@@ -1413,16 +1409,16 @@ fun narrow_okay_reg m q sflag has_thumb2 InITBlock OutsideOrLastInITBlock
   (case m
    of ADD => if narrow_registers [rd,rn] then
                sflag = not InITBlock andalso narrow_register rm orelse
-               not sflag andalso rd = rn andalso
+               not sflag andalso rd ~~ rn andalso
                (not (narrow_register rm) orelse has_thumb2)
              else
-               not sflag andalso rd = rn andalso
+               not sflag andalso rd ~~ rn andalso
                (not (is_PC rd) orelse OutsideOrLastInITBlock)
     | SUB => sflag = not InITBlock andalso narrow_registers [rd,rn,rm]
     | RSC => false
     | RSB => false
     | ORN => false
-    | _   => sflag = not InITBlock andalso rd = rn andalso
+    | _   => sflag = not InITBlock andalso rd ~~ rn andalso
              narrow_registers [rn,rm]);
 
 fun wide_okay_reg m mode1 =
@@ -1439,11 +1435,11 @@ fun data_processing_immediate m (rd,rn,i) =
           read_InITBlock >>= (fn InITBlock =>
             let val thumb_sflag = mk_bool (not InITBlock andalso
                                            not (is_SP rn))
-                val narrow_okay = q <> Wide andalso thumb_sflag = sflag
+                val narrow_okay = q <> Wide andalso thumb_sflag ~~ sflag
                                     andalso narrow_okay_imm m i (rd,rn)
                 val enc = pick_enc true narrow_okay
                 val (opc,imm12) =
-                       mode1_immediate2 (enc = Encoding_Thumb2_tm) m i
+                       mode1_immediate2 (enc ~~ Encoding_Thumb2_tm) m i
             in
               assertT_thumb "data_processing_immediate" q narrow_okay (m <> RSC)
                 (return (enc,
@@ -1533,14 +1529,14 @@ fun narrow_okay_reg m (rdn,rm,mode1) =
   if m = MOV then
     if is_Mode1_register_shifted_register mode1 then
       let val (rs,typ,_) = dest_Mode1_register_shifted_register mode1 in
-        rdn = rm andalso narrow_registers [rdn,rs]
+        rdn ~~ rm andalso narrow_registers [rdn,rs]
       end
     else
       let val (imm5,typ,_) = dest_Mode1_register mode1 in
         if narrow_registers [rdn,rm] then
-          typ <> mk_word2 3
+          typ !~ mk_word2 3
         else
-          typ = mk_word2 0 andalso imm5 = mk_word5 0
+          typ ~~ mk_word2 0 andalso imm5 ~~ mk_word5 0
       end
   else
     m <> TEQ andalso is_mode1_register mode1 andalso narrow_registers [rdn,rm];
@@ -1556,10 +1552,10 @@ fun move_test_immediate m (rdn,i) =
       read_InITBlock >>= (fn InITBlock =>
         let val thumb_sflag = mk_bool (not InITBlock orelse
                                        m <> MOV andalso m <> MVN)
-            val narrow_okay = q <> Wide andalso thumb_sflag = sflag andalso
+            val narrow_okay = q <> Wide andalso thumb_sflag ~~ sflag andalso
                               narrow_okay_imm m i rdn
             val enc = pick_enc true narrow_okay
-            val (opc,imm12) = mode1_immediate2 (enc = Encoding_Thumb2_tm) m i
+            val (opc,imm12) = mode1_immediate2 (enc ~~ Encoding_Thumb2_tm) m i
             val r15 = mk_word4 15
             val (rd,rn) = if mem m [MOV,MVN] then (rdn,r15) else (r15,rdn)
         in
@@ -1590,7 +1586,7 @@ fun move_test_reg m (rdn,rm,mode1) =
                                        narrow_registers [rdn,rm] andalso
                                        (m <> MOV orelse version < 6 orelse
                                         is_T sflag))
-            val narrow_okay = q <> Wide andalso thumb_sflag = sflag andalso
+            val narrow_okay = q <> Wide andalso thumb_sflag ~~ sflag andalso
                               (OutsideOrLastInITBlock orelse not (is_PC rdn))
                               andalso narrow_okay_reg m (rdn,rm,mode1)
             val wide_okay = wide_okay_reg m (rm,mode1)
@@ -1632,7 +1628,7 @@ fun shift_immediate m thumb q InITBlock sflag (rd,rm,i) =
 let val v = sint_of_term i
     val wide_okay = 1 <= v andalso v <= (if mem m [LSR,ASR] then 32 else 31)
     val narrow_okay = q <> Wide andalso wide_okay andalso m <> ROR andalso
-                      mk_bool InITBlock <> sflag andalso
+                      mk_bool InITBlock !~ sflag andalso
                       narrow_registers [rd,rm]
     val imm5 = mk_word5 (if v = 32 then 0 else Int.abs v)
     val rn = mk_word4 (if thumb then 15 else 0)
@@ -1647,8 +1643,8 @@ in
 end handle HOL_ERR {message,...} => other_errorT ("shift_immediate", message);
 
 fun shift_register m thumb q InITBlock sflag (rd,rn,rm) =
-let val narrow_okay = q <> Wide andalso rd = rn andalso
-                      mk_bool InITBlock <> sflag andalso
+let val narrow_okay = q <> Wide andalso rd ~~ rn andalso
+                      mk_bool InITBlock !~ sflag andalso
                       narrow_registers [rd,rn,rm]
     val rn' = mk_word4 (if thumb then 15 else 0)
 in
@@ -1750,7 +1746,7 @@ val arm_parse_adr : (term * term) M =
             if narrow_okay orelse wide_okay then
               return
                 (if narrow_okay then Encoding_Thumb_tm else Encoding_Thumb2_tm,
-                 mk_Add_Sub (mk_bool (0 <= offset andalso not (i == ``-0i``)),
+                 mk_Add_Sub (mk_bool (0 <= offset andalso not (i ~~ ``-0i``)),
                    mk_word4 15,rd,mk_word12 offset))
             else
               other_errorT ("arm_parse_adr",
@@ -1925,7 +1921,7 @@ val arm_parse_bx : (term * term) M =
   thumb_or_arm_okay (fn enc =>
   arm_parse_register >>= (fn rm =>
   read_OutsideOrLastInITBlock >>= (fn OutsideOrLastInITBlock =>
-    assertT (enc = Encoding_ARM_tm orelse OutsideOrLastInITBlock)
+    assertT (enc ~~ Encoding_ARM_tm orelse OutsideOrLastInITBlock)
       ("arm_parse_bx", "must be outside or last in IT block")
       (return (enc,mk_Branch_Exchange rm)))));
 
@@ -2120,11 +2116,12 @@ val arm_parse_mul : (term * term) M =
            read_InITBlock >>= (fn InITBlock =>
            read_qualifier >>= (fn q =>
              let val thumb_sflag = mk_bool (not InITBlock)
-                 val narrow_okay = q <> Wide andalso thumb_sflag = sflag andalso
-                                   (rd = rn orelse rd = rm) andalso
-                                   narrow_registers [rn,rm]
+                 val narrow_okay =
+                     q <> Wide andalso thumb_sflag ~~ sflag andalso
+                     (rd ~~ rn orelse rd ~~ rm) andalso
+                     narrow_registers [rn,rm]
                  val wide_okay = is_F sflag
-                 val (rn,rm) = if narrow_okay andalso rd <> rm
+                 val (rn,rm) = if narrow_okay andalso rd !~ rm
                                then (rm,rn) else (rn,rm)
              in
                assertT_thumb "arm_parse_mul" q narrow_okay wide_okay
@@ -2318,7 +2315,7 @@ val arm_parse_pkh : term -> (term * term) M =
                (fn _ =>
                   arm_parse_string (if is_T tbform then "asr" else "lsl") >>-
                   arm_parse_constant >>= (fn i =>
-                    let val imm5 = if is_T tbform andalso i == ``32i`` then
+                    let val imm5 = if is_T tbform andalso i ~~ ``32i`` then
                                      mk_word5 0
                                    else
                                      uint_to_word ``:5`` i
@@ -2377,7 +2374,7 @@ val arm_parse_mode2_offset :
              return (mk_bool (thumb orelse not thumb andalso is_T unpriv))) >>=
           (fn w =>
              let val v = sint_of_term i
-                 val u = mk_bool (0 <= v andalso not (i == ``-0i``))
+                 val u = mk_bool (0 <= v andalso not (i ~~ ``-0i``))
                  val thumbee_okay = thumbee andalso q <> Wide andalso
                                     narrow_register rt andalso is_F byte andalso
                                     is_F w andalso v mod 4 = 0 andalso
@@ -2442,7 +2439,7 @@ val arm_parse_mode2_offset :
                 let val (sh,_,_) = dest_Mode2_register mode2
                     val narrow_okay = q <> Wide andalso indx andalso
                                       narrow_registers [rt,rn,rm] andalso
-                                      sh = mk_word5 (if thumbee then 2 else 0)
+                                      sh ~~ mk_word5 (if thumbee then 2 else 0)
                                       andalso is_F w
                 in
                   assertT ((not thumb orelse pos andalso is_F w) andalso
@@ -2505,7 +2502,7 @@ val arm_parse_mode2 : bool -> term -> (term * term) M =
                     ("arm_parse_mode2", "not a valid instruction")
                     (return
                        (pick_enc thumb narrow_okay,
-                        mk_Load (T,mk_bool (0 <= v andalso not (i == ``-0i``)),
+                        mk_Load (T,mk_bool (0 <= v andalso not (i ~~ ``-0i``)),
                                  byte,F,F,mk_word4 15,rt,mode2)))
                 end handle HOL_ERR {message,...} =>
                   other_errorT ("arm_parse_mode2", message))
@@ -2530,7 +2527,7 @@ val arm_parse_mode2_unpriv : bool -> term -> (term * term) M =
                 let val v = sint_of_term i
                     val mode2 = mk_Mode2_immediate (mk_word12 (Int.abs v))
                 in
-                  assertT (enc = Encoding_Thumb2_tm andalso
+                  assertT (enc ~~ Encoding_Thumb2_tm andalso
                            0 <= v andalso v <= 255)
                     ("arm_parse_mode2_unpriv",
                      "must be Thumb2 with offset in range 0-255")
@@ -2545,13 +2542,13 @@ val arm_parse_mode2_unpriv : bool -> term -> (term * term) M =
               arm_parse_rsquare >>-
               tryT arm_parse_comma
                 (fn _ =>
-                   assertT (enc = Encoding_ARM_tm)
+                   assertT (enc ~~ Encoding_ARM_tm)
                      ("arm_parse_mode2_unpriv", "unexpected comma")
                      (arm_parse_mode2_offset (ld,false,byte,T,rt,rn)))
                 (fn _ =>
                   return (enc,
                    (if ld then mk_Load else mk_Store)
-                      (mk_bool (enc = Encoding_Thumb2_tm),T,byte,F,T,rn,rt,
+                      (mk_bool (enc ~~ Encoding_Thumb2_tm),T,byte,F,T,rn,rt,
                        mk_Mode2_immediate (mk_word12 0))))))));
 
 (* ------------------------------------------------------------------------- *)
@@ -2589,7 +2586,7 @@ val arm_parse_mode3_offset :
              return (mk_bool thumb)) >>=
           (fn w =>
              let val v = sint_of_term i
-                 val u = mk_bool (0 <= v andalso not (i == ``-0i``))
+                 val u = mk_bool (0 <= v andalso not (i ~~ ``-0i``))
                  val narrow_okay = q <> Wide andalso narrow_registers [rt,rn]
                                      andalso is_F w andalso v mod 2 = 0 andalso
                                    0 <= v andalso v <= 62 andalso
@@ -2637,7 +2634,7 @@ val arm_parse_mode3_offset :
                 let val (sh,_) = dest_Mode3_register mode3
                     val narrow_okay = q <> Wide andalso indx andalso
                                       narrow_registers [rt,rn,rm] andalso
-                                      sh = mk_word2 (if thumbee then 1 else 0)
+                                      sh ~~ mk_word2 (if thumbee then 1 else 0)
                                       andalso is_F w
                 in
                   assertT ((not thumb orelse pos andalso is_F w) andalso
@@ -2715,7 +2712,7 @@ val arm_parse_mode3 : (term * term) option -> (term * term) M =
                    (return
                       (if thumb then Encoding_Thumb2_tm else Encoding_ARM_tm,
                        mk_Load_Halfword (T,
-                         mk_bool (0 <= v andalso not (i == ``-0i``)),F,
+                         mk_bool (0 <= v andalso not (i ~~ ``-0i``)),F,
                          signed,half,F,mk_word4 15,rt,mode3)))
                end handle HOL_ERR {message,...} =>
                  other_errorT ("arm_parse_mode3", message)
@@ -2736,7 +2733,7 @@ val arm_parse_mode3_unpriv : (term * term) option -> (term * term) M =
                 let val v = sint_of_term i
                     val mode3 = mk_Mode3_immediate (mk_word12 (Int.abs v))
                 in
-                  assertT (enc = Encoding_Thumb2_tm andalso
+                  assertT (enc ~~ Encoding_Thumb2_tm andalso
                            0 <= v andalso v <= 255)
                     ("arm_parse_mode3_unpriv",
                      "must be Thumb2 with offset in range 0-255")
@@ -2752,7 +2749,7 @@ val arm_parse_mode3_unpriv : (term * term) option -> (term * term) M =
             arm_parse_rsquare >>-
             tryT arm_parse_comma
               (fn _ =>
-                 assertT (enc = Encoding_ARM_tm)
+                 assertT (enc ~~ Encoding_ARM_tm)
                    ("arm_parse_mode3_unpriv", "unexpected comma")
                    (tryT (arm_parse_plus_minus >>= (fn pos =>
                           arm_parse_register >>= (fn rm => return (pos,rm))))
@@ -2766,13 +2763,13 @@ val arm_parse_mode3_unpriv : (term * term) option -> (term * term) M =
                              ("arm_parse_mode3_unpriv",
                               "offset must be in range -255-255")
                              (return
-                               (mk_bool (0 <= v andalso not (i == ``-0i``)),
+                               (mk_bool (0 <= v andalso not (i ~~ ``-0i``)),
                                 mk_Mode3_immediate (mk_word12 (Int.abs v))))
                          end handle HOL_ERR {message,...} =>
                            other_errorT ("arm_parse_mode3_unpriv", message)))))
               (fn _ => return (T,mk_Mode3_immediate (mk_word12 0))) >>=
             (fn (add,tm) =>
-               let val thumb = enc = Encoding_Thumb2_tm
+               let val thumb = enc ~~ Encoding_Thumb2_tm
                    val indx = mk_bool thumb
                    val w = mk_bool (not thumb)
                in
@@ -2798,13 +2795,13 @@ val arm_parse_mode3_dual_offset : bool -> (term * term) M =
                   ("arm_parse_mode3_dual_offset",
                     "offset beyond permitted range (-1020 to +1020)")
                   (return
-                     (mk_bool (0 <= offset andalso not (i == ``-0i``)),
+                     (mk_bool (0 <= offset andalso not (i ~~ ``-0i``)),
                       mk_Mode3_immediate (mk_word12 (Int.abs offset)))))
            else
              assertT (~255 <= offset andalso offset <= 255)
                ("arm_parse_mode3_dual_offset",
                 "offset beyond permitted range (-255 to +255)")
-               (return (mk_bool (0 <= offset andalso not (i == ``-0i``)),
+               (return (mk_bool (0 <= offset andalso not (i ~~ ``-0i``)),
                   mk_Mode3_immediate (mk_word12 (Int.abs offset))))
          end handle HOL_ERR {message,...} =>
             other_errorT ("arm_parse_mode3_dual_offset", message))
@@ -2823,7 +2820,7 @@ val arm_parse_mode3_dual : bool -> (term * term) M =
        arm_parse_comma >>-
        arm_parse_register >>= (fn rt2 =>
        arm_parse_comma >>-
-         let val thumb = enc == Encoding_Thumb2_tm
+         let val thumb = enc ~~ Encoding_Thumb2_tm
              val t1 = uint_of_word rt
              val t2 = uint_of_word rt2
          in
@@ -2852,7 +2849,7 @@ val arm_parse_mode3_dual : bool -> (term * term) M =
                          return (T,T,mk_Mode3_immediate (mk_word12 0))) >>=
                    (fn (indx,add,tm) =>
                       let val w = mk_bool
-                                   (enc = Encoding_Thumb2_tm andalso is_F indx)
+                                   (enc ~~ Encoding_Thumb2_tm andalso is_F indx)
                       in
                         return
                           (if ld then
@@ -2875,13 +2872,13 @@ val arm_parse_mode3_dual : bool -> (term * term) M =
                                          (mk_word12 (Int.abs v))
                        in
                          assertT
-                           (if enc = Encoding_Thumb2_tm
+                           (if enc ~~ Encoding_Thumb2_tm
                             then wide_okay else arm_okay)
                            ("arm_parse_mode3_dual",
                             "offset beyond permitted range")
                            (return (enc,
                               mk_Load_Dual
-                                (T,mk_bool (0 <= v andalso not (i == ``-0i``)),
+                                (T,mk_bool (0 <= v andalso not (i ~~ ``-0i``)),
                                  F,mk_word4 15,rt,rt2,mode3)))
                        end handle HOL_ERR {message,...} =>
                          other_errorT ("arm_parse_mode3_dual", message)))))
@@ -2902,7 +2899,7 @@ val arm_parse_ldrex : (term * term) M =
              arm_parse_constant >>= (fn i =>
              arm_parse_rsquare >>-
                let val v = sint_of_term i in
-                 assertT (if enc = Encoding_Thumb2_tm then
+                 assertT (if enc ~~ Encoding_Thumb2_tm then
                             0 <= v andalso v <= 1020 andalso v mod 4 = 0
                           else
                             v = 0)
@@ -2930,7 +2927,7 @@ val arm_parse_strex : (term * term) M =
              arm_parse_constant >>= (fn i =>
              arm_parse_rsquare >>-
                let val v = sint_of_term i in
-                 assertT (if enc = Encoding_Thumb2_tm then
+                 assertT (if enc ~~ Encoding_Thumb2_tm then
                             0 <= v andalso v <= 1020 andalso v mod 4 = 0
                           else
                             v = 0)
@@ -3251,7 +3248,7 @@ val arm_parse_pld_pli : bool option -> (term * term) M =
                                              (mk_word12 (Int.abs v))
                            in
                              assertT
-                               ((if enc = Encoding_Thumb2_tm then
+                               ((if enc ~~ Encoding_Thumb2_tm then
                                    ~255 <= v
                                  else
                                    ~4095 <= v) andalso v <= 4095)
@@ -3262,17 +3259,17 @@ val arm_parse_pld_pli : bool option -> (term * term) M =
                                   of SOME wide =>
                                        mk_Preload_Data
                                         (mk_bool (0 <= v andalso
-                                                  not (i == ``-0i``)),
+                                                  not (i ~~ ``-0i``)),
                                          mk_bool wide,rn,mode2)
                                    | NONE =>
                                        mk_Preload_Instruction
                                         (mk_bool (0 <= v andalso
-                                                  not (i == ``-0i``)),
+                                                  not (i ~~ ``-0i``)),
                                          rn,mode2)))
                            end handle HOL_ERR {message,...} =>
                              other_errorT ("arm_parse_pld_pli", message))
                     (fn _ =>
-                       let val thumb = enc = Encoding_Thumb2_tm in
+                       let val thumb = enc ~~ Encoding_Thumb2_tm in
                          arm_parse_plus_minus >>= (fn pos =>
                          arm_parse_register >>= (fn rm =>
                            assertT (not thumb orelse pos)
@@ -3317,8 +3314,8 @@ val arm_parse_pld_pli : bool option -> (term * term) M =
                                 cast_var ``:addressing_mode2`` i))
                 else
                   let val v = sint_of_term i -
-                                (if enc = Encoding_Thumb2_tm then 4 else 8)
-                      val up = mk_bool (0 <= v andalso not (i == ``-0i``))
+                                (if enc ~~ Encoding_Thumb2_tm then 4 else 8)
+                      val up = mk_bool (0 <= v andalso not (i ~~ ``-0i``))
                       val mode2 = mk_Mode2_immediate (mk_word12 (Int.abs v))
                   in
                     assertT (~4095 <= v andalso v <= 4095)
@@ -3355,17 +3352,17 @@ val arm_parse_ssat_usat : bool -> (term * term) M =
                         assertT (mem stype [LSL_shift, ASR_shift])
                           ("arm_parse_ssat_usat", "only lsl and asr permitted")
                           (arm_parse_constant >>= (fn j =>
-                             let val shift32 = j == ``32i``
+                             let val shift32 = j ~~ ``32i``
                                  val imm5 = if shift32 then
                                               mk_word5 0
                                             else
                                               uint_to_word ``:5`` j
                                  val sh = mk_bool (shift32 orelse
-                                            not (imm5 == mk_word5 0) andalso
+                                            not (imm5 ~~ mk_word5 0) andalso
                                             stype = ASR_shift)
                              in
                                assertT (not shift32 orelse stype = ASR_shift
-                                        andalso enc == Encoding_ARM_tm)
+                                        andalso enc ~~ Encoding_ARM_tm)
                                  ("arm_parse_ssat_usat", "invalid shift")
                                  (return (enc,
                                     mk_Saturate (mk_bool unsigned,
@@ -3652,7 +3649,7 @@ val arm_parse_msr : (term * term) M =
            (fn rn =>
               return (enc,mk_Register_to_Status (spsr,mask,rn)))
            (fn _ =>
-              assertT (enc = Encoding_ARM_tm)
+              assertT (enc ~~ Encoding_ARM_tm)
                 ("arm_parse_msr", "not a Thumb instruction")
                 (arm_parse_constant >>= (fn i =>
                   let val imm12 = int_to_mode1_immediate i in
@@ -3726,7 +3723,7 @@ val arm_parse_srs : term -> term -> (term * term) M =
     need_v6 "arm_parse_srs"
       (thumb2_or_arm_okay "arm_parse_srs"
        (fn enc =>
-          assertT (enc == Encoding_ARM_tm orelse p <> inc)
+          assertT (enc ~~ Encoding_ARM_tm orelse p !~ inc)
             ("arm_parse_srs", "not available as a Thumb instruction")
             (arm_parse_register >>= (fn sp =>
                assertT (is_SP sp)
@@ -3745,7 +3742,7 @@ val arm_parse_rfe : term -> term -> (term * term) M =
     need_v6 "arm_parse_rfe"
       (thumb2_or_arm_okay "arm_parse_rfe"
        (fn enc =>
-          assertT (enc == Encoding_ARM_tm orelse p <> inc)
+          assertT (enc ~~ Encoding_ARM_tm orelse p !~ inc)
             ("arm_parse_rfe", "not available as a Thumb instruction")
             (arm_parse_register >>= (fn rn =>
              tryT arm_parse_exclaim (K (return T)) (K (return F)) >>= (fn w =>
@@ -3943,7 +3940,7 @@ val arm_parse_ldc_stc : instruction_mnemonic -> (term * term) M =
                            "offset not aligned or beyond permitted range\
                            \ (+/-1020)")
                           (return
-                             (F,mk_bool (0 <= v andalso not (i == ``-0i``)),T,
+                             (F,mk_bool (0 <= v andalso not (i ~~ ``-0i``)),T,
                               mk_word8 (Int.abs (v div 4))))
                       end handle HOL_ERR {message,...} =>
                         other_errorT ("arm_parse_ldc_stc", message))
@@ -3966,7 +3963,7 @@ val arm_parse_ldc_stc : instruction_mnemonic -> (term * term) M =
                   (v mod 4 = 0 andalso ~1020 <= v andalso v <= 1020)
                   ("arm_parse_ldc_stc",
                    "offset not aligned or beyond permitted range (+/-1020)")
-                  (return (T,mk_bool (0 <= v andalso not (i == ``-0i``)),w,
+                  (return (T,mk_bool (0 <= v andalso not (i ~~ ``-0i``)),w,
                            mk_word8 (Int.abs (v div 4))))
               end handle HOL_ERR {message,...} =>
                 other_errorT ("arm_parse_ldc_stc", message)))) >>=
@@ -4206,7 +4203,7 @@ val arm_parse_instruction : line M =
                other_errorT
                  ("arm_parse_instruction", "not supported yet"))) >>=
    (fn (enc,tm) =>
-      if m = IT andalso enc = boolSyntax.arb then
+      if m = IT andalso enc ~~ boolSyntax.arb then
         write_instruction NONE >>- return (Space ``0i``)
       else
         read_cond >>= (fn cond =>
@@ -4373,12 +4370,30 @@ datatype arm_code
   | Word of term list
   | Instruction of term * term * term;
 
+fun arm_code_cmp (Ascii s1, Ascii s2) = String.compare (s1,s2)
+  | arm_code_cmp (Ascii _, _) = LESS
+  | arm_code_cmp (_, Ascii _) = GREATER
+  | arm_code_cmp (Byte tl1, Byte tl2) = list_compare Term.compare (tl1, tl2)
+  | arm_code_cmp (Byte _, _) = LESS
+  | arm_code_cmp (_, Byte _) = GREATER
+  | arm_code_cmp (Short tl1, Short tl2) = list_compare Term.compare (tl1, tl2)
+  | arm_code_cmp (Short _, _) = LESS
+  | arm_code_cmp (_, Short _) = GREATER
+  | arm_code_cmp (Word tl1, Word tl2) = list_compare Term.compare (tl1, tl2)
+  | arm_code_cmp (Word _, _) = LESS
+  | arm_code_cmp (_, Word _) = GREATER
+  | arm_code_cmp (Instruction(t1,t2,t3), Instruction(ta, tb, tc)) =
+      list_compare Term.compare ([t1,t2,t3], [ta,tb,tc])
+
+fun arm_code_eq ac1 ac2 = arm_code_cmp(ac1,ac2) = EQUAL
+
+
 local
   open Arbnum
   val n4 = fromInt 4
 in
   fun align (line,e) =
-       line + (if e = Encoding_ARM_tm then
+       line + (if e ~~ Encoding_ARM_tm then
                  (n4 - (line mod n4)) mod n4
                else
                  (two - (line mod two)) mod two)
@@ -4396,7 +4411,7 @@ in
         let val n = fromInt i in line + (n - (line mod n)) mod n end
     | inc_code_width line (Instruction1 (_,e,_,_)) =
         align (line,e) +
-        (if e = Encoding_Thumb_tm orelse e = Encoding_ThumbEE_tm then
+        (if e ~~ Encoding_Thumb_tm orelse e ~~ Encoding_ThumbEE_tm then
            two
          else
            n4)
@@ -4530,7 +4545,7 @@ local
       fun aligned (i,n) = i mod n = 0
       fun enc_pc n enc =
             let open Arbint in
-              fromNat n + fromInt (if enc = Encoding_ARM_tm then 8 else 4)
+              fromNat n + fromInt (if enc ~~ Encoding_ARM_tm then 8 else 4)
             end
       fun align_pc n enc =
             let open Arbint
@@ -4581,14 +4596,14 @@ local
                                        aligned (offset,4) andalso
                                        in_range (~33554432,33554428) offset
                                  val imm24 = offset_to_imm24 (offset div
-                                               (if enc = Encoding_ARM_tm
+                                               (if enc ~~ Encoding_ARM_tm
                                                 then 4 else 2))
                              in
-                               if enc = Encoding_Thumb_tm andalso narrow_okay
+                               if enc ~~ Encoding_Thumb_tm andalso narrow_okay
                                   orelse
-                                  enc = Encoding_Thumb2_tm andalso wide_okay
+                                  enc ~~ Encoding_Thumb2_tm andalso wide_okay
                                   orelse
-                                  enc = Encoding_ARM_tm andalso arm_okay
+                                  enc ~~ Encoding_ARM_tm andalso arm_okay
                                then
                                  mk_Branch_Target imm24
                                else
@@ -4623,9 +4638,9 @@ local
                                  val imm24 = offset_to_imm24 (offset div 4)
                              in
                                if (is_arb h orelse is_F h') andalso
-                                  (enc = Encoding_Thumb2_tm andalso wide_okay
+                                  (enc ~~ Encoding_Thumb2_tm andalso wide_okay
                                    orelse
-                                   enc = Encoding_ARM_tm andalso arm_okay)
+                                   enc ~~ Encoding_ARM_tm andalso arm_okay)
                                then
                                  mk_Branch_Link_Exchange_Immediate
                                    (h',toARM,imm24)
@@ -4641,7 +4656,7 @@ local
                       in
                         ilink_instruction i (enc_pc x enc) v
                           (fn offset =>
-                             if enc = Encoding_Thumb_tm andalso
+                             if enc ~~ Encoding_Thumb_tm andalso
                                 aligned (offset,2) andalso
                                 in_range (0,126) offset
                              then
@@ -4658,11 +4673,11 @@ local
                       in
                         link_instruction i (align_pc x enc) v
                           (fn tm =>
-                             if enc = Encoding_ARM_tm then
+                             if enc ~~ Encoding_ARM_tm then
                                case total (mode1_immediate2 false ADD) tm
                                of SOME (opc,imm12) =>
                                     mk_Add_Sub
-                                      (mk_bool (opc = dp_opcode ADD),n,d,imm12)
+                                      (mk_bool (opc ~~ dp_opcode ADD),n,d,imm12)
                                 | NONE =>
                                     raise ERR "link_lines" ("cannot represent\
                                       \ offset to label " ^ v ^ " as a mode1\
@@ -4676,9 +4691,9 @@ local
                                          in_range (~4095,4095) offset
                                    val imm12 = mk_word12 (Int.abs offset)
                              in
-                               if enc = Encoding_Thumb_tm andalso narrow_okay
+                               if enc ~~ Encoding_Thumb_tm andalso narrow_okay
                                   orelse
-                                  enc = Encoding_Thumb2_tm andalso wide_okay
+                                  enc ~~ Encoding_Thumb2_tm andalso wide_okay
                                then
                                  mk_Add_Sub (mk_bool (0 <= offset),n,d,imm12)
                                else
@@ -4695,8 +4710,8 @@ local
                         ilink_instruction i (align_pc x enc) v
                           (fn offset =>
                              if in_range (~4095,4095) offset andalso
-                                (enc = Encoding_Thumb2_tm orelse
-                                 enc = Encoding_ARM_tm)
+                                (enc ~~ Encoding_Thumb2_tm orelse
+                                 enc ~~ Encoding_ARM_tm)
                              then
                                mk_Preload_Data (mk_bool (0 <= offset),w,n,
                                 mk_Mode2_immediate (mk_word12 (Int.abs offset)))
@@ -4712,8 +4727,8 @@ local
                         ilink_instruction i (align_pc x enc) v
                           (fn offset =>
                              if in_range (~4095,4095) offset andalso
-                                (enc = Encoding_Thumb2_tm orelse
-                                 enc = Encoding_ARM_tm)
+                                (enc ~~ Encoding_Thumb2_tm orelse
+                                 enc ~~ Encoding_ARM_tm)
                              then
                                mk_Preload_Instruction (mk_bool (0 <= offset),n,
                                 mk_Mode2_immediate (mk_word12 (Int.abs offset)))
@@ -4736,9 +4751,9 @@ local
                                  val mode2 = mk_Mode2_immediate
                                               (mk_word12 (Int.abs offset))
                              in
-                               if enc = Encoding_Thumb_tm andalso narrow_okay
-                                  orelse (enc = Encoding_Thumb2_tm orelse
-                                  enc = Encoding_ARM_tm) andalso wide_okay
+                               if enc ~~ Encoding_Thumb_tm andalso narrow_okay
+                                  orelse (enc ~~ Encoding_Thumb2_tm orelse
+                                  enc ~~ Encoding_ARM_tm) andalso wide_okay
                                then
                                  mk_Load (indx,mk_bool (0 <= offset),b,w,u,n,t,
                                    mode2)
@@ -4761,9 +4776,9 @@ local
                                  val mode3 = mk_Mode3_immediate
                                               (mk_word12 (Int.abs offset))
                              in
-                               if enc = Encoding_Thumb2_tm andalso wide_okay
+                               if enc ~~ Encoding_Thumb2_tm andalso wide_okay
                                   orelse
-                                  enc = Encoding_ARM_tm andalso arm_okay
+                                  enc ~~ Encoding_ARM_tm andalso arm_okay
                                then
                                  mk_Load_Halfword (indx,mk_bool (0 <= offset),w,
                                    s,h,u,n,t,mode3)
@@ -4786,9 +4801,9 @@ local
                                  val mode3 = mk_Mode3_immediate
                                               (mk_word12 (Int.abs offset))
                              in
-                               if enc = Encoding_Thumb2_tm andalso wide_okay
+                               if enc ~~ Encoding_Thumb2_tm andalso wide_okay
                                   orelse
-                                  enc = Encoding_ARM_tm andalso arm_okay
+                                  enc ~~ Encoding_ARM_tm andalso arm_okay
                                then
                                  mk_Load_Dual (indx,mk_bool (0 <= offset),w,
                                    n,t,t2,mode3)

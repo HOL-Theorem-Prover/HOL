@@ -9,7 +9,7 @@ val _ = new_theory "oset";
 val _ = temp_tight_equality ();
 
 (* oset for ordered set *)
-val _ = type_abbrev ("oset", ``:('a,unit) balanced_map``);
+val _ = type_abbrev_pp ("oset", ``:('a,unit) balanced_map``);
 
 (* Basic definitions, that correspond directly to balanced tree operations *)
 val good_oset_def = Define `
@@ -109,7 +109,7 @@ val good_oset_oset = Q.store_thm ("good_oset_oset",
 
 (* oempty theorems *)
 
-val oin_oempty = Q.store_thm ("oin_oinsert[simp]",
+val oin_oempty = Q.store_thm ("oin_oempty[simp]",
 `!cmp x. oin cmp x oempty = F`,
  rw [oin_def, oempty_def, empty_def, member_def]);
 

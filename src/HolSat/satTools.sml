@@ -3,10 +3,6 @@ structure satTools = struct
 
 local
 
-(*
-app load ["Binaryset","FileSys","TextIO","Process","Char","String","Substring","Conv"]
-*)
-
 open Lib boolLib Globals Parse Term Type Thm Drule Psyntax Conv Feedback
 open SatSolvers satCommonTools satTheory
 
@@ -27,7 +23,8 @@ infix |->;
 ** tests whether substring ss contains string s
 *)
 
-fun substringContains s ss = not(Substring.isEmpty(snd(Substring.position s ss)));
+fun substringContains s ss =
+    not(Substring.isEmpty(snd(Substring.position s ss)));
 
 (*
 ** parseSat (s1,s2) ss
@@ -65,32 +62,35 @@ fun sat_sysl s = Systeml.system_ps s
 
 fun invokeSat sat_solver tm vc nr svm sva infile =
  let
-      val (name,executable,notime_run,only_true,
-          failure_string,start_string,end_string) =
-	 (getSolverName sat_solver,getSolverExe sat_solver,getSolverRun sat_solver,
-	  getSolverTrue sat_solver,getSolverFail sat_solver,getSolverStart sat_solver,
-	  getSolverEnd sat_solver)
-     val outfile    = infile ^ "." ^ name
-     val run_cmd    = notime_run executable (infile,outfile)
-     val code       = sat_sysl run_cmd
-     val _          = if isSuccess code orelse
-                         (name="minisat" orelse name="minisatp")
-		      then () (* minisat returns non-std exit code on success *)
-                      else print("Warning:\n Process.system reports failure \
-                                 \signal returned by\n " ^ run_cmd ^ "\n")
-     val ins        = TextIO.openIn outfile
-     val sat_res_ss = Substring.full (TextIO.inputAll ins)
-     val _          = TextIO.closeIn ins
-     val result     = substringContains failure_string sat_res_ss
+   val (name,executable,notime_run,only_true,failure_string,start_string,
+        end_string) =
+       (getSolverName sat_solver,getSolverExe sat_solver,
+        getSolverRun sat_solver, getSolverTrue sat_solver,
+        getSolverFail sat_solver, getSolverStart sat_solver,
+        getSolverEnd sat_solver)
+   val outfile    = infile ^ "." ^ name
+   val run_cmd    = notime_run executable (infile,outfile)
+   val code       = sat_sysl run_cmd
+   val _          = if isSuccess code orelse
+                       (name="minisat" orelse name="minisatp")
+                    then () (* minisat returns non-std exit code on success *)
+                    else print("Warning:\n Process.system reports failure \
+                               \signal returned by\n " ^ run_cmd ^ "\n")
+   val ins        = TextIO.openIn outfile
+   val sat_res_ss = Substring.full (TextIO.inputAll ins)
+   val _          = TextIO.closeIn ins
+   val result     = substringContains failure_string sat_res_ss
  in
   if result
    then NONE
    else
     let val model1 = parseSat (start_string,end_string) sat_res_ss
-        val model2 = if only_true
-                      then model1 @
-                           (map (fn n => 0-n)
-				(subtract (map snd (snd(dimacsTools.showSatVarMap svm))) model1))
+        val model2 = if only_true then
+                       model1 @
+                       (map (fn n => 0-n)
+                            (subtract
+                               (map snd (snd(dimacsTools.showSatVarMap svm)))
+                               model1))
                      else model1
     in let val model3 = SOME(map (dimacsTools.intToLiteral sva) model2)
         in model3 end
@@ -115,9 +115,11 @@ fun satCheck model t =
                              then MP (SPEC (dest_neg(concl th))EQF_Imp1) th
                              else MP (SPEC(concl th)EQT_Imp1) th)
                   (CONJUNCTS th1) (* [ l1 /\ ... /\ ln |- l1 = T, ... ] *)
-      val subl = map (fn th => lhs(concl th) |-> th) thl (*[l1 |-> l1 /\ ... /\ ln |- l1 = T,...]*)
+      val subl = map (fn th => lhs(concl th) |-> th) thl
+                 (*[l1 |-> l1 /\ ... /\ ln |- l1 = T,...]*)
       val th2 = SUBST_CONV subl t t (* l1 /\ ... /\ ln |- t = t[l1/T,...] *)
-      val th3 = CONV_RULE (RHS_CONV computeLib.EVAL_CONV) th2 (* l1 /\ ... /\ ln |- t = T *)
+      val th3 = CONV_RULE (RHS_CONV computeLib.EVAL_CONV) th2
+                (* l1 /\ ... /\ ln |- t = T *)
       val th4 = EQT_ELIM th3 (* l1 /\ ... /\ ln |- t *)
    in
       DISCH mtm th4 (* |- l1 /\ ... /\ ln ==> t *)

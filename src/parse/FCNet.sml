@@ -329,6 +329,7 @@ fun RM patobs (theta0 as (tminfo, tyS)) =
               NONE => (* var on left not bound *) let
               in
                 if bvar_free (#obbvars tminfo, t2) then
+                  (* TODO: aconv below should be "aconv wrt fake-consts" *)
                   RM rest ((case mlookup t1 (#ids tminfo) (#theta tminfo) of
                               NONE => if aconv t1 t2 then add_id t1 tminfo
                                       else add_binding t1 t2 tminfo

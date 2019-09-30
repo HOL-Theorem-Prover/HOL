@@ -7,8 +7,6 @@ open relationTheory;
 
 val _ = new_theory "for_osmall";
 
-val _ = temp_tight_equality ();
-
 val ect = BasicProvers.EVERY_CASE_TAC;
 val fct = BasicProvers.FULL_CASE_TAC;
 
@@ -606,12 +604,15 @@ val sem_e_not_timeout = Q.prove (
 
 val sem_e_not_break = Q.prove(
 `!st e r. sem_e st e ≠ (Rbreak,r)`,
- Induct_on`e`>>srw_tac[][sem_e_def]>>
- ect>>
- fs[LET_THM,unpermute_pair_def,permute_pair_def,oracle_get_def]>>
- TRY(qpat_assum`A=(fst_e,snd_e)` mp_tac)>>
- rw[]>>
- TRY(metis_tac[]))
+  Induct_on`e`>>srw_tac[][sem_e_def]>>
+  ect>>
+  fs[LET_THM,unpermute_pair_def,permute_pair_def,oracle_get_def] >>
+  qpat_x_assum `_ = (fst_e,snd_e)` mp_tac >> rw[] >>
+  rename1 `sem_e st' _ = (Rbreak, new_r)` >>
+  first_x_assum (qspecl_then [`st'`,`new_r`] assume_tac) >>
+  first_x_assum (qspecl_then [`st'`,`new_r`] assume_tac) >>
+  fs[]
+ );
 
 val LAST_HD_eq = Q.prove(`
 ∀ls ls'.
@@ -648,189 +649,212 @@ val sem_e_big_small_lem = Q.prove(
     HD tr = (s with clock:=0, e_to_small_e e) ∧
     res_rel_e r (LAST tr)`,
  Induct_on`e`>>rw[]>>fs[sem_e_def,e_to_small_e_def]
- >-
-   (fct>>fs[res_rel_e_cases]
-   >-
-     (qexists_tac`[(s' with clock:=0,Var s)]`>>fs[check_trace_def,is_val_e_def]>>
-     simp[Once step_e_cases])
-   >-
-     (qexists_tac`[(s' with clock:=0,Var s);(s' with clock:=0,Num x)]`>>
-     fs[check_trace_def,some_def]>>
-     ntac 2 (simp[Once step_e_cases])))
- >-
-   (fs[res_rel_e_cases]>>
-   qexists_tac`[s with clock:=0,Num i]`>>fs[check_trace_def])
- >-
-   (fs[LET_THM,permute_pair_def,oracle_get_def]>>IF_CASES_TAC>>fs[]
-   >-
-     (qpat_abbrev_tac`st = s with <|io_trace:=B;non_det_o:=C|>`>>
-     first_x_assum(qspec_then`st`assume_tac)>>
-     Cases_on`sem_e st e'`>>Cases_on`q`>>
-     fs[sem_e_not_break,sem_e_not_timeout,unpermute_pair_def]
-     >-
-       (fct>>Cases_on`q`>>
-       fs[sem_e_not_break,sem_e_not_timeout]>>
-       last_x_assum(qspec_then`r` assume_tac)>>rfs[]>>
-       qpat_abbrev_tac`h =(A,B)`>>
-       qabbrev_tac`ls1 = (MAP (λst,e'. (st,AddR (e_to_small_e e) e')) tr)`>>
-       qabbrev_tac`ls2 = (MAP (λst,e'. (st,AddR e' (Num i))) tr')`>>
-       qabbrev_tac`ls = BUTLASTN 1 ls1 ++ ls2`>>
-       fs[res_rel_e_cases]>>
-       `LAST ls1 = HD ls2` by
-       (unabbrev_all_tac>>fs[LAST_MAP,HD_MAP])>>
-       `ls = ls1 ++ (TL ls2)` by
-       (unabbrev_all_tac>>
-       fs[LAST_HD_eq])>>
-       `check_trace (λst. some st'. ∃l. step_e st l st') ls2` by
-         fs[Abbr`ls2`,check_trace_addr2]>>
-       `check_trace (λst. some st'. ∃l. step_e st l st') ls` by
-         (fs[Abbr`ls`]>>Cases_on`ls2`>>fs[]>>Cases_on`t`>>fs[]
-         >-
-           fs[check_trace_addr1,Abbr`ls1`]
-         >>
-         match_mp_tac check_trace_append2>>rw[]
-         >-
-           fs[check_trace_addr1,Abbr`ls1`]
-         >-
-           (fs[markerTheory.Abbrev_def]>>
-           `h''::t' = TL (LAST ls1::h''::t')` by fs[]>>
-           pop_assum SUBST_ALL_TAC>>
-           match_mp_tac check_trace_tl>>fs[check_trace_addr2])
-         >>
-           fs[check_trace_def])
-       >-
-         (qexists_tac`[h] ++ ls ++ [(r' with clock:=0,Num(i'+i))]`>>
-         rw[]>>
-         match_mp_tac check_trace_append3>>fs[check_trace_def]>>rw[]
-         >-
-           (match_mp_tac check_trace_append2>>
-           fs[check_trace_def]>>
-           fs[markerTheory.Abbrev_def,LAST_APPEND,LAST_MAP]>>
-           match_mp_tac some_to_SOME_step_e>>
-           simp[Once step_e_cases])
-         >>
-           match_mp_tac some_to_SOME_step_e>>
-           fs[HD_APPEND,Abbr`ls1`,HD_MAP,Abbr`h`,Abbr`st`]>>
-           simp[Once step_e_cases,oracle_get_def])
-       >>
-         qexists_tac`[h]++ls` >>rw[]
-         >-
-           (match_mp_tac check_trace_append3>>
-           fs[HD_APPEND,Abbr`ls1`,HD_MAP]>>
-           match_mp_tac some_to_SOME_step_e>>
-           fs[Abbr`h`,Abbr`st`]>>
-           simp[Once step_e_cases,oracle_get_def])
-         >>
-           fs[markerTheory.Abbrev_def,LAST_DEF,LAST_APPEND,LAST_MAP,is_val_e_def,no_step_e_addr2])
-       >>
-       qpat_abbrev_tac`h =(A,B)`>>
-       qexists_tac`[h]++(MAP (λst,e'. (st,AddR (e_to_small_e e) e')) tr)`>>
-       fs[HD_MAP,res_rel_e_cases,LAST_MAP,is_val_e_def,LAST_APPEND,no_step_e_addr1]>>
-       match_mp_tac check_trace_append3>>fs[check_trace_addr1,HD_MAP]>>
-       match_mp_tac some_to_SOME_step_e>>
-       unabbrev_all_tac>>
-       simp[Once step_e_cases,oracle_get_def])
-     >>
-     (*symmetric*)
-     (qpat_abbrev_tac`st = s with <|io_trace:=B;non_det_o:=C|>`>>
-     last_x_assum(qspec_then`st`assume_tac)>>
-     Cases_on`sem_e st e`>>Cases_on`q`>>
-     fs[sem_e_not_break,sem_e_not_timeout,unpermute_pair_def]
-     >-
-       (fct>>Cases_on`q`>>
-       fs[sem_e_not_break,sem_e_not_timeout]>>
-       last_x_assum(qspec_then`r` assume_tac)>>rfs[]>>
-       qpat_abbrev_tac`h =(A,B)`>>
-       qabbrev_tac`ls1 = (MAP (λst,e. (st,AddL e (e_to_small_e e'))) tr)`>>
-       qabbrev_tac`ls2 = (MAP (λst,e'. (st,AddL (Num i) e')) tr')`>>
-       qabbrev_tac`ls = BUTLASTN 1 ls1 ++ ls2`>>
-       fs[res_rel_e_cases]>>
-       `LAST ls1 = HD ls2` by
-       (unabbrev_all_tac>>fs[LAST_MAP,HD_MAP])>>
-       `ls = ls1 ++ (TL ls2)` by
-       (unabbrev_all_tac>>
-       fs[LAST_HD_eq])>>
-       `check_trace (λst. some st'. ∃l. step_e st l st') ls2` by
-         fs[Abbr`ls2`,check_trace_addl2]>>
-       `check_trace (λst. some st'. ∃l. step_e st l st') ls` by
-         (fs[Abbr`ls`]>>Cases_on`ls2`>>fs[]>>Cases_on`t`>>fs[]
-         >-
-           fs[check_trace_addl1,Abbr`ls1`]
-         >>
-         match_mp_tac check_trace_append2>>rw[]
-         >-
-           fs[check_trace_addl1,Abbr`ls1`]
-         >-
-           (fs[markerTheory.Abbrev_def]>>
-           `h''::t' = TL (LAST ls1::h''::t')` by fs[]>>
-           pop_assum SUBST_ALL_TAC>>
-           match_mp_tac check_trace_tl>>fs[check_trace_addr2])
-         >>
-           fs[check_trace_def])
-       >-
-         (qexists_tac`[h] ++ ls ++ [(r' with clock:=0,Num(i+i'))]`>>
-         rw[]>>
-         match_mp_tac check_trace_append3>>fs[check_trace_def]>>rw[]
-         >-
-           (match_mp_tac check_trace_append2>>
-           fs[check_trace_def]>>
-           fs[markerTheory.Abbrev_def,LAST_APPEND,LAST_MAP]>>
-           match_mp_tac some_to_SOME_step_e>>
-           simp[Once step_e_cases])
-         >>
-           match_mp_tac some_to_SOME_step_e>>
-           fs[HD_APPEND,Abbr`ls1`,HD_MAP,Abbr`h`,Abbr`st`]>>
-           simp[Once step_e_cases,oracle_get_def])
-       >>
-         qexists_tac`[h]++ls` >>rw[]
-         >-
-           (match_mp_tac check_trace_append3>>
-           fs[HD_APPEND,Abbr`ls1`,HD_MAP]>>
-           match_mp_tac some_to_SOME_step_e>>
-           fs[Abbr`h`,Abbr`st`]>>
-           simp[Once step_e_cases,oracle_get_def])
-         >>
-           fs[markerTheory.Abbrev_def,LAST_DEF,LAST_APPEND,LAST_MAP,is_val_e_def,no_step_e_addl2])
-       >>
-       qpat_abbrev_tac`h =(A,B)`>>
-       qexists_tac`[h]++(MAP (λst,e. (st,AddL e (e_to_small_e e'))) tr)`>>
-       fs[HD_MAP,res_rel_e_cases,LAST_MAP,is_val_e_def,LAST_APPEND,no_step_e_addl1]>>
-       match_mp_tac check_trace_append3>>fs[check_trace_addl1,HD_MAP]>>
-       match_mp_tac some_to_SOME_step_e>>
-       unabbrev_all_tac>>
-       simp[Once step_e_cases,oracle_get_def]))
- >-
-   (EVERY_CASE_TAC>>fs[res_rel_e_cases,sem_e_not_break,sem_e_not_timeout]>>
-   first_x_assum(qspec_then`s'` assume_tac)>>rfs[]
-   >-
-     (qexists_tac`(MAP (λst,e. (st,Assign s e)) tr)++[r with <|store :=r.store |+ (s,i); clock:=0|>,Num i]`>>fs[HD_MAP,HD_APPEND]>>
-     ho_match_mp_tac check_trace_append2>>
-     fs[check_trace_def,LAST_MAP,check_trace_assign]>>
-     ntac 2 (simp[Once step_e_cases]))
-   >>
-     (qexists_tac`(MAP (λst,e. (st,Assign s e)) tr)`>>
-     fs[HD_MAP,LAST_MAP,is_val_e_def,no_step_e_assign,check_trace_assign]))
- >-
-   (Cases_on`getchar s.input`>>fs[LET_THM,res_rel_e_cases]>>
-   qpat_abbrev_tac`t = (A,B)`>>
-   qpat_abbrev_tac`t' = (A,B)`>>
-   qexists_tac`[t;t']`>>unabbrev_all_tac>>fs[check_trace_def]>>
-   match_mp_tac some_to_SOME_step_e>>
-   simp[Once step_e_cases])
- >-
-   (first_x_assum(qspec_then`s` assume_tac)>>fs[]>>
-   Cases_on`sem_e s e`>>Cases_on`q`>>fs[sem_e_not_break,sem_e_not_timeout]>>
-   qpat_abbrev_tac`t = (A,B)`>>
-   qpat_abbrev_tac`t' = (A,B)`
-   >-
-     (qexists_tac`MAP (λst,e. (st,Putchar e)) tr ++ [(r with <|io_trace := r.io_trace ++ [INL(Otag i)];clock:=0|>,Num i)]`>>
-     fs[HD_MAP,HD_APPEND,Abbr`t'`,res_rel_e_cases]>>
-     ho_match_mp_tac check_trace_append2>>
-     fs[check_trace_def,LAST_MAP,check_trace_putchar]>>
-     ntac 2 (simp[Once step_e_cases]))
-   >>
-     qexists_tac`MAP (λst,e. (st,Putchar e)) tr`>>unabbrev_all_tac>>
-     fs[HD_MAP,res_rel_e_cases,LAST_MAP,is_val_e_def,check_trace_putchar,no_step_e_putchar]))
+  >- (
+    fct>>fs[res_rel_e_cases]
+    >- (
+      qexists_tac`[(s' with clock:=0,Var s)]`>>fs[check_trace_def,is_val_e_def]>>
+      simp[Once step_e_cases]
+      )
+    >- (
+      qexists_tac`[(s' with clock:=0,Var s);(s' with clock:=0,Num x)]`>>
+      fs[check_trace_def,some_def]>>
+      ntac 2 (simp[Once step_e_cases])
+      )
+    )
+  >- (
+    fs[res_rel_e_cases]>>
+    qexists_tac`[s with clock:=0,Num i]`>>fs[check_trace_def]
+    )
+  >- (
+    fs[LET_THM,permute_pair_def,oracle_get_def]>>IF_CASES_TAC>>fs[]
+    >- (
+      qpat_abbrev_tac`st = s with <|io_trace:=B;non_det_o:=C|>`>>
+      first_x_assum(qspec_then`st`assume_tac)>>
+      Cases_on`sem_e st e'`>>Cases_on`q`>>
+      fs[sem_e_not_break,sem_e_not_timeout,unpermute_pair_def]
+      >- (
+        fct>>Cases_on`q`>>
+        fs[sem_e_not_break,sem_e_not_timeout]>>
+        last_x_assum(qspec_then`r` assume_tac)>>rfs[]>>
+        qpat_abbrev_tac`h =(A,B)`>>
+        qabbrev_tac`ls1 = (MAP (λst,e'. (st,AddR (e_to_small_e e) e')) tr)`>>
+        qabbrev_tac`ls2 = (MAP (λst,e'. (st,AddR e' (Num i))) tr')`>>
+        qabbrev_tac`ls = BUTLASTN 1 ls1 ++ ls2`>>
+        fs[res_rel_e_cases]>>
+        `LAST ls1 = HD ls2` by
+        (unabbrev_all_tac>>fs[LAST_MAP,HD_MAP])>>
+        `ls = ls1 ++ (TL ls2)` by
+        (unabbrev_all_tac>>
+        fs[LAST_HD_eq])>>
+        `check_trace (λst. some st'. ∃l. step_e st l st') ls2` by
+        fs[Abbr`ls2`,check_trace_addr2]>>
+        `check_trace (λst. some st'. ∃l. step_e st l st') ls` by (
+          fs[Abbr`ls`]>>Cases_on`ls2`>>fs[]>>Cases_on`t`>>fs[]
+          >- fs[check_trace_addr1,Abbr`ls1`] >>
+          match_mp_tac check_trace_append2>>rw[]
+          >- fs[check_trace_addr1,Abbr`ls1`]
+          >- (
+            fs[markerTheory.Abbrev_def]>>
+            `h''::t' = TL (LAST ls1::h''::t')` by fs[]>>
+            pop_assum SUBST_ALL_TAC>>
+            match_mp_tac check_trace_tl>>fs[check_trace_addr2]
+            ) >>
+          fs[check_trace_def]
+          )
+        >- (
+          qexists_tac`[h] ++ ls ++ [(r' with clock:=0,Num(i'+i))]`>>
+          rw[]>>
+          match_mp_tac check_trace_append3>>fs[check_trace_def]>>rw[]
+          >- (
+            match_mp_tac check_trace_append2>>
+            fs[check_trace_def]>>
+            fs[markerTheory.Abbrev_def,LAST_APPEND,LAST_MAP]>>
+            match_mp_tac some_to_SOME_step_e>>
+            simp[Once step_e_cases]
+            ) >>
+          match_mp_tac some_to_SOME_step_e>>
+          fs[HD_APPEND,Abbr`ls1`,HD_MAP,Abbr`h`,Abbr`st`]>>
+          simp[Once step_e_cases,oracle_get_def]
+          ) >>
+        qexists_tac`[h]++ls` >>rw[]
+        >- (
+          match_mp_tac check_trace_append3>>
+          fs[HD_APPEND,Abbr`ls1`,HD_MAP]>>
+          match_mp_tac some_to_SOME_step_e>>
+          fs[Abbr`h`,Abbr`st`]>>
+          simp[Once step_e_cases,oracle_get_def]
+          ) >>
+        fs[markerTheory.Abbrev_def,LAST_DEF,LAST_APPEND,LAST_MAP,
+           is_val_e_def,no_step_e_addr2]
+        )
+      >- (
+        qpat_abbrev_tac`h =(A,B)`>>
+        qexists_tac`[h]++(MAP (λst,e'. (st,AddR (e_to_small_e e) e')) tr)`>>
+        fs[HD_MAP,res_rel_e_cases,LAST_MAP,is_val_e_def,
+           LAST_APPEND,no_step_e_addr1]>>
+        match_mp_tac check_trace_append3>>fs[check_trace_addr1,HD_MAP]>>
+        match_mp_tac some_to_SOME_step_e>>
+        unabbrev_all_tac>>
+        simp[Once step_e_cases,oracle_get_def]
+        )
+      )
+    >- (
+      (*symmetric*)
+      qpat_abbrev_tac`st = s with <|io_trace:=B;non_det_o:=C|>`>>
+      last_x_assum(qspec_then`st`assume_tac)>>
+      Cases_on`sem_e st e`>>Cases_on`q`>>
+      fs[sem_e_not_break,sem_e_not_timeout,unpermute_pair_def]
+      >- (
+        fct>>Cases_on`q`>>
+        fs[sem_e_not_break,sem_e_not_timeout]>>
+        last_x_assum(qspec_then`r` assume_tac)>>rfs[]>>
+        qpat_abbrev_tac`h =(A,B)`>>
+        qabbrev_tac`ls1 = (MAP (λst,e. (st,AddL e (e_to_small_e e'))) tr)`>>
+        qabbrev_tac`ls2 = (MAP (λst,e'. (st,AddL (Num i) e')) tr')`>>
+        qabbrev_tac`ls = BUTLASTN 1 ls1 ++ ls2`>>
+        fs[res_rel_e_cases]>>
+        `LAST ls1 = HD ls2` by
+        (unabbrev_all_tac>>fs[LAST_MAP,HD_MAP])>>
+        `ls = ls1 ++ (TL ls2)` by
+        (unabbrev_all_tac>>
+        fs[LAST_HD_eq])>>
+        `check_trace (λst. some st'. ∃l. step_e st l st') ls2` by
+        fs[Abbr`ls2`,check_trace_addl2]>>
+        `check_trace (λst. some st'. ∃l. step_e st l st') ls` by (
+          fs[Abbr`ls`]>>Cases_on`ls2`>>fs[]>>Cases_on`t`>>fs[]
+          >- fs[check_trace_addl1,Abbr`ls1`] >>
+          match_mp_tac check_trace_append2>>rw[]
+          >- fs[check_trace_addl1,Abbr`ls1`]
+          >- (
+            fs[markerTheory.Abbrev_def]>>
+            `h''::t' = TL (LAST ls1::h''::t')` by fs[]>>
+            pop_assum SUBST_ALL_TAC>>
+            match_mp_tac check_trace_tl>>fs[check_trace_addr2]
+            ) >>
+          fs[check_trace_def]
+          )
+        >- (
+          qexists_tac`[h] ++ ls ++ [(r' with clock:=0,Num(i+i'))]`>>
+          rw[]>>
+          match_mp_tac check_trace_append3>>fs[check_trace_def]>>rw[]
+          >- (
+            match_mp_tac check_trace_append2>>
+            fs[check_trace_def]>>
+            fs[markerTheory.Abbrev_def,LAST_APPEND,LAST_MAP]>>
+            match_mp_tac some_to_SOME_step_e>>
+            simp[Once step_e_cases]
+            ) >>
+          match_mp_tac some_to_SOME_step_e>>
+          fs[HD_APPEND,Abbr`ls1`,HD_MAP,Abbr`h`,Abbr`st`]>>
+          simp[Once step_e_cases,oracle_get_def]
+          )
+        >- (
+          qexists_tac`[h]++ls` >>rw[]
+          >- (
+            match_mp_tac check_trace_append3>>
+            fs[HD_APPEND,Abbr`ls1`,HD_MAP]>>
+            match_mp_tac some_to_SOME_step_e>>
+            fs[Abbr`h`,Abbr`st`]>>
+            simp[Once step_e_cases,oracle_get_def]
+            ) >>
+          fs[markerTheory.Abbrev_def,LAST_DEF,LAST_APPEND,LAST_MAP,
+             is_val_e_def,no_step_e_addl2]
+          )
+        )
+      >- (
+        qpat_abbrev_tac`h =(A,B)`>>
+        qexists_tac`[h]++(MAP (λst,e. (st,AddL e (e_to_small_e e'))) tr)`>>
+        fs[HD_MAP,res_rel_e_cases,LAST_MAP,is_val_e_def,LAST_APPEND,
+           no_step_e_addl1]>>
+        match_mp_tac check_trace_append3>>fs[check_trace_addl1,HD_MAP]>>
+        match_mp_tac some_to_SOME_step_e>>
+        unabbrev_all_tac>>
+        simp[Once step_e_cases,oracle_get_def]
+        )
+      )
+    )
+  >- (
+    EVERY_CASE_TAC>>fs[res_rel_e_cases,sem_e_not_break,sem_e_not_timeout]>>
+    first_x_assum(qspec_then`s'` assume_tac)>>rfs[]
+    >- (
+      qexists_tac`(MAP (λst,e. (st,Assign s e)) tr)++
+        [r with <|store :=r.store |+ (s,i); clock:=0|>,Num i]`>>
+      fs[HD_MAP,HD_APPEND]>>
+      ho_match_mp_tac check_trace_append2>>
+      fs[check_trace_def,LAST_MAP,check_trace_assign]>>
+      ntac 2 (simp[Once step_e_cases])
+      ) >>
+      (
+        qexists_tac`(MAP (λst,e. (st,Assign s e)) tr)`>>
+        fs[HD_MAP,LAST_MAP,is_val_e_def,no_step_e_assign,check_trace_assign]
+      )
+    )
+  >- (
+    Cases_on`getchar s.input`>>fs[LET_THM,res_rel_e_cases]>>
+    qpat_abbrev_tac`t = (A,B)`>>
+    qpat_abbrev_tac`t' = (A,B)`>>
+    qexists_tac`[t;t']`>>unabbrev_all_tac>>fs[check_trace_def]>>
+    match_mp_tac some_to_SOME_step_e>>
+    simp[Once step_e_cases]
+    )
+  >- (
+    first_x_assum(qspec_then`s` assume_tac)>>fs[]>>
+    Cases_on`sem_e s e`>>Cases_on`q`>>fs[sem_e_not_break,sem_e_not_timeout]>>
+    qpat_abbrev_tac`t = (A,B)`>>
+    qpat_abbrev_tac`t' = (A,B)`
+    >- (
+      qexists_tac`MAP (λst,e. (st,Putchar e)) tr ++
+        [(r with <|io_trace := r.io_trace ++ [INL(Otag i)];clock:=0|>,Num i)]`>>
+      fs[HD_MAP,HD_APPEND,Abbr`t'`,res_rel_e_cases]>>
+      ho_match_mp_tac check_trace_append2>>
+      fs[check_trace_def,LAST_MAP,check_trace_putchar]>>
+      ntac 2 (simp[Once step_e_cases])
+      ) >>
+    qexists_tac`MAP (λst,e. (st,Putchar e)) tr`>>unabbrev_all_tac>>
+    fs[HD_MAP,res_rel_e_cases,LAST_MAP,is_val_e_def,check_trace_putchar,
+       no_step_e_putchar]
+    )
+)
 end
 
 val sem_t_for_no_break = Q.prove(
@@ -871,7 +895,6 @@ val step_e_zero_clock = Q.prove(
  `r with clock:= r.clock = r` by fs[state_component_equality]>>
  metis_tac[])
 
-local val rw = srw_tac[] val fs = fsrw_tac[] in
 val big_small_lem = Q.prove (
 `!s t r.
   sem_t s t = r
@@ -900,7 +923,6 @@ val big_small_lem = Q.prove (
  >-
    (qpat_abbrev_tac`A = (s with clock:=0,D)`>>
    qexists_tac`A::tr`>>fs[Abbr`A`,check_trace_def]>>
-   CONJ_TAC >- DECIDE_TAC>>
    CONJ_TAC >-
      (Cases_on`tr`>>
      simp[check_trace_def,optionTheory.some_def]>>
@@ -915,35 +937,28 @@ val big_small_lem = Q.prove (
    >-
      (qpat_abbrev_tac`p = t_to_small_t t'`>>
      qexists_tac`MAP (λst,t. (st,Seq t p)) tr ++ tr'`>>
-     fs[HD_MAP,HD_APPEND,LAST_APPEND]>>rw[]
-     >-
-       DECIDE_TAC
-     >-
-       (match_mp_tac check_trace_append2>>
-       fs[check_trace_seq,LAST_MAP]>>
-       Cases_on`LAST tr`>>fs[]>>
-       match_mp_tac some_to_SOME_step_t>>
-       simp[Once step_t_cases]>>fs[Abbr`p`,res_rel_t_cases]>>
-       metis_tac[]))
+     fs[HD_MAP,HD_APPEND,LAST_APPEND]>>rw[] >>
+     match_mp_tac check_trace_append2>>
+     fs[check_trace_seq,LAST_MAP]>>
+     Cases_on`LAST tr`>>fs[]>>
+     match_mp_tac some_to_SOME_step_t>>
+     simp[Once step_t_cases]>>fs[Abbr`p`,res_rel_t_cases]>>
+     metis_tac[])
    >-
      (qpat_abbrev_tac `p = t_to_small_t t'`>>
      qexists_tac`(MAP (λst,t. (st,Seq t p)) tr)++[r with clock:=0,Break]`>>
-     fs[HD_APPEND,HD_MAP]>>rw[]
-     >-
-       DECIDE_TAC
-     >-
-       (match_mp_tac check_trace_append2>>
-       fs[check_trace_seq,LAST_MAP,check_trace_def]>>
-       fs[res_rel_t_cases]>>
-       match_mp_tac some_to_SOME_step_t>>
-       simp[Once step_t_cases]>>fs[Abbr`p`,res_rel_t_cases])
-     >-
-       fs[Once res_rel_t_cases])
+     fs[HD_APPEND,HD_MAP, res_rel_t_cases]>>rw[] >>
+     match_mp_tac check_trace_append2>>
+     fs[check_trace_seq,LAST_MAP,check_trace_def]>>
+     fs[res_rel_t_cases]>>
+     match_mp_tac some_to_SOME_step_t>>
+     simp[Once step_t_cases]>>fs[Abbr`p`,res_rel_t_cases])
    >-
      (qpat_abbrev_tac `p = t_to_small_t t'`>>
      qexists_tac`(MAP (λst,t. (st,Seq t p)) tr)`>>
      fs[HD_APPEND,HD_MAP,check_trace_def,check_trace_seq]>>rw[]>>
      fs[Once res_rel_t_cases,LAST_MAP]>>
+     rename1 `step_t _ _ (s',_)` >>
      `step_t (r,Seq t'' p) l (s',Seq t''' p)` by
        simp[Once step_t_cases]>>
      metis_tac[])
@@ -960,198 +975,209 @@ val big_small_lem = Q.prove (
    qpat_abbrev_tac`p1 = t_to_small_t t1`>>
    qpat_abbrev_tac`p2 = t_to_small_t t2`>>
    TRY
-     (qexists_tac`(MAP (λst,e. (st,(If e p1 p2))) tr') ++ tr`>>
-     fs[HD_MAP,HD_APPEND,LAST_MAP,LAST_APPEND]>>rw[]
-     >-
-       DECIDE_TAC
-     >>
-       match_mp_tac check_trace_append2>>fs[res_rel_e_cases]>>CONJ_TAC
-       >-
-         metis_tac[check_trace_if1]
-       >>
-         match_mp_tac some_to_SOME_step_t>>fs[LAST_MAP]>>
+     (
+     qexists_tac`(MAP (λst,e. (st,(If e p1 p2))) tr') ++ tr`>>
+     fs[HD_MAP,HD_APPEND,LAST_MAP,LAST_APPEND]>>rw[] >>
+     match_mp_tac check_trace_append2>>fs[res_rel_e_cases]>>CONJ_TAC
+     >- metis_tac[check_trace_if1]
+     >>  match_mp_tac some_to_SOME_step_t>>fs[LAST_MAP]>>
          simp[Once step_t_cases]>>
-         metis_tac[])
+         metis_tac[]
+     )
    >>
      qexists_tac`(MAP (λst,e. (st,(If e p1 p2))) tr)`>>rw[]>>
      fs[HD_MAP,res_rel_t_cases,LAST_MAP,res_rel_e_cases,is_val_t_def,check_trace_if1,no_step_t_if1]>>
      metis_tac[check_trace_if1,no_step_t_if1,step_e_zero_clock])
- >- (*For*)
-   (Cases_on`sem_e s e1`>>Cases_on`q`>>fs[sem_e_not_break,sem_e_not_timeout]>>
-   qpat_abbrev_tac`e1s = e_to_small_e e1`>>
-   qpat_abbrev_tac`e2s = e_to_small_e e2`>>
-   (*trace for e1*)
-   imp_res_tac sem_e_big_small_lem>>
-   imp_res_tac sem_e_clock>>
-   qpat_abbrev_tac`p = t_to_small_t t`>>
-   qabbrev_tac`e1tr = (MAP (λst,e. (st,Handle (If e (Seq p (Seq (Exp e2s) (For e1s e2s p))) (Exp (Num 0))))) tr)`>>
-   `check_trace (λst. some st'. ∃l. step_t st l st') e1tr` by metis_tac[check_trace_for1]>>
-   qabbrev_tac`ls = [s with clock:=0,For e1s e2s p]`>>
-   `check_trace (λst. some st'. ∃l. step_t st l st') (ls++e1tr)` by
-     (match_mp_tac check_trace_append2>>unabbrev_all_tac>>
-     fs[check_trace_def,HD_MAP]>>
-     match_mp_tac some_to_SOME_step_t>>
-     simp[Once step_t_cases])
-   >-
-     (IF_CASES_TAC>>fs[]
-     >-
-       (*run out of time*)
-       (fs[res_rel_t_cases,res_rel_e_cases]>>
-       qexists_tac` (ls ++ e1tr)
-        ++ [(r with clock:=0,Handle (Exp (Num 0)));(r with clock:=0,Exp (Num 0))]`>>
-       fs[LAST_APPEND,LAST_MAP]>>fs[]>>rw[]
-       >-
-         (match_mp_tac check_trace_append2>>rw[]
-         >-
-           (fs[check_trace_def]>>
-           match_mp_tac some_to_SOME_step_t>>
-           simp[Once step_t_cases,is_val_e_def,is_val_t_def])
-         >-
-           (unabbrev_all_tac>>fs[LAST_APPEND,LAST_MAP]>>
-           match_mp_tac some_to_SOME_step_t>>
-           ntac 2 (simp[Once step_t_cases])))
-       >>
-         unabbrev_all_tac>>fs[HD_APPEND])
-     >>
-     Cases_on`sem_t r t`>>Cases_on`q`>>fs[]>>
-     qabbrev_tac`ttr = (MAP (λst,t. (st,Handle (Seq t (Seq (Exp e2s) (For e1s e2s p))) ))) tr'`>>
-     `check_trace (λst. some st'. ∃l. step_t st l st') ttr` by
-       metis_tac[check_trace_for2]>>
-     `check_trace (λst. some st'. ∃l. step_t st l st') (ls++e1tr++ttr)` by
-       (match_mp_tac check_trace_append2>>
-       fs[]>> unabbrev_all_tac>>
-       fs[LAST_MAP,res_rel_e_cases,HD_MAP,LAST_DEF]>>
-       match_mp_tac some_to_SOME_step_t>>
-       ntac 2 (simp[Once step_t_cases]))
-     >-
-       (*continue executing*)
-       (Cases_on`sem_e r' e2`>>Cases_on`q`>>
-       fs[sem_e_not_break,sem_e_not_timeout]>>
-       imp_res_tac sem_e_big_small_lem>>
-       imp_res_tac sem_e_clock>>
-       qabbrev_tac`e2tr = (MAP (λst,e. (st,Handle (Seq (Exp e) (For e1s e2s p)) ))) tr''`>>
-       `check_trace (λst. some st'. ∃l. step_t st l st') e2tr` by
-         metis_tac[check_trace_for3]>>
-       `check_trace (λst. some st'. ∃l. step_t st l st') (ls++e1tr++ttr++e2tr)` by
-         (match_mp_tac check_trace_append2>>fs[]>>
-         match_mp_tac some_to_SOME_step_t>>
-         unabbrev_all_tac>>fs[LAST_APPEND,LAST_MAP,HD_MAP,res_rel_t_cases]>>
-         ntac 2 (simp[Once step_t_cases,res_rel_e_cases]))
-       >-
-       (*e2 ok*)
-         (IF_CASES_TAC>>fs[]
-         >-
-           (*clock ok*)
-           (simp[STOP_def]>>
-           simp[Once sem_t_def_with_stop]>>
-           fs[dec_clock_def]>>
-           (*Need a handle wrapper around rest of trace*)
-           qabbrev_tac`ftr = MAP (λst,t. (st, Handle t))tr''''` >>
-           `check_trace (λst. some st'. ∃l. step_t st l st') ftr` by
-             metis_tac[check_trace_handle]>>
-           `check_trace (λst. some st'. ∃l. step_t st l st') (ls++e1tr++ttr++e2tr++ftr)` by
-             (match_mp_tac check_trace_append2>>fs[]>>
-             match_mp_tac some_to_SOME_step_t>>
-             unabbrev_all_tac>>fs[LAST_APPEND,LAST_MAP,HD_MAP]>>
-             fs[res_rel_e_cases]>>
-             ntac 2 (simp[Once step_t_cases]))>>
-           fs[res_rel_t_cases]
-           (*Case split on the rest of loop*)
-           >-
-             (qexists_tac`ls ++ e1tr ++ ttr ++ e2tr ++ ftr ++[s' with clock:=0,Exp (Num i''')]`>>fs[]>>rw[]>>
-             TRY
-               (unabbrev_all_tac>>fs[]>>
-               DECIDE_TAC)
-             >-
-               (match_mp_tac check_trace_append2>>fs[check_trace_def]>>
-               match_mp_tac some_to_SOME_step_t>>unabbrev_all_tac>>
-               fs[LAST_DEF,LAST_APPEND,LAST_MAP,res_rel_e_cases]>>
-               simp[Once step_t_cases,is_val_t_def,is_val_e_def])
-             >>
-               simp[Once sem_t_def_with_stop,LAST_APPEND,dec_clock_def])
-           >-
-             (qexists_tac`ls ++ e1tr++ttr++e2tr++ftr`>>fs[]>>rw[]>>
-             TRY(unabbrev_all_tac>>fs[]>>DECIDE_TAC)>>
-             ntac 4 (simp[Once sem_t_def_with_stop,LAST_APPEND,dec_clock_def])>>
-             unabbrev_all_tac>>fs[LAST_APPEND,LAST_MAP,is_val_t_def]>>
-             match_mp_tac no_step_t_handle>>
-             metis_tac[])
-           >-
-             (*break never occurs*)
-             (qpat_assum `A = (RBreak,s')` mp_tac>>
-             fct>>Cases_on`q`>>
-             fs[sem_e_not_timeout,sem_e_not_break]>>
-             IF_CASES_TAC>>fs[]>>
-             fct>>Cases_on`q`>>
-             fs[]>>
-             fct>>Cases_on`q`>>
-             fs[sem_e_not_timeout,sem_e_not_break]>>
-             IF_CASES_TAC>>fs[]>>
-             simp[STOP_def]>>
-             metis_tac[sem_t_for_no_break])
-           >>
-             (qexists_tac`ls ++ e1tr ++ ttr ++ e2tr ++ ftr`>>fs[]>>rw[]>>
-             TRY
-               (unabbrev_all_tac>>fs[]>>
-               DECIDE_TAC)
-             >>
-             unabbrev_all_tac>>
-             ntac 3 (simp[Once sem_t_def_with_stop,LAST_APPEND,dec_clock_def,LAST_MAP])>>
-             simp[Once step_t_cases]>>metis_tac[]))
-         >>
-           (*clock ended*)
-           fs[res_rel_t_cases]>>
-           qexists_tac`ls++e1tr++ttr++e2tr`>>fs[]>>rw[]>>
-           TRY (unabbrev_all_tac>>fs[]>>DECIDE_TAC)>>
-           unabbrev_all_tac>>fs[LAST_APPEND,LAST_MAP,res_rel_e_cases]>>
-           `r'' with clock:=0 = r''` by fs[state_component_equality]>>
-           ntac 2 (simp[Once step_t_cases,is_val_t_def])>>
-           metis_tac[])
-       >>
-       (*e2 fails*)
-       (qexists_tac`ls++e1tr++ttr++e2tr`>>fs[res_rel_e_cases]>>
-       unabbrev_all_tac>>
-       fs[LAST_APPEND,LAST_MAP,res_rel_t_cases,is_val_t_def]>>rw[]
-       >-
-         DECIDE_TAC
-       >>
-         imp_res_tac step_e_zero_clock>>
-         metis_tac[no_step_t_exp,no_step_t_handle
-         ,no_step_t_seq,is_val_t_def]))
-     >-
-       (qexists_tac`ls++e1tr++ttr++[(r' with clock:= 0,Handle Break);(r' with clock:=0,Exp (Num 0))]`>>
-       fs[LAST_APPEND,LAST_MAP,res_rel_t_cases]>>rw[]>>
-       TRY(unabbrev_all_tac>>fs[]>>DECIDE_TAC)>>
-       match_mp_tac check_trace_append2>>fs[check_trace_def]>>CONJ_TAC>>
-       match_mp_tac some_to_SOME_step_t>>
-       unabbrev_all_tac>>fs[LAST_APPEND,LAST_MAP,res_rel_t_cases]>>
-       ntac 2 (simp[Once step_t_cases]))
-     >-
-       (qexists_tac`ls++e1tr++ttr`>>unabbrev_all_tac>>
-       fs[LAST_APPEND,LAST_MAP,res_rel_t_cases]>>CONJ_TAC
-       >-
-         DECIDE_TAC
-       >>
-         ntac 2 (simp[Once step_t_cases,is_val_t_def])>>
-         metis_tac[])
-     >>
-       (qexists_tac`ls++e1tr++ttr`>>unabbrev_all_tac>>
-       fs[LAST_APPEND,LAST_MAP,res_rel_t_cases]>>CONJ_TAC
-       >-
-         DECIDE_TAC
-       >>
-         fs[is_val_t_def]>>match_mp_tac no_step_t_handle>>
-         fs[is_val_t_def]>>match_mp_tac no_step_t_seq>>
-         metis_tac[]))
-   >>
-     (*e1 fails, expand it 1 step*)
-     qexists_tac` ls ++ e1tr`>>
-     unabbrev_all_tac>>fs[res_rel_t_cases,LAST_DEF,LAST_MAP,HD_APPEND]>>
-     fs[LAST_APPEND,LAST_MAP,res_rel_e_cases,is_val_t_def]>>
-     match_mp_tac no_step_t_handle>>fs[is_val_t_def]>>
-     imp_res_tac step_e_zero_clock>>
-     metis_tac[no_step_t_if1]))
-end
+  >- ( (*For*)
+    reverse (Cases_on`sem_e s e1`>>Cases_on`q`)>>
+    fs[sem_e_not_break,sem_e_not_timeout]>>
+    qpat_abbrev_tac`e1s = e_to_small_e e1`>>
+    qpat_abbrev_tac`e2s = e_to_small_e e2`>>
+    (*trace for e1*)
+    imp_res_tac sem_e_big_small_lem>>
+    imp_res_tac sem_e_clock>>
+    qpat_abbrev_tac`p = t_to_small_t t`>>
+    qabbrev_tac `
+      e1tr = (MAP (λst,e. (st,Handle
+        (If e (Seq p (Seq (Exp e2s) (For e1s e2s p))) (Exp (Num 0))))) tr)`>>
+    `check_trace (λst. some st'. ∃l. step_t st l st') e1tr` by metis_tac[check_trace_for1]>>
+    qabbrev_tac`ls = [s with clock:=0,For e1s e2s p]`>>
+    `check_trace (λst. some st'. ∃l. step_t st l st') (ls++e1tr)` by (
+      match_mp_tac check_trace_append2>>unabbrev_all_tac>>
+      fs[check_trace_def,HD_MAP]>>
+      match_mp_tac some_to_SOME_step_t>>
+      simp[Once step_t_cases]
+      )
+    >- (
+      qexists_tac` ls ++ e1tr`>>
+      unabbrev_all_tac>>fs[res_rel_t_cases,LAST_DEF,LAST_MAP,HD_APPEND]>>
+      fs[LAST_APPEND,LAST_MAP,res_rel_e_cases,is_val_t_def]>>
+      match_mp_tac no_step_t_handle>>fs[is_val_t_def]>>
+      imp_res_tac step_e_zero_clock>>
+      metis_tac[no_step_t_if1]
+      ) >>
+    IF_CASES_TAC>>fs[]
+    >- ( (*run out of time*)
+      fs[res_rel_t_cases,res_rel_e_cases]>>
+      qexists_tac` (ls ++ e1tr) ++
+        [(r with clock:=0,Handle(Exp (Num 0)));(r with clock:=0,Exp (Num 0))]`>>
+      fs[LAST_APPEND,LAST_MAP]>>fs[]>>rw[]
+      >- (
+        match_mp_tac check_trace_append2>>rw[]
+        >- (
+          fs[check_trace_def]>>
+          match_mp_tac some_to_SOME_step_t>>
+          simp[Once step_t_cases,is_val_e_def,is_val_t_def]
+          )
+        >- (
+          unabbrev_all_tac>>fs[LAST_APPEND,LAST_MAP]>>
+          match_mp_tac some_to_SOME_step_t>>
+          ntac 2 (simp[Once step_t_cases])
+          )
+        )
+       >- (unabbrev_all_tac>>fs[HD_APPEND])
+      ) >>
+    reverse (Cases_on`sem_t r t`>>Cases_on`q`)>>fs[]>>
+    qabbrev_tac`ttr = (MAP (λst,t. (st,Handle (Seq t (Seq (Exp e2s) (For e1s e2s p))) ))) tr'`>>
+    `check_trace (λst. some st'. ∃l. step_t st l st') ttr` by
+      metis_tac[check_trace_for2]>>
+    `check_trace (λst. some st'. ∃l. step_t st l st') (ls++e1tr++ttr)` by (
+      match_mp_tac check_trace_append2>>
+      fs[]>> unabbrev_all_tac>>
+      fs[LAST_MAP,res_rel_e_cases,HD_MAP,LAST_DEF]>>
+      match_mp_tac some_to_SOME_step_t>>
+      ntac 2 (simp[Once step_t_cases])
+      )
+    >- (
+      qexists_tac`ls++e1tr++ttr`>>unabbrev_all_tac>>
+      fs[LAST_APPEND,LAST_MAP,res_rel_t_cases]>>CONJ_TAC >>
+      fs[is_val_t_def]>>match_mp_tac no_step_t_handle>>
+      fs[is_val_t_def]>>match_mp_tac no_step_t_seq>>
+      metis_tac[]
+      )
+    >- (
+      qexists_tac`ls++e1tr++ttr`>>unabbrev_all_tac>>
+      fs[LAST_APPEND,LAST_MAP,res_rel_t_cases] >>
+      ntac 2 (simp[Once step_t_cases,is_val_t_def])>>
+      metis_tac[]
+      )
+    >- (
+      qexists_tac`
+        ls++e1tr++ttr++
+          [(r' with clock:= 0,Handle Break);(r' with clock:=0,Exp (Num 0))]`>>
+      fs[LAST_APPEND,LAST_MAP,res_rel_t_cases]>>rw[]
+      >- (unabbrev_all_tac>>fs[]>>DECIDE_TAC)
+      >- (
+        match_mp_tac check_trace_append2>>fs[check_trace_def]>>CONJ_TAC>>
+        match_mp_tac some_to_SOME_step_t>>
+        unabbrev_all_tac>>fs[LAST_APPEND,LAST_MAP,res_rel_t_cases]>>
+        ntac 2 (simp[Once step_t_cases])
+        )
+      >- (unabbrev_all_tac>>fs[]>>DECIDE_TAC)
+      ) >>
+    (*continue executing*)
+    reverse (Cases_on`sem_e r' e2`>>Cases_on`q`)>>
+    fs[sem_e_not_break,sem_e_not_timeout]>>
+    imp_res_tac sem_e_big_small_lem>>
+    imp_res_tac sem_e_clock>>
+    qabbrev_tac`
+      e2tr = (MAP (λst,e. (st,Handle (Seq (Exp e) (For e1s e2s p)) ))) tr''`>>
+    `check_trace (λst. some st'. ∃l. step_t st l st') e2tr` by
+      metis_tac[check_trace_for3]>>
+    `check_trace (λst. some st'. ∃l. step_t st l st')(ls++e1tr++ttr++e2tr)` by (
+      match_mp_tac check_trace_append2>>fs[]>>
+      match_mp_tac some_to_SOME_step_t>>
+      unabbrev_all_tac>>fs[LAST_APPEND,LAST_MAP,HD_MAP,res_rel_t_cases]>>
+      ntac 2 (simp[Once step_t_cases,res_rel_e_cases])
+      )
+    >- ( (* e2 fails *)
+      qexists_tac`ls++e1tr++ttr++e2tr`>>fs[res_rel_e_cases]>>
+      unabbrev_all_tac>>
+      fs[LAST_APPEND,LAST_MAP,res_rel_t_cases,is_val_t_def]>>rw[] >>
+      imp_res_tac step_e_zero_clock>>
+      metis_tac[no_step_t_exp,no_step_t_handle,no_step_t_seq,is_val_t_def]
+      ) >>
+    (* e2 ok *)
+    reverse (IF_CASES_TAC) >>fs[]
+    >- (
+      (*clock ended*)
+      fs[res_rel_t_cases]>>
+      qexists_tac`ls++e1tr++ttr++e2tr`>>fs[]>>reverse (rw[])
+      >- (
+        unabbrev_all_tac>>fs[LAST_APPEND,LAST_MAP,res_rel_e_cases]>>
+        `r'' with clock:=0 = r''` by fs[state_component_equality]>>
+        ntac 2 (simp[Once step_t_cases,is_val_t_def])>>
+        metis_tac[]
+        ) >>
+      unabbrev_all_tac>>fs[]>>DECIDE_TAC
+      ) >>
+    (*clock ok*)
+    simp[STOP_def]>>
+    simp[Once sem_t_def_with_stop]>>
+    fs[dec_clock_def]>>
+    (*Need a handle wrapper around rest of trace*)
+    qabbrev_tac`ftr = MAP (λst,t. (st, Handle t))tr''''` >>
+    `check_trace (λst. some st'. ∃l. step_t st l st') ftr` by
+      metis_tac[check_trace_handle]>>
+    `check_trace (λst. some st'. ∃l. step_t st l st')
+      (ls++e1tr++ttr++e2tr++ftr)` by (
+        match_mp_tac check_trace_append2>>fs[]>>
+        match_mp_tac some_to_SOME_step_t>>
+        unabbrev_all_tac>>fs[LAST_APPEND,LAST_MAP,HD_MAP]>>
+        fs[res_rel_e_cases]>>
+        ntac 2 (simp[Once step_t_cases])
+      ) >>
+    fs[res_rel_t_cases]
+    (*Case split on the rest of loop*)
+    >- (
+      qexists_tac`
+        ls ++ e1tr ++ ttr ++ e2tr ++ ftr ++[s' with clock:=0,Exp (Num i''')]`>>
+      fs[]>>rw[]
+      >- (unabbrev_all_tac>>fs[]>>DECIDE_TAC)
+      >- (
+        match_mp_tac check_trace_append2>>fs[check_trace_def]>>
+        match_mp_tac some_to_SOME_step_t>>unabbrev_all_tac>>
+        fs[LAST_DEF,LAST_APPEND,LAST_MAP,res_rel_e_cases]>>
+        simp[Once step_t_cases,is_val_t_def,is_val_e_def]
+        )
+      >- (unabbrev_all_tac>>fs[]>>DECIDE_TAC)
+      >- (simp[Once sem_t_def_with_stop,LAST_APPEND,dec_clock_def])
+      )
+    >- (
+      qexists_tac`ls ++ e1tr++ttr++e2tr++ftr`>>fs[]>> reverse (rw[])
+      >- (
+        ntac 4 (simp[Once sem_t_def_with_stop,LAST_APPEND,dec_clock_def])>>
+        unabbrev_all_tac>>fs[LAST_APPEND,LAST_MAP,is_val_t_def]>>
+        match_mp_tac no_step_t_handle>>
+        metis_tac[]
+        ) >>
+      unabbrev_all_tac>>fs[]>>DECIDE_TAC
+      )
+    >- ( (*break never occurs*)
+      qpat_x_assum `A = (RBreak,s')` mp_tac>>
+      fct>>Cases_on`q`>>
+      fs[sem_e_not_timeout,sem_e_not_break]>>
+      IF_CASES_TAC>>fs[]>>
+      fct>>Cases_on`q`>>
+      fs[]>>
+      fct>>Cases_on`q`>>
+      fs[sem_e_not_timeout,sem_e_not_break]>>
+      IF_CASES_TAC>>fs[]>>
+      simp[STOP_def]>>
+      metis_tac[sem_t_for_no_break]
+      )
+    >- (
+      qexists_tac`ls ++ e1tr ++ ttr ++ e2tr ++ ftr`>>fs[]>> reverse (rw[]) >>
+      unabbrev_all_tac
+      >- (
+        ntac 3 (
+          simp[Once sem_t_def_with_stop,LAST_APPEND,dec_clock_def,LAST_MAP])>>
+        simp[Once step_t_cases]>>metis_tac[]
+        ) >>
+      fs[] >> DECIDE_TAC
+      )
+    )
+  )
 
 val big_timeout_0 = Q.prove (
 `!st p r.
@@ -1295,10 +1321,10 @@ val sem_e_ignores_clock = Q.prove(
   ho_match_mp_tac sem_e_ind>>srw_tac[][sem_e_def]>>fs[LET_THM]
   >-
     (ect>>fs[])
-  >-
-    (fs[permute_pair_def,LET_THM,oracle_get_def,unpermute_pair_def]>>
+  >- (
+    fs[permute_pair_def,LET_THM,oracle_get_def,unpermute_pair_def]>>
     Cases_on`switch`>>fs[]>>
-    qpat_assum`A=(r,s')` mp_tac>>
+    qpat_x_assum`A=(r,s')` mp_tac>>
     fct>>Cases_on`q`>>res_tac>>
     fs[sem_e_not_break,sem_e_not_timeout]>>
     fct>>Cases_on`q`>>res_tac>>
@@ -1540,7 +1566,7 @@ val init_st_with_clock = Q.prove(
   `init_st a b c with clock := d = init_st d b c`,
   EVAL_TAC)
 
-val prefix_chain_sem_t_io_trace_over_all_c = Q.store_thm("lprefix_chain_sem_t_io_trace_over_all_c",
+val lprefix_chain_sem_t_io_trace_over_all_c = Q.store_thm("lprefix_chain_sem_t_io_trace_over_all_c",
   `prefix_chain (over_all (λc. (SND (sem_t (init_st c nd input) t)).io_trace))`,
   rw[lprefix_lubTheory.prefix_chain_def,over_all_def] >>
   qspecl_then[`c`,`c'`]strip_assume_tac arithmeticTheory.LESS_EQ_CASES >|[disj1_tac,disj2_tac] >>
@@ -1563,7 +1589,7 @@ val _ = Parse.add_rule{term_name="BIGSUP",fixity=Parse.Binder,pp_elements=[TOK"B
 val semantics_alt = save_thm("semantics_alt",
   semantics_def
     |> SIMP_RULE bool_ss [image_intro]
-    |> SIMP_RULE bool_ss [prefix_chain_sem_t_io_trace_over_all_c,lprefix_lubTheory.prefix_chain_FILTER,lprefix_lubTheory.prefix_chain_lprefix_chain,lprefix_lubTheory.build_prefix_lub_intro]
+    |> SIMP_RULE bool_ss [lprefix_chain_sem_t_io_trace_over_all_c,lprefix_lubTheory.prefix_chain_FILTER,lprefix_lubTheory.prefix_chain_lprefix_chain,lprefix_lubTheory.build_prefix_lub_intro]
     |> SIMP_RULE bool_ss [IMAGE_over_all]
     |> SIMP_RULE bool_ss [prove(``f o g = λc. f (g c)``,rw[FUN_EQ_THM])]
     |> SIMP_RULE bool_ss [GSYM BIGSUP_def])

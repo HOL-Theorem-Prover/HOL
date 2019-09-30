@@ -37,7 +37,7 @@ datatype a_space_pred =
 
 datatype a_proposition =
    Aprop_infix of string * a_expression * a_expression
-	  (* string is one of "<", "<=", ">", ">=", "==", "!=" *)
+          (* string is one of "<", "<=", ">", ">=", "==", "!=" *)
   | Aprop_false
   | Aprop_ifthenelse of a_proposition * a_proposition * a_proposition
   | Aprop_star of a_proposition * a_proposition
@@ -66,8 +66,10 @@ datatype p_statement =
   | Pstm_dispose of a_expression * a_expression
   | Pstm_block of p_statement list
   | Pstm_if of p_condition * p_statement * p_statement
-  | Pstm_while of int * read_write_decl * a_invariant * p_condition * p_statement
-  | Pstm_block_spec of bool * int * read_write_decl * a_proposition * p_statement * a_proposition
+  | Pstm_while of
+      int * read_write_decl * a_invariant * p_condition * p_statement
+  | Pstm_block_spec of
+      bool * int * read_write_decl * a_proposition * p_statement * a_proposition
   | Pstm_withres of string * p_condition * p_statement
   | Pstm_fcall of string * actual_params
   | Pstm_parallel_fcall of string * actual_params * string * actual_params

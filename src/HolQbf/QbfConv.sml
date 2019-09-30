@@ -16,7 +16,7 @@ structure QbfConv :> QbfConv = struct
 
   local
     open boolSyntax boolTheory markerLib
-    fun literal x t = t = x orelse dest_neg t = x handle HOL_ERR _ => false
+    fun literal x t = t ~~ x orelse dest_neg t ~~ x handle HOL_ERR _ => false
   in
     val remove_forall =
       Ho_Rewrite.PURE_REWRITE_CONV [FORALL_AND_THM] THENC

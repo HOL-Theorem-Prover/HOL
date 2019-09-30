@@ -73,8 +73,8 @@ local
   val ty_g = Parse.type_grammar ()
 in
   val term_to_string =
-        Portable.pp_to_string 70
-          (term_pp.pp_term tm_g ty_g PPBackEnd.raw_terminal)
+        PP.pp_to_string 70
+          (Parse.mlower o term_pp.pp_term tm_g ty_g PPBackEnd.raw_terminal)
 end
 
 fun disassemble_byte l =
@@ -186,7 +186,7 @@ fun condition tm =
 
 fun mnemonic (enc,cond,tm) s1 s2 =
 let
-  val q = if enc = Encoding_Thumb2_tm andalso
+  val q = if enc ~~ Encoding_Thumb2_tm andalso
              can arm_encoderLib.arm_encode
                  (arm_parserLib.Instruction (Encoding_Thumb_tm,cond,tm))
           then
@@ -304,7 +304,7 @@ fun rotation (n,rot) =
 fun data_processing
       (f : string -> string -> string * string) enc (opc,s,n,d,mode1) =
 let
-  val m1 = disassemble_mode1 (enc = Encoding_Thumb2_tm) mode1
+  val m1 = disassemble_mode1 (enc ~~ Encoding_Thumb2_tm) mode1
   val sflag = opt (is_T s) "s"
   fun arith x = f (sflag x) (commy [register d, register n, m1])
   fun move x = f (sflag x) (commy [register d, m1])
@@ -326,7 +326,7 @@ in
    | 12 => arith "orr"
    | 13 => move  "mov"
    | 14 => arith "bic"
-   | 15 => if enc = Encoding_Thumb2_tm andalso not (is_PC n) then
+   | 15 => if enc ~~ Encoding_Thumb2_tm andalso not (is_PC n) then
              arith "orn"
            else
              move "mvn"
@@ -500,7 +500,7 @@ let val f = mnemonic instr in
    | ("Branch_Exchange", [m]) =>
        f "bx" (register m)
    | ("Branch_Link_Exchange_Immediate", [h,toarm,imm24]) =>
-       f (if (enc = Encoding_ARM_tm) = is_F toarm then "blx" else "bl")
+       f (if (enc ~~ Encoding_ARM_tm) = is_F toarm then "blx" else "bl")
          (``let imm32 = (sw2sw ^imm24 << 2) +
                         (if ^enc = Encoding_ARM then 8w else 4w:word32) in
               if ^toarm then imm32 else (1 :+ ^h) imm32`` |> offset)
@@ -537,12 +537,12 @@ in
         f (if is_T h then "movt" else "movw")
           (commy [register d, constant imm16])
    | ("Add_Sub", [a,n,d,imm12]) =>
-        if enc = Encoding_ARM_tm then
+        if enc ~~ Encoding_ARM_tm then
           f (if is_T a then "add" else "sub")
             (commy [register d, register n,
                     disassemble_mode1 false (mk_Mode1_immediate imm12)])
         else
-          f (if enc = Encoding_Thumb_tm then "add" else
+          f (if enc ~~ Encoding_Thumb_tm then "add" else
                if is_T a then "addw" else "subw")
             (commy [register d, register n, constant imm12])
    | ("Multiply", [acc,s,d,a,m,n]) =>

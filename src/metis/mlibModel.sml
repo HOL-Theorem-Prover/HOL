@@ -12,8 +12,6 @@ app load ["mlibHeap", "mlibTerm", "mlibSubst", "mlibMatch", "mlibThm", "mlibTerm
 structure mlibModel :> mlibModel =
 struct
 
-infix ## |->;
-
 open mlibUseful mlibTerm;
 
 structure W = Word; local open Word in end;
@@ -23,7 +21,7 @@ structure W = Word; local open Word in end;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibModel";
-val () = traces := {module = module, alignment = I} :: !traces;
+val () = add_trace {module = module, alignment = I}
 fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 
@@ -41,8 +39,17 @@ val pp_fp = pp_map
   (fn (f,a) => Fn (f, map (fn n => Fn (int_to_string n, [])) a)) pp_term;
 
 fun cached c f k =
-  case Binarymap.peek (!c,k) of SOME v => v
-  | NONE => let val v = f k val () = c := Binarymap.insert (!c,k,v) in v end;
+  case Binarymap.peek (Uref.!c,k) of
+      SOME v => v
+    | NONE =>
+      let
+        open Uref
+        val v = f k
+        val () = c := Binarymap.insert (!c,k,v)  (* OK *)
+                                       (* - caches are private per model *)
+      in
+        v
+      end;
 
 fun log2_int 1 = 0 | log2_int n = 1 + log2_int (n div 2);
 
@@ -287,15 +294,15 @@ fun cached_random_pred cache id p_args = cached cache (random_pred id) p_args;
 datatype model = MODEL of
   {parm : parameters,
    id : int,
-   cachef : (fp,int) Binarymap.dict ref,
-   cachep : (fp,bool) Binarymap.dict ref,
+   cachef : (fp,int) Binarymap.dict Uref.t,
+   cachep : (fp,bool) Binarymap.dict Uref.t,
    overf : (fp,int) Binarymap.dict,
    overp : (fp,bool) Binarymap.dict,
    fixf : (string * int list) -> int option,
    fixp : (string * int list) -> bool option};
 
 local
-  val new_id = let val n = ref ~1 in fn () => (n := !n + 1; !n) end;
+  val new_id = Portable.make_counter{inc=1,init=0}
 in
   fun new (parm : parameters) =
     let
@@ -303,8 +310,8 @@ in
       val {func = fixf, pred = fixp} = r n
       val () = assert (1 <= n) (Bug "mlibModel.new: nonpositive size")
       val id = new_id ()
-      val cachef = ref (Binarymap.mkDict fp_compare)
-      val cachep = ref (Binarymap.mkDict fp_compare)
+      val cachef = Uref.new (Binarymap.mkDict fp_compare)
+      val cachep = Uref.new (Binarymap.mkDict fp_compare)
       val overf = Binarymap.mkDict fp_compare
       val overp = Binarymap.mkDict fp_compare
     in
@@ -328,8 +335,8 @@ fun update_overp overp m =
             overf = overf, overp = overp, fixf = fixf, fixp = fixp}
   end;
 
-fun pp_model pp (MODEL {parm = {size = N, ...}, id, ...}) =
-  pp_string pp (int_to_string id ^ ":" ^ int_to_string N);
+fun pp_model (MODEL {parm = {size = N, ...}, id, ...}) =
+  pp_string (int_to_string id ^ ":" ^ int_to_string N);
 
 (* ------------------------------------------------------------------------- *)
 (* Evaluating ground formulas on models                                      *)

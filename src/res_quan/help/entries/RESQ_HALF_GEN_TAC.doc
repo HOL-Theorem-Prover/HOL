@@ -24,7 +24,7 @@ Fails unless the goal's conclusion is a restricted universal quantification.
 \USES
 The tactic {REPEAT RESQ_GEN_TAC} strips away a series of restricted
 universal quantifiers, and is commonly used before tactics relying on
-the  underlying term structure. 
+the  underlying term structure.
 
 \SEEALSO
 RESQ_GEN_TAC, RESQ_GEN, RESQ_GENL, RESQ_GEN_ALL, RESQ_SPEC, RESQ_SPECL,

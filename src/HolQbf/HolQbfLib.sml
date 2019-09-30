@@ -4,25 +4,33 @@
 
 structure HolQbfLib :> HolQbfLib = struct
 
+
  fun get_certificate t =
   let
     val path = FileSys.tmpName ()
-    val dict = QDimacs.write_qdimacs_file path t
-    (* the actual system call to Squolem *)
-    val cmd = "squolem2 -c " ^ path ^ " >/dev/null 2>&1"
-    val _ = if !QbfTrace.trace > 1 then
-        Feedback.HOL_MESG ("HolQbfLib: calling external command '" ^ cmd ^ "'")
-      else ()
-    val _ = Systeml.system_ps cmd
-    val cert_path = path ^ ".qbc"  (* the file name is hard-wired in Squolem *)
-    val cert = QbfCertificate.read_certificate_file cert_path
+    val cert_path = path ^ ".qbc" (* the file name is hard-wired in Squolem *)
+    fun dowork () =
+        let
+          val dict = QDimacs.write_qdimacs_file path t
+          (* the actual system call to Squolem *)
+          val cmd = "squolem2 -c " ^ path ^ " >/dev/null 2>&1"
+          val _ = if !QbfTrace.trace > 1 then
+                    Feedback.HOL_MESG ("HolQbfLib: calling external command '" ^
+                                       cmd ^ "'")
+                  else ()
+          val _ = Systeml.system_ps cmd
+          val cert = QbfCertificate.read_certificate_file cert_path
+        in
+          (dict,cert)
+        end
+    fun finish () =
     (* delete temporary files *)
-    val _ = if !QbfTrace.trace < 4 then
-        List.app (fn path => OS.FileSys.remove path handle SysErr _ => ())
-          [path, cert_path]
-      else ()
+        if !QbfTrace.trace < 4 then
+          List.app (fn path => OS.FileSys.remove path handle SysErr _ => ())
+                   [path, cert_path]
+        else ()
   in
-    (dict, cert)
+    Portable.finally finish dowork ()
   end
 
   (* 'prove' can prove valid QBFs in prenex form by validating a
@@ -72,13 +80,13 @@ structure HolQbfLib :> HolQbfLib = struct
      assumptions. *)
   fun decide t =
   let
-    open Thm Drule boolSyntax
+    open Thm Drule boolSyntax boolLib
     val fvs = Term.free_vars t
     val t = list_mk_forall (fvs,t)
     val tt = QbfConv.qbf_prenex_conv t
     val t' = rhs (concl tt)
-    in if t' = T then SPECL fvs (EQ_MP (SYM tt) boolTheory.TRUTH) else
-       if t' = F then EQ_MP tt (ASSUME t) else let
+    in if Teq t' then SPECL fvs (EQ_MP (SYM tt) boolTheory.TRUTH) else
+       if Feq t' then EQ_MP tt (ASSUME t) else let
     val (dict, cert) = get_certificate t'
     val th = QbfCertificate.check t' dict cert
   in case cert of

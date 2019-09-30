@@ -1,8 +1,7 @@
-structure mp_then =
+structure mp_then :> mp_then =
 struct
 
-local
-  open HolKernel Drule Conv Parse boolTheory boolSyntax
+open HolKernel Drule Conv Parse boolTheory boolSyntax
 
 fun avSPEC_ALL avds th =
   let
@@ -26,7 +25,7 @@ fun PART_MATCH' f th t =
     val hypfvs = HOLset.listItems hypfvs_set
     val hyptyvs = HOLset.listItems (hyp_tyvars th)
     val tfvs = free_vars t
-    val dontspec = union tfvs hypfvs
+    val dontspec = op_union aconv tfvs hypfvs
     val (vs, speccedth) = avSPEC_ALL dontspec th
     val s as (tmsig,tysig) =
         match_terml hyptyvs hypfvs_set (f (concl speccedth)) t
@@ -36,16 +35,13 @@ fun PART_MATCH' f th t =
          (INST_TY_TERM s speccedth)
   end
 
-fun match_subterm pat =
-  can (find_term (can (match_term pat)))
+fun match_subterm pat = find_term (can (match_term pat))
 
 val op$ = Portable.$
 val notT = el 2 (CONJUNCTS NOT_CLAUSES)
 val imp_clauses = IMP_CLAUSES |> SPEC_ALL |> CONJUNCTS
 val Timp = el 1 imp_clauses
 val impF = last imp_clauses
-
-in
 
 datatype match_position =
   Any
@@ -55,7 +51,7 @@ datatype match_position =
 
 fun mp_then pos (ttac : thm_tactic) ith0 rth (g as (asl,w)) =
   let
-    val ith = MP_CANON ith0
+    val ith = MP_CANON (GEN_ALL ith0)
     val rth_eqT = EQT_INTRO rth
     val rth_eq = EQF_INTRO rth handle HOL_ERR _ => rth_eqT
     fun m f k t =
@@ -91,27 +87,31 @@ fun mp_then pos (ttac : thm_tactic) ith0 rth (g as (asl,w)) =
       | Pos f => m (conj f) (fn _ => raise fail) t
       | Pat q =>
         let
-          val pat = parse_in_context
-                      (HOLset.listItems (FVL (w::asl) empty_tmset))
-                      q
-          fun doit n =
+          open TermParse
+          val pats =
+              prim_ctxt_termS Parse.Absyn (term_grammar())
+                              (HOLset.listItems (FVL (w::asl) empty_tmset))
+                              q
+          fun doit ps n =
             if n > max then raise fail
-            else m (fn t => let val subterm = conj (el n) t
-                            in
-                              if can (match_subterm pat) subterm then
-                                subterm
-                              else raise fail
-                            end)
-                   (fn _ => doit (n + 1))
+            else
+              case seq.cases ps of
+                  NONE => doit pats (n + 1)
+                | SOME (pat, rest) =>
+                    m (fn t => let val subterm = conj (el n) t
+                               in
+                                 if can (match_subterm pat) subterm then
+                                   subterm
+                                 else raise fail
+                               end)
+                      (fn _ => doit rest n)
                    t
         in
-          doit 1
+          doit pats 1
         end
       | Concl => m (fn t => t |> dest_imp |> #2)
                    (fn _ => raise fail)
                    (dest_neg t handle HOL_ERR _ => mk_neg t)
   end
-
-end (* local *)
 
 end

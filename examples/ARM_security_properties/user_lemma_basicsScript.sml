@@ -8,6 +8,7 @@ open tacticsLib;
 open wordsTheory wordsLib;
 
 val _ =  new_theory("user_lemma_basics");
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = temp_overload_on ("return", ``constT``);
 val _ = overload_on("priv_mode_constraints", ``priv_mode_constraints_v1``);
@@ -118,10 +119,10 @@ val reflex_priv_mode_constraints_v2a_thm = store_thm("reflex_priv_mode_constrain
 
 val trans_priv_mode_constraints_thm =
     store_thm("trans_priv_mode_constraints_thm",
-	      ``trans_fun priv_mode_constraints``,
-	      RW_TAC (srw_ss()) [LET_DEF, trans_fun_def,priv_mode_constraints_def]
-		     THEN RW_TAC (srw_ss()) [] THEN
-		     FULL_SIMP_TAC (srw_ss()) [get_base_vector_table_def,ARM_MODE_def,ARM_READ_CPSR_def]);
+              ``trans_fun priv_mode_constraints``,
+              RW_TAC (srw_ss()) [LET_DEF, trans_fun_def,priv_mode_constraints_def]
+                     THEN RW_TAC (srw_ss()) [] THEN
+                     FULL_SIMP_TAC (srw_ss()) [get_base_vector_table_def,ARM_MODE_def,ARM_READ_CPSR_def]);
 
 val reflex_priv_mode_similar_thm = store_thm(
     "reflex_priv_mode_similar_thm",
@@ -158,9 +159,9 @@ val strict_unt_and_priv_mode_constraints_v2a_lem = store_thm(
 
 val trans_strict_unt_thm =
     store_thm("trans_strict_unt_thm",
-	      ``trans_fun strict_unt``,
-	      RW_TAC (srw_ss()) [LET_DEF, trans_fun_def, strict_unt_def]
-		     THEN RW_TAC (srw_ss()) [] );
+              ``trans_fun strict_unt``,
+              RW_TAC (srw_ss()) [LET_DEF, trans_fun_def, strict_unt_def]
+                     THEN RW_TAC (srw_ss()) [] );
 
 
 val reflex_empty_unt_thm = store_thm(
@@ -171,9 +172,9 @@ val reflex_empty_unt_thm = store_thm(
 
 val trans_empty_unt_thm =
     store_thm("trans_empty_unt_thm",
-	      ``trans_fun empty_unt``,
-	      RW_TAC (srw_ss()) [LET_DEF, trans_fun_def, empty_unt_def]
-		     THEN RW_TAC (srw_ss()) [] );
+              ``trans_fun empty_unt``,
+              RW_TAC (srw_ss()) [LET_DEF, trans_fun_def, empty_unt_def]
+                     THEN RW_TAC (srw_ss()) [] );
 
 val strict_unt_lem = store_thm(
     "strict_unt_lem",
@@ -319,22 +320,22 @@ val extras_lem4 = store_thm(
 
 
  val comb_monot_thm = store_thm("comb_monot_thm",
-	       ``!a:(arm_state -> bool). comb a a a``,
-	       RW_TAC (srw_ss()) [comb_def]);
+               ``!a:(arm_state -> bool). comb a a a``,
+               RW_TAC (srw_ss()) [comb_def]);
 
 val preserve_relation_comb_thm =
     store_thm ("preserve_relation_comb_thm",
-	       ``! a b c d f  uf uy.
-	      preserve_relation_mmu  f d b uf uy
-	      ==>
-	      comb a b c ==>
-	      preserve_relation_mmu  f d c uf uy``,
-	       RW_TAC (srw_ss()) [preserve_relation_mmu_def,comb_def]
-		      THEN PAT_X_ASSUM ``∀g s1 s2. X``
-		      (fn thm => ASSUME_TAC (SPECL [``g:bool[32]``,
-						    ``s1:arm_state``, ``s2:arm_state``] thm))
+               ``! a b c d f  uf uy.
+              preserve_relation_mmu  f d b uf uy
+              ==>
+              comb a b c ==>
+              preserve_relation_mmu  f d c uf uy``,
+               RW_TAC (srw_ss()) [preserve_relation_mmu_def,comb_def]
+                      THEN PAT_X_ASSUM ``∀g s1 s2. X``
+                      (fn thm => ASSUME_TAC (SPECL [``g:bool[32]``,
+                                                    ``s1:arm_state``, ``s2:arm_state``] thm))
     THEN RES_TAC
-	 THEN RW_TAC (srw_ss()) []);
+         THEN RW_TAC (srw_ss()) []);
 
 
 val global_aligned_word_readable_lem = store_thm(
@@ -354,7 +355,7 @@ val seqT_preserves_relation_comb_thm =
     store_thm ("seqT_preserves_relation_comb_thm",
     ``! f1 f2 k inv2 comb_inv  uf uy.
           (comb  (assert_mode k) inv2 comb_inv) ==>
-	  (trans_fun uf) ==>
+          (trans_fun uf) ==>
           (preserve_relation_mmu  f1 (assert_mode k) (assert_mode k) uf uy)       ==>
           (preserve_relation_mmu_abs  f2 (assert_mode k) (comb_inv) uf uy) ==>
           (preserve_relation_mmu  (f1 >>= (f2)) (assert_mode k) comb_inv uf uy)

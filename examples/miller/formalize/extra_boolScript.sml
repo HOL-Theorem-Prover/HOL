@@ -2,6 +2,7 @@
 *)
 open HolKernel Parse boolLib;
 val _ = new_theory "extra_bool";
+val _ = ParseExtras.temp_loose_equality()
 
 (* interactive mode
 show_assums := true;
@@ -17,7 +18,7 @@ installPP subtypeTools.pp_context;
 *)
 
 open bossLib res_quanTheory pred_setTheory subtypeTheory
-     res_quanTools subtypeTools ho_proverTools HurdUseful
+     res_quanTools subtypeTools ho_proverTools hurdUtils
      ho_basicTools boolContext combinTheory;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;

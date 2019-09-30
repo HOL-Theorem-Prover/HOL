@@ -1445,7 +1445,7 @@ val insertMin_thm = Q.store_thm ("insertMin_thm",
  rw [FUNION_FUPDATE_1] >>
  metis_tac [FUPDATE_COMMUTES, cmp_thms, key_set_cmp_thm]);
 
-val deleteFindMin_thm = Q.store_thm ("deleteFindMin",
+val deleteFindMin = Q.store_thm ("deleteFindMin",
 `∀t t' k v.
   good_cmp cmp ∧
   invariant cmp t ∧
@@ -1574,7 +1574,7 @@ val deleteFindMin_thm = Q.store_thm ("deleteFindMin",
      rw [] >>
      metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm]));
 
-val deleteFindMax_thm = Q.store_thm ("deleteFindMax",
+val deleteFindMax = Q.store_thm ("deleteFindMax",
 `∀t t' k v.
   good_cmp cmp ∧
   invariant cmp t ∧
@@ -1727,7 +1727,7 @@ val glue_thm = Q.store_thm ("glue_thm",
      inv_mp_tac balanceR_thm >>
      simp [] >>
      inv_to_front_tac ``invariant`` >>
-     inv_mp_tac deleteFindMax_thm >>
+     inv_mp_tac deleteFindMax >>
      simp [Once SWAP_EXISTS_THM] >>
      qexists_tac `Bin n k v b b0` >>
      simp [null_def] >>
@@ -1764,7 +1764,7 @@ val glue_thm = Q.store_thm ("glue_thm",
      inv_mp_tac balanceL_thm >>
      simp [] >>
      inv_to_front_tac ``invariant`` >>
-     inv_mp_tac deleteFindMin_thm >>
+     inv_mp_tac deleteFindMin >>
      simp [Once SWAP_EXISTS_THM] >>
      qexists_tac `Bin n' k' v' b' b0'` >>
      simp [null_def] >>
@@ -2442,6 +2442,13 @@ val union_thm = Q.store_thm ("union_thm",
  fs [FLOOKUP_DEF, invariant_eq] >>
  rfs [key_ordered_to_fmap] >>
  metis_tac [cmp_thms, to_fmap_key_set]);
+
+val lookup_union = Q.store_thm("lookup_union",
+  `good_cmp cmp ∧ invariant cmp t1 ∧ invariant cmp t2 ⇒
+   lookup cmp k (union cmp t1 t2) = case lookup cmp k t1 of
+                                      NONE => lookup cmp k t2
+                                    | SOME v => SOME v`,
+  rw[lookup_thm,union_thm,FLOOKUP_FUNION]);
 
 val EXT2 = Q.prove (
 `!s1 s2. s1 = s2 ⇔ (!k v. (k,v) ∈ s1 ⇔ (k,v) ∈ s2)`,

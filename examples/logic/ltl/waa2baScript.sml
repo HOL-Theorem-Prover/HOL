@@ -3,6 +3,7 @@ open HolKernel Parse bossLib boolLib pairTheory relationTheory set_relationTheor
 open wordTheory buechiATheory alterATheory generalHelpersTheory
 
 val _ = new_theory "waa2ba"
+val _ = ParseExtras.temp_loose_equality()
 
 val d_gen_def = Define`
   d_gen (waa : (α,β) ALTER_A) qs
@@ -354,7 +355,7 @@ val vwaa2gba_gba_V_def = Define`
 ∧ (vwaa2gba_gba_V waa_run v' (SUC i) = v' i (vwaa2gba_gba_V waa_run v' i))`;
 
 val WAA_IN_GBA = store_thm
-  ("GBA_IN_WAA",
+  ("WAA_IN_GBA",
    ``!aut. isVeryWeakAlterA aut ∧ FINITE aut.alphabet ∧ FINITE aut.states
      ∧ isValidAlterA aut
    ==> alterA_lang aut ⊆ GBA_lang (vwaa2gba aut)``,

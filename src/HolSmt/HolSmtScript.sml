@@ -27,6 +27,8 @@
   val s = Theory.save_thm
 
   val _ = Theory.new_theory "HolSmt"
+  val _ = ParseExtras.temp_loose_equality()
+
 
   (* constants used by Z3 *)
 

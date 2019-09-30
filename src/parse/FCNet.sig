@@ -11,3 +11,8 @@ sig
 
   val can_match_term : term -> term -> bool
 end
+
+(* FCNet: a term-net that handles the pretty-printer's fake constants
+   as constants rather than the variables that they actually are.
+   Provides a matching function that does the same.
+*)

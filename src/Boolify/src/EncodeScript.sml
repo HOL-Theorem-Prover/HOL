@@ -21,7 +21,7 @@ val TOP_CASE_TAC = BasicProvers.TOP_CASE_TAC;
         biprefix is a bi-directional version of IS_PREFIX.
  ---------------------------------------------------------------------------*)
 
-val biprefix_def = Define `biprefix a b = IS_PREFIX a b \/ IS_PREFIX b a`;
+val biprefix_def = Define `biprefix a b <=> IS_PREFIX a b \/ IS_PREFIX b a`;
 
 val biprefix_refl = store_thm
   ("biprefix_refl",
@@ -39,11 +39,12 @@ val biprefix_append = store_thm
    RW_TAC std_ss [biprefix_def] >>
    PROVE_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2]);
 
-val biprefix_cons = store_thm
-  ("biprefix_cons",
-   ``!a b c d. biprefix (a :: b) (c :: d) = (a = c) /\ biprefix b d``,
+Theorem biprefix_cons:
+   !a b c d. biprefix (a :: b) (c :: d) <=> (a = c) /\ biprefix b d
+Proof
    RW_TAC std_ss [biprefix_def, IS_PREFIX] >>
-   PROVE_TAC []);
+   PROVE_TAC []
+QED
 
 val biprefix_appends = store_thm
   ("biprefix_appends",
@@ -161,7 +162,7 @@ val encode_prod_def =
   TotalDefn.Define
   `encode_prod xb yb (x : 'a, y : 'b) : bool list = APPEND (xb x) (yb y)`;
 
-val lift_prod_def = Define `lift_prod p1 p2 x = p1 (FST x) /\ p2 (SND x)`;
+val lift_prod_def = Define `lift_prod p1 p2 x <=> p1 (FST x) /\ p2 (SND x)`;
 
 val encode_prod_alt = store_thm
   ("encode_prod_alt",
@@ -270,13 +271,11 @@ val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,
- struct_ps = SOME(fn ppstrm =>
-   let val S = PP.add_string ppstrm
-       fun NL() = PP.add_newline ppstrm
+ struct_ps = SOME(fn _ =>
+   let val S = PP.add_string
    in
-  S "val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());";
-  NL()
-  end)};
+     S "val _ = DefnBase.write_congs (encode_list_cong::DefnBase.read_congs());"
+   end)};
 
 (*---------------------------------------------------------------------------
         Bounded lists
@@ -287,12 +286,13 @@ val encode_blist_def =
   `(encode_blist 0 e l = []) /\
    (encode_blist (SUC m) e l = APPEND (e (HD l)) (encode_blist m e (TL l)))`;
 
-val lift_blist_def = Define `lift_blist m p x = EVERY p x /\ (LENGTH x = m)`;
+val lift_blist_def = Define `lift_blist m p x <=> EVERY p x /\ (LENGTH x = m)`;
 
-val lift_blist_suc = store_thm
-  ("lift_blist_suc",
-   ``!n p h t. lift_blist (SUC n) p (h :: t) = p h /\ lift_blist n p t``,
-   RW_TAC std_ss [lift_blist_def, EVERY_DEF, LENGTH, CONJ_ASSOC]);
+Theorem lift_blist_suc:
+   !n p h t. lift_blist (SUC n) p (h :: t) <=> p h /\ lift_blist n p t
+Proof
+   RW_TAC std_ss [lift_blist_def, EVERY_DEF, LENGTH, CONJ_ASSOC]
+QED
 
 val wf_encode_blist = store_thm
   ("wf_encode_blist",
@@ -334,7 +334,7 @@ val (encode_num_def, encode_num_ind) =
    ASM_SIMP_TAC arith_ss
    [SUC_SUB1, MULT_DIV, DIV_LESS_EQ,
     DECIDE (Term `2n*m - 2n = (m-1n)*2n`),
-    DECIDE (Term `x < SUC y = x <= y`)]);
+    DECIDE “x < SUC y <=> x <= y”]);
 
 val _ = save_thm ("encode_num_def", encode_num_def);
 val _ = save_thm ("encode_num_ind", encode_num_ind);
@@ -411,7 +411,7 @@ val collision_free_def =
    !x y. p x /\ p y /\ (x MOD (2 EXP m) = y MOD (2 EXP m)) ==> (x = y)`;
 
 val wf_pred_bnum_def =
-  Define `wf_pred_bnum m p = wf_pred p /\ !x. p x ==> x < 2 ** m`;
+  Define `wf_pred_bnum m p <=> wf_pred p /\ !x. p x ==> x < 2 ** m`;
 
 val wf_pred_bnum_total = store_thm
   ("wf_pred_bnum_total",
@@ -420,7 +420,7 @@ val wf_pred_bnum_total = store_thm
    >> Q.EXISTS_TAC `0`
    >> REWRITE_TAC [ZERO_LESS_EXP, TWO]);
 
-val wf_pred_bnum_collision_free = store_thm
+val wf_pred_bnum = store_thm
   ("wf_pred_bnum",
    ``!m p. wf_pred_bnum m p ==> collision_free m p``,
    RW_TAC std_ss [wf_pred_bnum_def, collision_free_def]
@@ -440,7 +440,7 @@ val encode_bnum_inj = store_thm
        (x = y)``,
    Induct
    >> RW_TAC std_ss
-      [encode_bnum_def, DECIDE ``!n. n < 1 = (n = 0)``, GSYM EXP2_LT]
+      [encode_bnum_def, DECIDE “!n. n < 1 <=> (n = 0)”, GSYM EXP2_LT]
    >> RES_TAC
    >> Know `x DIV 2 = y DIV 2` >- RES_TAC
    >> Q.PAT_X_ASSUM `EVEN x = Y` MP_TAC
@@ -456,9 +456,9 @@ val wf_encode_bnum_collision_free = store_thm
    RW_TAC std_ss [collision_free_def, wf_encoder_def]
    >> HO_MATCH_MP_TAC
       (PROVE []
-       ``(!x y. p x /\ p y ==> (Q x y = R x y)) ==>
-         ((!x y. p x /\ p y /\ Q x y ==> P x y) =
-          (!x y. p x /\ p y /\ R x y ==> P x y))``)
+       “(!x y. p x /\ p y ==> (Q x y = R x y)) ==>
+         ((!x y. p x /\ p y /\ Q x y ==> P x y) <=>
+          (!x y. p x /\ p y /\ R x y ==> P x y))”)
    >> RW_TAC std_ss []
    >> MP_TAC
       (Q.SPECL [`encode_bnum m y`, `encode_bnum m x`]
@@ -480,14 +480,14 @@ val wf_encode_bnum_collision_free = store_thm
        >> Suff `n MOD 2 < 2` >- DECIDE_TAC
        >> RW_TAC arith_ss [DIVISION])
    >> STRIP_TAC
-   >> Know `(EVEN y = EVEN x) = (x MOD 2 = y MOD 2)`
+   >> Know `(EVEN y = EVEN x) <=> (x MOD 2 = y MOD 2)`
    >- (RW_TAC std_ss [EVEN_MOD2]
        >> POP_ASSUM (fn th => MP_TAC (CONJ (Q.SPEC `x` th) (Q.SPEC `y` th)))
        >> STRIP_TAC
        >> ASM_REWRITE_TAC []
        >> METIS_TAC [])
    >> DISCH_THEN (fn th => REWRITE_TAC [th])
-   >> MATCH_MP_TAC (PROVE [] ``(R ==> P) /\ (P ==> (Q = R)) ==> (P /\ Q = R)``)
+   >> MATCH_MP_TAC (PROVE [] ``(R ==> P) /\ (P ==> (Q = R)) ==> (P /\ Q <=> R)``)
    >> CONJ_TAC
    >- (RW_TAC std_ss []
        >> Suff `?m n. (m * 2 + x MOD 2) MOD 2 = (n * 2 + y MOD 2) MOD 2`
@@ -519,7 +519,7 @@ val wf_encode_bnum_collision_free = store_thm
 val wf_encode_bnum = store_thm
   ("wf_encode_bnum",
    ``!m p. wf_pred_bnum m p ==> wf_encoder p (encode_bnum m)``,
-   PROVE_TAC [wf_encode_bnum_collision_free, wf_pred_bnum_collision_free]);
+   PROVE_TAC [wf_encode_bnum_collision_free, wf_pred_bnum]);
 
 (*---------------------------------------------------------------------------
         Datatype of polymorphic n-ary trees.
@@ -561,7 +561,7 @@ val encode_tree_def =
 val (lift_tree_def, _) =
   Defn.tprove
   (Defn.Hol_defn "lift_tree"
-   `lift_tree p (Node a ts) = p a /\ EVERY (lift_tree p) ts`,
+   `lift_tree p (Node a ts) <=> p a /\ EVERY (lift_tree p) ts`,
    TotalDefn.WF_REL_TAC `measure (tree_size (K 0) o SND)` >>
    RW_TAC list_ss [tree_size_def, K_THM] >>
    (Induct_on `ts` >>

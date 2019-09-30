@@ -12,8 +12,10 @@ map load
    "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory", "arithmeticTheory"];
 *)
 
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
+open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
+     containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
      tuerk_tacticsLib temporal_deep_mixedTheory arithmeticTheory;
+open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -243,7 +245,7 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING =
         SIMP_TAC std_ss [] THEN
         MATCH_MP_TAC (GSYM XP_SEM___VAR_RENAMING) THEN
         UNDISCH_NO_TAC 2 THEN
-        MATCH_MP_TAC INJ_SUBSET THEN
+        MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
         SIMP_ALL_TAC std_ss [SUBSET_DEF, IN_UNION, SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def] THEN
         PROVE_TAC[],
 
@@ -255,7 +257,7 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING =
         SIMP_TAC std_ss [] THEN
         MATCH_MP_TAC (GSYM P_SEM___VAR_RENAMING) THEN
         UNDISCH_NO_TAC 4 THEN
-        MATCH_MP_TAC INJ_SUBSET THEN
+        MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
         SIMP_ALL_TAC std_ss [SUBSET_DEF, IN_UNION, SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def,
           IN_LIST_BIGUNION, MEM_MAP] THEN
         METIS_TAC[],
@@ -263,11 +265,10 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING =
         SIMP_TAC std_ss [] THEN
         MATCH_MP_TAC (GSYM P_SEM___VAR_RENAMING) THEN
         UNDISCH_NO_TAC 2 THEN
-        MATCH_MP_TAC INJ_SUBSET THEN
+        MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
         SIMP_ALL_TAC std_ss [SUBSET_DEF, SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def, IN_UNION] THEN
         PROVE_TAC[]
       ]);
 
 
 val _ = export_theory();
-

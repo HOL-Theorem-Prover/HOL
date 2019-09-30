@@ -29,8 +29,8 @@ fun find_summand v tm = let
   fun recurse tm = let
     val (l,r) = dest_plus tm
   in
-    if rand r = v then r else recurse l
-  end handle HOL_ERR _ => if rand tm = v then tm else raise fs_NotFound
+    if rand r ~~ v then r else recurse l
+  end handle HOL_ERR _ => if rand tm ~~ v then tm else raise fs_NotFound
 in
   recurse (lhand tm) handle fs_NotFound =>
                             raise ERR "find_summand" "No such summand"
@@ -251,7 +251,7 @@ val CHECK_RZERO_CONV = let
       SOME(ll, lr) => let
         val (c,v) = dest_mult lr
       in
-        if c = zero_tm then
+        if c ~~ zero_tm then
           LAND_CONV (RAND_CONV (REWR_CONV INT_MUL_LZERO) THENC
                      REWR_CONV INT_ADD_RID) THENC recurse
         else LAND_CONV recurse
@@ -259,8 +259,8 @@ val CHECK_RZERO_CONV = let
     | NONE => let
         val (c,v) = dest_mult l
       in
-        if c = zero_tm then LAND_CONV (REWR_CONV INT_MUL_LZERO) THENC
-                            REWR_CONV INT_ADD_LID
+        if c ~~ zero_tm then LAND_CONV (REWR_CONV INT_MUL_LZERO) THENC
+                             REWR_CONV INT_ADD_LID
         else ALL_CONV
       end
   end tm
@@ -478,13 +478,13 @@ local
                          INT_LE_RADD, int_ge, GSYM INT_LE_ANTISYM,
                          DE_MORGAN_THM]
   val not_le = prove(``~(x <= y) = (y + 1i <= x)``, tac)
-  val not_lt = prove(``~(x:int < y) = y <= x``, tac)
-  val not_gt = prove(``~(x:int > y) = x <= y``, tac)
-  val not_ge = prove(``~(x >= y) = x + 1i <= y``, tac)
-  val not_eq = prove(``~(x = y:int) = y + 1 <= x \/ x + 1 <= y``, tac)
-  val ge_elim = prove(``x:int >= y = y <= x``, tac)
-  val gt_elim = prove(``x > y = y + 1i <= x``, tac)
-  val eq_elim = prove(``(x:int = y) = (x <= y /\ y <= x)``, tac)
+  val not_lt = prove(``~(x:int < y) <=> y <= x``, tac)
+  val not_gt = prove(``~(x:int > y) <=> x <= y``, tac)
+  val not_ge = prove(``~(x >= y) <=> x + 1i <= y``, tac)
+  val not_eq = prove(``~(x = y:int) <=> y + 1 <= x \/ x + 1 <= y``, tac)
+  val ge_elim = prove(``x:int >= y <=> y <= x``, tac)
+  val gt_elim = prove(``x > y <=> y + 1i <= x``, tac)
+  val eq_elim = prove(``(x:int = y) <=> (x <= y /\ y <= x)``, tac)
   val mult1 = GSYM INT_MUL_LID
 in
 
@@ -517,7 +517,7 @@ fun normalise_numbers tm = let
      REWR_CONV int_arithTheory.eq_move_all_right)
   val base_normaliser = RAND_CONV sum_normalise THENC gcd_check
 in
-  if (is_leq tm orelse is_eq tm) andalso lhand tm = zero_tm then
+  if (is_leq tm orelse is_eq tm) andalso lhand tm ~~ zero_tm then
     if is_plus (rand tm) then let
       val (rl, rr) = dest_plus (rand tm)
       fun mult_ok acc tm = let
@@ -660,10 +660,10 @@ fun UNBETA_LIST tlist =
    ---------------------------------------------------------------------- *)
 
 val not_beq = prove(
-  ``~(b1 = b2) = b1 /\ ~b2 \/ ~b1 /\ b2``,
+  ``~(b1 = b2) <=> b1 /\ ~b2 \/ ~b1 /\ b2``,
   BOOL_CASES_TAC ``b1:bool`` THEN REWRITE_TAC []);
 val beq = prove(
-  ``(b1 = b2) = b1 /\ b2 \/ ~b1 /\ ~b2``,
+  ``(b1 = b2) <=> b1 /\ b2 \/ ~b1 /\ ~b2``,
   BOOL_CASES_TAC ``b1:bool`` THEN REWRITE_TAC []);
 
 fun reveal_a_disj tm =
@@ -772,7 +772,7 @@ val refl_case = prove(
   STRIP_TAC THEN ASM_REWRITE_TAC [] THEN Q.EXISTS_TAC `u` THEN
   ASM_REWRITE_TAC []);
 val nonrefl_case = prove(
-  ``!lo hi P. (?i:int. (lo <= i /\ i <= hi) /\ P i) =
+  ``!lo hi P. (?i:int. (lo <= i /\ i <= hi) /\ P i) <=>
               lo <= hi /\ (P lo \/ ?i. (lo + 1 <= i /\ i <= hi) /\ P i)``,
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     Q.ASM_CASES_TAC `i = lo` THENL [
@@ -827,9 +827,9 @@ fun rel_coeff v tm = let
   fun recurse t = let
     val (l,r) = dest_plus t
   in
-    if rand r = v then lhand r
+    if rand r ~~ v then lhand r
     else recurse l
-  end handle HOL_ERR _ => if rand t = v then lhand t else zero_tm
+  end handle HOL_ERR _ => if rand t ~~ v then lhand t else zero_tm
 in
   recurse (lhand (rand tm))
 end
@@ -1009,9 +1009,9 @@ val eliminate_equality =
 fun push_exvar_to_bot v tm = let
   val (bv, body) = dest_exists tm
 in
-  if bv = v then (SWAP_VARS_CONV THENC
-                  BINDER_CONV (push_exvar_to_bot v) ORELSEC
-                  ALL_CONV)
+  if bv ~~ v then (SWAP_VARS_CONV THENC
+                   BINDER_CONV (push_exvar_to_bot v) ORELSEC
+                   ALL_CONV)
   else (BINDER_CONV (push_exvar_to_bot v))
 end tm
 
@@ -1096,7 +1096,7 @@ fun eliminate_positive_divides t = let
       (LAND_CONV find_divides THENC LEFT_AND_EXISTS_CONV) ORELSEC
       (RAND_CONV find_divides THENC RIGHT_AND_EXISTS_CONV)
     else if is_divides tm andalso
-            not (null (intersect vs (free_vars (rand tm))))
+            not (HOLset.isEmpty (listset vs Isct FVs (rand tm)))
     then
       REWR_CONV INT_DIVIDES THENC
       BINDER_CONV leaf_normalise
@@ -1138,7 +1138,7 @@ fun eliminate_negative_divides t = let
       (LAND_CONV find_divides THENC rdistrib) ORELSEC
       (RAND_CONV find_divides THENC ldistrib)
     else if is_neg tm andalso
-            not (null (intersect vs (free_vars (rand (rand tm)))))
+            not (HOLset.isEmpty (listset vs Isct FVs (rand (rand tm))))
     then
       elim_ndivides THENC
       BINDER_CONV (LAND_CONV (RAND_CONV (CooperMath.REDUCE_CONV))) THENC

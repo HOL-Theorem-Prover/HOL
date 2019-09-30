@@ -1,0 +1,7 @@
+CLINE_OPTIONS = -j4
+
+foo: baz
+	-cat qux > $@
+	cat baz >> foo
+
+EXTRA_CLEANS = foo

@@ -23,6 +23,13 @@ exception Mod = General.Div
 
 fun assert_exn P x e = if P x then x else raise e
 fun with_exn f x e = f x handle Interrupt => raise Interrupt | _ => raise e
+fun finally finish f x =
+    let
+      val result = Exn.capture f x
+    in
+      finish();
+      Exn.release result
+    end
 
 val int_to_string = Int.toString
 
@@ -36,10 +43,15 @@ infix 3 ##
 fun (f ## g) (x, y) = (f x, g y)
 fun apfst f (x, y) = (f x, y)
 fun apsnd f (x, y) = (x, f y)
-infix |>
+infix |> ||> |>> ||->
 fun x |> f = f x
-infixr $
+fun (x,y) |>> f = (f x, y)
+fun (x,y) ||> f = (x, f y)
+fun (x,y) ||-> f = f x y
+infixr $ ?
 fun f $ x = f x
+fun (b ? f) x = if b then f x else x
+fun B2 f g x y = f (g x y)
 fun C f x y = f y x
 fun I x = x
 fun K x y = x
@@ -74,14 +86,27 @@ fun total f x = SOME (f x) handle Interrupt => raise Interrupt | _ => NONE
 
 fun partial e f x = case f x of SOME y => y | NONE => raise e
 
+fun these (SOME x) = x
+  | these NONE = []
+
 (* ----------------------------------------------------------------------
     Lists
    ---------------------------------------------------------------------- *)
 
 fun list_of_singleton a = [a]
+fun single a = [a]
+fun the_single [x] = x
+  | the_single _ = raise List.Empty;
+fun singleton f x = the_single (f [x])
+
 fun list_of_pair (a, b) = [a, b]
 fun list_of_triple (a, b, c) = [a, b, c]
 fun list_of_quadruple (a, b, c, d) = [a, b, c, d]
+
+fun the_list NONE = []
+  | the_list (SOME x) = [x]
+fun the_default d NONE = d
+  | the_default _ (SOME x) = x
 
 val all = List.all
 val exists = List.exists
@@ -100,8 +125,10 @@ fun first_opt f =
    end
 
 fun itlist f L base_value = List.foldr (uncurry f) base_value L
+val foldr' = itlist
 
 fun rev_itlist f L base_value = List.foldl (uncurry f) base_value L
+val foldl' = rev_itlist
 
 fun foldl_map _ (acc, []) = (acc, [])
   | foldl_map f (acc, x :: xs) =
@@ -112,12 +139,20 @@ fun foldl_map _ (acc, []) = (acc, [])
          (acc'', y :: ys)
       end
 
+fun foldl2' _ [] [] z = z
+  | foldl2' f (x::xs) (y::ys) z = foldl2' f xs ys (f x y z)
+  | foldl2' _ _ _ _ = raise ListPair.UnequalLengths
+fun foldr2' _ [] [] z = z
+  | foldr2' f (x::xs) (y::ys) z = f x y (foldr2' f xs ys z)
+  | foldr2' _ _ _ _ = raise ListPair.UnequalLengths
+
 (* separate s [x1, x2, ..., xn] ===> [x1, s, x2, s, ..., s, xn] *)
 
 fun separate s (x :: (xs as _ :: _)) = x :: s :: separate s xs
   | separate _ xs = xs
 
 val filter = List.filter
+fun filter_out P = filter (not o P)
 
 val partition = List.partition
 
@@ -134,11 +169,7 @@ fun pull_prefix ps l =
 val unzip = ListPair.unzip
 val split = unzip
 
-fun mapfilter f list =
-   itlist (fn i => fn L => (f i :: L)
-                handle Interrupt => raise Interrupt
-                     | otherwise => L)
-          list []
+fun mapfilter f = List.mapPartial (total f)
 
 val flatten = List.concat
 
@@ -236,6 +267,13 @@ fun bool_compare (true, true) = EQUAL
   | bool_compare (true, false) = GREATER
   | bool_compare (false, true) = LESS
   | bool_compare (false, false) = EQUAL
+
+fun option_compare cmp optp =
+  case optp of
+      (NONE, NONE) => EQUAL
+    | (NONE, SOME _) => LESS
+    | (SOME _, NONE) => GREATER
+    | (SOME x, SOME y) => cmp(x,y)
 
 fun list_compare cfn =
    let
@@ -441,6 +479,13 @@ fun op_set_diff eq_func S1 S2 =
       filter (fn x => not (memb x S2)) S1
    end
 
+fun op_remove eq x list =
+  if op_mem eq x list then
+    filter (fn y => not (eq x y)) list
+  else list
+
+fun op_update eq x xs = cons x (op_remove eq x xs)
+
 (*---------------------------------------------------------------------------
    quote puts double quotes around a string. mlquote does this as well,
    but also quotes all of the characters in the string so that the
@@ -457,6 +502,8 @@ val is_substring = String.isSubstring
 fun prime s = s ^ "'"
 
 val commafy = separate ", "
+
+fun enclose ld rd s = ld ^ s ^ rd
 
 val str_all = CharVector.all
 
@@ -561,6 +608,17 @@ val flush_out      = TextIO.flushOut
 fun input_line is  = case TextIO.inputLine is of NONE => "" | SOME s => s
 val end_of_stream  = TextIO.endOfStream
 
+(*---------------------------------------------------------------------------*)
+(* Yet another variant of the sum type, used for the failure monad           *)
+(*---------------------------------------------------------------------------*)
+
+datatype ('a, 'b) verdict = PASS of 'a | FAIL of 'b
+
+fun verdict f c x = PASS (f x) handle e => FAIL (c x, e)
+
+fun ?>(PASS x, f) = f x
+  | ?>(FAIL y, f) = FAIL y
+
 (*---------------------------------------------------------------------------
     Time
  ---------------------------------------------------------------------------*)
@@ -591,6 +649,17 @@ in
      case l of
          [] => Time.zeroTime
        | h::t => List.foldl time_max h t
+   fun realtime f x =
+     let
+       val timer = Timer.startRealTimer()
+       val result = verdict f (fn x => x) x
+       val t = Timer.checkRealTimer timer
+     in
+       print ("clock time: " ^ Time.toString t ^ "s\n");
+       case result of
+           PASS y => y
+         | FAIL (_, e) => raise e
+     end
 end
 
 (*---------------------------------------------------------------------------*
@@ -686,73 +755,9 @@ fun deinitcomment0 ss n =
 fun deinitcommentss ss = deinitcomment0 ss 0
 fun deinitcomment s = Substring.string (deinitcomment0 (Substring.full s) 0)
 
-(*---------------------------------------------------------------------------*)
-(* Yet another variant of the sum type, used for the failure monad           *)
-(*---------------------------------------------------------------------------*)
-
-datatype ('a, 'b) verdict = PASS of 'a | FAIL of 'b
-
-fun verdict f c x = PASS (f x) handle e => FAIL (c x, e)
-
-fun ?>(PASS x, f) = f x
-  | ?>(FAIL y, f) = FAIL y
-
 (*---------------------------------------------------------------------------
     Pretty Printing
  ---------------------------------------------------------------------------*)
-
-open HOLPP
-
-fun with_ppstream ppstrm =
-  {add_string     = add_string ppstrm,
-   add_break      = add_break ppstrm,
-   begin_block    = begin_block ppstrm,
-   end_block      = fn () => end_block ppstrm,
-   add_newline    = fn () => add_newline ppstrm,
-   clear_ppstream = fn () => clear_ppstream ppstrm,
-   flush_ppstream = fn () => flush_ppstream ppstrm}
-
-fun defaultConsumer () =
-   {consumer  = fn s => TextIO.output(TextIO.stdOut, s),
-    linewidth = 72,
-    flush     = fn () => TextIO.flushOut TextIO.stdOut}
-
-fun pp_to_string linewidth ppfn ob =
-   let
-      val l = ref ([]: string list)
-      fun attach s = l := (s :: (!l))
-    in
-       with_pp {consumer = attach,
-                linewidth = linewidth,
-                flush = fn () => ()}
-               (fn ppstrm => ppfn ppstrm ob)
-       ; String.concat (List.rev (!l))
-    end
-
-val mk_consumer = fn x => x
-
-(*---------------------------------------------------------------------------*)
-(* Generate a standard ppstream                                              *)
-(*---------------------------------------------------------------------------*)
-
-fun stdOut_ppstream () = mk_ppstream (defaultConsumer())
-
-(*---------------------------------------------------------------------------
- * Print a list of items.
- *
- *     pfun = print_function
- *     dfun = delim_function
- *     bfun = break_function
- *---------------------------------------------------------------------------*)
-
-fun pr_list_to_ppstream ppstrm pfun dfun bfun =
-   let
-      fun pr [] = ()
-        | pr [i] = pfun ppstrm i
-        | pr (i :: rst) = (pfun ppstrm i; dfun ppstrm; bfun ppstrm; pr rst)
-   in
-      pr
-   end
 
 (*---------------------------------------------------------------------------
  * Simple and heavily used.
@@ -761,36 +766,29 @@ fun pr_list_to_ppstream ppstrm pfun dfun bfun =
  * bfun = break printer function
  *---------------------------------------------------------------------------*)
 
-fun pr_list pfun dfun bfun =
-   let
-      fun pr [] = ()
-        | pr [i] = pfun i
-        | pr (i :: rst) = (pfun i; dfun (); bfun (); pr rst)
-   in
-      pr
-   end
-
-(*---------------------------------------------------------------------------*)
-(* Send the results of prettyprinting to stdOut                              *)
-(*---------------------------------------------------------------------------*)
-
-fun pprint pp x =
-   let
-      val strm = stdOut_ppstream ()
-   in
-      let
-         val _ = pp strm x
-      in
-         flush_ppstream strm; ()
-      end
-      handle e => (flush_ppstream strm; raise e)
-   end
+fun with_ppstream ppstrm =
+  let
+    open OldPP
+  in
+    {add_string     = add_string ppstrm,
+     add_break      = add_break ppstrm,
+     begin_block    = begin_block ppstrm,
+     end_block      = fn () => end_block ppstrm,
+     add_newline    = fn () => add_newline ppstrm,
+     clear_ppstream = fn () => clear_ppstream ppstrm,
+     flush_ppstream = fn () => flush_ppstream ppstrm}
+  end
 
 (*---------------------------------------------------------------------------
       MoscowML returns lists of QUOTE'd strings when a quote is spread
       over more than one line. "norm_quote" concatenates all adjacent
       QUOTE elements in this list.
  ---------------------------------------------------------------------------*)
+
+type 'a quotation = 'a HOLPP.quotation
+open HOLPP
+
+fun pprint f x = prettyPrint(TextIO.print, 72) (f x)
 
 fun norm_quote [] = []
   | norm_quote [x] = [x]

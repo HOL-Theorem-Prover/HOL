@@ -2213,7 +2213,7 @@ val weighted_reduction_def = Define`
 val op on = BasicProvers.on;
 infix 8 on;
 
-val lrcc_beta0_redex_posn = store_thm(
+val lrcc_redex_posn = store_thm(
   "lrcc_redex_posn",
   ``!M r N. lrcc beta0 M r N ==> r IN redex_posns (strip_label M)``,
   HO_MATCH_MP_TAC lrcc_ind THEN
@@ -2272,11 +2272,11 @@ val weighted_reduction_preserves_nonzero_weighing = store_thm(
     SIMP_TAC (srw_ss() ++ ETA_ss) [nonzero_thm, strip_label_thm],
     SIMP_TAC (srw_ss() ++ ETA_ss) [nonzero_thm, strip_label_thm],
     SRW_TAC [][nonzero_thm, strip_label_thm] THEN
-    IMP_RES_TAC lrcc_beta0_redex_posn THEN
+    IMP_RES_TAC lrcc_redex_posn THEN
     SRW_TAC [ETA_ss][update_weighing_vsubst],
     SIMP_TAC (srw_ss() ++ ETA_ss) [nonzero_thm, strip_label_thm],
     SRW_TAC [][nonzero_thm, strip_label_thm] THEN
-    IMP_RES_TAC lrcc_beta0_redex_posn THEN
+    IMP_RES_TAC lrcc_redex_posn THEN
     SRW_TAC [ETA_ss][]
   ]);
 

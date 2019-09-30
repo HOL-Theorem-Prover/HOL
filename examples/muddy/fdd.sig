@@ -46,24 +46,24 @@ end
 
   Values:
   extDomain   fdd_extdomain
-  ?	      fdd_overlapdomain
+  ?           fdd_overlapdomain
   clearAll    fdd_clearall
   domainNum   fdd_domainnum
   domainSize  fdd_domainsize
   varNum      fdd_varnum
-  vars	      fdd_vars
-  ?	      fdd_ithvar
-  ?	      fdd_scanvar
-  ?	      fdd_scanallvar
+  vars        fdd_vars
+  ?           fdd_ithvar
+  ?           fdd_scanvar
+  ?           fdd_scanallvar
   ithSet      fdd_ithset
   domain      fdd_domain
-  ?	      fdd_equals
-  ?	      fdd_file_hook
-  ?	      fdd_printset
-  ?	      fdd_fprintset
-  ?	      fdd_scanset
+  ?           fdd_equals
+  ?           fdd_file_hook
+  ?           fdd_printset
+  ?           fdd_fprintset
+  ?           fdd_scanset
   makeSet     fdd_makeset
-  ?	      fdd_intaddvarblock
+  ?           fdd_intaddvarblock
   ?           fdd_setpair              (use setPair)
   setPairs    fdd_setpairs
 *)

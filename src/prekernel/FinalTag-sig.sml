@@ -11,7 +11,7 @@ sig
      val set_dep    : Dep.dep -> tag -> tag
      val read       : string -> tag
      val merge      : tag -> tag -> tag
-     val pp_tag     : Portable.ppstream -> tag -> unit
-     val pp_to_disk : Portable.ppstream -> tag -> unit
+     val pp_tag     : tag -> HOLPP.pretty
+     val pp_to_disk : OldPP.ppstream -> tag -> unit
 
 end

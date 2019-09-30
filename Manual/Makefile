@@ -29,7 +29,7 @@ Reference/reference.pdf:
 	@echo "====> REFERENCE made"
 
 Interaction/HOL-interaction.pdf:
-	(cd Interaction; make; cd ..)
+	(cd Interaction; Holmake; cd ..)
 	@echo "====> Quick Reference made"
 
 Quick/quick.pdf:

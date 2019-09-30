@@ -46,7 +46,7 @@ fun REMAINS_TO_PROVE (t:term) = SUBGOAL_THEN t PROVE1_TAC;
  *--------------------------------------------------------------------------*)
 
 fun NEW_GOAL_TAC (t:term) =
-	SUBGOAL_THEN t MATCH_MP_TAC THEN1 PROVE_TAC[];
+        SUBGOAL_THEN t MATCH_MP_TAC THEN1 PROVE_TAC[];
 
 (*--------------------------------------------------------------------------
  *  ASSUME_X_TAC thm -> tactic
@@ -64,9 +64,9 @@ fun ASSUME_X_TAC (thm1:thm) = ASSUME_TAC thm1 THEN UNDISCH_HD_TAC;
 
 fun DISJ_LIST_CASES_TAC (thm1:thm) (asm_list, goal) =
 let
-	val cases_thm = GEN ``P:bool`` (prove(mk_imp (list_mk_conj (map (fn x => ``^x ==> P:bool``) (strip_disj (concl thm1))), ``P:bool``), PROVE_TAC[thm1]))
+        val cases_thm = GEN ``P:bool`` (prove(mk_imp (list_mk_conj (map (fn x => ``^x ==> P:bool``) (strip_disj (concl thm1))), ``P:bool``), PROVE_TAC[thm1]))
 in
-	(MATCH_MP_TAC (SPEC goal cases_thm) THEN REPEAT CONJ_TAC THEN STRIP_TAC) (asm_list, goal)
+        (MATCH_MP_TAC (SPEC goal cases_thm) THEN REPEAT CONJ_TAC THEN STRIP_TAC) (asm_list, goal)
 end
 
 (*--------------------------------------------------------------------------
@@ -76,7 +76,7 @@ end
  *--------------------------------------------------------------------------*)
 
 fun NESTED_ASM_CASES_TAC nil = ALL_TAC
-	| NESTED_ASM_CASES_TAC (h::t) = ASM_CASES_TAC (h) THENL [ALL_TAC,(NESTED_ASM_CASES_TAC t)];
+        | NESTED_ASM_CASES_TAC (h::t) = ASM_CASES_TAC (h) THENL [ALL_TAC,(NESTED_ASM_CASES_TAC t)];
 
 
 (*==========================================================================
@@ -88,65 +88,38 @@ fun NESTED_ASM_CASES_TAC nil = ALL_TAC
  *--------------------------------------------------------------------------*)
 
 fun store_thm_verbose (s:string, t:term, tac:tactic) =
-	let
-		val _ = print ("Proving " ^ s ^ "...\n")
-	in
-		store_thm(s,t,tac)
-	end;
-
-(*--------------------------------------------------------------------------
- *  in_list : ''a list -> ''a -> bool
- *--------------------------------------------------------------------------*)
-
-fun in_list l1 p1 =
-	(exists  (fn (x) => (x = p1)) l1);
-
-(*--------------------------------------------------------------------------
- *  list_merge : ''a list -> ''a list -> ''a list
- *--------------------------------------------------------------------------*)
-
-fun list_merge l1 l2 =
-	l1 @ filter (fn x => not (in_list l1 x)) l2;
-
-(*--------------------------------------------------------------------------
- *  list_xmerge : ''a list list -> ''a list
- *--------------------------------------------------------------------------*)
-
-fun	  list_xmerge (nil) = []
-	| list_xmerge (first::nil) = first
-	| list_xmerge (first::rest) = list_merge first (list_xmerge rest);
-
-(* ---------- test cases ---------- *
-	list_xmerge [[``f1:frac``]];
-	list_xmerge [[``f1:frac``,``f2:frac``],[``f2:frac``,``f3:frac``]];
- * ---------- test cases ---------- *)
+        let
+                val _ = print ("Proving " ^ s ^ "...\n")
+        in
+                store_thm(s,t,tac)
+        end;
 
 (*--------------------------------------------------------------------------
  *  extract_terms_of_type : hol_type -> term -> term list
  *--------------------------------------------------------------------------*)
 
 fun extract_terms_of_type (typ1:hol_type) (t1:term) =
-	if type_of t1 = typ1 then
-		[t1]
-	else
-		if is_comb t1 then
-			let
-				val (top_rator, top_rand) = dest_comb t1;
-			in
-				list_merge (extract_terms_of_type typ1 top_rator) (extract_terms_of_type typ1 top_rand)
-			end
-		else
-			[];
+  if type_of t1 = typ1 then [t1]
+  else if is_comb t1 then
+    let
+      val (top_rator, top_rand) = dest_comb t1
+    in
+      op_U aconv
+           [extract_terms_of_type typ1 top_rator,
+            extract_terms_of_type typ1 top_rand]
+    end
+  else
+    [];
 
 (*--------------------------------------------------------------------------
  *  dest_binop_triple : term -> term * term * term
  *--------------------------------------------------------------------------*)
 
 fun dest_binop_triple tm =
-	let val (Rator,rhs) = Term.dest_comb tm
-		val (opr,lhs) = Term.dest_comb Rator
-	in
-		(opr,lhs,rhs)
-	end;
+        let val (Rator,rhs) = Term.dest_comb tm
+                val (opr,lhs) = Term.dest_comb Rator
+        in
+                (opr,lhs,rhs)
+        end;
 
 end; (* of struct *)

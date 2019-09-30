@@ -25,12 +25,16 @@ val addNode_def = Define‘
                           preds updated_by (insert g.next []) ; |>’;
 
 val addEdge_def = Define`
-  addEdge id (e,suc) g =
-     if (id ∈ domain g.nodeInfo) ∧ (suc ∈ domain g.nodeInfo)
-     then do followers_old <- lookup id g.followers;
-             SOME (g with <| followers updated_by
-                     (insert id ((e,suc)::followers_old))|>)
-          od
+  addEdge src (e,tgt) g =
+     if src ∈ domain g.nodeInfo ∧ tgt ∈ domain g.nodeInfo then
+       do
+         followers_old <- lookup src g.followers;
+         preds_old <- lookup tgt g.preds;
+         SOME (g with <|
+                  followers updated_by (insert src ((e,tgt)::followers_old)) ;
+                  preds updated_by (insert tgt ((e,src)::preds_old))
+               |>)
+       od
      else NONE`;
 
 val findNode_def = Define`
@@ -74,22 +78,24 @@ val addNode_preserves_wfg = Q.store_thm(
   simp[wfg_def, addNode_def] >>
   dsimp[wfAdjacency_def, lookup_insert, cond_eq] >> metis_tac[]);
 
-val addEdge_preserves_wfg = Q.store_thm(
-   "addEdge_preserves_wfg[simp]",
-   `wfg g ∧ (addEdge i (e,s) g = SOME g2) ==> wfg g2`,
-   simp[wfg_def,addEdge_def] >>
-   dsimp[wfAdjacency_def, lookup_insert] >> rpt strip_tac
-   >> rw[] >> fs[]
-    >- metis_tac[]
-    >- (fs[INSERT_DEF,SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
-          >> metis_tac[])
-    >- (rename[`lookup k _ = SOME nl`, `MEM (e',n) nl`]
-        >> fs[lookup_insert] >> Cases_on `k=i` >> fs[]
-        >> Cases_on `MEM (e',n) followers_old` >> rw[] >> fs[MEM]
-        >> metis_tac[]
-       )
-    >- metis_tac[]
-    );
+Theorem addEdge_preserves_wfg:
+  wfg g ∧ (addEdge i (e,s) g = SOME g2) ==> wfg g2
+Proof
+  simp[wfg_def,addEdge_def] >>
+  dsimp[wfAdjacency_def, lookup_insert] >> rpt strip_tac >> rw[] >> fs[]
+  >- metis_tac[]
+  >- (fs[INSERT_DEF,SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> metis_tac[])
+  >- (fs[INSERT_DEF,SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> metis_tac[])
+  >- (rename[`lookup k (insert i _ _) = SOME nl`, `MEM (e',n) nl`,
+             ‘i ∈ domain _’] >>
+      fs[lookup_insert] >> Cases_on `k=i` >> fs[] >>
+      Cases_on `MEM (e',n) followers_old` >> rw[] >> fs[MEM] >> metis_tac[])
+  >- (rename[`lookup k1 (insert k2 _ _) = SOME nl`, `MEM (e',n) nl`,
+             ‘k2 ∈ domain _’] >>
+      fs[lookup_insert] >> Cases_on `k1=k2` >> fs[] >>
+      Cases_on `MEM (e',n) preds_old` >> rw[] >> fs[MEM] >>
+      metis_tac[])
+QED
 
 val addEdge_preserves_nodeInfo = Q.store_thm(
    "addEdge_preserves_nodeInfo",

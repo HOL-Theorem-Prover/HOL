@@ -4,6 +4,7 @@ struct
 
   open HolKernel boolLib bossLib Abbrev metisLib pred_setTheory numLib schneiderUtils
 
+   val ERR = mk_HOL_ERR "tuerk_tacticsLib";
 
    val SET_INDUCT_TAC = PSet_ind.SET_INDUCT_TAC FINITE_INDUCT;
 
@@ -68,10 +69,11 @@ struct
 
 
 
-   fun findMatch ([], l2, c) = raise ERR "findMatch" "" |
-      findMatch (l1, [], c) = raise ERR "findMatch" "" |
-      findMatch (a::l1, b::l2, []) = findMatch (l1, b::l2, b::l2) |
-      findMatch (a::l1, l2, b::c) = (if (a = b) then a else findMatch (a::l1, l2, c))
+   fun findMatch ([], l2, c) = raise ERR "findMatch" ""
+     | findMatch (l1, [], c) = raise ERR "findMatch" ""
+     | findMatch (a::l1, b::l2, []) = findMatch (l1, b::l2, b::l2)
+     | findMatch (a::l1, l2, b::c) = if a ~~ b then a
+                                     else findMatch (a::l1, l2, c)
 
 
    val DISJ_EQ_STRIP_TAC :tactic = fn (asl,t) =>
@@ -141,8 +143,8 @@ struct
    val IMP_TAC = fn t => ASSUME_TAC t THEN UNDISCH_HD_TAC;
    fun GSYM_NO_TAC i = POP_NO_ASSUM i (fn x=> ASSUME_TAC (GSYM x));
 
-   val SUBGOAL_TAC = (fn t => (t by ALL_TAC));
-   val REMAINS_TAC = (fn t => (Tactical.REVERSE(t by ALL_TAC)));
+   fun SUBGOAL_TAC q = Q.SUBGOAL_THEN q STRIP_ASSUME_TAC
+   fun REMAINS_TAC q = Tactical.REVERSE (SUBGOAL_TAC q)
    val SPEC_NO_ASSUM = (fn n => fn S => POP_NO_ASSUM n (fn x=> ASSUME_TAC (SPEC S x)));
    val SPECL_NO_ASSUM = (fn n => fn S => POP_NO_ASSUM n (fn x=> ASSUME_TAC (SPECL S x)));
 

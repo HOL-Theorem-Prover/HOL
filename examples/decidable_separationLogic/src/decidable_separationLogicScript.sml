@@ -22,7 +22,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "decidable_separationLogic";
-
+val _ = ParseExtras.temp_loose_equality()
 
 
 (*general stuff*)
@@ -30,7 +30,7 @@ val _ = new_theory "decidable_separationLogic";
 fun MP_FREE_VAR_TAC var =
    POP_ASSUM_LIST (fn thmL =>
       EVERY (rev
-      (map (fn thm => if (mem var (free_vars (concl thm))) then MP_TAC thm else ASSUME_TAC thm) thmL)));
+      (map (fn thm => if var IN FVs (concl thm) then MP_TAC thm else ASSUME_TAC thm) thmL)));
 
 local
    val thm = prove (``(!x. (P x = Q x)) ==> ((?x. P x) = (?x. Q x))``, METIS_TAC[]);
@@ -3190,7 +3190,7 @@ val LIST_PF_SEM_FLAT_INTRO = store_thm ("LIST_PF_SEM_FLAT_INTRO",
       ASM_SIMP_TAC std_ss [DS_FLAT_PF_def, LIST_PF_SEM_THM, PF_SEM_def]
    ]);
 
-val DS_FALT_PF_THM = store_thm ("DS_FLAT_PF_THM",
+val DS_FLAT_PF_THM = store_thm ("DS_FLAT_PF_THM",
    ``!s pfL. LIST_PF_SEM s pfL = LIST_PF_SEM s (FLAT (MAP DS_FLAT_PF pfL))``,
 
 Induct_on `pfL` THEN1 SIMP_TAC list_ss [] THEN
@@ -3299,7 +3299,7 @@ val LIST_SF_SEM_FLAT_INTRO = store_thm ("LIST_SF_SEM_FLAT_INTRO",
 
 
 
-val DS_FALT_SF_THM = store_thm ("DS_FLAT_SF_THM",
+val DS_FLAT_SF_THM = store_thm ("DS_FLAT_SF_THM",
    ``!s h sfL. LIST_SF_SEM s h sfL = LIST_SF_SEM s h (FLAT (MAP DS_FLAT_SF sfL))``,
 
 Induct_on `sfL` THEN1 SIMP_TAC list_ss [] THEN

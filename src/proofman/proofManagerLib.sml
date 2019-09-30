@@ -72,6 +72,9 @@ fun dropn i =
    handle Manager.NO_PROOFS => proofs()
 end;
 
+fun drop_all () =
+    (the_proofs := Manager.initial_proofs(); !the_proofs)
+
 fun expandf tac =
    (say "OK..\n";
     the_proofs := Manager.hd_opr (Manager.expandf tac) (proofs());

@@ -72,26 +72,26 @@ datatype
 (* a mapping: term -> mterm *)
 
 fun dest_primitive_op tm =
-  if tm = ``opCONS`` then op_CONS else
-  if tm = ``opEQUAL`` then op_EQUAL else
-  if tm = ``opLESS`` then op_LESS else
-  if tm = ``opSYMBOL_LESS`` then op_SYMBOL_LESS else
-  if tm = ``opADD`` then op_ADD else
-  if tm = ``opSUB`` then op_SUB else
-  if tm = ``opCONSP`` then op_CONSP else
-  if tm = ``opSYMBOLP`` then op_SYMBOLP else
-  if tm = ``opNATP`` then op_NATP else
-  if tm = ``opCAR`` then op_CAR else
-  if tm = ``opCDR`` then op_CDR else fail()
+  if tm ~~ ``opCONS`` then op_CONS else
+  if tm ~~ ``opEQUAL`` then op_EQUAL else
+  if tm ~~ ``opLESS`` then op_LESS else
+  if tm ~~ ``opSYMBOL_LESS`` then op_SYMBOL_LESS else
+  if tm ~~ ``opADD`` then op_ADD else
+  if tm ~~ ``opSUB`` then op_SUB else
+  if tm ~~ ``opCONSP`` then op_CONSP else
+  if tm ~~ ``opSYMBOLP`` then op_SYMBOLP else
+  if tm ~~ ``opNATP`` then op_NATP else
+  if tm ~~ ``opCAR`` then op_CAR else
+  if tm ~~ ``opCDR`` then op_CDR else fail()
 
 fun dest_func tm = let
   val p = repeat rator tm
-  in if p = ``PrimitiveFun`` then PrimitiveFun (dest_primitive_op (rand tm)) else
-     if p = ``Define`` then mDefine else
-     if p = ``Print`` then Print else
-     if p = ``Error`` then Error else
-     if p = ``Funcall`` then Funcall else
-     if p = ``Fun`` then Fun (stringSyntax.fromHOLstring (rand tm)) else fail()
+  in if p ~~ ``PrimitiveFun`` then PrimitiveFun (dest_primitive_op (rand tm)) else
+     if p ~~ ``Define`` then mDefine else
+     if p ~~ ``Print`` then Print else
+     if p ~~ ``Error`` then Error else
+     if p ~~ ``Funcall`` then Funcall else
+     if p ~~ ``Fun`` then Fun (stringSyntax.fromHOLstring (rand tm)) else fail()
   end
 
 fun dest_term tm = let
@@ -99,31 +99,41 @@ fun dest_term tm = let
                        handle HOL_ERR _ => [tm];
   val xs = list_dest dest_comb tm
   val p = repeat rator tm
-  in if p = ``Const`` then Const (rand tm) else
-     if p = ``Var`` then Var (stringSyntax.fromHOLstring (rand tm)) else
-     if p = ``App`` then App ((dest_func (tm |> rator |> rand)),
-                              map (dest_term) (fst (listSyntax.dest_list (rand tm)))) else
-     if p = ``If`` then If (dest_term (el 2 xs),dest_term (el 3 xs),dest_term (el 4 xs)) else
-     if p = ``LamApp`` then LamApp (map stringSyntax.fromHOLstring (fst (listSyntax.dest_list (el 2 xs))),
-                                    dest_term (el 3 xs),
-                                    map (dest_term) (fst (listSyntax.dest_list (el 4 xs)))) else
-     if p = ``First`` then First (dest_term (rand tm)) else
-     if p = ``Second`` then Second (dest_term (rand tm)) else
-     if p = ``Third`` then Third (dest_term (rand tm)) else
-     if p = ``Fourth`` then Fourth (dest_term (rand tm)) else
-     if p = ``Fifth`` then Fifth (dest_term (rand tm)) else
-     if p = ``Or`` then Or (map (dest_term) (fst (listSyntax.dest_list (rand tm)))) else
-     if p = ``And`` then And (map (dest_term) (fst (listSyntax.dest_list (rand tm)))) else
-     if p = ``List`` then List (map (dest_term) (fst (listSyntax.dest_list (rand tm)))) else
-     if p = ``Let`` then Let (map
-          ((fn (x,y) => (stringSyntax.fromHOLstring x, dest_term y)) o pairSyntax.dest_pair) (fst (listSyntax.dest_list (el 2 xs))),
-          dest_term (el 3 xs)) else
-     if p = ``LetStar`` then LetStar (map
-          ((fn (x,y) => (stringSyntax.fromHOLstring x, dest_term y)) o pairSyntax.dest_pair) (fst (listSyntax.dest_list (el 2 xs))),
-          dest_term (el 3 xs)) else
-     if p = ``Cond`` then Cond (map
-          ((fn (x,y) => (dest_term x, dest_term y)) o pairSyntax.dest_pair) (fst (listSyntax.dest_list (el 2 xs)))) else
-     if p = ``Defun`` then Defun (stringSyntax.fromHOLstring (el 2 xs),
+  in if p ~~ ``Const`` then Const (rand tm) else
+     if p ~~ ``Var`` then Var (stringSyntax.fromHOLstring (rand tm)) else
+     if p ~~ ``App`` then App ((dest_func (tm |> rator |> rand)),
+                               map (dest_term) (fst (listSyntax.dest_list (rand tm)))) else
+     if p ~~ ``If`` then If (dest_term (el 2 xs),dest_term (el 3 xs),dest_term (el 4 xs)) else
+     if p ~~ ``LamApp`` then
+       LamApp (map stringSyntax.fromHOLstring
+                   (fst (listSyntax.dest_list (el 2 xs))),
+               dest_term (el 3 xs),
+               map (dest_term) (fst (listSyntax.dest_list (el 4 xs)))) else
+     if p ~~ ``First`` then First (dest_term (rand tm)) else
+     if p ~~ ``Second`` then Second (dest_term (rand tm)) else
+     if p ~~ ``Third`` then Third (dest_term (rand tm)) else
+     if p ~~ ``Fourth`` then Fourth (dest_term (rand tm)) else
+     if p ~~ ``Fifth`` then Fifth (dest_term (rand tm)) else
+     if p ~~ ``Or`` then Or (map (dest_term) (fst (listSyntax.dest_list (rand tm)))) else
+     if p ~~ ``And`` then And (map (dest_term) (fst (listSyntax.dest_list (rand tm)))) else
+     if p ~~ ``List`` then List (map (dest_term) (fst (listSyntax.dest_list (rand tm)))) else
+     if p ~~ ``Let`` then
+       Let (map
+              ((fn (x,y) => (stringSyntax.fromHOLstring x, dest_term y)) o
+               pairSyntax.dest_pair)
+              (fst (listSyntax.dest_list (el 2 xs))),
+            dest_term (el 3 xs)) else
+     if p ~~ ``LetStar`` then
+       LetStar (map
+                  ((fn (x,y) => (stringSyntax.fromHOLstring x, dest_term y)) o
+                   pairSyntax.dest_pair)
+                  (fst (listSyntax.dest_list (el 2 xs))),
+                dest_term (el 3 xs)) else
+     if p ~~ ``Cond`` then
+       Cond (map
+               ((fn (x,y) => (dest_term x, dest_term y)) o pairSyntax.dest_pair)
+               (fst (listSyntax.dest_list (el 2 xs)))) else
+     if p ~~ ``Defun`` then Defun (stringSyntax.fromHOLstring (el 2 xs),
        map stringSyntax.fromHOLstring (fst (listSyntax.dest_list (el 3 xs))),
        el 4 xs) else fail()
   end
@@ -143,10 +153,10 @@ fun shallow_to_deep tm = let
   fun fromHOLstring s = string_uppercase (stringSyntax.fromHOLstring s)
   fun fromMLstring s = stringSyntax.fromMLstring (string_uppercase s)
   fun is_const tm =
-    (if rator tm = ``Sym`` then can fromHOLstring (rand tm) else
-     if rator tm = ``Val`` then can numSyntax.int_of_term (rand tm) else
-     if rator (rator tm) = ``Dot`` then is_const (rand (rator tm)) andalso
-                                        is_const (rand tm)
+    (if rator tm ~~ ``Sym`` then can fromHOLstring (rand tm) else
+     if rator tm ~~ ``Val`` then can numSyntax.int_of_term (rand tm) else
+     if rator (rator tm) ~~ ``Dot`` then is_const (rand (rator tm)) andalso
+                                         is_const (rand tm)
      else false) handle HOL_ERR _ => false
   val lisp_primitives =
     [(``Dot``,``opCONS``),
@@ -173,7 +183,7 @@ fun shallow_to_deep tm = let
       in ``Var`` $$ fromMLstring s end
     else if is_cond tm then let
       val (x1,x2,x3) = dest_cond tm
-      val _ = if rator x1 = ``isTrue`` then () else aux_fail x1
+      val _ = if rator x1 ~~ ``isTrue`` then () else aux_fail x1
       in ``If`` $$ aux (rand x1) $$ aux x2 $$ aux x3 end
     else if can pairSyntax.dest_anylet tm then let
       val (xs,x) = pairSyntax.dest_anylet tm
@@ -186,7 +196,7 @@ fun shallow_to_deep tm = let
       val xs = list_dest dest_comb tm
       val (x,xs) = (hd xs, tl xs)
       fun lookup x [] = fail()
-        | lookup x ((y,z)::zs) = if x = y then z else lookup x zs
+        | lookup x ((y,z)::zs) = if x ~~ y then z else lookup x zs
       val f = ``PrimitiveFun`` $$ lookup x lisp_primitives handle HOL_ERR _ =>
               ``Fun`` $$ fromMLstring (fst (dest_const x))
               handle HOL_ERR _ => aux_fail x
@@ -317,7 +327,8 @@ fun R_ev (Const c) = SPEC c R_ev_Const
       val tm2 = subst [``VarBind ^xs1 ^exps`` |-> ``VarBind ^xs1 ^(listSyntax.mk_list(xs3,``:SExp``))``] tm
       val tm3 = pairSyntax.mk_anylet(zip xs3 xs4,tm2)
       val rw = GSYM (pairLib.let_CONV tm3)
-      val _ = ((fst o dest_eq o concl) rw = tm) orelse failwith("R_ev (Let ...) failed.")
+      val _ = ((fst o dest_eq o concl) rw ~~ tm) orelse
+              failwith("R_ev (Let ...) failed.")
       val th = CONV_RULE ((RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV) (REWR_CONV rw)) th
       in th end
   | R_ev (LetStar ([],x)) = PRW1 [R_ev_LetStar_NIL] (R_ev x)
@@ -429,7 +440,7 @@ fun pure_extract name term_tac = let
         in result end
   (* install for future use *)
   val _ = atbl_install name result
-  val _ = save_thm(good_name ^ "_def",def)
+  val _ = save_thm(good_name ^ "_def[compute]",def)
   val _ = save_thm("R_ev_" ^ good_name,result)
   in def end;
 
@@ -676,12 +687,12 @@ fun mk_fun_ty t x = mk_type("fun",[t,x])
 val R_ap_format = ``R_ap x y``
 
 fun extract_side_condition tm =
-  if tm = T then T else let
+  if tm ~~ T then T else let
   val (x,y) = dest_conj tm
   val x1 = extract_side_condition x
   val y1 = extract_side_condition y
-  in if x1 = T then y1 else
-     if y1 = T then x1 else mk_conj(x1,y1) end
+  in if x1 ~~ T then y1 else
+     if y1 ~~ T then x1 else mk_conj(x1,y1) end
   handle HOL_ERR _ => let
   val fns_assum = hd (hyp (get_lookup_thm()))
   val _ = match_term fns_assum tm
@@ -690,18 +701,18 @@ fun extract_side_condition tm =
   val (x,y,z) = dest_cond tm
   val y1 = extract_side_condition y
   val z1 = extract_side_condition z
-  in if y1 = T andalso z1 = T then T else mk_cond(x,y1,z1) end
+  in if y1 ~~ T andalso z1 ~~ T then T else mk_cond(x,y1,z1) end
   handle HOL_ERR _ => let
   val (x,y) = dest_imp tm
   val y1 = extract_side_condition y
-  in if y1 = T then T else mk_imp(x,y1) end
+  in if y1 ~~ T then T else mk_imp(x,y1) end
   handle HOL_ERR _ => let
   val _ = match_term R_ap_format tm
   in T end
   handle HOL_ERR _ => let
   val (xs,b) = pairSyntax.dest_anylet tm
   val b1 = extract_side_condition b
-  in if b1 = T then T else pairSyntax.mk_anylet(xs,b1) end
+  in if b1 ~~ T then T else pairSyntax.mk_anylet(xs,b1) end
   handle HOL_ERR _ => tm
 
 fun impure_extract_aux name term_tac use_short_cut = let
@@ -924,7 +935,7 @@ fun deep_embeddings base_name defs_inds = let
     val goal = mk_imp(hd (hyp (get_lookup_thm())),th6 |> concl |> rand)
     val f = foldr mk_abs goal params
     val forall_goal = foldr mk_forall goal params
-    val result = if concl ind = T then RW [] th6 else let
+    val result = if concl ind ~~ T then RW [] th6 else let
           val i = ISPEC f ind |> CONV_RULE (DEPTH_CONV BETA_CONV)
           val i = REWRITE_RULE [isTrue_INTRO] i
           val result = prove(i |> concl |> rand,

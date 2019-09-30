@@ -14,20 +14,20 @@ sig
 end
 
 functor IntMapTable (type key
-		     val getInt: key -> int) : TABLE =
+                     val getInt: key -> int) : TABLE =
 struct
   type key = key
   type 'a table = (int,'a) Binarymap.dict
   val empty = Binarymap.mkDict (fn (k1:int,k2:int) => if k1 > k2 then GREATER
-				else if k1 = k2 then EQUAL
-				else LESS);
+                                else if k1 = k2 then EQUAL
+                                else LESS);
   fun enter(t,k,a) = Binarymap.insert(t,getInt k,a)
   fun look(t,k) = Binarymap.find(t,getInt k)
   fun peek(t,k) = Binarymap.peek(t,getInt k)
   val numItems = Binarymap.numItems
   fun remove(t,k) = Binarymap.remove(t,getInt k)
   fun addList (t,kl,vl) = #1 (List.foldl
-	(fn (v,(t,kl)) => (enter(t,hd kl,v),tl kl)) (t,kl) vl)
+        (fn (v,(t,kl)) => (enter(t,hd kl,v),tl kl)) (t,kl) vl)
   fun listKeys (t:'a table) = List.map (fn (k,v) => k) (Binarymap.listItems t)
   fun listItems (t:'a table) = List.map (fn (k,v) => v) (Binarymap.listItems t)
 end

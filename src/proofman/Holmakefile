@@ -16,6 +16,7 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        $(dprot $(SIGOBJ)/TypeBase.uo) \
        $(dprot $(SIGOBJ)/Preterm.uo) \
        $(dprot $(SIGOBJ)/type_pp.uo) \
+       $(dprot $(SIGOBJ)/parse_term.uo) \
        $(dprot $(SIGOBJ)/ParseExtras.uo) \
        $(dprot $(SIGOBJ)/Drule.uo) \
        $(dprot $(SIGOBJ)/TheoryPP.uo) \
@@ -23,19 +24,21 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        $(dprot $(SIGOBJ)/Tactic.uo) \
        $(dprot $(SIGOBJ)/Tactical.uo) \
        $(dprot $(SIGOBJ)/ParseDatatype.uo) \
-       $(dprot $(SIGOBJ)/type_grammar.uo)
+       $(dprot $(SIGOBJ)/type_grammar.uo) \
+       $(dprot $(SIGOBJ)/Symtab.uo) \
+       $(dprot $(SIGOBJ)/Inttab.uo) \
+       $(dprot $(SIGOBJ)/KNametab.uo) \
+       $(dprot $(SIGOBJ)/term_tokens.uo) \
+       $(dprot $(SIGOBJ)/DB.uo) \
+       $(dprot $(HOLDIR)/bin/buildheap)
 
-UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack
+UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack \
+         $(protect $(SIGOBJ)/KNametab) $(protect $(SIGOBJ)/Symtab) \
+         $(protect $(SIGOBJ)/Inttab)
 
 EXTRA_CLEANS = $(TARGET)
 
 $(TARGET): $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) --poly -o $@ $(UOARGS)
-
-all: selftest.exe $(TARGET)
-.PHONY: all
-
-selftest.exe: selftest.uo
-	$(HOLMOSMLC) -o $@ $<
 
 endif

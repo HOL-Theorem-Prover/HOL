@@ -53,14 +53,16 @@ val zchaff =
  SatSolver
   {name           = "zchaff",
    URL            = "http://www.princeton.edu/~chaff/zchaff",
-   executable     = if isSome (Process.getEnv "OS")
-		       andalso String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL
-		    then Globals.HOLDIR^"/src/HolSat/sat_solvers/zchaff/zchaff.exe"
-		    else Globals.HOLDIR^"/src/HolSat/sat_solvers/zchaff/zchaff",
-   post_exe       = SOME (if isSome (Process.getEnv "OS")
-		       andalso String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL
-			  then Globals.HOLDIR^"/src/HolSat/sat_solvers/zc2hs/zc2hs.exe"
-			  else Globals.HOLDIR^"/src/HolSat/sat_solvers/zc2hs/zc2hs"),
+   executable     =
+     if isSome (Process.getEnv "OS") andalso
+        String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL
+     then Globals.HOLDIR^"/src/HolSat/sat_solvers/zchaff/zchaff.exe"
+     else Globals.HOLDIR^"/src/HolSat/sat_solvers/zchaff/zchaff",
+   post_exe       =
+     SOME (if isSome (Process.getEnv "OS") andalso
+              String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL
+           then Globals.HOLDIR^"/src/HolSat/sat_solvers/zc2hs/zc2hs.exe"
+           else Globals.HOLDIR^"/src/HolSat/sat_solvers/zc2hs/zc2hs"),
    notime_run     = (fn ex => fn (infile,outfile) =>
                         spacify [p ex, p infile,">", p outfile]),
    time_run       = (fn ex => fn ((infile,outfile),time) =>
@@ -79,11 +81,13 @@ val zchaff =
 val minisatp =
  SatSolver
   {name           = "minisatp",
-   URL            = "http://www.cs.chalmers.se/Cs/Research/FormalMethods/MiniSat",
-   executable     = if isSome (Process.getEnv "OS")
-		       andalso String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL
-		    then Globals.HOLDIR^"/src/HolSat/sat_solvers/minisat/minisat.exe"
-		    else Globals.HOLDIR^"/src/HolSat/sat_solvers/minisat/minisat",
+   URL            =
+     "http://www.cs.chalmers.se/Cs/Research/FormalMethods/MiniSat",
+   executable     =
+     if isSome (Process.getEnv "OS") andalso
+        String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL
+     then Globals.HOLDIR^"/src/HolSat/sat_solvers/minisat/minisat.exe"
+     else Globals.HOLDIR^"/src/HolSat/sat_solvers/minisat/minisat",
    post_exe       = NONE,
    notime_run     = (fn ex => fn (infile,outfile) =>
                       spacify [p ex, "-r", p outfile, "-p",

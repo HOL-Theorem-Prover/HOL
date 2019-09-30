@@ -25,7 +25,7 @@ val () = app load
 val () = show_assums := true;
 *)
 
-open HurdUseful;
+open hurdUtils;
 
 infixr 0 oo ## ++ << || THENC ORELSEC THENR ORELSER;
 infix 1 >> |->;
@@ -120,6 +120,22 @@ tt2 sep_type_unify ``:'a -> 'b`` ``:bool -> 'b``;
 (* ------------------------------------------------------------------------- *)
 (* First-order unification.                                                  *)
 (* ------------------------------------------------------------------------- *)
+fun tdistinct tl = HOLset.numItems (listset tl) = length tl
+fun mk_renaming_tsubst_wrt_vars vars sub =
+  let
+    val (ok_sub, problem_sub) = partition (C tmem vars o redex) sub
+    val problem_sub_residues = map residue problem_sub
+    val _ = assert (forall (C tmem vars) problem_sub_residues)
+      (ERR "rename_sub_for_vars" "have not_var |-> not_var")
+    val _ = assert (tdistinct problem_sub_residues)
+      (ERR "rename_sub_for_vars" "have two not_vars |-> same_var")
+    val ok_sub_redexes = map redex ok_sub
+    val _ = assert (forall (not o C tmem ok_sub_redexes) problem_sub_residues)
+      (ERR "rename_sub_for_vars" "have not_var |-> used_var")
+    val problem_sub_redexes = map redex problem_sub
+  in
+    zipwith (curry op|->) problem_sub_residues problem_sub_redexes
+  end;
 
 fun mk_renaming_subst_wrt_vars vars sub =
   let
@@ -140,7 +156,7 @@ fun mk_renaming_subst_wrt_vars vars sub =
 local
   fun unify_reduce_ty ty1 ty2 sub = refine_subst sub ([], type_unify ty1 ty2)
 
-  fun occurs v tm = mem v (free_vars tm)
+  fun occurs v tm = free_in v tm
 
   fun solve sub [] = sub
     | solve (sub as (_, ty_sub)) (((bvs1, tm1), (bvs2, tm2)) :: rest) =
@@ -160,7 +176,8 @@ local
       end
     else if is_var tm1 then
       let
-        val _ = assert (null_intersection (free_vars tm2) bvs2)
+        val bvfvs = FVs tm2 Isct listset bvs2
+        val _ = assert (HOLset.isEmpty bvfvs)
           (ERR "unify" "can't unify var with a tm containing bound vars")
       in
         elim sub (tm1, tm2) rest
@@ -196,12 +213,12 @@ local
       val (tm_sub', ty_sub') = unify_reduce_ty (type_of v) (type_of tm) sub
       val (v', tm') = Df (inst_ty ty_sub') (v, tm)
     in
-      if v' = tm' then solve (tm_sub', ty_sub') rest
+      if v' ~~ tm' then solve (tm_sub', ty_sub') rest
       else
         let
           val _ = assert (not (occurs v' tm')) (ERR "unify" "occurs check")
         in
-          case total (find_redex v') tm_sub' of NONE =>
+          case total (tfind_redex v') tm_sub' of NONE =>
             let
               val sub' = refine_subst (tm_sub', ty_sub') ([v' |-> tm'], [])
             in
@@ -223,7 +240,7 @@ fun var_unify (tm_vars, ty_vars) tm1 tm2 =
     val ty_renaming_sub = mk_renaming_subst_wrt_vars ty_vars ty_sub
     val (tm_sub', ty_sub') = refine_subst (tm_sub, ty_sub) ([], ty_renaming_sub)
     val tm_vars' = map (inst_ty ty_sub') tm_vars
-    val tm_renaming_sub = mk_renaming_subst_wrt_vars tm_vars' tm_sub'
+    val tm_renaming_sub = mk_renaming_tsubst_wrt_vars tm_vars' tm_sub'
   in
     refine_subst (tm_sub', ty_sub') (tm_renaming_sub, [])
   end;
@@ -242,19 +259,19 @@ fun sep_var_unify (vars1, tm1) (vars2, tm2) =
     (* Separate the returned substitution *)
     val (ty_sub1, ty_sub2) = partition (C mem ty_gvars1 o redex) ty_sub
     val tm_gvars1' = map (inst_ty ty_sub1) tm_gvars1
-    val (tm_sub1, tm_sub2) = partition (C mem tm_gvars1' o redex) tm_sub
+    val (tm_sub1, tm_sub2) = partition (C tmem tm_gvars1' o redex) tm_sub
     (* Rename back the variables in the separated substitutions *)
     val ty_renaming_sub = (snd new_to_old1 @ snd new_to_old2)
     val (ty_sub1', ty_sub2') =
       Df (clean_subst o (subst_map (D (type_inst ty_renaming_sub))))
       (ty_sub1, ty_sub2)
     val tm_renaming_sub1 =
-      (clean_subst o subst_map (D (inst_ty ty_sub1'))) (fst new_to_old1)
+      (clean_tsubst o subst_map (D (inst_ty ty_sub1'))) (fst new_to_old1)
     val tm_renaming_sub2 =
-      (clean_subst o subst_map (D (inst_ty ty_sub2'))) (fst new_to_old2)
+      (clean_tsubst o subst_map (D (inst_ty ty_sub2'))) (fst new_to_old2)
     val tm_renaming_sub = tm_renaming_sub1 @ tm_renaming_sub2
     val (tm_sub1', tm_sub2') =
-      Df (clean_subst o subst_map (D (subst tm_renaming_sub)))
+      Df (clean_tsubst o subst_map (D (subst tm_renaming_sub)))
       (tm_sub1, tm_sub2)
   in
     ((tm_sub1', ty_sub1'), (tm_sub2', ty_sub2'))
@@ -285,9 +302,3 @@ tt2 sep_unify ``fred ==> fred`` ``fred : bool``;
 (* non-interactive mode
 *)
 end;
-
-
-
-
-
-

@@ -37,7 +37,7 @@ fun COND_ABS_CONV tm =
  (let val (v,bdy) = dest_abs tm
       val (cond,x,y) = dest_cond bdy
       val _ = assert (not o equal Type.bool o type_of) x
-      val b = assert (not o Lib.mem v o free_vars) cond
+      val b = assert (not o Lib.op_mem aconv v o free_vars) cond
       val xf = mk_abs(v,x)
       and yf = mk_abs(v,y)
       val th1 = INST_TYPE [alpha |-> type_of v, beta |-> type_of x] COND_ABS
@@ -160,27 +160,33 @@ in
   SUB_NORM_CONV' Positive
 end
 
-fun find_elim p t m = let
+fun find_elim sense p t m = let
+  val posc = REWR_CONV arithmeticTheory.SUB_ELIM_THM THENC
+             BINDER_CONV (BINOP_CONV (RAND_CONV BETA_CONV))
+  val negc = REWR_CONV arithmeticTheory.SUB_ELIM_THM_EXISTS THENC
+             BINOP_CONV (BINDER_CONV (RAND_CONV BETA_CONV))
   fun doit t =
     if numSyntax.is_minus t then
-      UNBETA_CONV t THENC
-      REWR_CONV arithmeticTheory.SUB_ELIM_THM THENC
-      BINDER_CONV (BINOP_CONV (RAND_CONV BETA_CONV)) THENC
+      UNBETA_CONV t THENC (if sense then posc else negc) THENC
       PURE_REWRITE_CONV [arithmeticTheory.ADD_CLAUSES,
                          arithmeticTheory.SUB_EQUAL_0,
                          arithmeticTheory.SUB_0]
     else NO_CONV
 in
-  case dest_term t of
-      COMB(f,x) => find_elim (p o RATOR_CONV) f ORELSEC
-                   find_elim (p o RAND_CONV) x ORELSEC doit t
-    | LAMB(_, body) => if type_of body = bool then
-                         p (ABS_CONV (find_elim I body))
-                       else NO_CONV
-    | _ => NO_CONV
+  if is_exists t then
+    p (BINDER_CONV (find_elim false I (#2 (dest_exists t))))
+  else if is_forall t then
+    p (BINDER_CONV (find_elim true I (#2 (dest_forall t))))
+  else
+    let
+      val (f,x) = dest_comb t
+    in
+      find_elim sense (p o RATOR_CONV) f ORELSEC
+      find_elim sense (p o RAND_CONV) x ORELSEC doit t
+    end
 end m
 
-fun ELIM_SUB1 t = find_elim I t t
+fun ELIM_SUB1 t = find_elim true I t t
 
 val NEW_SUB_ELIM_CONV = TRY_SUB_NORM THENC REPEATC ELIM_SUB1
 
@@ -243,39 +249,18 @@ end m
 fun ELIM_COND1 t = find_celim I t t
 
 fun op_of_app tm = op_of_app (rator tm) handle _ => tm
-val SUB_AND_COND_ELIM_CONV =
+
+val COND_ELIM_CONV =
    TOP_DEPTH_CONV
      (NUM_COND_RATOR_CONV ORELSEC
       (fn tm => if same_const (op_of_app tm) COND_t then failwith "fail"
                 else NUM_COND_RAND_CONV tm) ORELSEC
       TB COND_ABS_CONV) THENC
-   REPEATC ELIM_COND1 THENC
-   NEW_SUB_ELIM_CONV
-
-
-(*---------------------------------------------------------------------------*)
-(* COND_ELIM_CONV : conv                                                     *)
-(*                                                                           *)
-(* This function eliminates all conditionals in a term that it can. If the   *)
-(* term is a formula, only an abstraction can prevent the elimination, e.g.: *)
-(*                                                                           *)
-(*    COND_ELIM_CONV `(\m. (m = 0) => 0 | (m - 1)) (SUC n) = n` --->         *)
-(*    |- ((\m. ((m = 0) => 0 | m - 1))(SUC n) = n) =                         *)
-(*       ((\m. ((m = 0) => 0 | m - 1))(SUC n) = n)                           *)
-(*                                                                           *)
-(* Care has to be taken with the conditional lifting theorems because they   *)
-(* can loop if they try to move a conditional past another conditional, e.g. *)
-(*                                                                           *)
-(*    b1 => x | (b2 => y | z)                                                *)
-(*                                                                           *)
-(*---------------------------------------------------------------------------*)
-
-val COND_ELIM_CONV =
-   TOP_DEPTH_CONV
-     (TB COND_RATOR_CONV ORELSEC
-      (fn tm => if same_const (op_of_app tm) COND_t then failwith "fail"
-                else TB COND_RAND_CONV tm) ORELSEC
-      TB COND_ABS_CONV) THENC
    REPEATC ELIM_COND1
+
+val SUB_AND_COND_ELIM_CONV =
+   COND_ELIM_CONV THENC NEW_SUB_ELIM_CONV
+
+
 
 end

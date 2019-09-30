@@ -448,7 +448,7 @@ val numeral_ilog2 = Q.store_thm("numeral_ilog2",
       \\ SIMP_TAC arith_ss
             [GSYM ADD1, EXP, logrootTheory.LOG,
              DECIDE ``(2 * n + 2 = (n + 1) * 2) /\
-                      (2 * a < 4 * b = a < 2 * b)``]
+                      (2 * a < 4 * b <=> a < 2 * b)``]
       \\ SIMP_TAC arith_ss [GSYM EXP, logrootTheory.LOG],
       MATCH_MP_TAC
          ((SIMP_RULE arith_ss [] o Q.SPECL [`2 * n + 3`, `LOG2 (n + 1) + 1`])
@@ -472,12 +472,13 @@ val numeral_log2 = Q.store_thm("numeral_log2",
 
 (* ------------------------------------------------------------------------- *)
 
-val MOD_2EXP_EQ = Q.store_thm("MOD_2EXP_EQ",
-   `(!a b. MOD_2EXP_EQ 0 a b = T) /\
-    (!n a b.
-       MOD_2EXP_EQ (SUC n) a b =
-       (ODD a = ODD b) /\ MOD_2EXP_EQ n (DIV2 a) (DIV2 b)) /\
-    (!n a. MOD_2EXP_EQ n a a = T)`,
+Theorem MOD_2EXP_EQ:
+   (!a b. MOD_2EXP_EQ 0 a b = T) /\
+   (!n a b.
+      MOD_2EXP_EQ (SUC n) a b <=>
+        (ODD a = ODD b) /\ MOD_2EXP_EQ n (DIV2 a) (DIV2 b)) /\
+   (!n a. MOD_2EXP_EQ n a a = T)
+Proof
    SRW_TAC [] [MOD_2EXP_EQ_def, MOD_2EXP_def, GSYM BITS_ZERO3]
    \\ Cases_on `n`
    \\ FULL_SIMP_TAC std_ss [GSYM BITS_ZERO3, GSYM BIT0_ODD,
@@ -485,7 +486,8 @@ val MOD_2EXP_EQ = Q.store_thm("MOD_2EXP_EQ",
    \\ EQ_TAC
    \\ RW_TAC arith_ss []
    \\ Cases_on `x`
-   \\ RW_TAC arith_ss [])
+   \\ RW_TAC arith_ss []
+QED
 
 val lem = Q.prove(
    `!n. BITS n 0 (2 ** SUC n - 1) = 2 ** SUC n - 1`,
@@ -493,9 +495,10 @@ val lem = Q.prove(
    \\ MATCH_MP_TAC BITS_ZEROL
    \\ SIMP_TAC std_ss [ZERO_LT_TWOEXP])
 
-val MOD_2EXP_MAX = Q.store_thm("MOD_2EXP_MAX",
-   `(!a. MOD_2EXP_MAX 0 a = T) /\
-    (!n a. MOD_2EXP_MAX (SUC n) a = ODD a /\ MOD_2EXP_MAX n (DIV2 a))`,
+Theorem MOD_2EXP_MAX:
+   (!a. MOD_2EXP_MAX 0 a = T) /\
+   (!n a. MOD_2EXP_MAX (SUC n) a <=> ODD a /\ MOD_2EXP_MAX n (DIV2 a))
+Proof
     SRW_TAC [] [MOD_2EXP_MAX_def, MOD_2EXP_def, GSYM BITS_ZERO3]
     \\ Cases_on `n`
     >- SIMP_TAC std_ss [SYM BIT0_ODD, BIT_def]
@@ -505,16 +508,18 @@ val MOD_2EXP_MAX = Q.store_thm("MOD_2EXP_MAX",
     \\ EQ_TAC
     \\ RW_TAC arith_ss [BIT_EXP_SUB1]
     \\ Cases_on `x`
-    \\ RW_TAC arith_ss [])
+    \\ RW_TAC arith_ss []
+QED
 
 (* ------------------------------------------------------------------------- *)
 
 val LEAST_BIT_INTRO =
    (SIMP_RULE (srw_ss()) [] o Q.SPEC `\i. BIT i n`)  whileTheory.LEAST_INTRO
 
-val LOWEST_SET_BIT = Q.store_thm("LOWEST_SET_BIT",
-   `!n. ~(n = 0) ==>
-        (LOWEST_SET_BIT n = if ODD n then 0 else 1 + LOWEST_SET_BIT (DIV2 n))`,
+Theorem LOWEST_SET_BIT:
+   !n. n <> 0 ==>
+       (LOWEST_SET_BIT n = if ODD n then 0 else 1 + LOWEST_SET_BIT (DIV2 n))
+Proof
    SRW_TAC [ARITH_ss] [LOWEST_SET_BIT_def, DIV2_def, ADD1]
    \\ MATCH_MP_TAC LEAST_THM
    \\ SRW_TAC [] [BIT0_ODD]
@@ -532,10 +537,11 @@ val LOWEST_SET_BIT = Q.store_thm("LOWEST_SET_BIT",
       \\ `~(n DIV 2 = 0)`
       by (Cases_on `n = 1`
           \\ FULL_SIMP_TAC arith_ss
-                [(SIMP_RULE (srw_ss()) [DECIDE ``0 < n = ~(n = 0)``] o
+                [(SIMP_RULE (srw_ss()) [DECIDE ``0 < n <=> n <> 0``] o
                   Q.SPECL [`0`,`n`,`2`]) X_LT_DIV])
       \\ METIS_TAC [BIT_LOG2]
-   ])
+   ]
+QED
 
 val LOWEST_SET_BIT_compute = save_thm("LOWEST_SET_BIT_compute",
    let

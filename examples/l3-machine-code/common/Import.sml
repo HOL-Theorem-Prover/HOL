@@ -16,6 +16,7 @@ local
    val const_names = ref []
    fun decl s = "val " ^ s
    val typ = "{Thy: string, T: string list, C: string list, N: int list}"
+   val B = PP.block PP.CONSISTENT 0
 in
    fun log_boolify n = boolify_vals := Redblackset.add (!boolify_vals, n)
    fun log_type s = type_names := s :: !type_names
@@ -27,38 +28,39 @@ in
    fun finish i =
       (Theory.adjoin_to_theory {
          sig_ps =
-           SOME (fn ppstrm =>
-                   (PP.add_string ppstrm (decl "inventory:")
-                    ; PP.add_break ppstrm (1, 2)
-                    ; PP.add_string ppstrm typ)),
+           SOME (fn _ => B[PP.add_string (decl "inventory:"),
+                           PP.add_break (1, 2),
+                           PP.add_string typ]),
          struct_ps =
-           SOME (fn ppstrm =>
+           SOME (fn _ =>
                     let
                        val name = Lib.quote (Theory.current_theory ())
-                       fun bl f s l =
-                          ( PP.add_break ppstrm (1, 0)
-                          ; PP.add_string ppstrm (s ^ " [")
-                          ; PP.begin_block ppstrm PP.INCONSISTENT 0
-                          ; Portable.pr_list
-                              (PP.add_string ppstrm o f)
-                              (fn () => PP.add_string ppstrm ",")
-                              (fn () => PP.add_break ppstrm (1, 0)) l
-                          ; PP.add_string ppstrm "]"
-                          ; PP.end_block ppstrm)
+                       fun bl f s l = B [
+                           PP.add_break (1, 0),
+                           PP.add_string (s ^ " ["),
+                           PP.block PP.INCONSISTENT 0 (
+                             PP.pr_list (PP.add_string o f)
+                                        [PP.add_string ",", PP.add_break (1, 0)]
+                                        l
+                           ),
+                           PP.add_string "]"
+                         ]
                     in
-                       PP.add_string ppstrm (decl "inventory = {")
-                       ; PP.add_break ppstrm (0, 2)
-                       ; PP.begin_block ppstrm PP.CONSISTENT 0
-                       ; PP.add_string ppstrm ("Thy = " ^ name ^ ",")
-                       ; bl Lib.quote "T =" (!type_names)
-                       ; PP.add_string ppstrm (",")
-                       ; bl Lib.quote "C =" (!const_names)
-                       ; PP.add_string ppstrm (",")
-                       ; bl Int.toString "N ="
-                           (Redblackset.listItems (!boolify_vals))
-                       ; PP.add_string ppstrm "}"
-                       ; PP.end_block ppstrm
-                       ; PP.add_newline ppstrm
+                      B [
+                        PP.add_string (decl "inventory = {"),
+                        PP.add_break (0, 2),
+                        B  [
+                          PP.add_string ("Thy = " ^ name ^ ","),
+                          bl Lib.quote "T =" (!type_names),
+                          PP.add_string (","),
+                          bl Lib.quote "C =" (!const_names),
+                          PP.add_string (","),
+                          bl Int.toString "N ="
+                             (Redblackset.listItems (!boolify_vals)),
+                          PP.add_string "}"
+                        ],
+                        PP.add_newline
+                      ]
                     end)}
        ; Feedback.set_trace "TheoryPP.include_docs" i
        ; export_theory ()
@@ -297,8 +299,7 @@ fun Fupd (m, i, e) = Term.mk_comb (combinSyntax.mk_update (i, e), m)
 fun CS (x, cs) =
    Term.beta_conv (Term.mk_comb
      (Lib.with_flag (Feedback.emit_MESG, false)
-        (Lib.with_flag (Globals.priming, SOME "_")
-           TypeBase.mk_pattern_fn) cs, x))
+        (TypeBase.mk_pattern_fn) cs, x))
    before resetAnon ()
 
 (* Let-expression *)
@@ -853,17 +854,13 @@ local
    end
 
    fun mk_from_bool (x as (tm, a, b)) =
-      if tm = boolSyntax.T
-         then a
-      else if tm = boolSyntax.F
-         then b
+      if Teq tm then a
+      else if Feq tm then b
       else boolSyntax.mk_cond x
 
    fun mk_word_from_bool (tm, ty) =
-      if tm = boolSyntax.T
-         then mk_word1 ty
-      else if tm = boolSyntax.F
-         then mk_word0 ty
+      if Teq tm then mk_word1 ty
+      else if Feq tm then mk_word0 ty
       else bitstringSyntax.mk_v2w
              (listSyntax.mk_list ([tm], Type.bool),
               wordsSyntax.dest_word_type ty)
@@ -1236,7 +1233,7 @@ fun Def (s, a, b) =
    let
       val ty = Type.--> (Term.type_of a, Term.type_of b)
       val c = Term.mk_var (s, ty)
-      val isrec = (HolKernel.find_term (Lib.equal c) b; true)
+      val isrec = (HolKernel.find_term (aconv c) b; true)
                   handle HOL_ERR _ => false
       val def = if isrec andalso Term.is_abs b
                    then let

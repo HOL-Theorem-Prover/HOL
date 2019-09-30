@@ -82,6 +82,7 @@ sig
    val FUN_EQ_CONV           : conv
    val X_FUN_EQ_CONV         : term -> conv
    val SELECT_CONV           : conv
+   val SPLICE_CONJ_CONV      : conv
    val CONTRAPOS_CONV        : conv
    val ANTE_CONJ_CONV        : conv
    val AND_IMP_INTRO_CONV    : conv

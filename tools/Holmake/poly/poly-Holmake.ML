@@ -13,9 +13,6 @@ fun useC f = (use ("../" ^ f ^ ".sig"); use ("../" ^ f ^ ".sml"))
 
 fun useS f = use ("../" ^ f ^ ".sml")
 
-val _ = use "../Systeml.sig"
-val _ = use "../../../tools-poly/Holmake/Systeml.sml";
-
 val _ = use "../hmcore.ML";
 
 val _ = useC "tailbuffer";
@@ -35,8 +32,22 @@ val _ = useS "Holmake";
 
 val die_with = Holmake.die_with
 
+fun printPosn (l,pos) = Int.toString l ^ ":" ^ Int.toString pos
+
 fun main() =
   Holmake.main()
   handle SML90.Interrupt => die_with "Holmake interrupted"
-       | e => die_with ("Holmake failed with exception: "^
-                          exnMessage e)
+       | e =>
+         let
+           val msgpfx = "Holmake failed with exception: "^ exnMessage e
+         in
+           case PolyML.Exception.exceptionLocation e of
+               SOME {file,startLine,startPosition,endLine,endPosition} =>
+               let
+               in
+                 die_with (msgpfx ^ "\nRaised from: "^
+                           file ^ ": " ^ printPosn(startLine, startPosition) ^
+                           " - " ^ printPosn(endLine, endPosition))
+               end
+             | NONE => die_with (msgpfx ^ "\nRaised from unknown location")
+         end

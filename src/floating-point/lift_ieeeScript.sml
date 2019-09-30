@@ -6,6 +6,7 @@ open HolKernel boolLib bossLib
 open binary_ieeeTheory realTheory wordsLib realLib
 
 val () = new_theory "lift_ieee"
+val _ = ParseExtras.temp_loose_equality()
 
 val () =  Parse.temp_overload_on ("bias", ``words$INT_MAX``)
 
@@ -1441,7 +1442,7 @@ val float_mul_add = Q.store_thm ("float_mul_add",
   lift_tac
   )
 
-val float_mul_sub = Q.store_thm ("float_mul_add",
+val float_mul_sub = Q.store_thm ("float_mul_sub",
   `!a b c : ('t, 'w) float.
     float_is_finite a /\ float_is_finite b /\ float_is_finite c /\
     abs (float_to_real a * float_to_real b - float_to_real c) <
@@ -1594,14 +1595,11 @@ val round_finite_normal_float_id = Q.store_thm(
 "round_finite_normal_float_id",
   `!f.
      float_is_finite f /\
-     float_is_normal f /\
      ~ float_is_zero f ==>
      (round roundTiesToEven (float_to_real f) = f)`,
   rw[]
   \\ qpat_assum `float_is_finite _` mp_tac
-  \\ qpat_assum `float_is_normal _` mp_tac
-  \\ rewrite_tac [float_is_finite_def, float_is_normal_def]
-  \\ rewrite_tac [float_value_def]
+  \\ rewrite_tac [float_is_finite_def, float_value_def]
   \\ simp[]
   \\ strip_tac
   \\ once_rewrite_tac [round_def]
@@ -1634,7 +1632,6 @@ val real_to_float_finite_normal_id = Q.store_thm (
   "real_to_float_finite_normal_id",
   `!f.
      float_is_finite f /\
-     float_is_normal f /\
      ~ float_is_zero f ==>
      (real_to_float roundTiesToEven (float_to_real f) = f)`,
   rpt strip_tac

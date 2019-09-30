@@ -104,7 +104,7 @@ let
    val (p, a) = dest_imp_only t;
 in
    if (is_conj p) then (AND_IMP_ELIM_CONV THENC LIST_AND_IMP_ELIM_CONV) t else
-   if (p = T) then (TRUE_IMP_ELIM_CONV THENC LIST_AND_IMP_ELIM_CONV) t else
+   if Teq p then (TRUE_IMP_ELIM_CONV THENC LIST_AND_IMP_ELIM_CONV) t else
    (RAND_CONV LIST_AND_IMP_ELIM_CONV) t
 end handle HOL_ERR _ => raise UNCHANGED;
 
@@ -252,15 +252,15 @@ fun FORALL_NOT_LIST_CONV tm =
 fun QUANT_SIMP_CONV t =
     if (is_exists t) then
        let
-          val (v,b) = dest_exists t;
-          val _ = if mem v (free_vars b) then raise UNCHANGED else ();
+          val (v,b) = dest_exists t
+          val _ = if tmem v (free_vars b) then raise UNCHANGED else ()
        in
           HO_PART_MATCH lhs boolTheory.EXISTS_SIMP t
        end
     else if (is_forall t) then
        let
-          val (v,b) = dest_forall t;
-          val _ = if mem v (free_vars b) then raise UNCHANGED else ();
+          val (v,b) = dest_forall t
+          val _ = if tmem v (free_vars b) then raise UNCHANGED else ()
        in
           HO_PART_MATCH lhs boolTheory.FORALL_SIMP t
        end
@@ -584,16 +584,16 @@ end
 
 fun match_term_var v t1 t2 =
 let
-    val (s,t) = match_term t1 t2;
-    val _ = if (t = []) then () else Feedback.fail ();
-    val _ = if (s = []) then Feedback.fail () else ();
-    val i = hd s;
-    val _ = if (s = [i]) then () else Feedback.fail ();
+    val (s,t) = match_term t1 t2
+    val _ = if (t = []) then () else Feedback.fail ()
+    val _ = if null s then Feedback.fail () else ()
+    val i = hd s
+    val _ = if length s = 1 then () else Feedback.fail ()
 
-    val _ = if (#redex i = v) then () else Feedback.fail ();
+    val _ = if aconv (#redex i) v then () else Feedback.fail ()
 in
     #residue i
-end;
+end
 
 
 
@@ -623,15 +623,14 @@ fun list_variant avoid_vL rename_vL =
 let
    val (_,sub,fvL') =
       foldl (fn (fv, (vL,sub,fvL)) =>
-	  let
-             val fv' = variant vL fv;
-             val vL' = fv'::vL;
-             val fvL' = fv'::fvL;
-             val sub' = if (fv = fv') then sub else
-			(fv |-> fv')::sub;
+          let
+             val fv' = variant vL fv
+             val vL' = fv'::vL
+             val fvL' = fv'::fvL
+             val sub' = if aconv fv fv' then sub else (fv |-> fv')::sub
           in
              (vL',sub',fvL')
-          end) (avoid_vL,[],[]) rename_vL;
+          end) (avoid_vL,[],[]) rename_vL
 in
   (rev fvL', sub)
 end;

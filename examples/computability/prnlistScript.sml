@@ -1,6 +1,6 @@
 open HolKernel Parse bossLib boolLib
 
-open primrecfnsTheory numpairTheory arithmeticTheory
+open primrecfnsTheory numpairTheory nlistTheory arithmeticTheory
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
@@ -13,28 +13,12 @@ val primrec_ncons = Store_thm(
   Q.EXISTS_TAC `Cn succ [Cn (pr2 npair) [proj 0; proj 1]]` THEN
   SRW_TAC [][primrec_rules, ncons_def, ADD1]);
 
-(* nhd *)
-val nhd_def = Define`nhd nl = nfst (nl - 1)`
-
-val nhd_thm = Store_thm(
-  "nhd_thm",
-  ``nhd (ncons h t) = h``,
-  SRW_TAC [][ncons_def, nhd_def]);
-
 val primrec_nhd = Store_thm(
   "primrec_nhd",
   ``primrec (pr1 nhd) 1``,
   MATCH_MP_TAC primrec_pr1 THEN
   Q.EXISTS_TAC `Cn (pr1 nfst) [Cn (pr2 $-) [proj 0; K 1]]` THEN
   SRW_TAC [][primrec_rules, nhd_def]);
-
-(* ntl *)
-val ntl_def = Define`ntl nlist = nsnd (nlist - 1)`
-
-val ntl_thm = Store_thm(
-  "ntl_thm",
-  ``ntl (ncons h t) = t``,
-  SRW_TAC [][ncons_def, ntl_def]);
 
 val primrec_ntl = Store_thm(
   "primrec_ntl",
@@ -43,36 +27,18 @@ val primrec_ntl = Store_thm(
   Q.EXISTS_TAC `Cn (pr1 nsnd) [Cn (pr2 $-) [proj 0; K 1]]` THEN
   SRW_TAC [][primrec_rules, ntl_def]);
 
-(* ndrop *)
-val ndrop_def = Define`
-  (ndrop 0 nlist = nlist) ∧
-  (ndrop (SUC n) nlist = ntl (ndrop n nlist))
-`;
-
 val primrec_ndrop = Store_thm(
   "primrec_ndrop",
   ``primrec (pr2 ndrop) 2``,
   MATCH_MP_TAC primrec_pr2 THEN
   Q.EXISTS_TAC `Pr (proj 0) (Cn (pr1 ntl) [proj 1])` THEN
   SRW_TAC [][primrec_rules] THEN
-  Induct_on `m` THEN SRW_TAC [][ndrop_def]);
+  Induct_on `m` THEN SRW_TAC [][]);
 
 val ndrop_FUNPOW_ntl = store_thm(
   "ndrop_FUNPOW_ntl",
   ``∀n ms. ndrop n ms = FUNPOW ntl n ms``,
-  Induct THEN SRW_TAC [][ndrop_def, FUNPOW_SUC]);
-
-(* nel *)
-val nel_def = Define`nel n nlist = nhd (ndrop n nlist)`
-
-val nel_thm = Store_thm(
-  "nel_thm",
-  ``(nel 0 (ncons h t) = h) ∧
-    (nel (SUC n) (ncons h t) = nel n t)``,
-  SRW_TAC [][nel_def, ndrop_def] THEN
-  SRW_TAC [][ndrop_FUNPOW_ntl] THEN
-  SRW_TAC [][GSYM FUNPOW_SUC] THEN
-  SRW_TAC [][FUNPOW])
+  Induct THEN SRW_TAC [][FUNPOW_SUC]);
 
 val primrec_nel = Store_thm(
   "primrec_nel",
@@ -83,19 +49,6 @@ val primrec_nel = Store_thm(
 
 val primrec_cn = List.nth(CONJUNCTS primrec_rules, 3)
 
-
-val nlist_of_def = Define`
-  (nlist_of [] = 0) ∧
-  (nlist_of (h::t) = ncons h (nlist_of t))
-`;
-val _ = export_rewrites ["nlist_of_def"]
-
-val nel_nlist_of = store_thm(
-  "nel_nlist_of",
-  ``∀n l. n < LENGTH l ⇒ (nel n (nlist_of l) = EL n l)``,
-  Induct THEN1 (Cases_on `l` THEN SRW_TAC [][]) THEN
-  Q.X_GEN_TAC `list` THEN
-  Cases_on `list` THEN SRW_TAC [][]);
 
 open rich_listTheory
 
@@ -149,50 +102,110 @@ val primrec_napp = Store_thm(
       `(nhd (SUC m) = h) ∧ (ntl (SUC m) = t) ∧
        (napp (SUC m) n = ncons h (napp t n))` by SRW_TAC [][] THEN
       Q.PAT_ASSUM `SUC m = ncons h t` (K ALL_TAC) THEN
-      ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [nel_nlist_of, LENGTH_GENLIST,
+      ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [GSYM nel_correct, LENGTH_GENLIST,
                                            EL_GENLIST],
 
       SRW_TAC [][combinTheory.o_DEF]
     ]
   ]);
 
-val nlist_of_append = store_thm(
-  "nlist_of_append",
-  ``nlist_of (l1 ++ l2) = napp (nlist_of l1) (nlist_of l2)``,
-  Induct_on `l1` THEN SRW_TAC [][]);
+val _ = overload_on ("nsnoc", “λn e. nlist_of (listOfN n ++ [e])”)
 
-val nlist_of11 = Store_thm(
-  "nlist_of11",
-  ``∀l1 l2. (nlist_of l1 = nlist_of l2) ⇔ (l1 = l2)``,
-  Induct THEN SRW_TAC [][] THEN Cases_on `l2` THEN SRW_TAC [][]);
+val primrec_Cn = primrec_rules |> CONJUNCTS |> el 4
+Theorem primrec_nsnoc[simp]:
+  primrec (pr2 nsnoc) 2
+Proof
+  MATCH_MP_TAC primrec_pr2 >> simp[] >>
+  qexists_tac ‘pr2 (λl n. napp l (ncons n 0))’ >> conj_tac
+  >- (irule primrec_pr2 >>
+      qexists_tac ‘Cn (pr2 napp) [proj 0; Cn (pr1 (λe. ncons e 0)) [proj 1]]’ >>
+      simp[] >> irule primrec_Cn >> simp[primrec_rules] >>
+      irule primrec_Cn >> simp[primrec_rules] >> irule primrec_pr1 >>
+      qexists_tac ‘Cn (pr2 ncons) [proj 0; K 0]’ >> simp[primrec_rules]) >>
+  simp[]
+QED
 
-val nlist_of_onto = store_thm(
-  "nlist_of_onto",
-  ``∀n. ∃l. nlist_of l = n``,
-  HO_MATCH_MP_TAC nlist_ind THEN SRW_TAC [][] THENL [
-    Q.EXISTS_TAC `[]` THEN SRW_TAC [][],
-    Q.EXISTS_TAC `h::l` THEN SRW_TAC [][]
-  ]);
+val WFM_def = Define‘
+  WFM M = Cn (pr2 nel) [
+                proj 0;
+                Pr1 (ncons (M (K 0) 0) 0)
+                    (Cn (pr2 napp) [
+                        proj 1;
+                        Cn (pr2 ncons) [
+                          pr2 (λn r. M (λi. if i ≤ n then nel i r else 0)
+                                       (n + 1));
+                          zerof
+                        ]
+                      ])
+              ]
+’;
 
-val napp_nil2 = Store_thm(
-  "napp_nil2",
-  ``∀l1. napp l1 nnil = l1``,
-  HO_MATCH_MP_TAC nlist_ind THEN SRW_TAC [][]);
 
-val napp_ASSOC = store_thm(
-  "napp_ASSOC",
-  ``napp l1 (napp l2 l3) = napp (napp l1 l2) l3``,
-  MAP_EVERY Q.ID_SPEC_TAC [`l3`, `l2`, `l1`] THEN
-  HO_MATCH_MP_TAC nlist_ind THEN SRW_TAC [][])
+val restr_def = Define‘restr n r i = if i ≤ n then nel i r else 0’
 
-val napp11 = Store_thm(
-  "napp11",
-  ``((napp l1 l2 = napp l1 l3) ⇔ (l2 = l3)) ∧
-    ((napp l2 l1 = napp l3 l1) ⇔ (l2 = l3))``,
-  MAP_EVERY
-      (fn (nq, lq) => Q.SPEC_THEN nq (Q.X_CHOOSE_THEN lq (SUBST1_TAC o SYM))
-                                  nlist_of_onto)
-      [(`l3`,`ll3`), (`l2`,`ll2`), (`l1`,`ll1`)] THEN
-  SRW_TAC [][GSYM nlist_of_append]);
+val primrec_WFM = Q.store_thm(
+  "primrec_WFM",
+  ‘primrec (pr2 (λn r. M (restr n r) (n + 1))) 2 ⇒ primrec (WFM M) 1’,
+  strip_tac >> simp[WFM_def] >> irule primrec_Cn >> simp[primrec_rules] >>
+  irule primrec_Pr1 >> irule primrec_Cn >> simp[primrec_rules] >>
+  irule primrec_Cn >> simp[primrec_rules, GSYM restr_def] >>
+  asm_simp_tac (bool_ss ++ boolSimps.ETA_ss) []);
+
+val primrec_FACT = Q.store_thm(
+  "primrec_FACT",
+  ‘primrec (WFM (λf n. if n = 0 then 1 else n * f(n - 1))) 1’,
+  irule primrec_WFM >> simp[restr_def] >> irule primrec_pr2 >> simp[] >>
+  qexists_tac ‘Cn (pr2 $*) [Cn succ [proj 0]; pr2 nel]’ >> simp[] >>
+  irule primrec_Cn >> simp[primrec_rules]);
+
+val WFM_correct = Q.store_thm(
+  "WFM_correct",
+  ‘WFM M [n] = M (λi. if i < n then WFM M [i] else 0) n’,
+  simp[SimpLHS, WFM_def] >>
+  qho_match_abbrev_tac ‘nel n (prt n) = M (ff n) n’ >>
+  ‘prt 0 = nlist_of [M (K 0) 0]’ by simp[Abbr`prt`] >>
+  ‘∀n. nlen (prt n) = n + 1’
+    by (simp[Abbr`prt`] >> Induct_on ‘n’ >> simp[Pr1_correct]) >>
+  ‘∀i. i ≤ n ⇒
+       (nel i (prt n) = M (ff i) i) ∧ (nel i (prt i) = M (ff i) i)’
+    suffices_by simp[] >>
+  completeInduct_on ‘n’ >> simp[] >> rpt strip_tac >> fs[PULL_FORALL]
+  >- (‘(n = 0) ∨ ∃n0. n = SUC n0’ by (Cases_on ‘n’ >> simp[])
+      >- fs[Abbr`ff`, combinTheory.K_DEF] >>
+      simp[] >>
+      qpat_assum `Abbrev (prt = _)`
+        (ASSUME_TAC o REWRITE_RULE [markerTheory.Abbrev_def]) >>
+      pop_assum
+        (fn th => CONV_TAC (LAND_CONV (REWRITE_CONV [th]))) >>
+      simp_tac (srw_ss()) [Pr1_correct] >> rw[] >>
+      Cases_on `i <= n0`
+      >- (simp[GSYM nel_correct, EL_APPEND1] >> simp[nel_correct]) >>
+      ‘i = SUC n0’ by simp[] >> rw[] >>
+      simp[EL_APPEND2, GSYM nel_correct] >>
+      simp[ADD1] >> rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >>
+      qpat_assum `Abbrev (ff = _)`
+        (ASSUME_TAC o REWRITE_RULE [markerTheory.Abbrev_def]) >>
+      pop_assum
+        (fn th => CONV_TAC (RAND_CONV (REWRITE_CONV [th]))) >>
+      simp_tac (srw_ss()) [FUN_EQ_THM] >> gen_tac >> COND_CASES_TAC >>
+      first_assum (fn th => simp_tac (srw_ss() ++ ARITH_ss) [th]) >>
+      simp[WFM_def]) >>
+  ‘(i = 0) ∨ ∃j. i = SUC j’ by (Cases_on ‘i’ >> simp[])
+  >- simp[Abbr`ff`, combinTheory.K_DEF] >>
+  rw[] >>
+  qpat_assum `Abbrev (prt = _)`
+    (ASSUME_TAC o REWRITE_RULE [markerTheory.Abbrev_def]) >>
+  pop_assum
+    (fn th => CONV_TAC (LAND_CONV (REWRITE_CONV [th]))) >>
+  simp_tac (srw_ss()) [Pr1_correct] >>
+  simp[GSYM nel_correct, EL_APPEND2, ADD1] >>
+  rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >>
+  qpat_assum `Abbrev (ff = _)`
+    (ASSUME_TAC o REWRITE_RULE [markerTheory.Abbrev_def]) >>
+  pop_assum
+    (fn th => CONV_TAC (RAND_CONV (REWRITE_CONV [th]))) >>
+  simp_tac (srw_ss()) [FUN_EQ_THM] >> gen_tac >> COND_CASES_TAC >>
+  first_assum (fn th => simp_tac (srw_ss() ++ ARITH_ss) [th]) >>
+  simp[WFM_def, nel_correct]);
 
 val _ = export_theory ()

@@ -41,17 +41,15 @@ an evaluation, and timing it.
   and often accurate; however, it can be out-of-date, refer to earlier
   versions of the system, or even be missing!
 
-\item [\HOL{} structure information.]  For most structures in the
-  \HOL{} source, one can get a listing of the entrypoints found in the
-  accompanying signature. This is helpful for locating functions and
-  is automatically derived from the system sources, so it is alway
-  up-to-date.
+\item [\HOL{} structure information.]
+  For most structures in the \HOL{} source, one can get a listing of the entrypoints found in the accompanying signature.
+  This is helpful for locating functions and is automatically derived from the system sources, so it is always up-to-date.
 
-\item [Theory facts.] These are automatically derived from theory
-  files, so they are always up-to-date. The signature of each theory
-  is available (since theories are represented by structures in
-  \HOL{}). Also, each axiom, definition, and theorem in the theory can
-  be accessed by name in the help system; the theorem itself is given.
+\item [Theory facts.]
+  These are automatically derived from theory files, so they are always up-to-date.
+  The signature of each theory is available (since theories are represented by structures in \HOL{}).
+  Also, each axiom, definition, and theorem in the theory can be accessed by name in the help system.
+  As such theorems are pretty-printed into the corresponding \texttt{Theory.sig} file, the help system will find both the declaration in the signature (\eg, \ml{val~nm~:thm}), and the entry for that theorem in the comment-block.
 \end{description}
 
 Therefore the following example queries can be made:
@@ -99,7 +97,7 @@ Finally, the \ml{trace} function allows for a trace to be temporarily set while 
 
 
 
-\section{Maintaining \HOL{} Formalizations with \holmake}
+\section{\texorpdfstring{Maintaining \HOL{} Formalizations with \holmake}{Maintaining HOL Formalizations with \holmake}}
 \label{Holmake}
 \index{Holmake@\holmake|(}
 
@@ -160,9 +158,9 @@ a theory, the user should
   the theory file is available for use.
 \end{enumerate}
 
-\subsection{Source Conventions for Script and SML Files}
+\subsection{Source conventions for script and SML files}
 
-\paragraph{Script and Theory Files}
+\paragraph{Script and theory files}
 The file that generates the \HOL{} theory \textit{my}\texttt{Theory} must be called \textit{my}\texttt{Script.sml}.
 After the theory has been successfully generated, it can be \texttt{open}-ed at the head of other developments:
 \begin{alltt}
@@ -202,10 +200,11 @@ Contrarily, the batch compiler will reject files having occurrences of \ml{load}
 In addition, simply referring to a theory's theorems using the `dot-notation' will make that theory an ancestor.
 For example,
 \begin{alltt}
-    val mytheorem = store_thm(
-      "mytheorem",
-      ``...``,
-      SIMP_TAC (srw_ss()) [ThirdAncestorTheory.important_lemma] ...);
+   Theorem mytheorem:
+     ...
+   Proof
+     simp[ThirdAncestorTheory.important_lemma] ...
+   QED
 \end{alltt}
 will record a dependency on \texttt{ThirdAncestoryTheory}, making it just as much an ancestor as the theories that have been explicitly \texttt{open}-ed elsewhere.
 
@@ -237,7 +236,7 @@ Finally, take care not to have the string ``\texttt{Theory}'' appear at the end 
 This will also remove other files with names containing ``\texttt{Theory.sml}'' or ``\texttt{Theory.sig}''.
 For example, if, in your development directory, you had a file of \ML{} code named \texttt{MyTheory.sml} and you were also managing a \HOL{} development there with \holmake, then \texttt{MyTheory.sml} would get deleted if \texttt{Holmake~clean} were invoked.
 
-\paragraph{Other SML Code}
+\paragraph{Other SML code}
 When developing \HOL{} libraries, one should again attempt to follow Moscow~ML's conventions.
 Most importantly, file names should match \texttt{signature} and \texttt{structure} names.
 If this can be done, the automatic dependency analysis done by \holmake{} will work ``out of the box''.
@@ -290,6 +289,8 @@ In this way, one can get a staged application of \holmake{} across multiple dire
 \subsection{\holmake{}'s command-line arguments}
 \index{Holmake@\holmake!command-line arguments}
 Like {\tt make}, \holmake{} takes command-line arguments corresponding to the targets that the user desires to build.
+As a special case of this, targets ending with the suffix \ml{Theory} are treated as an instruction to build the theory files that lie behind a \HOL{} theory.
+(If successful such a build will enable other script-files to refer to that theory, and for interactive sessions to issue \ml{load~"xTheory";} commands.)
 If there are no command-line targets, then \holmake{} will look for a \texttt{Holmakefile} in the current directory.
 If there is none, or if that file specifies no targets, then \holmake{} will attempt to build all \ML{} modules and \HOL{} theories it can detect in the current directory.
 If there is a target in the \texttt{Holmakefile}, then \holmake{} will try to build the first such target (only).
@@ -310,11 +311,6 @@ In addition, there are three special targets that can be used:
 \noindent Finally, users can directly affect the workings of \holmake{}
 with the following command-line options:
 \begin{description}
-\item[\tt -d <file>] Ignore the given file and don't try to build it.
-  The file may be rebuilt anyway if other files you have specified
-  depend on it.  This is useful to stop Holmake from attempting to
-  compile files that are interactive scripts (include use of {\tt
-  load} or {\tt use}, for example).
 \item[\texttt{-f <theory>}] Toggles whether or not a theory should be
   built in ``fast'' mode.  Fast building causes tactic proofs
   (invocations of \texttt{prove} and \texttt{store\_thm}) to
@@ -369,10 +365,11 @@ Do not recursively attempt to build ``include'' directories before working in th
   This option implies \texttt{--no\_overlay}.
 \item[\texttt{--overlay <file>}] Use the given file as the overlay
   rather than the default.
-\item[\texttt{--qof}] Standing for ``quit on failure''.  If a tactic
-  fails to prove a theorem, quit the build.  The default is to use
-  \texttt{mk\_thm} to assert that the failed goal is true so that the
-  build can continue and other theorems proved.
+\item[\texttt{--qof},\texttt{--noqof}]
+  Where q-o-f stands for ``quit on failure''.
+  By default, if a tactic fails to prove a theorem, the running script exits with a failure.
+  Depending on the presence or absence of the \texttt{-k} flag, this failure to build a theory may cause \holmake{} to also exit (with a failure).
+  With the \texttt{--noqof} option, \holmake{} will cause the running script to use \texttt{mk\_thm} to assert the failed goal, allowing the build to continue and other theorems to be proved.
 \item[\texttt{--quiet}] Minimise the amount of output produced by
   \holmake{}.  Fatal error messages will still be written to the
   standard error stream.  Note that other programs called by \holmake{} will not
@@ -514,7 +511,7 @@ In particular, this means that hash-characters do \emph{not} start
 comments on command-lines, and such ``comments'' will be passed to the
 shell, which may or may not treat them as comments when it sees them.
 
-\paragraph{Special Targets}
+\paragraph{Special targets}
 Some target names for rules are handled specially by \holmake{}:
 \begin{itemize}
 \item Dependencies associated with the target name \texttt{.PHONY} are taken to be list of other targets in the make-file that are not actually the name of files to be built.
@@ -606,12 +603,14 @@ If the \texttt{-r} (``force recursion'') command-line flag is used, these direct
 The \texttt{CLINE\_OPTIONS} variable is used for the specification of command-line switches that are presumably usually appropriate for calls to \holmake{} in the containing directory.
 The options present in \texttt{CLINE\_OPTIONS} are used to build a ``base environment'' of switches; this base environment is then overridden by whatever was actually passed on the command-line.
 For example, a useful \texttt{CLINE\_OPTIONS} line%
-\footnote{Note that a \texttt{-{}-qof} option in a makefile can't be overridden from the command-line, but that the \texttt{-{}-no\_hmakefile} command-line option will stop the makefile from being consulted at all.} %
+\footnote{Note that a \texttt{-{}-noqof} option in a makefile might be overridden from the command-line with the otherwise useless seeming \texttt{-{}-qof} option.
+In addition, the \texttt{-{}-no\_hmakefile} command-line option will stop the makefile from being consulted at all.} %
 might be
 \begin{alltt}
-    CLINE_OPTIONS = -j1 --qof
+    CLINE_OPTIONS = -j1 --noqof
 \end{alltt}
 Under Poly/ML, the similar \texttt{POLY\_CLINE\_OPTIONS} variable can be used to pass run-time options to the Poly/ML executable that is run during theory construction.
+
 
 \index{EXTRA_CLEANS (Holmakefile variable)@\texttt{EXTRA\_CLEANS} (Holmakefile variable)}%
 The \texttt{EXTRA\_CLEANS} variable is used to
@@ -632,6 +631,15 @@ useful information:
   expands to \texttt{/bin/cp}; under Windows, it expands to
   \texttt{copy}.)
 \item[\texttt{DEBUG\_FLAG}] This variable is replaced by \texttt{"-{}-dbg"} if that flag was passed to \holmake, or the empty string if not.
+\item[\texttt{DEFAULT\_TARGETS}]\index{DEFAULT_TARGETS (Holmakefile variable)@\texttt{DEFAULT\_TARGETS} (Holmakefile variable)}%
+This variable expands to a list of the targets in the current directory that \holmake{} would build if there was no target in the Holmakefile, and no target was specified on the command-line.
+Thus, if one wishes to continue to have all these defaults built alongside an additional target, an appropriate idiom to use at the head of the file would be
+\begin{alltt}
+    all: $(DEFAULT_TARGETS) mytarget1 mytarget2
+    .PHONY: all
+\end{alltt}
+followed by rules for building the new target(s).
+
 \item[\texttt{HOLDIR}] The root of the HOL installation.
 \item[\texttt{HOLHEAP}]
 Under Poly/ML, this variable expands to the name of the heap that should be used to build this directory (to be used instead of the heap that underlies the \texttt{hol} executable).
@@ -696,7 +704,7 @@ treated as a reference to an environment variable.  If there is no
 such variable in the environment, then the variable is silently given
 the empty string as its value.
 
-\paragraph{Conditional Parts of Makefiles}
+\paragraph{Conditional parts of makefiles}
 \index{Holmake@\holmake!conditional inclusion of sections}
 As in GNU~\textsf{make}, parts of a \texttt{Holmakefile} can be included or excluded dynamically, depending on tests that can be performed on strings including variables.
 %
@@ -764,7 +772,7 @@ Note that environment variables with non-empty values are also considered to be 
 \index{Holmake@\holmake|)}
 
 
-\section{Generating and Using Heaps in Poly/ML \HOL{}}
+\section{\texorpdfstring{Generating and Using Heaps in Poly/ML \HOL{}}{Generating and Using Heaps in Poly/ML HOL}}
 \label{sec:polyml-heaps}
 
 \index{heaps (in Poly/ML)|(}
@@ -780,7 +788,7 @@ Users can use the same basic technology to ``dump'' heaps of their own.
 Such heaps can be preloaded with source code implementing special-purpose reasoning facilities, and with various necessary background theories.
 This can make developing big mechanisations considerably more pleasant.
 
-\subsection{Generating \HOL{} Heaps}
+\subsection{\texorpdfstring{Generating \HOL{} heaps}{Generating HOL heaps}}
 
 The easiest way to generate a \HOL{} heap is to use the \texttt{buildheap} executable that is built as part of the standard build process for (Poly/ML)~\HOL.
 This program takes a list of object files to include in a heap, an optional heap to build upon (use the \texttt{-b} command-line switch; the default is to use the heap behind the core \texttt{hol} executable), and an optional name for the new heap (the default is the traditional Unix \texttt{a.out}).
@@ -814,7 +822,7 @@ Finally, note how the use of the \texttt{dprot} and \texttt{protect} functions w
 \label{fig:realheap-makefile}
 \end{figure}
 
-\subsection{Using \HOL{} Heaps}
+\subsection{\texorpdfstring{Using \HOL{} heaps}{Using HOL heaps}}
 As just described, if a \texttt{Holmakefile} specifies a \texttt{HOLHEAP}, then files in that directory will be built on top of that heap rather than the default.
 This is also true if the specified heap is in another directory (\ie, the \texttt{HOLHEAP} line might specify a file such as \texttt{otherdir/myheap}).
 In this case, the \texttt{Holmakefile} won't (shouldn't) include instructions on how to build that heap, but the advantages of that heap are still available.
@@ -938,7 +946,7 @@ Total: 165.
 \index{timing of HOL evaluations@timing of \HOL{} evaluations|)}
 
 
-\section{Embedding \HOL{} in \LaTeX{}}
+\section{\texorpdfstring{Embedding \HOL{} in \LaTeX{}}{Embedding HOL in \LaTeX{}}}
 
 \index{LaTeX@\LaTeX!embedding HOL@embedding in \HOL{}|(}
 %
@@ -971,7 +979,7 @@ and then runs \LaTeX{} on \texttt{article.tex}.
 %
 One would probably automate this process with a makefile of course.
 
-\subsection{Munging Commands}
+\subsection{Munging commands}
 \label{sec:munging-commands}
 % need to get backslashes conveniently obscures the real names,
 % preventing the munger from seeing them, which will be useful when we
@@ -979,7 +987,7 @@ One would probably automate this process with a makefile of course.
 \newcommand{\holtm}{\texttt{\bs{}HOLtm}}
 \newcommand{\holty}{\texttt{\bs{}HOLty}}
 \newcommand{\holthm}{\texttt{\bs{}HOLthm}}
-\paragraph{Before Starting} In order to use the munger, one must ``include'' (use the \texttt{\bs{}usepackage} command) the \texttt{holtexbasic.sty} style-file, which is found in the HOL source directory \texttt{src/TeX}.
+\paragraph{Before starting} In order to use the munger, one must ``include'' (use the \texttt{\bs{}usepackage} command) the \texttt{holtexbasic.sty} style-file, which is found in the HOL source directory \texttt{src/TeX}.
 
 \bigskip
 There are then three commands for inserting text corresponding to \HOL{} entities into \LaTeX{} documents: \holtm, \holty{} and \holthm.
@@ -1050,7 +1058,7 @@ By default, the output is \emph{not} wrapped in an \texttt{\bs{}mbox}, making it
 The \texttt{verbatim} environment does the former, but not the latter.)
 \end{description}
 
-\paragraph{Munging Command Options}
+\paragraph{Munging command options}
 \index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!command options}
 There are a great many options for controlling the behaviour of each of these commands.
 %
@@ -1082,7 +1090,7 @@ extracts the conjunct $\vdash \texttt{F} \land t \iff \texttt{F}$.
 %
 Causes the theorem to be split into its constituent conjuncts, for each conjunct to have any outermost universal quantifiers removed, and for each to be printed on a line of its own.
 %
-The turnstiles usually printed in front of theorems are also omitted.
+The turnstiles usually printed in front of theorems are also omitted, and a special form of equality is printed for the top-level (``defining'') equality in each clause.
 %
 This works well with definitions (or characterising theorems) over multiple data type constructors, changing
 \begin{alltt}
@@ -1090,9 +1098,24 @@ This works well with definitions (or characterising theorems) over multiple data
 \end{alltt}
 into
 \begin{alltt}
-   FACT 0 = 1
-   FACT (SUC \ensuremath{n}) = SUC \ensuremath{n} * FACT \ensuremath{n}
+   FACT 0 \HOLTokenDefEquality{} 1
+   FACT (SUC \ensuremath{n}) \HOLTokenDefEquality{} SUC \ensuremath{n} * FACT \ensuremath{n}
 \end{alltt}
+If the special equality is not desired, the option \texttt{nodefsym} can be used to turn this off.
+The special equality symbol can also be redefined by changing the \LaTeX{} definition of the macro \ml{\bs{}HOLTokenDefEquality}.
+
+There are two variations on the \texttt{def} option:
+\begin{description}
+\item[\texttt{spaceddef}:]%
+\index{spaceddef, HOL in LaTeX option@\ml{spaceddef}, \HOL{} in \LaTeX{} option}%
+This option adds extra blank lines between successive conjuncts of a definition.
+\item[\ml{aligneddef}:]%
+\index{aligneddef, HOL in LaTeX option@\ml{aligneddef}, \HOL{} in \LaTeX{} option}%
+This option puts ampersands around the \ml{\bs{}HOLTokenDefEquality} macro call in the emitted \LaTeX{}.
+If the \LaTeX{} environment is an \texttt{array} or similar, this can ensure a nice column-based layout for one's definitions.
+\end{description}
+Both options can be used together, but \ml{aligneddef} will not work if \ml{nodefsym} is also used; if this combination is really required, it would be better to temporarily redefine (use \ml{\bs{}renewcommand}) \ml{\bs{}HOLTokenDefEquality}.
+
 
 \item[\texttt{depth}=$n$]
 Causes printing to be done with a maximum print depth of $n$; see Section~\ref{sec:pretty-print-depth}.
@@ -1145,7 +1168,7 @@ If this has been made the default, it may be useful to occasionally turn the mer
 
 
 \item[\texttt{nodollarparens}] (For use with \holtm{} and \holthm.) Causes the default escaping of syntactic sugar to be suppressed.
-\index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}%
+\index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!as escape character}%
 \index{tokens!suppressing parsing behaviour of}%
 The default behaviour is to use parentheses, so that
 % encode all the special characters below so that emacs font-locking has a reasonable chance of working
@@ -1271,9 +1294,9 @@ because the mapping from the integer addition constant to \texttt{"+"} is remove
 
 The \texttt{-} option can be useful when complicated notation involving overloads is first introduced in a document.
 
-\item[\texttt{\indentoption}] Indents the argument.
+\item[\texttt{\indentoption} and \texttt{\indentoption\td}] Indents the argument.
 %
-  This option only makes sense when used with the \texttt{alltt} option (the additional spaces will have no effect when inside an \texttt{\bs{}mbox}).
+  These options only make sense when used with the \texttt{alltt} option (the additional spaces will have no effect when inside an \texttt{\bs{}mbox}).
 %
   The default indentation is two spaces; if a different indentation is desired, the option can be followed by digits specifying the number of space characters desired.
 %
@@ -1291,6 +1314,15 @@ Rather the first line of \HOL{} output will be indented, and the subsequent line
 %
 The \texttt{\indentoption} option lets the pretty-printer know that it is printing with a given indentation, affecting all lines of its output.
 
+The version with the tilde character~(\td) does not add indentation to the first line of output, but adds the specified amount (again 2, if no number is provided) to subsequent lines.
+This allows one to achieve suitable alignment when other non-HOL text has been put onto the same line.
+For example,
+\begin{alltt}
+  AND_CLAUSES \bs{}HOLthm[width=46,>>~12]\lb{}bool.AND_CLAUSES\rb
+  TRUTH       \bs{}HOLthm[>>~12]\lb{}bool.TRUTH\rb
+  MAP         \bs{}HOLthm[>>~12,width=50]\lb{}list.MAP\rb
+\end{alltt}
+ensures correct vertical alignment when extra lines are printed, as they will be with the printing of \ml{bool.AND_CLAUSES} and \ml{list.MAP}.
 
 \item[$\mathit{nm}_1\mathtt{/}\mathit{nm}_2$] (For use with \holtm{}
   and \holthm{}.)
@@ -1312,7 +1344,7 @@ If printing depends on particular variable name choices, the ``last minute'' man
 The width of the \LaTeX{} string is taken to be the width of the original token $t$.
 \end{description}
 
-\subsection{Math-Mode Munging}
+\subsection{Math-mode munging}
 \label{sec:math-mode-munging}
 \index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!math mode}
 \index{math mode (in the LaTeX munger)@math mode (in the \LaTeX{} munger)}
@@ -1352,7 +1384,7 @@ Occasionally, one will want to arrange blocks of \HOL{} material within a larger
 The \texttt{HOLarray} environment is a simple alias for a single-column left-aligned array that one can use in these situations.
 
 
-\subsection{Creating a Munger}
+\subsection{Creating a munger}
 \label{sec:munger-creation}
 
 \newcommand{\mkmunge}{\texttt{mkmunge.exe}}
@@ -1380,7 +1412,7 @@ Doing so allows for the incorporation of many theories at once, and will be more
 The use of a base heap argument to \mkmunge{} doesn't affect the efficiency of the resulting munging tool.
 
 
-\subsection{Running a Munger}
+\subsection{Running a munger}
 \label{sec:running-munger}
 
 \index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!running a munger}
@@ -1433,7 +1465,9 @@ theories, using the
 Section~\ref{sec:holtheories-tex-ready} below).
 
 By overriding the special token \texttt{\$Turnstile\$}, one can control the printing of the turnstile produced by \holthm{}.
-The default setup is roughly equivalent to overriding \texttt{\$Turnstile\$} to \texttt{\textbackslash{}HOLTokenTurnstile\{\} } with a width of \texttt{3}.
+The default setup is roughly equivalent to overriding \texttt{\$Turnstile\$} to \texttt{\textbackslash{}HOLTokenTurnstile\{\}} followed by a space, giving a total width of \texttt{3}.
+Overriding the turnstile in this way will probably be necessary in math-mode printing, where the turnstile character is typically of the same width as 5 \texttt{\bs;} invocations.
+Providing the correct width is important in order to get lines past the first to line up with the left edge of the mathematical text rather than the turnstile.
 
 \paragraph{Default width}
 A munger can specify the default width in which \HOL{} will print its
@@ -1548,7 +1582,7 @@ you to run Holindex using AUCTeX.
 \end{description}
 
 
-\paragraph{Defining and Formatting Terms, Types and Theorems}
+\paragraph{Defining and formatting terms, types and theorems}
 
   Most of the Holindex commands require an identifier of a theorem,
   term or type as arguments. Theorem identifiers of the form
@@ -1600,8 +1634,7 @@ option names available:
     For theorems it is of the form \texttt{theory.theorem}.
   \item[\texttt{options}]
     formatting options for the munger as described in section~\ref{sec:munging-commands}.
-    Please use the Holindex commands for typsetting inline or as a block instead
-    of the options \texttt{tt} or \texttt{alltt}.
+    Please use the Holindex commands for typesetting inline or as a block instead of the options \texttt{tt} or \texttt{alltt}.
   \item[\texttt{label}] the label that will appear in the index. For
     theorems the label is by default its name and the label given here
     will be added after the name.
@@ -1673,14 +1706,14 @@ included.
 \end{description}
 
 
-\paragraph{Additional Documentation}
+\paragraph{Additional documentation}
 For more information about Holindex, please refer to
 the demonstration file \texttt{src/TeX/holindex-demo.tex}. This file contains
 documentation for rarely used commands as well as explanations of how to
 customise Holindex.
 
 
-\subsection{Making \HOL{} Theories \LaTeX{}-ready}
+\subsection{\texorpdfstring{Making \HOL{} theories \LaTeX{}-ready}{Making HOL theories \LaTeX{}-ready}}
 \label{sec:holtheories-tex-ready}
 
 Though one might specify all one's desired token-replacements in an \texttt{overrides} file, there is also support for specifying token replacements in the theory where tokens are first ``defined''.

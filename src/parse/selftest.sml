@@ -1,4 +1,4 @@
-open PPBackEnd PP Lib Type testutils
+open Lib Type PP smpp PPBackEnd testutils
 
 (* -------------------------------------------------------------------------- *)
 (* Test code for terminal styles                                              *)
@@ -29,13 +29,20 @@ val color_list =
     LightGrey , OrangeRed  , VividGreen , Yellow,
     Blue      , PinkPurple , LightBlue  , White]
 
+val _ = tprint "Basic vt100 style"
+val s = HOLPP.pp_to_string
+          70
+          (fn s => Parse.mlower
+                     (#ustyle vt100_terminal [FG Blue] (smpp.add_string s)))
+          "should be blue"
+val _ = if s = "\027[0;1;34mshould be blue\027[0m" then OK()
+        else die "FAILED!";
+
 
 fun test_terminal test_bg (terminal:t) =
 let
-   val pp_out = Portable.stdOut_ppstream ();
    val {add_string, add_xstring, add_newline, add_break,
-        begin_style, end_style, begin_block, end_block, ...} =
-       with_ppstream terminal pp_out
+        ustyle, ublock, ...} = terminal
    fun add_ann_string (s,ann) = add_xstring {s=s,ann=SOME ann,sz=NONE}
 
    val fg_styles =
@@ -57,67 +64,61 @@ let
           map (fn (s, styL) =>
             ((s^" - Background "^(color_name_fw c)), (BG c)::styL)) und_fg_styles)
           color_list)))
+   val m =
+       ublock INCONSISTENT 0 (
+         add_string "Terminal testing" >> add_newline >>
+         add_string "================" >> add_newline >> add_newline >>
+
+         add_string "Annotations:" >> add_newline >>
+         add_string "------------" >> add_newline >>
+         add_ann_string ("Bound variable", BV (bool, fn () => ": bool")) >>
+         add_newline >>
+         add_ann_string ("Free variable", FV (bool, fn () => ": bool")) >>
+         add_newline >>
+         add_ann_string ("Type variable", TyV) >>
+         add_newline >>
+         add_ann_string ("TySyn", TySyn (fn () => "TySyn")) >>
+         add_newline >>
+         add_ann_string ("TyOp", TyOp (fn () => "TyOp")) >>
+         add_newline >>
+         add_ann_string ("Const", Const {Name = "test-name", Thy = "test-thy",
+                                         Ty = (Type.bool, fn () => "bool")}) >>
+         add_newline >>
+         add_ann_string ("Note", Note "Some note") >>
+         add_newline >>
+
+         add_newline >> add_newline >>
+
+         add_string "Basic styles:" >> add_newline >>
+         add_string "-------------" >> add_newline >>
+         add_string "default style" >> add_newline >>
+         ustyle [Bold] (add_string "Bold") >> add_newline >>
+         ustyle [Underline] (add_string "Underline") >> add_newline >>
+         mapp (fn c => (
+                 add_string "Foreground " >>
+                 ustyle [FG c] (add_string (color_name_fw c)) >>
+                 add_newline))
+              color_list >>
+         mapp (fn c => (
+                add_string "Background " >>
+                ustyle [BG c] (add_string (color_name_fw c)) >>
+                add_newline)) color_list >>
+         add_newline >> add_newline >>
+
+         (if test_bg then
+            add_string "All style combinations:" >> add_newline >>
+            add_string "------------------------" >> add_newline
+          else
+            add_string "All style combinations (without background color):" >>
+            add_newline >>
+            add_string "--------------------------------------------------" >>
+            add_newline) >>
+         mapp (fn (s, styL) => ustyle styL (add_string s) >> add_newline)
+              full_styles >>
+         add_newline >> add_newline
+       )
 in
-   PP.clear_ppstream pp_out;
-   (#begin_block terminal) pp_out INCONSISTENT 0;
-
-   add_string "Terminal testing"; add_newline();
-   add_string "================"; add_newline();
-   add_newline();
-
-   add_string "Annotations:"; add_newline();
-   add_string "------------"; add_newline();
-   add_ann_string ("Bound variable", BV (bool, fn () => ": bool"));
-   add_newline();
-   add_ann_string ("Free variable", FV (bool, fn () => ": bool"));
-   add_newline();
-   add_ann_string ("Type variable", TyV);
-   add_newline();
-   add_ann_string ("TySyn", TySyn (fn () => "TySyn"));
-   add_newline();
-   add_ann_string ("TyOp", TyOp (fn () => "TyOp"));
-   add_newline();
-   add_ann_string ("Const", Const {Name = "test-name", Thy = "test-thy",
-                                   Ty = (Type.bool, fn () => "bool")});
-   add_newline();
-   add_ann_string ("Note", Note "Some note") ;
-   add_newline();
-
-   add_newline(); add_newline();
-
-   add_string "Basic styles:"; add_newline();
-   add_string "-------------"; add_newline();
-   add_string "default style"; add_newline();
-   begin_style [Bold]; add_string "Bold"; end_style(); add_newline();
-   begin_style [Underline]; add_string "Underline"; end_style(); add_newline();
-   map (fn c => (
-      add_string "Foreground ";
-      begin_style [FG c];
-          add_string (color_name_fw c);
-      end_style(); add_newline())) color_list;
-   map (fn c => (
-      add_string "Background ";
-      begin_style [BG c];
-          add_string (color_name_fw c);
-      end_style(); add_newline())) color_list;
-
-   add_newline(); add_newline();
-
-   if test_bg then (
-      add_string "All style combinations:"; add_newline();
-      add_string "------------------------"; add_newline()
-   ) else (
-      add_string "All style combinations (without background color):"; add_newline();
-      add_string "--------------------------------------------------"; add_newline()
-   );
-   map (fn (s, styL) => (
-      begin_style styL;
-          add_string s;
-      end_style(); add_newline())) full_styles;
-   add_newline();add_newline();
-
-   (#end_block terminal) pp_out;
-   PP.flush_ppstream pp_out
+  HOLPP.prettyPrint (TextIO.print, 75) (Parse.mlower m)
 end;
 
 
@@ -135,28 +136,6 @@ val _ = test_terminal false (PPBackEnd.vt100_terminal);
 
 
 
-(* -------------------------------------------------------------------------- *)
-(* Test code for style errors (non terminated style)                          *)
-(* -------------------------------------------------------------------------- *)
-
-fun test_style_error (terminal:t) =
-let
-   val pp_out = Portable.stdOut_ppstream ();
-   val {add_string, add_xstring, add_newline, add_break,
-        begin_style, end_style, begin_block, end_block, ...} =
-       with_ppstream terminal pp_out
-in
-   PP.clear_ppstream pp_out;
-   (#begin_block terminal) pp_out INCONSISTENT 0;
-
-   add_string "Style error";
-   begin_style [Bold]; add_string "...."; add_newline();
-
-   (#end_block terminal) pp_out;
-   PP.flush_ppstream pp_out
-end;
-
-
 (* ----------------------------------------------------------------------
     Tests of the base lexer
    ---------------------------------------------------------------------- *)
@@ -164,17 +143,20 @@ end;
 val _ = print "** Testing basic lexing functionality\n\n"
 open base_tokens
 
+exception InternalDie of string
+fun idie s = raise InternalDie s
+
 fun quoteToString [QUOTE s] = "`"^s^"`"
-  | quoteToString _ = die "Bad test quotation"
+  | quoteToString _ = idie "Bad test quotation"
 
 fun test (q, slist) = let
   val _ = tprint ("Testing " ^ quoteToString q)
+  fun prs s = "\"" ^ String.toString s ^ "\""
+  fun prsl sl = "[" ^ String.concatWith ", " (map prs sl) ^ "]"
 in
-  if map (base_tokens.toString o #1) (qbuf.lex_to_toklist q) <> slist then
-    die "FAILED!"
-  else OK()
-end handle LEX_ERR (s,_) => die ("FAILED!\n  [LEX_ERR "^s^"]")
-         | e => die ("FAILED\n ["^exnMessage e^"]")
+  require_msg (check_result (equal slist)) prsl
+              (map (base_tokens.toString o #1) o qbuf.lex_to_toklist) q
+end handle InternalDie s => die s
 
 val _ = app test [(`abc`, ["abc"]),
                   (`12`, ["12"]),
@@ -194,44 +176,177 @@ val _ = app test [(`abc`, ["abc"]),
                   (`+(**)y`, ["+", "y"]),
                   (`((*x*)`, ["("]),
                   (`+(%*%((*"*)-*foo`,["+(%*%(", "-*foo"]),
-                  (`"(*"`, ["\"(*\""])
+                  (`"(*"`, ["BTStrL(\",\"(*\")"]),
+                  (`foo$bar`, ["foo$bar"]),
+                  (`+foo$bar`, ["+", "foo$bar"]),
+                  (`+foo$bar+`, ["+", "foo$bar", "+"])
                  ]
 
 (* tests of the term lexer *)
-fun test (s, toklist : unit term_tokens.term_token list) = let
-  val _ = tprint ("Term token testing " ^ Lib.quote s)
-in
-  if term_tokens.lextest [] s = toklist then OK()
-  else die "FAILED!"
-end handle LEX_ERR (s,_) => die ("FAILED!\n  [LEX_ERR "^s^"]")
-         | e => die ("FAILED\n ["^exnMessage e^"]")
+local
+  open term_tokens
+  fun prtoks l =
+      "["^ String.concatWith ", " (map (toString (fn _ => "()")) l) ^ "]"
+  val testf = lextest ["--b->", "=β=>₁", "(<", ">)", "-->"]
 
-open term_tokens
+fun test (s, toklist : unit term_token list) = let
+  val _ = tprint ("Term token testing " ^ Lib.quote (String.toString s))
+in
+  require_msg (check_result (equal toklist)) prtoks testf s
+end
+
+fun failtest (s, substring) =
+    let
+      fun pr s = "Testing failing lex of " ^ Lib.quote (String.toString s)
+      fun check substring (LEX_ERR(s, _)) =
+            String.isSubstring substring s
+        | check _ _ = false
+    in
+      shouldfail {testfn = testf, printresult = prtoks, printarg = pr,
+                  checkexn = check substring}
+                 s
+    end
+
 val ai = Arbnum.fromInt
-val _ = app test [("abc", [Ident "abc"]),
-                  ("12", [Numeral (ai 12, NONE)]),
-                  ("-12", [Ident "-", Numeral (ai 12, NONE)]),
-                  ("((-12", [Ident "(", Ident "(", Ident "-",
-                             Numeral (ai 12, NONE)]),
-                  ("1.2", [Fraction{wholepart = ai 1, fracpart = ai 2,
-                                    places = 1}]),
-                  ("-1.2", [Ident "-",
-                            Fraction{wholepart = ai 1, fracpart = ai 2,
-                                     places = 1}]),
-                  ("~1.2", [Ident "~",
-                            Fraction{wholepart = ai 1, fracpart = ai 2,
-                                     places = 1}]),
-                  ("(2n*e", [Ident "(", Numeral (ai 2, SOME #"n"),
-                             Ident "*", Ident "e"]),
-                  ("2_001", [Numeral (ai 2001, NONE)]),
-                  ("2.000_023", [Fraction{wholepart = ai 2, places = 6,
-                                          fracpart = ai 23}]),
-                  ("0.", [Numeral (ai 0, NONE), Ident "."]),
-                  ("a0.", [Ident "a0", Ident "."]),
-                  ("-0.", [Ident "-", Numeral (ai 0, NONE), Ident "."]),
-                  ("{2.3", [Ident "{", Fraction{wholepart = ai 2, places = 1,
-                                                fracpart = ai 3}])
-                  ]
+fun snum i = Numeral(ai i, NONE)
+fun stdstr s = StrLit{ldelim = "\"", contents = s}
+fun charstr s = StrLit{ldelim = "#\"", contents = s}
+fun guillstr s = StrLit{ldelim = "«", contents = s}
+fun sguillstr s = StrLit{ldelim = "‹", contents = s}
+in
+val _ = app (ignore o test) [
+      ("abc", [Ident "abc"]),
+      ("’", [Ident "\226\128\153"]),
+      ("\"\\172\"", [stdstr "\172"]),
+      ("#\"c\"", [charstr "c"]),
+      ("f#\"c\"", [Ident "f", charstr "c"]),
+      ("f(#\"c\"", [Ident "f", Ident "(", charstr "c"]),
+      ("(\"ab\\172\"++z)",
+       [Ident "(", stdstr "ab\172", Ident "++", Ident "z", Ident ")"]),
+      ("f\"ab\\172x\"++", [Ident "f", stdstr "ab\172x", Ident "++"]),
+      ("+\"ab\\172\"++", [Ident "+", stdstr "ab\172", Ident "++"]),
+      ("$+\"ab\\172\"++", [Ident "$+", stdstr "ab\172", Ident "++"]),
+      ("12", [snum 12]),
+      ("-12", [Ident "-", snum 12]),
+      ("((-12", [Ident "(", Ident "(", Ident "-", snum 12]),
+      ("0a", [Numeral(ai 0, SOME #"a")]),
+      ("0", [snum 0]),
+      ("(0xF", [Ident "(", snum 15]),
+      ("01", [snum 1]),
+      ("1.2", [Fraction{wholepart = ai 1, fracpart = ai 2, places = 1}]),
+      ("-1.2", [Ident "-",
+                Fraction{wholepart = ai 1, fracpart = ai 2, places = 1}]),
+      ("~1.2", [Ident "~",
+                Fraction{wholepart = ai 1, fracpart = ai 2, places = 1}]),
+      ("(2n*e", [Ident "(", Numeral (ai 2, SOME #"n"), Ident "*", Ident "e"]),
+      ("2_001", [snum 2001]),
+      ("2.000_023", [Fraction{wholepart = ai 2, places = 6, fracpart = ai 23}]),
+      ("(", [Ident "("]),
+      (".", [Ident "."]),
+      ("0.", [snum 0, Ident "."]),
+      ("a0.", [Ident "a0", Ident "."]),
+      ("-0.", [Ident "-", snum 0, Ident "."]),
+      ("{2.3",
+       [Ident "{", Fraction{wholepart = ai 2, places = 1, fracpart = ai 3}]),
+      ("(a+1", [Ident "(", Ident"a", Ident"+", snum 1]),
+      ("a--b->c", [Ident "a", Ident"--b->", Ident"c"]),
+      ("(+)", [Ident "(", Ident "+", Ident ")"]),
+      ("$ $$ $$$ $+ $if $a",
+       [Ident "$", Ident "$$", Ident "$$$", Ident "$+", Ident "$if",
+        Ident "$a"]),
+      ("thy$id", [QIdent("thy", "id")]),
+      ("(thy$id", [Ident "(", QIdent("thy", "id")]),
+      ("(thy$id +", [Ident "(", QIdent("thy", "id"), Ident "+"]),
+      ("(thy$id+", [Ident "(", QIdent("thy", "id"), Ident "+"]),
+      ("+thy$id", [Ident "+", QIdent("thy", "id")]),
+      ("thy$0", [QIdent("thy", "0")]),
+      ("(thy$id\"foo\"", [Ident "(", QIdent ("thy", "id"), stdstr "foo"]),
+      ("(thy$id#\"f\"", [Ident "(", QIdent ("thy", "id"), charstr "f"]),
+      ("(thy$id«foo b»", [Ident "(", QIdent ("thy", "id"), guillstr "foo b"]),
+      ("x+« f»", [Ident "x", Ident "+", guillstr " f"]),
+      ("(thy$id‹foo b›", [Ident "(", QIdent ("thy", "id"), sguillstr "foo b"]),
+      ("x+‹ f›", [Ident "x", Ident "+", sguillstr " f"]),
+      ("foo$bar<foo$baz", [QIdent ("foo", "bar"), Ident "<",
+                           QIdent ("foo", "baz")]),
+      ("(bool$/\\", [Ident "(", QIdent ("bool", "/\\")]),
+      ("*foo$bar<foo$baz", [Ident "*", QIdent ("foo", "bar"), Ident "<",
+                            QIdent ("foo", "baz")]),
+      ("nm_sub$id", [QIdent ("nm_sub", "id")]),
+      ("+nm$id\"bar\"", [Ident "+", QIdent ("nm", "id"), stdstr "bar"]),
+      ("+nm$id\"\"", [Ident "+", QIdent ("nm", "id"), stdstr ""]),
+      ("nm$**", [QIdent("nm", "**")]),
+      ("$+a", [Ident "$+", Ident "a"]),
+      ("$==>", [Ident "$==>"]),
+      ("bool$~", [QIdent("bool", "~")]),
+      ("$~", [Ident "$~"]),
+      ("$¬", [Ident "$¬"]),
+      ("(<a+b>)", [Ident "(<", Ident "a", Ident "+", Ident "b", Ident ">)"]),
+      ("f(<a+b>)", [Ident "f", Ident "(<", Ident "a", Ident "+", Ident "b",
+                    Ident ">)"]),
+      ("+(<a+b>)", [Ident "+", Ident "(<", Ident "a", Ident "+", Ident "b",
+                    Ident ">)"]),
+      ("((<a+b>)", [Ident "(", Ident "(<", Ident "a", Ident "+", Ident "b",
+                    Ident ">)"]),
+      ("::_", [Ident "::", Ident "_"]),             (* case pattern with CONS *)
+      ("=\"\"", [Ident "=", stdstr ""]),                (* e.g., stringScript *)
+      ("$-->", [Ident "$-->"]),                       (* e.g., quotientScript *)
+      ("$var$(ab)", [Ident "ab"]),
+      ("$var$(ab\\nc)", [Ident "ab\nc"]),
+      ("$var$(ab\\nc\\))", [Ident "ab\nc)"]),
+      ("$var$(% foo )", [Ident "% foo "]),
+      ("$var$(% foo* )", [Ident "% foo* "]),
+      ("$var$(% foo*\\z)", [Ident "% foo*"]),
+      ("$var$(((foo)", [Ident "((foo"]),
+      ("$var$(foo\"bar)", [Ident "foo\"bar"]),
+      ("$var$(foo\\172bar)", [Ident "foo\172bar"]),
+      ("($var$(foo\"bar)", [Ident "(", Ident "foo\"bar"]),
+      ("$$var$(foo\"bar)", [Ident "$foo\"bar"]),
+      ("(')", [Ident "(", Ident "'", Ident ")"]),   (* e.g., finite_mapScript *)
+      ("λx.x", [Ident "λ", Ident "x", Ident ".", Ident "x"]),
+      ("x'0,y)", [Ident "x'0", Ident ",", Ident "y", Ident ")"]),
+      ("x'0)", [Ident "x'0", Ident ")"]),
+      ("(x'0)", [Ident "(", Ident "x'0", Ident ")"]),
+      ("x'²,y)", [Ident "x'", Ident "²", Ident ",", Ident "y", Ident ")"]),
+      ("x'", [Ident "x'"]),
+      ("x''", [Ident "x''"]),
+      ("x'3'", [Ident "x'''"]),
+      ("xa'3'a'", [Ident "xa'3'a'"]),
+      ("x'⁴'", [Ident "x''''"]),
+      ("map:=λh.", [Ident "map", Ident ":=", Ident "λ", Ident "h", Ident "."]),
+      ("map:=\\h.", [Ident "map", Ident ":=\\", Ident "h", Ident "."])
+    ]
+val _ = List.app (ignore o failtest) [
+      ("thy$$$", "qualified ident"),
+      ("$var$(ab\n c)", "quoted variable"),
+      ("'a", "can't begin with prime"),
+      ("thy$1", "qualified ident")
+]
+end (* local - tests of term lexer *)
+
+(* tests of type lexer *)
+val _ = let
+  open type_tokens
+  fun prtoklist ts =
+      "[" ^ String.concatWith ", " (map (token_string (fn _ => "_")) ts) ^ "]"
+  fun test (s,toklist) =
+      (tprint ("Type-lexing \"" ^ s ^ "\"");
+       require_msg (check_result (equal toklist)) prtoklist lextest s)
+in
+  List.app (ignore o test) [
+    ("bool", [TypeIdent "bool"]),
+    ("min$bool", [QTypeIdent("min", "bool")]),
+    ("α", [TypeVar "α"]),
+    ("'a", [TypeVar "'a"]),
+    ("bool->'a", [TypeIdent "bool", TypeSymbol "->", TypeVar "'a"]),
+    ("min$bool1->min$bool2", [QTypeIdent("min", "bool1"), TypeSymbol "->",
+                              QTypeIdent("min", "bool2")]),
+    ("(α,bool)fun", [LParen, TypeVar "α", Comma, TypeIdent "bool", RParen,
+                     TypeIdent "fun"]),
+    ("(foo$ty2,foo$ty2) ty1",
+     [LParen, QTypeIdent("foo", "ty2"), Comma, QTypeIdent("foo", "ty2"),
+      RParen, TypeIdent"ty1"])
+  ]
+end (* let - tests of type lexer *)
 
 val g0 = term_grammar.stdhol;
 fun mTOK s = term_grammar_dtype.RE (HOLgrammars.TOK s)
@@ -269,6 +384,37 @@ val lf_g = add_listform g0
               rightdelim= [mTOK "]"],
               nilstr = "NIL", cons = "CONS"}
 end;
+fun isabsynlist slist a =
+  let
+    open Absyn
+  in
+    case slist of
+        [] => (case a of IDENT (_, "NIL") => true | _ => false)
+      | s1 :: rest =>
+        (case a of
+             APP(_, APP (_, IDENT(_, "CONS"), IDENT (_, el1)), a_rest) =>
+               el1 = s1 andalso isabsynlist rest a_rest
+           | _ => false)
+  end
+val _ = PP.prettyPrint
+          (print, 75)
+          (Parse.mlower
+             (term_grammar.prettyprint_grammar
+                (fn g =>fn _ => smpp.add_string "<term>")
+                lf_g))
+
+fun parsetest sl =
+  let
+    val s = "["^String.concatWith ";" sl^"]"
+    val _ = tprint ("Parsing "^s)
+    val a = TermParse.absyn lf_g type_grammar.min_grammar [QUOTE s]
+  in
+    if isabsynlist sl a then OK() else die "FAILED!"
+  end
+
+val _ = parsetest []
+val _ = parsetest (map str (explode "ab"))
+val _ = parsetest (map str (explode "abcdef"))
 
 fun find_named_rule nm g =
   let
@@ -287,7 +433,7 @@ val _ =
     in
       if Lib.set_eq result
                     ["\\", "|>", "<|", ")", "(", ".", ":", "updated_by",
-                     ":=", "with", "let", "in", ";"]
+                     ":=", "with", "let", "in", ";", "$"]
       then OK()
       else die ("\nFAILED ["^
                 String.concatWith "," (map (fn s => "\""^s^"\"") result) ^ "]")
@@ -352,38 +498,54 @@ fun check (s1,s2) =
 val f = PrecAnalysis.check_for_listreductions check
 
 open term_grammar_dtype GrammarSpecials
-val _ = tprint "PrecAnalysis.check_for_listreductions 1"
-val input = [TOK "let", TM, TOK "in", TM]
-val result = f input
-val _ = if result = [("let", "in", lsp1)] then OK() else die "FAILED";
+fun prmsp {nilstr,cons,sep} = "{" ^ nilstr ^ "," ^ cons ^ "," ^ sep ^ "}"
+fun prlr (s1,s2,sp) = "(" ^ s1 ^ ", " ^ s2 ^ ", " ^ prmsp sp ^ ")"
+fun prlist p l = "[" ^ String.concatWith ", " (map p l) ^ "]"
+fun prlrs lrs = prlist prlr lrs
+fun prrel (TOK s) = "TOK \""^s^"\""
+  | prrel TM = "TM"
+  | prrel _ = "<Unexpected rule-element>"
+fun prlspi (lsp,i1,i2) =
+    "(" ^ prmsp lsp ^ "," ^ Int.toString i1 ^ "," ^ Int.toString i2 ^ ")"
+fun prrm_result (rels,lspis) =
+    "(" ^ prlist prrel rels ^ ", " ^ prlist prlspi lspis ^ ")"
+fun require_msg_eqk v pr f k x = require_msgk (check_result (equal v)) pr f k x
+fun require_msg_eq v pr f x = require_msg_eqk v pr f (fn _ => ()) x
+fun require_eq v f x = require (check_result (equal v)) f x
+fun rmlistrels r i = PrecAnalysis.remove_listrels (Exn.release r) i
 
-val _ = tprint "PrecAnalysis.remove_listrels 1"
-val remove_result = PrecAnalysis.remove_listrels result input
-val _ = if remove_result = ([TOK "let", TM, TOK "in", TM], [(lsp1, [0])])
-        then OK()
-        else die "FAILED";
+fun listredn_test (nm, input, input', expected1, testseq) =
+    let
+      val _ = tprint ("check_for_listreductions (" ^ nm ^ ")")
+      fun kont result =
+          (tprint ("remove_listrels (" ^ nm ^ ")");
+           require_msg_eq (input', testseq) prrm_result
+                          (rmlistrels result) input)
+    in
+      require_msg_eqk expected1 prlrs f kont input
+    end
+val bare_let = [TOK "let", TM, TOK "in", TM]
+val suffix_let = [TM, TOK "let", TM, TOK "in"]
 
-val _ = tprint "PrecAnalysis.check_for_listreductions 2"
-val input = [TOK "let", TM, TOK ";", TOK "in", TM]
-val result = f input
-val _ = if result = [("let", "in", lsp1)] then OK() else die "FAILED";
-
-val _ = tprint "PrecAnalysis.remove_listrels 2"
-val remove_result = PrecAnalysis.remove_listrels result input
-val _ = if remove_result = ([TOK "let", TM, TOK "in", TM], [(lsp1, [0])])
-        then OK()
-        else die "FAILED";
-
-val _ = tprint "PrecAnalysis.check_for_listreductions 3"
-val input = [TOK "let", TM, TOK ";", TM, TOK "in", TM]
-val result = f input
-val _ = if result = [("let", "in", lsp1)] then OK() else die "FAILED";
-
-val _ = tprint "PrecAnalysis.remove_listrels 3"
-val remove_result = PrecAnalysis.remove_listrels result input
-val _ = if remove_result = ([TOK "let", TM, TOK "in", TM], [(lsp1, [0,1])])
-        then OK()
-        else die "FAILED";
+val _ = List.app listredn_test [
+      ("1 element prefix", [TOK "let", TM, TOK "in", TM], bare_let,
+       [("let", "in", lsp1)], [(lsp1, 0, 1)]),
+      ("0 element prefix", [TOK "let", TOK "in", TM], bare_let,
+       [("let", "in", lsp1)], [(lsp1, 0, 0)]),
+      ("1 element + ; prefix", [TOK "let", TM, TOK ";", TOK "in", TM], bare_let,
+       [("let", "in", lsp1)], [(lsp1, 0, 1)]),
+      ("2 element prefix", [TOK "let", TM, TOK ";", TM, TOK "in", TM], bare_let,
+       [("let", "in", lsp1)], [(lsp1, 0, 2)]),
+      ("1 element suffix", [TM, TOK "let", TM, TOK "in"], suffix_let,
+       [("let", "in", lsp1)], [(lsp1, 1, 1)]),
+      ("2 element suffix", [TM, TOK "let", TM, TOK ";", TM, TOK "in"],
+       suffix_let, [("let", "in", lsp1)], [(lsp1,1,2)]),
+      ("2 element + ; suffix",
+       [TM, TOK "let", TM, TOK ";", TM, TOK ";", TOK "in"],
+       suffix_let, [("let", "in", lsp1)], [(lsp1,1,2)]),
+      ("0 element suffix", [TM, TOK "let", TOK "in"], suffix_let,
+       [("let", "in", lsp1)], [(lsp1, 1, 0)])
+    ]
 
 val mk_var = Term.mk_var
 val mk_comb = Term.mk_comb
@@ -409,7 +571,12 @@ val mk_list = mk_list0 bool NIL_t CONS_t;
 
 fun tmprint g =
   PP.pp_to_string 70
-      (term_pp.pp_term g type_grammar.min_grammar PPBackEnd.raw_terminal);
+      (fn t =>
+          Parse.mlower
+            (term_pp.pp_term g
+                             type_grammar.min_grammar
+                             PPBackEnd.raw_terminal
+                             t))
 
 fun tpp msg expected g t =
   let
@@ -563,7 +730,7 @@ val vbool = dTyop{Tyop = "bool", Thy = SOME "min", Args = []}
 fun pdparse s = parse mintyg [QUOTE s]
 fun hdparse s = hparse mintyg [QUOTE s]
 
-fun pdtest (nm, s,expected) =
+fun pdtest0 (nm, s,expected) =
   let
     val _ = tprint (nm ^ ": " ^ s)
     val res = (if nm = "p" then pdparse else hdparse) s
@@ -572,6 +739,21 @@ fun pdtest (nm, s,expected) =
     else die ("FAILED:\n  "^ASTL_toString res)
   end
 infix -=>
+fun nm2parse nm = if nm = "p" then pdparse else hdparse
+fun pdtest (nm, s, expected) =
+  let
+    val _ = tprint (nm ^ ": " ^ s)
+  in
+    timed (nm2parse nm)
+          (exncheck (fn r => if r = expected then OK()
+                             else die ("FAILED:\n  "^ASTL_toString r)))
+          s
+  end
+fun pdfail (nm, s) =
+  shouldfail {printarg = (fn s => nm ^ ": " ^ s ^ " (should fail)"),
+              printresult = ASTL_toString,
+              testfn = nm2parse nm,
+              checkexn = is_struct_HOL_ERR "ParseDatatype"} s
 
 fun vty1 -=> vty2 = dTyop{Tyop = "fun", Thy = SOME "min", Args = [vty1,vty2]}
 fun recop s = dTyop{Thy = NONE, Tyop = s, Args = []}
@@ -583,10 +765,14 @@ fun listnm nm =
   [(nm, Constructors[("N", []), ("C",[dVartype "'a", recop "ty"])])]
 val expected4 = listnm "ty"
 val expected5 = [("C", Constructors[("foo", []), ("bar",[])])]
+val expected6 = [("C", Constructors[("foo", [vbool, vbool])]),
+                 ("D", Constructors[("bar", [vbool]), ("baz", [])])]
 val _ = List.app pdtest [
   ("p", "ty = Cons of bool;", expected1),
   ("h", "ty = Cons bool;", expected1),
   ("h", "ty = Cons1 bool | Cons2 bool (bool -> bool);", expected2),
+  ("h", "ty = Cons1 bool | Cons2 bool (bool->bool);", expected2),
+  ("p", "ty = Cons1 of bool | Cons2 of bool => bool -> bool;", expected2),
   ("h", "ty = <| fld1 : bool ; fld2 : bool -> bool |>;", expected3),
   ("h", "ty = <| fld1 : bool ; fld2 : bool -> bool; |>;", expected3),
   ("h", "ty= <|fld1:bool;fld2:bool->bool; |>;", expected3),
@@ -596,8 +782,11 @@ val _ = List.app pdtest [
   ("h", "ty=N|C 'a ty", expected4),
   ("h", "ty= <|fld1:bool;fld2:bool->bool; |>;ty2=N|C 'a ty",
    expected3 @ listnm "ty2"),
-  ("h", "C = | foo | bar", expected5)
+  ("h", "C = | foo | bar", expected5),
+  ("h", "C = foo bool bool; D = bar bool|baz", expected6)
 ]
+
+val _ = List.app (ignore o pdfail) [("h", "C = foo bool->bool")]
 
 
 (* string find-replace *)
@@ -620,13 +809,119 @@ val _ = List.app test [("abcd", "yd"), ("ab", "xxxzzzz"), ("c", ""),
                        ("ccb", "vv")]
 end (* local *)
 
-(*
+val _ = tprint "rules_for finds record rule"
+val G0 = term_grammar.stdhol
+val recrules = term_grammar.rules_for G0 GrammarSpecials.reccons_special
+val _ =
+    let
+      open term_grammar
+    in
+      case recrules of
+          [(_, GRULE {pp_elements = RE (TOK "<|") :: _,...})] => OK()
+        | _ => die "Couldn't find it"
+    end
 
-full test including backgrounds
-val _ = test_terminal true (!Parse.current_backend)
+val _ = tprint "remove_termtok \"<|\" removes record rule"
+val G' =
+    term_grammar.remove_form_with_tok G0 {
+      term_name = GrammarSpecials.recd_lform_name, tok = "<|"
+    }
+val _ =
+    let
+      open term_grammar
+    in
+      case term_grammar.rules_for G' GrammarSpecials.reccons_special of
+          [] => OK()
+        | _ => die "Nope - something still there!"
+    end
 
+local
+  val pr = PP.pp_to_string 77 type_grammar.prettyprint_grammar
+  fun testvs(testname, fname, g) =
+    let
+      val expected0 = let
+        val istrm = TextIO.openIn fname
+      in
+        TextIO.inputAll istrm before TextIO.closeIn istrm
+      end
+      val expected = if String.sub(expected0, size expected0 - 1) = #"\n" then
+                       String.extract(expected0, 0, SOME (size expected0 - 1))
+                     else expected0
+      val res = delete_trailing_wspace (pr g)
+    in
+      tprint testname;
+      if res = expected then OK() else die ("\nFAILED!\n" ^ res)
+    end
+  open type_grammar
+in
+  val _ = app testvs [
+        ("Testing ty-grammar p/printing (min_grammar)", "tygrammar.txt",
+         min_grammar),
+        ("Testing ty-grammar p/printing (min_grammar with non-printing abbrev)",
+         "noprint_tygrammar.txt",
+         min_grammar |> new_abbreviation {knm = {Name = "set", Thy = "scratch"},
+                                          ty = alpha --> bool, print = true}
+                     |> disable_abbrev_printing "set")
+      ]
+end (* tygrammar p/printing local *)
 
-error testing for backends (be careful)
-val _ = test_style_error (!Parse.current_backend)
+local
+  open term_tokens
+  fun test (s, expected) =
+    let
+      val _ = tprint ("Non-aggregating lex-test on "^s)
+      fun check (Exn.Res (SOME (r, _))) =
+            (case r of Ident s' => s' = expected | _ => false)
+        | check _ = false
+      fun pr NONE = "NONE"
+        | pr (SOME (t, _)) = "SOME(" ^ token_string t ^ ")"
+    in
+      require_msg check pr (lex []) (qbuf.new_buffer [QUOTE s])
+    end
+in
+val _ = List.app (ignore o test) [
+      ("aa(", "aa"), ("((a", "("), ("¬¬", "¬"), ("¬¬p", "¬")
+    ]
+end (* local open term_tokens *)
 
-*)
+val _ = let
+  open term_grammar Absyn Portable
+  val rTOK = RE o TOK
+  datatype sexp = id of string | app of string * sexp list
+  fun toString (id s) = s
+    | toString (app(f,xs)) =
+      "(" ^ f ^
+      (case xs of [] => ""
+                | _ => " " ^ String.concatWith " " (map toString xs)) ^ ")"
+  fun dropA A a =
+      case a of
+          APP (_, a1, a2) => dropA (dropA [] a2::A) a1
+        | IDENT (_, s) => (case A of [] => id s | _ => app(s, A))
+        | _ => raise Fail "Unexpected Absyn form"
+  val G = min_grammar
+            |> add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                         fixity = Suffix 2100,
+                         paren_style = OnlyIfNecessary,
+                         pp_elements = [
+                           rTOK "{",
+                           ListForm {
+                             separator = [rTOK ";", BreakSpace(1,0)],
+                             block_info = (PP.CONSISTENT, 1),
+                             cons = "icons",
+                             nilstr = "inil"
+                           },
+                           rTOK "}"],
+                         term_name = "top"}
+  val testfn =
+      toString o dropA [] o TermParse.absyn G type_grammar.min_grammar o
+      single o QUOTE
+  fun test (s,expected) =
+      (tprint ("listspec-suffix: " ^ s);
+       require_msg_eq expected (fn s => s) testfn s)
+in
+  List.app (ignore o test) [
+    ("x {y}", "(top x (icons y inil))"),
+    ("x {y;z;}", "(top x (icons y (icons z inil)))"),
+    ("x {}", "(top x inil)")
+  ]
+end;

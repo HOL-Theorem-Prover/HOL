@@ -7,7 +7,7 @@ structure extra_pred_setTools :> extra_pred_setTools =
 struct
 
 open HolKernel Parse boolLib;
-open bossLib pred_setTheory HurdUseful subtypeTheory extra_pred_setTheory;
+open bossLib pred_setTheory hurdUtils subtypeTheory extra_pred_setTheory;
 
 infixr 0 ++ || ORELSEC ## THENC -->;
 infix 1 >> |->;
@@ -42,7 +42,7 @@ fun rewr_ss ths =
     convs = [],
     dprocs = [],
     filter = NONE,
-    rewrs = set_rewrs @ elt_rewrs,
+    rewrs = map (fn th => (NONE, th)) (set_rewrs @ elt_rewrs),
     congs = []});
 
 val pset_set_ss = rewr_ss set_rewrs;

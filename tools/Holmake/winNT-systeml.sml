@@ -10,17 +10,18 @@ structure FileSys = OS.FileSys
 
 fun dquote s = concat ["\"", s, "\""]
 
-fun concat_wspaces munge acc strl =
-    case strl of
-      [] => concat (List.rev acc)
-    | [x] => concat (List.rev (munge x :: acc))
-    | (x::xs) => concat_wspaces munge (" " :: munge x :: acc) xs
+fun concat_wspaces munge strl = String.concatWith " " (map munge strl)
 
 fun systeml l = let
-  val command = "call "^concat_wspaces dquote [] l
+  val command = "call "^concat_wspaces dquote l
 in
   Process.system command
 end
+
+fun systeml_out {outfile} c =
+  Process.system
+    ("call " ^ concat_wspaces dquote c ^ " > " ^ dquote outfile ^ " 2>&1")
+
 
 (* would like to be using Posix.Process.exec, but this seems flakey on
    various machines (and is entirely unavailable on Moscow ML) *)
@@ -81,7 +82,6 @@ fun fullPath slist =
 
 val HOLDIR = ""
 val MOSMLDIR = ""
-val HAVE_BASIS2002 = ""
 val OS = ""
 val POLY = ""
 val POLYC = ""
@@ -153,5 +153,7 @@ fun emit_hol_unquote_script target qend _ =
  end
 end (* local *)
 
+fun quietbind s = ()
+fun bindstr s = s
 
 end; (* struct *)

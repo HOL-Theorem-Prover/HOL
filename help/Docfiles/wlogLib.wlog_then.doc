@@ -1,0 +1,12 @@
+\DOC wlog_then
+
+\TYPE {wlog_then : term quotation -> term quotation list -> thm_tactic -> tactic}
+
+\SYNOPSIS
+Apply a theorem-tactic using a proposition that can be assumed without loss of
+generality.
+
+\DESCRIBE
+{wlogLib.wlog_then} is identical to {bossLib.wlog_then}
+
+\ENDDOC

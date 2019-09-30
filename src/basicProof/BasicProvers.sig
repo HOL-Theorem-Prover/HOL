@@ -30,6 +30,8 @@ sig
   val augment_srw_ss  : simpLib.ssfrag list -> unit
   val diminish_srw_ss : string list -> simpLib.ssfrag list
   val export_rewrites : string list -> unit
+  val delsimps        : string list -> unit
+  val temp_delsimps   : string list -> unit
   val thy_ssfrag      : string -> simpLib.ssfrag
 
   (* LET manoeuvres *)

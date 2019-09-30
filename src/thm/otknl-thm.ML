@@ -12,7 +12,7 @@
 (*               : July 2000, Konrad Slind                               *)
 (* ===================================================================== *)
 
-structure Thm :> Thm =
+structure Thm =
 struct
 
 open Feedback Lib Term Tag Dep
@@ -1043,14 +1043,14 @@ fun Mk_comb thm =
        val (Rator,Rand) = dest_comb rhs
        fun mkthm th1' th2' =
          let val (lhs1, rhs1, _) = Term.dest_eq_ty (concl th1')
-             val _ = Assert (EQ lhs1 Rator) "" ""
+             val _ = Assert (aconv lhs1 Rator) "" ""
              val (lhs2, rhs2, _) = Term.dest_eq_ty (concl th2')
-             val _ = Assert (EQ lhs2 Rand) "" ""
+             val _ = Assert (aconv lhs2 Rand) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1', th2']
          in make_thm Count.MkComb
-	   (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)), Mk_comb_prf (thm,th1',th2'))
+           (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)), Mk_comb_prf (thm,th1',th2'))
          end
-	 handle HOL_ERR _ => ERR "Mk_comb" "";
+         handle HOL_ERR _ => ERR "Mk_comb" "";
        val aty = type_of Rand    (* typing! *)
        val th1 = refl_nocheck (aty --> ty) Rator
        val th2 = refl_nocheck aty Rand
@@ -1077,13 +1077,13 @@ fun Mk_abs thm =
        val (Bvar,Body) = dest_abs rhs
        fun mkthm th1' =
          let val (lhs1, rhs1, _) = Term.dest_eq_ty (concl th1')
-             val _ = Assert (EQ lhs1 Body) "" ""
+             val _ = Assert (aconv lhs1 Body) "" ""
              val _ = Assert (not (var_occursl Bvar (hypset th1'))) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1']
          in make_thm Count.Abs
-	   (ocls, hyps, mk_eq_nocheck ty lhs (mk_abs(Bvar, rhs1)), Mk_abs_prf (thm,Bvar,th1'))
+           (ocls, hyps, mk_eq_nocheck ty lhs (mk_abs(Bvar, rhs1)), Mk_abs_prf (thm,Bvar,th1'))
          end
-	 handle HOL_ERR _ => ERR "Mk_abs" ""
+         handle HOL_ERR _ => ERR "Mk_abs" ""
        val th1 = refl_nocheck (rng ty) Body
    in (Bvar,th1,mkthm)
    end

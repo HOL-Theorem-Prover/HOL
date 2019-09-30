@@ -4,7 +4,7 @@ sig
   type term = Term.term
   val pp_term :
     term_grammar.grammar -> type_grammar.grammar -> PPBackEnd.t ->
-    Portable.ppstream -> term -> unit
+    term -> term_pp_types.uprinter
 
 
   (* this initialises a reference storing a function for pulling apart

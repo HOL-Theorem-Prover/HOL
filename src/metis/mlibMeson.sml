@@ -16,14 +16,11 @@ struct
 
 open mlibUseful mlibTerm mlibMatch mlibThm mlibCanon mlibMeter mlibSolver;
 
-infix |-> ::> @> oo ##;
-
 structure S = mlibStream; local open mlibStream in end;
 structure N = mlibLiteralnet; local open mlibLiteralnet in end;
 structure U = mlibUnits; local open mlibUnits in end;
 
 val |<>|          = mlibSubst.|<>|;
-val op ::>        = mlibSubst.::>;
 val formula_subst = mlibSubst.formula_subst;
 
 (* ------------------------------------------------------------------------- *)
@@ -31,7 +28,7 @@ val formula_subst = mlibSubst.formula_subst;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibMeson";
-val () = traces := {module = module, alignment = I} :: !traces;
+val () = add_trace {module = module, alignment = I}
 fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 
@@ -209,7 +206,7 @@ fun thm_proves th False = is_contradiction th
   case clause th of [lit] => lit = goal | [] => true | _ => false;
 
 fun filter_meter meter =
-  S.filter (fn a => Option.isSome a orelse not (check_meter (!meter)));
+  S.filter (fn a => Option.isSome a orelse not (check_meter (Uref.!meter)));
 
 (* ------------------------------------------------------------------------- *)
 (* mlibMeson rules.                                                              *)
@@ -362,7 +359,10 @@ fun cache_cont c ({offset, ...} : state) =
         fun p (n', l') = n <= n' andalso l = l'
       in
         if List.exists p (!mem) then raise Error "cache_cut: repetition"
-        else (mem := (n, l) :: (!mem); update_env (K (mlibSubst.from_maplets l)) s)
+        else (
+          mem := (n, l) :: (!mem); (* OK *)
+          update_env (K (mlibSubst.from_maplets l)) s
+        )
       end
   in
     c o purify
@@ -378,9 +378,10 @@ fun cache_cut false = I
 
 fun grab_unit units (s as {proof = th :: _, ...} : state) =
   let
+    open Uref
     val u = !units
     val th = U.demod u th
-    val () = units := U.add th u
+    val () = units := U.add th u (* OK *)
   in
     update_proof (cons th o tl) s
   end
@@ -388,7 +389,7 @@ fun grab_unit units (s as {proof = th :: _, ...} : state) =
 
 fun use_unit units g c (s as {env, ...}) =
   let
-    val prove = partial (Error "use_unit: NONE") (U.prove (!units))
+    val prove = partial (Error "use_unit: NONE") (U.prove (Uref.!units))
   in
     c (update_proof (cons (hd (prove [formula_subst env g]))) s)
   end;
@@ -466,7 +467,7 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
     fun expand ancestors g cont (state as {env, ...}) =
       (chatting 5 andalso
        chat ("meson: "^formula_to_string (formula_subst env g)^".\n");
-       if meter_expired (!meter) then
+       if meter_expired (Uref.!meter) then
          (NONE, CHOICE (fn () => expand ancestors g cont state))
        else if ancestor_prune ancestor_pruning env g ancestors then
          raise Error "meson: ancestor pruning"
@@ -489,10 +490,11 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
          end)
     and expand_rule ancestors g cont {env, depth, proof, offset} r () =
       let
+        open Uref
         val depth = depth - #asmn r
         val () =
           if 0 <= depth then ()
-          else (saturated := false; raise Error "meson: too deep")
+          else (saturated := false; raise Error "meson: too deep") (* OK *)
         val (r',offset) = freshen_rule r offset
         val (th,asms,env) = next_state state_simplify env r' g
         val asms = if 2 <= sort_literals then sort_lits asms else asms
@@ -549,7 +551,7 @@ fun raw_meson system goals depth =
 (* ------------------------------------------------------------------------- *)
 
 type 'a system =
-  {parm : parameters, rules : rules, meter : meter ref, saturated : bool ref,
+  {parm : parameters, rules : rules, meter : meter Uref.t, saturated : bool Uref.t,
    cut :
      (formula list -> formula -> (state -> 'a) -> state -> 'a) ->
       formula list -> formula -> (state -> 'a) -> state -> 'a};
@@ -561,7 +563,7 @@ fun mk_system parm units meter rules : 'a system =
     {parm      = parm,
      rules     = rules,
      meter     = meter,
-     saturated = ref false,
+     saturated = Uref.new false,
      cut       = unit_cut lemmaizing units o cache_cut caching}
   end;
 
@@ -578,11 +580,12 @@ fun meson' (name,parm) =
         "--#rules=" ^ int_to_string (num_rules ruls) ^
         "--#initial_rules=" ^ int_to_string (num_initial_rules ruls) ^ ".\n")
      val system as {saturated = b, ...} = mk_system parm units slice ruls
-     fun d n = if !b then S.NIL else (b := true; S.CONS (n, fn () => d (n + 1)))
+     fun d n = if Uref.!b then S.NIL
+               else (Uref.:=(b, true); S.CONS (n, fn () => d (n + 1))) (* OK *)
      fun f q d =
        (chatting 1 andalso chat ("-" ^ int_to_string d);
         raw_meson system q d)
-     fun unit_check goals NONE = U.prove (!units) goals | unit_check _ s = s
+     fun unit_check goals NONE = U.prove (Uref.!units) goals | unit_check _ s = s
    in
      fn goals =>
      filter_meter slice
@@ -597,6 +600,7 @@ fun delta' (name,parm) =
    solver_con =
    fn {slice, units, thms, hyps} =>
    let
+     open Uref
      val ruls = meson_rules parm thms hyps
      val dgoals = thms_to_delta_goals hyps
      val _ = chatting 3 andalso chat
@@ -606,7 +610,8 @@ fun delta' (name,parm) =
         "--#delta_goals=" ^ int_to_string (length dgoals) ^ ".\n")
      val system as {saturated = b, ...} = mk_system parm units slice ruls
      val delta_goals = S.from_list dgoals
-     fun d n = if !b then S.NIL else (b := true; S.CONS (n, fn () => d (n + 1)))
+     fun d n = if !b then S.NIL
+               else (b := true; S.CONS (n, fn () => d (n + 1))) (* OK *)
      fun f d g =
        (chatting 1 andalso chat "+";
         S.map (K NONE) (raw_meson system [g] d))

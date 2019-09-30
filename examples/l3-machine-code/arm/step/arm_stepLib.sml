@@ -14,8 +14,10 @@ structure Parse =
 struct
    open Parse
    val (tyg, (tmg, _)) =
-      (I ## term_grammar.mfupdate_overload_info
-               (Overload.remove_overloaded_form "add"))
+      apsnd (term_grammar.mfupdate_overload_info
+               (Overload.remove_overloaded_form "add") o
+             ParseExtras.grammar_loose_equality
+            )
       arm_stepTheory.arm_step_grammars
    val (Type, Term) = parse_from_grammars (tyg, tmg)
 end
@@ -1164,8 +1166,7 @@ local
    val le_tm = boolSyntax.mk_neg be_tm
    fun endian_rule thm =
       REWRITE_RULE
-         [ASSUME (if Lib.exists (Lib.equal le_tm) (Thm.hyp thm)
-                     then le_tm
+         [ASSUME (if Lib.exists (aconv le_tm) (Thm.hyp thm) then le_tm
                   else be_tm)] thm
    fun NO_FREE_VARS_CONV tm =
       if List.null (Term.free_vars tm)
@@ -1464,7 +1465,7 @@ in
    fun fetch tms =
       let
          val tms = List.map fix_datatype tms
-         val e = List.exists (equal big_tm) tms
+         val e = List.exists (aconv big_tm) tms
          val thms = fetch_thm tms
       in
          fn v =>
@@ -1666,7 +1667,7 @@ in
          val s = state_with_enc ``Encoding_ARM`` :: fst (Term.match_term v pat)
       in
          thm |> Thm.INST s
-             |> REWRITE_RULE [dual_rwt, DecodeVFP]
+             |> REWRITE_RULE [dual_rwt, v2w_13_15_rwts, v2w_ground4, DecodeVFP]
              |> Conv.RIGHT_CONV_RULE EVAL_DATATYPE_CONV
              |> SIMP_RULE bool_ss
                   [pairTheory.UNCURRY_DEF, rand_uncurry, ConditionPassed_enc]
@@ -1708,7 +1709,7 @@ val arm_patterns = List.map (I ## epattern)
    ("Multiply32",                           "FFFFFFF_____________TFFT"),
    ("MultiplyAccumulate",                   "FFFFFFT_____________TFFT"),
    ("MultiplyLong",                         "FFFFT_______________TFFT"),
-   ("Swap",                                 "FFFTF_FF____________TFFT"),
+   ("Swap",                                 "FFFTF_FF________FFFFTFFT"),
    ("ArithLogicImmediate",                  "FFTF____________________"),
    ("ArithLogicImmediate ORR/BIC",          "FFTTT_F_________________"),
    ("Move",                                 "FFTTT_T_________________"),
@@ -1728,19 +1729,19 @@ val arm_patterns = List.map (I ## epattern)
    ("LoadByteUnprivileged (reg)",           "FTTF_TTT_______________F"),
    ("LoadByte (reg,post)",                  "FTTF_TFT_______________F"),
    ("LoadByte (reg,pre)",                   "FTTT_T_T_______________F"),
-   ("LoadHalfUnprivileged (reg)",           "FFFF_FTT____________T_TT"),
-   ("LoadSignedByteUnprivileged (reg)",     "FFFF_FTT____________TTFT"),
-   ("LoadHalf (reg,post)",                  "FFFF_FFT____________T_TT"),
-   ("LoadSignedByte (reg,post)",            "FFFF_FFT____________TTFT"),
-   ("LoadHalf (reg,pre)",                   "FFFT_F_T____________T_TT"),
-   ("LoadSignedByte (reg,pre)",             "FFFT_F_T____________TTFT"),
+   ("LoadHalfUnprivileged (reg)",           "FFFF_FTT________FFFFT_TT"),
+   ("LoadSignedByteUnprivileged (reg)",     "FFFF_FTT________FFFFTTFT"),
+   ("LoadHalf (reg,post)",                  "FFFF_FFT________FFFFT_TT"),
+   ("LoadSignedByte (reg,post)",            "FFFF_FFT________FFFFTTFT"),
+   ("LoadHalf (reg,pre)",                   "FFFT_F_T________FFFFT_TT"),
+   ("LoadSignedByte (reg,pre)",             "FFFT_F_T________FFFFTTFT"),
    ("LoadHalfUnprivileged (imm)",           "FFFF_TTT____________T_TT"),
    ("LoadSignedByteUnprivileged (imm)",     "FFFF_TTT____________TTFT"),
-   ("LoadHalf (imm,post;lit)",              "FFFF_TFT____________T_TT"),
-   ("LoadSignedByte (imm,post;lit)",        "FFFF_TFT____________TTFT"),
-   ("LoadHalf (imm,pre)",                   "FFFT_T_T____________T_TT"),
-   ("LoadSignedByte (imm,pre)",             "FFFT_T_T____________TTFT"),
-   ("LoadDual (reg)",                       "FFF__F_F_______F____TTFT"),
+   ("LoadHalf (imm,post)",                  "FFFF_TFT____________T_TT"),
+   ("LoadSignedByte (imm,post)",            "FFFF_TFT____________TTFT"),
+   ("LoadHalf (imm,pre;lit)",               "FFFT_T_T____________T_TT"),
+   ("LoadSignedByte (imm,pre;lit)",         "FFFT_T_T____________TTFT"),
+   ("LoadDual (reg)",                       "FFF__F_F_______FFFFFTTFT"),
    ("LoadDual (imm;lit)",                   "FFF__T_F_______F____TTFT"),
    ("LoadMultiple",                         "TFF__F_T________________"),
    ("StoreUnprivileged (imm)",              "FTFF_FTF________________"),
@@ -1755,14 +1756,14 @@ val arm_patterns = List.map (I ## epattern)
    ("StoreByteUnprivileged (reg)",          "FTTF_TTF_______________F"),
    ("StoreByte (reg,post)",                 "FTTF_TFF_______________F"),
    ("StoreByte (reg,pre)",                  "FTTT_T_F_______________F"),
-   ("StoreHalfUnprivileged (reg)",          "FFFF_FTF____________TFTT"),
-   ("StoreHalf (reg,post)",                 "FFFF_FFF____________TFTT"),
-   ("StoreHalf (reg,pre)",                  "FFFT_F_F____________TFTT"),
+   ("StoreHalfUnprivileged (reg)",          "FFFF_FTF________FFFFTFTT"),
+   ("StoreHalf (reg,post)",                 "FFFF_FFF________FFFFTFTT"),
+   ("StoreHalf (reg,pre)",                  "FFFT_F_F________FFFFTFTT"),
    ("StoreHalfUnprivileged (imm)",          "FFFF_TTF____________TFTT"),
    ("StoreSignedByteUnprivileged (imm)",    "FFFF_TTF____________TTFT"),
    ("StoreHalf (imm,post)",                 "FFFF_TFF____________TFTT"),
    ("StoreHalf (imm,pre)",                  "FFFT_T_F____________TFTT"),
-   ("StoreDual (reg)",                      "FFF__F_F_______F____TTTT"),
+   ("StoreDual (reg)",                      "FFF__F_F_______FFFFFTTTT"),
    ("StoreDual (imm)",                      "FFF__T_F_______F____TTTT"),
    ("StoreMultiple",                        "TFF__F_F________________"),
    ("VFPLoadStore",                         "TTFT__F_________TFT_____"),
@@ -1833,23 +1834,19 @@ local
    val arm_pats15 = Redblackmap.fromList String.compare arm_patterns15
    val alias =
       fn "LoadByte (imm,pre)" => ("LoadByte (imm,pre;lit)", [true, false])
-       | "LoadSignedByte (imm,post)" =>
-            ("LoadSignedByte (imm,post;lit)", [true, false])
-       | "LoadHalf (imm,post)" => ("LoadHalf (imm,post;lit)", [true, false])
        | "LoadWord (imm,pre)" => ("LoadWord (imm,pre;lit)", [true, false])
        | "LoadDual (imm)" => ("LoadDual (imm;lit)", [true, false])
        | "LoadByte (lit)" => ("LoadByte (imm,pre;lit)", [false, true])
-       | "LoadSignedByte (lit)" =>
-            ("LoadSignedByte (imm,post;lit)", [false, true])
-       | "LoadHalf (lit)" => ("LoadHalf (imm,post;lit)", [false, true])
+       | "LoadSignedByte (lit)" => ("LoadSignedByte (imm,pre;lit)", [true])
+       | "LoadHalf (lit)" => ("LoadHalf (imm,pre;lit)", [true])
        | "LoadWord (lit)" => ("LoadWord (imm,pre;lit)", [false, true])
        | "LoadDual (lit)" => ("LoadDual (imm;lit)", [false, true])
-       | s as "LoadByte (imm,post)" => (s, [true, false])
-       | s as "LoadSignedByte (imm,pre)" => (s, [true, false])
-       | s as "LoadHalf (imm,pre)" => (s, [true, false])
-       | s as "LoadWord (imm,post)" => (s, [true, false])
+       | "LoadSignedByte (imm,pre;nowb)" =>
+           ("LoadSignedByte (imm,pre;lit)", [true, false])
+       | "LoadHalf (imm,pre;nowb)" => ("LoadHalf (imm,pre;lit)", [true, false])
        | s as "SpecialFromImmediate" =>
-            ("MoveTo" ^ s, [true, false, false, false, false, false, false])
+            ("MoveTo" ^ s,
+             [true, false, false, false, false, false, false, false])
        | s => (s, [true])
    val c14 = utilsLib.pattern "TTTF"
    val c15 = utilsLib.pattern "TTTT"
@@ -1876,7 +1873,10 @@ in
                         | NONE => raise ERR "mk_arm_pattern_opcode"
                                             (a ^ "; not found"))
       in
-         (if unconditional c then x else doubleup x, v)
+         (if unconditional c then x
+          else if s = "LoadWord (imm,post)" then
+            [true, true, false]
+          else doubleup x, v)
       end
 end
 
@@ -2041,8 +2041,8 @@ local
      ("RBIT", ("ReverseBits", [])),
      ("SBFX,UBFX", ("BitFieldExtract", [])),
      ("BFC", ("BitFieldClearOrInsert", [])),
-     ("LDR (+imm,pre,wb)", ("LoadWord (imm,pre)", [xT 0, xT 1])),
-     ("LDR (-imm,pre,wb)", ("LoadWord (imm,pre)", [xF 0, xT 1])),
+     ("LDR (+imm,pre,wb)", ("LoadWord (imm,pre;lit)", [xT 0, xT 1])),
+     ("LDR (-imm,pre,wb)", ("LoadWord (imm,pre;lit)", [xF 0, xT 1])),
      ("LDR (+imm,pre)", ("LoadWord (imm,pre)", [xT 0, xF 1])),
      ("LDR (-imm,pre)", ("LoadWord (imm,pre)", [xF 0, xF 1])),
      ("LDR (imm,post)", ("LoadWord (imm,post)", [])),
@@ -2060,9 +2060,9 @@ local
         ("LoadWord (reg,pre)", [xF 0, xF 1, xT 2, xT 3, xT 4, xT 5])),
      ("LDR (reg,post)", ("LoadWord (reg,post)", [])),
      ("LDR (pc,+imm,pre,wb)",
-        ("LoadWord (imm,pre)", [xT 0, xT 1, xT 6, xT 7, xT 8, xT 9])),
+        ("LoadWord (imm,pre;lit)", [xT 0, xT 1, xT 6, xT 7, xT 8, xT 9])),
      ("LDR (pc,-imm,pre,wb)",
-        ("LoadWord (imm,pre)", [xF 0, xT 1, xT 6, xT 7, xT 8, xT 9])),
+        ("LoadWord (imm,pre;lit)", [xF 0, xT 1, xT 6, xT 7, xT 8, xT 9])),
      ("LDR (pc,+imm,pre)",
         ("LoadWord (imm,pre)", [xT 0, xF 1, xT 6, xT 7, xT 8, xT 9])),
      ("LDR (pc,-imm,pre)",
@@ -2084,8 +2084,8 @@ local
         ("LoadWord (reg,pre)",
          [xF 0, xF 1, xT 2, xT 3, xT 4, xT 5, xT 6, xT 7, xT 8, xT 9])),
      ("LDR (pc,reg,post)", ("LoadWord (reg,post)", [])),
-     ("LDRB (+imm,pre,wb)", ("LoadByte (imm,pre)", [xT 0, xT 1])),
-     ("LDRB (-imm,pre,wb)", ("LoadByte (imm,pre)", [xF 0, xT 1])),
+     ("LDRB (+imm,pre,wb)", ("LoadByte (imm,pre;lit)", [xT 0, xT 1])),
+     ("LDRB (-imm,pre,wb)", ("LoadByte (imm,pre;lit)", [xF 0, xT 1])),
      ("LDRB (+imm,pre)", ("LoadByte (imm,pre)", [xT 0, xF 1])),
      ("LDRB (-imm,pre)", ("LoadByte (imm,pre)", [xF 0, xF 1])),
      ("LDRB (imm,post)", ("LoadByte (imm,post)", [])),
@@ -2102,15 +2102,15 @@ local
      ("LDRB (-reg,pre,pc)",
         ("LoadByte (reg,pre)", [xF 0, xF 1, xT 2, xT 3, xT 4, xT 5])),
      ("LDRB (reg,post)", ("LoadByte (reg,post)", [])),
-     ("LDRSB (+imm,pre,wb)", ("LoadSignedByte (imm,pre)", [xT 0, xT 1])),
-     ("LDRSB (-imm,pre,wb)", ("LoadSignedByte (imm,pre)", [xF 0, xT 1])),
-     ("LDRSB (+imm,pre)", ("LoadSignedByte (imm,pre)", [xT 0, xF 1])),
-     ("LDRSB (-imm,pre)", ("LoadSignedByte (imm,pre)", [xF 0, xF 1])),
+     ("LDRSB (+imm,pre,wb)", ("LoadSignedByte (imm,pre;lit)", [xT 0, xT 1])),
+     ("LDRSB (-imm,pre,wb)", ("LoadSignedByte (imm,pre;lit)", [xF 0, xT 1])),
+     ("LDRSB (+imm,pre)", ("LoadSignedByte (imm,pre;nowb)", [xT 0, xF 1])),
+     ("LDRSB (-imm,pre)", ("LoadSignedByte (imm,pre;nowb)", [xF 0, xF 1])),
      ("LDRSB (imm,post)", ("LoadSignedByte (imm,post)", [])),
      ("LDRSB (+lit)",
-        ("LoadSignedByte (imm,post;lit)", [xT 0, xT 1, xT 2, xT 3, xT 4])),
+        ("LoadSignedByte (lit)", [xT 0, xF 1, xT 2, xT 3, xT 4, xT 5])),
      ("LDRSB (-lit)",
-        ("LoadSignedByte (imm,post;lit)", [xF 0, xT 1, xT 2, xT 3, xT 4])),
+        ("LoadSignedByte (lit)", [xF 0, xF 1, xT 2, xT 3, xT 4, xT 5])),
      ("LDRSB (+reg,pre,wb)", ("LoadSignedByte (reg,pre)", [xT 0, xT 1])),
      ("LDRSB (-reg,pre,wb)", ("LoadSignedByte (reg,pre)", [xF 0, xT 1])),
      ("LDRSB (+reg,pre)", ("LoadSignedByte (reg,pre)", [xT 0, xF 1])),
@@ -2124,49 +2124,51 @@ local
      ("LDRBT (-imm)", ("LoadByteUnprivileged (imm)", [xF 0])),
      ("LDRBT (+reg)", ("LoadByteUnprivileged (reg)", [xT 0])),
      ("LDRBT (-reg)", ("LoadByteUnprivileged (reg)", [xF 0])),
-     ("LDRH (+imm,pre,wb)", ("LoadHalf (imm,pre)", [xT 0, xT 1, xF 13])),
-     ("LDRH (-imm,pre,wb)", ("LoadHalf (imm,pre)", [xF 0, xT 1, xF 13])),
-     ("LDRH (+imm,pre)", ("LoadHalf (imm,pre)", [xT 0, xF 1, xF 13])),
-     ("LDRH (-imm,pre)", ("LoadHalf (imm,pre)", [xF 0, xF 1, xF 13])),
+     ("LDRH (+imm,pre,wb)", ("LoadHalf (imm,pre;lit)", [xT 0, xT 1, xF 13])),
+     ("LDRH (-imm,pre,wb)", ("LoadHalf (imm,pre;lit)", [xF 0, xT 1, xF 13])),
+     ("LDRH (+imm,pre)", ("LoadHalf (imm,pre;nowb)", [xT 0, xF 1, xF 13])),
+     ("LDRH (-imm,pre)", ("LoadHalf (imm,pre;nowb)", [xF 0, xF 1, xF 13])),
      ("LDRH (imm,post)", ("LoadHalf (imm,post)", [xF 13])),
      ("LDRH (+lit)",
-        ("LoadHalf (imm,post;lit)", [xT 0, xT 1, xT 2, xT 3, xT 4, xF 13])),
+        ("LoadHalf (lit)", [xT 0, xF 1, xT 2, xT 3, xT 4, xT 5, xF 14])),
      ("LDRH (-lit)",
-        ("LoadHalf (imm,post;lit)", [xF 0, xT 1, xT 2, xT 3, xT 4, xF 13])),
+        ("LoadHalf (lit)", [xF 0, xF 1, xT 2, xT 3, xT 4, xT 5, xF 14])),
      ("LDRH (+reg,pre,wb)", ("LoadHalf (reg,pre)", [xT 0, xT 1, xF 13])),
      ("LDRH (-reg,pre,wb)", ("LoadHalf (reg,pre)", [xF 0, xT 1, xF 13])),
      ("LDRH (+reg,pre)", ("LoadHalf (reg,pre)", [xT 0, xF 1, xF 13])),
      ("LDRH (-reg,pre)", ("LoadHalf (reg,pre)", [xF 0, xF 1, xF 13])),
      ("LDRH (+reg,pre,pc)",
-        ("LoadHalf (reg,pre)", [xT 0, xF 1, xT 2, xT 3, xT 4, xT 5, xF 13])),
+        ("LoadHalf (reg,pre)", [xT 0, xF 1, xT 2, xT 3, xT 4, xT 5, xF 10])),
      ("LDRH (-reg,pre,pc)",
-        ("LoadHalf (reg,pre)", [xF 0, xF 1, xT 2, xT 3, xT 4, xT 5, xF 13])),
+        ("LoadHalf (reg,pre)", [xF 0, xF 1, xT 2, xT 3, xT 4, xT 5, xF 10])),
      ("LDRH (reg,post)", ("LoadHalf (reg,post)", [xF 13])),
-     ("LDRSH (+imm,pre,wb)", ("LoadHalf (imm,pre)", [xT 0, xT 1, xT 13])),
-     ("LDRSH (-imm,pre,wb)", ("LoadHalf (imm,pre)", [xF 0, xT 1, xT 13])),
-     ("LDRSH (+imm,pre)", ("LoadHalf (imm,pre)", [xT 0, xF 1, xT 13])),
-     ("LDRSH (-imm,pre)", ("LoadHalf (imm,pre)", [xF 0, xF 1, xT 13])),
+     ("LDRSH (+imm,pre,wb)", ("LoadHalf (imm,pre;lit)", [xT 0, xT 1, xT 13])),
+     ("LDRSH (-imm,pre,wb)", ("LoadHalf (imm,pre;lit)", [xF 0, xT 1, xT 13])),
+     ("LDRSH (+imm,pre)", ("LoadHalf (imm,pre;nowb)", [xT 0, xF 1, xT 13])),
+     ("LDRSH (-imm,pre)", ("LoadHalf (imm,pre;nowb)", [xF 0, xF 1, xT 13])),
      ("LDRSH (imm,post)", ("LoadHalf (imm,post)", [xT 13])),
      ("LDRSH (+lit)",
-      ("LoadHalf (imm,post;lit)", [xT 0, xT 1, xT 2, xT 3, xT 4, xT 13])),
+        ("LoadHalf (lit)", [xT 0, xF 1, xT 2, xT 3, xT 4, xT 5, xT 14])),
      ("LDRSH (-lit)",
-      ("LoadHalf (imm,post;lit)", [xF 0, xT 1, xT 2, xT 3, xT 4, xT 13])),
-     ("LDRSH (+reg,pre,wb)", ("LoadHalf (reg,pre)", [xT 0, xT 1, xT 13])),
-     ("LDRSH (-reg,pre,wb)", ("LoadHalf (reg,pre)", [xF 0, xT 1, xT 13])),
-     ("LDRSH (+reg,pre)", ("LoadHalf (reg,pre)", [xT 0, xF 1, xT 13])),
-     ("LDRSH (-reg,pre)", ("LoadHalf (reg,pre)", [xF 0, xF 1, xT 13])),
+        ("LoadHalf (lit)", [xF 0, xF 1, xT 2, xT 3, xT 4, xT 5, xT 14])),
+     ("LDRSH (+reg,pre,wb)", ("LoadHalf (reg,pre)", [xT 0, xT 1, xT 10])),
+     ("LDRSH (-reg,pre,wb)", ("LoadHalf (reg,pre)", [xF 0, xT 1, xT 10])),
+     ("LDRSH (+reg,pre)", ("LoadHalf (reg,pre)", [xT 0, xF 1, xT 10])),
+     ("LDRSH (-reg,pre)", ("LoadHalf (reg,pre)", [xF 0, xF 1, xT 10])),
      ("LDRSH (+reg,pre,pc)",
-        ("LoadHalf (reg,pre)", [xT 0, xF 1, xT 2, xT 3, xT 4, xT 5, xT 13])),
+        ("LoadHalf (reg,pre)", [xT 0, xF 1, xT 2, xT 3, xT 4, xT 5, xT 10])),
      ("LDRSH (-reg,pre,pc)",
-        ("LoadHalf (reg,pre)", [xF 0, xF 1, xT 2, xT 3, xT 4, xT 5, xT 13])),
+        ("LoadHalf (reg,pre)", [xF 0, xF 1, xT 2, xT 3, xT 4, xT 5, xT 10])),
      ("LDRSH (reg,post)", ("LoadHalf (reg,post)", [xT 13])),
-     ("LDRD (+imm,pre,wb)", ("LoadDual (imm)", [xT 0, xT 1, xT 2])),
-     ("LDRD (-imm,pre,wb)", ("LoadDual (imm)", [xT 0, xF 1, xT 2])),
+     ("LDRD (+imm,pre,wb)", ("LoadDual (imm;lit)", [xT 0, xT 1, xT 2])),
+     ("LDRD (-imm,pre,wb)", ("LoadDual (imm;lit)", [xT 0, xF 1, xT 2])),
      ("LDRD (+imm,pre)", ("LoadDual (imm)", [xT 0, xT 1, xF 2])),
      ("LDRD (-imm,pre)", ("LoadDual (imm)", [xT 0, xF 1, xF 2])),
-     ("LDRD (imm,post)", ("LoadDual (imm)", [xF 0, xF 2])),
-     ("LDRD (+lit)", ("LoadDual (imm;lit)", [xT 1, xT 3, xT 4, xT 5, xT 6])),
-     ("LDRD (-lit)", ("LoadDual (imm;lit)", [xF 1, xT 3, xT 4, xT 5, xT 6])),
+     ("LDRD (imm,post)", ("LoadDual (imm;lit)", [xF 0, xF 2])),
+     ("LDRD (+lit)",
+        ("LoadDual (imm;lit)", [xT 0, xT 1, xF 2, xT 3, xT 4, xT 5, xT 6])),
+     ("LDRD (-lit)",
+        ("LoadDual (imm;lit)", [xT 0, xF 1, xF 2, xT 3, xT 4, xT 5, xT 6])),
      ("LDRD (+reg,pre,wb)", ("LoadDual (reg)", [xT 0, xT 1, xT 2])),
      ("LDRD (-reg,pre,wb)", ("LoadDual (reg)", [xT 0, xF 1, xT 2])),
      ("LDRD (+reg,pre)", ("LoadDual (reg)", [xT 0, xT 1, xF 2])),
@@ -2465,7 +2467,7 @@ local
          then s ^ ";" ^
               snd (List.foldr
                      (fn (t, (i, s)) =>
-                         (i + 1, if t = boolSyntax.T then comma i s else s))
+                         (i + 1, if Teq t then comma i s else s))
                      (0, "") (List.drop (opc, 16)))
       else s
    val prefixes = List.rev (mlibUseful.sort_map String.size Int.compare
@@ -2556,7 +2558,7 @@ local
    val DecodeARM_tm = mk_arm_const "DecodeARM"
    fun mk_decode_arm t = Term.list_mk_comb (DecodeARM_tm, [t, se])
    val rewrites =
-      [v2w_13_15_rwts,
+      [v2w_13_15_rwts, v2w_ground4, boolTheory.COND_ID,
        bitstringLib.v2n_CONV ``v2n [F;F;F;F;F]``,
        blastLib.BBLAST_PROVE
          ``((v2w [T;T;b;T] = 13w: word4) \/ (v2w [T;T;b;T] = 15w: word4)) = T``]
@@ -2713,6 +2715,7 @@ val BranchExchange_pc_arm_rwt =
               (utilsLib.INST_REWRITE_CONV
                   [arm_stepTheory.Aligned4_bit0, arm_stepTheory.Aligned4_bit1]
                THENC REWRITE_CONV []) ``a ==> b``)
+     |> addThms
 
 val BranchExchange_pc_thumb_rwt =
    EV ([dfn'BranchExchange_def, BXWritePC_rwt, R15_rwt,
@@ -2725,6 +2728,7 @@ val BranchExchange_pc_thumb_rwt =
                   [arm_stepTheory.Aligned4_bit0_t,
                    arm_stepTheory.Aligned4_bit1_t]
                THENC REWRITE_CONV []) ``a ==> b``)
+     |> addThms
 
 (* ---------------------------- *)
 
@@ -3090,24 +3094,24 @@ local
       fun mapCons l (x: {redex: term frag list, residue: term}) =
          List.map (fn s => (x :: s)) l
    in
-      fun substCases cs f l = List.concat (List.map (mapCons l) (f cs))
+      fun substCases cs l = List.concat (List.map (mapCons l) cs)
    end
 
-   fun immediate1 f =
+   val immediate1 =
       substCases
          [`m` |-> ``immediate_form1 imm32``,
           `m` |-> ``register_form1
                        (r, FST (DecodeImmShift (v2w [b1; b0], imm5)),
-                           SND (DecodeImmShift (v2w [b1; b0], imm5)))``] f
+                           SND (DecodeImmShift (v2w [b1; b0], imm5)))``]
 
-   fun immediate2 f =
+   val immediate2 =
       substCases [`m` |-> ``immediate_form2 imm32``,
-                  `m` |-> ``register_form2 r``] f
+                  `m` |-> ``register_form2 r``]
 
-   fun immediate3 f =
+   val immediate3 =
       substCases
          [`m` |-> ``immediate_form1 imm32``,
-          `m` |-> ``register_form1 (r, SRType_LSL, imm2)``] f
+          `m` |-> ``register_form1 (r, SRType_LSL, imm2)``]
 in
    val addr =
       [[`idx` |-> ``T``, `wb` |-> ``F``, `a` |-> ``T``],
@@ -3116,13 +3120,13 @@ in
        [`idx` |-> ``T``, `wb` |-> ``T``, `a` |-> ``T``],
        [`idx` |-> ``T``, `wb` |-> ``T``, `a` |-> ``F``]]
    val bpc_addr = List.take (addr, 2)
-   val addr1 = immediate1 Lib.I addr
-   val addr2 = immediate2 Lib.I addr
-   val addr3 = immediate3 Lib.I addr
-   val bpc_addr1 = immediate1 List.tl bpc_addr
-   val bpc_addr2 = immediate2 List.tl bpc_addr
-   val bpc_addr3 = immediate3 List.tl bpc_addr
-   val plain_addr1 = immediate1 Lib.I [[`a` |-> ``T``], [`a` |-> ``F``]]
+   val addr1 = immediate1 addr
+   val addr2 = immediate2 addr
+   val addr3 = immediate3 addr
+   val bpc_addr1 = immediate1 bpc_addr
+   val bpc_addr2 = immediate2 bpc_addr
+   val bpc_addr3 = immediate3 bpc_addr
+   val plain_addr1 = immediate1 [[`a` |-> ``T``], [`a` |-> ``F``]]
 end
 
 (* ---------------------------- *)
@@ -3536,10 +3540,10 @@ val SignedSatQ_32_rwt =
 val ev =
   EV [FPToFixed32_def, FPToFixed64_def, RoundingMode,
       UnsignedSatQ_32_rwt, SignedSatQ_32_rwt, SatQ_def,
-      intLib.ARITH_PROVE ``i > 4294967295i = ~(i <= 4294967295i)``,
-      intLib.ARITH_PROVE ``i > 2147483647i = ~(i <= 2147483647i)``,
-      intLib.ARITH_PROVE ``i < -2147483648i = ~(-2147483648i <= i)``,
-      intLib.ARITH_PROVE ``i < 0i = ~(0i <= i)``
+      intLib.ARITH_PROVE ``i > 4294967295i <=> ~(i <= 4294967295i)``,
+      intLib.ARITH_PROVE ``i > 2147483647i <=> ~(i <= 2147483647i)``,
+      intLib.ARITH_PROVE ``i < -2147483648i <=> ~(-2147483648i <= i)``,
+      intLib.ARITH_PROVE ``i < 0i <=> ~(0i <= i)``
      ]
      [[``fp32_to_int
            (if round_towards_zero then roundTowardZero
@@ -3968,7 +3972,7 @@ val thms =
 
 fun is_j tm =
    case Lib.total fcpSyntax.dest_fcp_index tm of
-      SOME (_, i) => i = numLib.term_of_int 24
+      SOME (_, i) => i ~~ numLib.term_of_int 24
     | NONE => false
 
 fun unset_j_conv tm =
@@ -4223,7 +4227,8 @@ in
    fun arm_eval config =
       let
          val tms =
-            Lib.mk_set (default_tms @ arm_configLib.mk_config_terms config)
+            Lib.op_mk_set aconv
+                          (default_tms @ arm_configLib.mk_config_terms config)
          val ftch = fetch tms
          val dec = arm_decode tms
          val run = eval enc tms
@@ -4340,8 +4345,6 @@ dec "E10F1000"
 dec "E12FF001"
 dec "E32FF0FF"
 dec "E328F40F"
-
-val ev = arm_step ""
 
 ev "MSR (cpsr, imm)";
 ev "MSR (cpsr, reg)";

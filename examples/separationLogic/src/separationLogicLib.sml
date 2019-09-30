@@ -49,13 +49,13 @@ let
    val (l_f, l_args) = strip_comb l_term;
    fun split_vars [] acc = ([], acc)
      | split_vars (t::ts) acc =
-       if mem t vars then
-	   split_vars ts (t::acc)
+       if tmem t vars then
+           split_vars ts (t::acc)
        else
-	   (rev (t::ts), acc)
-   val (rest_args, elim_args) = split_vars (rev l_args) [];
-   val _ = if (elim_args = []) then raise UNCHANGED else ();
-   val rest_vars = filter (fn v => not (mem v elim_args)) vars;
+           (rev (t::ts), acc)
+   val (rest_args, elim_args) = split_vars (rev l_args) []
+   val _ = if null elim_args then raise UNCHANGED else ()
+   val rest_vars = filter (fn v => not (tmem v elim_args)) vars
 
    val l_term' = list_mk_comb (l_f, rest_args);
    val r_term' = list_mk_abs (elim_args, r_term);
@@ -64,7 +64,7 @@ let
 
    val thm_term = mk_eq (t,t');
    val thm = prove (thm_term, SIMP_TAC std_ss [FUN_EQ_THM] THEN
-			      EQ_TAC THEN SIMP_TAC std_ss [])
+                              EQ_TAC THEN SIMP_TAC std_ss [])
 in
    thm
 end
@@ -290,7 +290,7 @@ fun ASL_PROGRAM_ABSTRACTION___block pf abstL sys xenv penv p =
                             let
                                val pL = listSyntax.mk_list ([p2], type_of p2);
                                val thm_rest' = ONCE_REWRITE_RULE [GSYM ASL_PROGRAM_IS_ABSTRACTION___block_intro] thm_rest;
-		            in
+                            in
                                (thm_rest', pL)
                             end;
 

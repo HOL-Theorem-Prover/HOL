@@ -8,7 +8,7 @@ selftest.exe: selftest.uo realSimps.uo
 	$(HOLMOSMLC) -o $@ $<
 
 ifeq ($(KERNELID),otknl)
-BARE_THYS = real intreal transc powser integral poly real_sigma seq topology lim nets
+BARE_THYS = real intreal transc powser integral poly real_sigma seq metric lim nets
 hol4-real-unint.art: hol4-real-unint.thy $(patsubst %,%.ot.art,$(BARE_THYS))
 	opentheory info --article -o $@ $<
 hol4-real-unsat.art: hol4-real-unsat.thy hol4-real-unint.art ../opentheory/hol4.int
@@ -16,6 +16,5 @@ hol4-real-unsat.art: hol4-real-unsat.thy hol4-real-unint.art ../opentheory/hol4.
 hol4-real-assums.art: hol4-real-unsat.thy hol4-real-unint.art ../opentheory/hol4.int
 	opentheory info --skip-definitions --assumptions -o $@ $<
 real.art: real.otd
-topology.art: topology.otd
 prove_real_assums.art: hol4-real-assums.art
 endif

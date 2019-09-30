@@ -13,8 +13,6 @@ open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory wordsLi
 
 val _ = new_theory "ARMComposition";
 
-val _ = Globals.priming := NONE;
-
 (*------------------------------------------------------------------------------------------------------*)
 (* Additional theorems for finite maps                                                                  *)
 (*------------------------------------------------------------------------------------------------------*)
@@ -56,7 +54,7 @@ val set_ss = std_ss ++ SET_SPEC_ss ++ PRED_SET_ss;
 val terminated = Define `
    terminated arm =
      !(s:STATEPCS) iB.
-	   stopAt (\s':STATEPCS. FST (FST s') = FST (FST s) + LENGTH arm) (step (upload arm iB (FST (FST s)))) s`;
+           stopAt (\s':STATEPCS. FST (FST s') = FST (FST s) + LENGTH arm) (step (upload arm iB (FST (FST s)))) s`;
 
 val TERMINATED_THM = Q.store_thm (
    "TERMINATED_THM",
@@ -64,7 +62,7 @@ val TERMINATED_THM = Q.store_thm (
         !s iB. FST (FST (runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s)) = FST (FST s) + LENGTH arm`,
    RW_TAC std_ss [terminated, UNROLL_RUNTO] THEN
    METIS_TAC [Q.SPECL [`s:STATEPCS`, `\s':STATEPCS. FST (FST s') = FST (FST (s:STATEPCS)) + LENGTH arm`,
-		       `step (upload arm iB (FST (FST (s:STATEPCS))))`] (INST_TYPE [alpha |-> Type `:STATEPCS`] SHORTEST_STOP)]
+                       `step (upload arm iB (FST (FST (s:STATEPCS))))`] (INST_TYPE [alpha |-> Type `:STATEPCS`] SHORTEST_STOP)]
    );
 
 (*---------------------------------------------------------------------------------*)
@@ -82,7 +80,7 @@ val CLOSED_THM = Q.store_thm (
           m < shortest (\s'. FST (FST s') = FST (FST s) + LENGTH arm) (step (upload arm iB (FST (FST s)))) s
           ==>
           FST (FST s) <= FST (FST (FUNPOW (step (upload arm iB (FST (FST s)))) m s)) /\
-	  FST (FST (FUNPOW (step (upload arm iB (FST (FST s)))) m s)) < FST (FST s) + LENGTH arm
+          FST (FST (FUNPOW (step (upload arm iB (FST (FST s)))) m s)) < FST (FST s) + LENGTH arm
    `,
    REPEAT GEN_TAC THEN
    `?s0 pcS0. s = (s0,pcS0)` by METIS_TAC [ABS_PAIR_THM] THEN
@@ -142,11 +140,11 @@ val CLOSED_MIDDLE_STEP_LEM = Q.store_thm (
 val CLOSED_MIDDLE_LEM = Q.store_thm (
    "CLOSED_MIDDLE_LEM",
    `!arm arm' arm'' pos iB (s:STATEPCS) s'.
-	   closed arm /\ terminated arm /\ (pos + LENGTH arm' = FST (FST s)) /\ (instB = upload arm iB (FST (FST s))) /\
+           closed arm /\ terminated arm /\ (pos + LENGTH arm' = FST (FST s)) /\ (instB = upload arm iB (FST (FST s))) /\
            (?m. (s' = FUNPOW (step instB) m (s)) /\ m <= shortest (\s1:STATEPCS. FST (FST s1) = FST (FST s) + LENGTH arm) (step instB) s)
             ==>
-	       (runTo (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) s' =
-		    runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s')`,
+               (runTo (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) s' =
+                    runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s')`,
 
    RW_TAC std_ss [] THEN
    Q.ABBREV_TAC `instB = upload arm iB (FST (FST s))` THEN
@@ -165,10 +163,10 @@ val CLOSED_MIDDLE_LEM = Q.store_thm (
            REWRITE_TAC [Once EQ_SYM_EQ] THEN
                RW_TAC list_ss [FUNPOW] THEN
                Q.ABBREV_TAC `s' = FUNPOW (step instB) m s` THEN
-	       `FST (FST s') = FST (FST s) + LENGTH arm` by METIS_TAC [Q.SPECL [`s'`, `\s1. FST (FST s1) = FST (FST s) + LENGTH arm`]
-							  (INST_TYPE [alpha |-> Type `:STATEPCS`] SHORTEST_LEM)] THEN
+               `FST (FST s') = FST (FST s) + LENGTH arm` by METIS_TAC [Q.SPECL [`s'`, `\s1. FST (FST s1) = FST (FST s) + LENGTH arm`]
+                                                          (INST_TYPE [alpha |-> Type `:STATEPCS`] SHORTEST_LEM)] THEN
                `?s0 pcS0. s' = (s0,pcS0)` by METIS_TAC [ABS_PAIR_THM] THEN
-	       METIS_TAC [RUNTO_ADVANCE, FST, SND],
+               METIS_TAC [RUNTO_ADVANCE, FST, SND],
 
            REWRITE_TAC [Once EQ_SYM_EQ] THEN
                RW_TAC list_ss [FUNPOW] THEN
@@ -176,18 +174,18 @@ val CLOSED_MIDDLE_LEM = Q.store_thm (
                `stopAt (\s1. FST (FST s1) = FST (FST s) + LENGTH arm) (step instB) s` by METIS_TAC [terminated] THEN
                `SUC m <= shortest (\s'. FST (FST s') = FST (FST s) + LENGTH arm) (step instB) s` by RW_TAC arith_ss [] THEN
                `v + SUC m = shortest (\s'. FST (FST s') = FST (FST s) + LENGTH arm) (step instB) s` by METIS_TAC [FUNPOW_SUC, ADD_SYM,
-	           (INST_TYPE [alpha |-> Type `:STATEPCS`] SHORTEST_THM)] THEN
+                   (INST_TYPE [alpha |-> Type `:STATEPCS`] SHORTEST_THM)] THEN
                `step (upload (arm' ++ arm ++ arm'') iB pos) (FUNPOW (step instB) m s)  =
-	             step instB (FUNPOW (step instB) m s)` by (Q.UNABBREV_TAC `instB` THEN
-							       METIS_TAC [CLOSED_THM, CLOSED_MIDDLE_STEP_LEM]) THEN
+                     step instB (FUNPOW (step instB) m s)` by (Q.UNABBREV_TAC `instB` THEN
+                                                               METIS_TAC [CLOSED_THM, CLOSED_MIDDLE_STEP_LEM]) THEN
 
                Cases_on `v` THENL [
-	           RW_TAC std_ss [Once RUNTO_EXPAND_ONCE, FUNPOW] THENL [
+                   RW_TAC std_ss [Once RUNTO_EXPAND_ONCE, FUNPOW] THENL [
                        METIS_TAC [],
                        RW_TAC std_ss [Once RUNTO_EXPAND_ONCE, FUNPOW] THEN
                        Q.ABBREV_TAC `s' = step instB (FUNPOW (step instB) m s)` THEN
                        `(FST (FST s') = FST (FST s) + LENGTH arm)` by METIS_TAC [Q.SPECL [`s'`, `\s1. FST (FST s1) =
-			   FST (FST s) + LENGTH arm`] (INST_TYPE [alpha |-> Type `:STATEPCS`] SHORTEST_LEM)]
+                           FST (FST s) + LENGTH arm`] (INST_TYPE [alpha |-> Type `:STATEPCS`] SHORTEST_LEM)]
                    ],
 
                    Q.PAT_ASSUM `!s.p` (ASSUME_TAC o SIMP_RULE std_ss [FUNPOW_SUC] o Q.SPECL [`s`,`arm`,`instB`,`SUC m`]) THEN
@@ -203,16 +201,16 @@ val CLOSED_MIDDLE_LEM = Q.store_thm (
 val CLOSED_MIDDLE = Q.store_thm (
    "CLOSED_MIDDLE",
    `!arm arm' arm'' pos iB (s:STATEPCS).
-	   closed arm /\ terminated arm /\ (pos + LENGTH arm' = FST (FST s)) ==>
-	       (runTo (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) s =
-		    runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s)`,
+           closed arm /\ terminated arm /\ (pos + LENGTH arm' = FST (FST s)) ==>
+               (runTo (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) s =
+                    runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s)`,
    REPEAT STRIP_TAC THEN
    `(?m. (FUNPOW (step (upload arm iB (FST (FST s)))) 0 s = FUNPOW (step (upload arm iB (FST (FST s)))) m s) /\
           m <= shortest (\s1. FST (FST s1) = FST (FST s) + LENGTH arm) (step (upload arm iB (FST (FST s)))) s) ==>
           (runTo (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) (FUNPOW (step (upload arm iB (FST (FST s)))) 0 s) =
            runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) (FUNPOW (step (upload arm iB (FST (FST s)))) 0 s))`
-	      by METIS_TAC [(SIMP_RULE std_ss [] o Q.SPECL [`arm`,`arm'`,`arm''`,`pos`,`iB`,`s`,`FUNPOW (step instB) 0 s`] o
-			     SIMP_RULE std_ss []) CLOSED_MIDDLE_LEM] THEN
+              by METIS_TAC [(SIMP_RULE std_ss [] o Q.SPECL [`arm`,`arm'`,`arm''`,`pos`,`iB`,`s`,`FUNPOW (step instB) 0 s`] o
+                             SIMP_RULE std_ss []) CLOSED_MIDDLE_LEM] THEN
     `0 <= shortest (\s'. FST (FST s') = FST (FST s) + LENGTH arm) (step (upload arm iB (FST (FST s)))) s` by RW_TAC arith_ss [] THEN
    RES_TAC THEN
    METIS_TAC [FUNPOW]
@@ -222,9 +220,9 @@ val CLOSED_MIDDLE = Q.store_thm (
 val CLOSED_PREFIX = Q.store_thm (
    "CLOSED_PREFIX",
    `!arm arm' pos iB (s:STATEPCS).
-	   closed arm /\ terminated arm /\ (pos + LENGTH arm' = FST (FST s)) ==>
-	       (runTo (upload (arm' ++ arm) iB pos) (FST (FST s) + LENGTH arm) s =
-		    runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s)`,
+           closed arm /\ terminated arm /\ (pos + LENGTH arm' = FST (FST s)) ==>
+               (runTo (upload (arm' ++ arm) iB pos) (FST (FST s) + LENGTH arm) s =
+                    runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s)`,
    REPEAT STRIP_TAC THEN
    IMP_RES_TAC (Q.SPECL [`arm`,`arm'`,`[]`] CLOSED_MIDDLE) THEN
    FULL_SIMP_TAC list_ss []
@@ -234,9 +232,9 @@ val CLOSED_PREFIX = Q.store_thm (
 val CLOSED_SUFFIX = Q.store_thm (
    "CLOSED_SUFFIX",
    `!arm arm' iB instB (s:STATEPCS).
-	   closed arm /\ terminated arm  ==>
-	       (runTo (upload (arm ++ arm') iB (FST (FST s))) (FST (FST s) + LENGTH arm) s =
-		    runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s)`,
+           closed arm /\ terminated arm  ==>
+               (runTo (upload (arm ++ arm') iB (FST (FST s))) (FST (FST s) + LENGTH arm) s =
+                    runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s)`,
    REPEAT STRIP_TAC THEN
    IMP_RES_TAC (Q.SPECL [`arm`,`[]`,`arm'`] CLOSED_MIDDLE) THEN
    FULL_SIMP_TAC list_ss []
@@ -249,10 +247,10 @@ val CLOSED_SUFFIX = Q.store_thm (
 val TERMINATED_MIDDLE_LEM = Q.store_thm (
    "TERMINATED_MIDDLE_LEM",
     `!arm arm' arm'' pos iB (s:STATEPCS) s'.
-	   closed arm /\ terminated arm /\ (pos + LENGTH arm' = FST (FST s)) /\ (instB = upload arm iB (FST (FST s))) /\
+           closed arm /\ terminated arm /\ (pos + LENGTH arm' = FST (FST s)) /\ (instB = upload arm iB (FST (FST s))) /\
            (?m. (s' = FUNPOW (step instB) m (s)) /\ m <= shortest (\s1:STATEPCS. FST (FST s1) = FST (FST s) + LENGTH arm) (step instB) s)
          ==>
-	 terd (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) s'`,
+         terd (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) s'`,
 
    RW_TAC std_ss [terd_def] THEN
    Q.ABBREV_TAC `instB = upload arm iB (FST (FST s))` THEN
@@ -261,7 +259,7 @@ val TERMINATED_MIDDLE_LEM = Q.store_thm (
        `FST (FST (FUNPOW (step instB) m s)) = FST (FST s) + LENGTH arm` by ( FULL_SIMP_TAC std_ss [stopAt_def, shortest_def] THEN
            METIS_TAC [Q.SPEC `\n.FST (FST (FUNPOW (step instB) n s)) = FST (FST s) + LENGTH arm` LEAST_INTRO]) THEN
            RW_TAC std_ss [stopAt_def] THEN
-	   Q.EXISTS_TAC `0` THEN
+           Q.EXISTS_TAC `0` THEN
            RW_TAC std_ss [FUNPOW],
 
        `m < shortest (\s'. FST (FST s') = FST (FST s) + LENGTH arm) (step instB) s` by RW_TAC arith_ss [] THEN
@@ -271,8 +269,8 @@ val TERMINATED_MIDDLE_LEM = Q.store_thm (
            REWRITE_TAC [Once EQ_SYM_EQ] THEN
                RW_TAC list_ss [FUNPOW] THEN
                Q.ABBREV_TAC `s' = FUNPOW (step instB) m s` THEN
-	       `FST (FST s') = FST (FST s) + LENGTH arm` by METIS_TAC [Q.SPECL [`s'`, `\s1. FST (FST s1) = FST (FST s) + LENGTH arm`]
-							  (INST_TYPE [alpha |-> Type `:STATEPCS`] SHORTEST_LEM)] THEN
+               `FST (FST s') = FST (FST s) + LENGTH arm` by METIS_TAC [Q.SPECL [`s'`, `\s1. FST (FST s1) = FST (FST s) + LENGTH arm`]
+                                                          (INST_TYPE [alpha |-> Type `:STATEPCS`] SHORTEST_LEM)] THEN
                RW_TAC std_ss [stopAt_def] THEN
                Q.EXISTS_TAC `0` THEN
                RW_TAC std_ss [FUNPOW],
@@ -283,15 +281,15 @@ val TERMINATED_MIDDLE_LEM = Q.store_thm (
                `stopAt (\s1. FST (FST s1) = FST (FST s) + LENGTH arm) (step instB) s` by METIS_TAC [terminated] THEN
                `SUC m <= shortest (\s'. FST (FST s') = FST (FST s) + LENGTH arm) (step instB) s` by RW_TAC arith_ss [] THEN
                `v + SUC m = shortest (\s'. FST (FST s') = FST (FST s) + LENGTH arm) (step instB) s` by METIS_TAC [FUNPOW_SUC, ADD_SYM,
-	           (INST_TYPE [alpha |-> Type `:STATEPCS`] SHORTEST_THM)] THEN
-	       `step (upload (arm' ++ arm ++ arm'') iB pos) (FUNPOW (step instB) m s)  =
-	             step instB (FUNPOW (step instB) m s)` by (Q.UNABBREV_TAC `instB` THEN
-							       METIS_TAC [CLOSED_THM, CLOSED_MIDDLE_STEP_LEM]) THEN
+                   (INST_TYPE [alpha |-> Type `:STATEPCS`] SHORTEST_THM)] THEN
+               `step (upload (arm' ++ arm ++ arm'') iB pos) (FUNPOW (step instB) m s)  =
+                     step instB (FUNPOW (step instB) m s)` by (Q.UNABBREV_TAC `instB` THEN
+                                                               METIS_TAC [CLOSED_THM, CLOSED_MIDDLE_STEP_LEM]) THEN
                Cases_on `v` THENL [
-	           RW_TAC std_ss [stopAt_def] THEN
+                   RW_TAC std_ss [stopAt_def] THEN
                        Q.ABBREV_TAC `s' = step instB (FUNPOW (step instB) m s)` THEN
                        `(FST (FST s') = FST (FST s) + LENGTH arm)` by METIS_TAC [Q.SPECL [`s'`, `\s1. FST (FST s1) =
-			   FST (FST s) + LENGTH arm`] (INST_TYPE [alpha |-> Type `:STATEPCS`] SHORTEST_LEM)] THEN
+                           FST (FST s) + LENGTH arm`] (INST_TYPE [alpha |-> Type `:STATEPCS`] SHORTEST_LEM)] THEN
                        Q.EXISTS_TAC `SUC 0` THEN
                        RW_TAC std_ss [FUNPOW],
 
@@ -309,15 +307,15 @@ val TERMINATED_MIDDLE_LEM = Q.store_thm (
 val TERMINATED_MIDDLE = Q.store_thm (
    "TERMINATED_MIDDLE",
    `!arm arm' arm'' pos iB instB (s:STATEPCS).
-	   closed arm /\ terminated arm /\ (pos + LENGTH arm' = FST (FST s)) ==>
+           closed arm /\ terminated arm /\ (pos + LENGTH arm' = FST (FST s)) ==>
                terd (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) s`,
 
     REPEAT STRIP_TAC THEN
     `(?m. (FUNPOW (step (upload arm iB (FST (FST s)))) 0 s = FUNPOW (step (upload arm iB (FST (FST s)))) m s) /\
           m <= shortest (\s1. FST (FST s1) = FST (FST s) + LENGTH arm) (step (upload arm iB (FST (FST s)))) s) ==>
           terd (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) (FUNPOW (step (upload arm iB (FST (FST s)))) 0 s)`
-	      by METIS_TAC [(SIMP_RULE std_ss [] o Q.SPECL [`arm`,`arm'`,`arm''`,`pos`,`iB`,`s`,`FUNPOW (step (upload arm iB (FST (FST s)))) 0 s`] o
-			     SIMP_RULE std_ss []) TERMINATED_MIDDLE_LEM] THEN
+              by METIS_TAC [(SIMP_RULE std_ss [] o Q.SPECL [`arm`,`arm'`,`arm''`,`pos`,`iB`,`s`,`FUNPOW (step (upload arm iB (FST (FST s)))) 0 s`] o
+                             SIMP_RULE std_ss []) TERMINATED_MIDDLE_LEM] THEN
    `0 <= shortest (\s'. FST (FST s') = FST (FST s) + LENGTH arm) (step (upload arm iB (FST (FST s)))) s` by RW_TAC arith_ss [] THEN
    RES_TAC THEN
    METIS_TAC [FUNPOW]
@@ -337,7 +335,7 @@ val CLOSED_SEQUENTIAL_COMPOSITION = Q.store_thm (
           /\
          (runTo (upload (arm' ++ arm1 ++ arm2 ++ arm'') iB pos) (FST (FST s) + LENGTH arm1 + LENGTH arm2) s =
           runTo (upload arm2 iB (FST (FST s) + LENGTH arm1)) (FST (FST s) + LENGTH arm1 + LENGTH arm2)
-	               (runTo (upload arm1 iB (FST (FST s))) (FST (FST s) + LENGTH arm1) s))`,
+                       (runTo (upload arm1 iB (FST (FST s))) (FST (FST s) + LENGTH arm1) s))`,
 
     NTAC 8 STRIP_TAC THEN
     Cases_on `LENGTH arm2 = 0` THENL [
@@ -350,16 +348,16 @@ val CLOSED_SEQUENTIAL_COMPOSITION = Q.store_thm (
 
         Q.ABBREV_TAC `insts2 = arm2 ++ arm''` THEN
         `~(LENGTH insts2 = 0) /\ (arm' ++ arm1 ++ arm2 ++ arm'' = arm' ++ arm1 ++ insts2)` by
-				      (Q.UNABBREV_TAC `insts2` THEN RW_TAC list_ss [] THEN METIS_TAC [APPEND_ASSOC]) THEN
+                                      (Q.UNABBREV_TAC `insts2` THEN RW_TAC list_ss [] THEN METIS_TAC [APPEND_ASSOC]) THEN
         ASM_REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC) THEN
         `?s1 pcS1. (s1,pcS1) = runTo (upload (arm' ++ arm1 ++ insts2) iB pos) (FST (FST s) + LENGTH arm1) s` by METIS_TAC [ABS_PAIR_THM] THEN
         `~(FST (FST s) + LENGTH arm1 + LENGTH arm2 IN (FST (FST s) INSERT pcS1))` by ALL_TAC THENL [
             POP_ASSUM MP_TAC THEN
                 RW_TAC std_ss [SIMP_RULE std_ss [] (Q.SPECL [`arm1`,`arm'`,`insts2`,`pos`,`iB`, `s:STATEPCS`] CLOSED_MIDDLE)] THEN
             `pcS1 = SND (runTo (upload arm1 iB (FST (FST (s:STATEPCS)))) (FST (FST s) + LENGTH arm1) ((FST s,{}):STATEPCS)) UNION SND s`  by METIS_TAC
-		 [terminated, Q.SPEC `(FST (s:STATEPCS),SND s)` (INST_TYPE [alpha |-> Type`:STATEPCS`] RUNTO_PCS_UNION), SND, FST, ABS_PAIR_THM] THEN
+                 [terminated, Q.SPEC `(FST (s:STATEPCS),SND s)` (INST_TYPE [alpha |-> Type`:STATEPCS`] RUNTO_PCS_UNION), SND, FST, ABS_PAIR_THM] THEN
             `!x. x IN SND (runTo (upload arm1 iB (FST (FST s))) (FST (FST s) + LENGTH arm1) (FST s,{})) ==>
-			 FST (FST s) <= x /\ x < FST (FST s) + LENGTH arm1` by METIS_TAC [closed,FST] THEN
+                         FST (FST s) <= x /\ x < FST (FST s) + LENGTH arm1` by METIS_TAC [closed,FST] THEN
             Q.UNABBREV_TAC `insts2` THEN
             FULL_SIMP_TAC set_ss [] THEN FULL_SIMP_TAC arith_ss [] THEN
             STRIP_TAC THEN RES_TAC THEN
@@ -373,7 +371,7 @@ val CLOSED_SEQUENTIAL_COMPOSITION = Q.store_thm (
                 RW_TAC std_ss [stopAt_def] THEN
                 Q.ABBREV_TAC `instB = upload (arm' ++ arm1 ++ insts2) iB pos` THEN
                 Q.EXISTS_TAC `shortest (\s'. FST (FST s') = FST (FST s) + LENGTH arm1 + LENGTH arm2) (step instB) (s1,pcS1)  +
-			      shortest (\s'. FST (FST s') = FST (FST s) + LENGTH arm1) (step instB) s` THEN
+                              shortest (\s'. FST (FST s') = FST (FST s) + LENGTH arm1) (step instB) s` THEN
                 RW_TAC std_ss [GSYM FUNPOW_FUNPOW] THEN
                 FULL_SIMP_TAC std_ss [terd_def,
                   REWRITE_RULE [Once EQ_SYM_EQ] (Q.SPECL [`instB`,`FST (FST (s:STATEPCS)) + LENGTH arm1`, `s:STATEPCS`] (GSYM UNROLL_RUNTO))] THEN
@@ -386,12 +384,12 @@ val CLOSED_SEQUENTIAL_COMPOSITION = Q.store_thm (
                   REWRITE_TAC [APPEND_ASSOC, ADD_ASSOC] THEN
                   `pos + LENGTH (arm' ++ arm1) = FST (FST (s1,pcS1))` by METIS_TAC [TERMINATED_THM, FST, LENGTH_APPEND, ADD_ASSOC] THEN
                   `terd (upload (arm' ++ arm1 ++ arm2 ++ arm'') iB pos) (FST (FST s) + LENGTH arm1 + LENGTH arm2) (s1,pcS1)`
-		               by METIS_TAC [FST, SND, TERMINATED_MIDDLE, ABS_PAIR_THM, LENGTH_APPEND, ADD_ASSOC] THEN
+                               by METIS_TAC [FST, SND, TERMINATED_MIDDLE, ABS_PAIR_THM, LENGTH_APPEND, ADD_ASSOC] THEN
                   FULL_SIMP_TAC list_ss [terd_def, REWRITE_RULE [Once EQ_SYM_EQ] (Q.SPECL [`upload (arm' ++ arm1 ++ arm2 ++ arm'') iB pos`,
-				`FST (FST (s:STATEPCS)) + LENGTH arm1 + LENGTH arm2`, `(s1,pcS1):STATEPCS`] (GSYM UNROLL_RUNTO))] THEN
+                                `FST (FST (s:STATEPCS)) + LENGTH arm1 + LENGTH arm2`, `(s1,pcS1):STATEPCS`] (GSYM UNROLL_RUNTO))] THEN
                   FULL_SIMP_TAC std_ss [ADD_ASSOC] THEN
                   `runTo (upload (arm' ++ arm1 ++ arm2 ++ arm'') iB pos) (FST (FST s) + LENGTH arm1 + LENGTH arm2) (s1,pcS1) =
-		      runTo (upload arm2 iB (FST s1)) (FST s1 + LENGTH arm2) (s1,pcS1)` by METIS_TAC [FST,
+                      runTo (upload arm2 iB (FST s1)) (FST s1 + LENGTH arm2) (s1,pcS1)` by METIS_TAC [FST,
                        (REWRITE_RULE [ADD_ASSOC] o SIMP_RULE list_ss [])
                             (Q.SPECL [`arm2`,`arm' ++ arm1`,`arm''`, `pos`,`iB`,`(s1,pcS1):STATEPCS`] CLOSED_MIDDLE)] THEN
                   METIS_TAC [TERMINATED_THM],
@@ -433,7 +431,7 @@ val DSTATE_IRRELEVANT_PCS = Q.store_thm
   `!arm pcS0 pcS1 iB s.
             terminated arm ==>
             (get_st (runTo (upload arm iB (FST s)) (FST s + LENGTH arm) (s,pcS0)) =
-	     get_st (runTo (upload arm iB (FST s)) (FST s + LENGTH arm) (s,pcS1)))`,
+             get_st (runTo (upload arm iB (FST s)) (FST s + LENGTH arm) (s,pcS1)))`,
   RW_TAC std_ss [terminated, get_st] THEN
   Cases_on `LENGTH arm` THENL [
        RW_TAC std_ss [Once RUNTO_EXPAND_ONCE] THEN
@@ -448,9 +446,9 @@ val DSTATE_COMPOSITION = Q.store_thm (
        closed arm /\ terminated arm /\ status_independent arm /\
        closed arm' /\ terminated arm' /\ status_independent arm'
        ==>
-	   (get_st (runTo (upload (arm ++ arm') iB pos0) (pos0 + LENGTH arm + LENGTH arm') ((pos0,cpsr0,st),({}))) =
-		get_st (runTo (upload arm' iB pos2) (pos2 + LENGTH arm')
-		     ((pos2,cpsr2, get_st (runTo (upload arm iB pos1) (pos1 + LENGTH arm) ((pos1,cpsr1,st),({})))), ({}))))`,
+           (get_st (runTo (upload (arm ++ arm') iB pos0) (pos0 + LENGTH arm + LENGTH arm') ((pos0,cpsr0,st),({}))) =
+                get_st (runTo (upload arm' iB pos2) (pos2 + LENGTH arm')
+                     ((pos2,cpsr2, get_st (runTo (upload arm iB pos1) (pos1 + LENGTH arm) ((pos1,cpsr1,st),({})))), ({}))))`,
 
    RW_TAC std_ss [get_st] THEN
    RW_TAC std_ss [(SIMP_RULE set_ss [ADD_ASSOC] o SIMP_RULE list_ss [] o
@@ -494,7 +492,7 @@ val SEQ_COMPOSITION_FLAT = Q.store_thm (
    `!arm arm'.
        well_formed arm /\ well_formed arm'
        ==>
-	   (eval_fl (arm ++ arm') = eval_fl arm' o eval_fl arm)`,
+           (eval_fl (arm ++ arm') = eval_fl arm' o eval_fl arm)`,
    RW_TAC std_ss [uploadCode_def, eval_fl, well_formed, FUN_EQ_THM] THEN
    RW_TAC list_ss [SIMP_RULE arith_ss [] (Q.SPECL [`arm`,`arm'`,`0`,`0`,`0`,`0w`,`0w`,`0w`,`(\i. ARB)`,`x`] DSTATE_COMPOSITION)]
   );
@@ -513,7 +511,7 @@ val mk_CJ = Define `
          [((B,SOME rop,F),NONE,[],SOME (POS (LENGTH arm_f + 2)))] ++
          arm_f ++
          [((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))] ++
-	 arm_t`;
+         arm_t`;
 
 
 val mk_TR = Define `
@@ -546,7 +544,7 @@ val SC_IS_WELL_FORMED = Q.store_thm (
            `?s' pcS'. runTo (upload arm1 iB (FST s)) (FST s + LENGTH arm1) (s,{}) = (s',pcS')` by METIS_TAC [ABS_PAIR_THM] THEN
            `SND (runTo (upload arm2 iB (FST s + LENGTH arm1)) (FST s + LENGTH arm1 + LENGTH arm2) (s',pcS')) =
                SND (runTo (upload arm2 iB (FST s + LENGTH arm1)) (FST s + LENGTH arm1 + LENGTH arm2) (s',{})) UNION pcS'`
-							 by METIS_TAC [terminated, RUNTO_PCS_UNION, ADD_ASSOC] THEN
+                                                         by METIS_TAC [terminated, RUNTO_PCS_UNION, ADD_ASSOC] THEN
            FULL_SIMP_TAC set_ss [] THEN
            STRIP_TAC THENL [
                Q.PAT_ASSUM `FST s' = FST s + LENGTH arm1` (ASSUME_TAC o GSYM) THEN
@@ -584,11 +582,11 @@ val UNCOND_JUMP_OVER_THM = Q.store_thm (
    "UNCOND_JUMP_OVER_THM",
    `!arm. well_formed ([((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm + 1)))] ++ arm) /\
           !iB pos cpsr st pcS. get_st (runTo (upload ([((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm + 1)))] ++ arm) iB pos)
-					(pos + LENGTH arm + 1) ((pos,cpsr,st),pcS)) = st`,
+                                        (pos + LENGTH arm + 1) ((pos,cpsr,st),pcS)) = st`,
 
    STRIP_TAC THEN
    `!s pcS iB. step (upload (((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm + 1)))::arm) iB (FST s)) (s,pcS) =
-					 ((FST s + LENGTH arm + 1, SND s), FST s INSERT pcS)` by ALL_TAC THENL [
+                                         ((FST s + LENGTH arm + 1, SND s), FST s INSERT pcS)` by ALL_TAC THENL [
        REPEAT GEN_TAC THEN
            `?pc cpsr st. s = (pc,cpsr,st)` by METIS_TAC [ABS_PAIR_THM] THEN
            FULL_SIMP_TAC std_ss [step_def] THEN
@@ -634,7 +632,7 @@ val HOARE_SC_FLAT = Q.store_thm (
    "HOARE_SC_FLAT",
    `!arm1 arm2 (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE) (T:P_DSTATE).
            well_formed arm1 /\ well_formed arm2 /\
-	   (!st. P st ==> Q (eval_fl arm1 st)) /\ (!st. R st ==> T (eval_fl arm2 st)) /\ (!st. Q st ==> R st)
+           (!st. P st ==> Q (eval_fl arm1 st)) /\ (!st. R st ==> T (eval_fl arm2 st)) /\ (!st. Q st ==> R st)
            ==>
            (!st. P st ==> T (eval_fl (mk_SC arm1 arm2) st))`,
        RW_TAC std_ss [mk_SC, SEQ_COMPOSITION_FLAT]
@@ -666,8 +664,8 @@ val eval_cond_def = Define `
 
 val eval_cond_thm = Q.store_thm (
    "eval_cond_thm",
-	 `!v1 rop v2 st cpsr.
-		  (eval_cond (v1,rop,v2) st = decode_cond_cpsr
+         `!v1 rop v2 st cpsr.
+                  (eval_cond (v1,rop,v2) st = decode_cond_cpsr
             (setNZCV cpsr
                (word_msb (read st v1 - read st v2),read st v1 = read st v2,
                 read st v2 <=+ read st v1,
@@ -675,40 +673,40 @@ val eval_cond_thm = Q.store_thm (
                 ~(word_msb (read st v1) =
                   word_msb (read st v1 - read st v2)))) rop)` ,
 
-	Cases_on `rop` THEN
-	FULL_SIMP_TAC std_ss [eval_cond_def, decode_cond_def , decode_op_thm,
-		decode_cond_cpsr_def, setNZCV_thm, LET_THM,
-		nzcv_def] THENL [
+        Cases_on `rop` THEN
+        FULL_SIMP_TAC std_ss [eval_cond_def, decode_cond_def , decode_op_thm,
+                decode_cond_cpsr_def, setNZCV_thm, LET_THM,
+                nzcv_def] THENL [
 
 
-		REWRITE_TAC [WORD_HIGHER_EQ],
-		SIMP_TAC std_ss [GSYM word_add_def, word_sub_def],
-		SIMP_TAC std_ss [GSYM word_add_def, word_sub_def] THEN METIS_TAC[],
-		SIMP_TAC arith_ss [WORD_HI, WORD_LO, WORD_LS, GSYM w2n_11],
+                REWRITE_TAC [WORD_HIGHER_EQ],
+                SIMP_TAC std_ss [GSYM word_add_def, word_sub_def],
+                SIMP_TAC std_ss [GSYM word_add_def, word_sub_def] THEN METIS_TAC[],
+                SIMP_TAC arith_ss [WORD_HI, WORD_LO, WORD_LS, GSYM w2n_11],
 
 
-		SIMP_TAC std_ss [word_ge_def, nzcv_def, LET_THM, GSYM word_add_def,
-			GSYM word_sub_def] THEN METIS_TAC[],
+                SIMP_TAC std_ss [word_ge_def, nzcv_def, LET_THM, GSYM word_add_def,
+                        GSYM word_sub_def] THEN METIS_TAC[],
 
-		SIMP_TAC std_ss [word_gt_def, nzcv_def, LET_THM, GSYM word_add_def,
-				GSYM word_sub_def, WORD_EQ_SUB_RADD, WORD_ADD_0] THEN
+                SIMP_TAC std_ss [word_gt_def, nzcv_def, LET_THM, GSYM word_add_def,
+                                GSYM word_sub_def, WORD_EQ_SUB_RADD, WORD_ADD_0] THEN
       METIS_TAC[],
 
-		PROVE_TAC[WORD_LOWER_EQ_ANTISYM, WORD_LOWER_CASES],
-		SIMP_TAC std_ss [GSYM word_add_def, GSYM word_sub_def],
+                PROVE_TAC[WORD_LOWER_EQ_ANTISYM, WORD_LOWER_CASES],
+                SIMP_TAC std_ss [GSYM word_add_def, GSYM word_sub_def],
 
-		SIMP_TAC std_ss [GSYM word_add_def, GSYM word_sub_def] THEN METIS_TAC[],
+                SIMP_TAC std_ss [GSYM word_add_def, GSYM word_sub_def] THEN METIS_TAC[],
 
-		SIMP_TAC std_ss [WORD_LOWER_OR_EQ] THEN
-		METIS_TAC[WORD_LOWER_LOWER_CASES, WORD_LOWER_ANTISYM],
+                SIMP_TAC std_ss [WORD_LOWER_OR_EQ] THEN
+                METIS_TAC[WORD_LOWER_LOWER_CASES, WORD_LOWER_ANTISYM],
 
-		SIMP_TAC std_ss [word_lt_def, nzcv_def, LET_THM, GSYM word_add_def,
-				GSYM word_sub_def, WORD_EQ_SUB_RADD, WORD_ADD_0] THEN
+                SIMP_TAC std_ss [word_lt_def, nzcv_def, LET_THM, GSYM word_add_def,
+                                GSYM word_sub_def, WORD_EQ_SUB_RADD, WORD_ADD_0] THEN
       METIS_TAC[],
 
-		SIMP_TAC std_ss [word_le_def, nzcv_def, LET_THM, GSYM word_add_def,
-			GSYM word_sub_def, WORD_EQ_SUB_RADD, WORD_ADD_0] THEN METIS_TAC[]
-	]);
+                SIMP_TAC std_ss [word_le_def, nzcv_def, LET_THM, GSYM word_add_def,
+                        GSYM word_sub_def, WORD_EQ_SUB_RADD, WORD_ADD_0] THEN METIS_TAC[]
+        ]);
 
 
 
@@ -717,17 +715,17 @@ val ENUMERATE_CJ = Q.store_thm (
     `!cond pc cpsr st offset.
             (eval_cond cond st ==>
              ?cpsr'. decode_cond (pc + 1, decode_op (pc,cpsr,st) (CMP,(NONE :EXP option),[FST cond; SND (SND cond)],(NONE:OFFSET option)))
-		                 ((B,SOME (FST (SND cond)),F),NONE,[],SOME offset) =
+                                 ((B,SOME (FST (SND cond)),F),NONE,[],SOME offset) =
                      ((goto (pc+1,SOME offset)), cpsr', st)) /\
             (~(eval_cond cond) st ==>
               ?cpsr'. decode_cond (pc + 1, decode_op (pc,cpsr,st) (CMP,(NONE :EXP option),[FST cond; SND (SND cond)],(NONE:OFFSET option)))
-		                 ((B,SOME (FST (SND cond)),F),NONE,[],SOME offset) =
-		     (pc+2,cpsr',st))`,
+                                 ((B,SOME (FST (SND cond)),F),NONE,[],SOME offset) =
+                     (pc+2,cpsr',st))`,
 
-	 REPEAT GEN_TAC THEN
-	 `?v1 rop v2. cond = (v1,rop,v2)` by METIS_TAC [ABS_PAIR_THM] THEN
-	 ASM_SIMP_TAC list_ss [decode_op_def, OPERATOR_case_def, decode_cond_def, LET_THM,
-		GSYM eval_cond_thm]
+         REPEAT GEN_TAC THEN
+         `?v1 rop v2. cond = (v1,rop,v2)` by METIS_TAC [ABS_PAIR_THM] THEN
+         ASM_SIMP_TAC list_ss [decode_op_def, OPERATOR_case_def, decode_cond_def, LET_THM,
+                GSYM eval_cond_thm]
 )
 
 (*---------------------------------------------------------------------------------*)
@@ -744,7 +742,7 @@ val CJ_COMPOSITION_LEM_1 = Q.store_thm (
           (runTo (upload arm' iB (FST s)) (FST s + LENGTH arm') (s,{}) =
             ((FST s + LENGTH arm', cpsr', get_st (runTo (uploadCode arm_t iB) (LENGTH arm_t) ((0,SND s),{}))),
               SND (runTo (upload arm_t iB (FST s+ LENGTH arm_f + 3)) (FST s + LENGTH arm_f + 3 + LENGTH arm_t)
-		   ((FST s + LENGTH arm_f + 3,cpsr'', SND (SND s)),{FST s + 1;FST s}))))`,
+                   ((FST s + LENGTH arm_f + 3,cpsr'', SND (SND s)),{FST s + 1;FST s}))))`,
 
     RW_TAC std_ss [well_formed] THEN
     `(?v1 rop v2. cond = (v1,rop,v2)) /\ (?pc cpsr st. s = (pc,cpsr,st))` by METIS_TAC [ABS_PAIR_THM] THEN
@@ -764,7 +762,7 @@ val CJ_COMPOSITION_LEM_1 = Q.store_thm (
     RW_TAC arith_ss [goto_def, uploadCode_def] THEN
     Q.UNABBREV_TAC `insts` THEN
     Q.ABBREV_TAC `insts = ((CMP,NONE,F),NONE,[v1; v2],NONE):: ((B,SOME rop,F),NONE,[],SOME (POS (LENGTH arm_f + 2)))::arm_f ++
-							[((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))]` THEN
+                                                        [((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))]` THEN
     `(LENGTH arm_f + 3 = LENGTH insts) /\
     (((CMP,NONE,F),NONE,[v1; v2],NONE)::((B,SOME rop,F),NONE,[],SOME (POS (LENGTH arm_f + 2)))::
                 (arm_f ++ [((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))] ++ arm_t) =
@@ -773,7 +771,7 @@ val CJ_COMPOSITION_LEM_1 = Q.store_thm (
     ASM_REWRITE_TAC [] THEN
     NTAC 3 (POP_ASSUM (K ALL_TAC)) THEN
     RW_TAC arith_ss [get_st, SIMP_RULE arith_ss []
-	 (Q.SPECL [`arm_t:INST list`,`insts:INST list`,`pc`, `iB`, `((pc + LENGTH (insts:INST list),cpsr',st),{pc+1; pc})`] CLOSED_PREFIX)] THEN
+         (Q.SPECL [`arm_t:INST list`,`insts:INST list`,`pc`, `iB`, `((pc + LENGTH (insts:INST list),cpsr',st),{pc+1; pc})`] CLOSED_PREFIX)] THEN
     `FST (FST (runTo (upload arm_t iB (pc + LENGTH insts)) (pc + LENGTH insts + LENGTH arm_t) ((pc+LENGTH insts,cpsr',st),{pc+1; pc}))) =
            pc + LENGTH insts + LENGTH arm_t` by METIS_TAC [TERMINATED_THM, FST] THEN
     Q.EXISTS_TAC `FST (SND (FST (runTo (upload arm_t iB (pc+LENGTH insts)) (pc+LENGTH arm_t+LENGTH insts) ((pc+LENGTH insts,cpsr',st),{pc+1;pc}))))` THEN
@@ -817,7 +815,7 @@ val CJ_TERMINATED_LEM_1 = Q.store_thm (
         RW_TAC std_ss [GSYM FUNPOW_FUNPOW] THEN
         Q.UNABBREV_TAC `insts` THEN
         Q.ABBREV_TAC `insts = ((CMP,NONE,F),NONE,[v1; v2],NONE):: ((B,SOME rop,F),NONE,[],SOME (POS (LENGTH arm_f + 2)))::arm_f ++
-							[((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))]` THEN
+                                                        [((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))]` THEN
         `(pc + 3 + LENGTH arm_f = pc + LENGTH insts) /\
         (((CMP,NONE,F),NONE,[v1; v2],NONE)::((B,SOME rop,F),NONE,[],SOME (POS (LENGTH arm_f + 2)))::
                 (arm_f ++ [((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))] ++ arm_t) =
@@ -846,7 +844,7 @@ val CJ_COMPOSITION_LEM_2 = Q.store_thm (
          (runTo (upload arm' iB (FST s)) (FST s + LENGTH arm') (s,{}) =
              ((FST s+LENGTH arm', cpsr', get_st (runTo (uploadCode arm_f iB) (LENGTH arm_f) ((0,SND s),{}))),
                FST s + 2 + LENGTH arm_f INSERT SND (runTo (upload arm_f iB (FST s + 2)) (FST s + 2 + LENGTH arm_f)
-						    ((FST s + 2,cpsr'',SND (SND s)),{FST s + 1;FST s}))))`,
+                                                    ((FST s + 2,cpsr'',SND (SND s)),{FST s + 1;FST s}))))`,
 
     RW_TAC std_ss [well_formed] THEN
     `(?v1 rop v2. cond = (v1,rop,v2)) /\ (?pc cpsr st. s = (pc,cpsr,st))` by METIS_TAC [ABS_PAIR_THM] THEN
@@ -872,26 +870,26 @@ val CJ_COMPOSITION_LEM_2 = Q.store_thm (
     ((((CMP,NONE,F),NONE,[v1; v2],NONE)::((B,SOME rop,F),NONE,[],SOME (POS (LENGTH arm_f + 2)))::
           (arm_f ++ [((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))] ++ arm_t)) =
                 (insts1 ++ (arm_f:INST list)) ++ insts2)` by (Q.UNABBREV_TAC `insts1` THEN Q.UNABBREV_TAC `insts2` THEN RW_TAC list_ss [] THEN
-							METIS_TAC [ rich_listTheory.CONS_APPEND, APPEND_ASSOC]) THEN
+                                                        METIS_TAC [ rich_listTheory.CONS_APPEND, APPEND_ASSOC]) THEN
     ASM_REWRITE_TAC [] THEN
     POP_ASSUM (K ALL_TAC) THEN
     `pc + LENGTH insts1 = FST (FST ((pc + 2,cpsr',st),{pc+1; pc}))` by RW_TAC arith_ss [] THEN
     `?s1 pcS1. (s1,pcS1) = runTo (upload (insts1 ++ arm_f ++ insts2) iB pc) (FST (FST ((pc+2,cpsr',st),{pc+1; pc})) +
-	      LENGTH arm_f) ((pc + 2,cpsr',st),{pc+1; pc})` by METIS_TAC [ABS_PAIR_THM] THEN
+              LENGTH arm_f) ((pc + 2,cpsr',st),{pc+1; pc})` by METIS_TAC [ABS_PAIR_THM] THEN
     `~(pc + LENGTH insts1 + LENGTH arm_f + LENGTH insts2 IN ((FST ((pc + 2,cpsr',st))) INSERT pcS1))` by ALL_TAC THENL [
         POP_ASSUM MP_TAC THEN
            RW_TAC std_ss [SIMP_RULE std_ss [] (Q.SPECL [`arm_f`,`insts1`,`insts2`,`pc`,`iB`, `((pc+2,cpsr',st),{pc+1;pc}):STATEPCS`] CLOSED_MIDDLE)] THEN
             `pcS1 = SND (runTo (upload arm_f iB (pc+2)) (pc + 2 + LENGTH arm_f) ((pc+2,cpsr',st),{})) UNION {pc+1;pc}`
-		     by METIS_TAC [RUNTO_PCS_UNION, SND, FST, terminated] THEN
+                     by METIS_TAC [RUNTO_PCS_UNION, SND, FST, terminated] THEN
             `!x. x IN SND (runTo (upload arm_f iB (pc+2)) (pc + 2 + LENGTH arm_f) ((pc + 2,cpsr',st),{})) ==>
-			 pc + 2 <= x /\ x < pc + 2 + LENGTH arm_f` by METIS_TAC [closed,FST] THEN
+                         pc + 2 <= x /\ x < pc + 2 + LENGTH arm_f` by METIS_TAC [closed,FST] THEN
             Q.PAT_ASSUM `LENGTH arm_t + 1 = LENGTH insts2` (ASSUME_TAC o GSYM) THEN
             FULL_SIMP_TAC set_ss [] THEN FULL_SIMP_TAC arith_ss [] THEN
             STRIP_TAC THEN RES_TAC THEN
             FULL_SIMP_TAC arith_ss [],
 
     `terd (upload (insts1 ++ arm_f ++ insts2) iB pc) (FST (FST ((pc + 2,cpsr',st),{pc+1; pc})) + LENGTH arm_f)
-						 ((pc+2,cpsr',st),{pc+1; pc})` by METIS_TAC [FST, TERMINATED_MIDDLE] THEN
+                                                 ((pc+2,cpsr',st),{pc+1; pc})` by METIS_TAC [FST, TERMINATED_MIDDLE] THEN
             `pc + (LENGTH arm_f + (LENGTH arm_t + 3)) = pc + LENGTH insts1 + LENGTH arm_f + LENGTH insts2` by RW_TAC arith_ss [] THEN
              Q.PAT_ASSUM `LENGTH insts1 = 2` (K ALL_TAC) THEN
              Q.PAT_ASSUM `pc + LENGTH insts1 = x` (K ALL_TAC) THEN
@@ -903,16 +901,16 @@ val CJ_COMPOSITION_LEM_2 = Q.store_thm (
                        THEN RW_TAC list_ss []) THEN
              `runTo (upload arm_f iB (pc+2)) (pc + 2 + LENGTH arm_f) ((pc+2,cpsr',st),{pc+1;pc})= (s1,pcS1)` by METIS_TAC [FST, CLOSED_PAIR_EQ,
                         DECIDE (Term `pc + (LENGTH arm_f + 2) = pc + 2 + LENGTH arm_f`),
-		        SIMP_RULE std_ss [] (Q.SPECL [`arm_f`,`insts1`,`insts2`,`pc`,`iB`, `((pc+2,cpsr',st),{pc+1;pc}):STATEPCS`] CLOSED_MIDDLE)] THEN
+                        SIMP_RULE std_ss [] (Q.SPECL [`arm_f`,`insts1`,`insts2`,`pc`,`iB`, `((pc+2,cpsr',st),{pc+1;pc}):STATEPCS`] CLOSED_MIDDLE)] THEN
              FULL_SIMP_TAC std_ss [] THEN
              `FST s1 = pc + 2 + LENGTH arm_f` by METIS_TAC [TERMINATED_THM,FST] THEN
              `?cpsr1 st1. s1:STATE = (SUC (SUC (pc + LENGTH arm_f)), cpsr1,st1)` by (RW_TAC arith_ss [SUC_ONE_ADD] THEN
-			       METIS_TAC [FST, ADD_SYM, ADD_ASSOC,ABS_PAIR_THM]) THEN
+                               METIS_TAC [FST, ADD_SYM, ADD_ASSOC,ABS_PAIR_THM]) THEN
              FULL_SIMP_TAC std_ss [] THEN
              `(upload (insts1++arm_f++insts2) iB pc) (pc+(LENGTH arm_f+2)) = ((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))` by ALL_TAC THENL [
-	         Q.UNABBREV_TAC `insts1` THEN Q.UNABBREV_TAC `insts2` THEN
+                 Q.UNABBREV_TAC `insts1` THEN Q.UNABBREV_TAC `insts2` THEN
                     `LENGTH arm_f + 2 < LENGTH  ([((CMP,NONE,F),NONE,[v1; v2],NONE);((B,SOME rop,F),NONE,[],SOME (POS (LENGTH arm_f + 2)))] ++ arm_f ++
-						 ((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))::arm_t)` by RW_TAC list_ss [] THEN
+                                                 ((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))::arm_t)` by RW_TAC list_ss [] THEN
                     RW_TAC list_ss [UPLOAD_LEM] THEN
                     `LENGTH (((CMP,NONE,F),NONE,[v1; v2],NONE):: ((B,SOME rop,F),NONE,[],SOME (POS (LENGTH arm_f + 2)))::arm_f) <=  LENGTH arm_f + 2`
                          by RW_TAC list_ss [] THEN
@@ -922,7 +920,7 @@ val CJ_COMPOSITION_LEM_2 = Q.store_thm (
                 RW_TAC list_ss [Once RUNTO_EXPAND_ONCE, step_def, decode_cond_thm, decode_op_thm,goto_thm] THEN
                     RW_TAC arith_ss [Once RUNTO_EXPAND_ONCE, SUC_ONE_ADD, ADD_SYM, get_st] THEN
                     Q.EXISTS_TAC `cpsr'` THEN STRIP_TAC THENL [
-	            `SND (SND (FST (runTo (upload arm_f iB 0) (LENGTH arm_f) ((0,cpsr,st),{})))) =  SND (SND (FST (runTo (upload arm_f iB (pc + 2))
+                    `SND (SND (FST (runTo (upload arm_f iB 0) (LENGTH arm_f) ((0,cpsr,st),{})))) =  SND (SND (FST (runTo (upload arm_f iB (pc + 2))
                      (pc + 2 + LENGTH arm_f) ((pc + 2,cpsr',st),{pc+1; pc}))))` by METIS_TAC [get_st, DSTATE_IRRELEVANT_PCS,
                        status_independent, DECIDE (Term `!x.0 + x = x`), FST, ADD_SYM] THEN
                      METIS_TAC [ABS_PAIR_THM, ADD_SYM, FST, SND],
@@ -966,7 +964,7 @@ val CJ_TERMINATED_LEM_2 = Q.store_thm (
             ((((CMP,NONE,F),NONE,[v1; v2],NONE)::((B,SOME rop,F),NONE,[],SOME (POS (LENGTH arm_f + 2)))::
                (arm_f ++ [((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))] ++ arm_t)) =
                 (insts1 ++ (arm_f:INST list)) ++ insts2)` by (Q.UNABBREV_TAC `insts1` THEN Q.UNABBREV_TAC `insts2` THEN RW_TAC list_ss [] THEN
-							METIS_TAC [ rich_listTheory.CONS_APPEND, APPEND_ASSOC]) THEN
+                                                        METIS_TAC [ rich_listTheory.CONS_APPEND, APPEND_ASSOC]) THEN
         ASM_REWRITE_TAC [] THEN
         `stopAt (\s'. FST (FST s') = pc + LENGTH insts1 + LENGTH arm_f) (step (upload (insts1 ++ arm_f ++ insts2) iB pc)) ((pc + LENGTH insts1,
              cpsr',st'),pcS')` by METIS_TAC [SIMP_RULE list_ss [] (Q.SPECL [`arm_f`,`insts1`,`insts2`] TERMINATED_MIDDLE),FST,terd_def] THEN
@@ -982,9 +980,9 @@ val CJ_TERMINATED_LEM_2 = Q.store_thm (
         ASM_REWRITE_TAC [] THEN REWRITE_TAC [DECIDE (Term`1 = SUC 0`)] THEN
         RW_TAC std_ss [FUNPOW] THEN
         `(upload (insts1++arm_f++insts2) iB pc) (pc+(LENGTH arm_f+2)) = ((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))` by ALL_TAC THENL [
-	     Q.UNABBREV_TAC `insts1` THEN Q.UNABBREV_TAC `insts2` THEN
+             Q.UNABBREV_TAC `insts1` THEN Q.UNABBREV_TAC `insts2` THEN
                     `LENGTH arm_f + 2 < LENGTH  ([((CMP,NONE,F),NONE,[v1; v2],NONE);((B,SOME rop,F),NONE,[],SOME (POS (LENGTH arm_f + 2)))] ++ arm_f ++
-						 ((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))::arm_t)` by RW_TAC list_ss [] THEN
+                                                 ((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))::arm_t)` by RW_TAC list_ss [] THEN
                     RW_TAC list_ss [UPLOAD_LEM] THEN
                     `LENGTH (((CMP,NONE,F),NONE,[v1; v2],NONE):: ((B,SOME rop,F),NONE,[],SOME (POS (LENGTH arm_f + 2)))::arm_f) <=  LENGTH arm_f + 2`
                          by RW_TAC list_ss [] THEN
@@ -1022,7 +1020,7 @@ val CJ_IS_WELL_FORMED = Q.store_thm (
                Q.ABBREV_TAC `pc = FST s + LENGTH arm_f + 3` THEN
                `SND (runTo (upload arm_t iB pc) (pc + LENGTH arm_t) ((pc,cpsr'',SND(SND s)),{FST s + 1; FST s})) =
                    SND (runTo (upload arm_t iB pc) (pc + LENGTH arm_t) ((pc,cpsr'',SND(SND s)),{})) UNION {FST s + 1; FST s}`
-							 by METIS_TAC [well_formed, terminated, RUNTO_PCS_UNION, FST] THEN
+                                                         by METIS_TAC [well_formed, terminated, RUNTO_PCS_UNION, FST] THEN
                FULL_SIMP_TAC set_ss [] THEN
                STRIP_TAC THEN FULL_SIMP_TAC arith_ss [] THEN
                `pc <= x /\ x< pc + LENGTH arm_t` by METIS_TAC [well_formed,closed,FST] THEN
@@ -1036,12 +1034,12 @@ val CJ_IS_WELL_FORMED = Q.store_thm (
               `FST s + (LENGTH arm_f + 2) = FST s + 2 + LENGTH arm_f` by RW_TAC arith_ss [] THEN
               `SND (runTo (upload arm_f iB (FST s+2)) (FST s + (LENGTH arm_f + 2)) ((FST s+2,cpsr'',SND(SND s)),{FST s + 1; FST s})) =
                SND (runTo (upload arm_f iB (FST s+2)) (FST s + 2 + LENGTH arm_f) ((FST s+2,cpsr'',SND(SND s)),{})) UNION {FST s + 1; FST s}`
-					 by METIS_TAC [well_formed, terminated, RUNTO_PCS_UNION, FST] THEN
+                                         by METIS_TAC [well_formed, terminated, RUNTO_PCS_UNION, FST] THEN
                Q.PAT_ASSUM `x IN k` MP_TAC THEN
                FULL_SIMP_TAC set_ss [] THEN
                STRIP_TAC THEN FULL_SIMP_TAC arith_ss [] THEN
                `FST s + 2 <= x /\ x< FST s + 2 + LENGTH arm_f` by METIS_TAC [well_formed,closed,FST,
-						       DECIDE (Term`FST s + (LENGTH arm_f + 2) = FST s + 2 + LENGTH arm_f`)] THEN
+                                                       DECIDE (Term`FST s + (LENGTH arm_f + 2) = FST s + 2 + LENGTH arm_f`)] THEN
                FULL_SIMP_TAC arith_ss []
            ],
 
@@ -1067,10 +1065,10 @@ val CJ_IS_WELL_FORMED = Q.store_thm (
 
 
 val HOARE_CJ_FLAT_LEM_1 = Q.store_thm (
-   "HAORE_CJ_FLAT_LEM_1",
+   "HOARE_CJ_FLAT_LEM_1",
    `!cond arm_t arm_f (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE).
           well_formed arm_t /\ well_formed arm_f /\
-	  (!st. P st ==> Q (eval_fl arm_t st)) /\ (!st. P st ==> R (eval_fl arm_f st))
+          (!st. P st ==> Q (eval_fl arm_t st)) /\ (!st. P st ==> R (eval_fl arm_f st))
           ==>
           !st. (P st /\ eval_cond cond st ==> Q (eval_fl (mk_CJ cond arm_t arm_f) st))`,
 
@@ -1086,8 +1084,8 @@ val HOARE_CJ_FLAT_LEM_1 = Q.store_thm (
             FULL_SIMP_TAC std_ss [] THEN
             RW_TAC arith_ss [goto_def, uploadCode_def] THEN
             Q.ABBREV_TAC `insts = ((CMP,NONE,F),NONE,[v1; v2],NONE):: ((B,SOME rop,F),NONE,[],SOME (POS (LENGTH arm_f + 2)))::arm_f ++
-							[((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))]` THEN
-	    `(LENGTH arm_f + 3 = LENGTH insts) /\
+                                                        [((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))]` THEN
+            `(LENGTH arm_f + 3 = LENGTH insts) /\
              (((CMP,NONE,F),NONE,[v1; v2],NONE)::((B,SOME rop,F),NONE,[],SOME (POS (LENGTH arm_f + 2)))::
                     (arm_f ++ [((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))] ++ arm_t) =
                     insts ++ arm_t)` by (Q.UNABBREV_TAC `insts` THEN RW_TAC list_ss []) THEN
@@ -1095,7 +1093,7 @@ val HOARE_CJ_FLAT_LEM_1 = Q.store_thm (
             ASM_REWRITE_TAC [] THEN
             NTAC 3 (POP_ASSUM (K ALL_TAC)) THEN
             RW_TAC arith_ss [SIMP_RULE arith_ss []
-			 (Q.SPECL [`arm_t:INST list`,`insts:INST list`,`0`, `(\i. ARB)`, `((LENGTH insts,cpsr',st),{1; 0})`] CLOSED_PREFIX)] THEN
+                         (Q.SPECL [`arm_t:INST list`,`insts:INST list`,`0`, `(\i. ARB)`, `((LENGTH insts,cpsr',st),{1; 0})`] CLOSED_PREFIX)] THEN
             FULL_SIMP_TAC std_ss [eval_fl, uploadCode_def] THEN
             `LENGTH insts = FST (LENGTH insts,cpsr',st)` by RW_TAC std_ss [] THEN
             METIS_TAC [status_independent, DECIDE (Term `!x.0 + x = x`), ADD_SYM, DSTATE_IRRELEVANT_PCS]
@@ -1103,10 +1101,10 @@ val HOARE_CJ_FLAT_LEM_1 = Q.store_thm (
 
 
 val HOARE_CJ_FLAT_LEM_2 = Q.store_thm (
-   "HAORE_CJ_FLAT_LEM_2",
+   "HOARE_CJ_FLAT_LEM_2",
    `!cond arm_t arm_f (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE).
           well_formed arm_t /\ well_formed arm_f /\
-	  (!st. P st ==> Q (eval_fl arm_t st)) /\ (!st. P st ==> R (eval_fl arm_f st))
+          (!st. P st ==> Q (eval_fl arm_t st)) /\ (!st. P st ==> R (eval_fl arm_f st))
           ==>
           !st. (P st /\ ~(eval_cond cond st) ==> R (eval_fl (mk_CJ cond arm_t arm_f) st))`,
 
@@ -1125,26 +1123,26 @@ val HOARE_CJ_FLAT_LEM_2 = Q.store_thm (
     ((((CMP,NONE,F),NONE,[v1; v2],NONE)::((B,SOME rop,F),NONE,[],SOME (POS (LENGTH arm_f + 2)))::
           (arm_f ++ [((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm_t + 1)))] ++ arm_t)) =
                 (insts1 ++ (arm_f:INST list)) ++ insts2)` by (Q.UNABBREV_TAC `insts1` THEN Q.UNABBREV_TAC `insts2` THEN RW_TAC list_ss [] THEN
-							METIS_TAC [ rich_listTheory.CONS_APPEND, APPEND_ASSOC]) THEN
+                                                        METIS_TAC [ rich_listTheory.CONS_APPEND, APPEND_ASSOC]) THEN
     ASM_REWRITE_TAC [] THEN
     POP_ASSUM (K ALL_TAC) THEN
     `0 + LENGTH insts1 = FST (FST ((2,cpsr',st),{1; 0}))` by RW_TAC arith_ss [] THEN
     `?s1 pcS1. (s1,pcS1) = runTo (upload (insts1 ++ arm_f ++ insts2) (\i. ARB) 0) (FST (FST ((2,cpsr',st),{1; 0})) +
-	      LENGTH arm_f) ((2,cpsr',st),{1; 0})` by METIS_TAC [ABS_PAIR_THM] THEN
+              LENGTH arm_f) ((2,cpsr',st),{1; 0})` by METIS_TAC [ABS_PAIR_THM] THEN
     `~(LENGTH insts1 + LENGTH arm_f + LENGTH insts2 IN ((FST ((2,cpsr',st))) INSERT pcS1))` by ALL_TAC THENL [
         POP_ASSUM MP_TAC THEN
             RW_TAC std_ss [SIMP_RULE std_ss [] (Q.SPECL [`arm_f`,`insts1`,`insts2`,`0`,`\i. ARB`, `((2,cpsr',st),{1; 0}):STATEPCS`] CLOSED_MIDDLE)] THEN
             `pcS1 = SND (runTo (upload arm_f (\i. ARB) 2) (2 + LENGTH arm_f) ((2,cpsr',st),{})) UNION {1;0}`
-		     by METIS_TAC [RUNTO_PCS_UNION, SND, FST, terminated] THEN
+                     by METIS_TAC [RUNTO_PCS_UNION, SND, FST, terminated] THEN
             `!x. x IN SND (runTo (upload arm_f (\i. ARB) 2) (2 + LENGTH arm_f) ((2,cpsr',st),{})) ==>
-			 2 <= x /\ x < 2 + LENGTH arm_f` by METIS_TAC [closed,FST] THEN
+                         2 <= x /\ x < 2 + LENGTH arm_f` by METIS_TAC [closed,FST] THEN
             Q.PAT_ASSUM `LENGTH arm_t + 1 = LENGTH insts2` (ASSUME_TAC o GSYM) THEN
             FULL_SIMP_TAC set_ss [] THEN FULL_SIMP_TAC arith_ss [] THEN
             STRIP_TAC THEN RES_TAC THEN
             FULL_SIMP_TAC arith_ss [],
 
     `terd (upload (insts1 ++ arm_f ++ insts2) (\i. ARB) 0) (FST (FST ((2,cpsr',st),{1; 0})) + LENGTH arm_f)
-						 ((2,cpsr',st),{1; 0})` by METIS_TAC [FST, TERMINATED_MIDDLE] THEN
+                                                 ((2,cpsr',st),{1; 0})` by METIS_TAC [FST, TERMINATED_MIDDLE] THEN
             `LENGTH arm_f + (LENGTH arm_t + 3) = LENGTH insts1 + LENGTH arm_f + LENGTH insts2` by RW_TAC arith_ss [] THEN
              Q.PAT_ASSUM `LENGTH insts1 = 2` (K ALL_TAC) THEN
              ASM_REWRITE_TAC [] THEN
@@ -1153,16 +1151,16 @@ val HOARE_CJ_FLAT_LEM_2 = Q.store_thm (
              POP_ASSUM (ASSUME_TAC o GSYM) THEN
              `LENGTH insts1 = 2` by (Q.UNABBREV_TAC `insts1` THEN RW_TAC list_ss []) THEN
              `runTo (upload arm_f (\i. ARB) 2) (2 + LENGTH arm_f) ((2,cpsr',st),{1; 0})= (s1,pcS1)` by METIS_TAC [FST, CLOSED_PAIR_EQ,
-		        SIMP_RULE std_ss [] (Q.SPECL [`arm_f`,`insts1`,`insts2`,`0`,`\i. ARB`, `((2,cpsr',st),{1; 0}):STATEPCS`] CLOSED_MIDDLE)] THEN
+                        SIMP_RULE std_ss [] (Q.SPECL [`arm_f`,`insts1`,`insts2`,`0`,`\i. ARB`, `((2,cpsr',st),{1; 0}):STATEPCS`] CLOSED_MIDDLE)] THEN
              FULL_SIMP_TAC std_ss [] THEN
              `?cpsr1 st1. s1:STATE = (SUC (SUC (LENGTH arm_f)), cpsr1,st1)` by (RW_TAC arith_ss [SUC_ONE_ADD] THEN
-									 METIS_TAC [TERMINATED_THM,FST, ADD_SYM, ABS_PAIR_THM]) THEN
+                                                                         METIS_TAC [TERMINATED_THM,FST, ADD_SYM, ABS_PAIR_THM]) THEN
              Q.PAT_ASSUM `LENGTH arm_t + 1 = LENGTH insts2` (ASSUME_TAC o GSYM) THEN
              FULL_SIMP_TAC std_ss [] THEN
              Q.UNABBREV_TAC `insts1` THEN Q.UNABBREV_TAC `insts2` THEN
 
              RW_TAC list_ss [Once RUNTO_EXPAND_ONCE, step_def, GSYM uploadCode_def, UPLOADCODE_LEM,rich_listTheory.EL_APPEND2,
-				  decode_cond_thm, decode_op_thm,goto_thm] THEN
+                                  decode_cond_thm, decode_op_thm,goto_thm] THEN
 
              RW_TAC arith_ss [Once RUNTO_EXPAND_ONCE, SUC_ONE_ADD, get_st] THEN
              FULL_SIMP_TAC arith_ss [SUC_ONE_ADD, eval_fl, uploadCode_def, get_st] THEN
@@ -1174,7 +1172,7 @@ val HOARE_CJ_FLAT_1 = Q.store_thm (
    "HOARE_CJ_FLAT_1",
    `!cond arm_t arm_f (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE).
           well_formed arm_t /\ well_formed arm_f /\
-	  (!st. P st ==> Q (eval_fl arm_t st)) /\ (!st. P st ==> R (eval_fl arm_f st))
+          (!st. P st ==> Q (eval_fl arm_t st)) /\ (!st. P st ==> R (eval_fl arm_f st))
           ==>
           !st. (P st /\ eval_cond cond st ==> Q (eval_fl (mk_CJ cond arm_t arm_f) st)) /\
                (P st /\ ~(eval_cond cond st) ==> R (eval_fl (mk_CJ cond arm_t arm_f) st))`,
@@ -1186,7 +1184,7 @@ val HOARE_CJ_FLAT = Q.store_thm (
    "HOARE_CJ_FLAT",
    `!cond arm_t arm_f (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE).
           well_formed arm_t /\ well_formed arm_f /\
-	  (!st. P st ==> Q (eval_fl arm_t st)) /\ (!st. P st ==> R (eval_fl arm_f st))
+          (!st. P st ==> Q (eval_fl arm_t st)) /\ (!st. P st ==> R (eval_fl arm_f st))
           ==>
           !st. (P st ==> if eval_cond cond st then Q (eval_fl (mk_CJ cond arm_t arm_f) st)
                                               else R (eval_fl (mk_CJ cond arm_t arm_f) st))`,
@@ -1360,7 +1358,7 @@ val LOOPNUM_INDEPENDENT_OF_CPSR_PCS = Q.store_thm (
             IMP_RES_TAC SHORTEST_LEM THEN NTAC 3 (POP_ASSUM (K ALL_TAC)) THEN
             `(\s. eval_cond cond (SND (SND (FST s)))) ((pc1,cpsr1,st),pcS1)` by METIS_TAC [SND,FST] THEN
             METIS_TAC [Q.SPECL [`((pc1,cpsr1,st),pcS):STATEPCS`,`(\s. eval_cond cond (SND (SND (FST s))))`]
-		       (INST_TYPE [alpha|->Type `:STATEPCS`] SHORTEST_LEM)],
+                       (INST_TYPE [alpha|->Type `:STATEPCS`] SHORTEST_LEM)],
         REWRITE_TAC [Once EQ_SYM_EQ] THEN FULL_SIMP_TAC std_ss [loopNum, get_st] THEN
             REPEAT STRIP_TAC THEN
             FIRST_ASSUM (ASSUME_TAC o Q.SPEC `iB` o REWRITE_RULE [WF_TR]) THEN
@@ -1373,8 +1371,8 @@ val LOOPNUM_INDEPENDENT_OF_CPSR_PCS = Q.store_thm (
             `~(\s. eval_cond cond (SND (SND (FST s)))) (((pc1,cpsr1,st),pcS1):STATEPCS)` by METIS_TAC [SND,FST] THEN
             Q.PAT_ASSUM `!x.stopAT x y x` (ASSUME_TAC o Q.SPEC `((pc1,cpsr1,st),pcS1):STATEPCS`) THEN
             `1 <= shortest (\s'. eval_cond cond (SND (SND (FST s')))) (\s'.runTo (upload arm iB (FST (FST s'))) (FST (FST s') + LENGTH arm)
-			s') ((pc1,cpsr1,st),pcS1)` by METIS_TAC  [Q.SPECL [`((pc1,cpsr1,st),pcS):STATEPCS`,`(\s. eval_cond cond (SND (SND (FST s))))`]
-		       (INST_TYPE [alpha|->Type `:STATEPCS`] SHORTEST_LEM)] THEN
+                        s') ((pc1,cpsr1,st),pcS1)` by METIS_TAC  [Q.SPECL [`((pc1,cpsr1,st),pcS):STATEPCS`,`(\s. eval_cond cond (SND (SND (FST s))))`]
+                       (INST_TYPE [alpha|->Type `:STATEPCS`] SHORTEST_LEM)] THEN
             IMP_RES_TAC SHORTEST_THM THEN ASM_REWRITE_TAC [DECIDE (Term `1 = SUC 0`), FUNPOW] THEN
             REWRITE_TAC [DECIDE (Term `!x.x + SUC 0 = SUC x`), prim_recTheory.INV_SUC_EQ] THEN
             NTAC 4 (POP_ASSUM (K ALL_TAC)) THEN
@@ -1437,11 +1435,11 @@ val TR_TERMINATED_LEM = Q.store_thm (
                Q.ABBREV_TAC `insts2 = [((B,SOME AL,F),NONE,[],SOME (NEG (LENGTH arm + 2))):INST]` THEN
                `(LENGTH insts2 = 1) /\ (2 = LENGTH insts1) /\ (mk_TR (v1,rop,v2) arm = insts1 ++ (arm:INST list) ++ insts2)`
                     by (Q.UNABBREV_TAC `insts1` THEN Q.UNABBREV_TAC `insts2` THEN RW_TAC list_ss [mk_TR] THEN
-							METIS_TAC [ rich_listTheory.CONS_APPEND, APPEND_ASSOC]) THEN
+                                                        METIS_TAC [ rich_listTheory.CONS_APPEND, APPEND_ASSOC]) THEN
                ASM_REWRITE_TAC [] THEN
                `stopAt (\s'. FST (FST s') = pc + LENGTH insts1 + LENGTH arm) (step (upload (insts1 ++ arm ++ insts2) iB pc)) ((pc + LENGTH insts1,
                  cpsr1,st), pc + 1 INSERT pc INSERT pcS)` by METIS_TAC [SIMP_RULE list_ss []
-			 (Q.SPECL [`arm`,`insts1`,`insts2`] TERMINATED_MIDDLE),FST,well_formed,terd_def] THEN
+                         (Q.SPECL [`arm`,`insts1`,`insts2`] TERMINATED_MIDDLE),FST,well_formed,terd_def] THEN
                IMP_RES_TAC UNROLL_RUNTO THEN POP_ASSUM (ASSUME_TAC o GSYM) THEN ASM_REWRITE_TAC [] THEN
                NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN FULL_SIMP_TAC std_ss [well_formed] THEN
                IMP_RES_TAC (SIMP_RULE std_ss [] (Q.SPECL [`arm`,`insts1:INST list`,`insts2`,`pc`,`iB`,
@@ -1458,7 +1456,7 @@ val TR_TERMINATED_LEM = Q.store_thm (
                `(upload (insts1++arm++insts2) iB pc) (pc+(LENGTH arm+LENGTH (insts1:INST list)))=((B,SOME AL,F),NONE,[],SOME (NEG (LENGTH arm+2)))`
                   by (
                    Q.PAT_ASSUM `2 = x` (ASSUME_TAC o GSYM) THEN FULL_SIMP_TAC std_ss [] THEN
-	           Q.UNABBREV_TAC `insts1` THEN Q.UNABBREV_TAC `insts2` THEN
+                   Q.UNABBREV_TAC `insts1` THEN Q.UNABBREV_TAC `insts2` THEN
                    REPEAT (POP_ASSUM (K ALL_TAC)) THEN RW_TAC list_ss [] THEN
                       `LENGTH (arm:INST list) + 2 < LENGTH  (((CMP,NONE,F),NONE,[v1; v2],NONE)::((B,SOME rop,F),NONE,[],SOME (POS (LENGTH arm + 2)))
                          :: (arm ++ [((B,SOME AL,F),NONE,[],SOME (NEG (LENGTH arm + 2))):INST]))` by RW_TAC list_ss [] THEN
@@ -1498,8 +1496,6 @@ val FUNPOW_DSTATE = Q.store_thm (
        METIS_TAC [ABS_PAIR_THM, FST, SND, get_st]
    ]
    );
-
-val _ = (Globals.priming := SOME "");
 
 val UNROLL_TR_LEM = Q.store_thm (
    "UNROLL_TR_LEM",
@@ -1544,7 +1540,7 @@ val UNROLL_TR_LEM = Q.store_thm (
             Q.ABBREV_TAC `insts2 = [((B,SOME AL,F),NONE,[],SOME (NEG (LENGTH arm + 2))):INST]` THEN
             `(LENGTH insts2 = 1) /\ (2 = LENGTH insts1) /\ (mk_TR (v1,rop,v2) arm = insts1 ++ (arm:INST list) ++ insts2)`
                  by (Q.UNABBREV_TAC `insts1` THEN Q.UNABBREV_TAC `insts2` THEN RW_TAC list_ss [mk_TR] THEN
-				METIS_TAC [ rich_listTheory.CONS_APPEND, APPEND_ASSOC]) THEN
+                                METIS_TAC [ rich_listTheory.CONS_APPEND, APPEND_ASSOC]) THEN
             ASM_REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC) THEN
             `?s1 pcS1. (s1,pcS1) = runTo (upload (insts1 ++ arm ++ insts2) iB pc) (pc + LENGTH (insts1:INST list) + LENGTH arm)
                   ((pc + LENGTH (insts1:INST list),cpsr',st),pc + 1 INSERT pc INSERT pcS)` by METIS_TAC [ABS_PAIR_THM] THEN
@@ -1553,16 +1549,16 @@ val UNROLL_TR_LEM = Q.store_thm (
                RW_TAC std_ss [SIMP_RULE std_ss [] (Q.SPECL [`arm`,`insts1`,`insts2`,`pc`,`iB`, `((pc + LENGTH (insts1:INST list),cpsr',st),
                    pc + 1 INSERT pc INSERT pcS) :STATEPCS`] CLOSED_MIDDLE)] THEN
                `pcS1 = SND (runTo (upload arm iB (pc+2)) (pc + 2 + LENGTH arm) ((pc+2,cpsr',st),{})) UNION (pc+1 INSERT pc INSERT pcS)`
-		     by METIS_TAC [RUNTO_PCS_UNION, SND, FST, terminated] THEN
+                     by METIS_TAC [RUNTO_PCS_UNION, SND, FST, terminated] THEN
                `!x. x IN SND (runTo (upload arm iB (pc+2)) (pc + 2 + LENGTH arm) ((pc + 2,cpsr',st),{})) ==>
-			 pc + 2 <= x /\ x < pc + 2 + LENGTH arm` by METIS_TAC [closed,FST] THEN
+                         pc + 2 <= x /\ x < pc + 2 + LENGTH arm` by METIS_TAC [closed,FST] THEN
                FULL_SIMP_TAC set_ss [] THEN FULL_SIMP_TAC arith_ss [] THEN
                STRIP_TAC THEN Q.PAT_ASSUM `2 = LENGTH insts1` (ASSUME_TAC o GSYM) THEN FULL_SIMP_TAC std_ss [] THEN
                RES_TAC THEN FULL_SIMP_TAC arith_ss []
             ) THEN
 
             `terd (upload (insts1 ++ arm ++ insts2) iB pc) (pc + LENGTH (insts1:INST list) + LENGTH arm)
-		    ((pc+LENGTH(insts1:INST list),cpsr',st),pc+1 INSERT pc INSERT pcS)` by METIS_TAC [FST, well_formed, TERMINATED_MIDDLE] THEN
+                    ((pc+LENGTH(insts1:INST list),cpsr',st),pc+1 INSERT pc INSERT pcS)` by METIS_TAC [FST, well_formed, TERMINATED_MIDDLE] THEN
             IMP_RES_TAC RUNTO_COMPOSITION THEN Q.PAT_ASSUM `(s1,pcS1) = x` (ASSUME_TAC o GSYM) THEN ASM_REWRITE_TAC [] THEN
             `(get_st (s1,pcS1) = get_st (runTo (upload arm iB pc) (pc+LENGTH arm) ((pc,cpsr,st),{}))) /\
              (FST (FST (s1,pcS1)) = pc + LENGTH insts1 + LENGTH arm) /\
@@ -1576,7 +1572,7 @@ val UNROLL_TR_LEM = Q.store_thm (
 
             `(upload (insts1++arm++insts2) iB pc) (pc+(LENGTH arm+LENGTH (insts1:INST list)))=((B,SOME AL,F),NONE,[],SOME (NEG (LENGTH arm+2)))` by (
                    Q.PAT_ASSUM `2 = x` (ASSUME_TAC o GSYM) THEN FULL_SIMP_TAC std_ss [] THEN
-	           Q.UNABBREV_TAC `insts1` THEN Q.UNABBREV_TAC `insts2` THEN
+                   Q.UNABBREV_TAC `insts1` THEN Q.UNABBREV_TAC `insts2` THEN
                    REPEAT (POP_ASSUM (K ALL_TAC)) THEN RW_TAC list_ss [] THEN
                       `LENGTH (arm:INST list) + 2 < LENGTH  (((CMP,NONE,F),NONE,[v1; v2],NONE)::((B,SOME rop,F),NONE,[],SOME (POS (LENGTH arm + 2)))
                          :: (arm ++ [((B,SOME AL,F),NONE,[],SOME (NEG (LENGTH arm + 2))):INST]))` by RW_TAC list_ss [] THEN
@@ -1639,8 +1635,6 @@ val UNROLL_TR_LEM = Q.store_thm (
   );
 
 
-val _ = (Globals.priming := NONE);
-
 val TR_IS_WELL_FORMED = Q.store_thm (
    "TR_IS_WELL_FORMED",
    `!cond arm. well_formed arm /\ WF_TR (cond,arm)
@@ -1660,7 +1654,7 @@ val HOARE_TR_FLAT = Q.store_thm (
    "HOARE_TR_FLAT",
    `!cond arm_t (P:P_DSTATE).
           well_formed arm /\ WF_TR (cond,arm) /\
-	  (!st. P st ==> P (eval_fl arm st)) ==>
+          (!st. P st ==> P (eval_fl arm st)) ==>
           !st. P st ==> P (eval_fl (mk_TR cond arm) st) /\ (eval_cond cond (eval_fl (mk_TR cond arm) st))`,
     REPEAT GEN_TAC THEN SIMP_TAC std_ss [LENGTH_TR, eval_fl] THEN STRIP_TAC THEN GEN_TAC THEN
     IMP_RES_TAC (SIMP_RULE set_ss [] (Q.SPECL [`cond`,`arm`,`iB`,`s:STATE`,`{}`] UNROLL_TR_LEM)) THEN
@@ -1769,4 +1763,3 @@ val WELL_FORMED_INSTB = Q.store_thm (
 
 
 val _ = export_theory();
-

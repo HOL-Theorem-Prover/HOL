@@ -217,9 +217,9 @@ fun lift_cond def =
       val (fname, fbody) = dest_eq (concl (SPEC_ALL def))
       val fbody' = trav fbody
       val th1 = prove (mk_eq(fbody, fbody'),
-		       SIMP_TAC bool_ss [LET_THM])
+                       SIMP_TAC bool_ss [LET_THM])
                 handle _ => prove (mk_eq(fbody, fbody'),
-		                   RW_TAC std_ss [LET_THM])
+                                   RW_TAC std_ss [LET_THM])
                 handle _ => def
       val th2 = CONV_RULE (RHS_CONV (REWRITE_CONV [Once th1])) (SPEC_ALL def)
   in
@@ -250,7 +250,7 @@ fun lift_cond exp =
               val M1' = mk_plet (v, lift_cond M1, N')
               val M2' = mk_plet (v, lift_cond M2, N')
 
-	      val th3 =
+              val th3 =
                      let val f = mk_pabs(v,N)
                          val th = INST_TYPE [alpha |-> type_of N,
                                             beta  |-> type_of N,
@@ -258,9 +258,9 @@ fun lift_cond exp =
                                  (LIFT_COND_ABOVE_C)
                          val t2 = rhs (concl (SPECL [f, J, M1, M2] th))
                          val th2 = prove (mk_eq(exp,t2),
-					  RW_TAC std_ss [LET_THM, C_def])
+                                          RW_TAC std_ss [LET_THM, C_def])
                      in
-			 PairRules.PBETA_RULE (SIMP_RULE std_ss [pairTheory.LAMBDA_PROD] th2)
+                         PairRules.PBETA_RULE (SIMP_RULE std_ss [pairTheory.LAMBDA_PROD] th2)
                      end
     in
        th5

@@ -11,11 +11,12 @@ app load ["numLib",
 
 open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      pairTheory arithmeticTheory numTheory prim_recTheory
-     jrhUtils realTheory topologyTheory netsTheory seqTheory;
+     jrhUtils realTheory metricTheory netsTheory seqTheory;
 
 infix THEN THENL ORELSE ORELSEC ##;
 
 val _ = new_theory "lim";
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = Parse.reveal "B";
 

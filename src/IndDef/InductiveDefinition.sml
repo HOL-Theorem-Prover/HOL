@@ -33,7 +33,7 @@ open Parse
 
 local fun prime v = let val (n,ty) = dest_var v in mk_var(n^"'",ty) end
 in
-fun vary V v = if mem v V then vary V (prime v) else v
+fun vary V v = if op_mem aconv v V then vary V (prime v) else v
 end
 
 (* ------------------------------------------------------------------------- *)
@@ -175,16 +175,19 @@ val EXISTS_EQUATION = Prim_rec.EXISTS_EQUATION
 (*  [JRH] Removed "Fail" constructor from handle trap.                       *)
 (* ------------------------------------------------------------------------- *)
 
-local fun getequs(avs,[]) = []
-        | getequs(avs,(h as {redex=r,residue})::t) =
-            if mem r avs
-            then h::getequs(avs,filter (fn{redex,...} => not(r=redex)) t)
-            else getequs(avs,t)
-      fun calculate_simp_sequence avs plis =
-        let val oks = getequs(avs,plis)
-        in (oks,subtract plis oks)
-        end
-      fun mk_eq_of_bind{redex,residue} = mk_eq(residue,redex)
+local
+  fun redres_eq {redex=x1,residue=e1} {redex=x2,residue=e2} =
+    aconv x1 x2 andalso aconv e1 e2
+  fun getequs(avs,[]) = []
+    | getequs(avs,(h as {redex=r,residue})::t) =
+      if op_mem aconv r avs then
+        h::getequs(avs,filter (fn{redex,...} => not(aconv r redex)) t)
+      else getequs(avs,t)
+  fun calculate_simp_sequence avs plis =
+    let val oks = getequs(avs,plis)
+    in (oks,op_set_diff redres_eq plis oks)
+    end
+  fun mk_eq_of_bind{redex,residue} = mk_eq(residue,redex)
 in
 fun canonicalize_clause clause carg =
  let val (avs,bimp)  = strip_forall clause
@@ -192,12 +195,14 @@ fun canonicalize_clause clause carg =
      val (rel,xargs) = strip_comb con
      val plis        = map2 (curry op |->) xargs carg
      val (yes,no)    = calculate_simp_sequence avs plis
-     val nvs         = filter (not o C mem (map #redex yes)) avs
+     val nvs         = filter (not o C (op_mem aconv) (map #redex yes)) avs
      val eth =
         if is_imp bimp then
           let val atm = itlist (curry mk_conj o mk_eq_of_bind) (yes@no) ant
               val (ths,tth) = nsplit CONJ_PAIR plis (ASSUME atm)
-              val thl = map(fn t => first(fn th => lhs(concl th) = t)ths) carg
+              val thl = map
+                          (fn t => first(fn th => aconv (lhs(concl th)) t) ths)
+                          carg
               val th0 = MP (SPECL avs (ASSUME clause)) tth
               val th1 = rev_itlist (C (curry MK_COMB)) thl (REFL rel)
               val th2 = EQ_MP (SYM th1) th0
@@ -217,7 +222,9 @@ fun canonicalize_clause clause carg =
                               "Vacuous clause trivialises whole definition"
               val atm = list_mk_conj(map mk_eq_of_bind (yes@no))
               val ths = CONJUNCTS (ASSUME atm)
-              val thl = map(fn t => first(fn th => lhs(concl th) = t) ths) carg
+              val thl = map
+                          (fn t => first(fn th => aconv (lhs(concl th)) t) ths)
+                          carg
               val th0 = SPECL avs (ASSUME clause)
               val th1 = rev_itlist (C (curry MK_COMB)) thl (REFL rel)
               val th2 = EQ_MP (SYM th1) th0
@@ -240,14 +247,14 @@ end;
 (* Canonicalizes the set of clauses, disjoining compatible antecedants.      *)
 (* ------------------------------------------------------------------------- *)
 
-local fun assoc2 x (h1::t1,h2::t2) = if x = h1 then h2 else assoc2 x (t1,t2)
+local fun assoc2 x (h1::t1,h2::t2) = if aconv x h1 then h2 else assoc2 x (t1,t2)
         | assoc2 x _ = fail()
 in
 fun canonicalize_clauses clauses =
   let val concls = map getconcl clauses
       val uncs = map strip_comb concls
-      val rels = itlist (insert o fst) uncs []
-      val xargs = map (C assoc uncs) rels
+      val rels = itlist (op_insert aconv o fst) uncs []
+      val xargs = map (C (op_assoc aconv) uncs) rels
       val closed = list_mk_conj clauses
       val avoids = all_vars closed
       val flargs = make_args avoids (map type_of (end_foldr (op @) xargs))
@@ -256,8 +263,8 @@ fun canonicalize_clauses clauses =
       val cthms = map2 canonicalize_clause clauses cargs
       val pclauses = map (rand o concl) cthms
       fun collectclauses tm =
-          mapfilter (fn t => if fst t = tm then snd t else fail())
-          (zip (map fst uncs) pclauses)
+          mapfilter (fn t => if aconv (fst t) tm then snd t else fail())
+                    (zip (map fst uncs) pclauses)
       val clausell = map collectclauses rels
       val cclausel = map list_mk_conj clausell
       val cclauses = list_mk_conj cclausel
@@ -622,22 +629,25 @@ val inddef_strict = ref false;
 val _ = Feedback.register_btrace ("inddef strict", inddef_strict);
 
 fun indented_term_to_string n tm = let
-  val nspaces = String.implode (List.tabulate(n, K #" "))
-  fun pper pps tm = let
+  val nspaces = CharVector.tabulate(n, K #" ")
+  fun pper tm = let
+    open smpp
   in
-    PP.add_string pps nspaces;
-    Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal)
-                  (Parse.pp_term pps)
-                  tm
+    add_string nspaces >>
+    block PP.CONSISTENT n (
+      Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal)
+                    (lift Parse.pp_term)
+                    tm
+    )
   end
 in
-  PP.pp_to_string (!Globals.linewidth) pper tm
+  PP.pp_to_string (!Globals.linewidth) (Parse.mlower o pper) tm
 end
 
 
 local
   fun pare_comb qvs tm =
-      if null (intersect (free_vars tm) qvs)
+      if null (op_intersect aconv (free_vars tm) qvs)
          andalso all is_var (snd(strip_comb tm))
       then tm
       else pare_comb qvs (rator tm)
@@ -649,7 +659,7 @@ local
       case (l1, l2) of
         ([], _) => acc
       | (_, []) => acc
-      | (h1::t1, h2::t2) => if h1 = h2 then common_prefix0 (h1::acc) t1 t2
+      | (h1::t1, h2::t2) => if aconv h1 h2 then common_prefix0 (h1::acc) t1 t2
                             else acc
   fun common_prefix l1 l2 = List.rev (common_prefix0 [] l1 l2)
   fun lcommon_prefix0 acc l =
@@ -667,14 +677,14 @@ local
 in
 fun unschematize_clauses clauses = let
   val schem = map schem_head clauses
-  val schems = mk_set schem
+  val schems = op_mk_set aconv schem
   fun insert_list l s = foldl (fn (t,s) => HOLset.add(s,t)) s l
-  val hdops = mk_set (map (#1 o strip_comb) schems)
+  val hdops = op_mk_set aconv (map (#1 o strip_comb) schems)
   val schemv_extent = length (#2 (strip_comb (hd schems)))
   fun is_hdop_instance t = let
     val (f,args) = strip_comb t
   in
-    mem f hdops andalso length args = schemv_extent
+    op_mem aconv f hdops andalso length args = schemv_extent
   end
   val all_instances =
       foldl (fn (t, s) => insert_list (find_terms is_hdop_instance t) s)

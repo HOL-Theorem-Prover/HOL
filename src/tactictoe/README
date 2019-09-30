@@ -1,30 +1,25 @@
 TacticToe is a tactic-based prover.
 
-It explores proof trees by repeatly selecting tactics that are
-appropriate to solve the current goal.
-The selection is performed on a dataset of recorded human tactics.
+It searches for a proof by repeatedly applying suitable tactics for each goal state that it produces. 
 
-USAGE: See examples/ttt_demoScript.sml.
+RECORDING:
+  load "tttUnfold"; open tttUnfold;
+  load "fooTheory";
+  ttt_record (); (* takes a long time (2-12h) *)
 
-EVALUATION of a theory (not needed to use TacticToe):
-  Evaluates how much tactictoe can automatically re-prove 
-  from previous definitions.
-  The result is stored in src/tactictoe/search_log/proof/your.
+USAGE: (after RECORDING) 
+  load "tacticToe"; open tacticToe;
+  tactictoe ``1+1=2``;
 
-  load "tacticToe";
-  open tacticToe;
-  load "yourTheory";
-  ttt_record (); (* takes a while *)
-  ttt_eval_thy "your";
-  
-  Warnings: 
-    if you do interrupt evaluation, 
-    please run ttt_record_thy "your" as evaluation messes up with the database.
-    For the same reason, do not run evaluation in two theories in parallel
-    unless the two theories are independent from each other.
+CLEANING: 
+  - TacticToe calls depends on the data stored in 
+    src/tactictoe/ttt_tacdata 
+  - TacticToe recording and evaluation depends on data stored in 
+    src/AI/sml_inspection/open
+  After updating HOL, it is usually necessary to 
+  remove these directories and start afresh 
 
-ISSUES:
-  Applying numSimps.clear_arith_caches is necessary in rare circumstances.
+EXAMPLE: see examples in src/tactictoe/examples.
 
 NOTES FOR DEVELOPERS:
-  Keep up-to-date: infix tokens in hhsInfix.sml, polyml values in hhsUnfold.sml.
+  Keep up-to-date: infix tokens in tttInfix.sml, polyml values in tttUnfold.sml.

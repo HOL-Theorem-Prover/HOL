@@ -20,8 +20,8 @@ local
   val ty_g = Parse.type_grammar ()
 in
   val term_to_string =
-        Portable.pp_to_string 70
-          (term_pp.pp_term tm_g ty_g PPBackEnd.raw_terminal)
+        PP.pp_to_string 70
+          (Parse.mlower o term_pp.pp_term tm_g ty_g PPBackEnd.raw_terminal)
 end
 
 (* ------------------------------------------------------------------------- *)
@@ -506,7 +506,7 @@ local
   let val (imm5,typ,m) = dest_Mode1_register mode1 in
     check ("thumb_encode_register", mode1)
       (fn _ => is_0 imm5 andalso is_0 typ andalso
-               (is_PC n orelse d = n) andalso Lib.all (width_okay 3) [d,m])
+               (is_PC n orelse d ~~ n) andalso Lib.all (width_okay 3) [d,m])
       [(T,14), (opc,6), (m,3), (d,0)]
   end
 
@@ -533,7 +533,7 @@ in
                                        andalso aligned imm32)
                               [(``0b101100001w:9 word``,7), (imm32$(8,2),0)]
                           end
-                        else if d = n then
+                        else if d ~~ n then
                           checkdp (fn _ => width_okay 3 d andalso
                                            width_okay 8 imm)
                              [(``0b111w:word3``,11), (d,8), (imm,0)]
@@ -569,7 +569,7 @@ in
                                 [(``0b10101w:word5``,11), (d,8),
                                  (imm32$(9,2),0)]
                           end
-                        else if d = n then
+                        else if d ~~ n then
                           checkdp (* ADD(2) *)
                              (fn _ => width_okay 8 imm andalso width_okay 3 d)
                              [(``0b11w:word2``,12), (d,8), (imm,0)]
@@ -583,10 +583,10 @@ in
                           val _ = checkdp
                                     (fn _ => is_0 imm5 andalso is_0 typ) []
                       in
-                        if is_F sflag andalso d = n then (* ADD(4) *)
+                        if is_F sflag andalso d ~~ n then (* ADD(4) *)
                           [(``0b10001w:word5``,10), (d$(3,3),7), (m,3),
                            (d$(2,0),0)]
-                        else if is_F sflag andalso d = m then (* ADD(4) *)
+                        else if is_F sflag andalso d ~~ m then (* ADD(4) *)
                           [(``0b10001w:word5``,10), (d$(3,3),7), (n,3),
                            (d$(2,0),0)]
                         else
@@ -648,7 +648,7 @@ in
                                              "not a valid mov (shift register)"
                       in
                         checkdp
-                          (fn _ => d = m andalso Lib.all (width_okay 3) [s,m])
+                          (fn _ => d ~~ m andalso Lib.all (width_okay 3) [s,m])
                           [(T,14), (sh,6), (s,3), (m,0)]
                       end
             | 14 => thumb_encode_register (opc,n,d,mode1) "bic"
@@ -662,7 +662,7 @@ in
               [(``0b1010w:word3``,12), (d,8), (imm8,0)] (* ADD(5) *)
           end
      | ("Multiply", [acc,_,d,_,m,n]) =>
-          checkdp (fn _ => is_F acc andalso d = m andalso
+          checkdp (fn _ => is_F acc andalso d ~~ m andalso
                            Lib.all (width_okay 3) [m,n])
             [(``0b0100001101w:word10``,6), (n,3), (m,0)]
      | ("Extend_Byte", [u,n,d,rot,m]) =>
@@ -1195,11 +1195,11 @@ let val checkls = check ("thumb2_encode_load_store",tm) in
           end
      | ("Load_Multiple", [p,u,s,w,n,registers]) =>
           checkls
-            (fn _ => is_F s andalso p = NOT u andalso is_0 (registers$(13,13)))
+            (fn _ => is_F s andalso p ~~ NOT u andalso is_0 (registers$(13,13)))
             [(T,27), (p,24), (u,23), (w,21), (T,20), (n,16), (registers,0)]
      | ("Store_Multiple", [p,u,s,w,n,registers]) =>
           checkls
-            (fn _ => is_F s andalso p = NOT u andalso
+            (fn _ => is_F s andalso p ~~ NOT u andalso
                      is_0 (registers$(13,13)) andalso is_0 (registers$(15,15)))
             [(T,27), (p,24), (u,23), (w,21), (n,16), (registers,0)]
      | ("Load_Exclusive", [n,t,imm8]) =>
@@ -1225,10 +1225,10 @@ let val checkls = check ("thumb2_encode_load_store",tm) in
           [(``0b10001100w:word8``,20), (n,16), (t,12),
            (``0b11110100w:word8``,4), (d,0)]
      | ("Store_Return_State", [p,u,w,mode]) =>
-          checkls (fn _ => p = NOT u)
+          checkls (fn _ => p ~~ NOT u)
             [(T,27), (u,24), (u,23), (w,21), (``0b110111w:word6``,14), (mode,0)]
      | ("Return_From_Exception", [p,u,w,n]) =>
-          checkls (fn _ => p = NOT u)
+          checkls (fn _ => p ~~ NOT u)
             [(T,27), (u,24), (u,23), (w,22), (T,20), (n,16),
              (``0b11w:word2``,14)]
      | _ => raise ERR "thumb2_encode_load_store"
@@ -1450,9 +1450,9 @@ fun encode_instruction (enc,cond,tm) =
    | _ => raise ERR "encode_instruction" ("cannot encode: " ^
             term_to_string (pairSyntax.mk_pair (enc,tm))))
      |> Arbnum.toHexString
-     |> (if enc = Encoding_Thumb_tm orelse enc = Encoding_ThumbEE_tm then
+     |> (if enc ~~ Encoding_Thumb_tm orelse enc ~~ Encoding_ThumbEE_tm then
            pad 4
-         else if enc = Encoding_ARM_tm then
+         else if enc ~~ Encoding_ARM_tm then
            pad 8
          else
            (fn s => String.concat [String.substring (s, 0, 4), " ",

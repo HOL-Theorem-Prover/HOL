@@ -60,10 +60,10 @@ val iNd_is_tree = store_thm(
   MATCH_MP_TAC (#2 (CONJ_PAIR is_tree_rules)) THEN
   SRW_TAC [][])
 
-val inftree_11 = store_thm(
-  "inftree_11",
-  ``((iLf a1 = iLf a2 : ('a,'b,'c) inftree) = (a1 = a2)) /\
-    ((iNd b1 f1 = iNd b2 f2 : ('a,'b,'c)inftree) = (b1 = b2) /\ (f1 = f2))``,
+Theorem inftree_11[simp]:
+    ((iLf a1 = iLf a2 : ('a,'b,'c) inftree) <=> (a1 = a2)) /\
+    ((iNd b1 f1 = iNd b2 f2 : ('a,'b,'c)inftree) <=> (b1 = b2) /\ (f1 = f2))
+Proof
   SRW_TAC [][iLf_def, iNd_def] THENL [
     SRW_TAC [][EQ_IMP_THM] THEN
     POP_ASSUM (MP_TAC o AP_TERM ``from_inftree``) THEN
@@ -79,8 +79,8 @@ val inftree_11 = store_thm(
             THEN1 SRW_TAC [][from_inftree_11] THEN
       ASM_SIMP_TAC bool_ss [FUN_EQ_THM]
     ]
-  ]);
-val _ = export_rewrites ["inftree_11"]
+  ]
+QED
 
 val inftree_distinct = store_thm(
   "inftree_distinct",
@@ -202,28 +202,27 @@ end
 val _ = adjoin_to_theory {
   sig_ps = NONE,
   struct_ps = SOME(
-    fn pps => let
-         fun bblock () = PP.begin_block pps PP.CONSISTENT 0
-         fun eblock () = PP.end_block pps
-         fun string s = PP.add_string pps s
-         fun break n = PP.add_break pps (1,n)
+    fn _ => let
+         val bblock = PP.block PP.CONSISTENT 0
+         fun string s = PP.add_string s
+         fun break n = PP.add_break (1,n)
        in
-         bblock();
-         string "val _ = let";                            break 2;
-         bblock();
-         string    "open TypeBasePure";                   break 0;
-         string    "val tyinfo = gen_datatype_info {";    break 2;
-         bblock();
-         string       "ax = inftree_Axiom,";              break 0;
-         string       "ind = inftree_ind,";               break 0;
-         string       "case_defs = [inftree_case_def]";
-         eblock();                                        break 0;
-         string    "}";
-         eblock();                                        break 0;
-         string "in";                                     break 2;
-         string   "TypeBase.write tyinfo";                break 0;
-         string "end";
-         eblock();                                        break 0
+         bblock [
+           string "val _ = let",                            break 2,
+           bblock [
+             string    "open TypeBasePure",                   break 0,
+             string    "val tyinfo = gen_datatype_info {",    break 2,
+             bblock [
+               string       "ax = inftree_Axiom,",              break 0,
+               string       "ind = inftree_ind,",               break 0,
+               string       "case_defs = [inftree_case_def]"
+             ], break 0,
+             string    "}"
+           ], break 0,
+           string "in",                                     break 2,
+           string   "TypeBase.write tyinfo",                break 0,
+           string "end"
+         ]
        end)
   };
 

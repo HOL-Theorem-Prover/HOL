@@ -162,6 +162,10 @@ in
   val is_max = can dest_max
   fun mk_max(t1, t2) = list_mk_comb(max_tm, [t1, t2])
 
+  val dest_pow = dest2 exp_tm "dest_pow" "pow term"
+  val is_pow = can dest_pow
+  fun mk_pow(t1,t2) = list_mk_comb(exp_tm, [t1, t2])
+
 
   fun int_of_term t = let
     val (is_pos, n) =
@@ -172,5 +176,7 @@ in
     if is_pos then Arbint.fromNat n
     else Arbint.~(Arbint.fromNat n)
   end
+
+
 
 end ;

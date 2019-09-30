@@ -30,8 +30,8 @@ quietdec := true;                         (* Switch off output               *)
 loadPath                                  (* Add path to loadPath            *)
  :=
  "../../path" :: !loadPath;
-map load ["pred_setLib","PathTheory"];
-open ped_setTheory PathTheory;
+map load ["pred_setLib","PSLPathTheory"];
+open ped_setTheory PSLPathTheory;
 quietdec := false;                        (* Restore output                  *)
 *)
 
@@ -39,7 +39,7 @@ quietdec := false;                        (* Restore output                  *)
 (* Boilerplate needed for compilation                                        *)
 (*****************************************************************************)
 
-open HolKernel Parse boolLib bossLib pred_setTheory PathTheory;
+open HolKernel Parse boolLib bossLib pred_setTheory PSLPathTheory;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -50,6 +50,7 @@ open HolKernel Parse boolLib bossLib pred_setTheory PathTheory;
 (*****************************************************************************)
 
 val _ = new_theory "Model";
+val _ = ParseExtras.temp_loose_equality()
 
 (*****************************************************************************)
 (* Stop ``S`` parsing to the S-combinator                                    *)
@@ -105,5 +106,3 @@ val COMPUTATION_def =
   `COMPUTATION M w = ?s. s IN M.S0 /\ PATH M s w`;
 
 val _ = export_theory();
-
-

@@ -21,6 +21,7 @@ sig
     val b             : unit -> proof
     val drop          : unit -> proofs
     val dropn         : int -> proofs
+    val drop_all      : unit -> proofs
     val restart       : unit -> proof
     val backup        : unit -> proof
     val restore       : unit -> proof
@@ -61,14 +62,14 @@ sig
 
     (* Switch to a different prettyprinter for all goals *)
 
-    val set_goal_pp   : (ppstream->goal->unit) -> (ppstream->goal->unit)
+    val set_goal_pp   : goal Parse.pprinter -> goal Parse.pprinter
 
     (* Standard system prettyprinter for goals *)
 
-    val std_goal_pp   : ppstream -> goal -> unit
+    val std_goal_pp   : goal Parse.pprinter
 
     (* Prettyprinters for the state of the proof manager *)
 
-    val pp_proof      : ppstream -> proof -> unit
-    val pp_proofs     : ppstream -> proofs -> unit
+    val pp_proof      : proof Parse.pprinter
+    val pp_proofs     : proofs Parse.pprinter
 end

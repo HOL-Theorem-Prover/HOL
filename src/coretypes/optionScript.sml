@@ -1,11 +1,11 @@
 (* =======================================================================*)
-(* FILE		: optionScript.sml                                        *)
-(* DESCRIPTION  : Creates a theory of SML like options         	          *)
-(* WRITES FILES	: option.th						  *)
-(*									  *)
-(* AUTHOR	: (c) D. Syme 1988					  *)
-(* DATE		: 95.04.25						  *)
-(* REVISED	: (Konrad Slind) Oct 9.97 to eliminate usage of           *)
+(* FILE         : optionScript.sml                                        *)
+(* DESCRIPTION  : Creates a theory of SML like options                    *)
+(* WRITES FILES : option.th                                               *)
+(*                                                                        *)
+(* AUTHOR       : (c) D. Syme 1988                                        *)
+(* DATE         : 95.04.25                                                *)
+(* REVISED      : (Konrad Slind) Oct 9.97 to eliminate usage of           *)
 (*                recursive types package. Follows the development of     *)
 (*                Elsa Gunter in her formalization of partial functions.  *)
 (*                                                                        *)
@@ -18,11 +18,11 @@ open HolKernel Parse boolLib metisLib;
      Make sure that sumTheory and oneTheory is loaded.
  ---------------------------------------------------------------------------*)
 
-local open sumTheory oneTheory in end;
-open BasicProvers
+local open sumTheory oneTheory relationTheory in end;
+open simpLib BasicProvers
 
 (* ---------------------------------------------------------------------*)
-(* Create the new theory						*)
+(* Create the new theory                                                *)
 (* ---------------------------------------------------------------------*)
 
 val _ = new_theory "option";
@@ -113,18 +113,18 @@ val [option_case_def] = Prim_rec.define_case_constant option_Axiom
 val _ = ot0 "option_case" "case"
 val _ = overload_on("case", ``option_CASE``)
 
-val FORALL_OPTION = Q.store_thm
- ("FORALL_OPTION",
-  `(!opt. P opt) = P NONE /\ !x. P (SOME x)`,
-  METIS_TAC [option_induction]);
+Theorem FORALL_OPTION:
+  (!opt. P opt) <=> P NONE /\ !x. P (SOME x)
+Proof METIS_TAC [option_induction]
+QED
 
-val EXISTS_OPTION = store_thm(
-  "EXISTS_OPTION",
-  ``(?opt. P opt) = P NONE \/ ?x. P (SOME x)``,
-  METIS_TAC [option_nchotomy]);
+Theorem EXISTS_OPTION:
+  (?opt. P opt) = P NONE \/ ?x. P (SOME x)
+Proof METIS_TAC [option_nchotomy]
+QED
 
 val SOME_11 = store_thm("SOME_11",
-  Term`!x y :'a. (SOME x = SOME y) = (x=y)`,
+  Term`!x y :'a. (SOME x = SOME y) <=> (x=y)`,
   REWRITE_TAC [SOME_DEF,option_ABS_ONE_ONE,sumTheory.INR_INL_11]);
 val _ = export_rewrites ["SOME_11"]
 
@@ -148,6 +148,7 @@ val OPTION_MAP_DEF = Prim_rec.new_recursive_definition
   Term`(OPTION_MAP (f:'a->'b) (SOME x) = SOME (f x)) /\
        (OPTION_MAP f NONE = NONE)`};
 val _ = export_rewrites ["OPTION_MAP_DEF"]
+val _ = computeLib.add_persistent_funs ["OPTION_MAP_DEF"]
 val _ = ot0 "OPTION_MAP" "map"
 
 val IS_SOME_DEF = Prim_rec.new_recursive_definition
@@ -196,6 +197,7 @@ val OPTION_MAP2_THM = Q.store_thm("OPTION_MAP2_THM",
 val _ = export_rewrites ["OPTION_MAP2_THM"];
 val _ = overload_on("lift2", ``OPTION_MAP2``)
 val _ = overload_on("OPTION_MAP2", ``OPTION_MAP2``)
+val _ = computeLib.add_persistent_funs ["OPTION_MAP2_THM"]
 
 val option_rws = OPTION_MAP2_THM::option_rws;
 
@@ -459,6 +461,7 @@ val OPTION_BIND_def = Prim_rec.new_recursive_definition
    def = Term`(OPTION_BIND NONE f = NONE) /\
               (OPTION_BIND (SOME x) f = f x)`}
 val _= export_rewrites ["OPTION_BIND_def"]
+val _ = computeLib.add_persistent_funs["OPTION_BIND_def"];
 
 val OPTION_BIND_cong = Q.store_thm(
   "OPTION_BIND_cong",
@@ -481,6 +484,12 @@ val IS_SOME_BIND = Q.store_thm ("IS_SOME_BIND",
   OPTION_CASES_TAC “x:'a option” THEN
   REWRITE_TAC [IS_SOME_DEF, OPTION_BIND_def]) ;
 
+Theorem OPTION_BIND_SOME:
+  !opt:'a option. OPTION_BIND opt SOME = opt
+Proof
+  GEN_TAC >> OPTION_CASES_TAC “opt: 'a option” >> REWRITE_TAC[OPTION_BIND_def]
+QED
+
 val OPTION_IGNORE_BIND_def = new_definition(
   "OPTION_IGNORE_BIND_def",
   ``OPTION_IGNORE_BIND m1 m2 = OPTION_BIND m1 (K m2)``);
@@ -491,6 +500,7 @@ val OPTION_IGNORE_BIND_thm = store_thm(
     (OPTION_IGNORE_BIND (SOME v) m = m)``,
   SRW_TAC[][OPTION_IGNORE_BIND_def]);
 val _ = export_rewrites ["OPTION_IGNORE_BIND_thm"]
+val _ = computeLib.add_persistent_funs ["OPTION_IGNORE_BIND_thm"]
 
 val OPTION_IGNORE_BIND_EQUALS_OPTION = store_thm(
   "OPTION_IGNORE_BIND_EQUALS_OPTION[simp]",
@@ -506,6 +516,7 @@ val OPTION_GUARD_def = Prim_rec.new_recursive_definition {
   def = ``(OPTION_GUARD T = SOME ()) /\
           (OPTION_GUARD F = NONE)``};
 val _ = export_rewrites ["OPTION_GUARD_def"]
+val _ = computeLib.add_persistent_funs ["OPTION_GUARD_def"]
 (* suggest overloading this to assert when used with other monad syntax. *)
 
 val OPTION_GUARD_COND = store_thm(
@@ -526,6 +537,7 @@ val OPTION_CHOICE_def = Prim_rec.new_recursive_definition
    def = ``(OPTION_CHOICE NONE m2 = m2) /\
            (OPTION_CHOICE (SOME x) m2 = SOME x)``}
 val _ = export_rewrites ["OPTION_CHOICE_def"]
+val _ = computeLib.add_persistent_funs ["OPTION_CHOICE_def"]
 
 val OPTION_CHOICE_EQ_NONE = store_thm(
   "OPTION_CHOICE_EQ_NONE",
@@ -611,8 +623,9 @@ val OPTION_APPLY_o = store_thm(
    ---------------------------------------------------------------------- *)
 
 val OPTREL_def = new_definition("OPTREL_def",
-  ``OPTREL R x y = (x = NONE) /\ (y = NONE) \/
-                 ?x0 y0. (x = SOME x0) /\ (y = SOME y0) /\ R x0 y0``);
+  ``OPTREL R x y <=>
+      (x = NONE) /\ (y = NONE) \/
+      ?x0 y0. (x = SOME x0) /\ (y = SOME y0) /\ R x0 y0``);
 
 val OPTREL_MONO = store_thm(
   "OPTREL_MONO",
@@ -628,6 +641,33 @@ THEN OPTION_CASES_TAC ``x:'a option``
 THEN ASM_REWRITE_TAC(OPTREL_def::option_rws)
 THEN PROVE_TAC[])
 val _ = export_rewrites["OPTREL_refl"]
+
+Theorem OPTREL_eq[simp]:
+  OPTREL (=) = (=)
+Proof
+   REWRITE_TAC[FUN_EQ_THM] >> rpt strip_tac >> Q.RENAME_TAC [‘OPTREL _ x y’] >>
+   MAP_EVERY OPTION_CASES_TAC [“x:'a option”, “y:'a option”] >>
+   simpLib.SIMP_TAC bool_ss (OPTREL_def::option_rws) >> METIS_TAC[]
+QED
+
+Theorem OPTREL_SOME:
+  (!R x y. OPTREL R (SOME x) y <=> ?z. (y = SOME z) /\ R x z) /\
+  (!R x y. OPTREL R x (SOME y) <=> ?z. (x = SOME z) /\ R z y)
+Proof
+  SRW_TAC[][OPTREL_def]
+QED
+
+val OPTREL_O_lemma = Q.prove(
+  `!R1 R2 l1 l2.
+     OPTREL (R1 O R2) l1 l2 <=> ?l3. OPTREL R2 l1 l3 /\ OPTREL R1 l3 l2`,
+  SRW_TAC [][OPTREL_def,EQ_IMP_THM,relationTheory.O_DEF,PULL_EXISTS] >>
+  FULL_SIMP_TAC (srw_ss()) [PULL_EXISTS] >> METIS_TAC[]);
+
+Theorem OPTREL_O:
+  !R1 R2. OPTREL (R1 O R2) = OPTREL R1 O OPTREL R2
+Proof
+  SRW_TAC[][FUN_EQ_THM,OPTREL_O_lemma,relationTheory.O_DEF]
+QED
 
 (* ----------------------------------------------------------------------
     some (Hilbert choice "lifted" to the option type)
@@ -703,52 +743,43 @@ val option_case_eq = Q.store_thm(
    ((opt = NONE) /\ (nc = v) \/ ?x. (opt = SOME x) /\ (sc x = v))’,
   OPTION_CASES_TAC “opt:'a option” THEN SRW_TAC[][EQ_SYM_EQ, option_case_def]);
 
+val S = PP.add_string and NL = PP.NL and B = PP.block PP.CONSISTENT 0
+
+val option_Induct = save_thm("option_Induct",
+  ONCE_REWRITE_RULE [boolTheory.CONJ_SYM] option_induction);
+val option_CASES = save_thm("option_CASES",
+  ONCE_REWRITE_RULE [boolTheory.DISJ_SYM] option_nchotomy);
+
+val _ = TypeBase.export
+  [TypeBasePure.mk_datatype_info_no_simpls
+     {ax=TypeBasePure.ORIG option_Axiom,
+      case_def=option_case_def,
+      case_cong=option_case_cong,
+      case_eq = option_case_eq,
+      induction=TypeBasePure.ORIG option_induction,
+      nchotomy=option_nchotomy,
+      size=NONE,
+      encode=NONE,
+      fields=[],
+      accessors=[],
+      updates=[],
+      destructors=[THE_DEF],
+      recognizers=[IS_NONE_DEF,IS_SOME_DEF],
+      lift=SOME(mk_var("optionSyntax.lift_option",
+                       “:'type -> ('a -> 'term) -> 'a option -> 'term”)),
+      one_one=SOME SOME_11,
+      distinct=SOME NOT_NONE_SOME}];
 
 val _ = adjoin_to_theory
-{sig_ps = SOME (fn ppstrm =>
-  let val S = PP.add_string ppstrm
-      fun NL() = PP.add_newline ppstrm
-  in
-    S "val option_Induct : thm"; NL();
-    S "val option_CASES : thm";  NL()
-  end),
- struct_ps = SOME (fn ppstrm =>
-  let val S = PP.add_string ppstrm
-      fun NL() = PP.add_newline ppstrm
-  in
-    S "val _ = TypeBase.write";                              NL();
-    S "  [TypeBasePure.mk_datatype_info";                    NL();
-    S "     {ax=TypeBasePure.ORIG option_Axiom,";            NL();
-    S "      case_def=option_case_def,";                     NL();
-    S "      case_cong=option_case_cong,";                   NL();
-    S "      case_eq = option_case_eq,";                     NL();
-    S "      induction=TypeBasePure.ORIG option_induction,"; NL();
-    S "      nchotomy=option_nchotomy,";                     NL();
-    S "      size=NONE,";                                    NL();
-    S "      encode=NONE,";                                  NL();
-    S "      fields=[],";                                    NL();
-    S "      accessors=[],";                                 NL();
-    S "      updates=[],";                                   NL();
-    S "      destructors=[THE_DEF],";                        NL();
-    S "      recognizers=[IS_NONE_DEF,IS_SOME_DEF],";        NL();
-    S "      lift=SOME(mk_var(\"optionSyntax.lift_option\",Parse.Type`:'type -> ('a -> 'term) -> 'a option -> 'term`)),";
-    NL();
-    S "      one_one=SOME SOME_11,";                         NL();
-    S "      distinct=SOME NOT_NONE_SOME}];";                NL();
-    NL();
-    S "val option_Induct = Rewrite.ONCE_REWRITE_RULE ";               NL();
-    S "                      [boolTheory.CONJ_SYM] option_induction"; NL();
-    S "val option_CASES = Rewrite.ONCE_REWRITE_RULE ";                NL();
-    S "                      [boolTheory.DISJ_SYM] option_nchotomy";
-    NL();NL();
-    S "val _ = let open computeLib";                            NL();
-    S "        in add_funs (map lazyfy_thm";                    NL();
-    S "               [NOT_NONE_SOME,NOT_SOME_NONE,SOME_11,";   NL();
-    S "                option_case_def, OPTION_MAP_DEF,";       NL();
-    S "                IS_SOME_DEF,IS_NONE_DEF,THE_DEF,";       NL();
-    S "                OPTION_JOIN_DEF])";                      NL();
-    S "        end;"
-  end)};
+{sig_ps = NONE,
+ struct_ps = SOME (fn _ => B[
+    S "val _ = let open computeLib",                            NL,
+    S "        in add_funs (map lazyfy_thm",                    NL,
+    S "               [NOT_NONE_SOME,NOT_SOME_NONE,SOME_11,",   NL,
+    S "                option_case_def, ",                      NL,
+    S "                IS_SOME_DEF,IS_NONE_DEF,THE_DEF,",       NL,
+    S "                OPTION_JOIN_DEF])",                      NL,
+    S "        end;"])};
 
 val datatype_option = store_thm(
   "datatype_option",

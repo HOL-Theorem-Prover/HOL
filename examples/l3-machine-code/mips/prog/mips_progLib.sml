@@ -177,7 +177,7 @@ local
          [("mips$StatusRegister_ERL_fupd", "mips_CP0_Status_ERL"),
           ("mips$StatusRegister_EXL_fupd", "mips_CP0_Status_EXL")]
          []
-         (fn (s, l) => s = "mips$CP0_Status" andalso l = [``^st.CP0``])
+         (fn (s, l) => s = "mips$CP0_Status" andalso tml_eq l [``^st.CP0``])
    val cp0_write_footprint =
       stateLib.write_footprint mips_1 mips_2 []
          [("mips$CP0_Cause_fupd", "mips_CP0_Cause"),
@@ -187,12 +187,12 @@ local
           ("mips$CP0_ErrCtl_fupd", "mips_CP0_ErrCtl")]
          [("mips$CP0_Count_fupd", "mips_CP0_Count")]
          [("mips$CP0_Status_fupd", cp0_status_write_footprint)]
-         (fn (s, l) => s = "mips$mips_state_CP0" andalso l = [st])
+         (fn (s, l) => s = "mips$mips_state_CP0" andalso tml_eq l [st])
    val fcsr_write_footprint =
       stateLib.write_footprint mips_1 mips_2 [] []
          [("mips$FCSR_FCC_fupd", "mips_fcsr_FCC")]
          []
-         (fn (s, l) => s = "mips$mips_state_fcsr" andalso l = [st])
+         (fn (s, l) => s = "mips$mips_state_fcsr" andalso tml_eq l [st])
 in
    val mips_write_footprint =
       stateLib.write_footprint mips_1 mips_2
@@ -262,7 +262,7 @@ fun spec_BranchTo th =
                 else th
        | _ => th
    end
-
+fun tdistinct tml = HOLset.numItems (listset tml) = length tml
 local
    fun check_unique_reg_CONV tm =
       let
@@ -270,7 +270,7 @@ local
          val rp = List.mapPartial (Lib.total (fst o dest_mips_gpr)) p
          val fp = List.mapPartial (Lib.total (fst o dest_mips_FGR)) p
       in
-         if Lib.mk_set rp = rp andalso Lib.mk_set fp = fp
+         if tdistinct rp andalso tdistinct fp
             then Conv.ALL_CONV tm
          else raise ERR "check_unique_reg_CONV" "duplicate register"
       end
@@ -287,7 +287,7 @@ local
    val OPC_CONV = POOL_CONV o Conv.RATOR_CONV o Conv.RAND_CONV o Conv.RAND_CONV
    exception FalseTerm
    fun NOT_F_CONV tm =
-      if tm = boolSyntax.F then raise FalseTerm else Conv.ALL_CONV tm
+      if Feq tm then raise FalseTerm else Conv.ALL_CONV tm
    val WGROUND_RW_CONV =
       Conv.DEPTH_CONV (utilsLib.cache 10 Term.compare bitstringLib.v2w_n2w_CONV)
       THENC utilsLib.WGROUND_CONV

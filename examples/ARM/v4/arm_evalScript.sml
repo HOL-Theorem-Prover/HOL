@@ -16,6 +16,7 @@ open Q rich_listTheory arithmeticTheory wordsLib wordsTheory bitTheory;
 open combinTheory updateTheory armTheory systemTheory instructionTheory;
 
 val _ = new_theory "arm_eval";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 
@@ -437,7 +438,7 @@ val SPSR_WRITE_n2w = save_thm("SPSR_WRITE_n2w", GEN_ALL
 
 (* ------------------------------------------------------------------------- *)
 
-val decode_opcode_def = with_flag (priming, SOME "") Define`
+val decode_opcode_def = Define`
   decode_opcode i =
     case i of
       AND cond s Rd Rn Op2 => 0w:word4

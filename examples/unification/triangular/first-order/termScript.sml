@@ -1,4 +1,5 @@
-open HolKernel boolLib bossLib Parse stringTheory ramanaLib bagTheory commonUnifTheory;
+open HolKernel boolLib bossLib Parse stringTheory ramanaLib bagTheory
+     commonUnifTheory;
 
 val _ = new_theory "term";
 

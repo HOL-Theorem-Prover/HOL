@@ -1,11 +1,11 @@
 (* =====================================================================*)
-(* FILE		: monosetScript.sml                                     *)
-(* DESCRIPTION  : Creates a new monoset including the EVERY operator, 	*)
-(*                 and uses it to define a relation and its strong	*)
-(*                 induction theorem.					*)
-(*									*)
-(* AUTHOR	: Peter Vincent Homeier					*)
-(* DATE		: 2006.09.08						*)
+(* FILE         : monosetScript.sml                                     *)
+(* DESCRIPTION  : Creates a new monoset including the EVERY operator,   *)
+(*                 and uses it to define a relation and its strong      *)
+(*                 induction theorem.                                   *)
+(*                                                                      *)
+(* AUTHOR       : Peter Vincent Homeier                                 *)
+(* DATE         : 2006.09.08                                            *)
 (* =====================================================================*)
 
 (*
@@ -15,7 +15,7 @@
 open HolKernel Parse boolLib listLib listTheory IndDefLib bossLib
 
 (* --------------------------------------------------------------------- *)
-(* Open a new theory.							 *)
+(* Open a new theory.                                                    *)
 (* --------------------------------------------------------------------- *)
 
 val _ = new_theory"monoset";
@@ -61,8 +61,8 @@ val strong_alleven_ind = save_thm(
     different order just to be perverse.
    ---------------------------------------------------------------------- *)
 
-val every_def = Define`(every [] P = T) /\
-                       (every (h :: t) P = P h /\ every t P)`
+val every_def = Define`(every [] P <=> T) /\
+                       (every (h :: t) P <=> P h /\ every t P)`
 (* note how we could have defined this relation inductively too *)
 
 (* now we have to prove that this operator is monotone *)
@@ -88,7 +88,7 @@ val strong_allbigger_ind = save_thm(
   derive_strong_induction (allbigger_rules, allbigger_ind))
 
 (* --------------------------------------------------------------------- *)
-(* End of example.							 *)
+(* End of example.                                                       *)
 (* --------------------------------------------------------------------- *)
 
 val _ = export_theory();

@@ -28,6 +28,9 @@ open
 val arith_ss = old_arith_ss
 
 val _ = new_theory "rat";
+val _ = ParseExtras.temp_loose_equality()
+
+val ERR = mk_HOL_ERR "ratScript"
 
 (*--------------------------------------------------------------------------*
  *  rat_equiv: definition and proof of equivalence relation
@@ -143,7 +146,8 @@ val RAT_EQUIV_ALT = store_thm("RAT_EQUIV_ALT",
     EXISTS_TAC ``frac_dnm x`` THEN EXISTS_TAC ``frac_dnm a`` THEN
       ASM_SIMP_TAC bool_ss [FRAC_DNMPOS, NMR, DNM] THEN
       VALIDATE (CONV_TAC (feqconv FRAC_EQ)) THEN
-      TRY (irule INT_MUL_POS_SIGN THEN irule FRAC_DNMPOS) THEN CONJ_TAC
+      TRY (irule INT_MUL_POS_SIGN >> conj_tac >> irule FRAC_DNMPOS) THEN
+      CONJ_TAC
       (* ASM_SIMP_TAC bool_ss [] does nothing - why ??? *)
       THENL [ POP_ASSUM ACCEPT_TAC, ASM_SIMP_TAC bool_ss [INT_MUL_COMM] ],
       REPEAT STRIP_TAC THEN
@@ -403,7 +407,7 @@ val FRAC_ADD_EQUIV1 = store_thm ("FRAC_ADD_EQUIV1",
   ``rat_equiv x x' ==> rat_equiv (frac_add x y) (frac_add x' y)``,
   REWRITE_TAC[frac_add_def, rat_equiv_def] THEN
   VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
-  TRY (irule INT_MUL_POS_SIGN THEN irule FRAC_DNMPOS) THEN
+  TRY (irule INT_MUL_POS_SIGN >> conj_tac >> irule FRAC_DNMPOS) THEN
   REWRITE_TAC[INT_RDISTRIB] THEN DISCH_TAC THEN
   MK_COMB_TAC THENL [AP_TERM_TAC, ALL_TAC]
   THENL [
@@ -440,7 +444,7 @@ val FRAC_MUL_EQUIV1 = store_thm ("FRAC_MUL_EQUIV1",
   ``rat_equiv x x' ==> rat_equiv (frac_mul x y) (frac_mul x' y)``,
   REWRITE_TAC[frac_mul_def, rat_equiv_def] THEN
   VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
-  TRY (irule INT_MUL_POS_SIGN THEN irule FRAC_DNMPOS) THEN DISCH_TAC THEN
+  TRY (irule INT_MUL_POS_SIGN >> conj_tac >> irule FRAC_DNMPOS) >> DISCH_TAC >>
   RULE_ASSUM_TAC (AP_TERM ``int_mul (frac_nmr y * frac_dnm y)``) THEN
   POP_ASSUM (fn th => MATCH_MP_TAC (MATCH_MP box_equals th)) THEN
   CONJ_TAC THEN CONV_TAC (AC_CONV (INT_MUL_ASSOC,INT_MUL_SYM)) ) ;
@@ -684,13 +688,14 @@ fun RAT_CALC_CONV (t1:term) =
 let
         val thm = REFL t1;
         val (top_rator, top_rands) = strip_comb t1;
-        val calc_table_entry = List.find (fn x => fst(x)= top_rator) rat_calculate_table;
+        val calc_table_entry =
+            List.find (fn x => fst(x) ~~ top_rator) rat_calculate_table;
 in
         (* do nothing if term is already in the form abs_rat(...) *)
-        if top_rator=``abs_rat`` then
+        if top_rator ~~ ``abs_rat`` then
                 thm
         (* if it is a numeral, simply rewrite it *)
-        else if (top_rator=``rat_of_num``) then
+        else if (top_rator ~~ ``rat_of_num``) then
                 SUBST [``x:rat`` |-> SPEC (rand t1) (RAT_OF_NUM_CALCULATE)] ``^t1 = x:rat`` thm
         (* if there is an entry in the calculation table, calculate it *)
         else if (isSome calc_table_entry) then
@@ -736,25 +741,6 @@ handle HOL_ERR _ => raise ERR "RAT_CALCTERM_TAC" "";
 
 
 (*--------------------------------------------------------------------------
- *  RAT_STRICT_CALC_TAC : tactic
- *
- *  calculates the value of all subterms (of type ``:rat``)
- *--------------------------------------------------------------------------*)
-
-fun RAT_STRICT_CALC_TAC (asm_list,goal) =
-        let
-                val rat_terms = extract_rat goal;
-                val calc_thms = map RAT_CALC_CONV rat_terms;
-                val calc_asms = list_xmerge (map (fn x => fst (dest_thm x)) calc_thms);
-        in
-                (
-                        MAP_EVERY ASSUME_TAC (map (fn x => TAC_PROOF ((asm_list,x), RW_TAC intLib.int_ss [FRAC_DNMPOS,INT_MUL_POS_SIGN,INT_NOTPOS0_NEG,INT_NOT0_MUL,INT_GT0_IMP_NOT0,INT_ABS_NOT0POS])) calc_asms) THEN
-                        SUBST_TAC calc_thms
-                ) (asm_list,goal)
-        end
-handle HOL_ERR _ => raise ERR "RAT_STRICT_CALC_TAC" "";
-
-(*--------------------------------------------------------------------------
  *  RAT_CALC_TAC : tactic
  *
  *  calculates the value of all subterms (of type ``:rat``)
@@ -770,7 +756,7 @@ fun RAT_CALC_TAC (asm_list,goal) =
                         (* split list into assumptions and conclusions *)
                 val (calc_asmlists, calc_concl) = ListPair.unzip (map (fn x => dest_thm x) calc_thms);
                         (* merge assumptions lists *)
-                val calc_asms = list_xmerge calc_asmlists;
+                val calc_asms = op_U aconv calc_asmlists;
                         (* function to prove an assumption, TODO: fracLib benutzen *)
                 val gen_thm = (fn x => TAC_PROOF ((asm_list,x), RW_TAC intLib.int_ss [] ));
                         (* try to prove assumptions *)
@@ -978,7 +964,7 @@ val RAT_ADD_RINV = store_thm("RAT_ADD_RINV",
         SIMP_TAC bool_ss [NMR, DNM, FRAC_DNMPOS] THEN
         REWRITE_TAC[RAT_ABS_EQUIV,rat_equiv_def] THEN
         VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
-        TRY (irule INT_MUL_POS_SIGN THEN irule FRAC_DNMPOS) THEN
+        simp[INT_MUL_POS_SIGN, FRAC_DNMPOS] THEN
         REWRITE_TAC [INT_MUL_LZERO, INT_MUL_RID, INT_LT_01,
           GSYM INT_NEG_LMUL, INT_ADD_RINV]) ;
 
@@ -994,7 +980,7 @@ val RAT_MUL_RINV = store_thm("RAT_MUL_RINV",
   REWRITE_TAC[frac_mul_def, frac_minv_def, frac_1_def] THEN
   REWRITE_TAC[RAT_ABS_EQUIV, rat_equiv_def] THEN
   VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
-  TRY (irule INT_MUL_POS_SIGN) THEN
+  TRY (irule INT_MUL_POS_SIGN >> conj_tac) THEN
   TRY (irule FRAC_DNMPOS) THEN
   TRY (irule INT_LT_01) THEN
   TRY (irule INT_ABS_NOT0POS) THEN
@@ -1023,10 +1009,10 @@ val RAT_RDISTRIB = store_thm("RAT_RDISTRIB",
         REWRITE_TAC[RAT_MUL_CONG, RAT_ADD_CONG] THEN
         REWRITE_TAC[frac_mul_def,frac_add_def] THEN
         VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
-        TRY (irule INT_MUL_POS_SIGN THEN irule FRAC_DNMPOS) THEN
+        simp[INT_MUL_POS_SIGN, FRAC_DNMPOS] THEN
         REWRITE_TAC[RAT_ABS_EQUIV, rat_equiv_def] THEN
         VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
-        REPEAT (irule INT_MUL_POS_SIGN ORELSE irule FRAC_DNMPOS) THEN
+        simp[INT_MUL_POS_SIGN, FRAC_DNMPOS] THEN
         REWRITE_TAC[INT_RDISTRIB] THEN BINOP_TAC THEN
         CONV_TAC (AC_CONV (INT_MUL_ASSOC, INT_MUL_COMM))) ;
 

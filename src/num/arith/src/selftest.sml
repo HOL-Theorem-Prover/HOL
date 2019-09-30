@@ -26,7 +26,7 @@ val _ = convtest("Testing coefficient gathering in ARITH_ss (2)",
 val _ = pr "Testing arith on ground ctxt"
 val _ = let
   fun c (res, vfn) =
-    if null res andalso concl (vfn []) = F then OK()
+    if null res andalso Feq (concl (vfn [])) then OK()
     else die "FAILED!\n"
 in
   timed(ASM_SIMP_TAC arith_ss []) (exncheck c) ([``2 <= 0``], ``F``)
@@ -49,6 +49,22 @@ val _ = convtest ("Testing norming of polymorphic num-range constants",
                   QCONV (SIMP_CONV arith_ss []),
                   “n + dimindex(:'a) + dimindex(:'b) - 1”,
                   “n + (dimindex(:'a) + dimindex(:'b)) - 1”)
+
+val _ = convtest ("COND_ELIM_CONV(1)", Sub_and_cond.COND_ELIM_CONV,
+   “z = (if P then x else y:num)”,
+   “(P ==> (z:num = x)) /\ (~P ==> (z = y))”);
+
+val _ = convtest ("COND_ELIM_CONV(2)", Sub_and_cond.COND_ELIM_CONV,
+   “(if P then x else y:num) = z”,
+   “(P ==> (x:num = z)) /\ (~P ==> (y = z))”);
+
+val _ = convtest ("COND_ELIM_CONV(3)", Sub_and_cond.COND_ELIM_CONV,
+   “x < a + (if P then y else z:num)”,
+   “(P ==> x < a + y) /\ (~P ==> x < a + z)”);
+
+val _ = convtest ("COND_ELIM_CONV(4)", Sub_and_cond.COND_ELIM_CONV,
+   “a + (if P then y else z:num) < x”,
+   “(P ==> a + y < x) /\ (~P ==> a + z < x)”);
 
 fun TRUE_ARITH nm t =
   convtest("ARITH_CONV: "^nm, Arith.ARITH_CONV, t, boolSyntax.T)
@@ -84,6 +100,9 @@ val _ = TRUE_ARITH
                else (if i < j then i + 1 else i − 1) − j) <
               if i < j then j − i else i − j``
 
+val _ = TRUE_ARITH "Existential in implication on left"
+                   “(2 < j ==> ?u. 0 < u ∧ u <= j − 1) ∧ 0 < j ==> 1 <= j”
+
 val _ = pr "Testing r-cache behaviour with CONJ_ss"
 val _ = let
   val t = ``(168 = 0) /\ (13 = 13) /\ (105 = 1)``
@@ -91,7 +110,7 @@ val _ = let
   val result =
       SIMP_CONV (bool_ss ++ CONJ_ss ++ numSimps.ARITH_ss) [] t
 in
-  if null (hyp result) andalso rhs (concl result) = boolSyntax.F then
+  if null (hyp result) andalso aconv (rhs (concl result)) boolSyntax.F then
     OK()
   else die "FAILED!\n"
 end
@@ -125,13 +144,104 @@ in
   else die "FAILED!\n"
 end
 
-val _ = tprint "Testing MOD_ss with EXP"
+val _ = List.app convtest [
+  ("Testing MOD_ss with EXP", SIMP_CONV ss [],
+   “((x MOD 3 + 10) ** 10 + 10) MOD 3”, “((x + 1) ** 10 + 1) MOD 3”),
+  ("AND_CONV(1)", Boolconv.AND_CONV, “(\x. x) p /\ (\y. y) p”,
+   “(\a:bool. a) p”),
+  ("OR_CONV(1)", Boolconv.OR_CONV, “(\x. x) p \/ (\y. y) p”, “(\a:bool. a) p”),
+  ("IMP_CONV(1)", Boolconv.IMP_CONV, “(\x. x) p ==> (\y. y) p”, “T”),
+  ("BEQ_CONV(1)", Boolconv.BEQ_CONV, “(\x. x) (p:bool) = (\y. y) p”, “T”),
+  ("COND_CONV(1)", Boolconv.COND_CONV, “if b then (\x:'a. x) else (\y. y)”,
+   “\a:'a. a”)
+];
+
+val _ = Feedback.emit_WARNING := false
+
 val _ = let
-  val t = ``((x MOD 3 + 10) ** 10 + 10) MOD 3``
-  val result = SIMP_CONV ss [] t
+  open boolSimps numSimps
+  val _ = clear_arith_caches()
+  val _ = tprint "Checking cache-fouling with theorems about constants(1)"
+  val c1c2 = new_specification("c1c2", ["c1", "c2"],
+                Q.prove(‘∃c d:num. c < d’,
+                        MAP_EVERY Q.EXISTS_TAC [‘0’, ‘1’] >>
+                        reduceLib.REDUCE_TAC));
+  val tm = “c1 <> 0 \/ c2 <> 0”
+  val ss = bool_ss ++ ARITH_ss
+  val _ = QCONV (SIMP_CONV ss []) tm (* taint *)
+    (* examine cache with
+         Cache.cache_values numSimps.arith_cache
+    *)
+  fun check (Exn.Res th) = rhs (concl th) ~~ T
+    | check _ = false
+  val _ = require_msg check (term_to_string o rhs o concl)
+                      (SIMP_CONV (bool_ss ++ ARITH_ss) [c1c2])
+                      tm
+
+  val _ = tprint "Checking cache-fouling with theorems about constants(2)"
+  val c3_def = new_definition("c3", “c3 = 10”)
+  val goal = ([“c3 < x”, “x < 3”], “p:bool”)
+  val _ = VALID (FULL_SIMP_TAC ss []) goal
+  fun prg(asl,w) =
+      "([" ^ String.concatWith ", " (map term_to_string asl) ^ "], " ^
+      term_to_string w ^ ")"
+  fun pr (sgs, vf) =
+      "[" ^ String.concatWith ",\n     " (map prg sgs) ^ "]"
+  val _ = require_msg (check_result (null o #1)) pr
+                      (VALID (FULL_SIMP_TAC ss [c3_def]))
+                      goal
+
+  fun cached_simp thl g = VALID (FULL_SIMP_TAC ss thl) g
+  fun uncached_simp thl g =
+      (clear_arith_caches(); VALID (FULL_SIMP_TAC ss thl)) g
+
+  val list_eq = Portable.list_eq and pair_eq = Portable.pair_eq
+  fun tac_result_eq (sgs1, vf1) (sgs2, vf2) =
+      list_eq (pair_eq (list_eq aconv) aconv) sgs1 sgs2
+  fun testseq s =
+      (map (fn (a,x) => cached_simp a x) s,
+       map (fn (a,x) => uncached_simp a x) s)
+
+  val _ = tprint "Checking cached/uncached equivalency (1)"
+  val seq1 = [([c3_def], goal), ([], goal)]
+  val _ = require (check_result (uncurry (list_eq tac_result_eq))) testseq seq1
+
+  val _ = tprint "Checking cached/uncached equivalency (2)"
+  val seq2 = [([], goal), ([c3_def], goal)]
+  val _ = require (check_result (uncurry (list_eq tac_result_eq))) testseq seq2
+
+  val _ = tprint "Checking cached/uncached equivalency (3)"
+  val seq3 = [([], goal), ([c3_def], goal), ([], goal)]
+  val _ = require (check_result (uncurry (list_eq tac_result_eq))) testseq seq3
 in
-  if aconv (rhs (concl result)) ``((x + 1) ** 10 + 1) MOD 3`` then OK()
-  else die "FAILED!\n"
+  app delete_const ["c1", "c2", "c3", "foo"]
+end
+
+val _ = let
+  open numSimps boolSimps
+  val asm = “(2 < j ==> ?u. 0 < u /\ u <= j - 1) /\ 0 < j”
+  val g = mk_imp(asm, “1 <= j”)
+  val g' = “!u. (2 < j ==> 0 < u /\ u <= j - 1) /\ 0 < j ==> 1<= j”
+  fun tts t = "“" ^ term_to_string t ^ "”"
+  fun pr_goal (asl,g) = "([" ^ String.concatWith ", " (map term_to_string asl) ^
+                        "], " ^ tts g ^ ")"
+  fun pr_result (sgs, _) =
+      "[" ^ String.concatWith ", " (map pr_goal sgs) ^ "]"
+  fun test0 g =
+      (clear_arith_caches(); simp_tac (bool_ss ++ ARITH_ss) [] ([], g))
+  fun test (msg, g) =
+      (tprint msg;
+       require_msg
+         (check_result (fn (sgs, vfn) => null sgs andalso concl (vfn []) ~~ g))
+         pr_result
+         test0
+         g)
+
+in
+  app (ignore o test) [
+    ("Github issue 642 assumption handling (1)", g'),
+    ("Github issue 642 assumption handling (2)", g)
+  ]
 end
 
 val _ = Process.exit Process.success

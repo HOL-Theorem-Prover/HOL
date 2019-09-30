@@ -8,7 +8,8 @@ val nested_function = LIST_CONJ o map #1 o #extracta o
 
 val _ = new_theory "tfl_examples"
 
-val fact_cond_def = function "fact_cond" `fact x = if x = 0 then 1 else x * fact(x-1)`;
+val fact_cond_def = function "fact_cond"
+                             `fact x = if x = 0 then 1 else x * fact(x-1)`;
 
 val fact_pattern_def = function "fact_pattern"
    `(Fact 0 = 1) /\
@@ -44,9 +45,9 @@ val Mmap2_def = function "Mmap2"
 
 val order = ty_antiq(==`:'a -> 'a -> bool`==);
 val sorted_def = function "sorted"
-   `(sorted (R:^order, []) = T) /\
-    (sorted (R,       [x]) = T) /\
-    (sorted (R, CONS x (CONS y rst)) = R x y /\ sorted(R, CONS y rst))`;
+   `(sorted (R:^order, []) <=> T) /\
+    (sorted (R,       [x]) <=> T) /\
+    (sorted (R, CONS x (CONS y rst)) <=> R x y /\ sorted(R, CONS y rst))`;
 
 val fin_def = function "fin" `(fin(R:^order,[x:'a]) = T)`;
 val _ = overload_on("filter", ``FILTER``)

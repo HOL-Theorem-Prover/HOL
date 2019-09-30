@@ -350,15 +350,17 @@ val _ = Store_thm("lterm_distinct",
   srw_tac [][LAM_def, LAMi_def, VAR_def, APP_def, VAR_termP, APP_termP, LAM_termP,
              LAMi_termP, term_ABS_pseudo11, gterm_distinct, GLAM_eq_thm])
 
-val _ = Store_thm("lterm_11",
-   ``((VAR s1 = VAR s2) <=> (s1 = s2)) ∧
+Theorem lterm_11[simp]:
+     ((VAR s1 = VAR s2) <=> (s1 = s2)) ∧
      ((t11 @@ t12 = t21 @@ t22) <=> (t11 = t21) ∧ (t12 = t22)) ∧
      ((LAM v t1 = LAM v t2) <=> (t1 = t2)) ∧
-     ((LAMi n1 v t11 t12 = LAMi n2 v t21 t22) =
-         (n1 = n2) ∧ (t11 = t21) ∧ (t12 = t22))``,
+     ((LAMi n1 v t11 t12 = LAMi n2 v t21 t22) <=>
+         (n1 = n2) ∧ (t11 = t21) ∧ (t12 = t22))
+Proof
   srw_tac [][VAR_def, APP_def, LAM_def, LAM_termP, VAR_termP, APP_termP,
              LAMi_def, LAMi_termP,
-             term_ABS_pseudo11, gterm_11, term_REP_11]);
+             term_ABS_pseudo11, gterm_11, term_REP_11]
+QED
 
 val term_CASES = save_thm(
   tyname ^ "_CASES",
@@ -374,7 +376,7 @@ val ltpm_ALPHAi = store_thm(
   ``~(v IN FV t) ==> (LAMi n u t M = LAMi n v (ltpm [(v,u)] t) M)``,
   SRW_TAC [boolSimps.CONJ_ss][LAMi_eq_thm, pmact_flip_args]);
 
-val tpm_apart = store_thm(
+val ltpm_apart = store_thm(
   "ltpm_apart",
   ``!t. x IN FV t /\ y NOTIN FV t ==> ~(ltpm [(x,y)] t = t)``,
   srw_tac [][supp_apart])
@@ -486,11 +488,6 @@ val term_info_string =
 
 val _ = adjoin_to_theory
         { sig_ps = NONE,
-          struct_ps =
-          SOME (fn pps => PP.add_string pps term_info_string)}
-
-
-
+          struct_ps = SOME (fn _ => PP.add_string term_info_string)}
 
 val _ = export_theory()
-

@@ -1,11 +1,11 @@
 (* =====================================================================*)
-(* FILE		: fset_conv.ml						*)
-(* DESCRIPTION  : Conversions for taking unions and intersections of 	*)
-(*		  finite sets, for deciding membership of finite sets,  *)
-(*		  and so on.						*)
-(*								        *)
-(* REWRITTEN    : T Melham						*)
-(* DATE		: 90.10.16 (adapted for pred_set: January 1992)	        *)
+(* FILE         : fset_conv.ml                                          *)
+(* DESCRIPTION  : Conversions for taking unions and intersections of    *)
+(*                finite sets, for deciding membership of finite sets,  *)
+(*                and so on.                                            *)
+(*                                                                      *)
+(* REWRITTEN    : T Melham                                              *)
+(* DATE         : 90.10.16 (adapted for pred_set: January 1992)         *)
 (* TRANSLATED to hol90 February 1993 by kls                             *)
 (* =====================================================================*)
 
@@ -27,19 +27,19 @@ fun check_const cnst = assert (same_const cnst);
 
 (* =====================================================================*)
 (* FINITE_CONV: prove that a normal-form finite set is finite.  The set *)
-(* in question must have the standard form:				*)
-(*									*)
-(*	INSERT x1 (INSERT x2 ...(INSERT xn EMPTY)... ))	 		*)
-(*									*)
-(* A call to:								*)
-(*									*)
-(*	FINITE_CONV `FINITE {x1;...;xn}`                                *)
-(*									*)
-(* returns:								*)
-(*									*)
-(*       |- FINITE {x1;...;xn} = T					*)
-(*									*)
-(* The conversion fails on sets of the wrong form.			*)
+(* in question must have the standard form:                             *)
+(*                                                                      *)
+(*      INSERT x1 (INSERT x2 ...(INSERT xn EMPTY)... ))                 *)
+(*                                                                      *)
+(* A call to:                                                           *)
+(*                                                                      *)
+(*      FINITE_CONV `FINITE {x1;...;xn}`                                *)
+(*                                                                      *)
+(* returns:                                                             *)
+(*                                                                      *)
+(*       |- FINITE {x1;...;xn} = T                                      *)
+(*                                                                      *)
+(* The conversion fails on sets of the wrong form.                      *)
 (* ---------------------------------------------------------------------*)
 
 local val finI =
@@ -63,31 +63,31 @@ fun FINITE_CONV tm =
 end;
 
 (* =====================================================================*)
-(* IN_CONV: decide membership for finite sets.				*)
-(*									*)
-(* A call to:								*)
-(*									*)
-(*	IN_CONV conv `x IN {x1;...;xn}`                                 *)
-(*									*)
-(* returns:								*)
-(*									*)
-(*	|- x IN {x1;...;xn} = T						*)
-(*									*)
-(* if x is syntactically identical to xi for some i, where 1<=i<=n, or	*)
-(* if conv proves |- (x=xi)=T for some i, where 1<=i<=n, or it returns:	*)
-(*									*)
-(*	|- x IN {x1;...;xn} = F						*)
-(*									*)
-(* if conv proves |- (x=xi)=F for all 1<=i<=n.				*)
-(*									*)
+(* IN_CONV: decide membership for finite sets.                          *)
+(*                                                                      *)
+(* A call to:                                                           *)
+(*                                                                      *)
+(*      IN_CONV conv `x IN {x1;...;xn}`                                 *)
+(*                                                                      *)
+(* returns:                                                             *)
+(*                                                                      *)
+(*      |- x IN {x1;...;xn} = T                                         *)
+(*                                                                      *)
+(* if x is syntactically identical to xi for some i, where 1<=i<=n, or  *)
+(* if conv proves |- (x=xi)=T for some i, where 1<=i<=n, or it returns: *)
+(*                                                                      *)
+(*      |- x IN {x1;...;xn} = F                                         *)
+(*                                                                      *)
+(* if conv proves |- (x=xi)=F for all 1<=i<=n.                          *)
+(*                                                                      *)
 (* A call to                                                            *)
-(*									*)
-(*	IN_CONV conv `x IN UNIV`                                        *)
-(*									*)
-(* returns:								*)
-(*									*)
-(*	|- x IN UNIV = T						*)
-(*									*)
+(*                                                                      *)
+(*      IN_CONV conv `x IN UNIV`                                        *)
+(*                                                                      *)
+(* returns:                                                             *)
+(*                                                                      *)
+(*      |- x IN UNIV = T                                                *)
+(*                                                                      *)
 (* =====================================================================*)
 
 local val inI = pred_setTheory.IN_INSERT
@@ -108,20 +108,19 @@ local val inI = pred_setTheory.IN_INSERT
              let val eql = conv (mk_eq(x, y))
                  val res = rand(concl eql)
              in
-             if res=T
-               then EQT_INTRO (EQ_MP (SYM thm) (DISJ1 (EQT_ELIM eql) rectm))
-             else
-             if res=F
-             then let val rthm = in_conv conv (eth,ith) x S'
-                      val thm2 = MK_COMB (DISJ eql,rthm)
-                      val thm3 = INST[gv |-> rand(concl rthm)] F_OR
-                  in TRANS thm (TRANS thm2 thm3)
-                  end
-              else raise ERR "IN_CONV" ""
+               if aconv res T then
+                 EQT_INTRO (EQ_MP (SYM thm) (DISJ1 (EQT_ELIM eql) rectm))
+               else if aconv res F then
+                 let val rthm = in_conv conv (eth,ith) x S'
+                     val thm2 = MK_COMB (DISJ eql,rthm)
+                     val thm3 = INST[gv |-> rand(concl rthm)] F_OR
+                 in TRANS thm (TRANS thm2 thm3)
+                 end
+               else raise ERR "IN_CONV" ""
              end
              handle HOL_ERR _ =>
               let val rthm = in_conv conv (eth,ith) x S'
-              in if rand(concl rthm) = T
+              in if aconv (rand(concl rthm)) T
                  then let val eqn = mk_eq(x,y)
                           val thm2 = MK_COMB(DISJ (REFL eqn), rthm)
                           val thm3 = TRANS thm2 (INST [gv |-> eqn] OR_T)
@@ -146,19 +145,19 @@ fun IN_CONV conv tm =
 end;
 
 (* =====================================================================*)
-(* DELETE_CONV: delete an element from a finite set.			*)
-(*									*)
-(* A call to:								*)
-(*									*)
-(*	DELETE_CONV conv `{x1;...;xn} DELETE x`                         *)
-(*									*)
-(* returns:								*)
-(*									*)
-(*	|-{x1;...;xn} DELETE x = {xi;...;xk}				*)
-(*									*)
+(* DELETE_CONV: delete an element from a finite set.                    *)
+(*                                                                      *)
+(* A call to:                                                           *)
+(*                                                                      *)
+(*      DELETE_CONV conv `{x1;...;xn} DELETE x`                         *)
+(*                                                                      *)
+(* returns:                                                             *)
+(*                                                                      *)
+(*      |-{x1;...;xn} DELETE x = {xi;...;xk}                            *)
+(*                                                                      *)
 (* where for all xj in {xi,...,xk}, either conv proves |- xj=x or xj is *)
 (* syntactically identical to x and for all xj in {x1;...;xn} and NOT in*)
-(* {xi;...;xj}, conv proves |- (xj=x)=F.				*)
+(* {xi;...;xj}, conv proves |- (xj=x)=F.                                *)
 (* =====================================================================*)
 
 local val bv = genvar bool
@@ -189,18 +188,18 @@ end;
 
 
 (* =====================================================================*)
-(* UNION_CONV: compute the union of two sets.				*)
-(*									*)
-(* A call to:								*)
-(*									*)
-(*	UNION_CONV conv `{x1;...;xn} UNION S`                           *)
-(*									*)
-(* returns:								*)
-(*									*)
-(*	|-{x1;...;xn} UNION S = xi INSERT ... (xk INSERT S)		*)
-(*									*)
+(* UNION_CONV: compute the union of two sets.                           *)
+(*                                                                      *)
+(* A call to:                                                           *)
+(*                                                                      *)
+(*      UNION_CONV conv `{x1;...;xn} UNION S`                           *)
+(*                                                                      *)
+(* returns:                                                             *)
+(*                                                                      *)
+(*      |-{x1;...;xn} UNION S = xi INSERT ... (xk INSERT S)             *)
+(*                                                                      *)
 (* where for all xj in {x1;...;xn} but NOT in {xi;...;xk}, IN_CONV conv *)
-(* proves that |- xj IN S = T						*)
+(* proves that |- xj IN S = T                                           *)
 (* =====================================================================*)
 
 local val Eu = CONJUNCT1 pred_setTheory.UNION_EMPTY
@@ -242,25 +241,25 @@ end;
 
 
 (* =====================================================================*)
-(* INSERT_CONV: non-redundantly insert a value into a set.		*)
-(*									*)
-(* A call to:								*)
-(*									*)
-(*	INSERT_CONV conv `x INSERT S`                                   *)
-(*									*)
-(* returns:								*)
-(*									*)
-(*	|- x INSERT S = S						*)
-(*									*)
-(* if IN_CONV conv proves that |- x IN s = T, otherwise fail.		*)
-(*									*)
-(* Note that DEPTH_CONV (INSERT_CONV conv) can be used to remove 	*)
-(* duplicate elements from a set, but the following conversion is 	*)
-(* faster:								*)
-(*									*)
-(* fun REDUCE_CONV conv tm =						*)
+(* INSERT_CONV: non-redundantly insert a value into a set.              *)
+(*                                                                      *)
+(* A call to:                                                           *)
+(*                                                                      *)
+(*      INSERT_CONV conv `x INSERT S`                                   *)
+(*                                                                      *)
+(* returns:                                                             *)
+(*                                                                      *)
+(*      |- x INSERT S = S                                               *)
+(*                                                                      *)
+(* if IN_CONV conv proves that |- x IN s = T, otherwise fail.           *)
+(*                                                                      *)
+(* Note that DEPTH_CONV (INSERT_CONV conv) can be used to remove        *)
+(* duplicate elements from a set, but the following conversion is       *)
+(* faster:                                                              *)
+(*                                                                      *)
+(* fun REDUCE_CONV conv tm =                                            *)
 (*    (SUB_CONV (REDUCE_CONV conv) THENC (TRY_CONV (INSERT_CONV conv))) *)
-(*    tm;								*)
+(*    tm;                                                               *)
 (* =====================================================================*)
 
 local val absth =
@@ -273,29 +272,29 @@ in
 fun INSERT_CONV conv tm =
   let val (x,s) = dest_insert tm
       val thm = IN_CONV conv (mk_in (x,s))
-  in if rand(concl thm) = boolSyntax.T
-       then MP (SPEC s (ISPEC x absth)) (EQT_ELIM thm)
-       else raise ERR "INSERT_CONV" "failed"
+  in if aconv (rand(concl thm)) boolSyntax.T then
+       MP (SPEC s (ISPEC x absth)) (EQT_ELIM thm)
+     else raise ERR "INSERT_CONV" "failed"
   end
   handle e => raise wrap_exn "PFset_conv" "INSERT_CONV" e
 end;
 
 
 (* =====================================================================*)
-(* IMAGE_CONV: compute the image of a function on a finite set.		*)
-(*									*)
-(* A call to:								*)
-(*									*)
-(*	IMAGE_CONV conv iconv `IMAGE f {x1;...;xn}`                     *)
-(*									*)
-(* returns:								*)
-(*									*)
-(*	|- IMAGE f {x1;...;xn} = {y1;...;yn}				*)
-(*									*)
+(* IMAGE_CONV: compute the image of a function on a finite set.         *)
+(*                                                                      *)
+(* A call to:                                                           *)
+(*                                                                      *)
+(*      IMAGE_CONV conv iconv `IMAGE f {x1;...;xn}`                     *)
+(*                                                                      *)
+(* returns:                                                             *)
+(*                                                                      *)
+(*      |- IMAGE f {x1;...;xn} = {y1;...;yn}                            *)
+(*                                                                      *)
 (* where conv proves |- f xi = yi for all 1<=i<=n.  The conversion also *)
-(* trys to use INSERT_CONV iconv to simplify insertion of the results 	*)
-(* into the set {y1;...;yn}.						*)
-(*									*)
+(* trys to use INSERT_CONV iconv to simplify insertion of the results   *)
+(* into the set {y1;...;yn}.                                            *)
+(*                                                                      *)
 (* =====================================================================*)
 
 local val Ith = pred_setTheory.IMAGE_INSERT

@@ -255,7 +255,7 @@ fun vacuous thm =
    let
       val (h, c) = Thm.dest_thm thm
    in
-      c = boolSyntax.T orelse List.exists (Lib.equal boolSyntax.F) h
+      Teq c orelse List.exists Feq h
    end
 
 fun add_to_rw_net f (thm: thm, n) = LVTermNet.insert (n, ([], f thm), thm)
@@ -330,19 +330,17 @@ in
                     (List.length l, fn i => name ^ "_" ^ Int.toString i), l))
   fun adjoin_thms () =
     Theory.adjoin_to_theory
-      { sig_ps = SOME (fn pps => PP.add_string pps ("val rwts : string list")),
+      { sig_ps = SOME (fn _ => PP.add_string ("val rwts : string list")),
         struct_ps =
-          SOME (fn pps =>
-                  ( PP.add_string pps "val rwts = ["
-                  ; PP.begin_block pps PP.INCONSISTENT 0
-                  ; Portable.pr_list
-                     (PP.add_string pps o Lib.quote)
-                     (fn () => PP.add_string pps ",")
-                     (fn () => PP.add_break pps (1, 0)) (!names)
-                  ; PP.add_string pps "]"
-                  ; PP.end_block pps
-                  ; PP.add_newline pps
-                  ))
+          SOME (fn _ =>
+                   PP.block PP.INCONSISTENT 12 (
+                     [PP.add_string "val rwts = ["] @
+                     PP.pr_list (PP.add_string o Lib.quote)
+                                [PP.add_string ",", PP.add_break (1, 0)]
+                                (!names) @
+                     [PP.add_string "]", PP.add_newline]
+                   )
+               )
       }
 end
 
@@ -371,10 +369,8 @@ in
    fun ELIM_UNDISCH thm =
       case Lib.total boolSyntax.dest_imp (Thm.concl thm) of
          SOME (l, r) =>
-            if l = boolSyntax.T
-               then T_imp_rule thm
-            else if l = boolSyntax.F
-               then F_imp_rule thm
+            if Teq l then T_imp_rule thm
+            else if Feq l then F_imp_rule thm
             else if Term.is_var l andalso not (Term.var_occurs l r)
                then T_imp_rule (Thm.INST [l |-> boolSyntax.T] thm)
             else (case dest_neg_occ_var l r of
@@ -725,8 +721,7 @@ fun avoid_name_clashes tm2 tm1 =
       val sb = List.foldl
                   (fn (v, (sb, avoids)) =>
                      let
-                        val v' = Lib.with_flag (Globals.priming, SOME "_")
-                                    (Term.variant avoids) v
+                        val v' = Term.numvariant avoids v
                      in
                         ((v |-> v') :: sb, v' :: avoids)
                      end) ([], v2) l
@@ -863,7 +858,7 @@ local
               SOME s => s
             | NONE => t)
    fun find_occurance r t =
-      Lib.can (HolKernel.find_term (Lib.equal (base t))) r
+      Lib.can (HolKernel.find_term (aconv (base t))) r
    val modified = ref 0
    fun specialize (conv, tms) thm =
       let
@@ -1218,7 +1213,7 @@ local
       end
    fun is_call x tm =
       case Lib.total Term.rand tm of
-        SOME y => x = y
+        SOME y => x ~~ y
       | NONE => false
    fun leaf tm =
       case Lib.total Term.rand tm of

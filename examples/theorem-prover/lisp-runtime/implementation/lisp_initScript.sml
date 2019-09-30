@@ -1,4 +1,5 @@
 open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_init";
+val _ = ParseExtras.temp_loose_equality()
 open lisp_sexpTheory lisp_consTheory lisp_invTheory lisp_codegenTheory;
 
 (* --- *)
@@ -45,7 +46,7 @@ val BINIT_SYMBOLS_def = Define `BINIT_SYMBOLS = INIT_SYMBOLS ++ ["PEQUAL"]`;
 
 val INIT_SYMBOL_ASSERTION =
   EVAL ``(FOLDR (\x y. STRLEN x + y + 1) 1 BINIT_SYMBOLS) MOD 4``
-  |> concl |> dest_eq |> snd |> (fn x => if x = ``0`` then () else fail());
+  |> concl |> dest_eq |> snd |> (fn x => if x ~~ ``0`` then () else fail());
 
 val (init_func_spec,init_func_def) = let
   val tm = (snd o dest_eq o concl o EVAL) ``bytes2words (symbol_list BINIT_SYMBOLS)``

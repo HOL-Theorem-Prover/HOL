@@ -3,6 +3,7 @@ open HolKernel Parse boolLib bossLib pred_setTheory relationTheory set_relationT
 open generalHelpersTheory wordTheory
 
 val _ = new_theory "ltl"
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = Datatype`
   ltl_frml
@@ -241,7 +242,7 @@ val TSF_TRANS_LEMM = store_thm
 (* val TSF_TRANS_LEMM2 = store_thm *)
 (*   ("TSF_TRANS_LEMM2", *)
 (*    ``!x y z. (x,y) ∈ TSF ∧ (y,z) ∈ TSF ==> (x,z) ∈ TSF``, *)
-   
+
 (* ) *)
 
 
@@ -372,17 +373,17 @@ val ltl_lang_def = Define
 
 val W1_def = Define `W1 = WORD (\x. {x})`;
 
-val EX_1 = store_thm
+val EX1 = store_thm
  ("EX1", ``(MODELS W1 TRUE)``,  fs[MODELS_def,TRUE_def]);
 
-val EX_2 = store_thm
+val EX2 = store_thm
  ("EX2", ``MODELS W1 (VAR 0)``, simp[MODELS_def, at_def, W1_def]);
 
-val EX_3 = store_thm
+val EX3 = store_thm
  ("EX3",``MODELS W1 (U TRUE (VAR 23))``,
   simp [MODELS_def, TRUE_def, suff_def, at_def, W1_def]);
 
-val EX_4 = store_thm
+val EX4 = store_thm
   ("EX4",``!x. ?y. MODELS (suff W1 x) (U (VAR x) (VAR y))``,
    simp [MODELS_def, suff_def, at_def, W1_def] >> rpt strip_tac
      >> exists_tac ``0`` >> simp[]
@@ -431,16 +432,16 @@ val NNF_THM = store_thm
    >> metis_tac[NNF_NEG_LEMM]
   );
 
-val LTL_FALSE_def = Define `
+val LTL_FALSE_def = zDefine `
   LTL_FALSE p  = F_CONJ (F_VAR p) (F_NEG (F_VAR p))`;
 
-val LTL_TRUE_def = Define `
+val LTL_TRUE_def = zDefine `
   LTL_TRUE p = F_NEG (LTL_FALSE p)`;
 
-val LTL_F_def = Define `
+val LTL_F_def = zDefine `
   LTL_F φ p = F_U (LTL_TRUE p) φ`
 
-val LTL_G_def = Define `
+val LTL_G_def = zDefine `
   LTL_G φ p = F_NEG (LTL_F (F_NEG φ) p)`;
 
 (* Some example formulae*)

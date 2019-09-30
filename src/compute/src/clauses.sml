@@ -34,9 +34,9 @@ fun check_arg_form trm =
       chk Rator (pat1::stk) free'
       end
     else if (is_var t)
-         then if stk=[]
+         then if null stk
               then let val newi = length free
-                   in (free, Pvar (newi - index (equal t) free - 1))
+                   in (free, Pvar (newi - index (aconv t) free - 1))
                       handle HOL_ERR _ => (t::free, Pvar newi)
                    end
               else raise CL_ERR "check_arg_form"
@@ -106,8 +106,8 @@ fun inst_type_dterm ([],v) = v
   | inst_type_dterm (tysub,v) =
       let fun tyi_dt (Cst(c,dbsk)) = Cst(Term.inst tysub c, dbsk)
             | tyi_dt (App(h,l))  = App(tyi_dt h, map tyi_dt l)
-  	    | tyi_dt (Abs v)     = Abs(tyi_dt v)
-  	    | tyi_dt v           = v
+            | tyi_dt (Abs v)     = Abs(tyi_dt v)
+            | tyi_dt v           = v
       in tyi_dt v end
 ;
 
@@ -124,15 +124,15 @@ and db =
 and rewrite =
     RW of { cst: term,          (* constant which the rule applies to *)
             lhs: pattern list,  (* patterns = constant args in lhs of thm *)
-	    npv: int,           (* number of distinct pat vars in lhs *)
-	    rhs: db dterm,
+            npv: int,           (* number of distinct pat vars in lhs *)
+            rhs: db dterm,
             thm: Thm.thm }      (* thm we use for rewriting *)
 ;
 
 fun add_in_db (n,cst,act,EndDb) =
       funpow n NeedArg (Try{Hcst=cst, Rws=act, Tail=EndDb})
   | add_in_db (0,cst,act as Rewrite nrws,Try{Hcst,Rws as Rewrite rws,Tail}) =
-      if cst=Hcst then Try{ Hcst=Hcst, Rws=Rewrite(nrws@rws), Tail=Tail }
+      if aconv cst Hcst then Try{ Hcst=Hcst, Rws=Rewrite(nrws@rws), Tail=Tail }
       else Try { Hcst=Hcst, Rws=Rws, Tail=add_in_db(0,cst,act,Tail) }
   | add_in_db (n,cst,act,Try{Hcst,Rws,Tail}) =
       Try { Hcst=Hcst, Rws=Rws, Tail=add_in_db(n,cst,act,Tail) }
@@ -188,13 +188,15 @@ fun assoc_clause (RWS rws) cst =
 ;
 
 fun add_in_db_upd rws (name,arity,hcst) act =
-  let val (rl as ref(db,sk)) = assoc_clause rws name
+  let val rl = assoc_clause rws name
+    val (db, sk) = !rl
   in rl := (add_in_db (arity,hcst,act,db), sk)
   end
 ;
 
 fun set_skip (rws as RWS htbl) p sk =
-  let val (rl as ref(db,_)) = assoc_clause rws p
+  let val rl = assoc_clause rws p
+    val (db,_) = !rl
   in rl := (db,sk)
   end;
 
@@ -206,16 +208,16 @@ fun scrub_const (RWS htbl) c =
 fun from_term (rws,env,t) =
   let fun down (env,t,c) =
         case dest_term t of
-	  VAR _ => up((Bv (index (equal t) env) handle HOL_ERR _ => Fv), c)
-  	| CONST{Name,Thy,...} => up(Cst (t,assoc_clause rws (Name,Thy)),c)
-  	| COMB(Rator,Rand) => down(env,Rator,Zrator{Rand=(env,Rand),Ctx=c})
-  	| LAMB(Bvar,Body) => down(Bvar :: env, Body, Zabs{Bvar=(), Ctx=c})
+          VAR _ => up((Bv (index (aconv t) env) handle HOL_ERR _ => Fv), c)
+        | CONST{Name,Thy,...} => up(Cst (t,assoc_clause rws (Name,Thy)),c)
+        | COMB(Rator,Rand) => down(env,Rator,Zrator{Rand=(env,Rand),Ctx=c})
+        | LAMB(Bvar,Body) => down(Bvar :: env, Body, Zabs{Bvar=(), Ctx=c})
 
       and up (dt, Ztop) = dt
-	| up (dt, Zrator{Rand=(env,arg), Ctx=c}) =
-	    down (env,arg,Zrand{Rator=dt, Ctx=c})
-	| up (dt, Zrand{Rator=dr, Ctx=c}) = up (appl(dr,dt), c)
-	| up (dt, Zabs{Ctx=c,...}) = up(Abs dt, c)
+        | up (dt, Zrator{Rand=(env,arg), Ctx=c}) =
+            down (env,arg,Zrand{Rator=dt, Ctx=c})
+        | up (dt, Zrand{Rator=dr, Ctx=c}) = up (appl(dr,dt), c)
+        | up (dt, Zabs{Ctx=c,...}) = up(Abs dt, c)
   in down (env,t,Ztop)
   end
 ;
@@ -234,10 +236,10 @@ fun mk_rewrite rws eq_thm =
       val gen_thm = foldr (uncurry GEN) eq_thm fv
       val rhsc = from_term (rws, rev fv, rhs)
   in RW{ cst=cst,
-	 lhs=pats,
-	 rhs=rhsc,
-	 npv=length fv,
-	 thm=gen_thm }
+         lhs=pats,
+         rhs=rhsc,
+         npv=length fv,
+         thm=gen_thm }
   end
 ;
 
@@ -267,9 +269,9 @@ fun add_thms lthm rws =
 
 fun add_thmset setname rws = let
   open ThmSetData
-  val data = all_data setname
+  val data = all_data {settype = setname}
 in
-  app (fn (s, namedths) => add_thms (map #2 namedths) rws) data
+  app (fn (s, deltas) => add_thms (added_thms deltas) rws) data
 end
 
 fun add_extern (cst,arity,fconv) rws =
@@ -301,11 +303,12 @@ fun scrub_thms lthm rws =
 (* Support for analysis of compsets                                          *)
 (*---------------------------------------------------------------------------*)
 
-fun rws_of (RWS (ref rbmap)) = 
- let val thinglist = Redblackmap.listItems rbmap
-     fun db_of_entry (ss, ref (db,opt)) = db
+fun rws_of (RWS rrbmap) =
+ let val rbmap = !rrbmap
+     val thinglist = Redblackmap.listItems rbmap
+     fun db_of_entry (ss, r) = let val (db,opt) = !r in db end
      val dblist = List.map db_of_entry thinglist
-     fun get_actions db = 
+     fun get_actions db =
       case db
        of EndDb => []
         | NeedArg db' => get_actions db'
@@ -315,11 +318,11 @@ fun rws_of (RWS (ref rbmap)) =
      fun dest_action (Hcst,Rewrite rws) = (Hcst,map dest rws)
        | dest_action (Hcst,Conv _) = (Hcst,[])
      val rwlist = List.map dest_action actionlist
- in 
+ in
    rwlist
  end;
 
-datatype transform 
+datatype transform
   = Conversion of (term -> thm * db fterm)
   | RRules of thm list;
 
@@ -331,11 +334,12 @@ datatype transform
 (* to make all the dependencies explicit.                                    *)
 (*---------------------------------------------------------------------------*)
 
-fun deplist (RWS (ref rbmap)) = 
- let val thinglist = Redblackmap.listItems rbmap
-     fun db_of_entry (ss, ref (db,opt)) = (ss,db)
+fun deplist (RWS rrbmap) =
+ let val rbmap = !rrbmap
+     val thinglist = Redblackmap.listItems rbmap
+     fun db_of_entry (ss, r) = let val (db,opt) = !r in (ss,db) end
      val dblist = List.map db_of_entry thinglist
-     fun get_actions db = 
+     fun get_actions db =
       case db
        of EndDb => []
         | NeedArg db' => get_actions db'
@@ -345,7 +349,7 @@ fun deplist (RWS (ref rbmap)) =
      fun dest_action (Rewrite rws) = RRules (map dest rws)
        | dest_action (Conv ecnv) = Conversion ecnv
      val rwlist = List.map (I##(map dest_action)) actionlist
- in 
+ in
    rwlist
  end;
 
@@ -355,9 +359,9 @@ fun mkCSET () =
                       (inv_img_cmp (fn {Thy,Name,Ty} => (Thy,Name))
                               (pair_compare(String.compare,String.compare)))
      fun insert_const c cset = HOLset.add(cset,dest_thy_const c)
-     fun insert_tycs tyinfo cset = 
+     fun insert_tycs tyinfo cset =
         itlist insert_const (TypeBasePure.constructors_of tyinfo) cset
- in 
+ in
      itlist insert_tycs tyinfol init_set
  end;
 
@@ -365,11 +369,11 @@ fun mkCSET () =
 (* Compute the attachments for each constant, then delete the constructors.  *)
 (*---------------------------------------------------------------------------*)
 
-fun no_transform compset = 
+fun no_transform compset =
  let val CSET = mkCSET()
      fun inCSET t = HOLset.member(CSET, dest_thy_const t)
      fun interesting (ss,_::_) = false
-       | interesting ((Name,Thy),[]) = 
+       | interesting ((Name,Thy),[]) =
           let val c = prim_mk_const{Name=Name,Thy=Thy}
           in not(inCSET c)
           end

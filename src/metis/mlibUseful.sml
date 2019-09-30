@@ -6,8 +6,6 @@
 structure mlibUseful :> mlibUseful =
 struct
 
-infixr 0 oo ## |-> ==;
-
 (* ------------------------------------------------------------------------- *)
 (* Exceptions, profiling and tracing.                                        *)
 (* ------------------------------------------------------------------------- *)
@@ -69,6 +67,9 @@ val trace_level = ref 1;
 
 val traces : {module : string, alignment : int -> int} list ref = ref [];
 
+fun add_trace t = traces := t :: !traces
+fun set_traces ts = traces := ts
+
 local
   val MAX = 10;
   fun query m l =
@@ -97,8 +98,6 @@ fun K x y = x;
 fun S f g x = f x (g x);
 
 fun W f x = f x x;
-
-fun f oo g = fn x => f o (g x);
 
 fun funpow 0 _ x = x | funpow n f x = funpow (n - 1) f (f x);
 
@@ -564,36 +563,34 @@ local val ln2 = Math.ln 2.0 in fun log2 x = Math.ln x / ln2 end;
 
 (* Generic pretty-printers *)
 
-type ppstream = PP.ppstream
-type 'a pp = ppstream -> 'a -> unit;
+type 'a pp = 'a Parse.pprinter
 
 val LINE_LENGTH = ref 75;
 
-fun pp_map f pp_a (ppstrm : ppstream) x : unit = pp_a ppstrm (f x);
+fun pp_map f pp_a x = pp_a (f x);
 
-fun pp_bracket l r pp_a pp a =
-  (PP.begin_block pp PP.INCONSISTENT (size l); PP.add_string pp l; pp_a pp a;
-   PP.add_string pp r; PP.end_block pp);
+fun pp_bracket l r pp_a a =
+  PP.block PP.INCONSISTENT (size l) [PP.add_string l, pp_a a, PP.add_string r]
 
-fun pp_sequence sep pp_a pp =
-  let fun pp_x x = (PP.add_string pp sep; PP.add_break pp (1,0); pp_a pp x)
-  in fn [] => () | h :: t => (pp_a pp h; app pp_x t)
-  end;
+fun pp_sequence sep pp_a els =
+  let
+    fun recurse els =
+      case els of
+          [] => []
+        | [e] => [pp_a e]
+        | e::es => [pp_a e, PP.add_string sep, PP.add_break(1,0)] @
+                   recurse es
+  in
+    PP.block PP.INCONSISTENT 0 (recurse els)
+  end
 
-fun pp_binop s pp_a pp_b pp (a,b) =
-  (PP.begin_block pp PP.INCONSISTENT 0;
-   pp_a pp a;
-   PP.add_string pp s;
-   PP.add_break pp (1,0);
-   pp_b pp b;
-   PP.end_block pp);
+fun pp_binop s pp_a pp_b (a,b) =
+  PP.block PP.INCONSISTENT 0
+           [pp_a a, PP.add_string s, PP.add_break (1,0), pp_b b]
 
 (* Pretty-printers for common types *)
 
-fun pp_string pp s =
-  (PP.begin_block pp PP.INCONSISTENT 0;
-   PP.add_string pp s;
-   PP.end_block pp);
+fun pp_string s = PP.add_string s
 
 val pp_unit = pp_map (fn () => "()") pp_string;
 
@@ -631,8 +628,8 @@ fun is_inl (INL _) = true | is_inl (INR _) = false;
 
 fun is_inr (INR _) = true | is_inr (INL _) = false;
 
-fun pp_sum pp_a _ pp (INL a) = pp_a pp a
-  | pp_sum _ pp_b pp (INR b) = pp_b pp b;
+fun pp_sum pp_a _ (INL a) = pp_a a
+  | pp_sum _ pp_b (INR b) = pp_b b;
 
 (* ------------------------------------------------------------------------- *)
 (* Maplets.                                                                  *)
@@ -683,18 +680,15 @@ fun tree_partial_foldl f_b f_l =
 (* mlibUseful impure features                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-fun op== (x,y) = mlibPortable.pointer_eq x y;
-
 fun memoize f = let val s = Susp.delay f in fn () => Susp.force s end;
 
 local
-  val generator = ref 0
+  val generator = Portable.make_counter{inc=1,init=0}
 in
-  fun new_int () = let val n = !generator val () = generator := n + 1 in n end;
+  fun new_int () = generator()
 
   fun new_ints 0 = []
-    | new_ints k =
-    let val n = !generator val () = generator := n + k in interval n k end;
+    | new_ints k = generator() :: new_ints (k - 1)
 end;
 
 local
@@ -714,31 +708,9 @@ fun with_flag (r,update) f x =
     y
   end;
 
-fun cached cmp f =
-    let
-      val cache = ref (Binarymap.mkDict cmp)
-    in
-      fn x =>
-      case Binarymap.peek (!cache,x) of
-        SOME y => y
-      | NONE =>
-        let
-          val y = f x
-          val () = cache := Binarymap.insert (!cache,x,y)
-        in
-          y
-        end
-    end;
-
 (* ------------------------------------------------------------------------- *)
 (* Environment.                                                              *)
 (* ------------------------------------------------------------------------- *)
-
-val host = Option.getOpt (OS.Process.getEnv "HOSTNAME", "unknown");
-
-val date = Date.fmt "%H:%M:%S %d/%m/%Y" o Date.fromTimeLocal o Time.now;
-
-val today = Date.fmt "%d/%m/%Y" o Date.fromTimeLocal o Time.now;
 
 local
   fun err x s = TextIO.output (TextIO.stdErr, x ^ ": " ^ s ^ "\n");
@@ -746,25 +718,5 @@ in
   val warn = err "WARNING";
   fun die s = (err "\nFATAL ERROR" s; OS.Process.exit OS.Process.failure);
 end
-
-fun read_textfile {filename} =
-  let
-    open TextIO
-    val h = openIn filename
-    val contents = inputAll h
-    val () = closeIn h
-  in
-    contents
-  end;
-
-fun write_textfile {filename,contents} =
-  let
-    open TextIO
-    val h = openOut filename
-    val () = output (h,contents)
-    val () = closeOut h
-  in
-    ()
-  end;
 
 end

@@ -54,16 +54,18 @@ open Feedback Lib Type Term Thm ;
 open TheoryPP
 
 
-type ppstream = Portable.ppstream
-type pp_type  = ppstream -> hol_type -> unit
-type pp_thm   = ppstream -> thm -> unit
+val debug = ref false
+fun DPRINT f = if !debug then print ("Theory.DEBUG: " ^ f ()) else ()
+val _ = register_btrace("Theory.debug", debug)
+
+structure PP = HOLPP
 type num = Arbnum.num
 
 val ERR  = mk_HOL_ERR "Theory";
 val WARN = HOL_WARNING "Theory";
 
-type thy_addon = {sig_ps    : (ppstream -> unit) option,
-                  struct_ps : (ppstream -> unit) option}
+type thy_addon = {sig_ps    : (unit -> PP.pretty) option,
+                  struct_ps : (unit -> PP.pretty) option}
 
 local
   val hooks =
@@ -150,7 +152,7 @@ end (* local block enclosing declaration of hooks variable *)
 
 (* This reference is set in course of loading the parsing library *)
 
-val pp_thm = ref (fn _:ppstream => fn _:thm => ())
+val pp_thm = ref (fn _:thm => PP.add_string "<thm>")
 
 (*---------------------------------------------------------------------------*
  * Unique identifiers, for securely linking a theory to its parents when     *
@@ -231,7 +233,8 @@ end; (* structure Graph *)
  * stored in a theory.                                                       *
  *---------------------------------------------------------------------------*)
 
-datatype thmkind = Thm of thm | Axiom of string Nonce.t * thm | Defn of thm
+open ThmKind_dtype
+type thmkind = ThmKind_dtype.t
 
 fun is_axiom (Axiom _) = true  | is_axiom _   = false;
 fun is_theorem (Thm _) = true  | is_theorem _ = false;
@@ -382,10 +385,8 @@ local fun pluck1 x L =
          NONE => p::l
        | SOME ((_,f'),l') => p::l'
 in
-fun add_fact (th as (s,_)) (seg : segment) =
+fun add_fact th (seg : segment) =
     update_seg seg (U #facts (overwrite th (#facts seg))) $$
-      before
-    call_hooks (TheoryDelta.NewBinding s)
 end;
 
 fun new_addon a (s as {adjoin, ...} : segment) =
@@ -441,14 +442,17 @@ fun zap_segment s (thy : segment) =
        Wrappers for functions that alter the segment.
  ---------------------------------------------------------------------------*)
 
-local fun inCT f arg = makeCT(f arg (theCT()))
-      open TheoryDelta
+local
+  fun inCT f arg = makeCT(f arg (theCT()))
+  open TheoryDelta
+  fun add_factCT p = (inCT add_fact p;
+                      call_hooks (TheoryDelta.NewBinding p))
 in
   val add_typeCT        = inCT add_type
   val add_termCT        = inCT add_term
-  fun add_axiomCT(r,ax) = inCT add_fact (Nonce.dest r, Axiom(r,ax))
-  fun add_defnCT(s,def) = inCT add_fact (s,  Defn def)
-  fun add_thmCT(s,th)   = inCT add_fact (s,  Thm th)
+  fun add_axiomCT(r,ax) = add_factCT (Nonce.dest r, Axiom(r,ax))
+  fun add_defnCT(s,def) = add_factCT (s,  Defn def)
+  fun add_thmCT(s,th)   = add_factCT (s,  Thm th)
   val add_ML_dependency = inCT add_ML_dep
 
   fun delete_type n     = (inCT del_type  (n,CTname());
@@ -467,13 +471,15 @@ in
 end;
 
 local
-  fun pp_lines pps =
-    List.app (fn s => (PP.add_string pps s; PP.add_newline pps))
+  structure PP = HOLPP
+  fun pp_lines l =
+    PP.block PP.CONSISTENT 0
+       (List.concat (map (fn s => [PP.add_string s, PP.NL]) l))
   val is_empty =
     fn [] => true
      | [s] => s = "none" orelse List.all Char.isSpace (String.explode s)
      | _ => false
-  fun pp l = if is_empty l then NONE else SOME (fn pps => pp_lines pps l)
+  fun pp l = if is_empty l then NONE else SOME (fn _ => pp_lines l)
   val qpp = pp o Portable.quote_to_string_list
 in
   fun quote_adjoin_to_theory q1 q2 =
@@ -697,7 +703,7 @@ structure LoadableThyData =
 struct
 
   type t = UniversalType.t
-  type DataOps = {merge : t * t -> t,
+  type DataOps = {merge : t * t -> t, pp : t -> string,
                   read : (string -> term) -> string -> t option,
                   write : (term -> string) -> t -> string,
                   terms : t -> term list}
@@ -715,18 +721,27 @@ struct
         | SOME (Pending _) => raise ERR "segment_data"
                                         "Can't interpret pending loads"
   in
-    if thyid_name thid = thy then check_map thydata
+    if thyid_name thid = thy then
+      (DPRINT
+         (fn _ => "segment_data for " ^ thydataty ^
+                  " coming from current_theory\n");
+       check_map thydata)
     else
       case Binarymap.peek(!allthydata, thy) of
         NONE => NONE
       | SOME dmap => check_map dmap
   end
 
+  fun segment_data_string (arg as {thy,thydataty}) =
+      case Binarymap.peek (!dataops, thydataty) of
+          SOME {pp,...} => Option.map pp (segment_data arg)
+        | NONE => raise Fail ("No pp-fn for "^thydataty)
+
   fun write_data_update {thydataty,data} =
       case Binarymap.peek(!dataops, thydataty) of
         NONE => raise ERR "write_data_update"
                           ("No operations defined for "^thydataty)
-      | SOME {merge,read,write,terms} => let
+      | SOME {merge,read,write,terms,pp} => let
           val (s as {thydata,...}) = theCT()
           open Binarymap
           fun updatemap inmap = let
@@ -736,6 +751,20 @@ struct
                 | SOME (Loaded t) => Loaded (merge(t, data))
                 | SOME (Pending ds) =>
                     raise Fail "write_data_update invariant failure"
+            val _ = DPRINT
+                      (fn () =>
+                          let
+                            val newdata_s =
+                                case newdata of
+                                    Loaded t => pp t
+                                  | Pending ds => "Pending[" ^
+                                                  String.concatWith
+                                                    ", "
+                                                    (List.map fst ds) ^ "]"
+                          in
+                            "write_data_update/" ^ thydataty ^ ": writing " ^
+                            newdata_s ^ "\n"
+                          end)
           in
             insert(inmap,thydataty,newdata)
           end
@@ -747,10 +776,12 @@ struct
       case Binarymap.peek(!dataops, thydataty) of
         NONE => raise ERR "set_theory_data"
                           ("No operations defined for "^thydataty)
-      | SOME{read,write,...} => let
+      | SOME{read,write,pp,...} => let
           val (s as {thydata,...}) = theCT()
           open Binarymap
         in
+          DPRINT (fn _ => "Updating "^thydataty^" in segment with value " ^
+                          pp data ^ "\n");
           makeCT
             (update_seg s
                         (U #thydata (insert(thydata, thydataty, Loaded data)))
@@ -819,18 +850,19 @@ in
   makeCT (update_seg seg (U #thydata (update1 thydata)) $$)
 end
 
-fun 'a new {thydataty, merge, read, write, terms} = let
+fun 'a new {thydataty, merge, read, write, terms, pp} = let
   val (mk : 'a -> t, dest) = UniversalType.embed ()
   fun vdest t = valOf (dest t)
   fun merge' (t1, t2) = mk(merge(vdest t1, vdest t2))
   fun read' tmread s = Option.map mk (read tmread s)
   fun write' tmwrite t = write tmwrite (vdest t)
   fun terms' t = terms (vdest t)
+  fun pp' t = pp (vdest t)
 in
   update_pending (merge',read') thydataty;
   dataops := Binarymap.insert(!dataops, thydataty,
                               {merge=merge', read=read', write=write',
-                               terms=terms'});
+                               terms=terms', pp=pp'});
   (mk,dest)
 end
 
@@ -843,13 +875,12 @@ end (* struct *)
  *         PRINTING THEORIES OUT AS ML STRUCTURES AND SIGNATURES.            *
  *---------------------------------------------------------------------------*)
 
-fun theory_out f ostrm =
- let val ppstrm = Portable.mk_ppstream
-                    {consumer = Portable.outputc ostrm,
-                     linewidth=75, flush = fn () => Portable.flush_out ostrm}
- in f ppstrm handle e => (Portable.close_out ostrm; raise e);
-    Portable.flush_ppstream ppstrm;
-    Portable.close_out ostrm
+fun theory_out p ostrm =
+ let
+ in
+   PP.prettyPrint ((fn s => TextIO.output(ostrm,s)), 75) p
+     handle e => (Portable.close_out ostrm; raise e);
+   TextIO.closeOut ostrm
  end;
 
 fun unkind facts =

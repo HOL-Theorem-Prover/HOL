@@ -1,6 +1,8 @@
 open HolKernel Parse boolTheory boolLib pairTheory
 open quantHeuristicsLib simpLib boolSimps
 
+local open quantHeuristicsLibAbbrev in end (* check it compiles *)
+
 (* For manual
 
 val hard_fail = false;

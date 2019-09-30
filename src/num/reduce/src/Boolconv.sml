@@ -27,6 +27,7 @@ fun failwith function = raise (ERR function "");
 
 val ambient_grammars = Parse.current_grammars();
 val _ = Parse.temp_set_grammars boolTheory.bool_grammars
+val _ = ParseExtras.temp_loose_equality()
 
 val zv    = mk_var("z",bool)
 and beqop = inst [alpha |->bool] equality;
@@ -38,13 +39,13 @@ and beqop = inst [alpha |->bool] equality;
 (*-----------------------------------------------------------------------*)
 
 local val [c1,c2,c3] = CONJUNCTS
-	(Tactical.prove(“(~T = F) /\ (~F = T) /\ (!t. ~~t = t)”,
-	       REWRITE_TAC[NOT_CLAUSES]))
+        (Tactical.prove(“(~T = F) /\ (~F = T) /\ (!t. ~~t = t)”,
+               REWRITE_TAC[NOT_CLAUSES]))
 in
 fun NOT_CONV tm =
  let val xn = dest_neg tm
- in if xn = T then c1 else
-    if xn = F then c2
+ in if aconv xn T then c1 else
+    if aconv xn F then c2
     else let val xn' = dest_neg xn in SPEC xn c3 end
  end handle HOL_ERR _ => raise ERR "NOT_CONV" ""
 end;
@@ -61,20 +62,16 @@ local val [c1,c2,c3,c4,c5] = CONJUNCTS
        (Tactical.prove
         (Term`(!t. T /\ t = t) /\ (!t. t /\ T = t) /\
               (!t. F /\ t = F) /\ (!t. t /\ F = F) /\ (!t. t /\ t = t)`,
-	       REWRITE_TAC[AND_CLAUSES]))
+               REWRITE_TAC[AND_CLAUSES]))
 in
 fun AND_CONV tm =
  let val (xn,yn) = with_exn dest_conj tm (ERR "AND_CONV" "")
- in if xn = T then SPEC yn c1 else
-    if yn = T then SPEC xn c2 else
-    if xn = F then SPEC yn c3 else
-    if yn = F then SPEC xn c4 else
-    if xn = yn then SPEC xn c5 else
-    if aconv xn yn
-     then SUBST [zv |-> ALPHA xn yn]
-           (mk_comb(mk_comb(beqop,mk_conj(xn,zv)), xn))
-           (SPEC xn c5)
-     else failwith "AND_CONV"
+ in if aconv xn T then SPEC yn c1 else
+    if aconv yn T then SPEC xn c2 else
+    if aconv xn F then SPEC yn c3 else
+    if aconv yn F then SPEC xn c4 else
+    if aconv xn yn then SPEC xn c5 else
+    failwith "AND_CONV"
  end
  end;
 
@@ -87,23 +84,19 @@ fun AND_CONV tm =
 (*-----------------------------------------------------------------------*)
 
 local val [c1,c2,c3,c4,c5] = CONJUNCTS
-	(Tactical.prove
+        (Tactical.prove
          (Term`(!t. T \/ t = T) /\ (!t. t \/ T = T) /\ (!t. F \/ t = t) /\
-		   (!t. t \/ F = t) /\ (!t. t \/ t = t)`,
-	  REWRITE_TAC[OR_CLAUSES]))
+                   (!t. t \/ F = t) /\ (!t. t \/ t = t)`,
+          REWRITE_TAC[OR_CLAUSES]))
 in
 fun OR_CONV tm =
  let val (xn,yn) = with_exn dest_disj tm (ERR "OR_CONV" "")
- in if xn = T then SPEC yn c1 else
-    if yn = T then SPEC xn c2 else
-    if xn = F then SPEC yn c3 else
-    if yn = F then SPEC xn c4 else
-    if xn = yn then SPEC xn c5 else
-    if aconv xn yn
-      then SUBST [zv |-> ALPHA xn yn]
-             (mk_comb(mk_comb(beqop,mk_disj(xn,zv)),xn))
-             (SPEC xn c5)
-      else failwith "OR_CONV"
+ in if aconv xn T then SPEC yn c1 else
+    if aconv yn T then SPEC xn c2 else
+    if aconv xn F then SPEC yn c3 else
+    if aconv yn F then SPEC xn c4 else
+    if aconv xn yn then SPEC xn c5 else
+    failwith "OR_CONV"
  end
 end;
 
@@ -116,23 +109,19 @@ end;
 (*-----------------------------------------------------------------------*)
 
 local val [c1,c2,c3,c4,c5] = CONJUNCTS
-	(Tactical.prove(
+        (Tactical.prove(
           Term`(!t. (T ==> t) = t) /\ (!t. (t ==> T) = T) /\
                (!t. (F ==> t) = T) /\ (!t. (t ==> F) = ~t) /\
                (!t. (t ==> t) = T)`, REWRITE_TAC[IMP_CLAUSES]))
 in
 fun IMP_CONV tm =
  let val (xn,yn) = with_exn dest_imp tm (ERR "IMP_CONV" "")
- in if xn = T then SPEC yn c1 else
-    if yn = T then SPEC xn c2 else
-    if xn = F then SPEC yn c3 else
-    if yn = F then SPEC xn c4 else
-    if xn = yn then SPEC xn c5 else
-    if aconv xn yn
-       then SUBST [zv |-> ALPHA xn yn]
-              (mk_comb(mk_comb(beqop,mk_imp(xn,zv)),T))
-              (SPEC xn c5)
-       else failwith "IMP_CONV"
+ in if aconv xn T then SPEC yn c1 else
+    if aconv yn T then SPEC xn c2 else
+    if aconv xn F then SPEC yn c3 else
+    if aconv yn F then SPEC xn c4 else
+    if aconv xn yn then SPEC xn c5 else
+    failwith "IMP_CONV"
  end
 end;
 
@@ -147,17 +136,16 @@ end;
 local val [c1,c2,c3,c4,c5] = CONJUNCTS
        (Tactical.prove
         (Term`(!t. (T = t) = t) /\ (!t. (t = T) = t) /\ (!t. (F = t) = ~t) /\
-		   (!t. (t = F) = ~t) /\ (!t:bool. (t = t) = T)`,
-	       REWRITE_TAC[EQ_CLAUSES]))
+                   (!t. (t = F) = ~t) /\ (!t:bool. (t = t) = T)`,
+               REWRITE_TAC[EQ_CLAUSES]))
 in
 fun BEQ_CONV tm =
  let val (xn,yn) = with_exn dest_eq tm (ERR "BEQ_CONV" "")
- in if xn = T then SPEC yn c1 else
-    if yn = T then SPEC xn c2 else
-    if xn = F then SPEC yn c3 else
-    if yn = F then SPEC xn c4 else
-    if xn = yn then SPEC xn c5 else
-    if aconv xn yn then EQT_INTRO (ALPHA xn yn) else failwith "BEQ_CONV"
+ in if aconv xn T then SPEC yn c1 else
+    if aconv yn T then SPEC xn c2 else
+    if aconv xn F then SPEC yn c3 else
+    if aconv yn F then SPEC xn c4 else
+    if aconv xn yn then SPEC xn c5 else failwith "BEQ_CONV"
  end
 end;
 
@@ -168,20 +156,17 @@ end;
 (*-----------------------------------------------------------------------*)
 
 local val [c1,c2,c3] = CONJUNCTS
-	(Tactical.prove(Term`(!t1 t2. (if T then t1 else t2) = (t1:'a)) /\
-	                     (!t1 t2. (if F then t1 else t2) = (t2:'a)) /\
-		             (!b t.   (if b then t else t) = (t:'a))`,
-	       REWRITE_TAC[COND_CLAUSES, COND_ID]))
+        (Tactical.prove(Term`(!t1 t2. (if T then t1 else t2) = (t1:'a)) /\
+                             (!t1 t2. (if F then t1 else t2) = (t2:'a)) /\
+                             (!b t.   (if b then t else t) = (t:'a))`,
+               REWRITE_TAC[COND_CLAUSES, COND_ID]))
 in
 fun COND_CONV tm =
  let val (b,t1,t2) = with_exn dest_cond tm (ERR "COND_CONV" "")
- in if b = T then SPECL [t1,t2] (INST_TYPE[alpha |-> type_of t1] c1) else
-    if b = F then SPECL [t1,t2] (INST_TYPE[alpha |-> type_of t1] c2) else
-    if t1=t2 then SPECL [b,t1]  (INST_TYPE[alpha |-> type_of t1] c3) else
-    if aconv t1 t2
-      then TRANS (AP_TERM (rator tm) (ALPHA t2 t1))
-                 (SPECL [b, t1] (INST_TYPE [alpha |-> type_of t1] c3))
-      else failwith "BEQ_CONV"
+ in if aconv b T then SPECL [t1,t2] (INST_TYPE[alpha |-> type_of t1] c1) else
+    if aconv b F then SPECL [t1,t2] (INST_TYPE[alpha |-> type_of t1] c2) else
+    if aconv t1 t2 then SPECL [b,t1]  (INST_TYPE[alpha |-> type_of t1] c3) else
+    failwith "COND_CONV"
  end
 end;
 

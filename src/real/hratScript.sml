@@ -20,6 +20,7 @@ open Parse boolLib hol88Lib numLib reduceLib
      arithmeticTheory numTheory prim_recTheory jrhUtils;
 
 val _ = new_theory "hrat";
+val _ = ParseExtras.temp_loose_equality()
 
 (*---------------------------------------------------------------------------*)
 (* The following tactic gets rid of "PRE"s by implicitly bubbling out "SUC"s *)

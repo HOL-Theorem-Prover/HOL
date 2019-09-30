@@ -12,6 +12,5 @@ examples/elliptic
 examples/fsub
 examples/muddy/muddyC/buddy/doc/bddnotes.ps
 examples/muddy/muddyC/buddy/doc/buddy.ps
-examples/opsemTools
 examples/pgcl
 examples/temporal_deep

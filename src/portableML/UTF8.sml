@@ -128,6 +128,8 @@ in
   recurse 0 0
 end
 
+val firstChar = Option.map #1 o getChar
+
 fun lastChar s = let
   open Substring
   val ss = full s
@@ -199,5 +201,55 @@ fun substring (s,start,finish) =
   in
     recurse [] 0 s
   end
+
+fun all P s =
+    case getChar s of
+        NONE => true
+      | SOME ((s,_), rest) => P s andalso all P rest
+
+fun explode s =
+    let
+      fun recurse A s =
+          case getChar s of
+              NONE => List.rev A
+            | SOME((s,_), rest) => recurse (s::A) rest
+    in
+      recurse [] s
+    end
+
+fun explodei s =
+    let
+      fun recurse A s =
+          case getChar s of
+              NONE => List.rev A
+            | SOME((_,i), rest) => recurse (i::A) rest
+    in
+      recurse [] s
+    end
+
+fun apfst f (x,y) = (f x, y)
+
+datatype safecp = CP of int (* UTF8-encoded code-point *)
+                | RB of int (* raw byte *)
+fun safecp_to_char (CP i) = chr i
+  | safecp_to_char (RB b) = str (Char.chr b)
+fun safe_explode s =
+    let
+      fun recurse A s =
+          if s = "" then List.rev A
+          else
+            let
+              val (i, rest) =
+                  apfst (CP o #2) (valOf (getChar s))
+                  handle BadUTF8 _ =>
+                         (RB (Char.ord (String.sub(s,0))),
+                          String.extract(s,1,NONE))
+            in
+              recurse (i::A) rest
+            end
+    in
+      recurse [] s
+    end
+
 
 end (* struct *)

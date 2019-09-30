@@ -9,7 +9,7 @@ open wordsLib blastLib alignmentTheory
 open updateTheory cheriTheory
 
 val _ = new_theory "cheri_step"
-
+val _ = ParseExtras.temp_loose_equality()
 val _ = List.app (fn f => f ())
    [numLib.prefer_num, wordsLib.prefer_word, wordsLib.guess_lengths]
 
@@ -373,7 +373,7 @@ local
     in
       if is_SignalException t orelse is_SignalException e
         then b
-      else raise ERR "" ""
+      else raise mk_HOL_ERR "cheri_stepScript" "" ""
     end
 in
   fun split_exception th =

@@ -157,7 +157,7 @@ val first_match_tac = FIRST o List.map match_tac
 
 fun match1_tac (x,t) = match_tac ([x],t)
 
-fun kill_asm th = first_x_assum((K ALL_TAC) o assert (equal (concl th) o concl))
+fun kill_asm th = first_x_assum((K ALL_TAC) o assert (aconv (concl th) o concl))
 
 fun drule_thm th = mp_tac o Lib.C MATCH_MP th
 

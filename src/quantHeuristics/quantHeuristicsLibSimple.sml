@@ -48,6 +48,8 @@ type simple_guess_search_fun_with_callback =
 (* Auxiliary function                  *)
 (***************************************)
 
+val ERR = mk_HOL_ERR "quantHeuristicsLibSimple"
+
 fun not_uses_avoid_vars avoid tm = let
   val s1 = FVL [tm] empty_tmset
   val s2 = HOLset.intersection (s1, avoid)
@@ -355,8 +357,12 @@ fun SIMPLE_QUANT_INST_GEN_ss wcl = simpLib.SSFRAG
            trace=1,
            key=SOME ([],``@x:'a. P``),
            conv=K (K (SIMPLE_SELECT_INSTANTIATE_CONV_GEN wcl))}],
-   rewrs=[HD_TL_EQ_THMS, SOME_THE_EQ, FST_PAIR_EQ, SND_PAIR_EQ,
-          SOME_THE_EQ_SYM, FST_PAIR_EQ_SYM, SND_PAIR_EQ_SYM
+   rewrs=[(SOME "HD_TL_EQ_THMS", HD_TL_EQ_THMS),
+          (SOME "SOME_THE_EQ", SOME_THE_EQ),
+          (SOME "FST_PAIR_EQ", FST_PAIR_EQ), (SOME "SND_PAIR_EQ", SND_PAIR_EQ),
+          (SOME "SOME_THE_EQ_SYM", SOME_THE_EQ_SYM),
+          (SOME "FST_PAIR_EQ_SYM", FST_PAIR_EQ_SYM),
+          (SOME "SND_PAIR_EQ_SYM", SND_PAIR_EQ_SYM)
          ],filter=NONE,ac=[],dprocs=[],congs=[]};
 
 val SIMPLE_QUANT_INST_ss = SIMPLE_QUANT_INST_GEN_ss default_sgsfwcs;

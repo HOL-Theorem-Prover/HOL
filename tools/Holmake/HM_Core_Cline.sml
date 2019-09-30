@@ -3,16 +3,16 @@ struct
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate22 z
+  fun makeUpdateT z = makeUpdate21 z
 in
 fun updateT z = let
-  fun from debug do_logging dontmakes fast help hmakefile holdir includes
+  fun from debug do_logging fast help hmakefile holdir includes
            interactive jobs keep_going no_action no_hmakefile no_lastmaker_check
            no_overlay
            no_prereqs opentheory quiet
            quit_on_failure rebuild_deps recursive verbose =
     {
-      debug = debug, do_logging = do_logging, dontmakes = dontmakes,
+      debug = debug, do_logging = do_logging,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
       includes = includes, interactive = interactive, jobs = jobs,
       keep_going = keep_going,
@@ -27,9 +27,9 @@ fun updateT z = let
             no_overlay no_lastmaker_check no_hmakefile no_action keep_going
             jobs interactive
             includes holdir
-            hmakefile help fast dontmakes do_logging debug =
+            hmakefile help fast do_logging debug =
     {
-      debug = debug, do_logging = do_logging, dontmakes = dontmakes,
+      debug = debug, do_logging = do_logging,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
       includes = includes, interactive = interactive, jobs = jobs,
       keep_going = keep_going,
@@ -39,12 +39,12 @@ fun updateT z = let
       quiet = quiet, quit_on_failure = quit_on_failure,
       rebuild_deps = rebuild_deps, recursive = recursive, verbose = verbose
     }
-  fun to f {debug, do_logging, dontmakes, fast, help, hmakefile, holdir,
+  fun to f {debug, do_logging, fast, help, hmakefile, holdir,
             includes, interactive, jobs, keep_going, no_action, no_hmakefile,
             no_lastmaker_check,
             no_overlay, no_prereqs, opentheory,
             quiet, quit_on_failure, rebuild_deps, recursive, verbose} =
-    f debug do_logging dontmakes fast help hmakefile holdir includes
+    f debug do_logging fast help hmakefile holdir includes
       interactive jobs keep_going no_action no_hmakefile no_lastmaker_check
       no_overlay
       no_prereqs opentheory quiet
@@ -62,7 +62,6 @@ fun fupd_includes f t = updateT t (U #includes (f (#includes t))) $$
 type t = {
   debug : bool,
   do_logging : bool,
-  dontmakes : string list,
   fast : bool,
   help : bool,
   hmakefile : string option,
@@ -88,7 +87,6 @@ val default_core_options : t =
 {
   debug = false,
   do_logging = false,
-  dontmakes = [],
   fast = false,
   help = false,
   hmakefile = NONE,
@@ -104,7 +102,7 @@ val default_core_options : t =
   no_prereqs = false,
   opentheory = NONE,
   quiet = false,
-  quit_on_failure = false,
+  quit_on_failure = true,
   rebuild_deps = false,
   recursive = false,
   verbose = false
@@ -123,8 +121,8 @@ val setNOHMF =
                      hmakefile = NONE, no_hmf = true})
 fun mkBoolT sel =
   NoArg (fn () => resfn (fn (wn,t) => updateT t (U sel true) $$))
-fun cons_dontmakes x =
-  resfn (fn (wn,t) => updateT t (U #dontmakes (x :: #dontmakes t)) $$)
+fun mkBoolF sel =
+  NoArg (fn () => resfn (fn (wn,t) => updateT t (U sel false) $$))
 fun cons_includes x =
   resfn (fn (wn,t) => updateT t (U #includes (x :: #includes t)) $$)
 fun change_jobs nstr =
@@ -158,8 +156,6 @@ fun set_openthy s =
 val core_option_descriptions = [
   { help = "turn on diagnostic messages", long = ["dbg", "d"], short = "",
     desc = mkBoolT #debug},
-  { help = "don't make this target", long = [], short = "d",
-    desc = ReqArg (cons_dontmakes, "target") },
   { help = "fast build (replace tactics w/cheat)", long = ["fast"], short = "",
     desc = mkBoolT #fast },
   { help = "show this message", long = ["help"], short = "h",
@@ -188,6 +184,8 @@ val core_option_descriptions = [
     short = "", desc = mkBoolT #no_overlay },
   { help = "don't build recursively in INCLUDES",
     long = ["no_prereqs"], short = "", desc = mkBoolT #no_prereqs },
+  { help = "don't quit on failure", long = ["noqof"], short = "",
+    desc = mkBoolF #quit_on_failure },
   { help = "use file as opentheory logging .uo",
     long = ["ot"], short = "", desc = ReqArg (set_openthy, "file")},
   { help = "be quieter with output", short = "q", long = ["quiet"],

@@ -2,8 +2,6 @@
 (* Boilerplate.                                                          *)
 (* --------------------------------------------------------------------- *)
 open HolKernel Parse boolLib;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-infixr -->;
 
 
 (* --------------------------------------------------------------------- *)
@@ -83,13 +81,10 @@ val IN_DISJOINT_IMP =
   );
 
 
-val CONJ_11 =
- store_thm
-  ("CONJ_11",
-   “!a b c d. (a = b) /\ (c = d) ==> (a /\ c = b /\ d)”,
-   REPEAT STRIP_TAC
-   THEN ASM_REWRITE_TAC[]
-  );
+Theorem CONJ_11:
+  !a b c d. (a = b) /\ (c = d) ==> (a /\ c <=> b /\ d)
+Proof REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]
+QED
 
 
 val MAP_I =
@@ -115,14 +110,10 @@ val APPEND_11 =
   );
 
 
-val NULL_APPEND =
- store_thm
-  ("NULL_APPEND",
-   “!l1 l2:('a) list.
-      NULL (APPEND l1 l2) =  NULL l1 /\ NULL l2”,
-   LIST_INDUCT_TAC
-   THEN REWRITE_TAC[NULL,APPEND]
-  );
+Theorem NULL_APPEND:
+  !l1 l2:('a) list. NULL (APPEND l1 l2) <=> NULL l1 /\ NULL l2
+Proof LIST_INDUCT_TAC THEN REWRITE_TAC[NULL,APPEND]
+QED
 
 
 val ONE_ONE =
@@ -505,7 +496,7 @@ val DIFFF = save_thm("DIFFF", CONJ DIFF_EMPTY DIFF_INSERT);
 val UNION_SET_EXISTS =
     TAC_PROOF
     (([], “!s:('a->bool)->bool.
-                ?t. !x. x IN t = ?si. si IN s /\ x IN si”),
+                ?t. !x. x IN t <=> ?si. si IN s /\ x IN si”),
      GEN_TAC
      THEN EXISTS_TAC “\x:'a. ?si. si IN s /\ x IN si”
      THEN REWRITE_TAC[SPECIFICATION]

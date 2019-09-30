@@ -17,7 +17,7 @@ signature MutRecDef =
 
   val define_type
       : {type_name : string,
-	 constructors : {name:string,
+         constructors : {name:string,
                          arg_info : TypeInfo.type_info list}list} list
          ->
            {New_Ty_Induct_Thm     :thm,

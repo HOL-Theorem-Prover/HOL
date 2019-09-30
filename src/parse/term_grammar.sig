@@ -1,7 +1,6 @@
 signature term_grammar =
 sig
 
-  type ppstream = Portable.ppstream
   type block_info = term_grammar_dtype.block_info
   type overload_info = Overload.overload_info
   type associativity = term_grammar_dtype.associativity
@@ -145,6 +144,9 @@ sig
   val give_num_priority : grammar -> char -> grammar
   val remove_numeral_form : grammar -> char -> grammar
 
+  val add_strlit_injector: {ldelim: string, tmnm: string} -> grammar -> grammar
+  val strlit_map : grammar -> {tmnm:string} -> string option
+
   (*------------------------------------------------------------------------*
    * this removes all those rules which give special status to the          *
    * given string.  If there is a rule saying that COND is written          *
@@ -191,10 +193,10 @@ sig
 
 
   val prettyprint_grammar_rules
-                          : (grammar -> ppstream -> term -> unit) ->
-                            ppstream -> ruleset -> unit
-  val prettyprint_grammar : (grammar -> ppstream -> term -> unit) ->
-                            ppstream -> grammar -> unit
+                          : (grammar -> term -> term_pp_types.uprinter) ->
+                            ruleset -> term_pp_types.uprinter
+  val prettyprint_grammar : (grammar -> term -> term_pp_types.uprinter) ->
+                            grammar -> term_pp_types.uprinter
 
   val grammar_rule_reader : grammar_rule Coding.reader
   val grammar_rule_encode : grammar_rule -> string

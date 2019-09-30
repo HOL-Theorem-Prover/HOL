@@ -1,4 +1,5 @@
 open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_bigops";
+val _ = ParseExtras.temp_loose_equality()
 open lisp_codegenTheory lisp_initTheory lisp_symbolsTheory lisp_sexpTheory
 open lisp_invTheory lisp_parseTheory lisp_opsTheory;
 
@@ -836,4 +837,3 @@ val X64_LISP_PRINT_SEXP = save_thm("X64_LISP_PRINT_SEXP",let
 
 
 val _ = export_theory();
-

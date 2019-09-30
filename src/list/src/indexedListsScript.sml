@@ -246,11 +246,11 @@ val LIST_RELi_EL_EQN = Q.store_thm(
   ho_match_mp_tac SNOC_INDUCT >>
   simp[SNOC_APPEND, LENGTH_NIL_SYM, LIST_RELi_rules] >> rpt strip_tac >>
   Q.ISPEC_THEN `l2` FULL_STRUCT_CASES_TAC SNOC_CASES >> fs[SNOC_APPEND] >>
-  irule (CONJUNCT2 (SPEC_ALL LIST_RELi_rules))
+  irule (CONJUNCT2 (SPEC_ALL LIST_RELi_rules)) >> conj_tac
   >- (rename1 `R (LENGTH l1) x y` >>
       first_x_assum (qspec_then `LENGTH l1` mp_tac) >> simp[EL_APPEND2]) >>
-  reverse (first_x_assum irule) >- simp[] >> Q.X_GEN_TAC `j` >> strip_tac >>
-  first_x_assum (qspec_then `j` mp_tac) >> simp[EL_APPEND1]);
+  reverse (first_x_assum irule >> conj_tac) >- simp[] >> Q.X_GEN_TAC `j` >>
+  strip_tac >> first_x_assum (qspec_then `j` mp_tac) >> simp[EL_APPEND1]);
 
 val LIST_RELi_thm = Q.store_thm(
   "LIST_RELi_thm",

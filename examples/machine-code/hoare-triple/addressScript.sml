@@ -1,11 +1,9 @@
-
 open HolKernel boolLib bossLib Parse;
-open wordsTheory wordsLib bitTheory arithmeticTheory fcpTheory pred_setTheory progTheory;
+open wordsTheory wordsLib alignmentTheory bitTheory arithmeticTheory fcpTheory pred_setTheory progTheory;
 
 val _ = new_theory "address";
+val _ = ParseExtras.temp_loose_equality()
 
-infix \\
-val op \\ = op THEN;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -24,11 +22,13 @@ val DUMMY_EQ_def = Define `DUMMY_EQ x y = (x = y:'a)`;
 
 val SING_SET_def = Define `SING_SET x = {x}`;
 
-val word_mod_def = Define `
-  word_mod (v:'a word) (w:'a word) = n2w (w2n v MOD w2n w):'a word`;
-
 
 (* theorems *)
+
+Theorem ALIGNED_eq_aligned:
+  ALIGNED = aligned 2
+Proof rw[ALIGNED_def,FUN_EQ_THM,aligned_bitwise_and]
+QED
 
 val WORD_EQ_XOR_ZERO = store_thm("WORD_EQ_XOR_ZERO",
   ``!v w. (v ?? w = 0w) = (v = w:'a word)``,
@@ -132,7 +132,7 @@ val EXISTS_ADDR30 = store_thm("EXISTS_ADDR30",
     \\ SRW_TAC [WORD_EXTRACT_ss] []
     \\ FULL_SIMP_TAC (std_ss++WORD_BIT_EQ_ss++wordsLib.BIT_ss) [n2w_def]);
 
-val add32_ADDR30 = store_thm("ADDR32_ADDR30",
+val ADDR32_ADDR30 = store_thm("ADDR32_ADDR30",
   ``!x. (x && 3w = 0w) ==> (ADDR32 (ADDR30 x) = x)``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC EXISTS_ADDR30
     \\ ASM_REWRITE_TAC [ADDR30_ADDR32]);
@@ -681,18 +681,6 @@ val WORD_SUB_INTRO = store_thm("WORD_SUB_INTRO",
      (x + (-1w) * y = x - y) /\
      (x + y * (-1w) = x - y)``,
   SIMP_TAC (std_ss++wordsLib.WORD_ss) []);
-
-val WORD_DIVISION = store_thm("WORD_DIVISION",
-  ``!w. w <> 0w ==> !v. (v = (v // w) * w + word_mod v w) /\ word_mod v w <+ w``,
-  Cases_word \\ ASM_SIMP_TAC std_ss [n2w_11,ZERO_LT_dimword]
-  \\ STRIP_TAC \\ Cases_word
-  \\ ASM_SIMP_TAC std_ss [word_mod_def,word_div_def,w2n_n2w]
-  \\ ASM_SIMP_TAC std_ss [word_add_n2w,word_mul_n2w,WORD_LO,w2n_n2w]
-  \\ FULL_SIMP_TAC bool_ss [NOT_ZERO_LT_ZERO]
-  \\ IMP_RES_TAC (GSYM DIVISION)
-  \\ REPEAT (Q.PAT_X_ASSUM `!k. bbb` (ASSUME_TAC o Q.SPEC `n'`))
-  \\ IMP_RES_TAC LESS_TRANS
-  \\ ASM_SIMP_TAC std_ss []);
 
 val WORD_ADD_LEMMA = prove(
   ``!(x:'a word) n. x + n2w n * x = n2w (n + 1) * x``,

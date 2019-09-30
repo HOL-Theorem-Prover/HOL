@@ -1,4 +1,5 @@
 open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_parse";
+val _ = ParseExtras.temp_loose_equality()
 
 open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
 open combinTheory finite_mapTheory addressTheory stringTheory helperLib;
@@ -3152,7 +3153,7 @@ fun store_string2sexp_thm target extra post = let
     THEN Q.EXISTS_TAC `f`
     THEN AUTO_EXISTS_TAC
     THEN FULL_SIMP_TAC std_ss [AC STAR_COMM STAR_ASSOC]
-  val thi = prove(tm,tac)
+  val thi = TAC_PROOF(([], tm),tac)
   val th = MP th thi
   val th = DISCH_ALL th
   val th = SIMP_RULE (std_ss++sep_cond_ss) [progTheory.SPEC_MOVE_COND,AND_IMP_INTRO,SEP_CLAUSES] th

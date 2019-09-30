@@ -86,9 +86,7 @@ fun GENVAR_THM th =
   *--------------------------------------------------------------------------*)
 
  fun alike head tm1 tm2 =
-  (#1 (strip_comb tm2) = head)
-  andalso
-  can (match_term tm1) tm2;
+  aconv (#1 (strip_comb tm2)) head andalso can (match_term tm1) tm2;
 
  fun embedded1 tm =
   let val head = #1(strip_comb tm)
@@ -144,7 +142,7 @@ fun GENVAR_THM th =
                   ::map (DISCH ant) (mk_rewrs (step th (ASSUME ant)))
                end else
           if (is_forall tm) then mk_rewrs (SPECer th) else
-          if (tm = istrue) then [] else
+          if aconv tm istrue then [] else
           [EQT_INTRO th]
       end
       handle HOL_ERR _ => raise RW_ERR "mk_simpls" ""
@@ -278,8 +276,8 @@ fun stringulate _ [] = []
 
 val drop_opt = List.mapPartial Lib.I
 
-local fun sys_var tm = (is_var tm andalso
-                        not(Lexis.ok_identifier(fst(dest_var tm))))
+local fun sys_var tm =
+          is_var tm andalso not (Lexis.is_clean_varname (fst (dest_var tm)))
       val failed = RW_ERR "RW_STEP" "all applications failed"
 in
 fun RW_STEP {context=(cntxt,_),prover,simpls as RW{rw_net,...}} tm = let
@@ -328,46 +326,37 @@ fun CONG_STEP (RW{cong_net,...}) tm = Lib.trye hd (Net.match tm cong_net) tm;
  *                          Prettyprinting
  *---------------------------------------------------------------------------*)
 
-local open Portable
+local open Portable PP
 in
-fun pp_simpls ppstrm (RW{thms,congs,...}) =
-   let val {add_string,add_break,begin_block,end_block,add_newline,...} =
-         with_ppstream ppstrm
-       val pp_thm = Parse.pp_thm ppstrm
+fun pp_simpls (RW{thms,congs,...}) =
+   let val pp_thm = Parse.pp_thm
        val thms' = mk_simplsl SPEC_ALL (rev(flatten thms))
        val congs' = rev(flatten congs)
        val how_many_thms = length thms'
        val how_many_congs = length congs'
+       val B = block CONSISTENT 0
    in
-      begin_block PP.CONSISTENT 0;
-      if (how_many_thms = 0)
-      then (add_string "<empty simplification set>")
-      else ( add_string"Rewrite Rules:"; add_newline();
-             add_string"--------------"; add_newline();
-             begin_block PP.INCONSISTENT 0;
-             pr_list pp_thm (fn () => add_string";")
-                            (fn () => add_break(2,0))
-                            thms';
-             end_block());
-      add_newline();
-      add_string("Number of rewrite rules = "^Lib.int_to_string how_many_thms);
-      add_newline();
-      if (how_many_congs = 0)
-      then ()
-      else (add_newline();
-            add_string"Congruence Rules"; add_newline();
-            add_string"----------------"; add_newline();
-            begin_block PP.CONSISTENT 0;
-            pr_list pp_thm (fn () => add_string";")
-                           (fn () => add_break(2,0))
-                           congs';
-            end_block();
-            add_newline();
+     block PP.CONSISTENT 0 [
+       if (how_many_thms = 0)
+       then (add_string "<empty simplification set>")
+       else B [add_string"Rewrite Rules:", NL,
+               add_string"--------------", NL,
+               block PP.INCONSISTENT 0 (
+                 pr_list pp_thm [add_string";", add_break(2,0)] thms')
+              ],
+       NL,
+       add_string("Number of rewrite rules = "^Lib.int_to_string how_many_thms),
+       NL,
+       B (if (how_many_congs = 0) then []
+          else [
+            NL,
+            add_string"Congruence Rules", NL,
+            add_string"----------------", NL,
+            B (pr_list pp_thm [add_string";", add_break(2,0)] congs'), NL,
             add_string("Number of congruence rules = "
-                       ^Lib.int_to_string how_many_congs);
-            add_newline());
-
-      end_block()
+                       ^Lib.int_to_string how_many_congs), NL
+         ])
+     ]
    end
 end;
 
@@ -446,7 +435,7 @@ fun variants away0 vlist =
 fun variant_theta away0 vlist =
  rev_itlist (fn v => fn (V,away) =>
     let val v' = variant away v
-    in if v=v' then (V,away) else ((v|->v')::V, v'::away) end)
+    in if aconv v v' then (V,away) else ((v|->v')::V, v'::away) end)
  vlist ([],away0);
 
 (*---------------------------------------------------------------------------
@@ -462,8 +451,9 @@ fun vstrl_variants away0 vstrl =
      else let val theta =
                #1(rev_itlist (fn v => fn (theta, pool) =>
                      let val v' = variant pool v
-                     in if v=v' then (theta,pool)
-                                else ((v|->v')::theta, v'::pool)
+                     in
+                       if aconv v v' then (theta,pool)
+                       else ((v|->v')::theta, v'::pool)
                      end) clashes ([], op_union aconv away0 fvl))
           in map (subst theta) vstrl
           end
@@ -570,10 +560,11 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
     val (f,args) = (I##rev) (dest_combn lhs nvars)
     val (rhsv,_) = dest_combn rhs nvars
     val vstrl = #1(strip_pabs f)
-    val vstructs = vstrl_variants (union ant_frees context_frees) vstrl
-    val ceqn' = if null vstrl then ceqn else subst (map (op|->) (zip args vstructs)) ceqn
+    val vstructs = vstrl_variants (op_union aconv ant_frees context_frees) vstrl
+    val ceqn' = if null vstrl then ceqn
+                else subst (map (op|->) (zip args vstructs)) ceqn
 
-(*    val ceqn' = if null vstrl then ceqn 
+(*    val ceqn' = if null vstrl then ceqn
                  else subst (map2_total (curry op|->) args vstructs) ceqn
 *)
 
@@ -613,7 +604,7 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
           (* that has function syntax. This will allow the final        *)
           (* MATCH_MP icong ... to  succeed.                            *)
           (*------------------------------------------------------------*)
-         fun drop n list = 
+         fun drop n list =
             if n <= 0 orelse null list then list
             else drop (n-1) (tl list)
          (*-------------------------------------------------------------*)
@@ -634,8 +625,9 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
                val g = list_mk_pabs(vstructs,rcore)
                val gvstructs = list_mk_comb(g,vstructs)
 
-               val rhs_eq = if not_lambda_app then REFL gvstructs
-                            else SYM(Conv.QCONV (DEPTH_CONV GEN_BETA_CONV) gvstructs)
+               val rhs_eq =
+                   if not_lambda_app then REFL gvstructs
+                   else SYM(Conv.QCONV (DEPTH_CONV GEN_BETA_CONV) gvstructs)
                val th1 = TRANS th rhs_eq (* |- f vstructs = g vstructs *)
                          handle HOL_ERR _ => th
             in (g,th1)
@@ -645,8 +637,8 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
 (*         val pairs = zip args vstructs' handle HOL_ERR _ => [] *)
          val pairs = zip args vstructs handle HOL_ERR _ => []
          fun generalize v thm =
-              case assoc1 v pairs
-               of SOME (_,tup) => pairTools.PGEN v tup thm
+              case op_assoc1 aconv v pairs
+               of SOME tup => pairTools.PGEN v tup thm
                 | NONE => GEN v thm
           val result = itlist generalize vlist th2
       in
@@ -903,7 +895,7 @@ fun std_solver _ context tm =
                     solver_err())
        | loop (x::rst) =
            let val c = concl x
-           in if c = boolSyntax.F
+           in if aconv c boolSyntax.F
               then CCONTR tm x
               else if aconv tm c then x
                    else INST_TY_TERM (Term.match_term c tm) x
@@ -931,7 +923,7 @@ fun rw_solver simpls context tm =
                                   prover = rw_solver} tm
      val _ = if !monitoring > 0
              then let val (lhs,rhs) = dest_eq(concl th)
-                  in if rhs = T
+                  in if aconv rhs T
                      then Lib.say("Solver: proved\n"^thm_to_string th^"\n\n")
                      else Lib.say("Solver: unable to prove.\n\n")
                   end
@@ -940,7 +932,7 @@ fun rw_solver simpls context tm =
      fun loop [] = solver_err()
        | loop (x::rst) =
            let val c = concl x
-           in if c = F then CCONTR tm x
+           in if aconv c F then CCONTR tm x
               else if aconv tm' c then x
                    else INST_TY_TERM (Term.match_term c tm') x
                       handle HOL_ERR _ => loop rst

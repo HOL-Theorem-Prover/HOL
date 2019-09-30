@@ -19,7 +19,7 @@ open armTheory coreTheory lemmasTheory coprocessorTheory;
 open multTheory blockTheory interruptsTheory;
 
 val _ = new_theory "correct";
-
+val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------- *)
 
 val () = Feedback.set_trace "PAT_ABBREV_TAC: match var/const" 0
@@ -563,10 +563,10 @@ val MLA_MUL = Count.apply prove(
 
 (* ------------------------------------------------------------------------- *)
 
-val ALU_ABBREV_TAC = with_flag (priming,SOME "")
+val ALU_ABBREV_TAC =
   (PAT_ABBREV_TAC `alu = ALU6 ic is xireg xborrow2 xmul xdataabt xalua xalub xc`);
 
-val PSR_ABBREV_TAC = with_flag (priming,SOME "")
+val PSR_ABBREV_TAC =
   (PAT_ABBREV_TAC `psr = xpsr:psr`);
 
 val lem = prove(
@@ -886,13 +886,13 @@ val NON_MEMOPS = Count.apply prove(
     \\ (CONJ_TAC >> FINISH_OFF
     \\ RULE_ASSUM_TAC (SIMP_RULE (stdi_ss++PBETA_ss++ALU_ss++ALU2_ss)
          [GSYM IMMEDIATE_THM,IMMEDIATE_THM2])
-    \\ TRY (UNABBREV_TAC `psr1`) \\ TRY (UNABBREV_TAC `psr2`)
+    \\ TRY (UNABBREV_TAC `psr'`) \\ TRY (UNABBREV_TAC `psr''`)
     \\ FULL_SIMP_TAC (stdi_ss++STATE_INP_ss)
          ([CPSR_WRITE_READ_COND,CPSR_WRITE_READ_COND2,PSR_WRITE_COMM,
            DECODE_MODE_mode_num,DECODE_IFMODE_SET_IFMODE,
            exception_distinct,state_arm_ex_11] @ finish_rws3)
-    \\ TRY (UNABBREV_TAC `alu`) \\ TRY (UNABBREV_TAC `alu1`)
-    \\ TRY (UNABBREV_TAC `alu2`)
+    \\ TRY (UNABBREV_TAC `alu`) \\ TRY (UNABBREV_TAC `alu'`)
+    \\ TRY (UNABBREV_TAC `alu''`)
     \\ RW_TAC (stdi_ss++ALU2_ss) ([SET_NZC_def,SPSR_READ_WRITE,CONCAT_MSR,
          SHIFT_IMMEDIATE_THM2,IMMEDIATE_THM2,SHIFT_REGISTER_THM2,
          SOFTWARE_ADDRESS] @ finish_rws2)
@@ -942,11 +942,11 @@ val NON_MEMOPS_UNEXEC = Count.apply prove(
     \\ SIMP_TAC (stdi_ss++SWI_EX_ss) []
     \\ (CONJ_TAC >> FINISH_OFF
     \\ RULE_ASSUM_TAC (SIMP_RULE (stdi_ss++ALU_ss) [])
-    \\ TRY (UNABBREV_TAC `psr1` \\ UNABBREV_TAC `psr2`)
+    \\ TRY (UNABBREV_TAC `psr'` \\ UNABBREV_TAC `psr''`)
     \\ FULL_SIMP_TAC (stdi_ss++STATE_INP_ss)
            ([PSR_WRITE_COMM,DECODE_MODE_mode_num,num2exception_word3,
              DECODE_IFMODE_SET_IFMODE] @ finish_rws3)
-    \\ TRY (UNABBREV_TAC `alu1` \\ UNABBREV_TAC `alu2`)
+    \\ TRY (UNABBREV_TAC `alu'` \\ UNABBREV_TAC `alu''`)
     \\ RW_TAC (stdi_ss++ALU2_ss) ([INTERRUPT_ADDRESS] @ finish_rws2)));
 
 (* ------------------------------------------------------------------------- *)
@@ -1007,15 +1007,15 @@ val BASIC_MEMOPS = Count.apply prove(
         \\ RULE_ASSUM_TAC (SIMP_RULE (stdi_ss++ALU_ss++ALU2_ss) [])
         \\ FULL_SIMP_TAC (stdi_ss++STATE_INP_ss)
              ([IS_SOME_COND,HD,LDR_IMP_BITS,STR_IMP_BITS] @ finish_rws3)
-        \\ TRY (UNABBREV_TAC `alu`) \\ TRY (UNABBREV_TAC `alu1`)
-        \\ TRY (UNABBREV_TAC `alu2`) \\ TRY (UNABBREV_TAC `alu3`)
+        \\ TRY (UNABBREV_TAC `alu`) \\ TRY (UNABBREV_TAC `alu'`)
+        \\ TRY (UNABBREV_TAC `alu''`) \\ TRY (UNABBREV_TAC `alu'''`)
         \\ RW_TAC (stdi_ss++ALU2_ss++SIZES_ss) ([UP_DOWN_def,BW_READ_def,
              SLICE_ROR_THM,SHIFT_IMMEDIATE_THM2,IMMEDIATE_THM2,SND_ROR,
              SHIFT_ALIGN,w2w_extract] @ finish_rws2)
         \\ NTAC 2 (FULL_SIMP_TAC std_ss finish_rws2)
         \\ Cases_on `(19 >< 16) ireg = 15w:word4`
         \\ FULL_SIMP_TAC std_ss finish_rws2,
-      TRY (UNABBREV_TAC `alu1`)
+      TRY (UNABBREV_TAC `alu'`)
         \\ ASM_SIMP_TAC (stdi_ss++listSimps.LIST_ss++ALU_ss++ALU2_ss++SIZES_ss)
          ([Abbr`alu`,SWP_def,LDR_STR_def,DECODE_SWP_def,DECODE_LDR_STR_def,
            ADDR_MODE2_def,DECODE_PSR_def,OUT_ARM_def,MEMOP_def,SNOC,
@@ -1140,7 +1140,7 @@ val LDM_GENLIST_MEMOP_EQ = prove(
     \\ FULL_SIMP_TAC std_ss [PROJ_DATA_def,PROJ_ABORT_def]
     \\ POP_ASSUM (STRIP_ASSUME_TAC o
          (CONV_RULE (TOP_DEPTH_CONV (CHANGED_CONV (SKOLEM_CONV)))))
-    \\ UNABBREV_TAC `alu1`
+    \\ UNABBREV_TAC `alu'`
     \\ ASM_SIMP_TAC (arith_ss++ICLASS_ss++STATE_INP_ss) [PROJ_DATA_def,
          OUT_ARM6_def,IN_LDM_STM,GSYM FIRST_ADDRESS,TO_WRITE_READ6]);
 
@@ -1620,7 +1620,7 @@ val STM_GENLIST_MEMOP_EQ = prove(
          (fn th => FULL_SIMP_TAC std_ss [th,WORD_MULT_CLAUSES])
     \\ POP_ASSUM (STRIP_ASSUME_TAC o
          (CONV_RULE (TOP_DEPTH_CONV (CHANGED_CONV (SKOLEM_CONV)))))
-    \\ ASM_SIMP_TAC (arith_ss++STATE_INP_ss) [Abbr`alu`,Abbr`alu1`,
+    \\ ASM_SIMP_TAC (arith_ss++STATE_INP_ss) [Abbr`alu`,Abbr`alu'`,
          IS_ABORT_def,PROJ_ABORT_def,ADVANCE_def,OUT_ARM6_def,GSYM WB_ADDRESS,
          GSYM FIRST_ADDRESS,TO_WRITE_READ6,IN_LDM_STM]);
 
@@ -1760,7 +1760,7 @@ val STM_MEMOPS = Count.apply prove(
                 SUC (SUC n')`
             by PROVE_TAC [LENGTH_ADDR_MODE4]
             \\ ASM_SIMP_TAC (stdi_ss++PBETA_ss++listSimps.LIST_ss++ARITH_ss)
-                 ([Abbr`alu`,Abbr`alu1`,combinTheory.o_ABS_R,word_mul_n2w,
+                 ([Abbr`alu`,Abbr`alu'`,combinTheory.o_ABS_R,word_mul_n2w,
                    LSL_ZERO,ABS_ARM6_def,MEMOP_def,MAP_STM_MEMOP,OUT_ARM_def,
                    DECODE_PSR_def,LDM_STM_def,DECODE_LDM_STM_def,IN_LDM_STM,
                    SND_ADDR_MODE4,DECODE_INST_STM,ADDRESS_LIST_def,MAP_GENLIST,

@@ -13,6 +13,14 @@ open constrFamiliesLib
 open unwindLib
 open oneSyntax
 
+structure Parse =
+struct
+  open Parse
+  val (Type,Term) =
+      parse_from_grammars patternMatchesTheory.patternMatches_grammars
+end
+open Parse
+
 val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
 
 (***********************************************)
@@ -94,12 +102,9 @@ fun does_conv_loop thm = let
 (***********************************************)
 
 val PAIR_EQ_COLLAPSE = prove (
-``(((FST x = (a:'a)) /\ (SND x = (b:'b))) = (x = (a, b)))``,
-Cases_on `x` THEN SIMP_TAC std_ss [] THEN METIS_TAC[])
-
-val PAIR_EQ_COLLAPSE = prove (
-``(((FST x = (a:'a)) /\ (SND x = (b:'b))) = (x = (a, b)))``,
-Cases_on `x` THEN SIMP_TAC std_ss [])
+  ``(((FST x = (a:'a)) /\ (SND x = (b:'b))) = (x = (a, b)))``,
+  STRUCT_CASES_TAC (SPEC ``x:'a#'b`` pairTheory.pair_CASES) THEN
+  SIMP_TAC std_ss []);
 
 fun is_FST_eq x t = let
   val (l, r) = dest_eq t
@@ -623,8 +628,7 @@ fun PMATCH_REMOVE_FAST_REDUNDANT_CONV_GENCALL_SINGLE rc_arg t = let
      let
         val (t_s, ty_s) = match_term p1 p2
      in
-        (null ty_s) andalso
-        (Lib.all (fn x => mem (#redex x) v1) t_s)
+        null ty_s andalso Lib.all (fn x => tmem (#redex x) v1) t_s
      end handle HOL_ERR _ => false
   in
      List.filter does_match candidates
@@ -712,7 +716,7 @@ fun PMATCH_REMOVE_FAST_SUBSUMED_CONV_GENCALL_SINGLE
         val (t_s, ty_s) = match_term p2 p1
      in
         (null ty_s) andalso
-        (Lib.all (fn x => mem (#redex x) v2) t_s)
+        (Lib.all (fn x => tmem (#redex x) v2) t_s)
      end handle HOL_ERR _ => false
   in
      List.filter does_match candidates
@@ -1714,11 +1718,11 @@ val PMATCH_FAST_SIMP_ss = name_ss "patternMatchesFastSimp" (PMATCH_FAST_SIMP_GEN
 fun force_unique_vars s no_change avoid t =
   case Psyntax.dest_term t of
       Psyntax.VAR (_, _) =>
-      if (mem t no_change) then (s, avoid, t) else
+      if tmem t no_change then (s, avoid, t) else
       let
          val v' = variant avoid t
          val avoid' = v'::avoid
-         val s' = if (v' = t) then s else ((v', t)::s)
+         val s' = if v' ~~ t then s else ((v', t)::s)
       in (s', avoid', v') end
     | Psyntax.CONST _ => (s, avoid, t)
     | Psyntax.LAMB (v, t') => let
@@ -1826,7 +1830,7 @@ fun PMATCH_REMOVE_GUARD_AUX rc_arg t = let
      [] => raise UNCHANGED (* nothing found *)
    | (r:: rs') => let
         val (_, _, g, _) = dest_PMATCH_ROW_ABS r
-        val g_simple = ((g = T) orelse (g = F))
+        val g_simple = Teq g orelse Feq g
      in
         if g_simple then
            find_row_to_split (r::rs1) rs'
@@ -1926,15 +1930,14 @@ end) : column_heuristic
 
 
 (* ranking functions *)
-fun colRank_first_row (_:term, rows) = (
+fun colRank_first_row (_:term, rows) =
   case rows of
     [] => 0
-  | (vs, p) :: _ =>
-      if (is_var p andalso mem p vs) then 0 else 1);
+  | (vs, p) :: _ => if is_var p andalso tmem p vs then 0 else 1
 
 fun colRank_first_row_constr db (_, rows) = case rows of
     [] => 0
-  | ((vs, p) :: _) => if (is_var p andalso mem p vs) then 0 else
+  | ((vs, p) :: _) => if is_var p andalso tmem p vs then 0 else
       case pmatch_compile_db_compile_cf db rows of
         NONE => 0
       | SOME cf => let
@@ -1962,16 +1965,16 @@ fun col_get_constr_set db (_, rows) =
      val cL_cf = List.map fst constrL;
 
      val cL_rows' = List.filter (fn c => op_mem same_const c cL_cf) cL_rows;
-     val cL_rows'' = Lib.mk_set cL_rows';
+     val cL_rows'' = Lib.op_mk_set aconv cL_rows'
   in
     SOME (cL_rows'', cL_cf, exh)
   end
 
+fun tmltm_eq (tml1,tm1) (tml2,tm2) = tml_eq tml1 tml2 andalso tm1 ~~ tm2
 fun col_get_nonvar_set (_, rows) =
   let
-     val cL' = List.filter (fn (vs, p) =>
-        not (is_var p andalso mem p vs)) rows;
-     val cL'' = Lib.mk_set cL';
+     val cL' = List.filter (fn (vs, p) => not (is_var p andalso tmem p vs)) rows
+     val cL'' = Lib.op_mk_set tmltm_eq cL'
   in
     cL''
   end
@@ -2701,14 +2704,14 @@ end handle HOL_ERR _ => raise UNCHANGED
 fun find_non_constructor_pattern db vs t = let
   fun aux l = case l of
       [] => NONE
-    | (t::ts) =>  if (mem t vs) then aux ts else (
-        if (pairSyntax.is_pair t) then
+    | (t::ts) =>
+      if tmem t vs then aux ts
+      else if pairSyntax.is_pair t then
           aux ((pairSyntax.strip_pair t)@ts)
-        else (
+      else (
           case pmatch_compile_db_dest_constr_term db t of
              NONE => SOME t
            | SOME (_, args) => aux ((map snd args) @ ts)
-        )
       )
 in
   aux [t]
@@ -3024,15 +3027,14 @@ fun PMATCH_IS_EXHAUSTIVE_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t = let
     val thm0 = QCHANGED_CONV (PMATCH_IS_EXHAUSTIVE_FAST_CHECK_GENCALL rc_arg) t
     val (ex_t, r) = dest_eq (concl thm0)
   in
-    if (r = T) then
+    if Teq r then
       MP (SPEC ex_t EQ_T_ELIM) thm0
-    else (if (r = F) then
-      (SPEC ex_t EQ_F_ELIM)
+    else if Feq r then
+      SPEC ex_t EQ_F_ELIM
     else
-      (MP (SPEC r (SPEC ex_t EQ_O_ELIM)) thm0)
-    )
+      MP (SPEC r (SPEC ex_t EQ_O_ELIM)) thm0
   end handle HOL_ERR _ =>
-    PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t;
+    PMATCH_IS_EXHAUSTIVE_COMPILE_CONSEQ_CHECK_FULLGEN db col_heu rc_arg t
 end;
 
 
@@ -3056,8 +3058,7 @@ val rc_arg = ([], NONE)
 *)
 
 
-val neg_imp_rewr = prove (``(~A ==> B) = (~B ==> A)``,
-  Cases_on `A` THEN   Cases_on `B` THEN REWRITE_TAC[]);
+val neg_imp_rewr = prove (``(~A ==> B) = (~B ==> A)``, tautLib.PTAUT_TAC);
 
 fun nchotomy_PMATCH_ROW_COND_EX_CONSEQ_CONV_GEN rc_arg db col_heu tt = let
   (* destruct everything *)

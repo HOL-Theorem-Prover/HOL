@@ -120,7 +120,8 @@ val IS_SOME_PEXISTS = Q.prove
  Cases THEN RW_TAC list_ss [Once iintree_def,pEXISTS_def] THEN CASE_TAC);
 
 val iintree_dlem = Q.prove
-(`!d x tree. IS_SOME (iintree d x tree) ==> (iintree d x tree = iintree (SUC d) x tree)`,
+(`!d x tree.
+    IS_SOME (iintree d x tree) ==> (iintree d x tree = iintree (SUC d) x tree)`,
 Induct THENL [METIS_TAC [IS_SOME_IINTREE], ALL_TAC] THEN
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [iintree_def] THEN
   REPEAT CASE_TAC THEN FULL_SIMP_TAC arith_ss [] THEN
@@ -140,8 +141,10 @@ val iintree_determ = Q.prove
 
 val iintree_monotone_step = Q.prove
 (`!d x tree. IS_SOME(iintree d x tree) ==> IS_SOME(iintree (SUC d) x tree)`,
-e (Induct THENL [RW_TAC arith_ss [Once iintree_def], ONCE_REWRITE_TAC [iintree_def]]);
-e (SIMP_TAC arith_ss [] THEN REPEAT GEN_TAC THEN REPEAT CASE_TAC THEN STRIP_TAC);
+e (Induct THENL [RW_TAC arith_ss [Once iintree_def],
+                 ONCE_REWRITE_TAC [iintree_def]]);
+e (SIMP_TAC arith_ss [] THEN REPEAT GEN_TAC THEN
+   REPEAT CASE_TAC THEN STRIP_TAC);
 e (`(l=[]) \/ d<>0` by METIS_TAC [IS_SOME_PEXISTS]);
 (*1*)
 e (RW_TAC list_ss [pEXISTS_def]);
@@ -160,10 +163,13 @@ REPEAT STRIP_TAC THEN RW_TAC list_ss [Once iintree_def] THEN
  METIS_TAC [IS_SOME_EXISTS,NOT_SOME_NONE,SOME_11,iintree_determ]);
 
 val iintree_monotone = Q.prove
-(`!d1 d2 x list. IS_SOME(iintree d1 x list) /\ d1 <= d2 ==> IS_SOME(iintree d2 x list)`,
+(`!d1 d2 x list.
+    IS_SOME(iintree d1 x list) /\ d1 <= d2 ==> IS_SOME(iintree d2 x list)`,
  RW_TAC arith_ss [LESS_EQ_EXISTS] THEN
  Induct_on `p` THEN METIS_TAC [ADD_CLAUSES,iintree_monotone_step]);
 
 val iintree_norm = Q.prove
-(`!d x list. IS_SOME(iintree d x list) ==> (iintree d n = iintree (rdepth x list) x list)`,
+(`!d x list.
+    IS_SOME(iintree d x list) ==>
+    (iintree d n = iintree (rdepth x list) x list)`,
   METIS_TAC [iintree_determ,rdepth_thm]);

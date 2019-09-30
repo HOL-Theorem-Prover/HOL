@@ -5,9 +5,6 @@ open HolKernel Parse boolLib simpLib boolSimps bagSyntax bagTheory;
 
 type cache = Cache.cache;
 
-infixr -->
-infix |-> THENC
-
 val ERR = mk_HOL_ERR "bagSimps";
 
 val BAG_AC_ss = simpLib.SSFRAG {name=SOME"BAG_AC",
@@ -15,13 +12,6 @@ val BAG_AC_ss = simpLib.SSFRAG {name=SOME"BAG_AC",
     ac = [(SPEC_ALL ASSOC_BAG_UNION, SPEC_ALL COMM_BAG_UNION)],
     filter = NONE
 };
-
-(* remove x xs removes one instance of x from xs *)
-fun remove x [] = raise ERR "remove" "no such element"
-  | remove x (y::xs) = if x = y then xs else y::(remove x xs)
-
-fun remove_list [] l2 = l2
-  | remove_list (x::xs) l2 = remove_list xs (remove x l2)
 
 fun buac_prover ty = let
   fun type_inst ty = INST_TYPE [alpha |-> ty]
@@ -47,17 +37,14 @@ fun CANCEL_CONV tm = let
       handle HOL_ERR _ => (mk_eq, BAG_UNION_LEFT_CANCEL, dest_eq tm)
   val basetype = base_type arg1
   val bag_type = basetype --> numSyntax.num
-  val arg1_ts = strip_union arg1 and arg2_ts = strip_union arg2
-  fun common [] _ = []  (* like intersect but no setifying *)
-    | common _ [] = []
-    | common (x::xs) y = x::common xs (remove x y)
-    handle _ => common xs y
-  val common_part = common arg1_ts arg2_ts
-  val _ = not (null common_part) orelse
+  val arg1_ts = listset (strip_union arg1)
+  val arg2_ts = listset (strip_union arg2)
+  val common_part = arg1_ts Isct arg2_ts
+  val _ = not (HOLset.isEmpty common_part) orelse
     raise ERR "CANCEL_CONV" "No common parts to eliminate"
-  val rem1 = remove_list common_part arg1_ts
-  val rem2 = remove_list common_part arg2_ts
-  val cpt = list_mk_union common_part
+  val rem1 = HOLset.listItems (arg1_ts -- common_part)
+  val rem2 = HOLset.listItems (arg2_ts -- common_part)
+  val cpt = list_mk_union (HOLset.listItems common_part)
   val ac1 = mk_eq(arg1, if null rem1 then cpt
                         else mk_union (cpt, list_mk_union rem1))
   val ac2 = mk_eq(arg2, if null rem2 then cpt
@@ -95,9 +82,12 @@ val BAG_ss = SSFRAG
                               (SUB_BAG_tm, "SUB_BAG"),
                               (BAG_EQ_tm, "=")],
    filter = NONE, dprocs = [],
-   rewrs = [BAG_UNION_EMPTY, BAG_DIFF_EMPTY, SUB_BAG_REFL,
-            SUB_BAG_EMPTY,FINITE_EMPTY_BAG,
-            NOT_IN_EMPTY_BAG]};
+   rewrs = map (fn s => (SOME s, DB.fetch "bag" s)) [
+     "BAG_UNION_EMPTY", "BAG_DIFF_EMPTY", "SUB_BAG_REFL",
+     "SUB_BAG_EMPTY","FINITE_EMPTY_BAG",
+     "NOT_IN_EMPTY_BAG"
+   ]
+  };
 
 fun transform t =
   ((if is_sub_bag t then

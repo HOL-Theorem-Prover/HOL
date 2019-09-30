@@ -3,13 +3,14 @@ open HolKernel Parse boolLib bossLib pred_setTheory arithmeticTheory relationThe
 open generalHelpersTheory wordTheory
 
 val _ = new_theory "alterA"
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = Datatype
   `ALTER_A = <| states      : 's set;
-               initial      : ('s set) set;
-               final        : 's set;
                alphabet     : 'a set;
-               trans        : 's -> (('a set # 's set) set)
+               trans        : 's -> (('a set # 's set) set);
+               initial      : ('s set) set;
+               final        : 's set
                |>`;
 
 val isValidAlterA_def =
@@ -808,7 +809,7 @@ val STEP_THM = store_thm
 
 (* An example alternating automata *)
 
-val A1_def = Define `A1 = ALTER_A {1;2} {{1}} {2} {T;F} (\_. {({T;F}, {1;2})})`;
+val A1_def = Define `A1 = ALTER_A {1;2} {T;F} (\_. {({T;F}, {1;2})}) {{1}} {2}`;
 
 val AUT_EX_1 = store_thm
   ("AUT_EX_1",

@@ -7,7 +7,7 @@ quietdec := true;
 *)
 
 open HolKernel Parse boolLib bossLib arithmeticTheory combinTheory
-     pred_setTheory HurdUseful boolContext listTheory
+     pred_setTheory hurdUtils boolContext listTheory
      res_quanTools res_quanTheory subtypeTheory subtypeTools
      extra_listTheory ho_proverTools listContext extra_numTheory
      pairTheory state_transformerTheory simpLib;
@@ -17,6 +17,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "extra_pred_set";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
@@ -282,7 +283,7 @@ val NUM_TO_FINITE = store_thm
    ``!s (f:num->'a).
        FINITE s /\ (!n. f n IN s) ==> ?i j. i < j /\ (f i = f j)``,
    Suff `!s. FINITE s ==> !(f:num->'a). (!n. f n IN s)
-	       ==> ?i j. i < j /\ (f i = f j)`
+               ==> ?i j. i < j /\ (f i = f j)`
    >- PROVE_TAC []
    >> HO_MATCH_MP_TAC FINITE_INDUCT
    >> REWRITE_TAC [NOT_IN_EMPTY]
@@ -293,8 +294,8 @@ val NUM_TO_FINITE = store_thm
     >> Q.PAT_X_ASSUM `!f. (!n. P f n) ==> Q f` (MP_TAC o Q.SPEC `(\x. f (x + n))`)
     >> Know `!n'. f (n + n') IN s`
     >- (STRIP_TAC
-	>> Suff `n + n' >= n` >- PROVE_TAC []
-	>> DECIDE_TAC)
+        >> Suff `n + n' >= n` >- PROVE_TAC []
+        >> DECIDE_TAC)
     >> RW_TAC arith_ss []
     >> Suff `i + n < j + n` >- PROVE_TAC []
     >> DECIDE_TAC,

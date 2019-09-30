@@ -16,6 +16,10 @@ fun getbvs x =
    (fn (i:printing_info) => return (#current_bvars i)))
   x
 
+val dflt_pinfo = {seen_frees = Term.empty_tmset,
+                  current_bvars = Term.empty_tmset,
+                  last_string = " ", in_gspec = false}
+
 fun setbvs bvs = let
   fun set {seen_frees,current_bvars,last_string,in_gspec} =
       {seen_frees=seen_frees, current_bvars=bvs,last_string=last_string,

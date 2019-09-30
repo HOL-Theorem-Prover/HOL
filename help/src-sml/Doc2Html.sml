@@ -140,12 +140,10 @@ fun html (name,sectionl) ostrm =
        | markout_section (TYPE _) = raise Fail "markout_section: TYPE"
 
      fun front_matter name (TYPE ss) =
-           (out "<!DOCTYPE HTML PUBLIC \"-//W32//DTD HTML 4.01//EN\"\
-                 \ \"http://www.w3.org/TR/html4/strict.dtd\">\n";
+           (out "<!DOCTYPE html>\n";
             out "<HTML>\n";
             out "<HEAD>\n";
-            out "<meta http-equiv=\"content-type\" content=\"text/html ; \
-                \charset=US-ASCII\">\n";
+            out "<META CHARSET=\"utf-8\">\n";
             out "<TITLE>"; out name; out "</TITLE>\n";
             out "<LINK REL = \"STYLESHEET\" HREF = \"../";
             out cssURL;

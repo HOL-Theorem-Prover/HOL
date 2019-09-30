@@ -27,7 +27,7 @@ val _ = Hol_datatype`
            rules : 'b inf |-> ('a,'b,'c) pegsym |>
 `
 (* Option type should be replaced with sum type (loc. for NONE *)
-val (peg_eval_rules, peg_eval_ind, peg_eval_cases) = Hol_reln`
+Inductive peg_eval:
   (∀s c. peg_eval G (s, empty c) (SOME(s, c))) ∧
   (∀n r s f c.
        n ∈ FDOM G.rules ∧ peg_eval G (s, G.rules ' n) (SOME(r,c)) ⇒
@@ -67,22 +67,21 @@ val (peg_eval_rules, peg_eval_ind, peg_eval_cases) = Hol_reln`
      peg_eval G (s0, e) (SOME(s1,c)) ∧
      peg_eval_list G (s1, e) (s2,cs) ⇒
      peg_eval_list G (s0, e) (s2,c::cs))
-`;
+End
 
-val peg_eval_strongind' = save_thm(
-  "peg_eval_strongind'",
-  theorem "peg_eval_strongind"
-             |> SIMP_RULE (srw_ss()) [pairTheory.FORALL_PROD]
-             |> Q.SPECL [`G`, `\es0 r. P1 (FST es0) (SND es0) r`,
-                         `\es0 sr. P2 (FST es0) (SND es0) (FST sr) (SND sr)`]
-             |> SIMP_RULE (srw_ss()) [])
+Theorem peg_eval_strongind' =
+  peg_eval_strongind
+    |> SIMP_RULE (srw_ss()) [pairTheory.FORALL_PROD]
+    |> Q.SPECL [`G`, `\es0 r. P1 (FST es0) (SND es0) r`,
+                `\es0 sr. P2 (FST es0) (SND es0) (FST sr) (SND sr)`]
+    |> SIMP_RULE (srw_ss()) []
 
 open rich_listTheory
 val peg_eval_suffix0 = prove(
   ``(∀s0 e sr. peg_eval G (s0,e) sr ⇒ ∀s r. sr = SOME (s,r) ⇒ IS_SUFFIX s0 s) ∧
     ∀s0 e s rl. peg_eval_list G (s0,e) (s,rl) ⇒ IS_SUFFIX s0 s``,
-  HO_MATCH_MP_TAC peg_eval_strongind' THEN SRW_TAC [][IS_SUFFIX_compute, IS_PREFIX_APPEND3,
-                                       IS_PREFIX_REFL] THEN
+  HO_MATCH_MP_TAC peg_eval_strongind' THEN
+  SRW_TAC [][IS_SUFFIX_compute, IS_PREFIX_APPEND3, IS_PREFIX_REFL] THEN
   METIS_TAC [IS_PREFIX_TRANS]);
 
 (* Theorem 3.1 *)
@@ -109,7 +108,7 @@ val peg_badrpt = store_thm(
     by METIS_TAC [last (peg_eval_rules |> SPEC_ALL |> CONJUNCTS)] >>
   pop_assum mp_tac >> simp[]);
 
-val (peg0_rules, peg0_ind, peg0_cases) = Hol_reln`
+Inductive peg0:
   (∀c. peg0 G (empty c)) ∧
 
   (* any *)
@@ -151,7 +150,7 @@ val (peg0_rules, peg0_ind, peg0_cases) = Hol_reln`
   (* not *)
   (∀e c. pegfail G e ⇒ peg0 G (not e c)) ∧
   (∀e c. peg0 G e ∨ peggt0 G e ⇒ pegfail G (not e c))
-`;
+End
 
 val peg_eval_suffix' = store_thm(
   "peg_eval_suffix'",
@@ -205,7 +204,7 @@ val lemma4_1a0 = prove(
 
 val lemma4_1a = save_thm("lemma4_1a",lemma4_1a0 |> SIMP_RULE (srw_ss() ++ DNF_ss) [AND_IMP_INTRO])
 
-val (wfpeg_rules, wfpeg_ind, wfpeg_cases) = Hol_reln`
+Inductive wfpeg:
   (∀n f. n ∈ FDOM G.rules ∧ wfpeg G (G.rules ' n) ⇒ wfpeg G (nt n f)) ∧
   (∀c. wfpeg G (empty c)) ∧
   (∀f. wfpeg G (any f)) ∧
@@ -215,9 +214,9 @@ val (wfpeg_rules, wfpeg_ind, wfpeg_cases) = Hol_reln`
              wfpeg G (seq e1 e2 f)) ∧
   (∀e1 e2 f. wfpeg G e1 ∧ wfpeg G e2 ⇒ wfpeg G (choice e1 e2 f)) ∧
   (∀e f. wfpeg G e ∧ ¬peg0 G e ⇒ wfpeg G (rpt e f))
-`
+End
 
-val subexprs_def = Define`
+Definition subexprs_def[simp]:
   (subexprs (any f1) = { any f1 }) ∧
   (subexprs (empty c) = { empty c }) ∧
   (subexprs (tok t f2) = { tok t f2 }) ∧
@@ -227,8 +226,7 @@ val subexprs_def = Define`
   (subexprs (choice e1 e2 f4) =
     choice e1 e2 f4 INSERT subexprs e1 ∪ subexprs e2) ∧
   (subexprs (rpt e f5) = rpt e f5 INSERT subexprs e)
-`
-val _ = export_rewrites ["subexprs_def"]
+End
 
 
 val subexprs_included = store_thm(
@@ -240,11 +238,11 @@ val Gexprs_def = Define`
   Gexprs G = BIGUNION (IMAGE subexprs (G.start INSERT FRANGE G.rules))
 `
 
-val start_IN_Gexprs = store_thm(
-  "start_IN_Gexprs",
-  ``G.start ∈ Gexprs G``,
-  simp[Gexprs_def, subexprs_included]);
-val _ = export_rewrites ["start_IN_Gexprs"]
+Theorem start_IN_Gexprs[simp]:
+  G.start ∈ Gexprs G
+Proof
+  simp[Gexprs_def, subexprs_included]
+QED
 
 val wfG_def = Define`wfG G ⇔ ∀e. e ∈ Gexprs G ⇒ wfpeg G e`;
 

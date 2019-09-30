@@ -33,7 +33,7 @@ val noc_pair_I = Q.prove(
   METIS_TAC [nvars_def, IN_UNION, noc_rules])
 
 val noc_pair = Q.prove(
-  `noc s (nPair t1 t2) v = noc s t1 v \/ noc s t2 v`,
+  `noc s (nPair t1 t2) v <=> noc s t1 v \/ noc s t2 v`,
   METIS_TAC [noc_pair_E, noc_pair_I])
 
 val noc_const = Q.prove(

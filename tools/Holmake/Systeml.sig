@@ -3,6 +3,7 @@ sig
 
   val systeml : string list -> OS.Process.status
   val system_ps : string -> OS.Process.status
+  val systeml_out : {outfile:string} -> string list -> OS.Process.status
   val exec : string * string list -> 'a
   val protect : string -> string
   val xable_string : string -> string
@@ -26,7 +27,6 @@ sig
   val POLY_LDFLAGS_STATIC : string list
   val CC : string
   val MOSMLDIR : string
-  val HAVE_BASIS2002 : bool
   val OS : string
   val DEPDIR : string
   val GNUMAKE : string
@@ -37,6 +37,10 @@ sig
 
   val isUnix : bool
   val pointer_eq : 'a * 'a -> bool
+  val bindstr : string -> string
+   (* emits code that tries to quietly emulate the action of the argument
+      when fed to the compiler.  For MoscowML, this is the identity function
+      (and it won't be quiet). *)
 
   (* other system-wide constants, shared between build tools and the
      running hol *)

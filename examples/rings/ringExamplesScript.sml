@@ -22,7 +22,7 @@ val res4 = num_norm_conv `(b+a)*(b+a) : num`;
 val res5 = num_norm_conv `(a+b)*(a+b)*(a+b) : num`;
 
 val res6 = num_ring_conv `(a+b)*(a+b) = (b+a)*(b+a) : num`;  (* equality *)
-val _ = if rhs (concl res6) <> boolSyntax.T then raise Fail "res6 test failed"
+val _ = if rhs (concl res6) !~ boolSyntax.T then raise Fail "res6 test failed"
         else ()
 
 (*---------------------------------------------------------------------------
@@ -65,7 +65,7 @@ val _ = int_norm_conv `(a+b)*(a+b)*(a+b) : int`;
 val _ = int_norm_conv `(a-b)*(a+b) : int`;
 
 val res7 = int_ring_conv `(a+b)*(a+b) = (b+a)*(b+a) :int`;   (* equality *)
-val _ = if rhs (concl res7) <> boolSyntax.T then raise Fail "res7 test failed"
+val _ = if rhs (concl res7) !~ boolSyntax.T then raise Fail "res7 test failed"
         else ()
 
 
@@ -107,5 +107,3 @@ val _ = Q.store_thm(
   CONV_TAC (Count.apply INT_RING_CONV))
 
 val _ = export_theory()
-
-

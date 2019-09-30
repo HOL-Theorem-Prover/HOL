@@ -39,6 +39,7 @@ val op by = BasicProvers.byA
 (* Start new theory "compile"                                                *)
 (*****************************************************************************)
 val _ = new_theory "compile";
+val _ = ParseExtras.temp_loose_equality()
 
 (*****************************************************************************)
 (* |- f ===> g = !x. f x ==> g x                                             *)

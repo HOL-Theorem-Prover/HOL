@@ -420,7 +420,7 @@ fun expand th = let
                       code_abbrevs_def]
   val assum = ``LENGTH (cs:word64 list) = 10``
   val assum_lhs = fst (dest_eq assum)
-  fun cs_len_conv tm = if tm = assum_lhs then ASSUME assum else NO_CONV tm
+  fun cs_len_conv tm = if tm ~~ assum_lhs then ASSUME assum else NO_CONV tm
   val th = th |> RW (code_abbrevs @ [EL_UPDATE_NTH,LENGTH_UPDATE_NTH,
                    word_arith_lemma1,INSERT_UNION_EQ,UNION_EMPTY])
               |> CONV_RULE (DEPTH_CONV cs_len_conv)
@@ -477,7 +477,3 @@ in val _ = export_codeLib.write_code_to_file filename th end
 
 
 val _ = export_theory();
-
-
-
-

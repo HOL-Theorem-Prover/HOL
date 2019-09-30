@@ -357,6 +357,9 @@ val base_environment0 = let
   val alist =
       [("CC", [LIT CC]),
        ("CP", if OS = "winNT" then [LIT "copy /b"] else [LIT "/bin/cp"]),
+       ("DEFAULT_TARGETS",
+        [VREF ("patsubst %.sml,%.uo,$(patsubst %Theory.sml,,"^
+               "$(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml)))")]),
        ("HOLDIR", [LIT HOLDIR]),
        ("MLLEX", [VREF "protect $(HOLDIR)/tools/mllex/mllex.exe"]),
        ("MLYACC", [VREF "protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe"]),

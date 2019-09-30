@@ -3,7 +3,7 @@ struct
 
 open Feedback Thm Conv Abbrev;
 
-infix THENC ORELSEC |->;
+val aconv = Term.aconv
 
 (*---------------------------------------------------------------------------
  * Fake for NJSML: it does not use Interrupt anyway so it won't ever
@@ -114,7 +114,7 @@ fun rev_splitlist dest =
     in  rsplist (r::ls) l
     end
     handle Interrupt => raise Interrupt
-	 | _ => (x,ls)
+         | _ => (x,ls)
   in
     fn x => rsplist [] x
   end;;
@@ -125,7 +125,7 @@ fun striplist dest =
     in strip l (strip r acc)
     end
     handle Interrupt => raise Interrupt
-	 | _ => x::acc
+         | _ => x::acc
   in
     fn x => strip x []
   end;;
@@ -139,7 +139,7 @@ val rev_assoc = Lib.rev_assoc;
 
 fun remove_assoc x =
     let fun remove [] = raise ERR "" ""
-	  | remove ((h as (l,r))::t) = if (x = l) then t else (h::remove t)
+          | remove ((h as (l,r))::t) = if (x = l) then t else (h::remove t)
     in fn l => (remove l handle HOL_ERR _ => l)
     end;
 
@@ -193,30 +193,30 @@ fun list_mk_binop opr = Lib.end_itlist (Lib.curry (mk_binop opr));
 
 fun dest_binop opr tm =
     let val (Rator,rhs) = Term.dest_comb tm
-	val (opr',lhs) = Term.dest_comb Rator
+        val (opr',lhs) = Term.dest_comb Rator
     in
-	if opr=opr' then (lhs,rhs) else fail()
+        if aconv opr opr' then (lhs,rhs) else fail()
     end
     handle HOL_ERR _ => failwith "dest_binop";
 
 fun strip_binop opr =
     let val dest = dest_binop opr
-	fun strip tm =
-	    let val (l,r) = dest tm
-		val (str,rm) = strip r
-	    in (l::str,rm)
-	    end
-  	    handle HOL_ERR _ => ([],tm)
+        fun strip tm =
+            let val (l,r) = dest tm
+                val (str,rm) = strip r
+            in (l::str,rm)
+            end
+            handle HOL_ERR _ => ([],tm)
     in strip
     end;
 
 fun binops opr =
     let val dest = dest_binop opr
-	fun strip tm =
-	    let val (l,r) = dest tm
-	    in strip l @ strip r
-	    end
-  	    handle HOL_ERR _ => [tm]
+        fun strip tm =
+            let val (l,r) = dest tm
+            in strip l @ strip r
+            end
+            handle HOL_ERR _ => [tm]
     in strip
     end;
 
@@ -287,12 +287,14 @@ fun COMB2_CONV lconv rconv tm =
 val COMB_CONV = Lib.W COMB2_CONV;;
 
 fun alpha v tm =
-  let val (v0,bod) = Term.dest_abs tm
-               handle HOL_ERR _ => failwith "alpha: Not an abstraction"
-  in if v = v0 then tm else
-      if not (Lib.mem v (Term.free_vars bod))
-	  then Term.mk_abs(v, Term.subst [Lib.|->(v0,v)] bod)
-      else failwith "alpha: Invalid new variable"
+  let
+    val (v0,bod) = Term.dest_abs tm
+                   handle HOL_ERR _ => failwith "alpha: Not an abstraction"
+  in
+    if aconv v v0 then tm
+    else if not (Term.free_in v bod) then
+      Term.mk_abs(v, Term.subst [Lib.|->(v0,v)] bod)
+    else failwith "alpha: Invalid new variable"
   end;
 
 
@@ -342,8 +344,8 @@ fun COMB2_QCONV conv1 conv2 tm =
   let val (l,r) = Term.dest_comb tm
   in let val th1 = conv1 l
      in let val th2 = conv2 r
-	in MK_COMB(th1,th2)
-	end
+        in MK_COMB(th1,th2)
+        end
         handle HOL_ERR _ => AP_THM th1 r
      end
      handle HOL_ERR _ => AP_TERM l (conv2 r)
@@ -415,14 +417,17 @@ fun SINGLE_DEPTH_CONV conv tm =
 (*-----------------------------------------------------------------------*)
 
 fun MK_ABS_CONV var tm =
-  if (Term.is_comb tm andalso (Term.rand tm = var)
-      andalso not (Term.free_in var (Term.rator tm)))
-  then REFL tm
+  if Term.is_comb tm andalso aconv (Term.rand tm) var
+     andalso not (Term.free_in var (Term.rator tm))
+  then
+    REFL tm
   else
-  let val rhs = Term.mk_abs(var,tm)
+    let
+      val rhs = Term.mk_abs(var,tm)
       val newrhs = Term.mk_comb(rhs,var)
-  in SYM (BETA_CONV newrhs)
-  end;
+    in
+      SYM (BETA_CONV newrhs)
+    end;
 
 fun MK_ABSL_CONV vars tm =
  let val rhs = boolSyntax.list_mk_abs (vars,tm)

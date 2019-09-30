@@ -18,6 +18,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "tree";
+val _ = ParseExtras.temp_loose_equality()
 
 val tree = Hol_datatype `tree =
     leaf
@@ -91,7 +92,7 @@ REPEAT CONJ_TAC THEN1 (
                    EMPTY_DEF]
 ) THEN
 SIMP_TAC list_ss [EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM,
-		 GSYM LEFT_FORALL_IMP_THM, IN_DEF] THEN
+                 GSYM LEFT_FORALL_IMP_THM, IN_DEF] THEN
 REPEAT CONJ_TAC THENL [
    REPEAT STRIP_TAC THEN
    IMP_RES_TAC TC_CASES1 THEN
@@ -162,7 +163,7 @@ val SUBTREES_size = store_thm ("SUBTREES_size",
 ``!t2 t1. t1 IN SUBTREES t2 ==> (tree_size0 t1 <= tree_size0 t2)``,
 SIMP_TAC arith_ss [SUBTREES_THM, IN_INSERT,
                    DISJ_IMP_THM, PSUBTREES_size,
-		   LESS_IMP_LESS_OR_EQ]);
+                   LESS_IMP_LESS_OR_EQ]);
 
 
 
@@ -243,9 +244,9 @@ Induct_on `tL` THEN (
 REPEAT STRIP_TAC THEN
 CONSEQ_REWRITE_TAC ([], [IMAGE_FINITE], []) THEN
 ASM_SIMP_TAC std_ss [FINITE_BIGUNION_EQ, FINITE_INSERT,
-	             FINITE_LIST_TO_SET, IN_INSERT,
+                     FINITE_LIST_TO_SET, IN_INSERT,
                      DISJ_IMP_THM, FORALL_AND_THM, MEM_MAP,
-		     GSYM LEFT_FORALL_IMP_THM] THEN
+                     GSYM LEFT_FORALL_IMP_THM] THEN
 FULL_SIMP_TAC std_ss [EVERY_MEM]);
 
 
@@ -257,11 +258,11 @@ Induct_on `tL` THEN (
    SIMP_TAC list_ss [DEPTH_THM, NOT_INSERT_EMPTY]
 ) THEN
 SIMP_TAC std_ss [IMAGE_EQ_EMPTY, BIGUNION_INSERT,
-		 EMPTY_UNION]);
+                 EMPTY_UNION]);
 
 
 val MIN_LIST_def = Define `(MIN_LIST [] = 0) /\
-			   (MIN_LIST (t::l) = FOLDR MIN t l)`
+                           (MIN_LIST (t::l) = FOLDR MIN t l)`
 val MAX_LIST_def = Define `MAX_LIST l = FOLDR MAX 0 l`
 
 val MIN_MAX_LIST_THM = store_thm ("MIN_MAX_LIST_THM",
@@ -315,29 +316,29 @@ val MIN_MAX_DEPTH_THM = store_thm ("MIN_MAX_DEPTH_THM",
   (!v:'a tL. ~(NULL tL) ==> (MIN_DEPTH (node v tL) = SUC(MIN_LIST (MAP MIN_DEPTH tL))))``,
 
 SIMP_TAC (srw_ss()) [MAX_DEPTH_def, MIN_DEPTH_def,
-		  DEPTH_THM, MIN_SET_THM, MAX_SET_THM, NULL_EQ] THEN
+                  DEPTH_THM, MIN_SET_THM, MAX_SET_THM, NULL_EQ] THEN
 
 `!tL:'a tree list. ~(tL = []) ==> ((FINITE (BIGUNION (set (MAP DEPTH tL)))) /\
  ~((BIGUNION (set (MAP DEPTH tL))) = EMPTY))` by (
    Cases_on `tL` THEN
    SIMP_TAC list_ss [BIGUNION_INSERT, EMPTY_UNION, NOT_DEPTH_EMPTY,
                     FINITE_UNION, FINITE_DEPTH, FINITE_BIGUNION_EQ,
-		    FINITE_LIST_TO_SET, MEM_MAP,
-		    GSYM LEFT_FORALL_IMP_THM, IN_INSERT, FINITE_INSERT,
-		    DISJ_IMP_THM]) THEN
+                    FINITE_LIST_TO_SET, MEM_MAP,
+                    GSYM LEFT_FORALL_IMP_THM, IN_INSERT, FINITE_INSERT,
+                    DISJ_IMP_THM]) THEN
 ASM_SIMP_TAC std_ss [MIN_MAX_SET_SUC, GSYM FORALL_AND_THM] THEN
 POP_ASSUM (K ALL_TAC) THEN
 Induct_on `tL` THEN SIMP_TAC list_ss [] THEN
 Cases_on `tL = []` THEN1 (
    ASM_SIMP_TAC list_ss [MIN_MAX_LIST_THM, BIGUNION_INSERT, BIGUNION_EMPTY,
-			 UNION_EMPTY, MAX_DEPTH_def, MIN_DEPTH_def]
+                         UNION_EMPTY, MAX_DEPTH_def, MIN_DEPTH_def]
 ) THEN
 POP_ASSUM_LIST (fn thmL => EVERY (map (fn thm => ASSUME_TAC (GSYM thm)) (rev thmL))) THEN
 FULL_SIMP_TAC list_ss [BIGUNION_INSERT, MIN_MAX_LIST_THM, MAX_DEPTH_def, MIN_DEPTH_def] THEN
 CONSEQ_REWRITE_TAC ([], [MAX_SET_UNION, MIN_SET_UNION], []) THEN
 Cases_on `tL` THEN1 FULL_SIMP_TAC std_ss [] THEN
 SIMP_TAC std_ss [FINITE_BIGUNION_EQ, FINITE_DEPTH, NOT_DEPTH_EMPTY,
-		 FINITE_LIST_TO_SET, MEM_MAP, GSYM LEFT_FORALL_IMP_THM,
+                 FINITE_LIST_TO_SET, MEM_MAP, GSYM LEFT_FORALL_IMP_THM,
                  BIGUNION_EQ_EMPTY, MAP, LIST_TO_SET_THM, NOT_EMPTY_INSERT] THEN
 SIMP_TAC std_ss [EXTENSION] THEN
 Q.EXISTS_TAC `DEPTH h` THEN
@@ -449,8 +450,8 @@ REPEAT STRIP_TAC THEN EQ_TAC THENL [
    `WIDTH (node v tL) SUBSET {n}` by PROVE_TAC[SET_EQ_SUBSET] THEN
    FULL_SIMP_TAC std_ss [SUBSET_DEF, WIDTH_THM,
                          IN_INSERT, DISJ_IMP_THM, IN_BIGUNION,
-			 FORALL_AND_THM, NOT_IN_EMPTY,
-			 GSYM RIGHT_EXISTS_AND_THM,
+                         FORALL_AND_THM, NOT_IN_EMPTY,
+                         GSYM RIGHT_EXISTS_AND_THM,
                          MEM_MAP, GSYM LEFT_FORALL_IMP_THM, EVERY_MEM] THEN
    REPEAT STRIP_TAC THEN
    RES_TAC THEN
@@ -547,7 +548,7 @@ val LIST_TO_TREE_DEPTH = store_thm ("LIST_TO_TREE_DEPTH",
 ``!l. DEPTH (LIST_TO_TREE l) = {LENGTH l}``,
 Induct_on `l` THEN (
    ASM_SIMP_TAC list_ss [LIST_TO_TREE_def, DEPTH_THM, BIGUNION_SING,
-			 IMAGE_INSERT, IMAGE_EMPTY]
+                         IMAGE_INSERT, IMAGE_EMPTY]
 ));
 
 

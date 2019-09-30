@@ -9,6 +9,8 @@ val _ = set_trace "Unicode" 0
 val _ = set_trace "print blast counterexamples" 0
 val _ = set_trace "bit blast" 0
 
+val ERR = mk_HOL_ERR "selftest"
+
 val prs = StringCvt.padRight #" "
 fun trunc w t = let
   val s = Lib.with_flag (Globals.linewidth, 10000) term_to_string t
@@ -37,7 +39,7 @@ val _ = if type_to_string ty2 = ":('a + 'b)[32]" then OK()
 
 val _ = tprint "Parsing abbreviated word types"
 val u8 = fcpSyntax.mk_cart_type(bool, fcpSyntax.mk_int_numeric_type 8)
-val _ = type_abbrev("u8", u8)
+val _ = type_abbrev_pp("u8", u8)
 val _ = if Type.compare(Parse.Type`:u8`, u8) <> EQUAL then die "FAILED!"
         else OK()
 val _ = tprint "Printing abbreviated word types"
@@ -89,27 +91,43 @@ in
 end
 
 local
+  exception InternalDie of string
+  fun idie s = raise InternalDie s
   fun test_conv (conv: conv) tm =
     let
       val (t, expected) = boolSyntax.dest_eq tm
       val s = fst (boolSyntax.dest_strip_comb t)
       val s = case String.tokens (Lib.equal #"$") s of
                  [_, s] => s
-               | _ => die "FAILED\n  Couldn't get name."
+               | _ => idie "FAILED\n  Couldn't get name."
       val _ = tprint s
-      val th = conv t handle _ => die "FAILED - exception raised"
-      val r = rhs (concl th) handle HOL_ERR _ => die "FAILED - no RHS"
+      val th = conv t handle _ => idie "FAILED - exception raised"
+      val r = rhs (concl th) handle HOL_ERR _ => idie "FAILED - no RHS"
     in
       if aconv r expected then OK()
       else die ("FAILED\n  Got ``" ^ term_to_string r ^ "``")
-    end
-  val quote_to_term_list =
-    fn [QUOTE s] =>
-        List.mapPartial (fn s => if List.all Char.isSpace (String.explode s)
-                                    then NONE
-                                 else SOME (Parse.Term [QUOTE s]))
-          (String.tokens (Lib.equal #"\n") s)
-     | _ => raise ERR "" ""
+    end handle InternalDie s => die s
+  fun getlocpragma s =
+      let
+        open Substring
+        val ss = full s
+        val sr = dropl (not o Char.isDigit) ss
+        val sc = dropl Char.isDigit sr
+      in
+        (valOf (Int.fromString (string sr)), valOf (Int.fromString (string sc)))
+      end
+  fun mkpragma (r,c) = "(*#loc " ^ Int.toString r ^ " " ^ Int.toString c ^ "*)"
+  fun quote_to_term_list q =
+   let
+     val s = case q of [QUOTE s] => s | _ => raise ERR "quote_to_term_list" ""
+     val lines = String.tokens (Lib.equal #"\n") s
+     val (r, _) = getlocpragma s
+     fun foldthis (s, (r,ts)) =
+         if CharVector.all Char.isSpace s then (r+1, ts)
+         else (r+1, Parse.Term [QUOTE (mkpragma(r,1) ^ s)] :: ts)
+   in
+     #2 (List.foldl foldthis (r,[]) lines)
+   end
 in
   fun qtest_conv conv q = List.app (test_conv conv) (quote_to_term_list q)
 end
@@ -130,6 +148,7 @@ val _ = blast_fail ``?x: word8. 3w > 4w : word4``
 val _ = blast_fail ``x + x = x :'a word``
 
 (* Fail, can't solve *)
+val _ = ParseExtras.temp_loose_equality()
 val _ = blast_fail ``?x. !y. x <=+ y : word8``
 val _ = blast_fail ``!y. ?x. x <=+ y : word8``
 val _ = blast_fail ``?x. x <=+ y : word8``

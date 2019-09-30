@@ -47,8 +47,6 @@ open pairTheory;
 
 val _ = new_theory "MiniTLHexSolitaire";
 
-val _ = Globals.priming := SOME "";
-
 (*****************************************************************************)
 (* List of board positions                                                   *)
 (*****************************************************************************)

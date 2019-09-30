@@ -32,7 +32,7 @@ All of the following inline commands must be the first non-whitespace on the lin
     The invocation is done by wrapping the input in ` `` ` delimiters and adding a colon in the case of `##parsety`.
     These directives make it easy to include HOL terms and types in the input while also having them checked for syntactic validity.
     Note that if you want to check/print a type with its colon included, simply use the `parsetm` directive as wrapping that input in the backticks will give the desired effect.
--   The `##thm` command passes the following expression to HOL (and follows it with a `:thm` annotation so that the compiler checks that it really denotes a theorem). 
+-   The `##thm` command passes the following expression to HOL (and follows it with a `:thm` annotation so that the compiler checks that it really denotes a theorem).
     The output is printed indented on the next line after the input, and without the usual `val it = ` prefix and ` : thm` suffix.
     For example
 
@@ -41,7 +41,10 @@ All of the following inline commands must be the first non-whitespace on the lin
     becomes
 
         TRUTH
-          |- T
+          ⊢ T
+          
+    You can add digits immediately after the `##thm` to change the linewidth into which the theorem will be pretty-printed. 
+    For example, `##thm68 pred_setTheory.SURJ_DEF`.
 
 If the first non-whitespace characters are `>>>` or `###` then the first of these characters is dropped, and the rest of the line is passed unchanged.
 This allows for a form of escaping, just in case the input naturally wants to include `>>` or `##` at the start of a line.
@@ -56,3 +59,7 @@ This allows for a form of escaping, just in case the input naturally wants to in
            ∧ \(\land\)
 
     A mapping for LaTeX `alltt` type environments should also handle backslash and brace characters.
+
+<!-- Local variables: -->
+<!-- mode: markdown -->
+<!-- end: -->

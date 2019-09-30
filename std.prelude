@@ -26,24 +26,26 @@ open HolKernel Parse boolLib proofManagerLib;
  *---------------------------------------------------------------------------*)
 
 local
-  fun pp_from_stringfn sf pps x = PP.add_string pps (sf x)
-  fun gprint g pps t = let
+  fun pp_from_stringfn sf pps x = PP.add_string (sf x)
+  fun gprint0 g t = let
     val tyg = Parse.type_grammar()
     val (_, ppt) = Parse.print_from_grammars (tyg,g)
   in
-    ppt pps t
+    ppt t
   end
-  fun ppg pps g = term_grammar.prettyprint_grammar gprint pps g
-  fun ppgrules pps grs = term_grammar.prettyprint_grammar_rules gprint pps grs
-  fun timepp pps t = PP.add_string pps (Time.toString t ^ "s")
-  fun locpp pps l = PP.add_string pps (locn.toShortString l)
+  val gprint = (fn g => fn t => smpp.lift (gprint0 g) t)
+  fun ppg g = Parse.mlower (term_grammar.prettyprint_grammar gprint g)
+  fun ppgrules grs =
+    Parse.mlower (term_grammar.prettyprint_grammar_rules gprint grs)
+  fun timepp t = PP.add_string (Time.toString t ^ "s")
+  fun locpp l = PP.add_string (locn.toShortString l)
   structure MPP = MosmlPP
+  open PrettyImpl
 in
   fun mosmlpp ppfn pps x = let
     val slist = ref ([] : string list)
     fun output_slist () = (app (MPP.add_string pps) (List.rev (!slist));
                            slist := [])
-    fun flush ()= output_slist()
     fun consume_string s = let
       open Substring
       val (pfx,sfx) = splitl (fn c => c <> #"\n") (full s)
@@ -55,17 +57,11 @@ in
          if size sfx > 1 then consume_string (string (triml 1 sfx))
          else ())
     end
-    val consumer = {consumer = consume_string,
-                    linewidth = !Globals.linewidth,
-                    flush = flush}
-    val newpps = HOLPP.mk_ppstream consumer
   in
     MPP.begin_block pps MPP.INCONSISTENT 0;
-    HOLPP.begin_block newpps HOLPP.INCONSISTENT 0;
-    ppfn newpps x;
-    HOLPP.end_block newpps;
-    HOLPP.flush_ppstream newpps;
-    MPP.end_block pps
+    HOLPP.prettyPrint(consume_string, !Globals.linewidth) (ppfn x);
+    MPP.end_block pps;
+    output_slist()
   end
   val _ = installPP (mosmlpp Pretype.pp_pretype)
   val _ = installPP (mosmlpp (Parse.term_pp_with_delimiters Hol_pp.pp_term))
@@ -191,7 +187,16 @@ in
   val _ = loadPath := tl (!loadPath)
 end;
 
-val _ = ReadHMF.extend_path_with_includes {quietp = false, lpref = loadPath};
+val _ = let
+  val lpsize0 = length (!loadPath)
+in
+  ReadHMF.extend_path_with_includes {verbosity = 0, lpref = loadPath};
+  if length (!loadPath) <> lpsize0 then
+    print ("** Load path (see loadPath variable) now contains " ^
+           Int.toString (length (!loadPath)) ^
+           " entries\n** after consulting Holmakefiles\n\n")
+  else ()
+end;
 
 use (Path.concat(Globals.HOLDIR, "tools/check-intconfig.sml"));
 

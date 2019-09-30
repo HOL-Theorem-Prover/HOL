@@ -9,7 +9,9 @@ open helperLib progSyntax temporalSyntax temporal_stateSyntax
 structure Parse = struct
   open Parse
   val (Type, Term) =
-     parse_from_grammars temporal_stateTheory.temporal_state_grammars
+      temporal_stateTheory.temporal_state_grammars
+        |> apsnd ParseExtras.grammar_loose_equality
+        |> parse_from_grammars
 end
 open Parse
 
@@ -42,8 +44,8 @@ val MOVE_COND_CONV =
    ORELSEC Conv.REWR_CONV (GSYM temporal_stateTheory.TEMPORAL_NEXT_MOVE_COND)
 
 local
-   val cond_T = Q.prove (
-      `!p. (set_sep$cond T * p = p) /\ (p * set_sep$cond T = p)`,
+   val cond_T = prove (
+      “!p : 'a set set. (set_sep$cond T * p = p) /\ (p * set_sep$cond T = p)”,
       REWRITE_TAC [set_sepTheory.SEP_CLAUSES])
    val rule1 =
       helperLib.PRE_POST_RULE (REWRITE_CONV [cond_T]) o
@@ -60,7 +62,7 @@ in
          val thm1 = Conv.CONV_RULE (Conv.DEPTH_CONV (COND_RW_CONV tm)) thm
       in
          case Thm.hyp thm1 of
-            [t] => if t = tm then rule1 (Thm.DISCH t thm1) else thm
+            [t] => if t ~~ tm then rule1 (Thm.DISCH t thm1) else thm
           | _ => thm
       end
 end
@@ -178,7 +180,7 @@ local
          val t = tac THEN FULL_SIMP_TAC (srw_ss()) [thm]
       in
          Drule.GEN_ALL
-           (Q.prove (`!y s. FRAME_STATE ^p y ^u = FRAME_STATE ^p y s`, t))
+           (prove (“!y s. FRAME_STATE ^p y ^u = FRAME_STATE ^p y s”, t))
       end
 in
    fun update_hidden_frame_state_thm proj_def =
@@ -203,17 +205,17 @@ end
    ------------------------------------------------------------------------ *)
 
 local
-   val EXPAND_lem = Q.prove(
-      `!x y m s c.
+   val EXPAND_lem = prove(
+      “!x:'a # 'b y m s:'c c:'d.
           (!c d. (c, d) IN set (x :: y) ==> (m s c = d)) =
           (!c d. ((c, d) = x) ==> (m s c = d)) /\
-          (!c d. ((c, d) IN set y) ==> (m s c = d))`,
+          (!c d. ((c, d) IN set y) ==> (m s c = d))”,
       SRW_TAC [] [] \\ utilsLib.qm_tac [])
-   val EXPAND_lem2 = Q.prove(
-      `!x y m s c.
+   val EXPAND_lem2 = prove(
+      “!x:'a # 'b y m s:'c c:'d.
           (!c d. (c, d) IN x INSERT y ==> (m s c = d)) =
           (!c d. ((c, d) = x) ==> (m s c = d)) /\
-          (!c d. ((c, d) IN y) ==> (m s c = d))`,
+          (!c d. ((c, d) IN y) ==> (m s c = d))”,
       SRW_TAC [] [] \\ utilsLib.qm_tac [])
    val emp_thm =
       set_sepTheory.SEP_CLAUSES
@@ -428,20 +430,25 @@ in
          val () =
             Theory.adjoin_to_theory
                {sig_ps =
-                  SOME (fn ppstrm =>
-                           PP.add_string ppstrm "val component_defs: thm list"),
+                  SOME (fn _ =>
+                           PP.add_string "val component_defs: thm list"),
                 struct_ps =
-                  SOME (fn ppstrm =>
-                          (PP.add_string ppstrm "val component_defs = ["
-                           ; PP.begin_block ppstrm PP.INCONSISTENT 0
-                           ; Portable.pr_list
-                                 (PP.add_string ppstrm)
-                                 (fn () => PP.add_string ppstrm ",")
-                                 (fn () => PP.add_break ppstrm (1, 0))
-                                 (comp_names defs)
-                           ; PP.add_string ppstrm "]"
-                           ; PP.end_block ppstrm
-                           ; PP.add_newline ppstrm))}
+                  SOME (fn _ =>
+                           PP.block PP.CONSISTENT 2 [
+                             PP.add_string "val component_defs =",
+                             PP.add_break(1,0),
+                             PP.block PP.INCONSISTENT 1 (
+                               PP.add_string "[" ::
+                               PP.pr_list
+                                 PP.add_string
+                                 [PP.add_string ",", PP.add_break (1, 0)]
+                                 (comp_names defs) @
+                               [PP.add_string "]"]
+                             ),
+                             PP.add_newline
+                           ]
+                       )
+               }
       in
          proj_def :: defs
       end
@@ -540,9 +547,9 @@ fun is_code_access (s, v) tm =
    case boolSyntax.dest_strip_comb tm of
       (c, [_, a]) =>
          c = s andalso
-         (a = v orelse
+         (a ~~ v orelse
             (case Lib.total wordsSyntax.dest_word_add a of
-                SOME (x, y) => x = v andalso wordsSyntax.is_word_literal y
+                SOME (x, y) => x ~~ v andalso wordsSyntax.is_word_literal y
               | NONE => false))
     | _ => false
 
@@ -633,7 +640,7 @@ local
         (fn t =>
             let
                val m = fst (Term.match_term pat t)
-               val _ = List.length (HolKernel.find_terms (Lib.equal s_tm) t) < 2
+               val _ = List.length (HolKernel.find_terms (aconv s_tm) t) < 2
                        orelse raise ERR "" ""
             in
                (Term.subst m c, t)
@@ -748,7 +755,7 @@ local
       let
          val (x, y) = combinSyntax.strip_update (combinSyntax.dest_K_1 a)
       in
-         if b <> y
+         if b !~ y
             then (Parse.print_term b
                   ; print "\n\n"
                   ; Parse.print_term y
@@ -763,7 +770,7 @@ local
                val d = dst x
             in
                not (Lib.exists (fn y => case Lib.total dst y of
-                                           SOME c => c = d
+                                           SOME c => c ~~ d
                                          | NONE => false) p)
             end)
    val prefix =
@@ -883,8 +890,7 @@ in
             let
                val (p, pool, c, tm) = read thm
                val (p, q) = write (p, []: term list, tm)
-               val p = if c = boolSyntax.T
-                          then p
+               val p = if Teq c then p
                        else progSyntax.mk_star (progSyntax.mk_cond c, p)
             in
                mk_spec_or_temporal_next (generate_temporal()) (p, pool, q)
@@ -951,6 +957,9 @@ fun rename_vars (rmap, bump) =
 
    The "duplicate" flag controls whether or not conditions in "r" are
    added to the postcondition in order to introduce "f".
+
+val (duplicate, thm_def) = (false, riscv_ID_PC_def)
+
    ------------------------------------------------------------------------ *)
 
 local
@@ -958,10 +967,11 @@ local
    val err = ERR "introduce_triple"
    fun move_match (pat, t) =
       MOVE_COND_RULE
-        (case Lib.mk_set (find_terms (Lib.can (Term.match_term pat)) t) of
+        (case Lib.op_mk_set aconv (find_terms (Lib.can (Term.match_term pat)) t)
+          of
             [] => raise (err "missing condition")
           | [m] => m
-          | l => Lib.with_exn (Lib.first (Lib.equal pat)) l
+          | l => Lib.with_exn (Lib.first (aconv pat)) l
                    (err "ambiguous condition"))
 in
    fun introduce_triple_definition (duplicate, thm_def) =
@@ -1048,7 +1058,7 @@ in
             |> boolSyntax.dest_eq |> fst
             |> progSyntax.dest_star
             |> (strip2 ## strip2)
-         val is_f = Lib.equal f_tm o fst o boolSyntax.strip_comb
+         val is_f = aconv f_tm o fst o boolSyntax.strip_comb
          val get_f =
             List.filter is_f o progSyntax.strip_star o
             temporal_stateSyntax.dest_pre' o Thm.concl
@@ -1213,7 +1223,7 @@ local
          val pt = Drule.EQT_INTRO (Thm.ASSUME b)
          val nt = Drule.EQF_INTRO (Thm.ASSUME nb)
          val pth = PURE_REWRITE_RULE [pt, boolTheory.COND_CLAUSES] th
-         val _ = Thm.hyp pth = [b] orelse raise ERR "spec_cases" ""
+         val _ = tml_eq (Thm.hyp pth) [b] orelse raise ERR "spec_cases" ""
          val nth = PURE_REWRITE_RULE [nt, boolTheory.COND_CLAUSES] th
          val r = rule pre
       in
@@ -1240,16 +1250,16 @@ end
 fun get_delta pc_var pc =
    case Lib.total wordsSyntax.dest_word_add pc of
       SOME (x, n) =>
-         if x = pc_var
+         if x ~~ pc_var
             then Lib.total wordsSyntax.uint_of_word n
          else NONE
     | NONE =>
         (case Lib.total wordsSyntax.dest_word_sub pc of
             SOME (x, n) =>
-               if x = pc_var
+               if x ~~ pc_var
                   then Lib.total (Int.~ o wordsSyntax.uint_of_word) n
                else NONE
-          | NONE => if pc = pc_var then SOME 0 else NONE)
+          | NONE => if pc ~~ pc_var then SOME 0 else NONE)
 
 fun get_pc_delta is_pc =
    let
@@ -1403,7 +1413,7 @@ fun chunk_for m_def =
 
 fun not_refl thm =
    case Lib.total (boolSyntax.dest_eq o Thm.concl) thm of
-      SOME (l, r) => l <> r
+      SOME (l, r) => l !~ r
     | NONE => false
 
 fun chunks_intro_pre_process m_def =
@@ -1500,7 +1510,7 @@ local
                   let
                      val t = list_mk_add (base :: List.tabulate (i, K delta))
                   in
-                     if t = a then boolTheory.TRUTH
+                     if t ~~ a then boolTheory.TRUTH
                      else wordsLib.WORD_ARITH_PROVE (boolSyntax.mk_eq (t, a))
                   end) wa
    val cnv1 = REWRITE_CONV [emp_right, set_sepTheory.SEP_ARRAY_def]
@@ -1552,7 +1562,9 @@ in
                              (temporal_stateSyntax.dest_post' (Thm.concl thm'))
                        val (s2, _) = chunks lq
                        val array =
-                          (if s = s2 then mk_array2 else mk_array1) be s2
+                          (if list_eq (list_eq (redres_eq aconv aconv)) s s2
+                           then mk_array2
+                           else mk_array1) be s2
                        val l2_tm = listSyntax.mk_list (array, Term.type_of w)
                        val sep_array2 = mk_sep_array (m_tm, delta, base, l2_tm)
                        val rwt2 = r sep_array2
@@ -1582,10 +1594,10 @@ local
    fun concat_unzip l = (List.concat ## List.concat) (ListPair.unzip l)
    fun instantiate (a, b) =
       if Term.is_var a then SOME (a |-> b)
-      else if a = b then NONE else raise ERR "instantiate" "bad constant match"
+      else if a ~~ b then NONE else raise ERR "instantiate" "bad constant match"
    fun mk_assign f (p, q) =
       List.map
-         (fn ((r1, a), (r2, b)) => (Lib.assert (op =) (r1, r2); (r1, a, b)))
+         (fn ((r1, a), (r2, b)) => (Lib.assert (op ~~) (r1, r2); (r1, a, b)))
          (ListPair.zip (f p, f q))
    fun takeWhile P =
       let
@@ -1594,6 +1606,8 @@ local
       in
          iter
       end
+   fun t3_aconv (t1,t2,t3) (ta,tb,tc) =
+     t1 ~~ ta andalso t2 ~~ tb andalso t3 ~~ tc
 in
    fun register_combinations
          (dest_reg, reg_width, proj_reg, reg_conv, ok_conv, asm, model_tm) =
@@ -1626,7 +1640,7 @@ in
             handle HOL_ERR {message = s, ...} => raise (err s)
          fun match_register (tm1, v1, _) (tm2, v2, v3) =
             let
-               val _ = v3 = v2 orelse raise ERR "match_register" "changed"
+               val _ = v3 ~~ v2 orelse raise ERR "match_register" "changed"
                val l = ListPair.zip (explode_reg tm2, explode_reg tm1)
             in
                ((v2 |-> v1) :: List.mapPartial instantiate l, [tm2])
@@ -1647,7 +1661,7 @@ in
                          (fn l =>
                             let
                                val (unchanged, changed) =
-                                  List.partition (fn (_, a, b) => a = b) l
+                                  List.partition (fn (_, a, b) => a ~~ b) l
                             in
                                if 1 < List.length l
                                   andalso List.length changed < 2
@@ -1655,7 +1669,7 @@ in
                                   then SOME (changed @ unchanged)
                                else NONE
                             end))
-               |> Lib.mk_set
+               |> Lib.op_mk_set (list_eq (list_eq t3_aconv))
                |> Lib.mapfilter
                     (fn p =>
                        concat_unzip
@@ -1686,7 +1700,7 @@ in
                val l = List.mapPartial (Lib.total progSyntax.dest_cond) p
                val c = boolSyntax.list_mk_conj l
             in
-               fn s => utilsLib.rhsc (conv (Term.subst s c)) <> boolSyntax.F
+               fn s => utilsLib.rhsc (conv (Term.subst s c)) !~ boolSyntax.F
             end
          fun star_subst s = List.map (utilsLib.rhsc o reg_conv o Term.subst s)
       in
@@ -1708,7 +1722,7 @@ in
                                  List.filter
                                     (fn tm =>
                                        case Lib.total dest_reg tm of
-                                          SOME (a, _) => not (Lib.mem a d)
+                                          SOME (a, _) => not (tmem a d)
                                         | NONE => true)
                               val pl' = do_reg pl
                               val p' = progSyntax.list_mk_star pl'
@@ -1742,6 +1756,18 @@ end
 val () = set_trace "Goalstack.print_goal_at_top" 0
 val () = set_trace "Goalstack.print_goal_at_top" 1
 val () = set_trace "stateLib.spec" 1
+
+val (imp_spec, imp_temp, read_thms, write_thms, select_state_thms,
+     frame_thms, component_11, map_tys) =
+     (riscv_progTheory.RISCV_IMP_SPEC,
+      riscv_progTheory.RISCV_IMP_TEMPORAL,
+      [riscv_opcode_bytes, boolTheory.DE_MORGAN_THM],
+      [],
+      (riscv_select_state_pool_thm :: riscv_select_state_thms),
+      [riscv_frame, ricv_frame_hidden, state_id],
+      component_11,
+      [dword, word5])
+
 *)
 
 local
@@ -1847,6 +1873,9 @@ in
                )
             \\ POST_TAC
       in
+(*
+val (thm,t) = hd thm_ts
+*)
          fn (thm, t) =>
             let
                val v = optionSyntax.dest_some (utilsLib.rhsc thm)

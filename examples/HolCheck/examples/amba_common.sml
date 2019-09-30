@@ -88,32 +88,32 @@ val hwsv' = ksTools.mk_primed_state hwsv
 val Im_state = list_mk_pair(List.concat (List.map strip_pair [htransv,busreq_vars]))
 
 val Is_state = list_mk_pair(List.concat (List.map strip_pair [``(haddr_0:bool,hreadyout:bool)``,
-							      hrespv,split_vars,hselv]))
+                                                              hrespv,split_vars,hselv]))
 
 val Ia_state = list_mk_pair(List.concat (List.map strip_pair [``hreadyout:bool``,grant_vars,master_vars,busreq_vars]))
 
 val Ra_state = list_mk_pair(List.concat
-				(List.map strip_pair [``hreadyout:bool``,grant_vars,master_vars,
-						      mask_vars,busreq_vars,htransv]))
+                                (List.map strip_pair [``hreadyout:bool``,grant_vars,master_vars,
+                                                      mask_vars,busreq_vars,htransv]))
 val Ra_state2 = list_mk_pair(List.concat (List.map strip_pair [``hreadyout:bool``,grant_vars,master_vars,
-							       busreq_vars,htransv]))
+                                                               busreq_vars,htransv]))
 val Ra_state' = ksTools.mk_primed_state Ra_state
 
 val Rm_state =  list_mk_pair(List.concat (List.map strip_pair [``hreadyout:bool``,grant_vars,transm_vars,busreq_vars,
-							       hrespv,burstm_vars,bbv,mask_vars,split_vars,master_vars]))
+                                                               hrespv,burstm_vars,bbv,mask_vars,split_vars,master_vars]))
 val Rm_state2 =  list_mk_pair(List.concat (List.map strip_pair [``hreadyout:bool``,grant_vars,busreq_vars,hrespv,
-								split_vars,master_vars]))
+                                                                split_vars,master_vars]))
 val Rm_state' = ksTools.mk_primed_state Rm_state
 
 val Rs_state = list_mk_pair(List.concat (List.map strip_pair  [``hreadyout:bool``,hselv,hrespv,hwsv,htransv,
-							       ``hburst_0:bool``,slvsplt_vars,split_vars,grant_vars,master_vars]))
+                                                               ``hburst_0:bool``,slvsplt_vars,split_vars,grant_vars,master_vars]))
 val Rs_state2 = list_mk_pair(List.concat (List.map strip_pair  [``hreadyout:bool``,hselv,hrespv,htransv,
-							       ``hburst_0:bool``,split_vars,grant_vars,master_vars]))
+                                                               ``hburst_0:bool``,split_vars,grant_vars,master_vars]))
 val Rs_state' = ksTools.mk_primed_state Rs_state
 
 
 val Rx_state =  list_mk_pair(List.concat (List.map strip_pair [``hreadyout:bool``,grant_vars,transm_vars,burstm_vars,
-							       htransv,``hburst_0:bool``]))
+                                                               htransv,``hburst_0:bool``]))
 val Rx_state2 =  list_mk_pair(List.concat (List.map strip_pair [``hreadyout:bool``,grant_vars,htransv,``hburst_0:bool``]))
 val Rx_state' = ksTools.mk_primed_state Rx_state
 
@@ -126,29 +126,29 @@ val RCn_state2 =  list_mk_pair(List.concat (List.map strip_pair [``hreadyout:boo
 val RCn_state' = ksTools.mk_primed_state RCn_state
 
 val I1h_state =  list_mk_pair(undup Term.var_compare
-				    (List.concat (List.map strip_pair [Im_state,Is_state,Ia_state,Ra_state2,RCn_state2,
-								       Rm_state2,Rx_state2,(*Rd_state,*)Rs_state2])))
+                                    (List.concat (List.map strip_pair [Im_state,Is_state,Ia_state,Ra_state2,RCn_state2,
+                                                                       Rm_state2,Rx_state2,(*Rd_state,*)Rs_state2])))
 val R1h_state = I1h_state
 val R1h_state' = ksTools.mk_primed_state R1h_state
 
 val mod16defs = [MOD16_ZERO_def,MOD16_ONE_def,MOD16_IS_ZERO_def,MOD16_IS_ONE_def,MOD16_INC_def,MOD16_HOLD_def,dest_mod16,
-		 dest_mod16r,dest_mod16_tup,FST_COND,SND_COND,MOD16_IS_16_def,xor_def,MOD16_N2B_def,MOD16_N2B'_def,
-		 MOD16_PROJ_def]
+                 dest_mod16r,dest_mod16_tup,FST_COND,SND_COND,MOD16_IS_16_def,xor_def,MOD16_N2B_def,MOD16_N2B'_def,
+                 MOD16_PROJ_def]
 val m16b = [MOD16_ZERO_def,MOD16_ONE_def,MOD16_IS_ZERO_def,MOD16_IS_ONE_def,MOD16_INC_def,
-	    MOD16_INC4_def,MOD16_HOLD_def,FST_COND,SND_COND, MOD16_IS_16_def,xor_def]
+            MOD16_INC4_def,MOD16_HOLD_def,FST_COND,SND_COND, MOD16_IS_16_def,xor_def]
 val m16n2b = [MOD16_N2B_15,MOD16_N2B_14,MOD16_N2B_13,MOD16_N2B_12,MOD16_N2B_11,MOD16_N2B_10,MOD16_N2B_9,MOD16_N2B_8,
-	      MOD16_N2B_7,MOD16_N2B_6,MOD16_N2B_5,MOD16_N2B_4,MOD16_N2B_3,MOD16_N2B_2,MOD16_N2B_1,MOD16_N2B_0]
+              MOD16_N2B_7,MOD16_N2B_6,MOD16_N2B_5,MOD16_N2B_4,MOD16_N2B_3,MOD16_N2B_2,MOD16_N2B_1,MOD16_N2B_0]
 val m16exp = [MOD16_FORALL_EXPAND16,MOD16_FORALL_EXPAND4,MOD16_FORALL_EXPAND8]
 
 (* unroll abstract model into purely boolean model *)
 fun unroll_ahb_CONV maindefs Adef abbrev_defs t =
-	    (PURE_ONCE_REWRITE_CONV maindefs
+            (PURE_ONCE_REWRITE_CONV maindefs
              THENC NCONV nm (PURE_ONCE_REWRITE_CONV [Adef])
              THENC UNCHANGED_CONV (REWRITE_CONV abbrev_defs)
               THENC UNCHANGED_CONV (SIMP_CONV (pure_ss++BETA_ss) m16exp)
                THENC UNCHANGED_CONV (SIMP_CONV (pure_ss++numSimps.REDUCE_ss) ([COND_CLAUSES]))
                THENC UNCHANGED_CONV (SIMP_CONV (pure_ss++EL_ss) (m16n2b))
-	       THENC UNCHANGED_CONV (SIMP_CONV (pure_ss++pairSimps.PAIR_ss) ([dest_mod16r2,dest_mod16_tup]@m16b))) t
+               THENC UNCHANGED_CONV (SIMP_CONV (pure_ss++pairSimps.PAIR_ss) ([dest_mod16r2,dest_mod16_tup]@m16b))) t
 
 
 end

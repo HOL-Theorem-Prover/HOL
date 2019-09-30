@@ -1,0 +1,83 @@
+Transistor Implementation of a n-bit Counter
+============================================
+
+Overview:
+========
+
+This directory contains the specification and proof of correctness for a
+MOS level implementation of a n-bit counter.  The following top level
+correctness statement is proven.
+
+   |- !n.
+       let max = 2 EXP (n + 1) in
+       !button switches display sysinit.
+         DEVICE_IMP n (button,switches,display) /\
+         (button sysinit = T)
+         ==>
+         !t. sysinit <= t ==>
+           (display(t + 1) =
+             button t => switches t | ((display t) + 1) MOD max)
+
+This behaviour is derived from the specification of the counter implementation
+in terms of simple behavioural models for MOS primitives and the structural
+composition of the implementation.  The behavioural models for the MOS
+primitives are based on a four value logic with values for high impedance
+"Zz" and error "Er" as well as low "Lo" and high "Hi".  The simplicity of
+these models is illustrated by the following definitions for transistor and
+capacitor behaviours.
+
+   |- Ptran(g,i,o) =
+      (!t. o t = ((g t = Lo) => i t | ((g t = Hi) => Zz | Er)))
+
+   |- Ntran(g,i,o) =
+      (!t. o t = ((g t = Hi) => i t | ((g t = Lo) => Zz | Er)))
+
+   |- Cap(i,o) = (!t. o t = ((~(i t = Zz)) => i t | i(t - 1)))
+
+
+References:
+==========
+
+The theories "wop" (well-ordered property of natural numbers) and "da"
+(division algorithm) are created from ML sources written by Tom Melham.
+The temporal abstraction theorems in "tempabs" were described in [Melham87]
+but the ML source for "tempabs" was written for this example.  The definition
+of the two-phase clock in "clock" was given by Inder Dhingra in [Dhingra87].
+The MOS primitives and data abstraction from the four value logic to boolean
+logic were also suggested by Inder Dhingra (although slightly different
+transistor models are used here).  The specification and proof strategy
+is based on work by Albert Camilleri although the proof is complicated
+here by the introduction of time and the underlying four value logic.
+The counter example was previously described in [Gordon83].
+
+  [Camilleri86]	Camilleri, A., Gordon, M., and Melham, T.,
+		"Hardware Verification using Higher Order Logic",
+		Technical Report No. 91, Computer Laboratory,
+		Cambridge University, June 1986.
+
+  [Dhingra87]	Dhingra, I.S.,  "Formal Validataion of an Integrated
+		Circuit Design Style", Specification, Verification and
+		Synthesis, January 1987.
+
+  [Gordon83]	Gordon, M.,  "LCF_LSM, A System for Specifying and
+		Verifying Hardware",  Technical Report No. 41, Computer
+		Laboratory, Cambridge University, September 1983.
+
+  [Gordon87]	Gordon, M.,  "A Proof Generating System for Higher-Order
+		Logic", Technical Report No. 103, Computer Laboratory,
+		Cambridge University, January 1987.
+
+  [Melham87]	Melham, T., "Abstraction Mechanisms for Hardware
+		Verification", Specification, Verification and Synthesis,
+		January 1987.
+
+
+Running the Proof:
+=================
+
+To run the proof, execute the command file "Make".
+
+Rutherford HOL:  Because the Rutherford HOL system is currently outdated,
+a few extra ML sources are needed when the proof is run on the Rutherford
+HOL system.  In particular, the theory "exp" must be created.  As well,
+part of the "misc.ml" file must be un-commented for the Rutherford sytem.

@@ -10,14 +10,14 @@ in the conclusion of a theorem.
 rule, restricted quantifier, universal.
 
 \DESCRIBE
-When applied to a term-pair list {[(x1,P1);...;(xn,Pn)]} and a theorem 
-{A |- t}, the inference rule {RESQ_GENL} returns the theorem 
+When applied to a term-pair list {[(x1,P1);...;(xn,Pn)]} and a theorem
+{A |- t}, the inference rule {RESQ_GENL} returns the theorem
 {A |- !x1::P1. ... !xn::Pn. t}, provided none of the
 variables {xi} are free in any of the assumptions except in the corresponding
 {Pi}. It is not necessary that any or all of the {xi} should be free in {t}.
 {
          A |- t
-   ------------------------------  RESQ_GENL "[(x1,P1);...;(xn,Pn)]" 
+   ------------------------------  RESQ_GENL "[(x1,P1);...;(xn,Pn)]"
     A |- !x1::P1. ... !xn::Pn. t   [where no xi is free in A except in Pi]
 }
 \FAILURE

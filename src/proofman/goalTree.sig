@@ -16,6 +16,6 @@ sig
   val first_goal_opt  : gtree -> goal option
   val all_goals  : gtree -> goal list
   val tactic_of  : gtree -> tactic
-  val pp_gtree   : ppstream -> gtree -> unit
+  val pp_gtree   : gtree Parse.pprinter
 
 end

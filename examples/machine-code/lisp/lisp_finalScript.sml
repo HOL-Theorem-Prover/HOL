@@ -90,7 +90,7 @@ fun remove_primes th = let
 fun find_composition1 th1 th2 = let
   val (q,p,ty) = spec_post_and_pre th1 th2
   fun get_match_term tm = get_sep_domain tm
-  fun mm x y = get_match_term x = get_match_term y
+  fun mm x y = get_match_term x ~~ get_match_term y
   fun fetch_match x [] zs = fail()
     | fetch_match x (y::ys) zs =
         if mm x y then (y, rev zs @ ys) else fetch_match x ys (y::zs)
@@ -118,7 +118,7 @@ fun find_composition2 th1 th2 = let
   val pre_not_hidden  = map get_sep_domain (filter (not o can dest_sep_hide) p)
   fun f (d:term,(zs,to_be_hidden)) =
     if not (can dest_sep_hide d) then (zs,to_be_hidden) else
-      (zs,filter (fn x => get_sep_domain d = x) zs @ to_be_hidden)
+      (zs,filter (fn x => get_sep_domain d ~~ x) zs @ to_be_hidden)
   val hide_from_post = snd (foldr f (post_not_hidden,[]) p)
   val hide_from_pre  = snd (foldr f (pre_not_hidden,[]) q)
   val th1 = foldr (uncurry HIDE_POST_RULE) th1 hide_from_post
@@ -196,7 +196,7 @@ val xSTRING_SPACE_def = Define `
       cond (one_space a (n + 1) c (fun2set (f,df)))`;
 
 val one_space_EXPAND = prove(
-  ``!n a b s. one_space a n b s =
+  ``!n a b s. one_space a n b s <=>
               one_space a n (a + n2w n) s /\ (b = a + n2w n)``,
   Induct
   THEN SIMP_TAC std_ss [one_space_def,WORD_ADD_0,cond_def,SEP_EXISTS]

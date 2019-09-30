@@ -16,8 +16,6 @@ struct
 
 open mlibUseful mlibTerm mlibMeter mlibSolver;
 
-infix |-> ::> @> oo ## ::* ::@;
-
 structure I = Intset; local open Intset in end;
 structure S = mlibStream; local open mlibStream in end;
 
@@ -29,7 +27,7 @@ type distance = mlibSupport.distance;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibResolution";
-val () = traces := {module = module, alignment = I} :: !traces;
+val () = add_trace {module = module, alignment = I}
 fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 
@@ -246,11 +244,11 @@ fun resolution_stream slice_ref units_ref =
         y
       end
 
-    fun shove res = new_units (!units_ref) res
+    fun shove res = new_units (Uref.!units_ref) res
 
-    fun swipe res = units_ref := units res
+    fun swipe res = let open Uref in units_ref := units res (* OK *) end
 
-    fun record infs = record_infs (!slice_ref) infs
+    fun record infs = record_infs (Uref.!slice_ref) infs
 
     fun f res =
       case select res of NONE => (swipe res; S.NIL)
@@ -265,11 +263,11 @@ fun resolution_stream slice_ref units_ref =
         val () = record (length cls + #rewrites (size res))
         val res = add (d,cls) res
       in
-        if check_meter (!slice_ref) then f res
+        if check_meter (Uref.!slice_ref) then f res
         else (swipe res; S.CONS (NONE, stat (f o shove) res))
       end;
   in
-    fn (parm,thms,hyps) => stat f (sq new (parm,!units_ref,thms,hyps)) ()
+    fn (parm,thms,hyps) => stat f (sq new (parm,Uref.!units_ref,thms,hyps)) ()
   end;
 
 fun resolution' (name, parm : parameters) =

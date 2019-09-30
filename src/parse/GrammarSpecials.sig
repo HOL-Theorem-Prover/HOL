@@ -30,6 +30,13 @@ sig
   val nat_elim_term : string
   val fromNum_str : string
   val num_injection : string
+  val mk_lform_name : {cons:string,nilstr:string} -> string
+  val term_name_is_lform : string -> bool
+  val recd_lform_name : string
+
+  val mk_stringinjn_name : string -> string
+  val std_stringinjn_name : string (* above applied to "\"" *)
+  val string_elim_term : string
 
   (* handling case expressions *)
   val mk_case_special : string -> string

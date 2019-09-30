@@ -49,10 +49,10 @@ sig
   val hd_proj        : (proof -> 'a) -> proofs -> 'a
 
   val initial_proofs : unit -> proofs
-  val set_goal_pp    : (ppstream->goal->unit) -> (ppstream->goal->unit)
-  val std_goal_pp    : ppstream -> goal -> unit
+  val set_goal_pp    : goal Parse.pprinter -> goal Parse.pprinter
+  val std_goal_pp    : goal Parse.pprinter
 
-  val pp_proof       : ppstream -> proof -> unit
-  val pp_proofs      : ppstream -> proofs -> unit
+  val pp_proof       : proof Parse.pprinter
+  val pp_proofs      : proofs Parse.pprinter
 
 end

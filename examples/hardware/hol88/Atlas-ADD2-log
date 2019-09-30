@@ -1,0 +1,155 @@
+
+TTTT_Thm2 = |- ADD2_IMP(T,T,T,T,F,sum,cout) = (cout = F) /\ (sum = T)
+Runtime: 113144.2s
+GC: 26821.7s
+
+TTFT_Thm2 = |- ADD2_IMP(T,T,F,T,F,sum,cout) = (cout = F) /\ (sum = T)
+Runtime: 113770.2s
+GC: 33568.6s
+
+TFTT_Thm2 = 
+|- ADD2_IMP(T,F,T,T,F,sum,cout) =
+   (?p0 p1 p2 p3 p4 p5 p6 p7 p8.
+     (p4 = T) /\
+     (p5 = T) /\
+     (p2 = F) /\
+     (cout = F) /\
+     (p1 = p3) /\
+     (sum = T) /\
+     (p6 = p7) /\
+     (p0 = T) /\
+     (p8 = F))
+Runtime: 113499.3s
+GC: 27162.5s
+
+TFFT_Thm2 = |- ADD2_IMP(T,F,F,T,F,sum,cout) = (cout = F) /\ (sum = T)
+Runtime: 119117.9s
+GC: 34084.2s
+
+FTTT_Thm2 = 
+|- ADD2_IMP(F,T,T,T,F,sum,cout) =
+   (?p0 p1 p2 p3 p4 p5 p6 p7 p8.
+     (p4 = T) /\
+     (p5 = p7) /\
+     (p1 = p2) /\
+     (p1 = p3) /\
+     (cout = F) /\
+     (sum = T) /\
+     (p6 = p7) /\
+     (p0 = T) /\
+     (p8 = F))
+Runtime: 114431.8s
+GC: 34178.3s
+
+FTFT_Thm2 = 
+|- ADD2_IMP(F,T,F,T,F,sum,cout) =
+   (?p0 p1 p2 p3 p4 p5 p6 p8.
+     (p2 = F) /\
+     (p4 = T) /\
+     (p1 = F) /\
+     (p3 = F) /\
+     (cout = F) /\
+     (sum = T) /\
+     (p5 = p6) /\
+     (p0 = T) /\
+     (p8 = F))
+Runtime: 115250.3s
+GC: 34481.8s
+
+FFTT_Thm2 = 
+|- ADD2_IMP(F,F,T,T,F,sum,cout) =
+   (?p0 p1 p2 p3 p4 p6 p7 p8.
+     (p3 = F) /\
+     (p4 = T) /\
+     (p1 = F) /\
+     (p2 = F) /\
+     (cout = F) /\
+     (sum = T) /\
+     (p6 = p7) /\
+     (p0 = T) /\
+     (p8 = F))
+Runtime: 114057.7s
+GC: 27768.4s
+
+FFFT_Thm2 = |- ADD2_IMP(F,F,F,T,F,sum,cout) = (cout = F) /\ (sum = T)
+Runtime: 108323.8s
+GC: 35092.8s
+
+TTTF_Thm2 = |- ADD2_IMP(T,T,T,F,T,sum,cout) = (sum = F)
+Runtime: 130319.7s
+GC: 34876.8s
+
+TTFF_Thm2 = 
+|- ADD2_IMP(T,T,F,F,T,sum,cout) =
+   (?p0 p1 p3 p4 p5 p6 p7 p8.
+     ((cout = T) ==> (p4 = F)) /\
+     (sum = p6) /\
+     (p1 = T) /\
+     (p3 = cout) /\
+     (sum = p4) /\
+     (p5 = p6) /\
+     (p7 = F) /\
+     (p0 = T) /\
+     (p8 = F))
+Runtime: 84120.1s
+GC: 28093.4s
+
+TFTF_Thm2 = 
+|- ADD2_IMP(T,F,T,F,T,sum,cout) =
+   (?p0 p1 p2 p3 p4 p5 p6 p7 p8.
+     ((cout = T) ==> (p4 = F)) /\
+     (p3 = T) /\
+     (p6 = F) /\
+     (p1 = T) /\
+     (p2 = cout) /\
+     (sum = p4) /\
+     (sum = p5) /\
+     (p7 = F) /\
+     (p0 = T) /\
+     (p8 = F))
+Runtime: 104519.1s
+GC: 28206.5s
+
+TFFF_Thm2 = |- ADD2_IMP(T,F,F,F,T,sum,cout) = (sum = F) /\ (cout = T)
+Runtime: 155612.9s
+GC: 50314.2s
+
+FTTF_Thm2 = 
+|- ADD2_IMP(F,T,T,F,T,sum,cout) =
+   (?p0 p1 p2 p3 p4 p5 p6 p7 p8.
+     ((cout = T) ==> (p4 = F)) /\
+     (p2 = T) /\
+     (p3 = T) /\
+     (p5 = F) /\
+     (p6 = F) /\
+     (p1 = T) /\
+     (sum = p4) /\
+     (p7 = F) /\
+     (p0 = T) /\
+     (p8 = F))
+Runtime: 106716.8s
+GC: 28543.0s
+
+FTFF_Thm2 = 
+|- ADD2_IMP(F,T,F,F,T,sum,cout) =
+   (?p0 p1 p2 p3 p4 p5 p6 p7 p8.
+     (sum = F) /\
+     (p4 = F) /\
+     (p3 = T) /\
+     (cout = T) /\
+     (p2 = T) /\
+     (p1 = T) /\
+     (p5 = p6) /\
+     (p7 = F) /\
+     (p0 = T) /\
+     (p8 = F))
+Runtime: 137970.4s
+GC: 43533.0s
+
+FFTF_Thm2 = |- ADD2_IMP(F,F,T,F,T,sum,cout) = (sum = F) /\ (cout = T)
+Runtime: 142611.1s
+GC: 44146.6s
+
+FFFF_Thm2 = |- ADD2_IMP(F,F,F,F,T,sum,cout) = (cout = T)
+Runtime: 129863.8s
+GC: 44057.2s

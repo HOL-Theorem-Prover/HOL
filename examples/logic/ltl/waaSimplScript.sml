@@ -3,6 +3,7 @@ open HolKernel Parse bossLib boolLib pairTheory relationTheory set_relationTheor
 open alterATheory ltlTheory ltl2waaTheory
 
 val _ = new_theory "waaSimpl"
+val _ = ParseExtras.temp_loose_equality()
 
 (*
   Reducing the amount of transitions
@@ -75,8 +76,8 @@ val removeImplied_def = Define`
     (trans x) DIFF {t | ?t'. ~(t = t') ∧ t' ∈ (trans x) ∧ trans_implies t' t}`;
 
 val reduceTransSimpl_def = Define`
-  reduceTransSimpl (ALTER_A s i f a trans) =
-    ALTER_A s i f a (removeImplied trans)`;
+  reduceTransSimpl (ALTER_A s a trans i f) =
+     ALTER_A s a (removeImplied trans) i f`;
 
 val REDUCE_IS_WEAK = store_thm
   ("REDUCE_IS_WEAK",
@@ -190,11 +191,11 @@ val REDUCE_TRANS_CORRECT = store_thm
                       )
                    >- (simp[] >> fs[run_restr_def] >> simp[]
                        >> Cases_on `aut` >> simp[reduceTransSimpl_def, removeImplied_def]
-                       >> `?a. (a, run.E (i,q)) ∈ f3 q ∧ at x i ∈ a` by (
+                       >> `?a. (a, run.E (i,q)) ∈ f1 q ∧ at x i ∈ a` by (
                               fs[validAARunFor_def] >> metis_tac[SUBSET_DEF]
                         )
-                       >> qabbrev_tac `a' = (@a. (a,run.E (i,q)) ∈ f3 q ∧ at x i ∈ a)`
-                       >> `(a', run.E (i,q)) ∈ f3 q ∧ at x i ∈ a'` by metis_tac[SELECT_THM]
+                       >> qabbrev_tac `a' = (@a. (a,run.E (i,q)) ∈ f1 q ∧ at x i ∈ a)`
+                       >> `(a', run.E (i,q)) ∈ f1 q ∧ at x i ∈ a'` by metis_tac[SELECT_THM]
                        >> qexists_tac `a'` >> rpt strip_tac >> fs[]
                        >> Cases_on `t'` >> metis_tac[]
                       )
@@ -303,15 +304,16 @@ val REDUCE_TRANS_CORRECT = store_thm
 *)
 
 val removeStatesSimpl_def = Define`
-   removeStatesSimpl (ALTER_A s i f a t) =
+   removeStatesSimpl (ALTER_A s a t i f) =
      (ALTER_A
-      (s ∩ reachRelFromSet (ALTER_A s i f a t) (BIGUNION i))
-      i
-      (f ∩ reachRelFromSet (ALTER_A s i f a t) (BIGUNION i))
+      (s ∩ reachRelFromSet (ALTER_A s a t i f) (BIGUNION i))
       a
-      λq. if q ∈ (s ∩ reachRelFromSet (ALTER_A s i f a t) (BIGUNION i))
+      (λq. if q ∈ (s ∩ reachRelFromSet (ALTER_A s a t i f) (BIGUNION i))
           then t q
-          else {})`;
+          else {})
+      i
+      (f ∩ reachRelFromSet (ALTER_A s a t i f) (BIGUNION i))
+      )`;
 
 val REACHREL_LEMM = store_thm
   ("REACHREL_LEMM",
@@ -338,17 +340,17 @@ val REDUCE_STATE_IS_WEAK = store_thm
    >> Cases_on `aut`
    >> simp[removeStatesSimpl_def,ALTER_A_component_equality]
    >> qabbrev_tac `reachable =
-                     reachRelFromSet (ALTER_A f f0 f1 f2 f3) (BIGUNION f0)`
+                     reachRelFromSet (ALTER_A f f0 f1 f2 f3) (BIGUNION f2)`
    >> qexists_tac `rrestrict ord (f ∩ reachable)`
    >> fs[ALTER_A_component_equality]
    >> strip_tac
    >- metis_tac[INTER_SUBSET,partial_order_subset]
-   >- (rpt strip_tac >> `(a,d) ∈ f3 s` by metis_tac[]
+   >- (rpt strip_tac >> `(a,d) ∈ f1 s` by metis_tac[]
        >> simp[rrestrict_def] >> rpt strip_tac
        >- metis_tac[]
        >- (fs[isValidAlterA_def] >> metis_tac[SUBSET_DEF])
        >- (qunabbrev_tac `reachable` >> fs[reachRelFromSet_def,reachRel_def]
-           >> `∃x. (oneStep (ALTER_A f f0 f1 f2 f3))^* x s ∧ ∃s. x ∈ s ∧ s ∈ f0`
+           >> `∃x. (oneStep (ALTER_A f f0 f1 f2 f3))^* x s ∧ ∃s. x ∈ s ∧ s ∈ f2`
                by metis_tac[]
            >> fs[] >> qexists_tac `x'` >> rpt strip_tac
            >- (`oneStep (ALTER_A f f0 f1 f2 f3) s s'` by (
@@ -388,7 +390,7 @@ val REDUCE_STATE_IS_VALID = store_thm
        >> `d ⊆ f` by metis_tac[] >> fs[]
        >> fs[reachRelFromSet_def] >> simp[SUBSET_DEF] >> rpt strip_tac
        >> fs[]
-       >> rename [‘reachRel (ALTER_A f f0 f1 f2 f3) b s’, ‘b ∈ s1’, ‘s1 ∈ f0’,
+       >> rename [‘reachRel (ALTER_A f f0 f1 f2 f3) b s’, ‘b ∈ s1’, ‘s1 ∈ f2’,
                   ‘d ⊆ f’, ‘x ∈ d’]
        >> qexists_tac `b` >> simp[reachRel_def] >> conj_tac
            >- (`oneStep (ALTER_A f f0 f1 f2 f3) s x` by (
@@ -446,7 +448,7 @@ val REDUCE_STATE_CORRECT = store_thm
              >- (Cases_on `aut` >> fs[validAARunFor_def, removeStatesSimpl_def]
                  >> rpt strip_tac
                  >> `q ∈ f
-                   ∧ q ∈ reachRelFromSet (ALTER_A f f0 f1 f2 f3) (BIGUNION f0)`
+                   ∧ q ∈ reachRelFromSet (ALTER_A f f0 f1 f2 f3) (BIGUNION f2)`
                      by metis_tac[SUBSET_DEF] >> fs[]
                 )
              >- (Cases_on `aut` >> fs[validAARunFor_def, removeStatesSimpl_def])
@@ -472,10 +474,10 @@ val REDUCE_STATE_CORRECT = store_thm
              >> `∀i. b i ∈ run.V i` by metis_tac[BRANCH_V_LEMM]
              >> fs[validAARunFor_def] >> first_x_assum (qspec_then `b` mp_tac)
              >> simp[] >> rpt strip_tac
-             >> `{i | b i ∈ f1}
-                   ⊆ {i | b i ∈ f1 ∧
+             >> `{i | b i ∈ f3}
+                   ⊆ {i | b i ∈ f3 ∧
                         b i ∈ reachRelFromSet
-                        (ALTER_A f f0 f1 f2 f3) (BIGUNION f0)}` by (
+                        (ALTER_A f f0 f1 f2 f3) (BIGUNION f2)}` by (
                   simp[SUBSET_DEF] >> rpt strip_tac
                   >> metis_tac[SUBSET_DEF]
               )
@@ -500,7 +502,7 @@ val EQUIV_STATES_SYMM = store_thm
   );
 
 val EQUIV_STATES_REFL = store_thm
-  ("EQUIV_STATES_SYMM",
+  ("EQUIV_STATES_REFL",
   ``!f t x. equivalentStates f t x x``,
    metis_tac[equivalentStates_def]
   );
@@ -565,18 +567,18 @@ val replaceBy_def = Define`
 
 
 val mergeState_def = Define`
-  mergeState x (ALTER_A states i f a trans) =
+  mergeState x (ALTER_A states a trans i f) =
             if ?s. s ∈ states ∧ ~(s = x) ∧ equivalentStates f trans s x
             then
                 let s' = $@ (\s. s ∈ states ∧ ~(s = x)
                               ∧ equivalentStates f trans s x)
                 in ALTER_A
                        (states DIFF {x})
-                       (IMAGE (replaceState x s') i)
-                       (replaceState x s' f)
                        a
                        (replaceBy trans x s')
-            else (ALTER_A states i f a trans)`;
+                       (IMAGE (replaceState x s') i)
+                       (replaceState x s' f)
+            else (ALTER_A states a trans i f)`;
 
 val mergeStatesSimpl = Define`
   mergeStatesSimpl aut = ITSET mergeState aut.states aut`;

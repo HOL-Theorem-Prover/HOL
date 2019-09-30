@@ -86,8 +86,7 @@ with
 fun add_rewrites (RW{thms,net}) thl =
  let val rewrites = itlist (append o local_mk_rewrites) thl []
      fun appconv (c,UNBOUNDED) tm     = c tm
-       | appconv (c,BOUNDED(ref 0)) _ = failwith "exceeded bound"
-       | appconv (c,BOUNDED r) tm     = c tm before Portable.dec r
+       | appconv (c,BOUNDED r) tm     = if !r = 0 then failwith "exceeded bound" else c tm before Portable.dec r
  in
    RW{thms = thms@thl,
        net = itlist Net.insert
@@ -252,27 +251,27 @@ fun SUBST_MATCH eqth th =
 
 
 
-fun pp_rewrites ppstrm rws =
-    let open Portable
-        val {add_string,add_break,begin_block,end_block,add_newline,...} =
-               with_ppstream ppstrm
-        val pp_thm = Parse.pp_thm ppstrm
-        val thms = dest_rewrites rws
-        val thms' = flatten (map mk_rewrites thms)
-        val how_many = length thms'
+fun pp_rewrites rws =
+    let
+      open Portable smpp
+      val pp_thm = lift Parse.pp_thm
+      val thms = dest_rewrites rws
+      val thms' = flatten (map mk_rewrites thms)
+      val how_many = length thms'
+      val m =
+           block CONSISTENT 0 (
+             (if (how_many = 0) then add_string "<empty rule set>"
+              else
+                block INCONSISTENT 0 (
+                  pr_list pp_thm (add_string";" >> add_break(2,0)) thms'
+                )
+             ) >>
+             add_newline >>
+             add_string("Number of rewrite rules = "^Lib.int_to_string how_many) >>
+             add_newline
+           )
     in
-       begin_block CONSISTENT 0;
-       if (how_many = 0)
-       then (add_string "<empty rule set>")
-       else ( begin_block INCONSISTENT 0;
-              pr_list pp_thm (fn () => add_string";")
-                             (fn () => add_break(2,0))
-                             thms';
-              end_block());
-       add_newline();
-       add_string("Number of rewrite rules = "^Lib.int_to_string how_many);
-       add_newline();
-       end_block()
+      Parse.mlower m
     end;
 
 end (* Rewrite *)

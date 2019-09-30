@@ -73,7 +73,7 @@ val thm_pp_prefix = ref "|- " and thm_pp_suffix = ref ""
  * Tells the prettyprinters how wide the page is.                            *
  *---------------------------------------------------------------------------*)
 
-val linewidth = ref 72
+val linewidth = CoreReplVARS.linewidth
 
 (*---------------------------------------------------------------------------*
  * Controls depth of printing for terms. Since the pp recursively decrements *
@@ -146,19 +146,6 @@ val old =
       fn s => String.concat ["old", Int.toString (!c), "->", s, "<-old"] before
               c := !c + 1
    end
-
-(*---------------------------------------------------------------------------*
- * Flag used to tell how to do renaming: if it's NONE, do priming; if it's   *
- * SOME s, increment a numerical suffix and append it to s.                  *
- *---------------------------------------------------------------------------*)
-
-val priming = ref (NONE: string option)
-
-(*---------------------------------------------------------------------------*
- *    Flag allowing schematic definitions. Used by code in TotalDefn.        *
- *---------------------------------------------------------------------------*)
-
-val allow_schema_definition = ref false
 
 val print_thy_loads = ref false
 

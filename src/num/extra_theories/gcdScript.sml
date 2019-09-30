@@ -17,9 +17,8 @@ val _ = new_theory "gcd";
 
 val IS_GCD = Q.new_definition
  ("is_gcd_def",
-  `is_gcd a b c = divides c a /\
-                  divides c b /\
-                  !d. divides d a /\ divides d b ==> divides d c`);
+  `is_gcd a b c <=> divides c a /\ divides c b /\
+                    !d. divides d a /\ divides d b ==> divides d c`);
 
 
 val IS_GCD_UNIQUE = store_thm("IS_GCD_UNIQUE",
@@ -32,15 +31,15 @@ val IS_GCD_REF = store_thm(
   PROVE_TAC[IS_GCD,DIVIDES_REFL]);
 
 val IS_GCD_SYM = store_thm("IS_GCD_SYM",
-			Term `!a b c. (is_gcd a b c) = is_gcd b a c`,
+                        Term `!a b c. (is_gcd a b c) = is_gcd b a c`,
                         PROVE_TAC[IS_GCD]);
 
 val IS_GCD_0R = store_thm("IS_GCD_0R",
-			Term `!a. is_gcd a 0 a`,
+                        Term `!a. is_gcd a 0 a`,
                         PROVE_TAC[IS_GCD,DIVIDES_REFL,ALL_DIVIDES_0]);
 
 val IS_GCD_0L = store_thm("IS_GCD_0L",
-			Term `!a. is_gcd 0 a a`,
+                        Term `!a. is_gcd 0 a a`,
                         PROVE_TAC[IS_GCD,DIVIDES_REFL,ALL_DIVIDES_0]);
 
 val PRIME_IS_GCD = store_thm("PRIME_IS_GCD",
@@ -128,11 +127,10 @@ val GCD_ADD_L_THM = save_thm(
  CONJ GCD_ADD_L (ONCE_REWRITE_RULE [ADD_COMM] GCD_ADD_L))
 val _ = export_rewrites ["GCD_ADD_L_THM"]
 
-val GCD_EQ_0 = store_thm(
-  "GCD_EQ_0",
-  ``!n m. (gcd n m = 0) = (n = 0) /\ (m = 0)``,
-  HO_MATCH_MP_TAC gcd_ind THEN SRW_TAC [][GCD]);
-val _ = export_rewrites ["GCD_EQ_0"]
+Theorem GCD_EQ_0[simp]:
+  !n m. (gcd n m = 0) <=> (n = 0) /\ (m = 0)
+Proof HO_MATCH_MP_TAC gcd_ind THEN SRW_TAC [][GCD]
+QED
 
 val GCD_1 = store_thm(
   "GCD_1",
@@ -232,7 +230,7 @@ val LINEAR_GCD_AUX = prove(
           (?p q. p * n = q * m + gcd m n) /\ ?p q. p * m = q * n + gcd m n``,
   HO_MATCH_MP_TAC GCD_SUCfree_ind THEN
   SRW_TAC [][LEFT_ADD_DISTRIB] THEN
-  RULE_ASSUM_TAC (REWRITE_RULE [DECIDE ``0 < x = ~(x = 0)``]) THENL [
+  RULE_ASSUM_TAC (REWRITE_RULE [DECIDE ``0 < x <=> ~(x = 0)``]) THENL [
     PROVE_TAC [GCD_SYM],
     PROVE_TAC [GCD_SYM],
     MAP_EVERY Q.EXISTS_TAC [`1`,`0`] THEN SRW_TAC [][],

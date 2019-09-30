@@ -66,9 +66,11 @@ fun stored_label (fvars,tm) =
   in case dest_term oper
       of CONST {Name,Thy,...} => (Cnet(Name,Thy,length args),args')
        | LAMB (Bvar,Body) => (Lnet(length args),
-                              (subtract fvars [Bvar],Body)::args')
+                              (op_set_diff aconv fvars [Bvar],Body)::args')
        | VAR (Name,_) =>
-          if mem oper fvars then (FVnet(Name,length args),args') else (Vnet,[])
+          if op_mem aconv oper fvars then
+            (FVnet(Name,length args),args')
+          else (Vnet,[])
        | _ => fail()
     end;
 
@@ -149,5 +151,26 @@ fun merge_nets (n1, n2) = let
 in
   NODE (foldl add_node (edges n1) (edges n2), tips n1 @ tips n2)
 end
+
+fun fold' f n A =
+    case n of
+        NODE (children, vals) =>
+        let val A1 = Portable.foldl' f vals A
+        in
+          Binarymap.foldl (fn (_, n, A) => fold' f n A) A1 children
+        end
+      | EMPTY vs => Portable.foldl' f vs A
+
+fun vfilter P n =
+    case n of
+        NODE (children, vals) =>
+        let
+          val children' = Binarymap.map (fn (_, a) => vfilter P a) children
+          val vals' = List.filter P vals
+        in
+          if Binarymap.numItems children' = 0 then EMPTY vals'
+          else NODE (children', vals')
+        end
+      | EMPTY vs => EMPTY (List.filter P vs)
 
 end (* struct *)

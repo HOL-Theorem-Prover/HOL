@@ -12,7 +12,7 @@ app
 
 quietdec := true;
 open bossLib metisLib intLib stringLib rich_listTheory
-open regexpLib FinitePathTheory UnclockedSemanticsTheory 
+open regexpLib FinitePSLPathTheory UnclockedSemanticsTheory 
      PropertiesTheory ExecuteSemanticsTheory;
 quietdec := false;
 
@@ -59,7 +59,7 @@ val _ = computeLib.add_funs
            pred_setTheory.NOT_IN_EMPTY,
            EXISTS_COND, 
            COND_SIMP,
-           PathTheory.SEL_REC_AUX,
+           PSLPathTheory.SEL_REC_AUX,
            UF_SEM_F_UNTIL_REC,
            B_SEM,
            EVAL_US_SEM,

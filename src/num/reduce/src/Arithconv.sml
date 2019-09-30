@@ -43,9 +43,11 @@ fun TFN_CONV c t =
  let val result = c t
      val result_t = rhs (concl result)
  in
-   if result_t = T orelse result_t = F orelse Literal.is_numeral result_t
-     then result
-     else failwith "TFN_CONV"
+   if aconv result_t T orelse aconv result_t F orelse
+      Literal.is_numeral result_t
+   then
+     result
+   else failwith "TFN_CONV"
 end
 
 
@@ -61,9 +63,9 @@ fun NEQ_CONV tm =
  case total boolLib.dest_eq tm
   of NONE => failwith "NEQ_CONV"
    | SOME (n1,n2) =>
-      if is_numeral n1 andalso is_numeral n2
-      then if n1=n2 then SPEC n1 REFL_CLAUSE_num
-           else with_exn NEQ_RW tm (ERR "NEQ_CONV" "")
+      if is_numeral n1 andalso is_numeral n2 then
+        if aconv n1 n2 then SPEC n1 REFL_CLAUSE_num
+        else with_exn NEQ_RW tm (ERR "NEQ_CONV" "")
       else failwith "NEQ_CONV"
 end;
 
@@ -228,9 +230,9 @@ val rv = mk_var {Name= "r", Ty=num};
 
 local val divt =
     prove((“(q * y = p) ==> (p + r = x) ==> (r < y) ==> (x DIV y = q)”),
-	  REPEAT DISCH_TAC THEN
-	  MATCH_MP_TAC (arithmeticTheory.DIV_UNIQUE) THEN
-	  EXISTS_TAC (“r:num”) THEN ASM_REWRITE_TAC[])
+          REPEAT DISCH_TAC THEN
+          MATCH_MP_TAC (arithmeticTheory.DIV_UNIQUE) THEN
+          EXISTS_TAC (“r:num”) THEN ASM_REWRITE_TAC[])
 in
 fun DIV_CONV tm =
   let open Arbnum
@@ -260,9 +262,9 @@ end;
 
 local val modt =
     prove(“(q * y = p) ==> (p + r = x) ==> (r < y) ==> (x MOD y = r)”,
-	  REPEAT DISCH_TAC THEN
-	  MATCH_MP_TAC arithmeticTheory.MOD_UNIQUE THEN
-	  EXISTS_TAC “q:num” THEN ASM_REWRITE_TAC[])
+          REPEAT DISCH_TAC THEN
+          MATCH_MP_TAC arithmeticTheory.MOD_UNIQUE THEN
+          EXISTS_TAC “q:num” THEN ASM_REWRITE_TAC[])
 in
 fun MOD_CONV tm =
  let open Arbnum

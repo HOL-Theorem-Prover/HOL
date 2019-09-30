@@ -1563,10 +1563,10 @@ val sexp_size_cdr =
 (*                                                                           *)
 (*    (defun imported-symbol-names (pkg-name triples)                        *)
 (*      (cond ((endp triples) nil)                                           *)
-(* 	   ((equal (cadr (car triples)) pkg-name)                            *)
-(* 	    (cons (car (car triples))                                        *)
-(* 		  (imported-symbol-names pkg-name (cdr triples))))           *)
-(* 	   (t (imported-symbol-names pkg-name (cdr triples)))))              *)
+(*         ((equal (cadr (car triples)) pkg-name)                            *)
+(*          (cons (car (car triples))                                        *)
+(*                (imported-symbol-names pkg-name (cdr triples))))           *)
+(*         (t (imported-symbol-names pkg-name (cdr triples)))))              *)
 (*****************************************************************************)
 val imported_symbol_names_def =
  Define

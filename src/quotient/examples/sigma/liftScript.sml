@@ -10,6 +10,7 @@ infixr -->;
 
 
 val _ = new_theory "lift";
+val _ = ParseExtras.temp_loose_equality()
 
 
 open prim_recTheory pairTheory pairLib listTheory;

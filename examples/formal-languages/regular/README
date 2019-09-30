@@ -1,4 +1,4 @@
-Overview
+`Overview
 ========
 
 The code in this directory generates DFAs from regular expressions
@@ -28,24 +28,9 @@ See test.ml and test.hol for examples.
   \s = whitespace = [ \n\r\t\f]  (* Note the space character! *)
   \c = escape c, for c in {\,`,.,^,$,*,+,?,|,~,{,},[,],(,)}
   \ddd = ASCII character given in decimal representation (\000 to \255)
-  \i{lo,hi,dir} = 
-     Interval of numbers between lo and hi inclusive, with dir in {MSB,LSB}. 
-     The "dir" field can be omitted (it defaults to LSB). Numbers can be
-     unsigned (both lo and hi are positive) or signed twos complement
-     (lo is negative, hi can be positive or negative). Currently only 
-     binary representation is supported.
-  \p{e_1 ... e_n} = 
-     "Packed" intervals, where e_i can be either an interval specification
-     (lo,hi) or a padding specification .{n} (meaning "ignore the next n bits").
-     The sum of the widths of the e_i must be a multiple of 8.
-     Packing specifications support scenarios where adjacent intervals
-     don't line up on byte boundaries. For example, suppose one
-     interval needs 9 bits to represent and the adjacent interval
-     needs only 6 to represent. Then the two intervals can be
-     supported in 2 bytes via the \p{...} specification, rather than
-     the 3 bytes needed by the \i{...}\i{...} representation. Also
-     intended to be used for packing multiple intervals into a single
-     byte. 
+  \i{lo,hi} = Interval of numbers between lo and hi inclusive. Details of endianess and 
+     the representation of signed numbers are set to defaults which can be
+     changed by Regexp_Type.{get,set}_intervalFn.
     
   r|s = alternation
   r&s = intersection
@@ -80,10 +65,10 @@ Regexp_Type
    * SML definition of the type of regular expressions. This lies at
      the base of both "proof" and "code" paths.
 
-   * The size of the alphabet (default 256) can be set here, and the
-     resulting matchers will work properly. Note that large alphabets 
-     like Unicode will need a different approach. Also note that the
-     interval regexp support assumes that the alphabet size is 256.
+   * The size of the alphabet (default 256) can be set here. Note that
+     large alphabets like Unicode will need a different approach. Also
+     note that the interval regexp support assumes that the alphabet
+     size is 256.
 
    * There is a regexp parser implementation (entrypoints:
      fromSubstring, fromString, fromQuote). See above for the concrete
@@ -93,13 +78,8 @@ Regexp_Type
 Regexp_Match.
 
    * SML implementation of the regexp match compiler. Does not
-     generate proofs. Is close to the algorithms in regexpTheory,
-     having been derived from it. 
-
-   * There have been some efficiency hacks applied in order to speed
-     up processing of some regexps, the important one being use of
-     PolyML.pointerEq in regexp_compare. Some timings motivating
-     the hacking choices made are in test.results
+     generate proofs. Is close to the algorithms in regexpTheory and
+     regexp_compilerTheory, having been derived from them. 
 
    * A version that only runs the search and doesn't post-process to
      obtain the DFA is in the function domBrz. This is useful for
@@ -107,6 +87,15 @@ Regexp_Match.
      algorithm. Visualization is controlled by the "regexp-compiler"
      trace (default is "on").
      
+Regexp_Numerics.
+
+   * Provides support for encoding numbers into strings in various ways
+     (unsigned, twos-complement, zig-zag, and sign-magnitude encodings are
+     supported).
+
+DFA_Codegen.
+
+   * Program support for generating state machines in Ada, C, Java, SML.
 
 charset{Script,Theory}. 
 
@@ -151,16 +140,20 @@ test.{hol,ml}
    * Examples of the application of the compiler/DFA evaluator, with,
      and without, proofs.
 
+even.predicate
+
+   * Example showing showing how arithmetic predicates can be realized
+     by regexps.
+
 regexp2dfa
 
-   * Command-line tool for generating programs (C,Java,ML) from regexps. See
-     codegen/gen_files for invocation examples.
+   * Command-line tool for generating programs (Ada,C,Java,ML) from
+     regexps. See codegen/gen_*_files for invocation examples.
 
 codegen
 
-   * Directory of examples demonstrating generation of code from
-     regexps.  Contents: gen_files (shell script; just run it with
-     ./gen_files and files will be created in a variety of languages).
+   * Directory of shell scripts demonstrating generation of code from
+     regexps.  Contents: gen_ada_files, gen__c_files, ...
 
 
 Status.
@@ -211,3 +204,12 @@ July 1, 2017
 * Updated syntax for some examples.
 
 * codegen/gen_files split out into separate file generators for each language.
+
+July 1, 2019
+
+* Expansion of support for numeric encodings in regexps in Regexp_Numerics.
+
+* Removal of existing existing numeric regexp stuff in Regexp_Type. It
+  was incomplete and overly specialized. Padding has been removed.
+
+* Codegen now available from DFA_Codegen structure, as well as regexp2dfa.

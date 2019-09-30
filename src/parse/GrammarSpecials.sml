@@ -9,6 +9,9 @@ struct
   val and_special = " _ and"
   val fakeconst_special = " _ fakeconst"
 
+  fun mk_lform_name {nilstr,cons} = "ListForm<" ^ nilstr ^ "," ^ cons ^">"
+  val term_name_is_lform = String.isPrefix "ListForm<"
+
   fun mk_fakeconst_name {original,fake} = let
     open Coding
   in
@@ -38,6 +41,8 @@ struct
   val reccons_special = " _ record cons"
   val recnil_special = " _ record nil"
   val bigrec_subdivider_string = "brss__"
+  val recd_lform_name =
+      mk_lform_name{cons = reccons_special, nilstr = recnil_special}
 
 
   val vs_cons_special = " _ vs cons"
@@ -47,6 +52,16 @@ struct
   val fromNum_str = "_ inject_number"
   val num_injection = "&"
 
+  val stringinjn_base = "_ inject_string"
+  fun mk_stringinjn_name s =
+      let val ((_, i), _) = valOf (UTF8.getChar s)
+            handle Option => raise Fail "GrammarSpecials.mk_stringinjn_name: \
+                                        \empty string"
+      in
+        stringinjn_base ^ StringCvt.padLeft #"0" 4 (Int.fmt StringCvt.HEX i)
+      end
+  val std_stringinjn_name = mk_stringinjn_name "\""
+  val string_elim_term = "string_elim__magic"
 
   val std_binder_precedence = 0
 

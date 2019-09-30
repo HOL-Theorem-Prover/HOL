@@ -1,0 +1,9 @@
+.PHONY: all
+
+all: test1
+
+test1: script1.ML
+	$(protect $(HOLDIR)/bin/hol) $<
+
+
+EXTRA_CLEANS = test1

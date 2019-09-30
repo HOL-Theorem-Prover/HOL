@@ -18,7 +18,7 @@ open HolKernel Parse boolLib;
 open bossLib listTheory subtypeTools res_quanTools res_quanTheory
      pred_setTheory extra_pred_setTheory arithContext
      ho_proverTools extra_listTheory subtypeTheory
-     listContext arithmeticTheory groupTheory HurdUseful
+     listContext arithmeticTheory groupTheory hurdUtils
      groupContext extra_numTheory gcdTheory dividesTheory
      extra_arithTheory finite_groupTheory finite_groupContext
      abelian_groupTheory num_polyTheory extra_binomialTheory
@@ -29,6 +29,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "mult_group";
+val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 

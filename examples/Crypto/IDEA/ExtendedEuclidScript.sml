@@ -19,7 +19,7 @@ val dec_def =
 
 val P_def =
  Define
-   `P ((r1:num, r2:num, u1:int, u2:int, v1:int, v2:int), x:int, y:int) =
+   `P ((r1:num, r2:num, u1:int, u2:int, v1:int, v2:int), x:int, y:int) <=>
        (int_of_num r1 = u1*x + v1*y) /\ (int_of_num r2 = u2*x + v2*y)`;
 
 val decP_Lemma1 = Q.store_thm

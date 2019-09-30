@@ -1,11 +1,12 @@
 open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
      listTheory sequenceTheory state_transformerTheory
-     probabilityTheory HurdUseful extra_numTheory combinTheory
+     hurdUtils extra_numTheory combinTheory
      pairTheory realTheory realLib extra_boolTheory
-     extra_pred_setTheory prob_algebraTheory probTheory
-     extra_realTheory extra_pred_setTools measureTheory numTheory
+     extra_pred_setTheory extra_realTheory extra_pred_setTools numTheory
      simpLib seqTheory sequenceTools subtypeTheory res_quanTheory
      binomialTheory sumTheory;
+
+open real_measureTheory real_probabilityTheory prob_algebraTheory probTheory;
 
 val _ = new_theory "prob_binomial";
 

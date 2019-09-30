@@ -146,7 +146,7 @@ in
          val top = Float (false, m, f)
          val bottom = Float (true, m, f)
       in
-         if mode = binary_ieeeSyntax.roundTiesToEven_tm
+         if mode ~~ binary_ieeeSyntax.roundTiesToEven_tm
             then fn x =>
                     let
                        val r = real_to_arbrat x
@@ -178,7 +178,7 @@ in
                                        end)
                             end
                     end
-         else if mode = binary_ieeeSyntax.roundTowardPositive_tm
+         else if mode ~~ binary_ieeeSyntax.roundTowardPositive_tm
             then fn x =>
                     let
                        val r = real_to_arbrat x
@@ -195,7 +195,7 @@ in
                                else Float (nextfloat fp)
                             end
                     end
-         else if mode = binary_ieeeSyntax.roundTowardNegative_tm
+         else if mode ~~ binary_ieeeSyntax.roundTowardNegative_tm
             then fn x =>
                     let
                        val r = real_to_arbrat x
@@ -212,7 +212,7 @@ in
                                else Float (nextfloat fp)
                             end
                     end
-         else if mode = binary_ieeeSyntax.roundTowardZero_tm
+         else if mode ~~ binary_ieeeSyntax.roundTowardZero_tm
             then fn x =>
                     let
                        val r = real_to_arbrat x
@@ -346,7 +346,7 @@ local
               val tn = fcpSyntax.dest_int_numeric_type t
               val wn = fcpSyntax.dest_int_numeric_type w
               val f = real_to_float ((tn, wn), mode)
-              val thm = if mode = binary_ieeeSyntax.roundTiesToEven_tm
+              val thm = if mode ~~ binary_ieeeSyntax.roundTiesToEven_tm
                            then threshold_CONV (mk_threshold tw)
                         else largest_CONV (mk_large tw)
               val y = (f, Conv.REWR_CONV thm)
@@ -398,9 +398,9 @@ local
                  (ties_to_even (boolSyntax.mk_conj (c, boolSyntax.mk_neg rx))))
       end
    val lt_thm =
-      Drule.MATCH_MP (realLib.REAL_ARITH ``(a <= b = F) ==> b < a: real``)
+      Drule.MATCH_MP (realLib.REAL_ARITH ``(a <= b <=> F) ==> b < a: real``)
    val le_thm =
-      Drule.MATCH_MP (realLib.REAL_ARITH ``(a < b = F) ==> b <= a: real``)
+      Drule.MATCH_MP (realLib.REAL_ARITH ``(a < b <=> F) ==> b <= a: real``)
    fun mk_w (n, ty) = wordsSyntax.mk_n2w (numLib.mk_numeral n, ty)
    fun float_of_triple ((t, w), (s, e, f)) =
      binary_ieeeSyntax.mk_floating_point
@@ -427,7 +427,7 @@ in
       *)
       case r2f x of
          Float (sef as (s, _, _)) =>
-            if mode = binary_ieeeSyntax.roundTiesToEven_tm
+            if mode ~~ binary_ieeeSyntax.roundTiesToEven_tm
                then let
                        val u_thm =
                           ulp_conv
@@ -486,11 +486,11 @@ in
                                    binary_ieeeTheory.round_roundTiesToEven0 thm
                              end
                     end
-            else if mode = binary_ieeeSyntax.roundTowardPositive_tm
+            else if mode ~~ binary_ieeeSyntax.roundTowardPositive_tm
                then raise err "roundTowardPositive: not implemented"
-            else if mode = binary_ieeeSyntax.roundTowardNegative_tm
+            else if mode ~~ binary_ieeeSyntax.roundTowardNegative_tm
                then raise err "roundTowardNegative: not implemented"
-            else if mode = binary_ieeeSyntax.roundTowardZero_tm
+            else if mode ~~ binary_ieeeSyntax.roundTowardZero_tm
                then
                   case Lib.total
                          (EQT_REDUCE (Conv.RAND_CONV cnv))
@@ -539,14 +539,14 @@ in
                              end
             else raise err "unknown mode"
        | posInf =>
-            if mode = binary_ieeeSyntax.roundTiesToEven_tm
+            if mode ~~ binary_ieeeSyntax.roundTiesToEven_tm
                then let
                        val le = realSyntax.mk_leq (mk_threshold tw, x)
                        val thm = EQT_REDUCE (Conv.LAND_CONV cnv) le
                     in
                        toPosInf0 thm
                     end
-            else if mode = binary_ieeeSyntax.roundTowardPositive_tm
+            else if mode ~~ binary_ieeeSyntax.roundTowardPositive_tm
                then let
                        val lt = realSyntax.mk_less (mk_large tw, x)
                        val thm = EQT_REDUCE (Conv.LAND_CONV cnv) lt
@@ -555,7 +555,7 @@ in
                     end
             else raise err "+inf"
        | negInf =>
-            if mode = binary_ieeeSyntax.roundTiesToEven_tm
+            if mode ~~ binary_ieeeSyntax.roundTiesToEven_tm
                then let
                        val le = realSyntax.mk_leq (x, mk_neg_threshold tw)
                        val thm =
@@ -563,7 +563,7 @@ in
                     in
                        toNegInf0 thm
                     end
-            else if mode = binary_ieeeSyntax.roundTowardNegative_tm
+            else if mode ~~ binary_ieeeSyntax.roundTowardNegative_tm
                then let
                        val lt = realSyntax.mk_less (x, mk_neg_large tw)
                        val thm =
@@ -610,16 +610,16 @@ local
    val toZero = rule (binary_ieeeTheory.round_roundTowardZero_is_minus_zero,
                       binary_ieeeTheory.round_roundTowardZero_is_plus_zero)
    fun rnd_zero_thms toneg mode =
-      (if toneg = boolSyntax.T then fst
-       else if toneg = boolSyntax.F then snd
+      (if Teq toneg then fst
+       else if Feq toneg then snd
        else raise err "+/- 0")
-      (if mode = binary_ieeeSyntax.roundTiesToEven_tm
+      (if mode ~~ binary_ieeeSyntax.roundTiesToEven_tm
           then toEven
-       else if mode = binary_ieeeSyntax.roundTowardPositive_tm
+       else if mode ~~ binary_ieeeSyntax.roundTowardPositive_tm
           then raise err "roundTowardPositive: not implemented"
-       else if mode = binary_ieeeSyntax.roundTowardNegative_tm
+       else if mode ~~ binary_ieeeSyntax.roundTowardNegative_tm
           then raise err "roundTowardNegative: not implemented"
-       else if mode = binary_ieeeSyntax.roundTowardZero_tm
+       else if mode ~~ binary_ieeeSyntax.roundTowardZero_tm
           then toZero
        else raise err "unknown mode")
 in
@@ -749,7 +749,7 @@ local
    val rwt = boolTheory.IMP_CLAUSES |> Drule.SPEC_ALL |> Drule.CONJUNCTS |> hd
    fun is_nan_thm thm =
       case Lib.total boolSyntax.dest_eq (Thm.concl thm) of
-         SOME (_, r) => r = binary_ieeeSyntax.nan_tm
+         SOME (_, r) => r ~~ binary_ieeeSyntax.nan_tm
        | _ => false
    fun float_x_CONV (name, compute, dest, nan, float_finite,
                      plus_infinity_finite, minus_infinity_finite,
@@ -788,12 +788,12 @@ local
                   let
                      val vx_thm = float_value_CONV vx
                   in
-                     if rhsc vx_thm = binary_ieeeSyntax.nan_tm
+                     if rhsc vx_thm ~~ binary_ieeeSyntax.nan_tm
                         then float_nan (mode, x, y, vx_thm)
                      else let
                              val vy_thm = float_value_CONV vy
                           in
-                             if rhsc vy_thm = binary_ieeeSyntax.nan_tm
+                             if rhsc vy_thm ~~ binary_ieeeSyntax.nan_tm
                                 then float_nan (mode, x, y, vy_thm)
                              else
                                 mtch_spec float_finite (Thm.CONJ vx_thm vy_thm)

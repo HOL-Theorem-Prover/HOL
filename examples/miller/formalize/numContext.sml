@@ -4,6 +4,14 @@ structure numContext :> numContext =
 struct
 open HolKernel Parse boolLib;
 
+structure Parse = struct
+  open Parse
+  val (Type,Term) =
+      pred_setTheory.pred_set_grammars
+        |> apsnd ParseExtras.grammar_loose_equality
+        |> parse_from_grammars
+end
+open Parse
 (* interactive mode
 if !show_assums then () else
  (loadPath := ".."::"../../prob"::(!loadPath);
@@ -16,7 +24,7 @@ if !show_assums then () else
 
 open bossLib pairTheory pred_setTheory
      res_quanTheory arithmeticTheory extra_numTheory
-     HurdUseful ho_basicTools ho_proverTools res_quanTools
+     hurdUtils ho_basicTools ho_proverTools res_quanTools
      subtypeTools boolContext prim_recTheory;
 
 infixr 0 ++ || ORELSEC ## THENC THEN_TCL ORELSE_TCL |->;
@@ -181,7 +189,7 @@ in
              val th = prover goal
            in
              fn g =>
-             if g = goal then th
+             if g ~~ goal then th
              else raise ERR "mod_plus_rewr" "modulus changed"
            end
        in
@@ -218,7 +226,7 @@ in
              val th = prover goal
            in
              fn g =>
-             if g = goal then th
+             if g ~~ goal then th
              else raise ERR "mod_mult_rewr" "modulus changed"
            end
        in

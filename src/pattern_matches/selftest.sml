@@ -6,7 +6,7 @@ open testutils
 
 
 val hard_fail = true;
-val _ = really_die := true;
+val _ = testutils.diemode := ProcessExit
 val quiet = false;
 val _ = Parse.current_backend := PPBackEnd.vt100_terminal;
 
@@ -14,7 +14,7 @@ val _ = Parse.current_backend := PPBackEnd.vt100_terminal;
 
 set_trace "use pmatch_pp" 0
 val hard_fail = false;
-val _ = really_die := false;
+val _ = testutils.diemode := FailException
 val quiet = false;
 val _ = Parse.current_backend := PPBackEnd.emacs_terminal;
 
@@ -1071,7 +1071,7 @@ val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
 
 val test_nchot = test_gen (fn l => (
   print "[";
-  Portable.pr_list print_term' (fn () => print ", ") (fn () => ()) l;
+  OldPP.pr_list print_term' (fn () => print ", ") (fn () => ()) l;
   print "]"))
   print_thm' print_term' (fn (inp, out, res) => aconv  out (concl res))
   "nchotomy_of_pats" nchotomy_of_pats

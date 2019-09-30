@@ -12,6 +12,7 @@ sig
 
    val theTypeBase        : unit -> typeBase
    val write              : tyinfo list -> tyinfo list
+   val export             : tyinfo list -> unit
    val fetch              : hol_type -> tyinfo option
    val read               : {Thy :string, Tyop: string} -> tyinfo option
    val elts               : unit -> tyinfo list
@@ -55,4 +56,11 @@ sig
 
    val dest_record_type   : hol_type -> (string * hol_type) list
    val is_record_type     : hol_type -> bool
+
+   val CaseEq             : string -> thm
+   val CaseEqs            : string list -> thm
+   val AllCaseEqs         : unit -> thm
+
+   val update_induction   : thm -> unit
+   val update_axiom       : thm -> unit
 end

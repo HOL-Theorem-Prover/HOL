@@ -1,12 +1,8 @@
-structure exportLib =
+structure exportLib :> exportLib =
 struct
 
 open HolKernel boolLib bossLib Parse;
-open listTheory wordsTheory pred_setTheory arithmeticTheory wordsLib pairTheory;
-open set_sepTheory progTheory helperLib addressTheory combinTheory;
-
-open graph_specsLib backgroundLib writerLib;
-
+open helperLib graph_specsLib backgroundLib writerLib file_readerLib;
 open GraphLangTheory;
 
 
@@ -84,7 +80,8 @@ in
     val _ = can (match_term pat) tm orelse fail()
     val next = tm |> rator |> rand
     val (xs,ty) = tm |> rand |> listSyntax.dest_list
-    val _ = (ty = ``:string # (state -> variable)``) orelse fail()
+    val _ = (ty = ``:string # (32 state -> 32 variable)``) orelse
+            (ty = ``:string # (64 state -> 64 variable)``) orelse fail()
     val ys = xs |> map pairSyntax.dest_pair
                 |> map (fn (x,y) => (stringSyntax.fromHOLstring x,y))
     in (next,ys) end
@@ -112,7 +109,9 @@ in
     val strs = strs |> map stringSyntax.fromHOLstring
     val name = tm |> rator |> rator |> rand |> stringSyntax.fromHOLstring
     val (args,ty) = tm |> rator |> rand |> listSyntax.dest_list
-    val _ = (ty = ``:state -> variable``) orelse fail()
+    val _ = (ty = ``:32 state -> 32 variable``) orelse
+            (ty = ``:64 state -> 64 variable``) orelse
+            fail()
     in (next,name,args,strs) end
 end
 
@@ -148,7 +147,7 @@ local
     val x2 = tm |> rand
     in (x1,x2) end
 in
-  val dest_var_word32 = any_var_acc ``var_word32 str s``
+  val dest_var_word = any_var_acc ``var_word str s``
   val dest_var_word8 = any_var_acc ``var_word8 str s``
   val dest_var_nat = any_var_acc ``var_nat str s``
   val dest_var_bool = any_var_acc ``var_bool str s``
@@ -162,8 +161,10 @@ end;
 val patterns =
      [(``MemAcc8 m a``,"MemAcc"),
       (``MemAcc32 m a``,"MemAcc"),
+      (``MemAcc64 m a``,"MemAcc"),
       (``MemUpdate8 m a w``,"MemUpdate"),
       (``MemUpdate32 m a w``,"MemUpdate"),
+      (``MemUpdate64 m a w``,"MemUpdate"),
       (``x = (y:'a)``,"Equals"),
       (``T``,"True"),
       (``F``,"False"),
@@ -189,8 +190,8 @@ val patterns =
       (``(w2w (x:'a word)):'b word``,"WordCast"),
       (``(sw2sw (x:'a word)):'b word``,"WordCastSigned"),
       (``(n:num) + m``,"Plus"),
-      (``if b then x else y``,"IfThenElse"),
-      (``word_reverse x``,"WordReverse"),
+      (``if b then x else y : 'a``,"IfThenElse"),
+      (``word_reverse (x:'a word)``,"WordReverse"),
       (``count_leading_zero_bits (w:'a word)``,"CountLeadingZeroes")];
 
 val last_fail_node_tm = ref T;
@@ -207,7 +208,7 @@ fun export_graph name rhs = let
     | get_var_type "c" = "Bool"
     | get_var_type "v" = "Bool"
     | get_var_type "clock" = "Word 64"
-    | get_var_type _ = "Word 32"
+    | get_var_type _ = "Word " ^ substring(type_to_string(tysize()),1,2)
   fun arg s = "" ^ s ^ " " ^ get_var_type s
   fun commas [] = ""
     | commas [x] = x
@@ -217,11 +218,13 @@ fun export_graph name rhs = let
     SOME ("cart", [_, idx]) => "Word "
         ^ Arbnum.toString (fcpLib.index_to_num idx)
   | _ => if ty = ``:word32->word8`` then "Mem" else
-    if ty = ``:word32->bool`` then "Dom" else
-    if ty = ``:bool`` then "Bool" else
-    if ty = ``:num`` then "Word 64" else failwith("type")
+         if ty = ``:word32->bool`` then "Dom" else
+         if ty = ``:word64->word8`` then "Mem" else
+         if ty = ``:word64->bool`` then "Dom" else
+         if ty = ``:bool`` then "Bool" else
+         if ty = ``:num`` then "Word 64" else failwith("type")
   fun is_var_acc tm =
-    can dest_var_word32 tm orelse
+    can dest_var_word tm orelse
     can dest_var_word8 tm orelse
     can dest_var_nat tm orelse
     can dest_var_bool tm orelse
@@ -238,8 +241,8 @@ fun export_graph name rhs = let
     (if numSyntax.is_numeral tm then
       "Num " ^ int_to_string (tm |> numSyntax.int_of_term) ^ " Nat"
     else if wordsSyntax.is_n2w tm then
-      let val i = tm |> rand |> numSyntax.int_of_term
-      in "Num " ^ int_to_string i ^ " " ^ export_type (type_of tm) end
+      let val i = tm |> rand |> numSyntax.dest_numeral
+      in "Num " ^ Arbnum.toString i ^ " " ^ export_type (type_of tm) end
     (* Var *)
     else if is_var_acc tm then
       let val name = tm |> rator |> rand |> stringSyntax.fromHOLstring
@@ -251,16 +254,20 @@ fun export_graph name rhs = let
       in "Op " ^ n ^ " " ^ ty ^ " " ^ export_list (map term xs) end
     ) handle HOL_ERR err => (print (exn_to_string (HOL_ERR err));
             add_tm_fail tm; fail())
-  val types = [``VarNat``,``VarWord8``,``VarWord32``,
-               ``VarMem``,``VarDom``,``VarBool``]
-  val s_var = mk_var("s",``:state``)
+  val types = [``VarNat :num -> 'a variable``,
+               ``VarWord8 :word8 -> 'a variable``,
+               ``VarWord :'a word -> 'a variable``,
+               ``VarMem :('a word -> word8) -> 'a variable``,
+               ``VarDom :('a word -> bool) -> 'a variable``,
+               ``VarBool :bool -> 'a variable``]
   fun bool_exp tm =
     if can dest_var_acc tm then let
       val n = dest_var_acc tm
       in "Var " ^ n ^ " " ^ get_var_type n end
     else let
       val (s,e) = dest_abs tm
-      val _ = type_of s = ``:state`` orelse failwith("bad exp")
+      val _ = type_of s = ``:32 state`` orelse
+              type_of s = ``:64 state`` orelse failwith("bad exp")
       val _ = type_of e = ``:bool`` orelse failwith("bad exp")
       in term e end
   fun exp tm =
@@ -269,9 +276,10 @@ fun export_graph name rhs = let
       in "Var " ^ n ^ " " ^ get_var_type n end
     else let
       val (s,e) = dest_abs tm
-      val _ = type_of s = ``:state`` orelse failwith("bad exp")
+      val _ = type_of s = ``:32 state`` orelse
+              type_of s = ``:64 state`` orelse failwith("bad exp")
       val (t,tm) = dest_comb e
-      val _ = mem t types
+      val _ = term_mem t types
       in term tm end
   fun dest_abs_skip_tag test = let
     val (v,x) = dest_abs test
@@ -281,9 +289,9 @@ fun export_graph name rhs = let
     "" ^ n ^ " " ^ get_var_type n ^ " " ^ exp tm
   val ret_node = ``Ret``
   val err_node = ``Err``
-  fun export_nextnode tm =
-    if tm = ret_node then "Ret" else
-    if tm = err_node then "Err" else let
+  fun export_nextnode (tm:term) =
+    if aconv tm ret_node then "Ret" else
+    if aconv tm err_node then "Err" else let
       val i = dest_NextNode tm
       in int_to_hex i end
   fun export_node (n,tm) = let
@@ -320,7 +328,8 @@ fun export_graph name rhs = let
   val _ = write_graph decl
   fun my_map f [] = []
     | my_map f (x::xs) =
-    (let val y = f x in y end
+    ((let val y = f x in y end
+      handle Overflow => failwith "Overflow")
      handle HOL_ERR e =>
      let val _ = print "\n\nFailed to translate node: \n\n"
          val _ = print_term (snd x)
@@ -331,6 +340,10 @@ fun export_graph name rhs = let
   val last_line = "EntryPoint " ^ int_to_hex entry ^ "\n"
   val _ = if List.null nodes then () else write_graph last_line
   in () end
+
+(*
+val tm = !last_fail_node_tm
+*)
 
 
 (* export constant definition *)
@@ -347,10 +360,11 @@ fun export_func lemma = let
 fun print_export_report () = let
   val l = length (!failed_ty_translations) + length (!failed_tm_translations)
   in if l = 0 then write_line "No export failures." else let
+       val _ = has_failures := true
        val xs = map (fn ty => "Failed to translate type: " ^ type_to_string ty)
                        (all_distinct (!failed_ty_translations)) @
                 map (fn tm => "Failed to translate term: " ^ term_to_string tm)
-                       (all_distinct (!failed_tm_translations))
+                       (term_all_distinct (!failed_tm_translations))
        in (map write_line xs; ()) end end
 
 
@@ -362,7 +376,7 @@ val prepare_for_export_conv = let
       val ty = rand tm |> type_of |> dest_type |> snd |> hd
       in (RAND_CONV (REWR_CONV (GSYM ETA_AX))) tm end else NO_CONV tm
   val foldback = (unbeta_conv ``var_bool str``) ORELSEC
-                 (unbeta_conv ``var_word32 str``) ORELSEC
+                 (unbeta_conv ``var_word str``) ORELSEC
                  (unbeta_conv ``var_word8 str``) ORELSEC
                  (unbeta_conv ``var_nat str``) ORELSEC
                  (unbeta_conv ``var_mem str``) ORELSEC
@@ -372,7 +386,11 @@ val prepare_for_export_conv = let
             all_names_ignore_def, all_names_with_input_def] THENC
           PURE_REWRITE_CONV [decomp_simp2] THENC
           PURE_REWRITE_CONV [decomp_simp3] THENC
-          PURE_REWRITE_CONV [GSYM wordsTheory.WORD_NOT_LOWER] THENC
+          PURE_REWRITE_CONV [GSYM wordsTheory.WORD_NOT_LOWER,v2w_sing,
+                             wordsTheory.WORD_HIGHER_EQ,
+                             wordsTheory.WORD_HIGHER,
+                             wordsTheory.WORD_GREATER_EQ,
+                             wordsTheory.WORD_GREATER] THENC
           DEPTH_CONV foldback
   in QCONV c end;
 

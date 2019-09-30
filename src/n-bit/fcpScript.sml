@@ -33,14 +33,14 @@ val LT_REFL = prim_recTheory.LESS_REFL
 
 val () = Parse.set_fixity "HAS_SIZE" (Infix (NONASSOC, 450))
 
-val HAS_SIZE = Define `(s HAS_SIZE n) = FINITE s /\ (CARD s = n)`
+val HAS_SIZE = Define `(s HAS_SIZE n) <=> FINITE s /\ (CARD s = n)`
 
 val CARD_IMAGE_INJ = Q.prove(
    `!(f:'a->'b) s.
        (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) /\
        FINITE s ==> (CARD (IMAGE f s) = CARD s)`,
    GEN_TAC
-   THEN REWRITE_TAC [DECIDE ``a /\ b ==> c = b ==> a ==> c``]
+   THEN REWRITE_TAC [DECIDE ``a /\ b ==> c <=> b ==> a ==> c``]
    THEN Q.SPEC_THEN
            `\s. (!x y. (f x = f y) ==> y IN s ==> x IN s ==> (x = y)) ==>
                 (CARD (IMAGE f s) = CARD s)`
@@ -78,7 +78,7 @@ val HAS_SIZE_0 = Q.prove(
 
 val HAS_SIZE_SUC = Q.prove(
    `!(s:'a->bool) n.
-        (s HAS_SIZE (SUC n)) =
+        (s HAS_SIZE (SUC n)) <=>
         ~(s = {}) /\ !a. a IN s ==> ((s DELETE a) HAS_SIZE n)`,
    REPEAT GEN_TAC
    THEN REWRITE_TAC [HAS_SIZE]
@@ -214,7 +214,7 @@ val DIMINDEX_NONZERO =
 
 val DIMINDEX_GE_1 = Q.store_thm("DIMINDEX_GE_1",
    `1 <= dimindex(:'a)`,
-   REWRITE_TAC [DECIDE ``1 <= x = ~(x = 0)``, DIMINDEX_NONZERO]
+   REWRITE_TAC [DECIDE ``1 <= x <=> ~(x = 0)``, DIMINDEX_NONZERO]
    )
 
 val DIMINDEX_GT_0 =
@@ -257,7 +257,7 @@ val FINITE_INDEX_INJ = Q.prove(
       FIRST_ASSUM (MP_TAC o MATCH_MP FINITE_INDEX_WORKS_FINITE)
       THEN ASM_REWRITE_TAC [dimindex_def]
       THEN PROVE_TAC [],
-      PROVE_TAC [DECIDE ``!a. a < 1 = (a = 0)``]
+      PROVE_TAC [DECIDE ``!a. a < 1 <=> (a = 0)``]
    ])
 
 val FORALL_FINITE_INDEX =
@@ -334,26 +334,29 @@ val _ = TypeBase.write fcp_tyinfo
 local (* and here the palaver to make this persistent; this should be easier
          (even without the faff I went through with PP-blocks etc to make it
          look pretty) *)
-   fun out pps =
+   fun out _ =
       let
-         val S = PP.add_string pps
-         val Brk = PP.add_break pps
-         val Blk = PP.begin_block pps PP.CONSISTENT
-         fun EBlk() = PP.end_block pps
+         val S = PP.add_string
+         val Brk = PP.add_break
+         val Blk = PP.block PP.CONSISTENT
       in
-         Blk 2; S "val _ = let"; Brk (1,0);
-         Blk 2;
-         S "val tyi = "; Brk (0,0);
-         Blk 2; S "TypeBasePure.gen_datatype_info {"; Brk (0,0);
-         S "ax = fcp_Axiom,"; Brk (1,0);
-         S "ind = fcp_ind,";  Brk (1,0);
-         S "case_defs = [fcp_case_def]"; Brk (1,~2);
-         S "}";
-         EBlk(); EBlk();
-         Brk (1,~2);
-         S "in"; Brk(1,0);
-         S "TypeBase.write tyi"; Brk(1,~2);
-         S "end"; EBlk()
+         Blk 2 [
+           S "val _ = let", Brk (1,0),
+           Blk 2 [
+             S "val tyi = ", Brk (0,0),
+             Blk 2 [
+               S "TypeBasePure.gen_datatype_info {", Brk (0,0),
+               S "ax = fcp_Axiom,", Brk (1,0),
+               S "ind = fcp_ind,",  Brk (1,0),
+               S "case_defs = [fcp_case_def]", Brk (1,~2),
+               S "}"
+             ]
+           ],
+           Brk (1,~2),
+           S "in", Brk(1,0),
+           S "TypeBase.write tyi", Brk(1,~2),
+           S "end"
+         ]
       end
 in
    val _ = adjoin_to_theory {sig_ps = NONE, struct_ps = SOME out}
@@ -472,7 +475,7 @@ val index_sum = Q.store_thm("index_sum",
    )
 
 val finite_sum = Q.store_thm("finite_sum",
-   `FINITE (UNIV:('a+'b)->bool) =
+   `FINITE (UNIV:('a+'b)->bool) <=>
     FINITE (UNIV:'a->bool) /\ FINITE (UNIV:'b->bool)`,
    SIMP_TAC std_ss [FINITE_UNION, sum_union, isl_isr_finite])
 

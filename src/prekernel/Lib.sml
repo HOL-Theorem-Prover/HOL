@@ -15,6 +15,7 @@ open Feedback;
 val ERR = mk_HOL_ERR "Lib"
 
 open Portable;
+datatype frag = datatype HOLPP.frag
 
 (*---------------------------------------------------------------------------*
  * A version of try that coerces non-HOL_ERR exceptions to be HOL_ERRs.      *
@@ -237,6 +238,12 @@ fun op_assoc eq_func k l =
       [] => raise ERR "op_assoc" "not found"
     | (key,ob) :: rst => if eq_func k key then ob else op_assoc eq_func k rst
 
+fun op_rev_assoc eq_func k l =
+  case l of
+      [] => raise ERR "op_rev_assoc" "not found"
+    | (ob,key) :: rest => if eq_func k key then ob
+                          else op_rev_assoc eq_func k rest
+
 (*---------------------------------------------------------------------------*)
 (* Topologically sort a list wrt partial order R.                            *)
 (*---------------------------------------------------------------------------*)
@@ -313,14 +320,44 @@ fun unprime s =
       else raise ERR "unprime" "string doesn't end with a prime"
    end
 
+fun extract_pc s =
+    let
+      (* c = # of primes seen;
+         i = current index into string, terminate on -1
+         -- does right thing on UTF8 encoded codepoints
+       *)
+      fun recurse c i =
+          if i < 0 then ("", c)
+          else if String.sub(s,i) = #"'" then recurse (c + 1) (i - 1)
+          else (String.substring(s,0,i+1), c)
+    in
+      recurse 0 (String.size s - 1)
+    end
+
+
 fun unprefix pfx s =
    if String.isPrefix pfx s
       then String.extract (s, size pfx, NONE)
    else raise ERR "unprefix" "1st argument is not a prefix of 2nd argument"
 
-(* like HOLPP.pp_to_string but uses the Globals.linewidth reference to
-   determine linewidth *)
-fun ppstring pp x = HOLPP.pp_to_string (!Globals.linewidth) pp x
+fun ppstring pf x = HOLPP.pp_to_string (!Globals.linewidth) pf x
+
+fun delete_trailing_wspace s =
+  let
+    val toks = String.fields (equal #"\n") s
+    fun do1 i s =
+      if i < 0 then ""
+      else if Char.isSpace (String.sub(s,i)) then do1 (i - 1) s
+      else String.extract(s,0,SOME(i + 1))
+    fun remove_rptd_nls i cnt s =
+      if i < 0 then if cnt > 0 then "\n" else ""
+      else if String.sub(s,i) = #"\n" then
+        remove_rptd_nls (i - 1) (cnt + 1) s
+      else String.extract(s,0,SOME(i + 1 + (if cnt > 0 then 1 else 0)))
+    val s1 = String.concatWith "\n" (map (fn s => do1 (size s - 1) s) toks)
+  in
+    remove_rptd_nls (size s1 - 1) 0 s1
+  end
 
 (*---------------------------------------------------------------------------*
  * Timing                                                                    *
@@ -390,5 +427,8 @@ fun op Un p = HOLset.union p
 fun op Isct p = HOLset.intersection p
 fun op -- p = HOLset.difference p
 fun op IN (e,s) = HOLset.member(s,e)
+
+(* more equality function functions *)
+fun subst_eq aeq beq = list_eq (redres_eq aeq beq)
 
 end (* Lib *)

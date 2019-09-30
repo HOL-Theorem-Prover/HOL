@@ -62,8 +62,6 @@ val DUMMY_KEYS_def =
 (* Orchestrate the round computations.                                       *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Globals.priming := SOME ""
-
 val (RoundTuple_def, RoundTuple_ind) = Defn.tprove
  (Hol_defn
    "RoundTuple"
@@ -141,7 +139,7 @@ val AES_LEMMA = Q.store_thm
      order that the state also has.
  ---------------------------------------------------------------------------*)
 
-val _ = set_fixity "XOR8x4"  (Infixr 350);
+val _ = set_fixity "XOR8x4"  (Infixl 500);
 
 val XOR8x4_def =
  Define
@@ -193,7 +191,6 @@ val mk_keysched_def = Define
 (*---------------------------------------------------------------------------*)
 (* Sanity check                                                              *)
 (*---------------------------------------------------------------------------*)
-val _ = Globals.priming := SOME"";
 
 (*
 val PolyExp = Q.prove

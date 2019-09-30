@@ -67,87 +67,87 @@ val SAT_BOX_ENV_INV2 = save_thm("SAT_BOX_ENV_INV2", prove(``!(ks:('prop,'state) 
 
 val SAT_LFP_ENV_INV =
     save_thm("SAT_LFP_ENV_INV",
-	     prove(``!(ks:('prop,'state) KS)  s Q f e e'. (!s X e e'. MU_SAT f ks e[[[Q<--X]]] s = MU_SAT f ks e'[[[Q<--X]]] s)
-		      ==> (MU_SAT (mu Q.. f) ks e s = MU_SAT (mu Q .. f) ks e' s)``,
-		      SIMP_TAC std_ss [MU_SAT_def,STATES_def,SET_SPEC]
-		      THEN REPEAT STRIP_TAC
-		      THEN (SUBGOAL_THEN ``!(n:num) (s: 'state) . (s :'state) IN
-		      FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
-		      (e :string -> 'state -> bool)[[[Q<--{}]]] n = s IN FP f Q (ks: ('prop,'state) KS)
-								  (e' :string -> 'state -> bool)[[[Q<--{}]]] n``
-								  (fn th => ASSUM_LIST (fn t => PROVE_TAC (th::t))))
-		      THEN Induct_on `n`
-		      THENL [SIMP_TAC std_ss [STATES_def,ENV_UPDATE_def,NOT_IN_EMPTY],
-			     FULL_SIMP_TAC std_ss [IN_DEF,STATES_def,SYM (ISPECL [`` FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
-										     (e :string -> 'state -> bool)[[[Q<--{}]]]
-										     (n :num)``,``FP (f :'prop mu) (Q :string)
-										     (ks :('prop,'state) KS)
-										     (e':string -> 'state -> bool)[[[Q<--{}]]]
-										     (n :num)``] FUN_EQ_THM),ENV_UPDATE]]))
+             prove(``!(ks:('prop,'state) KS)  s Q f e e'. (!s X e e'. MU_SAT f ks e[[[Q<--X]]] s = MU_SAT f ks e'[[[Q<--X]]] s)
+                      ==> (MU_SAT (mu Q.. f) ks e s = MU_SAT (mu Q .. f) ks e' s)``,
+                      SIMP_TAC std_ss [MU_SAT_def,STATES_def,SET_SPEC]
+                      THEN REPEAT STRIP_TAC
+                      THEN (SUBGOAL_THEN ``!(n:num) (s: 'state) . (s :'state) IN
+                      FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
+                      (e :string -> 'state -> bool)[[[Q<--{}]]] n = s IN FP f Q (ks: ('prop,'state) KS)
+                                                                  (e' :string -> 'state -> bool)[[[Q<--{}]]] n``
+                                                                  (fn th => ASSUM_LIST (fn t => PROVE_TAC (th::t))))
+                      THEN Induct_on `n`
+                      THENL [SIMP_TAC std_ss [STATES_def,ENV_UPDATE_def,NOT_IN_EMPTY],
+                             FULL_SIMP_TAC std_ss [IN_DEF,STATES_def,SYM (ISPECL [`` FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
+                                                                                     (e :string -> 'state -> bool)[[[Q<--{}]]]
+                                                                                     (n :num)``,``FP (f :'prop mu) (Q :string)
+                                                                                     (ks :('prop,'state) KS)
+                                                                                     (e':string -> 'state -> bool)[[[Q<--{}]]]
+                                                                                     (n :num)``] FUN_EQ_THM),ENV_UPDATE]]))
 
 val SAT_LFP_ENV_INV2 =
     save_thm("SAT_LFP_ENV_INV2",
-	     prove(``!(ks:('prop,'state) KS)  Q f e e'. (!X. MU_SAT f ks e[[[Q<--X]]] = MU_SAT f ks e'[[[Q<--X]]])
-		      ==> (MU_SAT (mu Q.. f) ks e = MU_SAT (mu Q .. f) ks e')``,
-		      REPEAT STRIP_TAC
-		      THEN CONV_TAC FUN_EQ_CONV
-		      THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META2,MU_SAT_def,STATES_def,SET_SPEC]
-		      THEN REPEAT STRIP_TAC
-		      THEN (SUBGOAL_THEN ``!(n:num) (s: 'state) . (s :'state) IN
-		      FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
-		      (e :string -> 'state -> bool)[[[Q<--{}]]] n = s IN FP f Q (ks: ('prop,'state) KS)
-								  (e' :string -> 'state -> bool)[[[Q<--{}]]] n``
-								  (fn th => ASSUM_LIST (fn t => PROVE_TAC (th::t))))
-		      THEN Induct_on `n`
-		      THENL [SIMP_TAC std_ss [STATES_def,ENV_UPDATE_def,NOT_IN_EMPTY],
-			     FULL_SIMP_TAC std_ss [IN_DEF,STATES_def,SYM (ISPECL [`` FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
-										     (e :string -> 'state -> bool)[[[Q<--{}]]]
-										     (n :num)``,``FP (f :'prop mu) (Q :string)
-										     (ks :('prop,'state) KS)
-										     (e':string -> 'state -> bool)[[[Q<--{}]]]
-										     (n :num)``] FUN_EQ_THM),ENV_UPDATE]]))
+             prove(``!(ks:('prop,'state) KS)  Q f e e'. (!X. MU_SAT f ks e[[[Q<--X]]] = MU_SAT f ks e'[[[Q<--X]]])
+                      ==> (MU_SAT (mu Q.. f) ks e = MU_SAT (mu Q .. f) ks e')``,
+                      REPEAT STRIP_TAC
+                      THEN CONV_TAC FUN_EQ_CONV
+                      THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META2,MU_SAT_def,STATES_def,SET_SPEC]
+                      THEN REPEAT STRIP_TAC
+                      THEN (SUBGOAL_THEN ``!(n:num) (s: 'state) . (s :'state) IN
+                      FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
+                      (e :string -> 'state -> bool)[[[Q<--{}]]] n = s IN FP f Q (ks: ('prop,'state) KS)
+                                                                  (e' :string -> 'state -> bool)[[[Q<--{}]]] n``
+                                                                  (fn th => ASSUM_LIST (fn t => PROVE_TAC (th::t))))
+                      THEN Induct_on `n`
+                      THENL [SIMP_TAC std_ss [STATES_def,ENV_UPDATE_def,NOT_IN_EMPTY],
+                             FULL_SIMP_TAC std_ss [IN_DEF,STATES_def,SYM (ISPECL [`` FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
+                                                                                     (e :string -> 'state -> bool)[[[Q<--{}]]]
+                                                                                     (n :num)``,``FP (f :'prop mu) (Q :string)
+                                                                                     (ks :('prop,'state) KS)
+                                                                                     (e':string -> 'state -> bool)[[[Q<--{}]]]
+                                                                                     (n :num)``] FUN_EQ_THM),ENV_UPDATE]]))
 
 val SAT_GFP_ENV_INV =
     save_thm("SAT_GFP_ENV_INV",
-	     prove(``!(ks:('prop,'state) KS)  s Q f e e'. (!s X e e'. MU_SAT f ks e[[[Q<--X]]] s = MU_SAT f ks e'[[[Q<--X]]] s)
-		      ==> (MU_SAT (nu Q.. f) ks e s = MU_SAT (nu Q .. f) ks e' s)``,
-		      SIMP_TAC std_ss [MU_SAT_def,STATES_def,SET_SPEC]
-		      THEN REPEAT STRIP_TAC
-		      THEN (SUBGOAL_THEN ``!(n:num) (s: 'state) . (s :'state) IN
-		      FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
-		      (e :string -> 'state -> bool)[[[Q<--ks.S]]] n = s IN FP f Q (ks: ('prop,'state) KS)
-								  (e' :string -> 'state -> bool)[[[Q<--ks.S]]] n``
-								  (fn th => ASSUM_LIST (fn t => PROVE_TAC (th::t))))
-		      THEN Induct_on `n`
-		      THENL [SIMP_TAC std_ss [STATES_def,ENV_UPDATE_def,NOT_IN_EMPTY],
-			     FULL_SIMP_TAC std_ss [IN_DEF,STATES_def,SYM (ISPECL [`` FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
-										   (e :string -> 'state -> bool)[[[Q<--ks.S]]]
-										   (n :num)``,``FP (f :'prop mu) (Q :string)
-										   (ks :('prop,'state) KS)
-										   (e':string -> 'state -> bool)[[[Q<--ks.S]]]
-										   (n :num)``] FUN_EQ_THM),ENV_UPDATE]]))
+             prove(``!(ks:('prop,'state) KS)  s Q f e e'. (!s X e e'. MU_SAT f ks e[[[Q<--X]]] s = MU_SAT f ks e'[[[Q<--X]]] s)
+                      ==> (MU_SAT (nu Q.. f) ks e s = MU_SAT (nu Q .. f) ks e' s)``,
+                      SIMP_TAC std_ss [MU_SAT_def,STATES_def,SET_SPEC]
+                      THEN REPEAT STRIP_TAC
+                      THEN (SUBGOAL_THEN ``!(n:num) (s: 'state) . (s :'state) IN
+                      FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
+                      (e :string -> 'state -> bool)[[[Q<--ks.S]]] n = s IN FP f Q (ks: ('prop,'state) KS)
+                                                                  (e' :string -> 'state -> bool)[[[Q<--ks.S]]] n``
+                                                                  (fn th => ASSUM_LIST (fn t => PROVE_TAC (th::t))))
+                      THEN Induct_on `n`
+                      THENL [SIMP_TAC std_ss [STATES_def,ENV_UPDATE_def,NOT_IN_EMPTY],
+                             FULL_SIMP_TAC std_ss [IN_DEF,STATES_def,SYM (ISPECL [`` FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
+                                                                                   (e :string -> 'state -> bool)[[[Q<--ks.S]]]
+                                                                                   (n :num)``,``FP (f :'prop mu) (Q :string)
+                                                                                   (ks :('prop,'state) KS)
+                                                                                   (e':string -> 'state -> bool)[[[Q<--ks.S]]]
+                                                                                   (n :num)``] FUN_EQ_THM),ENV_UPDATE]]))
 
 val SAT_GFP_ENV_INV2 =
     save_thm("SAT_GFP_ENV_INV2",
-	     prove(``!(ks:('prop,'state) KS)  Q f e e'. (!X. MU_SAT f ks e[[[Q<--X]]] = MU_SAT f ks e'[[[Q<--X]]])
-		      ==> (MU_SAT (nu Q.. f) ks e = MU_SAT (nu Q .. f) ks e')``,
-		      REPEAT STRIP_TAC
-		      THEN CONV_TAC FUN_EQ_CONV
-		      THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META2,MU_SAT_def,STATES_def,SET_SPEC]
-		      THEN REPEAT STRIP_TAC
-		      THEN (SUBGOAL_THEN ``!(n:num) (s: 'state) . (s :'state) IN
-		      FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
-		      (e :string -> 'state -> bool)[[[Q<--ks.S]]] n = s IN FP f Q (ks: ('prop,'state) KS)
-								  (e' :string -> 'state -> bool)[[[Q<--ks.S]]] n``
-								  (fn th => ASSUM_LIST (fn t => PROVE_TAC (th::t))))
-		      THEN Induct_on `n`
-		      THENL [SIMP_TAC std_ss [STATES_def,ENV_UPDATE_def,NOT_IN_EMPTY],
-			     FULL_SIMP_TAC std_ss [IN_DEF,STATES_def,SYM (ISPECL [`` FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
-										   (e :string -> 'state -> bool)[[[Q<--ks.S]]]
-										   (n :num)``,``FP (f :'prop mu) (Q :string)
-										   (ks :('prop,'state) KS)
-										   (e':string -> 'state -> bool)[[[Q<--ks.S]]]
-										   (n :num)``] FUN_EQ_THM),ENV_UPDATE]]))
+             prove(``!(ks:('prop,'state) KS)  Q f e e'. (!X. MU_SAT f ks e[[[Q<--X]]] = MU_SAT f ks e'[[[Q<--X]]])
+                      ==> (MU_SAT (nu Q.. f) ks e = MU_SAT (nu Q .. f) ks e')``,
+                      REPEAT STRIP_TAC
+                      THEN CONV_TAC FUN_EQ_CONV
+                      THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META2,MU_SAT_def,STATES_def,SET_SPEC]
+                      THEN REPEAT STRIP_TAC
+                      THEN (SUBGOAL_THEN ``!(n:num) (s: 'state) . (s :'state) IN
+                      FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
+                      (e :string -> 'state -> bool)[[[Q<--ks.S]]] n = s IN FP f Q (ks: ('prop,'state) KS)
+                                                                  (e' :string -> 'state -> bool)[[[Q<--ks.S]]] n``
+                                                                  (fn th => ASSUM_LIST (fn t => PROVE_TAC (th::t))))
+                      THEN Induct_on `n`
+                      THENL [SIMP_TAC std_ss [STATES_def,ENV_UPDATE_def,NOT_IN_EMPTY],
+                             FULL_SIMP_TAC std_ss [IN_DEF,STATES_def,SYM (ISPECL [`` FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
+                                                                                   (e :string -> 'state -> bool)[[[Q<--ks.S]]]
+                                                                                   (n :num)``,``FP (f :'prop mu) (Q :string)
+                                                                                   (ks :('prop,'state) KS)
+                                                                                   (e':string -> 'state -> bool)[[[Q<--ks.S]]]
+                                                                                   (n :num)``] FUN_EQ_THM),ENV_UPDATE]]))
 
 
 (* thms used by checker for ado *)
@@ -215,7 +215,7 @@ THEN METIS_TAC [STATES_LFP_2]))
 
 val GEN_STATES_LFP =  prove(``!f ks e e' Q. wfKS ks /\ IMF (mu Q.. f) /\
          (!Q'. (if ~RV Q' SUBF NNF f then e Q' = e' Q' else e Q' SUBSET e' Q')) ==>
-			    (!n. FP f Q ks e[[[Q<--{}]]] n SUBSET FP f Q ks e'[[[Q<--{}]]] n)``,
+                            (!n. FP f Q ks e[[[Q<--{}]]] n SUBSET FP f Q ks e'[[[Q<--{}]]] n)``,
 REPEAT STRIP_TAC
 THEN Induct_on `n` THENL [
 FULL_SIMP_TAC std_ss [STATES_def,ENV_UPDATE,SUBSET_REFL,ENV_EVAL],
@@ -224,7 +224,7 @@ THEN METIS_TAC [STATES_MONO,SUBSET_REFL]])
 
 val GEN_STATES_FP_BIGUNION = save_thm("GEN_STATES_FP_BIGUNION",prove(``!f ks e e' Q.  wfKS ks /\ IMF (mu Q.. f) /\
          (!Q'. (if ~RV Q' SUBF NNF f then e Q' = e' Q' else e Q' SUBSET e' Q')) ==>
-		  BIGUNION {P | ?n. (P = FP f Q ks e[[[Q<--{}]]] n)} SUBSET BIGUNION {P | ?n. (P = FP f Q ks e'[[[Q<--{}]]] n)}``,
+                  BIGUNION {P | ?n. (P = FP f Q ks e[[[Q<--{}]]] n)} SUBSET BIGUNION {P | ?n. (P = FP f Q ks e'[[[Q<--{}]]] n)}``,
 REPEAT STRIP_TAC
 THEN SIMP_TAC std_ss [BIGUNION,SET_SPEC,SUBSET_DEF]
 THEN REPEAT STRIP_TAC
@@ -303,7 +303,7 @@ THEN METIS_TAC [STATES_GFP_2]))
 
 val GEN_STATES_GFP =  prove(``!f ks e e' Q.wfKS ks /\ IMF (nu Q.. f) /\
          (!Q'. (if ~RV Q' SUBF NNF f then e Q' = e' Q' else e Q' SUBSET e' Q'))  ==>
-			    (!n. FP f Q ks e[[[Q<--ks.S]]] n SUBSET FP f Q ks e'[[[Q<--ks.S]]] n)``,
+                            (!n. FP f Q ks e[[[Q<--ks.S]]] n SUBSET FP f Q ks e'[[[Q<--ks.S]]] n)``,
 REPEAT STRIP_TAC
 THEN Induct_on `n` THENL [
 FULL_SIMP_TAC std_ss [STATES_def,ENV_UPDATE,SUBSET_REFL,ENV_EVAL],

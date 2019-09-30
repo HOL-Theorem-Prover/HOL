@@ -72,7 +72,7 @@ end t
 
 fun INSTANCE_T_CONV detector conv tm =
  let val (univs,tm') = strip_forall tm
-     val insts = Lib.mk_set (detector tm')
+     val insts = Lib.op_mk_set aconv (detector tm')
      val vars = map (genvar o type_of) insts
      val s = map2 (curry op |->) insts vars
      val tm'' = list_mk_forall (vars, subst s tm')

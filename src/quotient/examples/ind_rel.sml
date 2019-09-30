@@ -21,7 +21,7 @@
          thm               (* strong induction theorem *)
       rule_induct :
          thm ->            (* induction theorem (strong or regular) *)
-	 tactic            (* sets up induction *)      *)
+         tactic            (* sets up induction *)      *)
 
 (* For interactive session, do the following:
 load "utilsLib";
@@ -31,8 +31,6 @@ structure ind_rel :> ind_rel =
 struct
 
 open HolKernel Parse boolLib;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-infixr -->;
 
 val nth = List.nth;
 
@@ -151,20 +149,16 @@ fun check_inductive_relations patterns rules_term =
 
 let
 
-fun member item (thing::more_things) =
-    if item = thing then true else member item more_things
-  | member item [] = false
-
 (* if neither A_list nor B_list have any duplicates, but possibly
    A_list and B_list have some common elements, then the result will
    be a list with no common elements *)
 fun append_no_dup (A_list, B_list) =
     let fun helper (A::As) B_list As_to_add =
-	    if member A B_list then helper As B_list As_to_add
-	    else helper As B_list (A::As_to_add)
-	  | helper [] B_list As_to_add = (rev As_to_add)@B_list
+            if tmem A B_list then helper As B_list As_to_add
+            else helper As B_list (A::As_to_add)
+          | helper [] B_list As_to_add = (rev As_to_add)@B_list
     in
-	helper A_list B_list []
+        helper A_list B_list []
     end
 
 (* val nth = Sml_system.List.nth *)
@@ -173,13 +167,13 @@ fun append_no_dup (A_list, B_list) =
    the "argument" types, [a1_ty, a2_ty, ... a(n-1)_ty] *)
 fun get_arg_types ftn_type =
     let fun helper the_type arg_types =
-	let val (tyop, args) = dest_type the_type
-	in
-	    if (tyop = "fun") andalso (args <> []) then
-		helper (nth (args, 1)) ((hd args)::arg_types)
-	    else
-		rev arg_types
-	end
+        let val (tyop, args) = dest_type the_type
+        in
+            if (tyop = "fun") andalso (args <> []) then
+                helper (nth (args, 1)) ((hd args)::arg_types)
+            else
+                rev arg_types
+        end
     in helper ftn_type []
     end
 
@@ -190,8 +184,8 @@ fun get_arg_types ftn_type =
 fun ensure_vars_different (var::vars) new_vars vars_to_avoid =
     let val new_var = Term.variant vars_to_avoid var
     in
-	ensure_vars_different vars (new_var::new_vars)
-	(new_var::vars_to_avoid)
+        ensure_vars_different vars (new_var::new_vars)
+        (new_var::vars_to_avoid)
     end
   | ensure_vars_different [] new_vars _ = rev new_vars
 
@@ -221,64 +215,64 @@ val all_variables = all_vars rules_term
 
 (* relations are variables at this point *)
 fun relations_in_tm tm =
-    if is_var tm then member tm relations else
+    if is_var tm then tmem tm relations else
     if is_const tm then false else
     if is_abs tm then relations_in_tm (body tm) else
     (* must be comb *)
-	let val (t1, t2) = dest_comb tm in
-	    relations_in_tm t1 orelse relations_in_tm t2
-	end
+        let val (t1, t2) = dest_comb tm in
+            relations_in_tm t1 orelse relations_in_tm t2
+        end
 
 (* this function makess sure that the rules are of the form needed *)
 fun check_rule rule_num rule =
     let fun check_hyp (hyp1::hyps) =
-	    let val (rator, rands) = strip_comb hyp1 in
-		if member rator relations then
-		    (* check that the relations don't occur in rands *)
-		    if (foldr (fn (tm, acc) => relations_in_tm tm orelse acc)
-			false rands) then
-			raise HOL_ERR
-			    {message = "found relation being defined"^
-			     " in arg to "^(fst(dest_var rator))^
-			     " in hypothesis ofrule number "^
-			     (Lib.int_to_string rule_num),
-			     origin_function = "check_rule",
-			     origin_structure = "define_inductive_relations"}
-		    else check_hyp hyps
-		else if relations_in_tm hyp1 then raise HOL_ERR
-		    {message = "found relation being defined"^
-		     " in side condition in rule number "^
-		     (Lib.int_to_string rule_num),
-		     origin_function = "check_rule",
-		     origin_structure = "define_inductive_relations"}
-		     else check_hyp hyps
-	    end |
-	    check_hyp [] = true
-	fun check_concl tm =
-	    let val (rator, rands) = strip_comb tm in
-		if not (member rator relations) then raise HOL_ERR
-		    {message = "must have relation as operator in "^
-		     "conclusion of rule "^(Lib.int_to_string rule_num),
-		     origin_function = "check_rule",
-		     origin_structure = "define_inductive_relations"} else
-		if (foldr (fn (tm, acc) => relations_in_tm tm orelse acc)
-		    false rands) then raise HOL_ERR
-		    {message = "found relation being defined"^
-		     " in arg to "^(fst(dest_var rator))^
-		     " in conclusion of rule number "^
-		     (Lib.int_to_string rule_num),
-		     origin_function = "check_rule",
-		     origin_structure = "define_inductive_relations"}
-		else true
-	    end
+            let val (rator, rands) = strip_comb hyp1 in
+                if tmem rator relations then
+                    (* check that the relations don't occur in rands *)
+                    if (foldr (fn (tm, acc) => relations_in_tm tm orelse acc)
+                        false rands) then
+                        raise HOL_ERR
+                            {message = "found relation being defined"^
+                             " in arg to "^(fst(dest_var rator))^
+                             " in hypothesis ofrule number "^
+                             (Lib.int_to_string rule_num),
+                             origin_function = "check_rule",
+                             origin_structure = "define_inductive_relations"}
+                    else check_hyp hyps
+                else if relations_in_tm hyp1 then raise HOL_ERR
+                    {message = "found relation being defined"^
+                     " in side condition in rule number "^
+                     (Lib.int_to_string rule_num),
+                     origin_function = "check_rule",
+                     origin_structure = "define_inductive_relations"}
+                     else check_hyp hyps
+            end |
+            check_hyp [] = true
+        fun check_concl tm =
+            let val (rator, rands) = strip_comb tm in
+                if not (tmem rator relations) then raise HOL_ERR
+                    {message = "must have relation as operator in "^
+                     "conclusion of rule "^(Lib.int_to_string rule_num),
+                     origin_function = "check_rule",
+                     origin_structure = "define_inductive_relations"} else
+                if (foldr (fn (tm, acc) => relations_in_tm tm orelse acc)
+                    false rands) then raise HOL_ERR
+                    {message = "found relation being defined"^
+                     " in arg to "^(fst(dest_var rator))^
+                     " in conclusion of rule number "^
+                     (Lib.int_to_string rule_num),
+                     origin_function = "check_rule",
+                     origin_structure = "define_inductive_relations"}
+                else true
+            end
     in
-	if is_imp rule then
-	    let val (hyp1, conc) = dest_imp rule in
-		check_hyp (strip_conj hyp1) andalso
-		check_concl conc
-	    end
-	else
-	    check_concl rule
+        if is_imp rule then
+            let val (hyp1, conc) = dest_imp rule in
+                check_hyp (strip_conj hyp1) andalso
+                check_concl conc
+            end
+        else
+            check_concl rule
     end
 
 fun check_rules rule_num (rule::rules) =
@@ -290,9 +284,9 @@ val _ = check_rules 0 orig_rules
 (* now sort the rules according to the relation that they are for *)
 fun rule_defines_relation rule relation =
     if is_imp rule then
-	relation = fst (strip_comb (snd (dest_imp rule)))
+      relation ~~ fst (strip_comb (snd (dest_imp rule)))
     else
-	relation = fst (strip_comb rule)
+      relation ~~ fst (strip_comb rule)
 
 val sorted_rules = map
     (fn rel => (filter (fn x => rule_defines_relation x rel) orig_rules))
@@ -305,23 +299,23 @@ val rules = foldr (fn (l1, l2) => l1@l2) [] sorted_rules
    conclusion and existentially those in the hypothesis *)
 fun quantify_rule rule =
     if is_imp rule then
-	let val (t1, t2) = dest_imp rule
-	    val vars_in_t2 = filter (fn v => not (member v relations))
-		(free_vars t2)
-	    val total_vars = vars_in_t2@relations
-	    val vars_in_t1 = filter
-		(fn v => not (member v total_vars)) (free_vars t1)
-	    val new_t1 = list_mk_exists (rev vars_in_t1, t1)
-	    val new_imp = mk_imp (new_t1, t2)
-	in
-	    list_mk_forall (rev vars_in_t2, new_imp)
-	end
+        let val (t1, t2) = dest_imp rule
+            val vars_in_t2 = filter (fn v => not (tmem v relations))
+                                    (free_vars t2)
+            val total_vars = vars_in_t2@relations
+            val vars_in_t1 = filter
+                               (fn v => not (tmem v total_vars)) (free_vars t1)
+            val new_t1 = list_mk_exists (rev vars_in_t1, t1)
+            val new_imp = mk_imp (new_t1, t2)
+        in
+            list_mk_forall (rev vars_in_t2, new_imp)
+        end
     else
-	let val vars_in_rule = filter
-	    (fn v => not (member v relations)) (free_vars rule)
-	in
-	    list_mk_forall (rev vars_in_rule, rule)
-	end
+        let val vars_in_rule = filter
+            (fn v => not (tmem v relations)) (free_vars rule)
+        in
+            list_mk_forall (rev vars_in_rule, rule)
+        end
 
 val new_rules = map quantify_rule rules
 
@@ -402,20 +396,16 @@ fun define_inductive_relations patterns rules_term =
 
 let
 
-fun member item (thing::more_things) =
-    if item = thing then true else member item more_things
-  | member item [] = false
-
 (* if neither A_list nor B_list have any duplicates, but possibly
    A_list and B_list have some common elements, then the result will
    be a list with no common elements *)
 fun append_no_dup (A_list, B_list) =
     let fun helper (A::As) B_list As_to_add =
-	    if member A B_list then helper As B_list As_to_add
-	    else helper As B_list (A::As_to_add)
-	  | helper [] B_list As_to_add = (rev As_to_add)@B_list
+            if tmem A B_list then helper As B_list As_to_add
+            else helper As B_list (A::As_to_add)
+          | helper [] B_list As_to_add = (rev As_to_add)@B_list
     in
-	helper A_list B_list []
+        helper A_list B_list []
     end
 
 (* val nth = Sml_system.List.nth *)
@@ -424,13 +414,13 @@ fun append_no_dup (A_list, B_list) =
    the "argument" types, [a1_ty, a2_ty, ... a(n-1)_ty] *)
 fun get_arg_types ftn_type =
     let fun helper the_type arg_types =
-	let val (tyop, args) = dest_type the_type
-	in
-	    if (tyop = "fun") andalso (args <> []) then
-		helper (nth (args, 1)) ((hd args)::arg_types)
-	    else
-		rev arg_types
-	end
+        let val (tyop, args) = dest_type the_type
+        in
+            if (tyop = "fun") andalso (args <> []) then
+                helper (nth (args, 1)) ((hd args)::arg_types)
+            else
+                rev arg_types
+        end
     in helper ftn_type []
     end
 
@@ -441,8 +431,8 @@ fun get_arg_types ftn_type =
 fun ensure_vars_different (var::vars) new_vars vars_to_avoid =
     let val new_var = Term.variant vars_to_avoid var
     in
-	ensure_vars_different vars (new_var::new_vars)
-	(new_var::vars_to_avoid)
+        ensure_vars_different vars (new_var::new_vars)
+        (new_var::vars_to_avoid)
     end
   | ensure_vars_different [] new_vars _ = rev new_vars
 
@@ -472,64 +462,64 @@ val all_variables = all_vars rules_term
 
 (* relations are variables at this point *)
 fun relations_in_tm tm =
-    if is_var tm then member tm relations else
+    if is_var tm then tmem tm relations else
     if is_const tm then false else
     if is_abs tm then relations_in_tm (body tm) else
     (* must be comb *)
-	let val (t1, t2) = dest_comb tm in
-	    relations_in_tm t1 orelse relations_in_tm t2
-	end
+        let val (t1, t2) = dest_comb tm in
+            relations_in_tm t1 orelse relations_in_tm t2
+        end
 
 (* this function makess sure that the rules are of the form needed *)
 fun check_rule rule_num rule =
     let fun check_hyp (hyp1::hyps) =
-	    let val (rator, rands) = strip_comb hyp1 in
-		if member rator relations then
-		    (* check that the relations don't occur in rands *)
-		    if (foldr (fn (tm, acc) => relations_in_tm tm orelse acc)
-			false rands) then
-			raise HOL_ERR
-			    {message = "found relation being defined"^
-			     " in arg to "^(fst(dest_var rator))^
-			     " in hypothesis ofrule number "^
-			     (Lib.int_to_string rule_num),
-			     origin_function = "check_rule",
-			     origin_structure = "define_inductive_relations"}
-		    else check_hyp hyps
-		else if relations_in_tm hyp1 then raise HOL_ERR
-		    {message = "found relation being defined"^
-		     " in side condition in rule number "^
-		     (Lib.int_to_string rule_num),
-		     origin_function = "check_rule",
-		     origin_structure = "define_inductive_relations"}
-		     else check_hyp hyps
-	    end |
-	    check_hyp [] = true
-	fun check_concl tm =
-	    let val (rator, rands) = strip_comb tm in
-		if not (member rator relations) then raise HOL_ERR
-		    {message = "must have relation as operator in "^
-		     "conclusion of rule "^(Lib.int_to_string rule_num),
-		     origin_function = "check_rule",
-		     origin_structure = "define_inductive_relations"} else
-		if (foldr (fn (tm, acc) => relations_in_tm tm orelse acc)
-		    false rands) then raise HOL_ERR
-		    {message = "found relation being defined"^
-		     " in arg to "^(fst(dest_var rator))^
-		     " in conclusion of rule number "^
-		     (Lib.int_to_string rule_num),
-		     origin_function = "check_rule",
-		     origin_structure = "define_inductive_relations"}
-		else true
-	    end
+            let val (rator, rands) = strip_comb hyp1 in
+                if tmem rator relations then
+                    (* check that the relations don't occur in rands *)
+                    if (foldr (fn (tm, acc) => relations_in_tm tm orelse acc)
+                        false rands) then
+                        raise HOL_ERR
+                            {message = "found relation being defined"^
+                             " in arg to "^(fst(dest_var rator))^
+                             " in hypothesis ofrule number "^
+                             (Lib.int_to_string rule_num),
+                             origin_function = "check_rule",
+                             origin_structure = "define_inductive_relations"}
+                    else check_hyp hyps
+                else if relations_in_tm hyp1 then raise HOL_ERR
+                    {message = "found relation being defined"^
+                     " in side condition in rule number "^
+                     (Lib.int_to_string rule_num),
+                     origin_function = "check_rule",
+                     origin_structure = "define_inductive_relations"}
+                     else check_hyp hyps
+            end |
+            check_hyp [] = true
+        fun check_concl tm =
+            let val (rator, rands) = strip_comb tm in
+                if not (tmem rator relations) then raise HOL_ERR
+                    {message = "must have relation as operator in "^
+                     "conclusion of rule "^(Lib.int_to_string rule_num),
+                     origin_function = "check_rule",
+                     origin_structure = "define_inductive_relations"} else
+                if (foldr (fn (tm, acc) => relations_in_tm tm orelse acc)
+                    false rands) then raise HOL_ERR
+                    {message = "found relation being defined"^
+                     " in arg to "^(fst(dest_var rator))^
+                     " in conclusion of rule number "^
+                     (Lib.int_to_string rule_num),
+                     origin_function = "check_rule",
+                     origin_structure = "define_inductive_relations"}
+                else true
+            end
     in
-	if is_imp rule then
-	    let val (hyp1, conc) = dest_imp rule in
-		check_hyp (strip_conj hyp1) andalso
-		check_concl conc
-	    end
-	else
-	    check_concl rule
+        if is_imp rule then
+            let val (hyp1, conc) = dest_imp rule in
+                check_hyp (strip_conj hyp1) andalso
+                check_concl conc
+            end
+        else
+            check_concl rule
     end
 
 fun check_rules rule_num (rule::rules) =
@@ -541,9 +531,9 @@ val _ = check_rules 0 orig_rules
 (* now sort the rules according to the relation that they are for *)
 fun rule_defines_relation rule relation =
     if is_imp rule then
-	relation = fst (strip_comb (snd (dest_imp rule)))
+      relation ~~ fst (strip_comb (snd (dest_imp rule)))
     else
-	relation = fst (strip_comb rule)
+      relation ~~ fst (strip_comb rule)
 
 val sorted_rules = map
     (fn rel => (filter (fn x => rule_defines_relation x rel) orig_rules))
@@ -556,23 +546,23 @@ val rules = foldr (fn (l1, l2) => l1@l2) [] sorted_rules
    conclusion and existentially those in the hypothesis *)
 fun quantify_rule rule =
     if is_imp rule then
-	let val (t1, t2) = dest_imp rule
-	    val vars_in_t2 = filter (fn v => not (member v relations))
-		(free_vars t2)
-	    val total_vars = vars_in_t2@relations
-	    val vars_in_t1 = filter
-		(fn v => not (member v total_vars)) (free_vars t1)
-	    val new_t1 = list_mk_exists (rev vars_in_t1, t1)
-	    val new_imp = mk_imp (new_t1, t2)
-	in
-	    list_mk_forall (rev vars_in_t2, new_imp)
-	end
+        let val (t1, t2) = dest_imp rule
+            val vars_in_t2 = filter (fn v => not (tmem v relations))
+                (free_vars t2)
+            val total_vars = vars_in_t2@relations
+            val vars_in_t1 = filter
+                (fn v => not (tmem v total_vars)) (free_vars t1)
+            val new_t1 = list_mk_exists (rev vars_in_t1, t1)
+            val new_imp = mk_imp (new_t1, t2)
+        in
+            list_mk_forall (rev vars_in_t2, new_imp)
+        end
     else
-	let val vars_in_rule = filter
-	    (fn v => not (member v relations)) (free_vars rule)
-	in
-	    list_mk_forall (rev vars_in_rule, rule)
-	end
+        let val vars_in_rule = filter
+            (fn v => not (tmem v relations)) (free_vars rule)
+        in
+            list_mk_forall (rev vars_in_rule, rule)
+        end
 
 val new_rules = map quantify_rule rules
 val num_rules = length new_rules
@@ -583,7 +573,7 @@ val predicate = list_mk_abs (relations, list_mk_conj new_rules)
 
 fun add_poss var =
     let val (n, t) = dest_var var in
-	mk_var ("poss_"^n, t)
+        mk_var ("poss_"^n, t)
     end
 
 val poss_relations = ensure_vars_different (map add_poss relations) []
@@ -595,13 +585,13 @@ val vars_to_avoid = poss_relations@all_variables
 fun define_relations (vars::more_vars) (reltn::more_reltns)
     (poss_rel::more_poss) =
     let val applied_poss = list_mk_comb (poss_rel, vars)
-	val impli = mk_imp (applied_pred, applied_poss)
-	val quant = list_mk_forall (poss_relations, impli)
-	val applied_reltn = list_mk_comb (reltn, vars)
-	val def = mk_eq (applied_reltn, quant)
+        val impli = mk_imp (applied_pred, applied_poss)
+        val quant = list_mk_forall (poss_relations, impli)
+        val applied_reltn = list_mk_comb (reltn, vars)
+        val def = mk_eq (applied_reltn, quant)
     in
-	(new_definition ((fst (dest_var reltn))^"_DEF", def))::
-	(define_relations more_vars more_reltns more_poss)
+        (new_definition ((fst (dest_var reltn))^"_DEF", def))::
+        (define_relations more_vars more_reltns more_poss)
     end
   | define_relations _ _ _ = []
 
@@ -625,57 +615,57 @@ val relatn_consts = map (mk_const o dest_var) relations
 fun mk_more_tactics num_hyps count (hyp1::hyps) =
     let val (rator, rands) = strip_comb hyp1
         fun mk_still_more_tactics count =
-	    if count < num_rules + num_hyps then
-		(fn (asms, gl) =>
-		 let val rule_thm = ASSUME (nth (rev asms, count))
-		 in
-		     (ACCEPT_TAC rule_thm) (asms, gl)
-		 end)::mk_still_more_tactics (count + 1)
-	    else []
-	(* new_rules have vars for relations *)
-	val is_sentence = member rator relations
-	val yet_more_tactics =
-	    if is_sentence then	mk_still_more_tactics num_hyps
-	    else []
+            if count < num_rules + num_hyps then
+                (fn (asms, gl) =>
+                 let val rule_thm = ASSUME (nth (rev asms, count))
+                 in
+                     (ACCEPT_TAC rule_thm) (asms, gl)
+                 end)::mk_still_more_tactics (count + 1)
+            else []
+        (* new_rules have vars for relations *)
+        val is_sentence = tmem rator relations
+        val yet_more_tactics =
+            if is_sentence then mk_still_more_tactics num_hyps
+            else []
     in
-	fn (asms, gl) =>
-	let val rule_thm = ASSUME (nth (rev asms, count))
-	in
-	    if is_sentence then
-		(MP_IMP_TAC (SPEC_ALL rule_thm) THEN
-		 REPEAT CONJ_TAC THENL yet_more_tactics) (asms, gl)
-	    else
-		(ACCEPT_TAC rule_thm) (asms, gl)
-	end
+        fn (asms, gl) =>
+        let val rule_thm = ASSUME (nth (rev asms, count))
+        in
+            if is_sentence then
+                (MP_IMP_TAC (SPEC_ALL rule_thm) THEN
+                 REPEAT CONJ_TAC THENL yet_more_tactics) (asms, gl)
+            else
+                (ACCEPT_TAC rule_thm) (asms, gl)
+        end
     end::mk_more_tactics num_hyps (count + 1) hyps
   | mk_more_tactics _ _ [] = []
 
 fun mk_tactics count (rule::rules) =
     let val (forall_vars, body_tm) = strip_forall rule
-	val is_an_imp = is_imp body_tm
-	val hyp1 = if is_an_imp then fst (dest_imp body_tm) else “T”
-	val (exists_vars, hyp2) = if is_an_imp then strip_exists hyp1
-				  else ([], “T”)
-	val hyps = if is_an_imp then strip_conj hyp2 else []
-	val hyp_count = length hyps
-	val more_tactics =
-	    if is_an_imp then
-		mk_more_tactics hyp_count 0 hyps
-	    else []
+        val is_an_imp = is_imp body_tm
+        val hyp1 = if is_an_imp then fst (dest_imp body_tm) else “T”
+        val (exists_vars, hyp2) = if is_an_imp then strip_exists hyp1
+                                  else ([], “T”)
+        val hyps = if is_an_imp then strip_conj hyp2 else []
+        val hyp_count = length hyps
+        val more_tactics =
+            if is_an_imp then
+                mk_more_tactics hyp_count 0 hyps
+            else []
     in
-        if ((not is_an_imp) andalso (forall_vars = [])) then
-	    (mk_tactics (count + 1) rules)
-	else
-	    (fn (asms, gl) =>
-	     let val rule_thm = ASSUME (nth (rev asms, hyp_count + count))
-	     in
-		 if is_an_imp then
-		     (MP_IMP_TAC (SPEC_ALL rule_thm) THEN
-		      multi_var_exists THEN
-		      REPEAT CONJ_TAC THENL more_tactics) (asms, gl)
-		 else
-		     ACCEPT_TAC (SPEC_ALL rule_thm) (asms, gl)
-	     end)::(mk_tactics (count + 1) rules)
+        if not is_an_imp andalso null forall_vars then
+          (mk_tactics (count + 1) rules)
+        else
+            (fn (asms, gl) =>
+             let val rule_thm = ASSUME (nth (rev asms, hyp_count + count))
+             in
+                 if is_an_imp then
+                     (MP_IMP_TAC (SPEC_ALL rule_thm) THEN
+                      multi_var_exists THEN
+                      REPEAT CONJ_TAC THENL more_tactics) (asms, gl)
+                 else
+                     ACCEPT_TAC (SPEC_ALL rule_thm) (asms, gl)
+             end)::(mk_tactics (count + 1) rules)
     end
   | mk_tactics _ [] = []
 
@@ -695,7 +685,7 @@ val rules_sat = BETA_RULE first_rules_sat
 
 fun mk_prop_vars count (rel::rels) =
     mk_var ("P_"^(Lib.int_to_string count),
-	    snd (dest_var rel)) :: mk_prop_vars (count + 1) rels
+            snd (dest_var rel)) :: mk_prop_vars (count + 1) rels
   | mk_prop_vars _ [] = []
 
 val all_arg_vars = foldr
@@ -707,10 +697,10 @@ val prop_vars = ensure_vars_different
 fun mk_conjuncts (vars::more_vars) (con::more_cons)
     (prop_var::more_props) =
     let val impl = mk_imp (list_mk_comb (con, vars),
-			   list_mk_comb (prop_var, vars))
-	val quantified = list_mk_forall (vars, impl)
+                           list_mk_comb (prop_var, vars))
+        val quantified = list_mk_forall (vars, impl)
     in
-	quantified::(mk_conjuncts more_vars more_cons more_props)
+        quantified::(mk_conjuncts more_vars more_cons more_props)
     end
   | mk_conjuncts _  _ _ = []
 
@@ -724,9 +714,9 @@ val induction_thm_term = list_mk_forall
 
 fun finish_tac (asms, gl) =
     let val thm1 = SPECL prop_vars (ASSUME (hd asms))
-	val thm2 = ASSUME (nth (asms, 1))
+        val thm2 = ASSUME (nth (asms, 1))
     in
-	(MP_IMP_TAC thm1 THEN ACCEPT_TAC thm2) (asms, gl)
+        (MP_IMP_TAC thm1 THEN ACCEPT_TAC thm2) (asms, gl)
     end
 
 val ind_thm1 = TAC_PROOF
@@ -793,16 +783,16 @@ fun RULE thm1 thm2 =
    end;
 
 (* --------------------------------------------------------------------- *)
-(* EXISTS_IMP2 : existentially quantify the antecedent and conclusion 	 *)
-(* of an implication.							 *)
-(*									 *)
-(*        A |- P ==> Q							 *)
-(* -------------------------- EXISTS_IMP "x"				 *)
-(*   A |- (?x.P) ==> (?x.Q)						 *)
-(*									 *)
-(* LIKE built-in, but doesn't quantify in Q if not free there.		 *)
-(* Actually, used only in context where x not free in Q.		 *)
-(*									 *)
+(* EXISTS_IMP2 : existentially quantify the antecedent and conclusion    *)
+(* of an implication.                                                    *)
+(*                                                                       *)
+(*        A |- P ==> Q                                                   *)
+(* -------------------------- EXISTS_IMP "x"                             *)
+(*   A |- (?x.P) ==> (?x.Q)                                              *)
+(*                                                                       *)
+(* LIKE built-in, but doesn't quantify in Q if not free there.           *)
+(* Actually, used only in context where x not free in Q.                 *)
+(*                                                                       *)
 (* --------------------------------------------------------------------- *)
 fun EXISTS_IMP2 x th =
    let val (ant,conseq) = dest_imp(concl th)
@@ -841,7 +831,7 @@ fun RULE2 vs thm1 thm2 =
    end;
 
 (* ---------------------------------------------------------------------*)
-(* INTERNAL FUNCTION : LIST_NOT_FORALL					*)
+(* INTERNAL FUNCTION : LIST_NOT_FORALL                                  *)
 (*                                                                      *)
 (* If:                                                                  *)
 (*             |- ~P                                                    *)
@@ -899,12 +889,12 @@ end;
 (* relations are constants *)
 fun rel_in_term rel tm =
     if is_var tm then false else
-    if is_const tm then rel = tm else
+    if is_const tm then rel ~~ tm else
     if is_abs tm then rel_in_term rel (body tm) else
     (* must be comb *)
-	let val (t1, t2) = dest_comb tm in
-	    (rel_in_term rel t1) orelse (rel_in_term rel t2)
-	end
+        let val (t1, t2) = dest_comb tm in
+            (rel_in_term rel t1) orelse (rel_in_term rel t2)
+        end
 
 fun foldr ftn base (b::bs) = ftn (b, (foldr ftn base bs))
   | foldr ftn base [] = base
@@ -917,27 +907,27 @@ fun foldr ftn base (b::bs) = ftn (b, (foldr ftn base bs))
    form (rel args), OW ti' = ti *)
 local
     fun mk_1_imp rel hyp =
-	if not (rel_in_term rel hyp) then
-	    ASSUME hyp
-	else
-	    CONJUNCT1 (PURE_REWRITE_RULE [NOT_IMP] (ASSUME hyp))
+        if not (rel_in_term rel hyp) then
+            ASSUME hyp
+        else
+            CONJUNCT1 (PURE_REWRITE_RULE [NOT_IMP] (ASSUME hyp))
 in
 fun mk_implication rel tm =
     let
-	val (term_exists_vars, tm2) = strip_exists tm
-	val term_conjs = strip_conj tm2
+        val (term_exists_vars, tm2) = strip_exists tm
+        val term_conjs = strip_conj tm2
         (* imp_thms says, for each i, ti |- ti' *)
-	val imp_thms = map (mk_1_imp rel) term_conjs
+        val imp_thms = map (mk_1_imp rel) term_conjs
         (* imp_thm has form [t1, ... , tn] |- t1' /\ ... /\ tn' *)
-	val imp_thm = LIST_CONJ imp_thms
+        val imp_thm = LIST_CONJ imp_thms
         (* need to get thm of form
-	   t1 /\ ... /\ tn |- t1' /\ ... /\ tn' -- this is imp_thm2 *)
-	val imp_thm2 = foldr (fn (thm1, thm2) => PROVE_HYP thm1 thm2)
-	     imp_thm (CONJUNCTS (ASSUME tm2))
+           t1 /\ ... /\ tn |- t1' /\ ... /\ tn' -- this is imp_thm2 *)
+        val imp_thm2 = foldr (fn (thm1, thm2) => PROVE_HYP thm1 thm2)
+             imp_thm (CONJUNCTS (ASSUME tm2))
     in
         (* now existentially quantify over the variables in hyp and concl *)
-	UNDISCH (foldr (fn (var, thm) => EXISTS_IMP var thm)
-	     (DISCH_ALL imp_thm2) term_exists_vars)
+        UNDISCH (foldr (fn (var, thm) => EXISTS_IMP var thm)
+             (DISCH_ALL imp_thm2) term_exists_vars)
     end
 end
 
@@ -951,7 +941,7 @@ local
 in
 fun simp_rule sfn set vs rul th =
    let (* c1 = antecedant of term, c2 = conseq of term where term is
-	  roughly the conclusion of th, is term corresponding with rul *)
+          roughly the conclusion of th, is term corresponding with rul *)
        val (c1,c2) = CONJ_PAIR (CONV_RULE (REWR_CONV NOT_IMP) th)
        (* th1 is rel <args from term> ==> eqtns *)
        val th1 = NOT_NOT c2
@@ -965,8 +955,8 @@ fun simp_rule sfn set vs rul th =
        val this_rel = fst (strip_comb pat)
        (* change conjuncts of form ~(rel args ==> eqtns) to (rel args) *)
        val th2 = if (rel_in_term this_rel (concl c1)) then
-	   PROVE_HYP c1 (mk_implication this_rel (concl c1))
-	   else c1
+           PROVE_HYP c1 (mk_implication this_rel (concl c1))
+           else c1
        (* inst is substitution that replaces rule vars with vars from term *)
        val inst = fst(match_term (concl th3) pat)
        (* th_a is rule with vars from term instead of original vars *)
@@ -975,7 +965,7 @@ fun simp_rule sfn set vs rul th =
        (* The line below used to use MATCH_MP, not MP. I can't see how
           th_a could be universally quantified, and it caused a bug by
           MATCH_MP sticking primes on things where they didn't belong,
-	  so it's now just MP. If there's a problem here, this may need to
+          so it's now just MP. If there's a problem here, this may need to
           be looked into more closely *)
        val rins = MP th_a th2
        (* erins is <ant of rule> |- <concl of rule, with vars from term> *)
@@ -1012,9 +1002,9 @@ fun simp set sfn rul th =
        val rule_body = snd (strip_forall (concl rul))
    in
        if is_imp rule_body then
-	   LIST_NOT_FORALL (simp_rule sfn set vs rul) th
+           LIST_NOT_FORALL (simp_rule sfn set vs rul) th
        else
-	   LIST_NOT_FORALL (simp_axiom sfn vs rul) th
+           LIST_NOT_FORALL (simp_axiom sfn vs rul) th
    end;
 
 fun last [a] = a
@@ -1042,7 +1032,7 @@ fun divide_by_numbers (0::nums) elts partial_list full_lists =
     divide_by_numbers nums elts [] ((rev partial_list)::full_lists)
   | divide_by_numbers (num::nums) (elt::more_elts) partial_list full_lists =
     divide_by_numbers ((num-1)::nums) more_elts (elt::partial_list)
-	full_lists
+        full_lists
   | divide_by_numbers _ _ _ full_lists = rev full_lists
 
 local
@@ -1077,7 +1067,7 @@ end
 
 fun DISCH_nth n thm1 =
     let val asms = fst (dest_thm thm1) in
-	DISCH (nth (asms, n)) thm1 end
+        DISCH (nth (asms, n)) thm1 end
 
 fun elim_nth n (item::items) =
     if (n = 0) then items
@@ -1092,24 +1082,24 @@ fun process_rule rel tm rule =
         (?exists_vars. hyp1 /\ ... /\ hypn) ==> some_rel args
        the form of rule is
        |- !forall_vars.
-	(?exists_vars. hyp1' /\ ... /\ hypn') ==> some_rel args
+        (?exists_vars. hyp1' /\ ... /\ hypn') ==> some_rel args
        where for side conditions and hyps not involving rel, hypi = hypi',
        but for others, hypi = ~(rel argvars ==> (conjunction of equations))
        and hypi' = rel argvars. *)
     let val (forall_vars, term_body) = strip_forall tm
-	val speced_rule = SPECL forall_vars rule
-	val (term_ant, term_conseq) = dest_imp term_body
+        val speced_rule = SPECL forall_vars rule
+        val (term_ant, term_conseq) = dest_imp term_body
         (* imp_thm3 says (?exists_vars. hyp1 /\ ... /\ hypn) |-
-	                 (?exists_vars. hyp1' /\ ... /\ hypn') *)
-	val imp_thm3 = mk_implication rel term_ant
-	(* imp_thm4 says
+                         (?exists_vars. hyp1' /\ ... /\ hypn') *)
+        val imp_thm3 = mk_implication rel term_ant
+        (* imp_thm4 says
            |- (?exists_vars. hyp1 /\ ... /\ hypn) ==> some_rel args *)
-	val imp_thm4 = DISCH_ALL (MP speced_rule imp_thm3)
+        val imp_thm4 = DISCH_ALL (MP speced_rule imp_thm3)
         (* now quantify over the forall_vars *)
-	val proved_term = GENL forall_vars imp_thm4
+        val proved_term = GENL forall_vars imp_thm4
         (* now introduce T to get |- tm = T *)
     in
-	EQT_INTRO proved_term
+        EQT_INTRO proved_term
     end
 
 (* process_term is geven a term and a rule, and is expected to return a
@@ -1117,57 +1107,57 @@ fun process_rule rel tm rule =
 fun process_term rel tm rule =
     let val (forall_vars, rule_body) = strip_forall (concl rule)
     in
-	if not (is_imp rule_body) orelse not (rel_in_term rel tm) then
-	    EQT_INTRO rule
-	else
-	    process_rule rel tm rule
+        if not (is_imp rule_body) orelse not (rel_in_term rel tm) then
+            EQT_INTRO rule
+        else
+            process_rule rel tm rule
     end
 
 (* assemble a list of props such that only the one referring to this
    relation is something other than the relation itslef *)
 fun assemble_preds count (pred::more_preds) (rel::more_rels) =
     if count = 0 then
-	pred::(assemble_preds (count - 1) more_preds more_rels)
+        pred::(assemble_preds (count - 1) more_preds more_rels)
     else
-	rel::(assemble_preds (count - 1) more_preds more_rels)
+        rel::(assemble_preds (count - 1) more_preds more_rels)
   | assemble_preds count _ _ = []
 
 fun subst_in_subst theta =
   map (fn {redex,residue} => {redex=redex, residue = subst theta residue});
 
 (* --------------------------------------------------------------------- *)
-(* INTERNAL FUNCTION : reduce 						*)
-(* 									*)
-(* A call to 								*)
-(*									*)
-(*   reduce [v1;...;vn] ths [] []					*)
-(*									*)
-(* reduces the list of theorems ths to an equivalent list by removing 	*)
+(* INTERNAL FUNCTION : reduce                                           *)
+(*                                                                      *)
+(* A call to                                                            *)
+(*                                                                      *)
+(*   reduce [v1;...;vn] ths [] []                                       *)
+(*                                                                      *)
+(* reduces the list of theorems ths to an equivalent list by removing   *)
 (* theorems of the form |- vi = ti where vi does not occur free in ti,   *)
-(* first using this equation to substitute ti for vi in all the other	*)
-(* theorems. The theorems in ths are processed sequentially, so for 	*)
-(* example:								*)
-(*									*)
-(*   reduce [a;b] [|- a=1; |- b=a+2; |- c=a+b] [] []			*)
-(*									*)
-(* is reduced in the following stages:					*)
-(*									*)
-(*   [|- a=1; |- b=a+2; |- c=a+b]					*)
-(*   									*)
-(*   ===> [|- b=1+2; |- c=1+b]      (by the substitution [1/a])		*)
-(*   ===> [|- c=1+(1+2)]            (by the substitution [1+2/b])	*)
-(*									*)
+(* first using this equation to substitute ti for vi in all the other   *)
+(* theorems. The theorems in ths are processed sequentially, so for     *)
+(* example:                                                             *)
+(*                                                                      *)
+(*   reduce [a;b] [|- a=1; |- b=a+2; |- c=a+b] [] []                    *)
+(*                                                                      *)
+(* is reduced in the following stages:                                  *)
+(*                                                                      *)
+(*   [|- a=1; |- b=a+2; |- c=a+b]                                       *)
+(*                                                                      *)
+(*   ===> [|- b=1+2; |- c=1+b]      (by the substitution [1/a])         *)
+(*   ===> [|- c=1+(1+2)]            (by the substitution [1+2/b])       *)
+(*                                                                      *)
 (* The function returns the reduced list of theorems, paired with a list *)
-(* of the substitutions that were made, in reverse order.  The result 	*)
-(* for the above example would be [|- c = 1+(1+2)],[("1+2",b);("1",a)].	*)
+(* of the substitutions that were made, in reverse order.  The result   *)
+(* for the above example would be [|- c = 1+(1+2)],[("1+2",b);("1",a)]. *)
 (* --------------------------------------------------------------------- *)
 fun reduce vs ths res subf =
    if (null ths)
    then (rev res, subf)
    else let val (lhs,rhs) = dest_eq(concl(hd ths))
-            val (sth,pai) = if (mem lhs vs)
+            val (sth,pai) = if tmem lhs vs
                             then (hd ths,{redex=lhs,residue=rhs})
-                            else if (mem rhs vs)
+                            else if tmem rhs vs
                                  then (SYM(hd ths),{redex=rhs,residue=lhs})
                                  else bad_error ("reduce")
         in if (free_in (#redex pai) (#residue pai))
@@ -1182,30 +1172,29 @@ fun reduce vs ths res subf =
 fun subst_assoc tm =
    let fun assc [] = NONE
          | assc ({redex,residue}::rst) =
-            if (tm = redex)
-            then (SOME residue)
+            if tm ~~ redex then (SOME residue)
             else assc rst
    in assc
    end;
 
 (* --------------------------------------------------------------------- *)
-(* REDUCE : simplify an existentially quantified conjuction by		*)
-(* eliminating conjuncts of the form |- v=t, where v is among the 	*)
-(* quantified variables and v does not appear free in t. For example 	*)
-(* suppose:								*)
-(* 									*)
-(*   tm = "?vi. ?vs. C1 /\ ... /\ v = t /\ ... /\ Cn"			*)
-(*									*)
-(* then the result is:							*)
-(*									*)
-(*   |- (?vi. ?vs. C1 /\ ... /\ vi = ti /\ ... /\ Cn)			*)
-(*          =								*)
-(*      (?vs. C1[ti/vi] /\ ... /\ Cn[ti/vi])				*)
-(*									*)
-(* The equations vi = ti can appear as ti = vi, and all eliminable 	*)
-(* equations are eliminated.  Fails unless there is at least one	*)
-(* eliminable equation. Also flattens conjuncts. Reduces term to "T" if	*)
-(* all variables eliminable.						*)
+(* REDUCE : simplify an existentially quantified conjuction by          *)
+(* eliminating conjuncts of the form |- v=t, where v is among the       *)
+(* quantified variables and v does not appear free in t. For example    *)
+(* suppose:                                                             *)
+(*                                                                      *)
+(*   tm = "?vi. ?vs. C1 /\ ... /\ v = t /\ ... /\ Cn"                   *)
+(*                                                                      *)
+(* then the result is:                                                  *)
+(*                                                                      *)
+(*   |- (?vi. ?vs. C1 /\ ... /\ vi = ti /\ ... /\ Cn)                   *)
+(*          =                                                           *)
+(*      (?vs. C1[ti/vi] /\ ... /\ Cn[ti/vi])                            *)
+(*                                                                      *)
+(* The equations vi = ti can appear as ti = vi, and all eliminable      *)
+(* equations are eliminated.  Fails unless there is at least one        *)
+(* eliminable equation. Also flattens conjuncts. Reduces term to "T" if *)
+(* all variables eliminable.                                            *)
 (* ---------------------------------------------------------------------*)
 local
 fun chfn v (a,th) =
@@ -1226,7 +1215,7 @@ fun efn ss v (pat,th) =
 fun prove ths cs =
    (uncurry CONJ ((prove ths ## prove ths) (dest_conj cs)))
    handle _
-   => (Lib.first (fn t => concl t = cs) ths)
+   => (Lib.first (fn t => concl t ~~ cs) ths)
    handle _
    => (REFL (rand cs))
 in
@@ -1272,25 +1261,25 @@ val (argvars, imps) = foldr
 val exists_vars = foldr
     (fn (tm, vars) =>
      let val b1 = snd (strip_forall tm)
-	 val not_axiom = is_imp b1
-	 val more_vars =
-	     if not_axiom then
-		 fst (strip_exists (fst (dest_imp b1)))
-	     else []
+         val not_axiom = is_imp b1
+         val more_vars =
+             if not_axiom then
+                 fst (strip_exists (fst (dest_imp b1)))
+             else []
      in
-	 if not_axiom then more_vars@vars else vars
+         if not_axiom then more_vars@vars else vars
      end) [] (map concl rule_thms)
 fun rename_vars (vars::more_vars) vars_to_avoid renamed_vars =
     let fun do_one_bunch_vars (var::more_var) used_vars new_vars =
-	    let
-		val tmp_var = Term.variant used_vars var
-	    in do_one_bunch_vars more_var (tmp_var::used_vars)
-		(tmp_var::new_vars)
-	    end
-	  | do_one_bunch_vars _ _ new_vars = rev new_vars
-	val new_vars = do_one_bunch_vars vars vars_to_avoid []
+            let
+                val tmp_var = Term.variant used_vars var
+            in do_one_bunch_vars more_var (tmp_var::used_vars)
+                (tmp_var::new_vars)
+            end
+          | do_one_bunch_vars _ _ new_vars = rev new_vars
+        val new_vars = do_one_bunch_vars vars vars_to_avoid []
     in
-	rename_vars more_vars (new_vars@vars_to_avoid) (new_vars::renamed_vars)
+        rename_vars more_vars (new_vars@vars_to_avoid) (new_vars::renamed_vars)
     end
   | rename_vars [] _ renamed_vars = rev renamed_vars
 val renamed_argvars = rename_vars argvars exists_vars []
@@ -1309,17 +1298,17 @@ val new_imps = modify_imps argvars renamed_argvars imps
 val info_list = map2
     (fn vars => fn imp =>
      let val hyp = rand (rator imp)
-	 val rel = fst (strip_comb hyp) in
-	 (rel, (vars, hyp)) end)
+         val rel = fst (strip_comb hyp) in
+         (rel, (vars, hyp)) end)
     renamed_argvars new_imps
 (* sfn is used to substitute vars used in rules for vars used in terms
    in conclusion of thm4 below *)
 fun sfn eqs rel =
-    let val (argvars, hyp) = assoc rel info_list
+    let val (argvars, hyp) = tassoc rel info_list
     in
 (* following line changed by PVH Feb 3, 2000 from {var=v, thm=th} *)
-	SUBST(map2 (fn th => fn v => {redex=v, residue=th})
-	      (map SYM (CONJUNCTS eqs)) argvars) hyp
+        SUBST(map2 (fn th => fn v => {redex=v, residue=th})
+              (map SYM (CONJUNCTS eqs)) argvars) hyp
     end
 
 (* list of relations *)
@@ -1328,12 +1317,12 @@ val set = map fst info_list
 (* divide up the rules according to which relation it's for *)
 fun has_this_rel rel thm1 =
     let val bdy = snd (strip_forall (concl thm1))
-	val applied_rel =
-	    if is_imp bdy then
-		snd (dest_imp bdy)
-	    else bdy
+        val applied_rel =
+            if is_imp bdy then
+                snd (dest_imp bdy)
+            else bdy
     in
-	rel = fst (strip_comb applied_rel)
+        rel ~~ fst (strip_comb applied_rel)
     end
 val divided_rules = map
     (fn rel => (filter (fn thm1 => has_this_rel rel thm1) rule_thms)) set
@@ -1362,13 +1351,13 @@ val genvars = map (fn vars => map (genvar o type_of) vars)
 fun mk_preds (gen_vars::more_gens) (arg_vars::more_args)
     (thm1::more_thms) =
     let val eqtns = list_mk_conj (mymap2 (arg_vars, gen_vars))
-	val theta = map2 (fn r1 => fn r2 => {redex=r1,residue=r2})
-	    arg_vars gen_vars
-	val assum = subst theta (rator (concl thm1))
-	val pred = list_mk_abs
-	    (gen_vars, mk_neg (mk_comb (assum, eqtns)))
+        val theta = map2 (fn r1 => fn r2 => {redex=r1,residue=r2})
+            arg_vars gen_vars
+        val assum = subst theta (rator (concl thm1))
+        val pred = list_mk_abs
+            (gen_vars, mk_neg (mk_comb (assum, eqtns)))
     in
-	pred::(mk_preds more_gens more_args more_thms)
+        pred::(mk_preds more_gens more_args more_thms)
     end
   | mk_preds _ _ _ = []
 
@@ -1378,61 +1367,61 @@ val hyps = map (rand o rator) new_imps
 
 fun mk_inversion_thms count all_rels (hyp::hyps) (vars::more_vars) =
     let val new_preds = assemble_preds count preds all_rels
-	val rel = nth (all_rels, count)
-	val theta = map2 (fn prop_var => fn pred =>
-			  {redex = prop_var, residue = pred}) props new_preds
-	(* replace P_0, P_1, etc, with the predicates *)
-	val thm1 = INST theta speced_ind
-	(* get the "preds satisfy rules" term *)
-	val preds_sat_rules = fst (dest_imp (concl thm1))
-	(* basically, eliminate unwanted conclusions, and put
-	   "preds satisfy rules" and "rel argvars" into hypotheses *)
-	val thm2 = BETA_RULE
-	    (UNDISCH (nth (CONJUNCTS (UNDISCH thm1), count)))
-	(* make the theorem that is contradictory to thm2 *)
-	val contr = DISCH hyp (ADD_ASSUM hyp (LIST_CONJ (map REFL vars)))
-	(* now do contradiction, getting ~"preds satisfy rules" in
-	   conclusion *)
-	val thm3 = BETA_RULE (NOT_INTRO (DISCH preds_sat_rules
-					 (MP thm2 contr)))
-	(* thm3 has form ~(conj1 /\ ... /\ conjn) where each conj
+        val rel = nth (all_rels, count)
+        val theta = map2 (fn prop_var => fn pred =>
+                          {redex = prop_var, residue = pred}) props new_preds
+        (* replace P_0, P_1, etc, with the predicates *)
+        val thm1 = INST theta speced_ind
+        (* get the "preds satisfy rules" term *)
+        val preds_sat_rules = fst (dest_imp (concl thm1))
+        (* basically, eliminate unwanted conclusions, and put
+           "preds satisfy rules" and "rel argvars" into hypotheses *)
+        val thm2 = BETA_RULE
+            (UNDISCH (nth (CONJUNCTS (UNDISCH thm1), count)))
+        (* make the theorem that is contradictory to thm2 *)
+        val contr = DISCH hyp (ADD_ASSUM hyp (LIST_CONJ (map REFL vars)))
+        (* now do contradiction, getting ~"preds satisfy rules" in
+           conclusion *)
+        val thm3 = BETA_RULE (NOT_INTRO (DISCH preds_sat_rules
+                                         (MP thm2 contr)))
+        (* thm3 has form ~(conj1 /\ ... /\ conjn) where each conj
            corresponds to one rule -- need to eliminate conjs that correspond
-	   to rules that don't apply to this relation *)
-	(* grab the conjuncts that don't correspond to this relation *)
-	val divided_conjs = divide_by_numbers rules_count
-	    (strip_conj (dest_neg (concl thm3))) [] []
-	(* these are the conjs that we need to get rid of, and the rules
-	   that correspond with them *)
-	val conjs = flatten (elim_nth count divided_conjs)
-	val rules = flatten (elim_nth count divided_rules)
-	(* get the theorems that say |- conji = T *)
-	val rewrites = map2 (process_term rel) conjs rules
-	(* rewrite with the |- conji = T and get rid of T conjuncts,
+           to rules that don't apply to this relation *)
+        (* grab the conjuncts that don't correspond to this relation *)
+        val divided_conjs = divide_by_numbers rules_count
+            (strip_conj (dest_neg (concl thm3))) [] []
+        (* these are the conjs that we need to get rid of, and the rules
+           that correspond with them *)
+        val conjs = flatten (elim_nth count divided_conjs)
+        val rules = flatten (elim_nth count divided_rules)
+        (* get the theorems that say |- conji = T *)
+        val rewrites = map2 (process_term rel) conjs rules
+        (* rewrite with the |- conji = T and get rid of T conjuncts,
            so now thm4 says ~(predicates satisfy rules), but the conjuncts
            corresponding to rules for other relations have been eliminated *)
-	val thm4 = PURE_REWRITE_RULE (T_and_clauses::rewrites) thm3
-	(* get the rules pertaining to this relation *)
-	val relevant_rules = nth (divided_rules, count)
+        val thm4 = PURE_REWRITE_RULE (T_and_clauses::rewrites) thm3
+        (* get the rules pertaining to this relation *)
+        val relevant_rules = nth (divided_rules, count)
         (* now do Tom-like munging to get process info to get it in the
-	   correct form *)
-	(* a_thm = assuming rel <argvars>, case disjunctions are true,
-	   b_thm = case disjunctions ==> rel <arsvars> *)
-	val (a_thm, b_thm) = LIST_DE_MORGAN (simp set sfn) relevant_rules thm4
+           correct form *)
+        (* a_thm = assuming rel <argvars>, case disjunctions are true,
+           b_thm = case disjunctions ==> rel <arsvars> *)
+        val (a_thm, b_thm) = LIST_DE_MORGAN (simp set sfn) relevant_rules thm4
         (* thm5 = rel <argvars> = case disjunctions *)
-	val thm5 = IMP_ANTISYM_RULE (DISCH_ALL a_thm) b_thm
-	(* ds is a list of thms, each one says
-	 (disj for rule) = (simplified disj for rule) *)
-	val ds = map (QCONV (TRY_CONV REDUCE)) (strip_disj(rand(concl thm5)))
-	(* red has form (original distunctions) = (simplified disjunctions) *)
-	val red = end_itlist (fn t1 => fn t2 =>
-			      MK_COMB (AP_TERM “$\/” t1, t2)) ds
+        val thm5 = IMP_ANTISYM_RULE (DISCH_ALL a_thm) b_thm
+        (* ds is a list of thms, each one says
+         (disj for rule) = (simplified disj for rule) *)
+        val ds = map (QCONV (TRY_CONV REDUCE)) (strip_disj(rand(concl thm5)))
+        (* red has form (original distunctions) = (simplified disjunctions) *)
+        val red = end_itlist (fn t1 => fn t2 =>
+                              MK_COMB (AP_TERM “$\/” t1, t2)) ds
         (* the preceeding line changed from `\/` to `$\/` for Taupo-4
            by PVH, October 19, 2000 *)
-	(* final result is that
+        (* final result is that
          !<argvars>. rel <argvars> = (case disjunctions) *)
     in
-	(GENL vars (TRANS thm5 red))::
-	(mk_inversion_thms (count + 1) all_rels hyps more_vars)
+        (GENL vars (TRANS thm5 red))::
+        (mk_inversion_thms (count + 1) all_rels hyps more_vars)
     end
   | mk_inversion_thms _ _ _ _ = []
 
@@ -1500,9 +1489,9 @@ val relations = map snd vars_relation_list
 
 fun mk_new_prop prop_var (vars, reltn) =
     let val conj = mk_conj (list_mk_comb (prop_var, vars),
-			    list_mk_comb (reltn, vars))
+                            list_mk_comb (reltn, vars))
     in
-	list_mk_abs (vars, conj)
+        list_mk_abs (vars, conj)
     end
 
 val new_props = map2 mk_new_prop prop_vars vars_relation_list
@@ -1528,21 +1517,20 @@ val and_thm = GEN_ALL (conjunct_n 4 (SPEC_ALL AND_CLAUSES))
 
 fun do_one_conjunct tm =
     let val (vars, bod) = strip_forall tm
-	val rel_tm = fst (dest_imp bod)
-	val thm1 = CONJUNCT1 (UNDISCH (SPEC_ALL (ASSUME tm)))
+        val rel_tm = fst (dest_imp bod)
+        val thm1 = CONJUNCT1 (UNDISCH (SPEC_ALL (ASSUME tm)))
     in
-	DISCH_ALL (GENL vars (DISCH rel_tm thm1))
+        DISCH_ALL (GENL vars (DISCH rel_tm thm1))
     end
 
 fun prove_conj_imp (tm::tms) =
-    if tms = [] then
-	do_one_conjunct tm
+    if null tms then do_one_conjunct tm
     else
-	let val thm1 = do_one_conjunct tm
-	    val thm2 = prove_conj_imp tms
-	in
-	    IMP_CONJ thm1 thm2
-	end
+        let val thm1 = do_one_conjunct tm
+            val thm2 = prove_conj_imp tms
+        in
+            IMP_CONJ thm1 thm2
+        end
   | prove_conj_imp [] = REFL “T” (* so SML doesn't complain *)
 
 val concl_thm = prove_conj_imp (strip_conj mod_concl)
@@ -1585,19 +1573,19 @@ fun delete_conjs1 pred conj_thm =
                 rconj_thm::so_far
             end
         else
-	if is_conj (concl conj_thm) then
-	    let val conj1 = CONJUNCT1 conj_thm in
+        if is_conj (concl conj_thm) then
+            let val conj1 = CONJUNCT1 conj_thm in
                 if is_cond (concl conj1) then
                     helper (CONJUNCT2 conj_thm) ((helper conj1 [])@so_far)
                 else
-		if pred (concl conj1) then
-		    helper (CONJUNCT2 conj_thm) (conj1::so_far)
-		else helper (CONJUNCT2 conj_thm) so_far
-	    end
-	else
-	    if pred (concl conj_thm) then (conj_thm::so_far) else so_far
+                if pred (concl conj1) then
+                    helper (CONJUNCT2 conj_thm) (conj1::so_far)
+                else helper (CONJUNCT2 conj_thm) so_far
+            end
+        else
+            if pred (concl conj_thm) then (conj_thm::so_far) else so_far
     in
-	LIST_CONJ (rev (helper (REWRITE_RULE[GSYM CONJ_ASSOC] conj_thm) []))
+        LIST_CONJ (rev (helper (REWRITE_RULE[GSYM CONJ_ASSOC] conj_thm) []))
     end
 in
 fun delete_conjs pred conj_thm =
@@ -1609,25 +1597,21 @@ end
 (* delete the conjs that don't satisfy pred *)
 fun delete_conjs pred conj_thm =
     let fun helper conj_thm so_far =
-	if is_conj (concl conj_thm) then
-	    let val conj1 = CONJUNCT1 conj_thm in
-		if pred (concl conj1) then
-		    helper (CONJUNCT2 conj_thm) (conj1::so_far)
-		else helper (CONJUNCT2 conj_thm) so_far
-	    end
-	else
-	    if pred (concl conj_thm) then (conj_thm::so_far) else so_far
+        if is_conj (concl conj_thm) then
+            let val conj1 = CONJUNCT1 conj_thm in
+                if pred (concl conj1) then
+                    helper (CONJUNCT2 conj_thm) (conj1::so_far)
+                else helper (CONJUNCT2 conj_thm) so_far
+            end
+        else
+            if pred (concl conj_thm) then (conj_thm::so_far) else so_far
     in
-	DISCH_ALL (LIST_CONJ (rev (helper conj_thm [])))
+        DISCH_ALL (LIST_CONJ (rev (helper conj_thm [])))
     end
 *)
 
-fun member item (thing::more_things) =
-    if item = thing then true else member item more_things
-  | member item [] = false
-
 fun props_in_tm tm =
-    if is_var tm then member tm prop_vars else
+    if is_var tm then tmem tm prop_vars else
     if is_const tm then false else
     if is_abs tm then props_in_tm (body tm) else
     (* must be comb *)
@@ -1641,39 +1625,39 @@ fun foldr ftn base (b::bs) = ftn (b, (foldr ftn base bs))
 fun do_one_conj2 rule tm =
     let val (vars, bod) = strip_forall tm
     in
-	if is_imp bod then
-	    let val (ex_mod_hyps, prop_and_rel) = dest_imp bod
-		val prop_tm = fst (dest_conj prop_and_rel)
-		val (exists_vars, mod_hyps) = strip_exists ex_mod_hyps
-		val mod_hyp_list = strip_conj mod_hyps
-		val new_mod_hyps = list_mk_conj mod_hyp_list
-		val ex_new_mod_hyps = list_mk_exists
-		    (exists_vars, new_mod_hyps)
-		val speced_rule = SPECL vars rule
-		val thm1 = ASSUME
-		    (list_mk_forall
-		     (vars, mk_imp (ex_new_mod_hyps, prop_tm)))
-		val thm2 = SPEC_ALL thm1
-		fun pred tm = not (props_in_tm tm)
-		val conj_imp = delete_conjs pred (ASSUME new_mod_hyps)
-		val ex_conj_imp = foldr (fn (var, thm) => EXISTS_IMP var thm)
-		    conj_imp exists_vars
-		val conjs_imp_reltn = IMP_TRANS ex_conj_imp speced_rule
-		val thm3 = PURE_ONCE_REWRITE_RULE [and_thm]
-		    (IMP_CONJ thm2 conjs_imp_reltn)
-		val thm4 = PURE_ONCE_REWRITE_RULE
-		    [CONJUNCTS_AC (new_mod_hyps, mod_hyps)] thm3
-	    in
-		DISCH_ALL (GENL vars thm4)
-	    end
-	else
-	    let val (prop_tm, reltn_tm) = dest_conj bod
-		val thm1 = ASSUME (list_mk_forall (vars, prop_tm))
-		val thm2 = GENL vars
-		    (CONJ (SPEC_ALL thm1) (SPECL vars rule))
-	    in
-		DISCH_ALL thm2
-	    end
+        if is_imp bod then
+            let val (ex_mod_hyps, prop_and_rel) = dest_imp bod
+                val prop_tm = fst (dest_conj prop_and_rel)
+                val (exists_vars, mod_hyps) = strip_exists ex_mod_hyps
+                val mod_hyp_list = strip_conj mod_hyps
+                val new_mod_hyps = list_mk_conj mod_hyp_list
+                val ex_new_mod_hyps = list_mk_exists
+                    (exists_vars, new_mod_hyps)
+                val speced_rule = SPECL vars rule
+                val thm1 = ASSUME
+                    (list_mk_forall
+                     (vars, mk_imp (ex_new_mod_hyps, prop_tm)))
+                val thm2 = SPEC_ALL thm1
+                fun pred tm = not (props_in_tm tm)
+                val conj_imp = delete_conjs pred (ASSUME new_mod_hyps)
+                val ex_conj_imp = foldr (fn (var, thm) => EXISTS_IMP var thm)
+                    conj_imp exists_vars
+                val conjs_imp_reltn = IMP_TRANS ex_conj_imp speced_rule
+                val thm3 = PURE_ONCE_REWRITE_RULE [and_thm]
+                    (IMP_CONJ thm2 conjs_imp_reltn)
+                val thm4 = PURE_ONCE_REWRITE_RULE
+                    [CONJUNCTS_AC (new_mod_hyps, mod_hyps)] thm3
+            in
+                DISCH_ALL (GENL vars thm4)
+            end
+        else
+            let val (prop_tm, reltn_tm) = dest_conj bod
+                val thm1 = ASSUME (list_mk_forall (vars, prop_tm))
+                val thm2 = GENL vars
+                    (CONJ (SPEC_ALL thm1) (SPECL vars rule))
+            in
+                DISCH_ALL thm2
+            end
     end
 
 (*
@@ -1695,13 +1679,13 @@ fun prove_conj_imp2 ((rule, tm)::more_info) =
 (*
 fun prove_conj_imp2 (((rule, tm)::more_info) :(thm * term)list) =
     if more_info = ([]:(thm * term)list) then
-	do_one_conj2 rule tm
+        do_one_conj2 rule tm
     else
-	let val thm1 = do_one_conj2 rule tm
-	    val thm2 = prove_conj_imp2 more_info
-	in
-	    IMP_CONJ thm1 thm2
-	end
+        let val thm1 = do_one_conj2 rule tm
+            val thm2 = prove_conj_imp2 more_info
+        in
+            IMP_CONJ thm1 thm2
+        end
   | prove_conj_imp2 [] = REFL “T” (* so SML doesn't complain *)
 *)
 
@@ -1737,33 +1721,33 @@ end
 
 local
     fun get_reltn tm =
-	fst (strip_comb (fst (dest_imp (snd (strip_forall tm)))))
+        fst (strip_comb (fst (dest_imp (snd (strip_forall tm)))))
     fun process_term tm =
-	(fst (strip_comb (fst (dest_imp (snd (strip_forall tm))))), tm)
+        (fst (strip_comb (fst (dest_imp (snd (strip_forall tm))))), tm)
     fun get_correct_tm ((rel, tm)::more_info) rel2 =
-	if rel = rel2 then tm
-	else get_correct_tm more_info rel2
+        if rel ~~ rel2 then tm
+        else get_correct_tm more_info rel2
       | get_correct_tm [] rel2 = raise HOL_ERR
-	{origin_structure = "inductive_relations",
-	 origin_function = "rule_induct",
-	 message = "need term for relation "^(fst (dest_const rel2))}
+        {origin_structure = "inductive_relations",
+         origin_function = "rule_induct",
+         message = "need term for relation "^(fst (dest_const rel2))}
 in
     fun rule_induct induct_thm (asms, gl) =
-	let val reltns_goals_list = map process_term (strip_conj gl)
-	    val concl_list = strip_conj
-		(snd (dest_imp (snd (strip_forall (concl induct_thm)))))
-	    val reltns_in_ind = map get_reltn concl_list
-	    (* look thru' the list for the clause that corresponds to it *)
-	    val sorted_goals = map
-		(get_correct_tm reltns_goals_list) reltns_in_ind
-	    val props_list = map
-		(fn tm => let val (vars, t2) = strip_forall tm
-			      val applied_prop = snd (dest_imp t2) in
-			  list_mk_abs (vars, applied_prop) end) sorted_goals
-	    val speced_ind = BETA_RULE (SPECL props_list induct_thm)
-	in
-	    MP_IMP_TAC speced_ind (asms, gl)
-	end
+        let val reltns_goals_list = map process_term (strip_conj gl)
+            val concl_list = strip_conj
+                (snd (dest_imp (snd (strip_forall (concl induct_thm)))))
+            val reltns_in_ind = map get_reltn concl_list
+            (* look thru' the list for the clause that corresponds to it *)
+            val sorted_goals = map
+                (get_correct_tm reltns_goals_list) reltns_in_ind
+            val props_list = map
+                (fn tm => let val (vars, t2) = strip_forall tm
+                              val applied_prop = snd (dest_imp t2) in
+                          list_mk_abs (vars, applied_prop) end) sorted_goals
+            val speced_ind = BETA_RULE (SPECL props_list induct_thm)
+        in
+            MP_IMP_TAC speced_ind (asms, gl)
+        end
 end
 
 end; (* ind_rel *)

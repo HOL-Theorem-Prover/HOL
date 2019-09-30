@@ -24,7 +24,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "separationLogic"
-
+val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************)
 (* Define separation combinators and algebras                                 *)

@@ -83,18 +83,18 @@ fun addf f k x t = let
                                       in (Leaf (k,new), new) end
                         else (join (k, Leaf (k,x), j, t), x)
       | Branch (p,m,t0,t1,sz) => if match_prefix k p m then
-	                           if zero_bit k m then let
+                                   if zero_bit k m then let
                                        val (t0', new) = ins t0
                                      in
-	                               (Branch (p, m, t0', t1, sz+1), new)
+                                       (Branch (p, m, t0', t1, sz+1), new)
                                      end
-	                        else let
+                                else let
                                     val (t1', new) = ins t1
                                   in
-	                            (Branch (p, m, t0, t1',sz+1), new)
+                                    (Branch (p, m, t0, t1',sz+1), new)
                                   end
-	                      else
-	                        (join (k, Leaf (k,x), p, t), x)
+                              else
+                                (join (k, Leaf (k,x), p, t), x)
 in
   ins t
 end
@@ -111,12 +111,12 @@ fun remove k t = let
         Empty => Empty
       | Leaf (j,_) => if k = j then Empty else t
       | Branch (p,m,t0,t1,_) => if match_prefix k p m then
-	                        if zero_bit k m then
-	                          branch (p, m, rmv t0, t1)
-	                        else
-	                          branch (p, m, t0, rmv t1)
-	                      else
-	                        t
+                                if zero_bit k m then
+                                  branch (p, m, rmv t0, t1)
+                                else
+                                  branch (p, m, t0, rmv t1)
+                              else
+                                t
 in
   rmv t
 end

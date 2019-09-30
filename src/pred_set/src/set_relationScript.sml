@@ -19,29 +19,32 @@ end
 
 val _ = type_abbrev  ("reln", ``:'a # 'a -> bool``);
 
-val rextension = Q.store_thm ("rextension",
-`!s t. (s = t) = !x y. (x,y) IN s = (x,y) IN t`,
+Theorem rextension:
+  !s t. (s = t) <=> !x y. (x,y) IN s <=> (x,y) IN t
+Proof
 SRW_TAC [] [] THEN
 EQ_TAC THEN
 SRW_TAC [] [EXTENSION] THEN
 Cases_on `x` THEN
-SRW_TAC [] []);
+SRW_TAC [] []
+QED
 
 val domain_def = Define `
   domain r = {x | ?y. (x, y) IN r}`;
 val _ = ot "domain"
 
-val range_def = Define `
-  range r = {y | ?x. (x, y) IN r}`;
+val range_def = Define `range r = {y | ?x. (x, y) IN r}`;
 val _ = ot "range"
 
-val in_domain = Q.store_thm ("in_domain",
-`!x r. x IN domain r = ?y. (x,y) IN r`,
-SRW_TAC [] [domain_def]);
+Theorem in_domain:
+  !x r. x IN domain r <=> ?y. (x,y) IN r
+Proof SRW_TAC [] [domain_def]
+QED
 
-val in_range = Q.store_thm ("in_range",
-`!y r. y IN range r = ?x. (x,y) IN r`,
-SRW_TAC [] [range_def]);
+Theorem in_range:
+  !y r. y IN range r <=> ?x. (x,y) IN r
+Proof SRW_TAC [] [range_def]
+QED
 
 val in_dom_rg = Q.store_thm ("in_dom_rg",
   `(x, y) IN r ==> x IN domain r /\ y IN range r`,
@@ -61,9 +64,10 @@ val rrestrict_def = Define `
   rrestrict r s = {(x, y) | (x, y) IN r /\ x IN s /\ y IN s}`;
 val _ = ot0 "rrestrict" "restrict"
 
-val in_rrestrict = Q.store_thm ("in_rrestrict",
-`!x y r s. (x, y) IN rrestrict r s = (x, y) IN r /\ x IN s /\ y IN s`,
-SRW_TAC [] [rrestrict_def]);
+Theorem in_rrestrict:
+  !x y r s. (x, y) IN rrestrict r s <=> (x, y) IN r /\ x IN s /\ y IN s
+Proof SRW_TAC [] [rrestrict_def]
+QED
 
 val in_rrestrict_alt = Q.store_thm ("in_rrestrict_alt",
   `x IN rrestrict r s <=> x IN r /\ FST x IN s /\ SND x IN s`,
@@ -201,13 +205,15 @@ val tc_rules = Q.store_thm ("tc_rules",
   (!x y. (?z. (x, z) IN tc r /\ (z, y) IN tc r) ==> (x, y) IN tc r)`,
 SRW_TAC [] [SPECIFICATION, tc_rules]);
 
-val tc_cases = Q.store_thm ("tc_cases",
-`!r x y.
-  (x, y) IN tc r =
-  ((x, y) IN r) \/
-  (?z. (x, z) IN tc r /\ (z, y) IN tc r)`,
+Theorem tc_cases:
+  !r x y.
+    (x, y) IN tc r <=>
+      (x, y) IN r \/
+      ?z. (x, z) IN tc r /\ (z, y) IN tc r
+Proof
 SRW_TAC [] [SPECIFICATION] THEN
-SRW_TAC [] [Once (Q.SPECL [`r`, `(x, y)`] tc_cases)]);
+SRW_TAC [] [Once (Q.SPECL [`r`, `(x, y)`] tc_cases)]
+QED
 
 val tc_ind = Q.store_thm ("tc_ind",
 `!r tc'.
@@ -265,19 +271,21 @@ HO_MATCH_MP_TAC tc_ind THEN
 SRW_TAC [] [] THEN
 METIS_TAC [tc_rules]);
 
-val tc_cases_right = Q.store_thm ("tc_cases_right",
-`!r x y.
-  (x, y) IN tc r =
-  ((x, y) IN r) \/
-  (?z. (x, z) IN tc r /\ (z, y) IN r)`,
-METIS_TAC [tc_cases_lem, tc_rules]);
+Theorem tc_cases_right:
+  !r x y.
+    (x, y) IN tc r <=>
+      (x, y) IN r \/
+      ?z. (x, z) IN tc r /\ (z, y) IN r
+Proof METIS_TAC [tc_cases_lem, tc_rules]
+QED
 
-val tc_cases_left = Q.store_thm ("tc_cases_left",
-`!r x y.
-  (x, y) IN tc r =
-  ((x, y) IN r) \/
-  (?z. (x, z) IN r /\ (z, y) IN tc r)`,
-METIS_TAC [tc_cases_lem, tc_rules]);
+Theorem tc_cases_left:
+  !r x y.
+    (x, y) IN tc r <=>
+      (x, y) IN r \/
+      ?z. (x, z) IN r /\ (z, y) IN tc r
+Proof METIS_TAC [tc_cases_lem, tc_rules]
+QED
 
 val tc_ind_left_lem = Q.prove (
 `!r P.
@@ -554,7 +562,7 @@ val antisym_def = Define `
 val _ = ot0 "antisym" "antisymmetric"
 
 val partial_order_def = Define `
-  partial_order r s =
+  partial_order r s <=>
        domain r SUBSET s /\ range r SUBSET s /\
        transitive r /\ reflexive r s /\ antisym r`;
 
@@ -598,7 +606,7 @@ IMP_RES_TAC strict_partial_order THEN
 SRW_TAC [] [transitive_tc, strict_def]);
 
 val linear_order_def = Define `
-  linear_order r s =
+  linear_order r s <=>
     domain r SUBSET s /\ range r SUBSET s /\
     transitive r /\ antisym r /\
     (!x y. x IN s /\ y IN s ==> (x, y) IN r \/ (y, x) IN r)`;
@@ -617,7 +625,7 @@ SRW_TAC [] [linear_order_def, partial_order_def, reflexive_def] THEN
 METIS_TAC []);
 
 val strict_linear_order_def = Define `
-  strict_linear_order r s =
+  strict_linear_order r s <=>
     domain r SUBSET s /\ range r SUBSET s /\
     transitive r /\
     (!x. (x, x) NOTIN r) /\
@@ -653,13 +661,17 @@ val REL_RESTRICT_UNIV = Q.store_thm ("REL_RESTRICT_UNIV",
 `REL_RESTRICT R UNIV = R`,
 SRW_TAC [] [FUN_EQ_THM, REL_RESTRICT_DEF, RINTER, RRUNIV_def]);
 
-val in_rel_to_reln = Q.store_thm ("in_rel_to_reln",
-`xy IN (rel_to_reln R) = R (FST xy) (SND xy)`,
-Cases_on `xy` THEN SRW_TAC [] [rel_to_reln_def])
+Theorem in_rel_to_reln:
+  xy IN (rel_to_reln R) <=> R (FST xy) (SND xy)
+Proof
+  Cases_on `xy` THEN SRW_TAC [] [rel_to_reln_def]
+QED
 
-val reln_to_rel_app = Q.store_thm ("reln_to_rel_app",
-`(reln_to_rel r) x y = (x, y) IN r`,
-SRW_TAC [] [reln_to_rel_def])
+Theorem reln_to_rel_app:
+  (reln_to_rel r) x y <=> (x, y) IN r
+Proof
+  SRW_TAC [] [reln_to_rel_def]
+QED
 
 val rel_to_reln_IS_UNCURRY = Q.store_thm ("rel_to_reln_IS_UNCURRY",
   `rel_to_reln = UNCURRY`,
@@ -755,7 +767,7 @@ val reflexive_reln_to_rel_conv_UNIV = Q.store_thm ("reflexive_reln_to_rel_conv_U
 `(set_relation$reflexive) r UNIV = (relation$reflexive) (reln_to_rel r)`,
 REWRITE_TAC[reflexive_reln_to_rel_conv, RREFL_EXP_UNIV])
 
-val transitive_reln_to_rel_conv = Q.store_thm ("reflexive_reln_to_rel_conv",
+val transitive_reln_to_rel_conv = Q.store_thm ("transitive_reln_to_rel_conv",
 `(set_relation$transitive) r = (relation$transitive) (reln_to_rel r)`,
 SRW_TAC [] [transitive_def, relationTheory.transitive_def, reln_rel_conv_props])
 
@@ -786,12 +798,14 @@ PROVE_TAC[])
 
 in
 
-val partial_order_reln_to_rel_conv = Q.store_thm ("partial_order_reln_to_rel_conv",
-`partial_order r s = ((reln_to_rel r) RSUBSET RRUNIV s) /\
-                     WeakOrder (RREFL_EXP (reln_to_rel r) s)`,
+Theorem partial_order_reln_to_rel_conv:
+  partial_order r s <=> reln_to_rel r RSUBSET RRUNIV s /\
+                        WeakOrder (RREFL_EXP (reln_to_rel r) s)
+Proof
 SRW_TAC [boolSimps.EQUIV_EXTRACT_ss] [partial_order_def, WeakOrder, reflexive_reln_to_rel_conv,
   transitive_reln_to_rel_conv, antisym_reln_to_rel_conv,
-  aux1, aux2, aux3]);
+  aux1, aux2, aux3]
+QED
 
 val partial_order_reln_to_rel_conv_UNIV = Q.store_thm ("partial_order_reln_to_rel_conv_UNIV",
 `partial_order r UNIV = WeakOrder (reln_to_rel r)`,
@@ -978,7 +992,7 @@ METIS_TAC []);
 
 in
 
-val maximal_tc = Q.store_thm ("maximal_TC",
+val maximal_TC = Q.store_thm ("maximal_TC",
 `!s r.
   domain r SUBSET s /\ range r SUBSET s
   ==>
@@ -1001,7 +1015,7 @@ METIS_TAC []);
 
 in
 
-val minimal_tc = Q.store_thm ("minimal_TC",
+val minimal_TC = Q.store_thm ("minimal_TC",
 `!s r.
   domain r SUBSET s /\ range r SUBSET s
   ==>
@@ -1052,7 +1066,8 @@ val finite_acyclic_has_maximal_path = Q.store_thm
   ?y. y IN maximal_elements s r /\ (x, y) IN tc r`,
   ONCE_REWRITE_TAC [GSYM tc_SWAP', GSYM minimal_elements_SWAP,
     GSYM acyclic_SWAP] THEN REPEAT STRIP_TAC THEN
-  irule finite_acyclic_has_minimal_path THEN FIRST_ASSUM ACCEPT_TAC) ;
+  irule finite_acyclic_has_minimal_path THEN rpt conj_tac THEN
+  FIRST_ASSUM ACCEPT_TAC) ;
 
 val finite_prefix_po_has_minimal_path = Q.store_thm
 ("finite_prefix_po_has_minimal_path",
@@ -1105,10 +1120,10 @@ val linear_order_restrict = Q.store_thm ("linear_order_restrict",
 `!s r s'. linear_order r s ==> linear_order (rrestrict r s') (s INTER s')`,
   Ho_Rewrite.REWRITE_TAC
     [linear_order_def, rrestrict_def, domain_def, range_def,
-	      SUBSET_DEF, transitive_def, antisym_def,
-	       IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF, IN_INTER] THEN
+              SUBSET_DEF, transitive_def, antisym_def,
+               IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF, IN_INTER] THEN
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN_LT
-  LASTGOAL (FIRST_X_ASSUM irule THEN FIRST_ASSUM ACCEPT_TAC) THEN
+  LASTGOAL (FIRST_X_ASSUM irule THEN rpt conj_tac >> FIRST_ASSUM ACCEPT_TAC) >>
   RES_TAC) ;
 
 val strict_linear_order_restrict = Q.store_thm ("strict_linear_order_restrict",
@@ -1118,10 +1133,10 @@ val strict_linear_order_restrict = Q.store_thm ("strict_linear_order_restrict",
   strict_linear_order (rrestrict r s') (s INTER s')`,
   Ho_Rewrite.REWRITE_TAC
     [strict_linear_order_def, rrestrict_def, domain_def, range_def,
-	      SUBSET_DEF, transitive_def, antisym_def,
-	       IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF, IN_INTER] THEN
+              SUBSET_DEF, transitive_def, antisym_def,
+               IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF, IN_INTER] THEN
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN_LT
-  LASTGOAL (FIRST_X_ASSUM irule THEN FIRST_ASSUM ACCEPT_TAC) THEN
+  LASTGOAL (FIRST_X_ASSUM irule >> rpt conj_tac >> FIRST_ASSUM ACCEPT_TAC) THEN
   RES_TAC) ;
 
 val linear_order_dom_rg = Q.store_thm ("linear_order_dom_rg",
@@ -1179,30 +1194,31 @@ val acyclic_union = Q.prove (
   irule tc_rule2 THEN Q.EXISTS_TAC `r` THEN
   CONJ_TAC THEN irule tc_rule1 THEN ASM_REWRITE_TAC [IN_UNION]) ;
 
-val strict_linear_order_union_acyclic = Q.store_thm
-("strict_linear_order_union_acyclic",
-`!r1 r2 s.
-  strict_linear_order r1 s /\
-  ((domain r2) UNION (range r2)) SUBSET s
-  ==>
-  (acyclic (r1 UNION r2) = r2 SUBSET r1)`,
-SRW_TAC [] [] THEN
-EQ_TAC THEN
-SRW_TAC [] [] THENL
-[ FULL_SIMP_TAC (srw_ss()) [strict_linear_order_def, domain_def,
-                           transitive_def, range_def, SUBSET_DEF] THEN
-    REPEAT STRIP_TAC THEN
-    Cases_on `x` THEN
-    RES_TAC THEN RES_TAC THEN
-    IMP_RES_TAC acyclic_union THEN
-    IMP_RES_TAC acyclic_irreflexive THEN
-    CCONTR_TAC THEN FULL_SIMP_TAC std_ss [IN_UNION],
- `r1 UNION r2 = r1`
-         by (FULL_SIMP_TAC (srw_ss()) [domain_def, range_def, SUBSET_DEF,
-                                       EXTENSION] THEN
-             METIS_TAC []) THEN
-     SRW_TAC [] [] THEN
-     METIS_TAC [strict_linear_order_acyclic]]);
+Theorem strict_linear_order_union_acyclic:
+  !r1 r2 s.
+    strict_linear_order r1 s /\
+    (domain r2 UNION range r2) SUBSET s
+    ==>
+    (acyclic (r1 UNION r2) <=> r2 SUBSET r1)
+Proof
+  SRW_TAC [] [] THEN
+  EQ_TAC THEN
+  SRW_TAC [] [] THENL
+  [ FULL_SIMP_TAC (srw_ss()) [strict_linear_order_def, domain_def,
+                             transitive_def, range_def, SUBSET_DEF] THEN
+      REPEAT STRIP_TAC THEN
+      Cases_on `x` THEN
+      RES_TAC THEN RES_TAC THEN
+      IMP_RES_TAC acyclic_union THEN
+      IMP_RES_TAC acyclic_irreflexive THEN
+      CCONTR_TAC THEN FULL_SIMP_TAC std_ss [IN_UNION],
+   `r1 UNION r2 = r1`
+           by (FULL_SIMP_TAC (srw_ss()) [domain_def, range_def, SUBSET_DEF,
+                                         EXTENSION] THEN
+               METIS_TAC []) THEN
+       SRW_TAC [] [] THEN
+       METIS_TAC [strict_linear_order_acyclic]]
+QED
 
 val strict_linear_order = Q.store_thm ("strict_linear_order",
 `!r s. linear_order r s ==> strict_linear_order (strict r) s`,
@@ -1318,7 +1334,7 @@ SRW_TAC [] [linear_order_def, domain_def, range_def, SUBSET_DEF,
      `{SOME x | ?m n'. m <= n' /\ (f m = SOME x) /\ (f n' = f n)} SUBSET
       IMAGE f (count (SUC n))`
              by (SRW_TAC [] [SUBSET_DEF, count_def,
-                             DECIDE ``!x:num y. x < SUC y = x <= y``] THEN
+                             DECIDE ``!x:num y. x < SUC y <=> x <= y``] THEN
                  METIS_TAC [NOT_SOME_NONE]) THEN
      `{x | ?m n'. m <= n' /\ (f m = SOME x) /\ (f n' = f n)} =
       IMAGE THE {SOME x | ?m n'. m <= n' /\ (f m = SOME x) /\ (f n' = f n)}`
@@ -1611,7 +1627,7 @@ end
 (* ------------------------------------------------------------------------ *)
 
 val per_def = Define `
-  per xs xss =
+  per xs xss <=>
     (BIGUNION xss) SUBSET xs /\ {} NOTIN xss /\
     !xs1 xs2. xs1 IN xss /\ xs2 IN xss /\ xs1 <> xs2 ==> DISJOINT xs1 xs2`;
 
@@ -1949,7 +1965,7 @@ SRW_TAC [] [nth_min_def] THENL
      FULL_SIMP_TAC (srw_ss()) [nth_min_def, LET_THM] THEN
      RES_TAC THEN
      FULL_SIMP_TAC (srw_ss()) [] THEN
-     FULL_SIMP_TAC (srw_ss()) [Q.prove (`(x, y) IN {(x, y) | P x y} = P x y`,
+     FULL_SIMP_TAC (srw_ss()) [Q.prove (`(x, y) IN {(x, y) | P x y} <=> P x y`,
                                         SRW_TAC [] [])] THEN
      IMP_RES_TAC nth_min_lem1 THEN
      FULL_SIMP_TAC (srw_ss()) []]);

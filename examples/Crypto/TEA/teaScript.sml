@@ -28,8 +28,6 @@ val _ = new_theory "tea";
 (* General stuff                                                             *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Globals.priming := SOME"_";
-
 val WORD_PRED_EXISTS = Q.prove
 (`!w:'a word. ~(w = 0w) ==> ?u. w = u + 1w`,
   RW_TAC std_ss [] THEN
@@ -71,7 +69,7 @@ val ShiftXor_def =
           ((x << 4) + k0) ?? (x + s) ?? ((x >>> 5) + k1)`;
 
 (* --------------------------------------------------------------------------*)
-(*	One round forward computation    				     *)
+(*      One round forward computation                                        *)
 (* --------------------------------------------------------------------------*)
 
 val Round_def =
@@ -81,7 +79,7 @@ val Round_def =
           y' = y + ShiftXor(z, s', k0, k1) in let
           z' = z + ShiftXor(y', s', k2, k3)
       in
-	((y',z'), (k0,k1,k2,k3), s')`;
+        ((y',z'), (k0,k1,k2,k3), s')`;
 
 (*---------------------------------------------------------------------------*)
 (* Arbitrary number of cipher rounds                                         *)
@@ -203,6 +201,7 @@ val tea_correct = Q.store_thm
  `!plaintext keys.
      teaDecrypt (keys,teaEncrypt (keys,plaintext)) = plaintext`,
  RW_TAC list_ss [teaEncrypt_def, teaDecrypt_def, DELTA_SHIFT]
+  THEN rename [‘Rounds(_,_,keys,_) = (_,keys_1,sum)’]
   THEN `(keys_1 = keys) /\ (sum = DELTA * 32w)`
         by METIS_TAC [lemma2,WORD_ADD_0,PAIR_EQ]
   THEN RW_TAC std_ss []

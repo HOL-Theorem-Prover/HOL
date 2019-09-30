@@ -39,7 +39,8 @@ in
                  val c = concl thm
                  val () = unsolved_list := []
               in
-                 if c = snd g then thm else EQ_MP (ALPHA c (snd g)) thm
+                 if identical c (snd g) then thm
+                 else EQ_MP (ALPHA c (snd g)) thm
               end
               handle e => raise ERR "TAC_PROOF" "Can't alpha convert")
        | (l, _) => (unsolved_list := l; raise ERR "TAC_PROOF" "unsolved goals")
@@ -172,7 +173,7 @@ fun TACS_TO_LT (tacl: tactic list) : list_tactic =
 
 (*---------------------------------------------------------------------------
  * NULL_OK_LT ltac: A list-tactical like ltac but succeeds with no effect
- *                  when applied to an ampty goal list
+ *                  when applied to an empty goal list
  *---------------------------------------------------------------------------*)
 
 fun NULL_OK_LT ltac [] = ([], Lib.I)
@@ -384,28 +385,51 @@ fun ADD_SGS_TAC (tms : term list) (tac : tactic) (g as (asl, w) : goal) =
 local
    val validity_tag = "ValidityCheck"
    fun masquerade goal = Thm.mk_oracle_thm validity_tag goal
-   fun achieves th (asl, w) =
-      Term.aconv (concl th) w andalso
-      Lib.all (fn h => Lib.exists (aconv h) asl) (hyp th)
+   datatype validity_failure = Concl of term | Hyp of term
+   fun bad_prf th (asl, w) =
+       if concl th !~ w then SOME (Concl (concl th))
+       else
+         case List.find (fn h => List.all (not o aconv h) asl) (hyp th) of
+             NONE => NONE
+           | SOME h => SOME (Hyp h)
+   fun error f t e =
+       let
+         val pfx = "Invalid " ^ t ^ ": theorem has "
+         val (desc, t) =
+             case e of
+                 Hyp h => ("bad hypothesis", h)
+               | Concl c => ("wrong conclusion", c)
+       in
+         raise ERR f (pfx ^ desc ^ " " ^ Parse.term_to_string t)
+       end
 in
    fun VALID (tac: tactic) : tactic =
       fn g: goal =>
          let
             val (result as (glist, prf)) = tac g
          in
-            if achieves (prf (map masquerade glist)) g
-               then result
-            else raise ERR "VALID" "Invalid tactic"
+           case bad_prf (prf (map masquerade glist)) g of
+               NONE => result
+             | SOME e => error "VALID" "tactic" e
          end
 
    fun VALID_LT (ltac: list_tactic) : list_tactic =
       fn gl: goal list =>
          let
             val (result as (glist, prf)) = ltac gl
+            val wrongnum_msg = "Invalid list-tactic: wrong number of results\
+                               \ from justification"
+            fun check ths gls =
+                case (ths, gls) of
+                    ([], []) => result
+                  | (_, []) => raise ERR "VALID_LT" wrongnum_msg
+                  | ([], _) => raise ERR "VALID_LT" wrongnum_msg
+                  | (th::ths0,gl::gls0) =>
+                    (case bad_prf th gl of
+                         NONE => check ths0 gls0
+                       | SOME e => error "VALID_LT" "list-tactic" e)
          in
-            if Lib.all2 achieves (prf (map masquerade glist)) gl
-               then result
-            else raise ERR "VALID_LT" "Invalid list-tactic"
+            check (prf (map masquerade glist)) gl
          end
 end
 
@@ -593,7 +617,7 @@ end
 
 local
    fun UNDISCH_THEN tm ttac (asl, w) =
-      let val (_, A) = Lib.pluck (equal tm) asl in ttac (ASSUME tm) (A, w) end
+      let val (_, A) = Lib.pluck (aconv tm) asl in ttac (ASSUME tm) (A, w) end
    fun f ttac th = UNDISCH_THEN (concl th) ttac
 in
    val FIRST_X_ASSUM = FIRST_ASSUM o f
@@ -613,7 +637,7 @@ local
       val (tm_inst, _) = ho_match_term [] empty_tmset pat ob
       val bound_vars = map #redex tm_inst
     in
-      null (intersect constants bound_vars)
+      null (op_intersect aconv constants bound_vars)
     end handle HOL_ERR _ => false
 
  (* you might think that one could simply pass the free variable set
@@ -660,12 +684,11 @@ fun CONV_TAC (conv: conv) : tactic =
          val th = conv w
          val (_, rhs) = dest_eq (concl th)
       in
-         if rhs = T
-            then ([], empty (EQ_MP (SYM th) boolTheory.TRUTH))
+         if aconv rhs T then ([], empty (EQ_MP (SYM th) boolTheory.TRUTH))
          else ([(asl, rhs)], sing (EQ_MP (SYM th)))
       end
       handle UNCHANGED =>
-        if w = T (* special case, can happen! *)
+        if aconv w T (* special case, can happen! *)
           then ([], empty boolTheory.TRUTH)
         else ALL_TAC (asl, w)
 
@@ -755,12 +778,31 @@ val USE_SG_TAC = USE_SG_THEN ASSUME_TAC ;
  * A tactical that makes a tactic fail if it has no effect.
  *---------------------------------------------------------------------------*)
 
+fun goaleq ((asms1,g1),(asms2,g2)) =
+  ListPair.allEq (fn (t1,t2) => aconv t1 t2) (asms1,asms2) andalso
+  aconv g1 g2
+
 fun CHANGED_TAC tac g =
-   let
-      val (gl, p) = tac g
+  let
+    val (gl, p) = tac g
    in
-      if set_eq gl [g] then raise ERR "CHANGED_TAC" "no change" else (gl, p)
-   end
+     if ListPair.allEq goaleq (gl, [g]) then raise ERR "CHANGED_TAC" "no change"
+     else (gl, p)
+  end
+
+fun check_delta exn P tac g =
+    let
+      val result as (gl,p) = tac g
+    in
+      if P (g, gl) then result else raise exn
+    end
+
+fun count0 m (g, gl) = List.all (fn (_, w) => m w = 0) gl
+fun count_decreases m ((_,w), gl) =
+    let val c0 = m w
+    in
+      List.all (fn (_,w') => m w' < c0) gl
+    end
 
 (*---------------------------------------------------------------------------
  * A tactical that parses in the context of a goal, a la the Q library.

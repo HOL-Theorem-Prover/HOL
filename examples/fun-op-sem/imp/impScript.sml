@@ -38,8 +38,8 @@ val aval_def = Define `
 val bval_def = Define `
   (bval (Bc v) s = v) /\
   (bval (Not b) s = ~bval b s) /\
-  (bval (And b1 b2) s = bval b1 s /\ bval b2 s) /\
-  (bval (Less a1 a2) s = aval a1 s < aval a2 s)`;
+  (bval (And b1 b2) s = (bval b1 s /\ bval b2 s)) /\
+  (bval (Less a1 a2) s = (aval a1 s < aval a2 s))`;
 
 val STOP_def = Define `STOP x = x`;
 

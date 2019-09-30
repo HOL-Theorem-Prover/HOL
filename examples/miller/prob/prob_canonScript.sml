@@ -1,20 +1,9 @@
-(* interactive mode
-loadPath := ["../ho_prover","../subtypes","../formalize"] @ !loadPath;
-app load
-  ["bossLib", "pred_setTheory", "listTheory", "rich_listTheory",
-   "pairTheory", "realLib", "HurdUseful", "extra_listTheory"];
-quietdec := true;
-*)
-
 open HolKernel Parse boolLib;
 open bossLib pred_setTheory listTheory rich_listTheory pairTheory realLib
-     HurdUseful extra_listTheory;
-
-(* interactive mode
-quietdec := false;
-*)
+     hurdUtils extra_listTheory;
 
 val _ = new_theory "prob_canon";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 (* Definition of the canonicalisation of algebra elements.                   *)
@@ -46,12 +35,12 @@ val prob_longest_def = Define `prob_longest
 
 val prob_canon_prefs_def = Define `(prob_canon_prefs (l:bool list) [] = [l])
   /\ (prob_canon_prefs l (h::t) = if IS_PREFIX h l then prob_canon_prefs l t
-				 else l::h::t)`;
+                                 else l::h::t)`;
 
 val prob_canon_find_def = Define `(prob_canon_find l [] = [l])
   /\ (prob_canon_find l (h::t) = if prob_order h l then
           if IS_PREFIX l h then (h::t) else h::(prob_canon_find l t)
-	else prob_canon_prefs l (h::t))`;
+        else prob_canon_prefs l (h::t))`;
 
 val prob_canon1_def = Define `prob_canon1 = FOLDR prob_canon_find []`;
 
@@ -87,7 +76,7 @@ val PROB_TWIN_SING = store_thm
     [Cases_on `l` >- PROVE_TAC [NOT_NIL_SNOC]
      >> DISCH_THEN (Q.X_CHOOSE_THEN `l` STRIP_ASSUME_TAC)
      >> NTAC 2 (POP_ASSUM MP_TAC)
-     >> REVERSE (Cases_on `l`) >- RW_TAC std_ss [SNOC, NOT_NIL_SNOC]
+     >> Reverse (Cases_on `l`) >- RW_TAC std_ss [SNOC, NOT_NIL_SNOC]
      >> RW_TAC std_ss [SNOC],
      RW_TAC std_ss []
      >> Q.EXISTS_TAC `[]`
@@ -96,7 +85,7 @@ val PROB_TWIN_SING = store_thm
     [Cases_on `l` >- PROVE_TAC [NOT_NIL_SNOC]
      >> DISCH_THEN (Q.X_CHOOSE_THEN `l` STRIP_ASSUME_TAC)
      >> NTAC 2 (POP_ASSUM MP_TAC)
-     >> REVERSE (Cases_on `l`) >- RW_TAC std_ss [SNOC, NOT_NIL_SNOC]
+     >> Reverse (Cases_on `l`) >- RW_TAC std_ss [SNOC, NOT_NIL_SNOC]
      >> RW_TAC std_ss [SNOC],
      RW_TAC std_ss []
      >> Q.EXISTS_TAC `[]`
@@ -201,7 +190,7 @@ val PROB_ORDER_PREFIX_ANTI = store_thm
    Induct >- RW_TAC list_ss [IS_PREFIX_NIL]
    >> Cases_on `y` >- RW_TAC list_ss [IS_PREFIX_NIL, prob_order_def]
    >> (RW_TAC list_ss [IS_PREFIX, prob_order_def]
-	 >> PROVE_TAC []))
+         >> PROVE_TAC []))
 
 val PROB_ORDER_PREFIX_MONO = store_thm
   ("PROB_ORDER_PREFIX_MONO",
@@ -286,7 +275,7 @@ val PROB_SORTED_APPEND = store_thm
                    /\ prob_order (LAST (h::t)) h'``,
    Induct_on `t`
      >- (RW_TAC list_ss [prob_sorted_def, LAST_CONS]
-	 >> PROVE_TAC [])
+         >> PROVE_TAC [])
    >> RW_TAC list_ss [prob_sorted_def]
    >> RW_TAC std_ss [(GSYM o CONJUNCT2) APPEND, LAST_CONS]
    >> PROVE_TAC []);
@@ -357,7 +346,7 @@ val PROB_PREFIXFREE_APPEND = store_thm
                    /\ ~IS_PREFIX h' (LAST (h::t))``,
    Induct_on `t`
      >- (RW_TAC list_ss [prob_prefixfree_def, LAST_CONS]
-	 >> PROVE_TAC [])
+         >> PROVE_TAC [])
    >> RW_TAC list_ss [prob_prefixfree_def]
    >> RW_TAC std_ss [(GSYM o CONJUNCT2) APPEND, LAST_CONS]
    >> PROVE_TAC []);
@@ -562,7 +551,7 @@ val PROB_CANON_FIND_PREFIXFREE = store_thm
    [Cases_on `b` >- RW_TAC list_ss [prob_prefixfree_def, prob_canon_find_def]
     >> Cases_on `prob_canon_find l (h'::t)`
       >- RW_TAC list_ss [prob_prefixfree_def, prob_canon_find_def]
-    >> REVERSE (RW_TAC list_ss [prob_prefixfree_def])
+    >> Reverse (RW_TAC list_ss [prob_prefixfree_def])
       >- PROVE_TAC [PROB_SORTED_TL, PROB_PREFIXFREE_TL]
     >> Suff `(h'' = h') \/ (h'' = (l:bool list))`
       >- PROVE_TAC [prob_prefixfree_def]
@@ -652,7 +641,7 @@ val PROB_CANON_MERGE_PREFIXFREE_PRESERVE = store_thm
    Induct_on `b` >- RW_TAC std_ss [MEM, prob_canon_merge_def, IS_PREFIX]
    >> REWRITE_TAC [prob_canon_merge_def]
    >> NTAC 5 STRIP_TAC
-   >> REVERSE (Cases_on `prob_twin l h`) >- ASM_REWRITE_TAC []
+   >> Reverse (Cases_on `prob_twin l h`) >- ASM_REWRITE_TAC []
    >> ASM_REWRITE_TAC []
    >> POP_ASSUM MP_TAC
    >> REWRITE_TAC [prob_twin_def]
@@ -661,9 +650,9 @@ val PROB_CANON_MERGE_PREFIXFREE_PRESERVE = store_thm
                 ==> ~IS_PREFIX h' x /\ ~IS_PREFIX x h'`
      >- PROVE_TAC []
    >> REWRITE_TAC [MEM]
-   >> REVERSE (NTAC 2 STRIP_TAC) >- PROVE_TAC [MEM]
+   >> Reverse (NTAC 2 STRIP_TAC) >- PROVE_TAC [MEM]
    >> ASM_REWRITE_TAC [BUTLAST]
-   >> REVERSE (Suff `~IS_PREFIX h' l /\ ~IS_PREFIX l h'
+   >> Reverse (Suff `~IS_PREFIX h' l /\ ~IS_PREFIX l h'
                             /\ ~IS_PREFIX h' h /\ ~IS_PREFIX h h'`)
    >- PROVE_TAC [MEM]
    >> ASM_REWRITE_TAC []
@@ -676,7 +665,7 @@ val PROB_CANON_MERGE_SHORTENS = store_thm
    ``!l b x. MEM x (prob_canon_merge l b)
              ==> (?y. MEM y (l::b) /\ IS_PREFIX y x)``,
    Induct_on `b` >- RW_TAC std_ss [prob_canon_merge_def, MEM, IS_PREFIX_REFL]
-   >> REVERSE (RW_TAC std_ss [prob_canon_merge_def, prob_twin_def])
+   >> Reverse (RW_TAC std_ss [prob_canon_merge_def, prob_twin_def])
    >- PROVE_TAC [IS_PREFIX_REFL]
    >> Q.PAT_X_ASSUM `!l. P l` (MP_TAC o Q.SPECL [`l'`, `x`])
    >> POP_ASSUM MP_TAC
@@ -752,14 +741,14 @@ val PROB_CANON2_SORTED_PREFIXFREE_TWINFREE = store_thm
      >- (Suff `!x. MEM x (prob_canon2 l)
                         ==> ~IS_PREFIX h x /\ ~IS_PREFIX (x:bool list) h`
            >- (REWRITE_TAC [prob_canon2_def] >> PROVE_TAC [MEM])
-	 >> Suff
+         >> Suff
              `!x. MEM x l ==> ~IS_PREFIX h x /\ ~IS_PREFIX (x:bool list) h`
            >- PROVE_TAC [PROB_CANON2_PREFIXFREE_PRESERVE]
          >> PROVE_TAC [PROB_PREFIXFREE_ELT])
    >> RW_TAC list_ss [prob_sorted_def, prob_prefixfree_def]
    >> Know `?x. MEM x l /\ IS_PREFIX x (h':bool list)`
      >- (Know `MEM h' (prob_canon2 l)` >- PROVE_TAC [prob_canon2_def, MEM]
-	 >> PROVE_TAC [PROB_CANON2_SHORTENS])
+         >> PROVE_TAC [PROB_CANON2_SHORTENS])
    >> STRIP_TAC
    >> Know `prob_order h x` >- PROVE_TAC [PROB_SORTED_DEF_ALT]
    >> PROVE_TAC [PROB_ORDER_PREFIX_TRANS]);
@@ -778,8 +767,8 @@ val PROB_CANON_SORTED_PREFIXFREE_TWINFREE = store_thm
          /\ prob_prefixfree (prob_canon l)
          /\ prob_twinfree (prob_canon l)``,
    RW_TAC list_ss [prob_canon_def,
-		   PROB_CANON1_SORTED, PROB_CANON1_PREFIXFREE,
-		   PROB_CANON2_SORTED_PREFIXFREE_TWINFREE]);
+                   PROB_CANON1_SORTED, PROB_CANON1_PREFIXFREE,
+                   PROB_CANON2_SORTED_PREFIXFREE_TWINFREE]);
 
 val PROB_CANON_CONSTANT = store_thm
   ("PROB_CANON_CONSTANT",
@@ -807,7 +796,7 @@ val PROB_CANONICAL_BASIC = store_thm
   ("PROB_CANONICAL_BASIC",
    ``prob_canonical [] /\ prob_canonical [[]] /\ !x. prob_canonical [x]``,
    RW_TAC list_ss [PROB_CANONICAL_DEF_ALT, prob_sorted_def,
-		   prob_prefixfree_def, prob_twinfree_def]);
+                   prob_prefixfree_def, prob_twinfree_def]);
 
 val PROB_CANON_BASIC = store_thm
   ("PROB_CANON_BASIC",
@@ -827,7 +816,7 @@ val PROB_CANONICAL_NIL_MEM = store_thm
   ("PROB_CANONICAL_NIL_MEM",
    ``!l. prob_canonical l /\ MEM [] l = (l = [[]])``,
    RW_TAC std_ss []
-   >> REVERSE EQ_TAC >- RW_TAC std_ss [PROB_CANONICAL_BASIC, MEM]
+   >> Reverse EQ_TAC >- RW_TAC std_ss [PROB_CANONICAL_BASIC, MEM]
    >> Induct_on `l` >- RW_TAC std_ss [MEM]
    >> NTAC 2 STRIP_TAC
    >> Know `prob_canonical l` >- PROVE_TAC [PROB_CANONICAL_TL]
@@ -865,18 +854,18 @@ val PROB_CANONICAL_STEP2 = store_thm
              ==> prob_canonical (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))``,
    NTAC 2 STRIP_TAC
    >> DISCH_TAC
-   >> REVERSE (Suff `~(MEM [] l1) \/ ~(MEM [] l2)`)
+   >> Reverse (Suff `~(MEM [] l1) \/ ~(MEM [] l2)`)
    >- PROVE_TAC [PROB_CANONICAL_NIL_MEM]
    >> POP_ASSUM MP_TAC
    >> RW_TAC std_ss [PROB_CANONICAL_DEF_ALT, PROB_SORTED_STEP,
-		     PROB_PREFIXFREE_STEP]
+                     PROB_PREFIXFREE_STEP]
    >> PROVE_TAC [PROB_TWINFREE_STEP2]);
 
 val PROB_CANONICAL_STEP = store_thm
   ("PROB_CANONICAL_STEP",
    ``!l1 l2. ~(l1 = [[]]) \/ ~(l2 = [[]])
              ==> (prob_canonical (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))
-		  = prob_canonical l1 /\ prob_canonical l2)``,
+                  = prob_canonical l1 /\ prob_canonical l2)``,
    PROVE_TAC [PROB_CANONICAL_STEP1, PROB_CANONICAL_STEP2]);
 
 val PROB_CANONICAL_CASES_THM = store_thm
@@ -929,7 +918,7 @@ val PROB_CANONICAL_CASES = store_thm
   ("PROB_CANONICAL_CASES",
    ``!P. P [] /\ P [[]]
          /\ (!l1 l2. prob_canonical l1 /\ prob_canonical l2
-	       /\ prob_canonical (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))
+               /\ prob_canonical (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))
                ==> P (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2)))
          ==> (!l. prob_canonical l ==> P l)``,
    RW_TAC list_ss []
@@ -940,18 +929,18 @@ val PROB_CANONICAL_INDUCT = store_thm
   ("PROB_CANONICAL_INDUCT",
    ``!P. P [] /\ P [[]]
          /\ (!l1 l2. prob_canonical l1 /\ prob_canonical l2 /\ P l1 /\ P l2
-	       /\ prob_canonical (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))
-	       ==> P (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2)))
+               /\ prob_canonical (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))
+               ==> P (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2)))
          ==> (!l. prob_canonical l ==> P l)``,
    RW_TAC list_ss []
    >> completeInduct_on `prob_longest l`
    >> RW_TAC list_ss []
-   >> REVERSE (Suff `((l = []) \/ (l = [[]])) \/ ?l1 l2.
+   >> Reverse (Suff `((l = []) \/ (l = [[]])) \/ ?l1 l2.
             prob_canonical l1 /\ prob_canonical l2 /\
             (l = APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))`)
      >- (POP_ASSUM (MP_TAC
-		    o MP (SPEC ``l:bool list list`` PROB_CANONICAL_CASES_THM))
-	 >> PROVE_TAC [])
+                    o MP (SPEC ``l:bool list list`` PROB_CANONICAL_CASES_THM))
+         >> PROVE_TAC [])
    >> DISCH_THEN DISJ_CASES_TAC >- PROVE_TAC []
    >> POP_ASSUM MP_TAC
    >> STRIP_TAC
@@ -962,14 +951,14 @@ val PROB_CANONICAL_INDUCT = store_thm
     >> POP_ASSUM MP_TAC
     >> KILL_TAC
     >> MP_TAC (SPECL [``MAP (CONS T) (h::t)``, ``MAP (CONS F) l2``]
-		 PROB_LONGEST_APPEND)
+                 PROB_LONGEST_APPEND)
     >> RW_TAC arith_ss [PROB_LONGEST_TLS],
     Cases_on `l2` >- PROVE_TAC []
     >> Suff `prob_longest (h::t) < prob_longest l` >- PROVE_TAC []
     >> POP_ASSUM MP_TAC
     >> KILL_TAC
     >> MP_TAC (SPECL [``MAP (CONS T) l1``, ``MAP (CONS F) (h::t)``]
-		 PROB_LONGEST_APPEND)
+                 PROB_LONGEST_APPEND)
     >> RW_TAC arith_ss [PROB_LONGEST_TLS]]);
 
 val MEM_NIL_STEP = store_thm
@@ -982,7 +971,7 @@ val PROB_SORTED_PREFIXFREE_MEM_NIL = store_thm
    ``!l. prob_sorted l /\ prob_prefixfree l /\ MEM [] l = (l = [[]])``,
    Induct >- RW_TAC list_ss [MEM]
    >> STRIP_TAC
-   >> REVERSE EQ_TAC
+   >> Reverse EQ_TAC
      >- RW_TAC std_ss [prob_prefixfree_def, prob_sorted_def, MEM]
    >> Cases_on `l` >- RW_TAC list_ss [MEM]
    >> ONCE_REWRITE_TAC [MEM]
@@ -1018,11 +1007,11 @@ val PROB_SORTED_PREFIXFREE_EQUALITY = store_thm
      >> RW_TAC std_ss [PROB_SORTED_DEF_ALT]],
     RW_TAC std_ss []
     >> Q.PAT_X_ASSUM `!l'. P l' ==> Q l'` MATCH_MP_TAC
-    >> REVERSE CONJ_TAC >- PROVE_TAC [PROB_SORTED_TL, PROB_PREFIXFREE_TL]
+    >> Reverse CONJ_TAC >- PROVE_TAC [PROB_SORTED_TL, PROB_PREFIXFREE_TL]
     >> RW_TAC std_ss []
     >> Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
     >> REWRITE_TAC [MEM]
-    >> REVERSE (Cases_on `x = h`) >- RW_TAC std_ss []
+    >> Reverse (Cases_on `x = h`) >- RW_TAC std_ss []
     >> RW_TAC std_ss []
     >> ASSUME_TAC PROB_PREFIXFREE_ELT
     >> RES_TAC

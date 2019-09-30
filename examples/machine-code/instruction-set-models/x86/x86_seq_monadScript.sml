@@ -5,6 +5,7 @@ open wordsTheory bit_listTheory listTheory opmonTheory combinTheory;
 open x86_coretypesTheory;
 
 val _ = new_theory "x86_seq_monad";
+val _ = ParseExtras.temp_loose_equality()
 
 
 val _ = Hol_datatype `x86_permission = Xread | Xwrite | Xexecute`;

@@ -14,8 +14,6 @@ structure barendregt :> barendregt =
 struct
 
 open HolKernel Parse boolLib;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-infixr -->;
 
 (*
 type term = Term.term
@@ -169,22 +167,22 @@ fun remove_s_matches matches =
 
 fun find_x (match::matches) =
     let val (l,r) = match in
-      if r = “x:var” then l else find_x matches
+      if r ~~ “x:var” then l else find_x matches
     end
   | find_x [] = “x:var”;
 
 fun find_a (match::matches) =
     let val (l,r) = match in
-      if r = “a:obj” then l else find_a matches
+      if r ~~ “a:obj” then l else find_a matches
     end
   | find_a [] = “a:obj”;
 
 fun sort_matches matchesl =
     let val (mtermsl,_) = split matchesl
         val xtms = map find_x mtermsl
-        val dist_xtms = mk_set xtms
+        val dist_xtms = op_mk_set aconv xtms
         val xs_termsl = zip xtms mtermsl
-        val xmgroups = map (fn dx => filter (fn (x,matches) => (x = dx))
+        val xmgroups = map (fn dx => filter (fn (x,matches) => x ~~ dx)
                                             xs_termsl)
                            dist_xtms
         val mgroups = map (map snd) xmgroups
@@ -229,7 +227,7 @@ fun make_new_objects thm =
         val rhs = #rhs(dest_eq cn)
         val lst = #Rand(dest_comb rhs)
         fun length_list lst =
-             if lst = “[]:obj list” then 0
+             if lst ~~ “[]:obj list” then 0
              else  1 + length_list (#Rand(dest_comb lst))
         val n = length_list lst
         fun make_one 0 thm = thm
@@ -361,18 +359,19 @@ val SHIFT_SIGMA_TAC :tactic = fn (asl,gl) =>
 *)
 
 val SHIFT_SIGMAS_TAC :tactic = fn (asl,gl) =>
-    let val matchesl = mk_set (ALL_DEPTH_matches get_shift_matches gl);
+    let val meq = pair_eq (list_eq (pair_eq aconv aconv)) equal
+        val matchesl = op_mk_set meq (ALL_DEPTH_matches get_shift_matches gl);
         val match_groups = sort_matches matchesl
         val (tags,groups) = split match_groups
         (* val (xs,bodies) = split tags *)
-        val free_vrs = mk_set (append (free_vars gl)
-                                      (flatten (map free_vars asl)));
+        val free_vrs = op_mk_set aconv
+                                 (append (free_vars gl)
+                                         (flatten (map free_vars asl)))
         val sigma_thms = map (MAKE_LIST_CLEAN_VAR_THM free_vrs) tags
         val t_sigma_thms = zip tags sigma_thms
       (*  val sigma_thm = map (MAKE_CLEAN_VAR_THM free_vrs) matchesl *)
     in
-       if matchesl = [] then
-          ONCE_REWRITE_TAC[SUB_object] (asl,gl)
+       if null matchesl then ONCE_REWRITE_TAC[SUB_object] (asl,gl)
        else
        (EVERY (map (fn ((x,os),sigma_thm) =>
          let val n = length os in

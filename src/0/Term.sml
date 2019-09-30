@@ -40,9 +40,6 @@ in
 end
 fun del_segment s = KernelSig.del_segment(termsig, s)
 
-
-
-
 (*---------------------------------------------------------------------------*
  * Builtin constants. These are in every HOL signature, and it is            *
  * convenient to nail them down here.                                        *
@@ -104,7 +101,7 @@ local fun lookup 0 (ty::_)  = ty
         | ty_of (Const(_,POLY Ty)) _   = Ty
         | ty_of (Bv i) E               = lookup i E
         | ty_of (Comb(Rator, _)) E     = snd(Type.dom_rng(ty_of Rator E))
-	| ty_of (t as Clos _) E        = ty_of (push_clos t) E
+        | ty_of (t as Clos _) E        = ty_of (push_clos t) E
         | ty_of (Abs(Fv(_,Ty),Body)) E = Ty --> ty_of Body (Ty::E)
         | ty_of _ _ = raise ERR "type_of" "term construction"
 in
@@ -163,7 +160,7 @@ fun free_vars_lr tm =
         | FV (Const _::t) A       = FV t A
         | FV (Comb(M,N)::t) A     = FV (M::N::t) A
         | FV (Abs(_,M)::t) A      = FV (M::t) A
-	| FV ((M as Clos _)::t) A = FV (push_clos M::t) A
+        | FV ((M as Clos _)::t) A = FV (push_clos M::t) A
         | FV [] A = rev A
   in
      FV [tm] []
@@ -176,7 +173,7 @@ fun free_vars_lr tm =
 local fun vars (v as Fv _) A        = Lib.insert v A
         | vars (Comb(Rator,Rand)) A = vars Rand (vars Rator A)
         | vars (Abs(Bvar,Body)) A   = vars Body (vars Bvar A)
-	| vars (t as Clos _) A      = vars (push_clos t) A
+        | vars (t as Clos _) A      = vars (push_clos t) A
         | vars _ A = A
 in
 fun all_vars tm = vars tm []
@@ -278,7 +275,7 @@ fun FVL [] A = A
 fun free_in tm =
    let fun f1 (Comb(Rator,Rand)) = (f2 Rator) orelse (f2 Rand)
          | f1 (Abs(_,Body)) = f2 Body
-	 | f1 (t as Clos _) = f2 (push_clos t)
+         | f1 (t as Clos _) = f2 (push_clos t)
          | f1 _ = false
        and f2 t = term_eq t tm orelse f1 t
    in f2
@@ -309,21 +306,15 @@ val mk_var = Fv
 
 fun inST s = not(null(KernelSig.listName termsig s))
 
-fun mk_primed_var (Name,Ty) =
-  let val next = Lexis.nameStrm Name
-      fun spin s = if inST s then spin (next()) else s
-  in mk_var(spin Name, Ty)
-  end;
-
 (*---------------------------------------------------------------------------*
  *   "genvars" are a Lisp-style "gensym" for HOL variables.                  *
  *---------------------------------------------------------------------------*)
 
 local val genvar_prefix = "%%genvar%%"
-      fun num2name i = genvar_prefix^Lib.int_to_string i
-      val nameStrm = Lib.mk_istream (fn x => x+1) 0 num2name
+      fun num2name i = genvar_prefix^Int.toString i
+      val num_stream = Portable.make_counter{init=0,inc=1}
 in
-fun genvar ty = Fv(state(next nameStrm), ty)
+fun genvar ty = Fv(num2name(num_stream()), ty)
 
 fun genvars ty =
  let fun gen acc n = if n <= 0 then rev acc else gen (genvar ty::acc) (n-1)
@@ -345,17 +336,15 @@ end;
  * sessions.                                                                 *
  *---------------------------------------------------------------------------*)
 
+
 fun gen_variant P caller =
   let fun var_name _ (Fv(Name,_)) = Name
         | var_name caller _ = raise ERR caller "not a variable"
       fun vary vlist (Fv(Name,Ty)) =
-          let val next = Lexis.nameStrm Name
-              val L = map (var_name caller) vlist
-              fun away s = if mem s L then away (next()) else s
-              fun loop name =
-                 let val s = away name
-                 in if P s then loop (next()) else s
-                 end
+          let val L = map (var_name caller) vlist
+              fun loop s =
+                  if mem s L orelse P s then loop (s ^ "'")
+                  else s
           in mk_var(loop Name, Ty)
           end
         | vary _ _ = raise ERR caller "2nd argument should be a variable"
@@ -365,6 +354,24 @@ fun gen_variant P caller =
 val variant      = gen_variant inST "variant"
 val prim_variant = gen_variant (K false) "prim_variant";
 
+fun numvariant avoids (Fv(Name,Ty)) =
+    let
+      fun var_name (Fv(Name,_)) = Name
+        | var_name _ =
+             raise ERR "numvariant" "Avoids list contains non-variable"
+      val nms = map var_name avoids
+      fun vary s = let val s' = Lexis.tmvar_vary s
+                   in
+                     if inST s' then vary s' else s'
+                   end
+    in
+      Fv(Lexis.gen_variant vary nms Name, Ty)
+    end
+  | numvariant _ _ =
+      raise ERR "numvariant" "2nd argument should be a variable"
+
+fun mk_primed_var (Name,Ty) =
+    gen_variant inST "mk_primed_var" [] (Fv(Name,Ty))
 
 (*---------------------------------------------------------------------------*
  *             Making constants.                                             *
@@ -378,7 +385,15 @@ val prim_variant = gen_variant (K false) "prim_variant";
  * polymorphic.                                                              *
  *---------------------------------------------------------------------------*)
 
-val decls = map (Const o #2) o KernelSig.listName termsig
+fun decls nm =
+    let
+      fun f ({Name,...}, info as (_, ty), A) =
+          if nm = Name andalso Type.uptodate_type (to_hol_type ty) then
+            Const info :: A
+          else A
+    in
+      KernelSig.foldl f [] termsig
+    end
 
 fun prim_mk_const (knm as {Name,Thy}) =
  case KernelSig.peek(termsig, knm)
@@ -419,8 +434,22 @@ fun first_decl fname Name =
 val current_const = first_decl "current_const";
 fun mk_const(Name,Ty) = create_const"mk_const" (first_decl"mk_const" Name) Ty;
 
-fun all_consts() = map (Const o #2) (KernelSig.listItems termsig)
-fun thy_consts s = map (Const o #2) (KernelSig.listThy termsig s)
+fun all_consts() =
+    let
+      fun buildAll (_, cinfo as (_,v), A) =
+          if Type.uptodate_type (to_hol_type v) then Const cinfo :: A else A
+    in
+      KernelSig.foldl buildAll [] termsig
+    end
+fun thy_consts s =
+    let
+      fun buildthy ({Thy,...}, cinfo as (_, v), A) =
+          if Thy = s andalso Type.uptodate_type (to_hol_type v) then
+            Const cinfo :: A
+          else A
+    in
+      KernelSig.foldl buildthy [] termsig
+    end
 
 fun same_const (Const(id1,_)) (Const(id2,_)) = id1 = id2
   | same_const _ _ = false
@@ -563,11 +592,11 @@ fun subst [] = I
         fun subs tm =
           case peek(fmap,tm)
            of SOME residue => residue
-	    | NONE =>
+            | NONE =>
               (case tm
                 of Comb(Rator,Rand) => Comb(subs Rator, subs Rand)
                  | Abs(Bvar,Body) => Abs(Bvar,subs Body)
-	         | Clos _        => subs(push_clos tm)
+                 | Clos _        => subs(push_clos tm)
                  |   _         => tm)
     in
       (if b then vsubs else subs)
@@ -693,13 +722,6 @@ local fun peel f (t as Clos _) A = peel f (push_clos t) A
          if HOLset.member(viset,vi) then viset else HOLset.add(viset,vi)
       fun trypush_clos (x as Clos _) = push_clos x
         | trypush_clos t = t
-      val AV = ref (Redblackmap.mkDict String.compare) : ((string,occtype)Redblackmap.dict) ref
-      fun peekInsert (key,data) =
-        let open Redblackmap
-        in case peek (!AV,key)
-            of SOME data' => SOME data'
-             | NONE       => (AV := insert(!AV,key,data); NONE)
-        end
 in
 fun strip_binder opt =
  let val f =
@@ -713,12 +735,20 @@ fun strip_binder opt =
                                        else NONE
                                     end handle HOL_ERR _ => NONE)
  in fn tm =>
-   let val (prefixl,body) = peel f tm []
+   let
+     open Uref
+     val (prefixl,body) = peel f tm []
+     val AV = Uref.new (Redblackmap.mkDict String.compare) : ((string,occtype)Redblackmap.dict) Uref.t
+     fun peekInsert (key,data) =
+        let open Redblackmap
+        in case peek (!AV,key)
+            of SOME data' => SOME data'
+             | NONE       => (AV := insert(!AV,key,data); NONE)
+        end
      val prefix = Array.fromList prefixl
      val vmap = curry Array.sub prefix
      val (insertAVbody,insertAVprefix,lookAV,dupls) =
         let open Redblackmap  (* AV is red-black map  of (var,occtype) elems *)
-            val _ = AV := mkDict String.compare
             fun insertl [] _ dupls = dupls
               | insertl (x::rst) i dupls =
                   let val n = fst(dest_var x)
@@ -733,10 +763,7 @@ fun strip_binder opt =
             dupls)
         end
      fun variantAV n =
-       let val next = Lexis.nameStrm n
-           fun loop s = case lookAV s of NONE => s | SOME _ => loop (next())
-       in loop n
-       end
+         gen_variant (fn s => isSome (lookAV s)) "strip_binder" [] n
      fun CVs (v as Fv(n,_)) capt k =
           (case lookAV n
             of SOME (PREFIX i) => k (add_vi capt (vmap i,i))
@@ -748,9 +775,8 @@ fun strip_binder opt =
        | CVs tm capt k = k capt
      fun unclash insert [] = ()
        | unclash insert ((v,i)::rst) =
-           let val (n,ty) = dest_var v
-               val n' = variantAV n
-               val v' = mk_var(n',ty)
+           let val v' = variantAV v
+               val n' = #1 (dest_var v')
            in Array.update(prefix,i,v')
             ; insert (n',i)
             ; unclash insert rst

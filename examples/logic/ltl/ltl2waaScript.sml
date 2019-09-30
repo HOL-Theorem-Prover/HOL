@@ -183,10 +183,10 @@ val ltl2vwaa_free_alph_def = Define
   `ltl2vwaa_free_alph Σ f =
         ALTER_A
            (tempSubForms f)
-           (initForms f)
-           (finalForms f)
            Σ
-           (trans Σ)`;
+           (trans Σ)
+           (initForms f)
+           (finalForms f)`;
 
 val ltl2vwaa_def = Define `ltl2vwaa f = ltl2vwaa_free_alph (POW (props f)) f`;
 
@@ -1026,7 +1026,7 @@ val REPL_IN_0 = store_thm
   );
 
 val RUN_FOR_CONJ_LEMM = store_thm
-  ("RUN_FOR_DISJ_LEMM",
+  ("RUN_FOR_CONJ_LEMM",
    ``!f1 f2 f w.
      (?r. runForAA (ltl2vwaa_free_alph (POW (props f)) f1) r w)
   /\ (?r. runForAA (ltl2vwaa_free_alph (POW (props f)) f2) r w)
@@ -1099,10 +1099,10 @@ val RUN_FOR_CONJ_LEMM = store_thm
                  >- (`∀f1' f2'. x ≠ U f1' f2' ∨ U f1' f2' ∉ tempSubForms f1` by metis_tac[]
                       >> `U f1' f2' ∉ tempSubForms f1` by metis_tac[]
                       >> `!i. b' i ∈ r.V i` by metis_tac[BRANCH_V_LEMM]
-                      >> `(∀i. r.V i ⊆ (ALTER_A (tempSubForms f1) (initForms f1)
-                                       {U f1' f2 | U f1' f2 ∈ tempSubForms f1}
-                                       (POW (props f))
-                                       (trans (POW (props f)))).states)`
+                      >> `(∀i. r.V i ⊆ (ALTER_A (tempSubForms f1) (POW (props f))
+                                                (trans (POW (props f))) (initForms f1)
+                                                {U f1' f2 | U f1' f2 ∈ tempSubForms f1}
+                                       ).states)`
                           by metis_tac[validAARunFor_def]
                       >> fs[SUBSET_DEF, branchFixP_def] >> metis_tac[]
                     )
@@ -1111,10 +1111,11 @@ val RUN_FOR_CONJ_LEMM = store_thm
                  >- (`∀f1' f2'. x ≠ U f1' f2' ∨ U f1' f2' ∉ tempSubForms f2` by metis_tac[]
                      >> `U f1' f2' ∉ tempSubForms f2` by metis_tac[]
                      >> `!i. b' i ∈ r'.V i` by metis_tac[BRANCH_V_LEMM]
-                     >> `(∀i. r'.V i ⊆ (ALTER_A (tempSubForms f2) (initForms f2)
+                     >> `(∀i. r'.V i ⊆ (ALTER_A (tempSubForms f2) (POW (props f))
+                                                (trans (POW (props f)))
+                                                (initForms f2)
                                                 {U f1 f2' | U f1 f2' ∈ tempSubForms f2}
-                                                (POW (props f))
-                                                (trans (POW (props f)))).states)`
+                                                ).states)`
                          by metis_tac[validAARunFor_def]
                      >> fs[SUBSET_DEF, branchFixP_def] >> metis_tac[]
                     )

@@ -5,6 +5,7 @@ infix |>
 fun x |> f = f x
 
 exception LEX_ERROR of string
+type result = (string,int) Binarymap.dict
 
 datatype char_reader = CR of {reader : unit -> string,
                               current : char option,
@@ -49,13 +50,13 @@ fun advance (c as CR {pos, buffer, maxpos, reader, current, closer}) =
 datatype SCR = SCR of {linenum : int,
                        filename : string,
                        colnum : int,
-                       ids : string Binaryset.set,
+                       ids : (string,int) Binarymap.dict,
                        cr : char_reader}
 
 
 fun SCRfromNamedCR (name, cr) =
   SCR { linenum = 1, colnum = 0, filename = name,
-        ids = Binaryset.empty String.compare, cr = cr }
+        ids = Binarymap.mkDict String.compare, cr = cr }
 
 fun makeSCR fname = SCRfromNamedCR (fname, fromFile fname)
 fun SCRfromStream (name, is) = SCRfromNamedCR (name, fromStream is)
@@ -72,7 +73,10 @@ fun newline (SCR{linenum, filename, colnum, ids, cr}) =
         ids = ids, cr = advance cr}
 fun completeID s (SCR{linenum, filename, colnum, ids, cr}) =
     SCR{linenum = linenum, filename = filename, colnum = colnum,
-        ids = Binaryset.add(ids, s), cr = cr}
+        ids = case Binarymap.peek(ids,s) of
+                  NONE => Binarymap.insert(ids, s, linenum)
+                | SOME _ => ids,
+        cr = cr}
 
 fun mem x [] = false
   | mem x (y::ys) = x = y orelse mem x ys

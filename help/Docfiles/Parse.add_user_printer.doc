@@ -31,6 +31,12 @@ of the theory). The name passed to the {register_userPP} function is
 then the name that must also be passed to {add_user_printer}. The term
 argument is the desired pattern.
 
+Alternatively, if the name specified is the empty string ({""}), the
+behaviour is to ensure that terms matching this pattern are not
+handled by the user-printing machinery. The expectation is that a more
+general pattern has already been registered, but that in this
+specified scenario the general term-printing machinery should be used.
+
 The user-supplied function may choose not to print anything for the
 given term and hand back control to the standard printer by raising
 the exception {term_pp_types.UserPP_Failed}.  All other exceptions
@@ -77,7 +83,7 @@ system printer, then it must use the {UserPP_Failed} exception
 described above.
 
 Though there are existing functions {add_string}, {add_break} etc. that
-can be used to manipulate pretty-printing streams, users should prefer
+can be used to create pretty-printing values, users should prefer
 instead to use the functions that are provided in the triple with the
 {sysprinter}. This then gives them access to functions that can
 prevent inadvertent symbol merges.
@@ -188,7 +194,7 @@ itself only with printing conjunctions. Note how the actions that make
 up the pretty-printer (combinations of {add_string} and {add_break}
 are combined with the infix {>>} operator (from the {smpp} module).
 {
-  - fun myprint Gs B sys (ppfns:term_pp_types.ppstream_funs) gravs d t =
+  > fun myprint Gs B sys (ppfns:term_pp_types.ppstream_funs) gravs d t =
     let
       open Portable term_pp_types smpp
       val (str,brk) = (#add_string ppfns, #add_break ppfns);
@@ -203,18 +209,18 @@ are combined with the infix {>>} operator (from the {smpp} module).
       sys (Top, Top, Top) r >>
       str "ENDCONJ"
     end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
-  >  val myprint = fn :
-       'a -> 'b ->
-       (grav * grav * grav -> int -> term ->
-         (term_pp_types.printing_info,'c)smpp.t) ->
-       term_pp_types.ppstream_funs -> 'd -> int -> term ->
-       (term_pp_types.printing_info,unit)smpp.t
+  val myprint = fn :
+     'a -> 'b ->
+     (grav * grav * grav -> int -> term ->
+       (term_pp_types.printing_info,'c)smpp.t) ->
+     term_pp_types.ppstream_funs -> 'd -> int -> term ->
+     (term_pp_types.printing_info,unit)smpp.t
 
-  - temp_add_user_printer ("myprint", ``p /\ q``, myprint);
-  > val it = () : unit
+  > temp_add_user_printer ("myprint", ``p /\ q``, myprint);
+  val it = () : unit
 
-  - ``p ==> q /\ r``;
-  > val it = ``p ==> CONJ: q and then r ENDCONJ`` : term
+  > ``p ==> q /\ r``;
+  val it = ``p ==> CONJ: q and then r ENDCONJ`` : term
 }
 The variables {p}, {q} and {r} as well as the implication
 are all of boolean type, but are handled by the system printer.  The
@@ -276,6 +282,7 @@ to call {strip_conj} and print all of the conjuncts in one fell swoop.
 Additionally, this example demonstrates how easy it is to conceal
 genuine syntactic structure with a pretty-printer. Finally, it shows
 how styles can be used.
+
 \USES
 For extending the pretty-printer in ways not possible to encompass
 with the built-in grammar rules for concrete syntax.

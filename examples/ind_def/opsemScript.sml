@@ -14,10 +14,10 @@ open HolKernel Parse boolLib bossLib
 val _ = new_theory "opsem";
 
 (*---------------------------------------------------------------------------*)
-(* Syntax of the programming language.					     *)
+(* Syntax of the programming language.                                       *)
 (*                                                                           *)
 (* Program variables are represented by strings, and states are modelled by  *)
-(* finite maps from program variables to natural numbers.	             *)
+(* finite maps from program variables to natural numbers.                    *)
 (*---------------------------------------------------------------------------*)
 
 val _ = type_abbrev("state", ``:string |-> num``);
@@ -99,14 +99,14 @@ val (rules,induction,ecases) = Hol_reln
 val rulel = CONJUNCTS rules;
 
 (* --------------------------------------------------------------------- *)
-(* Stronger form of rule induction.					 *)
+(* Stronger form of rule induction.                                      *)
 (* --------------------------------------------------------------------- *)
 
 val sinduction = derive_strong_induction(rules,induction);
 
 (* =====================================================================*)
 (* Derivation of backwards case analysis theorems for each rule.        *)
-(*									*)
+(*                                                                      *)
 (* These theorems are consequences of the general case analysis theorem *)
 (* proved above.  They are used to justify formal reasoning in which the*)
 (* rules are driven "backwards', inferring premisses from conclusions.  *)

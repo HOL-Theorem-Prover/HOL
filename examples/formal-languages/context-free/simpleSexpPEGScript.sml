@@ -70,7 +70,7 @@ val sexpPEG_def = zDefine`
         tokeq #"(" ~> pnt sxnt_sexpseq ;
         tokeq #"\"" ~> pnt sxnt_strcontents <~ tokeq #"\"" ;
         pegf (tokeq #"'" ~> grabWS (pnt sxnt_sexp0))
-             (λs. ⦇ SX_SYM "quote"; s⦈) ;
+             (λs. ⟪ SX_SYM "quote"; s⟫) ;
         pnt sxnt_sexpsym
       ]);
      (mkNT sxnt_sexpseq,

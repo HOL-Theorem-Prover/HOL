@@ -55,7 +55,7 @@ val _ = encodeLib.set_bottom_value ``:'a |-> 'b`` ``FEMPTY : 'a |-> 'b``;
 val _ = acl2encodeLib.translate_simple_function [(``ArrayOf``, "acl2ArrayOf")] ArrayOf_def;
 
 (*---------------------------------------------------------------------------*)
-(* Syntax of the programming language.					     *)
+(* Syntax of the programming language.                                       *)
 (*---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------*)
@@ -136,12 +136,12 @@ val safe_neval_def =
 val nevaluates_def =
   Define `(nevaluates (Var v) s = v IN FDOM s /\ isScalar (s ' v)) /\
           (nevaluates (Arr a e) s = a IN FDOM s /\ isArray (s ' a) /\ integer$int_le 0i (safe_neval e s) /\ nevaluates e s /\ Num (safe_neval e s) IN FDOM (ArrayOf (s ' a))) /\
-	  (nevaluates (Const c) s = T) /\
-	  (nevaluates (Plus e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\
-	  (nevaluates (Sub e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\
-	  (nevaluates (Times e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\
-	  (nevaluates (Div e1 e2) s = ~(safe_neval e2 s = 0i) /\ nevaluates e1 s /\ nevaluates e2 s) /\
-	  (nevaluates (Min e1 e2) s = nevaluates e1 s /\ nevaluates e2 s)`;
+          (nevaluates (Const c) s = T) /\
+          (nevaluates (Plus e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\
+          (nevaluates (Sub e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\
+          (nevaluates (Times e1 e2) s = nevaluates e1 s /\ nevaluates e2 s) /\
+          (nevaluates (Div e1 e2) s = ~(safe_neval e2 s = 0i) /\ nevaluates e1 s /\ nevaluates e2 s) /\
+          (nevaluates (Min e1 e2) s = nevaluates e1 s /\ nevaluates e2 s)`;
 
 (*****************************************************************************)
 (* ...and prove that this implies we are correct.                            *)
@@ -450,14 +450,14 @@ val (rules,induction,ecases) =
 val rulel = CONJUNCTS rules;
 
 (* --------------------------------------------------------------------- *)
-(* Stronger form of rule induction.					 *)
+(* Stronger form of rule induction.                                      *)
 (* --------------------------------------------------------------------- *)
 
 val sinduction = derive_strong_induction(rules,induction);
 
 (* =====================================================================*)
 (* Derivation of backwards case analysis theorems for each rule.        *)
-(*									*)
+(*                                                                      *)
 (* These theorems are consequences of the general case analysis theorem *)
 (* proved above.  They are used to justify formal reasoning in which the*)
 (* rules are driven 'backwards', inferring premisses from conclusions.  *)

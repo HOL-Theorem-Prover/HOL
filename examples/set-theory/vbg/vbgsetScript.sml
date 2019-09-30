@@ -5,6 +5,7 @@ open lcsymtacs
 open boolSimps
 
 val _ = new_theory "vbgset"
+val _ = ParseExtras.temp_loose_equality()
 
 (* hide constants from the existing (typed) set theory *)
 val _ = app (ignore o hide) ["UNION", "IN", "SUBSET", "EMPTY", "INSERT",

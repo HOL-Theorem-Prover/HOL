@@ -25,7 +25,7 @@ sig
   val realspace_delimited_fields : string -> string list
   val kernelid_fname : string
 
-  (* terminal colouring of strings *)
+  (* terminal stuff: colouring of strings, getting width *)
   val red : string -> string
   val boldred : string -> string
   val boldgreen : string -> string
@@ -33,6 +33,7 @@ sig
   val bold : string -> string
   val dim : string -> string
   val CLR_EOL : string
+  val getWidth : unit -> int
 
   (* diagnostics/output *)
   type output_functions = {warn : string -> unit,
@@ -78,6 +79,7 @@ sig
     val extend : {base : t, extension : t} -> t
     val toString : t -> string
     val toAbsPath : t -> string
+    val pretty_dir : t -> string (* uses holpathdb abbreviations *)
     val fromPath : {origin: string, path : string} -> t
     val sort : t list -> t list
     val curdir : unit -> t

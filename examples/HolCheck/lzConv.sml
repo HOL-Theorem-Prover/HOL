@@ -28,18 +28,18 @@ val ERR = mk_HOL_ERR "lzConv";
 
 
 (* ---------------------------------------------------------------------*)
-(* Conversion for rewrite rules of the form |- !x1 ... xn. t == u   	*)
-(* Matches x1 ... xn : 	 t'  ---->  |- t' == u'   			*)
+(* Conversion for rewrite rules of the form |- !x1 ... xn. t == u       *)
+(* Matches x1 ... xn :   t'  ---->  |- t' == u'                         *)
 (* Matches all types in conclusion except those mentioned in hypotheses.*)
-(*									*)
-(* Rewritten such that the lhs of |- t' = u' is syntactically equal to 	*)
-(* the input term, not just alpha-equivalent. 	         [TFM 90.07.11] *)
-(*									*)
-(* OLD CODE:								*)
-(*									*)
-(*   let REWRITE_CONV =							*)
-(*       set_fail_prefix `REWRITE_CONV`					*)
-(*         (PART_MATCH (fst o dest_eq));;				*)
+(*                                                                      *)
+(* Rewritten such that the lhs of |- t' = u' is syntactically equal to  *)
+(* the input term, not just alpha-equivalent.            [TFM 90.07.11] *)
+(*                                                                      *)
+(* OLD CODE:                                                            *)
+(*                                                                      *)
+(*   let REWRITE_CONV =                                                 *)
+(*       set_fail_prefix `REWRITE_CONV`                                 *)
+(*         (PART_MATCH (fst o dest_eq));;                               *)
 (* ---------------------------------------------------------------------*)
 
 fun REWR_CONV0 (part_matcher,fn_name) th =
@@ -60,11 +60,11 @@ val HO_REWR_CONV = REWR_CONV0 (HO_PART_MATCH, "HO_REWR_CONV");
 
 
 (* ---------------------------------------------------------------------*)
-(* RAND_CONV conv "t1 t2" applies conv to t2				*)
-(* 									*)
-(* Added TFM 88.03.31							*)
-(* Revised TFM 91.03.08							*)
-(* Revised RJB 91.04.17							*)
+(* RAND_CONV conv "t1 t2" applies conv to t2                            *)
+(*                                                                      *)
+(* Added TFM 88.03.31                                                   *)
+(* Revised TFM 91.03.08                                                 *)
+(* Revised RJB 91.04.17                                                 *)
 (* Revised Michael Norrish 2000.03.27                                   *)
 (*    now passes on information about nested failure                    *)
 (* ---------------------------------------------------------------------*)
@@ -87,11 +87,11 @@ end
 
 
 (* ---------------------------------------------------------------------*)
-(* RATOR_CONV conv "t1 t2" applies conv to t1				*)
-(* 									*)
-(* Added TFM 88.03.31							*)
-(* Revised TFM 91.03.08							*)
-(* Revised RJB 91.04.17							*)
+(* RATOR_CONV conv "t1 t2" applies conv to t1                           *)
+(*                                                                      *)
+(* Added TFM 88.03.31                                                   *)
+(* Revised TFM 91.03.08                                                 *)
+(* Revised RJB 91.04.17                                                 *)
 (* Revised Michael Norrish 2000.03.27                                   *)
 (*    now passes on information about nested failure                    *)
 (* ---------------------------------------------------------------------*)
@@ -134,19 +134,19 @@ fun ABS_CONV conv tm =
         ABS Bvar newbody
         handle HOL_ERR _ => (* this can happen if Bvar is now free in the assumptions to newbody *)
                let
-		 (* this is buggy:
-		  - fun foo_conv tm = List.foldl (fn (th,ath) => ADD_ASSUM (concl th) ath)
-						 (REFL tm) (List.map REFL (free_vars tm));
-		  > val foo_conv = fn : term -> thm
-		  -  foo_conv ``x``;
-			 <<HOL message: inventing new type variable names: 'a>>
-		  > val it =  [x = x] |- x = x : thm
-		  - ABS_CONV foo_conv ``\x.x`` handle ex => Raise ex;
-			 <<HOL message: inventing new type variable names: 'a>>
-			   Exception raised at Conv.ABS_CONV:
-			   ABS: The variable is free in the assumptions
-			! Uncaught exception:
-			! HOL_ERR
+                 (* this is buggy:
+                  - fun foo_conv tm = List.foldl (fn (th,ath) => ADD_ASSUM (concl th) ath)
+                                                 (REFL tm) (List.map REFL (free_vars tm));
+                  > val foo_conv = fn : term -> thm
+                  -  foo_conv ``x``;
+                         <<HOL message: inventing new type variable names: 'a>>
+                  > val it =  [x = x] |- x = x : thm
+                  - ABS_CONV foo_conv ``\x.x`` handle ex => Raise ex;
+                         <<HOL message: inventing new type variable names: 'a>>
+                           Exception raised at Conv.ABS_CONV:
+                           ABS: The variable is free in the assumptions
+                        ! Uncaught exception:
+                        ! HOL_ERR
 
                  in fact with
                     fun  foo_conv tm = (ADD_ASSUM ``x:bool`` (REFL (mk_conj(``x:bool``,tm)))); is fails on TRANS rather an ABS
@@ -470,29 +470,29 @@ end
 
 (* =====================================================================*)
 (* What follows is a complete set of conversions for moving ! and ? into*)
-(* and out of the basic logical connectives ~, /\, \/, ==>, and =.	*)
-(*									*)
-(* Naming scheme:							*)
-(*									*)
-(*   1: for moving quantifiers inwards:  <quant>_<conn>_CONV		*)
-(*									*)
+(* and out of the basic logical connectives ~, /\, \/, ==>, and =.      *)
+(*                                                                      *)
+(* Naming scheme:                                                       *)
+(*                                                                      *)
+(*   1: for moving quantifiers inwards:  <quant>_<conn>_CONV            *)
+(*                                                                      *)
 (*   2: for moving quantifiers outwards: [dir]_<conn>_<quant>_CONV      *)
-(*									*)
-(* where								*)
-(*									*)
-(*   <quant> := FORALL | EXISTS						*)
-(*   <conn>  := NOT | AND | OR | IMP | EQ				*)
-(*   [dir]   := LEFT | RIGHT			(optional)		*)
-(*									*)
-(*									*)
-(* [TFM 90.11.09]							*)
+(*                                                                      *)
+(* where                                                                *)
+(*                                                                      *)
+(*   <quant> := FORALL | EXISTS                                         *)
+(*   <conn>  := NOT | AND | OR | IMP | EQ                               *)
+(*   [dir]   := LEFT | RIGHT                    (optional)              *)
+(*                                                                      *)
+(*                                                                      *)
+(* [TFM 90.11.09]                                                       *)
 (* =====================================================================*)
 
 (* ---------------------------------------------------------------------*)
-(* NOT_FORALL_CONV, implements the following axiom scheme:		*)
-(*									*)
-(*      |- (~!x.tm) = (?x.~tm)						*)
-(*									*)
+(* NOT_FORALL_CONV, implements the following axiom scheme:              *)
+(*                                                                      *)
+(*      |- (~!x.tm) = (?x.~tm)                                          *)
+(*                                                                      *)
 (* ---------------------------------------------------------------------*)
 fun NOT_FORALL_CONV tm =
    let val all = dest_neg tm
@@ -511,10 +511,10 @@ fun NOT_FORALL_CONV tm =
    handle HOL_ERR _ => raise ERR "NOT_FORALL_CONV" "";
 
 (* ---------------------------------------------------------------------*)
-(* NOT_EXISTS_CONV, implements the following axiom scheme.		*)
-(*									*)
-(*	|- (~?x.tm) = (!x.~tm)						*)
-(*									*)
+(* NOT_EXISTS_CONV, implements the following axiom scheme.              *)
+(*                                                                      *)
+(*      |- (~?x.tm) = (!x.~tm)                                          *)
+(*                                                                      *)
 (* ---------------------------------------------------------------------*)
 fun NOT_EXISTS_CONV tm =
    let val {Bvar,Body} = dest_exists (dest_neg tm)
@@ -533,10 +533,10 @@ fun NOT_EXISTS_CONV tm =
    handle HOL_ERR _ => raise ERR "NOT_EXISTS_CONV" "";
 
 (* ---------------------------------------------------------------------*)
-(* EXISTS_NOT_CONV, implements the following axiom scheme.		*)
-(*									*)
-(*	|- (?x.~tm) = (~!x.tm)						*)
-(*									*)
+(* EXISTS_NOT_CONV, implements the following axiom scheme.              *)
+(*                                                                      *)
+(*      |- (?x.~tm) = (~!x.tm)                                          *)
+(*                                                                      *)
 (* ---------------------------------------------------------------------*)
 fun EXISTS_NOT_CONV tm =
    let val {Bvar,Body} = dest_exists tm
@@ -546,10 +546,10 @@ fun EXISTS_NOT_CONV tm =
    handle HOL_ERR _ => raise ERR "EXISTS_NOT_CONV" "";
 
 (* ---------------------------------------------------------------------*)
-(* FORALL_NOT_CONV, implements the following axiom scheme.		*)
-(*									*)
-(*	|- (!x.~tm) = (~?x.tm)						*)
-(*									*)
+(* FORALL_NOT_CONV, implements the following axiom scheme.              *)
+(*                                                                      *)
+(*      |- (!x.~tm) = (~?x.tm)                                          *)
+(*                                                                      *)
 (* ---------------------------------------------------------------------*)
 fun FORALL_NOT_CONV tm =
    let val {Bvar,Body} = dest_forall tm
@@ -559,11 +559,11 @@ fun FORALL_NOT_CONV tm =
    handle HOL_ERR _ => raise ERR "FORALL_NOT_CONV" "";
 
 (* ---------------------------------------------------------------------*)
-(* FORALL_AND_CONV : move universal quantifiers into conjunction.	*)
-(*									*)
-(* A call to FORALL_AND_CONV "!x. P /\ Q"  returns:			*)
-(*									*)
-(*   |- (!x. P /\ Q) = (!x.P) /\ (!x.Q)					*)
+(* FORALL_AND_CONV : move universal quantifiers into conjunction.       *)
+(*                                                                      *)
+(* A call to FORALL_AND_CONV "!x. P /\ Q"  returns:                     *)
+(*                                                                      *)
+(*   |- (!x. P /\ Q) = (!x.P) /\ (!x.Q)                                 *)
 (* ---------------------------------------------------------------------*)
 fun FORALL_AND_CONV tm =
     let val {Bvar,Body} = dest_forall tm
@@ -579,11 +579,11 @@ fun FORALL_AND_CONV tm =
     handle HOL_ERR _ => raise ERR "FORALL_AND_CONV" "";
 
 (* ---------------------------------------------------------------------*)
-(* EXISTS_OR_CONV : move existential quantifiers into disjunction.	*)
-(*									*)
-(* A call to EXISTS_OR_CONV "?x. P \/ Q"  returns:			*)
-(*									*)
-(*   |- (?x. P \/ Q) = (?x.P) \/ (?x.Q)					*)
+(* EXISTS_OR_CONV : move existential quantifiers into disjunction.      *)
+(*                                                                      *)
+(* A call to EXISTS_OR_CONV "?x. P \/ Q"  returns:                      *)
+(*                                                                      *)
+(*   |- (?x. P \/ Q) = (?x.P) \/ (?x.Q)                                 *)
 (* ---------------------------------------------------------------------*)
 (*
 fun EXISTS_OR_CONV tm =
@@ -636,11 +636,11 @@ fun EXISTS_OR_CONV tm =
 end;
 
 (* ---------------------------------------------------------------------*)
-(* AND_FORALL_CONV : move universal quantifiers out of conjunction.	*)
-(*									*)
-(* A call to AND_FORALL_CONV "(!x. P) /\ (!x. Q)"  returns:		*)
-(*									*)
-(*   |- (!x.P) /\ (!x.Q) = (!x. P /\ Q) 				*)
+(* AND_FORALL_CONV : move universal quantifiers out of conjunction.     *)
+(*                                                                      *)
+(* A call to AND_FORALL_CONV "(!x. P) /\ (!x. Q)"  returns:             *)
+(*                                                                      *)
+(*   |- (!x.P) /\ (!x.Q) = (!x. P /\ Q)                                 *)
 (* ---------------------------------------------------------------------*)
 
 fun AND_FORALL_CONV tm =
@@ -663,13 +663,13 @@ fun AND_FORALL_CONV tm =
 
 
 (* ---------------------------------------------------------------------*)
-(* LEFT_AND_FORALL_CONV : move universal quantifier out of conjunction.	*)
-(*									*)
-(* A call to LEFT_AND_FORALL_CONV "(!x.P) /\  Q"  returns:		*)
-(*									*)
-(*   |- (!x.P) /\ Q = (!x'. P[x'/x] /\ Q) 				*)
-(* 									*)
-(* Where x' is a primed variant of x not free in the input term		*)
+(* LEFT_AND_FORALL_CONV : move universal quantifier out of conjunction. *)
+(*                                                                      *)
+(* A call to LEFT_AND_FORALL_CONV "(!x.P) /\  Q"  returns:              *)
+(*                                                                      *)
+(*   |- (!x.P) /\ Q = (!x'. P[x'/x] /\ Q)                               *)
+(*                                                                      *)
+(* Where x' is a primed variant of x not free in the input term         *)
 (* ---------------------------------------------------------------------*)
 fun LEFT_AND_FORALL_CONV tm =
    let val {conj1,...} = dest_conj tm
@@ -688,12 +688,12 @@ fun LEFT_AND_FORALL_CONV tm =
 
 (* ---------------------------------------------------------------------*)
 (* RIGHT_AND_FORALL_CONV : move universal quantifier out of conjunction.*)
-(*									*)
-(* A call to RIGHT_AND_FORALL_CONV "P /\ (!x.Q)"  returns:		*)
-(*									*)
-(*   |-  P /\ (!x.Q) = (!x'. P /\ Q[x'/x]) 				*)
-(* 									*)
-(* where x' is a primed variant of x not free in the input term		*)
+(*                                                                      *)
+(* A call to RIGHT_AND_FORALL_CONV "P /\ (!x.Q)"  returns:              *)
+(*                                                                      *)
+(*   |-  P /\ (!x.Q) = (!x'. P /\ Q[x'/x])                              *)
+(*                                                                      *)
+(* where x' is a primed variant of x not free in the input term         *)
 (* ---------------------------------------------------------------------*)
 fun RIGHT_AND_FORALL_CONV tm =
    let val {conj2, ...} = dest_conj tm
@@ -711,11 +711,11 @@ fun RIGHT_AND_FORALL_CONV tm =
    handle HOL_ERR _ => raise ERR "RIGHT_AND_FORALL_CONV" "";
 
 (* ---------------------------------------------------------------------*)
-(* OR_EXISTS_CONV : move existential quantifiers out of disjunction.	*)
-(*									*)
-(* A call to OR_EXISTS_CONV "(?x. P) \/ (?x. Q)"  returns:		*)
-(*									*)
-(*   |- (?x.P) \/ (?x.Q) = (?x. P \/ Q) 				*)
+(* OR_EXISTS_CONV : move existential quantifiers out of disjunction.    *)
+(*                                                                      *)
+(* A call to OR_EXISTS_CONV "(?x. P) \/ (?x. Q)"  returns:              *)
+(*                                                                      *)
+(*   |- (?x.P) \/ (?x.Q) = (?x. P \/ Q)                                 *)
 (* ---------------------------------------------------------------------*)
 fun OR_EXISTS_CONV tm =
    let val {disj1,disj2} = dest_disj tm
@@ -745,12 +745,12 @@ fun OR_EXISTS_CONV tm =
 
 (* ---------------------------------------------------------------------*)
 (* LEFT_OR_EXISTS_CONV : move existential quantifier out of disjunction.*)
-(*									*)
-(* A call to LEFT_OR_EXISTS_CONV "(?x.P) \/  Q"  returns:		*)
-(*									*)
-(*   |- (?x.P) \/ Q = (?x'. P[x'/x] \/ Q) 				*)
-(* 									*)
-(* Where x' is a primed variant of x not free in the input term		*)
+(*                                                                      *)
+(* A call to LEFT_OR_EXISTS_CONV "(?x.P) \/  Q"  returns:               *)
+(*                                                                      *)
+(*   |- (?x.P) \/ Q = (?x'. P[x'/x] \/ Q)                               *)
+(*                                                                      *)
+(* Where x' is a primed variant of x not free in the input term         *)
 (* ---------------------------------------------------------------------*)
 
 fun LEFT_OR_EXISTS_CONV tm =
@@ -777,12 +777,12 @@ fun LEFT_OR_EXISTS_CONV tm =
 
 (* ---------------------------------------------------------------------*)
 (* RIGHT_OR_EXISTS_CONV: move existential quantifier out of disjunction.*)
-(*									*)
-(* A call to RIGHT_OR_EXISTS_CONV "P \/ (?x.Q)"  returns:		*)
-(*									*)
-(*   |-  P \/ (?x.Q) = (?x'. P \/ Q[x'/x]) 				*)
-(* 									*)
-(* where x' is a primed variant of x not free in the input term		*)
+(*                                                                      *)
+(* A call to RIGHT_OR_EXISTS_CONV "P \/ (?x.Q)"  returns:               *)
+(*                                                                      *)
+(*   |-  P \/ (?x.Q) = (?x'. P \/ Q[x'/x])                              *)
+(*                                                                      *)
+(* where x' is a primed variant of x not free in the input term         *)
 (* ---------------------------------------------------------------------*)
 fun RIGHT_OR_EXISTS_CONV tm =
    let val {disj1,disj2} = dest_disj tm
@@ -806,13 +806,13 @@ fun RIGHT_OR_EXISTS_CONV tm =
    handle HOL_ERR _ => raise ERR "RIGHT_OR_EXISTS_CONV" "";
 
 (* ---------------------------------------------------------------------*)
-(* EXISTS_AND_CONV : move existential quantifier into conjunction.	*)
-(*									*)
-(* A call to EXISTS_AND_CONV "?x. P /\ Q"  returns:			*)
-(*									*)
-(*    |- (?x. P /\ Q) = (?x.P) /\ Q        [x not free in Q]		*)
-(*    |- (?x. P /\ Q) = P /\ (?x.Q)        [x not free in P]		*)
-(*    |- (?x. P /\ Q) = (?x.P) /\ (?x.Q)   [x not free in P /\ Q]	*)
+(* EXISTS_AND_CONV : move existential quantifier into conjunction.      *)
+(*                                                                      *)
+(* A call to EXISTS_AND_CONV "?x. P /\ Q"  returns:                     *)
+(*                                                                      *)
+(*    |- (?x. P /\ Q) = (?x.P) /\ Q        [x not free in Q]            *)
+(*    |- (?x. P /\ Q) = P /\ (?x.Q)        [x not free in P]            *)
+(*    |- (?x. P /\ Q) = (?x.P) /\ (?x.Q)   [x not free in P /\ Q]       *)
 (* ---------------------------------------------------------------------*)
 fun EXISTS_AND_CONV tm =
    let val {Bvar, Body} = dest_exists tm handle HOL_ERR _
@@ -846,15 +846,15 @@ fun EXISTS_AND_CONV tm =
         end
    end
    handle (e as HOL_ERR{origin_structure = "lzConv",
-			origin_function = "EXISTS_AND_CONV",...}) => raise e
+                        origin_function = "EXISTS_AND_CONV",...}) => raise e
         | HOL_ERR _ => raise ERR"EXISTS_AND_CONV" "";
 
 (* ---------------------------------------------------------------------*)
-(* AND_EXISTS_CONV : move existential quantifier out of conjunction.	*)
-(*									*)
-(*   |- (?x.P) /\ (?x.Q) = (?x. P /\ Q) 				*)
-(* 									*)
-(* provided x is free in neither P nor Q.				*)
+(* AND_EXISTS_CONV : move existential quantifier out of conjunction.    *)
+(*                                                                      *)
+(*   |- (?x.P) /\ (?x.Q) = (?x. P /\ Q)                                 *)
+(*                                                                      *)
+(* provided x is free in neither P nor Q.                               *)
 (* ---------------------------------------------------------------------*)
 local val AE_ERR = ERR"AND_EXISTS_CONV" "expecting `(?x.P) /\\ (?x.Q)`"
 in
@@ -871,18 +871,18 @@ fun AND_EXISTS_CONV tm =
               (mk_exists{Bvar=x, Body=mk_conj{conj1=P, conj2=Q}}))
  end
  handle (e as HOL_ERR{origin_structure = "lzConv",
-			origin_function = "AND_EXISTS_CONV",...}) => raise e
+                        origin_function = "AND_EXISTS_CONV",...}) => raise e
       | HOL_ERR _ => raise ERR"AND_EXISTS_CONV" ""
 end;
 
 (* ---------------------------------------------------------------------*)
-(* LEFT_AND_EXISTS_CONV: move existential quantifier out of conjunction	*)
-(*									*)
-(* A call to LEFT_AND_EXISTS_CONV "(?x.P) /\  Q"  returns:		*)
-(*									*)
-(*   |- (?x.P) /\ Q = (?x'. P[x'/x] /\ Q) 				*)
-(* 									*)
-(* Where x' is a primed variant of x not free in the input term		*)
+(* LEFT_AND_EXISTS_CONV: move existential quantifier out of conjunction *)
+(*                                                                      *)
+(* A call to LEFT_AND_EXISTS_CONV "(?x.P) /\  Q"  returns:              *)
+(*                                                                      *)
+(*   |- (?x.P) /\ Q = (?x'. P[x'/x] /\ Q)                               *)
+(*                                                                      *)
+(* Where x' is a primed variant of x not free in the input term         *)
 (* ---------------------------------------------------------------------*)
 fun LEFT_AND_EXISTS_CONV tm =
    let val {conj1,conj2} = dest_conj tm
@@ -903,12 +903,12 @@ fun LEFT_AND_EXISTS_CONV tm =
 
 (* ---------------------------------------------------------------------*)
 (* RIGHT_AND_EXISTS_CONV: move existential quantifier out of conjunction*)
-(*									*)
-(* A call to RIGHT_AND_EXISTS_CONV "P /\ (?x.Q)"  returns:		*)
-(*									*)
-(*   |- P /\ (?x.Q) = (?x'. P /\ (Q[x'/x]) 				*)
-(* 									*)
-(* where x' is a primed variant of x not free in the input term		*)
+(*                                                                      *)
+(* A call to RIGHT_AND_EXISTS_CONV "P /\ (?x.Q)"  returns:              *)
+(*                                                                      *)
+(*   |- P /\ (?x.Q) = (?x'. P /\ (Q[x'/x])                              *)
+(*                                                                      *)
+(* where x' is a primed variant of x not free in the input term         *)
 (* ---------------------------------------------------------------------*)
 fun RIGHT_AND_EXISTS_CONV tm =
    let val {conj1,conj2} = dest_conj tm
@@ -929,13 +929,13 @@ fun RIGHT_AND_EXISTS_CONV tm =
 
 
 (* ---------------------------------------------------------------------*)
-(* FORALL_OR_CONV : move universal quantifier into disjunction.		*)
-(*									*)
-(* A call to FORALL_OR_CONV "!x. P \/ Q"  returns:			*)
-(*									*)
-(*   |- (!x. P \/ Q) = (!x.P) \/ Q	 [if x not free in Q]		*)
-(*   |- (!x. P \/ Q) = P \/ (!x.Q)	 [if x not free in P]		*)
-(*   |- (!x. P \/ Q) = (!x.P) \/ (!x.Q)	 [if x free in neither P nor Q]	*)
+(* FORALL_OR_CONV : move universal quantifier into disjunction.         *)
+(*                                                                      *)
+(* A call to FORALL_OR_CONV "!x. P \/ Q"  returns:                      *)
+(*                                                                      *)
+(*   |- (!x. P \/ Q) = (!x.P) \/ Q       [if x not free in Q]           *)
+(*   |- (!x. P \/ Q) = P \/ (!x.Q)       [if x not free in P]           *)
+(*   |- (!x. P \/ Q) = (!x.P) \/ (!x.Q)  [if x free in neither P nor Q] *)
 (* ---------------------------------------------------------------------*)
 local val FO_ERR = ERR"FORALL_OR_CONV" "expecting `!x. P \\/ Q`"
 in
@@ -986,16 +986,16 @@ fun FORALL_OR_CONV tm =
    end
  end
  handle (e as HOL_ERR{origin_structure = "lzConv",
-			origin_function = "FORALL_OR_CONV",...}) => raise e
+                        origin_function = "FORALL_OR_CONV",...}) => raise e
       | HOL_ERR _ => raise ERR "FORALL_OR_CONV" ""
 end;
 
 (* ---------------------------------------------------------------------*)
-(* OR_FORALL_CONV : move existential quantifier out of conjunction.	*)
-(*									*)
-(*   |- (!x.P) \/ (!x.Q) = (!x. P \/ Q) 				*)
-(* 									*)
-(* provided x is free in neither P nor Q.				*)
+(* OR_FORALL_CONV : move existential quantifier out of conjunction.     *)
+(*                                                                      *)
+(*   |- (!x.P) \/ (!x.Q) = (!x. P \/ Q)                                 *)
+(*                                                                      *)
+(* provided x is free in neither P nor Q.                               *)
 (* ---------------------------------------------------------------------*)
 local val OF_ERR = ERR "OR_FORALL_CONV" "expecting `(!x.P) \\/ (!x.Q)`"
 in
@@ -1011,18 +1011,18 @@ fun OR_FORALL_CONV tm =
    else SYM(FORALL_OR_CONV(mk_forall{Bvar=x,Body=mk_disj{disj1=P,disj2=Q}}))
  end
  handle (e as HOL_ERR{origin_structure = "lzConv",
-			origin_function = "OR_FORALL_CONV",...}) => raise e
+                        origin_function = "OR_FORALL_CONV",...}) => raise e
       | HOL_ERR _ => raise ERR "OR_FORALL_CONV" ""
 end;
 
 (* ---------------------------------------------------------------------*)
-(* LEFT_OR_FORALL_CONV : move universal quantifier out of conjunction.	*)
-(*									*)
-(* A call to LEFT_OR_FORALL_CONV "(!x.P) \/  Q"  returns:		*)
-(*									*)
-(*   |- (!x.P) \/ Q = (!x'. P[x'/x] \/ Q) 				*)
-(* 									*)
-(* Where x' is a primed variant of x not free in the input term		*)
+(* LEFT_OR_FORALL_CONV : move universal quantifier out of conjunction.  *)
+(*                                                                      *)
+(* A call to LEFT_OR_FORALL_CONV "(!x.P) \/  Q"  returns:               *)
+(*                                                                      *)
+(*   |- (!x.P) \/ Q = (!x'. P[x'/x] \/ Q)                               *)
+(*                                                                      *)
+(* Where x' is a primed variant of x not free in the input term         *)
 (* ---------------------------------------------------------------------*)
 fun LEFT_OR_FORALL_CONV tm =
    let val {disj1,disj2} = dest_disj tm
@@ -1045,13 +1045,13 @@ fun LEFT_OR_FORALL_CONV tm =
    handle HOL_ERR _ => raise ERR "LEFT_OR_FORALL_CONV" "";
 
 (* ---------------------------------------------------------------------*)
-(* RIGHT_OR_FORALL_CONV : move universal quantifier out of conjunction.	*)
-(*									*)
-(* A call to RIGHT_OR_FORALL_CONV "P \/ (!x.Q)"  returns:		*)
-(*									*)
-(*   |- P \/ (!x.Q) = (!x'. P \/ (Q[x'/x]) 				*)
-(* 									*)
-(* where x' is a primed variant of x not free in the input term		*)
+(* RIGHT_OR_FORALL_CONV : move universal quantifier out of conjunction. *)
+(*                                                                      *)
+(* A call to RIGHT_OR_FORALL_CONV "P \/ (!x.Q)"  returns:               *)
+(*                                                                      *)
+(*   |- P \/ (!x.Q) = (!x'. P \/ (Q[x'/x])                              *)
+(*                                                                      *)
+(* where x' is a primed variant of x not free in the input term         *)
 (* ---------------------------------------------------------------------*)
 fun RIGHT_OR_FORALL_CONV tm =
    let val {disj1,disj2} = dest_disj tm
@@ -1074,14 +1074,14 @@ fun RIGHT_OR_FORALL_CONV tm =
    handle HOL_ERR _ => raise ERR "RIGHT_OR_FORALL_CONV" "";
 
 (* ---------------------------------------------------------------------*)
-(* lzFORALL_IMP_CONV, implements the following axiom schemes.		*)
-(*									*)
-(*	|- (!x. P[x]==>Q) = ((?x.P[x]) ==> Q)	  [x not free in Q]	*)
-(*									*)
-(*	|- (!x. P==>Q[x]) = (P ==> (!x.Q[x]))	  [x not free in P]	*)
-(*									*)
-(*	|- (!x. P==>Q) = ((?x.P) ==> (!x.Q))	  [x not free in P==>Q]	*)
-(*									*)
+(* lzFORALL_IMP_CONV, implements the following axiom schemes.           *)
+(*                                                                      *)
+(*      |- (!x. P[x]==>Q) = ((?x.P[x]) ==> Q)     [x not free in Q]     *)
+(*                                                                      *)
+(*      |- (!x. P==>Q[x]) = (P ==> (!x.Q[x]))     [x not free in P]     *)
+(*                                                                      *)
+(*      |- (!x. P==>Q) = ((?x.P) ==> (!x.Q))      [x not free in P==>Q] *)
+(*                                                                      *)
 (* ---------------------------------------------------------------------*)
 local val FI_ERR = ERR "lzFORALL_IMP_CONV" "expecting `!x. P ==> Q`"
 in
@@ -1095,26 +1095,26 @@ fun lzFORALL_IMP_CONV tm =
      then raise ERR "lzFORALL_IMP_CONV"
              ("`"^(#Name(dest_var Bvar))^"` free on both sides of `==>`")
      else let val ltm =
-		  if fant then boolSyntax.mk_imp(boolSyntax.mk_exists(Bvar,ant),conseq)
-		  else if fconseq then boolSyntax.mk_imp(ant,boolSyntax.mk_forall(Bvar,conseq))
-		  else boolSyntax.mk_imp(boolSyntax.mk_exists(Bvar,ant),boolSyntax.mk_forall(Bvar,conseq))
-	      val jf = (fn _ => Conv.FORALL_IMP_CONV tm)
-	  in mk_lthm (fn _ => (boolSyntax.mk_eq(tm,ltm),jf)) jf  end
+                  if fant then boolSyntax.mk_imp(boolSyntax.mk_exists(Bvar,ant),conseq)
+                  else if fconseq then boolSyntax.mk_imp(ant,boolSyntax.mk_forall(Bvar,conseq))
+                  else boolSyntax.mk_imp(boolSyntax.mk_exists(Bvar,ant),boolSyntax.mk_forall(Bvar,conseq))
+              val jf = (fn _ => Conv.FORALL_IMP_CONV tm)
+          in mk_lthm (fn _ => (boolSyntax.mk_eq(tm,ltm),jf)) jf  end
    end
    handle (e as HOL_ERR{origin_structure = "lzConv",
-			origin_function = "lzFORALL_IMP_CONV",...}) => raise e
+                        origin_function = "lzFORALL_IMP_CONV",...}) => raise e
         | HOL_ERR _ => raise ERR"lzFORALL_IMP_CONV" ""
 end;
 
 (* ---------------------------------------------------------------------*)
-(* LEFT_IMP_EXISTS_CONV, implements the following theorem-scheme:	*)
-(*									*)
-(*    |- (?x. t1[x]) ==> t2  =  !x'. t1[x'] ==> t2			*)
-(*									*)
+(* LEFT_IMP_EXISTS_CONV, implements the following theorem-scheme:       *)
+(*                                                                      *)
+(*    |- (?x. t1[x]) ==> t2  =  !x'. t1[x'] ==> t2                      *)
+(*                                                                      *)
 (* where x' is a variant of x chosen not to be free in (?x.t1[x])==>t2  *)
-(*									*)
+(*                                                                      *)
 (* Author: Tom Melham                                                   *)
-(* Revised: [TFM 90.07.01]						*)
+(* Revised: [TFM 90.07.01]                                              *)
 (*----------------------------------------------------------------------*)
 fun LEFT_IMP_EXISTS_CONV tm =
    let val {ant, ...} = dest_imp tm
@@ -1130,11 +1130,11 @@ fun LEFT_IMP_EXISTS_CONV tm =
    handle HOL_ERR _ => raise ERR "LEFT_IMP_EXISTS_CONV" "";
 
 (* ---------------------------------------------------------------------*)
-(* RIGHT_IMP_FORALL_CONV, implements the following theorem-scheme:	*)
-(*									*)
-(*    |- (t1 ==> !x. t2)  =  !x'. t1 ==> t2[x'/x]			*)
-(*									*)
-(* where x' is a variant of x chosen not to be free in the input term.	*)
+(* RIGHT_IMP_FORALL_CONV, implements the following theorem-scheme:      *)
+(*                                                                      *)
+(*    |- (t1 ==> !x. t2)  =  !x'. t1 ==> t2[x'/x]                       *)
+(*                                                                      *)
+(* where x' is a variant of x chosen not to be free in the input term.  *)
 (*----------------------------------------------------------------------*)
 fun RIGHT_IMP_FORALL_CONV tm =
    let val {ant,conseq} = dest_imp tm
@@ -1153,13 +1153,13 @@ fun RIGHT_IMP_FORALL_CONV tm =
 
 
 (* ---------------------------------------------------------------------*)
-(* EXISTS_IMP_CONV, implements the following axiom schemes.		*)
-(*									*)
-(*	|- (?x. P==>Q[x]) = (P ==> (?x.Q[x]))	  [x not free in P]	*)
-(*									*)
-(*	|- (?x. P[x]==>Q) = ((!x.P[x]) ==> Q)	  [x not free in Q]	*)
-(*									*)
-(*	|- (?x. P==>Q) = ((!x.P) ==> (?x.Q))	  [x not free in P==>Q]	*)
+(* EXISTS_IMP_CONV, implements the following axiom schemes.             *)
+(*                                                                      *)
+(*      |- (?x. P==>Q[x]) = (P ==> (?x.Q[x]))     [x not free in P]     *)
+(*                                                                      *)
+(*      |- (?x. P[x]==>Q) = ((!x.P[x]) ==> Q)     [x not free in Q]     *)
+(*                                                                      *)
+(*      |- (?x. P==>Q) = ((!x.P) ==> (?x.Q))      [x not free in P==>Q] *)
 (* ---------------------------------------------------------------------*)
 local val EI_ERR = ERR"EXISTS_IMP_CONV" "expecting `?x. P ==> Q`"
 in
@@ -1221,11 +1221,11 @@ fun EXISTS_IMP_CONV tm =
 end;
 
 (* ---------------------------------------------------------------------*)
-(* LEFT_IMP_FORALL_CONV, implements the following theorem-scheme:	*)
-(*									*)
-(*    |- (!x. t1[x]) ==> t2  =  ?x'. t1[x'] ==> t2			*)
-(*									*)
-(* where x' is a variant of x chosen not to be free in the input term	*)
+(* LEFT_IMP_FORALL_CONV, implements the following theorem-scheme:       *)
+(*                                                                      *)
+(*    |- (!x. t1[x]) ==> t2  =  ?x'. t1[x'] ==> t2                      *)
+(*                                                                      *)
+(* where x' is a variant of x chosen not to be free in the input term   *)
 (*----------------------------------------------------------------------*)
 fun LEFT_IMP_FORALL_CONV tm =
    let val {ant,conseq} = dest_imp tm
@@ -1253,11 +1253,11 @@ fun LEFT_IMP_FORALL_CONV tm =
    handle HOL_ERR _ => raise ERR "LEFT_IMP_FORALL_CONV" "";
 
 (* ---------------------------------------------------------------------*)
-(* RIGHT_IMP_EXISTS_CONV, implements the following theorem-scheme:	*)
-(*									*)
-(*    |- (t1 ==> ?x. t2)  =  ?x'. t1 ==> t2[x'/x]			*)
-(*									*)
-(* where x' is a variant of x chosen not to be free in the input term.	*)
+(* RIGHT_IMP_EXISTS_CONV, implements the following theorem-scheme:      *)
+(*                                                                      *)
+(*    |- (t1 ==> ?x. t2)  =  ?x'. t1 ==> t2[x'/x]                       *)
+(*                                                                      *)
+(* where x' is a variant of x chosen not to be free in the input term.  *)
 (*----------------------------------------------------------------------*)
 fun RIGHT_IMP_EXISTS_CONV tm =
    let val {ant,conseq} = dest_imp tm
@@ -1279,13 +1279,13 @@ fun RIGHT_IMP_EXISTS_CONV tm =
    handle HOL_ERR _ => raise ERR "RIGHT_IMP_EXISTS_CONV" "";
 
 (* ---------------------------------------------------------------------*)
-(* X_SKOLEM_CONV : introduce a skolem function.				*)
-(*									*)
-(*   |- (!x1...xn. ?y. tm[x1,...,xn,y])					*)
-(*        =								*)
-(*      (?f. !x1...xn. tm[x1,..,xn,f x1 ... xn]				*)
-(*									*)
-(* The first argument is the function f.				*)
+(* X_SKOLEM_CONV : introduce a skolem function.                         *)
+(*                                                                      *)
+(*   |- (!x1...xn. ?y. tm[x1,...,xn,y])                                 *)
+(*        =                                                             *)
+(*      (?f. !x1...xn. tm[x1,..,xn,f x1 ... xn]                         *)
+(*                                                                      *)
+(* The first argument is the function f.                                *)
 (* ---------------------------------------------------------------------*)
 
 fun X_SKOLEM_CONV v =
@@ -1316,17 +1316,17 @@ fun X_SKOLEM_CONV v =
        end
   end
   handle (e as HOL_ERR{origin_structure = "lzConv",
-		       origin_function = "X_SKOLEM_CONV",...}) => raise e
+                       origin_function = "X_SKOLEM_CONV",...}) => raise e
         | HOL_ERR _ => raise ERR "X_SKOLEM_CONV" "";
 
 (* ---------------------------------------------------------------------*)
-(* SKOLEM_CONV : introduce a skolem function.				*)
-(*									*)
-(*   |- (!x1...xn. ?y. tm[x1,...,xn,y])					*)
-(*        =								*)
-(*      (?y'. !x1...xn. tm[x1,..,xn,y' x1 ... xn]			*)
-(*									*)
-(* Where y' is a primed variant of y not free in the input term.	*)
+(* SKOLEM_CONV : introduce a skolem function.                           *)
+(*                                                                      *)
+(*   |- (!x1...xn. ?y. tm[x1,...,xn,y])                                 *)
+(*        =                                                             *)
+(*      (?y'. !x1...xn. tm[x1,..,xn,y' x1 ... xn]                       *)
+(*                                                                      *)
+(* Where y' is a primed variant of y not free in the input term.        *)
 (* ---------------------------------------------------------------------*)
 
 local fun mkfty tm ty = type_of tm --> ty
@@ -1344,9 +1344,9 @@ end;
 
 
 (*----------------------------------------------------------------------*)
-(* SYM_CONV : a conversion for symmetry of equality.			*)
-(*									*)
-(* e.g. SYM_CONV "x=y"   ---->   (x=y) = (y=x).				*)
+(* SYM_CONV : a conversion for symmetry of equality.                    *)
+(*                                                                      *)
+(* e.g. SYM_CONV "x=y"   ---->   (x=y) = (y=x).                         *)
 (*----------------------------------------------------------------------*)
 
 fun SYM_CONV tm =
@@ -1369,13 +1369,13 @@ fun RIGHT_CONV_RULE conv th =
     TRANS th (conv(rhs(concl th))) handle UNCHANGED => th
 
 (* ---------------------------------------------------------------------*)
-(* FUN_EQ_CONV "f = g"  returns:  |- (f = g) = !x. (f x = g x).  	*)
-(*									*)
-(* Notes: f and g must be functions. The conversion choses an "x" not	*)
-(* free in f or g. This conversion just states that functions are equal	*)
-(* IFF the results of applying them to an arbitrary value are equal.	*)
-(*									*)
-(* New version: TFM 88.03.31						*)
+(* FUN_EQ_CONV "f = g"  returns:  |- (f = g) = !x. (f x = g x).         *)
+(*                                                                      *)
+(* Notes: f and g must be functions. The conversion choses an "x" not   *)
+(* free in f or g. This conversion just states that functions are equal *)
+(* IFF the results of applying them to an arbitrary value are equal.    *)
+(*                                                                      *)
+(* New version: TFM 88.03.31                                            *)
 (* ---------------------------------------------------------------------*)
 fun FUN_EQ_CONV tm =
  let val (ty1,_) = dom_rng(type_of (lhs tm))
@@ -1420,11 +1420,11 @@ fun X_FUN_EQ_CONV x tm =
  handle e => raise (wrap_exn "lzConv" "X_FUN_EQ_CONV" e);
 
 (* ---------------------------------------------------------------------*)
-(* SELECT_CONV: a conversion for introducing "?" when P [@x.P[x]].	*)
-(*									*)
-(* SELECT_CONV "P [@x.P [x]]" ---> |- P [@x.P [x]] = ?x. P[x]		*)
-(*									*)
-(* Added: TFM 88.03.31							*)
+(* SELECT_CONV: a conversion for introducing "?" when P [@x.P[x]].      *)
+(*                                                                      *)
+(* SELECT_CONV "P [@x.P [x]]" ---> |- P [@x.P [x]] = ?x. P[x]           *)
+(*                                                                      *)
+(* Added: TFM 88.03.31                                                  *)
 (* ---------------------------------------------------------------------*)
 (* fun SELECT_CONV tm =
 **   let val epsl = find_terms is_select tm
@@ -1477,12 +1477,12 @@ fun SELECT_CONV tm =
 end;
 
 (* ---------------------------------------------------------------------*)
-(* CONTRAPOS_CONV: convert an implication to its contrapositive.	*)
-(*									*)
-(* CONTRAPOS_CONV "a ==> b" --> |- (a ==> b) = (~b ==> ~a)		*)
-(*									*)
-(* Added: TFM 88.03.31							*)
-(* Revised: TFM 90.07.13						*)
+(* CONTRAPOS_CONV: convert an implication to its contrapositive.        *)
+(*                                                                      *)
+(* CONTRAPOS_CONV "a ==> b" --> |- (a ==> b) = (~b ==> ~a)              *)
+(*                                                                      *)
+(* Added: TFM 88.03.31                                                  *)
+(* Revised: TFM 90.07.13                                                *)
 (* ---------------------------------------------------------------------*)
 
 fun CONTRAPOS_CONV tm =
@@ -1497,13 +1497,13 @@ fun CONTRAPOS_CONV tm =
    handle HOL_ERR _ => raise ERR "CONTRAPOS_CONV" "";
 
 (* ---------------------------------------------------------------------*)
-(* ANTE_CONJ_CONV: convert an implication with conjuncts in its 	*)
-(*		  antecedant to a series of implications.		*)
-(*									*)
-(* ANTE_CONJ_CONV "a1 /\ a2 ==> c" 					*)
-(*	----> |- a1 /\ a2 ==> c = (a1 ==> (a2 ==> c))			*)
-(*									*)
-(* Added: TFM 88.03.31							*)
+(* ANTE_CONJ_CONV: convert an implication with conjuncts in its         *)
+(*                antecedant to a series of implications.               *)
+(*                                                                      *)
+(* ANTE_CONJ_CONV "a1 /\ a2 ==> c"                                      *)
+(*      ----> |- a1 /\ a2 ==> c = (a1 ==> (a2 ==> c))                   *)
+(*                                                                      *)
+(* Added: TFM 88.03.31                                                  *)
 (* ---------------------------------------------------------------------*)
 
 fun ANTE_CONJ_CONV tm =
@@ -1523,11 +1523,11 @@ fun ANTE_CONJ_CONV tm =
 
 
 (* ---------------------------------------------------------------------*)
-(* SWAP_EXISTS_CONV: swap the order of existentially quantified vars.	*)
-(*									*)
-(* SWAP_EXISTS_CONV "?x y.t[x,y]" ---> |- ?x y.t[x,y] = ?y x.t[x,y]	*)
-(*									*)
-(* AUTHOR: Paul Loewenstein 3 May 1988                             	*)
+(* SWAP_EXISTS_CONV: swap the order of existentially quantified vars.   *)
+(*                                                                      *)
+(* SWAP_EXISTS_CONV "?x y.t[x,y]" ---> |- ?x y.t[x,y] = ?y x.t[x,y]     *)
+(*                                                                      *)
+(* AUTHOR: Paul Loewenstein 3 May 1988                                  *)
 (* ---------------------------------------------------------------------*)
 
 fun SWAP_EXISTS_CONV xyt =
@@ -1541,22 +1541,22 @@ fun SWAP_EXISTS_CONV xyt =
          (DISCH xyt (CHOOSE (x,ASSUME xyt) (CHOOSE (y, (ASSUME yt))
           (EXISTS (yxt,y) (EXISTS (xt,x) t_thm)))))
          (DISCH yxt (CHOOSE (y,ASSUME yxt) (CHOOSE (x, (ASSUME xt))
- 	 (EXISTS (xyt,x) (EXISTS (yt,y) t_thm)))))
+         (EXISTS (xyt,x) (EXISTS (yt,y) t_thm)))))
    end
    handle HOL_ERR _ => raise ERR "SWAP_EXISTS_CONV" "";
 
 
 (* ---------------------------------------------------------------------*)
-(* bool_EQ_CONV: conversion for boolean equality.			*)
-(*									*)
-(* bool_EQ_CONV "b1 = b2" returns:					*)
-(*									*)
-(*    |- (b1 = b2) = T	   if b1 and b2 are identical boolean terms	*)
-(*    |- (b1 = b2)  = b2	   if b1 = "T"				*)
-(*    |- (b1 = b2)  = b1	   if b2 = "T"				*)
-(* 									*)
-(* Added TFM 88.03.31							*)
-(* Revised TFM 90.07.24							*)
+(* bool_EQ_CONV: conversion for boolean equality.                       *)
+(*                                                                      *)
+(* bool_EQ_CONV "b1 = b2" returns:                                      *)
+(*                                                                      *)
+(*    |- (b1 = b2) = T     if b1 and b2 are identical boolean terms     *)
+(*    |- (b1 = b2)  = b2           if b1 = "T"                          *)
+(*    |- (b1 = b2)  = b1           if b2 = "T"                          *)
+(*                                                                      *)
+(* Added TFM 88.03.31                                                   *)
+(* Revised TFM 90.07.24                                                 *)
 (* ---------------------------------------------------------------------*)
 
 local val (Tb::bT::_) = map (GEN (--`b:bool`--))
@@ -1575,15 +1575,15 @@ fun bool_EQ_CONV tm =
 end;
 
 (* ---------------------------------------------------------------------*)
-(* EXISTS_UNIQUE_CONV: expands with the definition of unique existence.	*)
-(*									*)
-(* 									*)
-(* EXISTS_UNIQUE_CONV "?!x.P[x]" yields the theorem: 			*)
-(* 									*)
-(*     |- ?!x.P[x] = ?x.P[x] /\ !x y. P[x] /\ P[y] ==> (x=y)		*)
-(* 									*)
-(* ADDED: TFM 90.05.06							*)
-(*									*)
+(* EXISTS_UNIQUE_CONV: expands with the definition of unique existence. *)
+(*                                                                      *)
+(*                                                                      *)
+(* EXISTS_UNIQUE_CONV "?!x.P[x]" yields the theorem:                    *)
+(*                                                                      *)
+(*     |- ?!x.P[x] = ?x.P[x] /\ !x y. P[x] /\ P[y] ==> (x=y)            *)
+(*                                                                      *)
+(* ADDED: TFM 90.05.06                                                  *)
+(*                                                                      *)
 (* REVISED: now uses a variant of x for y in 2nd conjunct [TFM 90.06.11]*)
 (* ---------------------------------------------------------------------*)
 
@@ -1621,23 +1621,23 @@ end;
 
 
 (* ---------------------------------------------------------------------*)
-(* COND_CONV: conversion for simplifying conditionals:			*)
-(*									*)
-(*   --------------------------- COND_CONV "T => u | v"			*)
-(*     |- (T => u | v) = u 						*)
+(* COND_CONV: conversion for simplifying conditionals:                  *)
 (*                                                                      *)
-(*									*)
-(*   --------------------------- COND_CONV "F => u | v"			*)
-(*     |- (F => u | v) = v 						*)
-(*									*)
-(*									*)
-(*   --------------------------- COND_CONV "b => u | u"			*)
-(*     |- (b => u | u) = u 						*)
-(*									*)
-(*   --------------------------- COND_CONV "b => u | v"	(u =alpha v)	*)
-(*     |- (b => u | v) = u 						*)
-(*									*)
-(* COND_CONV "P=>u|v" fails if P is neither "T" nor "F" and u =/= v.	*)
+(*   --------------------------- COND_CONV "T => u | v"                 *)
+(*     |- (T => u | v) = u                                              *)
+(*                                                                      *)
+(*                                                                      *)
+(*   --------------------------- COND_CONV "F => u | v"                 *)
+(*     |- (F => u | v) = v                                              *)
+(*                                                                      *)
+(*                                                                      *)
+(*   --------------------------- COND_CONV "b => u | u"                 *)
+(*     |- (b => u | u) = u                                              *)
+(*                                                                      *)
+(*   --------------------------- COND_CONV "b => u | v" (u =alpha v)    *)
+(*     |- (b => u | v) = u                                              *)
+(*                                                                      *)
+(* COND_CONV "P=>u|v" fails if P is neither "T" nor "F" and u =/= v.    *)
 (* ---------------------------------------------------------------------*)
 
 local val vt = genvar alpha
@@ -1669,12 +1669,12 @@ end;
 
 
 (* ---------------------------------------------------------------------*)
-(* EXISTENCE: derives existence from unique existence:		        *)
-(* 									*)
-(*    |- ?!x. P[x]							*)
-(* --------------------							*)
-(*    |- ?x. P[x]							*)
-(* 									*)
+(* EXISTENCE: derives existence from unique existence:                  *)
+(*                                                                      *)
+(*    |- ?!x. P[x]                                                      *)
+(* --------------------                                                 *)
+(*    |- ?x. P[x]                                                       *)
+(*                                                                      *)
 (* ---------------------------------------------------------------------*)
 
 local val EXISTS_UNIQUE_DEF = boolTheory.EXISTS_UNIQUE_DEF
@@ -1801,31 +1801,31 @@ in
 
   fun lzSWAP_VARS_CONV term =
       let val (l,bod) = strip_forall term
-	  (*val _ = DMSG (TM (list_mk_forall([hd(tl l),hd l]@List.drop(l,2),bod))) dbglzc(*DBG*)*)
-	  val jf = (fn _ => let val (dest, list_mk, qvar_thm) =
-				    if (is_exists term) then
-					(dest_exists, LIST_MK_EXISTS, boolTheory.SWAP_EXISTS_THM)
-				    else
-					(dest_forall, C (foldr(uncurry FORALL_EQ)), boolTheory.SWAP_FORALL_THM)
-				val {Bvar = fst_var, Body = fst_body} = dest term
-				val {Bvar = snd_var, Body = snd_body} = dest fst_body
-				val fnc = list_mk_abs ([fst_var,snd_var], snd_body)
-				val fn_rewrite =
-				    SYM (LIST_BETA_CONV (list_mk_comb (fnc, [fst_var,snd_var])))
-				val ex_rewrite = list_mk [fst_var,snd_var] fn_rewrite
-				val inst_thm = ISPEC fnc qvar_thm
-				val final_thm =
-				    TRANS inst_thm
-					  (RENAME_VARS_CONV (map (#Name o dest_var) [snd_var,fst_var])
-							    (rhs (concl inst_thm)))
-			    in
-				(* must do precisely two beta reductions on the right hand side of the
-												       theorem *)
-				CONV_RULE (RAND_CONV (BINDER_CONV (BINDER_CONV LIST_BETA_CONV)))
-					  (SUBS [final_thm] ex_rewrite)
-			    end)
-	  val res = mk_lthm (fn _ => (boolSyntax.mk_eq(term,list_mk_forall([hd(tl l),hd l]@List.drop(l,2),bod)),jf)) jf
-	  (*val _ = DMSG (TH res) dbglzc(*DBG*)*)
+          (*val _ = DMSG (TM (list_mk_forall([hd(tl l),hd l]@List.drop(l,2),bod))) dbglzc(*DBG*)*)
+          val jf = (fn _ => let val (dest, list_mk, qvar_thm) =
+                                    if (is_exists term) then
+                                        (dest_exists, LIST_MK_EXISTS, boolTheory.SWAP_EXISTS_THM)
+                                    else
+                                        (dest_forall, C (foldr(uncurry FORALL_EQ)), boolTheory.SWAP_FORALL_THM)
+                                val {Bvar = fst_var, Body = fst_body} = dest term
+                                val {Bvar = snd_var, Body = snd_body} = dest fst_body
+                                val fnc = list_mk_abs ([fst_var,snd_var], snd_body)
+                                val fn_rewrite =
+                                    SYM (LIST_BETA_CONV (list_mk_comb (fnc, [fst_var,snd_var])))
+                                val ex_rewrite = list_mk [fst_var,snd_var] fn_rewrite
+                                val inst_thm = ISPEC fnc qvar_thm
+                                val final_thm =
+                                    TRANS inst_thm
+                                          (RENAME_VARS_CONV (map (#Name o dest_var) [snd_var,fst_var])
+                                                            (rhs (concl inst_thm)))
+                            in
+                                (* must do precisely two beta reductions on the right hand side of the
+                                                                                                       theorem *)
+                                CONV_RULE (RAND_CONV (BINDER_CONV (BINDER_CONV LIST_BETA_CONV)))
+                                          (SUBS [final_thm] ex_rewrite)
+                            end)
+          val res = mk_lthm (fn _ => (boolSyntax.mk_eq(term,list_mk_forall([hd(tl l),hd l]@List.drop(l,2),bod)),jf)) jf
+          (*val _ = DMSG (TH res) dbglzc(*DBG*)*)
       in res  end
 end
 

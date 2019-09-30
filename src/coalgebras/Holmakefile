@@ -1,7 +1,17 @@
+all: $(DEFAULT_TARGETS) selftest.exe
+.PHONY: all
+
 ifdef OTKNL
+all: llist.ot.art
+
 llist.ot.art: llist.art
 	opentheory info --article -o $@ $<
 
 llist.art: llistScript.sml
 	Holmake --ot llistTheory.uo
 endif
+
+selftest.exe: selftest.uo llistTheory.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe

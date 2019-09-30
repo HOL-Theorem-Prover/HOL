@@ -321,7 +321,7 @@ val TRANSFORMLABEL_SUBSET2 = store_thm
 (*             >> fs[transformLabel_def] >> Cases_on `m' ∈ char (POW aP) h` *)
 (*             >- (`m' ∈ {}` by metis_tac[IN_INTER,SET_EQ_SUBSET] >> fs[]) *)
 (*             >- (`m' ∈ char_neg fs[char_def] >> *)
-                  
+
 
 (*              >- metis_tac[FOLDR_INTER,SUBSET_DEF,IN_POW] *)
 (*              >- *)
@@ -545,10 +545,10 @@ val concr2AbstrAA_def = Define`
   concr2AbstrAA (concrAA g init prop) =
     ALTER_A
         (concr2Abstr_states g)
-        (concr2Abstr_init init g)
-        (concr2Abstr_final g)
         (POW (LIST_TO_SET prop))
-        (concrTrans g (set prop))`;
+        (concrTrans g (set prop))
+        (concr2Abstr_init init g)
+        (concr2Abstr_final g)`;
 
 val graphStatesWithId_def = Define`
   graphStatesWithId g =
@@ -1684,11 +1684,11 @@ val ADD_0EDGE_LEMM = store_thm
    ) >> metis_tac[]
   );
 
-val ADDEDGE_COUNTER_LEMM = store_thm
-  ("ADDEDGE_COUNTER_LEMM",
-   ``!g e f g2.
-       (addEdgeToGraph f e g = SOME g2) ∧ flws_sorted g ∧ wfg g
-          ==> flws_sorted g2``,
+Theorem ADDEDGE_COUNTER_LEMM:
+   ∀g e f g2.
+       addEdgeToGraph f e g = SOME g2 ∧ flws_sorted g ∧ wfg g ==>
+       flws_sorted g2
+Proof
    rpt strip_tac >> Cases_on `e`
    >> fs[addEdgeToGraph_def]
    >> Cases_on `l1 = []` >> rpt strip_tac >> fs[]
@@ -1796,7 +1796,7 @@ val ADDEDGE_COUNTER_LEMM = store_thm
                         >> `∃j. lookup q m.followers = SOME j` by (
                             fs[wfg_def] >> metis_tac[domain_lookup]
                         )
-                        >> metis_tac[]
+                        >> metis_tac[wfg_def, domain_lookup]
                      )
                     >> qexists_tac `k` >> fs[]
                     >> qunabbrev_tac `addSingleEdge` >> fs[addEdge_def]
@@ -1900,7 +1900,7 @@ val ADDEDGE_COUNTER_LEMM = store_thm
        >> qunabbrev_tac `TO_LABELS` >> simp[] >> rpt strip_tac
        >> fs[flws_sorted_def] >>  metis_tac[]
    )
-  );
+QED
 
 val ADDEDGE_FINAL_LEMM = store_thm
   ("ADDEDGE_FINAL_LEMM",
@@ -1944,9 +1944,8 @@ val ADDEDGE_FINAL_LEMM = store_thm
       )
   );
 
-val ADDEDGE_LEMM = store_thm
-  ("ADDEDGE_LEMM",
-   ``!g f e aP. wfg g ∧ MEM f (graphStates g)
+Theorem ADDEDGE_LEMM:
+   !g f e aP. wfg g ∧ MEM f (graphStates g)
             ∧ unique_node_formula g
             ∧ (!x. MEM x e.sucs ==> MEM x (graphStates g))
             ∧ (flws_sorted g)
@@ -1957,7 +1956,8 @@ val ADDEDGE_LEMM = store_thm
                  if h = f
                  then ?i. extractTrans g2 h
                         = extractTrans g h ∪ { (i, e.pos,e.neg,set e.sucs) }
-                 else extractTrans g2 h = extractTrans g h))``,
+                 else extractTrans g2 h = extractTrans g h))
+Proof
    rpt strip_tac >> Cases_on `e` >> fs[addEdgeToGraph_def]
    >> fs[graphStates_def,MEM_MAP]
    >> `l1 = [] \/ ?h t. l1 = SNOC h t` by metis_tac[SNOC_CASES]
@@ -2507,10 +2507,10 @@ val ADDEDGE_LEMM = store_thm
             >> `?k. addEdge nId (LABEL,FST n) g = SOME k` suffices_by (
                 metis_tac[addEdge_preserves_wfg,addEdge_preserves_nodeInfo]
             )
-            >> simp[addEdge_def] >> fs[findNode_def]
+            >> simp[addEdge_def] >> fs[findNode_def] >> dsimp[]
             >> `MEM (nId,frml) (toAList g.nodeInfo)
                 ∧ MEM (FST n,h') (toAList g.nodeInfo)` by metis_tac[FIND_LEMM2]
-            >> metis_tac[MEM_toAList,domain_lookup]
+            >> metis_tac[MEM_toAList,domain_lookup, wfg_def]
         )
         >> qexists_tac `k`
         >> `∀fls q r.
@@ -2824,18 +2824,17 @@ val ADDEDGE_LEMM = store_thm
                                          addEdge_preserves_wfg]
              >> simp[addEdge_def] >> fs[]
              >> `nId ∈ domain m.nodeInfo ∧ id ∈ domain m.nodeInfo` by (
-                 fs[findNode_def]
-             >> metis_tac[MEM_toAList,domain_lookup,FIND_LEMM2]
+                   fs[findNode_def]
+                   >> metis_tac[MEM_toAList,domain_lookup,FIND_LEMM2]
              )
              >> fs[]
-             >> `∃m1.
-                 (∃followers_old.
+             >> dsimp[]
+             >> `∃followers_old preds_old.
                   lookup nId m.followers = SOME followers_old ∧
-                    m with followers updated_by insert nId ((LABEL,id)::followers_old) =
-                  m1)` by metis_tac[domain_lookup,wfg_def]
-             >> qexists_tac `m1` >> fs[]
+                  lookup id m.preds = SOME preds_old`
+                 by metis_tac[domain_lookup,wfg_def] >> simp[]
              >> qunabbrev_tac `B` >> rpt strip_tac >> fs[] >> rpt strip_tac
-             >- (`(q,r) = (nId,frml)` by metis_tac[findNode_def,SOME_11]
+             >- (`(q,r) = (nId,frml)` by fs[findNode_def]
                 >> rw[] >> fs[]
                 >> fs[gfg_component_equality] >> rw[] >> fs[]
                 >> metis_tac[findNode_def,SOME_11])
@@ -3212,7 +3211,7 @@ val ADDEDGE_LEMM = store_thm
         >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[]
        )
    )
-  );
+QED
 
 val ADDEDGE_FOLDR_LEMM = store_thm
   ("ADDEDGE_FOLDR_LEMM",

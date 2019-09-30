@@ -3,7 +3,7 @@
 \TYPE {QUANT_INSTANTIATE_TAC : quant_param list -> tactic}
 
 \SYNOPSIS
-A tactic to intantiate quantifiers in a term using a given list of
+A tactic to instantiate quantifiers in a term using a given list of
 quantifier heuristic parameters.
 
 \DESCRIBE

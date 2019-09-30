@@ -17,6 +17,10 @@ fun printOut s =
 val prompt1 = PolyML.Compiler.prompt1
 val prompt2 = PolyML.Compiler.prompt2
 val timing = PolyML.Compiler.timing
+
+(* code here derived from Poly/ML's implementation of its REPL.  Poly/ML code
+   is all under LGPL; see required copy at doc/copyrights/lgpl2.1.txt
+*)
 fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, startExec,
                    endExec} =
   let
@@ -31,7 +35,19 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, startExec,
     val endOfFile    = ref false;
     val realDataRead = ref false;
     val lastWasEol   = ref true;
-    val cgen = QFRead.streamToReader true TextIO.stdIn
+    (* It seems like the only way to *really* reset a lexer, in particular, to
+       force it back into its INITIAL state, is to create a fresh one. So,
+       this is what bind_cgen() does, and this is what is called in the
+       compile-fail exception handler below. *)
+    val cgenref = ref (fn () => SOME #"\000")
+    fun cgen() = !cgenref()
+    fun bind_cgen () =
+        let
+          val {read, ...} = QFRead.streamToReader true TextIO.stdIn
+        in
+          cgenref := read
+        end
+    val _ = bind_cgen()
 
     (* Each character typed is fed into the compiler but leading
        blank lines result in the prompt remaining as firstPrompt until
@@ -97,6 +113,7 @@ fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, startExec,
                             printOut(s ^ "\n");
                             flushInput();
                             lastWasEol := true;
+                            bind_cgen();
                             PolyML.Exception.reraise exn
                         )
 

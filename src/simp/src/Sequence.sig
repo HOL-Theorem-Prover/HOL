@@ -1,6 +1,6 @@
-(*  Title: 	sequence
+(*  Title:      sequence
     ID:         sequence.ML,v 1.3 1994/11/21 10:33:23 lcp Exp
-    Author: 	Lawrence C Paulson, Cambridge University Computer Laboratory
+    Author:     Lawrence C Paulson, Cambridge University Computer Laboratory
     Copyright   1988  University of Cambridge
 
 Unbounded sequences implemented by closures.

@@ -1,0 +1,752 @@
+4 APFromVMRights 4
+0 Arch_activateIdleThread 4
+4 Arch_checkIRQ 4
+0 Arch_configureIdleThread 4
+8 Arch_createObject 4 4 4 4
+4 Arch_decodeIRQControlInvocation 4 4 4 12 4
+4 Arch_decodeInvocation 4 4 4 4 8 12 4 4
+4 Arch_decodeTransfer 4
+12 Arch_deriveCap 4 8
+16 Arch_finaliseCap 8 4
+0 Arch_finaliseInterrupt
+4 Arch_getObjectSize 4
+4 Arch_getSanitiseRegisterInfo 4
+4 Arch_handleFaultReply 4 4 4
+4 Arch_hasRecycleRights 8
+0 Arch_initContext 4
+4 Arch_invokeIRQControl 2 4 4 4
+4 Arch_isCapRevocable 8 8
+4 Arch_isFrameType 4
+8 Arch_maskCapRights 4 8
+4 Arch_performTransfer 4 4 4
+0 Arch_postCapDeletion 8
+0 Arch_postModifyRegisters 4
+0 Arch_prepareThreadDelete 4
+4 Arch_sameObjectAs 8 8
+4 Arch_sameRegionAs 8 8
+4 Arch_setMRs_fault 4 4 4 4
+0 Arch_setTCBIPCBuffer 4 4
+0 Arch_switchToIdleThread
+0 Arch_switchToThread 4
+8 Arch_updateCapData 4 4 8
+0 L2_cacheSync
+4 StrictC'__builtin_clzl 4
+4 StrictC'__builtin_ctzl 4
+4 StrictC'__builtin_popcountl 4
+0 StrictC'__builtin_unreachable
+0 VGICMaintenance
+8 Zombie_new 4 4 4
+0 ackInterrupt 2
+0 activateThread
+0 activate_global_pd
+0 addToBitmap 4 4 4
+4 addrFromPPtr 4
+4 addressTranslateS1CPR 4
+4 alignUp 4 4
+4 alloc_region 4
+4 allocate_bi_frame 4 4 4
+8 allocate_extra_bi_region 4
+0 arch_c_entry_hook
+0 arch_c_exit_hook
+0 arch_clean_invalidate_caches
+0 arm_errata
+0 armv_contextSwitch 4 4
+0 armv_contextSwitch_HWASID 4 1
+0 armv_init_user_access
+0 bi_finalise
+0 bindNotification 4 4
+0 branchFlush 4 4
+0 branchFlushRange 4 4 4
+0 c_entry_hook
+0 c_exit_hook
+0 c_handle_data_fault
+0 c_handle_instruction_fault
+0 c_handle_interrupt
+0 c_handle_syscall 4 4 4
+0 c_handle_undefined_instruction
+0 c_handle_vm_fault 4
+0 cancelAllIPC 4
+0 cancelAllSignals 4
+0 cancelBadgedSends 4 4
+0 cancelIPC 4
+0 cancelSignal 4 4
+4 capCyclicZombie 8 4
+4 capRemovable 8 4
+0 capSwapForDelete 4 4
+12 capTransferFromWords 4
+8 cap_asid_control_cap_new
+4 cap_asid_pool_cap_get_capASIDBase 8
+4 cap_asid_pool_cap_get_capASIDPool 8
+8 cap_asid_pool_cap_new 4 4
+4 cap_capType_equals 8 4
+4 cap_cnode_cap_get_capCNodeGuard 8
+4 cap_cnode_cap_get_capCNodeGuardSize 8
+4 cap_cnode_cap_get_capCNodePtr 8
+4 cap_cnode_cap_get_capCNodeRadix 8
+8 cap_cnode_cap_new 4 4 4 4
+8 cap_cnode_cap_set_capCNodeGuard 8 4
+8 cap_cnode_cap_set_capCNodeGuardSize 8 4
+8 cap_domain_cap_new
+4 cap_endpoint_cap_get_capCanGrant 8
+4 cap_endpoint_cap_get_capCanGrantReply 8
+4 cap_endpoint_cap_get_capCanReceive 8
+4 cap_endpoint_cap_get_capCanSend 8
+4 cap_endpoint_cap_get_capEPBadge 8
+4 cap_endpoint_cap_get_capEPPtr 8
+8 cap_endpoint_cap_new 4 4 4 4 4 4
+8 cap_endpoint_cap_set_capCanGrant 8 4
+8 cap_endpoint_cap_set_capCanGrantReply 8 4
+8 cap_endpoint_cap_set_capCanReceive 8 4
+8 cap_endpoint_cap_set_capCanSend 8 4
+8 cap_endpoint_cap_set_capEPBadge 8 4
+4 cap_frame_cap_get_capFBasePtr 8
+4 cap_frame_cap_get_capFIsDevice 8
+4 cap_frame_cap_get_capFMappedASID 8
+4 cap_frame_cap_get_capFMappedASIDHigh 8
+4 cap_frame_cap_get_capFMappedASIDLow 8
+4 cap_frame_cap_get_capFMappedAddress 8
+4 cap_frame_cap_get_capFSize 8
+4 cap_frame_cap_get_capFVMRights 8
+8 cap_frame_cap_new 4 4 4 4 4 4 4
+8 cap_frame_cap_set_capFMappedASID 8 4
+8 cap_frame_cap_set_capFMappedASIDHigh 8 4
+8 cap_frame_cap_set_capFMappedASIDLow 8 4
+8 cap_frame_cap_set_capFMappedAddress 8 4
+8 cap_frame_cap_set_capFVMRights 8 4
+4 cap_get_archCapIsPhysical 8
+4 cap_get_archCapPtr 8
+4 cap_get_archCapSizeBits 8
+4 cap_get_capIsPhysical 8
+4 cap_get_capPtr 8
+4 cap_get_capSizeBits 8
+4 cap_get_capType 8
+8 cap_irq_control_cap_new
+4 cap_irq_handler_cap_get_capIRQ 8
+8 cap_irq_handler_cap_new 4
+4 cap_notification_cap_get_capNtfnBadge 8
+4 cap_notification_cap_get_capNtfnCanReceive 8
+4 cap_notification_cap_get_capNtfnCanSend 8
+4 cap_notification_cap_get_capNtfnPtr 8
+8 cap_notification_cap_new 4 4 4 4
+8 cap_notification_cap_set_capNtfnBadge 8 4
+8 cap_notification_cap_set_capNtfnCanReceive 8 4
+8 cap_notification_cap_set_capNtfnCanSend 8 4
+8 cap_null_cap_new
+4 cap_page_directory_cap_get_capPDBasePtr 8
+4 cap_page_directory_cap_get_capPDIsMapped 8
+4 cap_page_directory_cap_get_capPDMappedASID 8
+8 cap_page_directory_cap_new 4 4 4
+0 cap_page_directory_cap_ptr_set_capPDIsMapped 4 4
+0 cap_page_directory_cap_ptr_set_capPDMappedASID 4 4
+4 cap_page_table_cap_get_capPTBasePtr 8
+4 cap_page_table_cap_get_capPTIsMapped 8
+4 cap_page_table_cap_get_capPTMappedASID 8
+4 cap_page_table_cap_get_capPTMappedAddress 8
+8 cap_page_table_cap_new 4 4 4 4
+0 cap_page_table_cap_ptr_set_capPTIsMapped 4 4
+8 cap_page_table_cap_set_capPTIsMapped 8 4
+8 cap_page_table_cap_set_capPTMappedASID 8 4
+8 cap_page_table_cap_set_capPTMappedAddress 8 4
+4 cap_reply_cap_get_capReplyCanGrant 8
+4 cap_reply_cap_get_capReplyMaster 8
+4 cap_reply_cap_get_capTCBPtr 8
+8 cap_reply_cap_new 4 4 4
+0 cap_reply_cap_ptr_new_np 4 4 4 4
+8 cap_reply_cap_set_capReplyCanGrant 8 4
+4 cap_small_frame_cap_get_capFBasePtr 8
+4 cap_small_frame_cap_get_capFIsDevice 8
+4 cap_small_frame_cap_get_capFMappedASID 8
+4 cap_small_frame_cap_get_capFMappedASIDHigh 8
+4 cap_small_frame_cap_get_capFMappedASIDLow 8
+4 cap_small_frame_cap_get_capFMappedAddress 8
+4 cap_small_frame_cap_get_capFVMRights 8
+8 cap_small_frame_cap_new 4 4 4 4 4 4
+8 cap_small_frame_cap_set_capFMappedASID 8 4
+8 cap_small_frame_cap_set_capFMappedASIDHigh 8 4
+8 cap_small_frame_cap_set_capFMappedASIDLow 8 4
+8 cap_small_frame_cap_set_capFMappedAddress 8 4
+8 cap_small_frame_cap_set_capFVMRights 8 4
+4 cap_thread_cap_get_capTCBPtr 8
+8 cap_thread_cap_new 4
+4 cap_untyped_cap_get_capBlockSize 8
+4 cap_untyped_cap_get_capFreeIndex 8
+4 cap_untyped_cap_get_capIsDevice 8
+4 cap_untyped_cap_get_capPtr 8
+8 cap_untyped_cap_new 4 4 4 4
+0 cap_untyped_cap_ptr_set_capFreeIndex 4 4
+8 cap_untyped_cap_set_capFreeIndex 8 4
+4 cap_zombie_cap_get_capZombieBits 8
+4 cap_zombie_cap_get_capZombieID 8
+4 cap_zombie_cap_get_capZombieNumber 8
+4 cap_zombie_cap_get_capZombiePtr 8
+4 cap_zombie_cap_get_capZombieType 8
+8 cap_zombie_cap_new 4 4
+8 cap_zombie_cap_set_capZombieID 8 4
+8 cap_zombie_cap_set_capZombieNumber 8 4
+4 char_to_long 1
+4 checkPrio 4 4
+4 checkVPAlignment 4 4
+4 checkValidIPCBuffer 4 8
+0 check_export_arch_timer
+0 check_export_pmu
+0 chooseThread
+0 cleanByVA 4 4
+0 cleanByVA_PoU 4 4
+0 cleanByWSL 4
+0 cleanCacheRange_PoC 4 4 4
+0 cleanCacheRange_PoU 4 4 4
+0 cleanCacheRange_RAM 4 4 4
+0 cleanCaches_PoU
+0 cleanInvalByVA 4 4
+0 cleanInvalidateByWSL 4
+0 cleanInvalidateCacheRange_RAM 4 4 4
+0 cleanInvalidateL1Caches
+0 cleanInvalidate_D_PoC
+0 clean_D_PoU
+0 clearEnFPEXC
+0 clearExMonitor
+0 clearExMonitor_fp
+0 clearIOPageDirectory 8
+0 clearMemory 4 4
+0 clearMemoryRAM 4 4
+4 clzl 4
+0 completeSignal 4 4
+0 configureIdleThread 4
+0 copyGlobalMappings 4
+4 copyMRs 4 4 4 4 4
+0 copyMRsFault 4 4 4 4 4
+0 copyMRsFaultReply 4 4 4 4
+0 cpu_iface_init
+0 cpu_initLocalIRQController
+0 createNewObjects 4 4 12 4 4 4
+8 createObject 4 4 4 4
+16 createSafeMappingEntries_PDE 4 4 4 4 4 4
+16 createSafeMappingEntries_PTE 4 4 4 4 4 4
+0 create_bi_frame_cap 8 8 4 4
+4 create_device_frames 8
+0 create_domain_cap 8
+12 create_frames_of_region 8 8 8 4 4
+4 create_idle_thread
+4 create_initial_thread 8 8 4 4 4 8
+8 create_iospace_caps 8
+8 create_ipcbuf_frame 8 8 4
+4 create_irq_cnode
+8 create_it_address_space 8 8
+8 create_it_asid_pool 8
+8 create_it_frame_cap 4 4 4 4
+8 create_it_page_table_cap 8 4 4 4
+8 create_it_pd_pts 8 8 4 4
+4 create_kernel_untypeds 8 8 4
+8 create_mapped_it_frame_cap 8 4 4 4 4 4
+8 create_root_cnode
+8 create_unmapped_it_frame_cap 4 4
+4 create_untypeds 8 8
+4 create_untypeds_for_region 8 4 8 4
+4 cteDelete 4 4
+0 cteDeleteOne 4
+0 cteInsert 8 4 4
+0 cteMove 8 4 4
+4 cteRevoke 4
+0 cteSwap 8 4 8 4
+4 ctzl 4
+4 decodeARMFrameInvocation 4 4 4 8 12 4
+4 decodeARMIOMapInvocation 4 4 4 8 12 4
+4 decodeARMIOPTInvocation 4 4 4 8 12 4
+4 decodeARMIOSpaceInvocation 4 8
+4 decodeARMMMUInvocation 4 4 4 4 8 12 4
+4 decodeARMPageDirectoryInvocation 4 4 4 4 8 12 4
+4 decodeARMPageTableInvocation 4 4 4 8 12 4
+4 decodeBindNotification 8 12
+4 decodeCNodeInvocation 4 4 8 12 4
+4 decodeCopyRegisters 8 4 12 4
+4 decodeDomainInvocation 4 4 12 4
+4 decodeIRQControlInvocation 4 4 4 12 4
+4 decodeIRQHandlerInvocation 4 2 12
+4 decodeInvocation 4 4 4 4 8 12 4 4 4
+4 decodeReadRegisters 8 4 4 4
+4 decodeSetIPCBuffer 8 4 4 12 4
+4 decodeSetMCPriority 8 4 12 4
+4 decodeSetPriority 8 4 12 4
+4 decodeSetSchedParams 8 4 12 4
+4 decodeSetSpace 8 4 4 12 4
+4 decodeSetTLSBase 8 4 4
+4 decodeTCBConfigure 8 4 4 12 4
+4 decodeTCBInvocation 4 4 8 4 12 4 4
+4 decodeUnbindNotification 8
+4 decodeUntypedInvocation 4 4 4 8 12 4 4
+4 decodeWriteRegisters 8 4 4
+0 deleteASID 4 4
+0 deleteASIDPool 4 4
+0 deleteCallerCap 4
+0 deleteIOPageTable 8
+0 deletedIRQHandler 2
+0 deletingIRQHandler 2
+12 deriveCap 4 8
+0 disableFpu
+0 dist_enable_clr 2
+0 dist_enable_set 2
+0 dist_init
+0 dist_pending_clr 2
+0 dmb
+0 doFaultTransfer 4 4 4 4
+0 doFlush 4 4 4 4
+0 doIPCTransfer 4 4 4 4 4
+0 doNBRecvFailedTransfer 4
+0 doNormalTransfer 4 4 4 4 4 4 4
+0 doReplyTransfer 4 4 4 4
+0 doUnbindNotification 4 4
+0 dsb
+0 emptySlot 4 8
+0 enableFpuInstInHyp
+4 endpoint_ptr_get_epQueue_head 4
+4 endpoint_ptr_get_epQueue_tail 4
+4 endpoint_ptr_get_state 4
+0 endpoint_ptr_mset_epQueue_tail_state 4 4 4
+0 endpoint_ptr_set_epQueue_head 4 4
+0 endpoint_ptr_set_epQueue_head_np 4 4
+0 endpoint_ptr_set_epQueue_tail 4 4
+0 endpoint_ptr_set_state 4 4
+4 ensureEmptySlot 4
+4 ensureNoChildren 4
+8 ep_ptr_get_queue 4
+0 ep_ptr_set_queue 4 8
+0 fastpath_call 4 4
+0 fastpath_copy_mrs 4 4 4
+4 fastpath_mi_check 4
+4 fastpath_reply_cap_check 8
+0 fastpath_reply_recv 4 4
+0 fastpath_restore 4 4 4
+16 finaliseCap 8 4 4
+16 finaliseSlot 4 4
+1 findFreeHWASID
+8 findPDForASID 4
+0 flushBTAC
+0 flushPage 4 4 4 4
+0 flushSpace 4
+0 flushTable 4 4 4 4
+4 fpsimd_HWCapTest
+4 fpsimd_init
+4 generic_frame_cap_get_capFBasePtr 8
+4 generic_frame_cap_get_capFIsDevice 8
+4 generic_frame_cap_get_capFIsMapped 8
+4 generic_frame_cap_get_capFMappedASID 8
+4 generic_frame_cap_get_capFMappedAddress 8
+4 generic_frame_cap_get_capFSize 8
+4 generic_frame_cap_get_capFVMRights 8
+0 generic_frame_cap_ptr_set_capFMappedAddress 4 4 4
+8 generic_frame_cap_set_capFMappedAddress 8 4 4
+4 getACTLR
+4 getADFSR
+4 getAIFSR
+2 getActiveIRQ
+4 getCIDR
+4 getDFAR
+4 getDFSR
+4 getExtraCPtr 4 4
+4 getFAR
+4 getHTPIDR
+1 getHWASID 4
+4 getHighestPrio 4
+4 getIFAR
+4 getIFSR
+4 getKernelStack
+4 getNMRR
+4 getObjectSize 4 4
+4 getPRRR
+4 getProcessorID
+4 getReceiveSlots 4 4
+4 getRegister 4 4
+4 getRestartPC 4
+4 getSyscallArg 4 4
+8 get_avail_p_reg 4
+8 get_dev_p_reg 4
+4 get_num_avail_p_regs
+4 get_num_dev_p_regs
+4 get_num_reserved_region
+8 get_reserved_region 4 4
+0 halt
+0 handleDoubleFault 4 8
+0 handleFault 4
+4 handleFaultReply 4 4
+0 handleInterrupt 2
+4 handleInterruptEntry
+4 handleInvocation 4 4
+0 handleRecv 4
+0 handleReply
+0 handleReservedIRQ 2
+0 handleSpuriousIRQ
+4 handleSyscall 4
+4 handleUnknownSyscall 4
+4 handleUserLevelFault 4 4
+4 handleVMFault 4 4
+4 handleVMFaultEvent 4
+0 handleYield
+4 hasCancelSendRights 8
+0 idle_thread
+1 infer_cpu_gic_id 4
+0 initIRQController
+0 initL2Cache
+0 initTimer
+0 init_core_state 4
+4 init_cpu
+0 init_freemem 8
+0 init_irqs 8
+0 init_kernel 4 4 4 4
+0 init_plat
+0 insertNewCap 4 4 8
+4 insert_region 8
+8 insert_region_excluded 8 8
+0 invalidateASID 4
+0 invalidateASIDEntry 4
+0 invalidateByVA 4 4
+0 invalidateByVA_I 4 4
+0 invalidateCacheRange_I 4 4 4
+0 invalidateCacheRange_RAM 4 4 4
+0 invalidateHypTLB
+0 invalidateLocalTLB
+0 invalidateLocalTLB_ASID 1
+0 invalidateLocalTLB_VAASID 4
+0 invalidateTLBByASID 4
+0 invalidateTranslationASID 1
+0 invalidateTranslationASIDLocal 1
+0 invalidateTranslationAll
+0 invalidateTranslationAllLocal
+0 invalidateTranslationSingle 4
+0 invalidateTranslationSingleLocal 4
+0 invalidate_I_PoU
+4 invert_l1index 4
+4 invokeCNodeCancelBadgedSends 8
+4 invokeCNodeDelete 4
+4 invokeCNodeInsert 8 4 4
+4 invokeCNodeMove 8 4 4
+4 invokeCNodeRevoke 4
+4 invokeCNodeRotate 8 8 4 4 4
+4 invokeCNodeSaveCaller 4
+4 invokeIRQControl 2 4 4
+0 invokeIRQHandler_AckIRQ 2
+0 invokeIRQHandler_ClearIRQHandler 2
+0 invokeIRQHandler_SetIRQHandler 2 8 4
+4 invokeSetTLSBase 4 4
+4 invokeTCB_CopyRegisters 4 4 4 4 4 4 4
+4 invokeTCB_NotificationControl 4 4
+4 invokeTCB_ReadRegisters 4 4 4 4 4
+4 invokeTCB_Resume 4
+4 invokeTCB_Suspend 4
+4 invokeTCB_ThreadControl 4 4 4 4 4 8 4 8 4 4 8 4 4
+4 invokeTCB_WriteRegisters 4 4 4 4 4
+4 invokeUntyped_Retype 4 4 4 4 4 12 4
+4 isArchCap 8
+4 isBlocked 4
+4 isCapRevocable 8 8
+4 isFinalCapability 4
+4 isHighestPrio 4 4
+4 isIOSpaceFrameCap 8
+4 isIRQActive 2
+4 isIRQPending
+4 isMDBParentOf 4 4
+4 isRunnable 4
+4 isValidVTableRoot 8
+4 isValidVTableRoot_fp 8
+4 is_irq_edge_triggered 2
+4 is_reg_empty 8
+0 isb
+4 l1index_to_prio 4
+12 loadCapTransfer 4
+4 loadHWASID 4
+0 lockTLBEntry 4
+0 lockTLBEntryCritical 4 4 4
+12 lookupCap 4 4
+16 lookupCapAndSlot 4 4
+4 lookupExtraCaps 4 4 4
+4 lookupIPCBuffer 4 4
+4 lookupPDSlot 4 4
+8 lookupPTSlot 4 4
+4 lookupPTSlot_nofail 4 4
+8 lookupPivotSlot 8 4 4
+8 lookupSlot 4 4
+8 lookupSlotForCNodeOp 4 8 4 4
+8 lookupSourceSlot 8 4 4
+8 lookupTargetSlot 8 4 4
+4 lookup_fault_depth_mismatch_get_bitsFound 8
+4 lookup_fault_depth_mismatch_get_bitsLeft 8
+8 lookup_fault_depth_mismatch_new 4 4
+4 lookup_fault_get_lufType 8
+4 lookup_fault_guard_mismatch_get_bitsFound 8
+4 lookup_fault_guard_mismatch_get_bitsLeft 8
+4 lookup_fault_guard_mismatch_get_guardFound 8
+8 lookup_fault_guard_mismatch_new 4 4 4
+8 lookup_fault_invalid_root_new
+4 lookup_fault_missing_capability_get_bitsLeft 8
+8 lookup_fault_missing_capability_new 4
+8 lookup_fp 8 4
+4 makeUserPDE 4 4 4 4 4 4 4
+4 makeUserPTE 4 4 4 4 4
+0 map_it_frame_cap 8 8 4
+0 map_it_pt_cap 8 8
+0 map_kernel_devices
+0 map_kernel_frame 4 4 4 4
+0 map_kernel_window
+8 maskCapRights 4 8
+0 maskInterrupt 4 2
+4 maskVMRights 4 4
+4 mdb_node_get_mdbFirstBadged 8
+4 mdb_node_get_mdbNext 8
+4 mdb_node_get_mdbPrev 8
+4 mdb_node_get_mdbRevocable 8
+8 mdb_node_new 4 4 4 4
+0 mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged 4 4 4 4
+0 mdb_node_ptr_set_mdbFirstBadged 4 4
+0 mdb_node_ptr_set_mdbNext 4 4
+0 mdb_node_ptr_set_mdbPrev 4 4
+0 mdb_node_ptr_set_mdbPrev_np 4 4
+0 mdb_node_ptr_set_mdbRevocable 4 4
+8 mdb_node_set_mdbFirstBadged 8 4
+8 mdb_node_set_mdbPrev 8 4
+8 mdb_node_set_mdbRevocable 8 4
+4 memcpy 4 4 4
+4 memset 4 4 4
+0 memzero 4 4
+4 messageInfoFromWord 4
+4 messageInfoFromWord_raw 4
+0 nextDomain
+4 notification_ptr_get_ntfnBoundTCB 4
+4 notification_ptr_get_ntfnMsgIdentifier 4
+4 notification_ptr_get_ntfnQueue_head 4
+4 notification_ptr_get_ntfnQueue_tail 4
+4 notification_ptr_get_state 4
+0 notification_ptr_set_ntfnBoundTCB 4 4
+0 notification_ptr_set_ntfnMsgIdentifier 4 4
+0 notification_ptr_set_ntfnQueue_head 4 4
+0 notification_ptr_set_ntfnQueue_tail 4 4
+0 notification_ptr_set_state 4 4
+8 ntfn_ptr_get_queue 4
+0 ntfn_ptr_set_queue 4 8
+0 ntfn_set_active 4 4
+8 paddr_to_pptr_reg 8
+4 pageBase 4 4
+4 pageBitsForSize 4
+4 pageTableMapped 4 4 4
+4 pdeCheckIfMapped 4
+4 pde_get_pdeType 4
+4 pde_pde_coarse_get_address 4
+4 pde_pde_coarse_new 4 4 4
+4 pde_pde_coarse_ptr_get_address 4
+4 pde_pde_invalid_get_stored_asid_valid 4
+4 pde_pde_invalid_get_stored_hw_asid 4
+4 pde_pde_invalid_new 4 4
+4 pde_pde_section_get_size 4
+4 pde_pde_section_new 4 4 4 4 4 4 4 4 4 4 4 4
+4 pde_pde_section_ptr_get_address 4
+4 pde_pde_section_ptr_get_size 4
+4 pde_ptr_get_pdeType 4
+4 performASIDControlInvocation 4 4 4 4
+4 performASIDPoolInvocation 4 4 4
+4 performInvocation_Endpoint 4 4 4 4 4 4
+4 performInvocation_Notification 4 4
+4 performInvocation_Reply 4 4 4
+4 performPDFlush 4 4 4 4 4 4
+4 performPageFlush 4 4 4 4 4 4
+4 performPageGetAddress 4
+4 performPageInvocationMapPDE 4 8 4 4 8
+4 performPageInvocationMapPTE 4 8 4 4 8
+4 performPageInvocationRemapPDE 4 4 8
+4 performPageInvocationRemapPTE 4 4 8
+4 performPageInvocationUnmap 8 4
+4 performPageInvocationUnmapIO 8 4
+4 performPageTableInvocationMap 8 4 4 4
+4 performPageTableInvocationUnmap 8 4
+0 plat_cleanCache
+0 plat_cleanInvalidateL2Cache
+0 plat_cleanInvalidateL2Range 4 4
+0 plat_cleanL2Range 4 4
+0 plat_invalidateL2Range 4 4
+4 popcountl 4
+0 possibleSwitchTo 4
+0 postCapDeletion 8
+8 pptr_to_paddr_reg 8
+4 preemptionPoint
+4 prio_to_l1index 4
+4 provide_cap 8 8
+4 provide_untyped_cap 8 4 4 4 4
+4 pteCheckIfMapped 4
+4 pte_get_pteSize 4
+4 pte_get_pteType 4
+4 pte_pte_invalid_new
+4 pte_pte_large_get_reserved 4
+4 pte_pte_large_new 4 4 4 4 4 4 4 4 4 4
+4 pte_pte_large_ptr_get_address 4
+4 pte_pte_large_ptr_get_reserved 4
+4 pte_pte_small_new 4 4 4 4 4 4 4 4 4
+4 pte_pte_small_ptr_get_address 4
+4 pte_ptr_get_pteSize 4
+4 pte_ptr_get_pteType 4
+4 ptrFromPAddr 4
+4 readAuxiliaryControlRegister
+4 readCLID
+4 readCacheSize 4 4
+4 readDACR
+4 readMPIDR
+4 readSystemControlRegister
+4 readTPIDRPRW
+4 readTPIDRURO
+4 readTPIDRURW
+4 readTTBCR
+4 readTTBR0
+4 readTTBR1
+4 ready_queues_index 4 4
+0 receiveIPC 4 8 4
+0 receiveSignal 4 8 4
+4 reduceZombie 4 4
+4 reg_size 8
+0 removeFromBitmap 4 4 4
+0 replyFromKernel_error 4
+0 replyFromKernel_success_empty 4
+0 rescheduleRequired
+0 resetTimer
+4 resetUntypedCap 4
+12 resolveAddressBits 8 4 4
+12 resolveVAddr 4 4
+0 restart 4
+0 restore_user_context
+4 rightsFromWord 4
+4 sameObjectAs 8 8
+4 sameRegionAs 8 8
+4 sanitiseRegister 4 4 4
+0 schedule
+0 scheduleChooseNewThread
+0 scheduleTCB 4
+4 seL4_CNode_CapData_get_guard 4
+4 seL4_CNode_CapData_get_guardSize 4
+4 seL4_CapRights_get_capAllowGrant 4
+4 seL4_CapRights_get_capAllowGrantReply 4
+4 seL4_CapRights_get_capAllowRead 4
+4 seL4_CapRights_get_capAllowWrite 4
+4 seL4_Fault_CapFault_get_address 8
+4 seL4_Fault_CapFault_get_inReceivePhase 8
+8 seL4_Fault_CapFault_new 4 4
+8 seL4_Fault_NullFault_new
+4 seL4_Fault_UnknownSyscall_get_syscallNumber 8
+8 seL4_Fault_UnknownSyscall_new 4
+4 seL4_Fault_UserException_get_code 8
+4 seL4_Fault_UserException_get_number 8
+8 seL4_Fault_UserException_new 4 4
+4 seL4_Fault_VMFault_get_FSR 8
+4 seL4_Fault_VMFault_get_address 8
+4 seL4_Fault_VMFault_get_instructionFault 8
+8 seL4_Fault_VMFault_new 4 4 4
+4 seL4_Fault_get_seL4_FaultType 8
+4 seL4_MessageInfo_get_capsUnwrapped 4
+4 seL4_MessageInfo_get_extraCaps 4
+4 seL4_MessageInfo_get_label 4
+4 seL4_MessageInfo_get_length 4
+4 seL4_MessageInfo_new 4 4 4 4
+4 seL4_MessageInfo_set_capsUnwrapped 4 4
+4 seL4_MessageInfo_set_extraCaps 4 4
+4 seL4_MessageInfo_set_length 4 4
+4 sendFaultIPC 4
+0 sendIPC 4 4 4 4 4 4 4
+0 sendSignal 4 4
+0 setACTLR 4
+0 setADFSR 4
+0 setAIFSR 4
+0 setCIDR 4
+0 setCurrentPD 4
+0 setCurrentPDPL2 4
+0 setDFAR 4
+0 setDFSR 4
+0 setDomain 4 4
+0 setExtraBadge 4 4 4
+0 setHTPIDR 4
+0 setHardwareASID 1
+0 setIFAR 4
+0 setIFSR 4
+0 setIRQState 4 2
+0 setIRQTrigger 2 4
+0 setKernelStack 4
+0 setMCPriority 4 4
+4 setMR 4 4 4 4
+4 setMRs_fault 4 4 4
+4 setMRs_lookup_failure 4 4 8 4
+4 setMRs_syscall_error 4 4
+0 setNMRR 4
+0 setNextPC 4 4
+0 setPRRR 4
+0 setPriority 4 4
+0 setRegister 4 4 4
+0 setThreadState 4 4
+0 setUntypedCapAsFull 8 8 4
+0 setVMRoot 4
+4 setVMRootForFlush 4 4
+0 setupCallerCap 4 4 4
+0 setupReplyMaster 4
+4 slotCapLongRunningDelete 4
+0 slowpath 4
+0 storeHWASID 4 1
+4 str_to_long 4
+4 strlcat 4 4 4
+4 strlcpy 4 4 4
+4 strncmp 4 4 4
+4 strnlen 4 4
+4 supportsAsyncExceptions
+0 suspend 4
+0 switchToIdleThread
+0 switchToThread 4
+0 switchToThread_fp 4 4 4
+8 tcbEPAppend 4 8
+8 tcbEPDequeue 4 8
+0 tcbSchedAppend 4
+0 tcbSchedDequeue 4
+0 tcbSchedEnqueue 4
+4 thread_state_get_tcbQueued 12
+4 thread_state_get_tsType 12
+4 thread_state_ptr_get_blockingIPCBadge 4
+4 thread_state_ptr_get_blockingIPCCanGrant 4
+4 thread_state_ptr_get_blockingIPCCanGrantReply 4
+4 thread_state_ptr_get_blockingIPCIsCall 4
+4 thread_state_ptr_get_blockingObject 4
+4 thread_state_ptr_get_tsType 4
+0 thread_state_ptr_mset_blockingObject_tsType 4 4 4
+0 thread_state_ptr_set_blockingIPCBadge 4 4
+0 thread_state_ptr_set_blockingIPCCanGrant 4 4
+0 thread_state_ptr_set_blockingIPCCanGrantReply 4 4
+0 thread_state_ptr_set_blockingIPCIsCall 4 4
+0 thread_state_ptr_set_blockingObject 4 4
+0 thread_state_ptr_set_tcbQueued 4 4
+0 thread_state_ptr_set_tsType 4 4
+0 thread_state_ptr_set_tsType_np 4 4
+0 timerTick
+4 transferCaps 4 12 4 4 4
+0 trapFpuInstToHyp
+4 try_init_kernel 4 4 4 4
+0 unbindMaybeNotification 4
+0 unbindNotification 4
+0 unmapIOPage 8
+0 unmapPage 4 4 4 4
+0 unmapPageTable 4 4 4
+8 updateCapData 4 4 8
+4 vmAttributesFromWord 4
+4 vmRightsFromWord 4
+4 vm_attributes_get_armExecuteNever 4
+4 vm_attributes_get_armPageCacheable 4
+4 vm_attributes_get_armParityEnabled 4
+4 vm_attributes_new 4 4 4
+0 wfi
+4 wordFromMessageInfo 4
+4 wordFromRights 4
+4 wordFromVMRights 4
+0 writeAuxiliaryControlRegister 4
+0 writeContextID 4
+0 writeContextIDAndPD 4 4
+0 writeContextIDPL2 4
+0 writeDACR 4
+0 writeSystemControlRegister 4
+0 writeTPIDRPRW 4
+0 writeTPIDRURO 4
+0 writeTPIDRURW 4
+0 writeTTBCR 4
+0 writeTTBR0 4
+0 writeTTBR0Ptr 4
+0 writeTTBR1 4
+0 write_it_asid_pool 8 8
+0 write_it_pd_pts 8 8
+0 write_slot 4 8

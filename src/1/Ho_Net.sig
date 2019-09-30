@@ -15,5 +15,7 @@ sig
  val enter      : term list * term * 'a -> 'a net -> 'a net
  val lookup     : term -> 'a net -> 'a list
  val merge_nets : 'a net * 'a net -> 'a net
+ val fold'      : ('a -> 'b -> 'b) -> 'a net -> 'b -> 'b
+ val vfilter    : ('a -> bool) -> 'a net -> 'a net
 
 end

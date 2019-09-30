@@ -6,7 +6,7 @@ open rich_listTheory arithmeticTheory
 
 open reductionEval churchnumTheory churchboolTheory normal_orderTheory
      dnoreductTheory stepsTheory recursivefnsTheory recfunsTheory
-     churchlistTheory churchDBTheory
+     churchlistTheory churchDBTheory nlistTheory
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
@@ -276,18 +276,21 @@ val prtermrec1_correct = store_thm(
   Q_TAC SUFF_TAC
     `∀n p. f [n; p] = nlist_of (GENLIST (λi. prtermrec v c a [i; p])
                                         (n + 1))`
-    THEN1 SRW_TAC [][nel_nlist_of] THEN
+    THEN1 SRW_TAC [][GSYM nel_correct] THEN
   Induct THEN1
     (SRW_TAC [][Abbr`f`, Once prtermrec_def]) THEN
-  SRW_TAC [][Abbr`f`, LET_THM, ADD_CLAUSES, GENLIST, SNOC_APPEND,
-             nlist_of_append]
+  SRW_TAC [][Abbr`f`, LET_THM, ADD_CLAUSES, GENLIST, SNOC_APPEND]
   THENL [
     SRW_TAC [ARITH_ss][Once prtermrec_def, SimpRHS, LET_THM],
     SRW_TAC [ARITH_ss][Once prtermrec_def, SimpRHS, LET_THM, DIV_LESS] THEN
-    SRW_TAC [ARITH_ss][nel_nlist_of, EL_GENLIST, LENGTH_GENLIST],
+    SRW_TAC [ARITH_ss][GSYM nel_correct, EL_GENLIST,
+                       LENGTH_GENLIST],
     SRW_TAC [ARITH_ss][Once prtermrec_def, SimpRHS, LET_THM] THEN
-    SRW_TAC [ARITH_ss][nel_nlist_of, DIV_LESS, LENGTH_GENLIST, EL_GENLIST]
+    SRW_TAC [ARITH_ss][GSYM nel_correct, DIV_LESS, LENGTH_GENLIST,
+                       EL_GENLIST]
   ]);
+
+val _ = overload_on ("nsnoc", “λn e. nlist_of (listOfN n ++ [e])”)
 
 val primrec_termrec = Store_thm(
   "primrec_prtermrec",
@@ -300,22 +303,20 @@ val primrec_termrec = Store_thm(
   SRW_TAC [][LET_THM] THEN1
     SRW_TAC [][prCn2, i2 `ncons`] THEN
   intro prCOND THEN SRW_TAC [][prpred, combinTheory.o_ABS_R] THENL [
-    intro2 `napp` THEN SRW_TAC [ARITH_ss][] THEN
-    intro2 `ncons` THEN SRW_TAC [ARITH_ss][] THEN
+    ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN
+    SRW_TAC [ARITH_ss][] THEN
     intro prCn2 THEN SRW_TAC [][] THEN
     SRW_TAC [][prDIV, i2 `$+`],
 
     intro prCOND THEN
     SRW_TAC [][prpred, combinTheory.o_ABS_R] THENL [
-      intro2 `napp` THEN SRW_TAC [][] THEN
-      intro2 `ncons` THEN SRW_TAC [][prK] THEN
+      ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN SRW_TAC [][] THEN
       intro prCn5 THEN SRW_TAC [][] THEN
       SRW_TAC [][i1 `nfst`, prDIV, i2 `$+`, i1 `nsnd`] THEN
       intro2 `nel` THEN
       SRW_TAC [][i1 `nfst`, prDIV, i2 `$+`, i1 `nsnd`],
 
-      intro2 `napp` THEN SRW_TAC [][] THEN
-      intro2 `ncons` THEN SRW_TAC [][] THEN
+      ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN SRW_TAC [][] THEN
       intro prCn3 THEN
       SRW_TAC [][i2 `nel`, i2 `$+`, prDIV],
 
@@ -324,6 +325,10 @@ val primrec_termrec = Store_thm(
 
     SRW_TAC [][pr_eq, prMOD, i2 `$+`]
   ]);
+
+val nel_nlist_of = prove(
+  “i < LENGTH l ⇒ (nel i (nlist_of l) = EL i l)”,
+  simp[GSYM nel_correct]);
 
 val MOD3_thm = prove(
   ``((3 * n) MOD 3 = 0) ∧
@@ -555,7 +560,7 @@ val pr_lift_correct = Store_thm(
   Q.X_GEN_TAC `dd` THEN Induct_on `dd` THEN SRW_TAC [][] THENL [
     SRW_TAC [][Abbr`v`, NOT_LESS_EQUAL] THEN
     REPEAT (FIRST_X_ASSUM (K ALL_TAC)) THEN Induct_on `mx` THEN
-    SRW_TAC [][dBnum_def, ADD_CLAUSES, GENLIST, SNOC_APPEND, nlist_of_append],
+    SRW_TAC [][dBnum_def, ADD_CLAUSES, GENLIST, SNOC_APPEND],
 
     FULL_SIMP_TAC (srw_ss()) [] THEN Q.UNABBREV_TAC `c` THEN
     REPEAT (FIRST_X_ASSUM (K ALL_TAC)) THEN
@@ -576,7 +581,7 @@ val pr_lift_correct = Store_thm(
       FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
       SRW_TAC [ARITH_ss]
               [Abbr`sf`, Abbr`gf`, Abbr`gf'`, Abbr`gfr`, ADD_CLAUSES,
-               GENLIST, SNOC_APPEND, nlist_of_append, nel_nlist_of,
+               GENLIST, SNOC_APPEND, nel_nlist_of,
                LENGTH_GENLIST, EL_GENLIST, dBnum_def]
     ],
 
@@ -597,8 +602,7 @@ val pr_lift_correct = Store_thm(
       SRW_TAC [][dBnum_def],
 
       SRW_TAC [ARITH_ss][GENLIST, ADD_CLAUSES, dBnum_def, SNOC_APPEND,
-                         nel_nlist_of, LENGTH_GENLIST, EL_GENLIST,
-                         nlist_of_append]
+                         nel_nlist_of, LENGTH_GENLIST, EL_GENLIST]
     ]
   ]);
 
@@ -631,10 +635,11 @@ val primrec_pr_lift = Store_thm(
       MATCH_MP_TAC alt_Pr_rule THEN
       SRW_TAC [][i2 `ncons`, i2 `$+`, i2 `$*`] THEN
       intro prCOND THEN
-      SRW_TAC [][combinTheory.o_ABS_R, i2 `napp`, i2 `$*`, i2 `ncons`, prpred]
+      SRW_TAC [][combinTheory.o_ABS_R, i2 `nsnoc` |> BETA_RULE, i2 `$*`,
+                 i2 `ncons`, prpred]
       THENL [
-        intro2 `napp` THEN
-        SRW_TAC [][i2 `ncons`, i2 `$+`, i2 `$*`],
+        ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN
+        SRW_TAC [][i2 `$+`, i2 `$*`],
         SRW_TAC [][i2 `$+`]
       ],
 
@@ -643,8 +648,7 @@ val primrec_pr_lift = Store_thm(
           intro2 `ncons` THEN SRW_TAC [][prK] THEN
           intro2 `$+` THEN
           SRW_TAC [][i2 `$+`, i2 `$*`, i2 `npair`, i2 `nel`],
-          intro2 `napp` THEN SRW_TAC [][] THEN
-          intro2 `ncons` THEN SRW_TAC [][] THEN
+          ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN SRW_TAC [][] THEN
           intro2 `$+` THEN SRW_TAC [][] THEN
           intro2 `$*` THEN SRW_TAC [][] THEN
           SRW_TAC [][i2 `$+`, i2 `$*`, i2 `npair`, i2 `nel`]
@@ -659,8 +663,7 @@ val primrec_pr_lift = Store_thm(
       MATCH_MP_TAC alt_Pr_rule THEN SRW_TAC [][] THENL [
         intro2 `ncons` THEN
         SRW_TAC [][i2 `nel`, i2 `$*`, i2 `$+`],
-        intro2 `napp` THEN SRW_TAC [][] THEN
-        intro2 `ncons` THEN SRW_TAC [][] THEN
+        ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN SRW_TAC [][] THEN
         intro2 `$+` THEN SRW_TAC [][] THEN
         SRW_TAC [][i2 `nel`, i2 `$+`, i2 `$*`]
       ]
@@ -918,8 +921,7 @@ val pr_nsub_correct = Store_thm(
     SRW_TAC [][] THEN
     Q.MATCH_ABBREV_TAC
         `Pr zf sf [gmx; n; s⊗k] = nlist_of (GENLIST gf gmx)` THEN
-    Induct_on `gmx` THEN SRW_TAC [][GENLIST, SNOC_APPEND, nlist_of_append,
-                                    Abbr`zf`] THEN
+    Induct_on `gmx` THEN SRW_TAC [][GENLIST, SNOC_APPEND, Abbr`zf`] THEN
     SRW_TAC [ARITH_ss][Abbr`sf`, Abbr`gf`, dBnum_def],
 
     MAP_EVERY Q.RM_ABBREV_TAC [`v`, `a`] THEN
@@ -937,7 +939,7 @@ val pr_nsub_correct = Store_thm(
     FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
     Q.PAT_X_ASSUM `Pr ZZ FF LL = RR` (K ALL_TAC) THEN
     SRW_TAC [ARITH_ss][GENLIST, ADD_CLAUSES, nel_nlist_of,
-                       SNOC_APPEND, nlist_of_append, dBnum_def],
+                       SNOC_APPEND, dBnum_def],
 
     MAP_EVERY Q.RM_ABBREV_TAC [`v`, `c`] THEN
     FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
@@ -954,7 +956,7 @@ val pr_nsub_correct = Store_thm(
     SRW_TAC [][Abbr`zf`, Abbr`gf`, Abbr`gfr`, Abbr`sf`] THEN
     FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
     Q.PAT_X_ASSUM `Pr ZZ SS LL = RR` (K ALL_TAC) THEN
-    SRW_TAC [ARITH_ss][GENLIST, SNOC_APPEND, nlist_of_append, nel_nlist_of] THEN
+    SRW_TAC [ARITH_ss][GENLIST, SNOC_APPEND, nel_nlist_of] THEN
     SRW_TAC [][GSYM ADD1, FUNPOW_SUC, dBnum_def]
   ]);
 
@@ -966,7 +968,7 @@ val primrec_pr_nsub = Store_thm(
   intro primrec_termrec THEN SRW_TAC [][] THENL [
     intro prCn3 THEN SRW_TAC [][i1 `nfst`, i1 `nsnd`] THEN
     intro alt_Pr_rule THEN SRW_TAC [][] THEN
-    MAP_EVERY (fn q => intro2 q THEN SRW_TAC [][]) [`napp`, `ncons`] THEN
+    ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN SRW_TAC[][] THEN
     intro prCOND THEN
     SRW_TAC [][combinTheory.o_ABS_R, prpred, pr_eq, i1`nsnd`, i2 `$+`] THENL [
       intro primrec_FUNPOW THEN SRW_TAC [][i1 `nfst`] THEN
@@ -978,16 +980,16 @@ val primrec_pr_nsub = Store_thm(
     ],
 
     intro prCn3 THEN SRW_TAC [][] THENL [
-      MAP_EVERY (fn th => intro th THEN SRW_TAC [][])
-                [alt_Pr_rule, i2 `napp`, i2 `ncons`] THEN
+      intro alt_Pr_rule THEN SRW_TAC[][] THEN
+      ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN SRW_TAC[][] THEN
       intro2 `$+` THEN
       SRW_TAC [][i2 `$*`, i2 `nel`, i2 `npair`],
       SRW_TAC [][i2 `$-`, i2 `MAX`, prmxabs, i1 `nsnd`]
     ],
 
     intro prCn2 THEN SRW_TAC [][] THENL [
-      MAP_EVERY (fn th => intro th THEN SRW_TAC [][])
-                [alt_Pr_rule, i2 `napp`, i2 `ncons`] THEN
+      intro alt_Pr_rule THEN SRW_TAC[][] THEN
+      ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN SRW_TAC[][] THEN
       intro2 `$+` THEN
       SRW_TAC [][i2 `$*`, i2 `$+`, i2 `nel`],
 
@@ -1442,8 +1444,6 @@ val cnel_def = Define`
 `;
 
 val cnel_equiv = brackabs.brackabs_equiv [] cnel_def
-val ndrop_0 = prove(``ndrop n 0 = 0``,
-                    Induct_on `n` THEN SRW_TAC [][ndrop_def, ntl_def]);
 
 val cnel_behaviour = store_thm(
   "cnel_behaviour",
@@ -1451,17 +1451,17 @@ val cnel_behaviour = store_thm(
   SIMP_TAC (bsrw_ss()) [cnel_equiv] THEN
   Q.ID_SPEC_TAC `n` THEN Induct_on `i` THEN
   ASM_SIMP_TAC (bsrw_ss()) [natrec_behaviour, cis_zero_behaviour] THENL [
-    Q.X_GEN_TAC `n` THEN Q.SPEC_THEN `n` STRUCT_CASES_TAC nlist_cases THENL [
-      SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN
-      SRW_TAC [][nel_def, ndrop_def, nhd_def],
+    Q.X_GEN_TAC `n` THEN
+    Q.SPEC_THEN `n` STRUCT_CASES_TAC nlist_cases THENL [
+      SIMP_TAC (bsrw_ss()) [cB_behaviour] ,
       SIMP_TAC (bsrw_ss()) [cB_behaviour, cminus_behaviour,
                             cnfst_behaviour] THEN
       SIMP_TAC (srw_ss() ++ ARITH_ss) [ncons_def]
     ],
 
-    Q.X_GEN_TAC `n` THEN Q.SPEC_THEN `n` STRUCT_CASES_TAC nlist_cases THENL [
-      SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN
-      SRW_TAC [][nel_def, ndrop_def, nhd_def, ndrop_0, ntl_def],
+    Q.X_GEN_TAC `n` THEN
+    Q.SPEC_THEN `n` STRUCT_CASES_TAC nlist_cases THENL [
+      SIMP_TAC (bsrw_ss()) [cB_behaviour],
 
       ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour, cminus_behaviour,
                                 cnsnd_behaviour] THEN
@@ -1472,11 +1472,9 @@ val nel_proj = prove(
   ``nel i (nlist_of l) = proj i l``,
   SRW_TAC [ARITH_ss][proj_def, nel_nlist_of] THEN
   POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `l` THEN Induct_on `i` THEN
-  SRW_TAC [][] THENL [
-    FULL_SIMP_TAC (srw_ss()) [nel_def, ndrop_def, nhd_def],
-    Cases_on `l` THEN1 SRW_TAC [][nel_def, ndrop_0, nhd_def] THEN
-    SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
-  ]);
+  SRW_TAC [][] THEN
+  Cases_on `l` THEN1 SRW_TAC [][nel_def, nhd_def] THEN
+  SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []);
 
 val cnlist_of_def = Define`
   cnlist_of =
@@ -1498,8 +1496,7 @@ val cnlist_of_behaviour = store_thm(
   SIMP_TAC (bsrw_ss()) [cnlist_of_equiv] THEN Induct_on `ns` THEN1
     SIMP_TAC (bsrw_ss()) [cnil_def] THEN
   ASM_SIMP_TAC (bsrw_ss()) [wh_cvcons, cnpair_behaviour, csuc_behaviour,
-                            numpairTheory.ncons_def,
-                            arithmeticTheory.ADD1]);
+                            ncons_def, arithmeticTheory.ADD1]);
 
 val crecCn_def = Define`
   crecCn =

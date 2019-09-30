@@ -342,7 +342,7 @@ val wmul_def =
       n2w (decode (Num (((int_of_num (encode (w2n x))) *
                        (int_of_num (encode (w2n y)))) % 65537))) : word16`;
 
-val _ = set_fixity "wmul"  (Infixr 350);
+val _ = set_fixity "wmul"  (Infixl 600);
 
 val Num_Lemma1 = Q.store_thm
 ("Num_Lemma1",
