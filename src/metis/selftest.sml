@@ -40,8 +40,10 @@ val test_cases =
    ``?v x. (x \/ p \/ q) /\ (x \/ ~p \/ ~q) /\ (p \/ ~q \/ ~x) /\
            (q \/ ~p \/ ~x) /\ (v \/ ~q \/ ~r) /\ (r \/ ~v) /\ (q \/ ~v) /\
            (v \/ x)``),
+(* "No numerals currently allowed"
    ("SKI_CONV", SKI_CONV, ``?f. !y. f y = y + 1``,
     ``$? (S (K $!) (S (S (K S) (S (K (S (K $=))) I)) (K (S $+ (K 1)))))``),
+ *)
    ("SKI_CONV", SKI_CONV, ``\x:'a. ((f :'a->'a->'a) x o (g :'a->'a))``,
     ``S (S (K $o) (f :'a->'a->'a)) (K (g :'a->'a))``),
    ("SKI_CONV", SKI_CONV, ``\x y. (f :'a->'a->'a) x y``,
@@ -56,8 +58,10 @@ val test_cases =
     ``$! (S (K $!) (S (K (S (P :'a->'a->bool))) K))``),
    ("SKI_CONV", SKI_CONV, ``(P = Q) <=> (!x. P x <=> Q x)``,
     ``(P = Q <=> $! (S (S (K $<=>) P) Q))``),
+(* "No numerals currently allowed"
    ("SKICo_CONV", SKICo_CONV, ``?f. !y. f y = y + 1``,
     ``$? ($! o C (S o $o $=) (C $+ 1))``),
+ *)
    ("SKICo_CONV", SKICo_CONV, ``\x:'a. ((f :'a->'a->'a) x o (g :'a->'a))``,
     ``C ($o o (f :'a->'a->'a)) (g :'a->'a)``),
    ("SKICo_CONV", SKICo_CONV, ``\x y. (f :'a->'a->'a) x y``,
