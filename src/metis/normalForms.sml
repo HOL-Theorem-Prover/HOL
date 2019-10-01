@@ -83,7 +83,7 @@ fun AVOID_SPEC_TAC (tm, v) =
 
 local
   open tautLib;
-  val th = prove (``(a = b) /\ (c = d) ==> (a /\ c <=> b /\ d)``, TAUT_TAC);
+  val th = prove (``(a <=> b) /\ (c <=> d) ==> (a /\ c <=> b /\ d)``, TAUT_TAC);
   val (a, b, c, d) = (``a:bool``, ``b:bool``, ``c:bool``, ``d:bool``);
 in
   fun MK_CONJ_EQ th1 th2 =
@@ -451,8 +451,8 @@ end;
 (* A basic tautology prover and simplifier for clauses                       *)
 (*                                                                           *)
 (* Examples:                                                                 *)
-(*   TAUTOLOGY_CONV:   p \/ r \/ ~p \/ ~q   =  T                             *)
-(*   CONTRACT_CONV:    (p \/ r) \/ p \/ ~q  =  p \/ r \/ ~q                  *)
+(*   TAUTOLOGY_CONV:   p \/ r \/ ~p \/ ~q  <=> T                             *)
+(*   CONTRACT_CONV:    (p \/ r) \/ p \/ ~q <=> p \/ r \/ ~q                  *)
 (* ------------------------------------------------------------------------- *)
 
 val BOOL_CASES = prove
@@ -480,11 +480,11 @@ val OR_F = prove
    tautLib.TAUT_TAC);
 
 val CONTRACT_DISJ = prove
-  (``!a b b'. (~a ==> (b = b')) ==> (~a ==> (a \/ b = b'))``,
+  (``!a b b'. (~a ==> (b <=> b')) ==> (~a ==> (a \/ b <=> b'))``,
    tautLib.TAUT_TAC);
 
 val DISJ_CONGRUENCE = prove
-  (``!a b b'. (~a ==> (b = b')) ==> (a \/ b = a \/ b')``,
+  (``!a b b'. (~a ==> (b <=> b')) ==> (a \/ b <=> a \/ b')``,
    tautLib.TAUT_TAC);
 
 local
@@ -716,16 +716,16 @@ fun ATOM_CONV c tm = (if is_neg tm then RAND_CONV c else c) tm;
 
 val EQ_DEFCNF = prove
   (``!x y z.
-       (x = (y = z)) <=>
+       (x <=> (y <=> z)) <=>
        (z \/ ~y \/ ~x) /\ (y \/ ~z \/ ~x) /\ (x \/ ~y \/ ~z) /\ (x \/ y \/ z)``,
    CONV_TAC CNF_CONV);
 
 val AND_DEFCNF = prove
-  (``!x y z. (x = (y /\ z)) <=> (y \/ ~x) /\ (z \/ ~x) /\ (x \/ ~y \/ ~z)``,
+  (``!x y z. (x <=> (y /\ z)) <=> (y \/ ~x) /\ (z \/ ~x) /\ (x \/ ~y \/ ~z)``,
    CONV_TAC CNF_CONV);
 
 val OR_DEFCNF = prove
-  (``!x y z. (x = (y \/ z)) <=> (y \/ z \/ ~x) /\ (x \/ ~y) /\ (x \/ ~z)``,
+  (``!x y z. (x <=> (y \/ z)) <=> (y \/ z \/ ~x) /\ (x \/ ~y) /\ (x \/ ~z)``,
    CONV_TAC CNF_CONV);
 
 fun sub_cnf f con defs (a, b) =
@@ -1045,7 +1045,7 @@ val cond_lift_ss = simpLib.++ (pureSimps.pure_ss, cond_lift_SS);
 (* ------------------------------------------------------------------------- *)
 (* Converting boolean connectives to conditionals.                           *)
 (*                                                                           *)
-(* Example:  x /\ ~(y ==> ~z)  =  (if x then (if y then z else F) else F)    *)
+(* Example:  x /\ ~(y ==> ~z) <=> (if x then (if y then z else F) else F)    *)
 (* ------------------------------------------------------------------------- *)
 
 val COND_SIMP = prove
@@ -1053,7 +1053,7 @@ val COND_SIMP = prove
    SIMP_TAC boolSimps.bool_ss []);
 
 val COND_NOT = prove
-  (``!a. ~a = if a then F else T``,
+  (``!a. ~a <=> if a then F else T``,
    SIMP_TAC boolSimps.bool_ss []);
 
 val COND_AND = prove
@@ -1069,7 +1069,7 @@ val COND_IMP = prove
    SIMP_TAC boolSimps.bool_ss []);
 
 val COND_EQ = prove
-  (``!a b. (a = b) <=> if a then b else ~b``,
+  (``!a b. (a <=> b) <=> if a then b else ~b``,
    SIMP_TAC boolSimps.bool_ss [EQ_IMP_THM, COND_EXPAND]
    THEN tautLib.TAUT_TAC);
 
@@ -1388,49 +1388,16 @@ val Type = Parse.Type;
 Globals.guessing_tyvars := true; (* OK *)
 app load ["numLib", "arithmeticTheory", "pred_setTheory", "bossLib"];
 open numLib arithmeticTheory pred_setTheory bossLib;
-Parse.reveal "C";
 
-(*
-PRETTIFY_VARS_CONV (rhs (concl (DEF_CNF_CONV ``~(p = q) ==> q /\ r``)));
-
-try SKI_CONV ``?f. !y. f y = y + 1``;
-try SKI_CONV ``\x. f x o g``;
-SKI_CONV ``\x y. f x y``;
-SKI_CONV ``$? = \P. P ($@ P)``;
-SKI_CONV ``$==> = \a b. ~a \/ b``;
-SKI_CONV ``$! = \P. K T = P``;
-SKI_CONV ``!x y. P x y``;
-SKI_CONV ``!x y. P y x``;
-SKI_CONV ``(P = Q) = (!x. P x = Q x)``;
-
-try SKICo_CONV ``?f. !y. f y = y + 1``;
-try SKICo_CONV ``\x. f x o g``;
-SKICo_CONV ``\x y. f x y``;
-SKICo_CONV ``$? = \P. P ($@ P)``;
-SKICo_CONV ``$==> = \a b. ~a \/ b``;
-SKICo_CONV ``$! = \P. K T = P``;
-SKICo_CONV ``!x y. P x y``;
-SKICo_CONV ``!x y. P y x``;
-SKICo_CONV ``(P = Q) = (!x. P x = Q x)``;
-
-SIMPLIFY_CONV ``(!x y. P x \/ (P y /\ F)) ==> ?z. P z``;
-
-try NNF_CONV ``(!x. P(x)) ==> ((?y. Q(y)) = (?z. P(z) /\ Q(z)))``;
-NNF_CONV ``~(~(x = y) = z) = ~(x = ~(y = z))``;
 val tm = ``~(0 <= m ==>
              0 <= n ==>
              0 < m /\ 0 < n ==>
              ((~(n <= 1) \/ (m = 1)) /\
               (n <= 1 \/ (m + 1 = 1 + n) \/ m <= 0 /\ 1 + n <= 1) \/
-              m <= 1 /\ n <= 1 + 0 =
+              m <= 1 /\ n <= 1 + 0 <=>
               (m = n)))``;
 PARTIAL_NNF_CONV (REWR_CONV NOT_NUM_EQ) tm;
 PURE_NNF_CONV' (REWR_CONV NOT_NUM_EQ) tm;
-
-SKOLEMIZE_CONV ``!x. (?y. Q y \/ !z. ~P z \/ ~Q z) \/ ~P x``;
-
-TAUTOLOGY_CONV ``p \/ r \/ ~p \/ ~q``;
-CONTRACT_CONV ``(p \/ r) \/ p \/ ~q``;
 
 CNF_CONV ``(p /\ (q \/ r /\ s)) /\ (~p \/ ~q \/ ~s)``;
 CNF_CONV ``(p /\ (q \/ r /\ s)) /\ (~p \/ ~q \/ ~s) /\ (p \/ ~p)``;
@@ -1488,7 +1455,6 @@ drop ();
 try (SIMP_CONV cond_lift_ss []) ``f (if x then 7 else 1)``;
 
 try (SIMP_CONV condify_ss []) ``x /\ ~(y ==> ~z)``;
-*)
 
 (MIN_CNF o map ASSUME)
 [``!b. ~(p (c:bool) (b:bool))``];
@@ -1511,6 +1477,7 @@ val p34 = mk_neg
 
 CNF_CONV p34;
 MIN_CNF [ASSUME p34];
+*)
 
 (* Expensive tests
 val p28 =
@@ -1568,7 +1535,5 @@ val _ = use "../metis/data/large-problem.sml";
 val large_problem = time Term large_problem_frag;
 time CNF_CONV (mk_neg large_problem);
 *)
-*)
-
 
 end
