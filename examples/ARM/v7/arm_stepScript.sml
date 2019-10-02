@@ -15,6 +15,8 @@ open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory armTheory;
 
 val _ = new_theory "arm_step";
 val _ = ParseExtras.temp_loose_equality()
+val _ = BasicProvers.temp_delsimps ["UPDATE_EQ", "UPDATE_APPLY_ID_RWT"]
+
 (* ------------------------------------------------------------------------- *)
 
 val _ = numLib.prefer_num();

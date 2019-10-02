@@ -25,6 +25,15 @@ open Parse
 
 val _ = numLib.prefer_num();
 val _ = wordsLib.prefer_word();
+val srw_ss = srw_ss() -* ["UPDATE_EQ", "UPDATE_APPLY_ID_RWT"]
+fun SRW_TAC ssdl thl g = let
+  val base = srw_ss
+  open BasicProvers
+  val ss = foldl (fn (ssd, ss) => ss ++ ssd) base ssdl
+in
+  markerLib.ABBRS_THEN
+    (markerLib.mk_require_tac (fn thl => PRIM_STP_TAC (ss && thl) NO_TAC)) thl
+end g;
 
 infix \\
 
@@ -102,7 +111,7 @@ val _ = computeLib.add_funs
     armTheory.arm_next_def]);
 
 val WORD_EQ_ADD_LCANCEL_0 =
-  simpLib.SIMP_PROVE (srw_ss()++wordsLib.WORD_ARITH_EQ_ss) []
+  simpLib.SIMP_PROVE (srw_ss ++wordsLib.WORD_ARITH_EQ_ss) []
      ``(v = v + w) <=> (w = 0w:'a word)``;
 
 val word_add_sub2 = wordsLib.WORD_DECIDE ``(a + b) + -a = b : 'a word``
@@ -367,7 +376,7 @@ local
   val read_sctlr_tm          = mk_arm_const "ARM_READ_SCTLR"
   val read_status_tm         = mk_arm_const "ARM_READ_STATUS"
   val read_it_tm             = mk_arm_const "ARM_READ_IT"
-  val ALIGN_CONV = SIMP_CONV (srw_ss()) [aligned_n2w, align_n2w]
+  val ALIGN_CONV = SIMP_CONV srw_ss [aligned_n2w, align_n2w]
   val ALIGN_ss = simpLib.std_conv_ss
         {conv = ALIGN_CONV, name = "ALIGN_CONV",
          pats = [``arm_coretypes$aligned (n2w a:'a word,n)``]}
@@ -844,17 +853,17 @@ in
            ARM_READ_INTERRUPT_WAIT_def, ARM_READ_SCTLR_def, ARM_READ_SCR_def,
            ARM_READ_TEEHBR_def]
       \\ Cases_on `s`
-      \\ SIMP_TAC (srw_ss())
+      \\ SIMP_TAC srw_ss
            [WORD_NOT, WORD_LEFT_ADD_DISTRIB, IT_concat0,
             aligned_concat, aligned_bx_concat, it_mode_concat]
       \\ STRIP_TAC
-      \\ ASM_SIMP_TAC (srw_ss()) [arm_state_component_equality,
+      \\ ASM_SIMP_TAC srw_ss [arm_state_component_equality,
            ARMinfo_component_equality, Coprocessors_component_equality,
            coproc_state_component_equality, CP15reg_component_equality,
            CP15sctlr_component_equality, ARMpsr_component_equality,
            optionTheory.option_CLAUSES, APPLY_UPDATE_ID, aligned_thm,
            aligned_n2w, align_n2w]
-      \\ ASM_SIMP_TAC (srw_ss())
+      \\ ASM_SIMP_TAC srw_ss
            [align_relative_add_with_carry, lem3, APPLY_UPDATE_THM,
             WORD_NOT, WORD_LEFT_ADD_DISTRIB, UPDATE_APPLY_IMP_ID]
       \\ MATCH_MP_TAC UPDATE_APPLY_IMP_ID
@@ -867,7 +876,7 @@ fun prove_comp_thm the_state P H G X = Q.prove(
   BETA_TAC \\ STRIP_TAC
     \\ PURE_REWRITE_TAC [arm_state_accfupds]
     \\ computeLib.RESTR_EVAL_TAC restr_terms
-    \\ ASM_SIMP_TAC (srw_ss()++boolSimps.CONJ_ss)
+    \\ ASM_SIMP_TAC (srw_ss++boolSimps.CONJ_ss)
          [UPD11_SAME_KEY_AND_BASE, UPDATE_EQ, UPDATE_ID_o2, APPLY_UPDATE_THM,
           WORD_EQ_ADD_LCANCEL_0, align_aligned, align_aligned3]);
 
@@ -913,9 +922,9 @@ local
      GSYM ARM_WRITE_REG_o, GSYM ARM_MODE_def,
      GSYM ARM_READ_IT_def, GSYM ARM_READ_GE_def,
      GSYM ARM_READ_CPSR_def, GSYM ARM_WRITE_CPSR_def,
-     ARM_READ_SCTLR_def  |> SIMP_RULE (srw_ss()) [] |> GSYM,
-     ARM_READ_SCR_def    |> SIMP_RULE (srw_ss()) [] |> GSYM,
-     ARM_READ_TEEHBR_def |> SIMP_RULE (srw_ss()) [] |> GSYM,
+     ARM_READ_SCTLR_def  |> SIMP_RULE srw_ss [] |> GSYM,
+     ARM_READ_SCR_def    |> SIMP_RULE srw_ss [] |> GSYM,
+     ARM_READ_TEEHBR_def |> SIMP_RULE srw_ss [] |> GSYM,
      GSYM ARM_READ_STATUS_def, GSYM ARM_READ_SCTLR_def, GSYM ARM_READ_SCR_def,
      GSYM ARM_READ_TEEHBR_def,
      GSYM ARM_READ_STATUS_SPSR_def, GSYM ARM_READ_MODE_SPSR_def,
