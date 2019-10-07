@@ -62,6 +62,13 @@ sig
   (* External parallel exploration specification *)
   val mk_extspec : string -> ('a,'b) gamespec -> 'a extgamespec
 
+  (* Test *)
+  val test_mk_extspec : string -> ('a,'b) gamespec -> 
+    (dhtnn, 'a, 'a * bool * int) smlParallel.extspec
+  val test_compete : 
+    (dhtnn, 'a, 'a * bool * int) smlParallel.extspec -> dhtnn -> 
+    'a list ->  ('a * bool * int) list
+
   (* Reinforcement learning loop *)
   val logfile_glob : string ref
   val summary : string -> unit

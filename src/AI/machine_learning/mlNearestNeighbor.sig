@@ -32,4 +32,19 @@ sig
   val add_stacdep:
     (goal, lbl list) Redblackmap.dict -> int -> lbl list -> lbl list
 
+  (* training *)
+  val train_knn : 
+    (term * 'a) list ->
+    ((int, real) Redblackmap.dict * (term, int list) Redblackmap.dict) *
+    (term, 'a) Redblackmap.dict
+
+  val infer_knn : 
+    ((int, real) Redblackmap.dict * (term, int list) Redblackmap.dict) *
+    (term, 'a) Redblackmap.dict -> term -> 'a
+
+  val knn_accuracy : 
+    ((int, real) Redblackmap.dict * (term, int list) Redblackmap.dict) *
+    (term, real list) Redblackmap.dict ->
+    (term * real list) list -> real 
+
 end

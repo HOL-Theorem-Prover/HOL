@@ -69,5 +69,28 @@ fun accuracy_fixed tnn =
     quadruple_of_list (map (tnn_accuracy tnn) exl)
   end
 
+(* ------------------------------------------------------------------------
+   Comparison with nearest neighbor
+   ------------------------------------------------------------------------ *)
+
+(*
+load "mleCompute"; open mleCompute;
+load "mleArithData"; open mleArithData;
+load "mlNearestNeighbor"; open mlNearestNeighbor;
+
+val train = 
+  compute_exout (mlTacticData.import_terml (dataarith_dir ^ "/train"));
+val valid =
+  compute_exout (mlTacticData.import_terml (dataarith_dir ^ "/valid"));
+val test =
+  compute_exout (mlTacticData.import_terml (dataarith_dir ^ "/test"));
+
+val knn = train_knn train;
+val validacc = knn_accuracy knn valid;
+val testacc = knn_accuracy knn test;
+
+
+*)
+
 
 end (* struct *)

@@ -171,16 +171,18 @@ val eval_gamespec =
   }
 
 val eval_extspec = mk_extspec "mleSynthesize.eval_extspec" eval_gamespec
+val test_eval_extspec = 
+  test_mk_extspec "mleSynthesize.test_eval_extspec" eval_gamespec
 
 (* -------------------------------------------------------------------------
    Statistics
    ------------------------------------------------------------------------- *)
 
-fun maxeval_atgen () =
+fun max_sizeeval_atgen () =
   let
     val tml = mlTacticData.import_terml (dataarith_dir ^ "/train_evalsorted")
   in
-    map (list_imax o map eval_numtm) (mk_batch 400 tml)
+    map (list_imax o map min_sizeeval) (mk_batch 400 tml)
   end
 
 fun stats_eval file =
@@ -255,10 +257,49 @@ val nodel = trace_win (#status_of gamespec) tree [];
 
 *)
 
+(* -------------------------------------------------------------------------
+   Final test
+   ------------------------------------------------------------------------- *)
 
+(*
+load "aiLib"; open aiLib;
+load "mleArithData"; open mleArithData;
+load "mleLib"; open mleLib;
+load "mleSynthesize"; open mleSynthesize;
+load "mlReinforce"; open mlReinforce;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "psMCTS"; open psMCTS;
+load "mlTacticData"; open mlTacticData;
 
+fun stats l = 
+  let 
+    val winl = filter (fn (_,b,_) => b) l  
+    val a = length winl
+    val atot = length l
+    val b = sum_int (map (fn (_,_,n) => n) winl)
+    val btot = sum_int (map (fn (t,_,_) => 
+      (term_size o dest_startsit) t) winl) 
+  in
+    ((a,atot,int_div a atot), (b,btot, int_div b btot))
+  end
 
+fun eval dhtnn set =
+  stats (test_compete test_eval_extspec dhtnn (map mk_startsit set));
 
+val test = import_terml (dataarith_dir ^ "/test");
+
+val dhtnn0 = read_dhtnn (eval_dir ^ "/mleSynthesize_eval1_gen0_dhtnn");
+val dhtnn10 = read_dhtnn (eval_dir ^ "/mleSynthesize_eval1_gen10_dhtnn");
+val dhtnn99 = read_dhtnn (eval_dir ^ "/mleSynthesize_eval1_gen99_dhtnn");
+
+decay_glob := 0.99;
+nsim_glob := 1;
+ncore_mcts_glob := 8;
+
+val g0 = eval dhtnn0 test;
+val g10 = eval dhtnn10 test;
+val g99 = eval dhtnn99 test;
+*)
 
 
 

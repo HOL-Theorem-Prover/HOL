@@ -8,6 +8,7 @@ sig
 
   (* interface *)
   val mk_startsit : term -> board
+  val dest_startsit : board -> term
   
   (* create training sets with gradual difficulty *)
   val create_sorteddata : unit -> unit
@@ -19,9 +20,13 @@ sig
   val copy_extspec : board mlReinforce.extgamespec
   val eval_gamespec : (board,move) mlReinforce.gamespec
   val eval_extspec : board mlReinforce.extgamespec
+  val test_eval_extspec : 
+    (mlReinforce.dhtnn, (term * int) * term,
+    ((term * int) * term) * bool * int) smlParallel.extspec
+
 
   (* statistics *)
-  val maxeval_atgen : unit -> int list
+  val max_sizeeval_atgen : unit -> int list
   val stats_eval : string -> (int * int) list
 
 end

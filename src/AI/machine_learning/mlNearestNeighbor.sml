@@ -146,5 +146,20 @@ fun infer_knn (knninfo,trainsetd) tm =
     dfind neartm trainsetd (* predicting from the trainset *)
   end
 
+fun is_accurate_knn knn i (tm,rl) =
+  let
+    val _ = if i mod 10 = 0 then print_endline (its i) else ()
+    val rl1 = infer_knn knn tm
+    val rl2 = combine (rl,rl1)
+    fun test (x,y) = Real.abs (x - y) < 0.5
+  in
+    if all test rl2 then true else false
+  end
+
+fun knn_accuracy knn set =
+  let val correct = filter I (mapi (is_accurate_knn knn) set) in
+    Real.fromInt (length correct) / Real.fromInt (length set)
+  end
+
 
 end (* struct *)

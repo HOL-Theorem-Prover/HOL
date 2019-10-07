@@ -245,8 +245,10 @@ fun read_param file =
    read_dhtnn (file ^ "_dhtnn"))
 
 fun write_result file (bstatus,exl) =
-  (writel_atomic (file ^ "_bstatus") [bstatus_to_string bstatus];
-   write_dhex (file ^ "_exl") exl)
+  (
+  writel (file ^ "_bstatus") [bstatus_to_string bstatus];
+  write_dhex (file ^ "_exl") exl
+  )
 
 fun read_result file =
   let
@@ -294,6 +296,65 @@ fun mk_extspec (name: string) (gamespec : ('a,'b) gamespec) =
   write_result = write_result,
   read_result = read_result
   }
+
+(* -------------------------------------------------------------------------
+   Final test
+   ------------------------------------------------------------------------- *)
+
+fun test_n_bigsteps_extern gamespec dhtnn target =
+  let
+    val _ = temperature_flag := false
+    val mctsparam =
+      {nsim = !nsim_glob, decay = !decay_glob, noise = false,
+       status_of = #status_of gamespec,
+       apply_move = #apply_move gamespec,
+       fevalpoli = mk_fep_dhtnn false gamespec dhtnn}
+    val (bstatus,_,rootl) = n_bigsteps gamespec mctsparam target
+  in
+    (target,bstatus,length rootl)
+  end
+
+fun test_write_result gamespec file (target,bstatus,plength) =
+  (
+  #write_targetl gamespec (file ^ "_target") [target];
+  writel (file ^ "_bstatus") [bstatus_to_string bstatus];
+  writel (file ^ "_plength") [its plength]
+  )
+
+fun test_read_result gamespec file =
+  let
+    val target = hd (#read_targetl gamespec (file ^ "_target"))
+    val bstatus = (string_to_bstatus o hd o readl) (file ^ "_bstatus")
+    val plength = (string_to_int o hd o readl) (file ^ "_plength")
+  in
+    app remove_file [file ^ "_target",file ^ "_bstatus",file ^ "_plength"];
+    (target,bstatus,plength)
+  end
+
+fun test_write_param file dhtnn = write_dhtnn (file ^ "_dhtnn") dhtnn
+fun test_read_param file = read_dhtnn (file ^ "_dhtnn")
+
+fun test_mk_extspec (name: string) (gamespec: ('a,'b) gamespec) =
+  {
+  self = name,
+  reflect_globals = reflect_globals,
+  function = test_n_bigsteps_extern gamespec,
+  write_param = test_write_param,
+  read_param = test_read_param,
+  write_argl = #write_targetl gamespec,
+  read_argl = #read_targetl gamespec,
+  write_result = test_write_result gamespec,
+  read_result = test_read_result gamespec
+  }
+
+fun test_compete extspec (dhtnn:dhtnn) targetl =
+  let
+    val ncore = !ncore_mcts_glob
+    val (l,t) = add_time (parmap_queue_extern ncore extspec dhtnn) targetl
+  in
+    print_endline ("Testing time : " ^ rts t); l
+  end
+
 
 (* -------------------------------------------------------------------------
    Competition

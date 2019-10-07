@@ -161,6 +161,7 @@ val gamespec : (board,move) mlReinforce.gamespec =
   }
 
 val extspec = mk_extspec "mleRewrite.extspec" gamespec
+val test_extspec = test_mk_extspec "mleRewrite.test_extspec" gamespec
 
 (* -------------------------------------------------------------------------
    Statistics
@@ -168,7 +169,7 @@ val extspec = mk_extspec "mleRewrite.extspec" gamespec
 
 fun maxprooflength_atgen () =
   let val tml = import_terml (dataarith_dir ^ "/train_plsorted") in
-    map (list_imax o map (lo_prooflength 200)) (mk_batch 400 tml)
+    map (list_imax o map (lo_prooflength 1000)) (mk_batch 400 tml)
   end
 
 fun stats_prooflength file =
@@ -230,5 +231,81 @@ val tree = mcts_test 10000 gamespec (random_dhtnn_gamespec gamespec)
 val nodel = trace_win (#status_of gamespec) tree [];
 
 *)
+
+(* -------------------------------------------------------------------------
+   Final test
+   ------------------------------------------------------------------------- *)
+
+fun final_stats l = 
+  let 
+    val winl = filter (fn (_,b,_) => b) l  
+    val a = length winl
+    val atot = length l
+    val b = sum_int (map (fn (_,_,n) => n) winl)
+    val btot = sum_int (map (fn (t,_,_) => 
+      (lo_prooflength 200 o dest_startsit) t) winl) 
+  in
+    ((a,atot,int_div a atot), (b,btot, int_div b btot))
+  end
+
+fun final_eval fileout dhtnn set =
+  let
+    val l = test_compete test_extspec dhtnn (map mk_startsit set)
+    val ((a,atot,ar),(b,btot,br)) = final_stats l
+    val cr = br * ar + 2.0 * (1.0 - ar)
+    val s = 
+      String.concatWith " " [its a,its atot,rts ar,
+                             its b,its btot,rts br,rts cr]
+  in
+    writel fileout [fileout,s]
+  end
+
+
+(*
+load "aiLib"; open aiLib;
+load "mleArithData"; open mleArithData;
+load "mleLib"; open mleLib;
+load "mlReinforce"; open mlReinforce;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "psMCTS"; open psMCTS;
+load "mlTacticData"; open mlTacticData;
+load "mleRewrite"; open mleRewrite;
+
+decay_glob := 0.99;
+ncore_mcts_glob := 40;
+
+val test = import_terml (dataarith_dir ^ "/test");
+val (test1,test2) =
+  let val l = mapfilter (fn x => (x,(lo_prooflength 200) x)) test in
+    (map fst (filter (fn x => snd x >= 0 andalso snd x <= 89) l),  
+     map fst (filter (fn x => snd x >= 90 andalso snd x <= 130) l))
+  end
+;
+
+exception Read;
+fun read_ntest n = 
+  if n = 1 then test1 else if n = 2 then test2 else raise Read;
+fun read_ndhtnn n = 
+  read_dhtnn (eval_dir ^ "/mleRewrite_run41_gen" ^ its n ^ "_dhtnn");
+
+val paraml = [(0,1),(13,1),(31,1),(13,2),(31,2)];
+val nsiml = [1,16,160,1600];
+val paraml2 = cartesian_product nsiml paraml;
+
+fun final_eval_one (nsim,(ndhtnn,ntest)) =
+  let
+    val dhtnn = read_ndhtnn ndhtnn
+    val test = read_ntest ntest
+    val _ = nsim_glob := nsim
+    val suffix = 
+      "ngen" ^ its ndhtnn ^ "-ntest" ^ its ntest ^ "-nsim" ^ its nsim
+    val file = eval_dir ^ "/a_rw_" ^ suffix
+  in
+    final_eval file dhtnn test
+  end;
+
+app final_eval_one paraml2;
+*)
+
 
 end (* struct *)
