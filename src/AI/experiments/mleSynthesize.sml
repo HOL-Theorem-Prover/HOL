@@ -261,17 +261,7 @@ val nodel = trace_win (#status_of gamespec) tree [];
    Final test
    ------------------------------------------------------------------------- *)
 
-(*
-load "aiLib"; open aiLib;
-load "mleArithData"; open mleArithData;
-load "mleLib"; open mleLib;
-load "mleSynthesize"; open mleSynthesize;
-load "mlReinforce"; open mlReinforce;
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-load "psMCTS"; open psMCTS;
-load "mlTacticData"; open mlTacticData;
-
-fun stats l = 
+fun final_stats l = 
   let 
     val winl = filter (fn (_,b,_) => b) l  
     val a = length winl
@@ -283,23 +273,56 @@ fun stats l =
     ((a,atot,int_div a atot), (b,btot, int_div b btot))
   end
 
-fun eval dhtnn set =
-  stats (test_compete test_eval_extspec dhtnn (map mk_startsit set));
+fun final_eval fileout dhtnn set =
+  let
+    val l = test_compete test_eval_extspec dhtnn (map mk_startsit set)
+    val ((a,atot,ar),(b,btot,br)) = final_stats l
+    val cr = br * ar + 2.0 * (1.0 - ar)
+    val s = 
+      String.concatWith " " [its a,its atot,rts ar,
+                             its b,its btot,rts br,rts cr]
+  in
+    writel fileout [fileout,s]
+  end
 
-val test = import_terml (dataarith_dir ^ "/test");
 
-val dhtnn0 = read_dhtnn (eval_dir ^ "/mleSynthesize_eval1_gen0_dhtnn");
-val dhtnn10 = read_dhtnn (eval_dir ^ "/mleSynthesize_eval1_gen10_dhtnn");
-val dhtnn99 = read_dhtnn (eval_dir ^ "/mleSynthesize_eval1_gen99_dhtnn");
+(*
+load "aiLib"; open aiLib;
+load "mleArithData"; open mleArithData;
+load "mleLib"; open mleLib;
+load "mlReinforce"; open mlReinforce;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "psMCTS"; open psMCTS;
+load "mlTacticData"; open mlTacticData;
+load "mleSynthesize"; open mleSynthesize;
 
 decay_glob := 0.99;
-nsim_glob := 1;
-ncore_mcts_glob := 8;
+ncore_mcts_glob := 40;
 
-val g0 = eval dhtnn0 test;
-val g10 = eval dhtnn10 test;
-val g99 = eval dhtnn99 test;
+val testset = import_terml (dataarith_dir ^ "/test");
+fun read_ndhtnn n = 
+  read_dhtnn (eval_dir ^ "/mleSynthesize_eval1_gen" ^ its n ^ "_dhtnn");
+
+val genl = [0,10,99];
+val nsiml = [1,16,160,1600];
+val paraml = cartesian_product nsiml genl;
+
+fun final_eval_one (nsim,ndhtnn) =
+  let
+    val dhtnn = read_ndhtnn ndhtnn
+    val _ = nsim_glob := nsim
+    val suffix =  "ngen" ^ its ndhtnn ^ "-nsim" ^ its nsim
+    val file = eval_dir ^ "/a_synteval_" ^ suffix
+  in
+    final_eval file dhtnn testset
+  end;
+
+final_eval_one (hd paraml);
+
+app final_eval_one paraml;
 *)
+
+
 
 
 

@@ -295,13 +295,13 @@ val paraml2 = cartesian_product nsiml paraml;
 fun final_eval_one (nsim,(ndhtnn,ntest)) =
   let
     val dhtnn = read_ndhtnn ndhtnn
-    val test = read_ntest ntest
+    val set = read_ntest ntest
     val _ = nsim_glob := nsim
     val suffix = 
       "ngen" ^ its ndhtnn ^ "-ntest" ^ its ntest ^ "-nsim" ^ its nsim
     val file = eval_dir ^ "/a_rw_" ^ suffix
   in
-    final_eval file dhtnn test
+    final_eval file dhtnn set
   end;
 
 app final_eval_one paraml2;
