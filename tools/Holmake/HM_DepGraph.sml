@@ -163,8 +163,9 @@ fun find_runnable (g : t) =
       case peeknode g i of
           NONE => NONE
         | SOME nI =>
-          if not (is_pending (#status nI)) then search (i + 1)
-          else if List.all hasSucceeded (#dependencies nI) then SOME (i,nI)
+          if #status nI = Pending{needed=true} andalso
+             List.all hasSucceeded (#dependencies nI)
+          then SOME (i,nI)
           else search (i + 1)
   in
     search 0
@@ -245,13 +246,15 @@ fun toString g =
       String.concatWith ",\n  " (map prNode (listNodes g)) ^ "\n}"
     end
 
-fun postmortem (outs : Holmake_tools.output_functions) tgts g =
+fun postmortem (outs : Holmake_tools.output_functions) (status,g) =
   let
     fun pr s = s
     val {diag,tgtfatal,...} = outs
     val diagK = diag o (fn x => fn _ => x)
   in
-    case List.filter (fn (_,nI) => #status nI <> Succeeded) (listNodes g) of
+    case List.filter (fn (_,nI) => #status nI = Failed{needed=true})
+                     (listNodes g)
+     of
         [] => OS.Process.success
       | ns =>
         let

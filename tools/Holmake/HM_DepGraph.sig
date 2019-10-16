@@ -46,9 +46,8 @@ sig
 
   val toString : t -> string
 
-  val postmortem : Holmake_tools.output_functions ->
-                   (Holmake_tools.hmdir.t * string) list ->
-                   t -> OS.Process.status
+  val postmortem : Holmake_tools.output_functions -> OS.Process.status * t ->
+                   OS.Process.status
 
 
 

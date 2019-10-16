@@ -554,6 +554,7 @@ end
    in DEPDIR somewhere. *)
 
 fun get_implicit_dependencies incinfo (f: File) : File list = let
+  val {preincludes,includes} = incinfo
   val file_dependencies0 =
       get_direct_dependencies {incinfo = incinfo, extra_targets = extra_targets,
                                output_functions = outputfns,
@@ -671,6 +672,9 @@ fun de_script s =
 
 (* is run in a directory at a time *)
 fun build_depgraph cdset incinfo target g0 : (t * node) = let
+  val {preincludes,includes} = incinfo
+  val incinfo = {preincludes = preincludes,
+                 includes = std_include_flags @ includes}
   val pdep = primary_dependent target
   val target_s = fromFile target
   val _ = diag (fn _ => "Extending graph with target " ^ target_s)
@@ -937,19 +941,21 @@ in
         val depgraph = if cline_recursive then make_all_needed depgraph
                        else if no_prereqs then mk_dirneeded dir depgraph
                        else mkneeded targets depgraph
-        val _ =
-            let
-              val tgtstrings =
-                  map
-                    (fn (d,s) => if OS.FileSys.access(s, []) then s
-                                 else s ^ "(*)")
-                    targets
-            in
-              diag(fn _ => "Generated targets are: [" ^
-                           String.concatWith ", " tgtstrings ^ "]")
-            end
+        val _ = diag (
+              fn _ =>
+                 let
+                   val tgtstrings =
+                       map
+                         (fn (d,s) => if OS.FileSys.access(s, []) then s
+                                      else s ^ "(*)")
+                         targets
+                 in
+                   "Generated targets are: [" ^
+                   String.concatWith ", " tgtstrings ^ "]"
+                 end
+            )
       in
-        build_graph depgraph
+        postmortem outputfns (build_graph depgraph)
       end
     | xs => let
         val cleanTargets =
@@ -981,7 +987,7 @@ in
           let
             val targets = map (fn s => (dir,s)) xs
           in
-            build_graph (mkneeded targets depgraph)
+            postmortem outputfns (build_graph (mkneeded targets depgraph))
           end
       end
 end (* fun Holmake *)
