@@ -66,7 +66,7 @@ sig
   val primary_dependent : File -> File option
   val exists_readable : string -> bool
   val generate_all_plausible_targets :
-      (string -> unit) -> string option -> File list
+      (string -> unit) -> string option -> string list
   val extract_theory : string list -> string option
 
   val clean_dir : {extra_cleans: string list} -> unit
@@ -88,6 +88,7 @@ sig
   val nice_dir : string -> string (* prints a dir with ~ when HOME is set *)
 
   type include_info = {includes : string list, preincludes : string list}
+  val empty_incinfo : include_info
   type dirset = hmdir.t Binaryset.set
   type incset_pair = {pres : dirset, incs : dirset}
   val empty_dirset : dirset

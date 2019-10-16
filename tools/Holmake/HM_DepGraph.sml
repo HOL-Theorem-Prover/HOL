@@ -9,14 +9,19 @@ fun x |> f = f x
 structure Map = Binarymap
 
 datatype target_status =
-         Pending of {needed:bool} | Succeeded | Failed | Running
+         Pending of {needed:bool}
+       | Succeeded
+       | Failed of {needed:bool}
+       | Running
 fun is_pending (Pending _) = true | is_pending _ = false
+fun is_failed (Failed _) = true | is_failed _ = false
+fun needed_string {needed} = "{needed="^Bool.toString needed^"}]"
 fun status_toString s =
   case s of
       Succeeded => "[Succeeded]"
-    | Failed => "[Failed]"
+    | Failed n => "[Failed" ^ needed_string n ^ "]"
     | Running => "[Running]"
-    | Pending{needed} => "[Pending{needed="^Bool.toString needed^"}]"
+    | Pending n => "[Pending" ^ needed_string n ^ "]"
 
 exception NoSuchNode
 exception DuplicateTarget
@@ -26,7 +31,10 @@ datatype builtincmd = BIC_BuildScript of string | BIC_Compile
 fun bic_toString BIC_Compile = "BIC_Compile"
   | bic_toString (BIC_BuildScript s) = "BIC_Build " ^ s
 
-datatype command = NoCmd | SomeCmd of string | BuiltInCmd of builtincmd
+datatype command =
+         NoCmd
+       | SomeCmd of string
+       | BuiltInCmd of builtincmd * Holmake_tools.include_info
 type 'a nodeInfo = { target : 'a, status : target_status,
                      command : command, phony : bool,
                      seqnum : int, dir : Holmake_tools.hmdir.t,
@@ -59,7 +67,7 @@ fun command_compare (NoCmd, NoCmd) = EQUAL
   | command_compare (SomeCmd s1, SomeCmd s2) = String.compare(s1,s2)
   | command_compare (SomeCmd _, BuiltInCmd _) = LESS
   | command_compare (BuiltInCmd _, SomeCmd _) = GREATER
-  | command_compare (BuiltInCmd b1, BuiltInCmd b2) = bic_compare(b1,b2)
+  | command_compare (BuiltInCmd (b1,_), BuiltInCmd (b2,_)) = bic_compare(b1,b2)
 
 type t = { nodes : (node, string nodeInfo) Map.dict,
            target_map : (hmdir.t * string,node) Map.dict,
@@ -178,7 +186,10 @@ fun nodeInfo_toString tstr (nI : 'a nodeInfo) =
     status_toString status ^ " : " ^
     (case command of
          SomeCmd s => s
-       | BuiltInCmd bic => "<Holmake: " ^ bic_toString bic ^ ">"
+       | BuiltInCmd (bic,{preincludes,includes}) =>
+         "<Holmake: " ^ bic_toString bic ^
+         ",{pres=[" ^ String.concatWith "," preincludes ^ "],incs=[" ^
+         String.concatWith "," includes ^ "]}>"
        | NoCmd => "<no command>")
   end
 
@@ -212,6 +223,52 @@ fun mkneeded tgts g =
     in
       work (Binaryset.empty node_compare) [initial_tgts] g
     end
+
+fun mk_dirneeded d g =
+    let
+      fun upd_nI nI = if hmdir.compare(#dir nI, d) = EQUAL andalso
+                         #status nI = Pending{needed=false}
+                      then
+                        setStatus (Pending{needed=true}) nI
+                      else nI
+    in
+      fupd_nodes (Map.map (fn (_,nI) => upd_nI nI)) g
+    end
+
+fun toString g =
+    let
+      fun prNode(n,nI) =
+          "[" ^ node_toString n ^ "], " ^
+          nodeInfo_toString (fn s => s) nI
+    in
+      "{\n  " ^
+      String.concatWith ",\n  " (map prNode (listNodes g)) ^ "\n}"
+    end
+
+fun postmortem (outs : Holmake_tools.output_functions) tgts g =
+  let
+    fun pr s = s
+    val {diag,tgtfatal,...} = outs
+    val diagK = diag o (fn x => fn _ => x)
+  in
+    case List.filter (fn (_,nI) => #status nI <> Succeeded) (listNodes g) of
+        [] => OS.Process.success
+      | ns =>
+        let
+          fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString pr nI
+          fun failed_nocmd (_, nI) =
+            #status nI = Failed{needed=true} andalso #command nI = NoCmd
+          val ns' = List.filter failed_nocmd ns
+          fun nI_target (_, nI) = #target nI
+        in
+          diagK ("Failed nodes: \n" ^ String.concatWith "\n" (map str ns));
+          if not (null ns') then
+            tgtfatal ("Don't know how to build necessary target(s): " ^
+                      String.concatWith ", " (map nI_target ns'))
+          else ();
+          OS.Process.failure
+        end
+  end
 
 
 

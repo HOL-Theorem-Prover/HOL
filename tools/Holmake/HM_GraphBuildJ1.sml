@@ -19,39 +19,13 @@ type 'optv buildinfo_t = {
   SIGOBJ : string
 }
 
-fun fail (outs : Holmake_tools.output_functions) g =
-  let
-    open HM_DepGraph
-    fun pr s = s
-    val {diag,tgtfatal,...} = outs
-    val diagK = diag o (fn x => fn _ => x)
-  in
-    case List.filter (fn (_,nI) => #status nI <> Succeeded) (listNodes g) of
-        [] => raise Fail "No failing nodes in supposedly failed graph"
-      | ns =>
-        let
-          fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString pr nI
-          fun failed_nocmd (_, nI) =
-            #status nI = Failed andalso #command nI = NoCmd
-          val ns' = List.filter failed_nocmd ns
-          fun nI_target (_, nI) = #target nI
-        in
-          diagK ("Failed nodes: \n" ^ String.concatWith "\n" (map str ns));
-          if not (null ns') then
-            tgtfatal ("Don't know how to build necessary target(s): " ^
-                      String.concatWith ", " (map nI_target ns'))
-          else ();
-          OS.Process.failure
-        end
-  end
-
 fun is_heap_only() =
   case OS.Process.getEnv Systeml.build_after_reloc_envvar of
       SOME "1" => true
     | _ => false
 
 fun b2status true = HM_DepGraph.Succeeded
-  | b2status false = HM_DepGraph.Failed
+  | b2status false = HM_DepGraph.Failed{needed=true}
 
 fun updall nodes st g =
   List.foldl (fn (n,g) => HM_DepGraph.updnode(n,st) g) g nodes
@@ -64,18 +38,14 @@ fun graphbuildj1 static_info =
          quiet, hmenv, system} = static_info
     val {warn,diag,tgtfatal,info,...} = (outs : Holmake_tools.output_functions)
     val diagK = diag o (fn x => fn _ => x)
-    fun build_graph incinfo g =
+    fun build_graph g =
       let
         open HM_DepGraph
         val _ = diagK "Entering HMGBJ1.build_graph"
-        val bc = build_command g incinfo
+        val bc = build_command g
         fun recurse retval g =
           case find_runnable g of
-              NONE => (case List.find (fn (_,ni) => #status ni = Failed)
-                                      (listNodes g)
-                        of
-                           NONE => retval
-                         | SOME _ => fail outs g)
+              NONE => (retval, g)
             | SOME (n, nI : string nodeInfo) =>
               let
                 val deps = map #2 (#dependencies nI)
@@ -87,29 +57,31 @@ fun graphbuildj1 static_info =
                   in
                     if res then recurse retval g
                     else if keep_going then recurse OS.Process.failure g
-                    else fail outs g
+                    else (OS.Process.success, g)
                   end
                 fun stdprocess () =
                   case #command nI of
-                      BuiltInCmd BIC_Compile =>
+                      BuiltInCmd (BIC_Compile, ii) =>
                       (diagK("J1Build: Running built-in compile on " ^
                              #target nI);
                        case toFile (#target nI) of
-                           UI c => k (upd1 n) (bc (Compile depfs) (SIG c))
-                         | UO c => k (upd1 n) (bc (Compile depfs) (SML c))
+                           UI c => k (upd1 n) (bc ii (Compile depfs) (SIG c))
+                         | UO c => k (upd1 n) (bc ii (Compile depfs) (SML c))
                          | ART (RawArticle s) =>
-                             k (upd1 n) (bc (BuildArticle(s,depfs))
+                             k (upd1 n) (bc ii
+                                            (BuildArticle(s,depfs))
                                             (SML (Script s)))
                          | ART (ProcessedArticle s) =>
                              k (upd1 n)
-                               (bc (ProcessArticle s) (ART (RawArticle s)))
+                               (bc ii (ProcessArticle s) (ART (RawArticle s)))
                          | _ => raise Fail ("bg tgt = " ^ #target nI))
-                    | cmd as (BuiltInCmd (BIC_BuildScript thyname)) =>
+                    | cmd as (BuiltInCmd (BIC_BuildScript thyname, ii)) =>
                       let
                         val others = find_nodes_by_command g cmd
                       in
                         k (updall (n::others))
-                          (bc (BuildScript(thyname, depfs))
+                          (bc ii
+                              (BuildScript(thyname, depfs))
                               (SML (Script thyname)))
                       end
                     | cmd as SomeCmd c =>

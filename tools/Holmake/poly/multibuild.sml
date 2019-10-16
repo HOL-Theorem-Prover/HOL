@@ -12,12 +12,14 @@ datatype buildresult =
                         other_nodes : HM_DepGraph.node list }
        | BR_Failed
 
+val RealFail = Failed{needed=true}
+
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
 val loggingdir = ".hollogs"
 
 
-fun graphbuild optinfo incinfo g =
+fun graphbuild optinfo g =
   let
     val _ = OS.FileSys.mkDir loggingdir handle _ => ()
     val { build_command, mosml_build_command, warn, tgtfatal, diag,
@@ -46,7 +48,7 @@ fun graphbuild optinfo incinfo g =
             val _ = diag ("Found runnable node "^node_toString n)
             fun k b g =
               if b orelse keep_going then
-                genjob (updnode(n, if b then Succeeded else Failed) g, true)
+                genjob (updnode(n, if b then Succeeded else RealFail) g, true)
               else GiveUpAndDie (g, ok)
             val depfs = map (toFile o #2) (#dependencies nI)
             val _ = is_pending (#status nI) orelse
@@ -66,7 +68,7 @@ fun graphbuild optinfo incinfo g =
                       else if ignore_error then
                         (warn ("Ignoring error executing: " ^ c);
                          Succeeded)
-                      else Failed
+                      else RealFail
                   in
                     case mosml_build_command hmenv hypargs depfs of
                         SOME r =>
@@ -96,7 +98,7 @@ fun graphbuild optinfo incinfo g =
                                   (updall(g, Running), true))
                         end
                   end
-                | BuiltInCmd bic =>
+                | BuiltInCmd (bic,incinfo) =>
                   let
                     val _ = diag ("Setting up for target >" ^ target_s ^
                                   "< with bic " ^ bic_toString bic)
@@ -115,7 +117,7 @@ fun graphbuild optinfo incinfo g =
                               if job_kont (fn s => ()) (b2res b) then
                                 (updall Succeeded g, true)
                               else
-                                (updall Failed g, keep_going)
+                                (updall RealFail g, keep_going)
                             fun cline_str (c,l) = "["^c^"] " ^
                                                   String.concatWith " " l
                           in

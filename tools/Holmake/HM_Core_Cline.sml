@@ -201,7 +201,7 @@ val core_option_descriptions = [
     desc = mkBoolT #quit_on_failure },
   { help = "rebuild cached dependency files", short = "",
     long = ["rebuild_deps"], desc = mkBoolT #rebuild_deps },
-  { help = "clean recursively", short = "r", long = [],
+  { help = "more recursion", short = "r", long = [],
     desc = mkBoolT #recursive },
   { help = "verbose output", short = "v", long = ["verbose"],
     desc = NoArg

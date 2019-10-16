@@ -543,6 +543,7 @@ end
 type include_info = {includes : string list, preincludes : string list }
 
 type include_info = {includes : string list, preincludes : string list}
+val empty_incinfo = {includes = [], preincludes = []}
 type dirset = hmdir.t Binaryset.set
 
 val empty_dirset = Binaryset.empty hmdir.compare
@@ -569,7 +570,7 @@ fun find_files ds P =
 
 fun generate_all_plausible_targets warn first_target =
     case first_target of
-        SOME s => [toFile s]
+        SOME s => [s]
       | NONE =>
         let
           val cds = OS.FileSys.openDir "."
@@ -597,13 +598,10 @@ fun generate_all_plausible_targets warn first_target =
             | src_to_target (SML s) = (UO s)
             | src_to_target (SIG s) = (UI s)
             | src_to_target _ = raise Fail "Can't happen"
-          val initially = map (src_to_target o toFile) src_files
-          fun remove_sorted_dups [] = []
-            | remove_sorted_dups [x] = [x]
-            | remove_sorted_dups (x::y::z) = if x = y then remove_sorted_dups (y::z)
-                                             else x :: remove_sorted_dups (y::z)
+          val initially = map (fromFile o src_to_target o toFile) src_files
         in
-          remove_sorted_dups (Listsort.sort file_compare initially)
+          Binaryset.listItems
+            (Binaryset.addList (Binaryset.empty String.compare, initially))
         end
 
 (* dependency analysis *)

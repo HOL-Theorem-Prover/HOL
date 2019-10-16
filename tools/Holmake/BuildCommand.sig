@@ -6,6 +6,6 @@ sig
   val make_build_command :
       HM_Cline.t buildinfo_t ->
       {extra_impl_deps : File list,
-       build_graph : include_info -> HM_DepGraph.t -> OS.Process.status }
+       build_graph : HM_DepGraph.t -> OS.Process.status * HM_DepGraph.t}
 
 end

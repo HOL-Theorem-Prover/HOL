@@ -1,7 +1,6 @@
 signature HM_Core_Cline =
 sig
 
-
 type t = {
   debug : bool,
   do_logging : bool,

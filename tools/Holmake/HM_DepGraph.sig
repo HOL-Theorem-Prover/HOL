@@ -5,13 +5,20 @@ sig
   exception NoSuchNode
   exception DuplicateTarget
   datatype target_status =
-           Pending of {needed:bool} | Succeeded | Failed | Running
+           Pending of {needed:bool}
+         | Succeeded
+         | Failed of {needed:bool}
+         | Running
   val is_pending : target_status -> bool
+  val is_failed : target_status -> bool
   eqtype node
   datatype builtincmd = BIC_BuildScript of string | BIC_Compile
   val bic_toString : builtincmd -> string
 
-  datatype command = NoCmd | SomeCmd of string | BuiltInCmd of builtincmd
+  datatype command =
+           NoCmd
+         | SomeCmd of string
+         | BuiltInCmd of builtincmd * Holmake_tools.include_info
   type 'a nodeInfo = { target : 'a, status : target_status,
                        phony : bool, dir : Holmake_tools.hmdir.t,
                        command : command, seqnum : int,
@@ -33,7 +40,16 @@ sig
   val find_nodes_by_command : t -> command -> node list
   val make_all_needed : t -> t
   val mkneeded : (Holmake_tools.hmdir.t * string) list -> t -> t
+  val mk_dirneeded : Holmake_tools.hmdir.t -> t -> t
 
   val find_runnable : t -> (node * string nodeInfo) option
+
+  val toString : t -> string
+
+  val postmortem : Holmake_tools.output_functions ->
+                   (Holmake_tools.hmdir.t * string) list ->
+                   t -> OS.Process.status
+
+
 
 end

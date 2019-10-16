@@ -333,7 +333,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         in
           diag (fn _ => "Looking for other nodes with buildscript "^script);
           find_nodes_by_command g
-              (BuiltInCmd (BIC_BuildScript script_part))
+              (BuiltInCmd (BIC_BuildScript script_part, empty_incinfo))
+              (* incinfos not consulted for comparison so empty value ok here *)
         end
       in
         BR_ClineK { cline = (useScript, cline), job_kont = cont,
@@ -433,26 +434,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   open HM_DepGraph
   fun pr s = s
   fun interpret_graph (g,ok) =
-    case List.filter (fn (_,nI) => #status nI <> Succeeded) (listNodes g) of
-        [] => (if not ok then
-                 warn ("*** ProcessMultiplexor thinks state is not ok")
-               else ();
-               OS.Process.success)
-      | ns =>
-        let
-          fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString pr nI
-          fun failed_nocmd (_, nI) =
-            #status nI = Failed andalso #command nI = NoCmd
-          val ns' = List.filter failed_nocmd ns
-          fun nI_target (_, nI) = #target nI
-        in
-          diag (fn _ => "Failed nodes: \n"^String.concatWith "\n" (map str ns));
-          if not (null ns') then
-            tgtfatal ("Don't know how to build necessary target(s): " ^
-                      String.concatWith ", " (map nI_target ns'))
-          else ();
-          OS.Process.failure
-        end
+      (if ok then OS.Process.success else OS.Process.failure, g)
   fun interpret_bres bres =
     case bres of
         BR_OK => true
@@ -468,7 +450,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
 
   val build_graph =
       if jobs = 1 then
-        (fn ii => fn g =>
+        (fn g =>
             graphbuildj1 {
               build_command = (fn g => fn ii => fn cmds => fn f =>
                                   build_command g ii cmds f |> interpret_bres),
@@ -477,9 +459,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
               keep_going = keep_going,
               quiet = quiet_flag,
               hmenv = hmenv,
-              system = system } ii g)
+              system = system } g)
       else
-        (fn ii => fn g =>
+        (fn g =>
             multibuild.graphbuild { build_command = build_command,
                                     relocbuild = relocbuild,
                                     mosml_build_command = mosml_build_command,
@@ -489,7 +471,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                     info = #info outs,
                                     time_limit = time_limit,
                                     quiet = quiet_flag, hmenv = hmenv,
-                                    jobs = jobs } ii g |> interpret_graph)
+                                    jobs = jobs } g |> interpret_graph)
 in
   {extra_impl_deps = if relocbuild orelse HOLSTATE = POLY then []
                      else [Unhandled HOLSTATE],
