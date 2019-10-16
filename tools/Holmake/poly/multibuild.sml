@@ -49,7 +49,7 @@ fun graphbuild optinfo incinfo g =
                 genjob (updnode(n, if b then Succeeded else Failed) g, true)
               else GiveUpAndDie (g, ok)
             val depfs = map (toFile o #2) (#dependencies nI)
-            val _ = #status nI = Pending orelse
+            val _ = is_pending (#status nI) orelse
                     raise Fail "runnable not pending"
             val target_s = #target nI
             fun stdprocess() =

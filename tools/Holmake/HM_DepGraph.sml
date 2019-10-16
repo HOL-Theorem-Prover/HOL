@@ -1,20 +1,22 @@
 structure HM_DepGraph :> HM_DepGraph =
 struct
 
+
+open Holmake_tools
 infix |>
 fun x |> f = f x
 
 structure Map = Binarymap
 
-datatype target_status = Pending | Succeeded | Failed | Running
+datatype target_status =
+         Pending of {needed:bool} | Succeeded | Failed | Running
+fun is_pending (Pending _) = true | is_pending _ = false
 fun status_toString s =
   case s of
       Succeeded => "[Succeeded]"
     | Failed => "[Failed]"
     | Running => "[Running]"
-    | Pending => "[Pending]"
-
-fun pending_dflt (s1, s2) = if s1 = s2 then s1 else Pending
+    | Pending{needed} => "[Pending{needed="^Bool.toString needed^"}]"
 
 exception NoSuchNode
 exception DuplicateTarget
@@ -30,13 +32,15 @@ type 'a nodeInfo = { target : 'a, status : target_status,
                      seqnum : int, dir : Holmake_tools.hmdir.t,
                      dependencies : (node * string) list  }
 
-fun setStatus s (nI: 'a nodeInfo) : 'a nodeInfo =
+fun fupdStatus f (nI: 'a nodeInfo) : 'a nodeInfo =
   let
     val {target,command,status,dependencies,seqnum,phony,dir} = nI
   in
-    {target = target, status = s, command = command, seqnum = seqnum,
+    {target = target, status = f status, command = command, seqnum = seqnum,
      dependencies = dependencies, phony = phony, dir = dir}
   end
+
+fun setStatus s = fupdStatus (fn _ => s)
 
 fun addDeps0 dps {target,command,status,dependencies,seqnum,phony,dir} =
   {target = target, status = status, command = command, phony = phony,
@@ -58,9 +62,13 @@ fun command_compare (NoCmd, NoCmd) = EQUAL
   | command_compare (BuiltInCmd b1, BuiltInCmd b2) = bic_compare(b1,b2)
 
 type t = { nodes : (node, string nodeInfo) Map.dict,
-           target_map : (string,node) Map.dict,
+           target_map : (hmdir.t * string,node) Map.dict,
            command_map : (command,node list) Map.dict }
 
+fun pair_compare (c1,c2) ((a1,b1), (a2,b2)) =
+  case c1(a1,a2) of
+      EQUAL => c2(b1,b2)
+    | x => x
 fun lex_compare c (l1, l2) =
   case (l1,l2) of
       ([],[]) => EQUAL
@@ -69,8 +77,11 @@ fun lex_compare c (l1, l2) =
     | (h1::t1, h2::t2) => case c(h1,h2) of EQUAL => lex_compare c (t1,t2)
                                          | x => x
 
+val tgt_compare = pair_compare(hmdir.compare, String.compare)
+
+
 val empty = { nodes = Map.mkDict node_compare,
-              target_map = Map.mkDict String.compare,
+              target_map = Map.mkDict tgt_compare,
               command_map = Map.mkDict command_compare }
 fun fupd_nodes f {nodes, target_map, command_map} =
   {nodes = f nodes, target_map = target_map, command_map = command_map}
@@ -82,10 +93,6 @@ fun find_nodes_by_command (g : t) c =
 
 fun size (g : t) = Map.numItems (#nodes g)
 fun peeknode (g:t) n = Map.peek(#nodes g, n)
-fun pair_compare (c1,c2) ((a1,b1), (a2,b2)) =
-  case c1(a1,a2) of
-      EQUAL => c2(b1,b2)
-    | x => x
 val empty_nodeset = Binaryset.empty (pair_compare(node_compare, String.compare))
 
 fun addDeps (n,dps) g =
@@ -119,14 +126,14 @@ fun add_node (nI : string nodeInfo) (g :t) =
         val n = size g
       in
         ({ nodes = Map.insert(#nodes g,n,nI),
-           target_map = Map.insert(#target_map g, #target nI, n),
+           target_map = Map.insert(#target_map g, (#dir nI, #target nI), n),
            command_map = extend_map_list (#command_map g) copt n },
          n)
       end
-    val tgt = #target nI
+    val {target=tgt,dir,...} = nI
     val tmap = #target_map g
     val _ =
-        case Map.peek (tmap, tgt) of
+        case Map.peek (tmap, (dir,tgt)) of
             SOME n => if #seqnum (valOf (peeknode g n)) <> #seqnum nI then ()
                       else raise DuplicateTarget
           | NONE => ()
@@ -148,7 +155,7 @@ fun find_runnable (g : t) =
       case peeknode g i of
           NONE => NONE
         | SOME nI =>
-          if #status nI <> Pending then search (i + 1)
+          if not (is_pending (#status nI)) then search (i + 1)
           else if List.all hasSucceeded (#dependencies nI) then SOME (i,nI)
           else search (i + 1)
   in
@@ -174,5 +181,39 @@ fun nodeInfo_toString tstr (nI : 'a nodeInfo) =
        | BuiltInCmd bic => "<Holmake: " ^ bic_toString bic ^ ">"
        | NoCmd => "<no command>")
   end
+
+fun make_all_needed g =
+    let
+      fun mkneeded (Pending _) = Pending {needed = true}
+        | mkneeded s = s
+    in
+      fupd_nodes (Map.map (fn (_,n) => fupdStatus mkneeded n)) g
+    end
+
+fun mkneeded tgts g =
+    let
+      fun setneeded n g = updnode(n,Pending{needed=true}) g
+      fun work visited wlist g =
+          case wlist of
+              [] => g
+            | [] :: rest => work visited rest g
+            | (n :: ns) :: rest =>
+              if Binaryset.member(visited, n) then work visited (ns::rest) g
+              else
+                case peeknode g n of
+                    NONE => raise NoSuchNode
+                  | SOME nI =>
+                    work (Binaryset.add(visited, n))
+                         (map #1 (#dependencies nI) :: ns :: rest)
+                         (case #status nI of
+                              Pending {needed=false} => setneeded n g
+                            | _ => g)
+      val initial_tgts = List.mapPartial (target_node g) tgts
+    in
+      work (Binaryset.empty node_compare) [initial_tgts] g
+    end
+
+
+
 
 end
