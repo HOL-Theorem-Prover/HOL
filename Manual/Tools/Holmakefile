@@ -8,6 +8,6 @@ all: polyscripter testoutput1
 polyscripter: polyscripter.sml $(dprot $(HOLDIR)/bin/hol.state)
 	$(protect $(HOLDIR)/bin/buildheap) Arbrat $< -o $@ --exe main
 
-testoutput1: testinput1 polyscripter umap expected1 $(dprot ../../tools/cmp/cmp.exe)
+testoutput1: testinput1 polyscripter umap expected1 $(dprot ../../tools/cmp/cmp.exe) $(HOLDIR)/examples/misc/root2Theory.uo
 	./polyscripter umap < $< > $@
 	../../tools/cmp/cmp.exe $@ expected1
