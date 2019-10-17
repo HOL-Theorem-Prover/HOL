@@ -200,7 +200,7 @@ type build_command = HM_DepGraph.t ->
                      File -> bool
 
 fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
-  val {optv,hmake_options,actual_overlay,envlist,quit_on_failure,outs,...} =
+  val {optv,actual_overlay,envlist,quit_on_failure,outs,...} =
       buildinfo
   val hmenv = #hmenv buildinfo
   val {warn,diag,tgtfatal,...} = outs
@@ -221,7 +221,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val chatty = if jobs = 1 then #chatty outs else (fn _ => ())
   val info = if jobs = 1 then #info outs else (fn _ => ())
 
-  val HOLSTATE = let
+  fun HOLSTATE() = let
     val default =
         case cmdl_HOLSTATE of
             NONE => if polynothol then POLY else default_holstate
@@ -235,7 +235,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                default)
   end
 
-  val extra_poly_cline = envlist "POLY_CLINE_OPTIONS"
+  fun extra_poly_cline() = envlist "POLY_CLINE_OPTIONS"
 
   fun poly_link quietp result files =
   let
@@ -253,9 +253,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     p "#!/bin/sh";
     p ("set -e");
     p (protect(fullPath [HOLDIR, "bin", "buildheap"]) ^ " --gcthreads=1 " ^
-       (if polynothol then "--poly" else "--holstate="^protect(HOLSTATE))^" "^
+       (if polynothol then "--poly" else "--holstate="^protect(HOLSTATE()))^" "^
        (if debug then "--dbg " else "") ^
-       String.concatWith " " extra_poly_cline ^ " " ^
+       String.concatWith " " (extra_poly_cline()) ^ " " ^
        String.concatWith " " (map protect files));
     p ("exit 0");
     TextIO.closeOut out;
@@ -303,14 +303,15 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
         val _ = app safedelete expected_results
         val useScript = fullPath [HOLDIR, "bin", "buildheap"]
-        val cline = useScript::"--gcthreads=1"::
-                    (case #multithread optv of
-                         NONE => []
-                       | SOME i => ["--mt=" ^ Int.toString i]) @
-                    (if polynothol then "--poly" else "--holstate="^HOLSTATE)::
-                    extra_poly_cline @
-                    ((if debug then ["--dbg"] else []) @ objectfiles) @
-                    List.concat (map (fn f => ["-c", f]) expected_results)
+        val cline =
+            useScript::"--gcthreads=1"::
+            (case #multithread optv of
+                 NONE => []
+               | SOME i => ["--mt=" ^ Int.toString i]) @
+            (if polynothol then "--poly" else "--holstate="^HOLSTATE())::
+            extra_poly_cline() @
+            ((if debug then ["--dbg"] else []) @ objectfiles) @
+            List.concat (map (fn f => ["-c", f]) expected_results)
         fun cont wn res =
           let
             val _ =
@@ -473,8 +474,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                     quiet = quiet_flag, hmenv = hmenv,
                                     jobs = jobs } g |> interpret_graph)
 in
-  {extra_impl_deps = if relocbuild orelse HOLSTATE = POLY then []
-                     else [Unhandled HOLSTATE],
+  {extra_impl_deps = if relocbuild orelse HOLSTATE() = POLY then []
+                     else [Unhandled (HOLSTATE())],
    build_graph = build_graph}
 end
 

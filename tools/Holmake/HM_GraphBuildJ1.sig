@@ -11,7 +11,7 @@ sig
        OS.Process.status option
 
   type 'optv buildinfo_t = {
-    optv : 'optv, hmake_options : string list,
+    optv : 'optv,
     actual_overlay : string option,
     envlist : string -> string list,
     hmenv : Holmake_types.env,

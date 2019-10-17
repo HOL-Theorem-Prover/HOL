@@ -181,7 +181,7 @@ fun nodeInfo_toString tstr (nI : 'a nodeInfo) =
     open Holmake_tools
     val {target,status,command,dependencies,seqnum,phony,dir} = nI
   in
-    hmdir.toString (hmdir.extendp {base = dir, extension = tstr target}) ^
+    hmdir.pretty_dir (hmdir.extendp {base = dir,  extension = tstr target}) ^
     (if phony then "[PHONY]" else "") ^
     "(" ^ Int.toString seqnum ^ ") " ^
     status_toString status ^ " : " ^
@@ -236,14 +236,45 @@ fun mk_dirneeded d g =
       fupd_nodes (Map.map (fn (_,nI) => upd_nI nI)) g
     end
 
+fun indentedlist f l =
+    let
+      fun recurse c A l =
+          case l of
+              [] => ""
+            | [x] => let val s = f x
+                     in
+                       if c + String.size s > 80 then
+                         String.concat (List.rev ("\n }\n" :: s :: "\n  " :: A))
+                       else String.concat (List.rev ("\n }\n" :: s :: A))
+                     end
+            | x::xs => let val s = f x
+                           val sz = String.size s
+                       in
+                         if c + sz > 78 then
+                           recurse (sz + 4) (", " :: s :: "\n  " :: A) xs
+                         else
+                           recurse (sz + c + 2) (", " :: s :: A) xs
+                       end
+    in
+      case l of
+          [] => "{}\n"
+        | _ => "{\n  " ^ recurse 2 [] l
+    end
+
 fun toString g =
     let
+      val (successes, others) =
+          List.partition (fn (_,nI) => #status nI = Succeeded) (listNodes g)
+      fun prSuccess (n,{dir,target,...}) =
+          Int.toString n ^ ":" ^
+          hmdir.pretty_dir (hmdir.extendp {base = dir, extension = target})
       fun prNode(n,nI) =
           "[" ^ node_toString n ^ "], " ^
           nodeInfo_toString (fn s => s) nI
     in
-      "{\n  " ^
-      String.concatWith ",\n  " (map prNode (listNodes g)) ^ "\n}"
+      "{Already built " ^
+      indentedlist prSuccess successes ^ " Others:\n  " ^
+      String.concatWith ",\n  " (map prNode others) ^ "\n}"
     end
 
 fun postmortem (outs : Holmake_tools.output_functions) (status,g) =

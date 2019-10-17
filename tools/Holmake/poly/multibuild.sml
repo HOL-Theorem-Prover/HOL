@@ -18,6 +18,15 @@ infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
 val loggingdir = ".hollogs"
 
+fun pushd d f x =
+    let
+      val d0 = OS.FileSys.getDir()
+      val _ = OS.FileSys.chDir d
+    in
+      f x before OS.FileSys.chDir d0
+    end
+
+
 
 fun graphbuild optinfo g =
   let
@@ -51,6 +60,7 @@ fun graphbuild optinfo g =
                 genjob (updnode(n, if b then Succeeded else RealFail) g, true)
               else GiveUpAndDie (g, ok)
             val depfs = map (toFile o #2) (#dependencies nI)
+            val dir = Holmake_tools.hmdir.toAbsPath (#dir nI)
             val _ = is_pending (#status nI) orelse
                     raise Fail "runnable not pending"
             val target_s = #target nI
@@ -70,7 +80,7 @@ fun graphbuild optinfo g =
                          Succeeded)
                       else RealFail
                   in
-                    case mosml_build_command hmenv hypargs depfs of
+                    case pushd dir (mosml_build_command hmenv hypargs) depfs of
                         SOME r =>
                           k (error (OS.Process.isSuccess r) = Succeeded) g
                       | NONE =>
@@ -94,7 +104,7 @@ fun graphbuild optinfo g =
                               end
                         in
                           NewJob ({tag = target_s, command = shell_command c,
-                                   update = update},
+                                   update = update, dir = dir},
                                   (updall(g, Running), true))
                         end
                   end
@@ -126,12 +136,12 @@ fun graphbuild optinfo g =
                             diag ("Other nodes are: "^
                                   String.concatWith ", "
                                         (map node_toString other_nodes));
-                            NewJob({tag = target_s,
+                            NewJob({tag = target_s, dir = dir,
                                     command = cline_to_command cline,
                                     update = update},
                                    (updall Running g, true))
                           end
-                    val bc = build_command g incinfo
+                    fun bc c f = pushd dir (build_command g incinfo c) f
                     val _ = diag ("Handling builtin command " ^
                                   bic_toString bic ^ " for "^target_s)
                   in

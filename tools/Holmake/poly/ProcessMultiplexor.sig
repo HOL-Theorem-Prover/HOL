@@ -2,7 +2,8 @@ signature ProcessMultiplexor =
 sig
 
   type command = {executable: string, nm_args : string list, env : string list}
-  type 'a job = {tag : string, command : command, update : 'a * bool -> 'a}
+  type 'a job = {tag : string, command : command, update : 'a * bool -> 'a,
+                 dir : string}
   type jobkey = Posix.ProcEnv.pid * string
   type exit_status = Posix.Process.exit_status
   datatype 'a genjob_result =
