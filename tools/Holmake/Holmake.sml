@@ -8,7 +8,7 @@ structure Holmake =
 struct
 
 open Systeml Holmake_tools Holmake_types
-infix forces_update_of |>
+infix forces_update_of depforces_update_of |>
 
 fun x |> f = f x
 
@@ -56,7 +56,16 @@ in
 fun ppath s = if String.isPrefix sigobj s then
                 frakS ^ String.extract(s,size sigobj,NONE)
               else s
+fun depToString (dir, t, sopt) =
+    let
+      val dp = hmdir.extendp {base = dir, extension = fromFile t}
+      val ap = ppath (hmdir.toAbsPath dp)
+    in
+      ap ^ (case sopt of NONE => "" | SOME s => "<" ^ s ^ ">")
+    end
+
 fun pflist fs = String.concatWith ", " (map (ppath o fromFile) fs)
+fun pdlist fs = String.concatWith ", " (map depToString fs)
 end
 
 
@@ -500,7 +509,7 @@ end
    runs holdep, and puts the output into specified file, which will live
    in DEPDIR somewhere. *)
 
-fun get_implicit_dependencies incinfo (f: File) : File list = let
+fun get_implicit_dependencies0 incinfo (f: File) : File list = let
   val {preincludes,includes} = incinfo
   val file_dependencies0 =
       get_direct_dependencies {incinfo = incinfo,
@@ -571,7 +580,7 @@ in
               if exists_readable (fromFile f) then
                 List.mapPartial
                   (fn (x as (UO (Theory s))) => SOME x | _ => NONE)
-                  (get_implicit_dependencies incinfo (UO x))
+                  (get_implicit_dependencies0 incinfo (UO x))
               else []
         in
           set_union alldeps additional_theories
@@ -582,15 +591,37 @@ in
     file_dependencies
 end
 
-fun get_explicit_dependencies (f : File) : File list =
+fun normaliseHMFDep s =
+    let
+      val {dir,file} = OS.Path.splitDirFile s
+      val dir' = hmdir.extendp {base = hmdir.curdir(), extension = dir}
+      val origopt =
+          if dir <> "" andalso OS.Path.isRelative dir then SOME s else NONE
+    in
+      (dir',toFile file,origopt)
+    end
+
+fun get_implicit_dependencies inc f =
+    map (normaliseHMFDep o fromFile) (get_implicit_dependencies0 inc f)
+
+type dep = hmdir.t * File * string option
+fun get_explicit_dependencies (f:File) : dep list =
     let
       val result = case (extra_deps (fromFile f)) of
-                       SOME deps => map toFile deps
+                       SOME deps => map normaliseHMFDep deps
                      | NONE => []
     in
-      diag (fn _ => fromFile f ^ " -explicitdeps-> " ^ pflist result);
+      diag (fn _ => fromFile f ^ " -explicitdeps-> " ^ pdlist result);
       result
     end
+
+val empty_dset : dep Binaryset.set =
+    Binaryset.empty (inv_img_cmp (fn (a,b,c) => (a,b))
+                                 (pair_compare (hmdir.compare, file_compare)))
+fun deplist_to_set dl = Binaryset.addList(empty_dset, dl)
+fun dset_union ds1 ds2 =
+    Binaryset.listItems
+      (Binaryset.union(deplist_to_set ds1, deplist_to_set ds2))
 
 
 
@@ -600,10 +631,10 @@ exception CircularDependency
 exception BuildFailure
 exception NotFound
 
-fun no_full_extra_rule tgt =
-    case extra_commands (fromFile tgt) of
-      NONE => true
-    | SOME cl => null cl
+fun no_full_extra_rule tgtopt =
+    case tgtopt of
+        NONE => true
+      | SOME tgt => case extra_commands tgt of NONE => true | SOME cl => null cl
 
 val done_some_work = ref false
 open HM_DepGraph
@@ -619,46 +650,49 @@ fun de_script s =
     | _ => NONE
 
 (* is run in a directory at a time *)
-fun build_depgraph cdset incinfo target g0 : (t * node) = let
+fun build_depgraph cdset incinfo ((dir,target,hmfstringopt):dep) g0:(t * node) =
+let
   val {preincludes,includes} = incinfo
   val incinfo = {preincludes = preincludes,
                  includes = std_include_flags @ includes}
   val pdep = primary_dependent target
   val target_s = fromFile target
-  val dir = hmdir.curdir()
-  fun addF f n = (n,fromFile f)
+  val actual_dir = hmdir.curdir()
+  fun addF (_, f, _) n = (n,fromFile f)
   fun nstatus g n = peeknode g n |> valOf |> #status
-  fun build tgt' g =
-    build_depgraph (Binaryset.add(cdset, target_s)) incinfo tgt' g
-  val _ = not (Binaryset.member(cdset, target_s)) orelse
-          die (target_s ^ " seems to depend on itself - failing")
+  fun build (tgt':dep) g =
+    build_depgraph (Binaryset.add(cdset, (dir, target_s))) incinfo tgt' g
+  val fullpath = hmdir.extendp { base = dir, extension = target_s }
+  val fullpath_s = hmdir.toAbsPath fullpath
+  val fullname = hmdir.pretty_dir fullpath
+  val _ = not (Binaryset.member(cdset, (dir,target_s))) orelse
+          die (fullname ^ " seems to depend on itself - failing")
 in
   case target_node g0 (dir,target_s) of
       (x as SOME n) => (g0, n)
     | NONE =>
-      if Path.dir target_s <> "" andalso
-         Path.dir target_s <> "." andalso
-         Path.dir target_s <> hmdir.toAbsPath dir andalso
-         no_full_extra_rule target
+      if not (hmdir.eqdir dir actual_dir) andalso
+         no_full_extra_rule hmfstringopt
          (* path outside of current directory *)
       then (
-        diag (fn _ => "Target "^target_s^" external to directory");
+        diag (fn _ => "Target "^fullname^" external to directory");
         add_node {target = target_s, seqnum = 0, phony = false,
-                  status = if exists_readable target_s then Succeeded
+                  status = if exists_readable fullpath_s then Succeeded
                            else Failed{needed=false},
                   dir = dir,
                   command = NoCmd, dependencies = []} g0
       )
-      else if isSome pdep andalso no_full_extra_rule target then
+      else if isSome pdep andalso no_full_extra_rule (SOME target_s) then
         let
-          val pdep = valOf pdep
+          val pdep = (dir, valOf pdep, NONE)
           val (g1, pnode) = build pdep g0
           val _ = diag (fn _ => "Extended graph with primary dependency for " ^
                                 target_s)
-          val secondaries = set_union (get_implicit_dependencies incinfo target)
-                                      (get_explicit_dependencies target)
-          val _ = diag (fn _ => target_s ^ "-secondaries-> " ^
-                                pflist secondaries)
+          val secondaries =
+              dset_union (get_implicit_dependencies incinfo target)
+                         (get_explicit_dependencies target)
+          val _ = diag (fn _ => target_s ^ " -secondaries-> " ^
+                                pdlist secondaries)
           fun foldthis (d, (g, secnodes)) =
             let
               val (g', n) = build d g
@@ -675,8 +709,8 @@ in
                           depnodes
           val needs_building =
               not (null unbuilt_deps) orelse
-              List.exists (fn d => d forces_update_of target_s)
-                          (fromFile pdep :: map fromFile secondaries)
+              List.exists (fn d => d depforces_update_of target_s)
+                          (pdep :: secondaries)
           val bic = case toFile target_s of
                         SML (Theory s) => BIC_BuildScript s
                       | SIG (Theory s) => BIC_BuildScript s
@@ -701,7 +735,9 @@ in
             )
           | SOME {dependencies, commands, ...} =>
             let
-              val _ = diag (fn _ => "Extending graph with target " ^ target_s)
+              val _ = diag (fn _ =>
+                               "Extending graph with target " ^
+                               hmdir.pretty_dir dir ^ " / " ^ target_s)
               fun foldthis (d, (g, secnodes)) =
                 let
                   val (g, n) = build d g
@@ -726,6 +762,7 @@ in
                   if null commands then
                     List.foldr depfoldthis (NONE, []) dependencies
                   else (NONE, dependencies)
+              val dependencies = map normaliseHMFDep dependencies
 
               val more_deps =
                   case starred_dep of
@@ -737,8 +774,7 @@ in
                           handle Option => die "more_deps invariant failure"
 
               val (g1, depnodes) =
-                  List.foldl foldthis (g0, [])
-                             (more_deps @ map toFile dependencies)
+                  List.foldl foldthis (g0, []) (more_deps @ dependencies)
 
               val unbuilt_deps =
                   List.filter
@@ -753,7 +789,7 @@ in
               val needs_building_by_deps_existence =
                   not (OS.FileSys.access(target_s, [])) orelse
                   not (null unbuilt_deps) orelse
-                  List.exists (fn d => d forces_update_of target_s)
+                  List.exists (fn d => d depforces_update_of target_s)
                               dependencies orelse
                   is_phony
               val needs_building =
@@ -827,7 +863,7 @@ fun get_targets dir =
                       rules
     end
 
-val empty_tgts = Binaryset.empty String.compare
+val empty_tgts = Binaryset.empty (pair_compare(hmdir.compare, String.compare))
 fun extend_graph_in_dir incinfo warn dir graph =
     let
       open HM_DepGraph
@@ -836,7 +872,8 @@ fun extend_graph_in_dir incinfo warn dir graph =
       val dir_targets = get_targets dir
     in
       Binaryset.foldl
-        (fn (t,g) => #1 (build_depgraph empty_tgts incinfo (toFile t) g))
+        (fn (t,g) =>
+            #1 (build_depgraph empty_tgts incinfo (dir, toFile t, NONE) g))
         graph
         dir_targets
     end

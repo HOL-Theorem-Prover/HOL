@@ -11,6 +11,19 @@ structure Path = OS.Path
 structure FileSys = OS.FileSys
 
 val DEFAULT_OVERLAY = "Overlay.ui"
+type 'a cmp = 'a * 'a -> order
+fun pair_compare (c1,c2) ((a1,b1), (a2,b2)) =
+  case c1(a1,a2) of
+      EQUAL => c2(b1,b2)
+    | x => x
+fun lex_compare c (l1, l2) =
+  case (l1,l2) of
+      ([],[]) => EQUAL
+    | ([], _) => LESS
+    | (_, []) => GREATER
+    | (h1::t1, h2::t2) => case c(h1,h2) of EQUAL => lex_compare c (t1,t2)
+                                         | x => x
+fun inv_img_cmp f c (a1,a2) = c (f a1, f a2)
 
 fun normPath s = OS.Path.toString(OS.Path.fromString s)
 fun itstrings f [] = raise Fail "itstrings: empty list"
@@ -449,6 +462,8 @@ fun curdir () = {relpath = SOME (OS.Path.currentArc),
 fun compare ({absdir = d1, ...} : t, {absdir = d2, ...} : t) =
     String.compare (d1, d2)
 
+fun eqdir d1 d2 = compare(d1,d2) = EQUAL
+
 fun toString {relpath,absdir} =
     case relpath of
         NONE => absdir
@@ -703,6 +718,8 @@ fun holdep_arg (UO c) = SOME (SML c)
 
 fun mk_depfile_name DEPDIR s = fullPath [DEPDIR, s^".d"]
 
+type dep = (hmdir.t * File * string option)
+
 infix forces_update_of
 fun (f1 forces_update_of f2) = let
   open Time
@@ -711,6 +728,12 @@ in
   (not (FileSys.access(f2, [])) orelse FileSys.modTime f1 > FileSys.modTime f2)
 end
 
+infix depforces_update_of
+fun ((d,f1,_) depforces_update_of f2) = let
+  val p1 = hmdir.toAbsPath (hmdir.extendp {base = d, extension = fromFile f1})
+in
+  p1 forces_update_of f2
+end
 
 fun get_direct_dependencies {incinfo,DEPDIR,output_functions,extra_targets} f =
 let

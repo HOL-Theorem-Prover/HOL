@@ -73,17 +73,6 @@ type t = { nodes : (node, string nodeInfo) Map.dict,
            target_map : (hmdir.t * string,node) Map.dict,
            command_map : (command,node list) Map.dict }
 
-fun pair_compare (c1,c2) ((a1,b1), (a2,b2)) =
-  case c1(a1,a2) of
-      EQUAL => c2(b1,b2)
-    | x => x
-fun lex_compare c (l1, l2) =
-  case (l1,l2) of
-      ([],[]) => EQUAL
-    | ([], _) => LESS
-    | (_, []) => GREATER
-    | (h1::t1, h2::t2) => case c(h1,h2) of EQUAL => lex_compare c (t1,t2)
-                                         | x => x
 
 val tgt_compare = pair_compare(hmdir.compare, String.compare)
 

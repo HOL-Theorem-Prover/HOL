@@ -13,6 +13,11 @@ sig
   val set_diff : ''a list -> ''a list -> ''a list
   val remove_duplicates : ''a list -> ''a list
 
+  type 'a cmp = 'a * 'a -> order
+  val pair_compare : 'a cmp * 'b cmp -> ('a * 'b) cmp
+  val inv_img_cmp  : ('b -> 'a) -> 'a cmp -> 'b cmp
+  val lex_compare  : 'a cmp -> 'a list cmp
+
   (* fixed constants *)
   val DEFAULT_OVERLAY : string
 
@@ -84,6 +89,7 @@ sig
     val sort : t list -> t list
     val curdir : unit -> t
     val compare : t * t -> order
+    val eqdir : t -> t -> bool
   end
   val nice_dir : string -> string (* prints a dir with ~ when HOME is set *)
 
@@ -115,7 +121,9 @@ sig
       File -> File list
   exception HolDepFailed
 
+  type dep = (hmdir.t * File * string option)
   val forces_update_of : string * string -> bool
+  val depforces_update_of : dep * string -> bool
 
 
 end
