@@ -2,7 +2,7 @@ signature HM_Core_Cline =
 sig
 
 type t = {
-  debug : bool,
+  debug : string list option,
   do_logging : bool,
   fast : bool,
   help : bool,

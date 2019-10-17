@@ -29,7 +29,7 @@ datatype buildresult = datatype multibuild.buildresult
 
 fun process_mosml_args (outs:Holmake_tools.output_functions) c = let
   val {diag,...} = outs
-  val diag = fn s => diag (fn _ => s)
+  val diag = fn s => diag "mosml_args" (fn _ => s)
   fun isSource t = OS.Path.ext t = SOME "sig" orelse OS.Path.ext t = SOME "sml"
   fun isObj t = OS.Path.ext t = SOME "uo" orelse OS.Path.ext t = SOME "ui"
   val toks = String.tokens (fn c => c = #" ") c
@@ -254,7 +254,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     p ("set -e");
     p (protect(fullPath [HOLDIR, "bin", "buildheap"]) ^ " --gcthreads=1 " ^
        (if polynothol then "--poly" else "--holstate="^protect(HOLSTATE()))^" "^
-       (if debug then "--dbg " else "") ^
+       (if isSome debug then "--dbg " else "") ^
        String.concatWith " " (extra_poly_cline()) ^ " " ^
        String.concatWith " " (map protect files));
     p ("exit 0");
@@ -264,6 +264,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   end handle IO.Io _ => OS.Process.failure
 
   fun build_command g (ii as {preincludes,includes}) c arg = let
+    val diag = diag "build_command"
     val _ = diag (fn _ => "build_command on "^fromFile arg)
     val include_flags = preincludes @ includes
     val overlay_stringl = case actual_overlay of NONE => [] | SOME s => [s]
@@ -310,7 +311,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                | SOME i => ["--mt=" ^ Int.toString i]) @
             (if polynothol then "--poly" else "--holstate="^HOLSTATE())::
             extra_poly_cline() @
-            ((if debug then ["--dbg"] else []) @ objectfiles) @
+            ((if isSome debug then ["--dbg"] else []) @ objectfiles) @
             List.concat (map (fn f => ["-c", f]) expected_results)
         fun cont wn res =
           let
@@ -319,7 +320,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                   wn ("Failed script build for "^script^" - "^
                       posix_diagnostic res)
                 else ()
-            val _ = if isSuccess res orelse not debug then
+            val _ = if isSuccess res orelse debug = NONE then
                       app safedelete (script :: intermediates)
                     else ()
           in
@@ -407,6 +408,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       val isMosmlc =
           String.isPrefix (perform_substitution hm_env [VREF "MOSMLC"]) c
       val {diag,...} = outs
+      val diag = diag "mosml_build"
     in
       if isHolmosmlcc orelse isHolmosmlc orelse isMosmlc then let
         val _ = diag (fn _ => "Processing mosml build command: "^c)
@@ -468,7 +470,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                     mosml_build_command = mosml_build_command,
                                     warn = warn, tgtfatal = tgtfatal,
                                     keep_going = keep_going,
-                                    diag = (fn s => diag (fn _ => s)),
+                                    diag =
+                                      (fn s => diag "multibuild" (fn _ => s)),
                                     info = #info outs,
                                     time_limit = time_limit,
                                     quiet = quiet_flag, hmenv = hmenv,

@@ -45,9 +45,10 @@ sig
                            info : string -> unit,
                            chatty : string -> unit,
                            tgtfatal : string -> unit,
-                           diag : (unit -> string) -> unit}
+                           diag : string -> (unit -> string) -> unit}
   (* 0 : quiet, 1 : normal, 2 : chatty, 3 : everything + debug info *)
-  val output_functions : {chattiness:int,usepfx:bool} -> output_functions
+  val output_functions : {chattiness:int,debug:string list option,usepfx:bool}->
+                         output_functions
   val die_with : string -> 'a
   val terminal_log : string -> unit
 

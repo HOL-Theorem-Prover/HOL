@@ -176,10 +176,7 @@ fun nodeInfo_toString tstr (nI : 'a nodeInfo) =
     status_toString status ^ " : " ^
     (case command of
          SomeCmd s => s
-       | BuiltInCmd (bic,{preincludes,includes}) =>
-         "<Holmake: " ^ bic_toString bic ^
-         ",{pres=[" ^ String.concatWith "," preincludes ^ "],incs=[" ^
-         String.concatWith "," includes ^ "]}>"
+       | BuiltInCmd (bic,{preincludes,includes}) => "<" ^ bic_toString bic ^ ">"
        | NoCmd => "<no command>")
   end
 
@@ -270,7 +267,7 @@ fun postmortem (outs : Holmake_tools.output_functions) (status,g) =
   let
     fun pr s = s
     val {diag,tgtfatal,...} = outs
-    val diagK = diag o (fn x => fn _ => x)
+    val diagK = diag "postmortem" o (fn x => fn _ => x)
   in
     case List.filter (fn (_,nI) => #status nI = Failed{needed=true})
                      (listNodes g)

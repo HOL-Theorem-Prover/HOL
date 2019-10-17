@@ -172,7 +172,7 @@ val start_options = start_envlist "OPTIONS"
 
 fun chattiness_level switches =
   case (#debug switches, #verbose switches, #quiet switches) of
-      (true, _, _) => 3
+      (SOME _, _, _) => 3
     | (_, true, _) => 2
     | (_, _, true) => 0
     | _ => 1
@@ -197,6 +197,7 @@ val usepfx =
    have their own Holmakefiles *)
 val (outputfns as {warn,tgtfatal,diag,info,chatty}) =
     output_functions {chattiness = chattiness_level coption_value,
+                      debug = #debug coption_value,
                       usepfx = usepfx}
 val do_logging_flag = #do_logging coption_value
 val no_lastmakercheck = #no_lastmaker_check coption_value
@@ -218,8 +219,9 @@ val pass_option_value =
 
 val _ = do_lastmade_checks outputfns {no_lastmakercheck = no_lastmakercheck}
 
-val _ = diag (fn _ => "CommandLine.name() = "^CommandLine.name())
-val _ = diag (fn _ => "CommandLine.arguments() = "^
+val _ = diag "startup" (fn _ => "CommandLine.name() = "^CommandLine.name())
+val _ = diag "startup"
+             (fn _ => "CommandLine.arguments() = "^
                       String.concatWith ", " (CommandLine.arguments()))
 
 (* set up logging *)
@@ -329,6 +331,7 @@ let
   fun recur_abbrev dir data (dirinfo:dirinfo) =
       recursively getnewincs {warn=warn,diag=diag,hm=hm,dirinfo=dirinfo,dir=dir,
                               data=data}
+  val diag = diag "builddepgraph"
   val _ = diag (fn _ => "recursively: call in " ^ hmdir.pretty_dir dir)
   val _ = diag (fn _ => "recursively: includes (pre- & normal) = [" ^
                         String.concatWith ", "
@@ -457,11 +460,12 @@ val {extra_impl_deps,build_graph} = BuildCommand.make_build_command binfo
 
 val _ = let
 in
-  diag (fn _ => "HOLDIR = "^HOLDIR);
-  diag (fn _ => "Targets = [" ^ String.concatWith ", " targets ^ "]");
-  diag (fn _ => "Additional includes = [" ^
-                String.concatWith ", " cline_additional_includes ^ "]");
-  diag (fn _ => HM_BaseEnv.debug_info option_value)
+  diag "startup" (fn _ => "HOLDIR = "^HOLDIR);
+  diag "startup" (fn _ => "Targets = [" ^ String.concatWith ", " targets ^ "]");
+  diag "startup" (fn _ => "Additional includes = [" ^
+                          String.concatWith ", "
+                                            cline_additional_includes ^ "]");
+  diag "startup" (fn _ => HM_BaseEnv.debug_info option_value)
 end
 
 (** Top level sketch of algorithm *)
@@ -516,6 +520,7 @@ fun get_implicit_dependencies0 incinfo (f: File) : File list = let
                                extra_targets = extra_targets(),
                                output_functions = outputfns,
                                DEPDIR = DEPDIR} f
+  val diag = diag "impdeps"
   val _ = diag (fn _ => "get_implicit_dependencies("^fromFile f^"), " ^
                         "directdeps = " ^ pflist file_dependencies0)
   val file_dependencies =
@@ -611,7 +616,7 @@ fun get_explicit_dependencies (f:File) : dep list =
                        SOME deps => map normaliseHMFDep deps
                      | NONE => []
     in
-      diag (fn _ => fromFile f ^ " -explicitdeps-> " ^ pdlist result);
+      diag "expdeps" (fn _ => fromFile f ^ " -explicitdeps-> " ^ pdlist result);
       result
     end
 
@@ -667,6 +672,7 @@ let
   val fullname = hmdir.pretty_dir fullpath
   val _ = not (Binaryset.member(cdset, (dir,target_s))) orelse
           die (fullname ^ " seems to depend on itself - failing")
+  val diag = diag "builddepgraph"
 in
   case target_node g0 (dir,target_s) of
       (x as SOME n) => (g0, n)
@@ -867,7 +873,7 @@ val empty_tgts = Binaryset.empty (pair_compare(hmdir.compare, String.compare))
 fun extend_graph_in_dir incinfo warn dir graph =
     let
       open HM_DepGraph
-      val _ = diag (fn _ =>
+      val _ = diag "builddepgraph" (fn _ =>
                        "Extending graph in directory " ^ hmdir.pretty_dir dir)
       val dir_targets = get_targets dir
     in
@@ -888,10 +894,10 @@ fun create_complete_graph idm =
             dir = d,
             data = HM_DepGraph.empty
           }
+      val diag = diag "builddepgraph"
     in
       diag (fn _ => "Finished building complete dep graph (has " ^
                     Int.toString (HM_DepGraph.size g) ^ " nodes)");
-      diag (fn _ => ("Graph is:\n"^ HM_DepGraph.toString g));
       (g,idm_lookup incdirmap d)
     end
 
@@ -920,10 +926,6 @@ val (depgraph, local_incinfo) =
         } empty_incdirmap)
 
 fun work() =
-  if cline_nobuild then
-    (print ("Dependency graph:\n" ^ HM_DepGraph.toString depgraph);
-     OS.Process.success)
-  else
     case targets of
       [] => let
         val targets = generate_all_plausible_targets warn start_tgt
@@ -933,7 +935,7 @@ fun work() =
             if cline_recursive then make_all_needed depgraph
             else if toplevel_no_prereqs then mk_dirneeded dir depgraph
             else mkneeded targets depgraph
-        val _ = diag (
+        val _ = diag "core" (
               fn _ =>
                  let
                    val tgtstrings =
@@ -946,9 +948,15 @@ fun work() =
                    String.concatWith ", " tgtstrings ^ "]"
                  end
             )
-        val _ = diag (fn _ => "Dep.graph =\n" ^ HM_DepGraph.toString depgraph)
+        val _ = diag "core"
+                     (fn _ => "Dep.graph =\n" ^ HM_DepGraph.toString depgraph)
       in
-        postmortem outputfns (build_graph depgraph)
+        if cline_nobuild then
+          (print ("Dependency graph" ^ HM_DepGraph.toString depgraph);
+           OS.Process.success)
+        else
+          postmortem outputfns (build_graph depgraph)
+          handle e => die ("Exception: "^General.exnMessage e)
       end
     | xs => let
         val cleanTargets =
@@ -980,8 +988,14 @@ fun work() =
         else
           let
             val targets = map (fn s => (original_dir,s)) xs
+            val g = mkneeded targets depgraph
           in
-            postmortem outputfns (build_graph (mkneeded targets depgraph))
+            if cline_nobuild then
+              (print ("Dependency graph" ^ HM_DepGraph.toString g);
+               OS.Process.success)
+            else
+              postmortem outputfns (build_graph g)
+              handle e => die ("Exception: "^General.exnMessage e)
           end
       end
 

@@ -37,7 +37,7 @@ fun graphbuildj1 static_info =
     val {build_command, mosml_build_command, outs, keep_going,
          quiet, hmenv, system} = static_info
     val {warn,diag,tgtfatal,info,...} = (outs : Holmake_tools.output_functions)
-    val diagK = diag o (fn x => fn _ => x)
+    val diagK = diag "graphbuildj1" o (fn x => fn _ => x)
     fun build_graph g =
       let
         open HM_DepGraph

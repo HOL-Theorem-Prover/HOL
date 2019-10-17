@@ -11,6 +11,23 @@ structure Path = OS.Path
 structure FileSys = OS.FileSys
 
 val DEFAULT_OVERLAY = "Overlay.ui"
+fun member m [] = false
+  | member m (x::xs) = if x = m then true else member m xs
+fun set_union s1 s2 =
+  case s1 of
+    [] => s2
+  | (e::es) => let
+      val s' = set_union es s2
+    in
+      if member e s' then s' else e::s'
+    end
+fun delete m [] = []
+  | delete m (x::xs) = if m = x then delete m xs else x::delete m xs
+fun set_diff s1 s2 = foldl (fn (s2e, s1') => delete s2e s1') s1 s2
+fun remove_duplicates [] = []
+  | remove_duplicates (x::xs) = x::(remove_duplicates (delete x xs))
+
+
 type 'a cmp = 'a * 'a -> order
 fun pair_compare (c1,c2) ((a1,b1), (a2,b2)) =
   case c1(a1,a2) of
@@ -147,7 +164,7 @@ type output_functions = {warn : string -> unit,
                          info : string -> unit,
                          chatty : string -> unit,
                          tgtfatal : string -> unit,
-                         diag : (unit -> string) -> unit}
+                         diag : string -> (unit -> string) -> unit}
 
 fun die_with message = let
   open TextIO
@@ -160,7 +177,7 @@ end
 fun shorten_name name =
   if OS.Path.file name = "Holmake" then "Holmake" else name
 
-fun output_functions {usepfx,chattiness=n} = let
+fun output_functions {usepfx,chattiness=n,debug} = let
   val execname = if usepfx then shorten_name (CommandLine.name()) ^ ": " else ""
   open TextIO
   fun msg strm s =
@@ -180,7 +197,14 @@ fun output_functions {usepfx,chattiness=n} = let
   val info = if n >= 1 then msg stdOut else donothing
   val chatty = if n >= 2 then msg stdOut else donothing
   val tgtfatal = msg stdErr
-  val diag = if n >= 3 then (fn sf => msg stdErr (sf())) else donothing
+  val diag = if n >= 3 then
+               case debug of
+                   NONE => (fn _ => fn _ => ())
+                 | SOME [] => (fn _ => fn sf => msg stdErr (sf()))
+                 | SOME sl => (fn cat => fn sf => if member cat sl then
+                                                    msg stdErr (sf())
+                                                  else ())
+             else fn _ => donothing
 in
   {warn = warn, diag = diag, tgtfatal = tgtfatal, info = info, chatty = chatty}
 end
@@ -208,6 +232,7 @@ end
 
 fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
   val {warn,diag,...} = ofns
+  val diag = diag "lastmadecheck"
   val mypath = find_my_path()
   val _ = diag (K ("running "^mypath))
   fun write_lastmaker_file () = let
@@ -355,21 +380,6 @@ fun fromFileNoSuf f =
   | DAT s => s
   | Unhandled s => s
 
-fun member m [] = false
-  | member m (x::xs) = if x = m then true else member m xs
-fun set_union s1 s2 =
-  case s1 of
-    [] => s2
-  | (e::es) => let
-      val s' = set_union es s2
-    in
-      if member e s' then s' else e::s'
-    end
-fun delete m [] = []
-  | delete m (x::xs) = if m = x then delete m xs else x::delete m xs
-fun set_diff s1 s2 = foldl (fn (s2e, s1') => delete s2e s1') s1 s2
-fun remove_duplicates [] = []
-  | remove_duplicates (x::xs) = x::(remove_duplicates (delete x xs))
 
 
 
@@ -623,7 +633,7 @@ fun generate_all_plausible_targets warn first_target =
 exception HolDepFailed
 fun runholdep {ofs, extras, includes, arg, destination} = let
   val {chatty, diag, warn, ...} : output_functions = ofs
-  val diagK = diag o K
+  val diagK = diag "holdep" o K
   val _ = chatty ("Analysing "^fromFile arg)
   fun buildables s = let
     val f = toFile s
@@ -644,7 +654,7 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
                  String.concatWith ", " includes ^ "], assumes = [" ^
                  String.concatWith ", " buildable_extras ^"]")
   val holdep_result =
-    Holdep.main {assumes = buildable_extras, diag = diag,
+    Holdep.main {assumes = buildable_extras, diag = diag "Holdep",
                  includes = includes, fname = fromFile arg}
     handle Holdep.Holdep_Error s =>
              (warn ("Holdep failed: "^s); raise HolDepFailed)

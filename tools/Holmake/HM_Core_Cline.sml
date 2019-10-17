@@ -60,7 +60,7 @@ fun fupd_jobs f t = updateT t (U #jobs (f (#jobs t))) $$
 fun fupd_includes f t = updateT t (U #includes (f (#includes t))) $$
 
 type t = {
-  debug : bool,
+  debug : string list option,
   do_logging : bool,
   fast : bool,
   help : bool,
@@ -85,7 +85,7 @@ type t = {
 
 val default_core_options : t =
 {
-  debug = false,
+  debug = NONE,
   do_logging = false,
   fast = false,
   help = false,
@@ -153,9 +153,22 @@ fun set_openthy s =
                wn "Multiple opentheory specs; ignoring earlier spec"
              else ();
              updateT t (U #opentheory (SOME s)) $$))
+fun addDbg sopt =
+    resfn (fn (wn, t) =>
+              let
+                val newvalue =
+                    case #debug t of
+                        NONE => (case sopt of NONE => SOME []
+                                            | SOME s => SOME [s])
+                      | SOME l => (case sopt of NONE => SOME l
+                                              | SOME s => SOME (s::l))
+              in
+                updateT t (U #debug newvalue) $$
+              end)
+
 val core_option_descriptions = [
-  { help = "turn on diagnostic messages", long = ["dbg", "d"], short = "",
-    desc = mkBoolT #debug},
+  { help = "turn on diagnostic messages", long = ["dbg"], short = "d",
+    desc = OptArg (addDbg, "diag-cat")},
   { help = "fast build (replace tactics w/cheat)", long = ["fast"], short = "",
     desc = mkBoolT #fast },
   { help = "show this message", long = ["help"], short = "h",
