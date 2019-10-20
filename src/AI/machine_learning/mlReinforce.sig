@@ -63,10 +63,10 @@ sig
   val mk_extspec : string -> ('a,'b) gamespec -> 'a extgamespec
 
   (* Test *)
-  val test_mk_extspec : string -> ('a,'b) gamespec -> 
+  val test_mk_extspec : string -> ('a,'b) gamespec ->
     (dhtnn, 'a, 'a * bool * int) smlParallel.extspec
-  val test_compete : 
-    (dhtnn, 'a, 'a * bool * int) smlParallel.extspec -> dhtnn -> 
+  val test_compete :
+    (dhtnn, 'a, 'a * bool * int) smlParallel.extspec -> dhtnn ->
     'a list ->  ('a * bool * int) list
 
   (* Reinforcement learning loop *)

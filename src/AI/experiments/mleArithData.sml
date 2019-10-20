@@ -75,7 +75,7 @@ fun export_arithdata databare =
     val dir = HOLDIR ^ "/src/AI/experiments/data_arithexport"
     val _ = mkDir_err dir
     val tml = import_terml (dataarith_dir ^ "/" ^ databare)
-    fun f tm = 
+    fun f tm =
       let val ps = its (lo_prooflength 500 tm) handle Option => "?" in
         tts tm ^ ","  ^ its (eval_numtm tm) ^ "," ^  ps
       end
@@ -89,23 +89,23 @@ app export_arithdata ["train","valid","test"];
 *)
 
 
-  
+
 fun export_computefea databare =
   let
     val dir = HOLDIR ^ "/src/AI/experiments/exp_compute"
     val _ = mkDir_err dir
-    val tml' = 
+    val tml' =
       import_terml (dataarith_dir ^ "/test") @
       import_terml (dataarith_dir ^ "/train")
-    fun all_features x = 
+    fun all_features x =
       let val l = List.concat (map (feahash_of_term_mod 1299827) x) in
         dnew Int.compare (number_snd 0 (mk_fast_set Int.compare l))
       end
     val tml = import_terml (dataarith_dir ^ "/" ^ databare)
     val d = all_features tml'
-    fun f tm = 
-      let 
-        val il1 = dict_sort Int.compare 
+    fun f tm =
+      let
+        val il1 = dict_sort Int.compare
           (map (fn x => dfind x d) (feahash_of_term_mod 1299827 tm))
         val il2 = map (fn x => (its x ^ ":1")) il1
       in
@@ -155,7 +155,7 @@ fun mod16 x = eval_numtm x mod 16;
 val trainmod16 = regroup_by_metric mod16 traintml;
 write_texgraph (dir ^ "/trainmod16") ("mod16","number") trainmod16;
 
-fun valsize x = if (eval_numtm x > term_size x) then 2 
+fun valsize x = if (eval_numtm x > term_size x) then 2
             else if eval_numtm x = term_size x then 1 else 0;
 val trainvalsize = regroup_by_metric valsize traintml;
 map_snd (fn x => int_div x 11990) trainvalsize;
@@ -168,7 +168,7 @@ val x = sum_int (map snd (filter (fn x => fst x <= 100) trainlength));
 
 
 load "mleArithData"; open mleArithData;
-val tml = create_alt 1000; 
+val tml = create_alt 1000;
 
 
 fun f x = lo_prooflength 10000 x handle Option => ~1;
@@ -185,7 +185,7 @@ val testsize = regroup_by_metric term_size testtml;
 write_texgraph (dir ^ "/testsize") ("size","number") testsize;
 
 load "psTermGen"; open psTermGen;
-fun mk_train_alt (n,m) = 
+fun mk_train_alt (n,m) =
   random_terml [``SUC``,``0``,``$+``,``$*``] (n,``:num``) m;
 
 val train_alt = List.concat (map mk_train_alt trainsize);

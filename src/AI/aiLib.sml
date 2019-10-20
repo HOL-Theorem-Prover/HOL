@@ -449,8 +449,8 @@ fun standard_deviation l =
     Math.sqrt variance
   end
 
-fun absolute_deviation l = 
-  let val m = average_real l in 
+fun absolute_deviation l =
+  let val m = average_real l in
     average_real (map (fn x => Real.abs (x - m)) l)
   end
 
@@ -901,20 +901,20 @@ fun uniform_proba n = List.tabulate (n, fn _ => 1.0 / Real.fromInt n)
 
 fun normalize_proba l =
   let val sum = sum_real l in
-    if sum <= epsilon 
-    then uniform_proba (length l) 
+    if sum <= epsilon
+    then uniform_proba (length l)
     else map (fn x => x / sum) l
   end
 
-fun uniform_distrib l = 
+fun uniform_distrib l =
   let val sum = Real.fromInt (length l) in
     map_assoc (fn _ => 1.0 / sum) l
   end
 
 fun normalize_distrib dis =
   let val sum = sum_real (map snd dis) in
-    if sum <= epsilon 
-    then uniform_distrib (map fst dis) 
+    if sum <= epsilon
+    then uniform_distrib (map fst dis)
     else map_snd (fn x => x / sum) dis
   end
 

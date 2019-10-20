@@ -26,8 +26,8 @@ fun mk_startsit tm = ((tm,[]), 2 * lo_prooflength 200 tm + 2)
 fun dest_startsit ((tm,_),_) = tm
 
 (* search and networks have to be aware of the length of the proof *)
-fun status_of ((tm,_),n) = 
-  if is_suc_only tm then Win 
+fun status_of ((tm,_),n) =
+  if is_suc_only tm then Win
   else if n <= 0 then Lose
   else Undecided
 
@@ -236,14 +236,14 @@ val nodel = trace_win (#status_of gamespec) tree [];
    Final test
    ------------------------------------------------------------------------- *)
 
-fun final_stats l = 
-  let 
-    val winl = filter (fn (_,b,_) => b) l  
+fun final_stats l =
+  let
+    val winl = filter (fn (_,b,_) => b) l
     val a = length winl
     val atot = length l
     val b = sum_int (map (fn (_,_,n) => n) winl)
-    val btot = sum_int (map (fn (t,_,_) => 
-      (lo_prooflength 200 o dest_startsit) t) winl) 
+    val btot = sum_int (map (fn (t,_,_) =>
+      (lo_prooflength 200 o dest_startsit) t) winl)
   in
     ((a,atot,int_div a atot), (b,btot, int_div b btot))
   end
@@ -253,7 +253,7 @@ fun final_eval fileout dhtnn set =
     val l = test_compete test_extspec dhtnn (map mk_startsit set)
     val ((a,atot,ar),(b,btot,br)) = final_stats l
     val cr = br * ar + 2.0 * (1.0 - ar)
-    val s = 
+    val s =
       String.concatWith " " [its a,its atot,rts ar,
                              its b,its btot,rts br,rts cr]
   in
@@ -277,15 +277,15 @@ ncore_mcts_glob := 40;
 val test = import_terml (dataarith_dir ^ "/test");
 val (test1,test2) =
   let val l = mapfilter (fn x => (x,(lo_prooflength 200) x)) test in
-    (map fst (filter (fn x => snd x >= 0 andalso snd x <= 89) l),  
+    (map fst (filter (fn x => snd x >= 0 andalso snd x <= 89) l),
      map fst (filter (fn x => snd x >= 90 andalso snd x <= 130) l))
   end
 ;
 
 exception Read;
-fun read_ntest n = 
+fun read_ntest n =
   if n = 1 then test1 else if n = 2 then test2 else raise Read;
-fun read_ndhtnn n = 
+fun read_ndhtnn n =
   read_dhtnn (eval_dir ^ "/mleRewrite_run41_gen" ^ its n ^ "_dhtnn");
 
 val paraml = [(0,1),(13,1),(31,1),(13,2),(31,2)];
@@ -297,7 +297,7 @@ fun final_eval_one (nsim,(ndhtnn,ntest)) =
     val dhtnn = read_ndhtnn ndhtnn
     val set = read_ntest ntest
     val _ = nsim_glob := nsim
-    val suffix = 
+    val suffix =
       "ngen" ^ its ndhtnn ^ "-ntest" ^ its ntest ^ "-nsim" ^ its nsim
     val file = eval_dir ^ "/a_rw_" ^ suffix
   in

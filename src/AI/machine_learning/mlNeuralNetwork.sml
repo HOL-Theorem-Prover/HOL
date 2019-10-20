@@ -248,11 +248,11 @@ val show_stats = ref false
 
 fun sr r = pad 5 "0" (rts_round 3 r)
 
-fun stats_exl exl = 
-  let 
-    val ll = list_combine (map snd exl) 
-    fun f l = 
-      print_endline (sr (average_real l ) ^ " " ^ sr (absolute_deviation l)) 
+fun stats_exl exl =
+  let
+    val ll = list_combine (map snd exl)
+    fun f l =
+      print_endline (sr (average_real l ) ^ " " ^ sr (absolute_deviation l))
   in
     print_endline "mean deviation"; app f ll
   end
@@ -292,8 +292,8 @@ fun train_nn_aux ncore nepoch nn bsize exl =
   let
     val batchl = mk_batch bsize (shuffle exl)
     val (new_nn,loss) = train_nn_epoch ncore [] nn batchl
-    val _ = 
-      if !show_stats 
+    val _ =
+      if !show_stats
       then print_endline (its nepoch ^ " " ^ Real.toString loss)
       else ()
   in
@@ -317,7 +317,7 @@ fun train_nn ncore nepoch nn bsize exl =
   let
     val _ = if !show_stats then stats_exl exl else ()
     val newexl = map scale_ex exl
-  in      
+  in
     train_nn_aux ncore nepoch nn bsize newexl
   end
 

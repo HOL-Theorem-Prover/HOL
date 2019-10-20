@@ -43,8 +43,8 @@ fun copy_status_of ((ctm,n),tm) =
 
 fun eval_status_of ((ctm,n),tm) =
   if is_ground tm andalso mleArithData.eval_numtm tm = n then Win
-  else if is_ground tm orelse 
-    term_size tm > 2 * Int.min (n,term_size ctm) + 1 
+  else if is_ground tm orelse
+    term_size tm > 2 * Int.min (n,term_size ctm) + 1
     then Lose
   else Undecided
 
@@ -71,7 +71,7 @@ fun filter_sit sit = (fn l => l)
 fun string_of_move (tm,_) = tts tm
 
 fun write_targetl file targetl =
-  let val tml = map dest_startsit targetl in 
+  let val tml = map dest_startsit targetl in
     export_terml (file ^ "_targetl") tml
   end
 
@@ -171,7 +171,7 @@ val eval_gamespec =
   }
 
 val eval_extspec = mk_extspec "mleSynthesize.eval_extspec" eval_gamespec
-val test_eval_extspec = 
+val test_eval_extspec =
   test_mk_extspec "mleSynthesize.test_eval_extspec" eval_gamespec
 
 (* -------------------------------------------------------------------------
@@ -261,14 +261,14 @@ val nodel = trace_win (#status_of gamespec) tree [];
    Final test
    ------------------------------------------------------------------------- *)
 
-fun final_stats l = 
-  let 
-    val winl = filter (fn (_,b,_) => b) l  
+fun final_stats l =
+  let
+    val winl = filter (fn (_,b,_) => b) l
     val a = length winl
     val atot = length l
     val b = sum_int (map (fn (_,_,n) => n) winl)
-    val btot = sum_int (map (fn (t,_,_) => 
-      (term_size o dest_startsit) t) winl) 
+    val btot = sum_int (map (fn (t,_,_) =>
+      (term_size o dest_startsit) t) winl)
   in
     ((a,atot,int_div a atot), (b,btot, int_div b btot))
   end
@@ -278,7 +278,7 @@ fun final_eval fileout dhtnn set =
     val l = test_compete test_eval_extspec dhtnn (map mk_startsit set)
     val ((a,atot,ar),(b,btot,br)) = final_stats l
     val cr = br * ar + 2.0 * (1.0 - ar)
-    val s = 
+    val s =
       String.concatWith " " [its a,its atot,rts ar,
                              its b,its btot,rts br,rts cr]
   in
@@ -300,7 +300,7 @@ decay_glob := 0.99;
 ncore_mcts_glob := 40;
 
 val testset = import_terml (dataarith_dir ^ "/test");
-fun read_ndhtnn n = 
+fun read_ndhtnn n =
   read_dhtnn (eval_dir ^ "/mleSynthesize_eval1_gen" ^ its n ^ "_dhtnn");
 
 val genl = [0,10,99];

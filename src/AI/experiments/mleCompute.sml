@@ -78,7 +78,7 @@ load "mleCompute"; open mleCompute;
 load "mleArithData"; open mleArithData;
 load "mlNearestNeighbor"; open mlNearestNeighbor;
 
-val train = 
+val train =
   compute_exout (mlTacticData.import_terml (dataarith_dir ^ "/train"));
 val valid =
   compute_exout (mlTacticData.import_terml (dataarith_dir ^ "/valid"));

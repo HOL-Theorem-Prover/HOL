@@ -9,7 +9,7 @@ sig
   (* interface *)
   val mk_startsit : term -> board
   val dest_startsit : board -> term
-  
+
   (* create training sets with gradual difficulty *)
   val create_sorteddata : unit -> unit
 
@@ -26,7 +26,7 @@ sig
   val stats_eval : string -> (int * int) list
 
   (* test phase *)
-  val test_eval_extspec : 
+  val test_eval_extspec :
     (mlReinforce.dhtnn, (term * int) * term,
     ((term * int) * term) * bool * int) smlParallel.extspec
   val final_eval : string -> mlTreeNeuralNetwork.dhtnn -> term list -> unit

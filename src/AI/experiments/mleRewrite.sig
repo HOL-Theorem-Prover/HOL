@@ -8,7 +8,7 @@ sig
   datatype move = Arg of int | Paramod of (int * bool)
 
   val mk_startsit : term -> board
-  val dest_startsit : board -> term  
+  val dest_startsit : board -> term
 
   (* interface *)
   val gamespec : (board,move) mlReinforce.gamespec
@@ -18,10 +18,10 @@ sig
   (* statistics *)
   val maxprooflength_atgen : unit -> int list
   val stats_prooflength : string -> (int * int) list
-  
+
   (* test phase *)
-  val test_extspec : 
+  val test_extspec :
     (mlReinforce.dhtnn, board, board * bool * int) smlParallel.extspec
   val final_eval : string -> mlTreeNeuralNetwork.dhtnn -> term list -> unit
-   
+
 end

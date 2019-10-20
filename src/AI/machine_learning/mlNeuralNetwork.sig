@@ -40,7 +40,7 @@ sig
 
   (* training *)
   val train_nn_batch : int -> nn -> (vect * vect) list -> (nn * real)
-  
+
   (* input/output *)
   val reall_to_string : real list -> string
   val string_to_reall : string -> real list
@@ -52,7 +52,7 @@ sig
   val read_nn : string -> nn
   val write_exl : string -> (real list * real list) list -> unit
   val read_exl : string -> (real list * real list) list
-  
+
   (* interface *)
   val scale_out : real list -> vect
   val scale_ex : real list * real list -> vect * vect
