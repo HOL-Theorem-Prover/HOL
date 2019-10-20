@@ -47,6 +47,17 @@ local open Char String in
     end
 end
 
+local open Char String in
+  fun hash_string_mod modulo s =
+    let
+      fun hsh (i, A) s =
+         hsh (i + 1, (A * 263 + ord (sub (s, i))) mod modulo) s
+         handle Subscript => A
+    in
+      hsh (0,0) s
+    end
+end
+
 (* ------------------------------------------------------------------------
    Commands
    ------------------------------------------------------------------------ *)

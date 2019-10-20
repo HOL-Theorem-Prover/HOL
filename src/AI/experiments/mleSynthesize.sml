@@ -317,9 +317,7 @@ fun final_eval_one (nsim,ndhtnn) =
     final_eval file dhtnn testset
   end;
 
-final_eval_one (hd paraml);
-
-app final_eval_one paraml;
+val _ = app final_eval_one paraml;
 *)
 
 

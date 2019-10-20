@@ -1,1 +1,1 @@
-local open mleCompute mleRewrite mleSynthesize in end
+local open mleEntail mleCompute mleRewrite mleSynthesize in end

@@ -101,6 +101,9 @@ fun fea_of_goal (asl,w) =
 fun feahash_of_term tm =
   mk_fast_set Int.compare (map hash_string (fea_of_term tm))
 
+fun feahash_of_term_mod x tm =
+  mk_fast_set Int.compare (map (hash_string_mod x) (fea_of_term tm))
+
 fun feahash_of_goal g =
   mk_fast_set Int.compare (map hash_string (fea_of_goal g))
 

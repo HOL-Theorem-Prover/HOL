@@ -62,7 +62,7 @@ mlTreeNeuralNetwork.infer_tnn tnn tm;
 fun accuracy_fixed tnn =
   let
     val filel = map (fn x => dataarith_dir ^ "/" ^ x)
-      ["train","valid","test","big"]
+      ["train","valid","test"]
     val tmll = map mlTacticData.import_terml filel
     val exl = map compute_exout tmll
   in

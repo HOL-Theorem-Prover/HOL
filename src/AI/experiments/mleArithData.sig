@@ -15,7 +15,8 @@ sig
   val create_big   : term list -> int -> term list
 
   val export_arithdata : string -> unit
-  
+  val export_computefea : string -> unit
+
   (* statistics *)
   val read_arithtml : string -> term list
   val regroup_by_metric : ('a -> int) -> 'a list -> (int * int) list

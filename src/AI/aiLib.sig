@@ -11,6 +11,7 @@ sig
   val print_endline : string -> unit
   val vector_to_list : 'a vector -> 'a list
   val hash_string : string -> int
+  val hash_string_mod : int -> string -> int
 
   (* comparisons *)
   val cpl_compare :
