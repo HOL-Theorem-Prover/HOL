@@ -1159,6 +1159,13 @@ Proof
       >- (rw[SUBSET_DEF] >>qexists_tac`g++y`>>fs[Abbr`a`] )  )
 QED
 
+Theorem hutm_clean_invariance_theorem:
+  ∀V. (i ∈ indexes_of V ) ==> ∃C. ∀x. (kolmog_complexity x HUTM) <= (kolmog_complexity x V) + (C HUTM i)
+Proof
+  rw[clean_invariance_theorem,HUTM_univ] 
+QED
+
+
 Theorem HUTMpf_univpf:
   ∀f. prefix_free_fn f ==> ∃g. ∀x. recPhi [f; x] = HUTMpf (g ++ n2bl x)
 Proof
