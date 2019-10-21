@@ -685,6 +685,10 @@ val yMt_pred_def = Define‘
 ’;
 
 
+
+
+(* might not need above here *)
+
 val fkmin_def = Define`fkmin m = MIN_SET {n | m<= plain_kolmog n}`
 
 Theorem f_min_set_f:
@@ -941,18 +945,7 @@ Proof
   `ℓ (x + y) ≤ (ℓ x + ℓ y) + 1` suffices_by fs[] >> metis_tac[ell_sum_corr]
 QED
 
-val np_kolmog_def = Define`
-  np_kolmog x = THE (kolmog_complexity x (λy. Phi (nfst (bl2n y)) (nsnd (bl2n y))))
-`;
 
-Theorem np_kolmog_exists:
-  ∀x. ∃y. kolmog_complexity x (λy. Phi (nfst (bl2n y)) (nsnd (bl2n y))) = SOME y
-Proof
-  rw[kolmog_complexity_def,EXTENSION] >> simp[Phi_def] >>
-  qexists_tac`n2bl (npair (dBnum (fromTerm (K @@ church x))) (dBnum (fromTerm (K @@ church x))))` >> simp[] >>
-  qexists_tac`church x` >>
-  simp[K_lemma,normal_orderTheory.bnf_bnf_of]
-QED
 
 Theorem Phi_bl2nx_npair:
   ∀y. ∃x. Phi (nfst (bl2n x)) (nsnd (bl2n x)) = SOME y
@@ -964,23 +957,7 @@ Proof
   simp[K_lemma,normal_orderTheory.bnf_bnf_of]
 QED
 
-Theorem np_kolmog_thm:
-  np_kolmog x = (MIN_SET {LENGTH p |  Phi (nfst (bl2n p)) (nsnd (bl2n p)) = SOME x})
-Proof
-  fs[np_kolmog_def,kolmog_complexity_def] >>
-  Cases_on`{y | Phi (nfst (bl2n y)) (nsnd (bl2n y)) = SOME x} = ∅` >>
-  fs[] >> `∃y. Phi (nfst (bl2n y)) (nsnd (bl2n y)) = SOME x` by fs[Phi_bl2nx_npair] >>
-  `y∈{y | Phi (nfst (bl2n y)) (nsnd (bl2n y)) = SOME x}` by fs[] >> metis_tac[MEMBER_NOT_EMPTY]
-QED
 
-
-Theorem np_kolmog_smallest:
-  Phi (nfst k) (nsnd k) = SOME y ⇒ np_kolmog y ≤ ℓ k
-Proof
-  simp[np_kolmog_thm] >> strip_tac >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- (simp[EXTENSION] >> metis_tac[Phi_bl2nx_npair]) >>
-  fs[PULL_EXISTS]
-QED
 
 val _ = overload_on ("UKC",``(λx. THE (kolmog_complexity (x:num) (U:bool list -> num option ) ))``)
 
@@ -994,22 +971,6 @@ Proof
   fs[PULL_EXISTS]
 QED
 
-
-Theorem np_kolmog_fn_ub:
-  computable f ==> 
-  ∃c. ∀m. 
-    np_kolmog (f m) <= 2 * (ℓ (m) + ℓ (THE (kolmog_fn2 f)) ) + c
-Proof
-  `∃k. ∀x y. ℓ (x ⊗ y) <= 2*(ℓ x + ℓ y) + k` by fs[ell_npair] >> 
-  rw[] >> qexists_tac`k` >> rw[] >>
-  `(∀n. Phi (recfn_index2 f) n = SOME (f n)) ∧
-         ∀j. (∀n. Phi j n = SOME (f n)) ⇒ recfn_index2 f ≤ j` by fs[recfn_index2_def] >>
-  `Phi (recfn_index2 f) m = SOME (f m)` by fs[] >>
-  `Phi (nfst (npair (THE (kolmog_fn2 f)) m)) (nsnd (npair (THE (kolmog_fn2 f)) m)) = SOME (f m)` by fs[kolmog_fn2_def] >>
-  `np_kolmog (f m) ≤ ℓ (npair (THE (kolmog_fn2 f)) m)` by fs[np_kolmog_smallest] >>
-  `ℓ (npair (THE (kolmog_fn2 f)) m) <= 2 * (ℓ (THE (kolmog_fn2 f)) + ℓ (m)) + k` 
-    suffices_by fs[] >> metis_tac[]
-QED
 
 Theorem univ_rf_kolmog_fn_ub:
   computable f ∧ univ_rf U ==> 
@@ -1036,14 +997,6 @@ Proof
   fs[normal_orderTheory.lameq_bnf_of_SOME_I] 
 QED
 
-Theorem np_kolmog_ub:
-  ∃c. ∀m. np_kolmog (m) <= 2 * (ℓ (m) ) + c
-Proof
-  `computable (λx. x)` by fs[computable_id] >> qabbrev_tac`f = (λx. (x:num))` >> 
-  `∃c. ∀m. np_kolmog (f m) <= 2 * (ℓ (m) + ℓ (THE (kolmog_fn2 f)) ) + c` by 
-    metis_tac[np_kolmog_fn_ub]  >> qexists_tac`c+2 * ℓ (THE (kolmog_fn2 f))` >> fs[Abbr`f`]>>
-  rw[] >> `np_kolmog m ≤ c + 2 * (ℓ m + ℓ (THE (kolmog_fn2 (λx. x))))` by fs[] >> fs[]
-QED
 
 Theorem univ_rf_kolmog_ub:
   univ_rf U ==> ∃c. ∀m. UKC (m) <= (ℓ (m) ) + c
@@ -1054,7 +1007,7 @@ Proof
     metis_tac[univ_rf_kolmog_fn_ub]  >>metis_tac[ADD_COMM]
 QED
 
-val npfkmin_def = Define`npfkmin m = MIN_SET {n | m<= np_kolmog n}`
+
 
 Definition UKCfkmin_def:
   UKCfkmin (U:bool list->num option) m = MIN_SET {n | m <= UKC n}
@@ -1066,12 +1019,6 @@ Proof
   fs[EXTENSION,Phi_bl2nx_npair]
 QED
 
-Theorem np_kolmog_props:
-  ∀y. ∃z. np_kolmog y = ℓ z ∧ Phi (nfst z) (nsnd z) = SOME y
-Proof
-  simp[np_kolmog_thm] >> strip_tac >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- simp[MIN_SET_L_PHI_NPAIR_NON_EMPTY] >> qexists_tac ‘bl2n p’ >> simp[]
-QED
 
 Theorem univ_rf_kolmog_props:
   univ_rf U ==> ∀y. ∃z. UKC y = LENGTH z ∧ U z = SOME y
@@ -1080,46 +1027,6 @@ Proof
   DEEP_INTRO_TAC MIN_SET_ELIM >>  
   rw[] >> `{p | U p = SOME y} ≠ ∅` by fs[univ_rf_nonempty] >> 
   fs[EXTENSION] >> metis_tac[]
-QED
-
-Theorem np_kolmog_lb_exists:
-  ∃x. m <= np_kolmog x
-Proof
-  CCONTR_TAC >> fs[NOT_LESS_EQUAL] >>
-  `∀x. ∃i. Phi (nfst i) (nsnd i) = SOME x ∧ ℓ i < m` by metis_tac[np_kolmog_props] >>
-  fs[SKOLEM_THM] >> 
-  `FINITE (count m)` by fs[FINITE_COUNT] >>
-  `INFINITE {f x | x | T}` by 
-    (`SURJ (λx. Phi (nfst (f x)) (nsnd (f x))) UNIV {SOME n|T}` by 
-       (fs[SURJ_DEF] >> rw[]) >> 
-     `IMAGE (λx. Phi (nfst (f x)) (nsnd (f x))) UNIV = {SOME n|T}` by fs[IMAGE_SURJ]>>
-     fs[IMAGE_DEF] >> 
-     `{SOME n | T} = IMAGE (λx. Phi (nfst x) (nsnd x)) {f x | x | T}` by 
-       (fs[IMAGE_DEF,EXTENSION] >> rw[] >> eq_tac >> rw[] 
-        >- (qexists_tac`f n` >> metis_tac[]) 
-        >- (qexists_tac`x''` >> metis_tac[]) ) >> 
-     `SURJ (λx. Phi (nfst x) (nsnd x)) {f x | x | T} {SOME n | T}` by fs[SURJ_IMAGE] >>
-     `¬(FINITE {SOME (n:num) | T})` by 
-       (`INFINITE 𝕌(:num option)` by 
-          (fs[infinite_num_inj] >> qexists_tac`SOME` >> rw[INJ_DEF]) >> 
-        `{SOME n | T} = 𝕌(:num option) DIFF {NONE}` by  
-          (rw[EXTENSION] >> eq_tac >> rw[] >> Cases_on`x` >> fs[]) >> 
-        `FINITE {NONE}` by fs[FINITE_SING] >> 
-        rw[] >> fs[INFINITE_DIFF_down]) >> 
-     `∃g. INJ g {SOME n | T} {f x | x | T} ∧ ∀y. y ∈ {SOME n | T} ⇒ (λx. Phi (nfst x) (nsnd x)) (g y) = y` by 
-       (irule pred_setTheory.SURJ_INJ_INV >> fs[]) >> metis_tac[INFINITE_INJ] ) >>
-  `FINITE {i | ∃x. i = (f x)}` by 
-    (`{i | ∃x. i = (f x)} ⊆ count (2**m + 2**m)` suffices_by 
-       metis_tac[SUBSET_FINITE_I,FINITE_COUNT] >> simp[SUBSET_DEF] >> rw[] >> fs[] >>
-     `ℓ (f x') < m` by fs[] >> 
-     `MEM ((f x') + 1) (log2list (ℓ (f x')))` by metis_tac[ELL_log2list] >> 
-     fs[log2list_def,MEM_GENLIST] >> 
-     `f x' < 2 ** ℓ (f x') + 2 ** ℓ (f x')` by fs[] >>
-     `2 ** (ℓ (f x'))+2 ** (ℓ (f x')) < 2 ** m+2 ** m` by fs[] >> 
-     `f x' < 2 ** m + 2 ** m` by metis_tac[LESS_TRANS] >> fs[]) >> 
-   `SURJ (λx. x)  {i | (∃x. i = (f x))} {f x | x | T}` by 
-    (fs[SURJ_DEF] >> rw[] ) >>
-  `FINITE {f x | x | T}` by metis_tac[FINITE_SURJ]
 QED
 
 
@@ -1163,11 +1070,6 @@ Proof
   metis_tac[FINITE_SURJ]
 QED
 
-Theorem npkfkmin_lb:
-  ∀m. m <= np_kolmog (npfkmin m)
-Proof
-  rw[npfkmin_def] >> irule f_min_set_f >> fs[np_kolmog_lb_exists]
-QED
 
 Theorem UKCfkmin_def_lb:
   univ_rf U ==> ∀m. m <= UKC (UKCfkmin U m)
@@ -1204,13 +1106,6 @@ Proof
 QED
 
 
-(* only theorem left to prove *)
-Theorem computable_npfkmin:
-  computable np_kolmog ==> computable npfkmin
-Proof
-  rw[] >> `unbounded np_kolmog` by metis_tac[unbounded_def,np_kolmog_lb_exists] >>
-  simp[computable_def,npfkmin_def] >> fs[computable_arg_min_set]
-QED
 
 Theorem computable_UKCfkmin:
   univ_rf U ∧ computable UKC ==> computable (UKCfkmin U)
@@ -1219,14 +1114,7 @@ Proof
   simp[computable_def,UKCfkmin_def] >> fs[computable_arg_min_set]
 QED
 
-Theorem npkol_fkmin_lb:
-  computable np_kolmog ==> 
-  ∃c. ∀m. np_kolmog (npfkmin m) <= 2*((ℓ m) + ℓ (THE (kolmog_fn2 npfkmin))) + c
-Proof
-  rw[] >> `computable npfkmin` by fs[computable_npfkmin] >> 
-  `∃c. ∀m. np_kolmog (npfkmin m) ≤ 2 * (ℓ m + ℓ (THE (kolmog_fn2 npfkmin))) + c` by 
-    fs[np_kolmog_fn_ub] >> qexists_tac`c` >> rw[] >> fs[]
-QED
+
 
 Theorem UKCkol_fkmin_lb:
   univ_rf U ∧ computable UKC ==> 
@@ -1237,23 +1125,7 @@ Proof
     metis_tac[univ_rf_kolmog_fn_ub] >> qexists_tac`c` >> rw[] >> fs[]
 QED
 
-Theorem npkolmog_length_ub_corrol:
-  computable np_kolmog ==> ∃c. ∀m. np_kolmog (npfkmin m) <= 2*(ℓ m) + c
-Proof
-  rw[] >> 
-  `∃c. ∀m. np_kolmog (npfkmin m) <= 2*((ℓ m) + ℓ (THE (kolmog_fn2 npfkmin))) + c` by 
-    fs[npkol_fkmin_lb] >> qexists_tac` 2 * (ℓ (THE (kolmog_fn2 npfkmin))) + c` >> rw[] >> 
-  fs[GSYM LEFT_ADD_DISTRIB]
-QED
 
-
-Theorem compkol_lb:
-  computable np_kolmog ==> ∃c. ∀m. m <=  2*(ℓ m) + c
-Proof
-  rw[] >> `∃c. ∀m. np_kolmog (npfkmin m) <= 2*(ℓ m) + c` by fs[npkolmog_length_ub_corrol]>>
-  `∀m. m <= np_kolmog (npfkmin m)` by fs[npkfkmin_lb]  >> qexists_tac`c` >> rw[] >>
-  `m ≤ np_kolmog (npfkmin m)` by fs[] >> `np_kolmog (npfkmin m) ≤ c + 2 * ℓ m` by fs[] >>fs[]
-QED
 
 Theorem UKCcompkol_lb:
   univ_rf U ∧ computable UKC ==> ∃c. ∀m. m <=  2*(ℓ m) + c
@@ -1279,13 +1151,6 @@ Proof
       >- (`100 <= 2 * ℓ 100 + 1` by fs[] >> pop_assum mp_tac >> EVAL_TAC)  )
 QED
 
-Theorem part_hutter:
-  computable np_kolmog ==> F
-Proof
-  strip_tac >> `∃c. ∀m. m <=  2*(ℓ m) + c` by  fs[compkol_lb] >>
-  `∃m. ¬(m<= 2*(ℓ m) + c)` by fs[exists_log_lb] >> metis_tac[]
-QED
-
 Theorem part_hutter_UKC:
   univ_rf U ∧ computable UKC ==> F
 Proof
@@ -1298,6 +1163,7 @@ Theorem UKC_incomp:
 Proof
   metis_tac[part_hutter_UKC]
 QED
+
 
 (* up to here *)
 

@@ -676,7 +676,7 @@ val prefix_machine_def = Define`prefix_machine (U:bool list -> extnat) =
 val monotone_machine_def = Define`monotone_machine (U:bool list -> extnat) =
                      !p1 p2 x1 x2. (U p1 = (SOME x1)) /\ (U p2 = (SOME x2)) ==> (p1 ≼ p2 ==> (n2bl x1 ≼ n2bl x2 \/ n2bl x2 ≼ n2bl x1) )`
 
-val kolmog_complexity_def = Define`kolmog_complexity x U =
+val kolmog_complexity_def = Define`kolmog_complexity (x:num) (U:bool list -> num option) =
                        if  { p | U p = SOME x} = {} then NONE
                        else SOME (MIN_SET {LENGTH p | U p = SOME x})`;
 
@@ -933,6 +933,14 @@ Proof
       >- (rw[SUBSET_DEF] >>qexists_tac`g++y`>>fs[Abbr`a`] )  )
 QED
 
+
+(* Cleaned up invariance theorem *)
+
+Theorem clean_invariance_theorem:
+  ∀U V. univ_rf U ∧ (i ∈ {k | V = (λy. recPhi [k;bl2n y])} ) ==> ∃C. ∀x. (kolmog_complexity x U) <= (kolmog_complexity x V) + (C U i)
+Proof
+  rw[] >> qspecl_then [`U`,`i`] mp_tac invariance_theorem >> rw[]
+QED
 
 (* Kolmogorov kraft inequality *)
 
@@ -1312,6 +1320,8 @@ Proof
       >- (fs[EXTENSION] >> qexists_tac`M_x`>>fs[])
       >- (rw[SUBSET_DEF] >>qexists_tac`g++y`>>fs[Abbr`a`] ))
 QED
+
+
 
 
 val kolmogpf_def = Define`kolmogpf x = THE (kolmog_complexity x HUTMpf)`
