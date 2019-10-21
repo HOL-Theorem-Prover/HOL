@@ -936,10 +936,14 @@ QED
 
 (* Cleaned up invariance theorem *)
 
+Definition indexes_of_def:
+  indexes_of V = {k | V = (λy. recPhi [k;bl2n y])}
+End
+
 Theorem clean_invariance_theorem:
-  ∀U V. univ_rf U ∧ (i ∈ {k | V = (λy. recPhi [k;bl2n y])} ) ==> ∃C. ∀x. (kolmog_complexity x U) <= (kolmog_complexity x V) + (C U i)
+  ∀U V. univ_rf U ∧ (i ∈ indexes_of V ) ==> ∃C. ∀x. (kolmog_complexity x U) <= (kolmog_complexity x V) + (C U i)
 Proof
-  rw[] >> qspecl_then [`U`,`i`] mp_tac invariance_theorem >> rw[]
+  rw[indexes_of_def] >> qspecl_then [`U`,`i`] mp_tac invariance_theorem >> rw[]
 QED
 
 (* Kolmogorov kraft inequality *)
