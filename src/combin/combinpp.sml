@@ -139,7 +139,7 @@ fun upd_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
           add_string ld_s >> add_break(0,2) >>
           block PP.INCONSISTENT 0 (
             pr_list prkv (add_string ";" >> add_break(1,0)) kvs
-          ) >> add_break (0,~2) >>
+          ) >> add_break (0,0) >>
           add_string rd_s
         )
       )

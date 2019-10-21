@@ -562,11 +562,7 @@ tactic:
 \end{session}
 
 For many users, this would be the end of dealing with this proof: the
-tactic can now be packaged into an invocation of
-\ml{prove}\footnote{The \ml{prove} function takes a term and a tactic
-and attempts to prove the term using the supplied tactic.  It
-returns the proved theorem if the tactic succeeds.  It doesn't save
-the theorem to the developing theory.} or \ml{store\_thm} and that
+tactic can now be packaged into a \ml{Theorem} declaration, and that
 would be the end of it.
 However, another user might notice that this tactic could be shortened.
 

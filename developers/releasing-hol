@@ -92,7 +92,7 @@ localholdir=/tmp/localhol
 
 echo -n "Switching to ${gitref} - "
 (git checkout -f -q ${gitref} && echo "done" || die "failed")
-if [ ${reusecommit} -eq 1 ]
+if [ ${reusecommit} -eq 1 -a -f ${localholdir}/bin/hol.state ]
 then
     :
 else

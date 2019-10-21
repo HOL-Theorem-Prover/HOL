@@ -6,7 +6,9 @@ sig
   val parse_holfoot_file_restrict : (string list) -> string -> term;
   val print_file_contents         : string -> unit;
 
-  val add_genpred                 : (string * Parsetree.a_genpredargType list * (Absyn.absyn list -> Absyn.absyn)) -> unit
+  val add_genpred                 :
+      string * Parsetree.a_genpredargType list *
+      (Absyn.absyn list -> Absyn.absyn) -> unit
   val reset_genpreds              : unit -> unit
 
   val list_data_tag  : string ref;

@@ -44,18 +44,23 @@ sig
 
        |- SIMPLE_GUESS_FORALL v i tm
 
-     depending on the value of ty. Moreover i does not contain any variable from avoid.
+     depending on the value of ty. Moreover i does not contain any
+     variable from avoid.
 
-     Having an additional callback argument to search guesses for subterms is also useful.
-     combine_sgsfwcs then allows combining a list of such search functions with callback
-     into a single search function.
+     Having an additional callback argument to search guesses for
+     subterms is also useful. combine_sgsfwcs then allows combining a
+     list of such search functions with callback into a single search
+     function.
   *)
 
   datatype simple_guess_type = sgty_exists | sgty_forall
-  type simple_guess_search_fun = term HOLset.set -> simple_guess_type -> term -> term -> thm
-  type simple_guess_search_fun_with_callback = simple_guess_search_fun -> simple_guess_search_fun
+  type simple_guess_search_fun = term HOLset.set -> simple_guess_type -> term ->
+                                 term -> thm
+  type simple_guess_search_fun_with_callback =
+       simple_guess_search_fun -> simple_guess_search_fun
 
-  val combine_sgsfwcs : simple_guess_search_fun_with_callback list -> simple_guess_search_fun
+  val combine_sgsfwcs : simple_guess_search_fun_with_callback list ->
+                        simple_guess_search_fun
 
   (* search functions for common operations *)
   val sgsfwc_eq     : simple_guess_search_fun_with_callback (* v = _ / _ = v *)
@@ -83,14 +88,22 @@ sig
 
   val default_sgsfwcs : simple_guess_search_fun_with_callback list
 
-  (* Generalised conversions that allow specifying which search functions to use *)
-  val SIMPLE_EXISTS_INSTANTIATE_CONV_GEN  : simple_guess_search_fun_with_callback list -> conv
-  val SIMPLE_FORALL_INSTANTIATE_CONV_GEN  : simple_guess_search_fun_with_callback list -> conv
-  val SIMPLE_UEXISTS_INSTANTIATE_CONV_GEN : simple_guess_search_fun_with_callback list -> conv
-  val SIMPLE_SOME_INSTANTIATE_CONV_GEN    : simple_guess_search_fun_with_callback list -> conv
-  val SIMPLE_SELECT_INSTANTIATE_CONV_GEN  : simple_guess_search_fun_with_callback list -> conv
+  (* Generalised conversions that allow specifying which search functions to
+     use *)
+  val SIMPLE_EXISTS_INSTANTIATE_CONV_GEN  :
+      simple_guess_search_fun_with_callback list -> conv
+  val SIMPLE_FORALL_INSTANTIATE_CONV_GEN  :
+      simple_guess_search_fun_with_callback list -> conv
+  val SIMPLE_UEXISTS_INSTANTIATE_CONV_GEN :
+      simple_guess_search_fun_with_callback list -> conv
+  val SIMPLE_SOME_INSTANTIATE_CONV_GEN    :
+      simple_guess_search_fun_with_callback list -> conv
+  val SIMPLE_SELECT_INSTANTIATE_CONV_GEN  :
+      simple_guess_search_fun_with_callback list -> conv
 
-  val SIMPLE_QUANT_INSTANTIATE_CONV_GEN   : simple_guess_search_fun_with_callback list -> conv
-  val SIMPLE_QUANT_INST_GEN_ss            : simple_guess_search_fun_with_callback list -> simpLib.ssfrag
+  val SIMPLE_QUANT_INSTANTIATE_CONV_GEN   :
+      simple_guess_search_fun_with_callback list -> conv
+  val SIMPLE_QUANT_INST_GEN_ss            :
+      simple_guess_search_fun_with_callback list -> simpLib.ssfrag
 
 end

@@ -102,6 +102,8 @@ fun unicode_off f = Feedback.trace ("Unicode", 0) f
 fun raw_backend f =
     Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal) f
 
+fun quietly f = Feedback.quiet_messages (Feedback.quiet_warnings f)
+
 local
   val pfxsize = size "Testing printing of ..." + 3
     (* 3 for quotations marks and an extra space *)

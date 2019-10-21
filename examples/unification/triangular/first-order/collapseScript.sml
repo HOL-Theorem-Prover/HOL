@@ -1,4 +1,5 @@
-open HolKernel boolLib bossLib Parse finite_mapTheory termTheory ramanaLib pred_setTheory substTheory walkTheory walkstarTheory;
+open HolKernel boolLib bossLib Parse finite_mapTheory termTheory ramanaLib
+     pred_setTheory substTheory walkTheory walkstarTheory;
 
 val _ = new_theory "collapse";
 

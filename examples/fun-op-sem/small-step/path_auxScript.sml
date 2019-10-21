@@ -10,8 +10,6 @@ open listTheory llistTheory pathTheory;
 open lcsymtacs;
 open intLib;
 
-val _ = temp_tight_equality ();
-
 val ect = BasicProvers.EVERY_CASE_TAC;
 
 (* Copied from pathScript in HOL and generalised to 2 relations *)
@@ -197,7 +195,7 @@ val okpath_steps_lem1 = Q.prove (
  ho_match_mp_tac okpath_co_ind >>
  rw []
  >- (pop_assum (qspec_then `0` mp_tac) >>
-     rw [el_def_compute]) >>
+     rw [el_compute]) >>
  first_x_assum (qspec_then `n+1` mp_tac) >>
  fs [GSYM arithmeticTheory.ADD1]);
 

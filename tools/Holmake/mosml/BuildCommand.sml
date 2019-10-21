@@ -138,8 +138,12 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
               else objectfiles0
         in
           if
-            isSuccess (compile debug
-                               (include_flags @ ["-o", script] @ objectfiles))
+            isSuccess (
+              compile debug (
+                include_flags @ ["-o", script, "holmake_holpathdb.uo"] @
+                objectfiles
+              )
+            )
           then
             let
               val status = Systeml.mk_xable script

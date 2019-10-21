@@ -23,7 +23,7 @@ val () = show_assums := true;
 
 open bossLib listTheory subtypeTools res_quanTools res_quanTheory
      pred_setTheory extra_pred_setTheory listContext relationTheory
-     ho_proverTools subtypeTheory HurdUseful;
+     ho_proverTools subtypeTheory hurdUtils;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
 infix 1 >>;

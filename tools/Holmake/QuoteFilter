@@ -4,9 +4,16 @@ fun dec r = (r := !r - 1)
 infix |>
 fun x |> f = f x
 
-fun bslash_escape s = "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord(String.sub(s,0))))
+fun bslash_escape c =
+    "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord c))
 
-datatype quotetype = inQUOTE | inTMQUOTE | inTYQUOTE | inDFQUOTE;
+fun bslash_escape_s s = bslash_escape (String.sub(s, 0))
+
+val mk_strsafe =
+    String.translate (fn c => if Char.isPrint c then str c else
+                              bslash_escape c)
+
+datatype quotetype = inQUOTE | inTMQUOTE | inTYQUOTE | inDFQUOTE | inDTYQUOTE;
 datatype mltype = inTHMVAL | inTERMINATION_VAL | inINITIAL;
 
 datatype qfs = QFS of {comdepth : int ref,
@@ -43,13 +50,28 @@ fun resetstate (QFS{comdepth, pardepth, antiquote_stack, mltype_stack,...}) =
 fun ECHO (QFS _) s = s
 fun print (QFS _) s = s
 
-fun dest_ml_thm_binding bindname s =
+fun dest_ml_thm_binding s =
     let
-      val bsz = size bindname
-      val ss = Substring.dropl Char.isSpace (Substring.extract(s, bsz, NONE))
-      val (nmss, attrs) = Substring.position "[" ss
+      (* s matches {keyword}{ws}+{ident}[attrs]
+         ident is either a standard ML identifier, or something in double quotes
+         NB: If it's in double quotes, the thing in quotes might include square
+         brackets!
+      *)
+      val ss = s |> Substring.full
+                 |> Substring.dropl Char.isAlpha
+                 |> Substring.dropl Char.isSpace
+      val (nmss, attrs) =
+          if Substring.sub(ss, 0) = #"\"" then
+            let val ss' = Substring.slice(ss, 1, NONE)
+                val (nm,rest) = Substring.position "\"" ss'
+            in
+              (nm, Substring.slice(rest,1,NONE))
+            end
+          else
+            Substring.position "[" ss
+      val nms = nmss |> Substring.string |> mk_strsafe
     in
-      (Substring.string nmss, Substring.string ss,
+      (nms, Substring.string ss (* bogus if quotes used *),
        if Substring.isEmpty attrs then []
        else
          Substring.slice(attrs, 1, SOME (Substring.size attrs - 2))
@@ -57,6 +79,21 @@ fun dest_ml_thm_binding bindname s =
                         |> String.fields (fn c => c = #",")
       )
     end
+
+fun dest_ml_thm_binding_triv s =
+    let
+      val (thmname, with_attrs, attrs) = dest_ml_thm_binding s
+      val (with_attrs, attrs) =
+          if String.isPrefix "Triviality" s then
+            if null attrs then (thmname ^ "[local]", ["local"])
+            else
+              (String.substring(with_attrs, 0, size with_attrs - 1) ^ ",local]",
+               attrs @ ["local"])
+          else (with_attrs,attrs)
+    in
+      (thmname, with_attrs, attrs)
+    end
+
 
 fun indthm_munge s =
     if String.isSuffix "_def" s then
@@ -124,7 +161,7 @@ type lexresult = int*string
 fun eof arg = (~1, "")
 %%
 %structure QuoteFilter
-%s string comment qcomment tmcomment tycomment defncomment tyquote tmquote quote defnquote ANTIQ thmval TERMINATION_VAL;
+%s string comment qcomment tmcomment tycomment defncomment datatypecomment tyquote tmquote quote defnquote datatypequote ANTIQ thmval TERMINATION_VAL;
 %arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart, inscript, mltype_stack, induction_thm});
 %full
 
@@ -133,6 +170,7 @@ digit = [0-9];
 symbol = [-!%&$+/:<=>?@~|#*\\^];
 alphaMLid = {letter} ({letter} | {digit} | _ | "'")*;
 alphaMLid_list = {alphaMLid} (","{alphaMLid})*;
+quotedsymbolid = "\"" [^\034]+ "\"";
 defn_attribute = {alphaMLid} ("=" {alphaMLid})?;
 defn_attribute_list = {defn_attribute} (","{defn_attribute})*;
 MLid =  {alphaMLid} | {symbol}+;
@@ -144,7 +182,7 @@ fullquotebegin = "``" | "\226\128\156" ;
 fullquoteend = "``" | "\226\128\157";
 quotebegin = "`" | "\226\128\152";
 quoteend = "`" | "\226\128\153";
-Theorempfx = "Theorem"{ws}+{alphaMLid}("["{alphaMLid_list}"]")?;
+Theorempfx = ("Theorem"|"Triviality"){ws}+{alphaMLid}("["{alphaMLid_list}"]")?;
 Definitionpfx =
   "Definition"{ws}+{alphaMLid}("["{defn_attribute_list}"]")?{ws}*":";
 declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"exception"|"open"|";"|"infix"[lr]?|"local";
@@ -172,12 +210,55 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
                                          inQUOTE => quote
                                        | inDFQUOTE => defnquote
                                        | inTYQUOTE => tyquote
-                                       | inTMQUOTE => tmquote);
+                                       | inTMQUOTE => tmquote
+                                       | inDTYQUOTE => datatypequote);
                               ECHO yyarg
                                 (")),QUOTE \""^
                                  locpragma yyarg (yytext, yypos) 0)
                              )
                  else ECHO yyarg yytext)));
+<INITIAL,thmval>^"Datatype"{ws}*":" => (
+  (yypos,
+   if inscript then
+     (YYBEGIN datatypequote;
+      mltype_stack := [];
+      ECHO yyarg (mlswitch (!mltype_stack) "" "" ");" ^
+                  "val _ = bossLib.Datatype [QUOTE \"" ^
+                  locpragma yyarg (yytext, yypos) 0))
+   else yytext
+  )
+);
+<INITIAL,thmval>^("Type"|"Overload"){ws}+({alphaMLid}|{quotedsymbolid})("["{alphaMLid_list}"]")?{ws}*"=" => (
+  (yypos,
+   if inscript then
+     let
+       infix |> fun x |> f = f x
+       fun extract (s,p) l =
+           if List.exists (fn a => a = s) l then
+             (p, List.filter (fn a => a <> s) l)
+           else ("", l)
+       val pfx = mlswitch (!mltype_stack) "" "" ");"
+       val s0 = String.substring(yytext,0,size yytext - 1) (* drop = *)
+       val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
+                  |> Substring.string (* drop wspace after name *)
+       val (tyname, _, attrs) = dest_ml_thm_binding s
+       val core_name = if String.isPrefix "Overload" yytext then "overload_on"
+                       else "type_abbrev"
+       val (infpfx, attrs) = extract ("inferior", "inferior_") attrs
+       val (temppfx, attrs) = extract ("local", "temp_") attrs
+       val fnm =
+           temppfx ^ infpfx ^ core_name ^
+           String.concat (map (fn s => "_" ^ s) attrs)
+     in
+       mltype_stack := [];
+       YYBEGIN INITIAL;
+       ECHO yyarg (
+         pfx ^ "val _ = (fn x => Parse." ^fnm ^ "(\"" ^ tyname ^ "\", x))"
+       )
+     end
+   else yytext
+  )
+);
 <INITIAL,thmval>{Theorempfx}{ws}*":" => ((yypos,
 (
   if inscript then
@@ -187,12 +268,12 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
       val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop colon *)
       val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
                  |> Substring.string (* drop wspace between name and lparen *)
-      val (thname,with_attrs_string,_) = dest_ml_thm_binding "Theorem" s
+       val (thmname,with_attrs,attrs) = dest_ml_thm_binding_triv s
     in
       mltype_stack := [];
       YYBEGIN quote;
       ECHO yyarg (pfx ^
-                  "val " ^ thname ^ " = Q.store_thm(\"" ^ with_attrs_string ^
+                  "val " ^ thmname ^ " = Q.store_thm(\"" ^ with_attrs ^
                   "\"," ^
                   "[QUOTE \""^locpragma yyarg (yytext,yypos) 0)
     end
@@ -211,8 +292,7 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
        val s0 = String.extract(yytext,0,SOME(size yytext - 1)) (* drop : *)
        val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
                   |> Substring.string (* drop w/space between name and : *)
-       val (thname, with_attrs_string, attrs) =
-           dest_ml_thm_binding "Definition" s
+       val (thname, with_attrs_string, attrs) = dest_ml_thm_binding s
        val ind_thm =
            case List.find (String.isPrefix "induction=") attrs of
                NONE => indthm_munge thname
@@ -235,16 +315,16 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
      let
        infix |> fun x |> f = f x
        val pfx = case !mltype_stack of inTHMVAL :: _ => ");" | _ => ""
-       val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop lpar *)
+       val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop = *)
        val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
                   |> Substring.string (* drop wspace between name and = *)
-       val (thmname,with_attrs_string,_) = dest_ml_thm_binding "Theorem" s
+       val (thmname,with_attrs,attrs) = dest_ml_thm_binding_triv s
      in
        YYBEGIN thmval;
        mltype_stack := [inTHMVAL];
        ECHO yyarg (
          pfx ^ "val " ^ thmname ^ " = " ^ "(fn rule => boolLib.save_thm(\"" ^
-         with_attrs_string ^ "\",rule)) ("
+         with_attrs ^ "\",rule)) ("
        )
      end else yytext
   )
@@ -354,7 +434,7 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
   )
 );
 <string>{newline} => ((yypos, (newline yyarg (yypos,yytext))));
-<string>[\128-\255] => ((yypos, (ECHO yyarg (bslash_escape yytext))));
+<string>[\128-\255] => ((yypos, (ECHO yyarg (bslash_escape_s yytext))));
 <string>[^\\"\n\015\128-\255]{1,100} => ((yypos, (ECHO yyarg yytext)));
 <string>. => ((yypos, (ECHO yyarg yytext)));
 <comment,tmcomment,tycomment,qcomment>"(*" => ((yypos, (inc comdepth; ECHO yyarg yytext)));
@@ -379,13 +459,21 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 <defncomment>"*)" => ((yypos, (dec comdepth;
                    if !comdepth < 1 then YYBEGIN defnquote else ();
                    ECHO yyarg yytext)));
+<datatypecomment>"*)" => (
+  (yypos, (
+     dec comdepth;
+     if !comdepth < 1 then YYBEGIN datatypecomment else ();
+     ECHO yyarg yytext
+   )
+  )
+);
 <comment>{newline} => ((yypos, (newline yyarg (yypos,yytext))));
-<tmcomment,tycomment,qcomment,defncomment>{newline} => ((yypos,
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>{newline} => ((yypos,
    (qnewline yyarg (yypos,yytext))));
-<tmcomment,tycomment,qcomment,defncomment>"\\" => ((yypos, (ECHO yyarg "\\\\")));
-<tmcomment,tycomment,qcomment,defncomment>"\"" => ((yypos, (ECHO yyarg "\\\"")));
-<tmcomment,tycomment,qcomment,defncomment>"\t" => ((yypos, (ECHO yyarg "\\t")));
-<tmcomment,tycomment,qcomment,defncomment>"^`" => ((yypos, (ECHO yyarg "`")));
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>"\\" => ((yypos, (ECHO yyarg "\\\\")));
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>"\"" => ((yypos, (ECHO yyarg "\\\"")));
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>"\t" => ((yypos, (ECHO yyarg "\\t")));
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>"^`" => ((yypos, (ECHO yyarg "`")));
 <tmcomment,tycomment>{fullquoteend} => ((yypos,
    (comdepth := 0;
     YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval);
@@ -400,18 +488,28 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
   (comdepth := 0;
    YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval);
    ECHO yyarg "\"]")));
-<tmcomment,tycomment,qcomment>[\128-\255] => ((yypos,
-  (ECHO yyarg (bslash_escape yytext))));
-<comment,tmcomment,tycomment,qcomment,defncomment>. => ((yypos, (ECHO yyarg yytext)));
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>[\128-\255] => ((yypos,
+  (ECHO yyarg (bslash_escape_s yytext))));
+<datatypecomment>{newline}"End" => (
+  (yypos,
+   (
+     comdepth := 0;
+     YYBEGIN INITIAL;
+     nextline yyarg (yypos + size yytext);
+     ECHO yyarg "\"\n];"
+   )
+  )
+);
+<comment,tmcomment,tycomment,qcomment,defncomment,datatypecomment>. => ((yypos, (ECHO yyarg yytext)));
 
-<quote,tmquote,tyquote,defnquote>"^"+{ws} => ((yypos, (ECHO yyarg yytext)));
-<quote,tmquote,tyquote,defnquote>"^"+{newline} => ((yypos,
+<quote,tmquote,tyquote,defnquote,datatypequote>"^"+{ws} => ((yypos, (ECHO yyarg yytext)));
+<quote,tmquote,tyquote,defnquote,datatypequote>"^"+{newline} => ((yypos,
    (ECHO yyarg (String.substring(yytext,0,size yytext - 1) ^
                 qnewline yyarg (yypos,yytext)))));
-<quote,tmquote,tyquote,defnquote>"^^" => ((yypos, (ECHO yyarg "^")));
-<quote,tmquote,tyquote,defnquote>"^`" => ((yypos, (ECHO yyarg "`")));
-<quote,tmquote,tyquote,defnquote>"^"{symbol} => ((yypos, (ECHO yyarg yytext)));
-<quote,tmquote,tyquote,defnquote>{newline} => (
+<quote,tmquote,tyquote,defnquote,datatypequote>"^^" => ((yypos, (ECHO yyarg "^")));
+<quote,tmquote,tyquote,defnquote,datatypequote>"^`" => ((yypos, (ECHO yyarg "`")));
+<quote,tmquote,tyquote,defnquote,datatypequote>"^"{symbol} => ((yypos, (ECHO yyarg yytext)));
+<quote,tmquote,tyquote,defnquote,datatypequote>{newline} => (
   (yypos, (qnewline yyarg (yypos,yytext)))
 );
 
@@ -419,6 +517,15 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
    (yypos, (
       YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval);
       ECHO yyarg "\"]"))
+);
+<datatypequote>{newline}"End" => (
+  (
+    yypos, (
+      YYBEGIN INITIAL;
+      nextline yyarg (yypos + size yytext);
+      ECHO yyarg "\"\n];"
+    )
+  )
 );
 <defnquote>{newline}"End" => (
   (yypos, (
@@ -448,6 +555,9 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 <quote>"(*" => ((yypos, (inc comdepth; YYBEGIN qcomment; ECHO yyarg yytext)));
 <tmquote>"(*" => ((yypos, (inc comdepth; YYBEGIN tmcomment; ECHO yyarg yytext)));
 <tyquote>"(*" => ((yypos, (inc comdepth; YYBEGIN tycomment; ECHO yyarg yytext)));
+<datatypequote>"(*" => (
+  (yypos, (inc comdepth; YYBEGIN datatypecomment; ECHO yyarg yytext))
+);
 <defnquote>"(*" => (
   (yypos, (inc comdepth; YYBEGIN defncomment; ECHO yyarg yytext))
 );
@@ -463,12 +573,18 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 <defnquote>"^" => ((yypos, (YYBEGIN ANTIQ;
                    antiquote_stack := inDFQUOTE :: !antiquote_stack;
                    ECHO yyarg "\", ANTIQUOTE (")));
-
-
-<quote,tmquote,tyquote,defnquote>[\128-\255] => ((yypos, (ECHO yyarg (bslash_escape yytext))));
-<quote,tmquote,tyquote,defnquote>[^`\n\015^ \t(*\128-\255]+ => ((yypos,
+<datatypequote>"^" => (
+  (yypos, (
+    YYBEGIN ANTIQ;
+    antiquote_stack := inDTYQUOTE :: !antiquote_stack;
+    ECHO yyarg "\", ANTIQUOTE("
+   )
+  )
+);
+<quote,tmquote,tyquote,defnquote,datatypequote>[\128-\255] => ((yypos, (ECHO yyarg (bslash_escape_s yytext))));
+<quote,tmquote,tyquote,defnquote,datatypequote>[^`\n\015^ \t(*\128-\255]+ => ((yypos,
   (ECHO yyarg (String.toString yytext))));
-<quote,tmquote,tyquote,defnquote>. => (
+<quote,tmquote,tyquote,defnquote,datatypequote>. => (
   (yypos, (ECHO yyarg (String.toString yytext)))
 );
 
@@ -479,7 +595,8 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
                                           inQUOTE => quote
                                         | inTMQUOTE => tmquote
                                         | inTYQUOTE => tyquote
-                                        | inDFQUOTE => defnquote));
+                                        | inDFQUOTE => defnquote
+                                        | inDTYQUOTE => datatypequote));
                   ECHO yyarg (yytext ^
                               "),QUOTE \""^locpragma yyarg (yytext,yypos) 0))));
 <ANTIQ>"(" => ((yypos, (pardepth := 1; YYBEGIN INITIAL; ECHO yyarg yytext)));

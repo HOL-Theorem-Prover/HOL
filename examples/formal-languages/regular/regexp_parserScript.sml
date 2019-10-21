@@ -36,66 +36,84 @@ val _ =
 
 val _ = overload_on("mkNT", ``INL : reNT -> reNT inf``)
 
-val sumID_def = Define`
+Definition sumID_def :
   sumID (INL x) = x /\
   sumID (INR y) = y
-`;
+End
 
-val choicel_def = Define`
+Definition choicel_def :
   choicel [] = not (empty NONE) NONE /\
   choicel (h::t) = choice h (choicel t) sumID
-`;
+End
 
-val pegf_def = Define`
+Definition pegf_def :
   pegf sym f = seq sym (empty NONE) (\l1 l2. OPTION_MAP f l1)
-`
+End
 
-val try_def = Define`
+Definition try_def :
   try sym = choicel [sym; empty NONE]
-`;
+End
 
-val pnt_def = Define`pnt sym = nt (mkNT sym) I`;
+Definition pnt_def :
+  pnt sym = nt (mkNT sym) I
+End
 
-val igLeft_def = Define`
+Definition igLeft_def :
   igLeft s1 s2 = seq s1 s2 (\l1 l2. l2)
-`;
-val _ = set_mapped_fixity { tok = "*>", term_name = "igLeft", fixity = Infixl 500 }
+End
 
-val igRight_def = Define`
+val _ =
+ set_mapped_fixity
+    {tok = "*>",
+     term_name = "igLeft", fixity = Infixl 500 }
+
+Definition igRight_def :
   igRight s1 s2 = seq s1 s2 (\l1 l2. l1)
-`;
+End
 
-val _ = set_mapped_fixity { tok = "<*", term_name = "igRight", fixity = Infixl 500 }
+val _ =
+ set_mapped_fixity
+    {tok = "<*", term_name = "igRight", fixity = Infixl 500 }
 
-val igtok_def = Define`igtok P = tok P (K NONE)`
+Definition igtok_def :
+  igtok P = tok P (K NONE)
+End
 
-val DigitSet_def = Define`
+Definition DigitSet_def :
   DigitSet = charset_string "0123456789"
-`
+End
 
-val EscapableChar_def = Define`
-  EscapableChar c <=> MEM c "\\.^$*+?|~{}[]()" \/ ORD c = 96`
+Definition EscapableChar_def :
+  EscapableChar c <=> MEM c "\\.^$*+?|~{}[]()" \/ ORD c = 96
+End
 
-val OrM_def = Define`
+Definition OrM_def :
   OrM roptlist = OPTION_MAP Or (OPT_MMAP I roptlist)
-`
+End
+
 
 (* breaks abstraction, see TODO on mkNT Charset below *)
-val charset_char_def = Define`
-  charset_char c = Chset (Charset (n2w (ORD c)) 0w 0w 0w)`;
-val uncharset_char_def = Define`
+Definition charset_char_def :
+  charset_char c = Chset (Charset (n2w (ORD c)) 0w 0w 0w)
+End
+
+Definition uncharset_char_def :
   (uncharset_char (Chset (Charset w _ _ _)) = CHR (w2n (w && 255w))) /\
-  (uncharset_char _ = CHR 0)`;
-val uncharset_char_charset_char = Q.store_thm("uncharset_char_charset_char[simp]",
-  `uncharset_char (charset_char c) = c`,
+  (uncharset_char _ = CHR 0)
+End
+
+Theorem uncharset_char_charset_char :
+ uncharset_char (charset_char c) = c
+Proof
   rw[charset_char_def,uncharset_char_def]
   \\ once_rewrite_tac[wordsTheory.WORD_AND_COMM]
   \\ `255n = 2 ** 8 - 1` by simp[] \\ pop_assum SUBST1_TAC
   \\ srw_tac[wordsLib.WORD_ss][wordsTheory.WORD_AND_EXP_SUB1]
   \\ qspec_then`c`strip_assume_tac stringTheory.ORD_BOUND
-  \\ rw[stringTheory.CHR_ORD]);
+  \\ rw[stringTheory.CHR_ORD]
+QED
 
-val rePEG_def = Define`
+Definition rePEG_def :
   rePEG = <|
     start := pnt Top ;
     rules := FEMPTY |++ [
@@ -154,54 +172,71 @@ val rePEG_def = Define`
       (mkNT Top, pnt Alt)
      ]
   |>
-`;
 
-val FDOM_rePEG = save_thm("FDOM_rePEG",
-  EVAL``FDOM rePEG.rules``);
+End
+;
 
-val wfpeg_BslashSpecial_applied = Q.store_thm("wfpeg_BslashSpecial_applied",
-  `wfpeg rePEG (rePEG.rules ' (mkNT BslashSpecial))`,
+Theorem FDOM_rePEG = EVAL``FDOM rePEG.rules``;
+
+Theorem wfpeg_BslashSpecial_applied :
+ wfpeg rePEG (rePEG.rules ' (mkNT BslashSpecial))
+Proof
   CONV_TAC(RAND_CONV EVAL)
-  \\ rpt(rw[Once wfpeg_cases]));
+  \\ rpt(rw[Once wfpeg_cases])
+QED
 
-val wfpeg_BslashSpecial = Q.store_thm("wfpeg_BslashSpecial",
-  `wfpeg rePEG (nt (mkNT BslashSpecial) I)`,
+Theorem wfpeg_BslashSpecial :
+ wfpeg rePEG (nt (mkNT BslashSpecial) I)
+Proof
   rw[Once wfpeg_cases] >- EVAL_TAC
-  \\ rw[wfpeg_BslashSpecial_applied]);
+  \\ rw[wfpeg_BslashSpecial_applied]
+QED
 
-val wfpeg_CharSet_applied = Q.store_thm("wfpeg_CharSet_applied",
-  `wfpeg rePEG (rePEG.rules ' (mkNT CharSet))`,
+Theorem wfpeg_CharSet_applied :
+ wfpeg rePEG (rePEG.rules ' (mkNT CharSet))
+Proof
   CONV_TAC(RAND_CONV EVAL)
-  \\ ntac 2 (rw[Once wfpeg_cases]));
+  \\ ntac 2 (rw[Once wfpeg_cases])
+QED
 
-val wfpeg_CharSet = Q.store_thm("wfpeg_CharSet",
-  `wfpeg rePEG (nt (mkNT CharSet) I)`,
+Theorem wfpeg_CharSet :
+ wfpeg rePEG (nt (mkNT CharSet) I)
+Proof
   rw[Once wfpeg_cases] >- EVAL_TAC
-  \\ rw[wfpeg_CharSet_applied]);
+  \\ rw[wfpeg_CharSet_applied]
+QED
 
-val wfpeg_Atom_applied = Q.store_thm("wfpeg_Atom_applied",
-  `wfpeg rePEG (rePEG.rules ' (mkNT Atom))`,
+Theorem wfpeg_Atom_applied :
+ wfpeg rePEG (rePEG.rules ' (mkNT Atom))
+Proof
   CONV_TAC(RAND_CONV EVAL)
-  \\ rpt(rw[Once wfpeg_cases]));
+  \\ rpt(rw[Once wfpeg_cases])
+QED
 
-val wfpeg_Atom = Q.store_thm("wfpeg_Atom",
-  `wfpeg rePEG (nt (mkNT Atom) I)`,
+Theorem wfpeg_Atom :
+ wfpeg rePEG (nt (mkNT Atom) I)
+Proof
   rw[Once wfpeg_cases] >- EVAL_TAC
-  \\ rw[wfpeg_Atom_applied]);
+  \\ rw[wfpeg_Atom_applied]
+QED
 
-val wfpeg_Star_applied = Q.store_thm("wfpeg_Star_applied",
-  `wfpeg rePEG (rePEG.rules ' (mkNT Star))`,
+Theorem wfpeg_Star_applied :
+ wfpeg rePEG (rePEG.rules ' (mkNT Star))
+Proof
   CONV_TAC(RAND_CONV EVAL)
   \\ rw[Once wfpeg_cases,wfpeg_Atom]
-  \\ rpt(rw[Once wfpeg_cases]));
+  \\ rpt(rw[Once wfpeg_cases])
+QED
 
-val wfpeg_Star = Q.store_thm("wfpeg_Star",
-  `wfpeg rePEG (nt (mkNT Star) I)`,
+Theorem wfpeg_Star :
+ wfpeg rePEG (nt (mkNT Star) I)
+Proof
   rw[Once wfpeg_cases] >- EVAL_TAC
   \\ rw[wfpeg_Star_applied])
 
-val wfpeg_Concat_applied = Q.store_thm("wfpeg_Concat_applied",
-  `wfpeg rePEG (rePEG.rules ' (mkNT Concat))`,
+Theorem wfpeg_Concat_applied :
+ wfpeg rePEG (rePEG.rules ' (mkNT Concat))
+Proof
   CONV_TAC(RAND_CONV EVAL)
   \\ rw[Once wfpeg_cases]
   >- rw[wfpeg_Star]
@@ -211,36 +246,48 @@ val wfpeg_Concat_applied = Q.store_thm("wfpeg_Concat_applied",
   \\ fs[Once peg0_cases]
   \\ fs[EVAL``rePEG.rules ' (mkNT Atom)``]
   \\ rw[] \\ fs[]
-  \\ fs[Once peg0_cases]);
+  \\ fs[Once peg0_cases]
+QED
 
-val wfpeg_Concat = Q.store_thm("wfpeg_Concat",
-  `wfpeg rePEG (nt (mkNT Concat) I)`,
+Theorem wfpeg_Concat :
+ wfpeg rePEG (nt (mkNT Concat) I)
+Proof
   rw[Once wfpeg_cases] >- EVAL_TAC
-  \\ rw[wfpeg_Concat_applied]);
+  \\ rw[wfpeg_Concat_applied]
+QED
 
-val wfpeg_Alt_applied = Q.store_thm("wfpeg_Alt_applied",
-  `wfpeg rePEG (rePEG.rules ' (mkNT Alt))`,
+Theorem wfpeg_Alt_applied :
+ wfpeg rePEG (rePEG.rules ' (mkNT Alt))
+Proof
   CONV_TAC(RAND_CONV EVAL)
   \\ rw[Once wfpeg_cases,wfpeg_Concat]
-  \\ ntac 3 (rw[Once wfpeg_cases]));
+  \\ ntac 3 (rw[Once wfpeg_cases])
+QED
 
-val wfpeg_Alt = Q.store_thm("wfpeg_Alt",
-  `wfpeg rePEG (nt (mkNT Alt) I)`,
+Theorem wfpeg_Alt :
+ wfpeg rePEG (nt (mkNT Alt) I)
+Proof
   rw[Once wfpeg_cases] >- EVAL_TAC
-  \\ rw[wfpeg_Alt_applied]);
+  \\ rw[wfpeg_Alt_applied]
+QED
 
-val wfpeg_Top_applied = Q.store_thm("wfpeg_Top_applied",
-  `wfpeg rePEG (rePEG.rules ' (mkNT Top))`,
+Theorem wfpeg_Top_applied :
+ wfpeg rePEG (rePEG.rules ' (mkNT Top))
+Proof
   CONV_TAC(RAND_CONV EVAL)
-  \\ rw[wfpeg_Alt]);
+  \\ rw[wfpeg_Alt]
+QED
 
-val wfpeg_Top = Q.store_thm("wfpeg_Top",
-  `wfpeg rePEG (nt (mkNT Top) I)`,
+Theorem wfpeg_Top :
+ wfpeg rePEG (nt (mkNT Top) I)
+Proof
   rw[Once wfpeg_cases] >- EVAL_TAC
-  \\ rw[wfpeg_Top_applied]);
+  \\ rw[wfpeg_Top_applied]
+QED
 
-val wfG_rePEG = Q.store_thm("wfG_rePEG",
-  `wfG rePEG`,
+Theorem wfG_rePEG :
+ wfG rePEG
+Proof
   simp[wfG_def,Gexprs_def,finite_mapTheory.IN_FRANGE,PULL_EXISTS,FDOM_rePEG]
   \\ rw[] \\ pop_assum mp_tac
   \\ TRY (
@@ -248,19 +295,28 @@ val wfG_rePEG = Q.store_thm("wfG_rePEG",
     \\ CONV_TAC(LAND_CONV(RAND_CONV(RAND_CONV EVAL)))
     \\ simp[subexprs_def]
     \\ strip_tac \\ rpt BasicProvers.VAR_EQ_TAC
-    \\ rpt(rw[Once wfpeg_cases,wfpeg_Top,wfpeg_Alt,wfpeg_Concat,wfpeg_Star,wfpeg_Atom,wfpeg_BslashSpecial,wfpeg_CharSet]))
+    \\ rpt(rw[Once wfpeg_cases,wfpeg_Top,wfpeg_Alt, wfpeg_Concat,
+              wfpeg_Star,wfpeg_Atom,wfpeg_BslashSpecial,wfpeg_CharSet]))
   \\ CONV_TAC(LAND_CONV EVAL) \\ rw[]
-  \\ rpt(rw[Once wfpeg_cases,wfpeg_Top,wfpeg_Alt,wfpeg_Concat,wfpeg_Star,wfpeg_Atom]));
+  \\ rpt(rw[Once wfpeg_cases,wfpeg_Top,wfpeg_Alt,
+            wfpeg_Concat,wfpeg_Star,wfpeg_Atom])
+QED
 
-val add_loc_def = Define`
-  add_loc c = (c, Locs (locn 0 0 0) (locn 0 0 0))`;
+Definition add_loc_def :
+  add_loc c = (c, Locs (locn 0 0 0) (locn 0 0 0))
+End
 
-val parse_regexp_def = Define`
+
+Definition parse_regexp_def :
   parse_regexp s =
     case peg_exec rePEG rePEG.start (MAP add_loc s) [] done failed
-    of Result (SOME ([],SOME r)) => SOME r | _ => NONE`;
+    of Result (SOME ([],SOME r)) => SOME r | _ => NONE
+End
+
 
 (*
+load "wordsLib";
+
 val _ = computeLib.add_persistent_funs ["pegexec.peg_nt_thm"]
 
 val r = EVAL ``parse_regexp "\\d"``

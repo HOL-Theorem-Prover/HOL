@@ -121,6 +121,11 @@ sig
   val EVAL_RULE      : thm -> thm
   val EVAL_TAC       : tactic
 
+  (* Automate some routine set theory by reduction to FOL *)
+  val SET_TAC        : thm list -> tactic
+  val ASM_SET_TAC    : thm list -> tactic
+  val SET_RULE       : term -> thm
+
   (* Miscellaneous *)
 
   val ZAP_TAC        : simpset -> thm list -> tactic

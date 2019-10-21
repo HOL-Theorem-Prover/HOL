@@ -24,4 +24,6 @@ sig
   val tmvar_vary            : string -> string
   val gen_variant           : (string -> string)
                                 -> string list -> string -> string
+
+  val is_clean_varname      : string -> bool
 end

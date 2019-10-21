@@ -1,103 +1,58 @@
-(*
-
-app load ["bossLib", "metisLib", "arithmeticTheory", "pred_setTheory", "listTheory",
-          "state_transformerTheory", "formalizeUseful",
-          "combinTheory", "pairTheory", "realTheory", "realLib", "extra_boolTheory", "jrhUtils",
-          "extra_pred_setTheory", "realSimps", "extra_realTheory",
-          "measureTheory", "numTheory", "simpLib",
-          "seqTheory", "subtypeTheory",
-          "transcTheory", "limTheory", "stringTheory", "rich_listTheory", "stringSimps",
-          "listSimps"];
-
-*)
+(* ------------------------------------------------------------------------- *)
+(* Borel measurable sets defined on reals (from "examples/diningcryptos")    *)
+(* Author: Aaron Coble (2010)                                                *)
+(* Cambridge University                                                      *)
+(* ------------------------------------------------------------------------- *)
 
 open HolKernel Parse boolLib bossLib metisLib arithmeticTheory pred_setTheory
-     listTheory state_transformerTheory formalizeUseful extra_numTheory combinTheory
-     pairTheory realTheory realLib extra_boolTheory jrhUtils
-     extra_pred_setTheory realSimps extra_realTheory measureTheory numTheory
-     simpLib seqTheory subtypeTheory
-     transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps;
+     listTheory combinTheory pairTheory realTheory realLib jrhUtils realSimps
+     simpLib seqTheory real_sigmaTheory transcTheory limTheory numTheory;
 
-open real_sigmaTheory;
+open hurdUtils util_probTheory sigma_algebraTheory real_measureTheory;
 
 (* ------------------------------------------------------------------------- *)
-(* Start a new theory called "borel"                                         *)
+(* Start a new theory called "borel" (renamed to "real_borel")               *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = new_theory "borel";
+val _ = new_theory "real_borel";
 
-(* ------------------------------------------------------------------------- *)
-(* Helpful proof tools                                                       *)
-(* ------------------------------------------------------------------------- *)
-
-val REVERSE = Tactical.REVERSE;
-val lemma = I prove;
-
-val Simplify = RW_TAC arith_ss;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
-val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val Cond =
-  DISCH_THEN
-  (fn mp_th =>
-   let
-     val cond = fst (dest_imp (concl mp_th))
-   in
-     KNOW_TAC cond >| [ALL_TAC, DISCH_THEN (MP_TAC o MP mp_th)]
-   end);
-
-val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-
-val safe_list_ss = (simpLib.++ (bool_ss, LIST_ss));
-
-val safe_string_ss = (simpLib.++ (bool_ss, STRING_ss));
-
-val arith_string_ss = (simpLib.++ (arith_ss, STRING_ss));
-
-
-(* ************************************************************************* *)
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)
 (* ************************************************************************* *)
-(* ************************************************************************* *)
 
-val borel_space_def = Define
-   `borel_space = sigma (UNIV:real->bool) (IMAGE (\a:real. {x:real | x <= a}) (UNIV:real->bool))`;
+val borel_def = Define
+   `borel = sigma univ(:real) (IMAGE (\a:real. {x:real | x <= a}) univ(:real))`;
 
-
-val borel_measurable_def = Define
-   `borel_measurable a = measurable a borel_space`;
+val _ = overload_on ("borel_measurable", ``\a. measurable a borel``);
 
 val mono_convergent_def = Define
-   `mono_convergent u f s =
+   `mono_convergent u f s <=>
         (!x m n. m <= n /\ x IN s ==> u m x <= u n x) /\
         (!x. x IN s ==> (\i. u i x) --> f x)`;
 
-(* ************************************************************************* *)
+val indicator_fn_def = Define
+   `indicator_fn s = \x. if x IN s then (1:real) else (0:real)`;
+
 (* ************************************************************************* *)
 (* Proofs                                                                    *)
-(* ************************************************************************* *)
 (* ************************************************************************* *)
 
 val in_borel_measurable = store_thm
   ("in_borel_measurable",
-   ``!f s. f IN borel_measurable s =
+   ``!f s. f IN borel_measurable s <=>
            sigma_algebra s /\
            (!s'. s' IN subsets (sigma UNIV (IMAGE (\a. {x | x <= a}) UNIV)) ==>
                  PREIMAGE f s' INTER space s IN subsets s)``,
-   RW_TAC std_ss [borel_measurable_def, IN_MEASURABLE, borel_space_def,
+   RW_TAC std_ss [IN_MEASURABLE, borel_def,
                   SPACE_SIGMA, IN_FUNSET, IN_UNIV]
    >> `sigma_algebra (sigma UNIV (IMAGE (\a. {x | x <= a}) UNIV))`
         by (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA
             >> RW_TAC std_ss [subset_class_def, SUBSET_DEF, IN_UNIV])
    >> ASM_REWRITE_TAC []);
 
-
 val borel_measurable_const = store_thm
   ("borel_measurable_const",
-   ``!s c. sigma_algebra s ==>
-           (\x. c) IN borel_measurable s``,
+  ``!s c. sigma_algebra s ==> (\x. c) IN borel_measurable s``,
    RW_TAC std_ss [in_borel_measurable]
    >> Cases_on `c IN s'`
    >- (`PREIMAGE (\x. c) s' INTER space s = space s`
@@ -109,7 +64,6 @@ val borel_measurable_const = store_thm
         by RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_PREIMAGE, NOT_IN_EMPTY]
    >> POP_ORW
    >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA]);
-
 
 val borel_measurable_indicator = store_thm
   ("borel_measurable_indicator",
@@ -137,12 +91,12 @@ val borel_measurable_indicator = store_thm
         by (RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_PREIMAGE, NOT_IN_EMPTY] >> METIS_TAC [])
    >> POP_ORW >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, algebra_def]);
 
-
+(* c.f. IN_MEASURABLE_BOREL_RC in borelTheory *)
 val borel_measurable_le_iff = store_thm
   ("borel_measurable_le_iff",
    ``!m. measure_space m ==>
-        !f. f IN borel_measurable (m_space m, measurable_sets m) =
-            (!a. {w | w IN m_space m /\ f w <= a} IN measurable_sets m)``,
+         !f. f IN borel_measurable (m_space m, measurable_sets m) <=>
+             !a. {w | w IN m_space m /\ f w <= a} IN measurable_sets m``,
    NTAC 3 STRIP_TAC >> EQ_TAC
    >- (RW_TAC std_ss [in_borel_measurable, subsets_def, space_def]
        >> POP_ASSUM (MP_TAC o REWRITE_RULE [PREIMAGE_def] o Q.SPEC `{b | b <= a}`)
@@ -155,7 +109,7 @@ val borel_measurable_le_iff = store_thm
        >> MATCH_MP_TAC IN_SIGMA
        >> RW_TAC std_ss [IN_IMAGE, IN_UNIV, Once EXTENSION, GSPECIFICATION]
        >> Q.EXISTS_TAC `a` >> SIMP_TAC std_ss [])
-   >> RW_TAC std_ss [borel_measurable_def, borel_space_def]
+   >> RW_TAC std_ss [borel_def]
    >> MATCH_MP_TAC MEASURABLE_SIGMA
    >> RW_TAC std_ss [IN_FUNSET, IN_UNIV, subset_class_def, space_def, subsets_def, SUBSET_UNIV,
                      IN_IMAGE]
@@ -166,12 +120,12 @@ val borel_measurable_le_iff = store_thm
             >> DECIDE_TAC)
    >> RW_TAC std_ss []);
 
-
+(* c.f. IN_MEASURABLE_BOREL_IMP in borelTheory *)
 val sigma_le_less = store_thm
   ("sigma_le_less",
-   ``!f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ f w <= a} IN subsets A) ==>
-        !a. {w | w IN space A /\ f w < a} IN subsets A``,
-   REPEAT STRIP_TAC
+  ``!f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ f w <= a} IN subsets A) ==>
+          !a. {w | w IN space A /\ f w < a} IN subsets A``,
+   rpt STRIP_TAC
    >> `BIGUNION (IMAGE (\n. {w | w IN space A /\ f w <= a - inv(&(SUC n))}) (UNIV:num->bool)) =
        {w | w IN space A /\ f w < a}`
         by (ONCE_REWRITE_TAC [EXTENSION]
@@ -205,12 +159,11 @@ val sigma_le_less = store_thm
    >> RW_TAC std_ss [COUNTABLE_NUM, image_countable, SUBSET_DEF, IN_IMAGE, IN_UNIV]
    >> METIS_TAC []);
 
-
 val sigma_less_ge = store_thm
   ("sigma_less_ge",
-   ``!f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ f w < a} IN subsets A) ==>
-        !a. {w | w IN space A /\ a <= f w} IN subsets A``,
-   REPEAT STRIP_TAC
+  ``!f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ f w < a} IN subsets A) ==>
+          !a. {w | w IN space A /\ a <= f w} IN subsets A``,
+   rpt STRIP_TAC
    >> `{w | w IN space A /\ a <= f w} =
        space A DIFF {w | w IN space A /\ f w < a}`
         by (RW_TAC std_ss [Once EXTENSION, IN_DIFF, GSPECIFICATION, real_lt]
@@ -218,12 +171,11 @@ val sigma_less_ge = store_thm
    >> POP_ORW
    >> METIS_TAC [SIGMA_ALGEBRA]);
 
-
 val sigma_ge_gr = store_thm
   ("sigma_ge_gr",
-   ``!f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ a <= f w} IN subsets A) ==>
-        !a. {w | w IN space A /\ a < f w} IN subsets A``,
-   REPEAT STRIP_TAC
+  ``!f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ a <= f w} IN subsets A) ==>
+          !a. {w | w IN space A /\ a < f w} IN subsets A``,
+   rpt STRIP_TAC
    >> `BIGUNION (IMAGE (\n. {w | w IN space A /\ a <= f w - inv(&(SUC n))}) (UNIV:num->bool)) =
        {w | w IN space A /\ a < f w}`
         by (ONCE_REWRITE_TAC [EXTENSION]
@@ -257,12 +209,11 @@ val sigma_ge_gr = store_thm
    >> RW_TAC std_ss [COUNTABLE_NUM, image_countable, SUBSET_DEF, IN_IMAGE, IN_UNIV, REAL_LE_SUB_LADD]
    >> METIS_TAC []);
 
-
 val sigma_gr_le = store_thm
   ("sigma_gr_le",
-   ``!f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ a < f w} IN subsets A) ==>
-        !a. {w | w IN space A /\ f w <= a} IN subsets A``,
-   REPEAT STRIP_TAC
+  ``!f A. sigma_algebra A /\ (!(a:real). {w | w IN space A /\ a < f w} IN subsets A) ==>
+          !a. {w | w IN space A /\ f w <= a} IN subsets A``,
+   rpt STRIP_TAC
    >> `{w | w IN space A /\ f w <= a} =
        space A DIFF {w | w IN space A /\ a < f w}`
         by (RW_TAC std_ss [Once EXTENSION, IN_DIFF, GSPECIFICATION, real_lt]
@@ -270,15 +221,14 @@ val sigma_gr_le = store_thm
    >> POP_ORW
    >> METIS_TAC [SIGMA_ALGEBRA]);
 
-
 val borel_measurable_gr_iff = store_thm
   ("borel_measurable_gr_iff",
-   ``!m. measure_space m ==>
-        !f. f IN borel_measurable (m_space m, measurable_sets m) =
-            (!a. {w | w IN m_space m /\ a < f w} IN measurable_sets m)``,
+  ``!m. measure_space m ==>
+        !f. f IN borel_measurable (m_space m, measurable_sets m) <=>
+            !a. {w | w IN m_space m /\ a < f w} IN measurable_sets m``,
    RW_TAC std_ss [measure_space_def, borel_measurable_le_iff]
    >> EQ_TAC
-   >- (REPEAT STRIP_TAC
+   >- (rpt STRIP_TAC
        >> `{w | w IN m_space m /\ a < f w} =
                 m_space m DIFF {w | w IN m_space m /\ f w <= a}`
         by (ONCE_REWRITE_TAC [EXTENSION]
@@ -288,16 +238,15 @@ val borel_measurable_gr_iff = store_thm
        >> METIS_TAC [SIGMA_ALGEBRA, space_def, subsets_def])
    >> METIS_TAC [sigma_gr_le, SPACE, subsets_def, space_def, measurable_sets_def, m_space_def]);
 
-
 val borel_measurable_less_iff = store_thm
   ("borel_measurable_less_iff",
-   ``!m. measure_space m ==>
-        !f. f IN borel_measurable (m_space m, measurable_sets m) =
-            (!a. {w | w IN m_space m /\ f w < a} IN measurable_sets m)``,
+  ``!m. measure_space m ==>
+        !f. f IN borel_measurable (m_space m, measurable_sets m) <=>
+            !a. {w | w IN m_space m /\ f w < a} IN measurable_sets m``,
    RW_TAC std_ss [measure_space_def, borel_measurable_le_iff]
    >> EQ_TAC
    >- METIS_TAC [sigma_le_less, SPACE, subsets_def, space_def, measurable_sets_def, m_space_def]
-   >> REPEAT STRIP_TAC
+   >> rpt STRIP_TAC
    >> `BIGUNION (IMAGE (\n. {w | w IN m_space m /\ a <= f w - inv(&(SUC n))}) (UNIV:num->bool)) =
        {w | w IN m_space m /\ a < f w}`
         by (ONCE_REWRITE_TAC [EXTENSION]
@@ -345,39 +294,38 @@ val borel_measurable_less_iff = store_thm
    >- METIS_TAC [SPACE, subsets_def, space_def, measurable_sets_def, m_space_def, SIGMA_ALGEBRA]
    >> METIS_TAC []);
 
-
 val borel_measurable_ge_iff = store_thm
   ("borel_measurable_ge_iff",
    ``!m. measure_space m ==>
-        !f. f IN borel_measurable (m_space m, measurable_sets m) =
-            (!a. {w | w IN m_space m /\ a <= f w} IN measurable_sets m)``,
+        !f. f IN borel_measurable (m_space m, measurable_sets m) <=>
+            !a. {w | w IN m_space m /\ a <= f w} IN measurable_sets m``,
    RW_TAC std_ss [measure_space_def, borel_measurable_less_iff]
    >> EQ_TAC
-   >- (REPEAT STRIP_TAC
+   >- (rpt STRIP_TAC
        >> `{w | w IN m_space m /\ a <= f w} =
                 m_space m DIFF {w | w IN m_space m /\ f w < a}`
         by (RW_TAC std_ss [Once EXTENSION, IN_DIFF, GSPECIFICATION, real_lt]
             >> DECIDE_TAC)
        >> POP_ORW
        >> METIS_TAC [SIGMA_ALGEBRA, space_def, subsets_def])
-   >> METIS_TAC [sigma_ge_gr, sigma_gr_le, sigma_le_less, SPACE, subsets_def, space_def, measurable_sets_def, m_space_def]);
-
+   >> METIS_TAC [sigma_ge_gr, sigma_gr_le, sigma_le_less, SPACE, subsets_def, space_def,
+                 measurable_sets_def, m_space_def]);
 
 val affine_borel_measurable = store_thm
   ("affine_borel_measurable",
    ``!m g. measure_space m /\ g IN borel_measurable (m_space m, measurable_sets m) ==>
-                !(a:real) (b:real). (\x. a + (g x) * b) IN borel_measurable (m_space m, measurable_sets m)``,
-   REPEAT STRIP_TAC
+           !(a:real) (b:real). (\x. a + (g x) * b) IN borel_measurable (m_space m, measurable_sets m)``,
+   rpt STRIP_TAC
    >> Cases_on `b=0`
    >- (RW_TAC real_ss [] >> FULL_SIMP_TAC std_ss [measure_space_def, borel_measurable_const])
    >> `!x c. (a + g x * b <= c) = (g x * b <= c - a)`
-        by (REPEAT STRIP_TAC >> REAL_ARITH_TAC)
+        by (rpt STRIP_TAC >> REAL_ARITH_TAC)
    >> RW_TAC std_ss [borel_measurable_le_iff]
    >> POP_ASSUM (K ALL_TAC)
-   >> REVERSE (Cases_on `b < 0`)
+   >> Reverse (Cases_on `b < 0`)
    >- (`0 < b` by METIS_TAC [REAL_LT_LE, real_lt]
        >> `! x c. (g x * b <= c - a) = (g x <= (c - a) / b)`
-        by (REPEAT STRIP_TAC
+        by (rpt STRIP_TAC
             >> MATCH_MP_TAC (GSYM REAL_LE_RDIV_EQ)
             >> ASM_REWRITE_TAC [])
        >> `!c. {w | w IN m_space m /\ a + g w * b <= c} =
@@ -401,11 +349,10 @@ val affine_borel_measurable = store_thm
    >- METIS_TAC [SPACE, subsets_def, space_def, measurable_sets_def, m_space_def, SIGMA_ALGEBRA, measure_space_def]
    >> METIS_TAC [borel_measurable_less_iff]);
 
-
 val NON_NEG_REAL_RAT_DENSE = store_thm
   ("NON_NEG_REAL_RAT_DENSE",
-  ``!(x:real)(y:real). 0 <= x /\ x < y ==> ?(m:num)(n:num). x < &m / & n /\ &m / &n < y``,
-   REPEAT STRIP_TAC
+  ``!(x:real)(y:real). 0 <= x /\ x < y ==> ?(m:num) (n:num). x < &m / & n /\ &m / &n < y``,
+   rpt STRIP_TAC
    >> `0 < y - x` by RW_TAC real_ss [REAL_SUB_LT]
    >> (MP_TAC o Q.SPEC `y - x`) REAL_ARCH >> RW_TAC bool_ss []
    >> POP_ASSUM (MP_TAC o Q.SPEC `1`) >> RW_TAC bool_ss []
@@ -426,7 +373,7 @@ val NON_NEG_REAL_RAT_DENSE = store_thm
    >> FULL_SIMP_TAC std_ss [GSYM real_div]
    >> `minimal (\a. y <= & a / & n) = SUC m`
         by (MATCH_MP_TAC (GSYM MINIMAL_SUC_IMP)
-            >> REVERSE CONJ_TAC
+            >> Reverse CONJ_TAC
             >- (RW_TAC real_ss [o_DEF,GSYM real_lt] >> METIS_TAC [REAL_LET_TRANS])
             >> Suff `(\a. y <= & (SUC a) / & n) m` >- RW_TAC std_ss []
             >> Q.UNABBREV_TAC `m`
@@ -476,21 +423,17 @@ val NON_NEG_REAL_RAT_DENSE = store_thm
    >- (FULL_SIMP_TAC real_ss [] >> METIS_TAC [REAL_LT_ANTISYM, REAL_LET_TRANS])
    >> METIS_TAC [num_CASES,REAL_LT_IMP_LE]);
 
-
 val real_rat_set_def = Define
-   `real_rat_set = (IMAGE (\(a:num,b:num). (&a)/(&b)) ((UNIV:num->bool) CROSS (UNIV:num->bool))) UNION
-                   (IMAGE (\(a:num,b:num). ~((&a)/(&b))) ((UNIV:num->bool) CROSS (UNIV:num->bool)))`;
-
+   `real_rat_set = (IMAGE (\(a:num,b:num). (&a)/(&b)) (univ(:num) CROSS univ(:num))) UNION
+                   (IMAGE (\(a:num,b:num). ~((&a)/(&b))) (univ(:num) CROSS univ(:num)))`;
 
 val countable_real_rat_set = store_thm
-  ("countable_real_rat_set",
-   ``countable real_rat_set``,
+  ("countable_real_rat_set", ``countable real_rat_set``,
    RW_TAC std_ss [real_rat_set_def] >> MATCH_MP_TAC union_countable
    >> Suff `countable ((UNIV:num->bool) CROSS (UNIV:num->bool))` >- RW_TAC std_ss [image_countable]
    >> RW_TAC std_ss [COUNTABLE_ALT_BIJ] >> DISJ2_TAC
    >> RW_TAC std_ss [enumerate_def]
    >> METIS_TAC [SELECT_THM, NUM_2D_BIJ_INV]);
-
 
 val REAL_RAT_DENSE = store_thm
   ("REAL_RAT_DENSE",
@@ -514,14 +457,13 @@ val REAL_RAT_DENSE = store_thm
    >> `~y < ~x` by METIS_TAC [REAL_LT_NEG, REAL_LT_IMP_LE]
    >> METIS_TAC [NON_NEG_REAL_RAT_DENSE]);
 
-
 val borel_measurable_less_borel_measurable = store_thm
   ("borel_measurable_less_borel_measurable",
    ``!m f g. measure_space m /\
              f IN borel_measurable (m_space m, measurable_sets m) /\
              g IN borel_measurable (m_space m, measurable_sets m) ==>
                 {w | w IN m_space m /\ f w < g w} IN measurable_sets m``,
-   REPEAT STRIP_TAC
+   rpt STRIP_TAC
    >> `{w | w IN m_space m /\ f w < g w} =
         BIGUNION (IMAGE (\i. {w | w IN m_space m /\ f w < i} INTER {w | w IN m_space m /\ i < g w })
                         real_rat_set)`
@@ -546,14 +488,13 @@ val borel_measurable_less_borel_measurable = store_thm
    >> RW_TAC std_ss [subsets_def]
    >> METIS_TAC [borel_measurable_less_iff, borel_measurable_gr_iff]);
 
-
 val borel_measurable_leq_borel_measurable = store_thm
   ("borel_measurable_leq_borel_measurable",
    ``!m f g. measure_space m /\
              f IN borel_measurable (m_space m, measurable_sets m) /\
              g IN borel_measurable (m_space m, measurable_sets m) ==>
                 {w | w IN m_space m /\ f w <= g w} IN measurable_sets m``,
-   REPEAT STRIP_TAC
+   rpt STRIP_TAC
    >> `{w | w IN m_space m /\ f w <= g w} =
        m_space m DIFF {w | w IN m_space m /\ g w < f w}`
         by (RW_TAC std_ss [Once EXTENSION, IN_DIFF, GSPECIFICATION, real_lt] >> DECIDE_TAC)
@@ -562,14 +503,13 @@ val borel_measurable_leq_borel_measurable = store_thm
         by RW_TAC std_ss [borel_measurable_less_borel_measurable]
    >> FULL_SIMP_TAC std_ss [measure_space_def, SIGMA_ALGEBRA, subsets_def, space_def]);
 
-
 val borel_measurable_eq_borel_measurable = store_thm
   ("borel_measurable_eq_borel_measurable",
    ``!m f g. measure_space m /\
              f IN borel_measurable (m_space m, measurable_sets m) /\
              g IN borel_measurable (m_space m, measurable_sets m) ==>
                 {w | w IN m_space m /\ (f w = g w)} IN measurable_sets m``,
-   REPEAT STRIP_TAC
+   rpt STRIP_TAC
    >> `{w | w IN m_space m /\ (f w = g w)} =
        {w | w IN m_space m /\ f w <= g w} DIFF {w | w IN m_space m /\ f w < g w}`
         by (RW_TAC std_ss [Once EXTENSION, IN_DIFF, GSPECIFICATION, real_lt] >> METIS_TAC [REAL_LE_ANTISYM])
@@ -584,14 +524,13 @@ val borel_measurable_eq_borel_measurable = store_thm
    >> POP_ORW >> MATCH_MP_TAC ALGEBRA_DIFF
    >> RW_TAC std_ss [subsets_def]);
 
-
 val borel_measurable_neq_borel_measurable = store_thm
   ("borel_measurable_neq_borel_measurable",
    ``!m f g. measure_space m /\
              f IN borel_measurable (m_space m, measurable_sets m) /\
              g IN borel_measurable (m_space m, measurable_sets m) ==>
                 {w | w IN m_space m /\ ~(f w = g w)} IN measurable_sets m``,
-   REPEAT STRIP_TAC
+   rpt STRIP_TAC
    >> `{w | w IN m_space m /\ ~(f w = g w)} =
        m_space m DIFF {w | w IN m_space m /\ (f w = g w)}`
         by (RW_TAC std_ss [Once EXTENSION, IN_DIFF, GSPECIFICATION] >> DECIDE_TAC)
@@ -600,14 +539,11 @@ val borel_measurable_neq_borel_measurable = store_thm
         by RW_TAC std_ss [borel_measurable_eq_borel_measurable]
    >> FULL_SIMP_TAC std_ss [measure_space_def, SIGMA_ALGEBRA, subsets_def, space_def]);
 
-
-val sigma_algebra_borel_space = store_thm
-  ("sigma_algebra_borel_space",
-   ``sigma_algebra borel_space``,
-   RW_TAC std_ss [borel_space_def]
+val sigma_algebra_borel = store_thm
+  ("sigma_algebra_borel", ``sigma_algebra borel``,
+   RW_TAC std_ss [borel_def]
    >> MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA
    >> RW_TAC std_ss [subset_class_def, IN_UNIV, IN_IMAGE, SUBSET_DEF]);
-
 
 val borel_measurable_plus_borel_measurable = store_thm
   ("borel_measurable_plus_borel_measurable",
@@ -615,7 +551,7 @@ val borel_measurable_plus_borel_measurable = store_thm
              f IN borel_measurable (m_space m, measurable_sets m) /\
              g IN borel_measurable (m_space m, measurable_sets m) ==>
              (\x. f x + g x) IN borel_measurable (m_space m, measurable_sets m)``,
-   REPEAT STRIP_TAC
+   rpt STRIP_TAC
    >> `!a. {w | w IN m_space m /\ a <= f w + g w} =
            {w | w IN m_space m /\ a + (g w) * (~1) <= f w}`
         by RW_TAC real_ss [Once EXTENSION, GSPECIFICATION, GSYM real_sub, REAL_LE_SUB_RADD]
@@ -627,13 +563,12 @@ val borel_measurable_plus_borel_measurable = store_thm
         by FULL_SIMP_TAC std_ss []
    >> RW_TAC bool_ss [borel_measurable_ge_iff]);
 
-
 val borel_measurable_square = store_thm
   ("borel_measurable_square",
    ``!m f g. measure_space m /\
              f IN borel_measurable (m_space m, measurable_sets m) ==>
                 (\x. (f x) pow 2) IN borel_measurable (m_space m, measurable_sets m)``,
-   REPEAT STRIP_TAC
+   rpt STRIP_TAC
    >> RW_TAC std_ss [borel_measurable_le_iff]
    >> `!a. 0 <= a pow 2`
         by (STRIP_TAC
@@ -651,7 +586,7 @@ val borel_measurable_square = store_thm
    >> Cases_on `a < 0`
    >- (`{x | x IN m_space m /\ f x pow 2 <= a} = {}`
         by (RW_TAC std_ss [Once EXTENSION, NOT_IN_EMPTY, GSPECIFICATION]
-            >> REVERSE (Cases_on `(x IN m_space m)`) >> RW_TAC std_ss []
+            >> Reverse (Cases_on `(x IN m_space m)`) >> RW_TAC std_ss []
             >> RW_TAC std_ss [GSYM real_lt] >> MATCH_MP_TAC REAL_LTE_TRANS >> Q.EXISTS_TAC `0`
             >> RW_TAC std_ss [])
        >> FULL_SIMP_TAC std_ss [measure_space_def, SIGMA_ALGEBRA, subsets_def])
@@ -678,7 +613,7 @@ val borel_measurable_square = store_thm
         by (STRIP_TAC >> RW_TAC bool_ss [Once (GSYM REAL_POW2_ABS)]
             >> ONCE_REWRITE_TAC [GSYM ABS_BOUNDS]
             >> RW_TAC std_ss [GSYM REAL_NOT_LT]
-            >> REVERSE EQ_TAC
+            >> Reverse EQ_TAC
             >- (STRIP_TAC >> MATCH_MP_TAC REAL_POW_LT2 >> RW_TAC real_ss [REAL_LT_IMP_LE])
             >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
             >> POP_ASSUM MP_TAC
@@ -702,13 +637,11 @@ val borel_measurable_square = store_thm
    >> POP_ORW >> MATCH_MP_TAC ALGEBRA_INTER
    >> FULL_SIMP_TAC std_ss [subsets_def, measure_space_def, sigma_algebra_def]);
 
-
-val pow2_binomial = lemma
+val pow2_binomial = prove
   (``!(f:real) g. (f+g) pow 2 = f pow 2 + 2 * (f*g) + g pow 2``,
    RW_TAC std_ss [POW_2, REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB] >> REAL_ARITH_TAC);
 
-
-val times_eq_sum_squares = lemma
+val times_eq_sum_squares = prove
   (``!(f:real) g. f*g = ((f+g) pow 2)/4 - ((f-g)pow 2)/4``,
    RW_TAC std_ss [real_sub, pow2_binomial, real_div, REAL_MUL_RNEG]
    >> `~g pow 2 = g pow 2` by METIS_TAC [GSYM REAL_POW2_ABS, ABS_NEG]
@@ -721,14 +654,13 @@ val times_eq_sum_squares = lemma
    >> RW_TAC real_ss [GSYM real_sub]
    >> REAL_ARITH_TAC);
 
-
 val borel_measurable_times_borel_measurable = store_thm
   ("borel_measurable_times_borel_measurable",
    ``!m f g. measure_space m /\
              f IN borel_measurable (m_space m, measurable_sets m) /\
              g IN borel_measurable (m_space m, measurable_sets m) ==>
              (\x. f x * g x) IN borel_measurable (m_space m, measurable_sets m)``,
-   REPEAT STRIP_TAC
+   rpt STRIP_TAC
    >> `(\x. f x * g x) = (\x. ((f x + g x) pow 2)/4 - ((f x - g x) pow 2)/4)`
         by RW_TAC std_ss [times_eq_sum_squares]
    >> POP_ORW
@@ -745,7 +677,6 @@ val borel_measurable_times_borel_measurable = store_thm
    >> POP_ORW
    >> RW_TAC std_ss [affine_borel_measurable]);
 
-
 val borel_measurable_sub_borel_measurable = store_thm
   ("borel_measurable_sub_borel_measurable",
    ``!m f g. measure_space m /\
@@ -759,15 +690,14 @@ val borel_measurable_sub_borel_measurable = store_thm
    >> POP_ORW
    >> RW_TAC std_ss [affine_borel_measurable]);
 
-
 val mono_convergent_borel_measurable = store_thm
   ("mono_convergent_borel_measurable",
    ``!u m f. measure_space m /\ (!n. u n IN borel_measurable (m_space m, measurable_sets m)) /\
              mono_convergent u f (m_space m) ==>
                 f IN borel_measurable (m_space m, measurable_sets m)``,
-   REPEAT STRIP_TAC
+   rpt STRIP_TAC
    >> RW_TAC std_ss [borel_measurable_le_iff]
-   >> `!w. w IN m_space m /\ f w <= a = w IN m_space m /\ !i. u i w <= a`
+   >> `!w. w IN m_space m /\ f w <= a <=> w IN m_space m /\ !i. u i w <= a`
         by (FULL_SIMP_TAC std_ss [mono_convergent_def] >> STRIP_TAC >> EQ_TAC
             >- (RW_TAC std_ss [] >> MATCH_MP_TAC REAL_LE_TRANS >> Q.EXISTS_TAC `f w`
                 >> ASM_REWRITE_TAC [] >> `u i w = (\i. u i w) i` by SIMP_TAC std_ss [] >> POP_ORW
@@ -794,13 +724,12 @@ val mono_convergent_borel_measurable = store_thm
    >> POP_ASSUM MATCH_MP_TAC
    >> METIS_TAC [borel_measurable_le_iff]);
 
-
 val borel_measurable_SIGMA_borel_measurable = store_thm
   ("borel_measurable_SIGMA_borel_measurable",
    ``!m f s. measure_space m /\ FINITE s /\
            (!i. i IN s ==> f i IN borel_measurable (m_space m, measurable_sets m)) ==>
            (\x. SIGMA (\i. f i x) s) IN borel_measurable (m_space m, measurable_sets m)``,
-   REPEAT STRIP_TAC
+   rpt STRIP_TAC
    >> Suff `!s. FINITE s ==> (\s. !f. (!i. i IN s ==> f i IN borel_measurable (m_space m, measurable_sets m)) ==>
            (\x. SIGMA (\i. f i x) s) IN borel_measurable (m_space m, measurable_sets m)) s`
    >- METIS_TAC []
@@ -808,6 +737,5 @@ val borel_measurable_SIGMA_borel_measurable = store_thm
    >> RW_TAC std_ss [REAL_SUM_IMAGE_THM, IN_INSERT, DELETE_NON_ELEMENT]
    >- FULL_SIMP_TAC std_ss [measure_space_def, borel_measurable_const]
    >> METIS_TAC [borel_measurable_plus_borel_measurable]);
-
 
 val _ = export_theory ();

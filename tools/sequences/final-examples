@@ -7,15 +7,14 @@
 !examples/set-theory/zfset
 !examples/set-theory/vbg
 !!examples/category
-!!examples/miller/ho_prover
-!!examples/miller/miller
+!!examples/miller
 !!!examples/ARM_security_properties
 !examples/fun-op-sem/lprefix_lub
 !examples/fun-op-sem/for
 !examples/logic/propositional_logic
 !!examples/logic/ltl
 !!examples/logic/ltl-transformations
-## !!examples/fun-op-sem  works only with the standard kernel
+!!examples/fun-op-sem
 
 # Crypto examples
 !!examples/Crypto/AES

@@ -11,7 +11,7 @@ val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val () = Parse.temp_type_abbrev ("M",``:'state -> 'a # 'state``)
+Type M[local] = “:'state -> 'a # 'state”
 
 (* identity of the Kleisli category *)
 val UNIT_DEF = DEF `UNIT (x:'b) = \(s:'a). (x, s)`;

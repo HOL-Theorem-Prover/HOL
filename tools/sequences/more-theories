@@ -8,6 +8,7 @@ src/TeX
 src/monad/more_monads
 src/string
 src/sort
+!examples/logic/folcompactness
 !src/string/theorytesting
 !src/tfl/examples
 !examples/STE

@@ -1,6 +1,7 @@
 open HolKernel Parse boolLib bossLib finite_mapTheory;
 open recursivefnsTheory;
 open prnlistTheory;
+open nlistTheory
 open primrecfnsTheory;
 open listTheory;
 open arithmeticTheory;
@@ -378,23 +379,13 @@ val tri_mono = Q.store_thm ("tri_mono[simp]",
   `∀x y. (tri x <= tri y) <=> (x <= y)`,
   Induct_on `y` >> simp[]  );
 
-val npair_mono = Q.store_thm ("npair_mono[simp]",
-  `(x *, y < x *, z )<=> (y<z)`,
-  simp[EQ_IMP_THM,npair_def] >> conj_tac
-  >- (spose_not_then strip_assume_tac >> `z<=y` by simp[] >>
-      `tri(x+z) <= tri(x+y)` by simp[] >>
-      `z+tri(x+z) <= y+tri(x+y)` by simp[] >> fs[])
-  >- (strip_tac >>
-      irule (DECIDE “x < y ∧ a < b ⇒ x + a < y + b”) >> simp[]));
-
-
 val CELL_NUM_LEM1 = Q.store_thm("CELL_NUM_LEM1",
   `(∀n'. n' < n ⊗ c ⇒ (nfst n',CELL_NUM (nsnd n')) ∉ FDOM p) ∧
    (n,CELL_NUM c) ∈ FDOM p ==> (c=0) ∨ (c=1)`,
   spose_not_then strip_assume_tac >> Cases_on `CELL_NUM c`
   >- (`0<c` by simp[] >>
-      metis_tac[nfst_npair,nsnd_npair,npair_mono,CELL_NUM_def]) >>
-  `1<c` by simp[] >> metis_tac[nfst_npair,nsnd_npair,npair_mono,CELL_NUM_def]);
+      metis_tac[nfst_npair,nsnd_npair,npair2_lt,CELL_NUM_def]) >>
+  `1<c` by simp[] >> metis_tac[nfst_npair,nsnd_npair,npair2_lt,CELL_NUM_def]);
 
 val TM_ACT_LEM_1 = Q.store_thm("TM_ACT_LEM_1[simp]",
   `( (nsnd (nsnd (FULL_ENCODE_TM tm))) MOD 2) = NUM_CELL (tm.tape_h)`,

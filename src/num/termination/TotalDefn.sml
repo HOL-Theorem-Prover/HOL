@@ -535,7 +535,8 @@ local open Defn
      end
   val msg1 = "\nUnable to prove termination!\n\n\
               \Try using \"TotalDefn.tDefine <name> <quotation> <tac>\".\n"
-  val msg2 = "\nThe termination goal has been set up using Defn.tgoal <defn>.\n"
+  val msg2 = "\nThe termination goal has been set up using Defn.tgoal <defn>.\n\
+              \Solve the current proof goal (try e.g. p(), WF_REL_TAC).\n"
   fun termination_proof_failed defn =
      let
         val s =

@@ -405,6 +405,10 @@ local fun is_suc tm =
        case total dest_thy_const tm
         of NONE => false
          | SOME{Name,Thy,...} => Name="SUC" andalso Thy="num"
+      fun undef s =
+          if String.isSuffix "_DEF" s orelse String.isSuffix "_def" s then
+            String.substring(s,0,size s - 4)
+          else s
 in
 val SUC_TO_NUMERAL_DEFN_CONV_hook =
       ref (fn _ => raise ERR "SUC_TO_NUMERAL_DEFN_CONV_hook" "not initialized")
@@ -416,7 +420,7 @@ fun add_persistent_funs l =
       fun f (s, th) =
         [s] @
         (if has_lhs_SUC th then let
-            val name = s^"_compute"
+            val name = undef s^"_compute"
             val name = let
               val used = Lib.C Lib.mem (#1 (Lib.unzip (current_theorems())))
               fun loop n = let val x = (name^(Int.toString n))

@@ -1,10 +1,10 @@
 (* interactive mode
 loadPath := ["../ho_prover","../subtypes","../rsa"] @ !loadPath;
-app load ["bossLib","subtypeTheory","formalizeUseful","extra_boolTheory"];
+app load ["bossLib","subtypeTheory","hurdUtils","extra_boolTheory"];
 quietdec := true;
 *)
 
-open HolKernel Parse boolLib bossLib arithmeticTheory formalizeUseful
+open HolKernel Parse boolLib bossLib arithmeticTheory hurdUtils
      pred_setTheory subtypeTheory extra_boolTheory combinTheory;
 
 (*

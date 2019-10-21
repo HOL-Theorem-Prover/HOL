@@ -110,12 +110,17 @@ evaluations.")
 (put 'hol-term 'end-op
      (function
       (lambda ()
-        (re-search-forward "[`’”]\\|^Proof\\|^End\\|^Termination" nil t)
-        (setq hol-term-end-delim (match-string 0))
-        (goto-char (match-beginning 0)))))
+        (let ((pthm-point (save-excursion
+                            (re-search-forward "^Proof\\|^Theorem" nil t))))
+          (if (and pthm-point (equal (match-string 0) "Proof"))
+              (progn (goto-char (match-beginning 0))
+                     (setq hol-term-end-delim "Proof"))
+            (re-search-forward "[`’”]\\|^End\\|^Termination" nil t)
+            (setq hol-term-end-delim (match-string 0))
+            (goto-char (match-beginning 0)))))))
 (defvar hol-beg-pos nil) ; ugh, global, but easiest this way
 (defvar hol-quoted-theorem-proof-re-begin
-  "Theorem[[:space:]]+[A-Za-z0-9'_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
+  "\\(Theorem\\|Triviality\\)[[:space:]]+[A-Za-z0-9'_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
 (defvar hol-quoted-definition-re-begin
   (concat "Definition[[:space:]]+[A-Za-z0-9'_]+"
           "\\(\\[[A-Za-z0-9_,=]+\\]\\)?[[:space:]]*:"
@@ -196,6 +201,7 @@ process in it."
 (defun is-a-then (s)
   (and s (or (string-equal s "THEN")
              (string-equal s "THENL")
+             (string-equal s "QED")
              (string-equal s "val")
              (string-equal s ">-")
              (string-equal s ">>")
@@ -551,7 +557,7 @@ With a prefix ARG, uses `expandf' rather than `e'."
 (defun hol-string-contains-term-delimiters-p (s)
   (< 0 (count-text-match
         (concat "^Theorem\\|^Definition\\|^Proof\\|^\\(Co\\)?Inductive\\|"
-                "^Termination\\|^End\\|[“”‘’`]")
+                "^Termination\\|^End\\|[“”‘’`]\\|^Triviality")
         s)))
 
 
@@ -666,11 +672,12 @@ the region contains no term delimiters, then send region instead."
       (if (not done) (message "Incomplete comment in region given"))
       done))
 
-(defun remove-quoted-hol-term (bq eq end-marker)
+(defun remove-quoted-hol-term (bq eq end-marker &optional extra)
   (let ((start (point))
-        (bqsize (length bq)))
+        (bqsize (length bq))
+        (i (if extra extra 0)))
     (if (re-search-forward eq end-marker t)
-        (delete-region (- start bqsize) (point))
+        (delete-region (- start (- bqsize i)) (point))
       (error
        (format "Incomplete (%s...%s-quoted) HOL term in region given; \
 starts >%s%s<"
@@ -704,12 +711,15 @@ starts >%s%s<"
                 ((string= ms "“") (remove-quoted-hol-term "“" "”" m))
                 ((string= ms "‘") (remove-quoted-hol-term "‘" "’" m))
                 ((string-prefix-p "Theorem" ms)
-                 (remove-quoted-hol-term ms "^Proof" m))
+                 (remove-quoted-hol-term ms "^Proof" m 7))
+                ((string-prefix-p "Triviality" ms)
+                 (remove-quoted-hol-term ms "^Proof" m 10))
                 ((string-prefix-p "Definition" ms)
-                 (remove-quoted-hol-term ms "^\\(Termination\\|End\\)" m))
-                ((or (string-prefix-p "Inductive" ms)
-                     (string-prefix-p "CoInductive" ms))
-                 (remove-quoted-hol-term ms "^End" m))
+                 (remove-quoted-hol-term ms "^\\(Termination\\|End\\)" m 10))
+                ((string-prefix-p "Inductive" ms)
+                 (remove-quoted-hol-term ms "^End" m 9))
+                ((string-prefix-p "CoInductive" ms)
+                 (remove-quoted-hol-term ms "^End" m 11))
                 (t ; must be a back-tick
                  (if (not (looking-at "`"))
                      (remove-quoted-hol-term "`" "`" m)
@@ -725,7 +735,8 @@ starts >%s%s<"
               (word-list-to-regexp
                '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
                  "datatype" "nonfix" "exception" "end" "structure"
-                 "Theorem" "Definition" "Inductive" "CoInductive"))))
+                 "Theorem" "Definition" "Inductive" "CoInductive"
+                 "Triviality" "Datatype" "Type" "Overload"))))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
@@ -1119,11 +1130,12 @@ region instead. With prefix ARG prompt for a file-name to load."
 (defun hol-horizontal ()
   "Runs a HOL session after splitting the window"
   (interactive)
-  (hol '((lambda (b al)
+  (hol '(display-buffer-reuse-window
+         (lambda (b al)
            (let ((split-height-threshold nil)
-                 (split-width-threshold 1))
+                 (split-width-threshold 0))
              (display-buffer-pop-up-window b al))))
-       '((window-width . 80))))
+       '((window-width . 80) (reusable-frames . nil))))
 
 (defvar hol-new-buffer-style hol-new-buffer-style-default)
 
@@ -1936,7 +1948,8 @@ second is to show the new term.
 (font-lock-add-keywords
  'sml-mode
  '("^Theorem\\>" "^Proof\\>" "^QED\\>" "^Definition\\>" "^\\(Co\\)?Inductive\\>"
-   "^Termination\\>" "^End\\>"))
+   "^Termination\\>" "^End\\>" "^Datatype\\>" "^Type\\>" "^Triviality\\>"
+   "^Overload\\>"))
 
 (defgroup hol-faces nil "Faces used in pretty-printing HOL values"
   :group 'faces
