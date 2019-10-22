@@ -47,8 +47,10 @@ sig
                            tgtfatal : string -> unit,
                            diag : string -> (unit -> string) -> unit}
   (* 0 : quiet, 1 : normal, 2 : chatty, 3 : everything + debug info *)
-  val output_functions : {chattiness:int,debug:string list option,usepfx:bool}->
-                         output_functions
+  val output_functions :
+      {chattiness:int,
+       debug: {ins:string list,outs:string list} option,
+       usepfx:bool} -> output_functions
   val die_with : string -> 'a
   val terminal_log : string -> unit
 
@@ -93,7 +95,6 @@ sig
     val eqdir : t -> t -> bool
   end
   val nice_dir : string -> string (* prints a dir with ~ when HOME is set *)
-
   type include_info = {includes : string list, preincludes : string list}
   val empty_incinfo : include_info
   type dirset = hmdir.t Binaryset.set
@@ -115,14 +116,21 @@ sig
 
   val holdep_arg : File -> File option
 
+  type dep = hmdir.t * File
+  val empty_dset : dep Binaryset.set
+  val dep_compare : dep * dep -> order
+  val dep_toString : dep -> string
+  val depset_diff : dep list -> dep list -> dep list
+  val filestr_to_dep : string -> dep (* directory dependent *)
+
+
   val get_direct_dependencies :
       {incinfo : include_info, DEPDIR : string,
        output_functions : output_functions,
-       extra_targets : string list } ->
-      File -> File list
+       extra_targets : dep list } ->
+      File -> dep list
   exception HolDepFailed
 
-  type dep = (hmdir.t * File * string option)
   val forces_update_of : string * string -> bool
   val depforces_update_of : dep * string -> bool
 

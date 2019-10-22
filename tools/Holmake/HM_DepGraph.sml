@@ -38,7 +38,7 @@ datatype command =
 type 'a nodeInfo = { target : 'a, status : target_status,
                      command : command, phony : bool,
                      seqnum : int, dir : Holmake_tools.hmdir.t,
-                     dependencies : (node * string) list  }
+                     dependencies : (node * Holmake_tools.dep) list  }
 
 fun fupdStatus f (nI: 'a nodeInfo) : 'a nodeInfo =
   let
@@ -173,6 +173,7 @@ fun nodeInfo_toString tstr (nI : 'a nodeInfo) =
     hmdir.pretty_dir (hmdir.extendp {base = dir,  extension = tstr target}) ^
     (if phony then "[PHONY]" else "") ^
     "(" ^ Int.toString seqnum ^ ") " ^
+    "deps{" ^String.concatWith "," (map (Int.toString o #1) dependencies) ^ "}"^
     status_toString status ^ " : " ^
     (case command of
          SomeCmd s => s
@@ -268,26 +269,33 @@ fun postmortem (outs : Holmake_tools.output_functions) (status,g) =
     fun pr s = s
     val {diag,tgtfatal,...} = outs
     val diagK = diag "postmortem" o (fn x => fn _ => x)
+    fun pending_or_failed ps fs ns =
+        case ns of
+            [] => (ps,fs)
+          | (x as (n,nI))::rest => if #status nI = Failed{needed=true} then
+                                     pending_or_failed ps (x::fs) rest
+                                   else if #status nI = Pending{needed=true}then
+                                     pending_or_failed (x::ps) fs rest
+                                   else pending_or_failed ps fs rest
   in
-    case List.filter (fn (_,nI) => #status nI = Failed{needed=true})
-                     (listNodes g)
-     of
-        [] => OS.Process.success
-      | ns =>
+    case pending_or_failed [] [] (listNodes g) of
+        ([],[]) => OS.Process.success
+      | (ps, fs) =>
         let
           fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString pr nI
-          fun failed_nocmd (_, nI) =
-            #status nI = Failed{needed=true} andalso #command nI = NoCmd
-          val ns' = List.filter failed_nocmd ns
+          fun nocmd (_, nI) = #command nI = NoCmd
+          val fs' = List.filter nocmd fs
           fun nI_target (_, nI) = #target nI
         in
-          diagK ("Failed nodes: \n" ^ String.concatWith "\n" (map str ns));
-          if not (null ns') then
+          diagK ("Failed nodes: \n" ^ String.concatWith "\n" (map str fs));
+          diagK ("True pending: \n" ^ String.concatWith "\n" (map str ps));
+          if not (null fs') then
             tgtfatal ("Don't know how to build necessary target(s): " ^
-                      String.concatWith ", " (map nI_target ns'))
+                      String.concatWith ", " (map nI_target fs'))
           else ();
           OS.Process.failure
         end
+
   end
 
 

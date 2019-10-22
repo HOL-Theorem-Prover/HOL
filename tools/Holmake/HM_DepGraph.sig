@@ -2,6 +2,7 @@ signature HM_DepGraph =
 sig
 
   type t
+  type dep = Holmake_tools.dep
   exception NoSuchNode
   exception DuplicateTarget
   datatype target_status =
@@ -22,7 +23,7 @@ sig
   type 'a nodeInfo = { target : 'a, status : target_status,
                        phony : bool, dir : Holmake_tools.hmdir.t,
                        command : command, seqnum : int,
-                       dependencies : (node * string) list }
+                       dependencies : (node * dep) list }
   val nodeInfo_toString : ('a -> string) -> 'a nodeInfo -> string
   val node_toString : node -> string
   val setStatus : target_status -> 'a nodeInfo -> 'a nodeInfo
@@ -32,7 +33,7 @@ sig
   val add_node : string nodeInfo -> t -> t * node
   val updnode : node * target_status -> t -> t
   val nodeStatus : t -> node -> target_status
-  val addDeps : node * (node * string) list -> t -> t
+  val addDeps : node * (node * dep) list -> t -> t
   val peeknode : t -> node -> string nodeInfo option
   val target_node : t -> Holmake_tools.hmdir.t * string -> node option
   val size : t -> int

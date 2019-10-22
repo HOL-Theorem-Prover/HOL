@@ -4,6 +4,8 @@ struct
 open ProcessMultiplexor HM_DepGraph Holmake_tools
 type wp = HM_DepGraph.t workprovider
 
+(* type build_command = HM_GraphBuildJ1.build_command *)
+type mosml_build_command = HM_GraphBuildJ1.mosml_build_command
 datatype buildresult =
          BR_OK
        | BR_ClineK of { cline : string * string list,
@@ -31,7 +33,8 @@ fun pushd d f x =
 fun graphbuild optinfo g =
   let
     val _ = OS.FileSys.mkDir loggingdir handle _ => ()
-    val { build_command, mosml_build_command, warn, tgtfatal, diag,
+    val { build_command (* : build_command *),
+          mosml_build_command : mosml_build_command, warn, tgtfatal, diag,
           keep_going, quiet, hmenv, jobs, info, time_limit,
           relocbuild } = optinfo
     val _ = diag "Starting graphbuild"
@@ -53,14 +56,14 @@ fun graphbuild optinfo g =
       case (ok,find_runnable g) of
           (false, _) => GiveUpAndDie (g, false)
        |  (true, NONE) => NoMoreJobs (g, ok)
-       |  (true, SOME (n,nI)) =>
+       |  (true, SOME (n,nI : string nodeInfo)) =>
           let
             val _ = diag ("Found runnable node "^node_toString n)
             fun k b g =
               if b orelse keep_going then
                 genjob (updnode(n, if b then Succeeded else RealFail) g, true)
               else GiveUpAndDie (g, ok)
-            val depfs = map (toFile o #2) (#dependencies nI)
+            val deps = map #2 (#dependencies nI)
             val dir = Holmake_tools.hmdir.toAbsPath (#dir nI)
             val _ = is_pending (#status nI) orelse
                     raise Fail "runnable not pending"
@@ -81,7 +84,7 @@ fun graphbuild optinfo g =
                          Succeeded)
                       else RealFail
                   in
-                    case pushd dir (mosml_build_command hmenv hypargs) depfs of
+                    case pushd dir (mosml_build_command hmenv hypargs) deps of
                         SOME r =>
                           k (error (OS.Process.isSuccess r) = Succeeded) g
                       | NONE =>
@@ -149,10 +152,10 @@ fun graphbuild optinfo g =
                     case bic of
                         BIC_Compile =>
                         (case toFile target_s of
-                             UI c => bresk (bc (Compile depfs) (SIG c)) g
-                           | UO c => bresk (bc (Compile depfs) (SML c)) g
+                             UI c => bresk (bc (Compile deps) (SIG c)) g
+                           | UO c => bresk (bc (Compile deps) (SML c)) g
                            | ART (RawArticle s) =>
-                               bresk (bc (BuildArticle(s,depfs))
+                               bresk (bc (BuildArticle(s,deps))
                                          (SML (Script s)))
                                      g
                            | ART (ProcessedArticle s) =>
@@ -161,7 +164,7 @@ fun graphbuild optinfo g =
                                      g
                            | _ => raise Fail ("bg tgt = " ^ target_s))
                       | BIC_BuildScript thyname =>
-                          bresk (bc (BuildScript(thyname, depfs))
+                          bresk (bc (BuildScript(thyname, deps))
                                     (SML (Script thyname)))
                                 g
                   end
@@ -175,13 +178,14 @@ fun graphbuild optinfo g =
                 val _ = diag ("May not need to rebuild "^target_s)
               in
                 case List.find
-                       (fn (_, d) => forces_update_of(d,#target nI))
+                       (fn (_, d) => depforces_update_of(d,#target nI))
                        (#dependencies nI)
                  of
                     NONE => (diag ("Can skip work on "^target_s);
                              genjob (updnode (n, Succeeded) g, true))
                   | SOME (_,d) =>
-                    (diag ("Dependency "^d^" forces rebuild of "^ target_s);
+                    (diag ("Dependency "^dep_toString d^" forces rebuild of "^
+                           target_s);
                      stdprocess())
               end
             else

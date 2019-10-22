@@ -197,14 +197,17 @@ fun output_functions {usepfx,chattiness=n,debug} = let
   val info = if n >= 1 then msg stdOut else donothing
   val chatty = if n >= 2 then msg stdOut else donothing
   val tgtfatal = msg stdErr
-  val diag = if n >= 3 then
-               case debug of
-                   NONE => (fn _ => fn _ => ())
-                 | SOME [] => (fn _ => fn sf => msg stdErr (sf()))
-                 | SOME sl => (fn cat => fn sf => if member cat sl then
-                                                    msg stdErr (sf())
-                                                  else ())
-             else fn _ => donothing
+  fun pfx p s = "["^p^"] "^s
+  val diag =
+      if n >= 3 then
+        case debug of
+            NONE => (fn _ => fn _ => ())
+          | SOME {ins,outs} =>
+            (fn cat => fn sf => if member cat outs then () else
+                                if null ins orelse member cat ins then
+                                  msg stdErr (pfx cat (sf()))
+                                else ())
+      else fn _ => donothing
 in
   {warn = warn, diag = diag, tgtfatal = tgtfatal, info = info, chatty = chatty}
 end
@@ -635,8 +638,7 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
   val {chatty, diag, warn, ...} : output_functions = ofs
   val diagK = diag "holdep" o K
   val _ = chatty ("Analysing "^fromFile arg)
-  fun buildables s = let
-    val f = toFile s
+  fun buildables (d,f) = let
     val files =
         case f of
           SML (ss as Script t) => [UI ss, UO ss, SML (Theory t), DAT t,
@@ -654,7 +656,7 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
                  String.concatWith ", " includes ^ "], assumes = [" ^
                  String.concatWith ", " buildable_extras ^"]")
   val holdep_result =
-    Holdep.main {assumes = buildable_extras, diag = diag "Holdep",
+    Holdep.main {assumes = buildable_extras, diag = diag "holdep",
                  includes = includes, fname = fromFile arg}
     handle Holdep.Holdep_Error s =>
              (warn ("Holdep failed: "^s); raise HolDepFailed)
@@ -676,6 +678,15 @@ in
   output(outstr, Holdep.encode_for_HOLMKfile holdep_result);
   closeOut outstr
 end
+
+fun filestr_to_dep s =
+    let
+      val {dir,file} = OS.Path.splitDirFile s
+      val dir' = hmdir.extendp {base = hmdir.curdir(), extension = dir}
+    in
+      (dir',toFile file)
+    end
+
 
 (* pull out a list of files that target depends on from depfile.  *)
 (* All files on the right of a colon are assumed to be dependencies.
@@ -703,11 +714,10 @@ fun get_dependencies_from_file depfile = let
       val rhs = Substring.string (Substring.slice(rhs0, 1, NONE))
         handle Subscript => ""
     in
-      realspace_delimited_fields rhs
+      map filestr_to_dep (realspace_delimited_fields rhs)
     end
-    val result = List.concat (map process_line lines)
   in
-    List.map toFile result
+    List.concat (map process_line lines)
   end
 in
   parse_result (get_whole_file depfile)
@@ -728,7 +738,7 @@ fun holdep_arg (UO c) = SOME (SML c)
 
 fun mk_depfile_name DEPDIR s = fullPath [DEPDIR, s^".d"]
 
-type dep = (hmdir.t * File * string option)
+type dep = (hmdir.t * File)
 
 infix forces_update_of
 fun (f1 forces_update_of f2) = let
@@ -737,13 +747,30 @@ in
   FileSys.access(f1, []) andalso
   (not (FileSys.access(f2, [])) orelse FileSys.modTime f1 > FileSys.modTime f2)
 end
+val dep_compare = pair_compare (hmdir.compare, file_compare)
+val empty_dset : dep Binaryset.set = Binaryset.empty dep_compare
+fun dep_toString (d,f) =
+    OS.Path.concat (hmdir.toAbsPath d, fromFile f)
+fun depset_diff dl1 dl2 =
+    let
+      fun recurse [] = []
+        | recurse (d::ds) =
+          (if List.exists (fn d' => dep_compare(d,d') = EQUAL) dl2 then []
+           else [d]) @ recurse ds
+    in
+      recurse dl1
+    end
+
+
 
 infix depforces_update_of
-fun ((d,f1,_) depforces_update_of f2) = let
+fun ((d,f1) depforces_update_of f2) = let
   val p1 = hmdir.toAbsPath (hmdir.extendp {base = d, extension = fromFile f1})
 in
   p1 forces_update_of f2
 end
+
+fun localFile f = (hmdir.curdir(), f)
 
 fun get_direct_dependencies {incinfo,DEPDIR,output_functions,extra_targets} f =
 let
@@ -772,12 +799,12 @@ in
         []
   in
     case f of
-        UO (Theory s) => UI (Theory s) :: DAT s :: phase1
+        UO (Theory s) => localFile (UI (Theory s)) :: localFile(DAT s) :: phase1
       | UO x =>
         if FileSys.access(fromFile (SIG x), []) andalso
-           List.all (fn f => f <> SIG x) phase1
+           List.all (fn f => f <> localFile (SIG x)) phase1
         then
-          UI x :: phase1
+          localFile (UI x) :: phase1
         else
           phase1
       | _ => phase1

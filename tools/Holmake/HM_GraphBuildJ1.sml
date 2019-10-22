@@ -3,11 +3,12 @@ struct
 
 open Holmake_tools
 
-type build_command = HM_DepGraph.t -> include_info -> buildcmds -> File -> bool
+type build_command =
+     HM_DepGraph.t -> include_info -> dep buildcmds -> File -> bool
 type mosml_build_command =
      Holmake_types.env ->
      {noecho : bool, ignore_error : bool, command : string} ->
-     File list ->
+     dep list ->
      OS.Process.status option
 type 'optv buildinfo_t = {
   optv : 'optv,
@@ -34,7 +35,8 @@ fun upd1 node st g = HM_DepGraph.updnode(node,st) g
 
 fun graphbuildj1 static_info =
   let
-    val {build_command, mosml_build_command, outs, keep_going,
+    val {build_command : build_command,
+         mosml_build_command : mosml_build_command, outs, keep_going,
          quiet, hmenv, system} = static_info
     val {warn,diag,tgtfatal,info,...} = (outs : Holmake_tools.output_functions)
     val diagK = diag "graphbuildj1" o (fn x => fn _ => x)
@@ -49,7 +51,6 @@ fun graphbuildj1 static_info =
             | SOME (n, nI : string nodeInfo) =>
               let
                 val deps = map #2 (#dependencies nI)
-                val depfs = map toFile deps
                 val target_s = #target nI
                 fun k upd res =
                   let
@@ -65,11 +66,11 @@ fun graphbuildj1 static_info =
                       (diagK("J1Build: Running built-in compile on " ^
                              #target nI);
                        case toFile (#target nI) of
-                           UI c => k (upd1 n) (bc ii (Compile depfs) (SIG c))
-                         | UO c => k (upd1 n) (bc ii (Compile depfs) (SML c))
+                           UI c => k (upd1 n) (bc ii (Compile deps) (SIG c))
+                         | UO c => k (upd1 n) (bc ii (Compile deps) (SML c))
                          | ART (RawArticle s) =>
                              k (upd1 n) (bc ii
-                                            (BuildArticle(s,depfs))
+                                            (BuildArticle(s,deps))
                                             (SML (Script s)))
                          | ART (ProcessedArticle s) =>
                              k (upd1 n)
@@ -81,7 +82,7 @@ fun graphbuildj1 static_info =
                       in
                         k (updall (n::others))
                           (bc ii
-                              (BuildScript(thyname, depfs))
+                              (BuildScript(thyname, deps))
                               (SML (Script thyname)))
                       end
                     | cmd as SomeCmd c =>
@@ -89,7 +90,7 @@ fun graphbuildj1 static_info =
                         val hypargs as {noecho,ignore_error,command=c} =
                             process_hypat_options c
                       in
-                        case mosml_build_command hmenv hypargs depfs of
+                        case mosml_build_command hmenv hypargs deps of
                             SOME r => k (upd1 n) (OS.Process.isSuccess r)
                           | NONE =>
                             let
@@ -118,13 +119,14 @@ fun graphbuildj1 static_info =
                     val _ = diagK ("May not need to rebuild "^target_s)
                   in
                     case List.find
-                           (fn (_, d) => forces_update_of(d,#target nI))
+                           (fn (_, d) => depforces_update_of(d,#target nI))
                            (#dependencies nI)
                      of
                         NONE => (diagK ("Can skip work on "^target_s);
                                  k (upd1 n) true)
                       | SOME (_,d) =>
-                        (diagK ("Dependency "^d^" forces rebuild of "^target_s);
+                        (diagK ("Dependency "^dep_toString d^
+                                " forces rebuild of "^target_s);
                          stdprocess())
                   end
                 else

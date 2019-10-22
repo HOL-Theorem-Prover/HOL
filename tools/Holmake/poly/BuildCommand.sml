@@ -21,8 +21,8 @@ val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
 
 open HM_GraphBuildJ1
 
-datatype cmd_line = Mosml_compile of File list * string
-                  | Mosml_link of string * File list
+datatype cmd_line = Mosml_compile of dep list * string
+                  | Mosml_link of string * dep list
                   | Mosml_error
 
 datatype buildresult = datatype multibuild.buildresult
@@ -38,7 +38,7 @@ fun process_mosml_args (outs:Holmake_tools.output_functions) c = let
   val toplevel = ref false
   val obj = ref NONE
   val I = ref []
-  val obj_files = ref []
+  val obj_files = ref ([] : dep list)
   val src_file = ref NONE
   fun process_args [] = ()
     | process_args ("-c"::rest) = (c := true; process_args rest)
@@ -52,7 +52,7 @@ fun process_mosml_args (outs:Holmake_tools.output_functions) c = let
         else if isSource file then
           src_file := SOME file
         else if isObj file then
-          obj_files := toFile file::(!obj_files)
+          obj_files := filestr_to_dep file :: !obj_files
         else ();
         process_args rest
       end
@@ -130,24 +130,26 @@ fun finish_compilation warn depMods0 filename tgt =
              Systeml.build_after_reloc_envvar ^ " environment variable");
        OS.Process.success)
 
-fun poly_compile warn diag quietp file I deps = let
+fun poly_compile warn diag quietp file I (deps : dep list) = let
   val modName = fromFileNoSuf file
   val deps = let
     open Binaryset
-    val dep_set0 = addList (empty String.compare, map fromFile deps)
+    val dep_set0 = addList (empty_dset, deps)
     val {deps = extra_deps, ...} =
         Holdep.main {assumes = [], includes = I, diag = diag,
                      fname = fromFile file}
-    val dep_set = addList (dep_set0, extra_deps)
+    val dep_set =
+        addList (dep_set0, map Holmake_tools.filestr_to_dep extra_deps)
   in
-    foldr (fn (s,acc) => toFile s :: acc) [] dep_set
+    listItems dep_set
   end
   val _ = diag (fn _ => "Writing "^fromFile file^" with dependencies: " ^
-                        String.concatWith ", " (map fromFile deps))
+                        String.concatWith ", " (map dep_toString deps))
+  val depfiles = map (toFile o dep_toString) deps
   fun mapthis (Unhandled _) = NONE
     | mapthis (DAT _) = NONE
     | mapthis f = SOME (fromFileNoSuf f)
-  val depMods = List.map (addPath I) (List.mapPartial mapthis deps)
+  val depMods = List.map (addPath I) (List.mapPartial mapthis depfiles)
   fun usePathVars p = holpathdb.reverse_lookup {path = p}
   val depMods = List.map usePathVars depMods
   val say = if quietp then (fn s => ())
@@ -196,7 +198,7 @@ fun list_delete x [] = []
 
 type build_command = HM_DepGraph.t ->
                      {preincludes : string list, includes : string list} ->
-                     Holmake_tools.buildcmds ->
+                     dep Holmake_tools.buildcmds ->
                      File -> bool
 
 fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
@@ -279,7 +281,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       val scriptui = script^".ui"
       (* first thing to do is to create the Script.uo file *)
       val b =
-          case build_command g ii (Compile deps) scriptsml_file of
+          case build_command g ii (Compile (deps : dep list)) scriptsml_file of
               BR_OK => true
             | BR_Failed => false
             | BR_ClineK _ => raise Fail "Compilation resulted in commandline"
@@ -345,7 +347,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   in
     let
     in
-      case c of
+      case (c : dep buildcmds) of
           Compile deps =>
           let
             val file = fromFile arg
@@ -364,22 +366,25 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             run_script g scriptetc objectfiles
                        [s^"Theory.sml", s^"Theory.sig", s^"Theory.dat"]
           end
-        | BuildArticle (s0, deps) =>
+        | BuildArticle (s0, deps : dep list) =>
           let
             val s = s0 ^ ".art"
-            val oldscript_f = SML (Script s0)
-            val fakescript_f = SML (Script s)
-            val _ = Posix.FileSys.link {old = fromFile oldscript_f,
-                                        new = fromFile fakescript_f }
+            val dep_set = Binaryset.addList(empty_dset, deps)
+            val oldscript_str = s0 ^ "Script.sml"
+            val fakescript_str = s ^ "Script.sml"
+            val _ = Posix.FileSys.link {old = oldscript_str,
+                                        new = fakescript_str }
             val loggingextras =
                 case opentheory of SOME uo => [uo]
                                  | NONE => ["loggingHolKernel.uo"]
-            val deps = list_delete oldscript_f deps @ [fakescript_f]
+            val deps =
+                (Binaryset.delete(dep_set, filestr_to_dep oldscript_str)
+                                 |> Binaryset.listItems) @
+                [filestr_to_dep fakescript_str]
             val ((script,inters),objectfiles) =
                 setup_script s deps loggingextras
           in
-            run_script g (script,fromFile fakescript_f :: inters) objectfiles
-                       [s]
+            run_script g (script,fakescript_str :: inters) objectfiles [s]
           end
         | ProcessArticle s =>
           let
@@ -423,9 +428,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             let
             in
               diag (fn _ => "Moscow ML command is link -o "^result^" ["^
-                            String.concatWith ", " (map fromFile objs) ^ "]");
+                            String.concatWith ", "
+                                              (map dep_toString objs) ^ "]");
               SOME (poly_link (noecho orelse quiet_flag) result
-                              (map fromFileNoSuf objs))
+                              (map (OS.Path.base o dep_toString) objs))
             end
           | (Mosml_error, _) =>
             (warn ("*** Couldn't interpret Moscow ML command: "^c);

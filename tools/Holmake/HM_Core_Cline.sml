@@ -60,7 +60,7 @@ fun fupd_jobs f t = updateT t (U #jobs (f (#jobs t))) $$
 fun fupd_includes f t = updateT t (U #includes (f (#includes t))) $$
 
 type t = {
-  debug : string list option,
+  debug : {ins : string list, outs : string list} option,
   do_logging : bool,
   fast : bool,
   help : bool,
@@ -156,12 +156,21 @@ fun set_openthy s =
 fun addDbg sopt =
     resfn (fn (wn, t) =>
               let
+                fun process (x as {ins,outs}) sopt =
+                    case sopt of
+                        NONE => SOME x
+                      | SOME s =>
+                        if String.sub(s,0) = #"-" then
+                          if size s > 1 then
+                            SOME{ins=ins,
+                                 outs = String.extract(s,1,NONE) :: outs}
+                          else (wn "Ignoring bogus -d- option"; SOME x)
+                        else
+                          SOME{ins = s::ins, outs = outs}
                 val newvalue =
                     case #debug t of
-                        NONE => (case sopt of NONE => SOME []
-                                            | SOME s => SOME [s])
-                      | SOME l => (case sopt of NONE => SOME l
-                                              | SOME s => SOME (s::l))
+                        NONE => process {ins=[],outs=[]} sopt
+                      | SOME x => process x sopt
               in
                 updateT t (U #debug newvalue) $$
               end)
