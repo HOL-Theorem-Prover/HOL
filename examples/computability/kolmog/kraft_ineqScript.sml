@@ -1389,5 +1389,12 @@ Proof
   fs[bls_size_def]
 QED
 
+Theorem kolmog_kraft2:
+  bls_size {x | (∃y. HUTMpf x = SOME y)} n <= 1
+Proof
+  fs[kraft_ineq1,HUTMpf_prefix_free]
+QED
+
+
 
 val _ = export_theory();

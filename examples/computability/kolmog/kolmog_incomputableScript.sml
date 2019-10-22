@@ -715,7 +715,7 @@ Theorem INFINITE_SURJ:
 Proof
   metis_tac[FINITE_SURJ]
 QED
-
+(*
 
 Theorem plain_kolmog_lb_exists:
   ∃x. m <= plain_kolmog x
@@ -761,6 +761,7 @@ Theorem kfkmin_lb:
 Proof
   rw[fkmin_def] >> irule f_min_set_f >> fs[plain_kolmog_lb_exists]
 QED
+*)
 
 Theorem computable_imp_thm:
   ∀f. computable f ==> ∃i. ∀n. Phi i n = SOME (f n)
@@ -805,7 +806,7 @@ Theorem MEM_log2list_ineq:
    MEM x (log2list i) ⇔ 0 < x ∧ (2 ** i)  <= x ∧ x < (2 ** (i+1)) 
 Proof
   eq_tac >> fs[log2list_def,MEM_GENLIST ] >> rw[]
-  >- (`x'+2**i < 2** i + 2**i` by fs[] >> `2**i + 2**i = 2*2**i` by simp[GSYM TIMES2] >>
+  >- (`x'+2**i < 2** i + 2**i` by fs[] >> `2**i + 2**i = 2*2**i` by fs[GSYM TIMES2] >>
       `2**i + 2**i = 2 ** SUC i` by fs[EXP] >> fs[ADD1])
   >- (qexists_tac`x-2**i` >> fs[] >> `2*2**i = 2 ** SUC i` by fs[EXP] >> fs[ADD1])
 QED
@@ -1165,7 +1166,11 @@ Proof
 QED
 
 
+
+
 (* up to here *)
+
+
 
 
 val _ = export_theory()
