@@ -2,10 +2,8 @@ structure multibuild =
 struct
 
 open ProcessMultiplexor HM_DepGraph Holmake_tools
-type wp = HM_DepGraph.t workprovider
 
-(* type build_command = HM_GraphBuildJ1.build_command *)
-type mosml_build_command = HM_GraphBuildJ1.mosml_build_command
+type 'a mosml_build_command = 'a HM_GraphBuildJ1.mosml_build_command
 datatype buildresult =
          BR_OK
        | BR_ClineK of { cline : string * string list,
@@ -33,8 +31,9 @@ fun pushd d f x =
 fun graphbuild optinfo g =
   let
     val _ = OS.FileSys.mkDir loggingdir handle _ => ()
-    val { build_command (* : build_command *),
-          mosml_build_command : mosml_build_command, warn, tgtfatal, diag,
+    val { build_command,
+          mosml_build_command : GraphExtra.t mosml_build_command,
+          warn, tgtfatal, diag,
           keep_going, quiet, hmenv, jobs, info, time_limit,
           relocbuild } = optinfo
     val _ = diag "Starting graphbuild"
@@ -56,9 +55,14 @@ fun graphbuild optinfo g =
       case (ok,find_runnable g) of
           (false, _) => GiveUpAndDie (g, false)
        |  (true, NONE) => NoMoreJobs (g, ok)
-       |  (true, SOME (n,nI : dep nodeInfo)) =>
+       |  (true, SOME (n,nI : GraphExtra.t nodeInfo)) =>
           let
             val _ = diag ("Found runnable node "^node_toString n)
+            val extra = #extra nI
+            fun eCompile ds = Compile(ds, extra)
+            fun eBuildScript (s,deps) = BuildScript(s,deps,extra)
+            fun eBuildArticle (s,deps) = BuildArticle(s,deps,extra)
+            fun eProcessArticle s = ProcessArticle(s,extra)
             fun k b g =
               if b orelse keep_going then
                 genjob (updnode(n, if b then Succeeded else RealFail) g, true)
@@ -84,7 +88,9 @@ fun graphbuild optinfo g =
                          Succeeded)
                       else RealFail
                   in
-                    case pushd dir (mosml_build_command hmenv hypargs) deps of
+                    case pushd dir
+                               (mosml_build_command hmenv extra hypargs) deps
+                     of
                         SOME r =>
                           k (error (OS.Process.isSuccess r) = Succeeded) g
                       | NONE =>
@@ -152,19 +158,19 @@ fun graphbuild optinfo g =
                     case bic of
                         BIC_Compile =>
                         (case toFile target_s of
-                             UI c => bresk (bc (Compile deps) (SIG c)) g
-                           | UO c => bresk (bc (Compile deps) (SML c)) g
+                             UI c => bresk (bc (eCompile deps) (SIG c)) g
+                           | UO c => bresk (bc (eCompile deps) (SML c)) g
                            | ART (RawArticle s) =>
-                               bresk (bc (BuildArticle(s,deps))
+                               bresk (bc (eBuildArticle(s,deps))
                                          (SML (Script s)))
                                      g
                            | ART (ProcessedArticle s) =>
-                               bresk (bc (ProcessArticle s)
+                               bresk (bc (eProcessArticle s)
                                          (ART (RawArticle s)))
                                      g
                            | _ => raise Fail ("bg tgt = " ^ target_s))
                       | BIC_BuildScript thyname =>
-                          bresk (bc (BuildScript(thyname, deps))
+                          bresk (bc (eBuildScript(thyname, deps))
                                     (SML (Script thyname)))
                                 g
                   end

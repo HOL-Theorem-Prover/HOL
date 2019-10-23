@@ -676,7 +676,8 @@ fun cdset_toString ((_,stk):cdset) =
     String.concatWith ">" (map #2 (List.rev stk))
 
 (* is run in a directory at a time *)
-fun build_depgraph cdset incinfo (tgt as (dir,target):dep) g0:(t * node) =
+type g = GraphExtra.t HM_DepGraph.t
+fun build_depgraph cdset incinfo (tgt as (dir,target):dep) g0:(g * node) =
 let
   val {preincludes,includes} = incinfo
   val incinfo = {preincludes = preincludes,
@@ -694,9 +695,16 @@ let
   val fullpath = fp dir target_s
   val fullpath_s = fps fullpath
   val pretty_tgt = hmdir.pretty_dir fullpath
+  val (env, _, _) = get_hmf()
+  val extra = GraphExtra.get_extra { master_dir = original_dir,
+                                     master_cline = master_cline_nohmf,
+                                     envlist = envlist env }
+  val extra_deps = if GraphExtra.canIgnore tgt extra then []
+                   else GraphExtra.extra_deps extra
   val diag = fn f => diag "builddepgraph"
                           (fn _ => "|" ^ cdset_toString cdset ^ "| " ^ f ())
   val _ = diag (fn _ => "Target = " ^ pretty_tgt)
+  val _ = diag (fn _ => "Extra = " ^ GraphExtra.toString extra)
   val _ = not (cdset_member cdset (dir,target_s)) orelse
           die (pretty_tgt ^ " seems to depend on itself failing\n" ^
                " Loop is : " ^ cdset_toString cdset ^ ">" ^ pretty_tgt)
@@ -712,7 +720,7 @@ in
         add_node {target = tgt, seqnum = 0, phony = false,
                   status = if exists_readable fullpath_s then Succeeded
                            else Failed{needed=false},
-                  dir = dir,
+                  dir = dir, extra = extra,
                   command = NoCmd, dependencies = []} g0
       )
       else if isSome pdep andalso no_full_extra_rule (SOME tgt) then
@@ -724,6 +732,7 @@ in
           val secondaries =
               set_addList (get_explicit_dependencies target)
                           (get_implicit_dependencies incinfo target)
+                       |> set_addList extra_deps
           val _ = diag (fn _ => target_s ^ " -secondaries-> " ^
                                 set_concatWith dep_toString ", " secondaries)
           fun foldthis (d, (g, secnodes)) =
@@ -753,6 +762,7 @@ in
             add_node {target = tgt, seqnum = 0, phony = false,
                       status = if needs_building then Pending{needed=false}
                                else Succeeded,
+                      extra = extra,
                       command = BuiltInCmd (bic,incinfo), dir = hmdir.curdir(),
                       dependencies = depnodes } g2
         end
@@ -763,7 +773,7 @@ in
               add_node {target = tgt, seqnum = 0, phony = false,
                         status = if exists_readable target_s then Succeeded
                                  else Failed{needed=false},
-                        command = NoCmd, dir = hmdir.curdir(),
+                        command = NoCmd, dir = hmdir.curdir(), extra = extra,
                         dependencies = []} g0
             )
           | SOME {dependencies, commands, ...} =>
@@ -809,7 +819,8 @@ in
 
               val (g1, depnodes) =
                   Binaryset.foldl foldthis (g0, [])
-                                  (set_addList dependencies more_deps)
+                                  (more_deps |> set_addList dependencies
+                                             |> set_addList extra_deps)
 
               val unbuilt_deps =
                   List.filter
@@ -840,7 +851,7 @@ in
                 let
                   val (g',n) = add_node {target = tgt, seqnum = seqnum,
                                          status = status, phony = is_phony,
-                                         command = SomeCmd c,
+                                         command = SomeCmd c, extra = extra,
                                          dir = hmdir.curdir(),
                                          dependencies = depnode @ depnodes } g
                 in
@@ -863,7 +874,7 @@ in
                 case starred_dep of
                     NONE =>
                     add_node {target = tgt, seqnum = 0, phony = is_phony,
-                              status = status, command = NoCmd,
+                              status = status, command = NoCmd, extra = extra,
                               dir = hmdir.curdir(), dependencies = depnodes} g1
                   | SOME scr =>
                     (case toFile scr of
@@ -878,7 +889,7 @@ in
                                      phony = false, status = updstatus,
                                      command = BuiltInCmd
                                                  (BIC_BuildScript s, incinfo),
-                                     dir = dir,
+                                     dir = dir, extra = extra,
                                      dependencies = depnodes} g1
                          end
                        | _ => die "Invariant failure in build_depgraph")
@@ -920,7 +931,7 @@ fun create_complete_graph idm =
             warn=warn,diag=diag,hm=extend_graph_in_dir,
             dirinfo={incdirmap=idm, visited = Binaryset.empty hmdir.compare},
             dir = d,
-            data = HM_DepGraph.empty
+            data = HM_DepGraph.empty()
           }
       val diag = diag "builddepgraph"
     in

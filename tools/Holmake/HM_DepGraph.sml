@@ -35,24 +35,24 @@ datatype command =
          NoCmd
        | SomeCmd of string
        | BuiltInCmd of builtincmd * Holmake_tools.include_info
-type 'a nodeInfo = { target : 'a, status : target_status,
+type 'a nodeInfo = { target : dep, status : target_status, extra : 'a,
                      command : command, phony : bool,
                      seqnum : int, dir : Holmake_tools.hmdir.t,
                      dependencies : (node * Holmake_tools.dep) list  }
 
 fun fupdStatus f (nI: 'a nodeInfo) : 'a nodeInfo =
   let
-    val {target,command,status,dependencies,seqnum,phony,dir} = nI
+    val {target,command,status,dependencies,seqnum,phony,dir,extra} = nI
   in
     {target = target, status = f status, command = command, seqnum = seqnum,
-     dependencies = dependencies, phony = phony, dir = dir}
+     dependencies = dependencies, phony = phony, dir = dir, extra = extra}
   end
 
 fun setStatus s = fupdStatus (fn _ => s)
 
-fun addDeps0 dps {target,command,status,dependencies,seqnum,phony,dir} =
+fun addDeps0 dps {target,command,status,dependencies,seqnum,phony,dir,extra} =
   {target = target, status = status, command = command, phony = phony,
-   dependencies = dps @ dependencies, seqnum = seqnum, dir = dir}
+   dependencies = dps @ dependencies, seqnum = seqnum, dir = dir, extra = extra}
 
 
 val node_compare = Int.compare
@@ -69,27 +69,27 @@ fun command_compare (NoCmd, NoCmd) = EQUAL
   | command_compare (BuiltInCmd _, SomeCmd _) = GREATER
   | command_compare (BuiltInCmd (b1,_), BuiltInCmd (b2,_)) = bic_compare(b1,b2)
 
-type t = { nodes : (node, dep nodeInfo) Map.dict,
-           target_map : (dep,node) Map.dict,
-           command_map : (command,node list) Map.dict }
+type 'a t = { nodes : (node, 'a nodeInfo) Map.dict,
+              target_map : (dep,node) Map.dict,
+              command_map : (command,node list) Map.dict }
 
 
 val tgt_compare = pair_compare(hmdir.compare, String.compare)
 
 
-val empty = { nodes = Map.mkDict node_compare,
-              target_map = Map.mkDict dep_compare,
-              command_map = Map.mkDict command_compare }
-fun fupd_nodes f {nodes, target_map, command_map} =
+fun empty() : 'a t = { nodes = Map.mkDict node_compare,
+                       target_map = Map.mkDict dep_compare,
+                       command_map = Map.mkDict command_compare }
+fun fupd_nodes f ({nodes, target_map, command_map}: 'a t) : 'a t =
   {nodes = f nodes, target_map = target_map, command_map = command_map}
 
-fun find_nodes_by_command (g : t) c =
+fun find_nodes_by_command (g : 'a t) c =
   case Map.peek (#command_map g, c) of
       NONE => []
     | SOME ns => ns
 
-fun size (g : t) = Map.numItems (#nodes g)
-fun peeknode (g:t) n = Map.peek(#nodes g, n)
+fun size (g : 'a t) = Map.numItems (#nodes g)
+fun peeknode (g:'a t) n = Map.peek(#nodes g, n)
 val empty_nodeset = Binaryset.empty (pair_compare(node_compare, String.compare))
 
 fun addDeps (n,dps) g =
@@ -116,7 +116,7 @@ fun extend_map_list m k v =
       NONE => Map.insert(m, k, [v])
     | SOME vs => Map.insert(m, k, v::vs)
 
-fun add_node (nI : dep nodeInfo) (g :t) =
+fun add_node (nI : 'a nodeInfo) (g :'a t) =
   let
     fun newNode (copt : command) =
       let
@@ -138,12 +138,12 @@ fun add_node (nI : dep nodeInfo) (g :t) =
     newNode (#command nI)
   end
 
-fun updnode (n, st) (g : t) : t =
+fun updnode (n, st) (g : 'a t) : 'a t =
   case peeknode g n of
       NONE => raise NoSuchNode
     | SOME nI => fupd_nodes (fn m => Map.insert(m, n, setStatus st nI)) g
 
-fun find_runnable (g : t) =
+fun find_runnable (g : 'a t) =
   let
     val sz = size g
     fun hasSucceeded (i,_) = #status (valOf (peeknode g i)) = Succeeded
@@ -160,18 +160,17 @@ fun find_runnable (g : t) =
     search 0
   end
 
-fun target_node (g:t) t = Map.peek(#target_map g,t)
-fun listNodes (g:t) = Map.foldr (fn (k,v,acc) => (k,v)::acc) [] (#nodes g)
+fun target_node (g:'a t) t = Map.peek(#target_map g,t)
+fun listNodes (g:'a t) = Map.foldr (fn (k,v,acc) => (k,v)::acc) [] (#nodes g)
 
 val node_toString = Int.toString
 
-fun nodeInfo_toString tstr (nI : 'a nodeInfo) =
+fun nodeInfo_toString (nI : 'a nodeInfo) =
   let
     open Holmake_tools
-    val {target,status,command,dependencies,seqnum,phony,dir} = nI
+    val {target,status,command,dependencies,seqnum,phony,dir,...} = nI
   in
-    hmdir.pretty_dir (hmdir.extendp {base = dir,  extension = tstr target}) ^
-    (if phony then "[PHONY]" else "") ^
+    dep_toString target ^ (if phony then "[PHONY]" else "") ^
     "(" ^ Int.toString seqnum ^ ") " ^
     "deps{" ^String.concatWith "," (map (Int.toString o #1) dependencies) ^ "}"^
     status_toString status ^ " : " ^
@@ -258,8 +257,7 @@ fun toString g =
           (if hmdir.compare(dir,#1 target) <> EQUAL then
              "[ run in " ^ hmdir.pretty_dir dir ^ "]"
            else "")
-      fun prNode(n,nI) =
-          "[" ^ node_toString n ^ "], " ^ nodeInfo_toString dep_toString nI
+      fun prNode(n,nI) = "[" ^ node_toString n ^ "], " ^ nodeInfo_toString nI
     in
       "{Already built " ^
       indentedlist prSuccess successes ^ " Others:\n  " ^
@@ -284,13 +282,13 @@ fun postmortem (outs : Holmake_tools.output_functions) (status,g) =
         ([],[]) => OS.Process.success
       | (ps, fs) =>
         let
-          fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString pr nI
+          fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString nI
           fun nocmd (_, nI) = #command nI = NoCmd
           val fs' = List.filter nocmd fs
           fun nI_target (_, nI) = #target nI
         in
-          diagK ("Failed nodes: \n" ^ String.concatWith "\n" (map str fs));
-          diagK ("True pending: \n" ^ String.concatWith "\n" (map str ps));
+          diagK ("Failed nodes: \n" ^ concatWithf str "\n" fs);
+          diagK ("True pending: \n" ^ concatWithf str "\n" ps);
           if not (null fs') then
             tgtfatal ("Don't know how to build necessary target(s): " ^
                       concatWithf (dep_toString o nI_target) ", " fs')

@@ -3,10 +3,10 @@ struct
 
 open Holmake_tools
 
-type build_command =
-     HM_DepGraph.t -> include_info -> dep buildcmds -> File -> bool
-type mosml_build_command =
-     Holmake_types.env ->
+type 'a build_command =
+     'a HM_DepGraph.t -> include_info -> (dep,'a) buildcmds -> File -> bool
+type 'a mosml_build_command =
+     Holmake_types.env -> 'a ->
      {noecho : bool, ignore_error : bool, command : string} ->
      dep list ->
      OS.Process.status option
@@ -33,10 +33,10 @@ fun updall nodes st g =
 
 fun upd1 node st g = HM_DepGraph.updnode(node,st) g
 
-fun graphbuildj1 static_info =
+fun 'a graphbuildj1 static_info =
   let
-    val {build_command : build_command,
-         mosml_build_command : mosml_build_command, outs, keep_going,
+    val {build_command : 'a build_command,
+         mosml_build_command : 'a mosml_build_command, outs, keep_going,
          quiet, hmenv, system} = static_info
     val {warn,diag,tgtfatal,info,...} = (outs : Holmake_tools.output_functions)
     val diagK = diag "graphbuildj1" o (fn x => fn _ => x)
@@ -48,10 +48,14 @@ fun graphbuildj1 static_info =
         fun recurse retval g =
           case find_runnable g of
               NONE => (retval, g)
-            | SOME (n, nI : dep nodeInfo) =>
+            | SOME (n, nI : 'a nodeInfo) =>
               let
                 val target_d = #target nI
                 val target_s = dep_toString target_d
+                val extra = #extra nI
+                fun eCompile ds = Compile(ds,extra)
+                fun eBuildArticle (s,deps) = BuildArticle(s,deps,extra)
+                fun eProcessArticle s = ProcessArticle(s,extra)
                 val _ = hmdir.chdir (#dir nI)
                 val deps = map #2 (#dependencies nI)
                 fun k upd res =
@@ -72,15 +76,15 @@ fun graphbuildj1 static_info =
                          ("Can't have built-in commands in different\
                           \ directories from target "^target_s);
                        case #2 target_d of
-                           UI c => k (upd1 n) (bc ii (Compile deps) (SIG c))
-                         | UO c => k (upd1 n) (bc ii (Compile deps) (SML c))
+                           UI c => k (upd1 n) (bc ii (eCompile deps) (SIG c))
+                         | UO c => k (upd1 n) (bc ii (eCompile deps) (SML c))
                          | ART (RawArticle s) =>
                              k (upd1 n) (bc ii
-                                            (BuildArticle(s,deps))
+                                            (eBuildArticle(s,deps))
                                             (SML (Script s)))
                          | ART (ProcessedArticle s) =>
                              k (upd1 n)
-                               (bc ii (ProcessArticle s) (ART (RawArticle s)))
+                               (bc ii (eProcessArticle s) (ART (RawArticle s)))
                          | _ => raise Fail ("bad bic tgt = " ^ target_s))
                     | cmd as (BuiltInCmd (BIC_BuildScript thyname, ii)) =>
                       let
@@ -88,7 +92,7 @@ fun graphbuildj1 static_info =
                       in
                         k (updall (n::others))
                           (bc ii
-                              (BuildScript(thyname, deps))
+                              (BuildScript(thyname, deps, #extra nI))
                               (SML (Script thyname)))
                       end
                     | cmd as SomeCmd c =>
@@ -96,7 +100,7 @@ fun graphbuildj1 static_info =
                         val hypargs as {noecho,ignore_error,command=c} =
                             process_hypat_options c
                       in
-                        case mosml_build_command hmenv hypargs deps of
+                        case mosml_build_command hmenv extra hypargs deps of
                             SOME r => k (upd1 n) (OS.Process.isSuccess r)
                           | NONE =>
                             let

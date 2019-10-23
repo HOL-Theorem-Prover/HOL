@@ -3,10 +3,11 @@ sig
 
   type File = Holmake_tools.File
   type dep = Holmake_tools.dep
-  type build_command = HM_DepGraph.t -> Holmake_tools.include_info ->
-                       dep Holmake_tools.buildcmds -> File -> bool
-  type mosml_build_command =
+  type 'a build_command = 'a HM_DepGraph.t -> Holmake_tools.include_info ->
+                          (dep,'a) Holmake_tools.buildcmds -> File -> bool
+  type 'a mosml_build_command =
        Holmake_types.env ->
+       'a ->
        {noecho : bool, ignore_error : bool, command : string} ->
        dep list ->
        OS.Process.status option
@@ -27,13 +28,13 @@ sig
 
 
 
-  val graphbuildj1 : {build_command : build_command,
-                      mosml_build_command : mosml_build_command,
+  val graphbuildj1 : {build_command : 'a build_command,
+                      mosml_build_command : 'a mosml_build_command,
                       outs : Holmake_tools.output_functions,
                       keep_going : bool,
                       quiet : bool,
                       system : string -> OS.Process.status,
                       hmenv : Holmake_types.env} ->
-                     HM_DepGraph.t -> OS.Process.status * HM_DepGraph.t
+                     'a HM_DepGraph.t -> OS.Process.status * 'a HM_DepGraph.t
 
 end

@@ -19,9 +19,10 @@ datatype File =
        | DAT of string
        | Unhandled of string
 
-datatype 'dep buildcmds = Compile of 'dep list
-                        | BuildScript of string * 'dep list
-                        | BuildArticle of string * 'dep list
-                        | ProcessArticle of string
+datatype ('dep,'extra) buildcmds =
+         Compile of 'dep list * 'extra
+       | BuildScript of string * 'dep list * 'extra
+       | BuildArticle of string * 'dep list * 'extra
+       | ProcessArticle of string * 'extra
 
 end

@@ -196,10 +196,10 @@ end
 fun list_delete x [] = []
   | list_delete x (y::ys) = if x = y then ys else y :: list_delete x ys
 
-type build_command = HM_DepGraph.t ->
-                     {preincludes : string list, includes : string list} ->
-                     dep Holmake_tools.buildcmds ->
-                     File -> bool
+type 'a build_command = 'a HM_DepGraph.t ->
+                        {preincludes : string list, includes : string list} ->
+                        (dep,'a) Holmake_tools.buildcmds ->
+                        File -> bool
 
 fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val {optv,actual_overlay,envlist,quit_on_failure,outs,...} =
@@ -223,23 +223,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val chatty = if jobs = 1 then #chatty outs else (fn _ => ())
   val info = if jobs = 1 then #info outs else (fn _ => ())
 
-  fun HOLSTATE() = let
-    val default =
-        case cmdl_HOLSTATE of
-            NONE => if polynothol then POLY else default_holstate
-          | SOME s => s
-  in
-    case envlist "HOLHEAP" of
-        [] => default
-      | [x] => x
-      | xs => (warn ("Can't interpret "^String.concatWith " " xs ^
-                     " as a HOL HEAP spec; using default hol.builder.");
-               default)
-  end
-
   fun extra_poly_cline() = envlist "POLY_CLINE_OPTIONS"
 
-  fun poly_link quietp result files =
+  fun poly_link quietp extra result files =
   let
     val _ = if not quietp then
               TextIO.output(TextIO.stdOut,
@@ -255,7 +241,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     p "#!/bin/sh";
     p ("set -e");
     p (protect(fullPath [HOLDIR, "bin", "buildheap"]) ^ " --gcthreads=1 " ^
-       (if polynothol then "--poly" else "--holstate="^protect(HOLSTATE()))^" "^
+       (case #holheap extra of NONE => "--poly"
+                             | SOME d => "--holstate="^dep_toString d) ^ " " ^
        (if isSome debug then "--dbg " else "") ^
        String.concatWith " " (extra_poly_cline()) ^ " " ^
        String.concatWith " " (map protect files));
@@ -273,7 +260,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     exception CompileFailed
     exception FileNotFound
     val isSuccess = OS.Process.isSuccess
-    fun setup_script s deps extras = let
+    fun setup_script s depinfo extras = let
       val scriptsml_file = SML (Script s)
       val scriptsml = fromFile scriptsml_file
       val script   = s^"Script"
@@ -281,7 +268,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       val scriptui = script^".ui"
       (* first thing to do is to create the Script.uo file *)
       val b =
-          case build_command g ii (Compile (deps : dep list)) scriptsml_file of
+          case build_command g ii (Compile depinfo) scriptsml_file of
               BR_OK => true
             | BR_Failed => false
             | BR_ClineK _ => raise Fail "Compilation resulted in commandline"
@@ -301,20 +288,21 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     in
         ((script,[scriptuo,scriptui,script]), objectfiles)
     end
-    fun run_script g (script, intermediates) objectfiles expected_results =
+    fun run_script g (extra:GraphExtra.t) (script, intermediates) objectfiles expecteds =
       let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
-        val _ = app safedelete expected_results
+        val _ = app safedelete expecteds
         val useScript = fullPath [HOLDIR, "bin", "buildheap"]
         val cline =
             useScript::"--gcthreads=1"::
             (case #multithread optv of
                  NONE => []
                | SOME i => ["--mt=" ^ Int.toString i]) @
-            (if polynothol then "--poly" else "--holstate="^HOLSTATE())::
+            (case #holheap extra of NONE => "--poly"
+                                  | SOME d => "--holstate="^dep_toString d) ::
             extra_poly_cline() @
             ((if isSome debug then ["--dbg"] else []) @ objectfiles) @
-            List.concat (map (fn f => ["-c", f]) expected_results)
+            List.concat (map (fn f => ["-c", f]) expecteds)
         fun cont wn res =
           let
             val _ =
@@ -347,8 +335,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   in
     let
     in
-      case (c : dep buildcmds) of
-          Compile deps =>
+      case (c : (dep,GraphExtra.t) buildcmds) of
+          Compile (deps,_) =>
           let
             val file = fromFile arg
             val _ = exists_readable file orelse
@@ -359,14 +347,14 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           in
             if OS.Process.isSuccess res then BR_OK else BR_Failed
           end
-        | BuildScript (s, deps) =>
+        | BuildScript (s, deps, extra : GraphExtra.t) =>
           let
-            val (scriptetc,objectfiles) = setup_script s deps []
+            val (scriptetc,objectfiles) = setup_script s (deps,extra) []
           in
-            run_script g scriptetc objectfiles
+            run_script g extra scriptetc objectfiles
                        [s^"Theory.sml", s^"Theory.sig", s^"Theory.dat"]
           end
-        | BuildArticle (s0, deps : dep list) =>
+        | BuildArticle (s0, deps : dep list, extra) =>
           let
             val s = s0 ^ ".art"
             val dep_set = Binaryset.addList(empty_dset, deps)
@@ -382,11 +370,11 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                  |> Binaryset.listItems) @
                 [filestr_to_dep fakescript_str]
             val ((script,inters),objectfiles) =
-                setup_script s deps loggingextras
+                setup_script s (deps,extra) loggingextras
           in
-            run_script g (script,fakescript_str :: inters) objectfiles [s]
+            run_script g extra (script,fakescript_str :: inters) objectfiles [s]
           end
-        | ProcessArticle s =>
+        | ProcessArticle (s,extra) =>
           let
             val raw_art_file = ART (RawArticle s)
             val art_file = ART (ProcessedArticle s)
@@ -403,7 +391,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     end handle CompileFailed => BR_Failed
              | FileNotFound  => BR_Failed
   end
-  fun mosml_build_command hm_env {noecho, ignore_error, command = c} deps =
+  fun mosml_build_command hm_env extra {noecho, ignore_error, command = c} deps=
     let
       open Holmake_types
       val isHolmosmlcc =
@@ -430,7 +418,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
               diag (fn _ => "Moscow ML command is link -o "^result^" ["^
                             String.concatWith ", "
                                               (map dep_toString objs) ^ "]");
-              SOME (poly_link (noecho orelse quiet_flag) result
+              SOME (poly_link (noecho orelse quiet_flag) extra result
                               (map (OS.Path.base o dep_toString) objs))
             end
           | (Mosml_error, _) =>
@@ -483,8 +471,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                     quiet = quiet_flag, hmenv = hmenv,
                                     jobs = jobs } g |> interpret_graph)
 in
-  {extra_impl_deps = if relocbuild orelse HOLSTATE() = POLY then []
-                     else [filestr_to_dep (HOLSTATE())],
+  {extra_impl_deps = [],
    build_graph = build_graph}
 end
 
