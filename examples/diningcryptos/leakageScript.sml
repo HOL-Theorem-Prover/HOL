@@ -2,19 +2,19 @@
 (* Create "leakageTheory" setting up the theory of information leakage       *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib bossLib metisLib arithmeticTheory pred_setTheory
+open HolKernel Parse boolLib bossLib;
+
+open metisLib arithmeticTheory pred_setTheory
      listTheory state_transformerTheory combinTheory pairTheory realTheory
      realLib jrhUtils realSimps numTheory simpLib seqTheory subtypeTheory
      transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps
-     informationTheory;
+     informationTheory real_sigmaTheory;
 
 open extra_boolTheory extra_numTheory extra_pred_setTheory extra_realTheory
      extra_listTheory extra_stringTheory extra_stringLib;
 
-open real_sigmaTheory;
-
-open hurdUtils util_probTheory real_measureTheory real_lebesgueTheory
-     real_probabilityTheory;
+open hurdUtils util_probTheory sigma_algebraTheory
+     real_measureTheory real_lebesgueTheory real_probabilityTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "information"                                   *)

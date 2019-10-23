@@ -21,7 +21,7 @@ val Suff = PARSE_TAC SUFF_TAC;
 
 fun REPEAT_SAFE_EVAL tm =
         let val t = EVAL tm in
-        if (snd (dest_thm t)) = (mk_eq (tm,tm)) then
+        if (snd (dest_thm t)) ~~ (mk_eq (tm,tm)) then
                 ALL_CONV tm
         else
                 t
@@ -45,14 +45,13 @@ fun MEM_CONV (c:term->thm) =
         UNFOLD_CONV [MEM] c;
 
 fun F_UNCHANGED_CONV (conv:term->thm) tm =
-        if tm = ``F`` then ALL_CONV tm else conv tm;
+        if tm ~~ F then ALL_CONV tm else conv tm;
 
 fun T_UNCHANGED_CONV (conv:term->thm) tm =
-        if tm = ``T`` then ALL_CONV tm else conv tm;
+        if tm ~~ T then ALL_CONV tm else conv tm;
 
 fun T_F_UNCHANGED_CONV (conv:term->thm) tm =
         T_UNCHANGED_CONV (F_UNCHANGED_CONV conv) tm;
-
 
 val CROSS_NON_EMPTY_IMP = prove
    (``!P Q. FINITE P /\ FINITE Q /\ ~(P={}) /\ ~(Q={}) ==> ~(P CROSS Q = {})``,
@@ -70,11 +69,18 @@ val CROSS_HLR_NON_EMPTY_IMP = prove
    (``!h l r. FINITE h /\ FINITE l /\ FINITE r /\ ~(h={}) /\ ~(l={}) /\ ~(r={}) ==> ~((h CROSS l) CROSS r = {})``,
     METIS_TAC [CROSS_NON_EMPTY_IMP, FINITE_CROSS]);
 
-val unif_prog_space_leakage_computation_reduce_COMPUTE = prove  (``!high low random f. FINITE high /\ FINITE low /\ FINITE random /\       ~((high CROSS low) CROSS random={}) ==>         (leakage (unif_prog_space high low random) f =           (1/(&(CARD high * CARD low * CARD random)))*            (SIGMA (\(out,h,l). (\x. x * lg (((1/(&(CARD random)))* x))) (SIGMA (\r. if (f((h,l),r)=out) then 1 else 0) random))
-                  (IMAGE (\s. (f s,FST s)) (high CROSS low CROSS random)) -
+val unif_prog_space_leakage_computation_reduce_COMPUTE = prove
+  (``!high low random f. FINITE high /\ FINITE low /\ FINITE random /\
+       ~((high CROSS low) CROSS random={}) ==>
+         (leakage (unif_prog_space high low random) f =
+           (1/(&(CARD high * CARD low * CARD random)))*
+            (SIGMA (\(out,h,l). (\x. x * lg (((1/(&(CARD random)))* x)))
+                                (SIGMA (\r. if (f((h,l),r)=out) then 1 else 0) random))
+            (IMAGE (\s. (f s,FST s)) (high CROSS low CROSS random)) -
              SIGMA (\(out,l). (\x. x * lg (((1/(&(CARD high * CARD random)))* x)))
                         (SIGMA (\(h,r). if (f((h,l),r)=out) then 1 else 0) (high CROSS random)))
-                  (IMAGE (\s. (f s,SND (FST s))) (high CROSS low CROSS random))))``,   METIS_TAC [unif_prog_space_leakage_computation_reduce]);
+                  (IMAGE (\s. (f s,SND (FST s))) (high CROSS low CROSS random))))``,
+   METIS_TAC [unif_prog_space_leakage_computation_reduce]);
 
 fun LEAKAGE_COMPUTE_PROVE_FINITE (t:term) (tl:Abbrev.thm list) =
         (prove ((mk_comb ((inst [alpha |-> fst(dom_rng(type_of t))]``FINITE``),t)),
@@ -173,7 +179,7 @@ fun LEAKAGE_COMPUTE_IMAGE_HLR_CROSS ((h:term),(l:term),(r:term)) (tl:Abbrev.thm 
                                                 (UNION_CONV (SIMP_CONV bool_ss [] THENC r_dups_conv)))))))))));
 
 fun RECURSIVE_UNWIND_SUM (dups_conv:Abbrev.term->Abbrev.thm) (item_conv:Abbrev.term->Abbrev.thm) (tm:term) =
-        if (rand tm) = (inst [alpha |-> fst(dom_rng(type_of (rand tm)))] ``{}``) then REWRITE_CONV [REAL_SUM_IMAGE_THM] tm else
+        if (rand tm) ~~ (inst [alpha |-> fst(dom_rng(type_of (rand tm)))] ``{}``) then REWRITE_CONV [REAL_SUM_IMAGE_THM] tm else
         ((fn (tm:term) => (let val s = snd(dest_comb(snd (dest_comb tm))) in
                                           let val f = snd(dest_comb (fst(dest_comb tm))) in
                                           let val fin_thm = prove (mk_comb((inst [alpha |-> fst(dom_rng(type_of s))] ``FINITE``),s),
