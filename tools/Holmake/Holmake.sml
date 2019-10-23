@@ -10,8 +10,6 @@ struct
 open Systeml Holmake_tools Holmake_types
 infix forces_update_of depforces_update_of |>
 
-fun x |> f = f x
-
 structure FileSys = OS.FileSys
 structure Path = OS.Path
 structure Process = OS.Process
@@ -37,8 +35,6 @@ in
   map dequote (tokenize (perform_substitution env [VREF id]))
 end
 
-val set_difference = Binaryset.difference
-fun set_union s1 s2 = Binaryset.union(s1,s2)
 
 
 
@@ -62,15 +58,9 @@ in
 fun ppath s = if String.isPrefix sigobj s then
                 frakS ^ String.extract(s,size sigobj,NONE)
               else s
-fun depToString ((dir, t):dep) =
-    let
-      val dp = hmdir.extendp {base = dir, extension = fromFile t}
-    in
-      ppath (hmdir.toAbsPath dp)
-    end
 
-fun pflist fs = String.concatWith ", " (map (ppath o fromFile) fs)
-fun pdlist fs = String.concatWith ", " (map depToString fs)
+fun pflist fs = concatWithf (ppath o fromFile) ", " fs
+fun pdlist ds = concatWithf dep_toString ", " ds
 end
 
 
@@ -127,7 +117,8 @@ local
                                {commands = commands,
                                 dependencies = map filestr_to_dep deps0})
         in
-          (env, Binarymap.foldl foldthis empty_trdb rdb, tgt0)
+          (env, Binarymap.foldl foldthis empty_trdb rdb,
+           Option.map filestr_to_dep tgt0)
         end
       else
         default
@@ -308,11 +299,7 @@ fun extend_idmap k (v as {incs = i,pres = p}) idm0 =
                           pres = Binaryset.union(p0,p)})
 
 fun print_set ds =
-  "{" ^
-  String.concatWith
-    ", "
-    (Binaryset.foldr (fn (d,acc) => hmdir.pretty_dir d :: acc) [] ds) ^
-  "}"
+  "{" ^ set_concatWith hmdir.pretty_dir ", " ds ^ "}"
 
 type incmap = (hmdir.t, {incs:dirset,pres:dirset}) Binarymap.dict
 type dirinfo = {incdirmap : incmap, visited : hmdir.t Binaryset.set}
@@ -353,9 +340,7 @@ let
   val diag = diag "builddepgraph"
   val _ = diag (fn _ => "recursively: call in " ^ hmdir.pretty_dir dir)
   val _ = diag (fn _ => "recursively: includes (pre- & normal) = [" ^
-                        String.concatWith ", "
-                           (map hmdir.pretty_dir
-                                (Binaryset.listItems recur_into)) ^ "]")
+                        set_concatWith hmdir.pretty_dir ", " recur_into ^ "]")
   val _ = diag (fn _ =>
                    "recursively: incdmap on dir " ^ hmdir.pretty_dir dir ^
                    " = " ^ print_set (#incs (idm_lookup incdirmap dir)))
@@ -549,7 +534,7 @@ end
    runs holdep, and puts the output into specified file, which will live
    in DEPDIR somewhere. *)
 
-fun get_implicit_dependencies incinfo (f: File) : dep list = let
+fun get_implicit_dependencies incinfo (f: File) : dep Binaryset.set = let
   val {preincludes,includes} = incinfo
   val file_dependencies0 =
       get_direct_dependencies {incinfo = incinfo,
@@ -558,9 +543,7 @@ fun get_implicit_dependencies incinfo (f: File) : dep list = let
                                DEPDIR = DEPDIR} f
   val diag = diag "impdeps"
   val _ = diag (fn _ => "get_implicit_dependencies("^fromFile f^"), " ^
-                        "directdeps = " ^
-                        String.concatWith ", "
-                                          (map dep_toString file_dependencies0))
+                        "directdeps = " ^ pdlist file_dependencies0)
   val file_dependencies =
       case actual_overlay of
         NONE => file_dependencies0
@@ -591,7 +574,7 @@ in
             [] => sofar
            | d::ds =>
              case #2 d of
-               | UO (Theory _) => collect_all_dependencies sofar ds
+                 UO (Theory _) => collect_all_dependencies sofar ds
                | UI (Theory _) => collect_all_dependencies sofar ds
                | _ =>
                  let
@@ -602,18 +585,21 @@ in
                              UI x => (get_direct_dependencies f @
                                       get_direct_dependencies (UO x))
                            | _ => get_direct_dependencies f
-                   val newdeps = set_difference(deplist_to_set deps, sofar)
-            in
-              collect_all_dependencies (sofar @ newdeps)
-                                       (set_union newdeps fs)
-            end
-      val tcdeps = collect_all_dependencies starters starters
+                   val newdeps = set_diff (deplist_to_set deps) sofar
+                 in
+                   collect_all_dependencies (set_union sofar newdeps)
+                                            (listItems newdeps @ ds)
+                 end
+      val tcdeps = collect_all_dependencies (deplist_to_set starters) starters
       val _ = diag (fn _ => "get_implicit_dependencies("^fromFile f^"), " ^
-                            "tcdeps = " ^ pflist tcdeps)
+                            "tcdeps = " ^
+                            set_concatWith dep_toString ", " tcdeps)
       val uo_deps =
-          List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) tcdeps
-      val alldeps = set_union (set_union tcdeps uo_deps)
-                              (set_union file_dependencies extra_impl_deps)
+          Binaryset.foldl
+            (fn ((d,UI x), A) => set_add (d,UO x) A | (_, A) => A) empty_dset
+            tcdeps
+      val alldeps = set_addList (file_dependencies @ extra_impl_deps)
+                                (set_union tcdeps uo_deps)
     in
       case f of
         SML x => let
@@ -623,26 +609,24 @@ in
              in the dependencies for UO (Theory x). *)
           val additional_theories =
               if exists_readable (fromFile f) then
-                List.mapPartial
-                  (fn (x as (UO (Theory s))) => SOME x | _ => NONE)
-                  (get_implicit_dependencies0 incinfo (UO x))
-              else []
+                set_mapPartial
+                  (fn (x as (_, UO (Theory s))) => SOME x | _ => NONE)
+                  empty_dset
+                  (get_implicit_dependencies incinfo (UO x))
+              else empty_dset
         in
           set_union alldeps additional_theories
         end
       | _ => alldeps
     end
   else
-    file_dependencies
+    deplist_to_set file_dependencies
 end
-
-fun get_implicit_dependencies inc f =
-    map (normaliseHMFDep o fromFile) (get_implicit_dependencies0 inc f)
 
 fun get_explicit_dependencies (f:File) : dep list =
     let
-      val result = case (extra_deps (fromFile f)) of
-                       SOME deps => map normaliseHMFDep deps
+      val result = case extra_deps (filestr_to_dep (fromFile f)) of
+                       SOME deps => deps
                      | NONE => []
     in
       diag "expdeps" (fn _ => fromFile f ^ " -explicitdeps-> " ^ pdlist result);
@@ -692,17 +676,17 @@ fun cdset_toString ((_,stk):cdset) =
     String.concatWith ">" (map #2 (List.rev stk))
 
 (* is run in a directory at a time *)
-fun build_depgraph cdset incinfo ((dir,target):dep) g0:(t * node) =
+fun build_depgraph cdset incinfo (tgt as (dir,target):dep) g0:(t * node) =
 let
   val {preincludes,includes} = incinfo
   val incinfo = {preincludes = preincludes,
                  includes = std_include_flags @ includes}
   val pdep = primary_dependent target
-  val target_s = fromFile target
+  val target_s = dep_toString tgt
   val actual_dir = hmdir.curdir()
   fun fp d s = hmdir.extendp {base = d, extension = s}
   fun fps d = hmdir.toAbsPath d
-  fun addF (d, f, _) n = (n,fps (fp d (fromFile f)))
+  fun addF tgt n = (n,tgt)
   fun nstatus g n = peeknode g n |> valOf |> #status
   fun build (tgt':dep) g =
     build_depgraph (cdset_add cdset (dir, target_s)) incinfo tgt' g
@@ -717,39 +701,39 @@ let
           die (pretty_tgt ^ " seems to depend on itself failing\n" ^
                " Loop is : " ^ cdset_toString cdset ^ ">" ^ pretty_tgt)
 in
-  case target_node g0 (dir,target_s) of
+  case target_node g0 tgt of
       (x as SOME n) => (g0, n)
     | NONE =>
       if not (hmdir.eqdir dir actual_dir) andalso
-         no_full_extra_rule
+         no_full_extra_rule (SOME tgt)
          (* path outside of current directory *)
       then (
         diag (fn _ => "Target "^pretty_tgt^" external to directory");
-        add_node {target = target_s, seqnum = 0, phony = false,
+        add_node {target = tgt, seqnum = 0, phony = false,
                   status = if exists_readable fullpath_s then Succeeded
                            else Failed{needed=false},
                   dir = dir,
                   command = NoCmd, dependencies = []} g0
       )
-      else if isSome pdep andalso no_full_extra_rule (SOME target_s) then
+      else if isSome pdep andalso no_full_extra_rule (SOME tgt) then
         let
-          val pdep = (dir, valOf pdep, NONE)
+          val pdep = (dir, valOf pdep)
           val (g1, pnode) = build pdep g0
           val _ = diag (fn _ => "Extended graph with primary dependency for " ^
                                 target_s)
           val secondaries =
-              dset_union (get_implicit_dependencies incinfo target)
-                         (get_explicit_dependencies target)
+              set_addList (get_explicit_dependencies target)
+                          (get_implicit_dependencies incinfo target)
           val _ = diag (fn _ => target_s ^ " -secondaries-> " ^
-                                pdlist secondaries)
+                                set_concatWith dep_toString ", " secondaries)
           fun foldthis (d, (g, secnodes)) =
             let
               val (g', n) = build d g
             in
               (g', addF d n::secnodes)
             end
-          val (g2, depnodes : (HM_DepGraph.node * string) list) =
-              List.foldl foldthis (g1, [addF pdep pnode]) secondaries
+          val (g2, depnodes : (HM_DepGraph.node * dep) list) =
+              Binaryset.foldl foldthis (g1, [addF pdep pnode]) secondaries
           val unbuilt_deps =
               List.filter (fn (n,_) => let val stat = nstatus g2 n
                                        in
@@ -758,25 +742,25 @@ in
                           depnodes
           val needs_building =
               not (null unbuilt_deps) orelse
-              List.exists (fn d => d depforces_update_of target_s)
-                          (pdep :: secondaries)
+              set_exists (fn d => d depforces_update_of tgt)
+                         (set_add pdep secondaries)
           val bic = case toFile target_s of
                         SML (Theory s) => BIC_BuildScript s
                       | SIG (Theory s) => BIC_BuildScript s
                       | DAT s => BIC_BuildScript s
                       | _ => BIC_Compile
         in
-            add_node {target = target_s, seqnum = 0, phony = false,
+            add_node {target = tgt, seqnum = 0, phony = false,
                       status = if needs_building then Pending{needed=false}
                                else Succeeded,
                       command = BuiltInCmd (bic,incinfo), dir = hmdir.curdir(),
                       dependencies = depnodes } g2
         end
       else
-        case extra_rule_for target_s of
+        case extra_rule_for tgt of
             NONE => (
               diag (fn _ => "No extra info/rule for target " ^ target_s);
-              add_node {target = target_s, seqnum = 0, phony = false,
+              add_node {target = tgt, seqnum = 0, phony = false,
                         status = if exists_readable target_s then Succeeded
                                  else Failed{needed=false},
                         command = NoCmd, dir = hmdir.curdir(),
@@ -784,46 +768,48 @@ in
             )
           | SOME {dependencies, commands, ...} =>
             let
-              val _ = diag (fn _ =>
-                               "Target " ^
-                               hmdir.pretty_dir dir ^ " / " ^ target_s)
+              val _ = diag (fn _ => target_s ^ " has rule")
               fun foldthis (d, (g, secnodes)) =
                 let
                   val (g, n) = build d g
                 in
                   (g, addF d n::secnodes)
                 end
-              fun depfoldthis (s, (starp, deps)) =
-                if s <> "" andalso String.sub(s,0) = #"*" andalso
-                   is_script s
-                   (* is_script returns true for, e.g., *boolScript.sml *)
-                then
-                  if isSome starp then
-                    die ("Multiple starred script dependencies for "^target_s)
-                  else
-                    let
-                      val s = String.extract(s,1,NONE)
-                    in
-                      (SOME s, s :: deps)
-                    end
-                else (starp, s::deps)
+              fun depfoldthis (dep as (d,f), (starp, deps)) =
+                  case f of
+                      SML (Script s) =>
+                      if String.sub(s,0) = #"*" then
+                        if isSome starp then
+                          die
+                            ("Multiple starred script dependencies for "^
+                             target_s)
+                        else if hmdir.compare(d, actual_dir) <> EQUAL then
+                          die "Don't star non-local script files"
+                        else
+                          let
+                            val s' = String.extract(s,1,NONE)
+                          in
+                            (SOME s', (d, SML (Script s')) :: deps)
+                          end
+                      else (starp, dep :: deps)
+                    | _ => (starp, dep :: deps)
               val (starred_dep, dependencies) =
                   if null commands then
                     List.foldr depfoldthis (NONE, []) dependencies
                   else (NONE, dependencies)
-              val dependencies = map normaliseHMFDep dependencies
 
               val more_deps =
                   case starred_dep of
-                      NONE => []
+                      NONE => empty_dset
                     | SOME s =>
                         get_implicit_dependencies
                           incinfo
-                          (SML(Theory (valOf (de_script s))))
+                          (SML(Theory s))
                           handle Option => die "more_deps invariant failure"
 
               val (g1, depnodes) =
-                  List.foldl foldthis (g0, []) (more_deps @ dependencies)
+                  Binaryset.foldl foldthis (g0, [])
+                                  (set_addList dependencies more_deps)
 
               val unbuilt_deps =
                   List.filter
@@ -832,13 +818,13 @@ in
                                    is_pending stat orelse is_failed stat
                                  end)
                     depnodes
-              val is_phony = isPHONY target_s
+              val is_phony = isPHONY tgt
               val _ = if is_phony then diag (fn _ => target_s ^" is phony")
                       else ()
               val needs_building_by_deps_existence =
                   not (OS.FileSys.access(target_s, [])) orelse
                   not (null unbuilt_deps) orelse
-                  List.exists (fn d => d depforces_update_of target_s)
+                  List.exists (fn d => d depforces_update_of tgt)
                               dependencies orelse
                   is_phony
               val needs_building =
@@ -852,19 +838,18 @@ in
                            else Succeeded
               fun foldthis (c, (depnode, seqnum, g)) =
                 let
-                  val (g',n) = add_node {target = target_s, seqnum = seqnum,
+                  val (g',n) = add_node {target = tgt, seqnum = seqnum,
                                          status = status, phony = is_phony,
                                          command = SomeCmd c,
                                          dir = hmdir.curdir(),
                                          dependencies = depnode @ depnodes } g
                 in
-                  (* The "" is necessary to make multi-command, multi-target
-                     rules work: when subsequent nodes (seqnum > 0) are added
-                     to the graph targetting a target other than the first,
-                     it is important that this new node merges with the
-                     corresponding seqnum>0 node generated from the first
-                     target *)
-                  ([(n,"")], seqnum + 1, g')
+                  (* This function needs to be folded l-to-r to ensure that
+                     the last node is the one that gets recorded in the target
+                     map, ensuring that if targets are marked as needed, the
+                     earliest commands will get executed as dependencies of
+                     the later commands *)
+                  ([(n,tgt)], seqnum + 1, g')
                 end
             in
               if needs_building then
@@ -877,7 +862,7 @@ in
               else
                 case starred_dep of
                     NONE =>
-                    add_node {target = target_s, seqnum = 0, phony = is_phony,
+                    add_node {target = tgt, seqnum = 0, phony = is_phony,
                               status = status, command = NoCmd,
                               dir = hmdir.curdir(), dependencies = depnodes} g1
                   | SOME scr =>
@@ -889,7 +874,7 @@ in
                                  Pending{needed=false}
                                else Succeeded
                          in
-                           add_node {target = target_s, seqnum = 0,
+                           add_node {target = tgt, seqnum = 0,
                                      phony = false, status = updstatus,
                                      command = BuiltInCmd
                                                  (BIC_BuildScript s, incinfo),
@@ -904,12 +889,11 @@ end
 fun get_targets dir =
     let
       val from_directory =
-          generate_all_plausible_targets warn NONE |> slist_to_depset
+          deplist_to_set (generate_all_plausible_targets warn NONE)
       val (_, rules, _) = get_hmf()
     in
-      Binarymap.foldl (fn (k,v,acc) =>
-                          if k <> ".PHONY" then
-                            Binaryset.add(acc, normaliseHMFDep k)
+      Binarymap.foldl (fn (dep as (_,f),v,acc) =>
+                          if f <> Unhandled ".PHONY" then set_add dep acc
                           else acc)
                       from_directory
                       rules
@@ -923,8 +907,7 @@ fun extend_graph_in_dir incinfo warn dir graph =
       val dir_targets = get_targets dir
     in
       Binaryset.foldl
-        (fn (t,g) =>
-            #1 (build_depgraph empty_cdset incinfo (dir, toFile t, NONE) g))
+        (fn (t,g) => #1 (build_depgraph empty_cdset incinfo t g))
         graph
         dir_targets
     end
@@ -974,23 +957,18 @@ fun work() =
     case targets of
       [] => let
         val targets = generate_all_plausible_targets warn start_tgt
-        val dir = hmdir.curdir()
-        val targets = map (fn s => (dir, s)) targets
         val depgraph =
             if cline_recursive then make_all_needed depgraph
-            else if toplevel_no_prereqs then mk_dirneeded dir depgraph
+            else if toplevel_no_prereqs then
+              mk_dirneeded (hmdir.curdir()) depgraph
             else mkneeded targets depgraph
         val _ = diag "core" (
               fn _ =>
                  let
-                   val tgtstrings =
-                       map
-                         (fn (d,s) => if OS.FileSys.access(s, []) then s
-                                      else s ^ "(*)")
-                         targets
+                   fun pr t = if depexists_readable t then dep_toString t
+                              else dep_toString t ^ "(*)"
                  in
-                   "Generated targets are: [" ^
-                   String.concatWith ", " tgtstrings ^ "]"
+                   "Generated targets are: [" ^concatWithf pr ", " targets ^ "]"
                  end
             )
         val _ = diag "core"
@@ -1032,7 +1010,7 @@ fun work() =
           )
         else
           let
-            val targets = map (fn s => (original_dir,s)) xs
+            val targets = map filestr_to_dep xs
             val g = mkneeded targets depgraph
           in
             if cline_nobuild then

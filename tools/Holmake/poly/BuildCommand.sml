@@ -484,7 +484,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                     jobs = jobs } g |> interpret_graph)
 in
   {extra_impl_deps = if relocbuild orelse HOLSTATE() = POLY then []
-                     else [Unhandled (HOLSTATE())],
+                     else [filestr_to_dep (HOLSTATE())],
    build_graph = build_graph}
 end
 

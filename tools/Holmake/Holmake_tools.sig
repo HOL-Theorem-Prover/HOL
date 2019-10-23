@@ -6,13 +6,16 @@ sig
   datatype File = datatype Holmake_tools_dtype.File
   datatype buildcmds = datatype Holmake_tools_dtype.buildcmds
 
+  val |> : 'a * ('a -> 'b) -> 'b
+
   (* simple list things *)
   val member : ''a -> ''a list -> bool
-  val set_union : ''a list -> ''a list -> ''a list
+  val set_unionl : ''a list -> ''a list -> ''a list
   val delete : ''a -> ''a list -> ''a list
-  val set_diff : ''a list -> ''a list -> ''a list
+  val set_diffl : ''a list -> ''a list -> ''a list
   val remove_duplicates : ''a list -> ''a list
 
+  (* comparisons *)
   type 'a cmp = 'a * 'a -> order
   val pair_compare : 'a cmp * 'b cmp -> ('a * 'b) cmp
   val inv_img_cmp  : ('b -> 'a) -> 'a cmp -> 'b cmp
@@ -29,6 +32,18 @@ sig
   val collapse_bslash_lines : string -> string
   val realspace_delimited_fields : string -> string list
   val kernelid_fname : string
+  val concatWithf : ('a -> string) -> string -> 'a list -> string
+
+  (* sets *)
+  type 'a set = 'a Binaryset.set
+  val set_add : 'a -> 'a set -> 'a set
+  val set_addList : 'a list -> 'a set -> 'a set
+  val set_union : 'a set -> 'a set -> 'a set
+  val set_diff : 'a set -> 'a set -> 'a set
+  val set_exists : ('a -> bool) -> 'a set -> bool
+  val set_concatWith : ('a -> string) -> string -> 'a set -> string
+  val set_mapPartial : ('a -> 'b option) -> 'b set -> 'a set -> 'b set
+  val listItems : 'a set -> 'a list
 
   (* terminal stuff: colouring of strings, getting width *)
   val red : string -> string
@@ -73,8 +88,6 @@ sig
   val file_compare : File * File -> order
   val primary_dependent : File -> File option
   val exists_readable : string -> bool
-  val generate_all_plausible_targets :
-      (string -> unit) -> string option -> string list
   val extract_theory : string list -> string option
 
   val clean_dir : {extra_cleans: string list} -> unit
@@ -93,6 +106,7 @@ sig
     val curdir : unit -> t
     val compare : t * t -> order
     val eqdir : t -> t -> bool
+    val chdir : t -> unit
   end
   val nice_dir : string -> string (* prints a dir with ~ when HOME is set *)
   type include_info = {includes : string list, preincludes : string list}
@@ -121,7 +135,11 @@ sig
   val dep_compare : dep * dep -> order
   val dep_toString : dep -> string
   val depset_diff : dep list -> dep list -> dep list
+  val depexists_readable : dep -> bool
+  val localFile : File -> dep
   val filestr_to_dep : string -> dep (* directory dependent *)
+  val generate_all_plausible_targets :
+      (string -> unit) -> dep option -> dep list
 
 
   val get_direct_dependencies :
@@ -132,7 +150,7 @@ sig
   exception HolDepFailed
 
   val forces_update_of : string * string -> bool
-  val depforces_update_of : dep * string -> bool
+  val depforces_update_of : dep * dep -> bool
 
 
 end

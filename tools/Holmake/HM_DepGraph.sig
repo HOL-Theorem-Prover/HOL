@@ -30,20 +30,20 @@ sig
   val node_compare : node * node -> order
 
   val empty : t
-  val add_node : string nodeInfo -> t -> t * node
+  val add_node : dep nodeInfo -> t -> t * node
   val updnode : node * target_status -> t -> t
   val nodeStatus : t -> node -> target_status
   val addDeps : node * (node * dep) list -> t -> t
-  val peeknode : t -> node -> string nodeInfo option
-  val target_node : t -> Holmake_tools.hmdir.t * string -> node option
+  val peeknode : t -> node -> dep nodeInfo option
+  val target_node : t -> dep -> node option
   val size : t -> int
-  val listNodes : t -> (node * string nodeInfo) list
+  val listNodes : t -> (node * dep nodeInfo) list
   val find_nodes_by_command : t -> command -> node list
   val make_all_needed : t -> t
-  val mkneeded : (Holmake_tools.hmdir.t * string) list -> t -> t
+  val mkneeded : dep list -> t -> t
   val mk_dirneeded : Holmake_tools.hmdir.t -> t -> t
 
-  val find_runnable : t -> (node * string nodeInfo) option
+  val find_runnable : t -> (node * dep nodeInfo) option
 
   val toString : t -> string
 

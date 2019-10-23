@@ -69,8 +69,8 @@ fun command_compare (NoCmd, NoCmd) = EQUAL
   | command_compare (BuiltInCmd _, SomeCmd _) = GREATER
   | command_compare (BuiltInCmd (b1,_), BuiltInCmd (b2,_)) = bic_compare(b1,b2)
 
-type t = { nodes : (node, string nodeInfo) Map.dict,
-           target_map : (hmdir.t * string,node) Map.dict,
+type t = { nodes : (node, dep nodeInfo) Map.dict,
+           target_map : (dep,node) Map.dict,
            command_map : (command,node list) Map.dict }
 
 
@@ -78,7 +78,7 @@ val tgt_compare = pair_compare(hmdir.compare, String.compare)
 
 
 val empty = { nodes = Map.mkDict node_compare,
-              target_map = Map.mkDict tgt_compare,
+              target_map = Map.mkDict dep_compare,
               command_map = Map.mkDict command_compare }
 fun fupd_nodes f {nodes, target_map, command_map} =
   {nodes = f nodes, target_map = target_map, command_map = command_map}
@@ -116,21 +116,21 @@ fun extend_map_list m k v =
       NONE => Map.insert(m, k, [v])
     | SOME vs => Map.insert(m, k, v::vs)
 
-fun add_node (nI : string nodeInfo) (g :t) =
+fun add_node (nI : dep nodeInfo) (g :t) =
   let
     fun newNode (copt : command) =
       let
         val n = size g
       in
         ({ nodes = Map.insert(#nodes g,n,nI),
-           target_map = Map.insert(#target_map g, (#dir nI, #target nI), n),
+           target_map = Map.insert(#target_map g, #target nI, n),
            command_map = extend_map_list (#command_map g) copt n },
          n)
       end
     val {target=tgt,dir,...} = nI
     val tmap = #target_map g
     val _ =
-        case Map.peek (tmap, (dir,tgt)) of
+        case Map.peek (tmap, tgt) of
             SOME n => if #seqnum (valOf (peeknode g n)) <> #seqnum nI then ()
                       else raise DuplicateTarget
           | NONE => ()
@@ -254,10 +254,12 @@ fun toString g =
           List.partition (fn (_,nI) => #status nI = Succeeded) (listNodes g)
       fun prSuccess (n,{dir,target,...}) =
           Int.toString n ^ ":" ^
-          hmdir.pretty_dir (hmdir.extendp {base = dir, extension = target})
+          dep_toString target ^
+          (if hmdir.compare(dir,#1 target) <> EQUAL then
+             "[ run in " ^ hmdir.pretty_dir dir ^ "]"
+           else "")
       fun prNode(n,nI) =
-          "[" ^ node_toString n ^ "], " ^
-          nodeInfo_toString (fn s => s) nI
+          "[" ^ node_toString n ^ "], " ^ nodeInfo_toString dep_toString nI
     in
       "{Already built " ^
       indentedlist prSuccess successes ^ " Others:\n  " ^
@@ -266,7 +268,7 @@ fun toString g =
 
 fun postmortem (outs : Holmake_tools.output_functions) (status,g) =
   let
-    fun pr s = s
+    val pr = dep_toString
     val {diag,tgtfatal,...} = outs
     val diagK = diag "postmortem" o (fn x => fn _ => x)
     fun pending_or_failed ps fs ns =
@@ -291,7 +293,7 @@ fun postmortem (outs : Holmake_tools.output_functions) (status,g) =
           diagK ("True pending: \n" ^ String.concatWith "\n" (map str ps));
           if not (null fs') then
             tgtfatal ("Don't know how to build necessary target(s): " ^
-                      String.concatWith ", " (map nI_target fs'))
+                      concatWithf (dep_toString o nI_target) ", " fs')
           else ();
           OS.Process.failure
         end

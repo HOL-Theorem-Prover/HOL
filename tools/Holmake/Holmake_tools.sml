@@ -7,23 +7,26 @@ open Holmake_tools_dtype
 
 fun K x y = x
 
+fun |>(x,f) = f x
+infix |>
+
 structure Path = OS.Path
 structure FileSys = OS.FileSys
 
 val DEFAULT_OVERLAY = "Overlay.ui"
 fun member m [] = false
   | member m (x::xs) = if x = m then true else member m xs
-fun set_union s1 s2 =
+fun set_unionl s1 s2 =
   case s1 of
     [] => s2
   | (e::es) => let
-      val s' = set_union es s2
+      val s' = set_unionl es s2
     in
       if member e s' then s' else e::s'
     end
 fun delete m [] = []
   | delete m (x::xs) = if m = x then delete m xs else x::delete m xs
-fun set_diff s1 s2 = foldl (fn (s2e, s1') => delete s2e s1') s1 s2
+fun set_diffl s1 s2 = foldl (fn (s2e, s1') => delete s2e s1') s1 s2
 fun remove_duplicates [] = []
   | remove_duplicates (x::xs) = x::(remove_duplicates (delete x xs))
 
@@ -471,6 +474,7 @@ fun op+ (d, e) = Path.mkCanonical (Path.concat(d, e))
 
 fun curdir () = {relpath = SOME (OS.Path.currentArc),
                  absdir = OS.FileSys.getDir()}
+fun chdir ({absdir,...}: t) = OS.FileSys.chDir absdir
 
 fun compare ({absdir = d1, ...} : t, {absdir = d2, ...} : t) =
     String.compare (d1, d2)
@@ -596,42 +600,6 @@ fun find_files ds P =
     recurse []
   end
 
-fun generate_all_plausible_targets warn first_target =
-    case first_target of
-        SOME s => [s]
-      | NONE =>
-        let
-          val cds = OS.FileSys.openDir "."
-          fun not_a_dot f = not (String.isPrefix "." f)
-          fun ok_file f =
-              case (toFile f) of
-                  SIG (Theory _) => false
-                | SIG _ => true
-                | SML (Script s) =>
-                  (case OS.Path.ext s of
-                       SOME "art" => false
-                       (* can be generated as temporary by opentheory
-                          machinery *)
-                     | SOME _ =>
-                         (warn ("Theory names (e.g., "^f^
-                                ") can't include '.' characters");
-                          false)
-                     | NONE => true)
-                | SML (Theory _) => false
-                | SML _ => true
-                | _ => false
-          val src_files = find_files cds (fn s => ok_file s andalso not_a_dot s)
-          fun src_to_target (SIG (Script s)) = UO (Theory s)
-            | src_to_target (SML (Script s)) = UO (Theory s)
-            | src_to_target (SML s) = (UO s)
-            | src_to_target (SIG s) = (UI s)
-            | src_to_target _ = raise Fail "Can't happen"
-          val initially = map (fromFile o src_to_target o toFile) src_files
-        in
-          Binaryset.listItems
-            (Binaryset.addList (Binaryset.empty String.compare, initially))
-        end
-
 (* dependency analysis *)
 exception HolDepFailed
 fun runholdep {ofs, extras, includes, arg, destination} = let
@@ -739,6 +707,8 @@ fun holdep_arg (UO c) = SOME (SML c)
 fun mk_depfile_name DEPDIR s = fullPath [DEPDIR, s^".d"]
 
 type dep = (hmdir.t * File)
+fun dirpart (d:dep) = #1 d
+fun filepart (d:dep) = #2 d
 
 infix forces_update_of
 fun (f1 forces_update_of f2) = let
@@ -761,14 +731,10 @@ fun depset_diff dl1 dl2 =
       recurse dl1
     end
 
-
-
 infix depforces_update_of
-fun ((d,f1) depforces_update_of f2) = let
-  val p1 = hmdir.toAbsPath (hmdir.extendp {base = d, extension = fromFile f1})
-in
-  p1 forces_update_of f2
-end
+fun (d1 depforces_update_of d2) =
+  dep_toString d1 forces_update_of dep_toString d2
+fun depexists_readable d = exists_readable (dep_toString d)
 
 fun localFile f = (hmdir.curdir(), f)
 
@@ -812,6 +778,74 @@ in
   else
     []
 end
+
+type 'a set = 'a Binaryset.set
+fun set_diff s1 s2 = Binaryset.difference(s1,s2)
+fun set_union s1 s2 = Binaryset.union(s1,s2)
+fun set_add i s = Binaryset.add(s,i)
+fun set_addList l s = Binaryset.addList(s,l)
+fun set_exists P s = isSome (Binaryset.find P s)
+fun set_mapPartial f emp s =
+    Binaryset.foldl (fn (e,A) => case f e of SOME e' => set_add e' A
+                                           | NONE => A)
+                    emp
+                    s
+val listItems = Binaryset.listItems
+
+fun set_concatWith p d set =
+    let val str = Binaryset.foldl (fn (e, A) => p e ^ d :: A) [] set
+                                  |> String.concat
+    in
+      case str of
+          "" => ""
+        | _ => String.extract(str, 0, SOME (size str - size d))
+    end
+fun concatWithf p d [] = ""
+  | concatWithf p d [x] = p x
+  | concatWithf p d xs =
+    let
+      fun recur A [] = List.rev A (* shouldn't ever happen *)
+        | recur A [x] = List.rev (p x :: A)
+        | recur A (x::xs) = recur (d :: p x :: A) xs
+    in
+      String.concat (recur [] xs)
+    end
+
+
+fun generate_all_plausible_targets warn first_target =
+    case first_target of
+        SOME d => [d]
+      | NONE =>
+        let
+          val cds = OS.FileSys.openDir "."
+          fun not_a_dot f = not (String.isPrefix "." f)
+          fun ok_file f =
+              case (toFile f) of
+                  SIG (Theory _) => false
+                | SIG _ => true
+                | SML (Script s) =>
+                  (case OS.Path.ext s of
+                       SOME "art" => false
+                       (* can be generated as temporary by opentheory
+                          machinery *)
+                     | SOME _ =>
+                         (warn ("Theory names (e.g., "^f^
+                                ") can't include '.' characters");
+                          false)
+                     | NONE => true)
+                | SML (Theory _) => false
+                | SML _ => true
+                | _ => false
+          val src_files = find_files cds (fn s => ok_file s andalso not_a_dot s)
+          fun src_to_target (SIG (Script s)) = UO (Theory s)
+            | src_to_target (SML (Script s)) = UO (Theory s)
+            | src_to_target (SML s) = (UO s)
+            | src_to_target (SIG s) = (UI s)
+            | src_to_target _ = raise Fail "Can't happen"
+          val initially = map (localFile o src_to_target o toFile) src_files
+        in
+          listItems (set_addList initially empty_dset)
+        end
 
 
 

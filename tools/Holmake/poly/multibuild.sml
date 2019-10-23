@@ -56,7 +56,7 @@ fun graphbuild optinfo g =
       case (ok,find_runnable g) of
           (false, _) => GiveUpAndDie (g, false)
        |  (true, NONE) => NoMoreJobs (g, ok)
-       |  (true, SOME (n,nI : string nodeInfo)) =>
+       |  (true, SOME (n,nI : dep nodeInfo)) =>
           let
             val _ = diag ("Found runnable node "^node_toString n)
             fun k b g =
@@ -67,7 +67,7 @@ fun graphbuild optinfo g =
             val dir = Holmake_tools.hmdir.toAbsPath (#dir nI)
             val _ = is_pending (#status nI) orelse
                     raise Fail "runnable not pending"
-            val target_s = #target nI
+            val target_s = dep_toString (#target nI)
             fun stdprocess() =
               case #command nI of
                   NoCmd => genjob (updnode (n,Succeeded) g, true)
@@ -169,7 +169,7 @@ fun graphbuild optinfo g =
                                 g
                   end
           in
-            if not (#phony nI) andalso exists_readable (#target nI) andalso
+            if not (#phony nI) andalso depexists_readable (#target nI) andalso
                #seqnum nI = 0
                (* necessary to avoid dropping out of a multi-command execution
                   part way through *)

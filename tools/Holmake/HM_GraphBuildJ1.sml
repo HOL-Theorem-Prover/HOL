@@ -48,10 +48,12 @@ fun graphbuildj1 static_info =
         fun recurse retval g =
           case find_runnable g of
               NONE => (retval, g)
-            | SOME (n, nI : string nodeInfo) =>
+            | SOME (n, nI : dep nodeInfo) =>
               let
+                val target_d = #target nI
+                val target_s = dep_toString target_d
+                val _ = hmdir.chdir (#dir nI)
                 val deps = map #2 (#dependencies nI)
-                val target_s = #target nI
                 fun k upd res =
                   let
                     val g = upd (b2status res) g
@@ -64,8 +66,12 @@ fun graphbuildj1 static_info =
                   case #command nI of
                       BuiltInCmd (BIC_Compile, ii) =>
                       (diagK("J1Build: Running built-in compile on " ^
-                             #target nI);
-                       case toFile (#target nI) of
+                             target_s);
+                       hmdir.eqdir (#dir nI) (#1 target_d) orelse
+                       raise Fail
+                         ("Can't have built-in commands in different\
+                          \ directories from target "^target_s);
+                       case #2 target_d of
                            UI c => k (upd1 n) (bc ii (Compile deps) (SIG c))
                          | UO c => k (upd1 n) (bc ii (Compile deps) (SML c))
                          | ART (RawArticle s) =>
@@ -75,7 +81,7 @@ fun graphbuildj1 static_info =
                          | ART (ProcessedArticle s) =>
                              k (upd1 n)
                                (bc ii (ProcessArticle s) (ART (RawArticle s)))
-                         | _ => raise Fail ("bg tgt = " ^ #target nI))
+                         | _ => raise Fail ("bad bic tgt = " ^ target_s))
                     | cmd as (BuiltInCmd (BIC_BuildScript thyname, ii)) =>
                       let
                         val others = find_nodes_by_command g cmd
@@ -105,14 +111,15 @@ fun graphbuildj1 static_info =
                             in
                               if not res_b andalso ignore_error
                               then
-                                (warn ("[" ^ #target nI ^ "] Error (ignored)");
+                                (warn ("[" ^ dep_toString target_d ^
+                                       "] Error (ignored)");
                                  k (updall (n::others)) true)
                               else k (updall (n::others)) res_b
                             end
                       end
                     | NoCmd => k (upd1 n) true
               in
-                if not (#phony nI) andalso exists_readable (#target nI) andalso
+                if not (#phony nI) andalso depexists_readable target_d andalso
                    #seqnum nI = 0
                 then
                   let
