@@ -1115,7 +1115,7 @@ val FINITE_LIST_TO_SET = store_thm
    Induct
    >> RW_TAC std_ss [FINITE_EMPTY, FINITE_INSERT, LIST_TO_SET_THM]);
 
-val ALL_DISTINCT_imp_REAL_SUM_IMAGE_of_LIST_TO_SET_eq_REAL_SUM = store_thm  
+val ALL_DISTINCT_imp_REAL_SUM_IMAGE_of_LIST_TO_SET_eq_REAL_SUM = store_thm
   ("ALL_DISTINCT_imp_REAL_SUM_IMAGE_of_LIST_TO_SET_eq_REAL_SUM",
    ``!l. ALL_DISTINCT l ==>
          (REAL_SUM_IMAGE f (LIST_TO_SET l) = REAL_SUM (MAP f l))``,
