@@ -505,7 +505,7 @@ val LT_LE_1_MULT = store_thm
 Theorem EXP_MONO :
     !p a b. 1 < p ==> (p EXP a < p EXP b <=> a < b)
 Proof
-    Induct_on `b` >- RW_TAC arith_ss [EXP]       
+    Induct_on `b` >- RW_TAC arith_ss [EXP]
  >> rpt STRIP_TAC
  >> Cases_on `a`
  >> RW_TAC arith_ss [EXP]
