@@ -4,7 +4,7 @@ INCLUDES = $(HOLDIR)/tools/unicode-grep
 
 .PHONY: all
 
-all:
+all: $(dprot $(HOLDIR)/tools/unicode-grep/unicode-grep)
 	$(protect $(HOLDIR)/tools/unicode-grep/unicode-grep) --nolinelen $(protect $(HOLDIR)/src) $(protect $(HOLDIR)/help/Docfiles)
 	$(protect $(HOLDIR)/tools/unicode-grep/unicode-grep) --nolinelen -u $(protect $(HOLDIR)/examples)
 
