@@ -27,7 +27,7 @@
 structure Thm_cont :> Thm_cont =
 struct
 
-open Feedback HolKernel Drule boolSyntax Abbrev;
+open Feedback HolKernel Drule boolSyntax Abbrev Conv;
 
 val ERR = mk_HOL_ERR "Thm_cont"
 
@@ -447,13 +447,16 @@ end
 local
  fun occurs_check [] tm = ()
    | occurs_check (v::vs) tm = if free_in v tm then raise (ERR "PROVEHYP_THEN" "") else occurs_check vs tm
+ val IMP_CLAUSES1 = boolTheory.IMP_CLAUSES |> SPEC_ALL |> CONJUNCT1 |> GEN_ALL
+ fun lth_mp th lth = CONV_RULE (STRIP_QUANT_CONV (LAND_CONV (K (EQT_INTRO lth)) THENC
+                                                  REWR_CONV IMP_CLAUSES1)) th
 in
  fun PROVEHYP_THEN t2tac th g = let
   val (vs, tm) = strip_forall (concl th)
   val (l, _) = dest_imp tm
   val () = occurs_check vs l
  in
-  Tactical.SUBGOAL_THEN l (fn lth => t2tac lth (MATCH_MP th lth))
+  Tactical.SUBGOAL_THEN l (fn lth => t2tac lth (lth_mp th lth))
  end g
 end
 
