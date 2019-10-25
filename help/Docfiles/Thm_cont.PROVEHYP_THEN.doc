@@ -15,8 +15,6 @@ requires that {th} be an (universally quantified) implication
 Given an implication {|- !x1..xn. l ==> r x1..xn}, the result is a new
 sub-goal requiring the user to prove {l}, and the application of {th2tac}
 to the theorems with conclusion {l} and {!x1..xn. r x1..xn}.
-(The former has just been proved by the user; the latter is the result
-of applying {MATCH_MP} to {th} and {l}.)
 
 Diagrammatically, one might see this as
 {
