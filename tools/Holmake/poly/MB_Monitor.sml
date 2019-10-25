@@ -213,9 +213,9 @@ fun new {info,warn,genLogFile,time_limit} =
             pfx ^ colour (StringCvt.padLeft #" " 7 s) ^ CLR_EOL)
     fun monitor msg =
       case msg of
-          StartJob (_, tag) =>
+          StartJob ((_, tag), {dir}) =>
           let
-            val strm = TextIO.openOut (genLogFile{tag = tag})
+            val strm = TextIO.openOut (genLogFile{tag = tag, dir = dir})
             val tb = tailbuffer.new {
                   numlines = 10,
                   patterns = [cheat_string, oracle_string, used_cheat_string]

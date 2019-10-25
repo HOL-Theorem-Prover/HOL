@@ -60,7 +60,7 @@ fun fupd_jobs f t = updateT t (U #jobs (f (#jobs t))) $$
 fun fupd_includes f t = updateT t (U #includes (f (#includes t))) $$
 
 type t = {
-  debug : bool,
+  debug : {ins : string list, outs : string list} option,
   do_logging : bool,
   fast : bool,
   help : bool,
@@ -85,7 +85,7 @@ type t = {
 
 val default_core_options : t =
 {
-  debug = false,
+  debug = NONE,
   do_logging = false,
   fast = false,
   help = false,
@@ -153,9 +153,31 @@ fun set_openthy s =
                wn "Multiple opentheory specs; ignoring earlier spec"
              else ();
              updateT t (U #opentheory (SOME s)) $$))
+fun addDbg sopt =
+    resfn (fn (wn, t) =>
+              let
+                fun process (x as {ins,outs}) sopt =
+                    case sopt of
+                        NONE => SOME x
+                      | SOME s =>
+                        if String.sub(s,0) = #"-" then
+                          if size s > 1 then
+                            SOME{ins=ins,
+                                 outs = String.extract(s,1,NONE) :: outs}
+                          else (wn "Ignoring bogus -d- option"; SOME x)
+                        else
+                          SOME{ins = s::ins, outs = outs}
+                val newvalue =
+                    case #debug t of
+                        NONE => process {ins=[],outs=[]} sopt
+                      | SOME x => process x sopt
+              in
+                updateT t (U #debug newvalue) $$
+              end)
+
 val core_option_descriptions = [
-  { help = "turn on diagnostic messages", long = ["dbg", "d"], short = "",
-    desc = mkBoolT #debug},
+  { help = "turn on diagnostic messages", long = ["dbg"], short = "d",
+    desc = OptArg (addDbg, "diag-cat")},
   { help = "fast build (replace tactics w/cheat)", long = ["fast"], short = "",
     desc = mkBoolT #fast },
   { help = "show this message", long = ["help"], short = "h",
@@ -201,7 +223,7 @@ val core_option_descriptions = [
     desc = mkBoolT #quit_on_failure },
   { help = "rebuild cached dependency files", short = "",
     long = ["rebuild_deps"], desc = mkBoolT #rebuild_deps },
-  { help = "clean recursively", short = "r", long = [],
+  { help = "more recursion", short = "r", long = [],
     desc = mkBoolT #recursive },
   { help = "verbose output", short = "v", long = ["verbose"],
     desc = NoArg

@@ -13,7 +13,8 @@ struct
   type exit_status = Posix.Process.exit_status
 
   type command = {executable: string, nm_args : string list, env : string list}
-  type 'a job = {tag : string, command : command, update : 'a * bool -> 'a}
+  type 'a job = {tag : string, command : command, update : 'a * bool -> 'a,
+                 dir : string}
   datatype 'a genjob_result =
            NoMoreJobs of 'a | NewJob of ('a job * 'a) | GiveUpAndDie of 'a
   type 'a workprovider = { initial : 'a, genjob : 'a -> 'a genjob_result }
@@ -38,7 +39,7 @@ struct
          | Terminated of jobkey * exit_status * Time.time
          | MonitorKilled of jobkey * Time.time
          | EOF of jobkey * strmtype * Time.time
-         | StartJob of jobkey
+         | StartJob of jobkey * {dir:string}
   datatype client_cmd = Kill of jobkey | KillAll
   type monitor = monitor_message -> client_cmd option
 
@@ -152,7 +153,7 @@ struct
   fun start_job (j : 'a job) : 'a working_job =
     let
       open Posix.Process Posix.IO
-      val {tag, command, update} = j
+      val {tag, command, update, dir} = j
       val {executable,env,nm_args} = command
       val {infd=outinfd, outfd = outoutfd} = pipe()
       val {infd=errinfd, outfd = erroutfd} = pipe()
@@ -167,6 +168,7 @@ struct
             val () =
                 List.app close [errinfd, erroutfd, outinfd, outoutfd,
                                 ininfd, inoutfd]
+            val _ = OS.FileSys.chDir dir
           in
             exece(executable,nm_args,env)
           end
@@ -196,7 +198,8 @@ struct
   fun shellcommand s =
     let
       open Posix.Process
-      val j :int job = {tag = s, command = simple_shell s, update = K 0}
+      val j :int job = {tag = s, command = simple_shell s, update = K 0,
+                        dir = "."}
       val wj = start_job j
       fun read pfx acc strm k =
         case TextIO.inputLine strm of
@@ -228,9 +231,10 @@ struct
           | NewJob (job, state') =>
             let
               val wj = start_job job
-              val cmds' = case monitorfn (StartJob (wjkey wj)) of
-                              NONE => cmds
-                            | SOME c => c::cmds
+              val cmds' =
+                  case monitorfn (StartJob (wjkey wj, {dir= #dir job})) of
+                      NONE => cmds
+                    | SOME c => c::cmds
             in
               fill_workq monitorfn
                          (cmds', wl |> addjob wj |> updstate state')
@@ -257,7 +261,7 @@ struct
         | MonitorKilled((pid,tag), t) => p tag t "monitor-killed"
         | EOF ((pid,tag), chan, t) =>
             p tag t ("EOF on " ^ chan_name chan)
-        | StartJob (pid,tag) => p tag (Time.fromSeconds 0) "beginning"
+        | StartJob ((pid,tag), _) => p tag (Time.fromSeconds 0) "beginning"
     end
 
   fun wjstrm ERR (wj:'a working_job) = #err wj
@@ -415,7 +419,8 @@ struct
               let
                 fun upd(clist, b) = fupdAlist t (fn (c,_) => (c,Done b)) clist
               in
-                NewJob ({tag = t, command = simple_shell c, update = upd}, l)
+                NewJob ({tag = t, command = simple_shell c, update = upd,
+                         dir = "."}, l)
               end
         end
       val wl =

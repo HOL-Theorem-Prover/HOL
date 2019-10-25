@@ -2,7 +2,8 @@ signature ProcessMultiplexor =
 sig
 
   type command = {executable: string, nm_args : string list, env : string list}
-  type 'a job = {tag : string, command : command, update : 'a * bool -> 'a}
+  type 'a job = {tag : string, command : command, update : 'a * bool -> 'a,
+                 dir : string}
   type jobkey = Posix.ProcEnv.pid * string
   type exit_status = Posix.Process.exit_status
   datatype 'a genjob_result =
@@ -17,7 +18,7 @@ sig
          | Terminated of jobkey * exit_status * Time.time
          | MonitorKilled of jobkey * Time.time
          | EOF of jobkey * strmtype * Time.time
-         | StartJob of jobkey
+         | StartJob of jobkey * {dir:string}
   datatype client_cmd = Kill of jobkey | KillAll
   type monitor = monitor_message -> client_cmd option
   val text_monitor : monitor

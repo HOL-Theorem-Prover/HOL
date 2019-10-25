@@ -8,20 +8,35 @@ structure Holmake =
 struct
 
 open Systeml Holmake_tools Holmake_types
-infix forces_update_of |>
-
-fun x |> f = f x
+infix forces_update_of depforces_update_of |>
 
 structure FileSys = OS.FileSys
 structure Path = OS.Path
 structure Process = OS.Process
 
+type dep = hmdir.t * File
+
+
+
+fun slist_to_set slist =
+    Binaryset.addList(Binaryset.empty String.compare, slist)
+fun flist_to_set flist =
+    Binaryset.addList(Binaryset.empty file_compare, flist)
+fun slist_to_dset basedir slist =
+    List.foldl
+      (fn (s,dset) =>
+          Binaryset.add(dset, hmdir.extendp {base=basedir, extension=s}))
+      (Binaryset.empty hmdir.compare) slist
+fun deplist_to_set ds = Binaryset.addList(empty_dset, ds)
 (* turn a variable name into a list *)
 fun envlist env id = let
   open Holmake_types
 in
   map dequote (tokenize (perform_substitution env [VREF id]))
 end
+
+
+
 
 fun main() = let
 
@@ -43,22 +58,10 @@ in
 fun ppath s = if String.isPrefix sigobj s then
                 frakS ^ String.extract(s,size sigobj,NONE)
               else s
-fun pflist fs = String.concatWith ", " (map (ppath o fromFile) fs)
+
+fun pflist fs = concatWithf (ppath o fromFile) ", " fs
+fun pdlist ds = concatWithf dep_toString ", " ds
 end
-
-
-(**** get_dependencies *)
-(* figures out whether or not a dependency file is a suitable place to read
-   information about current target or not, and then either does so, or makes
-   the dependency file and then reads from it.
-
-     f1 forces_update_of f2
-     iff
-     f1 exists /\ (f2 exists ==> f1 is newer than f2)
-*)
-
-(**** get dependencies from file *)
-
 
 
 (** Command line parsing *)
@@ -80,7 +83,70 @@ val (master_cline_options, targets) = getcline (CommandLine.arguments())
 val master_cline_nohmf =
     HM_Cline.default_options |> apply_updates master_cline_options
 
+fun read_holpathdb() =
+    let
+      val holpathdb_extensions =
+          holpathdb.search_for_extensions (fn s => []) [OS.FileSys.getDir()]
+      val _ = List.app holpathdb.extend_db holpathdb_extensions
+      open Holmake_types
+      fun foldthis ({vname,path}, env) = env_extend (vname, [LIT path]) env
+    in
+      List.foldl foldthis
+                 (HM_BaseEnv.make_base_env master_cline_nohmf)
+                 holpathdb_extensions
+    end
 
+type tgt_ruledb = (dep, {dependencies:dep list, commands : quotation list})
+                    Binarymap.dict
+val empty_trdb : tgt_ruledb = Binarymap.mkDict dep_compare
+
+
+local
+  val base = read_holpathdb()
+  val hmcache = ref (Binarymap.mkDict String.compare)
+  val default = (base,empty_trdb,NONE)
+  fun get_hmf0 d =
+      if OS.FileSys.access("Holmakefile", [OS.FileSys.A_READ]) then
+        let val (env, rdb, tgt0) =
+              ReadHMF.read "Holmakefile" (read_holpathdb())
+              handle Fail s =>
+                     (warn ("Bad Holmakefile in " ^ d ^ ": " ^ s);
+                      (base,Binarymap.mkDict String.compare,NONE))
+          fun foldthis (k,{commands,dependencies=deps0},A) =
+              Binarymap.insert(A, filestr_to_dep k,
+                               {commands = commands,
+                                dependencies = map filestr_to_dep deps0})
+        in
+          (env, Binarymap.foldl foldthis empty_trdb rdb,
+           Option.map filestr_to_dep tgt0)
+        end
+      else
+        default
+in
+fun get_hmf () =
+    let
+      val d = OS.FileSys.getDir()
+    in
+      case Binarymap.peek(!hmcache, d) of
+          NONE => let val result = get_hmf0 d
+                  in
+                    hmcache := Binarymap.insert (!hmcache, d, result);
+                    result
+                  end
+        | SOME r => r
+    end
+end
+
+fun getnewincs dir =
+    let val (env, _, _) = get_hmf()
+    in
+      {includes = envlist env "INCLUDES" |> slist_to_dset dir,
+       preincludes = envlist env "PREINCLUDES" |> slist_to_dset dir}
+    end
+
+(* Examining the c/line options, determine whether to use a
+   Holmakefile at all, and which one if we are going to use one.
+*)
 val (cline_hmakefile, cline_nohmf) =
     List.foldl (fn (f,(hmf,nohmf)) =>
                    ((case #hmakefile f of NONE => hmf | SOME s => SOME s),
@@ -100,18 +166,6 @@ fun get_hmf_cline_updates hmenv =
     hmf_options
   end
 
-fun read_holpathdb() =
-    let
-      val holpathdb_extensions =
-          holpathdb.search_for_extensions (fn s => []) [OS.FileSys.getDir()]
-      val _ = List.app holpathdb.extend_db holpathdb_extensions
-      open Holmake_types
-      fun foldthis ({vname,path}, env) = env_extend (vname, [LIT path]) env
-    in
-      List.foldl foldthis
-                 (HM_BaseEnv.make_base_env master_cline_nohmf)
-                 holpathdb_extensions
-    end
 
 val starting_holmakefile =
     if cline_nohmf then NONE
@@ -121,27 +175,28 @@ val starting_holmakefile =
                   else NONE
         | x => x
 
-val starting_dir_hmenv =
-    let
-      val env0 = read_holpathdb()
-    in
-      case starting_holmakefile of
-          NONE => (env0, Holmake_types.empty_ruledb, NONE)
-        | SOME hmf => ReadHMF.read hmf env0
-    end
+val (start_hmenv, start_rules, start_tgt) = get_hmf()
+val start_envlist = envlist start_hmenv
+val start_options = start_envlist "OPTIONS"
+
 
 fun chattiness_level switches =
   case (#debug switches, #verbose switches, #quiet switches) of
-      (true, _, _) => 3
+      (SOME _, _, _) => 3
     | (_, true, _) => 2
     | (_, _, true) => 0
     | _ => 1
 
-val option_value =
+val option_value : HM_Cline.t =
     HM_Cline.default_options
-      |> apply_updates (get_hmf_cline_updates (#1 starting_dir_hmenv))
+      |> apply_updates (get_hmf_cline_updates start_hmenv)
       |> apply_updates master_cline_options
 val coption_value = #core option_value
+val cmdl_HOLDIR = #holdir coption_value
+val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
+val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
+
+
 val usepfx =
   #jobs (#core
            (HM_Cline.default_options |> apply_updates master_cline_options)) =
@@ -152,12 +207,18 @@ val usepfx =
    have their own Holmakefiles *)
 val (outputfns as {warn,tgtfatal,diag,info,chatty}) =
     output_functions {chattiness = chattiness_level coption_value,
+                      debug = #debug coption_value,
                       usepfx = usepfx}
 val do_logging_flag = #do_logging coption_value
 val no_lastmakercheck = #no_lastmaker_check coption_value
 val show_usage = #help coption_value
+val quit_on_failure = #quit_on_failure coption_value
 val toplevel_no_prereqs = #no_prereqs coption_value
+val toplevel_no_overlay = #no_overlay coption_value
 val cline_additional_includes = #includes coption_value
+val cline_always_rebuild_deps = #rebuild_deps coption_value
+val cline_nobuild = #no_action coption_value
+val cline_recursive = #recursive coption_value
 
 (* make the cline includes = [] so that these are only looked at once
    (when the cline_additional_includes value is folded into dirinfo values
@@ -168,8 +229,9 @@ val pass_option_value =
 
 val _ = do_lastmade_checks outputfns {no_lastmakercheck = no_lastmakercheck}
 
-val _ = diag (fn _ => "CommandLine.name() = "^CommandLine.name())
-val _ = diag (fn _ => "CommandLine.arguments() = "^
+val _ = diag "startup" (fn _ => "CommandLine.name() = "^CommandLine.name())
+val _ = diag "startup"
+             (fn _ => "CommandLine.arguments() = "^
                       String.concatWith ", " (CommandLine.arguments()))
 
 (* set up logging *)
@@ -200,24 +262,16 @@ val _ = Process.atExit (fn () => ignore (finish_logging false))
 
 (* ----------------------------------------------------------------------
 
-    maybe_recurse
+    recursively
 
-    this function doesn't handle all recursion, just one level's
-    worth. In other words, the master Holmake calls this function, and
-    this then arranges the recursive calls into the various include
-    directories that need to happen. The holmake that gets called in
-    those directories (via the hm parameter) will in turn call this
-    function for recursion at that level in the "tree".
-
-    The local_build/k parameter is how the maybe_recurse function
-    finishes off; this parameter is called when all of the necessary
-    recursion has been performed and work should be done in the
-    current ("local") directory.
+    The hm parameter is how work is actually done; this parameter is
+    called when all of the necessary recursion has been performed and
+    work should be done in the current ("local") directory. (We are
+    performing a post-order depth-first traversal.)
 
     Finally, what of the dirinfo?
 
     This record includes
-          origin: the absolute path to the very first directory
         includes: the includes that the local directory knows about
                   (which will have come from the command-line or
                   INCLUDES lines in the local Holmakefile
@@ -245,146 +299,113 @@ fun extend_idmap k (v as {incs = i,pres = p}) idm0 =
                           pres = Binaryset.union(p0,p)})
 
 fun print_set ds =
-  "{" ^
-  String.concatWith
-    ", "
-    (Binaryset.foldr (fn (d,acc) => hmdir.toString d :: acc) [] ds) ^
-  "}"
+  "{" ^ set_concatWith hmdir.pretty_dir ", " ds ^ "}"
 
-fun maybe_recurse {warn,diag,hm,dirinfo,dir,local_build=k,cleantgt} allincs =
+type incmap = (hmdir.t, {incs:dirset,pres:dirset}) Binarymap.dict
+type dirinfo = {incdirmap : incmap, visited : hmdir.t Binaryset.set}
+type 'a hmfold =
+     {includes : string list, preincludes : string list} ->
+     (string -> unit) ->
+     hmdir.t ->
+     'a -> 'a
+(* ----------------------------------------------------------------------
+
+    Parameters
+           getnewincs : get INCLUDES information from a directory,
+                        type : dir -> dirinfo
+
+           {warn : how to issue a warning,
+            diag : how to issue a diagnostic,
+            hm   : what to do in a given directory;
+                   will be either to build a graph, or to perform a clean
+            dirinfo : tracks INCLUDES info, and the progress of the
+                      recursion
+            dir : the directory I'm in,
+            data : the value to fold hm over, a graph for a normal build,
+                   or just unit for a clean}
+
+    Assume that we are already in directory dir, and will end in the same
+    directory.
+
+   ---------------------------------------------------------------------- *)
+fun recursively getnewincs dsopt {warn,diag,hm : 'a hmfold,dirinfo,dir,data} =
 let
-  val {incdirmap,visited} = dirinfo
-  val _ = diag (fn _ => "maybe_recurse: includes (pre- & normal) = [" ^
-                        String.concatWith ", " allincs ^ "]")
+  val {incdirmap,visited} = dirinfo : dirinfo
+  val {includes=incset, preincludes = preincset} = getnewincs dir
+  val incdirmap = extend_idmap dir {incs = incset, pres = preincset} incdirmap
+  val recur_into = set_union (set_union incset preincset)
+                             (case dsopt of NONE => empty_dirset
+                                          | SOME ds => ds)
+  fun recur_abbrev dir data (dirinfo:dirinfo) =
+      recursively getnewincs NONE
+                  {warn=warn,diag=diag,hm=hm,dirinfo=dirinfo,dir=dir, data=data}
+  val diag = diag "builddepgraph"
+  val _ = diag (fn _ => "recursively: call in " ^ hmdir.pretty_dir dir)
+  val _ = diag (fn _ => "recursively: includes (pre- & normal) = [" ^
+                        set_concatWith hmdir.pretty_dir ", " recur_into ^ "]")
   val _ = diag (fn _ =>
-                   "maybe_recurse: incdmap on dir \"" ^ hmdir.toString dir ^
+                   "recursively: incdmap on dir " ^ hmdir.pretty_dir dir ^
                    " = " ^ print_set (#incs (idm_lookup incdirmap dir)))
-  val k = fn ii => (terminal_log ("Holmake: "^nice_dir (hmdir.toString dir));
-                    k ii)
-  val tgts = case cleantgt of SOME s => [s] | NONE => []
-  fun recurse (acc as {visited,incdirmap}) newdir = let
+  fun recurse (acc as {visited,incdirmap,data:'a}) newdir = let
   in
     if Binaryset.member(visited, newdir) then
       (* even if you don't want to rebuild newdir, you still want to learn
          about what it depends on so that the dependency map for this directory
          is appropriately augmented *)
-      SOME {visited = visited,
-            incdirmap =
-              extend_idmap dir (idm_lookup incdirmap newdir) incdirmap}
+      {visited = visited,
+       data = data,
+       incdirmap = extend_idmap dir (idm_lookup incdirmap newdir) incdirmap}
     else let
       val _ = OS.FileSys.access
                 (hmdir.toAbsPath newdir, [OS.FileSys.A_READ, OS.FileSys.A_EXEC])
               orelse
                 die ("Attempt to recurse into non-existent directory: " ^
-                     hmdir.toString newdir ^
+                     hmdir.pretty_dir newdir ^
                      "\n  (Probably a result of bad INCLUDES spec.)")
-      val _ = diag (fn _ => "Recursive call in " ^ hmdir.pretty_dir newdir)
-      val _ = diag (fn _ => "Visited set = " ^ print_set visited)
+      val _ = diag (fn _ => "recursively: Visited set = " ^ print_set visited)
       val _ = terminal_log ("Holmake: "^nice_dir (hmdir.toString newdir))
+      val _ = OS.FileSys.chDir (hmdir.toAbsPath newdir)
       val result =
-          case hm newdir acc tgts of
-              NONE => NONE
-            | SOME {visited,incdirmap = idm0} =>
-              SOME {visited = visited,
-                    incdirmap = extend_idmap dir (idm_lookup idm0 newdir) idm0}
+          case recur_abbrev newdir data {incdirmap=incdirmap, visited=visited}of
+              {visited,incdirmap = idm0,data=data'} =>
+              {visited = visited,
+               incdirmap = extend_idmap dir (idm_lookup idm0 newdir) idm0,
+               data = data'}
+      val _ = OS.FileSys.chDir (hmdir.toAbsPath dir)
     in
-      diag (fn _ => "Finished work in "^hmdir.pretty_dir newdir);
       terminal_log ("Holmake: "^nice_dir (hmdir.toString dir));
-      FileSys.chDir (hmdir.toAbsPath dir);
       case result of
-          SOME{visited,incdirmap} =>
+          {visited,incdirmap,data} =>
           let
             val {incs,pres} = idm_lookup incdirmap dir
           in
             diag (fn () =>
-                     "Recursively computed includes for " ^ hmdir.toString dir ^
-                     " = " ^ print_set incs);
+                     "recursively: computed includes for " ^
+                     hmdir.pretty_dir dir ^ " = " ^ print_set incs);
             diag (fn () =>
-                     "Recursively computed pre-includes for " ^
-                     hmdir.toString dir ^
-                     " = " ^ print_set pres)
-          end
-        | NONE => ();
+                     "recursively: computed pre-includes for " ^
+                     hmdir.pretty_dir dir ^ " = " ^ print_set pres)
+          end;
       result
     end
   end
-  fun do_em (accg as {incdirmap,...}) dirs =
+  fun do_em (accg as {incdirmap,data:'a,visited}) dirs =
       case dirs of
           [] =>
           let
             val {pres, incs} = idm_lookup incdirmap dir
             val f = Binaryset.foldr (fn (d,acc) => hmdir.toAbsPath d :: acc) []
+            val data' = hm {includes=f incs,preincludes=f pres} warn dir data
           in
-            if k {includes=f incs,preincludes=f pres} then SOME accg
-            else NONE
+            {incdirmap = incdirmap, visited = visited, data = data'}
           end
-        | x::xs =>
-          let
-          in
-            case recurse accg x of
-                SOME result => do_em result xs
-              | NONE => NONE
-          end
+        | x::xs => do_em (recurse accg x) xs
   val visited = Binaryset.add(visited, dir)
-  fun canon i = hmdir.extendp {base = dir, extension = i}
-  val canonl = map canon
-  fun f idirs = map canon idirs
 in
-  do_em {visited = visited, incdirmap = incdirmap} (hmdir.sort (f allincs))
+  do_em {visited = visited, incdirmap = incdirmap, data = data}
+        (Binaryset.listItems recur_into) before
+  diag (fn _ => "recursively: Finished work in "^hmdir.pretty_dir dir)
 end
-
-(* directory specific stuff here *)
-type res = holmake_result
-fun Holmake hmenvopt nobuild dir dirinfo cline_additional_includes targets: res=
-let
-  val abs_dir = hmdir.toAbsPath dir
-  val _ = OS.FileSys.chDir abs_dir
-
-  val (hmakefile_env, extra_rules, first_target) =
-      case hmenvopt of
-        SOME x => x
-      | _ =>
-        (* as hmenvopt is NONE, this is a recursive call, so user hasn't
-           had option to specify different Holmakefile for this directory*)
-        let
-          val env0 = read_holpathdb()
-        in
-          if exists_readable "Holmakefile" andalso not cline_nohmf
-          then
-              (diag
-                 (fn _ => "Reading additional information fromHolmakefile");
-               ReadHMF.read "Holmakefile" env0)
-          else (env0, Holmake_types.empty_ruledb, NONE)
-        end
-
-  val envlist = envlist hmakefile_env
-
-  val option_value =
-      pass_option_value |> apply_updates (get_hmf_cline_updates hmakefile_env)
-  val coption_value = #core option_value
-
-  val allfast = #fast coption_value
-  val always_rebuild_deps = #rebuild_deps coption_value
-  val cline_recursive = #recursive coption_value
-  val debug = #debug coption_value
-  val user_hmakefile = #hmakefile coption_value
-  val cmdl_HOLDIR = #holdir coption_value
-  val cline_additional_includes =
-      cline_additional_includes @ #includes coption_value
-  val keep_going_flag = #keep_going coption_value
-  val no_action = #no_action coption_value
-  val no_overlay = #no_overlay coption_value
-  val no_prereqs = #no_prereqs coption_value
-  val opentheory = #opentheory coption_value
-  val quiet_flag = #quiet coption_value
-  val quit_on_failure = #quit_on_failure coption_value
-  val verbose = #verbose coption_value
-  (* find HOLDIR by first looking at command-line, then looking
-     for a value compiled into the code.
-  *)
-  val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
-  val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
-
 
 (* prepare to do logging *)
 val () = if do_logging_flag then
@@ -398,79 +419,76 @@ val () = if do_logging_flag then
              end handle IO.Io _ => warn "Couldn't set up make log"
          else ()
 
-
-
-
-val hmake_includes = envlist "INCLUDES"
-val hmake_options = envlist "OPTIONS"
-val additional_includes =
-  remove_duplicates (cline_additional_includes @ hmake_includes)
-
-val hmake_preincludes = envlist "PRE_INCLUDES"
-val hmake_no_overlay = member "NO_OVERLAY" hmake_options
-val hmake_no_sigobj = member "NO_SIGOBJ" hmake_options
-val hmake_qof = member "QUIT_ON_FAILURE" hmake_options
-val hmake_noprereqs = member "NO_PREREQS" hmake_options
-val extra_cleans = envlist "EXTRA_CLEANS"
-
-val quit_on_failure = quit_on_failure orelse hmake_qof
-
-val _ = if cline_recursive andalso no_prereqs then
-          warn("-r forces recursion, taking precedence over --no_prereqs")
-        else ()
-val no_prereqs = (no_prereqs orelse hmake_noprereqs) andalso not cline_recursive
-
-val _ =
-  if quit_on_failure andalso allfast then
-    warn "quit on (tactic) failure ignored for fast built theories"
-  else
-    ()
-
-val no_sigobj = hmake_no_sigobj
 val actual_overlay =
-  if no_sigobj orelse no_overlay orelse hmake_no_overlay then NONE
-  else SOME DEFAULT_OVERLAY
+    if toplevel_no_overlay orelse member "NO_OVERLAY" start_options then NONE
+    else SOME DEFAULT_OVERLAY
 
-val std_include_flags = if no_sigobj then [] else [SIGOBJ]
+val std_include_flags = [SIGOBJ]
+
+fun get_rule_info rdb env tgt =
+    case Binarymap.peek(rdb, tgt) of
+      NONE => NONE
+    | SOME {dependencies, commands} => let
+        val dep1 = [LIT (dep_toString (hd dependencies))]
+            handle Empty => [LIT ""]
+        val env = env |> env_extend("<", dep1)
+                      |> env_extend("@", [LIT (dep_toString tgt)])
+      in
+        SOME {dependencies = dependencies,
+              commands = map (perform_substitution env) commands}
+      end
+
+fun local_rule_info t =
+    let val (env, rules, _) = get_hmf()
+    in
+      get_rule_info rules env t
+    end
 
 fun extra_deps t =
-    Option.map #dependencies
-               (Holmake_types.get_rule_info extra_rules hmakefile_env t)
+      Option.map #dependencies (local_rule_info t)
+fun localstr_extra_deps s =
+    extra_deps (hmdir.curdir(), toFile s)
 
 fun isPHONY t =
-  case extra_deps ".PHONY" of
-      NONE => false
-    | SOME l => member t l
+    case localstr_extra_deps ".PHONY" of
+        NONE => false
+      | SOME l => List.exists (fn e => dep_compare(e,t) = EQUAL) l
 
-fun extra_commands t =
-    Option.map #commands
-               (Holmake_types.get_rule_info extra_rules hmakefile_env t)
+fun extra_commands t = Option.map #commands (local_rule_info t)
 
-val extra_targets = Binarymap.foldr (fn (k,_,acc) => k::acc) [] extra_rules
+fun extra_targets() =
+    let
+      val (_, rules, _) = get_hmf()
+    in
+      Binarymap.foldr (fn (k,_,acc) => k::acc) [] rules
+    end
 
-fun extra_rule_for t = Holmake_types.get_rule_info extra_rules hmakefile_env t
+fun extra_rule_for t = local_rule_info t
+fun dir_varying_envlist s =
+    let val (env, _, _) = get_hmf()
+    in
+      envlist env s
+    end
 
-(* treat targets as sets *)
-infix in_target
-fun (s in_target t) = case extra_deps t of NONE => false | SOME l => member s l
+fun extra_cleans() = dir_varying_envlist "EXTRA_CLEANS"
 
 (*** Compilation of files *)
 val binfo : HM_Cline.t BuildCommand.buildinfo_t =
-    {optv = option_value, hmake_options = hmake_options,
-     actual_overlay = actual_overlay, envlist = envlist,
-     hmenv = hmakefile_env,
+    {optv = option_value,
+     actual_overlay = actual_overlay, envlist = dir_varying_envlist,
+     hmenv = start_hmenv,
      quit_on_failure = quit_on_failure, outs = outputfns,
      SIGOBJ = SIGOBJ}
 val {extra_impl_deps,build_graph} = BuildCommand.make_build_command binfo
 
 val _ = let
 in
-  diag (fn _ => "HOLDIR = "^HOLDIR);
-  diag (fn _ => "Targets = [" ^ String.concatWith ", " targets ^ "]");
-  diag (fn _ => "Additional includes = [" ^
-                String.concatWith ", " additional_includes ^ "]");
-  diag (fn _ => "Using HOL sigobj dir = "^Bool.toString (not no_sigobj));
-  diag (fn _ => HM_BaseEnv.debug_info option_value)
+  diag "startup" (fn _ => "HOLDIR = "^HOLDIR);
+  diag "startup" (fn _ => "Targets = [" ^ String.concatWith ", " targets ^ "]");
+  diag "startup" (fn _ => "Additional includes = [" ^
+                          String.concatWith ", "
+                                            cline_additional_includes ^ "]");
+  diag "startup" (fn _ => HM_BaseEnv.debug_info option_value)
 end
 
 (** Top level sketch of algorithm *)
@@ -518,18 +536,21 @@ end
    runs holdep, and puts the output into specified file, which will live
    in DEPDIR somewhere. *)
 
-fun get_implicit_dependencies incinfo (f: File) : File list = let
+fun get_implicit_dependencies incinfo (f: File) : dep Binaryset.set = let
+  val {preincludes,includes} = incinfo
   val file_dependencies0 =
-      get_direct_dependencies {incinfo = incinfo, extra_targets = extra_targets,
+      get_direct_dependencies {incinfo = incinfo,
+                               extra_targets = extra_targets(),
                                output_functions = outputfns,
                                DEPDIR = DEPDIR} f
+  val diag = diag "impdeps"
   val _ = diag (fn _ => "get_implicit_dependencies("^fromFile f^"), " ^
-                        "directdeps = " ^ pflist file_dependencies0)
+                        "directdeps = " ^ pdlist file_dependencies0)
   val file_dependencies =
       case actual_overlay of
         NONE => file_dependencies0
       | SOME s => if isSome (holdep_arg f) then
-                    toFile (fullPath [SIGOBJ, s]) :: file_dependencies0
+                    filestr_to_dep (fullPath [SIGOBJ, s]) :: file_dependencies0
                   else
                     file_dependencies0
   fun requires_exec (SML (Theory _)) = true
@@ -546,36 +567,41 @@ in
       val get_direct_dependencies =
           get_direct_dependencies {incinfo = incinfo, DEPDIR = DEPDIR,
                                    output_functions = outputfns,
-                                   extra_targets = extra_targets}
+                                   extra_targets = extra_targets()}
       val starters = get_direct_dependencies f
       (* ignore theories as we don't want to depend on the script files
          behind them *)
       fun collect_all_dependencies sofar tovisit =
           case tovisit of
             [] => sofar
-          | (UO (Theory _)::fs) => collect_all_dependencies sofar fs
-          | (UI (Theory _)::fs) => collect_all_dependencies sofar fs
-          | f::fs =>
-            let
-              val deps =
-                  if Path.dir (string_part f) <> "" then []
-                  else
-                    case f of
-                      UI x => (get_direct_dependencies f @
-                               get_direct_dependencies (UO x))
-                    | _ => get_direct_dependencies f
-              val newdeps = set_diff deps sofar
-            in
-              collect_all_dependencies (sofar @ newdeps)
-                                       (set_union newdeps fs)
-            end
-      val tcdeps = collect_all_dependencies starters starters
+           | d::ds =>
+             case #2 d of
+                 UO (Theory _) => collect_all_dependencies sofar ds
+               | UI (Theory _) => collect_all_dependencies sofar ds
+               | _ =>
+                 let
+                   val deps =
+                       if hmdir.compare(#1 d, hmdir.curdir()) <> EQUAL then []
+                       else
+                         case #2 d of
+                             UI x => (get_direct_dependencies f @
+                                      get_direct_dependencies (UO x))
+                           | _ => get_direct_dependencies f
+                   val newdeps = set_diff (deplist_to_set deps) sofar
+                 in
+                   collect_all_dependencies (set_union sofar newdeps)
+                                            (listItems newdeps @ ds)
+                 end
+      val tcdeps = collect_all_dependencies (deplist_to_set starters) starters
       val _ = diag (fn _ => "get_implicit_dependencies("^fromFile f^"), " ^
-                            "tcdeps = " ^ pflist tcdeps)
+                            "tcdeps = " ^
+                            set_concatWith dep_toString ", " tcdeps)
       val uo_deps =
-          List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) tcdeps
-      val alldeps = set_union (set_union tcdeps uo_deps)
-                              (set_union file_dependencies extra_impl_deps)
+          Binaryset.foldl
+            (fn ((d,UI x), A) => set_add (d,UO x) A | (_, A) => A) empty_dset
+            tcdeps
+      val alldeps = set_addList (file_dependencies @ extra_impl_deps)
+                                (set_union tcdeps uo_deps)
     in
       case f of
         SML x => let
@@ -585,64 +611,49 @@ in
              in the dependencies for UO (Theory x). *)
           val additional_theories =
               if exists_readable (fromFile f) then
-                List.mapPartial
-                  (fn (x as (UO (Theory s))) => SOME x | _ => NONE)
+                set_mapPartial
+                  (fn (x as (_, UO (Theory s))) => SOME x | _ => NONE)
+                  empty_dset
                   (get_implicit_dependencies incinfo (UO x))
-              else []
+              else empty_dset
         in
           set_union alldeps additional_theories
         end
       | _ => alldeps
     end
   else
-    file_dependencies
+    deplist_to_set file_dependencies
 end
 
-fun get_explicit_dependencies (f : File) : File list =
+fun get_explicit_dependencies (f:File) : dep list =
     let
-      val result = case (extra_deps (fromFile f)) of
-                       SOME deps => map toFile deps
+      val result = case extra_deps (filestr_to_dep (fromFile f)) of
+                       SOME deps => deps
                      | NONE => []
     in
-      diag (fn _ => fromFile f ^ " -explicitdeps-> " ^ pflist result);
+      diag "expdeps" (fn _ => fromFile f ^ " -explicitdeps-> " ^ pdlist result);
       result
     end
+
+val slist_to_depset =
+    List.foldl (fn (s,set) => Binaryset.add(set, filestr_to_dep s))
+               empty_dset
+fun dset_union ds1 ds2 =
+    Binaryset.listItems
+      (Binaryset.union(deplist_to_set ds1, deplist_to_set ds2))
 
 
 
 (** Build graph *)
 
-(*
-fun do_a_build_command incinfo target pdep secondaries =
-  case (extra_commands (fromFile target)) of
-    SOME (cs as _ :: _) =>
-      Process.isSuccess (run_extra_commands (fromFile target) cs secondaries)
-  | _ (* i.e., NONE or SOME [] *) => let
-      val build_command = build_command incinfo
-    in
-      case target of
-         UO c           => build_command (Compile secondaries) pdep
-       | UI c           => build_command (Compile secondaries) pdep
-       | SML (Theory s) => build_command (BuildScript (s, secondaries)) pdep
-       | SIG (Theory s) => build_command (BuildScript (s, secondaries)) pdep
-       | ART (RawArticle s) => build_command (BuildArticle(s, secondaries)) pdep
-       | ART (ProcessedArticle s) => build_command (ProcessArticle s) pdep
-       | x => raise Fail "Can't happen"
-                    (* can't happen because do_a_build_command is only
-                       called on targets that have primary_dependents,
-                       and those are those targets of the shapes already
-                       matched in the previous cases *)
-    end
-*)
-
 exception CircularDependency
 exception BuildFailure
 exception NotFound
 
-fun no_full_extra_rule tgt =
-    case extra_commands (fromFile tgt) of
-      NONE => true
-    | SOME cl => null cl
+fun no_full_extra_rule tgtopt =
+    case tgtopt of
+        NONE => true
+      | SOME tgt => case extra_commands tgt of NONE => true | SOME cl => null cl
 
 val done_some_work = ref false
 open HM_DepGraph
@@ -657,96 +668,143 @@ fun de_script s =
       SML (Script s) => SOME s
     | _ => NONE
 
-fun build_depgraph cdset incinfo target g0 : (t * node) = let
+type cdelem = hmdir.t * string
+type cdset = cdelem Binaryset.set * cdelem list
+val empty_cdset =
+    (Binaryset.empty (pair_compare(hmdir.compare, String.compare)), [])
+fun cdset_add (set,stk) e = (Binaryset.add(set,e), e::stk)
+fun cdset_member(set,stk) e = Binaryset.member(set,e)
+fun cdset_toString ((_,stk):cdset) =
+    String.concatWith ">" (map #2 (List.rev stk))
+
+(* is run in a directory at a time *)
+type g = GraphExtra.t HM_DepGraph.t
+fun build_depgraph cdset incinfo (tgt as (dir,target):dep) g0:(g * node) =
+let
+  val {preincludes,includes} = incinfo
+  val incinfo = {preincludes = preincludes,
+                 includes = std_include_flags @ includes}
   val pdep = primary_dependent target
-  val target_s = fromFile target
-  fun addF f n = (n,fromFile f)
+  val target_s = dep_toString tgt
+  val actual_dir = hmdir.curdir()
+  fun fp d s = hmdir.extendp {base = d, extension = s}
+  fun fps d = hmdir.toAbsPath d
+  fun addF tgt n = (n,tgt)
   fun nstatus g n = peeknode g n |> valOf |> #status
-  fun build tgt' g =
-    build_depgraph (Binaryset.add(cdset, target_s)) incinfo tgt' g
-  val _ = not (Binaryset.member(cdset, target_s)) orelse
-          die (target_s ^ " seems to depend on itself - failing")
+  fun build (tgt':dep) g =
+    build_depgraph (cdset_add cdset (dir, target_s)) incinfo tgt' g
+
+  val fullpath = fp dir target_s
+  val fullpath_s = fps fullpath
+  val pretty_tgt = hmdir.pretty_dir fullpath
+  val (env, _, _) = get_hmf()
+  val extra = GraphExtra.get_extra { master_dir = original_dir,
+                                     master_cline = option_value,
+                                     envlist = envlist env }
+  val extra_deps = if GraphExtra.canIgnore tgt extra then []
+                   else GraphExtra.extra_deps extra
+  val diag = fn f => diag "builddepgraph"
+                          (fn _ => "|" ^ cdset_toString cdset ^ "| " ^ f ())
+  val _ = diag (fn _ => "Target = " ^ pretty_tgt)
+  val _ = diag (fn _ => "Extra = " ^ GraphExtra.toString extra)
+  val _ = not (cdset_member cdset (dir,target_s)) orelse
+          die (pretty_tgt ^ " seems to depend on itself failing\n" ^
+               " Loop is : " ^ cdset_toString cdset ^ ">" ^ pretty_tgt)
 in
-  case target_node g0 target_s of
+  case target_node g0 tgt of
       (x as SOME n) => (g0, n)
     | NONE =>
-      if Path.dir (string_part target) <> "" andalso
-         Path.dir (string_part target) <> "." andalso
-         no_full_extra_rule target
+      if not (hmdir.eqdir dir actual_dir) andalso
+         no_full_extra_rule (SOME tgt)
          (* path outside of current directory *)
-      then
-        add_node {target = target_s, seqnum = 0, phony = false,
-                  status = if exists_readable target_s then Succeeded
-                           else Failed,
-                  dir = hmdir.curdir(),
+      then (
+        diag (fn _ => "Target "^pretty_tgt^" external to directory");
+        add_node {target = tgt, seqnum = 0, phony = false,
+                  status = if exists_readable fullpath_s then Succeeded
+                           else Failed{needed=false},
+                  dir = dir, extra = extra,
                   command = NoCmd, dependencies = []} g0
-      else if isSome pdep andalso no_full_extra_rule target then
+      )
+      else if isSome pdep andalso no_full_extra_rule (SOME tgt) then
         let
-          val pdep = valOf pdep
+          val pdep = (dir, valOf pdep)
           val (g1, pnode) = build pdep g0
-          val secondaries = set_union (get_implicit_dependencies incinfo target)
-                                      (get_explicit_dependencies target)
-          val _ = diag (fn _ => target_s ^ "-secondaries-> " ^
-                                pflist secondaries)
+          val _ = diag (fn _ => "Extended graph with primary dependency for " ^
+                                target_s)
+          val secondaries =
+              set_addList (get_explicit_dependencies target)
+                          (get_implicit_dependencies incinfo target)
+                       |> set_addList extra_deps
+          val _ = diag (fn _ => target_s ^ " -secondaries-> " ^
+                                set_concatWith dep_toString ", " secondaries)
           fun foldthis (d, (g, secnodes)) =
             let
               val (g', n) = build d g
             in
               (g', addF d n::secnodes)
             end
-          val (g2, depnodes : (HM_DepGraph.node * string) list) =
-              List.foldl foldthis (g1, [addF pdep pnode]) secondaries
+          val (g2, depnodes : (HM_DepGraph.node * dep) list) =
+              Binaryset.foldl foldthis (g1, [addF pdep pnode]) secondaries
           val unbuilt_deps =
               List.filter (fn (n,_) => let val stat = nstatus g2 n
                                        in
-                                         stat = Pending orelse stat = Failed
+                                         is_pending stat orelse is_failed stat
                                        end)
                           depnodes
           val needs_building =
               not (null unbuilt_deps) orelse
-              List.exists (fn d => d forces_update_of target_s)
-                          (fromFile pdep :: map fromFile secondaries)
+              set_exists (fn d => d depforces_update_of tgt)
+                         (set_add pdep secondaries)
           val bic = case toFile target_s of
                         SML (Theory s) => BIC_BuildScript s
                       | SIG (Theory s) => BIC_BuildScript s
                       | DAT s => BIC_BuildScript s
                       | _ => BIC_Compile
         in
-            add_node {target = target_s, seqnum = 0, phony = false,
-                      status = if needs_building then Pending else Succeeded,
-                      command = BuiltInCmd bic, dir = hmdir.curdir(),
+            add_node {target = tgt, seqnum = 0, phony = false,
+                      status = if needs_building then Pending{needed=false}
+                               else Succeeded,
+                      extra = extra,
+                      command = BuiltInCmd (bic,incinfo), dir = hmdir.curdir(),
                       dependencies = depnodes } g2
         end
       else
-        case extra_rule_for target_s of
-            NONE =>
-              add_node {target = target_s, seqnum = 0, phony = false,
+        case extra_rule_for tgt of
+            NONE => (
+              diag (fn _ => "No extra info/rule for target " ^ target_s);
+              add_node {target = tgt, seqnum = 0, phony = false,
                         status = if exists_readable target_s then Succeeded
-                                 else Failed,
-                        command = NoCmd, dir = hmdir.curdir(),
+                                 else Failed{needed=false},
+                        command = NoCmd, dir = hmdir.curdir(), extra = extra,
                         dependencies = []} g0
+            )
           | SOME {dependencies, commands, ...} =>
             let
+              val _ = diag (fn _ => target_s ^ " has rule")
               fun foldthis (d, (g, secnodes)) =
                 let
                   val (g, n) = build d g
                 in
                   (g, addF d n::secnodes)
                 end
-              fun depfoldthis (s, (starp, deps)) =
-                if s <> "" andalso String.sub(s,0) = #"*" andalso
-                   is_script s
-                   (* is_script returns true for, e.g., *boolScript.sml *)
-                then
-                  if isSome starp then
-                    die ("Multiple starred script dependencies for "^target_s)
-                  else
-                    let
-                      val s = String.extract(s,1,NONE)
-                    in
-                      (SOME s, s :: deps)
-                    end
-                else (starp, s::deps)
+              fun depfoldthis (dep as (d,f), (starp, deps)) =
+                  case f of
+                      SML (Script s) =>
+                      if String.sub(s,0) = #"*" then
+                        if isSome starp then
+                          die
+                            ("Multiple starred script dependencies for "^
+                             target_s)
+                        else if hmdir.compare(d, actual_dir) <> EQUAL then
+                          die "Don't star non-local script files"
+                        else
+                          let
+                            val s' = String.extract(s,1,NONE)
+                          in
+                            (SOME s', (d, SML (Script s')) :: deps)
+                          end
+                      else (starp, dep :: deps)
+                    | _ => (starp, dep :: deps)
               val (starred_dep, dependencies) =
                   if null commands then
                     List.foldr depfoldthis (NONE, []) dependencies
@@ -754,49 +812,57 @@ in
 
               val more_deps =
                   case starred_dep of
-                      NONE => []
+                      NONE => empty_dset
                     | SOME s =>
                         get_implicit_dependencies
                           incinfo
-                          (SML(Theory (valOf (de_script s))))
+                          (SML(Theory s))
                           handle Option => die "more_deps invariant failure"
 
               val (g1, depnodes) =
-                  List.foldl foldthis (g0, [])
-                             (more_deps @ map toFile dependencies)
+                  Binaryset.foldl foldthis (g0, [])
+                                  (more_deps |> set_addList dependencies
+                                             |> set_addList extra_deps)
 
               val unbuilt_deps =
-                  List.filter (fn (n,_) => let val stat = nstatus g1 n
-                                           in
-                                             stat = Pending orelse stat = Failed
-                                           end)
-                              depnodes
-              val is_phony = isPHONY target_s
+                  List.filter
+                    (fn (n,_) => let val stat = nstatus g1 n
+                                 in
+                                   is_pending stat orelse is_failed stat
+                                 end)
+                    depnodes
+              val is_phony = isPHONY tgt
+              val _ = if is_phony then diag (fn _ => target_s ^" is phony")
+                      else ()
               val needs_building_by_deps_existence =
-                  (not (OS.FileSys.access(target_s, [])) orelse
-                   not (null unbuilt_deps) orelse
-                   List.exists (fn d => d forces_update_of target_s)
-                               dependencies orelse
-                   is_phony)
+                  not (OS.FileSys.access(target_s, [])) orelse
+                  not (null unbuilt_deps) orelse
+                  List.exists (fn d => d depforces_update_of tgt)
+                              dependencies orelse
+                  is_phony
               val needs_building =
                   needs_building_by_deps_existence andalso
                   not (null commands)
-              val status = if needs_building then Pending else Succeeded
+              val _ = if is_phony then
+                        diag (fn _ => target_s ^ " needs building = " ^
+                                      Bool.toString needs_building)
+                      else ()
+              val status = if needs_building then Pending{needed=false}
+                           else Succeeded
               fun foldthis (c, (depnode, seqnum, g)) =
                 let
-                  val (g',n) = add_node {target = target_s, seqnum = seqnum,
+                  val (g',n) = add_node {target = tgt, seqnum = seqnum,
                                          status = status, phony = is_phony,
-                                         command = SomeCmd c,
+                                         command = SomeCmd c, extra = extra,
                                          dir = hmdir.curdir(),
                                          dependencies = depnode @ depnodes } g
                 in
-                  (* The "" is necessary to make multi-command, multi-target
-                     rules work: when subsequent nodes (seqnum > 0) are added
-                     to the graph targetting a target other than the first,
-                     it is important that this new node merges with the
-                     corresponding seqnum>0 node generated from the first
-                     target *)
-                  ([(n,"")], seqnum + 1, g')
+                  (* This function needs to be folded l-to-r to ensure that
+                     the last node is the one that gets recorded in the target
+                     map, ensuring that if targets are marked as needed, the
+                     earliest commands will get executed as dependencies of
+                     the later commands *)
+                  ([(n,tgt)], seqnum + 1, g')
                 end
             in
               if needs_building then
@@ -809,88 +875,69 @@ in
               else
                 case starred_dep of
                     NONE =>
-                    add_node {target = target_s, seqnum = 0, phony = is_phony,
-                              status = status, command = NoCmd,
+                    add_node {target = tgt, seqnum = 0, phony = is_phony,
+                              status = status, command = NoCmd, extra = extra,
                               dir = hmdir.curdir(), dependencies = depnodes} g1
-                  | SOME scr =>
-                    (case toFile scr of
-                         SML (Script s) =>
-                         let
-                           val updstatus =
-                               if needs_building_by_deps_existence then Pending
-                               else Succeeded
-                         in
-                           add_node {target = target_s, seqnum = 0,
-                                     phony = false, status = updstatus,
-                                     command = BuiltInCmd (BIC_BuildScript s),
-                                     dir = hmdir.curdir(),
-                                     dependencies = depnodes} g1
-                         end
-                       | _ => die "Invariant failure in build_depgraph")
+                  | SOME s =>
+                    let
+                      val updstatus =
+                          if needs_building_by_deps_existence then
+                            Pending{needed=false}
+                          else Succeeded
+                    in
+                      add_node {target = tgt, seqnum = 0,
+                                phony = false, status = updstatus,
+                                command = BuiltInCmd
+                                            (BIC_BuildScript s, incinfo),
+                                dir = dir, extra = extra,
+                                dependencies = depnodes} g1
+                    end
             end
 end
 
-
-val allincludes =
-    cline_additional_includes @ hmake_includes
-
-fun add_sigobj {includes,preincludes} =
-    {includes = std_include_flags @ includes,
-     preincludes = preincludes}
-
-fun null_ii {includes,preincludes} = null includes andalso null preincludes
-
-val extended_dirinfo =
+(* called in dir *)
+fun get_targets dir =
     let
-      fun mkd s = hmdir.extendp{base = dir, extension = s}
-      val mkS =
-          List.foldl (fn (s, acc) => Binaryset.add(acc, mkd s)) empty_dirset
+      val from_directory =
+          deplist_to_set (generate_all_plausible_targets warn NONE)
+      val (_, rules, _) = get_hmf()
     in
-      {
-        visited = #visited dirinfo,
-        incdirmap =
-          extend_idmap
-            dir
-            {incs= mkS allincludes, pres= mkS hmake_preincludes}
-            (#incdirmap dirinfo)
-      }
+      Binarymap.foldl (fn (dep as (_,f),v,acc) =>
+                          if f <> Unhandled ".PHONY" then set_add dep acc
+                          else acc)
+                      from_directory
+                      rules
     end
 
-val recurse_into_dirs = allincludes @ hmake_preincludes
+fun extend_graph_in_dir incinfo warn dir graph =
+    let
+      open HM_DepGraph
+      val _ = diag "builddepgraph" (fn _ =>
+                       "Extending graph in directory " ^ hmdir.pretty_dir dir)
+      val dir_targets = get_targets dir
+    in
+      Binaryset.foldl
+        (fn (t,g) => #1 (build_depgraph empty_cdset incinfo t g))
+        graph
+        dir_targets
+    end
 
-fun hm_recur ctgt k : holmake_result = let
-  val nobuild = toplevel_no_prereqs orelse no_prereqs
-  fun hm dir dirinfo targets =
-      Holmake NONE nobuild dir dirinfo [] targets
-  val warn = if nobuild then (fn _ => ()) else warn
-in
-  maybe_recurse
-      {warn = warn,
-       diag = diag,
-       hm = hm,
-       dirinfo = extended_dirinfo,
-       dir = dir,
-       local_build = k,
-       cleantgt = ctgt}
-      recurse_into_dirs
-end
-
-fun create_graph tgts ii =
-  let
-    open HM_DepGraph
-    val empty_tgts = Binaryset.empty String.compare
-    val _ = diag(fn _ => "Building dep. graph with targets: " ^
-                         String.concatWith " " tgts)
-    val g =
-        List.foldl
-          (fn (t, g) => #1 (build_depgraph empty_tgts ii t g))
-          empty
-          (map toFile tgts)
-  in
-    diag (fn _ => "Finished building dep graph (has " ^
-                  Int.toString (size g) ^ " nodes)");
-    g
-  end
+fun create_complete_graph cline_incs idm =
+    let
+      val d = hmdir.curdir()
+      val {data = g, incdirmap,...} =
+          recursively getnewincs (SOME cline_incs) {
+            warn=warn,diag=diag,hm=extend_graph_in_dir,
+            dirinfo={incdirmap=idm, visited = Binaryset.empty hmdir.compare},
+            dir = d,
+            data = HM_DepGraph.empty()
+          }
+      val diag = diag "builddepgraph"
+    in
+      diag (fn _ => "Finished building complete dep graph (has " ^
+                    Int.toString (HM_DepGraph.size g) ^ " nodes)");
+      (g,idm_lookup incdirmap d)
+    end
 
 fun clean_deps() =
   ( Holmake_tools.clean_depdir {depdirname = DEPDIR}
@@ -898,91 +945,92 @@ fun clean_deps() =
 
 fun do_clean_target x = let
   fun clean_action () =
-      (Holmake_tools.clean_dir {extra_cleans = extra_cleans}; true)
+      Holmake_tools.clean_dir {extra_cleans = extra_cleans()}
 in
   case x of
-      "clean" => ((info "Cleaning directory of object files\n";
-                   clean_action();
-                   true) handle _ => false)
-    | "cleanDeps" => clean_deps()
-    | "cleanAll" => clean_action() andalso clean_deps()
+      "clean" => (info "Cleaning directory of object files\n"; clean_action())
+    | "cleanDeps" => ignore (clean_deps())
+    | "cleanAll" => (clean_action(); ignore (clean_deps()))
     | _ => die ("Bad clean target " ^ x)
 end
 
-fun basecont tgts ii =
-  if List.exists (fn x => member x ["clean", "cleanDeps", "cleanAll"]) tgts then
-    (app (ignore o do_clean_target) tgts; true)
-  else
-    let
-      open HM_DepGraph
-      val _ = if null_ii ii andalso hmdir.compare(dir,original_dir) = EQUAL then
-                ()
-              else warn (bold ("Working in " ^ hmdir.pretty_dir dir))
-      val ii = add_sigobj ii
-      val g = create_graph tgts ii
-      val _ = diag (fn _ => "Building from graph")
-      val res = build_graph ii g
-      val buildok = OS.Process.isSuccess res
-      val _ = diag (fn _ => "Built from graph with result " ^
-                            (if buildok then "OK" else "FAILED"))
-    in
-      finish_logging buildok
-    end
+val _ = not cline_always_rebuild_deps orelse clean_deps()
 
-fun no_action_cont tgts ii =
-  let
-    open HM_DepGraph
-    val ii = add_sigobj ii
-    val g = create_graph tgts ii
-    fun pr s = s
-    fun str (n,ni) =
-      "{" ^ node_toString n ^ "}: " ^ nodeInfo_toString pr ni ^ "\n"
-  in
-    List.app (print o str) (listNodes g);
-    true
-  end
+val (depgraph, local_incinfo) =
+    create_complete_graph
+      (slist_to_dset original_dir cline_additional_includes)
+      (extend_idmap original_dir
+                    {pres = empty_dirset, incs = empty_dirset}
+                    empty_incdirmap)
 
-val stdcont = if no_action then no_action_cont else basecont
-
-val _ = not always_rebuild_deps orelse clean_deps()
-
-in
-  if nobuild then hm_recur NONE (fn _ => true)
-  else
+fun work() =
     case targets of
       [] => let
-        val targets = generate_all_plausible_targets warn first_target
-        val targets = map fromFile targets
-        val _ =
-            let
-              val tgtstrings =
-                  map
-                    (fn s => if OS.FileSys.access(s, []) then s else s ^ "(*)")
-                    targets
-            in
-              diag(fn _ => "Generated targets are: [" ^
-                           String.concatWith ", " tgtstrings ^ "]")
-            end
+        val targets = generate_all_plausible_targets warn start_tgt
+        val depgraph =
+            if cline_recursive then make_all_needed depgraph
+            else if toplevel_no_prereqs then
+              mk_dirneeded (hmdir.curdir()) depgraph
+            else mkneeded targets depgraph
+        val _ = diag "core" (
+              fn _ =>
+                 let
+                   fun pr t = if depexists_readable t then dep_toString t
+                              else dep_toString t ^ "(*)"
+                 in
+                   "Generated targets are: [" ^concatWithf pr ", " targets ^ "]"
+                 end
+            )
+        val _ = diag "core"
+                     (fn _ => "Dep.graph =\n" ^ HM_DepGraph.toString depgraph)
       in
-        hm_recur NONE (stdcont targets)
+        if cline_nobuild then
+          (print ("Dependency graph" ^ HM_DepGraph.toString depgraph);
+           OS.Process.success)
+        else
+          postmortem outputfns (build_graph depgraph)
+          handle e => die ("Exception: "^General.exnMessage e)
       end
     | xs => let
-        val cleanTarget_opt =
-            List.find (fn x => member x ["clean", "cleanDeps", "cleanAll"]) xs
+        val cleanTargets =
+            List.filter (fn x => member x ["clean", "cleanDeps", "cleanAll"]) xs
+        fun visit_and_clean tgts d =
+            let
+              val _ = OS.FileSys.chDir (hmdir.toAbsPath d)
+            in
+              List.app do_clean_target tgts;
+              OS.FileSys.chDir (hmdir.toAbsPath original_dir)
+            end
         fun transform_thy_target s =
             if String.isSuffix "Theory" s then s ^ ".dat"
             else s
         val xs = map transform_thy_target xs
       in
-        if isSome cleanTarget_opt andalso not cline_recursive then
-          (List.app (ignore o do_clean_target) xs;
-           finish_logging true;
-           SOME dirinfo)
+        if not (null cleanTargets) then
+          if not cline_recursive then
+            (List.app (ignore o do_clean_target) cleanTargets;
+             finish_logging true;
+             OS.Process.success)
+          else (
+            Binaryset.app (visit_and_clean cleanTargets)
+                          (Binaryset.add(Binaryset.union(#pres local_incinfo,
+                                                         #incs local_incinfo),
+                                         original_dir));
+            OS.Process.success
+          )
         else
-            hm_recur cleanTarget_opt (stdcont xs)
+          let
+            val targets = map filestr_to_dep xs
+            val g = mkneeded targets depgraph
+          in
+            if cline_nobuild then
+              (print ("Dependency graph" ^ HM_DepGraph.toString g);
+               OS.Process.success)
+            else
+              postmortem outputfns (build_graph g)
+              handle e => die ("Exception: "^General.exnMessage e)
+          end
       end
-end (* fun Holmake *)
-
 
 in
   if show_usage then
@@ -994,18 +1042,10 @@ in
           })
   else let
       open Process
-      val result =
-          Holmake (SOME starting_dir_hmenv)
-                  false (* yes, build something *)
-                  (hmdir.curdir())
-                  {visited = Binaryset.empty hmdir.compare,
-                   incdirmap = empty_incdirmap}
-            cline_additional_includes
-            targets
+      val result = work()
           handle Fail s => die ("Fail exception: "^s^"\n")
     in
-      if isSome result then exit success
-      else exit failure
+      exit result
     end
 
 end (* main *)
