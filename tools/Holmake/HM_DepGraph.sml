@@ -183,6 +183,7 @@ fun nodeInfo_toString (nI : 'a nodeInfo) =
 fun make_all_needed g =
     let
       fun mkneeded (Pending _) = Pending {needed = true}
+        | mkneeded (Failed _) = Failed {needed = true}
         | mkneeded s = s
     in
       fupd_nodes (Map.map (fn (_,n) => fupdStatus mkneeded n)) g
@@ -190,7 +191,7 @@ fun make_all_needed g =
 
 fun mkneeded tgts g =
     let
-      fun setneeded n g = updnode(n,Pending{needed=true}) g
+      fun setneeded f n g = updnode(n,f{needed=true}) g
       fun work visited wlist g =
           case wlist of
               [] => g
@@ -204,7 +205,8 @@ fun mkneeded tgts g =
                     work (Binaryset.add(visited, n))
                          (map #1 (#dependencies nI) :: ns :: rest)
                          (case #status nI of
-                              Pending {needed=false} => setneeded n g
+                              Pending {needed=false} => setneeded Pending n g
+                            | Failed  {needed=false} => setneeded Failed  n g
                             | _ => g)
       val initial_tgts = List.mapPartial (target_node g) tgts
     in

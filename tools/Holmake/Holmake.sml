@@ -187,7 +187,7 @@ fun chattiness_level switches =
     | (_, _, true) => 0
     | _ => 1
 
-val option_value =
+val option_value : HM_Cline.t =
     HM_Cline.default_options
       |> apply_updates (get_hmf_cline_updates start_hmenv)
       |> apply_updates master_cline_options
@@ -699,7 +699,7 @@ let
   val pretty_tgt = hmdir.pretty_dir fullpath
   val (env, _, _) = get_hmf()
   val extra = GraphExtra.get_extra { master_dir = original_dir,
-                                     master_cline = master_cline_nohmf,
+                                     master_cline = option_value,
                                      envlist = envlist env }
   val extra_deps = if GraphExtra.canIgnore tgt extra then []
                    else GraphExtra.extra_deps extra
@@ -878,23 +878,20 @@ in
                     add_node {target = tgt, seqnum = 0, phony = is_phony,
                               status = status, command = NoCmd, extra = extra,
                               dir = hmdir.curdir(), dependencies = depnodes} g1
-                  | SOME scr =>
-                    (case toFile scr of
-                         SML (Script s) =>
-                         let
-                           val updstatus =
-                               if needs_building_by_deps_existence then
-                                 Pending{needed=false}
-                               else Succeeded
-                         in
-                           add_node {target = tgt, seqnum = 0,
-                                     phony = false, status = updstatus,
-                                     command = BuiltInCmd
-                                                 (BIC_BuildScript s, incinfo),
-                                     dir = dir, extra = extra,
-                                     dependencies = depnodes} g1
-                         end
-                       | _ => die "Invariant failure in build_depgraph")
+                  | SOME s =>
+                    let
+                      val updstatus =
+                          if needs_building_by_deps_existence then
+                            Pending{needed=false}
+                          else Succeeded
+                    in
+                      add_node {target = tgt, seqnum = 0,
+                                phony = false, status = updstatus,
+                                command = BuiltInCmd
+                                            (BIC_BuildScript s, incinfo),
+                                dir = dir, extra = extra,
+                                dependencies = depnodes} g1
+                    end
             end
 end
 
