@@ -215,11 +215,13 @@ fun mkneeded tgts g =
 
 fun mk_dirneeded d g =
     let
-      fun upd_nI nI = if hmdir.compare(#dir nI, d) = EQUAL andalso
-                         #status nI = Pending{needed=false}
-                      then
-                        setStatus (Pending{needed=true}) nI
-                      else nI
+      fun upd_nI nI =
+          if hmdir.compare(#dir nI, d) <> EQUAL then
+            case (depexists_readable (#target nI), #status nI) of
+                (true, Pending _) => setStatus Succeeded nI
+              | (false, Pending {needed}) => setStatus(Failed{needed=needed})nI
+              | _ => nI
+          else nI
     in
       fupd_nodes (Map.map (fn (_,nI) => upd_nI nI)) g
     end

@@ -72,6 +72,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                 (* force to always use unquoter if present, so as to generate
                    location pragmas. Must test for existence, for bootstrapping.
                  *)
+                val _ = diag "build_command" (fn _ => "Using unquoter")
                 val clone = variant file
                 val _ = FileSys.rename {old=file, new=clone}
                 fun revert() =
@@ -152,7 +153,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
               val thysigfile = s^"Theory.sig"
               fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
               val _ = app safedelete [thysmlfile, thysigfile]
-              val res2 = Systeml.systeml [fullPath [FileSys.getDir(), script']]
+              val res2 = Systeml.systeml [script']
               val _ = app safedelete [script', scriptuo, scriptui]
               val () = if not (isSuccess res2) then
                          failed_script_cache :=

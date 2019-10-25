@@ -970,7 +970,7 @@ fun work() =
         val depgraph =
             if cline_recursive then make_all_needed depgraph
             else if toplevel_no_prereqs then
-              mk_dirneeded (hmdir.curdir()) depgraph
+              mk_dirneeded (hmdir.curdir()) (mkneeded targets depgraph)
             else mkneeded targets depgraph
         val _ = diag "core" (
               fn _ =>
