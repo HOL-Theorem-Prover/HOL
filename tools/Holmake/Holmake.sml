@@ -328,15 +328,17 @@ type 'a hmfold =
     directory.
 
    ---------------------------------------------------------------------- *)
-fun recursively getnewincs {warn,diag,hm : 'a hmfold,dirinfo,dir,data} =
+fun recursively getnewincs dsopt {warn,diag,hm : 'a hmfold,dirinfo,dir,data} =
 let
   val {incdirmap,visited} = dirinfo : dirinfo
   val {includes=incset, preincludes = preincset} = getnewincs dir
   val incdirmap = extend_idmap dir {incs = incset, pres = preincset} incdirmap
-  val recur_into = Binaryset.union(incset, preincset)
+  val recur_into = set_union (set_union incset preincset)
+                             (case dsopt of NONE => empty_dirset
+                                          | SOME ds => ds)
   fun recur_abbrev dir data (dirinfo:dirinfo) =
-      recursively getnewincs {warn=warn,diag=diag,hm=hm,dirinfo=dirinfo,dir=dir,
-                              data=data}
+      recursively getnewincs NONE
+                  {warn=warn,diag=diag,hm=hm,dirinfo=dirinfo,dir=dir, data=data}
   val diag = diag "builddepgraph"
   val _ = diag (fn _ => "recursively: call in " ^ hmdir.pretty_dir dir)
   val _ = diag (fn _ => "recursively: includes (pre- & normal) = [" ^
@@ -923,11 +925,11 @@ fun extend_graph_in_dir incinfo warn dir graph =
         dir_targets
     end
 
-fun create_complete_graph idm =
+fun create_complete_graph cline_incs idm =
     let
       val d = hmdir.curdir()
       val {data = g, incdirmap,...} =
-          recursively getnewincs {
+          recursively getnewincs (SOME cline_incs) {
             warn=warn,diag=diag,hm=extend_graph_in_dir,
             dirinfo={incdirmap=idm, visited = Binaryset.empty hmdir.compare},
             dir = d,
@@ -959,10 +961,10 @@ val _ = not cline_always_rebuild_deps orelse clean_deps()
 
 val (depgraph, local_incinfo) =
     create_complete_graph
-      (extend_idmap original_dir {
-          pres = empty_dirset,
-          incs = slist_to_dset original_dir cline_additional_includes
-        } empty_incdirmap)
+      (slist_to_dset original_dir cline_additional_includes)
+      (extend_idmap original_dir
+                    {pres = empty_dirset, incs = empty_dirset}
+                    empty_incdirmap)
 
 fun work() =
     case targets of

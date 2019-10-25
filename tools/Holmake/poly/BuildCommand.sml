@@ -21,8 +21,8 @@ val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
 
 open HM_GraphBuildJ1
 
-datatype cmd_line = Mosml_compile of dep list * string
-                  | Mosml_link of string * dep list
+datatype cmd_line = Mosml_compile of string list * string
+                  | Mosml_link of string * string list
                   | Mosml_error
 
 datatype buildresult = datatype multibuild.buildresult
@@ -35,15 +35,14 @@ fun process_mosml_args (outs:Holmake_tools.output_functions) c = let
   val toks = String.tokens (fn c => c = #" ") c
   val c = ref false
   val q = ref false
-  val toplevel = ref false
   val obj = ref NONE
   val I = ref []
-  val obj_files = ref ([] : dep list)
+  val obj_files = ref ([] : string list)
   val src_file = ref NONE
   fun process_args [] = ()
     | process_args ("-c"::rest) = (c := true; process_args rest)
-    | process_args ("-q"::rest) = (q := true; process_args rest)
-    | process_args ("-toplevel"::rest) = (toplevel := true; process_args rest)
+    | process_args ("-q"::rest) = process_args rest
+    | process_args ("-toplevel"::rest) = process_args rest
     | process_args ("-o"::arg::rest) = (obj := SOME arg; process_args rest)
     | process_args ("-I"::arg::rest) = (I := arg::(!I); process_args rest)
     | process_args (file::rest) = let
@@ -52,7 +51,7 @@ fun process_mosml_args (outs:Holmake_tools.output_functions) c = let
         else if isSource file then
           src_file := SOME file
         else if isObj file then
-          obj_files := filestr_to_dep file :: !obj_files
+          obj_files := file :: !obj_files
         else ();
         process_args rest
       end
@@ -87,18 +86,21 @@ in
                     SysWord.toString (Posix.Signal.toWord sg)
 end
 
-fun addPath I file =
-  if OS.Path.isAbsolute file then
-    file
-  else let
-      val p = List.find (fn p =>
-                            FileSys.access (p ++ (file ^ ".ui"), []))
-                        (FileSys.getDir() :: I)
+fun addPath incs (file : string) : dep =
+    let
+      val dir = OS.FileSys.getDir()
     in
-      case p of
-           NONE => OS.FileSys.getDir() ++ file
-         | SOME p => p ++ file
-    end;
+      if OS.Path.dir file <> "" then filestr_to_dep file
+      else let
+        val p = List.find (fn p =>
+                              FileSys.access (p ++ (file ^ ".ui"), []))
+                          (dir :: incs)
+      in
+        case p of
+            NONE => (hmdir.curdir(), toFile file)
+          | SOME p => (hmdir.fromPath {origin = dir, path = p}, toFile file)
+      end
+    end
 
 fun time_max(t1,t2) = if Time.<(t1,t2) then t2 else t1
 
@@ -130,7 +132,10 @@ fun finish_compilation warn depMods0 filename tgt =
              Systeml.build_after_reloc_envvar ^ " environment variable");
        OS.Process.success)
 
-fun poly_compile warn diag quietp file I (deps : dep list) = let
+fun poly_compile warn diag quietp file I (deps : dep list) objs = let
+  val _ = diag (fn _ => "poly-compiling " ^ fromFile file ^ "\n  deps = [" ^
+                        concatWithf dep_toString ", " deps ^ "]\n  objs = [" ^
+                        String.concatWith ", " objs ^ "]")
   val modName = fromFileNoSuf file
   val deps = let
     open Binaryset
@@ -143,19 +148,21 @@ fun poly_compile warn diag quietp file I (deps : dep list) = let
   in
     listItems dep_set
   end
-  val _ = diag (fn _ => "Writing "^fromFile file^" with dependencies: " ^
-                        String.concatWith ", " (map dep_toString deps))
   val depfiles = map (toFile o dep_toString) deps
+  val objfiles = map toFile objs
   fun mapthis (Unhandled _) = NONE
     | mapthis (DAT _) = NONE
     | mapthis f = SOME (fromFileNoSuf f)
-  val depMods = List.map (addPath I) (List.mapPartial mapthis depfiles)
+  val depMods = List.mapPartial mapthis depfiles
+  val objMods = List.map (addPath I) (List.mapPartial mapthis objfiles)
   fun usePathVars p = holpathdb.reverse_lookup {path = p}
-  val depMods = List.map usePathVars depMods
+  val depMods = List.map usePathVars (depMods @ map dep_toString objMods)
   val say = if quietp then (fn s => ())
             else (fn s => TextIO.output(TextIO.stdOut, s ^ "\n"))
   val _ = say ("HOLMOSMLC -c " ^ fromFile file)
-  val filename = addPath [] (fromFile file)
+  val filename = dep_toString (filestr_to_dep (fromFile file))
+  val _ = diag (fn _ => "Writing target with dependencies: " ^
+                        String.concatWith ", " depMods)
 in
 case file of
   SIG _ =>
@@ -177,7 +184,7 @@ case file of
      in
        TextIO.output (outUo, String.concatWith "\n" depMods);
        TextIO.output (outUo, "\n");
-       TextIO.output (outUo, usePathVars (addPath [] (fromFile file)) ^ "\n");
+       TextIO.output (outUo, usePathVars filename ^ "\n");
        TextIO.closeOut outUo;
        (if OS.FileSys.access (modName ^ ".sig", []) then
           ()
@@ -343,7 +350,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                     (warn ("Wanted to compile "^file^
                             ", but it wasn't there\n");
                      raise FileNotFound)
-            val res = poly_compile warn diag true arg include_flags deps
+            val res = poly_compile warn diag true arg include_flags deps []
           in
             if OS.Process.isSuccess res then BR_OK else BR_Failed
           end
@@ -411,15 +418,15 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             SOME (poly_compile warn diag (noecho orelse quiet_flag)
                                (toFile src)
                                I
-                               (deps @ objs))
+                               deps
+                               objs)
           | (Mosml_link (result, objs), I) =>
             let
             in
               diag (fn _ => "Moscow ML command is link -o "^result^" ["^
-                            String.concatWith ", "
-                                              (map dep_toString objs) ^ "]");
+                            String.concatWith ", " objs ^ "]");
               SOME (poly_link (noecho orelse quiet_flag) extra result
-                              (map (OS.Path.base o dep_toString) objs))
+                              (map OS.Path.base objs))
             end
           | (Mosml_error, _) =>
             (warn ("*** Couldn't interpret Moscow ML command: "^c);
