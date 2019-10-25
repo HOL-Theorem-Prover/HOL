@@ -30,18 +30,31 @@ fun pushd d f x =
 
 fun graphbuild optinfo g =
   let
-    val _ = OS.FileSys.mkDir loggingdir handle _ => ()
     val { build_command,
           mosml_build_command : GraphExtra.t mosml_build_command,
           warn, tgtfatal, diag,
           keep_going, quiet, hmenv, jobs, info, time_limit,
           relocbuild } = optinfo
     val _ = diag "Starting graphbuild"
-    val safetag = String.map (fn #"/" => #"-" | c => c)
+    fun dropthySuffix s =
+        if List.exists
+             (fn sfx => String.isSuffix ("Theory." ^ sfx) s)
+             ["dat", "sml", "sig"]
+        then String.substring(s,0,String.size s - 4)
+        else s
+    fun safetag d t =
+        if d = OS.Path.dir t then dropthySuffix (OS.Path.file t)
+        else String.map (fn #"/" => #"-" | c => c) t
+    fun genLF {tag, dir} =
+        let
+          val ldir = dir ++ loggingdir
+          val _ = OS.FileSys.mkDir ldir handle _ => ()
+        in
+          ldir ++ safetag dir tag
+        end
+
     val monitor =
-        MB_Monitor.new {info = info,
-                        warn = warn,
-                        genLogFile = (fn {tag} => loggingdir ++ safetag tag),
+        MB_Monitor.new {info = info, warn = warn, genLogFile = genLF,
                         time_limit = time_limit}
 
     val env =

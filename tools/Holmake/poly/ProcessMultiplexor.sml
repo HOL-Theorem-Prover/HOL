@@ -39,7 +39,7 @@ struct
          | Terminated of jobkey * exit_status * Time.time
          | MonitorKilled of jobkey * Time.time
          | EOF of jobkey * strmtype * Time.time
-         | StartJob of jobkey
+         | StartJob of jobkey * {dir:string}
   datatype client_cmd = Kill of jobkey | KillAll
   type monitor = monitor_message -> client_cmd option
 
@@ -231,9 +231,10 @@ struct
           | NewJob (job, state') =>
             let
               val wj = start_job job
-              val cmds' = case monitorfn (StartJob (wjkey wj)) of
-                              NONE => cmds
-                            | SOME c => c::cmds
+              val cmds' =
+                  case monitorfn (StartJob (wjkey wj, {dir= #dir job})) of
+                      NONE => cmds
+                    | SOME c => c::cmds
             in
               fill_workq monitorfn
                          (cmds', wl |> addjob wj |> updstate state')
@@ -260,7 +261,7 @@ struct
         | MonitorKilled((pid,tag), t) => p tag t "monitor-killed"
         | EOF ((pid,tag), chan, t) =>
             p tag t ("EOF on " ^ chan_name chan)
-        | StartJob (pid,tag) => p tag (Time.fromSeconds 0) "beginning"
+        | StartJob ((pid,tag), _) => p tag (Time.fromSeconds 0) "beginning"
     end
 
   fun wjstrm ERR (wj:'a working_job) = #err wj
