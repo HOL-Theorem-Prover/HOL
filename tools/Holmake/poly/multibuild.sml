@@ -85,6 +85,8 @@ fun graphbuild optinfo g =
             val _ = is_pending (#status nI) orelse
                     raise Fail "runnable not pending"
             val target_s = dep_toString (#target nI)
+            val tag = if OS.Path.dir target_s = dir then OS.Path.file target_s
+                      else target_s
             fun stdprocess() =
               case #command nI of
                   NoCmd => genjob (updnode (n,Succeeded) g, true)
@@ -126,7 +128,7 @@ fun graphbuild optinfo g =
                                 (g',ok')
                               end
                         in
-                          NewJob ({tag = target_s, command = shell_command c,
+                          NewJob ({tag = tag, command = shell_command c,
                                    update = update, dir = dir},
                                   (updall(g, Running), true))
                         end
@@ -159,7 +161,7 @@ fun graphbuild optinfo g =
                             diag ("Other nodes are: "^
                                   String.concatWith ", "
                                         (map node_toString other_nodes));
-                            NewJob({tag = target_s, dir = dir,
+                            NewJob({tag = tag, dir = dir,
                                     command = cline_to_command cline,
                                     update = update},
                                    (updall Running g, true))
