@@ -43,8 +43,7 @@ fun graphbuild optinfo g =
         then String.substring(s,0,String.size s - 4)
         else s
     fun safetag d t =
-        if d = OS.Path.dir t then dropthySuffix (OS.Path.file t)
-        else String.map (fn #"/" => #"-" | c => c) t
+        String.map (fn #"/" => #"-" | c => c) (dropthySuffix t)
     fun genLF {tag, dir} =
         let
           val ldir = dir ++ loggingdir
