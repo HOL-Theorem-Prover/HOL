@@ -141,7 +141,7 @@ fun getnewincs dir =
     let val (env, _, _) = get_hmf()
     in
       {includes = envlist env "INCLUDES" |> slist_to_dset dir,
-       preincludes = envlist env "PREINCLUDES" |> slist_to_dset dir}
+       preincludes = envlist env "PRE_INCLUDES" |> slist_to_dset dir}
     end
 
 (* Examining the c/line options, determine whether to use a
