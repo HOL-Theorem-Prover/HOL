@@ -332,7 +332,11 @@ fun recursively getnewincs dsopt {warn,diag,hm : 'a hmfold,dirinfo,dir,data} =
 let
   val {incdirmap,visited} = dirinfo : dirinfo
   val {includes=incset, preincludes = preincset} = getnewincs dir
-  val incdirmap = extend_idmap dir {incs = incset, pres = preincset} incdirmap
+  val incdirmap =
+      incdirmap |> extend_idmap dir {incs = incset, pres = preincset}
+                |> (case dsopt of
+                        SOME ds => extend_idmap dir {incs=ds,pres=empty_dirset}
+                      | NONE => (fn x => x))
   val recur_into = set_union (set_union incset preincset)
                              (case dsopt of NONE => empty_dirset
                                           | SOME ds => ds)
