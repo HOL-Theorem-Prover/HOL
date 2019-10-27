@@ -37,6 +37,7 @@ datatype buf = B of { lnum : int,
                       curr : (int * string) option }
 
 fun init_buf fname = let
+  val fname = OS.Path.mkAbsolute {path=fname, relativeTo=OS.FileSys.getDir()}
   val istrm = TextIO.openIn fname
 in
   B { lnum = 1, strm = istrm, curr = readline 1 istrm, name = fname }
