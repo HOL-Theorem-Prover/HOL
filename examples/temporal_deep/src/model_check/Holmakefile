@@ -1,8 +1,13 @@
 PRE_INCLUDES=${HOLDIR}/examples/PSL/path
 
+ifdef POLY
+INCLUDES = ${HOLDIR}/examples/PSL/1.1/official-semantics \
+	../tools ../deep_embeddings ../translations
+elseif
 INCLUDES = ${HOLDIR}/examples/PSL/1.1/official-semantics \
 	${HOLDIR}/examples/HolBdd ${HOLDIR}/examples/muddy \
 	../tools ../deep_embeddings ../translations
+endif
 
 all: $(DEFAULT_TARGETS) selftest.exe
 
