@@ -339,10 +339,10 @@ val _ =
     compile [] "HM_GraphBuildJ1.sig";
     compile [] "HM_GraphBuildJ1.sml";
     FileSys.chDir "mosml";
-    compile ["-I", ".."] "GraphExtra.sig";
-    compile ["-I", ".."] "GraphExtra.sml";
     compile ["-I", ".."] "HM_Cline.sig";
     compile ["-I", ".."] "HM_Cline.sml";
+    compile ["-I", ".."] "GraphExtra.sig";
+    compile ["-I", ".."] "GraphExtra.sml";
     compile ["-I", ".."] "HM_BaseEnv.sig";
     compile ["-I", ".."] "HM_BaseEnv.sml";
     FileSys.chDir "..";
