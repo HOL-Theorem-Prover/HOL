@@ -1,4 +1,5 @@
 INCLUDES = ../../../cmp
+CLINE_OPTIONS = --no_overlay
 
 .PHONY: test
 test: input expected_output $(dprot $(HOLDIR)/tools/cmp/cmp.exe)
