@@ -52,8 +52,8 @@ val PAIRED_BETA_THM = store_thm
 (* ------------------------------------------------------------------------- *)
 
 val _ = set_fixity "powr" (Infixr 700);
+val _ = overload_on ("powr", ``$rpow``); (* transcTheory *)
 
-val powr_def = Define `x powr a = exp (a * ln x)`;
 val logr_def = Define `logr a x = ln x / ln a`;
 val lg_def   = Define `lg x = logr 2 x`;
 
