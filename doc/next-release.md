@@ -61,6 +61,11 @@ Bugs fixed:
 New theories:
 -------------
 
+*  `derivativeTheory` and `integrationTheory`: univariate
+    differential and integral calculus (based on Henstock-Kurzweil
+    integral, or generalized Riemann integral, or gauge integral),
+    ported by Muhammad Qasim, Osman Hasan et al. from HOL Light (up to 2015).
+
 *  `measureTheory`, `lebesgueTheory`, `martingaleTheory` and `probabilityTheory`:
     the type of measure/probability has been upgraded
     from `('a set) -> real` to `('a set) -> extreal`, better aligned with
