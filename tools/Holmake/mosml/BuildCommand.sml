@@ -6,6 +6,8 @@ structure FileSys = OS.FileSys
 structure Path = OS.Path
 structure Process = OS.Process
 
+infix |>
+
 open HM_GraphBuildJ1
 
 val MOSMLDIR0 = Systeml.MOSMLDIR;
@@ -145,10 +147,15 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             )
           then
             let
+              val _ = exists_readable script orelse
+                      die_with ("Can't see script executable: "^script)
               val status = Systeml.mk_xable script
               val _ = OS.Process.isSuccess status orelse
                       die_with ("Couldn't make script "^script^" executable")
-              val script' = xable_string script
+              val script' = xable_string script |> filestr_to_dep
+                                                |> dep_toString
+              val _ = diag "build_command"
+                           (fn _ => "Created executable "^script')
               val thysmlfile = s^"Theory.sml"
               val thysigfile = s^"Theory.sig"
               fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
