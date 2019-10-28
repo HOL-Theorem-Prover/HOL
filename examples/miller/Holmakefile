@@ -1,2 +1,2 @@
-PRE_INCLUDES = ../../src/probability 
+CLINE_OPTIONS = -r
 INCLUDES = miller
