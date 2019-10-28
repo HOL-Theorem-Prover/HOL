@@ -62,9 +62,6 @@ val nonempty_def = Define `nonempty s = ~(s = {})`;
 
 val range_def = Define `range f = IMAGE f UNIV`;
 
-val prod_sets_def = Define
-   `prod_sets a b = {s CROSS t | s IN a /\ t IN b}`;
-
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
 (* ------------------------------------------------------------------------- *)
@@ -73,11 +70,6 @@ val IN_o = store_thm
   ("IN_o",
    ``!x f s. x IN (s o f) <=> f x IN s``,
    RW_TAC std_ss [SPECIFICATION, o_THM]);
-
-val COMPL_EMPTY = store_thm
-  ("COMPL_EMPTY",
-   ``COMPL {} = UNIV``,
-   RW_TAC std_ss [EXTENSION, IN_COMPL, NOT_IN_EMPTY, IN_UNIV]);
 
 val UNION_DEF_ALT = store_thm
   ("UNION_DEF_ALT",
@@ -1153,16 +1145,6 @@ val ALL_DISTINCT_imp_REAL_SUM_IMAGE_of_LIST_TO_SET_eq_REAL_SUM = store_thm
    >> RW_TAC list_ss [REAL_SUM_def, LIST_TO_SET_THM,
                       REAL_SUM_IMAGE_THM, ALL_DISTINCT, FINITE_INSERT, FINITE_LIST_TO_SET]
    >> METIS_TAC [DELETE_NON_ELEMENT, LIST_TO_SET, REAL_EQ_LADD]);
-
-val LIST_TO_SET_APPEND = store_thm
-  ("LIST_TO_SET_APPEND",
-   ``!l l'. LIST_TO_SET (l ++ l') = (LIST_TO_SET l) UNION (LIST_TO_SET l')``,
-   RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_UNION, LIST_TO_SET, MEM_APPEND]);
-
-val LIST_TO_SET_MAP = store_thm
-  ("LIST_TO_SET_MAP",
-   ``!f l. LIST_TO_SET (MAP f l) = IMAGE f (LIST_TO_SET l)``,
-   RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_IMAGE, LIST_TO_SET, MEM_MAP]);
 
 val IMAGE_LIST_TO_SET = store_thm
   ("IMAGE_LIST_TO_SET",

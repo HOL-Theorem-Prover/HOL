@@ -57,6 +57,20 @@ val REAL_LE_EQ = store_thm
    ``!(x:real) y. x <= y /\ y <= x ==> (x = y)``,
    REAL_ARITH_TAC);
 
+(* the same theorem in realTheory is slightly different *)
+val REAL_INF_MIN = store_thm
+  ("REAL_INF_MIN",
+   ``!p z. z IN p /\ (!x. x IN p ==> z <= x) ==> (inf p = z)``,
+   RW_TAC std_ss [SPECIFICATION]
+   >> MP_TAC (SPECL [``(\r. (p:real->bool) (~r))``, ``~(z:real)``]
+              REAL_SUP_MAX)
+   >> RW_TAC std_ss [REAL_NEGNEG, INF_DEF_ALT, SPECIFICATION]
+   >> Suff `!x. p ~x ==> x <= ~z`
+   >- PROVE_TAC [REAL_ARITH ``~~(x:real) = x``]
+   >> REPEAT STRIP_TAC
+   >> Suff `z <= ~x` >- (KILL_TAC >> REAL_ARITH_TAC)
+   >> PROVE_TAC []);
+
 val POW_HALF_TWICE = store_thm
   ("POW_HALF_TWICE",
    ``!n. (1 / 2) pow n = 2 * (1 / 2) pow (SUC n)``,
@@ -105,6 +119,14 @@ val ABS_BETWEEN_LE = store_thm
      >> Q.PAT_ASSUM `0 <= x - y` MP_TAC
      >> KILL_TAC
      >> REAL_ARITH_TAC]]);
+
+val ONE_MINUS_HALF = store_thm
+  ("ONE_MINUS_HALF",
+   ``1 - 1 / 2 = 1 / 2``,
+   MP_TAC (Q.SPEC `1` X_HALF_HALF)
+   >> RW_TAC real_ss []
+   >> MATCH_MP_TAC (REAL_ARITH ``(x + 1 / 2 = y + 1 / 2) ==> (x = y)``)
+   >> RW_TAC std_ss [REAL_SUB_ADD]);
 
 val REAL_POW = store_thm
   ("REAL_POW",
