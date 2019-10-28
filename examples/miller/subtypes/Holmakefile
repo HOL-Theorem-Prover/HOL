@@ -1,3 +1,2 @@
-PRE_INCLUDES = ../../../src/probability
 INCLUDES = ../ho_prover
 OPTIONS = QUIT_ON_FAILURE
