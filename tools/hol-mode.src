@@ -1974,11 +1974,11 @@ second is to show the new term.
                    '("^Datatype\\>" . 'hol-definition-syntax)
                    "^Type\\>"
                    "^Overload\\>"
-                   '(hol-find-quoted-material 0 'hol-quoted-material))
+                   '(hol-find-quoted-material 0 'hol-quoted-material prepend))
              t)))
 
 (defun hol-find-quoted-material (limit)
-  (let ((beginmatch (re-search-forward term-begin-re limit t)))
+  (let ((beginmatch (re-search-forward hol-term-begin-re limit t)))
     (if (not beginmatch) nil
       (let* ((begin-marker (point-marker))
              (start-delim (match-string-no-properties 0))
@@ -2094,19 +2094,19 @@ second is to show the new term.
 (defun hol-fl-term-bump-backwards (pos)
   (save-excursion
     (goto-char pos)
-    (let ((match (re-search-backward term-beginend-re nil t)))
+    (let ((match (re-search-backward hol-term-beginend-re nil t)))
       (if (not match) pos
-        (if (looking-at term-end-re) pos
-          (if (looking-at term-begin-re) (match-beginning 0) pos))))))
+        (if (looking-at hol-term-end-re) pos
+          (if (looking-at hol-term-begin-re) (match-beginning 0) pos))))))
 
 (defun hol-fl-term-bump-forwards (pos)
   (save-excursion
     (goto-char pos)
-    (let ((match (re-search-forward term-beginend-re nil t)))
+    (let ((match (re-search-forward hol-term-beginend-re nil t)))
       (if (not match) pos
         (goto-char (match-beginning 0))
-        (if (looking-at term-begin-re) pos
-          (if (looking-at term-end-re) (match-end 0) pos))))))
+        (if (looking-at hol-term-begin-re) pos
+          (if (looking-at hol-term-end-re) (match-end 0) pos))))))
 
 
 
