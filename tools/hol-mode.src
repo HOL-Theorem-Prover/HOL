@@ -119,12 +119,12 @@ evaluations.")
             (setq hol-term-end-delim (match-string 0))
             (goto-char (match-beginning 0)))))))
 (defvar hol-beg-pos nil) ; ugh, global, but easiest this way
+(defvar hol-name-attrs-colon-re
+  "[[:space:]]+[A-Za-z0-9'_]+\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
 (defvar hol-quoted-theorem-proof-re-begin
-  "\\(Theorem\\|Triviality\\)[[:space:]]+[A-Za-z0-9'_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
+  (concat "\\(Theorem\\|Triviality\\)" hol-name-attrs-colon-re))
 (defvar hol-quoted-definition-re-begin
-  (concat "Definition[[:space:]]+[A-Za-z0-9'_]+"
-          "\\(\\[[A-Za-z0-9_,=]+\\]\\)?[[:space:]]*:"
-          "\\|\\(Co\\)?Inductive[[:space:]]+[A-Za-z0-9'_]+[[:space]]*:"))
+  (concat "\\(Definition\\|\\(Co\\)?Inductive\\)" hol-name-attrs-colon-re))
 (put 'hol-term 'beginning-op
      (function
       (lambda ()
@@ -1945,11 +1945,68 @@ second is to show the new term.
                 (buffer-substring (point-min) (point-max))
               (delete-region (point-min) (point-max))))))))
 
-(font-lock-add-keywords
- 'sml-mode
- '("^Theorem\\>" "^Proof\\>" "^QED\\>" "^Definition\\>" "^\\(Co\\)?Inductive\\>"
-   "^Termination\\>" "^End\\>" "^Datatype\\>" "^Type\\>" "^Triviality\\>"
-   "^Overload\\>"))
+(defun hol-fl-extend-region ()
+  (let ((newbeg (hol-fl-term-bump-backwards font-lock-beg))
+        (newend (hol-fl-term-bump-forwards font-lock-end))
+        (changed nil))
+    (if (= newbeg font-lock-beg) nil
+      (setq font-lock-beg newbeg)
+      (setq changed t))
+    (if (= newend font-lock-end) nil
+      (setq font-lock-end newend)
+      (setq changed t))
+    changed))
+
+(add-hook 'sml-mode-hook
+          (lambda ()
+            (setq font-lock-multiline t)
+            (setq font-lock-extend-region-functions
+                  (append font-lock-extend-region-functions
+                          '(hol-fl-extend-region)))
+            (message "Running HOL SML hook")
+            (font-lock-add-keywords
+             nil
+             (list '("^Theorem\\>" . 'hol-theorem-syntax)
+                   '("^Triviality\\>" . 'hol-theorem-syntax)
+                   '("^Proof\\>" . 'hol-theorem-syntax)
+                   '("^QED\\>" . 'hol-theorem-syntax)
+                   '("^Definition\\>\\|^\\(Co\\)?Inductive\\>\\|^Termination\\>\\|^End\\>" . 'hol-definition-syntax)
+                   '("^Datatype\\>" . 'hol-definition-syntax)
+                   "^Type\\>"
+                   "^Overload\\>"
+                   '(hol-find-quoted-material 0 'hol-quoted-material))
+             t)))
+
+(defun hol-find-quoted-material (limit)
+  (let ((beginmatch (re-search-forward term-begin-re limit t)))
+    (if (not beginmatch) nil
+      (let* ((begin-marker (point-marker))
+             (start-delim (match-string-no-properties 0))
+             (endre (hol-term-matching-delim start-delim))
+             (endmatch (if endre (re-search-forward endre limit t)
+                         (message (format "No end-delim for %s" start-delim))
+                         nil)))
+        (if (not endmatch) nil
+          (goto-char (match-beginning 0))
+          (set-match-data (list begin-marker (point-marker)))
+          t)))))
+;  (re-search-forward "^Theorem[[:space:]]+[A-Za-z0-9'_]+\\(?:\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:\\(\\(?:\n  \\|.\\)+\\)\nProof" limit t))
+
+(defun hol-thm-prefix (s)
+  (or (string-prefix-p "Theorem" s) (string-prefix-p "Triviality" s)))
+(defun hol-defn-prefix (s) (string-prefix-p "Definition" s))
+(defun hol-indn-prefix (s)
+  (or (string-prefix-p "Inductive" s) (string-prefix-p "CoInductive" s)))
+
+(defun hol-term-matching-delim (start-delim)
+  (pcase start-delim
+    ("“" "”")
+    ("‘" "’")
+    ("Datatype:" "^End\\>")
+    ((pred hol-thm-prefix) "^Proof\\>")
+    ((pred hol-indn-prefix) "^End\\>")
+    ((pred hol-defn-prefix) "^Termination\\>\\|^End\\>")))
+
 
 (defgroup hol-faces nil "Faces used in pretty-printing HOL values"
   :group 'faces
@@ -1989,6 +2046,21 @@ second is to show the new term.
   "The face for presenting HOL types."
   :group 'hol-faces)
 
+(defface hol-theorem-syntax
+  '((((class color)) :foreground "blueviolet"))
+  "The face for highlighting script file Theorem-Proof-QED syntax."
+  :group 'hol-faces)
+
+(defface hol-definition-syntax
+  '((((class color)) :foreground "indianred"))
+  "The face for highlighting script file definition syntax."
+  :group 'hol-faces)
+
+(defface hol-quoted-material
+  '((((class color)) :foreground "brown" :weight bold))
+  "The face for highlighting quoted material."
+  :group 'hol-faces)
+
 (defun hol-region-to-unicode-pdf (filename beg end)
   "Print region to FILE as a PDF, handling Unicode characters."
   (interactive "FFile to write to: \nr")
@@ -2003,6 +2075,42 @@ second is to show the new term.
     (lpr-region beg end)
     (shell-command (concat "ps2pdf " temp-ps-file " " filename))
     (delete-file temp-ps-file)))
+
+(setq hol-term-beginend-re
+      (concat
+       (regexp-opt
+        '("Theorem" "End" "Definition" "Inductive" "Termination" "Proof"
+          "CoInductive" "Datatype" "Triviality") "^\\(")
+       "\\|"
+       (regexp-opt '("“" "‘" "”" "’"))))
+(defvar hol-term-end-re (regexp-opt '("End" "Termination" "Proof" "”" "’")))
+(defvar hol-term-begin-re
+  (concat
+   (regexp-opt '("“" "‘")) "\\|"
+   hol-quoted-theorem-proof-re-begin "\\|"
+   hol-quoted-definition-re-begin "\\|"
+   "Datatype[[:space:]]*:"))
+
+(defun hol-fl-term-bump-backwards (pos)
+  (save-excursion
+    (goto-char pos)
+    (let ((match (re-search-backward term-beginend-re nil t)))
+      (if (not match) pos
+        (if (looking-at term-end-re) pos
+          (if (looking-at term-begin-re) (match-beginning 0) pos))))))
+
+(defun hol-fl-term-bump-forwards (pos)
+  (save-excursion
+    (goto-char pos)
+    (let ((match (re-search-forward term-beginend-re nil t)))
+      (if (not match) pos
+        (goto-char (match-beginning 0))
+        (if (looking-at term-begin-re) pos
+          (if (looking-at term-end-re) (match-end 0) pos))))))
+
+
+
+
 
 ;;The key combinations
 (define-key global-map "\M-h" 'hol-map)
