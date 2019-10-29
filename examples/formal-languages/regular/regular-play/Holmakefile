@@ -1,4 +1,5 @@
 INCLUDES = src test emit
+CLINE_OPTIONS = --recursive-clean
 
 all: selftest.exe
 
