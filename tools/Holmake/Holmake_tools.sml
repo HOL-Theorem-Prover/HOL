@@ -461,10 +461,6 @@ val nice_dir =
 fun xterm_log s =
   ignore (OS.Process.system ("/bin/sh -c 'printf \"\\033]0;" ^ s ^ "\\007\"'"))
 
-val terminal_log =
-    if Systeml.isUnix then xterm_log
-    else (fn s => ())
-
 structure hmdir =
 struct
 

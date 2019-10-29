@@ -67,7 +67,6 @@ sig
        debug: {ins:string list,outs:string list} option,
        usepfx:bool} -> output_functions
   val die_with : string -> 'a
-  val terminal_log : string -> unit
 
 
   val check_distrib : string -> string option

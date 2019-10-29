@@ -367,7 +367,6 @@ let
                      hmdir.pretty_dir newdir ^
                      "\n  (Probably a result of bad INCLUDES spec.)")
       val _ = diag (fn _ => "recursively: Visited set = " ^ print_set visited)
-      val _ = terminal_log ("Holmake: "^nice_dir (hmdir.toString newdir))
       val _ = OS.FileSys.chDir (hmdir.toAbsPath newdir)
       val result =
           case recur_abbrev newdir data {incdirmap=incdirmap, visited=visited}of
@@ -377,7 +376,6 @@ let
                data = data'}
       val _ = OS.FileSys.chDir (hmdir.toAbsPath dir)
     in
-      terminal_log ("Holmake: "^nice_dir (hmdir.toString dir));
       case result of
           {visited,incdirmap,data} =>
           let
