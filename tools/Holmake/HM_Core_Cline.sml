@@ -3,14 +3,15 @@ struct
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate21 z
+  fun makeUpdateT z = makeUpdate22 z
 in
 fun updateT z = let
   fun from debug do_logging fast help hmakefile holdir includes
            interactive jobs keep_going no_action no_hmakefile no_lastmaker_check
            no_overlay
            no_prereqs opentheory quiet
-           quit_on_failure rebuild_deps recursive verbose =
+           quit_on_failure rebuild_deps recursive_build recursive_clean
+           verbose =
     {
       debug = debug, do_logging = do_logging,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
@@ -20,9 +21,11 @@ fun updateT z = let
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
       no_prereqs = no_prereqs, opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
-      rebuild_deps = rebuild_deps, recursive = recursive, verbose = verbose
+      rebuild_deps = rebuild_deps, recursive_build = recursive_build,
+      recursive_clean = recursive_clean, verbose = verbose
     }
-  fun from' verbose recursive rebuild_deps quit_on_failure quiet opentheory
+  fun from' verbose recursive_clean recursive_build rebuild_deps quit_on_failure
+            quiet opentheory
             no_prereqs
             no_overlay no_lastmaker_check no_hmakefile no_action keep_going
             jobs interactive
@@ -37,18 +40,20 @@ fun updateT z = let
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
       no_prereqs = no_prereqs, opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
-      rebuild_deps = rebuild_deps, recursive = recursive, verbose = verbose
+      rebuild_deps = rebuild_deps, recursive_build = recursive_build,
+      recursive_clean = recursive_clean, verbose = verbose
     }
   fun to f {debug, do_logging, fast, help, hmakefile, holdir,
             includes, interactive, jobs, keep_going, no_action, no_hmakefile,
             no_lastmaker_check,
             no_overlay, no_prereqs, opentheory,
-            quiet, quit_on_failure, rebuild_deps, recursive, verbose} =
+            quiet, quit_on_failure, rebuild_deps, recursive_build,
+            recursive_clean, verbose} =
     f debug do_logging fast help hmakefile holdir includes
       interactive jobs keep_going no_action no_hmakefile no_lastmaker_check
       no_overlay
       no_prereqs opentheory quiet
-      quit_on_failure rebuild_deps recursive verbose
+      quit_on_failure rebuild_deps recursive_build recursive_clean verbose
 in
   makeUpdateT (from, from', to)
 end z
@@ -79,7 +84,8 @@ type t = {
   quiet : bool,
   quit_on_failure : bool,
   rebuild_deps : bool,
-  recursive : bool,
+  recursive_build : bool,
+  recursive_clean : bool,
   verbose : bool
 }
 
@@ -104,7 +110,8 @@ val default_core_options : t =
   quiet = false,
   quit_on_failure = true,
   rebuild_deps = false,
-  recursive = false,
+  recursive_build = false,
+  recursive_clean = false,
   verbose = false
 }
 
@@ -223,8 +230,18 @@ val core_option_descriptions = [
     desc = mkBoolT #quit_on_failure },
   { help = "rebuild cached dependency files", short = "",
     long = ["rebuild_deps"], desc = mkBoolT #rebuild_deps },
-  { help = "more recursion", short = "r", long = [],
-    desc = mkBoolT #recursive },
+  { help = "both --recursive-{build,clean}", short = "r", long = [],
+    desc = NoArg (
+      fn () => resfn (
+                fn (wn,t) => updateT t
+                                     (U #recursive_build true)
+                                     (U #recursive_clean true) $$
+              )
+    )},
+  { help = "build all targets recursively", short = "",
+    long = ["recursive-build"], desc = mkBoolT #recursive_build},
+  { help = "clean recursively", short = "",
+    long = ["recursive-clean"], desc = mkBoolT #recursive_clean},
   { help = "verbose output", short = "v", long = ["verbose"],
     desc = NoArg
              (fn () =>

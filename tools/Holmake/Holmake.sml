@@ -218,7 +218,8 @@ val toplevel_no_overlay = #no_overlay coption_value
 val cline_additional_includes = #includes coption_value
 val cline_always_rebuild_deps = #rebuild_deps coption_value
 val cline_nobuild = #no_action coption_value
-val cline_recursive = #recursive coption_value
+val cline_recursive_build = #recursive_build coption_value
+val cline_recursive_clean = #recursive_clean coption_value
 
 (* make the cline includes = [] so that these are only looked at once
    (when the cline_additional_includes value is folded into dirinfo values
@@ -970,7 +971,7 @@ fun work() =
       [] => let
         val targets = generate_all_plausible_targets warn start_tgt
         val depgraph =
-            if cline_recursive then make_all_needed depgraph
+            if cline_recursive_build then make_all_needed depgraph
             else if toplevel_no_prereqs then
               mk_dirneeded (hmdir.curdir()) (mkneeded targets depgraph)
             else mkneeded targets depgraph
@@ -1009,7 +1010,7 @@ fun work() =
         val xs = map transform_thy_target xs
       in
         if not (null cleanTargets) then
-          if not cline_recursive then
+          if not cline_recursive_clean then
             (List.app (ignore o do_clean_target) cleanTargets;
              finish_logging true;
              OS.Process.success)

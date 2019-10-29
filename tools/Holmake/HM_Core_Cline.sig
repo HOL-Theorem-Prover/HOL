@@ -20,7 +20,8 @@ type t = {
   quiet : bool,
   quit_on_failure : bool,
   rebuild_deps : bool,
-  recursive : bool,
+  recursive_build : bool,
+  recursive_clean : bool,
   hmakefile : string option,
   verbose : bool
 }
