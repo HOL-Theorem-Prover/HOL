@@ -3,6 +3,10 @@ sig
 
   include Abbrev
 
+  (* terms *)
+  val list_mk_binop : term -> term list -> term   
+  val arity_of : term -> int
+
   (* arithmetic *)
   val mk_suc : term -> term
   val mk_sucn : int -> term
