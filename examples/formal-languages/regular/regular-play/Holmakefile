@@ -1,10 +1,16 @@
-INCLUDES = ./src ./test
+INCLUDES = src test emit
 
 all: selftest.exe
 
 .PHONY: all
 
-selftest.exe: selftest.uo
+EMIT_STEMS = combin list num pair regexEMC rich_list
+
+EMIT_DEPS = $(patsubst %,emit/%ML.uo emit/%ML.ui,$(EMIT_STEMS))
+# need to include explicit mention of files in emit  because the corresponding
+# files don't even necessarily exist when the dependency graph is built
+
+selftest.exe: selftest.uo $(EMIT_DEPS)
 	$(HOLMOSMLC) -o $@ $<
 
 
