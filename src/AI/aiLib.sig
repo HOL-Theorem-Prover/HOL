@@ -165,7 +165,8 @@ sig
   val rm_squote : string -> string
   val rm_space  : string -> string
   datatype lisp = Lterm of lisp list | Lstring of string
-  val lisp_of : string list -> lisp list
+  val lisp_lexer : string -> string list 
+  val lisp_parser : string -> lisp list
   val rec_fun_type : int -> hol_type -> hol_type
   val term_of_lisp : lisp -> term
 

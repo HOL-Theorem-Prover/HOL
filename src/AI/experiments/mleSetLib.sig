@@ -3,15 +3,36 @@ sig
 
   include Abbrev
 
-  val eval_term : term -> int
-  val eval_subst : (term * term) -> int -> bool
-  val start_form : term
+  (* reading formulas *)
+  val parse_setsyntdata : unit -> (term * int list) list
+
+  val nat_to_bin : int -> int list
+  val bin_to_nat : int list -> int
+  (* printing *)
+  val hd_string : string -> char 
+  val tl_string : string -> string
+  
+  (* variables *)
   val xvar : term
   val xvarl : term list
-  val is_cont : term -> bool
+  val yvarl : term list
+  val is_xyvar : term -> bool
+  
+  (* continuations *)
   val cont_form : term
   val cont_term : term
-  val yvarl : term list
+  val is_cont : term -> bool
+
+  (* operators *)
+  val operl_plain : term list
+  val operl_ext : term list
+
+  (* evaluation *)
+  val eval_term : term -> int list
+  val eval_subst : (term * term) -> int list -> bool
+  
+  (* search *)
+  val start_form : term
   val movel : term list
   val random_step : term -> term
   val apply_move : term -> term -> term

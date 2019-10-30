@@ -1,5 +1,5 @@
 (* ========================================================================= *)
-(* FILE          : mleSetSynt.sml                                         *)
+(* FILE          : mleSetSynt.sml                                            *)
 (* DESCRIPTION   : Specification of a term synthesis game                    *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2019                                                      *)
@@ -20,7 +20,7 @@ val ERR = mk_HOL_ERR "mleSetSynt"
 val graphcat = mk_var ("graphcat", ``:bool -> bool -> bool``)
 
 fun mk_graph n t = 
-  map (eval_subst (xvar,t)) (List.tabulate (n,I))
+  map (eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I))
 
 fun graph_to_term graph =
   let val l = map (fn x => if x then T else F) graph in
@@ -58,10 +58,15 @@ fun nntm_of_sit ((_,(_,graphtm)),tm) = list_mk_comb (adjgraph,[graphtm,tm]);
 
 fun is_end tm = not (can (find_term is_cont) tm);
 
+fun alt_size t = 
+  let val (oper,argl) = strip_comb t in
+    if is_cont oper then 1 else 1 + sum_int (map alt_size argl)
+  end
+
 fun status_of ((orgtm,(graph,graphtm)),tm) =
   if is_end tm then 
     if graph = mk_graph 16 tm handle HOL_ERR _ => false then Win else Lose
-  else if term_size tm > 4 * term_size orgtm + 1 
+  else if alt_size tm > 2 * term_size orgtm + 1 
     then Lose
     else Undecided
 
@@ -84,7 +89,7 @@ fun read_targetl file =
     map mk_startsit tml
   end
 
-fun max_bigsteps ((orgtm,_),_) = 2 * term_size orgtm + 5
+fun max_bigsteps ((orgtm,_),_) = 2 * alt_size orgtm + 5
 
 (* -------------------------------------------------------------------------
    Level
@@ -94,10 +99,39 @@ val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt"
 
 val train_file = datasetsynt_dir ^ "/train_lisp"
 
-fun mk_targetl basein level ntarget = 
-  map mk_startsit []
- 
+fun eval64 t = 
+  let 
+    val l = List.tabulate (64,I)
+    fun f x = (eval_subst (xvar,t) (nat_to_bin x), x)
+  in
+    SOME (map f l)
+  end
+  handle HOL_ERR _ => NONE
+
+fun export_setsyntdata () =
+  let
+    val formgraphl = parse_setsyntdata ()
+    val l2 = map_assoc (eval64 o fst) formgraphl;
+    val l3 = filter (isSome o snd) l2
+    fun cmp (a,b) = Int.compare (term_size a, term_size b) 
+  in
+    export_terml (datasetsynt_dir ^ "/h4setsynt") 
+    (dict_sort cmp (map (fst o fst) l3))
+  end
+
+fun mk_targetl level ntarget = 
+  let 
+    val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt")
+    val tmll2 = map shuffle (first_n level (mk_batch_full 400 tml1))
+    val tml3 = List.concat (list_combine tmll2)
+  in 
+    map mk_startsit (first_n ntarget tml3)
+  end
+
 (*
+load "mleSetSynt"; open mleSetSynt; 
+(* export_setsyntdata (); *)
+
  let
     val tml1 = import_terml (dataarith_dir ^ "/" ^ basein)
     val tmll2 = map shuffle (first_n level (mk_batch 400 tml1))
@@ -120,7 +154,7 @@ val gamespec =
   apply_move = apply_move_to_board,
   operl = operl,
   nntm_of_sit = nntm_of_sit,
-  mk_targetl = mk_targetl "",
+  mk_targetl = mk_targetl,
   write_targetl = write_targetl,
   read_targetl = read_targetl,
   string_of_move = string_of_move,
@@ -142,7 +176,7 @@ load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 load "aiLib"; open aiLib;
 
-ncore_mcts_glob := 12;
+ncore_mcts_glob := 4;
 ncore_train_glob := 4;
 ntarget_compete := 400;
 ntarget_explore := 400;
@@ -157,9 +191,9 @@ nsim_glob := 1600;
 nepoch_glob := 100;
 ngen_glob := 100;
 
-logfile_glob := "mleSetSynt_eval1";
+logfile_glob := "mleSetSynt1";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
-val r = start_rl_loop (setsynt_gamespec,setsynt_extspec);
+val r = start_rl_loop (gamespec,extspec);
 *)
 
 (* -------------------------------------------------------------------------
@@ -174,13 +208,23 @@ load "psMCTS"; open psMCTS;
 nsim_glob := 10000;
 decay_glob := 0.99;
 val formula = (funpow 20 random_step) start_form;
-val formula = ``(pNOTSUB (tEmpty:'a)) (X :'a) :bool``;
+
+val formula = ``(qEXISTS_IN (vY0 :'a) (vX:'a) 
+(oNOT (pEQ (vX:'a) (vY0 :'a):bool):bool):bool)``;
+val formula = ``(oNOT (pEQ (vX :'a) (vX:'a):bool):bool)``;
+
+val formula = ``(qEXISTS_IN (vY0 :'a) (vX:'a) 
+(oNOT (pSubq (vX:'a) ((tPower (vY0:'a)) :'a):bool):bool):bool)``;
+
 val board = mk_startsit formula;
 val _ = n_bigsteps_test gamespec (random_dhtnn_gamespec gamespec) board;
 
 val tree = mcts_test 10000 gamespec (random_dhtnn_gamespec gamespec) board;
 val nodel = trace_win (#status_of gamespec) tree [];
-
+*)
+(* 
+   todo: have operators with fixed embeddings. i.e no updates
+   during learning and fixed 
 *)
 
 (* -------------------------------------------------------------------------

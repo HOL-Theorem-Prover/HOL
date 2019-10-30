@@ -6,6 +6,9 @@ sig
   type board = ((term * (bool list * term)) * term)
   type move = term
 
+  (* dataset *)
+  val export_setsyntdata : unit -> unit
+
   (* interface *)
   val mk_startsit : term -> board
   val dest_startsit : board -> term

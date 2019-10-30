@@ -382,16 +382,27 @@ fun combine_triple (l1,l2,l3) = case (l1,l2,l3) of
 
 datatype lisp = Lterm of lisp list | Lstring of string
 
-fun lisp_aux acc sl = case sl of
+fun implo buf = if null buf then [] else [implode (rev buf)]
+
+fun lisp_tokens acc buf charl = case charl of
+    [] => rev acc
+  | #"(" :: m => lisp_tokens ("(" :: implo buf @ acc) [] m
+  | #")" :: m => lisp_tokens (")" :: implo buf @ acc) [] m
+  | #" " :: m => lisp_tokens (implo buf @ acc) [] m
+  | a :: m => lisp_tokens acc (a :: buf) m
+
+fun lisp_lexer s = lisp_tokens [] [] (explode s)
+
+fun lisp_parser_aux acc sl = case sl of
     []       => (rev acc, [])
   | "(" :: m =>
-    let val (parsedl,contl) = lisp_aux [] m in
-      lisp_aux (Lterm parsedl :: acc) contl
+    let val (parsedl,contl) = lisp_parser_aux [] m in
+      lisp_parser_aux (Lterm parsedl :: acc) contl
     end
   | ")" :: m => (rev acc, m)
-  | a   :: m => lisp_aux (Lstring a :: acc) m
+  | a   :: m => lisp_parser_aux (Lstring a :: acc) m
 
-fun lisp_of sl = fst (lisp_aux [] sl)
+fun lisp_parser s = fst (lisp_parser_aux [] (lisp_lexer s))
 
 fun lisp_lower_case s =
   if String.sub (s,0) = #"\""
