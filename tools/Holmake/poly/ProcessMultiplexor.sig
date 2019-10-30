@@ -5,6 +5,9 @@ sig
   type 'a job = {tag : string, command : command, update : 'a * bool -> 'a,
                  dir : string}
   type jobkey = Posix.ProcEnv.pid * string
+  val jobkey_compare : jobkey * jobkey -> order
+  val jobkey_toString : jobkey -> string
+
   type exit_status = Posix.Process.exit_status
   datatype 'a genjob_result =
            NoMoreJobs of 'a | NewJob of ('a job * 'a) | GiveUpAndDie of 'a

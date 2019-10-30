@@ -99,6 +99,8 @@ struct
     case SysWord.compare(pidToWord p1, pidToWord p2) of
         EQUAL => String.compare(s1,s2)
       | x => x
+  fun jobkey_toString (p,s) =
+      s ^ "(" ^ SysWord.toString (pidToWord p) ^ ")"
   fun wjkey ({tag,pid,...} : 'a working_job) = (pid,tag)
   fun wjk_member x [] = false
     | wjk_member x (h::t) = jobkey_compare(x,h) = EQUAL orelse wjk_member x t

@@ -141,7 +141,7 @@ fun squash_to wdth s =
 fun new {info,warn,genLogFile,time_limit} =
   let
     val monitor_map =
-        ref (Binarymap.mkDict String.compare : (string,procinfo)Binarymap.dict)
+        ref (Binarymap.mkDict jobkey_compare : (jobkey,procinfo)Binarymap.dict)
     val last_width_check = ref (Time.now())
     val width = ref (getWidth())
     val last_child_cputime = let
@@ -173,20 +173,21 @@ fun new {info,warn,genLogFile,time_limit} =
           let
             val tgtw = width div job_count - 4
           in
-            Binarymap.app (fn (k,{status,...}) =>
-                              print (polish tgtw k ^ statusString status ^ " "))
-                          (!monitor_map);
+            Binarymap.app (
+              fn (jk as (_, tag),{status,...}) =>
+                 print (polish tgtw tag ^ statusString status ^ " ")
+            ) (!monitor_map);
             print CLR_EOL
           end
         else
           case Binarymap.listItems (!monitor_map) of
               [] => ()
-            | (k,{tb,status,...}) :: _ =>
+            | (jk as (_, tag),{tb,status,...}) :: _ =>
               let
                 val s = case tailbuffer.last_line tb of NONE => "" | SOME s => s
                 val tgtw = width div 4
               in
-                print (polish tgtw k ^
+                print (polish tgtw tag ^
                        rtrunc (width - tgtw - 5) (": " ^ s) ^ " " ^
                        (case status of
                             Stalling _ => statusString status
@@ -203,9 +204,9 @@ fun new {info,warn,genLogFile,time_limit} =
           ((fn s => info ("Starting work on " ^ delsml_sfx s)), "",
            (fn () => ()),
            id, id, id, id, "")
-    fun stdhandle tag f =
-      case Binarymap.peek (!monitor_map, tag) of
-          NONE => (warn ("Lost monitor info for "^tag); NONE)
+    fun stdhandle jkey f =
+      case Binarymap.peek (!monitor_map, jkey) of
+          NONE => (warn ("Lost monitor info for "^jobkey_toString jkey); NONE)
         | SOME info => f info
     fun taginfo tag colour pfx s =
       info (infopfx ^
@@ -213,7 +214,7 @@ fun new {info,warn,genLogFile,time_limit} =
             pfx ^ colour (StringCvt.padLeft #" " 7 s) ^ CLR_EOL)
     fun monitor msg =
       case msg of
-          StartJob ((_, tag), {dir}) =>
+          StartJob (jk as (_, tag), {dir}) =>
           let
             val strm = TextIO.openOut (genLogFile{tag = tag, dir = dir})
             val tb = tailbuffer.new {
@@ -222,15 +223,15 @@ fun new {info,warn,genLogFile,time_limit} =
                 }
           in
             monitor_map :=
-              Binarymap.insert(!monitor_map, tag,
+              Binarymap.insert(!monitor_map, jk,
                                {os = strm, tb = tb, status = MRunning #"|",
                                 start_time = Time.now()});
             startmsg tag;
             display_map();
             NONE
           end
-        | Output((_, tag), t, chan, msg) =>
-          stdhandle tag
+        | Output(jk as (_, tag), t, chan, msg) =>
+          stdhandle jk
             (fn (pinfo as {os = strm,tb,status=stat,...}) =>
                 let
                   val stat' = case stat of MRunning c => MRunning (nextchar c)
@@ -240,7 +241,7 @@ fun new {info,warn,genLogFile,time_limit} =
                   TextIO.output(strm,msg);
                   TextIO.flushOut strm;
                   monitor_map :=
-                    Binarymap.insert(!monitor_map, tag,
+                    Binarymap.insert(!monitor_map, jk,
                                      pinfo_upd (append msg tb, stat') pinfo);
                   display_map();
                   NONE
@@ -257,18 +258,19 @@ fun new {info,warn,genLogFile,time_limit} =
                       | Stalling _ => Stalling delay
               in
                 monitor_map :=
-                  Binarymap.insert(!monitor_map, tag, pinfo_upd (tb, stat') pi);
+                  Binarymap.insert(!monitor_map, jkey,
+                                   pinfo_upd (tb, stat') pi);
                 display_map();
                 NONE
               end
           in
             stdhandle
-              tag
+              jkey
               (fn pinfo =>
                   check_time (delay, jkey, (fn () => after_check pinfo)))
           end
-        | Terminated((_, tag), st, _) =>
-          stdhandle tag
+        | Terminated(jk as (_, tag), st, _) =>
+          stdhandle jk
             (fn {os = strm,tb,status=stat,start_time} =>
                 let
                   val {fulllines,lastpartial,patterns_seen} =
@@ -296,16 +298,16 @@ fun new {info,warn,genLogFile,time_limit} =
                         if lastpartial <> "" then info (" " ^ dim lastpartial)
                         else ());
                   TextIO.closeOut strm;
-                  monitor_map := #1 (Binarymap.remove(!monitor_map, tag));
+                  monitor_map := #1 (Binarymap.remove(!monitor_map, jk));
                   display_map();
                   NONE
                 end)
-        | MonitorKilled((_, tag), _) =>
-          stdhandle tag
+        | MonitorKilled(jk as (_, tag), _) =>
+          stdhandle jk
             (fn {os = strm,tb, status = stat,...} =>
                 (taginfo tag red "" "M-KILLED";
                  TextIO.closeOut strm;
-                 monitor_map := #1 (Binarymap.remove(!monitor_map, tag));
+                 monitor_map := #1 (Binarymap.remove(!monitor_map, jk));
                  display_map();
                  NONE))
         | _ => NONE
