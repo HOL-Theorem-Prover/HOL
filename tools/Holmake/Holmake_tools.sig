@@ -34,6 +34,16 @@ sig
   val kernelid_fname : string
   val concatWithf : ('a -> string) -> string -> 'a list -> string
 
+  (* exceptions *)
+  structure Exception : sig
+    datatype 'a result = Res of 'a | Exn of exn
+    val get_res : 'a result -> 'a option
+    val get_exn : 'a result -> exn option
+    val capture : ('a -> 'b) -> 'a -> 'b result
+    val release : 'a result -> 'a
+  end
+
+
   (* sets *)
   type 'a set = 'a Binaryset.set
   val set_add : 'a -> 'a set -> 'a set
@@ -92,6 +102,10 @@ sig
   val clean_dir : {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool
   val clean_forReloc : {holheap : string option} -> unit
+  val pushdir : string -> ('a -> 'b) -> ('a -> 'b)
+
+
+
 
   structure hmdir : sig
     type t

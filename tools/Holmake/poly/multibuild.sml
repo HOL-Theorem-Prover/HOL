@@ -18,14 +18,6 @@ infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
 val loggingdir = ".hollogs"
 
-fun pushd d f x =
-    let
-      val d0 = OS.FileSys.getDir()
-      val _ = OS.FileSys.chDir d
-    in
-      f x before OS.FileSys.chDir d0
-    end
-
 
 
 fun graphbuild optinfo g =
@@ -102,8 +94,8 @@ fun graphbuild optinfo g =
                          Succeeded)
                       else RealFail
                   in
-                    case pushd dir
-                               (mosml_build_command hmenv extra hypargs) deps
+                    case pushdir dir
+                                 (mosml_build_command hmenv extra hypargs) deps
                      of
                         SOME r =>
                           k (error (OS.Process.isSuccess r) = Succeeded) g
@@ -165,7 +157,7 @@ fun graphbuild optinfo g =
                                     update = update},
                                    (updall Running g, true))
                           end
-                    fun bc c f = pushd dir (build_command g incinfo c) f
+                    fun bc c f = pushdir dir (build_command g incinfo c) f
                     val _ = diag ("Handling builtin command " ^
                                   bic_toString bic ^ " for "^target_s)
                   in

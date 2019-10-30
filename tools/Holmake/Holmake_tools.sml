@@ -10,6 +10,15 @@ fun K x y = x
 fun |>(x,f) = f x
 infix |>
 
+structure Exception = struct
+  datatype 'a result = Res of 'a | Exn of exn
+  fun get_res (Res r) = SOME r | get_res _ = NONE
+  fun get_exn (Exn e) = SOME e | get_exn _ = NONE
+  fun capture f x = Res (f x) handle e => Exn e
+  fun release (Res r) = r | release (Exn e) = raise e
+end
+
+
 structure Path = OS.Path
 structure FileSys = OS.FileSys
 
@@ -457,6 +466,15 @@ val nice_dir =
                              "~" ^ String.extract(s,size h,NONE)
                            else s)
       | NONE => (fn s => s)
+
+fun pushdir d f x =
+    let
+      val d0 = OS.FileSys.getDir()
+      val res = Exception.capture (fn () => (OS.FileSys.chDir d; f x)) ()
+    in
+      OS.FileSys.chDir d0; Exception.release res
+    end
+
 
 fun xterm_log s =
   ignore (OS.Process.system ("/bin/sh -c 'printf \"\\033]0;" ^ s ^ "\\007\"'"))
