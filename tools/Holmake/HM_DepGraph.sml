@@ -180,15 +180,6 @@ fun nodeInfo_toString (nI : 'a nodeInfo) =
        | NoCmd => "<no command>")
   end
 
-fun make_all_needed g =
-    let
-      fun mkneeded (Pending _) = Pending {needed = true}
-        | mkneeded (Failed _) = Failed {needed = true}
-        | mkneeded s = s
-    in
-      fupd_nodes (Map.map (fn (_,n) => fupdStatus mkneeded n)) g
-    end
-
 fun mkneeded tgts g =
     let
       fun setneeded f n g = updnode(n,f{needed=true}) g

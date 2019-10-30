@@ -329,9 +329,11 @@ type 'a hmfold =
     directory.
 
    ---------------------------------------------------------------------- *)
-fun recursively getnewincs dsopt {warn,diag,hm : 'a hmfold,dirinfo,dir,data} =
+fun 'a recursively getnewincs dsopt {outputfns,verb,hm,dirinfo,dir,data} =
 let
   val {incdirmap,visited} = dirinfo : dirinfo
+  val hm : 'a hmfold = hm
+  val {warn,diag,info,chatty,...} : output_functions = outputfns
   val {includes=incset, preincludes = preincset} = getnewincs dir
   val incdirmap =
       incdirmap |> extend_idmap dir {incs = incset, pres = preincset}
@@ -343,7 +345,8 @@ let
                                           | SOME ds => ds)
   fun recur_abbrev dir data (dirinfo:dirinfo) =
       recursively getnewincs NONE
-                  {warn=warn,diag=diag,hm=hm,dirinfo=dirinfo,dir=dir, data=data}
+                  {outputfns = outputfns,verb=verb,hm=hm,dirinfo=dirinfo,
+                   dir=dir, data=data}
   val diag = diag "builddepgraph"
   val _ = diag (fn _ => "recursively: call in " ^ hmdir.pretty_dir dir)
   val _ = diag (fn _ => "recursively: includes (pre- & normal) = [" ^
@@ -398,6 +401,9 @@ let
           let
             val {pres, incs} = idm_lookup incdirmap dir
             val f = Binaryset.foldr (fn (d,acc) => hmdir.toAbsPath d :: acc) []
+            val _ = if not (isSome dsopt) then
+                      info (verb ^ " " ^ bold (hmdir.pretty_dir dir))
+                    else ()
             val data' = hm {includes=f incs,preincludes=f pres} warn dir data
           in
             {incdirmap = incdirmap, visited = visited, data = data'}
@@ -930,7 +936,8 @@ fun create_complete_graph cline_incs idm =
       val d = hmdir.curdir()
       val {data = g, incdirmap,...} =
           recursively getnewincs (SOME cline_incs) {
-            warn=warn,diag=diag,hm=extend_graph_in_dir,
+            outputfns = outputfns, verb = "Scanning",
+            hm=extend_graph_in_dir,
             dirinfo={incdirmap=idm, visited = Binaryset.empty hmdir.compare},
             dir = d,
             data = HM_DepGraph.empty()
@@ -959,22 +966,40 @@ end
 
 val _ = not cline_always_rebuild_deps orelse clean_deps()
 
-val (depgraph, local_incinfo) =
-    create_complete_graph
-      (slist_to_dset original_dir cline_additional_includes)
-      (extend_idmap original_dir
+val cline_incs = slist_to_dset original_dir cline_additional_includes
+val idmap0 = extend_idmap original_dir
                     {pres = empty_dirset, incs = empty_dirset}
-                    empty_incdirmap)
+                    empty_incdirmap
+
+fun toplevel_build_graph () = create_complete_graph cline_incs idmap0
+
+fun get_targets_recursively {incs, pres} =
+    let
+      val dirs = set_add original_dir (set_union incs pres)
+      fun indir() =
+          let val (_, _, target1) = get_hmf()
+          in
+            generate_all_plausible_targets warn target1
+          end
+    in
+      List.concat (
+        Binaryset.foldl
+          (fn (d,A) => pushdir (hmdir.toAbsPath d) indir () :: A) [] dirs
+      )
+    end
 
 fun work() =
     case targets of
       [] => let
-        val targets = generate_all_plausible_targets warn start_tgt
+        val (depgraph, local_incinfo) = toplevel_build_graph()
+        val targets = if cline_recursive_build then
+                        get_targets_recursively local_incinfo
+                      else generate_all_plausible_targets warn start_tgt
         val depgraph =
-            if cline_recursive_build then make_all_needed depgraph
-            else if toplevel_no_prereqs then
+            if toplevel_no_prereqs then
               mk_dirneeded (hmdir.curdir()) (mkneeded targets depgraph)
-            else mkneeded targets depgraph
+            else
+              mkneeded targets depgraph
         val _ = diag "core" (
               fn _ =>
                  let
@@ -1015,22 +1040,32 @@ fun work() =
              finish_logging true;
              OS.Process.success)
           else (
-            Binaryset.app (visit_and_clean cleanTargets)
-                          (Binaryset.add(Binaryset.union(#pres local_incinfo,
-                                                         #incs local_incinfo),
-                                         original_dir));
+            recursively getnewincs (SOME cline_incs) {
+              outputfns = outputfns, verb = "Cleaning",
+              hm = (fn _ => fn _ => fn _ => fn _ =>
+                       List.app (ignore o do_clean_target) cleanTargets),
+              dirinfo = {incdirmap=idmap0,
+                         visited = Binaryset.empty hmdir.compare},
+              dir = original_dir,
+              data = ()
+            };
             OS.Process.success
           )
         else
           let
+            val (depgraph, local_incinfo) = toplevel_build_graph()
             val targets = map filestr_to_dep xs
-            val g = mkneeded targets depgraph
+            val depgraph =
+                if toplevel_no_prereqs then
+                  mk_dirneeded (hmdir.curdir()) (mkneeded targets depgraph)
+                else
+                  mkneeded targets depgraph
           in
             if cline_nobuild then
-              (print ("Dependency graph" ^ HM_DepGraph.toString g);
+              (print ("Dependency graph" ^ HM_DepGraph.toString depgraph);
                OS.Process.success)
             else
-              postmortem outputfns (build_graph g)
+              postmortem outputfns (build_graph depgraph)
               handle e => die ("Exception: "^General.exnMessage e)
           end
       end

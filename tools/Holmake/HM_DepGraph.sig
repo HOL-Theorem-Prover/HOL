@@ -39,7 +39,6 @@ sig
   val size : 'a t -> int
   val listNodes : 'a t -> (node * 'a nodeInfo) list
   val find_nodes_by_command : 'a t -> command -> node list
-  val make_all_needed : 'a t -> 'a t
   val mkneeded : dep list -> 'a t -> 'a t
   val mk_dirneeded : Holmake_tools.hmdir.t -> 'a t -> 'a t
 
