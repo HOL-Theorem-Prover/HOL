@@ -50,8 +50,7 @@ val operl =
   mk_fast_set oper_compare
   ( 
     operl_of (listSyntax.mk_list (yvarl,alpha)) @
-    map_assoc arity_of 
-      (F :: T :: cont_form :: cont_term :: graphcat :: adjgraph :: movel) 
+    map_assoc arity_of (F :: T :: graphcat :: adjgraph :: operl_ext) 
   );
 
 fun nntm_of_sit ((_,(_,graphtm)),tm) = list_mk_comb (adjgraph,[graphtm,tm]);
@@ -176,7 +175,7 @@ load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 load "aiLib"; open aiLib;
 
-ncore_mcts_glob := 4;
+ncore_mcts_glob := 32;
 ncore_train_glob := 4;
 ntarget_compete := 400;
 ntarget_explore := 400;
@@ -191,7 +190,7 @@ nsim_glob := 1600;
 nepoch_glob := 100;
 ngen_glob := 100;
 
-logfile_glob := "mleSetSynt1";
+logfile_glob := "aa_mleSetSynt1";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
 val r = start_rl_loop (gamespec,extspec);
 *)
