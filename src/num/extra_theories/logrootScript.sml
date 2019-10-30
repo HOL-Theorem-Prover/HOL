@@ -446,6 +446,22 @@ val ROOT_COMPUTE = Q.store_thm("ROOT_COMPUTE",
             DECIDE ``(a = b + c) ==> b <= a:num``, ADD1, LE_ADD_LCANCEL,
             DECIDE ``a <= 1 <=> a < 2n``]);
 
+Theorem ROOT_EVAL[compute]:
+  !r n. ROOT r n = 
+    if r = 0 then ROOT 0 n else
+    if n = 0 then 0 else
+    let m = 2 * (ROOT r (n DIV 2 ** r)) in
+    m + if (SUC m) ** r <= n then 1 else 0
+Proof
+  rpt strip_tac >>
+  (Cases_on `r = 0` >> asm_simp_tac arith_ss[LET_THM]) >>
+  `0 < r` by asm_simp_tac arith_ss[] >>
+  (Cases_on `n = 0` >> asm_simp_tac arith_ss[Once ROOT_COMPUTE, LET_THM]) >>
+  `0 DIV 2 ** r = 0` by RW_TAC arith_ss[ZERO_DIV] >>
+  METIS_TAC[ROOT_COMPUTE]
+QED
+
+
 val SQRTd_def = zDefine `SQRTd n = (ROOT 2 n, n - (ROOT 2 n * ROOT 2 n))`;
 
 val iSQRTd_def = zDefine`
