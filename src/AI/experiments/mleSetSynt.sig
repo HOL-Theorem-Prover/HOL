@@ -11,7 +11,7 @@ sig
 
   (* parameters *)
   val graph_size : int ref 
-
+  val ntarget_level : int ref
  (* interface *)
   val mk_startsit : term -> board
   val dest_startsit : board -> term

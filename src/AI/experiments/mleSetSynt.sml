@@ -133,10 +133,14 @@ fun export_setsyntdata () =
     (dict_sort cmp (map (fst o fst) l3))
   end
 
+
+val ntarget_level = ref 100
+
 fun mk_targetl level ntarget = 
   let 
     val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt")
-    val tmll2 = map shuffle (first_n level (mk_batch_full 400 tml1))
+    val tmll2 = 
+      map shuffle (first_n level (mk_batch_full (!ntarget_level) tml1))
     val tml3 = List.concat (list_combine tmll2)
   in 
     map mk_startsit (first_n ntarget tml3)
@@ -177,10 +181,11 @@ load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 load "aiLib"; open aiLib;
 
-ncore_mcts_glob := 8;
+ncore_mcts_glob := 32;
 ncore_train_glob := 4;
+ntarget_level := 100;
 ntarget_compete := 400;
-ntarget_explore := 50;
+ntarget_explore := 400;
 exwindow_glob := 40000;
 uniqex_flag := false;
 dim_glob := 12;
@@ -192,9 +197,9 @@ level_glob := 1;
 nsim_glob := 1600;
 nepoch_glob := 100;
 ngen_glob := 100;
-temp_flag := true;
+temp_flag := false;
 
-logfile_glob := "aa_mleSetSynt4";
+logfile_glob := "aa_mleSetSynt5";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
 val r = start_rl_loop (gamespec,extspec);
 *)
