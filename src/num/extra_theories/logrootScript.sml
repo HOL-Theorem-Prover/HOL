@@ -446,8 +446,9 @@ val ROOT_COMPUTE = Q.store_thm("ROOT_COMPUTE",
             DECIDE ``(a = b + c) ==> b <= a:num``, ADD1, LE_ADD_LCANCEL,
             DECIDE ``a <= 1 <=> a < 2n``]);
 
+(* For evaluation of ROOT r n in HOL4 interactive session. *)
 Theorem ROOT_EVAL[compute]:
-  !r n. ROOT r n = 
+  !r n. ROOT r n =
     if r = 0 then ROOT 0 n else
     if n = 0 then 0 else
     let m = 2 * (ROOT r (n DIV 2 ** r)) in
