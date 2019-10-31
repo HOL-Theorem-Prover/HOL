@@ -1,6 +1,8 @@
 signature mlNeuralNetwork =
 sig
 
+  include Abbrev
+
   type vect = real vector
   type mat = vect vector
 
@@ -25,6 +27,8 @@ sig
 
   (* weights randomly initialized *)
   val random_nn : (real -> real) * (real -> real) -> int list -> nn
+  val is_numvar : term -> bool
+  val numvar_nn : int -> term -> nn  
 
   (* forward and backward pass *)
   val fp_nn        : nn -> vect -> fpdata list

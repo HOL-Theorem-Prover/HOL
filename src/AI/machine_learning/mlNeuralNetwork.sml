@@ -150,6 +150,7 @@ fun fp_layer (layer : layer) inv =
   in
     {layer = layer, inv = new_inv, outv = outv, outnv = outnv}
   end
+  handle Subscript => raise ERR "fp_layer" ""
 
 fun fp_nn nn v = case nn of
     [] => []
@@ -322,6 +323,34 @@ fun train_nn ncore nepoch nn bsize exl =
   end
 
 fun infer_nn nn l = (descale_out o #outnv o last o (fp_nn nn) o scale_in) l
+
+(* -------------------------------------------------------------------------
+   Fixed neural embedding derived by the name of the variable
+   ------------------------------------------------------------------------- *)
+
+fun embed_nn embed =
+  let val embed' = map (fn x => Vector.fromList [x]) embed in
+    [{a = id, da = did, w = Vector.fromList embed'}]
+  end
+
+fun is_numvar f = is_var f andalso  
+  let val fs = fst (dest_var f) in 
+    hd_string fs = #"n" andalso 
+    all Char.isDigit (explode (tl_string fs))
+  end
+ 
+fun numvar_nn dim f =
+  if is_numvar f then 
+    let 
+      val fs = fst (dest_var f)
+      val cl = tl (explode fs)
+      val embed = map (Real.fromInt o string_to_int o Char.toString) cl
+    in
+      if length embed = dim 
+      then embed_nn embed
+      else raise ERR "numvar_nn" fs
+    end
+  else raise ERR "fp_op" (fst (dest_var f))
 
 end (* struct *)
 

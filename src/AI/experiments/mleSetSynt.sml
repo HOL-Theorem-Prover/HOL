@@ -13,18 +13,29 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
 
 val ERR = mk_HOL_ERR "mleSetSynt"
 
+val graph_size = ref 12
+
 (* -------------------------------------------------------------------------
    Graph
    ------------------------------------------------------------------------- *)
 
-val graphcat = mk_var ("graphcat", ``:bool -> bool -> bool``)
-
 fun mk_graph n t = 
   map (eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I))
 
+(*
+val graphcat = mk_var ("graphcat", ``:bool -> bool -> bool``)
 fun graph_to_term graph =
   let val l = map (fn x => if x then T else F) graph in
     list_mk_binop graphcat l
+  end
+*)
+
+val graphtag = mk_var ("graphtag", ``:bool -> bool``)
+fun graph_to_term graph =
+  let 
+    val vs = "n" ^ String.concat (map (fn x => if x then "1" else "0") graph)
+  in
+    mk_comb (graphtag, mk_var (vs,bool))
   end
 
 (* -------------------------------------------------------------------------
@@ -35,37 +46,41 @@ type board = ((term * (bool list * term)) * term)
 
 fun mk_startsit tm = 
   let 
-    val graph = mk_graph 16 tm
+    val graph = mk_graph (!graph_size) tm
     val graphtm = graph_to_term graph
   in
     ((tm,(graph,graphtm)),start_form)
   end
-  handle HOL_ERR _ => raise ERR "mk_startsit" (term_to_string tm)
 
 fun dest_startsit ((tm,_),_) = tm
 
 val adjgraph = mk_var ("adjgraph", ``: bool -> bool -> bool``);
 
+val uncont_term = mk_var ("uncont_term",alpha)
+val uncont_form = mk_var ("uncont_form",bool)
+val uncontl = [uncont_term,uncont_form]
+
 val operl = 
   mk_fast_set oper_compare
-  ( 
-    operl_of (listSyntax.mk_list (yvarl,alpha)) @
-    map_assoc arity_of (F :: T :: graphcat :: adjgraph :: operl_ext) 
-  );
+  (map_assoc arity_of (graphtag :: adjgraph :: (uncontl @ operl_plain)));
 
-fun nntm_of_sit ((_,(_,graphtm)),tm) = list_mk_comb (adjgraph,[graphtm,tm]);
+fun rw_to_uncont t =
+  let val (oper,argl) = strip_comb t in
+    if term_eq oper cont_term then uncont_term
+    else if term_eq oper cont_form then uncont_form
+    else list_mk_comb (oper, map rw_to_uncont argl)
+  end
+
+fun nntm_of_sit ((_,(_,graphtm)),tm) = 
+  list_mk_comb (adjgraph, [graphtm, rw_to_uncont tm]);
 
 fun is_end tm = not (can (find_term is_cont) tm);
 
-fun alt_size t = 
-  let val (oper,argl) = strip_comb t in
-    if is_cont oper then 1 else 1 + sum_int (map alt_size argl)
-  end
-
 fun status_of ((orgtm,(graph,graphtm)),tm) =
   if is_end tm then 
-    if graph = mk_graph 16 tm handle HOL_ERR _ => false then Win else Lose
-  else if alt_size tm > 2 * term_size orgtm + 1 
+    if graph = mk_graph (!graph_size) tm 
+       handle HOL_ERR _ => false then Win else Lose
+  else if term_size (rw_to_uncont tm) > 2 * term_size orgtm + 1 
     then Lose
     else Undecided
 
@@ -88,7 +103,7 @@ fun read_targetl file =
     map mk_startsit tml
   end
 
-fun max_bigsteps ((orgtm,_),_) = 2 * alt_size orgtm + 5
+fun max_bigsteps ((orgtm,_),_) = 2 * term_size orgtm + 5
 
 (* -------------------------------------------------------------------------
    Level
@@ -127,19 +142,6 @@ fun mk_targetl level ntarget =
     map mk_startsit (first_n ntarget tml3)
   end
 
-(*
-load "mleSetSynt"; open mleSetSynt; 
-(* export_setsyntdata (); *)
-
- let
-    val tml1 = import_terml (dataarith_dir ^ "/" ^ basein)
-    val tmll2 = map shuffle (first_n level (mk_batch 400 tml1))
-    val tml3 = List.concat (list_combine tmll2)
-  in
-    map mk_startsit (first_n ntarget tml3)
-  end
-*)
-
 (* -------------------------------------------------------------------------
    Interface
    ------------------------------------------------------------------------- *)
@@ -175,13 +177,14 @@ load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 load "aiLib"; open aiLib;
 
-ncore_mcts_glob := 32;
+ncore_mcts_glob := 8;
 ncore_train_glob := 4;
 ntarget_compete := 400;
-ntarget_explore := 400;
+ntarget_explore := 50;
 exwindow_glob := 40000;
 uniqex_flag := false;
 dim_glob := 12;
+graph_size := !dim_glob;
 lr_glob := 0.02;
 batchsize_glob := 16;
 decay_glob := 0.99;
@@ -189,8 +192,9 @@ level_glob := 1;
 nsim_glob := 1600;
 nepoch_glob := 100;
 ngen_glob := 100;
+temp_flag := true;
 
-logfile_glob := "aa_mleSetSynt1";
+logfile_glob := "aa_mleSetSynt4";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
 val r = start_rl_loop (gamespec,extspec);
 *)
@@ -204,26 +208,29 @@ load "mleSetLib"; open mleSetLib;
 load "mleSetSynt"; open mleSetSynt;
 load "mlReinforce"; open mlReinforce;
 load "psMCTS"; open psMCTS;
+dim_glob := 12;
+graph_size := !dim_glob;
 nsim_glob := 10000;
 decay_glob := 0.99;
-val formula = (funpow 20 random_step) start_form;
 
-val formula = ``(qEXISTS_IN (vY0 :'a) (vX:'a) 
-(oNOT (pEQ (vX:'a) (vY0 :'a):bool):bool):bool)``;
 val formula = ``(oNOT (pEQ (vX :'a) (vX:'a):bool):bool)``;
-
-val formula = ``(qEXISTS_IN (vY0 :'a) (vX:'a) 
-(oNOT (pSubq (vX:'a) ((tPower (vY0:'a)) :'a):bool):bool):bool)``;
-
 val board = mk_startsit formula;
-val _ = n_bigsteps_test gamespec (random_dhtnn_gamespec gamespec) board;
-
 val tree = mcts_test 10000 gamespec (random_dhtnn_gamespec gamespec) board;
 val nodel = trace_win (#status_of gamespec) tree [];
+
+val _ = n_bigsteps_test gamespec (random_dhtnn_gamespec gamespec) board;
 *)
+
+(* -------------------------------------------------------------------------
+   Example of interesting formulas
+   ------------------------------------------------------------------------- *)
+
 (* 
-   todo: have operators with fixed embeddings. i.e no updates
-   during learning and fixed 
+val formula = (funpow 20 random_step) start_form;
+val formula = ``(qEXISTS_IN (vY0 :'a) (vX:'a) 
+(oNOT (pEQ (vX:'a) (vY0 :'a):bool):bool):bool)``;
+val formula = ``(qEXISTS_IN (vY0 :'a) (vX:'a) 
+(oNOT (pSubq (vX:'a) ((tPower (vY0:'a)) :'a):bool):bool):bool)``;
 *)
 
 (* -------------------------------------------------------------------------

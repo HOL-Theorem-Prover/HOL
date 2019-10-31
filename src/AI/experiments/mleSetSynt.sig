@@ -9,7 +9,10 @@ sig
   (* dataset *)
   val export_setsyntdata : unit -> unit
 
-  (* interface *)
+  (* parameters *)
+  val graph_size : int ref 
+
+ (* interface *)
   val mk_startsit : term -> board
   val dest_startsit : board -> term
   val gamespec : (board,move) mlReinforce.gamespec

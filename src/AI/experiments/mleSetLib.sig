@@ -8,10 +8,7 @@ sig
 
   val nat_to_bin : int -> int list
   val bin_to_nat : int list -> int
-  (* printing *)
-  val hd_string : string -> char 
-  val tl_string : string -> string
-  
+
   (* variables *)
   val xvar : term
   val xvarl : term list
@@ -25,7 +22,6 @@ sig
 
   (* operators *)
   val operl_plain : term list
-  val operl_ext : term list
 
   (* evaluation *)
   val eval_term : term -> int list

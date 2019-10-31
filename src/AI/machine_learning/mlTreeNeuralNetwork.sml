@@ -269,22 +269,23 @@ fun prepare_dhex dhex =
    Forward propagation
    ------------------------------------------------------------------------- *)
 
-fun fp_op opdict fpdict tm =
+fun fp_op dim opdict fpdict tm =
   let
     val (f,argl) = strip_comb tm
-    val nn = dfind (f,length argl) opdict
-      handle NotFound => raise ERR "fp_op" (string_of_oper (f,length argl))
+    val nn = dfind (f,length argl) opdict handle NotFound => numvar_nn dim f
     val invl = map (fn x => #outnv (last (dfind x fpdict))) argl
     val inv = Vector.concat invl
   in
     fp_nn nn inv
   end
+  handle Subscript => raise ERR "" (its dim ^ "," ^ 
+   its (String.size (fst (dest_var tm))))
 
-fun fp_opdict opdict fpdict tml = case tml of
+fun fp_opdict dim opdict fpdict tml = case tml of
     []      => fpdict
   | tm :: m =>
-    let val fpdatal = fp_op opdict fpdict tm in
-      fp_opdict opdict (dadd tm fpdatal fpdict) m
+    let val fpdatal = fp_op dim opdict fpdict tm in
+      fp_opdict dim opdict (dadd tm fpdatal fpdict) m
     end
 
 fun fp_head headnn fpdict tml =
@@ -294,20 +295,23 @@ fun fp_head headnn fpdict tml =
 
 fun fp_tnn tnn tml =
   let
-    val fpdict = fp_opdict (#opdict tnn) (dempty Term.compare) tml
+    val fpdict = fp_opdict (#dimin tnn) (#opdict tnn) (dempty Term.compare) tml
     val fpdatal = fp_head (#headnn tnn) fpdict tml
   in
     (fpdict,fpdatal)
   end
 
 fun fp_tnn_nohead tnn tml =
-  let val fpdict = fp_opdict (#opdict tnn) (dempty Term.compare) tml in
+  let val fpdict = 
+    fp_opdict (#dimin tnn) (#opdict tnn) (dempty Term.compare) tml 
+  in
     #outnv (last (dfind (last tml) fpdict))
   end
 
 fun fp_dhtnn dhtnn tml =
   let
-    val fpdict = fp_opdict (#opdict dhtnn) (dempty Term.compare) tml
+    val fpdict = fp_opdict 
+      (#dimin dhtnn) (#opdict dhtnn) (dempty Term.compare) tml
     val fpdataleval = fp_head (#headeval dhtnn) fpdict tml
     val fpdatalpoli = fp_head (#headpoli dhtnn) fpdict tml
   in
@@ -439,7 +443,8 @@ fun train_tnn_batch ncore (tnn as {opdict,headnn,dimin,dimout}) batch =
       split (parmap_batch ncore (train_tnn_one tnn) batch)
     val (newheadnn,loss) = update_head headnn bpdatall
     val bpdict = dconcat oper_compare bpdictl
-    val newnnl = map (update_opernn opdict) (dlist bpdict)
+    val bpdict' = filter (not o is_numvar o fst o fst) (dlist bpdict)
+    val newnnl = map (update_opernn opdict) bpdict'
     val newopdict = daddl newnnl opdict
   in
     ({opdict = newopdict, headnn = newheadnn, dimin = dimin, dimout = dimout},
@@ -522,8 +527,8 @@ fun train_dhtnn_batch ncore dhtnn batch =
     val (newheadeval,loss1) = update_head headeval bpdatall1
     val (newheadpoli,loss2) = update_head headpoli bpdatall2
     val bpdict = dconcat oper_compare bpdictl
-    val newopdict =
-      daddl (map (update_opernn opdict) (dlist bpdict)) opdict
+    val bpdict' = filter (not o is_numvar o fst o fst) (dlist bpdict)
+    val newopdict = daddl (map (update_opernn opdict) bpdict') opdict
   in
     ({opdict = newopdict, headeval = newheadeval, headpoli = newheadpoli,
      dimin = dimin, dimout = dimout},(loss1,loss2))

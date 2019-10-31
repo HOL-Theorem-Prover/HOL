@@ -56,8 +56,6 @@ fun is_cont t = tmem t contl;
 fun is_xyvar t = tmem t (xvarl @ yvarl);
 
 val operl_plain = constrl @ predl @ logicopl @ quantl @ xvarl @ yvarl
-val operl_ext = operl_plain @ contl  
-
 
 (* remove NOT move and introduce extra moves instead *)
 val pNOTEQ = mk_var ("pNOTEQ", binpred)
@@ -73,9 +71,6 @@ val movel = constrl @ predl @ notpredl @ [oIMP,oAND] @ quantl @ xvarl @ yvarl
 (* -------------------------------------------------------------------------
    Writing terms
    ------------------------------------------------------------------------- *)
-
-fun hd_string s = String.sub (s,0)
-fun tl_string s = String.substring (s, 1, String.size s - 1)
 
 fun setname_to_lisp s = 
   let 
@@ -349,10 +344,7 @@ val start_form = mk_comb (cont_form, listSyntax.mk_list (xvarl,alpha));
 
 fun res_term move varl =
   if arity_of move <= 0 then move else
-  let 
-    val newvarl = filter (fn x => not (term_eq x xvar)) varl
-    val arg = mk_comb (cont_term, listSyntax.mk_list (newvarl,alpha))
-  in
+  let val arg = mk_comb (cont_term, listSyntax.mk_list (varl,alpha)) in
     list_mk_comb (move, List.tabulate (arity_of move, fn _ => arg))
   end
 fun res_logicop move varl =

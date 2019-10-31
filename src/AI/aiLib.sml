@@ -374,11 +374,12 @@ fun combine_triple (l1,l2,l3) = case (l1,l2,l3) of
   | (a1 :: m1, a2 :: m2, a3 :: m3) => (a1,a2,a3) :: combine_triple (m1,m2,m3)
   | _ => raise ERR "combine_triple" "different lengths"
 
-
-
 (* --------------------------------------------------------------------------
    Parsing
    ------------------------------------------------------------------------- *)
+
+fun hd_string s = String.sub (s,0)
+fun tl_string s = String.substring (s, 1, String.size s - 1)
 
 datatype lisp = Lterm of lisp list | Lstring of string
 

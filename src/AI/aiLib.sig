@@ -154,6 +154,8 @@ sig
 
 
   (* parse *)
+  val hd_string : string -> char 
+  val tl_string : string -> string
   val unquote_string : string -> string
   val drop_sig : string -> string
   val split_sl : ''a -> ''a list -> ''a list * ''a list
