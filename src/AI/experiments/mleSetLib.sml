@@ -325,11 +325,10 @@ and eval_exists_subq (v,n,t) =
 fun find_qvar t =
   let 
     fun test x = is_var x andalso String.isPrefix "vY" (fst (dest_var x))
-    val varl = mk_term_set (find_terms test t)
-    val _ = if length varl >= maximum_vars 
-            then raise ERR "find_qvar" "" else () 
+    val n = length (mk_term_set (find_terms test t))
+    val _ = if n >= maximum_vars then raise ERR "find_qvar" "" else () 
   in
-    mk_var ("vY" ^ its (length var), alpha)
+    mk_var ("vY" ^ its n, alpha)
   end
 
 fun find_redex t = find_term (fn x => is_cont (fst (strip_comb x))) t
@@ -465,7 +464,7 @@ load "mleSetSynt"; open mleSetSynt;
 val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt";
 val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt");
 val tml2 = first_n 100 tml1;
-val (graphl,t) = add_time (map (mk_graph 64)) tml1;
+(* val (graphl,t) = add_time (map (mk_graph 64)) tml1; *)
 
 
 fun search_uniform nsim tm =
@@ -480,7 +479,7 @@ fun search_uniform nsim tm =
     r
   end;
 
-val tmnl = map_assoc (search_uniform 160000) tml2;
+val tmnl = map_assoc (search_uniform 1600) tml2;
 val tmnl_win = filter (isSome o snd) tmnl;
 length tmnl_win;
 *)
