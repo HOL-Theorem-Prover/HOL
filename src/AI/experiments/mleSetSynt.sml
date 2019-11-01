@@ -200,7 +200,7 @@ nepoch_glob := 100;
 ngen_glob := 100;
 temp_flag := false;
 
-logfile_glob := "aa_mleSetSynt7_unlimited_noise";
+logfile_glob := "aa_mleSetSynt7ul";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
 val r = start_rl_loop (gamespec,extspec);
 *)

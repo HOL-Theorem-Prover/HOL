@@ -111,6 +111,14 @@ fun dirichlet_noise_plain alpha n =
 fun dirichlet_noise alpha n =
   normalize_proba (dirichlet_noise_plain alpha n)
 
+fun normalize_pol pol =
+  let 
+    val (l1,l2) = split pol 
+    val (l1a,l1b) = split l1
+  in 
+    combine (combine (l1a, normalize_proba l1b), l2) 
+  end
+
 fun add_root_noise tree =
   let
     val {pol,sit,sum,vis,status} = dfind [] tree
@@ -120,7 +128,7 @@ fun add_root_noise tree =
       let val newpolv = (1.0 - !noise_coeff) * polv + (!noise_coeff) * noise in
         ((move,newpolv), cid)
       end
-    val newpol = map f (normalize_proba (combine (pol,noisel2)))
+    val newpol = normalize_pol (map f (combine (pol,noisel2)))
   in
     dadd [] {pol=newpol,sit=sit,sum=sum,vis=vis,status=status} tree
   end
