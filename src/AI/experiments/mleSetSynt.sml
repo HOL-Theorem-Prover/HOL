@@ -182,9 +182,9 @@ load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 load "aiLib"; open aiLib;
 
-ncore_mcts_glob := 16;
+ncore_mcts_glob := 50;
 ncore_train_glob := 4;
-ntarget_level := 100;
+ntarget_level := 400;
 ntarget_compete := 400;
 ntarget_explore := 400;
 exwindow_glob := 40000;
@@ -195,12 +195,12 @@ lr_glob := 0.02;
 batchsize_glob := 16;
 decay_glob := 0.99;
 level_glob := 1;
-nsim_glob := 1600;
+nsim_glob := 16000;
 nepoch_glob := 100;
 ngen_glob := 100;
 temp_flag := false;
 
-logfile_glob := "aa_mleSetSynt7ul";
+logfile_glob := "aa_mleSetSynt9ul";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
 val r = start_rl_loop (gamespec,extspec);
 *)

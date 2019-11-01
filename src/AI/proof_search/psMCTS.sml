@@ -20,7 +20,7 @@ val exploration_coeff = ref 2.0
 val temperature_flag = ref false
 val alpha_glob = ref 0.2
 val stopatwin_flag = ref false
-val unlimited_noise = ref true (* to be reflected in mlReinforce *)
+val unlimited_noise = ref false (* to be reflected in mlReinforce *)
 val noise_coeff = ref 0.25
 
 (* -------------------------------------------------------------------------
