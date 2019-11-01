@@ -326,13 +326,14 @@ fun find_qvar t =
   let 
     fun test x = is_var x andalso String.isPrefix "vY" (fst (dest_var x))
     val varl = find_terms test t
+    val _ = if length varl >= maximum_vars 
+      then raise ERR "find_qvar" "" else () 
     fun num_of_var x =
       let val xs = fst (dest_var x) in
         string_to_int (String.substring (xs, 2, String.size xs - 2))
       end
     val nl = map num_of_var varl
     val nmax = if null nl then ~1 else list_imax nl
-    val _ = if nmax >= maximum_vars then raise ERR "find_qvar" "" else () 
   in
     mk_var ("vY" ^ its (nmax + 1), alpha)
   end
@@ -399,11 +400,13 @@ fun is_applicable t move =
   let 
     val red = find_redex t
     val varl = fst (listSyntax.dest_list (rand red))
+    fun test x = is_var x andalso String.isPrefix "vY" (fst (dest_var x))
   in
     if type_of red = alpha then
       (is_constr move orelse tmem move varl)
     else if type_of red = bool then
-      (is_predmove move orelse is_logicop move orelse is_quant move)
+      (is_predmove move orelse is_logicop move orelse 
+      (is_quant move andalso length (find_terms test t) < maximum_vars))
     else false
   end
 

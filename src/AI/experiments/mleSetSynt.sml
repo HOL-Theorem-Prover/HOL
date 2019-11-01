@@ -134,7 +134,7 @@ fun export_setsyntdata () =
     export_terml (datasetsynt_dir ^ "/h4setsynt") (dict_sort cmp l5)
   end
 
-val ntarget_level = ref 100
+val ntarget_level = ref 400
 
 fun mk_targetl level ntarget = 
   let 
@@ -200,7 +200,7 @@ nepoch_glob := 100;
 ngen_glob := 100;
 temp_flag := false;
 
-logfile_glob := "aa_mleSetSynt9ul";
+logfile_glob := "aa_mleSetSynt10";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
 val r = start_rl_loop (gamespec,extspec);
 *)
