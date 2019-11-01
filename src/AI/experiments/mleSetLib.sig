@@ -19,6 +19,9 @@ sig
   val cont_form : term
   val cont_term : term
   val is_cont : term -> bool
+  
+  (* *)
+  val quantl : term list
 
   (* operators *)
   val operl_plain : term list
@@ -33,5 +36,9 @@ sig
   val random_step : term -> term
   val apply_move : term -> term -> term
   val is_applicable : term -> term -> bool
+
+  (* test *)
+  val imitate_once : term -> term -> term
+  val imitate : term -> bool
 
 end

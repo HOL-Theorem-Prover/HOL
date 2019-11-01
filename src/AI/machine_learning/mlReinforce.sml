@@ -67,6 +67,7 @@ val lr_glob = ref 0.1
 val ncore_train_glob = ref 4
 
 val nsim_glob = ref 1600
+(* val ul_noise = ref false *)
 val decay_glob = ref 0.99
 val temp_flag = ref false
 val ncore_mcts_glob = ref 8
@@ -96,6 +97,7 @@ fun summary_param () =
     val mcts5 = "mcts exploration coeff: " ^ rts (!exploration_coeff)
     val mcts6 = "mcts noise alpha: " ^ rts (!alpha_glob)
     val mcts7 = "mcts temp: " ^ bts (!temp_flag)
+    val mcts8 = "mcts unlimited noise: " ^ bts (!ul_noise)
   in
     summary "Global parameters";
     summary (String.concatWith "\n  "
@@ -122,6 +124,14 @@ fun mk_fep_dhtnn startb gamespec dhtnn sit =
         handle HOL_ERR _ => raise ERR "mk_fep_dhtnn"
           (its (length movel) ^ " " ^ its (length p))
       end
+  end
+
+fun mk_fep_uniform gamespec sit =
+  let
+    val movel = #movel gamespec
+    val filter_sit = (#filter_sit gamespec) sit
+  in
+    (0.0, filter_sit (map (fn x => (x,1.0)) movel))
   end
 
 (* -------------------------------------------------------------------------
@@ -439,7 +449,7 @@ fun mcts_uniform nsim gamespec startsit =
       {nsim = nsim, decay = 1.0, noise = false,
        status_of = #status_of gamespec,
        apply_move = #apply_move gamespec,
-       fevalpoli = mk_fep_dhtnn true gamespec (random_dhtnn_gamespec gamespec)}
+       fevalpoli = mk_fep_uniform gamespec}
   in
     mcts param (starttree_of param startsit)
   end

@@ -20,6 +20,8 @@ val exploration_coeff = ref 2.0
 val temperature_flag = ref false
 val alpha_glob = ref 0.2
 val stopatwin_flag = ref false
+val unlimited_noise = ref true (* to be reflected in mlReinforce *)
+val noise_coeff = ref 0.25
 
 (* -------------------------------------------------------------------------
    Node
@@ -102,19 +104,23 @@ fun interval (step:real) (a,b) =
 fun gamma_distrib alpha =
   map_assoc (gamma_density alpha) (interval 0.01 (0.01,10.0));
 
-fun dirichlet_noise alpha n =
+fun dirichlet_noise_plain alpha n =
   if n = 0 then [] else
-  let val l =
-    List.tabulate (n, fn _ => select_in_distrib (gamma_distrib alpha)) in
-    normalize_proba l
-  end
+    List.tabulate (n, fn _ => select_in_distrib (gamma_distrib alpha))
+
+fun dirichlet_noise alpha n =
+  normalize_proba (dirichlet_noise_plain alpha n)
 
 fun add_root_noise tree =
   let
     val {pol,sit,sum,vis,status} = dfind [] tree
-    val noisel = dirichlet_noise (!alpha_glob) (length pol)
-    fun f (((move,polv),cid),noise) = ((move, 0.75 * polv + 0.25 * noise), cid)
-    val newpol = map f (combine (pol,noisel))
+    val noisel1 = dirichlet_noise_plain (!alpha_glob) (length pol)
+    val noisel2 = if !unlimited_noise then noisel1 else normalize_proba noisel1
+    fun f (((move,polv),cid),noise) =
+      let val newpolv = (1.0 - !noise_coeff) * polv + (!noise_coeff) * noise in
+        ((move,newpolv), cid)
+      end
+    val newpol = map f (normalize_proba (combine (pol,noisel2)))
   in
     dadd [] {pol=newpol,sit=sit,sum=sum,vis=vis,status=status} tree
   end

@@ -127,12 +127,12 @@ fun export_setsyntdata () =
     val formgraphl = parse_setsyntdata ()
     val l2 = map_assoc (eval64 o fst) formgraphl;
     val l3 = filter (isSome o snd) l2
-    fun cmp (a,b) = Int.compare (term_size a, term_size b) 
+    val l4 = map (fst o fst) l3
+    val l5 = filter (can imitate) l4 
+    fun cmp (a,b) = Int.compare (term_size a, term_size b)
   in
-    export_terml (datasetsynt_dir ^ "/h4setsynt") 
-    (dict_sort cmp (map (fst o fst) l3))
+    export_terml (datasetsynt_dir ^ "/h4setsynt") (dict_sort cmp l5)
   end
-
 
 val ntarget_level = ref 100
 
@@ -176,12 +176,13 @@ val extspec = mk_extspec "mleSetSynt.extspec" gamespec
 
 (*
 load "mleSetSynt"; open mleSetSynt;
+(* export_setsyntdata (); *)
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 load "aiLib"; open aiLib;
 
-ncore_mcts_glob := 32;
+ncore_mcts_glob := 16;
 ncore_train_glob := 4;
 ntarget_level := 100;
 ntarget_compete := 400;
@@ -199,7 +200,7 @@ nepoch_glob := 100;
 ngen_glob := 100;
 temp_flag := false;
 
-logfile_glob := "aa_mleSetSynt5";
+logfile_glob := "aa_mleSetSynt7_unlimited_noise";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
 val r = start_rl_loop (gamespec,extspec);
 *)

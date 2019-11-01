@@ -10,6 +10,7 @@ sig
   val export_setsyntdata : unit -> unit
 
   (* parameters *)
+  val mk_graph : int -> term -> bool list
   val graph_size : int ref 
   val ntarget_level : int ref
  (* interface *)

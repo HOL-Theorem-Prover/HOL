@@ -46,6 +46,7 @@ sig
   val decay_glob : real ref
   val temp_flag : bool ref
   val ncore_mcts_glob : int ref
+  val ul_noise : bool ref
 
   (* Debugging *)
   val mcts_test :

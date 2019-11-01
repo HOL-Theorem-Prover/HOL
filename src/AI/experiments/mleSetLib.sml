@@ -326,7 +326,11 @@ fun find_qvar t =
   let 
     fun test x = is_var x andalso String.isPrefix "vY" (fst (dest_var x))
     val varl = find_terms test t
-    val nl = map (string_to_int o tl_string o fst o dest_var) varl
+    fun num_of_var x =
+      let val xs = fst (dest_var x) in
+        string_to_int (String.substring (xs, 2, String.size xs - 2))
+      end
+    val nl = map num_of_var varl
     val nmax = if null nl then ~1 else list_imax nl
     val _ = if nmax >= maximum_vars then raise ERR "find_qvar" "" else () 
   in
@@ -391,12 +395,96 @@ fun apply_move move t =
     subst_occs [[1]] [{redex = red, residue = res}] t
   end
 
-fun is_applicable t move = can (apply_move move) t;
+fun is_applicable t move = 
+  let 
+    val red = find_redex t
+    val varl = fst (listSyntax.dest_list (rand red))
+  in
+    if type_of red = alpha then
+      (is_constr move orelse tmem move varl)
+    else if type_of red = bool then
+      (is_predmove move orelse is_logicop move orelse is_quant move)
+    else false
+  end
+
 fun all_applicables t = filter (is_applicable t) movel;
 fun random_step t =
   let val l = all_applicables t in
     if null l then t else apply_move (random_elem l) t   
   end
+
+(* -------------------------------------------------------------------------
+   Test if moves are enough to recreate the original term
+   ------------------------------------------------------------------------- *)
+
+fun topsim (t1,t2) = 
+  let 
+    val (oper1,argl1) = strip_comb t1
+    val (oper2,argl2) = strip_comb t2
+  in
+    if term_eq oper1 oper2 
+    then 1 + sum_int (map topsim (combine (argl1,argl2)))
+    else 0
+  end
+
+fun imitate_once orgtm tm =
+  let
+    val movel' = all_applicables tm 
+    val _ = if null movel' 
+      then raise ERR "imitate" "no available moves" else ()
+    val tml1 = map (fn x => apply_move x tm) movel'
+    val tml2 = map_assoc (fn x => topsim (orgtm,x)) tml1
+    val tml3 = dict_sort compare_imax tml2
+    val newtm = fst (hd tml3)
+  in
+    if topsim (orgtm,newtm) <= topsim (orgtm,tm)
+    then 
+      (
+      print_endline (term_to_string orgtm);
+      print_endline (term_to_string tm);
+      print_endline (term_to_string newtm); 
+      print_endline (String.concatWith " " (map term_to_string movel'));
+      raise ERR "no progress" ""
+      )
+    else ();
+    newtm
+  end
+
+fun imitate orgtm =
+  let fun loop tm =
+    if term_eq orgtm tm then true else loop (imitate_once orgtm tm)
+  in
+    loop start_form
+  end
+
+(* 
+load "aiLib"; open aiLib;
+load "mleSetLib"; open mleSetLib;
+load "mlTacticData"; open mlTacticData;
+load "mlReinforce"; open mlReinforce;
+load "mleSetSynt"; open mleSetSynt;
+val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt";
+val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt");
+val tml2 = first_n 100 tml1;
+val (graphl,t) = add_time (map (mk_graph 64)) tml1;
+
+
+fun search_uniform nsim tm =
+  let 
+    val _ = psMCTS.stopatwin_flag := true;
+    val tree = mcts_uniform nsim gamespec (mk_startsit tm);
+    val r = 
+      if can (psMCTS.trace_win (#status_of gamespec) tree) []
+      then SOME (dlength tree) else NONE
+    val _ = psMCTS.stopatwin_flag := false
+  in
+    r
+  end;
+
+val tmnl = map_assoc (search_uniform 160000) tml2;
+val tmnl_win = filter (isSome o snd) tmnl;
+length tmnl_win;
+*)
 
 end (* struct *)
 
