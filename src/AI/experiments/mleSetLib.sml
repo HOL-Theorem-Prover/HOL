@@ -45,8 +45,8 @@ val quantl = [qFORALL_IN,qFORALL_SUBQ,qEXISTS_IN,qEXISTS_SUBQ]
 fun is_quant t = tmem t quantl;
 
 (* variables *)
-val maximum_vars = 4;
-val yvarl = List.tabulate (maximum_vars, fn i => mk_var ("vY" ^ its i,alpha));
+val max_quants = 4;
+val yvarl = List.tabulate (max_quants, fn i => mk_var ("vY" ^ its i,alpha));
 val xvar = mk_var ("vX",alpha);
 val xvarl = [xvar];
 val cont_term = mk_var ("cont_term",``:'a list -> 'a``);
@@ -144,29 +144,6 @@ fun parse_line line =
   end
 
 fun parse_setsyntdata () = map parse_line (readl train_file);
-
-(* 
-load "mleSetLib"; open mleSetLib;
-load "aiLib"; open aiLib;
-val formgraphl = parse_setsyntdata ();
-val test = fst (hd formgraphl);
-fun eval64 t = 
-  let val l = 
-    map (fn x => (eval_subst (xvar,t) (nat_to_bin x),x)) 
-      (List.tabulate (64,I)) 
-  in
-    SOME l
-  end
-  handle HOL_ERR _ => NONE;
-
-val l2 = map_assoc (eval64 o fst) formgraphl;
-val l3 = filter (isSome o snd) l2;
-val l4 = map_snd (map snd o filter fst o valOf) l3;
-val l5 = map (fn ((a,b),c) => ((a,dict_sort Int.compare b), dict_sort Int.compare c)) l4;
-val l6 = filter (fn ((a,b),c) => b <> c) l5;
-fun cmp (a,b) = Int.compare (term_size (fst (fst a)),term_size (fst (fst b)));
-dict_sort cmp l6;
-*)
 
 (* -------------------------------------------------------------------------
    Helpers
@@ -318,18 +295,16 @@ and eval_exists_in (v,n,t) =
 and eval_exists_subq (v,n,t) =
   exists (eval_subst (v,t)) (binel_of (eval_power n))  
 
+fun eval64 t = SOME (
+  map (fn x => (eval_subst (xvar,t) (nat_to_bin x),x)) (List.tabulate (64,I)))
+  handle HOL_ERR _ => NONE
+
 (* -------------------------------------------------------------------------
    Synthesis helpers
    ------------------------------------------------------------------------- *)
 
 fun find_qvar t =
-  let 
-    fun test x = is_var x andalso String.isPrefix "vY" (fst (dest_var x))
-    val n = length (mk_term_set (find_terms test t))
-    val _ = if n >= maximum_vars then raise ERR "find_qvar" "" else () 
-  in
-    mk_var ("vY" ^ its n, alpha)
-  end
+  mk_var ("vY" ^ its (length (find_terms is_quant t)), alpha)
 
 fun find_redex t = find_term (fn x => is_cont (fst (strip_comb x))) t
 
@@ -401,7 +376,7 @@ fun is_applicable t move =
     else if type_of red = bool then
       (is_predmove move orelse is_logicop move orelse 
       (is_quant move andalso 
-       length (mk_term_set (find_terms test t)) < maximum_vars))
+       length (find_terms is_quant t) < max_quants))
     else false
   end
 
@@ -448,40 +423,48 @@ fun imitate_once orgtm tm =
     newtm
   end
 
+(* assumes all variables are distinct *)
+fun norm_bvarl tm =
+  let
+    val vi = ref 0
+    fun rename_aux tm = 
+      let val (oper,argl) = strip_comb tm in
+        if is_quant oper then 
+          let 
+            val (v,bound,bod) = triple_of_list argl 
+            val newv = mk_var ("vY" ^ its (!vi), alpha)
+            val _ = incr vi
+            val newbod = subst [{redex = v, residue = newv}] bod
+          in
+            list_mk_comb (oper,[newv,bound,rename_aux newbod])
+          end
+        else list_mk_comb (oper, map rename_aux argl)
+      end
+  in 
+    rename_aux tm
+  end
+
 fun imitate orgtm =
-  let fun loop tm =
-    if term_eq orgtm tm then true else loop (imitate_once orgtm tm)
+  let 
+    val orgtm' = norm_bvarl orgtm
+    fun loop tm =
+      if term_eq orgtm' tm then true else loop (imitate_once orgtm' tm)
   in
     loop start_form
   end
 
 (* 
-load "aiLib"; open aiLib;
 load "mleSetLib"; open mleSetLib;
-load "mlTacticData"; open mlTacticData;
-load "mlReinforce"; open mlReinforce;
-load "mleSetSynt"; open mleSetSynt;
-val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt";
-val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt");
-val tml2 = first_n 100 tml1;
-(* val (graphl,t) = add_time (map (mk_graph 64)) tml1; *)
-
-
-fun search_uniform nsim tm =
-  let 
-    val _ = psMCTS.stopatwin_flag := true;
-    val tree = mcts_uniform nsim gamespec (mk_startsit tm);
-    val r = 
-      if can (psMCTS.trace_win (#status_of gamespec) tree) []
-      then SOME (dlength tree) else NONE
-    val _ = psMCTS.stopatwin_flag := false
-  in
-    r
-  end;
-
-val tmnl = map_assoc (search_uniform 1600) tml2;
-val tmnl_win = filter (isSome o snd) tmnl;
-length tmnl_win;
+load "aiLib"; open aiLib;
+val l1 = parse_setsyntdata ();
+val l2 = map_assoc (eval64 o fst) l1;
+val (l3,l3') = partition (isSome o snd) l2;
+val l4 = map_snd (map snd o filter fst o valOf) l3;
+val l5 = map (fn ((a,b),c) => ((a,dict_sort Int.compare b), dict_sort Int.compare c)) l4;
+val l6 = map (fst o fst) l5;
+val (l7,l7') = partition (can imitate) l6;
+val l8 = map_assoc norm_bvarl l7;
+val l9 = filter (fn (a,b) => not (term_eq a b)) l8;
 *)
 
 end (* struct *)

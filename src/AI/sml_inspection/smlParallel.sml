@@ -284,8 +284,10 @@ type ('a,'b,'c) extspec =
 fun boss_start_worker code_of wid =
   (
   writel (widscript_file wid) (code_of wid);
-  smlOpen.run_buildheap false (widscript_file wid);
-  remove_file (widscript_file wid)
+  smlOpen.run_buildheap false 
+    (SOME (widscript_file wid ^ ".out")) (widscript_file wid);
+  remove_file (widscript_file wid);
+  remove_file (widscript_file wid ^ ".out")
   )
 
 val attrib = [Thread.InterruptState Thread.InterruptAsynch,

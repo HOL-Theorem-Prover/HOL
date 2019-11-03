@@ -71,7 +71,7 @@ fun find_genscriptdep file =
   end
   handle _ => raise ERR "find_genscriptdep" ""
 
-fun run_buildheap core_flag file =
+fun run_buildheap core_flag ofileo file =
   let
     val _ = mkDir_err sml_buildheap_dir
     val dir = OS.Path.dir file
@@ -79,12 +79,14 @@ fun run_buildheap core_flag file =
     val bare = OS.Path.base file'
     val buildheap = HOLDIR ^ "/bin/buildheap"
     val filel = find_genscriptdep file
+    val ofile = 
+      if isSome ofileo then valOf ofileo else buildheap ^ "/" ^ bare
     val state =
       if core_flag then HOLDIR ^ "/bin/hol.state0" else find_heapname file
     val cmd =
       String.concatWith " "
         ([buildheap,"--holstate=" ^ state,"--gcthreads=1"] @ filel @ [file']
-        @ [">",sml_buildheap_dir ^ "/" ^ bare])
+        @ [">",ofile])
   in
     cmd_in_dir dir cmd
   end
@@ -92,10 +94,7 @@ fun run_buildheap core_flag file =
 fun remove_err s = FileSys.remove s handle SysErr _ => ()
 
 fun run_rm_script core_flag file =
-  (
-  run_buildheap core_flag file;
-  remove_err file
-  )
+  (run_buildheap core_flag NONE file; remove_err file)
   handle Interrupt => (remove_err file; raise Interrupt)
 
 (* -------------------------------------------------------------------------

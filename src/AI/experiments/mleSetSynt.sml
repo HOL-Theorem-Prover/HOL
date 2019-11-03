@@ -38,6 +38,34 @@ fun graph_to_term graph =
     mk_comb (graphtag, mk_var (vs,bool))
   end
 
+fun mk_graph n t = 
+  map (eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I))
+
+(* -------------------------------------------------------------------------
+   Inverted trees only works for alpha leafs for now
+   ------------------------------------------------------------------------- *)
+
+fun invert_oper v = mk_var ("inverted_" ^ fst (dest_var v), ``:'a -> 'a``)
+fun addarg_var v = mk_var ("addarg_" ^ fst (dest_var v), ``:'a -> 'a``)
+
+fun rpt_mk_comb argl finarg =
+  if null argl then finarg else 
+    mk_comb (hd argl, rpt_mk_comb (tl argl) finarg)
+
+fun mirror_term_aux (path,finarg) tm =
+  if is_var tm 
+  then rpt_mk_comb (addarg_var tm :: map invert_oper path) finarg 
+  else
+  let 
+    val (oper,argl) = strip_comb tm 
+    val newargl = map (mirror_term_aux (oper :: path,finarg)) argl
+  in
+    list_mk_comb (oper,newargl)
+  end
+
+fun mirror_term finarg tm = mirror_term_aux ([],finarg) tm 
+
+
 (* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
@@ -200,7 +228,7 @@ nepoch_glob := 100;
 ngen_glob := 100;
 temp_flag := false;
 
-logfile_glob := "aa_mleSetSynt10";
+logfile_glob := "aa_mleSetSynt11";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
 val r = start_rl_loop (gamespec,extspec);
 *)
@@ -311,6 +339,38 @@ load "aiLib"; open aiLib;
 val graph = start_graph formula;
 *)
 
+
+(* -------------------------------------------------------------------------
+   Test uniform search without guidance
+   ------------------------------------------------------------------------- *)
+
+fun search_uniform nsim tm =
+  let 
+    val _ = psMCTS.stopatwin_flag := true;
+    val tree = mlReinforce.mcts_uniform nsim gamespec (mk_startsit tm);
+    val r = 
+      if can (psMCTS.trace_win (#status_of gamespec) tree) []
+      then SOME (dlength tree) else NONE
+    val _ = psMCTS.stopatwin_flag := false
+  in
+    r
+  end
+
+(* 
+load "aiLib"; open aiLib;
+load "mleSetLib"; open mleSetLib;
+load "mlTacticData"; open mlTacticData;
+load "mlReinforce"; open mlReinforce;
+load "mleSetSynt"; open mleSetSynt;
+val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt";
+val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt");
+val tml2 = first_n 100 tml1;
+(* val (graphl,t) = add_time (map (mk_graph 64)) tml1; *)
+
+val (tmnl,t) = add_time (map_assoc (search_uniform 16000)) tml2;
+val tmnl_win = filter (isSome o snd) tmnl;
+length tmnl_win;
+*)
 
 
 

@@ -22,13 +22,15 @@ sig
   
   (* *)
   val quantl : term list
-
+  val is_quant : term -> bool
+  val norm_bvarl : term -> term
   (* operators *)
   val operl_plain : term list
 
   (* evaluation *)
   val eval_term : term -> int list
   val eval_subst : (term * term) -> int list -> bool
+  val eval64 : term -> (bool * int) list option
   
   (* search *)
   val start_form : term
@@ -37,7 +39,7 @@ sig
   val apply_move : term -> term -> term
   val is_applicable : term -> term -> bool
 
-  (* test *)
+  (* tests *)
   val imitate_once : term -> term -> term
   val imitate : term -> bool
 

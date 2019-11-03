@@ -8,7 +8,6 @@ sig
 
   (* dataset *)
   val export_setsyntdata : unit -> unit
-
   (* parameters *)
   val mk_graph : int -> term -> bool list
   val graph_size : int ref 
@@ -21,5 +20,7 @@ sig
   (* val test_extspec :
     (mlReinforce.dhtnn, (term * int) * term,
     ((term * int) * term) * bool * int) smlParallel.extspec *)
+  (* breadth first search *)
+  val search_uniform : int -> term -> int option
 
 end
