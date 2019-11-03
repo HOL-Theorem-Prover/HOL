@@ -20,7 +20,6 @@ val exploration_coeff = ref 2.0
 val temperature_flag = ref false
 val alpha_glob = ref 0.2
 val stopatwin_flag = ref false
-val unlimited_noise = ref false (* to be reflected in mlReinforce *)
 val noise_coeff = ref 0.25
 
 (* -------------------------------------------------------------------------
@@ -35,13 +34,7 @@ type 'b pol = (('b * real) * id) list
 type 'b dis = ((('b * real) * id) * real) list
 
 type ('a,'b) node =
-{
-  pol    : 'b pol,
-  sit    : 'a,
-  sum    : real,
-  vis    : real,
-  status : status
-}
+  {pol: 'b pol, sit: 'a, sum: real, vis: real, status: status}
 
 type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
 
@@ -123,7 +116,7 @@ fun add_root_noise tree =
   let
     val {pol,sit,sum,vis,status} = dfind [] tree
     val noisel1 = dirichlet_noise_plain (!alpha_glob) (length pol)
-    val noisel2 = if !unlimited_noise then noisel1 else normalize_proba noisel1
+    val noisel2 = normalize_proba noisel1
     fun f (((move,polv),cid),noise) =
       let val newpolv = (1.0 - !noise_coeff) * polv + (!noise_coeff) * noise in
         ((move,newpolv), cid)
@@ -257,6 +250,36 @@ fun mcts param starttree =
         end
   in
     loop starttree_noise
+  end
+
+(* -------------------------------------------------------------------------
+   Tree re-use
+   ------------------------------------------------------------------------- *)
+
+fun is_prefix l1 l2 = case (l1,l2) of
+    ([],_) => true
+  | (_,[]) => false
+  | (a1 :: m1, a2 :: m2) => a1 = a2 andalso is_prefix m1 m2 
+
+fun is_suffix l1 l2 = is_prefix (rev l1) (rev l2)
+
+fun rm_prefix l1 l2 = case (l1,l2) of
+    ([],_) => l2
+  | (_,[]) => raise ERR "rm_prefix" ""
+  | (a1 :: m1, a2 :: m2) => 
+    (if a1 = a2 then rm_prefix m1 m2 else raise ERR "rm_prefix" "")
+
+fun rm_suffix l1 l2 = rm_prefix (rev l1) (rev l2)
+
+fun cut_tree id tree = 
+  let
+    val l = filter (fn x => is_suffix id (fst x)) (dlist tree)
+    fun change_node (x,{pol,sit,sum,vis,status}) =
+      (rm_suffix id x, 
+        {pol=map_snd (rm_suffix id) pol,
+         sit=sit,sum=sum,vis=vis,status=status})
+  in
+    dnew id_compare (map change_node l)
   end
 
 (* -------------------------------------------------------------------------

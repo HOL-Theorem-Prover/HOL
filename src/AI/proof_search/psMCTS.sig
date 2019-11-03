@@ -11,7 +11,6 @@ sig
   val temperature_flag : bool ref
   val alpha_glob : real ref
   val stopatwin_flag : bool ref
-  val unlimited_noise : bool ref
   val noise_coeff : real ref
 
   (* 'a is the representation of a board *)
@@ -38,6 +37,9 @@ sig
   val gamma_distrib : real -> (real * real) list
   val dirichlet_noise : real -> int -> real list
   val dirichlet_noise_plain : real -> int -> real list
+  
+  (* tree reuse *)
+  val cut_tree : id -> ('a,'b) tree -> ('a,'b) tree
 
   (* statistics *)
   val root_variation : ('a,'b) tree -> id list

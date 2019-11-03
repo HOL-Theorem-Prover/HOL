@@ -96,7 +96,6 @@ fun summary_param () =
     val mcts5 = "mcts exploration coeff: " ^ rts (!exploration_coeff)
     val mcts6 = "mcts noise alpha: " ^ rts (!alpha_glob)
     val mcts7 = "mcts temp: " ^ bts (!temp_flag)
-    val mcts8 = "mcts unlimited noise: " ^ bts (!unlimited_noise)
   in
     summary "Global parameters";
     summary (String.concatWith "\n  "
