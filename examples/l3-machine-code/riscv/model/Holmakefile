@@ -1,7 +1,7 @@
 INCLUDES = ../../common ../../lib
 
-all: $(DEFAULT_TARGETS) riscv.ui
+all: $(DEFAULT_TARGETS)
 .PHONY: all
 
-riscv.uo: ../../lib/assemblerLib.uo ../../lib/MutableMap16.uo riscv.sml
+riscv.uo: ../../lib/assemblerLib.uo ../../lib/MutableMap16.uo riscv.sml riscv.ui
 	$(HOLMOSMLC) -c -toplevel assemblerLib.uo MutableMap16.ui riscv.sml
