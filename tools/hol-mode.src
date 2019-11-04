@@ -1978,16 +1978,23 @@ second is to show the new term.
              t)))
 
 (defun hol-find-quoted-material (limit)
-  (let ((beginmatch (re-search-forward hol-term-begin-re limit t)))
+  (let ((beginmatch (re-search-forward hol-term-begin-re limit t))
+        (ppss (syntax-ppss)))
+    (while (and beginmatch (or (nth 3 ppss) (nth 4 ppss)))
+      (setq beginmatch (re-search-forward hol-term-begin-re limit t))
+      (setq ppss (syntax-ppss)))
     (if (not beginmatch) nil
-      (let* ((begin-marker (point-marker))
-             (start-delim (match-string-no-properties 0))
+      (let* ((start-delim (match-string-no-properties 0))
+             (begin-marker
+              (if (= (length start-delim) 1)
+                  (set-marker (make-marker) (1- (point)))
+                (point-marker)))
              (endre (hol-term-matching-delim start-delim))
              (endmatch (if endre (re-search-forward endre limit t)
                          (message (format "No end-delim for %s" start-delim))
                          nil)))
         (if (not endmatch) nil
-          (goto-char (match-beginning 0))
+          (if (= (length start-delim) 1) nil (goto-char (match-beginning 0)))
           (set-match-data (list begin-marker (point-marker)))
           t)))))
 ;  (re-search-forward "^Theorem[[:space:]]+[A-Za-z0-9'_]+\\(?:\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:\\(\\(?:\n  \\|.\\)+\\)\nProof" limit t))
