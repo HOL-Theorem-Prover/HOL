@@ -1,0 +1,3 @@
+PRE_INCLUDES = ../ring
+INCLUDES = ../lib ../group ../monoid ../field
+OPTIONS = QUIT_ON_FAILURE

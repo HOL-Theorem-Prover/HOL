@@ -1,0 +1,102 @@
+digraph G {
+     ratio = compress
+     size = "16,16"
+     ranksep = 1.0
+     nodesep = 0.30
+     node [fontcolor = darkgreen fontsize=30 fontname=Arial]
+
+     helperSet [URL = "helperSetTheory.html"]
+     helperFunction [URL = "helperFunctionTheory.html"]
+     Gauss [URL = "GaussTheory.html"]
+     helperBinomial [URL = "helperBinomialTheory.html"]
+     ConseqConv [URL = "ConseqConvTheory.html"]
+     quantHeuristics [URL = "quantHeuristicsTheory.html"]
+     rich_list [URL = "rich_listTheory.html"]
+     divides [URL = "dividesTheory.html"]
+     gcd [URL = "gcdTheory.html"]
+     helperNum [URL = "helperNumTheory.html"]
+     helperList [URL = "helperListTheory.html"]
+     binomial [URL = "binomialTheory.html"]
+     ind_type [URL = "ind_typeTheory.html"]
+     operator [URL = "operatorTheory.html"]
+     while [URL = "whileTheory.html"]
+     pair [URL = "pairTheory.html"]
+     num [URL = "numTheory.html"]
+     relation [URL = "relationTheory.html"]
+     prim_rec [URL = "prim_recTheory.html"]
+     arithmetic [URL = "arithmeticTheory.html"]
+     numeral [URL = "numeralTheory.html"]
+     normalForms [URL = "normalFormsTheory.html"]
+     one [URL = "oneTheory.html"]
+     marker [URL = "markerTheory.html"]
+     combin [URL = "combinTheory.html"]
+     min [URL = "minTheory.html"]
+     bool [URL = "boolTheory.html"]
+     sat [URL = "satTheory.html"]
+     sum [URL = "sumTheory.html"]
+     option [URL = "optionTheory.html"]
+     basicSize [URL = "basicSizeTheory.html"]
+     numpair [URL = "numpairTheory.html"]
+     pred_set [URL = "pred_setTheory.html"]
+     list [URL = "listTheory.html"]
+     listRange [URL = "listRangeTheory.html"]
+     triangle [URL = "triangleTheory.html"]
+
+     ConseqConv -> quantHeuristics
+     arithmetic -> while
+     arithmetic -> numeral
+     basicSize -> gcd
+     basicSize -> numpair
+     binomial -> helperBinomial
+     binomial -> triangle
+     bool -> ConseqConv
+     bool -> normalForms
+     bool -> marker
+     bool -> sat
+     combin -> relation
+     combin -> one
+     combin -> sum
+     divides -> gcd
+     gcd -> helperNum
+     helperFunction -> Gauss
+     helperList -> Gauss
+     helperList -> binomial
+     helperNum -> helperSet
+     helperNum -> helperList
+     helperSet -> helperFunction
+     ind_type -> list
+     list -> quantHeuristics
+     list -> rich_list
+     list -> listRange
+     listRange -> triangle
+     marker -> num
+     marker -> combin
+     min -> bool
+     normalForms -> relation
+     normalForms -> option
+     num -> prim_rec
+     numeral -> divides
+     numeral -> ind_type
+     numeral -> operator
+     numeral -> basicSize
+     numpair -> pred_set
+     one -> option
+     operator -> list
+     option -> while
+     option -> basicSize
+     pair -> arithmetic
+     pred_set -> list
+     prim_rec -> arithmetic
+     quantHeuristics -> helperNum
+     relation -> pair
+     relation -> prim_rec
+     rich_list -> helperNum
+     sat -> relation
+     sat -> one
+     sat -> sum
+     sum -> option
+     while -> divides
+     while -> ind_type
+     while -> operator
+     while -> numpair
+}

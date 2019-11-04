@@ -1,0 +1,2 @@
+INCLUDES = theories
+OPTIONS = QUIT_ON_FAILURE

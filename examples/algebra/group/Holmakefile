@@ -1,0 +1,2 @@
+INCLUDES = ../lib ../monoid
+OPTIONS = QUIT_ON_FAILURE

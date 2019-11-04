@@ -1,0 +1,3 @@
+INCLUDES = ../../algebra/lib
+
+OPTIONS = QUIT_ON_FAILURE
