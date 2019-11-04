@@ -18,6 +18,7 @@
 
 (define-prefix-command 'hol-map)
 (define-prefix-command 'hol-d-map)
+(define-prefix-command 'hol-movement-map)
 (make-variable-buffer-local 'hol-buffer-name)
 (make-variable-buffer-local 'hol-buffer-ready)
 (set-default 'hol-buffer-ready nil)
@@ -1964,6 +1965,8 @@ second is to show the new term.
                   (append font-lock-extend-region-functions
                           '(hol-fl-extend-region)))
             (message "Running HOL SML hook")
+            (local-set-key (kbd "C-M-<up>") 'hol-movement-backward-up-list)
+            (local-set-key (kbd "C-M-<left>") 'hol-movement-backward-sexp)
             (font-lock-add-keywords
              nil
              (list '("^Theorem\\>" . 'hol-theorem-syntax)
@@ -2127,6 +2130,7 @@ second is to show the new term.
 
 ;;The key combinations
 (define-key global-map "\M-h" 'hol-map)
+(define-key global-map (kbd "C-M-h") 'hol-movement-map)
 (define-prefix-command 'holpp-map)
 (define-key hol-map "\M-p" 'holpp-map)
 
@@ -2207,6 +2211,47 @@ second is to show the new term.
 (define-key holpp-map "t"    'hol-toggle-pp-annotations)
 (define-key holpp-map "s"    'hol-toggle-pp-styles)
 (define-key holpp-map "c"    'hol-toggle-pp-cases)
+
+(define-key hol-movement-map "u" 'hol-movement-backward-up-list)
+
+;;; HOL movement
+
+(defconst hol-proof-beginend-re "^\\(Proof\\|QED\\|Termination\\|End\\)\\>")
+(defun hol-movement-in-proof-p (pos)
+  (save-excursion
+    (goto-char pos)
+    (let ((pp (syntax-ppss)))
+      (and (not (nth 3 pp)) (not (nth 4 pp))
+           (let ((nextre (re-search-backward hol-proof-beginend-re nil t)))
+             (and nextre
+                  (let ((s (match-string-no-properties 0)))
+                    (and (not (equal s "QED")) (not (equal s "End"))
+                         (match-beginning 0)))))))))
+
+(defun hol-movement-backward-up-list
+    (&optional n escape-strings no-syntax-crossing)
+  (interactive "^p\nd\nd")
+  (or (let ((p (hol-movement-in-proof-p (point)))) (and p (goto-char p)))
+      (and (looking-at "^Proof\\>")
+           (re-search-backward "^\\(Triviality\\>\\|Theorem\\>\\)" nil t))
+      (and (looking-at "^Termination\\>")
+           (re-search-backward "^Definition\\>" nil t))
+      (backward-up-list n escape-strings no-syntax-crossing)))
+
+(defconst hol-movement-top-re
+  "^\\(Theorem\\|Triviality\\|Definition\\|Datatype\\|Overload\\|Type\\)")
+(defun hol-movement-backward-sexp (&optional arg)
+  (interactive "p")
+  (if (and (> arg 0)
+           (save-excursion
+             (beginning-of-line)
+             (looking-at hol-movement-top-re)))
+      (progn
+        (re-search-backward hol-movement-top-re nil t)
+        (hol-movement-backward-sexp (1- arg)))
+    (backward-sexp arg)))
+
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
