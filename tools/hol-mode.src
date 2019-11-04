@@ -1974,6 +1974,7 @@ second is to show the new term.
                    '("^Datatype\\>" . 'hol-definition-syntax)
                    "^Type\\>"
                    "^Overload\\>"
+                   '("\\<cheat\\>" . 'hol-cheat-face)
                    '(hol-find-quoted-material 0 'hol-quoted-material prepend))
              t)))
 
@@ -2056,6 +2057,11 @@ second is to show the new term.
 (defface hol-theorem-syntax
   '((((class color)) :foreground "blueviolet"))
   "The face for highlighting script file Theorem-Proof-QED syntax."
+  :group 'hol-faces)
+
+(defface hol-cheat-face
+  '((((class color)) :foreground "orange" :weight ultra-bold :box t))
+  "The face for highlighting occurrences of the cheat tactic."
   :group 'hol-faces)
 
 (defface hol-definition-syntax
