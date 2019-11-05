@@ -818,6 +818,10 @@ in
                   if null commands then
                     List.foldr depfoldthis (NONE, []) dependencies
                   else (NONE, dependencies)
+              val _ = case starred_dep of
+                          SOME s =>
+                            diag (fn _ => target_s ^ " has star = " ^ s)
+                        | NONE => diag (fn _ => "No star for " ^ target_s)
 
               val more_deps =
                   case starred_dep of
@@ -827,6 +831,11 @@ in
                           incinfo
                           (SML(Theory s))
                           handle Option => die "more_deps invariant failure"
+                               | e => die (
+                                       "Unexpected exception: " ^
+                                       General.exnMessage e ^
+                                       " thrown in get_implicit_dependencies"
+                                     )
 
               val (g1, depnodes) =
                   Binaryset.foldl foldthis (g0, [])
@@ -893,11 +902,12 @@ in
                           if needs_building_by_deps_existence then
                             Pending{needed=false}
                           else Succeeded
+                      val fp = OS.Path.concat (hmdir.toAbsPath actual_dir, s)
                     in
                       add_node {target = tgt, seqnum = 0,
                                 phony = false, status = updstatus,
                                 command = BuiltInCmd
-                                            (BIC_BuildScript s, incinfo),
+                                            (BIC_BuildScript fp, incinfo),
                                 dir = dir, extra = extra,
                                 dependencies = depnodes} g1
                     end
