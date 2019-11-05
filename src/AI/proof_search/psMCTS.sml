@@ -13,17 +13,7 @@ open HolKernel Abbrev boolLib aiLib
 val ERR = mk_HOL_ERR "psMCTS"
 
 (* -------------------------------------------------------------------------
-   Global fixed parameters
-   ------------------------------------------------------------------------- *)
-
-val exploration_coeff = ref 2.0
-val temperature_flag = ref false
-val alpha_glob = ref 0.2
-val stopatwin_flag = ref false
-val noise_coeff = ref 0.25
-
-(* -------------------------------------------------------------------------
-   Node
+   Tree
    ------------------------------------------------------------------------- *)
 
 datatype status = Undecided | Win | Lose
@@ -37,6 +27,24 @@ type ('a,'b) node =
   {pol: 'b pol, sit: 'a, sum: real, vis: real, status: status}
 
 type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
+
+(* -------------------------------------------------------------------------
+   Parameters     
+   ------------------------------------------------------------------------- *)
+
+type ('a,'b) mctsparam =
+  {
+  nsim : int, 
+  stopatwin_flag : bool,
+  decay : real,
+  explo_coeff : real,
+  noise_flag : bool,
+  noise_coeff : real,
+  noise_alpha : real,
+  status_of : 'a -> status,
+  apply_move : 'b -> 'a -> 'a,
+  fevalpoli : 'a -> real * ('b * real) list
+  }
 
 (* -------------------------------------------------------------------------
    Backup
@@ -77,12 +85,13 @@ fun backup decay tree (id,eval) =
    Dirichlet noise
    ------------------------------------------------------------------------- *)
 
+(* divides first number by 100 to get gamma(alpha) *)
 val gammatable =
- [(1, 99.43258512),(2, 49.44221016),(3, 32.78499835),(4, 24.46095502),
-  (5, 19.47008531),(6, 16.14572749),(7, 13.77360061),(8, 11.99656638),
-  (9, 10.61621654),(10, 9.513507699),(20, 4.590843712),(30, 2.991568988),
-  (40, 2.218159544),(50, 1.772453851),(60, 1.489192249),(70, 1.298055333),
-  (80, 1.164229714),(90, 1.068628702)]
+  [(1, 99.43258512),(2, 49.44221016),(3, 32.78499835),(4, 24.46095502),
+   (5, 19.47008531),(6, 16.14572749),(7, 13.77360061),(8, 11.99656638),
+   (9, 10.61621654),(10, 9.513507699),(20, 4.590843712),(30, 2.991568988),
+   (40, 2.218159544),(50, 1.772453851),(60, 1.489192249),(70, 1.298055333),
+   (80, 1.164229714),(90, 1.068628702)]
 
 fun gamma_of alpha =
   assoc (Real.round (alpha * 100.0)) gammatable
@@ -112,13 +121,16 @@ fun normalize_pol pol =
     combine (combine (l1a, normalize_proba l1b), l2) 
   end
 
-fun add_root_noise tree =
+fun add_root_noise param tree =
   let
     val {pol,sit,sum,vis,status} = dfind [] tree
-    val noisel1 = dirichlet_noise_plain (!alpha_glob) (length pol)
+    val noisel1 = dirichlet_noise_plain (#noise_alpha param) (length pol)
     val noisel2 = normalize_proba noisel1
     fun f (((move,polv),cid),noise) =
-      let val newpolv = (1.0 - !noise_coeff) * polv + (!noise_coeff) * noise in
+      let 
+        val coeff = #noise_coeff param
+        val newpolv = (1.0 - coeff) * polv + coeff * noise 
+      in
         ((move,newpolv), cid)
       end
     val newpol = normalize_pol (map f (combine (pol,noisel2)))
@@ -155,10 +167,10 @@ fun node_create_backup param tree (id,sit) =
   end
 
 (* -------------------------------------------------------------------------
-   Value of a choice in a policy according to PCUT formula.
+   Score of a choice in a policy according to pUCT formula.
    ------------------------------------------------------------------------- *)
 
-fun value_choice tree vtot ((move,polv),cid) =
+fun puct_choice param tree vtot ((move,polv),cid) =
   let
     val (sum,vis) =
       let val child = dfind cid tree in ((#sum child),(#vis child)) end
@@ -166,7 +178,7 @@ fun value_choice tree vtot ((move,polv),cid) =
     val exploitation = sum / (vis + 1.0)
     val exploration  = (polv * Math.sqrt vtot) / (vis + 1.0)
   in
-    exploitation + (!exploration_coeff) * exploration
+    exploitation + (#explo_coeff param) * exploration
   end
 
 (* -------------------------------------------------------------------------
@@ -188,7 +200,7 @@ fun select_child param tree id =
   in
     if status <> Undecided then Backup (id,score_status status) else
       let
-        val l1 = map_assoc (value_choice tree (#vis node)) (#pol node)
+        val l1 = map_assoc (puct_choice param tree (#vis node)) (#pol node)
         val _ = if null l1 then raise ERR "select_child" "" else ()
         val l2 = dict_sort compare_rmax l1
         val cid  = snd (fst (hd l2))
@@ -223,24 +235,16 @@ fun expand param tree (id,cid) =
    MCTS
    ------------------------------------------------------------------------- *)
 
-type ('a,'b) mctsparam =
-  {
-  nsim : int, decay : real, noise : bool,
-  status_of : 'a -> status,
-  apply_move : 'b -> 'a -> 'a,
-  fevalpoli : 'a -> real * ('b * real) list
-  }
-
-fun starttree_of param startsit =
-  node_create_backup param (dempty id_compare) ([],startsit)
+fun starttree_of param sit =
+  node_create_backup param (dempty id_compare) ([],sit)
 
 fun mcts param starttree =
   let
     val starttree_noise =
-      if #noise param then add_root_noise starttree else starttree
+      if #noise_flag param then add_root_noise param starttree else starttree
     fun loop tree =
       if #vis (dfind [] tree) > Real.fromInt (#nsim param) + 0.5 orelse
-         (!stopatwin_flag andalso #status (dfind [] tree) = Win)
+         (#stopatwin_flag param andalso #status (dfind [] tree) = Win)
       then tree else
         let val newtree = case select_child param tree [] of
             Backup (id,sc) => backup (#decay param) tree (id,sc)
@@ -250,36 +254,6 @@ fun mcts param starttree =
         end
   in
     loop starttree_noise
-  end
-
-(* -------------------------------------------------------------------------
-   Tree re-use
-   ------------------------------------------------------------------------- *)
-
-fun is_prefix l1 l2 = case (l1,l2) of
-    ([],_) => true
-  | (_,[]) => false
-  | (a1 :: m1, a2 :: m2) => a1 = a2 andalso is_prefix m1 m2 
-
-fun is_suffix l1 l2 = is_prefix (rev l1) (rev l2)
-
-fun rm_prefix l1 l2 = case (l1,l2) of
-    ([],_) => l2
-  | (_,[]) => raise ERR "rm_prefix" ""
-  | (a1 :: m1, a2 :: m2) => 
-    (if a1 = a2 then rm_prefix m1 m2 else raise ERR "rm_prefix" "")
-
-fun rm_suffix l1 l2 = rm_prefix (rev l1) (rev l2)
-
-fun cut_tree id tree = 
-  let
-    val l = filter (fn x => is_suffix id (fst x)) (dlist tree)
-    fun change_node (x,{pol,sit,sum,vis,status}) =
-      (rm_suffix id x, 
-        {pol=map_snd (rm_suffix id) pol,
-         sit=sit,sum=sum,vis=vis,status=status})
-  in
-    dnew id_compare (map change_node l)
   end
 
 (* -------------------------------------------------------------------------
@@ -333,50 +307,5 @@ fun trace_win status_of tree id =
     if null l then raise ERR "trace_win" "" else
     node :: trace_win status_of tree (hd l)
   end
-
-(* -------------------------------------------------------------------------
-   Big steps and example extraction
-   ------------------------------------------------------------------------- *)
-
-fun make_distrib tree =
-  let
-    val pol = #pol (dfind [] tree)
-    val _ = if null pol then raise ERR "make_distrib" "pol" else ()
-    fun f (_,cid) = #vis (dfind cid tree) handle NotFound => 0.0
-    val dis = map_assoc f pol
-    val tot = sum_real (map snd dis)
-    val _ = if tot < 0.5 then raise ERR "make_distrib" "tot" else ()
-  in
-    (dis,tot)
-  end
-
-fun evalpoli_example tree =
-  let
-    val root = dfind [] tree
-    val (dis,tot) = make_distrib tree
-    val eval = #sum root / #vis root
-    val poli = map (fn (((move,_),_),r) => (move,r / tot)) dis
-  in
-    (eval,poli)
-  end
-
-fun print_distrib g l =
-  let
-    fun f1 (((move,r),_),_) = g move ^ " " ^ (rts (approx 4 r))
-    fun f2 (((move,_),_),r) = g move ^ " " ^ (rts (approx 4 r))
-  in
-    print_endline ("  " ^ String.concatWith ", " (map f1 l));
-    print_endline ("  " ^ String.concatWith ", " (map f2 l))
-  end
-
-fun select_bigstep tree =
-  let
-    val (d,_) = make_distrib tree
-    val choice =
-      if !temperature_flag then select_in_distrib d else best_in_distrib d
-  in
-    (snd choice, d)
-  end
-
 
 end (* struct *)

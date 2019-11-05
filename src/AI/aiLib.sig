@@ -18,8 +18,8 @@ sig
     ('a * 'b -> order) ->
     ('c * 'd -> order) ->
     ('a * 'c) * ('b * 'd) -> order
-  val goal_compare : (goal * goal) -> order
-  val lbl_compare : (lbl * lbl) -> order
+  val goal_compare : goal * goal -> order
+  val lbl_compare : lbl * lbl -> order
   val compare_rmin : (('a * real) * ('a * real)) -> order
   val compare_rmax : (('a * real) * ('a * real)) -> order
   val compare_imin : (('a * int) * ('a * int)) -> order
@@ -27,6 +27,7 @@ sig
   val list_rmax : real list -> real
   val list_imax : int list -> int
   val list_imin : int list -> int
+  val tmsize_compare : term * term -> order  
 
   (* time *)
   val add_time : ('a -> 'b) -> 'a -> 'b * real

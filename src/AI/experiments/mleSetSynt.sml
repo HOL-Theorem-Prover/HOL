@@ -146,20 +146,35 @@ fun eval64 t =
     val l = List.tabulate (64,I)
     fun f x = (eval_subst (xvar,t) (nat_to_bin x), x)
   in
-    SOME (map f l)
+    map snd (filter fst (map f l))
   end
-  handle HOL_ERR _ => NONE
+  handle HOL_ERR _ => raise ERR "eval64" (term_to_string t)
+
+fun bin_to_string bin = String.concatWith "," (map its bin)
 
 fun export_setsyntdata () =
   let
     val formgraphl = parse_setsyntdata ()
-    val l2 = map_assoc (eval64 o fst) formgraphl;
-    val l3 = filter (isSome o snd) l2
-    val l4 = map (fst o fst) l3
-    val l5 = filter (can imitate) l4 
-    fun cmp (a,b) = Int.compare (term_size a, term_size b)
+    val _ = print_endline ("Reading " ^ its (length formgraphl) ^ " terms");
+    val l1 = map (fn (a,b) => (norm_bvarl a ,rev b)) formgraphl
+    val l2 = map_assoc (eval64 o fst) l1
+    fun f ((a,b),c) = 
+      if b = c then () else 
+        (
+        print_endline (bin_to_string b);
+        print_endline (bin_to_string c);
+        raise ERR "not_equal_on" (term_to_string a)
+        )
+    val _ = app f l2
+    val tml = map (fst o fst) l2
+    fun g tm = 
+      if can imitate tm then () else 
+        raise ERR "cannot replicate" (term_to_string tm)
+    val _ = app g tml
   in
-    export_terml (datasetsynt_dir ^ "/h4setsynt") (dict_sort cmp l5)
+    print_endline ("Exporting " ^ its (length tml) ^ " terms");
+    export_terml (datasetsynt_dir ^ "/h4setsynt") 
+      (dict_sort tmsize_compare tml)
   end
 
 val ntarget_level = ref 400
@@ -182,21 +197,24 @@ val gamespec =
   {
   movel = movel,
   move_compare = Term.compare,
+  string_of_move = string_of_move,
   status_of = status_of,
   filter_sit = filter_sit,
   apply_move = apply_move_to_board,
-  operl = operl,
-  nntm_of_sit = nntm_of_sit,
   mk_targetl = mk_targetl,
   write_targetl = write_targetl,
   read_targetl = read_targetl,
-  string_of_move = string_of_move,
   max_bigsteps = max_bigsteps
   }
 
+val tnnspec =
+  {
+  operl = operl,
+  nntm_of_sit = nntm_of_sit,
+  
+  }
+
 val extspec = mk_extspec "mleSetSynt.extspec" gamespec
-(* val test_setsynt_extspec =
-  test_mk_extspec "mleSetSynt.test_setsynt_extspec" setsynt_gamespec *)
 
 (* -------------------------------------------------------------------------
    Reinforcement learning
@@ -250,9 +268,9 @@ decay_glob := 0.99;
 
 val formula = ``(oNOT (pEQ (vX :'a) (vX:'a):bool):bool)``;
 val board = mk_startsit formula;
-val tree = mcts_test 100 gamespec (random_dhtnn_gamespec gamespec) board;
+val tree = mcts_test 1000 gamespec (random_dhtnn_gamespec gamespec) board;
 val nodel1 = dlist tree;
-val tree2 = cut_tree [1] tree;
+val tree2 = cut_tree [0] tree;
 val root2 = dfind [] tree2;
 
 val nodel = trace_win (#status_of gamespec) tree [];

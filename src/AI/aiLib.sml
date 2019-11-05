@@ -270,6 +270,11 @@ fun mk_string_set l = mk_fast_set String.compare l
 fun mk_term_set l = mk_fast_set Term.compare l
 fun mk_type_set l = mk_fast_set Type.compare l
 
+fun tmsize_compare (a,b) =
+  let val r = Int.compare (term_size a, term_size b) in
+    if r = EQUAL then Term.compare (a,b) else r
+  end
+
 fun fold_left f l orig = case l of
     [] => orig
   | a :: m => let val new_orig = f a orig in fold_left f m new_orig end

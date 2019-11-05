@@ -72,7 +72,7 @@ val temp_flag = ref false
 val ncore_mcts_glob = ref 8
 
 val level_glob = ref 1
-val level_threshold = ref 0.95
+val level_threshold = ref 0.75
 
 fun summary_param () =
   let
@@ -107,29 +107,29 @@ fun summary_param () =
   end
 
 (* -------------------------------------------------------------------------
-   Evaluation and policy
+   Creating guidance for MCTS by producing an evaluation and policy for
+   each board (sit).
    ------------------------------------------------------------------------- *)
 
-fun mk_fep_dhtnn startb gamespec dhtnn sit =
-  let
-    val movel = #movel gamespec
-    val filter_sit = (#filter_sit gamespec) sit
-    val nntm = (#nntm_of_sit gamespec) sit
-  in
-    if startb then (0.0, filter_sit (map (fn x => (x,1.0)) movel)) else
-      let val (e,p) = infer_dhtnn dhtnn nntm in
-        (e, filter_sit (combine (movel,p)))
-        handle HOL_ERR _ => raise ERR "mk_fep_dhtnn"
-          (its (length movel) ^ " " ^ its (length p))
-      end
-  end
-
-fun mk_fep_uniform gamespec sit =
+fun mk_guider_uniform gamespec sit =
   let
     val movel = #movel gamespec
     val filter_sit = (#filter_sit gamespec) sit
   in
     (0.0, filter_sit (map (fn x => (x,1.0)) movel))
+  end
+
+fun mk_guider_dhtnn startb gamespec dhtnn sit =
+  if startb then mk_guider_uniform gamespec sit else
+  let
+    val movel = #movel gamespec
+    val filter_sit = (#filter_sit gamespec) sit
+    val nntm = (#nntm_of_sit gamespec) sit
+  in
+    let val (e,p) = infer_dhtnn dhtnn nntm in
+      (e, filter_sit (combine (movel,p)))
+      handle HOL_ERR _ => raise ERR "mk_guider_dhtnn" ""
+    end
   end
 
 (* -------------------------------------------------------------------------
@@ -286,7 +286,7 @@ fun n_bigsteps_extern (gamespec: ('a,'b) gamespec) (flags,dhtnn) target =
       {nsim = !nsim_glob, decay = !decay_glob, noise = noise,
        status_of = #status_of gamespec,
        apply_move = #apply_move gamespec,
-       fevalpoli = mk_fep_dhtnn bstart gamespec dhtnn}
+       fevalpoli = mk_guider_dhtnn bstart gamespec dhtnn}
     val (bstatus,exl,rootl) = n_bigsteps gamespec mctsparam target
   in
     (bstatus,exl)
@@ -316,7 +316,7 @@ fun test_n_bigsteps_extern gamespec dhtnn target =
       {nsim = !nsim_glob, decay = !decay_glob, noise = false,
        status_of = #status_of gamespec,
        apply_move = #apply_move gamespec,
-       fevalpoli = mk_fep_dhtnn false gamespec dhtnn}
+       fevalpoli = mk_guider_dhtnn false gamespec dhtnn}
     val (bstatus,_,rootl) = n_bigsteps gamespec mctsparam target
   in
     (target,bstatus,length rootl)
@@ -378,6 +378,18 @@ fun compete_one extspec dhtnn targetl =
   in
     summary ("Competition time : " ^ rts t); nwin
   end
+(*
+fun compete_guider guiderspec targetl =
+  let
+    val flags = (false,false,false)
+    val param = (flags,dhtnn)
+    val ncore = !ncore_mcts_glob
+    val (l,t) = add_time (parmap_queue_extern ncore extspec param) targetl
+    val nwin = length (filter fst l)
+  in
+    summary ("Competition time : " ^ rts t); nwin
+  end
+*)
 
 fun summary_compete (w_old,w_new) =
   let val s = if w_new >= w_old then "Passed" else "Failed" in
@@ -436,7 +448,7 @@ fun mcts_test nsim gamespec dhtnn startsit =
       {nsim = nsim, decay = 1.0, noise = false,
        status_of = #status_of gamespec,
        apply_move = #apply_move gamespec,
-       fevalpoli = mk_fep_dhtnn false gamespec dhtnn}
+       fevalpoli = mk_guider_dhtnn false gamespec dhtnn}
   in
     mcts param (starttree_of param startsit)
   end
@@ -447,7 +459,7 @@ fun mcts_uniform nsim gamespec startsit =
       {nsim = nsim, decay = 1.0, noise = false,
        status_of = #status_of gamespec,
        apply_move = #apply_move gamespec,
-       fevalpoli = mk_fep_uniform gamespec}
+       fevalpoli = mk_guider_uniform gamespec}
   in
     mcts param (starttree_of param startsit)
   end
@@ -459,7 +471,7 @@ fun n_bigsteps_test gamespec dhtnn target =
       {nsim = !nsim_glob, decay = !decay_glob, noise = false,
        status_of = #status_of gamespec,
        apply_move = #apply_move gamespec,
-       fevalpoli = mk_fep_dhtnn false gamespec dhtnn}
+       fevalpoli = mk_guider_dhtnn false gamespec dhtnn}
     val _ = verbose_flag := true
     val (_,_,rootl) = n_bigsteps gamespec mctsparam target
     val _ = verbose_flag := false
