@@ -1,1 +1,1 @@
-local open psMCTS psMinimize psTermGen in end
+local open psMCTS psMinimize psTermGen psBigSteps in end

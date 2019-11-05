@@ -255,28 +255,7 @@ val r = start_rl_loop (gamespec,extspec);
    Small test
    ------------------------------------------------------------------------- *)
 
-(*
-load "mleSetLib"; open mleSetLib;
-load "mleSetSynt"; open mleSetSynt;
-load "mlReinforce"; open mlReinforce;
-load "psMCTS"; open psMCTS;
-load "aiLib"; open aiLib;
-dim_glob := 12;
-graph_size := !dim_glob;
-nsim_glob := 10000;
-decay_glob := 0.99;
 
-val formula = ``(oNOT (pEQ (vX :'a) (vX:'a):bool):bool)``;
-val board = mk_startsit formula;
-val tree = mcts_test 1000 gamespec (random_dhtnn_gamespec gamespec) board;
-val nodel1 = dlist tree;
-val tree2 = cut_tree [0] tree;
-val root2 = dfind [] tree2;
-
-val nodel = trace_win (#status_of gamespec) tree [];
-
-val _ = n_bigsteps_test gamespec (random_dhtnn_gamespec gamespec) board;
-*)
 
 (* -------------------------------------------------------------------------
    Example of interesting formulas

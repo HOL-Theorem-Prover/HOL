@@ -13,6 +13,54 @@ smlParallel
 
 val ERR = mk_HOL_ERR "mlReinforce"
 
+type rlparam =
+  {
+  (* competition *)
+  ntarget_compete : int,
+  mcts_explore : int,
+  (* exploration *)
+  ntarget_explore : int,
+  mctsparam_explore : int,
+  exwindow_glob : int,
+  uniqex_flag : bool,
+  (* generation *)
+  ngen : int,
+  level_start : int,
+  level_threshold : real
+  }
+
+(* mcts parameters *)
+val ncore_mcts_glob = ref 8
+
+(* training parameters *)
+val dim_glob = ref 8
+val batchsize_glob = ref 64
+val nepoch_glob = ref 100
+val lr_glob = ref 0.1
+val ncore_train_glob = ref 4
+
+
+(* default parameters *)
+val ngen = ref 20
+val ntarget_compete = ref 400
+val ntarget_explore = ref 400
+
+val exwindow_glob = ref 40000
+val uniqex_flag = ref false
+val dim_glob = ref 8
+val batchsize_glob = ref 64
+val nepoch_glob = ref 100
+val lr_glob = ref 0.1
+val ncore_train_glob = ref 4
+
+val nsim_glob = ref 1600
+val decay_glob = ref 0.99
+val temp_flag = ref false
+val ncore_mcts_glob = ref 8
+
+val level_start = ref 1
+val level_threshold = ref 0.75
+
 type ('a,'b) gamespec =
   {
   movel : 'b list,
@@ -54,25 +102,7 @@ fun bts b = if b then "true" else "false"
    Hard-coded parameters
    ------------------------------------------------------------------------- *)
 
-val ngen_glob = ref 20
-val ntarget_compete = ref 400
-val ntarget_explore = ref 400
 
-val exwindow_glob = ref 40000
-val uniqex_flag = ref false
-val dim_glob = ref 8
-val batchsize_glob = ref 64
-val nepoch_glob = ref 100
-val lr_glob = ref 0.1
-val ncore_train_glob = ref 4
-
-val nsim_glob = ref 1600
-val decay_glob = ref 0.99
-val temp_flag = ref false
-val ncore_mcts_glob = ref 8
-
-val level_glob = ref 1
-val level_threshold = ref 0.75
 
 fun summary_param () =
   let
@@ -81,7 +111,7 @@ fun summary_param () =
     val gen1  = "gen max: " ^ its (!ngen_glob)
     val gen2  = "target_compete: " ^ its (!ntarget_compete)
     val gen3  = "target_explore: " ^ its (!ntarget_explore)
-    val gen4  = "starting level: " ^ its (!level_glob)
+    val gen4  = "starting level: " ^ its (!level_start)
     val gen5  = "level threshold: " ^ rts (!level_threshold)
     val nn0   = "uniqex_flag: " ^ bts (!uniqex_flag)
     val nn1   = "example_window: " ^ its (!exwindow_glob)
@@ -138,64 +168,6 @@ fun mk_guider_dhtnn startb gamespec dhtnn sit =
 
 val emptyallex = []
 
-fun complete_pol gamespec mrl =
-  let
-    val d = dnew (#move_compare gamespec) mrl
-    fun f move = dfind move d handle NotFound => 0.0
-  in
-    map f (#movel gamespec)
-  end
-
-fun add_rootex gamespec tree exl =
-  let
-    val root = dfind [] tree
-    val sit  = #sit root
-    val nntm = (#nntm_of_sit gamespec) sit
-    val (e,p) = evalpoli_example tree
-  in
-    (nntm,[e], complete_pol gamespec p) :: exl
-  end
-
-(* -------------------------------------------------------------------------
-   MCTS big steps. Ending the search when there is no move available.
-   ------------------------------------------------------------------------- *)
-
-val verbose_flag = ref false
-
-fun n_bigsteps_loop (n,nmax) gamespec mctsparam (exl,rootl) tree =
-  let
-    val sit = #sit (dfind [] tree)
-    val status = #status_of gamespec sit
-    val _ = if !verbose_flag
-            then print_endline (term_to_string (#nntm_of_sit gamespec sit))
-            else ()
-  in
-    if status <> Undecided orelse n >= nmax then (status = Win,exl,rootl) else
-    let
-      val newtree = mcts mctsparam tree
-      val root = dfind [] newtree
-      val filter_sit = (#filter_sit gamespec) sit
-      val movel = #movel gamespec
-      val (cid,dis) = select_bigstep newtree
-      val _ = if !verbose_flag
-              then print_distrib (#string_of_move gamespec) dis
-              else ()
-      val cuttree = starttree_of mctsparam (#sit (dfind cid newtree))
-                    (* cut_tree newtree cid *)
-      val newexl = add_rootex gamespec newtree exl
-      val newrootl = root :: rootl
-    in
-      n_bigsteps_loop (n+1,nmax) gamespec mctsparam (newexl,newrootl) cuttree
-    end
-  end
-
-fun n_bigsteps gamespec mctsparam target =
-  let
-    val tree = starttree_of mctsparam target
-    val n = #max_bigsteps gamespec target
-  in
-    n_bigsteps_loop (0,n) gamespec mctsparam ([],[]) tree
-  end
 
 (* -------------------------------------------------------------------------
    Training
@@ -397,12 +369,12 @@ fun summary_compete (w_old,w_new) =
   end
 
 fun level_up b =
-  if b then (incr level_glob; summary ("Level up: " ^ its (!level_glob)))
+  if b then (incr level_start; summary ("Level up: " ^ its (!level_start)))
   else ()
 
 fun compete (gamespec,extspec) dhtnn_old dhtnn_new =
   let
-    val targetl = #mk_targetl gamespec (!level_glob) (!ntarget_compete)
+    val targetl = #mk_targetl gamespec (!level_start) (!ntarget_compete)
     val _ = summary ("Competition targets: " ^ its (length targetl))
     val w_old = compete_one extspec dhtnn_old targetl
     val w_new = compete_one extspec dhtnn_new targetl
@@ -420,7 +392,7 @@ fun compete (gamespec,extspec) dhtnn_old dhtnn_new =
 
 fun explore startb (gamespec,extspec) allex dhtnn =
   let
-    val targetl = #mk_targetl gamespec (!level_glob) (!ntarget_explore)
+    val targetl = #mk_targetl gamespec (!level_start) (!ntarget_explore)
     val _ = summary ("Exploration targets: " ^ its (length targetl))
     val flags = (true,startb,!temp_flag)
     val param = (flags,dhtnn)
