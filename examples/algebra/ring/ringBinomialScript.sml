@@ -781,10 +781,10 @@ val ring_binomial_index_shift = store_thm(
 (* Pattern for binomial expansion:
 
     (x+y)(x^3 + 3x^2y + 3xy^2 + y^3)
-	= x(x^3) + 3x(x^2y) + 3x(xy^2) + x(y^3) +
-	             y(x^3) + 3y(x^2y) + 3y(xy^2) + y(y^3)
-	= x^4 + (3+1)x^3y + (3+3)(x^2y^2) + (1+3)(xy^3) + y^4
-    = x^4 + 4x^3y	  + 6x^2y^2       + 4xy^3       + y^4
+        = x(x^3) + 3x(x^2y) + 3x(xy^2) + x(y^3) +
+                     y(x^3) + 3y(x^2y) + 3y(xy^2) + y(y^3)
+        = x^4 + (3+1)x^3y + (3+3)(x^2y^2) + (1+3)(xy^3) + y^4
+    = x^4 + 4x^3y         + 6x^2y^2       + 4xy^3       + y^4
 
 *)
 
@@ -876,29 +876,29 @@ val ring_binomial_term_merge_y = store_thm(
                                                                by ring_binomial_term_merge_x, ring_binomial_term_merge_y
        = (\k. ##(binomial n k) * x ** SUC (n - k) * y ** k) 0 +
          rsum (GENLIST ((\k. ##(binomial n k) * x ** SUC (n - k) * y ** k) o SUC) n) +
-		 rsum (GENLIST (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) (SUC n))   by ring_sum_decompose_first
+                 rsum (GENLIST (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) (SUC n))   by ring_sum_decompose_first
        = (\k. ##(binomial n k) * x ** SUC (n - k) * y ** k) 0 +
          rsum (GENLIST ((\k. ##(binomial n k) * x ** SUC (n - k) * y ** k) o SUC) n) +
-		(rsum (GENLIST (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n) +
-		 (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n )                      by ring_sum_decompose_last
+                (rsum (GENLIST (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n) +
+                 (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n )                      by ring_sum_decompose_last
        = (\k. ##(binomial n k) * x ** SUC(n - k) * y ** k) 0 +
          rsum (GENLIST (\k. ##(binomial n (SUC k)) * x ** (n - k) * y ** (SUC k)) n) +
-		(rsum (GENLIST (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n) +
-		 (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n )             by ring_binomial_genlist_index_shift
+                (rsum (GENLIST (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n) +
+                 (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n )             by ring_binomial_genlist_index_shift
        = (\k. ##(binomial n k) * x ** SUC(n - k) * y ** k) 0 +
         (rsum (GENLIST (\k. ##(binomial n (SUC k)) * x ** (n - k) * y ** (SUC k)) n) +
-		 rsum (GENLIST (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n)) +
-		 (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n               by ring_add_assoc, ring_add_element
+                 rsum (GENLIST (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n)) +
+                 (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n               by ring_add_assoc, ring_add_element
        = (\k. ##(binomial n k) * x ** SUC (n - k) * y ** k) 0 +
         rsum (GENLIST (\k. (##(binomial n (SUC k)) * x ** (n - k) * y ** (SUC k) +
-		                   ##(binomial n k) * x ** (n - k) * y ** (SUC k))) n) +
+                                   ##(binomial n k) * x ** (n - k) * y ** (SUC k))) n) +
         (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n                by ring_sum_genlist_add
        = (\k. ##(binomial n k) * x ** SUC (n - k) * y ** k) 0 +
         rsum (GENLIST (\k. (##(binomial n (SUC k)) + ##(binomial n k)) * x ** (n - k) * y ** (SUC k)) n) +
         (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n                by ring_mult_ladd, ring_mult_element
        = (\k. ##(binomial n k) * x ** SUC (n - k) * y ** k) 0 +
         rsum (GENLIST (\k. (##(binomial n (SUC k)) * (x ** (n - k) * y ** (SUC k)) +
-		                   ##(binomial n k) * (x ** (n - k) * y ** (SUC k)))) n) +
+                                   ##(binomial n k) * (x ** (n - k) * y ** (SUC k)))) n) +
         (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n                by  ring_mult_assoc
        = (\k. ##(binomial n k) * x ** SUC (n - k) * y ** k) 0 +
         rsum (GENLIST (\k. ##(binomial n (SUC k) + binomial n k) * (x ** (n - k) * y ** (SUC k))) n) +
@@ -941,7 +941,7 @@ val ring_binomial_term_merge_y = store_thm(
     = C(n,0)x^(n+1) + rsum (k=0..n-1) C(n+1,k+1) x^(n-k)y^(k+1)          + C(n,n)y^(n+1)     by binomial recurrence
     = C(n,0)x^(n+1) + rsum (k=1..n) C(n+1,k) x^(n+1-k)y^k                + C(n,n)y^(n+1)     by index shifting again
     = C(n+1,0)x^(n+1) + rsum (k=1..n) C(n+1,k) x^(n+1-k)y^k              + C(n+1,n+1)y^(n+1) by binomial identities
-	= rsum (k=0..(SUC n))C(SUC n,k) x^((SUC n)-k)y^k                                         by synthesis of sum
+        = rsum (k=0..(SUC n))C(SUC n,k) x^((SUC n)-k)y^k                                         by synthesis of sum
 *)
 val ring_binomial_thm = store_thm(
   "ring_binomial_thm",
@@ -974,37 +974,37 @@ val ring_binomial_thm = store_thm(
     by rw_tac std_ss[ring_binomial_term_merge_x, ring_binomial_term_merge_y] >>
   `_ = (\k. ##(binomial n k) * x ** SUC (n - k) * y ** k) 0 +
          rsum (GENLIST ((\k. ##(binomial n k) * x ** SUC (n - k) * y ** k) o SUC) n) +
-		 rsum (GENLIST (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) (SUC n))`
+                 rsum (GENLIST (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) (SUC n))`
     by rw_tac std_ss[ring_sum_decompose_first] >>
   `_ = (\k. ##(binomial n k) * x ** SUC (n - k) * y ** k) 0 +
          rsum (GENLIST ((\k. ##(binomial n k) * x ** SUC (n - k) * y ** k) o SUC) n) +
-		(rsum (GENLIST (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n) +
-		 (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n )`
+                (rsum (GENLIST (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n) +
+                 (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n )`
     by rw_tac std_ss[ring_sum_decompose_last] >>
   `_ = (\k. ##(binomial n k) * x ** SUC(n - k) * y ** k) 0 +
          rsum (GENLIST (\k. ##(binomial n (SUC k)) * x ** (n - k) * y ** (SUC k)) n) +
-		(rsum (GENLIST (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n) +
-		 (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n )`
+                (rsum (GENLIST (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n) +
+                 (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n )`
     by rw_tac std_ss[ring_binomial_genlist_index_shift] >>
   `_ = (\k. ##(binomial n k) * x ** SUC(n - k) * y ** k) 0 +
         (rsum (GENLIST (\k. ##(binomial n (SUC k)) * x ** (n - k) * y ** (SUC k)) n) +
-		 rsum (GENLIST (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n)) +
-		 (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n`
+                 rsum (GENLIST (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n)) +
+                 (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n`
     by rw_tac std_ss[ring_add_assoc, ring_add_element] >>
   `_ = (\k. ##(binomial n k) * x ** SUC (n - k) * y ** k) 0 +
         rsum (GENLIST (\k. (##(binomial n (SUC k)) * x ** (n - k) * y ** (SUC k) +
-		                   ##(binomial n k) * x ** (n - k) * y ** (SUC k))) n) +
+                                   ##(binomial n k) * x ** (n - k) * y ** (SUC k))) n) +
         (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n`
-	by rw_tac std_ss[ring_sum_genlist_add] >>
+        by rw_tac std_ss[ring_sum_genlist_add] >>
   `_ = (\k. ##(binomial n k) * x ** SUC (n - k) * y ** k) 0 +
         rsum (GENLIST (\k. (##(binomial n (SUC k)) * (x ** (n - k) * y ** (SUC k)) +
-		                   ##(binomial n k) * (x ** (n - k) * y ** (SUC k)))) n) +
+                                   ##(binomial n k) * (x ** (n - k) * y ** (SUC k)))) n) +
         (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n`
-	by rw_tac std_ss[ring_mult_assoc] >>
+        by rw_tac std_ss[ring_mult_assoc] >>
   `_ = (\k. ##(binomial n k) * x ** SUC (n - k) * y ** k) 0 +
         rsum (GENLIST (\k. ##(binomial n (SUC k) + binomial n k) * (x ** (n - k) * y ** (SUC k))) n) +
         (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n`
-	by rw_tac std_ss[ring_num_add_mult, ring_mult_element] >>
+        by rw_tac std_ss[ring_num_add_mult, ring_mult_element] >>
   `_ = (\k. ##(binomial n k) * x ** SUC(n - k) * y ** k) 0 +
         rsum (GENLIST (\k. ##(binomial (SUC n) (SUC k)) * (x ** (n - k) * y ** (SUC k))) n) +
         (\k. ##(binomial n k) * x ** (n - k) * y ** (SUC k)) n`

@@ -5,7 +5,7 @@ open HolKernel lcsymtacs boolLib
 
 (* existing strip_tac looks like
 
-    gen_tac ORELSE conj_tac ORELSE disch_then strip_assume_tac 
+    gen_tac ORELSE conj_tac ORELSE disch_then strip_assume_tac
 
 *)
 
@@ -13,10 +13,10 @@ open HolKernel lcsymtacs boolLib
      =          (thm -> tactic) -> tactic
 *)
 
-fun stripDup ths = 
-    FIRST [gen_tac, conj_tac, 
+fun stripDup ths =
+    FIRST [gen_tac, conj_tac,
            disch_then (fn th => strip_assume_tac th >>
-       	                     	strip_assume_tac (REWRITE_RULE ths th))]
+                                strip_assume_tac (REWRITE_RULE ths th))]
 
 
 

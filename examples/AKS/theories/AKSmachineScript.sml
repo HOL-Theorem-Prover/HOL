@@ -968,13 +968,13 @@ val run_def = tDefine "run" `
            if NULL m.vstack then NONE (* abort: no vector *)
            else if NULL (HD (m.vstack)) then NONE (* abort: vector no head *)
            else run (m with <| sstack := HD (HD m.vstack) :: m.sstack;
-           	                   vstack := TL (HD m.vstack):: TL m.vstack;
+                                   vstack := TL (HD m.vstack):: TL m.vstack;
                                pc updated_by SUC; clock := nclock; ticks := nticks |>)
       | vRSHIFT => (* last of vector to scalar, leave front of vector *)
            if NULL m.vstack then NONE (* abort: no vector *)
            else if NULL (HD (m.vstack)) then NONE (* abort: vector no last *)
            else run (m with <| sstack := LAST (HD m.vstack) :: m.sstack;
-           	                   vstack := FRONT (HD m.vstack) :: TL m.vstack;
+                                   vstack := FRONT (HD m.vstack) :: TL m.vstack;
                                pc updated_by SUC; clock := nclock; ticks := nticks |>)
       | vCMULT n6 => (* multiply vector by scalar, MOD scell[num] *)
            if n6 >= m.smark then NONE (* abort: inaccessible cell *)

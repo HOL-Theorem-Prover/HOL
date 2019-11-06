@@ -330,7 +330,7 @@ open triangleTheory; (* for list_lcm_pos *)
    Of course, being the smallest value, k must be prime.
 *)
 
-	(* Still More Theory:
+        (* Still More Theory:
    When found, k divides (n ** j - 1)  with j > m.
    Say k = 13, the smallest value not a factor of P = PROD (0 < j <= m) (n ** j - 1)
    Since k is the smallest, this must be due to:
