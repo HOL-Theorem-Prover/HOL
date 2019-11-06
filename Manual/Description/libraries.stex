@@ -134,6 +134,8 @@ associativity. See \REFERENCE{} for more details.
 
 \paragraph{Type abbreviations}
 \index{type abbreviations}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!type abbreviations}
+\index{abbreviations!for types}
 
 Users can abbreviate common type patterns with \emph{abbreviations}.
 This is done with the \ML{} function \ml{type\_abbrev}:
@@ -161,22 +163,25 @@ For more information, see \ml{type\_abbrev}'s entry in \REFERENCE.
 There are special syntactic forms available for both type abbreviation entry-points.
 Instead of
 \begin{hol}
-\begin{verbatim}
-   val _ = type_abbrev("set", ``:'a -> bool``)
-\end{verbatim}
+\begin{alltt}
+   val _ = type_abbrev("set", \fldq:'a -> bool\frdq)
+\end{alltt}
 \end{hol}
 one can write
 \begin{hol}
-\begin{verbatim}
-   Type set = ``:'a -> bool``
-\end{verbatim}
+\begin{alltt}
+   Type set = \fldq:'a -> bool\frdq
+\end{alltt}
 \end{hol}
 and if an underlying call to \ml{type\_abbrev\_pp} is desired, the \ml{[pp]} ``attribute'' should be added to the name, thus:
 \begin{hol}
-\begin{verbatim}
-   Type set[pp] = ``:'a -> bool``
-\end{verbatim}
+\begin{alltt}
+   Type set[pp] = \fldq:'a -> bool\frdq
+\end{alltt}
 \end{hol}
+
+\index{local@\ml{local}!as attribute for type abbreviations}
+If a ``temporary'' abbreviation is required (one whose effect will not be apparent in descendent theories), then the \ml{local} attribute can also be added to the \ml{Type} syntax, or the \ML{} functions \ml{temp\_type\_abbrev} and \ml{temp\_type\_abbrev\_pp} can be used.
 
 
 \subsection{Parsing terms}
@@ -233,9 +238,9 @@ series of tokens.  For more on lexing, see Section~\ref{HOL-lex}.
   It is possible for names that occur in the \ml{Absyn} value to be
   different from any of the tokens that appeared in the original
   input.  For example, the input
-\begin{verbatim}
-   ``if P then Q else R``
-\end{verbatim} will turn into
+\begin{alltt}
+   \fholquote{if P then Q else R}
+\end{alltt} will turn into
 \begin{verbatim}
    APP (APP (APP (IDENT "COND", IDENT "P"), IDENT "Q"), IDENT "R")
 \end{verbatim}
@@ -253,7 +258,7 @@ series of tokens.  For more on lexing, see Section~\ref{HOL-lex}.
 \index{tokens!suppressing parsing behaviour of|(}%
 %
 then this phase of the parser will not treat strings as part of a
-special form.  For example, \holtxt{\holquote{\dol{}if~P}} turns into
+special form.  For example, \holtxt{\fholquote{\dol{}if~P}} turns into
 the \ml{Absyn} form
 \begin{verbatim}
    APP(IDENT "if", IDENT "P")
@@ -261,7 +266,7 @@ the \ml{Absyn} form
   \emph{not} a form involving \holtxt{COND}.
 
   More typically, one often writes something like
-  \holtxt{\holquote{\$+~x}}, which generates the abstract syntax
+  \holtxt{\fholquote{\$+~x}}, which generates the abstract syntax
 \begin{verbatim}
    APP(IDENT "+", IDENT "x")
 \end{verbatim}
@@ -272,7 +277,7 @@ the \ml{Absyn} form
   give the input its desired meaning.
 
   Symbols can also be ``escaped'' by enclosing them in parentheses.
-  Thus, the above could be written \holtxt{\holquote{(+)~x}} for the
+  Thus, the above could be written \holtxt{\fholquote{(+)~x}} for the
   same effect.
 \index{tokens!suppressing parsing behaviour of|)}
 
@@ -374,7 +379,7 @@ the \ml{Absyn} form
 \subsubsection{Unicode characters}
 \label{sec:parser:unicode-characters}
 
-\index{Unicode}\index{UTF-8}
+\index{Unicode|(}\index{UTF-8}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!Unicode characters|(}
 It is possible to have the \HOL{} parsing and printing infrastructure
 use Unicode characters (written in the UTF-8 encoding).  This makes it
@@ -401,6 +406,7 @@ Unicode syntax for the underlying constant.
 If users have fonts with the appropriate repertoire of characters to display their syntax, and are confident that any other users of their theories will too, then this is perfectly reasonable.
 However, if users wish to retain some backwards compatibility a provide a pure ASCII syntax, they can do so by defining that pure ASCII syntax first.
 Having done this, they can create a Unicode version of the syntax with the function \ml{Unicode.unicode\_version}.
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!Unicode in pretty-printing}
 Then, either Unicode or ASCII characters can be used to input the syntax, and, while the trace variable \ml{"PP.avoid_unicode"} is $1$, the ASCII syntax will be used for printing.
 If the trace is set to $0$, then again, both syntaxes can be used to \emph{write} the terms, but the pretty-printer will prefer the Unicode syntax when the terms are printed by the system.
 
@@ -447,48 +453,37 @@ everything else is symbolic.  (The exception for \holtxt{$\lambda$} is to
 allow strings like \holtxt{$\lambda$x.x} to lex into \emph{four} tokens.)
 
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!Unicode characters|)}
+\index{Unicode|)}
 
-\subsubsection{Syntactic patterns (``macros'')}
+\subsubsection{Overloading and Syntactic Patterns (``macros'')}
 \label{sec:parser:syntactic-patterns}
+\index{abbreviations!for terms}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!overloading}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!term abbreviations}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!syntactic patterns|(}
 
-The ``overload map'' mentioned previously is actually a combination of
-maps, one for parsing, and one for printing.  The parsing map is from
-names to lists of terms, and determines how the names that appear in a
-\ml{Preterm} will translate into terms.  In essence, bound names turn
-into bound variables, unbound names not in the domain of the map turn
-into free variables, and unbound names in the domain of the map turn
-into one of the elements of the set associated with the given name.
-Each term in the set of possibilities may have a different type, so
-type inference will choose from those that have types consistent with
-the rest of the given term.  If the resulting list contains more than
-one element, then the term appearing earlier in the list will be
-chosen.
+The ``overload map'' mentioned previously is actually a combination of maps, one for parsing, and one for printing.
+The parsing map is from names to lists of terms, and determines how the names that appear in a \ml{Preterm} will translate into terms.
+In essence, bound names turn into bound variables, unbound names not in the domain of the map turn into free variables, and unbound names in the domain of the map turn into one of the elements of the set associated with the given name.
+Each term in the set of possibilities may have a different type, so type inference will choose from those that have types consistent with the rest of the given term.
+If the resulting list contains more than one element, then the term appearing earlier in the list will be chosen.
 
-The most common use-case for the overload map is have names map to
-constants.  In this way, for example, the various numeric theories can
-map the string \ml{"+"} to the relevant notions of addition, each of
-which is a different constant.  However, the system has extra
-flexibility because names can map to arbitrary terms.  For example, it
-is possible to map to specific type-instances of constants.  Thus, the
-string \ml{"<=>"} maps to equality, but where the arguments are forced
-to be of type \holquote{:bool}.
+The most common use-case for the overload map is have names map to constants.
+In this way, for example, the various numeric theories can map the string \ml{"+"} to the relevant notions of addition, each of which is a different constant.
+However, the system has extra flexibility because names can map to arbitrary terms.
+For example, it is possible to map to specific type-instances of constants.  Thus, the string \ml{"<=>"} maps to equality, but where the arguments are forced to be of type \fholquote{:bool}.
 
-Moreover, if the term mapped to is a lambda-abstraction (\ie, of the
-form $\lambda x.\;M$), then the parser will perform all possible
-$\beta$-reductions for that term and the arguments accompanying it.  For
-example, in \theoryimp{boolTheory} and its descendants, the string
-\ml{"<>"} is overloaded to the term \holquote{\holtxt{\bs{}x~y.~\td{}(x~=~y)}}.
-Additionally, \ml{"<>"} is set up at the concrete syntax level as an
-infix.  When the user inputs \holquote{\holtxt{x~\lt\gt~y}}, the resulting
+Moreover, if the term mapped to is a lambda-abstraction (\ie, of the form $\lambda x.\;M$), then the parser will perform all possible $\beta$-reductions for that term and the arguments accompanying it.
+For example, in \theoryimp{boolTheory} and its descendants, the string \ml{"<>"} is overloaded to the term \fholquote{\holtxt{\bs{}x~y.~\td{}(x~=~y)}}.
+Additionally, \ml{"<>"} is set up at the concrete syntax level as an infix.
+When the user inputs \fholquote{\holtxt{x~\lt\gt~y}}, the resulting
 \ml{Absyn} value is
 \begin{verbatim}
    APP(APP(IDENT "<>", IDENT "x"), IDENT "x")
 \end{verbatim}
 The \ml{"x"}  and \ml{"y"} identifiers will map to free variables, but
 the \ml{"<>"} identifier maps to a list containing
-\holquote{\holtxt{\bs{}x~y.~\td(x~=~y)}}. This term has type
+\fholquote{\holtxt{\bs{}x~y.~\td(x~=~y)}}. This term has type
 \begin{verbatim}
    :'a -> 'a -> bool
 \end{verbatim}
@@ -498,13 +493,30 @@ Assuming that this option is the only overloading for \ml{"<>"} left
 after type inference, then the resulting term will be
 \holtxt{\td(x~=~y)}.  Better, though this will be the underlying
 structure of the term in memory, it will actually print as
-\holquote{\holtxt{x~\lt\gt~y}}.
+\fholquote{\holtxt{x~\lt\gt~y}}.
 
 If the term mapped to in the overload map contains any free variables,
 these variables will not be instantiated in any way.  In particular,
 if these variables have polymorphic types, then the type variables in
 those types will be constant: not subject to instantiation by type
 inference.
+
+\index{special syntactic forms for scripts!Overload@\ml{Overload}}
+\index{Overload (special syntactic form)@\ml{Overload} (special syntactic form)}
+The prettiest way to introduce entries into the overload map is to use the \ml{Overload} syntactic form:
+\begin{alltt}
+   Overload name[attrs] = \fholquote{term/pattern}
+\end{alltt}
+Depending on the choice of attributes, this will map into a call to one of a variety of underlying ``overload-on'' functions.
+\index{overload_on (ML function)@\ml{overload\_on} (\ML{} function)}
+The default (without any attributes) calls \ml{overload\_on}, whose effect is to make an entry in the map that will be exported with the theory.
+The overloading effect thus persists in descendent theories.
+\index{local@\ml{local}!as overloading attribute}
+If the \ml{local} attribute is used, this export doesn't occur, and the overloading effect is only visible for the rest of the containing script file.%
+\footnote{The use of \ml{local} induces a call to the \ml{temp\_overload\_on} function.}
+
+\index{inferior@\ml{inferior}!as overloading attribute}
+The other attribute that can be used is \ml{inferior}, which causes the entry to be made, but makes it the pretty-printer's last choice when matching terms are printed.
 
 \paragraph{Pretty-printing and syntactic patterns} The second part of
 the ``overload map'' is a map from terms to strings, specifying how
@@ -526,7 +538,7 @@ most specific match (the one that requires least instantiation of the
 pattern's variables).  If this still results in multiple, equally
 specific, possibilities, the most recently added pattern takes
 precedence.  (Users can thus manipulate the printer's preferences by
-making otherwise redundant calls to the \ml{overload\_on} function.)
+making otherwise redundant \ml{Overload} declarations.)
 
 In the example of the not-equal-to operator above, the pattern will be
 \holtxt{\~{}(?x = ?y)}, where the question-marks indicate instantiable
@@ -551,14 +563,14 @@ happens with every constant definition).  But after the call
 establishing the new pattern for \holtxt{IS\_PREFIX}, the
 \holtxt{isPREFIX} form will no longer be printed.  Nor is it enough,
 to repeat the call
-\begin{verbatim}
-   overload_on("isPREFIX", ``isPREFIX``)
-\end{verbatim}
+\begin{alltt}
+   overload_on("isPREFIX", \fholquote{isPREFIX})
+\end{alltt}
 Instead (assuming that \holtxt{isPREFIX} is indeed the preferred
 printing form), the call must be
-\begin{verbatim}
-   overload_on("isPREFIX", ``\x y. isPREFIX x y``)
-\end{verbatim}
+\begin{alltt}
+   overload_on("isPREFIX", \fholquote{\bs{}x y. isPREFIX x y})
+\end{alltt}
 so that \ml{isPREFIX}'s pattern is as long as \ml{IS\_PREFIX}'s.
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!syntactic patterns|)}
 
@@ -833,9 +845,9 @@ parser in \HOL{}.
   \texttt{MEM} for \texttt{IS\_EL}.  We need to use the function
   \texttt{overload\_on} to overload the original constant for the new
   name:
-\begin{verbatim}
-   val _ = overload_on ("MEM", Term`IS_EL`);
-\end{verbatim}
+\begin{alltt}
+   val _ = overload_on ("MEM", \fholquote{IS_EL});
+\end{alltt}
 
 \item[Making addition right associative] If one has a number of old
   scripts that assume addition is right associative because this is

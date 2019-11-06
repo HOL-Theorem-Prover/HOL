@@ -1,12 +1,8 @@
-(* ========================================================================== *)
-(* FILE          : ExampleScript.sml                                           *)
-(* DESCRIPTION   : Example theorems and definitions used in the thesis         *)
-(*                                                                            *)
-(* THESIS        : A Formalization of Unique Solutions of Equations in        *)
-(*                 Process Algebra                                            *)
-(* AUTHOR        : (c) Chun Tian, University of Bologna                       *)
-(* DATE          : 2017                                                       *)
-(* ========================================================================== *)
+(*
+ * Copyright 1991-1995  University of Cambridge (Author: Monica Nesi)
+ * Copyright 2016-2017  University of Bologna, Italy (Author: Chun Tian)
+ * Copyright 2018-2019  Fondazione Bruno Kessler, Italy (Author: Chun Tian)
+ *)
 
 open HolKernel Parse boolLib bossLib;
 
@@ -21,6 +17,8 @@ open CongruenceTheory CoarsestCongrTheory;
 open TraceTheory ExpansionTheory ContractionTheory;
 open BisimulationUptoTheory UniqueSolutionsTheory;
 
+open MultivariateTheory;
+
 val _ = new_theory "Example";
 val _ = temp_loose_equality ();
 
@@ -28,7 +26,6 @@ val _ = temp_loose_equality ();
 val _ = disable_tyabbrev_printing "transition";
 val _ = disable_tyabbrev_printing "context";
 val _ = disable_tyabbrev_printing "simulation";
-val _ = disable_tyabbrev_printing "list_simulation";
 
 (******************************************************************************)
 (*                                                                            *)
@@ -207,58 +204,23 @@ in
                                 (combine (["ex_A1", "ex_A2", "ex_A3"], nodes))
 end;
 
-val (WB_rules, WB_coind, WB_cases) = Hol_coreln `
-    (!(P :('a, 'b) CCS) (Q :('a, 'b) CCS).
-       (!l.
-         (!P'. TRANS P (label l) P' ==>
-               (?Q'. WEAK_TRANS Q (label l) Q' /\ WB P' Q')) /\
-         (!Q'. TRANS Q (label l) Q' ==>
-               (?P'. WEAK_TRANS P (label l) P' /\ WB P' Q'))) /\
-       (!P'. TRANS P tau P' ==> (?Q'. EPS Q Q' /\ WB P' Q')) /\
-       (!Q'. TRANS Q tau Q' ==> (?P'. EPS P P' /\ WB P' Q'))
-     ==> WB P Q)`;
+(* Examples used in Section 5 of I&C paper *)
+Theorem WG_example1 :
+    WG (\t. prefix a t + prefix b t + prefix c (var Y))
+Proof
+    HO_MATCH_MP_TAC WG4
+ >> Reverse CONJ_TAC >- REWRITE_TAC [WG2]
+ >> HO_MATCH_MP_TAC WG4
+ >> REWRITE_TAC [WG1]
+QED
 
-(* SOS rules with changed variable names *)
-val PREFIX' = store_thm (
-   "PREFIX'", ``!P u. TRANS (prefix u P) u P``,
-    PROVE_TAC [PREFIX]);
-
-val SUM1' = store_thm (
-   "SUM1'", ``!P u P' Q.    TRANS P u P' ==> TRANS (sum P Q) u P'``,
-    PROVE_TAC [SUM1]);
-
-val SUM2' = store_thm (
-   "SUM2'", ``!P u P' Q.    TRANS P u P' ==> TRANS (sum Q P) u P'``,
-    PROVE_TAC [SUM2]);
-
-val PAR1' = store_thm (
-   "PAR1'", ``!P u P' Q.    TRANS P u P' ==> TRANS (par P Q) u (par P' Q)``,
-    PROVE_TAC [PAR1]);
-
-val PAR2' = store_thm (
-   "PAR2'", ``!P u P' Q.    TRANS P u P' ==> TRANS (par Q P) u (par Q P')``,
-    PROVE_TAC [PAR2]);
-
-val PAR3' = store_thm (
-   "PAR3'", ``!P l P' Q P2. TRANS P (label l) P' /\ TRANS Q (label (COMPL l)) Q'
-                ==> TRANS (par P Q) tau (par P' Q')``,
-    PROVE_TAC [PAR3]);
-
-val RESTR' = store_thm (
-   "RESTR'", ``!P u Q l L.   TRANS P u Q /\ ((u = tau) \/
-                                     ((u = label l) /\ l NOTIN L /\ (COMPL l) NOTIN L))
-                ==> TRANS (restr L P) u (restr L Q)``,
-    PROVE_TAC [RESTR]);
-
-val RELABELING' = store_thm (
-   "RELABELING'", ``!P u Q rf.    TRANS P u Q
-                ==> TRANS (relab P rf) (relabel rf u) (relab Q rf)``,
-    PROVE_TAC [RELABELING]);
-
-val REC' = store_thm (
-   "REC'", ``!P u A P'.     TRANS (CCS_Subst P (rec A P) A) u P'
-                ==> TRANS (rec A P) u P'``,
-    PROVE_TAC [REC]);
+Theorem WG_example2 :
+    WG (\t. prefix a (var X) + prefix b (var X) + prefix c t)
+Proof
+    HO_MATCH_MP_TAC WG4
+ >> Reverse CONJ_TAC >- REWRITE_TAC [WG1]
+ >> REWRITE_TAC [WG2]
+QED
 
 val _ = export_theory ();
 val _ = html_theory "Example";
@@ -284,6 +246,7 @@ val _ =
         OS.FileSys.remove "../paper/HOLExpansion.tex" handle e => {};
         OS.FileSys.remove "../paper/HOLContraction.tex" handle e => {};
         OS.FileSys.remove "../paper/HOLUniqueSolutions.tex" handle e => {};
+        OS.FileSys.remove "../paper/HOLMultivariate.tex" handle e => {};
 
         EmitTeX.print_theories_as_tex_doc
             ["CCS",
@@ -299,7 +262,8 @@ val _ =
              "Trace",
              "Expansion",
              "Contraction",
-             "UniqueSolutions"]
+             "UniqueSolutions",
+             "Multivariate"]
             "../paper/references"
     end
  else

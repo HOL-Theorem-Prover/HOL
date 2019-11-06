@@ -1,2 +1,6 @@
+ifdef POLY
+CLINE_OPTIONS = --holstate=../../../../../bin/hol.state0
+endif
+
 output:
 	$(CP) Holmakefile $@

@@ -82,7 +82,9 @@ fun th1_term oc tm =
     end
   else if is_abs tm then
     let val (vl,bod) = strip_abs tm in
-      os oc "^["; oiter oc ", " th1_vty vl; os oc "]: "; th1_term oc bod
+      os oc "(";
+      os oc "^["; oiter oc ", " th1_vty vl; os oc "]: "; th1_term oc bod;
+      os oc ")"
     end
   else raise ERR "th1_term" ""
 
@@ -109,7 +111,7 @@ fun th1_pred oc tm =
 and th1_binop oc s (l,r) =
   (os oc "("; th1_pred oc l; os oc (" " ^ s ^ " "); th1_pred oc r; os oc ")")
 and th1_quant oc s (vl,bod) =
-  (th1_quant_vl oc s vl; th1_pred oc bod)
+  (os oc "("; th1_quant_vl oc s vl; th1_pred oc bod; os oc ")")
 
 fun th1_formula oc tm = (th1_forall_tyvarl_tm oc tm; th1_pred oc tm)
 
@@ -195,15 +197,15 @@ fun th1_write_pb dir (thmid,depl) =
     val file  = dir ^ "/" ^ name_thm thmid ^ ".p"
     val oc  = TextIO.openOut file
     val tml = collect_tml (thmid,depl)
-    (* todo: remove unnecessary collection of first-order arity *)
-    val cval = mk_fast_set tma_compare
-      (List.concat (cval_extra :: map collect_arity_noapp tml))
+    val cvl1 = mk_term_set (List.concat (map (find_terms is_const) tml))
+    val cvl2 = map fst cval_extra
+    val cvl3 = mk_term_set (map mgc_of (cvl1 @ cvl2))
     val tyopl =  mk_fast_set ida_compare
       (List.concat (tyopl_extra :: map collect_tyop tml))
   in
     (
     app (th1_tyopdef oc) tyopl;
-    app (th1_cvdef oc) ((uniq_cvdef_arity o uniq_cvdef_mgc) cval);
+    app (th1_cvdef oc) cvl3;
     th1_thmdef_extra oc;
     app (th1_thmdef "axiom" oc) depl;
     th1_thmdef "conjecture" oc thmid;
@@ -245,7 +247,6 @@ val thmid = ("arithmetic","ADD1");
 val depl = valOf (hhExportLib.depo_of_thmid thmid);
 val dir = HOLDIR ^ "/src/holyhammer/export_th1_test";
 th1_write_pb dir (thmid,depl);
-th1_export_chainy ["bool"];
 *)
 
 (*
@@ -254,12 +255,6 @@ load "tttUnfold"; tttUnfold.load_sigobj ();
 val thyl = ancestry (current_theory ());
 val bushydir =  HOLDIR ^ "/src/holyhammer/th1_bushy";
 th1_export_bushy bushydir thyl;
-val chainydir = "/local1/thibault/th1_chainy";
-th1_export_chainy chainydir thyl;
 *)
-
-(* load "hhExportTh1"; load "hhExportTf1"; load "hhExportFof";
-  load "hhExportTf0"; load "hhExportTh0"; *)
-
 
 end (* struct *)

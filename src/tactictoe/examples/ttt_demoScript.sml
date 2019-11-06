@@ -62,9 +62,10 @@ val ex4 = store_thm("ex4",
   );
 
 (* --------------------------------------------------------------------------
-   Example 5: closed form sums. tactictoe was not able to minimize the proof.
+   Example 5: sums
    -------------------------------------------------------------------------- *)
 
+(* load "sum_numTheory"; open sum_numTheory; *)
 open sum_numTheory;
 set_timeout 60.0;
 (* ttt  ([],``!n. 2 * SUM (n+1) I = n * (n+1) ``); *)

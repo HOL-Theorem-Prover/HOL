@@ -240,7 +240,7 @@ fun read_tnnex file =
   end
 
 (* -------------------------------------------------------------------------
-   Normalization/denormalization
+   Scaling output values and ordering subterms
    ------------------------------------------------------------------------- *)
 
 fun order_subtm tm =
@@ -255,19 +255,13 @@ fun order_subtm tm =
     topo_sort Term.compare (g tm)
   end
 
-fun norm_vect v = Vector.map (fn x => 2.0 * (x - 0.5)) v
-fun denorm_vect v = Vector.map (fn x => 0.5 * x + 0.5) v
-
 fun prepare_tnnex tnnex =
-  let fun f (tm,rl) = (order_subtm tm, norm_vect (Vector.fromList rl)) in
+  let fun f (tm,rl) = (order_subtm tm, scale_out rl) in
     map f tnnex
   end
 
 fun prepare_dhex dhex =
-  let fun f (tm,rl1,rl2) =
-    (order_subtm tm, norm_vect (Vector.fromList rl1),
-     norm_vect (Vector.fromList rl2))
-  in
+  let fun f (tm,rl1,rl2) = (order_subtm tm, scale_out rl1, scale_out rl2) in
     map f dhex
   end
 
@@ -323,8 +317,8 @@ fun fp_dhtnn dhtnn tml =
 fun infer_dhtnn dhtnn tm =
   let val (_,fpdataleval,fpdatalpoli) = fp_dhtnn dhtnn (order_subtm tm) in
     (
-    only_hd (vector_to_list (denorm_vect (#outnv (last fpdataleval)))),
-    vector_to_list (denorm_vect (#outnv (last fpdatalpoli)))
+    only_hd (descale_out (#outnv (last fpdataleval))),
+    descale_out (#outnv (last fpdatalpoli))
     )
   end
 
@@ -399,7 +393,7 @@ fun bp_dhtnn dim (fpdict,fpdataleval,fpdatalpoli)
 
 fun infer_tnn tnn tm =
   let val (_,fpdatal) = fp_tnn tnn (order_subtm tm) in
-    vector_to_list (denorm_vect (#outnv (last fpdatal)))
+    descale_out (#outnv (last fpdatal))
   end
 
 fun infer_tnn_nohead tnn tm =

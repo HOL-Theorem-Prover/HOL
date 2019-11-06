@@ -1,12 +1,14 @@
-open HolKernel boolLib bossLib Parse pred_setTheory relationTheory finite_mapTheory termTheory ramanaLib pairTheory bagTheory prim_recTheory substTheory walkTheory walkstarTheory
+open HolKernel boolLib bossLib Parse
+
+open pred_setTheory relationTheory finite_mapTheory termTheory ramanaLib
+     pairTheory bagTheory prim_recTheory substTheory walkTheory walkstarTheory
 
 val _ = new_theory "redUnif"
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 
-val istep_def = Define`
+Definition istep_def:
   istep (sl,bl) (sr,br) <=>
-  (∃t. (br + {|(t, t)|} = bl) ∧
-       (sr = sl)) ∨
+  (∃t. br + {|(t, t)|} = bl ∧ sr = sl) ∨
   (∃t1a t1d t2a t2d.
     (br + {|(Pair t1a t1d, Pair t2a t2d)|} = {|(t1a,t2a); (t1d,t2d)|} + bl) ∧
     (sr = sl)) ∨
@@ -14,8 +16,9 @@ val istep_def = Define`
     ((bi + {|(Var v, t)|} = bl) ∨
      (bi + {|(t, Var v)|} = bl)) ∧
     v ∉ vars t ∧
-    (br = BAG_IMAGE (λ(t1,t2). ((FEMPTY|+(v,t)) ❜ t1, (FEMPTY|+(v,t)) ❜ t2)) bi) ∧
-    (sr = sl |+ (v,t)))`;
+    br = BAG_IMAGE (λ(t1,t2). ((FEMPTY|+(v,t)) ❜ t1, (FEMPTY|+(v,t)) ❜ t2)) bi ∧
+    sr = sl |+ (v,t))
+End
 
 val tstep_def = Define`
   tstep (sl,bl) (sr,br) <=>
@@ -67,7 +70,10 @@ RES_TAC);
 
 (*
 val istep_if_tstep = Q.store_thm(
-"istep_if_tstep", (* no! the substitutions won't be equal, they will be equivalent. istep gives an idempotent substitution whereas tstep gives a triangular one! *)
+"istep_if_tstep",
+  (* no! the substitutions won't be equal, they will be equivalent.
+     istep gives an idempotent substitution whereas tstep gives a triangular
+     one! *)
 `wfs sl ∧ tstep^* (sl,bl) (sr,br) ⇒ ∃br'. tstep^* (sl,bl) (sr,br')`,
 Q_TAC SUFF_TAC
 `∀x y. RTC tstep x y ⇒ wfs (FST x) ⇒ ∃br. RTC istep x (FST y,br)`
@@ -127,7 +133,8 @@ THEN1 (
   THEN1 METIS_TAC [RTC_RULES] THEN
   SRW_TAC [][tstep_def,Abbr`pi`] THEN
   DISJ2_TAC THEN DISJ1_TAC THEN
-  MAP_EVERY Q.EXISTS_TAC [`Pair t1a t1d`,`Pair t2a t2d`,`t1a`,`t1d`,`t2a`,`t2d`] THEN
+  MAP_EVERY Q.EXISTS_TAC
+  [`Pair t1a t1d`,`Pair t2a t2d`,`t1a`,`t1d`,`t2a`,`t2d`] THEN
 
 val tstep_if_unify = Q.store_thm(
 "tstep_if_unify",
@@ -175,7 +182,8 @@ THEN1 (MATCH_MP_TAC TC_SUBSET THEN SRW_TAC [][tstep_def])
 
 (*
 "unify_if_tstep",
-`tstep^+ (s,{|(t1,t2)|}) (sx,{||}) ⇒ ∃su. (unify s t1 t2 = SOME su) ∧ relate sx and su`
+`tstep^+ (s,{|(t1,t2)|}) (sx,{||}) ⇒
+  ∃su. (unify s t1 t2 = SOME su) ∧ relate sx and su`
 *)
 
 (* The above is more like Urban's paper. The below is following "Term rewriting
@@ -194,7 +202,8 @@ val istep_def = Define`
     (Var v, t) <: el ∧
     v ∉ vars t ∧
     ¬ BAG_EVERY el (λ(t1,t2) v ∉ vars t1 ∧ v ∉ vars t2) ∧
-    (er = {|(Var v, t)|} + BAG_IMAGE (el - (Var v, t)) (λ(t1,t2). ((FEMPTY|+(v,t)) ❜ t1, (FEMPTY|+(v,t)) ❜ t2))))`;
+    (er = {|(Var v, t)|} + BAG_IMAGE (el - (Var v, t))
+       (λ(t1,t2). ((FEMPTY|+(v,t)) ❜ t1, (FEMPTY|+(v,t)) ❜ t2))))`;
 
 val tstep_def = Define`
   tstep f (sl,el) (sr,er) =

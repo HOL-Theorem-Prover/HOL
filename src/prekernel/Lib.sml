@@ -162,15 +162,6 @@ fun zip [] [] = []
 
 fun combine (l1, l2) = zip l1 l2
 
-fun front_last l =
-  let
-     fun fl _ [] = raise ERR "front_last" "empty list"
-       | fl acc [x] = (List.rev acc, x)
-       | fl acc (h :: t) = fl (h :: acc) t
-  in
-     fl [] l
-  end
-
 fun butlast l =
    fst (front_last l) handle HOL_ERR _ => raise ERR "butlast" "empty list"
 

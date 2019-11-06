@@ -1,4 +1,8 @@
-open HolKernel boolLib bossLib ramanaLib Parse stringTheory arithmeticTheory finite_mapTheory pred_setTheory bagTheory pairTheory termTheory relationTheory prim_recTheory unifDefTheory substTheory walkTheory walkstarTheory
+open HolKernel boolLib bossLib ramanaLib Parse
+
+open stringTheory arithmeticTheory finite_mapTheory pred_setTheory bagTheory
+     pairTheory termTheory relationTheory prim_recTheory unifDefTheory
+     substTheory walkTheory walkstarTheory
 
 val _ = new_theory "unifProps"
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
@@ -65,13 +69,13 @@ SRW_TAC [][RTC_CASES_TC] THENL [
   METIS_TAC [TC_RULES]
 ]);
 
-val walkstar_extend = Q.store_thm(
-"walkstar_extend",
-`wfs s1 /\ wfs (s|+(vx,tx)) /\ vx NOTIN FDOM s /\
- (walkstar s1 (Var vx) = walkstar s1 (walkstar s tx)) ==>
-   !t.(walkstar s1 (walkstar (s|+(vx,tx)) t) = walkstar s1 (walkstar s t))`,
+Theorem walkstar_extend:
+  wfs s1 /\ wfs (s|+(vx,tx)) /\ vx NOTIN FDOM s /\
+  walkstar s1 (Var vx) = walkstar s1 (walkstar s tx) ==>
+     !t. walkstar s1 (walkstar (s|+(vx,tx)) t) = walkstar s1 (walkstar s t)
+Proof
 STRIP_TAC THEN
-`s SUBMAP (s|+(vx,tx)) /\ wfs s` by METIS_TAC [wfs_SUBMAP,SUBMAP_FUPDATE_EQN] THEN
+`s SUBMAP (s|+(vx,tx)) ∧ wfs s` by METIS_TAC [wfs_SUBMAP,SUBMAP_FUPDATE_EQN] >>
 HO_MATCH_MP_TAC (Q.INST[`s`|->`s|+(vx,tx)`]walkstar_ind) THEN
 SRW_TAC [][] THEN
 Cases_on `t` THEN SRW_TAC [][] THEN
@@ -134,19 +138,22 @@ val unify_same_lemma = prove(
   pop_assum mp_tac >>
   simp_tac std_ss [Once unify_def] >>
   Cases_on `walk s t1` >> rw[])
-val unify_same = store_thm("unify_same",
- ``∀s. wfs s ⇒ ∀t. unify s t t = SOME s``,
- PROVE_TAC[unify_same_lemma])
-val _ = export_rewrites["unify_same"]
+Theorem unify_same[simp]:
+   ∀s. wfs s ⇒ ∀t. unify s t t = SOME s
+Proof PROVE_TAC[unify_same_lemma]
+QED
 
-val wex = Q.prove(
-`wfs s1 /\ wfs (s|+(vx,tx)) /\
- (walkstar s1 (walk* s (Var vx)) = walkstar s1 (walkstar s tx)) /\ vx NOTIN FDOM s
- ==> !t.(walkstar s1 (walkstar (s|+(vx,tx)) t) = walkstar s1 (walkstar s t))`,
+Theorem wex[local]:
+  wfs s1 ∧ wfs (s|+(vx,tx)) ∧
+  walkstar s1 (walk* s (Var vx)) = walkstar s1 (walkstar s tx) ∧ vx ∉ FDOM s
+ ==>
+  !t. walkstar s1 (walkstar (s|+(vx,tx)) t) = walkstar s1 (walkstar s t)
+Proof
 STRIP_TAC THEN
 `wfs s` by METIS_TAC [wfs_SUBMAP,SUBMAP_FUPDATE_EQN] THEN
 FULL_SIMP_TAC (srw_ss()) [NOT_FDOM_vwalk] THEN
-METIS_TAC [walkstar_extend])
+METIS_TAC [walkstar_extend]
+QED
 
 val unify_mgu = Q.store_thm(
 "unify_mgu",
@@ -167,7 +174,7 @@ SRW_TAC [][Once unify_def] THENL [
   Cases_on `unify s t' t''` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
   `wfs x` by METIS_TAC [unify_uP,uP_def] THEN SRW_TAC [][] THEN
   MAP_EVERY (fn x => Q.PAT_X_ASSUM x ASSUME_TAC)
-    [`wfs s`,`unify x Y Z = SOME sx`,`wfs s2`,`walk s t1 = X`,`walk s t2 = X`] THEN
+    [`wfs s`,`unify x Y Z = SOME sx`,`wfs s2`,`walk s t1 = X`,`walk s t2 = X`]>>
   FULL_SIMP_TAC (srw_ss()) [],
   METIS_TAC [walkstar_walk,wex,walk_to_var]
 ])
@@ -272,7 +279,7 @@ val oc_subterm_neq = Q.store_thm(
  walk* s2 (Var v) ≠ walk* s2 (walk* s t)`,
 STRIP_TAC THEN
 `v ∈ vars (walk* s t)` by METIS_TAC [oc_eq_vars_walkstar,IN_DEF] THEN
-`∀w. (walk* s t) ≠ Var w` by (Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) []) THEN
+`∀w. (walk* s t) ≠ Var w` by (Cases_on `t` >> fs[]) THEN
 IMP_RES_TAC vars_measure THEN
 SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [measure_thm])

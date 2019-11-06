@@ -3,4 +3,4 @@ INCLUDES = $(HOLDIR)/tools/cmp $(proj2)
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = input output selftest.exe
+EXTRA_CLEANS = output selftest.exe

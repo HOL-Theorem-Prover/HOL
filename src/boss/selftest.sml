@@ -248,3 +248,29 @@ val _ = new_constant("foo", “:'a -> num”)
 val _ = tprint "find 'a finds new constant"
 val _ = require_msg (check_result (tmem “foo”)) (listprint term_to_string)
                     find_consts “:'a”
+
+
+val _ = new_constant ("split", ``:num list -> (num list # num list) ``)
+local
+  val quotation = `
+  bar Γ =
+    case split Γ of
+        (Γ1, Γ2) => if EVEN (bar Γ1) then 2 else bar Γ2`
+
+  val mkdef = quietly (Defn.mk_defn "bar")
+  fun test q =
+      let
+        val (tm,_) = Defn.parse_absyn (Parse.Absyn q)
+      in
+        (mkdef tm, mkdef tm)
+      end
+  fun is_nested (DefnBase.NESTREC _ ) = true | is_nested _ = false
+  fun check_defs (d1,d2) =
+      is_nested d1 andalso is_nested d2 andalso
+      length (Defn.tcs_of d1) = length (Defn.tcs_of d2)
+  val ppd = PP.pp_to_string 65 DefnBase.pp_defn
+  fun prdefpair (d1,d2) = ppd d1 ^ "\n   vs\n" ^ ppd d2
+in
+val _ = tprint "TFL nested recursion + Unicode parameter name"
+val _ = require_msg (check_result check_defs) prdefpair test quotation
+end

@@ -368,7 +368,7 @@ val STRONG_EQUIV_PRESD_BY_PAR = store_thm (
  *)
 val STRONG_EQUIV_SUBST_PAR_R = save_thm (
    "STRONG_EQUIV_SUBST_PAR_R",
-    Q_GENL [`E`, `E'`]
+    Q.GENL [`E`, `E'`]
        (DISCH_ALL
         (GEN_ALL
          (UNDISCH
@@ -383,7 +383,7 @@ val STRONG_EQUIV_SUBST_PAR_R = save_thm (
  *)
 val STRONG_EQUIV_SUBST_PAR_L = save_thm (
    "STRONG_EQUIV_SUBST_PAR_L",
-    Q_GENL [`E`, `E'`]
+    Q.GENL [`E`, `E'`]
        (DISCH_ALL
         (GEN_ALL
          (UNDISCH

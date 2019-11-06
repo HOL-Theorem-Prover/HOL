@@ -124,13 +124,14 @@ val WBISIM_def = new_definition ("WBISIM_def",
 
 (* Weak bisimilarity, see WBISIM_REL_def for an alternative definition *)
 CoInductive WBISIM_REL :
-    !p q.
-          (!l. l <> tau ==>
-            (!p'. ts p l p' ==> ?q'. (WTS ts tau) q l q' /\ (WBISIM_REL ts tau) p' q') /\
-            (!q'. ts q l q' ==> ?p'. (WTS ts tau) p l p' /\ (WBISIM_REL ts tau) p' q')) /\
-          (!p'. ts p tau p' ==> ?q'. (ETS ts tau) q   q' /\ (WBISIM_REL ts tau) p' q') /\
-          (!q'. ts q tau q' ==> ?p'. (ETS ts tau) p   p' /\ (WBISIM_REL ts tau) p' q')
-      ==> (WBISIM_REL ts tau) p q
+  !p q.
+    (!l. l <> tau ==>
+      (!p'. ts p l p' ==> ?q'. WTS ts tau q l q' /\ WBISIM_REL ts tau p' q') /\
+      (!q'. ts q l q' ==> ?p'. WTS ts tau p l p' /\ WBISIM_REL ts tau p' q')) /\
+    (!p'. ts p tau p' ==> ?q'. ETS ts tau q   q' /\ WBISIM_REL ts tau p' q') /\
+    (!q'. ts q tau q' ==> ?p'. ETS ts tau p   p' /\ WBISIM_REL ts tau p' q')
+   ==>
+    WBISIM_REL ts tau p q
 End
 
 Theorem TS_IMP_ETS :
@@ -194,9 +195,10 @@ Proof
     SRW_TAC[][WBISIM_def, inv_DEF] >> METIS_TAC []
 QED
 
-val lemma2 = prove (
-  ``!p p'. (ETS ts tau) p p' ==>
-           !R q. WBISIM ts tau R /\ R p q ==> ?q'. (ETS ts tau) q q' /\ R p' q'``,
+Theorem lemma2[local]:
+  !p p'. (ETS ts tau) p p' ==>
+         !R q. WBISIM ts tau R /\ R p q ==> ?q'. (ETS ts tau) q q' /\ R p' q'
+Proof
     HO_MATCH_MP_TAC lemma1
  >> SRW_TAC[][]
  >| [ (* goal 1 (of 3) *)
@@ -212,7 +214,8 @@ val lemma2 = prove (
       Q.EXISTS_TAC `q''` >> ASM_REWRITE_TAC [] \\
       FULL_SIMP_TAC (srw_ss()) [ETS_def] \\
       MATCH_MP_TAC (REWRITE_RULE [transitive_def] RTC_TRANSITIVE) \\
-      Q.EXISTS_TAC `q'` >> ASM_REWRITE_TAC [] ]);
+      Q.EXISTS_TAC `q'` >> ASM_REWRITE_TAC [] ]
+QED
 
 val lemma2' = prove (
   ``!q q'. (ETS ts tau) q q' ==>

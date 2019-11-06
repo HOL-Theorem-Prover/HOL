@@ -19,10 +19,10 @@ datatype File =
        | DAT of string
        | Unhandled of string
 
-(* file lists are dependencies *)
-datatype buildcmds = Compile of File list
-                   | BuildScript of string * File list
-                   | BuildArticle of string * File list
-                   | ProcessArticle of string
+datatype ('dep,'extra) buildcmds =
+         Compile of 'dep list * 'extra
+       | BuildScript of string * 'dep list * 'extra
+       | BuildArticle of string * 'dep list * 'extra
+       | ProcessArticle of string * 'extra
 
 end

@@ -5,6 +5,8 @@
 (* DATE          : 2018                                                      *)
 (* ========================================================================= *)
 
+
+(* todo: make it more general *)
 structure mleRewrite :> mleRewrite =
 struct
 
@@ -18,12 +20,16 @@ val ERR = mk_HOL_ERR "mleRewrite"
    ------------------------------------------------------------------------- *)
 
 type pos = int list
-type board = (term * pos)
+type board = ((term * pos) * int)
 
-fun mk_startsit tm = (tm,[])
-fun dest_startsit (tm,_) = tm
+fun mk_startsit tm = ((tm,[]), 2 * lo_prooflength 200 tm + 2)
+fun dest_startsit ((tm,_),_) = tm
 
-fun status_of (tm,_) = if is_suc_only tm then Win else Undecided
+(* search and networks have to be aware of the length of the proof *)
+fun status_of ((tm,_),n) =
+  if is_suc_only tm then Win
+  else if n <= 0 then Lose
+  else Undecided
 
 (* -------------------------------------------------------------------------
    Neural network units and inputs
@@ -45,7 +51,7 @@ val rewrite_operl =
     mk_fast_set oper_compare operl'
   end
 
-fun nntm_of_sit (tm,pos) = tag_pos (tm,pos)
+fun nntm_of_sit ((tm,pos),_) = tag_pos (tm,pos)
 
 (* -------------------------------------------------------------------------
    Move
@@ -67,11 +73,9 @@ fun move_compare (m1,m2) = case (m1,m2) of
   | (Paramod (i1,b1), Paramod (i2,b2)) =>
     (cpl_compare Int.compare bool_compare) ((i1,b1),(i2,b2))
 
-fun bts b = if b then "t" else "f"
-
 fun string_of_move move = case move of
     Arg n => ("A" ^ its n)
-  | Paramod (i,b) => ("P" ^ its i ^ bts b)
+  | Paramod (i,b) => ("P" ^ its i ^ (if b then "t" else "f"))
 
 fun narg tm = length (snd (strip_comb tm))
 
@@ -85,21 +89,19 @@ fun paramod_pb (i,b) (tm,pos) =
     (valOf tmo,[])
   end
 
-fun available (tm,pos) (move,r:real) = case move of
+fun available ((tm,pos),_) (move,r:real) = case move of
     Arg i => (narg (find_subtm (tm,pos)) >= i + 1)
   | Paramod (i,b) => can (paramod_pb (i,b)) (tm,pos)
 
-fun apply_move move (tm,pos) = case move of
-    Arg n => argn_pb n (tm,pos)
-  | Paramod (i,b) => paramod_pb (i,b) (tm,pos)
+fun apply_move move ((tm,pos),step) = case move of
+    Arg n => (argn_pb n (tm,pos), step - 1)
+  | Paramod (i,b) => (paramod_pb (i,b) (tm,pos), step - 1)
 
-fun filter_sit (tm,pos) = List.filter (available (tm,pos))
+fun filter_sit sit = List.filter (available sit)
 
 (* -------------------------------------------------------------------------
    Target
    ------------------------------------------------------------------------- *)
-
-fun lo_prooflength_target (tm,_) = lo_prooflength 200 tm
 
 fun write_targetl file targetl =
   let val tml = map dest_startsit targetl in
@@ -111,7 +113,7 @@ fun read_targetl file =
     map mk_startsit tml
   end
 
-fun max_bigsteps target = 2 * lo_prooflength_target target + 1
+fun max_bigsteps target = snd target + 1
 
 (* -------------------------------------------------------------------------
    Level
@@ -159,6 +161,7 @@ val gamespec : (board,move) mlReinforce.gamespec =
   }
 
 val extspec = mk_extspec "mleRewrite.extspec" gamespec
+val test_extspec = test_mk_extspec "mleRewrite.test_extspec" gamespec
 
 (* -------------------------------------------------------------------------
    Statistics
@@ -166,7 +169,7 @@ val extspec = mk_extspec "mleRewrite.extspec" gamespec
 
 fun maxprooflength_atgen () =
   let val tml = import_terml (dataarith_dir ^ "/train_plsorted") in
-    map (list_imax o map (lo_prooflength 200)) (mk_batch 400 tml)
+    map (list_imax o map (lo_prooflength 1000)) (mk_batch 400 tml)
   end
 
 fun stats_prooflength file =
@@ -187,12 +190,12 @@ fun stats_prooflength file =
 load "mleRewrite"; open mleRewrite;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "mlReinforce"; open mlReinforce;
+load "smlParallel"; open smlParallel;
 load "aiLib"; open aiLib;
 
-logfile_glob := "mleRewrite_run40";
-parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
-(!logfile_glob);
-ncore_mcts_glob := 8;
+logfile_glob := "mleRewrite_run41";
+parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
+ncore_mcts_glob := 16;
 ncore_train_glob := 4;
 ntarget_compete := 400;
 ntarget_explore := 400;
@@ -205,8 +208,8 @@ decay_glob := 0.99;
 level_glob := 1;
 nsim_glob := 1600;
 nepoch_glob := 100;
-ngen_glob := 20
-start_rl_loop (gamespec,extspec);
+ngen_glob := 100;
+val r = start_rl_loop (gamespec,extspec);
 *)
 
 (* -------------------------------------------------------------------------
@@ -228,5 +231,81 @@ val tree = mcts_test 10000 gamespec (random_dhtnn_gamespec gamespec)
 val nodel = trace_win (#status_of gamespec) tree [];
 
 *)
+
+(* -------------------------------------------------------------------------
+   Final test
+   ------------------------------------------------------------------------- *)
+
+fun final_stats l =
+  let
+    val winl = filter (fn (_,b,_) => b) l
+    val a = length winl
+    val atot = length l
+    val b = sum_int (map (fn (_,_,n) => n) winl)
+    val btot = sum_int (map (fn (t,_,_) =>
+      (lo_prooflength 200 o dest_startsit) t) winl)
+  in
+    ((a,atot,int_div a atot), (b,btot, int_div b btot))
+  end
+
+fun final_eval fileout dhtnn set =
+  let
+    val l = test_compete test_extspec dhtnn (map mk_startsit set)
+    val ((a,atot,ar),(b,btot,br)) = final_stats l
+    val cr = br * ar + 2.0 * (1.0 - ar)
+    val s =
+      String.concatWith " " [its a,its atot,rts ar,
+                             its b,its btot,rts br,rts cr]
+  in
+    writel fileout [fileout,s]
+  end
+
+
+(*
+load "aiLib"; open aiLib;
+load "mleArithData"; open mleArithData;
+load "mleLib"; open mleLib;
+load "mlReinforce"; open mlReinforce;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "psMCTS"; open psMCTS;
+load "mlTacticData"; open mlTacticData;
+load "mleRewrite"; open mleRewrite;
+
+decay_glob := 0.99;
+ncore_mcts_glob := 40;
+
+val test = import_terml (dataarith_dir ^ "/test");
+val (test1,test2) =
+  let val l = mapfilter (fn x => (x,(lo_prooflength 200) x)) test in
+    (map fst (filter (fn x => snd x >= 0 andalso snd x <= 89) l),
+     map fst (filter (fn x => snd x >= 90 andalso snd x <= 130) l))
+  end
+;
+
+exception Read;
+fun read_ntest n =
+  if n = 1 then test1 else if n = 2 then test2 else raise Read;
+fun read_ndhtnn n =
+  read_dhtnn (eval_dir ^ "/mleRewrite_run41_gen" ^ its n ^ "_dhtnn");
+
+val paraml = [(0,1),(13,1),(31,1),(13,2),(31,2)];
+val nsiml = [1,16,160,1600];
+val paraml2 = cartesian_product nsiml paraml;
+
+fun final_eval_one (nsim,(ndhtnn,ntest)) =
+  let
+    val dhtnn = read_ndhtnn ndhtnn
+    val set = read_ntest ntest
+    val _ = nsim_glob := nsim
+    val suffix =
+      "ngen" ^ its ndhtnn ^ "-ntest" ^ its ntest ^ "-nsim" ^ its nsim
+    val file = eval_dir ^ "/a_rw_" ^ suffix
+  in
+    final_eval file dhtnn set
+  end;
+
+app final_eval_one paraml2;
+*)
+
 
 end (* struct *)

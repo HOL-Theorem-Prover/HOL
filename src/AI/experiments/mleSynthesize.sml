@@ -29,12 +29,24 @@ fun is_ground tm = not (tmem active_var (free_vars_lr tm))
 val synt_operl = [(active_var,0)] @ operl_of ``SUC 0 + 0 = 0 * 0``
 fun nntm_of_sit ((ctm,_),tm) = mk_eq (ctm,tm)
 
-fun status_of ((ctm,n),tm) =
+fun normal_status_of ((ctm,n),tm) =
   let val ntm = mk_sucn n in
     if term_eq ntm tm then Win
     else if is_ground tm orelse term_size tm > 2 * n + 1 then Lose
     else Undecided
   end
+
+fun copy_status_of ((ctm,n),tm) =
+  if term_eq ctm tm then Win
+  else if is_ground tm orelse term_size tm > 2 * (term_size ctm) + 1 then Lose
+  else Undecided
+
+fun eval_status_of ((ctm,n),tm) =
+  if is_ground tm andalso mleArithData.eval_numtm tm = n then Win
+  else if is_ground tm orelse
+    term_size tm > 2 * Int.min (n,term_size ctm) + 1
+    then Lose
+  else Undecided
 
 (* -------------------------------------------------------------------------
    Move
@@ -68,69 +80,109 @@ fun read_targetl file =
     map mk_startsit tml
   end
 
-fun max_bigsteps target = 2 * term_size (dest_startsit target) + 1
+fun max_bigsteps ((ctm,n),_) = 4 * Int.max (n,term_size ctm) + 5
 
 (* -------------------------------------------------------------------------
    Level
    ------------------------------------------------------------------------- *)
 
-fun create_train_evalsorted () =
+val train_file = dataarith_dir ^ "/train"
+fun min_sizeeval x = Int.min (term_size x, eval_numtm x)
+
+fun order_train baseout f =
   let
-    val filein = dataarith_dir ^ "/train"
-    val fileout = dataarith_dir ^ "/train_evalsorted"
-    val l1 = import_terml filein ;
-    val l2 = map (fn x => (x, eval_numtm x)) l1
-    val l3 = filter (fn x => snd x <= 100) l2
-    val l4 = dict_sort compare_imin l3
+    val l1 = import_terml train_file
+    val l2 = map (fn x => (x, f x)) l1
+    val l3 = dict_sort compare_imin l2
   in
-    export_terml fileout (map fst l4)
+    export_terml (dataarith_dir ^ "/" ^ baseout) (map fst l3)
   end
 
-fun mk_targetl level ntarget =
+fun mk_targetl basein level ntarget =
   let
-    val tml = mlTacticData.import_terml (dataarith_dir ^ "/train_evalsorted")
-    val tmll = map shuffle (first_n level (mk_batch 400 tml))
-    val tml2 = List.concat (list_combine tmll)
+    val tml1 = import_terml (dataarith_dir ^ "/" ^ basein)
+    val tmll2 = map shuffle (first_n level (mk_batch 400 tml1))
+    val tml3 = List.concat (list_combine tmll2)
   in
-    map mk_startsit (first_n ntarget tml2)
+    map mk_startsit (first_n ntarget tml3)
   end
+
+fun create_sorteddata () =
+  (
+  order_train "train_evalsorted" eval_numtm;
+  order_train "train_sizesorted" term_size;
+  order_train "train_sizeevalsorted" min_sizeeval
+  )
 
 (* -------------------------------------------------------------------------
-   Interface
+   Interfaces: normal, copy, eval
    ------------------------------------------------------------------------- *)
 
-val gamespec : (board,move) mlReinforce.gamespec =
+val normal_gamespec =
   {
   movel = movel,
   move_compare = move_compare,
-  status_of = status_of,
+  status_of = normal_status_of,
   filter_sit = filter_sit,
   apply_move = apply_move,
   operl = synt_operl,
   nntm_of_sit = nntm_of_sit,
-  mk_targetl = mk_targetl,
+  mk_targetl = mk_targetl "train_evalsorted",
   write_targetl = write_targetl,
   read_targetl = read_targetl,
   string_of_move = string_of_move,
   max_bigsteps = max_bigsteps
   }
 
-type dhex = (term * real list * real list) list
-type dhtnn = mlTreeNeuralNetwork.dhtnn
-type flags = bool * bool * bool
+val normal_extspec = mk_extspec "mleSynthesize.normal_extspec" normal_gamespec
 
-val extspec : (flags * dhtnn, board, bool * dhex)
-  smlParallel.extspec = mk_extspec "mleSynthesize.extspec" gamespec
+val copy_gamespec =
+  {
+  movel = movel,
+  move_compare = move_compare,
+  status_of = copy_status_of,
+  filter_sit = filter_sit,
+  apply_move = apply_move,
+  operl = synt_operl,
+  nntm_of_sit = nntm_of_sit,
+  mk_targetl = mk_targetl "train_sizesorted",
+  write_targetl = write_targetl,
+  read_targetl = read_targetl,
+  string_of_move = string_of_move,
+  max_bigsteps = max_bigsteps
+  }
+
+val copy_extspec = mk_extspec "mleSynthesize.copy_extspec" copy_gamespec
+
+val eval_gamespec =
+  {
+  movel = movel,
+  move_compare = move_compare,
+  status_of = eval_status_of,
+  filter_sit = filter_sit,
+  apply_move = apply_move,
+  operl = synt_operl,
+  nntm_of_sit = nntm_of_sit,
+  mk_targetl = mk_targetl "train_sizeevalsorted",
+  write_targetl = write_targetl,
+  read_targetl = read_targetl,
+  string_of_move = string_of_move,
+  max_bigsteps = max_bigsteps
+  }
+
+val eval_extspec = mk_extspec "mleSynthesize.eval_extspec" eval_gamespec
+val test_eval_extspec =
+  test_mk_extspec "mleSynthesize.test_eval_extspec" eval_gamespec
 
 (* -------------------------------------------------------------------------
    Statistics
    ------------------------------------------------------------------------- *)
 
-fun maxeval_atgen () =
+fun max_sizeeval_atgen () =
   let
     val tml = mlTacticData.import_terml (dataarith_dir ^ "/train_evalsorted")
   in
-    map (list_imax o map eval_numtm) (mk_batch 400 tml)
+    map (list_imax o map min_sizeeval) (mk_batch 400 tml)
   end
 
 fun stats_eval file =
@@ -143,5 +195,133 @@ fun stats_eval file =
   in
     map_snd length l2
   end
+
+(* -------------------------------------------------------------------------
+   Reinforcement learning
+   ------------------------------------------------------------------------- *)
+
+(*
+load "mleSynthesize"; open mleSynthesize;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "mlReinforce"; open mlReinforce;
+load "smlParallel"; open smlParallel;
+load "aiLib"; open aiLib;
+
+(* create_sorteddata (); *)
+
+ncore_mcts_glob := 12;
+ncore_train_glob := 4;
+ntarget_compete := 400;
+ntarget_explore := 400;
+exwindow_glob := 40000;
+uniqex_flag := false;
+dim_glob := 12;
+lr_glob := 0.02;
+batchsize_glob := 16;
+decay_glob := 0.99;
+level_glob := 1;
+nsim_glob := 1600;
+nepoch_glob := 100;
+ngen_glob := 100;
+
+logfile_glob := "mleSynthesize_normal1";
+parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
+val r = start_rl_loop (normal_gamespec,normal_extspec);
+
+logfile_glob := "mleSynthesize_copy1";
+parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
+val r = start_rl_loop (copy_gamespec,copy_extspec);
+
+logfile_glob := "mleSynthesize_eval1";
+parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
+val r = start_rl_loop (eval_gamespec,eval_extspec);
+*)
+
+(* -------------------------------------------------------------------------
+   Small test
+   ------------------------------------------------------------------------- *)
+
+(*
+load "mleRewrite"; open mleRewrite;
+load "mlReinforce"; open mlReinforce;
+load "psMCTS"; open psMCTS;
+nsim_glob := 10000;
+decay_glob := 0.9;
+val _ = n_bigsteps_test gamespec (random_dhtnn_gamespec gamespec)
+(mk_startsit ``SUC 0 * SUC 0``);
+
+dim_glob := 4;
+val tree = mcts_test 10000 gamespec (random_dhtnn_gamespec gamespec)
+(mk_startsit ``SUC (SUC 0) + SUC 0``);
+val nodel = trace_win (#status_of gamespec) tree [];
+
+*)
+
+(* -------------------------------------------------------------------------
+   Final test
+   ------------------------------------------------------------------------- *)
+
+fun final_stats l =
+  let
+    val winl = filter (fn (_,b,_) => b) l
+    val a = length winl
+    val atot = length l
+    val b = sum_int (map (fn (_,_,n) => n) winl)
+    val btot = sum_int (map (fn (t,_,_) =>
+      (term_size o dest_startsit) t) winl)
+  in
+    ((a,atot,int_div a atot), (b,btot, int_div b btot))
+  end
+
+fun final_eval fileout dhtnn set =
+  let
+    val l = test_compete test_eval_extspec dhtnn (map mk_startsit set)
+    val ((a,atot,ar),(b,btot,br)) = final_stats l
+    val cr = br * ar + 2.0 * (1.0 - ar)
+    val s =
+      String.concatWith " " [its a,its atot,rts ar,
+                             its b,its btot,rts br,rts cr]
+  in
+    writel fileout [fileout,s]
+  end
+
+
+(*
+load "aiLib"; open aiLib;
+load "mleArithData"; open mleArithData;
+load "mleLib"; open mleLib;
+load "mlReinforce"; open mlReinforce;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "psMCTS"; open psMCTS;
+load "mlTacticData"; open mlTacticData;
+load "mleSynthesize"; open mleSynthesize;
+
+decay_glob := 0.99;
+ncore_mcts_glob := 40;
+
+val testset = import_terml (dataarith_dir ^ "/test");
+fun read_ndhtnn n =
+  read_dhtnn (eval_dir ^ "/mleSynthesize_eval1_gen" ^ its n ^ "_dhtnn");
+
+val genl = [0,10,99];
+val nsiml = [1,16,160,1600];
+val paraml = cartesian_product nsiml genl;
+
+fun final_eval_one (nsim,ndhtnn) =
+  let
+    val dhtnn = read_ndhtnn ndhtnn
+    val _ = nsim_glob := nsim
+    val suffix =  "ngen" ^ its ndhtnn ^ "-nsim" ^ its nsim
+    val file = eval_dir ^ "/a_synteval_" ^ suffix
+  in
+    final_eval file dhtnn testset
+  end;
+
+val _ = app final_eval_one paraml;
+*)
+
+
+
+
 
 end (* struct *)

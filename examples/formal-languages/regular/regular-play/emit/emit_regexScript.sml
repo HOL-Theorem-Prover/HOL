@@ -12,21 +12,7 @@ open regexCachedMarkedTheory;
 val _ = new_theory "emit_regex";
 
 
-
-
-(* prepare empty directory *)
-(* ============================================================================================== *)
-
-val emitDir = OS.Path.concat(OS.FileSys.getDir(), "../emit");
-
-val _ = ignore (OS.Process.system ("rm -rf " ^ emitDir));
-
-val _ = if (not (OS.FileSys.access(emitDir, []))) then (OS.FileSys.mkDir emitDir) else ();
-
-
-
-
-
+val emitDir = OS.FileSys.getDir()
 
 (* emit the regexEMCML library *)
 (* ============================================================================================== *)
@@ -91,5 +77,3 @@ copyDep "rich_list";
 
 
 val _ = export_theory ();
-
-

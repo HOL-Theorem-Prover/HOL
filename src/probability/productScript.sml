@@ -20,9 +20,9 @@
 open HolKernel Parse boolLib bossLib;
 
 open numLib unwindLib tautLib Arith prim_recTheory combinTheory quotientTheory
-     arithmeticTheory hrealTheory realaxTheory realTheory realLib jrhUtils
+     arithmeticTheory realaxTheory realTheory realLib jrhUtils
      pairTheory seqTheory limTheory transcTheory listTheory mesonLib
-     boolTheory pred_setTheory optionTheory numTheory
+     boolTheory pred_setTheory optionTheory numTheory hurdUtils
      sumTheory InductiveDefinition ind_typeTheory;
 
 open cardinalTheory iterateTheory;
@@ -33,7 +33,6 @@ val _ = new_theory "product";
 (* MESON, METIS, ASSERT_TAC, ASM_ARITH_TAC                                   *)
 (* ------------------------------------------------------------------------- *)
 
-fun K_TAC _ = ALL_TAC;
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
@@ -530,7 +529,7 @@ val PRODUCT_CLOSED = store_thm ("PRODUCT_CLOSED",
  ``!P f:'a->real s.
         P(&1) /\ (!x y. P x /\ P y ==> P(x * y)) /\ (!a. a IN s ==> P(f a))
         ==> P(product s f)``,
-  REPEAT STRIP_TAC THEN MP_TAC(MATCH_MP ITERATE_CLOSED MONOIDAL_REAL_MUL) THEN
+  rpt STRIP_TAC THEN MP_TAC(MATCH_MP ITERATE_CLOSED MONOIDAL_REAL_MUL) THEN
   DISCH_THEN(MP_TAC o SPEC ``P:real->bool``) THEN
   ASM_SIMP_TAC std_ss [NEUTRAL_REAL_MUL, GSYM product]);
 

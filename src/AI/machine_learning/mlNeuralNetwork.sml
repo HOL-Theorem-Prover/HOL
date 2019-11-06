@@ -39,12 +39,8 @@ type layer = {a : real -> real, da : real -> real, w : real vector vector}
 type nn = layer list
 
 (* inv includes biais *)
-type fpdata =
-  {layer : layer, inv : real vector, outv : real vector, outnv : real vector}
-
-type bpdata =
-  {doutnv: real vector, doutv: real vector, dinv: real vector,
-   dw: real vector vector}
+type fpdata = {layer : layer, inv : vect, outv : vect, outnv : vect}
+type bpdata = {doutnv : vect, doutv : vect, dinv : vect, dw : mat}
 
 (*---------------------------------------------------------------------------
   Initialization
@@ -125,33 +121,26 @@ fun read_nn_sl sl =
 
 fun read_nn file = read_nn_sl (readl file)
 
-
-fun string_of_ex (v1,v2) =
-  let fun f v = reall_to_string (vector_to_list v) in
-    f v1 ^ "," ^ f v2
-  end
-
+fun string_of_ex (l1,l2) = reall_to_string l1 ^ "," ^ reall_to_string l2
 fun write_exl file exl = writel file (map string_of_ex exl)
 
 fun ex_of_string s =
   let val (a,b) = pair_of_list (String.tokens (fn x => x = #",") s) in
-    (Vector.fromList (string_to_reall a),
-     Vector.fromList (string_to_reall b))
+    (string_to_reall a, string_to_reall b)
   end
-
 fun read_exl file = map ex_of_string (readl file)
 
-(*---------------------------------------------------------------------------
-  Biais
-  ---------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   Biais
+   ------------------------------------------------------------------------- *)
 
 val biais = Vector.fromList [1.0]
 fun add_biais v = Vector.concat [biais,v]
 fun rm_biais v = Vector.fromList (tl (vector_to_list v))
 
-(*---------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
   Forward propagation (fp) with memory of the steps
-  ---------------------------------------------------------------------------*)
+  -------------------------------------------------------------------------- *)
 
 fun fp_layer (layer : layer) inv =
   let
@@ -167,13 +156,11 @@ fun fp_nn nn v = case nn of
   | layer :: m =>
     let val fpdata = fp_layer layer v in fpdata :: fp_nn m (#outnv fpdata) end
 
-fun infer_nn nn v = #outnv (last (fp_nn nn v))
-
-(*--------------------------------------------------------------------------
-  Backward propagation (bp)
-  Takes the data from the forward pass, computes the loss and weight updates
-  by gradient descent. Input is j. Output is i. Matrix is Mij.
-  -------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Backward propagation (bp)
+   Takes the data from the forward pass, computes the loss and weight updates
+   by gradient descent. Input is j. Output is i. Matrix is Mij.
+   ------------------------------------------------------------------------- *)
 
 fun bp_layer (fpdata:fpdata) doutnv =
   let
@@ -254,6 +241,23 @@ fun update_layer (layer, layerwu) =
 fun update_nn nn wu = map update_layer (combine (nn,wu))
 
 (* -------------------------------------------------------------------------
+   Statistics
+   ------------------------------------------------------------------------- *)
+
+val show_stats = ref false
+
+fun sr r = pad 5 "0" (rts_round 3 r)
+
+fun stats_exl exl =
+  let
+    val ll = list_combine (map snd exl)
+    fun f l =
+      print_endline (sr (average_real l ) ^ " " ^ sr (absolute_deviation l))
+  in
+    print_endline "mean deviation"; app f ll
+  end
+
+(* -------------------------------------------------------------------------
    Training
    ------------------------------------------------------------------------- *)
 
@@ -283,16 +287,41 @@ fun train_nn_epoch ncore lossl nn batchl  = case batchl of
       train_nn_epoch ncore (loss :: lossl) newnn m
     end
 
-fun train_nn ncore n nn bsize exl =
-  if n <= 0 then nn else
+fun train_nn_aux ncore nepoch nn bsize exl =
+  if nepoch <= 0 then nn else
   let
     val batchl = mk_batch bsize (shuffle exl)
     val (new_nn,loss) = train_nn_epoch ncore [] nn batchl
-    val _ = print_endline (its n ^ " " ^ Real.toString loss)
+    val _ =
+      if !show_stats
+      then print_endline (its nepoch ^ " " ^ Real.toString loss)
+      else ()
   in
-    train_nn ncore (n - 1) new_nn bsize exl
+    train_nn_aux ncore (nepoch - 1) new_nn bsize exl
   end
 
+(* -------------------------------------------------------------------------
+   Interface:
+   - Scaling from [0,1] to [-1,1] to match activation functions range.
+   - Converting lists to vectors
+   ------------------------------------------------------------------------- *)
+
+fun scale_real x = x * 2.0 - 1.0
+fun descale_real x = (x + 1.0) * 0.5
+fun scale_in l = Vector.fromList (map scale_real l)
+fun scale_out l = Vector.fromList (map scale_real l)
+fun descale_out v = map descale_real (vector_to_list v)
+fun scale_ex (l1,l2) = (scale_in l1, scale_out l2)
+
+fun train_nn ncore nepoch nn bsize exl =
+  let
+    val _ = if !show_stats then stats_exl exl else ()
+    val newexl = map scale_ex exl
+  in
+    train_nn_aux ncore nepoch nn bsize newexl
+  end
+
+fun infer_nn nn l = (descale_out o #outnv o last o (fp_nn nn) o scale_in) l
 
 end (* struct *)
 
@@ -316,7 +345,7 @@ val bsize = 16;
 val nepoch = 100;
 val ncore = 1;
 val exl = List.tabulate (1000, fn _ => gen_idex dim);
-val nn = random_nn (tanh,dtanh) [10,20,10];
+val nn = random_nn (tanh,dtanh) [dim,2* dim,dim];
 val (newnn,t) = add_time (train_nn ncore nepoch nn bsize) exl;
 val inv = fst (gen_idex dim);
 val outv = infer_nn newnn inv;

@@ -24,7 +24,7 @@ if !show_assums then () else
 
 open bossLib pairTheory pred_setTheory
      res_quanTheory arithmeticTheory extra_numTheory
-     HurdUseful ho_basicTools ho_proverTools res_quanTools
+     hurdUtils ho_basicTools ho_proverTools res_quanTools
      subtypeTools boolContext prim_recTheory;
 
 infixr 0 ++ || ORELSEC ## THENC THEN_TCL ORELSE_TCL |->;

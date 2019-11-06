@@ -1,15 +1,2 @@
 INCLUDES=tools deep_embeddings translations model_check examples
-
-.PHONY: all clean world 
-
-all:
-
-clean:
-	cd tools; Holmake cleanAll; cd ..
-	cd deep_embeddings; Holmake cleanAll; cd ..
-	cd translations; Holmake cleanAll; cd ..
-	cd model_check; Holmake cleanAll; cd ..
-	cd examples; Holmake cleanAll; cd ..
-
-world: clean all
-
+CLINE_OPTIONS = -r

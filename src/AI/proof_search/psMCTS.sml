@@ -102,17 +102,11 @@ fun interval (step:real) (a,b) =
 fun gamma_distrib alpha =
   map_assoc (gamma_density alpha) (interval 0.01 (0.01,10.0));
 
-fun proba_norm l =
-  let val sum = sum_real l in
-    if sum <= 0.0001 then raise ERR "proba_norm" "" else
-    map (fn x => x / sum) l
-  end
-
 fun dirichlet_noise alpha n =
   if n = 0 then [] else
   let val l =
     List.tabulate (n, fn _ => select_in_distrib (gamma_distrib alpha)) in
-    proba_norm l
+    normalize_proba l
   end
 
 fun add_root_noise tree =

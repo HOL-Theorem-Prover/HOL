@@ -1,3 +1,7 @@
+ifdef POLY
+CLINE_OPTIONS = --holstate=../../../../../bin/hol.state0
+endif
+
 all:
 	$(CP) Holmakefile output
 	$(protect $(HOLDIR)/tools/cmp/cmp.exe) Holmakefile output

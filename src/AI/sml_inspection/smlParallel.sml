@@ -328,7 +328,7 @@ fun code_of_extspec extspec wid =
     "open smlParallel;",
     "val _ = parallel_dir := " ^ quote (!parallel_dir) ^ ";",
     "val _ = " ^ #reflect_globals extspec () ^ ";",
-    "worker_start " ^ its wid ^ s ^ ";"
+    "worker_start " ^ its wid ^ " " ^ s ^ ";"
     ]
   end
 

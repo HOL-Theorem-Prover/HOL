@@ -27,7 +27,7 @@
 structure Thm_cont :> Thm_cont =
 struct
 
-open Feedback HolKernel Drule boolSyntax Abbrev;
+open Feedback HolKernel Drule boolSyntax Abbrev Conv;
 
 val ERR = mk_HOL_ERR "Thm_cont"
 
@@ -438,18 +438,27 @@ end
 (* ----------------------------------------------------------------------
     PROVEHYP_THEN ttac th
 
-    th must be of form |- l ==> r
+    th must be of form |- !x1..xn. l ==> r x1..xn
 
     Application of tactic sets up l as a subgoal, and in the second
-    branch applies ttac to |- r
+    branch applies ttac to |- !x1..xn. r x1..xn
    ---------------------------------------------------------------------- *)
 
-fun PROVEHYP_THEN t2tac th g =
-  let
-    val (l, _) = dest_imp (concl th)
-  in
-    Tactical.SUBGOAL_THEN l (fn lth => t2tac lth (MP th lth))
-  end g
+local
+ fun occurs_check [] tm = ()
+   | occurs_check (v::vs) tm = if free_in v tm then raise (ERR "PROVEHYP_THEN" "") else occurs_check vs tm
+ val IMP_CLAUSES1 = boolTheory.IMP_CLAUSES |> SPEC_ALL |> CONJUNCT1 |> GEN_ALL
+ fun lth_mp th lth = CONV_RULE (STRIP_QUANT_CONV (LAND_CONV (K (EQT_INTRO lth)) THENC
+                                                  REWR_CONV IMP_CLAUSES1)) th
+in
+ fun PROVEHYP_THEN t2tac th g = let
+  val (vs, tm) = strip_forall (concl th)
+  val (l, _) = dest_imp tm
+  val () = occurs_check vs l
+ in
+  Tactical.SUBGOAL_THEN l (fn lth => t2tac lth (lth_mp th lth))
+ end g
+end
 
 val provehyp_then = PROVEHYP_THEN
 

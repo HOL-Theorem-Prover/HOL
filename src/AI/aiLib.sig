@@ -11,6 +11,7 @@ sig
   val print_endline : string -> unit
   val vector_to_list : 'a vector -> 'a list
   val hash_string : string -> int
+  val hash_string_mod : int -> string -> int
 
   (* comparisons *)
   val cpl_compare :
@@ -115,14 +116,19 @@ sig
   val split_triple : ('a * 'b * 'c) list -> 'a list * 'b list * 'c list
   val quintuple_of_list : 'a list -> 'a * 'a * 'a * 'a * 'a
 
-  (* random *)
+  (* randomness, probability and distributions *)
   val random_real : unit -> real
   val shuffle   : 'a list -> 'a list
   val random_elem : 'a list -> 'a
   val random_int : (int * int) -> int (* uses random_elem *)
   val select_in_distrib : ('a * real) list -> 'a
+  val select_in_distrib_seeded : real -> ('a * real) list -> 'a
   val best_in_distrib : ('a * real) list -> 'a
   val random_percent : real -> 'a list -> 'a list * 'a list
+  val uniform_proba : int -> real list
+  val normalize_proba : real list -> real list
+  val uniform_distrib : 'a  list -> ('a * real) list
+  val normalize_distrib : ('a * real) list -> ('a * real) list
 
   (* input/output *)
   val string_of_goal : goal -> string
@@ -172,7 +178,9 @@ sig
   val decr   : int ref -> unit
   val sum_real : real list -> real
   val average_real : real list -> real
+  val average_int: int list -> real
   val standard_deviation : real list -> real
+  val absolute_deviation : real list -> real
   val sum_int : int list -> int
   val int_div : int -> int -> real
   val int_pow : int -> int -> int

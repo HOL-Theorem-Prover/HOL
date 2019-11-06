@@ -122,7 +122,7 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 2)),
                    pp_elements = [HardSpace 1, TOK ":-", BreakSpace(1,0)],
                    term_name = ":-"};
 
-val _ = Parse.temp_type_abbrev ("label", ``:ind``);
+Type label[local] = “:ind”
 
 val label_def = new_definition(
   "label_def",

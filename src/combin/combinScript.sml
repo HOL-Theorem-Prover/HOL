@@ -97,6 +97,8 @@ val o_ASSOC = store_thm("o_ASSOC",
    THEN CONV_TAC (REDEPTH_CONV BETA_CONV)
    THEN REFL_TAC);
 
+Theorem o_ASSOC' = GSYM o_ASSOC
+
 val o_ABS_L = store_thm(
   "o_ABS_L",
   ``(\x:'a. f x:'c) o (g:'b -> 'a) = (\x. f (g x))``,
@@ -213,6 +215,13 @@ val UPDATE_APPLY_ID = Q.store_thm("UPDATE_APPLY_ID",
     THEN POP_ASSUM (Q.SPEC_THEN `a` ASSUME_TAC)
     THEN RULE_ASSUM_TAC (REWRITE_RULE [])
     THEN ASM_REWRITE_TAC []]);
+
+val UPDATE_APPLY_ID' = GSYM UPDATE_APPLY_ID
+Theorem UPDATE_APPLY_ID_RWT =
+  CONJ UPDATE_APPLY_ID'
+       (CONV_RULE (STRIP_QUANT_CONV (LAND_CONV (REWR_CONV EQ_SYM_EQ)))
+                  UPDATE_APPLY_ID')
+
 
 val UPDATE_APPLY_IMP_ID = save_thm("UPDATE_APPLY_IMP_ID",
   GEN_ALL (fst (EQ_IMP_RULE (SPEC_ALL UPDATE_APPLY_ID))));

@@ -2,18 +2,21 @@
 
 \newcommand{\HOLTokenStrongEQ}{$\sim$}
 \newcommand{\HOLTokenWeakEQ}{$\approx$}
-\newcommand{\HOLTokenObsCongr}{$\approx^c\!$}
-\newcommand{\HOLTokenEPS}{$\overset{\epsilon}{\Rightarrow}$}
+\newcommand{\HOLTokenObsCongr}{$\approx^{\mathrm{c}}\!$}
+\newcommand{\HOLTokenEPS}{$\overset{\epsilon}{\Longrightarrow}$}
 \newcommand{\HOLTokenTransBegin}{$-$}
-\newcommand{\HOLTokenTransEnd}{$\rightarrow$}
+\newcommand{\HOLTokenTransEnd}{$\rightarrow$\xspace}
 \newcommand{\HOLTokenWeakTransBegin}{$=$}
-\newcommand{\HOLTokenWeakTransEnd}{$\Rightarrow$}
-\newcommand{\HOLTokenExpands}{$\succeq_e\!$}
-\newcommand{\HOLTokenContracts}{$\succeq_{bis}\!$}
-\newcommand{\HOLTokenObsContracts}{$\succeq^c_{bis}\!$}
-%\renewcommand{\HOLTokenImp}{\ensuremath{\Longrightarrow}}
+\newcommand{\HOLTokenWeakTransEnd}{$\Rightarrow$\xspace}
+\newcommand{\HOLTokenExpands}{$\succeq_{\mathrm{e}}\!$}
+\newcommand{\HOLTokenContracts}{$\succeq_{\mathrm{bis}}\!$}
+\newcommand{\HOLTokenObsContracts}{$\succeq^{\mathrm{c}}_{\mathrm{bis}}\!$}
+\newcommand{\HOLTokenInputAct}{$\mathrm{in}$}
+\newcommand{\HOLTokenOutputAct}{$\overline{\mathrm{out}}$}
+
+\renewcommand{\HOLTokenImp}{\ensuremath{\Longrightarrow}}
 
 % Experimental environments
-\usepackage{environ}
-\NewEnviron{HOLTrans}{\overset{\BODY}{\longrightarrow}}
-\NewEnviron{HOLWeakTrans}{\overset{\BODY}{\Longrightarrow}}
+%\usepackage{environ}
+%\NewEnviron{HOLTrans}{\overset{\BODY}{\longrightarrow}}
+%\NewEnviron{HOLWeakTrans}{\overset{\BODY}{\Longrightarrow}}

@@ -4136,6 +4136,21 @@ val TAKE_compute =
 val DROP_compute =
    Theory.save_thm("DROP_compute", numLib.SUC_RULE DROP_compute);
 
+Theorem DROP_TAKE:
+  !xs n k. DROP n (TAKE k xs) = TAKE (k - n) (DROP n xs)
+Proof
+  Induct \\ simp_tac bool_ss [TAKE_def,DROP_def]
+  \\ rpt strip_tac \\ rpt IF_CASES_TAC
+  \\ asm_simp_tac bool_ss [TAKE_def,DROP_def,TAKE_0,arithmeticTheory.SUB_0]
+  \\ AP_THM_TAC \\ AP_TERM_TAC \\ numLib.DECIDE_TAC
+QED
+
+Theorem TAKE_DROP_SWAP:
+  !xs k n. TAKE k (DROP n xs) = DROP n (TAKE (k + n) xs)
+Proof
+  rewrite_tac [DROP_TAKE,arithmeticTheory.ADD_SUB]
+QED
+
 (* ----------------------------------------------------------------------
     versions of constants with option outputs rather than unspecified
 

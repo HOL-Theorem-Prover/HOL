@@ -1716,7 +1716,7 @@ Once a theorem has been proved, it can be saved with the function
 \index{theorems, in HOL logic@theorems, in \HOL{} logic!saving of|(}%
 \index{saving theorems|(}%
 \index{save_thm@\ml{save\_thm}|pin}
-\index{save_thm@\ml{save\_thm}|seealso{\ml{Theorem} syntax}}
+\index{save_thm@\ml{save\_thm}|seealso{\ml{Theorem} (special syntactic form)}}
 \begin{verbatim}
    save_thm : (string * thm) -> thm
 \end{verbatim}
@@ -1738,11 +1738,12 @@ Thus, to indicate the \ml{simp} attribute (for which, see discussion of the stat
 \end{alltt}
 Multiple attributes can be listed between the square brackets, separated by commas.
 
-\index{local (theorem attribute)@\ml{local} (theorem attribute)}
+\index{local@\ml{local}!as theorem attribute}
+\index{theorem attributes!local@\ml{local}}
 Another attribute, \ml{local}, can be used to create theorems that will \emph{not} be exported to disk, but which are important locally.
 Such local theorems can have other attributes attached to them, which will have their effect within the given session/script-file.
 
-\index{Theorem syntax@\ml{Theorem} syntax|(}
+\index{Theorem (special syntactic form)@\ml{Theorem} (special syntactic form)|(}
 \index{special syntactic forms for scripts!Theorem@\ml{Theorem}}
 \smallskip\noindent
 Equivalently, a special \ml{Theorem} syntax is available for use in script files.
@@ -1763,7 +1764,7 @@ Attributes can also be added; for example:
 If one wishes to prove a goal with a tactic (see Chapter~\ref{tactics-and-tacticals}), and store the resulting theorem, the combination of these actions can be achieved with the \ml{store\_thm} function:
 \begin{holboxed}
 \index{store_thm@\ml{store\_thm}|pin}
-\index{store_thm@\ml{store\_thm}|seealso{\ml{Theorem} syntax}}
+\index{store_thm@\ml{store\_thm}|seealso{\ml{Theorem} (special syntactic form)}}
 \begin{verbatim}
    store_thm : (string * term * tactic) -> thm
 \end{verbatim}
@@ -1773,7 +1774,6 @@ If the tactic is successful, the resulting theorem is saved under the name \mnam
 Also as before, theorem attributes can be added to the name.
 
 \index{special syntactic forms for scripts!Theorem@\ml{Theorem}}
-\index{Theorem syntax@\ml{Theorem} syntax}
 Finally, again for use in script files only, there is a \ml{Theorem} syntax to replace \ml{store\_thm}, reducing the need to write the same name twice, and giving a cleaner appearance.
 One can write %
 \index{Proof keyword@\ml{Proof} keyword}\index{QED keyword@\ml{QED} keyword}%
@@ -1807,7 +1807,7 @@ But recall: if writing library code to prove and store theorems, the underlying 
 \index{theorems, in HOL logic@theorems, in \HOL{} logic!saving of|)}%
 \index{saving theorems|)}%
 \index{theorem attributes|)}
-\index{Theorem syntax@\ml{Theorem} syntax|)}
+\index{Theorem (special syntactic form)@\ml{Theorem} (special syntactic form)|)}
 %
 } % end local definition of mname, mth macros etc
 
@@ -1881,9 +1881,9 @@ Individual axioms, definitions and theorems can be read from the
 current theory using the following \ML\ functions:
 
 \begin{holboxed}
-\index{axiom@\ml{axiom}|pin}
-\index{definition@\ml{definition}|pin}
-\index{theorem@\ml{theorem}|pin}
+\index{axiom (ML function)@\ml{axiom} (\ML{} function)|pin}
+\index{definition (ML function)@\ml{definition} (\ML{} function)|pin}
+\index{theorem (ML function)@\ml{theorem} (\ML{} function)|pin}
 \begin{verbatim}
    axiom      : string -> thm
    definition : string -> thm
@@ -1897,9 +1897,9 @@ of a theory's axioms, definitions and theorems can be retreived with
 the \ML{} functions:
 
 \begin{holboxed}
-\index{axioms@\ml{axioms}|pin}
-\index{theorems@\ml{theorems}|pin}
-\index{definitions@\ml{definitions}|pin}
+\index{axioms (ML function)@\ml{axioms} (\ML{} function)|pin}
+\index{theorems (ML function)@\ml{theorems} (\ML{} function)|pin}
+\index{definitions (ML function)@\ml{definitions} (\ML{} function)|pin}
 \begin{verbatim}
    axioms      : string -> (string * thm) list
    definitions : string -> (string * thm) list

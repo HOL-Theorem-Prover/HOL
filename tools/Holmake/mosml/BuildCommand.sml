@@ -6,6 +6,8 @@ structure FileSys = OS.FileSys
 structure Path = OS.Path
 structure Process = OS.Process
 
+infix |>
+
 open HM_GraphBuildJ1
 
 val MOSMLDIR0 = Systeml.MOSMLDIR;
@@ -33,7 +35,7 @@ fun unquote_to intp file1 file2 =
 val failed_script_cache = ref (Binaryset.empty String.compare)
 
 fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
-  val {optv,actual_overlay,hmake_options,SIGOBJ,outs,hmenv,...} = buildinfo
+  val {optv,actual_overlay,SIGOBJ,outs,hmenv,...} = buildinfo
   val {warn,tgtfatal,info,chatty,diag,...} = outs
   val debug = #debug (#core optv)
   val allfast = #fast (#core optv)
@@ -41,15 +43,13 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val quit_on_failure = #quit_on_failure (#core optv)
   val quiet_flag = #quiet (#core optv)
   val interactive_flag = #interactive (#core optv)
-  val no_sigobj = member "NO_SIGOBJ" hmake_options
-  val hmake_no_overlay = member "NO_OVERLAY" hmake_options
   val no_overlay = #no_overlay (#core optv)
   val overlay_stringl = case actual_overlay of NONE => [] | SOME s => [s]
   val MOSMLDIR =  case #mosmldir optv of NONE => MOSMLDIR0 | SOME s => s
   val MOSMLCOMP = fullPath [MOSMLDIR, "mosmlc"]
   fun compile debug args = let
-    val _ = if debug then print ("  with command "^
-                                 spacify(MOSMLCOMP::args)^"\n")
+    val _ = if isSome debug then
+              print ("  with command "^ spacify(MOSMLCOMP::args)^"\n")
             else ()
   in
     SYSTEML (MOSMLCOMP::args)
@@ -74,11 +74,12 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                 (* force to always use unquoter if present, so as to generate
                    location pragmas. Must test for existence, for bootstrapping.
                  *)
+                val _ = diag "build_command" (fn _ => "Using unquoter")
                 val clone = variant file
                 val _ = FileSys.rename {old=file, new=clone}
                 fun revert() =
                   if FileSys.access (clone, [FileSys.A_READ]) then
-                    ((if debug then
+                    ((if isSome debug then
                         FileSys.rename{old=file, new=file ^ ".quoted"}
                       else
                         FileSys.remove file) handle _ => ();
@@ -113,7 +114,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                            false)
       | ProcessArticle _ => (print "Can't handle article processing yet";
                              false)
-      | BuildScript (s, deps) =>
+      | BuildScript (s, deps, ex) =>
         let
           val _ = not (Binaryset.member(!failed_script_cache, s)) orelse
                   (print ("Not re-running "^s^"Script; believe it will fail\n");
@@ -125,7 +126,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           val scriptui = script^".ui"
           open Process
           (* first thing to do is to create the Script.uo file *)
-          val b = build_command g ii (Compile deps) scriptsml_file
+          val b = build_command g ii (Compile (deps, ex)) scriptsml_file
           val _ = b orelse raise CompileFailed
           val _ = print ("Linking "^scriptuo^
                          " to produce theory-builder executable\n")
@@ -138,19 +139,28 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
               else objectfiles0
         in
           if
-            isSuccess (compile debug
-                               (include_flags @ ["-o", script] @ objectfiles))
+            isSuccess (
+              compile debug (
+                include_flags @ ["-o", script, "holmake_holpathdb.uo"] @
+                objectfiles
+              )
+            )
           then
             let
+              val _ = exists_readable script orelse
+                      die_with ("Can't see script executable: "^script)
               val status = Systeml.mk_xable script
               val _ = OS.Process.isSuccess status orelse
                       die_with ("Couldn't make script "^script^" executable")
-              val script' = xable_string script
+              val script' = xable_string script |> filestr_to_dep
+                                                |> dep_toString
+              val _ = diag "build_command"
+                           (fn _ => "Created executable "^script')
               val thysmlfile = s^"Theory.sml"
               val thysigfile = s^"Theory.sig"
               fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
               val _ = app safedelete [thysmlfile, thysigfile]
-              val res2 = Systeml.systeml [fullPath [FileSys.getDir(), script']]
+              val res2 = Systeml.systeml [script']
               val _ = app safedelete [script', scriptuo, scriptui]
               val () = if not (isSuccess res2) then
                          failed_script_cache :=
@@ -176,7 +186,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         end handle CompileFailed => false
                  | FileNotFound => false
   end (* fun's let *)
-  fun mosml_build_command _ _ _ = NONE
+  fun mosml_build_command _ _ _ _ = NONE
   val build_graph = graphbuildj1 { build_command = build_command,
                                    mosml_build_command = mosml_build_command,
                                    outs = outs,

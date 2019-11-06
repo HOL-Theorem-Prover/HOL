@@ -18,6 +18,7 @@
 
 (define-prefix-command 'hol-map)
 (define-prefix-command 'hol-d-map)
+(define-prefix-command 'hol-movement-map)
 (make-variable-buffer-local 'hol-buffer-name)
 (make-variable-buffer-local 'hol-buffer-ready)
 (set-default 'hol-buffer-ready nil)
@@ -110,16 +111,21 @@ evaluations.")
 (put 'hol-term 'end-op
      (function
       (lambda ()
-        (re-search-forward "[`’”]\\|^Proof\\|^End\\|^Termination" nil t)
-        (setq hol-term-end-delim (match-string 0))
-        (goto-char (match-beginning 0)))))
+        (let ((pthm-point (save-excursion
+                            (re-search-forward "^Proof\\|^Theorem" nil t))))
+          (if (and pthm-point (equal (match-string 0) "Proof"))
+              (progn (goto-char (match-beginning 0))
+                     (setq hol-term-end-delim "Proof"))
+            (re-search-forward "[`’”]\\|^End\\|^Termination" nil t)
+            (setq hol-term-end-delim (match-string 0))
+            (goto-char (match-beginning 0)))))))
 (defvar hol-beg-pos nil) ; ugh, global, but easiest this way
+(defvar hol-name-attrs-colon-re
+  "[[:space:]]+[A-Za-z0-9'_]+\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
 (defvar hol-quoted-theorem-proof-re-begin
-  "\\(Theorem\\|Triviality\\)[[:space:]]+[A-Za-z0-9'_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
+  (concat "\\(Theorem\\|Triviality\\)" hol-name-attrs-colon-re))
 (defvar hol-quoted-definition-re-begin
-  (concat "Definition[[:space:]]+[A-Za-z0-9'_]+"
-          "\\(\\[[A-Za-z0-9_,=]+\\]\\)?[[:space:]]*:"
-          "\\|\\(Co\\)?Inductive[[:space:]]+[A-Za-z0-9'_]+[[:space]]*:"))
+  (concat "\\(Definition\\|\\(Co\\)?Inductive\\)" hol-name-attrs-colon-re))
 (put 'hol-term 'beginning-op
      (function
       (lambda ()
@@ -196,6 +202,7 @@ process in it."
 (defun is-a-then (s)
   (and s (or (string-equal s "THEN")
              (string-equal s "THENL")
+             (string-equal s "QED")
              (string-equal s "val")
              (string-equal s ">-")
              (string-equal s ">>")
@@ -730,7 +737,7 @@ starts >%s%s<"
                '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
                  "datatype" "nonfix" "exception" "end" "structure"
                  "Theorem" "Definition" "Inductive" "CoInductive"
-                 "Triviality" "Datatype" "Type"))))
+                 "Triviality" "Datatype" "Type" "Overload"))))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
@@ -1124,11 +1131,12 @@ region instead. With prefix ARG prompt for a file-name to load."
 (defun hol-horizontal ()
   "Runs a HOL session after splitting the window"
   (interactive)
-  (hol '((lambda (b al)
+  (hol '(display-buffer-reuse-window
+         (lambda (b al)
            (let ((split-height-threshold nil)
-                 (split-width-threshold 1))
-             (display-buffer-in-side-window b (cons '(side . right) al)))))
-       '((window-width . 80))))
+                 (split-width-threshold 0))
+             (display-buffer-pop-up-window b al))))
+       '((window-width . 80) (reusable-frames . nil))))
 
 (defvar hol-new-buffer-style hol-new-buffer-style-default)
 
@@ -1938,10 +1946,78 @@ second is to show the new term.
                 (buffer-substring (point-min) (point-max))
               (delete-region (point-min) (point-max))))))))
 
-(font-lock-add-keywords
- 'sml-mode
- '("^Theorem\\>" "^Proof\\>" "^QED\\>" "^Definition\\>" "^\\(Co\\)?Inductive\\>"
-   "^Termination\\>" "^End\\>" "^Datatype\\>" "^Type\\>" "^Triviality\\>"))
+(defun hol-fl-extend-region ()
+  (let ((newbeg (hol-fl-term-bump-backwards font-lock-beg))
+        (newend (hol-fl-term-bump-forwards font-lock-end))
+        (changed nil))
+    (if (= newbeg font-lock-beg) nil
+      (setq font-lock-beg newbeg)
+      (setq changed t))
+    (if (= newend font-lock-end) nil
+      (setq font-lock-end newend)
+      (setq changed t))
+    changed))
+
+(add-hook 'sml-mode-hook
+          (lambda ()
+            (setq font-lock-multiline t)
+            (setq font-lock-extend-region-functions
+                  (append font-lock-extend-region-functions
+                          '(hol-fl-extend-region)))
+            (message "Running HOL SML hook")
+            (local-set-key (kbd "C-M-<up>") 'hol-movement-backward-up-list)
+            (local-set-key (kbd "C-M-<left>") 'hol-movement-backward-sexp)
+            (font-lock-add-keywords
+             nil
+             (list '("^Theorem\\>" . 'hol-theorem-syntax)
+                   '("^Triviality\\>" . 'hol-theorem-syntax)
+                   '("^Proof\\>" . 'hol-theorem-syntax)
+                   '("^QED\\>" . 'hol-theorem-syntax)
+                   '("^Definition\\>\\|^\\(Co\\)?Inductive\\>\\|^Termination\\>\\|^End\\>" . 'hol-definition-syntax)
+                   '("^Datatype\\>" . 'hol-definition-syntax)
+                   "^Type\\>"
+                   "^Overload\\>"
+                   '("\\<cheat\\>" . 'hol-cheat-face)
+                   '(hol-find-quoted-material 0 'hol-quoted-material prepend))
+             t)))
+
+(defun hol-find-quoted-material (limit)
+  (let ((beginmatch (re-search-forward hol-term-begin-re limit t))
+        (ppss (syntax-ppss)))
+    (while (and beginmatch (or (nth 3 ppss) (nth 4 ppss)))
+      (setq beginmatch (re-search-forward hol-term-begin-re limit t))
+      (setq ppss (syntax-ppss)))
+    (if (not beginmatch) nil
+      (let* ((start-delim (match-string-no-properties 0))
+             (begin-marker
+              (if (= (length start-delim) 1)
+                  (set-marker (make-marker) (1- (point)))
+                (point-marker)))
+             (endre (hol-term-matching-delim start-delim))
+             (endmatch (if endre (re-search-forward endre limit t)
+                         (message (format "No end-delim for %s" start-delim))
+                         nil)))
+        (if (not endmatch) nil
+          (if (= (length start-delim) 1) nil (goto-char (match-beginning 0)))
+          (set-match-data (list begin-marker (point-marker)))
+          t)))))
+;  (re-search-forward "^Theorem[[:space:]]+[A-Za-z0-9'_]+\\(?:\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:\\(\\(?:\n  \\|.\\)+\\)\nProof" limit t))
+
+(defun hol-thm-prefix (s)
+  (or (string-prefix-p "Theorem" s) (string-prefix-p "Triviality" s)))
+(defun hol-defn-prefix (s) (string-prefix-p "Definition" s))
+(defun hol-indn-prefix (s)
+  (or (string-prefix-p "Inductive" s) (string-prefix-p "CoInductive" s)))
+
+(defun hol-term-matching-delim (start-delim)
+  (pcase start-delim
+    ("“" "”")
+    ("‘" "’")
+    ("Datatype:" "^End\\>")
+    ((pred hol-thm-prefix) "^Proof\\>")
+    ((pred hol-indn-prefix) "^End\\>")
+    ((pred hol-defn-prefix) "^Termination\\>\\|^End\\>")))
+
 
 (defgroup hol-faces nil "Faces used in pretty-printing HOL values"
   :group 'faces
@@ -1981,6 +2057,26 @@ second is to show the new term.
   "The face for presenting HOL types."
   :group 'hol-faces)
 
+(defface hol-theorem-syntax
+  '((((class color)) :foreground "blueviolet"))
+  "The face for highlighting script file Theorem-Proof-QED syntax."
+  :group 'hol-faces)
+
+(defface hol-cheat-face
+  '((((class color)) :foreground "orange" :weight ultra-bold :box t))
+  "The face for highlighting occurrences of the cheat tactic."
+  :group 'hol-faces)
+
+(defface hol-definition-syntax
+  '((((class color)) :foreground "indianred"))
+  "The face for highlighting script file definition syntax."
+  :group 'hol-faces)
+
+(defface hol-quoted-material
+  '((((class color)) :foreground "brown" :weight bold))
+  "The face for highlighting quoted material."
+  :group 'hol-faces)
+
 (defun hol-region-to-unicode-pdf (filename beg end)
   "Print region to FILE as a PDF, handling Unicode characters."
   (interactive "FFile to write to: \nr")
@@ -1996,8 +2092,45 @@ second is to show the new term.
     (shell-command (concat "ps2pdf " temp-ps-file " " filename))
     (delete-file temp-ps-file)))
 
+(setq hol-term-beginend-re
+      (concat
+       (regexp-opt
+        '("Theorem" "End" "Definition" "Inductive" "Termination" "Proof"
+          "CoInductive" "Datatype" "Triviality") "^\\(")
+       "\\|"
+       (regexp-opt '("“" "‘" "”" "’"))))
+(defvar hol-term-end-re (regexp-opt '("End" "Termination" "Proof" "”" "’")))
+(defvar hol-term-begin-re
+  (concat
+   (regexp-opt '("“" "‘")) "\\|"
+   hol-quoted-theorem-proof-re-begin "\\|"
+   hol-quoted-definition-re-begin "\\|"
+   "Datatype[[:space:]]*:"))
+
+(defun hol-fl-term-bump-backwards (pos)
+  (save-excursion
+    (goto-char pos)
+    (let ((match (re-search-backward hol-term-beginend-re nil t)))
+      (if (not match) pos
+        (if (looking-at hol-term-end-re) pos
+          (if (looking-at hol-term-begin-re) (match-beginning 0) pos))))))
+
+(defun hol-fl-term-bump-forwards (pos)
+  (save-excursion
+    (goto-char pos)
+    (let ((match (re-search-forward hol-term-beginend-re nil t)))
+      (if (not match) pos
+        (goto-char (match-beginning 0))
+        (if (looking-at hol-term-begin-re) pos
+          (if (looking-at hol-term-end-re) (match-end 0) pos))))))
+
+
+
+
+
 ;;The key combinations
 (define-key global-map "\M-h" 'hol-map)
+(define-key global-map (kbd "C-M-h") 'hol-movement-map)
 (define-prefix-command 'holpp-map)
 (define-key hol-map "\M-p" 'holpp-map)
 
@@ -2078,6 +2211,47 @@ second is to show the new term.
 (define-key holpp-map "t"    'hol-toggle-pp-annotations)
 (define-key holpp-map "s"    'hol-toggle-pp-styles)
 (define-key holpp-map "c"    'hol-toggle-pp-cases)
+
+(define-key hol-movement-map "u" 'hol-movement-backward-up-list)
+
+;;; HOL movement
+
+(defconst hol-proof-beginend-re "^\\(Proof\\|QED\\|Termination\\|End\\)\\>")
+(defun hol-movement-in-proof-p (pos)
+  (save-excursion
+    (goto-char pos)
+    (let ((pp (syntax-ppss)))
+      (and (not (nth 3 pp)) (not (nth 4 pp))
+           (let ((nextre (re-search-backward hol-proof-beginend-re nil t)))
+             (and nextre
+                  (let ((s (match-string-no-properties 0)))
+                    (and (not (equal s "QED")) (not (equal s "End"))
+                         (match-beginning 0)))))))))
+
+(defun hol-movement-backward-up-list
+    (&optional n escape-strings no-syntax-crossing)
+  (interactive "^p\nd\nd")
+  (or (let ((p (hol-movement-in-proof-p (point)))) (and p (goto-char p)))
+      (and (looking-at "^Proof\\>")
+           (re-search-backward "^\\(Triviality\\>\\|Theorem\\>\\)" nil t))
+      (and (looking-at "^Termination\\>")
+           (re-search-backward "^Definition\\>" nil t))
+      (backward-up-list n escape-strings no-syntax-crossing)))
+
+(defconst hol-movement-top-re
+  "^\\(Theorem\\|Triviality\\|Definition\\|Datatype\\|Overload\\|Type\\)")
+(defun hol-movement-backward-sexp (&optional arg)
+  (interactive "p")
+  (if (and (> arg 0)
+           (save-excursion
+             (beginning-of-line)
+             (looking-at hol-movement-top-re)))
+      (progn
+        (re-search-backward hol-movement-top-re nil t)
+        (hol-movement-backward-sexp (1- arg)))
+    (backward-sexp arg)))
+
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

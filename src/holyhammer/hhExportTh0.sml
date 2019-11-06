@@ -131,7 +131,7 @@ and th0_term_mono oc tm =
   if is_var tm orelse is_const tm then os oc (name_obj_mono tm)
   else if is_abs tm then
     let val (vl,bod) = strip_abs tm in
-      (th0_quant_vl oc "^" vl; th0_jterm oc bod)
+      (os oc "(" ; th0_quant_vl oc "^" vl; th0_jterm oc bod; os oc ")")
     end
   else
   let val (rator,argl) = strip_comb tm in
@@ -203,7 +203,7 @@ and th0_binop oc s (l,r) =
   (os oc "("; th0_pred oc l; os oc (" " ^ s ^ " ");
    th0_pred oc r; os oc ")")
 and th0_quant oc s (vl,bod) =
-  (th0_quant_vl oc s vl; th0_pred oc bod)
+  (os oc "("; th0_quant_vl oc s vl; th0_pred oc bod; os oc ")")
 
 fun th0_formula oc tm = (th0_forall_tyvarl_tm oc tm; th0_pred oc tm)
 
@@ -639,14 +639,14 @@ val thmid = ("arithmetic","ADD1");
 val depl = valOf (hhExportLib.depo_of_thmid thmid);
 val dir = HOLDIR ^ "/src/holyhammer/export_th0_test";
 th0_write_pb dir (thmid,depl);
+*)
 
+(*
 load "hhExportTh0"; open hhExportTh0;
 load "tttUnfold"; tttUnfold.load_sigobj ();
 val thyl = ancestry (current_theory ());
-val bushydir = "/local1/thibault/th0_bushy";
+val bushydir = HOLDIR ^ "/src/holyhammer/th0_bushy";
 th0_export_bushy bushydir thyl;
-val chainydir = "/local1/thibault/th0_chainy";
-th0_export_chainy chainydir thyl;
 *)
 
 end (* struct *)

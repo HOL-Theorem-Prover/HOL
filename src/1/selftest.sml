@@ -108,16 +108,16 @@ in
   if aconv (concl Falsity) F then die "" else die "Huh???"
 end handle ExitOK => OK();
 
-val _ = Process.atExit (fn () => let
-                             fun rm s = FileSys.remove ("scratchTheory." ^ s)
-                                        handle _ => ()
-                           in
-                             app rm ["sml", "sig", "dat"]
-                           end)
+fun cleanup() = let
+  fun rm s = FileSys.remove ("scratchTheory." ^ s)
+      handle _ => ()
+in
+  app rm ["sml", "sig", "dat"]
+end
 
 exception InternalDie
 fun test f x = f x orelse raise InternalDie
-val oldconstants_test = let
+fun oldconstants_test() = let
   val _ = tprint "Identity of old constants test"
   val defn1_t = mk_eq(mk_var("foo", bool), boolSyntax.T)
   val defn2_t = mk_eq(mk_var("foo", bool), boolSyntax.F)
@@ -133,8 +133,6 @@ val oldconstants_test = let
   val _ = test (not o uncurry aconv) (c2, c3)
   val _ = test (String.isPrefix "old" o #Name o dest_thy_const) c1
   val _ = test (String.isPrefix "old" o #Name o dest_thy_const) c2
-  val _ = Feedback.emit_MESG := false
-  val _ = Feedback.emit_WARNING := false
   val _ = new_theory "foo"
   val defn1 = new_definition("c", mk_eq(mk_var("c", bool), boolSyntax.T))
   val _ = new_theory "foo"
@@ -144,17 +142,22 @@ val oldconstants_test = let
   val _ = test (fn (c1, c2) => Term.compare(c1,c2) <> EQUAL) (c1, c2)
   val _ = test (not o uncurry aconv) (c1, c2)
 in
-  OK()
-end handle InternalDie => die "Internal test failed";
+  OK();
+  cleanup()
+end handle e => (cleanup(); raise e)
+
+val _ = testutils.quietly oldconstants_test ()
+    handle InternalDie => die "Internal test failed";
 
 val _ = tprint "Testing functional-pretype 1 (pattern)"
 val _ = require (check_result (fn _ => true)) Parse.Term `x <> y ==> x <> y`
 
 val _ = tprint "Testing functional-pretype 2 (simple case)"
-val _ = require (check_result (fn _ => true)) Parse.Term `case x of T => F`
+val _ = require (check_result (fn _ => true)) (quietly Parse.Term)
+                `case x of T => F`
 
 val _ = tprint "Testing functional-pretype 3 (ignored constraint)"
-val quiet_parse = trace ("show_typecheck_errors", 0) Parse.Term
+val quiet_parse = quietly (trace ("show_typecheck_errors", 0) Parse.Term)
 val _ = shouldfail {testfn = quiet_parse, printresult = term_to_string,
                     printarg = (fn _ => ""),
                     checkexn = is_struct_HOL_ERR "Preterm"}
@@ -285,7 +288,7 @@ val _ = checkparse ()
 val _ = tprint "Testing stale type abbreviations bug"
 val _ = new_type ("foo", 1)
 val _ = type_abbrev("bar", ``:bool foo``)
-val _ = new_type ("foo", 0)
+val _ = quietly new_type ("foo", 0)
 val _ = type_abbrev("baz", ``:foo``) handle _ => die ""
 val _ = OK()
 
@@ -394,7 +397,7 @@ val _ = set_trace "pp_dollar_escapes" 0
 val _ = app tpp ["(/\\)", "(if)"]
 val _ = set_trace "pp_dollar_escapes" 1
 
-val _ = new_type ("foo", 2)
+val _ = quietly new_type ("foo", 2)
 val _ = new_constant ("con", ``:'a -> ('a,'b)foo``)
 val _ = set_trace "types" 1
 val _ = print "** Tests with 'types' trace on.\n"
@@ -704,7 +707,7 @@ end handle _ => die ""
 
 val _ = let
   val _ = tprint "Removing type abbreviation"
-  val _ = temp_type_abbrev_pp ("foo", ``:'a -> bool``)
+  val _ = quietly temp_type_abbrev_pp ("foo", ``:'a -> bool``)
   val s1 = type_to_string ``:bool -> bool``
   val _ = s1 = ":bool foo" orelse raise InternalDie
   val _ = temp_remove_type_abbrev "foo"
@@ -714,7 +717,7 @@ in
 end handle InternalDie => die ""
 
 fun nc (s,ty) =
-  (new_constant(s,ty); prim_mk_const{Name = s, Thy = current_theory()})
+  (quietly new_constant(s,ty); prim_mk_const{Name = s, Thy = current_theory()})
 
 val _ = let
   val _ = tprint "irule 1 (basic match-mp)"
@@ -990,10 +993,10 @@ end;
 val _ = let
   open mp_then
   val _ = tprint "mp_then (pat) 3"
-  val _ = new_type("list", 1)
-  val _ = new_type("ti", 0)
+  val _ = quietly new_type("list", 1)
+  val _ = quietly new_type("ti", 0)
   val _ = hide "foo"
-  val _ = new_constant("EVERY", ``:('a -> bool) -> 'a list -> bool``)
+  val _ = nc("EVERY", ``:('a -> bool) -> 'a list -> bool``)
   val asl = [``EVERY (x:'a -> bool) ls``,
              ``!x:ti y. foo x y /\ EVERY y (ls:'a list) ==> gg x``,
              ``foo (a:ti) (x:'a -> bool):bool``, ``bar (x:'a -> bool):bool``]

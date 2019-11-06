@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (*                                                                           *)
-(*                    Theory of Iteration over Sets                          *)
+(*    Generic iterated operations and special cases of sums over N and R     *)
 (*                                                                           *)
 (*        (c) Copyright 2014,                                                *)
 (*                       Muhammad Qasim,                                     *)
@@ -11,27 +11,28 @@
 (*            Contact:  <m_qasi@ece.concordia.ca>                            *)
 (*                                                                           *)
 (*                                                                           *)
-(* Note: This theory has been ported from hol light                          *)
+(*    Note: This theory was ported from HOL Light                            *)
 (*                                                                           *)
+(*              (c) Copyright, John Harrison 1998-2007                       *)
+(*              (c) Copyright, Lars Schewe 2007                              *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib bossLib numLib unwindLib tautLib Arith
-prim_recTheory combinTheory quotientTheory arithmeticTheory hrealTheory
+open HolKernel Parse boolLib bossLib;
+
+open numLib unwindLib tautLib Arith
+prim_recTheory combinTheory quotientTheory arithmeticTheory
 realaxTheory realTheory realLib jrhUtils pairTheory seqTheory limTheory
 transcTheory listTheory mesonLib boolTheory pred_setTheory
-util_probTheory optionTheory numTheory sumTheory InductiveDefinition
-ind_typeTheory;
+optionTheory numTheory sumTheory InductiveDefinition ind_typeTheory;
 
-open wellorderTheory cardinalTheory;
+open wellorderTheory cardinalTheory hurdUtils;
 
 val _ = new_theory "iterate";
-val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
-(* MESON, METIS, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                         *)
+(* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)
 (* ------------------------------------------------------------------------- *)
 
-fun K_TAC _ = ALL_TAC;
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
@@ -54,17 +55,6 @@ val REAL_LT_BETWEEN = store_thm ("REAL_LT_BETWEEN",
   SIMP_TAC arith_ss [REAL_LT_RDIV_EQ, REAL_LT_LDIV_EQ, REAL_ARITH ``0 < 2:real``, REAL_LT] THEN
   POP_ASSUM MP_TAC THEN REAL_ARITH_TAC);
 
-val SIMP_REAL_ARCH = store_thm
-  ("SIMP_REAL_ARCH",
-  ``!x:real. ?n. x <= &n``,
-        REWRITE_TAC [REAL_LE_LT] THEN
-        FULL_SIMP_TAC std_ss [EXISTS_OR_THM] THEN
-        RW_TAC std_ss [] THEN
-        DISJ1_TAC THEN
-        MP_TAC (Q.SPEC `1` REAL_ARCH) THEN
-        REWRITE_TAC [REAL_LT_01, REAL_MUL_RID] THEN
-        RW_TAC std_ss []);
-
 val LOWER_BOUND_FINITE_SET_REAL = store_thm ("LOWER_BOUND_FINITE_SET_REAL",
  ``!f:('a->real) s. FINITE(s) ==> ?a. !x. x IN s ==> a <= f(x)``,
   GEN_TAC THEN ONCE_REWRITE_TAC [METIS []
@@ -82,11 +72,6 @@ val UPPER_BOUND_FINITE_SET_REAL = store_thm ("UPPER_BOUND_FINITE_SET_REAL",
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
   REWRITE_TAC[IN_INSERT, NOT_IN_EMPTY] THEN
   METIS_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]);
-
-val REAL_WLOG_LT = store_thm ("REAL_WLOG_LT",
- ``(!x. P x x) /\ (!x y. P x y <=> P y x) /\ (!x y. x < y ==> P x y)
-   ==> !x y:real. P x y``,
-  METIS_TAC[REAL_LT_TOTAL]);
 
 (* ------------------------------------------------------------------------- *)
 (* Recursion over finite sets; based on Ching-Tsun's code (archive 713).     *)
@@ -430,7 +415,7 @@ val lemma3 = prove (
 val lemma4 = prove (
  ``!P:real->bool.
     ((?x. P x) /\ (?z. !x. P x ==> x < z) ==>
-     (?s. !y. (?x. P x /\ y < x) = y < s)) ==>
+     (?s. !y. (?x. P x /\ y < x) <=> y < s)) ==>
     ((?x. P x) /\ (?s. !x. P x ==> x <= s)
        ==> ?s. (!x. P x ==> x <= s) /\
                !M'. (!x. P x ==> x <= M') ==> s <= M')``,
@@ -451,9 +436,11 @@ val REAL_COMPLETE = store_thm ("REAL_COMPLETE",
 (* Supremum and infimum.                                                     *)
 (* ------------------------------------------------------------------------- *)
 
+(* The original definition is in HOL Light's "sets.ml",
+   HOL4's definition is in realTheory *)
 val sup_alt = store_thm ("sup_alt",
   ``sup s = @a:real. (!x. x IN s ==> x <= a) /\
-                    !b. (!x. x IN s ==> x <= b) ==> a <= b``,
+                     !b. (!x. x IN s ==> x <= b) ==> a <= b``,
   SIMP_TAC std_ss [sup] THEN AP_TERM_TAC THEN ABS_TAC THEN
   SIMP_TAC std_ss [SPECIFICATION, lemma1, lemma2, lemma3] THEN
   METIS_TAC []);
@@ -585,21 +572,72 @@ val SUP_UNION = store_thm ("SUP_UNION",
   REPEAT STRIP_TAC THEN MATCH_MP_TAC SUP_UNIQUE THEN
   SIMP_TAC real_ss [FORALL_IN_UNION, REAL_MAX_LE] THEN METIS_TAC[SUP, REAL_LE_TRANS]);
 
-val inf = new_definition ("inf",
-  ``inf s = @a:real. (!x. x IN s ==> a <= x) /\
-                    !b. (!x. x IN s ==> b <= x) ==> b <= a``);
+(* The original definition of "inf" in HOL Light (sets.ml) *)
+val inf_tm = ``@a:real. (!x. x IN s ==> a <= x) /\
+                        !b. (!x. x IN s ==> b <= x) ==> b <= a``;
 
-val INF_EQ = store_thm ("INF_EQ",
- ``!s t:real->bool. (!a. (!x. x IN s ==> a <= x) <=> (!x. x IN t ==> a <= x))
-         ==> (inf s = inf t)``,
-  SIMP_TAC std_ss [inf]);
+(* `inf s` exists iff s is non-empty and has a lower bound b *)
+val inf_criteria = ``s <> {} /\ (?b. !x. x IN s ==> b <= x)``;
+
+(* alternative definition of `inf` *)
+Theorem inf_alt :
+    !s. ^inf_criteria ==> (inf s = ^inf_tm)
+Proof
+    RW_TAC std_ss []
+ >> Suff `(\f. inf s = f) (^inf_tm)` >- METIS_TAC []
+ >> MATCH_MP_TAC SELECT_ELIM_THM
+ >> RW_TAC std_ss []
+ >- (Q.EXISTS_TAC `inf s` >> CONJ_TAC
+     >- (Know `(?y. s y) /\ (?y. !z. s z ==> y <= z)`
+         >- (STRONG_CONJ_TAC >- METIS_TAC [MEMBER_NOT_EMPTY, IN_APP] \\
+             STRIP_TAC >> `y IN s` by fs [IN_APP] >> RES_TAC \\
+             Q.EXISTS_TAC `b` >> rpt STRIP_TAC \\
+             FIRST_X_ASSUM MATCH_MP_TAC >> PROVE_TAC [IN_APP]) \\
+         DISCH_THEN (MP_TAC o (MATCH_MP REAL_INF_LE)) >> Rewr \\
+         Q.X_GEN_TAC `z` >> rpt STRIP_TAC \\
+         FIRST_X_ASSUM MATCH_MP_TAC >> fs [IN_APP]) \\
+     rpt STRIP_TAC >> MATCH_MP_TAC REAL_IMP_LE_INF \\
+     CONJ_TAC >- METIS_TAC [MEMBER_NOT_EMPTY, IN_APP] \\
+     fs [IN_APP])
+ >> RW_TAC std_ss [GSYM REAL_LE_ANTISYM]
+ >- (Know `(?y. s y) /\ (?y. !z. s z ==> y <= z)`
+     >- (STRONG_CONJ_TAC >- METIS_TAC [MEMBER_NOT_EMPTY, IN_APP] \\
+         STRIP_TAC >> `y IN s` by fs [IN_APP] >> RES_TAC \\
+         Q.EXISTS_TAC `b` >> rpt STRIP_TAC \\
+         FIRST_X_ASSUM MATCH_MP_TAC >> PROVE_TAC [IN_APP]) \\
+     DISCH_THEN (MP_TAC o (MATCH_MP REAL_INF_LE)) >> Rewr \\
+     rpt STRIP_TAC \\
+     Q.PAT_X_ASSUM `!b. (!x. x IN s ==> b <= x) ==> b <= x`
+       MATCH_MP_TAC >> fs [IN_APP])
+ >> MATCH_MP_TAC REAL_IMP_LE_INF
+ >> CONJ_TAC >- METIS_TAC [MEMBER_NOT_EMPTY, IN_APP]
+ >> fs [IN_APP]
+QED
+
+(* added `s <> EMPTY /\ (?b. !x. x IN s ==> b <= x) /\
+          t <> EMPTY /\ (?b. !x. x IN t ==> b <= x)`
+   to make sure that both `inf s` and `inf t` exist. *)
+Theorem INF_EQ :
+    !s t:real->bool. s <> EMPTY /\ (?b. !x. x IN s ==> b <= x) /\
+                     t <> EMPTY /\ (?b. !x. x IN t ==> b <= x) /\
+                    (!a. (!x. x IN s ==> a <= x) <=> (!x. x IN t ==> a <= x))
+                ==> (inf s = inf t)
+Proof
+    rpt STRIP_TAC
+ >> Know `(inf s = ^inf_tm) /\
+          (inf t = @a:real. (!x. x IN t ==> a <= x) /\
+                        !b. (!x. x IN t ==> b <= x) ==> b <= a)`
+ >- (CONJ_TAC >> MATCH_MP_TAC inf_alt >> PROVE_TAC [])
+ >> ASM_SIMP_TAC std_ss []
+QED
 
 val INF = store_thm ("INF",
  ``!s:real->bool. ~(s = {}) /\ (?b. !x. x IN s ==> b <= x)
        ==> (!x. x IN s ==> inf s <= x) /\
            !b. (!x. x IN s ==> b <= x) ==> b <= inf s``,
-  GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[inf] THEN
-  CONV_TAC(ONCE_DEPTH_CONV SELECT_CONV) THEN
+  GEN_TAC THEN STRIP_TAC THEN
+  Know `inf s = ^inf_tm` >- (MATCH_MP_TAC inf_alt >> PROVE_TAC []) >> Rewr'
+  THEN CONV_TAC(ONCE_DEPTH_CONV SELECT_CONV) THEN
   ONCE_REWRITE_TAC[GSYM REAL_LE_NEG2] THEN
   EXISTS_TAC ``-(sup (IMAGE (\x:real. -x) s))`` THEN
   MP_TAC(SPEC ``IMAGE (\x. -x) (s:real->bool)`` SUP) THEN
@@ -644,11 +682,19 @@ val REAL_INF_UNIQUE = store_thm ("REAL_INF_UNIQUE",
  ``!s b:real. (!x. x IN s ==> b <= x) /\
          (!b'. b < b' ==> ?x. x IN s /\ x < b')
          ==> (inf s = b)``,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[inf] THEN MATCH_MP_TAC SELECT_UNIQUE THEN
+  rpt STRIP_TAC THEN
+  Know `s <> EMPTY`
+  >- (REWRITE_TAC [GSYM MEMBER_NOT_EMPTY] \\
+      POP_ASSUM (MP_TAC o (Q.SPEC `b + 1`)) \\
+      RW_TAC real_ss [REAL_LT_ADDR, REAL_LT_01] \\
+      Q.EXISTS_TAC `x` >> ASM_REWRITE_TAC []) >> DISCH_TAC \\
+  Know `inf s = ^inf_tm`
+  >- (MATCH_MP_TAC inf_alt >> PROVE_TAC []) >> Rewr' \\
+  MATCH_MP_TAC SELECT_UNIQUE THEN
   METIS_TAC[REAL_NOT_LE, REAL_LE_ANTISYM]);
 
 val REAL_LE_INF = store_thm ("REAL_LE_INF",
- ``!b:real. ~(s = {}) /\ (!x. x IN s ==> b <= x) ==> b <= inf s``,
+ ``!s b:real. ~(s = {}) /\ (!x. x IN s ==> b <= x) ==> b <= inf s``,
   MESON_TAC[INF]);
 
 val REAL_LE_INF_SUBSET = store_thm ("REAL_LE_INF_SUBSET",
@@ -679,14 +725,14 @@ val REAL_INF_ASCLOSE = store_thm ("REAL_INF_ASCLOSE",
   METIS_TAC[REAL_INF_BOUNDS]);
 
 val SUP_UNIQUE_FINITE = store_thm ("SUP_UNIQUE_FINITE",
- ``!s:real->bool. FINITE s /\ ~(s = {})
+ ``!s:real->bool a. FINITE s /\ ~(s = {})
        ==> ((sup s = a) <=> a IN s /\ !y. y IN s ==> y <= a)``,
    ASM_SIMP_TAC std_ss [GSYM REAL_LE_ANTISYM, REAL_LE_SUP_FINITE, REAL_SUP_LE_FINITE,
                NOT_INSERT_EMPTY, FINITE_INSERT, FINITE_EMPTY] THEN
    METIS_TAC[REAL_LE_REFL, REAL_LE_TRANS, REAL_LE_ANTISYM]);
 
 val INF_UNIQUE_FINITE = store_thm ("INF_UNIQUE_FINITE",
- ``!s. FINITE s /\ ~(s = {})
+ ``!s a. FINITE s /\ ~(s = {})
        ==> ((inf s = a) <=> a IN s /\ !y. y IN s ==> a <= y)``,
    ASM_SIMP_TAC std_ss [GSYM REAL_LE_ANTISYM, REAL_LE_INF_FINITE, REAL_INF_LE_FINITE,
                NOT_INSERT_EMPTY, FINITE_INSERT, FINITE_EMPTY] THEN
@@ -731,10 +777,12 @@ val INF_SING = store_thm ("INF_SING",
 (* A natural notation for segments of the naturals.                          *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = set_fixity ".." (Infix(NONASSOC, 450));
+(* Fixes for tight_equality(): make sure the priority is slightly higher than
+   "=" (450) and "IN" (425). -- Chun Tian, Mar 20, 2019 *)
+val _ = set_fixity ".." (Infix(NONASSOC, 470));
 
 val numseg = new_definition ("numseg",
-  ``m..n = {x:num | m <= x /\ x <= n}``);
+  ``(..) m n = {x:num | m <= x /\ x <= n}``);
 
 val FINITE_NUMSEG = store_thm ("FINITE_NUMSEG",
   ``!m n. FINITE (m..n)``,
@@ -1207,7 +1255,7 @@ val ITERATE_RELATED = store_thm ("ITERATE_RELATED",
   GEN_TAC THEN DISCH_TAC THEN GEN_TAC THEN STRIP_TAC THEN GEN_TAC THEN
   GEN_TAC THEN REWRITE_TAC[GSYM AND_IMP_INTRO] THEN GEN_TAC THEN
   KNOW_TAC ``(!x. x IN s ==> R (f x) (g x)) ==>
-    R (iterate op s f) (iterate op s g) = (\s. (!x. x IN s ==> R (f x) (g x)) ==>
+    R (iterate op s f) (iterate op s g) <=> (\s. (!x. x IN s ==> R (f x) (g x)) ==>
     R (iterate op s f) (iterate op s g)) s`` THENL [FULL_SIMP_TAC std_ss [],
    DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
@@ -1342,7 +1390,7 @@ val ITERATE_EQ = store_thm("ITERATE_EQ",
     (!x. x IN (support op f s) ==> (f x = g x))``
   MP_TAC THENL [ASM_MESON_TAC[IN_SUPPORT], REWRITE_TAC[GSYM AND_IMP_INTRO] THEN
   SPEC_TAC(``support op (f:'a->'b) s``,``t:'a->bool``) THEN GEN_TAC THEN
-  KNOW_TAC ``(!x. x IN t ==> (f x = g x)) ==> (iterate op t f = iterate op t g) =
+  KNOW_TAC ``(!x. x IN t ==> (f x = g x)) ==> (iterate op t f = iterate op t g) <=>
         (\t. (!x. x IN t ==> (f x = g x)) ==> (iterate op t f = iterate op t g)) t``
   THENL [FULL_SIMP_TAC std_ss [], DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN ASM_SIMP_TAC std_ss [ITERATE_CLAUSES] THEN
@@ -2135,15 +2183,17 @@ val MOD_NSUM_MOD_NUMSEG = store_thm ("MOD_NSUM_MOD_NUMSEG",
         ==> ((nsum(a..b) f) MOD n = nsum(a..b) (\i. f i MOD n) MOD n)``,
   METIS_TAC[MOD_NSUM_MOD, FINITE_NUMSEG]);
 
-val TH = store_thm ("TH",
- ``(!f g s.   (!x. x IN s ==> (f(x) = g(x)))
-              ==> (nsum s (\i. f(i)) = nsum s g)) /\
-   (!f g a b. (!i. a <= i /\ i <= b ==> (f(i) = g(i)))
-              ==> (nsum(a..b) (\i. f(i)) = nsum(a..b) g)) /\
-   (!f g p.   (!x. p x ==> (f x = g x))
-              ==> (nsum {y | p y} (\i. f(i)) = nsum {y | p y} g))``,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC NSUM_EQ THEN
-  ASM_SIMP_TAC std_ss [GSPECIFICATION,  IN_NUMSEG]);
+val NSUM_CONG = store_thm
+  ("NSUM_CONG",
+  ``(!f g s.   (!x. x IN s ==> (f(x) = g(x)))
+           ==> (nsum s (\i. f(i)) = nsum s g)) /\
+    (!f g a b. (!i. a <= i /\ i <= b ==> (f(i) = g(i)))
+           ==> (nsum(a..b) (\i. f(i)) = nsum(a..b) g)) /\
+    (!f g p.   (!x. p x ==> (f x = g x))
+           ==> (nsum {y | p y} (\i. f(i)) = nsum {y | p y} g))``,
+    REPEAT STRIP_TAC
+ >> MATCH_MP_TAC NSUM_EQ
+ >> ASM_SIMP_TAC std_ss [GSPECIFICATION, IN_NUMSEG]);
 
 (* ------------------------------------------------------------------------- *)
 (* Thanks to finite sums, we can express cardinality of finite union.        *)
@@ -2971,13 +3021,14 @@ val SUM_COMBINE_L = store_thm ("SUM_COMBINE_L",
 (* redex or we'll get a loop since f(x) will lambda-reduce recursively.      *)
 (* ------------------------------------------------------------------------- *)
 
-val TH = store_thm ("TH",
- ``(!f g s.   (!x. x IN s ==> (f(x) = g(x)))
-              ==> (sum s (\i. f(i)) = sum s g)) /\
-   (!f g a b. (!i. a <= i /\ i <= b ==> (f(i) = g(i)))
-              ==> (sum(a..b) (\i. f(i)) = sum(a..b) g)) /\
-   (!f g p.   (!x. p x ==> (f x = g x))
-              ==> (sum {y | p y} (\i. f(i)) = sum {y | p y} g))``,
+val SUM_CONG = store_thm
+  ("SUM_CONG",
+  ``(!f g s.   (!x. x IN s ==> (f(x) = g(x)))
+           ==> (sum s (\i. f(i)) = sum s g)) /\
+    (!f g a b. (!i. a <= i /\ i <= b ==> (f(i) = g(i)))
+           ==> (sum(a..b) (\i. f(i)) = sum(a..b) g)) /\
+    (!f g p.   (!x. p x ==> (f x = g x))
+           ==> (sum {y | p y} (\i. f(i)) = sum {y | p y} g))``,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC SUM_EQ THEN
   ASM_SIMP_TAC std_ss [GSPECIFICATION,  IN_NUMSEG]);
 

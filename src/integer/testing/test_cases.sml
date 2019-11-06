@@ -249,7 +249,8 @@ val terms_to_test =
   L (``0i < & (Num (ABS a1 - 1)) + 1``, "Num3"),
   L (``0i < &(Num (f (x:'a) - 1)) + 1``, "Num4a"),
   L (``0i < (if 0 <= f (x:'a) - 1i then f x - 1 else &(g (f x - 1))) + 1``,
-     "Num4b")
+     "Num4b"),
+  L (“n MOD 5 = 1  ==> 5 * ((n - 1) DIV 5) + 1 = n”, "Github677")
 ];
 
 val omega_test_terms = [

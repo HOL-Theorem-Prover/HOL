@@ -1,160 +1,75 @@
-(* interactive mode
-app load ["bossLib","realLib","transcTheory","subtypeTheory",
-          "formalizeUseful","extra_boolTheory",
-          "extra_pred_setTheory","extra_realTheory"];
-
-
-quietdec := true;
-*)
+(* ------------------------------------------------------------------------- *)
+(* Measure Theory defined on the positive reals [0, PosInf)                  *)
+(* Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar                         *)
+(* HVG Group, Concordia University, Montreal                                 *)
+(* ------------------------------------------------------------------------- *)
+(* Based on the work of Aaron Coble (and Joe Hurd), Cambridge University     *)
+(* ------------------------------------------------------------------------- *)
 
 open HolKernel Parse boolLib bossLib arithmeticTheory realTheory
-     seqTheory pred_setTheory res_quanTheory listTheory
-     rich_listTheory pairTheory combinTheory realLib formalizeUseful
-     subtypeTheory extra_pred_setTheory extra_boolTheory optionTheory
-     extra_realTheory extra_numTheory;
+     seqTheory pred_setTheory res_quanTheory res_quanTools listTheory transcTheory
+     rich_listTheory pairTheory combinTheory realLib optionTheory
+     real_sigmaTheory;
 
-open real_sigmaTheory;
+open hurdUtils util_probTheory sigma_algebraTheory;
 
-(* interactive mode
-quietdec := false;
-*)
-
-val _ = new_theory "measure";
+val _ = new_theory "real_measure";
 
 val std_ss' = std_ss ++ boolSimps.ETA_ss;
-val INTER_ASSOC = GSYM INTER_ASSOC;
-val UNION_ASSOC = GSYM UNION_ASSOC;
-
-(* ------------------------------------------------------------------------- *)
-(* Tools.                                                                    *)
-(* ------------------------------------------------------------------------- *)
-
-val REVERSE = Tactical.REVERSE;
-val Strip = rpt (POP_ASSUM MP_TAC) >> rpt STRIP_TAC;
-val Simplify = RW_TAC arith_ss;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
-val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val STRONG_DISJ_TAC = CONV_TAC (REWR_CONV (GSYM IMP_DISJ_THM)) >> STRIP_TAC;
-val Cond =
-  DISCH_THEN
-  (fn mp_th =>
-   let
-     val cond = fst (dest_imp (concl mp_th))
-   in
-     KNOW_TAC cond >| [ALL_TAC, DISCH_THEN (MP_TAC o MP mp_th)]
-   end);
-
-val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 
 (* ------------------------------------------------------------------------- *)
 (* Basic measure theory definitions.                                         *)
-(*                                                                           *)
-(* Limitations:                                                              *)
-(*       *)
-(* 2. Measures must be finite, that is, lie in the range [0, +infinity).     *)
-(*                                                                           *)
-(* Limitation 2 is not relevant for probability measures, which must lie in  *)
-(* the range [0,1] anyway.                                                   *)
 (* ------------------------------------------------------------------------- *)
-
-
-val space_def = Define
-   `space (x:'a->bool,y:('a->bool)->bool) = x`;
-
-
-val subsets_def = Define
-   `subsets (x:'a->bool,y:('a->bool)->bool) = y`;
-
-
-val SPACE = store_thm
-  ("SPACE",
-   ``!a. (space a, subsets a) = a``,
-   STRIP_TAC >> MP_TAC (Q.ISPEC `(a :('a -> bool) # (('a -> bool) -> bool))` pair_CASES)
-   >> RW_TAC std_ss [space_def, subsets_def]);
-
-val subset_class_def = Define
-   `subset_class sp sts = !x. x IN sts ==> x SUBSET sp`;
-
-
-val algebra_def = Define
-  `algebra a =
-     subset_class (space a) (subsets a) /\
-     {} IN subsets a /\
-     (!s. s IN subsets a ==> space a DIFF s IN subsets a) /\
-     (!s t. s IN subsets a /\ t IN subsets a ==> s UNION t IN subsets a)`;
-
-
-val sigma_algebra_def = Define
-   `sigma_algebra a =
-     algebra a /\
-     !c. countable c /\ c SUBSET (subsets a) ==> BIGUNION c IN (subsets a)`;
-
-
-val sigma_def = Define
-   `sigma sp st = (sp, BIGINTER {s | st SUBSET s /\ sigma_algebra (sp,s)})`;
-
 
 val m_space_def = Define
    `m_space (sp:'a->bool, sts:('a->bool)->bool, mu:('a->bool)->real) = sp`;
 
-
 val measurable_sets_def = Define
    `measurable_sets (sp:'a->bool, sts:('a->bool)->bool, mu:('a->bool)->real) = sts`;
-
 
 val measure_def = Define
    `measure (sp:'a->bool, sts:('a->bool)->bool, mu:('a->bool)->real) = mu`;
 
-
 val positive_def = Define
-  `positive m =
-   (measure m {} = 0) /\ !s. s IN measurable_sets m ==> 0 <= measure m s`;
-
+   `positive m <=>
+    (measure m {} = 0) /\ !s. s IN measurable_sets m ==> 0 <= measure m s`;
 
 val additive_def = Define
-  `additive m =
-   !s t. s IN measurable_sets m /\ t IN measurable_sets m /\ DISJOINT s t ==>
-   (measure m (s UNION t) = measure m s + measure m t)`;
-
+   `additive m <=>
+    !s t. s IN measurable_sets m /\ t IN measurable_sets m /\ DISJOINT s t ==>
+         (measure m (s UNION t) = measure m s + measure m t)`;
 
 val countably_additive_def = Define
-  `countably_additive m =
-   !f : num -> ('a -> bool).
+   `countably_additive m <=>
+    !f : num -> ('a -> bool).
      f IN (UNIV -> measurable_sets m) /\
      (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) /\
      BIGUNION (IMAGE f UNIV) IN measurable_sets m ==>
      (measure m o f) sums measure m (BIGUNION (IMAGE f UNIV))`;
 
-
 val subadditive_def = Define
-  `subadditive m =
-   !s t.
+   `subadditive m <=>
+    !s t.
      s IN measurable_sets m /\ t IN measurable_sets m ==>
      measure m (s UNION t) <= measure m s + measure m t`;
 
-
 val countably_subadditive_def = Define
-  `countably_subadditive m =
-   !f : num -> ('a -> bool).
+   `countably_subadditive m <=>
+    !f : num -> ('a -> bool).
      f IN (UNIV -> measurable_sets m) /\
      BIGUNION (IMAGE f UNIV) IN measurable_sets m /\
      summable (measure m o f) ==>
      measure m (BIGUNION (IMAGE f UNIV)) <= suminf (measure m o f)`;
 
-
 val increasing_def = Define
-  `increasing m =
-   !s t.
+   `increasing m <=>
+    !s t.
      s IN measurable_sets m /\ t IN measurable_sets m /\ s SUBSET t ==>
      measure m s <= measure m t`;
 
-
 val measure_space_def = Define
-  `measure_space m =
-   sigma_algebra (m_space m, measurable_sets m) /\ positive m /\ countably_additive m`;
-
+   `measure_space m <=>
+    sigma_algebra (m_space m, measurable_sets m) /\ positive m /\ countably_additive m`;
 
 val lambda_system_def = Define
   `lambda_system gen (lam : ('a -> bool) -> real) =
@@ -162,26 +77,20 @@ val lambda_system_def = Define
     l IN (subsets gen) /\
     !s. s IN (subsets gen) ==> (lam (l INTER s) + lam ((space gen DIFF l) INTER s) = lam s)}`;
 
-
 val outer_measure_space_def = Define
-  `outer_measure_space m =
-   positive m /\ increasing m /\ countably_subadditive m`;
-
+   `outer_measure_space m <=> positive m /\ increasing m /\ countably_subadditive m`;
 
 val inf_measure_def = Define
-  `inf_measure m s =
-   inf
-   {r |
-    ?f.
-      f IN (UNIV -> measurable_sets m) /\
-      (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) /\
-      s SUBSET BIGUNION (IMAGE f UNIV) /\ ((measure m o f) sums r)}`;
-
+   `inf_measure m s =
+    inf
+    {r | ?f. f IN (UNIV -> measurable_sets m) /\
+            (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) /\
+             s SUBSET BIGUNION (IMAGE f UNIV) /\ ((measure m o f) sums r)}`;
 
 val closed_cdi_def = Define
-  `closed_cdi p =
-   subset_class (space p) (subsets p) /\
-   (!s. s IN (subsets p) ==> (space p DIFF s) IN (subsets p)) /\
+   `closed_cdi p <=>
+    subset_class (space p) (subsets p) /\
+     (!s. s IN (subsets p) ==> (space p DIFF s) IN (subsets p)) /\
      (!f : num -> 'a -> bool.
         f IN (UNIV -> (subsets p)) /\ (f 0 = {}) /\ (!n. f n SUBSET f (SUC n)) ==>
         BIGUNION (IMAGE f UNIV) IN (subsets p)) /\
@@ -189,127 +98,34 @@ val closed_cdi_def = Define
         f IN (UNIV -> (subsets p)) /\ (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
         BIGUNION (IMAGE f UNIV) IN (subsets p))`;
 
-
 val smallest_closed_cdi_def = Define
-  `smallest_closed_cdi a = (space a, BIGINTER {b | (subsets a) SUBSET b /\ closed_cdi (space a, b)})`;
-
+   `smallest_closed_cdi a =
+     (space a, BIGINTER {b | (subsets a) SUBSET b /\ closed_cdi (space a, b)})`;
 
 val measurable_def = Define
-  `measurable a b = {f | sigma_algebra a /\ sigma_algebra b /\
-                         f IN (space a -> space b) /\
-                         !s. s IN subsets b ==> ((PREIMAGE f s)INTER(space a)) IN subsets a}`;
-
+   `measurable a b = {f | sigma_algebra a /\ sigma_algebra b /\
+                          f IN (space a -> space b) /\
+                          !s. s IN subsets b ==> ((PREIMAGE f s)INTER(space a)) IN subsets a}`;
 
 val measure_preserving_def = Define
-  `measure_preserving m1 m2 =
-   {f |
-    f IN measurable (m_space m1, measurable_sets m1) (m_space m2, measurable_sets m2) /\
-    measure_space m1 /\ measure_space m2 /\
-    !s.
-      s IN measurable_sets m2 ==> (measure m1 ((PREIMAGE f s)INTER(m_space m1)) = measure m2 s)}`;
-
-
-val indicator_fn_def = Define
-   `indicator_fn s = \x. if x IN s then (1:real) else (0:real)`;
-
+   `measure_preserving m1 m2 =
+    {f |
+     f IN measurable (m_space m1, measurable_sets m1) (m_space m2, measurable_sets m2) /\
+     measure_space m1 /\ measure_space m2 /\
+     !s.
+      s IN measurable_sets m2 ==>
+           (measure m1 ((PREIMAGE f s)INTER(m_space m1)) = measure m2 s)}`;
 
 (* ------------------------------------------------------------------------- *)
-(* Basic measure theory theorems, leading to:                                *)
-(* 1. Caratheodory's extension theorem.                                      *)
+(* Basic measure theory theorems                                             *)
 (* ------------------------------------------------------------------------- *)
-
-
-val ALGEBRA_ALT_INTER = store_thm
-  ("ALGEBRA_ALT_INTER",
-   ``!a.
-       algebra a =
-       subset_class (space a) (subsets a) /\
-       {} IN (subsets a) /\ (!s. s IN (subsets a) ==> (space a DIFF s) IN (subsets a)) /\
-       !s t. s IN (subsets a) /\ t IN (subsets a) ==> s INTER t IN (subsets a)``,
-   RW_TAC std_ss [algebra_def, subset_class_def]
-   >> EQ_TAC >|
-   [RW_TAC std_ss []
-    >> Know `s INTER t =  space a DIFF ((space a DIFF s) UNION (space a DIFF t))`
-    >- (RW_TAC std_ss [EXTENSION, IN_INTER, IN_DIFF, IN_UNION]
-        >> EQ_TAC
-        >- (RW_TAC std_ss [] >> FULL_SIMP_TAC std_ss [SUBSET_DEF] >> PROVE_TAC [])
-        >> RW_TAC std_ss [] >> ASM_REWRITE_TAC [])
-    >> RW_TAC std_ss [],
-    RW_TAC std_ss []
-    >> Know `s UNION t = space a DIFF ((space a DIFF s) INTER (space a DIFF t))`
-    >- (RW_TAC std_ss [EXTENSION, IN_INTER, IN_DIFF, IN_UNION]
-        >> EQ_TAC
-        >- (RW_TAC std_ss [] >> FULL_SIMP_TAC std_ss [SUBSET_DEF] >> PROVE_TAC [])
-        >> RW_TAC std_ss [] >> ASM_REWRITE_TAC [])
-    >> RW_TAC std_ss []]);
-
-
-val ALGEBRA_EMPTY = store_thm
-  ("ALGEBRA_EMPTY",
-   ``!a. algebra a ==> {} IN (subsets a)``,
-   RW_TAC std_ss [algebra_def]);
-
-
-val ALGEBRA_SPACE = store_thm
-  ("ALGEBRA_SPACE",
-   ``!a. algebra a ==> (space a) IN (subsets a)``,
-   RW_TAC std_ss [algebra_def]
-   >> PROVE_TAC [DIFF_EMPTY]);
-
-
-val ALGEBRA_COMPL = store_thm
-  ("ALGEBRA_COMPL",
-   ``!a s. algebra a /\ s IN (subsets a) ==> (space a DIFF s) IN (subsets a)``,
-   RW_TAC std_ss [algebra_def]);
-
-
-val ALGEBRA_UNION = store_thm
-  ("ALGEBRA_UNION",
-   ``!a s t. algebra a /\ s IN (subsets a) /\ t IN (subsets a) ==> s UNION t IN (subsets a)``,
-   RW_TAC std_ss [algebra_def]);
-
-
-val ALGEBRA_INTER = store_thm
-  ("ALGEBRA_INTER",
-   ``!a s t. algebra a /\ s IN (subsets a) /\ t IN (subsets a) ==> s INTER t IN (subsets a)``,
-   RW_TAC std_ss [ALGEBRA_ALT_INTER]);
-
-
-val ALGEBRA_DIFF = store_thm
-  ("ALGEBRA_DIFF",
-   ``!a s t. algebra a /\ s IN (subsets a) /\ t IN (subsets a) ==> s DIFF t IN (subsets a)``,
-   REPEAT STRIP_TAC
-   >> Know `s DIFF t = s INTER (space a DIFF t)`
-   >- (RW_TAC std_ss [EXTENSION, IN_DIFF, IN_INTER]
-       >> FULL_SIMP_TAC std_ss [algebra_def, SUBSET_DEF, subset_class_def]
-       >> PROVE_TAC [])
-   >> RW_TAC std_ss [ALGEBRA_INTER, ALGEBRA_COMPL]);
-
-
-val ALGEBRA_FINITE_UNION = store_thm
-  ("ALGEBRA_FINITE_UNION",
-   ``!a c. algebra a /\ FINITE c /\ c SUBSET (subsets a) ==> BIGUNION c IN (subsets a)``,
-   RW_TAC std_ss [algebra_def]
-   >> NTAC 2 (POP_ASSUM MP_TAC)
-   >> Q.SPEC_TAC (`c`, `c`)
-   >> HO_MATCH_MP_TAC FINITE_INDUCT
-   >> RW_TAC std_ss [BIGUNION_EMPTY, BIGUNION_INSERT, INSERT_SUBSET]);
-
-
-val ALGEBRA_INTER_SPACE = store_thm
-  ("ALGEBRA_INTER_SPACE",
-   ``!a s. algebra a /\ s IN subsets a ==> ((space a INTER s = s) /\ (s INTER space a = s))``,
-   RW_TAC std_ss [algebra_def, SUBSET_DEF, IN_INTER, EXTENSION, subset_class_def]
-   >> PROVE_TAC []);
-
 
 val LAMBDA_SYSTEM_EMPTY = store_thm
   ("LAMBDA_SYSTEM_EMPTY",
-   ``!g0 lam. algebra g0 /\ positive (space g0, subsets g0, lam) ==> {} IN lambda_system g0 lam``,
-   RW_TAC real_ss [lambda_system_def, GSPECIFICATION, positive_def,
-                  INTER_EMPTY, DIFF_EMPTY, ALGEBRA_INTER_SPACE, measure_def]
-   >> FULL_SIMP_TAC std_ss [algebra_def]);
-
+  ``!g0 lam. algebra g0 /\ positive (space g0, subsets g0, lam) ==> {} IN lambda_system g0 lam``,
+    RW_TAC real_ss [lambda_system_def, GSPECIFICATION, positive_def,
+                    INTER_EMPTY, DIFF_EMPTY, ALGEBRA_INTER_SPACE, measure_def]
+ >> FULL_SIMP_TAC std_ss [algebra_def]);
 
 val LAMBDA_SYSTEM_COMPL = store_thm
   ("LAMBDA_SYSTEM_COMPL",
@@ -322,7 +138,6 @@ val LAMBDA_SYSTEM_COMPL = store_thm
    >- (RW_TAC std_ss [Once EXTENSION, IN_DIFF, LEFT_AND_OVER_OR] >> PROVE_TAC [algebra_def, subset_class_def, SUBSET_DEF])
    >> RW_TAC std_ss []
    >> PROVE_TAC [REAL_ADD_SYM]);
-
 
 val LAMBDA_SYSTEM_INTER = store_thm
   ("LAMBDA_SYSTEM_INTER",
@@ -356,7 +171,7 @@ val LAMBDA_SYSTEM_INTER = store_thm
        >- (RW_TAC std_ss [EXTENSION, IN_INTER, IN_DIFF]
            >> PROVE_TAC [])
        >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
-       >> REWRITE_TAC [INTER_ASSOC]
+       >> REWRITE_TAC [GSYM INTER_ASSOC]
        >> Q.PAT_X_ASSUM `!g. P g` K_TAC
        >> Q.PAT_X_ASSUM `!g. P g` MATCH_MP_TAC
        >> PROVE_TAC [ALGEBRA_ALT_INTER])
@@ -371,15 +186,15 @@ val LAMBDA_SYSTEM_INTER = store_thm
    >> KILL_TAC
    >> REAL_ARITH_TAC);
 
-
 val LAMBDA_SYSTEM_ALGEBRA = store_thm
   ("LAMBDA_SYSTEM_ALGEBRA",
    ``!g0 lam.
-       algebra g0 /\ positive (space g0, subsets g0, lam) ==> algebra (space g0, lambda_system g0 lam)``,
+       algebra g0 /\ positive (space g0, subsets g0, lam)
+       ==> algebra (space g0, lambda_system g0 lam)``,
    RW_TAC std_ss [ALGEBRA_ALT_INTER, LAMBDA_SYSTEM_EMPTY, positive_def,
-                  LAMBDA_SYSTEM_COMPL, LAMBDA_SYSTEM_INTER, space_def, subsets_def, subset_class_def]
+                  LAMBDA_SYSTEM_COMPL, LAMBDA_SYSTEM_INTER, space_def,
+                  subsets_def, subset_class_def]
    >> FULL_SIMP_TAC std_ss [lambda_system_def, GSPECIFICATION]);
-
 
 val LAMBDA_SYSTEM_STRONG_ADDITIVE = store_thm
   ("LAMBDA_SYSTEM_STRONG_ADDITIVE",
@@ -407,7 +222,6 @@ val LAMBDA_SYSTEM_STRONG_ADDITIVE = store_thm
    >> Q.PAT_X_ASSUM `l1 IN x` MP_TAC
    >> RW_TAC std_ss [lambda_system_def, GSPECIFICATION]);
 
-
 val LAMBDA_SYSTEM_ADDITIVE = store_thm
   ("LAMBDA_SYSTEM_ADDITIVE",
    ``!g0 lam l1 l2.
@@ -416,8 +230,8 @@ val LAMBDA_SYSTEM_ADDITIVE = store_thm
    RW_TAC std_ss [additive_def, measure_def, measurable_sets_def]
    >> MP_TAC (Q.SPECL [`g0`, `lam`, `space g0`, `s`, `t`]
               LAMBDA_SYSTEM_STRONG_ADDITIVE)
-   >> FULL_SIMP_TAC std_ss [lambda_system_def, GSPECIFICATION, ALGEBRA_INTER_SPACE, ALGEBRA_SPACE, ALGEBRA_UNION]);
-
+   >> FULL_SIMP_TAC std_ss [lambda_system_def, GSPECIFICATION, ALGEBRA_INTER_SPACE,
+                            ALGEBRA_SPACE, ALGEBRA_UNION]);
 
 val COUNTABLY_SUBADDITIVE_SUBADDITIVE = store_thm
   ("COUNTABLY_SUBADDITIVE_SUBADDITIVE",
@@ -470,137 +284,6 @@ val COUNTABLY_SUBADDITIVE_SUBADDITIVE = store_thm
        >> BasicProvers.NORM_TAC std_ss [IN_FUNSET, IN_UNIV, algebra_def, subsets_def, subset_class_def])
    >> PROVE_TAC [algebra_def, subsets_def, subset_class_def]);
 
-
-val SIGMA_ALGEBRA_ALT = store_thm
-  ("SIGMA_ALGEBRA_ALT",
-   ``!a.
-       sigma_algebra a =
-       algebra a /\
-       (!f : num -> 'a -> bool.
-          f IN (UNIV -> (subsets a)) ==> BIGUNION (IMAGE f UNIV) IN (subsets a))``,
-   RW_TAC std_ss [sigma_algebra_def]
-   >> EQ_TAC
-   >- (RW_TAC std_ss [COUNTABLE_ALT, IN_FUNSET, IN_UNIV]
-       >> Q.PAT_X_ASSUM `!c. P c ==> Q c` MATCH_MP_TAC
-       >> REVERSE (RW_TAC std_ss [IN_IMAGE, SUBSET_DEF, IN_UNIV])
-       >- PROVE_TAC []
-       >> Q.EXISTS_TAC `f`
-       >> RW_TAC std_ss []
-       >> PROVE_TAC [])
-   >> RW_TAC std_ss [COUNTABLE_ALT_BIJ]
-   >- PROVE_TAC [ALGEBRA_FINITE_UNION]
-   >> Q.PAT_X_ASSUM `!f. P f` (MP_TAC o Q.SPEC `\n. enumerate c n`)
-   >> RW_TAC std_ss' [IN_UNIV, IN_FUNSET]
-   >> Know `BIGUNION c = BIGUNION (IMAGE (enumerate c) UNIV)`
-   >- (RW_TAC std_ss [EXTENSION, IN_BIGUNION, IN_IMAGE, IN_UNIV]
-       >> Suff `!s. s IN c = ?n. (enumerate c n = s)` >- PROVE_TAC []
-       >> Q.PAT_X_ASSUM `BIJ x y z` MP_TAC
-       >> RW_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_UNIV]
-       >> PROVE_TAC [])
-   >> DISCH_THEN (REWRITE_TAC o wrap)
-   >> POP_ASSUM MATCH_MP_TAC
-   >> Strip
-   >> Suff `enumerate c n IN c` >- PROVE_TAC [SUBSET_DEF]
-   >> Q.PAT_X_ASSUM `BIJ i j k` MP_TAC
-   >> RW_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_UNIV]);
-
-
-val SIGMA_ALGEBRA_ALT_MONO = store_thm
-  ("SIGMA_ALGEBRA_ALT_MONO",
-   ``!a.
-       sigma_algebra a =
-       algebra a /\
-       (!f : num -> 'a -> bool.
-          f IN (UNIV -> (subsets a)) /\ (f 0 = {}) /\ (!n. f n SUBSET f (SUC n)) ==>
-          BIGUNION (IMAGE f UNIV) IN (subsets a))``,
-   RW_TAC std_ss [SIGMA_ALGEBRA_ALT]
-   >> EQ_TAC >- PROVE_TAC []
-   >> RW_TAC std_ss []
-   >> Q.PAT_X_ASSUM `!f. P f`
-      (MP_TAC o Q.SPEC `\n. BIGUNION (IMAGE f (count n))`)
-   >> RW_TAC std_ss [IN_UNIV, IN_FUNSET]
-   >> Know
-      `BIGUNION (IMAGE f UNIV) =
-       BIGUNION (IMAGE (\n. BIGUNION (IMAGE f (count n))) UNIV)`
-   >- (KILL_TAC
-       >> ONCE_REWRITE_TAC [EXTENSION]
-       >> RW_TAC std_ss [IN_BIGUNION, IN_IMAGE, IN_UNIV]
-       >> EQ_TAC
-       >- (RW_TAC std_ss []
-           >> Q.EXISTS_TAC `BIGUNION (IMAGE f (count (SUC x')))`
-           >> RW_TAC std_ss [IN_BIGUNION, IN_IMAGE, IN_COUNT]
-           >> PROVE_TAC [prim_recTheory.LESS_SUC_REFL])
-       >> RW_TAC std_ss []
-       >> POP_ASSUM MP_TAC
-       >> RW_TAC std_ss [IN_BIGUNION, IN_IMAGE, IN_COUNT]
-       >> PROVE_TAC [])
-   >> DISCH_THEN (REWRITE_TAC o wrap)
-   >> POP_ASSUM MATCH_MP_TAC
-   >> REVERSE (RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_COUNT, IN_IMAGE,
-                              COUNT_ZERO, IMAGE_EMPTY, BIGUNION_EMPTY])
-   >- (Q.EXISTS_TAC `f x'`
-       >> RW_TAC std_ss []
-       >> Q.EXISTS_TAC `x'`
-       >> DECIDE_TAC)
-   >> MATCH_MP_TAC ALGEBRA_FINITE_UNION
-   >> POP_ASSUM MP_TAC
-   >> REVERSE (RW_TAC std_ss [IN_FUNSET, IN_UNIV, SUBSET_DEF, IN_IMAGE])
-   >- PROVE_TAC []
-   >> MATCH_MP_TAC IMAGE_FINITE
-   >> RW_TAC std_ss [FINITE_COUNT]);
-
-
-val SIGMA_ALGEBRA_ALT_DISJOINT = store_thm
-  ("SIGMA_ALGEBRA_ALT_DISJOINT",
-   ``!a.
-       sigma_algebra a =
-       algebra a /\
-       (!f.
-          f IN (UNIV -> (subsets a)) /\
-          (!m n : num. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
-          BIGUNION (IMAGE f UNIV) IN (subsets a))``,
-   Strip
-   >> EQ_TAC >- RW_TAC std_ss [SIGMA_ALGEBRA_ALT]
-   >> RW_TAC std_ss [SIGMA_ALGEBRA_ALT_MONO, IN_FUNSET, IN_UNIV]
-   >> Q.PAT_X_ASSUM `!f. P f ==> Q f` (MP_TAC o Q.SPEC `\n. f (SUC n) DIFF f n`)
-   >> RW_TAC std_ss []
-   >> Know
-      `BIGUNION (IMAGE f UNIV) = BIGUNION (IMAGE (\n. f (SUC n) DIFF f n) UNIV)`
-   >- (POP_ASSUM K_TAC
-       >> ONCE_REWRITE_TAC [EXTENSION]
-       >> RW_TAC std_ss [IN_BIGUNION, IN_IMAGE, IN_UNIV, IN_DIFF]
-       >> REVERSE EQ_TAC
-       >- (RW_TAC std_ss []
-           >> POP_ASSUM MP_TAC
-           >> RW_TAC std_ss [IN_DIFF]
-           >> PROVE_TAC [])
-       >> RW_TAC std_ss []
-       >> Induct_on `x'` >- RW_TAC std_ss [NOT_IN_EMPTY]
-       >> RW_TAC std_ss []
-       >> Cases_on `x IN f x'` >- PROVE_TAC []
-       >> Q.EXISTS_TAC `f (SUC x') DIFF f x'`
-       >> RW_TAC std_ss [EXTENSION, IN_DIFF]
-       >> PROVE_TAC [])
-   >> DISCH_THEN (REWRITE_TAC o wrap)
-   >> POP_ASSUM MATCH_MP_TAC
-   >> CONJ_TAC >- RW_TAC std_ss [ALGEBRA_DIFF]
-   >> HO_MATCH_MP_TAC TRANSFORM_2D_NUM
-   >> CONJ_TAC >- PROVE_TAC [DISJOINT_SYM]
-   >> RW_TAC arith_ss []
-   >> Suff `f (SUC m) SUBSET f (m + n)`
-   >- (RW_TAC std_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY,
-                      IN_INTER, IN_DIFF, SUBSET_DEF]
-       >> PROVE_TAC [])
-   >> Cases_on `n` >- PROVE_TAC [ADD_CLAUSES]
-   >> POP_ASSUM K_TAC
-   >> Know `m + SUC n' = SUC m + n'` >- DECIDE_TAC
-   >> DISCH_THEN (REWRITE_TAC o wrap)
-   >> Induct_on `n'` >- RW_TAC arith_ss [SUBSET_REFL]
-   >> MATCH_MP_TAC SUBSET_TRANS
-   >> Q.EXISTS_TAC `f (SUC m + n')`
-   >> PROVE_TAC [ADD_CLAUSES]);
-
-
 val SUBADDITIVE = store_thm
   ("SUBADDITIVE",
    ``!m s t u.
@@ -608,7 +291,6 @@ val SUBADDITIVE = store_thm
        (u = s UNION t) ==>
        measure m u <= measure m s + measure m t``,
    RW_TAC std_ss [subadditive_def]);
-
 
 val ADDITIVE = store_thm
   ("ADDITIVE",
@@ -618,7 +300,6 @@ val ADDITIVE = store_thm
        (measure m u = measure m s + measure m t)``,
    RW_TAC std_ss [additive_def]);
 
-
 val COUNTABLY_SUBADDITIVE = store_thm
   ("COUNTABLY_SUBADDITIVE",
    ``!m f s.
@@ -627,7 +308,6 @@ val COUNTABLY_SUBADDITIVE = store_thm
        (s IN measurable_sets m) ==>
        measure m s <= suminf (measure m o f)``,
    PROVE_TAC [countably_subadditive_def]);
-
 
 val ADDITIVE_SUM = store_thm
   ("ADDITIVE_SUM",
@@ -650,7 +330,6 @@ val ADDITIVE_SUM = store_thm
    >> MATCH_MP_TAC ((REWRITE_RULE [subsets_def] o Q.SPEC `(m_space m,measurable_sets m)`) ALGEBRA_FINITE_UNION)
    >> RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_COUNT]
    >> PROVE_TAC [FINITE_COUNT, IMAGE_FINITE]);
-
 
 val INCREASING_ADDITIVE_SUMMABLE = store_thm
   ("INCREASING_ADDITIVE_SUMMABLE",
@@ -681,20 +360,17 @@ val INCREASING_ADDITIVE_SUMMABLE = store_thm
                      IN_FUNSET, IN_UNIV, algebra_def, space_def, subsets_def, subset_class_def]
    >> PROVE_TAC []);
 
-
 val LAMBDA_SYSTEM_POSITIVE = store_thm
   ("LAMBDA_SYSTEM_POSITIVE",
    ``!g0 lam. positive (space g0, subsets g0, lam) ==> positive (space g0, lambda_system g0 lam, lam)``,
    RW_TAC std_ss [positive_def, lambda_system_def, GSPECIFICATION,
                   measure_def, measurable_sets_def]);
 
-
 val LAMBDA_SYSTEM_INCREASING = store_thm
   ("LAMBDA_SYSTEM_INCREASING",
    ``!g0 lam. increasing (space g0, subsets g0, lam) ==> increasing (space g0, lambda_system g0 lam, lam)``,
    RW_TAC std_ss [increasing_def, lambda_system_def, GSPECIFICATION,
                   measure_def, measurable_sets_def]);
-
 
 val LAMBDA_SYSTEM_STRONG_SUM = store_thm
   ("LAMBDA_SYSTEM_STRONG_SUM",
@@ -718,18 +394,10 @@ val LAMBDA_SYSTEM_STRONG_SUM = store_thm
    >> RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, LAMBDA_SYSTEM_ALGEBRA]
    >> PROVE_TAC [IMAGE_FINITE, FINITE_COUNT]);
 
-
-val SIGMA_ALGEBRA_ALGEBRA = store_thm
-  ("SIGMA_ALGEBRA_ALGEBRA",
-   ``!a. sigma_algebra a ==> algebra a``,
-   PROVE_TAC [sigma_algebra_def]);
-
-
 val OUTER_MEASURE_SPACE_POSITIVE = store_thm
   ("OUTER_MEASURE_SPACE_POSITIVE",
    ``!m. outer_measure_space m ==> positive m``,
    PROVE_TAC [outer_measure_space_def]);
-
 
 val LAMBDA_SYSTEM_CARATHEODORY = store_thm
   ("LAMBDA_SYSTEM_CARATHEODORY",
@@ -780,10 +448,10 @@ val LAMBDA_SYSTEM_CARATHEODORY = store_thm
        >> Suff `(\s. s INTER BIGUNION (IMAGE f UNIV)) o f = f`
        >- RW_TAC std_ss []
        >> KILL_TAC
-       >> FUN_EQ_TAC
+       >> RW_TAC std_ss [FUN_EQ_THM]
        >> RW_TAC std_ss [o_DEF, EXTENSION, IN_INTER, IN_BIGUNION,
                          GSPECIFICATION, IN_IMAGE, IN_UNIV]
-       >> PROVE_TAC [])
+       >> METIS_TAC [IN_INTER,SPECIFICATION,IN_BIGUNION_IMAGE,IN_UNIV])
    >> rpt GEN_TAC
    >> STRIP_TAC
    >> Know `summable (lam o (\s. s INTER g) o f)`
@@ -844,7 +512,7 @@ val LAMBDA_SYSTEM_CARATHEODORY = store_thm
     >> CONJ_TAC
     >- (RW_TAC std_ss [EXTENSION, IN_INTER, IN_BIGUNION, IN_IMAGE, IN_UNIV,
                        o_DEF]
-        >> REVERSE EQ_TAC >- PROVE_TAC []
+        >> Reverse EQ_TAC >- PROVE_TAC []
         >> RW_TAC std_ss [GSYM EXTENSION]
         >> Q.EXISTS_TAC `f x' INTER g`
         >> RW_TAC std_ss [IN_INTER]
@@ -894,7 +562,6 @@ val LAMBDA_SYSTEM_CARATHEODORY = store_thm
                       IN_UNIV, IN_DIFF]
     >> PROVE_TAC []]);
 
-
 val CARATHEODORY_LEMMA = store_thm
   ("CARATHEODORY_LEMMA",
    ``!gsig lam.
@@ -908,7 +575,6 @@ val CARATHEODORY_LEMMA = store_thm
     >> PROVE_TAC [LAMBDA_SYSTEM_ALGEBRA, SIGMA_ALGEBRA_ALGEBRA,
                   outer_measure_space_def],
     PROVE_TAC [outer_measure_space_def, LAMBDA_SYSTEM_POSITIVE]]);
-
 
 val INF_MEASURE_NONEMPTY = store_thm
   ("INF_MEASURE_NONEMPTY",
@@ -934,7 +600,6 @@ val INF_MEASURE_NONEMPTY = store_thm
       >> MATCH_MP_TAC SER_0
       >> RW_TAC arith_ss []]);
 
-
 val INF_MEASURE_POS0 = store_thm
   ("INF_MEASURE_POS0",
    ``!m g x.
@@ -950,7 +615,6 @@ val INF_MEASURE_POS0 = store_thm
    >> MATCH_MP_TAC SER_POS
    >> RW_TAC std_ss [o_DEF]);
 
-
 val INF_MEASURE_POS = store_thm
   ("INF_MEASURE_POS",
    ``!m g. algebra (m_space m, measurable_sets m) /\ positive m /\ g SUBSET m_space m ==> 0 <= inf_measure m g``,
@@ -962,7 +626,6 @@ val INF_MEASURE_POS = store_thm
        >> PROVE_TAC [ALGEBRA_SPACE, space_def, subsets_def])
    >> METIS_TAC [INF_MEASURE_POS0]);
 
-
 val INCREASING = store_thm
   ("INCREASING",
    ``!m s t.
@@ -970,7 +633,6 @@ val INCREASING = store_thm
        t IN measurable_sets m ==>
        measure m s <= measure m t``,
    PROVE_TAC [increasing_def]);
-
 
 val ADDITIVE_INCREASING = store_thm
   ("ADDITIVE_INCREASING",
@@ -992,7 +654,6 @@ val ADDITIVE_INCREASING = store_thm
    >> RW_TAC std_ss [DISJOINT_DEF, IN_DIFF, IN_UNION, EXTENSION, IN_INTER,
                      NOT_IN_EMPTY]
    >> PROVE_TAC [SUBSET_DEF]);
-
 
 val COUNTABLY_ADDITIVE_ADDITIVE = store_thm
   ("COUNTABLY_ADDITIVE_ADDITIVE",
@@ -1040,7 +701,6 @@ val COUNTABLY_ADDITIVE_ADDITIVE = store_thm
    >> RW_TAC std_ss [DISJOINT_EMPTY]
    >> PROVE_TAC [DISJOINT_SYM, ALGEBRA_UNION, subsets_def]);
 
-
 val COUNTABLY_ADDITIVE = store_thm
   ("COUNTABLY_ADDITIVE",
    ``!m s f.
@@ -1050,7 +710,6 @@ val COUNTABLY_ADDITIVE = store_thm
        measure m o f sums measure m s``,
    RW_TAC std_ss []
    >> PROVE_TAC [countably_additive_def]);
-
 
 val INF_MEASURE_AGREES = store_thm
   ("INF_MEASURE_AGREES",
@@ -1066,7 +725,7 @@ val INF_MEASURE_AGREES = store_thm
        >- (Q.EXISTS_TAC `0`
            >> METIS_TAC [INF_MEASURE_POS0])
        >> Q.EXISTS_TAC `measure m s`
-       >> REVERSE CONJ_TAC >- RW_TAC std_ss [REAL_LE_REFL]
+       >> Reverse CONJ_TAC >- RW_TAC std_ss [REAL_LE_REFL]
        >> MATCH_MP_TAC INF_MEASURE_NONEMPTY
        >> RW_TAC std_ss [SUBSET_REFL])
    >> MATCH_MP_TAC LE_INF
@@ -1109,7 +768,6 @@ val INF_MEASURE_AGREES = store_thm
    >> RW_TAC std_ss [DISJOINT_DEF, IN_INTER, NOT_IN_EMPTY, EXTENSION]
    >> PROVE_TAC []);
 
-
 val MEASURE_DOWN = store_thm
   ("MEASURE_DOWN",
    ``!m0 m1.
@@ -1120,57 +778,12 @@ val MEASURE_DOWN = store_thm
    RW_TAC std_ss [measure_space_def, positive_def, SUBSET_DEF,
                   countably_additive_def, IN_FUNSET, IN_UNIV]);
 
-val SIGMA_ALGEBRA_SIGMA = store_thm
-  ("SIGMA_ALGEBRA_SIGMA",
-   ``!sp sts. subset_class sp sts ==> sigma_algebra (sigma sp sts)``,
-   SIMP_TAC std_ss [subset_class_def]
-   >> NTAC 3 STRIP_TAC
-   >> RW_TAC std_ss [sigma_def, sigma_algebra_def, algebra_def,
-                     subsets_def, space_def, IN_BIGINTER,
-                     GSPECIFICATION, subset_class_def]
-   >- (POP_ASSUM (MATCH_MP_TAC o REWRITE_RULE [IN_POW, DIFF_SUBSET, UNION_SUBSET, EMPTY_SUBSET] o
-       Q.ISPEC `POW (sp :'a -> bool)`)
-       >> RW_TAC std_ss [SUBSET_DEF, IN_POW, IN_BIGUNION]
-       >> PROVE_TAC [])
-   >> POP_ASSUM (fn th => MATCH_MP_TAC th >> ASSUME_TAC th)
-   >> RW_TAC std_ss [SUBSET_DEF]
-   >> Q.PAT_X_ASSUM `c SUBSET PP` MP_TAC
-   >> CONV_TAC (LAND_CONV (SIMP_CONV (srw_ss()) [SUBSET_DEF]))
-   >> DISCH_THEN (MP_TAC o Q.SPEC `x`)
-   >> ASM_REWRITE_TAC []
-   >> DISCH_THEN MATCH_MP_TAC
-   >> RW_TAC std_ss []
-   >> PROVE_TAC [SUBSET_DEF]);
-
-val POW_ALGEBRA = store_thm
-  ("POW_ALGEBRA",
-   ``algebra (sp, POW sp)``,
-   RW_TAC std_ss [algebra_def, IN_POW, space_def, subsets_def, subset_class_def,
-                  EMPTY_SUBSET, DIFF_SUBSET, UNION_SUBSET]);
-
-
-val POW_SIGMA_ALGEBRA = store_thm
-  ("POW_SIGMA_ALGEBRA",
-   ``sigma_algebra (sp, POW sp)``,
-   RW_TAC std_ss [sigma_algebra_def, IN_POW, space_def, subsets_def,
-                  POW_ALGEBRA, SUBSET_DEF, IN_BIGUNION]
-   >> PROVE_TAC []);
-
-
-val UNIV_SIGMA_ALGEBRA = store_thm
-  ("UNIV_SIGMA_ALGEBRA",
-   ``sigma_algebra ((UNIV :'a -> bool),(UNIV :('a -> bool) -> bool))``,
-    Know `(UNIV :('a -> bool) -> bool) = POW (UNIV :'a -> bool)`
-    >- RW_TAC std_ss [EXTENSION, IN_POW, IN_UNIV, SUBSET_UNIV]
-    >> RW_TAC std_ss [POW_SIGMA_ALGEBRA]);
-
-
 val INF_MEASURE_EMPTY = store_thm
   ("INF_MEASURE_EMPTY",
    ``!m. algebra (m_space m, measurable_sets m) /\ positive m ==> (inf_measure m {} = 0)``,
    RW_TAC std_ss []
    >> ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
-   >> REVERSE CONJ_TAC >- PROVE_TAC [INF_MEASURE_POS, EMPTY_SUBSET]
+   >> Reverse CONJ_TAC >- PROVE_TAC [INF_MEASURE_POS, EMPTY_SUBSET]
    >> RW_TAC std_ss [inf_measure_def]
    >> MATCH_MP_TAC INF_LE
    >> CONJ_TAC >- METIS_TAC [INF_MEASURE_POS0, EMPTY_SUBSET]
@@ -1186,7 +799,6 @@ val INF_MEASURE_EMPTY = store_thm
    >> RW_TAC std_ss [K_THM, o_THM]
    >> PROVE_TAC [positive_def]);
 
-
 val INF_MEASURE_POSITIVE = store_thm
   ("INF_MEASURE_POSITIVE",
    ``!m.
@@ -1194,7 +806,6 @@ val INF_MEASURE_POSITIVE = store_thm
        positive (m_space m, POW (m_space m), inf_measure m)``,
    RW_TAC std_ss [positive_def, INF_MEASURE_EMPTY, INF_MEASURE_POS,
                   measure_def, measurable_sets_def, IN_POW]);
-
 
 val INF_MEASURE_INCREASING = store_thm
   ("INF_MEASURE_INCREASING",
@@ -1218,14 +829,12 @@ val INF_MEASURE_INCREASING = store_thm
    >> RW_TAC std_ss [GSPECIFICATION, REAL_LE_REFL]
    >> PROVE_TAC [SUBSET_TRANS]);
 
-
 val INF_MEASURE_LE = store_thm
   ("INF_MEASURE_LE",
    ``!m s x.
        algebra (m_space m, measurable_sets m) /\ positive m /\ increasing m /\
        x IN
-       {r |
-        ?f.
+       {r | ?f.
           f IN (UNIV -> measurable_sets m) /\
           s SUBSET BIGUNION (IMAGE f UNIV) /\
           measure m o f sums r} ==>
@@ -1274,10 +883,9 @@ val INF_MEASURE_LE = store_thm
     >> Q.EXISTS_TAC
        `f (minimal (\n. x IN f n)) DIFF
         BIGUNION (IMAGE f (count (minimal (\n. x IN f n))))`
-    >> REVERSE CONJ_TAC >- PROVE_TAC []
+    >> Reverse CONJ_TAC >- PROVE_TAC []
     >> RW_TAC std_ss [IN_DIFF, IN_BIGUNION, IN_IMAGE, IN_COUNT]
     >> PROVE_TAC []]);
-
 
 val INF_MEASURE_CLOSE = store_thm
   ("INF_MEASURE_CLOSE",
@@ -1290,16 +898,11 @@ val INF_MEASURE_CLOSE = store_thm
    RW_TAC std_ss [inf_measure_def]
    >> Suff
       `?l.
-         l IN
-         {r |
-          ?f.
+         l IN {r | ?f.
             f IN (UNIV -> measurable_sets m) /\
             (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) /\
             s SUBSET BIGUNION (IMAGE f UNIV) /\ measure m o f sums r} /\
-         l <
-         inf
-         {r |
-          ?f.
+         l < inf {r | ?f.
             f IN (UNIV -> measurable_sets m) /\
             (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) /\
             s SUBSET BIGUNION (IMAGE f UNIV) /\ measure m o f sums r} + e`
@@ -1314,7 +917,6 @@ val INF_MEASURE_CLOSE = store_thm
    >> MATCH_MP_TAC INF_MEASURE_NONEMPTY
    >> RW_TAC std_ss []
    >> PROVE_TAC [ALGEBRA_SPACE, m_space_def, measurable_sets_def, subsets_def, space_def]);
-
 
 val INF_MEASURE_COUNTABLY_SUBADDITIVE = store_thm
   ("INF_MEASURE_COUNTABLY_SUBADDITIVE",
@@ -1393,7 +995,7 @@ val INF_MEASURE_COUNTABLY_SUBADDITIVE = store_thm
     >> Q.EXISTS_TAC `y`
     >> RW_TAC std_ss [UNCURRY_DEF],
     Know `measure m o UNCURRY g o f' = UNCURRY (\m'. measure m o g m') o f'`
-    >- (FUN_EQ_TAC
+    >- (RW_TAC std_ss [FUN_EQ_THM]
         >> RW_TAC std_ss [o_DEF]
         >> Cases_on `f' x`
         >> RW_TAC std_ss [UNCURRY_DEF])
@@ -1402,7 +1004,6 @@ val INF_MEASURE_COUNTABLY_SUBADDITIVE = store_thm
     >> RW_TAC std_ss [o_THM]
     >> PROVE_TAC [positive_def]]);
 
-
 val INF_MEASURE_OUTER = store_thm
   ("INF_MEASURE_OUTER",
    ``!m.
@@ -1410,15 +1011,6 @@ val INF_MEASURE_OUTER = store_thm
        outer_measure_space (m_space m, POW(m_space m), inf_measure m)``,
    RW_TAC std_ss [outer_measure_space_def, INF_MEASURE_POSITIVE,
                   INF_MEASURE_INCREASING, INF_MEASURE_COUNTABLY_SUBADDITIVE]);
-
-
-val SIGMA_SUBSET = store_thm
-  ("SIGMA_SUBSET",
-   ``!a b. sigma_algebra b /\ a SUBSET (subsets b) ==> subsets (sigma (space b) a) SUBSET (subsets b)``,
-   RW_TAC std_ss [sigma_def, SUBSET_DEF, IN_BIGINTER, GSPECIFICATION, subsets_def]
-   >> POP_ASSUM (MATCH_MP_TAC o Q.SPEC `subsets b`)
-   >> RW_TAC std_ss [SPACE]);
-
 
 val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
   ("ALGEBRA_SUBSET_LAMBDA_SYSTEM",
@@ -1452,10 +1044,12 @@ val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
            >> Q.EXISTS_TAC `measure m o f`
            >> RW_TAC std_ss [GREATER_EQ]
            >> Q.EXISTS_TAC `0`
-           >> REVERSE (RW_TAC arith_ss [o_THM, abs])
-           >- PROVE_TAC [positive_def, (REWRITE_RULE [subsets_def, space_def] o Q.SPEC `(m_space m,measurable_sets m)`) ALGEBRA_INTER]
+           >> Reverse (RW_TAC arith_ss [o_THM, abs])
+           >- PROVE_TAC [positive_def, (REWRITE_RULE [subsets_def, space_def] o
+                         Q.SPEC `(m_space m,measurable_sets m)`) ALGEBRA_INTER]
            >> MATCH_MP_TAC INCREASING
-           >> RW_TAC std_ss [INTER_SUBSET, (REWRITE_RULE [subsets_def, space_def] o Q.SPEC `(m_space m,measurable_sets m)`) ALGEBRA_INTER])
+           >> RW_TAC std_ss [INTER_SUBSET, (REWRITE_RULE [subsets_def, space_def] o
+                                           Q.SPEC `(m_space m,measurable_sets m)`) ALGEBRA_INTER])
        >> RW_TAC std_ss [inf_measure_def]
        >> MATCH_MP_TAC INF_LE
        >> CONJ_TAC
@@ -1477,7 +1071,8 @@ val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
        >> PROVE_TAC [IN_INTER])
    >> DISCH_THEN
       (fn th => MP_TAC (Q.SPEC `x` th) >> MP_TAC (Q.SPEC `m_space m DIFF x` th))
-   >> RW_TAC std_ss [(REWRITE_RULE [subsets_def, space_def] o Q.SPEC `(m_space m,measurable_sets m)`) ALGEBRA_COMPL]
+   >> RW_TAC std_ss [(REWRITE_RULE [subsets_def, space_def] o
+                     Q.SPEC `(m_space m,measurable_sets m)`) ALGEBRA_COMPL]
    >> MATCH_MP_TAC REAL_LE_TRANS
    >> Q.EXISTS_TAC
       `suminf (measure m o (\s. x INTER s) o f) +
@@ -1489,13 +1084,15 @@ val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
    >> RW_TAC std_ss [SUMINF_ADD, o_THM]
    >> Know `!a b : real. (a = b) ==> a <= b` >- REAL_ARITH_TAC
    >> DISCH_THEN MATCH_MP_TAC
-   >> MATCH_MP_TAC RAND_THM
-   >> FUN_EQ_TAC
+   >> AP_TERM_TAC
+   >> RW_TAC std_ss [FUN_EQ_THM]
    >> RW_TAC std_ss [o_THM]
    >> MATCH_MP_TAC EQ_SYM
    >> MATCH_MP_TAC ADDITIVE
-   >> RW_TAC std_ss [(REWRITE_RULE [subsets_def, space_def] o Q.SPEC `(m_space m,measurable_sets m)`) ALGEBRA_INTER,
-                     (REWRITE_RULE [subsets_def, space_def] o Q.SPEC `(m_space m,measurable_sets m)`) ALGEBRA_COMPL,
+   >> RW_TAC std_ss [(REWRITE_RULE [subsets_def, space_def] o
+                      Q.SPEC `(m_space m,measurable_sets m)`) ALGEBRA_INTER,
+                     (REWRITE_RULE [subsets_def, space_def] o
+                      Q.SPEC `(m_space m,measurable_sets m)`) ALGEBRA_COMPL,
                      DISJOINT_DEF, IN_INTER, IN_DIFF, NOT_IN_EMPTY, EXTENSION, IN_UNION]
    >> PROVE_TAC [algebra_def, subset_class_def, SUBSET_DEF, space_def, subsets_def],
    Know `inf_measure m = measure (m_space m, POW (m_space m), inf_measure m)`
@@ -1509,79 +1106,44 @@ val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
                      COUNTABLY_SUBADDITIVE_SUBADDITIVE,
                      measurable_sets_def, m_space_def]]);
 
-
 val CARATHEODORY = store_thm
   ("CARATHEODORY",
    ``!m0.
        algebra (m_space m0, measurable_sets m0) /\ positive m0 /\ countably_additive m0 ==>
        ?m.
          (!s. s IN measurable_sets m0 ==> (measure m s = measure m0 s)) /\
-         ((m_space m, measurable_sets m) = sigma (m_space m0) (measurable_sets m0)) /\ measure_space m``,
+         ((m_space m, measurable_sets m) =
+          sigma (m_space m0) (measurable_sets m0)) /\ measure_space m``,
    RW_TAC std_ss []
-   >> Q.EXISTS_TAC `(space (sigma (m_space m0) (measurable_sets m0)), subsets (sigma (m_space m0) (measurable_sets m0)), inf_measure m0)`
+   >> Q.EXISTS_TAC `(space (sigma (m_space m0) (measurable_sets m0)),
+                     subsets (sigma (m_space m0) (measurable_sets m0)),
+                     inf_measure m0)`
    >> CONJ_TAC >- PROVE_TAC [INF_MEASURE_AGREES, measure_def]
    >> CONJ_TAC >- RW_TAC std_ss [measurable_sets_def, subsets_def, space_def, m_space_def, SPACE]
    >> MATCH_MP_TAC MEASURE_DOWN
    >> Q.EXISTS_TAC
-      `(m_space m0, lambda_system (m_space m0, POW (m_space m0)) (inf_measure m0), inf_measure m0)`
+      `(m_space m0,
+        lambda_system (m_space m0, POW (m_space m0)) (inf_measure m0),
+        inf_measure m0)`
    >> REWRITE_TAC [measurable_sets_def, measure_def, space_def, m_space_def, subsets_def, SPACE]
-   >> STRONG_CONJ_TAC >- FULL_SIMP_TAC std_ss [algebra_def, SIGMA_ALGEBRA_SIGMA, space_def, subsets_def]
+   >> STRONG_CONJ_TAC >- FULL_SIMP_TAC std_ss [algebra_def, SIGMA_ALGEBRA_SIGMA,
+                                               space_def, subsets_def]
    >> STRIP_TAC
    >> ONCE_REWRITE_TAC [CONJ_COMM]
    >> STRONG_CONJ_TAC
-   >- ((MATCH_MP_TAC o REWRITE_RULE [subsets_def, space_def] o Q.SPEC `(m_space m0,POW (m_space m0))`) CARATHEODORY_LEMMA
+   >- ((MATCH_MP_TAC o REWRITE_RULE [subsets_def, space_def] o
+       Q.SPEC `(m_space m0,POW (m_space m0))`) CARATHEODORY_LEMMA
        >> CONJ_TAC >- RW_TAC std_ss [POW_SIGMA_ALGEBRA]
        >> PROVE_TAC [INF_MEASURE_OUTER, COUNTABLY_ADDITIVE_ADDITIVE,
                      ADDITIVE_INCREASING])
    >> RW_TAC std_ss []
    >> (MATCH_MP_TAC o REWRITE_RULE [space_def, subsets_def] o
-        Q.SPECL [`(measurable_sets m0)`, `(m_space m0, lambda_system (m_space m0, POW (m_space m0)) (inf_measure m0))`]) SIGMA_SUBSET
+        Q.SPECL [`(measurable_sets m0)`, `(m_space m0,
+                                           lambda_system (m_space m0, POW (m_space m0))
+                                           (inf_measure m0))`]) SIGMA_SUBSET
    >> CONJ_TAC >- FULL_SIMP_TAC std_ss [measure_space_def, measurable_sets_def, m_space_def]
    >> PROVE_TAC [ALGEBRA_SUBSET_LAMBDA_SYSTEM, COUNTABLY_ADDITIVE_ADDITIVE,
                  ADDITIVE_INCREASING]);
-
-
-val SIGMA_SUBSET_SUBSETS = store_thm
-  ("SIGMA_SUBSET_SUBSETS",
-   ``!sp a. a SUBSET subsets (sigma sp a)``,
-   RW_TAC std_ss [sigma_def, IN_BIGINTER, SUBSET_DEF, GSPECIFICATION, subsets_def]);
-
-
-val IN_SIGMA = store_thm
-  ("IN_SIGMA",
-   ``!sp a x. x IN a ==> x IN subsets (sigma sp a)``,
-   MP_TAC SIGMA_SUBSET_SUBSETS
-   >> RW_TAC std_ss [SUBSET_DEF]);
-
-
-val SIGMA_ALGEBRA = store_thm
-  ("SIGMA_ALGEBRA",
-   ``!p.
-       sigma_algebra p =
-       subset_class (space p) (subsets p) /\
-       {} IN subsets p /\ (!s. s IN subsets p ==> (space p DIFF s) IN subsets p) /\
-       (!c. countable c /\ c SUBSET subsets p ==> BIGUNION c IN subsets p)``,
-   RW_TAC std_ss [sigma_algebra_def, algebra_def]
-   >> EQ_TAC >- PROVE_TAC []
-   >> RW_TAC std_ss []
-   >> Q.PAT_X_ASSUM `!c. P c` (MP_TAC o Q.SPEC `{s; t}`)
-   >> RW_TAC std_ss [COUNTABLE_ALT_BIJ, FINITE_INSERT, FINITE_EMPTY, SUBSET_DEF,
-                     BIGUNION_PAIR, IN_INSERT, NOT_IN_EMPTY]
-   >> PROVE_TAC []);
-
-
-val SIGMA_ALGEBRA_COUNTABLE_UNION = store_thm
-  ("SIGMA_ALGEBRA_COUNTABLE_UNION",
-   ``!a c. sigma_algebra a /\ countable c /\ c SUBSET subsets a ==> BIGUNION c IN subsets a``,
-   PROVE_TAC [sigma_algebra_def]);
-
-
-val SIGMA_ALGEBRA_ENUM = store_thm
-  ("SIGMA_ALGEBRA_ENUM",
-   ``!a (f : num -> ('a -> bool)).
-       sigma_algebra a /\ f IN (UNIV -> subsets a) ==> BIGUNION (IMAGE f UNIV) IN subsets a``,
-   RW_TAC std_ss [SIGMA_ALGEBRA_ALT]);
-
 
 val MEASURE_COMPL = store_thm
   ("MEASURE_COMPL",
@@ -1599,39 +1161,10 @@ val MEASURE_COMPL = store_thm
    >> PROVE_TAC [COUNTABLY_ADDITIVE_ADDITIVE, ALGEBRA_COMPL, subsets_def, space_def,
                  algebra_def, subset_class_def, SUBSET_DEF]);
 
-
-val SIGMA_PROPERTY = store_thm
-  ("SIGMA_PROPERTY",
-   ``!sp p a.
-       subset_class sp p /\ {} IN p /\ a SUBSET p /\ (!s. s IN (p INTER subsets (sigma sp a)) ==> (sp DIFF s) IN p) /\
-       (!c. countable c /\ c SUBSET (p INTER subsets (sigma sp a)) ==> BIGUNION c IN p) ==>
-       subsets (sigma sp a) SUBSET p``,
-   RW_TAC std_ss []
-   >> Suff `subsets (sigma sp a) SUBSET p INTER subsets (sigma sp a)`
-   >- SIMP_TAC std_ss [SUBSET_INTER]
-   >> Suff `p INTER subsets (sigma sp a) IN {b | a SUBSET b /\ sigma_algebra (sp,b)}`
-   >- (KILL_TAC
-       >> RW_TAC std_ss [sigma_def, GSPECIFICATION, SUBSET_DEF, INTER_DEF, BIGINTER, subsets_def])
-   >> RW_TAC std_ss [GSPECIFICATION]
-   >- PROVE_TAC [SUBSET_DEF, IN_INTER, IN_SIGMA]
-   >> Know `subset_class sp a` >- PROVE_TAC [subset_class_def, SUBSET_DEF]
-   >> STRIP_TAC
-   >> Know `sigma_algebra (sigma sp a)` >- PROVE_TAC [subset_class_def, SUBSET_DEF, SIGMA_ALGEBRA_SIGMA]
-   >> STRIP_TAC
-   >> RW_TAC std_ss [SIGMA_ALGEBRA, IN_INTER, space_def, subsets_def, SIGMA_ALGEBRA_ALGEBRA, ALGEBRA_EMPTY]
-   >| [PROVE_TAC [subset_class_def, IN_INTER, SUBSET_DEF],
-       (MATCH_MP_TAC o REWRITE_RULE [space_def, subsets_def] o Q.SPEC `(sp, subsets (sigma sp a))`) ALGEBRA_COMPL
-       >> FULL_SIMP_TAC std_ss [sigma_def, sigma_algebra_def, subsets_def],
-       FULL_SIMP_TAC std_ss [sigma_algebra_def]
-       >> Q.PAT_X_ASSUM `!c. P c ==> BIGUNION c IN subsets (sigma sp a)` MATCH_MP_TAC
-       >> FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_INTER]]);
-
-
 val MEASURE_EMPTY = store_thm
   ("MEASURE_EMPTY",
    ``!m. measure_space m ==> (measure m {} = 0)``,
    RW_TAC std_ss [measure_space_def, positive_def]);
-
 
 val SIGMA_SUBSET_MEASURABLE_SETS = store_thm
   ("SIGMA_SUBSET_MEASURABLE_SETS",
@@ -1644,112 +1177,18 @@ val SIGMA_SUBSET_MEASURABLE_SETS = store_thm
    >> PROVE_TAC [SIGMA_ALGEBRA, space_def, subsets_def]);
 
 
-val SIGMA_ALGEBRA_FN = store_thm
-  ("SIGMA_ALGEBRA_FN",
-   ``!a.
-       sigma_algebra a =
-       subset_class (space a) (subsets a) /\
-       {} IN subsets a /\ (!s. s IN subsets a ==> (space a DIFF s) IN subsets a) /\
-       (!f : num -> 'a -> bool.
-          f IN (UNIV -> subsets a) ==> BIGUNION (IMAGE f UNIV) IN subsets a)``,
-   RW_TAC std_ss [SIGMA_ALGEBRA, IN_FUNSET, IN_UNIV, SUBSET_DEF]
-   >> EQ_TAC
-   >- (RW_TAC std_ss []
-       >> Q.PAT_X_ASSUM `!c. P c ==> Q c` MATCH_MP_TAC
-       >> RW_TAC std_ss [COUNTABLE_IMAGE_NUM, IN_IMAGE]
-       >> PROVE_TAC [])
-   >> RW_TAC std_ss [COUNTABLE_ENUM]
-   >- RW_TAC std_ss [BIGUNION_EMPTY]
-   >> Q.PAT_X_ASSUM `!f. (!x. P x f) ==> Q f` MATCH_MP_TAC
-   >> POP_ASSUM MP_TAC
-   >> RW_TAC std_ss [IN_IMAGE, IN_UNIV]
-   >> PROVE_TAC []);
-
-
-val SIGMA_ALGEBRA_FN_DISJOINT = store_thm
-  ("SIGMA_ALGEBRA_FN_DISJOINT",
-   ``!a.
-       sigma_algebra a =
-       subset_class (space a) (subsets a) /\
-       {} IN subsets a /\ (!s. s IN subsets a ==> (space a DIFF s) IN subsets a) /\
-       (!s t. s IN subsets a /\ t IN subsets a ==> s UNION t IN subsets a) /\
-       (!f : num -> 'a -> bool.
-          f IN (UNIV -> subsets a) /\ (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
-          BIGUNION (IMAGE f UNIV) IN subsets a)``,
-   RW_TAC std_ss [SIGMA_ALGEBRA_ALT_DISJOINT, algebra_def]
-   >> EQ_TAC
-   >> RW_TAC std_ss []);
-
-val SIGMA_PROPERTY_ALT = store_thm
-  ("SIGMA_PROPERTY_ALT",
-   ``!sp p a.
-       subset_class sp p /\
-       {} IN p /\ a SUBSET p /\ (!s. s IN (p INTER subsets (sigma sp a)) ==> sp DIFF s IN p) /\
-       (!(f : num -> 'a -> bool).
-          f IN (UNIV -> (p INTER subsets (sigma sp a))) ==> BIGUNION (IMAGE f UNIV) IN p) ==>
-       subsets (sigma sp a) SUBSET p``,
-   RW_TAC std_ss []
-   >> Suff `subsets (sigma sp a) SUBSET p INTER subsets (sigma sp a)`
-   >- SIMP_TAC std_ss [SUBSET_INTER]
-   >> Suff `p INTER subsets (sigma sp a) IN {b | a SUBSET b /\ sigma_algebra (sp, b)}`
-   >- (KILL_TAC
-       >> RW_TAC std_ss [sigma_def, GSPECIFICATION, SUBSET_DEF, INTER_DEF, BIGINTER, subsets_def])
-   >> RW_TAC std_ss [GSPECIFICATION]
-   >- PROVE_TAC [SUBSET_DEF, IN_INTER, IN_SIGMA]
-   >> POP_ASSUM MP_TAC
-   >> Know `sigma_algebra (sigma sp a)` >- PROVE_TAC [subset_class_def, SUBSET_DEF,
-                                                      SIGMA_ALGEBRA_SIGMA]
-   >> STRIP_TAC
-   >> RW_TAC std_ss [SIGMA_ALGEBRA_FN, IN_INTER, FUNSET_INTER, subsets_def, space_def,
-                     SIGMA_ALGEBRA_ALGEBRA, ALGEBRA_EMPTY]
-   >| [PROVE_TAC [subset_class_def, IN_INTER, SUBSET_DEF],
-       (MATCH_MP_TAC o REWRITE_RULE [space_def, subsets_def] o
-        Q.SPEC `(sp, subsets (sigma sp a))`) ALGEBRA_COMPL
-       >> FULL_SIMP_TAC std_ss [sigma_def, sigma_algebra_def, subsets_def],
-       FULL_SIMP_TAC std_ss [(Q.SPEC `(sigma sp a)`) SIGMA_ALGEBRA_FN]]);
-
-val SIGMA_PROPERTY_DISJOINT_WEAK = store_thm
-  ("SIGMA_PROPERTY_DISJOINT_WEAK",
-   ``!sp p a.
-       subset_class sp p /\
-       {} IN p /\ a SUBSET p /\ (!s. s IN (p INTER subsets (sigma sp a)) ==> (sp DIFF s) IN p) /\
-       (!s t. s IN p /\ t IN p ==> s UNION t IN p) /\
-       (!f : num -> 'a -> bool.
-          f IN (UNIV -> (p INTER subsets (sigma sp a))) /\
-          (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
-          BIGUNION (IMAGE f UNIV) IN p) ==>
-       subsets (sigma sp a) SUBSET p``,
-   RW_TAC std_ss []
-   >> Suff `subsets (sigma sp a) SUBSET p INTER subsets (sigma sp a)`
-   >- SIMP_TAC std_ss [SUBSET_INTER]
-   >> Suff `p INTER subsets (sigma sp a) IN {b | a SUBSET b /\ sigma_algebra (sp, b)}`
-   >- (KILL_TAC
-       >> RW_TAC std_ss [sigma_def, GSPECIFICATION, SUBSET_DEF, INTER_DEF, BIGINTER, subsets_def, space_def])
-   >> RW_TAC std_ss [GSPECIFICATION]
-   >- PROVE_TAC [SUBSET_DEF, IN_INTER, IN_SIGMA]
-   >> POP_ASSUM MP_TAC
-   >> Know `sigma_algebra (sigma sp a)` >- PROVE_TAC [subset_class_def, SUBSET_DEF, SIGMA_ALGEBRA_SIGMA]
-   >> STRIP_TAC
-   >> RW_TAC std_ss [SIGMA_ALGEBRA_FN_DISJOINT, IN_INTER, FUNSET_INTER, subsets_def, space_def, SIGMA_ALGEBRA_ALGEBRA, ALGEBRA_EMPTY]
-   >| [PROVE_TAC [subset_class_def, IN_INTER, SUBSET_DEF],
-       (MATCH_MP_TAC o REWRITE_RULE [space_def, subsets_def] o Q.SPEC `(sp, subsets (sigma sp a))`) ALGEBRA_COMPL
-       >> FULL_SIMP_TAC std_ss [sigma_def, sigma_algebra_def, subsets_def],
-       (MATCH_MP_TAC o REWRITE_RULE [space_def, subsets_def] o Q.SPEC `(sp, subsets (sigma sp a))`) ALGEBRA_UNION
-       >> FULL_SIMP_TAC std_ss [sigma_def, sigma_algebra_def, subsets_def],
-       FULL_SIMP_TAC std_ss [(Q.SPEC `(sigma sp a)`) SIGMA_ALGEBRA_FN_DISJOINT]]);
-
-
 val SPACE_SMALLEST_CLOSED_CDI = store_thm
   ("SPACE_SMALLEST_CLOSED_CDI",
    ``!a. space (smallest_closed_cdi a) = space a``,
   RW_TAC std_ss [smallest_closed_cdi_def, space_def]);
 
-
 val SMALLEST_CLOSED_CDI = store_thm
   ("SMALLEST_CLOSED_CDI",
-   ``!a. algebra a ==> subsets a SUBSET subsets (smallest_closed_cdi a) /\ closed_cdi (smallest_closed_cdi a) /\
+   ``!a. algebra a ==> subsets a SUBSET subsets (smallest_closed_cdi a) /\
+                       closed_cdi (smallest_closed_cdi a) /\
          subset_class (space a) (subsets (smallest_closed_cdi a))``,
-   Know `!a. algebra a ==> subsets a SUBSET subsets (smallest_closed_cdi a) /\ closed_cdi (smallest_closed_cdi a)`
+   Know `!a. algebra a ==> subsets a SUBSET subsets (smallest_closed_cdi a) /\
+                           closed_cdi (smallest_closed_cdi a)`
    >- (RW_TAC std_ss [smallest_closed_cdi_def, GSPECIFICATION, SUBSET_DEF, INTER_DEF, BIGINTER,
                        subset_class_def, algebra_def, subsets_def]
         >> RW_TAC std_ss [closed_cdi_def, GSPECIFICATION, IN_BIGINTER, IN_FUNSET,
@@ -1761,7 +1200,6 @@ val SMALLEST_CLOSED_CDI = store_thm
         >> PROVE_TAC [IN_DIFF, IN_BIGUNION, IN_IMAGE, IN_UNIV])
    >> SIMP_TAC std_ss []
    >> RW_TAC std_ss [closed_cdi_def, SPACE_SMALLEST_CLOSED_CDI]);
-
 
 val CLOSED_CDI_DUNION = store_thm
   ("CLOSED_CDI_DUNION",
@@ -1788,12 +1226,10 @@ val CLOSED_CDI_DUNION = store_thm
    >> RW_TAC std_ss [IN_FUNSET, IN_UNIV, DISJOINT_EMPTY]
    >> PROVE_TAC [DISJOINT_SYM]);
 
-
 val CLOSED_CDI_COMPL = store_thm
   ("CLOSED_CDI_COMPL",
    ``!p s. closed_cdi p /\ s IN subsets p ==> space p DIFF s IN subsets p``,
    RW_TAC std_ss [closed_cdi_def]);
-
 
 val CLOSED_CDI_DISJOINT = store_thm
   ("CLOSED_CDI_DISJOINT",
@@ -1802,7 +1238,6 @@ val CLOSED_CDI_DISJOINT = store_thm
        (!m n : num. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
        BIGUNION (IMAGE f UNIV) IN subsets p``,
    RW_TAC std_ss [closed_cdi_def]);
-
 
 val CLOSED_CDI_INCREASING = store_thm
   ("CLOSED_CDI_INCREASING",
@@ -1882,7 +1317,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
     >> MATCH_MP_TAC CLOSED_CDI_INCREASING
     >> Q.PAT_X_ASSUM `f IN X` MP_TAC
     >> RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    >- (REVERSE (Cases_on `m`) >- RW_TAC arith_ss []
+    >- (Reverse (Cases_on `m`) >- RW_TAC arith_ss []
         >> RW_TAC arith_ss []
         >> PROVE_TAC [SMALLEST_CLOSED_CDI, ALGEBRA_EMPTY, SUBSET_DEF])
     >> Cases_on `n` >- RW_TAC arith_ss [num_case_def, EMPTY_SUBSET]
@@ -1938,12 +1373,12 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
        [PROVE_TAC [SMALLEST_CLOSED_CDI, SUBSET_DEF],
         PROVE_TAC [SIGMA_PROPERTY_DISJOINT_LEMMA1, INTER_COMM]])
    >> SIMP_TAC std_ss [GSPECIFICATION, SUBSET_DEF, closed_cdi_def, space_def, subsets_def]
-   >> STRIP_TAC >> REPEAT CONJ_TAC >|
+   >> STRIP_TAC >> rpt CONJ_TAC >|
    [(MP_TAC o UNDISCH o Q.SPEC `a`) SMALLEST_CLOSED_CDI
     >> RW_TAC std_ss [subset_class_def, SUBSET_DEF, GSPECIFICATION]
     >> PROVE_TAC [algebra_def, subset_class_def, SUBSET_DEF],
     Q.X_GEN_TAC `s'`
-    >> REPEAT STRIP_TAC
+    >> rpt STRIP_TAC
     >- PROVE_TAC [closed_cdi_def, SMALLEST_CLOSED_CDI,
                   SPACE_SMALLEST_CLOSED_CDI]
     >> Know `s INTER (space a DIFF s') =
@@ -1966,7 +1401,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
     >> RW_TAC std_ss [DISJOINT_DEF, COMPL_DEF, INTER_DEF, IN_DIFF, IN_UNIV, GSPECIFICATION,
                       EXTENSION, NOT_IN_EMPTY]
     >> DECIDE_TAC,
-    Q.X_GEN_TAC `f` >> REPEAT STRIP_TAC
+    Q.X_GEN_TAC `f` >> rpt STRIP_TAC
     >- (Q.PAT_X_ASSUM `f IN x` MP_TAC
         >> RW_TAC std_ss [IN_FUNSET, IN_UNIV, GSPECIFICATION]
         >> MATCH_MP_TAC CLOSED_CDI_INCREASING
@@ -1995,12 +1430,12 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
     >> MATCH_MP_TAC CLOSED_CDI_INCREASING
     >> Q.PAT_X_ASSUM `f IN X` MP_TAC
     >> RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    >- (REVERSE (Cases_on `m`) >- RW_TAC arith_ss []
+    >- (Reverse (Cases_on `m`) >- RW_TAC arith_ss []
         >> RW_TAC arith_ss []
         >> PROVE_TAC [SMALLEST_CLOSED_CDI, ALGEBRA_EMPTY, SUBSET_DEF])
     >> Cases_on `n` >- RW_TAC arith_ss [num_case_def, EMPTY_SUBSET]
     >> RW_TAC arith_ss [num_case_def, SUBSET_DEF, IN_INTER],
-    Q.X_GEN_TAC `f` >> REPEAT STRIP_TAC
+    Q.X_GEN_TAC `f` >> rpt STRIP_TAC
     >- (Q.PAT_X_ASSUM `f IN x` MP_TAC
         >> RW_TAC std_ss [IN_FUNSET, IN_UNIV, GSPECIFICATION]
         >> MATCH_MP_TAC CLOSED_CDI_DISJOINT
@@ -2033,18 +1468,19 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
 
 val SIGMA_PROPERTY_DISJOINT_LEMMA = store_thm
   ("SIGMA_PROPERTY_DISJOINT_LEMMA",
-   ``!sp a p. algebra (sp, a) /\ a SUBSET p /\ closed_cdi (sp, p) ==> subsets (sigma sp a) SUBSET p``,
+   ``!sp a p. algebra (sp, a) /\ a SUBSET p /\ closed_cdi (sp, p)
+         ==> subsets (sigma sp a) SUBSET p``,
    RW_TAC std_ss []
    >> MATCH_MP_TAC SUBSET_TRANS
    >> Q.EXISTS_TAC `subsets (smallest_closed_cdi (sp, a))`
-   >> REVERSE CONJ_TAC
+   >> Reverse CONJ_TAC
    >- (RW_TAC std_ss [SUBSET_DEF, smallest_closed_cdi_def, IN_BIGINTER,
                       GSPECIFICATION, subsets_def, space_def]
        >> PROVE_TAC [SUBSET_DEF])
    >> NTAC 2 (POP_ASSUM K_TAC)
    >> Suff `subsets (smallest_closed_cdi (sp, a)) IN {b | a SUBSET b /\ sigma_algebra (sp,b)}`
    >- (KILL_TAC
-       >> RW_TAC std_ss [sigma_def, BIGINTER, SUBSET_DEF, GSPECIFICATION, subsets_def])
+       >> RW_TAC std_ss [sigma_def, BIGINTER, SUBSET_DEF, GSPECIFICATION,subsets_def])
    >> RW_TAC std_ss [GSPECIFICATION, SIGMA_ALGEBRA_ALT_DISJOINT,
                      ALGEBRA_ALT_INTER, space_def, subsets_def] >|
    [PROVE_TAC [SMALLEST_CLOSED_CDI, subsets_def],
@@ -2053,76 +1489,6 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA = store_thm
     PROVE_TAC [SMALLEST_CLOSED_CDI, CLOSED_CDI_COMPL, space_def, SPACE_SMALLEST_CLOSED_CDI],
     PROVE_TAC [SIGMA_PROPERTY_DISJOINT_LEMMA2],
     PROVE_TAC [SMALLEST_CLOSED_CDI, CLOSED_CDI_DISJOINT]]);
-
-
-val SIGMA_PROPERTY_DISJOINT_WEAK = store_thm
-  ("SIGMA_PROPERTY_DISJOINT_WEAK",
-   ``!sp p a.
-       algebra (sp, a) /\ a SUBSET p /\
-       subset_class sp p /\
-       (!s. s IN p ==> sp DIFF s IN p) /\
-       (!f : num -> 'a -> bool.
-          f IN (UNIV -> p) /\ (f 0 = {}) /\ (!n. f n SUBSET f (SUC n)) ==>
-          BIGUNION (IMAGE f UNIV) IN p) /\
-       (!f : num -> 'a -> bool.
-          f IN (UNIV -> p) /\ (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
-          BIGUNION (IMAGE f UNIV) IN p) ==>
-       subsets (sigma sp a) SUBSET p``,
-   RW_TAC std_ss []
-   >> MATCH_MP_TAC (Q.SPECL [`sp`, `a`, `p`] SIGMA_PROPERTY_DISJOINT_LEMMA)
-   >> RW_TAC std_ss [closed_cdi_def, space_def, subsets_def]);
-
-
-val SIGMA_PROPERTY_DISJOINT = store_thm
-  ("SIGMA_PROPERTY_DISJOINT",
-   ``!sp p a.
-       algebra (sp,a) /\ a SUBSET p /\
-       (!s. s IN (p INTER subsets (sigma sp a)) ==> sp DIFF s IN p) /\
-       (!f : num -> 'a -> bool.
-          f IN (UNIV -> p INTER subsets (sigma sp a)) /\ (f 0 = {}) /\
-          (!n. f n SUBSET f (SUC n)) ==>
-          BIGUNION (IMAGE f UNIV) IN p) /\
-       (!f : num -> 'a -> bool.
-          f IN (UNIV -> p INTER subsets (sigma sp a)) /\
-          (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) ==>
-          BIGUNION (IMAGE f UNIV) IN p) ==>
-       subsets (sigma sp a) SUBSET p``,
-   RW_TAC std_ss [IN_FUNSET, IN_UNIV, IN_INTER]
-   >> Suff `subsets (sigma sp a) SUBSET p INTER subsets (sigma sp a)`
-   >- (KILL_TAC
-       >> SIMP_TAC std_ss [SUBSET_INTER])
-   >> MATCH_MP_TAC
-      (Q.SPECL [`sp`, `p INTER subsets (sigma sp a)`, `a`] SIGMA_PROPERTY_DISJOINT_WEAK)
-   >> RW_TAC std_ss [SUBSET_INTER, IN_INTER, IN_FUNSET, IN_UNIV] >|
-   [PROVE_TAC [SUBSET_DEF, IN_SIGMA],
-    (MP_TAC o Q.SPECL [`sp`,`a`]) SIGMA_ALGEBRA_SIGMA
-    >> Q.PAT_X_ASSUM `algebra (sp,a)` MP_TAC
-    >> RW_TAC std_ss [algebra_def, space_def, subsets_def]
-    >> POP_ASSUM MP_TAC
-    >> NTAC 3 (POP_ASSUM (K ALL_TAC))
-    >> RW_TAC std_ss [sigma_algebra_def, algebra_def, space_def, subsets_def]
-    >> NTAC 4 (POP_ASSUM (K ALL_TAC))
-    >> POP_ASSUM MP_TAC
-    >> Know `space (sigma sp a) = sp` >- RW_TAC std_ss [sigma_def, space_def]
-    >> RW_TAC std_ss [subset_class_def, IN_INTER],
-    (MP_TAC o Q.SPECL [`sp`,`a`]) SIGMA_ALGEBRA_SIGMA
-    >> Q.PAT_X_ASSUM `algebra (sp,a)` MP_TAC
-    >> RW_TAC std_ss [algebra_def, space_def, subsets_def]
-    >> POP_ASSUM MP_TAC
-    >> NTAC 3 (POP_ASSUM (K ALL_TAC))
-    >> Know `space (sigma sp a) = sp` >- RW_TAC std_ss [sigma_def, space_def]
-    >> RW_TAC std_ss [SIGMA_ALGEBRA, algebra_def, subsets_def, space_def],
-    MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_UNION
-    >> Q.PAT_X_ASSUM `algebra (sp,a)` MP_TAC
-    >> RW_TAC std_ss [SIGMA_ALGEBRA_SIGMA, COUNTABLE_IMAGE_NUM, SUBSET_DEF,
-                      IN_IMAGE, IN_UNIV, algebra_def, subsets_def, space_def]
-    >> PROVE_TAC [],
-    MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_UNION
-    >> Q.PAT_X_ASSUM `algebra (sp,a)` MP_TAC
-    >> RW_TAC std_ss [SIGMA_ALGEBRA_SIGMA, COUNTABLE_IMAGE_NUM, SUBSET_DEF,
-                      IN_IMAGE, IN_UNIV, algebra_def, subsets_def, space_def]
-    >> PROVE_TAC []]);
-
 
 val MEASURE_COUNTABLY_ADDITIVE = store_thm
   ("MEASURE_COUNTABLY_ADDITIVE",
@@ -2143,14 +1509,12 @@ val MEASURE_COUNTABLY_ADDITIVE = store_thm
                      IN_FUNSET]
    >> PROVE_TAC []);
 
-
 val MEASURE_SPACE_ADDITIVE = store_thm
   ("MEASURE_SPACE_ADDITIVE",
    ``!m. measure_space m ==> additive m``,
    RW_TAC std_ss []
    >> MATCH_MP_TAC COUNTABLY_ADDITIVE_ADDITIVE
    >> PROVE_TAC [measure_space_def, SIGMA_ALGEBRA_ALGEBRA]);
-
 
 val MEASURE_ADDITIVE = store_thm
   ("MEASURE_ADDITIVE",
@@ -2162,7 +1526,6 @@ val MEASURE_ADDITIVE = store_thm
    >> MATCH_MP_TAC ADDITIVE
    >> RW_TAC std_ss [MEASURE_SPACE_ADDITIVE]);
 
-
 val MEASURE_COUNTABLE_INCREASING = store_thm
   ("MEASURE_COUNTABLE_INCREASING",
    ``!m s f.
@@ -2173,16 +1536,19 @@ val MEASURE_COUNTABLE_INCREASING = store_thm
    RW_TAC std_ss [IN_FUNSET, IN_UNIV]
    >> Know
       `measure m o f = (\n. sum (0, n) (measure m o (\m. f (SUC m) DIFF f m)))`
-   >- (FUN_EQ_TAC
-       >> Induct >- RW_TAC std_ss [o_THM, sum, MEASURE_EMPTY]
+   >- (RW_TAC std_ss [FUN_EQ_THM]
+       >> Induct_on `n` >- RW_TAC std_ss [o_THM, sum, MEASURE_EMPTY]
        >> POP_ASSUM (MP_TAC o SYM)
        >> RW_TAC arith_ss [o_THM, sum]
        >> MATCH_MP_TAC MEASURE_ADDITIVE
-       >> FULL_SIMP_TAC std_ss [EXTENSION, IN_UNION, IN_DIFF, DISJOINT_DEF, NOT_IN_EMPTY, IN_INTER, SUBSET_DEF]
+       >> FULL_SIMP_TAC std_ss [EXTENSION, IN_UNION, IN_DIFF, DISJOINT_DEF, NOT_IN_EMPTY,
+                                IN_INTER, SUBSET_DEF]
        >> Know `algebra (m_space m, measurable_sets m)`
-       >- FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def, space_def, subsets_def]
+       >- FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def,
+                                space_def, subsets_def]
        >> STRIP_TAC
-       >> (MP_TAC o REWRITE_RULE [subsets_def, space_def] o Q.SPEC `(m_space m, measurable_sets m)`) ALGEBRA_DIFF
+       >> (MP_TAC o REWRITE_RULE [subsets_def, space_def] o
+           Q.SPEC `(m_space m, measurable_sets m)`) ALGEBRA_DIFF
        >> PROVE_TAC [])
    >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
    >> RW_TAC std_ss [GSYM sums]
@@ -2191,12 +1557,14 @@ val MEASURE_COUNTABLE_INCREASING = store_thm
    >> CONJ_TAC
    >- (RW_TAC std_ss [IN_FUNSET, IN_UNIV]
        >> Know `algebra (m_space m, measurable_sets m)`
-       >- FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def, space_def, subsets_def]
+       >- FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def,
+                                space_def, subsets_def]
        >> STRIP_TAC
-       >> (MP_TAC o REWRITE_RULE [subsets_def, space_def] o Q.SPEC `(m_space m, measurable_sets m)`) ALGEBRA_DIFF
+       >> (MP_TAC o REWRITE_RULE [subsets_def, space_def] o
+           Q.SPEC `(m_space m, measurable_sets m)`) ALGEBRA_DIFF
        >> PROVE_TAC [])
    >> CONJ_TAC
-   >- (REPEAT STRIP_TAC
+   >- (rpt STRIP_TAC
        >> MATCH_MP_TAC DISJOINT_DIFFS
        >> Q.EXISTS_TAC `f`
        >> RW_TAC std_ss [])
@@ -2204,7 +1572,7 @@ val MEASURE_COUNTABLE_INCREASING = store_thm
    >- (FULL_SIMP_TAC std_ss [EXTENSION, IN_UNION, IN_DIFF, DISJOINT_DEF, NOT_IN_EMPTY, IN_INTER,
                              SUBSET_DEF, IN_BIGUNION, IN_IMAGE, IN_UNIV, DIFF_DEF]
        >> STRIP_TAC
-       >> REVERSE (EQ_TAC >> RW_TAC std_ss [])
+       >> Reverse (EQ_TAC >> RW_TAC std_ss [])
        >- PROVE_TAC []
        >> Know `x IN f x'` >- PROVE_TAC []
        >> NTAC 2 (POP_ASSUM K_TAC)
@@ -2222,7 +1590,6 @@ val MEASURE_COUNTABLE_INCREASING = store_thm
    >> RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_UNIV]
    >> PROVE_TAC []);
 
-
 val MEASURE_SPACE_REDUCE = store_thm
   ("MEASURE_SPACE_REDUCE",
    ``!m. (m_space m, measurable_sets m, measure m) = m``,
@@ -2230,12 +1597,6 @@ val MEASURE_SPACE_REDUCE = store_thm
    >> Q.SPEC_TAC (`r`, `r`)
    >> Cases
    >> RW_TAC std_ss [m_space_def, measurable_sets_def, measure_def]);
-
-
-val SPACE_SIGMA = store_thm
-  ("SPACE_SIGMA",
-   ``!sp a. space (sigma sp a) = sp``,
-   RW_TAC std_ss [sigma_def, space_def]);
 
 val MONOTONE_CONVERGENCE = store_thm
   ("MONOTONE_CONVERGENCE",
@@ -2276,18 +1637,12 @@ val MONOTONE_CONVERGENCE = store_thm
    >> Ho_Rewrite.REWRITE_TAC [GSYM SEQ_SUC]
    >> RW_TAC std_ss' []);
 
-val SIGMA_REDUCE = store_thm
-  ("SIGMA_REDUCE",
-   ``!sp a. (sp, subsets (sigma sp a)) = sigma sp a``,
-   PROVE_TAC [SPACE_SIGMA, SPACE]);
-
-
 val MEASURABLE_SETS_SUBSET_SPACE = store_thm
   ("MEASURABLE_SETS_SUBSET_SPACE",
    ``!m s. measure_space m /\ s IN measurable_sets m ==>
                 s SUBSET m_space m``,
-   RW_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def, subsets_def, space_def, subset_class_def]);
-
+   RW_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def, subsets_def, space_def,
+                  subset_class_def]);
 
 val MEASURABLE_DIFF_PROPERTY = store_thm
   ("MEASURABLE_DIFF_PROPERTY",
@@ -2300,11 +1655,11 @@ val MEASURABLE_DIFF_PROPERTY = store_thm
                   PREIMAGE_DIFF, IN_IMAGE]
    >> MATCH_MP_TAC SUBSET_ANTISYM
    >> RW_TAC std_ss [SUBSET_DEF, IN_DIFF, IN_PREIMAGE]
-   >> Q.PAT_X_ASSUM `!s. s IN subsets b ==> PREIMAGE f s IN subsets a` (MP_TAC o Q.SPEC `space b DIFF s`)
+   >> Q.PAT_X_ASSUM `!s. s IN subsets b ==> PREIMAGE f s IN subsets a`
+        (MP_TAC o Q.SPEC `space b DIFF s`)
    >> Know `x IN PREIMAGE f (space b DIFF s)`
    >- RW_TAC std_ss [IN_PREIMAGE, IN_DIFF]
    >> PROVE_TAC [subset_class_def, SUBSET_DEF]);
-
 
 val MEASURABLE_BIGUNION_PROPERTY = store_thm
   ("MEASURABLE_BIGUNION_PROPERTY",
@@ -2316,7 +1671,6 @@ val MEASURABLE_BIGUNION_PROPERTY = store_thm
    RW_TAC std_ss [SIGMA_ALGEBRA, IN_FUNSET, subsets_def, space_def, GSPECIFICATION,
                   PREIMAGE_BIGUNION, IN_IMAGE]);
 
-
 val MEASUBABLE_BIGUNION_LEMMA = store_thm
   ("MEASUBABLE_BIGUNION_LEMMA",
    ``!a b f. sigma_algebra a /\ sigma_algebra b /\
@@ -2326,8 +1680,9 @@ val MEASUBABLE_BIGUNION_LEMMA = store_thm
                 BIGUNION c IN IMAGE (PREIMAGE f) (subsets b))``,
    RW_TAC std_ss [SIGMA_ALGEBRA, IN_FUNSET, IN_IMAGE]
    >> Q.EXISTS_TAC `BIGUNION (IMAGE (\x. @x'. x' IN subsets b /\ (PREIMAGE f x' = x)) c)`
-   >> REVERSE CONJ_TAC
-   >- (Q.PAT_X_ASSUM `!c. countable c /\ c SUBSET subsets b ==> BIGUNION c IN subsets b` MATCH_MP_TAC
+   >> Reverse CONJ_TAC
+   >- (Q.PAT_X_ASSUM `!c. countable c /\ c SUBSET subsets b ==> BIGUNION c IN subsets b`
+           MATCH_MP_TAC
        >> RW_TAC std_ss [image_countable, SUBSET_DEF, IN_IMAGE]
        >> Suff `(\x''. x'' IN subsets b) (@x''. x'' IN subsets b /\ (PREIMAGE f x'' = x'))`
        >- RW_TAC std_ss []
@@ -2339,7 +1694,8 @@ val MEASUBABLE_BIGUNION_LEMMA = store_thm
    >> FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_IMAGE]
    >> EQ_TAC
    >- (RW_TAC std_ss [] >> Q.EXISTS_TAC `s` >> ASM_REWRITE_TAC []
-       >> Q.PAT_X_ASSUM `!x. x IN c ==> ?x'. (x = PREIMAGE f x') /\ x' IN subsets b` (MP_TAC o Q.SPEC `s`)
+       >> Q.PAT_X_ASSUM `!x. x IN c ==> ?x'. (x = PREIMAGE f x') /\ x' IN subsets b`
+             (MP_TAC o Q.SPEC `s`)
        >> RW_TAC std_ss []
        >> Q.EXISTS_TAC `PREIMAGE f x'` >> ASM_REWRITE_TAC []
        >> Suff `(\x''. PREIMAGE f x' = PREIMAGE f x'')
@@ -2350,12 +1706,12 @@ val MEASUBABLE_BIGUNION_LEMMA = store_thm
    >> RW_TAC std_ss []
    >> Q.EXISTS_TAC `x'`
    >> ASM_REWRITE_TAC []
-   >> Know `(\x''. x IN PREIMAGE f x'' ==> x IN x') (@x''. x'' IN subsets b /\ (PREIMAGE f x'' = x'))`
+   >> Know `(\x''. x IN PREIMAGE f x'' ==> x IN x')
+                   (@x''. x'' IN subsets b /\ (PREIMAGE f x'' = x'))`
    >- (MATCH_MP_TAC SELECT_ELIM_THM
        >> RW_TAC std_ss []
        >> PROVE_TAC [])
    >> RW_TAC std_ss []);
-
 
 val MEASURABLE_SIGMA_PREIMAGES = store_thm
   ("MEASURABLE_SIGMA_PREIMAGES",
@@ -2375,38 +1731,38 @@ val MEASURABLE_SIGMA_PREIMAGES = store_thm
        >> RW_TAC std_ss [PREIMAGE_DIFF]
        >> MATCH_MP_TAC SUBSET_ANTISYM
        >> RW_TAC std_ss [SUBSET_DEF, IN_DIFF, IN_PREIMAGE]
-       >> Q.PAT_X_ASSUM `!s. s IN subsets b ==> PREIMAGE f s IN subsets a` (MP_TAC o Q.SPEC `space b DIFF x`)
+       >> Q.PAT_X_ASSUM `!s. s IN subsets b ==> PREIMAGE f s IN subsets a`
+             (MP_TAC o Q.SPEC `space b DIFF x`)
        >> Know `x' IN PREIMAGE f (space b DIFF x)`
        >- RW_TAC std_ss [IN_PREIMAGE, IN_DIFF]
        >> PROVE_TAC [subset_class_def, SUBSET_DEF],
-       (MP_TAC o REWRITE_RULE [IN_FUNSET, SIGMA_ALGEBRA] o Q.SPECL [`a`, `b`, `f`]) MEASUBABLE_BIGUNION_LEMMA
+       (MP_TAC o REWRITE_RULE [IN_FUNSET, SIGMA_ALGEBRA] o Q.SPECL [`a`, `b`, `f`])
+               MEASUBABLE_BIGUNION_LEMMA
        >> RW_TAC std_ss []]);
-
 
 val IN_MEASURABLE = store_thm
   ("IN_MEASURABLE",
-   ``!a b f. f IN measurable a b =
-                sigma_algebra a /\
-                sigma_algebra b /\
-                f IN (space a -> space b) /\
-                (!s. s IN subsets b ==> ((PREIMAGE f s)INTER(space a)) IN subsets a)``,
-   RW_TAC std_ss [measurable_def, GSPECIFICATION]);
-
+  ``!a b f. f IN measurable a b <=>
+            sigma_algebra a /\ sigma_algebra b /\
+            f IN (space a -> space b) /\
+            (!s. s IN subsets b ==> ((PREIMAGE f s)INTER(space a)) IN subsets a)``,
+    RW_TAC std_ss [measurable_def, GSPECIFICATION]);
 
 val MEASURABLE_SIGMA = store_thm
   ("MEASURABLE_SIGMA",
-   ``!f a b sp.
+  ``!f a b sp.
        sigma_algebra a /\
        subset_class sp b /\
        f IN (space a -> sp) /\
        (!s. s IN b ==> ((PREIMAGE f s)INTER(space a)) IN subsets a)
-        ==>
+      ==>
        f IN measurable a (sigma sp b)``,
    RW_TAC std_ss []
    >> REWRITE_TAC [IN_MEASURABLE]
    >> CONJ_TAC >- FULL_SIMP_TAC std_ss [sigma_def, space_def]
    >> RW_TAC std_ss [SIGMA_ALGEBRA_SIGMA, SPACE_SIGMA, subsets_def, GSPECIFICATION]
-   >> Know `subsets (sigma sp b) SUBSET {x' | ((PREIMAGE f x')INTER(space a)) IN subsets a /\ x' SUBSET sp}`
+   >> Know `subsets (sigma sp b) SUBSET {x' | ((PREIMAGE f x')INTER(space a)) IN subsets a /\
+                                         x' SUBSET sp}`
    >- (MATCH_MP_TAC SIGMA_PROPERTY
        >> RW_TAC std_ss [subset_class_def, GSPECIFICATION, IN_INTER, EMPTY_SUBSET,
                          PREIMAGE_EMPTY, PREIMAGE_DIFF, SUBSET_INTER, SIGMA_ALGEBRA,
@@ -2422,20 +1778,23 @@ val MEASURABLE_SIGMA = store_thm
            >- (RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_PREIMAGE] >> METIS_TAC [IN_FUNSET])
            >> FULL_SIMP_TAC std_ss [sigma_algebra_def, ALGEBRA_COMPL],
            FULL_SIMP_TAC std_ss [sigma_algebra_def]
-           >> `BIGUNION (IMAGE (PREIMAGE f) c) INTER space a = BIGUNION (IMAGE (\x. (PREIMAGE f x) INTER (space a)) c)`
+           >> `BIGUNION (IMAGE (PREIMAGE f) c) INTER space a =
+               BIGUNION (IMAGE (\x. (PREIMAGE f x) INTER (space a)) c)`
                 by (RW_TAC std_ss [Once EXTENSION, IN_BIGUNION, IN_INTER, IN_IMAGE]
                     >> FULL_SIMP_TAC std_ss [IN_FUNSET]
                     >> EQ_TAC
-                    >- (RW_TAC std_ss [] >> Q.EXISTS_TAC `PREIMAGE f x' INTER space a` >> ASM_REWRITE_TAC [IN_INTER]
+                    >- (RW_TAC std_ss []
+                        >> Q.EXISTS_TAC `PREIMAGE f x' INTER space a`
+                        >> ASM_REWRITE_TAC [IN_INTER]
                         >> Q.EXISTS_TAC `x'` >> RW_TAC std_ss [])
                     >> RW_TAC std_ss [] >> METIS_TAC [IN_INTER, IN_PREIMAGE])
            >> RW_TAC std_ss []
-           >> Q.PAT_X_ASSUM `!c. countable c /\ c SUBSET subsets a ==> BIGUNION c IN subsets a` MATCH_MP_TAC
+           >> Q.PAT_X_ASSUM `!c. countable c /\ c SUBSET subsets a ==>
+                 BIGUNION c IN subsets a` MATCH_MP_TAC
            >> RW_TAC std_ss [image_countable, SUBSET_DEF, IN_IMAGE]
            >> PROVE_TAC [],
            PROVE_TAC []])
    >> RW_TAC std_ss [SUBSET_DEF, GSPECIFICATION]);
-
 
 val MEASURABLE_SUBSET = store_thm
   ("MEASURABLE_SUBSET",
@@ -2444,25 +1803,22 @@ val MEASURABLE_SUBSET = store_thm
    >> MATCH_MP_TAC MEASURABLE_SIGMA
    >> FULL_SIMP_TAC std_ss [IN_MEASURABLE, SIGMA_ALGEBRA, space_def, subsets_def]);
 
-
 val MEASURABLE_LIFT = store_thm
   ("MEASURABLE_LIFT",
    ``!f a b.
        f IN measurable a b ==> f IN measurable a (sigma (space b) (subsets b))``,
    PROVE_TAC [MEASURABLE_SUBSET, SUBSET_DEF]);
 
-
 val IN_MEASURE_PRESERVING = store_thm
   ("IN_MEASURE_PRESERVING",
    ``!m1 m2 f.
-       f IN measure_preserving m1 m2 =
+       f IN measure_preserving m1 m2 <=>
        f IN measurable (m_space m1, measurable_sets m1) (m_space m2, measurable_sets m2) /\
        measure_space m1 /\ measure_space m2 /\
        !s.
          s IN measurable_sets m2 ==>
          (measure m1 ((PREIMAGE f s)INTER(m_space m1)) = measure m2 s)``,
    RW_TAC std_ss [measure_preserving_def, GSPECIFICATION]);
-
 
 val MEASURE_PRESERVING_LIFT = store_thm
   ("MEASURE_PRESERVING_LIFT",
@@ -2472,8 +1828,9 @@ val MEASURE_PRESERVING_LIFT = store_thm
        f IN measure_preserving m1 (m_space m2, a, measure m2) ==>
        f IN measure_preserving m1 m2``,
    RW_TAC std_ss []
-   >> REVERSE (Cases_on `algebra (m_space m2, a)`)
-   >- FULL_SIMP_TAC std_ss [IN_MEASURE_PRESERVING, IN_MEASURABLE, m_space_def, measurable_sets_def, sigma_algebra_def]
+   >> Reverse (Cases_on `algebra (m_space m2, a)`)
+   >- FULL_SIMP_TAC std_ss [IN_MEASURE_PRESERVING, IN_MEASURABLE, m_space_def,
+                            measurable_sets_def, sigma_algebra_def]
    >> Suff `f IN measure_preserving m1 (m_space m2, measurable_sets m2, measure m2)`
    >- RW_TAC std_ss [MEASURE_SPACE_REDUCE]
    >> ASM_REWRITE_TAC []
@@ -2483,7 +1840,8 @@ val MEASURE_PRESERVING_LIFT = store_thm
    >> STRONG_CONJ_TAC
    >- (Know `(m_space m2,subsets (sigma (m_space m2) a)) = sigma (m_space m2) a`
        >- (Q.ABBREV_TAC `Q = (m_space m2,subsets (sigma (m_space m2) a))`
-           >> Know `sigma (m_space m2) a = (space (sigma (m_space m2) a), subsets (sigma (m_space m2) a))`
+           >> Know `sigma (m_space m2) a = (space (sigma (m_space m2) a),
+                                            subsets (sigma (m_space m2) a))`
            >- RW_TAC std_ss [SPACE]
            >> STRIP_TAC >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
            >> Q.UNABBREV_TAC `Q`
@@ -2502,13 +1860,15 @@ val MEASURE_PRESERVING_LIFT = store_thm
    >> CONJ_TAC
    >- (Q.PAT_X_ASSUM `measurable_sets m2 = subsets (sigma (m_space m2) a)` (MP_TAC o GSYM)
        >> RW_TAC std_ss [MEASURE_SPACE_REDUCE])
-   >> Suff `subsets (sigma (m_space m2) a) SUBSET {s | measure m1 ((PREIMAGE f s)INTER (m_space m1)) = measure m2 s}`
+   >> Suff `subsets (sigma (m_space m2) a) SUBSET
+                 {s | measure m1 ((PREIMAGE f s) INTER (m_space m1)) = measure m2 s}`
    >- RW_TAC std_ss [SUBSET_DEF, GSPECIFICATION]
    >> MATCH_MP_TAC SIGMA_PROPERTY_DISJOINT
    >> RW_TAC std_ss [GSPECIFICATION, SUBSET_DEF, IN_INTER, IN_FUNSET,
                      IN_UNIV, PREIMAGE_COMPL, PREIMAGE_BIGUNION, IMAGE_IMAGE,
                      MEASURE_COMPL] >|
-   [Q.PAT_X_ASSUM `measure m1 (PREIMAGE f s INTER m_space m1) = measure m2 s` (fn thm => ONCE_REWRITE_TAC [GSYM thm])
+   [Q.PAT_X_ASSUM `measure m1 (PREIMAGE f s INTER m_space m1) = measure m2 s`
+                (fn thm => ONCE_REWRITE_TAC [GSYM thm])
     >> Know `m_space m2 IN a` >- PROVE_TAC [ALGEBRA_SPACE, subsets_def, space_def]
     >> STRIP_TAC
     >> Q.PAT_X_ASSUM `!s. s IN a ==> (measure m1 (PREIMAGE f s INTER m_space m1) = measure m2 s)`
@@ -2538,7 +1898,7 @@ val MEASURE_PRESERVING_LIFT = store_thm
     >- (MATCH_MP_TAC MEASURE_COUNTABLE_INCREASING
         >> RW_TAC std_ss [IN_FUNSET, IN_UNIV, SUBSET_DEF])
     >> Know `measure m2 o f' = measure m1 o (\x. (PREIMAGE f o f') x INTER m_space m1)`
-    >- (FUN_EQ_TAC
+    >- (RW_TAC std_ss [FUN_EQ_THM]
         >> RW_TAC std_ss [o_THM])
     >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
     >> MATCH_MP_TAC MEASURE_COUNTABLE_INCREASING
@@ -2565,13 +1925,12 @@ val MEASURE_PRESERVING_LIFT = store_thm
     >- (MATCH_MP_TAC MEASURE_COUNTABLY_ADDITIVE
         >> RW_TAC std_ss [IN_FUNSET, IN_UNIV])
     >> Know `measure m2 o f' = measure m1 o (\x. (PREIMAGE f o f') x INTER m_space m1)`
-    >- (FUN_EQ_TAC
+    >- (RW_TAC std_ss [FUN_EQ_THM]
         >> RW_TAC std_ss [o_THM])
     >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
     >> MATCH_MP_TAC MEASURE_COUNTABLY_ADDITIVE
     >> RW_TAC std_ss [IN_FUNSET, IN_UNIV, o_THM, IN_DISJOINT, PREIMAGE_DISJOINT, IN_INTER]
     >> METIS_TAC [IN_DISJOINT, PREIMAGE_DISJOINT]]);
-
 
 val MEASURE_PRESERVING_SUBSET = store_thm
   ("MEASURE_PRESERVING_SUBSET",
@@ -2584,28 +1943,27 @@ val MEASURE_PRESERVING_SUBSET = store_thm
    >> MATCH_MP_TAC MEASURE_PRESERVING_LIFT
    >> PROVE_TAC []);
 
-
 val MEASURABLE_I = store_thm
   ("MEASURABLE_I",
    ``!a. sigma_algebra a ==> I IN measurable a a``,
    RW_TAC std_ss [IN_MEASURABLE, I_THM, PREIMAGE_I, IN_FUNSET, GSPEC_ID, SPACE, SUBSET_REFL]
    >> Know `s INTER space a = s`
-   >- (FULL_SIMP_TAC std_ss [Once EXTENSION, sigma_algebra_def, algebra_def, IN_INTER, subset_class_def, SUBSET_DEF]
+   >- (FULL_SIMP_TAC std_ss [Once EXTENSION, sigma_algebra_def, algebra_def, IN_INTER,
+                             subset_class_def, SUBSET_DEF]
        >> METIS_TAC [])
    >> RW_TAC std_ss []);
-
 
 val MEASURABLE_COMP = store_thm
   ("MEASURABLE_COMP",
    ``!f g a b c.
        f IN measurable a b /\ g IN measurable b c ==>
        (g o f) IN measurable a c``,
-   RW_TAC std_ss [IN_MEASURABLE, GSYM PREIMAGE_COMP, IN_FUNSET, SIGMA_ALGEBRA, space_def, subsets_def, GSPECIFICATION]
+   RW_TAC std_ss [IN_MEASURABLE, GSYM PREIMAGE_COMP, IN_FUNSET, SIGMA_ALGEBRA, space_def,
+                  subsets_def, GSPECIFICATION]
    >> `PREIMAGE f (PREIMAGE g s) INTER space a =
        PREIMAGE f (PREIMAGE g s INTER space b) INTER space a`
         by (RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_PREIMAGE] >> METIS_TAC [])
    >> METIS_TAC []);
-
 
 val MEASURABLE_COMP_STRONG = store_thm
   ("MEASURABLE_COMP_STRONG",
@@ -2620,7 +1978,8 @@ val MEASURABLE_COMP_STRONG = store_thm
        RW_TAC std_ss [PREIMAGE_ALT]
        >> ONCE_REWRITE_TAC [o_ASSOC]
        >> ONCE_REWRITE_TAC [GSYM PREIMAGE_ALT]
-       >> Know `PREIMAGE f (s o g) INTER space a = PREIMAGE f (s o g INTER (IMAGE f (space a))) INTER space a`
+       >> Know `PREIMAGE f (s o g) INTER space a =
+                PREIMAGE f (s o g INTER (IMAGE f (space a))) INTER space a`
        >- (RW_TAC std_ss [GSYM PREIMAGE_ALT]
            >> RW_TAC std_ss [Once EXTENSION, IN_PREIMAGE, IN_INTER, IN_IMAGE]
            >> EQ_TAC
@@ -2632,7 +1991,6 @@ val MEASURABLE_COMP_STRONG = store_thm
            >> PROVE_TAC [])
        >> STRIP_TAC >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
        >> FULL_SIMP_TAC std_ss [PREIMAGE_ALT]]);
-
 
 val MEASURABLE_COMP_STRONGER = store_thm
   ("MEASURABLE_COMP_STRONGER",
@@ -2671,23 +2029,20 @@ val MEASURABLE_COMP_STRONGER = store_thm
        >> RW_TAC std_ss [PREIMAGE_ALT]
        >> RW_TAC std_ss [GSYM PREIMAGE_ALT, GSYM PREIMAGE_COMP]]);
 
-
 val MEASURABLE_UP_LIFT = store_thm
   ("MEASURABLE_UP_LIFT",
    ``!sp a b c f. f IN measurable (sp, a) c /\
                sigma_algebra (sp, b) /\ a SUBSET b ==> f IN measurable (sp,b) c``,
    RW_TAC std_ss [IN_MEASURABLE, GSPECIFICATION, SUBSET_DEF, IN_FUNSET, space_def, subsets_def]);
 
-
 val MEASURABLE_UP_SUBSET = store_thm
   ("MEASURABLE_UP_SUBSET",
    ``!sp a b c. a SUBSET b /\ sigma_algebra (sp, b)
-        ==> measurable (sp, a) c SUBSET measurable (sp, b) c``,
+            ==> measurable (sp, a) c SUBSET measurable (sp, b) c``,
    RW_TAC std_ss [MEASURABLE_UP_LIFT, SUBSET_DEF]
    >> MATCH_MP_TAC MEASURABLE_UP_LIFT
    >> Q.EXISTS_TAC `a`
    >> ASM_REWRITE_TAC [SUBSET_DEF]);
-
 
 val MEASURABLE_UP_SIGMA = store_thm
   ("MEASURABLE_UP_SIGMA",
@@ -2698,7 +2053,7 @@ val MEASURABLE_UP_SIGMA = store_thm
 
 val MEASURE_PRESERVING_UP_LIFT = store_thm
   ("MEASURE_PRESERVING_UP_LIFT",
-   ``!m1 m2 f.
+   ``!m1 m2 f a.
        measure_space m1 /\
        f IN measure_preserving (m_space m1, a, measure m1) m2 /\
        sigma_algebra (m_space m1, measurable_sets m1) /\
@@ -2712,7 +2067,7 @@ val MEASURE_PRESERVING_UP_LIFT = store_thm
 
 val MEASURE_PRESERVING_UP_SUBSET = store_thm
   ("MEASURE_PRESERVING_UP_SUBSET",
-   ``!m1 m2.
+   ``!m1 m2 a.
        measure_space m1 /\
        a SUBSET measurable_sets m1 /\
        sigma_algebra (m_space m1, measurable_sets m1) ==>
@@ -2729,17 +2084,14 @@ val MEASURE_PRESERVING_UP_SIGMA = store_thm
        measure_preserving (m_space m1, a, measure m1) m2 SUBSET measure_preserving m1 m2``,
    RW_TAC std_ss [MEASURE_PRESERVING_UP_LIFT, SUBSET_DEF]
    >> MATCH_MP_TAC MEASURE_PRESERVING_UP_LIFT
+   >> Q.EXISTS_TAC `a`
    >> ASM_REWRITE_TAC [SIGMA_SUBSET_SUBSETS, SIGMA_REDUCE]
-   >> FULL_SIMP_TAC std_ss [IN_MEASURE_PRESERVING, IN_MEASURABLE, m_space_def, measurable_sets_def]
+   >> FULL_SIMP_TAC std_ss [IN_MEASURE_PRESERVING, IN_MEASURABLE, m_space_def,
+                            measurable_sets_def]
    >> MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA
    >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, space_def, subsets_def]);
 
-
-
 (* ****************** *)
-
-
-
 
 val MEASURABLE_PROD_SIGMA = store_thm
   ("MEASURABLE_PROD_SIGMA",
@@ -2747,13 +2099,15 @@ val MEASURABLE_PROD_SIGMA = store_thm
        sigma_algebra a /\
        (FST o f) IN measurable a a1 /\
        (SND o f) IN measurable a a2 ==>
-       f IN measurable a (sigma ((space a1) CROSS (space a2)) (prod_sets (subsets a1) (subsets a2)))``,
-   REPEAT STRIP_TAC
+       f IN measurable a (sigma ((space a1) CROSS (space a2))
+                                (prod_sets (subsets a1) (subsets a2)))``,
+   rpt STRIP_TAC
    >> MATCH_MP_TAC MEASURABLE_SIGMA
    >> FULL_SIMP_TAC std_ss [IN_MEASURABLE]
    >> CONJ_TAC
    >- (RW_TAC std_ss [subset_class_def, subsets_def, space_def, IN_PROD_SETS]
-      >> PROVE_TAC [SIGMA_ALGEBRA, CROSS_SUBSET, SUBSET_DEF, subset_class_def, subsets_def, space_def])
+      >> PROVE_TAC [SIGMA_ALGEBRA, CROSS_SUBSET, SUBSET_DEF, subset_class_def, subsets_def,
+                    space_def])
    >> CONJ_TAC
    >- (RW_TAC std_ss [IN_FUNSET, SPACE_SIGMA, IN_CROSS]
        >> FULL_SIMP_TAC std_ss [IN_FUNSET, o_DEF])
@@ -2763,7 +2117,6 @@ val MEASURABLE_PROD_SIGMA = store_thm
        (PREIMAGE (FST o f) t INTER space a) INTER (PREIMAGE (SND o f) u INTER space a)`
         by (RW_TAC std_ss [Once EXTENSION, IN_INTER] >> DECIDE_TAC)
    >> PROVE_TAC [sigma_algebra_def, ALGEBRA_INTER]);
-
 
 val MEASURABLE_RANGE_REDUCE = store_thm
   ("MEASURABLE_RANGE_REDUCE",
@@ -2783,19 +2136,20 @@ val MEASURABLE_POW_TO_POW = store_thm
         measure_space m /\
         (measurable_sets m = POW (m_space m)) ==>
         f IN measurable (m_space m, measurable_sets m) (UNIV, POW(UNIV))``,
-   RW_TAC std_ss [IN_MEASURABLE, IN_POW, IN_UNIV, POW_SIGMA_ALGEBRA, subsets_def, space_def, IN_FUNSET,
-                            PREIMAGE_UNIV, SUBSET_UNIV, measure_space_def, SUBSET_DEF, IN_INTER]);
+   RW_TAC std_ss [IN_MEASURABLE, IN_POW, IN_UNIV, POW_SIGMA_ALGEBRA, subsets_def, space_def,
+                  IN_FUNSET, PREIMAGE_UNIV, SUBSET_UNIV, measure_space_def, SUBSET_DEF,
+                  IN_INTER]);
 
 val MEASURABLE_POW_TO_POW_IMAGE = store_thm
   ("MEASURABLE_POW_TO_POW_IMAGE",
    ``!m f.
         measure_space m /\
         (measurable_sets m = POW (m_space m)) ==>
-        f IN measurable (m_space m, measurable_sets m) (IMAGE f (m_space m), POW(IMAGE f (m_space m)))``,
-   REPEAT STRIP_TAC
+        f IN measurable (m_space m, measurable_sets m)
+                        (IMAGE f (m_space m), POW(IMAGE f (m_space m)))``,
+   rpt STRIP_TAC
    >> (MP_TAC o Q.SPECL [`m`,`f`,`UNIV`]) MEASURABLE_RANGE_REDUCE
-   >> ASM_SIMP_TAC std_ss [UNIV_NEQ_EMPTY, INTER_UNIV, MEASURABLE_POW_TO_POW]);
-
+   >> ASM_SIMP_TAC std_ss [UNIV_NOT_EMPTY, INTER_UNIV, MEASURABLE_POW_TO_POW]);
 
 val MEASURE_SPACE_SUBSET = store_thm
   ("MEASURE_SPACE_SUBSET",
@@ -2805,22 +2159,22 @@ val MEASURE_SPACE_SUBSET = store_thm
                   positive_def, measure_def, IN_POW, countably_additive_def, IN_FUNSET, IN_POW]
    >> METIS_TAC [SUBSET_TRANS, SUBSET_REFL]);
 
-
 val STRONG_MEASURE_SPACE_SUBSET = store_thm
   ("STRONG_MEASURE_SPACE_SUBSET",
    ``!s s'. s' SUBSET m_space s /\ measure_space s /\ POW s' SUBSET measurable_sets s ==>
                 measure_space (s',POW s', measure s)``,
-   REPEAT STRIP_TAC >> MATCH_MP_TAC MEASURE_DOWN
+   rpt STRIP_TAC >> MATCH_MP_TAC MEASURE_DOWN
    >> Q.EXISTS_TAC `s`
    >> RW_TAC std_ss [measure_def, m_space_def, measurable_sets_def, POW_SIGMA_ALGEBRA]);
 
-
 val MEASURE_REAL_SUM_IMAGE = store_thm
   ("MEASURE_REAL_SUM_IMAGE",
-   ``!m s. measure_space m /\ s IN measurable_sets m /\ (!x. x IN s ==> {x} IN measurable_sets m) /\ FINITE s ==>
+   ``!m s. measure_space m /\ s IN measurable_sets m /\
+                (!x. x IN s ==> {x} IN measurable_sets m) /\ FINITE s ==>
                 (measure m s = SIGMA (\x. measure m {x}) s)``,
    Suff `!s. FINITE s ==>
-        (\s. !m. measure_space m /\ s IN measurable_sets m /\ (!x. x IN s ==> {x} IN measurable_sets m) ==>
+        (\s. !m. measure_space m /\ s IN measurable_sets m /\
+             (!x. x IN s ==> {x} IN measurable_sets m) ==>
                 (measure m s = SIGMA (\x. measure m {x}) s)) s`
    >- METIS_TAC []
    >> MATCH_MP_TAC FINITE_INDUCT
@@ -2832,7 +2186,8 @@ val MEASURE_REAL_SUM_IMAGE = store_thm
    >> RW_TAC std_ss []
    >> `s IN measurable_sets m`
         by (`s = (e INSERT s) DIFF {e}`
-                by (RW_TAC std_ss [EXTENSION, IN_INSERT, IN_DIFF, IN_SING] >> METIS_TAC [GSYM DELETE_NON_ELEMENT])
+                by (RW_TAC std_ss [EXTENSION, IN_INSERT, IN_DIFF, IN_SING]
+                    >> METIS_TAC [GSYM DELETE_NON_ELEMENT])
             >> POP_ORW
             >> FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def]
             >> METIS_TAC [space_def, subsets_def, ALGEBRA_DIFF])
@@ -2840,15 +2195,6 @@ val MEASURE_REAL_SUM_IMAGE = store_thm
    >> MATCH_MP_TAC MEASURE_ADDITIVE
    >> RW_TAC std_ss [IN_DISJOINT, IN_SING, Once INSERT_SING_UNION]
    >> FULL_SIMP_TAC std_ss [GSYM DELETE_NON_ELEMENT]);
-
-val SIGMA_POW = store_thm
-  ("SIGMA_POW",
-   ``!s. sigma s (POW s) = (s,POW s)``,
-   RW_TAC std_ss [sigma_def, PAIR_EQ, EXTENSION, IN_BIGINTER, IN_POW, GSPECIFICATION]
-   >> EQ_TAC
-   >- (RW_TAC std_ss [] >> POP_ASSUM (MP_TAC o Q.SPEC `POW s`)
-       >> METIS_TAC [IN_POW, POW_SIGMA_ALGEBRA, SUBSET_REFL])
-   >> RW_TAC std_ss [SUBSET_DEF, IN_POW] >> METIS_TAC []);
 
 val finite_additivity_sufficient_for_finite_spaces = store_thm
   ("finite_additivity_sufficient_for_finite_spaces",
@@ -2890,18 +2236,215 @@ val finite_additivity_sufficient_for_finite_spaces = store_thm
    >> RW_TAC std_ss [sum]
    >> FULL_SIMP_TAC real_ss [positive_def, measure_def]);
 
-
 val finite_additivity_sufficient_for_finite_spaces2 = store_thm
   ("finite_additivity_sufficient_for_finite_spaces2",
-   ``!m. sigma_algebra (m_space m, measurable_sets m) /\ FINITE (m_space m) /\
-           positive m /\
-           additive m ==>
-                measure_space m``,
-   REPEAT STRIP_TAC
-   >> Suff `measure_space (space (m_space m, measurable_sets m), subsets (m_space m, measurable_sets m), measure m)`
+  ``!m. sigma_algebra (m_space m, measurable_sets m) /\ FINITE (m_space m) /\
+        positive m /\ additive m ==> measure_space m``,
+   rpt STRIP_TAC
+   >> Suff `measure_space (space (m_space m, measurable_sets m),
+                           subsets (m_space m, measurable_sets m), measure m)`
    >- RW_TAC std_ss [space_def, subsets_def, MEASURE_SPACE_REDUCE]
    >> MATCH_MP_TAC finite_additivity_sufficient_for_finite_spaces
    >> RW_TAC std_ss [space_def, subsets_def, MEASURE_SPACE_REDUCE]);
 
+val MEASURE_SPACE_INCREASING = store_thm
+  ("MEASURE_SPACE_INCREASING",``!m. measure_space m ==> increasing m``,
+  RW_TAC real_ss [] >> `additive m` by RW_TAC real_ss [MEASURE_SPACE_ADDITIVE]
+  >> FULL_SIMP_TAC real_ss [measure_space_def,sigma_algebra_def,ADDITIVE_INCREASING]);
+
+val MEASURE_SPACE_POSITIVE = store_thm
+  ("MEASURE_SPACE_POSITIVE",``!m. measure_space m ==> positive m``,
+  PROVE_TAC [measure_space_def]);
+
+val MEASURE_SPACE_INTER = store_thm
+  ("MEASURE_SPACE_INTER",``!m s t. (measure_space m) /\ (s IN measurable_sets m) /\
+                        (t IN measurable_sets m) ==> (s INTER t IN measurable_sets m)``,
+  METIS_TAC [measure_space_def,sigma_algebra_def,subsets_def,
+            (REWRITE_RULE [subsets_def] (Q.SPEC `(m_space m,measurable_sets m)` ALGEBRA_INTER))]);
+
+val MEASURE_SPACE_UNION = store_thm
+  ("MEASURE_SPACE_UNION",``!m s t. (measure_space m) /\ (s IN measurable_sets m) /\
+                              (t IN measurable_sets m) ==> (s UNION t IN measurable_sets m)``,
+  METIS_TAC [measure_space_def,sigma_algebra_def,subsets_def,
+              (REWRITE_RULE [subsets_def] (Q.SPEC `(m_space m,measurable_sets m)`
+              ALGEBRA_UNION))]);
+
+val MEASURE_SPACE_DIFF = store_thm
+  ("MEASURE_SPACE_DIFF",``!m s t. (measure_space m) /\ (s IN measurable_sets m) /\
+                    (t IN measurable_sets m) ==> (s DIFF t IN measurable_sets m)``,
+   METIS_TAC [measure_space_def,sigma_algebra_def,subsets_def,
+       (REWRITE_RULE [subsets_def] (Q.SPEC `(m_space m,measurable_sets m)` ALGEBRA_DIFF))]);
+
+val MEASURE_COMPL_SUBSET = store_thm
+  ("MEASURE_COMPL_SUBSET",
+   ``!m s t.
+       measure_space m /\ s IN measurable_sets m /\ t IN measurable_sets m /\ (t SUBSET s) ==>
+       (measure m (s DIFF t) = measure m s - measure m t)``,
+   RW_TAC std_ss []
+   >> Suff `measure m s = measure m t + measure m (s DIFF t)`
+   >- REAL_ARITH_TAC
+   >> MATCH_MP_TAC ADDITIVE
+   >> Q.PAT_X_ASSUM `measure_space m` MP_TAC
+   >> RW_TAC std_ss [measure_space_def, sigma_algebra_def, DISJOINT_DEF,
+                            EXTENSION, IN_DIFF, IN_UNIV, IN_UNION, IN_INTER,
+                            NOT_IN_EMPTY]
+   >> METIS_TAC [COUNTABLY_ADDITIVE_ADDITIVE,MEASURE_SPACE_DIFF,measure_space_def,
+                 sigma_algebra_def,SUBSET_DEF]);
+
+val MEASURE_SPACE_BIGUNION = store_thm
+  ("MEASURE_SPACE_BIGUNION",``!m s. measure_space m /\ (!n:num. s n IN measurable_sets m)
+              ==> (BIGUNION (IMAGE s UNIV) IN measurable_sets m)``,
+  RW_TAC std_ss []
+  >> (MP_TAC o REWRITE_RULE [subsets_def,space_def,IN_UNIV,IN_FUNSET] o
+               Q.SPEC `(m_space m,measurable_sets m)`) SIGMA_ALGEBRA_FN
+  >> METIS_TAC [measure_space_def]);
+
+val MEASURE_SPACE_IN_MSPACE = store_thm
+  ("MEASURE_SPACE_IN_MSPACE",``!m A. measure_space m /\ A IN measurable_sets m
+             ==> (!x. x IN A ==> x IN m_space m)``,
+   METIS_TAC [measure_space_def,sigma_algebra_def,algebra_def,measurable_sets_def,space_def,
+              subset_class_def,subsets_def,SUBSET_DEF]);
+
+val MEASURE_SPACE_SUBSET_MSPACE = store_thm
+  ("MEASURE_SPACE_SUBSET_MSPACE", ``!A m. measure_space m /\ A IN measurable_sets m
+                  ==> A SUBSET m_space m``,
+   RW_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def,subset_class_def,
+                  subsets_def, space_def]);
+
+val MEASURE_SPACE_EMPTY_MEASURABLE = store_thm
+  ("MEASURE_SPACE_EMPTY_MEASURABLE",``!m. measure_space m
+                              ==> {} IN measurable_sets m``,
+   RW_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def,subsets_def, space_def]);
+
+val MEASURE_SPACE_MSPACE_MEASURABLE = store_thm
+  ("MEASURE_SPACE_MSPACE_MEASURABLE",``!m. measure_space m ==> (m_space m) IN measurable_sets m``,
+   RW_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def, subsets_def, space_def]
+   >> METIS_TAC [DIFF_EMPTY]);
+
+val MEASURE_SPACE_BIGINTER = store_thm
+  ("MEASURE_SPACE_BIGINTER",``!m s. measure_space m /\ (!n:num. s n IN measurable_sets m)
+                  ==> (BIGINTER (IMAGE s UNIV) IN measurable_sets m)``,
+  RW_TAC std_ss []
+  >> (MP_TAC o REWRITE_RULE [subsets_def,space_def,IN_UNIV,IN_FUNSET] o
+               Q.SPEC `(m_space m,measurable_sets m)`) SIGMA_ALGEBRA_FN_BIGINTER
+  >> METIS_TAC [measure_space_def]);
+
+val MONOTONE_CONVERGENCE2 = store_thm
+  ("MONOTONE_CONVERGENCE2", ``!m f. measure_space m /\
+       f IN (UNIV -> measurable_sets m) /\ (!n. f n SUBSET f (SUC n)) ==>
+       (measure m o f --> measure m (BIGUNION (IMAGE f UNIV)))``,
+  METIS_TAC [MONOTONE_CONVERGENCE]);
+
+val MONOTONE_CONVERGENCE_BIGINTER = store_thm
+  ("MONOTONE_CONVERGENCE_BIGINTER",
+   ``!m s f.
+       measure_space m /\ f IN (UNIV -> measurable_sets m) /\
+       (!n. f (SUC n) SUBSET f n) /\ (s = BIGINTER (IMAGE f UNIV)) ==>
+       measure m o f --> measure m s``,
+  RW_TAC std_ss [IN_FUNSET, IN_UNIV]
+  >> `BIGINTER (IMAGE f UNIV) IN measurable_sets m` by METIS_TAC [MEASURE_SPACE_BIGINTER]
+  >> `!n. f n SUBSET f 0`
+       by (Induct_on `n` >- RW_TAC std_ss [SUBSET_REFL]
+             >> METIS_TAC [SUBSET_TRANS])
+  >> `BIGINTER (IMAGE f UNIV) SUBSET (f 0)`
+       by (MATCH_MP_TAC BIGINTER_SUBSET
+           >> METIS_TAC [IMAGE_EQ_EMPTY,UNIV_NOT_EMPTY,IN_IMAGE,IN_UNIV])
+  >> Q.ABBREV_TAC `g = (\n. (f 0) DIFF (f n))`
+  >> FULL_SIMP_TAC std_ss [o_DEF]
+  >> `!n. measure m (f 0) - measure m (f n) = measure m (g n)` by METIS_TAC [MEASURE_COMPL_SUBSET]
+  >> `(\x. measure m (f x)) = (\x. (\x. measure m (f 0)) x - (\x. measure m (g x)) x)`
+       by (RW_TAC std_ss [FUN_EQ_THM]
+           >> METIS_TAC [REAL_EQ_SUB_LADD,REAL_EQ_SUB_RADD,real_sub,REAL_ADD_COMM])
+  >> POP_ORW
+  >> `BIGINTER (IMAGE f UNIV) = (f 0) DIFF BIGUNION (IMAGE (\u. (f 0) DIFF u) (IMAGE f UNIV))`
+      by (MATCH_MP_TAC DIFF_BIGINTER
+          >> METIS_TAC [IN_IMAGE,IN_UNIV,IMAGE_EQ_EMPTY,UNIV_NOT_EMPTY])
+  >> POP_ORW
+  >> `BIGUNION (IMAGE (\u. f 0 DIFF u) (IMAGE f UNIV)) = BIGUNION (IMAGE (\n. f 0 DIFF f n) UNIV)`
+        by (RW_TAC std_ss [EXTENSION,IN_BIGUNION_IMAGE,IN_UNIV,IN_IMAGE]
+            >> METIS_TAC [SUBSET_DEF,IN_DIFF])
+  >> POP_ORW
+  >> RW_TAC std_ss []
+  >> `(\n. measure m (g n)) --> measure m (BIGUNION (IMAGE g UNIV))`
+       by ((MATCH_MP_TAC o REWRITE_RULE [o_DEF]) MONOTONE_CONVERGENCE2
+           >> RW_TAC std_ss [IN_FUNSET,IN_UNIV]
+           >- METIS_TAC [MEASURE_SPACE_DIFF]
+           >> Q.UNABBREV_TAC `g`
+           >> RW_TAC std_ss [SUBSET_DEF,IN_DIFF,GSPECIFICATION]
+           >> METIS_TAC [SUBSET_DEF])
+  >> Suff `measure m (f 0 DIFF BIGUNION (IMAGE (\n. f 0 DIFF f n) UNIV)) =
+           measure m (f 0) - measure m (BIGUNION (IMAGE (\n. f 0 DIFF f n) UNIV))`
+  >- (RW_TAC std_ss []
+      >> `(\x. measure m (f 0) - measure m (g x)) =
+          (\x. (\x. measure m (f 0)) x - (\x. measure m (g x)) x)`
+            by RW_TAC std_ss [FUN_EQ_THM]
+      >> POP_ORW
+      >> MATCH_MP_TAC SEQ_SUB
+      >> METIS_TAC [SEQ_CONST])
+  >> MATCH_MP_TAC MEASURE_COMPL_SUBSET
+  >> RW_TAC std_ss []
+  >- (MATCH_MP_TAC MEASURE_SPACE_BIGUNION
+      >> METIS_TAC [MEASURE_SPACE_DIFF])
+  >> RW_TAC std_ss [BIGUNION_SUBSET,IN_IMAGE,IN_UNIV]
+  >> METIS_TAC [DIFF_SUBSET]);
+
+val MONOTONE_CONVERGENCE_BIGINTER2 = store_thm
+  ("MONOTONE_CONVERGENCE_BIGINTER2",
+   ``!m f. measure_space m /\ f IN (UNIV -> measurable_sets m) /\
+       (!n. f (SUC n) SUBSET f n) ==>
+       measure m o f --> measure m (BIGINTER (IMAGE f UNIV))``,
+  METIS_TAC [MONOTONE_CONVERGENCE_BIGINTER]);
+
+val MEASURE_SPACE_RESTRICTED = store_thm
+  ("MEASURE_SPACE_RESTRICTED",
+  ``!m s. measure_space m /\ s IN measurable_sets m ==>
+          measure_space (s, IMAGE (\t. s INTER t) (measurable_sets m), measure m)``,
+  RW_TAC std_ss []
+  >> `positive (s,IMAGE (\t. s INTER t) (measurable_sets m),measure m)`
+        by (RW_TAC std_ss [positive_def,measure_def,measurable_sets_def,IN_IMAGE]
+            >> METIS_TAC [MEASURE_SPACE_POSITIVE,MEASURE_SPACE_INTER,positive_def])
+  >> `countably_additive (s,IMAGE (\t. s INTER t) (measurable_sets m),measure m)`
+        by (RW_TAC std_ss [countably_additive_def,measure_def,measurable_sets_def,
+                           IN_IMAGE,IN_FUNSET,IN_UNIV]
+            >> `!x. f x IN measurable_sets m` by METIS_TAC [MEASURE_SPACE_INTER]
+            >> `BIGUNION (IMAGE f univ(:num)) IN measurable_sets m`
+                 by METIS_TAC [MEASURE_SPACE_INTER]
+            >> `countably_additive m` by METIS_TAC [measure_space_def]
+            >> FULL_SIMP_TAC std_ss [countably_additive_def,IN_FUNSET,IN_UNIV])
+  >> RW_TAC std_ss [measure_space_def,sigma_algebra_def,measurable_sets_def,subsets_def,
+                    m_space_def,IN_IMAGE]
+  >- (RW_TAC std_ss [algebra_def,space_def,subsets_def,subset_class_def,IN_IMAGE]
+      >| [RW_TAC std_ss [INTER_SUBSET],
+          METIS_TAC [INTER_EMPTY,MEASURE_SPACE_EMPTY_MEASURABLE],
+          Q.EXISTS_TAC `m_space m DIFF t`
+          >> RW_TAC std_ss [MEASURE_SPACE_DIFF,MEASURE_SPACE_MSPACE_MEASURABLE,EXTENSION,
+                            IN_DIFF,IN_INTER]
+          >> METIS_TAC [MEASURE_SPACE_SUBSET_MSPACE,SUBSET_DEF],
+          Q.EXISTS_TAC `t' UNION t''`
+          >> RW_TAC std_ss [MEASURE_SPACE_UNION,UNION_OVER_INTER]])
+  >> `BIGUNION c SUBSET s`
+       by (RW_TAC std_ss [SUBSET_DEF,IN_BIGUNION]
+           >> FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_IMAGE]
+           >> `?t. (s' = s INTER t) /\ t IN measurable_sets m` by METIS_TAC []
+           >> METIS_TAC [IN_INTER])
+  >> Q.EXISTS_TAC `BIGUNION c`
+  >> RW_TAC std_ss [SUBSET_INTER2]
+  >> Suff `BIGUNION c IN subsets (m_space m, measurable_sets m)`
+  >- RW_TAC std_ss [subsets_def]
+  >> MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_UNION
+  >> RW_TAC std_ss [subsets_def]
+  >- FULL_SIMP_TAC std_ss [measure_space_def]
+  >> FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_IMAGE]
+  >> METIS_TAC [MEASURE_SPACE_INTER]);
+
+val MEASURE_SPACE_CMUL = store_thm
+  ("MEASURE_SPACE_CMUL", ``!m c. measure_space m /\ 0 <= c ==>
+                   measure_space (m_space m, measurable_sets m, (\a. c * measure m a))``,
+  RW_TAC real_ss [measure_space_def,m_space_def,measurable_sets_def,measure_def,positive_def]
+  >- METIS_TAC [REAL_LE_MUL]
+  >> RW_TAC std_ss [countably_additive_def,measure_def,measurable_sets_def,o_DEF]
+  >> METIS_TAC [SER_CMUL,countably_additive_def]);
+
+(* All Borel and Borel-measurable theorems were deleted here. -- Chun Tian *)
 
 val _ = export_theory ();

@@ -45,8 +45,8 @@ val (recfn_rules, recfn_ind, recfn_cases) = Hol_reln`
 `;
 
 val recfn_rulesl = CONJUNCTS recfn_rules
-val recfnCn = save_thm("recfnCn", List.nth(recfn_rulesl, 3))
-val recfnPr = save_thm("recfnPr", List.nth(recfn_rulesl, 4))
+Theorem recfnCn = List.nth(recfn_rulesl, 3)
+Theorem recfnPr = List.nth(recfn_rulesl, 4)
 
 val primrec_recfn = store_thm(
   "primrec_recfn",
@@ -83,17 +83,16 @@ val totalrec_def = Define`
   totalrec f n ⇔ recfn f n ∧ ∀l. (LENGTH l = n) ⇒ ∃m. f l = SOME m
 `;
 
-val rec1_def = Define`
+Definition rec1_def[simp]:
   (rec1 f [] = f 0 : num option) ∧
   (rec1 f (x::t) = f x)
-`;
+End
 
-val rec2_def = Define`
+Definition rec2_def[simp]:
   (rec2 f [] = f 0 0 : num option) ∧
   (rec2 f [x] = f x 0) ∧
   (rec2 f (x::y::t) = f x y)
-`;
-val _ = export_rewrites ["rec2_def"]
+End
 
 val recfn_K = store_thm(
   "recfn_K[simp]",
@@ -164,7 +163,7 @@ val recfn_long_truncated = Q.store_thm(
 val unary_recfn_eq = Q.store_thm(
   "unary_recfn_eq",
   `recfn f 1 ∧ (∀n. f [n] = g n) ⇒ (f = rec1 g)`,
-  strip_tac >> simp[FUN_EQ_THM] >> Cases >> simp[rec1_def]
+  strip_tac >> simp[FUN_EQ_THM] >> Cases >> simp[]
   >- (drule_then (qspec_then `[]` mp_tac) recfn_short_extended >> simp[])
   >- (drule_then (qspec_then ‘h::t’ mp_tac) recfn_long_truncated >> simp[]))
 
@@ -172,5 +171,12 @@ val recfn_rec1 = Q.store_thm(
   "recfn_rec1",
   `(∃g. recfn g 1 ∧ ∀n. g [n] = f n) ⇒ recfn (rec1 f) 1`,
   metis_tac[unary_recfn_eq]);
+
+Theorem recfn_nzero:
+  ∀f a. recfn f a ⇒ 0 < a
+Proof
+  Induct_on ‘recfn’ >> rw[] >> fs[EVERY_MEM] >>
+  rename [‘recfn f (LENGTH gs)’] >> Cases_on ‘gs’ >> fs[]
+QED
 
 val _ = export_theory()

@@ -85,6 +85,7 @@ include Abbrev
   val logic_l1 : (string * string) list
   val quant_l2 : (string * string) list
   val boolop_cval : (term * int) list
+  val mgc_of : term -> term
   val uniq_cvdef_mgc : (term * int) list -> (term * int) list
   val uniq_cvdef_arity : (term * int) list -> term list
 
