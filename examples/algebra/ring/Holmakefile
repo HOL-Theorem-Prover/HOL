@@ -1,2 +1,1 @@
-INCLUDES = ../lib ../group ../monoid
-OPTIONS = QUIT_ON_FAILURE
+INCLUDES = ../lib ../monoid ../group

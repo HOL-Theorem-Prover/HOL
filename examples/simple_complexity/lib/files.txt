@@ -1,5 +1,5 @@
 (* ------------------------------------------------------------------------- *)
-(* Hierarchy of Algorithm Common Library                                     *)
+(* Hierarchy of Simple_Complexity Common Library                             *)
 (*                                                                           *)
 (* Author: Joseph Chan                                                       *)
 (* Date: December, 2018                                                      *)

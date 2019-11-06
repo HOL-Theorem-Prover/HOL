@@ -1,2 +1,2 @@
-INCLUDES = theories
-OPTIONS = QUIT_ON_FAILURE
+CLINE_OPTIONS = -r
+INCLUDES = compute machine theories

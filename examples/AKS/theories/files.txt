@@ -64,20 +64,3 @@
 * 3 AKStheorem
 * 4 AKSrevised
 * 5 AKSimproved
-
-6 AKSmachine -- the AKS Machine (still to finish).
-* logPower
-* computeBasic
-* computeOrder
-* computeAKS
-* computePoly
-* computeRing
-* 5 AKSimproved
-
-3 AKSdemo -- demonstration script of AKS algorithm (no binary).
-* logPower
-* computeAKS
-* 0 AKSintro
-* 1 AKSsets
-* 1 AKSshift
-* 2 AKSmaps

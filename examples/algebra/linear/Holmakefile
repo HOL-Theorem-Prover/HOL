@@ -1,3 +1,2 @@
 PRE_INCLUDES = ../ring
 INCLUDES = ../lib ../monoid ../group ../field ../polynomial  
-OPTIONS = QUIT_ON_FAILURE

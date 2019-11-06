@@ -1,5 +1,5 @@
 (* ------------------------------------------------------------------------- *)
-(* Hierarchy of Algorithm Loop Library                                       *)
+(* Hierarchy of Simple_Complexity Loop Library                               *)
 (*                                                                           *)
 (* Author: Joseph Chan                                                       *)
 (* Date: December, 2018                                                      *)
