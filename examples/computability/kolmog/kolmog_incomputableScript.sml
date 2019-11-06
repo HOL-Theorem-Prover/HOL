@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib
 open arithmeticTheory whileTheory logrootTheory pred_setTheory listTheory
 open reductionEval;
 open churchoptionTheory churchlistTheory recfunsTheory numsAsCompStatesTheory
-     kolmog_complexTheory kraft_ineqTheory
+     kolmogorov_complexityTheory kraft_ineqTheory invarianceResultsTheory
 open churchDBTheory
 
 val _ = new_theory "kolmog_incomputable"
@@ -1168,8 +1168,104 @@ QED
 
 
 
+val _ = overload_on ("UKCB",``(λx. THE (kolmog_complexity_new (x:bool list) (U:bool list -> bool list option ) ))``)
+
+
+val _ = overload_on ("UCKC",``(λx y. THE (cond_kolmog_complexity (x:bool list) (y:bool list)  (U:bool list -> bool list option ) ))``)
+
+Definition univ_rf_bl:
+  univ_rf_bl U <=> univ_rf (λy. obl2n (U y))
+End
+
+
+
 (* up to here *)
 
+Definition ignore_machine:
+  ignore x n = if ∃k. x = 2 ** k then x/(2**(2*n + 1)) else ignore (x-2**n) (n+1)
+End
+
+Definition ig_n_mach_def:
+  ig_n_mach (x:num) (n:num) = x DIV (2**n)
+End
+
+
+Theorem ig_n_mach_corr:
+  ig_n_mach (bl2n (x++y)) (LENGTH x) = bl2n y
+Proof
+  Induct_on`x` >> fs[bool_list_to_num_def,ig_n_mach_def] >> rw[]
+  >- (rename[`(2 * a + 2) DIV 2 ** (SUC b) = c`] >> 
+      `(2*a+2) DIV 2 ** SUC b = a DIV 2 ** b` suffices_by fs[] >> 
+      `((2*a+2) DIV 2) DIV 2 ** b = a DIV 2 ** b` suffices_by 
+        (fs[] >> `(2*a+2) = 2*(a+1)` by fs[] >> `2 ** SUC b = 2 * (2 ** b)` by fs[EXP] >> rw[]>>
+         fs[] >>  ) >> )
+  >- (rename[`(2 * a + 1) DIV 2 ** (SUC b) = c`])
+QED
+
+Theorem ignore_correct:
+  ignore (bl2n (pair a b)) 0 = b
+Proof
+  simp[bool_list_to_num_de,pair_def,bar_def]
+QED
+
+(* UCKC is conditional kolmogorov complexity, UKCB is kolmogorov complexity typed the right way *)
+
+Theorem extra_information1:
+  univ_rf_bl U ==> ∃c. ∀x y. (UCKC x y) <= (UKCB x) + c
+Proof
+  rw[ univ_rf_bl,univ_rf_def,kolmog_complexity_new_def,cond_kolmog_complexity_def,kolmog_complexity_def] >> fs[obl2n]
+  (* The f we need to construct is the function which ignores the 1^|x|x on the input and runs the remainder  *)
+QED
+
+Theorem extra_information2:
+  univ_rf U ==> ∃c. ∀x y. UKCB x <= UKCB (pair x y) + c
+Proof
+
+QED
+
+Theorem subadditivity1:
+  univ_rf U ==> ∃c. ∀x y. UKCB (x++y) <= UKCB (pair x y) + c
+Proof
+
+QED
+
+Theorem subadditivity2:
+  univ_rf U ==> ∃c. ∀x y. UKCB (pair x y) <= UKCB x + UCKC y x + c
+Proof
+
+QED
+
+Theorem subadditivity3:
+  univ_rf U ==> ∃c. ∀x y. UKCB x + UCKC y x <= UKCB x + UKCB y + c
+Proof
+
+QED
+
+
+Theorem symmetry_of_information1a:
+  unif_rf U ==> ∃c. ∀x y. UCKC x (pair y (UKCB y)) + UKCB y <= UKCB (pair x y) + c
+Proof
+
+QED
+
+Theorem symmetry_of_information1b:
+  unif_rf U ==> ∃c. ∀x y. UKCB (pair x y) <= UCKC x (pair y (UKCB y)) + UKCB y + c
+Proof
+
+QED
+
+Theorem symmetry_of_information2:
+  unif_rf U ==> ∃c. ∀x y. UKCB (pair x y) <= UKCB (pair y x) + c
+Proof
+
+QED
+
+Theorem symmetry_of_information1b:
+  unif_rf U ==> ∃c. ∀x y. UCKC y (pair x (UKCB x)) + UKCB x <= 
+                          UCKC x (pair y (UKCB y)) + UKCB y + c
+Proof
+
+QED
 
 
 
