@@ -27,7 +27,7 @@ val FV_cvpr = Store_thm(
   NEW_ELIM_TAC THEN METIS_TAC []);
 val bnf_cvpr = Store_thm(
   "bnf_cvpr",
-  ``bnf (cvpr M N) = bnf M ∧ bnf N``,
+  ``bnf (cvpr M N) <=> bnf M ∧ bnf N``,
   SRW_TAC [][cvpr_def, LET_THM]);
 
 val cvpr_fresh = store_thm(
@@ -38,7 +38,7 @@ val cvpr_fresh = store_thm(
 
 val cvpr_11 = Store_thm(
   "cvpr_11",
-  ``(cvpr M₁ N₁ = cvpr M₂ N₂) = (M₁ = M₂) ∧ (N₁ = N₂)``,
+  ``cvpr M₁ N₁ = cvpr M₂ N₂ <=> M₁ = M₂ ∧ N₁ = N₂``,
   Q_TAC (NEW_TAC "z") `FV M₁ ∪ FV M₂ ∪ FV N₁ ∪ FV N₂` THEN
   `(cvpr M₁ N₁ = LAM z (VAR z @@ M₁ @@ N₁)) ∧
    (cvpr M₂ N₂ = LAM z (VAR z @@ M₂ @@ N₂))`
