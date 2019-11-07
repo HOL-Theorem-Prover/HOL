@@ -208,6 +208,8 @@ sig
   val strip_type : hol_type -> (hol_type list * hol_type)
   val has_boolty : term -> bool
   val only_concl : thm -> term
+  val list_mk_binop : term -> term list -> term   
+  val arity_of : term -> int
 
   (* thread *)
   val interruptkill : Thread.thread -> unit

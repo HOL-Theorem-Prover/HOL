@@ -34,6 +34,7 @@ type nn = layer list
 type train_param = 
   {ncore: int, verbose: bool, 
    learning_rate: real, batch_size: int, nepoch: int}
+
 (* inv includes biais *)
 type fpdata = {layer : layer, inv : vect, outv : vect, outnv : vect}
 type bpdata = {doutnv : vect, doutv : vect, dinv : vect, dw : mat}
@@ -285,7 +286,7 @@ fun train_nn_epoch param lossl nn batchl  = case batchl of
       train_nn_epoch param (loss :: lossl) newnn m
     end
 
-fun train_nn_epochs param i nn exl =
+fun train_nn_nepoch param i nn exl =
   if i >= #nepoch param then nn else
   let
     val batchl = mk_batch (#batch_size param) (shuffle exl)
@@ -293,7 +294,7 @@ fun train_nn_epochs param i nn exl =
     val _ = 
       if #verbose param then print_endline (its i ^ " " ^ sr loss) else ()
   in
-    train_nn_epochs param (i+1) new_nn exl
+    train_nn_nepoch param (i+1) new_nn exl
   end
 
 (* -------------------------------------------------------------------------
@@ -314,7 +315,7 @@ fun train_nn param nn exl =
     val _ = if #verbose param then stats_exl exl else ()
     val newexl = map scale_ex exl
   in
-    train_nn_epochs param 0 nn newexl
+    train_nn_nepoch param 0 nn newexl
   end
 
 fun infer_nn nn l = (descale_out o #outnv o last o (fp_nn nn) o scale_in) l

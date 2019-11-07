@@ -29,7 +29,9 @@ include Abbrev
     }
   type dhtnn =
     {opdict: opdict, headeval: nn, headpoli: nn, dimin: int, dimpoli: int}
-
+  
+  type schedule = mlNeuralNetwork.train_param list
+  
   (* random generation *)
   val random_tnn : tnn_param -> tnn
   val random_dhtnn  : dhtnn_param -> dhtnn
@@ -54,10 +56,8 @@ include Abbrev
   val infer_dhtnn : dhtnn -> term -> real * real list
 
   (* training *)
-  val train_tnn :
-    (int * int) -> tnn -> tnnex * tnnex -> (int * real) list -> tnn
-  val train_dhtnn :
-    (int * int) -> dhtnn -> dhex -> (int * real) list -> dhtnn
+  val train_tnn : schedule -> tnn -> tnnex * tnnex -> tnn
+  val train_dhtnn : schedule -> dhtnn -> dhex -> dhtnn
 
   (* statistics *)
   val tnn_accuracy : tnn -> (term * real list) list -> real

@@ -602,6 +602,13 @@ fun tts tm = case dest_term tm of
 
 fun its i = int_to_string i
 
+fun list_mk_binop binop l = case l of
+    [] => raise ERR "" ""
+  | [a] => a
+  | a :: m => list_mk_comb  (binop, [a, list_mk_binop binop m])
+
+fun arity_of t = length (fst (strip_type (type_of t)))
+
 
 (* -------------------------------------------------------------------------
    I/O

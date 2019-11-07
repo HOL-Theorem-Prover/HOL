@@ -11,6 +11,7 @@ struct
 open HolKernel boolLib Abbrev aiLib mlMatrix mlNeuralNetwork smlParallel
 
 val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
+fun msg param s = if #verbose param then print_endline s else ()
 
 (* -------------------------------------------------------------------------
    Objects
@@ -40,22 +41,21 @@ type dhtnn_param =
 type dhtnn =
   {opdict: opdict, headeval: nn, headpoli: nn, dimin: int, dimpoli: int}
 
+type schedule = train_param list
+
 (* -------------------------------------------------------------------------
    Random tree neural network
    ------------------------------------------------------------------------- *)
 
 fun oper_nn (dimin,nlayer) (_,a) =
-    if a = 0 then random_nn (idactiv,didactiv) [0,dimin] else 
-    random_nn (tanh,dtanh) 
-    (List.tabulate (nlayer, fn _ => a * dimin) @ [dimin])
-  end
+  if a = 0 then random_nn (idactiv,didactiv) [0,dimin] else 
+  random_nn (tanh,dtanh) (List.tabulate (nlayer,fn _ => a * dimin) @ [dimin])
 
 fun random_opdict (dimin,nlayer,operl) =
   dnew oper_compare (map_assoc (oper_nn (dimin,nlayer)) operl)
 
 fun random_headnn (dimin,nlayer,dimout) =
-  random_nn (tanh,dtanh)
-    (List.tabulate (!nlayer_glob, fn _ => dimin) @ [dimout])
+  random_nn (tanh,dtanh) (List.tabulate (nlayer,fn _ => dimin) @ [dimout])
 
 fun random_tnn {operl,nlayer_oper,nlayer_headnn,dimin,dimout} =
   {
@@ -66,11 +66,11 @@ fun random_tnn {operl,nlayer_oper,nlayer_headnn,dimin,dimout} =
   }
 
 fun random_dhtnn {operl,nlayer_oper,nlayer_headeval,nlayer_headpoli,
-  dimin, dimpoli} =
+  dimin,dimpoli} =
   {
   opdict = random_opdict (dimin,nlayer_oper,operl),
-  headeval = random_headnn (dimin,nlayer_headnn,1),
-  headpoli = random_headnn (dimin,nltaer_headpoli,dimpoli),
+  headeval = random_headnn (dimin,nlayer_headeval,1),
+  headpoli = random_headnn (dimin,nlayer_headpoli,dimpoli),
   dimin = dimin,
   dimpoli = dimpoli
   }
@@ -283,10 +283,11 @@ fun embed_nn embed =
     [{a = idactiv, da = didactiv, w = Vector.fromList embed'}]
   end
 
-fun is_numvar f = is_var f andalso  
+fun is_numvar f = 
+  is_var f andalso  
   let val fs = fst (dest_var f) in 
-    hd_string fs = #"n" andalso 
-    all Char.isDigit (explode (tl_string fs))
+    String.isPrefix "tnn_numvar_" fs andalso 
+    all Char.isDigit (snd (part_n (String.size "tnn_numvar_") (explode fs)))
   end
  
 fun numvar_nn dim f =
@@ -455,69 +456,69 @@ fun train_tnn_one tnn (tml,expectv) =
     bp_tnn (#dimin tnn) (fpdict,fpdatal) (tml,expectv)
   end
 
-fun update_head headnn bpdatall =
+fun update_headnn param headnn bpdatall =
   let
     val dwll = map (map #dw) bpdatall
     val dwl = sum_dwll dwll
-    val newheadnn = update_nn headnn dwl
+    val newheadnn = update_nn param headnn dwl
     val loss = average_loss bpdatall
   in
     (newheadnn, loss)
   end
 
-fun update_opernn opdict (oper,dwll) =
+fun update_opernn param opdict (oper,dwll) =
   let
     val nn    = dfind oper opdict
     val dwl   = sum_dwll dwll
-    val newnn = update_nn nn dwl
+    val newnn = update_nn param nn dwl
   in
     (oper,newnn)
   end
 
-fun train_tnn_batch ncore (tnn as {opdict,headnn,dimin,dimout}) batch =
+fun train_tnn_batch param (tnn as {opdict,headnn,dimin,dimout}) batch =
   let
+    val ncore = #ncore param
     val (bpdictl,bpdatall) =
       split (parmap_batch ncore (train_tnn_one tnn) batch)
-    val (newheadnn,loss) = update_head headnn bpdatall
+    val (newheadnn,loss) = update_headnn param headnn bpdatall
     val bpdict = dconcat oper_compare bpdictl
     val bpdict' = filter (not o is_numvar o fst o fst) (dlist bpdict)
-    val newnnl = map (update_opernn opdict) bpdict'
+    val newnnl = map (update_opernn param opdict) bpdict'
     val newopdict = daddl newnnl opdict
   in
     ({opdict = newopdict, headnn = newheadnn, dimin = dimin, dimout = dimout},
       loss)
   end
 
-fun train_tnn_epoch ncore lossl tnn batchl = case batchl of
+fun train_tnn_epoch param lossl tnn batchl = case batchl of
     [] => (tnn, average_real lossl)
   | batch :: m =>
-    let val (newtnn,loss) = train_tnn_batch ncore tnn batch in
-      train_tnn_epoch ncore (loss :: lossl) newtnn m
+    let val (newtnn,loss) = train_tnn_batch param tnn batch in
+      train_tnn_epoch param (loss :: lossl) newtnn m
     end
 
-fun train_tnn_nepoch (ncore,bsize) nepoch tnn (ptrain,ptest) =
-  if nepoch <= 0 then tnn else
+fun train_tnn_nepoch param i tnn (ptrain,ptest) =
+  if i >= #nepoch param then tnn else
   let
-    val batchl = (mk_batch bsize o shuffle) ptrain
-    val (newtnn,r1) = train_tnn_epoch ncore [] tnn batchl
+    val batchl = mk_batch (#batch_size param) (shuffle ptrain)
+    val (newtnn,r1) = train_tnn_epoch param [] tnn batchl
     val r2 = if null ptest then 0.0 else
       average_real (map (infer_mse tnn) ptest)
-    val _ = print_endline
-      (its nepoch ^ " train: " ^ pretty_real r1 ^ " test: " ^ pretty_real r2)
+    val sr = pretty_real
+    val _ = msg param (its i ^ " train: " ^ sr r1 ^ " test: " ^ sr r2)
   in
-    train_tnn_nepoch (ncore,bsize) (nepoch - 1) newtnn (ptrain,ptest)
+    train_tnn_nepoch param (i+1) newtnn (ptrain,ptest)
   end
 
-fun train_tnn_schedule (ncore,bsize) tnn (ptrain,ptest) schedule =
+fun train_tnn_schedule schedule tnn (ptrain,ptest) =
   case schedule of
     [] => tnn
-  | (nepoch, lrate) :: m =>
+  | param :: m =>
     let
-      val _ = learningrate_glob := lrate
-      val _ = print_endline ("learning_rate: " ^ rts lrate)
-      val newtnn = train_tnn_nepoch (ncore,bsize) nepoch tnn (ptrain,ptest)
+      val _ = msg param ("learning rate: " ^ rts (#learning_rate param))
+      val newtnn = train_tnn_nepoch param 0 tnn (ptrain,ptest)
     in
-      train_tnn_schedule (ncore,bsize) newtnn (ptrain,ptest) m
+      train_tnn_schedule m newtnn (ptrain,ptest)
     end
 
 fun output_info exl =
@@ -532,16 +533,15 @@ fun output_info exl =
     "  deviation: " ^ String.concatWith " " devl
   end
 
-fun train_tnn (ncore,bsize) randtnn (trainex,testex) schedule =
+fun train_tnn schedule randtnn (trainex,testex) =
   let
     val _ = print_endline ("trainset " ^ output_info (map snd trainex))
     val _ = print_endline ("testset  " ^ output_info (map snd testex))
-    val _ = if length trainex < bsize
+    val _ = if length trainex < #batch_size (hd schedule)
             then raise ERR "prepare_train_tnn" "too few examples"
             else ()
     val pset = (prepare_tnnex trainex, prepare_tnnex testex)
-    val (tnn,t) =
-      add_time (train_tnn_schedule (ncore,bsize) randtnn pset) schedule
+    val (tnn,t) = add_time (train_tnn_schedule schedule randtnn) pset 
   in
     print_endline ("Tree neural network training time: " ^ rts t); tnn
   end
@@ -556,16 +556,17 @@ fun train_dhtnn_one dhtnn (tml,expecteval,expectpoli) =
     (tml,expecteval,expectpoli)
   end
 
-fun train_dhtnn_batch ncore dhtnn batch =
+fun train_dhtnn_batch param dhtnn batch =
   let
+    val ncore = #ncore param
     val {opdict, headeval, headpoli, dimin, dimpoli} = dhtnn
     val (bpdictl,bpdatall1,bpdatall2) =
       split_triple (parmap_batch ncore (train_dhtnn_one dhtnn) batch)
-    val (newheadeval,loss1) = update_head headeval bpdatall1
-    val (newheadpoli,loss2) = update_head headpoli bpdatall2
+    val (newheadeval,loss1) = update_headnn param headeval bpdatall1
+    val (newheadpoli,loss2) = update_headnn param headpoli bpdatall2
     val bpdict = dconcat oper_compare bpdictl
     val bpdict' = filter (not o is_numvar o fst o fst) (dlist bpdict)
-    val newopdict = daddl (map (update_opernn opdict) bpdict') opdict
+    val newopdict = daddl (map (update_opernn param opdict) bpdict') opdict
   in
     ({opdict = newopdict, headeval = newheadeval, headpoli = newheadpoli,
      dimin = dimin, dimpoli = dimpoli},(loss1,loss2))
@@ -582,36 +583,33 @@ fun train_dhtnn_epoch ncore (lossl1,lossl2) dhtnn batchl =
       newdhtnn m
     end
 
-fun train_dhtnn_nepoch (ncore,bsize) nepoch dhtnn dhex =
-  if nepoch <= 0 then dhtnn else
+fun train_dhtnn_nepoch param i dhtnn dhex =
+  if i >= #nepoch param then dhtnn else
   let
-    val batchl = mk_batch bsize (shuffle dhex)
-    val (newdhtnn,(r1,r2)) = train_dhtnn_epoch ncore ([],[]) dhtnn batchl
-    val _ = print_endline
-      (its nepoch ^ ": eval " ^ pretty_real r1 ^ " poli " ^ pretty_real r2)
+    val batchl = mk_batch (#batch_size param) (shuffle dhex)
+    val (newdhtnn,(r1,r2)) = train_dhtnn_epoch param ([],[]) dhtnn batchl
+    val sr = pretty_real
+    val _ = msg param (its i ^ ": eval " ^ sr r1 ^ " poli " ^ sr r2)
   in
-    train_dhtnn_nepoch (ncore,bsize) (nepoch - 1) newdhtnn dhex
+    train_dhtnn_nepoch param (i + 1) newdhtnn dhex
   end
 
-fun train_dhtnn_schedule (ncore,bsize) dhtnn dhex schedule =
-  case schedule of
+fun train_dhtnn_schedule schedule dhtnn dhex = case schedule of
     [] => dhtnn
-  | (nepoch, lrate) :: m =>
+  | param :: m =>
     let
-      val _ = learningrate_glob := lrate
-      val _ = print_endline ("learning_rate: " ^ rts lrate)
-      val newdhtnn = train_dhtnn_nepoch (ncore,bsize) nepoch dhtnn dhex
+      val _ = print_endline ("learning rate: " ^ rts (#learning_rate param))
+      val newdhtnn = train_dhtnn_nepoch param 0 dhtnn dhex
     in
-      train_dhtnn_schedule (ncore,bsize) newdhtnn dhex m
+      train_dhtnn_schedule m newdhtnn dhex
     end
 
-fun train_dhtnn (ncore,bsize) dhtnn dhex schedule =
+fun train_dhtnn schedule dhtnn dhex =
   let
     val _ = print_endline ("eval " ^ output_info (map #2 dhex))
     val _ = print_endline ("poli " ^ output_info (map #3 dhex))
     val newdhex = prepare_dhex dhex
-    val (newdhtnn,t) =
-      add_time (train_dhtnn_schedule (ncore,bsize) dhtnn newdhex) schedule
+    val (newdhtnn,t) = add_time (train_dhtnn_schedule schedule dhtnn) newdhex
   in
     print_endline
       ("Double-headed tree neural network training time: " ^ rts t);
@@ -635,5 +633,56 @@ fun tnn_accuracy tnn set =
   let val correct = filter (is_accurate_tnn tnn) set in
     Real.fromInt (length correct) / Real.fromInt (length set)
   end
+
+(* -------------------------------------------------------------------------
+   Example: learn to tell if a term contains the variable "x" or not
+   ------------------------------------------------------------------------- *)
+
+(*
+load "aiLib"; open aiLib;
+load "psTermGen"; open psTermGen;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+
+(*** objective ***)
+val varl = [``x:'a``,``y:'a``,``z:'a``,``f:'a->'a->'a``,``g:'a -> 'a``]; 
+fun contain_x tm = can (find_term (fn x => term_eq x ``x:'a``)) tm;
+
+(*** examples ***)
+fun mk_dataset n =
+  let
+    val pxl = mk_term_set (random_terml varl (n,alpha) 10000);
+    val (px,pnotx) = partition contain_x pxl
+  in
+    (first_n 100 (shuffle px), first_n 100 (shuffle pnotx))
+  end
+
+val (l1,l2) = split (List.tabulate (20, fn n => mk_dataset (n + 1)));
+val (l1',l2') = (List.concat l1, List.concat l2);
+val (pos,neg) = (map_assoc (fn x => [1.0]) l1', map_assoc (fn x => [0.0]) l2');
+
+(* 90/10 split *)
+val l = shuffle (pos @ neg);
+val (trainex,testex) = part_n (Real.round (Real.fromInt (length l) * 0.9)) l;
+
+(*** tree neural network ***)
+val tnn_param =
+  {
+  operl = map_assoc arity_of varl,
+  nlayer_oper = 2, nlayer_headnn = 2,
+  dimin = 8, dimout = 1
+  }
+
+val randtnn = random_tnn tnn_param;
+val schedule = 
+  [{ncore=4, verbose=true, learning_rate=0.02, batch_size=16, nepoch=100}];
+val newtnn = train_tnn schedule randtnn (trainex,testex);
+
+(*** inference example ***)
+val tm = fst (hd (shuffle testex));
+val r = infer_tnn newtnn tm;
+val acc = tnn_accuracy newtnn trainex;
+
+*)
+
 
 end (* struct *)
