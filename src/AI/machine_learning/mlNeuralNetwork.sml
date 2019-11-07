@@ -13,23 +13,17 @@ open HolKernel Abbrev boolLib aiLib mlMatrix smlParallel
 val ERR = mk_HOL_ERR "mlNeuralNetwork"
 
 (* -------------------------------------------------------------------------
-   Parameters
+   Activation and derivatives (with a trick)
    ------------------------------------------------------------------------- *)
 
-val learningrate_glob = ref 0.01
-
-(* -------------------------------------------------------------------------
-   Activation and derivatives (with a smart trick)
-   ------------------------------------------------------------------------- *)
-
+fun idactiv (x:real) = x:real
+fun didactiv (x:real) = 1.0
 fun tanh x = Math.tanh x
-fun dtanh x = 1.0 - (x:real) * x (* 1 - (tanh x) * (tanh x) *)
+fun dtanh x = 1.0 - (x:real) * x
 fun relu x  = if x > 0.0 then x else 0.0
-fun drelu x = if x < 0.000000000001 then 0.0 else 1.0
+fun drelu x = if x < epsilon then 0.0 else 1.0
 fun leakyrelu x  = if x > 0.0 then x else 0.01 * x
-fun dleakyrelu x = if x <= 0.0 then 0.01 else 1.0
-fun id (x:real) = x:real
-fun did (x:real) = 1.0
+fun dleakyrelu x = if x < epsilon then 0.01 else 1.0
 
 (* -------------------------------------------------------------------------
    Types
@@ -37,7 +31,9 @@ fun did (x:real) = 1.0
 
 type layer = {a : real -> real, da : real -> real, w : real vector vector}
 type nn = layer list
-
+type train_param = 
+  {ncore: int, verbose: bool, 
+   learning_rate: real, batch_size: int, nepoch: int}
 (* inv includes biais *)
 type fpdata = {layer : layer, inv : vect, outv : vect, outnv : vect}
 type bpdata = {doutnv : vect, doutv : vect, dinv : vect, dw : mat}
@@ -230,24 +226,23 @@ fun clip (a,b) m =
     mat_map f m
   end
 
-fun update_layer (layer, layerwu) =
+fun update_layer param (layer, layerwu) =
   let
-    val w0 = mat_smult (!learningrate_glob) layerwu
+    val coeff = #learning_rate param / Real.fromInt (#batch_size param)
+    val w0 = mat_smult coeff layerwu
     val w1 = mat_add (#w layer) w0
     val w2 = clip (~4.0,4.0) w1
   in
     {a = #a layer, da = #da layer, w = w2}
   end
 
-fun update_nn nn wu = map update_layer (combine (nn,wu))
+fun update_nn param nn wu = map (update_layer param) (combine (nn,wu))
 
 (* -------------------------------------------------------------------------
    Statistics
    ------------------------------------------------------------------------- *)
 
-val show_stats = ref false
-
-fun sr r = pad 5 "0" (rts_round 3 r)
+fun sr r = pad 7 "0" (rts_round 5 r)
 
 fun stats_exl exl =
   let
@@ -255,7 +250,7 @@ fun stats_exl exl =
     fun f l =
       print_endline (sr (average_real l ) ^ " " ^ sr (absolute_deviation l))
   in
-    print_endline "mean deviation"; app f ll
+    print_endline "mean deviation"; app f ll; print_endline ""
   end
 
 (* -------------------------------------------------------------------------
@@ -271,34 +266,34 @@ fun train_nn_subbatch nn (subbatch : (vect * vect) list) =
     (dwl, average_loss bpdatall)
   end
 
-fun train_nn_batch ncore nn batch =
+fun train_nn_batch param nn batch =
   let
-    val (dwll,lossl) =
-      split (parmap_exact ncore (train_nn_subbatch nn) (cut_n ncore batch))
+    val ncore = #ncore param
+    val subbatchl = cut_n ncore batch
+    val (dwll,lossl) = 
+      split (parmap_exact ncore (train_nn_subbatch nn) subbatchl)
     val dwl = sum_dwll dwll
-    val newnn = update_nn nn dwl
+    val newnn = update_nn param nn dwl
   in
     (newnn, average_real lossl)
   end
 
-fun train_nn_epoch ncore lossl nn batchl  = case batchl of
+fun train_nn_epoch param lossl nn batchl  = case batchl of
     [] => (nn, average_real lossl)
   | batch :: m =>
-    let val (newnn,loss) = train_nn_batch ncore nn batch in
-      train_nn_epoch ncore (loss :: lossl) newnn m
+    let val (newnn,loss) = train_nn_batch param nn batch in
+      train_nn_epoch param (loss :: lossl) newnn m
     end
 
-fun train_nn_aux ncore nepoch nn bsize exl =
-  if nepoch <= 0 then nn else
+fun train_nn_epochs param i nn exl =
+  if i >= #nepoch param then nn else
   let
-    val batchl = mk_batch bsize (shuffle exl)
-    val (new_nn,loss) = train_nn_epoch ncore [] nn batchl
-    val _ =
-      if !show_stats
-      then print_endline (its nepoch ^ " " ^ Real.toString loss)
-      else ()
+    val batchl = mk_batch (#batch_size param) (shuffle exl)
+    val (new_nn,loss) = train_nn_epoch param [] nn batchl
+    val _ = 
+      if #verbose param then print_endline (its i ^ " " ^ sr loss) else ()
   in
-    train_nn_aux ncore (nepoch - 1) new_nn bsize exl
+    train_nn_epochs param (i+1) new_nn exl
   end
 
 (* -------------------------------------------------------------------------
@@ -314,43 +309,15 @@ fun scale_out l = Vector.fromList (map scale_real l)
 fun descale_out v = map descale_real (vector_to_list v)
 fun scale_ex (l1,l2) = (scale_in l1, scale_out l2)
 
-fun train_nn ncore nepoch nn bsize exl =
+fun train_nn param nn exl =
   let
-    val _ = if !show_stats then stats_exl exl else ()
+    val _ = if #verbose param then stats_exl exl else ()
     val newexl = map scale_ex exl
   in
-    train_nn_aux ncore nepoch nn bsize newexl
+    train_nn_epochs param 0 nn newexl
   end
 
 fun infer_nn nn l = (descale_out o #outnv o last o (fp_nn nn) o scale_in) l
-
-(* -------------------------------------------------------------------------
-   Fixed neural embedding derived by the name of the variable
-   ------------------------------------------------------------------------- *)
-
-fun embed_nn embed =
-  let val embed' = map (fn x => Vector.fromList [x]) embed in
-    [{a = id, da = did, w = Vector.fromList embed'}]
-  end
-
-fun is_numvar f = is_var f andalso  
-  let val fs = fst (dest_var f) in 
-    hd_string fs = #"n" andalso 
-    all Char.isDigit (explode (tl_string fs))
-  end
- 
-fun numvar_nn dim f =
-  if is_numvar f then 
-    let 
-      val fs = fst (dest_var f)
-      val cl = tl (explode fs)
-      val embed = map (Real.fromInt o string_to_int o Char.toString) cl
-    in
-      if length embed = dim 
-      then embed_nn embed
-      else raise ERR "numvar_nn" fs
-    end
-  else raise ERR "fp_op" (fst (dest_var f))
 
 end (* struct *)
 
@@ -361,21 +328,25 @@ end (* struct *)
 (*
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
-load "smlParallel"; open smlParallel;
 
+(* examples *)
 fun gen_idex dim =
-  let
-    fun f dim = List.tabulate (dim, fn _ => random_real () - 0.5)
-    val x = Vector.fromList (f dim) in (x,x)
+  let fun f () = List.tabulate (dim, fn _ => random_real ()) in
+    let val x = f () in (x,x) end
   end
-
+; 
 val dim = 10;
-val bsize = 16;
-val nepoch = 100;
-val ncore = 1;
 val exl = List.tabulate (1000, fn _ => gen_idex dim);
-val nn = random_nn (tanh,dtanh) [dim,2* dim,dim];
-val (newnn,t) = add_time (train_nn ncore nepoch nn bsize) exl;
+
+(* training *)
+val nn = random_nn (tanh,dtanh) [dim,4*dim,4*dim,dim];
+val param : train_param = 
+  {ncore = 1, verbose = true, 
+   learning_rate = 0.02, batch_size = 16, nepoch = 100}
+;
+val (newnn,t) = add_time (train_nn param nn) exl;
+
+(* testing *)
 val inv = fst (gen_idex dim);
 val outv = infer_nn newnn inv;
 *)

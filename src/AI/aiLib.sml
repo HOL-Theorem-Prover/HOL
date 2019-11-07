@@ -912,7 +912,7 @@ fun best_in_distrib distrib =
 fun random_percent percent l =
   part_n (Real.floor (percent * Real.fromInt (length l))) (shuffle l)
 
-val epsilon = 0.00000001
+val epsilon = 0.000000001
 
 fun uniform_proba n = List.tabulate (n, fn _ => 1.0 / Real.fromInt n)
 

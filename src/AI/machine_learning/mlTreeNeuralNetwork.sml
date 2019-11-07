@@ -13,58 +13,66 @@ open HolKernel boolLib Abbrev aiLib mlMatrix mlNeuralNetwork smlParallel
 val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
 
 (* -------------------------------------------------------------------------
-   Type
+   Objects
    ------------------------------------------------------------------------- *)
 
 type vect = real vector
 type mat = real vector vector
 type opdict = ((term * int),nn) Redblackmap.dict
+
 type tnnex = (term * real list) list
 type tnn =
   {opdict: opdict, headnn: nn, dimin: int, dimout: int}
+type tnn_param =
+  {
+  operl: (term * int) list,
+  nlayer_oper: int, nlayer_headnn: int,
+  dimin: int, dimout: int
+  }
+  
 type dhex = (term * real list * real list) list
+type dhtnn_param =
+  {
+  operl: (term * int) list,
+  nlayer_oper: int, nlayer_headeval: int, nlayer_headpoli: int,
+  dimin: int, dimpoli: int
+  }
 type dhtnn =
-  {opdict: opdict, headeval: nn, headpoli: nn, dimin: int, dimout: int}
+  {opdict: opdict, headeval: nn, headpoli: nn, dimin: int, dimpoli: int}
 
 (* -------------------------------------------------------------------------
    Random tree neural network
    ------------------------------------------------------------------------- *)
 
-val nlayer_glob = ref 2
-
-fun id (x:real) = x:real
-fun did (x:real) = 1.0
-
-fun const_nn dim arity =
-  if arity = 0
-  then random_nn (id,did) [0,dim]
-  else random_nn (tanh,dtanh)
-    (List.tabulate (!nlayer_glob, fn _ => arity * dim) @ [dim])
-
-fun random_opdict dimin cal =
-  let val l = map_assoc (fn (_,a) => const_nn dimin a) cal in
-    dnew oper_compare l
+fun oper_nn (dimin,nlayer) (_,a) =
+    if a = 0 then random_nn (idactiv,didactiv) [0,dimin] else 
+    random_nn (tanh,dtanh) 
+    (List.tabulate (nlayer, fn _ => a * dimin) @ [dimin])
   end
 
-fun random_headnn (dimin,dimout) =
+fun random_opdict (dimin,nlayer,operl) =
+  dnew oper_compare (map_assoc (oper_nn (dimin,nlayer)) operl)
+
+fun random_headnn (dimin,nlayer,dimout) =
   random_nn (tanh,dtanh)
     (List.tabulate (!nlayer_glob, fn _ => dimin) @ [dimout])
 
-fun random_tnn (dimin,dimout) operl =
+fun random_tnn {operl,nlayer_oper,nlayer_headnn,dimin,dimout} =
   {
-  opdict = random_opdict dimin operl,
-  headnn = random_headnn (dimin,dimout),
+  opdict = random_opdict (dimin,nlayer_oper,operl),
+  headnn = random_headnn (dimin,nlayer_headnn,dimout),
   dimin = dimin,
   dimout = dimout
   }
 
-fun random_dhtnn (dimin,dimout) operl =
+fun random_dhtnn {operl,nlayer_oper,nlayer_headeval,nlayer_headpoli,
+  dimin, dimpoli} =
   {
-  opdict = random_opdict dimin operl,
-  headeval = random_headnn (dimin,1),
-  headpoli = random_headnn (dimin,dimout),
+  opdict = random_opdict (dimin,nlayer_oper,operl),
+  headeval = random_headnn (dimin,nlayer_headnn,1),
+  headpoli = random_headnn (dimin,nltaer_headpoli,dimpoli),
   dimin = dimin,
-  dimout = dimout
+  dimpoli = dimpoli
   }
 
 (* -------------------------------------------------------------------------
@@ -88,7 +96,7 @@ fun string_of_tnn {opdict,headnn,dimin,dimout} =
   string_of_nn headnn ^ "\nheadstop\n\n" ^
   string_of_opdict opdict ^ "\nopdictstop"
 
-fun string_of_dhtnn {opdict,headeval,headpoli,dimin,dimout} =
+fun string_of_dhtnn {opdict,headeval,headpoli,dimin,dimpoli} =
   string_of_nn headeval ^ "\nheadevalstop\n\n" ^
   string_of_nn headpoli ^ "\nheadpolistop\n\n" ^
   string_of_opdict opdict ^ "\nopdictstop"
@@ -161,10 +169,10 @@ fun read_dhtnn_sl operl sl =
     val (l3,_) = split_sl "opdictstop" contl2
     val opdict = read_opdict operl l3
     val dimin = ((snd o mat_dim o #w o hd) headpoli) - 1
-    val dimout = (fst o mat_dim o #w o last) headpoli
+    val dimpoli = (fst o mat_dim o #w o last) headpoli
   in
     {opdict=opdict,headeval=headeval,headpoli=headpoli,
-     dimin=dimin,dimout=dimout}
+     dimin=dimin,dimpoli=dimpoli}
   end
 
 fun read_dhtnn file =
@@ -264,6 +272,35 @@ fun prepare_dhex dhex =
   let fun f (tm,rl1,rl2) = (order_subtm tm, scale_out rl1, scale_out rl2) in
     map f dhex
   end
+
+(* -------------------------------------------------------------------------
+   Fixed neural embedding derived by the name of the variable. 
+   It is a useful hack for fixing an embedding in one leaf of the tree.
+   ------------------------------------------------------------------------- *)
+
+fun embed_nn embed =
+  let val embed' = map (fn x => Vector.fromList [x]) embed in
+    [{a = idactiv, da = didactiv, w = Vector.fromList embed'}]
+  end
+
+fun is_numvar f = is_var f andalso  
+  let val fs = fst (dest_var f) in 
+    hd_string fs = #"n" andalso 
+    all Char.isDigit (explode (tl_string fs))
+  end
+ 
+fun numvar_nn dim f =
+  if is_numvar f then 
+    let 
+      val fs = fst (dest_var f)
+      val cl = tl (explode fs)
+      val embed = map (Real.fromInt o string_to_int o Char.toString) cl
+    in
+      if length embed = dim 
+      then embed_nn embed
+      else raise ERR "numvar_nn" fs
+    end
+  else raise ERR "fp_op" (fst (dest_var f))
 
 (* -------------------------------------------------------------------------
    Forward propagation
@@ -521,7 +558,7 @@ fun train_dhtnn_one dhtnn (tml,expecteval,expectpoli) =
 
 fun train_dhtnn_batch ncore dhtnn batch =
   let
-    val {opdict, headeval, headpoli, dimin, dimout} = dhtnn
+    val {opdict, headeval, headpoli, dimin, dimpoli} = dhtnn
     val (bpdictl,bpdatall1,bpdatall2) =
       split_triple (parmap_batch ncore (train_dhtnn_one dhtnn) batch)
     val (newheadeval,loss1) = update_head headeval bpdatall1
@@ -531,7 +568,7 @@ fun train_dhtnn_batch ncore dhtnn batch =
     val newopdict = daddl (map (update_opernn opdict) bpdict') opdict
   in
     ({opdict = newopdict, headeval = newheadeval, headpoli = newheadpoli,
-     dimin = dimin, dimout = dimout},(loss1,loss2))
+     dimin = dimin, dimpoli = dimpoli},(loss1,loss2))
   end
 
 fun train_dhtnn_epoch ncore (lossl1,lossl2) dhtnn batchl =

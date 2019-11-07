@@ -8,19 +8,91 @@
 structure mlReinforce :> mlReinforce =
 struct
 
-open HolKernel Abbrev boolLib aiLib psMCTS mlTreeNeuralNetwork
-smlParallel
+open HolKernel Abbrev boolLib aiLib psMCTS psBigSteps 
+mlTreeNeuralNetwork smlParallel
 
 val ERR = mk_HOL_ERR "mlReinforce"
 
-type rlparam =
+(* -------------------------------------------------------------------------
+   Training
+   ------------------------------------------------------------------------- *)
+
+type schedule = (int,real) list
+
+type 'a tnnguider_param =
   {
-  (* competition *)
-  ntarget_compete : int,
-  mcts_explore : int,
-  (* exploration *)
+  term_of_board: 'a -> term,
+  schedule: schedule
+  }
+
+fun random_dhtnn_gamespec tnnguider_param gamespec =
+  random_dhtnn dhtnn_param 
+
+   (#dim , length (#movel gamespec)) (#operl gamespec)
+
+fun train_tnnguider tnnguider_param exl =
+  
+
+
+fun epex_stats epex =
+  let
+    val d = count_dict (dempty Term.compare) (map #1 epex)
+    val r = average_real (map (Real.fromInt o snd) (dlist d))
+  in
+    summary ("examples: " ^ its (length epex));
+    summary ("average duplicates: " ^ rts r)
+  end
+
+
+
+fun train_dhtnn_gamespec gamespec epex =
+  let
+    val _ = epex_stats epex
+    val schedule = [(!nepoch_glob, !lr_glob]
+    val dhtnn = random_dhtnn_gamespec gamespec
+  in
+    train_dhtnn (!ncore_train_glob,!batchsize_glob) dhtnn epex schedule
+  end
+
+fun train_f gamespec allex =
+  let val (dhtnn,t) = add_time (train_dhtnn_gamespec gamespec) allex in
+    summary ("Training time : " ^ rts t); dhtnn
+  end
+
+(* specific guider for a specific game *)
+(* fun mk_tnnguider1 gamespec =
+  {
+  operl = 
+  nlayer_oper, nlayer_headp, nlayer_heade,
+  dimin,
+  dimout,
+  nntm_of_board,
+  schedule
+  }  
+*)
+
+fun mk_uniformguider gamespec =
+  
+fun mk_randomguider gamerspec
+
+datatype ('a,'b) guider = 
+  RandomGuider | UniformGuider | TnnGuider of ('a,'b) 
+  
+  mk_gamedhtnn : ('a 'b) dhtnnguider_param -> dhtnn
+  train_gamedhtnn : ('a 'b) dhtnnguider_param -> 'a ex -> dhtnn
+  mk_fep : ('a,'b) gamespec -> dhtnn -> ('a,'b) psMCTS.guider
+  
+
+type rl_param =
+  {
+  (* search *)
+  ncore_bigsteps_glob
+  ntarget_compete_elim : int,
+  ntarget_compete_final : int,
+  bigsteps_compete : guider_env -> ('a,'b) bigsteps_param,
   ntarget_explore : int,
-  mctsparam_explore : int,
+  bigsteps_explore : guider_env -> ('a,'b) bigsteps_param,
+  (* examples *)
   exwindow_glob : int,
   uniqex_flag : bool,
   (* generation *)
@@ -29,17 +101,15 @@ type rlparam =
   level_threshold : real
   }
 
+(*
 (* mcts parameters *)
 val ncore_mcts_glob = ref 8
-
 (* training parameters *)
 val dim_glob = ref 8
 val batchsize_glob = ref 64
 val nepoch_glob = ref 100
 val lr_glob = ref 0.1
 val ncore_train_glob = ref 4
-
-
 (* default parameters *)
 val ngen = ref 20
 val ntarget_compete = ref 400
@@ -52,12 +122,7 @@ val batchsize_glob = ref 64
 val nepoch_glob = ref 100
 val lr_glob = ref 0.1
 val ncore_train_glob = ref 4
-
-val nsim_glob = ref 1600
-val decay_glob = ref 0.99
-val temp_flag = ref false
 val ncore_mcts_glob = ref 8
-
 val level_start = ref 1
 val level_threshold = ref 0.75
 
@@ -76,8 +141,14 @@ type ('a,'b) gamespec =
   read_targetl: string -> 'a list,
   max_bigsteps : 'a -> int
   }
+*)
 
-type dhex = (term * real list * real list) list
+(* -------------------------------------------------------------------------
+   Training
+   ------------------------------------------------------------------------- *)
+
+
+type 'a ex = ('a * real list * real list)
 type dhtnn = mlTreeNeuralNetwork.dhtnn
 type flags = bool * bool * bool
 type 'a extgamespec =
@@ -96,15 +167,11 @@ fun log_eval file s =
   end
 fun summary s = (log_eval (!logfile_glob) s; print_endline s)
 
-fun bts b = if b then "true" else "false"
-
 (* -------------------------------------------------------------------------
    Hard-coded parameters
    ------------------------------------------------------------------------- *)
 
-
-
-fun summary_param () =
+fun summary_rl_param rl_param =
   let
     val file  = "  file: " ^ (!logfile_glob)
     val para  = "parallel_dir: " ^ (!parallel_dir)
@@ -141,26 +208,6 @@ fun summary_param () =
    each board (sit).
    ------------------------------------------------------------------------- *)
 
-fun mk_guider_uniform gamespec sit =
-  let
-    val movel = #movel gamespec
-    val filter_sit = (#filter_sit gamespec) sit
-  in
-    (0.0, filter_sit (map (fn x => (x,1.0)) movel))
-  end
-
-fun mk_guider_dhtnn startb gamespec dhtnn sit =
-  if startb then mk_guider_uniform gamespec sit else
-  let
-    val movel = #movel gamespec
-    val filter_sit = (#filter_sit gamespec) sit
-    val nntm = (#nntm_of_sit gamespec) sit
-  in
-    let val (e,p) = infer_dhtnn dhtnn nntm in
-      (e, filter_sit (combine (movel,p)))
-      handle HOL_ERR _ => raise ERR "mk_guider_dhtnn" ""
-    end
-  end
 
 (* -------------------------------------------------------------------------
    Examples
@@ -169,35 +216,7 @@ fun mk_guider_dhtnn startb gamespec dhtnn sit =
 val emptyallex = []
 
 
-(* -------------------------------------------------------------------------
-   Training
-   ------------------------------------------------------------------------- *)
 
-fun epex_stats epex =
-  let
-    val d = count_dict (dempty Term.compare) (map #1 epex)
-    val r = average_real (map (Real.fromInt o snd) (dlist d))
-  in
-    summary ("examples: " ^ its (length epex));
-    summary ("average duplicates: " ^ rts r)
-  end
-
-fun random_dhtnn_gamespec gamespec =
-  random_dhtnn (!dim_glob, length (#movel gamespec)) (#operl gamespec)
-
-fun train_dhtnn_gamespec gamespec epex =
-  let
-    val _ = epex_stats epex
-    val schedule = [(!nepoch_glob, !lr_glob / Real.fromInt (!batchsize_glob))]
-    val dhtnn = random_dhtnn_gamespec gamespec
-  in
-    train_dhtnn (!ncore_train_glob,!batchsize_glob) dhtnn epex schedule
-  end
-
-fun train_f gamespec allex =
-  let val (dhtnn,t) = add_time (train_dhtnn_gamespec gamespec) allex in
-    summary ("Training time : " ^ rts t); dhtnn
-  end
 
 (* -------------------------------------------------------------------------
    External parallelization specification

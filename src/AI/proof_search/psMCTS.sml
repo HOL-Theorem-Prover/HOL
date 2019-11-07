@@ -13,7 +13,7 @@ open HolKernel Abbrev boolLib aiLib
 val ERR = mk_HOL_ERR "psMCTS"
 
 (* -------------------------------------------------------------------------
-   Tree
+   Search tree
    ------------------------------------------------------------------------- *)
 
 datatype status = Undecided | Win | Lose
@@ -25,21 +25,32 @@ type ('a,'b) node =
 type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
 
 (* -------------------------------------------------------------------------
-   Parameters     
+   Game specification, guider (evaluation + policy) and additional search 
+   parameters   
    ------------------------------------------------------------------------- *)
 
-type ('a,'b) mctsparam =
+type ('a,'b) gamespec =
   {
-  nsim : int, 
-  stopatwin_flag : bool,
-  decay : real,
-  explo_coeff : real,
-  noise_flag : bool,
-  noise_coeff : real,
-  noise_alpha : real,
+  string_of_board : 'a -> string,
+  movel: 'b list,
+  move_compare : 'b * 'b -> order,
+  string_of_move : 'b -> string,
   status_of : 'a -> status,
-  apply_move : 'b -> 'a -> 'a,
-  fevalpoli : 'a -> real * ('b * real) list
+  available_move : 'a -> 'b -> bool,
+  apply_move : ('b -> 'a -> 'a)
+  }
+
+type ('a,'b) guider = 'a -> real * ('b * real) list
+
+fun uniform_guider gamespec board =
+  (0.0, map (fn x => (x,1.0)) (#movel gamespec))
+
+type ('a,'b) mcts_param =
+  {
+  nsim : int, stopatwin_flag : bool, decay : real, explo_coeff : real,
+  noise_flag : bool, noise_coeff : real, noise_alpha : real,
+  gamespec : ('a,'b) gamespec,
+  guider : ('a,'b) guider
   }
 
 (* -------------------------------------------------------------------------
@@ -146,14 +157,23 @@ fun rescale_pol pol =
     if tot > 0.01 then map norm pol else pol
   end
 
+fun filter_available gamespec board (e,p) =
+  let 
+    val p' = filter (fn (m,_) => (#available_move gamespec) board m) p
+    val _ = if null p' then raise ERR "filter_available" "" else ()
+  in
+    (e,p') 
+  end
+
 fun node_create_backup param tree (id,board) =
   let
+    val gamespec = #gamespec param
     fun wrap_poli poli = let fun f i x = (x, i :: id) in mapi f poli end
-    val status = #status_of param board
+    val status = (#status_of gamespec) board
     val (eval,poli) = case status of
         Win       => (1.0,[])
       | Lose      => (0.0,[])
-      | Undecided => #fevalpoli param board
+      | Undecided => filter_available gamespec board ((#guider param) board)
     val node = {pol=rescale_pol (wrap_poli poli),
                 board=board, sum=0.0, vis=0.0, status=status}
     val tree1 = dadd id node tree
@@ -179,7 +199,6 @@ fun puct_choice param tree vtot ((move,polv),cid) =
 
 (* -------------------------------------------------------------------------
    Selection of a node to extend by traversing the tree.
-   Assumption: every move proposed by the fevalpoli is applicable.
    ------------------------------------------------------------------------- *)
 
 datatype ('a,'b) select = Backup of (id * real) | NodeExtension of (id * id)
@@ -192,7 +211,7 @@ fun score_status status = case status of
 fun select_child param tree id =
   let
     val node = dfind id tree
-    val status = #status_of param (#board (dfind id tree))
+    val status = (#status_of (#gamespec param)) (#board (dfind id tree))
   in
     if status <> Undecided then Backup (id,score_status status) else
       let
@@ -222,7 +241,7 @@ fun expand param tree (id,cid) =
     val node = dfind id tree
     val board1 = #board node
     val move = find_move (#pol node) cid
-    val board2 = (#apply_move param) move board1
+    val board2 = (#apply_move (#gamespec param)) move board1
   in
     node_create_backup param tree (cid,board2)
   end
@@ -234,7 +253,7 @@ fun expand param tree (id,cid) =
 fun starttree_of param board =
   node_create_backup param (dempty id_compare) ([],board)
 
-fun mcts param starttree =
+fun mcts (param : ('a, 'b) mcts_param) starttree =
   let
     val starttree_noise =
       if #noise_flag param then add_root_noise param starttree else starttree
@@ -302,31 +321,48 @@ fun trace_win status_of tree id =
     node :: trace_win status_of tree (hd l)
   end
 
-(* need gamespec (containing move_compare) *)
-(* need gamevis (containing string_of) *)
-
 (* -------------------------------------------------------------------------
    Toy example: the goal of this task is to reach a positive number starting 
    from zero by incrementing or decrementing.
    ------------------------------------------------------------------------- *)
 
+type toy_board = (int * int)
+datatype toy_move = Incr | Decr
+val toy_movel = [Incr,Decr];
+
+fun toy_status_of (start,finish) = 
+    if start >= finish then Win 
+    else if start < 0 then Lose else Undecided;
+
+fun toy_available_move board move = true
+
+fun toy_apply_move m (start,finish) = case m of 
+   Incr => (start+1,finish)
+ | Decr => (start-1,finish)
+
+fun toy_string_of_move m = case m of
+   Incr => "Incr"
+ | Decr => "Decr"
+
+fun toy_move_compare (a,b) =
+  String.compare (toy_string_of_move a, toy_string_of_move b)
+
+val toy_gamespec =
+  {
+  string_of_board = fn (a,b) => (its a ^ " " ^ its b),
+  movel = toy_movel,
+  move_compare = toy_move_compare,
+  string_of_move = toy_string_of_move,
+  status_of = toy_status_of,
+  available_move = toy_available_move,
+  apply_move = toy_apply_move
+  }
+
 (*
 load "aiLib"; open aiLib;
 load "psMCTS"; open psMCTS;
-type board = int * int;
-datatype move = Incr | Decr;
-val movel = [Incr,Decr];
 
-fun status_of ((start,finish):board) = 
-  if start >= finish then Win 
-  else if start < 0 then Lose else Undecided;
-fun apply_move (m:move) ((start,finish):board) = case m of 
-   Incr => ((start+1,finish):board)
- | Decr => (start-1,finish);
-(* random guidance *)
-fun fevalpoli (_:board) = (0.0 , map_assoc (fn _ => random_real ()) movel);
-
-val param : (board,move) psMCTS.mctsparam =
+val param : (toy_board,toy_move) mcts_param =
   {
   nsim = 16000, 
   stopatwin_flag = true,
@@ -335,14 +371,13 @@ val param : (board,move) psMCTS.mctsparam =
   noise_flag = false,
   noise_coeff = 0.25,
   noise_alpha = 0.2,
-  status_of = status_of,
-  apply_move = apply_move,
-  fevalpoli = fevalpoli
+  gamespec = toy_gamespec,
+  guider = uniform_guider toy_gamespec
   };
 
 val starttree = starttree_of param (0,10);
 val tree = mcts param starttree;
-val nodel = trace_win (#status_of param) tree [];
+val nodel = trace_win (#status_of (#gamespec param)) tree [];
 *)
 
 

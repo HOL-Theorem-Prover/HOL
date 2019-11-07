@@ -3,10 +3,6 @@ sig
 
 include Abbrev
 
-  (* globals *)
-  val nlayer_glob : int ref
-
-  (* types *)
   type vect = real vector
   type mat = real vector vector
   type layer = {a  : real -> real, da : real -> real, w : mat}
@@ -14,17 +10,29 @@ include Abbrev
   type fpdata = {layer : layer, inv : vect, outv : vect, outnv : vect}
   type bpdata = {doutnv : vect, doutv  : vect, dinv : vect, dw : mat}
   type opdict = ((term * int),nn) Redblackmap.dict
+  
   type tnnex = (term * real list) list
+  type tnn_param =
+    {
+    operl: (term * int) list,
+    nlayer_oper: int, nlayer_headnn: int,
+    dimin: int, dimout: int
+    }
   type tnn = {opdict: opdict, headnn: nn, dimin: int, dimout: int}
+  
   type dhex = (term * real list * real list) list
+  type dhtnn_param =
+    {
+    operl: (term * int) list,
+    nlayer_oper: int, nlayer_headeval: int, nlayer_headpoli: int,
+    dimin: int, dimpoli: int
+    }
   type dhtnn =
-    {opdict: opdict, headeval: nn, headpoli: nn, dimin: int, dimout: int}
+    {opdict: opdict, headeval: nn, headpoli: nn, dimin: int, dimpoli: int}
 
   (* random generation *)
-  val random_headnn : (int * int) -> nn
-  val random_opdict : int -> (term * int) list -> opdict
-  val random_tnn : (int * int) -> (term * int) list -> tnn
-  val random_dhtnn  : (int * int) -> (term * int) list -> dhtnn
+  val random_tnn : tnn_param -> tnn
+  val random_dhtnn  : dhtnn_param -> dhtnn
 
   (* input/output *)
   val string_of_tnn : tnn -> string
