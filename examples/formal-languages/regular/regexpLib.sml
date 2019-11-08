@@ -245,12 +245,12 @@ fun gen_dfa_conv r =
      val compset = base_compset()
      val baseEval = computeLib.CBV_CONV compset
      val dom_Brz_alt_conv = REPEATC (time (REWR_CONV dom_Brz_alt_eqns THENC baseEval))
-     val _ = print "proving dom_Brz for this instance ...\n"
+     val _ = print "\nProving domain property ...\n"
      val dom_Brz_thm = EQT_ELIM (Count.apply dom_Brz_alt_conv
                          ``dom_Brz_alt empty (singleton (normalize ^regexp_tm) ())``)
      val _ = print "---> done.\n"
 
-     val _ = print "Compiling regexp ... "
+     val _ = print "\nCompiling regexp ...\n"
      val exec_Brz_conv = REPEATC (time (REWR_CONV exec_Brz_def THENC baseEval))
      fun compile_regexp_conv regexp_tm =
        let val th1 = baseEval ``normalize ^regexp_tm``
@@ -258,7 +258,7 @@ fun gen_dfa_conv r =
            val th2 = (PURE_REWRITE_CONV [Brzozowski_exec_Brz, MAXNUM_32_def]
                       THENC exec_Brz_conv)
                 ``Brzozowski empty (singleton ^nr ()) (1,singleton ^nr 0,[])``
-           val _ = print "\nState transitions computed; now building DFA.\n"
+           val _ = print "\nState transitions computed; now building DFA.\n\n"
        in
            compile_regexp_def
              |> SPEC regexp_tm
@@ -268,7 +268,7 @@ fun gen_dfa_conv r =
              |> CONV_RULE (RHS_CONV baseEval)
        end
      val compile_thm = Count.apply compile_regexp_conv regexp_tm
-     val _ = print "done.\n"
+     val _ = print "---> done.\n"
      val triple = rhs (concl compile_thm)
      val [t1,t2,t3] = strip_pair triple
      val start_state_thm = baseEval ``lookup regexp_compare (normalize ^regexp_tm) ^t1``
@@ -344,7 +344,7 @@ fun gen_dfa HOL = gen_hol_dfa
 fun dfa_by_proof (name,r) =
  let val name = if Lexis.ok_identifier name then name
                else (HOL_MESG (Lib.quote name^
-                       " is not a suitable identifier, using \"DFA\" instead");
+                       " is not a suitable identifier, using \"foo\" instead");
                      "foo")
      val {certificate,aux,start,table,final,matchfn} = gen_hol_dfa r
      val SOME thm = certificate
@@ -363,7 +363,6 @@ fun dfa_by_proof (name,r) =
  in
    save_thm(name^"_regexp_compilation",thm'')
  end;
-
 
 (*---------------------------------------------------------------------------*)
 (* Reasoner for character sets. charset_conv converts terms of the form      *)
