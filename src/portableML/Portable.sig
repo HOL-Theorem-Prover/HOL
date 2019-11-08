@@ -66,6 +66,7 @@ sig
                                               (* exn ListPair.UnequalLengths *)
   val foldl_map : ('a * 'b -> 'a * 'c) -> 'a * 'b list -> 'a * 'c list
   val separate : 'a -> 'a list -> 'a list
+  val front_last : 'a list -> 'a list * 'a
   val filter : ('a -> bool) -> 'a list -> 'a list
   val filter_out : ('a -> bool) -> 'a list -> 'a list
   val partition : ('a -> bool) -> 'a list -> 'a list * 'a list
@@ -121,6 +122,7 @@ sig
 
   type 'a eqf = 'a -> 'a -> bool
   val pair_eq : 'a eqf -> 'b eqf -> ('a * 'b) eqf
+  val fst_eq : 'a eqf -> ('a * 'b) eqf
   val option_eq : 'a eqf -> 'a option eqf
   val list_eq : 'a eqf -> 'a list eqf
   val redres_eq : 'a eqf -> 'b eqf -> {redex:'a,residue:'b} eqf

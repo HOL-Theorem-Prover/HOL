@@ -42,32 +42,33 @@ end handle OS.Path.InvalidArc =>
   raise Holdep_Error ("Bad module name \"" ^ s ^ "\"")
 
 fun isTheory s =
-  case List.rev(String.explode s) of
-    #"y" :: #"r" :: #"o" :: #"e" :: #"h" :: #"T" :: n::ame =>
-      SOME(String.implode(List.rev (n::ame)))
-  | _ => NONE
+    if String.isSuffix "Theory" s andalso size s > 6 then
+      SOME (String.substring(s, 0, size s - 6))
+    else NONE
 
 fun addThExt s s' ext = addExt (addDir (Path.dir s') s) ext
 fun outname (rcd as {assumes,includes}) cdir linenum (s, res) =
   case isTheory s of
-    SOME n => let
+    SOME n =>
+    let
     in
       (* allow a dependency on a theory if we can see a script.sml file *)
       case access rcd cdir (n^"Script") "sml" of
-        SOME s' => addThExt s s' "ui" :: res
+        SOME s' => addThExt s s' "uo" :: res
       | NONE => let
         in
           (* or, if we can see the theory.ui file already; which might
              happen if the theory file is in sigobj *)
           case access rcd cdir (n^"Theory") "ui" of
-            SOME s' => addThExt s s' "ui" :: res
+            SOME s' => addThExt s s' "uo" :: res
           | NONE => res
         end
     end
-  | _ => let
+  | _ =>
+    let
     in
       case access rcd cdir s "sig" of
-        SOME s' => addExt s' "ui" :: res
+        SOME s' => addExt s' "uo" :: res
       | _       => let
         in
           case access rcd cdir s "sml" of
@@ -89,14 +90,11 @@ fun outname (rcd as {assumes,includes}) cdir linenum (s, res) =
                  this possibility by looking to see if we can see a .ui
                  file; if so, we can retain the dependency *)
               case access rcd cdir s "ui" of
-                SOME s' => addExt s' "ui" :: res
+                SOME s' => addExt s' "uo" :: res
               | NONE => res
             end
         end
     end
-  handle Holdep_Error s =>
-    raise Holdep_Error (s ^ " (line " ^ Int.toString linenum ^ ")")
-
 
 fun beginentry objext target = let
   val targetname = addExt target objext
@@ -164,7 +162,7 @@ fun main (r as {assumes, diag, includes, fname}) =
     val results = processfile r
   in
     diag (fn () => "Holdep: " ^ #tgt results ^ ": " ^
-                   String.concatWith ", " (#deps results) ^ "\n");
+                   String.concatWith ", " (#deps results));
     results
   end
    handle e as OS.SysErr (str, _) => (errMsg str; raise e)

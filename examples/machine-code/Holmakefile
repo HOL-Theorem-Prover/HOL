@@ -7,4 +7,5 @@ INCLUDES = $(HOLDIR)/examples/machine-code/hoare-triple \
            $(HOLDIR)/examples/machine-code/just-in-time \
            $(HOLDIR)/examples/machine-code/lisp \
            $(HOLDIR)/examples/machine-code/graph
-OPTIONS=QUIT_ON_FAILURE
+
+CLINE_OPTIONS = -r

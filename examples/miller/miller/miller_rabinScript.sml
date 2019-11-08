@@ -8,14 +8,10 @@ open listTheory subtypeTools
      extra_arithTheory finite_groupTheory finite_groupContext
      abelian_groupTheory num_polyTheory extra_binomialTheory
      binomialTheory summationTheory pred_setContext mult_groupTheory
-     extra_realTheory realTheory realLib
+     extra_realTheory realTheory realLib seqTheory
      state_transformerTheory combinTheory;
 
 open util_probTheory real_probabilityTheory probTheory prob_uniformTheory;
-
-(* interactive mode
-quietdec := false;
-*)
 
 val _ = new_theory "miller_rabin";
 val _ = ParseExtras.temp_loose_equality()
@@ -38,17 +34,6 @@ val (G_TAC, AG_TAC, G_TAC', AG_TAC') = SIMPLIFY_TACS finite_group_c;
 
 val Strip = S_TAC;
 val Simplify = R_TAC;
-val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val STRONG_DISJ_TAC = CONV_TAC (REWR_CONV (GSYM IMP_DISJ_THM)) >> STRIP_TAC;
-val Cond =
-  DISCH_THEN
-  (fn mp_th =>
-   let
-     val cond = fst (dest_imp (concl mp_th))
-   in
-     KNOW_TAC cond >| [ALL_TAC, DISCH_THEN (MP_TAC o MP mp_th)]
-   end);
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)

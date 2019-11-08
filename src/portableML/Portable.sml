@@ -172,6 +172,16 @@ val split = unzip
 fun mapfilter f = List.mapPartial (total f)
 
 val flatten = List.concat
+fun front_last l =
+  let
+     fun fl _ [] = raise List.Empty
+       | fl acc [x] = (List.rev acc, x)
+       | fl acc (h :: t) = fl (h :: acc) t
+  in
+     fl [] l
+  end
+
+
 
 fun trypluck' f list =
    let
@@ -414,6 +424,7 @@ fun set_eq S1 S2 = set_diff S1 S2 = [] andalso set_diff S2 S1 = []
 (* functions for lifting equality functions over standard type operators *)
 type 'a eqf = 'a -> 'a -> bool
 fun pair_eq eq1 eq2 (x1,y1) (x2,y2) = eq1 x1 x2 andalso eq2 y1 y2
+fun fst_eq eq (x1,y1) (x2,y2) = eq x1 x2
 fun option_eq eq NONE NONE = true
   | option_eq eq (SOME x) (SOME y) = eq x y
   | option_eq _ _ _ = false

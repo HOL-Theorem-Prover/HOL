@@ -290,14 +290,21 @@ type formula_info =
   tyopl : ((string * string) * int) list
   }
 
-fun mgc_of (tm,a) =
+fun mgc_of tm =
+  if is_const tm then
+    let val {Thy,Name,Ty} = dest_thy_const tm in
+      prim_mk_const {Thy = Thy, Name = Name}
+    end
+  else raise ERR "mgc_of" ""
+
+fun mgc_of_aux (tm,a) =
   if is_const tm then
     let val {Thy,Name,Ty} = dest_thy_const tm in
       (prim_mk_const {Thy = Thy, Name = Name},a)
     end
   else (tm,a)
 
-fun uniq_cvdef_mgc cval = mk_fast_set tma_compare (map mgc_of cval)
+fun uniq_cvdef_mgc cval = mk_fast_set tma_compare (map mgc_of_aux cval)
 
 fun uniq_cvdef_arity cval = mk_term_set (map fst cval)
 

@@ -7,6 +7,7 @@ sig
   val fea_of_goal : goal -> string list
 
   val feahash_of_term : term -> int list
+  val feahash_of_term_mod : int -> term -> int list
   val feahash_of_goal : goal -> int list
 
   (* tfidf *)

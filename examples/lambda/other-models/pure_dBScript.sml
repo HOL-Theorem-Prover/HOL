@@ -8,7 +8,7 @@ fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
 val _ = new_theory "pure_dB"
 
-val _ = set_fixity "=" (Infix(NONASSOC, 100))
+val _ = temp_set_fixity "=" (Infix(NONASSOC, 100))
 
 (* the type of pure de Bruijn terms *)
 val _ = Datatype`pdb = dV num | dAPP pdb pdb | dABS pdb`

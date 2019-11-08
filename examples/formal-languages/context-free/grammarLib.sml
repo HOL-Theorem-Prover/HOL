@@ -356,15 +356,22 @@ in
       | NONE =>
         let
         in
-          case Lib.total dest_comb t of
-              SOME (g,x) => if same_const g gspec_tm then
-                              let val (v, body) = dest_pabs x
-                                  val (e, cond) = dest_pair body
-                              in
-                                mk_icomb(gspec_tm, mk_pabs(v,mk_pair(f e, cond)))
-                              end
-                            else raise err()
-            | NONE => raise err()
+          case Lib.total dest_union t of
+              SOME(s1,s2) => mk_union(image f destty s1, image f destty s2)
+            | NONE =>
+              let
+              in
+                case Lib.total dest_comb t of
+                    SOME (g,x) => if same_const g gspec_tm then
+                                    let val (v, body) = dest_pabs x
+                                        val (e, cond) = dest_pair body
+                                    in
+                                      mk_icomb(gspec_tm,
+                                               mk_pabs(v,mk_pair(f e, cond)))
+                                    end
+                                  else raise err()
+                  | NONE => raise err()
+              end
         end
 end
 

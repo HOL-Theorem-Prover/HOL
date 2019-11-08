@@ -32,7 +32,7 @@ fun parse_ex s =
              else raise ERR "translate_token" ""
     fun dm_to_hol s =
        let val s' = String.translate translate_token s in
-         (Term [QUOTE s'] handle HOL_ERR _ => raise ERR "read_ex" s')
+         (Parse.Term [HOLPP.QUOTE s'] handle HOL_ERR _ => raise ERR "read_ex" s')
        end
   in
     (mk_imp (dm_to_hol s1, dm_to_hol s2), [Real.fromInt (string_to_int s3)])
@@ -47,6 +47,13 @@ fun read_true_exl file =
     map rename_allvar exl2
   end
 
+fun read_false_exl file =
+  let
+    val exl1 = map parse_ex (readl file)
+    val exl2 = map fst (filter (fn (_,x) => hd x < 0.5) exl1)
+  in
+    map rename_allvar exl2
+  end
 
 (* -------------------------------------------------------------------------
    Normalize examples
@@ -95,11 +102,11 @@ fun train_fixed basename =
     val schedule = [(100, 0.02 / (Real.fromInt bsize))]
     val ncore = 4
     val randtnn = entail_random_tnn 12
-    val tnn = prepare_train_tnn (ncore,bsize) randtnn
+    val tnn = train_tnn (ncore,bsize) randtnn
       (trainex,first_n 100 trainex) schedule
   in
     write_tnn (entail_dir ^ "/" ^ basename) tnn;
-    accuracy_set tnn trainex
+    tnn_accuracy tnn trainex
   end
 
 (* ------------------------------------------------------------------------
@@ -113,8 +120,20 @@ fun accuracy_fixed tnn =
        "test_big.txt","test_massive.txt","test_exam.txt"]
     val exl = map (exprimed_from_file 26) filel
   in
-    map (accuracy_set tnn) exl
+    map (tnn_accuracy tnn) exl
   end
+
+(*
+load "aiLib"; open aiLib;
+load "mleEntail"; open mleEntail;
+val tmlT = read_true_exl (entail_dir ^ "/train.txt");
+val tmlF = read_false_exl (entail_dir ^ "/train.txt");
+fun f t = rhs (concl (normalForms.CNF_CONV t handle UNCHANGED => REFL t));
+
+val tmlF1 = map_assoc f tmlF;
+val tmlF2 = filter (fn x => term_eq (snd x) T) tmlF1;
+
+*)
 
 
 end (* struct *)

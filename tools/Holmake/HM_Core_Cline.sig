@@ -1,9 +1,8 @@
 signature HM_Core_Cline =
 sig
 
-
 type t = {
-  debug : bool,
+  debug : {ins:string list, outs:string list} option,
   do_logging : bool,
   fast : bool,
   help : bool,
@@ -21,7 +20,8 @@ type t = {
   quiet : bool,
   quit_on_failure : bool,
   rebuild_deps : bool,
-  recursive : bool,
+  recursive_build : bool,
+  recursive_clean : bool,
   hmakefile : string option,
   verbose : bool
 }

@@ -53,4 +53,5 @@ src/proofman
 !tools/Holmake/tests/ignore_errors/j1
 !tools/Holmake/tests/qfreadTheoremsyntax
 [poly]!tools/Holmake/tests/ignore_errors/j4
+[poly]!tools/Holmake/tests/hollogs
 !src/1/theory_tests

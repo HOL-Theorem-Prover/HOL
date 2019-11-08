@@ -9,6 +9,8 @@ $(SML_LIB)/basis/basis.mlb
 ../HM_GraphBuildJ1.sml
 ../poly/HM_Cline.sig
 ../poly/HM_Cline.sml
+../poly/GraphExtra.sig
+../poly/GraphExtra.sml
 ../poly/HM_BaseEnv.sig
 ../poly/HM_BaseEnv.sml
 ../BuildCommand.sig
