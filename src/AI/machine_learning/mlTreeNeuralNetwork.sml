@@ -647,7 +647,7 @@ load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 val varl = [``x:'a``,``y:'a``,``z:'a``,``f:'a->'a->'a``,``g:'a -> 'a``]; 
 fun contain_x tm = can (find_term (fn x => term_eq x ``x:'a``)) tm;
 
-(*** examples ***)
+(*** generation of training examples ***)
 fun mk_dataset n =
   let
     val pxl = mk_term_set (random_terml varl (n,alpha) 10000);
@@ -681,8 +681,6 @@ val newtnn = train_tnn schedule randtnn (trainex,testex);
 val tm = fst (hd (shuffle testex));
 val r = infer_tnn newtnn tm;
 val acc = tnn_accuracy newtnn trainex;
-
 *)
-
 
 end (* struct *)

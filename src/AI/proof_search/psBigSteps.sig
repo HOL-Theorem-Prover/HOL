@@ -39,7 +39,8 @@ sig
   (* parallelization *)
   val ext_bigsteps : ('a,'b,'c) bigsteps_param -> 'c -> 'a -> 
     bool * 'a ex list
-  val bigsteps_to_extspec : string -> ('a,'b,'c) bigsteps_param -> 
+  val bigsteps_to_extspec : 
+    string -> ('a,'b,'c) bigsteps_param -> 
     ('c, 'a, bool * 'a ex list) smlParallel.extspec
 
   val para_bigsteps : 

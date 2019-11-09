@@ -9,11 +9,12 @@ sig
   val parapp_queue : int -> ('a -> 'b) -> 'a list -> unit
 
   (* external *)
-  val parallel_dir : string ref
+  val default_parallel_dir : string
   (* 'a: type of parameter, 'b: type of arguments, 'c: returned type *)
   type ('a,'b,'c) extspec =
     {
     self: string,
+    parallel_dir: string,
     reflect_globals : unit -> string,
     function : 'a -> 'b -> 'c,
     write_param : string -> 'a -> unit,

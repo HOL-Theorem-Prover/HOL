@@ -228,6 +228,25 @@ load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 load "aiLib"; open aiLib;
 
+val rl_param =
+  {
+  expname = "test", 
+  parallel_dir = smlParallel.parallel_dir ^ ,
+  ntarget_compete : int, ntarget_explore : int,
+  ex_window : int, ex_uniq : bool,
+  ngen : int,
+  level_start : int, level_threshold : real,
+  level_targetl : int -> int -> 'a list,
+  ncore_search : int, 
+  par_search : (dhtnn, 'a, bool * 'a ex list) smlParallel.extspec,
+  ncore_train : int
+
+
+  }
+
+
+val rl_preobj =
+
 ncore_mcts_glob := 50;
 ncore_train_glob := 4;
 ntarget_level := 400;

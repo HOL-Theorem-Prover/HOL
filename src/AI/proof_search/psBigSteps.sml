@@ -70,7 +70,7 @@ fun debug_ep_aux param dis root =
   let
     val mcts_param = #mcts_param param
     val gamespec = #gamespec mcts_param
-    val old_eval = fst ((#guider mcts_param) (#board root))
+    val old_eval = fst ((#fep mcts_param) (#board root))
     val new_eval = #sum root / #vis root
     val fm = #string_of_move gamespec
     fun g r = pad 6 "0" (rts (approx 4 r))
@@ -224,9 +224,9 @@ fun bigsteps_to_extspec name bigsteps_param =
   read_result = #read_result bigsteps_param
   }
 
-fun para_bigsteps ncore bigsteps_param targetl =
-  let 
-    val (r,t) = add_time (parmap_queue_extern ncore extspec extparam) targetl
+fun para_bigsteps ncore extspec param targetl =
+  let
+    val (r,t) = add_time (parmap_queue_extern ncore extspec param) targetl
     val nwin = length (filter fst r)
   in
     print_endline ("Time: " ^ rts t);
@@ -255,7 +255,7 @@ val mcts_param : (toy_board,toy_move) mcts_param =
   noise_coeff = 0.25,
   noise_alpha = 0.2,
   gamespec = toy_gamespec,
-  guider = uniform_guider toy_gamespec
+  fep = uniform_fep toy_gamespec
   };
 
 val ERR = mk_HOL_ERR "test";

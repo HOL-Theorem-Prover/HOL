@@ -29,16 +29,19 @@ sig
     available_move : 'a -> 'b -> bool,
     apply_move : ('b -> 'a -> 'a)
     }
-  type ('a,'b) guider = 'a -> real * ('b * real) list
-  val uniform_guider : ('a,'b) gamespec -> ('a,'b) guider
+
+  type ('a,'b) fep = 'a -> real * ('b * real) list
+  val uniform_fep : ('a,'b) gamespec -> ('a,'b) fep
   
   type ('a,'b) mcts_param =
     {
-    nsim : int, stopatwin_flag : bool, decay : real, explo_coeff : real,
+    nsim : int, 
+    stopatwin_flag : bool, decay : real, explo_coeff : real,
     noise_flag : bool, noise_coeff : real, noise_alpha : real,
     gamespec : ('a,'b) gamespec,
-    guider : ('a,'b) guider
+    fep : ('a,'b) fep
     }
+
   val starttree_of : ('a,'b) mcts_param -> 'a -> ('a,'b) tree
   val mcts : ('a,'b) mcts_param -> ('a,'b) tree -> ('a,'b) tree
 

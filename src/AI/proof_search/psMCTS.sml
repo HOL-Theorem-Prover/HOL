@@ -25,7 +25,7 @@ type ('a,'b) node =
 type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
 
 (* -------------------------------------------------------------------------
-   Game specification, guider (evaluation + policy) and additional search 
+   Game specification, fep (evaluation + policy) and additional search 
    parameters   
    ------------------------------------------------------------------------- *)
 
@@ -40,9 +40,9 @@ type ('a,'b) gamespec =
   apply_move : ('b -> 'a -> 'a)
   }
 
-type ('a,'b) guider = 'a -> real * ('b * real) list
+type ('a,'b) fep = 'a -> real * ('b * real) list
 
-fun uniform_guider gamespec board =
+fun uniform_fep gamespec board =
   (0.0, map (fn x => (x,1.0)) (#movel gamespec))
 
 type ('a,'b) mcts_param =
@@ -50,7 +50,7 @@ type ('a,'b) mcts_param =
   nsim : int, stopatwin_flag : bool, decay : real, explo_coeff : real,
   noise_flag : bool, noise_coeff : real, noise_alpha : real,
   gamespec : ('a,'b) gamespec,
-  guider : ('a,'b) guider
+  fep : ('a,'b) fep
   }
 
 (* -------------------------------------------------------------------------
@@ -173,7 +173,7 @@ fun node_create_backup param tree (id,board) =
     val (eval,poli) = case status of
         Win       => (1.0,[])
       | Lose      => (0.0,[])
-      | Undecided => filter_available gamespec board ((#guider param) board)
+      | Undecided => filter_available gamespec board ((#fep param) board)
     val node = {pol=rescale_pol (wrap_poli poli),
                 board=board, sum=0.0, vis=0.0, status=status}
     val tree1 = dadd id node tree
@@ -372,7 +372,7 @@ val param : (toy_board,toy_move) mcts_param =
   noise_coeff = 0.25,
   noise_alpha = 0.2,
   gamespec = toy_gamespec,
-  guider = uniform_guider toy_gamespec
+  fep = uniform_fep toy_gamespec
   };
 
 val starttree = starttree_of param (0,10);
