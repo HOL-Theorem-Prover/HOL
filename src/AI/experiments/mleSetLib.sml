@@ -391,7 +391,7 @@ fun res_quant move varl t =
     list_mk_comb (move,[qvar,t1,t2])
   end
 
-fun apply_move move t = 
+fun apply_move_aux move t = 
   let 
     val red = find_redex t
     val varl = fst (listSyntax.dest_list (rand red))
@@ -399,18 +399,18 @@ fun apply_move move t =
       if type_of red = alpha then
         if is_constr move orelse tmem move varl
           then res_term move varl
-        else raise ERR "apply_move" "require term level"
+        else raise ERR "apply_move_aux" "require term level"
       else if type_of red = bool then
         if is_predmove move then res_pred move varl
         else if is_logicop move then res_logicop move varl
         else if is_quant move then res_quant move varl t
-        else raise ERR "apply_move" "require formula level"
-      else raise ERR "apply_move" "unexpected type"
+        else raise ERR "apply_move_aux" "require formula level"
+      else raise ERR "apply_move_aux" "unexpected type"
   in
     subst_occs [[1]] [{redex = red, residue = res}] t
   end
 
-fun is_applicable t move = 
+fun available_move_aux t move = 
   let 
     val red = find_redex t
     val varl = fst (listSyntax.dest_list (rand red))
@@ -425,10 +425,10 @@ fun is_applicable t move =
     else false
   end
 
-fun all_applicables t = filter (is_applicable t) movel;
+fun all_applicables t = filter (available_move_aux t) movel;
 fun random_step t =
   let val l = all_applicables t in
-    if null l then t else apply_move (random_elem l) t   
+    if null l then t else apply_move_aux (random_elem l) t   
   end
 
 (* -------------------------------------------------------------------------
@@ -450,7 +450,7 @@ fun imitate_once orgtm tm =
     val movel' = all_applicables tm 
     val _ = if null movel' 
       then raise ERR "imitate" "no available moves" else ()
-    val tml1 = map (fn x => apply_move x tm) movel'
+    val tml1 = map (fn x => apply_move_aux x tm) movel'
     val tml2 = map_assoc (fn x => topsim (orgtm,x)) tml1
     val tml3 = dict_sort compare_imax tml2
     val newtm = fst (hd tml3)

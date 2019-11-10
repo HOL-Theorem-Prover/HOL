@@ -107,8 +107,6 @@ fun mat_random (dim as (a,b)) =
     mat_tabulate f dim
   end
 
-
-
 fun string_of_vect v =
   String.concatWith " " (map Real.toString (vector_to_list v))
 

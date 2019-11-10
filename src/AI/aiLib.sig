@@ -134,7 +134,6 @@ sig
   (* input/output *)
   val string_of_goal : goal -> string
   val trace_tacl : tactic list -> goal -> unit
-  val string_of_bool : bool -> string
   val readl : string -> string list
   val bare_readl : string -> string list
   val readl_empty : string -> string list
@@ -197,6 +196,8 @@ sig
   val tts : term -> string
   val its : int -> string
   val rts : real -> string
+  val bts : bool -> string
+  val string_to_bool : string -> bool
   val rts_round : int -> real -> string
   val pretty_real : real -> string
   val epsilon : real

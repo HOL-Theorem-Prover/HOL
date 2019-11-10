@@ -54,8 +54,10 @@ sig
   val read_exl : string -> (real list * real list) list
 
   (* interface *)
+  val scale_real : real -> real
   val scale_out : real list -> vect
   val scale_ex : real list * real list -> vect * vect
+  val descale_real : real -> real
   val descale_out : vect -> real list
   val infer_nn : nn -> real list -> real list
   val train_nn_batch : train_param -> nn -> (vect * vect) list -> (nn * real)

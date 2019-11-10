@@ -19,7 +19,7 @@ sig
   val dirichlet_noise : real -> int -> real list
 
   (* search function *)
-  type ('a,'b) gamespec =
+  type ('a,'b) game =
     {
     string_of_board : 'a -> string,
     movel: 'b list,
@@ -30,20 +30,25 @@ sig
     apply_move : ('b -> 'a -> 'a)
     }
 
-  type ('a,'b) fep = 'a -> real * ('b * real) list
-  val uniform_fep : ('a,'b) gamespec -> ('a,'b) fep
+  type ('a,'b) player = 'a -> real * ('b * real) list
+  val uniform_player : ('a,'b) game -> ('a,'b) player
   
-  type ('a,'b) mcts_param =
+  type mcts_param =
     {
     nsim : int, 
-    stopatwin_flag : bool, decay : real, explo_coeff : real,
-    noise_flag : bool, noise_coeff : real, noise_alpha : real,
-    gamespec : ('a,'b) gamespec,
-    fep : ('a,'b) fep
+    stopatwin_flag : bool,
+    decay : real, 
+    explo_coeff : real,
+    noise_flag : bool, 
+    noise_coeff : real, 
+    noise_alpha : real
     }
 
-  val starttree_of : ('a,'b) mcts_param -> 'a -> ('a,'b) tree
-  val mcts : ('a,'b) mcts_param -> ('a,'b) tree -> ('a,'b) tree
+  type ('a,'b) mcts_obj =
+    {mcts_param : mcts_param, game : ('a,'b) game, player : ('a,'b) player}
+  
+  val starttree_of : ('a,'b) mcts_obj -> 'a -> ('a,'b) tree
+  val mcts : ('a,'b) mcts_obj -> ('a,'b) tree -> ('a,'b) tree
 
   (* statistics *)
   val mostexplored_path : ('a,'b) tree -> id -> id list
@@ -53,6 +58,6 @@ sig
   (* toy example *)
   type toy_board = (int * int)
   datatype toy_move = Incr | Decr
-  val toy_gamespec : (toy_board,toy_move) gamespec
+  val toy_game : (toy_board,toy_move) game
 
 end

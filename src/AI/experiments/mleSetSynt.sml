@@ -13,25 +13,107 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
 
 val ERR = mk_HOL_ERR "mleSetSynt"
 
-val graph_size = ref 12
+(* -------------------------------------------------------------------------
+   Helpers
+   ------------------------------------------------------------------------- *)
+
+val uncont_term = mk_var ("uncont_term",alpha)
+val uncont_form = mk_var ("uncont_form",bool)
+val uncontl = [uncont_term,uncont_form]
+
+fun rw_to_uncont t =
+  let val (oper,argl) = strip_comb t in
+    if term_eq oper cont_term then uncont_term
+    else if term_eq oper cont_form then uncont_form
+    else list_mk_comb (oper, map rw_to_uncont argl)
+  end
 
 (* -------------------------------------------------------------------------
    Graph
    ------------------------------------------------------------------------- *)
 
+
+
+
+
+
+(* -------------------------------------------------------------------------
+   Board
+   ------------------------------------------------------------------------- *)
+
+type board = ((term * bool list) * term)
+
+fun string_of_board ((_,bl),tm) =
+  String.concatWith " " (map bts bl) ^ " :\n" ^ tts tm
+
 fun mk_graph n t = 
   map (eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I))
 
+fun mk_startboard tm = 
+  let 
+    val graph = mk_graph 12 tm
+    val graphtm = term_of_graph graph
+  in
+    ((tm,(graph,graphtm)),start_form)
+  end
+
+fun dest_startboard ((tm,_),_) = tm
+
+fun status_of ((orgtm,graph),tm) =
+  if not (can (find_term is_cont) tm) then 
+    if graph = mk_graph 12 tm handle HOL_ERR _ => false 
+    then Win 
+    else Lose
+  else if term_size (rw_to_uncont tm) > 2 * term_size orgtm
+    then Lose
+    else Undecided
+
+(* -------------------------------------------------------------------------
+   Move
+   ------------------------------------------------------------------------- *)
+
+type move = term
+
+fun apply_move move (ctxt,tm) = (ctxt, apply_move_aux move tm)
+fun available_move board move = available_move_aux (snd board) move
+fun string_of_move move = tts move
+
+(* -------------------------------------------------------------------------
+   Game
+   ------------------------------------------------------------------------- *)
+
+val game : (boad,move) game =
+  {
+  string_of_board = string_of_board,
+  movel = movel,
+  move_compare = Term.compare,
+  string_of_move = string_of_move,
+  status_of = status_of,
+  available_move = available_move,
+  apply_move = apply_move
+  }
+
+(* -------------------------------------------------------------------------
+   Big steps limit (redundant with status_of)
+   ------------------------------------------------------------------------- *)
+
+fun max_bigsteps ((orgtm,_),_) = 2 * term_size orgtm
+
+(* -------------------------------------------------------------------------
+   Double-headed neural network
+   ------------------------------------------------------------------------- *)
+
 (*
 val graphcat = mk_var ("graphcat", ``:bool -> bool -> bool``)
-fun graph_to_term graph =
+fun term_of_graph graph =
   let val l = map (fn x => if x then T else F) graph in
     list_mk_binop graphcat l
   end
 *)
 
 val graphtag = mk_var ("graphtag", ``:bool -> bool``)
-fun graph_to_term graph =
+
+fun term_of_graph graph =
   let 
     val vs = "n" ^ String.concat (map (fn x => if x then "1" else "0") graph)
   in
@@ -41,100 +123,28 @@ fun graph_to_term graph =
 fun mk_graph n t = 
   map (eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I))
 
-(* -------------------------------------------------------------------------
-   Inverted trees only works for alpha leafs for now
-   ------------------------------------------------------------------------- *)
-
-fun invert_oper v = mk_var ("inverted_" ^ fst (dest_var v), ``:'a -> 'a``)
-fun addarg_var v = mk_var ("addarg_" ^ fst (dest_var v), ``:'a -> 'a``)
-
-fun rpt_mk_comb argl finarg =
-  if null argl then finarg else 
-    mk_comb (hd argl, rpt_mk_comb (tl argl) finarg)
-
-fun mirror_term_aux (path,finarg) tm =
-  if is_var tm 
-  then rpt_mk_comb (addarg_var tm :: map invert_oper path) finarg 
-  else
-  let 
-    val (oper,argl) = strip_comb tm 
-    val newargl = map (mirror_term_aux (oper :: path,finarg)) argl
-  in
-    list_mk_comb (oper,newargl)
-  end
-
-fun mirror_term finarg tm = mirror_term_aux ([],finarg) tm 
-
-
-(* -------------------------------------------------------------------------
-   Board
-   ------------------------------------------------------------------------- *)
-
-type board = ((term * (bool list * term)) * term)
-
-fun mk_startsit tm = 
-  let 
-    val graph = mk_graph (!graph_size) tm
-    val graphtm = graph_to_term graph
-  in
-    ((tm,(graph,graphtm)),start_form)
-  end
-
-fun dest_startsit ((tm,_),_) = tm
-
 val adjgraph = mk_var ("adjgraph", ``: bool -> bool -> bool``);
-
-val uncont_term = mk_var ("uncont_term",alpha)
-val uncont_form = mk_var ("uncont_form",bool)
-val uncontl = [uncont_term,uncont_form]
 
 val operl = 
   mk_fast_set oper_compare
   (map_assoc arity_of (graphtag :: adjgraph :: (uncontl @ operl_plain)));
 
-fun rw_to_uncont t =
-  let val (oper,argl) = strip_comb t in
-    if term_eq oper cont_term then uncont_term
-    else if term_eq oper cont_form then uncont_form
-    else list_mk_comb (oper, map rw_to_uncont argl)
-  end
+fun term_of_board ((_,graph),tm) = 
+  let val graphtm = term_of_graph graph in
+    list_mk_comb (adjgraph, [graphtm, rw_to_uncont tm]);
 
-fun nntm_of_sit ((_,(_,graphtm)),tm) = 
-  list_mk_comb (adjgraph, [graphtm, rw_to_uncont tm]);
-
-fun is_end tm = not (can (find_term is_cont) tm);
-
-fun status_of ((orgtm,(graph,graphtm)),tm) =
-  if is_end tm then 
-    if graph = mk_graph (!graph_size) tm 
-       handle HOL_ERR _ => false then Win else Lose
-  else if term_size (rw_to_uncont tm) > 2 * term_size orgtm + 1 
-    then Lose
-    else Undecided
+val dhtnn_param =
+  {
+  operl = operl,
+  nlayer_oper = 1, 
+  nlayer_headeval = 1, 
+  nlayer_headpoli = 1,
+  dimin = 8, 
+  dimpoli = length movel
+  }
 
 (* -------------------------------------------------------------------------
-   Move
-   ------------------------------------------------------------------------- *)
-
-type move = term
-fun apply_move_to_board move (ctxt,tm) = (ctxt, apply_move move tm)
-fun filter_sit (ctxt,tm) = (fn l => filter (is_applicable tm o fst) l)
-fun string_of_move tm = tts tm
-
-fun write_targetl file targetl =
-  let val tml = map dest_startsit targetl in
-    export_terml (file ^ "_targetl") tml
-  end
-
-fun read_targetl file =
-  let val tml = import_terml (file ^ "_targetl") in
-    map mk_startsit tml
-  end
-
-fun max_bigsteps ((orgtm,_),_) = 2 * term_size orgtm + 5
-
-(* -------------------------------------------------------------------------
-   Level
+   Levels
    ------------------------------------------------------------------------- *)
 
 val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt"
@@ -177,44 +187,67 @@ fun export_setsyntdata () =
       (dict_sort tmsize_compare tml)
   end
 
-val ntarget_level = ref 400
-
-fun mk_targetl level ntarget = 
+fun level_targetl level ntarget = 
   let 
     val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt")
-    val tmll2 = 
-      map shuffle (first_n level (mk_batch_full (!ntarget_level) tml1))
+    val tmll2 = map shuffle (first_n level (mk_batch_full 400 tml1))
     val tml3 = List.concat (list_combine tmll2)
   in 
-    map mk_startsit (first_n ntarget tml3)
+    map mk_startboard (first_n ntarget tml3)
   end
+
+val level_param =
+  {
+  ntarget_compete = 400,
+  ntarget_explore = 400,
+  level_start = 1, 
+  level_threshold = 0.75,
+  level_targetl = level_targetl
+  }
+
+
+(*
+fun write_targetl file targetl =
+  let val tml = map dest_startboard targetl in
+    export_terml (file ^ "_targetl") tml
+  end
+fun read_targetl file =
+  let val tml = import_terml (file ^ "_targetl") in
+    map mk_startboard tml
+  end
+*)
 
 (* -------------------------------------------------------------------------
    Interface
    ------------------------------------------------------------------------- *)
 
-val gamespec =
+val expname = "mleSetSynt-v2-1"
+
+val rl_param =
   {
-  movel = movel,
-  move_compare = Term.compare,
-  string_of_move = string_of_move,
-  status_of = status_of,
-  filter_sit = filter_sit,
-  apply_move = apply_move_to_board,
-  mk_targetl = mk_targetl,
+  expname = expname, 
+  ex_window = 400, 
+  ex_uniq = false, 
+  ngen = 100,
+  ncore_search = 8,
+  ncore_train = 4}
+
+val rl_preobj =
+  {
+  rl_param = rl_param,
+  level_param = level_param,
+  max_bigsteps = max_bigsteps,
+  game = game,
+  (* parallel search *)
   write_targetl = write_targetl,
   read_targetl = read_targetl,
-  max_bigsteps = max_bigsteps
+  (* dhtnn *)
+  dhtnn_param = dhtnn_param,
+  term_of_board = term_of_board
   }
 
-val tnnspec =
-  {
-  operl = operl,
-  nntm_of_sit = nntm_of_sit,
-  
-  }
+val prl_search_es = mk_prl_search_es "mleSetSynt.prl_search_es" rl_preobj
 
-val extspec = mk_extspec "mleSetSynt.extspec" gamespec
 
 (* -------------------------------------------------------------------------
    Reinforcement learning
@@ -300,14 +333,14 @@ fun final_stats l =
     val atot = length l
     val b = sum_int (map (fn (_,_,n) => n) winl)
     val btot = sum_int (map (fn (t,_,_) =>
-      (term_size o dest_startsit) t) winl)
+      (term_size o dest_startboard) t) winl)
   in
     ((a,atot,int_div a atot), (b,btot, int_div b btot))
   end
 
 fun final_eval fileout dhtnn set =
   let
-    val l = test_compete test_eval_extspec dhtnn (map mk_startsit set)
+    val l = test_compete test_eval_extspec dhtnn (map mk_startboard set)
     val ((a,atot,ar),(b,btot,br)) = final_stats l
     val cr = br * ar + 2.0 * (1.0 - ar)
     val s =
@@ -368,7 +401,7 @@ val graph = start_graph formula;
 fun search_uniform nsim tm =
   let 
     val _ = psMCTS.stopatwin_flag := true;
-    val tree = mlReinforce.mcts_uniform nsim gamespec (mk_startsit tm);
+    val tree = mlReinforce.mcts_uniform nsim gamespec (mk_startboard tm);
     val r = 
       if can (psMCTS.trace_win (#status_of gamespec) tree) []
       then SOME (dlength tree) else NONE

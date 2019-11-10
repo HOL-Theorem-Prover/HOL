@@ -584,7 +584,10 @@ fun trace_tacl tacl g = case tacl of
     (print_endline (string_of_goal g); trace_tacl m (hd (fst (tac g))))
   | [] => print_endline (string_of_goal g)
 
-fun string_of_bool b = if b then "T" else "F"
+fun bts b = if b then "true" else "false"
+fun string_to_bool s = 
+  if s = "true" then true else if s = "false" then false 
+  else raise ERR "string_to_bool" ""
 
 fun only_concl x =
   let val (a,b) = dest_thm x in

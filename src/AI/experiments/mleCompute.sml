@@ -48,6 +48,7 @@ fun train_fixed basename exl =
 (*
 load "mleCompute"; open mleCompute;
 load "mleArithData"; open mleArithData;
+
 val tml = mlTacticData.import_terml (dataarith_dir ^ "/train");
 val exl = compute_exout tml;
 val tnn = train_fixed "test" exl;
@@ -61,8 +62,7 @@ mlTreeNeuralNetwork.infer_tnn tnn tm;
 
 fun accuracy_fixed tnn =
   let
-    val filel = map (fn x => dataarith_dir ^ "/" ^ x)
-      ["train","valid","test"]
+    val filel = map (fn x => dataarith_dir ^ "/" ^ x) ["train","valid","test"]
     val tmll = map mlTacticData.import_terml filel
     val exl = map compute_exout tmll
   in
@@ -77,19 +77,14 @@ fun accuracy_fixed tnn =
 load "mleCompute"; open mleCompute;
 load "mleArithData"; open mleArithData;
 load "mlNearestNeighbor"; open mlNearestNeighbor;
+load "mlTacticData"; open mlTacticData;
 
-val train =
-  compute_exout (mlTacticData.import_terml (dataarith_dir ^ "/train"));
-val valid =
-  compute_exout (mlTacticData.import_terml (dataarith_dir ^ "/valid"));
-val test =
-  compute_exout (mlTacticData.import_terml (dataarith_dir ^ "/test"));
-
+val train = compute_exout (import_terml (dataarith_dir ^ "/train"));
+val valid = compute_exout (import_terml (dataarith_dir ^ "/valid"));
+val test = compute_exout (import_terml (dataarith_dir ^ "/test"));
 val knn = train_knn train;
 val validacc = knn_accuracy knn valid;
 val testacc = knn_accuracy knn test;
-
-
 *)
 
 

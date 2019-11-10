@@ -298,7 +298,7 @@ fun numvar_nn dim f =
       val embed = map (Real.fromInt o string_to_int o Char.toString) cl
     in
       if length embed = dim 
-      then embed_nn embed
+      then embed_nn (map scale_real embed)
       else raise ERR "numvar_nn" fs
     end
   else raise ERR "fp_op" (fst (dest_var f))

@@ -36,8 +36,8 @@ sig
   val start_form : term
   val movel : term list
   val random_step : term -> term
-  val apply_move : term -> term -> term
-  val is_applicable : term -> term -> bool
+  val apply_move_aux : term -> term -> term
+  val available_move_aux : term -> term -> bool
 
   (* tests *)
   val imitate_once : term -> term -> term
