@@ -8,7 +8,7 @@ sig
 
   (* search tree: 'a is a board position, 'b is a move *)
   type id = int list
-  val id_compare : int list cmp
+  val id_compare : id * id -> order
   type 'b pol = (('b * real) * id) list
   type ('a,'b) node =
     {pol : 'b pol, board : 'a, sum : real, vis : real, status : status}

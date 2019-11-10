@@ -278,9 +278,7 @@ fun boss_start_worker pd code_of wid =
   (
   writel (widscript_file pd wid) (code_of wid);
   smlOpen.run_buildheap false 
-    (SOME (widscript_file pd wid ^ ".out")) (widscript_file pd wid);
-  remove_file (widscript_file pd wid);
-  remove_file (widscript_file pd wid ^ ".out")
+    (SOME (widscript_file pd wid ^ ".out")) (widscript_file pd wid)
   )
 
 val attrib = [Thread.InterruptState Thread.InterruptAsynch,

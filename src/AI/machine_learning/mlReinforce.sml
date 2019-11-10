@@ -122,7 +122,7 @@ fun mk_extsearch self rl_preobj =
         (string_to_bool (only_hd (readl (file ^ "_bstatus"))),
          read_exl (file ^ "_exl"))
       in
-        app remove_file [file ^ "_bstatus",file ^ "_exl"]; r
+        remove_file (file ^ "_bstatus"); r
       end
   in
     {

@@ -32,6 +32,9 @@ include Abbrev
   
   type schedule = mlNeuralNetwork.train_param list
   
+  (* hack for fixed embeddings *)
+  val tnn_numvar_prefix : string
+  
   (* random generation *)
   val random_tnn : tnn_param -> tnn
   val random_dhtnn  : dhtnn_param -> dhtnn

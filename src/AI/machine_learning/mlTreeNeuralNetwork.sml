@@ -283,18 +283,21 @@ fun embed_nn embed =
     [{a = idactiv, da = didactiv, w = Vector.fromList embed'}]
   end
 
+val tnn_numvar_prefix = "tnn_numvar_"
+
 fun is_numvar f = 
   is_var f andalso  
   let val fs = fst (dest_var f) in 
-    String.isPrefix "tnn_numvar_" fs andalso 
-    all Char.isDigit (snd (part_n (String.size "tnn_numvar_") (explode fs)))
+    String.isPrefix tnn_numvar_prefix fs andalso 
+    all Char.isDigit 
+      (snd (part_n (String.size tnn_numvar_prefix) (explode fs)))
   end
  
 fun numvar_nn dim f =
   if is_numvar f then 
     let 
       val fs = fst (dest_var f)
-      val cl = tl (explode fs)
+      val cl = (snd (part_n (String.size tnn_numvar_prefix) (explode fs)))
       val embed = map (Real.fromInt o string_to_int o Char.toString) cl
     in
       if length embed = dim 
