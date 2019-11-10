@@ -1837,19 +1837,20 @@ val FMEQ_SINGLE_SIMPLE_DISJ_ELIM = store_thm(
    ---------------------------------------------------------------------- *)
 
 Inductive ITFMAPR:
-  (∀A. ITFMAPR f FEMPTY A A) ∧
-  (∀A1 A2 k v fm.
-     k ∉ FDOM fm ∧ ITFMAPR f fm A1 A2 ⇒ ITFMAPR f (fm |+ (k,v)) A1 (f k v A2))
+  (!A. ITFMAPR f FEMPTY A A) /\
+  (!A1 A2 k v fm.
+     k NOTIN FDOM fm /\ ITFMAPR f fm A1 A2 ==>
+     ITFMAPR f (fm |+ (k,v)) A1 (f k v A2))
 End
 
 Theorem ITFMAPR_FEMPTY[simp]:
-  ITFMAPR f FEMPTY A1 A2 ⇔ A1 = A2
+  ITFMAPR f FEMPTY A1 A2 <=> A1 = A2
 Proof
   simp[Once ITFMAPR_cases] >> metis_tac[]
 QED
 
 Theorem ITFMAPR_total:
-  ∀fm r0. ∃r. ITFMAPR f fm r0 r
+  !fm r0. ?r. ITFMAPR f fm r0 r
 Proof
   ho_match_mp_tac fmap_INDUCT >> metis_tac[ITFMAPR_rules, DOMSUB_NOT_IN_DOM]
 QED
@@ -1862,13 +1863,13 @@ Proof
 QED
 
 Theorem FUPDATE_PURGE:
-  ∀f x y. f |+ (x,y) = (f \\ x) |+ (x, y)
+  !f x y. f |+ (x,y) = (f \\ x) |+ (x, y)
 Proof
   simp[]
 QED
 
 Theorem fmap_cases_NOTIN:
-  ∀fm. fm = FEMPTY ∨ ∃k v fm0. k ∉ FDOM fm0 ∧ fm = fm0 |+ (k,v)
+  !fm. fm = FEMPTY \/ ?k v fm0. k NOTIN FDOM fm0 /\ fm = fm0 |+ (k,v)
 Proof
   gen_tac >> qspec_then ‘fm’ strip_assume_tac fmap_CASES >> fs[] >>
   rename [‘fm = fm0 |+ (k,v)’] >>
@@ -1876,8 +1877,8 @@ Proof
 QED
 
 Theorem ITFMAPR_unique:
-  (∀k1 k2 v1 v2 A. f k1 v1 (f k2 v2 A) = f k2 v2 (f k1 v1 A)) ⇒
-  ∀fm A0 A1 A2. ITFMAPR f fm A0 A1 ∧ ITFMAPR f fm A0 A2 ⇒ A1 = A2
+  (!k1 k2 v1 v2 A. f k1 v1 (f k2 v2 A) = f k2 v2 (f k1 v1 A)) ==>
+  !fm A0 A1 A2. ITFMAPR f fm A0 A1 /\ ITFMAPR f fm A0 A2 ==> A1 = A2
 Proof
   strip_tac >> gen_tac >> completeInduct_on ‘CARD (FDOM fm)’ >> rw[] >>
   Cases_on ‘fm = FEMPTY’ >> fs[] >>
@@ -1888,9 +1889,9 @@ Proof
   disch_then (qx_choosel_then [‘A1a’, ‘k1’, ‘v1’, ‘fm1’] strip_assume_tac) >>
   disch_then (qx_choosel_then [‘A1b’, ‘k2’, ‘v2’, ‘fm2’] strip_assume_tac) >>
   Cases_on ‘k1 = k2’ >> fs[]
-  >- (‘v1 = v2 ∧ fm1 = fm2’ by metis_tac[FUPD11_SAME_NEW_KEY] >> rw[] >>
+  >- (‘v1 = v2 /\ fm1 = fm2’ by metis_tac[FUPD11_SAME_NEW_KEY] >> rw[] >>
       fs[PULL_FORALL] >> metis_tac[DECIDE “x < SUC x”]) >>
-  ‘∃A0'. ITFMAPR f (fm1 \\ k2) A0 A0'’ by metis_tac[ITFMAPR_total] >>
+  ‘?A0'. ITFMAPR f (fm1 \\ k2) A0 A0'’ by metis_tac[ITFMAPR_total] >>
   ‘fm1 \\ k2 = fm2 \\ k1’
      by (rw[fmap_EXT]
          >- (simp[EXTENSION] >> fs[fmap_EXT, EXTENSION] >> metis_tac[]) >>
@@ -1900,11 +1901,12 @@ Proof
   ‘ITFMAPR f ((fm2 \\ k1) |+ (k2,v2)) A0 (f k2 v2 A0')’
     by metis_tac[ITFMAPR_rules, FDOM_DOMSUB, IN_DELETE] >>
   qabbrev_tac ‘base = fm2 \\ k1’ >>
-  ‘fm1 = base |+ (k2,v2) ∧ fm2 = base |+ (k1,v1)’
+  ‘fm1 = base |+ (k2,v2) /\ fm2 = base |+ (k1,v1)’
     by (rw[Abbr‘base’] >>
         fs[fmap_EXT, EXTENSION, FAPPLY_FUPDATE_THM, DOMSUB_FAPPLY_THM] >>
         PROVE_TAC[]) >>
-  ‘k1 ∉ FDOM base ∧ k2 ∉ FDOM base’ by metis_tac[FDOM_DOMSUB, IN_DELETE] >>
+  ‘k1 NOTIN FDOM base /\ k2 NOTIN FDOM base’
+    by metis_tac[FDOM_DOMSUB, IN_DELETE] >>
   markerLib.RM_ABBREV_TAC "base" >>
   qpat_x_assum ‘_ = base’ (K ALL_TAC) >> rw[] >> fs[] >>
   ‘CARD (FDOM (base |+ (k2,v2))) < SUC (SUC (CARD (FDOM base)))’ by simp[] >>
@@ -1921,9 +1923,9 @@ Definition ITFMAP_def:
 End
 
 Theorem ITFMAP_thm:
-  (ITFMAP f FEMPTY A = A) ∧
-  ((∀k1 k2 v1 v2 A. f k1 v1 (f k2 v2 A) = f k2 v2 (f k1 v1 A))
-     ⇒
+  (ITFMAP f FEMPTY A = A) /\
+  ((!k1 k2 v1 v2 A. f k1 v1 (f k2 v2 A) = f k2 v2 (f k1 v1 A))
+     ==>
    ITFMAP f (fm |+ (k,v)) A = f k v (ITFMAP f (fm\\k) A))
 Proof
   simp[ITFMAP_def] >>
