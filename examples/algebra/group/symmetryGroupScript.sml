@@ -253,23 +253,26 @@ val symmetric_group_def = Define`
            = (LINV f s o f) on s         by fun_on_compose
            = I on s                      by bij_on_inv
 *)
-val symmetric_group_group = store_thm(
-  "symmetric_group_group",
-  ``!(s:'a -> bool). Group (symmetric_group s)``,
+Theorem symmetric_group_group:
+  !(s:'a -> bool). Group (symmetric_group s)
+Proof
   rw_tac std_ss[group_def_alt, symmetric_group_def, GSPECIFICATION] >| [
+    rename [‘(f on s) o (f' on s) on s’] >>
     qexists_tac `(f o f') on s` >>
-    rpt strip_tac >-
-    metis_tac[fun_on_compose, fun_on_on, BIJ_ELEMENT] >>
+    rpt strip_tac
+    >- metis_tac[fun_on_compose, fun_on_on, BIJ_ELEMENT] >>
     metis_tac[bij_on_compose_bij],
     metis_tac[bij_on_compose_assoc, bij_on_bij],
     metis_tac[BIJ_I_SAME],
+    rename [‘f PERMUTES s’] >>
     `!x. x IN s ==> f x IN s` by metis_tac[BIJ_ELEMENT] >>
     rw[fun_on_compose],
+    rename [‘f PERMUTES s’] >>
     qexists_tac `(LINV f s) on s` >>
-    rpt strip_tac >-
-    metis_tac[BIJ_LINV_BIJ] >>
+    rpt strip_tac >- metis_tac[BIJ_LINV_BIJ] >>
     metis_tac[fun_on_compose, bij_on_inv, BIJ_ELEMENT]
-  ]);
+  ]
+QED
 
 (* This is a very good result! *)
 
@@ -386,24 +389,26 @@ val automorphism_group_def = Define`
            = (LINV f G o f) on G                             by bij_on_compose
            = I on G                                          by bij_on_inv
 *)
-val automorphism_group_group = store_thm(
-  "automorphism_group_group",
-  ``!g:'a group. Group g ==> Group (automorphism_group g)``,
+Theorem automorphism_group_group:
+  !g:'a group. Group g ==> Group (automorphism_group g)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[group_def_alt, automorphism_group_def, GSPECIFICATION] >| [
+    rename [‘(f on G) o (f' on G) on G’] >>
     qexists_tac `f o f' on G` >>
-    rpt strip_tac >-
-    metis_tac[bij_on_compose, fun_on_on, group_auto_bij] >>
+    rpt strip_tac >- metis_tac[bij_on_compose, fun_on_on, group_auto_bij] >>
     metis_tac[group_auto_compose, group_auto_on_auto],
     metis_tac[group_auto_bij, bij_on_bij, bij_on_compose_assoc],
     metis_tac[group_auto_I],
+    rename [‘(I on G) o (f on G) on G’] >>
     `!x. x IN G ==> f x IN G` by metis_tac[group_auto_bij, BIJ_ELEMENT] >>
     rw[fun_on_compose],
+    rename [‘_ o (f on G) on G’] >>
     qexists_tac `(LINV f G) on G` >>
-    rpt strip_tac >-
-    metis_tac[group_auto_linv_auto] >>
+    rpt strip_tac >- metis_tac[group_auto_linv_auto] >>
     metis_tac[bij_on_compose, bij_on_inv, group_auto_bij]
-  ]);
+  ]
+QED
 
 (* Another major result. *)
 

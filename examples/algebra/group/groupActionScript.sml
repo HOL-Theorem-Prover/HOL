@@ -1173,12 +1173,15 @@ val orbit_stabilizer_cosets_bij_3 = store_thm(
        Now z IN G                                         by stabilizer_element
       Thus x'' = x' * z IN G                              by group_op_element
 *)
-val orbit_stabilizer_cosets_bij_4 = store_thm(
-  "orbit_stabilizer_cosets_bij_4",
-  ``!f (g:'a group) (A:'b -> bool) a. Group g /\ (g act A) f /\ a IN A ==>
-   BIJ (\b. (act_by f g a b) * (stabilizer f g a)) (orbit f g A a) (CosetPartition g (StabilizerGroup f g a))``,
+Theorem orbit_stabilizer_cosets_bij_4:
+  !f (g:'a group) (A:'b -> bool) a.
+     Group g /\ (g act A) f /\ a IN A ==>
+     BIJ (\b. (act_by f g a b) * (stabilizer f g a))
+         (orbit f g A a)
+         (CosetPartition g (StabilizerGroup f g a))
+Proof
   simp_tac (srw_ss()) [CosetPartition_def, partition_def, inCoset_def,
-                        StabilizerGroup_def, BIJ_DEF, INJ_DEF, SURJ_DEF] >>
+                       StabilizerGroup_def, BIJ_DEF, INJ_DEF, SURJ_DEF] >>
   rpt strip_tac >| [
     qabbrev_tac `z = act_by f g a b` >>
     qexists_tac `z` >>
@@ -1194,68 +1197,18 @@ val orbit_stabilizer_cosets_bij_4 = store_thm(
     `z IN G` by rw[act_by_def, Abbr`z`] >>
     rw[coset_def, IMAGE_DEF, EXTENSION] >>
     metis_tac[stabilizer_element, group_op_element],
-    qexists_tac `f x' a` >>
-    rpt strip_tac >-
-    metis_tac[orbit_element, action_closure, reach_def] >>
-    qabbrev_tac `b = f x' a` >>
+    rename [‘X ∈ G’, ‘_ ∈ X * stabilizer f g a’] >>
+    qexists_tac `f X a` >>
+    rpt strip_tac >- metis_tac[orbit_element, action_closure, reach_def] >>
+    qabbrev_tac `b = f X a` >>
     `(a ~~ b) f g` by metis_tac[reach_def] >>
-    `act_by f g a b IN G /\ (f (act_by f g a b) a = f x' a)` by rw[act_by_def] >>
-    `act_by f g a b * (stabilizer f g a) = x' * (stabilizer f g a)` by metis_tac[orbit_stabilizer_map_good] >>
+    `act_by f g a b IN G /\ (f (act_by f g a b) a = f X a)` by rw[act_by_def] >>
+    `act_by f g a b * (stabilizer f g a) = X * (stabilizer f g a)`
+      by metis_tac[orbit_stabilizer_map_good] >>
     asm_simp_tac (srw_ss()) [EXTENSION, EQ_IMP_THM] >>
     metis_tac[coset_def, IN_IMAGE, stabilizer_element, group_op_element]
-  ]);
-(* Michael's orginal proof *)
-val orbit_stabilizer_cosets_bij_4 = store_thm(
-  "orbit_stabilizer_cosets_bij_4",
-  ``!f (g:'a group) (A:'b -> bool) a. Group g /\ (g act A) f /\ a IN A ==>
-       BIJ (\b. (act_by f g a b) * (stabilizer f g a))
-           (orbit f g A a)
-           (CosetPartition g (StabilizerGroup f g a))``,
-  SIMP_TAC (srw_ss()) [CosetPartition_def, partition_def, inCoset_def,
-                       StabilizerGroup_def, BIJ_DEF, INJ_DEF, SURJ_DEF] THEN
-  REPEAT GEN_TAC THEN STRIP_TAC THEN REPEAT CONJ_TAC THENL [
-    Q.X_GEN_TAC `z` THEN STRIP_TAC THEN
-    `reach f g a z` by metis_tac[orbit_element] THEN
-    `act_by f g a z IN G` by rw[act_by_def] THEN
-    qexists_tac `act_by f g a z` THEN
-    ASM_SIMP_TAC (srw_ss()) [EXTENSION, EQ_IMP_THM] THEN Q.X_GEN_TAC `x'` THEN
-    STRIP_TAC THEN
-    `x' IN IMAGE (\z'. act_by f g a z * z') (stabilizer f g a)`
-      by metis_tac[coset_def] THEN
-    `?z'. z' IN (stabilizer f g a) /\ (x' = act_by f g a z * z')`
-       by metis_tac[IN_IMAGE] THEN
-    metis_tac[stabilizer_element, group_op_element],
-    MAP_EVERY Q.X_GEN_TAC [`z`, `z'`] THEN rpt strip_tac THEN
-    `reach f g a z /\ reach f g a z'` by metis_tac[orbit_element] THEN
-    `act_by f g a z IN G /\ act_by f g a z' IN G` by rw[act_by_def] THEN
-    `f (act_by f g a z) a = f (act_by f g a z') a` by metis_tac[orbit_stabilizer_map_inj] THEN
-    metis_tac[act_by_def],
-    Q.X_GEN_TAC `z` THEN rpt strip_tac THEN
-    `reach f g a z` by metis_tac[orbit_element] THEN
-    `act_by f g a z IN G` by rw[act_by_def] THEN
-    qexists_tac `act_by f g a z` THEN
-    ASM_SIMP_TAC (srw_ss())[EXTENSION, EQ_IMP_THM] THEN Q.X_GEN_TAC `x'` THEN
-    STRIP_TAC THEN
-    `x' IN IMAGE (\z'. act_by f g a z * z') (stabilizer f g a)` by metis_tac[coset_def] THEN
-    `?z'. z' IN (stabilizer f g a) /\ (x' = act_by f g a z * z')` by metis_tac[IN_IMAGE] THEN
-    metis_tac[stabilizer_element, group_op_element],
-    Q.X_GEN_TAC `x'` THEN
-    DISCH_THEN (Q.X_CHOOSE_THEN `x''` STRIP_ASSUME_TAC) THEN
-    qexists_tac `f x'' a` THEN
-    rw[] THENL [
-      `reach f g a (f x'' a)` by metis_tac[reach_def] THEN
-      `f x'' a IN A` by metis_tac[action_closure] THEN
-      rw[orbit_def],
-      `reach f g a (f x'' a)` by metis_tac[reach_def] THEN
-      `act_by f g a (f x'' a) IN G /\ (f (act_by f g a (f x'' a)) a = (f x'' a))` by rw[act_by_def] THEN
-      `(act_by f g a (f x'' a)) * (stabilizer f g a)  = x'' * (stabilizer f g a)` by metis_tac[orbit_stabilizer_map_good] THEN
-      ASM_SIMP_TAC (srw_ss()) [EXTENSION, EQ_IMP_THM] THEN
-      Q.X_GEN_TAC `x'` THEN STRIP_TAC THEN
-      `x' IN IMAGE (\z. x'' * z) (stabilizer f g a)` by metis_tac[coset_def] THEN
-      `?z. z IN (stabilizer f g a) /\ (x' = x'' * z)` by metis_tac[IN_IMAGE] THEN
-      metis_tac[stabilizer_element, group_op_element]
-    ]
-  ]);
+  ]
+QED
 
 (* Theorem: [Orbit-Stabilizer Theorem]
             FiniteGroup g /\ (g act A) f /\ a IN A /\ FINITE A ==>

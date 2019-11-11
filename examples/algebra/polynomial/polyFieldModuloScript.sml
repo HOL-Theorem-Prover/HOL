@@ -4650,34 +4650,46 @@ val poly_prod_set_image_X_add_c_property = store_thm(
        Applying the lemma, s SUBSET s' and s' SUBSET s    by equality implies subset
        Therefore s = s'                                   by SUBSET_ANTISYM
 *)
-val poly_prod_set_image_X_add_c_inj = store_thm(
-  "poly_prod_set_image_X_add_c_inj",
-  ``!r:'a field. Field r ==> !n. n < char r ==>
-   INJ (\s. PPROD (IMAGE (\c:num. X + |c|) s)) (PPOW (IMAGE SUC (count n))) (PolyRing r).carrier``,
+
+Theorem poly_prod_set_image_X_add_c_inj:
+  !r:'a field.
+      Field r ==> !n. n < char r ==>
+      INJ (\s. PPROD (IMAGE (\c:num. X + |c|) s))
+          (PPOW (IMAGE SUC (count n)))
+          (PolyRing r).carrier
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `f = \c:num. X + |c|` >>
   rw_tac std_ss[INJ_DEF, IN_PPOW, IN_DIFF, IN_SING] >| [
+    rename [‘s ≠ natural n’, ‘s ∈ POW (natural n)’] >>
     `s SUBSET (IMAGE SUC (count n))` by rw[GSYM IN_POW] >>
-    `FINITE (IMAGE f s)` by metis_tac[IMAGE_FINITE, SUBSET_FINITE, FINITE_COUNT] >>
-    `(IMAGE f s) SUBSET (PolyRing r).carrier` by rw[poly_X_add_c_image_poly_subset, Abbr`f`] >>
+    `FINITE (IMAGE f s)`
+       by metis_tac[IMAGE_FINITE, SUBSET_FINITE, FINITE_COUNT] >>
+    `(IMAGE f s) SUBSET (PolyRing r).carrier`
+       by rw[poly_X_add_c_image_poly_subset, Abbr`f`] >>
     rw[poly_prod_set_property],
-    `!s t. FINITE s /\ MAX_SET s < char r /\ FINITE t /\ MAX_SET t < char r /\
-             (PPROD (IMAGE f s) = PPROD (IMAGE f t)) ==> s SUBSET t` by
-  (rw_tac std_ss[SUBSET_DEF, Abbr`f`] >>
-    qabbrev_tac `f = \c:num. X + |c|` >>
-    `x < char r` by metis_tac[MAX_SET_LESS] >>
-    `(PPROD (IMAGE f s'')) % (X + ###x) = |0|` by rw[GSYM poly_prod_set_image_X_add_c_property, Abbr`f`] >>
-    `(PPROD (IMAGE f t)) % (X + ###x) = |0|` by metis_tac[] >>
-    rev_full_simp_tac std_ss [GSYM poly_prod_set_image_X_add_c_property, Abbr`f`]) >>
-    `s SUBSET (IMAGE SUC (count n)) /\ s' SUBSET (IMAGE SUC (count n))` by rw[GSYM IN_POW] >>
+    rename [‘PPIMAGE f s1 = PPIMAGE f s2’] >>
+    ‘!s t. FINITE s /\ MAX_SET s < char r /\ FINITE t /\ MAX_SET t < char r /\
+             (PPROD (IMAGE f s) = PPROD (IMAGE f t)) ==> s SUBSET t’
+     by (rw_tac std_ss[SUBSET_DEF, Abbr`f`] >>
+         qabbrev_tac `f = \c:num. X + |c|` >>
+         `x < char r` by metis_tac[MAX_SET_LESS] >>
+         `(PPROD (IMAGE f s)) % (X + ###x) = |0|`
+           by rw[GSYM poly_prod_set_image_X_add_c_property, Abbr`f`] >>
+         `(PPROD (IMAGE f t)) % (X + ###x) = |0|` by metis_tac[] >>
+         rev_full_simp_tac std_ss [GSYM poly_prod_set_image_X_add_c_property,
+                                   Abbr`f`]) >>
+    `s1 ⊆ IMAGE SUC (count n) /\ s2 ⊆ (IMAGE SUC (count n))`
+      by rw[GSYM IN_POW] >>
     `FINITE (IMAGE SUC (count n))` by rw[] >>
     `MAX_SET (IMAGE SUC (count n)) = n` by rw[MAX_SET_IMAGE_SUC_COUNT] >>
-    `FINITE s /\ FINITE s'` by metis_tac[SUBSET_FINITE] >>
-    `MAX_SET s < char r /\ MAX_SET s' < char r` by metis_tac[SUBSET_MAX_SET, LESS_EQ_LESS_TRANS] >>
-    `s SUBSET s' /\ s' SUBSET s` by metis_tac[] >>
-    rw[SUBSET_ANTISYM]
-  ]);
+    `FINITE s1 ∧ FINITE s2` by metis_tac[SUBSET_FINITE] >>
+    `MAX_SET s1 < char r ∧ MAX_SET s2 < char r`
+      by metis_tac[SUBSET_MAX_SET, LESS_EQ_LESS_TRANS] >>
+    metis_tac[SUBSET_ANTISYM]
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Factor and Root of Lifting Polynomial                                     *)
