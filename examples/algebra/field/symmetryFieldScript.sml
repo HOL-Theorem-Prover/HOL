@@ -305,25 +305,29 @@ val automorphism_field_def = Define`
            = (LINV f R o f) on R                             by bij_on_compose
            = I on R                                          by bij_on_inv
 *)
-val automorphism_field_group = store_thm(
-  "automorphism_field_group",
-  ``!r:'a field. Field r ==> Group (automorphism_field r)``,
+
+Theorem automorphism_field_group:
+  !r:'a field. Field r ==> Group (automorphism_field r)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[group_def_alt, automorphism_field_def, GSPECIFICATION] >| [
-    qexists_tac `f o f' on R` >>
+    rename [‘(f on R) o (f' on R) on R’] >> qexists_tac `f o f' on R` >>
     rpt strip_tac >-
     metis_tac[bij_on_compose, fun_on_on, field_auto_bij] >>
     metis_tac[field_auto_compose, field_auto_on_auto],
+    rename [‘((f on R) o (f' on R) on R) o (f'' on R) on R’] >>
     `f PERMUTES R /\ f' PERMUTES R /\ f'' PERMUTES R` by rw[field_auto_bij] >>
-    metis_tac[bij_on_bij, bij_on_compose_assoc],
+    metis_tac[bij_on_bij, bij_on_compose_assoc, field_auto_bij],
     metis_tac[field_auto_I],
+    rename [‘FieldAuto f r’] >>
     `!x. x IN R ==> f x IN R` by metis_tac[field_auto_bij, BIJ_ELEMENT] >>
     rw[fun_on_compose],
+    rename [‘FieldAuto f r’] >>
     qexists_tac `(LINV f R) on R` >>
-    rpt strip_tac >-
-    metis_tac[field_auto_linv_auto] >>
+    rpt strip_tac >- metis_tac[field_auto_linv_auto] >>
     metis_tac[bij_on_compose, bij_on_inv, field_auto_bij]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Map Fixing a Set                                                          *)
@@ -574,20 +578,24 @@ val subfield_auto_group_def = Define`
        = ((LINV f R) o f) on R                by bij_on_compose
        = I o R                                by subfield_auto_on_linv
 *)
-val subfield_auto_group_group = store_thm(
-  "subfield_auto_group_group",
-  ``!(r s):'a field. Field r /\ B SUBSET R ==> Group (subfield_auto_group r s)``,
+
+Theorem subfield_auto_group_group:
+  !(r s):'a field. Field r /\ B SUBSET R ==> Group (subfield_auto_group r s)
+Proof
   rw_tac std_ss[group_def_alt, subfield_auto_group_def, GSPECIFICATION] >| [
+    rename [‘(f on R) o (f' on R) on R’] >>
     qexists_tac `f o f' on R` >>
     rpt strip_tac >-
     metis_tac[bij_on_compose, fun_on_on, subfield_auto_bij] >>
     rw_tac std_ss[subfield_auto_on_compose],
     prove_tac[subfield_auto_bij, bij_on_bij, bij_on_compose_assoc],
     metis_tac[subfield_auto_I],
+    rename [‘subfield_auto f r s’] >>
     `!x. x IN R ==> f x IN R` by metis_tac[subfield_auto_bij, BIJ_ELEMENT] >>
     rw[fun_on_compose],
     metis_tac[subfield_auto_on_linv, subfield_auto_bij, bij_on_compose]
-  ]);
+  ]
+QED
 
 (* This is a milestone theorem. *)
 
