@@ -1574,12 +1574,16 @@ PPM 3 = IMAGE (\s. PPROD (IMAGE (\c. X + |c|) s)) {{3; 2}; {3; 1}; {3}; {2; 1}; 
      Now !p. p IN (IMAGE (\c. X + |c|) s) ==> poly p      by poly_X_add_c_image_element
    Hence poly (PPROD (IMAGE (\c. X + |c|) s))             by poly_prod_set_poly
 *)
-val reduceP_poly_element_poly = store_thm(
-  "reduceP_poly_element_poly",
-  ``!r:'a ring. Ring r ==> !p n. p IN PPM n ==> poly p``,
+
+Theorem reduceP_poly_element_poly:
+  !r:'a ring. Ring r ==> !p n. p IN PPM n ==> poly p
+Proof
   rw_tac std_ss[reduceP_poly_def, IN_IMAGE, IN_DIFF, IN_SING] >>
-  `FINITE (IMAGE (\c. X + |c|) s)` by metis_tac[IN_POW, FINITE_COUNT, IMAGE_FINITE, SUBSET_FINITE] >>
-  metis_tac[poly_X_add_c_image_element, poly_prod_set_poly]);
+  rename [‘s ∈ POW(natural n)’]  >>
+  ‘FINITE (IMAGE (\c. X + |c|) s)’
+    by metis_tac[IN_POW, FINITE_COUNT, IMAGE_FINITE, SUBSET_FINITE] >>
+  metis_tac[poly_X_add_c_image_element, poly_prod_set_poly]
+QED
 
 (* Theorem: !p. p IN PPM n ==> monic p *)
 (* Proof:
@@ -1593,12 +1597,16 @@ val reduceP_poly_element_poly = store_thm(
      Now !p. p IN (IMAGE (\c. X + |c|) s) ==> monic p     by poly_monic_X_add_c_image_element
    Hence monic (PPROD (IMAGE (\c. X + |c|) s))            by poly_monic_prod_set_monic
 *)
-val reduceP_poly_element_monic = store_thm(
-  "reduceP_poly_element_monic",
-  ``!r:'a ring. Ring r ==> !p n. p IN PPM n ==> monic p``,
+
+Theorem reduceP_poly_element_monic:
+  !r:'a ring. Ring r ==> !p n. p IN PPM n ==> monic p
+Proof
   rw_tac std_ss[reduceP_poly_def, IN_IMAGE, IN_DIFF, IN_SING] >>
-  `FINITE (IMAGE (\c. X + |c|) s)` by metis_tac[IN_POW, FINITE_COUNT, IMAGE_FINITE, SUBSET_FINITE] >>
-  metis_tac[poly_monic_X_add_c_image_element, poly_monic_prod_set_monic]);
+  rename [‘s ∈ POW (natural n)’] >>
+  ‘FINITE (IMAGE (\c. X + |c|) s)’
+    by metis_tac[IN_POW, FINITE_COUNT, IMAGE_FINITE, SUBSET_FINITE] >>
+  metis_tac[poly_monic_X_add_c_image_element, poly_monic_prod_set_monic]
+QED
 
 (* Theorem: #1 <> #0 ==> !n. |0| NOTIN (PPM n) *)
 (* Proof:
@@ -1630,11 +1638,13 @@ val reduceP_poly_has_no_zero = store_thm(
     Giving X = X + |0| = X + |c| ==> c = 0  by poly_X_add_c_eq
    This contradicts 0 NOTIN s               by s = (IMAGE SUC (count n))
 *)
-val reduceP_poly_has_no_X = store_thm(
-  "reduceP_poly_has_no_X",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !n. n < char r ==> X NOTIN PPM n``,
+
+Theorem reduceP_poly_has_no_X:
+  !r:'a ring. Ring r /\ #1 <> #0 ==> !n. n < char r ==> X NOTIN PPM n
+Proof
   rw_tac std_ss[reduceP_poly_def, IN_IMAGE, IN_PPOW, IN_DIFF, IN_SING] >>
   spose_not_then strip_assume_tac >>
+  rename [‘s ∈ POW (natural n)’] >>
   `s SUBSET (IMAGE SUC (count n))` by rw[GSYM IN_POW] >>
   `0 NOTIN IMAGE SUC (count n)` by rw[] >>
   `0 NOTIN s` by metis_tac[SUBSET_DEF] >>
@@ -1650,7 +1660,8 @@ val reduceP_poly_has_no_X = store_thm(
   `PPROD {X + |c|} = X + |c|` by metis_tac[poly_prod_set_sing, FINITE_SING, poly_X_add_c] >>
   `(X = X + |0|) /\ ($###0 = |0|)` by rw[] >>
   `0 < char r` by decide_tac >>
-  metis_tac[poly_X_add_c_eq, MAX_SET_LESS, IN_SING]);
+  metis_tac[poly_X_add_c_eq, MAX_SET_LESS, IN_SING]
+QED
 
 (* Theorem: FiniteField r /\ n < char r ==> FINITE (PPM n) *)
 (* Proof:
