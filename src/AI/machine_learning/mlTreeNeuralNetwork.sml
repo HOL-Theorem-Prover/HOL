@@ -647,13 +647,13 @@ load "psTermGen"; open psTermGen;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 
 (*** objective ***)
-val varl = [``x:'a``,``y:'a``,``z:'a``,``f:'a->'a->'a``,``g:'a -> 'a``]; 
 fun contain_x tm = can (find_term (fn x => term_eq x ``x:'a``)) tm;
 
 (*** generation of training examples ***)
+val varl = [``x:'a``,``y:'a``,``z:'a``,``f:'a->'a->'a``,``g:'a -> 'a``]; 
 fun mk_dataset n =
   let
-    val pxl = mk_term_set (random_terml varl (n,alpha) 10000);
+    val pxl = mk_term_set (random_terml varl (n,alpha) 1000);
     val (px,pnotx) = partition contain_x pxl
   in
     (first_n 100 (shuffle px), first_n 100 (shuffle pnotx))
@@ -677,7 +677,7 @@ val tnn_param =
 
 val randtnn = random_tnn tnn_param;
 val schedule = 
-  [{ncore=4, verbose=true, learning_rate=0.02, batch_size=16, nepoch=100}];
+  [{ncore=1, verbose=true, learning_rate=0.02, batch_size=16, nepoch=100}];
 val newtnn = train_tnn schedule randtnn (trainex,testex);
 
 (*** inference example ***)

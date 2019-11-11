@@ -41,11 +41,23 @@ type set_param =
 fun train_tnn_param ((ncore,dimout),(train,test,operl))
   (param as {dim,nepoch,batchsize,learningrate,nlayer})=
   let
-    val _ = mlTreeNeuralNetwork.nlayer_glob := nlayer
-    val randtnn = random_tnn (dim,dimout) operl
-    val schedule = [(nepoch, learningrate /  (Real.fromInt batchsize))]
-    val (tnn,t) = add_time
-      (train_tnn (ncore,batchsize) randtnn (train,test)) schedule
+    val tnn_param =
+      {
+      dimin = dim, dimout = dimout,
+      nlayer_headnn = nlayer, nlayer_oper = nlayer, 
+      operl = operl
+      }
+    val randtnn = random_tnn tnn_param
+    val train_param =
+      {
+      batch_size = batchsize,
+      learning_rate = learningrate, 
+      ncore = ncore, 
+      nepoch = nepoch,
+      verbose = true
+      }
+    val schedule = [train_param]
+    val (tnn,t) = add_time (train_tnn schedule randtnn) (train,test)
     val r1 = tnn_accuracy tnn train
     val r2 = tnn_accuracy tnn test
   in
@@ -63,7 +75,6 @@ fun write_param file ((ncore,dimout),(train,test,operl)) =
   write_tnnex (file ^ "_test") test;
   write_operl (file ^ "_operl") operl
   )
-
 fun read_param file =
   (
   pair_of_list (map string_to_int (readl (file ^ "_ncoredimout"))),
@@ -79,7 +90,6 @@ fun write_argl file prl =
   in
     writel file (map f prl)
   end
-
 fun read_argl file =
   let
     fun f s =
@@ -103,6 +113,7 @@ fun read_result file =
 val extspec : (set_param, ml_param, real * real * real) smlParallel.extspec  =
   {
   self = "mlTune.extspec",
+  parallel_dir = default_parallel_dir ^ "__mlTune",
   reflect_globals = fn () => "()",
   function = train_tnn_param,
   write_param = write_param,
@@ -134,6 +145,8 @@ fun write_summary file prl =
 (*
 load "mlTune"; open mlTune;
 load "smlParallel"; open smlParallel;
+val prl = parmap_queue_extern 10 extspec fixedparam paraml;
+write_summary "my_file" prl
 *)
 
 end (* struct *)

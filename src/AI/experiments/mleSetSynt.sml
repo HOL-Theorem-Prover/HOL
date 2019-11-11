@@ -265,8 +265,7 @@ val expname = "mleSetSynt-v2-1"
 val rl_param =
  {expname = expname, 
   ex_window = 40000, ex_uniq = false, 
-  ngen = 2,
-  ncore_search = 8, ncore_train = 4}
+  ngen = 2, ncore_search = 8, ncore_train = 4}
 
 val rl_preobj : (board,move) rl_preobj =
   {
