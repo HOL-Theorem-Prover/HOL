@@ -19,8 +19,8 @@ sig
     function : 'a -> 'b -> 'c,
     write_param : string -> 'a -> unit,
     read_param : string -> 'a,
-    write_argl : string -> 'b list -> unit,
-    read_argl : string -> 'b list,
+    write_arg : string -> 'b -> unit,
+    read_arg : string -> 'b,
     write_result : string ->'c -> unit,
     read_result : string -> 'c
     }

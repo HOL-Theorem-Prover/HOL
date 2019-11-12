@@ -110,10 +110,10 @@ fun write_result file (r1,r2,t) = writel file (map rts [r1,r2,t])
 fun read_result file =
   triple_of_list (map (valOf o Real.fromString) (readl file))
 
-val extspec : (set_param, ml_param, real * real * real) smlParallel.extspec  =
+val extspec : (set_param, ml_param, real * real * real) extspec  =
   {
   self = "mlTune.extspec",
-  parallel_dir = default_parallel_dir ^ "__mlTune",
+  parallel_dir = default_parallel_dir ^ "_tune_tnn",
   reflect_globals = fn () => "()",
   function = train_tnn_param,
   write_param = write_param,
@@ -146,7 +146,77 @@ fun write_summary file prl =
 load "mlTune"; open mlTune;
 load "smlParallel"; open smlParallel;
 val prl = parmap_queue_extern 10 extspec fixedparam paraml;
-write_summary "my_file" prl
+write_summary "my_file" prll;
 *)
+
+(* -------------------------------------------------------------------------
+   Train different dhtnn arichtectures in parallel
+   ------------------------------------------------------------------------- *)
+
+fun train_dhtnn_fun () (exl, schedule, dhtnn_param) =
+  let
+    val randdhtnn = random_dhtnn tnn_param
+    val tob = dfind tob_id tob_dict
+    val exl' = map (fn (a,b,c) => (tob a, b, c)) exl
+    val (dhtnn,t) = add_time (train_dhttnn schedule randtnn) exl
+  in
+    print_endline ("Training time : " ^ rts t);
+    dhtnn
+  end
+
+fun write_noparam file (_:unit) = ()
+fun read_noparam file = ()
+
+fun write_dhtnn_argl file (exl, schedule, dhtnn_param) =
+  (
+  write_dhex (file ^ "_exl");
+  write_schedule (file ^ "_schedule") schedule;
+  write_dhtnn_param (file ^ "_dhtnn_param") dhtnn_param
+  )
+fun read_dhtnn_argl file =
+  let
+    val exl = read_dhex exl
+    
+
+(* 
+  todo: 
+  get rid of the send arguments to everyone at the beginning 
+*)
+
+
+fun read_argl file =
+  let
+    fun f s =
+      let val (a,b,c,d,e) = quintuple_of_list (String.tokens Char.isSpace s) in
+        {
+        batchsize = string_to_int a,
+        dim = string_to_int b,
+        learningrate = valOf (Real.fromString c),
+        nepoch = string_to_int d,
+        nlayer = string_to_int e
+        }
+      end
+  in
+    map f (readl file)
+  end
+
+val train_dhtnn_extspec =
+  {
+  self = "train_dhtnn_extspec",
+  parallel_dir = default_parallel_dir ^ "__train_dhtnn",
+  reflect_globals = fn () => "()",
+  function = train_dhtnn_fun,
+  write_param = write_noparam,
+  read_param = read_noparam,
+  write_argl = write_exl,
+  read_argl = read_exl,
+  write_result = write_dhtnn,
+  read_result = read_dhtnn
+  }
+
+
+
+
+
 
 end (* struct *)
