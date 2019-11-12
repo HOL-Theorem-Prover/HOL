@@ -227,8 +227,8 @@ fun stat_jobs (pendingl,freewidl,runningl,completedl) =
 fun send_job pd arglv warg (wid,job) =
   (
   print_endline ("  send job " ^ its job ^ " to worker " ^ its wid);
-  writel_atomic (widin_file pd wid) [its job];
-  warg (widarg_file pd wid) (Vector.sub (arglv,job))
+  warg (widarg_file pd wid) (Vector.sub (arglv,job));
+  writel_atomic (widin_file pd wid) [its job]
   )
 
 fun boss_send pd threadl rr arglv warg (pendingl,runningl,completedl) =

@@ -11,6 +11,6 @@ sig
   val mk_startboard : term -> board
   val dest_startboard : board -> term
   val extsearch : board mlReinforce.extsearch
-  val rl_obj : board mlReinforce.rl_obj
+  val rlobj : board mlReinforce.rlobj
 
 end

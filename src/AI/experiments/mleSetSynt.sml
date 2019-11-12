@@ -185,15 +185,6 @@ fun level_targetl level ntarget =
     map mk_startboard (first_n ntarget tml3)
   end
 
-val level_param =
-  {
-  ntarget_compete = 50,
-  ntarget_explore = 50,
-  level_start = 1, 
-  level_threshold = 0.75,
-  level_targetl = level_targetl
-  }
-
 (* -------------------------------------------------------------------------
    Parallelization (communicating by files)
    ------------------------------------------------------------------------- *)
@@ -227,19 +218,22 @@ fun read_exl file =
     combine_triple (boardl,evall,polil)
   end
 
-fun write_player file (unib,dhtnn,noiseb) =
+fun write_splayer file (unib,dhtnn,noiseb,tobid) =
   (
   write_dhtnn (file ^ "_dhtnn") dhtnn; 
-  writel (file ^ "_flags") [String.concatWith " " (map bts [unib,noiseb])]
+  writel (file ^ "_flags") [String.concatWith " " (map bts [unib,noiseb])];
+  writel (file ^ "_tobid") [its tobid]
   )
-fun read_player file =
+
+fun read_splayer file =
   let
     val dhtnn = read_dhtnn (file ^ "_dhtnn")
     val (unib,noiseb) = 
       pair_of_list (map string_to_bool 
         (String.tokens Char.isSpace (only_hd (readl (file ^ "_flags")))))
+     val tobid = string_to_int (only_hd (readl (file ^ "_tobid")))
   in
-    (unib,dhtnn,noiseb)
+    (unib,dhtnn,noiseb,tobid)
   end
 
 val pre_extsearch = 
@@ -248,8 +242,8 @@ val pre_extsearch =
   read_target = read_target,  
   write_exl = write_exl,
   read_exl = read_exl,
-  write_player = write_player,
-  read_player = read_player
+  write_splayer = write_splayer,
+  read_splayer = read_splayer
   }
 
 (* -------------------------------------------------------------------------
@@ -258,25 +252,43 @@ val pre_extsearch =
 
 val expname = "mleSetSynt-v2-1"
 
-val rl_param =
- {expname = expname, 
-  ex_window = 40000, ex_uniq = false, 
-  ngen = 2, ncore_search = 8, ncore_train = 4}
+val level_param =
+  {
+  ntarget_compete = 50,
+  ntarget_explore = 50,
+  level_start = 4, 
+  level_threshold = 0.75,
+  level_targetl = level_targetl
+  }
 
-val rl_preobj : (board,move) rl_preobj =
+val rl_param =
+ {expname = expname, ex_window = 40000, ex_uniq = false, 
+  ngen = 2, ncore_search = 8}
+
+(* players *)
+val schedule = 
+  [{ncore = 1, verbose = true,
+    learning_rate = 0.02, batch_size = 16, nepoch = 100}]
+val dplayer1 =
+ {tobid = 1, dhtnn_param = dhtnn_param, schedule = schedule}
+val dplayer2 =
+ {tobid = 2, dhtnn_param = dhtnn_param, schedule = schedule}
+val tobdict = dnew Int.compare [(1,term_of_board),(2,term_of_board)];
+
+val rlpreobj : (board,move) rlpreobj =
   {
   rl_param = rl_param,
   level_param = level_param,
   max_bigsteps = max_bigsteps,
   game = game,
   pre_extsearch = pre_extsearch, 
-  dhtnn_param = dhtnn_param,
-  term_of_board = term_of_board
+  tobdict = tobdict,
+  dplayerl = [dplayer1,dplayer2]
   }
 
-val extsearch = mk_extsearch "mleSetSynt.extsearch" rl_preobj
+val extsearch = mk_extsearch "mleSetSynt.extsearch" rlpreobj
 
-val rl_obj = mk_rl_obj rl_preobj extsearch
+val rlobj = mk_rlobj rlpreobj extsearch
 
 (* -------------------------------------------------------------------------
    Reinforcement learning
@@ -286,7 +298,7 @@ val rl_obj = mk_rl_obj rl_preobj extsearch
 load "mlReinforce"; open mlReinforce;
 load "mleSetSynt"; open mleSetSynt;
 (* export_setsyntdata (); *)
-val r = start_rl_loop rl_obj;
+val r = start_rl_loop rlobj;
 *)
 
 end (* struct *)
