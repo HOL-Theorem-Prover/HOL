@@ -5,9 +5,9 @@ sig
 
   type dhex = mlTreeNeuralNetwork.dhex
   type dhtnn = mlTreeNeuralNetwork.dhtnn
-  type schedule = mlTreeNeuralNetwork.schedule
+  type schedule = mlNeuralNetwork.schedule
   type dhtnn_param = mlTreeNeuralNetwork.dhtnn_param
-  type 'a ex = 'a psBigSteps.ex
+  type 'a rlex = 'a psBigSteps.rlex
 
   (* object description *)
   type 'a level_param =
@@ -25,10 +25,10 @@ sig
     }
   type 'a pre_extsearch = 
     {
-    write_targetl : string -> 'a list -> unit,
-    read_targetl : string -> 'a list,  
-    write_exl : string -> 'a ex list -> unit,
-    read_exl : string -> 'a ex list,
+    write_target : string -> 'a -> unit,
+    read_target : string -> 'a,  
+    write_exl : string -> 'a rlex -> unit,
+    read_exl : string -> 'a rlex,
     write_player : string -> (bool * dhtnn * bool) -> unit,
     read_player : string -> (bool * dhtnn * bool)
     }
@@ -43,8 +43,7 @@ sig
     term_of_board : 'a -> term
     }
   type 'a extsearch =
-    (bool * mlTreeNeuralNetwork.dhtnn * bool, 'a, bool * 'a ex list) 
-    smlParallel.extspec
+    (bool * dhtnn * bool, 'a, bool * 'a rlex) smlParallel.extspec
   type 'a rl_obj =
     {
     rl_param : rl_param,
@@ -57,14 +56,14 @@ sig
   val mk_rl_obj : ('a,'b) rl_preobj -> 'a extsearch -> 'a rl_obj
 
   (* phases *)
-  val rl_train : 'a rl_obj -> 'a ex list -> dhtnn
+  val rl_train : 'a rl_obj -> 'a rlex -> dhtnn
   val rl_compete : 'a rl_obj -> int -> dhtnn -> dhtnn -> (int * dhtnn)
   val loop_rl_explore : 'a rl_obj -> int -> bool -> dhtnn -> 
-    'a ex list -> ('a ex list * int)
+    'a rlex -> ('a rlex * int)
 
   (* main loop *)
   val cont_rl_loop : 'a rl_obj -> int -> 
-     ('a ex list * dhtnn * int) ->  ('a ex list * dhtnn * int)
-  val start_rl_loop : 'a rl_obj -> ('a ex list * dhtnn * int)
+     ('a rlex * dhtnn * int) ->  ('a rlex * dhtnn * int)
+  val start_rl_loop : 'a rl_obj -> ('a rlex * dhtnn * int)
 
 end

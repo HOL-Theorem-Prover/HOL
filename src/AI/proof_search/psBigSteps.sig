@@ -9,8 +9,8 @@ sig
   type ('a,'b) node = ('a,'b) psMCTS.node
   type ('a,'b) tree = ('a,'b) psMCTS.tree
   
-  (* machine learning examples *)
-  type 'a ex = ('a * real list * real list)
+  (* reinforcement learning examples *)
+  type 'a rlex = ('a * real list * real list) list
 
   (* tree reuse *)
   val cut_tree : id -> ('a,'b) tree -> ('a,'b) tree
@@ -28,6 +28,6 @@ sig
     ('a,'b) bigsteps_obj -> ('a,'b) tree -> id
   val run_bigsteps : 
     ('a,'b) bigsteps_obj -> 'a -> 
-    bool * 'a ex list * ('a,'b) psMCTS.node list
+    bool * 'a rlex * ('a,'b) psMCTS.node list
 
 end

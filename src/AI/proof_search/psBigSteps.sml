@@ -17,7 +17,7 @@ val ERR = mk_HOL_ERR "psBigSteps"
    Type for examples and distribution derived from a policy 
    ------------------------------------------------------------------------- *)
 
-type 'a ex = ('a * real list * real list)
+type 'a rlex = ('a * real list * real list) list
 
 (* -------------------------------------------------------------------------
    Tree re-use

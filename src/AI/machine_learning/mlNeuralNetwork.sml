@@ -35,6 +35,28 @@ type train_param =
   {ncore: int, verbose: bool, 
    learning_rate: real, batch_size: int, nepoch: int}
 
+fun string_of_trainparam {ncore,verbose,learning_rate,batch_size,nepoch} =
+  its ncore ^ " " ^ bts verbose ^ " " ^ rts learning_rate ^ " " ^
+  its batch_size ^ " " ^ its nepoch
+
+fun trainparam_of_string s =
+  let val (a,b,c,d,e) = quintuple_of_list (String.tokens Char.isSpace s) in
+    {
+    ncore = string_to_int a, 
+    verbose = string_to_bool b,
+    learning_rate = (valOf o Real.fromString) c,
+    batch_size = string_to_int d, 
+    nepoch = string_to_int e
+    }
+  end     
+
+type schedule = train_param list
+
+fun write_schedule file schedule =
+  writel file (map string_of_trainparam schedule)
+fun read_schedule file =
+  map trainparam_of_string (readl file)
+
 (* inv includes biais *)
 type fpdata = {layer : layer, inv : vect, outv : vect, outnv : vect}
 type bpdata = {doutnv : vect, doutv : vect, dinv : vect, dw : mat}

@@ -9,7 +9,7 @@ structure mlReinforce :> mlReinforce =
 struct
 
 open HolKernel Abbrev boolLib aiLib psMCTS psBigSteps 
-mlTreeNeuralNetwork smlParallel
+  mlNeuralNetwork mlTreeNeuralNetwork smlParallel
 
 val ERR = mk_HOL_ERR "mlReinforce"
 
@@ -32,16 +32,15 @@ type rl_param =
   }
 type 'a pre_extsearch = 
   {
-  write_targetl : string -> 'a list -> unit,
-  read_targetl : string -> 'a list,  
-  write_exl : string -> 'a ex list -> unit,
-  read_exl : string -> 'a ex list,
+  write_target : string -> 'a -> unit,
+  read_target : string -> 'a,  
+  write_exl : string -> 'a rlex -> unit,
+  read_exl : string -> 'a rlex,
   write_player : string -> (bool * dhtnn * bool) -> unit,
   read_player : string -> (bool * dhtnn * bool)
   }
 type 'a extsearch =
-  (bool * mlTreeNeuralNetwork.dhtnn * bool, 'a, bool * 'a ex list) 
-  smlParallel.extspec
+  (bool * dhtnn * bool, 'a, bool * 'a rlex) smlParallel.extspec
 type ('a,'b) rl_preobj =
   {
   rl_param : rl_param,
@@ -111,7 +110,7 @@ fun extsearch_fun rl_preobj (unib,dhtnn,noiseb) target =
 fun mk_extsearch self rl_preobj =
   let 
     val rl_param = #rl_param rl_preobj
-    val {write_targetl,read_targetl,
+    val {write_target,read_target,
          write_exl,read_exl,
          write_player,read_player} = #pre_extsearch rl_preobj
     fun write_result file (b,exl) =
@@ -132,8 +131,8 @@ fun mk_extsearch self rl_preobj =
     function = extsearch_fun rl_preobj,
     write_param = write_player,
     read_param = read_player,
-    write_argl = write_targetl,
-    read_argl = read_targetl,
+    write_arg = write_target,
+    read_arg = read_target,
     write_result = write_result,
     read_result = read_result
     }
@@ -314,7 +313,6 @@ fun rl_init (rl_obj :'a rl_obj) =
     val _ = write_dhtnn (file ^ "_dhtnn") dhtnn
     val (allex,newlevel) = loop_rl_explore rl_obj level true dhtnn []
   in
-    (* write_dhex (file ^ "_allex") allex; *)
     (allex,dhtnn,newlevel)
   end
 
@@ -328,7 +326,6 @@ fun rl_one n rl_obj (allex,dhtnn,level) =
     val _ = write_dhtnn (file ^ "_dhtnn") dhtnn_best
     val (newallex,level2) = loop_rl_explore rl_obj level1 false dhtnn allex
   in
-    (* write_dhex (file ^ "_allex") newallex; *)
     (newallex,dhtnn_best,level2)
   end
 

@@ -198,14 +198,10 @@ val level_param =
    Parallelization (communicating by files)
    ------------------------------------------------------------------------- *)
 
-fun write_targetl file targetl =
-  let val tml = map dest_startboard targetl in
-    export_terml (file ^ "_targetl") tml
-  end
-fun read_targetl file =
-  let val tml = import_terml (file ^ "_targetl") in
-    map mk_startboard tml
-  end
+fun write_target file target =
+  export_terml (file ^ "_target") [dest_startboard target]
+fun read_target file =
+  mk_startboard (only_hd (import_terml (file ^ "_target")))
 
 fun write_exl file exl = 
   let 
@@ -248,8 +244,8 @@ fun read_player file =
 
 val pre_extsearch = 
   {
-  write_targetl = write_targetl,
-  read_targetl = read_targetl,  
+  write_target = write_target,
+  read_target = read_target,  
   write_exl = write_exl,
   read_exl = read_exl,
   write_player = write_player,

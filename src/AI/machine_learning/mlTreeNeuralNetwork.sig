@@ -52,6 +52,8 @@ include Abbrev
   val read_tnnex  : string -> tnnex
   val write_operl : string -> (term * int) list -> unit
   val read_operl  : string -> (term * int) list
+  val write_dhtnnparam : string -> dhtnn_param -> unit
+  val read_dhtnnparam : string -> dhtnn_param  
 
   (* inference *)
   val infer_tnn : tnn -> term -> real list

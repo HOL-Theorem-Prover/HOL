@@ -22,6 +22,11 @@ sig
   type train_param = 
     {ncore: int, verbose: bool,
      learning_rate: real, batch_size: int, nepoch: int}
+  val string_of_trainparam : train_param -> string
+  val trainparam_of_string : string -> train_param
+  type schedule = train_param list
+  val write_schedule : string -> schedule -> unit
+  val read_schedule : string -> schedule
 
   type fpdata = {layer : layer, inv : vect, outv : vect, outnv : vect}
   type bpdata = {doutnv : vect, doutv : vect, dinv : vect, dw : mat}

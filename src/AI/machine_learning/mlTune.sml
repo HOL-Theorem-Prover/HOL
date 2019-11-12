@@ -8,8 +8,8 @@
 structure mlTune :> mlTune =
 struct
 
-open HolKernel Abbrev boolLib aiLib mlTreeNeuralNetwork
-  mlReinforce smlParallel
+open HolKernel Abbrev boolLib aiLib mlNeuralNetwork mlTreeNeuralNetwork 
+  smlParallel
 
 val ERR = mk_HOL_ERR "mlTune"
 
@@ -83,14 +83,14 @@ fun read_param file =
   read_operl (file ^ "_operl"))
   )
 
-fun write_argl file prl =
+fun write_ml_param file param =
   let fun f {batchsize,dim,learningrate,nepoch,nlayer} =
     String.concatWith " "
     [its batchsize, its dim, rts learningrate, its nepoch, its nlayer]
   in
-    writel file (map f prl)
+    writel file [f param]
   end
-fun read_argl file =
+fun read_ml_param file =
   let
     fun f s =
       let val (a,b,c,d,e) = quintuple_of_list (String.tokens Char.isSpace s) in
@@ -103,7 +103,7 @@ fun read_argl file =
         }
       end
   in
-    map f (readl file)
+    f (only_hd (readl file))
   end
 
 fun write_result file (r1,r2,t) = writel file (map rts [r1,r2,t])
@@ -118,8 +118,8 @@ val extspec : (set_param, ml_param, real * real * real) extspec  =
   function = train_tnn_param,
   write_param = write_param,
   read_param = read_param,
-  write_argl = write_argl,
-  read_argl = read_argl,
+  write_arg = write_ml_param,
+  read_arg = read_ml_param,
   write_result = write_result,
   read_result = read_result
   }
@@ -153,12 +153,10 @@ write_summary "my_file" prll;
    Train different dhtnn arichtectures in parallel
    ------------------------------------------------------------------------- *)
 
-fun train_dhtnn_fun () (exl, schedule, dhtnn_param) =
+fun train_dhtnn_fun () (exl,schedule,dhtnnparam) =
   let
-    val randdhtnn = random_dhtnn tnn_param
-    val tob = dfind tob_id tob_dict
-    val exl' = map (fn (a,b,c) => (tob a, b, c)) exl
-    val (dhtnn,t) = add_time (train_dhttnn schedule randtnn) exl
+    val randdhtnn = random_dhtnn dhtnnparam
+    val (dhtnn,t) = add_time (train_dhtnn schedule randdhtnn) exl
   in
     print_endline ("Training time : " ^ rts t);
     dhtnn
@@ -167,56 +165,34 @@ fun train_dhtnn_fun () (exl, schedule, dhtnn_param) =
 fun write_noparam file (_:unit) = ()
 fun read_noparam file = ()
 
-fun write_dhtnn_argl file (exl, schedule, dhtnn_param) =
+fun write_dhtnnarg file (exl,schedule,dhtnnparam) =
   (
-  write_dhex (file ^ "_exl");
+  write_dhex (file ^ "_exl") exl;
   write_schedule (file ^ "_schedule") schedule;
-  write_dhtnn_param (file ^ "_dhtnn_param") dhtnn_param
+  write_dhtnnparam (file ^ "_dhtnn_param") dhtnnparam
   )
-fun read_dhtnn_argl file =
+fun read_dhtnnarg file =
   let
-    val exl = read_dhex exl
-    
-
-(* 
-  todo: 
-  get rid of the send arguments to everyone at the beginning 
-*)
-
-
-fun read_argl file =
-  let
-    fun f s =
-      let val (a,b,c,d,e) = quintuple_of_list (String.tokens Char.isSpace s) in
-        {
-        batchsize = string_to_int a,
-        dim = string_to_int b,
-        learningrate = valOf (Real.fromString c),
-        nepoch = string_to_int d,
-        nlayer = string_to_int e
-        }
-      end
+    val exl = read_dhex (file ^ "_exl")
+    val schedule = read_schedule (file ^ "_schedule")    
+    val dhtnnparam = read_dhtnnparam (file ^ "_dhtnn_param")
   in
-    map f (readl file)
+    (exl,schedule,dhtnnparam)
   end
 
-val train_dhtnn_extspec =
+val traindhtnn_extspec =
   {
-  self = "train_dhtnn_extspec",
-  parallel_dir = default_parallel_dir ^ "__train_dhtnn",
+  self = "traindhtnn_extspec",
+  parallel_dir = default_parallel_dir ^ "_traindhtnn",
   reflect_globals = fn () => "()",
   function = train_dhtnn_fun,
   write_param = write_noparam,
   read_param = read_noparam,
-  write_argl = write_exl,
-  read_argl = read_exl,
+  write_arg = write_dhtnnarg,
+  read_arg = read_dhtnnarg,
   write_result = write_dhtnn,
   read_result = read_dhtnn
   }
-
-
-
-
 
 
 end (* struct *)

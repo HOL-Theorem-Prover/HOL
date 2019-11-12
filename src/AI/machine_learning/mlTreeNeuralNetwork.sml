@@ -38,10 +38,9 @@ type dhtnn_param =
   nlayer_oper: int, nlayer_headeval: int, nlayer_headpoli: int,
   dimin: int, dimpoli: int
   }
+
 type dhtnn =
   {opdict: opdict, headeval: nn, headpoli: nn, dimin: int, dimpoli: int}
-
-type schedule = train_param list
 
 (* -------------------------------------------------------------------------
    Random tree neural network
@@ -245,6 +244,29 @@ fun read_tnnex file =
     val rll = map string_to_reall (readl file_eval)
   in
     combine (terml,rll)
+  end
+
+fun write_dhtnnparam file {operl,nlayer_oper,nlayer_headeval, 
+  nlayer_headpoli,dimin,dimpoli} =
+  (
+  write_operl (file ^ "_operl") operl;
+  writel (file ^ "_param") [String.concatWith " " 
+    (map its [nlayer_oper,nlayer_headeval,nlayer_headpoli,dimin,dimpoli])]
+  )
+fun read_dhtnnparam file =
+  let
+    val operl = read_operl (file ^ "_operl")
+    val (a,b,c,d,e) = quintuple_of_list (map string_to_int 
+      (String.tokens Char.isSpace (only_hd (readl (file ^ "_param")))))
+  in
+    {
+    operl = operl,
+    nlayer_oper = a,
+    nlayer_headeval = b, 
+    nlayer_headpoli = c,
+    dimin = d,
+    dimpoli = e
+    }
   end
 
 (* -------------------------------------------------------------------------
