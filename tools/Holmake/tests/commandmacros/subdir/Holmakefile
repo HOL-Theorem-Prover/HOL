@@ -1,4 +1,3 @@
-CLINE_OPTIONS = --no_overlay --poly_not_hol
 INCLUDES = $(HOLDIR)/tools/cmp
 
 .PHONY: test
