@@ -51,7 +51,7 @@ fun 'a graphbuildj1 static_info =
             | SOME (n, nI : 'a nodeInfo) =>
               let
                 val target_d = #target nI
-                val target_s = dep_toString target_d
+                val target_s = tgt_toString target_d
                 val extra = #extra nI
                 fun eCompile ds = Compile(ds,extra)
                 fun eBuildArticle (s,deps) = BuildArticle(s,deps,extra)
@@ -71,11 +71,11 @@ fun 'a graphbuildj1 static_info =
                       BuiltInCmd (BIC_Compile, ii) =>
                       (diagK("J1Build: Running built-in compile on " ^
                              target_s);
-                       hmdir.eqdir (#dir nI) (#1 target_d) orelse
+                       hmdir.eqdir (#dir nI) (hm_target.dirpart target_d) orelse
                        raise Fail
                          ("Can't have built-in commands in different\
                           \ directories from target "^target_s);
-                       case #2 target_d of
+                       case hm_target.filepart target_d of
                            UI c => k (upd1 n) (bc ii (eCompile deps) (SIG c))
                          | UO c => k (upd1 n) (bc ii (eCompile deps) (SML c))
                          | ART (RawArticle s) =>
@@ -115,7 +115,7 @@ fun 'a graphbuildj1 static_info =
                             in
                               if not res_b andalso ignore_error
                               then
-                                (warn ("[" ^ dep_toString target_d ^
+                                (warn ("[" ^ tgt_toString target_d ^
                                        "] Error (ignored)");
                                  k (updall (n::others)) true)
                               else k (updall (n::others)) res_b
@@ -123,7 +123,8 @@ fun 'a graphbuildj1 static_info =
                       end
                     | NoCmd => k (upd1 n) true
               in
-                if not (#phony nI) andalso depexists_readable target_d andalso
+                if not (#phony nI) andalso
+                   hm_target.tgtexists_readable target_d andalso
                    #seqnum nI = 0
                 then
                   let
@@ -136,7 +137,7 @@ fun 'a graphbuildj1 static_info =
                         NONE => (diagK ("Can skip work on "^target_s);
                                  k (upd1 n) true)
                       | SOME (_,d) =>
-                        (diagK ("Dependency "^dep_toString d^
+                        (diagK ("Dependency " ^ tgt_toString d ^
                                 " forces rebuild of "^target_s);
                          stdprocess())
                   end

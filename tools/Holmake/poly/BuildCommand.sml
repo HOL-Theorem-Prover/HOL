@@ -89,16 +89,17 @@ end
 fun addPath incs (file : string) : dep =
     let
       val dir = OS.FileSys.getDir()
+      open hm_target
     in
-      if OS.Path.dir file <> "" then filestr_to_dep file
+      if OS.Path.dir file <> "" then filestr_to_tgt file
       else let
         val p = List.find (fn p =>
                               FileSys.access (p ++ (file ^ ".ui"), []))
                           (dir :: incs)
       in
         case p of
-            NONE => (hmdir.curdir(), toFile file)
-          | SOME p => (hmdir.fromPath {origin = dir, path = p}, toFile file)
+            NONE => mk(hmdir.curdir(), toFile file)
+          | SOME p => mk(hmdir.fromPath {origin = dir, path = p}, toFile file)
       end
     end
 
@@ -133,22 +134,23 @@ fun finish_compilation warn depMods0 filename tgt =
        OS.Process.success)
 
 fun poly_compile warn diag quietp file I (deps : dep list) objs = let
+  open hm_target
   val _ = diag (fn _ => "poly-compiling " ^ fromFile file ^ "\n  deps = [" ^
-                        concatWithf dep_toString ", " deps ^ "]\n  objs = [" ^
+                        concatWithf tgt_toString ", " deps ^ "]\n  objs = [" ^
                         String.concatWith ", " objs ^ "]")
   val modName = fromFileNoSuf file
   val deps = let
     open Binaryset
-    val dep_set0 = addList (empty_dset, deps)
+    val dep_set0 = addList (empty_tgtset, deps)
     val {deps = extra_deps, ...} =
         Holdep.main {assumes = [], includes = I, diag = diag,
                      fname = fromFile file}
     val dep_set =
-        addList (dep_set0, map Holmake_tools.filestr_to_dep extra_deps)
+        addList (dep_set0, map filestr_to_tgt extra_deps)
   in
     listItems dep_set
   end
-  val depfiles = map (toFile o dep_toString) deps
+  val depfiles = map (toFile o tgt_toString) deps
   val objfiles = map toFile objs
   fun mapthis (Unhandled _) = NONE
     | mapthis (DAT _) = NONE
@@ -156,11 +158,11 @@ fun poly_compile warn diag quietp file I (deps : dep list) objs = let
   val depMods = List.mapPartial mapthis depfiles
   val objMods = List.map (addPath I) (List.mapPartial mapthis objfiles)
   fun usePathVars p = holpathdb.reverse_lookup {path = p}
-  val depMods = List.map usePathVars (depMods @ map dep_toString objMods)
+  val depMods = List.map usePathVars (depMods @ map tgt_toString objMods)
   val say = if quietp then (fn s => ())
             else (fn s => TextIO.output(TextIO.stdOut, s ^ "\n"))
   val _ = say ("HOLMOSMLC -c " ^ fromFile file)
-  val filename = dep_toString (filestr_to_dep (fromFile file))
+  val filename = tgt_toString (filestr_to_tgt (fromFile file))
   val _ = diag (fn _ => "Writing target with dependencies: " ^
                         String.concatWith ", " depMods)
 in
@@ -234,6 +236,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
 
   fun poly_link quietp extra result files =
   let
+    open hm_target
     val _ = if not quietp then
               TextIO.output(TextIO.stdOut,
                             "HOLMOSMLC -o " ^ result ^ " " ^
@@ -249,7 +252,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     p ("set -e");
     p (protect(fullPath [HOLDIR, "bin", "buildheap"]) ^ " --gcthreads=1 " ^
        (case #holheap extra of NONE => "--poly"
-                             | SOME d => "--holstate="^dep_toString d) ^ " " ^
+                             | SOME d => "--holstate="^tgt_toString d) ^ " " ^
        (if isSome debug then "--dbg " else "") ^
        String.concatWith " " (extra_poly_cline()) ^ " " ^
        String.concatWith " " (map protect files));
@@ -306,7 +309,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                  NONE => []
                | SOME i => ["--mt=" ^ Int.toString i]) @
             (case #holheap extra of NONE => "--poly"
-                                  | SOME d => "--holstate="^dep_toString d) ::
+                                  | SOME d => "--holstate="^tgt_toString d) ::
             extra_poly_cline() @
             ((if isSome debug then ["--dbg"] else []) @ objectfiles) @
             List.concat (map (fn f => ["-c", f]) expecteds)
@@ -363,8 +366,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           end
         | BuildArticle (s0, deps : dep list, extra) =>
           let
+            open hm_target
             val s = s0 ^ ".art"
-            val dep_set = Binaryset.addList(empty_dset, deps)
+            val dep_set = Binaryset.addList(empty_tgtset, deps)
             val oldscript_str = s0 ^ "Script.sml"
             val fakescript_str = s ^ "Script.sml"
             val _ = Posix.FileSys.link {old = oldscript_str,
@@ -373,9 +377,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                 case opentheory of SOME uo => [uo]
                                  | NONE => ["loggingHolKernel.uo"]
             val deps =
-                (Binaryset.delete(dep_set, filestr_to_dep oldscript_str)
+                (Binaryset.delete(dep_set, filestr_to_tgt oldscript_str)
                                  |> Binaryset.listItems) @
-                [filestr_to_dep fakescript_str]
+                [filestr_to_tgt fakescript_str]
             val ((script,inters),objectfiles) =
                 setup_script s (deps,extra) loggingextras
           in

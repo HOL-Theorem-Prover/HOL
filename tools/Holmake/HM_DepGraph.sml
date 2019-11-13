@@ -74,11 +74,8 @@ type 'a t = { nodes : (node, 'a nodeInfo) Map.dict,
               command_map : (command,node list) Map.dict }
 
 
-val tgt_compare = pair_compare(hmdir.compare, String.compare)
-
-
 fun empty() : 'a t = { nodes = Map.mkDict node_compare,
-                       target_map = Map.mkDict dep_compare,
+                       target_map = Map.mkDict hm_target.compare,
                        command_map = Map.mkDict command_compare }
 fun fupd_nodes f ({nodes, target_map, command_map}: 'a t) : 'a t =
   {nodes = f nodes, target_map = target_map, command_map = command_map}
@@ -170,7 +167,7 @@ fun nodeInfo_toString (nI : 'a nodeInfo) =
     open Holmake_tools
     val {target,status,command,dependencies,seqnum,phony,dir,...} = nI
   in
-    dep_toString target ^ (if phony then "[PHONY]" else "") ^
+    tgt_toString target ^ (if phony then "[PHONY]" else "") ^
     "(" ^ Int.toString seqnum ^ ") " ^
     "deps{" ^String.concatWith "," (map (Int.toString o #1) dependencies) ^ "}"^
     status_toString status ^ " : " ^
@@ -208,7 +205,7 @@ fun mk_dirneeded d g =
     let
       fun upd_nI nI =
           if hmdir.compare(#dir nI, d) <> EQUAL then
-            case (depexists_readable (#target nI), #status nI) of
+            case (hm_target.tgtexists_readable (#target nI), #status nI) of
                 (true, Pending _) => setStatus Succeeded nI
               | (false, Pending {needed}) => setStatus(Failed{needed=needed})nI
               | _ => nI
@@ -244,12 +241,13 @@ fun indentedlist f l =
 
 fun toString g =
     let
+      open hm_target
       val (successes, others) =
           List.partition (fn (_,nI) => #status nI = Succeeded) (listNodes g)
       fun prSuccess (n,{dir,target,...}) =
           Int.toString n ^ ":" ^
-          dep_toString target ^
-          (if hmdir.compare(dir,#1 target) <> EQUAL then
+          tgt_toString target ^
+          (if hmdir.compare(dir,dirpart target) <> EQUAL then
              "[ run in " ^ hmdir.pretty_dir dir ^ "]"
            else "")
       fun prNode(n,nI) = "[" ^ node_toString n ^ "], " ^ nodeInfo_toString nI
@@ -261,7 +259,7 @@ fun toString g =
 
 fun postmortem (outs : Holmake_tools.output_functions) (status,g) =
   let
-    val pr = dep_toString
+    val pr = tgt_toString
     val {diag,tgtfatal,...} = outs
     val diagK = diag "postmortem" o (fn x => fn _ => x)
     fun pending_or_failed ps fs ns =
@@ -286,7 +284,7 @@ fun postmortem (outs : Holmake_tools.output_functions) (status,g) =
           diagK ("True pending: \n" ^ concatWithf str "\n" ps);
           if not (null fs') then
             tgtfatal ("Don't know how to build necessary target(s): " ^
-                      concatWithf (dep_toString o nI_target) ", " fs')
+                      concatWithf (tgt_toString o nI_target) ", " fs')
           else ();
           OS.Process.failure
         end

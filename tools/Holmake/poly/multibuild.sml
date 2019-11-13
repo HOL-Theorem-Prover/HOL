@@ -75,7 +75,7 @@ fun graphbuild optinfo g =
             val dir = Holmake_tools.hmdir.toAbsPath (#dir nI)
             val _ = is_pending (#status nI) orelse
                     raise Fail "runnable not pending"
-            val target_s = dep_toString (#target nI)
+            val target_s = tgt_toString (#target nI)
             val tag = if OS.Path.dir target_s = dir then OS.Path.file target_s
                       else target_s
             fun stdprocess() =
@@ -181,7 +181,8 @@ fun graphbuild optinfo g =
                                 g
                   end
           in
-            if not (#phony nI) andalso depexists_readable (#target nI) andalso
+            if not (#phony nI) andalso
+               hm_target.tgtexists_readable (#target nI) andalso
                #seqnum nI = 0
                (* necessary to avoid dropping out of a multi-command execution
                   part way through *)
@@ -196,8 +197,8 @@ fun graphbuild optinfo g =
                     NONE => (diag ("Can skip work on "^target_s);
                              genjob (updnode (n, Succeeded) g, true))
                   | SOME (_,d) =>
-                    (diag ("Dependency "^dep_toString d^" forces rebuild of "^
-                           target_s);
+                    (diag ("Dependency " ^ tgt_toString d ^
+                           " forces rebuild of "^ target_s);
                      stdprocess())
               end
             else

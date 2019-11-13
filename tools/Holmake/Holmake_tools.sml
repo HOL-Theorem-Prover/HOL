@@ -614,13 +614,52 @@ fun find_files ds P =
     recurse []
   end
 
+(* targets are also dependencies, so the naming convention is to use variable
+   names like deps and tgts both *)
+structure hm_target =
+struct
+type t = (hmdir.t * File * string option)
+fun mk(d,f) = (d,f,NONE)
+fun dirpart (d:t) = #1 d
+fun filepart (d:t) = #2 d
+fun HMF_text (t:t) = #3 t
+fun setFile f (d,_,sopt) = (d,f,sopt)
+fun setHMF_text s (d,f,_) = (d,f,SOME s)
+fun toString (d,f,_) = OS.Path.concat (hmdir.toAbsPath d, fromFile f)
+val compare = inv_img_cmp (fn (d,f,_) => (d,f))
+                          (pair_compare (hmdir.compare, file_compare))
+val empty_tgtset : t Binaryset.set = Binaryset.empty compare
+fun tgtset_diff dl1 dl2 =
+    let
+      fun recurse [] = []
+        | recurse (d::ds) =
+          (if List.exists (fn d' => compare(d,d') = EQUAL) dl2 then []
+           else [d]) @ recurse ds
+    in
+      recurse dl1
+    end
+fun localFile f = (hmdir.curdir(), f, NONE)
+fun filestr_to_tgt s =
+    let
+      val {dir,file} = OS.Path.splitDirFile s
+      val dir' = hmdir.extendp {base = hmdir.curdir(), extension = dir}
+    in
+      (dir',toFile file,NONE)
+    end
+fun tgtexists_readable d = exists_readable (toString d)
+end (* struct *)
+
+type dep = hm_target.t
+val tgt_toString = hm_target.toString
+
 (* dependency analysis *)
 exception HolDepFailed
 fun runholdep {ofs, extras, includes, arg, destination} = let
   val {chatty, diag, warn, ...} : output_functions = ofs
   val diagK = diag "holdep" o K
   val _ = chatty ("Analysing "^fromFile arg)
-  fun buildables (d,f) = let
+  fun buildables tgt  = let
+    val d = hm_target.dirpart tgt val f = hm_target.filepart tgt
     val files =
         case f of
           SML (ss as Script t) => [UI ss, UO ss, SML (Theory t), DAT t,
@@ -661,15 +700,6 @@ in
   closeOut outstr
 end
 
-fun filestr_to_dep s =
-    let
-      val {dir,file} = OS.Path.splitDirFile s
-      val dir' = hmdir.extendp {base = hmdir.curdir(), extension = dir}
-    in
-      (dir',toFile file)
-    end
-
-
 (* pull out a list of files that target depends on from depfile.  *)
 (* All files on the right of a colon are assumed to be dependencies.
    This is despite the fact that holdep produces two entries when run
@@ -679,31 +709,6 @@ fun filestr_to_dep s =
    atomic step from fooScript.sml. *)
 fun first f [] = NONE
   | first f (x::xs) = case f x of NONE => first f xs | res => res
-
-fun get_dependencies_from_file depfile = let
-  fun get_whole_file s = let
-    open TextIO
-    val instr = openIn (normPath s)
-  in
-    inputAll instr before closeIn instr
-  end
-  fun parse_result s = let
-    val lines = String.fields (fn c => c = #"\n") (collapse_bslash_lines s)
-    fun process_line line = let
-      val (lhs0, rhs0) = Substring.splitl (fn c => c <> #":")
-                                          (Substring.full line)
-      val lhs = Substring.string lhs0
-      val rhs = Substring.string (Substring.slice(rhs0, 1, NONE))
-        handle Subscript => ""
-    in
-      map filestr_to_dep (realspace_delimited_fields rhs)
-    end
-  in
-    List.concat (map process_line lines)
-  end
-in
-  parse_result (get_whole_file depfile)
-end
 
 (* a function that given a product file, figures out the argument that
    should be passed to runholdep in order to get back secondary
@@ -720,9 +725,35 @@ fun holdep_arg (UO c) = SOME (SML c)
 
 fun mk_depfile_name DEPDIR s = fullPath [DEPDIR, s^".d"]
 
-type dep = (hmdir.t * File)
-fun dirpart (d:dep) = #1 d
-fun filepart (d:dep) = #2 d
+
+fun get_dependencies_from_file depfile = let
+  open hm_target
+  fun get_whole_file s = let
+    open TextIO
+    val instr = openIn (normPath s)
+  in
+    inputAll instr before closeIn instr
+  end
+  fun parse_result s = let
+    val lines = String.fields (fn c => c = #"\n") (collapse_bslash_lines s)
+    fun process_line line = let
+      val (lhs0, rhs0) = Substring.splitl (fn c => c <> #":")
+                                          (Substring.full line)
+      val lhs = Substring.string lhs0
+      val rhs = Substring.string (Substring.slice(rhs0, 1, NONE))
+        handle Subscript => ""
+    in
+      map filestr_to_tgt (realspace_delimited_fields rhs)
+    end
+  in
+    List.concat (map process_line lines)
+  end
+in
+  parse_result (get_whole_file depfile)
+end
+
+
+
 
 infix forces_update_of
 fun (f1 forces_update_of f2) = let
@@ -731,29 +762,14 @@ in
   FileSys.access(f1, []) andalso
   (not (FileSys.access(f2, [])) orelse FileSys.modTime f1 > FileSys.modTime f2)
 end
-val dep_compare = pair_compare (hmdir.compare, file_compare)
-val empty_dset : dep Binaryset.set = Binaryset.empty dep_compare
-fun dep_toString (d,f) =
-    OS.Path.concat (hmdir.toAbsPath d, fromFile f)
-fun depset_diff dl1 dl2 =
-    let
-      fun recurse [] = []
-        | recurse (d::ds) =
-          (if List.exists (fn d' => dep_compare(d,d') = EQUAL) dl2 then []
-           else [d]) @ recurse ds
-    in
-      recurse dl1
-    end
-
 infix depforces_update_of
 fun (d1 depforces_update_of d2) =
-  dep_toString d1 forces_update_of dep_toString d2
-fun depexists_readable d = exists_readable (dep_toString d)
+    tgt_toString d1 forces_update_of tgt_toString d2
 
-fun localFile f = (hmdir.curdir(), f)
 
 fun get_direct_dependencies {incinfo,DEPDIR,output_functions,extra_targets} f =
 let
+  open hm_target
   val fname = fromFile f
   val arg = holdep_arg f  (* arg is file to analyse for dependencies *)
   val {includes,preincludes} = incinfo
@@ -831,6 +847,7 @@ fun generate_all_plausible_targets warn first_target =
         SOME d => [d]
       | NONE =>
         let
+          open hm_target
           val cds = OS.FileSys.openDir "."
           fun not_a_dot f = not (String.isPrefix "." f)
           fun ok_file f =
@@ -858,7 +875,7 @@ fun generate_all_plausible_targets warn first_target =
             | src_to_target _ = raise Fail "Can't happen"
           val initially = map (localFile o src_to_target o toFile) src_files
         in
-          listItems (set_addList initially empty_dset)
+          listItems (set_addList initially empty_tgtset)
         end
 
 

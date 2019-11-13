@@ -1,0 +1,12 @@
+CLINE_OPTIONS = --no_overlay --poly_not_hol
+INCLUDES = $(HOLDIR)/tools/cmp
+
+.PHONY: test
+
+test: atmacro $(dprot $(HOLDIR)/tools/cmp/cmp.exe) expected
+	$(protect $(HOLDIR)/tools/cmp/cmp.exe) $< expected
+
+./atmacro: dep
+	echo "Target is $@, dep is $<" > atmacro
+
+EXTRA_CLEANS = atmacro
