@@ -114,15 +114,15 @@ New examples:
 
     The theory behind the AKS algorithm is delivered in __AKS/theories__,
     starting with `AKSintroTheory`, the introspective relation,
-    culminating in `AKSimprovedTheory` that the AKS algorithm is a primality test.
+    culminating in `AKSimprovedTheory`, proving that the AKS algorithm is a primality test.
     The underlying theories are based on finite fields, hence making use of
     `finitefieldTheory` in __algebra__.
 
     An implementation of the AKS algorithm is shown to execute in polynomial-time:
-    the pseduo-codes of subroutines are give in __AKS/compute__, and the corresponding
-    implementation in monadic styles are given in __AKS/machine__, which includes a
+    the pseudo-codes of subroutines are given in __AKS/compute__, and the corresponding
+    implementations in monadic style are given in __AKS/machine__, which includes a
     simple machine model outlined in `countMonadTheory` and `countMacroTheory`.
-    Run-time analysis of subroutines are based on `loopTheory` in __simple_complexity__.
+    Run-time analysis of subroutines is based on `loopTheory` in __simple_complexity__.
 
     The AKS main theorems and proofs have been cleaned up in `AKScleanTheory`.
     For details, please refer to his [PhD thesis](http://hdl.handle.net/1885/177195).
