@@ -9,7 +9,7 @@
 structure psBigSteps :> psBigSteps =
 struct
 
-open HolKernel Abbrev boolLib aiLib psMCTS smlParallel mlTreeNeuralNetwork
+open HolKernel Abbrev boolLib aiLib psMCTS smlParallel
 
 val ERR = mk_HOL_ERR "psBigSteps"
 
