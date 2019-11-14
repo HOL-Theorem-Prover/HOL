@@ -10,7 +10,7 @@ structure mleRewrite :> mleRewrite =
 struct
 
 open HolKernel boolLib Abbrev aiLib smlParallel psMCTS psTermGen
-  mlNeuralNetwork mlTreeNeuralNetwork mlTacticData 
+  mlNeuralNetwork mlTreeNeuralNetwork mlTacticData
   mlReinforce mleLib mleArithData
 
 val ERR = mk_HOL_ERR "mleRewrite"
@@ -169,7 +169,7 @@ fun read_target file =
   mk_startboard (only_hd (import_terml (file ^ "_target")))
 
 fun write_boardl file boardl =
-  let 
+  let
     val (l1,l2) = split boardl
     val (l1a,l1b) = split l1
   in
@@ -185,9 +185,9 @@ fun read_boardl file =
   in
     combine (combine (orgl,posl), nl)
   end
-  
-fun write_exl file exl = 
-  let val (boardl,evall,polil) = split_triple exl in 
+
+fun write_exl file exl =
+  let val (boardl,evall,polil) = split_triple exl in
     write_boardl (file ^ "_boardl") boardl;
     writel (file ^ "_eval") (map reall_to_string evall);
     writel (file ^ "_poli") (map reall_to_string polil)
@@ -203,16 +203,16 @@ fun read_exl file =
 
 fun write_splayer file (unib,dhtnn,noiseb,playerid,nsim) =
   (
-  write_dhtnn (file ^ "_dhtnn") dhtnn; 
+  write_dhtnn (file ^ "_dhtnn") dhtnn;
   writel (file ^ "_flags") [String.concatWith " " (map bts [unib,noiseb])];
-  writel (file ^ "_playerid") [playerid]; 
+  writel (file ^ "_playerid") [playerid];
   writel (file ^ "_nsim") [its nsim]
   )
 fun read_splayer file =
   let
     val dhtnn = read_dhtnn (file ^ "_dhtnn")
-    val (unib,noiseb) = 
-      pair_of_list (map string_to_bool 
+    val (unib,noiseb) =
+      pair_of_list (map string_to_bool
         (String.tokens Char.isSpace (only_hd (readl (file ^ "_flags")))))
     val playerid = only_hd (readl (file ^ "_playerid"))
     val nsim = string_to_int (only_hd (readl (file ^ "_nsim")))
@@ -220,10 +220,10 @@ fun read_splayer file =
     (unib,dhtnn,noiseb,playerid,nsim)
   end
 
-val pre_extsearch = 
+val pre_extsearch =
   {
   write_target = write_target,
-  read_target = read_target,  
+  read_target = read_target,
   write_exl = write_exl,
   read_exl = read_exl,
   write_splayer = write_splayer,
@@ -234,14 +234,14 @@ val pre_extsearch =
    Player
    ------------------------------------------------------------------------- *)
 
-val schedule = 
+val schedule =
   [{ncore = 1, verbose = true,
-    learning_rate = 0.02, 
+    learning_rate = 0.02,
     batch_size = 16, nepoch = 100}]
 
 val dhtnn_param =
   {
-  operl = rewrite_operl, nlayer_oper = 2, 
+  operl = rewrite_operl, nlayer_oper = 2,
   nlayer_headeval = 2, nlayer_headpoli = 2,
   dimin = 12, dimpoli = length movel
   }
@@ -265,8 +265,8 @@ val level_param =
   }
 
 val rl_param =
-  { 
-  expname = expname, ex_window = 40000, ex_uniq = false, 
+  {
+  expname = expname, ex_window = 40000, ex_uniq = false,
   ngen = 100, ncore_search = 40,
   nsim_start = 1600, nsim_explore = 1600, nsim_compete = 1600,
   decay = 0.99
@@ -278,7 +278,7 @@ val rlpreobj : (board,move) rlpreobj =
   level_param = level_param,
   max_bigsteps = max_bigsteps,
   game = game,
-  pre_extsearch = pre_extsearch, 
+  pre_extsearch = pre_extsearch,
   tobdict = tobdict,
   dplayerl = [dplayer]
   }

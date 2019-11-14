@@ -14,7 +14,7 @@ open HolKernel Abbrev boolLib aiLib psMCTS smlParallel mlTreeNeuralNetwork
 val ERR = mk_HOL_ERR "psBigSteps"
 
 (* -------------------------------------------------------------------------
-   Type for examples and distribution derived from a policy 
+   Type for examples and distribution derived from a policy
    ------------------------------------------------------------------------- *)
 
 type 'a rlex = ('a * real list * real list) list
@@ -26,23 +26,23 @@ type 'a rlex = ('a * real list * real list) list
 fun is_prefix l1 l2 = case (l1,l2) of
     ([],_) => true
   | (_,[]) => false
-  | (a1 :: m1, a2 :: m2) => a1 = a2 andalso is_prefix m1 m2 
+  | (a1 :: m1, a2 :: m2) => a1 = a2 andalso is_prefix m1 m2
 
 fun is_suffix l1 l2 = is_prefix (rev l1) (rev l2)
 
 fun rm_prefix l1 l2 = case (l1,l2) of
     ([],_) => l2
   | (_,[]) => raise ERR "rm_prefix" "1"
-  | (a1 :: m1, a2 :: m2) => 
+  | (a1 :: m1, a2 :: m2) =>
     (if a1 = a2 then rm_prefix m1 m2 else raise ERR "rm_prefix" "2")
 
 fun rm_suffix l1 l2 = rev (rm_prefix (rev l1) (rev l2))
 
-fun cut_tree id tree = 
+fun cut_tree id tree =
   let
     val l = filter (fn x => is_suffix id (fst x)) (dlist tree)
     fun change_node (x,{pol,board,sum,vis,status}) =
-      (rm_suffix id x, 
+      (rm_suffix id x,
         {pol=map_snd (rm_suffix id) pol,
          board=board,sum=sum,vis=vis,status=status})
   in
@@ -87,9 +87,9 @@ fun debug_ep obj dis root =
 fun select_bigstep obj tree =
   let
     val (dis,_) = make_distrib tree
-    val (_,cid) = 
+    val (_,cid) =
       if #temp_flag obj then select_in_distrib dis else best_in_distrib dis
-    val _ = debug_ep obj dis (dfind [] tree) 
+    val _ = debug_ep obj dis (dfind [] tree)
   in
     cid
   end
@@ -124,12 +124,12 @@ fun add_rootex game tree exl =
 type ('a,'b) bigsteps_obj =
   {
   verbose : bool,
-  temp_flag : bool, 
+  temp_flag : bool,
   max_bigsteps : 'a -> int,
   mcts_obj : ('a,'b) psMCTS.mcts_obj
   }
 
-fun debug_board obj game board = 
+fun debug_board obj game board =
   if #verbose obj
   then print_endline ((#string_of_board game) board)
   else ()
@@ -143,13 +143,13 @@ fun loop_bigsteps (n,nmax) obj (exl,rootl) tree =
     val status = #status_of game board
     val _ = debug_board obj game board
   in
-    if status <> Undecided orelse n >= nmax 
+    if status <> Undecided orelse n >= nmax
       then (status = Win,exl,rootl) else
     let
       val newtree = mcts mcts_obj tree
       val root = dfind [] newtree
       val cid = select_bigstep obj newtree
-      val cuttree = 
+      val cuttree =
         if #noise_flag mcts_param
         then starttree_of mcts_obj (#board (dfind cid newtree))
         else cut_tree cid newtree
@@ -179,7 +179,7 @@ load "psBigSteps"; open psBigSteps;
 
 val mcts_param =
   {
-  nsim = 16000, 
+  nsim = 16000,
   stopatwin_flag = false,
   decay = 1.0,
   explo_coeff = 2.0,
@@ -198,7 +198,7 @@ val mcts_obj : (toy_board,toy_move) mcts_obj =
 val bigsteps_obj: (toy_board,toy_move) psBigSteps.bigsteps_obj =
   {
   verbose = true,
-  temp_flag = false, 
+  temp_flag = false,
   max_bigsteps = (fn (a,b) => 2*b),
   mcts_obj = mcts_obj
   };

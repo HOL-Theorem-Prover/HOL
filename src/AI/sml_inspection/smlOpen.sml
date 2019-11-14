@@ -79,7 +79,7 @@ fun run_buildheap core_flag ofileo file =
     val bare = OS.Path.base file'
     val buildheap = HOLDIR ^ "/bin/buildheap"
     val filel = find_genscriptdep file
-    val ofile = 
+    val ofile =
       if isSome ofileo then valOf ofileo else buildheap ^ "/" ^ bare
     val state =
       if core_flag then HOLDIR ^ "/bin/hol.state0" else find_heapname file

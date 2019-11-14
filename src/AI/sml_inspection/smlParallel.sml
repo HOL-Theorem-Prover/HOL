@@ -338,7 +338,7 @@ and boss_collect pd threadl rr arglv warg (pendingl,runningl,completedl) =
 fun boss_start_worker pd code_of wid =
   (
   writel (widscript_file pd wid) (code_of wid);
-  smlOpen.run_buildheap false 
+  smlOpen.run_buildheap false
     (SOME (widscript_file pd wid ^ ".out")) (widscript_file pd wid)
   )
 
@@ -367,9 +367,9 @@ fun worker_start wid es =
     val pd = #parallel_dir es
     val param = #read_param es (param_file pd)
     fun f () =
-      let 
+      let
         val arg = (#read_arg es) (widarg_file pd wid)
-        val r = (#function es) param arg 
+        val r = (#function es) param arg
       in
         (#write_result es) (result_file pd wid) r;
         writel_atomic (widout_file pd wid) ["done"]

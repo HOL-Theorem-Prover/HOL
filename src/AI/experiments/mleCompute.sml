@@ -32,10 +32,10 @@ fun train_fixed () =
     val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``)
     val tnn_param =
       {dimin = 12, dimout = 4,
-       nlayer_headnn = 2, nlayer_oper = 2, 
+       nlayer_headnn = 2, nlayer_oper = 2,
        operl = operl}
     val schedule =
-      [{batch_size = 16, learning_rate = 0.02, 
+      [{batch_size = 16, learning_rate = 0.02,
         ncore = 4, nepoch = 100, verbose = true}]
     val randtnn = random_tnn tnn_param
     val tnn = train_tnn schedule randtnn (exl,[])

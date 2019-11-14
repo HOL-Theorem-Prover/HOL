@@ -8,7 +8,7 @@
 structure mlTune :> mlTune =
 struct
 
-open HolKernel Abbrev boolLib aiLib mlNeuralNetwork mlTreeNeuralNetwork 
+open HolKernel Abbrev boolLib aiLib mlNeuralNetwork mlTreeNeuralNetwork
   smlParallel
 
 val ERR = mk_HOL_ERR "mlTune"
@@ -44,15 +44,15 @@ fun train_tnn_param ((ncore,dimout),(train,test,operl))
     val tnn_param =
       {
       dimin = dim, dimout = dimout,
-      nlayer_headnn = nlayer, nlayer_oper = nlayer, 
+      nlayer_headnn = nlayer, nlayer_oper = nlayer,
       operl = operl
       }
     val randtnn = random_tnn tnn_param
     val train_param =
       {
       batch_size = batchsize,
-      learning_rate = learningrate, 
-      ncore = ncore, 
+      learning_rate = learningrate,
+      ncore = ncore,
       nepoch = nepoch,
       verbose = true
       }
@@ -174,7 +174,7 @@ fun write_dhtnnarg file (exl,schedule,dhtnnparam) =
 fun read_dhtnnarg file =
   let
     val exl = read_dhex (file ^ "_exl")
-    val schedule = read_schedule (file ^ "_schedule")    
+    val schedule = read_schedule (file ^ "_schedule")
     val dhtnnparam = read_dhtnnparam (file ^ "_dhtnn_param")
   in
     (exl,schedule,dhtnnparam)

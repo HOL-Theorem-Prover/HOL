@@ -32,21 +32,21 @@ sig
 
   type ('a,'b) player = 'a -> real * ('b * real) list
   val uniform_player : ('a,'b) game -> ('a,'b) player
-  
+
   type mcts_param =
     {
-    nsim : int, 
+    nsim : int,
     stopatwin_flag : bool,
-    decay : real, 
+    decay : real,
     explo_coeff : real,
-    noise_flag : bool, 
-    noise_coeff : real, 
+    noise_flag : bool,
+    noise_coeff : real,
     noise_alpha : real
     }
 
   type ('a,'b) mcts_obj =
     {mcts_param : mcts_param, game : ('a,'b) game, player : ('a,'b) player}
-  
+
   val starttree_of : ('a,'b) mcts_obj -> 'a -> ('a,'b) tree
   val mcts : ('a,'b) mcts_obj -> ('a,'b) tree -> ('a,'b) tree
 

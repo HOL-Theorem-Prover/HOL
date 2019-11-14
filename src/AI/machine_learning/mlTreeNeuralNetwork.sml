@@ -30,7 +30,7 @@ type tnn_param =
   nlayer_oper: int, nlayer_headnn: int,
   dimin: int, dimout: int
   }
-  
+
 type dhex = (term * real list * real list) list
 type dhtnn_param =
   {
@@ -47,7 +47,7 @@ type dhtnn =
    ------------------------------------------------------------------------- *)
 
 fun oper_nn (dimin,nlayer) (_,a) =
-  if a = 0 then random_nn (idactiv,didactiv) [0,dimin] else 
+  if a = 0 then random_nn (idactiv,didactiv) [0,dimin] else
   random_nn (tanh,dtanh) (List.tabulate (nlayer,fn _ => a * dimin) @ [dimin])
 
 fun random_opdict (dimin,nlayer,operl) =
@@ -246,23 +246,23 @@ fun read_tnnex file =
     combine (terml,rll)
   end
 
-fun write_dhtnnparam file {operl,nlayer_oper,nlayer_headeval, 
+fun write_dhtnnparam file {operl,nlayer_oper,nlayer_headeval,
   nlayer_headpoli,dimin,dimpoli} =
   (
   write_operl (file ^ "_operl") operl;
-  writel (file ^ "_param") [String.concatWith " " 
+  writel (file ^ "_param") [String.concatWith " "
     (map its [nlayer_oper,nlayer_headeval,nlayer_headpoli,dimin,dimpoli])]
   )
 fun read_dhtnnparam file =
   let
     val operl = read_operl (file ^ "_operl")
-    val (a,b,c,d,e) = quintuple_of_list (map string_to_int 
+    val (a,b,c,d,e) = quintuple_of_list (map string_to_int
       (String.tokens Char.isSpace (only_hd (readl (file ^ "_param")))))
   in
     {
     operl = operl,
     nlayer_oper = a,
-    nlayer_headeval = b, 
+    nlayer_headeval = b,
     nlayer_headpoli = c,
     dimin = d,
     dimpoli = e
@@ -296,7 +296,7 @@ fun prepare_dhex dhex =
   end
 
 (* -------------------------------------------------------------------------
-   Fixed neural embedding derived by the name of the variable. 
+   Fixed neural embedding derived by the name of the variable.
    It is a useful hack for fixing an embedding in one leaf of the tree.
    ------------------------------------------------------------------------- *)
 
@@ -307,22 +307,22 @@ fun embed_nn embed =
 
 val tnn_numvar_prefix = "tnn_numvar_"
 
-fun is_numvar f = 
-  is_var f andalso  
-  let val fs = fst (dest_var f) in 
-    String.isPrefix tnn_numvar_prefix fs andalso 
-    all Char.isDigit 
+fun is_numvar f =
+  is_var f andalso
+  let val fs = fst (dest_var f) in
+    String.isPrefix tnn_numvar_prefix fs andalso
+    all Char.isDigit
       (snd (part_n (String.size tnn_numvar_prefix) (explode fs)))
   end
- 
+
 fun numvar_nn dim f =
-  if is_numvar f then 
-    let 
+  if is_numvar f then
+    let
       val fs = fst (dest_var f)
       val cl = (snd (part_n (String.size tnn_numvar_prefix) (explode fs)))
       val embed = map (Real.fromInt o string_to_int o Char.toString) cl
     in
-      if length embed = dim 
+      if length embed = dim
       then embed_nn (map scale_real embed)
       else raise ERR "numvar_nn" fs
     end
@@ -341,7 +341,7 @@ fun fp_op dim opdict fpdict tm =
   in
     fp_nn nn inv
   end
-  handle Subscript => raise ERR "" (its dim ^ "," ^ 
+  handle Subscript => raise ERR "" (its dim ^ "," ^
    its (String.size (fst (dest_var tm))))
 
 fun fp_opdict dim opdict fpdict tml = case tml of
@@ -365,15 +365,15 @@ fun fp_tnn tnn tml =
   end
 
 fun fp_tnn_nohead tnn tml =
-  let val fpdict = 
-    fp_opdict (#dimin tnn) (#opdict tnn) (dempty Term.compare) tml 
+  let val fpdict =
+    fp_opdict (#dimin tnn) (#opdict tnn) (dempty Term.compare) tml
   in
     #outnv (last (dfind (last tml) fpdict))
   end
 
 fun fp_dhtnn dhtnn tml =
   let
-    val fpdict = fp_opdict 
+    val fpdict = fp_opdict
       (#dimin dhtnn) (#opdict dhtnn) (dempty Term.compare) tml
     val fpdataleval = fp_head (#headeval dhtnn) fpdict tml
     val fpdatalpoli = fp_head (#headpoli dhtnn) fpdict tml
@@ -542,7 +542,7 @@ fun train_tnn_schedule schedule tnn (ptrain,ptest) =
       val _ = msg param ("ncore: " ^ its (#ncore param))
       val (pf,close_threadl) = parmap_gen (#ncore param)
       val newtnn = train_tnn_nepoch param pf 0 tnn (ptrain,ptest)
-      val r = train_tnn_schedule m newtnn (ptrain,ptest)   
+      val r = train_tnn_schedule m newtnn (ptrain,ptest)
     in
       (close_threadl (); r)
     end
@@ -567,7 +567,7 @@ fun train_tnn schedule randtnn (trainex,testex) =
             then raise ERR "prepare_train_tnn" "too few examples"
             else ()
     val pset = (prepare_tnnex trainex, prepare_tnnex testex)
-    val (tnn,t) = add_time (train_tnn_schedule schedule randtnn) pset 
+    val (tnn,t) = add_time (train_tnn_schedule schedule randtnn) pset
   in
     print_endline ("Tree neural network training time: " ^ rts t); tnn
   end
@@ -676,7 +676,7 @@ load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 fun contain_x tm = can (find_term (fn x => term_eq x ``x:'a``)) tm;
 
 (*** generation of training examples ***)
-val varl = [``x:'a``,``y:'a``,``z:'a``,``f:'a->'a->'a``,``g:'a -> 'a``]; 
+val varl = [``x:'a``,``y:'a``,``z:'a``,``f:'a->'a->'a``,``g:'a -> 'a``];
 fun mk_dataset n =
   let
     val pxl = mk_term_set (random_terml varl (n,alpha) 1000);
@@ -702,7 +702,7 @@ val tnn_param =
   }
 
 val randtnn = random_tnn tnn_param;
-val schedule = 
+val schedule =
   [{ncore=1, verbose=true, learning_rate=0.02, batch_size=16, nepoch=100}];
 val newtnn = train_tnn schedule randtnn (trainex,testex);
 

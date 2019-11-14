@@ -11,7 +11,7 @@ sig
 
   val extsearch : board mlReinforce.extsearch
   val rlobj : board mlReinforce.rlobj
-  
+
   val create_levels : unit -> unit
   val max_sizeeval_atgen : unit -> int list
   val stats_sizeeval : string -> (int * int) list

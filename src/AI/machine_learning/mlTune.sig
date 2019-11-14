@@ -28,9 +28,9 @@ sig
   (* statistics *)
   val write_summary :
     string -> (ml_param * (real * real * real )) list -> unit
-  
+
   (* training multiple dhtnn architectures *)
   val traindhtnn_extspec :
     (unit, (dhex * schedule * dhtnn_param), dhtnn) smlParallel.extspec
-  
+
 end

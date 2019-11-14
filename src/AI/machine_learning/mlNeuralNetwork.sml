@@ -31,8 +31,8 @@ fun dleakyrelu x = if x < epsilon then 0.01 else 1.0
 
 type layer = {a : real -> real, da : real -> real, w : real vector vector}
 type nn = layer list
-type train_param = 
-  {ncore: int, verbose: bool, 
+type train_param =
+  {ncore: int, verbose: bool,
    learning_rate: real, batch_size: int, nepoch: int}
 
 fun string_of_trainparam {ncore,verbose,learning_rate,batch_size,nepoch} =
@@ -42,13 +42,13 @@ fun string_of_trainparam {ncore,verbose,learning_rate,batch_size,nepoch} =
 fun trainparam_of_string s =
   let val (a,b,c,d,e) = quintuple_of_list (String.tokens Char.isSpace s) in
     {
-    ncore = string_to_int a, 
+    ncore = string_to_int a,
     verbose = string_to_bool b,
     learning_rate = (valOf o Real.fromString) c,
-    batch_size = string_to_int d, 
+    batch_size = string_to_int d,
     nepoch = string_to_int e
     }
-  end     
+  end
 
 type schedule = train_param list
 
@@ -302,7 +302,7 @@ fun train_nn_nepoch param pf i nn exl =
   let
     val batchl = mk_batch (#batch_size param) (shuffle exl)
     val (new_nn,loss) = train_nn_epoch param pf [] nn batchl
-    val _ = 
+    val _ =
       if #verbose param then print_endline (its i ^ " " ^ sr loss) else ()
   in
     train_nn_nepoch param pf (i+1) new_nn exl
@@ -348,14 +348,14 @@ fun gen_idex dim =
   let fun f () = List.tabulate (dim, fn _ => random_real ()) in
     let val x = f () in (x,x) end
   end
-; 
+;
 val dim = 10;
 val exl = List.tabulate (1000, fn _ => gen_idex dim);
 
 (* training *)
 val nn = random_nn (tanh,dtanh) [dim,4*dim,4*dim,dim];
-val param : train_param = 
-  {ncore = 1, verbose = true, 
+val param : train_param =
+  {ncore = 1, verbose = true,
    learning_rate = 0.02, batch_size = 16, nepoch = 100}
 ;
 val (newnn,t) = add_time (train_nn param nn) exl;

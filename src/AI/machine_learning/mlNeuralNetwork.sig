@@ -19,7 +19,7 @@ sig
   (* neural network *)
   type layer = {a : real -> real, da : real -> real, w : mat}
   type nn = layer list
-  type train_param = 
+  type train_param =
     {ncore: int, verbose: bool,
      learning_rate: real, batch_size: int, nepoch: int}
   val string_of_trainparam : train_param -> string

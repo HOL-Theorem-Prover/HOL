@@ -27,7 +27,7 @@ sig
   val list_rmax : real list -> real
   val list_imax : int list -> int
   val list_imin : int list -> int
-  val tmsize_compare : term * term -> order  
+  val tmsize_compare : term * term -> order
 
   (* time *)
   val add_time : ('a -> 'b) -> 'a -> 'b * real
@@ -154,7 +154,7 @@ sig
 
 
   (* parse *)
-  val hd_string : string -> char 
+  val hd_string : string -> char
   val tl_string : string -> string
   val unquote_string : string -> string
   val drop_sig : string -> string
@@ -167,7 +167,7 @@ sig
   val rm_squote : string -> string
   val rm_space  : string -> string
   datatype lisp = Lterm of lisp list | Lstring of string
-  val lisp_lexer : string -> string list 
+  val lisp_lexer : string -> string list
   val lisp_parser : string -> lisp list
   val rec_fun_type : int -> hol_type -> hol_type
   val term_of_lisp : lisp -> term
@@ -209,7 +209,7 @@ sig
   val strip_type : hol_type -> (hol_type list * hol_type)
   val has_boolty : term -> bool
   val only_concl : thm -> term
-  val list_mk_binop : term -> term list -> term   
+  val list_mk_binop : term -> term list -> term
   val arity_of : term -> int
 
   (* thread *)

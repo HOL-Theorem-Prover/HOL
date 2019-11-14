@@ -42,27 +42,27 @@ val graphtag = mk_var ("graphtag", ``:bool -> bool``)
 
 fun string_of_graph graph =
   String.concatWith " " (map bts graph)
-fun graph_of_string s = 
+fun graph_of_string s =
   map string_to_bool (String.tokens Char.isSpace s)
 
 fun term_of_graph graph =
-  let 
-    val vs = tnn_numvar_prefix ^ 
+  let
+    val vs = tnn_numvar_prefix ^
       String.concat (map (fn x => if x then "1" else "0") graph)
   in
     mk_comb (graphtag, mk_var (vs,bool))
   end
 
-fun mk_graph n t = 
+fun mk_graph n t =
   map (eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I))
 
 val adjgraph = mk_var ("adjgraph", ``: bool -> bool -> bool``);
 
-val operl = 
+val operl =
   mk_fast_set oper_compare
   (map_assoc arity_of (graphtag :: adjgraph :: (uncontl @ operl_plain)));
 
-fun term_of_board ((_,graph),tm) = 
+fun term_of_board ((_,graph),tm) =
   let val graphtm = term_of_graph graph in
     list_mk_comb (adjgraph, [graphtm, rw_to_uncont tm])
   end
@@ -76,16 +76,16 @@ type board = ((term * bool list) * term)
 fun string_of_board ((_,bl),tm) =
   String.concatWith " " (map bts bl) ^ " :\n" ^ tts tm
 
-fun mk_graph n t = 
+fun mk_graph n t =
   map (eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I))
 
 fun mk_startboard tm = ((tm,mk_graph graph_size tm),start_form)
 fun dest_startboard ((tm,_),_) = tm
 
 fun status_of ((orgtm,graph),tm) =
-  if not (can (find_term is_cont) tm) then 
-    if graph = mk_graph graph_size tm handle HOL_ERR _ => false 
-    then Win 
+  if not (can (find_term is_cont) tm) then
+    if graph = mk_graph graph_size tm handle HOL_ERR _ => false
+    then Win
     else Lose
   else if term_size (rw_to_uncont tm) > 2 * term_size orgtm
     then Lose
@@ -130,8 +130,8 @@ val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt"
 
 val train_file = datasetsynt_dir ^ "/train_lisp"
 
-fun eval64 t = 
-  let 
+fun eval64 t =
+  let
     val l = List.tabulate (64,I)
     fun f x = (eval_subst (xvar,t) (nat_to_bin x), x)
   in
@@ -147,8 +147,8 @@ fun export_setsyntdata () =
     val _ = print_endline ("Reading " ^ its (length formgraphl) ^ " terms");
     val l1 = map (fn (a,b) => (norm_bvarl a ,rev b)) formgraphl
     val l2 = map_assoc (eval64 o fst) l1
-    fun f ((a,b),c) = 
-      if b = c then () else 
+    fun f ((a,b),c) =
+      if b = c then () else
         (
         print_endline (bin_to_string b);
         print_endline (bin_to_string c);
@@ -156,22 +156,22 @@ fun export_setsyntdata () =
         )
     val _ = app f l2
     val tml = map (fst o fst) l2
-    fun g tm = 
-      if can imitate tm then () else 
+    fun g tm =
+      if can imitate tm then () else
         raise ERR "cannot replicate" (term_to_string tm)
     val _ = app g tml
   in
     print_endline ("Exporting " ^ its (length tml) ^ " terms");
-    export_terml (datasetsynt_dir ^ "/h4setsynt") 
+    export_terml (datasetsynt_dir ^ "/h4setsynt")
       (dict_sort tmsize_compare tml)
   end
 
-fun level_targetl level ntarget = 
-  let 
+fun level_targetl level ntarget =
+  let
     val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt")
     val tmll2 = map shuffle (first_n level (mk_batch_full 400 tml1))
     val tml3 = List.concat (list_combine tmll2)
-  in 
+  in
     map mk_startboard (first_n ntarget tml3)
   end
 
@@ -184,12 +184,12 @@ fun write_target file target =
 fun read_target file =
   mk_startboard (only_hd (import_terml (file ^ "_target")))
 
-fun write_exl file exl = 
-  let 
+fun write_exl file exl =
+  let
     val (boardl,evall,polil) = split_triple exl
     val (l1,l2) = split boardl
     val (l1a,l1b) = split l1
-  in 
+  in
     export_terml (file ^ "_orgtm") l1a;
     writel (file ^ "_graph") (map string_of_graph l1b);
     export_terml (file ^ "_conttm") l2;
@@ -210,17 +210,17 @@ fun read_exl file =
 
 fun write_splayer file (unib,dhtnn,noiseb,playerid,nsim) =
   (
-  write_dhtnn (file ^ "_dhtnn") dhtnn; 
+  write_dhtnn (file ^ "_dhtnn") dhtnn;
   writel (file ^ "_flags") [String.concatWith " " (map bts [unib,noiseb])];
-  writel (file ^ "_playerid") [playerid]; 
+  writel (file ^ "_playerid") [playerid];
   writel (file ^ "_nsim") [its nsim]
   )
 
 fun read_splayer file =
   let
     val dhtnn = read_dhtnn (file ^ "_dhtnn")
-    val (unib,noiseb) = 
-      pair_of_list (map string_to_bool 
+    val (unib,noiseb) =
+      pair_of_list (map string_to_bool
         (String.tokens Char.isSpace (only_hd (readl (file ^ "_flags")))))
     val playerid = only_hd (readl (file ^ "_playerid"))
     val nsim = string_to_int (only_hd (readl (file ^ "_nsim")))
@@ -228,10 +228,10 @@ fun read_splayer file =
     (unib,dhtnn,noiseb,playerid,nsim)
   end
 
-val pre_extsearch = 
+val pre_extsearch =
   {
   write_target = write_target,
-  read_target = read_target,  
+  read_target = read_target,
   write_exl = write_exl,
   read_exl = read_exl,
   write_splayer = write_splayer,
@@ -242,21 +242,21 @@ val pre_extsearch =
    Players
    ------------------------------------------------------------------------- *)
 
-val schedule = 
+val schedule =
   [{ncore = 1, verbose = true,
-    learning_rate = 0.02, 
+    learning_rate = 0.02,
     batch_size = 16, nepoch = 100}]
 
 val dhtnn_param1 =
   {
-  operl = operl,nlayer_oper = 1, 
+  operl = operl,nlayer_oper = 1,
   nlayer_headeval = 1, nlayer_headpoli = 1,
   dimin = 12, dimpoli = length movel
   }
 
 val dhtnn_param2 =
   {
-  operl = operl, nlayer_oper = 2, 
+  operl = operl, nlayer_oper = 2,
   nlayer_headeval = 2, nlayer_headpoli = 2,
   dimin = 12, dimpoli = length movel
   }
@@ -266,7 +266,7 @@ val dplayer1 =
 val dplayer2 =
   {playerid = "two_layers", dhtnn_param = dhtnn_param2, schedule = schedule}
 
-val tobdict = dnew String.compare 
+val tobdict = dnew String.compare
   [("one_layer",term_of_board),("two_layers",term_of_board)];
 
 (* -------------------------------------------------------------------------
@@ -284,7 +284,7 @@ val level_param =
 
 val rl_param =
   {
-  expname = expname, ex_window = 40000, ex_uniq = false, 
+  expname = expname, ex_window = 40000, ex_uniq = false,
   ngen = 100, ncore_search = 40,
   nsim_start = 16000, nsim_explore = 16000, nsim_compete = 16000,
   decay = 0.99
@@ -296,7 +296,7 @@ val rlpreobj : (board,move) rlpreobj =
   level_param = level_param,
   max_bigsteps = max_bigsteps,
   game = game,
-  pre_extsearch = pre_extsearch, 
+  pre_extsearch = pre_extsearch,
   tobdict = tobdict,
   dplayerl = [dplayer1,dplayer2]
   }

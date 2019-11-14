@@ -12,7 +12,7 @@ sig
 
   val extsearch : board mlReinforce.extsearch
   val rlobj : board mlReinforce.rlobj
-  
+
   val create_levels : unit -> unit
   val max_prooflength_atgen : unit -> int list
   val stats_prooflength : string -> (int * int) list

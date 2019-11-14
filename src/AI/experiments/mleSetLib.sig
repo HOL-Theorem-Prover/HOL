@@ -14,12 +14,12 @@ sig
   val xvarl : term list
   val yvarl : term list
   val is_xyvar : term -> bool
-  
+
   (* continuations *)
   val cont_form : term
   val cont_term : term
   val is_cont : term -> bool
-  
+
   (* *)
   val quantl : term list
   val is_quant : term -> bool
@@ -31,7 +31,7 @@ sig
   val eval_term : term -> int list
   val eval_subst : (term * term) -> int list -> bool
   val eval64 : term -> (bool * int) list option
-  
+
   (* search *)
   val start_form : term
   val movel : term list

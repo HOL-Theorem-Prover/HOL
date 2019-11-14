@@ -25,8 +25,8 @@ type ('a,'b) node =
 type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
 
 (* -------------------------------------------------------------------------
-   Game specification, player (evaluation + policy) and additional search 
-   parameters   
+   Game specification, player (evaluation + policy) and additional search
+   parameters
    ------------------------------------------------------------------------- *)
 
 type ('a,'b) game =
@@ -46,12 +46,12 @@ type ('a,'b) player = 'a -> real * ('b * real) list
 
 type mcts_param =
   {
-  nsim : int, 
-  stopatwin_flag : bool, 
-  decay : real, 
+  nsim : int,
+  stopatwin_flag : bool,
+  decay : real,
   explo_coeff : real,
-  noise_flag : bool, 
-  noise_coeff : real, 
+  noise_flag : bool,
+  noise_coeff : real,
   noise_alpha : real
   }
 
@@ -126,11 +126,11 @@ fun dirichlet_noise alpha n =
   normalize_proba (dirichlet_noise_plain alpha n)
 
 fun normalize_pol pol =
-  let 
-    val (l1,l2) = split pol 
+  let
+    val (l1,l2) = split pol
     val (l1a,l1b) = split l1
-  in 
-    combine (combine (l1a, normalize_proba l1b), l2) 
+  in
+    combine (combine (l1a, normalize_proba l1b), l2)
   end
 
 fun add_root_noise param tree =
@@ -139,9 +139,9 @@ fun add_root_noise param tree =
     val noisel1 = dirichlet_noise_plain (#noise_alpha param) (length pol)
     val noisel2 = normalize_proba noisel1
     fun f (((move,polv),cid),noise) =
-      let 
+      let
         val coeff = #noise_coeff param
-        val newpolv = (1.0 - coeff) * polv + coeff * noise 
+        val newpolv = (1.0 - coeff) * polv + coeff * noise
       in
         ((move,newpolv), cid)
       end
@@ -163,11 +163,11 @@ fun rescale_pol pol =
   end
 
 fun filter_available game board (e,p) =
-  let 
+  let
     val p' = filter (fn (m,_) => (#available_move game) board m) p
     val _ = if null p' then raise ERR "filter_available" "" else ()
   in
-    (e,p') 
+    (e,p')
   end
 
 fun node_create_backup obj tree (id,board) =
@@ -330,7 +330,7 @@ fun trace_win status_of tree id =
   end
 
 (* -------------------------------------------------------------------------
-   Toy example: the goal of this task is to reach a positive number starting 
+   Toy example: the goal of this task is to reach a positive number starting
    from zero by incrementing or decrementing.
    ------------------------------------------------------------------------- *)
 
@@ -338,13 +338,13 @@ type toy_board = (int * int)
 datatype toy_move = Incr | Decr
 val toy_movel = [Incr,Decr];
 
-fun toy_status_of (start,finish) = 
-    if start >= finish then Win 
+fun toy_status_of (start,finish) =
+    if start >= finish then Win
     else if start < 0 then Lose else Undecided;
 
 fun toy_available_move board move = true
 
-fun toy_apply_move m (start,finish) = case m of 
+fun toy_apply_move m (start,finish) = case m of
    Incr => (start+1,finish)
  | Decr => (start-1,finish)
 
@@ -372,7 +372,7 @@ load "psMCTS"; open psMCTS;
 
 val mcts_param =
   {
-  nsim = 16000, 
+  nsim = 16000,
   stopatwin_flag = true,
   decay = 1.0,
   explo_coeff = 2.0,

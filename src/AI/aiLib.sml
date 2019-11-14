@@ -585,8 +585,8 @@ fun trace_tacl tacl g = case tacl of
   | [] => print_endline (string_of_goal g)
 
 fun bts b = if b then "true" else "false"
-fun string_to_bool s = 
-  if s = "true" then true else if s = "false" then false 
+fun string_to_bool s =
+  if s = "true" then true else if s = "false" then false
   else raise ERR "string_to_bool" ""
 
 fun only_concl x =

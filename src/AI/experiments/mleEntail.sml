@@ -83,14 +83,14 @@ fun exprimed_from_file maxvar basename =
    ------------------------------------------------------------------------- *)
 
 fun entail_random_tnn dim =
-  let 
+  let
     val operl =
       [(``$/\``,2),(``$\/``,2),(``$~``,1),(``$==>``,2),
        (``$= :bool -> bool -> bool``,2)] @
       [(``x:bool``,0),(prime_tag,1)]
     val tnn_param =
       {dimin = dim, dimout = 1,
-       nlayer_headnn = 2, nlayer_oper = 2, 
+       nlayer_headnn = 2, nlayer_oper = 2,
        operl = operl}
   in
     random_tnn tnn_param
@@ -104,7 +104,7 @@ fun train_fixed () =
   let
     val trainex = exprimed_from_file 10 "train.txt"
     val schedule =
-      [{batch_size = 16, learning_rate = 0.02, 
+      [{batch_size = 16, learning_rate = 0.02,
        ncore = 4, nepoch = 100, verbose = true}]
     val randtnn = entail_random_tnn 12
     val tnn = train_tnn schedule randtnn (trainex,first_n 100 trainex)
