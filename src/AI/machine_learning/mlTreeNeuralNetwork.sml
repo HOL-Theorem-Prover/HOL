@@ -500,11 +500,9 @@ fun update_opernn param opdict (oper,dwll) =
     (oper,newnn)
   end
 
-fun train_tnn_batch param (tnn as {opdict,headnn,dimin,dimout}) batch =
+fun train_tnn_batch param pf (tnn as {opdict,headnn,dimin,dimout}) batch =
   let
-    val ncore = #ncore param
-    val (bpdictl,bpdatall) =
-      split (parmap_batch ncore (train_tnn_one tnn) batch)
+    val (bpdictl,bpdatall) = split (pf (train_tnn_one tnn) batch)
     val (newheadnn,loss) = update_headnn param headnn bpdatall
     val bpdict = dconcat oper_compare bpdictl
     val bpdict' = filter (not o is_numvar o fst o fst) (dlist bpdict)
@@ -515,24 +513,24 @@ fun train_tnn_batch param (tnn as {opdict,headnn,dimin,dimout}) batch =
       loss)
   end
 
-fun train_tnn_epoch param lossl tnn batchl = case batchl of
+fun train_tnn_epoch param pf lossl tnn batchl = case batchl of
     [] => (tnn, average_real lossl)
   | batch :: m =>
-    let val (newtnn,loss) = train_tnn_batch param tnn batch in
-      train_tnn_epoch param (loss :: lossl) newtnn m
+    let val (newtnn,loss) = train_tnn_batch param pf tnn batch in
+      train_tnn_epoch param pf (loss :: lossl) newtnn m
     end
 
-fun train_tnn_nepoch param i tnn (ptrain,ptest) =
+fun train_tnn_nepoch param pf i tnn (ptrain,ptest) =
   if i >= #nepoch param then tnn else
   let
     val batchl = mk_batch (#batch_size param) (shuffle ptrain)
-    val (newtnn,r1) = train_tnn_epoch param [] tnn batchl
+    val (newtnn,r1) = train_tnn_epoch param pf [] tnn batchl
     val r2 = if null ptest then 0.0 else
       average_real (map (infer_mse tnn) ptest)
     val sr = pretty_real
     val _ = msg param (its i ^ " train: " ^ sr r1 ^ " test: " ^ sr r2)
   in
-    train_tnn_nepoch param (i+1) newtnn (ptrain,ptest)
+    train_tnn_nepoch param pf (i+1) newtnn (ptrain,ptest)
   end
 
 fun train_tnn_schedule schedule tnn (ptrain,ptest) =
@@ -541,9 +539,12 @@ fun train_tnn_schedule schedule tnn (ptrain,ptest) =
   | param :: m =>
     let
       val _ = msg param ("learning rate: " ^ rts (#learning_rate param))
-      val newtnn = train_tnn_nepoch param 0 tnn (ptrain,ptest)
+      val _ = msg param ("ncore: " ^ its (#ncore param))
+      val (pf,close_threadl) = parmap_gen (#ncore param)
+      val newtnn = train_tnn_nepoch param pf 0 tnn (ptrain,ptest)
+      val r = train_tnn_schedule m newtnn (ptrain,ptest)   
     in
-      train_tnn_schedule m newtnn (ptrain,ptest)
+      (close_threadl (); r)
     end
 
 fun output_info exl =
@@ -581,12 +582,12 @@ fun train_dhtnn_one dhtnn (tml,expecteval,expectpoli) =
     (tml,expecteval,expectpoli)
   end
 
-fun train_dhtnn_batch param dhtnn batch =
+fun train_dhtnn_batch param pf dhtnn batch =
   let
     val ncore = #ncore param
     val {opdict, headeval, headpoli, dimin, dimpoli} = dhtnn
     val (bpdictl,bpdatall1,bpdatall2) =
-      split_triple (parmap_batch ncore (train_dhtnn_one dhtnn) batch)
+      split_triple (pf (train_dhtnn_one dhtnn) batch)
     val (newheadeval,loss1) = update_headnn param headeval bpdatall1
     val (newheadpoli,loss2) = update_headnn param headpoli bpdatall2
     val bpdict = dconcat oper_compare bpdictl
@@ -597,36 +598,39 @@ fun train_dhtnn_batch param dhtnn batch =
      dimin = dimin, dimpoli = dimpoli},(loss1,loss2))
   end
 
-fun train_dhtnn_epoch ncore (lossl1,lossl2) dhtnn batchl =
+fun train_dhtnn_epoch param pf (lossl1,lossl2) dhtnn batchl =
   case batchl of
     [] => (dhtnn, (average_real lossl1, average_real lossl2))
   | batch :: m =>
     let val (newdhtnn,(loss1,loss2)) =
-      train_dhtnn_batch ncore dhtnn batch
+      train_dhtnn_batch param pf dhtnn batch
     in
-      train_dhtnn_epoch ncore (loss1 :: lossl1, loss2 :: lossl2)
+      train_dhtnn_epoch param pf (loss1 :: lossl1, loss2 :: lossl2)
       newdhtnn m
     end
 
-fun train_dhtnn_nepoch param i dhtnn dhex =
+fun train_dhtnn_nepoch param pf i dhtnn dhex =
   if i >= #nepoch param then dhtnn else
   let
     val batchl = mk_batch (#batch_size param) (shuffle dhex)
-    val (newdhtnn,(r1,r2)) = train_dhtnn_epoch param ([],[]) dhtnn batchl
+    val (newdhtnn,(r1,r2)) = train_dhtnn_epoch param pf ([],[]) dhtnn batchl
     val sr = pretty_real
     val _ = msg param (its i ^ ": eval " ^ sr r1 ^ " poli " ^ sr r2)
   in
-    train_dhtnn_nepoch param (i + 1) newdhtnn dhex
+    train_dhtnn_nepoch param pf (i + 1) newdhtnn dhex
   end
 
 fun train_dhtnn_schedule schedule dhtnn dhex = case schedule of
     [] => dhtnn
   | param :: m =>
     let
-      val _ = print_endline ("learning rate: " ^ rts (#learning_rate param))
-      val newdhtnn = train_dhtnn_nepoch param 0 dhtnn dhex
+      val _ = msg param ("learning rate: " ^ rts (#learning_rate param))
+      val _ = msg param ("ncore: " ^ its (#ncore param))
+      val (pf,close_threadl) = parmap_gen (#ncore param)
+      val newdhtnn = train_dhtnn_nepoch param pf 0 dhtnn dhex
+      val r = train_dhtnn_schedule m newdhtnn dhex
     in
-      train_dhtnn_schedule m newdhtnn dhex
+      close_threadl (); r
     end
 
 fun train_dhtnn schedule dhtnn dhex =

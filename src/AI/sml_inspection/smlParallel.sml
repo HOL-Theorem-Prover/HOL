@@ -73,6 +73,68 @@ fun parmap_batch ncores f l =
   then map f l
   else List.concat (parmap_exact ncores (map f) (cut_n ncores l))
 
+
+(* -------------------------------------------------------------------------
+   The function parmap_gen start n threads, and generate a parmap function
+   relying on this threads and a function to close this threads.
+   This makes repeated calls of parmap f on different lists faster.
+   Otherwise it behaves like parmap_batch.
+   ------------------------------------------------------------------------- *)
+
+fun parmap_gen ncore =
+  if ncore = 1 then (fn f => (fn l => map f l), fn () => ()) else
+  let
+    val endflag = ref false
+    val inv = Vector.tabulate (ncore, fn _ => ref NONE)
+    val outv = Vector.tabulate (ncore, fn _ => ref NONE)
+    val endv = Vector.tabulate (ncore, fn _ => ref false)
+    val waitv = Vector.tabulate (ncore, fn _ => ref false)
+    val f_ref = ref NONE
+      fun reset_outv () =
+       let fun init_one pi =
+         let val outref = Vector.sub (outv,pi) in outref := NONE end
+       in
+         ignore (List.tabulate (ncore, init_one))
+       end
+    fun process pi =
+      if !endflag then
+        let val endref = Vector.sub (endv,pi) in endref := true end
+      else
+      let val inref = Vector.sub (inv,pi) in
+        case !inref of
+          NONE => process pi
+        | SOME x =>
+          let val outref = Vector.sub (outv,pi) in
+            inref := NONE; outref := SOME (map (valOf (!f_ref)) x);
+            process pi
+          end
+      end
+    fun fork_on pi = Thread.fork (fn () => process pi, attrib)
+    val threadl = List.tabulate (ncore,fork_on)
+    fun wait_resultl () =
+      if Vector.all (isSome o !) outv then () else wait_resultl ()
+    fun parmap_loc f l =
+      let
+        val _ = f_ref := SOME f
+        val _ = reset_outv ()
+        val inv_loc = Vector.fromList (cut_n ncore l)
+        fun assign pi =
+          let val inref = Vector.sub (inv,pi) in
+            inref := SOME (Vector.sub (inv_loc,pi))
+          end
+        val _ = List.tabulate (ncore, assign)
+        val _ = wait_resultl ()
+        val ll = vector_to_list (Vector.map (valOf o !) outv)
+      in
+        reset_outv (); List.concat ll
+      end
+    fun wait_close () =
+      if exists Thread.isActive threadl then wait_close () else ()
+    fun close_threadl () = (endflag := true; wait_close ())
+  in
+    (parmap_loc, close_threadl)
+  end
+
 (* -------------------------------------------------------------------------
    Smart allocation of inputs to waiting threads
    ------------------------------------------------------------------------- *)

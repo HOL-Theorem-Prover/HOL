@@ -280,43 +280,32 @@ fun stats_exl exl =
    Training
    ------------------------------------------------------------------------- *)
 
-fun train_nn_subbatch nn (subbatch : (vect * vect) list) =
+fun train_nn_batch param pf nn batch =
   let
-    val bpdatall = map (train_nn_one nn) subbatch
+    val bpdatall = pf (train_nn_one nn) batch
     val dwll = map (map #dw) bpdatall
-    val dwl = sum_dwll dwll
-  in
-    (dwl, average_loss bpdatall)
-  end
-
-fun train_nn_batch param nn batch =
-  let
-    val ncore = #ncore param
-    val subbatchl = cut_n ncore batch
-    val (dwll,lossl) = 
-      split (parmap_exact ncore (train_nn_subbatch nn) subbatchl)
     val dwl = sum_dwll dwll
     val newnn = update_nn param nn dwl
   in
-    (newnn, average_real lossl)
+    (newnn, average_loss bpdatall)
   end
 
-fun train_nn_epoch param lossl nn batchl  = case batchl of
+fun train_nn_epoch param pf lossl nn batchl  = case batchl of
     [] => (nn, average_real lossl)
   | batch :: m =>
-    let val (newnn,loss) = train_nn_batch param nn batch in
-      train_nn_epoch param (loss :: lossl) newnn m
+    let val (newnn,loss) = train_nn_batch param pf nn batch in
+      train_nn_epoch param pf (loss :: lossl) newnn m
     end
 
-fun train_nn_nepoch param i nn exl =
+fun train_nn_nepoch param pf i nn exl =
   if i >= #nepoch param then nn else
   let
     val batchl = mk_batch (#batch_size param) (shuffle exl)
-    val (new_nn,loss) = train_nn_epoch param [] nn batchl
+    val (new_nn,loss) = train_nn_epoch param pf [] nn batchl
     val _ = 
       if #verbose param then print_endline (its i ^ " " ^ sr loss) else ()
   in
-    train_nn_nepoch param (i+1) new_nn exl
+    train_nn_nepoch param pf (i+1) new_nn exl
   end
 
 (* -------------------------------------------------------------------------
@@ -334,10 +323,12 @@ fun scale_ex (l1,l2) = (scale_in l1, scale_out l2)
 
 fun train_nn param nn exl =
   let
+    val (pf,close_threadl) = parmap_gen (#ncore param)
     val _ = if #verbose param then stats_exl exl else ()
     val newexl = map scale_ex exl
+    val r = train_nn_nepoch param pf 0 nn newexl
   in
-    train_nn_nepoch param 0 nn newexl
+    close_threadl (); r
   end
 
 fun infer_nn nn l = (descale_out o #outnv o last o (fp_nn nn) o scale_in) l

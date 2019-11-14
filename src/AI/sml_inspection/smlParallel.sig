@@ -5,9 +5,10 @@ sig
   val use_thread_flag : bool ref (* for debugging *)
   val parmap_exact : int -> ('a -> 'b) -> 'a list -> 'b list
   val parmap_batch : int -> ('a -> 'b) -> 'a list -> 'b list
+  val parmap_gen : int -> (('a -> 'b) -> 'a list -> 'b list) * (unit -> unit)
   val parmap_queue : int -> ('a -> 'b) -> 'a list -> 'b list
   val parapp_queue : int -> ('a -> 'b) -> 'a list -> unit
-
+     
   (* external *)
   val default_parallel_dir : string
   (* 'a: type of parameter, 'b: type of arguments, 'c: returned type *)

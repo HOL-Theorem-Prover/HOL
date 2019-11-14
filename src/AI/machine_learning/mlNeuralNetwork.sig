@@ -65,7 +65,6 @@ sig
   val descale_real : real -> real
   val descale_out : vect -> real list
   val infer_nn : nn -> real list -> real list
-  val train_nn_batch : train_param -> nn -> (vect * vect) list -> (nn * real)
   val train_nn : train_param -> nn -> (real list * real list) list -> nn
 
 

@@ -67,15 +67,7 @@ fun term_of_board ((_,graph),tm) =
     list_mk_comb (adjgraph, [graphtm, rw_to_uncont tm])
   end
 
-val dhtnn_param =
-  {
-  operl = operl,
-  nlayer_oper = 1, 
-  nlayer_headeval = 1, 
-  nlayer_headpoli = 1,
-  dimin = 12, 
-  dimpoli = length movel
-  }
+
 
 (* -------------------------------------------------------------------------
    Board
@@ -247,6 +239,38 @@ val pre_extsearch =
   }
 
 (* -------------------------------------------------------------------------
+   Players
+   ------------------------------------------------------------------------- *)
+
+val schedule = 
+  [{ncore = 1, verbose = true,
+    learning_rate = 0.02, 
+    batch_size = 16, nepoch = 100}]
+
+val dhtnn_param1 =
+  {
+  operl = operl,nlayer_oper = 1, 
+  nlayer_headeval = 1, nlayer_headpoli = 1,
+  dimin = 12, dimpoli = length movel
+  }
+
+val dhtnn_param2 =
+  {
+  operl = operl, nlayer_oper = 2, 
+  nlayer_headeval = 2, nlayer_headpoli = 2,
+  dimin = 12, dimpoli = length movel
+  }
+
+val dplayer1 =
+ {name = "one_layer", dhtnn_param = dhtnn_param1, schedule = schedule}
+val dplayer2 =
+ {name = "two_layers", dhtnn_param = dhtnn_param2, schedule = schedule}
+
+val tobdict = dnew String.compare 
+  [("one_layer",term_of_board),("two_layers",term_of_board)];
+
+
+(* -------------------------------------------------------------------------
    Interface
    ------------------------------------------------------------------------- *)
 
@@ -266,14 +290,7 @@ val rl_param =
   ngen = 2, ncore_search = 8}
 
 (* players *)
-val schedule = 
-  [{ncore = 1, verbose = true,
-    learning_rate = 0.02, batch_size = 16, nepoch = 100}]
-val dplayer1 =
- {tobid = 1, dhtnn_param = dhtnn_param, schedule = schedule}
-val dplayer2 =
- {tobid = 2, dhtnn_param = dhtnn_param, schedule = schedule}
-val tobdict = dnew Int.compare [(1,term_of_board),(2,term_of_board)];
+
 
 val rlpreobj : (board,move) rlpreobj =
   {
