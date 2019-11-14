@@ -9,12 +9,9 @@ sig
 
   val mk_startsit : term -> board
   val dest_startsit : board -> term
-
-  (* statistics *)
   val maxprooflength_atgen : unit -> int list
   val stats_prooflength : string -> (int * int) list
-
-  (* *)
+  val extsearch : board mlReinforce.extsearch
+  val rlobj : board mlReinforce.rlobj
   
-
 end

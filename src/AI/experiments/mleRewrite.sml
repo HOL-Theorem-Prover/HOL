@@ -50,7 +50,7 @@ val rewrite_operl =
     mk_fast_set oper_compare operl'
   end
 
-fun nntm_of_sit ((tm,pos),_) = tag_pos (tm,pos)
+fun term_of_board ((tm,pos),_) = tag_pos (tm,pos)
 
 (* -------------------------------------------------------------------------
    Move
@@ -162,7 +162,7 @@ fun write_boardl file boardl =
     writel (file ^ "_pos") (map string_of_pos l1b);
     writel (file ^ "_max") (map its l2)
   end
-fun read_boardl file boardl =
+fun read_boardl file =
   let
     val orgl = import_terml (file ^ "_orgtm")
     val posl = map pos_of_string (readl (file ^ "_pos"))
@@ -172,25 +172,16 @@ fun read_boardl file boardl =
   end
   
 fun write_exl file exl = 
-  let 
-    val (boardl,evall,polil) = split_triple exl
-    val (l1,l2) = split boardl
-    val (l1a,l1b) = split l1
-  in 
-    export_terml (file ^ "_orgtm") l1a;
-    writel (file ^ "_graph") (map string_of_graph l1b);
-    export_terml (file ^ "_conttm") l2;
+  let val (boardl,evall,polil) = split_triple exl in 
+    write_boardl (file ^ "_boardl") boardl;
     writel (file ^ "_eval") (map reall_to_string evall);
     writel (file ^ "_poli") (map reall_to_string polil)
   end
 fun read_exl file =
   let
-    val orgl = import_terml (file ^ "_orgtm")
-    val graphl = map graph_of_string (readl (file ^ "_graph"))
-    val contl = import_terml (file ^ "_conttm")
     val evall = map string_to_reall (readl (file ^ "_eval"))
     val polil = map string_to_reall (readl (file ^ "_poli"))
-    val boardl = combine (combine (orgl,graphl), contl)
+    val boardl = read_boardl (file ^ "_boardl")
   in
     combine_triple (boardl,evall,polil)
   end
@@ -225,7 +216,7 @@ val pre_extsearch =
   }
 
 (* -------------------------------------------------------------------------
-   Players
+   Player
    ------------------------------------------------------------------------- *)
 
 val schedule = 
@@ -233,45 +224,35 @@ val schedule =
     learning_rate = 0.02, 
     batch_size = 16, nepoch = 100}]
 
-val dhtnn_param1 =
-  {
-  operl = operl,nlayer_oper = 1, 
-  nlayer_headeval = 1, nlayer_headpoli = 1,
-  dimin = 12, dimpoli = length movel
-  }
-
-val dhtnn_param2 =
+val dhtnn_param =
   {
   operl = operl, nlayer_oper = 2, 
   nlayer_headeval = 2, nlayer_headpoli = 2,
   dimin = 12, dimpoli = length movel
   }
 
-val dplayer1 =
-  {playerid = "one_layer", dhtnn_param = dhtnn_param1, schedule = schedule}
-val dplayer2 =
-  {playerid = "two_layers", dhtnn_param = dhtnn_param2, schedule = schedule}
+val dplayer =
+  {playerid = "only_player", dhtnn_param = dhtnn_param, schedule = schedule}
 
-val tobdict = dnew String.compare 
-  [("one_layer",term_of_board),("two_layers",term_of_board)];
+val tobdict = dnew String.compare [("only_player",term_of_board)];
 
 (* -------------------------------------------------------------------------
-   Interface
+   Reinforcement learning
    ------------------------------------------------------------------------- *)
 
-val expname = "mleSetSynt-v2-1"
+val expname = "mleRewrite-v2-1"
 
 val level_param =
   {
-  ntarget_start = 1600, ntarget_compete = 400, ntarget_explore = 400,
-  level_start = 4, level_threshold = 0.75,
+  ntarget_start = 400, ntarget_compete = 400, ntarget_explore = 400,
+  level_start = 1, level_threshold = 0.95,
   level_targetl = level_targetl
   }
 
 val rl_param =
  {expname = expname, ex_window = 40000, ex_uniq = false, 
   ngen = 100, ncore_search = 40,
-  nsim_start = 16000, nsim_explore = 16000, nsim_compete = 16000}
+  nsim_start = 1600, nsim_explore = 1600, nsim_compete = 1600}
 
 val rlpreobj : (board,move) rlpreobj =
   {
@@ -288,9 +269,7 @@ val extsearch = mk_extsearch "mleSetSynt.extsearch" rlpreobj
 
 val rlobj = mk_rlobj rlpreobj extsearch
 
-(* -------------------------------------------------------------------------
-   Reinforcement learning
-   ------------------------------------------------------------------------- *)
+
 
 (*
 load "mlReinforce"; open mlReinforce;
