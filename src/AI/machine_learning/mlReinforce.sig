@@ -10,10 +10,10 @@ sig
   type 'a rlex = 'a psBigSteps.rlex
 
   (* players *)
-  type splayer = (bool * dhtnn * bool * int)
+  type splayer = (bool * dhtnn * bool * string * int)
   type dplayer =
-    {tobid : int, dhtnn_param : dhtnn_param, schedule : schedule}
-  type rplayer = (dhtnn * int)
+    {playerid : string, dhtnn_param : dhtnn_param, schedule : schedule}
+  type rplayer = (dhtnn * string)
 
   (* object description *)
   type 'a level_param =
@@ -45,7 +45,7 @@ sig
     max_bigsteps : 'a -> int,
     game : ('a,'b) psMCTS.game,
     pre_extsearch : 'a pre_extsearch, 
-    tobdict : (int, 'a -> term) Redblackmap.dict,
+    tobdict : (string, 'a -> term) Redblackmap.dict,
     dplayerl : dplayer list
     }
   type 'a extsearch = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
@@ -54,7 +54,7 @@ sig
     rl_param : rl_param,
     level_param : 'a level_param,
     extsearch : 'a extsearch, 
-    tobdict : (int,'a -> term) Redblackmap.dict,
+    tobdict : (string,'a -> term) Redblackmap.dict,
     dplayerl : dplayer list
     }
   val mk_extsearch : string -> ('a,'b) rlpreobj -> 'a extsearch

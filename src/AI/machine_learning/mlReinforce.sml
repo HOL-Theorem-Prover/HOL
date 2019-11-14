@@ -14,25 +14,18 @@ open HolKernel Abbrev boolLib aiLib psMCTS psBigSteps
 val ERR = mk_HOL_ERR "mlReinforce"
 
 (* -------------------------------------------------------------------------
-   All parameters of the reinforcement learning loop
+   Different representation of players
    ------------------------------------------------------------------------- *)
 
-type splayer = (bool * dhtnn * bool * int)
+type splayer = (bool * dhtnn * bool * string * int)
 type dplayer =
-  {tobid : int, dhtnn_param : dhtnn_param, schedule : schedule}
-type rplayer = (dhtnn * int)
+  {playerid : string, dhtnn_param : dhtnn_param, schedule : schedule}
+type rplayer = (dhtnn * string)
 
-type 'a level_param =
-  {
-  ntarget_compete : int, ntarget_explore : int,
-  level_start : int, level_threshold : real,
-  level_targetl : int -> int -> 'a list
-  }
-type rl_param =
-  {expname : string, ex_window : int, ex_uniq : bool, 
-   ngen : int, ncore_search : int}
-type playerenv =
-  {tobid : int, dhtnn_param : dhtnn_param, schedule : schedule}
+(* -------------------------------------------------------------------------
+   Parallelization of the search
+   ------------------------------------------------------------------------- *)
+
 type 'a pre_extsearch = 
   {
   write_target : string -> 'a -> unit,
@@ -42,8 +35,23 @@ type 'a pre_extsearch =
   write_splayer : string -> splayer -> unit,
   read_splayer : string -> splayer
   }
-type 'a extsearch =
-  (bool * dhtnn * bool * int, 'a, bool * 'a rlex) smlParallel.extspec
+type 'a extsearch = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
+
+(* -------------------------------------------------------------------------
+   Parameters of the reinforcement learning loop
+   ------------------------------------------------------------------------- *)
+
+type 'a level_param =
+  {
+  ntarget_compete : int, ntarget_explore : int,
+  level_start : int, level_threshold : real,
+  level_targetl : int -> int -> 'a list
+  }
+
+type rl_param =
+  {expname : string, ex_window : int, ex_uniq : bool, 
+   ngen : int, ncore_search : int}
+
 type ('a,'b) rlpreobj =
   {
   rl_param : rl_param,
@@ -51,15 +59,16 @@ type ('a,'b) rlpreobj =
   max_bigsteps : 'a -> int,
   game : ('a,'b) game,
   pre_extsearch : 'a pre_extsearch, 
-  tobdict : (int, 'a -> term) Redblackmap.dict,
+  tobdict : (string, 'a -> term) Redblackmap.dict,
   dplayerl : dplayer list
   }
+
 type 'a rlobj =
   {
   rl_param : rl_param,
   level_param : 'a level_param,
   extsearch : 'a extsearch, 
-  tobdict : (int,'a -> term) Redblackmap.dict,
+  tobdict : (string,'a -> term) Redblackmap.dict,
   dplayerl : dplayer list
   }
 
@@ -67,9 +76,9 @@ type 'a rlobj =
    Search parallelization (big steps)
    ------------------------------------------------------------------------- *)
 
-fun mk_mcts_param noiseb rlpreobj =
+fun mk_mcts_param noiseb nsim rlpreobj =
   {
-  nsim = 1600,
+  nsim = nsim,
   stopatwin_flag = false,
   decay = 0.99,
   explo_coeff = 2.0,
@@ -83,9 +92,9 @@ fun player_from_dhtnn game (tob,dhtnn) board =
      (e, combine (#movel game,p))
    end
 
-fun mk_bigsteps_obj rlpreobj (unib,dhtnn,noiseb,tobid) =
+fun mk_bigsteps_obj rlpreobj (unib,dhtnn,noiseb,playerid,nsim) =
   let 
-    val tob = dfind tobid (#tobdict rlpreobj)
+    val tob = dfind playerid (#tobdict rlpreobj)
     val game = #game rlpreobj
     val player = if unib then uniform_player game
       else player_from_dhtnn game (tob,dhtnn) 
@@ -95,15 +104,15 @@ fun mk_bigsteps_obj rlpreobj (unib,dhtnn,noiseb,tobid) =
     temp_flag = false,
     max_bigsteps = #max_bigsteps rlpreobj,
     mcts_obj = 
-       {mcts_param = mk_mcts_param noiseb rlpreobj,
+       {mcts_param = mk_mcts_param noiseb nsim rlpreobj,
         game = #game rlpreobj,
         player = player}
     }
   end
 
-fun extsearch_fun rlpreobj (unib,dhtnn,noiseb,tobid) target =
+fun extsearch_fun rlpreobj splayer target =
   let
-    val obj = mk_bigsteps_obj rlpreobj (unib,dhtnn,noiseb,tobid) 
+    val obj = mk_bigsteps_obj rlpreobj splayer
     val (bstatus,exl,_) = run_bigsteps obj target
   in
     (bstatus,exl)
@@ -179,21 +188,12 @@ fun log_header (obj : 'a rlobj) =
    Training
    ------------------------------------------------------------------------- *)
 
-fun stats_exl (rlobj : 'a rlobj) board_compare (ex : 'a rlex) =
-  let
-    val d = count_dict (dempty board_compare) (map #1 ex)
-    val r = average_real (map (Real.fromInt o snd) (dlist d))
-  in
-    log rlobj ("Examples: " ^ its (length ex));
-    log rlobj ("Average duplicates: " ^ rts r)
-  end
-
 fun rl_train rlobj exl =
   let
     val dplayerl = #dplayerl rlobj
-    fun f {tobid, dhtnn_param, schedule} =
+    fun f {playerid, dhtnn_param, schedule} =
       let 
-        val tob = dfind tobid (#tobdict rlobj)
+        val tob = dfind playerid (#tobdict rlobj)
         val exl' = map (fn (a,b,c) => (tob a, b, c)) exl
       in
         (exl',schedule,dhtnn_param)
@@ -202,38 +202,30 @@ fun rl_train rlobj exl =
     val ncore = length argl
     val (dhtnnl,t) = 
       add_time (parmap_queue_extern ncore mlTune.traindhtnn_extspec ()) argl; 
-    val rplayerl = combine (dhtnnl,map #tobid dplayerl)
+    val rplayerl = combine (dhtnnl,map #playerid dplayerl)
   in
     log rlobj ("Total training time : " ^ rts t); 
     rplayerl
   end
 
-
 (* -------------------------------------------------------------------------
    Competition
    ------------------------------------------------------------------------- *)
 
-fun compete_one rlobj (dhtnn,tobid) targetl =
+fun compete_one rlobj (dhtnn,playerid) targetl =
   let
     val ncore = #ncore_search (#rl_param rlobj)
     val extspec = #extsearch rlobj
-    val splayer = (false,dhtnn,false,tobid)
+    val splayer = (false,dhtnn,false,playerid,1600)
     val (r,t) = add_time (parmap_queue_extern ncore extspec splayer) targetl
     val nwin = length (filter fst r)
   in
+    log rlobj ("Player: " ^ playerid);
     log rlobj ("Competition time : " ^ rts t); 
     log rlobj ("Competition wins : " ^ its nwin); 
     nwin
   end
 
-(*
-fun log_compete rlobj b newlevel (w_old,w_new) freq =
-  let val s = if w_new >= w_old then "Passed" else "Failed" in
-    log rlobj s;
-    log rlobj ("Max success rate: " ^ rts (approx 4 freq));
-    
-  end
-*)
 fun rl_compete rlobj level rplayerl =
   let
     val {ntarget_compete, ntarget_explore,
@@ -251,7 +243,6 @@ fun rl_compete rlobj level rplayerl =
     val newlevel = if b then level + 1 else level
     val _ = if b then log rlobj ("Level up: " ^ its newlevel) else ()
   in
-    (* log_compete rlobj b newlevel (w_old,w_new) freq; *)
     (newlevel, fst winner)
   end
 
@@ -259,18 +250,12 @@ fun rl_compete rlobj level rplayerl =
    Exploration
    ------------------------------------------------------------------------- *)
 
-(*
-fun mk_uniq_ex exl =
-  let fun cmp ((a,_,_),(b,_,_)) = Term.compare (a,b) in
-    mk_sameorder_set cmp exl
-  end
-*)
-
-fun explore_one rlobj unib (dhtnn,tobid) targetl =
+fun explore_one rlobj unib (dhtnn,playerid) targetl =
   let 
     val ncore = #ncore_search (#rl_param rlobj)
     val extspec = #extsearch rlobj
-    val splayer = (unib,dhtnn,true,tobid)
+    val nsim = if unib then 160000 else 16000
+    val splayer = (unib,dhtnn,true,playerid,nsim)
     val (l,t) = add_time (parmap_queue_extern ncore extspec splayer) targetl
     val nwin = length (filter fst l)
     val exl = map snd l
@@ -287,11 +272,11 @@ fun rl_explore rlobj level unib rplayer allex =
     val {ntarget_compete, ntarget_explore,
          level_start, level_threshold,
          level_targetl} = #level_param rlobj
-    val targetl = level_targetl level ntarget_explore
+    val ntarget = if unib then 4 * 400 else ntarget_explore
+    val targetl = level_targetl level ntarget
     val _ = log rlobj ("Exploration targets: " ^ its (length targetl))
     val (nwin,exl0) = explore_one rlobj unib rplayer targetl
     val exl1 = List.concat exl0 @ allex
-    (* val exl2 = if #ex_uniq rl_param then mk_uniq_ex exl1 else exl1 *)
     val exl3 = first_n (#ex_window rl_param) exl1
     val b = int_div nwin (length targetl) > level_threshold
     val newlevel = if b then level + 1 else level
@@ -321,7 +306,7 @@ fun rl_init rlobj =
     val file = eval_dir ^ "/" ^ expname ^ "_gen0"
     val dplayer = hd (#dplayerl rlobj)
     val dhtnn = random_dhtnn (#dhtnn_param dplayer)
-    val rplayer = (dhtnn,#tobid dplayer)
+    val rplayer = (dhtnn,#playerid dplayer)
     val (allex,newlevel) = loop_rl_explore rlobj level true rplayer []
   in
     (allex,rplayer,newlevel)
@@ -335,7 +320,7 @@ fun rl_one n rlobj (allex,rplayer,level) =
     val rplayerl = rl_train rlobj allex
     val (level1,rplayer_best) = rl_compete rlobj level (rplayer :: rplayerl)
     val _ = write_dhtnn (file ^ "_dhtnn") (fst rplayer_best)
-    val _ = writel (file ^ "_tobid") [its (snd rplayer_best)]
+    val _ = writel (file ^ "_playerid") [snd rplayer_best]
     val (newallex,level2) = loop_rl_explore rlobj level1 false rplayer allex
   in
     (newallex,rplayer_best,level2)

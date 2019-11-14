@@ -210,11 +210,12 @@ fun read_exl file =
     combine_triple (boardl,evall,polil)
   end
 
-fun write_splayer file (unib,dhtnn,noiseb,tobid) =
+fun write_splayer file (unib,dhtnn,noiseb,playerid,nsim) =
   (
   write_dhtnn (file ^ "_dhtnn") dhtnn; 
   writel (file ^ "_flags") [String.concatWith " " (map bts [unib,noiseb])];
-  writel (file ^ "_tobid") [its tobid]
+  writel (file ^ "_playerid") [playerid]; 
+  writel (file ^ "_nsim") [its nsim]
   )
 
 fun read_splayer file =
@@ -223,9 +224,10 @@ fun read_splayer file =
     val (unib,noiseb) = 
       pair_of_list (map string_to_bool 
         (String.tokens Char.isSpace (only_hd (readl (file ^ "_flags")))))
-     val tobid = string_to_int (only_hd (readl (file ^ "_tobid")))
+    val playerid = only_hd (readl (file ^ "_playerid"))
+    val nsim = string_to_int (only_hd (readl (file ^ "_nsim")))
   in
-    (unib,dhtnn,noiseb,tobid)
+    (unib,dhtnn,noiseb,playerid,nsim)
   end
 
 val pre_extsearch = 
@@ -262,13 +264,12 @@ val dhtnn_param2 =
   }
 
 val dplayer1 =
- {name = "one_layer", dhtnn_param = dhtnn_param1, schedule = schedule}
+  {playerid = "one_layer", dhtnn_param = dhtnn_param1, schedule = schedule}
 val dplayer2 =
- {name = "two_layers", dhtnn_param = dhtnn_param2, schedule = schedule}
+  {playerid = "two_layers", dhtnn_param = dhtnn_param2, schedule = schedule}
 
 val tobdict = dnew String.compare 
   [("one_layer",term_of_board),("two_layers",term_of_board)];
-
 
 (* -------------------------------------------------------------------------
    Interface
@@ -278,8 +279,8 @@ val expname = "mleSetSynt-v2-1"
 
 val level_param =
   {
-  ntarget_compete = 50,
-  ntarget_explore = 50,
+  ntarget_compete = 400,
+  ntarget_explore = 400,
   level_start = 4, 
   level_threshold = 0.75,
   level_targetl = level_targetl
@@ -287,10 +288,7 @@ val level_param =
 
 val rl_param =
  {expname = expname, ex_window = 40000, ex_uniq = false, 
-  ngen = 2, ncore_search = 8}
-
-(* players *)
-
+  ngen = 100, ncore_search = 40}
 
 val rlpreobj : (board,move) rlpreobj =
   {
