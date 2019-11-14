@@ -279,16 +279,15 @@ val expname = "mleSetSynt-v2-1"
 
 val level_param =
   {
-  ntarget_compete = 400,
-  ntarget_explore = 400,
-  level_start = 4, 
-  level_threshold = 0.75,
+  ntarget_start = 1600, ntarget_compete = 400, ntarget_explore = 400,
+  level_start = 4, level_threshold = 0.75,
   level_targetl = level_targetl
   }
 
 val rl_param =
  {expname = expname, ex_window = 40000, ex_uniq = false, 
-  ngen = 100, ncore_search = 40}
+  ngen = 100, ncore_search = 40,
+  nsim_start = 16000, nsim_explore = 16000, nsim_compete = 16000}
 
 val rlpreobj : (board,move) rlpreobj =
   {

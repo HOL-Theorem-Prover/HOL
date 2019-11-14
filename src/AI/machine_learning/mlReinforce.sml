@@ -43,14 +43,15 @@ type 'a extsearch = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
 
 type 'a level_param =
   {
-  ntarget_compete : int, ntarget_explore : int,
+  ntarget_start : int, ntarget_compete : int, ntarget_explore : int,
   level_start : int, level_threshold : real,
   level_targetl : int -> int -> 'a list
   }
 
 type rl_param =
   {expname : string, ex_window : int, ex_uniq : bool, 
-   ngen : int, ncore_search : int}
+   ngen : int, ncore_search : int,
+   nsim_start : int , nsim_explore : int, nsim_compete : int}
 
 type ('a,'b) rlpreobj =
   {
@@ -216,7 +217,7 @@ fun compete_one rlobj (dhtnn,playerid) targetl =
   let
     val ncore = #ncore_search (#rl_param rlobj)
     val extspec = #extsearch rlobj
-    val splayer = (false,dhtnn,false,playerid,1600)
+    val splayer = (false,dhtnn,false,playerid,#nsim_compete (#rl_param rlobj))
     val (r,t) = add_time (parmap_queue_extern ncore extspec splayer) targetl
     val nwin = length (filter fst r)
   in
@@ -228,7 +229,7 @@ fun compete_one rlobj (dhtnn,playerid) targetl =
 
 fun rl_compete rlobj level rplayerl =
   let
-    val {ntarget_compete, ntarget_explore,
+    val {ntarget_start, ntarget_compete, ntarget_explore,
          level_start, level_threshold,
          level_targetl} = #level_param rlobj
     val targetl = level_targetl level ntarget_compete
@@ -254,7 +255,10 @@ fun explore_one rlobj unib (dhtnn,playerid) targetl =
   let 
     val ncore = #ncore_search (#rl_param rlobj)
     val extspec = #extsearch rlobj
-    val nsim = if unib then 160000 else 16000
+    val nsim = 
+      if unib 
+      then #nsim_start (#rl_param rlobj) 
+      else #nsim_explore (#rl_param rlobj)
     val splayer = (unib,dhtnn,true,playerid,nsim)
     val (l,t) = add_time (parmap_queue_extern ncore extspec splayer) targetl
     val nwin = length (filter fst l)
@@ -269,10 +273,10 @@ fun explore_one rlobj unib (dhtnn,playerid) targetl =
 fun rl_explore rlobj level unib rplayer allex =
   let
     val rl_param = #rl_param rlobj
-    val {ntarget_compete, ntarget_explore,
+    val {ntarget_start, ntarget_compete, ntarget_explore,
          level_start, level_threshold,
          level_targetl} = #level_param rlobj
-    val ntarget = if unib then 4 * 400 else ntarget_explore
+    val ntarget = if unib then ntarget_start else ntarget_explore
     val targetl = level_targetl level ntarget
     val _ = log rlobj ("Exploration targets: " ^ its (length targetl))
     val (nwin,exl0) = explore_one rlobj unib rplayer targetl
@@ -306,24 +310,27 @@ fun rl_init rlobj =
     val file = eval_dir ^ "/" ^ expname ^ "_gen0"
     val dplayer = hd (#dplayerl rlobj)
     val dhtnn = random_dhtnn (#dhtnn_param dplayer)
-    val rplayer = (dhtnn,#playerid dplayer)
-    val (allex,newlevel) = loop_rl_explore rlobj level true rplayer []
+    val dummyrplayer = (dhtnn, #playerid dplayer)
+    val (allex,newlevel) = loop_rl_explore rlobj level true dummyrplayer []
   in
-    (allex,rplayer,newlevel)
+    (allex,NONE,newlevel)
   end
 
-fun rl_one n rlobj (allex,rplayer,level) =
+fun rl_one n rlobj (allex,rplayero,level) =
   let
     val expname = #expname (#rl_param rlobj)
     val file = eval_dir ^ "/" ^ expname ^ "_gen" ^ its n
     val _ = log rlobj ("\nGeneration " ^ its n)
     val rplayerl = rl_train rlobj allex
-    val (level1,rplayer_best) = rl_compete rlobj level (rplayer :: rplayerl)
+    val rplayero' = if isSome rplayero then [valOf rplayero] else []
+    val (level1,rplayer_best) = 
+      rl_compete rlobj level (rplayero' @ rplayerl)
     val _ = write_dhtnn (file ^ "_dhtnn") (fst rplayer_best)
     val _ = writel (file ^ "_playerid") [snd rplayer_best]
-    val (newallex,level2) = loop_rl_explore rlobj level1 false rplayer allex
+    val (newallex,level2) = loop_rl_explore rlobj level1 false 
+      rplayer_best allex
   in
-    (newallex,rplayer_best,level2)
+    (newallex,SOME rplayer_best,level2)
   end
 
 fun cont_rl_loop rlobj i rldata =

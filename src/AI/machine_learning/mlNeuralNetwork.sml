@@ -185,7 +185,7 @@ fun fp_nn nn v = case nn of
 fun bp_layer (fpdata:fpdata) doutnv =
   let
     val doutv =
-      (* should use (#outv fpdata) to use the derivative *)
+      (* trick: uses (#outnv fpdata) instead of (#outv fpdata) *)
       let val dav = Vector.map (#da (#layer fpdata)) (#outnv fpdata) in
         mult_rvect dav doutnv
       end

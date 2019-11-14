@@ -15,20 +15,7 @@ sig
     {playerid : string, dhtnn_param : dhtnn_param, schedule : schedule}
   type rplayer = (dhtnn * string)
 
-  (* object description *)
-  type 'a level_param =
-    {
-    ntarget_compete : int, ntarget_explore : int,
-    level_start : int, level_threshold : real,
-    level_targetl : int -> int -> 'a list
-    }
-  type rl_param =
-    {
-    expname : string, 
-    ex_window : int, ex_uniq : bool, 
-    ngen : int, ncore_search : int
-    }
-  
+  (* parallelization *)
   type 'a pre_extsearch = 
     {
     write_target : string -> 'a -> unit,
@@ -37,6 +24,23 @@ sig
     read_exl : string -> 'a rlex,
     write_splayer : string -> splayer -> unit,
     read_splayer : string -> splayer
+    }
+
+  type 'a extsearch = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
+
+  (* reinforcement learning parameters *)
+  type 'a level_param =
+    {
+    ntarget_start: int, ntarget_compete : int, ntarget_explore : int,
+    level_start : int, level_threshold : real,
+    level_targetl : int -> int -> 'a list
+    }
+  type rl_param =
+    {
+    expname : string, 
+    ex_window : int, ex_uniq : bool, 
+    ngen : int, ncore_search : int,
+    nsim_start : int , nsim_explore : int, nsim_compete : int
     }
   type ('a,'b) rlpreobj =
     {
@@ -48,7 +52,6 @@ sig
     tobdict : (string, 'a -> term) Redblackmap.dict,
     dplayerl : dplayer list
     }
-  type 'a extsearch = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
   type 'a rlobj =
     {
     rl_param : rl_param,
@@ -57,6 +60,7 @@ sig
     tobdict : (string,'a -> term) Redblackmap.dict,
     dplayerl : dplayer list
     }
+  
   val mk_extsearch : string -> ('a,'b) rlpreobj -> 'a extsearch
   val mk_rlobj : ('a,'b) rlpreobj -> 'a extsearch -> 'a rlobj
 
@@ -68,7 +72,7 @@ sig
 
   (* main loop *)
   val cont_rl_loop : 'a rlobj -> int -> 
-     ('a rlex * rplayer * int) ->  ('a rlex * rplayer * int)
-  val start_rl_loop : 'a rlobj -> ('a rlex * rplayer * int)
+     ('a rlex * rplayer option * int) ->  ('a rlex * rplayer option * int)
+  val start_rl_loop : 'a rlobj -> ('a rlex * rplayer option * int)
 
 end
