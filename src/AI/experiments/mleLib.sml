@@ -45,6 +45,9 @@ fun eval_numtm tm =
 
 type pos = int list
 
+fun string_of_pos pos = String.concatWith " " (map its pos)
+fun pos_of_string s = map string_to_int (String.tokens Char.isSpace s)
+
 fun subst_pos (tm,pos) res =
   if null pos then res else
   let

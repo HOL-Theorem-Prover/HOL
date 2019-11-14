@@ -178,7 +178,7 @@ fun level_targetl level ntarget =
   end
 
 (* -------------------------------------------------------------------------
-   Parallelization (communicating by files)
+   Parallelization
    ------------------------------------------------------------------------- *)
 
 fun write_target file target =

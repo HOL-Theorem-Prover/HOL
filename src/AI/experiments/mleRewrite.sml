@@ -6,7 +6,6 @@
 (* ========================================================================= *)
 
 
-(* todo: make it more general *)
 structure mleRewrite :> mleRewrite =
 struct
 
@@ -100,22 +99,6 @@ fun apply_move move ((tm,pos),step) = case move of
 fun filter_sit sit = List.filter (available sit)
 
 (* -------------------------------------------------------------------------
-   Target
-   ------------------------------------------------------------------------- *)
-
-fun write_targetl file targetl =
-  let val tml = map dest_startsit targetl in
-    mlTacticData.export_terml (file ^ "_targetl") tml
-  end
-
-fun read_targetl file =
-  let val tml = mlTacticData.import_terml (file ^ "_targetl") in
-    map mk_startsit tml
-  end
-
-fun max_bigsteps target = snd target + 1
-
-(* -------------------------------------------------------------------------
    Level
    ------------------------------------------------------------------------- *)
 
@@ -131,7 +114,7 @@ fun create_train_evalsorted () =
     export_terml fileout (map fst l4)
   end
 
-fun mk_targetl level ntarget =
+fun level_targetl level ntarget =
   let
     val tml = mlTacticData.import_terml (dataarith_dir ^ "/train_plsorted")
     val tmll = map shuffle (first_n level (mk_batch 400 tml))
@@ -139,33 +122,6 @@ fun mk_targetl level ntarget =
   in
     map mk_startsit (first_n ntarget tml2)
   end
-
-(* -------------------------------------------------------------------------
-   Interface
-   ------------------------------------------------------------------------- *)
-
-val gamespec : (board,move) mlReinforce.gamespec =
-  {
-  movel = movel,
-  move_compare = move_compare,
-  string_of_move = string_of_move,
-  filter_sit = filter_sit,
-  status_of = status_of,
-  apply_move = apply_move,
-  operl = rewrite_operl,
-  nntm_of_sit = nntm_of_sit,
-  mk_targetl = mk_targetl,
-  write_targetl = write_targetl,
-  read_targetl = read_targetl,
-  max_bigsteps = max_bigsteps
-  }
-
-val extspec = mk_extspec "mleRewrite.extspec" gamespec
-val test_extspec = test_mk_extspec "mleRewrite.test_extspec" gamespec
-
-(* -------------------------------------------------------------------------
-   Statistics
-   ------------------------------------------------------------------------- *)
 
 fun maxprooflength_atgen () =
   let val tml = import_terml (dataarith_dir ^ "/train_plsorted") in
@@ -181,6 +137,169 @@ fun stats_prooflength file =
   in
     map_snd length l2
   end
+
+(* -------------------------------------------------------------------------
+   Big steps limit
+   ------------------------------------------------------------------------- *)
+
+fun max_bigsteps target = snd target + 1
+
+(* -------------------------------------------------------------------------
+   Parallelization
+   ------------------------------------------------------------------------- *)
+
+fun write_target file target =
+  export_terml (file ^ "_target") [dest_startboard target]
+fun read_target file =
+  mk_startboard (only_hd (import_terml (file ^ "_target")))
+
+fun write_boardl file boardl =
+  let 
+    val (l1,l2) = split boardl
+    val (l1a,l1b) = split l1
+  in
+    export_terml (file ^ "_orgtm") l1a;
+    writel (file ^ "_pos") (map string_of_pos l1b);
+    writel (file ^ "_max") (map its l2)
+  end
+fun read_boardl file boardl =
+  let
+    val orgl = import_terml (file ^ "_orgtm")
+    val posl = map pos_of_string (readl (file ^ "_pos"))
+    val nl = map string_to_int (readl (file ^ "_max"))
+  in
+    combine (combine (orgl,posl), nl)
+  end
+  
+fun write_exl file exl = 
+  let 
+    val (boardl,evall,polil) = split_triple exl
+    val (l1,l2) = split boardl
+    val (l1a,l1b) = split l1
+  in 
+    export_terml (file ^ "_orgtm") l1a;
+    writel (file ^ "_graph") (map string_of_graph l1b);
+    export_terml (file ^ "_conttm") l2;
+    writel (file ^ "_eval") (map reall_to_string evall);
+    writel (file ^ "_poli") (map reall_to_string polil)
+  end
+fun read_exl file =
+  let
+    val orgl = import_terml (file ^ "_orgtm")
+    val graphl = map graph_of_string (readl (file ^ "_graph"))
+    val contl = import_terml (file ^ "_conttm")
+    val evall = map string_to_reall (readl (file ^ "_eval"))
+    val polil = map string_to_reall (readl (file ^ "_poli"))
+    val boardl = combine (combine (orgl,graphl), contl)
+  in
+    combine_triple (boardl,evall,polil)
+  end
+
+fun write_splayer file (unib,dhtnn,noiseb,playerid,nsim) =
+  (
+  write_dhtnn (file ^ "_dhtnn") dhtnn; 
+  writel (file ^ "_flags") [String.concatWith " " (map bts [unib,noiseb])];
+  writel (file ^ "_playerid") [playerid]; 
+  writel (file ^ "_nsim") [its nsim]
+  )
+fun read_splayer file =
+  let
+    val dhtnn = read_dhtnn (file ^ "_dhtnn")
+    val (unib,noiseb) = 
+      pair_of_list (map string_to_bool 
+        (String.tokens Char.isSpace (only_hd (readl (file ^ "_flags")))))
+    val playerid = only_hd (readl (file ^ "_playerid"))
+    val nsim = string_to_int (only_hd (readl (file ^ "_nsim")))
+  in
+    (unib,dhtnn,noiseb,playerid,nsim)
+  end
+
+val pre_extsearch = 
+  {
+  write_target = write_target,
+  read_target = read_target,  
+  write_exl = write_exl,
+  read_exl = read_exl,
+  write_splayer = write_splayer,
+  read_splayer = read_splayer
+  }
+
+(* -------------------------------------------------------------------------
+   Players
+   ------------------------------------------------------------------------- *)
+
+val schedule = 
+  [{ncore = 1, verbose = true,
+    learning_rate = 0.02, 
+    batch_size = 16, nepoch = 100}]
+
+val dhtnn_param1 =
+  {
+  operl = operl,nlayer_oper = 1, 
+  nlayer_headeval = 1, nlayer_headpoli = 1,
+  dimin = 12, dimpoli = length movel
+  }
+
+val dhtnn_param2 =
+  {
+  operl = operl, nlayer_oper = 2, 
+  nlayer_headeval = 2, nlayer_headpoli = 2,
+  dimin = 12, dimpoli = length movel
+  }
+
+val dplayer1 =
+  {playerid = "one_layer", dhtnn_param = dhtnn_param1, schedule = schedule}
+val dplayer2 =
+  {playerid = "two_layers", dhtnn_param = dhtnn_param2, schedule = schedule}
+
+val tobdict = dnew String.compare 
+  [("one_layer",term_of_board),("two_layers",term_of_board)];
+
+(* -------------------------------------------------------------------------
+   Interface
+   ------------------------------------------------------------------------- *)
+
+val expname = "mleSetSynt-v2-1"
+
+val level_param =
+  {
+  ntarget_start = 1600, ntarget_compete = 400, ntarget_explore = 400,
+  level_start = 4, level_threshold = 0.75,
+  level_targetl = level_targetl
+  }
+
+val rl_param =
+ {expname = expname, ex_window = 40000, ex_uniq = false, 
+  ngen = 100, ncore_search = 40,
+  nsim_start = 16000, nsim_explore = 16000, nsim_compete = 16000}
+
+val rlpreobj : (board,move) rlpreobj =
+  {
+  rl_param = rl_param,
+  level_param = level_param,
+  max_bigsteps = max_bigsteps,
+  game = game,
+  pre_extsearch = pre_extsearch, 
+  tobdict = tobdict,
+  dplayerl = [dplayer1,dplayer2]
+  }
+
+val extsearch = mk_extsearch "mleSetSynt.extsearch" rlpreobj
+
+val rlobj = mk_rlobj rlpreobj extsearch
+
+(* -------------------------------------------------------------------------
+   Reinforcement learning
+   ------------------------------------------------------------------------- *)
+
+(*
+load "mlReinforce"; open mlReinforce;
+load "mleSetSynt"; open mleSetSynt;
+(* export_setsyntdata (); *)
+val r = start_rl_loop rlobj;
+*)
+
+
 
 (* -------------------------------------------------------------------------
    Reinforcement learning
@@ -211,101 +330,5 @@ nepoch_glob := 100;
 ngen_glob := 100;
 val r = start_rl_loop (gamespec,extspec);
 *)
-
-(* -------------------------------------------------------------------------
-   Small test
-   ------------------------------------------------------------------------- *)
-
-(*
-load "mleRewrite"; open mleRewrite;
-load "mlReinforce"; open mlReinforce;
-load "psMCTS"; open psMCTS;
-nsim_glob := 10000;
-decay_glob := 0.9;
-val _ = n_bigsteps_test gamespec (random_dhtnn_gamespec gamespec)
-(mk_startsit ``SUC 0 * SUC 0``);
-
-dim_glob := 4;
-val tree = mcts_test 10000 gamespec (random_dhtnn_gamespec gamespec)
-(mk_startsit ``SUC (SUC 0) + SUC 0``);
-val nodel = trace_win (#status_of gamespec) tree [];
-
-*)
-
-(* -------------------------------------------------------------------------
-   Final test
-   ------------------------------------------------------------------------- *)
-
-fun final_stats l =
-  let
-    val winl = filter (fn (_,b,_) => b) l
-    val a = length winl
-    val atot = length l
-    val b = sum_int (map (fn (_,_,n) => n) winl)
-    val btot = sum_int (map (fn (t,_,_) =>
-      (lo_prooflength 200 o dest_startsit) t) winl)
-  in
-    ((a,atot,int_div a atot), (b,btot, int_div b btot))
-  end
-
-fun final_eval fileout dhtnn set =
-  let
-    val l = test_compete test_extspec dhtnn (map mk_startsit set)
-    val ((a,atot,ar),(b,btot,br)) = final_stats l
-    val cr = br * ar + 2.0 * (1.0 - ar)
-    val s =
-      String.concatWith " " [its a,its atot,rts ar,
-                             its b,its btot,rts br,rts cr]
-  in
-    writel fileout [fileout,s]
-  end
-
-
-(*
-load "aiLib"; open aiLib;
-load "mleArithData"; open mleArithData;
-load "mleLib"; open mleLib;
-load "mlReinforce"; open mlReinforce;
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-load "psMCTS"; open psMCTS;
-load "mlTacticData"; open mlTacticData;
-load "mleRewrite"; open mleRewrite;
-
-decay_glob := 0.99;
-ncore_mcts_glob := 40;
-
-val test = import_terml (dataarith_dir ^ "/test");
-val (test1,test2) =
-  let val l = mapfilter (fn x => (x,(lo_prooflength 200) x)) test in
-    (map fst (filter (fn x => snd x >= 0 andalso snd x <= 89) l),
-     map fst (filter (fn x => snd x >= 90 andalso snd x <= 130) l))
-  end
-;
-
-exception Read;
-fun read_ntest n =
-  if n = 1 then test1 else if n = 2 then test2 else raise Read;
-fun read_ndhtnn n =
-  read_dhtnn (eval_dir ^ "/mleRewrite_run41_gen" ^ its n ^ "_dhtnn");
-
-val paraml = [(0,1),(13,1),(31,1),(13,2),(31,2)];
-val nsiml = [1,16,160,1600];
-val paraml2 = cartesian_product nsiml paraml;
-
-fun final_eval_one (nsim,(ndhtnn,ntest)) =
-  let
-    val dhtnn = read_ndhtnn ndhtnn
-    val set = read_ntest ntest
-    val _ = nsim_glob := nsim
-    val suffix =
-      "ngen" ^ its ndhtnn ^ "-ntest" ^ its ntest ^ "-nsim" ^ its nsim
-    val file = eval_dir ^ "/a_rw_" ^ suffix
-  in
-    final_eval file dhtnn set
-  end;
-
-app final_eval_one paraml2;
-*)
-
 
 end (* struct *)
