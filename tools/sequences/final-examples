@@ -30,3 +30,10 @@
 !!!examples/l3-machine-code/cheri/step
 [poly]!!!examples/theorem-prover
 [poly]!!!examples/machine-code
+
+!!!examples/diningcryptos
+
+# AKS examples
+!!examples/algebra
+!!examples/simple_complexity
+!!examples/AKS

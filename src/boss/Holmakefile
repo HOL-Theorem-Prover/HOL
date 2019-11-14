@@ -2,20 +2,18 @@ ifdef POLY
 EXTRA_CLEANS = $(TARGET)
 
 TARGET = $(dprot $(HOLDIR)/bin/hol.state)
-HOLHEAP = $(TARGET)
 
-builder0 = $(HOLDIR)/src/num/termination/numheap
+HOLHEAP = $(HOLDIR)/src/num/termination/numheap
 
 boss_deps = listTheory pred_setTheory arithmeticTheory numLib \
             pred_setLib pred_setSimps numSimps optionTheory \
             RecordType rich_listTheory
-DEPS = bossLib.uo $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(boss_deps)) \
-       $(dprot $(builder0))
+DEPS = bossLib.uo $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(boss_deps))
 
 all: $(TARGET)
 
 $(TARGET): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $(TARGET) -b $(builder0) $(boss_deps) bossLib
+	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $(TARGET) -b $(HOLHEAP) $(boss_deps) bossLib
 
 endif
 

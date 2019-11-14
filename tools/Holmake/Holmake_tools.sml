@@ -7,10 +7,52 @@ open Holmake_tools_dtype
 
 fun K x y = x
 
+fun |>(x,f) = f x
+infix |>
+
+structure Exception = struct
+  datatype 'a result = Res of 'a | Exn of exn
+  fun get_res (Res r) = SOME r | get_res _ = NONE
+  fun get_exn (Exn e) = SOME e | get_exn _ = NONE
+  fun capture f x = Res (f x) handle e => Exn e
+  fun release (Res r) = r | release (Exn e) = raise e
+end
+
+
 structure Path = OS.Path
 structure FileSys = OS.FileSys
 
 val DEFAULT_OVERLAY = "Overlay.ui"
+fun member m [] = false
+  | member m (x::xs) = if x = m then true else member m xs
+fun set_unionl s1 s2 =
+  case s1 of
+    [] => s2
+  | (e::es) => let
+      val s' = set_unionl es s2
+    in
+      if member e s' then s' else e::s'
+    end
+fun delete m [] = []
+  | delete m (x::xs) = if m = x then delete m xs else x::delete m xs
+fun set_diffl s1 s2 = foldl (fn (s2e, s1') => delete s2e s1') s1 s2
+fun remove_duplicates [] = []
+  | remove_duplicates (x::xs) = x::(remove_duplicates (delete x xs))
+
+
+type 'a cmp = 'a * 'a -> order
+fun pair_compare (c1,c2) ((a1,b1), (a2,b2)) =
+  case c1(a1,a2) of
+      EQUAL => c2(b1,b2)
+    | x => x
+fun lex_compare c (l1, l2) =
+  case (l1,l2) of
+      ([],[]) => EQUAL
+    | ([], _) => LESS
+    | (_, []) => GREATER
+    | (h1::t1, h2::t2) => case c(h1,h2) of EQUAL => lex_compare c (t1,t2)
+                                         | x => x
+fun inv_img_cmp f c (a1,a2) = c (f a1, f a2)
 
 fun normPath s = OS.Path.toString(OS.Path.fromString s)
 fun itstrings f [] = raise Fail "itstrings: empty list"
@@ -134,7 +176,7 @@ type output_functions = {warn : string -> unit,
                          info : string -> unit,
                          chatty : string -> unit,
                          tgtfatal : string -> unit,
-                         diag : (unit -> string) -> unit}
+                         diag : string -> (unit -> string) -> unit}
 
 fun die_with message = let
   open TextIO
@@ -147,7 +189,7 @@ end
 fun shorten_name name =
   if OS.Path.file name = "Holmake" then "Holmake" else name
 
-fun output_functions {usepfx,chattiness=n} = let
+fun output_functions {usepfx,chattiness=n,debug} = let
   val execname = if usepfx then shorten_name (CommandLine.name()) ^ ": " else ""
   open TextIO
   fun msg strm s =
@@ -167,7 +209,17 @@ fun output_functions {usepfx,chattiness=n} = let
   val info = if n >= 1 then msg stdOut else donothing
   val chatty = if n >= 2 then msg stdOut else donothing
   val tgtfatal = msg stdErr
-  val diag = if n >= 3 then (fn sf => msg stdErr (sf())) else donothing
+  fun pfx p s = "["^p^"] "^s
+  val diag =
+      if n >= 3 then
+        case debug of
+            NONE => (fn _ => fn _ => ())
+          | SOME {ins,outs} =>
+            (fn cat => fn sf => if member cat outs then () else
+                                if null ins orelse member cat ins then
+                                  msg stdErr (pfx cat (sf()))
+                                else ())
+      else fn _ => donothing
 in
   {warn = warn, diag = diag, tgtfatal = tgtfatal, info = info, chatty = chatty}
 end
@@ -195,6 +247,7 @@ end
 
 fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
   val {warn,diag,...} = ofns
+  val diag = diag "lastmadecheck"
   val mypath = find_my_path()
   val _ = diag (K ("running "^mypath))
   fun write_lastmaker_file () = let
@@ -342,21 +395,6 @@ fun fromFileNoSuf f =
   | DAT s => s
   | Unhandled s => s
 
-fun member m [] = false
-  | member m (x::xs) = if x = m then true else member m xs
-fun set_union s1 s2 =
-  case s1 of
-    [] => s2
-  | (e::es) => let
-      val s' = set_union es s2
-    in
-      if member e s' then s' else e::s'
-    end
-fun delete m [] = []
-  | delete m (x::xs) = if m = x then delete m xs else x::delete m xs
-fun set_diff s1 s2 = foldl (fn (s2e, s1') => delete s2e s1') s1 s2
-fun remove_duplicates [] = []
-  | remove_duplicates (x::xs) = x::(remove_duplicates (delete x xs))
 
 
 
@@ -429,12 +467,17 @@ val nice_dir =
                            else s)
       | NONE => (fn s => s)
 
+fun pushdir d f x =
+    let
+      val d0 = OS.FileSys.getDir()
+      val res = Exception.capture (fn () => (OS.FileSys.chDir d; f x)) ()
+    in
+      OS.FileSys.chDir d0; Exception.release res
+    end
+
+
 fun xterm_log s =
   ignore (OS.Process.system ("/bin/sh -c 'printf \"\\033]0;" ^ s ^ "\\007\"'"))
-
-val terminal_log =
-    if Systeml.isUnix then xterm_log
-    else (fn s => ())
 
 structure hmdir =
 struct
@@ -445,9 +488,12 @@ fun op+ (d, e) = Path.mkCanonical (Path.concat(d, e))
 
 fun curdir () = {relpath = SOME (OS.Path.currentArc),
                  absdir = OS.FileSys.getDir()}
+fun chdir ({absdir,...}: t) = OS.FileSys.chDir absdir
 
 fun compare ({absdir = d1, ...} : t, {absdir = d2, ...} : t) =
     String.compare (d1, d2)
+
+fun eqdir d1 d2 = compare(d1,d2) = EQUAL
 
 fun toString {relpath,absdir} =
     case relpath of
@@ -543,6 +589,7 @@ end
 type include_info = {includes : string list, preincludes : string list }
 
 type include_info = {includes : string list, preincludes : string list}
+val empty_incinfo = {includes = [], preincludes = []}
 type dirset = hmdir.t Binaryset.set
 
 val empty_dirset = Binaryset.empty hmdir.compare
@@ -567,53 +614,52 @@ fun find_files ds P =
     recurse []
   end
 
-fun generate_all_plausible_targets warn first_target =
-    case first_target of
-        SOME s => [toFile s]
-      | NONE =>
-        let
-          val cds = OS.FileSys.openDir "."
-          fun not_a_dot f = not (String.isPrefix "." f)
-          fun ok_file f =
-              case (toFile f) of
-                  SIG (Theory _) => false
-                | SIG _ => true
-                | SML (Script s) =>
-                  (case OS.Path.ext s of
-                       SOME "art" => false
-                       (* can be generated as temporary by opentheory
-                          machinery *)
-                     | SOME _ =>
-                         (warn ("Theory names (e.g., "^f^
-                                ") can't include '.' characters");
-                          false)
-                     | NONE => true)
-                | SML (Theory _) => false
-                | SML _ => true
-                | _ => false
-          val src_files = find_files cds (fn s => ok_file s andalso not_a_dot s)
-          fun src_to_target (SIG (Script s)) = UO (Theory s)
-            | src_to_target (SML (Script s)) = UO (Theory s)
-            | src_to_target (SML s) = (UO s)
-            | src_to_target (SIG s) = (UI s)
-            | src_to_target _ = raise Fail "Can't happen"
-          val initially = map (src_to_target o toFile) src_files
-          fun remove_sorted_dups [] = []
-            | remove_sorted_dups [x] = [x]
-            | remove_sorted_dups (x::y::z) = if x = y then remove_sorted_dups (y::z)
-                                             else x :: remove_sorted_dups (y::z)
-        in
-          remove_sorted_dups (Listsort.sort file_compare initially)
-        end
+(* targets are also dependencies, so the naming convention is to use variable
+   names like deps and tgts both *)
+structure hm_target =
+struct
+type t = (hmdir.t * File * string option)
+fun mk(d,f) = (d,f,NONE)
+fun dirpart (d:t) = #1 d
+fun filepart (d:t) = #2 d
+fun HMF_text (t:t) = #3 t
+fun setFile f (d,_,sopt) = (d,f,sopt)
+fun setHMF_text s (d,f,_) = (d,f,SOME s)
+fun toString (d,f,_) = OS.Path.concat (hmdir.toAbsPath d, fromFile f)
+val compare = inv_img_cmp (fn (d,f,_) => (d,f))
+                          (pair_compare (hmdir.compare, file_compare))
+val empty_tgtset : t Binaryset.set = Binaryset.empty compare
+fun tgtset_diff dl1 dl2 =
+    let
+      fun recurse [] = []
+        | recurse (d::ds) =
+          (if List.exists (fn d' => compare(d,d') = EQUAL) dl2 then []
+           else [d]) @ recurse ds
+    in
+      recurse dl1
+    end
+fun localFile f = (hmdir.curdir(), f, NONE)
+fun filestr_to_tgt s =
+    let
+      val {dir,file} = OS.Path.splitDirFile s
+      val dir' = hmdir.extendp {base = hmdir.curdir(), extension = dir}
+    in
+      (dir',toFile file,NONE)
+    end
+fun tgtexists_readable d = exists_readable (toString d)
+end (* struct *)
+
+type dep = hm_target.t
+val tgt_toString = hm_target.toString
 
 (* dependency analysis *)
 exception HolDepFailed
 fun runholdep {ofs, extras, includes, arg, destination} = let
   val {chatty, diag, warn, ...} : output_functions = ofs
-  val diagK = diag o K
+  val diagK = diag "holdep" o K
   val _ = chatty ("Analysing "^fromFile arg)
-  fun buildables s = let
-    val f = toFile s
+  fun buildables tgt  = let
+    val d = hm_target.dirpart tgt val f = hm_target.filepart tgt
     val files =
         case f of
           SML (ss as Script t) => [UI ss, UO ss, SML (Theory t), DAT t,
@@ -631,7 +677,7 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
                  String.concatWith ", " includes ^ "], assumes = [" ^
                  String.concatWith ", " buildable_extras ^"]")
   val holdep_result =
-    Holdep.main {assumes = buildable_extras, diag = diag,
+    Holdep.main {assumes = buildable_extras, diag = diag "holdep",
                  includes = includes, fname = fromFile arg}
     handle Holdep.Holdep_Error s =>
              (warn ("Holdep failed: "^s); raise HolDepFailed)
@@ -664,32 +710,6 @@ end
 fun first f [] = NONE
   | first f (x::xs) = case f x of NONE => first f xs | res => res
 
-fun get_dependencies_from_file depfile = let
-  fun get_whole_file s = let
-    open TextIO
-    val instr = openIn (normPath s)
-  in
-    inputAll instr before closeIn instr
-  end
-  fun parse_result s = let
-    val lines = String.fields (fn c => c = #"\n") (collapse_bslash_lines s)
-    fun process_line line = let
-      val (lhs0, rhs0) = Substring.splitl (fn c => c <> #":")
-                                          (Substring.full line)
-      val lhs = Substring.string lhs0
-      val rhs = Substring.string (Substring.slice(rhs0, 1, NONE))
-        handle Subscript => ""
-    in
-      realspace_delimited_fields rhs
-    end
-    val result = List.concat (map process_line lines)
-  in
-    List.map toFile result
-  end
-in
-  parse_result (get_whole_file depfile)
-end
-
 (* a function that given a product file, figures out the argument that
    should be passed to runholdep in order to get back secondary
    dependencies. *)
@@ -705,6 +725,36 @@ fun holdep_arg (UO c) = SOME (SML c)
 
 fun mk_depfile_name DEPDIR s = fullPath [DEPDIR, s^".d"]
 
+
+fun get_dependencies_from_file depfile = let
+  open hm_target
+  fun get_whole_file s = let
+    open TextIO
+    val instr = openIn (normPath s)
+  in
+    inputAll instr before closeIn instr
+  end
+  fun parse_result s = let
+    val lines = String.fields (fn c => c = #"\n") (collapse_bslash_lines s)
+    fun process_line line = let
+      val (lhs0, rhs0) = Substring.splitl (fn c => c <> #":")
+                                          (Substring.full line)
+      val lhs = Substring.string lhs0
+      val rhs = Substring.string (Substring.slice(rhs0, 1, NONE))
+        handle Subscript => ""
+    in
+      map filestr_to_tgt (realspace_delimited_fields rhs)
+    end
+  in
+    List.concat (map process_line lines)
+  end
+in
+  parse_result (get_whole_file depfile)
+end
+
+
+
+
 infix forces_update_of
 fun (f1 forces_update_of f2) = let
   open Time
@@ -712,10 +762,14 @@ in
   FileSys.access(f1, []) andalso
   (not (FileSys.access(f2, [])) orelse FileSys.modTime f1 > FileSys.modTime f2)
 end
+infix depforces_update_of
+fun (d1 depforces_update_of d2) =
+    tgt_toString d1 forces_update_of tgt_toString d2
 
 
 fun get_direct_dependencies {incinfo,DEPDIR,output_functions,extra_targets} f =
 let
+  open hm_target
   val fname = fromFile f
   val arg = holdep_arg f  (* arg is file to analyse for dependencies *)
   val {includes,preincludes} = incinfo
@@ -741,12 +795,12 @@ in
         []
   in
     case f of
-        UO (Theory s) => UI (Theory s) :: DAT s :: phase1
+        UO (Theory s) => localFile (UI (Theory s)) :: localFile(DAT s) :: phase1
       | UO x =>
         if FileSys.access(fromFile (SIG x), []) andalso
-           List.all (fn f => f <> SIG x) phase1
+           List.all (fn f => f <> localFile (SIG x)) phase1
         then
-          UI x :: phase1
+          localFile (UI x) :: phase1
         else
           phase1
       | _ => phase1
@@ -754,6 +808,75 @@ in
   else
     []
 end
+
+type 'a set = 'a Binaryset.set
+fun set_diff s1 s2 = Binaryset.difference(s1,s2)
+fun set_union s1 s2 = Binaryset.union(s1,s2)
+fun set_add i s = Binaryset.add(s,i)
+fun set_addList l s = Binaryset.addList(s,l)
+fun set_exists P s = isSome (Binaryset.find P s)
+fun set_mapPartial f emp s =
+    Binaryset.foldl (fn (e,A) => case f e of SOME e' => set_add e' A
+                                           | NONE => A)
+                    emp
+                    s
+val listItems = Binaryset.listItems
+
+fun set_concatWith p d set =
+    let val str = Binaryset.foldl (fn (e, A) => p e ^ d :: A) [] set
+                                  |> String.concat
+    in
+      case str of
+          "" => ""
+        | _ => String.extract(str, 0, SOME (size str - size d))
+    end
+fun concatWithf p d [] = ""
+  | concatWithf p d [x] = p x
+  | concatWithf p d xs =
+    let
+      fun recur A [] = List.rev A (* shouldn't ever happen *)
+        | recur A [x] = List.rev (p x :: A)
+        | recur A (x::xs) = recur (d :: p x :: A) xs
+    in
+      String.concat (recur [] xs)
+    end
+
+
+fun generate_all_plausible_targets warn first_target =
+    case first_target of
+        SOME d => [d]
+      | NONE =>
+        let
+          open hm_target
+          val cds = OS.FileSys.openDir "."
+          fun not_a_dot f = not (String.isPrefix "." f)
+          fun ok_file f =
+              case (toFile f) of
+                  SIG (Theory _) => false
+                | SIG _ => true
+                | SML (Script s) =>
+                  (case OS.Path.ext s of
+                       SOME "art" => false
+                       (* can be generated as temporary by opentheory
+                          machinery *)
+                     | SOME _ =>
+                         (warn ("Theory names (e.g., "^f^
+                                ") can't include '.' characters");
+                          false)
+                     | NONE => true)
+                | SML (Theory _) => false
+                | SML _ => true
+                | _ => false
+          val src_files = find_files cds (fn s => ok_file s andalso not_a_dot s)
+          fun src_to_target (SIG (Script s)) = UO (Theory s)
+            | src_to_target (SML (Script s)) = UO (Theory s)
+            | src_to_target (SML s) = (UO s)
+            | src_to_target (SIG s) = (UI s)
+            | src_to_target _ = raise Fail "Can't happen"
+          val initially = map (localFile o src_to_target o toFile) src_files
+        in
+          listItems (set_addList initially empty_tgtset)
+        end
 
 
 

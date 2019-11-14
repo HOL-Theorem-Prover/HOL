@@ -22,6 +22,7 @@ val _ = useC "HM_Core_Cline";
 val _ = useC "HM_DepGraph";
 val _ = useC "HM_GraphBuildJ1";
 val _ = useC "poly/HM_Cline";
+val _ = useC "poly/GraphExtra";
 val _ = useC "poly/HM_BaseEnv";
 val _ = use  "../BuildCommand.sig";
 val _ = useC "poly/ProcessMultiplexor";

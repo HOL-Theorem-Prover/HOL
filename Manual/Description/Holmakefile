@@ -22,13 +22,13 @@ drules.tex: drules.stex $(PS_STUFF)
 tactics.tex: tactics.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
-theories.tex: theories.stex $(PS_STUFF)
+theories.tex: theories.stex $(PS_STUFF) $(dprot $(SIGOBJ)/integerTheory.uo)
 	$(PS_COMMAND)
 
 PatternMatchesLib.tex: PatternMatchesLib.stex $(PS_STUFF)
 	$(PS_COMMAND)
 
-libraries.tex: libraries.stex $(PS_STUFF)
+libraries.tex: libraries.stex $(PS_STUFF) $(dprot $(SIGOBJ)/integerTheory.uo)
 	$(PS_COMMAND)
 
 system.tex: system.stex $(PS_STUFF)

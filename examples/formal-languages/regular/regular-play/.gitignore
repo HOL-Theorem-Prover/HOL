@@ -1,7 +1,8 @@
 # some ignores only for this example project
 # ------------
 
-emit
+emit/*ML.sig
+emit/*ML.sml
 test/performance.log
 
 

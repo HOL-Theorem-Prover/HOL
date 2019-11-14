@@ -1,0 +1,12 @@
+INCLUDES = ../src
+
+GENERATED_STEMS = combin list num pair regexEMC rich_list
+GENERATED_FILES = $(patsubst %,%ML.sig %ML.sml,$(GENERATED_STEMS))
+
+
+all: $(patsubst %,%ML.ui %ML.uo,$(GENERATED_STEMS))
+
+$(GENERATED_FILES): *emit_regexScript.sml
+
+EXTRA_CLEANS = $(GENERATED_FILES)
+.PHONY: all

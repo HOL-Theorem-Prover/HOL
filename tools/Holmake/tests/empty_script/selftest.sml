@@ -17,6 +17,18 @@ fun pluckk P k l =
               else pluckk P (fn h' => fn t => k h' (h::t)) t
 fun pluck P l = pluckk P (fn h => fn t => (h, t)) l
 
+fun find1 s ss =
+    let val (_, rest) = Substring.position s ss
+    in
+      if Substring.isPrefix s rest then SOME rest else NONE
+    end
+
+fun find_all [] ss = true
+  | find_all (s::rest) ss =
+      case find1 s ss of
+          NONE => false
+        | SOME ss' => find_all rest ss'
+
 fun grep pats f =
   let
     val istrm = TextIO.openIn f
@@ -30,9 +42,11 @@ fun grep pats f =
               case TextIO.inputLine istrm of
                   NONE => return false
                 | SOME line =>
-                  (case pluck (fn p => String.isSubstring p line) pats of
+                  (case pluck (fn p => String.isSubstring (hd p) line) pats of
                        NONE => checking()
-                     | SOME (_, t) => recurse t)
+                     | SOME (p, t) =>
+                       if find_all p (Substring.full line) then recurse t
+                       else checking())
           in
             checking()
           end
@@ -40,8 +54,8 @@ fun grep pats f =
     recurse pats
   end
 
-val pats = ["Couldn't find required output file: emptyTheory",
-            "Couldn't find required output file: noproductTheory"]
+val pats = [["Couldn't find required output file:", "emptyTheory"],
+            ["Couldn't find required output file:", "noproductTheory"]]
 
 val desc = "failing Holmake with empty/non-producing scripts"
 val holstate_sfx = ["--holstate", Globals.HOLDIR ++ "bin" ++ "hol.state0"]

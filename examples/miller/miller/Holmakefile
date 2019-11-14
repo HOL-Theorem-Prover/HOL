@@ -1,4 +1,3 @@
-PRE_INCLUDES = ../../../src/probability 
 INCLUDES = ../prob ../formalize ../ho_prover ../subtypes ${HOLDIR}/examples/RSA ../groups
 OPTIONS = QUIT_ON_FAILURE
 

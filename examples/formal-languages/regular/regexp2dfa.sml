@@ -13,7 +13,7 @@ fun HOLfile name quote (certificate,_,finals,table) =
   of NONE => ""
    | SOME thm =>
      let open HolKernel Drule boolLib bossLib
-         val _ = stdErr_print "Generating theorem.\n"
+         val _ = stdErr_print "Generating HOL theorem.\n"
          val eqn = snd(dest_forall(concl thm))
          val (exec_dfa,[finals,table,start,s]) = strip_comb(lhs eqn)
          val name_finals = name^"_finals"

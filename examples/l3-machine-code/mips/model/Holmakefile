@@ -3,8 +3,8 @@ INCLUDES = ../../common ../../lib
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
-all: $(TARGETS) mips.ui
+all: $(DEFAULT_TARGETS)
 .PHONY: all
 
-mips.uo: ../../lib/assemblerLib.uo ../../lib/MutableMap16.uo mips.sml
+mips.uo: ../../lib/assemblerLib.uo ../../lib/MutableMap16.uo mips.sml mips.ui
 	$(HOLMOSMLC) -c -toplevel assemblerLib.uo MutableMap16.ui mips.sml

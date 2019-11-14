@@ -2,8 +2,8 @@ structure multibuild =
 struct
 
 open ProcessMultiplexor HM_DepGraph Holmake_tools
-type wp = HM_DepGraph.t workprovider
 
+type 'a mosml_build_command = 'a HM_GraphBuildJ1.mosml_build_command
 datatype buildresult =
          BR_OK
        | BR_ClineK of { cline : string * string list,
@@ -12,22 +12,40 @@ datatype buildresult =
                         other_nodes : HM_DepGraph.node list }
        | BR_Failed
 
+val RealFail = Failed{needed=true}
+
 infix ++
 fun p1 ++ p2 = OS.Path.concat(p1, p2)
 val loggingdir = ".hollogs"
 
 
-fun graphbuild optinfo incinfo g =
+
+fun graphbuild optinfo g =
   let
-    val _ = OS.FileSys.mkDir loggingdir handle _ => ()
-    val { build_command, mosml_build_command, warn, tgtfatal, diag,
+    val { build_command,
+          mosml_build_command : GraphExtra.t mosml_build_command,
+          warn, tgtfatal, diag,
           keep_going, quiet, hmenv, jobs, info, time_limit,
           relocbuild } = optinfo
-    val safetag = String.map (fn #"/" => #"-" | c => c)
+    val _ = diag "Starting graphbuild"
+    fun dropthySuffix s =
+        if List.exists
+             (fn sfx => String.isSuffix ("Theory." ^ sfx) s)
+             ["dat", "sml", "sig"]
+        then String.substring(s,0,String.size s - 4)
+        else s
+    fun safetag d t =
+        String.map (fn #"/" => #"-" | c => c) (dropthySuffix t)
+    fun genLF {tag, dir} =
+        let
+          val ldir = dir ++ loggingdir
+          val _ = OS.FileSys.mkDir ldir handle _ => ()
+        in
+          ldir ++ safetag dir tag
+        end
+
     val monitor =
-        MB_Monitor.new {info = info,
-                        warn = warn,
-                        genLogFile = (fn {tag} => loggingdir ++ safetag tag),
+        MB_Monitor.new {info = info, warn = warn, genLogFile = genLF,
                         time_limit = time_limit}
 
     val env =
@@ -41,17 +59,25 @@ fun graphbuild optinfo incinfo g =
       case (ok,find_runnable g) of
           (false, _) => GiveUpAndDie (g, false)
        |  (true, NONE) => NoMoreJobs (g, ok)
-       |  (true, SOME (n,nI)) =>
+       |  (true, SOME (n,nI : GraphExtra.t nodeInfo)) =>
           let
             val _ = diag ("Found runnable node "^node_toString n)
+            val extra = #extra nI
+            fun eCompile ds = Compile(ds, extra)
+            fun eBuildScript (s,deps) = BuildScript(s,deps,extra)
+            fun eBuildArticle (s,deps) = BuildArticle(s,deps,extra)
+            fun eProcessArticle s = ProcessArticle(s,extra)
             fun k b g =
               if b orelse keep_going then
-                genjob (updnode(n, if b then Succeeded else Failed) g, true)
+                genjob (updnode(n, if b then Succeeded else RealFail) g, true)
               else GiveUpAndDie (g, ok)
-            val depfs = map (toFile o #2) (#dependencies nI)
-            val _ = #status nI = Pending orelse
+            val deps = map #2 (#dependencies nI)
+            val dir = Holmake_tools.hmdir.toAbsPath (#dir nI)
+            val _ = is_pending (#status nI) orelse
                     raise Fail "runnable not pending"
-            val target_s = #target nI
+            val target_s = tgt_toString (#target nI)
+            val tag = if OS.Path.dir target_s = dir then OS.Path.file target_s
+                      else target_s
             fun stdprocess() =
               case #command nI of
                   NoCmd => genjob (updnode (n,Succeeded) g, true)
@@ -66,9 +92,11 @@ fun graphbuild optinfo incinfo g =
                       else if ignore_error then
                         (warn ("Ignoring error executing: " ^ c);
                          Succeeded)
-                      else Failed
+                      else RealFail
                   in
-                    case mosml_build_command hmenv hypargs depfs of
+                    case pushdir dir
+                                 (mosml_build_command hmenv extra hypargs) deps
+                     of
                         SOME r =>
                           k (error (OS.Process.isSuccess r) = Succeeded) g
                       | NONE =>
@@ -91,12 +119,12 @@ fun graphbuild optinfo incinfo g =
                                 (g',ok')
                               end
                         in
-                          NewJob ({tag = target_s, command = shell_command c,
-                                   update = update},
+                          NewJob ({tag = tag, command = shell_command c,
+                                   update = update, dir = dir},
                                   (updall(g, Running), true))
                         end
                   end
-                | BuiltInCmd bic =>
+                | BuiltInCmd (bic,incinfo) =>
                   let
                     val _ = diag ("Setting up for target >" ^ target_s ^
                                   "< with bic " ^ bic_toString bic)
@@ -115,7 +143,7 @@ fun graphbuild optinfo incinfo g =
                               if job_kont (fn s => ()) (b2res b) then
                                 (updall Succeeded g, true)
                               else
-                                (updall Failed g, keep_going)
+                                (updall RealFail g, keep_going)
                             fun cline_str (c,l) = "["^c^"] " ^
                                                   String.concatWith " " l
                           in
@@ -124,36 +152,37 @@ fun graphbuild optinfo incinfo g =
                             diag ("Other nodes are: "^
                                   String.concatWith ", "
                                         (map node_toString other_nodes));
-                            NewJob({tag = target_s,
+                            NewJob({tag = tag, dir = dir,
                                     command = cline_to_command cline,
                                     update = update},
                                    (updall Running g, true))
                           end
-                    val bc = build_command g incinfo
+                    fun bc c f = pushdir dir (build_command g incinfo c) f
                     val _ = diag ("Handling builtin command " ^
                                   bic_toString bic ^ " for "^target_s)
                   in
                     case bic of
                         BIC_Compile =>
                         (case toFile target_s of
-                             UI c => bresk (bc (Compile depfs) (SIG c)) g
-                           | UO c => bresk (bc (Compile depfs) (SML c)) g
+                             UI c => bresk (bc (eCompile deps) (SIG c)) g
+                           | UO c => bresk (bc (eCompile deps) (SML c)) g
                            | ART (RawArticle s) =>
-                               bresk (bc (BuildArticle(s,depfs))
+                               bresk (bc (eBuildArticle(s,deps))
                                          (SML (Script s)))
                                      g
                            | ART (ProcessedArticle s) =>
-                               bresk (bc (ProcessArticle s)
+                               bresk (bc (eProcessArticle s)
                                          (ART (RawArticle s)))
                                      g
                            | _ => raise Fail ("bg tgt = " ^ target_s))
                       | BIC_BuildScript thyname =>
-                          bresk (bc (BuildScript(thyname, depfs))
+                          bresk (bc (eBuildScript(thyname, deps))
                                     (SML (Script thyname)))
                                 g
                   end
           in
-            if not (#phony nI) andalso exists_readable (#target nI) andalso
+            if not (#phony nI) andalso
+               hm_target.tgtexists_readable (#target nI) andalso
                #seqnum nI = 0
                (* necessary to avoid dropping out of a multi-command execution
                   part way through *)
@@ -162,13 +191,14 @@ fun graphbuild optinfo incinfo g =
                 val _ = diag ("May not need to rebuild "^target_s)
               in
                 case List.find
-                       (fn (_, d) => forces_update_of(d,#target nI))
+                       (fn (_, d) => depforces_update_of(d,#target nI))
                        (#dependencies nI)
                  of
                     NONE => (diag ("Can skip work on "^target_s);
                              genjob (updnode (n, Succeeded) g, true))
                   | SOME (_,d) =>
-                    (diag ("Dependency "^d^" forces rebuild of "^ target_s);
+                    (diag ("Dependency " ^ tgt_toString d ^
+                           " forces rebuild of "^ target_s);
                      stdprocess())
               end
             else
