@@ -12,8 +12,6 @@ val MAP_EQ_CONS = prove(
   ``(MAP f l = h::t) ⇔ ∃e es. l = e::es ∧ f e = h ∧ MAP f es = t``,
   Cases_on `l` >> simp[])
 
-fun Store_thm(n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
-
 val _ = new_theory "NTproperties"
 
 fun dsimp thl = asm_simp_tac (srw_ss() ++ boolSimps.DNF_ss) thl
@@ -33,16 +31,16 @@ val RTC_R_I = relationTheory.RTC_RULES |> SPEC_ALL |> CONJUNCT2 |> GEN_ALL
     rather than derivations simplifies some of the resulting proofs.
    ---------------------------------------------------------------------- *)
 
-val nullable_def = Define`
+Definition nullable_def:
   nullable G sf = derives G sf []
-`
-val _ = overload_on ("nullableNT", ``λG n. nullable G [NT n]``)
+End
+Overload nullableNT = “λG n. nullable G [NT n]”
 
-val derives_TOK = store_thm(
-  "derives_TOK",
-  ``∀G p s t sf.
+Theorem derives_TOK:
+  ∀G p s t sf.
       derives G (p ++ [TOK t] ++ s) sf ⇒
-      ∃ps ss. sf = ps ++ [TOK t] ++ ss ∧ derives G p ps ∧ derives G s ss``,
+      ∃ps ss. sf = ps ++ [TOK t] ++ ss ∧ derives G p ps ∧ derives G s ss
+Proof
   gen_tac >>
   `∀sf0 sf. derives G sf0 sf ⇒
             ∀p s t. sf0 = p ++ [TOK t] ++ s ⇒
@@ -64,24 +62,26 @@ val derives_TOK = store_thm(
   ] >>
   simp[] >> disch_then (qxchl [`ps`, `ss`] strip_assume_tac) >>
   map_every qexists_tac [`ps`, `ss`] >> simp[] >>
-  match_mp_tac RTC_R_I >> simp[derive_def] >> metis_tac[])
+  match_mp_tac RTC_R_I >> simp[derive_def] >> metis_tac[]
+QED
 
-val nullable_CONS_TOK = store_thm(
-  "nullable_CONS_TOK[simp]",
-  ``nullable G (TOK t :: rest) = F``,
+Theorem nullable_CONS_TOK[simp]:
+  nullable G (TOK t :: rest) = F
+Proof
   simp[nullable_def] >> strip_tac >>
-  qspecl_then [`G`, `[]`, `rest`, `t`, `[]`] mp_tac derives_TOK >> simp[])
+  qspecl_then [`G`, `[]`, `rest`, `t`, `[]`] mp_tac derives_TOK >> simp[]
+QED
 
-val nullable_NIL = store_thm(
-  "nullable_NIL[simp]",
-  ``nullable G [] = T``,
-  simp[nullable_def])
+Theorem nullable_NIL[simp]:
+  nullable G [] = T
+Proof simp[nullable_def]
+QED
 
-val nullable_CONS_NT = store_thm(
-  "nullable_CONS_NT",
-  ``nullable G (NT n :: rest) <=>
+Theorem nullable_CONS_NT:
+  nullable G (NT n :: rest) <=>
       nullable G rest ∧ n ∈ FDOM G.rules ∧
-      ∃r. r ∈ G.rules ' n ∧ nullable G r``,
+      ∃r. r ∈ G.rules ' n ∧ nullable G r
+Proof
   simp[nullable_def] >> REVERSE eq_tac
   >- (strip_tac >> match_mp_tac RTC_R_I >> simp[derive_def] >>
       qexists_tac `r ++ rest` >> REVERSE conj_tac
@@ -91,9 +91,8 @@ val nullable_CONS_NT = store_thm(
   simp[derives_split_horizontally] >> strip_tac >>
   Q.UNDISCH_THEN `derives G [NT n] []`
      (mp_tac o SIMP_RULE (srw_ss()) [Once relationTheory.RTC_CASES1]) >>
-  metis_tac[]);
-
-
+  metis_tac[]
+QED
 
 val paireq = prove(
   ``(x,y) = z ⇔ x = FST z ∧ y = SND z``, Cases_on `z` >> simp[])
@@ -110,7 +109,7 @@ val _ = SIMP_CONV (srw_ss())[GSPEC_INTER, combinTheory.o_ABS_R, combinTheory.S_A
    to determine nullability. I put the "executable" in quotes because of the
    scary looking set comprehension below.  This will work fine if the
    sets of rules for non-terminals are always finite. *)
-val nullableML_def = tDefine "nullableML" `
+Definition nullableML_def:
   nullableML seen [] = T ∧
   nullableML seen (TOK t :: _) = F ∧
   nullableML seen (NT n :: rest) =
@@ -118,60 +117,66 @@ val nullableML_def = tDefine "nullableML" `
         if G.rules ' n ∩ { r | nullableML (n INSERT seen) r } = ∅ then F
         else nullableML seen rest
       else F
-`
-  (WF_REL_TAC `measure (λs. CARD (FDOM G.rules DIFF s)) LEX measure LENGTH` >>
-   rpt strip_tac >> simp[] >> DISJ1_TAC >> simp[CARD_DIFF_EQN] >>
-   simp[Once INTER_COMM] >> simp[INSERT_INTER] >>
-   simp[FINITE_INTER] >> simp[Once INTER_COMM] >>
-   simp[arithmeticTheory.SUB_LEFT_LESS] >>
-   match_mp_tac arithmeticTheory.LESS_LESS_EQ_TRANS >>
-   qexists_tac `CARD (n INSERT FDOM G.rules ∩ seen)` >>
-   conj_tac >- simp[] >>
-   `FINITE (FDOM G.rules)` by simp[] >>
-   pop_assum (MATCH_MP_TAC o MATCH_MP CARD_SUBSET) >>
-   simp[SUBSET_DEF])
+Termination
+  WF_REL_TAC `measure (λs. CARD (FDOM G.rules DIFF s)) LEX measure LENGTH` >>
+  rpt strip_tac >> simp[] >> DISJ1_TAC >> simp[CARD_DIFF_EQN] >>
+  simp[Once INTER_COMM] >> simp[INSERT_INTER] >>
+  simp[FINITE_INTER] >> simp[Once INTER_COMM] >>
+  simp[arithmeticTheory.SUB_LEFT_LESS] >>
+  match_mp_tac arithmeticTheory.LESS_LESS_EQ_TRANS >>
+  qexists_tac `CARD (n INSERT FDOM G.rules ∩ seen)` >>
+  conj_tac >- simp[] >>
+  `FINITE (FDOM G.rules)` by simp[] >>
+  pop_assum (MATCH_MP_TAC o MATCH_MP CARD_SUBSET) >>
+  simp[SUBSET_DEF]
+End
 
-val nullableML_nullable = store_thm(
-  "nullableML_nullable",
-  ``∀sn sf. nullableML G sn sf ⇒ nullable G sf``,
+Theorem nullableML_nullable:
+  ∀sn sf. nullableML G sn sf ⇒ nullable G sf
+Proof
   HO_MATCH_MP_TAC (theorem "nullableML_ind") >>
   simp[nullableML_def, nullable_CONS_NT] >>
   map_every qx_gen_tac [`sn`, `N`, `sf`] >> rpt strip_tac >>
-  qpat_x_assum `SS ≠ ∅` mp_tac >> simp[EXTENSION] >> metis_tac[]);
+  qpat_x_assum `SS ≠ ∅` mp_tac >> simp[EXTENSION] >> metis_tac[]
+QED
 
 
-val ptree_NTs_def = tDefine "ptree_NTs" `
+Definition ptree_NTs_def:
   (ptree_NTs (Lf (l,_)) = case l of NT N => {N} | _ => ∅) ∧
   (ptree_NTs (Nd (n,_) subs) = n INSERT BIGUNION (IMAGE ptree_NTs (set subs)))
-`
-  (WF_REL_TAC `measure ptree_size` >> Induct_on `subs` >> simp[] >> fs[] >>
-   rpt strip_tac >> res_tac >> asimp[])
+Termination
+  WF_REL_TAC `measure ptree_size` >> Induct_on `subs` >> simp[] >> fs[] >>
+  rpt strip_tac >> res_tac >> asimp[]
+End
 
-val ptree_rptfree_def = tDefine "ptree_rptfree" `
+Definition ptree_rptfree_def:
   ptree_rptfree (Lf _) = T ∧
   ptree_rptfree (Nd (N,_) subs) =
     ∀s. MEM s subs ⇒ ptree_rptfree s ∧ N ∉ ptree_NTs s
-`
-  (WF_REL_TAC `measure ptree_size` >> Induct_on `subs` >> simp[] >> fs[] >>
-   rpt strip_tac >> res_tac >> asimp[])
+Termination
+  WF_REL_TAC `measure ptree_size` >> Induct_on `subs` >> simp[] >> fs[] >>
+  rpt strip_tac >> res_tac >> asimp[]
+End
 
-val nullableML_by_singletons = store_thm(
-  "nullableML_by_singletons",
-  ``nullableML G sn sf ⇔ ∀a. MEM a sf ⇒ nullableML G sn [a]``,
+Theorem nullableML_by_singletons:
+  nullableML G sn sf ⇔ ∀a. MEM a sf ⇒ nullableML G sn [a]
+Proof
   Induct_on `sf` >> dsimp[nullableML_def] >> qx_gen_tac `h` >>
-  Cases_on `h` >> simp[nullableML_def, CONJ_ASSOC]);
+  Cases_on `h` >> simp[nullableML_def, CONJ_ASSOC]
+QED
 
-val nullable_by_singletons = store_thm(
-  "nullable_by_singletons",
-  ``nullable G sf ⇔ ∀a. MEM a sf ⇒ nullable G [a]``,
+Theorem nullable_by_singletons:
+  nullable G sf ⇔ ∀a. MEM a sf ⇒ nullable G [a]
+Proof
   Induct_on `sf` >> simp[] >> qx_gen_tac `h` >> Cases_on `h` >>
-  dsimp[nullable_CONS_NT] >> metis_tac[])
+  dsimp[nullable_CONS_NT] >> metis_tac[]
+QED
 
-val ptree_nullableML = store_thm(
-  "ptree_nullableML",
-  ``∀pt sn. DISJOINT (ptree_NTs pt) sn ∧ ptree_fringe pt = [] ∧
-            valid_ptree G pt ∧ ptree_rptfree pt ⇒
-            nullableML G sn [ptree_head pt]``,
+Theorem ptree_nullableML:
+  ∀pt sn. DISJOINT (ptree_NTs pt) sn ∧ ptree_fringe pt = [] ∧
+          valid_ptree G pt ∧ ptree_rptfree pt ⇒
+          nullableML G sn [ptree_head pt]
+Proof
   HO_MATCH_MP_TAC grammarTheory.ptree_ind >>
   strip_tac >- (rw[] >> Cases_on`pt` >> fs[]) >>
   qx_gen_tac `subs` >> strip_tac >> dsimp[] >>
@@ -181,16 +186,17 @@ val ptree_nullableML = store_thm(
   strip_tac >> simp[EXTENSION] >>
   qexists_tac `MAP ptree_head subs` >> simp[] >>
   simp[Once nullableML_by_singletons] >> dsimp[listTheory.MEM_MAP] >>
-  rw[] >> res_tac >> rw[]);
+  rw[] >> res_tac >> rw[]
+QED
 
-val rptfree_subtree = store_thm(
-  "rptfree_subtree",
-  ``∀pt : (α,β,γ) parsetree.
+Theorem rptfree_subtree:
+  ∀pt : (α,β,γ) parsetree.
       ptree_rptfree pt ∧ N ∈ ptree_NTs pt ∧ ptree_fringe pt = [] ∧
       valid_ptree G pt ⇒
       ∃pt' : (α,β,γ) parsetree.
         ptree_rptfree pt' ∧ ptree_head pt' = NT N ∧
-        ptree_fringe pt' = [] ∧ valid_ptree G pt'``,
+        ptree_fringe pt' = [] ∧ valid_ptree G pt'
+Proof
   HO_MATCH_MP_TAC grammarTheory.ptree_ind >>
   strip_tac >- (rw[] >> Cases_on`pt` >> fs[]) >>
   simp[ptree_rptfree_def, ptree_NTs_def] >> qx_gen_tac `subs` >> strip_tac >>
@@ -200,15 +206,16 @@ val rptfree_subtree = store_thm(
   fs[ptree_rptfree_def, FLAT_EQ_NIL, listTheory.MEM_MAP,ptree_NTs_def]
   >-(qexists_tac `Nd (N, ARB) subs` >>
      fs[ptree_rptfree_def, FLAT_EQ_NIL, listTheory.MEM_MAP] >> dsimp[]) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
-val rptfree_nullable_ptrees_possible = store_thm(
-  "rptfree_nullable_ptrees_possible",
-  ``∀pt : (α,β,γ) parsetree.
+Theorem rptfree_nullable_ptrees_possible:
+  ∀pt : (α,β,γ) parsetree.
       valid_ptree G pt ∧ ptree_fringe pt = [] ⇒
       ∃pt' : (α,β,γ) parsetree.
         valid_ptree G pt' ∧ ptree_head pt' = ptree_head pt ∧
-        ptree_fringe pt' = [] ∧ ptree_rptfree pt'``,
+        ptree_fringe pt' = [] ∧ ptree_rptfree pt'
+Proof
   HO_MATCH_MP_TAC grammarTheory.ptree_ind >>
   strip_tac >- (rw[] >> Cases_on`pt` >> fs[]) >>
   dsimp[FLAT_EQ_NIL, listTheory.MEM_MAP] >>
@@ -226,59 +233,63 @@ val rptfree_nullable_ptrees_possible = store_thm(
   Cases_on `∃pt. MEM pt subs' ∧ q ∈ ptree_NTs pt`
   >- (fs[] >> metis_tac[rptfree_subtree]) >>
   fs[] >> qexists_tac `Nd (q,r) subs'` >>
-  dsimp[ptree_rptfree_def, FLAT_EQ_NIL, listTheory.MEM_MAP] >> metis_tac[])
+  dsimp[ptree_rptfree_def, FLAT_EQ_NIL, listTheory.MEM_MAP] >> metis_tac[]
+QED
 
-val nullable_nullableML = store_thm(
-  "nullable_nullableML",
-  ``∀sf. nullable G sf ⇒ nullableML G ∅ sf``,
+Theorem nullable_nullableML:
+  ∀sf. nullable G sf ⇒ nullableML G ∅ sf
+Proof
   simp[Once nullable_by_singletons, Once nullableML_by_singletons] >>
   ntac 2 strip_tac >> qx_gen_tac `a` >> strip_tac >>
-  `nullable G [a]` by res_tac >>
-  `derives G [a] []` by fs[nullable_def] >>
+  ‘nullable G [a]’ by res_tac >>
+  ‘derives G [a] []’ by fs[nullable_def] >>
   qspecl_then [`Lf (a, ARB)`, `[]`] mp_tac ptrees_derive_extensible >> simp[] >>
   disch_then (qxchl [`pt`] strip_assume_tac) >>
-  `∃pt' : (α,β)lfptree.
+  ‘∃pt' : (α,β)lfptree.
          ptree_rptfree pt' ∧ ptree_head pt' = ptree_head pt ∧
-         ptree_fringe pt' = [] ∧ valid_ptree G pt'`
+         ptree_fringe pt' = [] ∧ valid_ptree G pt'’
     by metis_tac [rptfree_nullable_ptrees_possible] >>
-  Q.ISPECL_THEN [`pt'`] assume_tac ptree_nullableML >>
-  pop_assum (qspecl_then [`∅`] mp_tac) >> simp[]);
+  qspec_then ‘pt'’ assume_tac ptree_nullableML >>
+  pop_assum (qspecl_then [`∅`] mp_tac) >> simp[]
+QED
 
-val nullableML_EQN = store_thm(
-  "nullableML_EQN",
-  ``nullable G sf ⇔ nullableML G ∅ sf``,
-  metis_tac[nullable_nullableML, nullableML_nullable])
+Theorem nullableML_EQN:
+  nullable G sf ⇔ nullableML G ∅ sf
+Proof
+  metis_tac[nullable_nullableML, nullableML_nullable]
+QED
 
 (* ----------------------------------------------------------------------
     Calculating first sets
    ---------------------------------------------------------------------- *)
 
-val firstSet_def = Define`
+Definition firstSet_def:
   firstSet G sf = { t | ∃rest. derives G sf (TOK t :: rest) }
-`;
+End
 
-val firstSet_nonempty_fringe = store_thm(
-  "firstSet_nonempty_fringe",
-  ``∀pt t rest. ptree_fringe pt = TOK t :: rest ∧ valid_ptree G pt ⇒
-                t ∈ firstSet G [ptree_head pt]``,
-  simp[firstSet_def] >> metis_tac [grammarTheory.valid_ptree_derive]);
+Theorem firstSet_nonempty_fringe:
+  ∀pt t rest. ptree_fringe pt = TOK t :: rest ∧ valid_ptree G pt ⇒
+              t ∈ firstSet G [ptree_head pt]
+Proof simp[firstSet_def] >> metis_tac [grammarTheory.valid_ptree_derive]
+QED
 
-val IN_firstSet = store_thm(
-  "IN_firstSet",
-  ``t ∈ firstSet G [sym] ⇒
-    ∃pt:(α,β)lfptree rest.
-       ptree_head pt = sym ∧ valid_ptree G pt ∧
-       ptree_fringe pt = TOK t :: rest``,
+Theorem IN_firstSet:
+  t ∈ firstSet G [sym] ⇒
+  ∃pt:(α,β)lfptree rest.
+     ptree_head pt = sym ∧ valid_ptree G pt ∧
+     ptree_fringe pt = TOK t :: rest
+Proof
   simp[firstSet_def] >>
   metis_tac [grammarTheory.ptrees_derive_extensible
                |> Q.SPECL [`Lf (sym,())`, `TOK t :: rest`]
-               |> SIMP_RULE (srw_ss()) []]);
+               |> SIMP_RULE (srw_ss()) []]
+QED
 
-val derives_preserves_leading_toks = store_thm(
-  "derives_preserves_leading_toks",
-  ``∀G syms rest x.
-        derives G (MAP TOK syms ++ rest) x ⇔
-        ∃rest'. derives G rest rest' ∧ x = MAP TOK syms ++ rest'``,
+Theorem derives_preserves_leading_toks:
+  ∀G syms rest x.
+      derives G (MAP TOK syms ++ rest) x ⇔
+      ∃rest'. derives G rest rest' ∧ x = MAP TOK syms ++ rest'
+Proof
   rpt gen_tac >> eq_tac
   >- (`∀x y. derives G x y ⇒
              ∀syms rest.
@@ -296,30 +307,32 @@ val derives_preserves_leading_toks = store_thm(
       metis_tac [grammarTheory.derive_def, relationTheory.RTC_CASES1,
                  listTheory.APPEND]) >>
   rw[] >> match_mp_tac grammarTheory.derives_paste_horizontally >>
-  simp[]);
+  simp[]
+QED
 
-val firstSet_NIL = Store_thm(
-  "firstSet_NIL",
-  ``firstSet G [] = {}``,
+Theorem firstSet_NIL[simp]:    firstSet G [] = {}
+Proof
   simp[firstSet_def] >> simp[Once relationTheory.RTC_CASES1] >>
-  simp[grammarTheory.derive_def]);
+  simp[grammarTheory.derive_def]
+QED
 
-val firstSet_TOK = store_thm(
-  "firstSet_TOK[simp]",
-  ``firstSet G (TOK t::rest) = {t}``,
+Theorem firstSet_TOK[simp]:
+  firstSet G (TOK t::rest) = {t}
+Proof
   simp[firstSet_def, EXTENSION, EQ_IMP_THM] >> rw[]
   >- (qspecl_then [`G`, `[t]`, `rest`] mp_tac derives_preserves_leading_toks >>
       simp[] >> strip_tac >> fs[]) >>
-  metis_tac[relationTheory.RTC_REFL]);
+  metis_tac[relationTheory.RTC_REFL]
+QED
 
-val firstSet_NT = store_thm(
-  "firstSet_NT",
-  ``firstSet G (NT N :: rest) =
+Theorem firstSet_NT:
+  firstSet G (NT N :: rest) =
       if N ∈ FDOM G.rules then
         BIGUNION (IMAGE (firstSet G) (G.rules ' N)) ∪
         (if nullable G [NT N] then firstSet G rest
          else {})
-      else {}``,
+      else {}
+Proof
   reverse (Cases_on `N ∈ FDOM G.rules`)
   >- simp[firstSet_def, derives_leading_nonNT] >>
   simp[Once EXTENSION] >> qx_gen_tac `t` >> reverse eq_tac
@@ -344,9 +357,10 @@ val firstSet_NT = store_thm(
   fs[] >> rveq >>
   qpat_x_assum `derives G [NT N] X`
     (mp_tac o ONCE_REWRITE_RULE [relationTheory.RTC_CASES1]) >>
-  simp[] >> metis_tac[]);
+  simp[] >> metis_tac[]
+QED
 
-val firstSetML_def = tDefine "firstSetML" `
+Definition firstSetML_def:
   firstSetML seen [] = {} ∧
   firstSetML seen (TOK t :: _) = {t} ∧
   firstSetML seen (NT n :: rest) =
@@ -358,32 +372,36 @@ val firstSetML_def = tDefine "firstSetML" `
       (if nullable G [NT n] then firstSetML seen rest
        else {})
     else {}
-`
-  (WF_REL_TAC `measure (λs. CARD (FDOM G.rules DIFF s)) LEX measure LENGTH` >>
-   simp[] >> rw[] >> DISJ1_TAC >> simp[CARD_DIFF_EQN] >>
-   simp[Once INTER_COMM] >> simp[INSERT_INTER] >>
-   simp[FINITE_INTER] >> simp[Once INTER_COMM] >>
-   simp[arithmeticTheory.SUB_LEFT_LESS] >>
-   match_mp_tac arithmeticTheory.LESS_LESS_EQ_TRANS >>
-   qexists_tac `CARD (n INSERT FDOM G.rules ∩ seen)` >>
-   conj_tac >- simp[] >>
-   `FINITE (FDOM G.rules)` by simp[] >>
-   pop_assum (MATCH_MP_TAC o MATCH_MP CARD_SUBSET) >>
-   simp[SUBSET_DEF])
+Termination
+  WF_REL_TAC `measure (λs. CARD (FDOM G.rules DIFF s)) LEX measure LENGTH` >>
+  simp[] >> rw[] >> DISJ1_TAC >> simp[CARD_DIFF_EQN] >>
+  simp[Once INTER_COMM] >> simp[INSERT_INTER] >>
+  simp[FINITE_INTER] >> simp[Once INTER_COMM] >>
+  simp[arithmeticTheory.SUB_LEFT_LESS] >>
+  match_mp_tac arithmeticTheory.LESS_LESS_EQ_TRANS >>
+  qexists_tac `CARD (n INSERT FDOM G.rules ∩ seen)` >>
+  conj_tac >- simp[] >>
+  `FINITE (FDOM G.rules)` by simp[] >>
+  pop_assum (MATCH_MP_TAC o MATCH_MP CARD_SUBSET) >>
+  simp[SUBSET_DEF]
+End
 
-val firstSetML_firstSet = store_thm(
-  "firstSetML_firstSet",
-  ``∀seen sf. firstSetML G seen sf ⊆ firstSet G sf``,
-  ho_match_mp_tac (theorem "firstSetML_ind") >> simp[firstSetML_def] >>
+Theorem firstSetML_firstSet:
+  ∀seen sf. firstSetML G seen sf ⊆ firstSet G sf
+Proof
+  ho_match_mp_tac firstSetML_ind >> simp[firstSetML_def] >>
   map_every qx_gen_tac [`seen`, `N`, `sf`] >> strip_tac >>
   reverse (Cases_on `N ∈ FDOM G.rules`) >> fs[] >>
   reverse conj_tac
   >- (rw[] >> fs[] >> simp[firstSet_NT] >> fs[SUBSET_DEF]) >>
   Cases_on `N ∈ seen` >> simp[] >>
   dsimp[SUBSET_DEF] >> simp[firstSet_NT] >> rpt strip_tac >>
-  DISJ1_TAC >> dsimp[] >> fs[SUBSET_DEF] >> metis_tac[]);
+  DISJ1_TAC >> dsimp[] >> fs[SUBSET_DEF] >> metis_tac[]
+QED
 
-val nts_derive_def = Define`
+(* there is a "path" of non-terminals were N₁ -> N₂ if N₂ appears in a rhs for N₁,
+   and in the last one, there is a rhs where the given tok can appear first *)
+Definition nts_derive_def[simp]:
   (nts_derive G [] tok ⇔ F) ∧
   (nts_derive G [N] tok ⇔
     N ∈ FDOM G.rules ∧
@@ -394,38 +412,38 @@ val nts_derive_def = Define`
     ∃p s. p ++ [NT N2] ++ s ∈ G.rules ' N1 ∧
           nullable G p ∧
           nts_derive G (N2::NS) tok)
-`;
-val _ = export_rewrites ["nts_derive_def"]
+End
 
-val nts_derive_APPEND_E = store_thm(
-  "nts_derive_APPEND_E",
-  ``nts_derive G (n1 ++ n2) t ∧ n2 ≠ [] ⇒ nts_derive G n2 t``,
+Theorem nts_derive_APPEND_E:
+  nts_derive G (n1 ++ n2) t ∧ n2 ≠ [] ⇒ nts_derive G n2 t
+Proof
   Induct_on `n1` >> simp[] >> reverse (Cases_on `n1`)
   >- (rpt strip_tac >> fs[]) >>
-  fs[] >> Cases_on `n2` >> simp[] >> metis_tac[]);
+  fs[] >> Cases_on `n2` >> simp[] >> metis_tac[]
+QED
 
-val firstSetML_nullable_prefix = store_thm(
-  "firstSetML_nullable_prefix",
-  ``x ∈ firstSetML G sn sf ∧ nullable G p ⇒
-    x ∈ firstSetML G sn (p ++ sf)``,
+Theorem firstSetML_nullable_prefix:
+  x ∈ firstSetML G sn sf ∧ nullable G p ⇒
+    x ∈ firstSetML G sn (p ++ sf)
+Proof
   Induct_on `p` >> simp[] >> Cases >>
-  simp[firstSetML_def, nullable_CONS_NT]);
+  simp[firstSetML_def, nullable_CONS_NT]
+QED
 
-val firstSetML_CONS_I = store_thm(
-  "firstSetML_CONS_I",
-  ``tk ∈ firstSetML G sn [h] ⇒ tk ∈ firstSetML G sn (h::t)``,
-  Cases_on `h` >> simp[firstSetML_def] >> rw[]);
+Theorem firstSetML_CONS_I:
+  tk ∈ firstSetML G sn [h] ⇒ tk ∈ firstSetML G sn (h::t)
+Proof Cases_on `h` >> simp[firstSetML_def] >> rw[]
+QED
 
-val firstSet_CONS_I = store_thm(
-  "firstSet_CONS_I",
-  ``tk ∈ firstSet G [h] ⇒ tk ∈ firstSet G (h::t)``,
-  Cases_on `h` >> simp[firstSet_NT] >> rw[]);
+Theorem firstSet_CONS_I:
+  tk ∈ firstSet G [h] ⇒ tk ∈ firstSet G (h::t)
+Proof Cases_on `h` >> simp[firstSet_NT] >> rw[]
+QED
 
-val distinct_nts_derive_firstSetML = store_thm(
-  "distinct_nts_derive_firstSetML",
-  ``∀sn. nts_derive G ns tok ∧ ALL_DISTINCT ns ∧
-         set ns ∩ sn = ∅ ⇒
-         tok ∈ firstSetML G sn [NT (HD ns)]``,
+Theorem distinct_nts_derive_firstSetML:
+  ∀sn. nts_derive G ns tok ∧ ALL_DISTINCT ns ∧ set ns ∩ sn = ∅ ⇒
+       tok ∈ firstSetML G sn [NT (HD ns)]
+Proof
   Induct_on `ns` >> simp[] >>
   Cases_on `ns`
   >- (simp[firstSetML_def] >> map_every qx_gen_tac [`N`, `seen`] >>
@@ -443,41 +461,40 @@ val distinct_nts_derive_firstSetML = store_thm(
   match_mp_tac firstSetML_nullable_prefix >> simp[] >>
   match_mp_tac firstSetML_CONS_I >> fs[] >>
   first_x_assum match_mp_tac >> simp[EXTENSION] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
-val heads_give_first = prove(
-  ``FLAT (MAP ptree_fringe subs) = tk :: rest ⇒
+Triviality heads_give_first:
+  FLAT (MAP ptree_fringe subs) = tk :: rest ⇒
     ∃p sym s r0.
       p ++ [sym] ++ s = subs ∧ ptree_fringe sym = tk :: r0 ∧
-      FLAT (MAP ptree_fringe p) = []``,
+      FLAT (MAP ptree_fringe p) = []
+Proof
   Induct_on `subs` >> simp[] >> simp[APPEND_EQ_CONS] >> rpt strip_tac >>
-  dsimp[] >>fs[] >> map_every qexists_tac [`sym`, `s`, `r0`, `p`] >> simp[]);
+  dsimp[] >>fs[] >> map_every qexists_tac [`sym`, `s`, `r0`, `p`] >> simp[]
+QED
 
-val nullable_alltrees = store_thm(
-  "nullable_alltrees",
-  ``nullable G sf ⇔
+Theorem nullable_alltrees:
+  nullable G sf ⇔
     ∀sym. MEM sym sf ⇒
           ∃pt:(α,β)lfptree.
-            valid_ptree G pt ∧ ptree_head pt = sym ∧ ptree_fringe pt = []``,
+            valid_ptree G pt ∧ ptree_head pt = sym ∧ ptree_fringe pt = []
+Proof
   simp[Once nullable_by_singletons] >> eq_tac >> rpt strip_tac >> res_tac
   >- (pop_assum mp_tac >> simp_tac (srw_ss())[nullable_def] >>
       simp[singleton_derives_ptree]) >>
-  simp[nullable_def] >> rw[] >> metis_tac [valid_ptree_derive]);
+  simp[nullable_def] >> rw[] >> metis_tac [valid_ptree_derive]
+QED
 
-val MEM_last_strip = prove(
-  ``∀l. MEM e l ⇒ ∃p s. l = p ++ [e] ++ s ∧ ¬MEM e s``,
-  ho_match_mp_tac rich_listTheory.SNOC_INDUCT >> dsimp[] >> conj_tac
-  >- (qx_gen_tac `l` >> strip_tac >> map_every qexists_tac [`l`, `[]`] >>
-      simp[]) >>
-  map_every qx_gen_tac [`l`, `x`] >> rpt strip_tac >> fs[] >>
-  Cases_on `x = e`
-  >- (map_every qexists_tac [`p ++ [e] ++ s`, `[]`] >> simp[]) >>
-  map_every qexists_tac [`p`, `s ++ [x]`] >> simp[]);
+Triviality MEM_last_strip:
+  ∀l. MEM e l ⇒ ∃p s. l = p ++ [e] ++ s ∧ ¬MEM e s
+Proof metis_tac[MEM_SPLIT_APPEND_last]
+QED
 
-val firstSet_nts_derive = store_thm(
-  "firstSet_nts_derive",
-  ``tk ∈ firstSet G [NT N] ⇒
-    ∃Ns. ALL_DISTINCT Ns ∧ nts_derive G Ns tk ∧ HD Ns = N``,
+Theorem firstSet_nts_derive:
+  tk ∈ firstSet G [NT N] ⇒
+    ∃Ns. ALL_DISTINCT Ns ∧ nts_derive G Ns tk ∧ HD Ns = N
+Proof
   strip_tac >> pop_assum (strip_assume_tac o MATCH_MP IN_firstSet) >>
   rpt (pop_assum mp_tac) >> map_every qid_spec_tac [`N`, `rest`, `pt`] >>
   ho_match_mp_tac ptree_ind >> simp[] >> rpt strip_tac
@@ -501,12 +518,13 @@ val firstSet_nts_derive = store_thm(
             simp[]) >>
       qexists_tac `N::Ns1` >> simp[] >> fs[ALL_DISTINCT_APPEND]
       ) >>
-  qexists_tac `N::Ns` >> simp[] >> Cases_on `Ns` >> fs[] >> metis_tac[]);
+  qexists_tac `N::Ns` >> simp[] >> Cases_on `Ns` >> fs[] >> metis_tac[]
+QED
 
-val firstSet_singleton = store_thm(
-  "firstSet_singleton",
-  ``tk ∈ firstSet G sf ⇔
-    ∃p e s. sf = p ++ [e] ++ s ∧ nullable G p ∧ tk ∈ firstSet G [e]``,
+Theorem firstSet_singleton:
+  tk ∈ firstSet G sf ⇔
+    ∃p e s. sf = p ++ [e] ++ s ∧ nullable G p ∧ tk ∈ firstSet G [e]
+Proof
   Induct_on `sf` >> simp[] >> Cases_on `h` >> simp[] >> eq_tac >> strip_tac
   >- (map_every qexists_tac [`[]`, `TOK tk`, `sf`] >> simp[])
   >- (fs[APPEND_EQ_CONS] >> rw[] >> fs[])
@@ -524,23 +542,27 @@ val firstSet_singleton = store_thm(
       simp[firstSet_NT] >> metis_tac[]) >>
   Cases_on `p` >> fs[] >> rw[] >- simp[firstSet_CONS_I] >>
   fs[Once nullable_by_singletons, DISJ_IMP_THM, FORALL_AND_THM] >>
-  simp[firstSet_NT] >> fs[nullable_CONS_NT] >> metis_tac[]);
+  simp[firstSet_NT] >> fs[nullable_CONS_NT] >> metis_tac[]
+QED
 
-val firstSet_firstSetML = store_thm(
-  "firstSet_firstSetML",
-  ``tk ∈ firstSet G sf ⇒ tk ∈ firstSetML G {} sf``,
+Theorem firstSet_firstSetML:
+  tk ∈ firstSet G sf ⇒ tk ∈ firstSetML G {} sf
+Proof
   simp[Once firstSet_singleton] >> rw[] >> REWRITE_TAC [GSYM APPEND_ASSOC] >>
   match_mp_tac firstSetML_nullable_prefix >> simp[] >>
   match_mp_tac firstSetML_CONS_I >>
   asm_match `tk ∈ firstSet G [sym]` >>
   Cases_on `sym` >> fs[] >- simp[firstSetML_def] >>
   imp_res_tac firstSet_nts_derive >> rw[] >>
-  match_mp_tac distinct_nts_derive_firstSetML >> simp[]);
+  match_mp_tac distinct_nts_derive_firstSetML >> simp[]
+QED
 
-val firstSetML_eqn = store_thm(
-  "firstSetML_eqn",
-  ``firstSet G sf = firstSetML G {} sf``,
+Theorem firstSetML_eqn:
+  firstSet G sf = firstSetML G {} sf
+Proof
   simp[EXTENSION, EQ_IMP_THM, firstSet_firstSetML] >>
-  metis_tac [SUBSET_DEF, firstSetML_firstSet]);
+  metis_tac [SUBSET_DEF, firstSetML_firstSet]
+QED
+
 
 val _ = export_theory()
