@@ -40,7 +40,8 @@ sig
     expname : string, 
     ex_window : int, ex_uniq : bool, 
     ngen : int, ncore_search : int,
-    nsim_start : int , nsim_explore : int, nsim_compete : int
+    nsim_start : int , nsim_explore : int, nsim_compete : int,
+    decay : real
     }
   type ('a,'b) rlpreobj =
     {

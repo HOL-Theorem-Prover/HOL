@@ -51,7 +51,8 @@ type 'a level_param =
 type rl_param =
   {expname : string, ex_window : int, ex_uniq : bool, 
    ngen : int, ncore_search : int,
-   nsim_start : int , nsim_explore : int, nsim_compete : int}
+   nsim_start : int , nsim_explore : int, nsim_compete : int,
+   decay : real}
 
 type ('a,'b) rlpreobj =
   {
@@ -81,7 +82,7 @@ fun mk_mcts_param noiseb nsim rlpreobj =
   {
   nsim = nsim,
   stopatwin_flag = false,
-  decay = 0.99,
+  decay = #decay (#rl_param rlpreobj),
   explo_coeff = 2.0,
   noise_flag = noiseb,
   noise_coeff = 0.25,

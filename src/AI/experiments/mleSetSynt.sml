@@ -285,9 +285,12 @@ val level_param =
   }
 
 val rl_param =
- {expname = expname, ex_window = 40000, ex_uniq = false, 
+  {
+  expname = expname, ex_window = 40000, ex_uniq = false, 
   ngen = 100, ncore_search = 40,
-  nsim_start = 16000, nsim_explore = 16000, nsim_compete = 16000}
+  nsim_start = 16000, nsim_explore = 16000, nsim_compete = 16000,
+  decay = 0.99
+  }
 
 val rlpreobj : (board,move) rlpreobj =
   {

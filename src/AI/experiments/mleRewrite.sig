@@ -7,8 +7,8 @@ sig
   type board = ((term * pos) * int)
   datatype move = Arg of int | Paramod of (int * bool)
 
-  val mk_startsit : term -> board
-  val dest_startsit : board -> term
+  val mk_startboard : term -> board
+  val dest_startboard : board -> term
   val maxprooflength_atgen : unit -> int list
   val stats_prooflength : string -> (int * int) list
   val extsearch : board mlReinforce.extsearch

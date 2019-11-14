@@ -10,7 +10,8 @@ structure mleRewrite :> mleRewrite =
 struct
 
 open HolKernel boolLib Abbrev aiLib smlParallel psMCTS psTermGen
-  mlTreeNeuralNetwork mlTacticData mlReinforce mleLib mleArithData
+  mlNeuralNetwork mlTreeNeuralNetwork mlTacticData 
+  mlReinforce mleLib mleArithData
 
 val ERR = mk_HOL_ERR "mleRewrite"
 
@@ -21,8 +22,8 @@ val ERR = mk_HOL_ERR "mleRewrite"
 type pos = int list
 type board = ((term * pos) * int)
 
-fun mk_startsit tm = ((tm,[]), 2 * lo_prooflength 200 tm + 2)
-fun dest_startsit ((tm,_),_) = tm
+fun mk_startboard tm = ((tm,[]), 2 * lo_prooflength 200 tm + 2)
+fun dest_startboard ((tm,_),_) = tm
 
 (* search and networks have to be aware of the length of the proof *)
 fun status_of ((tm,_),n) =
@@ -31,7 +32,7 @@ fun status_of ((tm,_),n) =
   else Undecided
 
 (* -------------------------------------------------------------------------
-   Neural network units and inputs
+   Neural network representation of the board
    ------------------------------------------------------------------------- *)
 
 val numtag = mk_var ("numtag", ``:num -> num``)
@@ -51,6 +52,8 @@ val rewrite_operl =
   end
 
 fun term_of_board ((tm,pos),_) = tag_pos (tm,pos)
+
+fun string_of_board b = term_to_string (term_of_board b)
 
 (* -------------------------------------------------------------------------
    Move
@@ -88,7 +91,7 @@ fun paramod_pb (i,b) (tm,pos) =
     (valOf tmo,[])
   end
 
-fun available ((tm,pos),_) (move,r:real) = case move of
+fun available_move ((tm,pos),_) move = case move of
     Arg i => (narg (find_subtm (tm,pos)) >= i + 1)
   | Paramod (i,b) => can (paramod_pb (i,b)) (tm,pos)
 
@@ -96,7 +99,21 @@ fun apply_move move ((tm,pos),step) = case move of
     Arg n => (argn_pb n (tm,pos), step - 1)
   | Paramod (i,b) => (paramod_pb (i,b) (tm,pos), step - 1)
 
-fun filter_sit sit = List.filter (available sit)
+
+(* -------------------------------------------------------------------------
+   Game
+   ------------------------------------------------------------------------- *)
+
+val game : (board,move) game =
+  {
+  string_of_board = string_of_board,
+  movel = movel,
+  move_compare = move_compare,
+  string_of_move = string_of_move,
+  status_of = status_of,
+  available_move = available_move,
+  apply_move = apply_move
+  }
 
 (* -------------------------------------------------------------------------
    Level
@@ -120,7 +137,7 @@ fun level_targetl level ntarget =
     val tmll = map shuffle (first_n level (mk_batch 400 tml))
     val tml2 = List.concat (list_combine tmll)
   in
-    map mk_startsit (first_n ntarget tml2)
+    map mk_startboard (first_n ntarget tml2)
   end
 
 fun maxprooflength_atgen () =
@@ -226,7 +243,7 @@ val schedule =
 
 val dhtnn_param =
   {
-  operl = operl, nlayer_oper = 2, 
+  operl = rewrite_operl, nlayer_oper = 2, 
   nlayer_headeval = 2, nlayer_headpoli = 2,
   dimin = 12, dimpoli = length movel
   }
@@ -250,9 +267,12 @@ val level_param =
   }
 
 val rl_param =
- {expname = expname, ex_window = 40000, ex_uniq = false, 
+  { 
+  expname = expname, ex_window = 40000, ex_uniq = false, 
   ngen = 100, ncore_search = 40,
-  nsim_start = 1600, nsim_explore = 1600, nsim_compete = 1600}
+  nsim_start = 1600, nsim_explore = 1600, nsim_compete = 1600,
+  decay = 0.99
+  }
 
 val rlpreobj : (board,move) rlpreobj =
   {
@@ -262,52 +282,18 @@ val rlpreobj : (board,move) rlpreobj =
   game = game,
   pre_extsearch = pre_extsearch, 
   tobdict = tobdict,
-  dplayerl = [dplayer1,dplayer2]
+  dplayerl = [dplayer]
   }
 
-val extsearch = mk_extsearch "mleSetSynt.extsearch" rlpreobj
+val extsearch = mk_extsearch "mleRewrite.extsearch" rlpreobj
 
 val rlobj = mk_rlobj rlpreobj extsearch
-
-
 
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleSetSynt"; open mleSetSynt;
-(* export_setsyntdata (); *)
+(* create_train_evalsorted (); *)
 val r = start_rl_loop rlobj;
-*)
-
-
-
-(* -------------------------------------------------------------------------
-   Reinforcement learning
-   ------------------------------------------------------------------------- *)
-
-(*
-load "mleRewrite"; open mleRewrite;
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-load "mlReinforce"; open mlReinforce;
-load "smlParallel"; open smlParallel;
-load "aiLib"; open aiLib;
-
-logfile_glob := "mleRewrite_run41";
-parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
-ncore_mcts_glob := 16;
-ncore_train_glob := 4;
-ntarget_compete := 400;
-ntarget_explore := 400;
-exwindow_glob := 40000;
-uniqex_flag := false;
-dim_glob := 12;
-lr_glob := 0.02;
-batchsize_glob := 16;
-decay_glob := 0.99;
-level_glob := 1;
-nsim_glob := 1600;
-nepoch_glob := 100;
-ngen_glob := 100;
-val r = start_rl_loop (gamespec,extspec);
 *)
 
 end (* struct *)
