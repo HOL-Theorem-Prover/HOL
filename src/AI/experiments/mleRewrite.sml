@@ -31,6 +31,8 @@ fun status_of ((tm,_),n) =
   else if n <= 0 then Lose
   else Undecided
 
+fun max_bigsteps target = snd target + 1
+
 (* -------------------------------------------------------------------------
    Neural network representation of the board
    ------------------------------------------------------------------------- *)
@@ -119,15 +121,17 @@ val game : (board,move) game =
    Level
    ------------------------------------------------------------------------- *)
 
-fun create_train_evalsorted () =
+fun create_levels () =
   let
     val filein = dataarith_dir ^ "/train"
     val fileout = dataarith_dir ^ "/train_plsorted"
-    val l1 = import_terml filein ;
+    val l1 = import_terml filein
+    val _ = print_endline ("Reading " ^ its (length l1) ^ " terms")
     val l2 = mapfilter (fn x => (x, lo_prooflength 200 x)) l1
     val l3 = filter (fn x => snd x <= 100) l2
     val l4 = dict_sort compare_imin l3
   in
+    print_endline ("Exporting " ^ its (length l4) ^ " terms");
     export_terml fileout (map fst l4)
   end
 
@@ -140,7 +144,7 @@ fun level_targetl level ntarget =
     map mk_startboard (first_n ntarget tml2)
   end
 
-fun maxprooflength_atgen () =
+fun max_prooflength_atgen () =
   let val tml = import_terml (dataarith_dir ^ "/train_plsorted") in
     map (list_imax o map (lo_prooflength 1000)) (mk_batch 400 tml)
   end
@@ -154,12 +158,6 @@ fun stats_prooflength file =
   in
     map_snd length l2
   end
-
-(* -------------------------------------------------------------------------
-   Big steps limit
-   ------------------------------------------------------------------------- *)
-
-fun max_bigsteps target = snd target + 1
 
 (* -------------------------------------------------------------------------
    Parallelization
@@ -291,8 +289,8 @@ val rlobj = mk_rlobj rlpreobj extsearch
 
 (*
 load "mlReinforce"; open mlReinforce;
-load "mleSetSynt"; open mleSetSynt;
-(* create_train_evalsorted (); *)
+load "mleRewrite"; open mleRewrite;
+(* create_levels (); *)
 val r = start_rl_loop rlobj;
 *)
 
