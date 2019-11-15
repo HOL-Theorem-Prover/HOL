@@ -59,7 +59,10 @@ sig
     level_param : 'a level_param,
     extsearch : 'a extsearch,
     tobdict : (string,'a -> term) Redblackmap.dict,
-    dplayerl : dplayer list
+    dplayerl : dplayer list,
+    write_exl : string -> 'a rlex -> unit,
+    read_exl : string -> 'a rlex,
+    board_compare : 'a * 'a -> order
     }
 
   val mk_extsearch : string -> ('a,'b) rlpreobj -> 'a extsearch
@@ -68,7 +71,7 @@ sig
   (* phases *)
   val rl_train : 'a rlobj -> 'a rlex -> rplayer list
   val rl_compete : 'a rlobj -> int -> rplayer list -> (int * rplayer)
-  val loop_rl_explore : 'a rlobj -> int -> bool -> rplayer ->
+  val loop_rl_explore : int -> 'a rlobj -> int -> bool -> rplayer ->
     'a rlex -> ('a rlex * int)
 
   (* main loop *)

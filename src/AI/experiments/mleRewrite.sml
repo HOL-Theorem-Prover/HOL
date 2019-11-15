@@ -55,6 +55,11 @@ val rewrite_operl =
 
 fun term_of_board ((tm,pos),_) = tag_pos (tm,pos)
 
+val board_compare = 
+  cpl_compare 
+    (cpl_compare Term.compare (list_compare Int.compare))
+    Int.compare
+
 fun string_of_board b = term_to_string (term_of_board b)
 
 (* -------------------------------------------------------------------------
@@ -108,6 +113,7 @@ fun apply_move move ((tm,pos),step) = case move of
 
 val game : (board,move) game =
   {
+  board_compare = board_compare,
   string_of_board = string_of_board,
   movel = movel,
   move_compare = move_compare,

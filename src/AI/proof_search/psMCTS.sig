@@ -21,6 +21,7 @@ sig
   (* search function *)
   type ('a,'b) game =
     {
+    board_compare : 'a * 'a -> order,
     string_of_board : 'a -> string,
     movel: 'b list,
     move_compare : 'b * 'b -> order,

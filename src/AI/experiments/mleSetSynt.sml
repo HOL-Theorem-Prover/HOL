@@ -73,6 +73,11 @@ fun term_of_board ((_,graph),tm) =
 
 type board = ((term * bool list) * term)
 
+val board_compare = 
+  cpl_compare 
+    (cpl_compare Term.compare (list_compare bool_compare)) 
+    Term.compare
+
 fun string_of_board ((_,bl),tm) =
   String.concatWith " " (map bts bl) ^ " :\n" ^ tts tm
 
@@ -107,6 +112,7 @@ fun string_of_move move = tts move
 
 val game : (board,move) game =
   {
+  board_compare = board_compare,
   string_of_board = string_of_board,
   movel = movel,
   move_compare = Term.compare,

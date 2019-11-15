@@ -22,6 +22,9 @@ type board = ((term * int) * term)
 
 fun string_of_board ((a,b),c)= tts a ^ " " ^ its b ^ " " ^ tts c
 
+val board_compare = 
+  cpl_compare (cpl_compare Term.compare Int.compare) Term.compare
+
 val active_var = ``active_var:num``;
 
 fun mk_startboard tm = ((tm,mleArithData.eval_numtm tm),active_var)
@@ -68,6 +71,7 @@ fun string_of_move (tm,_) = tts tm
 
 val game : (board,move) game =
   {
+  board_compare = board_compare,
   string_of_board = string_of_board,
   movel = movel,
   move_compare = move_compare,
@@ -256,10 +260,6 @@ load "mleSynthesize"; open mleSynthesize;
 (* create_levels (); *)
 val r = start_rl_loop rlobj;
 *)
-
-
-
-
 
 
 end (* struct *)

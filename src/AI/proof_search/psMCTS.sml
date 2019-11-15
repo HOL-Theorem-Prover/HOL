@@ -31,6 +31,7 @@ type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
 
 type ('a,'b) game =
   {
+  board_compare : 'a * 'a -> order,
   string_of_board : 'a -> string,
   movel: 'b list,
   move_compare : 'b * 'b -> order,
@@ -357,6 +358,7 @@ fun toy_move_compare (a,b) =
 
 val toy_game =
   {
+  board_compare = cpl_compare Int.compare Int.compare,
   string_of_board = fn (a,b) => (its a ^ " " ^ its b),
   movel = toy_movel,
   move_compare = toy_move_compare,
