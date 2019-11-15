@@ -1205,10 +1205,11 @@ fun pp_term (G : grammar) TyG backend = let
                                 recurse (decdepth depth) us)
               val ldelim_size = ellist_size ldelim
             in
-              print_ellist NONE (Top,Top,Top) (ldelim, []) >>
-              block INCONSISTENT ldelim_size (recurse depth updates) >>
-              print_ellist NONE (Top,Top,Top) (rdelim, []) >>
-              nothing
+              block INCONSISTENT ldelim_size (
+                print_ellist NONE (Top,Top,Top) (ldelim, []) >>
+                recurse depth updates >>
+                print_ellist NONE (Top,Top,Top) (rdelim, [])
+              )
             end
           in
             if is_const base andalso fst (dest_const base) = "ARB" then
