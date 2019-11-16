@@ -50,7 +50,7 @@ type 'a level_param =
 
 type rl_param =
   {
-  expname : string, ex_window : int, ex_uniq : bool,
+  expname : string, ex_window : int, ex_filter : int option,
   ngen : int, ncore_search : int,
   nsim_start : int , nsim_explore : int, nsim_compete : int,
   decay : real
@@ -187,7 +187,7 @@ fun log_header (obj : 'a rlobj) =
     val param = #rl_param obj
     val name = "expname: " ^ (#expname param)
     val gen1 = "ngen: " ^ its (#ngen param)
-    val ex0 = "ex_uniq: " ^ bts (#ex_uniq param)
+    val ex0 = "ex_filter: " ^ bts (isSome (#ex_filter param))
     val ex1 = "ex_window: " ^ its (#ex_window param)
   in
     log obj "Global parameters";
@@ -259,61 +259,6 @@ fun rl_compete rlobj level rplayerl =
   end
 
 (* -------------------------------------------------------------------------
-   Exploration
-   ------------------------------------------------------------------------- *)
-
-fun explore_one rlobj unib (dhtnn,playerid) targetl =
-  let
-    val ncore = #ncore_search (#rl_param rlobj)
-    val extspec = #extsearch rlobj
-    val nsim =
-      if unib
-      then #nsim_start (#rl_param rlobj)
-      else #nsim_explore (#rl_param rlobj)
-    val splayer = (unib,dhtnn,true,playerid,nsim)
-    val (l,t) = add_time (parmap_queue_extern ncore extspec splayer) targetl
-    val nwin = length (filter fst l)
-    val exl = List.concat (map snd l)
-  in
-    log rlobj ("Exploration time: " ^ rts t);
-    log rlobj ("Exploration wins: " ^ its nwin);
-    log rlobj ("Exploration new examples: " ^ its (length exl));
-    (nwin,exl)
-  end
-
-fun rl_explore ngen rlobj level unib rplayer exl =
-  let
-    val rl_param = #rl_param rlobj
-    val {ntarget_start, ntarget_compete, ntarget_explore,
-         level_start, level_threshold,
-         level_targetl} = #level_param rlobj
-    val ntarget = if unib then ntarget_start else ntarget_explore
-    val targetl = level_targetl level ntarget
-    val _ = log rlobj ("Exploration: " ^ its (length targetl) ^ " targets")
-    val (nwin,exl1) = explore_one rlobj unib rplayer targetl
-    val expname = #expname (#rl_param rlobj)
-    val file = eval_dir ^ "/" ^ expname ^ 
-      "examples_gen" ^ its ngen ^ "_level" ^ its level
-    val _ = (#write_exl rlobj) file exl1
-    val exl2 = first_n (#ex_window rl_param) (exl1 @ exl)
-    val _ = log rlobj ("examples: " ^ its (length exl2))
-    val uboardl = mk_fast_set (#board_compare rlobj) (map #1 exl2)
-    val _ = log rlobj ("unique boards: " ^ its (length uboardl))
-    val b = int_div nwin (length targetl) > level_threshold
-    val newlevel = if b then level + 1 else level
-  in
-    if b then log rlobj ("Level up: " ^ its newlevel) else ();
-    (b,exl2,newlevel)
-  end
-
-fun loop_rl_explore ngen rlobj level unib rplayer exl =
-  let val (b,newexl,newlevel) = rl_explore ngen rlobj level unib rplayer exl in
-    if b
-    then loop_rl_explore ngen rlobj newlevel unib rplayer newexl
-    else (newexl,newlevel)
-  end
-
-(* -------------------------------------------------------------------------
    Example filtering
    ------------------------------------------------------------------------- *)
 
@@ -369,6 +314,69 @@ fun rl_filter_compete rlobj level explayerl =
 fun rl_filter rlobj rplayer ncut level exl =
   let val explayerl = rl_filter_train rlobj rplayer ncut exl in
     rl_filter_compete rlobj level explayerl
+  end
+
+(* -------------------------------------------------------------------------
+   Exploration
+   ------------------------------------------------------------------------- *)
+
+fun explore_one rlobj unib (dhtnn,playerid) targetl =
+  let
+    val ncore = #ncore_search (#rl_param rlobj)
+    val extspec = #extsearch rlobj
+    val nsim =
+      if unib
+      then #nsim_start (#rl_param rlobj)
+      else #nsim_explore (#rl_param rlobj)
+    val splayer = (unib,dhtnn,true,playerid,nsim)
+    val (l,t) = add_time (parmap_queue_extern ncore extspec splayer) targetl
+    val nwin = length (filter fst l)
+    val exl = List.concat (map snd l)
+  in
+    log rlobj ("Exploration time: " ^ rts t);
+    log rlobj ("Exploration wins: " ^ its nwin);
+    log rlobj ("Exploration new examples: " ^ its (length exl));
+    (nwin,exl)
+  end
+
+fun rl_explore ngen rlobj level unib rplayer exl =
+  let
+    val rl_param = #rl_param rlobj
+    val {ntarget_start, ntarget_compete, ntarget_explore,
+         level_start, level_threshold,
+         level_targetl} = #level_param rlobj
+    val ntarget = if unib then ntarget_start else ntarget_explore
+    val targetl = level_targetl level ntarget
+    val _ = log rlobj ("Exploration: " ^ its (length targetl) ^ " targets")
+    val (nwin,exl1) = explore_one rlobj unib rplayer targetl
+    val expname = #expname (#rl_param rlobj)
+    val file = eval_dir ^ "/" ^ expname ^ 
+      "examples_gen" ^ its ngen ^ "_level" ^ its level
+    val _ = (#write_exl rlobj) file exl1
+    val ex_filter = #ex_filter rl_param
+    val ex_window = #ex_window rl_param
+    val exl2 = exl1 @ exl
+    val _ = log rlobj ("Exploration examples: " ^ its (length exl2))
+    val exl3 = 
+      if length exl2 > ex_window then
+        if isSome ex_filter 
+        then rl_filter rlobj rplayer (valOf ex_filter) level exl2
+        else first_n ex_window exl2
+      else exl2
+    val uboardl = mk_fast_set (#board_compare rlobj) (map #1 exl2)
+    val _ = log rlobj ("unique boards: " ^ its (length uboardl))
+    val b = int_div nwin (length targetl) > level_threshold
+    val newlevel = if b then level + 1 else level
+  in
+    if b then log rlobj ("Level up: " ^ its newlevel) else ();
+    (b,exl3,newlevel)
+  end
+
+fun loop_rl_explore ngen rlobj level unib rplayer exl =
+  let val (b,newexl,newlevel) = rl_explore ngen rlobj level unib rplayer exl in
+    if b
+    then loop_rl_explore ngen rlobj newlevel unib rplayer newexl
+    else (newexl,newlevel)
   end
 
 (* -------------------------------------------------------------------------
