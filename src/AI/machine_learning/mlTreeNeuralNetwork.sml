@@ -481,14 +481,18 @@ fun train_tnn_one tnn (tml,expectv) =
     bp_tnn (#dimin tnn) (fpdict,fpdatal) (tml,expectv)
   end
 
-fun update_headnn param headnn bpdatall =
+fun train_tnn_subbatch tnn subbatch =
   let
-    val dwll = map (map #dw) bpdatall
-    val dwl = sum_dwll dwll
-    val newheadnn = update_nn param headnn dwl
-    val loss = average_loss bpdatall
+    val {opdict,headnn,dimin,dimout} = tnn
+    val (bpdictl,bpdatall) = split (map (train_tnn_one tnn) subbatch)
+    val bpdict1 = dconcat oper_compare bpdictl
+    val bpdict2 = filter (not o is_numvar o fst o fst) (dlist bpdict1)
+    val bpdict3 = dnew oper_compare bpdict2
+    fun f (oper,dwll) = [sum_dwll dwll]
+    val bpdict4 = dmap f bpdict3
+    val dwl_head = sum_dwll (map (map #dw) bpdatall)
   in
-    (newheadnn, loss)
+    (bpdict4, dwl_head, average_loss bpdatall)
   end
 
 fun update_opernn param opdict (oper,dwll) =
@@ -502,15 +506,18 @@ fun update_opernn param opdict (oper,dwll) =
 
 fun train_tnn_batch param pf (tnn as {opdict,headnn,dimin,dimout}) batch =
   let
-    val (bpdictl,bpdatall) = split (pf (train_tnn_one tnn) batch)
-    val (newheadnn,loss) = update_headnn param headnn bpdatall
+    val subbatchl = cut_modulo (#ncore param) batch
+    val (bpdictl, dwl_headl, lossl) = 
+      split_triple (pf (train_tnn_subbatch tnn) subbatchl)
+    val newheadnn = update_nn param headnn (sum_dwll dwl_headl)
     val bpdict = dconcat oper_compare bpdictl
-    val bpdict' = filter (not o is_numvar o fst o fst) (dlist bpdict)
-    val newnnl = map (update_opernn param opdict) bpdict'
+    val newnnl = map (update_opernn param opdict) (dlist bpdict)
     val newopdict = daddl newnnl opdict
   in
-    ({opdict = newopdict, headnn = newheadnn, dimin = dimin, dimout = dimout},
-      loss)
+    (
+    {opdict = newopdict, headnn = newheadnn, dimin = dimin, dimout = dimout},
+    average_real lossl
+    )
   end
 
 fun train_tnn_epoch param pf lossl tnn batchl = case batchl of
@@ -582,20 +589,40 @@ fun train_dhtnn_one dhtnn (tml,expecteval,expectpoli) =
     (tml,expecteval,expectpoli)
   end
 
-fun train_dhtnn_batch param pf dhtnn batch =
+fun train_dhtnn_subbatch dhtnn subbatch =
   let
-    val ncore = #ncore param
     val {opdict, headeval, headpoli, dimin, dimpoli} = dhtnn
     val (bpdictl,bpdatall1,bpdatall2) =
-      split_triple (pf (train_dhtnn_one dhtnn) batch)
-    val (newheadeval,loss1) = update_headnn param headeval bpdatall1
-    val (newheadpoli,loss2) = update_headnn param headpoli bpdatall2
-    val bpdict = dconcat oper_compare bpdictl
-    val bpdict' = filter (not o is_numvar o fst o fst) (dlist bpdict)
-    val newopdict = daddl (map (update_opernn param opdict) bpdict') opdict
+      split_triple (map (train_dhtnn_one dhtnn) subbatch)
+    val dwle = sum_dwll (map (map #dw) bpdatall1)
+    val dwlp = sum_dwll (map (map #dw) bpdatall2)
+    val bpdict1 = dconcat oper_compare bpdictl
+    val bpdict2 = filter (not o is_numvar o fst o fst) (dlist bpdict1)
+    val bpdict3 = dnew oper_compare bpdict2
+    fun f (oper,dwll) = [sum_dwll dwll]
+    val bpdict4 = dmap f bpdict3
   in
-    ({opdict = newopdict, headeval = newheadeval, headpoli = newheadpoli,
-     dimin = dimin, dimpoli = dimpoli},(loss1,loss2))
+    (bpdict4, (dwle,dwlp), (average_loss bpdatall1, average_loss bpdatall2))
+  end
+
+fun train_dhtnn_batch param pf dhtnn batch =
+  let
+    val subbatchl = cut_modulo (#ncore param) batch
+    val {opdict, headeval, headpoli, dimin, dimpoli} = dhtnn
+    val (bpdictl,dwllheadcpl,losscpl) =
+      split_triple (pf (train_dhtnn_subbatch dhtnn) subbatchl)
+    val (dwlle,dwllp) = split dwllheadcpl
+    val (lossle,losslp) = split losscpl
+    val newheadeval = update_nn param headeval (sum_dwll dwlle)
+    val newheadpoli = update_nn param headpoli (sum_dwll dwllp)
+    val dwlloper = dlist (dconcat oper_compare bpdictl)
+    val newopdict = daddl (map (update_opernn param opdict) dwlloper) opdict
+  in
+    (
+    {opdict = newopdict, headeval = newheadeval, headpoli = newheadpoli,
+     dimin = dimin, dimpoli = dimpoli},
+    (average_real lossle, average_real losslp)
+    )
   end
 
 fun train_dhtnn_epoch param pf (lossl1,lossl2) dhtnn batchl =
@@ -698,13 +725,14 @@ val tnn_param =
   {
   operl = map_assoc arity_of varl,
   nlayer_oper = 2, nlayer_headnn = 2,
-  dimin = 8, dimout = 1
+  dimin = 16, dimout = 1
   }
 
 val randtnn = random_tnn tnn_param;
 val schedule =
-  [{ncore=1, verbose=true, learning_rate=0.02, batch_size=16, nepoch=100}];
-val newtnn = train_tnn schedule randtnn (trainex,testex);
+  [{ncore=1, verbose=true, learning_rate=0.02, batch_size=16, nepoch=10}];
+val newtnn = Profile.profile "g" (train_tnn schedule randtnn) (trainex,testex);
+ Profile.results ();
 
 (*** inference example ***)
 val tm = fst (hd (shuffle testex));
