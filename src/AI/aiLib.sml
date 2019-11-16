@@ -340,6 +340,14 @@ fun cut_n n l =
     mk_batch_full bsize l
   end
 
+fun cut_modulo n l =
+  let 
+    val l1 = map_fst (fn x => x mod n) (number_fst 0 l)
+    val d = dregroup Int.compare (rev l1)
+  in
+    map snd (dlist d)
+  end
+
 (* -------------------------------------------------------------------------
    List (continued)
    ------------------------------------------------------------------------- *)

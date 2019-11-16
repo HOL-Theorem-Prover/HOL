@@ -108,6 +108,7 @@ sig
   val mk_batch : int -> 'a list -> 'a list list
   val mk_batch_full : int -> 'a list -> 'a list list
   val cut_n : int -> 'a list -> 'a list list
+  val cut_modulo : int -> 'a list -> 'a list list
   val number_partition : int -> int -> int list list
   val duplicate : int -> 'a list -> 'a list
   val indent: int -> string

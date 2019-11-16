@@ -68,6 +68,14 @@ sig
   val mk_extsearch : string -> ('a,'b) rlpreobj -> 'a extsearch
   val mk_rlobj : ('a,'b) rlpreobj -> 'a extsearch -> 'a rlobj
 
+  (* example filtering *)
+  val rl_filter_train : 
+    'a rlobj -> rplayer -> int -> 'a rlex -> ('a rlex * rplayer) list
+  val rl_filter_compete :
+    'a rlobj -> int -> ('a rlex * rplayer) list -> 'a rlex
+  val rl_filter :
+    'a rlobj -> rplayer -> int -> int -> 'a rlex -> 'a rlex
+
   (* phases *)
   val rl_train : 'a rlobj -> 'a rlex -> rplayer list
   val rl_compete : 'a rlobj -> int -> rplayer list -> (int * rplayer)
