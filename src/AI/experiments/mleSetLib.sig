@@ -23,7 +23,7 @@ sig
   (* *)
   val quantl : term list
   val is_quant : term -> bool
-  val norm_bvarl : term -> term
+  val max_quants : int
   (* operators *)
   val operl_plain : term list
 

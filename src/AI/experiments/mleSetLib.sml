@@ -339,9 +339,6 @@ fun eval63_debug t = eval_subst (xvar,t) (nat_to_bin 63)
    Synthesis helpers
    ------------------------------------------------------------------------- *)
 
-fun find_qvar t =
-  mk_var ("vY" ^ its (length (find_terms is_quant t)), alpha)
-
 fun find_redex t = find_term (fn x => is_cont (fst (strip_comb x))) t
 
 val empty_list = listSyntax.mk_nil alpha;
@@ -375,7 +372,7 @@ fun res_pred move varl =
   end
 fun res_quant move varl t =
   let
-    val qvar = find_qvar t
+    val qvar = mk_var ("vY" ^ (its (length varl - 1)), alpha)
     val t1 = mk_comb (cont_term, listSyntax.mk_list (varl, alpha))
     val t2 = mk_comb (cont_form, listSyntax.mk_list (qvar :: varl,alpha))
   in
@@ -405,7 +402,6 @@ fun available_move_aux t move =
   let
     val red = find_redex t
     val varl = fst (listSyntax.dest_list (rand red))
-    fun test x = is_var x andalso String.isPrefix "vY" (fst (dest_var x))
   in
     if type_of red = alpha then
       (is_constr move orelse tmem move varl)
@@ -459,32 +455,10 @@ fun imitate_once orgtm tm =
     newtm
   end
 
-(* assumes all variables are distinct *)
-fun norm_bvarl tm =
-  let
-    val vi = ref 0
-    fun rename_aux tm =
-      let val (oper,argl) = strip_comb tm in
-        if is_quant oper then
-          let
-            val (v,bound,bod) = triple_of_list argl
-            val newv = mk_var ("vY" ^ its (!vi), alpha)
-            val _ = incr vi
-            val newbod = subst [{redex = v, residue = newv}] bod
-          in
-            list_mk_comb (oper,[newv,bound,rename_aux newbod])
-          end
-        else list_mk_comb (oper, map rename_aux argl)
-      end
-  in
-    rename_aux tm
-  end
-
 fun imitate orgtm =
   let
-    val orgtm' = norm_bvarl orgtm
     fun loop tm =
-      if term_eq orgtm' tm then true else loop (imitate_once orgtm' tm)
+      if term_eq orgtm tm then true else loop (imitate_once orgtm tm)
   in
     loop start_form
   end
@@ -493,31 +467,13 @@ fun imitate orgtm =
 load "mleSetLib"; open mleSetLib;
 load "aiLib"; open aiLib;
 val l1 = parse_setsyntdata ();
-val l1' = map_fst norm_bvarl l1;
-val l2 = map_assoc (eval64 o fst) l1';
+val l2 = map_assoc (eval64 o fst) l1;
 val (l3,l3') = partition (isSome o snd) l2;
-length l3';
 val l4 = map_snd (map snd o filter fst o valOf) l3;
 val l5 = map (fn ((a,b),c) => ((a,dict_sort Int.compare b), dict_sort Int.compare c)) l4;
 val (l6,l6') = partition (fn ((a,b),c) => b = c) l5;
-
 val l6 = map (fst o fst) l5;
 val (l7,l7') = partition (can imitate) l6;
-val l8 = map_assoc norm_bvarl l7;
-val l9 = filter (fn (a,b) => not (term_eq a b)) l8;
-*)
-
-(* debug evaluation
-val tml = dict_sort tmsize_compare (map (fst o fst) l3');
-val ex = hd tml;
-fun eval63_debug t = eval_subst (xvar,t) (nat_to_bin 63);
-eval63_debug (fst (fst (hd l3')));
-val ERR = mk_HOL_ERR "test";
-fun eval64 t =
-  map (fn x => (eval_subst (xvar,t) (nat_to_bin x),x)
-    handle HOL_ERR _ => raise ERR "" (its x)) (List.tabulate (64,I));
-
-eval64 (fst (fst (hd l3')));
 *)
 
 end (* struct *)

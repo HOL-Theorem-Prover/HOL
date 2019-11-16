@@ -273,7 +273,7 @@ fun explore_one rlobj unib (dhtnn,playerid) targetl =
     val nwin = length (filter fst l)
     val exl = List.concat (map snd l)
   in
-    log rlobj ("time: " ^ rts t ^ ", wins: " ^ its nwin; 
+    log rlobj ("time: " ^ rts t ^ ", wins: " ^ its nwin ^
                ", new examples: " ^ its (length exl));
     (nwin,exl)
   end
