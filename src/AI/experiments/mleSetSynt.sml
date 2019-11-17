@@ -450,7 +450,7 @@ val rlpreobj : (board,move) rlpreobj =
   game = game,
   pre_extsearch = pre_extsearch,
   tobdict = tobdict,
-  dplayerl = [player_base, (* player_4core *),
+  dplayerl = [player_base, (* player_4core *)
               player_100epoch, player_4batch,
               player_1layer, player_quantterm, 
               player_listgraph, player_allgraph]
