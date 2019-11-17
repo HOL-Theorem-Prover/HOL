@@ -274,6 +274,9 @@ val _ =
     register_btrace ("notify type variable guesses",
                      Globals.notify_on_tyvar_guess)
 
+val _ =
+    register_btrace ("guess overloads", Globals.guessing_overloads)
+
 fun to_term (tm : preterm) : term in_env =
     if !Globals.guessing_tyvars then
       let
