@@ -412,7 +412,7 @@ val player_allgraph =
 val tobdict = dnew String.compare
   [
   ("base",term_of_board1),
- (* ("4core",term_of_board1), *)
+  ("4core",term_of_board1),
   ("100epoch",term_of_board1),
   ("4batch",term_of_board1),
   ("1layer",term_of_board1),
@@ -450,8 +450,10 @@ val rlpreobj : (board,move) rlpreobj =
   game = game,
   pre_extsearch = pre_extsearch,
   tobdict = tobdict,
-  dplayerl = [player_base,player_4core,player_100epoch,player_4batch,
-              player_1layer,player_quantterm,player_listgraph,player_allgraph]
+  dplayerl = [player_base, (* player_4core *),
+              player_100epoch, player_4batch,
+              player_1layer, player_quantterm, 
+              player_listgraph, player_allgraph]
   }
 
 val extsearch = mk_extsearch "mleSetSynt.extsearch" rlpreobj
