@@ -247,9 +247,10 @@ val _ = set_trace "Unicode" 0
 fun pptest (nm, t, expected) = let
   val _ = tprint ("Pretty-printing of "^nm)
   val s = Parse.term_to_string t
+  fun f s = String.translate (fn #" " => UTF8.chr 0x2423 | c => str c) s
 in
   if s = expected then OK()
-  else die ("FAILED!\n  Expected \""^expected^"\"; got \""^s^"\"")
+  else die ("FAILED!\n  Expected \""^expected^"\"; got \""^f s^"\"")
 end
 
 fun s t = let open HolKernel boolLib
@@ -330,6 +331,36 @@ val _ = with_flag (Globals.linewidth, 40) pptest
                        fld4 := also a long expression|>``,
                   "<|fld3 := a very long expression indeed;\n\
                   \  fld4 := also a long expression|>")
+
+val _ = with_flag (Globals.linewidth, 40) pptest
+                  ("multiline record 3",
+                   “f x =  <|fld3 := a very long expression indeed ;
+                             fld4 := also a long expression|>”,
+                   "f x =\n\
+                   \<|fld3 := a very long expression indeed;\n\
+                   \  fld4 := also a long expression|>")
+
+val _ = with_flag (Globals.linewidth, 40) pptest
+                  ("multiline record 4",
+                   “let x = <|fld3 := a very long expression indeed ;
+                             fld4 := also a long expression|> in f x”,
+                   "let\n\
+                   \  x =\n\
+                   \    <|fld3 :=\n\
+                   \        a very long expression indeed;\n\
+                   \      fld4 := also a long expression|>\n\
+                   \in\n\
+                   \  f x")
+
+val _ = with_flag (Globals.linewidth, 40) pptest
+                  ("multiline record 5",
+                   “R P (f x)
+                      <|fld3 := a very long expression indeed ;
+                             fld4 := also a long expression|>”,
+                   "R P (f x)\n\
+                   \  <|fld3 :=\n\
+                   \      a very long expression indeed;\n\
+                   \    fld4 := also a long expression|>")
 
 val _ = app convtest [
       ("EVAL field K-composition", computeLib.CBV_CONV computeLib.the_compset,
