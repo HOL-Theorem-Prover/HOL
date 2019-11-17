@@ -341,7 +341,7 @@ fun cut_n n l =
   end
 
 fun cut_modulo n l =
-  let 
+  let
     val l1 = map_fst (fn x => x mod n) (number_fst 0 l)
     val d = dregroup Int.compare (rev l1)
   in

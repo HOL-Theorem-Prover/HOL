@@ -69,7 +69,7 @@ sig
   val mk_rlobj : ('a,'b) rlpreobj -> 'a extsearch -> 'a rlobj
 
   (* example filtering *)
-  val rl_filter_train : 
+  val rl_filter_train :
     'a rlobj -> rplayer -> int -> 'a rlex -> ('a rlex * rplayer) list
   val rl_filter_compete :
     'a rlobj -> int -> ('a rlex * rplayer) list -> 'a rlex

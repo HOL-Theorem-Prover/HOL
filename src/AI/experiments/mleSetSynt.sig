@@ -16,7 +16,7 @@ sig
   val term_of_board4 : board -> term
   val extsearch : board mlReinforce.extsearch
   val rlobj : board mlReinforce.rlobj
- 
-    
+
+
 
 end

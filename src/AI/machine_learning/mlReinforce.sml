@@ -247,7 +247,7 @@ fun rl_compete rlobj level rplayerl =
     val wl1 = map_assoc f rplayerl
     val wl1' = map snd wl1
     val bpass = exists (fn x => x >= hd wl1') (tl wl1')
-    val _ = log rlobj (if bpass then "Pass" else "Fail")  
+    val _ = log rlobj (if bpass then "Pass" else "Fail")
     val wl2 = dict_sort compare_imax wl1
     val winner = hd wl2
     val freq = int_div (snd winner) (length targetl)
@@ -262,9 +262,9 @@ fun rl_compete rlobj level rplayerl =
    Example filtering
    ------------------------------------------------------------------------- *)
 
-fun exclude n l = 
-  if n < 0 orelse null l then raise ERR "exclude" "" 
-  else if n = 0 then tl l 
+fun exclude n l =
+  if n < 0 orelse null l then raise ERR "exclude" ""
+  else if n = 0 then tl l
   else hd l :: exclude (n - 1) (tl l)
 
 fun mk_filter_exll ncut exl =
@@ -278,7 +278,7 @@ fun rl_filter_train rlobj rplayer ncut exl =
     val dplayerl = #dplayerl rlobj
     fun test {playerid, dhtnn_param, schedule} = playerid = snd rplayer
     val {playerid, dhtnn_param, schedule} = valOf (List.find test dplayerl)
-    fun f l = 
+    fun f l =
       let
         val tob = dfind playerid (#tobdict rlobj)
         val l' = map (fn (a,b,c) => (tob a, b, c)) l
@@ -305,7 +305,7 @@ fun rl_filter_compete rlobj level explayerl =
     fun f x = compete_one rlobj (snd x) targetl
     val wl1 = map_assoc f explayerl
     val wl2 = dict_sort compare_imax wl1
-    val winnerexl = fst (fst (hd wl2))  
+    val winnerexl = fst (fst (hd wl2))
   in
     log rlobj ("Filter examples: " ^ its (length winnerexl));
     winnerexl
@@ -350,16 +350,16 @@ fun rl_explore ngen rlobj level unib rplayer exl =
     val _ = log rlobj ("Exploration: " ^ its (length targetl) ^ " targets")
     val (nwin,exl1) = explore_one rlobj unib rplayer targetl
     val expname = #expname (#rl_param rlobj)
-    val file = eval_dir ^ "/" ^ expname ^ 
+    val file = eval_dir ^ "/" ^ expname ^
       "examples_gen" ^ its ngen ^ "_level" ^ its level
     val _ = (#write_exl rlobj) file exl1
     val ex_filter = #ex_filter rl_param
     val ex_window = #ex_window rl_param
     val exl2 = exl1 @ exl
     val _ = log rlobj ("Exploration examples: " ^ its (length exl2))
-    val exl3 = 
+    val exl3 =
       if length exl2 > ex_window then
-        if isSome ex_filter 
+        if isSome ex_filter
         then rl_filter rlobj rplayer (valOf ex_filter) level exl2
         else first_n ex_window exl2
       else exl2

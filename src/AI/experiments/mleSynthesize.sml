@@ -22,7 +22,7 @@ type board = ((term * int) * term)
 
 fun string_of_board ((a,b),c)= tts a ^ " " ^ its b ^ " " ^ tts c
 
-val board_compare = 
+val board_compare =
   cpl_compare (cpl_compare Term.compare Int.compare) Term.compare
 
 val active_var = ``active_var:num``;

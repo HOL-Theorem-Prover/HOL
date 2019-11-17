@@ -55,8 +55,8 @@ val rewrite_operl =
 
 fun term_of_board ((tm,pos),_) = tag_pos (tm,pos)
 
-val board_compare = 
-  cpl_compare 
+val board_compare =
+  cpl_compare
     (cpl_compare Term.compare (list_compare Int.compare))
     Int.compare
 

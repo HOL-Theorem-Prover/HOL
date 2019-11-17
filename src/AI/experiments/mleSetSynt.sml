@@ -39,9 +39,9 @@ fun mk_graph n t =
 
 type board = ((term * bool list) * term)
 
-val board_compare = 
-  cpl_compare 
-    (cpl_compare Term.compare (list_compare bool_compare)) 
+val board_compare =
+  cpl_compare
+    (cpl_compare Term.compare (list_compare bool_compare))
     Term.compare
 
 fun string_of_board ((_,bl),tm) =
@@ -84,7 +84,7 @@ fun numvar_of_graph graph =
 val adjgraph = mk_var ("adjgraph", ``: bool -> bool -> bool``);
 
 fun term_of_board1 ((_,graph),tm) =
-  list_mk_comb (adjgraph, 
+  list_mk_comb (adjgraph,
     [mk_comb (graphtag, numvar_of_graph graph), rw_to_uncont tm])
 
 val operl1 = mk_fast_set oper_compare
@@ -100,14 +100,14 @@ fun annotate_var n v =
   if tmem v yvarl then v else
   let val (vs,ty) = dest_var v in mk_var (vs ^ "_" ^ its n, ty) end
 
-fun all_annot v = 
-  if tmem v yvarl then [v] 
+fun all_annot v =
+  if tmem v yvarl then [v]
   else List.tabulate (max_quants + 1, fn n => annotate_var n v)
 
 fun ind_quant n tm =
   let val (oper,argl) = strip_comb tm in
     if tmem oper quantl then
-      let 
+      let
         val (v,bound,bod) = triple_of_list argl
         val bound' = ind_quant n bound
         val bod' = ind_quant (n+1) bod
@@ -118,7 +118,7 @@ fun ind_quant n tm =
   end
 
 fun term_of_board2 ((_,graph),tm) =
-  list_mk_comb (adjgraph, [numvar_of_graph graph, 
+  list_mk_comb (adjgraph, [numvar_of_graph graph,
     ind_quant 0 (rw_to_uncont tm)])
 
 val operl2 = mk_fast_set oper_compare
@@ -140,7 +140,7 @@ fun term_of_board3 ((_,graph),tm) =
   list_mk_comb (adjgraph, [term_of_graph graph, rw_to_uncont tm])
 
 val operl3 = mk_fast_set oper_compare
-  (map_assoc arity_of 
+  (map_assoc arity_of
      (T :: F :: graphcat :: adjgraph :: (uncontl @ operl_plain)));
 
 (* -------------------------------------------------------------------------
@@ -148,11 +148,11 @@ val operl3 = mk_fast_set oper_compare
    ------------------------------------------------------------------------- *)
 
 fun extend_var v =
-  let val (vs,ty) = dest_var v in 
+  let val (vs,ty) = dest_var v in
     mk_var (vs ^ "_ext", mk_type ("fun", [bool,ty]))
   end
 
-fun add_graph numvar tm = 
+fun add_graph numvar tm =
   let val (oper,argl) = strip_comb tm in
     list_mk_comb (extend_var oper, numvar :: map (add_graph numvar) argl)
   end
@@ -339,7 +339,7 @@ val dhtnn_param_base =
   dimin = 12, dimpoli = length movel
   }
 val player_base =
-  {playerid = "base", 
+  {playerid = "base",
    dhtnn_param = dhtnn_param_base, schedule = schedule_base}
 
 val schedule_4core =
@@ -347,7 +347,7 @@ val schedule_4core =
     learning_rate = 0.02,
     batch_size = 16, nepoch = 200}]
 val player_4core =
-  {playerid = "4core", 
+  {playerid = "4core",
    dhtnn_param = dhtnn_param_base, schedule = schedule_4core}
 
 val schedule_100epoch =
@@ -355,7 +355,7 @@ val schedule_100epoch =
     learning_rate = 0.02,
     batch_size = 16, nepoch = 100}]
 val player_100epoch =
-  {playerid = "100epoch", 
+  {playerid = "100epoch",
    dhtnn_param = dhtnn_param_base, schedule = schedule_100epoch}
 
 val schedule_4batch =
@@ -363,7 +363,7 @@ val schedule_4batch =
     learning_rate = 0.01,
     batch_size = 4, nepoch = 200}]
 val player_4batch =
-  {playerid = "4batch", 
+  {playerid = "4batch",
    dhtnn_param = dhtnn_param_base, schedule = schedule_4batch}
 
 val dhtnn_param_1layer =
@@ -373,7 +373,7 @@ val dhtnn_param_1layer =
   dimin = 12, dimpoli = length movel
   }
 val player_1layer =
-  {playerid = "1layer", 
+  {playerid = "1layer",
    dhtnn_param = dhtnn_param_base, schedule = schedule_base}
 
 val dhtnn_param_quantterm =
@@ -383,8 +383,8 @@ val dhtnn_param_quantterm =
   dimin = 12, dimpoli = length movel
   }
 val player_quantterm =
-  {playerid = "quantterm", 
-   dhtnn_param = dhtnn_param_quantterm , 
+  {playerid = "quantterm",
+   dhtnn_param = dhtnn_param_quantterm ,
    schedule = schedule_base}
 
 val dhtnn_param_listgraph =
@@ -394,8 +394,8 @@ val dhtnn_param_listgraph =
   dimin = 12, dimpoli = length movel
   }
 val player_listgraph =
-  {playerid = "listgraph", 
-   dhtnn_param = dhtnn_param_listgraph, 
+  {playerid = "listgraph",
+   dhtnn_param = dhtnn_param_listgraph,
    schedule = schedule_base}
 
 val dhtnn_param_allgraph =
@@ -405,8 +405,8 @@ val dhtnn_param_allgraph =
   dimin = 12, dimpoli = length movel
   }
 val player_allgraph =
-  {playerid = "allgraph", 
-   dhtnn_param = dhtnn_param_allgraph, 
+  {playerid = "allgraph",
+   dhtnn_param = dhtnn_param_allgraph,
    schedule = schedule_base}
 
 val tobdict = dnew String.compare
@@ -452,7 +452,7 @@ val rlpreobj : (board,move) rlpreobj =
   tobdict = tobdict,
   dplayerl = [player_base, (* player_4core *)
               player_100epoch, player_4batch,
-              player_1layer, player_quantterm, 
+              player_1layer, player_quantterm,
               player_listgraph, player_allgraph]
   }
 

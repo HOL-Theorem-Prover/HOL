@@ -507,7 +507,7 @@ fun update_opernn param opdict (oper,dwll) =
 fun train_tnn_batch param pf (tnn as {opdict,headnn,dimin,dimout}) batch =
   let
     val subbatchl = cut_modulo (#ncore param) batch
-    val (bpdictl, dwl_headl, lossl) = 
+    val (bpdictl, dwl_headl, lossl) =
       split_triple (pf (train_tnn_subbatch tnn) subbatchl)
     val newheadnn = update_nn param headnn (sum_dwll dwl_headl)
     val bpdict = dconcat oper_compare bpdictl
