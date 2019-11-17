@@ -329,7 +329,7 @@ val pre_extsearch =
    ------------------------------------------------------------------------- *)
 
 val schedule_base =
-  [{ncore = 1, verbose = true,
+  [{ncore = 4, verbose = true,
     learning_rate = 0.02,
     batch_size = 16, nepoch = 200}]
 val dhtnn_param_base =
@@ -359,7 +359,7 @@ val player_100epoch =
    dhtnn_param = dhtnn_param_base, schedule = schedule_100epoch}
 
 val schedule_4batch =
-  [{ncore = 1, verbose = true,
+  [{ncore = 4, verbose = true,
     learning_rate = 0.01,
     batch_size = 4, nepoch = 200}]
 val player_4batch =
@@ -412,7 +412,7 @@ val player_allgraph =
 val tobdict = dnew String.compare
   [
   ("base",term_of_board1),
-  ("4core",term_of_board1),
+ (* ("4core",term_of_board1), *)
   ("100epoch",term_of_board1),
   ("4batch",term_of_board1),
   ("1layer",term_of_board1),
