@@ -614,7 +614,7 @@ fun tts tm = case dest_term tm of
 fun its i = int_to_string i
 
 fun list_mk_binop binop l = case l of
-    [] => raise ERR "" ""
+    [] => raise ERR "list_mk_binop" "empty"
   | [a] => a
   | a :: m => list_mk_comb  (binop, [a, list_mk_binop binop m])
 

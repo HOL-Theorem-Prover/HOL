@@ -63,14 +63,8 @@ fun status_of ((orgtm,graph),tm) =
     else Undecided
 
 (* -------------------------------------------------------------------------
-   Term representation of the board (default)
+   1) Term representation of the board (default)
    ------------------------------------------------------------------------- *)
-
-val graphcat = mk_var ("graphcat", ``:bool -> bool -> bool``)
-fun term_of_graph graph =
-  let val l = map (fn x => if x then T else F) graph in
-    list_mk_binop graphcat l
-  end
 
 val graphtag = mk_var ("graphtag", ``:bool -> bool``)
 
@@ -84,37 +78,31 @@ fun numvar_of_graph graph =
     val vs = tnn_numvar_prefix ^
       String.concat (map (fn x => if x then "1" else "0") graph)
   in
-    mk_comb (graphtag, mk_var (vs,bool))
+    mk_var (vs,bool)
   end
 
 val adjgraph = mk_var ("adjgraph", ``: bool -> bool -> bool``);
 
-val operl = mk_fast_set oper_compare
-  (map_assoc arity_of (graphtag :: adjgraph :: (uncontl @ operl_plain)));
-
 fun term_of_board1 ((_,graph),tm) =
-  list_mk_comb (adjgraph, [numvar_of_graph graph, rw_to_uncont tm])
+  list_mk_comb (adjgraph, 
+    [mk_comb (graphtag, numvar_of_graph graph), rw_to_uncont tm])
+
+val operl1 = mk_fast_set oper_compare
+  (map_assoc arity_of (graphtag :: adjgraph :: (uncontl @ operl_plain)))
 
 (* -------------------------------------------------------------------------
-   Annotate operators with number of quantifiers above them
+   2) Annotate operators with number of quantifiers above them
    ------------------------------------------------------------------------- *)
 
 fun is_numvar v = String.isPrefix tnn_numvar_prefix (fst (dest_var v))
 
 fun annotate_var n v =
-  if tmem v (yvarl @ [graphtag,adjgraph]) orelse is_numvar v 
-  then v
-  else let val (vs,ty) = dest_var v in mk_var (vs ^ "_" ^ its n, ty) end
-
+  if tmem v yvarl then v else
+  let val (vs,ty) = dest_var v in mk_var (vs ^ "_" ^ its n, ty) end
 
 fun all_annot v = 
   if tmem v yvarl then [v] 
   else List.tabulate (max_quants + 1, fn n => annotate_var n v)
-
-val operl_quant = mk_fast_set oper_compare
-  (map_assoc arity_of (
-   graphtag :: adjgraph ::
-   List.concat (map all_annot (uncontl @ operl_plain))))
 
 fun ind_quant n tm =
   let val (oper,argl) = strip_comb tm in
@@ -129,7 +117,51 @@ fun ind_quant n tm =
     else list_mk_comb (annotate_var n oper, map (ind_quant n) argl)
   end
 
-fun term_of_board2 x = ind_quant 0 (term_of_board1 x)
+fun term_of_board2 ((_,graph),tm) =
+  list_mk_comb (adjgraph, [numvar_of_graph graph, 
+    ind_quant 0 (rw_to_uncont tm)])
+
+val operl2 = mk_fast_set oper_compare
+  (map_assoc arity_of (
+   graphtag :: adjgraph ::
+   List.concat (map all_annot (uncontl @ operl_plain))))
+
+(* -------------------------------------------------------------------------
+   3) Graph represented by a list
+   ------------------------------------------------------------------------- *)
+
+val graphcat = mk_var ("graphcat", ``:bool -> bool -> bool``)
+fun term_of_graph graph =
+  let val l = map (fn x => if x then T else F) graph in
+    list_mk_binop graphcat l
+  end
+
+fun term_of_board3 ((_,graph),tm) =
+  list_mk_comb (adjgraph, [term_of_graph graph, rw_to_uncont tm])
+
+val operl3 = mk_fast_set oper_compare
+  (map_assoc arity_of 
+     (T :: F :: graphcat :: adjgraph :: (uncontl @ operl_plain)));
+
+(* -------------------------------------------------------------------------
+   3) Numvar graph as argument of all nodes
+   ------------------------------------------------------------------------- *)
+
+fun extend_var v =
+  let val (vs,ty) = dest_var v in 
+    mk_var (vs ^ "_ext", mk_type ("fun", [bool,ty]))
+  end
+
+fun add_graph numvar tm = 
+  let val (oper,argl) = strip_comb tm in
+    list_mk_comb (extend_var oper, numvar :: map (add_graph numvar) argl)
+  end
+
+fun term_of_board4 ((_,graph),tm) =
+  add_graph (numvar_of_graph graph) (rw_to_uncont tm)
+
+val operl4 = mk_fast_set oper_compare
+  (map_assoc arity_of (map extend_var (uncontl @ operl_plain)));
 
 (*
 load "aiLib"; open aiLib;
@@ -137,9 +169,11 @@ load "mleSetLib"; open mleSetLib;
 load "mleSetSynt"; open mleSetSynt;
 val l1 = parse_setsyntdata ();
 val tml = map fst l1;
-val board : board = ((T,[]), random_elem tml);
+val board : board = ((T,[true,false]), random_elem tml);
 val tm1 = term_of_board1 board;
 val tm2 = term_of_board2 board;
+val tm3 = term_of_board3 board;
+val tm4 = term_of_board4 board;
 *)
 
 (* -------------------------------------------------------------------------
@@ -294,63 +328,117 @@ val pre_extsearch =
    Players
    ------------------------------------------------------------------------- *)
 
-val schedule =
+val schedule_base =
   [{ncore = 1, verbose = true,
     learning_rate = 0.02,
-    batch_size = 16, nepoch = 100}]
-
-val dhtnn_param1 =
+    batch_size = 16, nepoch = 200}]
+val dhtnn_param_base =
   {
-  operl = operl,nlayer_oper = 1,
-  nlayer_headeval = 1, nlayer_headpoli = 1,
-  dimin = 12, dimpoli = length movel
-  }
-val dplayer1 =
-  {playerid = "one_layer", dhtnn_param = dhtnn_param1, schedule = schedule}
-
-val dhtnn_param2 =
-  {
-  operl = operl, nlayer_oper = 1,
+  operl = operl1, nlayer_oper = 2,
   nlayer_headeval = 2, nlayer_headpoli = 2,
   dimin = 12, dimpoli = length movel
   }
-val dplayer2 =
-  {playerid = "two_layers_head", 
-   dhtnn_param = dhtnn_param2, schedule = schedule}
+val player_base =
+  {playerid = "base", 
+   dhtnn_param = dhtnn_param_base, schedule = schedule_base}
 
-val dhtnn_param3 =
+val schedule_4core =
+  [{ncore = 4, verbose = true,
+    learning_rate = 0.02,
+    batch_size = 16, nepoch = 200}]
+val player_4core =
+  {playerid = "4core", 
+   dhtnn_param = dhtnn_param_base, schedule = schedule_4core}
+
+val schedule_100epoch =
+  [{ncore = 4, verbose = true,
+    learning_rate = 0.02,
+    batch_size = 16, nepoch = 100}]
+val player_100epoch =
+  {playerid = "100epoch", 
+   dhtnn_param = dhtnn_param_base, schedule = schedule_100epoch}
+
+val schedule_4batch =
+  [{ncore = 1, verbose = true,
+    learning_rate = 0.01,
+    batch_size = 4, nepoch = 200}]
+val player_4batch =
+  {playerid = "4batch", 
+   dhtnn_param = dhtnn_param_base, schedule = schedule_4batch}
+
+val dhtnn_param_1layer =
   {
-  operl = operl_quant, nlayer_oper = 1,
-  nlayer_headeval = 1, nlayer_headpoli = 1,
+  operl = operl1, nlayer_oper = 1,
+  nlayer_headeval = 2, nlayer_headpoli = 2,
   dimin = 12, dimpoli = length movel
   }
-val dplayer3 =
-  {playerid = "quant_aware", dhtnn_param = dhtnn_param3, schedule = schedule}
+val player_1layer =
+  {playerid = "1layer", 
+   dhtnn_param = dhtnn_param_base, schedule = schedule_base}
 
+val dhtnn_param_quantterm =
+  {
+  operl = operl2, nlayer_oper = 2,
+  nlayer_headeval = 2, nlayer_headpoli = 2,
+  dimin = 12, dimpoli = length movel
+  }
+val player_quantterm =
+  {playerid = "quantterm", 
+   dhtnn_param = dhtnn_param_quantterm , 
+   schedule = schedule_base}
+
+val dhtnn_param_listgraph =
+  {
+  operl = operl3, nlayer_oper = 2,
+  nlayer_headeval = 2, nlayer_headpoli = 2,
+  dimin = 12, dimpoli = length movel
+  }
+val player_listgraph =
+  {playerid = "listgraph", 
+   dhtnn_param = dhtnn_param_listgraph, 
+   schedule = schedule_base}
+
+val dhtnn_param_allgraph =
+  {
+  operl = operl4, nlayer_oper = 2,
+  nlayer_headeval = 2, nlayer_headpoli = 2,
+  dimin = 12, dimpoli = length movel
+  }
+val player_allgraph =
+  {playerid = "allgraph", 
+   dhtnn_param = dhtnn_param_allgraph, 
+   schedule = schedule_base}
 
 val tobdict = dnew String.compare
-  [("one_layer", term_of_board1),
-   ("two_layers_head", term_of_board1),
-   ("quant_aware", term_of_board2)];
+  [
+  ("base",term_of_board1),
+  ("4core",term_of_board1),
+  ("100epoch",term_of_board1),
+  ("4batch",term_of_board1),
+  ("1layer",term_of_board1),
+  ("quantterm",term_of_board2),
+  ("listgraph",term_of_board3),
+  ("allgraph",term_of_board4)
+  ];
 
 (* -------------------------------------------------------------------------
    Interface
    ------------------------------------------------------------------------- *)
 
-val expname = "mleSetSynt-v2-1"
+val expname = "mleSetSynt-v2-2"
 
 val level_param =
   {
-  ntarget_start = 50, ntarget_compete = 50, ntarget_explore = 50,
+  ntarget_start = 400, ntarget_compete = 400, ntarget_explore = 400,
   level_start = 1, level_threshold = 0.75,
   level_targetl = level_targetl
   }
 
 val rl_param =
   {
-  expname = expname, ex_window = 40000, ex_filter = SOME 2,
+  expname = expname, ex_window = 20000, ex_filter = SOME 10,
   ngen = 1, ncore_search = 4,
-  nsim_start = 1600, nsim_explore = 1600, nsim_compete = 1600,
+  nsim_start = 16000, nsim_explore = 16000, nsim_compete = 3200,
   decay = 0.99
   }
 
@@ -362,7 +450,8 @@ val rlpreobj : (board,move) rlpreobj =
   game = game,
   pre_extsearch = pre_extsearch,
   tobdict = tobdict,
-  dplayerl = [dplayer3]
+  dplayerl = [player_base,player_4core,player_100epoch,player_4batch,
+              player_1layer,player_quantterm,player_listgraph,player_allgraph]
   }
 
 val extsearch = mk_extsearch "mleSetSynt.extsearch" rlpreobj

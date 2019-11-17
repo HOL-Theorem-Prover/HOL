@@ -726,13 +726,14 @@ val tnn_param =
   operl = map_assoc arity_of varl,
   nlayer_oper = 2, nlayer_headnn = 2,
   dimin = 16, dimout = 1
-  }
+  };
 
+Profile.reset_all ();
 val randtnn = random_tnn tnn_param;
 val schedule =
-  [{ncore=1, verbose=true, learning_rate=0.02, batch_size=16, nepoch=10}];
-val newtnn = Profile.profile "g" (train_tnn schedule randtnn) (trainex,testex);
- Profile.results ();
+  [{ncore=4, verbose=true, learning_rate=0.02, batch_size=16, nepoch=10}];
+val newtnn = Profile.profile "h" (train_tnn schedule randtnn) (trainex,testex);
+Profile.results ();
 
 (*** inference example ***)
 val tm = fst (hd (shuffle testex));
