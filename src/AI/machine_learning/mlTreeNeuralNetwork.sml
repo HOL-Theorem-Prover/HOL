@@ -730,7 +730,7 @@ val tnn_param =
   };
 
 Profile.reset_all ();
-smlParallel.use_thread_flag;
+smlParallel.use_thread_flag := true;
 val randtnn = random_tnn tnn_param;
 val schedule =
   [{ncore=4, verbose=true, learning_rate=0.02, batch_size=16, nepoch=10}];
@@ -738,6 +738,11 @@ val newtnn = Profile.profile "4" (train_tnn schedule randtnn) (trainex,testex);
 val schedule =
   [{ncore=1, verbose=true, learning_rate=0.02, batch_size=16, nepoch=10}];
 val newtnn = Profile.profile "1" (train_tnn schedule randtnn) (trainex,testex);
+val _ = smlParallel.use_thread_flag := true;
+val schedule =
+  [{ncore=1, verbose=true, learning_rate=0.02, batch_size=16, nepoch=10}];
+val newtnn = 
+  Profile.profile "1t" (train_tnn schedule randtnn) (trainex,testex);
 Profile.results ();
 
 (*** inference example ***)

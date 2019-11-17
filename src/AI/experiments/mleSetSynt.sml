@@ -206,7 +206,7 @@ val game : (board,move) game =
    Big steps limit (redundant with status_of)
    ------------------------------------------------------------------------- *)
 
-fun max_bigsteps ((orgtm,_),_) = 2 * term_size orgtm
+fun max_bigsteps ((orgtm,_),_) = 2 * term_size orgtm + 10
 
 (* -------------------------------------------------------------------------
    Levels
@@ -330,8 +330,8 @@ val pre_extsearch =
 
 val schedule_base =
   [{ncore = 4, verbose = true,
-    learning_rate = 0.02,
-    batch_size = 16, nepoch = 200}]
+    learning_rate = 0.04,
+    batch_size = 16, nepoch = 50}]
 val dhtnn_param_base =
   {
   operl = operl1, nlayer_oper = 2,
@@ -425,7 +425,7 @@ val tobdict = dnew String.compare
    Interface
    ------------------------------------------------------------------------- *)
 
-val expname = "mleSetSynt-v2-2"
+val expname = "mleSetSynt-v2-11"
 
 val level_param =
   {
@@ -436,9 +436,9 @@ val level_param =
 
 val rl_param =
   {
-  expname = expname, ex_window = 20000, ex_filter = SOME 10,
-  ngen = 100, ncore_search = 40,
-  nsim_start = 16000, nsim_explore = 16000, nsim_compete = 3200,
+  expname = expname, ex_window = 40000, ex_filter = NONE,
+  ngen = 400, ncore_search = 40,
+  nsim_start = 8000, nsim_explore = 8000, nsim_compete = 8000,
   decay = 0.99
   }
 
@@ -450,10 +450,7 @@ val rlpreobj : (board,move) rlpreobj =
   game = game,
   pre_extsearch = pre_extsearch,
   tobdict = tobdict,
-  dplayerl = [player_base, (* player_4core *)
-              player_100epoch, player_4batch,
-              player_1layer, player_quantterm,
-              player_listgraph, player_allgraph]
+  dplayerl = [player_base]
   }
 
 val extsearch = mk_extsearch "mleSetSynt.extsearch" rlpreobj
