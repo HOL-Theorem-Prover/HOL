@@ -348,20 +348,25 @@ val _ = overload_on ("gh425", ``gh425a``);
 val _ = overload_on ("gh425", ``gh425b``);
 val buf = ref ([] : string list)
 fun app s = buf := s :: !buf
-fun testquiet f x =
-  (buf := [];
-   let val result =
+fun recording P f x =
+    (buf := [];
+     let
+       val f' =
            (Lib.with_flag (Feedback.MESG_outstream, app) o
             Lib.with_flag (Feedback.ERR_outstream, app) o
             Lib.with_flag (Feedback.WARNING_outstream, app) o
-            Lib.with_flag (Globals.interactive, true)) (Lib.total f) x
-       val _ =
-           null (!buf) orelse
-           raise InternalDie
-                 ("\n  FAILED : buf contains " ^ String.concatWith "\n" (!buf))
-   in
-     result
-   end);
+            Lib.with_flag (Globals.interactive, true)) f
+       val result = Exn.capture f' x
+     in
+       P result (!buf)
+     end)
+
+fun wasquiet res sl =
+    if null sl then res
+    else
+        raise InternalDie
+              ("\n  FAILED : buf contains " ^ String.concatWith "\n" sl)
+fun testquiet f x = recording wasquiet f x
 
 val _ = tprint "(Interactive) PAT_ASSUM quiet about tyvar guesses(1)"
 val _ = let
@@ -370,7 +375,7 @@ val _ = let
                  ([``gh425a (f T) : bool``], ``p /\ q``)
 in
   case result of
-      SOME ([([], t)],_) =>
+      Exn.Res ([([], t)],_) =>
               if aconv t ``gh425a (f T) ==> p /\ q`` then OK()
               else die "\nFAILED - Incorrect result"
     | _ => die "\nFAILED - Incorrect result"
@@ -404,5 +409,14 @@ val _ = (testquiet (Q.RENAME_TAC [‘SUC n’]) ([“P (SUC x) ==> Q”], “p /
 val _ = tprint "(Interactive) RENAME_TAC quiet about tyvar guesses(4)"
 val _ = (testquiet (Q.RENAME_TAC [‘SUC n’]) ([“Pr ==> Q”], “P (SUC x) /\ q”);
          OK()) handle InternalDie s => die s
+
+val _ = tprint "Q.SPEC_THEN reports type errors"
+val _ = let
+  fun contains res sl =
+      if Portable.is_substring "α -> bool" (String.concat sl) then OK()
+      else die ""
+in
+  recording contains (Q.SPEC_THEN ‘T’ MP_TAC (ASSUME “∀f. f x”)) ([], “p /\ q”)
+end
 
 val _ = Process.exit Process.success;

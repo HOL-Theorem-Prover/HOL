@@ -116,11 +116,12 @@ fun SPEC_THEN q ttac thm (g as (asl,w)) = let
       let
           val ptmm = TermParse.absyn_to_preterm (Parse.term_grammar()) a
           open Preterm seqmonad
+          val printers = SOME (term_to_string, type_to_string)
       in
         fromErr pbty >>~ (fn pty =>
         fromErr ptmm >>~ (fn ptm =>
         fromErr
-          (TermParse.ctxt_preterm_to_term NONE NONE ctxt
+          (TermParse.ctxt_preterm_to_term printers NONE ctxt
                 (Constrained{Locn = locn.Loc_None,Ptm = ptm, Ty = pty}))))
       end
   fun Ecompose theta0 E =
