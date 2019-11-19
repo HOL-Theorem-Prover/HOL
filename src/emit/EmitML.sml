@@ -862,23 +862,19 @@ datatype elem_internal
     | iMLSTRUCT of string;
 
 
-(*---------------------------------------------------------------------------*)
-(* A datatype declaration results in some extra HOL function definitions     *)
-(* being automatically made. These are, usually, invisible to the user, but  *)
-(* are important and usually need to have ML generated for them.  Currently, *)
-(* only the access and update functions for records are generated. We used   *)
-(* to also write out the size functions for datatypes as well, but they were *)
-(* not used, so they are going for the time being.                           *)
-(*                                                                           *)
-(* In many cases suitable update and access functions are defined by the     *)
-(* datatype package and stuck into the TypeBase. However, large records are  *)
-(* modelled differently, for efficiency. The threshold number of fields is   *)
-(* controlled by Datatype.big_record_size. A big record has a different      *)
-(* shape, i.e., recursion theorem. To handle such records, we generate       *)
-(* fake "theorems" of the right form. This should be OK, as they are only    *)
-(* created for exporting the ML functions, and they are tagged. In fact, all *)
-(* record declarations are handled by the following code.                    *)
-(*---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    A datatype declaration results in some extra HOL function
+    definitions being automatically made. These are, usually,
+    invisible to the user, but are important and usually need to have
+    ML generated for them. Currently, only the access and update
+    functions for records are generated. We used to also write out the
+    size functions for datatypes as well, but they were not used, so
+    they are going for the time being. In many cases suitable update
+    and access functions are defined by the datatype package and stuck
+    into the TypeBase. All record declarations are handled by the
+    following code, which generates "fake" theorems as definitions for
+    the various constants.
+   ---------------------------------------------------------------------- *)
 
 fun diag vlist flist = tl
   (itlist2 (fn v => fn f => fn A =>
