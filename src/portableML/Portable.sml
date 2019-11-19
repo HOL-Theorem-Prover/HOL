@@ -146,6 +146,10 @@ fun foldr2' _ [] [] z = z
   | foldr2' f (x::xs) (y::ys) z = f x y (foldr2' f xs ys z)
   | foldr2' _ _ _ _ = raise ListPair.UnequalLengths
 
+fun zip3 ([], [], []) = []
+  | zip3 (h1::t1, h2::t2, h3::t3) = (h1,h2,h3) :: zip3 (t1,t2,t3)
+  | zip3 _ = raise ListPair.UnequalLengths
+
 (* separate s [x1, x2, ..., xn] ===> [x1, s, x2, s, ..., s, xn] *)
 
 fun separate s (x :: (xs as _ :: _)) = x :: s :: separate s xs

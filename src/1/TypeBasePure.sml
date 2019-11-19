@@ -7,6 +7,7 @@ struct
 
 open HolKernel boolSyntax Drule Conv Prim_rec;
 type simpfrag = simpfrag.simpfrag
+type rcd_fieldinfo = {ty: hol_type, accessor: term, fupd : term}
 
 val ERR = mk_HOL_ERR "TypeBasePure";
 val WARN = HOL_WARNING "TypeBasePure";
@@ -32,7 +33,7 @@ datatype shared_thm
          lift      : term option,
          one_one   : thm option,
          distinct  : thm option,
-         fields    : (string * hol_type) list,
+         fields    : (string * rcd_fieldinfo) list,
          accessors : thm list,
          updates   : thm list,
          destructors : thm list,
@@ -62,7 +63,7 @@ type dtyinfo =
             lift         : term option,
             distinct     : thm option,
             one_one      : thm option,
-            fields       : (string * hol_type) list,
+            fields       : (string * rcd_fieldinfo) list,
             accessors    : thm list,
             updates      : thm list,
             simpls       : simpfrag,
@@ -1048,6 +1049,9 @@ fun option f v =
   case v of
       NONE => Sym "NONE"
     | SOME v0 => List [Sym "SOME", f v0]
+fun rcdfinfo_to_sexp {ty,accessor,fupd} =
+    List [Type ty, Term accessor, Term fupd]
+
 fun dtyiToSEXPs (dtyi : dtyinfo) =
     field "ty" (Type (#ty dtyi)) @
     field "axiom" (Thm (thm_of (#axiom dtyi))) @
@@ -1067,8 +1071,9 @@ fun dtyiToSEXPs (dtyi : dtyinfo) =
     field "distinct" (option Thm (#distinct dtyi)) @
     field "nchotomy" (Thm (#nchotomy dtyi)) @
     field "one_one" (option Thm (#one_one dtyi)) @
-    field "fields" (List (map (fn (s,ty) => List[String s, Type ty])
-                              (#fields dtyi))) @
+    field "fields"
+          (List (map (fn (s,rfi) => List[String s, rcdfinfo_to_sexp rfi])
+                     (#fields dtyi))) @
     field "accessors" (List (map Thm (#accessors dtyi))) @
     field "updates" (List (map Thm (#updates dtyi))) @
     field "simpls" (List (map Thm (#rewrs (#simpls dtyi)))) @
@@ -1104,6 +1109,10 @@ fun fromSEXP0 s =
       | dest_option _ _ = raise OptionExn
     fun dest_pair df1 df2 (List [s1, s2]) = (df1 s1, df2 s2)
       | dest_pair _ _ _ = raise OptionExn
+    fun dest_rfi (List [typ, acc, fupd]) = {ty = ty typ, accessor = tm acc,
+                                            fupd = tm fupd}
+      | dest_rfi _ = raise OptionExn
+
     fun H nm f x = f x
        handle OptionExn => raise ERR "fromSEXP" ("Bad encoding for field "^nm)
   in
@@ -1146,7 +1155,8 @@ fun fromSEXP0 s =
                     distinct = H "distinct" (dest_option thm) distinct_option,
                     nchotomy = nchotomy,
                     one_one = H "one_one" (dest_option thm) one_one_option,
-                    fields = H "fields" (map (dest_pair string ty)) field_list,
+                    fields = H "fields"
+                               (map (dest_pair string dest_rfi)) field_list,
                     accessors = H "accessors" (map thm) accessor_list,
                     updates = H "updates" (map thm) update_list,
                     simpls = simpfrag.add_rwts simpfrag.empty_simpfrag

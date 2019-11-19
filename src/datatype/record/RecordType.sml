@@ -574,8 +574,10 @@ fun prove_recordtype_thms (tyinfo, fields) = let
       fupdcanon_thm :: fupdcanon_comp_thm :: new_simpls0
     else new_simpls0
   end
+  val finfos = map (fn (ty,a,u) => {ty = ty, accessor = a, fupd = #2 u})
+                   (Portable.zip3 (types, accfn_terms, fupdfn_terms))
   val new_tyinfo =
-       update_tyinfo (SOME (zip fields types,access_defns,fupdfn_thms))
+       update_tyinfo (SOME (zip fields finfos,access_defns,fupdfn_thms))
                      new_simpls tyinfo
 
   (* set up parsing for the record type *)

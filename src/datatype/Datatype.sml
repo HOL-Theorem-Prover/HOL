@@ -831,7 +831,7 @@ fun augment_tyinfos tyis thminfo_list = let
   val tyis = Listsort.sort tyi_compare tyis
   val thminfo_list = Listsort.sort alist_comp thminfo_list
   type thmdata = (string * thm) list
-  type flddata = (string * hol_type) list * thm list * thm list
+  type flddata = (string * TypeBase.rcd_fieldinfo) list * thm list * thm list
   fun merge acc tyis (thmi_list : (string * thmdata * flddata) list) =
       case (tyis, thmi_list) of
         ([], _ :: _ ) => raise Fail "Datatype.sml: invariant failure 101"
@@ -926,33 +926,7 @@ in
 fun prim_define_type_from_astl prevtypes f db astl0 = let
   val astl = insert_tyarguments prevtypes astl0
 in
-  if includes_big_record astl then let
-      val (newastls, bigrecords) = reformulate_record_types astl
-      val (db, tyinfos) = f prevtypes db newastls
-      val function_defns = map define_bigrec_functions bigrecords
-      val fldinfo = getfldinfo bigrecords (* list of (string * (string*type) list)
-                                             recording user's desired fields for
-                                             each big record type *)
-      val merged_alists = merge_alists function_defns fldinfo
-      val tyinfos = augment_tyinfos tyinfos merged_alists
-      val ss = let
-        open simpLib boolSimps
-        fun foldthis (tyi, ss) =
-            ss ++ rewrites (TypeBasePure.gen_std_rewrs tyi @
-                            #rewrs (TypeBasePure.simpls_of tyi))
-      in
-        foldl foldthis (bool_ss ++ combinSimps.COMBIN_ss) tyinfos
-      end
-      val newtheorems = map (prove_bigrec_theorems tyinfos ss) bigrecords
-     (* don't need to make this stuff persist because what's adjoined already
-        will mention the theorems that should be in the typebase.  What we've
-        done here is made the theorems look right.
-      *)
-      val tyinfos = augment_tyinfos tyinfos merged_alists
-    in
-      (db, tyinfos)
-    end
-  else if is_enum_type_spec astl then (db, build_enum_tyinfos astl)
+  if is_enum_type_spec astl then (db, build_enum_tyinfos astl)
   else (db,
         map add_record_facts
             (zip (build_tyinfos db (new_asts_datatype astl))
