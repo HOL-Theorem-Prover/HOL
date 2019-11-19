@@ -137,7 +137,6 @@ val _ =
 
 val _ = Hol_datatype`K = <| F : 'a -> bool; S : num |>`
 
-val _ = Datatype.big_record_size := 10;
 val _ = Hol_datatype`
   big_record = <| fld3 : num ; fld4: bool ; fld5 : num -> num;
                   fld6 : bool -> bool ; fld7 : 'a -> num ;
@@ -255,7 +254,7 @@ end
 
 fun s t = let open HolKernel boolLib
           in
-            rhs (concl (simpLib.SIMP_CONV (BasicProvers.srw_ss()) [] t))
+            rhs (concl (QCONV (simpLib.SIMP_CONV (BasicProvers.srw_ss()) []) t))
           end
 
 val _ = Hol_datatype`ovlrcd = <| id : num ; opn : num -> num |>`
