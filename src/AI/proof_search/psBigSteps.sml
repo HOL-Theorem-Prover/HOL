@@ -69,7 +69,7 @@ fun debug_ep obj dis root =
   if #verbose obj then
   let
     val mcts_obj = #mcts_obj obj
-    val {game,player,mcts_param} = mcts_obj
+    val {cuttree,game,player,mcts_param} = mcts_obj
     val old_eval = #value root
     val new_eval = #sum root / #vis root
     val fm = #string_of_move game
@@ -138,7 +138,7 @@ fun debug_board obj game board =
 fun loop_bigsteps (n,nmax) obj (exl,rootl) tree =
   let
     val mcts_obj = #mcts_obj obj
-    val {mcts_param,game,player} = mcts_obj
+    val {cuttree,mcts_param,game,player} = mcts_obj
     val board = #board (dfind [] tree)
     val status = #status_of game board
     val _ = debug_board obj game board
@@ -146,17 +146,22 @@ fun loop_bigsteps (n,nmax) obj (exl,rootl) tree =
     if status <> Undecided orelse n >= nmax
       then (status = Win,exl,rootl) else
     let
-      val newtree = mcts mcts_obj tree
-      val root = dfind [] newtree
-      val cid = select_bigstep obj newtree
-      val cuttree =
-        if #noise_flag mcts_param
-        then starttree_of mcts_obj (#board (dfind cid newtree))
-        else cut_tree cid newtree
-      val newexl = add_rootex game newtree exl
+      val endtree = mcts mcts_obj tree
+      val root = dfind [] endtree
+      val cid = select_bigstep obj endtree
+      val newtree =
+        if #noise_flag mcts_param then 
+          let val local_mcts_obj =
+            {cuttree = SOME (cut_tree cid endtree),
+             mcts_param = mcts_param, game = game, player = player}
+          in
+            starttree_of local_mcts_obj (#board (dfind cid endtree))
+          end
+        else cut_tree cid endtree
+      val newexl = add_rootex game endtree exl
       val newrootl = root :: rootl
     in
-      loop_bigsteps (n+1,nmax) obj (newexl,newrootl) cuttree
+      loop_bigsteps (n+1,nmax) obj (newexl,newrootl) newtree
     end
   end
 
@@ -179,17 +184,18 @@ load "psBigSteps"; open psBigSteps;
 
 val mcts_param =
   {
-  nsim = 16000,
+  nsim = 32000,
   stopatwin_flag = false,
   decay = 1.0,
   explo_coeff = 2.0,
-  noise_flag = false,
+  noise_flag = true,
   noise_coeff = 0.25,
   noise_alpha = 0.2
   };
 
 val mcts_obj : (toy_board,toy_move) mcts_obj =
   {
+  cuttree = NONE,
   mcts_param = mcts_param,
   game = toy_game,
   player = uniform_player toy_game
@@ -204,7 +210,7 @@ val bigsteps_obj: (toy_board,toy_move) psBigSteps.bigsteps_obj =
   };
 
 val target = (0,10);
-val _ = run_bigsteps bigsteps_obj target;
+val (_,t) = add_time (run_bigsteps bigsteps_obj) target;
 val (winb,exl,rootl) = run_bigsteps bigsteps_obj target;
 *)
 

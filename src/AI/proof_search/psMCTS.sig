@@ -53,7 +53,12 @@ sig
     }
 
   type ('a,'b) mcts_obj =
-    {mcts_param : mcts_param, game : ('a,'b) game, player : ('a,'b) player}
+    {
+    cuttree : ('a,'b) tree option,
+    mcts_param : mcts_param, 
+    game : ('a,'b) game, 
+    player : ('a,'b) player
+    }
 
   val starttree_of : ('a,'b) mcts_obj -> 'a -> ('a,'b) tree
   val mcts : ('a,'b) mcts_obj -> ('a,'b) tree -> ('a,'b) tree

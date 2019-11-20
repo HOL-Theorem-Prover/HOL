@@ -42,10 +42,8 @@ fun mk_graph n t =
 
 type board = ((term * bool list) * term)
 
-val board_compare =
-  cpl_compare
-    (cpl_compare Term.compare (list_compare bool_compare))
-    Term.compare
+fun board_compare (((a,b),c),((d,e),f)) = 
+  cpl_compare Term.compare Term.compare ((c,a),(f,d))
 
 fun string_of_board ((_,bl),tm) =
   String.concatWith " " (map bts bl) ^ " :\n" ^ tts tm
