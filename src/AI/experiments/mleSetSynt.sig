@@ -10,13 +10,11 @@ sig
   val mk_graph : int -> term -> bool list
   val mk_startboard : term -> board
   val dest_startboard : board -> term
-  val term_of_board1 : board -> term
-  val term_of_board2 : board -> term
+  val term_of_board1 : int -> board -> term
+  val term_of_board2 : int -> board -> term
   val term_of_board3 : board -> term
-  val term_of_board4 : board -> term
+  val term_of_board4 : int -> board -> term
   val extsearch : board mlReinforce.extsearch
   val rlobj : board mlReinforce.rlobj
-
-
 
 end

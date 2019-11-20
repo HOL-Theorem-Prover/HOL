@@ -41,10 +41,10 @@ fun rm_suffix l1 l2 = rev (rm_prefix (rev l1) (rev l2))
 fun cut_tree id tree =
   let
     val l = filter (fn x => is_suffix id (fst x)) (dlist tree)
-    fun change_node (x,{pol,board,sum,vis,status}) =
+    fun change_node (x,{pol,value,board,sum,vis,status}) =
       (rm_suffix id x,
         {pol=map_snd (rm_suffix id) pol,
-         board=board,sum=sum,vis=vis,status=status})
+         board=board, value=value, sum=sum, vis=vis, status=status})
   in
     dnew id_compare (map change_node l)
   end
@@ -70,7 +70,7 @@ fun debug_ep obj dis root =
   let
     val mcts_obj = #mcts_obj obj
     val {game,player,mcts_param} = mcts_obj
-    val old_eval = fst (player (#board root))
+    val old_eval = #value root
     val new_eval = #sum root / #vis root
     val fm = #string_of_move game
     fun g r = pad 6 "0" (rts (approx 4 r))

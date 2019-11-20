@@ -21,11 +21,18 @@ type id = int list (* node identifier *)
 val id_compare = list_compare Int.compare
 type 'b pol = (('b * real) * id) list
 type ('a,'b) node =
-  {pol: 'b pol, board: 'a, sum: real, vis: real, status: status}
+  {
+  pol : 'b pol, 
+  value : real,
+  board : 'a, 
+  sum : real, 
+  vis : real, 
+  status : status
+  }
 type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
 
 (* -------------------------------------------------------------------------
-   Game specification, player (evaluation + policy) and additional search
+   Game specification, player (value + policy) and additional search
    parameters
    ------------------------------------------------------------------------- *)
 
@@ -75,23 +82,24 @@ fun quant_status quant status tree pol =
 fun exists_win tree pol  = quant_status exists Win tree pol
 fun all_lose tree pol = quant_status all Lose tree pol
 
-fun update_node decay tree eval {pol,board,sum,vis,status} =
+fun update_node decay tree reward {pol,value,board,sum,vis,status} =
   let val newstatus =
     if status <> Undecided then status
     else if exists_win tree pol then Win
     else if all_lose tree pol then Lose
     else Undecided
   in
-    {pol=pol, board=board, sum=sum+eval, vis=vis+1.0, status=newstatus}
+    {pol=pol, value=value, board=board, 
+     sum=sum+reward, vis=vis+1.0, status=newstatus}
   end
 
-fun backup decay tree (id,eval) =
+fun backup decay tree (id,reward) =
   let
     val node1 = dfind id tree
-    val node2 = update_node decay tree eval node1
+    val node2 = update_node decay tree reward node1
     val newtree = dadd id node2 tree
   in
-    if null id then newtree else backup decay newtree (tl id, decay * eval)
+    if null id then newtree else backup decay newtree (tl id, decay * reward)
   end
 
 (* --------------------------------------------------------------------------
@@ -136,7 +144,7 @@ fun normalize_pol pol =
 
 fun add_root_noise param tree =
   let
-    val {pol,board,sum,vis,status} = dfind [] tree
+    val {pol,value,board,sum,vis,status} = dfind [] tree
     val noisel1 = dirichlet_noise_plain (#noise_alpha param) (length pol)
     val noisel2 = normalize_proba noisel1
     fun f (((move,polv),cid),noise) =
@@ -148,7 +156,8 @@ fun add_root_noise param tree =
       end
     val newpol = normalize_pol (map f (combine (pol,noisel2)))
   in
-    dadd [] {pol=newpol,board=board,sum=sum,vis=vis,status=status} tree
+    dadd [] {pol=newpol, value=value, 
+             board=board,sum=sum,vis=vis,status=status} tree
   end
 
 (* -------------------------------------------------------------------------
@@ -177,14 +186,15 @@ fun node_create_backup obj tree (id,board) =
     val param = #mcts_param obj
     fun wrap_poli poli = let fun f i x = (x, i :: id) in mapi f poli end
     val status = (#status_of game) board
-    val (eval,poli) = case status of
+    val (value,poli) = case status of
         Win       => (1.0,[])
       | Lose      => (0.0,[])
       | Undecided => filter_available game board ((#player obj) board)
-    val node = {pol=rescale_pol (wrap_poli poli),
-                board=board, sum=0.0, vis=0.0, status=status}
+    val node = {pol=rescale_pol (wrap_poli poli), value=value,
+                board=board,
+                sum=0.0, vis=0.0, status=status}
     val tree1 = dadd id node tree
-    val tree2 = backup (#decay param) tree1 (id,eval)
+    val tree2 = backup (#decay param) tree1 (id,value)
   in
     tree2
   end
@@ -261,7 +271,7 @@ fun expand obj tree (id,cid) =
 fun starttree_of obj board =
   node_create_backup obj (dempty id_compare) ([],board)
 
-fun mcts (obj :  ('a, 'b) mcts_obj) starttree =
+fun mcts obj starttree =
   let
     val param = #mcts_param obj
     val starttree_noise =

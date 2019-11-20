@@ -11,7 +11,14 @@ sig
   val id_compare : id * id -> order
   type 'b pol = (('b * real) * id) list
   type ('a,'b) node =
-    {pol : 'b pol, board : 'a, sum : real, vis : real, status : status}
+    {
+    pol : 'b pol, 
+    value : real,
+    board : 'a, 
+    sum : real,
+    vis : real, 
+    status : status
+    }
   type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
 
   (* dirichlet noise *)

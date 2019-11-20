@@ -17,6 +17,9 @@ val ERR = mk_HOL_ERR "mleSetSynt"
    Helper
    ------------------------------------------------------------------------- *)
 
+val graphcat = mk_var ("graphcat", ``:bool -> bool -> bool``)
+val adjgraph = mk_var ("adjgraph", ``: bool -> bool -> bool``);
+
 val uncont_term = mk_var ("uncont_term",alpha)
 val uncont_form = mk_var ("uncont_form",bool)
 val uncontl = [uncont_term,uncont_form]
@@ -28,7 +31,7 @@ fun rw_to_uncont t =
     else list_mk_comb (oper, map rw_to_uncont argl)
   end
 
-val graph_size = 12
+val graph_size = 64
 
 fun mk_graph n t =
   map (eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I))
@@ -73,22 +76,30 @@ fun string_of_graph graph =
 fun graph_of_string s =
   map string_to_bool (String.tokens Char.isSpace s)
 
-fun numvar_of_graph graph =
+fun numvar_of_graph dim graph =
+  if length graph = dim then 
   let
     val vs = tnn_numvar_prefix ^
       String.concat (map (fn x => if x then "1" else "0") graph)
   in
     mk_var (vs,bool)
   end
+  else raise ERR "numvar_of_graph" 
+    "dimension of the graph not a multiple of the dimension of the network"
 
-val adjgraph = mk_var ("adjgraph", ``: bool -> bool -> bool``);
+fun term_of_graph dim graph =
+  let 
+    val graphl = mk_batch_full dim graph
+    val numvarl = map (numvar_of_graph dim) graphl
+  in
+    list_mk_binop graphcat numvarl
+  end
 
-fun term_of_board1 ((_,graph),tm) =
-  list_mk_comb (adjgraph,
-    [mk_comb (graphtag, numvar_of_graph graph), rw_to_uncont tm])
+fun term_of_board1 dim ((_,graph),tm) =
+  list_mk_comb (adjgraph, [term_of_graph dim graph, rw_to_uncont tm])
 
 val operl1 = mk_fast_set oper_compare
-  (map_assoc arity_of (graphtag :: adjgraph :: (uncontl @ operl_plain)))
+  (map_assoc arity_of (graphcat :: adjgraph :: (uncontl @ operl_plain)))
 
 (* -------------------------------------------------------------------------
    2) Annotate operators with number of quantifiers above them
@@ -117,34 +128,33 @@ fun ind_quant n tm =
     else list_mk_comb (annotate_var n oper, map (ind_quant n) argl)
   end
 
-fun term_of_board2 ((_,graph),tm) =
-  list_mk_comb (adjgraph, [numvar_of_graph graph,
+fun term_of_board2 dim ((_,graph),tm) =
+  list_mk_comb (adjgraph, [term_of_graph dim graph,
     ind_quant 0 (rw_to_uncont tm)])
 
 val operl2 = mk_fast_set oper_compare
   (map_assoc arity_of (
-   graphtag :: adjgraph ::
+   graphcat :: adjgraph ::
    List.concat (map all_annot (uncontl @ operl_plain))))
 
 (* -------------------------------------------------------------------------
    3) Graph represented by a list
    ------------------------------------------------------------------------- *)
 
-val graphcat = mk_var ("graphcat", ``:bool -> bool -> bool``)
-fun term_of_graph graph =
+fun booltermlist_of_graph graph =
   let val l = map (fn x => if x then T else F) graph in
     list_mk_binop graphcat l
   end
 
 fun term_of_board3 ((_,graph),tm) =
-  list_mk_comb (adjgraph, [term_of_graph graph, rw_to_uncont tm])
+  list_mk_comb (adjgraph, [booltermlist_of_graph graph, rw_to_uncont tm])
 
 val operl3 = mk_fast_set oper_compare
   (map_assoc arity_of
      (T :: F :: graphcat :: adjgraph :: (uncontl @ operl_plain)));
 
 (* -------------------------------------------------------------------------
-   3) Numvar graph as argument of all nodes
+   3) graph as argument of all nodes (expensive)
    ------------------------------------------------------------------------- *)
 
 fun extend_var v =
@@ -157,11 +167,11 @@ fun add_graph numvar tm =
     list_mk_comb (extend_var oper, numvar :: map (add_graph numvar) argl)
   end
 
-fun term_of_board4 ((_,graph),tm) =
-  add_graph (numvar_of_graph graph) (rw_to_uncont tm)
+fun term_of_board4 dim ((_,graph),tm) =
+  add_graph (term_of_graph dim graph) (rw_to_uncont tm)
 
 val operl4 = mk_fast_set oper_compare
-  (map_assoc arity_of (map extend_var (uncontl @ operl_plain)));
+  (map_assoc arity_of (graphcat :: map extend_var (uncontl @ operl_plain)));
 
 (*
 load "aiLib"; open aiLib;
@@ -169,7 +179,7 @@ load "mleSetLib"; open mleSetLib;
 load "mleSetSynt"; open mleSetSynt;
 val l1 = parse_setsyntdata ();
 val tml = map fst l1;
-val board : board = ((T,[true,false]), random_elem tml);
+val board : board = ((T,List.tabulate (64,fn _ => false)), random_elem tml);
 val tm1 = term_of_board1 board;
 val tm2 = term_of_board2 board;
 val tm3 = term_of_board3 board;
@@ -181,7 +191,6 @@ val tm4 = term_of_board4 board;
    ------------------------------------------------------------------------- *)
 
 type move = term
-
 fun apply_move move (ctxt,tm) = (ctxt, apply_move_aux move tm)
 fun available_move board move = available_move_aux (snd board) move
 fun string_of_move move = tts move
@@ -331,12 +340,12 @@ val pre_extsearch =
 val schedule_base =
   [{ncore = 4, verbose = true,
     learning_rate = 0.02,
-    batch_size = 16, nepoch = 50}]
+    batch_size = 16, nepoch = 25}]
 val dhtnn_param_base =
   {
   operl = operl1, nlayer_oper = 2,
   nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 12, dimpoli = length movel
+  dimin = 8, dimpoli = length movel
   }
 val player_base =
   {playerid = "base",
@@ -411,21 +420,21 @@ val player_allgraph =
 
 val tobdict = dnew String.compare
   [
-  ("base",term_of_board1),
-  ("4core",term_of_board1),
-  ("100epoch",term_of_board1),
-  ("4batch",term_of_board1),
-  ("1layer",term_of_board1),
-  ("quantterm",term_of_board2),
+  ("base",term_of_board1 8),
+  ("4core",term_of_board1 8),
+  ("100epoch",term_of_board1 8),
+  ("4batch",term_of_board1 8),
+  ("1layer",term_of_board1 8),
+  ("quantterm",term_of_board2 8),
   ("listgraph",term_of_board3),
-  ("allgraph",term_of_board4)
+  ("allgraph",term_of_board4 8)
   ];
 
 (* -------------------------------------------------------------------------
    Interface
    ------------------------------------------------------------------------- *)
 
-val expname = "mleSetSynt-v2-12"
+val expname = "mleSetSynt-v2-13"
 
 val level_param =
   {
@@ -436,8 +445,8 @@ val level_param =
 
 val rl_param =
   {
-  expname = expname, ex_window = 80000, ex_filter = NONE,
-  ngen = 400, ncore_search = 40,
+  expname = expname, ex_window = 160000, ex_filter = NONE,
+  ngen = 400, ncore_search = 45,
   nsim_start = 32000, nsim_explore = 32000, nsim_compete = 32000,
   decay = 0.99
   }
