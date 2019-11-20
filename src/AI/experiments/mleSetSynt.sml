@@ -82,13 +82,13 @@ fun numvar_of_graph dim graph =
   in
     mk_var (vs,bool)
   end
-  else raise ERR "numvar_of_graph" 
-    "dimension of the graph not a multiple of the dimension of the network"
+  else raise ERR "numvar_of_graph" ""
 
 fun term_of_graph dim graph =
   let 
     val graphl = mk_batch_full dim graph
-    val numvarl = map (numvar_of_graph dim) graphl
+    val grl = last graphl @ List.tabulate (dim - length graphl, fn _ => false)
+    val numvarl = map (numvar_of_graph dim) (butlast graphl @ [grl])
   in
     list_mk_binop graphcat numvarl
   end
@@ -343,7 +343,7 @@ val dhtnn_param_base =
   {
   operl = operl1, nlayer_oper = 2,
   nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 8, dimpoli = length movel
+  dimin = 12, dimpoli = length movel
   }
 val player_base =
   {playerid = "base",
