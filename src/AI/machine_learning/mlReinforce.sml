@@ -111,7 +111,8 @@ fun mk_bigsteps_obj rlpreobj (unib,dhtnn,noiseb,playerid,nsim) =
     temp_flag = false,
     max_bigsteps = #max_bigsteps rlpreobj,
     mcts_obj =
-       {mcts_param = mk_mcts_param noiseb nsim rlpreobj,
+       {cuttree = NONE,
+        mcts_param = mk_mcts_param noiseb nsim rlpreobj,
         game = #game rlpreobj,
         player = player}
     }

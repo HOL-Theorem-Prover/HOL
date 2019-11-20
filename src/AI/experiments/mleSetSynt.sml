@@ -446,7 +446,7 @@ val rl_param =
   expname = expname, ex_window = 160000, ex_filter = NONE,
   ngen = 400, ncore_search = 45,
   nsim_start = 32000, nsim_explore = 32000, nsim_compete = 32000,
-  decay = 0.99
+  decay = 1.0
   }
 
 val rlpreobj : (board,move) rlpreobj =
