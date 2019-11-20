@@ -3,46 +3,65 @@ open HolKernel Parse boolLib bossLib;
 val _ = new_theory "transfer";
 
 (* uniqueness, which might also be termed injectivity *)
-val right_unique_def = Define‘
+Definition right_unique_def:
   right_unique (R : 'a -> 'b -> bool) <=>
-    !a b1 b2. R a b1 /\ R a b2 ==> (b1 = b2)’;
+    !a b1 b2. R a b1 /\ R a b2 ==> b1 = b2
+End
+Theorem right_unique_EQ[simp]: right_unique (=)
+Proof simp[right_unique_def]
+QED
 
-val left_unique_def = Define‘
+Definition left_unique_def:
   left_unique (R: 'a -> 'b -> bool) <=>
-    !a1 a2 b. R a1 b /\ R a2 b ==> (a1 = a2)’;
+    !a1 a2 b. R a1 b /\ R a2 b ==> a1 = a2
+End
+Theorem left_unique_EQ[simp]: left_unique (=)
+Proof simp[left_unique_def]
+QED
 
-val bi_unique_def = Define‘bi_unique R <=> left_unique R /\ right_unique R’;
+Definition bi_unique_def:
+  bi_unique R <=> left_unique R /\ right_unique R
+End
+
+Theorem bi_unique_EQ[simp]: bi_unique (=)
+Proof simp[bi_unique_def]
+QED
 
 (* totality or surjectivity *)
-val total_def = Define‘total (R : 'a -> 'b -> bool) <=> !x:'a. ?y. R x y’;
-val surj_def = Define‘surj (R : 'a -> 'b -> bool) <=> !y:'b. ?x. R x y’;
-val bitotal_def = Define‘bitotal (R : 'a -> 'b -> bool) <=> total R /\ surj R’;
+Definition total_def: total (R : 'a -> 'b -> bool) <=> !x:'a. ?y. R x y
+End
+
+Definition surj_def: surj (R : 'a -> 'b -> bool) <=> !y:'b. ?x. R x y
+End
+
+Definition bitotal_def: bitotal (R : 'a -> 'b -> bool) <=> total R /\ surj R
+End
 
 val _ =
     set_mapped_fixity {fixity = Infixr 490, term_name = "FUN_REL", tok = "===>"}
 
-val FUN_REL_def = Define‘
+Definition FUN_REL_def:
   (AB ===> CD) (f : 'a -> 'c) (g : 'b -> 'd) <=>
     !a:'a b:'b. AB a b ==> CD (f a) (g b)
-’;
+End
 
-val FUN_REL_COMB = Q.store_thm(
-  "FUN_REL_COMB",
-  ‘(AB ===> CD) f g /\ AB a b ==> CD (f a) (g b)’,
-  simp[FUN_REL_def]);
+Theorem FUN_REL_COMB:
+  (AB ===> CD) f g /\ AB a b ==> CD (f a) (g b)
+Proof simp[FUN_REL_def]
+QED
 
-val FUN_REL_ABS = Q.store_thm(
-  "FUN_REL_ABS",
-  ‘(!a b. AB a b ==> CD (f a) (g b)) ==>
-   (AB ===> CD) (\a. f a) (\b. g b)’,
-  simp[FUN_REL_def]);
+Theorem FUN_REL_ABS:
+  (!a b. AB a b ==> CD (f a) (g b)) ==> (AB ===> CD) (\a. f a) (\b. g b)
+Proof simp[FUN_REL_def]
+QED
 
-val FUN_REL_EQ2 = Q.store_thm(
-  "FUN_REL_EQ2[simp]",
-  ‘((=) ===> (=)) = (=)’,
-  simp[FUN_REL_def, FUN_EQ_THM]);
+Theorem FUN_REL_EQ2[simp]:
+  ((=) ===> (=)) = (=)
+Proof simp[FUN_REL_def, FUN_EQ_THM]
+QED
 
-val PAIR_REL_def = Define‘PAIR_REL AB CD (a,c) (b,d) <=> AB a b /\ CD c d’;
+Definition PAIR_REL_def:  PAIR_REL AB CD (a,c) (b,d) <=> AB a b /\ CD c d
+End
 val _ =
     set_mapped_fixity {fixity = Infixr 601, term_name = "PAIR_REL", tok = "###"}
 
