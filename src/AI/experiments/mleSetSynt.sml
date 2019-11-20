@@ -444,7 +444,7 @@ val level_param =
 val rl_param =
   {
   expname = expname, ex_window = 160000, ex_filter = NONE,
-  ngen = 400, ncore_search = 45,
+  ngen = 400, ncore_search = 50,
   nsim_start = 32000, nsim_explore = 32000, nsim_compete = 32000,
   decay = 1.0
   }
