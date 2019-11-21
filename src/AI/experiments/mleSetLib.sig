@@ -28,10 +28,9 @@ sig
   val operl_plain : term list
 
   (* evaluation *)
-  val binsubq_of : int list -> int list list
-  val eval_term : term -> (int list * int)
-  val eval_subst : (term * term) -> int list -> (bool * int)
+  val eval_nat : term -> int -> bool
   val mk_graph : int -> term -> bool list
+  val has_graph : bool list -> term -> bool
   val eval64 : term -> int list option
 
   (* search *)

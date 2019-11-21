@@ -152,26 +152,11 @@ fun parse_setsyntdata () = map parse_line (readl train_file);
    ------------------------------------------------------------------------- *)
 
 val subqlimit = 6
-val qlimit = 4000
+val qlimit = 1000
+val qglob = ref 0 
 
 fun assert_ilimit s n =
   if length n > 6 then raise ERR s "ilimit" else () 
-
-fun assert_qlimit s q =
-  if q > qlimit then raise ERR s "qlimit" else () 
-
-fun map_qlimit_aux (lacc,qacc) f l = case l of
-    [] => (rev lacc,qacc)
-  | a :: m => 
-    let 
-      val (r,q) = f a 
-      val qacc' = qacc + q
-      val _ = assert_qlimit "map_qlimit" qacc'
-    in 
-      map_qlimit_aux (r :: lacc, qacc') f m
-    end
-
-fun map_qlimit start f l = map_qlimit_aux ([],start) f l
 
 (* -------------------------------------------------------------------------
    Ackermann representation
@@ -236,35 +221,29 @@ fun indexl_to_bin l =
    Evaluation
    ------------------------------------------------------------------------- *)
 
+fun incrq q = 
+  (incr q; if !q > qlimit then raise ERR "" "" else ())
 (* terms *)
-val eval_empty = ([],1)
+val eval_empty = (incrq qglob; [])
 
-fun eval_sing (n,q) =  
+fun eval_sing n =  
+  (
+  incrq qglob; 
+  assert_ilimit "eval_sing" n;
+  List.tabulate (bin_to_nat n,fn _ => 0) @ [1]
+  )
+
+fun eval_binunion (n1,n2) = (incrq qglob; pointwise_union n1 n2)
+
+fun eval_power n =
   let
-    val _ = assert_ilimit "eval_sing" n
-    val nout = List.tabulate (bin_to_nat n,fn _ => 0) @ [1]
-  in
-    (nout,q+1)
-  end
-
-fun eval_binunion ((n1,q1),(n2,q2)) = 
-  let 
-    val qtot = q1 + q2 + 1
-    val _ = assert_qlimit "eval_binunion" qtot
-    val nout = pointwise_union n1 n2
-  in
-    (nout,qtot)
-  end
-
-fun eval_power (n,q) =
-  let
-    val _ = assert_ilimit "eval_power" n
+    val _ = (incrq qglob; assert_ilimit "eval_power" n)
     val l1 = map (fn x => if x = 1 then [0,1] else [0]) n
     val l2 = cartesian_productl l1
     val l3 = map bin_to_nat l2
     val nout = indexl_to_bin l3
   in
-    (nout,q+1)
+    nout
   end
 
 fun eval_term t =
@@ -274,7 +253,8 @@ fun eval_term t =
     val s = fst (dest_var oper)
   in
     if hd_string s = #"n"
-      then (map (string_to_int o Char.toString) (explode (tl_string s)),1)
+      then (incrq qglob;
+        (map (string_to_int o Char.toString) (explode (tl_string s))))
     else if term_eq oper tEmpty then eval_empty
     else if term_eq oper tSing
       then eval_sing (singleton_of_list argle)
@@ -286,30 +266,16 @@ fun eval_term t =
   end
 
 (* predicates *)
-fun eval_equal ((n1,q1),(n2,q2)) = 
-  let 
-    val qtot = q1 + q2
-    val _ = assert_qlimit "eval_equal" qtot
-  in 
-    (n1 = n2, qtot)
-  end
+fun eval_equal (n1,n2) = (incrq qglob; n1 = n2)  
 
-fun eval_in ((n1,q1),(n2,q2)) = 
-  let 
-    val qtot = q1 + q2
-    val _ = assert_qlimit "eval_in" qtot
-    val _ = assert_ilimit "eval_in" n1
-  in 
-    (List.nth (n2, bin_to_nat n1) = 1 handle Subscript => false, qtot)
-  end
+fun eval_in (n1,n2) = 
+  (
+  incrq qglob;
+  assert_ilimit "eval_in" n1;
+  (List.nth (n2, bin_to_nat n1) = 1 handle Subscript => false)
+  ) 
 
-fun eval_sub ((n1,q1),(n2,q2)) =
-  let 
-    val qtot = q1 + q2
-    val _ = assert_qlimit "eval_sub" qtot
-  in 
-    (pointwise_subset n1 n2, qtot)
-  end
+fun eval_sub (n1,n2) = (incrq qglob; pointwise_subset n1 n2)
 
 fun eval_predicate t =
   let
@@ -323,23 +289,9 @@ fun eval_predicate t =
   end
 
 (* logical operators and quantifiers *)
-fun eval_not (b,q) = (not b, q)
-
-fun eval_imp ((b1,q1),(b2,q2)) = 
-  let
-    val qtot = q1 + q2
-    val _ = assert_qlimit "eval_imp" qtot
-  in
-    (not b1 orelse b2, qtot)
-  end
-
-fun eval_and ((b1,q1),(b2,q2)) =
-  let
-    val qtot = q1 + q2
-    val _ = assert_qlimit "eval_and" qtot
-  in
-    (b1 andalso b2, qtot)
-  end
+fun eval_not b = not b
+fun eval_imp (b1,b2) = not b1 orelse b2
+fun eval_and (b1,b2) = b1 andalso b2
 
 fun eval_form t =
   if tmem (fst (strip_comb t)) predl then eval_predicate t else
@@ -372,25 +324,26 @@ and eval_subst (v,t) n =
   let val res = mk_var ("n" ^ ilts n, alpha) in
     eval_form (subst [{redex = v, residue = res}] t)
   end
-and eval_forall_in (v,(n,q),t) = 
-  let val (l,qtot) = map_qlimit q (eval_subst (v,t)) (binel_of n) in
-    (all I l, qtot)
-  end  
-and eval_forall_subq (v,(n,q),t) = 
-  let val (l,qtot) = map_qlimit q (eval_subst (v,t)) (binsubq_of n) in
-    (all I l, qtot)
-  end
-and eval_exists_in (v,(n,q),t) = 
-  let val (l,qtot) = map_qlimit q (eval_subst (v,t)) (binel_of n) in
-    (exists I l, qtot)
-  end
-and eval_exists_subq (v,(n,q),t) =   
-  let val (l,qtot) = map_qlimit q (eval_subst (v,t)) (binsubq_of n) in
-    (exists I l, qtot)
-  end
+and eval_forall_in (v,n,t) = 
+  all (eval_subst (v,t)) (binel_of n)
+and eval_forall_subq (v,n,t) = 
+  all (eval_subst (v,t)) (binsubq_of n)
+and eval_exists_in (v,n,t) = 
+  exists (eval_subst (v,t)) (binel_of n)
+and eval_exists_subq (v,n,t) =   
+  exists (eval_subst (v,t)) (binsubq_of n) 
 
-fun mk_graph n t =
-  fst (map_qlimit 0 (eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I)))
+(* main eval function *)
+fun eval_nat t nat = 
+  (qglob := 0; eval_subst (xvar,t) (nat_to_bin nat))
+
+fun mk_graph n t = map (eval_nat t) (List.tabulate (n,I))
+
+fun has_graph_aux i graph t = case graph of
+    [] => true
+  | b :: m => eval_nat t i = b andalso has_graph_aux (i + 1) m t
+  
+fun has_graph graph t = has_graph_aux 0 graph t
 
 fun graph_to_intl l = map snd (filter fst (number_snd 0 l))
 

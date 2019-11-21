@@ -50,7 +50,7 @@ fun dest_startboard ((tm,_),_) = tm
 
 fun status_of ((orgtm,graph),tm) =
   if not (can (find_term is_cont) tm) then
-    if graph = mk_graph graph_size tm handle HOL_ERR _ => false
+    if has_graph graph tm handle HOL_ERR _ => false
     then Win
     else Lose
   else if term_size (rw_to_uncont tm) > 2 * term_size orgtm
