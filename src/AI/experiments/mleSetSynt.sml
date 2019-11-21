@@ -31,7 +31,7 @@ fun rw_to_uncont t =
     else list_mk_comb (oper, map rw_to_uncont argl)
   end
 
-val graph_size = 64
+val graph_size = 12
 
 fun mk_graph n t =
   map (eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I))
@@ -224,15 +224,18 @@ val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt"
 
 val train_file = datasetsynt_dir ^ "/train_lisp"
 
-fun eval64 t =
+fun eval64 (t,nl) =
   let
     val l = List.tabulate (64,I)
     fun f x = (eval_subst (xvar,t) (nat_to_bin x), x)
   in
-    map snd (filter fst (map f l))
+    ((t,nl), map snd (filter fst (map f l)))
   end
-  handle HOL_ERR _ => raise ERR "eval64" (term_to_string t)
-
+  handle HOL_ERR _ => 
+    (
+    print_endline ("eval64: " ^ (term_to_string t));
+    raise ERR "eval64" (term_to_string t)
+    )
 fun bin_to_string bin = String.concatWith "," (map its bin)
 
 fun export_setsyntdata () =
@@ -240,7 +243,7 @@ fun export_setsyntdata () =
     val formgraphl = parse_setsyntdata ()
     val _ = print_endline ("Reading " ^ its (length formgraphl) ^ " terms");
     val l1 = map (fn (a,b) => (a ,rev b)) formgraphl
-    val l2 = map_assoc (eval64 o fst) l1
+    val l2 = mapfilter eval64 l1
     fun f ((a,b),c) =
       if b = c then () else
         (
@@ -438,7 +441,7 @@ val level_param =
 val rl_param =
   {
   expname = expname, ex_window = 160000, ex_filter = NONE,
-  ngen = 400, ncore_search = 50,
+  ngen = 1, ncore_search = 50,
   nsim_start = 32000, nsim_explore = 32000, nsim_compete = 32000,
   decay = 1.0
   }

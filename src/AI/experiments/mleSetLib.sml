@@ -149,9 +149,9 @@ fun parse_setsyntdata () = map parse_line (readl train_file);
    Helpers
    ------------------------------------------------------------------------- *)
 
-val ilimit = 10
-val olimit = 1024
-val subqlimit = 7
+val ilimit = 6
+val olimit = 256
+val subqlimit = 6
 
 fun nat_to_bin n =
   if n < 0 then raise ERR "" "" else
@@ -474,7 +474,14 @@ val l5 = map (fn ((a,b),c) => ((a,dict_sort Int.compare b), dict_sort Int.compar
 val (l6,l6') = partition (fn ((a,b),c) => b = c) l5;
 val l6 = map (fst o fst) l5;
 val (l7,l7') = partition (can imitate) l6;
+
+length l3';
+length l6';
+length l7';
+
 *)
+
+
 
 end (* struct *)
 
