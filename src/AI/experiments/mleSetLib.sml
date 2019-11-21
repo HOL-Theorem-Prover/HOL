@@ -246,18 +246,16 @@ val eval_empty = ([],1)
 
 fun eval_sing (n,q) =  
   let
-    val qtot = q + 1
-    val _ = assert_qlimit "eval_sing" qtot
     val _ = assert_ilimit "eval_sing" n
     val nout = List.tabulate (bin_to_nat n,fn _ => 0) @ [1]
     val _ = assert_olimit "eval_sing" nout
   in
-    (nout,qtot)
+    (nout,q)
   end
 
 fun eval_binunion ((n1,q1),(n2,q2)) = 
   let 
-    val qtot = q1 + q2 + 1 
+    val qtot = q1 + q2
     val _ = assert_qlimit "eval_binunion" qtot
     val nout = pointwise_union n1 n2
     val _ = assert_olimit "eval_binunion" nout
@@ -267,22 +265,15 @@ fun eval_binunion ((n1,q1),(n2,q2)) =
 
 fun eval_power (n,q) =
   let
-    val qtot = q + 1 
     val _ = assert_ilimit "eval_power" n
-    val _ = assert_qlimit "eval_power" qtot
     val l1 = map (fn x => if x = 1 then [0,1] else [0]) n
     val l2 = cartesian_productl l1
     val l3 = map bin_to_nat l2
     val nout = indexl_to_bin l3
     val _ = assert_olimit "eval_power" nout
   in
-    (nout,qtot)
+    (nout,q)
   end
-  handle Overflow => 
-    (
-    print_endline ("power " ^ ilts n ^ " " ^ its q);
-    raise Overflow
-    )
 
 fun eval_term t =
   let
@@ -305,7 +296,7 @@ fun eval_term t =
 (* predicates *)
 fun eval_equal ((n1,q1),(n2,q2)) = 
   let 
-    val qtot = q1 + q2 + 1 
+    val qtot = q1 + q2
     val _ = assert_qlimit "eval_equal" qtot
   in 
     (n1 = n2, qtot)
@@ -313,16 +304,16 @@ fun eval_equal ((n1,q1),(n2,q2)) =
 
 fun eval_in ((n1,q1),(n2,q2)) = 
   let 
-    val qtot = q1 + q2 + 1
-    val _ = assert_ilimit "eval_in" n1
+    val qtot = q1 + q2
     val _ = assert_qlimit "eval_in" qtot
+    val _ = assert_ilimit "eval_in" n1
   in 
     (List.nth (n2, bin_to_nat n1) = 1 handle Subscript => false, qtot)
   end
 
 fun eval_sub ((n1,q1),(n2,q2)) =
   let 
-    val qtot = q1 + q2 + 1 
+    val qtot = q1 + q2
     val _ = assert_qlimit "eval_sub" qtot
   in 
     (pointwise_subset n1 n2, qtot)
@@ -340,17 +331,11 @@ fun eval_predicate t =
   end
 
 (* logical operators and quantifiers *)
-fun eval_not (b,q) = 
-  let 
-    val qtot = q+1 
-    val _ = assert_qlimit "eval_not" qtot
-  in
-    (not b, qtot)
-  end
+fun eval_not (b,q) = (not b, q)
 
 fun eval_imp ((b1,q1),(b2,q2)) = 
   let
-    val qtot = q1 + q2 + 1 
+    val qtot = q1 + q2
     val _ = assert_qlimit "eval_imp" qtot
   in
     (not b1 orelse b2, qtot)
@@ -358,7 +343,7 @@ fun eval_imp ((b1,q1),(b2,q2)) =
 
 fun eval_and ((b1,q1),(b2,q2)) =
   let
-    val qtot = q1 + q2 + 1 
+    val qtot = q1 + q2
     val _ = assert_qlimit "eval_and" qtot
   in
     (b1 andalso b2, qtot)
@@ -396,19 +381,19 @@ and eval_subst (v,t) n =
     eval_form (subst [{redex = v, residue = res}] t)
   end
 and eval_forall_in (v,(n,q),t) = 
-  let val (l,qtot) = map_qlimit (q+1) (eval_subst (v,t)) (binel_of n) in
+  let val (l,qtot) = map_qlimit q (eval_subst (v,t)) (binel_of n) in
     (all I l, qtot)
   end  
 and eval_forall_subq (v,(n,q),t) = 
-  let val (l,qtot) = map_qlimit (q+1) (eval_subst (v,t)) (binsubq_of n) in
+  let val (l,qtot) = map_qlimit q (eval_subst (v,t)) (binsubq_of n) in
     (all I l, qtot)
   end
 and eval_exists_in (v,(n,q),t) = 
-  let val (l,qtot) = map_qlimit (q+1) (eval_subst (v,t)) (binel_of n) in
+  let val (l,qtot) = map_qlimit q (eval_subst (v,t)) (binel_of n) in
     (exists I l, qtot)
   end
 and eval_exists_subq (v,(n,q),t) =   
-  let val (l,qtot) = map_qlimit (q+1) (eval_subst (v,t)) (binsubq_of n) in
+  let val (l,qtot) = map_qlimit q (eval_subst (v,t)) (binsubq_of n) in
     (exists I l, qtot)
   end
 
@@ -561,7 +546,6 @@ val (l7,l7') = partition (can imitate) l6;
 length l3';
 length l6';
 length l7';
-
 *)
 
 
