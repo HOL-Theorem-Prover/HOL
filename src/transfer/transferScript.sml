@@ -37,6 +37,24 @@ End
 Definition bitotal_def: bitotal (R : 'a -> 'b -> bool) <=> total R /\ surj R
 End
 
+Theorem total_EQ[simp]:
+  total (=)
+Proof
+  simp[total_def]
+QED
+
+Theorem surj_EQ[simp]:
+  surj (=)
+Proof
+  simp[surj_def]
+QED
+
+Theorem bitotal_EQ[simp]:
+  bitotal (=)
+Proof
+  simp[bitotal_def]
+QED
+
 val _ =
     set_mapped_fixity {fixity = Infixr 490, term_name = "FUN_REL", tok = "===>"}
 
@@ -50,9 +68,10 @@ Theorem FUN_REL_COMB:
 Proof simp[FUN_REL_def]
 QED
 
-Theorem FUN_REL_ABS:
-  (!a b. AB a b ==> CD (f a) (g b)) ==> (AB ===> CD) (\a. f a) (\b. g b)
-Proof simp[FUN_REL_def]
+Theorem FUN_REL_IFF_IMP:
+  (AB ===> (=)) P Q ==> (AB ===> (==>)) P Q /\ (AB ===> combin$C (==>)) P Q
+Proof
+  simp[FUN_REL_def] >> metis_tac[]
 QED
 
 Theorem FUN_REL_EQ2[simp]:
