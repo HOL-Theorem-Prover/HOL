@@ -350,6 +350,7 @@ val player_base =
   {playerid = "base",
    dhtnn_param = dhtnn_param_base, schedule = schedule_base}
 
+(*
 val schedule_4core =
   [{ncore = 4, verbose = true,
     learning_rate = 0.02,
@@ -416,18 +417,10 @@ val player_allgraph =
   {playerid = "allgraph",
    dhtnn_param = dhtnn_param_allgraph,
    schedule = schedule_base}
+*)
 
 val tobdict = dnew String.compare
-  [
-  ("base",term_of_board1 8),
-  ("4core",term_of_board1 8),
-  ("100epoch",term_of_board1 8),
-  ("4batch",term_of_board1 8),
-  ("1layer",term_of_board1 8),
-  ("quantterm",term_of_board2 8),
-  ("listgraph",term_of_board3),
-  ("allgraph",term_of_board4 8)
-  ];
+  [("base", term_of_board1 (#dimin dhtnn_param_base))]
 
 (* -------------------------------------------------------------------------
    Interface
