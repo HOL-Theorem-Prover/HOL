@@ -13,8 +13,6 @@ val ERR = mk_HOL_ERR "mleSetLib"
 
 fun ilts n = String.concat (map its n)
 
-
-
 (* -------------------------------------------------------------------------
    Operators
    ------------------------------------------------------------------------- *)
@@ -154,7 +152,7 @@ fun parse_setsyntdata () = map parse_line (readl train_file);
    ------------------------------------------------------------------------- *)
 
 val subqlimit = 6
-val qlimit = 1000
+val qlimit = 16000
 
 fun assert_ilimit s n =
   if length n > 6 then raise ERR s "ilimit" else () 
@@ -397,12 +395,13 @@ and eval_exists_subq (v,(n,q),t) =
     (exists I l, qtot)
   end
 
-fun eval_one t i x =
-  (fst (eval_subst (xvar,t) (nat_to_bin x)),x)
+fun mk_graph n t =
+  fst (map_qlimit 0 (eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I)))
+
+fun graph_to_intl l = map snd (filter fst (number_snd 0 l))
 
 fun eval64 t = 
-  SOME (mapi (eval_one t) (List.tabulate (64,I)))
-  handle HOL_ERR _ => NONE
+  SOME (graph_to_intl (mk_graph 64 t)) handle HOL_ERR _ => NONE
 
 (* -------------------------------------------------------------------------
    Synthesis helpers
@@ -538,7 +537,7 @@ load "aiLib"; open aiLib;
 val l1 = parse_setsyntdata ();
 val l2 = map_assoc (eval64 o fst) l1;
 val (l3,l3') = partition (isSome o snd) l2;
-val l4 = map_snd (map snd o filter fst o valOf) l3;
+val l4 = map_snd valOf l3;
 val l5 = map (fn ((a,b),c) => ((a,dict_sort Int.compare b), dict_sort Int.compare c)) l4;
 val (l6,l6') = partition (fn ((a,b),c) => b = c) l5;
 val l6 = map (fst o fst) l5;

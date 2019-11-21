@@ -33,9 +33,6 @@ fun rw_to_uncont t =
 
 val graph_size = 64
 
-fun mk_graph n t =
-  map (fst o eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I))
-
 (* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
@@ -221,14 +218,6 @@ val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt"
 
 val train_file = datasetsynt_dir ^ "/train_lisp"
 
-fun eval64 (t,nl) =
-  let
-    val l = List.tabulate (64,I)
-    fun f x = ( fst (eval_subst (xvar,t) (nat_to_bin x)) ,  x)
-  in
-    ((t,nl), map snd (filter fst (map f l)))
-  end
-
 fun bin_to_string bin = String.concatWith "," (map its bin)
 
 fun export_setsyntdata () =
@@ -236,7 +225,7 @@ fun export_setsyntdata () =
     val formgraphl = parse_setsyntdata ()
     val _ = print_endline ("Reading " ^ its (length formgraphl) ^ " terms");
     val l1 = map (fn (a,b) => (a ,rev b)) formgraphl
-    val l2 = mapfilter eval64 l1
+    val l2 = mapfilter (fn x => (x, valOf (eval64 (fst x)))) l1
     fun f ((a,b),c) =
       if b = c then () else
         (
@@ -261,8 +250,9 @@ fun level_targetl level ntarget =
     val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt")
     val tmll2 = map shuffle (first_n level (mk_batch_full 400 tml1))
     val tml3 = List.concat (list_combine tmll2)
+    val tml4 = rev (dict_sort tmsize_compare (first_n ntarget tml3))
   in
-    map mk_startboard (first_n ntarget tml3)
+    map mk_startboard tml4
   end
 
 (* -------------------------------------------------------------------------

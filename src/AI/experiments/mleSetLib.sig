@@ -31,7 +31,8 @@ sig
   val binsubq_of : int list -> int list list
   val eval_term : term -> (int list * int)
   val eval_subst : (term * term) -> int list -> (bool * int)
-  val eval64 : term -> (bool * int) list option
+  val mk_graph : int -> term -> bool list
+  val eval64 : term -> int list option
 
   (* search *)
   val start_form : term
