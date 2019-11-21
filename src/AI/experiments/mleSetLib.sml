@@ -157,7 +157,6 @@ val qlimit = 4000
 fun assert_ilimit s n =
   if length n > 6 then raise ERR s "ilimit" else () 
 
-
 fun assert_qlimit s q =
   if q > qlimit then raise ERR s "qlimit" else () 
 
