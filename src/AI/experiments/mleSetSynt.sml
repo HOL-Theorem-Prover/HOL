@@ -31,7 +31,7 @@ fun rw_to_uncont t =
     else list_mk_comb (oper, map rw_to_uncont argl)
   end
 
-val graph_size = 12
+val graph_size = 64
 
 fun mk_graph n t =
   map (eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I))
