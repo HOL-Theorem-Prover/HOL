@@ -149,15 +149,15 @@ fun loop_bigsteps (n,nmax) obj (exl,rootl) tree =
       val endtree = mcts mcts_obj tree
       val root = dfind [] endtree
       val cid = select_bigstep obj endtree
-      val newtree =
-        if #noise_flag mcts_param then 
+      val newtree = cut_tree cid endtree
+        (* if #noise_flag mcts_param then 
           let val local_mcts_obj =
             {cuttree = SOME (cut_tree cid endtree),
              mcts_param = mcts_param, game = game, player = player}
           in
             starttree_of local_mcts_obj (#board (dfind cid endtree))
           end
-        else cut_tree cid endtree
+        else *)
       val newexl = add_rootex game endtree exl
       val newrootl = root :: rootl
     in
