@@ -45,7 +45,7 @@ val quantl = [qFORALL_IN,qFORALL_SUBQ,qEXISTS_IN,qEXISTS_SUBQ]
 fun is_quant t = tmem t quantl;
 
 (* variables *)
-val max_quants = 4;
+val max_quants = 3;
 val yvarl = List.tabulate (max_quants, fn i => mk_var ("vY" ^ its i,alpha));
 val xvar = mk_var ("vX",alpha);
 val xvarl = [xvar];
@@ -108,7 +108,7 @@ writel "exholformat" (map setterm_to_lisp forml10);
    ------------------------------------------------------------------------- *)
 
 val setsyntdata_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt"
-val train_file = setsyntdata_dir ^ "/train_sexpr"
+val train_file = setsyntdata_dir ^ "/train_sexpr_noY3"
 
 fun read_info sexprl = case sexprl of
     [Lterm [a,b,c,d]] => (a,b,c,d)
@@ -177,7 +177,7 @@ fun rm_endzeros l = rev (rm_leadingzeros (rev l))
 
 fun binsubq_of binin =
   if length (filter (fn x => x = 1) binin) > subqlimit
-    then raise ERR "binsubq_of" "ilimit"
+    then raise ERR "binsubq_of" ""
   else
   let
     val l2 = map (fn x => if x = 1 then [0,1] else [0]) binin
