@@ -13,6 +13,8 @@ val ERR = mk_HOL_ERR "mleSetLib"
 
 fun ilts n = String.concat (map its n)
 
+
+
 (* -------------------------------------------------------------------------
    Operators
    ------------------------------------------------------------------------- *)
@@ -148,7 +150,7 @@ fun parse_line line =
 fun parse_setsyntdata () = map parse_line (readl train_file);
 
 (* -------------------------------------------------------------------------
-   Helpers
+   Bounds on evaluation
    ------------------------------------------------------------------------- *)
 
 val subqlimit = 6
@@ -162,6 +164,23 @@ fun assert_olimit s n =
 
 fun assert_qlimit s q =
   if q > qlimit then raise ERR s "qlimit" else () 
+
+fun map_qlimit_aux (lacc,qacc) f l = case l of
+    [] => (rev lacc,qacc)
+  | a :: m => 
+    let 
+      val (r,q) = f a 
+      val qacc' = qacc + q
+      val _ = assert_qlimit "map_qlimit" qacc'
+    in 
+      map_qlimit_aux (r :: lacc, qacc') f m
+    end
+
+fun map_qlimit start f l = map_qlimit_aux ([],start) f l
+
+(* -------------------------------------------------------------------------
+   Ackermann representation
+   ------------------------------------------------------------------------- *)
 
 fun nat_to_bin n =
   if n < 0 then raise ERR "" "" else
@@ -376,62 +395,26 @@ and eval_subst (v,t) n =
   let val res = mk_var ("n" ^ ilts n, alpha) in
     eval_form (subst [{redex = v, residue = res}] t)
   end
-  handle Overflow => 
-    (
-    print_endline (
-    "eval_subst: " ^
-    term_to_string v ^ " " ^ term_to_string t ^ " " ^ ilts n);
-    raise Overflow
-    )
-
 and eval_forall_in (v,(n,q),t) = 
-  let 
-    val l = map (eval_subst (v,t)) (binel_of n) 
-    val qtot = 1 + sum_int (map snd l) + q
-    val _ = assert_qlimit "eval_forall_in" qtot
-  in
-    (all fst l, qtot)
-  end
-    
+  let val (l,qtot) = map_qlimit (q+1) (eval_subst (v,t)) (binel_of n) in
+    (all I l, qtot)
+  end  
 and eval_forall_subq (v,(n,q),t) = 
-  let 
-    val l = map (eval_subst (v,t)) (binsubq_of n)
-    val qtot = 1 + sum_int (map snd l) + q
-    val _ = assert_qlimit "eval_forall_subq" qtot
-  in
-    (all fst l, qtot)
+  let val (l,qtot) = map_qlimit (q+1) (eval_subst (v,t)) (binsubq_of n) in
+    (all I l, qtot)
   end
-
 and eval_exists_in (v,(n,q),t) = 
-  let 
-    val l = map (eval_subst (v,t)) (binel_of n) 
-    val qtot = 1 + sum_int (map snd l) + q
-    val _ = assert_qlimit "eval_exists_in" qtot
-  in
-    (exists fst l, qtot)
+  let val (l,qtot) = map_qlimit (q+1) (eval_subst (v,t)) (binel_of n) in
+    (exists I l, qtot)
   end
-
 and eval_exists_subq (v,(n,q),t) =   
-  let
-    val l = map (eval_subst (v,t)) (binsubq_of n)
-    val qtot = 1 + sum_int (map snd l) + q
-    val _ = assert_qlimit "eval_exists_subq" qtot
-  in
-    (exists fst l,qtot)
+  let val (l,qtot) = map_qlimit (q+1) (eval_subst (v,t)) (binsubq_of n) in
+    (exists I l, qtot)
   end
-  handle Overflow => 
-    (
-    print_endline ("exists_subq");
-    raise Overflow
-    )
 
 fun eval_one t i x =
   (fst (eval_subst (xvar,t) (nat_to_bin x)),x)
-  handle Overflow => 
-    (
-    print_endline (its i ^ " " ^ term_to_string t ^ " on " ^ its x);
-    raise Overflow
-    )
+
 fun eval64 t = 
   SOME (mapi (eval_one t) (List.tabulate (64,I)))
   handle HOL_ERR _ => NONE
@@ -575,7 +558,6 @@ val l5 = map (fn ((a,b),c) => ((a,dict_sort Int.compare b), dict_sort Int.compar
 val (l6,l6') = partition (fn ((a,b),c) => b = c) l5;
 val l6 = map (fst o fst) l5;
 val (l7,l7') = partition (can imitate) l6;
-
 length l3';
 length l6';
 length l7';
