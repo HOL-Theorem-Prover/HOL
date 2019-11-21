@@ -152,13 +152,11 @@ fun parse_setsyntdata () = map parse_line (readl train_file);
    ------------------------------------------------------------------------- *)
 
 val subqlimit = 6
-val qlimit = 16000
+val qlimit = 4000
 
 fun assert_ilimit s n =
   if length n > 6 then raise ERR s "ilimit" else () 
 
-fun assert_olimit s n =
-  if length n > 128 then raise ERR s "olimit" else () 
 
 fun assert_qlimit s q =
   if q > qlimit then raise ERR s "qlimit" else () 
@@ -246,17 +244,15 @@ fun eval_sing (n,q) =
   let
     val _ = assert_ilimit "eval_sing" n
     val nout = List.tabulate (bin_to_nat n,fn _ => 0) @ [1]
-    val _ = assert_olimit "eval_sing" nout
   in
-    (nout,q)
+    (nout,q+1)
   end
 
 fun eval_binunion ((n1,q1),(n2,q2)) = 
   let 
-    val qtot = q1 + q2
+    val qtot = q1 + q2 + 1
     val _ = assert_qlimit "eval_binunion" qtot
     val nout = pointwise_union n1 n2
-    val _ = assert_olimit "eval_binunion" nout
   in
     (nout,qtot)
   end
@@ -268,9 +264,8 @@ fun eval_power (n,q) =
     val l2 = cartesian_productl l1
     val l3 = map bin_to_nat l2
     val nout = indexl_to_bin l3
-    val _ = assert_olimit "eval_power" nout
   in
-    (nout,q)
+    (nout,q+1)
   end
 
 fun eval_term t =
