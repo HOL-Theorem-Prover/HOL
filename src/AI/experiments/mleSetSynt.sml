@@ -87,8 +87,9 @@ fun numvar_of_graph dim graph =
 fun term_of_graph dim graph =
   let 
     val graphl = mk_batch_full dim graph
-    val grl = last graphl @ List.tabulate (dim - length graphl, fn _ => false)
-    val numvarl = map (numvar_of_graph dim) (butlast graphl @ [grl])
+    val lastg1 = last graphl
+    val lastg2 = lastg1 @ List.tabulate (dim - length lastg1, fn _ => false)
+    val numvarl = map (numvar_of_graph dim) (butlast graphl @ [lastg2])
   in
     list_mk_binop graphcat numvarl
   end
@@ -177,11 +178,11 @@ load "mleSetLib"; open mleSetLib;
 load "mleSetSynt"; open mleSetSynt;
 val l1 = parse_setsyntdata ();
 val tml = map fst l1;
-val board : board = ((T,List.tabulate (64,fn _ => false)), random_elem tml);
-val tm1 = term_of_board1 board;
-val tm2 = term_of_board2 board;
+val board : board = ((T,List.tabulate (64,fn _ => true)), random_elem tml);
+val tm1 = term_of_board1 12 board;
+val tm2 = term_of_board2 12 board;
 val tm3 = term_of_board3 board;
-val tm4 = term_of_board4 board;
+val tm4 = term_of_board4 12 board;
 *)
 
 (* -------------------------------------------------------------------------
