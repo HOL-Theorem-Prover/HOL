@@ -28,8 +28,9 @@ sig
   val operl_plain : term list
 
   (* evaluation *)
-  val eval_term : term -> int list
-  val eval_subst : (term * term) -> int list -> bool
+  val binsubq_of : int list -> int list list
+  val eval_term : term -> (int list * int)
+  val eval_subst : (term * term) -> int list -> (bool * int)
   val eval64 : term -> (bool * int) list option
 
   (* search *)

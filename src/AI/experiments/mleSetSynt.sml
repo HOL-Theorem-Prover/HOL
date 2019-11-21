@@ -34,7 +34,7 @@ fun rw_to_uncont t =
 val graph_size = 64
 
 fun mk_graph n t =
-  map (eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I))
+  map (fst o eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I))
 
 (* -------------------------------------------------------------------------
    Board
@@ -47,9 +47,6 @@ fun board_compare (((a,b),c),((d,e),f)) =
 
 fun string_of_board ((_,bl),tm) =
   String.concatWith " " (map bts bl) ^ " :\n" ^ tts tm
-
-fun mk_graph n t =
-  map (eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I))
 
 fun mk_startboard tm = ((tm,mk_graph graph_size tm),start_form)
 fun dest_startboard ((tm,_),_) = tm
@@ -227,15 +224,11 @@ val train_file = datasetsynt_dir ^ "/train_lisp"
 fun eval64 (t,nl) =
   let
     val l = List.tabulate (64,I)
-    fun f x = (eval_subst (xvar,t) (nat_to_bin x), x)
+    fun f x = ( fst (eval_subst (xvar,t) (nat_to_bin x)) ,  x)
   in
     ((t,nl), map snd (filter fst (map f l)))
   end
-  handle HOL_ERR _ => 
-    (
-    print_endline ("eval64: " ^ (term_to_string t));
-    raise ERR "eval64" (term_to_string t)
-    )
+
 fun bin_to_string bin = String.concatWith "," (map its bin)
 
 fun export_setsyntdata () =

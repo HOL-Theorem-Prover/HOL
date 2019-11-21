@@ -11,6 +11,8 @@ struct
 open HolKernel Abbrev boolLib aiLib mleLib
 val ERR = mk_HOL_ERR "mleSetLib"
 
+fun ilts n = String.concat (map its n)
+
 (* -------------------------------------------------------------------------
    Operators
    ------------------------------------------------------------------------- *)
@@ -45,7 +47,7 @@ val quantl = [qFORALL_IN,qFORALL_SUBQ,qEXISTS_IN,qEXISTS_SUBQ]
 fun is_quant t = tmem t quantl;
 
 (* variables *)
-val max_quants = 3;
+val max_quants = 4;
 val yvarl = List.tabulate (max_quants, fn i => mk_var ("vY" ^ its i,alpha));
 val xvar = mk_var ("vX",alpha);
 val xvarl = [xvar];
@@ -108,7 +110,7 @@ writel "exholformat" (map setterm_to_lisp forml10);
    ------------------------------------------------------------------------- *)
 
 val setsyntdata_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt"
-val train_file = setsyntdata_dir ^ "/train_sexpr_noY3"
+val train_file = setsyntdata_dir ^ "/train_sexpr"
 
 fun read_info sexprl = case sexprl of
     [Lterm [a,b,c,d]] => (a,b,c,d)
@@ -149,9 +151,17 @@ fun parse_setsyntdata () = map parse_line (readl train_file);
    Helpers
    ------------------------------------------------------------------------- *)
 
-val ilimit = 6
-val olimit = 256
 val subqlimit = 6
+val qlimit = 1000
+
+fun assert_ilimit s n =
+  if length n > 6 then raise ERR s "ilimit" else () 
+
+fun assert_olimit s n =
+  if length n > 128 then raise ERR s "olimit" else () 
+
+fun assert_qlimit s q =
+  if q > qlimit then raise ERR s "qlimit" else () 
 
 fun nat_to_bin n =
   if n < 0 then raise ERR "" "" else
@@ -175,12 +185,12 @@ fun rm_leadingzeros l = case l of
 
 fun rm_endzeros l = rev (rm_leadingzeros (rev l))
 
-fun binsubq_of binin =
-  if length (filter (fn x => x = 1) binin) > subqlimit
+fun binsubq_of n =
+  if length (filter (fn x => x = 1) n) > subqlimit
     then raise ERR "binsubq_of" ""
   else
   let
-    val l2 = map (fn x => if x = 1 then [0,1] else [0]) binin
+    val l2 = map (fn x => if x = 1 then [0,1] else [0]) n
     val l3 = cartesian_productl l2
     val l4 = map rm_endzeros l3
   in
@@ -213,31 +223,47 @@ fun indexl_to_bin l =
    ------------------------------------------------------------------------- *)
 
 (* terms *)
-val eval_empty = []
+val eval_empty = ([],1)
 
-fun eval_sing binin =
-  if length binin > ilimit then raise ERR "eval_sing" "" else
-    let
-      val n = bin_to_nat binin
-      val binout = List.tabulate (n,fn _ => 0) @ [1]
-    in
-      if length binout > olimit then raise ERR "eval_sing" "" else binout
-    end
-
-fun eval_binunion (bin1,bin2) = pointwise_union bin1 bin2
-
-fun eval_power binin =
-  if length binin > ilimit then raise ERR "eval_power"
-    ("in: " ^ String.concat (map its binin)) else
+fun eval_sing (n,q) =  
   let
-    val l2 = map (fn x => if x = 1 then [0,1] else [0]) binin
-    val l3 = cartesian_productl l2
-    val l4 = map bin_to_nat l3
-    val binout = indexl_to_bin l4
+    val qtot = q + 1
+    val _ = assert_qlimit "eval_sing" qtot
+    val _ = assert_ilimit "eval_sing" n
+    val nout = List.tabulate (bin_to_nat n,fn _ => 0) @ [1]
+    val _ = assert_olimit "eval_sing" nout
   in
-    if length binout > olimit then raise ERR "eval_power"
-    ("out: " ^ String.concat (map its binout)) else binout
+    (nout,qtot)
   end
+
+fun eval_binunion ((n1,q1),(n2,q2)) = 
+  let 
+    val qtot = q1 + q2 + 1 
+    val _ = assert_qlimit "eval_binunion" qtot
+    val nout = pointwise_union n1 n2
+    val _ = assert_olimit "eval_binunion" nout
+  in
+    (nout,qtot)
+  end
+
+fun eval_power (n,q) =
+  let
+    val qtot = q + 1 
+    val _ = assert_ilimit "eval_power" n
+    val _ = assert_qlimit "eval_power" qtot
+    val l1 = map (fn x => if x = 1 then [0,1] else [0]) n
+    val l2 = cartesian_productl l1
+    val l3 = map bin_to_nat l2
+    val nout = indexl_to_bin l3
+    val _ = assert_olimit "eval_power" nout
+  in
+    (nout,qtot)
+  end
+  handle Overflow => 
+    (
+    print_endline ("power " ^ ilts n ^ " " ^ its q);
+    raise Overflow
+    )
 
 fun eval_term t =
   let
@@ -246,7 +272,7 @@ fun eval_term t =
     val s = fst (dest_var oper)
   in
     if hd_string s = #"n"
-      then map (string_to_int o Char.toString) (explode (tl_string s))
+      then (map (string_to_int o Char.toString) (explode (tl_string s)),1)
     else if term_eq oper tEmpty then eval_empty
     else if term_eq oper tSing
       then eval_sing (singleton_of_list argle)
@@ -258,11 +284,30 @@ fun eval_term t =
   end
 
 (* predicates *)
-fun eval_equal (n1,n2) = n1 = n2
-fun eval_in (n1,n2) =
-  if length n1 > ilimit then false else
-    List.nth (n2, bin_to_nat n1) = 1 handle Subscript => false
-fun eval_sub (n1,n2) = pointwise_subset n1 n2
+fun eval_equal ((n1,q1),(n2,q2)) = 
+  let 
+    val qtot = q1 + q2 + 1 
+    val _ = assert_qlimit "eval_equal" qtot
+  in 
+    (n1 = n2, qtot)
+  end
+
+fun eval_in ((n1,q1),(n2,q2)) = 
+  let 
+    val qtot = q1 + q2 + 1
+    val _ = assert_ilimit "eval_in" n1
+    val _ = assert_qlimit "eval_in" qtot
+  in 
+    (List.nth (n2, bin_to_nat n1) = 1 handle Subscript => false, qtot)
+  end
+
+fun eval_sub ((n1,q1),(n2,q2)) =
+  let 
+    val qtot = q1 + q2 + 1 
+    val _ = assert_qlimit "eval_sub" qtot
+  in 
+    (pointwise_subset n1 n2, qtot)
+  end
 
 fun eval_predicate t =
   let
@@ -276,22 +321,29 @@ fun eval_predicate t =
   end
 
 (* logical operators and quantifiers *)
-fun eval_not b = not b
-fun eval_imp (b1,b2) =
-  if b1 = SOME false orelse b2 = SOME true
-    then true
-  else if b1 = SOME true andalso b2 = SOME false
-    then false
-  else raise ERR "eval_imp" ""
+fun eval_not (b,q) = 
+  let 
+    val qtot = q+1 
+    val _ = assert_qlimit "eval_not" qtot
+  in
+    (not b, qtot)
+  end
 
-fun eval_and (b1,b2) =
-  if b1 = SOME false orelse b2 = SOME false
-    then false
-  else if b1 = SOME true andalso b2 = SOME true
-    then true
-  else raise ERR "eval_and" ""
+fun eval_imp ((b1,q1),(b2,q2)) = 
+  let
+    val qtot = q1 + q2 + 1 
+    val _ = assert_qlimit "eval_imp" qtot
+  in
+    (not b1 orelse b2, qtot)
+  end
 
-fun some_f f a = SOME (f a) handle HOL_ERR _ => NONE
+fun eval_and ((b1,q1),(b2,q2)) =
+  let
+    val qtot = q1 + q2 + 1 
+    val _ = assert_qlimit "eval_and" qtot
+  in
+    (b1 andalso b2, qtot)
+  end
 
 fun eval_form t =
   if tmem (fst (strip_comb t)) predl then eval_predicate t else
@@ -307,33 +359,82 @@ fun eval_form t =
     else if term_eq oper oIMP
       then
         let val (a,b) = pair_of_list argl in
-          eval_imp (some_f eval_form a, some_f eval_form b)
+          eval_imp (eval_form a, eval_form b)
         end
     else if term_eq oper oAND
       then
         let val (a,b) = pair_of_list argl in
-          eval_and (some_f eval_form a, some_f eval_form b)
+          eval_and (eval_form a, eval_form b)
         end
     else if tmem oper quantl then
       let val (v,n,t') = triple_of_list argl in
-        (dfind oper d) (v,eval_term n,t')
+        (dfind oper d) (v, eval_term n, t')
       end
     else raise ERR "eval_form" (term_to_string t)
   end
 and eval_subst (v,t) n =
-  let val res = mk_var ("n" ^ String.concat (map its n), alpha) in
+  let val res = mk_var ("n" ^ ilts n, alpha) in
     eval_form (subst [{redex = v, residue = res}] t)
   end
-and eval_forall_in (v,n,t) =   all (eval_subst (v,t)) (binel_of n)
-and eval_forall_subq (v,n,t) = all (eval_subst (v,t)) (binsubq_of n)
-and eval_exists_in (v,n,t) =   exists (eval_subst (v,t)) (binel_of n)
-and eval_exists_subq (v,n,t) = exists (eval_subst (v,t)) (binsubq_of n)
+  handle Overflow => 
+    (
+    print_endline (
+    "eval_subst: " ^
+    term_to_string v ^ " " ^ term_to_string t ^ " " ^ ilts n);
+    raise Overflow
+    )
 
-fun eval64 t = SOME (
-  map (fn x => (eval_subst (xvar,t) (nat_to_bin x),x)) (List.tabulate (64,I)))
+and eval_forall_in (v,(n,q),t) = 
+  let 
+    val l = map (eval_subst (v,t)) (binel_of n) 
+    val qtot = 1 + sum_int (map snd l) + q
+    val _ = assert_qlimit "eval_forall_in" qtot
+  in
+    (all fst l, qtot)
+  end
+    
+and eval_forall_subq (v,(n,q),t) = 
+  let 
+    val l = map (eval_subst (v,t)) (binsubq_of n)
+    val qtot = 1 + sum_int (map snd l) + q
+    val _ = assert_qlimit "eval_forall_subq" qtot
+  in
+    (all fst l, qtot)
+  end
+
+and eval_exists_in (v,(n,q),t) = 
+  let 
+    val l = map (eval_subst (v,t)) (binel_of n) 
+    val qtot = 1 + sum_int (map snd l) + q
+    val _ = assert_qlimit "eval_exists_in" qtot
+  in
+    (exists fst l, qtot)
+  end
+
+and eval_exists_subq (v,(n,q),t) =   
+  let
+    val l = map (eval_subst (v,t)) (binsubq_of n)
+    val qtot = 1 + sum_int (map snd l) + q
+    val _ = assert_qlimit "eval_exists_subq" qtot
+  in
+    (exists fst l,qtot)
+  end
+  handle Overflow => 
+    (
+    print_endline ("exists_subq");
+    raise Overflow
+    )
+
+fun eval_one t i x =
+  (fst (eval_subst (xvar,t) (nat_to_bin x)),x)
+  handle Overflow => 
+    (
+    print_endline (its i ^ " " ^ term_to_string t ^ " on " ^ its x);
+    raise Overflow
+    )
+fun eval64 t = 
+  SOME (mapi (eval_one t) (List.tabulate (64,I)))
   handle HOL_ERR _ => NONE
-
-fun eval63_debug t = eval_subst (xvar,t) (nat_to_bin 63)
 
 (* -------------------------------------------------------------------------
    Synthesis helpers
