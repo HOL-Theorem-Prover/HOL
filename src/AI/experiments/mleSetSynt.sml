@@ -276,8 +276,7 @@ val pre_extsearch =
    ------------------------------------------------------------------------- *)
 
 val schedule_base =
-  [{ncore = 4, verbose = true,
-    learning_rate = 0.02,
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 25}]
 val dhtnn_param_base =
   {
@@ -307,7 +306,7 @@ val level_param =
 
 val rl_param =
   {
-  expname = expname, ex_window = 160000, ex_filter = NONE,
+  expname = expname, ex_window = 100000, ex_filter = NONE,
   skip_compete = true,
   ngen = 400, ncore_search = 40,
   nsim_start = 100000, nsim_explore = 100000, nsim_compete = 100000,
