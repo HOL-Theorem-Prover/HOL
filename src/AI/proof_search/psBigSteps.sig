@@ -28,6 +28,6 @@ sig
     }
 
   val run_bigsteps :
-    ('a,'b,'c) bigsteps_obj -> 'a -> bool * 'a rlex * ('a,'b) node list
+    ('a,'b,'c) bigsteps_obj -> 'a -> bool * bool * 'a rlex * ('a,'b) node list
 
 end

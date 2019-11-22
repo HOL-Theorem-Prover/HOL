@@ -35,7 +35,7 @@ type 'a pre_extsearch =
   write_splayer : string -> splayer -> unit,
   read_splayer : string -> splayer
   }
-type 'a extsearch = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
+type 'a extsearch = (splayer, 'a, bool * bool * 'a rlex) smlParallel.extspec
 
 (* -------------------------------------------------------------------------
    Parameters of the reinforcement learning loop
@@ -124,9 +124,9 @@ fun mk_bigsteps_obj rlpreobj (unib,dhtnn,noiseb,playerid,nsim) =
 fun extsearch_fun rlpreobj splayer target =
   let
     val obj = mk_bigsteps_obj rlpreobj splayer
-    val (bstatus,exl,_) = run_bigsteps obj target
+    val (b1,b2,exl,_) = run_bigsteps obj target
   in
-    (bstatus,exl)
+    (b1,b2,exl)
   end
 
 fun mk_extsearch self rlpreobj =
@@ -135,13 +135,15 @@ fun mk_extsearch self rlpreobj =
     val {write_target,read_target,
          write_exl,read_exl,
          write_splayer,read_splayer} = #pre_extsearch rlpreobj
-    fun write_result file (b,exl) =
-      (writel (file ^ "_bstatus") [bts b];
+    fun write_result file (b1,b2,exl) =
+      (writel (file ^ "_bstatus") [bts b1 ^ " " ^ bts b2];
        write_exl (file ^ "_exl") exl)
     fun read_result file =
-      let val r =
-        (string_to_bool (only_hd (readl (file ^ "_bstatus"))),
-         read_exl (file ^ "_exl"))
+      let 
+        val bs = only_hd (readl (file ^ "_bstatus"))
+        val (b1,b2) = pair_of_list (map string_to_bool    
+          (String.tokens Char.isSpace bs)) 
+        val r = (b1,b2,read_exl (file ^ "_exl"))
       in
         remove_file (file ^ "_bstatus"); r
       end
@@ -161,7 +163,6 @@ fun mk_extsearch self rlpreobj =
   end
 
 fun mk_rlobj rlpreobj extsearch =
-  (
   {
   rl_param = #rl_param rlpreobj,
   level_param = #level_param rlpreobj,
@@ -172,8 +173,6 @@ fun mk_rlobj rlpreobj extsearch =
   read_exl = #read_exl (#pre_extsearch rlpreobj),
   board_compare = #board_compare (#game rlpreobj)
   }
-  : 'a rlobj
-  )
 
 (* -------------------------------------------------------------------------
    Logs
@@ -235,12 +234,13 @@ fun compete_one rlobj (dhtnn,playerid) targetl =
     val extspec = #extsearch rlobj
     val splayer = (false,dhtnn,false,playerid,#nsim_compete (#rl_param rlobj))
     val (r,t) = add_time (parmap_queue_extern ncore extspec splayer) targetl
-    val nwin = length (filter fst r)
+    val nwin1 = length (filter #1 r)
+    val nwin2 = length (filter #2 r)
   in
     log rlobj ("Player: " ^ playerid);
     log rlobj ("Competition time : " ^ rts t);
-    log rlobj ("Competition wins : " ^ its nwin);
-    nwin
+    log rlobj ("Competition wins : " ^ its nwin1 ^ " " ^ its nwin2);
+    nwin1
   end
 
 fun rl_compete rlobj level rplayerl =
@@ -337,13 +337,14 @@ fun explore_one rlobj unib (dhtnn,playerid) targetl =
       else #nsim_explore (#rl_param rlobj)
     val splayer = (unib,dhtnn,true,playerid,nsim)
     val (l,t) = add_time (parmap_queue_extern ncore extspec splayer) targetl
-    val nwin = length (filter fst l)
-    val exl = List.concat (map snd l)
+    val nwin1 = length (filter #1 l)
+    val nwin2 = length (filter #2 l)
+    val exl = List.concat (map #3 l)
   in
     log rlobj ("Exploration time: " ^ rts t);
-    log rlobj ("Exploration wins: " ^ its nwin);
+    log rlobj ("Exploration wins: " ^ its nwin1 ^ " " ^ its nwin2);
     log rlobj ("Exploration new examples: " ^ its (length exl));
-    (nwin,exl)
+    (nwin1,exl)
   end
 
 fun rl_explore ngen rlobj level unib rplayer exl =

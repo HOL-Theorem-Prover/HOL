@@ -352,7 +352,7 @@ load "mlTacticData"; open mlTacticData;
 
 val mcts_param =
   {
-  nsim = 100000,
+  nsim = 1000,
   stopatwin_flag = true,
   decay = #decay (#rl_param rlpreobj),
   explo_coeff = 2.0,
@@ -366,8 +366,9 @@ val targetl1 = map mk_startboard (first_n 100 tml1);
 fun test i target =
   let 
     val mcts_obj =
-      {cuttree = NONE, mcts_param = mcts_param,
-       game = #game rlpreobj, player = uniform_player (#game rlpreobj)}
+      {mcts_param = mcts_param,
+       game = #game rlpreobj, 
+       player = uniform_player (#game rlpreobj)}
     val tree = starttree_of mcts_obj target
     val endtree = mcts mcts_obj tree
   in

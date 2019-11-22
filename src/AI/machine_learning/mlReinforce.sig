@@ -26,7 +26,7 @@ sig
     read_splayer : string -> splayer
     }
 
-  type 'a extsearch = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
+  type 'a extsearch = (splayer, 'a, bool * bool * 'a rlex) smlParallel.extspec
 
   (* reinforcement learning parameters *)
   type 'a level_param =

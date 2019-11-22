@@ -137,7 +137,7 @@ fun debug_board obj game board =
   else ()
 
 (* rootl and exl are reversed *)
-fun loop_bigsteps (n,nmax) obj mcts_obj (exl,rootl) tree =
+fun loop_bigsteps (n,nmax) cstatus obj mcts_obj (exl,rootl) tree =
   let
     val {mcts_param,game,player} = mcts_obj
     val board = #board (dfind [] tree)
@@ -145,10 +145,11 @@ fun loop_bigsteps (n,nmax) obj mcts_obj (exl,rootl) tree =
     val _ = debug_board obj game board
   in
     if status <> Undecided orelse n >= nmax
-      then (status = Win,exl,rootl) else
+      then (status = Win, cstatus = Win, exl, rootl) else
     let
       val endtree = mcts mcts_obj tree
       val root = dfind [] endtree
+      val newcstatus = if cstatus = Win then Win else #status root
       val cid = select_bigstep obj mcts_obj endtree
       val newtree = cut_tree cid endtree
       (* if #noise_flag mcts_param then 
@@ -156,7 +157,8 @@ fun loop_bigsteps (n,nmax) obj mcts_obj (exl,rootl) tree =
       val newexl = add_rootex game endtree exl
       val newrootl = root :: rootl
     in
-      loop_bigsteps (n+1,nmax) obj mcts_obj (newexl,newrootl) newtree
+      loop_bigsteps (n+1,nmax) newcstatus 
+        obj mcts_obj (newexl,newrootl) newtree
     end
   end
 
@@ -172,7 +174,7 @@ fun run_bigsteps obj target =
     val tree = starttree_of mcts_obj target
     val n = (#max_bigsteps obj) target
   in
-    loop_bigsteps (0,n) obj mcts_obj ([],[]) tree
+    loop_bigsteps (0,n) Undecided obj mcts_obj ([],[]) tree
   end
 
 (* -------------------------------------------------------------------------
