@@ -69,7 +69,7 @@ fun debug_ep obj dis root =
   if #verbose obj then
   let
     val mcts_obj = #mcts_obj obj
-    val {cuttree,game,player,mcts_param} = mcts_obj
+    val {game,player,mcts_param} = mcts_obj
     val old_eval = #value root
     val new_eval = #sum root / #vis root
     val fm = #string_of_move game
@@ -138,7 +138,7 @@ fun debug_board obj game board =
 fun loop_bigsteps (n,nmax) obj (exl,rootl) tree =
   let
     val mcts_obj = #mcts_obj obj
-    val {cuttree,mcts_param,game,player} = mcts_obj
+    val {mcts_param,game,player} = mcts_obj
     val board = #board (dfind [] tree)
     val status = #status_of game board
     val _ = debug_board obj game board
@@ -150,14 +150,8 @@ fun loop_bigsteps (n,nmax) obj (exl,rootl) tree =
       val root = dfind [] endtree
       val cid = select_bigstep obj endtree
       val newtree = cut_tree cid endtree
-        (* if #noise_flag mcts_param then 
-          let val local_mcts_obj =
-            {cuttree = SOME (cut_tree cid endtree),
-             mcts_param = mcts_param, game = game, player = player}
-          in
-            starttree_of local_mcts_obj (#board (dfind cid endtree))
-          end
-        else *)
+      (* if #noise_flag mcts_param then 
+         starttree_of mcts_obj (#board (dfind cid endtree)) else *)
       val newexl = add_rootex game endtree exl
       val newrootl = root :: rootl
     in
@@ -202,7 +196,6 @@ val mcts_param =
 
 val mcts_obj : (toy_board,toy_move) mcts_obj =
   {
-  cuttree = NONE,
   mcts_param = mcts_param,
   game = toy_game,
   player = uniform_player toy_game

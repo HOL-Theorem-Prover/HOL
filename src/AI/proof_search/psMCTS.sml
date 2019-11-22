@@ -65,7 +65,6 @@ type mcts_param =
 
 type ('a,'b) mcts_obj =
   {
-  cuttree : ('a,'b) tree option,
   mcts_param : mcts_param, 
   game : ('a,'b) game, 
   player : ('a,'b) player
@@ -189,8 +188,7 @@ fun node_create_backup obj tree (id,board) =
   let
     val game = #game obj
     val param = #mcts_param obj
-    val cuttree = #cuttree obj
-    fun f () =
+    val node = 
       let
         fun wrap_poli poli = let fun f i x = (x, i :: id) in mapi f poli end
         val status = (#status_of game) board
@@ -202,14 +200,6 @@ fun node_create_backup obj tree (id,board) =
         {pol=rescale_pol (wrap_poli poli), value=value,
          board=board, sum=0.0, vis=0.0, status=status}
       end
-    val node = 
-      if isSome cuttree then
-        let val {pol,value,status,...} = dfind id (valOf cuttree) in
-          {pol=pol, value=value, board=board,
-           sum=0.0, vis=0.0, status=status}
-        end
-        handle NotFound => f ()
-      else f ()
     val tree1 = dadd id node tree
     val tree2 = backup (#decay param) tree1 (id,(#value node))
   in

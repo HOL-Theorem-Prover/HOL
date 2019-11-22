@@ -54,7 +54,6 @@ sig
 
   type ('a,'b) mcts_obj =
     {
-    cuttree : ('a,'b) tree option,
     mcts_param : mcts_param, 
     game : ('a,'b) game, 
     player : ('a,'b) player

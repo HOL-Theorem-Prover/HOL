@@ -109,10 +109,7 @@ fun mk_bigsteps_obj rlpreobj (unib,dhtnn,noiseb,playerid,nsim) =
       then 
         let 
           val (pretob,precomp) = dfind playerid (valOf (#tobpdict rlpreobj)) 
-          val 
-        in
-          pretob arg
-        end
+        
       else dfind playerid (#tobdict rlpreobj)
     val game = #game rlpreobj
     val player = if unib then uniform_player game
@@ -123,8 +120,7 @@ fun mk_bigsteps_obj rlpreobj (unib,dhtnn,noiseb,playerid,nsim) =
     temp_flag = false,
     max_bigsteps = #max_bigsteps rlpreobj,
     mcts_obj =
-       {cuttree = NONE,
-        mcts_param = mk_mcts_param noiseb nsim rlpreobj,
+       {mcts_param = mk_mcts_param noiseb nsim rlpreobj,
         game = #game rlpreobj,
         player = player}
     }
