@@ -167,6 +167,13 @@ fun loop_bigsteps (n,nmax) obj (exl,rootl) tree =
 
 fun run_bigsteps obj target =
   let
+    val precomp = #precomp obj 
+    val mcts_obj = 
+      {
+      mcts_param = mcts_param,
+      game = game,
+      player = (#preplayer obj) precomp,   
+      }
     val tree = starttree_of (#mcts_obj obj) target
     val n = (#max_bigsteps obj) target
   in

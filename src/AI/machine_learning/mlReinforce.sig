@@ -51,6 +51,8 @@ sig
     game : ('a,'b) psMCTS.game,
     pre_extsearch : 'a pre_extsearch,
     tobdict : (string, 'a -> term) Redblackmap.dict,
+    tobpdict : (string, (('a -> 'c -> term) * (dhtnn -> 'a -> 'c)) 
+               Redblackmap.dict option,
     dplayerl : dplayer list
     }
   type 'a rlobj =
@@ -64,7 +66,6 @@ sig
     read_exl : string -> 'a rlex,
     board_compare : 'a * 'a -> order
     }
-
   val mk_extsearch : string -> ('a,'b) rlpreobj -> 'a extsearch
   val mk_rlobj : ('a,'b) rlpreobj -> 'a extsearch -> 'a rlobj
 

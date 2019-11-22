@@ -62,7 +62,7 @@ fun status_of ((orgtm,graph),tm) =
     else Undecided
 
 (* -------------------------------------------------------------------------
-   1) Term representation of the board (default)
+   Term representations of the board
    ------------------------------------------------------------------------- *)
 
 val graphtag = mk_var ("graphtag", ``:bool -> bool``)
@@ -98,6 +98,17 @@ fun term_of_board1 dim ((_,graph),tm) =
 val operl1 = mk_fast_set oper_compare
   (map_assoc arity_of (graphcat :: adjgraph :: (uncontl @ operl_plain)))
 
+fun mk_graphv dim dhtnn ((_,graph),_) = 
+  let 
+    val tmgraph = term_of_graph dim graph
+    val embed1 = infer_dhtnn_nohead dhtnn tmgraph
+    val s = reall_to_string embed1
+  in
+    mk_var (embedding_prefix ^ s,bool)
+  end
+ 
+fun term_of_board1p graphv ((_,_),tm) =
+  list_mk_comb (adjgraph, [graphv, rw_to_uncont tm])
 
 (*
 load "aiLib"; open aiLib;
@@ -283,93 +294,11 @@ val player_base =
   {playerid = "base",
    dhtnn_param = dhtnn_param_base, schedule = schedule_base}
 
-(*
-val schedule_4core =
-  [{ncore = 4, verbose = true,
-    learning_rate = 0.02,
-    batch_size = 16, nepoch = 200}]
-val player_4core =
-  {playerid = "4core",
-   dhtnn_param = dhtnn_param_base, schedule = schedule_4core}
-
-val schedule_100epoch =
-  [{ncore = 4, verbose = true,
-    learning_rate = 0.02,
-    batch_size = 16, nepoch = 100}]
-val player_100epoch =
-  {playerid = "100epoch",
-   dhtnn_param = dhtnn_param_base, schedule = schedule_100epoch}
-
-val schedule_4batch =
-  [{ncore = 4, verbose = true,
-    learning_rate = 0.01,
-    batch_size = 4, nepoch = 200}]
-val player_4batch =
-  {playerid = "4batch",
-   dhtnn_param = dhtnn_param_base, schedule = schedule_4batch}
-
-val dhtnn_param_1layer =
-  {
-  operl = operl1, nlayer_oper = 1,
-  nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 12, dimpoli = length movel
-  }
-val player_1layer =
-  {playerid = "1layer",
-   dhtnn_param = dhtnn_param_base, schedule = schedule_base}
-
-val dhtnn_param_quantterm =
-  {
-  operl = operl2, nlayer_oper = 2,
-  nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 12, dimpoli = length movel
-  }
-val player_quantterm =
-  {playerid = "quantterm",
-   dhtnn_param = dhtnn_param_quantterm ,
-   schedule = schedule_base}
-
-val dhtnn_param_listgraph =
-  {
-  operl = operl3, nlayer_oper = 2,
-  nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 12, dimpoli = length movel
-  }
-val player_listgraph =
-  {playerid = "listgraph",
-   dhtnn_param = dhtnn_param_listgraph,
-   schedule = schedule_base}
-
-val dhtnn_param_allgraph =
-  {
-  operl = operl4, nlayer_oper = 2,
-  nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 12, dimpoli = length movel
-  }
-val player_allgraph =
-  {playerid = "allgraph",
-   dhtnn_param = dhtnn_param_allgraph,
-   schedule = schedule_base}
-*)
-
 val tobdict = dnew String.compare
   [("base", term_of_board1 (#dimin dhtnn_param_base))]
 
-fun mk_graphv dim dhtnn ((_,graph),_) = 
-  let 
-    val tmgraph = term_of_graph dim graph
-    val embed1 = infer_dhtnn_nohead dhtnn tmgraph
-    val s = reall_to_string embed1
-  in
-    mk_var (embedding_prefix ^ s,bool)
-  end
- 
-fun term_of_board1p graphv ((_,_),tm) =
-  list_mk_comb (adjgraph, [graphv, rw_to_uncont tm])
-
 val tobpdict = dnew String.compare
   [("base", (term_of_board1p, mk_graphv (#dimin dhtnn_param_base))]
-
 
 (* -------------------------------------------------------------------------
    Interface
@@ -400,6 +329,7 @@ val rlpreobj : (board,move) rlpreobj =
   game = game,
   pre_extsearch = pre_extsearch,
   tobdict = tobdict,
+  tobpdict = SOME tobpdict,
   dplayerl = [player_base]
   }
 

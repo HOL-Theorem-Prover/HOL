@@ -64,6 +64,8 @@ type ('a,'b) rlpreobj =
   game : ('a,'b) game,
   pre_extsearch : 'a pre_extsearch,
   tobdict : (string, 'a -> term) Redblackmap.dict,
+  tobpdict : (string, (('a -> 'c -> term) * (dhtnn -> 'a -> 'c)) 
+             Redblackmap.dict option,
   dplayerl : dplayer list
   }
 
@@ -101,7 +103,17 @@ fun player_from_dhtnn game (tob,dhtnn) board =
 
 fun mk_bigsteps_obj rlpreobj (unib,dhtnn,noiseb,playerid,nsim) =
   let
-    val tob = dfind playerid (#tobdict rlpreobj)
+    val tob = 
+      if isSome (#tobpdict rlpreobj) andalso
+         dmem playerid (valOf (#tobpdict rlpreobj))
+      then 
+        let 
+          val (pretob,precomp) = dfind playerid (valOf (#tobpdict rlpreobj)) 
+          val 
+        in
+          pretob arg
+        end
+      else dfind playerid (#tobdict rlpreobj)
     val game = #game rlpreobj
     val player = if unib then uniform_player game
       else player_from_dhtnn game (tob,dhtnn)
