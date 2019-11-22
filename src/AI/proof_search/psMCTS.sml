@@ -58,7 +58,8 @@ type mcts_param =
   stopatwin_flag : bool,
   decay : real,
   explo_coeff : real,
-  noise_flag : bool,
+  noise_root : bool,
+  noise_all : bool,
   noise_coeff : real,
   noise_alpha : real
   }
@@ -112,9 +113,10 @@ fun backup decay tree (id,reward) =
 
 (* divides first number by 100 to get gamma(alpha) *)
 val gammatable =
-  [(1, 99.43258512),(2, 49.44221016),(3, 32.78499835),(4, 24.46095502),
+  [(20, 4.590843712),(1, 99.43258512),(2, 49.44221016),(3, 32.78499835),
+   (4, 24.46095502),
    (5, 19.47008531),(6, 16.14572749),(7, 13.77360061),(8, 11.99656638),
-   (9, 10.61621654),(10, 9.513507699),(20, 4.590843712),(30, 2.991568988),
+   (9, 10.61621654),(10, 9.513507699),(30, 2.991568988),
    (40, 2.218159544),(50, 1.772453851),(60, 1.489192249),(70, 1.298055333),
    (80, 1.164229714),(90, 1.068628702)]
 
@@ -138,43 +140,28 @@ fun dirichlet_noise_plain alpha n =
 fun dirichlet_noise alpha n =
   normalize_proba (dirichlet_noise_plain alpha n)
 
-fun normalize_pol pol =
-  let
-    val (l1,l2) = split pol
-    val (l1a,l1b) = split l1
-  in
-    combine (combine (l1a, normalize_proba l1b), l2)
-  end
+fun normalize_prepol prepol =
+  let val (l1,l2) = split prepol in combine (l1, normalize_proba l2) end
 
-fun add_root_noise param tree =
+fun add_noise param prepol =
   let
-    val {pol,value,board,sum,vis,status} = dfind [] tree
-    val noisel1 = dirichlet_noise_plain (#noise_alpha param) (length pol)
+    val noisel1 = List.tabulate (length prepol, fn _ => random_real ())
+      (* dirichlet_noise_plain (#noise_alpha param) (length prepol) *)
     val noisel2 = normalize_proba noisel1
-    fun f (((move,polv),cid),noise) =
+    fun f ((move,polv),noise) =
       let
         val coeff = #noise_coeff param
         val newpolv = (1.0 - coeff) * polv + coeff * noise
       in
-        ((move,newpolv), cid)
+        (move,newpolv)
       end
-    val newpol = normalize_pol (map f (combine (pol,noisel2)))
   in
-    dadd [] {pol=newpol, value=value, 
-             board=board,sum=sum,vis=vis,status=status} tree
+    map f (combine (prepol,noisel2))
   end
 
 (* -------------------------------------------------------------------------
    Node creation
    ------------------------------------------------------------------------- *)
-
-fun rescale_pol pol =
-  let
-    val tot = sum_real (map (snd o fst) pol)
-    fun norm ((move,polv),cid) = ((move,polv / tot),cid)
-  in
-    if tot > 0.01 then map norm pol else pol
-  end
 
 fun filter_available game board (e,p) =
   let
@@ -190,14 +177,20 @@ fun node_create_backup obj tree (id,board) =
     val param = #mcts_param obj
     val node = 
       let
-        fun wrap_poli poli = let fun f i x = (x, i :: id) in mapi f poli end
+        fun add_cid pol = let fun f i x = (x, i :: id) in mapi f pol end
         val status = (#status_of game) board
-        val (value,poli) = case status of
+        val (value,pol1) = case status of
             Win       => (1.0,[])
           | Lose      => (0.0,[])
           | Undecided => filter_available game board ((#player obj) board)
+        val pol2 = normalize_prepol pol1
+        val pol3 = 
+          if #noise_all param orelse 
+             (#noise_root param andalso null id) 
+          then add_noise param pol2 
+          else pol2
       in
-        {pol=rescale_pol (wrap_poli poli), value=value,
+        {pol= add_cid pol3, value=value,
          board=board, sum=0.0, vis=0.0, status=status}
       end
     val tree1 = dadd id node tree
@@ -281,8 +274,6 @@ fun starttree_of obj board =
 fun mcts obj starttree =
   let
     val param = #mcts_param obj
-    val starttree_noise =
-      if #noise_flag param then add_root_noise param starttree else starttree
     fun loop tree =
       if #vis (dfind [] tree) > Real.fromInt (#nsim param) + 0.5 orelse
          (#stopatwin_flag param andalso #status (dfind [] tree) = Win)
@@ -294,7 +285,7 @@ fun mcts obj starttree =
           loop newtree
         end
   in
-    loop starttree_noise
+    loop starttree
   end
 
 (* -------------------------------------------------------------------------
@@ -395,7 +386,8 @@ val mcts_param =
   stopatwin_flag = true,
   decay = 1.0,
   explo_coeff = 2.0,
-  noise_flag = false,
+  noise_all = true,
+  noise_root = false,
   noise_coeff = 0.25,
   noise_alpha = 0.2
   };
@@ -408,7 +400,7 @@ val mcts_obj : (toy_board,toy_move) mcts_obj =
   };
 
 val starttree = starttree_of mcts_obj (0,10);
-val tree = mcts obj starttree;
+val (tree,t) = add_time (mcts mcts_obj) starttree;
 val nodel = trace_win (#status_of (#game mcts_obj)) tree [];
 *)
 

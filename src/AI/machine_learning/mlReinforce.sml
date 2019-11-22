@@ -51,6 +51,7 @@ type 'a level_param =
 type rl_param =
   {
   expname : string, ex_window : int, ex_filter : int option,
+  skip_compete : bool,
   ngen : int, ncore_search : int,
   nsim_start : int , nsim_explore : int, nsim_compete : int,
   decay : real
@@ -90,7 +91,8 @@ fun mk_mcts_param noiseb nsim rlpreobj =
   stopatwin_flag = false,
   decay = #decay (#rl_param rlpreobj),
   explo_coeff = 2.0,
-  noise_flag = noiseb,
+  noise_all = noiseb,
+  noise_root = false,
   noise_coeff = 0.25,
   noise_alpha = 0.2
   }
@@ -409,13 +411,16 @@ fun rl_init rlobj =
 
 fun rl_one n rlobj (allex,rplayero,level) =
   let
+    val rl_param = #rl_param rlobj
     val expname = #expname (#rl_param rlobj)
     val file = eval_dir ^ "/" ^ expname ^ "_gen" ^ its n
     val _ = log rlobj ("\nGeneration " ^ its n)
     val rplayerl = rl_train rlobj allex
     val rplayero' = if isSome rplayero then [valOf rplayero] else []
     val (level1,rplayer_best) =
-      rl_compete rlobj level (rplayero' @ rplayerl)
+      if #skip_compete rl_param 
+      then (level,only_hd rplayerl)
+      else rl_compete rlobj level (rplayero' @ rplayerl)
     val _ = write_dhtnn (file ^ "_dhtnn") (fst rplayer_best)
     val _ = writel (file ^ "_playerid") [snd rplayer_best]
     val (newallex,level2) = loop_rl_explore n rlobj level1 false

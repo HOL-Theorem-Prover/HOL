@@ -192,7 +192,8 @@ val mcts_param =
   stopatwin_flag = false,
   decay = 1.0,
   explo_coeff = 2.0,
-  noise_flag = true,
+  noise_all = true,
+  noise_root = false,
   noise_coeff = 0.25,
   noise_alpha = 0.2
   };

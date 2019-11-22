@@ -296,7 +296,7 @@ val pretobdict = dnew String.compare
    Interface
    ------------------------------------------------------------------------- *)
 
-val expname = "mleSetSynt-v2-13"
+val expname = "mleSetSynt-v2-14"
 
 val level_param =
   {
@@ -308,8 +308,9 @@ val level_param =
 val rl_param =
   {
   expname = expname, ex_window = 160000, ex_filter = NONE,
+  skip_compete = true,
   ngen = 400, ncore_search = 40,
-  nsim_start = 32000, nsim_explore = 32000, nsim_compete = 32000,
+  nsim_start = 100000, nsim_explore = 100000, nsim_compete = 100000,
   decay = 1.0
   }
 
@@ -352,16 +353,21 @@ load "mlTacticData"; open mlTacticData;
 
 val mcts_param =
   {
-  nsim = 1000,
+  nsim = 32000,
   stopatwin_flag = true,
   decay = #decay (#rl_param rlpreobj),
   explo_coeff = 2.0,
-  noise_flag = false, noise_coeff = 0.25, noise_alpha = 0.2
+  noise_all = true, 
+  noise_root = false,
+  noise_coeff = 0.25, 
+  noise_alpha = 0.2
   };
 
 val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt"
 val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt");
-val targetl1 = map mk_startboard (first_n 100 tml1);
+val targetl1 = map mk_startboard (first_n 400 tml1);
+val graphl = map (snd o fst) targetl1;
+val graph_set = mk_fast_set (list_compare bool_compare) graphl;
 
 fun test i target =
   let 

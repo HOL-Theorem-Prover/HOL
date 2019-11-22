@@ -47,7 +47,8 @@ sig
     stopatwin_flag : bool,
     decay : real,
     explo_coeff : real,
-    noise_flag : bool,
+    noise_root : bool,
+    noise_all : bool,
     noise_coeff : real,
     noise_alpha : real
     }
