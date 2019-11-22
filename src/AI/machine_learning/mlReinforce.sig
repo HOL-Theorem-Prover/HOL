@@ -43,16 +43,15 @@ sig
     nsim_start : int , nsim_explore : int, nsim_compete : int,
     decay : real
     }
-  type ('a,'b) rlpreobj =
+  type ('a,'b,'c) rlpreobj =
     {
     rl_param : rl_param,
     level_param : 'a level_param,
     max_bigsteps : 'a -> int,
     game : ('a,'b) psMCTS.game,
     pre_extsearch : 'a pre_extsearch,
-    tobdict : (string, 'a -> term) Redblackmap.dict,
-    tobpdict : (string, (('a -> 'c -> term) * (dhtnn -> 'a -> 'c)) 
-               Redblackmap.dict option,
+    pretobdict : (string, ('a -> term) * ('c -> 'a -> term)) Redblackmap.dict,
+    precomp_dhtnn : dhtnn -> 'a -> 'c,
     dplayerl : dplayer list
     }
   type 'a rlobj =
@@ -60,14 +59,14 @@ sig
     rl_param : rl_param,
     level_param : 'a level_param,
     extsearch : 'a extsearch,
-    tobdict : (string,'a -> term) Redblackmap.dict,
+    tobdict : (string, 'a -> term) Redblackmap.dict,
     dplayerl : dplayer list,
     write_exl : string -> 'a rlex -> unit,
     read_exl : string -> 'a rlex,
     board_compare : 'a * 'a -> order
     }
-  val mk_extsearch : string -> ('a,'b) rlpreobj -> 'a extsearch
-  val mk_rlobj : ('a,'b) rlpreobj -> 'a extsearch -> 'a rlobj
+  val mk_extsearch : string -> ('a,'b,'c) rlpreobj -> 'a extsearch
+  val mk_rlobj : ('a,'b,'c) rlpreobj -> 'a extsearch -> 'a rlobj
 
   (* example filtering *)
   val rl_filter_train :

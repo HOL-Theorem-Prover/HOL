@@ -56,16 +56,15 @@ type rl_param =
   decay : real
   }
 
-type ('a,'b) rlpreobj =
+type ('a,'b,'c) rlpreobj =
   {
   rl_param : rl_param,
   level_param : 'a level_param,
   max_bigsteps : 'a -> int,
   game : ('a,'b) game,
   pre_extsearch : 'a pre_extsearch,
-  tobdict : (string, 'a -> term) Redblackmap.dict,
-  tobpdict : (string, (('a -> 'c -> term) * (dhtnn -> 'a -> 'c)) 
-             Redblackmap.dict option,
+  pretobdict : (string, ('a -> term) * ('c -> 'a -> term)) Redblackmap.dict,
+  precomp_dhtnn : dhtnn -> 'a -> 'c,
   dplayerl : dplayer list
   }
 
@@ -74,7 +73,7 @@ type 'a rlobj =
   rl_param : rl_param,
   level_param : 'a level_param,
   extsearch : 'a extsearch,
-  tobdict : (string,'a -> term) Redblackmap.dict,
+  tobdict : (string, 'a -> term) Redblackmap.dict,
   dplayerl : dplayer list,
   write_exl : string -> 'a rlex -> unit,
   read_exl : string -> 'a rlex,
@@ -96,33 +95,29 @@ fun mk_mcts_param noiseb nsim rlpreobj =
   noise_alpha = 0.2
   }
 
-fun player_from_dhtnn game (tob,dhtnn) board =
-   let val (e,p) = infer_dhtnn dhtnn (tob board) in
+fun player_from_dhtnn game (tobc,dhtnn) ctxt board =
+   let val (e,p) = infer_dhtnn dhtnn (tobc ctxt board) in
      (e, combine (#movel game,p))
    end
 
 fun mk_bigsteps_obj rlpreobj (unib,dhtnn,noiseb,playerid,nsim) =
   let
-    val tob = 
-      if isSome (#tobpdict rlpreobj) andalso
-         dmem playerid (valOf (#tobpdict rlpreobj))
-      then 
-        let 
-          val (pretob,precomp) = dfind playerid (valOf (#tobpdict rlpreobj)) 
-        
-      else dfind playerid (#tobdict rlpreobj)
     val game = #game rlpreobj
-    val player = if unib then uniform_player game
-      else player_from_dhtnn game (tob,dhtnn)
+    val (tob,tobc) = dfind playerid (#pretobdict rlpreobj)
+    fun preplayer ctxt board = 
+      if unib 
+      then uniform_player game board
+      else player_from_dhtnn game (tobc,dhtnn) ctxt board
+    fun precomp board = (#precomp_dhtnn rlpreobj) dhtnn board
   in
     {
     verbose = false,
     temp_flag = false,
     max_bigsteps = #max_bigsteps rlpreobj,
-    mcts_obj =
-       {mcts_param = mk_mcts_param noiseb nsim rlpreobj,
-        game = #game rlpreobj,
-        player = player}
+    precomp = precomp,
+    preplayer = preplayer,
+    game = game,
+    mcts_param = mk_mcts_param noiseb nsim rlpreobj
     }
   end
 
@@ -166,16 +161,19 @@ fun mk_extsearch self rlpreobj =
   end
 
 fun mk_rlobj rlpreobj extsearch =
+  (
   {
   rl_param = #rl_param rlpreobj,
   level_param = #level_param rlpreobj,
   extsearch = extsearch,
-  tobdict = #tobdict rlpreobj,
+  tobdict = dmap (fst o snd) (#pretobdict rlpreobj),
   dplayerl = #dplayerl rlpreobj,
   write_exl = #write_exl (#pre_extsearch rlpreobj),
   read_exl = #read_exl (#pre_extsearch rlpreobj),
   board_compare = #board_compare (#game rlpreobj)
   }
+  : 'a rlobj
+  )
 
 (* -------------------------------------------------------------------------
    Logs

@@ -303,19 +303,24 @@ fun prepare_dhex dhex =
 val embedding_prefix = "embedding_"
 
 fun is_embedding v =
-  is_var v andalso String.isPrefix embedding (fst (dest_var v))
+  is_var v andalso String.isPrefix embedding_prefix (fst (dest_var v))
 
-fun embed_nn dim v =
+fun embed_nn v =
   if is_embedding v then
     let
       val vs = fst (dest_var v)
-      val es = String.substring (String.size embedding_prefix) 
-      val e1 = map reall_from_string es
+      val n1 = String.size embedding_prefix
+      val ntot = String.size vs
+      val es = String.substring (vs,n1,ntot-n1) 
+      val e1 = string_to_reall es
       val e2 = map (fn x => Vector.fromList [x]) e1
     in
       [{a = idactiv, da = didactiv, w = Vector.fromList e2}]
     end
-  else raise ERR "fp_op" (fst (dest_var f))
+  else raise ERR "embed_nn" (fst (dest_var v))
+
+fun mk_embedding_var rv = 
+  mk_var (embedding_prefix ^ reall_to_string (vector_to_list rv), bool)
 
 (* -------------------------------------------------------------------------
    Forward propagation
@@ -324,7 +329,7 @@ fun embed_nn dim v =
 fun fp_op dim opdict fpdict tm =
   let
     val (f,argl) = strip_comb tm
-    val nn = dfind (f,length argl) opdict handle NotFound => numvar_nn dim f
+    val nn = dfind (f,length argl) opdict handle NotFound => embed_nn f
     val invl = map (fn x => #outnv (last (dfind x fpdict))) argl
     val inv = Vector.concat invl
   in
@@ -443,7 +448,7 @@ fun infer_tnn tnn tm =
   end
 
 fun infer_tnn_nohead tnn tm =
-  vector_to_list (infer_opdict (#dimin tnn) (#opdict tnn) (order_subtm tm))
+  infer_opdict (#dimin tnn) (#opdict tnn) (order_subtm tm)
 
 fun infer_dhtnn dhtnn tm =
   let val (_,fpdataleval,fpdatalpoli) = fp_dhtnn dhtnn (order_subtm tm) in
@@ -454,7 +459,7 @@ fun infer_dhtnn dhtnn tm =
   end
 
 fun infer_dhtnn_nohead dhtnn tm =
-  vector_to_list (infer_opdict (#dimin dhtnn) (#opdict dhtnn) (order_subtm tm))
+  infer_opdict (#dimin dhtnn) (#opdict dhtnn) (order_subtm tm)
 
 fun infer_mse tnn (tml,ev) =
   let 

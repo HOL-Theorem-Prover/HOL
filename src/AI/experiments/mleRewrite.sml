@@ -255,7 +255,8 @@ val dhtnn_param =
 val dplayer =
   {playerid = "only_player", dhtnn_param = dhtnn_param, schedule = schedule}
 
-val tobdict = dnew String.compare [("only_player",term_of_board)];
+val pretobdict = dnew String.compare 
+  [("only_player", (term_of_board, fn () => term_of_board))];
 
 (* -------------------------------------------------------------------------
    Reinforcement learning
@@ -278,14 +279,15 @@ val rl_param =
   decay = 0.99
   }
 
-val rlpreobj : (board,move) rlpreobj =
+val rlpreobj : (board,move,unit) rlpreobj =
   {
   rl_param = rl_param,
   level_param = level_param,
   max_bigsteps = max_bigsteps,
   game = game,
   pre_extsearch = pre_extsearch,
-  tobdict = tobdict,
+  pretobdict = pretobdict,
+  precomp_dhtnn = (fn _ => (fn _ => ())),
   dplayerl = [dplayer]
   }
 

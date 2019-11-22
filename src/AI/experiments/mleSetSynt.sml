@@ -72,24 +72,19 @@ fun string_of_graph graph =
 fun graph_of_string s =
   map string_to_bool (String.tokens Char.isSpace s)
 
-fun numvar_of_graph dim graph =
-  if length graph = dim then 
-  let
-    val vs = tnn_numvar_prefix ^
-      String.concat (map (fn x => if x then "1" else "0") graph)
-  in
-    mk_var (vs,bool)
-  end
-  else raise ERR "numvar_of_graph" ""
+fun embed_of_graph graph =
+  Vector.fromList (map (fn x => if x then 1.0 else ~1.0) graph)
 
 fun term_of_graph dim graph =
   let 
     val graphl = mk_batch_full dim graph
-    val lastg1 = last graphl
-    val lastg2 = lastg1 @ List.tabulate (dim - length lastg1, fn _ => false)
-    val numvarl = map (numvar_of_graph dim) (butlast graphl @ [lastg2])
+    val bl = map embed_of_graph (butlast graphl)
+    val b1 = embed_of_graph (last graphl)
+    val b2 = Vector.concat [b1, 
+      Vector.tabulate (dim - Vector.length b1, fn _ => 0.0)]
+    val varl = map mk_embedding_var (bl @ [b2])
   in
-    list_mk_binop graphcat numvarl
+    list_mk_binop graphcat varl
   end
 
 fun term_of_board1 dim ((_,graph),tm) =
@@ -101,13 +96,12 @@ val operl1 = mk_fast_set oper_compare
 fun mk_graphv dim dhtnn ((_,graph),_) = 
   let 
     val tmgraph = term_of_graph dim graph
-    val embed1 = infer_dhtnn_nohead dhtnn tmgraph
-    val s = reall_to_string embed1
+    val embed = infer_dhtnn_nohead dhtnn tmgraph
   in
-    mk_var (embedding_prefix ^ s,bool)
+    mk_embedding_var embed
   end
  
-fun term_of_board1p graphv ((_,_),tm) =
+fun term_of_board1c graphv ((_,_),tm) =
   list_mk_comb (adjgraph, [graphv, rw_to_uncont tm])
 
 (*
@@ -120,6 +114,7 @@ val tml = map fst l1;
 val graph = List.tabulate (64,fn _ => true);
 val board : board = ((T,graph), random_elem tml);
 val tm1 = term_of_board1 12 board;
+val tm = term_of_graph graph;
 *)
 
 (*
@@ -294,11 +289,8 @@ val player_base =
   {playerid = "base",
    dhtnn_param = dhtnn_param_base, schedule = schedule_base}
 
-val tobdict = dnew String.compare
-  [("base", term_of_board1 (#dimin dhtnn_param_base))]
-
-val tobpdict = dnew String.compare
-  [("base", (term_of_board1p, mk_graphv (#dimin dhtnn_param_base))]
+val pretobdict = dnew String.compare
+  [("base", (term_of_board1 (#dimin dhtnn_param_base), term_of_board1c))]
 
 (* -------------------------------------------------------------------------
    Interface
@@ -321,15 +313,15 @@ val rl_param =
   decay = 1.0
   }
 
-val rlpreobj : (board,move) rlpreobj =
+val rlpreobj : (board,move,term) rlpreobj =
   {
   rl_param = rl_param,
   level_param = level_param,
   max_bigsteps = max_bigsteps,
   game = game,
   pre_extsearch = pre_extsearch,
-  tobdict = tobdict,
-  tobpdict = SOME tobpdict,
+  pretobdict = pretobdict,
+  precomp_dhtnn = mk_graphv (#dimin dhtnn_param_base),
   dplayerl = [player_base]
   }
 

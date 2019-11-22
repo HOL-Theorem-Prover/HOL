@@ -12,12 +12,10 @@ sig
   val dest_startboard : board -> term
   val term_of_graph : int -> bool list -> term
   val term_of_board1 : int -> board -> term
-  val term_of_board2 : int -> board -> term
-  val term_of_board3 : board -> term
-  val term_of_board4 : int -> board -> term
+  val term_of_board1c : term -> board -> term
   val dhtnn_param_base : mlTreeNeuralNetwork.dhtnn_param
   val extsearch : board mlReinforce.extsearch
-  val rlpreobj :  (board,move) mlReinforce.rlpreobj
+  val rlpreobj : (board,move,term) mlReinforce.rlpreobj
   val rlobj : board mlReinforce.rlobj
 
 end
