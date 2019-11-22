@@ -297,34 +297,23 @@ fun prepare_dhex dhex =
 
 (* -------------------------------------------------------------------------
    Fixed neural embedding derived by the name of the variable.
-   It is a useful hack for fixing an embedding in one leaf of the tree.
+   Useful for fixing an embedding in one leaf of the tree.
    ------------------------------------------------------------------------- *)
 
-fun embed_nn embed =
-  let val embed' = map (fn x => Vector.fromList [x]) embed in
-    [{a = idactiv, da = didactiv, w = Vector.fromList embed'}]
-  end
+val embedding_prefix = "embedding_"
 
-val tnn_numvar_prefix = "tnn_numvar_"
+fun is_embedding v =
+  is_var v andalso String.isPrefix embedding (fst (dest_var v))
 
-fun is_numvar f =
-  is_var f andalso
-  let val fs = fst (dest_var f) in
-    String.isPrefix tnn_numvar_prefix fs andalso
-    all Char.isDigit
-      (snd (part_n (String.size tnn_numvar_prefix) (explode fs)))
-  end
-
-fun numvar_nn dim f =
-  if is_numvar f then
+fun embed_nn dim v =
+  if is_embedding v then
     let
-      val fs = fst (dest_var f)
-      val cl = (snd (part_n (String.size tnn_numvar_prefix) (explode fs)))
-      val embed = map (Real.fromInt o string_to_int o Char.toString) cl
+      val vs = fst (dest_var v)
+      val es = String.substring (String.size embedding_prefix) 
+      val e1 = map reall_from_string es
+      val e2 = map (fn x => Vector.fromList [x]) e1
     in
-      if length embed = dim
-      then embed_nn (map scale_real embed)
-      else raise ERR "numvar_nn" fs
+      [{a = idactiv, da = didactiv, w = Vector.fromList e2}]
     end
   else raise ERR "fp_op" (fst (dest_var f))
 
@@ -364,13 +353,6 @@ fun fp_tnn tnn tml =
     (fpdict,fpdatal)
   end
 
-fun fp_tnn_nohead tnn tml =
-  let val fpdict =
-    fp_opdict (#dimin tnn) (#opdict tnn) (dempty Term.compare) tml
-  in
-    #outnv (last (dfind (last tml) fpdict))
-  end
-
 fun fp_dhtnn dhtnn tml =
   let
     val fpdict = fp_opdict
@@ -379,14 +361,6 @@ fun fp_dhtnn dhtnn tml =
     val fpdatalpoli = fp_head (#headpoli dhtnn) fpdict tml
   in
     (fpdict,fpdataleval,fpdatalpoli)
-  end
-
-fun infer_dhtnn dhtnn tm =
-  let val (_,fpdataleval,fpdatalpoli) = fp_dhtnn dhtnn (order_subtm tm) in
-    (
-    only_hd (descale_out (#outnv (last fpdataleval))),
-    descale_out (#outnv (last fpdatalpoli))
-    )
   end
 
 (* -------------------------------------------------------------------------
@@ -458,19 +432,37 @@ fun bp_dhtnn dim (fpdict,fpdataleval,fpdatalpoli)
    Inference
    ------------------------------------------------------------------------- *)
 
+fun infer_opdict dim opdict tml =
+  let val fpdict = fp_opdict dim opdict (dempty Term.compare) tml in
+    #outnv (last (dfind (last tml) fpdict))
+  end
+
 fun infer_tnn tnn tm =
   let val (_,fpdatal) = fp_tnn tnn (order_subtm tm) in
     descale_out (#outnv (last fpdatal))
   end
 
 fun infer_tnn_nohead tnn tm =
-  vector_to_list (fp_tnn_nohead tnn (order_subtm tm))
+  vector_to_list (infer_opdict (#dimin tnn) (#opdict tnn) (order_subtm tm))
 
-fun out_tnn tnn tml =
-  let val (_,fpdatal) = fp_tnn tnn tml in (#outnv (last fpdatal)) end
+fun infer_dhtnn dhtnn tm =
+  let val (_,fpdataleval,fpdatalpoli) = fp_dhtnn dhtnn (order_subtm tm) in
+    (
+    only_hd (descale_out (#outnv (last fpdataleval))),
+    descale_out (#outnv (last fpdatalpoli))
+    )
+  end
+
+fun infer_dhtnn_nohead dhtnn tm =
+  vector_to_list (infer_opdict (#dimin dhtnn) (#opdict dhtnn) (order_subtm tm))
 
 fun infer_mse tnn (tml,ev) =
-  mean_square_error (diff_rvect ev (out_tnn tnn tml))
+  let 
+    fun out_tnn tnn tml =
+      let val (_,fpdatal) = fp_tnn tnn tml in (#outnv (last fpdatal)) end
+  in
+    mean_square_error (diff_rvect ev (out_tnn tnn tml))
+  end
 
 (* -------------------------------------------------------------------------
    Training a tree neural network
@@ -486,7 +478,7 @@ fun train_tnn_subbatch tnn subbatch =
     val {opdict,headnn,dimin,dimout} = tnn
     val (bpdictl,bpdatall) = split (map (train_tnn_one tnn) subbatch)
     val bpdict1 = dconcat oper_compare bpdictl
-    val bpdict2 = filter (not o is_numvar o fst o fst) (dlist bpdict1)
+    val bpdict2 = filter (not o is_embedding o fst o fst) (dlist bpdict1)
     val bpdict3 = dnew oper_compare bpdict2
     fun f (oper,dwll) = [sum_dwll dwll]
     val bpdict4 = dmap f bpdict3
@@ -597,7 +589,7 @@ fun train_dhtnn_subbatch dhtnn subbatch =
     val dwle = sum_dwll (map (map #dw) bpdatall1)
     val dwlp = sum_dwll (map (map #dw) bpdatall2)
     val bpdict1 = dconcat oper_compare bpdictl
-    val bpdict2 = filter (not o is_numvar o fst o fst) (dlist bpdict1)
+    val bpdict2 = filter (not o is_embedding o fst o fst) (dlist bpdict1)
     val bpdict3 = dnew oper_compare bpdict2
     fun f (oper,dwll) = [sum_dwll dwll]
     val bpdict4 = dmap f bpdict3

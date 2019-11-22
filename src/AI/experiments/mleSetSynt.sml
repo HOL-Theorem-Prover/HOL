@@ -14,7 +14,13 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
 val ERR = mk_HOL_ERR "mleSetSynt"
 
 (* -------------------------------------------------------------------------
-   Helper
+   Global parameter
+   ------------------------------------------------------------------------- *)
+
+val graph_size = 64
+
+(* -------------------------------------------------------------------------
+   Helpers
    ------------------------------------------------------------------------- *)
 
 val graphcat = mk_var ("graphcat", ``:bool -> bool -> bool``)
@@ -30,8 +36,6 @@ fun rw_to_uncont t =
     else if term_eq oper cont_form then uncont_form
     else list_mk_comb (oper, map rw_to_uncont argl)
   end
-
-val graph_size = 64
 
 (* -------------------------------------------------------------------------
    Board
@@ -94,89 +98,32 @@ fun term_of_board1 dim ((_,graph),tm) =
 val operl1 = mk_fast_set oper_compare
   (map_assoc arity_of (graphcat :: adjgraph :: (uncontl @ operl_plain)))
 
-(* -------------------------------------------------------------------------
-   2) Annotate operators with number of quantifiers above them
-   ------------------------------------------------------------------------- *)
-
-fun is_numvar v = String.isPrefix tnn_numvar_prefix (fst (dest_var v))
-
-fun annotate_var n v =
-  if tmem v yvarl then v else
-  let val (vs,ty) = dest_var v in mk_var (vs ^ "_" ^ its n, ty) end
-
-fun all_annot v =
-  if tmem v yvarl then [v]
-  else List.tabulate (max_quants + 1, fn n => annotate_var n v)
-
-fun ind_quant n tm =
-  let val (oper,argl) = strip_comb tm in
-    if tmem oper quantl then
-      let
-        val (v,bound,bod) = triple_of_list argl
-        val bound' = ind_quant n bound
-        val bod' = ind_quant (n+1) bod
-      in
-        list_mk_comb (annotate_var n oper,[v,bound',bod'])
-      end
-    else list_mk_comb (annotate_var n oper, map (ind_quant n) argl)
-  end
-
-fun term_of_board2 dim ((_,graph),tm) =
-  list_mk_comb (adjgraph, [term_of_graph dim graph,
-    ind_quant 0 (rw_to_uncont tm)])
-
-val operl2 = mk_fast_set oper_compare
-  (map_assoc arity_of (
-   graphcat :: adjgraph ::
-   List.concat (map all_annot (uncontl @ operl_plain))))
-
-(* -------------------------------------------------------------------------
-   3) Graph represented by a list
-   ------------------------------------------------------------------------- *)
-
-fun booltermlist_of_graph graph =
-  let val l = map (fn x => if x then T else F) graph in
-    list_mk_binop graphcat l
-  end
-
-fun term_of_board3 ((_,graph),tm) =
-  list_mk_comb (adjgraph, [booltermlist_of_graph graph, rw_to_uncont tm])
-
-val operl3 = mk_fast_set oper_compare
-  (map_assoc arity_of
-     (T :: F :: graphcat :: adjgraph :: (uncontl @ operl_plain)));
-
-(* -------------------------------------------------------------------------
-   3) graph as argument of all nodes (expensive)
-   ------------------------------------------------------------------------- *)
-
-fun extend_var v =
-  let val (vs,ty) = dest_var v in
-    mk_var (vs ^ "_ext", mk_type ("fun", [bool,ty]))
-  end
-
-fun add_graph numvar tm =
-  let val (oper,argl) = strip_comb tm in
-    list_mk_comb (extend_var oper, numvar :: map (add_graph numvar) argl)
-  end
-
-fun term_of_board4 dim ((_,graph),tm) =
-  add_graph (term_of_graph dim graph) (rw_to_uncont tm)
-
-val operl4 = mk_fast_set oper_compare
-  (map_assoc arity_of (graphcat :: map extend_var (uncontl @ operl_plain)));
 
 (*
 load "aiLib"; open aiLib;
 load "mleSetLib"; open mleSetLib;
 load "mleSetSynt"; open mleSetSynt;
+
 val l1 = parse_setsyntdata ();
 val tml = map fst l1;
-val board : board = ((T,List.tabulate (64,fn _ => true)), random_elem tml);
+val graph = List.tabulate (64,fn _ => true);
+val board : board = ((T,graph), random_elem tml);
 val tm1 = term_of_board1 12 board;
-val tm2 = term_of_board2 12 board;
-val tm3 = term_of_board3 board;
-val tm4 = term_of_board4 12 board;
+*)
+
+(*
+load "aiLib"; open aiLib;
+load "mleSetLib"; open mleSetLib;
+load "mleSetSynt"; open mleSetSynt;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "mlNeuralNetwork"; open mlNeuralNetwork;
+
+val graph = List.tabulate (64,fn _ => true);
+val tmgraph = term_of_graph 12 graph;
+val dhtnn = random_dhtnn dhtnn_param_base;
+val embed1 = time (infer_dhtnn_nohead dhtnn) tmgraph;
+val s = reall_to_string embed1;
+val embed2 = time string_to_reall s;
 *)
 
 (* -------------------------------------------------------------------------
@@ -220,7 +167,7 @@ val train_file = datasetsynt_dir ^ "/train_lisp"
 
 fun bin_to_string bin = String.concatWith "," (map its bin)
 
-fun export_setsyntdata () =
+fun create_levels () =
   let
     val formgraphl = parse_setsyntdata ()
     val _ = print_endline ("Reading " ^ its (length formgraphl) ^ " terms");
@@ -408,6 +355,22 @@ val player_allgraph =
 val tobdict = dnew String.compare
   [("base", term_of_board1 (#dimin dhtnn_param_base))]
 
+fun mk_graphv dim dhtnn ((_,graph),_) = 
+  let 
+    val tmgraph = term_of_graph dim graph
+    val embed1 = infer_dhtnn_nohead dhtnn tmgraph
+    val s = reall_to_string embed1
+  in
+    mk_var (embedding_prefix ^ s,bool)
+  end
+ 
+fun term_of_board1p graphv ((_,_),tm) =
+  list_mk_comb (adjgraph, [graphv, rw_to_uncont tm])
+
+val tobpdict = dnew String.compare
+  [("base", (term_of_board1p, mk_graphv (#dimin dhtnn_param_base))]
+
+
 (* -------------------------------------------------------------------------
    Interface
    ------------------------------------------------------------------------- *)
@@ -451,8 +414,50 @@ val rlobj = mk_rlobj rlpreobj extsearch
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleSetSynt"; open mleSetSynt;
-(* export_setsyntdata (); *)
+(* create_levels (); *)
 val r = start_rl_loop rlobj;
 *)
+
+(* -------------------------------------------------------------------------
+   MCTS test with uniform player
+   ------------------------------------------------------------------------- *)
+
+(*
+load "mleSetSynt"; open mleSetSynt;
+load "psMCTS"; open psMCTS;
+load "aiLib"; open aiLib;
+load "mlTacticData"; open mlTacticData;
+
+val mcts_param =
+  {
+  nsim = 100000,
+  stopatwin_flag = true,
+  decay = #decay (#rl_param rlpreobj),
+  explo_coeff = 2.0,
+  noise_flag = false, noise_coeff = 0.25, noise_alpha = 0.2
+  };
+
+val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt"
+val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt");
+val targetl1 = map mk_startboard (first_n 100 tml1);
+
+fun test i target =
+  let 
+    val mcts_obj =
+      {cuttree = NONE, mcts_param = mcts_param,
+       game = #game rlpreobj, player = uniform_player (#game rlpreobj)}
+    val tree = starttree_of mcts_obj target
+    val endtree = mcts mcts_obj tree
+  in
+    print_endline (its i);
+    #status (dfind [] endtree) = Win
+  end
+
+val targetl2 = combine (targetl1, mapi test targetl1);
+val targetl3 = filter snd targetl2;
+length targetl3;
+*)
+
+
 
 end (* struct *)
