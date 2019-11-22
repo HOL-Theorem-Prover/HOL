@@ -108,6 +108,8 @@ val lameq_weaken_cong = store_thm(
   ``(M1:term) == M2 ==> N1 == N2 ==> (M1 == N1 <=> M2 == N2)``,
   METIS_TAC [lameq_rules]);
 
+Theorem lameq_SYM = List.nth(CONJUNCTS lameq_rules, 2)
+
 val fixed_point_thm = store_thm(  (* p. 14 *)
   "fixed_point_thm",
   ``!f. ?x. f @@ x == x``,
