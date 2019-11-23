@@ -558,6 +558,11 @@ Definition cfold_def:
   cfold = B @@ cfst @@ cfold0
 End
 
+Theorem FV_cfold[simp]:
+  FV cfold = ∅
+Proof  rw[cfold_def]
+QED
+
 Theorem cfold_behaviour:
   cfold @@ cnil == church 0 ∧
   cfold @@ cvcons t cnil == t ∧
