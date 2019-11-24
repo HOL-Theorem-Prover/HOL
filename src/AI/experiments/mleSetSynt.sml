@@ -282,7 +282,7 @@ val dhtnn_param_base =
   {
   operl = operl1, nlayer_oper = 2,
   nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 12, dimpoli = length movel
+  dimin = 8, dimpoli = length movel
   }
 val player_base =
   {playerid = "base",
@@ -295,7 +295,7 @@ val pretobdict = dnew String.compare
    Interface
    ------------------------------------------------------------------------- *)
 
-val expname = "mleSetSynt-v2-14"
+val expname = "mleSetSynt-v2-15"
 
 val level_param =
   {
@@ -306,10 +306,10 @@ val level_param =
 
 val rl_param =
   {
-  expname = expname, ex_window = 100000, ex_filter = NONE,
+  expname = expname, ex_window = 200000, ex_filter = NONE,
   skip_compete = true,
   ngen = 400, ncore_search = 40,
-  nsim_start = 100000, nsim_explore = 100000, nsim_compete = 100000,
+  nsim_start = 200000, nsim_explore = 200000, nsim_compete = 200000,
   decay = 1.0
   }
 

@@ -500,9 +500,7 @@ val l5 = map (fn ((a,b),c) => ((a,dict_sort Int.compare b), dict_sort Int.compar
 val (l6,l6') = partition (fn ((a,b),c) => b = c) l5;
 val l6 = map (fst o fst) l5;
 val (l7,l7') = partition (can imitate) l6;
-length l3';
-length l6';
-length l7';
+length l3'; length l6'; length l7';
 
 val exl = map fst l1;
 fun f ex n = (ignore (eval_nat ex n) handle HOL_ERR _ => qglob := ~1; !qglob);
