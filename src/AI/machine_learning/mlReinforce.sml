@@ -94,7 +94,7 @@ fun mk_mcts_param noiseb nsim rlpreobj =
   noise_all = noiseb,
   noise_root = false,
   noise_coeff = 0.25,
-  noise_gen = gamma_noise_gen 0.2
+  noise_gen = random_real
   }
 
 fun player_from_dhtnn game (tobc,dhtnn) ctxt board =
