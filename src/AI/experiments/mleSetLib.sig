@@ -28,6 +28,7 @@ sig
   val operl_plain : term list
 
   (* evaluation *)
+  val qglob : int ref
   val eval_nat : term -> int -> bool
   val mk_graph : int -> term -> bool list
   val has_graph : bool list -> term -> bool

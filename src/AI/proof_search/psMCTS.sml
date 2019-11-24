@@ -111,12 +111,7 @@ fun backup decay tree (id,reward) =
    Dirichlet noise
    ------------------------------------------------------------------------- *)
 
-fun real_compare prec (r1,r2) = 
-  if Real.abs (r1 - r2) < prec then EQUAL 
-  else if r1 < r2 then LESS
-  else GREATER
-
-val gammadict = dnew (real_compare 0.000001)
+val gammadict = dnew Real.compare
   [(0.01, 99.43258512),(0.02, 49.44221016),(0.03, 32.78499835),
    (0.04, 24.46095502),(0.05, 19.47008531),(0.06, 16.14572749),
    (0.07, 13.77360061),(0.08, 11.99656638),(0.09, 10.61621654),
@@ -124,8 +119,7 @@ val gammadict = dnew (real_compare 0.000001)
    (0.4, 2.218159544),(0.5, 1.772453851),(0.6, 1.489192249),
    (0.7, 1.298055333),(0.8, 1.164229714),(0.9, 1.068628702)]
 
-fun gamma_of alpha =
-  dfind (alpha * 100.0) gammadict
+fun gamma_of alpha = dfind alpha gammadict
   handle NotFound => raise ERR "gamma_of" (rts alpha)
 
 fun gamma_density alpha x =
@@ -138,8 +132,11 @@ fun gamma_distrib alpha =
   map_assoc (gamma_density alpha) (interval 0.01 (0.01,10.0));
 
 fun gamma_noise_gen alpha =
-  let val distrib = gamma_distrib alpha in 
-    fn () => select_in_distrib distrib
+  let 
+    val distrib = gamma_distrib alpha 
+    val cumul = mk_cumul distrib
+  in 
+    fn () => select_in_cumul cumul
   end
 
 (* --------------------------------------------------------------------------
@@ -407,8 +404,6 @@ val starttree = starttree_of mcts_obj (0,10);
 val (tree,t) = add_time (mcts mcts_obj) starttree;
 val nodel = trace_win (#status_of (#game mcts_obj)) tree [];
 
-
-  
 *)
 
 

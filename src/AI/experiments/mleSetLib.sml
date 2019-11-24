@@ -151,12 +151,19 @@ fun parse_setsyntdata () = map parse_line (readl train_file);
    Bounds on evaluation
    ------------------------------------------------------------------------- *)
 
-val subqlimit = 6
+val subqlimit = 7
+val ilimit = 7
 val qlimit = 1000
 val qglob = ref 0 
 
-fun assert_ilimit s n =
-  if length n > 6 then raise ERR s "ilimit" else () 
+fun assert_ilimit n =
+  if length n > ilimit then raise ERR "ilimit" (its ilimit) else () 
+
+fun incrq () =
+  (incr qglob; if !qglob > qlimit then raise ERR "incrq" (its qlimit) else ())
+fun incrqn n =
+  (qglob := !qglob + n; 
+   if !qglob > qlimit then raise ERR "incrq" (its qlimit) else ())
 
 (* -------------------------------------------------------------------------
    Ackermann representation
@@ -185,8 +192,8 @@ fun rm_leadingzeros l = case l of
 fun rm_endzeros l = rev (rm_leadingzeros (rev l))
 
 fun binsubq_of n =
-  if length (filter (fn x => x = 1) n) > subqlimit
-    then raise ERR "binsubq_of" ""
+  if length (filter (fn x => x = 1) n) > subqlimit 
+  then raise ERR "binsubq_of" ""
   else
   let
     val l2 = map (fn x => if x = 1 then [0,1] else [0]) n
@@ -221,27 +228,30 @@ fun indexl_to_bin l =
    Evaluation
    ------------------------------------------------------------------------- *)
 
-fun incrq q = 
-  (incr q; if !q > qlimit then raise ERR "" "" else ())
-(* terms *)
-val eval_empty = (incrq qglob; [])
+val eval_empty = (incrq (); [])
 
-fun eval_sing n =  
-  (
-  incrq qglob; 
-  assert_ilimit "eval_sing" n;
-  List.tabulate (bin_to_nat n,fn _ => 0) @ [1]
-  )
+fun eval_sing n = 
+  let 
+    val _ = assert_ilimit n
+    val i = bin_to_nat n
+    val r = List.tabulate (i, fn _ => 0) @ [1] 
+  in
+    incrqn (4 * i + 1); r 
+  end
 
-fun eval_binunion (n1,n2) = (incrq qglob; pointwise_union n1 n2)
+fun eval_binunion (n1,n2) = 
+  (incrqn (length n1 + length n2); pointwise_union n1 n2)
 
 fun eval_power n =
   let
-    val _ = (incrq qglob; assert_ilimit "eval_power" n)
+    val _ = assert_ilimit n
     val l1 = map (fn x => if x = 1 then [0,1] else [0]) n
+    val _ = incrqn (length l1)
     val l2 = cartesian_productl l1
+    val _ = incrqn (2 * length l2)
     val l3 = map bin_to_nat l2
     val nout = indexl_to_bin l3
+    val _ = incrqn (2 * length nout)
   in
     nout
   end
@@ -253,7 +263,7 @@ fun eval_term t =
     val s = fst (dest_var oper)
   in
     if hd_string s = #"n"
-      then (incrq qglob;
+      then (incrq ();
         (map (string_to_int o Char.toString) (explode (tl_string s))))
     else if term_eq oper tEmpty then eval_empty
     else if term_eq oper tSing
@@ -266,16 +276,16 @@ fun eval_term t =
   end
 
 (* predicates *)
-fun eval_equal (n1,n2) = (incrq qglob; n1 = n2)  
+fun eval_equal (n1,n2) = (incrq (); n1 = n2)  
 
 fun eval_in (n1,n2) = 
   (
-  incrq qglob;
-  assert_ilimit "eval_in" n1;
+  assert_ilimit n1;
+  incrqn (length n2 + length n1);
   (List.nth (n2, bin_to_nat n1) = 1 handle Subscript => false)
   ) 
 
-fun eval_sub (n1,n2) = (incrq qglob; pointwise_subset n1 n2)
+fun eval_sub (n1,n2) = (incrq (); pointwise_subset n1 n2)
 
 fun eval_predicate t =
   let
@@ -482,6 +492,7 @@ fun imitate orgtm =
 load "mleSetLib"; open mleSetLib;
 load "aiLib"; open aiLib;
 val l1 = parse_setsyntdata ();
+
 val l2 = map_assoc (eval64 o fst) l1;
 val (l3,l3') = partition (isSome o snd) l2;
 val l4 = map_snd valOf l3;
@@ -492,6 +503,15 @@ val (l7,l7') = partition (can imitate) l6;
 length l3';
 length l6';
 length l7';
+
+val exl = map fst l1;
+fun f ex n = (ignore (eval_nat ex n) handle HOL_ERR _ => qglob := ~1; !qglob);
+fun fl ex nl = map (f ex) nl;
+val (r,t) = add_time (map_assoc (C fl (List.tabulate (16,I)))) exl;
+val (r1,r2) = partition (fn x => exists (fn y => y = ~1) (snd x)) r;
+length l1; length r2; t;
+val r3 = dict_sort compare_imax (map_snd list_imax r2);
+hd (snd (part_n 1000 r3));
 *)
 
 
