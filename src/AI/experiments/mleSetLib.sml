@@ -228,24 +228,24 @@ fun indexl_to_bin l =
    Evaluation
    ------------------------------------------------------------------------- *)
 
-val eval_empty = (incrq (); [])
+val eval_empty = []
 
 fun eval_sing n = 
   let 
-    val _ = (incrq (); assert_ilimit n)
+    val _ = assert_ilimit n
     val i = bin_to_nat n
     val r = List.tabulate (i, fn _ => 0) @ [1] 
   in
      r 
   end
 
-fun eval_binunion (n1,n2) = (incrq (); pointwise_union n1 n2)
+fun eval_binunion (n1,n2) = pointwise_union n1 n2
 
 fun eval_power n =
   let
-    val _ = (incrq (); assert_ilimit n)
+    val _ = assert_ilimit n
     val l1 = map (fn x => if x = 1 then [0,1] else [0]) n
-    val l2 = cartesian_productl l1)
+    val l2 = cartesian_productl l1
     val l3 = map bin_to_nat l2
     val nout = indexl_to_bin l3
   in
@@ -254,12 +254,13 @@ fun eval_power n =
 
 fun eval_term t =
   let
+    val _ = incrq ()
     val (oper,argl) = strip_comb t
     val argle = map eval_term argl
     val s = fst (dest_var oper)
   in
     if hd_string s = #"n"
-      then (incrq ();
+      then (
         (map (string_to_int o Char.toString) (explode (tl_string s))))
     else if term_eq oper tEmpty then eval_empty
     else if term_eq oper tSing
@@ -272,18 +273,19 @@ fun eval_term t =
   end
 
 (* predicates *)
-fun eval_equal (n1,n2) = (incrq (); n1 = n2)  
+fun eval_equal (n1,n2) = n1 = n2
 
 fun eval_in (n1,n2) = 
   (
-  incrq (); assert_ilimit n1;
+  assert_ilimit n1;
   (List.nth (n2, bin_to_nat n1) = 1 handle Subscript => false)
   ) 
 
-fun eval_sub (n1,n2) = (incrq (); pointwise_subset n1 n2)
+fun eval_sub (n1,n2) = pointwise_subset n1 n2
 
 fun eval_predicate t =
   let
+    val _ = incrq ()
     val (oper,argl) = strip_comb t
     val r = pair_of_list (map eval_term argl)
   in
