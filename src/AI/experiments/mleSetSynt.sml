@@ -356,7 +356,7 @@ val mcts_param =
   stopatwin_flag = true,
   decay = #decay (#rl_param rlpreobj),
   explo_coeff = 2.0,
-  noise_all = true, 
+  noise_all = false, 
   noise_root = false,
   noise_coeff = 0.25, 
   noise_alpha = 0.2
@@ -364,9 +364,10 @@ val mcts_param =
 
 val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt"
 val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt");
-val targetl1 = map mk_startboard (first_n 400 tml1);
+val targetl1 = map mk_startboard (first_n 100 tml1);
 val graphl = map (snd o fst) targetl1;
 val graph_set = mk_fast_set (list_compare bool_compare) graphl;
+length graph_set;
 
 fun test i target =
   let 
@@ -380,6 +381,7 @@ fun test i target =
     print_endline (its i);
     #status (dfind [] endtree) = Win
   end
+;
 
 val targetl2 = combine (targetl1, mapi test targetl1);
 val targetl3 = filter snd targetl2;

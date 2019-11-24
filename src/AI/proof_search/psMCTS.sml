@@ -61,7 +61,7 @@ type mcts_param =
   noise_root : bool,
   noise_all : bool,
   noise_coeff : real,
-  noise_alpha : real
+  noise_gen : unit -> real
   }
 
 type ('a,'b) mcts_obj =
@@ -111,18 +111,22 @@ fun backup decay tree (id,reward) =
    Dirichlet noise
    ------------------------------------------------------------------------- *)
 
-(* divides first number by 100 to get gamma(alpha) *)
-val gammatable =
-  [(20, 4.590843712),(1, 99.43258512),(2, 49.44221016),(3, 32.78499835),
-   (4, 24.46095502),
-   (5, 19.47008531),(6, 16.14572749),(7, 13.77360061),(8, 11.99656638),
-   (9, 10.61621654),(10, 9.513507699),(30, 2.991568988),
-   (40, 2.218159544),(50, 1.772453851),(60, 1.489192249),(70, 1.298055333),
-   (80, 1.164229714),(90, 1.068628702)]
+fun real_compare prec (r1,r2) = 
+  if Real.abs (r1 - r2) < prec then EQUAL 
+  else if r1 < r2 then LESS
+  else GREATER
+
+val gammadict = dnew (real_compare 0.000001)
+  [(0.01, 99.43258512),(0.02, 49.44221016),(0.03, 32.78499835),
+   (0.04, 24.46095502),(0.05, 19.47008531),(0.06, 16.14572749),
+   (0.07, 13.77360061),(0.08, 11.99656638),(0.09, 10.61621654),
+   (0.1, 9.513507699),(0.2, 4.590843712),(0.3, 2.991568988),
+   (0.4, 2.218159544),(0.5, 1.772453851),(0.6, 1.489192249),
+   (0.7, 1.298055333),(0.8, 1.164229714),(0.9, 1.068628702)]
 
 fun gamma_of alpha =
-  assoc (Real.round (alpha * 100.0)) gammatable
-  handle HOL_ERR _ => raise ERR "gamma_of" (rts alpha)
+  dfind (alpha * 100.0) gammadict
+  handle NotFound => raise ERR "gamma_of" (rts alpha)
 
 fun gamma_density alpha x =
   (Math.pow (x, alpha - 1.0) * Math.exp (~ x)) / gamma_of alpha
@@ -133,20 +137,21 @@ fun interval (step:real) (a,b) =
 fun gamma_distrib alpha =
   map_assoc (gamma_density alpha) (interval 0.01 (0.01,10.0));
 
-fun dirichlet_noise_plain alpha n =
-  if n = 0 then [] else
-    List.tabulate (n, fn _ => select_in_distrib (gamma_distrib alpha))
+fun gamma_noise_gen alpha =
+  let val distrib = gamma_distrib alpha in 
+    fn () => select_in_distrib distrib
+  end
 
-fun dirichlet_noise alpha n =
-  normalize_proba (dirichlet_noise_plain alpha n)
+(* --------------------------------------------------------------------------
+   Policy noise
+   ------------------------------------------------------------------------- *)
 
 fun normalize_prepol prepol =
   let val (l1,l2) = split prepol in combine (l1, normalize_proba l2) end
 
 fun add_noise param prepol =
   let
-    val noisel1 = List.tabulate (length prepol, fn _ => random_real ())
-      (* dirichlet_noise_plain (#noise_alpha param) (length prepol) *)
+    val noisel1 = List.tabulate (length prepol, fn _ => (#noise_gen param) ())
     val noisel2 = normalize_proba noisel1
     fun f ((move,polv),noise) =
       let
@@ -185,8 +190,7 @@ fun node_create_backup obj tree (id,board) =
           | Undecided => filter_available game board ((#player obj) board)
         val pol2 = normalize_prepol pol1
         val pol3 = 
-          if #noise_all param orelse 
-             (#noise_root param andalso null id) 
+          if #noise_all param orelse (#noise_root param andalso null id) 
           then add_noise param pol2 
           else pol2
       in
@@ -386,10 +390,10 @@ val mcts_param =
   stopatwin_flag = true,
   decay = 1.0,
   explo_coeff = 2.0,
-  noise_all = true,
+  noise_all = false,
   noise_root = false,
   noise_coeff = 0.25,
-  noise_alpha = 0.2
+  noise_gen = gamma_noise_gen 0.2
   };
 
 val mcts_obj : (toy_board,toy_move) mcts_obj =
@@ -402,6 +406,9 @@ val mcts_obj : (toy_board,toy_move) mcts_obj =
 val starttree = starttree_of mcts_obj (0,10);
 val (tree,t) = add_time (mcts mcts_obj) starttree;
 val nodel = trace_win (#status_of (#game mcts_obj)) tree [];
+
+
+  
 *)
 
 

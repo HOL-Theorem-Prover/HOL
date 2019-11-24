@@ -23,7 +23,7 @@ sig
 
   (* dirichlet noise *)
   val gamma_distrib : real -> (real * real) list
-  val dirichlet_noise : real -> int -> real list
+  val gamma_noise_gen : real -> (unit -> real)
 
   (* search function *)
   type ('a,'b) game =
@@ -50,7 +50,7 @@ sig
     noise_root : bool,
     noise_all : bool,
     noise_coeff : real,
-    noise_alpha : real
+    noise_gen : unit -> real
     }
 
   type ('a,'b) mcts_obj =
