@@ -151,8 +151,8 @@ fun parse_setsyntdata () = map parse_line (readl train_file);
    Bounds on evaluation
    ------------------------------------------------------------------------- *)
 
-val subqlimit = 7
-val ilimit = 7
+val subqlimit = 6
+val ilimit = 6
 val qlimit = 1000
 val qglob = ref 0 
 
@@ -232,26 +232,22 @@ val eval_empty = (incrq (); [])
 
 fun eval_sing n = 
   let 
-    val _ = assert_ilimit n
+    val _ = (incrq (); assert_ilimit n)
     val i = bin_to_nat n
     val r = List.tabulate (i, fn _ => 0) @ [1] 
   in
-    incrqn (4 * i + 1); r 
+     r 
   end
 
-fun eval_binunion (n1,n2) = 
-  (incrqn (length n1 + length n2); pointwise_union n1 n2)
+fun eval_binunion (n1,n2) = (incrq (); pointwise_union n1 n2)
 
 fun eval_power n =
   let
-    val _ = assert_ilimit n
+    val _ = (incrq (); assert_ilimit n)
     val l1 = map (fn x => if x = 1 then [0,1] else [0]) n
-    val _ = incrqn (length l1)
-    val l2 = cartesian_productl l1
-    val _ = incrqn (2 * length l2)
+    val l2 = cartesian_productl l1)
     val l3 = map bin_to_nat l2
     val nout = indexl_to_bin l3
-    val _ = incrqn (2 * length nout)
   in
     nout
   end
@@ -280,8 +276,7 @@ fun eval_equal (n1,n2) = (incrq (); n1 = n2)
 
 fun eval_in (n1,n2) = 
   (
-  assert_ilimit n1;
-  incrqn (length n2 + length n1);
+  incrq (); assert_ilimit n1;
   (List.nth (n2, bin_to_nat n1) = 1 handle Subscript => false)
   ) 
 
