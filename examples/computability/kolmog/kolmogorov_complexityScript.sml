@@ -123,8 +123,10 @@ Proof
     by fs[MIN_SET_ADD] >> fs[]
 QED
 
+
+
 val kolmog_fn_def = Define`kolmog_fn f = if (∃n. recfn f n)
-                                           then SOME (MIN_SET {p | p=recfn_index f})
+                                           then SOME (MIN_SET {p | ∃n. p = recfn_index f n})
                                          else NONE`
 
 

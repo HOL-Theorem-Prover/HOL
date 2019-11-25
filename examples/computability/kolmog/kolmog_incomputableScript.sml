@@ -5,7 +5,7 @@ open reductionEval;
 open churchoptionTheory churchlistTheory recfunsTheory numsAsCompStatesTheory
      kolmogorov_complexityTheory invarianceResultsTheory boolListsTheory
 open churchDBTheory
-open recursivefnsTheory primrecfnsTheory recursivefnsTheory
+open recursivefnsTheory primrecfnsTheory prtermTheory
 
 val _ = new_theory "kolmog_incomputable"
 
@@ -495,6 +495,8 @@ QED
                  cfindleast (λt. exists (λs. terminated s) (run t))
                             (λi. 2 ** c + findindex is_terminated (run i))
 *)
+
+(*
 val compute_arg_lt_def = Define‘
   compute_arg_lt pki =
   LAM "y" (
@@ -531,7 +533,9 @@ val compute_arg_lt_def = Define‘
                                             @@ (cchurch @@ VAR "y")))
   )
 ’;
+*)
 
+(*
 Theorem FV_cexists[simp]:
   FV cexists = ∅
 Proof
@@ -544,7 +548,10 @@ Proof
   simp[cfind_index_def, EXTENSION]
 QED
 
+
 val compute_arg_eqn = brackabs.brackabs_equiv [] (SPEC_ALL compute_arg_lt_def)
+
+*)
 
 Theorem EL_log2list :
   n < 2 ** i ⇒ EL n (log2list i) = n + 2 ** i
@@ -1303,8 +1310,8 @@ End
 Theorem subndiv2_rec[simp]:
   recfn (subndiv2 n) 1
 Proof
-  simp[subndiv2_def] >> rpt (irule recursivefnsTheory.recfnCn >> rw[]) >> 
-  irule recursivefnsTheory.primrec_recfn >> fs[primrecfnsTheory.primrec_rules]
+  simp[subndiv2_def] >> rpt (irule recfnCn >> rw[]) >> 
+  irule primrec_recfn >> fs[primrec_rules]
 QED
 
 Theorem subndiv2_correct[simp]:
@@ -1319,37 +1326,35 @@ Proof
   mp_tac prtermTheory.recfn_recPhi >> rw[Excl"recfn_recPhi"]
 QED
 
-
-
-
 Theorem unary_rec_fns_phi:
   recfn f 1 ==> ∃i. ∀x. Phi i x = f [x]
 Proof
-  rw[] >> qabbrev_tac`G = recCn f [SOME o (pr1 nhd)]` >>
-  `recfn G 1` by (simp[Abbr`G`,recursivefnsTheory.recfnCn,recursivefnsTheory.primrec_recfn])>>
-  drule_then strip_assume_tac prtermTheory.recfns_in_Phi >> qexists_tac`i` >> rw[] >>
-  FIRST_X_ASSUM (qspec_then `listOfN x` mp_tac) >> fs[]
+  rw[] >> drule_then strip_assume_tac recfns_in_Phi >> qexists_tac`i` >> rw[] >>
+  `Phi i (fold [x]) = f [x]` by fs[] >> fs[unary_recfnsTheory.fold_def]
 QED
 
 Theorem univ_mach_rf:
   univ_mach U ==> univ_rf U
 Proof
   rw[univ_mach_def,univ_rf_def] >> qabbrev_tac`G=recCn recPhi [K (SOME f);subndiv2 1]` >>
-  `recfn G 1` by (simp[Abbr`G`] >> rpt (irule recursivefnsTheory.recfnCn >> rw[])) >>
+  `recfn G 1` by (simp[Abbr`G`] >> rpt (irule recfnCn >> rw[])) >>
   `∀x. G [bl2n (F::x)] = Phi f (bl2n x)` by 
-    (simp[Abbr`G`,recursivefnsTheory.recCn_def,bool_list_to_num_def]) >> 
-  drule_then strip_assume_tac prtermTheory.recfns_in_Phi >> 
-  LAST_X_ASSUM (qspecl_then [``,`[]`])
+    (simp[Abbr`G`,recCn_def,bool_list_to_num_def]) >> 
+  drule_then strip_assume_tac recfns_in_Phi >> 
+  LAST_X_ASSUM (qspecl_then [`n2bl i`,`[]`] mp_tac) >> rw[] >> fs[pair_def] >>
+  qexists_tac`F::bar (n2bl i)` >> rw[] >> `Phi f x = Phi i (bl2n (F::n2bl x))` suffices_by fs[]>>
+  `G [bl2n (F::n2bl x)] = Phi f (bl2n (n2bl x))` by fs[] >> 
+  `Phi i (fold [bl2n (F::n2bl x)]) = G [bl2n (F::n2bl x)]` by simp[] >> fs[]
 QED
 
-Theorem univ_rf_pair_nonempty:
-   univ_rf U  ⇒ {p | U (pair y p) = SOME x} ≠ ∅
-Proof
-  rw[] >> `{p | U p = SOME x} ≠ ∅` by fs[univ_rf_nonempty] >> fs[EXTENSION] >> 
-  fs[univ_rf_def,univ_phi_def] >> 
 
-  `∃f. ∀x. on2bl (Phi f x) = U ([] ++ n2bl x)` by fs[] >> `on2bl (Phi f (bl2n x')) = U ([] ++ (n2bl (bl2n x')))` by fs[] >> fs[] >>
-  ``
+
+Theorem univ_rf_pair_nonempty:
+   univ_mach U  ⇒ {p | U (pair y p) = SOME x} ≠ ∅
+Proof
+  rw[] >> `{p | U p = SOME x} ≠ ∅` by fs[univ_rf_nonempty,univ_mach_rf] >> fs[EXTENSION] >> 
+  fs[univ_mach_def] >> 
+  `` >>
 QED
 
 Theorem extra_information1:
