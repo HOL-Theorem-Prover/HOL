@@ -301,7 +301,7 @@ local
                      List.filter (Lib.equal (SOME n) o Lib.total List.hd)
                   val (nd, dn) =
                      List.foldl
-                        (fn ((x as ((n, t), f)), (nd, dn)) =>
+                        (fn ((x as ((n, {ty = t, ...}), f)), (nd, dn)) =>
                            let
                               val hs' = process n hs
                               val es' = process n es

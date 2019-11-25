@@ -365,10 +365,10 @@ local
   val datatype_conv =
     REWRITE_CONV
       (utilsLib.datatype_rewrites true "cheri"
-         ["cheri_state", "cheri_state_brss__0", "cheri_state_brss__1",
+         ["cheri_state",
           "procState", "DataType", "CP0", "CapCause", "StatusRegister",
           "ExceptionType"] @ ths)
-  val dt_assume = ASSUME o utilsLib.rhsc o datatype_conv
+  val dt_assume = ASSUME o utilsLib.rhsc o QCONV datatype_conv
   val procID_th = dt_assume ``^st.procID = 0w``
   val exceptionSignalled_th = dt_assume ``~exceptionSignalled ^st``
   val BranchDelayPCC_th = dt_assume ``^st.BranchDelayPCC = NONE``
