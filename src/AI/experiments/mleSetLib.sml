@@ -154,15 +154,15 @@ fun parse_setsyntdata () = map parse_line (readl train_file);
 val subqlimit = 6
 val ilimit = 6
 val qlimit = 1000
-val qglob = ref 0 
+val qglob = ref 0
 
 fun assert_ilimit n =
-  if length n > ilimit then raise ERR "ilimit" (its ilimit) else () 
+  if length n > ilimit then raise ERR "ilimit" (its ilimit) else ()
 
 fun incrq () =
   (incr qglob; if !qglob > qlimit then raise ERR "incrq" (its qlimit) else ())
 fun incrqn n =
-  (qglob := !qglob + n; 
+  (qglob := !qglob + n;
    if !qglob > qlimit then raise ERR "incrq" (its qlimit) else ())
 
 (* -------------------------------------------------------------------------
@@ -192,7 +192,7 @@ fun rm_leadingzeros l = case l of
 fun rm_endzeros l = rev (rm_leadingzeros (rev l))
 
 fun binsubq_of n =
-  if length (filter (fn x => x = 1) n) > subqlimit 
+  if length (filter (fn x => x = 1) n) > subqlimit
   then raise ERR "binsubq_of" ""
   else
   let
@@ -230,13 +230,13 @@ fun indexl_to_bin l =
 
 val eval_empty = []
 
-fun eval_sing n = 
-  let 
+fun eval_sing n =
+  let
     val _ = assert_ilimit n
     val i = bin_to_nat n
-    val r = List.tabulate (i, fn _ => 0) @ [1] 
+    val r = List.tabulate (i, fn _ => 0) @ [1]
   in
-     r 
+     r
   end
 
 fun eval_binunion (n1,n2) = pointwise_union n1 n2
@@ -275,11 +275,11 @@ fun eval_term t =
 (* predicates *)
 fun eval_equal (n1,n2) = n1 = n2
 
-fun eval_in (n1,n2) = 
+fun eval_in (n1,n2) =
   (
   assert_ilimit n1;
   (List.nth (n2, bin_to_nat n1) = 1 handle Subscript => false)
-  ) 
+  )
 
 fun eval_sub (n1,n2) = pointwise_subset n1 n2
 
@@ -331,17 +331,17 @@ and eval_subst (v,t) n =
   let val res = mk_var ("n" ^ ilts n, alpha) in
     eval_form (subst [{redex = v, residue = res}] t)
   end
-and eval_forall_in (v,n,t) = 
+and eval_forall_in (v,n,t) =
   all (eval_subst (v,t)) (binel_of n)
-and eval_forall_subq (v,n,t) = 
+and eval_forall_subq (v,n,t) =
   all (eval_subst (v,t)) (binsubq_of n)
-and eval_exists_in (v,n,t) = 
+and eval_exists_in (v,n,t) =
   exists (eval_subst (v,t)) (binel_of n)
-and eval_exists_subq (v,n,t) =   
-  exists (eval_subst (v,t)) (binsubq_of n) 
+and eval_exists_subq (v,n,t) =
+  exists (eval_subst (v,t)) (binsubq_of n)
 
 (* main eval function *)
-fun eval_nat t nat = 
+fun eval_nat t nat =
   (qglob := 0; eval_subst (xvar,t) (nat_to_bin nat))
 
 fun mk_graph n t = map (eval_nat t) (List.tabulate (n,I))
@@ -349,12 +349,12 @@ fun mk_graph n t = map (eval_nat t) (List.tabulate (n,I))
 fun has_graph_aux i graph t = case graph of
     [] => true
   | b :: m => eval_nat t i = b andalso has_graph_aux (i + 1) m t
-  
+
 fun has_graph graph t = has_graph_aux 0 graph t
 
 fun graph_to_intl l = map snd (filter fst (number_snd 0 l))
 
-fun eval64 t = 
+fun eval64 t =
   SOME (graph_to_intl (mk_graph 64 t)) handle HOL_ERR _ => NONE
 
 (* -------------------------------------------------------------------------

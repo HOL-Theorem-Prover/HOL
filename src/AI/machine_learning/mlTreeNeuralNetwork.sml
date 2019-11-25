@@ -311,7 +311,7 @@ fun embed_nn v =
       val vs = fst (dest_var v)
       val n1 = String.size embedding_prefix
       val ntot = String.size vs
-      val es = String.substring (vs,n1,ntot-n1) 
+      val es = String.substring (vs,n1,ntot-n1)
       val e1 = string_to_reall es
       val e2 = map (fn x => Vector.fromList [x]) e1
     in
@@ -319,7 +319,7 @@ fun embed_nn v =
     end
   else raise ERR "embed_nn" (fst (dest_var v))
 
-fun mk_embedding_var rv = 
+fun mk_embedding_var rv =
   mk_var (embedding_prefix ^ reall_to_string (vector_to_list rv), bool)
 
 (* -------------------------------------------------------------------------
@@ -462,7 +462,7 @@ fun infer_dhtnn_nohead dhtnn tm =
   infer_opdict (#dimin dhtnn) (#opdict dhtnn) (order_subtm tm)
 
 fun infer_mse tnn (tml,ev) =
-  let 
+  let
     fun out_tnn tnn tml =
       let val (_,fpdatal) = fp_tnn tnn tml in (#outnv (last fpdatal)) end
   in
@@ -738,7 +738,7 @@ val newtnn = Profile.profile "1" (train_tnn schedule randtnn) (trainex,testex);
 val _ = smlParallel.use_thread_flag := true;
 val schedule =
   [{ncore=1, verbose=true, learning_rate=0.02, batch_size=16, nepoch=10}];
-val newtnn = 
+val newtnn =
   Profile.profile "1t" (train_tnn schedule randtnn) (trainex,testex);
 Profile.results ();
 

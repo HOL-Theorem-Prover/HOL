@@ -22,11 +22,11 @@ val id_compare = list_compare Int.compare
 type 'b pol = (('b * real) * id) list
 type ('a,'b) node =
   {
-  pol : 'b pol, 
+  pol : 'b pol,
   value : real,
-  board : 'a, 
-  sum : real, 
-  vis : real, 
+  board : 'a,
+  sum : real,
+  vis : real,
   status : status
   }
 type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
@@ -66,8 +66,8 @@ type mcts_param =
 
 type ('a,'b) mcts_obj =
   {
-  mcts_param : mcts_param, 
-  game : ('a,'b) game, 
+  mcts_param : mcts_param,
+  game : ('a,'b) game,
   player : ('a,'b) player
   }
 
@@ -94,7 +94,7 @@ fun update_node decay tree reward {pol,value,board,sum,vis,status} =
     else if all_lose tree pol then Lose
     else Undecided
   in
-    {pol=pol, value=value, board=board, 
+    {pol=pol, value=value, board=board,
      sum=sum+reward, vis=vis+1.0, status=newstatus}
   end
 
@@ -132,10 +132,10 @@ fun gamma_distrib alpha =
   map_assoc (gamma_density alpha) (interval 0.01 (0.01,10.0));
 
 fun gamma_noise_gen alpha =
-  let 
-    val distrib = gamma_distrib alpha 
+  let
+    val distrib = gamma_distrib alpha
     val cumul = mk_cumul distrib
-  in 
+  in
     fn () => select_in_cumul cumul
   end
 
@@ -177,7 +177,7 @@ fun node_create_backup obj tree (id,board) =
   let
     val game = #game obj
     val param = #mcts_param obj
-    val node = 
+    val node =
       let
         fun add_cid pol = let fun f i x = (x, i :: id) in mapi f pol end
         val status = (#status_of game) board
@@ -186,9 +186,9 @@ fun node_create_backup obj tree (id,board) =
           | Lose      => (0.0,[])
           | Undecided => filter_available game board ((#player obj) board)
         val pol2 = normalize_prepol pol1
-        val pol3 = 
-          if #noise_all param orelse (#noise_root param andalso null id) 
-          then add_noise param pol2 
+        val pol3 =
+          if #noise_all param orelse (#noise_root param andalso null id)
+          then add_noise param pol2
           else pol2
       in
         {pol= add_cid pol3, value=value,

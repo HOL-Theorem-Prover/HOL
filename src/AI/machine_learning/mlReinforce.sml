@@ -106,8 +106,8 @@ fun mk_bigsteps_obj rlpreobj (unib,dhtnn,noiseb,playerid,nsim) =
   let
     val game = #game rlpreobj
     val (tob,tobc) = dfind playerid (#pretobdict rlpreobj)
-    fun preplayer ctxt board = 
-      if unib 
+    fun preplayer ctxt board =
+      if unib
       then uniform_player game board
       else player_from_dhtnn game (tobc,dhtnn) ctxt board
     fun precomp board = (#precomp_dhtnn rlpreobj) dhtnn board
@@ -141,10 +141,10 @@ fun mk_extsearch self rlpreobj =
       (writel (file ^ "_bstatus") [bts b1 ^ " " ^ bts b2];
        write_exl (file ^ "_exl") exl)
     fun read_result file =
-      let 
+      let
         val bs = only_hd (readl (file ^ "_bstatus"))
-        val (b1,b2) = pair_of_list (map string_to_bool    
-          (String.tokens Char.isSpace bs)) 
+        val (b1,b2) = pair_of_list (map string_to_bool
+          (String.tokens Char.isSpace bs))
         val r = (b1,b2,read_exl (file ^ "_exl"))
       in
         remove_file (file ^ "_bstatus"); r
@@ -418,7 +418,7 @@ fun rl_one n rlobj (allex,rplayero,level) =
     val rplayerl = rl_train rlobj allex
     val rplayero' = if isSome rplayero then [valOf rplayero] else []
     val (level1,rplayer_best) =
-      if #skip_compete rl_param 
+      if #skip_compete rl_param
       then (level,only_hd rplayerl)
       else rl_compete rlobj level (rplayero' @ rplayerl)
     val _ = write_dhtnn (file ^ "_dhtnn") (fst rplayer_best)

@@ -43,7 +43,7 @@ fun rw_to_uncont t =
 
 type board = ((term * bool list) * term)
 
-fun board_compare (((a,b),c),((d,e),f)) = 
+fun board_compare (((a,b),c),((d,e),f)) =
   cpl_compare Term.compare Term.compare ((c,a),(f,d))
 
 fun string_of_board ((_,bl),tm) =
@@ -76,11 +76,11 @@ fun embed_of_graph graph =
   Vector.fromList (map (fn x => if x then 1.0 else ~1.0) graph)
 
 fun term_of_graph dim graph =
-  let 
+  let
     val graphl = mk_batch_full dim graph
     val bl = map embed_of_graph (butlast graphl)
     val b1 = embed_of_graph (last graphl)
-    val b2 = Vector.concat [b1, 
+    val b2 = Vector.concat [b1,
       Vector.tabulate (dim - Vector.length b1, fn _ => 0.0)]
     val varl = map mk_embedding_var (bl @ [b2])
   in
@@ -93,14 +93,14 @@ fun term_of_board1 dim ((_,graph),tm) =
 val operl1 = mk_fast_set oper_compare
   (map_assoc arity_of (graphcat :: adjgraph :: (uncontl @ operl_plain)))
 
-fun mk_graphv dim dhtnn ((_,graph),_) = 
-  let 
+fun mk_graphv dim dhtnn ((_,graph),_) =
+  let
     val tmgraph = term_of_graph dim graph
     val embed = infer_dhtnn_nohead dhtnn tmgraph
   in
     mk_embedding_var embed
   end
- 
+
 fun term_of_board1c graphv ((_,_),tm) =
   list_mk_comb (adjgraph, [graphv, rw_to_uncont tm])
 
@@ -356,9 +356,9 @@ val mcts_param =
   stopatwin_flag = true,
   decay = #decay (#rl_param rlpreobj),
   explo_coeff = 2.0,
-  noise_all = false, 
+  noise_all = false,
   noise_root = false,
-  noise_coeff = 0.25, 
+  noise_coeff = 0.25,
   noise_alpha = 0.2
   };
 
@@ -370,10 +370,10 @@ val graph_set = mk_fast_set (list_compare bool_compare) graphl;
 length graph_set;
 
 fun test i target =
-  let 
+  let
     val mcts_obj =
       {mcts_param = mcts_param,
-       game = #game rlpreobj, 
+       game = #game rlpreobj,
        player = uniform_player (#game rlpreobj)}
     val tree = starttree_of mcts_obj target
     val endtree = mcts mcts_obj tree

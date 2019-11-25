@@ -12,11 +12,11 @@ sig
   type 'b pol = (('b * real) * id) list
   type ('a,'b) node =
     {
-    pol : 'b pol, 
+    pol : 'b pol,
     value : real,
-    board : 'a, 
+    board : 'a,
     sum : real,
-    vis : real, 
+    vis : real,
     status : status
     }
   type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
@@ -55,8 +55,8 @@ sig
 
   type ('a,'b) mcts_obj =
     {
-    mcts_param : mcts_param, 
-    game : ('a,'b) game, 
+    mcts_param : mcts_param,
+    game : ('a,'b) game,
     player : ('a,'b) player
     }
 

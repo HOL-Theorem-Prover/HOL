@@ -30,25 +30,25 @@ include Abbrev
   val namea_cv : (term * int) -> string
   val name_tyop : (string * string) -> string
   val name_thm : (string * string) -> string
-  
+
   val name_tyu_mono : hol_type -> string
   val namea_obj_mono : (term * int) -> string
   val namea_obj_poly : (term * int) -> string
 
   val name_def : int -> string -> string
   val name_arityeq : term * int -> string
-  
+
   val all_tyop : hol_type -> ((string * string) * int) list
 
   (* comparison *)
   val id_compare : (string * string) * (string * string) -> order
-  val ida_compare : 
+  val ida_compare :
     ((string * string) * int) * ((string * string) * int) -> order
   val tma_compare : (term * int) * (term * int) -> order
 
-  val compare_namethm : (string * thm) * (string * thm) -> order    
+  val compare_namethm : (string * thm) * (string * thm) -> order
   val type_set : term -> hol_type list
-   
+
   (* type *)
   val ttype : string
   val otype : string
@@ -57,7 +57,7 @@ include Abbrev
   val strip_funty_n : int -> hol_type -> hol_type list
   val strip_funty : hol_type -> (hol_type * hol_type list)
 
-  val full_match_type : 
+  val full_match_type :
     hol_type -> hol_type -> {redex: hol_type, residue: hol_type} list
   val typearg_of_c : term -> hol_type list
   val typearg_of_cvapp : term -> hol_type list
@@ -65,18 +65,18 @@ include Abbrev
 
   (* term *)
   val full_apply_const : term -> term
-  val apply_cva : (term * int) -> (term * term list) 
+  val apply_cva : (term * int) -> (term * term list)
 
   val tyopset_of_tyl : hol_type list -> ((string * string) * int) list
-  val add_zeroarity : (term * int) list -> (term * int) list 
-  val collect_tyop : term -> ((string * string) * int) list 
+  val add_zeroarity : (term * int) list -> (term * int) list
+  val collect_tyop : term -> ((string * string) * int) list
 
   (* thm *)
   val older_than : thm -> 'a * thm -> bool
-  val depo_of_thm : thm -> thmid list option 
-  val depo_of_thmid : thmid -> thmid list option 
+  val depo_of_thm : thm -> thmid list option
+  val depo_of_thmid : thmid -> thmid list option
 
-  val fetch_thm : (string * string) -> thm 
+  val fetch_thm : (string * string) -> thm
 
   val combin_axioml : (string * term) list
   val p_axioml : (string * thm) list
@@ -95,8 +95,8 @@ include Abbrev
   val chainy_dep :
     string list -> string -> (string * thm) list ->
     (thmid * (string list * thmid list)) list
-  val bushy_dep :  
-    string -> (string * thm) list -> 
+  val bushy_dep :
+    string -> (string * thm) list ->
     (thmid * (string list * thmid list)) list
 
   (* theory order *)

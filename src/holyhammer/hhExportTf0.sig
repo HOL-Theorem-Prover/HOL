@@ -11,8 +11,8 @@ include Abbrev
   val ij_axiom : TextIO.outstream -> hol_type -> unit
   val ji_axiom : TextIO.outstream -> hol_type -> unit
   val tf0_monoeq : TextIO.outstream -> (term * int) -> unit
-  
-  val tf0_write_pb :  string -> (thmid * (string list * thmid list)) -> unit 
+
+  val tf0_write_pb :  string -> (thmid * (string list * thmid list)) -> unit
   val tf0_export_bushy : string -> string list -> unit
   val tf0_export_chainy : string -> string list -> unit
 

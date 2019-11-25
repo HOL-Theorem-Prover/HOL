@@ -82,7 +82,7 @@ fun parmap_batch ncores f l =
    ------------------------------------------------------------------------- *)
 
 fun parmap_gen ncore =
-  if ncore = 1 andalso not (!use_thread_flag) 
+  if ncore = 1 andalso not (!use_thread_flag)
   then (fn f => (fn l => map f l), fn () => ()) else
   let
     val endflag = ref false

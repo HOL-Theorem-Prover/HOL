@@ -152,12 +152,12 @@ fun loop_bigsteps (n,nmax) cstatus obj mcts_obj (exl,rootl) tree =
       val newcstatus = if cstatus = Win then Win else #status root
       val cid = select_bigstep obj mcts_obj endtree
       val newtree = cut_tree cid endtree
-      (* if #noise_flag mcts_param then 
+      (* if #noise_flag mcts_param then
          starttree_of mcts_obj (#board (dfind cid endtree)) else *)
       val newexl = add_rootex game endtree exl
       val newrootl = root :: rootl
     in
-      loop_bigsteps (n+1,nmax) newcstatus 
+      loop_bigsteps (n+1,nmax) newcstatus
         obj mcts_obj (newexl,newrootl) newtree
     end
   end
@@ -165,11 +165,11 @@ fun loop_bigsteps (n,nmax) cstatus obj mcts_obj (exl,rootl) tree =
 fun run_bigsteps obj target =
   let
     val precomp = (#precomp obj) target
-    val mcts_obj = 
+    val mcts_obj =
       {
       mcts_param = (#mcts_param obj),
       game = (#game obj),
-      player = (#preplayer obj) precomp   
+      player = (#preplayer obj) precomp
       }
     val tree = starttree_of mcts_obj target
     val n = (#max_bigsteps obj) target

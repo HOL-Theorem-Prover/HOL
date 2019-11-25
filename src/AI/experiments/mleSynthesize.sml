@@ -216,8 +216,8 @@ val dhtnn_param =
 val dplayer =
   {playerid = "only_player", dhtnn_param = dhtnn_param, schedule = schedule}
 
-val pretobdict = 
-  dnew String.compare [("only_player", 
+val pretobdict =
+  dnew String.compare [("only_player",
     (term_of_board, fn () => term_of_board))];
 
 (* -------------------------------------------------------------------------
