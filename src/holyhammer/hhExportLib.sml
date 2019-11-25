@@ -11,6 +11,7 @@ struct
 open HolKernel boolLib aiLib mlThmData hhTranslate
 
 val ERR = mk_HOL_ERR "hhExportLib"
+type thmid = string * string
 
 (* -------------------------------------------------------------------------
    Directory
@@ -76,19 +77,19 @@ fun full_match_type t1 t2 =
   end
 
 fun full_apply_const c =
-  let
+  let 
     val (imty,argtyl) = strip_funty (type_of c)
     fun f i x = mk_var ("V" ^ its i,x)
-    val vl = mapi f argtyl
+    val vl = mapi f argtyl 
   in
     list_mk_comb (c,vl)
   end
 
 fun apply_cva (cv,a) =
-  let
+  let 
     val argtyl = butlast (strip_funty_n a (type_of cv))
     fun f i x = mk_var ("V" ^ its i,x)
-    val vl = mapi f argtyl
+    val vl = mapi f argtyl 
   in
     (list_mk_comb (cv,vl),vl)
   end
@@ -105,7 +106,7 @@ fun typearg_of_c tm =
     val {Thy, Name, Ty} = dest_thy_const tm
     val mgty = type_of (prim_mk_const {Thy = Thy, Name = Name})
     val subst = full_match_type mgty Ty
-  in
+  in 
     map #residue subst
   end
 
@@ -113,7 +114,7 @@ fun typearg_of_fv tm =
   let
     val ty = snd (dest_var tm) (* a free var is only used with one type *)
     val subst = full_match_type ty ty
-  in
+  in 
     map #residue subst
   end
 
@@ -122,7 +123,7 @@ fun typearg_of_app tm =
     val ty = snd (dest_var tm)
     val mgty = type_of (prim_mk_const {Thy = "bool", Name = "LET"})
     val subst = full_match_type mgty ty
-  in
+  in 
     map #residue subst
   end
 
@@ -158,9 +159,9 @@ fun namea_cv (tm,a) =
   if is_var tm then namea_v (tm,a) else raise ERR "namea_cv" ""
 
 (* polymorphic / monomorphic names *)
-fun name_fo_fun_mono (s,f_arg,argl) =
-  if null argl then s else
-  (s ^ escape "(" ^ String.concatWith (escape ",") (map f_arg argl) ^
+fun name_fo_fun_mono (s,f_arg,argl) = 
+  if null argl then s else 
+  (s ^ escape "(" ^ String.concatWith (escape ",") (map f_arg argl) ^ 
    escape ")")
 
 fun name_tyu_mono_aux ty =
@@ -177,16 +178,16 @@ fun name_tyu_mono ty = escape "mono." ^ name_tyu_mono_aux ty
 fun add_tyargltag s cv =
   let val tyargl = typearg_of_cvapp cv in
     if null tyargl then s else
-    (s ^ escape "." ^ String.concatWith (escape " ")
+    (s ^ escape "." ^ String.concatWith (escape " ") 
     (map name_tyu_mono tyargl))
   end
 
 (* obj: constants, bound variables and free variables *)
 
 fun namea_obj_mono (cv,a) =
-  if is_tptp_bv cv then namea_v (cv,a)
+  if is_tptp_bv cv then namea_v (cv,a)  
   else add_tyargltag (escape "mono." ^ namea_cv (cv,a)) cv
-
+  
 fun namea_obj_poly (cv,a) =
   if is_tptp_bv cv then namea_v (cv,a) else namea_cv (cv,a)
 
@@ -197,7 +198,7 @@ fun namea_obj_poly (cv,a) =
 
 fun name_def i thmname = escape ("def" ^ its i ^ ".") ^ thmname
 
-fun name_arityeq (cv,a) =
+fun name_arityeq (cv,a) = 
   add_tyargltag ("arityeq" ^ its a ^ escape "." ^ namea_cv (cv,a)) cv
 
 (* -------------------------------------------------------------------------
@@ -209,7 +210,7 @@ val logic_l1 = map cid_of [``$/\``,``$\/``,``$~``,``$==>``,
 val quant_l2 = map cid_of [``$! : ('a -> bool) -> bool``,
   ``$? : ('a -> bool) -> bool``]
 
-val boolop_cval =
+val boolop_cval = 
   [
    (``$/\``,2),(``$\/``,2),(``$~``,1),(``$==>``,2),
    (``$= : 'a -> 'a -> bool``,2),
@@ -220,8 +221,9 @@ val boolop_cval =
    Higher-order theorems in a first-order embedding
    ------------------------------------------------------------------------- *)
 
-fun mk_combin_thm thm fvname =
-  let
+fun mk_combin_thm thmname fvname =
+  let 
+    val thm = DB.fetch "combin" thmname
     val (tm0,defl) = translate_thm thm
     val _ = if null defl then () else raise ERR "mk_combin_thm" ""
     val oper = (fst o strip_comb o lhs o snd o strip_forall) tm0
@@ -232,9 +234,9 @@ fun mk_combin_thm thm fvname =
     subst sub tm1
   end
 
-val i_thm = mk_combin_thm combinTheory.I_THM "combin_i"
-val k_thm = mk_combin_thm combinTheory.K_THM "combin_k"
-val s_thm = mk_combin_thm combinTheory.S_THM "combin_s"
+val i_thm = mk_combin_thm "I_THM" "combin_i"
+val k_thm = mk_combin_thm "K_THM" "combin_k"
+val s_thm = mk_combin_thm "S_THM" "combin_s"
 
 (* combin_axioml are already translated *)
 val combin_axioml = [("i_thm",i_thm),("k_thm",k_thm),("s_thm",s_thm)]
@@ -253,28 +255,28 @@ val id_compare = cpl_compare String.compare String.compare
 val tma_compare = cpl_compare Term.compare Int.compare
 val ida_compare = cpl_compare id_compare Int.compare
 
-fun all_tyop topty =
-  let
-    val l = ref []
-    fun loop ty =
+fun all_tyop topty = 
+  let 
+    val l = ref [] 
+    fun loop ty = 
       if is_vartype ty then () else
       let val {Args,Thy,Tyop} = dest_thy_type ty in
-        l := ((Thy,Tyop),length Args) :: !l; app loop Args
+        l := ((Thy,Tyop),length Args) :: !l; app loop Args 
       end
-  in
+  in 
     loop topty; (!l)
   end
 
 fun tyop_set topty = mk_fast_set ida_compare (all_tyop topty)
 
 
-fun tyopset_of_tyl tyl =
+fun tyopset_of_tyl tyl = 
   mk_fast_set ida_compare (List.concat (map tyop_set tyl))
 
-fun type_set tm =
+fun type_set tm = 
   mk_type_set (map type_of (find_terms is_const tm @ all_vars tm))
 
-fun collect_tyop tm =
+fun collect_tyop tm = 
   let val tyl = mk_type_set (List.concat (map type_set (atoms tm))) in
     tyopset_of_tyl tyl
   end
@@ -284,29 +286,29 @@ fun add_zeroarity cval =
     mk_fast_set tma_compare (List.concat (map f cval))
   end
 
-type formula_info =
+type formula_info = 
   {
   cval : (term * int) list,
   tyopl : ((string * string) * int) list
   }
 
 fun mgc_of tm =
-  if is_const tm then
+  if is_const tm then 
     let val {Thy,Name,Ty} = dest_thy_const tm in
       prim_mk_const {Thy = Thy, Name = Name}
     end
-  else raise ERR "mgc_of" ""
+  else raise ERR "not a constant" ""
 
-fun mgc_of_aux (tm,a) =
-  if is_const tm then
+fun mgca_of (tm,a) =
+  if is_const tm then 
     let val {Thy,Name,Ty} = dest_thy_const tm in
       (prim_mk_const {Thy = Thy, Name = Name},a)
     end
   else (tm,a)
 
-fun uniq_cvdef_mgc cval = mk_fast_set tma_compare (map mgc_of_aux cval)
-
-fun uniq_cvdef_arity cval = mk_term_set (map fst cval)
+fun uniq_cvdef_mgc cval = mk_fast_set tma_compare (map mgca_of cval)
+ 
+fun uniq_cvdef_arity cval = mk_term_set (map fst cval) 
 
 (* -------------------------------------------------------------------------
    Theorem and theory order
@@ -318,11 +320,11 @@ fun before_elem e l = case l of
     [] => raise ERR "before_elem" ""
   | a :: m => if a = e then [] else a :: before_elem e m
 
-fun older_than th1 (name,th2) =
+fun older_than th1 (name,th2) = 
   depnumber_of_thm th2 < depnumber_of_thm th1
 
 fun add_ancestry thy = thy :: ancestry thy
-fun sorted_ancestry thyl =
+fun sorted_ancestry thyl = 
   sort_thyl (mk_string_set (List.concat (map add_ancestry thyl)))
 
 fun depo_of_thm thm =
@@ -340,11 +342,11 @@ fun compare_namethm ((_,th1),(_,th2)) =
    Bushy
    ------------------------------------------------------------------------- *)
 
-fun add_bushy_dep thy namethml =
+fun bushy_dep thy namethml =
   let
      fun f (name,thm) = case depo_of_thm thm of
         NONE => NONE
-      | SOME depl => SOME ((thy,name), depl)
+      | SOME depl => SOME ((thy,name),([],depl))
   in
     List.mapPartial f namethml
   end
@@ -355,26 +357,20 @@ fun depo_of_thmid thmid = depo_of_thm (uncurry DB.fetch thmid)
    Chainy dependencies
    ------------------------------------------------------------------------- *)
 
-fun thmidl_in_thyl thyl =
-  let fun f thy = map (fn (name,_) => (thy,name)) (DB.thms thy) in
-    List.concat (map f thyl)
-  end
+fun thmidl_in_thy thy = map (fn (name,_) => (thy,name)) (DB.thms thy)
 
-fun add_chainy_dep thyorder thy namethml =
+fun chainy_dep thyorder thy namethml =
   let
     val thyl = before_elem thy thyorder
-    val thmidl1 = thmidl_in_thyl thyl
-    fun f (name,thm) =
-      let
+    fun f (name,thm) = 
+      let 
         val namethml1 = filter (older_than thm) namethml
         val thmidl2 = map (fn (name,_) => (thy,name)) namethml1
       in
-        ((thy,name), thmidl1 @ thmidl2)
+        ((thy,name), (thyl,thmidl2))
       end
   in
     map f namethml
   end
-
-
 
 end (* struct *)
