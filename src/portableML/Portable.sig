@@ -65,6 +65,8 @@ sig
   val foldr2' : ('a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c
                                               (* exn ListPair.UnequalLengths *)
   val foldl_map : ('a * 'b -> 'a * 'c) -> 'a * 'b list -> 'a * 'c list
+  val zip3 : 'a list * 'b list * 'c list -> ('a * 'b * 'c) list
+                                              (* exn ListPair.UnequalLengths *)
   val separate : 'a -> 'a list -> 'a list
   val front_last : 'a list -> 'a list * 'a
   val filter : ('a -> bool) -> 'a list -> 'a list

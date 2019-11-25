@@ -7,8 +7,9 @@ sig
   val prove_recordtype_thms : TypeBasePure.tyinfo * string list ->
                               TypeBasePure.tyinfo
 
-  val update_tyinfo : ((string * hol_type) list * thm list * thm list) option ->
-                      thm list -> TypeBasePure.tyinfo -> TypeBasePure.tyinfo
+  val update_tyinfo :
+      ((string * TypeBase.rcd_fieldinfo) list * thm list * thm list) option ->
+      thm list -> TypeBasePure.tyinfo -> TypeBasePure.tyinfo
 end
 
 (*

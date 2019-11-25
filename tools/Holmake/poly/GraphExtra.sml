@@ -2,6 +2,7 @@ structure GraphExtra :> GraphExtra =
 struct
 
 open Holmake_tools
+open hm_target
 type t = {holheap : dep option}
 
 fun extra_deps {holheap = SOME d} = [d]
@@ -13,7 +14,7 @@ fun get_extra0 {master_dir,master_cline : HM_Cline.t, envlist} =
         if #poly_not_hol master_cline then NONE
         else (
           case #holstate master_cline of
-              NONE => SOME (filestr_to_dep
+              NONE => SOME (filestr_to_tgt
                               (fullPath[Systeml.HOLDIR, "bin",
                                         "hol.state"]))
             | SOME s =>
@@ -21,19 +22,19 @@ fun get_extra0 {master_dir,master_cline : HM_Cline.t, envlist} =
                 val fp = hmdir.extendp {base = master_dir, extension = s}
                 val {dir,file} = OS.Path.splitDirFile (hmdir.toAbsPath fp)
               in
-                SOME (hmdir.fromPath{origin="", path = dir}, toFile file)
+                SOME (mk(hmdir.fromPath{origin="", path = dir}, toFile file))
               end
         )
-      | [s] => SOME (filestr_to_dep s)
+      | [s] => SOME (filestr_to_tgt s)
       | _ => die_with ("Can't interpret HOLHEAP spec. in " ^
                        OS.FileSys.getDir())
 
 fun get_extra i = {holheap = get_extra0 i}
 
-fun toString {holheap = SOME d} = "heap="^dep_toString d
+fun toString {holheap = SOME d} = "heap="^tgt_toString d
   | toString {holheap = NONE} = "heap=*"
 
-fun canIgnore d {holheap=SOME d'} = dep_compare(d,d') = EQUAL
+fun canIgnore d {holheap=SOME d'} = hm_target.compare(d,d') = EQUAL
   | canIgnore d _ = false
 
 end

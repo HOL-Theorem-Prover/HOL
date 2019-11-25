@@ -270,6 +270,11 @@ fun mk_string_set l = mk_fast_set String.compare l
 fun mk_term_set l = mk_fast_set Term.compare l
 fun mk_type_set l = mk_fast_set Type.compare l
 
+fun tmsize_compare (a,b) =
+  let val r = Int.compare (term_size a, term_size b) in
+    if r = EQUAL then Term.compare (a,b) else r
+  end
+
 fun fold_left f l orig = case l of
     [] => orig
   | a :: m => let val new_orig = f a orig in fold_left f m new_orig end
@@ -335,6 +340,14 @@ fun cut_n n l =
     mk_batch_full bsize l
   end
 
+fun cut_modulo n l =
+  let
+    val l1 = map_fst (fn x => x mod n) (number_fst 0 l)
+    val d = dregroup Int.compare (rev l1)
+  in
+    map snd (dlist d)
+  end
+
 (* -------------------------------------------------------------------------
    List (continued)
    ------------------------------------------------------------------------- *)
@@ -374,24 +387,36 @@ fun combine_triple (l1,l2,l3) = case (l1,l2,l3) of
   | (a1 :: m1, a2 :: m2, a3 :: m3) => (a1,a2,a3) :: combine_triple (m1,m2,m3)
   | _ => raise ERR "combine_triple" "different lengths"
 
-
-
 (* --------------------------------------------------------------------------
    Parsing
    ------------------------------------------------------------------------- *)
 
+fun hd_string s = String.sub (s,0)
+fun tl_string s = String.substring (s, 1, String.size s - 1)
+
 datatype lisp = Lterm of lisp list | Lstring of string
 
-fun lisp_aux acc sl = case sl of
+fun implo buf = if null buf then [] else [implode (rev buf)]
+
+fun lisp_tokens acc buf charl = case charl of
+    [] => rev acc
+  | #"(" :: m => lisp_tokens ("(" :: implo buf @ acc) [] m
+  | #")" :: m => lisp_tokens (")" :: implo buf @ acc) [] m
+  | #" " :: m => lisp_tokens (implo buf @ acc) [] m
+  | a :: m => lisp_tokens acc (a :: buf) m
+
+fun lisp_lexer s = lisp_tokens [] [] (explode s)
+
+fun lisp_parser_aux acc sl = case sl of
     []       => (rev acc, [])
   | "(" :: m =>
-    let val (parsedl,contl) = lisp_aux [] m in
-      lisp_aux (Lterm parsedl :: acc) contl
+    let val (parsedl,contl) = lisp_parser_aux [] m in
+      lisp_parser_aux (Lterm parsedl :: acc) contl
     end
   | ")" :: m => (rev acc, m)
-  | a   :: m => lisp_aux (Lstring a :: acc) m
+  | a   :: m => lisp_parser_aux (Lstring a :: acc) m
 
-fun lisp_of sl = fst (lisp_aux [] sl)
+fun lisp_parser s = fst (lisp_parser_aux [] (lisp_lexer s))
 
 fun lisp_lower_case s =
   if String.sub (s,0) = #"\""
@@ -567,7 +592,10 @@ fun trace_tacl tacl g = case tacl of
     (print_endline (string_of_goal g); trace_tacl m (hd (fst (tac g))))
   | [] => print_endline (string_of_goal g)
 
-fun string_of_bool b = if b then "T" else "F"
+fun bts b = if b then "true" else "false"
+fun string_to_bool s =
+  if s = "true" then true else if s = "false" then false
+  else raise ERR "string_to_bool" ""
 
 fun only_concl x =
   let val (a,b) = dest_thm x in
@@ -584,6 +612,13 @@ fun tts tm = case dest_term tm of
   | LAMB(Var,Bod)      => "(LAMB " ^ tts Var ^ "." ^ tts Bod ^ ")"
 
 fun its i = int_to_string i
+
+fun list_mk_binop binop l = case l of
+    [] => raise ERR "list_mk_binop" "empty"
+  | [a] => a
+  | a :: m => list_mk_comb  (binop, [a, list_mk_binop binop m])
+
+fun arity_of t = length (fst (strip_type (type_of t)))
 
 
 (* -------------------------------------------------------------------------
@@ -895,7 +930,7 @@ fun best_in_distrib distrib =
 fun random_percent percent l =
   part_n (Real.floor (percent * Real.fromInt (length l))) (shuffle l)
 
-val epsilon = 0.00000001
+val epsilon = 0.000000001
 
 fun uniform_proba n = List.tabulate (n, fn _ => 1.0 / Real.fromInt n)
 

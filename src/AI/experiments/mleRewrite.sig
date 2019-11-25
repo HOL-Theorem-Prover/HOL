@@ -7,21 +7,14 @@ sig
   type board = ((term * pos) * int)
   datatype move = Arg of int | Paramod of (int * bool)
 
-  val mk_startsit : term -> board
-  val dest_startsit : board -> term
+  val mk_startboard : term -> board
+  val dest_startboard : board -> term
 
-  (* interface *)
-  val gamespec : (board,move) mlReinforce.gamespec
-  val extspec : board mlReinforce.extgamespec
+  val extsearch : board mlReinforce.extsearch
+  val rlobj : board mlReinforce.rlobj
 
-
-  (* statistics *)
-  val maxprooflength_atgen : unit -> int list
+  val create_levels : unit -> unit
+  val max_prooflength_atgen : unit -> int list
   val stats_prooflength : string -> (int * int) list
-
-  (* test phase *)
-  val test_extspec :
-    (mlReinforce.dhtnn, board, board * bool * int) smlParallel.extspec
-  val final_eval : string -> mlTreeNeuralNetwork.dhtnn -> term list -> unit
 
 end

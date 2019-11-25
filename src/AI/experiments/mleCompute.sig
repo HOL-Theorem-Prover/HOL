@@ -3,8 +3,10 @@ sig
 
   include Abbrev
 
+  type tnn = mlTreeNeuralNetwork.tnn
+
   val compute_exout : term list -> (term * real list) list
-  val train_fixed : string -> (term * real list) list -> mlTreeNeuralNetwork.tnn
-  val accuracy_fixed : mlTreeNeuralNetwork.tnn -> (real * real * real * real)
+  val train_fixed : unit -> tnn
+  val test_fixed : tnn -> real list
 
 end

@@ -152,8 +152,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
               val status = Systeml.mk_xable script
               val _ = OS.Process.isSuccess status orelse
                       die_with ("Couldn't make script "^script^" executable")
-              val script' = xable_string script |> filestr_to_dep
-                                                |> dep_toString
+              val script' = xable_string script |> hm_target.filestr_to_tgt
+                                                |> tgt_toString
               val _ = diag "build_command"
                            (fn _ => "Created executable "^script')
               val thysmlfile = s^"Theory.sml"

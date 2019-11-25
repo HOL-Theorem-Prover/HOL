@@ -16,58 +16,53 @@ val ERR = mk_HOL_ERR "mleCompute"
 val compute_dir = HOLDIR ^ "/src/AI/experiments/data_compute"
 
 (* -------------------------------------------------------------------------
-   Constructing examples
+   Examples
    ------------------------------------------------------------------------- *)
 
 fun compute_exout tml = map_assoc (bin_rep 4 o eval_numtm) tml
 
 (* -------------------------------------------------------------------------
-   Associated tnn
+   Training
    ------------------------------------------------------------------------- *)
 
-val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``)
-
-(* -------------------------------------------------------------------------
-   Training with a fixed set of parameters
-   ------------------------------------------------------------------------- *)
-
-fun train_fixed basename exl =
+fun train_fixed () =
   let
-    val dim = 12
-    val randtnn = random_tnn (dim,4) operl
-    val bsize = 16
-    val schedule = [(100, 0.02 / (Real.fromInt bsize))]
-    val ncore = 4
-    val tnn = train_tnn (ncore,bsize) randtnn (exl,[]) schedule
-    val _ = mkDir_err compute_dir
+    val tml = import_terml (dataarith_dir ^ "/train");
+    val exl = compute_exout tml
+    val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``)
+    val tnn_param =
+      {dimin = 12, dimout = 4,
+       nlayer_headnn = 2, nlayer_oper = 2,
+       operl = operl}
+    val schedule =
+      [{batch_size = 16, learning_rate = 0.02,
+        ncore = 4, nepoch = 100, verbose = true}]
+    val randtnn = random_tnn tnn_param
+    val tnn = train_tnn schedule randtnn (exl,[])
   in
-    write_tnn (compute_dir ^ "/" ^ basename) tnn;
+    mkDir_err compute_dir; write_tnn (compute_dir ^ "/tnn") tnn;
     tnn
+  end
+
+(* ------------------------------------------------------------------------
+   Testing
+   ------------------------------------------------------------------------ *)
+
+fun test_fixed tnn =
+  let
+    val filel = map (fn x => dataarith_dir ^ "/" ^ x) ["train","valid","test"]
+    val tmll = map import_terml filel
+    val exl = map compute_exout tmll
+  in
+    map (tnn_accuracy tnn) exl
   end
 
 (*
 load "mleCompute"; open mleCompute;
 load "mleArithData"; open mleArithData;
-val tml = mlTacticData.import_terml (dataarith_dir ^ "/train");
-val exl = compute_exout tml;
-val tnn = train_fixed "test" exl;
-val tm = aiLib.random_elem tml;
-mlTreeNeuralNetwork.infer_tnn tnn tm;
+val tnn = train_fixed ();
+val r = test_fixed tnn;
 *)
-
-(* ------------------------------------------------------------------------
-   Accuracy of the tree neural network on arithmetical datasets
-   ------------------------------------------------------------------------ *)
-
-fun accuracy_fixed tnn =
-  let
-    val filel = map (fn x => dataarith_dir ^ "/" ^ x)
-      ["train","valid","test"]
-    val tmll = map mlTacticData.import_terml filel
-    val exl = map compute_exout tmll
-  in
-    quadruple_of_list (map (tnn_accuracy tnn) exl)
-  end
 
 (* ------------------------------------------------------------------------
    Comparison with nearest neighbor
@@ -77,19 +72,14 @@ fun accuracy_fixed tnn =
 load "mleCompute"; open mleCompute;
 load "mleArithData"; open mleArithData;
 load "mlNearestNeighbor"; open mlNearestNeighbor;
+load "mlTacticData"; open mlTacticData;
 
-val train =
-  compute_exout (mlTacticData.import_terml (dataarith_dir ^ "/train"));
-val valid =
-  compute_exout (mlTacticData.import_terml (dataarith_dir ^ "/valid"));
-val test =
-  compute_exout (mlTacticData.import_terml (dataarith_dir ^ "/test"));
-
+val train = compute_exout (import_terml (dataarith_dir ^ "/train"));
+val valid = compute_exout (import_terml (dataarith_dir ^ "/valid"));
+val test = compute_exout (import_terml (dataarith_dir ^ "/test"));
 val knn = train_knn train;
 val validacc = knn_accuracy knn valid;
 val testacc = knn_accuracy knn test;
-
-
 *)
 
 

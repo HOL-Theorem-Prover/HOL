@@ -143,16 +143,28 @@ sig
 
   val holdep_arg : File -> File option
 
-  type dep = hmdir.t * File
-  val empty_dset : dep Binaryset.set
-  val dep_compare : dep * dep -> order
-  val dep_toString : dep -> string
-  val depset_diff : dep list -> dep list -> dep list
-  val depexists_readable : dep -> bool
-  val localFile : File -> dep
-  val filestr_to_dep : string -> dep (* directory dependent *)
+  structure hm_target : sig
+    type t
+    val empty_tgtset : t Binaryset.set
+    val mk : hmdir.t * File -> t
+    val compare : t * t -> order
+    val toString : t -> string
+    val tgtset_diff : t list -> t list -> t list
+    val tgtexists_readable : t -> bool
+    val localFile : File -> t
+    val filestr_to_tgt : string -> t (* directory dependent *)
+    val setHMF_text : string -> t -> t
+    val setFile : File -> t -> t
+    val dirpart : t -> hmdir.t
+    val filepart : t -> File
+    val HMF_text : t -> string option
+  end
+
+  type dep = hm_target.t
+  val tgt_toString : dep -> string
+
   val generate_all_plausible_targets :
-      (string -> unit) -> dep option -> dep list
+        (string -> unit) -> dep option -> dep list
 
 
   val get_direct_dependencies :

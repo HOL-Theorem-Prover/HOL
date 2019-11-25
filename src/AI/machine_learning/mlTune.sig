@@ -3,6 +3,11 @@ sig
 
   include Abbrev
 
+  type schedule = mlNeuralNetwork.schedule
+  type dhex = mlTreeNeuralNetwork.dhex
+  type dhtnn = mlTreeNeuralNetwork.dhtnn
+  type dhtnn_param = mlTreeNeuralNetwork.dhtnn_param
+
   (* parameters *)
   type ml_param =
     {dim: int, nepoch: int, batchsize: int, learningrate: real, nlayer: int}
@@ -23,5 +28,9 @@ sig
   (* statistics *)
   val write_summary :
     string -> (ml_param * (real * real * real )) list -> unit
+
+  (* training multiple dhtnn architectures *)
+  val traindhtnn_extspec :
+    (unit, (dhex * schedule * dhtnn_param), dhtnn) smlParallel.extspec
 
 end

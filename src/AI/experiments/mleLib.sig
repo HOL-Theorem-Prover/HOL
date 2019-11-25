@@ -16,6 +16,8 @@ sig
 
   (* position *)
   type pos = int list
+  val string_of_pos : pos -> string
+  val pos_of_string : string -> pos
   val subst_pos : term * pos -> term -> term
   val find_subtm : term * pos -> term
   val narg_ge : int -> term * pos -> bool

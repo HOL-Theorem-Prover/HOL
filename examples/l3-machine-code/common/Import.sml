@@ -143,7 +143,7 @@ val myDatatype =
        Datatype.astHol_datatype
    end
 
-val l3_big_record_size = 28 (* HOL default is 20 *)
+val l3_big_record_size = 28
 
 (* Record type *)
 fun Record (n, l) =
@@ -151,12 +151,10 @@ fun Record (n, l) =
        then Feedback.HOL_WARNING "Import" "Record"
               ("Defining big record type; size " ^ Int.toString (List.length l))
      else ()
-   ; Lib.with_flag (Datatype.big_record_size, l3_big_record_size)
-       myDatatype [(n, ParseDatatype.Record l)]
+   ; myDatatype [(n, ParseDatatype.Record l)]
    )
 
 fun NoBigRecord (n, l) =
-  Lib.with_flag (Datatype.big_record_size, List.length l + 1)
     myDatatype [(n, ParseDatatype.Record l)]
 
 (* Algebraic type *)

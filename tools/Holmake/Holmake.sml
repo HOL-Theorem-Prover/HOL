@@ -14,10 +14,6 @@ structure FileSys = OS.FileSys
 structure Path = OS.Path
 structure Process = OS.Process
 
-type dep = hmdir.t * File
-
-
-
 fun slist_to_set slist =
     Binaryset.addList(Binaryset.empty String.compare, slist)
 fun flist_to_set flist =
@@ -27,7 +23,8 @@ fun slist_to_dset basedir slist =
       (fn (s,dset) =>
           Binaryset.add(dset, hmdir.extendp {base=basedir, extension=s}))
       (Binaryset.empty hmdir.compare) slist
-fun deplist_to_set ds = Binaryset.addList(empty_dset, ds)
+fun deplist_to_set ds = Binaryset.addList(hm_target.empty_tgtset, ds)
+val filestr_to_tgt = hm_target.filestr_to_tgt
 (* turn a variable name into a list *)
 fun envlist env id = let
   open Holmake_types
@@ -60,7 +57,7 @@ fun ppath s = if String.isPrefix sigobj s then
               else s
 
 fun pflist fs = concatWithf (ppath o fromFile) ", " fs
-fun pdlist ds = concatWithf dep_toString ", " ds
+fun pdlist ds = concatWithf tgt_toString ", " ds
 end
 
 
@@ -96,29 +93,34 @@ fun read_holpathdb() =
                  holpathdb_extensions
     end
 
-type tgt_ruledb = (dep, {dependencies:dep list, commands : quotation list})
+(* The hmftext is the form of the target as it appears in the Holmakefile *)
+type tgt_ruledb = (dep, {hmftext: string, dependencies:dep list,
+                         commands : quotation list})
                     Binarymap.dict
-val empty_trdb : tgt_ruledb = Binarymap.mkDict dep_compare
+val empty_trdb : tgt_ruledb = Binarymap.mkDict hm_target.compare
 
 
 local
+  open hm_target
   val base = read_holpathdb()
   val hmcache = ref (Binarymap.mkDict String.compare)
   val default = (base,empty_trdb,NONE)
   fun get_hmf0 d =
       if OS.FileSys.access("Holmakefile", [OS.FileSys.A_READ]) then
-        let val (env, rdb, tgt0) =
+        let
+          val (env, rdb, tgt0) =
               ReadHMF.read "Holmakefile" (read_holpathdb())
               handle Fail s =>
                      (warn ("Bad Holmakefile in " ^ d ^ ": " ^ s);
                       (base,Binarymap.mkDict String.compare,NONE))
+          fun hmfstr_to_tgt s = s |> filestr_to_tgt |> setHMF_text s
           fun foldthis (k,{commands,dependencies=deps0},A) =
-              Binarymap.insert(A, filestr_to_dep k,
-                               {commands = commands,
-                                dependencies = map filestr_to_dep deps0})
+              Binarymap.insert(A, filestr_to_tgt k,
+                               {commands = commands, hmftext = k,
+                                dependencies = map hmfstr_to_tgt deps0})
         in
           (env, Binarymap.foldl foldthis empty_trdb rdb,
-           Option.map filestr_to_dep tgt0)
+           Option.map filestr_to_tgt tgt0)
         end
       else
         default
@@ -437,11 +439,16 @@ val std_include_flags = [SIGOBJ]
 fun get_rule_info rdb env tgt =
     case Binarymap.peek(rdb, tgt) of
       NONE => NONE
-    | SOME {dependencies, commands} => let
-        val dep1 = [LIT (dep_toString (hd dependencies))]
-            handle Empty => [LIT ""]
+    | SOME {dependencies, commands, hmftext} =>
+      let
+        fun special tgt' =
+            valOf (hm_target.HMF_text tgt')
+            handle Option =>
+                   die ("No Holmakefile text for " ^ tgt_toString tgt' ^
+                        " in rule for " ^ tgt_toString tgt)
+        val dep1 = [LIT (special (hd dependencies))] handle Empty => [LIT ""]
         val env = env |> env_extend("<", dep1)
-                      |> env_extend("@", [LIT (dep_toString tgt)])
+                      |> env_extend("@", [LIT hmftext])
       in
         SOME {dependencies = dependencies,
               commands = map (perform_substitution env) commands}
@@ -456,12 +463,12 @@ fun local_rule_info t =
 fun extra_deps t =
       Option.map #dependencies (local_rule_info t)
 fun localstr_extra_deps s =
-    extra_deps (hmdir.curdir(), toFile s)
+    extra_deps (hm_target.mk(hmdir.curdir(), toFile s))
 
 fun isPHONY t =
     case localstr_extra_deps ".PHONY" of
         NONE => false
-      | SOME l => List.exists (fn e => dep_compare(e,t) = EQUAL) l
+      | SOME l => List.exists (fn e => hm_target.compare(e,t) = EQUAL) l
 
 fun extra_commands t = Option.map #commands (local_rule_info t)
 
@@ -559,7 +566,7 @@ fun get_implicit_dependencies incinfo (f: File) : dep Binaryset.set = let
       case actual_overlay of
         NONE => file_dependencies0
       | SOME s => if isSome (holdep_arg f) then
-                    filestr_to_dep (fullPath [SIGOBJ, s]) :: file_dependencies0
+                    filestr_to_tgt (fullPath [SIGOBJ, s]) :: file_dependencies0
                   else
                     file_dependencies0
   fun requires_exec (SML (Theory _)) = true
@@ -584,15 +591,17 @@ in
           case tovisit of
             [] => sofar
            | d::ds =>
-             case #2 d of
+             case hm_target.filepart d of
                  UO (Theory _) => collect_all_dependencies sofar ds
                | UI (Theory _) => collect_all_dependencies sofar ds
                | _ =>
                  let
+                   open hm_target
                    val deps =
-                       if hmdir.compare(#1 d, hmdir.curdir()) <> EQUAL then []
+                       if hmdir.compare(dirpart d, hmdir.curdir()) <> EQUAL
+                       then []
                        else
-                         case #2 d of
+                         case filepart d of
                              UI x => (get_direct_dependencies f @
                                       get_direct_dependencies (UO x))
                            | _ => get_direct_dependencies f
@@ -604,10 +613,13 @@ in
       val tcdeps = collect_all_dependencies (deplist_to_set starters) starters
       val _ = diag (fn _ => "get_implicit_dependencies("^fromFile f^"), " ^
                             "tcdeps = " ^
-                            set_concatWith dep_toString ", " tcdeps)
+                            set_concatWith tgt_toString ", " tcdeps)
       val uo_deps =
           Binaryset.foldl
-            (fn ((d,UI x), A) => set_add (d,UO x) A | (_, A) => A) empty_dset
+            (fn (d, A) => case hm_target.filepart d of
+                              UI x => set_add (hm_target.setFile (UO x) d) A
+                            | _ => A)
+            hm_target.empty_tgtset
             tcdeps
       val alldeps = set_addList (file_dependencies @ extra_impl_deps)
                                 (set_union tcdeps uo_deps)
@@ -621,10 +633,12 @@ in
           val additional_theories =
               if exists_readable (fromFile f) then
                 set_mapPartial
-                  (fn (x as (_, UO (Theory s))) => SOME x | _ => NONE)
-                  empty_dset
+                  (fn dep => case hm_target.filepart dep of
+                                 UO (Theory s) => SOME dep
+                               | _ => NONE)
+                  hm_target.empty_tgtset
                   (get_implicit_dependencies incinfo (UO x))
-              else empty_dset
+              else hm_target.empty_tgtset
         in
           set_union alldeps additional_theories
         end
@@ -636,7 +650,7 @@ end
 
 fun get_explicit_dependencies (f:File) : dep list =
     let
-      val result = case extra_deps (filestr_to_dep (fromFile f)) of
+      val result = case extra_deps (filestr_to_tgt (fromFile f)) of
                        SOME deps => deps
                      | NONE => []
     in
@@ -645,8 +659,8 @@ fun get_explicit_dependencies (f:File) : dep list =
     end
 
 val slist_to_depset =
-    List.foldl (fn (s,set) => Binaryset.add(set, filestr_to_dep s))
-               empty_dset
+    List.foldl (fn (s,set) => Binaryset.add(set, filestr_to_tgt s))
+               hm_target.empty_tgtset
 fun dset_union ds1 ds2 =
     Binaryset.listItems
       (Binaryset.union(deplist_to_set ds1, deplist_to_set ds2))
@@ -688,13 +702,14 @@ fun cdset_toString ((_,stk):cdset) =
 
 (* is run in a directory at a time *)
 type g = GraphExtra.t HM_DepGraph.t
-fun build_depgraph cdset incinfo (tgt as (dir,target):dep) g0:(g * node) =
+fun build_depgraph cdset incinfo (tgt:dep) g0:(g * node) =
 let
+  val dir = hm_target.dirpart tgt and target = hm_target.filepart tgt
   val {preincludes,includes} = incinfo
   val incinfo = {preincludes = preincludes,
                  includes = std_include_flags @ includes}
   val pdep = primary_dependent target
-  val target_s = dep_toString tgt
+  val target_s = tgt_toString tgt
   val actual_dir = hmdir.curdir()
   fun fp d s = hmdir.extendp {base = d, extension = s}
   fun fps d = hmdir.toAbsPath d
@@ -736,7 +751,7 @@ in
       )
       else if isSome pdep andalso no_full_extra_rule (SOME tgt) then
         let
-          val pdep = (dir, valOf pdep)
+          val pdep = hm_target.mk(dir, valOf pdep)
           val (g1, pnode) = build pdep g0
           val _ = diag (fn _ => "Extended graph with primary dependency for " ^
                                 target_s)
@@ -745,7 +760,7 @@ in
                           (get_implicit_dependencies incinfo target)
                        |> set_addList extra_deps
           val _ = diag (fn _ => target_s ^ " -secondaries-> " ^
-                                set_concatWith dep_toString ", " secondaries)
+                                set_concatWith tgt_toString ", " secondaries)
           fun foldthis (d, (g, secnodes)) =
             let
               val (g', n) = build d g
@@ -796,24 +811,31 @@ in
                 in
                   (g, addF d n::secnodes)
                 end
-              fun depfoldthis (dep as (d,f), (starp, deps)) =
-                  case f of
-                      SML (Script s) =>
-                      if String.sub(s,0) = #"*" then
-                        if isSome starp then
-                          die
-                            ("Multiple starred script dependencies for "^
-                             target_s)
-                        else if hmdir.compare(d, actual_dir) <> EQUAL then
-                          die "Don't star non-local script files"
-                        else
-                          let
-                            val s' = String.extract(s,1,NONE)
-                          in
-                            (SOME s', (d, SML (Script s')) :: deps)
-                          end
-                      else (starp, dep :: deps)
-                    | _ => (starp, dep :: deps)
+              fun depfoldthis (dep, (starp, deps)) =
+                  let
+                    open hm_target
+                    val d = dirpart dep and f = filepart dep
+                  in
+                    case f of
+                        SML (Script s) =>
+                        if String.sub(s,0) = #"*" then
+                          if isSome starp then
+                            die
+                              ("Multiple starred script dependencies for "^
+                               target_s)
+                          else if hmdir.compare(d, actual_dir) <> EQUAL then
+                            die "Don't star non-local script files"
+                          else
+                            let
+                              val s' = String.extract(s,1,NONE)
+                            in
+                              (SOME s',
+                               (mk(d, SML (Script s')) |> setHMF_text s') ::
+                               deps)
+                            end
+                        else (starp, dep :: deps)
+                      | _ => (starp, dep :: deps)
+                  end
               val (starred_dep, dependencies) =
                   if null commands then
                     List.foldr depfoldthis (NONE, []) dependencies
@@ -825,7 +847,7 @@ in
 
               val more_deps =
                   case starred_dep of
-                      NONE => empty_dset
+                      NONE => hm_target.empty_tgtset
                     | SOME s =>
                         get_implicit_dependencies
                           incinfo
@@ -921,8 +943,9 @@ fun get_targets dir =
           deplist_to_set (generate_all_plausible_targets warn NONE)
       val (_, rules, _) = get_hmf()
     in
-      Binarymap.foldl (fn (dep as (_,f),v,acc) =>
-                          if f <> Unhandled ".PHONY" then set_add dep acc
+      Binarymap.foldl (fn (dep,v,acc) =>
+                          if hm_target.filepart dep <> Unhandled ".PHONY" then
+                            set_add dep acc
                           else acc)
                       from_directory
                       rules
@@ -1013,8 +1036,9 @@ fun work() =
         val _ = diag "core" (
               fn _ =>
                  let
-                   fun pr t = if depexists_readable t then dep_toString t
-                              else dep_toString t ^ "(*)"
+                   fun pr t = if hm_target.tgtexists_readable t then
+                                tgt_toString t
+                              else tgt_toString t ^ "(*)"
                  in
                    "Generated targets are: [" ^concatWithf pr ", " targets ^ "]"
                  end
@@ -1064,7 +1088,7 @@ fun work() =
         else
           let
             val (depgraph, local_incinfo) = toplevel_build_graph()
-            val targets = map filestr_to_dep xs
+            val targets = map filestr_to_tgt xs
             val depgraph =
                 if toplevel_no_prereqs then
                   mk_dirneeded (hmdir.curdir()) (mkneeded targets depgraph)
@@ -1099,9 +1123,3 @@ in
 end (* main *)
 
 end (* struct *)
-
-(** Local variable rubbish *)
-(* local variables: *)
-(* mode: sml *)
-(* outline-regexp: " *(\\*\\*+" *)
-(* end: *)

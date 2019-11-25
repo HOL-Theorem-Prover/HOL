@@ -32,3 +32,8 @@
 [poly]!!!examples/machine-code
 
 !!!examples/diningcryptos
+
+# AKS examples
+!!examples/algebra
+!!examples/simple_complexity
+!!examples/AKS

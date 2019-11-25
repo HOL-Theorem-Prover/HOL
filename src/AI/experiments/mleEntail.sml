@@ -83,37 +83,41 @@ fun exprimed_from_file maxvar basename =
    ------------------------------------------------------------------------- *)
 
 fun entail_random_tnn dim =
-  let val operl =
-    [(``$/\``,2),(``$\/``,2),(``$~``,1),(``$==>``,2),
-     (``$= :bool -> bool -> bool``,2)] @
-    [(``x:bool``,0),(prime_tag,1)]
+  let
+    val operl =
+      [(``$/\``,2),(``$\/``,2),(``$~``,1),(``$==>``,2),
+       (``$= :bool -> bool -> bool``,2)] @
+      [(``x:bool``,0),(prime_tag,1)]
+    val tnn_param =
+      {dimin = dim, dimout = 1,
+       nlayer_headnn = 2, nlayer_oper = 2,
+       operl = operl}
   in
-    random_tnn (dim,1) operl
+    random_tnn tnn_param
   end
 
 (* -------------------------------------------------------------------------
    Train
    ------------------------------------------------------------------------- *)
 
-fun train_fixed basename =
+fun train_fixed () =
   let
-    val trainex = exprimed_from_file 10 basename
-    val bsize = 16
-    val schedule = [(100, 0.02 / (Real.fromInt bsize))]
-    val ncore = 4
+    val trainex = exprimed_from_file 10 "train.txt"
+    val schedule =
+      [{batch_size = 16, learning_rate = 0.02,
+       ncore = 4, nepoch = 100, verbose = true}]
     val randtnn = entail_random_tnn 12
-    val tnn = train_tnn (ncore,bsize) randtnn
-      (trainex,first_n 100 trainex) schedule
+    val tnn = train_tnn schedule randtnn (trainex,first_n 100 trainex)
   in
-    write_tnn (entail_dir ^ "/" ^ basename) tnn;
-    tnn_accuracy tnn trainex
+    write_tnn (entail_dir ^ "/tnn") tnn;
+    tnn
   end
 
 (* ------------------------------------------------------------------------
    Evaluation
    ------------------------------------------------------------------------- *)
 
-fun accuracy_fixed tnn =
+fun test_fixed tnn =
   let
     val filel =
       ["validate.txt","test_easy.txt","test_hard.txt",
@@ -126,13 +130,8 @@ fun accuracy_fixed tnn =
 (*
 load "aiLib"; open aiLib;
 load "mleEntail"; open mleEntail;
-val tmlT = read_true_exl (entail_dir ^ "/train.txt");
-val tmlF = read_false_exl (entail_dir ^ "/train.txt");
-fun f t = rhs (concl (normalForms.CNF_CONV t handle UNCHANGED => REFL t));
-
-val tmlF1 = map_assoc f tmlF;
-val tmlF2 = filter (fn x => term_eq (snd x) T) tmlF1;
-
+val tnn = train_fixed ();
+val l = test_fixed tnn;
 *)
 
 

@@ -73,6 +73,68 @@ fun parmap_batch ncores f l =
   then map f l
   else List.concat (parmap_exact ncores (map f) (cut_n ncores l))
 
+
+(* -------------------------------------------------------------------------
+   The function parmap_gen start n threads, and generate a parmap function
+   relying on this threads and a function to close this threads.
+   This makes repeated calls of parmap f on different lists faster.
+   Otherwise it behaves like parmap_batch.
+   ------------------------------------------------------------------------- *)
+
+fun parmap_gen ncore =
+  if ncore = 1 then (fn f => (fn l => map f l), fn () => ()) else
+  let
+    val endflag = ref false
+    val inv = Vector.tabulate (ncore, fn _ => ref NONE)
+    val outv = Vector.tabulate (ncore, fn _ => ref NONE)
+    val endv = Vector.tabulate (ncore, fn _ => ref false)
+    val waitv = Vector.tabulate (ncore, fn _ => ref false)
+    val f_ref = ref NONE
+      fun reset_outv () =
+       let fun init_one pi =
+         let val outref = Vector.sub (outv,pi) in outref := NONE end
+       in
+         ignore (List.tabulate (ncore, init_one))
+       end
+    fun process pi =
+      if !endflag then
+        let val endref = Vector.sub (endv,pi) in endref := true end
+      else
+      let val inref = Vector.sub (inv,pi) in
+        case !inref of
+          NONE => process pi
+        | SOME x =>
+          let val outref = Vector.sub (outv,pi) in
+            inref := NONE; outref := SOME (map (valOf (!f_ref)) x);
+            process pi
+          end
+      end
+    fun fork_on pi = Thread.fork (fn () => process pi, attrib)
+    val threadl = List.tabulate (ncore,fork_on)
+    fun wait_resultl () =
+      if Vector.all (isSome o !) outv then () else wait_resultl ()
+    fun parmap_loc f l =
+      let
+        val _ = f_ref := SOME f
+        val _ = reset_outv ()
+        val inv_loc = Vector.fromList (cut_n ncore l)
+        fun assign pi =
+          let val inref = Vector.sub (inv,pi) in
+            inref := SOME (Vector.sub (inv_loc,pi))
+          end
+        val _ = List.tabulate (ncore, assign)
+        val _ = wait_resultl ()
+        val ll = vector_to_list (Vector.map (valOf o !) outv)
+      in
+        reset_outv (); List.concat ll
+      end
+    fun wait_close () =
+      if exists Thread.isActive threadl then wait_close () else ()
+    fun close_threadl () = (endflag := true; wait_close ())
+  in
+    (parmap_loc, close_threadl)
+  end
+
 (* -------------------------------------------------------------------------
    Smart allocation of inputs to waiting threads
    ------------------------------------------------------------------------- *)
@@ -142,51 +204,59 @@ fun parmap_queue ncores f l =
 fun parapp_queue ncores f l = ignore (parmap_queue ncores f l)
 
 (* -------------------------------------------------------------------------
-   External parmap
+   Specification of the external parmap
+   ------------------------------------------------------------------------- *)
+
+type ('a,'b,'c) extspec =
+  {
+  self: string,
+  parallel_dir : string,
+  reflect_globals : unit -> string,
+  function : 'a -> 'b -> 'c,
+  write_param : string -> 'a -> unit,
+  read_param : string -> 'a,
+  write_arg : string -> 'b -> unit,
+  read_arg : string -> 'b,
+  write_result : string ->'c -> unit,
+  read_result : string -> 'c
+  }
+
+(* -------------------------------------------------------------------------
+   Directories as channels
    ------------------------------------------------------------------------- *)
 
 fun mini_sleep () = OS.Process.sleep (Time.fromReal 0.01)
 
-val parallel_dir = ref (HOLDIR ^ "/src/AI/sml_inspection/parallel")
-fun wid_dir wid = (!parallel_dir) ^ "/" ^ its wid
-fun widin_file wid = wid_dir wid ^ "/in"
-fun widout_file wid = wid_dir wid ^ "/out"
-fun widscript_file wid = wid_dir wid ^ "/script" ^ its wid ^ ".sml"
-
-fun param_file () = !parallel_dir ^ "/param"
-fun argl_file () = !parallel_dir ^ "/argl"
-fun result_file wid = wid_dir wid ^ "/result"
-
-fun profile_file wid = wid_dir wid ^ "/profile"
-
-fun write_profile wid =
-  (
-  writel (profile_file wid) [PolyML.makestring (Profile.results ())]
-  )
+val default_parallel_dir = HOLDIR ^ "/src/AI/sml_inspection/parallel"
+fun wid_dir pd wid = pd ^ "/" ^ its wid
+fun widin_file pd wid = wid_dir pd wid ^ "/in"
+fun widarg_file pd wid = wid_dir pd wid ^ "/arg"
+fun widout_file pd wid = wid_dir pd wid ^ "/out"
+fun widscript_file pd wid = wid_dir pd wid ^ "/script" ^ its wid ^ ".sml"
+fun param_file pd = pd ^ "/param"
+fun result_file pd wid = wid_dir pd wid ^ "/result"
 
 (* -------------------------------------------------------------------------
    Worker
    ------------------------------------------------------------------------- *)
 
-fun worker_process wid (f,l) job =
-  (f wid (List.nth (l,job)); worker_listen wid (f,l))
-and worker_listen wid fl =
-  if exists_file (widin_file wid) then
-    let val s = hd (readl_rm (widin_file wid)) in
+fun worker_listen pd wid f =
+  if exists_file (widin_file pd wid) then
+    let val s = hd (readl_rm (widin_file pd wid)) in
       if s = "stop" then () else
-        worker_process wid fl (string_to_int s)
+        (f (); worker_listen pd wid f)
     end
-  else (mini_sleep (); worker_listen wid fl)
+  else (mini_sleep (); worker_listen pd wid f)
 
 (* -------------------------------------------------------------------------
    Closing workers and gathering results
    ------------------------------------------------------------------------- *)
 
-fun boss_stop_workers threadl =
+fun boss_stop_workers pd threadl =
   let
     val ncore = length threadl
     val _ = print_endline ("stop " ^ its ncore ^ " workers")
-    fun send_stop wid = writel_atomic (widin_file wid) ["stop"]
+    fun send_stop wid = writel_atomic (widin_file pd wid) ["stop"]
     fun loop threadl =
       (if exists Thread.isActive threadl
        then (mini_sleep (); loop threadl)
@@ -197,10 +267,10 @@ fun boss_stop_workers threadl =
     print_endline ("  " ^ its ncore ^ " workers stopped")
   end
 
-fun boss_end threadl completedl =
+fun boss_end pd threadl completedl =
   let
     val ncore = length threadl
-    val _ = boss_stop_workers threadl
+    val _ = boss_stop_workers pd threadl
     val l = dict_sort compare_imin (map swap completedl)
   in
     map fst l
@@ -216,13 +286,14 @@ fun stat_jobs (pendingl,freewidl,runningl,completedl) =
        its (length runningl) ^ " " ^ its (length completedl) ^
      " free core: " ^ String.concatWith " " (map its freewidl))
 
-fun send_job (wid,job) =
+fun send_job pd arglv warg (wid,job) =
   (
   print_endline ("  send job " ^ its job ^ " to worker " ^ its wid);
-  writel_atomic (widin_file wid) [its job]
+  warg (widarg_file pd wid) (Vector.sub (arglv,job));
+  writel_atomic (widin_file pd wid) [its job]
   )
 
-fun boss_send threadl rr (pendingl,runningl,completedl) =
+fun boss_send pd threadl rr arglv warg (pendingl,runningl,completedl) =
   let
     fun is_running x = mem x (map fst runningl)
     val widl = List.tabulate (length threadl,I)
@@ -232,102 +303,87 @@ fun boss_send threadl rr (pendingl,runningl,completedl) =
     val (jobl,pendingl_new) = part_n njob pendingl
     val runningl_new = combine (first_n njob freewidl, jobl)
   in
-    app send_job runningl_new;
-    boss_collect threadl rr
+    app (send_job pd arglv warg) runningl_new;
+    boss_collect pd threadl rr arglv warg
       (pendingl_new, runningl_new @ runningl, completedl)
   end
 
-and boss_collect threadl rr (pendingl,runningl,completedl) =
+and boss_collect pd threadl rr arglv warg (pendingl,runningl,completedl) =
   if null pendingl andalso null runningl
-    then boss_end threadl completedl
+    then boss_end pd threadl completedl
   else
   let
     fun f (wid,job) =
-      if not (exists_file (widout_file wid)) then NONE else
+      if not (exists_file (widout_file pd wid)) then NONE else
       (
       print_endline ("  completed job " ^ its job ^ " by worker " ^ its wid);
-      remove_file (widout_file wid);
+      remove_file (widout_file pd wid);
       SOME (rr wid)
       )
     fun forget_wid ((wid,job),ro) = (job, valOf ro)
     val (al,bl) = partition (isSome o snd) (map_assoc f runningl)
     val runningl_new = map fst bl
     val completedl_new = map forget_wid al
-    val rrc_new = (pendingl,runningl_new,completedl_new @ completedl)
+    val prc_new = (pendingl,runningl_new,completedl_new @ completedl)
   in
     if null completedl_new orelse null pendingl then
-      (mini_sleep (); boss_collect threadl rr rrc_new)
-    else boss_send threadl rr rrc_new
+      (mini_sleep (); boss_collect pd threadl rr arglv warg prc_new)
+    else boss_send pd threadl rr arglv warg prc_new
   end
-
-(* -------------------------------------------------------------------------
-   Specification of the external parallel run
-   ------------------------------------------------------------------------- *)
-
-type ('a,'b,'c) extspec =
-  {
-  self: string,
-  reflect_globals : unit -> string,
-  function : 'a -> 'b -> 'c,
-  write_param : string -> 'a -> unit,
-  read_param : string -> 'a,
-  write_argl : string -> 'b list -> unit,
-  read_argl : string -> 'b list,
-  write_result : string ->'c -> unit,
-  read_result : string -> 'c
-  }
 
 (* -------------------------------------------------------------------------
    Starting threads and external calls
    ------------------------------------------------------------------------- *)
 
-fun boss_start_worker code_of wid =
+fun boss_start_worker pd code_of wid =
   (
-  writel (widscript_file wid) (code_of wid);
-  smlOpen.run_buildheap false (widscript_file wid);
-  remove_file (widscript_file wid)
+  writel (widscript_file pd wid) (code_of wid);
+  smlOpen.run_buildheap false
+    (SOME (widscript_file pd wid ^ ".out")) (widscript_file pd wid)
   )
 
 val attrib = [Thread.InterruptState Thread.InterruptAsynch,
   Thread.EnableBroadcastInterrupt true]
 
-fun boss_wait_upl widl =
-  let fun is_up wid = hd (readl (widout_file wid)) = "up"
+fun boss_wait_upl pd widl =
+  let fun is_up wid = hd (readl (widout_file pd wid)) = "up"
                       handle Io _ => false
   in
     if all is_up widl
-    then app (remove_file o widout_file) widl
-    else (mini_sleep (); boss_wait_upl widl)
+    then app (remove_file o (widout_file pd)) widl
+    else (mini_sleep (); boss_wait_upl pd widl)
   end
 
-fun clean_parallel_dirs widl =
+fun clean_parallel_dirs pd widl =
   let fun f wid =
-    (mkDir_err (wid_dir wid);
-     app remove_file [widin_file wid, widout_file wid])
+    (mkDir_err (wid_dir pd wid);
+     app remove_file [widin_file pd wid, widout_file pd wid])
   in
-    mkDir_err (!parallel_dir); app f widl
+    mkDir_err pd; app f widl
   end
 
-fun worker_start wid (extspec: ('a,'b,'c) extspec) =
+fun worker_start wid es =
   let
-    val param = #read_param extspec (param_file ())
-    val argl = #read_argl extspec (argl_file ())
-    fun f wid arg =
-      let val r = #function extspec param arg in
-        #write_result extspec (result_file wid) r;
-        writel_atomic (widout_file wid) ["done"]
+    val pd = #parallel_dir es
+    val param = #read_param es (param_file pd)
+    fun f () =
+      let
+        val arg = (#read_arg es) (widarg_file pd wid)
+        val r = (#function es) param arg
+      in
+        (#write_result es) (result_file pd wid) r;
+        writel_atomic (widout_file pd wid) ["done"]
       end
   in
-    writel_atomic (widout_file wid) ["up"];
-    worker_listen wid (f,argl)
+    writel_atomic (widout_file pd wid) ["up"];
+    worker_listen pd wid f
   end
 
-fun code_of_extspec extspec wid =
-  let val s = #self extspec in
+fun code_of_extspec es wid =
+  let val s = #self es in
     [
     "open smlParallel;",
-    "val _ = parallel_dir := " ^ quote (!parallel_dir) ^ ";",
-    "val _ = " ^ #reflect_globals extspec () ^ ";",
+    "val _ = " ^ #reflect_globals es () ^ ";",
     "worker_start " ^ its wid ^ " " ^ s ^ ";"
     ]
   end
@@ -335,22 +391,24 @@ fun code_of_extspec extspec wid =
 val attrib = [Thread.InterruptState Thread.InterruptAsynch,
   Thread.EnableBroadcastInterrupt true]
 
-fun parmap_queue_extern ncore extspec param argl =
+fun parmap_queue_extern ncore es param argl =
   let
     val widl = List.tabulate (ncore,I)
-    val _ = clean_parallel_dirs widl
-    val _ = #write_param extspec (param_file ()) param
-    val _ = #write_argl extspec (argl_file ()) argl
+    val pd = #parallel_dir es
+    val _ = clean_parallel_dirs pd widl
+    val _ = #write_param es (param_file pd) param
     val _ = print_endline ("start " ^ its ncore ^ " workers")
     fun fork wid = Thread.fork (fn () =>
-      boss_start_worker (code_of_extspec extspec) wid, attrib)
+      boss_start_worker pd (code_of_extspec es) wid, attrib)
     val threadl = map fork widl
-    val pendingl = List.tabulate (length argl,I)
-    fun rr wid = #read_result extspec (result_file wid)
+    fun rr wid = #read_result es (result_file pd wid)
+    val arglv = Vector.fromList argl
+    val pendingl = List.tabulate (Vector.length arglv,I)
+    val warg = #write_arg es
   in
-    boss_wait_upl widl;
+    boss_wait_upl pd widl;
     print_endline ("  " ^ its ncore ^ " workers started");
-    boss_send threadl rr (pendingl,[],[])
+    boss_send pd threadl rr arglv warg (pendingl,[],[])
   end
 
 (* -------------------------------------------------------------------------
@@ -360,12 +418,13 @@ fun parmap_queue_extern ncore extspec param argl =
 val idspec : (unit,int,int) extspec =
   {
   self = "smlParallel.idspec",
+  parallel_dir = default_parallel_dir,
   reflect_globals = fn () => "()",
   function = let fun f _ (x:int) = x in f end,
   write_param = let fun f _ () = () in f end,
   read_param = let fun f _ = () in f end,
-  write_argl = let fun f file argl = writel file (map its argl) in f end,
-  read_argl = let fun f file = map string_to_int (readl file) in f end,
+  write_arg = let fun f file arg = writel file [its arg] in f end,
+  read_arg = let fun f file = string_to_int (only_hd (readl file)) in f end,
   write_result = let fun f file r = writel file [its r] in f end,
   read_result = let fun f file = string_to_int (hd (readl_rm file)) in f end
   }

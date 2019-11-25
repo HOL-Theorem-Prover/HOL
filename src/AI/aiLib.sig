@@ -18,8 +18,8 @@ sig
     ('a * 'b -> order) ->
     ('c * 'd -> order) ->
     ('a * 'c) * ('b * 'd) -> order
-  val goal_compare : (goal * goal) -> order
-  val lbl_compare : (lbl * lbl) -> order
+  val goal_compare : goal * goal -> order
+  val lbl_compare : lbl * lbl -> order
   val compare_rmin : (('a * real) * ('a * real)) -> order
   val compare_rmax : (('a * real) * ('a * real)) -> order
   val compare_imin : (('a * int) * ('a * int)) -> order
@@ -27,6 +27,7 @@ sig
   val list_rmax : real list -> real
   val list_imax : int list -> int
   val list_imin : int list -> int
+  val tmsize_compare : term * term -> order
 
   (* time *)
   val add_time : ('a -> 'b) -> 'a -> 'b * real
@@ -107,6 +108,7 @@ sig
   val mk_batch : int -> 'a list -> 'a list list
   val mk_batch_full : int -> 'a list -> 'a list list
   val cut_n : int -> 'a list -> 'a list list
+  val cut_modulo : int -> 'a list -> 'a list list
   val number_partition : int -> int -> int list list
   val duplicate : int -> 'a list -> 'a list
   val indent: int -> string
@@ -133,7 +135,6 @@ sig
   (* input/output *)
   val string_of_goal : goal -> string
   val trace_tacl : tactic list -> goal -> unit
-  val string_of_bool : bool -> string
   val readl : string -> string list
   val bare_readl : string -> string list
   val readl_empty : string -> string list
@@ -154,6 +155,8 @@ sig
 
 
   (* parse *)
+  val hd_string : string -> char
+  val tl_string : string -> string
   val unquote_string : string -> string
   val drop_sig : string -> string
   val split_sl : ''a -> ''a list -> ''a list * ''a list
@@ -165,7 +168,8 @@ sig
   val rm_squote : string -> string
   val rm_space  : string -> string
   datatype lisp = Lterm of lisp list | Lstring of string
-  val lisp_of : string list -> lisp list
+  val lisp_lexer : string -> string list
+  val lisp_parser : string -> lisp list
   val rec_fun_type : int -> hol_type -> hol_type
   val term_of_lisp : lisp -> term
 
@@ -193,8 +197,11 @@ sig
   val tts : term -> string
   val its : int -> string
   val rts : real -> string
+  val bts : bool -> string
+  val string_to_bool : string -> bool
   val rts_round : int -> real -> string
   val pretty_real : real -> string
+  val epsilon : real
 
   (* term *)
   val rename_bvarl : (string -> string) -> term -> term
@@ -203,6 +210,8 @@ sig
   val strip_type : hol_type -> (hol_type list * hol_type)
   val has_boolty : term -> bool
   val only_concl : thm -> term
+  val list_mk_binop : term -> term list -> term
+  val arity_of : term -> int
 
   (* thread *)
   val interruptkill : Thread.thread -> unit

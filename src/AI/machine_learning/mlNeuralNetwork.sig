@@ -1,14 +1,14 @@
 signature mlNeuralNetwork =
 sig
 
+  include Abbrev
+
   type vect = real vector
   type mat = vect vector
 
-  (* hyperparameters *)
-  val learningrate_glob : real ref
-  val show_stats : bool ref
-
   (* activation *)
+  val idactiv : real -> real
+  val didactiv : real -> real
   val tanh : real -> real
   val dtanh : real -> real
   val relu : real -> real
@@ -19,6 +19,14 @@ sig
   (* neural network *)
   type layer = {a : real -> real, da : real -> real, w : mat}
   type nn = layer list
+  type train_param =
+    {ncore: int, verbose: bool,
+     learning_rate: real, batch_size: int, nepoch: int}
+  val string_of_trainparam : train_param -> string
+  val trainparam_of_string : string -> train_param
+  type schedule = train_param list
+  val write_schedule : string -> schedule -> unit
+  val read_schedule : string -> schedule
 
   type fpdata = {layer : layer, inv : vect, outv : vect, outnv : vect}
   type bpdata = {doutnv : vect, doutv : vect, dinv : vect, dw : mat}
@@ -32,14 +40,11 @@ sig
   val bp_nn_wocost : fpdata list -> vect -> bpdata list
 
   (* weight updates *)
-  val update_nn         : nn -> mat list -> nn
+  val update_nn         : train_param -> nn -> mat list -> nn
   val smult_dwl         : real -> mat list -> mat list
   val sum_dwll          : mat list list -> mat list
   val mean_square_error : vect -> real
   val average_loss      : bpdata list list -> real
-
-  (* training *)
-  val train_nn_batch : int -> nn -> (vect * vect) list -> (nn * real)
 
   (* input/output *)
   val reall_to_string : real list -> string
@@ -54,10 +59,13 @@ sig
   val read_exl : string -> (real list * real list) list
 
   (* interface *)
+  val scale_real : real -> real
   val scale_out : real list -> vect
   val scale_ex : real list * real list -> vect * vect
+  val descale_real : real -> real
   val descale_out : vect -> real list
   val infer_nn : nn -> real list -> real list
-  val train_nn : int -> int -> nn -> int -> (real list * real list) list -> nn
+  val train_nn : train_param -> nn -> (real list * real list) list -> nn
+
 
 end

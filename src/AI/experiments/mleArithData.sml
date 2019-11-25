@@ -88,8 +88,6 @@ load "mleArithData"; open mleArithData;
 app export_arithdata ["train","valid","test"];
 *)
 
-
-
 fun export_computefea databare =
   let
     val dir = HOLDIR ^ "/src/AI/experiments/exp_compute"

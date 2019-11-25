@@ -16,9 +16,9 @@ val ERR = mk_HOL_ERR "mlMatrix"
 type vect = real vector
 type mat = real vector vector
 
-(*---------------------------------------------------------------------------
- * Vectors
- *---------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   Vectors
+   ------------------------------------------------------------------------- *)
 
 fun sum_rvect v = Vector.foldl (op +) 0.0 v
 
@@ -38,9 +38,9 @@ fun scalar_product v1 v2 = sum_rvect (mult_rvect v1 v2)
 
 fun scalar_mult (k:real) v = Vector.map (fn x => (k:real) * x) v
 
-(*---------------------------------------------------------------------------
- * Matrix
- *---------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   Matrix
+   ------------------------------------------------------------------------- *)
 
 fun mat_mult m inv =
   let fun f line = scalar_product line inv in Vector.map f m end
@@ -56,18 +56,6 @@ fun mat3_tabulate f (an,bn,cn) =
   let fun g i = mat_tabulate (f i) (bn,cn) in
     Vector.tabulate (an,g)
   end
-
-(*
-load "mlMatrix";
-open mlMatrix;
-fun f a b = 10 * a + b;
-mat_tabulate f (3,3);
-
-fun f a b c = 100 * a + 10 * b + c;
-mat3_tabulate f (3,3,3);
-
-*)
-
 
 fun mat_smult (k:real) m = mat_map (fn x => k * x) m
 
@@ -107,8 +95,6 @@ fun mat_random (dim as (a,b)) =
     mat_tabulate f dim
   end
 
-
-
 fun string_of_vect v =
   String.concatWith " " (map Real.toString (vector_to_list v))
 
@@ -125,7 +111,6 @@ fun read_mat_sl sl =
 
 fun read_mat file = read_mat_sl (readl file)
 
-
 fun is_comma c = c = #","
 
 fun read_diml s =
@@ -135,50 +120,6 @@ fun read_diml s =
   in
     map pair_of_list l2
   end
-
-
-(*
-load "mlMatrix"; load "aiLib"; open mlMatrix aiLib;
-val dir = HOLDIR ^ "/src/AI";
-val m1 = mat_random (9,2);
-val file = dir ^ "/test";
-writel file [string_of_mat m1];
-val m2 = read_mat file;
-
-load "mlMatrix"; load "aiLib"; open mlMatrix aiLib;
-
-val l1 = List.tabulate (10000,fn _ => random_real ());
-val l2 = List.tabulate (10000,fn _ => random_real ());
-val v1 = Vector.fromList l1;
-val v2 = Vector.fromList l2;
-
-fun f0 l1 (l2 : real list) =  map (op +) (combine (l1,l2));
-val (_,t1) = add_time (f0 l1) l2;
-fun f1 v1 (v2 : real vector) =
-  Vector.tabulate
-    (Vector.length v1, fn i => Vector.sub (v1,i) + Vector.sub (v2,i))
-;
-val (_,t2) = add_time (f1 v1) v2;
-
-val m1 = mat_random (100,100);
-val m2 = mat_random (100,100);
-
-val (m,t3) = add_time (mat_add m1) m2;
-
-
-val a1 = Array.fromList l1;
-val a2 = Array.fromList l2;
-
-fun f2 a1 (a2 : real array) =
-  Array.tabulate
-    (Array.length a1, fn i => Array.sub (a1,i) + Array.sub (a2,i))
-
-val (_,t4) = add_time (f2 a1) a2;
-
-
-*)
-
-
 
 
 end (* struct *)

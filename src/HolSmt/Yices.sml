@@ -615,7 +615,7 @@ structure Yices = struct
                  it may not be needed at all: ensuring that the constant name
                  is identical to the field selector name may already be
                  sufficient. *)
-              val j = Lib.index (fn (field_name, field_ty) =>
+              val j = Lib.index (fn (field_name, {ty = field_ty,...}) =>
                   select_name = record_name ^ "_" ^ field_name andalso
                     Lib.can (Type.match_type field_ty) rng_ty)
                 (TypeBase.fields_of record_ty)
@@ -650,7 +650,7 @@ structure Yices = struct
                  it may not be needed at all: ensuring that the constant name
                  is identical to the field update function's name may already be
                  sufficient. *)
-              val j = Lib.index (fn (field_name, field_ty) =>
+              val j = Lib.index (fn (field_name, {ty = field_ty, ...}) =>
                   update_name = record_name ^ "_" ^ field_name ^ "_fupd" andalso
                     Lib.can (Type.match_type field_ty) val_ty)
                 (TypeBase.fields_of record_ty)
