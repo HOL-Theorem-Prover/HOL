@@ -5,6 +5,7 @@ open reductionEval;
 open churchoptionTheory churchlistTheory recfunsTheory numsAsCompStatesTheory
      kolmogorov_complexityTheory invarianceResultsTheory boolListsTheory
 open churchDBTheory
+open recursivefnsTheory primrecfnsTheory recursivefnsTheory
 
 val _ = new_theory "kolmog_incomputable"
 
@@ -1317,6 +1318,9 @@ Theorem recfn_rec2_Phi[simp]:
 Proof
   mp_tac prtermTheory.recfn_recPhi >> rw[Excl"recfn_recPhi"]
 QED
+
+
+
 
 Theorem unary_rec_fns_phi:
   recfn f 1 ==> ∃i. ∀x. Phi i x = f [x]
