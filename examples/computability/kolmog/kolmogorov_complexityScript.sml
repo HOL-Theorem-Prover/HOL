@@ -45,15 +45,23 @@ val prefix_rec_fun_def = Define`prefix_rec_fun i = prefix_free (IMAGE n2bl {x|Ph
 
 val pr_log2_def = Define`pr_log2 = WFM (λf n. if n<=1 then 1 else 1+(f (n DIV 2)) )`
 
-val univ_rf_def = Define`univ_rf U <=> ∀f. ∃g. ∀x. recPhi [f;x] = U (g++(n2bl x))`
+Definition on2bl_def:
+  on2bl x = OPTION_MAP n2bl x
+End
+
+val univ_rf_def = Define`univ_rf U <=> ∀f. ∃g. ∀x. on2bl (recPhi [f;x]) = U (g++(n2bl x))`
 
 Theorem univ_rf_nonempty:
   univ_rf U ==> {p | U p = SOME x} <> {}
 Proof
-  rw[univ_rf_def,EXTENSION] >> `∃m. Phi m 0 = SOME x` by (simp[Phi_def] >>
-  qexists_tac`dBnum (fromTerm (K @@ church x))` >> simp[] >> qexists_tac`church x` >>
-  simp[K_lemma,normal_orderTheory.bnf_bnf_of]) >> `∃g. ∀x. Phi m x = U (g++(n2bl x))` by fs[]>>
-  `Phi m 0 = U (g++(n2bl 0))` by fs[] >> qexists_tac`g++(n2bl 0)` >> fs[]
+  rw[univ_rf_def,EXTENSION] >> 
+  `∃m. Phi m 0 = SOME (bl2n x)` by (simp[Phi_def] >>
+    qexists_tac`dBnum (fromTerm (K @@ church (bl2n x)))` >> simp[] >> qexists_tac`church (bl2n x)` >>
+    simp[K_lemma,normal_orderTheory.bnf_bnf_of]) >> 
+  `∃g. ∀x. on2bl (Phi m x) = U (g++(n2bl x))` by fs[]>>
+  `on2bl (Phi m 0) = U (g++(n2bl 0))` by fs[] >> qexists_tac`g++(n2bl 0)` >> fs[]>>
+  `on2bl (SOME (bl2n x)) = U (g ++ n2bl 0)` by metis_tac[] >> 
+  fs[optionTheory.OPTION_MAP_DEF,on2bl_def]
 QED
 
 

@@ -307,6 +307,25 @@ Proof
 QED
 
 
+val bl2n_11 = Q.store_thm("bl2n_11[simp]",
+`bl2n x = bl2n y <=> x = y`,
+metis_tac[num_bool_inv])
+
+val finite_bool_list_n = Q.store_thm("finite_bool_list_n[simp]",
+`FINITE {s|LENGTH (s:bool list) = n}`,
+irule (INST_TYPE[beta|->``:num``] FINITE_INJ) >> qexists_tac`bool_list_to_num` >>
+          qexists_tac`count (2n**(n+1)-1)` >> simp[INJ_DEF] >> qid_spec_tac`n` >> Induct_on`x`>>
+          simp[bool_list_to_num_def] >> pop_assum(qspec_then`LENGTH x` MP_TAC) >>rw[] >>
+          simp[GSYM ADD1,Once EXP] >> irule (DECIDE``n<=2n /\ b<x-1 ==> 2*b+n<2*x-1``) >> rw[ADD1])
+
+
+val finite_bool_list_lt_n = Q.store_thm("finite_bool_list_lt_n",
+`FINITE {(s:bool list) | LENGTH s < n}`,
+Induct_on`n` >> simp[finite_bool_list_n] >>
+`FINITE {(s:bool list)|LENGTH s = n}` by fs[finite_bool_list_n] >>
+`FINITE ({(s:bool list) | LENGTH s < n \/ LENGTH s = n}) ` by simp[FINITE_UNION,GSPEC_OR] >>
+`{(s:bool list) | LENGTH s < SUC n} = {s | LENGTH s < n \/ LENGTH s = n}` by rw[EXTENSION] >>fs[])
+
 
 val _ = export_theory();
 

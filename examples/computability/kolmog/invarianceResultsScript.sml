@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib bossLib;
-open kolmogorov_complexityTheory
+open kolmogorov_complexityTheory pred_setTheory
 
 val _ = new_theory "invarianceResults";
 
@@ -11,10 +11,11 @@ val _ = new_theory "invarianceResults";
 
 
 Theorem invariance_theorem:
-  ∀U T. univ_rf U ==> ∃C. ∀x. (kolmog_complexity x U) <= (kolmog_complexity x (λy. recPhi [T;bl2n y])) + (C U T)
+  ∀U T. univ_rf U ==> ∃C. ∀x. (core_complexity U x) <= 
+                              (core_complexity (λy. on2bl (recPhi [T;bl2n y])) x) + (C U T)
 Proof
-  rw[univ_rf_def,kolmog_complexity_def] >>  fs[univ_rf_def] >>
-  `∃g. ∀x. Phi T' x = U (g++ (n2bl x))` by fs[] >>
+  rw[univ_rf_def,core_complexity_def] >>  fs[univ_rf_def] >>
+  `∃g. ∀x. on2bl (Phi T' x) = U (g++ (n2bl x))` by fs[] >>
   qexists_tac`λx y. SOME (LENGTH g)` >> rw[]
   >- (`univ_rf U` by fs[univ_rf_def] >>`{p| U p = SOME x} <> {}` by fs[univ_rf_nonempty] >> fs[])
   >- (`MIN_SET (IMAGE LENGTH {p | U p = SOME x}) ∈
@@ -45,11 +46,11 @@ QED
 (* Cleaned up invariance theorem *)
 
 Definition indexes_of_def:
-  indexes_of V = {k | V = (λy. recPhi [k;bl2n y])}
+  indexes_of V = {k | V = (λy. on2bl (recPhi [k;bl2n y]))}
 End
 
 Theorem clean_invariance_theorem:
-  ∀U V. univ_rf U ∧ (i ∈ indexes_of V ) ==> ∃C. ∀x. (kolmog_complexity x U) <= (kolmog_complexity x V) + (C U i)
+  ∀U V. univ_rf U ∧ (i ∈ indexes_of V ) ==> ∃C. ∀x. (core_complexity U x) <= (core_complexity V x) + (C U i)
 Proof
   rw[indexes_of_def] >> qspecl_then [`U`,`i`] mp_tac invariance_theorem >> rw[]
 QED

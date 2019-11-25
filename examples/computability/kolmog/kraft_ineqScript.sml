@@ -38,16 +38,6 @@ Proof
 QED
 
 
-val bl2n_11 = Q.store_thm("bl2n_11[simp]",
-`bl2n x = bl2n y <=> x = y`,
-metis_tac[num_bool_inv])
-
-val finite_bool_list_n = Q.store_thm("finite_bool_list_n[simp]",
-`FINITE {s|LENGTH (s:bool list) = n}`,
-irule (INST_TYPE[beta|->``:num``] FINITE_INJ) >> qexists_tac`bool_list_to_num` >>
-          qexists_tac`count (2**(n+1)-1)` >> simp[INJ_DEF] >> qid_spec_tac`n` >> Induct_on`x`>>
-          simp[bool_list_to_num_def] >> pop_assum(qspec_then`LENGTH x` MP_TAC) >>rw[] >>
-          simp[GSYM ADD1,Once EXP] >> irule (DECIDE``n<=2n /\ b<x-1 ==> 2*b+n<2*x-1``) >> rw[ADD1])
 
 val bool_list_card = Q.store_thm("bool_list_card[simp]",
 `CARD {s | LENGTH (s:bool list) = n} = 2**n`,
@@ -290,12 +280,7 @@ rw[] >- (fs[interval_bl_def] >> `(0:real)<= &TBL2N a` by fs[tbl2n_def] >> `(0:re
 
 val bls_size_def = Define`bls_size (P:bool list -> bool) n = SIGMA (\s. (2 rpow -&LENGTH s)) {x|x IN P /\ LENGTH x < n }`
 
-val finite_bool_list_lt_n = Q.store_thm("finite_bool_list_lt_n",
-`FINITE {(s:bool list) | LENGTH s < n}`,
-Induct_on`n` >> simp[finite_bool_list_n] >>
-`FINITE {(s:bool list)|LENGTH s = n}` by fs[finite_bool_list_n] >>
-`FINITE ({(s:bool list) | LENGTH s < n \/ LENGTH s = n}) ` by simp[FINITE_UNION,GSPEC_OR] >>
-`{(s:bool list) | LENGTH s < SUC n} = {s | LENGTH s < n \/ LENGTH s = n}` by rw[EXTENSION] >>fs[])
+
 
 val finite_and = Q.store_thm("finite_and",
 `FINITE {s| P s} ==> FINITE {s|  Q s /\ P s}`,
