@@ -8,7 +8,7 @@
 structure hhExportLib :> hhExportLib =
 struct
 
-open HolKernel boolLib aiLib mlThmData hhTranslate
+open HolKernel boolLib aiLib mlThmData hhTranslate combinTheory
 
 val ERR = mk_HOL_ERR "hhExportLib"
 type thmid = string * string
@@ -268,7 +268,6 @@ fun all_tyop topty =
   end
 
 fun tyop_set topty = mk_fast_set ida_compare (all_tyop topty)
-
 
 fun tyopset_of_tyl tyl =
   mk_fast_set ida_compare (List.concat (map tyop_set tyl))
