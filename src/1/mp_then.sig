@@ -9,6 +9,7 @@ sig
     | Pos of (term list -> term)
     | Concl
 
+  val PART_MATCH' : (term -> term) -> thm -> term -> thm
   val mp_then : match_position -> thm_tactic -> thm -> thm -> tactic
 
 end
