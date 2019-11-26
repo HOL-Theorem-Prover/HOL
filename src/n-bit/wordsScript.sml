@@ -138,8 +138,10 @@ val () = add_infixes 482 HOLgrammars.RIGHT
    ("||",  `words$word_or`),
    ("~||", `words$word_nor`)]
 
-val _ = overload_on ("~", ``words$word_1comp``)
+Overload "~" = “words$word_1comp”
+Overload "¬" = “words$word_1comp”   (* UOK *)
 val _ = send_to_back_overload "~" {Name = "word_1comp", Thy = "words"}
+val _ = send_to_back_overload "¬" {Name = "word_1comp", Thy = "words"} (* UOK *)
 
 val _ = overload_on ("UINT_MAXw", ``words$word_T``)
 val _ = overload_on ("INT_MAXw",  ``words$word_H``)

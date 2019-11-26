@@ -305,7 +305,12 @@ local
           else ("", "", String.extract(s,1,NONE),0)
         else ("", "", s,0)
     fun addann2 ty (s1,s2) =
-      "\\" ^ !texPrefix ^ ty ^ "{" ^ s1 ^ "}" ^ s2
+        let val base = "\\" ^ !texPrefix ^ ty ^ "{" ^ s1 ^ "}"
+        in
+          if size s2 = 0 then base
+          else
+            "\\ensuremath{" ^ base ^ s2 ^ "}"
+        end
     fun addann ty s = addann2 ty (s,"")
     fun smapper s = smap overrides (s, sz_opt)
     val unmapped_sz = case sz_opt of NONE => size s | SOME i => i

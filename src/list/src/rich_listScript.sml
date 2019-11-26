@@ -83,10 +83,10 @@ val ELL = DEF0`
    (ELL 0 l = LAST l) /\
    (ELL (SUC n) l = ELL n (FRONT l))`;
 
-val REPLICATE = DEF0`
+Definition REPLICATE[simp]:
    (REPLICATE 0 x = []) /\
-   (REPLICATE (SUC n) x = CONS x (REPLICATE n x))`;
-val _ = export_rewrites ["REPLICATE"]
+   (REPLICATE (SUC n) x = CONS x (REPLICATE n x))
+End
 
 val SCANL = DEF0`
    (SCANL f (e: 'b) [] = [e]) /\
@@ -2617,18 +2617,15 @@ val SEG_REVERSE = Q.store_thm ("SEG_REVERSE",
       THEN SUBST1_TAC SEG_lem THEN SUBST1_TAC lem THEN REFL_TAC
    end);
 
-val LENGTH_REPLICATE = Q.store_thm ("LENGTH_REPLICATE[simp]",
-   `!n x. LENGTH (REPLICATE n x) = n`,
-   INDUCT_TAC THEN ASM_REWRITE_TAC [REPLICATE, LENGTH]);
+Theorem LENGTH_REPLICATE[simp]:
+   !n x. LENGTH (REPLICATE n x) = n
+Proof INDUCT_TAC THEN ASM_REWRITE_TAC [REPLICATE, LENGTH]
+QED
 
-val MEM_REPLICATE = Q.store_thm ("MEM_REPLICATE",
-   `!n. 0 < n ==> !x. MEM x (REPLICATE n x)`,
-   INDUCT_TAC THEN ASM_REWRITE_TAC [NOT_LESS_0, MEM, REPLICATE]);
-
-val EVERY_REPLICATE = Q.store_thm ("EVERY_REPLICATE",
-   `!x n. EVERY ($= x) (REPLICATE n x)`,
-   GEN_TAC THEN INDUCT_TAC
-   THEN ASM_REWRITE_TAC [NOT_LESS_0, EVERY_DEF, REPLICATE]);
+Theorem MEM_REPLICATE[simp]:
+  !n x y. MEM y (REPLICATE n x) <=> x = y /\ 0 < n
+Proof INDUCT_TAC THEN simp [NOT_LESS_0, MEM, EQ_IMP_THM, DISJ_IMP_THM]
+QED
 
 (* |- !l. AND_EL l <=> FOLDL $/\ T l *)
 val AND_EL_FOLDL = save_thm ("AND_EL_FOLDL",
@@ -3140,9 +3137,10 @@ val EL_REPLICATE = Q.store_thm ("EL_REPLICATE",
    >> rw []
    >> fs [REPLICATE, EL]);
 
-val EVERY_REPLICATE = Q.store_thm ("EVERY_REPLICATE",
-   `!f n x. EVERY f (REPLICATE n x) <=> (n = 0) \/ f x`,
-   Induct_on `n` >> rw [REPLICATE] >> metis_tac []);
+Theorem EVERY_REPLICATE[simp]:
+   !f n x. EVERY f (REPLICATE n x) <=> (n = 0) \/ f x
+Proof Induct_on `n` >> rw [] >> metis_tac []
+QED
 
 val ALL_DISTINCT_DROP = Q.store_thm("ALL_DISTINCT_DROP",
    `!ls n. ALL_DISTINCT ls ==> ALL_DISTINCT (DROP n ls)`,
@@ -3344,22 +3342,24 @@ val ZIP_COUNT_LIST = Q.store_thm("ZIP_COUNT_LIST",
     (ZIP (l1,COUNT_LIST n) = GENLIST (\n. (EL n l1, n)) (LENGTH l1))`,
    simp[LIST_EQ_REWRITE,LENGTH_COUNT_LIST,EL_ZIP,EL_COUNT_LIST])
 
-val map_replicate = Q.store_thm ("map_replicate",
-   `!f n x. MAP f (REPLICATE n x) = REPLICATE n (f x)`,
-   Induct_on `n` >> rw [REPLICATE]);
+Theorem map_replicate[simp]:
+   !f n x. MAP f (REPLICATE n x) = REPLICATE n (f x)
+Proof Induct_on `n` >> rw [REPLICATE]
+QED
 
-val REPLICATE_NIL = Q.store_thm("REPLICATE_NIL",
-  `(REPLICATE x y = []) <=> (x = 0)`,
-  Cases_on`x`>>rw[REPLICATE]);
+Theorem REPLICATE_NIL[simp]:  REPLICATE x y = [] <=> x = 0
+Proof Cases_on`x` >> rw[]
+QED
 
 val REPLICATE_APPEND = Q.store_thm("REPLICATE_APPEND",
   `REPLICATE n a ++ REPLICATE m a = REPLICATE (n+m) a`,
   simp[LIST_EQ_REWRITE,LENGTH_REPLICATE] >> rw[] >>
   Cases_on`x < n` >> simp[EL_APPEND1,LENGTH_REPLICATE,EL_REPLICATE,EL_APPEND2])
 
-val DROP_REPLICATE = Q.store_thm("DROP_REPLICATE",
-  `DROP n (REPLICATE m a) = REPLICATE (m-n) a`,
-  simp[LIST_EQ_REWRITE,LENGTH_REPLICATE,EL_REPLICATE,EL_DROP])
+Theorem DROP_REPLICATE[simp]:
+  DROP n (REPLICATE m a) = REPLICATE (m-n) a
+Proof simp[LIST_EQ_REWRITE,LENGTH_REPLICATE,EL_REPLICATE,EL_DROP]
+QED
 
 val LIST_REL_REPLICATE_same = store_thm("LIST_REL_REPLICATE_same",
   ``LIST_REL P (REPLICATE n x) (REPLICATE n y) <=> (n > 0 ==> P x y)``,
@@ -3368,7 +3368,7 @@ val LIST_REL_REPLICATE_same = store_thm("LIST_REL_REPLICATE_same",
   FIRST_X_ASSUM MATCH_MP_TAC >>
   Q.EXISTS_TAC`0`>>simp[]);
 
-Theorem SNOC_REPLICATE:
+Theorem SNOC_REPLICATE[simp]:
   !n x. SNOC x (REPLICATE n x) = REPLICATE (SUC n) x
 Proof  Induct \\ fs [REPLICATE]
 QED

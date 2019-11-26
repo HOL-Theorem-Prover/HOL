@@ -862,23 +862,19 @@ datatype elem_internal
     | iMLSTRUCT of string;
 
 
-(*---------------------------------------------------------------------------*)
-(* A datatype declaration results in some extra HOL function definitions     *)
-(* being automatically made. These are, usually, invisible to the user, but  *)
-(* are important and usually need to have ML generated for them.  Currently, *)
-(* only the access and update functions for records are generated. We used   *)
-(* to also write out the size functions for datatypes as well, but they were *)
-(* not used, so they are going for the time being.                           *)
-(*                                                                           *)
-(* In many cases suitable update and access functions are defined by the     *)
-(* datatype package and stuck into the TypeBase. However, large records are  *)
-(* modelled differently, for efficiency. The threshold number of fields is   *)
-(* controlled by Datatype.big_record_size. A big record has a different      *)
-(* shape, i.e., recursion theorem. To handle such records, we generate       *)
-(* fake "theorems" of the right form. This should be OK, as they are only    *)
-(* created for exporting the ML functions, and they are tagged. In fact, all *)
-(* record declarations are handled by the following code.                    *)
-(*---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    A datatype declaration results in some extra HOL function
+    definitions being automatically made. These are, usually,
+    invisible to the user, but are important and usually need to have
+    ML generated for them. Currently, only the access and update
+    functions for records are generated. We used to also write out the
+    size functions for datatypes as well, but they were not used, so
+    they are going for the time being. In many cases suitable update
+    and access functions are defined by the datatype package and stuck
+    into the TypeBase. All record declarations are handled by the
+    following code, which generates "fake" theorems as definitions for
+    the various constants.
+   ---------------------------------------------------------------------- *)
 
 fun diag vlist flist = tl
   (itlist2 (fn v => fn f => fn A =>
@@ -886,35 +882,16 @@ fun diag vlist flist = tl
                    | h::t => (v::h) :: (f v::h) :: map (cons v) t)
          vlist flist []);
 
-fun gen_updates ty fields =
+fun gen_updates ty (fields : (string * TypeBase.rcd_fieldinfo) list) =
  let open pairSyntax
      val {Tyop,Thy,Args} = dest_thy_type ty
-     fun mk_upd_const (fname,_) =
-       let
-         val rpty = Pretype.fromType ty
-         val op -=> = Pretype.mk_fun_ty infix -=>
-         open errormonad
-         val upd_ptyM = lift2 (fn ty1 => fn ty2 => ty1 -=> (rpty -=> ty2))
-                              Pretype.new_uvar Pretype.new_uvar
-         val ln = locn.Loc_None
-         val qid = Absyn.QIDENT(ln, Thy, Tyop^"_"^fname^"_fupd")
-         val ptm0_M = Parse.absyn_to_preterm qid
-         val ptm_M =
-             lift2 (fn ptm0 => fn upd_pty =>
-                       Preterm.Constrained{Locn = ln, Ptm = ptm0, Ty = upd_pty})
-                   ptm0_M upd_ptyM
-         val toTerm = ptm_M >- (fn pt =>
-                      Preterm.typecheck_phase1 NONE pt >> Preterm.to_term pt)
-       in
-         with_flag (Globals.guessing_tyvars, true)
-                   (Preterm.smash toTerm)
-                   Pretype.Env.empty
-       end
+     fun mk_upd_const (fname,{fupd,...}) = fupd
      val upds = map mk_upd_const fields
      val fns = map (fn upd_t => mk_var ("f", #1(dom_rng (type_of upd_t)))) upds
-     val fake_tyc = mk_record_vconstr(Tyop,list_mk_fun(map snd fields, ty))
+     val fake_tyc =
+         mk_record_vconstr(Tyop,list_mk_fun(map (#ty o snd) fields, ty))
      val vars = itlist
-          (fn (n,(_,ty)) => fn acc =>
+          (fn (n,(_,{ty,...})) => fn acc =>
               mk_var("v"^int_to_string n,ty) :: acc)
           (enumerate 1 fields) []
      val pat = list_mk_comb(fake_tyc,vars)
@@ -933,15 +910,15 @@ fun gen_updates ty fields =
  end
  handle e => raise wrap_exn "EmitML" "gen_updates" e;
 
-fun gen_accesses ty fields =
+fun gen_accesses ty (fields : (string * TypeBase.rcd_fieldinfo) list) =
  let open pairSyntax
      val {Tyop,Thy,Args} = dest_thy_type ty
-     fun mk_proj_const (fname,fty) =
-         mk_thy_const{Name=Tyop^"_"^fname,Thy=Thy, Ty = ty --> fty}
+     fun mk_proj_const (fname,{accessor,...}) = accessor
      val projs = map mk_proj_const fields
-     val fake_tyc = mk_record_vconstr(Tyop,list_mk_fun(map snd fields, ty))
+     val fake_tyc =
+         mk_record_vconstr(Tyop,list_mk_fun(map (#ty o snd) fields, ty))
      val vars = itlist
-          (fn (n,(_,ty)) => fn acc =>
+          (fn (n,(_,{ty,...})) => fn acc =>
              mk_var("v"^int_to_string n,ty) :: acc)
           (enumerate 1 fields) []
      val pat = list_mk_comb(fake_tyc,vars)

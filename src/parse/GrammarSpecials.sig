@@ -23,7 +23,6 @@ sig
   val reccons_special : string
   val recnil_special : string
   val recwith_special : string
-  val bigrec_subdivider_string : string
 
   val std_binder_precedence : int
 

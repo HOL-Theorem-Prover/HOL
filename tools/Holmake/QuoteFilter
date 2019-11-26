@@ -158,7 +158,10 @@ fun magic_bind (arg as QFS{induction_thm,...}) =
 
 type lexresult = int*string
 
-fun eof arg = (~1, "")
+fun eof (QFS {mltype_stack,...}) =
+    case !mltype_stack of
+        inTHMVAL:: _ => (mltype_stack := [];  (~1, ");"))
+      | _ => (~1, "")
 %%
 %structure QuoteFilter
 %s string comment qcomment tmcomment tycomment defncomment datatypecomment tyquote tmquote quote defnquote datatypequote ANTIQ thmval TERMINATION_VAL;

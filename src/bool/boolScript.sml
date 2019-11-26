@@ -160,12 +160,18 @@ val TYPE_DEFINITION =
  *---------------------------------------------------------------------------*)
 
 open Portable;
+Overload "~" = “~”
+Overload "¬" = “~”                                                     (* UOK *)
 val _ = add_rule {term_name   = "~",
                   fixity      = Prefix 900,
                   pp_elements = [TOK "~"],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundEachPhrase, (CONSISTENT, 0))};
-val _ = unicode_version { u = UChar.neg, tmnm = "~"};
+val _ = add_rule {term_name   = UChar.neg,
+                  fixity      = Prefix 900,
+                  pp_elements = [TOK UChar.neg],
+                  paren_style = OnlyIfNecessary,
+                  block_style = (AroundEachPhrase, (CONSISTENT, 0))};
 val _ = TeX_notation {hol = "~", TeX = ("\\HOLTokenNeg{}",1)}
 val _ = TeX_notation {hol = UChar.neg, TeX = ("\\HOLTokenNeg{}",1)}
 
