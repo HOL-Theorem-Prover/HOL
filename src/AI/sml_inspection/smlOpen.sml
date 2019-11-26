@@ -52,21 +52,21 @@ fun find_heapname file =
     cmd_in_dir (OS.Path.dir file) cmd;
     hd (readl fileout)
   end
-  handle Interrupt => raise Interrupt 
+  handle Interrupt => raise Interrupt
     | _ => raise ERR "find_heapname" file
 
 fun find_genscriptdep file =
   let
-    val _ = mkDir_err sml_code_dir 
+    val _ = mkDir_err sml_code_dir
     val genscriptdep_bin = HOLDIR ^ "/bin/genscriptdep"
     val fileout = sml_code_dir ^ "/sml_genscriptdep_" ^ bare file
-    val cmd = String.concatWith " " 
+    val cmd = String.concatWith " "
       [genscriptdep_bin, OS.Path.file file, ">", fileout]
   in
     cmd_in_dir (OS.Path.dir file) cmd;
     map holpathdb.subst_pathvars (readl fileout)
   end
-  handle Interrupt => raise Interrupt 
+  handle Interrupt => raise Interrupt
     | _ => raise ERR "find_genscriptdep" file
 
 fun run_buildheap core_flag ofileo file =
@@ -74,21 +74,21 @@ fun run_buildheap core_flag ofileo file =
     val _ = mkDir_err sml_buildheap_dir
     val buildheap_bin = HOLDIR ^ "/bin/buildheap"
     val filel = find_genscriptdep file
-    val ofile = 
-      if isSome ofileo 
-      then valOf ofileo 
+    val ofile =
+      if isSome ofileo
+      then valOf ofileo
       else sml_buildheap_dir ^ "/" ^ bare file
     val state =
       if core_flag then HOLDIR ^ "/bin/hol.state0" else find_heapname file
     val cmd =
       String.concatWith " "
-        ([buildheap_bin,"--holstate=" ^ state,"--gcthreads=1"] @ 
+        ([buildheap_bin,"--holstate=" ^ state,"--gcthreads=1"] @
           filel @ [OS.Path.file file]
         @ [">",ofile])
   in
     cmd_in_dir (OS.Path.dir file) cmd
   end
-  handle Interrupt => raise Interrupt 
+  handle Interrupt => raise Interrupt
     | _ => raise ERR "run_buildheap" file
 
 fun remove_err s = FileSys.remove s handle SysErr _ => ()
