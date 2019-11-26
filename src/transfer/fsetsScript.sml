@@ -4,7 +4,7 @@ open transferTheory finite_mapTheory pred_setTheory
 
 val _ = new_theory "fsets";
 
-Type fset = “:'a |-> unit”
+Type fset[pp] = “:'a |-> unit”
 
 Overload fIN = “\e (fs:'a fset). e IN FDOM fs”
 
@@ -121,10 +121,10 @@ val abs2 =
                  |> Q.SPECL [‘fs2’, ‘s2’, ‘fs1’, ‘s1’]
                  |> UNDISCH_ALL
 
-val fall' = ONCE_REWRITE_RULE [FUN_REL_def] FORALL_FSET |> UNDISCH_ALL
+Theorem FORALL_FSET' = REWRITE_RULE [FUN_REL_def] FORALL_FSET |> UNDISCH_ALL
 
 val AB = “AB : 'a -> 'b -> bool”
-val eq =
+Theorem fUNION_COMM =
     FSET_EQ |> REWRITE_RULE [ASSUME “bi_unique ^AB”, ASSUME “bitotal ^AB”]
             |> SIMP_RULE bool_ss [PULL_FORALL, FUN_REL_def]
             |> C MATCH_MP abs1 |> C MATCH_MP abs2
@@ -134,14 +134,13 @@ val eq =
             |> Q.GENL [‘fs2’, ‘s2’]
             |> CONV_RULE (REWR_CONV (GSYM FUN_REL_def))
             |> MATCH_MP (GEN_ALL FUN_REL_IFF_IMP)
-            |> CONJUNCT2
-            |> MATCH_MP fall'
+            |> CONJUNCT2 |> REWRITE_RULE [FUN_REL_def]
+            |> MATCH_MP FORALL_FSET'
             |> CONV_RULE (FORK_CONV(UNBETA_CONV “fs1: 'a |-> unit”,
                                     UNBETA_CONV “s1:'b -> bool”))
             |> DISCH “FSET AB fs1 s1”
             |> Q.GENL [‘fs1’, ‘s1’]
-            |> CONV_RULE (REWR_CONV (GSYM FUN_REL_def))
-            |> MATCH_MP fall'
+            |> MATCH_MP FORALL_FSET'
             |> PROVE_HYP (REWRITE_RULE [bi_unique_def]
                                        (ASSUME “bi_unique ^AB”) |> CONJUNCT1)
             |> INST_TYPE [beta |-> alpha]
@@ -149,6 +148,5 @@ val eq =
             |> PROVE_HYP bi_unique_EQ |> PROVE_HYP bitotal_EQ
             |> REWRITE_RULE [combinTheory.C_THM]
             |> C MATCH_MP UNION_COMM
-
 
 val _ = export_theory();
