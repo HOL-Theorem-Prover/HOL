@@ -18,6 +18,7 @@ val sml_code_dir = sml_dir ^ "/code"
 val sml_open_dir = sml_dir ^ "/open"
 val sml_buildheap_dir = sml_dir ^ "/buildheap"
 fun bare file = OS.Path.base (OS.Path.file file)
+
 (* -------------------------------------------------------------------------
    Running buildheap
    ------------------------------------------------------------------------- *)
@@ -43,7 +44,6 @@ fun theory_files script =
 
 fun find_heapname file =
   let
-    val _ = print_endline ("find_heapname: " ^ file)
     val _ = mkDir_err sml_code_dir
     val heapname_bin = HOLDIR ^ "/bin/heapname"
     val fileout = sml_code_dir ^ "/find_heapname_" ^ bare file
@@ -57,7 +57,6 @@ fun find_heapname file =
 
 fun find_genscriptdep file =
   let
-    val _ = print_endline ("find_genscriptdep: " ^ file)
     val _ = mkDir_err sml_code_dir 
     val genscriptdep_bin = HOLDIR ^ "/bin/genscriptdep"
     val fileout = sml_code_dir ^ "/sml_genscriptdep_" ^ bare file
@@ -72,7 +71,6 @@ fun find_genscriptdep file =
 
 fun run_buildheap core_flag ofileo file =
   let
-    val _ = print_endline ("run_buildheap: " ^ file)
     val _ = mkDir_err sml_buildheap_dir
     val buildheap_bin = HOLDIR ^ "/bin/buildheap"
     val filel = find_genscriptdep file
