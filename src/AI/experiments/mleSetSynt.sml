@@ -295,7 +295,7 @@ val pretobdict = dnew String.compare
    Interface
    ------------------------------------------------------------------------- *)
 
-val expname = "mleSetSynt-v3-1"
+val expname = "mleSetSynt-v3-16"
 
 val level_param =
   {
@@ -306,10 +306,10 @@ val level_param =
 
 val rl_param =
   {
-  expname = expname, ex_window = 800000, ex_filter = NONE,
+  expname = expname, ex_window = 200000, ex_filter = NONE,
   skip_compete = true,
   ngen = 400, ncore_search = 40,
-  nsim_start = 12500, nsim_explore = 12500, nsim_compete = 12500,
+  nsim_start = 50000, nsim_explore = 50000, nsim_compete = 50000,
   decay = 1.0
   }
 
@@ -337,7 +337,7 @@ val rlobj = mk_rlobj rlpreobj extsearch
 load "mlReinforce"; open mlReinforce;
 load "mleSetSynt"; open mleSetSynt;
 (* create_levels (); *)
-val _ = rl_restart_async rlobj (68,68) 1;
+val _ = rl_restart_async rlobj (126,125) 2;
 val _ = rl_start_async rlobj 1;
 *)
 
