@@ -339,8 +339,7 @@ and boss_collect pd threadl rr arglv warg (pendingl,runningl,completedl) =
 fun boss_start_worker pd code_of wid =
   (
   writel (widscript_file pd wid) (code_of wid);
-  smlOpen.run_buildheap false
-    (SOME (widscript_file pd wid ^ ".out")) (widscript_file pd wid)
+  smlOpen.run_buildheap (wid_dir pd wid) false (widscript_file pd wid)
   )
 
 val attrib = [Thread.InterruptState Thread.InterruptAsynch,

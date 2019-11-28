@@ -152,7 +152,7 @@ fun mk_extsearch self rlpreobj =
   in
     {
     self = self,
-    parallel_dir = default_parallel_dir ^ "__" ^ #expname rl_param,
+    parallel_dir = default_parallel_dir ^ "_search",
     reflect_globals = fn () => "()",
     function = extsearch_fun rlpreobj,
     write_param = write_splayer,
@@ -182,13 +182,10 @@ fun mk_rlobj rlpreobj extsearch =
 
 val eval_dir = HOLDIR ^ "/src/AI/experiments/eval"
 
-fun log_in_eval file s =
-  let val path = eval_dir ^ "/" ^ file in
-    mkDir_err eval_dir;
-    append_endline path s
-  end
+fun log_in_eval obj s =
+  append_endline (eval_dir ^ "/" ^ (#expname (#rl_param obj)) ^ "/log") s
 
-fun log obj s = (log_in_eval (#expname (#rl_param obj)) s; print_endline s)
+fun log obj s = (log_in_eval obj s; print_endline s)
 
 fun log_header (obj : 'a rlobj) =
   let
@@ -207,7 +204,7 @@ fun log_header (obj : 'a rlobj) =
    ------------------------------------------------------------------------- *)
 
 
-fun rl_train ntrain rlobj exl =
+fun rl_train rlobj exl =
   let
     val dplayerl = #dplayerl rlobj
     fun f {playerid, dhtnn_param, schedule} =
@@ -223,7 +220,7 @@ fun rl_train ntrain rlobj exl =
       add_time (parmap_queue_extern ncore mlTune.traindhtnn_extspec ()) argl;
     val rplayerl = combine (dhtnnl,map #playerid dplayerl)
   in
-    log rlobj ("Total training time : " ^ rts t);
+    log rlobj ("Training time: " ^ rts t);
     rplayerl
   end
 
@@ -350,7 +347,7 @@ fun explore_one rlobj unib (dhtnn,playerid) targetl =
     (nwin1,exl)
   end
 
-fun rl_explore ngen rlobj level unib rplayer exl =
+fun rl_explore rlobj level unib rplayer =
   let
     val rl_param = #rl_param rlobj
     val {ntarget_start, ntarget_compete, ntarget_explore,
@@ -359,9 +356,7 @@ fun rl_explore ngen rlobj level unib rplayer exl =
     val ntarget = if unib then ntarget_start else ntarget_explore
     val targetl = level_targetl level ntarget
     val _ = log rlobj ("Exploration: " ^ its (length targetl) ^ " targets")
-    val (nwin,exl1) = explore_one rlobj unib rplayer targetl
-    val expname = #expname (#rl_param rlobj)
-    val _ = (#write_exl rlobj) file exl1
+    val (nwin,exl1) = explore_one rlobj unib rplayer targetl 
     (*
     val ex_filter = #ex_filter rl_param
     val ex_window = #ex_window rl_param
@@ -374,8 +369,8 @@ fun rl_explore ngen rlobj level unib rplayer exl =
         else first_n ex_window exl2
       else exl2
     val uboardl = mk_fast_set (#board_compare rlobj) (map #1 exl2)
-    *)
     val _ = log rlobj ("unique boards: " ^ its (length uboardl))
+    *)
     val b = int_div nwin (length targetl) > level_threshold
     val newlevel = if b then level + 1 else level
   in
@@ -383,8 +378,6 @@ fun rl_explore ngen rlobj level unib rplayer exl =
     (exl1,newlevel)
   end
 
-    val file = eval_dir ^ "/" ^ expname ^
-      "examples_gen" ^ its ngen ^ "_level" ^ its level
 (* -------------------------------------------------------------------------
    Asynchronous training and exploration
    ------------------------------------------------------------------------- *)
@@ -392,100 +385,103 @@ fun rl_explore ngen rlobj level unib rplayer exl =
 (* helpers *)
 fun wait () = OS.Process.sleep (Time.fromReal 1.0)
 
-(* files *)
-fun player_save rlobj n =
-  eval_dir ^ "/" ^ (#expname rlobj) ^ "_player" ^ its n
-fun ex_save rlobj n =
-  eval_dir ^ "/" ^ (#expname rlobj) ^ "_ex" ^ its n
+(* examples *)
+fun ex_file rlobj n =
+  eval_dir ^ "/" ^ (#expname (#rl_param rlobj)) ^ "/ex" ^ its n
+fun read_one_ex rlobj n = (#read_exl rlobj) (ex_file rlobj n)
+fun gather_ex rlobj acc n =
+  let val ex_window = #ex_window (#rl_param rlobj) in
+    if n < 0 orelse length acc > ex_window
+    then first_n ex_window (rev acc) 
+    else gather_ex rlobj (read_one_ex rlobj n @ acc) (n-1)
+  end
 
-fun gather_ex acc n =
-  if n < 0 orelse length acc > #ex_window rlobj 
-  then first_n (#ex_window rlobj) (rev acc) 
-  else gather_ex (rev (read_ex n) @ acc) (n-1)
-fun export_rplayer rlobj n rplayer =
+fun store_ex rlobj n exl =
   (
-  write_dhtnn (rplayer_save rlobj n ^ "_dhtnn") (fst rplayer_best);
-  writel_atomic (rplayer_save rlobj n ^ "_id") [snd rplayer_best]  
-  )     
+  (#write_exl rlobj) (ex_file rlobj n) exl;
+  writel_atomic (ex_file rlobj n ^ "_status") ["done"]
+  )
+fun retrieve_ex rlobj n = gather_ex rlobj [] n
+fun exists_ex rlobj n = exists_file (ex_file rlobj n ^ "_status")
+fun max_ex rlobj n =
+  if not (exists_ex rlobj n) then n else max_ex rlobj (n+1)
+
+(* player *)
+fun player_file rlobj n =
+  eval_dir ^ "/" ^ (#expname (#rl_param rlobj)) ^ "/player" ^ its n
+
+fun store_player rlobj n (dhtnn,id) =
+  (
+  write_dhtnn (player_file rlobj n ^ "_dhtnn") dhtnn;
+  writel_atomic (player_file rlobj n ^ "_id") [id]
+  )
+fun retrieve_player rlobj n =
+  (
+  read_dhtnn (player_file rlobj n ^ "_dhtnn"),   
+  only_hd (readl (player_file rlobj n ^ "_id"))     
+  )
+fun exists_player rlobj n = exists_file (player_file rlobj n ^ "_id")
+fun max_player rlobj n =
+  if not (exists_player rlobj n) then n else max_player rlobj (n+1) 
 
 (* training *)
-fun rl_train_async (nplayer,nex) rlobj =
-  let 
-    fun f n = if not (exists_ex n) then (n-1) else f (n+1) 
-    val new_nex = f nex
-  in 
-    if new_nex = nex then (wait (); rl_train_async (nplayer,nex) rlobj) else
+fun rl_train_async rlobj (nplayer,nex) =
+  let val newnex = max_ex rlobj nex in 
+    if newnex = nex then (wait (); rl_train_async rlobj (nplayer,nex)) else
     let
-      val exl = gather_ex [] new_nex
-      val rplayer = only_hd (rl_train ntrain rlobj exl)
-      val _ = export_rplayer rlobj ntrain rplayer
+      val _ = log rlobj ("Training: player " ^ its nplayer ^ 
+                         " with example " ^ its (newnex - 1))  
+      val exl = retrieve_ex rlobj (newnex - 1)
+      val _ = log rlobj ("Training examples: " ^ its (length exl))
+      val uboardl = mk_fast_set (#board_compare rlobj) (map #1 exl)
+      val _ = log rlobj ("Training unique boards: " ^ its (length uboardl))
+      val rplayer = only_hd (rl_train rlobj exl)
+      val _ = store_player rlobj nplayer rplayer
     in
-      rl_train_async (nplayer + 1, new_nex) rlobj
+      rl_train_async rlobj (nplayer + 1, newnex) 
     end
+ end
 
 (* exploration *)
-fun rl_explore_async (nplayer,nex) rlobj level =
-  let 
-    fun f n = if not (exists_player n) then (n-1) else f (n+1) 
-    val new_nplayer = f nplayer
-    val rplayer = read_player new_nplayer
-    val (newexl,newlevel) = rl_explore ngen rlobj level unib rplayer exl
-  in  
-    rl_explore ngen rlobj level unib rplayer exl;
-    rl_explore_async (nplayer,nex) rlobj
+fun rl_explore_async rlobj (nplayer,nex) level =
+  let
+    val newnplayer = max_player rlobj nplayer
+    val _ = log rlobj 
+      ("Exploration: player " ^ its (newnplayer - 1) ^ 
+       " producing example " ^ its nex) 
+    val rplayer = retrieve_player rlobj (newnplayer - 1)
+    val (newexl,newlevel) = rl_explore rlobj level false rplayer
+    val _ = store_ex rlobj nex newexl
+  in
+    rl_explore_async rlobj (newnplayer,nex + 1) newlevel
   end
 
 (* -------------------------------------------------------------------------
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
 
-fun rl_init rlobj =
-  let
-    val expname = #expname (#rl_param rlobj)
-    val level = #level_start (#level_param rlobj)
-    val _ = remove_file (eval_dir ^ "/" ^ expname)
-    val _ = log_header rlobj
-    val _ = log rlobj "\nGeneration 0"
-    val file = eval_dir ^ "/" ^ expname ^ "_gen0"
-    val dplayer = hd (#dplayerl rlobj)
+fun execute (f: unit -> unit) = f ()
+fun parmap_fun fl = ignore (parmap_exact (length fl) execute fl)
+
+fun rl_restart_async rlobj (nplayer,nex) level =
+  let  
+    val expdir = eval_dir ^ "/" ^ #expname (#rl_param rlobj)
+    val _ = app mkDir_err [eval_dir,expdir]
+  in
+    parmap_fun 
+      [fn () => rl_train_async rlobj (nplayer,nex),
+       fn () => rl_explore_async rlobj (nplayer,nex) level]
+  end
+
+fun rl_start_async rlobj level =
+  let 
+    val expdir = eval_dir ^ "/" ^ #expname (#rl_param rlobj)
+    val _ = app mkDir_err [eval_dir,expdir]
+    val dplayer = only_hd (#dplayerl rlobj)
     val dhtnn = random_dhtnn (#dhtnn_param dplayer)
-    val dummyrplayer = (dhtnn, #playerid dplayer)
-    val (exl,newlevel) = loop_rl_explore 0 rlobj level true dummyrplayer []
   in
-    (exl,NONE,newlevel)
+    store_player rlobj 0 (dhtnn, #playerid dplayer);
+    rl_restart_async rlobj (1,0) level
   end
-
-fun rl_one n rlobj (exl,rplayero,level) =
-  let
-    val rl_param = #rl_param rlobj
-    val expname = #expname (#rl_param rlobj)
-    val _ = log rlobj ("\nGeneration " ^ its n)
-    val rplayerl = rl_train rlobj exl
-    val rplayero' = if isSome rplayero then [valOf rplayero] else []
-    val (level1,rplayer_best) =
-      if #skip_compete rl_param
-      then (level,only_hd rplayerl)
-      else rl_compete rlobj level (rplayero' @ rplayerl)
-    val (newexl,level2) = rl_explore n rlobj level1 false rplayer_best exl
-  in
-    (newexl,SOME rplayer_best,level2)
-  end
-
-fun cont_rl_loop rlobj i rldata =
-  if i > #ngen (#rl_param rlobj) then rldata else
-  let val rldata_new = rl_one i rlobj rldata in
-    cont_rl_loop rlobj (i+1) rldata_new
-  end
-
-fun start_rl_loop rlobj = cont_rl_loop rlobj 1 (rl_init rlobj)
-
-(* -------------------------------------------------------------------------
-   Testing things
-   ------------------------------------------------------------------------- *)
-
-load "smlParallel"; open smlParallel;
-fun execute (f: unit -> unit) = f ();
-fun parmap_fun fl = ignore (parmap_exact (length fl) execute fl);
-
 
 end (* struct *)

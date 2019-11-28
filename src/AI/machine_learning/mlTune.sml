@@ -183,7 +183,7 @@ fun read_dhtnnarg file =
 val traindhtnn_extspec =
   {
   self = "mlTune.traindhtnn_extspec",
-  parallel_dir = default_parallel_dir ^ "_traindhtnn",
+  parallel_dir = default_parallel_dir ^ "_train",
   reflect_globals = fn () => "()",
   function = train_dhtnn_fun,
   write_param = write_noparam,

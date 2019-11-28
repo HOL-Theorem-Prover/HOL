@@ -80,12 +80,20 @@ sig
   (* phases *)
   val rl_train : 'a rlobj -> 'a rlex -> rplayer list
   val rl_compete : 'a rlobj -> int -> rplayer list -> (int * rplayer)
-  val rl_explore : int -> 'a rlobj -> int -> bool -> rplayer ->
-    'a rlex -> ('a rlex * int)
+  val rl_explore : 'a rlobj -> int -> bool -> rplayer -> ('a rlex * int)
 
   (* main loop *)
+  (*
   val cont_rl_loop : 'a rlobj -> int ->
      ('a rlex * rplayer option * int) ->  ('a rlex * rplayer option * int)
   val start_rl_loop : 'a rlobj -> ('a rlex * rplayer option * int)
+  *)
+
+  (* asynchronous training and exploration: both functions do not terminate *)
+  val rl_train_async: 'a rlobj -> (int * int) -> unit
+  val rl_explore_async: 'a rlobj -> (int * int) -> int -> unit
+  val rl_start_async : 'a rlobj -> int -> unit
+  val rl_restart_async : 'a rlobj -> (int * int) -> int -> unit
+
 
 end
