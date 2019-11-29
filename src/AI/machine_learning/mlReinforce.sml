@@ -446,9 +446,9 @@ fun rl_train_async rlobj (nplayer,nex) =
 fun rl_explore_async rlobj (nplayer,nex) level =
   let
     val newnplayer = max_player rlobj nplayer
-    val _ = log rlobj ("Exploration: producing example " ^ its nex)    
+    val _ = log rlobj ("Exploration: player " ^ 
+      its (newnplayer - 1) ^ " producing example " ^ its nex)    
     val rplayer = retrieve_player rlobj (newnplayer - 1)
-    val _ = ("Exploration: player " ^ its (newnplayer - 1))
     val (newexl,newlevel) = rl_explore rlobj level false rplayer
     val _ = store_ex rlobj nex newexl
   in
