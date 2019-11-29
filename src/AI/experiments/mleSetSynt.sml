@@ -295,11 +295,11 @@ val pretobdict = dnew String.compare
    Interface
    ------------------------------------------------------------------------- *)
 
-val expname = "mleSetSynt-v3-1"
+val expname = "mleSetSynt-v3-16"
 
 val level_param =
   {
-  ntarget_start = 400, ntarget_compete = 400, ntarget_explore = 400,
+  ntarget_start = 400, ntarget_compete = 400, ntarget_explore = 40000,
   level_start = 1, level_threshold = 0.75,
   level_targetl = level_targetl
   }
