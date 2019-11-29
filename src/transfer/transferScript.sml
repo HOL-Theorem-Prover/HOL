@@ -109,6 +109,13 @@ Proof
   simp[equalityp_def]
 QED
 
+Theorem bi_unique_EQ:
+  bi_unique AB ==> (AB ===> AB ===> (=)) (=) (=)
+Proof
+  simp[FUN_REL_def, bi_unique_def, left_unique_def, right_unique_def] >>
+  metis_tac[]
+QED
+
 Theorem ALL_IFF:
   bitotal AB ==> ((AB ===> (=)) ===> (=)) (!) (!)
 Proof
@@ -161,6 +168,13 @@ Proof
   ntac 2 (pop_assum SUBST1_TAC) >> metis_tac[]
 QED
 
+Theorem all_cimp_cimp' =
+    ALL_total_cimp_cimp
+      |> SIMP_RULE bool_ss [FUN_REL_def, PULL_FORALL]
+      |> SIMP_RULE bool_ss [AND_IMP_INTRO]
+      |> INST_TYPE [alpha |-> gen_tyvar(), beta |-> gen_tyvar()]
+      |> GEN_ALL
+
 Theorem ALL_total_iff_cimp:
   total AB ==> ((AB ===> (=)) ===> flip (==>)) (!) (!)
 Proof
@@ -168,6 +182,31 @@ Proof
   map_every qx_gen_tac [‘a’, ‘b’] >>
   ‘a = (\x. a x) /\ b = (\y. b y)’ by simp[FUN_EQ_THM] >>
   ntac 2 (pop_assum SUBST1_TAC) >> metis_tac[]
+QED
+
+Theorem cimp_imp:
+  ((==>) ===> flip (==>) ===> flip (==>)) (==>) (==>)
+Proof
+  simp[FUN_REL_def, FORALL_BOOL]
+QED
+
+fun transform th =
+    th|> INST_TYPE [alpha |-> gen_tyvar(), beta |-> gen_tyvar()]
+      |> SIMP_RULE bool_ss [FUN_REL_def, PULL_FORALL]
+      |> SIMP_RULE bool_ss [AND_IMP_INTRO] |> GEN_ALL
+
+Theorem cimp_imp' = transform cimp_imp
+
+Theorem imp_conj :
+  ((==>) ===> (==>) ===> (==>)) (/\) (/\)
+Proof
+  simp[FUN_REL_def]
+QED
+
+Theorem imp_conj':
+  !p1 p2 q1 q2. (p1 ==> p2) /\ (q1 ==> q2) ==> (p1 /\ q1 ==> p2 /\ q2)
+Proof
+  simp[]
 QED
 
 val _ = export_theory();

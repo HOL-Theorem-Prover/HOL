@@ -81,6 +81,33 @@ Proof
   metis_tac[INJECTIVE_IMAGE_FINITE]
 QED
 
+Theorem RRANGE_FSET:
+  RRANGE (FSET AB) = { bset | FINITE { a | ?b. AB a b /\ b IN bset} /\
+                              ∀a b b'. b IN bset /\ AB a b /\ AB a b' ==>
+                                       b' IN bset }
+Proof
+  simp[FSET_def, relationTheory.RRANGE, Once FUN_EQ_THM] >>
+  qx_gen_tac ‘bset’ >> eq_tac
+  >- (disch_then (qx_choose_then ‘afm’ strip_assume_tac) >>
+      ‘{ a | ?b. AB a b /\ b IN bset } = { a | (?b. AB a b) /\ fIN a afm }’
+         by (simp[EXTENSION] >> metis_tac[]) >> pop_assum SUBST1_TAC >>
+      conj_tac
+      >- (irule SUBSET_FINITE >> qexists_tac ‘FDOM afm’ >> simp[SUBSET_DEF]) >>
+      metis_tac[]) >>
+  strip_tac >> qexists_tac ‘FUN_FMAP (K ()) {a | ?b. AB a b /\ b IN bset}’ >>
+  simp[FUN_FMAP_DEF] >> metis_tac[]
+QED
+
+Theorem RRANGE_FSET_EQ[simp]:
+  RRANGE (FSET (=)) = FINITE
+Proof
+  simp[RRANGE_FSET, Once FUN_EQ_THM]
+QED
+
+(* if not left-unique there could be an infinite number of α's all mapping
+   to the one β, and then {α₁} on the left couldn't relate to {β} because
+   of all the other α's that would have to also be in the set on the left
+*)
 Theorem total_FSET:
   left_unique AB ==> total (FSET AB)
 Proof
@@ -89,30 +116,14 @@ Proof
   simp[FSET_def, EXTENSION] >> metis_tac[]
 QED
 
-Theorem FORALL_FSET:
-  left_unique AB ==>
-  ((FSET AB ===> combin$C (==>)) ===> combin$C (==>)) (!) (!)
-Proof
-  strip_tac >> simp[FUN_REL_def] >>
-  qx_genl_tac [‘fsP’, ‘sP’] >>
-  ‘fsP = \fs. fsP fs’ by simp[FUN_EQ_THM] >> pop_assum SUBST_ALL_TAC >>
-  ‘sP = \s. sP s’ by simp[FUN_EQ_THM] >> pop_assum SUBST_ALL_TAC >> rw[] >>
-  ‘total (FSET AB)’ suffices_by metis_tac[total_def] >> simp[total_FSET]
-QED
+open mp_then
+val fUNION_UNION' = fUNION_UNION |> REWRITE_RULE [FUN_REL_def]
+                                 |> SIMP_RULE bool_ss [PULL_FORALL]
+                                 |> INST_TYPE [alpha |-> gen_tyvar(),
+                                               beta |-> gen_tyvar()]
 
-Theorem FSET_EQ:
-  bi_unique AB /\ bitotal AB ==>
-  (FSET AB ===> FSET AB ===> (=)) (=) (=)
-Proof
-  strip_tac >> simp[FUN_REL_def] >>
-  ‘bi_unique (FSET AB)’ suffices_by
-    metis_tac[bi_unique_def, left_unique_def, right_unique_def] >>
-  simp[bi_unique_FSET]
-QED
+val abs1 = PART_MATCH' (rand o #2 o strip_imp) fUNION_UNION' “s1 ∪ s2:'a set”
 
-val abs1 =
-    fUNION_UNION |> REWRITE_RULE [FUN_REL_def]
-                 |> SIMP_RULE bool_ss [PULL_FORALL]
                  |> Q.SPECL [‘fs1’, ‘s1’, ‘fs2’, ‘s2’]
                  |> UNDISCH_ALL
 val abs2 =
@@ -121,10 +132,20 @@ val abs2 =
                  |> Q.SPECL [‘fs2’, ‘s2’, ‘fs1’, ‘s1’]
                  |> UNDISCH_ALL
 
-Theorem FORALL_FSET' = REWRITE_RULE [FUN_REL_def] FORALL_FSET |> UNDISCH_ALL
+val equality =
+    bi_unique_EQ |> SIMP_RULE bool_ss [FUN_REL_def, PULL_FORALL]
+                 |> C (PART_MATCH' (lhand o rand)) (concl abs1)
+                 |> C (PART_MATCH' (lhand o rand o rand)) (concl abs2)
+                 |> UNDISCH
+                 |> C MP abs1
+                 |> C MP abs2
+
+val ALL_IFF' = SIMP_RULE bool_ss [FUN_REL_def] ALL_IFF
+
+PART_MATCH' (rand o rand o rand) fset_all (concl UNION_COMM)
 
 val AB = “AB : 'a -> 'b -> bool”
-Theorem fUNION_COMM =
+(* Theorem fUNION_COMM =
     FSET_EQ |> REWRITE_RULE [ASSUME “bi_unique ^AB”, ASSUME “bitotal ^AB”]
             |> SIMP_RULE bool_ss [PULL_FORALL, FUN_REL_def]
             |> C MATCH_MP abs1 |> C MATCH_MP abs2
@@ -148,5 +169,5 @@ Theorem fUNION_COMM =
             |> PROVE_HYP bi_unique_EQ |> PROVE_HYP bitotal_EQ
             |> REWRITE_RULE [combinTheory.C_THM]
             |> C MATCH_MP UNION_COMM
-
+*)
 val _ = export_theory();
