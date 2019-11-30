@@ -44,7 +44,7 @@ fun rw_to_uncont t =
 type board = ((term * bool list) * term)
 
 fun board_compare (((a,b),c),((d,e),f)) =
-  cpl_compare Term.compare Term.compare ((c,a),(f,d))
+  cpl_compare Term.compare Term.compare ((a,c),(d,f))
 
 fun string_of_board ((_,bl),tm) =
   String.concatWith " " (map bts bl) ^ " :\n" ^ tts tm
@@ -198,13 +198,12 @@ fun create_levels () =
       (dict_sort tmsize_compare tml)
   end
 
-fun init_leveld () =
+fun level_targetl level =
   let 
-    val tml = import_terml (datasetsynt_dir ^ "/h4setsynt") 
-    val targetl =  map mk_startboard tml
-    fun f ((target,n),d) = dadd target (n,[],0) d
+    val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt") 
+    val tml2 = rev (first_n (level * 400) tml1)
   in
-    foldl f (dempty board_compare) (number_snd 0 targetl)
+    map mk_startboard tml2
   end
 
 (* -------------------------------------------------------------------------
@@ -283,7 +282,7 @@ val pre_extsearch =
    ------------------------------------------------------------------------- *)
 
 val schedule_base =
-  [{ncore = 4, verbose = true, learning_rate = 0.02,
+  [{ncore = 8, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 20}]
 val dhtnn_param_base =
   {
@@ -302,12 +301,12 @@ val pretobdict = dnew String.compare
    Interface
    ------------------------------------------------------------------------- *)
 
-val expname = "mleSetSynt-v4-17"
+val expname = "mleSetSynt-20"
 
 val rl_param =
   {
   expname = expname, ex_window = 400000,
-  ncore_search = 25, nsim = 50000, decay = 1.0
+  ncore_search = 40, nsim = 50000, decay = 1.0
   }
 
 val rlpreobj : (board,move,term) rlpreobj =
@@ -319,8 +318,7 @@ val rlpreobj : (board,move,term) rlpreobj =
   pretobdict = pretobdict,
   precomp_dhtnn = mk_graphv (#dimin dhtnn_param_base),
   dplayerl = [player_base],
-  write_boardl = write_boardl,
-  read_boardl = read_boardl
+  level_targetl = level_targetl
   }
 
 val extsearch = mk_extsearch "mleSetSynt.extsearch" rlpreobj
@@ -335,7 +333,6 @@ val rlobj = mk_rlobj rlpreobj extsearch
 load "mlReinforce"; open mlReinforce;
 load "mleSetSynt"; open mleSetSynt;
 (* create_levels (); *)
-val leveld = init_leveld ();
 val _ = rl_start_sync rlobj leveld;
 *)
 

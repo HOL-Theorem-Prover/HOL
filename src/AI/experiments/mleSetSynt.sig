@@ -7,7 +7,6 @@ sig
   type move = term
 
   val create_levels : unit -> unit
-  val init_leveld : unit -> board mlReinforce.leveld
   val mk_graph : int -> term -> bool list
   val mk_startboard : term -> board
   val dest_startboard : board -> term

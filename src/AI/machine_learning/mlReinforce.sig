@@ -8,7 +8,6 @@ sig
   type schedule = mlNeuralNetwork.schedule
   type dhtnn_param = mlTreeNeuralNetwork.dhtnn_param
   type 'a rlex = 'a psBigSteps.rlex
-  type 'a leveld = ('a, int * bool list * int) Redblackmap.dict
   (* players *)
   type splayer = (bool * dhtnn * bool * string * int)
   type dplayer =
@@ -45,8 +44,7 @@ sig
     pretobdict : (string, ('a -> term) * ('c -> 'a -> term)) Redblackmap.dict,
     precomp_dhtnn : dhtnn -> 'a -> 'c,
     dplayerl : dplayer list,
-    write_boardl : string -> 'a list -> unit,
-    read_boardl : string -> 'a list
+    level_targetl : int -> 'a list
     }
   
   type 'a rlobj =
@@ -58,26 +56,21 @@ sig
     write_exl : string -> 'a rlex -> unit,
     read_exl : string -> 'a rlex,
     board_compare : 'a * 'a -> order,
-    write_boardl : string -> 'a list -> unit,
-    read_boardl : string -> 'a list
+    level_targetl : int -> 'a list
     }
   
   val mk_extsearch : string -> ('a,'b,'c) rlpreobj -> 'a extsearch
   val mk_rlobj : ('a,'b,'c) rlpreobj -> 'a extsearch -> 'a rlobj
 
-  (* levels *)
-  val store_leveld : 'a rlobj -> int -> 'a leveld -> unit
-  val retrieve_leveld : 'a rlobj -> int -> 'a leveld
-
   (* phases *)
   val rl_train_sync: 
-     'a rlobj -> ((int * int) * 'a leveld) -> ((int * int) * 'a leveld)
+     'a rlobj -> ((int * int) * int) -> ((int * int) * int)
   val rl_explore_sync: 
-     'a rlobj -> ((int * int) * 'a leveld) -> ((int * int) * 'a leveld)
+     'a rlobj -> ((int * int) * int) -> ((int * int) * int)
   
   (* main functions *)
-  val rl_start_sync : 'a rlobj -> 'a leveld -> unit
-  val rl_restart_sync : 'a rlobj -> ((int * int) * 'a leveld) -> unit
+  val rl_start_sync : 'a rlobj -> int -> unit
+  val rl_restart_sync : 'a rlobj -> ((int * int) * int) -> unit
 
 
 end
