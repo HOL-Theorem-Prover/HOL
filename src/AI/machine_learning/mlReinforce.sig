@@ -8,7 +8,7 @@ sig
   type schedule = mlNeuralNetwork.schedule
   type dhtnn_param = mlTreeNeuralNetwork.dhtnn_param
   type 'a rlex = 'a psBigSteps.rlex
-
+  type 'a leveld = ('a, int * bool list * int) Redblackmap.dict
   (* players *)
   type splayer = (bool * dhtnn * bool * string * int)
   type dplayer =
@@ -31,63 +31,51 @@ sig
   (* reinforcement learning parameters *)
   type rl_param =
     {
-    expname : string,
-    ex_window : int, ex_filter : int option,
-    skip_compete : bool,
-    ngen : int, ncore_search : int,
-    nsim_start : int , nsim_explore : int, nsim_compete : int,
-    decay : real
+    expname : string, 
+    ex_window : int, 
+    ncore_search : int, nsim : int, decay : real
     }
+  
   type ('a,'b,'c) rlpreobj =
     {
     rl_param : rl_param,
-    level_targetl : (term, int * bool list * int) Redblackmap.dict -> 'a list,
     max_bigsteps : 'a -> int,
-    game : ('a,'b) game,
+    game : ('a,'b) psMCTS.game,
     pre_extsearch : 'a pre_extsearch,
     pretobdict : (string, ('a -> term) * ('c -> 'a -> term)) Redblackmap.dict,
     precomp_dhtnn : dhtnn -> 'a -> 'c,
-    dplayerl : dplayer list
+    dplayerl : dplayer list,
+    write_boardl : string -> 'a list -> unit,
+    read_boardl : string -> 'a list
     }
+  
   type 'a rlobj =
     {
     rl_param : rl_param,
-    level_targetl : (term, int * bool list * int) Redblackmap.dict -> 'a list,
     extsearch : 'a extsearch,
     tobdict : (string, 'a -> term) Redblackmap.dict,
     dplayerl : dplayer list,
     write_exl : string -> 'a rlex -> unit,
     read_exl : string -> 'a rlex,
-    board_compare : 'a * 'a -> order
+    board_compare : 'a * 'a -> order,
+    write_boardl : string -> 'a list -> unit,
+    read_boardl : string -> 'a list
     }
+  
   val mk_extsearch : string -> ('a,'b,'c) rlpreobj -> 'a extsearch
   val mk_rlobj : ('a,'b,'c) rlpreobj -> 'a extsearch -> 'a rlobj
 
-  (* example filtering *)
-  val rl_filter_train :
-    'a rlobj -> rplayer -> int -> 'a rlex -> ('a rlex * rplayer) list
-  val rl_filter_compete :
-    'a rlobj -> int -> ('a rlex * rplayer) list -> 'a rlex
-  val rl_filter :
-    'a rlobj -> rplayer -> int -> int -> 'a rlex -> 'a rlex
+  (* levels *)
+  val store_leveld : 'a rlobj -> int -> 'a leveld -> unit
+  val retrieve_leveld : 'a rlobj -> int -> 'a leveld
 
   (* phases *)
-  val rl_train : 'a rlobj -> 'a rlex -> rplayer list
-  val rl_compete : 'a rlobj -> int -> rplayer list -> (int * rplayer)
-  val rl_explore : 'a rlobj -> int -> bool -> rplayer -> ('a rlex * int)
-
-  (* main loop *)
-  (*
-  val cont_rl_loop : 'a rlobj -> int ->
-     ('a rlex * rplayer option * int) ->  ('a rlex * rplayer option * int)
-  val start_rl_loop : 'a rlobj -> ('a rlex * rplayer option * int)
-  *)
-
-  (* asynchronous training and exploration: both functions do not terminate *)
   val rl_train_async: 'a rlobj -> (int * int) -> unit
-  val rl_explore_async: 'a rlobj -> (int * int) -> int -> unit
-  val rl_start_async : 'a rlobj -> int -> unit
-  val rl_restart_async : 'a rlobj -> (int * int) -> int -> unit
+  val rl_explore_async: 'a rlobj -> (int * int) -> 'a leveld -> unit
+  
+  (* main functions *)
+  val rl_start_async : 'a rlobj -> 'a leveld -> unit
+  val rl_restart_async : 'a rlobj -> (int * int) -> 'a leveld -> unit
 
 
 end

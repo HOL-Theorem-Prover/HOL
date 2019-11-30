@@ -198,56 +198,13 @@ fun create_levels () =
       (dict_sort tmsize_compare tml)
   end
 
-fun init_rdict () =
+fun init_leveld () =
   let 
-    val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt") 
-    val tml2 = number_snd 0 tml1 
-    fun f ((tm,n),d) = dadd tm (n,[],0) d
+    val tml = import_terml (datasetsynt_dir ^ "/h4setsynt") 
+    val targetl =  map mk_startboard tml
+    fun f ((target,n),d) = dadd target (n,[],0) d
   in
-    foldl f (dempty Term.compare) tml2
-  end
-
-(* -------------------------------------------------------------------------
-   Updating dictionnary for making levels
-   ------------------------------------------------------------------------- *)
-
-fun compare_target ((_,(ord1,_,wait1)),(_,(ord2,_,wait2))) =
-  cpl_compare Int.compare Int.compare ((wait1,ord1),(wait2,ord2))
-
-fun n_true bstatusl = case bstatusl of
-    true :: m => 1 + n_true m
-  | _ => 0
-
-fun n_false bstatusl = case bstatusl of
-    false :: m => 1 + n_true m
-  | _ => 0
-
-fun update_rdict_one ((tm,bstatus),rdict) =
-  let 
-    val (ord1,bstatusl,wait) = dfind tm rdict 
-    handle NotFound => raise ERR "update_rdict_one" ""
-    val newbstatusl = bstatus :: bstatusl
-    val newwait = Int.max (n_true bstatusl, n_false bstatusl)
-  in
-    dadd tm (ord1,newbstatusl,newwait) rdict
-  end
-
-fun decrease_wait (_,(a,b,wait)) = (a,b,if wait <= 0 then 0 else wait - 1)
-
-fun update_rdict rdict tmwinl =
-  let 
-    val rdict1 = foldl update_rdict_one rdict tmwinl
-    val rdict2 = dmap decrease_wait rdict1
-  in
-    rdict2
-  end
-
-fun level_targetl rdict =
-  let
-    val tml1 = dict_sort compare_target (dlist rdict)
-    val tml2 = rev (dict_sort tmsize_compare (first_n 400 tml1))
-  in
-    map mk_startboard tml2
+    foldl f (dempty board_compare) (number_snd 0 targetl)
   end
 
 (* -------------------------------------------------------------------------
@@ -259,26 +216,35 @@ fun write_target file target =
 fun read_target file =
   mk_startboard (only_hd (import_terml (file ^ "_target")))
 
-fun write_exl file exl =
+fun write_boardl file boardl =
   let
-    val (boardl,evall,polil) = split_triple exl
     val (l1,l2) = split boardl
     val (l1a,l1b) = split l1
   in
     export_terml (file ^ "_orgtm") l1a;
     writel (file ^ "_graph") (map string_of_graph l1b);
-    export_terml (file ^ "_conttm") l2;
+    export_terml (file ^ "_conttm") l2
+  end
+fun read_boardl file =
+  let
+    val orgl = import_terml (file ^ "_orgtm")
+    val graphl = map graph_of_string (readl (file ^ "_graph"))
+    val contl = import_terml (file ^ "_conttm")
+  in
+    combine (combine (orgl,graphl), contl)
+  end
+
+fun write_exl file exl =
+  let val (boardl,evall,polil) = split_triple exl in
+    write_boardl file boardl;
     writel (file ^ "_eval") (map reall_to_string evall);
     writel (file ^ "_poli") (map reall_to_string polil)
   end
 fun read_exl file =
   let
-    val orgl = import_terml (file ^ "_orgtm")
-    val graphl = map graph_of_string (readl (file ^ "_graph"))
-    val contl = import_terml (file ^ "_conttm")
+    val boardl = read_boardl file
     val evall = map string_to_reall (readl (file ^ "_eval"))
     val polil = map string_to_reall (readl (file ^ "_poli"))
-    val boardl = combine (combine (orgl,graphl), contl)
   in
     combine_triple (boardl,evall,polil)
   end
@@ -290,7 +256,6 @@ fun write_splayer file (unib,dhtnn,noiseb,playerid,nsim) =
   writel (file ^ "_playerid") [playerid];
   writel (file ^ "_nsim") [its nsim]
   )
-
 fun read_splayer file =
   let
     val dhtnn = read_dhtnn (file ^ "_dhtnn")
@@ -318,8 +283,8 @@ val pre_extsearch =
    ------------------------------------------------------------------------- *)
 
 val schedule_base =
-  [{ncore = 1, verbose = true, learning_rate = 0.02,
-    batch_size = 16, nepoch = 10}]
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
+    batch_size = 16, nepoch = 20}]
 val dhtnn_param_base =
   {
   operl = operl1, nlayer_oper = 2,
@@ -341,23 +306,21 @@ val expname = "mleSetSynt-v4-16"
 
 val rl_param =
   {
-  expname = expname, ex_window = 400000, ex_filter = NONE,
-  skip_compete = true,
-  ngen = 400, ncore_search = 40,
-  nsim_start = 50000, nsim_explore = 50000, nsim_compete = 50000,
-  decay = 1.0
+  expname = expname, ex_window = 400000,
+  ncore_search = 27, nsim = 50000, decay = 1.0
   }
 
 val rlpreobj : (board,move,term) rlpreobj =
   {
   rl_param = rl_param,
-  level_targetl = level_targetl,
   max_bigsteps = max_bigsteps,
   game = game,
   pre_extsearch = pre_extsearch,
   pretobdict = pretobdict,
   precomp_dhtnn = mk_graphv (#dimin dhtnn_param_base),
-  dplayerl = [player_base]
+  dplayerl = [player_base],
+  write_boardl = write_boardl,
+  read_boardl = read_boardl
   }
 
 val extsearch = mk_extsearch "mleSetSynt.extsearch" rlpreobj
@@ -373,7 +336,8 @@ load "mlReinforce"; open mlReinforce;
 load "mleSetSynt"; open mleSetSynt;
 (* create_levels (); *)
 val _ = rl_restart_async rlobj (136,153) 2;
-val _ = rl_start_async rlobj 1;
+val leveld = init_leveld ();
+val _ = rl_start_async rlobj leveld;
 *)
 
 (* -------------------------------------------------------------------------
