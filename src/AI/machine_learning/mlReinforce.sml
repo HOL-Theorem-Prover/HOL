@@ -378,6 +378,7 @@ fun retrieve_leveld rlobj n =
       (combine (boardl, combine_triple (ordl,bstatusl,waitl)))
   end
 
+
 (* training *)
 fun rl_train_sync rlobj ((nplayer,nex),leveld) =
   let
