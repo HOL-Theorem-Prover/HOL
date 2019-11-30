@@ -307,7 +307,7 @@ val expname = "mleSetSynt-v4-16"
 val rl_param =
   {
   expname = expname, ex_window = 400000,
-  ncore_search = 40, nsim = 50000, decay = 1.0
+  ncore_search = 50, nsim = 50000, decay = 1.0
   }
 
 val rlpreobj : (board,move,term) rlpreobj =
@@ -336,9 +336,7 @@ load "mlReinforce"; open mlReinforce;
 load "mleSetSynt"; open mleSetSynt;
 (* create_levels (); *)
 val leveld = init_leveld ();
-val _ = rl_start_async rlobj leveld;
-
-val _ = rl_restart_async rlobj (136,153) (retrieve_leveld ...);
+val _ = rl_start_sync rlobj leveld;
 *)
 
 (* -------------------------------------------------------------------------
