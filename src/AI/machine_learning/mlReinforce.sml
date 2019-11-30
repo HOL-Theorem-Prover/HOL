@@ -193,7 +193,7 @@ fun n_true bstatusl = case bstatusl of
   | _ => 0
 
 fun n_false bstatusl = case bstatusl of
-    false :: m => 1 + n_true m
+    false :: m => 1 + n_false m
   | _ => 0
 
 fun difficulty (target,(_,bstatusl,_)) = 
@@ -220,7 +220,7 @@ fun update_leveld leveld targetbl =
 
 fun level_targetl leveld =
   let
-    val targetl1 = first_n 400 (dict_sort compare_target (dlist leveld))
+    val targetl1 = first_n 200 (dict_sort compare_target (dlist leveld))
     val targetl2 = map_assoc difficulty targetl1
   in
     map (fst o fst) (dict_sort compare_imin targetl2)
@@ -270,12 +270,12 @@ fun rl_train rlobj exl =
    Exploration
    ------------------------------------------------------------------------- *)
 
-fun explore_one rlobj (dhtnn,playerid) targetl =
+fun explore_one unib rlobj (dhtnn,playerid) targetl =
   let
     val ncore = #ncore_search (#rl_param rlobj)
     val extspec = #extsearch rlobj
     val nsim = #nsim (#rl_param rlobj)
-    val splayer = (false,dhtnn,true,playerid,nsim)
+    val splayer = (unib,dhtnn,true,playerid,nsim)
     val (l,t) = add_time (parmap_queue_extern ncore extspec splayer) targetl
     val nwin1 = length (filter #1 l)
     val nwin2 = length (filter #2 l)
@@ -289,12 +289,12 @@ fun explore_one rlobj (dhtnn,playerid) targetl =
     (nwin1,exl,targetbl)
   end
 
-fun rl_explore rlobj leveld rplayer =
+fun rl_explore unib rlobj leveld rplayer =
   let
     val rl_param = #rl_param rlobj
     val targetl = level_targetl leveld
     val _ = log rlobj ("Exploration: " ^ its (length targetl) ^ " targets")
-    val (nwin,exl,targetbl) = explore_one rlobj rplayer targetl 
+    val (nwin,exl,targetbl) = explore_one unib rlobj rplayer targetl 
   in
     (exl, update_leveld leveld targetbl)
   end
@@ -395,13 +395,24 @@ fun rl_train_sync rlobj ((nplayer,nex),leveld) =
   end
 
 (* exploration *)
+fun rl_explore_init rlobj leveld =
+  let
+    val _ = log rlobj ("Exploration: initialization")    
+    val dplayer = only_hd (#dplayerl rlobj)
+    val dhtnn = random_dhtnn (#dhtnn_param dplayer)
+    val dummyplayer = (dhtnn, #playerid dplayer)
+    val (newexl,_) = rl_explore true rlobj leveld dummyplayer
+  in
+    store_ex rlobj 0 newexl
+  end
+
 fun rl_explore_sync rlobj ((nplayer,nex),leveld) =
   let
     val newnplayer = max_player rlobj nplayer
     val _ = log rlobj ("Exploration: player " ^ 
       its (newnplayer - 1) ^ " producing example " ^ its nex)    
     val rplayer = retrieve_player rlobj (newnplayer - 1)
-    val (newexl,newleveld) = rl_explore rlobj leveld rplayer
+    val (newexl,newleveld) = rl_explore false rlobj leveld rplayer
     val _ = store_ex rlobj nex newexl
     val _ = store_leveld rlobj nex newleveld
     val _ = stats_leveld rlobj newleveld
@@ -428,18 +439,16 @@ fun rl_restart_sync rlobj arg =
     val expdir = eval_dir ^ "/" ^ #expname (#rl_param rlobj)
     val _ = app mkDir_err [eval_dir,expdir]
   in
-    loop_sync rlobj (1,2) arg
+    loop_sync rlobj (0,2) arg
   end
 
 fun rl_start_sync rlobj leveld =
   let 
     val expdir = eval_dir ^ "/" ^ #expname (#rl_param rlobj)
     val _ = app mkDir_err [eval_dir,expdir]
-    val dplayer = only_hd (#dplayerl rlobj)
-    val dhtnn = random_dhtnn (#dhtnn_param dplayer)
   in
-    store_player rlobj 0 (dhtnn, #playerid dplayer);
-    rl_restart_sync rlobj ((1,0),leveld)
+    rl_explore_init rlobj leveld;
+    rl_restart_sync rlobj ((0,1),leveld)
   end
 
 

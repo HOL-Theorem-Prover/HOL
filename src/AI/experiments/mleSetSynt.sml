@@ -302,12 +302,12 @@ val pretobdict = dnew String.compare
    Interface
    ------------------------------------------------------------------------- *)
 
-val expname = "mleSetSynt-v4-16"
+val expname = "mleSetSynt-v4-17"
 
 val rl_param =
   {
   expname = expname, ex_window = 400000,
-  ncore_search = 50, nsim = 50000, decay = 1.0
+  ncore_search = 25, nsim = 50000, decay = 1.0
   }
 
 val rlpreobj : (board,move,term) rlpreobj =
