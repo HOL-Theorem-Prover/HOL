@@ -29,12 +29,6 @@ sig
   type 'a extsearch = (splayer, 'a, bool * bool * 'a rlex) smlParallel.extspec
 
   (* reinforcement learning parameters *)
-  type 'a level_param =
-    {
-    ntarget_start: int, ntarget_compete : int, ntarget_explore : int,
-    level_start : int, level_threshold : real,
-    level_targetl : int -> int -> 'a list
-    }
   type rl_param =
     {
     expname : string,
@@ -47,9 +41,9 @@ sig
   type ('a,'b,'c) rlpreobj =
     {
     rl_param : rl_param,
-    level_param : 'a level_param,
+    level_targetl : (term, int * bool list * int) Redblackmap.dict -> 'a list,
     max_bigsteps : 'a -> int,
-    game : ('a,'b) psMCTS.game,
+    game : ('a,'b) game,
     pre_extsearch : 'a pre_extsearch,
     pretobdict : (string, ('a -> term) * ('c -> 'a -> term)) Redblackmap.dict,
     precomp_dhtnn : dhtnn -> 'a -> 'c,
@@ -58,7 +52,7 @@ sig
   type 'a rlobj =
     {
     rl_param : rl_param,
-    level_param : 'a level_param,
+    level_targetl : (term, int * bool list * int) Redblackmap.dict -> 'a list,
     extsearch : 'a extsearch,
     tobdict : (string, 'a -> term) Redblackmap.dict,
     dplayerl : dplayer list,

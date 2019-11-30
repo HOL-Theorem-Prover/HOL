@@ -164,7 +164,7 @@ val game : (board,move) game =
 fun max_bigsteps ((orgtm,_),_) = 2 * term_size orgtm + 10
 
 (* -------------------------------------------------------------------------
-   Levels
+   Initialization of the levels
    ------------------------------------------------------------------------- *)
 
 val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt"
@@ -198,14 +198,56 @@ fun create_levels () =
       (dict_sort tmsize_compare tml)
   end
 
-fun level_targetl level ntarget =
-  let
-    val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt")
-    val tmll2 = map shuffle (first_n level (mk_batch_full 400 tml1))
-    val tml3 = List.concat (list_combine tmll2)
-    val tml4 = rev (dict_sort tmsize_compare (first_n ntarget tml3))
+fun init_rdict () =
+  let 
+    val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt") 
+    val tml2 = number_snd 0 tml1 
+    fun f ((tm,n),d) = dadd tm (n,[],0) d
   in
-    map mk_startboard tml4
+    foldl f (dempty Term.compare) tml2
+  end
+
+(* -------------------------------------------------------------------------
+   Updating dictionnary for making levels
+   ------------------------------------------------------------------------- *)
+
+fun compare_target ((_,(ord1,_,wait1)),(_,(ord2,_,wait2))) =
+  cpl_compare Int.compare Int.compare ((wait1,ord1),(wait2,ord2))
+
+fun n_true bstatusl = case bstatusl of
+    true :: m => 1 + n_true m
+  | _ => 0
+
+fun n_false bstatusl = case bstatusl of
+    false :: m => 1 + n_true m
+  | _ => 0
+
+fun update_rdict_one ((tm,bstatus),rdict) =
+  let 
+    val (ord1,bstatusl,wait) = dfind tm rdict 
+    handle NotFound => raise ERR "update_rdict_one" ""
+    val newbstatusl = bstatus :: bstatusl
+    val newwait = Int.max (n_true bstatusl, n_false bstatusl)
+  in
+    dadd tm (ord1,newbstatusl,newwait) rdict
+  end
+
+fun decrease_wait (_,(a,b,wait)) = (a,b,if wait <= 0 then 0 else wait - 1)
+
+fun update_rdict rdict tmwinl =
+  let 
+    val rdict1 = foldl update_rdict_one rdict tmwinl
+    val rdict2 = dmap decrease_wait rdict1
+  in
+    rdict2
+  end
+
+fun level_targetl rdict =
+  let
+    val tml1 = dict_sort compare_target (dlist rdict)
+    val tml2 = rev (dict_sort tmsize_compare (first_n 400 tml1))
+  in
+    map mk_startboard tml2
   end
 
 (* -------------------------------------------------------------------------
@@ -277,7 +319,7 @@ val pre_extsearch =
 
 val schedule_base =
   [{ncore = 1, verbose = true, learning_rate = 0.02,
-    batch_size = 16, nepoch = 5}]
+    batch_size = 16, nepoch = 10}]
 val dhtnn_param_base =
   {
   operl = operl1, nlayer_oper = 2,
@@ -295,28 +337,21 @@ val pretobdict = dnew String.compare
    Interface
    ------------------------------------------------------------------------- *)
 
-val expname = "mleSetSynt-v3-16"
-
-val level_param =
-  {
-  ntarget_start = 400, ntarget_compete = 400, ntarget_explore = 40000,
-  level_start = 1, level_threshold = 0.75,
-  level_targetl = level_targetl
-  }
+val expname = "mleSetSynt-v4-16"
 
 val rl_param =
   {
-  expname = expname, ex_window = 800000, ex_filter = NONE,
+  expname = expname, ex_window = 400000, ex_filter = NONE,
   skip_compete = true,
   ngen = 400, ncore_search = 40,
-  nsim_start = 12500, nsim_explore = 12500, nsim_compete = 12500,
+  nsim_start = 50000, nsim_explore = 50000, nsim_compete = 50000,
   decay = 1.0
   }
 
 val rlpreobj : (board,move,term) rlpreobj =
   {
   rl_param = rl_param,
-  level_param = level_param,
+  level_targetl = level_targetl,
   max_bigsteps = max_bigsteps,
   game = game,
   pre_extsearch = pre_extsearch,
@@ -337,7 +372,7 @@ val rlobj = mk_rlobj rlpreobj extsearch
 load "mlReinforce"; open mlReinforce;
 load "mleSetSynt"; open mleSetSynt;
 (* create_levels (); *)
-val _ = rl_restart_async rlobj (75,95) 1;
+val _ = rl_restart_async rlobj (136,153) 2;
 val _ = rl_start_async rlobj 1;
 *)
 

@@ -41,13 +41,6 @@ type 'a extsearch = (splayer, 'a, bool * bool * 'a rlex) smlParallel.extspec
    Parameters of the reinforcement learning loop
    ------------------------------------------------------------------------- *)
 
-type 'a level_param =
-  {
-  ntarget_start : int, ntarget_compete : int, ntarget_explore : int,
-  level_start : int, level_threshold : real,
-  level_targetl : int -> int -> 'a list
-  }
-
 type rl_param =
   {
   expname : string, ex_window : int, ex_filter : int option,
@@ -60,7 +53,7 @@ type rl_param =
 type ('a,'b,'c) rlpreobj =
   {
   rl_param : rl_param,
-  level_param : 'a level_param,
+  level_targetl : (term, int * bool list * int) Redblackmap.dict -> 'a list
   max_bigsteps : 'a -> int,
   game : ('a,'b) game,
   pre_extsearch : 'a pre_extsearch,
@@ -167,7 +160,7 @@ fun mk_extsearch self rlpreobj =
 fun mk_rlobj rlpreobj extsearch =
   {
   rl_param = #rl_param rlpreobj,
-  level_param = #level_param rlpreobj,
+  level_targetl = #level_targetl rlpreobj,
   extsearch = extsearch,
   tobdict = dmap (fst o snd) (#pretobdict rlpreobj),
   dplayerl = #dplayerl rlpreobj,
@@ -222,105 +215,6 @@ fun rl_train rlobj exl =
   in
     log rlobj ("Training time: " ^ rts t);
     rplayerl
-  end
-
-(* -------------------------------------------------------------------------
-   Competition
-   ------------------------------------------------------------------------- *)
-
-fun compete_one rlobj (dhtnn,playerid) targetl =
-  let
-    val ncore = #ncore_search (#rl_param rlobj)
-    val extspec = #extsearch rlobj
-    val splayer = (false,dhtnn,false,playerid,#nsim_compete (#rl_param rlobj))
-    val (r,t) = add_time (parmap_queue_extern ncore extspec splayer) targetl
-    val nwin1 = length (filter #1 r)
-    val nwin2 = length (filter #2 r)
-  in
-    log rlobj ("Player: " ^ playerid);
-    log rlobj ("Competition time : " ^ rts t);
-    log rlobj ("Competition wins : " ^ its nwin1 ^ " " ^ its nwin2);
-    nwin1
-  end
-
-fun rl_compete rlobj level rplayerl =
-  let
-    val {ntarget_start, ntarget_compete, ntarget_explore,
-         level_start, level_threshold,
-         level_targetl} = #level_param rlobj
-    val targetl = level_targetl level ntarget_compete
-    val _ = log rlobj ("Competition targets: " ^ its (length targetl))
-    fun f x = compete_one rlobj x targetl
-    val wl1 = map_assoc f rplayerl
-    val wl1' = map snd wl1
-    val bpass = exists (fn x => x >= hd wl1') (tl wl1')
-    val _ = log rlobj (if bpass then "Pass" else "Fail")
-    val wl2 = dict_sort compare_imax wl1
-    val winner = hd wl2
-    val freq = int_div (snd winner) (length targetl)
-    val b = freq > level_threshold
-    val newlevel = if b then level + 1 else level
-    val _ = if b then log rlobj ("Level up: " ^ its newlevel) else ()
-  in
-    (newlevel, fst winner)
-  end
-
-(* -------------------------------------------------------------------------
-   Example filtering
-   ------------------------------------------------------------------------- *)
-
-fun exclude n l =
-  if n < 0 orelse null l then raise ERR "exclude" ""
-  else if n = 0 then tl l
-  else hd l :: exclude (n - 1) (tl l)
-
-fun mk_filter_exll ncut exl =
-  let val exll = cut_modulo ncut (shuffle exl) in
-    List.tabulate (ncut, fn x => List.concat (exclude x exll))
-  end
-
-fun rl_filter_train rlobj rplayer ncut exl =
-  let
-    val exll = mk_filter_exll ncut exl
-    val dplayerl = #dplayerl rlobj
-    fun test {playerid, dhtnn_param, schedule} = playerid = snd rplayer
-    val {playerid, dhtnn_param, schedule} = valOf (List.find test dplayerl)
-    fun f l =
-      let
-        val tob = dfind playerid (#tobdict rlobj)
-        val l' = map (fn (a,b,c) => (tob a, b, c)) l
-      in
-        (l',schedule, dhtnn_param)
-      end
-    val argl = map f exll
-    val ncore = length argl
-    val (dhtnnl,t) =
-      add_time (parmap_queue_extern ncore mlTune.traindhtnn_extspec ()) argl;
-    val rplayerl = map (fn x => (x,playerid)) dhtnnl
-  in
-    log rlobj ("Filter training time : " ^ rts t);
-    combine (exll,rplayerl)
-  end
-
-fun rl_filter_compete rlobj level explayerl =
-  let
-    val {ntarget_start, ntarget_compete, ntarget_explore,
-         level_start, level_threshold,
-         level_targetl} = #level_param rlobj
-    val targetl = level_targetl level ntarget_compete
-    val _ = log rlobj ("Filter competition targets: " ^ its (length targetl))
-    fun f x = compete_one rlobj (snd x) targetl
-    val wl1 = map_assoc f explayerl
-    val wl2 = dict_sort compare_imax wl1
-    val winnerexl = fst (fst (hd wl2))
-  in
-    log rlobj ("Filter examples: " ^ its (length winnerexl));
-    winnerexl
-  end
-
-fun rl_filter rlobj rplayer ncut level exl =
-  let val explayerl = rl_filter_train rlobj rplayer ncut exl in
-    rl_filter_compete rlobj level explayerl
   end
 
 (* -------------------------------------------------------------------------
