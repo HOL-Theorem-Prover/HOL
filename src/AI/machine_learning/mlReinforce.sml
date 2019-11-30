@@ -379,25 +379,23 @@ fun retrieve_leveld rlobj n =
   end
 
 (* training *)
-fun rl_train_async rlobj (nplayer,nex) =
-  let val newnex = max_ex rlobj nex in 
-    if newnex = nex then (wait (); rl_train_async rlobj (nplayer,nex)) else
-    let
-      val _ = log rlobj ("Training: player " ^ its nplayer ^ 
-                         " with example " ^ its (newnex - 1))  
-      val exl = retrieve_ex rlobj (newnex - 1)
-      val _ = log rlobj ("Training examples: " ^ its (length exl))
-      val uboardl = mk_fast_set (#board_compare rlobj) (map #1 exl)
-      val _ = log rlobj ("Training unique boards: " ^ its (length uboardl))
-      val rplayer = only_hd (rl_train rlobj exl)
-      val _ = store_player rlobj nplayer rplayer
-    in
-      rl_train_async rlobj (nplayer + 1, newnex) 
-    end
- end
+fun rl_train_sync rlobj ((nplayer,nex),leveld) =
+  let
+    val newnex = max_ex rlobj nex
+    val _ = log rlobj ("Training: player " ^ its nplayer ^ 
+                       " with example " ^ its (newnex - 1))  
+    val exl = retrieve_ex rlobj (newnex - 1)
+    val _ = log rlobj ("Training examples: " ^ its (length exl))
+    val uboardl = mk_fast_set (#board_compare rlobj) (map #1 exl)
+    val _ = log rlobj ("Training unique boards: " ^ its (length uboardl))
+    val rplayer = only_hd (rl_train rlobj exl)
+    val _ = store_player rlobj nplayer rplayer
+  in
+    ((nplayer + 1, newnex),leveld)
+  end
 
 (* exploration *)
-fun rl_explore_async rlobj (nplayer,nex) leveld =
+fun rl_explore_sync rlobj ((nplayer,nex),leveld) =
   let
     val newnplayer = max_player rlobj nplayer
     val _ = log rlobj ("Exploration: player " ^ 
@@ -408,27 +406,32 @@ fun rl_explore_async rlobj (nplayer,nex) leveld =
     val _ = store_leveld rlobj nex newleveld
     val _ = stats_leveld rlobj newleveld
   in
-    rl_explore_async rlobj (newnplayer,nex + 1) newleveld
+    ((newnplayer,nex + 1),newleveld)
   end
 
 (* -------------------------------------------------------------------------
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
 
-fun execute (f: unit -> unit) = f ()
-fun parmap_fun fl = ignore (parmap_exact (length fl) execute fl)
+fun loop_sync rlobj (n,freq) arg =
+  let val newarg = 
+    if n mod freq = 0 
+    then rl_train_sync rlobj arg
+    else rl_explore_sync rlobj arg
+  in  
+    log rlobj ("\nLoop " ^ its n);
+    loop_sync rlobj (n+1,freq) newarg
+  end
 
-fun rl_restart_async rlobj (nplayer,nex) leveld =
+fun rl_restart_sync rlobj arg =
   let
     val expdir = eval_dir ^ "/" ^ #expname (#rl_param rlobj)
     val _ = app mkDir_err [eval_dir,expdir]
   in
-    parmap_fun
-      [fn () => rl_train_async rlobj (nplayer,nex),
-       fn () => rl_explore_async rlobj (nplayer,nex) leveld]
+    loop_sync rlobj (1,8) arg
   end
 
-fun rl_start_async rlobj leveld =
+fun rl_start_sync rlobj leveld =
   let 
     val expdir = eval_dir ^ "/" ^ #expname (#rl_param rlobj)
     val _ = app mkDir_err [eval_dir,expdir]
@@ -436,7 +439,8 @@ fun rl_start_async rlobj leveld =
     val dhtnn = random_dhtnn (#dhtnn_param dplayer)
   in
     store_player rlobj 0 (dhtnn, #playerid dplayer);
-    rl_restart_async rlobj (1,0) leveld
+    rl_restart_sync rlobj ((1,0),leveld)
   end
+
 
 end (* struct *)

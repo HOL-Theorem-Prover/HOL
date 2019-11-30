@@ -70,12 +70,14 @@ sig
   val retrieve_leveld : 'a rlobj -> int -> 'a leveld
 
   (* phases *)
-  val rl_train_async: 'a rlobj -> (int * int) -> unit
-  val rl_explore_async: 'a rlobj -> (int * int) -> 'a leveld -> unit
+  val rl_train_sync: 
+     'a rlobj -> ((int * int) * 'a leveld) -> ((int * int) * 'a leveld)
+  val rl_explore_sync: 
+     'a rlobj -> ((int * int) * 'a leveld) -> ((int * int) * 'a leveld)
   
   (* main functions *)
-  val rl_start_async : 'a rlobj -> 'a leveld -> unit
-  val rl_restart_async : 'a rlobj -> (int * int) -> 'a leveld -> unit
+  val rl_start_sync : 'a rlobj -> 'a leveld -> unit
+  val rl_restart_sync : 'a rlobj -> ((int * int) * 'a leveld) -> unit
 
 
 end
