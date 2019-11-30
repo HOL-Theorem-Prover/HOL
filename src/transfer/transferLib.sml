@@ -41,6 +41,255 @@ fun mk_uvar(nm,ty) = mk_var(new_var Unification nm, ty)
 end
 fun is_uvar v = String.sub(v |> dest_var |> #1, 0) = #"?" handle _ => false
 
+fun pmk_const c =
+    case Preterm.term_to_preterm [] c (Pretype.Env.empty) of
+        errormonad.Some (_, pt) => pt
+      | _ => raise Fail "No conversion"
+val pconj = pmk_const boolSyntax.conjunction
+val pdisj = pmk_const boolSyntax.disjunction
+val piff =
+    pmk_const (mk_thy_const{Name = "=", Thy = "min",
+                            Ty = bool --> bool --> bool})
+val pneg = pmk_const boolSyntax.negation
+fun pmk_comb(t1,t2) = Preterm.Comb{Locn = locn.Loc_None, Rator = t1, Rand = t2}
+fun plist_mk_comb(f, args) =
+    case args of
+        [] => f
+      | pt::rest => plist_mk_comb(pmk_comb(f,pt), rest)
+
+fun pmk_conj (pt1, pt2) = plist_mk_comb(pconj, [pt1, pt2])
+fun pmk_disj (pt1, pt2) = plist_mk_comb(pdisj, [pt1, pt2])
+fun pmk_neg pt = pmk_comb(pneg, pt)
+fun pmk_var (nm, i) = Preterm.Var{Locn = locn.Loc_None,
+                                  Name = nm, Ty = Pretype.UVar i}
+fun pmk_abs (v, b) = Preterm.Abs{Body = b, Bvar = v, Locn = locn.Loc_None}
+
+local
+open stmonad
+infix >* >>-
+val op>>- =  op >-
+fun (m1 >* m2) = lift2 (fn x => fn y => (x,y)) m1 m2
+type env = (term, preterm) Binarymap.dict * int
+type 'a t = env -> env * 'a
+fun getmap E = (E, #1 E)
+val newconst : preterm t = fn (vmap, i) =>
+    ((vmap, i + 1), pmk_var("UC" ^ Int.toString i, i))
+fun newvar bv (m:'a t) : (preterm * 'a) t = fn (vmap,i) =>
+    let val pv = pmk_var("UV" ^ Int.toString i, i)
+        val vmap' = Binarymap.insert(vmap, bv, pv)
+        val ((vmap'',i'), result) = m (vmap', i + 1)
+    in
+      ((vmap, i'), (pv, result))
+    end
+in
+val env0:env = (Binarymap.mkDict Term.compare, 0)
+fun build_preterm ct : Preterm.preterm t =
+  (* if is_conj ct then
+    let
+      val (cl,cr) = dest_conj ct
+    in
+      lift pmk_conj (build_preterm cl >* build_preterm cr)
+    end
+  else if is_neg ct then lift pmk_neg (build_preterm (dest_neg ct))
+  else  *)
+    let
+      fun varmap ct e =
+          case Binarymap.peek(e,ct) of
+              NONE => raise Fail ("Free variable: "^term_to_string ct)
+            | SOME pt => return pt
+    in
+      case dest_term ct of
+          VAR _ => getmap >>- varmap ct
+        | CONST _ => newconst
+        | COMB(t1,t2) => lift pmk_comb (build_preterm t1 >* build_preterm t2)
+        | LAMB(bv,body) => lift pmk_abs (newvar bv (build_preterm body))
+    end
+end (* local *)
+
+fun dvty ty = ty |> dest_vartype |> (fn s => String.extract(s,1,NONE))
+fun build_skeleton ct =
+    let val ((_, i), pt) = build_preterm ct env0
+        fun newify n ptye = if n <= 0 then ptye
+                            else newify (n - 1) (#1 (Pretype.Env.new ptye))
+        val ptyenv = newify i Pretype.Env.empty
+        val tm =
+            trace ("notify type variable guesses", 0)
+                  (Preterm.smash (Preterm.typecheck NONE pt))
+                  ptyenv
+        val tyvars = type_vars_in_term tm
+        val sigma = map (
+              fn tyv => {
+                redex = tyv, residue = mk_vartype ("'UU__" ^ dvty tyv)
+              }
+            ) tyvars
+    in
+      Term.inst sigma tm
+    end
+
+val FUN_REL_t = prim_mk_const{Thy = "transfer", Name = "FUN_REL"}
+fun ty2relvar cleftp skty cty =
+    if is_vartype skty then
+      mk_var("RV" ^ dvty skty,
+             if cleftp then cty --> skty -->bool
+             else skty --> cty --> bool)
+    else
+      let val (skd,skr) = dom_rng skty
+          val (cd, cr) = dom_rng cty
+          val dR = ty2relvar cleftp skd cd
+          val rR = ty2relvar cleftp skr cr
+      in
+        mk_icomb(mk_icomb(FUN_REL_t, dR), rR)
+      end
+
+val GFUN_REL_COMB = GEN_ALL FUN_REL_COMB
+fun prove_relation_thm cleftp ct skt =
+    let
+      val argl = if cleftp then [ct, skt] else [skt, ct]
+      val skty = type_of skt and cty = type_of ct
+    in
+      case dest_term ct of
+          VAR _ => ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
+        | CONST _ => ASSUME (list_mk_comb(ty2relvar cleftp skty cty, argl))
+        | COMB(cf, cx) =>
+          let
+            val fthm = prove_relation_thm cleftp cf (rator skt)
+            val xthm = prove_relation_thm cleftp cx (rand skt)
+          in
+            MATCH_MP GFUN_REL_COMB (CONJ fthm xthm)
+          end
+        | LAMB (cbv, cbod) =>
+          let
+            val (skbv, skbod) = dest_abs skt
+            val brel = ty2relvar cleftp (type_of skbv) (type_of cbv)
+            val b_asm_t =
+                list_mk_comb(brel, if cleftp then [cbv, skbv] else [skbv, cbv])
+            val bod_thm = prove_relation_thm cleftp cbod skbod
+            val (lv,rv) = if cleftp then (cbv,skbv) else (skbv,cbv)
+            val hyp_thm =
+                bod_thm
+                  |> CONV_RULE (FORK_CONV (UNBETA_CONV lv, UNBETA_CONV rv))
+                  |> DISCH b_asm_t |> GENL [lv,rv]
+          in
+            EQ_MP (PART_MATCH lhs (GSYM FUN_REL_def) (concl hyp_thm)) hyp_thm
+          end
+    end
+
+val notsing_empty = let
+  val ct = concl NOT_SING_EMPTY
+in
+  prove_relation_thm false ct (build_skeleton ct)
+end
+
+val funion_comm = let
+  val ct = “∀f1 f2. fUNION f1 f2 = fUNION f2 f1”
+in
+  prove_relation_thm true ct (build_skeleton ct)
+end
+
+val union_commeg = let
+  val ct = concl UNION_COMM
+in
+  prove_relation_thm false ct (build_skeleton ct)
+    |> INST_TYPE [alpha |-> beta,
+                  “:'UU__a” |-> “:'a fset”,
+                  “:'UU__b” |-> bool,
+                  “:'UU__c” |-> bool,
+                  “:'UU__d” |-> “:'a fset”,
+                  “:'UU__e” |-> bool,
+                  “:'UU__f” |-> “:'a fset”,
+                  “:'UU__g” |-> “:'a fset”]
+    |> Q.INST [
+         ‘RVUU__a’ |-> ‘FSET AB’,
+         ‘RVUU__b’ |-> ‘combin$C (==>)’,
+         ‘RVUU__c’ |-> ‘combin$C (==>)’,
+         ‘RVUU__d’ |-> ‘FSET AB’,
+         ‘RVUU__e’ |-> ‘(=)’,
+         ‘RVUU__f’ |-> ‘FSET AB’,
+         ‘RVUU__g’ |-> ‘FSET AB’,
+         ‘UC0’ |-> ‘(!)’, ‘UC2’ |-> ‘(!)’, ‘UC4’ |-> ‘(=)’,
+         ‘UC5’ |-> ‘fUNION’, ‘UC6’ |-> ‘fUNION’
+       ]
+    |> PROVE_HYP fUNION_UNION
+    |> PROVE_HYP (ALL_total_cimp_cimp |> INST_TYPE [alpha |-> “:'a fset”,
+                                                    beta |-> “:'b set”]
+                                      |> Q.INST [‘AB’ |-> ‘FSET AB'’]
+                                      |> Q.INST [‘AB'’ |-> ‘AB’]
+                                      |> UNDISCH)
+    |> PROVE_HYP (ALL_total_iff_cimp |> INST_TYPE [alpha |-> “:'a fset”,
+                                                    beta |-> “:'b set”]
+                                      |> Q.INST [‘AB’ |-> ‘FSET AB'’]
+                                      |> Q.INST [‘AB'’ |-> ‘AB’]
+                                      |> UNDISCH)
+    |> PROVE_HYP (UNDISCH total_FSET)
+    |> PROVE_HYP (bi_unique_EQ  |> INST_TYPE [alpha |-> “:'a fset”,
+                                                    beta |-> “:'b set”]
+                                |> Q.INST [‘AB’ |-> ‘FSET AB'’]
+                                |> Q.INST [‘AB'’ |-> ‘AB’]
+                                |> UNDISCH)
+    |> PROVE_HYP (UNDISCH bi_unique_FSET)
+end
+
+val ct = “∀P. P ∅ ∧ (∀s :: FINITE. ∀e. e ∉ s ⇒ P (e INSERT s)) ⇒
+              ∀s :: FINITE. P s”
+
+
+prove_relation_thm false ct (build_skeleton ct)
+
+val induct_example = let
+  val ct = concl FINITE_INDUCT
+in
+  prove_relation_thm false ct (build_skeleton ct)
+    |> INST_TYPE [alpha |-> beta,
+                  “:'UU__a” |-> “:'a fset”,
+                  “:'UU__b” |-> bool,
+                  “:'UU__c” |-> bool,
+                  “:'UU__d” |-> bool,
+                  “:'UU__e” |-> bool,
+                  “:'UU__f” |-> bool,
+                  “:'UU__g” |-> bool,
+                  “:'UU__h” |-> bool,
+                  “:'UU__i” |-> bool,
+                  “:'UU__j” |-> bool,
+                  “:'UU__k” |-> bool,
+                  “:'UU__l” |-> alpha,
+                  “:'UU__m” |-> bool,
+                  “:'UU__n” |-> bool,
+                  “:'UU__o” |-> bool,
+                  “:'UU__p” |-> bool,
+                  “:'UU__q” |-> bool
+                 ]
+    |> Q.INST [‘RVUU__a’ |-> ‘FSET AB’,
+               ‘RVUU__b’ |-> ‘(=)’,
+               ‘RVUU__c’ |-> ‘combin$C $==>’,
+               ‘RVUU__d’ |-> ‘combin$C $==>’,
+               ‘RVUU__f’ |-> ‘combin$C $==>’,
+               ‘RVUU__l’ |-> ‘AB’,
+
+
+               ‘UC0’ |-> ‘$!’,
+               ‘UC2’ |-> ‘$==>’,
+               ‘UC3’ |-> ‘$/\’,
+               ‘UC4’ |-> ‘FEMPTY’,
+               ‘UC5’ |-> ‘$!’,
+               ‘UC7’ |-> ‘$==>’,
+               ‘UC8’ |-> ‘$/\’,
+               ‘UC9’ |-> ‘K T’,
+               ‘UC10’ |-> ‘$!’,
+               ‘UC12’ |-> ‘$==>’,
+               ‘UC13’ |-> ‘$~’,
+               ‘UC14’ |-> ‘fIN’,
+               ‘UC15’ |-> ‘fINSERT’,
+               ‘UC16’ |-> ‘$!’,
+               ‘UC18’ |-> ‘$==>’,
+               ‘UC19’ |-> ‘K T’
+              ]
+
+    |> PROVE_HYP fEMPTY_EMPTY |> PROVE_HYP (UNDISCH fINSERT_INSERT)
+    |> SIMP_RULE (bool_ss ++ combinSimps.COMBIN_ss) []
+
+
+fIN_IN
+
 datatype sequent = SQ of term list * term
 type validation = thm list -> thm
 datatype 'a state = Unsolved | Progressed of 'a
