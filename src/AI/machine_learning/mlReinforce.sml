@@ -228,15 +228,17 @@ fun level_targetl leveld =
 
 fun stats_leveld rlobj leveld =
   let
-    val l = map snd (map_assoc difficulty (dlist leveld))
-    val r0 = filter (fn x => x <= ~2) l
-    val r1 = filter (fn x => x <= ~1) l
-    val r2 = filter (fn x => x = 0) l
-    val r3 = filter (fn x => x >= 1) l
-    val r4 = filter (fn x => x >= 2) l
+    val l0  = filter (fn (_,(_,l,_)) => not (null l)) (dlist leveld)
+    val l1 = map snd (map_assoc difficulty l0)
+    val r0 = filter (fn x => x <= ~2) l1
+    val r1 = filter (fn x => x <= ~1) l1
+    val r2 = filter (fn x => x = 0) l1
+    val r3 = filter (fn x => x >= 1) l1
+    val r4 = filter (fn x => x >= 2) l1
   in 
-    log rlobj ("Exploration: level_geq1 " ^ (its (length r3)));
-    log rlobj ("Exploration: difficulty_distrib " 
+    log rlobj ("Exploration: target seen " ^ (its (length l1)));
+    log rlobj ("Exploration: target geq1 " ^ (its (length r3)));
+    log rlobj ("Exploration: target distrib " 
       ^ String.concatWith " " (map (its o length) [r4,r3,r2,r1,r0]))
   end
 

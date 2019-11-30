@@ -335,9 +335,10 @@ val rlobj = mk_rlobj rlpreobj extsearch
 load "mlReinforce"; open mlReinforce;
 load "mleSetSynt"; open mleSetSynt;
 (* create_levels (); *)
-val _ = rl_restart_async rlobj (136,153) 2;
 val leveld = init_leveld ();
 val _ = rl_start_async rlobj leveld;
+
+val _ = rl_restart_async rlobj (136,153) (retrieve_leveld ...);
 *)
 
 (* -------------------------------------------------------------------------
