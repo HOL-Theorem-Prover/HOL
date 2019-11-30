@@ -428,7 +428,7 @@ fun rl_restart_sync rlobj arg =
     val expdir = eval_dir ^ "/" ^ #expname (#rl_param rlobj)
     val _ = app mkDir_err [eval_dir,expdir]
   in
-    loop_sync rlobj (1,8) arg
+    loop_sync rlobj (1,2) arg
   end
 
 fun rl_start_sync rlobj leveld =
