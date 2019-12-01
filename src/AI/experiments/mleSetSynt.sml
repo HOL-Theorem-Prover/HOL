@@ -288,7 +288,7 @@ val dhtnn_param_base =
   {
   operl = operl1, nlayer_oper = 2,
   nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 8, dimpoli = length movel
+  dimin = 12, dimpoli = length movel
   }
 val player_base =
   {playerid = "base",
