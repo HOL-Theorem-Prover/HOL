@@ -282,7 +282,7 @@ val pre_extsearch =
    ------------------------------------------------------------------------- *)
 
 val schedule_base =
-  [{ncore = 8, verbose = true, learning_rate = 0.02,
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 10}]
 val dhtnn_param_base =
   {
