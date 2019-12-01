@@ -319,6 +319,7 @@ fun rl_explore_sync rlobj ((nplayer,nex),level) =
     val rplayer = retrieve_player rlobj (newnplayer - 1)
     val (newexl,newlevel) = rl_explore false rlobj level rplayer
   in
+    store_ex rlobj nex newexl;
     ((newnplayer,nex + 1), newlevel)
   end
 

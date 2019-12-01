@@ -288,7 +288,7 @@ val dhtnn_param_base =
   {
   operl = operl1, nlayer_oper = 2,
   nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 12, dimpoli = length movel
+  dimin = 8, dimpoli = length movel
   }
 val player_base =
   {playerid = "base",
@@ -333,7 +333,7 @@ val rlobj = mk_rlobj rlpreobj extsearch
 load "mlReinforce"; open mlReinforce;
 load "mleSetSynt"; open mleSetSynt;
 (* create_levels (); *)
-val _ = rl_start_sync rlobj 1;
+val _ = rl_restart_sync rlobj ((40,40),1);
 *)
 
 (* -------------------------------------------------------------------------
