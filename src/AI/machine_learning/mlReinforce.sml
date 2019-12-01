@@ -234,7 +234,7 @@ fun rl_explore unib rlobj level rplayer =
     val (exl,b) = explore_one unib rlobj rplayer targetl 
     val _ = if b then log rlobj ("Level up: " ^ its (level + 1)) else ()
   in
-    (exl,level + 1)
+    (exl, if b then level + 1 else level)
   end
 
 (* -------------------------------------------------------------------------
@@ -342,7 +342,7 @@ fun rl_restart_sync rlobj arg =
     val expdir = eval_dir ^ "/" ^ #expname (#rl_param rlobj)
     val _ = app mkDir_err [eval_dir,expdir]
   in
-    loop_sync rlobj (0,2) arg
+    loop_sync rlobj (0,5) arg
   end
 
 fun rl_start_sync rlobj level =
