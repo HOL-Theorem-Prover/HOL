@@ -303,7 +303,7 @@ val pretobdict = dnew String.compare
    Interface
    ------------------------------------------------------------------------- *)
 
-val expname = "mleSetSynt-test1"
+val expname = "mleSetSynt-30"
 
 val rl_param =
   {
