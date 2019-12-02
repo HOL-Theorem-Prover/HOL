@@ -285,7 +285,7 @@ val pre_extsearch =
 
 val schedule_base =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
-    batch_size = 16, nepoch = 40}]
+    batch_size = 16, nepoch = 20}]
 val dhtnn_param_base =
   {
   operl = operl1, nlayer_oper = 2,
@@ -335,7 +335,7 @@ val rlobj = mk_rlobj rlpreobj extsearch
 load "mlReinforce"; open mlReinforce;
 load "mleSetSynt"; open mleSetSynt;
 (* create_levels (); *)
-val _ = rl_restart_sync rlobj ((125,125),1);
+val _ = rl_restart_sync rlobj ((131,131),2);
 *)
 
 (* -------------------------------------------------------------------------
