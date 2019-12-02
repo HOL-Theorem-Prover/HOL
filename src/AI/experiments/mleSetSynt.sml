@@ -201,9 +201,11 @@ fun create_levels () =
 fun level_targetl level =
   let 
     val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt") 
-    val tml2 = rev (first_n (level * 400) tml1)
+    val tmll = map shuffle (first_n level (mk_batch 400 tml1))
+    val tml2 = first_n 400 (List.concat (list_combine tmll))
+    val tml3 = rev (dict_sort tmsize_compare tml2)
   in
-    map mk_startboard tml2
+    map mk_startboard tml3
   end
 
 (* -------------------------------------------------------------------------
@@ -301,7 +303,7 @@ val pretobdict = dnew String.compare
    Interface
    ------------------------------------------------------------------------- *)
 
-val expname = "mleSetSynt-22"
+val expname = "mleSetSynt-test1"
 
 val rl_param =
   {
@@ -333,7 +335,31 @@ val rlobj = mk_rlobj rlpreobj extsearch
 load "mlReinforce"; open mlReinforce;
 load "mleSetSynt"; open mleSetSynt;
 (* create_levels (); *)
-val _ = rl_restart_sync rlobj ((40,40),1);
+val _ = rl_restart_sync rlobj ((125,125),1);
+*)
+
+(* -------------------------------------------------------------------------
+   Test without noise
+   ------------------------------------------------------------------------- *)
+
+(*
+load "mlReinforce"; open mlReinforce;
+load "mleSetSynt"; open mleSetSynt;
+load "aiLib"; open aiLib;
+load "mlTacticData"; open mlTacticData;
+(* create_levels (); *)
+
+val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt"
+val tml = import_terml (datasetsynt_dir ^ "/h4setsynt");
+val targetl = map mk_startboard (first_n 800 tml);
+val (targetl1',targetl2') = part_n 400 targetl;
+val (targetl1,targetl2) = (rev targetl1', rev targetl2');
+
+val rplayer = retrieve_player number;
+val _ = explore_standalone (true,false) rlobj rplayer targetl1;
+val _ = explore_standalone (false,false) rlobj rplayer targetl1;
+val _ = explore_standalone (true,false) rlobj rplayer targetl2;
+val _ = explore_standalone (false,false) rlobj rplayer targetl2;
 *)
 
 (* -------------------------------------------------------------------------

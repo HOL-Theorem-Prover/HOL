@@ -8,12 +8,13 @@ sig
   type schedule = mlNeuralNetwork.schedule
   type dhtnn_param = mlTreeNeuralNetwork.dhtnn_param
   type 'a rlex = 'a psBigSteps.rlex
+  
   (* players *)
   type splayer = (bool * dhtnn * bool * string * int)
   type dplayer =
     {playerid : string, dhtnn_param : dhtnn_param, schedule : schedule}
   type rplayer = (dhtnn * string)
-
+  
   (* parallelization *)
   type 'a pre_extsearch =
     {
@@ -62,9 +63,14 @@ sig
   val mk_extsearch : string -> ('a,'b,'c) rlpreobj -> 'a extsearch
   val mk_rlobj : ('a,'b,'c) rlpreobj -> 'a extsearch -> 'a rlobj
 
+  (* communication files *)
+  val retrieve_player : 'a rlobj -> int -> rplayer
+
   (* phases *)
   val rl_train_sync: 
      'a rlobj -> ((int * int) * int) -> ((int * int) * int)
+  val explore_standalone : (bool * bool) -> 'a rlobj -> rplayer -> 'a list -> 
+     'a rlex * bool
   val rl_explore_sync: 
      'a rlobj -> ((int * int) * int) -> ((int * int) * int)
   

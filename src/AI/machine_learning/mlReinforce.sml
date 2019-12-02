@@ -206,17 +206,14 @@ fun rl_train rlobj exl =
    Exploration
    ------------------------------------------------------------------------- *)
 
-fun explore_one unib rlobj (dhtnn,playerid) targetl =
+fun explore_standalone (unib,noiseb) rlobj (dhtnn,playerid) targetl =
   let
     val ncore = #ncore_search (#rl_param rlobj)
     val extspec = #extsearch rlobj
     val nsim = #nsim (#rl_param rlobj)
-    val splayer = (unib,dhtnn,true,playerid,nsim)
+    val splayer = (unib,dhtnn,noiseb,playerid,nsim)
     val (l,t) = add_time (parmap_queue_extern ncore extspec splayer) targetl
-    val nwin1 = length (filter #1 l)
-    val nwin2 = length (filter #2 l)
-    fun f (b,_,locexl) = (#1 (last locexl),b) 
-    val targetbl = map f l
+    val (nwin1,nwin2) = (length (filter #1 l), length (filter #2 l))
     val exl = List.concat (map #3 l)
     val b = int_div nwin1 (length targetl) > 0.75
   in
@@ -231,7 +228,7 @@ fun rl_explore unib rlobj level rplayer =
     val rl_param = #rl_param rlobj
     val targetl = (#level_targetl rlobj) level
     val _ = log rlobj ("Exploration: " ^ its (length targetl) ^ " targets")
-    val (exl,b) = explore_one unib rlobj rplayer targetl 
+    val (exl,b) = explore_standalone (unib,true) rlobj rplayer targetl 
     val _ = if b then log rlobj ("Level up: " ^ its (level + 1)) else ()
   in
     (exl, if b then level + 1 else level)
@@ -342,7 +339,7 @@ fun rl_restart_sync rlobj arg =
     val expdir = eval_dir ^ "/" ^ #expname (#rl_param rlobj)
     val _ = app mkDir_err [eval_dir,expdir]
   in
-    loop_sync rlobj (0,5) arg
+    loop_sync rlobj (0,2) arg
   end
 
 fun rl_start_sync rlobj level =
