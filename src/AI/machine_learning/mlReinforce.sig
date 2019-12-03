@@ -64,6 +64,7 @@ sig
   val mk_rlobj : ('a,'b,'c) rlpreobj -> 'a extsearch -> 'a rlobj
 
   (* communication files *)
+  val log : 'a rlobj -> string -> unit
   val retrieve_player : 'a rlobj -> int -> rplayer
 
   (* phases *)

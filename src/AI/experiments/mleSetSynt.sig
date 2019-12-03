@@ -18,4 +18,9 @@ sig
   val rlpreobj : (board,move,term) mlReinforce.rlpreobj
   val rlobj : board mlReinforce.rlobj
 
+  val mask_graphtm : int -> bool list -> term
+  val extsearch_mask : board mlReinforce.extsearch
+  val rlpreobj_mask : (board,move,term) mlReinforce.rlpreobj
+  val rlobj_mask : board mlReinforce.rlobj
+
 end

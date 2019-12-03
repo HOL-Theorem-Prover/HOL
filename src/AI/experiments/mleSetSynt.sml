@@ -104,6 +104,33 @@ fun mk_graphv dim dhtnn ((_,graph),_) =
 fun term_of_board1c graphv ((_,_),tm) =
   list_mk_comb (adjgraph, [graphv, rw_to_uncont tm])
 
+(* -------------------------------------------------------------------------
+   Masking the graph
+   ------------------------------------------------------------------------- *)
+
+fun mask_graph graph =
+  Vector.fromList (map (fn x => 0.0) graph)
+
+fun mask_graphtm dim graph =
+  let
+    val graphl = mk_batch_full dim graph
+    val bl = map mask_graph (butlast graphl)
+    val b1 = mask_graph (last graphl)
+    val b2 = Vector.concat [b1,
+      Vector.tabulate (dim - Vector.length b1, fn _ => 0.0)]
+    val varl = map mk_embedding_var (bl @ [b2])
+  in
+    list_mk_binop graphcat varl
+  end
+
+fun mask_graphv dim dhtnn ((_,graph),_) =
+  let
+    val tmgraph = mask_graphtm dim graph
+    val embed = infer_dhtnn_nohead dhtnn tmgraph
+  in
+    mk_embedding_var embed
+  end
+
 (*
 load "aiLib"; open aiLib;
 load "mleSetLib"; open mleSetLib;
@@ -111,10 +138,11 @@ load "mleSetSynt"; open mleSetSynt;
 
 val l1 = parse_setsyntdata ();
 val tml = map fst l1;
-val graph = List.tabulate (64,fn _ => true);
-val board : board = ((T,graph), random_elem tml);
-val tm1 = term_of_board1 12 board;
-val tm = term_of_graph graph;
+val graph = List.tabulate (64,fn _ => false);
+val board : board = ((F,graph), random_elem tml);
+val tm1 = term_of_board1 8 board;
+val tm2 = term_of_graph 8 graph;
+val tm3 = mask_graphtm 8 graph;
 *)
 
 (*
@@ -303,7 +331,7 @@ val pretobdict = dnew String.compare
    Interface
    ------------------------------------------------------------------------- *)
 
-val expname = "mleSetSynt-30"
+val expname = "mleSetSynt-test1"
 
 val rl_param =
   {
@@ -323,9 +351,25 @@ val rlpreobj : (board,move,term) rlpreobj =
   level_targetl = level_targetl
   }
 
-val extsearch = mk_extsearch "mleSetSynt.extsearch" rlpreobj
 
+val extsearch = mk_extsearch "mleSetSynt.extsearch" rlpreobj
 val rlobj = mk_rlobj rlpreobj extsearch
+
+
+val rlpreobj_mask : (board,move,term) rlpreobj =
+  {
+  rl_param = rl_param,
+  max_bigsteps = max_bigsteps,
+  game = game,
+  pre_extsearch = pre_extsearch,
+  pretobdict = pretobdict,
+  precomp_dhtnn = mask_graphv (#dimin dhtnn_param_base),
+  dplayerl = [player_base],
+  level_targetl = level_targetl
+  }
+
+val extsearch_mask = mk_extsearch "mleSetSynt.extsearch_mask" rlpreobj_mask
+val rlobj_mask = mk_rlobj rlpreobj_mask extsearch_mask
 
 (* -------------------------------------------------------------------------
    Reinforcement learning
@@ -351,15 +395,36 @@ load "mlTacticData"; open mlTacticData;
 
 val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt"
 val tml = import_terml (datasetsynt_dir ^ "/h4setsynt");
-val targetl = map mk_startboard (first_n 800 tml);
-val (targetl1',targetl2') = part_n 400 targetl;
-val (targetl1,targetl2) = (rev targetl1', rev targetl2');
+val targetl = map mk_startboard (first_n 1200 tml);
+val (targetl1,targetl2,targetl3) = triple_of_list 
+  (map rev (mk_batch 400 targetl));
+map length [targetl1,targetl2,targetl3];
 
-val rplayer = retrieve_player number;
+val rplayer = retrieve_player rlobj 148;
+
+val _ = log rlobj "\n Breadth-first";
+val _ = log rlobj "Level 1";
 val _ = explore_standalone (true,false) rlobj rplayer targetl1;
-val _ = explore_standalone (false,false) rlobj rplayer targetl1;
+val _ = log rlobj "Level 2";
 val _ = explore_standalone (true,false) rlobj rplayer targetl2;
+val _ = log rlobj "Level 3";
+val _ = explore_standalone (true,false) rlobj rplayer targetl3;
+
+val _ = log rlobj "\n Hidden-graph";
+val _ = log rlobj "Level 1";
+val _ = explore_standalone (false,false) rlobj_mask rplayer targetl1;
+val _ = log rlobj "Level 2";
+val _ = explore_standalone (false,false) rlobj_mask rplayer targetl2;
+val _ = log rlobj "Level 3";
+val _ = explore_standalone (false,false) rlobj_mask rplayer targetl3;
+
+val _ = log rlobj "\n Guided";
+val _ = log rlobj "Level 1";
+val _ = explore_standalone (false,false) rlobj rplayer targetl1;
+val _ = log rlobj "Level 2";
 val _ = explore_standalone (false,false) rlobj rplayer targetl2;
+val _ = log rlobj "Level 3";
+val _ = explore_standalone (false,false) rlobj rplayer targetl3;
 *)
 
 (* -------------------------------------------------------------------------
@@ -374,14 +439,12 @@ load "mlTacticData"; open mlTacticData;
 
 val mcts_param =
   {
-  nsim = 32000,
+  nsim = 50000,
   stopatwin_flag = true,
   decay = #decay (#rl_param rlpreobj),
   explo_coeff = 2.0,
-  noise_all = false,
-  noise_root = false,
   noise_coeff = 0.25,
-  noise_alpha = 0.2
+  noise_gen = 0.2
   };
 
 val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt"
@@ -410,6 +473,73 @@ val targetl3 = filter snd targetl2;
 length targetl3;
 *)
 
+(* -------------------------------------------------------------------------
+   Big steps test
+   ------------------------------------------------------------------------- *)
+
+(*
+load "mleSetSynt"; open mleSetSynt;
+load "psMCTS"; open psMCTS;
+load "psBigSteps"; open psBigSteps;
+load "aiLib"; open aiLib;
+load "mlTacticData"; open mlTacticData;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+
+(* player *)
+val eval_dir = HOLDIR ^ "/src/AI/experiments/eval";
+fun player_file n =
+  eval_dir ^ "/" ^ (#expname (#rl_param rlobj)) ^ "/player" ^ its n;
+fun retrieve_player n =
+  (
+  read_dhtnn (player_file n ^ "_dhtnn"),   
+  only_hd (readl (player_file n ^ "_id"))     
+  );
+val (dhtnn,playerid) = retrieve_player 148;
+
+(* target *)
+val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt";
+val tml = import_terml (datasetsynt_dir ^ "/h4setsynt");
+val target = mk_startboard (List.nth (tml,112));
+
+(* bigsteps *)
+fun player_from_dhtnn (tobc,dhtnn) ctxt board =
+   let val (e,p) = infer_dhtnn dhtnn (tobc ctxt board) in
+     (e, combine (#movel (#game rlpreobj),p))
+   end;
+
+fun mk_mcts_param noiseb nsim =
+  {
+  nsim = nsim,
+  stopatwin_flag = false,
+  decay = #decay (#rl_param rlpreobj),
+  explo_coeff = 2.0,
+  noise_all = noiseb,
+  noise_root = false,
+  noise_coeff = 0.25,
+  noise_gen = random_real
+  };
+
+fun mk_bigsteps_obj (dhtnn,noiseb,playerid,nsim) =
+  let
+    val game = #game rlpreobj
+    val (tob,tobc) = dfind playerid (#pretobdict rlpreobj)
+    fun preplayer ctxt board = player_from_dhtnn (tobc,dhtnn) ctxt board
+    fun precomp board = (#precomp_dhtnn rlpreobj) dhtnn board
+  in
+    {
+    verbose = true,
+    temp_flag = false,
+    max_bigsteps = #max_bigsteps rlpreobj,
+    precomp = precomp,
+    preplayer = preplayer,
+    game = game,
+    mcts_param = mk_mcts_param noiseb nsim
+    }
+  end;
+
+val bigsteps_obj = mk_bigsteps_obj (dhtnn,true,playerid,50000);
+val _ = run_bigsteps bigsteps_obj target;
+*)  
 
 
 end (* struct *)
