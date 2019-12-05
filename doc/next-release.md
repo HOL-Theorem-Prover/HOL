@@ -91,6 +91,11 @@ New theories:
 New tools:
 ----------
 
+*  `holwrap.py`: a simple python script that 'wraps' hol in a similar fashion 
+    to rlwrap. Features include multiline input, history and basic StandardML
+    syntax highlighting. 
+    See the comments at the head of the script for usage instructions.
+
 New examples:
 -------------
 
