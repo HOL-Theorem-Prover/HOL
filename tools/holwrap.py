@@ -14,6 +14,9 @@
 # If hol is not in your path you will need to write the full path instead.
 #   e.g., python3 holwrap.py /path/to/HOL/bin/hol
 
+# Due to the mutiline input, holwrap won't send input until it sees a semicolon,
+#  'QED' or 'End'. You can force it with Esc-Enter, but it could cause problems.
+
 import sys, pexpect, re
 from pygments.lexers.ml import SMLLexer
 from prompt_toolkit import PromptSession
