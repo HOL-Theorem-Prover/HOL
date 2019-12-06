@@ -10,7 +10,7 @@ Overload fIN = “\e (fs:'a fset). e IN FDOM fs”
 
 Overload fUNION = “FUNION : 'a fset -> 'a fset -> 'a fset”
 
-Overload fINSERT = “λe fs. fs |+ (e,())”
+Overload fINSERT = “\e fs. fs |+ (e,())”
 
 Definition FSET_def:
   FSET AB fs s <=> !a b. AB a b ==> (fIN a fs <=> b IN s)
@@ -67,7 +67,7 @@ Proof
 QED
 
 Theorem bi_unique_FSET[simp]:
-  bi_unique AB ∧ bitotal AB ==> bi_unique (FSET AB)
+  bi_unique AB /\ bitotal AB ==> bi_unique (FSET AB)
 Proof
   simp[bi_unique_def, FSET_def, left_unique_def, right_unique_def,
        bitotal_def, total_def, surj_def, pred_setTheory.EXTENSION, fmap_EXT] >>
@@ -91,7 +91,7 @@ QED
 
 Theorem RRANGE_FSET:
   RRANGE (FSET AB) = { bset | FINITE { a | ?b. AB a b /\ b IN bset} /\
-                              ∀a b b'. b IN bset /\ AB a b /\ AB a b' ==>
+                              !a b b'. b IN bset /\ AB a b /\ AB a b' ==>
                                        b' IN bset }
 Proof
   simp[FSET_def, relationTheory.RRANGE, Once FUN_EQ_THM] >>
@@ -112,9 +112,10 @@ Proof
   simp[RRANGE_FSET, Once FUN_EQ_THM]
 QED
 
-(* if not left-unique there could be an infinite number of α's all mapping
-   to the one β, and then {α₁} on the left couldn't relate to {β} because
-   of all the other α's that would have to also be in the set on the left
+(* if not left-unique there could be an infinite number of alphas all
+   mapping to the one beta, and then {alpha_1} on the left couldn't
+   relate to {beta} because of all the other alphas that would have to
+   also be in the set on the left
 *)
 Theorem total_FSET:
   left_unique AB ==> total (FSET AB)

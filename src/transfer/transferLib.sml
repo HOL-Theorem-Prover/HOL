@@ -378,6 +378,9 @@ val ruledb = empty_rdb
                |> addrule ALL_total_RRANGE
                |> addrule ALL_total_iff_cimp
                |> addrule ALL_total_cimp_cimp
+               |> addrule ALL_surj_RDOM
+               |> addrule ALL_surj_iff_imp
+               |> addrule ALL_surj_imp_imp
                |> addrule EXISTS_bitotal
                |> addrule EXISTS_total_iff_imp
                |> addrule EXISTS_total_imp_imp
@@ -388,6 +391,9 @@ val ruledb = empty_rdb
                |> addrule UREL_EQ
                |> addrule PAIRU_COMMA
                |> addrule cimp_imp
+               |> addrule (equalityp_applied
+                             |> INST_TYPE [alpha |-> (bool --> bool --> bool)]
+                             |> Q.INST [‘x’ |-> ‘(==>)’])
                |> addsafe (UNDISCH_ALL
                              (REWRITE_RULE [GSYM AND_IMP_INTRO]
                                            equalityp_FUN_REL))
@@ -421,7 +427,7 @@ in
 end
 
 val funion_comm = let
-  val ct = “∀f1 f2. fUNION f1 f2 = fUNION f2 f1”
+  val ct = “!f1 f2. fUNION f1 f2 = fUNION f2 f1”
   val th0 = prove_relation_thm true ct (build_skeleton ct)
                                |> eliminate_booleans_and_equalities true
 in
@@ -445,12 +451,12 @@ in
 end
 
 val induct = let
-  val ct = “∀P. P FEMPTY ∧ (∀s e. ~fIN e s ⇒ P (fINSERT e s)) ⇒
-                ∀s:num fset. P s”
+  val ct = “!P. P FEMPTY /\ (!s e. ~fIN e s ==> P (fINSERT e s)) ==>
+                !s. P s”
   val th0 = prove_relation_thm true ct (build_skeleton ct)
                                |> eliminate_booleans_and_equalities true
 in
-  seq.hd (seqrpt (resolve_relhyps true ruledb) th0)
+  seqrpt (resolve_relhyps true ruledb) th0 |> seq.take 10
 end
 
 (* doesn't get as far as you might like because you have no way of knowing
