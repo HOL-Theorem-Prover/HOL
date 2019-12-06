@@ -1,45 +1,33 @@
 structure transferLib :> transferLib =
 struct
 
+open transferTheory FullUnify
 val PART_MATCH' = mp_then.PART_MATCH'
 val op $ = Portable.$
 
-datatype var_flavour = Unification | Constrained
-fun flavour_to_pfx Unification = "U" | flavour_to_pfx Constrained = "C"
-local
-  val c = Counter.make()
-  fun new_var flv vnm = flavour_to_pfx flv ^ vnm ^ Int.toString (c())
-in
-fun gspec_all flavour th =
+fun relconstraint_tm t =
+    case dest_term t of
+        CONST {Thy = "transfer", Name, ...} =>
+          Name = "left_unique" orelse Name = "bitotal" orelse
+          Name = "total" orelse Name = "bi_unique" orelse
+          Name = "equalityp" orelse Name = "right_unique" orelse
+          Name = "surj"
+      | _ => false
+fun is_relconstraint t =
+    relconstraint_tm (rator t)
+
+fun gen_tyvar_sigma (tys : hol_type list) =
+    map (fn ty => {redex = ty, residue = gen_tyvar()}) tys
+
+fun gen_tyvarify tm =
+    Term.inst (gen_tyvar_sigma (type_vars_in_term tm)) tm
+
+fun GEN_TYVARIFY th =
     let
-      val (vs, bod) = strip_forall $ concl th
-      fun foldthis (v, th) =
-          let
-            val (nm, ty) = dest_var v
-          in
-            SPEC(mk_var(new_var flavour nm, ty)) th
-          end
+      val tyvs = HOLset.addList(hyp_tyvars th, type_vars_in_term (concl th))
     in
-      List.foldl foldthis th vs
+      INST_TYPE (gen_tyvar_sigma (HOLset.listItems tyvs)) th
     end
-val GUSPEC_ALL = gspec_all Unification
-fun gcspec_all t =
-    let fun recurse A t =
-            case Lib.total dest_forall t of
-                NONE => (List.rev A, t)
-              | SOME (v,bod) =>
-                let
-                  val (vnm, ty) = dest_var v
-                  val v' = mk_var(new_var Constrained vnm, ty)
-                in
-                  recurse (v'::A) (subst[v |-> v'] bod)
-                end
-    in
-      recurse [] t
-    end
-fun mk_uvar(nm,ty) = mk_var(new_var Unification nm, ty)
-end
-fun is_uvar v = String.sub(v |> dest_var |> #1, 0) = #"?" handle _ => false
 
 fun pmk_const c =
     case Preterm.term_to_preterm [] c (Pretype.Env.empty) of
@@ -69,10 +57,11 @@ open stmonad
 infix >* >>-
 val op>>- =  op >-
 fun (m1 >* m2) = lift2 (fn x => fn y => (x,y)) m1 m2
+type preterm = Preterm.preterm
 type env = (term, preterm) Binarymap.dict * int
 type 'a t = env -> env * 'a
 fun getmap E = (E, #1 E)
-val newconst : preterm t = fn (vmap, i) =>
+val newconst : Preterm.preterm t = fn (vmap, i) =>
     ((vmap, i + 1), pmk_var("UC" ^ Int.toString i, i))
 fun newvar bv (m:'a t) : (preterm * 'a) t = fn (vmap,i) =>
     let val pv = pmk_var("UV" ^ Int.toString i, i)
@@ -174,298 +163,326 @@ fun prove_relation_thm cleftp ct skt =
           end
     end
 
+type ruledb = {
+  left: thm Net.net,
+  right : thm Net.net,
+  safe : thm Net.net,
+  bad : term Net.net
+}
+
+fun eliminate_with_unifier ctys th1 h th2 =
+    (* h probably a hypothesis of th2; conclusion of th1 unifies with h;
+       instantiate th1 and th2 so that PROVE_HYP th1' th2' produces a
+       theorem that is th2 without an h
+
+       ctys a list of type variables from th2 that should be held constant
+     *)
+    let
+      val rule = GEN_TYVARIFY th1
+      val cr_t = concl rule
+      val mk_vartype = trace ("Vartype Format Complaint", 0) mk_vartype
+    in
+      case unify ctys [] (cr_t, h) Env.empty of
+          NONE => NONE
+        | SOME (E, ()) =>
+          let
+            val tyinst =
+                Binarymap.foldl
+                  (fn (s,ty,A) => {redex = mk_vartype s,
+                                   residue = Env.lookup_ty E ty}::A)
+                  []
+                  (Env.triTY E)
+            val tminst =
+                Binarymap.foldl
+                  (fn (v,tm,A) =>
+                      {redex = v, residue = Env.lookup_tm E tm} :: A)
+                  []
+                  (Env.triTM E)
+            val f = INST tminst o INST_TYPE tyinst
+          in
+            SOME (PROVE_HYP (f rule) (f th2))
+          end
+    end
+
+
+fun addrule th ({left, right, safe, bad} : ruledb) =
+    let
+      val th = UNDISCH th handle HOL_ERR _ => th
+    in
+      { left = Net.enter (lhand (concl th), th) left,
+        right = Net.enter (rand (concl th), th) right,
+        safe = safe, bad = bad}
+    end
+
+fun addsafe th ({left,right,safe,bad} : ruledb) =
+    { left = left, right = right, bad = bad,
+      safe = Net.enter (concl th, th) safe }
+
+fun addbad t ({left,right,safe,bad} : ruledb) : ruledb =
+  { left = left, right = right, safe = safe,
+    bad = Net.enter(t,t) bad }
+
+fun lookup_rule cleftp (rdb:ruledb) t =
+    let
+      val n = if cleftp then #left rdb else #right rdb
+      val t = if cleftp then lhand t else rand t
+    in
+      Net.lookup t n
+    end
+
+fun check cleftp (ruledb:ruledb) th =
+    let
+      infix +++
+      val argsel = if cleftp then lhand else rand
+      val ctys = type_vars_in_term (th |> concl |> argsel)
+      fun sq >>- f = seq.flatten (seq.map f sq)
+      fun sq1 +++ sq2 =
+          case seq.cases sq1 of
+              NONE => sq2
+            | _ => sq1
+      fun return x = seq.fromList [x]
+      val fail = seq.empty
+      val hs = hyp th
+      fun u1 h th rule =
+          case eliminate_with_unifier ctys rule h th of
+              NONE => fail
+            | SOME th' => return th'
+      fun safe_recurse hs th =
+          case hs of
+              [] => return th
+            | h::rest =>
+              let
+                val ths = Net.lookup h (#safe ruledb)
+              in
+                ((seq.fromList ths >>- u1 h th) +++ return th) >>-
+                safe_recurse rest
+              end
+      fun bad_recurse hs th =
+          case hs of
+              [] => return th
+            | h::rest =>
+                if List.exists
+                     (fn pat => can (match_term (gen_tyvarify pat)) h)
+                     (Net.lookup h (#bad ruledb))
+                then
+                  fail
+                else bad_recurse rest th
+    in
+      safe_recurse hs th >>- S (C bad_recurse) hyp
+    end
+
+fun resolve_relhyps cleftp rdb th =
+    let
+      val argsel = if cleftp then lhand else rand
+      val ctys = type_vars_in_term (th |> concl |> argsel)
+      fun sq >>- f = seq.flatten (seq.map f sq)
+      fun return x = seq.fromList [x]
+      val fail = seq.empty
+      fun goodhyp h = not (is_relconstraint h)
+    in
+      case HOLset.find goodhyp (hypset th) of
+          NONE => fail
+        | SOME h =>
+          let
+            val candidate_rules = case lookup_rule cleftp rdb h of
+                                      [] => [UNDISCH equalityp_applied]
+                                    | xs => xs
+            fun kont candidate_rule =
+                case eliminate_with_unifier ctys candidate_rule h th of
+                    NONE => fail
+                  | SOME th' => return th'
+          in
+            seq.fromList candidate_rules >>- kont >>- check cleftp rdb
+          end
+    end
+
+fun mksel cleftp = if cleftp then lhand else rand
+
+fun boolhyp_tm cleftp h =
+    case dest_term (mksel cleftp h) of
+        CONST {Thy = "bool", Name, ...} =>
+          Name = "/\\" orelse Name = "\\/" orelse Name = "~"
+      | _ => false
+
+local
+  val eqty = alpha --> alpha --> bool
+  val ABty = alpha --> beta --> bool
+  val x = mk_var("x", alpha)
+  val A = mk_var("A", eqty)
+  val AB = mk_var("AB", ABty)
+in
+fun eliminate_booleans_and_equalities cleftp th =
+    let
+      val argsel = if cleftp then lhand else rand
+      val ctys = type_vars_in_term (th |> concl |> argsel)
+      val boolhyps = List.filter (boolhyp_tm cleftp) (hyp th)
+      fun bh_recurse hs th =
+          case hs of
+              [] => th
+            | h::rest =>
+              let
+                val eq = equalityp_applied
+                           |> INST [A |-> genvar eqty, x |-> genvar alpha]
+                           |> GEN_TYVARIFY |> UNDISCH
+              in
+                case eliminate_with_unifier ctys eq h th of
+                    NONE => bh_recurse rest th
+                  | SOME th' => bh_recurse rest th'
+              end
+      val bh_gone = th |> bh_recurse boolhyps
+      fun is_eqhyp t =
+          List.length (#2 (strip_comb t)) >= 2 andalso
+          same_const equality (argsel t) handle HOL_ERR _ => false
+      val eqhyps = List.filter is_eqhyp (hyp bh_gone)
+      fun eq_recurse hs th =
+          case hs of
+              [] => th
+            | h::rest =>
+              let
+                val eqr = EQ_bi_unique |> INST [AB |-> genvar ABty]
+                                       |> GEN_TYVARIFY |> UNDISCH
+              in
+                case eliminate_with_unifier ctys eqr h th of
+                    NONE => eq_recurse rest th
+                  | SOME th' => eq_recurse rest th'
+              end
+    in
+      eq_recurse eqhyps bh_gone
+    end
+end (* local *)
+
+fun seqrpt f x =
+    let
+      val s1 = f x
+    in
+      case seq.cases s1 of
+        NONE => seq.fromList [x]
+      | SOME _ => seq.flatten (seq.map (seqrpt f) s1)
+    end
+
+val empty_rdb : ruledb =
+   {left = Net.empty, right = Net.empty, safe = Net.empty, bad = Net.empty}
+
+open pred_setTheory fsetsTheory
+
+val ruledb = empty_rdb
+               |> addrule fUNION_UNION
+               |> addrule fIN_IN
+               |> addrule fINSERT_INSERT
+               |> addrule fupdate_correct
+               |> addrule fEMPTY_EMPTY
+               |> addrule EQ_bi_unique
+               |> addrule UPAIR_COMMA
+               |> addrule toSet_correct
+               |> addrule ALL_IFF
+               |> addrule ALL_total_RRANGE
+               |> addrule ALL_total_iff_cimp
+               |> addrule ALL_total_cimp_cimp
+               |> addrule EXISTS_bitotal
+               |> addrule EXISTS_total_iff_imp
+               |> addrule EXISTS_total_imp_imp
+               |> addrule EXISTS_surj_iff_cimp
+               |> addrule EXISTS_surj_cimp_cimp
+               |> addrule EXISTS_IFF_RDOM
+               |> addrule EXISTS_IFF_RRANGE
+               |> addrule UREL_EQ
+               |> addrule PAIRU_COMMA
+               |> addrule cimp_imp
+               |> addsafe (UNDISCH_ALL
+                             (REWRITE_RULE [GSYM AND_IMP_INTRO]
+                                           equalityp_FUN_REL))
+               |> addsafe (UNDISCH_ALL
+                             (REWRITE_RULE [GSYM AND_IMP_INTRO]
+                                           bi_unique_implied))
+               |> addsafe (UNDISCH_ALL
+                             (REWRITE_RULE [GSYM AND_IMP_INTRO]
+                                           total_total_sets))
+               |> addsafe eq_equalityp
+               |> addsafe bi_unique_EQ
+               |> addsafe bitotal_EQ
+               |> addsafe total_EQ
+               |> addsafe (SPEC_ALL EQ_REFL)
+               |> addsafe (UNDISCH total_FSET)
+               |> addsafe (UNDISCH left_unique_FSET)
+               |> addsafe (UNDISCH right_unique_FSET)
+               |> addsafe (UNDISCH_ALL
+                             (REWRITE_RULE [GSYM AND_IMP_INTRO] bi_unique_FSET))
+               |> addbad “equalityp (==>)”
+               |> addbad “equalityp (combin$C (==>))”
+               |> addbad “bitotal (FSET AB)”
+               |> addbad “surj (FSET AB)”
+
 val notsing_empty = let
   val ct = concl NOT_SING_EMPTY
+  val th0 = prove_relation_thm false ct (build_skeleton ct)
+                               |> eliminate_booleans_and_equalities false
 in
-  prove_relation_thm false ct (build_skeleton ct)
+  seq.take 10 (seqrpt (resolve_relhyps false ruledb) th0)
 end
 
 val funion_comm = let
   val ct = “∀f1 f2. fUNION f1 f2 = fUNION f2 f1”
+  val th0 = prove_relation_thm true ct (build_skeleton ct)
+                               |> eliminate_booleans_and_equalities true
 in
-  prove_relation_thm true ct (build_skeleton ct)
+  seq.take 10 (seqrpt (resolve_relhyps true ruledb) th0)
+end
+
+val IN_INTER_eq = let
+  val ct = concl IN_INTER
+  val th0 = prove_relation_thm false ct (build_skeleton ct)
+                               |> eliminate_booleans_and_equalities false
+in
+  seq.take 10 (seqrpt (resolve_relhyps false ruledb) th0)
 end
 
 val union_commeg = let
   val ct = concl UNION_COMM
+  val th0 = prove_relation_thm false ct (build_skeleton ct)
+                               |> eliminate_booleans_and_equalities false
 in
-  prove_relation_thm false ct (build_skeleton ct)
-    |> INST_TYPE [alpha |-> beta,
-                  “:'UU__a” |-> “:'a fset”,
-                  “:'UU__b” |-> bool,
-                  “:'UU__c” |-> bool,
-                  “:'UU__d” |-> “:'a fset”,
-                  “:'UU__e” |-> bool,
-                  “:'UU__f” |-> “:'a fset”,
-                  “:'UU__g” |-> “:'a fset”]
-    |> Q.INST [
-         ‘RVUU__a’ |-> ‘FSET AB’,
-         ‘RVUU__b’ |-> ‘combin$C (==>)’,
-         ‘RVUU__c’ |-> ‘combin$C (==>)’,
-         ‘RVUU__d’ |-> ‘FSET AB’,
-         ‘RVUU__e’ |-> ‘(=)’,
-         ‘RVUU__f’ |-> ‘FSET AB’,
-         ‘RVUU__g’ |-> ‘FSET AB’,
-         ‘UC0’ |-> ‘(!)’, ‘UC2’ |-> ‘(!)’, ‘UC4’ |-> ‘(=)’,
-         ‘UC5’ |-> ‘fUNION’, ‘UC6’ |-> ‘fUNION’
-       ]
-    |> PROVE_HYP fUNION_UNION
-    |> PROVE_HYP (ALL_total_cimp_cimp |> INST_TYPE [alpha |-> “:'a fset”,
-                                                    beta |-> “:'b set”]
-                                      |> Q.INST [‘AB’ |-> ‘FSET AB'’]
-                                      |> Q.INST [‘AB'’ |-> ‘AB’]
-                                      |> UNDISCH)
-    |> PROVE_HYP (ALL_total_iff_cimp |> INST_TYPE [alpha |-> “:'a fset”,
-                                                    beta |-> “:'b set”]
-                                      |> Q.INST [‘AB’ |-> ‘FSET AB'’]
-                                      |> Q.INST [‘AB'’ |-> ‘AB’]
-                                      |> UNDISCH)
-    |> PROVE_HYP (UNDISCH total_FSET)
-    |> PROVE_HYP (bi_unique_EQ  |> INST_TYPE [alpha |-> “:'a fset”,
-                                                    beta |-> “:'b set”]
-                                |> Q.INST [‘AB’ |-> ‘FSET AB'’]
-                                |> Q.INST [‘AB'’ |-> ‘AB’]
-                                |> UNDISCH)
-    |> PROVE_HYP (UNDISCH bi_unique_FSET)
+  seq.take 10 (seqrpt (resolve_relhyps false ruledb) th0)
 end
 
-val ct = “∀P. P ∅ ∧ (∀s :: FINITE. ∀e. e ∉ s ⇒ P (e INSERT s)) ⇒
-              ∀s :: FINITE. P s”
+val induct = let
+  val ct = “∀P. P FEMPTY ∧ (∀s e. ~fIN e s ⇒ P (fINSERT e s)) ⇒
+                ∀s:num fset. P s”
+  val th0 = prove_relation_thm true ct (build_skeleton ct)
+                               |> eliminate_booleans_and_equalities true
+in
+  seq.hd (seqrpt (resolve_relhyps true ruledb) th0)
+end
 
+(* doesn't get as far as you might like because you have no way of knowing
+   that the set asserted to exist in the second disjunct should be finite *)
+val cases1 = let
+  val ct = concl SET_CASES
+in
+  ct |> build_skeleton |> prove_relation_thm false ct
+     |> eliminate_booleans_and_equalities false
+     |> seqrpt (resolve_relhyps false ruledb)
+     |> seq.hd
+end
 
-prove_relation_thm false ct (build_skeleton ct)
+val cases2 = let
+  val ct = “!fs. fs = FEMPTY \/ ?e fs0. ~(fIN e fs0) /\ fs = fINSERT e fs0”
+in
+  ct |> build_skeleton |> prove_relation_thm true ct
+     |> eliminate_booleans_and_equalities true
+     |> seqrpt (resolve_relhyps true ruledb)
+     |> seq.take 10
+     |> map (SIMP_RULE (bool_ss ++ combinSimps.COMBIN_ss) [])
+end
+
 
 val induct_example = let
   val ct = concl FINITE_INDUCT
 in
   prove_relation_thm false ct (build_skeleton ct)
-    |> INST_TYPE [alpha |-> beta,
-                  “:'UU__a” |-> “:'a fset”,
-                  “:'UU__b” |-> bool,
-                  “:'UU__c” |-> bool,
-                  “:'UU__d” |-> bool,
-                  “:'UU__e” |-> bool,
-                  “:'UU__f” |-> bool,
-                  “:'UU__g” |-> bool,
-                  “:'UU__h” |-> bool,
-                  “:'UU__i” |-> bool,
-                  “:'UU__j” |-> bool,
-                  “:'UU__k” |-> bool,
-                  “:'UU__l” |-> alpha,
-                  “:'UU__m” |-> bool,
-                  “:'UU__n” |-> bool,
-                  “:'UU__o” |-> bool,
-                  “:'UU__p” |-> bool,
-                  “:'UU__q” |-> bool
-                 ]
-    |> Q.INST [‘RVUU__a’ |-> ‘FSET AB’,
-               ‘RVUU__b’ |-> ‘(=)’,
-               ‘RVUU__c’ |-> ‘combin$C $==>’,
-               ‘RVUU__d’ |-> ‘combin$C $==>’,
-               ‘RVUU__f’ |-> ‘combin$C $==>’,
-               ‘RVUU__l’ |-> ‘AB’,
-
-
-               ‘UC0’ |-> ‘$!’,
-               ‘UC2’ |-> ‘$==>’,
-               ‘UC3’ |-> ‘$/\’,
-               ‘UC4’ |-> ‘FEMPTY’,
-               ‘UC5’ |-> ‘$!’,
-               ‘UC7’ |-> ‘$==>’,
-               ‘UC8’ |-> ‘$/\’,
-               ‘UC9’ |-> ‘K T’,
-               ‘UC10’ |-> ‘$!’,
-               ‘UC12’ |-> ‘$==>’,
-               ‘UC13’ |-> ‘$~’,
-               ‘UC14’ |-> ‘fIN’,
-               ‘UC15’ |-> ‘fINSERT’,
-               ‘UC16’ |-> ‘$!’,
-               ‘UC18’ |-> ‘$==>’,
-               ‘UC19’ |-> ‘K T’
-              ]
-
-    |> PROVE_HYP fEMPTY_EMPTY |> PROVE_HYP (UNDISCH fINSERT_INSERT)
-    |> SIMP_RULE (bool_ss ++ combinSimps.COMBIN_ss) []
-
-
-fIN_IN
-
-datatype sequent = SQ of term list * term
-type validation = thm list -> thm
-datatype 'a state = Unsolved | Progressed of 'a
-datatype 'a tpf_tree =
-  TPF of sequent (* conclusion *)
-       * ('a tpf_tree list * term list * validation * 'a) state
-         (* possible sub-trees *)
-
-fun tree0 R leftp t =
-    let
-      val (ds, rng) = strip_fun (type_of R)
-      val _ = rng = bool orelse raise Fail "Relation of bad type"
-      val (d1,d2) = case ds of [ty1,ty2] => (ty1,ty2)
-                             | _ => raise Fail "Relation of bad type"
-      val c_t = if leftp then list_mk_comb(R, [t, mk_uvar("B", d2)])
-                else list_mk_comb(R, [mk_uvar("A", d1), t])
-    in
-      TPF(SQ([], c_t), Unsolved)
-    end
-
-fun relconstraint_tm t =
-    case dest_term t of
-        CONST {Thy = "transfer", Name, ...} =>
-          Name = "left_unique" orelse Name = "bitotal" orelse
-          Name = "total" orelse Name = "bi_unique"
-      | _ => false
-fun is_relconstraint t =
-    relconstraint_tm (rator t)
-
-
-
-
-(* thm is : !vs. hyp1 /\ hyp2 /\ ... /\ hypn ==> R tm1 tm2 *)
-(* hyps can be Rlns or side constraints *)
-fun build_tree1 k leftp asms thm tm =
-  let
-    val seln_f = if leftp then lhand o #2 o dest_imp
-                 else rand o #2 o dest_imp
-    val thm_instance = PART_MATCH' seln_f thm tm |> BETA_RULE |> GUSPEC_ALL
-    val (sgblock, sq_tm) =
-        thm_instance |> concl |> strip_forall |> #2 |> dest_imp
-  in
-    TPF (SQ (asms, sq_tm), k thm_instance asms (strip_conj sgblock))
-  end
-
-fun dischvs vs th =
-    case vs of
-        [] => th
-      | v::rest => (case List.find (free_in v) (hyp th) of
-                        SOME h => dischvs rest (DISCH h th)
-                      | NONE => raise Fail ("Can't find hyp mentioning: "^
-                                            term_to_string v))
-
-
-fun process1 asms t =
-    if is_forall t then
-      let val (vs', t') = gcspec_all t
-          val (hs, c) = strip_imp t'
-      in
-        (SQ(tunion asms hs,c), fn th => th |> dischvs vs' |> GENL vs')
-      end
-    else
-      (SQ(asms, t), fn th => th)
-
-fun process_subgoals th asms ts =
-    let
-      fun recurse sqA scA fsA ts =
-          case ts of
-              [] => (List.rev sqA, List.rev scA, List.rev fsA)
-            | t::rest =>
-              if is_relconstraint t then
-                recurse sqA (t::scA) (I :: fsA) rest
-              else
-                let val (sq,f) = process1 asms t
-                in
-                  recurse (sq::sqA) scA (f::fsA) rest
-                end
-      val (sqs, scs, fs) = recurse [] [] [] ts
-      val scfns = List.tabulate(length scs, K (fn th => th))
-      fun sq2pf sq = TPF (sq, Unsolved)
-    in
-      Progressed (map sq2pf sqs, scs,
-                  fn ths => MATCH_MP th
-                                     (LIST_CONJ (map (fn (f,x) => f x)
-                                                     (ListPair.zip (fs, ths)))),
-                  th)
-    end
-
-
-
-
-fun mapFirst f l =
-    let
-      fun recurse A l =
-          case l of
-              [] => NONE
-            | h::t => case f h of
-                          SOME h' => SOME (List.revAppend(A, h'::t))
-                        | NONE => recurse (h::A) t
-    in
-      recurse [] l
-    end
-
-fun attack_left pft leftp th =
-    case pft of
-        TPF (SQ(hs,c), Unsolved) =>
-          let
-            val selfn = if leftp then lhand else rand
-          in
-            SOME (build_tree1 process_subgoals leftp hs th (selfn c))
-          end
-      | TPF (rsq, Progressed(pfts, scs, vfn, info)) =>
-        case mapFirst (fn pft => attack_left pft leftp th) pfts of
-            NONE => NONE
-          | SOME pfts' => SOME (TPF (rsq, Progressed(pfts', scs, vfn, info)))
-
-val t0 = valOf
-           (attack_left (tree0 “combin$C (==>)” false (concl UNION_COMM)) false
-                        all_cimp_cimp')
-val SOME t1 = attack_left t0 false all_cimp_cimp'
-
-local
-  val p = mk_var("p", bool)
-  val q = mk_var("q", bool)
-  val iff = mk_eq(p,q)
-  val c0 = combinTheory.C_DEF
-             |> INST_TYPE [alpha |-> bool, beta |-> bool, gamma |-> bool]
-             |> C AP_THM boolSyntax.implication |> C AP_THM p |> C AP_THM q
-             |> BETA_RULE |> SYM
-in
-  val piffq_imp_pimpq = EQ_MP (ASSUME iff) (ASSUME p) |> DISCH p |> DISCH iff
-  val piffq_imp_ppmiq =
-      EQ_MP (SYM (ASSUME iff)) (ASSUME q) |> DISCH q
-            |> EQ_MP c0 |> DISCH iff
 end
 
-fun transform th =
-    th|> INST_TYPE [alpha |-> gen_tyvar(), beta |-> gen_tyvar()]
-      |> SIMP_RULE bool_ss [FUN_REL_def, PULL_FORALL]
-      |> SIMP_RULE bool_ss [AND_IMP_INTRO] |> GEN_ALL
-
-val eq' = transform bi_unique_EQ
-
-val t0 = valOf
-           (attack_left (tree0 “combin$C (==>)” false (concl UNION_COMM)) false
-                        all_cimp_cimp')
-val SOME t1 = attack_left t0 false all_cimp_cimp'
-val SOME t2 = attack_left t1 false (GEN_ALL piffq_imp_ppmiq)
-val SOME t3 = attack_left t2 false eq'
-val SOME t4 = attack_left t3 false (transform fUNION_UNION)
-
-val f0 = tree0 “combin$C (==>)” false (concl FINITE_INDUCT)
-val SOME f1 = attack_left f0 false all_cimp_cimp'
-val SOME f2 = attack_left f1 false cimp_imp'
-val SOME f3 = attack_left f2 false imp_conj'
-val SOME f4 = attack_left f3 false (transform FUN_REL_COMB)
-
-(*
-val stage1' = check_stage1_match thm (tm, leftp) |> BETA_RULE |> guspec_all
-
-*)
-
-fun new_goals th = th |> dest_imp |> #1 |> strip_conj
-
-(* val new1 = new_goals stage1' *)
 
 
-
-val (rcs, others) = List.partition relconstraint new1
-
-fun process_other tm =
-    let
-      val tm' = tm |> ASSUME |> gcspec_all |> concl
-      val (h,c) = dest_imp tm'
-    in
-      map check_stage1_match ..
 
 
 

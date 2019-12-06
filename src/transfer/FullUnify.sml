@@ -20,6 +20,8 @@ struct
      where sigma is the type instantiation given by the map
   *)
   type t = (string, hol_type) Binarymap.dict * (term, term) Binarymap.dict
+  fun triTY ((d,_):t) = d
+  fun triTM ((_, d):t) = d
   type 'a EM = (t, 'a) optmonad.optmonad
   val empty : t =
         (Binarymap.mkDict String.compare, Binarymap.mkDict Term.compare)
@@ -43,20 +45,24 @@ struct
       in
         Term.inst sigma tm
       end
-  fun lookup_tm E tm =
-      case dest_term tm of
+  fun lookup_tm E tm0 =
+      let
+        val tm = instE E tm0
+      in
+        case dest_term tm of
           VAR _ => (case Binarymap.peek(#2 E, tm) of
-                       NONE => instE E tm
-                     | SOME tm' => lookup_tm E tm')
-        | CONST _ => instE E tm
+                        NONE => tm
+                      | SOME tm' => lookup_tm E tm')
+        | CONST _ => tm
         | COMB(f,x) => mk_comb(lookup_tm E f, lookup_tm E x)
         | LAMB(v,bod) =>
           let
             val tm' =
                 #1 (Binarymap.remove(#2 E, v)) handle Binarymap.NotFound => #2 E
           in
-            mk_abs(instE E v, lookup_tm (#1 E, tm') bod)
+            mk_abs(v, lookup_tm (#1 E, tm') bod)
           end
+      end
 
 
 
@@ -86,12 +92,10 @@ fun unify_types ctys (ty1, ty2) : unit Env.EM =
           fun k (ty1, ty2) =
               if is_vartype ty1 then
                 if ty1 = ty2 then return ()
-                else if Lib.mem ty1 (type_vars ty2) orelse Lib.mem ty1 ctys then
-                  fail
+                else if Lib.mem ty1 (type_vars ty2) then fail
+                else if Lib.mem ty1 ctys then fail
                 else Env.add_tybind (dest_vartype ty1, ty2)
-              else if is_vartype ty2 then
-                if Lib.mem ty2 (type_vars ty1) orelse Lib.mem ty2 ctys then fail
-                else Env.add_tybind (dest_vartype ty2, ty1)
+              else if is_vartype ty2 then fail
               else
                 let
                   val {Args=a1,Tyop=op1,Thy=thy1} = dest_thy_type ty1
@@ -101,8 +105,11 @@ fun unify_types ctys (ty1, ty2) : unit Env.EM =
                   else
                     mmap recurse (ListPair.zip(a1,a2)) >> return ()
                 end
+          fun flip (p as (ty1, ty2)) =
+              if is_vartype ty1 andalso not (Lib.mem ty1 ctys) then p
+              else (ty2, ty1)
         in
-          (getty ty1_0 >* getty ty2_0) >>- k
+          lift flip (getty ty1_0 >* getty ty2_0) >>- k
         end
   in
     recurse(ty1,ty2)
@@ -112,44 +119,43 @@ fun unify ctys ctms (t1, t2) : unit Env.EM =
   let
     open optmonad
     val op>>- = op>-
-    fun recurse ctms (tm10, tm20) : unit Env.EM =
+    fun recurse bvs (tm10, tm20) : unit Env.EM =
         let
           fun k (tm1, tm2) =
-              if type_of tm1 <> type_of tm2 then fail
-              else
-                case (dest_term tm1, dest_term tm2) of
-                    (VAR _, VAR _) => if tm1 ~~ tm2 then return ()
-                                      else if tmem tm1 ctms then
-                                        if tmem tm2 ctms then fail
-                                        else Env.add_tmbind (tm2, tm1)
-                                      else Env.add_tmbind (tm1, tm2)
-                  | (VAR _, _) => if free_in tm1 tm2 orelse tmem tm1 ctms
-                                  then
-                                    fail
-                                  else Env.add_tmbind (tm1, tm2)
-                  | (_, VAR _) => if free_in tm2 tm1 orelse tmem tm2 ctms
-                                  then
-                                    fail
-                                  else Env.add_tmbind (tm2, tm1)
+              case (dest_term tm1, dest_term tm2) of
+                  (VAR _, VAR _) => if tm1 ~~ tm2 then return ()
+                                    else if tmem tm1 bvs orelse tmem tm2 bvs
+                                    then
+                                      fail
+                                    else if tmem tm1 ctms then
+                                      if tmem tm2 ctms then fail
+                                      else Env.add_tmbind (tm2, tm1)
+                                    else Env.add_tmbind (tm1, tm2)
+                | (VAR _, _) => if free_in tm1 tm2 orelse tmem tm1 ctms orelse
+                                   tmem tm1 bvs
+                                then
+                                  fail
+                                else Env.add_tmbind (tm1, tm2)
                 | (CONST _, CONST _) => if tm1 ~~ tm2 then return () else fail
                 | (COMB(f1,x1), COMB(f2,x2)) =>
-                  recurse ctms (f1,f2) >> recurse ctms (x1,x2)
+                  recurse bvs (f1,f2) >> recurse bvs (x1,x2)
                 | (LAMB(bv1,bod1), LAMB(bv2,bod2)) =>
                   let
                     val gv = genvar (type_of bv1)
                   in
-                    recurse (gv::ctms)
+                    recurse (gv::bvs)
                             (subst [bv1 |-> gv] bod1, subst [bv2 |-> gv] bod2)
                   end
                 | _ => fail
+          fun flip (p as (t1, t2)) =
+              if is_var t1 then p else if is_var t2 then (t2,t1) else p
         in
           unify_types ctys (type_of tm10, type_of tm20) >>
-          (gettm tm10 >* gettm tm20) >>- k
+          lift flip (gettm tm10 >* gettm tm20) >>- k
         end
   in
-    recurse ctms (t1, t2)
+    recurse [] (t1, t2)
   end
-
 
 
 

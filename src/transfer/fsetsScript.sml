@@ -42,6 +42,14 @@ Proof
        right_unique_def] >> metis_tac[]
 QED
 
+Theorem fupdate_correct:
+  bi_unique AB ==>
+  (FSET AB ===> PAIRU AB ===> FSET AB) $|+ (combin$C $INSERT)
+Proof
+  simp[FUN_REL_def, PAIRU_def, pairTheory.FORALL_PROD, FSET_def, bi_unique_def,
+       left_unique_def, right_unique_def] >> metis_tac[]
+QED
+
 Overload fDELETE = “fdomsub : 'a fset -> 'a -> 'a fset”
 Theorem fDELETE_DELETE:
   bi_unique AB ==>
@@ -116,58 +124,28 @@ Proof
   simp[FSET_def, EXTENSION] >> metis_tac[]
 QED
 
-open mp_then
-val fUNION_UNION' = fUNION_UNION |> REWRITE_RULE [FUN_REL_def]
-                                 |> SIMP_RULE bool_ss [PULL_FORALL]
-                                 |> INST_TYPE [alpha |-> gen_tyvar(),
-                                               beta |-> gen_tyvar()]
+Theorem fset_ext:
+  (fm1 : 'a fset = fm2) <=> FDOM fm1 = FDOM fm2
+Proof
+  simp[fmap_EXT]
+QED
 
-val abs1 = PART_MATCH' (rand o #2 o strip_imp) fUNION_UNION' “s1 ∪ s2:'a set”
+(* if there is no b for a1 and a2, then the finite-maps with a1 and a2 in their
+   domains both relate to the empty set but are not equal *)
+Theorem left_unique_FSET:
+  total AB ==> left_unique (FSET AB)
+Proof
+  simp[left_unique_def, total_def] >> strip_tac >>
+  qx_genl_tac [‘fm1’, ‘fm2’, ‘s’] >>
+  rw[FSET_def, EXTENSION, fset_ext] >> metis_tac[]
+QED
 
-                 |> Q.SPECL [‘fs1’, ‘s1’, ‘fs2’, ‘s2’]
-                 |> UNDISCH_ALL
-val abs2 =
-    fUNION_UNION |> REWRITE_RULE [FUN_REL_def]
-                 |> SIMP_RULE bool_ss [PULL_FORALL]
-                 |> Q.SPECL [‘fs2’, ‘s2’, ‘fs1’, ‘s1’]
-                 |> UNDISCH_ALL
+Theorem right_unique_FSET:
+  surj AB ==> right_unique (FSET AB)
+Proof
+  simp[right_unique_def, surj_def] >> strip_tac >>
+  qx_genl_tac [‘fm’, ‘s1’, ‘s2’] >>
+  rw[FSET_def, EXTENSION] >> metis_tac[]
+QED
 
-val equality =
-    bi_unique_EQ |> SIMP_RULE bool_ss [FUN_REL_def, PULL_FORALL]
-                 |> C (PART_MATCH' (lhand o rand)) (concl abs1)
-                 |> C (PART_MATCH' (lhand o rand o rand)) (concl abs2)
-                 |> UNDISCH
-                 |> C MP abs1
-                 |> C MP abs2
-
-val ALL_IFF' = SIMP_RULE bool_ss [FUN_REL_def] ALL_IFF
-
-PART_MATCH' (rand o rand o rand) fset_all (concl UNION_COMM)
-
-val AB = “AB : 'a -> 'b -> bool”
-(* Theorem fUNION_COMM =
-    FSET_EQ |> REWRITE_RULE [ASSUME “bi_unique ^AB”, ASSUME “bitotal ^AB”]
-            |> SIMP_RULE bool_ss [PULL_FORALL, FUN_REL_def]
-            |> C MATCH_MP abs1 |> C MATCH_MP abs2
-            |> CONV_RULE (FORK_CONV(UNBETA_CONV “fs2:'a |-> unit”,
-                                    UNBETA_CONV “s2: 'b -> bool”))
-            |> DISCH “FSET AB fs2 s2”
-            |> Q.GENL [‘fs2’, ‘s2’]
-            |> CONV_RULE (REWR_CONV (GSYM FUN_REL_def))
-            |> MATCH_MP (GEN_ALL FUN_REL_IFF_IMP)
-            |> CONJUNCT2 |> REWRITE_RULE [FUN_REL_def]
-            |> MATCH_MP FORALL_FSET'
-            |> CONV_RULE (FORK_CONV(UNBETA_CONV “fs1: 'a |-> unit”,
-                                    UNBETA_CONV “s1:'b -> bool”))
-            |> DISCH “FSET AB fs1 s1”
-            |> Q.GENL [‘fs1’, ‘s1’]
-            |> MATCH_MP FORALL_FSET'
-            |> PROVE_HYP (REWRITE_RULE [bi_unique_def]
-                                       (ASSUME “bi_unique ^AB”) |> CONJUNCT1)
-            |> INST_TYPE [beta |-> alpha]
-            |> INST [“AB:'a -> 'a -> bool” |-> “(=) : 'a -> 'a -> bool”]
-            |> PROVE_HYP bi_unique_EQ |> PROVE_HYP bitotal_EQ
-            |> REWRITE_RULE [combinTheory.C_THM]
-            |> C MATCH_MP UNION_COMM
-*)
 val _ = export_theory();

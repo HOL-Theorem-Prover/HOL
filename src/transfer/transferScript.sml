@@ -25,6 +25,12 @@ Definition bi_unique_def:
   bi_unique R <=> left_unique R /\ right_unique R
 End
 
+Theorem bi_unique_implied:
+  left_unique r /\ right_unique r ==> bi_unique r
+Proof
+  simp[bi_unique_def]
+QED
+
 Theorem bi_unique_EQ[simp]: bi_unique (=)
 Proof simp[bi_unique_def]
 QED
@@ -92,29 +98,16 @@ Proof
   simp[equalityp_def, FUN_REL_def]
 QED
 
-Definition PAIR_REL_def:     PAIR_REL AB CD (a,c) (b,d) <=> AB a b /\ CD c d
-End
-val _ =
-    set_mapped_fixity {fixity = Infixr 601, term_name = "PAIR_REL", tok = "###"}
-
-Theorem equalityp_PAIR_REL:
-  equalityp AB /\ equalityp CD ==> equalityp (AB ### CD)
-Proof
-  simp[equalityp_def, PAIR_REL_def, FUN_EQ_THM, pairTheory.FORALL_PROD]
-QED
-
-Theorem equalityp_LIST_REL:
-  equalityp AB ==> equalityp (LIST_REL AB)
-Proof
-  simp[equalityp_def]
-QED
-
-Theorem bi_unique_EQ:
+Theorem EQ_bi_unique:
   bi_unique AB ==> (AB ===> AB ===> (=)) (=) (=)
 Proof
   simp[FUN_REL_def, bi_unique_def, left_unique_def, right_unique_def] >>
   metis_tac[]
 QED
+
+(* ----------------------------------------------------------------------
+    forall
+   ---------------------------------------------------------------------- *)
 
 Theorem ALL_IFF:
   bitotal AB ==> ((AB ===> (=)) ===> (=)) (!) (!)
@@ -168,13 +161,6 @@ Proof
   ntac 2 (pop_assum SUBST1_TAC) >> metis_tac[]
 QED
 
-Theorem all_cimp_cimp' =
-    ALL_total_cimp_cimp
-      |> SIMP_RULE bool_ss [FUN_REL_def, PULL_FORALL]
-      |> SIMP_RULE bool_ss [AND_IMP_INTRO]
-      |> INST_TYPE [alpha |-> gen_tyvar(), beta |-> gen_tyvar()]
-      |> GEN_ALL
-
 Theorem ALL_total_iff_cimp:
   total AB ==> ((AB ===> (=)) ===> flip (==>)) (!) (!)
 Proof
@@ -184,18 +170,91 @@ Proof
   ntac 2 (pop_assum SUBST1_TAC) >> metis_tac[]
 QED
 
+(* ----------------------------------------------------------------------
+    exists
+   ---------------------------------------------------------------------- *)
+
+Theorem EXISTS_bitotal :
+  bitotal AB ==> ((AB ===> (=)) ===> (=)) (?) (?)
+Proof
+  simp[FUN_REL_def, bitotal_def, total_def, surj_def] >> strip_tac >>
+  qx_genl_tac [‘aP’, ‘bP’] >> strip_tac >>
+  ‘aP = (\a. aP a) /\ bP = (\b. bP b)’ by simp[FUN_EQ_THM] >>
+  ntac 2 (pop_assum SUBST1_TAC) >> metis_tac[]
+QED
+
+Theorem EXISTS_IFF_RDOM:
+  surj AB ==> ((AB ===> (=)) ===> (=)) (RES_EXISTS (RDOM AB)) (?)
+Proof
+  simp[FUN_REL_def, bitotal_def, total_def, surj_def, RES_EXISTS_THM, IN_DEF] >>
+  strip_tac >> qx_genl_tac [‘aP’, ‘bP’] >> strip_tac >>
+  ‘bP = (\b. bP b)’ by simp[FUN_EQ_THM] >> pop_assum SUBST1_TAC >>
+  simp[relationTheory.RDOM_DEF] >> metis_tac[]
+QED
+
+Theorem EXISTS_IFF_RRANGE:
+  total AB ==> ((AB ===> (=)) ===> (=)) (?) (RES_EXISTS (RRANGE AB))
+Proof
+  simp[FUN_REL_def, bitotal_def, total_def, surj_def, RES_EXISTS_THM, IN_DEF] >>
+  strip_tac >> qx_genl_tac [‘aP’, ‘bP’] >> strip_tac >>
+  ‘aP = (\a. aP a)’ by simp[FUN_EQ_THM] >> pop_assum SUBST1_TAC >>
+  simp[relationTheory.RRANGE] >> metis_tac[]
+QED
+
+Theorem EXISTS_total_iff_imp:
+  total AB ==> ((AB ===> (=)) ===> $==>) (?) (?)
+Proof
+  simp[FUN_REL_def, bitotal_def, total_def, surj_def] >> strip_tac >>
+  qx_genl_tac [‘aP’, ‘bP’] >> strip_tac >>
+  ‘aP = (\a. aP a) /\ bP = (\b. bP b)’ by simp[FUN_EQ_THM] >>
+  ntac 2 (pop_assum SUBST1_TAC) >> metis_tac[]
+QED
+
+Theorem EXISTS_total_imp_imp:
+  total AB ==> ((AB ===> $==>) ===> $==>) (?) (?)
+Proof
+  simp[FUN_REL_def, bitotal_def, total_def, surj_def] >> strip_tac >>
+  qx_genl_tac [‘aP’, ‘bP’] >> strip_tac >>
+  ‘aP = (\a. aP a) /\ bP = (\b. bP b)’ by simp[FUN_EQ_THM] >>
+  ntac 2 (pop_assum SUBST1_TAC) >> metis_tac[]
+QED
+
+Theorem EXISTS_surj_iff_cimp:
+  surj AB ==> ((AB ===> $=) ===> flip $==>) (?) (?)
+Proof
+  simp[FUN_REL_def, bitotal_def, total_def, surj_def] >> strip_tac >>
+  qx_genl_tac [‘aP’, ‘bP’] >> strip_tac >>
+  ‘aP = (\a. aP a) /\ bP = (\b. bP b)’ by simp[FUN_EQ_THM] >>
+  ntac 2 (pop_assum SUBST1_TAC) >> metis_tac[]
+QED
+
+Theorem EXISTS_surj_cimp_cimp:
+  surj AB ==> ((AB ===> flip $==>) ===> flip $==>) (?) (?)
+Proof
+  simp[FUN_REL_def, bitotal_def, total_def, surj_def] >> strip_tac >>
+  qx_genl_tac [‘aP’, ‘bP’] >> strip_tac >>
+  ‘aP = (\a. aP a) /\ bP = (\b. bP b)’ by simp[FUN_EQ_THM] >>
+  ntac 2 (pop_assum SUBST1_TAC) >> metis_tac[]
+QED
+
+Theorem total_total_sets:
+  total AB /\ left_unique AB ==> total (AB ===> $<=>)
+Proof
+  simp[FUN_REL_def, total_def, left_unique_def] >> rw[] >>
+  qexists_tac ‘{ b | ?a. a IN x /\ AB a b }’  >> simp[IN_DEF] >> metis_tac[]
+QED
+
 Theorem cimp_imp:
   ((==>) ===> flip (==>) ===> flip (==>)) (==>) (==>)
 Proof
   simp[FUN_REL_def, FORALL_BOOL]
 QED
 
-fun transform th =
-    th|> INST_TYPE [alpha |-> gen_tyvar(), beta |-> gen_tyvar()]
-      |> SIMP_RULE bool_ss [FUN_REL_def, PULL_FORALL]
-      |> SIMP_RULE bool_ss [AND_IMP_INTRO] |> GEN_ALL
-
-Theorem cimp_imp' = transform cimp_imp
+Theorem eq_imp:
+  ((=) ===> (=) ===> (=)) (==>) (==>)
+Proof
+  simp[FUN_REL_def]
+QED
 
 Theorem imp_conj :
   ((==>) ===> (==>) ===> (==>)) (/\) (/\)
@@ -203,10 +262,91 @@ Proof
   simp[FUN_REL_def]
 QED
 
-Theorem imp_conj':
-  !p1 p2 q1 q2. (p1 ==> p2) /\ (q1 ==> q2) ==> (p1 /\ q1 ==> p2 /\ q2)
+Theorem imp_disj:
+  ((==>) ===> (==>) ===> (==>)) (\/) (\/)
 Proof
-  simp[]
+  simp[FUN_REL_def] >> metis_tac[]
 QED
+
+Theorem cimp_disj:
+  (flip (==>) ===> flip (==>) ===> flip (==>)) (\/) (\/)
+Proof
+  simp[FUN_REL_def] >> metis_tac[]
+QED
+
+
+(* ----------------------------------------------------------------------
+    Pairs
+   ---------------------------------------------------------------------- *)
+
+Definition PAIR_REL_def:     PAIR_REL AB CD (a,c) (b,d) <=> AB a b /\ CD c d
+End
+val _ =
+    set_mapped_fixity {fixity = Infixr 601, term_name = "PAIR_REL", tok = "###"}
+
+Theorem equalityp_PAIR_REL:
+  equalityp AB /\ equalityp CD ==> equalityp (AB ### CD)
+Proof
+  simp[equalityp_def, PAIR_REL_def, FUN_EQ_THM, pairTheory.FORALL_PROD]
+QED
+
+Theorem FST_CORRECT:
+  (PAIR_REL AB CD ===> AB) FST FST
+Proof
+  simp[PAIR_REL_def, FUN_REL_def, pairTheory.FORALL_PROD]
+QED
+
+Theorem SND_CORRECT:
+  (PAIR_REL AB CD ===> CD) SND SND
+Proof
+  simp[PAIR_REL_def, FUN_REL_def, pairTheory.FORALL_PROD]
+QED
+
+Theorem COMMA_CORRECT:
+  (AB ===> CD ===> PAIR_REL AB CD) $, $,
+Proof
+  simp[PAIR_REL_def, FUN_REL_def, pairTheory.FORALL_PROD]
+QED
+
+Definition PAIRU_def:
+  PAIRU AB (a,()) b <=> AB a b
+End
+
+Theorem PAIRU_COMMA:
+  (AB ===> (=) ===> PAIRU AB) $, K
+Proof
+  simp[PAIRU_def, pairTheory.FORALL_PROD, FUN_REL_def]
+QED
+
+Definition UPAIR_def:
+  UPAIR AB ((),a) b <=> AB a b
+End
+
+Theorem UPAIR_COMMA:
+  ((=) ===> AB ===> UPAIR AB) $, (K I)
+Proof
+  simp[UPAIR_def, pairTheory.FORALL_PROD, FUN_REL_def]
+QED
+
+(* ----------------------------------------------------------------------
+    Unit
+   ---------------------------------------------------------------------- *)
+
+Theorem UREL_EQ:
+  () = ()
+Proof simp[]
+QED
+
+(* ----------------------------------------------------------------------
+    Lists
+   ---------------------------------------------------------------------- *)
+
+Theorem equalityp_LIST_REL:
+  equalityp AB ==> equalityp (LIST_REL AB)
+Proof
+  simp[equalityp_def]
+QED
+
+
 
 val _ = export_theory();
