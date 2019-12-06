@@ -167,8 +167,23 @@ type ruledb = {
   left: thm Net.net,
   right : thm Net.net,
   safe : thm Net.net,
-  bad : term Net.net
+  bad : term Net.net,
+  DOMRNG_ss : thm list
 }
+
+fun collapse E =
+    let
+      val mk_vartype = trace ("Vartype Format Complaint", 0) mk_vartype
+    in
+      (Binarymap.foldl
+         (fn (s,ty,A) => {redex=mk_vartype s, residue = Env.lookup_ty E ty}::A)
+         []
+         (Env.triTY E),
+       Binarymap.foldl
+         (fn (v,tm,A) => {redex = v, residue = Env.lookup_tm E tm} :: A)
+         []
+         (Env.triTM E))
+    end
 
 fun eliminate_with_unifier ctys th1 h th2 =
     (* h probably a hypothesis of th2; conclusion of th1 unifies with h;
@@ -180,24 +195,12 @@ fun eliminate_with_unifier ctys th1 h th2 =
     let
       val rule = GEN_TYVARIFY th1
       val cr_t = concl rule
-      val mk_vartype = trace ("Vartype Format Complaint", 0) mk_vartype
     in
       case unify ctys [] (cr_t, h) Env.empty of
           NONE => NONE
         | SOME (E, ()) =>
           let
-            val tyinst =
-                Binarymap.foldl
-                  (fn (s,ty,A) => {redex = mk_vartype s,
-                                   residue = Env.lookup_ty E ty}::A)
-                  []
-                  (Env.triTY E)
-            val tminst =
-                Binarymap.foldl
-                  (fn (v,tm,A) =>
-                      {redex = v, residue = Env.lookup_tm E tm} :: A)
-                  []
-                  (Env.triTM E)
+            val (tyinst,tminst) = collapse E
             val f = INST tminst o INST_TYPE tyinst
           in
             SOME (PROVE_HYP (f rule) (f th2))
@@ -205,22 +208,26 @@ fun eliminate_with_unifier ctys th1 h th2 =
     end
 
 
-fun addrule th ({left, right, safe, bad} : ruledb) =
+fun addrule th ({left, right, safe, bad, DOMRNG_ss} : ruledb) =
     let
       val th = UNDISCH th handle HOL_ERR _ => th
     in
       { left = Net.enter (lhand (concl th), th) left,
         right = Net.enter (rand (concl th), th) right,
-        safe = safe, bad = bad}
+        safe = safe, bad = bad, DOMRNG_ss = DOMRNG_ss}
     end
 
-fun addsafe th ({left,right,safe,bad} : ruledb) =
-    { left = left, right = right, bad = bad,
+fun addsafe th ({left,right,safe,bad,DOMRNG_ss} : ruledb) =
+    { left = left, right = right, bad = bad, DOMRNG_ss = DOMRNG_ss,
       safe = Net.enter (concl th, th) safe }
 
-fun addbad t ({left,right,safe,bad} : ruledb) : ruledb =
-  { left = left, right = right, safe = safe,
+fun addbad t ({left,right,safe,bad,DOMRNG_ss} : ruledb) : ruledb =
+  { left = left, right = right, safe = safe, DOMRNG_ss = DOMRNG_ss,
     bad = Net.enter(t,t) bad }
+
+fun add_domrng th ({left,right,safe,bad,DOMRNG_ss} :ruledb) : ruledb =
+   {left = left, right = right, safe = safe, bad = bad,
+    DOMRNG_ss = th :: DOMRNG_ss}
 
 fun lookup_rule cleftp (rdb:ruledb) t =
     let
@@ -230,12 +237,14 @@ fun lookup_rule cleftp (rdb:ruledb) t =
       Net.lookup t n
     end
 
-fun check cleftp (ruledb:ruledb) th =
+infix ~>
+fun sq ~> f = seq.flatten (seq.map f sq)
+
+fun check {cleftp,forceprogress} (ruledb:ruledb) th =
     let
       infix +++
       val argsel = if cleftp then lhand else rand
       val ctys = type_vars_in_term (th |> concl |> argsel)
-      fun sq >>- f = seq.flatten (seq.map f sq)
       fun sq1 +++ sq2 =
           case seq.cases sq1 of
               NONE => sq2
@@ -246,15 +255,15 @@ fun check cleftp (ruledb:ruledb) th =
       fun u1 h th rule =
           case eliminate_with_unifier ctys rule h th of
               NONE => fail
-            | SOME th' => return th'
-      fun safe_recurse hs th =
+            | SOME th' => return (true, th')
+      fun safe_recurse hs (progressed,th) =
           case hs of
-              [] => return th
+              [] => return (progressed,th)
             | h::rest =>
               let
                 val ths = Net.lookup h (#safe ruledb)
               in
-                ((seq.fromList ths >>- u1 h th) +++ return th) >>-
+                ((seq.fromList ths ~> u1 h th) +++ return (progressed, th)) ~>
                 safe_recurse rest
               end
       fun bad_recurse hs th =
@@ -267,15 +276,16 @@ fun check cleftp (ruledb:ruledb) th =
                 then
                   fail
                 else bad_recurse rest th
+      fun assertprogress (p, th) = if not p andalso forceprogress then fail
+                                   else return th
     in
-      safe_recurse hs th >>- S (C bad_recurse) hyp
+      safe_recurse hs (false,th) ~> assertprogress ~> S (C bad_recurse) hyp
     end
 
 fun resolve_relhyps cleftp rdb th =
     let
       val argsel = if cleftp then lhand else rand
       val ctys = type_vars_in_term (th |> concl |> argsel)
-      fun sq >>- f = seq.flatten (seq.map f sq)
       fun return x = seq.fromList [x]
       val fail = seq.empty
       fun goodhyp h = not (is_relconstraint h)
@@ -292,7 +302,8 @@ fun resolve_relhyps cleftp rdb th =
                     NONE => fail
                   | SOME th' => return th'
           in
-            seq.fromList candidate_rules >>- kont >>- check cleftp rdb
+            seq.fromList candidate_rules ~> kont ~>
+            check {cleftp=cleftp,forceprogress=false} rdb
           end
     end
 
@@ -303,6 +314,22 @@ fun boolhyp_tm cleftp h =
         CONST {Thy = "bool", Name, ...} =>
           Name = "/\\" orelse Name = "\\/" orelse Name = "~"
       | _ => false
+
+fun mkrelsyms_eq cleftp th =
+    let
+      val ctys = type_vars_in_term (th |> concl |> mksel cleftp)
+      fun instv (v, th) =
+          case unify ctys [] (gen_tyvarify boolSyntax.equality, v) Env.empty of
+              NONE => th
+            | SOME (E, _) =>
+              let
+                val (tyi,tmi) = collapse E
+              in
+                th |> INST_TYPE tyi |> INST tmi
+              end
+    in
+      HOLset.foldl instv th (hyp_frees th)
+    end
 
 local
   val eqty = alpha --> alpha --> bool
@@ -351,19 +378,41 @@ fun eliminate_booleans_and_equalities cleftp th =
     end
 end (* local *)
 
-fun seqrpt f x =
-    let
-      val s1 = f x
-    in
-      case seq.cases s1 of
-        NONE => seq.fromList [x]
-      | SOME _ => seq.flatten (seq.map (seqrpt f) s1)
-    end
+fun seqrptUntil P f x =
+    if P x then seq.fromList [x]
+    else f x ~> seqrptUntil P f
+
+fun seqrpt f x = seqrptUntil (List.all is_relconstraint o hyp) f x
 
 val empty_rdb : ruledb =
-   {left = Net.empty, right = Net.empty, safe = Net.empty, bad = Net.empty}
+   {left = Net.empty, right = Net.empty, safe = Net.empty, bad = Net.empty,
+    DOMRNG_ss = []}
 
 open pred_setTheory fsetsTheory
+
+val RES_FORALL_RRANGE =
+    RES_FORALL_THM
+      |> INST_TYPE [alpha |-> beta]
+      |> SPEC (mk_comb(prim_mk_const{Thy = "relation", Name = "RRANGE"},
+                       mk_var("P", alpha --> beta --> bool)))
+      |> REWRITE_RULE [pred_setTheory.SPECIFICATION]
+val RES_FORALL_RDOM =
+    RES_FORALL_THM
+      |> SPEC (mk_comb(prim_mk_const{Thy = "relation", Name = "RDOM"},
+                       mk_var("P", alpha --> beta --> bool)))
+      |> REWRITE_RULE [pred_setTheory.SPECIFICATION]
+val RES_EXISTS_RRANGE =
+    RES_EXISTS_THM
+      |> INST_TYPE [alpha |-> beta]
+      |> SPEC (mk_comb(prim_mk_const{Thy = "relation", Name = "RRANGE"},
+                       mk_var("P", alpha --> beta --> bool)))
+      |> REWRITE_RULE [pred_setTheory.SPECIFICATION]
+val RES_EXISTS_RDOM =
+    RES_EXISTS_THM
+      |> SPEC (mk_comb(prim_mk_const{Thy = "relation", Name = "RDOM"},
+                       mk_var("P", alpha --> beta --> bool)))
+      |> REWRITE_RULE [pred_setTheory.SPECIFICATION]
+
 
 val ruledb = empty_rdb
                |> addrule fUNION_UNION
@@ -402,11 +451,20 @@ val ruledb = empty_rdb
                                            bi_unique_implied))
                |> addsafe (UNDISCH_ALL
                              (REWRITE_RULE [GSYM AND_IMP_INTRO]
+                                           bitotal_implied))
+               |> addsafe (UNDISCH_ALL
+                             (REWRITE_RULE [GSYM AND_IMP_INTRO]
                                            total_total_sets))
+               |> addsafe (UNDISCH_ALL
+                             (REWRITE_RULE [GSYM AND_IMP_INTRO]
+                                           surj_sets))
                |> addsafe eq_equalityp
                |> addsafe bi_unique_EQ
                |> addsafe bitotal_EQ
                |> addsafe total_EQ
+               |> addsafe left_unique_EQ
+               |> addsafe right_unique_EQ
+               |> addsafe surj_EQ
                |> addsafe (SPEC_ALL EQ_REFL)
                |> addsafe (UNDISCH total_FSET)
                |> addsafe (UNDISCH left_unique_FSET)
@@ -417,47 +475,87 @@ val ruledb = empty_rdb
                |> addbad “equalityp (combin$C (==>))”
                |> addbad “bitotal (FSET AB)”
                |> addbad “surj (FSET AB)”
+               |> add_domrng RRANGE_EQ
+               |> add_domrng RDOM_EQ
+               |> add_domrng RRANGE_FSET_EQ
+               |> add_domrng RDOM_FSET_EQ
+               |> add_domrng RES_EXISTS_RDOM
+               |> add_domrng RES_EXISTS_RRANGE
+               |> add_domrng RES_FORALL_RDOM
+               |> add_domrng RES_FORALL_RRANGE
 
-val notsing_empty = let
-  val ct = concl NOT_SING_EMPTY
-  val th0 = prove_relation_thm false ct (build_skeleton ct)
-                               |> eliminate_booleans_and_equalities false
-in
-  seq.take 10 (seqrpt (resolve_relhyps false ruledb) th0)
-end
+fun search_for P depth sq =
+    let
+      val (default, sq') = case seq.cases sq of
+                               NONE => raise Fail "No theorems!"
+                             | SOME (th, rest) => (th, rest)
+      fun recurse i sq =
+          if i > depth then default
+          else
+            case seq.cases sq of
+                NONE => default
+              | SOME (th, rest) => if P (concl th) then th
+                                   else recurse (i + 1) rest
+    in
+      recurse (depth - 1) sq'
+    end
 
-val funion_comm = let
-  val ct = “!f1 f2. fUNION f1 f2 = fUNION f2 f1”
-  val th0 = prove_relation_thm true ct (build_skeleton ct)
-                               |> eliminate_booleans_and_equalities true
-in
-  seq.take 10 (seqrpt (resolve_relhyps true ruledb) th0)
-end
+fun const_occurs c = can (find_term (same_const c))
+val RRANGE_tm = prim_mk_const{Thy = "relation", Name = "RRANGE"}
+val RDOM_tm = prim_mk_const{Thy = "relation", Name = "RDOM"}
 
+fun base_transfer cleftp ruledb t =
+    let
+      val th0 = prove_relation_thm cleftp t (build_skeleton t)
+                                   |> eliminate_booleans_and_equalities cleftp
+    in
+      seqrpt (resolve_relhyps cleftp ruledb) th0 ~>
+      seqrptUntil (List.all (is_var o rand) o hyp)
+                  (check{cleftp=cleftp,forceprogress=true} ruledb) |>
+      seq.map (mkrelsyms_eq cleftp) ~>
+      check {cleftp=cleftp,forceprogress=false} ruledb |>
+      seq.map
+        (SIMP_RULE (bool_ss ++ combinSimps.COMBIN_ss) (#DOMRNG_ss ruledb)) |>
+      seq.filter (not o const_occurs RRANGE_tm o concl) |>
+      seq.filter (not o const_occurs RDOM_tm o concl)
+    end
+
+fun transfer_tm depth cleftp ruledb t =
+    base_transfer cleftp ruledb t |> search_for is_eq depth
+
+fun transfer_thm depth cleftp ruledb th =
+    let
+      fun goodconcl c =
+          is_eq c orelse
+          aconv (#1 (dest_imp c)) (concl th) handle HOL_ERR _ => false
+      val th0 = base_transfer cleftp ruledb (concl th)
+                              |> search_for goodconcl depth
+    in
+      if is_eq (concl th0) then
+        if cleftp then EQ_MP th0 th else EQ_MP (SYM th0) th
+      else MP th0 th
+    end
+
+val notsing_empty = transfer_thm 4 false ruledb NOT_SING_EMPTY
+val funion_comm1 = transfer_thm 4 false ruledb UNION_COMM
+val funion_comm2 =
+    transfer_tm 4 true ruledb “!f1 f2. fUNION f1 f2 = fUNION f2 f1”
+
+(*
 val IN_INTER_eq = let
   val ct = concl IN_INTER
   val th0 = prove_relation_thm false ct (build_skeleton ct)
                                |> eliminate_booleans_and_equalities false
 in
-  seq.take 10 (seqrpt (resolve_relhyps false ruledb) th0)
-end
+  seqrpt (resolve_relhyps false ruledb) th0 ~>
+  seqrptUntil (List.all (is_var o rand) o hyp)
+              (check{cleftp=false,forceprogress=true} ruledb) |> seq.hd
+end *)
 
-val union_commeg = let
-  val ct = concl UNION_COMM
-  val th0 = prove_relation_thm false ct (build_skeleton ct)
-                               |> eliminate_booleans_and_equalities false
-in
-  seq.take 10 (seqrpt (resolve_relhyps false ruledb) th0)
-end
-
-val induct = let
-  val ct = “!P. P FEMPTY /\ (!s e. ~fIN e s ==> P (fINSERT e s)) ==>
-                !s. P s”
-  val th0 = prove_relation_thm true ct (build_skeleton ct)
-                               |> eliminate_booleans_and_equalities true
-in
-  seqrpt (resolve_relhyps true ruledb) th0 |> seq.take 10
-end
+val induct =
+    transfer_tm 4 true ruledb
+                “!P. P FEMPTY /\ (!s e. ~fIN e s ==> P (fINSERT e s)) ==>
+                     !s. P s”
 
 (* doesn't get as far as you might like because you have no way of knowing
    that the set asserted to exist in the second disjunct should be finite *)
@@ -470,26 +568,66 @@ in
      |> seq.hd
 end
 
-val cases2 = let
-  val ct = “!fs. fs = FEMPTY \/ ?e fs0. ~(fIN e fs0) /\ fs = fINSERT e fs0”
-in
-  ct |> build_skeleton |> prove_relation_thm true ct
-     |> eliminate_booleans_and_equalities true
-     |> seqrpt (resolve_relhyps true ruledb)
-     |> seq.take 10
-     |> map (SIMP_RULE (bool_ss ++ combinSimps.COMBIN_ss) [])
-end
+val cases2 =
+    transfer_tm 4 true ruledb
+                “!fs. fs = FEMPTY \/ ?e fs0. ~(fIN e fs0) /\ fs = fINSERT e fs0”
+
+(*
+Definition o2n_def:
+  o2n s = FUN_FMAP (K ()) s
+End
+
+Definition n2o_def:
+  n2o fm = FDOM fm
+End
+
+Theorem tydef:
+  (!s. FINITE s <=> (n2o (o2n s) = s)) /\
+  (!fm. o2n (n2o fm) = fm)
+Proof
+  simp[n2o_def, o2n_def] >> conj_tac
+  >- (qx_gen_tac ‘s’ >> Cases_on ‘FINITE s’ >> simp[] >> strip_tac >>
+      metis_tac[finite_mapTheory.FDOM_FINITE]) >>
+  simp[finite_mapTheory.fmap_EXT]
+QED
+
+Theorem o2n_thm:
+  FSET $= b a ==> o2n a = b
+Proof
+  simp[FSET_def, o2n_def, finite_mapTheory.fmap_EXT] >> strip_tac >>
+  rename [‘fIN _ fm <=> _ IN s’] >>
+  ‘FINITE s’ suffices_by simp[pred_setTheory.EXTENSION] >>
+  ‘s = FDOM fm’ suffices_by simp[] >> simp[pred_setTheory.EXTENSION]
+QED
+
+Theorem n2o_thm:
+  FSET $= fm (n2o fm)
+Proof
+  simp[FSET_def, n2o_def]
+QED
+
+Theorem FSETR_eq:
+  FSET $= O inv (FSET $=) = (\s1 s2. FINITE s1 /\ s1 = s2)
+Proof
+  simp[Ntimes FUN_EQ_THM 2, FSET_def, relationTheory.O_DEF,
+       relationTheory.inv_DEF] >> rw[Once EQ_IMP_THM]
+  >- (rename [‘FINITE s’, ‘fIN _ fm <=> _ IN s’] >>
+      ‘s = FDOM fm’ suffices_by simp[] >>
+      simp[pred_setTheory.EXTENSION] >> metis_tac[])
+  >- (simp[pred_setTheory.EXTENSION] >> metis_tac[]) >>
+  rename [‘FINITE s’]>> qexists_tac ‘FUN_FMAP (K ()) s’ >>
+  simp[]
+QED
 
 
-val induct_example = let
-  val ct = concl FINITE_INDUCT
-in
-  prove_relation_thm false ct (build_skeleton ct)
-end
+Definition fmi_def:
+  fmi fs1 fs2 = o2n (n2o fs1 INTER n2o fs2)
+End
 
-
-
-
-
+Theorem fmi_correct:
+  (FSET $= ===> FSET $= ===> FSET $=) fmi $INTER
+Proof
+  simp[FUN_REL_def, fmi_def]
+*)
 
 end (* struct *)

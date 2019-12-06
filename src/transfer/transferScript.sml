@@ -45,6 +45,12 @@ End
 Definition bitotal_def: bitotal (R : 'a -> 'b -> bool) <=> total R /\ surj R
 End
 
+Theorem bitotal_implied:
+  total r /\ surj r ==> bitotal r
+Proof
+  simp[bitotal_def]
+QED
+
 Theorem total_EQ[simp]:      total (=)
 Proof simp[total_def]
 QED
@@ -141,6 +147,18 @@ Proof
   map_every qx_gen_tac [‘a’, ‘b’] >>
   ‘a = (\x. a x) /\ b = (\y. b y)’ by simp[FUN_EQ_THM] >>
   ntac 2 (pop_assum SUBST1_TAC) >> metis_tac[]
+QED
+
+Theorem RRANGE_EQ[simp]:
+  RRANGE (=) = K T
+Proof
+  simp[pred_setTheory.EXTENSION, IN_DEF, relationTheory.RRANGE]
+QED
+
+Theorem RDOM_EQ[simp]:
+  RDOM (=) = K T
+Proof
+  simp[pred_setTheory.EXTENSION, IN_DEF, relationTheory.RDOM_DEF]
 QED
 
 Theorem ALL_total_RRANGE:
@@ -242,6 +260,15 @@ Theorem total_total_sets:
 Proof
   simp[FUN_REL_def, total_def, left_unique_def] >> rw[] >>
   qexists_tac ‘{ b | ?a. a IN x /\ AB a b }’  >> simp[IN_DEF] >> metis_tac[]
+QED
+
+Theorem surj_sets:
+  surj AB /\ right_unique AB ==> surj (AB ===> $<=>)
+Proof
+  rw[FUN_REL_def, surj_def, right_unique_def] >>
+  rename [‘AB _ _ ==> (_ _ <=> bset _)’] >>
+  qexists_tac ‘{ a | ?b. bset b /\ AB a b }’ >> simp[] >>
+  metis_tac[]
 QED
 
 Theorem cimp_imp:

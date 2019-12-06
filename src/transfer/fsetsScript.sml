@@ -112,6 +112,13 @@ Proof
   simp[RRANGE_FSET, Once FUN_EQ_THM]
 QED
 
+Theorem RDOM_FSET_EQ[simp]:
+  RDOM (FSET (=)) = UNIV
+Proof
+  simp[relationTheory.RDOM_DEF, EXTENSION, FSET_def, IN_DEF] >>
+  qx_gen_tac ‘fm’ >> qexists_tac ‘FDOM fm’ >> simp[]
+QED
+
 (* if not left-unique there could be an infinite number of alphas all
    mapping to the one beta, and then {alpha_1} on the left couldn't
    relate to {beta} because of all the other alphas that would have to
