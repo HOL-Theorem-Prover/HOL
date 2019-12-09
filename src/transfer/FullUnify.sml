@@ -1,7 +1,7 @@
 structure FullUnify :> FullUnify =
 struct
 
-open Abbrev
+open HolKernel boolLib
 structure Env =
 struct
 
@@ -75,6 +75,8 @@ struct
       case Binarymap.peek(tmm, v) of
           NONE => SOME((tym, Binarymap.insert(tmm,v,tm)), ())
         | SOME _ => NONE
+
+  fun fromEmpty m = Option.map #2 (m empty)
 end (* Env struct *)
 
 fun getty ty E = SOME(E, Env.lookup_ty E ty)
@@ -157,7 +159,21 @@ fun unify ctys ctms (t1, t2) : unit Env.EM =
     recurse [] (t1, t2)
   end
 
+fun collapse0 E =
+    let
+      val mk_vartype = trace ("Vartype Format Complaint", 0) mk_vartype
+    in
+      (Binarymap.foldl
+         (fn (s,ty,A) => {redex=mk_vartype s, residue = Env.lookup_ty E ty}::A)
+         []
+         (Env.triTY E),
+       Binarymap.foldl
+         (fn (v,tm,A) => {redex = v, residue = Env.lookup_tm E tm} :: A)
+         []
+         (Env.triTM E))
+    end
 
+fun collapse E = SOME(E, collapse0 E)
 
 
 end

@@ -1,6 +1,7 @@
 structure transferLib :> transferLib =
 struct
 
+open HolKernel boolLib
 open transferTheory FullUnify
 val PART_MATCH' = mp_then.PART_MATCH'
 val op $ = Portable.$
@@ -163,7 +164,9 @@ fun prove_relation_thm cleftp ct skt =
           end
     end
 
-type ruledb = {
+structure ruledb =
+struct
+type t = {
   left: thm Net.net,
   right : thm Net.net,
   safe : thm Net.net,
@@ -171,19 +174,46 @@ type ruledb = {
   DOMRNG_ss : thm list
 }
 
-fun collapse E =
+val empty_rdb : t =
+   {left = Net.empty, right = Net.empty, safe = Net.empty, bad = Net.empty,
+    DOMRNG_ss = []}
+
+fun fupd_left f ({left,right,safe,bad,DOMRNG_ss}:t) : t =
+  {left = f left, right = right, safe = safe, bad = bad, DOMRNG_ss = DOMRNG_ss}
+
+fun fupd_right f ({left,right,safe,bad,DOMRNG_ss}:t) : t =
+  {left = left, right = f right, safe = safe, bad = bad, DOMRNG_ss = DOMRNG_ss}
+
+fun fupd_safe f ({left,right,safe,bad,DOMRNG_ss}:t) : t =
+  {left = left, right = right, safe = f safe, bad = bad, DOMRNG_ss = DOMRNG_ss}
+
+fun fupd_bad f ({left,right,safe,bad,DOMRNG_ss}:t) : t =
+  {left = left, right = right, safe = safe, bad = f bad, DOMRNG_ss = DOMRNG_ss}
+
+fun fupd_DOMRNG_ss f ({left,right,safe,bad,DOMRNG_ss}:t) : t =
+  {left = left, right = right, safe = safe, bad = bad, DOMRNG_ss = f DOMRNG_ss}
+
+fun addrule th r =
     let
-      val mk_vartype = trace ("Vartype Format Complaint", 0) mk_vartype
+      val th = UNDISCH th handle HOL_ERR _ => th
     in
-      (Binarymap.foldl
-         (fn (s,ty,A) => {redex=mk_vartype s, residue = Env.lookup_ty E ty}::A)
-         []
-         (Env.triTY E),
-       Binarymap.foldl
-         (fn (v,tm,A) => {redex = v, residue = Env.lookup_tm E tm} :: A)
-         []
-         (Env.triTM E))
+      r |> fupd_left (Net.enter (lhand (concl th), th))
+        |> fupd_right(Net.enter (rand (concl th), th))
     end
+
+fun addsafe th r = r |> fupd_safe (Net.enter (concl th, th))
+fun addbad t r = r |> fupd_bad (Net.enter(t,t))
+fun add_domrng th r = r |> fupd_DOMRNG_ss (cons th)
+
+fun lookup_rule cleftp (rdb:t) t =
+    let
+      val n = if cleftp then #left rdb else #right rdb
+      val t = if cleftp then lhand t else rand t
+    in
+      Net.lookup t n
+    end
+
+end (* ruledb struct *)
 
 fun eliminate_with_unifier ctys th1 h th2 =
     (* h probably a hypothesis of th2; conclusion of th1 unifies with h;
@@ -193,14 +223,14 @@ fun eliminate_with_unifier ctys th1 h th2 =
        ctys a list of type variables from th2 that should be held constant
      *)
     let
+      open optmonad
       val rule = GEN_TYVARIFY th1
       val cr_t = concl rule
     in
-      case unify ctys [] (cr_t, h) Env.empty of
+      case Env.fromEmpty (unify ctys [] (cr_t, h) >> collapse) of
           NONE => NONE
-        | SOME (E, ()) =>
+        | SOME (tyinst,tminst) =>
           let
-            val (tyinst,tminst) = collapse E
             val f = INST tminst o INST_TYPE tyinst
           in
             SOME (PROVE_HYP (f rule) (f th2))
@@ -208,39 +238,10 @@ fun eliminate_with_unifier ctys th1 h th2 =
     end
 
 
-fun addrule th ({left, right, safe, bad, DOMRNG_ss} : ruledb) =
-    let
-      val th = UNDISCH th handle HOL_ERR _ => th
-    in
-      { left = Net.enter (lhand (concl th), th) left,
-        right = Net.enter (rand (concl th), th) right,
-        safe = safe, bad = bad, DOMRNG_ss = DOMRNG_ss}
-    end
-
-fun addsafe th ({left,right,safe,bad,DOMRNG_ss} : ruledb) =
-    { left = left, right = right, bad = bad, DOMRNG_ss = DOMRNG_ss,
-      safe = Net.enter (concl th, th) safe }
-
-fun addbad t ({left,right,safe,bad,DOMRNG_ss} : ruledb) : ruledb =
-  { left = left, right = right, safe = safe, DOMRNG_ss = DOMRNG_ss,
-    bad = Net.enter(t,t) bad }
-
-fun add_domrng th ({left,right,safe,bad,DOMRNG_ss} :ruledb) : ruledb =
-   {left = left, right = right, safe = safe, bad = bad,
-    DOMRNG_ss = th :: DOMRNG_ss}
-
-fun lookup_rule cleftp (rdb:ruledb) t =
-    let
-      val n = if cleftp then #left rdb else #right rdb
-      val t = if cleftp then lhand t else rand t
-    in
-      Net.lookup t n
-    end
-
 infix ~>
 fun sq ~> f = seq.flatten (seq.map f sq)
 
-fun check {cleftp,forceprogress} (ruledb:ruledb) th =
+fun check {cleftp,forceprogress} (ruledb:ruledb.t) th =
     let
       infix +++
       val argsel = if cleftp then lhand else rand
@@ -294,7 +295,7 @@ fun resolve_relhyps cleftp rdb th =
           NONE => fail
         | SOME h =>
           let
-            val candidate_rules = case lookup_rule cleftp rdb h of
+            val candidate_rules = case ruledb.lookup_rule cleftp rdb h of
                                       [] => [UNDISCH equalityp_applied]
                                     | xs => xs
             fun kont candidate_rule =
@@ -317,16 +318,15 @@ fun boolhyp_tm cleftp h =
 
 fun mkrelsyms_eq cleftp th =
     let
+      open optmonad
       val ctys = type_vars_in_term (th |> concl |> mksel cleftp)
       fun instv (v, th) =
-          case unify ctys [] (gen_tyvarify boolSyntax.equality, v) Env.empty of
+          case Env.fromEmpty
+                 (unify ctys [] (gen_tyvarify boolSyntax.equality, v) >>
+                  collapse)
+           of
               NONE => th
-            | SOME (E, _) =>
-              let
-                val (tyi,tmi) = collapse E
-              in
-                th |> INST_TYPE tyi |> INST tmi
-              end
+            | SOME (tyi, tmi) => th |> INST_TYPE tyi |> INST tmi
     in
       HOLset.foldl instv th (hyp_frees th)
     end
@@ -384,10 +384,6 @@ fun seqrptUntil P f x =
 
 fun seqrpt f x = seqrptUntil (List.all is_relconstraint o hyp) f x
 
-val empty_rdb : ruledb =
-   {left = Net.empty, right = Net.empty, safe = Net.empty, bad = Net.empty,
-    DOMRNG_ss = []}
-
 open pred_setTheory fsetsTheory
 
 val RES_FORALL_RRANGE =
@@ -414,75 +410,70 @@ val RES_EXISTS_RDOM =
       |> REWRITE_RULE [pred_setTheory.SPECIFICATION]
 
 
-val ruledb = empty_rdb
-               |> addrule fUNION_UNION
-               |> addrule fIN_IN
-               |> addrule fINSERT_INSERT
-               |> addrule fupdate_correct
-               |> addrule fEMPTY_EMPTY
-               |> addrule EQ_bi_unique
-               |> addrule UPAIR_COMMA
-               |> addrule toSet_correct
-               |> addrule ALL_IFF
-               |> addrule ALL_total_RRANGE
-               |> addrule ALL_total_iff_cimp
-               |> addrule ALL_total_cimp_cimp
-               |> addrule ALL_surj_RDOM
-               |> addrule ALL_surj_iff_imp
-               |> addrule ALL_surj_imp_imp
-               |> addrule EXISTS_bitotal
-               |> addrule EXISTS_total_iff_imp
-               |> addrule EXISTS_total_imp_imp
-               |> addrule EXISTS_surj_iff_cimp
-               |> addrule EXISTS_surj_cimp_cimp
-               |> addrule EXISTS_IFF_RDOM
-               |> addrule EXISTS_IFF_RRANGE
-               |> addrule UREL_EQ
-               |> addrule PAIRU_COMMA
-               |> addrule cimp_imp
-               |> addrule (equalityp_applied
-                             |> INST_TYPE [alpha |-> (bool --> bool --> bool)]
-                             |> Q.INST [‘x’ |-> ‘(==>)’])
-               |> addsafe (UNDISCH_ALL
-                             (REWRITE_RULE [GSYM AND_IMP_INTRO]
-                                           equalityp_FUN_REL))
-               |> addsafe (UNDISCH_ALL
-                             (REWRITE_RULE [GSYM AND_IMP_INTRO]
-                                           bi_unique_implied))
-               |> addsafe (UNDISCH_ALL
-                             (REWRITE_RULE [GSYM AND_IMP_INTRO]
-                                           bitotal_implied))
-               |> addsafe (UNDISCH_ALL
-                             (REWRITE_RULE [GSYM AND_IMP_INTRO]
-                                           total_total_sets))
-               |> addsafe (UNDISCH_ALL
-                             (REWRITE_RULE [GSYM AND_IMP_INTRO]
-                                           surj_sets))
-               |> addsafe eq_equalityp
-               |> addsafe bi_unique_EQ
-               |> addsafe bitotal_EQ
-               |> addsafe total_EQ
-               |> addsafe left_unique_EQ
-               |> addsafe right_unique_EQ
-               |> addsafe surj_EQ
-               |> addsafe (SPEC_ALL EQ_REFL)
-               |> addsafe (UNDISCH total_FSET)
-               |> addsafe (UNDISCH left_unique_FSET)
-               |> addsafe (UNDISCH right_unique_FSET)
-               |> addsafe (UNDISCH_ALL
-                             (REWRITE_RULE [GSYM AND_IMP_INTRO] bi_unique_FSET))
-               |> addbad “equalityp (==>)”
-               |> addbad “equalityp (combin$C (==>))”
-               |> addbad “bitotal (FSET AB)”
-               |> addbad “surj (FSET AB)”
-               |> add_domrng RRANGE_EQ
-               |> add_domrng RDOM_EQ
-               |> add_domrng RRANGE_FSET_EQ
-               |> add_domrng RDOM_FSET_EQ
-               |> add_domrng RES_EXISTS_RDOM
-               |> add_domrng RES_EXISTS_RRANGE
-               |> add_domrng RES_FORALL_RDOM
-               |> add_domrng RES_FORALL_RRANGE
+val equalityp_tm = prim_mk_const{Name = "equalityp", Thy = "transfer"}
+val cimp_tm = mk_icomb(combinSyntax.C_tm, boolSyntax.implication)
+
+val ruledb =
+    let
+      open ruledb
+    in
+      empty_rdb
+        |> addrule EQ_bi_unique
+        |> addrule UPAIR_COMMA
+        |> addrule toSet_correct
+        |> addrule ALL_IFF
+        |> addrule ALL_total_RRANGE
+        |> addrule ALL_total_iff_cimp
+        |> addrule ALL_total_cimp_cimp
+        |> addrule ALL_surj_RDOM
+        |> addrule ALL_surj_iff_imp
+        |> addrule ALL_surj_imp_imp
+        |> addrule EXISTS_bitotal
+        |> addrule EXISTS_total_iff_imp
+        |> addrule EXISTS_total_imp_imp
+        |> addrule EXISTS_surj_iff_cimp
+        |> addrule EXISTS_surj_cimp_cimp
+        |> addrule EXISTS_IFF_RDOM
+        |> addrule EXISTS_IFF_RRANGE
+        |> addrule UREL_EQ
+        |> addrule PAIRU_COMMA
+        |> addrule cimp_imp
+        |> addrule (equalityp_applied
+                      |> INST_TYPE [alpha |-> (bool --> bool --> bool)]
+                      |> INST [mk_var("x", bool --> bool --> bool) |->
+                               boolSyntax.implication])
+        |> addsafe (UNDISCH_ALL
+                      (REWRITE_RULE [GSYM AND_IMP_INTRO]
+                                    equalityp_FUN_REL))
+        |> addsafe (UNDISCH_ALL
+                      (REWRITE_RULE [GSYM AND_IMP_INTRO]
+                                    bi_unique_implied))
+        |> addsafe (UNDISCH_ALL
+                      (REWRITE_RULE [GSYM AND_IMP_INTRO]
+                                    bitotal_implied))
+        |> addsafe (UNDISCH_ALL
+                      (REWRITE_RULE [GSYM AND_IMP_INTRO]
+                                    total_total_sets))
+        |> addsafe (UNDISCH_ALL
+                      (REWRITE_RULE [GSYM AND_IMP_INTRO]
+                                    surj_sets))
+        |> addsafe eq_equalityp
+        |> addsafe bi_unique_EQ
+        |> addsafe bitotal_EQ
+        |> addsafe total_EQ
+        |> addsafe left_unique_EQ
+        |> addsafe right_unique_EQ
+        |> addsafe surj_EQ
+        |> addsafe (SPEC_ALL EQ_REFL)
+        |> addbad (mk_icomb(equalityp_tm, boolSyntax.implication))
+        |> addbad (mk_icomb(equalityp_tm, cimp_tm))
+        |> add_domrng RRANGE_EQ
+        |> add_domrng RDOM_EQ
+        |> add_domrng RES_EXISTS_RDOM
+        |> add_domrng RES_EXISTS_RRANGE
+        |> add_domrng RES_FORALL_RDOM
+        |> add_domrng RES_FORALL_RRANGE
+    end (* let *)
 
 fun search_for P depth sq =
     let
@@ -508,6 +499,7 @@ fun base_transfer cleftp ruledb t =
     let
       val th0 = prove_relation_thm cleftp t (build_skeleton t)
                                    |> eliminate_booleans_and_equalities cleftp
+      open simpLib boolSimps
     in
       seqrpt (resolve_relhyps cleftp ruledb) th0 ~>
       seqrptUntil (List.all (is_var o rand) o hyp)
@@ -536,98 +528,66 @@ fun transfer_thm depth cleftp ruledb th =
       else MP th0 th
     end
 
-val notsing_empty = transfer_thm 4 false ruledb NOT_SING_EMPTY
-val funion_comm1 = transfer_thm 4 false ruledb UNION_COMM
-val funion_comm2 =
-    transfer_tm 4 true ruledb “!f1 f2. fUNION f1 f2 = fUNION f2 f1”
+val default_depth = Sref.new 4
+val the_ruledb = Sref.new ruledb
+fun xfer_back_tac (g as (asl,c)) =
+    let
+      val th = transfer_tm (Sref.value default_depth) false
+                           (Sref.value the_ruledb) c
+      val con = concl th
+      val mkE = mk_HOL_ERR "transferLib" "xfer_back_tac"
+    in
+      if is_imp con then
+        if aconv (rand con) c then
+          if aconv (lhand con) c then
+            raise mkE "Derived p ==> p implication"
+          else Tactic.MATCH_MP_TAC th g
+        else raise mkE "Derived an implication, but conclusion <> goal"
+      else if is_eq con andalso aconv (rand con) c then
+        if aconv (lhand con) c then raise mkE "Derived p <=> p equality"
+        else CONV_TAC (REWR_CONV (SYM th)) g
+      else raise mkE ("Derived non-equality, non-implication: "^
+                      term_to_string con)
+    end
 
-(*
-val IN_INTER_eq = let
-  val ct = concl IN_INTER
-  val th0 = prove_relation_thm false ct (build_skeleton ct)
-                               |> eliminate_booleans_and_equalities false
-in
-  seqrpt (resolve_relhyps false ruledb) th0 ~>
-  seqrptUntil (List.all (is_var o rand) o hyp)
-              (check{cleftp=false,forceprogress=true} ruledb) |> seq.hd
-end *)
+open ruledb
+fun not_ceq th1 th2 = concl th1 !~ concl th2
+fun temp_add_rule th = Sref.update the_ruledb (addrule th)
+fun temp_add_safe th = Sref.update the_ruledb (addsafe th)
+fun temp_remove_rule th =
+    Sref.update the_ruledb (fupd_left (Net.filter (not_ceq th)) o
+                            fupd_right (Net.filter (not_ceq th)))
+fun temp_remove_safe th =
+    Sref.update the_ruledb (fupd_left (Net.filter (not_ceq th)) o
+                            fupd_right (Net.filter (not_ceq th)))
+fun name_to_thm n =
+    case String.fields (equal #".") n of
+        [s] => DB.fetch (current_theory()) s
+      | [thy,name] => DB.fetch thy name
+      | _ => raise mk_HOL_ERR "transferLib" "temp_remove_named_rule"
+                   ("Malformed thm-spec: "^n)
+fun temp_remove_named_rule n = temp_remove_rule (name_to_thm n)
+fun temp_remove_named_safe n = temp_remove_safe (name_to_thm n)
 
-val induct =
-    transfer_tm 4 true ruledb
-                “!P. P FEMPTY /\ (!s e. ~fIN e s ==> P (fINSERT e s)) ==>
-                     !s. P s”
+val {export = add_rule,delete} =
+    ThmSetData.new_exporter {
+      settype = "transfer_rule",
+      efns = {add = fn {named_thms,...} =>
+                       List.app (temp_add_rule o #2) named_thms,
+              remove = fn {removes,...} =>
+                          List.app temp_remove_named_rule removes}
+    }
 
-(* doesn't get as far as you might like because you have no way of knowing
-   that the set asserted to exist in the second disjunct should be finite *)
-val cases1 = let
-  val ct = concl SET_CASES
-in
-  ct |> build_skeleton |> prove_relation_thm false ct
-     |> eliminate_booleans_and_equalities false
-     |> seqrpt (resolve_relhyps false ruledb)
-     |> seq.hd
-end
+val {export = add_safe,delete} =
+    ThmSetData.new_exporter {
+      settype = "transfer_safe",
+      efns = {add = fn {named_thms,...} =>
+                       List.app (temp_add_safe o #2) named_thms,
+              remove = fn {removes,...} =>
+                          List.app temp_remove_named_safe removes}
+    }
 
-val cases2 =
-    transfer_tm 4 true ruledb
-                “!fs. fs = FEMPTY \/ ?e fs0. ~(fIN e fs0) /\ fs = fINSERT e fs0”
+fun global_ruledb() = Sref.value the_ruledb
 
-(*
-Definition o2n_def:
-  o2n s = FUN_FMAP (K ()) s
-End
-
-Definition n2o_def:
-  n2o fm = FDOM fm
-End
-
-Theorem tydef:
-  (!s. FINITE s <=> (n2o (o2n s) = s)) /\
-  (!fm. o2n (n2o fm) = fm)
-Proof
-  simp[n2o_def, o2n_def] >> conj_tac
-  >- (qx_gen_tac ‘s’ >> Cases_on ‘FINITE s’ >> simp[] >> strip_tac >>
-      metis_tac[finite_mapTheory.FDOM_FINITE]) >>
-  simp[finite_mapTheory.fmap_EXT]
-QED
-
-Theorem o2n_thm:
-  FSET $= b a ==> o2n a = b
-Proof
-  simp[FSET_def, o2n_def, finite_mapTheory.fmap_EXT] >> strip_tac >>
-  rename [‘fIN _ fm <=> _ IN s’] >>
-  ‘FINITE s’ suffices_by simp[pred_setTheory.EXTENSION] >>
-  ‘s = FDOM fm’ suffices_by simp[] >> simp[pred_setTheory.EXTENSION]
-QED
-
-Theorem n2o_thm:
-  FSET $= fm (n2o fm)
-Proof
-  simp[FSET_def, n2o_def]
-QED
-
-Theorem FSETR_eq:
-  FSET $= O inv (FSET $=) = (\s1 s2. FINITE s1 /\ s1 = s2)
-Proof
-  simp[Ntimes FUN_EQ_THM 2, FSET_def, relationTheory.O_DEF,
-       relationTheory.inv_DEF] >> rw[Once EQ_IMP_THM]
-  >- (rename [‘FINITE s’, ‘fIN _ fm <=> _ IN s’] >>
-      ‘s = FDOM fm’ suffices_by simp[] >>
-      simp[pred_setTheory.EXTENSION] >> metis_tac[])
-  >- (simp[pred_setTheory.EXTENSION] >> metis_tac[]) >>
-  rename [‘FINITE s’]>> qexists_tac ‘FUN_FMAP (K ()) s’ >>
-  simp[]
-QED
-
-
-Definition fmi_def:
-  fmi fs1 fs2 = o2n (n2o fs1 INTER n2o fs2)
-End
-
-Theorem fmi_correct:
-  (FSET $= ===> FSET $= ===> FSET $=) fmi $INTER
-Proof
-  simp[FUN_REL_def, fmi_def]
-*)
 
 end (* struct *)
