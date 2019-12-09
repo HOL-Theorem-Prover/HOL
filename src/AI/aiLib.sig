@@ -213,6 +213,7 @@ sig
   val has_boolty : term -> bool
   val only_concl : thm -> term
   val list_mk_binop : term -> term list -> term
+  val strip_binop : term -> term -> term list
   val arity_of : term -> int
 
   (* thread *)

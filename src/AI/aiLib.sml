@@ -620,6 +620,12 @@ fun list_mk_binop binop l = case l of
 
 fun arity_of t = length (fst (strip_type (type_of t)))
 
+fun strip_binop binop tm = case strip_comb tm of
+    (oper,[a,b]) => 
+    if term_eq oper binop  
+    then a :: strip_binop binop b
+    else [tm]
+  | _ => [tm]
 
 (* -------------------------------------------------------------------------
    I/O
