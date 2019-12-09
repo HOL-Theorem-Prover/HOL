@@ -570,6 +570,7 @@ QED
     follow sets
    ---------------------------------------------------------------------- *)
 
+(*
 Definition followSet_def:
   followSet (g:(α,β) grammar) (sym:(α,β) symbol) =
     { ts | ∃s pfx sfx.
@@ -865,14 +866,14 @@ val (followML_def, followML_ind) = tprove(
 SRW_TAC [][validSeen] THEN
 `{e | ((e = P) ∨ e ∈ sn) ∧ NTS e ∈ nonTerminals g} =
 {P} ∪ {e | e ∈ sn ∧ NTS e ∈ nonTerminals g}` by (SRW_TAC [][EXTENSION] THEN
-						 METIS_TAC []) THEN
+                                                 METIS_TAC []) THEN
 `{P} ∩ {e | e ∈ sn ∧ NTS e ∈ nonTerminals g} = {}`
 by (SRW_TAC [][EXTENSION] THEN METIS_TAC []) THEN
 `FINITE {e | e ∈ sn ∧ NTS e ∈ nonTerminals g}` by cheat THEN
 `CARD {e | ((e = P) ∨ e ∈ sn) ∧ NTS e ∈ nonTerminals g} + 0 =
 CARD {P} + CARD {e | e ∈ sn ∧ NTS e ∈ nonTerminals g}` by
-			  METIS_TAC [CARD_UNION,FINITE_SING,
-				     FINITE_LIST_TO_SET,CARD_EMPTY] THEN
+                          METIS_TAC [CARD_UNION,FINITE_SING,
+                                     FINITE_LIST_TO_SET,CARD_EMPTY] THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
 ONCE_ASM_REWRITE_TAC [] THEN
 DECIDE_TAC,
@@ -920,7 +921,7 @@ FULL_SIMP_TAC (srw_ss()) [] THEN
   Q.EXISTS_TAC `(pfx++h::t)` THEN SRW_TAC [] [] THEN
   `RTC (derives g) (pfx++h::t) (pfx++[h]++[TS fst]++rst)`
       by METIS_TAC [APPEND, APPEND_ASSOC, rtc_derives_same_append_right,
-		    rtc_derives_same_append_left] THEN
+                    rtc_derives_same_append_left] THEN
   METIS_TAC [APPEND, APPEND_ASSOC],
 
   METIS_TAC [APPEND, APPEND_ASSOC],
@@ -1002,8 +1003,8 @@ val ntderive'_list_exists = prove(
                      ALL_DISTINCT nlist``,
   HO_MATCH_MP_TAC RTC_STRONG_INDUCT THEN SRW_TAC [][] THEN1
     (POP_ASSUM (Q.SPEC_THEN `[]` MP_TAC) THEN
-		SRW_TAC [][] THEN
-		FULL_SIMP_TAC (srw_ss()) [nullable_def]) THEN
+                SRW_TAC [][] THEN
+                FULL_SIMP_TAC (srw_ss()) [nullable_def]) THEN
   `∃N rhs pfx sfx.
       MEM (rule N rhs) (rules g) ∧
       (sf1 = pfx ++ [NTS N] ++ sfx) ∧
@@ -1033,21 +1034,21 @@ val ntderive'_list_exists = prove(
           METIS_TAC [ALL_DISTINCT_APPEND]
         ],
 
-	MAP_EVERY Q.EXISTS_TAC
+        MAP_EVERY Q.EXISTS_TAC
                   [`N :: nlist`, `pfx`, `sfx`] THEN
         SRW_TAC [][] THENL [
           FULL_SIMP_TAC (srw_ss()) [nullable_APPEND],
-	  Cases_on `nlist` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-	  METIS_TAC [nullable_APPEND]
+          Cases_on `nlist` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+          METIS_TAC [nullable_APPEND]
         ]
       ],
 
       SRW_TAC [][] THEN
       MAP_EVERY Q.EXISTS_TAC
-		[`nlist`, `pfx ++ [NTS N] ++ y1`, `sfx'`] THEN
+                [`nlist`, `pfx ++ [NTS N] ++ y1`, `sfx'`] THEN
       SRW_TAC [][] THEN
       METIS_TAC [nullable_APPEND, nullable_def, res1,
-		 RTC_RULES]
+                 RTC_RULES]
     ],
 
     FULL_SIMP_TAC (srw_ss()) [] THEN
@@ -1058,16 +1059,16 @@ val ntderive'_list_exists = prove(
       SRW_TAC [][] THEN METIS_TAC [nullable_APPEND],
       `nullable g [NTS N]`
          by METIS_TAC [nullable_APPEND, RTC_RULES, res1,
-		       nullable_def] THEN
+                       nullable_def] THEN
       FULL_SIMP_TAC (srw_ss()) [nullable_APPEND] THEN
       FIRST_X_ASSUM (Q.SPECL_THEN [`pfx ++ [NTS N] ++ y1`, `s`]
-				  MP_TAC) THEN
+                                  MP_TAC) THEN
       SRW_TAC [][nullable_APPEND]
     ]
   ]);
 
 val lemma' =  SIMP_RULE (srw_ss() ++ boolSimps.DNF_ss) []
-		       ntderive'_list_exists
+                       ntderive'_list_exists
 *)
 
 
@@ -1149,6 +1150,6 @@ val _ =
  end;
 *)
 
-
+*)
 
 val _ = export_theory()
