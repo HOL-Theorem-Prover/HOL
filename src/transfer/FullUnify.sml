@@ -76,7 +76,7 @@ struct
           NONE => SOME((tym, Binarymap.insert(tmm,v,tm)), ())
         | SOME _ => NONE
 
-  fun fromEmpty m = Option.map #2 (m empty)
+  fun fromEmpty (m : 'a EM) = Option.map #2 (m empty)
 end (* Env struct *)
 
 fun getty ty E = SOME(E, Env.lookup_ty E ty)
