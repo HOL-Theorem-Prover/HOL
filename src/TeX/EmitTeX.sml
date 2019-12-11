@@ -322,10 +322,26 @@ local
           | Const _ => apfst (addann "Const") (smapper s)
           | SymConst _ => apfst (addann "SymConst") (smapper s)
           | TyOp _ => apfst (addann "TyOp") (smapper s)
-          | Literal StringLit => (addann "StringLit"
-                                         (stringmunge
-                                           (String.substring(s, 1, size s - 2))),
-                                  unmapped_sz)
+          | Literal StringLit =>
+            let
+              val c1i = case UTF8.getChar s of
+                            SOME ((_, i), _) => i
+                          | NONE => failwith "String literal with no content"
+              val ann =
+                  case c1i of
+                    34 => (* " *) "StringLit"
+                   | 0xAB => (* double guillemet *) "StringLitDG"
+                   | 0x2039 => (* single guillemet *) "StringLitSG"
+                   | _ => failwith
+                            ("Don't understand string literal delimiter: "^s)
+              (* contents of strings are 8-bit chars, but delimiters are
+                 potentially Unicode *)
+            in
+              (addann ann
+                      (stringmunge
+                         (UTF8.substring(s, 1, UTF8.size s - 2))),
+               unmapped_sz)
+            end
           | Literal FldName => apfst (addann "FieldName") (smapper s)
           | Literal NumLit => (addann "NumLit" s, unmapped_sz)
           | Literal CharList => (addann "CharLit"

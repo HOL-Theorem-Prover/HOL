@@ -1,3 +1,9 @@
 \HOLinline{\HOLFreeVar{s} \HOLSymConst{=} \HOLStringLit{foo}}
 
 \HOLinline{\HOLFreeVar{c} \HOLSymConst{=} \HOLCharLit{a}}
+
+\HOLinline{\HOLStringLitDG{foo}}
+
+\HOLinline{\HOLStringLitSG{bar}}
+
+\HOLinline{\HOLStringLitSG{foo\HOLTokenBackslash{}n bar}}
