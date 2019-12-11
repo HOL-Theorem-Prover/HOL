@@ -262,7 +262,8 @@ local
   fun string_map (s,sz) =
       case Binarymap.peek(TexTokenMap.the_map(), s) of
         SOME result => result
-      | NONE => (UTF8.translate char_map s,case sz of NONE => String.size s | SOME sz => sz)
+      | NONE => (UTF8.translate char_map s,
+                 case sz of NONE => String.size s | SOME sz => sz)
 
   fun smap overrides (s,sz) =
       case overrides s of
