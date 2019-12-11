@@ -2645,15 +2645,74 @@ val LLENGTH_LREPEAT = Q.store_thm(
   rw[LREPEAT_def])
 
 (* --------------------------------------------------------------------------
+   Case constant, distinctness etc. for TypeBase
+   -------------------------------------------------------------------------- *)
+
+Definition llist_CASE_def:
+  llist_CASE ll b f =
+    case LTL_HD ll of
+      NONE => b
+    | SOME(ltl,lhd) => f lhd ltl
+End
+
+Theorem llist_CASE_compute[simp,compute]:
+  (llist_CASE [||] b f = b) /\
+  (llist_CASE (x:::ll) b f = f x ll)
+Proof
+  rw[llist_CASE_def]
+QED
+
+Theorem LLIST_BISIMULATION_I =
+ LLIST_BISIMULATION |> SPEC_ALL |> PURE_ONCE_REWRITE_RULE[EQ_IMP_THM] |> CONJUNCT2
+ |> Q.GEN `ll1` |> Q.GEN `ll2`
+
+Theorem LLIST_CASE_CONG:
+  !M M' v f.
+    M = M' /\ (M' = [||] ==> v = v') /\
+    (!a0 a1. M' = a0:::a1 ==> f a0 a1 = f' a0 a1) ==>
+    llist_CASE M v f = llist_CASE M' v' f'
+Proof
+  rpt GEN_TAC >>
+  llist_CASE_TAC ``M':'a llist`` >>
+  rw[]
+QED
+
+Theorem LLIST_CASE_EQ:
+  llist_CASE (x:'a llist) v f = v' ⇔ x = [||] /\ v = v' ∨ ∃a l. x = a:::l /\ f a l = v'
+Proof
+  llist_CASE_TAC ``x:'a llist`` >> rw[]
+QED
+
+Theorem LLIST_DISTINCT:
+  !a1 a0. [||] <> a0:::a1
+Proof
+  rw[]
+QED
+
+(* --------------------------------------------------------------------------
    Update TypeBase
    -------------------------------------------------------------------------- *)
 
 val _ = TypeBase.export
-  [TypeBasePure.mk_nondatatype_info (
-      “:'a llist”,
-      {nchotomy = SOME llist_CASES, induction = NONE, size = NONE,
-       encode = NONE}
-   )
+  [TypeBasePure.mk_datatype_info
+    {
+     ax = TypeBasePure.ORIG llist_Axiom,
+     induction = TypeBasePure.ORIG LLIST_BISIMULATION_I,
+     case_def = llist_CASE_compute,
+     case_cong = LLIST_CASE_CONG,
+     case_eq = LLIST_CASE_EQ,
+     nchotomy = llist_CASES,
+     size = NONE,
+     encode = NONE,
+     lift = NONE,
+     one_one = SOME LCONS_11,
+     distinct = SOME LLIST_DISTINCT,
+     fields = [],
+     accessors = [],
+     updates = [],
+     destructors = [],
+     recognizers = []
+    }
   ]
 
 (* ----------------------------------------------------------------------
