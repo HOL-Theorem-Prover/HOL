@@ -382,7 +382,7 @@ fun seqrptUntil P f x =
 
 fun seqrpt f x = seqrptUntil (List.all is_relconstraint o hyp) f x
 
-open pred_setTheory fsetsTheory
+open pred_setTheory
 
 val RES_FORALL_RRANGE =
     RES_FORALL_THM
@@ -418,7 +418,6 @@ val ruledb =
       empty_rdb
         |> addrule EQ_bi_unique
         |> addrule UPAIR_COMMA
-        |> addrule toSet_correct
         |> addrule ALL_total_iff_cimp
         |> addrule ALL_total_cimp_cimp
         |> addrule ALL_surj_iff_imp

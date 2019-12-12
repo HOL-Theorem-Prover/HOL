@@ -128,32 +128,54 @@ Proof
 QED
 
 
-Theorem fsetQ:
+Theorem fset0Q[simp]:
   Qt fsequiv fset_ABS fset_REP FSET0
 Proof
   simp[Qt_def, relationTheory.O_DEF, relationTheory.inv_DEF, FUN_EQ_THM,
        FSET0_def]
 QED
 
-Theorem fsequiv_repabs:
-  fsequiv (fset_REP (fset_ABS l)) l
+Theorem R_repabs:
+  Qt R Abs Rep Tf ==> !x. R x x ==> R (Rep (Abs x)) x
 Proof
-  assume_tac fsetQ >>
-  fs[Qt_def, relationTheory.O_DEF, relationTheory.inv_DEF, PULL_EXISTS,IN_DEF]>>
-  qexists_tac ‘fset_ABS l’ >> simp[] >> simp[FSET0_def]
+  rw[Qt_def,relationTheory.O_DEF,relationTheory.inv_DEF, PULL_EXISTS,IN_DEF]>>
+  metis_tac[]
 QED
 
-(* important for predicates over the new type *)
+(* important for predicates over the new type - generic version of this
+   should be proved *)
 Theorem RDOM_FSET0set[simp,transfer_simp]:
   RDOM (FSET0 |==> ($= : bool -> bool -> bool)) =
     \lP. (!l1 l2. lP l1 /\ fsequiv l1 l2 ==> lP l2)
 Proof
   rw[relationTheory.RDOM_DEF, Once FUN_EQ_THM, FUN_REL_def, FSET0_def] >>
   eq_tac >> rw[]
-  >- (fs[IN_DEF] >> metis_tac[fset_ABS_11]) >>
-  qexists_tac ‘\fs. lP (fset_REP fs)’ >> simp[] >> fs[IN_DEF] >>
-  metis_tac[fsequiv_repabs, fsequiv_equiv, quotientTheory.EQUIV_def]
+  >- metis_tac[fset_ABS_11] >>
+  qexists_tac ‘\fs. lP (fset_REP fs)’ >> simp[] >>
+  metis_tac[R_repabs, fsequiv_equiv, quotientTheory.EQUIV_def, fsequiv_refl,
+            fset0Q]
 QED
+
+Theorem surj_FSET0[transfer_safe] = MATCH_MP Qt_surj fset0Q
+Theorem right_unique_FSET0[transfer_safe] = MATCH_MP Qt_right_unique fset0Q
+Theorem FSETEQ[transfer_rule] = MATCH_MP Qt_EQ fset0Q
+
+Definition fIN_def:
+  fIN e s <=> MEM e (fset_REP s)
+End
+
+Theorem fIN_relates[transfer_rule]:
+  ((=) |==> FSET0 |==> (=)) MEM fIN
+Proof
+  irule HK_thm2 >> map_every qexists_tac [
+    ‘I ---> fset_REP ---> I’, ‘(=) |==> fsequiv |==> (=)’,
+    ‘I ---> fset_ABS ---> I’
+  ] >> rw[]
+  >- simp[FUN_REL_def, fsequiv_def]
+  >- simp[FUN_EQ_THM, fIN_def] >>
+  irule funQ >> simp[]>> irule funQ >> simp[]
+QED
+
 
 Definition fUNION_def:
   fUNION f1 f2 = fset_ABS (fset_REP f1 ++ fset_REP f2)
@@ -170,7 +192,7 @@ Proof
   ] >> rpt conj_tac
   >- simp[FUN_REL_def, fsequiv_def] (* respectfulness *)
   >- simp[FUN_EQ_THM, fUNION_def] (* the definition *) >>
-  irule funQ >> simp[fsetQ] >> irule funQ >> simp[fsetQ]
+  irule funQ >> simp[] >> irule funQ >> simp[]
 QED
 
 Theorem IN_UNION[simp]:
@@ -187,7 +209,7 @@ Theorem fEMPTY_relates[transfer_rule]:
   FSET0 [] fEMPTY
 Proof
   irule HK_thm2 >>
-  goal_assum (C (mp_then.mp_then (mp_then.Pos last) mp_tac) fsetQ) >>
+  goal_assum (C (mp_then.mp_then (mp_then.Pos last) mp_tac) fset0Q) >>
   simp[fEMPTY_def, fsequiv_def]
 QED
 
@@ -205,29 +227,8 @@ Proof
   ] >> rw[]
   >- simp[FUN_REL_def, fsequiv_def]
   >- simp[FUN_EQ_THM, fINSERT_def] >>
-  irule funQ >> simp[] >> irule funQ >> simp[fsetQ]
+  irule funQ >> simp[] >> irule funQ >> simp[]
 QED
-
-Definition fIN_def:
-  fIN e s <=> MEM e (fset_REP s)
-End
-
-Theorem fIN_relates[transfer_rule]:
-  ((=) |==> FSET0 |==> (=)) MEM fIN
-Proof
-  irule HK_thm2 >> map_every qexists_tac [
-    ‘I ---> fset_REP ---> I’, ‘(=) |==> fsequiv |==> (=)’,
-    ‘I ---> fset_ABS ---> I’
-  ] >> rw[]
-  >- simp[FUN_REL_def, fsequiv_def]
-  >- simp[FUN_EQ_THM, fIN_def] >>
-  irule funQ >> simp[]>> irule funQ >> simp[fsetQ]
-QED
-
-
-Theorem surj_FSET0[transfer_safe] = MATCH_MP Qt_surj fsetQ
-Theorem right_unique_FSET0[transfer_safe] = MATCH_MP Qt_right_unique fsetQ
-Theorem FSETEQ[transfer_rule] = MATCH_MP Qt_EQ fsetQ
 
 Theorem fset_cases:
   !s:'a fset. s = fEMPTY \/ ?e s0. s = fINSERT e s0 /\ ~fIN e s0
@@ -293,7 +294,7 @@ Proof
   ] >> simp[] >> rw[]
   >- simp[FUN_REL_def, fsequiv_def, LIST_TO_SET_FILTER]
   >- simp[FUN_EQ_THM, fDELETE_def] >>
-  irule funQ >> simp[] >> irule funQ >> simp[fsetQ]
+  irule funQ >> simp[] >> irule funQ >> simp[]
 QED
 
 Definition fCARD_def:
@@ -321,7 +322,7 @@ Proof
       fs[Abbr‘b'’, length_nub_append, rich_listTheory.FILTER_FILTER] >>
       pop_assum mp_tac >> csimp[])
   >- simp[FUN_EQ_THM, fCARD_def] >>
-  irule funQ >> simp[fsetQ]
+  irule funQ >> simp[]
 QED
 
 Theorem fCARD_THM[simp]:
@@ -354,7 +355,7 @@ Proof
   ] >> rw[]
   >- simp[FUN_REL_def, fsequiv_def, LIST_TO_SET_MAP]
   >- simp[fIMAGE_def, FUN_EQ_THM] >>
-  ntac 2 (irule funQ >> simp[fsetQ])
+  ntac 2 (irule funQ >> simp[])
 QED
 
 Theorem fIMAGE_thm[simp]:
@@ -377,7 +378,7 @@ Proof
   ] >> rw[]
   >- simp[FUN_REL_def, fsequiv_def, LIST_TO_SET_FILTER]
   >- simp[fINTER_def, FUN_EQ_THM, combinTheory.C_DEF] >>
-  ntac 2 (irule funQ >> simp[fsetQ])
+  ntac 2 (irule funQ >> simp[])
 QED
 
 Theorem IN_INTER[simp]:
@@ -399,7 +400,7 @@ Proof
   ] >> rw[]
   >- simp[FUN_REL_def, fsequiv_def, LIST_TO_SET_FILTER]
   >- simp[fDIFF_def, FUN_EQ_THM] >>
-  ntac 2 (irule funQ >> simp[fsetQ])
+  ntac 2 (irule funQ >> simp[])
 QED
 
 Theorem IN_DIFF[simp]:
@@ -425,5 +426,6 @@ Theorem EXTENSION:
 Proof
   xfer_back_tac >> simp[fsequiv_def, pred_setTheory.EXTENSION]
 QED
+
 
 val _ = export_theory();
