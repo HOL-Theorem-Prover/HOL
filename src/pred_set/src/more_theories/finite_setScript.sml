@@ -3,7 +3,7 @@ open quotient
 
 open listTheory liftingTheory transferTheory transferLib
 
-val _ = new_theory "finite_sets";
+val _ = new_theory "finite_set";
 
 Definition fsequiv_def:
   fsequiv l1 l2 <=> set l1 = set l2
