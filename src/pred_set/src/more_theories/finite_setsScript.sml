@@ -173,6 +173,12 @@ Proof
   irule funQ >> simp[fsetQ] >> irule funQ >> simp[fsetQ]
 QED
 
+Theorem IN_UNION[simp]:
+  !e s1 s2. fIN e (fUNION s1 s2) <=> fIN e s1 \/ fIN e s2
+Proof
+  xfer_back_tac >> simp[]
+QED
+
 Definition fEMPTY_def:
   fEMPTY = fset_ABS []
 End
@@ -358,6 +364,50 @@ Proof
   xfer_back_tac >> simp[fsequiv_def]
 QED
 
+Definition fINTER_def:
+  fINTER s1 s2 = fset_ABS (FILTER (\x. MEM x (fset_REP s2)) (fset_REP s1))
+End
+
+Theorem fINTER_relates[transfer_rule]:
+  (FSET0 |==> FSET0 |==> FSET0) (\l1 l2. FILTER (combin$C MEM l2) l1) fINTER
+Proof
+  irule HK_thm2 >> map_every qexists_tac [
+    ‘fset_REP ---> fset_REP ---> fset_ABS’, ‘fsequiv |==> fsequiv |==> fsequiv’,
+    ‘fset_ABS ---> fset_ABS ---> fset_REP’
+  ] >> rw[]
+  >- simp[FUN_REL_def, fsequiv_def, LIST_TO_SET_FILTER]
+  >- simp[fINTER_def, FUN_EQ_THM, combinTheory.C_DEF] >>
+  ntac 2 (irule funQ >> simp[fsetQ])
+QED
+
+Theorem IN_INTER[simp]:
+  !e s1 s2. fIN e (fINTER s1 s2) <=> fIN e s1 /\ fIN e s2
+Proof
+  xfer_back_tac >> simp[MEM_FILTER, CONJ_COMM]
+QED
+
+Definition fDIFF_def:
+  fDIFF s1 s2 = fset_ABS (FILTER (\x. ~MEM x (fset_REP s2)) (fset_REP s1))
+End
+
+Theorem fDIFF_relates[transfer_rule]:
+  (FSET0 |==> FSET0 |==> FSET0) (\l1 l2. FILTER (\x. ~MEM x l2) l1) fDIFF
+Proof
+  irule HK_thm2 >> map_every qexists_tac [
+    ‘fset_REP ---> fset_REP ---> fset_ABS’, ‘fsequiv |==> fsequiv |==> fsequiv’,
+    ‘fset_ABS ---> fset_ABS ---> fset_REP’
+  ] >> rw[]
+  >- simp[FUN_REL_def, fsequiv_def, LIST_TO_SET_FILTER]
+  >- simp[fDIFF_def, FUN_EQ_THM] >>
+  ntac 2 (irule funQ >> simp[fsetQ])
+QED
+
+Theorem IN_DIFF[simp]:
+  !e s1 s2. fIN e (fDIFF s1 s2) <=> fIN e s1 /\ ~fIN e s2
+Proof
+  xfer_back_tac >> simp[MEM_FILTER, CONJ_COMM]
+QED
+
 Theorem NOT_IN_EMPTY[simp]:
   !e. ~fIN e fEMPTY
 Proof
@@ -374,12 +424,6 @@ Theorem EXTENSION:
   !s1 s2. (s1 = s2) <=> !e. fIN e s1 <=> fIN e s2
 Proof
   xfer_back_tac >> simp[fsequiv_def, pred_setTheory.EXTENSION]
-QED
-
-Theorem IN_UNION[simp]:
-  !e s1 s2. fIN e (fUNION s1 s2) <=> fIN e s1 \/ fIN e s2
-Proof
-  xfer_back_tac >> simp[]
 QED
 
 val _ = export_theory();
