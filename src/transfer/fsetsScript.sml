@@ -17,7 +17,7 @@ Definition FSET_def:
 End
 
 Theorem fIN_IN:
-  (AB ===> FSET AB ===> (=)) fIN (IN)
+  (AB |==> FSET AB |==> (=)) fIN (IN)
 Proof
   simp[FUN_REL_def, FSET_def]
 QED
@@ -29,14 +29,14 @@ Proof
 QED
 
 Theorem fUNION_UNION:
-  (FSET AB ===> FSET AB ===> FSET AB) fUNION (UNION)
+  (FSET AB |==> FSET AB |==> FSET AB) fUNION (UNION)
 Proof
   simp[FUN_REL_def, FSET_def] >> metis_tac[]
 QED
 
 Theorem fINSERT_INSERT:
   bi_unique AB ==>
-  (AB ===> FSET AB ===> FSET AB) fINSERT (INSERT)
+  (AB |==> FSET AB |==> FSET AB) fINSERT (INSERT)
 Proof
   simp[FUN_REL_def, FSET_def, bi_unique_def, left_unique_def,
        right_unique_def] >> metis_tac[]
@@ -44,7 +44,7 @@ QED
 
 Theorem fupdate_correct:
   bi_unique AB ==>
-  (FSET AB ===> PAIRU AB ===> FSET AB) $|+ (combin$C $INSERT)
+  (FSET AB |==> PAIRU AB |==> FSET AB) $|+ (combin$C $INSERT)
 Proof
   simp[FUN_REL_def, PAIRU_def, pairTheory.FORALL_PROD, FSET_def, bi_unique_def,
        left_unique_def, right_unique_def] >> metis_tac[]
@@ -53,7 +53,7 @@ QED
 Overload fDELETE = “fdomsub : 'a fset -> 'a -> 'a fset”
 Theorem fDELETE_DELETE:
   bi_unique AB ==>
-  (FSET AB ===> AB ===> FSET AB) fDELETE (DELETE)
+  (FSET AB |==> AB |==> FSET AB) fDELETE (DELETE)
 Proof
   simp[FUN_REL_def, FSET_def, bi_unique_def, left_unique_def,
        right_unique_def] >> metis_tac[]
@@ -61,7 +61,7 @@ QED
 
 Overload toSet = “FDOM : 'a fset -> 'a set”
 Theorem toSet_correct:
-  (FSET AB ===> AB ===> (=)) toSet I
+  (FSET AB |==> AB |==> (=)) toSet I
 Proof
   simp[FUN_REL_def, FSET_def] >> simp[IN_DEF]
 QED
@@ -75,7 +75,7 @@ Proof
 QED
 
 Theorem KT_FINITE:
-  surj AB /\ right_unique AB ==> (FSET AB ===> (=)) (K T) FINITE
+  surj AB /\ right_unique AB ==> (FSET AB |==> (=)) (K T) FINITE
 Proof
   rw[FUN_REL_def, FSET_def, right_unique_def, total_def, surj_def] >>
   fs[SKOLEM_THM] >>

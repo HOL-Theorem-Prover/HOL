@@ -6,6 +6,10 @@ open transferTheory FullUnify
 val PART_MATCH' = mp_then.PART_MATCH'
 val op $ = Portable.$
 
+val SIMP_CONV = simpLib.SIMP_CONV
+val SIMP_RULE = simpLib.SIMP_RULE
+val transfer_ss = simpLib.++(boolSimps.bool_ss, combinSimps.COMBIN_ss)
+
 fun relconstraint_tm t =
     case dest_term t of
         CONST {Thy = "transfer", Name, ...} =>
@@ -127,8 +131,10 @@ fun ty2relvar cleftp skty cty =
           val (cd, cr) = dom_rng cty
           val dR = ty2relvar cleftp skd cd
           val rR = ty2relvar cleftp skr cr
+          val sigma = match_type (alpha --> beta --> bool) (type_of dR) @
+                      match_type (gamma --> delta --> bool) (type_of rR)
       in
-        mk_icomb(mk_icomb(FUN_REL_t, dR), rR)
+        mk_comb(mk_comb(FUN_REL_t |> inst sigma, dR), rR)
       end
 
 val GFUN_REL_COMB = GEN_ALL FUN_REL_COMB
@@ -240,6 +246,7 @@ fun eliminate_with_unifier ctys th1 h th2 =
 
 infix ~>
 fun sq ~> f = seq.flatten (seq.map f sq)
+fun sqreturn x = seq.fromList [x]
 
 fun check {cleftp,forceprogress} (ruledb:ruledb.t) th =
     let
@@ -250,26 +257,25 @@ fun check {cleftp,forceprogress} (ruledb:ruledb.t) th =
           case seq.cases sq1 of
               NONE => sq2
             | _ => sq1
-      fun return x = seq.fromList [x]
       val fail = seq.empty
       val hs = hyp th
       fun u1 h th rule =
           case eliminate_with_unifier ctys rule h th of
               NONE => fail
-            | SOME th' => return (true, th')
+            | SOME th' => sqreturn (true, th')
       fun safe_recurse hs (progressed,th) =
           case hs of
-              [] => return (progressed,th)
+              [] => sqreturn (progressed,th)
             | h::rest =>
               let
                 val ths = Net.lookup h (#safe ruledb)
               in
-                ((seq.fromList ths ~> u1 h th) +++ return (progressed, th)) ~>
+                ((seq.fromList ths ~> u1 h th) +++ sqreturn (progressed, th)) ~>
                 safe_recurse rest
               end
       fun bad_recurse hs th =
           case hs of
-              [] => return th
+              [] => sqreturn th
             | h::rest =>
                 if List.exists
                      (fn pat => can (match_term (gen_tyvarify pat)) h)
@@ -277,17 +283,26 @@ fun check {cleftp,forceprogress} (ruledb:ruledb.t) th =
                 then
                   fail
                 else bad_recurse rest th
+      fun simphyp (h, th) =
+          if not (is_relconstraint h) then th
+          else
+            let
+              val hth = SIMP_CONV transfer_ss (#DOMRNG_ss ruledb) h
+            in
+              PROVE_HYP (EQ_IMP_RULE hth |> #2 |> UNDISCH) th
+            end handle UNCHANGED => th | HOL_ERR _ => th
+      fun simphyps th = sqreturn (List.foldl simphyp th (hyp th))
       fun assertprogress (p, th) = if not p andalso forceprogress then fail
-                                   else return th
+                                   else sqreturn th
     in
-      safe_recurse hs (false,th) ~> assertprogress ~> S (C bad_recurse) hyp
+      safe_recurse hs (false,th) ~> assertprogress ~> simphyps ~>
+      S (C bad_recurse) hyp
     end
 
 fun resolve_relhyps cleftp rdb th =
     let
       val argsel = if cleftp then lhand else rand
       val ctys = type_vars_in_term (th |> concl |> argsel)
-      fun return x = seq.fromList [x]
       val fail = seq.empty
       fun goodhyp h = not (is_relconstraint h)
     in
@@ -301,7 +316,7 @@ fun resolve_relhyps cleftp rdb th =
             fun kont candidate_rule =
                 case eliminate_with_unifier ctys candidate_rule h th of
                     NONE => fail
-                  | SOME th' => return th'
+                  | SOME th' => sqreturn th'
           in
             seq.fromList candidate_rules ~> kont ~>
             check {cleftp=cleftp,forceprogress=false} rdb
@@ -356,25 +371,8 @@ fun eliminate_booleans_and_equalities cleftp th =
                     NONE => bh_recurse rest th
                   | SOME th' => bh_recurse rest th'
               end
-      val bh_gone = th |> bh_recurse boolhyps
-      fun is_eqhyp t =
-          List.length (#2 (strip_comb t)) >= 2 andalso
-          same_const equality (argsel t) handle HOL_ERR _ => false
-      val eqhyps = List.filter is_eqhyp (hyp bh_gone)
-      fun eq_recurse hs th =
-          case hs of
-              [] => th
-            | h::rest =>
-              let
-                val eqr = EQ_bi_unique |> INST [AB |-> genvar ABty]
-                                       |> GEN_TYVARIFY |> UNDISCH
-              in
-                case eliminate_with_unifier ctys eqr h th of
-                    NONE => eq_recurse rest th
-                  | SOME th' => eq_recurse rest th'
-              end
     in
-      eq_recurse eqhyps bh_gone
+      th |> bh_recurse boolhyps
     end
 end (* local *)
 
@@ -421,20 +419,20 @@ val ruledb =
         |> addrule EQ_bi_unique
         |> addrule UPAIR_COMMA
         |> addrule toSet_correct
-        |> addrule ALL_IFF
-        |> addrule ALL_total_RRANGE
         |> addrule ALL_total_iff_cimp
         |> addrule ALL_total_cimp_cimp
-        |> addrule ALL_surj_RDOM
         |> addrule ALL_surj_iff_imp
         |> addrule ALL_surj_imp_imp
-        |> addrule EXISTS_bitotal
+        |> addrule ALL_IFF
+        |> addrule ALL_surj_RDOM
+        |> addrule ALL_total_RRANGE
         |> addrule EXISTS_total_iff_imp
         |> addrule EXISTS_total_imp_imp
         |> addrule EXISTS_surj_iff_cimp
         |> addrule EXISTS_surj_cimp_cimp
         |> addrule EXISTS_IFF_RDOM
         |> addrule EXISTS_IFF_RRANGE
+        |> addrule EXISTS_bitotal
         |> addrule UREL_EQ
         |> addrule PAIRU_COMMA
         |> addrule cimp_imp
@@ -473,6 +471,7 @@ val ruledb =
         |> add_domrng RES_EXISTS_RRANGE
         |> add_domrng RES_FORALL_RDOM
         |> add_domrng RES_FORALL_RRANGE
+        |> add_domrng FUN_REL_EQ2
     end (* let *)
 
 fun search_for P depth sq =
@@ -488,26 +487,43 @@ fun search_for P depth sq =
               | SOME (th, rest) => if P (concl th) then th
                                    else recurse (i + 1) rest
     in
-      recurse (depth - 1) sq'
+      recurse 1 sq'
     end
 
 fun const_occurs c = can (find_term (same_const c))
 val RRANGE_tm = prim_mk_const{Thy = "relation", Name = "RRANGE"}
 val RDOM_tm = prim_mk_const{Thy = "relation", Name = "RDOM"}
 
-fun base_transfer cleftp ruledb t =
+fun transfer_skeleton cleftp t =
+    prove_relation_thm cleftp t (build_skeleton t)
+                       |> eliminate_booleans_and_equalities cleftp
+
+fun resolveN n cleftp ruledb t =
     let
-      val th0 = prove_relation_thm cleftp t (build_skeleton t)
-                                   |> eliminate_booleans_and_equalities cleftp
+      fun recurse n th =
+          if n < 1 then sqreturn th
+          else resolve_relhyps cleftp ruledb th ~> recurse (n - 1)
+    in
+      recurse n (transfer_skeleton cleftp t)
+    end
+
+fun transfer_phase1 cleftp ruledb t =
+    let
       open simpLib boolSimps
     in
-      seqrpt (resolve_relhyps cleftp ruledb) th0 ~>
+      seqrpt (resolve_relhyps cleftp ruledb) (transfer_skeleton cleftp t) ~>
       seqrptUntil (List.all (is_var o rand) o hyp)
-                  (check{cleftp=cleftp,forceprogress=true} ruledb) |>
+                  (check{cleftp=cleftp,forceprogress=true} ruledb)
+    end
+
+fun base_transfer cleftp ruledb t =
+    let
+      open simpLib boolSimps
+    in
+      transfer_phase1 cleftp ruledb t |>
       seq.map (mkrelsyms_eq cleftp) ~>
       check {cleftp=cleftp,forceprogress=false} ruledb |>
-      seq.map
-        (SIMP_RULE (bool_ss ++ combinSimps.COMBIN_ss) (#DOMRNG_ss ruledb)) |>
+      seq.map (SIMP_RULE transfer_ss (#DOMRNG_ss ruledb)) |>
       seq.filter (not o const_occurs RRANGE_tm o concl) |>
       seq.filter (not o const_occurs RDOM_tm o concl)
     end
@@ -554,12 +570,17 @@ open ruledb
 fun not_ceq th1 th2 = concl th1 !~ concl th2
 fun temp_add_rule th = Sref.update the_ruledb (addrule th)
 fun temp_add_safe th = Sref.update the_ruledb (addsafe th)
+fun temp_add_simp th = Sref.update the_ruledb (add_domrng th)
 fun temp_remove_rule th =
     Sref.update the_ruledb (fupd_left (Net.filter (not_ceq th)) o
                             fupd_right (Net.filter (not_ceq th)))
 fun temp_remove_safe th =
     Sref.update the_ruledb (fupd_left (Net.filter (not_ceq th)) o
                             fupd_right (Net.filter (not_ceq th)))
+fun delsimp th rwts = List.filter (not_ceq th) rwts
+fun temp_remove_simp th =
+    Sref.update the_ruledb (fupd_DOMRNG_ss (delsimp th))
+
 fun name_to_thm n =
     case String.fields (equal #".") n of
         [s] => DB.fetch (current_theory()) s
@@ -568,24 +589,23 @@ fun name_to_thm n =
                    ("Malformed thm-spec: "^n)
 fun temp_remove_named_rule n = temp_remove_rule (name_to_thm n)
 fun temp_remove_named_safe n = temp_remove_safe (name_to_thm n)
+fun temp_remove_named_simp n = temp_remove_simp (name_to_thm n)
 
-val {export = add_rule,delete} =
-    ThmSetData.new_exporter {
-      settype = "transfer_rule",
-      efns = {add = fn {named_thms,...} =>
-                       List.app (temp_add_rule o #2) named_thms,
-              remove = fn {removes,...} =>
-                          List.app temp_remove_named_rule removes}
-    }
+fun new_exporter nm add del =
+    let
+      val {export,...} =
+          ThmSetData.new_exporter {
+            settype = nm,
+            efns = {add = fn {named_thms,...} => List.app (add o #2) named_thms,
+                    remove = fn {removes,...} => List.app del removes}
+          }
+    in
+      export
+    end
 
-val {export = add_safe,delete} =
-    ThmSetData.new_exporter {
-      settype = "transfer_safe",
-      efns = {add = fn {named_thms,...} =>
-                       List.app (temp_add_safe o #2) named_thms,
-              remove = fn {removes,...} =>
-                          List.app temp_remove_named_safe removes}
-    }
+val add_rule = new_exporter "transfer_rule" temp_add_rule temp_remove_named_rule
+val add_safe = new_exporter "transfer_safe" temp_add_safe temp_remove_named_safe
+val add_simp = new_exporter "transfer_simp" temp_add_simp temp_remove_named_simp
 
 fun global_ruledb() = Sref.value the_ruledb
 

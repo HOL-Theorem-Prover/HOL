@@ -10,7 +10,7 @@ val FMSP_def = Define‘
 
 val FMSP_FDOM = Q.store_thm(
   "FMSP_FDOM",
-  ‘(FMSP AN BC ===> (AN ===> (<=>))) FDOM domain’,
+  ‘(FMSP AN BC |==> (AN |==> (<=>))) FDOM domain’,
   simp[FMSP_def, FUN_REL_def] >> rpt strip_tac >> res_tac >>
   rename [‘OPTREL BC (FLOOKUP fm a) (lookup n sp)’] >> pop_assum mp_tac >>
   map_every Cases_on [‘FLOOKUP fm a’, ‘lookup n sp’] >>
@@ -28,7 +28,7 @@ val FMSP_FEMPTY = Q.store_thm(
 val FMSP_FUPDATE = Q.store_thm(
   "FMSP_FUPDATE",
   ‘bi_unique AN ==>
-     (FMSP AN BC ===> (AN ### BC) ===> FMSP AN BC)
+     (FMSP AN BC |==> (AN ### BC) |==> FMSP AN BC)
        FUPDATE
        (\sp (n,v). insert n v sp)’,
   simp[FMSP_def, FUN_REL_def, PAIR_REL_def, pairTheory.FORALL_PROD,
@@ -96,7 +96,7 @@ QED
 
 val FMSP_FUNION = Q.store_thm(
   "FMSP_FUNION",
-  ‘(FMSP AN BC ===> FMSP AN BC ===> FMSP AN BC) FUNION union’,
+  ‘(FMSP AN BC |==> FMSP AN BC |==> FMSP AN BC) FUNION union’,
   simp[FUN_REL_def, FMSP_def, FLOOKUP_DEF, lookup_union, FUNION_DEF] >>
   rpt strip_tac >>
   rename [‘k IN FDOM fm1 \/ k IN FDOM fm2’, ‘AN k n’,
@@ -114,7 +114,7 @@ val FMSP_FUNION = Q.store_thm(
 val FMSP_FDOMSUB = Q.store_thm(
   "FMSP_FDOMSUB",
   ‘bi_unique AN ==>
-   (FMSP AN BC ===> AN ===> FMSP AN BC) (\\) (combin$C delete)’,
+   (FMSP AN BC |==> AN |==> FMSP AN BC) (\\) (combin$C delete)’,
   simp[FUN_REL_def, FMSP_def] >> rpt strip_tac >>
   rename [‘FLOOKUP (fm \\ k1) k2’, ‘lookup m (delete n sp)’] >>
   Cases_on ‘k1 = k2’ >> simp[FLOOKUP_DEF, lookup_delete]
