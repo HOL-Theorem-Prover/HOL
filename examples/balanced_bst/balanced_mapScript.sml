@@ -1947,6 +1947,14 @@ val delete_thm = Q.store_thm ("delete_thm",
          metis_tac [FCARD_DEF])
      >- to_fmap_tac));
 
+Theorem lookup_delete:
+ good_cmp cmp /\ invariant cmp t ==>
+ lookup cmp k (delete cmp k' t) =
+ if cmp k k' = Equal then NONE else lookup cmp k t
+Proof
+ rw[lookup_thm,delete_thm,FLOOKUP_DRESTRICT] \\ metis_tac[key_set_eq,FLOOKUP_DEF]
+QED
+
 val restrict_set_def = Define `
 restrict_set cmp lo hi =
 { k | option_cmp cmp lo (SOME k) = Less ∧
