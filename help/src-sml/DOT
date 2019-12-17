@@ -100,7 +100,13 @@ fun gen_dotfile file node_info =
      val ostrm = openOut file
  in
    PP.prettyPrint(curry output ostrm, 75)
-                 (pp_dot_file {size="16,16",ranksep="1.0",nodesep="0.30"}
+                 (* HOL Theory Hierarchy (clickable) disappeared (#749)
+
+                    Enlarged SVG size (old: (16,16) inch) to make sure
+                    the success of SVG generation. Further scaling is done
+                    at HTML side. Nodesep 0.2 (old: 0.3) looks better.
+                  *)
+                 (pp_dot_file {size="100,100",ranksep="1.0",nodesep="0.2"}
                               node_info);
    closeOut ostrm
  end;
@@ -146,7 +152,11 @@ in
       out "<BODY bgcolor=linen>";
       out "<H1>HOL Theory Hierarchy (clickable)</H1>";
       out (String.concat
-               ["<object data=\"",OS.Path.file svgfile,"\" type=\"image/svg+xml\">HOL Theory Map</object>"]);
+           ["<object data=\"",
+            OS.Path.file svgfile,
+            (* HOL Theory Hierarchy (clickable) disappeared (#749)
+               Force the scaling of SVG to the width of the browser window. *)
+            "\" style=\"width: 100%;\" type=\"image/svg+xml\">HOL Theory Map</object>"]);
       out "</BODY>";
       out "</HTML>";
       closeOut ostrm
