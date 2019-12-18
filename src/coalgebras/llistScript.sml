@@ -2648,7 +2648,7 @@ val LLENGTH_LREPEAT = Q.store_thm(
    Case constant, distinctness etc. for TypeBase
    -------------------------------------------------------------------------- *)
 
-Definition llist_CASE_def:
+Definition llist_CASE_def[nocompute]:
   llist_CASE ll b f =
     case LTL_HD ll of
       NONE => b
