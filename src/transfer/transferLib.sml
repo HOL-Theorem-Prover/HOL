@@ -299,6 +299,9 @@ fun check {cleftp,forceprogress} (ruledb:ruledb.t) th =
       S (C bad_recurse) hyp
     end
 
+fun check_constraints cleftp rdb th =
+    check{cleftp=cleftp,forceprogress=false} rdb th
+
 fun resolve_relhyps cleftp rdb th =
     let
       val argsel = if cleftp then lhand else rand
@@ -409,6 +412,7 @@ val RES_EXISTS_RDOM =
 
 
 val equalityp_tm = prim_mk_const{Name = "equalityp", Thy = "transfer"}
+val right_unique_tm = prim_mk_const{Name = "right_unique", Thy = "transfer"}
 val cimp_tm = mk_icomb(combinSyntax.C_tm, boolSyntax.implication)
 
 val ruledb =
@@ -462,8 +466,13 @@ val ruledb =
         |> addsafe right_unique_EQ
         |> addsafe surj_EQ
         |> addsafe (SPEC_ALL EQ_REFL)
+        |> addsafe LIST_REL_surj
+        |> addsafe LIST_REL_total
+        |> addsafe LIST_REL_right_unique
         |> addbad (mk_icomb(equalityp_tm, boolSyntax.implication))
         |> addbad (mk_icomb(equalityp_tm, cimp_tm))
+        |> addbad (mk_icomb(right_unique_tm, boolSyntax.implication))
+        |> addbad (mk_icomb(right_unique_tm, cimp_tm))
         |> add_domrng RRANGE_EQ
         |> add_domrng RDOM_EQ
         |> add_domrng RES_EXISTS_RDOM
@@ -552,7 +561,8 @@ fun xfer_back_tac (g as (asl,c)) =
       val con = concl th
       val mkE = mk_HOL_ERR "transferLib" "xfer_back_tac"
     in
-      if is_imp con then
+      if aconv con c then ACCEPT_TAC th g
+      else if is_imp con then
         if aconv (rand con) c then
           if aconv (lhand con) c then
             raise mkE "Derived p ==> p implication"
@@ -568,7 +578,9 @@ fun xfer_back_tac (g as (asl,c)) =
 open ruledb
 fun not_ceq th1 th2 = concl th1 !~ concl th2
 fun temp_add_rule th = Sref.update the_ruledb (addrule th)
-fun temp_add_safe th = Sref.update the_ruledb (addsafe th)
+fun temp_add_safe th =
+    Sref.update the_ruledb
+            (addsafe (UNDISCH_ALL (PURE_REWRITE_RULE[GSYM AND_IMP_INTRO] th)))
 fun temp_add_simp th = Sref.update the_ruledb (add_domrng th)
 fun temp_remove_rule th =
     Sref.update the_ruledb (fupd_left (Net.filter (not_ceq th)) o

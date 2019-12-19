@@ -2,6 +2,7 @@ signature transferLib =
 sig
 
   include Abbrev
+  val GEN_TYVARIFY : thm -> thm
 
   structure ruledb : sig
     type t
@@ -15,6 +16,7 @@ sig
 
   val resolve_relhyps : bool -> ruledb.t -> thm -> thm seq.seq
   val resolveN : int -> bool -> ruledb.t -> term -> thm seq.seq
+  val check_constraints : bool -> ruledb.t -> thm -> thm seq.seq
 
   val transfer_skeleton : bool -> term -> thm
   val transfer_phase1   : bool -> ruledb.t -> term -> thm seq.seq

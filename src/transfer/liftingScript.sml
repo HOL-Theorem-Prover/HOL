@@ -39,6 +39,13 @@ Proof
   simp[Qt_def, FUN_EQ_THM, relationTheory.inv_DEF] >> metis_tac[]
 QED
 
+Theorem R_repabs:
+  Qt R Abs Rep Tf ==> !x. R x x ==> R (Rep (Abs x)) x
+Proof
+  rw[Qt_def,relationTheory.O_DEF,relationTheory.inv_DEF, PULL_EXISTS,IN_DEF]>>
+  metis_tac[]
+QED
+
 Theorem pairQ:
   Qt R1 Abs1 Rep1 Tf1 /\ Qt R2 Abs2 Rep2 Tf2 ==>
   Qt (R1 ### R2) (Abs1 ## Abs2) (Rep1 ## Rep2) (Tf1 ### Tf2)
@@ -76,6 +83,12 @@ Proof
   simp[map_fun_def]
 QED
 
+Theorem map_fun_I[simp]:
+  (f ---> I) = combin$C $o f /\ (I ---> g) = $o g
+Proof
+  simp[FUN_EQ_THM]
+QED
+
 (* no idea which orientation of this makes most sense *)
 Theorem map_fun_o:
   (f1 o f2) ---> (g1 o g2) = (f2 ---> g1) o (f1 ---> g2)
@@ -101,6 +114,16 @@ Theorem funQ:
 Proof
   simp[Qt_alt_def2, relationTheory.O_DEF, relationTheory.inv_DEF, FUN_EQ_THM,
        FUN_REL_def, PULL_EXISTS] >> metis_tac[]
+QED
+
+Theorem setQ:
+  Qt (R : 'a -> 'a -> bool) Abs (Rep : 'b -> 'a) Tf ==>
+  Qt (R |==> (=)) (PREIMAGE Rep) (PREIMAGE Abs) (Tf |==> (=))
+Proof
+  strip_tac >> drule (INST_TYPE [beta |-> bool, delta |-> bool] funQ) >>
+  ‘PREIMAGE Rep = Rep ---> I /\ PREIMAGE Abs = Abs ---> I’
+    by simp[FUN_EQ_THM, IN_DEF] >>
+  ntac 2 (pop_assum SUBST1_TAC) >> disch_then irule >> simp[]
 QED
 
 Theorem HK_thm2:

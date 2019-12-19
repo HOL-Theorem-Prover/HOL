@@ -387,4 +387,10 @@ Proof
   simp[surj_def] >> strip_tac >> Induct >> simp[PULL_EXISTS] >> metis_tac[]
 QED
 
+Theorem LIST_REL_total:
+  total AB ==> total (LIST_REL AB)
+Proof
+  simp[total_def] >> strip_tac >> Induct >> simp[] >> metis_tac[]
+QED
+
 val _ = export_theory();
