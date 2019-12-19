@@ -19,6 +19,7 @@
 (define-prefix-command 'hol-map)
 (define-prefix-command 'hol-d-map)
 (define-prefix-command 'hol-movement-map)
+(define-prefix-command 'hol-backquote-map)
 (make-variable-buffer-local 'hol-buffer-name)
 (make-variable-buffer-local 'hol-buffer-ready)
 (set-default 'hol-buffer-ready nil)
@@ -1475,7 +1476,67 @@ second is to show the new term.
   (interactive "sOverloaded name: ")
   (send-string-to-hol (format "overload_info_for \"%s\"" term-name)))
 
+;;; nicer editing with quotations
+(defun hol-to-left-quote ()
+  "Move left in the buffer to the previous “ or ‘ character."
+  (interactive)
+  (re-search-backward "‘\\|“"))
 
+(defun hol-to-right-quote ()
+  "Move right in the buffer to just beyond the next ” or ’ character."
+  (interactive)
+  (re-search-forward "’\\|”"))
+
+(defun hol-dbl-backquote ()
+  "Perform 'smart' insertion of Unicode quotes.
+
+On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inserts a
+‘-’ pair, leaving the cursor on the right quote, ready to insert text."
+  (interactive)
+  (cond
+   ((looking-at "’")
+    (if (catch 'exit
+          (save-mark-and-excursion
+            (re-search-backward "‘\\|’" nil t)
+            (if (looking-at "‘")
+                (progn (delete-char 1) (insert "“")
+                         (throw 'exit t))
+              (throw 'exit nil))))
+        (progn
+          (if (looking-at "“") (forward-char 1))
+          (delete-char 1) (insert "”") (backward-char 1))))
+   ((looking-at "”")
+    (if (catch 'exit
+          (save-mark-and-excursion
+            (re-search-backward "“\\|”" nil t)
+            (if (looking-at "“")
+                (progn (delete-char 1) (insert "‘")
+                       (throw 'exit t))
+              (throw 'exit nil))))
+        (progn
+          (if (looking-at "‘") (forward-char 1))
+          (delete-char 1) (insert "’") (backward-char 1))))
+   ((looking-at "“")
+    (if (catch 'exit
+          (save-mark-and-excursion
+            (forward-char 1)
+            (if (re-search-forward "”\\|“" nil t)
+                (goto-char (match-beginning 0)))
+            (if (looking-at "”")
+                (progn (delete-char 1) (insert "’") (throw 'exit t))
+              (throw 'exit nil))))
+        (progn (delete-char 1) (insert "‘") (backward-char 1))))
+   ((looking-at "‘")
+    (if (catch 'exit
+          (save-mark-and-excursion
+            (forward-char 1)
+            (if (re-search-forward "’\\|‘" nil t)
+                (goto-char (match-beginning 0)))
+            (if (looking-at "’")
+                (progn (delete-char 1) (insert "”") (throw 'exit t))
+              (throw 'exit nil))))
+        (progn (delete-char 1) (insert "“") (backward-char 1))))
+   (t (insert "‘’") (backward-char 1))))
 
 ;;templates
 (defun hol-extract-script-name (arg)
@@ -1961,6 +2022,7 @@ second is to show the new term.
 
 (add-hook 'sml-mode-hook
           (lambda ()
+            (local-set-key "`" 'hol-backquote-map)
             (setq font-lock-multiline t)
             (setq font-lock-extend-region-functions
                   (append font-lock-extend-region-functions
@@ -2214,6 +2276,10 @@ second is to show the new term.
 (define-key holpp-map "c"    'hol-toggle-pp-cases)
 
 (define-key hol-movement-map "u" 'hol-movement-backward-up-list)
+
+(define-key hol-backquote-map "`" 'hol-dbl-backquote)
+(define-key hol-backquote-map (kbd "<left>") 'hol-to-left-quote)
+(define-key hol-backquote-map (kbd "<right>") 'hol-to-right-quote)
 
 ;;; HOL movement
 
