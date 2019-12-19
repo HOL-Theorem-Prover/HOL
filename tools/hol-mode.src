@@ -1120,6 +1120,7 @@ region instead. With prefix ARG prompt for a file-name to load."
   (concat "using " (hol-executable-with-bare)))
 
 (defun hol-display ()
+   "Attempts to bring the HOL buffer to the fore (calling `display-buffer')."
    (interactive)
    (display-buffer hol-buffer-name))
 
@@ -2161,9 +2162,9 @@ second is to show the new term.
 (define-key hol-map "h"    'hol)
 (define-key hol-map "H"    'hol-with-region)
 (define-key hol-map "\M-m" 'holmake)
-(define-key hol-map "4"    'hol-display)
-(define-key hol-map "3"    'hol-horizontal)
 (define-key hol-map "2"    'hol-vertical)
+(define-key hol-map "3"    'hol-horizontal)
+(define-key hol-map "4"    'hol-display)
 (define-key hol-map "l"    'hol-load-file)
 (define-key hol-map "m"    'hol-db-match)
 (define-key hol-map "f"    'hol-db-find)
