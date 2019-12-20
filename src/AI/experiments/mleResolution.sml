@@ -525,7 +525,7 @@ val pretobdict = dnew String.compare
 
 val rl_param =
   { expname = "mleResolution-1", ex_window = 40000,
-    ncore_search = 5, nsim = 160, decay = 1.0}
+    ncore_search = 40, nsim = 160, decay = 1.0}
 
 val rlpreobj : (board,move,unit) rlpreobj =
   {
@@ -545,8 +545,6 @@ val rlobj = mk_rlobj rlpreobj extsearch
 (*
 load "mleResolution"; open mleResolution;
 load "mlReinforce"; open mlReinforce;
-val l = time level_targetl 8;
-length l;
 val _ = rl_start_sync rlobj 1;
 *)
 
