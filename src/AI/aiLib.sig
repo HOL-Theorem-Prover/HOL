@@ -123,6 +123,7 @@ sig
   val shuffle   : 'a list -> 'a list
   val random_elem : 'a list -> 'a
   val random_int : (int * int) -> int (* uses random_elem *)
+  val random_subset : int -> 'a list -> 'a list
   val mk_cumul : ('a * real) list -> ('a * real) list * real
   val select_in_cumul : ('a * real) list * real -> 'a
   val select_in_distrib : ('a * real) list -> 'a

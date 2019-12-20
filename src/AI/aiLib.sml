@@ -877,7 +877,7 @@ fun unescape_aux l = case l of
 fun unescape s = implode (unescape_aux (explode s))
 
 (* ------------------------------------------------------------------------
-   Probability
+   Random
    ------------------------------------------------------------------------ *)
 
 val new_real = Random.newgen ()
@@ -902,6 +902,12 @@ fun random_int (a,b) =
   in
     if c >= b then b else c
   end
+
+fun random_subset n l = first_n n (shuffle l)
+
+(* ------------------------------------------------------------------------
+   Distribution
+   ------------------------------------------------------------------------ *)
 
 fun cumul_proba (tot:real) l = case l of
     [] => []

@@ -229,7 +229,7 @@ fun create_levels () =
 fun level_targetl level =
   let 
     val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt") 
-    val tmll = map shuffle (first_n level (mk_batch 400 tml1))
+    val tmll = map shuffle (first_n level (mk_batch_full 400 tml1))
     val tml2 = first_n 400 (List.concat (list_combine tmll))
     val tml3 = rev (dict_sort tmsize_compare tml2)
   in
