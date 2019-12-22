@@ -87,6 +87,7 @@ sig
   val map_snd : ('a -> 'b) -> ('c * 'a) list -> ('c * 'b) list
   val map_fst : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list
   val map_assoc : ('a -> 'b) -> 'a list -> ('a * 'b) list
+  val all_pairs : 'a list -> ('a * 'a) list
   val cartesian_product : 'a list -> 'b list -> ('a * 'b) list
   val cartesian_productl : 'a list list -> 'a list list
   val findSome  : ('a -> 'b option) -> 'a list -> 'b option

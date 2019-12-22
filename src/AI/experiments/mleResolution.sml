@@ -11,108 +11,316 @@ struct
 open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlNeuralNetwork mlTreeNeuralNetwork mlTacticData mlReinforce mleLib mleSetLib
 
+load "aiLib"; open aiLib;
+
 val ERR = mk_HOL_ERR "mleResolution"
-type 'a set = ('a, unit) Redblackmap.dict
 
 (* -------------------------------------------------------------------------
    Comparison function
    ------------------------------------------------------------------------- *)
 
+type clause = (int * bool) list
 val lit_compare = cpl_compare Int.compare bool_compare
-fun dict_compare cmp (d1,d2) = list_compare cmp (dlist d1, dlist d2)
-val clause_compare = dict_compare (cpl_compare Int.compare bool_compare)
-fun set_compare cmp (d1,d2) = list_compare cmp (dkeys d1, dkeys d2)
-
-fun lookup_clause d c = List.nth (dkeys d, c)
-  handle Subscript => raise ERR "lookup_clause" ""
+val clause_compare = list_compare lit_compare 
 
 (* -------------------------------------------------------------------------
    Resolution
    ------------------------------------------------------------------------- *)
 
-fun find_uniq test l = case l of
-    [] => NONE
-  | a :: m => 
-    (if test a 
-     then (if not (exists test m) then SOME a else NONE)
-     else find_uniq test m)
+fun resolve_aux b (c1,c2) = case (c1:clause,c2:clause) of
+    ([],_) => if b then c2 else raise ERR "resolve_aux" "no match"
+  | (_,[]) => if b then c1 else raise ERR "resolve_aux" "no match"
+  | ((a1,b1) :: m1, (a2,b2) :: m2) =>
+    if a1 < a2 then (a1,b1) :: resolve_aux b (m1,c2)
+    else if a2 < a1 then (a2,b2) :: resolve_aux b (c1,m2) 
+    else 
+      if b1 = b2 then (a1,b1) :: resolve_aux b (m1,m2)
+      else if b then raise ERR "resolve_aux" "multiple matches"
+           else resolve_aux true (m1,m2)
 
-fun find_match (d1,d2) =
-  let fun test (i,b) = (dfind i d2 = not b handle NotFound => false) in
-    Option.map fst (find_uniq test (dlist d1)) 
+fun resolve (c1:clause, c2:clause) = (resolve_aux false (c1,c2) : clause)
+  
+fun resolve_ctxt cd (c1,c2) = 
+  let val c = resolve (c1,c2) in 
+    if dmem c cd then raise ERR "resolve_ctxt" "" else r
   end
-        
-fun is_match (d1,d2) = isSome (find_match (d1,d2))
-
-fun resolve_at (d1,d2) i =
-  daddl (dlist (drem i d1)) (drem i d2)
-
-fun resolve_pair d (d1,d2) = case find_match (d1,d2) of
-    SOME i => 
-    let val clause = resolve_at (d1,d2) i in
-      if dmem clause d then NONE else SOME clause
-    end
-  | NONE => NONE
-
-fun resolve_pairi d (c1,c2)= 
-  resolve_pair d (lookup_clause d c1, lookup_clause d c2)
-
-fun has_effect d (d1,d2) = isSome (resolve_pair d (d1,d2))
-fun exists_effect pb d =
-  exists (fn x => has_effect pb (d,x)) (dkeys pb)
-
-fun has_effecti d (c1,c2) =
-  can (lookup_clause d) c1 andalso
-  can (lookup_clause d) c2 andalso
-  has_effect d (lookup_clause d c1, lookup_clause d c2)
-fun exists_effecti d c =
-  exists (fn x => has_effecti d (c,x)) (List.tabulate (dlength d, I))
-
-fun is_saturated d = not (exists (exists_effect d) (dkeys d))
 
 (* -------------------------------------------------------------------------
-   Calculate difficulty
+   Brute force algorithm by iterative deepedning
    ------------------------------------------------------------------------- *)
 
-fun all_pairs l = case l of
-    [] => []
-  | [a] => []
-  | a :: m => map (fn x => (a,x)) m @ all_pairs m
-
-fun resolve_pair_cost pb ((d1,n1),(d2,n2)) = case find_match (d1,d2) of
-    SOME i => 
-    let val clause = resolve_at (d1,d2) i in
-      if dmem clause pb then NONE else SOME (clause, n1 + n2 + 1)
-    end
-  | NONE => NONE
-
-fun resolve_all (pb,sep) =
-  let 
-    val (l1,l2) = part_n sep (dlist pb)
-    val ll = all_pairs l2 @ cartesian_product l1 l2 
-  in
-    List.mapPartial (resolve_pair_cost pb) ll
+fun resolve_cost pb ((c1,n1),(c2,n2)) =
+  let val c = resolve (c1,c2) in
+    if dmem c pb then raise ERR "resolve_cost" "" else (c, n1 + n2 + 1)
   end
 
-val empty_clause = dempty Int.compare
+fun resolve_brute (pb,l1,l2) =
+  let val l = all_pairs l2 @ cartesian_product l1 l2 in
+    mapfilter (resolve_cost pb) l
+  end
 
-fun brute_pb_aux (i,n) (pb,sep) =
-  if dmem empty_clause pb
-    then ("solved", dfind empty_clause pb) 
-  else if i >= n 
-    then ("timeout",i) 
+fun brute_pb_aux (i,n) (pb,l1,l2) =
+  if dmem [] pb then ("solved",i, SOME (dfind [] pb))
+  else if null l2 then ("saturated", i, NONE)  
+  else if i >= n then ("timeout", i, NONE)
   else
-    let val clausel = resolve_all (pb,sep) in
-      if null clausel then ("saturated", i+1) else
-      brute_pb_aux (i+1,n) (daddl clausel pb, dlength pb)
+    let 
+      val cl1 = dlist (dregroup clause_compare (resolve_brute (pb,l1,l2))) 
+      val cl2 = map_snd list_imin cl1
+    in
+      brute_pb_aux (i+1,n) (daddl cl2 pb, l2 @ l1, cl2)
     end
 
-fun brute_pb n pb = 
-  brute_pb_aux (0,n) (dmap (fn _ => 0) pb, 0)
+fun brute_pb n (l: clause list) = 
+  let val lcost = map_assoc (fn _ => 0) l in
+    brute_pb_aux (0,n) (dnew clause_compare lcost, [], lcost)
+  end
 
-fun difficulty maxdepth pb = case brute_pb maxdepth pb of
-    ("solved", i) => SOME i
+fun difficulty n l = case brute_pb n l of
+    ("solved", _, SOME i) => (print_endline (its i); SOME i)
   | _ => NONE
+
+(* -------------------------------------------------------------------------
+   Evaluation
+   ------------------------------------------------------------------------- *)
+
+fun eval_lit assign (lit,b) = 
+  if b then Vector.sub (assign,lit) else not (Vector.sub (assign,lit))
+
+fun eval_clause assign c = exists (eval_lit assign) c
+
+fun eval_pb assign pb = all (eval_clause assign) pb
+
+fun all_assign nvar =
+  map Vector.fromList 
+  (cartesian_productl (List.tabulate (nvar,fn _ => [false,true])))
+
+fun is_sat pb = 
+  let val nvar = list_imax (map fst (List.concat pb)) in
+    exists (C eval_pb pb) (all_assign (nvar + 1))
+  end
+
+(* -------------------------------------------------------------------------
+   Generation of a random problem for 3-SAT
+   ------------------------------------------------------------------------- *)
+
+fun random_lit nvar = 
+  (random_int (0, nvar - 1), random_elem [true,false])
+
+fun random_clause nlit nvar = 
+  let 
+    fun loop n d = 
+      if dlength d >= nlit then d else
+      let val (i,b) = random_lit nvar in
+        if dmem i d then loop (n-1) d else loop (n-1) (dadd i b d)
+      end
+  in
+    dlist (loop nlit (dempty Int.compare))
+  end
+
+fun random_pb nclause nlit nvar =
+  let 
+    fun loop d =
+      if dlength d >= nclause 
+      then d 
+      else loop (dadd (random_clause nlit nvar) () d)
+  in
+    dkeys (loop (dempty clause_compare))
+  end
+
+(*
+val max_lit = 3;
+val max_var = 8;
+val max_clause = 40;
+val c = random_clause max_lit max_var;
+val pb = random_pb max_clause max_lit max_var;
+val b = is_sat pb;
+val r = brute_pb 32 pb;
+
+val pbl = List.tabulate (100, fn _ => random_pb max_clause max_lit max_var);
+val (pbl_sat, pbl_unsat) = partition is_sat pbl;
+length pbl_unsat;
+
+val pbl_result = map (brute_pb 32) pbl_unsat;
+val pbl_solved = filter (fn x => #1 x = "solved") pbl_result;
+length (filter (fn x => #1 x = "solved") pbl_result);
+length (filter (fn x => #1 x = "saturated") pbl_result);
+length (filter (fn x => #1 x = "timeout") pbl_result);
+
+val diffl = map (valOf o #3) pbl_solved;
+val diffd = count_dict (dempty Int.compare) diffl;
+(dlist diffd);
+*)
+
+(* -------------------------------------------------------------------------
+   Exhaustive generation
+   ------------------------------------------------------------------------- *)
+
+(*
+val all_clauses = cartesian_productl (List.tabulate (5,fn _ => [~1,0,1]));
+
+fun subsume l1 l2 = 
+  all (fn (a,b) => a = 0 orelse a = b) (combine (l1,l2))
+
+fun all_subsumed l =
+  filter (fn x => subsume l x andalso l <> x) all_clauses;
+
+val ordered_clauses = 
+  rev (topo_sort (list_compare Int.compare) (map_assoc all_subsumed 
+  all_clauses))
+
+val clausen_dict = dnew (list_compare Int.compare) (number_snd 0 ordered_clauses);
+val nclause_dict = dnew Int.compare (map swap (dlist clausen_dict));
+
+fun non_empty l = exists (fn x => x <> 0) l
+
+fun remove_abs1 l = case l of
+    [] => []
+  | a :: m => if (a = 1 orelse a = ~1) then remove_abs1 m else l
+
+fun leading_abs1 l = case l of
+    [] => 0
+  | a :: m => if (a = 1 orelse a = ~1) then 1 + leading_abs1 m else 0
+
+fun union l1 l2 = 
+  map (fn (a,b) => if (a = 1 orelse a = ~1) andalso (b = 1 orelse b = ~1)
+                   then 1
+                   else 0) (combine (l1,l2));
+
+fun unionl ll = case ll of
+    [] => raise ERR "unionl" ""
+  | [l] => l
+  | l :: m => union l (unionl m)
+
+fun remove_zero l = case l of
+    [] => []
+  | a :: m => if a = 0 then remove_zero m else l
+
+fun is_normal c = null (remove_zero (remove_abs1 c))
+
+val clause1 = 
+  let fun test x = non_empty x andalso is_normal x in
+    map single (filter test all_clauses)
+  end
+
+fun add_exhaustive pb =
+  let 
+    val k = leading_abs1 (unionl pb)
+    val ci = dfind (hd pb) clausen_dict
+    fun is_normal x = 
+      null (remove_zero (remove_abs1 (snd (part_n k x))))
+    fun is_incr x = dfind x clausen_dict > ci
+    fun is_subsumed x = exists (fn y => subsume y x) pb 
+    fun test x = 
+      non_empty x andalso is_normal x andalso is_incr x andalso
+      not (is_subsumed x)
+    val cl = filter test all_clauses
+  in
+    map (fn x => x :: pb) cl
+  end
+
+val clause2 = List.concat (map add_exhaustive clause1);
+val clause3 = List.concat (map add_exhaustive clause2);
+val clause4 = List.concat (map add_exhaustive clause3);
+val clause5 = List.concat (time (map add_exhaustive) clause4);
+
+fun convert_clause l = 
+  let  
+    val l1 = number_fst 0 l
+    val l2 = filter (fn x => snd x <> 0) l1
+    val l3 = map_snd (fn x => if x = 1 then true else false) l2
+  in
+    dnew Int.compare l3
+  end
+
+fun convert_pb ll = dset clause_compare (map convert_clause ll)
+
+
+
+val pbl_solvablel =
+  map (filter (not o is_sat)) [clause2,clause3,clause4,clause5];
+map length pbl_solvablel;
+
+val pbl_solvable = List.concat pbl_solvablel;
+
+val pbl = map convert_pb pbl_solvable;
+load "mleResolution"; open mleResolution;
+val pbl_diff = map_assoc (difficulty 32) pbl;
+val pbl_diff2 = map_snd valOf pbl_diff;
+val d = dregroup Int.compare (map swap pbl_diff2);
+dfind 1 d;
+fun view pb = map dlist (dkeys pb);
+val l = map view (dfind 1 d);
+*)
+
+
+(*
+load "aiLib"; open aiLib;
+
+(* backward *)
+fun parents_of pivot c =
+  let fun f i x = 
+    if i = pivot then (1,~1) else
+    if x <> 0 then random_elem [(0,x),(x,0),(x,x)] else (0,0)
+  in
+    split (mapi f c)
+  end
+
+fun backward_step c = 
+  let val pivotl = map snd (filter (fn x => fst x = 0) (number_snd 0 c)) in
+    if null pivotl then NONE else SOME (parents_of (random_elem pivotl) c)
+  end
+
+fun backward_step_pb pb = 
+  let val l = shuffle pb in
+    case backward_step (hd l) of
+      NONE => NONE
+    | SOME (a,b) => 
+        SOME (mk_fast_set (list_compare Int.compare) (a :: b :: tl l))
+  end
+
+fun n_bstep_aux (i,n) pb =
+  if i >= n then (pb,n) else
+    (
+    case backward_step_pb pb of
+      NONE => (pb,i)
+    | SOME newpb => n_bstep_aux (i+1,n) newpb
+    )
+
+fun n_bstep n = n_bstep_aux (0,n) [[0,0,0,0,0]]
+
+val (pb,i) = n_bstep 15;
+
+(* resolution *)
+val ERR = mk_HOL_ERR "test";
+
+fun resolve_one bo (a,b) = 
+  if a <> 0 andalso a = ~b then 
+    (if bo then raise ERR "resolve_one" "" else (0,true)) 
+  else 
+    (if a = 0 then (b,bo) else (a,bo))
+
+fun resolve_aux bo l1 l2 = case (l1,l2) of
+    ([],[]) => if bo then [] else raise ERR "resolve_aux" ""
+  | (a1 :: m1, a2 :: m2) => 
+    let val (a3,newbo) = resolve_one bo (a1,a2) in
+      a3 :: resolve_aux newbo m1 m2
+    end
+  | _ => raise ERR "resolve_aux" ""
+
+fun resolve l1 l2 = resolve_aux false l1 l2;
+
+
+
+
+val pbl = map fst (List.tabulate (1000, fn _ => n_bstep (random_int (5,32))));
+val pbil = map_assoc (difficulty 32) pbl;
+val pbil2 = map_snd valOf pbil; 
+val d = dregroup Int.compare (map swap pbil2);
+map_snd length (dlist d);
+
+
+*)
 
 (* -------------------------------------------------------------------------
    Board
@@ -205,26 +413,7 @@ val l = List.tabulate (100, fn x => random_elem [0,1]);
 val n = sum_int l;
 *)
 
-(* -------------------------------------------------------------------------
-   Generation
-   ------------------------------------------------------------------------- *)
 
-fun random_lit i = (i,random_elem [true,false])
-
-fun random_clause maxlit = 
-  let 
-    fun f i = if random_int (0,1) = 0 then [random_lit i] else [] 
-    val l = List.concat (List.tabulate (maxlit, f))
-  in
-    if null l 
-    then random_clause maxlit
-    else dnew Int.compare l
-  end
-
-fun random_pb nclause maxlit =
-  let val dl = List.tabulate (nclause, fn _ => random_clause maxlit) in
-    dset clause_compare dl
-  end
 
 fun eval_lit assign (i,b) = 
   if b then dfind i assign else not (dfind i assign)
@@ -335,7 +524,7 @@ fun mcts_test nsim pb =
    Big steps limit (redundant with status_of)
    ------------------------------------------------------------------------- *)
 
-fun max_bigsteps (_,_,n) = n
+fun max_bigsteps (_,_,n) = n+1
 
 (* -------------------------------------------------------------------------
    Initialization of the levels
@@ -343,97 +532,21 @@ fun max_bigsteps (_,_,n) = n
 
 val data_dir = HOLDIR ^ "/src/AI/experiments/data_resolution"
 
-fun bin_to_string bin = String.concatWith "," (map its bin)
-
-(*
-fun create_levels () =
-  let
-    val _ = print_endline ("Generating 100000 problems")
-    val pbl = List.tabulate (100000, fn _ => random_pb 5 5)
-    val _ = print_endline ("Removing satisfiables")
-    val pbl_unsat = filter (not o satisfiable_pb) pbl
-    val _ = print_endline ("  " ^ its (length pbl_unsat))
-    val _ = print_endline ("Iterative deepening with depth 5")
-    val rl = map_assoc (brute_pb 5) pbl_unsat
-    val rl_solved = filter (fn x => #1 (snd x) = "solved") rl
-    val rl_saturated = filter (fn x => #1 (snd x) = "saturated") rl
-    val rl_timeout = filter (fn x => #1 (snd x) = "timeout") rl
-    val rl_nontriv = filter (fn x => #2 (snd x) >= 1) rl_solved
-    fun f (s,l) = print (s ^ " " ^ its (length l) ^ "  ")
-    val _ = print "  "
-    val _ = app f [("solved",rl_solved),("saturated",rl_saturated),
-                   ("timeout",rl_timeout)]
-    val _ = print_endline (its (length rl_nontriv) ^ " non-trivial")
-    val pbl_diff = map difficulty rl_nontriv
-    val pbl1 = dict_sort compare_imin (filter (fn x => snd x <= 20) pbl_diff)
-    val _ = print_endline
-      ("Exporting " ^ its (length pbl1) ^ " problems")
-  in
-    export_terml (data_dir ^ "/levels_term") (map (term_of_pb o fst) pbl1);
-    writel (data_dir ^ "/levels_diff") (map (its o snd) pbl1)
-  end
-*)
-
-fun random_solvable maxdepth maxdiff = 
+fun level_pb level =
   let 
+    val nvar = random_int (4,level)
+    val nlit = 3
+    val nclause = random_int (nvar * 4, nvar * 5)   
     fun loop () =
-      let val pb' = random_pb 5 5 in 
-        if satisfiable_pb pb' then loop () else pb'
+      let val pb = random_pb nclause nlit nvar in
+        if is_sat pb then loop () else pb
       end
-    val pb = loop ()
   in
-    case difficulty maxdepth pb of
-      SOME i => if i > maxdiff 
-                then random_solvable maxdepth maxdiff
-                else (pb,i)
-    | NONE => random_solvable maxdepth maxdiff
+    loop ()
   end
-
-fun equi_div n m =
-  let 
-    val l1 = List.tabulate (m, fn _ => n div m)
-    val l2 = number_snd 0 l1
-    val r = n mod m
-    fun f (k,i) = if i < r then k + 1 else k
-  in  
-    map f l2
-  end
-
-fun mk_limitd n m =
-  let val l = equi_div n m in
-    dnew Int.compare (number_fst 1 l)
-  end
-
-fun collect_solvable_aux (rd,limitd) =
-  if dlength limitd = 0 then rd else
-  let val (pb,diff) = random_solvable 6 20 in
-    if not (dmem diff limitd) then collect_solvable_aux (rd,limitd) else 
-    let 
-      val oldpbl = dfind diff rd handle NotFound => []
-      val newpbl = pb :: oldpbl
-      val newrd = dadd diff newpbl rd
-      val limit = dfind diff limitd
-      val newlimit = limit - 1
-      val newlimitd = 
-        if newlimit <= 0 
-        then drem diff limitd 
-        else dadd diff newlimit limitd 
-    in
-      collect_solvable_aux (newrd,newlimitd)
-    end
-  end
-
-fun collect_solvable level = 
-  collect_solvable_aux (dempty Int.compare, mk_limitd 400 level)   
 
 fun level_targetl level =
-  let 
-    val level_alt = if level >= 10 then 10 else level
-    val pbll = dlist (collect_solvable level_alt)
-    fun f (diff,pbl) = map (fn pb => (pb, NONE, 4 * diff)) pbl
-  in
-    List.concat (map f (rev pbll))
-  end
+  map (fn x => (x,NONE,40)) (List.tabulate (400, fn _=> level_pb level))
 
 (* -------------------------------------------------------------------------
    Parallelization

@@ -190,6 +190,11 @@ fun map_assoc f l = map (fn a => (a, f a)) l
 fun cartesian_product l1 l2 =
   List.concat (map (fn x => map (fn y => (x,y)) l2) l1)
 
+fun all_pairs l = case l of
+    [] => []
+  | [a] => []
+  | a :: m => map (fn x => (a,x)) m @ all_pairs m
+
 fun quintuple_of_list l = case l of
     [a,b,c,d,e] => (a,b,c,d,e)
   | _ => raise ERR "quintuple_of_list" ""
@@ -890,9 +895,6 @@ fun shuffle l =
       map fst (dict_sort compare_rmin l')
   end
 
-fun random_elem l = hd (shuffle l)
-  handle Empty => raise ERR "random_elem" "empty"
-
 fun random_int (a,b) =
   if a > b then raise ERR "random_int" "" else
   if a = b then a else
@@ -902,6 +904,10 @@ fun random_int (a,b) =
   in
     if c >= b then b else c
   end
+
+fun random_elem l = 
+  if null l then raise ERR "random_elem" "empty" else 
+    List.nth (l, random_int (0, length l - 1))
 
 fun random_subset n l = first_n n (shuffle l)
 
