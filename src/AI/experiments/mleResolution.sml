@@ -11,17 +11,33 @@ struct
 open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlNeuralNetwork mlTreeNeuralNetwork mlTacticData mlReinforce mleLib mleSetLib
 
-load "aiLib"; open aiLib;
-
 val ERR = mk_HOL_ERR "mleResolution"
+
+val max_steps_glob = 80
+val max_vars_glob = 20
 
 (* -------------------------------------------------------------------------
    Comparison function
    ------------------------------------------------------------------------- *)
 
-type clause = (int * bool) list
+type 'a set = ('a, unit) Redblackmap.dict
+type lit = int * bool
+type clause = lit list
 val lit_compare = cpl_compare Int.compare bool_compare
 val clause_compare = list_compare lit_compare 
+
+(* -------------------------------------------------------------------------
+   Subsumption
+   ------------------------------------------------------------------------- *)
+
+fun subsume c1 c2 = 
+  let val d = dset lit_compare c2 in all (fn x => dmem x d) c1 end 
+
+fun subsumel c1l c2 = exists (fn x => subsume x c2) c1l
+
+fun inter_reduce cl = case cl of
+    [] => []
+  | c :: m => if subsumel m c then inter_reduce m else c :: inter_reduce m
 
 (* -------------------------------------------------------------------------
    Resolution
@@ -40,10 +56,15 @@ fun resolve_aux b (c1,c2) = case (c1:clause,c2:clause) of
 
 fun resolve (c1:clause, c2:clause) = (resolve_aux false (c1,c2) : clause)
   
-fun resolve_ctxt cd (c1,c2) = 
+fun resolve_ctxt pb (c1,c2) = 
   let val c = resolve (c1,c2) in 
-    if dmem c cd then raise ERR "resolve_ctxt" "" else r
+    if mem c pb orelse subsumel pb c 
+    then raise ERR "resolve_ctxt" "" 
+    else c
   end
+
+fun exists_match pb l c = 
+  exists (fn x => can (resolve_ctxt pb) (x,c)) l
 
 (* -------------------------------------------------------------------------
    Brute force algorithm by iterative deepedning
@@ -153,206 +174,39 @@ val diffd = count_dict (dempty Int.compare) diffl;
 *)
 
 (* -------------------------------------------------------------------------
-   Exhaustive generation
-   ------------------------------------------------------------------------- *)
-
-(*
-val all_clauses = cartesian_productl (List.tabulate (5,fn _ => [~1,0,1]));
-
-fun subsume l1 l2 = 
-  all (fn (a,b) => a = 0 orelse a = b) (combine (l1,l2))
-
-fun all_subsumed l =
-  filter (fn x => subsume l x andalso l <> x) all_clauses;
-
-val ordered_clauses = 
-  rev (topo_sort (list_compare Int.compare) (map_assoc all_subsumed 
-  all_clauses))
-
-val clausen_dict = dnew (list_compare Int.compare) (number_snd 0 ordered_clauses);
-val nclause_dict = dnew Int.compare (map swap (dlist clausen_dict));
-
-fun non_empty l = exists (fn x => x <> 0) l
-
-fun remove_abs1 l = case l of
-    [] => []
-  | a :: m => if (a = 1 orelse a = ~1) then remove_abs1 m else l
-
-fun leading_abs1 l = case l of
-    [] => 0
-  | a :: m => if (a = 1 orelse a = ~1) then 1 + leading_abs1 m else 0
-
-fun union l1 l2 = 
-  map (fn (a,b) => if (a = 1 orelse a = ~1) andalso (b = 1 orelse b = ~1)
-                   then 1
-                   else 0) (combine (l1,l2));
-
-fun unionl ll = case ll of
-    [] => raise ERR "unionl" ""
-  | [l] => l
-  | l :: m => union l (unionl m)
-
-fun remove_zero l = case l of
-    [] => []
-  | a :: m => if a = 0 then remove_zero m else l
-
-fun is_normal c = null (remove_zero (remove_abs1 c))
-
-val clause1 = 
-  let fun test x = non_empty x andalso is_normal x in
-    map single (filter test all_clauses)
-  end
-
-fun add_exhaustive pb =
-  let 
-    val k = leading_abs1 (unionl pb)
-    val ci = dfind (hd pb) clausen_dict
-    fun is_normal x = 
-      null (remove_zero (remove_abs1 (snd (part_n k x))))
-    fun is_incr x = dfind x clausen_dict > ci
-    fun is_subsumed x = exists (fn y => subsume y x) pb 
-    fun test x = 
-      non_empty x andalso is_normal x andalso is_incr x andalso
-      not (is_subsumed x)
-    val cl = filter test all_clauses
-  in
-    map (fn x => x :: pb) cl
-  end
-
-val clause2 = List.concat (map add_exhaustive clause1);
-val clause3 = List.concat (map add_exhaustive clause2);
-val clause4 = List.concat (map add_exhaustive clause3);
-val clause5 = List.concat (time (map add_exhaustive) clause4);
-
-fun convert_clause l = 
-  let  
-    val l1 = number_fst 0 l
-    val l2 = filter (fn x => snd x <> 0) l1
-    val l3 = map_snd (fn x => if x = 1 then true else false) l2
-  in
-    dnew Int.compare l3
-  end
-
-fun convert_pb ll = dset clause_compare (map convert_clause ll)
-
-
-
-val pbl_solvablel =
-  map (filter (not o is_sat)) [clause2,clause3,clause4,clause5];
-map length pbl_solvablel;
-
-val pbl_solvable = List.concat pbl_solvablel;
-
-val pbl = map convert_pb pbl_solvable;
-load "mleResolution"; open mleResolution;
-val pbl_diff = map_assoc (difficulty 32) pbl;
-val pbl_diff2 = map_snd valOf pbl_diff;
-val d = dregroup Int.compare (map swap pbl_diff2);
-dfind 1 d;
-fun view pb = map dlist (dkeys pb);
-val l = map view (dfind 1 d);
-*)
-
-
-(*
-load "aiLib"; open aiLib;
-
-(* backward *)
-fun parents_of pivot c =
-  let fun f i x = 
-    if i = pivot then (1,~1) else
-    if x <> 0 then random_elem [(0,x),(x,0),(x,x)] else (0,0)
-  in
-    split (mapi f c)
-  end
-
-fun backward_step c = 
-  let val pivotl = map snd (filter (fn x => fst x = 0) (number_snd 0 c)) in
-    if null pivotl then NONE else SOME (parents_of (random_elem pivotl) c)
-  end
-
-fun backward_step_pb pb = 
-  let val l = shuffle pb in
-    case backward_step (hd l) of
-      NONE => NONE
-    | SOME (a,b) => 
-        SOME (mk_fast_set (list_compare Int.compare) (a :: b :: tl l))
-  end
-
-fun n_bstep_aux (i,n) pb =
-  if i >= n then (pb,n) else
-    (
-    case backward_step_pb pb of
-      NONE => (pb,i)
-    | SOME newpb => n_bstep_aux (i+1,n) newpb
-    )
-
-fun n_bstep n = n_bstep_aux (0,n) [[0,0,0,0,0]]
-
-val (pb,i) = n_bstep 15;
-
-(* resolution *)
-val ERR = mk_HOL_ERR "test";
-
-fun resolve_one bo (a,b) = 
-  if a <> 0 andalso a = ~b then 
-    (if bo then raise ERR "resolve_one" "" else (0,true)) 
-  else 
-    (if a = 0 then (b,bo) else (a,bo))
-
-fun resolve_aux bo l1 l2 = case (l1,l2) of
-    ([],[]) => if bo then [] else raise ERR "resolve_aux" ""
-  | (a1 :: m1, a2 :: m2) => 
-    let val (a3,newbo) = resolve_one bo (a1,a2) in
-      a3 :: resolve_aux newbo m1 m2
-    end
-  | _ => raise ERR "resolve_aux" ""
-
-fun resolve l1 l2 = resolve_aux false l1 l2;
-
-
-
-
-val pbl = map fst (List.tabulate (1000, fn _ => n_bstep (random_int (5,32))));
-val pbil = map_assoc (difficulty 32) pbl;
-val pbil2 = map_snd valOf pbil; 
-val d = dregroup Int.compare (map swap pbil2);
-map_snd length (dlist d);
-
-
-*)
-
-(* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
 
-val max_clauses = 20
+type board = clause list * clause list * int
 
-type clause = (int, bool) Redblackmap.dict
-val clause_compare = dict_compare lit_compare
-
-type board = clause set * int option * int
-
-fun mk_startboard pb = (pb, NONE, 40)
+fun mk_startboard cl = ([], cl, max_steps_glob)
 
 fun triple_compare cmp1 cmp2 cmp3 ((a1,a2,a3),(b1,b2,b3)) = 
   cpl_compare (cpl_compare cmp1 cmp2) cmp3 (((a1,a2),a3),((b1,b2),b3))
 
+fun set_compare cmp (d1,d2) = list_compare cmp (dkeys d1, dkeys d2)
+
 val board_compare =
-  triple_compare 
-    (set_compare clause_compare)
-    (option_compare Int.compare)
-    Int.compare
+  triple_compare (list_compare clause_compare)
+    (list_compare clause_compare) Int.compare
 
-fun string_of_board _ = "board"
+fun string_of_lit (i,b) = if b then its i else "~" ^ its i
 
-fun status_of (d,_,n) =
-  if exists (fn x => dlength x = 0) (dkeys d) 
-    then Win 
-  else if n <= 0 orelse dlength d <= 0 orelse dlength d >= max_clauses orelse
-          is_saturated d
-    then Lose
-    else Undecided
+fun string_of_clause c = 
+  "(" ^ String.concatWith " " (map string_of_lit c) ^ ")"
+
+fun string_of_clausel cl = 
+  if null cl 
+  then "empty clause list"
+  else String.concatWith "\n" (map string_of_clause cl)
+
+fun string_of_board ((cl1,cl2),n) =
+  [string_of_clausel cl1, string_of_clausel cl2, its n]  
+  
+fun status_of (cl1,cl2,n) =
+  if mem [] cl2 then Win 
+  else if n <= 0 then Lose
+  else Undecided
 
 (* -------------------------------------------------------------------------
    Term representation of the board
@@ -367,116 +221,68 @@ fun lit_of_term tm =
   then (bvar_of_term (dest_neg tm), false) 
   else (bvar_of_term tm, true)
 
-fun term_of_clause c = list_mk_disj (map mk_lit (dlist c))
-fun clause_of_term ctm = 
-  dnew Int.compare (map lit_of_term (strip_disj ctm))
+fun term_of_clause c = list_mk_disj (map mk_lit c)
+fun clause_of_term ctm = map lit_of_term (strip_disj ctm)
 
-fun term_of_pb d = list_mk_conj (map term_of_clause (dkeys d))
-fun pb_of_term tm = dset clause_compare (map clause_of_term (strip_conj tm))
+fun term_of_clausel cl = list_mk_conj (map term_of_clause cl)
+fun clausel_of_term tm = map clause_of_term (strip_conj tm)
 
-val focus_cat = mk_var ("focus_cat", ``:bool -> bool -> bool``)
-fun term_of_board (d,co,_) = case co of
-    SOME ci => list_mk_comb (focus_cat, 
-      [term_of_clause (lookup_clause d ci), term_of_pb d])
-  | NONE => term_of_pb d
+fun term_of_pb d = term_of_clausel (dkeys d)
+fun pb_of_term tm = dset clause_compare (clausel_of_term tm)
+
+val pair_cat = mk_var ("pair_cat", ``:bool -> bool -> bool``)
+
+fun term_of_board (cl1,cl2,_) =
+  list_mk_comb (pair_cat, [term_of_clausel cl1, term_of_clausel cl2])    
+
 fun board_of_term tm = 
-  let val (oper,argl) = strip_comb tm in
-    if term_eq oper focus_cat 
-    then 
-      let 
-        val (ctm,pbtm) = pair_of_list argl 
-        val clause = clause_of_term ctm
-        val pb = pb_of_term pbtm
-        val pb' = dnew clause_compare (number_snd 0 (dkeys pb))
-      in
-        (pb, SOME (dfind clause pb'))
-      end
-    else (pb_of_term tm, NONE)
+  let 
+    val (cl1',cl2') = pair_of_list (snd (strip_comb tm)) 
+    val (cl1,cl2) = (clausel_of_term cl1', clausel_of_term cl2')
+    val pb = pb_of_term pbtm
+  in
+    (pb, (cl1, cl2, bigc_of cl1 cl2))
   end
 
-val operl_aux = List.tabulate (5,mk_bvar) @ 
-  [focus_cat, ``$~``,``$/\``,``$\/``]
-val operl = mk_fast_set oper_compare (map_assoc arity_of operl_aux);
+val operl_aux = List.tabulate (max_vars_glob, mk_bvar) @ 
+  [pair_cat, ``$~``,``$/\``,``$\/``]
+val operl = mk_fast_set oper_compare (map_assoc arity_of operl_aux)
 fun term_of_boardc (_:unit) b = term_of_board b
 
 (*
 load "aiLib"; open aiLib;
 load "mleResolution"; open mleResolution;
-val board = dset clause_compare
-   [dnew Int.compare [(0,true),(1,false),(2,true)]];
+val board = dset clause_compare [[(0,true),(1,false),(2,true)]];
 val tm = term_of_board (board,NONE,0);
-*)
-
-(*
-load "aiLib"; open aiLib;
-val l = List.tabulate (100, fn x => random_elem [0,1]);
-val n = sum_int l;
-*)
-
-
-
-fun eval_lit assign (i,b) = 
-  if b then dfind i assign else not (dfind i assign)
-
-fun eval_clause assign clause = 
-  exists (eval_lit assign) (dlist clause)
-
-fun eval_pb_assign assign pb = 
-  all (eval_clause assign) (dkeys pb)
-
-val all_assign = 
-  map (dnew Int.compare)
-  (cartesian_productl (List.tabulate (5,fn x => [(x,true),(x,false)])))
-
-fun satisfiable_pb pb = 
-  exists (C eval_pb_assign pb) all_assign
-
-(* 
-load "aiLib"; open aiLib;
-load "mleResolution"; open mleResolution;
-val pb = random_pb 5 5;
-val l = map dlist (dkeys pb);
-val b = satisfiable_pb pb;
-val r = brute_pb 5 pb;
 *)
 
 (* -------------------------------------------------------------------------
    Move
    ------------------------------------------------------------------------- *)
 
-datatype move = Select of int | Delete of int
-fun is_select m = case m of Select _ => true | _ => false
-fun is_delete m = case m of Delete _ => true | _ => false
+datatype move = Select | Delete
+val movel = [Select, Delete]
 
-fun string_of_move m = case m of
-    Select c => "s" ^ its c
-  | Delete c => "c" ^ its c
-
-val movel = List.tabulate (max_clauses, Select) @ 
-  List.tabulate (max_clauses, Delete)
-
+fun string_of_move m = case m of Select => "select" | Delete => "delete" 
 fun move_compare (a,b) = String.compare (string_of_move a, string_of_move b)
 
-fun available_move board move = 
+fun available_move (cl1,cl2,_) move = 
+  move = Delete orelse exists_match cl1 cl1 (hd cl2) 
+  
+fun apply_select (cl1,cl2,n) =
   let 
-    val d = #1 board
-    val n = dlength d
-    val cl = List.tabulate (n,I)
+    val prodl = mapfilter (fn x => resolve_ctxt cl1 ((hd cl2),x)) cl1
+    val subl = filter (subsume c) cl1
+    val subld = dset clause_compare subl
+    val pb1 = filter (fn x => not (dmem x subld)) cl1  
+    val pb2 = c :: pb1
   in
-    case #2 board of
-      NONE => (case move of 
-          Select c1 => n < max_clauses andalso exists_effecti d c1
-        | Delete c => false)
-    | SOME c1 => (case move of 
-          Select c2 => has_effecti d (c1,c2) 
-        | Delete c => false)
+    (pb2, tl cl2 @ prodl, n-1)
   end
 
-fun apply_move move (d,c1o,n) = case move of
-    Delete c => (drem (lookup_clause d c) d, NONE, n-1)  
-  | Select c => (case c1o of
-      NONE => (d, SOME c, n-1)
-    | SOME c1 => (dadd (valOf (resolve_pairi d (c1,c))) () d, NONE, n-1))
+fun apply_move move (cl1,cl2,n) = case move of
+    Select => apply_select (cl1,cl2,n)
+  | Delete => (cl1, tl cl2, n-1)
 
 (* -------------------------------------------------------------------------
    Game
@@ -511,7 +317,7 @@ fun mcts_test nsim pb =
     val mcts_obj =
       {mcts_param = mk_mcts_param nsim,
        game = game,
-       player = uniform_player game}
+       player = random_player game}
     val tree = starttree_of mcts_obj (mk_startboard pb)
     val endtree = mcts mcts_obj tree
     val b = #status (dfind [] endtree) = Win
@@ -520,17 +326,31 @@ fun mcts_test nsim pb =
     (b, endtree)
   end
 
-(* -------------------------------------------------------------------------
-   Big steps limit (redundant with status_of)
-   ------------------------------------------------------------------------- *)
+(*
+load "aiLib"; open aiLib;
+load "mleResolution"; open mleResolution;
 
-fun max_bigsteps (_,_,n) = n+1
+val pbl_unsat  = List.tabulate (1000, fn _ => level_pb 4);
+val pbl_result = map_assoc (brute_pb 15) (map dkeys pbl_unsat);
+val pbl_solved = filter (fn x => #1 (snd x) = "solved") pbl_result;
+val pbl1 = map (fn x => (fst x, valOf (#3 (snd x)))) pbl_solved;
+val pbl2 = dict_sort compare_imin pbl1;
+val (pb,diff) = hd pbl2;
+val pb' = inter_reduce pb;
+
+val tm = term_of_board (mk_startboard (dset clause_compare pb));
+val (win,endtree) = mcts_test 500000 (dset clause_compare pb);
+dfind [0,0,0,0,0,0,0] endtree;
+
+IDEA: symmetry breaking with order of literal selection, clause selection
+ and resolution steps (don't allow parallel paths).
+*)
+
+
 
 (* -------------------------------------------------------------------------
    Initialization of the levels
    ------------------------------------------------------------------------- *)
-
-val data_dir = HOLDIR ^ "/src/AI/experiments/data_resolution"
 
 fun level_pb level =
   let 
@@ -542,27 +362,33 @@ fun level_pb level =
         if is_sat pb then loop () else pb
       end
   in
-    loop ()
+    dset clause_compare (inter_reduce (mk_fast_set clause_compare (loop ())))
   end
 
 fun level_targetl level =
-  map (fn x => (x,NONE,40)) (List.tabulate (400, fn _=> level_pb level))
+  let val level_alt = 
+    if level > max_vars_glob then max_vars_glob else level
+  in
+    map mk_startboard (List.tabulate (400, fn _=> level_pb level_alt))
+  end
 
 (* -------------------------------------------------------------------------
    Parallelization
    ------------------------------------------------------------------------- *)
 
 fun write_boardl file boardl =
-  let val (_,_,l3) = split_triple boardl in
-    export_terml (file ^ "_pboard") (map term_of_board boardl);
-    writel (file ^ "_diff") (map its l3)
+  let val nl = map #3 boardl in
+    export_terml (file ^ "_boardl") (map term_of_board boardl);
+    writel (file ^ "_timel") (map its nl)
   end
+
 fun read_boardl file =
-  let
-    val pboardl = map board_of_term (import_terml (file ^ "_pboard"))
-    val diffl = map string_to_int (readl (file ^ "_diff"))
+  let 
+    val boardl = map board_of_term (import_terml (file ^ "_boardl"))
+    val nl = map string_to_int (readl (file ^ "_timel"))
+    val (l1,l2) = split boardl
   in
-    map (fn ((a,b),c) => (a,b,c)) (combine (pboardl,diffl))
+    combine_triple (l1,l2,nl)
   end
 
 fun write_target file target = write_boardl (file ^ "_target") [target]
@@ -637,13 +463,13 @@ val pretobdict = dnew String.compare
    ------------------------------------------------------------------------- *)
 
 val rl_param =
-  { expname = "mleResolution-1", ex_window = 40000,
-    ncore_search = 40, nsim = 160, decay = 1.0}
+  {expname = "mleResolution-1", ex_window = 80000,
+   ncore_search = 40, nsim = 160, decay = 1.0}
 
 val rlpreobj : (board,move,unit) rlpreobj =
   {
   rl_param = rl_param,
-  max_bigsteps = max_bigsteps,
+  max_bigsteps = (fn (_,_,n) => n+1),
   game = game,
   pre_extsearch = pre_extsearch,
   pretobdict = pretobdict,

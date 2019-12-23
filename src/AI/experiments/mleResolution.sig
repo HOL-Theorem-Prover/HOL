@@ -4,22 +4,25 @@ sig
   include Abbrev
   
   type 'a set = ('a, unit) Redblackmap.dict
-  type clause = (int, bool) Redblackmap.dict
+  type lit = int * bool
+  type clause = lit list
   val clause_compare : clause * clause -> order
 
-  type board = clause set * int option * int
-  datatype move = Select of int | Delete of int
+  type board = (clause list * clause list * int)
+  type move = int * bool
+  val mk_startboard : clause list -> board
+  
   val game : (board,move) psMCTS.game
-  val brute_pb : int -> clause set -> string * int
-  val difficulty : int -> clause set -> int option
+  val brute_pb : int -> clause list -> string * int * int option
+  val difficulty : int -> clause list -> int option
 
-  val random_pb : int -> int -> clause set
-  val satisfiable_pb : clause set -> bool
-  val random_solvable : int -> int -> (clause set * int)
+  val random_pb : int -> int -> int -> clause list
+  val is_sat : clause list -> bool
+  val inter_reduce : clause list -> clause list
   val mcts_test : int -> clause set -> bool * (board, move) psMCTS.tree
 
   val term_of_board : board -> term
-  val collect_solvable :  int -> (int, clause set list) Redblackmap.dict
+  val level_pb : int -> clause set
   val level_targetl : int -> board list
 
   val dhtnn_param_base : mlTreeNeuralNetwork.dhtnn_param

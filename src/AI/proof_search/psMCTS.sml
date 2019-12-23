@@ -50,6 +50,9 @@ type ('a,'b) game =
 
 fun uniform_player game board = (0.0, map (fn x => (x,1.0)) (#movel game))
 
+fun random_player game board = 
+  (random_real (), map (fn x => (x,1.0)) (#movel game))
+
 type ('a,'b) player = 'a -> real * ('b * real) list
 
 type mcts_param =
@@ -168,7 +171,9 @@ fun add_noise param prepol =
 fun filter_available game board (e,p) =
   let
     val p' = filter (fn (m,_) => (#available_move game) board m) p
-    val _ = if null p' then raise ERR "filter_available" "" else ()
+    val _ = if null p' 
+      then (print_endline (#string_of_board game board);
+            raise ERR "filter_available" "") else ()
   in
     (e,p')
   end

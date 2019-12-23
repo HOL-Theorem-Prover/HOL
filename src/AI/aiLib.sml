@@ -176,6 +176,7 @@ fun decr x = x := (!x) - 1
    ------------------------------------------------------------------------- *)
 
 fun only_hd x = case x of [a] => a | _ => raise ERR "only_hd" ""
+fun is_single l = case l of [a] => true | _ => false
 
 fun one_in_n n start l = case l of
     [] => []

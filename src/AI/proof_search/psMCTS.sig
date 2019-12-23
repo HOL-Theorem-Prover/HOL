@@ -40,6 +40,7 @@ sig
 
   type ('a,'b) player = 'a -> real * ('b * real) list
   val uniform_player : ('a,'b) game -> ('a,'b) player
+  val random_player : ('a,'b) game -> ('a,'b) player
 
   type mcts_param =
     {

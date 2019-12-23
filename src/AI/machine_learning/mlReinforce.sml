@@ -226,8 +226,9 @@ fun explore_standalone (unib,noiseb) rlobj (dhtnn,playerid) targetl =
 fun rl_explore unib rlobj level rplayer =
   let
     val rl_param = #rl_param rlobj
-    val targetl = (#level_targetl rlobj) level
-    val _ = log rlobj ("Exploration: " ^ its (length targetl) ^ " targets")
+    val (targetl,t) = add_time (#level_targetl rlobj) level
+    val _ = log rlobj ("Exploration: " ^ its (length targetl) ^ 
+      " targets generated in " ^ rts t ^ " seconds")
     val (exl,b) = explore_standalone (unib,true) rlobj rplayer targetl 
     val _ = if b then log rlobj ("Level up: " ^ its (level + 1)) else ()
   in
