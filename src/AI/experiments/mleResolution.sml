@@ -482,8 +482,8 @@ val pretobdict = dnew String.compare
    ------------------------------------------------------------------------- *)
 
 val rl_param =
-  {expname = "mleResolution-2", ex_window = 80000,
-   ncore_search = 40, nsim = 1600, decay = 1.0}
+  {expname = "mleResolution-3", ex_window = 80000,
+   ncore_search = 40, nsim = 16000, decay = 1.0}
 
 val rlpreobj : (board,move,unit) rlpreobj =
   {
