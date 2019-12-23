@@ -131,7 +131,7 @@ fun random_lit nvar =
 fun random_clause nlit nvar = 
   let 
     fun loop n d = 
-      if dlength d >= nlit then d else
+      if n <= 0 then d else
       let val (i,b) = random_lit nvar in
         if dmem i d then loop (n-1) d else loop (n-1) (dadd i b d)
       end
@@ -200,7 +200,8 @@ fun string_of_clausel cl =
   then "empty clause list"
   else String.concatWith "\n" (map string_of_clause cl)
 
-fun string_of_board ((cl1,cl2),n) =
+fun string_of_board (cl1,cl2,n) =
+  String.concatWith "\n\n" 
   [string_of_clausel cl1, string_of_clausel cl2, its n]  
   
 fun status_of (cl1,cl2,n) =
@@ -224,8 +225,15 @@ fun lit_of_term tm =
 fun term_of_clause c = list_mk_disj (map mk_lit c)
 fun clause_of_term ctm = map lit_of_term (strip_disj ctm)
 
-fun term_of_clausel cl = list_mk_conj (map term_of_clause cl)
-fun clausel_of_term tm = map clause_of_term (strip_conj tm)
+val empty_list_var = mk_var ("empty_list_var", bool)
+fun term_of_clausel cl = 
+  if null cl 
+  then empty_list_var 
+  else list_mk_conj (map term_of_clause cl)
+fun clausel_of_term tm = 
+  if term_eq empty_list_var tm 
+  then []
+  else map clause_of_term (strip_conj tm)
 
 fun term_of_pb d = term_of_clausel (dkeys d)
 fun pb_of_term tm = dset clause_compare (clausel_of_term tm)
@@ -236,16 +244,12 @@ fun term_of_board (cl1,cl2,_) =
   list_mk_comb (pair_cat, [term_of_clausel cl1, term_of_clausel cl2])    
 
 fun board_of_term tm = 
-  let 
-    val (cl1',cl2') = pair_of_list (snd (strip_comb tm)) 
-    val (cl1,cl2) = (clausel_of_term cl1', clausel_of_term cl2')
-    val pb = pb_of_term pbtm
-  in
-    (pb, (cl1, cl2, bigc_of cl1 cl2))
+  let val (cl1,cl2) = pair_of_list (snd (strip_comb tm)) in
+    (clausel_of_term cl1, clausel_of_term cl2)
   end
 
 val operl_aux = List.tabulate (max_vars_glob, mk_bvar) @ 
-  [pair_cat, ``$~``,``$/\``,``$\/``]
+  [empty_list_var, pair_cat, ``$~``,``$/\``,``$\/``]
 val operl = mk_fast_set oper_compare (map_assoc arity_of operl_aux)
 fun term_of_boardc (_:unit) b = term_of_board b
 
@@ -267,22 +271,36 @@ fun string_of_move m = case m of Select => "select" | Delete => "delete"
 fun move_compare (a,b) = String.compare (string_of_move a, string_of_move b)
 
 fun available_move (cl1,cl2,_) move = 
-  move = Delete orelse exists_match cl1 cl1 (hd cl2) 
-  
-fun apply_select (cl1,cl2,n) =
-  let 
-    val prodl = mapfilter (fn x => resolve_ctxt cl1 ((hd cl2),x)) cl1
-    val subl = filter (subsume c) cl1
-    val subld = dset clause_compare subl
-    val pb1 = filter (fn x => not (dmem x subld)) cl1  
-    val pb2 = c :: pb1
-  in
-    (pb2, tl cl2 @ prodl, n-1)
+  if move = Delete then not (null cl2) else true
+
+fun choose_clause_aux (cl1,cl2) = case cl2 of
+    [] => raise ERR "choose_clause" "empty"
+  | a :: m => (if not (subsumel cl1 a)
+               then (a,m) 
+               else choose_clause_aux (cl1, tl cl2))
+
+fun choose_clause (cl1,cl2) = 
+  SOME (choose_clause_aux (cl1,cl2)) handle HOL_ERR _ => NONE
+
+fun apply_select (cl1,cl2,n) = 
+  let val ro = choose_clause (cl1,cl2) in
+    if not (isSome ro) then ([],[],~1) else 
+    let
+      val (c,cl2cont) = valOf ro
+      val prodl = mapfilter (fn x => resolve_ctxt cl1 (c,x)) cl1
+      val subl = filter (subsume c) cl1
+      val subld = dset clause_compare subl
+      val pb1 = filter (fn x => not (dmem x subld)) cl1  
+      val pb2 = c :: pb1
+    in
+      (pb2, cl2cont @ prodl, n-1)
+    end
   end
+  
 
 fun apply_move move (cl1,cl2,n) = case move of
-    Select => apply_select (cl1,cl2,n)
-  | Delete => (cl1, tl cl2, n-1)
+    Select => apply_select (cl1,cl2,n-1)
+  | Delete => (cl1,tl cl2,n-1)
 
 (* -------------------------------------------------------------------------
    Game
@@ -312,6 +330,11 @@ fun mk_mcts_param nsim =
   noise_all = false, noise_gen = random_real
   }
 
+fun string_of_status status = case status of
+    Win => "win"
+  | Lose => "lose"
+  | Undecided => "undecided"
+
 fun mcts_test nsim pb =
   let
     val mcts_obj =
@@ -322,7 +345,7 @@ fun mcts_test nsim pb =
     val endtree = mcts mcts_obj tree
     val b = #status (dfind [] endtree) = Win
   in
-    if b then print_endline "Win" else print_endline "Lose"; 
+    print_endline (string_of_status (#status (dfind [] endtree)));
     (b, endtree)
   end
 
@@ -331,22 +354,18 @@ load "aiLib"; open aiLib;
 load "mleResolution"; open mleResolution;
 
 val pbl_unsat  = List.tabulate (1000, fn _ => level_pb 4);
-val pbl_result = map_assoc (brute_pb 15) (map dkeys pbl_unsat);
+val pbl_result = map_assoc (brute_pb 15) pbl_unsat;
 val pbl_solved = filter (fn x => #1 (snd x) = "solved") pbl_result;
 val pbl1 = map (fn x => (fst x, valOf (#3 (snd x)))) pbl_solved;
+map_snd length (dlist (dregroup Int.compare (map swap pbl1)));
 val pbl2 = dict_sort compare_imin pbl1;
-val (pb,diff) = hd pbl2;
+
+val (pb,diff) = List.nth (pbl2,100);
 val pb' = inter_reduce pb;
-
-val tm = term_of_board (mk_startboard (dset clause_compare pb));
-val (win,endtree) = mcts_test 500000 (dset clause_compare pb);
+val tm = term_of_board (mk_startboard pb');
+val (win,endtree) = mcts_test 1000 pb';
 dfind [0,0,0,0,0,0,0] endtree;
-
-IDEA: symmetry breaking with order of literal selection, clause selection
- and resolution steps (don't allow parallel paths).
 *)
-
-
 
 (* -------------------------------------------------------------------------
    Initialization of the levels
@@ -356,13 +375,13 @@ fun level_pb level =
   let 
     val nvar = random_int (4,level)
     val nlit = 3
-    val nclause = random_int (nvar * 4, nvar * 5)   
+    val nclause = random_int (nvar * 2, nvar * 3)   
     fun loop () =
       let val pb = random_pb nclause nlit nvar in
         if is_sat pb then loop () else pb
       end
   in
-    dset clause_compare (inter_reduce (mk_fast_set clause_compare (loop ())))
+    inter_reduce (mk_sameorder_set clause_compare (loop ()))
   end
 
 fun level_targetl level =
@@ -463,8 +482,8 @@ val pretobdict = dnew String.compare
    ------------------------------------------------------------------------- *)
 
 val rl_param =
-  {expname = "mleResolution-1", ex_window = 80000,
-   ncore_search = 40, nsim = 160, decay = 1.0}
+  {expname = "mleResolution-2", ex_window = 80000,
+   ncore_search = 40, nsim = 1600, decay = 1.0}
 
 val rlpreobj : (board,move,unit) rlpreobj =
   {
@@ -484,7 +503,7 @@ val rlobj = mk_rlobj rlpreobj extsearch
 (*
 load "mleResolution"; open mleResolution;
 load "mlReinforce"; open mlReinforce;
-val _ = rl_start_sync rlobj 1;
+val _ = rl_start_sync rlobj 4;
 *)
 
 end (* struct *)

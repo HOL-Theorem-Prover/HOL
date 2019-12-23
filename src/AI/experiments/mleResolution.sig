@@ -9,7 +9,7 @@ sig
   val clause_compare : clause * clause -> order
 
   type board = (clause list * clause list * int)
-  type move = int * bool
+  datatype move = Delete | Select
   val mk_startboard : clause list -> board
   
   val game : (board,move) psMCTS.game
@@ -19,10 +19,10 @@ sig
   val random_pb : int -> int -> int -> clause list
   val is_sat : clause list -> bool
   val inter_reduce : clause list -> clause list
-  val mcts_test : int -> clause set -> bool * (board, move) psMCTS.tree
+  val mcts_test : int -> clause list -> bool * (board, move) psMCTS.tree
 
   val term_of_board : board -> term
-  val level_pb : int -> clause set
+  val level_pb : int -> clause list
   val level_targetl : int -> board list
 
   val dhtnn_param_base : mlTreeNeuralNetwork.dhtnn_param
