@@ -194,6 +194,9 @@ local
    val intOf = Option.valOf o Int.fromString
    val number = PolyML.Compiler.compilerVersionNumber
    val _ = number >= 570 orelse die "PolyML version must be at least 5.7.0"
+   val default =
+       ["-L" ^ polymllibdir, "-lpolymain", "-lpolyml", "-lpthread",
+        "-lm", "-ldl", "-lstdc++", "-lgcc_s", "-lgcc"]
 in
    val machine_flags =
        if sysname = "Darwin" (* Mac OS X *) then
@@ -209,9 +212,11 @@ in
        else if sysname = "Linux" then
          case pkgconfig_info of
              SOME list => list
-           | _ => ["-L" ^ polymllibdir, "-lpolymain", "-lpolyml", "-lpthread",
-                   "-lm", "-ldl", "-lstdc++", "-lgcc_s", "-lgcc"]
-       else []
+           | _ => default
+       else if String.isPrefix "CYGWIN_NT" sysname (* Cygwin! *) then
+         default
+       else
+         default
 end;
 
 
