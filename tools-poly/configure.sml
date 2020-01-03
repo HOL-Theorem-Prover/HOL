@@ -228,15 +228,22 @@ in
    "val POLYMLLIBDIR =" --> ("val POLYMLLIBDIR = "^quote polymllibdir^"\n"),
    "val POLY =" --> ("val POLY = "^quote poly^"\n"),
    "val POLYC =" --> ("val POLYC = "^quote polyc^"\n"),
-   "val POLY_LDFLAGS =" --> ("val POLY_LDFLAGS = ["^
-                             (String.concatWith
-                                  ", "
-                                  (map quote machine_flags)) ^ "]\n"),
-   "val POLY_LDFLAGS_STATIC =" --> ("val POLY_LDFLAGS_STATIC = ["^
-                             (String.concatWith
-                                  ", "
-                                  (quote "-static" ::
-                                   map quote machine_flags)) ^ "]\n"),
+   "val POLY_LDFLAGS =" -->
+      ("val POLY_LDFLAGS = [" ^
+       String.concatWith ", "
+                         (map quote
+                              (if null POLY_LDFLAGS then machine_flags
+                               else POLY_LDFLAGS)) ^
+       "]\n"),
+   "val POLY_LDFLAGS_STATIC =" -->
+      ("val POLY_LDFLAGS_STATIC = [" ^
+       String.concatWith ", "
+                         (map quote
+                              (if null POLY_LDFLAGS_STATIC then
+                                 ("-static" :: machine_flags)
+                               else
+                                 POLY_LDFLAGS_STATIC)) ^
+       "]\n"),
    "val CC =" --> ("val CC = "^quote CC^"\n"),
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
    "val DEPDIR ="   --> ("val DEPDIR = "^quote DEPDIR^"\n"),
