@@ -181,9 +181,6 @@ type board = clause list * clause list * int
 
 fun mk_startboard cl = ([], cl, max_steps_glob)
 
-fun triple_compare cmp1 cmp2 cmp3 ((a1,a2,a3),(b1,b2,b3)) = 
-  cpl_compare (cpl_compare cmp1 cmp2) cmp3 (((a1,a2),a3),((b1,b2),b3))
-
 fun set_compare cmp (d1,d2) = list_compare cmp (dkeys d1, dkeys d2)
 
 val board_compare =

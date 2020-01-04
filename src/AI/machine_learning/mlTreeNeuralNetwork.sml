@@ -8,199 +8,72 @@
 structure mlTreeNeuralNetwork :> mlTreeNeuralNetwork =
 struct
 
-open HolKernel boolLib Abbrev aiLib mlMatrix mlNeuralNetwork smlParallel
+open HolKernel boolLib Abbrev aiLib mlMatrix mlNeuralNetwork 
+smlParallel mlTacticData
 
 val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
 fun msg param s = if #verbose param then print_endline s else ()
-
+fun msg_err fs es = (print_endline (fs ^ ": " ^ es); raise ERR fs es)
+  
 (* -------------------------------------------------------------------------
    Objects
    ------------------------------------------------------------------------- *)
 
 type vect = real vector
 type mat = real vector vector
-type opdict = ((term * int),nn) Redblackmap.dict
-
-type tnnex = (term * real list) list
-type tnn =
-  {opdict: opdict, headnn: nn, dimin: int, dimout: int}
-type tnn_param =
-  {
-  operl: (term * int) list,
-  nlayer_oper: int, nlayer_headnn: int,
-  dimin: int, dimout: int
-  }
-
-type dhex = (term * real list * real list) list
-type dhtnn_param =
-  {
-  operl: (term * int) list,
-  nlayer_oper: int, nlayer_headeval: int, nlayer_headpoli: int,
-  dimin: int, dimpoli: int
-  }
-
-type dhtnn =
-  {opdict: opdict, headeval: nn, headpoli: nn, dimin: int, dimpoli: int}
+type tnn = (term,nn) Redblackmap.dict
 
 (* -------------------------------------------------------------------------
    Random tree neural network
    ------------------------------------------------------------------------- *)
 
-fun oper_nn (dimin,nlayer) (_,a) =
-  if a = 0 then random_nn (idactiv,didactiv) [0,dimin] else
-  random_nn (tanh,dtanh) (List.tabulate (nlayer,fn _ => a * dimin) @ [dimin])
+fun oper_nn diml = case diml of
+    [] => raise ERR "oper_nn" ""
+  | a :: m =>
+    if a = 0 
+    then random_nn (idactiv,didactiv) [0,last m] 
+    else random_nn (tanh,dtanh) diml
 
-fun random_opdict (dimin,nlayer,operl) =
-  dnew oper_compare (map_assoc (oper_nn (dimin,nlayer)) operl)
-
-fun random_headnn (dimin,nlayer,dimout) =
-  random_nn (tanh,dtanh) (List.tabulate (nlayer,fn _ => dimin) @ [dimout])
-
-fun random_tnn {operl,nlayer_oper,nlayer_headnn,dimin,dimout} =
-  {
-  opdict = random_opdict (dimin,nlayer_oper,operl),
-  headnn = random_headnn (dimin,nlayer_headnn,dimout),
-  dimin = dimin,
-  dimout = dimout
-  }
-
-fun random_dhtnn {operl,nlayer_oper,nlayer_headeval,nlayer_headpoli,
-  dimin,dimpoli} =
-  {
-  opdict = random_opdict (dimin,nlayer_oper,operl),
-  headeval = random_headnn (dimin,nlayer_headeval,1),
-  headpoli = random_headnn (dimin,nlayer_headpoli,dimpoli),
-  dimin = dimin,
-  dimpoli = dimpoli
-  }
+fun random_tnn operdiml = dnew Term.compare (map_snd oper_nn operdiml)
 
 (* -------------------------------------------------------------------------
    Input/output
    ------------------------------------------------------------------------- *)
 
-fun string_of_oper (f,n) = (tts f ^ "," ^ its n)
-
-fun string_of_opdict_one d ((oper,a),nn) =
-  its (dfind oper d) ^ " " ^ its a ^ "\n" ^ string_of_nn nn ^ "\nnnstop\n"
-
-fun string_of_opdict opdict =
-  let
-    val tml = mk_sameorder_set Term.compare (map fst (dkeys opdict))
-    val d = dnew Term.compare (number_snd 0 tml)
-  in
-    String.concatWith "\n" (map (string_of_opdict_one d) (dlist opdict))
-  end
-
-fun string_of_tnn {opdict,headnn,dimin,dimout} =
-  string_of_nn headnn ^ "\nheadstop\n\n" ^
-  string_of_opdict opdict ^ "\nopdictstop"
-
-fun string_of_dhtnn {opdict,headeval,headpoli,dimin,dimpoli} =
-  string_of_nn headeval ^ "\nheadevalstop\n\n" ^
-  string_of_nn headpoli ^ "\nheadpolistop\n\n" ^
-  string_of_opdict opdict ^ "\nopdictstop"
-
 fun write_tnn file tnn =
-  let
-    val file_operl = file ^ "_operl"
-    val file_dhtnn = file ^ "_tnn"
-    val operl = mk_sameorder_set Term.compare (map fst (dkeys (#opdict tnn)))
+  let 
+    val (l1,l2) = split (dlist tnn) 
+    fun string_of_tnn tnn =
+      let fun f (oper,nn) = string_of_nn nn in
+        String.concatWith "\nnnstop\n" (map f (dlist tnn)) 
+      end
   in
-    writel file_dhtnn [string_of_tnn tnn];
-    mlTacticData.export_terml file_operl operl
-  end
-
-fun write_dhtnn file dhtnn =
-  let
-    val file_operl = file ^ "_operl"
-    val file_dhtnn = file ^ "_dhtnn"
-    val operl = mk_sameorder_set Term.compare (map fst (dkeys (#opdict dhtnn)))
-  in
-    writel file_dhtnn [string_of_dhtnn dhtnn];
-    mlTacticData.export_terml file_operl operl
-  end
-
-fun read_opdict_one tos sl =
-  let
-    val (opers,ns) = pair_of_list (String.tokens Char.isSpace (hd sl))
-    val (oper,n) = (tos (string_to_int opers), string_to_int ns)
-  in
-    ((oper,n),read_nn_sl (tl sl))
-  end
-
-fun read_opdict operl sl =
-  let
-    val d = dnew Int.compare (number_fst 0 operl)
-    fun tos i = dfind i d
-    val sll = rpt_split_sl "nnstop" sl
-  in
-    dnew oper_compare (map (read_opdict_one tos) sll)
-  end
-
-fun read_tnn_sl operl sl =
-  let
-    val (l1,contl1) = split_sl "headstop" sl
-    val headnn = read_nn_sl l1
-    val (l2,_) = split_sl "opdictstop" contl1
-    val opdict = read_opdict operl l2
-    val dimin = ((snd o mat_dim o #w o hd) headnn) - 1
-    val dimout = (fst o mat_dim o #w o last) headnn
-  in
-    {opdict=opdict,headnn=headnn,dimin=dimin,dimout=dimout}
+    export_terml (file ^ "_operl") l1;
+    writel (file ^ "_nnl") (map string_of_tnn l2)
   end
 
 fun read_tnn file =
   let
-    val file_operl = file ^ "_operl"
-    val file_tnn = file ^ "_tnn"
-    val operl = mlTacticData.import_terml file_operl
-    val sl = readl file_tnn
+    val l1 = mlTacticData.import_terml (file ^ "_operl")
+    fun read_tnn_sl sl = map read_nn_sl (rpt_split_sl "nnstop" sl)
+    val l2 = read_tnn_sl (readl (file ^ "_nnl"))
   in
-    read_tnn_sl operl sl
+    dnew Term.compare (combine (l1,l2))
   end
 
-fun read_dhtnn_sl operl sl =
-  let
-    val (l1,contl1) = split_sl "headevalstop" sl
-    val headeval = read_nn_sl l1
-    val (l2,contl2) = split_sl "headpolistop" contl1
-    val headpoli = read_nn_sl l2
-    val (l3,_) = split_sl "opdictstop" contl2
-    val opdict = read_opdict operl l3
-    val dimin = ((snd o mat_dim o #w o hd) headpoli) - 1
-    val dimpoli = (fst o mat_dim o #w o last) headpoli
-  in
-    {opdict=opdict,headeval=headeval,headpoli=headpoli,
-     dimin=dimin,dimpoli=dimpoli}
-  end
+(*
+load "aiLib"; open aiLib;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+val file = HOLDIR ^ "/src/AI/machine_learning/test";
 
-fun read_dhtnn file =
-  let
-    val file_operl = file ^ "_operl"
-    val file_dhtnn = file ^ "_dhtnn"
-    val operl = mlTacticData.import_terml file_operl
-    val sl = readl file_dhtnn
-  in
-    read_dhtnn_sl operl sl
-  end
 
-fun write_operl file operl =
-  let
-    val file1 = file ^ "_operl_term"
-    val file2 = file ^ "_operl_arity"
-    val (l1,l2) = split operl
-  in
-    mlTacticData.export_terml file1 l1;
-    writel file2 (map its l2)
-  end
+(* extract dimension of nn: *)
+val dimin = ((snd o mat_dim o #w o hd) nn) - 1
+val dimout = (fst o mat_dim o #w o last) nn
+*)
 
-fun read_operl file =
-  let
-    val l1 = mlTacticData.import_terml (file ^ "_operl_term")
-    val l2 = map string_to_int (readl (file ^ "_operl_arity"))
-  in
-    combine (l1,l2)
-  end
+(*
+
 
 fun write_dhex file epex =
   let
@@ -317,7 +190,7 @@ fun embed_nn v =
     in
       [{a = idactiv, da = didactiv, w = Vector.fromList e2}]
     end
-  else raise ERR "embed_nn" (fst (dest_var v))
+  else msg_err "embed_nn" (fst (dest_var v))
 
 fun mk_embedding_var rv =
   mk_var (embedding_prefix ^ reall_to_string (vector_to_list rv), bool)
@@ -335,13 +208,14 @@ fun fp_op dim opdict fpdict tm =
   in
     fp_nn nn inv
   end
-  handle Subscript => raise ERR "" (its dim ^ "," ^
-   its (String.size (fst (dest_var tm))))
+  handle Subscript => msg_err "fp_op" (its dim ^ "," ^ (fst (dest_var tm)))
 
 fun fp_opdict dim opdict fpdict tml = case tml of
     []      => fpdict
   | tm :: m =>
-    let val fpdatal = fp_op dim opdict fpdict tm in
+    let 
+      val fpdatal = fp_op dim opdict fpdict tm 
+    in
       fp_opdict dim opdict (dadd tm fpdatal fpdict) m
     end
 
@@ -568,7 +442,7 @@ fun train_tnn schedule randtnn (trainex,testex) =
     val _ = print_endline ("trainset " ^ output_info (map snd trainex))
     val _ = print_endline ("testset  " ^ output_info (map snd testex))
     val _ = if length trainex < #batch_size (hd schedule)
-            then raise ERR "prepare_train_tnn" "too few examples"
+            then msg_err "train_tnn" "too few examples"
             else ()
     val pset = (prepare_tnnex trainex, prepare_tnnex testex)
     val (tnn,t) = add_time (train_tnn_schedule schedule randtnn) pset
@@ -581,7 +455,9 @@ fun train_tnn schedule randtnn (trainex,testex) =
    ------------------------------------------------------------------------- *)
 
 fun train_dhtnn_one dhtnn (tml,expecteval,expectpoli) =
-  let val (fpdict,fpdataleval,fpdatalpoli) = fp_dhtnn dhtnn tml in
+  let 
+    val (fpdict,fpdataleval,fpdatalpoli) = fp_dhtnn dhtnn tml 
+  in
     bp_dhtnn (#dimin dhtnn) (fpdict,fpdataleval,fpdatalpoli)
     (tml,expecteval,expectpoli)
   end
@@ -626,8 +502,8 @@ fun train_dhtnn_epoch param pf (lossl1,lossl2) dhtnn batchl =
   case batchl of
     [] => (dhtnn, (average_real lossl1, average_real lossl2))
   | batch :: m =>
-    let val (newdhtnn,(loss1,loss2)) =
-      train_dhtnn_batch param pf dhtnn batch
+    let 
+      val (newdhtnn,(loss1,loss2)) = train_dhtnn_batch param pf dhtnn batch
     in
       train_dhtnn_epoch param pf (loss1 :: lossl1, loss2 :: lossl2)
       newdhtnn m
@@ -686,7 +562,7 @@ fun tnn_accuracy tnn set =
   let val correct = filter (is_accurate_tnn tnn) set in
     Real.fromInt (length correct) / Real.fromInt (length set)
   end
-
+*)
 (* -------------------------------------------------------------------------
    Example: learn to tell if a term contains the variable "x" or not
    ------------------------------------------------------------------------- *)

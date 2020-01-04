@@ -18,14 +18,9 @@ sig
   (* parallelization *)
   type 'a pre_extsearch =
     {
-    write_target : string -> 'a -> unit,
-    read_target : string -> 'a,
-    write_exl : string -> 'a rlex -> unit,
-    read_exl : string -> 'a rlex,
-    write_splayer : string -> splayer -> unit,
-    read_splayer : string -> splayer
+    write_boardl : string -> 'a list -> unit,
+    read_boardl : string -> 'a list
     }
-
   type 'a extsearch = (splayer, 'a, bool * bool * 'a rlex) smlParallel.extspec
 
   (* reinforcement learning parameters *)

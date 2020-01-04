@@ -39,13 +39,10 @@ type rplayer = (dhtnn * string)
 
 type 'a pre_extsearch =
   {
-  write_target : string -> 'a -> unit,
-  read_target : string -> 'a,
-  write_exl : string -> 'a rlex -> unit,
-  read_exl : string -> 'a rlex,
-  write_splayer : string -> splayer -> unit,
-  read_splayer : string -> splayer
+  write_boardl : string -> 'a list -> unit,
+  read_boardl : string -> 'a list
   }
+
 type 'a extsearch = (splayer, 'a, bool * bool * 'a rlex) smlParallel.extspec
 
 (* -------------------------------------------------------------------------
@@ -84,7 +81,7 @@ type 'a rlobj =
   }
 
 (* -------------------------------------------------------------------------
-   Search parallelization (big steps)
+   Big steps
    ------------------------------------------------------------------------- *)
 
 fun mk_mcts_param noiseb nsim rlpreobj =
@@ -125,6 +122,66 @@ fun mk_bigsteps_obj rlpreobj (unib,dhtnn,noiseb,playerid,nsim) =
     }
   end
 
+(* -------------------------------------------------------------------------
+   I/O for external parallelization
+   ------------------------------------------------------------------------- *)
+
+fun write_exl write_boardl file exl =
+  let val (boardl,evall,polil) = split_triple exl in
+    write_boardl (file ^ "_boardl") boardl;
+    writel (file ^ "_eval") (map reall_to_string evall);
+    writel (file ^ "_poli") (map reall_to_string polil)
+  end
+fun read_exl read_boardl file =
+  let
+    val evall = map string_to_reall (readl (file ^ "_eval"))
+    val polil = map string_to_reall (readl (file ^ "_poli"))
+    val boardl = read_boardl (file ^ "_boardl")
+  in
+    combine_triple (boardl,evall,polil)
+  end
+
+fun write_splayer file (unib,dhtnn,noiseb,playerid,nsim) =
+  (
+  write_dhtnn (file ^ "_dhtnn") dhtnn;
+  writel (file ^ "_flags") [String.concatWith " " (map bts [unib,noiseb])];
+  writel (file ^ "_playerid") [playerid];
+  writel (file ^ "_nsim") [its nsim]
+  )
+fun read_splayer file =
+  let
+    val dhtnn = read_dhtnn (file ^ "_dhtnn")
+    val (unib,noiseb) =
+      pair_of_list (map string_to_bool
+        (String.tokens Char.isSpace (only_hd (readl (file ^ "_flags")))))
+    val playerid = only_hd (readl (file ^ "_playerid"))
+    val nsim = string_to_int (only_hd (readl (file ^ "_nsim")))
+  in
+    (unib,dhtnn,noiseb,playerid,nsim)
+  end
+
+fun write_result write_boardl file (b1,b2,exl) =
+  (writel (file ^ "_bstatus") [bts b1 ^ " " ^ bts b2];
+   write_exl write_boardl (file ^ "_exl") exl)
+fun read_result read_boardl file =
+  let
+    val bs = only_hd (readl (file ^ "_bstatus"))
+    val (b1,b2) = pair_of_list (map string_to_bool
+      (String.tokens Char.isSpace bs))
+    val r = (b1,b2,read_exl read_boardl (file ^ "_exl"))
+  in
+    r
+  end
+
+fun write_target write_boardl file target = 
+  write_boardl (file ^ "_target") [target]
+fun read_target read_boardl file = 
+  only_hd (read_boardl (file ^ "_target"))
+
+(* -------------------------------------------------------------------------
+   External parallelization
+   ------------------------------------------------------------------------- *)
+
 fun extsearch_fun rlpreobj splayer target =
   let
     val obj = mk_bigsteps_obj rlpreobj splayer
@@ -136,21 +193,7 @@ fun extsearch_fun rlpreobj splayer target =
 fun mk_extsearch self rlpreobj =
   let
     val rl_param = #rl_param rlpreobj
-    val {write_target,read_target,
-         write_exl,read_exl,
-         write_splayer,read_splayer} = #pre_extsearch rlpreobj
-    fun write_result file (b1,b2,exl) =
-      (writel (file ^ "_bstatus") [bts b1 ^ " " ^ bts b2];
-       write_exl (file ^ "_exl") exl)
-    fun read_result file =
-      let
-        val bs = only_hd (readl (file ^ "_bstatus"))
-        val (b1,b2) = pair_of_list (map string_to_bool
-          (String.tokens Char.isSpace bs))
-        val r = (b1,b2,read_exl (file ^ "_exl"))
-      in
-        remove_file (file ^ "_bstatus"); r
-      end
+    val {write_boardl,read_boardl} = #pre_extsearch rlpreobj
   in
     {
     self = self,
@@ -159,24 +202,29 @@ fun mk_extsearch self rlpreobj =
     function = extsearch_fun rlpreobj,
     write_param = write_splayer,
     read_param = read_splayer,
-    write_arg = write_target,
-    read_arg = read_target,
-    write_result = write_result,
-    read_result = read_result
+    write_arg = write_target write_boardl,
+    read_arg = read_target read_boardl,
+    write_result = write_result write_boardl,
+    read_result = read_result read_boardl
     }
   end
 
 fun mk_rlobj rlpreobj extsearch =
-  {
-  rl_param = #rl_param rlpreobj,
-  extsearch = extsearch,
-  tobdict = dmap (fst o snd) (#pretobdict rlpreobj),
-  dplayerl = #dplayerl rlpreobj,
-  write_exl = #write_exl (#pre_extsearch rlpreobj),
-  read_exl = #read_exl (#pre_extsearch rlpreobj),
-  board_compare = #board_compare (#game rlpreobj),
-  level_targetl = #level_targetl rlpreobj
-  }
+  let
+    val rl_param = #rl_param rlpreobj
+    val {write_boardl,read_boardl} = #pre_extsearch rlpreobj
+  in
+    {
+    rl_param = rl_param,
+    extsearch = extsearch,
+    tobdict = dmap (fst o snd) (#pretobdict rlpreobj),
+    dplayerl = #dplayerl rlpreobj,
+    write_exl = write_exl write_boardl,
+    read_exl = read_exl read_boardl,
+    board_compare = #board_compare (#game rlpreobj),
+    level_targetl = #level_targetl rlpreobj
+    }
+  end
 
 (* -------------------------------------------------------------------------
    Training
@@ -190,7 +238,7 @@ fun rl_train rlobj exl =
         val tob = dfind playerid (#tobdict rlobj)
         val exl' = map (fn (a,b,c) => (tob a, b, c)) exl
       in
-        (exl',schedule,dhtnn_param)
+        (exl', schedule, dhtnn_param)
       end
     val argl = map f dplayerl
     val ncore = length argl

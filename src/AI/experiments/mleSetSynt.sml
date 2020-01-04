@@ -314,6 +314,7 @@ val pre_extsearch =
 val schedule_base =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 20}]
+
 val dhtnn_param_base =
   {
   operl = operl1, nlayer_oper = 2,
@@ -331,11 +332,9 @@ val pretobdict = dnew String.compare
    Interface
    ------------------------------------------------------------------------- *)
 
-val expname = "mleSetSynt-test1"
-
 val rl_param =
   {
-  expname = expname, ex_window = 200000,
+  expname = "mleSetSynt-test1", ex_window = 200000,
   ncore_search = 40, nsim = 50000, decay = 1.0
   }
 

@@ -87,6 +87,9 @@ fun cpl_compare cmp1 cmp2 ((a1,a2),(b1,b2)) =
     if r = EQUAL then cmp2 (a2,b2) else r
   end
 
+fun triple_compare cmp1 cmp2 cmp3 ((a1,a2,a3),(b1,b2,b3)) = 
+  cpl_compare (cpl_compare cmp1 cmp2) cmp3 (((a1,a2),a3),((b1,b2),b3))
+
 fun lbl_compare ((stac1,_,g1,_),(stac2,_,g2,_)) =
   cpl_compare String.compare goal_compare ((stac1,g1),(stac2,g2))
 

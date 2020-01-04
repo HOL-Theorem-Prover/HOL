@@ -3,18 +3,29 @@ sig
 
   include Abbrev
 
-  type pos = int list
-  type board = ((term * pos) * int)
-  datatype move = Arg of int | Paramod of (int * bool)
+  type board = term * term * int
+  type move = string * term
 
-  val mk_startboard : term -> board
-  val dest_startboard : board -> term
+  (* vocabulary *)
+  val oo : term * term -> term
+  val tag : term -> term
+  val cA : term
+  val cT : term
+  val cS : term
+  val cK : term
+  val cE : term
+  val cts : term -> string 
+  val level_targetl : int -> board list
+  (* helpers *)
+  val subst_match : term -> term -> term
+  val game : (board,move) psMCTS.game
+  val mcts_test : int -> board -> bool * (board, move) psMCTS.tree
+  val movel : move list
 
+  val schedule_base : mlNeuralNetwork.schedule
+  val dhtnn_param_base : mlTreeNeuralNetwork.dhtnn_param
   val extsearch : board mlReinforce.extsearch
+  val rlpreobj : (board,move,unit) mlReinforce.rlpreobj
   val rlobj : board mlReinforce.rlobj
-
-  val create_levels : unit -> unit
-  val max_prooflength_atgen : unit -> int list
-  val stats_prooflength : string -> (int * int) list
 
 end

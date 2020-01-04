@@ -11,101 +11,122 @@ struct
 
 open HolKernel boolLib Abbrev aiLib smlParallel psMCTS psTermGen
   mlNeuralNetwork mlTreeNeuralNetwork mlTacticData
-  mlReinforce mleLib mleArithData
+  mlReinforce mleLib mleArithData combinTheory
 
 val ERR = mk_HOL_ERR "mleRewrite"
+
+(* -------------------------------------------------------------------------
+   Vocabulary
+   ------------------------------------------------------------------------- *)
+
+fun new_const (s,ty) = mk_var (s,ty)
+val cI = new_const ("cI",alpha);
+val cK = new_const ("cK",alpha);
+val cS = new_const ("cS",alpha);
+val cA = new_const ("cA",``:'a -> 'a -> 'a``);
+val cT = new_const ("cT",``:'a -> 'a``);
+val vf = mk_var ("vf",alpha);
+val vg = mk_var ("vg",alpha);
+val vy = mk_var ("vy",alpha);
+val vx = mk_var ("vx",alpha);
+infix oo;
+fun op oo (a,b) = list_mk_comb (cA,[a,b]);
+fun tag x = mk_comb (cT,x);
 
 (* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
 
-type pos = int list
-type board = ((term * pos) * int)
-
-fun mk_startboard tm = ((tm,[]), 2 * lo_prooflength 200 tm + 2)
-fun dest_startboard ((tm,_),_) = tm
-
-(* search and networks have to be aware of the length of the proof *)
-fun status_of ((tm,_),n) =
-  if is_suc_only tm then Win
-  else if n <= 0 then Lose
-  else Undecided
-
-fun max_bigsteps target = snd target + 1
-
-(* -------------------------------------------------------------------------
-   Neural network representation of the board
-   ------------------------------------------------------------------------- *)
-
-val numtag = mk_var ("numtag", ``:num -> num``)
-
-fun tag_pos (tm,pos) =
-  if null pos then (if is_eq tm then tm else mk_comb (numtag,tm)) else
-  let
-    val (oper,argl) = strip_comb tm
-    fun f i arg = if i = hd pos then tag_pos (arg,tl pos) else arg
-  in
-    list_mk_comb (oper, mapi f argl)
-  end
-
-val rewrite_operl =
-  let val operl' = (numtag,1) :: operl_of (``0 * SUC 0 + 0 = 0``) in
-    mk_fast_set oper_compare operl'
-  end
-
-fun term_of_board ((tm,pos),_) = tag_pos (tm,pos)
-
-val board_compare =
-  cpl_compare
-    (cpl_compare Term.compare (list_compare Int.compare))
-    Int.compare
-
-fun string_of_board b = term_to_string (term_of_board b)
+type board = term * term * int
+val board_compare = triple_compare Term.compare Term.compare Int.compare
+fun string_of_board (a,b,c) = tts a ^ " " ^ tts b ^ " " ^ its c
 
 (* -------------------------------------------------------------------------
    Move
    ------------------------------------------------------------------------- *)
 
-datatype move = Arg of int | Paramod of (int * bool)
+type move = string * term
 
-val movel =
-  map Arg [0,1] @
-  [Paramod (0,true),Paramod (0,false)] @
-  [Paramod (1,true),Paramod (1,false)] @
-  [Paramod (2,true)] @
-  [Paramod (3,true),Paramod (3,false)]
+val k_thm = mk_eq (cK oo vx oo vy, vx);
+val k_tag = let val (a,b) = dest_eq k_thm in mk_eq (tag a, b) end;
+val s_thm = mk_eq (cS oo vf oo vg oo vx, (vf oo vx) oo (vg oo vx));    
+val s_tag = let val (a,b) = dest_eq s_thm in mk_eq (tag a, b) end;
+val rand_thm = mk_eq (tag (vf oo vg), vf oo tag vg);
+val rator_thm = mk_eq (tag (vf oo vg), tag vf oo vg);
 
-fun move_compare (m1,m2) = case (m1,m2) of
-    (Arg i1, Arg i2) => Int.compare (i1,i2)
-  | (Arg _, _) => LESS
-  | (_,Arg _) => GREATER
-  | (Paramod (i1,b1), Paramod (i2,b2)) =>
-    (cpl_compare Int.compare bool_compare) ((i1,b1),(i2,b2))
+val movel = [("k",k_tag),("s",s_tag),("rand",rand_thm),("rator",rator_thm)];
 
-fun string_of_move move = case move of
-    Arg n => ("A" ^ its n)
-  | Paramod (i,b) => ("P" ^ its i ^ (if b then "t" else "f"))
+fun is_cconst x = hd_string (fst (dest_var x)) = #"c"
 
-fun narg tm = length (snd (strip_comb tm))
+fun is_cmatch eq tm = 
+  let val (sub,_) = match_term (lhs eq) tm in
+    not (exists is_cconst (map #redex sub))
+  end
+  handle HOL_ERR _ => false
 
-fun argn_pb n (tm,pos) = (tm,pos @ [n])
+fun exists_cmatch eq tm = can (find_term (is_cmatch eq)) tm
+fun is_rewritable tm = exists (C exists_cmatch tm) [k_thm,s_thm]
 
-fun paramod_pb (i,b) (tm,pos) =
-  let
-    val ax = Vector.sub (robinson_eq_vect,i)
-    val tmo = paramod_ground (if b then ax else sym ax) (tm,pos)
+fun subst_match eq tm =
+  let 
+    val subtm = find_term (is_cmatch eq) tm
+    val sub1 = fst (match_term (lhs eq) subtm)
+    val eqinst = subst sub1 eq
+    val sub2 = [{redex = lhs eqinst, residue = rhs eqinst}]
   in
-    (valOf tmo,[])
+    subst_occs [[1]] sub2 tm
   end
 
-fun available_move ((tm,pos),_) move = case move of
-    Arg i => (narg (find_subtm (tm,pos)) >= i + 1)
-  | Paramod (i,b) => can (paramod_pb (i,b)) (tm,pos)
+fun contains_tag tm = can (find_term (term_eq cT)) tm
 
-fun apply_move move ((tm,pos),step) = case move of
-    Arg n => (argn_pb n (tm,pos), step - 1)
-  | Paramod (i,b) => (paramod_pb (i,b) (tm,pos), step - 1)
+fun string_of_move move = fst move
+fun move_compare (m1,m2) = 
+  String.compare (string_of_move m1, string_of_move m2)
 
+fun apply_move_once (move : move) (tm1,tm2,n) = 
+  let 
+    val tm1' = subst_match (snd move) tm1
+    val tm1'' = if contains_tag tm1' then tm1' else tag tm1' 
+  in
+    (tm1'', tm2, n)
+  end
+
+fun apply_move_once_count (move : move) (tm1,tm2,n) = 
+  let 
+    val tm1' = subst_match (snd move) tm1
+    val tm1'' = if contains_tag tm1' then tm1' else tag tm1' 
+  in
+    (tm1'', tm2, n-1)
+  end
+
+fun available_move (board as (tm,_,_)) (move as (_,eq)) = 
+  if not (can (subst_match eq) tm) then false else
+  let val tm' = subst_match eq tm in
+    if not (contains_tag tm') then true else
+    let val subtm = 
+      rand (find_term (fn x => term_eq (fst (dest_comb x)) cT) tm') 
+    in
+      is_rewritable subtm
+    end
+  end
+
+fun status_of (board as (tm1,tm2,n)) =
+  if term_eq tm1 tm2 then Win
+  else 
+    if n <= 0 orelse not (is_rewritable tm1) orelse
+       null (filter (available_move board) movel) 
+    then Lose 
+  else Undecided
+
+fun apply_uniq_move board =
+  if status_of board <> Undecided then board else
+    case filter (available_move board) movel of
+      [] => board
+    | [a] => apply_uniq_move (apply_move_once a board)
+    | _ => board
+
+fun apply_move move board = 
+  apply_uniq_move (apply_move_once_count move board)
 
 (* -------------------------------------------------------------------------
    Game
@@ -124,183 +145,191 @@ val game : (board,move) game =
   }
 
 (* -------------------------------------------------------------------------
+   MCTS test with uniform player
+   ------------------------------------------------------------------------- *)
+
+fun mk_mcts_param nsim =
+  {
+  nsim = nsim, stopatwin_flag = true,
+  decay = 1.0, explo_coeff = 2.0,
+  noise_coeff = 0.25, noise_root = false,
+  noise_all = false, noise_gen = random_real
+  }
+
+fun string_of_status status = case status of
+    Win => "win"
+  | Lose => "lose"
+  | Undecided => "undecided"
+
+fun mcts_test nsim board =
+  let
+    val mcts_obj =
+      {mcts_param = mk_mcts_param nsim,
+       game = game,
+       player = random_player game}
+    val tree = starttree_of mcts_obj board
+    val endtree = mcts mcts_obj tree
+    val b = #status (dfind [] endtree) = Win
+  in
+    print_endline (string_of_status (#status (dfind [] endtree)));
+    (b, endtree)
+  end
+
+fun cts_par tm = 
+  if is_const tm then tl_string (fst (dest_const tm)) else 
+    case (snd (strip_comb tm)) of
+      [a] => "[" ^ cts a ^ "]"
+    | [a,b] =>  "(" ^ cts a ^ " " ^ cts_par b ^ ")"
+    | _ => raise ERR "cts_par" ""
+and cts tm = 
+  if is_const tm then tl_string (fst (dest_const tm)) else 
+    case (snd (strip_comb tm)) of
+      [a] => "[" ^ cts a ^ "]"
+    | [a,b] =>  cts a ^ " " ^ cts_par b
+    | _ => raise ERR "cts" ""
+
+(*
+load "aiLib"; open aiLib;
+load "psMCTS"; open psMCTS;
+load "psTermGen"; open psTermGen;
+load "mleRewrite"; open mleRewrite;
+val board = hd (level_targetl 30);
+val (b,endtree) = mcts_test 16000 board1;
+val nodel = trace_win (#status_of game) endtree [];
+todo: cite machine learning and combinators paper statistics.
+*)
+
+(* -------------------------------------------------------------------------
    Level
    ------------------------------------------------------------------------- *)
 
-fun create_levels () =
-  let
-    val filein = dataarith_dir ^ "/train"
-    val fileout = dataarith_dir ^ "/train_plsorted"
-    val l1 = import_terml filein
-    val _ = print_endline ("Reading " ^ its (length l1) ^ " terms")
-    val l2 = mapfilter (fn x => (x, lo_prooflength 200 x)) l1
-    val l3 = filter (fn x => snd x <= 100) l2
-    val l4 = dict_sort compare_imin l3
-  in
-    print_endline ("Exporting " ^ its (length l4) ^ " terms");
-    export_terml fileout (map fst l4)
+fun random_walk n board =
+  if n <= 0 then board else
+  let val movel' = filter (available_move board) movel in
+    if null movel' then board else
+    random_walk (n-1) (apply_move (random_elem movel') board)
   end
 
-fun level_targetl level ntarget =
-  let
-    val tml = mlTacticData.import_terml (dataarith_dir ^ "/train_plsorted")
-    val tmll = map shuffle (first_n level (mk_batch 400 tml))
-    val tml2 = List.concat (list_combine tmll)
+fun random_cterm n = random_term [cA,cS,cK] (n,alpha);
+fun random_board size nstep =
+  let 
+    val tm = tag (random_cterm (2 * size - 1))
+    val board1 = (tm, mk_var("none",alpha), nstep + 1)
+    val board2 = random_walk nstep board1
   in
-    map mk_startboard (first_n ntarget tml2)
+    (tm, #1 board2, 2 * (nstep + 1 - (#3 board2))) 
   end
 
-fun max_prooflength_atgen () =
-  let val tml = import_terml (dataarith_dir ^ "/train_plsorted") in
-    map (list_imax o map (lo_prooflength 1000)) (mk_batch 400 tml)
-  end
-
-fun stats_prooflength file =
-  let
-    val l0 = import_terml file
-    val l1 = mapfilter (fn x => (x,(lo_prooflength 200) x)) l0
-    val _  = print_endline (its (length l1))
-    val l2 = dlist (dregroup Int.compare (map swap l1))
+fun level_target level =
+  let 
+    val size = random_int (5, level) 
+    val nstep = random_int (1, level)
   in
-    map_snd length l2
-  end
+    apply_uniq_move (random_board size nstep)
+  end  
+
+fun level_targetl level = List.tabulate (400, fn _ => level_target level)
+
+(*
+load "aiLib"; open aiLib;
+load "mleRewrite"; open mleRewrite;
+load "psTermGen"; open psTermGen;
+val [(tm1,tm2,n)] = level_targetl 20 1;
+print_endline (cts tm1); 
+print_endline (cts tm2);
+print_endline (its n);
+*)
+
+(* -------------------------------------------------------------------------
+   Neural representation of the board
+   ------------------------------------------------------------------------- *)
+
+val cE = mk_var ("cE", ``:'a -> 'a -> 'a``)
+fun term_of_board (tm1,tm2,n) = list_mk_comb (cE,[tm1,tm2])
+val operl = map_assoc arity_of [cE,cA,cT,cS,cK]
 
 (* -------------------------------------------------------------------------
    Parallelization
    ------------------------------------------------------------------------- *)
 
-fun write_target file target =
-  export_terml (file ^ "_target") [dest_startboard target]
-fun read_target file =
-  mk_startboard (only_hd (import_terml (file ^ "_target")))
-
 fun write_boardl file boardl =
-  let
-    val (l1,l2) = split boardl
-    val (l1a,l1b) = split l1
-  in
-    export_terml (file ^ "_orgtm") l1a;
-    writel (file ^ "_pos") (map string_of_pos l1b);
-    writel (file ^ "_max") (map its l2)
+  let val (l1,l2,l3) = split_triple boardl in
+    export_terml (file ^ "_in") l1;
+    export_terml (file ^ "_out") l2; 
+    writel (file ^ "_max") (map its l3)
   end
 fun read_boardl file =
   let
-    val orgl = import_terml (file ^ "_orgtm")
-    val posl = map pos_of_string (readl (file ^ "_pos"))
-    val nl = map string_to_int (readl (file ^ "_max"))
+    val l1 = import_terml (file ^ "_in")
+    val l2 = import_terml (file ^ "_out")
+    val l3 = map string_to_int (readl (file ^ "_max"))
   in
-    combine (combine (orgl,posl), nl)
+    combine_triple (l1,l2,l3)
   end
 
-fun write_exl file exl =
-  let val (boardl,evall,polil) = split_triple exl in
-    write_boardl (file ^ "_boardl") boardl;
-    writel (file ^ "_eval") (map reall_to_string evall);
-    writel (file ^ "_poli") (map reall_to_string polil)
-  end
-fun read_exl file =
-  let
-    val evall = map string_to_reall (readl (file ^ "_eval"))
-    val polil = map string_to_reall (readl (file ^ "_poli"))
-    val boardl = read_boardl (file ^ "_boardl")
-  in
-    combine_triple (boardl,evall,polil)
-  end
-
-fun write_splayer file (unib,dhtnn,noiseb,playerid,nsim) =
-  (
-  write_dhtnn (file ^ "_dhtnn") dhtnn;
-  writel (file ^ "_flags") [String.concatWith " " (map bts [unib,noiseb])];
-  writel (file ^ "_playerid") [playerid];
-  writel (file ^ "_nsim") [its nsim]
-  )
-fun read_splayer file =
-  let
-    val dhtnn = read_dhtnn (file ^ "_dhtnn")
-    val (unib,noiseb) =
-      pair_of_list (map string_to_bool
-        (String.tokens Char.isSpace (only_hd (readl (file ^ "_flags")))))
-    val playerid = only_hd (readl (file ^ "_playerid"))
-    val nsim = string_to_int (only_hd (readl (file ^ "_nsim")))
-  in
-    (unib,dhtnn,noiseb,playerid,nsim)
-  end
-
-val pre_extsearch =
-  {
-  write_target = write_target,
-  read_target = read_target,
-  write_exl = write_exl,
-  read_exl = read_exl,
-  write_splayer = write_splayer,
-  read_splayer = read_splayer
-  }
+val pre_extsearch = {write_boardl = write_boardl, read_boardl = read_boardl}
 
 (* -------------------------------------------------------------------------
-   Player
+   Players
    ------------------------------------------------------------------------- *)
 
-val schedule =
-  [{ncore = 1, verbose = true,
-    learning_rate = 0.02,
-    batch_size = 16, nepoch = 100}]
+val schedule_base =
+  [{ncore = 1, verbose = true, learning_rate = 0.02,
+    batch_size = 16, nepoch = 20}]
 
-val dhtnn_param =
+val dhtnn_param_base =
   {
-  operl = rewrite_operl, nlayer_oper = 2,
+  operl = operl, nlayer_oper = 2,
   nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 12, dimpoli = length movel
+  dimin = 8, dimpoli = length movel
   }
 
-val dplayer =
-  {playerid = "only_player", dhtnn_param = dhtnn_param, schedule = schedule}
+val player_base =
+  {playerid = "base",
+   dhtnn_param = dhtnn_param_base, schedule = schedule_base}
+
+fun term_of_boardc (_:unit) b = term_of_board b
 
 val pretobdict = dnew String.compare
-  [("only_player", (term_of_board, fn () => term_of_board))];
+  [("base", (term_of_board, term_of_boardc))]
 
 (* -------------------------------------------------------------------------
-   Reinforcement learning
+   Interface
    ------------------------------------------------------------------------- *)
 
-val expname = "mleRewrite-v2-1"
-
-val level_param =
-  {
-  ntarget_start = 400, ntarget_compete = 400, ntarget_explore = 400,
-  level_start = 1, level_threshold = 0.95,
-  level_targetl = level_targetl
-  }
-
 val rl_param =
-  {
-  expname = expname, ex_window = 40000, ex_filter = NONE,
-  skip_compete = false,
-  ngen = 100, ncore_search = 40,
-  nsim_start = 1600, nsim_explore = 1600, nsim_compete = 1600,
-  decay = 0.99
-  }
+  {expname = "mleRewrite-combin-1", ex_window = 80000,
+   ncore_search = 4, nsim = 160, decay = 1.0}
 
 val rlpreobj : (board,move,unit) rlpreobj =
   {
   rl_param = rl_param,
-  level_param = level_param,
-  max_bigsteps = max_bigsteps,
+  max_bigsteps = (fn (_,_,n) => 10000),
   game = game,
   pre_extsearch = pre_extsearch,
   pretobdict = pretobdict,
   precomp_dhtnn = (fn _ => (fn _ => ())),
-  dplayerl = [dplayer]
+  dplayerl = [player_base],
+  level_targetl = level_targetl
   }
 
 val extsearch = mk_extsearch "mleRewrite.extsearch" rlpreobj
-
 val rlobj = mk_rlobj rlpreobj extsearch
 
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
-(* create_levels (); *)
-val r = start_rl_loop rlobj;
+
+
+val exl = #read_exl rlobj 
+  (HOLDIR ^ "/src/AI/experiments/eval/mleRewrite-combin-1/ex0");
+fun term_of_board (tm1,tm2,n) = list_mk_comb (cE,[tm1,tm2])
+val dhex = map (fn (a,b,c) => (term_of_board a,b,c)) exl;
+
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+val dhtnn = train_dhtnn schedule_base (random_dhtnn dhtnn_param_base) dhex;
+
+val r = rl_start_sync rlobj 6;
 *)
 
 end (* struct *)

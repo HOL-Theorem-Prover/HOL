@@ -7,10 +7,16 @@ include Abbrev
   type mat = real vector vector
   type layer = {a  : real -> real, da : real -> real, w : mat}
   type nn = layer list
+  (*
   type fpdata = {layer : layer, inv : vect, outv : vect, outnv : vect}
   type bpdata = {doutnv : vect, doutv  : vect, dinv : vect, dw : mat}
-  type opdict = ((term * int),nn) Redblackmap.dict
+  *)
+  type tnn = (term,nn) Redblackmap.dict
 
+  val random_tnn : (term * int list) list -> (term,nn) Redblackmap.dict
+  val write_tnn :
+
+(*
   type tnnex = (term * real list) list
   type tnn_param =
     {
@@ -67,5 +73,6 @@ include Abbrev
 
   (* statistics *)
   val tnn_accuracy : tnn -> (term * real list) list -> real
+*)
 
 end

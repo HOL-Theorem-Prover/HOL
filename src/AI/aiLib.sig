@@ -18,6 +18,12 @@ sig
     ('a * 'b -> order) ->
     ('c * 'd -> order) ->
     ('a * 'c) * ('b * 'd) -> order
+  val triple_compare :
+    ('a * 'b -> order) ->
+    ('c * 'd -> order) ->
+    ('e * 'f -> order) -> 
+    ('a * 'c * 'e) * ('b * 'd * 'f) -> order
+
   val goal_compare : goal * goal -> order
   val lbl_compare : lbl * lbl -> order
   val compare_rmin : (('a * real) * ('a * real)) -> order
