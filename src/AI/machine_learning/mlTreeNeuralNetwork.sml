@@ -30,6 +30,21 @@ fun oper_nn diml = case diml of
 
 fun random_tnn operdiml = dnew Term.compare (map_snd oper_nn operdiml)
 
+fun dim_std (nlayer,dim) oper =
+  let 
+    val a = arity_of oper 
+    val dim_alt = 
+      if is_var oper andalso String.isPrefix "head_" (fst (dest_var oper))
+      then 1
+      else dim
+  in  
+    (if a = 0 then [0] else List.tabulate (nlayer, fn _ => a * dim)) @ 
+    [dim_alt]
+  end
+
+fun random_tnn_std (nlayer,dim) operl =
+  random_tnn (map_assoc (dim_std (nlayer,dim)) operl) 
+
 (* -------------------------------------------------------------------------
    TNN I/O
    ------------------------------------------------------------------------- *)
@@ -53,29 +68,23 @@ fun read_tnn file =
    TNN Examples: I/O
    ------------------------------------------------------------------------- *)
 
-type tnnex = (term list * real list) list
+type tnnex = ((term * real list) list) list
 
 fun write_tnnex file ex =
-  let val (tmll,rll) = split ex in
-    writel (file ^ "_group") (map (its o length) tmll);
-    export_terml (file ^ "_term") (List.concat tmll);
+  let val (tml,rll) = split (List.concat ex) in
+    writel (file ^ "_group") (map (its o length) ex);
+    export_terml (file ^ "_term") tml;
     writel (file ^ "_reall") (map reall_to_string rll)
   end
-
-fun part_group groupl l = case groupl of
-    [] => if null l then [] else raise ERR "part_group" ""
-  | a :: m => let val (l1,l2) = part_n a l in
-                l1 :: part_group m l2
-              end
 
 fun read_tnnex file =
   let
     val tml = import_terml (file ^ "_term")
+    val rll = map string_to_reall (readl (file ^ "_reall")) 
+    val ex = combine (tml,rll)
     val groupl = map string_to_int (readl (file ^ "_group"))
-    val tmll = part_group groupl tml
-    val rll = map string_to_reall (readl (file ^ "_reall"))
   in
-    combine (tmll,rll)
+    part_group groupl ex
   end
 
 (* -------------------------------------------------------------------------
@@ -97,10 +106,7 @@ fun order_subtm tml =
   end
 
 fun prepare_tnnex tnnex =
-  let fun f (tml,rl) = 
-    (order_subtm tml, 
-     map_snd (fn x => Vector.fromList [scale_real x]) (combine (tml,rl)))
-  in 
+  let fun f x = (order_subtm (map fst x), map_snd scale_out x) in 
     map f tnnex
   end
 
@@ -210,11 +216,11 @@ fun bp_tnn fpdict (tml,tmevl) =
 fun infer_tnn tnn tml =
   let 
     val fpdict = fp_tnn tnn (order_subtm tml) 
-    val fpdatal = dfind (only_hd tml) fpdict
+    fun f x = descale_out (#outnv (last (dfind x fpdict)))
   in
-    descale_out (#outnv (last fpdatal))
+    map_assoc f tml
   end
-
+  
 (* -------------------------------------------------------------------------
    Training
    ------------------------------------------------------------------------- *)
@@ -228,9 +234,11 @@ fun se_of fpdict (tm,ev) =
     r * r
   end
 
-fun mse_of fpdict tmevl =
-  Math.sqrt (sum_real (map (se_of fpdict) tmevl))
-  
+fun mse_of fpdict tmevl = Math.sqrt (sum_real (map (se_of fpdict) tmevl))
+
+fun fp_loss tnn (tml,tmevl) = mse_of (fp_tnn tnn tml) tmevl
+
+
 fun train_tnn_one tnn (tml,tmevl) =
   let 
     val fpdict = fp_tnn tnn tml
@@ -271,14 +279,15 @@ fun train_tnn_epoch param pf lossl tnn batchl = case batchl of
       train_tnn_epoch param pf (loss :: lossl) newtnn m
     end
 
-(* todo: add support for testset *)
 fun train_tnn_nepoch param pf i tnn (train,test) =
   if i >= #nepoch param then tnn else
   let
     val batchl = mk_batch (#batch_size param) (shuffle train)
     val _ = if null batchl then msg_err "train_tnn_nepoch" "empty" else ()
     val (newtnn,loss) = train_tnn_epoch param pf [] tnn batchl
-    val _ = msg param (its i ^ " train: " ^ pretty_real loss)
+    val testloss = average_real (map (fp_loss newtnn) test)
+    val _ = msg param (its i ^ " train: " ^ pretty_real loss ^
+      " test: " ^ pretty_real testloss)
   in
     train_tnn_nepoch param pf (i+1) newtnn (train,test)
   end
@@ -297,22 +306,21 @@ fun train_tnn_schedule schedule tnn (train,test) =
       (close_threadl (); r)
     end
 
-fun output_info exl =
-  if null exl then "empty" else
-  let
-    val l = list_combine exl
-    val meanl = map (rts o approx 6 o average_real) l
-    val devl = map (rts o approx 6 o standard_deviation) l
+fun output_info ex =
+  if null ex then "empty" else
+  let 
+    val rl = List.concat (map snd (List.concat ex))
+    val s1 = "\n  length: " ^ its (length ex) ^ "(" ^ its (length rl) ^ ")"
+    val s2 = "\n  mean: " ^ pretty_real (average_real rl)
+    val s3 = "\n  standard deviation: " ^ pretty_real (standard_deviation rl)
   in
-    "  length: " ^ int_to_string (length exl) ^ "\n" ^
-    "  mean: " ^ String.concatWith " " meanl ^ "\n" ^
-    "  deviation: " ^ String.concatWith " " devl
+    s1 ^ s2 ^ s3
   end
 
 fun train_tnn schedule randtnn (trainex,testex) =
   let
-    val _ = print_endline ("train " ^ output_info (map snd trainex))
-    val _ = print_endline ("test  " ^ output_info (map snd testex))
+    val _ = print_endline ("training set statistics:" ^ output_info trainex)
+    val _ = print_endline ("testing set statistics:" ^ output_info testex)
     val (tnn,t) = add_time (train_tnn_schedule schedule randtnn) 
       (prepare_tnnex trainex, prepare_tnnex testex)
   in
@@ -323,13 +331,20 @@ fun train_tnn schedule randtnn (trainex,testex) =
    Accuracy
    ------------------------------------------------------------------------- *)
 
-fun is_accurate_tnn tnn (tml,rl) =
+fun is_accurate_one (rl1,rl2) =
   let
-    val rl1 = infer_tnn tnn tml
-    val rl2 = combine (rl,rl1)
+    val rl3 = combine (rl1,rl2)
     fun test (x,y) = Real.abs (x - y) < 0.5
   in
-    if all test rl2 then true else false
+    if all test rl3 then true else false
+  end
+
+fun is_accurate_tnn tnn e =
+  let
+    val rll1 = map snd (infer_tnn tnn (map fst e))
+    val rll2 = map snd e
+  in
+    all is_accurate_one (combine (rll1,rll2))
   end
 
 fun tnn_accuracy tnn set =
@@ -338,7 +353,7 @@ fun tnn_accuracy tnn set =
   end
 
 (* -------------------------------------------------------------------------
-   Example: learn to tell if a term contains the variable "x" or not
+   Toy example: learning to guess if a term contains the variable "x"
    ------------------------------------------------------------------------- *)
 
 (*
@@ -346,14 +361,22 @@ load "aiLib"; open aiLib;
 load "psTermGen"; open psTermGen;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 
-(* examples *)
-fun contain_x tm = can (find_term (fn x => term_eq x ``x:'a``)) tm;
-val varl = [``x:'a``,``y:'a``,``z:'a``,``f:'a->'a->'a``,``g:'a -> 'a``];
-val head = mk_var ("head", ``:'a -> 'a``);
+(* terms *)
+val vx = mk_var ("x",alpha);
+val vy = mk_var ("y",alpha);load "aiLib"; open aiLib;
+load "psTermGen"; open psTermGen;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+val vz = mk_var ("z",alpha);
+val vf = ``f:'a->'a->'a``;
+val vg = ``g:'a -> 'a``;
+val vhead = mk_var ("head_", ``:'a -> 'a``);
+val varl = [vx,vy,vz,vf,vg];
 
+(* examples *)
+fun contain_x tm = can (find_term (fn x => term_eq x vx)) tm;
 fun mk_dataset n =
   let
-    val pxl = mk_term_set (random_terml varl (n,alpha) 100);
+    val pxl = mk_term_set (random_terml varl (n,alpha) 1000);
     val (px,pnotx) = partition contain_x pxl
   in
     (first_n 100 (shuffle px), first_n 100 (shuffle pnotx))
@@ -361,29 +384,25 @@ fun mk_dataset n =
 val (l1,l2) = split (List.tabulate (20, fn n => mk_dataset (n + 1)));
 val (l1',l2') = (List.concat l1, List.concat l2);
 val (pos,neg) = (map_assoc (fn x => [1.0]) l1', map_assoc (fn x => [0.0]) l2');
-val l = map_fst (single o (fn x => mk_comb (head,x))) 
-  (shuffle (pos @ neg));
+val ex0 = shuffle (pos @ neg);
+val ex1 = map (fn (a,b) => single (mk_comb (vhead,a),b)) ex0;
+val (trainex,testex) = part_pct 0.9 ex1;
 
-val (trainex,testex) = 
-  part_n (Real.round (Real.fromInt (length l) * 0.9)) l;
+(* TNN *)
+val nlayer = 2;
+val dim = 12;
+val randtnn = random_tnn_std (nlayer,dim) (vhead :: varl);
 
 (* training *)
 val train_param =
   {ncore = 1, verbose = true,
-   learning_rate = 0.02, batch_size = 16, nepoch = 100};
+   learning_rate = 0.02, batch_size = 16, nepoch = 20};
 val schedule = [train_param];
-
-val operdiml = 
-  [(``x:'a``,[0,8]), (``y:'a``,[0,8]), (``z:'a``,[0,8]),
-   (``f:'a->'a->'a``,[16,16,8]), (``g:'a -> 'a``,[8,8,8]),
-   (head, [8,1])
-   ];
-val randtnn = random_tnn operdiml;
 val tnn = train_tnn schedule randtnn (trainex,testex);
 
 (* testing *)
-val tm = fst (hd (shuffle testex));
-val r = infer_tnn tnn tm;
+val tml = map fst (hd (shuffle testex));
+val r = infer_tnn tnn tml;
 val acc = tnn_accuracy tnn testex;
 *)
 

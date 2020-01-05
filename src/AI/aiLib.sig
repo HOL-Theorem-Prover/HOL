@@ -101,6 +101,8 @@ sig
   val first_n   : int -> 'a list -> 'a list
   val first_test_n : ('a -> bool) -> int -> 'a list -> 'a list
   val part_n : int -> 'a list -> ('a list * 'a list)
+  val part_pct :  real -> 'a list -> 'a list * 'a list
+  val part_group : int list -> 'a list -> 'a list list
   val number_list : int -> 'a list -> (int * 'a) list
   val list_diff : ''a list -> ''a list -> ''a list
   val subset : ''a list -> ''a list -> bool
@@ -137,13 +139,16 @@ sig
   val select_in_distrib : ('a * real) list -> 'a
   val select_in_distrib_seeded : real -> ('a * real) list -> 'a
   val best_in_distrib : ('a * real) list -> 'a
-  val random_percent : real -> 'a list -> 'a list * 'a list
   val uniform_proba : int -> real list
   val normalize_proba : real list -> real list
   val uniform_distrib : 'a  list -> ('a * real) list
   val normalize_distrib : ('a * real) list -> ('a * real) list
 
   (* input/output *)
+  val reall_to_string : real list -> string
+  val realll_to_string : real list list -> string
+  val string_to_reall : string -> real list
+  val string_to_realll : string -> real list list
   val string_of_goal : goal -> string
   val trace_tacl : tactic list -> goal -> unit
   val readl : string -> string list
@@ -163,7 +168,6 @@ sig
     string -> string * string -> (int * int) list -> unit
   val readl_rm : string -> string list
   val writel_atomic : string -> string list -> unit
-
 
   (* parse *)
   val hd_string : string -> char

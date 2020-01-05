@@ -89,11 +89,6 @@ fun random_nn (a,da) sizel =
    input/output
    ------------------------------------------------------------------------- *)
 
-fun reall_to_string rl = String.concatWith " " (map rts rl)
-
-fun string_to_reall rls =
-  map (valOf o Real.fromString) (String.tokens Char.isSpace rls)
-
 fun string_of_wl wl =
   let
     val diml = map (mat_dim) wl

@@ -238,6 +238,14 @@ fun part_aux n acc l =
 
 fun part_n n l = part_aux n [] l
 
+fun part_group groupl l = case groupl of
+    [] => if null l then [] else raise ERR "part_group" ""
+  | a :: m => let val (l1,l2) = part_n a l in
+                l1 :: part_group m l2
+              end
+
+fun part_pct r l = part_n (Real.round (Real.fromInt (length l) * r)) l
+
 fun number_list start l = case l of
     []      => []
   | a :: m  => (start,a) :: number_list (start + 1) m
@@ -559,7 +567,6 @@ fun rename_allvar tm =
     tm2
   end
 
-
 fun all_bvar tm =
   mk_fast_set Term.compare (map (fst o dest_abs) (find_terms is_abs tm))
 
@@ -599,26 +606,10 @@ fun trace_tacl tacl g = case tacl of
     (print_endline (string_of_goal g); trace_tacl m (hd (fst (tac g))))
   | [] => print_endline (string_of_goal g)
 
-fun bts b = if b then "true" else "false"
-fun string_to_bool s =
-  if s = "true" then true else if s = "false" then false
-  else raise ERR "string_to_bool" ""
-
 fun only_concl x =
   let val (a,b) = dest_thm x in
     if null a then b else raise ERR "only_concl" ""
   end
-
-fun tts tm = case dest_term tm of
-    VAR(Name,Ty)       => Name
-  | CONST{Name,Thy,Ty} => Name
-  | COMB _ =>
-    let val (oper,argl) = strip_comb tm in
-      "(" ^ String.concatWith " " (map tts (oper :: argl)) ^ ")"
-    end
-  | LAMB(Var,Bod)      => "(LAMB " ^ tts Var ^ "." ^ tts Bod ^ ")"
-
-fun its i = int_to_string i
 
 fun list_mk_binop binop l = case l of
     [] => raise ERR "list_mk_binop" "empty"
@@ -637,6 +628,35 @@ fun strip_binop binop tm = case strip_comb tm of
 (* -------------------------------------------------------------------------
    I/O
    ------------------------------------------------------------------------- *)
+
+fun bts b = if b then "true" else "false"
+fun string_to_bool s =
+  if s = "true" then true else if s = "false" then false
+  else raise ERR "string_to_bool" ""
+
+fun tts tm = case dest_term tm of
+    VAR(Name,Ty)       => Name
+  | CONST{Name,Thy,Ty} => Name
+  | COMB _ =>
+    let val (oper,argl) = strip_comb tm in
+      "(" ^ String.concatWith " " (map tts (oper :: argl)) ^ ")"
+    end
+  | LAMB(Var,Bod)      => "(LAMB " ^ tts Var ^ "." ^ tts Bod ^ ")"
+
+fun its i = int_to_string i
+
+fun reall_to_string rl = String.concatWith " " (map rts rl)
+
+fun realll_to_string rll = 
+  String.concatWith "," (map reall_to_string rll)
+
+fun string_to_reall s =
+  map (valOf o Real.fromString) (String.tokens Char.isSpace s)
+
+fun string_to_realll s =
+  let val sl = String.tokens (fn x => x = #",") s in
+    map string_to_reall sl
+  end
 
 fun bare_readl path =
   let
@@ -957,9 +977,6 @@ fun best_in_distrib distrib =
   let fun cmp (a,b) = Real.compare (snd b,snd a) in
     fst (hd (dict_sort cmp distrib))
   end
-
-fun random_percent percent l =
-  part_n (Real.floor (percent * Real.fromInt (length l))) (shuffle l)
 
 val epsilon = 0.000000001
 
