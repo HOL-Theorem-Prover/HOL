@@ -31,13 +31,17 @@ sig
   type fpdata = {layer : layer, inv : vect, outv : vect, outnv : vect}
   type bpdata = {doutnv : vect, doutv : vect, dinv : vect, dw : mat}
 
+  (* dimension *)
+  val dimin_nn : nn -> int
+  val dimout_nn : nn -> int
+
   (* weights randomly initialized *)
   val random_nn : (real -> real) * (real -> real) -> int list -> nn
 
   (* forward and backward pass *)
   val fp_nn        : nn -> vect -> fpdata list
   val bp_nn        : fpdata list -> vect -> bpdata list
-  val bp_nn_wocost : fpdata list -> vect -> bpdata list
+  val bp_nn_doutnv : fpdata list -> vect -> bpdata list
 
   (* weight updates *)
   val update_nn         : train_param -> nn -> mat list -> nn

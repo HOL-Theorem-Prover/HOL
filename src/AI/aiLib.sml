@@ -141,8 +141,6 @@ fun dappend (k,v) d =
 
 fun dappendl kvl d = foldl (uncurry dappend) d kvl
 
-
-
 fun dconcat cmp dictl =
   let
     val l0 = List.concat (map dlist dictl)

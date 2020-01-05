@@ -73,6 +73,9 @@ fun diml_of sizel = case sizel of
     [] => []
   | a :: m => diml_aux a m
 
+fun dimin_nn nn = ((snd o mat_dim o #w o hd) nn) - 1
+fun dimout_nn nn = (fst o mat_dim o #w o last) nn
+
 fun random_nn (a,da) sizel =
   let
     val l = diml_of sizel
@@ -130,13 +133,14 @@ fun read_wl_sl sl =
 fun read_nn_sl sl =
   let
     val nl = map fst (read_diml (hd sl))
-    val matsl = split_nl nl (tl sl)
+    val matsl = split_nl nl (tl sl) handle HOL_ERR _ =>
+      raise ERR "read_nn_sl" (String.concatWith " # " (tl sl))
     val matl =  map read_mat_sl matsl
     fun f m = {a = tanh, da = dtanh, w = m}
   in
     map f matl
   end
-  handle Empty => raise ERR "read_nn_sl" ""
+  handle Empty => raise ERR "read_nn_sl" "empty"
 
 fun read_nn file = read_nn_sl (readl file)
 
@@ -208,7 +212,7 @@ fun bp_nn_aux rev_fpdatal doutnv =
       bpdata :: bp_nn_aux m (#dinv bpdata)
     end
 
-fun bp_nn_wocost fpdatal doutnv = rev (bp_nn_aux (rev fpdatal) doutnv)
+fun bp_nn_doutnv fpdatal doutnv = rev (bp_nn_aux (rev fpdatal) doutnv)
 
 fun bp_nn fpdatal expectv =
   let
