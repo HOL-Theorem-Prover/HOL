@@ -3,33 +3,28 @@ sig
 
   include Abbrev
 
-  type dhex = mlTreeNeuralNetwork.dhex
-  type dhtnn = mlTreeNeuralNetwork.dhtnn
+  type tnn = mlTreeNeuralNetwork.tnn
+  type tnnex = mlTreeNeuralNetwork.tnnex
+  type tnnparam = mlTreeNeuralNetwork.tnnparam
   type schedule = mlNeuralNetwork.schedule
-  type dhtnn_param = mlTreeNeuralNetwork.dhtnn_param
   type 'a rlex = 'a psBigSteps.rlex
   
   (* players *)
-  type splayer = (bool * dhtnn * bool * string * int)
+  type splayer = (bool * tnn * bool * string * int)
   type dplayer =
-    {playerid : string, dhtnn_param : dhtnn_param, schedule : schedule}
-  type rplayer = (dhtnn * string)
+    {playerid : string, tnnparam : tnnparam, schedule : schedule}
+  type rplayer = (tnn * string)
   
   (* parallelization *)
   type 'a pre_extsearch =
-    {
-    write_boardl : string -> 'a list -> unit,
-    read_boardl : string -> 'a list
-    }
+    {write_boardl : string -> 'a list -> unit,
+     read_boardl : string -> 'a list}
   type 'a extsearch = (splayer, 'a, bool * bool * 'a rlex) smlParallel.extspec
 
   (* reinforcement learning parameters *)
   type rl_param =
-    {
-    expname : string, 
-    ex_window : int, 
-    ncore_search : int, nsim : int, decay : real
-    }
+    {expname : string, ex_window : int, 
+     ncore_search : int, nsim : int, decay : real}
   
   type ('a,'b,'c) rlpreobj =
     {
@@ -38,7 +33,7 @@ sig
     game : ('a,'b) psMCTS.game,
     pre_extsearch : 'a pre_extsearch,
     pretobdict : (string, ('a -> term) * ('c -> 'a -> term)) Redblackmap.dict,
-    precomp_dhtnn : dhtnn -> 'a -> 'c,
+    precomp_tnn : tnn -> 'a -> 'c,
     dplayerl : dplayer list,
     level_targetl : int -> 'a list
     }

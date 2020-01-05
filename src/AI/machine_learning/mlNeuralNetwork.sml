@@ -13,17 +13,13 @@ open HolKernel Abbrev boolLib aiLib mlMatrix smlParallel
 val ERR = mk_HOL_ERR "mlNeuralNetwork"
 
 (* -------------------------------------------------------------------------
-   Activation and derivatives (with a trick)
+   Activation and derivatives (with an optimization)
    ------------------------------------------------------------------------- *)
 
 fun idactiv (x:real) = x:real
 fun didactiv (x:real) = 1.0
 fun tanh x = Math.tanh x
-fun dtanh x = 1.0 - (x:real) * x
-fun relu x  = if x > 0.0 then x else 0.0
-fun drelu x = if x < epsilon then 0.0 else 1.0
-fun leakyrelu x  = if x > 0.0 then x else 0.01 * x
-fun dleakyrelu x = if x < epsilon then 0.01 else 1.0
+fun dtanh fx = 1.0 - fx * fx
 
 (* -------------------------------------------------------------------------
    Types
@@ -31,7 +27,7 @@ fun dleakyrelu x = if x < epsilon then 0.01 else 1.0
 
 type layer = {a : real -> real, da : real -> real, w : real vector vector}
 type nn = layer list
-type train_param =
+type trainparam =
   {ncore: int, verbose: bool,
    learning_rate: real, batch_size: int, nepoch: int}
 
@@ -50,7 +46,7 @@ fun trainparam_of_string s =
     }
   end
 
-type schedule = train_param list
+type schedule = trainparam list
 
 fun write_schedule file schedule =
   writel file (map string_of_trainparam schedule)
@@ -353,7 +349,7 @@ val exl = List.tabulate (1000, fn _ => gen_idex dim);
 
 (* training *)
 val nn = random_nn (tanh,dtanh) [dim,4*dim,4*dim,dim];
-val param : train_param =
+val param : trainparam =
   {ncore = 1, verbose = true,
    learning_rate = 0.02, batch_size = 16, nepoch = 100}
 ;

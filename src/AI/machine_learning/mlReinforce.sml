@@ -28,20 +28,17 @@ fun log obj s = (log_in_eval obj s; print_endline s)
    Different representation of players
    ------------------------------------------------------------------------- *)
 
-type splayer = (bool * dhtnn * bool * string * int)
-type dplayer =
-  {playerid : string, dhtnn_param : dhtnn_param, schedule : schedule}
-type rplayer = (dhtnn * string)
+type splayer = (bool * nn * bool * string * int)
+type dplayer = {playerid : string, tnnparam : tnnparam, schedule : schedule}
+type rplayer = (tnn * string)
 
 (* -------------------------------------------------------------------------
    Parallelization of the search
    ------------------------------------------------------------------------- *)
 
 type 'a pre_extsearch =
-  {
-  write_boardl : string -> 'a list -> unit,
-  read_boardl : string -> 'a list
-  }
+  {write_boardl : string -> 'a list -> unit,
+   read_boardl : string -> 'a list}
 
 type 'a extsearch = (splayer, 'a, bool * bool * 'a rlex) smlParallel.extspec
 
@@ -250,7 +247,7 @@ fun rl_train rlobj exl =
     rplayerl
   end
 
-(* -------------------------------------------------------------------------
+(* -------------------------------type------------------------------------------
    Exploration
    ------------------------------------------------------------------------- *)
 

@@ -8,7 +8,7 @@
 structure mlTreeNeuralNetwork :> mlTreeNeuralNetwork =
 struct
 
-open HolKernel boolLib Abbrev aiLib mlMatrix mlNeuralNetwork 
+open HolKernel boolLib Abbrev aiLib mlMatrix mlNeuralNetwork smlParallel
 smlParallel mlTacticData
 
 val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
@@ -19,6 +19,7 @@ fun msg_err fs es = (print_endline (fs ^ ": " ^ es); raise ERR fs es)
    Random TNN
    ------------------------------------------------------------------------- *)
 
+type tnnparam = (term * int list) list
 type tnn = (term,nn) Redblackmap.dict
 
 fun oper_nn diml = case diml of
@@ -28,7 +29,7 @@ fun oper_nn diml = case diml of
     then random_nn (idactiv,didactiv) [0,last m] 
     else random_nn (tanh,dtanh) diml
 
-fun random_tnn operdiml = dnew Term.compare (map_snd oper_nn operdiml)
+fun random_tnn tnnparam = dnew Term.compare (map_snd oper_nn tnnparam)
 
 fun dim_std (nlayer,dim) oper =
   let 
@@ -353,6 +354,51 @@ fun tnn_accuracy tnn set =
   end
 
 (* -------------------------------------------------------------------------
+   Object for training different TNN in parallel
+   ------------------------------------------------------------------------- *)
+
+fun train_tnn_fun () (ex,schedule,tnnparam) =
+  let
+    val randtnn = random_tnn tnnparam
+    val (tnn,t) = add_time (train_tnn schedule randtnn) exl
+  in
+    print_endline ("Training time : " ^ rts t);
+    tnn
+  end
+
+fun write_noparam file (_:unit) = ()
+fun read_noparam file = ()
+
+fun write_tnnarg file (ex,schedule,tnnparam) =
+  (
+  write_tnnex (file ^ "_tnnex") ex;
+  write_schedule (file ^ "_schedule") schedule;
+  write_tnnparam (file ^ "_tnnparam") tnnparam
+  )
+fun read_tnnarg file =
+  let
+    val ex = read_tnnex (file ^ "_tnnex")
+    val schedule = read_schedule (file ^ "_schedule")
+    val tnnparam = read_tnnparam (file ^ "_tnnparam")
+  in
+    (ex,schedule,tnnparam)
+  end
+
+val traintnn_extspec =
+  {
+  self = "mlTreeNeuralNetwork.traintnn_extspec",
+  parallel_dir = default_parallel_dir ^ "_train",
+  reflect_globals = fn () => "()",
+  function = train_tnn_fun,
+  write_param = write_noparam,
+  read_param = read_noparam,
+  write_arg = write_tnnarg,
+  read_arg = read_tnnarg,
+  write_result = write_tnn,
+  read_result = read_tnn
+  }
+
+(* -------------------------------------------------------------------------
    Toy example: learning to guess if a term contains the variable "x"
    ------------------------------------------------------------------------- *)
 
@@ -394,10 +440,10 @@ val dim = 12;
 val randtnn = random_tnn_std (nlayer,dim) (vhead :: varl);
 
 (* training *)
-val train_param =
+val trainparam =
   {ncore = 1, verbose = true,
    learning_rate = 0.02, batch_size = 16, nepoch = 20};
-val schedule = [train_param];
+val schedule = [trainparam];
 val tnn = train_tnn schedule randtnn (trainex,testex);
 
 (* testing *)
