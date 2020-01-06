@@ -876,7 +876,7 @@ region instead. With prefix ARG prompt for a file-name to load."
            (let ((split-height-threshold nil)
                  (split-width-threshold 0))
              (display-buffer-pop-up-window b al))))
-       '((window-width . 80) (reusable-frames . nil))))
+       '((window-width . 83) (reusable-frames . nil))))
 
 (defvar hol-new-buffer-style hol-new-buffer-style-default)
 
