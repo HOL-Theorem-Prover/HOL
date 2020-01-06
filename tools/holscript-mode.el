@@ -52,6 +52,7 @@
 (defvar holscript-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "`" holscript-backquote-map)
+    (define-key map (kbd "<RET>") 'holscript-newline-and-relative-indent)
     ;;(define-key map "\M-f" 'forward-hol-tactic)
     ;;(define-key map "\M-b" 'backward-hol-tactic)
     ; (define-key map (kbd "C-M-<up>") 'hol-movement-backward-up-list)
@@ -435,6 +436,13 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
              (if no-error-found t (hol-correct-eqstring s1 p1 s2 p2)))))
   (message "checking for problematic names done"))))
 
+;; make newline do a newline and relative indent
+(defun holscript-newline-and-relative-indent ()
+  "Insert a newline, then perform a `relative indent'."
+  (interactive "*")
+  (delete-horizontal-space t)
+  (newline nil t)
+  (indent-relative))
 
 ;;indentation and other cleanups
 (defun hol-replace-tabs-with-spaces ()
