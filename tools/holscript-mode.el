@@ -804,3 +804,6 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
   '((((class color)) :foreground "DarkSlateGray4" :weight bold))
   "The face for highlighting `THEN' connectives in tactics."
   :group 'holscript-faces)
+
+(setq auto-mode-alist (cons '("Script\\.sml" . holscript-mode)
+                            auto-mode-alist))
