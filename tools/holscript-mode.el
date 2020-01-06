@@ -9,7 +9,8 @@
         '("^Definition\\>\\|^\\(Co\\)?Inductive\\>\\|^Termination\\>\\|^End\\>"
           . 'holscript-definition-syntax)
         '("^Datatype\\>" . 'holscript-definition-syntax)
-        '("\\<THENL?\\>" . 'holscript-then-syntax)
+        '("^THEN[1L]?\\>" . 'holscript-then-syntax)
+        '("[^A-Za-z0-9_']\\(THEN[1L]?\\)\\>" 1 'holscript-then-syntax)
         '("\\S.\\(>[->|]\\|\\\\\\\\\\)\\S." 1 'holscript-then-syntax)
         "^Type\\>"
         "^Overload\\>"
@@ -654,25 +655,30 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
   (smie-prec2->grammar
    (smie-bnf->prec2
     '((id)
-      (decl ("Theorem" id ":" quotedmaterial "Proof" tactic "QED")
-            ("Definition" id ":" quotedmaterial "Termination" tactic "End")
-            ("Definition" id ":" quotedmaterial "End")
+      (decl ("Theorem" theorem-contents "QED")
+            ("Definition" definition-contents "End")
             ("Datatype:" quotedmaterial "End"))
+      (theorem-contents (id-quoted "Proof" tactic))
+      (definition-contents (id-quoted "Termination" tactic) (id-quoted))
+      (id-quoted (id ":" quotedmaterial))
       (quotedmaterial)
       (tactic (tactic ">>" tactic)
               (tactic "\\\\" tactic)
               (tactic ">-" tactic)
               (tactic ">|" tactic)
+              (tactic "THEN" tactic)
+              (tactic "THEN1" tactic)
+              (tactic "THENL" tactic)
               ("[" tactics "]"))
       (tactics (tactic) (tactics "," tactics)))
     '((assoc ","))
-    '((assoc ">>" "\\\\" ">-"  ">|")))))
+    '((assoc ">>" "\\\\" ">-"  ">|" "THEN" "THEN1" "THENL")))))
 
 (defvar holscript-smie-keywords-regexp
   (regexp-opt '("Definition" "Theorem" "Proof" "QED" ">>" ">-" "\\\\"
                 ">|" "Termination" ":")))
 (defvar holscript-quotedmaterial-delimiter-regexp
-  (regexp-opt '("``" "`")))
+  (regexp-opt '("“" "”" "‘" "’")))
 (defun holscript-smie-forward-token ()
   (forward-comment (point-max))
   (cond
@@ -682,7 +688,7 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
    ((looking-at holscript-quotedmaterial-delimiter-regexp)
     (goto-char (match-end 0))
     (match-string-no-properties 0))
-   ((= 1 (syntax-class (syntax-after (point))))
+   ((equal 1 (syntax-class (syntax-after (point))))
     (buffer-substring-no-properties
      (point)
      (progn (skip-syntax-forward ".") (point))))
@@ -694,13 +700,16 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
 (defun holscript-smie-backward-token ()
   (forward-comment (- (point)))
   (cond
-   ((looking-back holscript-smie-keywords-regexp (- (point) 15) t)
+   (; am I just after a keyword?
+    (looking-back holscript-smie-keywords-regexp (- (point) 15) t)
     (goto-char (match-beginning 0))
     (match-string-no-properties 0))
-   ((looking-back holscript-quotedmaterial-delimiter-regexp (- (point) 1) t)
+   (; am I just after a quotation mark
+    (looking-back holscript-quotedmaterial-delimiter-regexp (- (point) 1) t)
     (goto-char (match-beginning 0))
     (match-string-no-properties 0))
-   ((= 1 (syntax-class (syntax-after (1- (point)))))
+   (; am I sitting after "punctuation"
+    (equal 1 (syntax-class (syntax-after (1- (point)))))
     (buffer-substring-no-properties
      (point)
      (progn (skip-syntax-backward ".") (point))))
