@@ -28,21 +28,18 @@ sig
   (* search function *)
   type ('a,'b) game =
     {
-    board_compare : 'a * 'a -> order,
+    status_of : 'a -> status, 
+    apply_move : 'b -> 'a -> 'a,
+    available_movel : 'a -> 'b list,
     string_of_board : 'a -> string,
-    movel: 'b list,
-    move_compare : 'b * 'b -> order,
-    string_of_move : 'b -> string,
-    status_of : 'a -> status,
-    available_move : 'a -> 'b -> bool,
-    apply_move : ('b -> 'a -> 'a)
+    string_of_move : 'b -> string
     }
 
   type ('a,'b) player = 'a -> real * ('b * real) list
   val uniform_player : ('a,'b) game -> ('a,'b) player
   val random_player : ('a,'b) game -> ('a,'b) player
 
-  type mcts_param =
+  type mctsparam =
     {
     nsim : int,
     stopatwin_flag : bool,
@@ -54,15 +51,15 @@ sig
     noise_gen : unit -> real
     }
 
-  type ('a,'b) mcts_obj =
+  type ('a,'b) mctsobj =
     {
-    mcts_param : mcts_param,
+    mctsparam : mctsparam,
     game : ('a,'b) game,
     player : ('a,'b) player
     }
 
-  val starttree_of : ('a,'b) mcts_obj -> 'a -> ('a,'b) tree
-  val mcts : ('a,'b) mcts_obj -> ('a,'b) tree -> ('a,'b) tree
+  val starttree_of : ('a,'b) mctsobj -> 'a -> ('a,'b) tree
+  val mcts : ('a,'b) mctsobj -> ('a,'b) tree -> ('a,'b) tree
 
   (* statistics *)
   val mostexplored_path : ('a,'b) tree -> id -> id list
@@ -70,7 +67,7 @@ sig
   val trace_win : ('a -> status) -> ('a,'b) tree -> id -> ('a,'b) node list
 
   (* toy example *)
-  type toy_board = (int * int)
+  type toy_board = (int * int * int)
   datatype toy_move = Incr | Decr
   val toy_game : (toy_board,toy_move) game
 

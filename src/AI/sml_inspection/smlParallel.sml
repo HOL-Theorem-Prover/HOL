@@ -424,7 +424,8 @@ val idspec : (unit,int,int) extspec =
   write_param = let fun f _ () = () in f end,
   read_param = let fun f _ = () in f end,
   write_arg = let fun f file arg = writel file [its arg] in f end,
-  read_arg = let fun f file = string_to_int (only_hd (readl file)) in f end,
+  read_arg = let fun f file = 
+     string_to_int (singleton_of_list (readl file)) in f end,
   write_result = let fun f file r = writel file [its r] in f end,
   read_result = let fun f file = string_to_int (hd (readl_rm file)) in f end
   }

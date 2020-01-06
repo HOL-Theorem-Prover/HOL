@@ -22,6 +22,7 @@ sig
   val find_subtm : term * pos -> term
   val narg_ge : int -> term * pos -> bool
   val all_pos : term -> pos list
+  val all_subtmpos : term -> (term * pos) list
 
   (* equality *)
   val sym : term -> term

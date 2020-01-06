@@ -9,65 +9,46 @@ sig
   type schedule = mlNeuralNetwork.schedule
   type 'a rlex = 'a psBigSteps.rlex
   
-  (* players *)
-  type splayer = (bool * tnn * bool * string * int)
-  type dplayer =
-    {playerid : string, tnnparam : tnnparam, schedule : schedule}
-  type rplayer = (tnn * string)
-  
-  (* parallelization *)
-  type 'a pre_extsearch =
+  (* I/O *)
+  type 'a gameio =
     {write_boardl : string -> 'a list -> unit,
      read_boardl : string -> 'a list}
-  type 'a extsearch = (splayer, 'a, bool * bool * 'a rlex) smlParallel.extspec
+  val write_rlex : 'a gameio -> string -> 'a rlex -> unit
+  val read_rlex : 'a gameio -> string -> 'a rlex
 
-  (* reinforcement learning parameters *)
-  type rl_param =
-    {expname : string, ex_window : int, 
-     ncore_search : int, nsim : int, decay : real}
+  (* players *)
+  type splayer = bool * tnn * bool * int
+  type 'a dplayer = 
+    {tob : 'a -> term list, schedule : schedule, tnnparam : tnnparam}
   
-  type ('a,'b,'c) rlpreobj =
+  (* parallelization of the search *)
+  type 'a es = (splayer, 'a, bool * bool * 'a rlex) smlParallel.extspec
+
+  (* all parameters *)
+  type rlparam =
+    {expname : string, exwindow : int, ncore : int, nsim : int, decay : real}
+   
+  type ('a,'b) rlobj =
     {
-    rl_param : rl_param,
-    max_bigsteps : 'a -> int,
+    rlparam : rlparam,
     game : ('a,'b) psMCTS.game,
-    pre_extsearch : 'a pre_extsearch,
-    pretobdict : (string, ('a -> term) * ('c -> 'a -> term)) Redblackmap.dict,
-    precomp_tnn : tnn -> 'a -> 'c,
-    dplayerl : dplayer list,
-    level_targetl : int -> 'a list
+    gameio : 'a gameio,
+    level_targetl : int -> 'a list,
+    dplayer : 'a dplayer
     }
   
-  type 'a rlobj =
-    {
-    rl_param : rl_param,
-    extsearch : 'a extsearch,
-    tobdict : (string, 'a -> term) Redblackmap.dict,
-    dplayerl : dplayer list,
-    write_exl : string -> 'a rlex -> unit,
-    read_exl : string -> 'a rlex,
-    board_compare : 'a * 'a -> order,
-    level_targetl : int -> 'a list
-    }
-  
-  val mk_extsearch : string -> ('a,'b,'c) rlpreobj -> 'a extsearch
-  val mk_rlobj : ('a,'b,'c) rlpreobj -> 'a extsearch -> 'a rlobj
+  val mk_bsobj : ('a,'b) rlobj -> splayer -> ('a,'b) psBigSteps.bsobj
+  val mk_extsearch : string -> ('a,'b) rlobj -> 'a es
 
-  (* communication files *)
-  val log : 'a rlobj -> string -> unit
-  val retrieve_player : 'a rlobj -> int -> rplayer
-
-  (* phases *)
-  val rl_train_sync: 
-     'a rlobj -> ((int * int) * int) -> ((int * int) * int)
-  val explore_standalone : (bool * bool) -> 'a rlobj -> rplayer -> 'a list -> 
-     'a rlex * bool
-  val rl_explore_sync: 
-     'a rlobj -> ((int * int) * int) -> ((int * int) * int)
+  (* storage *)
+  val log : ('a,'b) rlobj -> string -> unit
+  val store_rlex : ('a,'b) rlobj -> int -> 'a rlex -> unit  
+  val retrieve_rlex : ('a,'b) rlobj -> int -> 'a rlex
+  val store_tnn : ('a,'b) rlobj -> int -> tnn -> unit
+  val retrieve_tnn : ('a,'b) rlobj -> int -> tnn
   
   (* main functions *)
-  val rl_start_sync : 'a rlobj -> int -> unit
-  val rl_restart_sync : 'a rlobj -> ((int * int) * int) -> unit
-
+  val rl_start : ('a,'b) rlobj * 'a es -> int -> unit
+  val rl_restart : int -> ('a,'b) rlobj * 'a es -> int -> unit
 
 end

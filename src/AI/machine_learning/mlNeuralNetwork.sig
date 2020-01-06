@@ -11,10 +11,6 @@ sig
   val didactiv : real -> real
   val tanh : real -> real
   val dtanh : real -> real
-  val relu : real -> real
-  val drelu : real -> real
-  val leakyrelu : real -> real
-  val dleakyrelu : real -> real
 
   (* neural network *)
   type layer = {a : real -> real, da : real -> real, w : mat}

@@ -408,7 +408,7 @@ fun read_boardl file =
   end
 
 fun write_target file target = write_boardl (file ^ "_target") [target]
-fun read_target file = only_hd (read_boardl (file ^ "_target"))
+fun read_target file = singleton_of_list (read_boardl (file ^ "_target"))
 
 fun write_exl file exl =
   let val (boardl,evall,polil) = split_triple exl in
@@ -437,9 +437,10 @@ fun read_splayer file =
     val dhtnn = read_dhtnn (file ^ "_dhtnn")
     val (unib,noiseb) =
       pair_of_list (map string_to_bool
-        (String.tokens Char.isSpace (only_hd (readl (file ^ "_flags")))))
-    val playerid = only_hd (readl (file ^ "_playerid"))
-    val nsim = string_to_int (only_hd (readl (file ^ "_nsim")))
+        (String.tokens Char.isSpace 
+           (singleton_of_list (readl (file ^ "_flags")))))
+    val playerid = singleton_of_list (readl (file ^ "_playerid"))
+    val nsim = string_to_int (singleton_of_list (readl (file ^ "_nsim")))
   in
     (unib,dhtnn,noiseb,playerid,nsim)
   end

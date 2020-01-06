@@ -75,6 +75,14 @@ fun all_pos tm =
     [] :: List.concat (mapi f argl)
   end
 
+fun all_subtmpos tm =
+  let
+    val (oper,argl) = strip_comb tm
+    fun f i arg = map_snd (fn x => i :: x) (all_subtmpos arg)
+  in
+    (tm,[]) :: List.concat (mapi f argl)
+  end
+
 (* -------------------------------------------------------------------------
    Equality
    ------------------------------------------------------------------------- *)

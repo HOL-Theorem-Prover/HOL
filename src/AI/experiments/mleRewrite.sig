@@ -4,7 +4,7 @@ sig
   include Abbrev
 
   type board = term * term * int
-  type move = string * term
+  type move = term * int list
 
   (* vocabulary *)
   val oo : term * term -> term
@@ -15,17 +15,19 @@ sig
   val cK : term
   val cE : term
   val cts : term -> string 
+  
+  (* example generation *)
+  val random_board : int -> int -> board
   val level_targetl : int -> board list
-  (* helpers *)
-  val subst_match : term -> term -> term
+  
+  (* test *)
+  val subst_cmatch : term -> term -> term
   val game : (board,move) psMCTS.game
   val mcts_test : int -> board -> bool * (board, move) psMCTS.tree
-  val movel : move list
+  
+  (* reinforcement learning *)
+  val extsearch : board mlReinforce.es
+  val rlobj : (board,move) mlReinforce.rlobj
 
-  val schedule_base : mlNeuralNetwork.schedule
-  val dhtnn_param_base : mlTreeNeuralNetwork.dhtnn_param
-  val extsearch : board mlReinforce.extsearch
-  val rlpreobj : (board,move,unit) mlReinforce.rlpreobj
-  val rlobj : board mlReinforce.rlobj
 
 end

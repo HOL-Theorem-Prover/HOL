@@ -52,17 +52,35 @@ fun random_tnn_std (nlayer,dim) operl =
 
 fun write_tnn file tnn =
   let val (l1,l2) = split (dlist tnn) in
-    export_terml (file ^ "_operl") l1;
-    writel (file ^ "_nnl") 
+    export_terml (file ^ "_oper") l1;
+    writel (file ^ "_nn") 
       [String.concatWith "\n\nnnstop\n\n" (map string_of_nn l2)]
   end
 
 fun read_tnn file =
   let
-    val l1 = import_terml (file ^ "_operl") 
-    val l2 = map read_nn_sl (rpt_split_sl "nnstop" (readl (file ^ "_nnl")))
+    val l1 = import_terml (file ^ "_oper") 
+    val l2 = map read_nn_sl (rpt_split_sl "nnstop" (readl (file ^ "_nn")))
   in
     dnew Term.compare (combine (l1,l2))
+  end
+
+fun write_tnnparam file tnnparam =
+  let 
+    fun ilts x = String.concatWith " " (map its x)
+    val (l1,l2) = split tnnparam 
+  in
+    export_terml (file ^ "_oper") l1;
+    writel (file ^ "_diml") (map ilts l2)
+  end
+
+fun read_tnnparam file =
+  let
+    val l1 = import_terml (file ^ "_oper") 
+    fun stil s = map string_to_int (String.tokens Char.isSpace s)
+    val l2 = map stil (readl (file ^ "_diml"))
+  in
+    combine (l1,l2)
   end
 
 (* -------------------------------------------------------------------------
@@ -230,7 +248,7 @@ fun se_of fpdict (tm,ev) =
   let
     val fpdatal = dfind tm fpdict
     val doutnv = diff_rvect ev (#outnv (last fpdatal))
-    val r = only_hd (vector_to_list doutnv)
+    val r = singleton_of_list (vector_to_list doutnv)
   in
     r * r
   end
@@ -286,9 +304,9 @@ fun train_tnn_nepoch param pf i tnn (train,test) =
     val batchl = mk_batch (#batch_size param) (shuffle train)
     val _ = if null batchl then msg_err "train_tnn_nepoch" "empty" else ()
     val (newtnn,loss) = train_tnn_epoch param pf [] tnn batchl
-    val testloss = average_real (map (fp_loss newtnn) test)
-    val _ = msg param (its i ^ " train: " ^ pretty_real loss ^
-      " test: " ^ pretty_real testloss)
+    val testloss = if null test then "" else
+      (" test: " ^ pretty_real (average_real (map (fp_loss newtnn) test)))
+     val _ = msg param (its i ^ " train: " ^ pretty_real loss ^ testloss)  
   in
     train_tnn_nepoch param pf (i+1) newtnn (train,test)
   end
@@ -360,10 +378,9 @@ fun tnn_accuracy tnn set =
 fun train_tnn_fun () (ex,schedule,tnnparam) =
   let
     val randtnn = random_tnn tnnparam
-    val (tnn,t) = add_time (train_tnn schedule randtnn) exl
+    val (tnn,t) = add_time (train_tnn schedule randtnn) (ex,[])
   in
-    print_endline ("Training time : " ^ rts t);
-    tnn
+    print_endline ("Training time : " ^ rts t); tnn
   end
 
 fun write_noparam file (_:unit) = ()

@@ -20,43 +20,53 @@ val ERR = mk_HOL_ERR "mleRewrite"
    ------------------------------------------------------------------------- *)
 
 fun new_const (s,ty) = mk_var (s,ty)
-val cI = new_const ("cI",alpha);
-val cK = new_const ("cK",alpha);
-val cS = new_const ("cS",alpha);
-val cA = new_const ("cA",``:'a -> 'a -> 'a``);
-val cT = new_const ("cT",``:'a -> 'a``);
-val vf = mk_var ("vf",alpha);
-val vg = mk_var ("vg",alpha);
-val vy = mk_var ("vy",alpha);
-val vx = mk_var ("vx",alpha);
-infix oo;
-fun op oo (a,b) = list_mk_comb (cA,[a,b]);
-fun tag x = mk_comb (cT,x);
+val cI = new_const ("cI",alpha)
+val cK = new_const ("cK",alpha)
+val cS = new_const ("cS",alpha)
+val cA = new_const ("cA",``:'a -> 'a -> 'a``)
+val cT = new_const ("cT",``:'a -> 'a``)
+val cE = mk_var ("cE", ``:'a -> 'a -> 'a``)
+val vf = mk_var ("vf",alpha)
+val vg = mk_var ("vg",alpha)
+val vy = mk_var ("vy",alpha)
+val vx = mk_var ("vx",alpha)
+val eq_adj = mk_var ("eq_adj", ``:'a -> bool -> 'a``)
+val head_eval = mk_var ("head_eval", ``:'a -> 'a``)
+val head_poli = mk_var ("head_poli", ``:'a -> 'a``)
+
+fun is_cconst x = is_var x andalso hd_string (fst (dest_var x)) = #"c"
+
+fun mk_cE (a,b) = list_mk_comb (cE,[a,b])
+fun tag x = mk_comb (cT,x)
+fun tag_heval x = mk_comb (head_eval,x)
+fun tag_hpoli x = mk_comb (head_poli,x)
+
+infix oo
+fun op oo (a,b) = list_mk_comb (cA,[a,b])
+
+val s_thm = mk_eq (cS oo vf oo vg oo vx, (vf oo vx) oo (vg oo vx))
+val k_thm = mk_eq (cK oo vx oo vy, vx)
 
 (* -------------------------------------------------------------------------
-   Board
+   Pretty-printing combinator expressions
    ------------------------------------------------------------------------- *)
 
-type board = term * term * int
-val board_compare = triple_compare Term.compare Term.compare Int.compare
-fun string_of_board (a,b,c) = tts a ^ " " ^ tts b ^ " " ^ its c
+fun cts_par tm = 
+  if is_cconst tm then tl_string (fst (dest_var tm)) else 
+    case (snd (strip_comb tm)) of
+      [a] => "[" ^ cts a ^ "]"
+    | [a,b] =>  "(" ^ cts a ^ " " ^ cts_par b ^ ")"
+    | _ => raise ERR "cts_par" ""
+and cts tm = 
+  if is_cconst tm then tl_string (fst (dest_var tm)) else 
+    case (snd (strip_comb tm)) of
+      [a] => "[" ^ cts a ^ "]"
+    | [a,b] =>  cts a ^ " " ^ cts_par b
+    | _ => raise ERR "cts" ""
 
 (* -------------------------------------------------------------------------
-   Move
+   Rewriting
    ------------------------------------------------------------------------- *)
-
-type move = string * term
-
-val k_thm = mk_eq (cK oo vx oo vy, vx);
-val k_tag = let val (a,b) = dest_eq k_thm in mk_eq (tag a, b) end;
-val s_thm = mk_eq (cS oo vf oo vg oo vx, (vf oo vx) oo (vg oo vx));    
-val s_tag = let val (a,b) = dest_eq s_thm in mk_eq (tag a, b) end;
-val rand_thm = mk_eq (tag (vf oo vg), vf oo tag vg);
-val rator_thm = mk_eq (tag (vf oo vg), tag vf oo vg);
-
-val movel = [("k",k_tag),("s",s_tag),("rand",rand_thm),("rator",rator_thm)];
-
-fun is_cconst x = hd_string (fst (dest_var x)) = #"c"
 
 fun is_cmatch eq tm = 
   let val (sub,_) = match_term (lhs eq) tm in
@@ -65,68 +75,62 @@ fun is_cmatch eq tm =
   handle HOL_ERR _ => false
 
 fun exists_cmatch eq tm = can (find_term (is_cmatch eq)) tm
-fun is_rewritable tm = exists (C exists_cmatch tm) [k_thm,s_thm]
+fun is_rewritable tm = exists (C exists_cmatch tm) [s_thm,k_thm]
 
-fun subst_match eq tm =
+fun subst_cmatch eq tm =
   let 
     val subtm = find_term (is_cmatch eq) tm
     val sub1 = fst (match_term (lhs eq) subtm)
     val eqinst = subst sub1 eq
     val sub2 = [{redex = lhs eqinst, residue = rhs eqinst}]
   in
-    subst_occs [[1]] sub2 tm
+    subst sub2 tm
   end
+  handle HOL_ERR _ => raise ERR "subst_cmatch" (cts tm ^ " -- " ^ tts eq)
 
-fun contains_tag tm = can (find_term (term_eq cT)) tm
-
-fun string_of_move move = fst move
-fun move_compare (m1,m2) = 
-  String.compare (string_of_move m1, string_of_move m2)
-
-fun apply_move_once (move : move) (tm1,tm2,n) = 
+fun tag_subtm (tm,pos) =
+  if null pos then tag tm else
   let 
-    val tm1' = subst_match (snd move) tm1
-    val tm1'' = if contains_tag tm1' then tm1' else tag tm1' 
+    val (oper,argl) = strip_comb tm 
+    fun f i arg = 
+      if i = hd pos then tag_subtm (List.nth (argl,hd pos), tl pos) else arg
   in
-    (tm1'', tm2, n)
+    list_mk_comb (oper, mapi f argl)
   end
 
-fun apply_move_once_count (move : move) (tm1,tm2,n) = 
-  let 
-    val tm1' = subst_match (snd move) tm1
-    val tm1'' = if contains_tag tm1' then tm1' else tag tm1' 
-  in
-    (tm1'', tm2, n-1)
-  end
+fun tag_eq eq = let val (a,b) = dest_eq eq in mk_eq (tag a, b) end
 
-fun available_move (board as (tm,_,_)) (move as (_,eq)) = 
-  if not (can (subst_match eq) tm) then false else
-  let val tm' = subst_match eq tm in
-    if not (contains_tag tm') then true else
-    let val subtm = 
-      rand (find_term (fn x => term_eq (fst (dest_comb x)) cT) tm') 
-    in
-      is_rewritable subtm
-    end
-  end
+(* -------------------------------------------------------------------------
+   Board
+   ------------------------------------------------------------------------- *)
+
+type board = term * term * int
+
+fun string_of_board (a,b,c) = cts a ^ "\n" ^ cts b ^ "\n" ^ its c
 
 fun status_of (board as (tm1,tm2,n)) =
   if term_eq tm1 tm2 then Win
-  else 
-    if n <= 0 orelse not (is_rewritable tm1) orelse
-       null (filter (available_move board) movel) 
-    then Lose 
+  else if n <= 0 orelse not (is_rewritable tm1) then Lose 
   else Undecided
 
-fun apply_uniq_move board =
-  if status_of board <> Undecided then board else
-    case filter (available_move board) movel of
-      [] => board
-    | [a] => apply_uniq_move (apply_move_once a board)
-    | _ => board
+(* -------------------------------------------------------------------------
+   Move
+   ------------------------------------------------------------------------- *)
 
-fun apply_move move board = 
-  apply_uniq_move (apply_move_once_count move board)
+type move = term * int list
+
+fun string_of_move (eq,pos) = tts eq ^ ", " ^ string_of_pos pos
+
+fun apply_move (eq,pos) (tm1,tm2,n) = 
+  (subst_cmatch (tag_eq eq) (tag_subtm (tm1,pos)), tm2, n-1)
+
+fun moveo_poseq tm ((subtm,pos),eq) =
+  if is_cmatch eq subtm then SOME (eq,pos) else NONE
+
+fun available_movel (tm,_,_) = 
+  let val l = cartesian_product (all_subtmpos tm) ([s_thm,k_thm]) in
+    List.mapPartial (moveo_poseq tm) l
+  end
 
 (* -------------------------------------------------------------------------
    Game
@@ -134,21 +138,18 @@ fun apply_move move board =
 
 val game : (board,move) game =
   {
-  board_compare = board_compare,
-  string_of_board = string_of_board,
-  movel = movel,
-  move_compare = move_compare,
-  string_of_move = string_of_move,
   status_of = status_of,
-  available_move = available_move,
-  apply_move = apply_move
+  apply_move = apply_move,
+  available_movel = available_movel,  
+  string_of_board = string_of_board,
+  string_of_move = string_of_move
   }
 
 (* -------------------------------------------------------------------------
    MCTS test with uniform player
    ------------------------------------------------------------------------- *)
 
-fun mk_mcts_param nsim =
+fun mk_mctsparam nsim =
   {
   nsim = nsim, stopatwin_flag = true,
   decay = 1.0, explo_coeff = 2.0,
@@ -164,7 +165,7 @@ fun string_of_status status = case status of
 fun mcts_test nsim board =
   let
     val mcts_obj =
-      {mcts_param = mk_mcts_param nsim,
+      {mctsparam = mk_mctsparam nsim,
        game = game,
        player = random_player game}
     val tree = starttree_of mcts_obj board
@@ -175,28 +176,16 @@ fun mcts_test nsim board =
     (b, endtree)
   end
 
-fun cts_par tm = 
-  if is_const tm then tl_string (fst (dest_const tm)) else 
-    case (snd (strip_comb tm)) of
-      [a] => "[" ^ cts a ^ "]"
-    | [a,b] =>  "(" ^ cts a ^ " " ^ cts_par b ^ ")"
-    | _ => raise ERR "cts_par" ""
-and cts tm = 
-  if is_const tm then tl_string (fst (dest_const tm)) else 
-    case (snd (strip_comb tm)) of
-      [a] => "[" ^ cts a ^ "]"
-    | [a,b] =>  cts a ^ " " ^ cts_par b
-    | _ => raise ERR "cts" ""
-
 (*
 load "aiLib"; open aiLib;
 load "psMCTS"; open psMCTS;
-load "psTermGen"; open psTermGen;
+load "mleLib"; open mleLib;
 load "mleRewrite"; open mleRewrite;
-val board = hd (level_targetl 30);
-val (b,endtree) = mcts_test 16000 board1;
+val board = random_board 20 20;
+val (_,endtree) = mcts_test 1600 board;
 val nodel = trace_win (#status_of game) endtree [];
-todo: cite machine learning and combinators paper statistics.
+val step = (length nodel - 1);
+val tm1 = #1 (#board (hd nodel)); cts tm1;
 *)
 
 (* -------------------------------------------------------------------------
@@ -205,48 +194,51 @@ todo: cite machine learning and combinators paper statistics.
 
 fun random_walk n board =
   if n <= 0 then board else
-  let val movel' = filter (available_move board) movel in
-    if null movel' then board else
-    random_walk (n-1) (apply_move (random_elem movel') board)
+  let val movel = available_movel board in
+    if null movel then board else
+    random_walk (n-1) (apply_move (random_elem movel) board)
   end
 
 fun random_cterm n = random_term [cA,cS,cK] (n,alpha);
 fun random_board size nstep =
   let 
-    val tm = tag (random_cterm (2 * size - 1))
-    val board1 = (tm, mk_var("none",alpha), nstep + 1)
+    val tm = random_cterm (2 * size - 1)
+    val board1 = (tm, mk_var("dummy",alpha),0)
     val board2 = random_walk nstep board1
   in
-    (tm, #1 board2, 2 * (nstep + 1 - (#3 board2))) 
+    (tm, #1 board2, 2 * (~(#3 board2))) 
   end
 
 fun level_target level =
-  let 
-    val size = random_int (5, level) 
-    val nstep = random_int (1, level)
-  in
-    apply_uniq_move (random_board size nstep)
-  end  
+  random_board (random_int (5, level)) (random_int (1, level))
 
 fun level_targetl level = List.tabulate (400, fn _ => level_target level)
 
 (*
 load "aiLib"; open aiLib;
 load "mleRewrite"; open mleRewrite;
-load "psTermGen"; open psTermGen;
-val [(tm1,tm2,n)] = level_targetl 20 1;
-print_endline (cts tm1); 
-print_endline (cts tm2);
-print_endline (its n);
+val board = random_board 20 5;
+val boardl = level_targetl 20;
+print_endline (#string_of_board (#game rlobj) board); 
 *)
 
 (* -------------------------------------------------------------------------
    Neural representation of the board
    ------------------------------------------------------------------------- *)
 
-val cE = mk_var ("cE", ``:'a -> 'a -> 'a``)
-fun term_of_board (tm1,tm2,n) = list_mk_comb (cE,[tm1,tm2])
-val operl = map_assoc arity_of [cE,cA,cT,cS,cK]
+fun term_of_board (tm1,tm2,_) = mk_cE (tm1,tm2)
+
+fun term_of_move (tm1,tm2,_) (eq,pos) =
+  let val tagboard = mk_cE (tag_subtm (tm1,pos),tm2) in
+    list_mk_comb (eq_adj,[tagboard,eq])
+  end
+
+fun tob board = 
+  tag_heval (term_of_board board) ::
+  map (tag_hpoli o term_of_move board) (available_movel board)
+
+val operl = [eq_adj,head_eval,head_poli,``$= :'a->'a->bool``, 
+  cE,cT,cA,cS,cK,vx,vy,vf,vg];
 
 (* -------------------------------------------------------------------------
    Parallelization
@@ -256,80 +248,104 @@ fun write_boardl file boardl =
   let val (l1,l2,l3) = split_triple boardl in
     export_terml (file ^ "_in") l1;
     export_terml (file ^ "_out") l2; 
-    writel (file ^ "_max") (map its l3)
+    writel (file ^ "_timer") (map its l3)
   end
+
 fun read_boardl file =
   let
     val l1 = import_terml (file ^ "_in")
     val l2 = import_terml (file ^ "_out")
-    val l3 = map string_to_int (readl (file ^ "_max"))
+    val l3 = map string_to_int (readl (file ^ "_timer"))
   in
     combine_triple (l1,l2,l3)
   end
 
-val pre_extsearch = {write_boardl = write_boardl, read_boardl = read_boardl}
+val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
 
 (* -------------------------------------------------------------------------
    Players
    ------------------------------------------------------------------------- *)
 
-val schedule_base =
-  [{ncore = 1, verbose = true, learning_rate = 0.02,
+val schedule =
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 20}]
 
-val dhtnn_param_base =
-  {
-  operl = operl, nlayer_oper = 2,
-  nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 8, dimpoli = length movel
-  }
+val tnnparam = map_assoc (dim_std (2,12)) operl
 
-val player_base =
-  {playerid = "base",
-   dhtnn_param = dhtnn_param_base, schedule = schedule_base}
-
-fun term_of_boardc (_:unit) b = term_of_board b
-
-val pretobdict = dnew String.compare
-  [("base", (term_of_board, term_of_boardc))]
+val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 (* -------------------------------------------------------------------------
    Interface
    ------------------------------------------------------------------------- *)
 
-val rl_param =
-  {expname = "mleRewrite-combin-1", ex_window = 80000,
-   ncore_search = 4, nsim = 160, decay = 1.0}
+val rlparam =
+  {expname = "mleRewrite-combin-1", exwindow = 80000,
+   ncore = 32, nsim = 1600, decay = 1.0}
 
-val rlpreobj : (board,move,unit) rlpreobj =
+val rlobj : (board,move) rlobj =
   {
-  rl_param = rl_param,
-  max_bigsteps = (fn (_,_,n) => 10000),
+  rlparam = rlparam,
   game = game,
-  pre_extsearch = pre_extsearch,
-  pretobdict = pretobdict,
-  precomp_dhtnn = (fn _ => (fn _ => ())),
-  dplayerl = [player_base],
-  level_targetl = level_targetl
+  gameio = gameio,
+  level_targetl = level_targetl,
+  dplayer = dplayer
   }
 
-val extsearch = mk_extsearch "mleRewrite.extsearch" rlpreobj
-val rlobj = mk_rlobj rlpreobj extsearch
+val extsearch = mk_extsearch "mleRewrite.extsearch" rlobj
 
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
-
-
-val exl = #read_exl rlobj 
-  (HOLDIR ^ "/src/AI/experiments/eval/mleRewrite-combin-1/ex0");
-fun term_of_board (tm1,tm2,n) = list_mk_comb (cE,[tm1,tm2])
-val dhex = map (fn (a,b,c) => (term_of_board a,b,c)) exl;
-
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-val dhtnn = train_dhtnn schedule_base (random_dhtnn dhtnn_param_base) dhex;
-
-val r = rl_start_sync rlobj 6;
+val r = rl_start (rlobj,extsearch) 20;
 *)
+
+(* -------------------------------------------------------------------------
+   Bigsteps test
+   ------------------------------------------------------------------------- *)
+
+(*
+load "aiLib"; open aiLib;
+load "mlReinforce"; open mlReinforce;
+load "mleRewrite"; open mleRewrite;
+load "psBigSteps"; open psBigSteps;
+
+val game = #game rlobj;
+
+val mctsparam =
+  {
+  nsim = 1600,
+  stopatwin_flag = false,
+  decay = 1.0,
+  explo_coeff = 2.0,
+  noise_all = true, noise_root = false,
+  noise_coeff = 0.25, noise_gen = random_real
+  };
+
+val bsobj : (board,move) bsobj =
+  {
+  verbose = true,
+  temp_flag = false,
+  player = psMCTS.uniform_player game,
+  game = game,
+  mctsparam = mctsparam
+  };
+
+val board = random_board 40 5;
+val _ = run_bigsteps bsobj board;
+val (b1,b2,rlex,rootl) = run_bigsteps bsobj board;
+*)
+
+(* -------------------------------------------------------------------------
+   Training test
+   ------------------------------------------------------------------------- *)
+
+(*
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+val {schedule,tnnparam,tob} = #dplayer rlobj;
+fun f (a,b) = combine (tob a, map single b);
+val tnnex = map f (List.concat (List.tabulate (16, fn _ => rlex)));
+val tnn = train_tnn schedule (random_tnn tnnparam) (tnnex,[]);
+*)
+
 
 end (* struct *)

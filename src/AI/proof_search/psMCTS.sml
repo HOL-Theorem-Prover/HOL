@@ -32,30 +32,27 @@ type ('a,'b) node =
 type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
 
 (* -------------------------------------------------------------------------
-   Game specification, player (value + policy) and additional search
-   parameters
+   Game specification
    ------------------------------------------------------------------------- *)
 
 type ('a,'b) game =
   {
-  board_compare : 'a * 'a -> order,
+  status_of : 'a -> status, 
+  apply_move : 'b -> 'a -> 'a,
+  available_movel : 'a -> 'b list,
   string_of_board : 'a -> string,
-  movel: 'b list,
-  move_compare : 'b * 'b -> order,
-  string_of_move : 'b -> string,
-  status_of : 'a -> status,
-  available_move : 'a -> 'b -> bool,
-  apply_move : ('b -> 'a -> 'a)
+  string_of_move : 'b -> string
   }
 
-fun uniform_player game board = (0.0, map (fn x => (x,1.0)) (#movel game))
+fun uniform_player game board = 
+  (0.0, map (fn x => (x,1.0)) (#available_movel game board))
 
 fun random_player game board = 
-  (random_real (), map (fn x => (x,1.0)) (#movel game))
+  (random_real (), map (fn x => (x,1.0)) (#available_movel game board))
 
 type ('a,'b) player = 'a -> real * ('b * real) list
 
-type mcts_param =
+type mctsparam =
   {
   nsim : int,
   stopatwin_flag : bool,
@@ -67,9 +64,9 @@ type mcts_param =
   noise_gen : unit -> real
   }
 
-type ('a,'b) mcts_obj =
+type ('a,'b) mctsobj =
   {
-  mcts_param : mcts_param,
+  mctsparam : mctsparam,
   game : ('a,'b) game,
   player : ('a,'b) player
   }
@@ -168,20 +165,10 @@ fun add_noise param prepol =
    Node creation
    ------------------------------------------------------------------------- *)
 
-fun filter_available game board (e,p) =
-  let
-    val p' = filter (fn (m,_) => (#available_move game) board m) p
-    val _ = if null p' 
-      then (print_endline (#string_of_board game board);
-            raise ERR "filter_available" "") else ()
-  in
-    (e,p')
-  end
-
 fun node_create_backup obj tree (id,board) =
   let
     val game = #game obj
-    val param = #mcts_param obj
+    val param = #mctsparam obj
     val node =
       let
         fun add_cid pol = let fun f i x = (x, i :: id) in mapi f pol end
@@ -189,7 +176,7 @@ fun node_create_backup obj tree (id,board) =
         val (value,pol1) = case status of
             Win       => (1.0,[])
           | Lose      => (0.0,[])
-          | Undecided => filter_available game board ((#player obj) board)
+          | Undecided => (#player obj) board
         val pol2 = normalize_prepol pol1
         val pol3 =
           if #noise_all param orelse (#noise_root param andalso null id)
@@ -238,7 +225,7 @@ fun select_child obj tree id =
   in
     if status <> Undecided then Backup (id,score_status status) else
       let
-        val param = #mcts_param obj
+        val param = #mctsparam obj
         val l1 = map_assoc (puct_choice param tree (#vis node)) (#pol node)
         val _ = if null l1 then raise ERR "select_child" "" else ()
         val l2 = dict_sort compare_rmax l1
@@ -279,7 +266,7 @@ fun starttree_of obj board =
 
 fun mcts obj starttree =
   let
-    val param = #mcts_param obj
+    val param = #mctsparam obj
     fun loop tree =
       if #vis (dfind [] tree) > Real.fromInt (#nsim param) + 0.5 orelse
          (#stopatwin_flag param andalso #status (dfind [] tree) = Win)
@@ -349,47 +336,37 @@ fun trace_win status_of tree id =
    from zero by incrementing or decrementing.
    ------------------------------------------------------------------------- *)
 
-type toy_board = (int * int)
+type toy_board = (int * int * int)
 datatype toy_move = Incr | Decr
-val toy_movel = [Incr,Decr];
 
-fun toy_status_of (start,finish) =
+fun toy_status_of (start,finish,timer) =
     if start >= finish then Win
-    else if start < 0 then Lose else Undecided;
+    else if start < 0 orelse timer <= 0 then Lose 
+    else Undecided
 
-fun toy_available_move board move = true
+fun toy_available_movel board = [Incr,Decr]
 
-fun toy_apply_move m (start,finish) = case m of
-   Incr => (start+1,finish)
- | Decr => (start-1,finish)
-
-fun toy_string_of_move m = case m of
-   Incr => "Incr"
- | Decr => "Decr"
-
-fun toy_move_compare (a,b) =
-  String.compare (toy_string_of_move a, toy_string_of_move b)
+fun toy_apply_move m (start,finish,timer) = case m of
+   Incr => (start+1,finish,timer-1)
+ | Decr => (start-1,finish,timer-1)
 
 val toy_game =
   {
-  board_compare = cpl_compare Int.compare Int.compare,
-  string_of_board = fn (a,b) => (its a ^ " " ^ its b),
-  movel = toy_movel,
-  move_compare = toy_move_compare,
-  string_of_move = toy_string_of_move,
   status_of = toy_status_of,
-  available_move = toy_available_move,
-  apply_move = toy_apply_move
+  apply_move = toy_apply_move,
+  available_movel = toy_available_movel,
+  string_of_board = (fn (a,b,c) => (its a ^ " " ^ its b ^ " " ^ its c)),
+  string_of_move = (fn x => case x of Incr => "Incr" | Decr => "Decr") 
   }
 
 (*
 load "aiLib"; open aiLib;
 load "psMCTS"; open psMCTS;
 
-val mcts_param =
+val mctsparam =
   {
   nsim = 16000,
-  stopatwin_flag = true,
+  stopatwin_flag = false,
   decay = 1.0,
   explo_coeff = 2.0,
   noise_all = false,
@@ -398,16 +375,16 @@ val mcts_param =
   noise_gen = gamma_noise_gen 0.2
   };
 
-val mcts_obj : (toy_board,toy_move) mcts_obj =
+val mctsobj : (toy_board,toy_move) mctsobj =
   {
-  mcts_param = mcts_param,
+  mctsparam = mctsparam,
   game = toy_game,
   player = uniform_player toy_game
   };
 
-val starttree = starttree_of mcts_obj (0,10);
-val (tree,t) = add_time (mcts mcts_obj) starttree;
-val nodel = trace_win (#status_of (#game mcts_obj)) tree [];
+val starttree = starttree_of mctsobj (0,10,100);
+val (tree,t) = add_time (mcts mctsobj) starttree;
+val nodel = trace_win (#status_of (#game mctsobj)) tree [];
 
 *)
 
