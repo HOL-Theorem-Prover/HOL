@@ -323,7 +323,7 @@ fun print_goals gl =
 
 fun repeat_apply (f:'a->'b) step stop x =
       f x
-    handle e =>
+    handle (e as HOL_ERR _) =>
       let val x' = step x in
         if stop x x' then raise e
         else repeat_apply f step stop x'
@@ -486,7 +486,7 @@ fun ctac1 THEN1_DEP ctac2 = fn g =>
                      end))
          end
     end
-    handle _ => failwith "THEN1_DEP";
+    handle HOL_ERR _ => failwith "THEN1_DEP";
 
 
 val ALL_DEP = fn (asl,gl) =>
@@ -496,7 +496,7 @@ val ALL_DEP = fn (asl,gl) =>
 infix ORELSE_DEP;
 
 fun ctac1 ORELSE_DEP ctac2 = fn g =>
-    ctac1 g handle _ => ctac2 g;
+    ctac1 g handle HOL_ERR _ => ctac2 g;
 
 
 fun FIRST_DEP cl =
