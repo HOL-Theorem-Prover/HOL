@@ -201,7 +201,7 @@ fun mk_extsearch self (rlobj as {rlparam,gameio,...}) =
 fun rl_train ngen rlobj rlex =
   let
     val {tob,schedule,tnnparam} = #dplayer rlobj
-    fun f (a,b) = combine (tob a, map single b)
+    fun f (a,b) = combine (tob a, map (fn x => [x]) b)
     val tnnex = map f rlex
     val uex = mk_fast_set (list_compare Term.compare) (map (tob o fst) rlex)
     val _ = log rlobj ("Training examples: " ^ its (length rlex))
