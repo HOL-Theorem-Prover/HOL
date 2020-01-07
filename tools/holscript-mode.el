@@ -445,8 +445,10 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
   "Insert a newline, then perform a `relative indent'."
   (interactive "*")
   (delete-horizontal-space t)
-  (newline nil t)
-  (indent-relative))
+  (let ((doindent (save-excursion (forward-line 0)
+                                  (equal (char-syntax (following-char)) ?\s))))
+    (newline nil t)
+    (if doindent (indent-relative))))
 
 ;;indentation and other cleanups
 (defun hol-replace-tabs-with-spaces ()
@@ -731,6 +733,7 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
      (message "In (:list-intro \"\"))") holscript-indent-level)
     (`(:after . ":") (message "in after : rule") 2)
     (`(:after . "Proof") 2)
+    (`(:before . "Proof") 0)
     (`(:after . "Termination") 2)
     (`(:close-all . _) t)
     (`(:after . "[") 2)
