@@ -14,6 +14,9 @@
         '("\\S.\\(>[->|]\\|\\\\\\\\\\)\\S." 1 'holscript-then-syntax)
         "^Type\\>"
         "^Overload\\>"
+        (list (regexp-opt '("let" "local" "in" "end" "fun" "val" "open") 'words)
+              'quote
+              'holscript-smlsyntax)
         '("\\<cheat\\>" . 'hol-cheat-face)
         '(hol-find-quoted-material 0 'holscript-quoted-material prepend)))
 
@@ -802,12 +805,12 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
 (defface holscript-cheat-face
   '((((class color)) :foreground "orange" :weight ultra-bold :box t))
   "The face for highlighting occurrences of the cheat tactic."
-  :group 'hol-faces)
+  :group 'holscript-faces)
 
 (defface holscript-definition-syntax
   '((((class color)) :foreground "indianred"))
   "The face for highlighting script file definition syntax."
-  :group 'hol-faces)
+  :group 'holscript-faces)
 
 (defface holscript-quoted-material
   '((((class color)) :foreground "brown" :weight bold))
@@ -817,6 +820,11 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
 (defface holscript-then-syntax
   '((((class color)) :foreground "DarkSlateGray4" :weight bold))
   "The face for highlighting `THEN' connectives in tactics."
+  :group 'holscript-faces)
+
+(defface holscript-smlsyntax
+  '((((class color)) :foreground "DarkOliveGreen" :weight bold))
+  "The face for highlighting important SML syntax that appears in script files."
   :group 'holscript-faces)
 
 (setq auto-mode-alist (cons '("Script\\.sml" . holscript-mode)
