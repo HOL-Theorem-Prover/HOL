@@ -509,7 +509,7 @@ starts >%s%s<"
           ;; next thing to do is to look for open declarations
           (goto-char (point-min))
           ;; search through buffer for open declarations
-          (while (re-search-forward "\\s-open\\s-" (point-max) t)
+          (while (re-search-forward "\\<open\\s-" (point-max) t)
             ;; point now after an open, now search forward to end of
             ;; buffer or a semi-colon, or an infix declaration or a
             ;; val or a fun or another open  (as per the regexp defined just
@@ -525,6 +525,22 @@ starts >%s%s<"
           ;; send the string
           (delete-region (point-min) (point-max))
           (insert string)
+          (goto-char (point-min))
+          ; now retraverse string, bracketing open calls with quietdec toggles
+          (while (re-search-forward "\\<open\\s-" (point-max) t)
+            (let* ((start (match-beginning 0))
+                   (end (save-excursion
+                          (if (re-search-forward hol-open-terminator-regexp
+                                                 (point-max) t)
+                              (match-beginning 0)
+                            (point-max))))
+                   (endm (make-marker)))
+              (set-marker endm end)
+              (goto-char end)
+              (insert ";val _ = HOL_Interactive.toggle_quietdec();\n")
+              (goto-char start)
+              (insert "val _ = HOL_Interactive.toggle_quietdec();\n")
+              (goto-char endm) (set-marker endm nil)))
           (send-buffer-to-hol-maybe-via-file echoit))
       (kill-buffer tmpbuf)) ; kill buffer always
     ;; deactivate-mark will have likely been set by all the editting actions
