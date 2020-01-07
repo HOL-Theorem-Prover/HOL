@@ -2196,4 +2196,11 @@ Proof
   \\ fs [relationTheory.irreflexive_def, SORTED_MAP_FST_toSortedAList]
 QED
 
+val _ = let
+  open sptreepp
+in
+  add_ML_dependency "sptreepp";
+  add_user_printer ("sptreepp.sptreepp", “x : 'a spt”)
+end
+
 val _ = export_theory();
