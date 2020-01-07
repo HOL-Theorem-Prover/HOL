@@ -36,6 +36,9 @@ val _ = new_theory "sptree";
 val _ = Datatype`spt = LN | LS 'a | BN spt spt | BS spt 'a spt`
 (* Leaf-None, Leaf-Some, Branch-None, Branch-Some *)
 
+Type num_map[pp] = “:'a spt”
+Type num_set[pp] = “:unit spt”
+
 val _ = overload_on ("isEmpty", ``\t. t = LN``)
 
 val wf_def = Define`
