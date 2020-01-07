@@ -2,12 +2,12 @@
 
 ;; font-locking and syntax
 (defconst holscript-font-lock-keywords
-  (list '("^Theorem\\>" . 'holscript-theorem-syntax)
-        '("^Triviality\\>" . 'holscript-theorem-syntax)
-        '("^Proof\\>" . 'holscript-theorem-syntax)
-        '("^QED\\>" . 'holscript-theorem-syntax)
-        '("^Definition\\>\\|^\\(Co\\)?Inductive\\>\\|^Termination\\>\\|^End\\>"
-          . 'holscript-definition-syntax)
+  (list '("^\\(Theorem\\|Triviality\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[ :]"
+          (1 'holscript-theorem-syntax) (2 'holscript-thmname-syntax))
+        '("^\\(Proof\\|^QED\\)\\>" . 'holscript-theorem-syntax)
+        '("^\\(Definition\\|\\(?:Co\\)?Inductive\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[ :]"
+          (1 'holscript-definition-syntax) (2 'holscript-thmname-syntax))
+        '("^Termination\\>\\|^End\\>" . 'holscript-definition-syntax)
         '("^Datatype\\>" . 'holscript-definition-syntax)
         '("^THEN[1L]?\\>" . 'holscript-then-syntax)
         '("[^A-Za-z0-9_']\\(THEN[1L]?\\)\\>" 1 'holscript-then-syntax)
@@ -792,7 +792,12 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
 (defface holscript-theorem-syntax
   '((((class color)) :foreground "blueviolet"))
   "The face for highlighting script file Theorem-Proof-QED syntax."
-  :group 'hol-faces)
+  :group 'holscript-faces)
+
+(defface holscript-thmname-syntax
+  '((((class color)) :weight bold))
+    "The face for highlighting theorem names."
+    :group 'holscript-faces)
 
 (defface holscript-cheat-face
   '((((class color)) :foreground "orange" :weight ultra-bold :box t))
