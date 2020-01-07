@@ -20,7 +20,6 @@ val max_vars_glob = 20
    Comparison function
    ------------------------------------------------------------------------- *)
 
-type 'a set = ('a, unit) Redblackmap.dict
 type lit = int * bool
 type clause = lit list
 val lit_compare = cpl_compare Int.compare bool_compare
@@ -177,32 +176,23 @@ val diffd = count_dict (dempty Int.compare) diffl;
    Board
    ------------------------------------------------------------------------- *)
 
-type board = clause list * clause list * int
+type board = clause list * clause option * int
 
-fun mk_startboard cl = ([], cl, max_steps_glob)
-
-fun set_compare cmp (d1,d2) = list_compare cmp (dkeys d1, dkeys d2)
-
-val board_compare =
-  triple_compare (list_compare clause_compare)
-    (list_compare clause_compare) Int.compare
+fun mk_startboard cl = (cl, max_steps_glob)
 
 fun string_of_lit (i,b) = if b then its i else "~" ^ its i
-
 fun string_of_clause c = 
   "(" ^ String.concatWith " " (map string_of_lit c) ^ ")"
-
 fun string_of_clausel cl = 
   if null cl 
   then "empty clause list"
   else String.concatWith "\n" (map string_of_clause cl)
-
 fun string_of_board (cl1,cl2,n) =
   String.concatWith "\n\n" 
   [string_of_clausel cl1, string_of_clausel cl2, its n]  
   
-fun status_of (cl1,cl2,n) =
-  if mem [] cl2 then Win 
+fun status_of (cl,n) =
+  if mem [] cl then Win
   else if n <= 0 then Lose
   else Undecided
 
@@ -261,8 +251,8 @@ val tm = term_of_board (board,NONE,0);
    Move
    ------------------------------------------------------------------------- *)
 
-datatype move = Select | Delete
-val movel = [Select, Delete]
+type move = clause
+
 
 fun string_of_move m = case m of Select => "select" | Delete => "delete" 
 fun move_compare (a,b) = String.compare (string_of_move a, string_of_move b)
@@ -480,7 +470,7 @@ val pretobdict = dnew String.compare
    ------------------------------------------------------------------------- *)
 
 val rl_param =
-  {expname = "mleResolution-3", ex_window = 80000,
+  {expname = "mleResolution-4", ex_window = 80000,
    ncore_search = 40, nsim = 16000, decay = 1.0}
 
 val rlpreobj : (board,move,unit) rlpreobj =

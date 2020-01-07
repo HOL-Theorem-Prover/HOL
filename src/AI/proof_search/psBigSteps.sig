@@ -25,7 +25,6 @@ sig
     mctsparam : psMCTS.mctsparam
     }
 
-  val run_bigsteps : ('a,'b) bsobj -> 'a -> 
-    bool * bool * 'a rlex * ('a,'b) node list
+  val run_bigsteps : ('a,'b) bsobj -> 'a -> bool * 'a rlex * ('a,'b) node list
 
 end

@@ -41,10 +41,10 @@ fun rm_suffix l1 l2 = rev (rm_prefix (rev l1) (rev l2))
 fun cut_tree id tree =
   let
     val l = filter (fn x => is_suffix id (fst x)) (dlist tree)
-    fun change_node (x,{pol,value,board,sum,vis,status}) =
+    fun change_node (x,{board,pol,value,stati,sum,vis,status}) =
       (rm_suffix id x,
-        {pol=map_snd (rm_suffix id) pol,
-         board=board, value=value, sum=sum, vis=vis, status=status})
+        {board=board, pol=map_snd (rm_suffix id) pol,
+         value=value, stati=stati, sum=sum, vis=vis, status=status})
   in
     dnew id_compare (map change_node l)
   end
@@ -131,26 +131,22 @@ fun debug_board b game board =
   else ()
 
 (* rootl and rlex are reversed *)
-fun loop_bigsteps cstatus bsobj mctsobj (rlex,rootl) tree =
+fun loop_bigsteps bsobj mctsobj (rlex,rootl) tree =
   let
     val {mctsparam,game,player} = mctsobj
-    val board = #board (dfind [] tree)
-    val status = #status_of game board
+    val {board,stati,...} = dfind [] tree
     val _ = debug_board (#verbose bsobj) game board
   in
-    if status <> Undecided
-    then (status = Win, cstatus = Win, rlex, rootl) 
-      else
+    if stati <> Undecided then (stati = Win, rlex, rootl) else
     let
       val endtree = mcts mctsobj tree
       val root = dfind [] endtree
-      val newcstatus = if cstatus = Win then Win else #status root
       val cid = select_bigstep bsobj mctsobj endtree
       val newtree = cut_tree cid endtree
       val newrlex = add_rootex game endtree rlex
       val newrootl = root :: rootl
     in
-      loop_bigsteps newcstatus bsobj mctsobj (newrlex,newrootl) newtree
+      loop_bigsteps bsobj mctsobj (newrlex,newrootl) newtree
     end
   end
 
@@ -164,7 +160,7 @@ fun run_bigsteps bsobj target =
       }
     val tree = starttree_of mctsobj target
   in
-    loop_bigsteps Undecided bsobj mctsobj ([],[]) tree
+    loop_bigsteps bsobj mctsobj ([],[]) tree
   end
 
 (* -------------------------------------------------------------------------
@@ -197,7 +193,7 @@ val bsobj : (toy_board,toy_move) bsobj =
 
 val target = (0,10,100);
 val (_,t) = add_time (run_bigsteps bsobj) target;
-val (winb1,winb2,rlex,rootl) = run_bigsteps bsobj target;
+val (winb,rlex,rootl) = run_bigsteps bsobj target;
 *)
 
 end (* struct *)

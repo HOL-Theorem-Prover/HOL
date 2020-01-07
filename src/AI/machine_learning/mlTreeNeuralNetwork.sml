@@ -326,10 +326,10 @@ fun train_tnn_schedule schedule tnn (train,test) =
     end
 
 fun output_info ex =
-  if null ex then "empty" else
+  if null ex then " empty" else
   let 
     val rl = List.concat (map snd (List.concat ex))
-    val s1 = "\n  length: " ^ its (length ex) ^ "(" ^ its (length rl) ^ ")"
+    val s1 = "\n  length: " ^ its (length ex) ^ " " ^ its (length rl)
     val s2 = "\n  mean: " ^ pretty_real (average_real rl)
     val s3 = "\n  standard deviation: " ^ pretty_real (standard_deviation rl)
   in

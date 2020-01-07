@@ -12,12 +12,8 @@ sig
   type 'b pol = (('b * real) * id) list
   type ('a,'b) node =
     {
-    pol : 'b pol,
-    value : real,
-    board : 'a,
-    sum : real,
-    vis : real,
-    status : status
+    board : 'a, pol : 'b pol, value : real, stati : status,
+    sum : real, vis : real, status : status
     }
   type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
 

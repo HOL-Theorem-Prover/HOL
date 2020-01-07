@@ -32,7 +32,7 @@ type 'a gameio =
 type splayer = bool * tnn * bool * int
 type 'a dplayer = 
   {tob : 'a -> term list, schedule : schedule, tnnparam : tnnparam}
-type 'a es = (splayer, 'a, bool * bool * 'a rlex) smlParallel.extspec
+type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
 type rlparam =
   {expname : string, exwindow : int, ncore : int, nsim : int, decay : real}
 type ('a,'b) rlobj =
@@ -122,20 +122,15 @@ fun read_splayer file =
     (unib,tnn,noiseb,nsim)
   end
 
-fun write_result gameio file (b1,b2,rlex) =
+fun write_result gameio file (b,rlex) =
   (
-  writel (file ^ "_bstatus") [bts b1 ^ " " ^ bts b2];
+  writel (file ^ "_bstatus") [bts b];
   write_rlex gameio (file ^ "_rlex") rlex
   )
 
 fun read_result gameio file =
-  let
-    val bs = singleton_of_list (readl (file ^ "_bstatus"))
-    val (b1,b2) = pair_of_list (map string_to_bool
-      (String.tokens Char.isSpace bs))
-    val r = (b1, b2, read_rlex gameio (file ^ "_rlex"))
-  in
-    r
+  let val s = singleton_of_list (readl (file ^ "_bstatus")) in
+    (string_to_bool s, read_rlex gameio (file ^ "_rlex"))
   end
 
 fun write_target gameio file target = 
@@ -175,9 +170,9 @@ fun retrieve_tnn rlobj n = read_tnn (tnn_file rlobj n)
 fun extsearch_fun rlobj splayer target =
   let
     val bsobj = mk_bsobj rlobj splayer
-    val (b1,b2,rlex,_) = run_bigsteps bsobj target
+    val (b1,rlex,_) = run_bigsteps bsobj target
   in
-    (b1,b2,rlex)
+    (b1,rlex)
   end
 
 fun mk_extsearch self (rlobj as {rlparam,gameio,...}) =
@@ -224,12 +219,12 @@ fun rl_explore_targetl (unib,noiseb) (rlobj,es) tnn targetl =
     val nsim = #nsim (#rlparam rlobj)
     val splayer = (unib,tnn,noiseb,nsim)
     val (l,t) = add_time (parmap_queue_extern ncore es splayer) targetl
-    val (nwin1,nwin2) = (length (filter #1 l), length (filter #2 l))
-    val rlex = List.concat (map #3 l)
-    val b = int_div nwin1 (length targetl) > 0.75
+    val nwin = length (filter fst l)
+    val rlex = List.concat (map snd l)
+    val b = int_div nwin (length targetl) > 0.75
   in
     log rlobj ("Exploration time: " ^ rts t);
-    log rlobj ("Exploration wins: " ^ its nwin1 ^ " " ^ its nwin2);
+    log rlobj ("Exploration wins: " ^ its nwin);
     log rlobj ("Exploration new examples: " ^ its (length rlex));
     (rlex,b)
   end

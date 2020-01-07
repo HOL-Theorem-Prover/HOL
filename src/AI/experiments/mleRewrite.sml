@@ -212,7 +212,13 @@ fun random_board size nstep =
 fun level_target level =
   random_board (random_int (5, level)) (random_int (1, level))
 
-fun level_targetl level = List.tabulate (400, fn _ => level_target level)
+fun level_targetl level = 
+  let 
+    val l = List.tabulate (400, fn _ => level_target level) 
+    fun third_compare cmp (_,_,a) (_,_,b) = cmp (a,b)
+  in
+    rev (dict_sort (third_compare Int.compare) l)
+  end    
 
 (*
 load "aiLib"; open aiLib;
@@ -342,7 +348,7 @@ val (b1,b2,rlex,rootl) = run_bigsteps bsobj board;
 (*
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 val {schedule,tnnparam,tob} = #dplayer rlobj;
-fun f (a,b) = combine (tob a, map single b);
+fun f (a,b) = combine (tob a, map (fn x => [x]) b);
 val tnnex = map f (List.concat (List.tabulate (16, fn _ => rlex)));
 val tnn = train_tnn schedule (random_tnn tnnparam) (tnnex,[]);
 *)

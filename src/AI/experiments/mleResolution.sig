@@ -3,7 +3,6 @@ sig
 
   include Abbrev
   
-  type 'a set = ('a, unit) Redblackmap.dict
   type lit = int * bool
   type clause = lit list
   val clause_compare : clause * clause -> order

@@ -22,7 +22,7 @@ sig
     {tob : 'a -> term list, schedule : schedule, tnnparam : tnnparam}
   
   (* parallelization of the search *)
-  type 'a es = (splayer, 'a, bool * bool * 'a rlex) smlParallel.extspec
+  type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
 
   (* all parameters *)
   type rlparam =

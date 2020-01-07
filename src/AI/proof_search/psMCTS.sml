@@ -22,12 +22,8 @@ val id_compare = list_compare Int.compare
 type 'b pol = (('b * real) * id) list
 type ('a,'b) node =
   {
-  pol : 'b pol,
-  value : real,
-  board : 'a,
-  sum : real,
-  vis : real,
-  status : status
+  board : 'a, pol : 'b pol, value : real, stati : status,
+  sum : real, vis : real, status : status
   }
 type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
 
@@ -65,11 +61,7 @@ type mctsparam =
   }
 
 type ('a,'b) mctsobj =
-  {
-  mctsparam : mctsparam,
-  game : ('a,'b) game,
-  player : ('a,'b) player
-  }
+  {mctsparam : mctsparam, game : ('a,'b) game, player : ('a,'b) player}
 
 (* -------------------------------------------------------------------------
    Backup
@@ -87,14 +79,14 @@ fun quant_status quant status tree pol =
 fun exists_win tree pol  = quant_status exists Win tree pol
 fun all_lose tree pol = quant_status all Lose tree pol
 
-fun update_node decay tree reward {pol,value,board,sum,vis,status} =
+fun update_node decay tree reward {board,pol,value,stati,sum,vis,status} =
   let val newstatus =
     if status <> Undecided then status
     else if exists_win tree pol then Win
     else if all_lose tree pol then Lose
     else Undecided
   in
-    {pol=pol, value=value, board=board,
+    {board=board, pol=pol, value=value, stati=stati, 
      sum=sum+reward, vis=vis+1.0, status=newstatus}
   end
 
@@ -183,7 +175,7 @@ fun node_create_backup obj tree (id,board) =
           then add_noise param pol2
           else pol2
       in
-        {pol= add_cid pol3, value=value,
+        {pol= add_cid pol3, value=value, stati=status,
          board=board, sum=0.0, vis=0.0, status=status}
       end
     val tree1 = dadd id node tree
@@ -221,7 +213,7 @@ fun score_status status = case status of
 fun select_child obj tree id =
   let
     val node = dfind id tree
-    val status = (#status_of (#game obj)) (#board (dfind id tree))
+    val status = #stati (dfind id tree)
   in
     if status <> Undecided then Backup (id,score_status status) else
       let
