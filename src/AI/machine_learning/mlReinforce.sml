@@ -57,7 +57,8 @@ fun mk_mctsparam noiseb nsim rlobj =
   noise_all = noiseb,
   noise_root = false,
   noise_coeff = 0.25,
-  noise_gen = random_real
+  noise_gen = random_real,
+  noconfl = true, avoidlose = true
   }
 
 fun player_from_tnn tnn tob game board =

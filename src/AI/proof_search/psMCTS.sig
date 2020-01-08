@@ -28,7 +28,8 @@ sig
     apply_move : 'b -> 'a -> 'a,
     available_movel : 'a -> 'b list,
     string_of_board : 'a -> string,
-    string_of_move : 'b -> string
+    string_of_move : 'b -> string,
+    board_compare : 'a * 'a -> order
     }
 
   type ('a,'b) player = 'a -> real * ('b * real) list
@@ -44,7 +45,9 @@ sig
     noise_root : bool,
     noise_all : bool,
     noise_coeff : real,
-    noise_gen : unit -> real
+    noise_gen : unit -> real,
+    noconfl : bool,
+    avoidlose : bool
     }
 
   type ('a,'b) mctsobj =
@@ -54,8 +57,10 @@ sig
     player : ('a,'b) player
     }
 
-  val starttree_of : ('a,'b) mctsobj -> 'a -> ('a,'b) tree
-  val mcts : ('a,'b) mctsobj -> ('a,'b) tree -> ('a,'b) tree
+  val starttree_of : ('a,'b) mctsobj -> 'a -> 
+    (('a,'b) tree * ('a,id) Redblackmap.dict)
+  val mcts : ('a,'b) mctsobj -> (('a,'b) tree * ('a,id) Redblackmap.dict) ->    
+    (('a,'b) tree * ('a,id) Redblackmap.dict)
 
   (* statistics *)
   val mostexplored_path : ('a,'b) tree -> id -> id list

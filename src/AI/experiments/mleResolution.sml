@@ -176,9 +176,9 @@ val diffd = count_dict (dempty Int.compare) diffl;
    Board
    ------------------------------------------------------------------------- *)
 
-type board = clause list * clause option * int
+type board = clause list * clause list * int
 
-fun mk_startboard cl = (cl, max_steps_glob)
+fun mk_startboard cl = ([], cl, max_steps_glob)
 
 fun string_of_lit (i,b) = if b then its i else "~" ^ its i
 fun string_of_clause c = 
@@ -190,14 +190,19 @@ fun string_of_clausel cl =
 fun string_of_board (cl1,cl2,n) =
   String.concatWith "\n\n" 
   [string_of_clausel cl1, string_of_clausel cl2, its n]  
-  
-fun status_of (cl,n) =
-  if mem [] cl then Win
-  else if n <= 0 then Lose
+
+fun board_compare ((cl1,cl2,n),(cl1',cl2',n')) =
+  cpl_compare 
+    (list_compare clause_compare) (list_compare clause_compare)
+  ((cl1,cl2),(cl1',cl2'))
+
+fun status_of (cl1,cl2,n) =
+  if mem [] cl2 then Win
+  else if n <= 0 orelse null cl2 then Lose
   else Undecided
 
 (* -------------------------------------------------------------------------
-   Term representation of the board
+   Neural representation of the board
    ------------------------------------------------------------------------- *)
 
 fun mk_bvar i = mk_var ("V" ^ its i, bool)
@@ -235,10 +240,24 @@ fun board_of_term tm =
     (clausel_of_term cl1, clausel_of_term cl2)
   end
 
-val operl_aux = List.tabulate (max_vars_glob, mk_bvar) @ 
-  [empty_list_var, pair_cat, ``$~``,``$/\``,``$\/``]
-val operl = mk_fast_set oper_compare (map_assoc arity_of operl_aux)
-fun term_of_boardc (_:unit) b = term_of_board b
+val selectvar = mk_var ("selectvar",alpha);
+val deletevar = mk_var ("deletevar",alpha);
+val cat_move = mk_var ("cat_move", ``:bool -> 'a -> 'a``); 
+
+fun term_of_move board move = 
+  list_mk_comb (cat_move, [term_of_board board, 
+    (case move of Delete => deletevar | Select => selectvar)]) 
+
+val head_eval = mk_var ("head_eval", ``:bool -> 'a``)
+val head_poli = mk_var ("head_poli", ``:'a -> 'a``)
+fun tag_heval x = mk_comb (head_eval,x)
+fun tag_hpoli x = mk_comb (head_poli,x)
+
+val operl = List.tabulate (max_vars_glob, mk_bvar) @ 
+  [empty_list_var, 
+   selectvar,deletevar,cat_move,
+   pair_cat, ``$~``,``$/\``,``$\/``,head_eval,head_poli]
+
 
 (*
 load "aiLib"; open aiLib;
@@ -251,14 +270,13 @@ val tm = term_of_board (board,NONE,0);
    Move
    ------------------------------------------------------------------------- *)
 
-type move = clause
+datatype move = Delete | Select
 
 
 fun string_of_move m = case m of Select => "select" | Delete => "delete" 
 fun move_compare (a,b) = String.compare (string_of_move a, string_of_move b)
 
-fun available_move (cl1,cl2,_) move = 
-  if move = Delete then not (null cl2) else true
+fun available_movel (cl1,cl2,_) = [Delete,Select]
 
 fun choose_clause_aux (cl1,cl2) = case cl2 of
     [] => raise ERR "choose_clause" "empty"
@@ -278,7 +296,7 @@ fun apply_select (cl1,cl2,n) =
       val subl = filter (subsume c) cl1
       val subld = dset clause_compare subl
       val pb1 = filter (fn x => not (dmem x subld)) cl1  
-      val pb2 = c :: pb1
+      val pb2 = mk_fast_set clause_compare (c :: pb1)
     in
       (pb2, cl2cont @ prodl, n-1)
     end
@@ -295,26 +313,25 @@ fun apply_move move (cl1,cl2,n) = case move of
 
 val game : (board,move) game =
   {
-  board_compare = board_compare,
-  string_of_board = string_of_board,
-  movel = movel,
-  move_compare = move_compare,
-  string_of_move = string_of_move,
   status_of = status_of,
-  available_move = available_move,
-  apply_move = apply_move
+  apply_move = apply_move,
+  available_movel = available_movel,  
+  string_of_board = string_of_board,
+  string_of_move = string_of_move,
+  board_compare = board_compare
   }
 
 (* -------------------------------------------------------------------------
    MCTS test with uniform player
    ------------------------------------------------------------------------- *)
 
-fun mk_mcts_param nsim =
+fun mk_mctsparam nsim =
   {
   nsim = nsim, stopatwin_flag = true,
   decay = 1.0, explo_coeff = 2.0,
   noise_coeff = 0.25, noise_root = false,
-  noise_all = false, noise_gen = random_real
+  noise_all = false, noise_gen = random_real,
+  noconfl = true, avoidlose = true
   }
 
 fun string_of_status status = case status of
@@ -324,12 +341,12 @@ fun string_of_status status = case status of
 
 fun mcts_test nsim pb =
   let
-    val mcts_obj =
-      {mcts_param = mk_mcts_param nsim,
+    val mctsobj =
+      {mctsparam = mk_mctsparam nsim,
        game = game,
        player = random_player game}
-    val tree = starttree_of mcts_obj (mk_startboard pb)
-    val endtree = mcts mcts_obj tree
+    val tree = starttree_of mctsobj (mk_startboard pb)
+    val (endtree,_) = mcts mctsobj tree
     val b = #status (dfind [] endtree) = Win
   in
     print_endline (string_of_status (#status (dfind [] endtree)));
@@ -351,7 +368,6 @@ val (pb,diff) = List.nth (pbl2,100);
 val pb' = inter_reduce pb;
 val tm = term_of_board (mk_startboard pb');
 val (win,endtree) = mcts_test 1000 pb';
-dfind [0,0,0,0,0,0,0] endtree;
 *)
 
 (* -------------------------------------------------------------------------
@@ -397,101 +413,47 @@ fun read_boardl file =
     combine_triple (l1,l2,nl)
   end
 
-fun write_target file target = write_boardl (file ^ "_target") [target]
-fun read_target file = singleton_of_list (read_boardl (file ^ "_target"))
-
-fun write_exl file exl =
-  let val (boardl,evall,polil) = split_triple exl in
-    write_boardl file boardl;
-    writel (file ^ "_eval") (map reall_to_string evall);
-    writel (file ^ "_poli") (map reall_to_string polil)
-  end
-fun read_exl file =
-  let
-    val boardl = read_boardl file
-    val evall = map string_to_reall (readl (file ^ "_eval"))
-    val polil = map string_to_reall (readl (file ^ "_poli"))
-  in
-    combine_triple (boardl,evall,polil)
-  end
-
-fun write_splayer file (unib,dhtnn,noiseb,playerid,nsim) =
-  (
-  write_dhtnn (file ^ "_dhtnn") dhtnn;
-  writel (file ^ "_flags") [String.concatWith " " (map bts [unib,noiseb])];
-  writel (file ^ "_playerid") [playerid];
-  writel (file ^ "_nsim") [its nsim]
-  )
-fun read_splayer file =
-  let
-    val dhtnn = read_dhtnn (file ^ "_dhtnn")
-    val (unib,noiseb) =
-      pair_of_list (map string_to_bool
-        (String.tokens Char.isSpace 
-           (singleton_of_list (readl (file ^ "_flags")))))
-    val playerid = singleton_of_list (readl (file ^ "_playerid"))
-    val nsim = string_to_int (singleton_of_list (readl (file ^ "_nsim")))
-  in
-    (unib,dhtnn,noiseb,playerid,nsim)
-  end
-
-val pre_extsearch =
-  {
-  write_target = write_target,
-  read_target = read_target,
-  write_exl = write_exl,
-  read_exl = read_exl,
-  write_splayer = write_splayer,
-  read_splayer = read_splayer
-  }
+val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
 
 (* -------------------------------------------------------------------------
    Players
    ------------------------------------------------------------------------- *)
 
-val schedule_base =
+val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 20}]
-val dhtnn_param_base =
-  {
-  operl = operl, nlayer_oper = 2,
-  nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 8, dimpoli = length movel
-  }
-val player_base =
-  {playerid = "base",
-   dhtnn_param = dhtnn_param_base, schedule = schedule_base}
 
-val pretobdict = dnew String.compare
-  [("base", (term_of_board, term_of_boardc))]
+val tnnparam = map_assoc (dim_std (2,12)) operl
+
+fun tob board = 
+  tag_heval (term_of_board board) ::
+  map (tag_hpoli o term_of_move board) (available_movel board)
+
+val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 (* -------------------------------------------------------------------------
    Interface
    ------------------------------------------------------------------------- *)
 
-val rl_param =
-  {expname = "mleResolution-4", ex_window = 80000,
-   ncore_search = 40, nsim = 16000, decay = 1.0}
+val rlparam =
+  {expname = "mleResolution-4", exwindow = 80000,
+   ncore = 6, nsim = 1600, decay = 1.0}
 
-val rlpreobj : (board,move,unit) rlpreobj =
+val rlobj : (board,move) rlobj =
   {
-  rl_param = rl_param,
-  max_bigsteps = (fn (_,_,n) => n+1),
+  rlparam = rlparam,
   game = game,
-  pre_extsearch = pre_extsearch,
-  pretobdict = pretobdict,
-  precomp_dhtnn = (fn _ => (fn _ => ())),
-  dplayerl = [player_base],
-  level_targetl = level_targetl
+  gameio = gameio,
+  level_targetl = level_targetl,
+  dplayer = dplayer
   }
 
-val extsearch = mk_extsearch "mleResolution.extsearch" rlpreobj
-val rlobj = mk_rlobj rlpreobj extsearch
+val extsearch = mk_extsearch "mleResolution.extsearch" rlobj
 
 (*
 load "mleResolution"; open mleResolution;
 load "mlReinforce"; open mlReinforce;
-val _ = rl_start_sync rlobj 4;
+val r = rl_start (rlobj,extsearch) 4;
 *)
 
 end (* struct *)

@@ -24,9 +24,7 @@ sig
   val level_pb : int -> clause list
   val level_targetl : int -> board list
 
-  val dhtnn_param_base : mlTreeNeuralNetwork.dhtnn_param
-  val extsearch : board mlReinforce.extsearch
-  val rlpreobj : (board,move,unit) mlReinforce.rlpreobj
-  val rlobj : board mlReinforce.rlobj
+  val extsearch : board mlReinforce.es
+  val rlobj : (board,move) mlReinforce.rlobj
 
 end

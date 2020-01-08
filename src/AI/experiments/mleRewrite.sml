@@ -142,7 +142,8 @@ val game : (board,move) game =
   apply_move = apply_move,
   available_movel = available_movel,  
   string_of_board = string_of_board,
-  string_of_move = string_of_move
+  string_of_move = string_of_move,
+  board_compare = board_compare
   }
 
 (* -------------------------------------------------------------------------

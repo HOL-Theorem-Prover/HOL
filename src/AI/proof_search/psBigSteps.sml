@@ -49,6 +49,9 @@ fun cut_tree id tree =
     dnew id_compare (map change_node l)
   end
 
+fun build_cache game tree =
+  dnew (#board_compare game) (map swap (map_snd #board (dlist tree)))
+
 (* -------------------------------------------------------------------------
    Big steps and example extraction
    ------------------------------------------------------------------------- *)
@@ -131,7 +134,7 @@ fun debug_board b game board =
   else ()
 
 (* rootl and rlex are reversed *)
-fun loop_bigsteps bsobj mctsobj (rlex,rootl) tree =
+fun loop_bigsteps bsobj mctsobj (rlex,rootl) (tree,cache) =
   let
     val {mctsparam,game,player} = mctsobj
     val {board,stati,...} = dfind [] tree
@@ -139,14 +142,15 @@ fun loop_bigsteps bsobj mctsobj (rlex,rootl) tree =
   in
     if stati <> Undecided then (stati = Win, rlex, rootl) else
     let
-      val endtree = mcts mctsobj tree
+      val (endtree,_) = mcts mctsobj (tree,cache)
       val root = dfind [] endtree
       val cid = select_bigstep bsobj mctsobj endtree
       val newtree = cut_tree cid endtree
+      val newcache = build_cache game newtree
       val newrlex = add_rootex game endtree rlex
       val newrootl = root :: rootl
     in
-      loop_bigsteps bsobj mctsobj (newrlex,newrootl) newtree
+      loop_bigsteps bsobj mctsobj (newrlex,newrootl) (newtree,newcache)
     end
   end
 
@@ -158,9 +162,9 @@ fun run_bigsteps bsobj target =
       game = #game bsobj,
       player = #player bsobj
       }
-    val tree = starttree_of mctsobj target
+    val (tree,cache) = starttree_of mctsobj target
   in
-    loop_bigsteps bsobj mctsobj ([],[]) tree
+    loop_bigsteps bsobj mctsobj ([],[]) (tree,cache)
   end
 
 (* -------------------------------------------------------------------------
@@ -174,12 +178,16 @@ load "psBigSteps"; open psBigSteps;
 
 val mctsparam =
   {
-  nsim = 1600,
-  stopatwin_flag = false,
+  nsim = 16000,
+  stopatwin_flag = true,
   decay = 1.0,
   explo_coeff = 2.0,
-  noise_all = true, noise_root = false,
-  noise_coeff = 0.25, noise_gen = gamma_noise_gen 0.2
+  noise_all = false,
+  noise_root = false,
+  noise_coeff = 0.25,
+  noise_gen = gamma_noise_gen 0.2,
+  noconfl = true,
+  avoidlose = true
   };
 
 val bsobj : (toy_board,toy_move) bsobj =
@@ -191,7 +199,7 @@ val bsobj : (toy_board,toy_move) bsobj =
   mctsparam = mctsparam
   };
 
-val target = (0,10,100);
+val target = (0,100,200);
 val (_,t) = add_time (run_bigsteps bsobj) target;
 val (winb,rlex,rootl) = run_bigsteps bsobj target;
 *)
