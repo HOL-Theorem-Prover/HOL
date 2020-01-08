@@ -437,7 +437,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleResolution-4", exwindow = 80000,
-   ncore = 6, nsim = 1600, decay = 1.0}
+   ncore = 32, nsim = 1600, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {
