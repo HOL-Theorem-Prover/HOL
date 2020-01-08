@@ -1021,6 +1021,19 @@ fun get_targets_recursively {incs, pres} =
       )
     end
 
+fun check_targets_are_in_graph graph tgts =
+    let
+      fun check1 tgt =
+          case target_node graph tgt of
+              SOME _ => true
+            | NONE => hm_target.tgtexists_readable tgt orelse
+                      (warn ("Don't know how to build `" ^
+                             hm_target.toString tgt ^ "'.");
+                       false)
+    in
+      List.all check1 tgts orelse OS.Process.exit OS.Process.failure
+    end
+
 fun work() =
     case targets of
       [] => let
@@ -1094,6 +1107,7 @@ fun work() =
                   mk_dirneeded (hmdir.curdir()) (mkneeded targets depgraph)
                 else
                   mkneeded targets depgraph
+            val _ = check_targets_are_in_graph depgraph targets
           in
             if cline_nobuild then
               (print ("Dependency graph" ^ HM_DepGraph.toString depgraph);
