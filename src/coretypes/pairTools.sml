@@ -15,37 +15,49 @@ local
     FULL_STRUCT_CASES_TAC
       (CONV_RULE (RENAME_VARS_CONV [name_of a, name_of d])
          (ISPEC p pair_CASES))
-in
-  fun PairCases_on q g = let
-    val fvs = free_varsl(snd g::fst g)
+  fun PairCases_common v fvs g = let
     val mk_var = variant fvs o mk_var
+    val (sv,ty) = dest_var v
+    val n = let val n = ref 0 in fn()=> !n before n := !n+1 end
+    fun split_tacs v tya tyd = let
+      fun try_split s ty = let
+        val v = mk_var((name_of v)^s,ty)
+      in (v,
+          case total dest_prod ty of
+            NONE =>
+              (fn()=> rename_tac v (mk_var(sv^(Int.toString(n())),ty)))
+          | SOME (tya, tyd) =>
+              (fn()=> split_tacs v tya tyd))
+      end
+      val (va,ka) = try_split "a" tya
+      val (vd,kd) = try_split "d" tyd
+    in
+      split_tac v va vd
+      THEN ka() THEN kd()
+    end
+  in
+    case total dest_prod (type_of v) of
+      NONE => raise PERR "PairCases_on" "Not of pair type"
+    | SOME (tya, tyd) => split_tacs v tya tyd
+  end g
+in
+  fun PairCases (g as (hyps, w)) = let
+    val fvs = free_varsl (w::hyps)
+    val (v, _) = dest_forall w
+    (* From gen_tac: *)
+    val v' = gen_variant Parse.is_constname "" fvs v
+  in
+    X_GEN_TAC v' THEN PairCases_common v' fvs
+  end g
+
+  fun PairCases_on q (g as (hyps, w)) = let
+    val fvs = free_varsl (w::hyps)
     val v = parse_in_context fvs q
   in
-    if is_var v then let
-      val (sv,ty) = dest_var v
-      val n = let val n = ref 0 in fn()=> !n before n := !n+1 end
-      fun split_tacs v tya tyd = let
-        fun try_split s ty = let
-          val v = mk_var((name_of v)^s,ty)
-        in (v,
-            case total dest_prod ty of
-              NONE =>
-                (fn()=> rename_tac v (mk_var(sv^(Int.toString(n())),ty)))
-            | SOME (tya, tyd) =>
-                (fn()=> split_tacs v tya tyd))
-        end
-        val (va,ka) = try_split "a" tya
-        val (vd,kd) = try_split "d" tyd
-      in
-        split_tac v va vd
-        THEN ka() THEN kd()
-      end
-    in
-      case total dest_prod (type_of v) of
-        NONE => raise PERR "PairCases_on" "Not of pair type"
-      | SOME (tya, tyd) => split_tacs v tya tyd
-    end g
-    else raise PERR "PairCases_on" "Not a variable"
+    if is_var v then
+      PairCases_common v fvs g
+    else
+      raise PERR "PairCases_on" "Not a variable"
   end
 end
 
