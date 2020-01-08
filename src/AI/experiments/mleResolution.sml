@@ -13,7 +13,6 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
 
 val ERR = mk_HOL_ERR "mleResolution"
 
-val max_steps_glob = 80
 val max_vars_glob = 20
 
 (* -------------------------------------------------------------------------
@@ -39,7 +38,7 @@ fun inter_reduce cl = case cl of
   | c :: m => if subsumel m c then inter_reduce m else c :: inter_reduce m
 
 (* -------------------------------------------------------------------------
-   Resolution
+   Resolution: assumes the literals in clauses are sorted.
    ------------------------------------------------------------------------- *)
 
 fun resolve_aux b (c1,c2) = case (c1:clause,c2:clause) of
@@ -64,6 +63,9 @@ fun resolve_ctxt pb (c1,c2) =
 
 fun exists_match pb l c = 
   exists (fn x => can (resolve_ctxt pb) (x,c)) l
+
+fun filter_match pb c l = 
+  filter (fn x => can (resolve_ctxt pb) (c,x)) l
 
 (* -------------------------------------------------------------------------
    Brute force algorithm by iterative deepedning
@@ -176,9 +178,9 @@ val diffd = count_dict (dempty Int.compare) diffl;
    Board
    ------------------------------------------------------------------------- *)
 
-type board = clause list * clause list * int
+type board = clause list * clause option * int
 
-fun mk_startboard cl = ([], cl, max_steps_glob)
+fun mk_startboard cl = (cl, NONE, 2 * length cl)
 
 fun string_of_lit (i,b) = if b then its i else "~" ^ its i
 fun string_of_clause c = 
@@ -187,23 +189,33 @@ fun string_of_clausel cl =
   if null cl 
   then "empty clause list"
   else String.concatWith "\n" (map string_of_clause cl)
-fun string_of_board (cl1,cl2,n) =
+fun string_of_board (cl1,co,n) =
   String.concatWith "\n\n" 
-  [string_of_clausel cl1, string_of_clausel cl2, its n]  
+  [string_of_clausel cl1, 
+   if co = NONE then "" else string_of_clause (valOf co), its n]  
 
-fun board_compare ((cl1,cl2,n),(cl1',cl2',n')) =
+fun board_compare ((cl,co,n),(cl',co',n')) =
   cpl_compare 
-    (list_compare clause_compare) (list_compare clause_compare)
-  ((cl1,cl2),(cl1',cl2'))
+    (list_compare clause_compare) (option_compare clause_compare)
+    ((cl,co),(cl',co'))
 
-fun status_of (cl1,cl2,n) =
-  if mem [] cl2 then Win
-  else if n <= 0 orelse null cl2 then Lose
+fun available_movel (cl,co,_) =
+  if co = NONE 
+  then filter (fn c => exists_match cl cl c) cl
+  else filter_match cl (valOf co) cl
+
+fun status_of (board as (cl,co,n)) =
+  if mem [] cl then Win
+  else if n <= 0 orelse null (available_movel board) then Lose
   else Undecided
 
 (* -------------------------------------------------------------------------
    Neural representation of the board
    ------------------------------------------------------------------------- *)
+
+val empty_list_var = mk_var ("empty_list_var", bool)
+val pair_cat = mk_var ("pair_cat", ``:bool -> bool -> bool``)
+val cat_move = mk_var ("cat_move", ``:bool -> bool -> 'a``); 
 
 fun mk_bvar i = mk_var ("V" ^ its i, bool)
 fun bvar_of_term tm = string_to_int (tl_string (fst (dest_var tm)))
@@ -217,7 +229,6 @@ fun lit_of_term tm =
 fun term_of_clause c = list_mk_disj (map mk_lit c)
 fun clause_of_term ctm = map lit_of_term (strip_disj ctm)
 
-val empty_list_var = mk_var ("empty_list_var", bool)
 fun term_of_clausel cl = 
   if null cl 
   then empty_list_var 
@@ -230,23 +241,21 @@ fun clausel_of_term tm =
 fun term_of_pb d = term_of_clausel (dkeys d)
 fun pb_of_term tm = dset clause_compare (clausel_of_term tm)
 
-val pair_cat = mk_var ("pair_cat", ``:bool -> bool -> bool``)
-
-fun term_of_board (cl1,cl2,_) =
-  list_mk_comb (pair_cat, [term_of_clausel cl1, term_of_clausel cl2])    
-
+fun term_of_board (cl,co,_) =
+  let val clo = if co = NONE then [] else [valOf co] in
+    list_mk_comb (pair_cat, [term_of_clausel cl, term_of_clausel clo])    
+  end
 fun board_of_term tm = 
   let val (cl1,cl2) = pair_of_list (snd (strip_comb tm)) in
-    (clausel_of_term cl1, clausel_of_term cl2)
+    (
+    clausel_of_term cl1, 
+    (case clausel_of_term cl2 of 
+        [] => NONE | [a] => SOME a | _ => raise ERR "board_of_term" "")
+    )
   end
 
-val selectvar = mk_var ("selectvar",alpha);
-val deletevar = mk_var ("deletevar",alpha);
-val cat_move = mk_var ("cat_move", ``:bool -> 'a -> 'a``); 
-
 fun term_of_move board move = 
-  list_mk_comb (cat_move, [term_of_board board, 
-    (case move of Delete => deletevar | Select => selectvar)]) 
+  list_mk_comb (cat_move, [term_of_board board, term_of_clause move])
 
 val head_eval = mk_var ("head_eval", ``:bool -> 'a``)
 val head_poli = mk_var ("head_poli", ``:'a -> 'a``)
@@ -254,15 +263,13 @@ fun tag_heval x = mk_comb (head_eval,x)
 fun tag_hpoli x = mk_comb (head_poli,x)
 
 val operl = List.tabulate (max_vars_glob, mk_bvar) @ 
-  [empty_list_var, 
-   selectvar,deletevar,cat_move,
+  [empty_list_var, cat_move,
    pair_cat, ``$~``,``$/\``,``$\/``,head_eval,head_poli]
-
 
 (*
 load "aiLib"; open aiLib;
 load "mleResolution"; open mleResolution;
-val board = dset clause_compare [[(0,true),(1,false),(2,true)]];
+val board = [[(0,true),(1,false),(2,true)]];
 val tm = term_of_board (board,NONE,0);
 *)
 
@@ -270,42 +277,16 @@ val tm = term_of_board (board,NONE,0);
    Move
    ------------------------------------------------------------------------- *)
 
-datatype move = Delete | Select
+type move = clause
 
+val string_of_move = string_of_clause 
+val move_compare = list_compare lit_compare
 
-fun string_of_move m = case m of Select => "select" | Delete => "delete" 
-fun move_compare (a,b) = String.compare (string_of_move a, string_of_move b)
-
-fun available_movel (cl1,cl2,_) = [Delete,Select]
-
-fun choose_clause_aux (cl1,cl2) = case cl2 of
-    [] => raise ERR "choose_clause" "empty"
-  | a :: m => (if not (subsumel cl1 a)
-               then (a,m) 
-               else choose_clause_aux (cl1, tl cl2))
-
-fun choose_clause (cl1,cl2) = 
-  SOME (choose_clause_aux (cl1,cl2)) handle HOL_ERR _ => NONE
-
-fun apply_select (cl1,cl2,n) = 
-  let val ro = choose_clause (cl1,cl2) in
-    if not (isSome ro) then ([],[],~1) else 
-    let
-      val (c,cl2cont) = valOf ro
-      val prodl = mapfilter (fn x => resolve_ctxt cl1 (c,x)) cl1
-      val subl = filter (subsume c) cl1
-      val subld = dset clause_compare subl
-      val pb1 = filter (fn x => not (dmem x subld)) cl1  
-      val pb2 = mk_fast_set clause_compare (c :: pb1)
-    in
-      (pb2, cl2cont @ prodl, n-1)
-    end
+fun apply_move move (cl,co,n) = 
+  if co = NONE then (cl,SOME move,n) else
+  let val newc = resolve (valOf co, move) in
+     (mk_fast_set clause_compare (newc :: cl), NONE, n-1)
   end
-  
-
-fun apply_move move (cl1,cl2,n) = case move of
-    Select => apply_select (cl1,cl2,n-1)
-  | Delete => (cl1,tl cl2,n-1)
 
 (* -------------------------------------------------------------------------
    Game
@@ -436,7 +417,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleResolution-4", exwindow = 80000,
+  {expname = "mleResolution-5", exwindow = 80000,
    ncore = 32, nsim = 1600, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
@@ -453,6 +434,8 @@ val extsearch = mk_extsearch "mleResolution.extsearch" rlobj
 (*
 load "mleResolution"; open mleResolution;
 load "mlReinforce"; open mlReinforce;
+val pbl = (#level_targetl rlobj) 4;
+
 val r = rl_start (rlobj,extsearch) 4;
 *)
 

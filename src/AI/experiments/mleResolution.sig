@@ -7,8 +7,8 @@ sig
   type clause = lit list
   val clause_compare : clause * clause -> order
 
-  type board = (clause list * clause list * int)
-  datatype move = Delete | Select
+  type board = clause list * clause option * int
+  type move = clause
   val mk_startboard : clause list -> board
   
   val game : (board,move) psMCTS.game
@@ -19,10 +19,6 @@ sig
   val is_sat : clause list -> bool
   val inter_reduce : clause list -> clause list
   val mcts_test : int -> clause list -> bool * (board, move) psMCTS.tree
-
-  val term_of_board : board -> term
-  val level_pb : int -> clause list
-  val level_targetl : int -> board list
 
   val extsearch : board mlReinforce.es
   val rlobj : (board,move) mlReinforce.rlobj
