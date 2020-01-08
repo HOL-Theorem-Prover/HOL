@@ -1,7 +1,7 @@
 structure DefnBase :> DefnBase =
 struct
 
-open HolKernel
+open HolKernel boolSyntax Drule
 
 val ERR = mk_HOL_ERR "DefnBase";
 
@@ -158,5 +158,97 @@ val {export = export_cong,...} =
         remove = fn _ => ()
       }
     }
+
+(* ----------------------------------------------------------------------
+    storage of definitions
+   ---------------------------------------------------------------------- *)
+
+type defnstore = (string * KernelSig.kernelname, thm) Binarymap.dict
+type indnstore = (KernelSig.kernelname, thm * term list) Binarymap.dict
+
+val the_defnstore : defnstore ref =
+    ref (Binarymap.mkDict(pair_compare(String.compare, KernelSig.name_compare)))
+val the_indnstore : indnstore ref =
+    ref (Binarymap.mkDict KernelSig.name_compare)
+
+fun list_insert m k v =
+    case Binarymap.peek(m,k) of
+        NONE => Binarymap.insert(m,k,[v])
+      | SOME vs => Binarymap.insert(m,k,v::vs)
+
+fun to_kid {Thy,Name,Ty} = {Thy = Thy, Name = Name}
+
+fun register_defn tag thm =
+    let
+      val ths = thm |> CONJUNCTS
+      val cs =
+          map
+            (fn th =>
+                (th |> concl |> strip_forall |> #2 |> lhs |> strip_comb |> #1
+                    |> dest_thy_const |> to_kid,
+                 th))
+            ths handle HOL_ERR _ => raise mk_HOL_ERR "DefnBase" "register_defn"
+                                          "Malformed definition"
+      val m = List.foldr (fn ((t,th),A) => list_insert A t th)
+                         (Binarymap.mkDict KernelSig.name_compare)
+                         cs
+    in
+      the_defnstore :=
+      Binarymap.foldl (fn (k,cs,A) => Binarymap.insert(A,(tag,k),LIST_CONJ cs))
+                      (!the_defnstore)
+                      m
+    end
+
+fun lookup_defn c tag =
+    let
+      val {Name,Thy,...} =
+          dest_thy_const c
+          handle HOL_ERR _ => raise mk_HOL_ERR "DefnBase"
+                                    "lookup_defn" "Not a constant"
+    in
+      Binarymap.peek (!the_defnstore, (tag, {Name = Name, Thy = Thy}))
+    end
+
+fun isprefix l1 l2 =
+    case (l1,l2) of
+        ([] , _) => true
+      | (h1::t1, []) => false
+      | (h1::t1, h2::t2) => h1 = h2 andalso isprefix t1 t2
+
+fun register_indn (ind, cs) =
+    let
+      val _ = not (null cs) orelse
+              raise mk_HOL_ERR "DefnBase" "register_indn"
+                    "Must have non-empty list of constants"
+      val (Ps, body) = ind |> concl |> strip_forall
+      fun check (P, c) =
+          let
+            val (Pdoms, _) = strip_fun (type_of P)
+            val (cdoms, _) = strip_fun (type_of c)
+          in
+            isprefix Pdoms cdoms orelse
+            raise mk_HOL_ERR "DefnBase" "register_indn"
+                    ("Induction variable type of ivar "^ #1 (dest_var P) ^
+                     " doesn't match that of constant " ^ #1 (dest_const c))
+          end
+      val _ = ListPair.all check (Ps, cs)
+    in
+      the_indnstore :=
+      List.foldl (fn (c, A) =>
+                     Binarymap.insert(A, c |> dest_thy_const |> to_kid,
+                                      (ind,cs)))
+                 (!the_indnstore)
+                 cs
+    end
+
+fun lookup_indn c =
+    let
+      val {Name,Thy,...} =
+          dest_thy_const c
+          handle HOL_ERR _ => raise mk_HOL_ERR "DefnBase"
+                                    "lookup_indn" "Not a constant"
+    in
+      Binarymap.peek (!the_indnstore, {Name = Name, Thy = Thy})
+    end
 
 end

@@ -16,7 +16,7 @@ sig
   val xDefine      : string -> term quotation -> thm
   val tDefine      : string -> term quotation -> tactic -> thm
   val WF_REL_TAC   : term quotation -> tactic
-  val Hol_defn     : string -> term quotation -> defn
+  val Hol_defn     : string -> term quotation -> DefnBase.defn
 
   (* new (inductive) relations *)
   val Hol_reln     : term quotation -> thm * thm * thm
