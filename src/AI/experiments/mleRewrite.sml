@@ -108,6 +108,9 @@ type board = term * term * int
 
 fun string_of_board (a,b,c) = cts a ^ "\n" ^ cts b ^ "\n" ^ its c
 
+fun board_compare ((a,b,_),(c,d,_)) = 
+  cpl_compare Term.compare Term.compare ((a,b),(c,d))
+
 fun status_of (board as (tm1,tm2,n)) =
   if term_eq tm1 tm2 then Win
   else if n <= 0 orelse not (is_rewritable tm1) then Lose 
@@ -155,7 +158,8 @@ fun mk_mctsparam nsim =
   nsim = nsim, stopatwin_flag = true,
   decay = 1.0, explo_coeff = 2.0,
   noise_coeff = 0.25, noise_root = false,
-  noise_all = false, noise_gen = random_real
+  noise_all = false, noise_gen = random_real,
+  noconfl = false, avoidlose = false
   }
 
 fun string_of_status status = case status of
@@ -170,7 +174,7 @@ fun mcts_test nsim board =
        game = game,
        player = random_player game}
     val tree = starttree_of mcts_obj board
-    val endtree = mcts mcts_obj tree
+    val (endtree,_) = mcts mcts_obj tree
     val b = #status (dfind [] endtree) = Win
   in
     print_endline (string_of_status (#status (dfind [] endtree)));
@@ -215,10 +219,10 @@ fun level_target level =
 
 fun level_targetl level = 
   let 
-    val l = List.tabulate (400, fn _ => level_target level) 
-    fun third_compare cmp (_,_,a) (_,_,b) = cmp (a,b)
+    val l = List.tabulate (400, fn _ => level_target level)
+    fun third_compare cmp ((_,_,a),(_,_,b)) = cmp (b,a)
   in
-    rev (dict_sort (third_compare Int.compare) l)
+    dict_sort (third_compare Int.compare) l
   end    
 
 (*
