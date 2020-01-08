@@ -253,10 +253,9 @@ fun se_of fpdict (tm,ev) =
     r * r
   end
 
-fun mse_of fpdict tmevl = Math.sqrt (sum_real (map (se_of fpdict) tmevl))
+fun mse_of fpdict tmevl = Math.sqrt (average_real (map (se_of fpdict) tmevl))
 
 fun fp_loss tnn (tml,tmevl) = mse_of (fp_tnn tnn tml) tmevl
-
 
 fun train_tnn_one tnn (tml,tmevl) =
   let 

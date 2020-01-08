@@ -303,7 +303,7 @@ val extsearch = mk_extsearch "mleRewrite.extsearch" rlobj
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
-val r = rl_start (rlobj,extsearch) 20;
+val r = rl_start (rlobj,extsearch) 30;
 *)
 
 (* -------------------------------------------------------------------------

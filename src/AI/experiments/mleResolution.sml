@@ -369,10 +369,13 @@ fun level_pb level =
   end
 
 fun level_targetl level =
-  let val level_alt = 
-    if level > max_vars_glob then max_vars_glob else level
+  let 
+    val level_alt = if level > max_vars_glob then max_vars_glob else level
+    val l1 = List.tabulate (400, fn _=> level_pb level_alt)
+    val l2 = map mk_startboard l1
+    fun cmp ((_,_,a1),(_,_,a2)) = Int.compare (a2,a1)
   in
-    map mk_startboard (List.tabulate (400, fn _=> level_pb level_alt))
+    dict_sort cmp l2
   end
 
 (* -------------------------------------------------------------------------
