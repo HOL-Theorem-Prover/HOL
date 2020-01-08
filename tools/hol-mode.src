@@ -11,6 +11,7 @@
 (require 'thingatpt)
 (require 'cl)
 (require 'subr-x)
+(require 'holscript-mode)
 
 (defgroup hol nil
   "Customising the Emacs interface to the HOL4 proof assistant."
@@ -1453,7 +1454,7 @@ second is to show the new term.
 
 (add-hook 'sml-mode-hook
           (lambda ()
-            (local-set-key "`" 'hol-backquote-map)
+            (local-set-key "`" 'holscript-backquote-map)
             (message "Running HOL SML hook")
 ))
 
