@@ -1707,25 +1707,129 @@ Proof
   fs[rUMibl_def,rec2_def,recCn_def,nblfst_correct,nblsnd_correct2]
 QED
 
-Definition pr_nblft:
-  pr_nblft = 
+Definition lam_nblft_def:
+  lam_nblft = LAM "x" (
+    LAM "y" (
+      VAR "y" 
+       @@ (K @@ church 0)
+       @@ (LAM "r" ( 
+             LAM "x'" (
+               cis_zero @@ VAR "x'" 
+                        @@ church 0
+                        @@ (cis_zero 
+                             @@ (cmod @@ VAR "x'" @@ church 2)
+                             @@ (cplus @@ church 2 
+                                       @@ (cmult @@ church 2 
+                                                 @@ (VAR "r" @@ (cdiv @@ (cminus @@ VAR"x'" 
+                                                                                 @@ church 2) 
+                                                                      @@ church 2) )  ) )
+                             @@ (cplus @@ church 1 
+                                       @@ (cmult @@ church 2 
+                                                 @@ (VAR "r" @@ (cdiv @@ (cminus @@ VAR"x'" 
+                                                                                 @@ church 1) 
+                                                                      @@ church 2) )  ) )  ) )))
+       @@ VAR "x"
+    )
+  )
 End
 
-Theorem recfn_nblfst:
-  recfn (SOME o (pr1 nblfst)) 1
+Theorem FV_lam_nblft:
+  FV lam_nblft = {}
 Proof
-  irule primrec_recfn >> fs[nblfst_def] >> irule primrec_pr1 >> fs[nblfst_def] >>
-  qexists_tac`Cn pr_nblsr [Cn succ [Cn (pr1 nfst) [Cn pr_nblsnd0 [proj 0]]];
-                           Cn (pr1 nsnd) [Cn pr_nblsnd0 [proj 0]]]  ` >> rw[]
-  >- (rpt (irule unary_recfnsTheory.primrec_Cn >> rw[primrec_rules,primrec_pr_nblsr,primrec_pr_nblsnd0]) )
-  >- (simp[pr_nblsr_correct,Excl"nblsr_def",ADD1,pr_nblsnd0_correct])
+  simp[lam_nblft_def,EXTENSION]
+QED
+
+Theorem lam_nblft_equiv = brackabs.brackabs_equiv [] lam_nblft_def
+
+Theorem lam_nblft_behaviour:
+   ∀x y. lam_nblft @@ church x @@ church y == church (nblft x y)
+Proof
+  Induct_on`y` >> simp_tac (bsrw_ss()) [lam_nblft_equiv,nblft_def] >> rw[] >>
+  simp_tac (bsrw_ss()) [churchboolTheory.cB_behaviour] >> fs[EVEN_MOD2] >>
+  simp_tac (bsrw_ss()) [churchboolTheory.cB_behaviour] >>
+  full_simp_tac (bsrw_ss()) [lam_nblft_equiv] >> simp[]
+QED
+
+Theorem lam_nblft_phi:
+  Phi (dBnum (fromTerm (S @@ (B @@ lam_nblft @@ cnfst) @@ cnsnd) ) ) (m *, n) = SOME (nblft m n)
+Proof
+  simp[Phi_def] >> simp_tac (bsrw_ss()) [lam_nblft_behaviour,normal_orderTheory.bnf_bnf_of]
+QED
+
+
+
+Theorem nblft_phiii:
+  ∀z1 z2. rec2 (λx y. SOME (nblft x y)) [z1;z2] = 
+  recCn 
+    (recCn 
+       recPhi 
+       [(λx. SOME (K (dBnum (fromTerm (S @@ (B @@ lam_nblft @@ cnfst) @@ cnsnd) ) ) x ) ) ;
+        SOME o proj 0 ]) [(SOME ∘ pr2 $*,)] [z1;z2]
+Proof
+  rpt strip_tac >> simp[Excl"fromTerm_def",recPhi_correct,recCn_def,lam_nblft_phi ]
+QED
+
+Theorem nblft_phi_lem:
+rec2 (λx y. SOME (nblft x y)) = 
+  recCn 
+    (recCn 
+       recPhi 
+       [(λx. SOME (K (dBnum (fromTerm (S @@ (B @@ lam_nblft @@ cnfst) @@ cnsnd) ) ) x ) ) ;
+        SOME o proj 0 ]) [(SOME ∘ pr2 $*,)]
+Proof
+  rw[FUN_EQ_THM,Excl"fromTerm_def"] >> Cases_on`x` >> rw[Excl"fromTerm_def"] 
+  >-(simp[recCn_def,Excl"fromTerm_def"] >> `SOME 0 =
+     Phi (dBnum (fromTerm (S @@ (B @@ lam_nblft @@ cnfst) @@ cnsnd))) (0 *, 0)` 
+       suffices_by simp[Excl"fromTerm_def"] >> simp[lam_nblft_phi]) >> 
+  Cases_on`t` >> rw[Excl"fromTerm_def"]  
+  >-(simp[recCn_def,Excl"fromTerm_def"] >> simp[lam_nblft_phi]) >>
+  simp[recCn_def,Excl"fromTerm_def"] >> simp[lam_nblft_phi]
+QED
+
+Theorem recfn_some_num:
+  recfn (λx. SOME (a:num)) 1
+Proof
+  `(λ(x:num list). SOME a) = K (SOME a)` by (simp[FUN_EQ_THM,combinTheory.K_THM]) >> 
+  `recfn (K (SOME a)) 1` suffices_by simp[] >> simp[recfn_K]
+QED
+
+Theorem recfn_nblfst:
+  recfn (rec1 (SOME o nblfst)) 1
+Proof
+  irule recfn_rec1 >> fs[nblfst_def] >>
+  qexists_tac`recCn (rec2 (λx y. SOME (nblft x y) )) [SOME o Cn pr_nblsr [K 1;Cn (pr1 nsnd) [Cn pr_nblsnd0 [proj 0]] ];
+                    SOME o Cn (pr1 nfst) [Cn pr_nblsnd0 [proj 0]] ]` >> rw[]
+  >- (irule recfnCn >> rw[recfn_rules]
+      >- (irule primrec_recfn >> 
+          rpt (irule unary_recfnsTheory.primrec_Cn >> simp[primrec_pr_nblsr,primrec_rules,primrec_pr_nblsnd0]) )
+      >- (irule primrec_recfn >> 
+          rpt (irule unary_recfnsTheory.primrec_Cn >> simp[primrec_pr_nblsr,primrec_rules,primrec_pr_nblsnd0]))
+      >- (simp[nblft_phi_lem,Excl"fromTerm_def"] >> irule recfnCn >> 
+          rw[recfn_rules,Excl"fromTerm_def"]
+          >- (irule primrec_recfn >> simp[primrec_npair]) >> irule recfnCn >> 
+         rw[recfn_rules,Excl"fromTerm_def"] >> simp[recfn_some_num] )  )
+  >- (simp[recCn_def] >>  simp[pr_nblsr_correct,Excl"nblsr_def",ADD1,pr_nblsnd0_correct])
+QED
+
+Theorem rec1_pr1:
+  SOME o pr1 f = rec1 (SOME o f)
+Proof
+  simp[FUN_EQ_THM] >> Cases_on`x` >> rw[rec1_def,pr1_def]
 QED
 
 Theorem rUMibl_recfn:
   recfn rUMibl 1
 Proof
-  fs[rUMibl_def] >> irule recfnCn >> rw[] >> irule recfnCn >> rw[recfn_rules,recfn_nblsnd,recfn_nblfst]
+  fs[rUMibl_def] >> irule recfnCn >> rw[] >> irule recfnCn >> rw[recfn_rules,recfn_nblsnd,recfn_nblfst] >> `(SOME ∘ pr1 nblfst) = rec1 (SOME o nblfst)` suffices_by fs[recfn_nblfst] >> fs[rec1_pr1]
 QED
+
+Theorem rUMibl_index:
+  ∃i. ∀x. Phi i x = rUMibl [x]
+Proof
+  fs[unary_rec_fns_phi,rUMibl_recfn]
+QED
+
+(* Up to here *)
 
 Theorem extra_information1:
   univ_mach U ==> ∃c. ∀x y. (CKC U x y) <= (KC U x) + c
@@ -1737,13 +1841,17 @@ Proof
   pop_assum (qspec_then `bl2n (pair a b)` (assume_tac o Q.GENL[`a`,`b`])) >> 
   fs[nblsnd_correct2]>> fs[univ_mach_def] >> 
   `∀a b. U (pair b (pair (n2bl i) a)) = SOME a` by fs[on2bl_def] >> 
+  assume_tac rUMibl_index >> fs[] >> rename [`∀x. Phi rUMi x = rUMibl [x]`]
 
-  qabbrev_tac`j = UMi o i` >> 
-  `∀x y. Phi j (bl2n (pair x y)) = Phi UMi (bl2n y)` by 
+  qabbrev_tac`j = rUMi o i` >> 
+  `∀x y. Phi j (bl2n (pair x y)) = Phi rUMi (bl2n y)` by 
     (simp[Abbr`j`,computable_composition_def,nblsnd_correct2]) >> 
   pop_assum (qspecl_then [`x`,`pair a b`] (assume_tac o Q.GENL[`x`,`a`,`b`])) >>
-  `∀x a b. U (pair x (pair (n2bl j) (pair a b))) = U (pair a (pair (n2bl UMi) b))` by fs[] >>
+  `∀x a b. U (pair x (pair (n2bl j) (pair a b))) = U (pair a (pair (n2bl rUMi) b))` by fs[] >>
   `univ_mach U` by metis_tac[GSYM univ_mach_def] >>
+  `∀x a b. Phi j (bl2n (pair x (pair a b))) = Phi (bl2n a) (bl2n b)` by fs[rUMibl_correct] >>
+
+
   rw[univ_mach_pair_pair] >> 
 
   `∃c. ∀x y. MIN_SET {LENGTH (pair i b) | Phi (bl2n i) (bl2n (pair y b)) = SOME (bl2n x)} <= c + MIN_SET {LENGTH (pair a (pair i b)) | Phi (bl2n i) (bl2n (pair a b)) = SOME (bl2n x)}` 
