@@ -378,22 +378,22 @@ Proof
       rw [APPEND_BUTLASTN_LASTN],
       (* goal 5.2 (of 2) *)
       NTAC 2 STRONG_DISJ_TAC >> fs [] \\
+      Q.PAT_X_ASSUM `!w k. ~(k <= LENGTH u - 1) \/ _`
+         (ASSUME_TAC o (Q.SPEC `\i. {}`)) \\
      `(k = 0) \/ 0 < k` by RW_TAC arith_ss []
       >- (fs [BUTLASTN] \\
           Know `IS_CONCL (LTL3_SEM_TIME (LENGTH u − 1) u f')`
           >- (MATCH_MP_TAC PTLTL_SEM_LTL3_CONCL >> rw []) \\
           Q.PAT_X_ASSUM `THE (LTL3_SEM_TIME (LENGTH u − 1) u f')` MP_TAC \\
           rw [LTL3_SEM_TIME_def, IS_CONCL_def] \\
-          Q.PAT_X_ASSUM `!w k. ~(k <= LENGTH u - 1) \/ _`
-             (MP_TAC o (Q.SPECL [`\i. {}`, `LENGTH (u :'a set list) - 1`])) \\
+          Q.PAT_X_ASSUM `!k. ~(k <= LENGTH u - 1) \/ _`
+             (MP_TAC o (Q.SPEC `LENGTH (u :'a set list) - 1`)) \\
           RW_TAC arith_ss []) \\
       Know `PTLTL_SEM_ALT (BUTLASTN k u) f' =
             THE (LTL3_SEM_TIME (LENGTH (BUTLASTN k u) − 1) (BUTLASTN k u) f')`
-      >- (FIRST_X_ASSUM irule >> rw [LENGTH_BUTLASTN]) \\
+      >- (FIRST_X_ASSUM irule (* IH *) >> rw [LENGTH_BUTLASTN]) \\
       rw [LENGTH_BUTLASTN] \\
       POP_ASSUM MP_TAC \\
-      Q.PAT_X_ASSUM `!w k. ~(k <= LENGTH u - 1) \/ _`
-         (ASSUME_TAC o (Q.SPEC `\i. {}`)) \\
       Know `IS_CONCL (LTL3_SEM_TIME (LENGTH u − (k + 1)) (BUTLASTN k u) f')`
       >- (MATCH_MP_TAC PTLTL_SEM_LTL3_CONCL >> rw [LENGTH_BUTLASTN]) \\
       rw [LTL3_SEM_TIME_def, IS_CONCL_def] \\
@@ -408,18 +408,18 @@ Proof
           Know `IS_CONCL (LTL3_SEM_TIME (LENGTH u − 1) u f)`
           >- (MATCH_MP_TAC PTLTL_SEM_LTL3_CONCL >> rw []) \\
           rw [LTL3_SEM_TIME_def, IS_CONCL_def] >> fs []) \\
+      (* final part *)
+      Q.EXISTS_TAC `LENGTH u - (j + 1)` >> rw [] \\
       Q.PAT_X_ASSUM `!y. LENGTH y < LENGTH u ==> _`
          (MP_TAC o (Q.SPEC `BUTLASTN (LENGTH u - (j + 1)) u`)) \\
       rw [LENGTH_BUTLASTN] \\
-      POP_ASSUM (MP_TAC o (Q.SPEC `f`)) \\
+      POP_ASSUM K_TAC (* cleanup *) \\
       Know `IS_CONCL (LTL3_SEM_TIME j (BUTLASTN (LENGTH u − (j + 1)) u) f)`
       >- (MATCH_MP_TAC PTLTL_SEM_LTL3_CONCL >> rw [LENGTH_BUTLASTN]) \\
-      rw [LTL3_SEM_TIME_def, IS_CONCL_def]
-      >- (POP_ASSUM K_TAC \\
-          POP_ASSUM (MP_TAC o (ONCE_REWRITE_RULE [GSYM concat_assoc]) o
-                     (Q.SPEC `(LASTN (LENGTH u - (j + 1)) u) ++ (\i. {})`)) \\
-          rw [APPEND_BUTLASTN_LASTN]) \\
-      Q.EXISTS_TAC `LENGTH u - (j + 1)` >> rw [] ]
+      rw [LTL3_SEM_TIME_def, IS_CONCL_def] \\
+      POP_ASSUM (MP_TAC o (ONCE_REWRITE_RULE [GSYM concat_assoc]) o
+                  (Q.SPEC `(LASTN (LENGTH u - (j + 1)) u) ++ (\i. {})`)) \\
+      rw [APPEND_BUTLASTN_LASTN] ]
 QED
 
 val _ = export_theory ();
