@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+tex_theory                                                   (EmitTeX)
+----------------------------------------------------------------------
+tex_theory : string -> unit
+
+SYNOPSIS
+Emits theory as LaTeX commands and creates a document template.
+
+DESCRIBE
+An invocation of {tex_theory thy} will export the named
+theory {thy} as a collection of LaTeX commands and it will also generate
+a document "thy.tex" that presents the theory.  The string {"-"}
+may be used to denote the current theory segment. The theory is exported
+with {print_theory_as_tex}.
+
+FAILURE
+Will fail if there is a system error when trying to write the files.  It will not overwite the file {name}, however, "HOLname.tex" may be overwritten.
+
+EXAMPLE
+The invocation
+
+ - EmitTeX.tex_theory "list";
+ > val it = () : unit
+
+will generate two files "HOLlist.tex" and "list.tex".
+
+
+
+SEEALSO
+EmitTeX.print_term_as_tex, EmitTeX.print_type_as_tex,
+EmitTeX.print_theorem_as_tex, EmitTeX.print_theory_as_tex,
+EmitTeX.print_theories_as_tex_doc.
+
+----------------------------------------------------------------------

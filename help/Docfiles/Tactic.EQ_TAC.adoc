@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+EQ_TAC                                                        (Tactic)
+----------------------------------------------------------------------
+EQ_TAC : tactic
+
+SYNOPSIS
+Reduces goal of equality of boolean terms to forward and backward implication.
+
+KEYWORDS
+tactic, equality, implication.
+
+DESCRIBE
+When applied to a goal {A ?- t1 = t2}, where {t1} and {t2} have type {bool},
+the tactic {EQ_TAC} returns the subgoals {A ?- t1 ==> t2} and
+{A ?- t2 ==> t1}.
+
+             A ?- t1 = t2
+   =================================  EQ_TAC
+    A ?- t1 ==> t2   A ?- t2 ==> t1
+
+
+
+
+FAILURE
+Fails unless the conclusion of the goal is an equation between boolean terms.
+
+SEEALSO
+Thm.EQ_IMP_RULE, Drule.IMP_ANTISYM_RULE.
+
+----------------------------------------------------------------------

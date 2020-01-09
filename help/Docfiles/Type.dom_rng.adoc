@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+dom_rng                                                         (Type)
+----------------------------------------------------------------------
+dom_rng : hol_type -> hol_type * hol_type
+
+SYNOPSIS
+Breaks a function type into domain and range types.
+
+KEYWORDS
+type
+
+DESCRIBE
+If {ty} has the form {ty1 -> ty2}, then {dom_rng ty} yields {(ty1,ty2)}.
+
+FAILURE
+Fails if {ty} is not a function type.
+
+EXAMPLE
+
+- dom_rng (bool --> alpha);
+> val it = (`:bool`, `:'a`) : hol_type * hol_type
+
+- try dom_rng bool;
+
+Exception raised at Type.dom_rng:
+not a function type
+
+
+
+
+SEEALSO
+Type.-->, Type.dest_type, Type.dest_thy_type.
+
+----------------------------------------------------------------------

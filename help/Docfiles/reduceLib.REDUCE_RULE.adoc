@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+REDUCE_RULE                                                (reduceLib)
+----------------------------------------------------------------------
+REDUCE_RULE : (thm -> thm)
+
+SYNOPSIS
+Performs arithmetic or boolean reduction on a theorem at all levels possible.
+
+LIBRARY
+reduce
+
+DESCRIBE
+{REDUCE_RULE} attempts to transform a theorem by applying {REDUCE_CONV}.
+
+FAILURE
+Never fails, but may just return the original theorem.
+
+EXAMPLE
+
+#REDUCE_RULE (ASSUME "x = (100 + (60 - 17))");;
+. |- x = 143
+
+#REDUCE_RULE (REFL "100 + 12 DIV 6");;
+|- T
+
+
+SEEALSO
+reduceLib.RED_CONV, reduceLib.REDUCE_CONV, reduceLib.REDUCE_TAC.
+
+----------------------------------------------------------------------

@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+remove_user_printer                                            (Parse)
+----------------------------------------------------------------------
+remove_user_printer :
+  string -> (term * term_grammar.userprinter) option
+
+SYNOPSIS
+Removes a user-defined pretty-printing function associated with a
+particular name.
+
+KEYWORDS
+Pretty-printing.
+
+LIBRARY
+Parse
+
+DESCRIBE
+This removes the user-defined pretty-printing function that has been
+associated with a particular name (the name of the code for the
+function).  If there is such a printer in the global grammar for the
+specified type, this is returned in the option type.  If there is no
+printer, then {NONE} is returned.
+
+FAILURE
+Never fails.
+
+COMMENTS
+As always, there is an accompanying function
+{temp_remove_user_printer}, which does not affect the grammar exported
+to disk.
+
+SEEALSO
+Parse.add_user_printer.
+
+----------------------------------------------------------------------

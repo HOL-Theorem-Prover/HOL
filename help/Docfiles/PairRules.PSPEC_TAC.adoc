@@ -1,0 +1,59 @@
+----------------------------------------------------------------------
+PSPEC_TAC                                                  (PairRules)
+----------------------------------------------------------------------
+PSPEC_TAC : term * term -> tactic
+
+KEYWORDS
+tactic.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Generalizes a goal.
+
+DESCRIBE
+When applied to a pair of terms {(q,p)}, where {p} is a paired structure of
+variables and a goal {A ?- t}, the tactic {PSPEC_TAC} generalizes the
+goal to {A ?- !p. t[p/q]}, that is, all components of {q} are turned into
+the corresponding components of {p}.
+
+        A ?- t
+   =================  PSPEC_TAC (q,p)
+    A ?- !x. t[p/q]
+
+
+
+
+FAILURE
+Fails unless {p} is a paired structure of variables with the same type as {q}.
+
+EXAMPLE
+
+- g `1 + 2 = 2 + 1`;
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         1 + 2 = 2 + 1
+
+- e (PSPEC_TAC (Term`(1,2)`, Term`(x:num,y:num)`));
+OK..
+1 subgoal:
+> val it =
+    !(x,y). x + y = y + x
+
+     : proof
+
+
+
+
+USES
+Removing unnecessary speciality in a goal, particularly as a prelude to
+an inductive proof.
+
+SEEALSO
+PairRules.PGEN, PairRules.PGENL, PairRules.PGEN_TAC, PairRules.PSPEC,
+PairRules.PSPECL, PairRules.PSPEC_ALL, PairRules.PSTRIP_TAC.
+
+----------------------------------------------------------------------

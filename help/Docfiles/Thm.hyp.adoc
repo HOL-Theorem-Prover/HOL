@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+hyp                                                              (Thm)
+----------------------------------------------------------------------
+hyp : thm -> term list
+
+SYNOPSIS
+Returns the hypotheses of a theorem.
+
+DESCRIBE
+When applied to a theorem {A |- t}, the function {hyp} returns {A}, the
+list of hypotheses of the theorem.
+
+FAILURE
+Never fails.
+
+COMMENTS
+The order in which hypotheses are returned can not be relied on.
+
+SEEALSO
+Thm.dest_thm, Thm.concl.
+
+----------------------------------------------------------------------

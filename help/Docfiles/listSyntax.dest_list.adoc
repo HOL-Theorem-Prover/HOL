@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+dest_list                                                 (listSyntax)
+----------------------------------------------------------------------
+dest_list : term -> term list * hol_type
+
+SYNOPSIS
+Iteratively breaks apart a list term.
+
+DESCRIBE
+{dest_list} is a term destructor for lists:
+{dest_list ``[t1;...;tn]:ty list``} returns {([t1,...,tn], ty)}.
+
+FAILURE
+Fails if the term is not a list.
+
+SEEALSO
+listSyntax.mk_list, listSyntax.is_list, listSyntax.mk_cons,
+listSyntax.dest_cons, listSyntax.is_cons.
+
+----------------------------------------------------------------------

@@ -1,0 +1,44 @@
+----------------------------------------------------------------------
+output_words_as                                             (wordsLib)
+----------------------------------------------------------------------
+output_words_as : (int * num -> radix) -> unit
+
+SYNOPSIS
+Controls pretty-printing of word literals.
+
+DESCRIBE
+A call to {output_words_as f} makes function {f} determine the output base for
+word literals.  The funtion {f} takes a word-length/word-value pair and returns
+the required output radix.
+
+EXAMPLE
+The default setting is:
+
+output_words_as
+  (fn (l, v) =>
+      if Arbnum.<= (Arbnum.fromHexString "10000", v)
+         then StringCvt.HEX
+      else StringCvt.DEC);
+
+The {l = 0} case is used for word literals with non-numeric index types.
+
+- wordsLib.output_words_as
+    (fn (l,_) => if l = 0 then StringCvt.HEX else StringCvt.DEC);
+- ``32w``;
+<<HOL message: inventing new type variable names: 'a>>
+> val it = ``0x20w`` : term
+- ``32w:word5``;
+> val it = ``32w`` : term
+
+
+COMMENTS
+Printing and parsing in octal is controlled by the reference
+{base_tokens.allow_octal_input}.  Pretty-printing for word literals can be
+turned off with a call to {wordsLib.output_words_as_dec}.
+
+SEEALSO
+Parse.add_user_printer, wordsLib.output_words_as_dec,
+wordsLib.output_words_as_bin, wordsLib.output_words_as_oct,
+wordsLib.output_words_as_hex.
+
+----------------------------------------------------------------------

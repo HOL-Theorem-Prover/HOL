@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+strcat                                                           (Lib)
+----------------------------------------------------------------------
+strcat : string -> string -> string
+
+KEYWORDS
+Curry
+
+SYNOPSIS
+Concatenates two ML strings.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- strcat "1" "";
+> val it = "1" : string
+
+- strcat "hello" "world";
+> val it = "helloworld" : string
+
+- strcat "hello" (strcat " " "world");
+> val it = "hello world" : string
+
+
+----------------------------------------------------------------------

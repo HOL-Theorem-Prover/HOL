@@ -1,0 +1,21 @@
+----------------------------------------------------------------------
+bool_case                                                 (boolSyntax)
+----------------------------------------------------------------------
+bool_case : term
+
+SYNOPSIS
+Constant denoting case expressions for {bool}.
+
+LIBRARY
+boolSyntax
+
+DESCRIBE
+The ML variable {boolSyntax.bool_case} is bound to the term {bool$bool_case}.
+
+SEEALSO
+boolSyntax.equality, boolSyntax.implication, boolSyntax.select,
+boolSyntax.T, boolSyntax.F, boolSyntax.universal,
+boolSyntax.existential, boolSyntax.exists1, boolSyntax.conjunction,
+boolSyntax.disjunction, boolSyntax.let_tm, boolSyntax.arb.
+
+----------------------------------------------------------------------

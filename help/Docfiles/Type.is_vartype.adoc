@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+is_vartype                                                      (Type)
+----------------------------------------------------------------------
+is_vartype : hol_type -> bool
+
+SYNOPSIS
+Tests a type to see if it is a type variable.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- is_vartype Type.alpha;
+> val it = true : bool
+
+- is_vartype bool;
+> val it = false : bool
+
+- is_vartype (Type `:'a  -> bool`);
+> val it = false : bool
+
+
+
+
+SEEALSO
+Type.mk_vartype, Type.dest_vartype.
+
+----------------------------------------------------------------------

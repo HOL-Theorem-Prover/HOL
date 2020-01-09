@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+FIRST_TCL                                                   (Thm_cont)
+----------------------------------------------------------------------
+FIRST_TCL : (thm_tactical list -> thm_tactical)
+
+SYNOPSIS
+Applies the first theorem-tactical in a list which succeeds.
+
+KEYWORDS
+theorem-tactical.
+
+DESCRIBE
+When applied to a list of theorem-tacticals, a theorem-tactic and a theorem,
+{FIRST_TCL} returns the tactic resulting from the application of the first
+theorem-tactical to the theorem-tactic and theorem which succeeds. The effect
+is the same as:
+
+   FIRST_TCL [ttl1;...;ttln] = ttl1 ORELSE_TCL ... ORELSE_TCL ttln
+
+
+
+
+FAILURE
+{FIRST_TCL} fails iff each tactic in the list fails when applied to the
+theorem-tactic and theorem. This is trivially the case if the list is empty.
+
+SEEALSO
+Thm_cont.EVERY_TCL, Thm_cont.ORELSE_TCL, Thm_cont.REPEAT_TCL,
+Thm_cont.THEN_TCL.
+
+----------------------------------------------------------------------

@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+REVERSE_LT                                                  (Tactical)
+----------------------------------------------------------------------
+REVERSE_LT : list_tactic
+
+SYNOPSIS
+Reverses the order of a list of subgoals.
+
+KEYWORDS
+list-tactic.
+
+DESCRIBE
+The list-tactic {REVERSE_LT} reverses
+the order of a list of subgoals.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+Where {tac} is a tactic,
+{tac THEN_LT REVERSE_LT} is equivalent to {REVERSE tac}
+
+SEEALSO
+Tactical.THEN_LT, Tactical.REVERSE, Tactical.ROTATE_LT.
+
+----------------------------------------------------------------------

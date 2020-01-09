@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+hidden                                                         (Parse)
+----------------------------------------------------------------------
+hidden : string -> bool
+
+SYNOPSIS
+Checks to see if a given name has been hidden.
+
+LIBRARY
+Parse
+
+DESCRIBE
+A call {hidden c} where {c} is the name of a constant, will
+check to see if the given name had been hidden by a previous call
+to {Parse.hide}.
+
+FAILURE
+Never fails.
+
+COMMENTS
+The hiding of a constant only affects the quotation parser; the constant is
+still there in a theory.
+
+SEEALSO
+Parse.hide, Parse.reveal.
+
+----------------------------------------------------------------------

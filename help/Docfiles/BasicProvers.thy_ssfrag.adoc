@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+thy_ssfrag                                              (BasicProvers)
+----------------------------------------------------------------------
+thy_ssfrag : string -> simpLib.ssfrag
+
+SYNOPSIS
+Returns simplifier fragment for a theory
+
+KEYWORDS
+simplification
+
+DESCRIBE
+Returns the simpset fragment recorded for the given theory.  This
+consists of the rewrites passed to {export_rewrites}.
+
+FAILURE
+Fails if the theory was not found, or did not export any theorems.
+
+SEEALSO
+BasicProvers.export_rewrites.
+
+----------------------------------------------------------------------

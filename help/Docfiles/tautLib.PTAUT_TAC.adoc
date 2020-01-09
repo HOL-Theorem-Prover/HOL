@@ -1,0 +1,28 @@
+----------------------------------------------------------------------
+PTAUT_TAC                                                    (tautLib)
+----------------------------------------------------------------------
+PTAUT_TAC : tactic
+
+SYNOPSIS
+Tautology checker. Proves propositional goals.
+
+LIBRARY
+taut
+
+DESCRIBE
+Given a goal with a conclusion that contains only Boolean constants,
+Boolean-valued variables, Boolean equalities, implications, conjunctions,
+disjunctions, negations and Boolean-valued conditionals, this tactic will
+prove the goal if it is valid. If all the variables in the conclusion are
+universally quantified, this tactic will also reduce an invalid goal to false.
+
+FAILURE
+Fails if the conclusion of the goal is not of the form
+{!x1 ... xn. f[x1,...,xn]} where {f[x1,...,xn]} is a propositional formula
+(except that the variables do not have to be universally quantified if the
+goal is valid).
+
+SEEALSO
+tautLib.PTAUT_CONV, tautLib.PTAUT_PROVE, tautLib.TAUT_TAC.
+
+----------------------------------------------------------------------

@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+known_constants                                                (Parse)
+----------------------------------------------------------------------
+Parse.known_constants : unit -> string list
+
+SYNOPSIS
+Returns the list of constants known to the parser.
+
+KEYWORDS
+Parsing.
+
+LIBRARY
+Parse
+
+DESCRIBE
+A call to this functions returns the list of constants that will be
+treated as such by the parser.  Those constants with names not on the
+list will be parsed as if they were variables.
+
+FAILURE
+Never fails.
+
+SEEALSO
+Parse.hide, Parse.reveal, Parse.set_known_constants.
+
+----------------------------------------------------------------------

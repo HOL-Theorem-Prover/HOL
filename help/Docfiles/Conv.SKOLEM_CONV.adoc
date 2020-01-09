@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+SKOLEM_CONV                                                     (Conv)
+----------------------------------------------------------------------
+SKOLEM_CONV : conv
+
+SYNOPSIS
+Proves the existence of a Skolem function.
+
+KEYWORDS
+conversion.
+
+DESCRIBE
+When applied to an argument of the form {!x1...xn. ?y. P}, the conversion
+{SKOLEM_CONV} returns the theorem:
+
+   |- (!x1...xn. ?y. P) = (?y'. !x1...xn. P[y' x1 ... xn/y])
+
+where {y'} is a primed variant of {y} not free in the input term.
+
+FAILURE
+{SKOLEM_CONV tm} fails if {tm} is not a term of the form {!x1...xn. ?y. P}.
+
+SEEALSO
+Conv.X_SKOLEM_CONV.
+
+----------------------------------------------------------------------

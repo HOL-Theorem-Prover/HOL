@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+DISCH_ALL                                                      (Drule)
+----------------------------------------------------------------------
+DISCH_ALL : thm -> thm
+
+SYNOPSIS
+Discharges all hypotheses of a theorem.
+
+KEYWORDS
+rule, discharge, assumption, implication.
+
+DESCRIBE
+
+         A1, ..., An |- t
+   ----------------------------  DISCH_ALL
+    |- A1 ==> ... ==> An ==> t
+
+
+
+
+FAILURE
+{DISCH_ALL} never fails. If there are no hypotheses to discharge, it will
+simply return the theorem unchanged.
+
+COMMENTS
+Users should not rely on the hypotheses being discharged in any particular
+order.
+
+SEEALSO
+Thm.DISCH, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Drule.NEG_DISCH,
+Tactic.FILTER_DISCH_TAC, Tactic.FILTER_DISCH_THEN, Tactic.STRIP_TAC,
+Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
+
+----------------------------------------------------------------------

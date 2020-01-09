@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+dest_forall                                               (boolSyntax)
+----------------------------------------------------------------------
+dest_forall : term -> term * term
+
+SYNOPSIS
+Breaks apart a universally quantified term into quantified variable and body.
+
+DESCRIBE
+If {M} has the form {!x. t}, then {dest_forall M} returns {(x,t)}.
+
+FAILURE
+Fails if {M} is not a universal quantification.
+
+SEEALSO
+boolSyntax.mk_forall, boolSyntax.is_forall, boolSyntax.strip_forall,
+boolSyntax.list_mk_forall.
+
+----------------------------------------------------------------------

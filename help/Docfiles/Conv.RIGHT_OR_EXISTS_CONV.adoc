@@ -1,0 +1,28 @@
+----------------------------------------------------------------------
+RIGHT_OR_EXISTS_CONV                                            (Conv)
+----------------------------------------------------------------------
+RIGHT_OR_EXISTS_CONV : conv
+
+SYNOPSIS
+Moves an existential quantification of the right disjunct outwards through a
+disjunction.
+
+KEYWORDS
+conversion, quantifier, existential, disjunction.
+
+DESCRIBE
+When applied to a term of the form {P \/ (?x.Q)}, the conversion
+{RIGHT_OR_EXISTS_CONV} returns the theorem:
+
+   |- P \/ (?x.Q) = (?x'. P \/ (Q[x'/x]))
+
+where {x'} is a primed variant of {x} that does not appear free in
+the input term.
+
+FAILURE
+Fails if applied to a term not of the form {P \/ (?x.Q)}.
+
+SEEALSO
+Conv.OR_EXISTS_CONV, Conv.EXISTS_OR_CONV, Conv.LEFT_OR_EXISTS_CONV.
+
+----------------------------------------------------------------------

@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+MP_TAC                                                        (Tactic)
+----------------------------------------------------------------------
+MP_TAC : thm_tactic
+
+SYNOPSIS
+Reduces a goal to implication from a known theorem.
+
+KEYWORDS
+tactic, modus, ponens, implication, antecedent.
+
+DESCRIBE
+When applied to the theorem {A' |- s} and the goal {A ?- t}, the tactic
+{MP_TAC} reduces the goal to {A ?- s ==> t}. Unless {A'} is a subset of
+{A}, this is an invalid tactic.
+
+       A ?- t
+   ==============  MP_TAC (A' |- s)
+    A ?- s ==> t
+
+
+
+
+FAILURE
+Never fails.
+
+SEEALSO
+Tactic.MATCH_MP_TAC, Thm.MP, Tactic.UNDISCH_TAC.
+
+----------------------------------------------------------------------

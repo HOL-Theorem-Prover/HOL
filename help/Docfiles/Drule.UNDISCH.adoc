@@ -1,0 +1,33 @@
+----------------------------------------------------------------------
+UNDISCH                                                        (Drule)
+----------------------------------------------------------------------
+UNDISCH : thm -> thm
+
+SYNOPSIS
+Undischarges the antecedent of an implicative theorem.
+
+KEYWORDS
+rule, undischarge, antecedent.
+
+DESCRIBE
+
+    A |- t1 ==> t2
+   ----------------  UNDISCH
+     A, t1 |- t2
+
+Note that {UNDISCH} treats {"~u"} as {"u ==> F"}.
+
+FAILURE
+{UNDISCH} will fail on theorems which are not implications or negations.
+
+COMMENTS
+If the antecedent already appears in (or is alpha-equivalent to one of) the
+hypotheses, it will not be duplicated.
+
+SEEALSO
+Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN,
+Tactic.FILTER_DISCH_TAC, Tactic.FILTER_DISCH_THEN, Drule.NEG_DISCH,
+Tactic.STRIP_TAC, Drule.UNDISCH_ALL, Drule.UNDISCH_SPLIT,
+Drule.UNDISCH_TM, Tactic.UNDISCH_TAC.
+
+----------------------------------------------------------------------

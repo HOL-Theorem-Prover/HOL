@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+++                                                           (simpLib)
+----------------------------------------------------------------------
+op ++ : simpset * ssfrag -> simpset
+
+SYNOPSIS
+Infix operator for adding an {ssfrag} item into a simpset.
+
+DESCRIBE
+{bossLib.++} is identical to {simpLib.++}.
+
+SEEALSO
+bossLib.++.
+
+----------------------------------------------------------------------

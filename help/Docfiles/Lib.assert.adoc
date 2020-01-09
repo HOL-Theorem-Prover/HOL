@@ -1,0 +1,37 @@
+----------------------------------------------------------------------
+assert                                                           (Lib)
+----------------------------------------------------------------------
+assert : ('a -> bool) -> 'a -> 'a
+
+SYNOPSIS
+Checks that a value satisfies a predicate.
+
+DESCRIBE
+{assert p x} returns {x} if the application {p x} yields {true}. Otherwise,
+{assert p x} fails.
+
+FAILURE
+{assert p x} fails with exception {HOL_ERR} if the predicate {p} yields
+{false} when applied to the value {x}. If the application {p x} raises an
+exception {e}, then {assert p x} raises {e}.
+
+EXAMPLE
+
+- null [];
+> val it = true : bool
+
+- assert null ([]:int list);
+> val it = [] : int list
+
+- null [1];
+> false : bool
+
+- assert null [1];
+! Uncaught exception:
+! HOL_ERR <poly>
+
+
+SEEALSO
+Lib.can, Lib.assert_exn.
+
+----------------------------------------------------------------------

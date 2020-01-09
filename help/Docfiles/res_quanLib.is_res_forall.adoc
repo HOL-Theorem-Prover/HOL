@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+is_res_forall                                            (res_quanLib)
+----------------------------------------------------------------------
+is_res_forall : term -> bool
+
+SYNOPSIS
+Tests a term to see if it is a restricted universal quantification.
+
+DESCRIBE
+{is_res_forall "!var::P. t"} returns {true}. If the term is not a
+restricted universal quantification the result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+res_quanLib.mk_res_forall, res_quanLib.dest_res_forall.
+
+----------------------------------------------------------------------

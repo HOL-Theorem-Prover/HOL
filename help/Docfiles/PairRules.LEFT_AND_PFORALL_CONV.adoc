@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+LEFT_AND_PFORALL_CONV                                      (PairRules)
+----------------------------------------------------------------------
+LEFT_AND_PFORALL_CONV : conv
+
+LIBRARY
+pair
+
+SYNOPSIS
+Moves a paired universal quantification of the left conjunct outwards through
+a conjunction.
+
+DESCRIBE
+When applied to a term of the form {(!p. t) /\ u}, the conversion
+{LEFT_AND_PFORALL_CONV} returns the theorem:
+
+   |- (!p. t) /\ u = (!p'. t[p'/p] /\ u)
+
+where {p'} is a primed variant of {p} that does not appear free in
+the input term.
+
+FAILURE
+Fails if applied to a term not of the form {(!p. t) /\ u}.
+
+SEEALSO
+Conv.LEFT_AND_FORALL_CONV, PairRules.AND_PFORALL_CONV,
+PairRules.PFORALL_AND_CONV, PairRules.RIGHT_AND_PFORALL_CONV.
+
+----------------------------------------------------------------------

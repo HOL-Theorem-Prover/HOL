@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+is_res_exists_unique                                     (res_quanLib)
+----------------------------------------------------------------------
+is_res_exists_unique : term -> bool
+
+SYNOPSIS
+Tests a term to see if it is a restricted unique existential quantification.
+
+DESCRIBE
+{is_res_exists_unique "?!var::P. t"} returns {true}. If the term is not a
+restricted unique existential quantification the result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+res_quanLib.mk_res_exists_unique, res_quanLib.dest_res_exists_unique.
+
+----------------------------------------------------------------------

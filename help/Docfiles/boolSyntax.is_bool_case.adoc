@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+is_bool_case                                              (boolSyntax)
+----------------------------------------------------------------------
+is_bool_case : term -> bool
+
+SYNOPSIS
+Tests a case expression over {bool}.
+
+DESCRIBE
+If {M} has the form {bool_case M1 M2 b}, then {is_bool_case M}
+returns {true}. Otherwise, it returns {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+boolSyntax.mk_bool_case, boolSyntax.dest_bool_case.
+
+----------------------------------------------------------------------

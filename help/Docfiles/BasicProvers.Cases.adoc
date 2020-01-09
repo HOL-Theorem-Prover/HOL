@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+Cases                                                   (BasicProvers)
+----------------------------------------------------------------------
+Cases : tactic
+
+SYNOPSIS
+Case split on leading universally quantified variable in a goal.
+
+DESCRIBE
+{bossLib.Cases} is identical to {BasicProof.Cases}.
+
+SEEALSO
+bossLib.Cases.
+
+----------------------------------------------------------------------

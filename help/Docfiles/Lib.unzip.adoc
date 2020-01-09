@@ -1,0 +1,24 @@
+----------------------------------------------------------------------
+unzip                                                            (Lib)
+----------------------------------------------------------------------
+unzip : ('a * 'b) list -> ('a list * 'b list)
+
+SYNOPSIS
+Converts a list of pairs into a pair of lists.
+
+KEYWORDS
+list.
+
+DESCRIBE
+{unzip [(x1,y1),...,(xn,yn)]} returns {([x1,...,xn],[y1,...,yn])}.
+
+FAILURE
+Never fails.
+
+COMMENTS
+Identical to {Lib.split}.
+
+SEEALSO
+Lib.split, Lib.zip, Lib.combine.
+
+----------------------------------------------------------------------

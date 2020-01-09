@@ -1,0 +1,25 @@
+----------------------------------------------------------------------
+eta                                                  (proofManagerLib)
+----------------------------------------------------------------------
+eta : tactic -> proof
+
+SYNOPSIS
+Applies a tactic to all goals, on which it succeeds, in the current goal list,
+replacing the list with the resulting subgoals.
+
+DESCRIBE
+{eta tac} tries to apply {tac} to all the goals in the current goal list;
+replacing the goal list with the list of all the resulting subgoals.
+If it fails on a goal, it has no effect on that goal.
+It is an abbreviation for {expand_list (TRYALL tac)}.
+
+USES
+For interactively constructing suitable compound tactics:
+in an interactive proof, the effect of {e (tac1 THEN TRY tac2)}
+can be obtained by {e tac1} and then {eta tac2}.
+
+SEEALSO
+proofManagerLib.expand_list, proofManagerLib.elt, Tactical.TRYALL,
+Tactical.TRY, proofManagerLib.eall, proofManagerLib.set_goal.
+
+----------------------------------------------------------------------

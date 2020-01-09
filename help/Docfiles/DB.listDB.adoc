@@ -1,0 +1,25 @@
+----------------------------------------------------------------------
+listDB                                                            (DB)
+----------------------------------------------------------------------
+listDB : unit -> data list
+
+SYNOPSIS
+All theorems, axioms, and definitions in the currently loaded theory
+segments.
+
+DESCRIBE
+An invocation {listDB()} returns everything that has been stored in
+all theory segments currently loaded.
+
+EXAMPLE
+
+- length (listDB());
+> val it = 736 : int
+
+
+
+
+SEEALSO
+DB.thy, DB.theorems, DB.definitions, DB.axioms, DB.find, DB.match.
+
+----------------------------------------------------------------------

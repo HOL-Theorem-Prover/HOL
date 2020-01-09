@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+CCONTR                                                           (Thm)
+----------------------------------------------------------------------
+CCONTR : term -> thm -> thm
+
+SYNOPSIS
+Implements the classical contradiction rule.
+
+KEYWORDS
+rule, contradiction.
+
+DESCRIBE
+When applied to a term {t} and a theorem {A |- F}, the inference rule {CCONTR}
+returns the theorem {A - {~t} |- t}.
+
+       A |- F
+   ---------------  CCONTR t
+    A - {~t} |- t
+
+
+
+
+FAILURE
+Fails unless the term has type {bool} and the theorem has {F} as its
+conclusion.
+
+COMMENTS
+The usual use will be when {~t} exists in the assumption list; in this case,
+{CCONTR} corresponds to the classical contradiction rule: if {~t} leads to
+a contradiction, then {t} must be true.
+
+SEEALSO
+Drule.CONTR, Drule.CONTRAPOS, Tactic.CONTR_TAC, Thm.NOT_ELIM.
+
+----------------------------------------------------------------------

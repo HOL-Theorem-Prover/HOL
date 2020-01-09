@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+export_mono                                                (IndDefLib)
+----------------------------------------------------------------------
+export_mono : string -> unit
+
+SYNOPSIS
+Records a theorem as a monotonicity theorem for inductive definitions.
+
+KEYWORDS
+Inductive definitions.
+
+DESCRIBE
+A call to {export_mono "thm_name"} causes the theorem of that name to
+be stored as a monotonicity theorem, to be used when an inductive
+definition is made. See the DESCRIPTION manual for more on the
+required form of the theorem being exported in this way.
+
+FAILURE
+Fails if the string argument is not the name of a stored theorem. The
+name can be qualified (preceded) with the name of an ancestral theory
+segment and a full-stop, or can be “bare”, in which case it must be
+the name of a theorem in the current segment.
+
+SEEALSO
+IndDefLib.Hol_reln.
+
+----------------------------------------------------------------------

@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+isEmpty                                                          (Tag)
+----------------------------------------------------------------------
+isEmpty : tag -> bool
+
+SYNOPSIS
+Tells if a tag is empty.
+
+KEYWORDS
+tag.
+
+DESCRIBE
+An invocation {isEmpty t} returns {true} just in case {t} is the empty tag.
+Only theorems built solely by HOL proof have an empty tag.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- Tag.isEmpty (Thm.tag NOT_FORALL_THM);
+> val it = true : bool
+
+
+
+
+SEEALSO
+Thm.tag, Thm.mk_oracle_thm.
+
+----------------------------------------------------------------------

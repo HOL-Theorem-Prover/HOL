@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+dest_select                                               (boolSyntax)
+----------------------------------------------------------------------
+dest_select : term -> term * term
+
+SYNOPSIS
+Breaks apart a choice term into selected variable and body.
+
+DESCRIBE
+If {M} has the form {@v. t} then {dest_select M} returns {(v,t)}.
+
+FAILURE
+Fails if {M} is not an epsilon-term.
+
+SEEALSO
+boolSyntax.mk_select, boolSyntax.is_select.
+
+----------------------------------------------------------------------

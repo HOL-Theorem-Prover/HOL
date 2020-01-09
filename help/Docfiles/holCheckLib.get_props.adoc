@@ -1,0 +1,12 @@
+----------------------------------------------------------------------
+get_props                                                (holCheckLib)
+----------------------------------------------------------------------
+get_props : model -> (string * term) list
+
+SYNOPSIS
+Returns the properties that will be checked for this HolCheck model. Throws an exception if no properties have been set.
+
+SEEALSO
+holCheckLib.holCheck, holCheckLib.set_props.
+
+----------------------------------------------------------------------

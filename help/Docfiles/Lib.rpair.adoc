@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+rpair                                                            (Lib)
+----------------------------------------------------------------------
+rpair : 'a -> 'b -> 'b * 'a
+
+SYNOPSIS
+Makes two values into a pair, in reverse order.
+
+DESCRIBE
+{rpair x y} returns {(y,x)}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+Lib.pair, Lib.swap, Lib.fst, Lib.snd, Lib.curry, Lib.uncurry.
+
+----------------------------------------------------------------------

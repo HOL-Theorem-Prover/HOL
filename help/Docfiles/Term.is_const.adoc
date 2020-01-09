@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+is_const                                                        (Term)
+----------------------------------------------------------------------
+is_const : term -> bool
+
+SYNOPSIS
+Tests a term to see if it is a constant.
+
+DESCRIBE
+If {c} is an instance of a previously declared HOL constant, then
+{is_const c} returns {true}; otherwise the result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+Term.mk_const, Term.dest_const, Term.is_var, Term.is_comb,
+Term.is_abs.
+
+----------------------------------------------------------------------

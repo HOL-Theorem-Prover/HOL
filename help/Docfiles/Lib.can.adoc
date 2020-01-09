@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+can                                                              (Lib)
+----------------------------------------------------------------------
+can : ('a -> 'b) -> 'a -> bool
+
+KEYWORDS
+Failure, exceptions.
+
+SYNOPSIS
+Tests for failure.
+
+DESCRIBE
+{can f x} evaluates to {true} if the application of {f} to {x} succeeds.
+It evaluates to {false} if the application fails.
+
+FAILURE
+Only fails if {f x} raises the {Interrupt} exception.
+
+EXAMPLE
+
+- hd [];
+! Uncaught exception:
+! Empty
+
+- can hd [];
+> val it = false : bool
+
+- can (fn _ => raise Interrupt) 3;
+> Interrupted.
+
+
+SEEALSO
+Lib.assert, Lib.trye, Lib.partial, Lib.total, Lib.assert_exn.
+
+----------------------------------------------------------------------

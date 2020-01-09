@@ -1,0 +1,23 @@
+----------------------------------------------------------------------
+strip_abs                                                 (boolSyntax)
+----------------------------------------------------------------------
+strip_abs : term -> term list * term
+
+SYNOPSIS
+Iteratively breaks apart abstractions.
+
+DESCRIBE
+If {M} has the form {\x1 ... xn.t} then {strip_abs M} returns
+{([x1,...,xn],t)}. Note that
+
+   strip_abs(list_mk_abs([x1,...,xn],t))
+
+will not return {([x1,...,xn],t)} if {t} is an abstraction.
+
+FAILURE
+Never fails.
+
+SEEALSO
+boolSyntax.list_mk_abs, Term.dest_abs.
+
+----------------------------------------------------------------------

@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+recInduct                                               (BasicProvers)
+----------------------------------------------------------------------
+recInduct : thm -> tactic
+
+SYNOPSIS
+Induct with supplied recursion induction scheme.
+
+DESCRIBE
+{bossLib.recInduct} is identical to {Induction.recInduct}.
+
+SEEALSO
+bossLib.recInduct.
+
+----------------------------------------------------------------------

@@ -1,0 +1,17 @@
+----------------------------------------------------------------------
+GEN_EXISTS_TAC                                               (bossLib)
+----------------------------------------------------------------------
+GEN_EXISTS_TAC : string -> Parse.term Lib.frag list -> tactic
+
+SYNOPSIS
+Instantiate a quantifier at subposition.
+
+DESCRIBE
+{GEN_EXISTS_TAC v_name i} tries to instantiate a quantifier for a variable with
+name {v_name} with {i}. It is short for {quantHeuristicsLib.QUANT_TAC [(v, i, [])]}.
+It can be seen as a generalisation of {Q.EXISTS_TAC}.
+
+SEEALSO
+Tactic.EXISTS_TAC, quantHeuristicsLib.QUANT_TAC.
+
+----------------------------------------------------------------------

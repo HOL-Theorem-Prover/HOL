@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+definitions                                                       (DB)
+----------------------------------------------------------------------
+definitions : string -> (string * thm) list
+
+SYNOPSIS
+All the definitions stored in the named theory.
+
+DESCRIBE
+An invocation {definitions thy}, where {thy} is the name of a currently
+loaded theory segment, will return a list of the definitions stored in
+that theory. Each definition is paired with its name in the result.
+The string {"-"} may be used to denote the current theory segment.
+
+FAILURE
+Never fails. If {thy} is not the name of a currently loaded theory segment,
+the empty list is returned.
+
+EXAMPLE
+
+- definitions "combin";
+> val it =
+    [("C_DEF", |- combin$C = (\f x y. f y x)),
+     ("I_DEF", |- I = S K K),
+     ("K_DEF", |- K = (\x y. x)),
+     ("o_DEF", |- !f g. f o g = (\x. f (g x))),
+     ("S_DEF", |- S = (\f g x. f x (g x))),
+     ("W_DEF", |- W = (\f x. f x x))] : (string * thm) list
+
+
+
+
+SEEALSO
+DB.thy, DB.fetch, DB.thms, DB.theorems, DB.axioms, DB.listDB.
+
+----------------------------------------------------------------------

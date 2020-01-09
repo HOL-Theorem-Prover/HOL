@@ -1,0 +1,16 @@
+----------------------------------------------------------------------
+CONSEQ_CONV_TAC                                           (ConseqConv)
+----------------------------------------------------------------------
+CONSEQ_CONV_TAC : directed_conseq_conv -> tactic
+
+SYNOPSIS
+Reduces the goal using a consequence conversion.
+
+DESCRIBE
+{CONSEQ_CONV_TAC c} tries to strengthen a goal {P} using
+{c} to a new goal {P'}. It then remains to show that {P'} holds.
+
+SEEALSO
+Tactic.MATCH_MP_TAC.
+
+----------------------------------------------------------------------

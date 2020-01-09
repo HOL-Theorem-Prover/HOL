@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+front_last                                                       (Lib)
+----------------------------------------------------------------------
+Lib.front_last : 'a list -> 'a list * 'a
+
+SYNOPSIS
+Takes a non-empty list {L} and returns a pair {(front,last)} such that
+{front @ [last] = L}.
+
+KEYWORDS
+list.
+
+FAILURE
+Fails if the list is empty.
+
+EXAMPLE
+
+- front_last [1];
+> val it = ([],1) : int list * int
+
+- front_last [1,2,3];
+> val it = ([1,2],3) : int list * int
+
+
+
+
+SEEALSO
+Lib.butlast, Lib.last.
+
+----------------------------------------------------------------------

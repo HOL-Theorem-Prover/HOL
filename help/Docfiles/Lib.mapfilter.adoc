@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+mapfilter                                                        (Lib)
+----------------------------------------------------------------------
+mapfilter : ('a -> 'b) -> 'a list -> 'b list
+
+SYNOPSIS
+Applies a function to every element of a list, returning a list of results
+for those elements for which application succeeds.
+
+KEYWORDS
+list.
+
+FAILURE
+If {f x} raises {Interrupt} for some element {x} of {l}, then
+{mapfilter f l} fails.
+
+EXAMPLE
+
+- mapfilter hd [[1,2,3],[4,5],[],[6,7,8],[]];
+> val it = [1, 4, 6] : int list
+
+
+SEEALSO
+Lib.filter.
+
+----------------------------------------------------------------------

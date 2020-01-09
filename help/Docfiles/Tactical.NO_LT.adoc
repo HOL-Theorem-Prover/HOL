@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+NO_LT                                                       (Tactical)
+----------------------------------------------------------------------
+NO_LT : list_tactic
+
+SYNOPSIS
+List-tactic which always fails.
+
+KEYWORDS
+list-tactic.
+
+DESCRIBE
+Whatever goal list it is applied to, {NO_LT} always fails
+with string {`NO_LT`}.
+
+FAILURE
+Always fails.
+
+SEEALSO
+Tactical.NO_TAC, Tactical.ALL_LT, Tactical.FAIL_LT.
+
+----------------------------------------------------------------------

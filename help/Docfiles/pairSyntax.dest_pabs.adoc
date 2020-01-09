@@ -1,0 +1,23 @@
+----------------------------------------------------------------------
+dest_pabs                                                 (pairSyntax)
+----------------------------------------------------------------------
+dest_pabs : term -> term * term
+
+LIBRARY
+pair
+
+SYNOPSIS
+Breaks apart a paired abstraction into abstracted pair and body.
+
+DESCRIBE
+{dest_pabs} is a term destructor for paired abstractions:
+{dest_abs "\pair. t"} returns {("pair","t")}.
+
+FAILURE
+Fails with {dest_pabs} if term is not a paired abstraction.
+
+SEEALSO
+Term.dest_abs, pairSyntax.mk_pabs, pairSyntax.is_pabs,
+pairSyntax.strip_pabs.
+
+----------------------------------------------------------------------

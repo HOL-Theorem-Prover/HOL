@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+FAST_QUANT_INSTANTIATE_CONV                       (quantHeuristicsLib)
+----------------------------------------------------------------------
+FAST_QUANT_INSTANTIATE_CONV : quant_param list -> conv
+
+SYNOPSIS
+A fast version of {quantHeuristicsLib.QUANT_INSTANTIATE_CONV}. It does
+not preprocess the term in order to minimise the number of variable
+occurrences.
+
+SEEALSO
+quantHeuristicsLib.QUANT_INSTANTIATE_CONV,
+quantHeuristicsLib.FAST_QUANT_INSTANTIATE_TAC.
+
+----------------------------------------------------------------------

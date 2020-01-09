@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+term_grammar                                                   (Parse)
+----------------------------------------------------------------------
+Parse.term_grammar : unit -> term_grammar.grammar
+
+SYNOPSIS
+Returns the current global term grammar.
+
+KEYWORDS
+Parsing, pretty-printing
+
+LIBRARY
+Parse
+
+FAILURE
+Never fails.
+
+COMMENTS
+There is a pretty-printer installed in the interactive system so that
+term grammar values are presented nicely.  The global term grammar is
+passed as a parameter to the {Term} parsing function in the {Parse}
+structure, and also drives the installed term and theorem
+pretty-printers.
+
+SEEALSO
+Parse.parse_from_grammars, Parse.print_from_grammars,
+Parse.temp_set_grammars, Parse.Term.
+
+----------------------------------------------------------------------

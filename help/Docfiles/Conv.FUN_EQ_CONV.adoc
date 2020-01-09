@@ -1,0 +1,32 @@
+----------------------------------------------------------------------
+FUN_EQ_CONV                                                     (Conv)
+----------------------------------------------------------------------
+FUN_EQ_CONV : conv
+
+SYNOPSIS
+Equates normal and extensional equality for two functions.
+
+KEYWORDS
+conversion, extensionality.
+
+DESCRIBE
+The conversion {FUN_EQ_CONV} embodies the fact that two functions are equal
+precisely when they give the same results for all values to which they can be
+applied. When supplied with a term argument of the form {f = g}, where {f} and
+{g} are functions of type {ty1->ty2}, {FUN_EQ_CONV} returns the theorem:
+
+   |- (f = g) = (!x. f x = g x)
+
+where {x} is a variable of type {ty1} chosen by the conversion.
+
+FAILURE
+{FUN_EQ_CONV tm} fails if {tm} is not an equation {f = g}, where {f} and {g}
+are functions.
+
+USES
+Used for proving equality of functions.
+
+SEEALSO
+Drule.EXT, Conv.X_FUN_EQ_CONV.
+
+----------------------------------------------------------------------

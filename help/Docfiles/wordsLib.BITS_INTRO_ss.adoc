@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+BITS_INTRO_ss                                               (wordsLib)
+----------------------------------------------------------------------
+BITS_INTRO_ss : ssfrag
+
+SYNOPSIS
+Simplification fragment that applies the conversion {BITS_INTRO_CONV}.
+
+KEYWORDS
+simplification, words.
+
+SEEALSO
+wordsLib.BITS_INTRO_CONV.
+
+----------------------------------------------------------------------

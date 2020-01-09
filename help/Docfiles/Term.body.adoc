@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+body                                                            (Term)
+----------------------------------------------------------------------
+body : term -> term
+
+SYNOPSIS
+Returns the body of an abstraction.
+
+DESCRIBE
+If {M} is a lambda abstraction, i.e, has the form {\v. t}, then
+{body M} returns {t}.
+
+FAILURE
+Fails unless {M} is an abstraction.
+
+SEEALSO
+Term.bvar, Term.dest_abs.
+
+----------------------------------------------------------------------

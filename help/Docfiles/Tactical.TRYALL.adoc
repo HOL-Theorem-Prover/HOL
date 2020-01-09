@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+TRYALL                                                      (Tactical)
+----------------------------------------------------------------------
+TRYALL : tactic -> list_tactic
+
+SYNOPSIS
+Tries to apply a tactic to every goal in a list
+
+KEYWORDS
+tactical, list-tactic.
+
+DESCRIBE
+If {tac} is a tactic, {TRYALL tac} is a list-tactic which,
+when applied to a list of goals,
+applies the tactic {tac} to each goal for which it succeeds.
+When {tac} fails on a goal, {TRYALL tac} has no effect on that goal.
+
+FAILURE
+The application of {TRYALL} to a tactic never fails.
+The resulting list-tactic never fails.
+
+EXAMPLE
+Where {tac1} and {tac2} are tactics,
+{tac1 THEN_LT TRYALL tac2} is equivalent to {tac1 THEN TRY tac2}
+
+SEEALSO
+Tactical.TRY, Tactical.THEN_LT, Tactical.THEN, Tactical.TRY,
+Tactical.ALLGOALS.
+
+----------------------------------------------------------------------

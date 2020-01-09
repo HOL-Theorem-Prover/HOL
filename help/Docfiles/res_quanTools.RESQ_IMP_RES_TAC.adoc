@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+RESQ_IMP_RES_TAC                                       (res_quanTools)
+----------------------------------------------------------------------
+RESQ_IMP_RES_TAC : thm_tactic
+
+SYNOPSIS
+Repeatedly resolves a restricted universally quantified theorem with
+the assumptions of a goal.
+
+KEYWORDS
+theorem-tactic, resolution, restricted quantification.
+
+DESCRIBE
+The function {RESQ_IMP_RES_TAC} performs repeatedly
+resolution using a restricted quantified theorem.
+It takes a restricted quantified theorem and transforms it into an
+implication. This resulting theorem is used in the resolution.
+
+Given a theorem {th}, the theorem-tactic {RESQ_IMP_RES_TAC}
+applies {RESQ_IMP_RES_THEN} repeatedly to resolve the theorem with the
+assumptions.
+
+FAILURE
+Never fails
+
+SEEALSO
+res_quanTools.RESQ_IMP_RES_THEN, res_quanTools.RESQ_RES_THEN,
+res_quanTools.RESQ_RES_TAC, Thm_cont.IMP_RES_THEN, Tactic.IMP_RES_TAC,
+Drule.MATCH_MP, Drule.RES_CANON, Tactic.RES_TAC, Thm_cont.RES_THEN.
+
+----------------------------------------------------------------------

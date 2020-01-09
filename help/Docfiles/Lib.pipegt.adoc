@@ -1,0 +1,23 @@
+----------------------------------------------------------------------
+|>                                                               (Lib)
+----------------------------------------------------------------------
+op |> : 'a -> ('a -> 'b) -> 'b
+
+SYNOPSIS
+Infix operator for writing function application.
+
+LIBRARY
+Lib
+
+DESCRIBE
+The expression {x |> f} is equal to {f x}. This way of writing
+application has two advantages, both apparent when multiple
+functions are being applied.  Without using {|>}, one might write
+{f (g (h x))}. With it, one writes {x |> h |> g |> f}.  The latter
+form needs fewer parentheses, and also makes the order in which
+functions will operate correspond to a left-to-right reading.
+
+FAILURE
+Never fails.
+
+----------------------------------------------------------------------

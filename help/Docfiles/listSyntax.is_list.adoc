@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+is_list                                                   (listSyntax)
+----------------------------------------------------------------------
+is_list : (term -> bool)
+
+SYNOPSIS
+Tests a term to see if it is a list.
+
+DESCRIBE
+{is_list} returns {true} of a term representing a list. Otherwise it returns
+{false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+listSyntax.mk_list, listSyntax.dest_list, listSyntax.mk_cons,
+listSyntax.dest_cons, listSyntax.is_cons.
+
+----------------------------------------------------------------------

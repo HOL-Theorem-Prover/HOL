@@ -1,0 +1,24 @@
+----------------------------------------------------------------------
+dest_res_abstract                                        (res_quanLib)
+----------------------------------------------------------------------
+dest_res_abstract : term -> (term # term # term)
+
+SYNOPSIS
+Breaks apart a restricted abstract term into
+the quantified variable, predicate and body.
+
+DESCRIBE
+{dest_res_abstract} is a term destructor for restricted abstraction:
+
+   dest_res_abstract "\var::P. t"
+
+returns {("var","P","t")}.
+
+FAILURE
+Fails with {dest_res_abstract} if the term is not a restricted
+abstraction.
+
+SEEALSO
+res_quanLib.mk_res_abstract, res_quanLib.is_res_abstract.
+
+----------------------------------------------------------------------

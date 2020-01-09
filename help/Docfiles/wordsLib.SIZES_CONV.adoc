@@ -1,0 +1,21 @@
+----------------------------------------------------------------------
+SIZES_CONV                                                  (wordsLib)
+----------------------------------------------------------------------
+SIZES_CONV : conv
+
+SYNOPSIS
+Evaluates {dimindex}, {dimword} and {INT_MIN}.
+
+EXAMPLE
+
+- SIZES_CONV ``dimword(:32)``
+> val it = |- dimword (:32) = 4294967296 : thm
+
+
+COMMENTS
+Evaluations are stored and so will be slightly faster when repeated.
+
+SEEALSO
+wordsLib.SIZES_ss.
+
+----------------------------------------------------------------------

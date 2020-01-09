@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+MK_ABS                                                         (Drule)
+----------------------------------------------------------------------
+MK_ABS : (thm -> thm)
+
+SYNOPSIS
+Abstracts both sides of an equation.
+
+KEYWORDS
+rule, abstraction, equality.
+
+DESCRIBE
+When applied to a theorem {A |- !x. t1 = t2}, whose conclusion is a
+universally quantified equation, {MK_ABS} returns the theorem
+{A |- \x. t1 = \x. t2}.
+
+        A |- !x. t1 = t2
+   --------------------------  MK_ABS
+    A |- (\x. t1) = (\x. t2)
+
+
+
+
+FAILURE
+Fails unless the theorem is a (singly) universally quantified equation.
+
+SEEALSO
+Thm.ABS, jrhUtils.HALF_MK_ABS, Thm.MK_COMB, Drule.MK_EXISTS.
+
+----------------------------------------------------------------------

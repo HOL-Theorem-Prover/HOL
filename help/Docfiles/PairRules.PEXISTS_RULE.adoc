@@ -1,0 +1,37 @@
+----------------------------------------------------------------------
+PEXISTS_RULE                                               (PairRules)
+----------------------------------------------------------------------
+PEXISTS_RULE : (thm -> thm)
+
+KEYWORDS
+rule, epsilon.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Introduces a paired existential quantification in place of a paired choice.
+
+DESCRIBE
+The inference rule {PEXISTS_RULE} expects a theorem asserting that
+{(@p. t)} denotes a pair for which {t} holds.
+The equivalent assertion that there exists a {p} for which {t} holds is
+returned.
+
+    A |- t[(@p. t)/p]
+   ------------------  PEXISTS_RULE
+       A |- ?p. t
+
+
+
+
+FAILURE
+Fails if applied to a theorem the conclusion of which is not
+of the form {(t[(@p.t)/p])}.
+
+SEEALSO
+PairRules.PEXISTS_CONV, PairRules.PSELECT_RULE,
+PairRules.PSELECT_CONV, PairRules.PSELECT_INTRO,
+PairRules.PSELECT_ELIM.
+
+----------------------------------------------------------------------

@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+is_pforall                                                (pairSyntax)
+----------------------------------------------------------------------
+is_pforall : (term -> bool)
+
+LIBRARY
+pair
+
+SYNOPSIS
+Tests a term to see if it is a paired universal quantification.
+
+DESCRIBE
+{is_pforall "!pair. t"} returns {true}.
+If the term is not a paired universal quantification the result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+boolSyntax.is_forall, pairSyntax.dest_pforall.
+
+----------------------------------------------------------------------

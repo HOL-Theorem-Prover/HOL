@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+transform                                                 (computeLib)
+----------------------------------------------------------------------
+type transform
+
+SYNOPSIS
+Type of elements in compset
+
+LIBRARY
+compute
+
+DESCRIBE
+An element of a compset can map to a collection of rewrite rules or a conversion (or both, in some cases).
+The type {transform} is declared as follows:
+ 
+   datatype transform  
+      = Conversion of (term -> thm * db fterm)
+      | RRules of thm list
+
+
+FAILURE
+Can not fail.
+
+SEEALSO
+computeLib.listItems.
+
+----------------------------------------------------------------------

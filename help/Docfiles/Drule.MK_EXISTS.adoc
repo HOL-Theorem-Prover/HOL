@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+MK_EXISTS                                                      (Drule)
+----------------------------------------------------------------------
+MK_EXISTS : (thm -> thm)
+
+SYNOPSIS
+Existentially quantifies both sides of a universally quantified
+equational theorem.
+
+KEYWORDS
+rule, quantifier, existential, equality.
+
+DESCRIBE
+When applied to a theorem {A |- !x. t1 = t2}, the inference rule {MK_EXISTS}
+returns the theorem {A |- (?x. t1) = (?x. t2)}.
+
+       A |- !x. t1 = t2
+   --------------------------  MK_EXISTS
+    A |- (?x. t1) = (?x. t2)
+
+
+
+
+FAILURE
+Fails unless the theorem is a singly universally quantified equation.
+
+SEEALSO
+Thm.AP_TERM, Drule.EXISTS_EQ, Thm.GEN, Drule.LIST_MK_EXISTS,
+Drule.MK_ABS.
+
+----------------------------------------------------------------------

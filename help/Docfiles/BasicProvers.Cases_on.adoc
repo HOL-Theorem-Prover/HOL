@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+Cases_on                                                (BasicProvers)
+----------------------------------------------------------------------
+Cases_on : term quotation -> tactic
+
+SYNOPSIS
+Case split on type of supplied term.
+
+DESCRIBE
+{bossLib.Cases_on} is identical to {BasicProvers.Cases_on}.
+
+SEEALSO
+bossLib.Cases_on, bossLib.Cases.
+
+----------------------------------------------------------------------

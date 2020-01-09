@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+&&                                                      (BasicProvers)
+----------------------------------------------------------------------
+op && : simpset * thm list -> simpset
+
+SYNOPSIS
+Infix operator for adding theorems into a simpset.
+
+DESCRIBE
+{BasicProvers.&&} is identical to {bossLib.&&}.
+
+SEEALSO
+bossLib.&&.
+
+----------------------------------------------------------------------

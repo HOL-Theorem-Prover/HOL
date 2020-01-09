@@ -1,0 +1,33 @@
+----------------------------------------------------------------------
+GENL                                                             (Thm)
+----------------------------------------------------------------------
+GENL : term list -> thm -> thm
+
+SYNOPSIS
+Generalizes zero or more variables in the conclusion of a theorem.
+
+KEYWORDS
+rule, quantifier, universal.
+
+DESCRIBE
+When applied to a term list {[x1,...,xn]} and a theorem {A |- t}, the inference
+rule {GENL} returns the theorem {A |- !x1...xn. t}, provided none of the
+variables {xi} are free in any of the assumptions. It is not necessary that
+any or all of the {xi} should be free in {t}.
+
+         A |- t
+   ------------------  GENL [x1,...,xn]       [where no xi is free in A]
+    A |- !x1...xn. t
+
+
+
+
+FAILURE
+Fails unless all the terms in the list are variables, none of which are
+free in the assumption list.
+
+SEEALSO
+Thm.GEN, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPECL,
+Drule.SPEC_ALL, Tactic.SPEC_TAC.
+
+----------------------------------------------------------------------

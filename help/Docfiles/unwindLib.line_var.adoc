@@ -1,0 +1,21 @@
+----------------------------------------------------------------------
+line_var                                                   (unwindLib)
+----------------------------------------------------------------------
+line_var : (term -> term)
+
+SYNOPSIS
+Computes the line variable of an equation.
+
+LIBRARY
+unwind
+
+DESCRIBE
+{line_var "!y1 ... ym. f x1 ... xn = t"} returns the variable {"f"}.
+
+FAILURE
+Fails if the argument term is not of the specified form.
+
+SEEALSO
+unwindLib.line_name.
+
+----------------------------------------------------------------------

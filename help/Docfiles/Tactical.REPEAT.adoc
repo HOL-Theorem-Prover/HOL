@@ -1,0 +1,24 @@
+----------------------------------------------------------------------
+REPEAT                                                      (Tactical)
+----------------------------------------------------------------------
+REPEAT : (tactic -> tactic)
+
+SYNOPSIS
+Repeatedly applies a tactic until it fails.
+
+KEYWORDS
+tactical.
+
+DESCRIBE
+The tactic {REPEAT T} is a tactic which applies {T} to a goal, and while it
+succeeds, continues applying it to all subgoals generated.
+
+FAILURE
+The application of {REPEAT} to a tactic never fails, and neither does the
+composite tactic, even if the basic tactic fails immediately.
+
+SEEALSO
+Tactical.EVERY, Tactical.FIRST, Tactical.ORELSE, Tactical.THEN,
+Tactical.THENL.
+
+----------------------------------------------------------------------

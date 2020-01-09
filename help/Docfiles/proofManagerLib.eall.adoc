@@ -1,0 +1,24 @@
+----------------------------------------------------------------------
+eall                                                 (proofManagerLib)
+----------------------------------------------------------------------
+eall : tactic -> proof
+
+SYNOPSIS
+Applies a tactic to all goals in the current goal list,
+replacing the list with the resulting subgoals.
+
+DESCRIBE
+{eall tac} applies {tac} to all the goals in the current goal list,
+replacing the goal list with the list of all the resulting subgoals.
+It is an abbreviation for {expand_list (ALLGOALS tac)}.
+
+USES
+For interactively constructing suitable compound tactics:
+in an interactive proof, the effect of {e (tac1 THEN tac2)}
+can be obtained by {e tac1} and then {eall tac2}.
+
+SEEALSO
+proofManagerLib.expand_list, proofManagerLib.elt, Tactical.ALLGOALS,
+proofManagerLib.eta, proofManagerLib.set_goal.
+
+----------------------------------------------------------------------

@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+GEN_TAC                                                       (Tactic)
+----------------------------------------------------------------------
+GEN_TAC : tactic
+
+SYNOPSIS
+Strips the outermost universal quantifier from the conclusion of a goal.
+
+KEYWORDS
+tactic, quantifier, universal.
+
+DESCRIBE
+When applied to a goal {A ?- !x. t}, the tactic {GEN_TAC} reduces it to
+{A ?- t[x'/x]} where {x'} is a variant of {x} chosen to avoid clashing with any
+variables free in the goal’s assumption list. Normally {x'} is just {x}.
+
+     A ?- !x. t
+   ==============  GEN_TAC
+    A ?- t[x'/x]
+
+
+
+
+FAILURE
+Fails unless the goal’s conclusion is universally quantified.
+
+USES
+The tactic {REPEAT GEN_TAC} strips away any universal quantifiers, and
+is commonly used before tactics relying on the  underlying term structure.
+
+SEEALSO
+Tactic.FILTER_GEN_TAC, Thm.GEN, Thm.GENL, Drule.GEN_ALL, Thm.SPEC,
+Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC, Tactic.STRIP_TAC,
+Tactic.X_GEN_TAC.
+
+----------------------------------------------------------------------

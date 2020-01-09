@@ -1,0 +1,16 @@
+----------------------------------------------------------------------
+ASM_QI_TAC                                                   (bossLib)
+----------------------------------------------------------------------
+ASM_QI_TAC : tactic
+
+SYNOPSIS
+Try to instantiate quantifiers with some default heuristics using also the assumptions..
+
+DESCRIBE
+{ASM_QI_TAC} is short for {ASM_QUANT_INSTANTIATE_TAC [std_qp]}.
+
+SEEALSO
+bossLib.QI_TAC, quantHeuristicsLib.ASM_QUANT_INSTANTIATE_TAC,
+quantHeuristicsLib.QUANT_INSTANTIATE_TAC.
+
+----------------------------------------------------------------------

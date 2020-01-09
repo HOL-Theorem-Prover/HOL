@@ -1,0 +1,37 @@
+----------------------------------------------------------------------
+P_PGEN_TAC                                                 (PairRules)
+----------------------------------------------------------------------
+P_PGEN_TAC : (term -> tactic)
+
+KEYWORDS
+tactic.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Specializes a goal with the given paired structure of variables.
+
+DESCRIBE
+When applied to a paired structure of variables {p'}, and a goal
+{A ?- !p. t}, the tactic {P_PGEN_TAC} returns the goal {A ?- t[p'/p]}.
+
+     A ?- !p. t
+   ==============  P_PGEN_TAC "p'"
+    A ?- t[p'/x]
+
+
+
+
+FAILURE
+Fails unless the goal’s conclusion is a paired universal quantification
+and the term a paired structure of variables of the appropriate type.
+It also fails if any of the variables of the supplied structure occurs free
+in either the assumptions or (initial) conclusion of the goal.
+
+SEEALSO
+Tactic.X_GEN_TAC, PairRules.FILTER_PGEN_TAC, PairRules.PGEN,
+PairRules.PGENL, PairRules.PSPEC, PairRules.PSPECL,
+PairRules.PSPEC_ALL, PairRules.PSPEC_TAC.
+
+----------------------------------------------------------------------

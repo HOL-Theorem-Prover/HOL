@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+triple_of_list                                                   (Lib)
+----------------------------------------------------------------------
+triple_of_list : 'a list -> 'a * 'a * 'a
+
+SYNOPSIS
+Turns a three-element list into a triple.
+
+DESCRIBE
+{triple_of_list [x, y, z]} returns {(x, y, z)}.
+
+FAILURE
+Fails if applied to a list that is not of length 3.
+
+SEEALSO
+Lib.singleton_of_list, Lib.pair_of_list, Lib.quadruple_of_list.
+
+----------------------------------------------------------------------

@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+PEXISTENCE                                                 (PairRules)
+----------------------------------------------------------------------
+PEXISTENCE : (thm -> thm)
+
+KEYWORDS
+rule, unique, existential.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Deduces paired existence from paired unique existence.
+
+DESCRIBE
+When applied to a theorem with a paired unique-existentially quantified
+conclusion, {EXISTENCE} returns the same theorem with normal paired
+existential quantification over the same pair.
+
+    A |- ?!p. t
+   -------------  PEXISTENCE
+    A |- ?p. t
+
+
+
+
+FAILURE
+Fails unless the conclusion of the theorem is a paired unique-existential
+quantification.
+
+SEEALSO
+Conv.EXISTENCE, PairRules.PEXISTS_UNIQUE_CONV.
+
+----------------------------------------------------------------------

@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+Induct_on                                               (BasicProvers)
+----------------------------------------------------------------------
+Induct_on : term quotation -> tactic
+
+SYNOPSIS
+Induct on given term.
+
+DESCRIBE
+{bossLib.Induct_on} is identical to {BasicProvers.Induct_on}.
+
+SEEALSO
+bossLib.Induct_on.
+
+----------------------------------------------------------------------

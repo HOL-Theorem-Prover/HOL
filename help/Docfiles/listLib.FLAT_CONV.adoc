@@ -1,0 +1,40 @@
+----------------------------------------------------------------------
+FLAT_CONV                                                    (listLib)
+----------------------------------------------------------------------
+FLAT_CONV : conv
+
+SYNOPSIS
+Computes by inference the result of flattening a list of lists.
+
+KEYWORDS
+conversion, list.
+
+DESCRIBE
+{FLAT_CONV} takes a term {tm} in the following form:
+
+   FLAT [[x00;...x0n]; ...; [xm0;...xmn]]
+
+It returns the theorem
+
+   |- FLAT [[x00;...x0n];...;[xm0;...xmn]] = [x00;...x0n;...;xm0;...xmn]
+
+
+
+
+FAILURE
+{FLAT_CONV tm} fails if {tm} is not of the form described above.
+
+EXAMPLE
+Evaluating
+
+   FLAT_CONV “FLAT [[0;2;4];[0;1;2;3;4]]”;
+
+returns the following theorem:
+
+   |- FLAT[[0;2;4];[0;1;2;3;4]] = [0;2;4;0;1;2;3;4]
+
+
+SEEALSO
+listLib.FOLDL_CONV, listLib.FOLDR_CONV, listLib.list_FOLD_CONV.
+
+----------------------------------------------------------------------

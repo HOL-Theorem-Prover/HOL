@@ -1,0 +1,32 @@
+----------------------------------------------------------------------
+bool_compset                                              (computeLib)
+----------------------------------------------------------------------
+bool_compset : unit -> compset
+
+SYNOPSIS
+Creates a new simplification set to use with {CBV_CONV} for
+basic computations.
+
+LIBRARY
+boss
+
+DESCRIBE
+This function creates a new simplification set to use with the compute
+library performing computations about operations on primitive booleans
+and other basic constants, such as LET, conditional, implication,
+conjunction, disjunction, and negation.
+
+
+
+EXAMPLE
+
+- CBV_CONV (bool_compset()) (Term `F ==> (T \/ F)`);
+> val it = |- F ==> (T \/ F) = T : thm
+
+
+
+
+SEEALSO
+computeLib.CBV_CONV.
+
+----------------------------------------------------------------------

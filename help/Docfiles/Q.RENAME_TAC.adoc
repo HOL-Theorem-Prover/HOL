@@ -1,0 +1,91 @@
+----------------------------------------------------------------------
+RENAME_TAC                                                         (Q)
+----------------------------------------------------------------------
+RENAME_TAC : term quotation list -> tactic
+
+SYNOPSIS
+Renames free variables or subterms within a goal.
+
+KEYWORDS
+
+
+DESCRIBE
+A call to {RENAME_TAC qs} searches the current goal for matches to the
+patterns in the list {qs}, and then substitutes out the matches (in
+the “reverse direction”) so that the goal becomes one that uses the
+names from {qs}. This can cause subterms within the goal to turn into
+simple variables, but the usual intention is to rename free variables
+into the variables that appear in the patterns.
+
+The matching is done without reference to the goal’s existing free
+variables. If a variable in {qs} clashes with an existing variable in
+the goal, then the goal’s variable will be renamed away. It is
+sufficient for variables to have the same name to “clash”; they need
+not also have the same type. The search for matches begins by
+attempting to find matches against the whole of the goal, against
+whole assumptions, for sub-terms within the goal, and then sub-terms
+of assumptions. If multiple matches are possible, a variant tactic,
+{Q.kRENAME_TAC}, can be used: this tactic takes an additional
+“continuation” tactic argument that can be used to discriminate
+between these matches.
+
+Patterns can use underscores to match anything without any change in
+the goal’s naming being introduced. Underscores can match against
+sub-terms that include bound variables. Matching is first-order.
+
+FAILURE
+Fails if it is impossible to consistently match the combination of
+patterns in the provided list of quotations ({qs}).
+
+EXAMPLE
+If the goal is of the form
+
+   x < y, y < z ?- x < f a
+
+then invoking {Q.RENAME_TAC [`b < c`, `a < b`]} will produce the sub-goal:
+
+   a < b, b < c ?- a < f a'
+
+where the goal’s original {a} variable (which is not even of type
+{num}), has been renamed away from {a} because that variable occurs in the
+patterns. (If the right hand side of the inequality was simply {a} and
+was thus of type num, it would also be renamed to {a'}.)
+
+If {Q.RENAME_TAC [`b < c`]} is invoked on the same initial goal, the result is:
+
+   b < y, y < z ?- b < c
+
+illustrating the way in which variables can eliminate more complicated sub-terms.
+
+The useful way in which underscores in patterns can be used to “dodge” terms including bound variables is illustrated in the next example, where the initial goal is:
+
+   (!a. f a < z), z < c ?- z < d
+
+After applying {Q.RENAME_TAC [`_ < x`, `x < c`]}, the goal becomes
+
+   (!a. f a < x), x < c' ?- x < c
+
+The goal was chosen for the match to the second pattern because the goal is considered first. If the initial goal had been
+
+   (!a. f a < z), z < c ?- z < d /\ P z
+
+then the result of the same application would be
+
+   (!a. f a < z), z < c ?- x < d /\ P x
+
+because whole assumptions are considered before sub-terms of the goal.
+
+COMMENTS
+This function is also available under the name {bossLib.rename}.
+
+Note that {Q.RENAME_TAC [q]} is *not* the same as {Q.RENAME1_TAC q}.
+The latter pays attention to the goal’s free variables, using these to
+constrain the match to the pattern. In contrast, {Q.RENAME_TAC}
+completely ignores all of the goal’s free variables, such that using
+an existing name in a pattern doesn’t make any difference to the
+matching behaviour.
+
+SEEALSO
+Q.RENAME1_TAC.
+
+----------------------------------------------------------------------

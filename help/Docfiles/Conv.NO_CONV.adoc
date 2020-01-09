@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+NO_CONV                                                         (Conv)
+----------------------------------------------------------------------
+NO_CONV : conv
+
+SYNOPSIS
+Conversion that always fails.
+
+KEYWORDS
+conversion.
+
+FAILURE
+{NO_CONV} always fails.
+
+SEEALSO
+Conv.ALL_CONV.
+
+----------------------------------------------------------------------

@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+EXISTS_DEL1_CONV                                           (unwindLib)
+----------------------------------------------------------------------
+EXISTS_DEL1_CONV : conv
+
+SYNOPSIS
+Deletes one existential quantifier.
+
+LIBRARY
+unwind
+
+DESCRIBE
+{EXISTS_DEL1_CONV "?x. t"} returns the theorem:
+
+   |- (?x. t) = t
+
+provided {x} is not free in {t}.
+
+FAILURE
+Fails if the argument term is not an existential quantification or if {x} is
+free in {t}.
+
+SEEALSO
+unwindLib.EXISTS_DEL_CONV, unwindLib.PRUNE_ONCE_CONV.
+
+----------------------------------------------------------------------

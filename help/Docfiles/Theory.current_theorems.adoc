@@ -1,0 +1,24 @@
+----------------------------------------------------------------------
+current_theorems                                              (Theory)
+----------------------------------------------------------------------
+current_theorems : unit -> (string * thm) list
+
+SYNOPSIS
+Return the theorems stored in the current theory segment.
+
+KEYWORDS
+theorem, theory.
+
+DESCRIBE
+An invocation {current_theorems ()} returns the list of theorems
+stored in the current theory segment.
+
+FAILURE
+Never fails. If no theorems have been stored, the empty list is returned.
+
+SEEALSO
+Theory.current_theory, Theory.new_theory, Theory.current_definitions,
+Theory.current_theorems, Theory.constants, Theory.types,
+Theory.parents.
+
+----------------------------------------------------------------------

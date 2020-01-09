@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+emit_MESG                                                   (Feedback)
+----------------------------------------------------------------------
+emit_MESG : bool ref
+
+SYNOPSIS
+Flag controlling output of {HOL_MESG} function.
+
+KEYWORDS
+messages, output
+
+DESCRIBE
+The boolean flag {emit_MESG} is consulted by {HOL_MESG} when it attempts to
+print its argument. This flag is not commonly used, and it may disappear
+or change in the future.
+
+The default value of {emit_MESG} is {true}.
+
+EXAMPLE
+
+- HOL_MESG "Joy to the world.";
+<<HOL message: Joy to the world.>>
+
+- emit_MESG := false;
+> val it = () : unit
+
+- HOL_MESG "Peace on Earth.";
+> val it = () : unit
+
+
+
+
+SEEALSO
+Feedback, Feedback.HOL_MESG, Feedback.emit_ERR, Feedback.emit_WARNING.
+
+----------------------------------------------------------------------

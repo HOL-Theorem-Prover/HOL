@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+EXISTS_EQ                                                      (Drule)
+----------------------------------------------------------------------
+EXISTS_EQ : (term -> thm -> thm)
+
+SYNOPSIS
+Existentially quantifies both sides of an equational theorem.
+
+KEYWORDS
+rule, quantifier, existential, equality.
+
+DESCRIBE
+When applied to a variable {x} and a theorem whose conclusion is
+equational, {A |- t1 = t2}, the inference rule
+{EXISTS_EQ} returns the theorem {A |- (?x. t1) = (?x. t2)}, provided
+the variable {x} is not free in any of the assumptions.
+
+         A |- t1 = t2
+   ------------------------  EXISTS_EQ "x"      [where x is not free in A]
+    A |- (?x.t1) = (?x.t2)
+
+
+
+
+FAILURE
+Fails unless the theorem is equational with both sides having type {bool},
+or if the term is not a variable, or if the variable to be quantified
+over is free in any of the assumptions.
+
+SEEALSO
+Thm.AP_TERM, Drule.EXISTS_IMP, Drule.FORALL_EQ, Drule.MK_EXISTS,
+Drule.SELECT_EQ.
+
+----------------------------------------------------------------------

@@ -1,0 +1,39 @@
+----------------------------------------------------------------------
+prim_variant                                                    (Term)
+----------------------------------------------------------------------
+prim_variant : term list -> term -> term
+
+SYNOPSIS
+Rename a variable to be different from any in a list.
+
+KEYWORDS
+variable, renaming.
+
+DESCRIBE
+The function {prim_variant} is exactly the same as {variant}, except that
+it doesn’t rename away from constants.
+
+FAILURE
+{prim_variant l t} fails if any term in the list {l} is not a variable
+or if {t} is not a variable.
+
+EXAMPLE
+
+- variant [] (mk_var("T",bool));
+> val it = `T'` : term
+
+- prim_variant [] (mk_var("T",bool));
+> val it = `T` : term
+
+
+
+
+COMMENTS
+The extra amount of renaming that {variant} does is useful when generating
+new constant names (even though it returns a variable) inside high-level
+definition mechanisms. Otherwise, {prim_variant} seems preferable.
+
+SEEALSO
+Term.variant, Term.mk_var, Term.genvar, Term.mk_primed_var.
+
+----------------------------------------------------------------------

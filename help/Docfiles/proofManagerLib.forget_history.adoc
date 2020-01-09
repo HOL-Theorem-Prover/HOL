@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+forget_history                                       (proofManagerLib)
+----------------------------------------------------------------------
+forget_history : unit -> unit
+
+SYNOPSIS
+Clears the proof history.
+
+DESCRIBE
+The function {forget_history} is part of the subgoal package. A call to
+{forget_history} clears the history of saved proof states.  Subsequent calls to
+{backup} or {restart} will behave as if the initial goal was the state at the
+time of the call to {forget_history}. For a description of the subgoal package,
+see {set_goal}.
+
+FAILURE
+The function {forget_history} only fails if no goalstack is being managed.
+
+USES
+Hiding an automatic preprocessing phase of a proof before handing it to the user.
+
+SEEALSO
+proofManagerLib.set_goal, proofManagerLib.restart,
+proofManagerLib.backup, proofManagerLib.restore, proofManagerLib.save,
+proofManagerLib.set_backup, proofManagerLib.expand,
+proofManagerLib.expandf, proofManagerLib.p, proofManagerLib.top_thm,
+proofManagerLib.top_goal.
+
+----------------------------------------------------------------------

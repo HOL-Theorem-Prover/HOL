@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+is_cons                                                   (listSyntax)
+----------------------------------------------------------------------
+is_cons : (term -> bool)
+
+SYNOPSIS
+Tests a term to see if it is an application of {CONS}.
+
+DESCRIBE
+{is_cons} returns {true} of a term representing a non-empty list. Otherwise it
+returns {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+listSyntax.mk_cons, listSyntax.dest_cons, listSyntax.mk_list,
+listSyntax.dest_list, listSyntax.is_list.
+
+----------------------------------------------------------------------

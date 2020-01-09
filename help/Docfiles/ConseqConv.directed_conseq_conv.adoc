@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+directed_conseq_conv                                      (ConseqConv)
+----------------------------------------------------------------------
+type directed_conseq_conv
+
+SYNOPSIS
+A type for consequence conversions that can be instructed on whether to
+strengthen or weaken a given term.
+
+DESCRIBE
+Given a {CONSEQ_CONV_direction}, a directed consequence conversion
+tries to strengthen, weaken or whatever it can depending on the
+given direction.
+
+SEEALSO
+ConseqConv.conseq_conv, ConseqConv.CONSEQ_CONV_direction.
+
+----------------------------------------------------------------------

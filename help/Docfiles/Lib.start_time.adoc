@@ -1,0 +1,37 @@
+----------------------------------------------------------------------
+start_time                                                       (Lib)
+----------------------------------------------------------------------
+start_time : unit -> Timer.cpu_timer
+
+SYNOPSIS
+Set a timer running.
+
+KEYWORDS
+time.
+
+DESCRIBE
+An application {start_time ()} creates a timer and starts it. A later
+invocation {end_time t}, where {t} is a timer, will need to be called
+to get the elapsed time between the two function calls.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- val clock = start_time ();
+> val clock = <cpu_timer> : cpu_timer
+
+
+
+
+COMMENTS
+Multiple timers may be started without any interfering with the others.
+
+Further operations associated with the type {cpu_timer} may be found
+in the Standard ML Basis Library structures {Timer} and {Time}.
+
+SEEALSO
+Lib.end_time, Lib.time.
+
+----------------------------------------------------------------------

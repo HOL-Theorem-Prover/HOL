@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+reset_trace                                                 (Feedback)
+----------------------------------------------------------------------
+reset_trace : string -> unit
+
+SYNOPSIS
+Resets a tracing variable to its default value.
+
+KEYWORDS
+Tracing.
+
+DESCRIBE
+A call to {reset_trace n} resets the tracing variable associated with
+the name {n} to its default value, i.e., the value of the expression
+{!r} when {n} was registered with {register_trace n r}.
+
+FAILURE
+Fails if the name given is not associated with a registered tracing
+variable, or if a {set} function associated with a "functional" trace
+(see {register_ftrace}) fails.
+
+SEEALSO
+Feedback, Feedback.register_trace, Feedback.set_trace,
+Feedback.reset_traces, Feedback.trace, Feedback.traces.
+
+----------------------------------------------------------------------

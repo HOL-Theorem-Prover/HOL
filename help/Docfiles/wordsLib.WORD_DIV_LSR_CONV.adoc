@@ -1,0 +1,21 @@
+----------------------------------------------------------------------
+WORD_DIV_LSR_CONV                                           (wordsLib)
+----------------------------------------------------------------------
+WORD_DIV_LSR_CONV : conv
+
+DESCRIBE
+The conversion {WORD_DIV_LSR_CONV} replaces instances of unsigned division by a power of two with applications of logical right-shift.
+
+EXAMPLE
+
+> wordsLib.WORD_DIV_LSR_CONV ``w // 8w : word8``;
+val it = |- w // 8w = w >>> 3: thm
+
+
+COMMENTS
+This conversion requires the word length to be known.
+
+SEEALSO
+wordsLib.WORD_MUL_LSL_CONV, wordsLib.WORD_MOD_BITS_CONV.
+
+----------------------------------------------------------------------

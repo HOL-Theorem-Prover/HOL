@@ -1,0 +1,39 @@
+----------------------------------------------------------------------
+null_intersection                                                (Lib)
+----------------------------------------------------------------------
+null_intersection : ''a list -> ''a list -> bool
+
+SYNOPSIS
+Tells if two lists have no common elements.
+
+KEYWORDS
+set, list, eqtype.
+
+DESCRIBE
+An invocation {null_intersection l1 l2} is equivalent to
+{null(intersect l1 l2)}, but is more efficient in the case where
+the intersection is not empty.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- null_intersection [1,2,3,4] [5,6,7,8];
+> val it = true : bool
+
+- null_intersection [1,2,3,4] [8,5,3];
+> val it = false : bool
+
+
+
+
+COMMENTS
+A high-performance implementation of finite sets may be found in
+structure {HOLset}.
+
+SEEALSO
+Lib.intersect, Lib.union, Lib.U, Lib.mk_set, Lib.mem, Lib.insert,
+Lib.set_eq, Lib.set_diff.
+
+----------------------------------------------------------------------

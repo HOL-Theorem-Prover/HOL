@@ -1,0 +1,25 @@
+----------------------------------------------------------------------
+FORALL_CONSEQ_CONV                                        (ConseqConv)
+----------------------------------------------------------------------
+FORALL_CONSEQ_CONV : (conseq_conv -> conseq_conv)
+
+SYNOPSIS
+Applies a consequence conversion to the body of a
+universally-quantified term.
+
+DESCRIBE
+If {c} is a consequence conversion that maps a term {``t x``}
+to a theorem {|- t x = t' x},  {|- t' x ==> t x} or  {|- t x ==> t' x}, then
+{FORALL_CONSEQ_CONV c} maps {``!x. t x``} to
+{|- !x. t x = !x. t' x},  {|- !x. t' x ==> !x. t x} or
+{|- !x. t x ==> !x. t' x}, respectively.
+
+FAILURE
+{FORALL_CONSEQ_CONV c t} fails, if {t} is not an all-quantified term or
+if {c} fails on the body of {t}.
+
+SEEALSO
+Conv.QUANT_CONV, ConseqConv.EXISTS_CONSEQ_CONV,
+ConseqConv.QUANT_CONSEQ_CONV.
+
+----------------------------------------------------------------------

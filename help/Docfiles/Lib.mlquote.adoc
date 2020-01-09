@@ -1,0 +1,37 @@
+----------------------------------------------------------------------
+mlquote                                                          (Lib)
+----------------------------------------------------------------------
+mlquote : string -> string
+
+SYNOPSIS
+Put quotation marks around a string.
+
+KEYWORDS
+string.
+
+DESCRIBE
+Like {quote}, {mlquote s} puts quotation marks around a string. However, it
+also transforms the characters in a string so that, when printed, it
+would be a valid ML lexeme.
+
+FAILURE
+Never fails
+
+EXAMPLE
+
+- print (quote "foo\nbar" ^ "\n");
+"foo
+bar"
+> val it = () : unit
+
+- print (mlquote "foo\nbar" ^ "\n");
+"foo\nbar"
+> val it = () : unit
+
+
+
+
+SEEALSO
+Lib.quote.
+
+----------------------------------------------------------------------

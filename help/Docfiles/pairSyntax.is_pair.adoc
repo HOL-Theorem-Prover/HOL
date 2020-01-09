@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+is_pair                                                   (pairSyntax)
+----------------------------------------------------------------------
+is_pair : (term -> bool)
+
+SYNOPSIS
+Tests a term to see if it is a pair.
+
+DESCRIBE
+{is_pair "(t1,t2)"} returns {true}. If the term is not a pair the result is
+{false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+pairSyntax.mk_pair, pairSyntax.dest_pair.
+
+----------------------------------------------------------------------

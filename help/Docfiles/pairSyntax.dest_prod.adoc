@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+dest_prod                                                 (pairSyntax)
+----------------------------------------------------------------------
+dest_prod : hol_type -> hol_type * hol_type
+
+LIBRARY
+pair
+
+SYNOPSIS
+Breaks a product type into its two component types.
+
+DESCRIBE
+{dest_prod} is a type destructor for products:
+{dest_pair ":t1#t2"} returns {(":t1",":t2")}.
+
+FAILURE
+Fails with {dest_prod} if the argument is not a product type.
+
+SEEALSO
+pairSyntax.is_prod, pairSyntax.mk_prod.
+
+----------------------------------------------------------------------

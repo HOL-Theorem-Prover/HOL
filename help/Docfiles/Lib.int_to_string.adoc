@@ -1,0 +1,33 @@
+----------------------------------------------------------------------
+int_to_string                                                    (Lib)
+----------------------------------------------------------------------
+int_to_string : int -> string
+
+SYNOPSIS
+Translates an integer into a string.
+
+DESCRIBE
+An application {int_to_string i} returns the printable form of {i}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- int_to_string 12323;
+> val it = "12323" : string
+
+- int_to_string ~1;
+> val it = "~1" : string
+
+
+
+
+COMMENTS
+Equivalent functionality can be found in the Standard ML Basis
+Library function {Int.toString}.
+
+SEEALSO
+Lib.string_to_int.
+
+----------------------------------------------------------------------

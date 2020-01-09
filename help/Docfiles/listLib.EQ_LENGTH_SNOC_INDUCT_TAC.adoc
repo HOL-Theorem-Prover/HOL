@@ -1,0 +1,48 @@
+----------------------------------------------------------------------
+EQ_LENGTH_SNOC_INDUCT_TAC                                    (listLib)
+----------------------------------------------------------------------
+EQ_LENGTH_SNOC_INDUCT_TAC : tactic
+
+SYNOPSIS
+Performs tactical proof by structural induction on two equal length
+lists from the tail end.
+
+KEYWORDS
+tactic.
+
+DESCRIBE
+{EQ_LENGTH_SNOC_INDUCT_TAC} reduces a goal
+ {!x y . (LENGTH x = LENGTH y) ==> t[x,y]},
+ where {x} and {y} range over lists, to two
+subgoals corresponding to the base and step cases in a proof by
+induction on the length of {x} and {y}. The induction hypothesis appears among
+the assumptions of the
+subgoal for the step case.  The specification of {EQ_LENGTH_SNOC_INDUCT_TAC} is:
+
+     A ?- !x y . (LENGTH x = LENGTH y) ==> t[x,y]
+   ================================================  EQ_LENGTH_SNOC_INDUCT_TAC
+                            A ?- t[NIL/x][NIL/y]
+    A u {{LENGTH x = LENGTH y, t[x'/x, y'/y]}} ?-
+         !h h'. t[(SNOC h x)/x, (SNOC h' y)/y]
+
+
+FAILURE
+{EQ_LENGTH_SNOC_INDUCT_TAC g} fails unless the conclusion of the goal {g} has the
+ form
+
+   !x y . (LENGTH x = LENGTH y) ==> t[x,y]
+
+where the variables {x} and {y}
+ have types {(xty)list} and {(yty)list} for some types {xty} and {yty}.
+ It also fails if either of the variables {x} or {y} appear free in the
+ assumptions.
+
+USES
+Use this tactic to perform  structural induction on two lists that have
+identical length.
+
+SEEALSO
+listLib.EQ_LENGTH_INDUCT_TAC, listLib.LIST_INDUCT_TAC,
+listLib.SNOC_INDUCT_TAC.
+
+----------------------------------------------------------------------

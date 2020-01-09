@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+FIRST_CONV                                                      (Conv)
+----------------------------------------------------------------------
+FIRST_CONV : conv list -> conv
+
+SYNOPSIS
+Apply the first of the conversions in a given list that succeeds.
+
+KEYWORDS
+conversional.
+
+DESCRIBE
+{FIRST_CONV [c1,...,cn] t} returns the result of applying to the term
+{t} the first conversion {ci} that succeeds (or raises {UNCHANGED})
+when applied to {t}. The conversions are tried in the order
+in which they are given in the list.
+
+FAILURE
+{FIRST_CONV [c1,...,cn] t} fails if all the conversions {c1}, ...,
+{cn} fail when applied to the term {t}. {FIRST_CONV cs t} also fails
+if {cs} is the empty list.
+
+SEEALSO
+Conv.ORELSEC, Conv.UNCHANGED.
+
+----------------------------------------------------------------------

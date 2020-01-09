@@ -1,0 +1,32 @@
+----------------------------------------------------------------------
+augment_srw_ss                                               (bossLib)
+----------------------------------------------------------------------
+bossLib.augment_srw_ss : simpLib.ssfrag list -> unit
+
+SYNOPSIS
+Augments the “stateful rewriter” with a list of {simpset} fragments.
+
+KEYWORDS
+simplification
+
+LIBRARY
+bossLib
+
+DESCRIBE
+A call to {augment_srw_ss sslist} causes each element of {sslist} to
+be merged into the {simpset} value that the system maintains
+“behind” {srw_ss()}.
+
+FAILURE
+Never fails.
+
+COMMENTS
+The change to the {srw_ss()} {simpset} brought about with
+{augment_srw_ss} is not exported with a theory, so it is not
+“permanent”.  But see {export_rewrites} for a simple way to achieve
+a sort of permanence.
+
+SEEALSO
+BasicProvers.export_rewrites, bossLib.srw_ss, bossLib.SRW_TAC.
+
+----------------------------------------------------------------------

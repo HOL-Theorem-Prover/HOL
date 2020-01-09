@@ -1,0 +1,21 @@
+----------------------------------------------------------------------
+line_name                                                  (unwindLib)
+----------------------------------------------------------------------
+line_name : (term -> string)
+
+SYNOPSIS
+Computes the line name of an equation.
+
+LIBRARY
+unwind
+
+DESCRIBE
+{line_name "!y1 ... ym. f x1 ... xn = t"} returns the string {`f`}.
+
+FAILURE
+Fails if the argument term is not of the specified form.
+
+SEEALSO
+unwindLib.line_var.
+
+----------------------------------------------------------------------

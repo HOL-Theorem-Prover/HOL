@@ -1,0 +1,33 @@
+----------------------------------------------------------------------
+RESQ_RES_TAC                                           (res_quanTools)
+----------------------------------------------------------------------
+RESQ_RES_TAC : tactic
+
+SYNOPSIS
+Enriches assumptions by repeatedly resolving restricted universal
+quantifications in them against the others.
+
+KEYWORDS
+tactic, resolution, restricted quantifier.
+
+DESCRIBE
+{RESQ_RES_TAC} uses those assumptions which are restricted universal
+quantifications in resolution in a way similar to {RES_TAC}. It calls
+{RESQ_RES_THEN} repeatedly until there is no more resolution can be done.
+The conclusions of all the new results are returned as additional
+assumptions of the subgoal(s).  The effect of {RESQ_RES_TAC}
+on a goal is to enrich the assumption set with some of its collective
+consequences.
+
+
+
+FAILURE
+{RESQ_RES_TAC} cannot fail and so should not be unconditionally {REPEAT}ed.
+
+SEEALSO
+res_quanTools.RESQ_IMP_RES_TAC, res_quanTools.RESQ_IMP_RES_THEN,
+res_quanTools.RESQ_RES_THEN, Tactic.IMP_RES_TAC,
+Thm_cont.IMP_RES_THEN, Drule.RES_CANON, Thm_cont.RES_THEN,
+Tactic.RES_TAC.
+
+----------------------------------------------------------------------

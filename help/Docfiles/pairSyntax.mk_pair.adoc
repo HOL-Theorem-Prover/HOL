@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+mk_pair                                                   (pairSyntax)
+----------------------------------------------------------------------
+mk_pair : term * term -> term
+
+SYNOPSIS
+Constructs object-level pair from a pair of terms.
+
+DESCRIBE
+{mk_pair (t1,t2)} returns {(t1,t2)}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+pairSyntax.dest_pair, pairSyntax.is_pair, pairSyntax.list_mk_pair.
+
+----------------------------------------------------------------------

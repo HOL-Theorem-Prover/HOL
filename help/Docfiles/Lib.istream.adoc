@@ -1,0 +1,25 @@
+----------------------------------------------------------------------
+istream                                                          (Lib)
+----------------------------------------------------------------------
+type ('a,'b) istream
+
+SYNOPSIS
+Type of imperative streams.
+
+KEYWORDS
+stream.
+
+DESCRIBE
+The type {('a,'b) istream} is an abstract type of imperative streams.
+These may be created with {mk_istream}, advanced by {next},
+accessed by {state}, and reset with {reset}.
+
+COMMENTS
+Purely functional streams are well-known in functional programming, and
+more elegant. However, this type proved useful in implementing some
+imperative ‘gensym’-like algorithms used in HOL.
+
+SEEALSO
+Lib.mk_istream, Lib.next, Lib.state, Lib.reset.
+
+----------------------------------------------------------------------

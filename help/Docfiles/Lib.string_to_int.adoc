@@ -1,0 +1,38 @@
+----------------------------------------------------------------------
+string_to_int                                                    (Lib)
+----------------------------------------------------------------------
+string_to_int : string -> int
+
+SYNOPSIS
+Translates from a string to an integer.
+
+DESCRIBE
+An application {string_to_int s} returns the integer denoted by {s},
+if such exists.
+
+FAILURE
+If the string cannot be translated to an integer.
+
+EXAMPLE
+
+- string_to_int "123";
+> val it = 123 : int
+
+- string_to_int "~123";
+> val it = ~123 : int
+
+- string_to_int "foo";
+! Uncaught exception:
+! HOL_ERR
+
+
+
+
+COMMENTS
+Similar functionality can be obtained from the Standard ML Basis Library
+function {Int.fromString}.
+
+SEEALSO
+Lib.int_to_string.
+
+----------------------------------------------------------------------

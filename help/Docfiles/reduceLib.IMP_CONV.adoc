@@ -1,0 +1,40 @@
+----------------------------------------------------------------------
+IMP_CONV                                                   (reduceLib)
+----------------------------------------------------------------------
+IMP_CONV : conv
+
+SYNOPSIS
+Simplifies certain implicational expressions.
+
+LIBRARY
+reduce
+
+DESCRIBE
+If {tm} corresponds to one of the forms given below, where {t} is an arbitrary
+term of type {bool}, then {IMP_CONV tm} returns the corresponding theorem. Note
+that in the last case the antecedent and consequent need only be
+alpha-equivalent rather than strictly identical.
+
+   IMP_CONV "T ==> t" = |- T ==> t = t
+   IMP_CONV "t ==> T" = |- t ==> T = T
+   IMP_CONV "F ==> t" = |- F ==> t = T
+   IMP_CONV "t ==> F" = |- t ==> F = ~t
+   IMP_CONV "t ==> t" = |- t ==> t = T
+
+
+FAILURE
+{IMP_CONV tm} fails unless {tm} has one of the forms indicated above.
+
+EXAMPLE
+
+#IMP_CONV "T ==> F";;
+|- T ==> F = F
+
+#IMP_CONV "F ==> x";;
+|- F ==> x = T
+
+#IMP_CONV "(!z:(num)list. z = z) ==> (!x:(num)list. x = x)";;
+|- (!z. z = z) ==> (!x. x = x) = T
+
+
+----------------------------------------------------------------------

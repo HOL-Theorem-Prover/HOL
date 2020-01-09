@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+dest_exists1                                              (boolSyntax)
+----------------------------------------------------------------------
+dest_exists1 : term -> term * term
+
+SYNOPSIS
+Breaks apart a unique existence term into quantified variable and body.
+
+DESCRIBE
+If {M} has the form {?!x. t}, then {dest_exists1 M} returns {(x,t)}.
+
+FAILURE
+Fails if {M} is not a unique existence term.
+
+SEEALSO
+boolSyntax.mk_exists1, boolSyntax.is_exists1.
+
+----------------------------------------------------------------------

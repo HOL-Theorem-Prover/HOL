@@ -1,0 +1,42 @@
+----------------------------------------------------------------------
+matches                                                           (DB)
+----------------------------------------------------------------------
+matches : term -> thm -> bool
+
+SYNOPSIS
+Tells whether part of a theorem matches a pattern.
+
+KEYWORDS
+matching.
+
+DESCRIBE
+An invocation {DB.match pat th} tells whether the conclusion of {th}
+has a subterm matching {pat}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+> DB.matches (Term `(a = b) = c`) EQ_CLAUSES ;
+<<HOL message: inventing new type variable names: 'a>>
+val it = true: bool
+
+> DB.matches (Term `(a = b) = c`)  EQ_TRANS ;
+<<HOL message: inventing new type variable names: 'a>>
+val it = false: bool
+
+
+
+
+COMMENTS
+The notion of matching is a restricted version of higher-order matching,
+as used by {DB.apropos, DB.apropos_in, DB.match}, etc.
+
+USES
+For locating theorems relevant to a given pattern.
+
+SEEALSO
+DB.matcher, DB.matchp, DB.apropos, DB.apropos_in.
+
+----------------------------------------------------------------------

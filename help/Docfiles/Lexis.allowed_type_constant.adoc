@@ -1,0 +1,45 @@
+----------------------------------------------------------------------
+allowed_type_constant                                          (Lexis)
+----------------------------------------------------------------------
+allowed_type_constant : string -> bool
+
+SYNOPSIS
+Tests if a string has a permissible name for a type constant.
+
+
+
+LIBRARY
+Lexis
+
+DESCRIBE
+When applied to a string, {allowed_type_constant} returns {true} if
+the string is a permissible constant name for a type operator, and
+{false} otherwise.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+The following gives a sample of some allowed and disallowed names for
+type operators:
+
+   - map Lexis.allowed_type_constant ["list", "'a", "fun", "->", "#", "fun2"];
+   > val it = [true, false, true, false, false, true] : bool list
+
+
+
+
+COMMENTS
+Note that this function only performs a lexical test; it does not
+check whether there is already a type operator of that name in the
+current theory.
+
+This function is not currently enforced by the system, as it was found
+that more flexibilty in naming was preferable.
+
+
+
+SEEALSO
+Lexis.allowed_term_constant.
+
+----------------------------------------------------------------------

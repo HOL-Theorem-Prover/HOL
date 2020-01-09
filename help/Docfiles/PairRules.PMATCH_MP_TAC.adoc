@@ -1,0 +1,42 @@
+----------------------------------------------------------------------
+PMATCH_MP_TAC                                              (PairRules)
+----------------------------------------------------------------------
+PMATCH_MP_TAC : thm_tactic
+
+KEYWORDS
+tactic, modus ponens, implication.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Reduces the goal using a supplied implication, with matching.
+
+DESCRIBE
+When applied to a theorem of the form
+
+   A' |- !p1...pn. s ==> !q1...qm. t
+
+{PMATCH_MP_TAC} produces a tactic that reduces a goal whose
+conclusion {t'} is a substitution and/or type instance of {t} to the
+corresponding instance of {s}. Any variables free in {s} but not in {t} will
+be existentially quantified in the resulting subgoal:
+
+     A ?- !u1...ui. t'
+  ======================  PMATCH_MP_TAC (A' |- !p1...pn. s ==> !q1...qm. t)
+     A ?- ?w1...wp. s'
+
+where {w1}, ..., {wp} are (type instances of) those pairs among
+{p1}, ..., {pn} having variables that do not occur free in {t}.
+Note that this is not a valid tactic unless {A'} is a subset of {A}.
+
+FAILURE
+Fails unless the theorem is an (optionally paired universally quantified)
+implication whose consequent can be instantiated to match the goal.
+The generalized pairs {u1}, ..., {ui} must occur in {s'} in order for the
+conclusion {t} of the supplied theorem to match {t'}.
+
+SEEALSO
+Tactic.MATCH_MP_TAC.
+
+----------------------------------------------------------------------

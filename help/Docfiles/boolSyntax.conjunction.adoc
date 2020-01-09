@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+conjunction                                               (boolSyntax)
+----------------------------------------------------------------------
+conjunction : term
+
+SYNOPSIS
+Constant denoting logical conjunction.
+
+LIBRARY
+boolSyntax
+
+DESCRIBE
+The ML variable {boolSyntax.conjunction} is bound to the term {bool$/\}.
+
+SEEALSO
+boolSyntax.equality, boolSyntax.implication, boolSyntax.select,
+boolSyntax.T, boolSyntax.F, boolSyntax.universal,
+boolSyntax.existential, boolSyntax.exists1, boolSyntax.disjunction,
+boolSyntax.negation, boolSyntax.conditional, boolSyntax.bool_case,
+boolSyntax.let_tm, boolSyntax.arb.
+
+----------------------------------------------------------------------

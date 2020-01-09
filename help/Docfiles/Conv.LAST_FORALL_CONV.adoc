@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+LAST_FORALL_CONV                                                (Conv)
+----------------------------------------------------------------------
+LAST_FORALL_CONV : conv -> conv
+
+SYNOPSIS
+Applies a conversion to the last universal quantifier (and its body)
+in a chain.
+
+KEYWORDS
+conversion
+
+DESCRIBE
+Application of {LAST_FORALL_CONV v} to the term
+{``!x1 .. xn x. body``} will apply {c} to the term {``!x. body``}.
+If the result of this application is the theorem {|- (!x. body) = t}, then
+the result of the whole will be
+
+   |- (?x1 .. xn x. body) = (?x1 .. xn. t)
+
+
+FAILURE
+Fails if the term is not universally quantified, or if the conversion
+{c} fails when it is applied.
+
+SEEALSO
+Conv.BINDER_CONV, Conv.LAST_EXISTS_CONV, Conv.STRIP_QUANT_CONV.
+
+----------------------------------------------------------------------

@@ -1,0 +1,21 @@
+----------------------------------------------------------------------
+freesl                                                      (hol88Lib)
+----------------------------------------------------------------------
+freesl : term list -> term list
+
+SYNOPSIS
+Returns a list of the free variables in a list of terms.
+
+DESCRIBE
+{freesl} is equivalent to {rev o Term.free_varsl}.
+
+FAILURE
+Never fails.
+
+COMMENTS
+Superseded by {Term.free_varsl}.
+
+SEEALSO
+hol88Lib.frees, Term.free_varsl.
+
+----------------------------------------------------------------------

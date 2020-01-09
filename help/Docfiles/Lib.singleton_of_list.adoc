@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+singleton_of_list                                                (Lib)
+----------------------------------------------------------------------
+singleton_of_list : 'a list -> 'a
+
+SYNOPSIS
+Turns a single-element list into a singleton.
+
+DESCRIBE
+{singleton_of_list [x]} returns {x}.
+
+FAILURE
+Fails if applied to a list that is not of length 1.
+
+SEEALSO
+Lib.pair_of_list, Lib.triple_of_list, Lib.quadruple_of_list.
+
+----------------------------------------------------------------------

@@ -1,0 +1,39 @@
+----------------------------------------------------------------------
+SUM_CONV                                                     (listLib)
+----------------------------------------------------------------------
+SUM_CONV : conv
+
+SYNOPSIS
+Computes by inference the result of summing the elements of a list.
+
+KEYWORDS
+conversion, list.
+
+DESCRIBE
+For any object language list of the form {“[x1;x2;...;xn]”}, where {x1},
+{x2}, ..., {xn} are numeral constants, the result of evaluating
+
+   SUM_CONV “SUM [x1;x2;...;xn]”
+
+is the theorem
+
+   |- SUM [x1;x2;...;xn] = n
+
+where {n} is the numeral constant that denotes the sum of the elements of the list.
+
+EXAMPLE
+Evaluating {SUM_CONV “SUM [0;1;2;3]”} will return
+the following theorem:
+
+   |- SUM [0;1;2;3] = 6
+
+
+
+
+FAILURE
+{SUM_CONV tm} fails if {tm} is not of the form described above.
+
+SEEALSO
+listLib.FOLDL_CONV, listLib.FOLDR_CONV, listLib.list_FOLD_CONV.
+
+----------------------------------------------------------------------

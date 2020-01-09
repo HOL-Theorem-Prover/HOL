@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+dest_cond                                                 (boolSyntax)
+----------------------------------------------------------------------
+dest_cond : term -> term * term * term
+
+SYNOPSIS
+Breaks apart a conditional into the three terms involved.
+
+DESCRIBE
+If {M} has the form {if t then t1 else t2} then {dest_cond M}
+returns {(t,t1,t2)}.
+
+FAILURE
+Fails if {M} is not a conditional.
+
+SEEALSO
+boolSyntax.mk_cond, boolSyntax.is_cond.
+
+----------------------------------------------------------------------

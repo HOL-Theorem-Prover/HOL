@@ -1,0 +1,25 @@
+----------------------------------------------------------------------
+FCP_ss                                                        (fcpLib)
+----------------------------------------------------------------------
+FCP_ss : ssfrag
+
+SYNOPSIS
+A simpset fragment for simplifying finite Cartesian product expressions.
+
+KEYWORDS
+simplification, finite Cartesian products.
+
+EXAMPLE
+
+  simpLib.SSFRAG{ac = [], congs = [], convs = [], dprocs = [], filter = NONE,
+                 rewrs =
+                   [|- !i. i < dimindex (:'b) ==> ($FCP g ' i = g i),
+                    |- !g. (FCP i. g ' i) = g,
+                    |- !x y. (x = y) = !i. i < dimindex (:'b) ==> (x ' i = y ' i)]}
+   : ssfrag
+
+
+SEEALSO
+wordsLib.WORD_BIT_EQ_ss.
+
+----------------------------------------------------------------------

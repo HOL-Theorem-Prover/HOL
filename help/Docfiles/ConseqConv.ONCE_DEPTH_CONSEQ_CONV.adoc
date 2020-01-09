@@ -1,0 +1,17 @@
+----------------------------------------------------------------------
+ONCE_DEPTH_CONSEQ_CONV                                    (ConseqConv)
+----------------------------------------------------------------------
+ONCE_DEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv
+
+SYNOPSIS
+Applies a consequence conversion at most once to a sub-terms of a term.
+
+DESCRIBE
+While {DEPTH_CONSEQ_CONV c tm} applies {c} repeatedly,
+{ONCE_DEPTH_CONSEQ_CONV c tm} applies {c} at most once.
+
+SEEALSO
+Conv.DEPTH_CONV, ConseqConv.NUM_DEPTH_CONSEQ_CONV,
+ConseqConv.DEPTH_CONSEQ_CONV, ConseqConv.DEPTH_STRENGTHEN_CONSEQ_CONV.
+
+----------------------------------------------------------------------

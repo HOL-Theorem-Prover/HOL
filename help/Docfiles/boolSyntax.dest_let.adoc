@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+dest_let                                                  (boolSyntax)
+----------------------------------------------------------------------
+dest_let : term -> term * term
+
+SYNOPSIS
+Breaks apart a let-expression.
+
+DESCRIBE
+If {M} is a term of the form {LET M N}, then {dest_let M}
+returns {(M,N)}.
+
+EXAMPLE
+
+- dest_let (Term `let x = P /\ Q in x \/ x`);
+> val it = (`\x. x \/ x`, `P /\ Q`) : term * term
+
+
+
+
+FAILURE
+Fails if {M} is not of the form {LET M N}.
+
+SEEALSO
+boolSyntax.mk_let, boolSyntax.is_let.
+
+----------------------------------------------------------------------

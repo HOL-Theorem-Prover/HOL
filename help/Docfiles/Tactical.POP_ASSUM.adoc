@@ -1,0 +1,73 @@
+----------------------------------------------------------------------
+POP_ASSUM                                                   (Tactical)
+----------------------------------------------------------------------
+POP_ASSUM : thm_tactic -> tactic
+
+SYNOPSIS
+Applies tactic generated from the first element of a goal’s assumption list.
+
+KEYWORDS
+theorem-tactic, assumption.
+
+DESCRIBE
+When applied to a theorem-tactic and a goal, {POP_ASSUM} applies
+the theorem-tactic to the {ASSUME}d first element of the assumption list,
+and applies the resulting tactic to the goal without the first
+assumption in its assumption list:
+
+    POP_ASSUM f ({A1,...,An} ?- t) = f (A1 |- A1) ({A2,...,An} ?- t)
+
+
+
+
+FAILURE
+Fails if the assumption list of the goal is empty, or the theorem-tactic
+fails when applied to the popped assumption, or if the resulting tactic
+fails when applied to the goal (with depleted assumption list).
+
+COMMENTS
+It is possible simply to use the theorem {ASSUME A1} as required rather than
+use {POP_ASSUM}; this will also maintain {A1} in the assumption list,
+which is generally useful. In addition, this approach can equally well be
+applied to assumptions other than the first.
+
+There are admittedly times when {POP_ASSUM} is convenient, but it is most
+unwise to use it if there is more than one assumption in the assumption
+list, since this introduces a dependency on the ordering, which is vulnerable
+to changes in the HOL system.
+
+Another point to consider is that if the relevant assumption has been obtained
+by {DISCH_TAC}, it is often cleaner to use {DISCH_THEN} with a theorem-tactic.
+For example, instead of:
+
+   DISCH_TAC THEN POP_ASSUM (fn th => SUBST1_TAC (SYM th))
+
+one might use
+
+   DISCH_THEN (SUBST1_TAC o SYM)
+
+
+
+
+EXAMPLE
+The goal:
+
+   {4 = SUC x} ?- x = 3
+
+can be solved by:
+
+   POP_ASSUM
+    (fn th => REWRITE_TAC[REWRITE_RULE[num_CONV (Term`4`), INV_SUC_EQ] th])
+
+
+
+
+USES
+Making more delicate use of an assumption than rewriting or resolution
+using it.
+
+SEEALSO
+Tactical.ASSUM_LIST, Tactical.EVERY_ASSUM, Tactic.IMP_RES_TAC,
+Tactical.POP_ASSUM_LIST, Rewrite.REWRITE_TAC.
+
+----------------------------------------------------------------------

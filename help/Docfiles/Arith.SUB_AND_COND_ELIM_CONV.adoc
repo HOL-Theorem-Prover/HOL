@@ -1,0 +1,59 @@
+----------------------------------------------------------------------
+SUB_AND_COND_ELIM_CONV                                         (Arith)
+----------------------------------------------------------------------
+SUB_AND_COND_ELIM_CONV : conv
+
+SYNOPSIS
+Eliminates natural number subtraction, PRE, and conditional statements from a
+formula.
+
+DESCRIBE
+This function eliminates natural number subtraction and the predecessor
+function, {PRE}, from a formula, but in doing so may generate conditional
+statements, so these are eliminated too. The conditional statements are moved
+up through the term and if at any point the branches of the conditional become
+Boolean-valued the conditional is eliminated. Subtraction operators are moved
+up until a relation (such as less-than) is reached. The subtraction can then
+be transformed into an addition. Provided the argument term is a formula, only
+an abstraction can prevent a conditional being moved up far enough to be
+eliminated. If the term is not a formula it may not be possible to eliminate
+the subtraction. The function is also incapable of eliminating subtractions
+that appear in arguments to functions other than the standard operators of
+arithmetic.
+
+The function is not as delicate as it could be; it tries to eliminate all
+conditionals in a formula when it need only eliminate those that have to be
+removed in order to eliminate subtraction.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+#SUB_AND_COND_ELIM_CONV
+# "((p + 3) <= n) ==> (!m. ((m = 0) => (n - 1) | (n - 2)) > p)";;
+|- (p + 3) <= n ==> (!m. ((m = 0) => n - 1 | n - 2) > p) =
+   (p + 3) <= n ==>
+   (!m. (~(m = 0) \/ n > (1 + p)) /\ ((m = 0) \/ n > (2 + p)))
+
+#SUB_AND_COND_ELIM_CONV
+# "!f n. f ((SUC n = 0) => 0 | (SUC n - 1)) < (f n) + 1";;
+|- (!f n. (f((SUC n = 0) => 0 | (SUC n) - 1)) < ((f n) + 1)) =
+   (!f n.
+     (~(SUC n = 0) \/ (f 0) < ((f n) + 1)) /\
+     ((SUC n = 0) \/ (f((SUC n) - 1)) < ((f n) + 1)))
+
+#SUB_AND_COND_ELIM_CONV
+# "!f n. (\m. f ((m = 0) => 0 | (m - 1))) (SUC n) < (f n) + 1";;
+|- (!f n. ((\m. f((m = 0) => 0 | m - 1))(SUC n)) < ((f n) + 1)) =
+   (!f n. ((\m. ((m = 0) => f 0 | f(m - 1)))(SUC n)) < ((f n) + 1))
+
+
+USES
+Useful as a preprocessor to decision procedures which do not allow natural
+number subtraction in their argument formula.
+
+SEEALSO
+Arith.COND_ELIM_CONV.
+
+----------------------------------------------------------------------

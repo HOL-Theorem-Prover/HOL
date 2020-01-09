@@ -1,0 +1,33 @@
+----------------------------------------------------------------------
+ABS_TAC                                                       (Tactic)
+----------------------------------------------------------------------
+ABS_TAC : tactic
+
+SYNOPSIS
+Strips lambda abstraction on both sides of an equation.
+
+LIBRARY
+bool
+
+KEYWORDS
+tactic.
+
+DESCRIBE
+When applied to a goal of the form {A ?- (\x. f x) = (\y. g u)}, the tactic {ABS_TAC}
+strips away the lambda abstractions:
+
+    A ?- (\x. f x) = (\y. g y)
+   ===========================  ABS_TAC
+            A ?- f x = g x
+
+
+
+
+FAILURE
+Fails unless the goal has the above form, namely an equation both sides of
+which consist of a lamdba abstraction.
+
+SEEALSO
+Tactic.AP_TERM_TAC, Tactic.AP_THM_TAC.
+
+----------------------------------------------------------------------

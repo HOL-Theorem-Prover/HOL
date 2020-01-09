@@ -1,0 +1,37 @@
+----------------------------------------------------------------------
+dest_term                                                  (HolKernel)
+----------------------------------------------------------------------
+dest_term : term -> lambda
+
+SYNOPSIS
+Breaks terms into a type with SML constructors for pattern-matching.
+
+KEYWORDS
+
+
+DESCRIBE
+A call to {dest_term t} returns a value of type {lambda}, which has
+SML definition
+
+   datatype lambda =
+      VAR of string * term
+    | CONST of {Name:string, Thy:string, Ty:hol_type}
+    | COMB of term * term
+    | LAMB of term * term
+
+This type encodes all possible forms of {term}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+> dest_term ``SUC 2``;
+val it = COMB (``SUC``, ``2``) : lambda
+
+
+SEEALSO
+Term.dest_abs, Term.dest_comb, Term.dest_const,
+boolSyntax.dest_strip_comb, Term.dest_thy_const, Term.dest_var.
+
+----------------------------------------------------------------------

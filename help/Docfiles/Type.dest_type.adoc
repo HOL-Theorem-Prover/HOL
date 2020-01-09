@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+dest_type                                                       (Type)
+----------------------------------------------------------------------
+dest_type : hol_type -> string * hol_type list
+
+SYNOPSIS
+Breaks apart a non-variable type.
+
+DESCRIBE
+If {ty} is a type constant, then {dest_type ty} returns {(ty,[])}.
+If {ty} is a compound type {(ty1,...,tyn)tyop}, then {dest_type ty}
+returns {(tyop,[ty1,...,tyn])}.
+
+FAILURE
+Fails if {ty} is a type variable.
+
+EXAMPLE
+
+- dest_type bool;
+> val it = ("bool", []) : string * hol_type list
+
+- dest_type (alpha --> bool);
+> val it = ("fun", [`:'a`, `:bool`]) : string * hol_type list
+
+
+
+
+COMMENTS
+A more precise alternative is {dest_thy_type}, which tells which theory
+the type operator was declared in.
+
+SEEALSO
+Type.mk_type, Type.dest_thy_type, Type.dest_vartype.
+
+----------------------------------------------------------------------

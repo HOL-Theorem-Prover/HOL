@@ -1,0 +1,16 @@
+----------------------------------------------------------------------
+RW_TAC                                                  (BasicProvers)
+----------------------------------------------------------------------
+RW_TAC : simpset -> thm list -> tactic
+
+SYNOPSIS
+Simplification with case-splitting and built-in knowledge of
+declared datatypes.
+
+DESCRIBE
+{bossLib.RW_TAC} is identical to {BasicProvers.RW_TAC}.
+
+SEEALSO
+bossLib.RW_TAC.
+
+----------------------------------------------------------------------

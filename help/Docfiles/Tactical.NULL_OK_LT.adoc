@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+NULL_OK_LT                                                  (Tactical)
+----------------------------------------------------------------------
+NULL_OK_LT : list_tactic -> list_tactic
+
+SYNOPSIS
+Makes a list-tactic succeed with no effect when applied to the empty goal list.
+
+KEYWORDS
+list-tactical, failure.
+
+DESCRIBE
+For any list-tactic {ltac}, the application {NULL_OK_LT ltac}
+gives a new list-tactic which has the same effect as {ltac} when applied to
+a non-empty goal list.  Applied to the empty goal list it succeeds with no
+effect.
+
+FAILURE
+The application of {NULL_OK_LT} to a list-tactic {ltac} never fails.
+The resulting list-tactic fails if applied to a non-empty goal list on which
+{ltac} fails.
+
+SEEALSO
+Tactical.ALL_LT, Tactical.THENL.
+
+----------------------------------------------------------------------

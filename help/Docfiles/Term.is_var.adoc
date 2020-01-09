@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+is_var                                                          (Term)
+----------------------------------------------------------------------
+is_var : term -> bool
+
+SYNOPSIS
+Tests a term to see if it is a variable.
+
+DESCRIBE
+If {M} is a HOL variable, then {is_var M} returns {true}. If the term is not a variable the result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+Term.mk_var, Term.dest_var, Term.is_const, Term.is_comb, Term.is_abs.
+
+----------------------------------------------------------------------

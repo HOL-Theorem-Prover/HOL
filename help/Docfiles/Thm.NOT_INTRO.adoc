@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+NOT_INTRO                                                        (Thm)
+----------------------------------------------------------------------
+NOT_INTRO : (thm -> thm)
+
+SYNOPSIS
+Transforms {|- t ==> F} into {|- ~t}.
+
+KEYWORDS
+rule, negation, implication.
+
+DESCRIBE
+When applied to a theorem {A |- t ==> F}, the inference rule {NOT_INTRO}
+returns the theorem {A |- ~t}.
+
+    A |- t ==> F
+   --------------  NOT_INTRO
+      A |- ~t
+
+
+
+
+FAILURE
+Fails unless the theorem has an implicative conclusion with {F}
+as the consequent.
+
+SEEALSO
+Drule.IMP_ELIM, Thm.NOT_ELIM.
+
+----------------------------------------------------------------------

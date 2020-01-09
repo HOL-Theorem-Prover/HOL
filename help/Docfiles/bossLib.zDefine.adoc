@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+zDefine                                                      (bossLib)
+----------------------------------------------------------------------
+zDefine : term quotation -> thm
+
+SYNOPSIS
+General-purpose function definition facility.
+
+DESCRIBE
+{zDefine} behaves exactly like {Define}, except that it does not add the definition to {computeLib.the_compset}.  Consequently the definition is not used by {bossLib.EVAL} when evaluating expressions.
+
+
+
+FAILURE
+{zDefine} and {Define} succeed and fail in the same way.
+
+
+
+EXAMPLE
+
+- zDefine `foo = 10 ** 10 ** 10`
+- EVAL ``foo``;
+> val it = |- foo = foo: thm
+
+
+
+
+COMMENTS
+{zDefine} is helpful when users wish to derive and use their own efficient evaluation theorems, which can be added using {computeLib.add_funs} or {computeLib.add_persistent_funs}.
+
+SEEALSO
+bossLib.Define.
+
+----------------------------------------------------------------------

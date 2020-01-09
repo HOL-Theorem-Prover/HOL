@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+dest_res_exists                                          (res_quanLib)
+----------------------------------------------------------------------
+dest_res_exists : term -> (term # term # term)
+
+SYNOPSIS
+Breaks apart a restricted existentially quantified term into
+the quantified variable, predicate and body.
+
+DESCRIBE
+{dest_res_exists} is a term destructor for restricted existential
+quantification:
+
+   dest_res_exists "?var::P. t"
+
+returns {("var","P","t")}.
+
+FAILURE
+Fails with {dest_res_exists} if the term is not a restricted
+existential quantification.
+
+SEEALSO
+res_quanLib.mk_res_exists, res_quanLib.is_res_exists,
+res_quanLib.strip_res_exists.
+
+----------------------------------------------------------------------

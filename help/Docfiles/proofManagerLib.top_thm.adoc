@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+top_thm                                              (proofManagerLib)
+----------------------------------------------------------------------
+top_thm : unit -> thm
+
+SYNOPSIS
+Returns the theorem just proved using the subgoal package.
+
+DESCRIBE
+The function {top_thm} is part of the subgoal package. A proof state of the
+package consists of either  goal and justification stacks if a proof is in
+progress or a theorem if a proof has just been completed. If the proof state
+consists of a theorem, {top_thm} returns that theorem. For a description of the
+subgoal package, see {set_goal}.
+
+FAILURE
+{top_thm} will fail if the proof state does not hold a theorem. This will be
+so either because no goal has been set or because a proof is in progress with
+unproven subgoals.
+
+USES
+Accessing the result of an interactive proof session with the subgoal package.
+
+SEEALSO
+proofManagerLib.set_goal, proofManagerLib.restart,
+proofManagerLib.backup, proofManagerLib.restore, proofManagerLib.save,
+proofManagerLib.set_backup, proofManagerLib.expand,
+proofManagerLib.expandf, proofManagerLib.p, proofManagerLib.top_thm,
+proofManagerLib.top_goal.
+
+----------------------------------------------------------------------

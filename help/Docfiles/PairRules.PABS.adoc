@@ -1,0 +1,40 @@
+----------------------------------------------------------------------
+PABS                                                       (PairRules)
+----------------------------------------------------------------------
+PABS : (term -> thm -> thm)
+
+KEYWORDS
+rule, abstraction.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Paired abstraction of both sides of an equation.
+
+DESCRIBE
+
+         A |- t1 = t2
+   ------------------------  ABS "p"            [Where p is not free in A]
+    A |- (\p.t1) = (\p.t2)
+
+
+
+
+FAILURE
+If the theorem is not an equation, or if any variable in the paired structure
+of variables {p} occurs free in the assumptions {A}.
+
+EXAMPLE
+
+- PABS (Term `(x:'a,y:'b)`) (REFL (Term `(x:'a,y:'b)`));
+> val it = |- (\(x,y). (x,y)) = (\(x,y). (x,y)) : thm
+
+
+
+
+SEEALSO
+Thm.ABS, PairRules.PABS_CONV, PairRules.PETA_CONV, PairRules.PEXT,
+PairRules.MK_PABS.
+
+----------------------------------------------------------------------

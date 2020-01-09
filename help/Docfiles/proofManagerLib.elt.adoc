@@ -1,0 +1,24 @@
+----------------------------------------------------------------------
+elt                                                  (proofManagerLib)
+----------------------------------------------------------------------
+elt : list_tactic -> proof
+
+SYNOPSIS
+Applies a list-tactic to the current goal list,
+replacing it with the resulting subgoals.
+
+DESCRIBE
+The function {elt} is part of the subgoal package. It is an abbreviation for
+{expand_list}. For a description of the subgoal package, see {set_goal}.
+
+FAILURE
+As for {expand_list}.
+
+USES
+Doing a step in an interactive goal-directed proof,
+where the step may affect the list of goals produced by the previous step.
+
+SEEALSO
+proofManagerLib.expand_list, proofManagerLib.set_goal.
+
+----------------------------------------------------------------------

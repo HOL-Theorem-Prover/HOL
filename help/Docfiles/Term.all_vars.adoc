@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+all_vars                                                        (Term)
+----------------------------------------------------------------------
+all_vars : term -> term list
+
+SYNOPSIS
+Returns the set of all variables in a term.
+
+KEYWORDS
+variable, term.
+
+DESCRIBE
+An invocation {all_vars tm} returns a list representing the set of
+all bound and free term variables occurring in {tm}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- all_vars ``!x y. x /\ y /\ y ==> z``;
+> val it = [``z``, ``y``, ``x``] : term list
+
+
+
+
+COMMENTS
+Code should not depend on how elements are arranged in the
+result of {all_vars}.
+
+SEEALSO
+Term.all_atoms, Term.all_varsl, Term.free_vars.
+
+----------------------------------------------------------------------

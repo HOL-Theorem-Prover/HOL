@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+DISJ1                                                            (Thm)
+----------------------------------------------------------------------
+DISJ1 : thm -> term -> thm
+
+SYNOPSIS
+Introduces a right disjunct into the conclusion of a theorem.
+
+KEYWORDS
+rule, disjunction.
+
+DESCRIBE
+
+       A |- t1
+   ---------------  DISJ1 (A |- t1) t2
+    A |- t1 \/ t2
+
+
+
+
+FAILURE
+Fails unless the term argument is boolean.
+
+EXAMPLE
+
+- DISJ1 TRUTH F;
+> val it = |- T \/ F : thm
+
+
+
+
+SEEALSO
+Tactic.DISJ1_TAC, Thm.DISJ2, Tactic.DISJ2_TAC, Thm.DISJ_CASES.
+
+----------------------------------------------------------------------

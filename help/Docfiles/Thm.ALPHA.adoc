@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+ALPHA                                                            (Thm)
+----------------------------------------------------------------------
+ALPHA : term -> term -> thm
+
+SYNOPSIS
+Proves equality of alpha-equivalent terms.
+
+KEYWORDS
+rule, alpha.
+
+DESCRIBE
+When applied to a pair of terms {t1} and {t1'} which are
+alpha-equivalent, {ALPHA} returns the theorem {|- t1 = t1'}.
+
+
+   -------------  ALPHA  t1  t1'
+    |- t1 = t1'
+
+
+
+
+FAILURE
+Fails unless the terms provided are alpha-equivalent.
+
+SEEALSO
+Term.aconv, Drule.ALPHA_CONV, Drule.GEN_ALPHA_CONV.
+
+----------------------------------------------------------------------

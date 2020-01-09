@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+existential                                               (boolSyntax)
+----------------------------------------------------------------------
+existential : term
+
+SYNOPSIS
+Constant denoting existential quantification.
+
+LIBRARY
+boolSyntax
+
+DESCRIBE
+The ML variable {boolSyntax.existential} is bound to the term {bool$?}.
+
+SEEALSO
+boolSyntax.equality, boolSyntax.implication, boolSyntax.select,
+boolSyntax.T, boolSyntax.F, boolSyntax.universal, boolSyntax.exists1,
+boolSyntax.conjunction, boolSyntax.disjunction, boolSyntax.negation,
+boolSyntax.conditional, boolSyntax.bool_case, boolSyntax.let_tm,
+boolSyntax.arb.
+
+----------------------------------------------------------------------

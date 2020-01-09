@@ -1,0 +1,33 @@
+----------------------------------------------------------------------
+rewrites                                                     (bossLib)
+----------------------------------------------------------------------
+rewrites : thm list -> ssfrag
+
+SYNOPSIS
+Creates an {ssfrag} value consisting of the given theorems as
+rewrites.
+
+KEYWORDS
+simplification
+
+LIBRARY
+simpLib
+
+FAILURE
+Never fails.
+
+EXAMPLE
+Instead of writing the simpler {SIMP_CONV std_ss thmlist}, one could
+write
+
+   SIMP_CONV (std_ss ++ rewrites thmlist) []
+
+More plausibly, {rewrites} can be used to create commonly
+used {ssfrag} values containing a great number of rewrites.  This is
+how the basic system’s various {ssfrag} values are constructed where
+those values consist only of rewrite theorems.
+
+SEEALSO
+bossLib.++, simpLib.mk_simpset, simpLib.SSFRAG, bossLib.SIMP_CONV.
+
+----------------------------------------------------------------------

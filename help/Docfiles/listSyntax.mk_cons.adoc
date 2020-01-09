@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+mk_cons                                                   (listSyntax)
+----------------------------------------------------------------------
+mk_cons : term * term -> term
+
+SYNOPSIS
+Constructs a {CONS} pair.
+
+DESCRIBE
+{mk_cons (``t``, ``[t1;...;tn]``)} returns {``[t;t1;...;tn]``}.
+
+FAILURE
+Fails if the second element is not a list or if the first element is not of the same type as
+the elements of the list.
+
+SEEALSO
+listSyntax.dest_cons, listSyntax.is_cons, listSyntax.mk_list,
+listSyntax.dest_list, listSyntax.is_list.
+
+----------------------------------------------------------------------

@@ -1,0 +1,33 @@
+----------------------------------------------------------------------
+data                                                              (DB)
+----------------------------------------------------------------------
+type data
+
+SYNOPSIS
+Type abbreviation used in {DB} structure.
+
+DESCRIBE
+When functions from the {DB} structure are used to query the
+current theory, answer are often phrased in terms of the {data}
+type, which is a type abbreviation declared as
+
+   type data = (string * string) * (thm * class)
+
+
+An element {((thy,name), (th,cl))} means that {th} is a theorem
+with classification {class}, stored in theory segment {thy} under {name}.
+
+EXAMPLE
+
+- DB.find "BOOL_CASES_AX";
+> val it = [(("bool", "BOOL_CASES_AX"),
+            (|- !t. (t = T) \/ (t = F), Axm))]
+   : ((string * string) * (thm * class)) list
+
+
+
+
+SEEALSO
+DB.class, DB.thy, DB.find, DB.match, DB.apropos, DB.listDB.
+
+----------------------------------------------------------------------

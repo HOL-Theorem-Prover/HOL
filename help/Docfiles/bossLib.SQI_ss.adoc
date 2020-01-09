@@ -1,0 +1,12 @@
+----------------------------------------------------------------------
+SQI_ss                                                       (bossLib)
+----------------------------------------------------------------------
+SQI_ss : simpLib.ssfrag
+
+SYNOPSIS
+A synonym for {quantHeuristicsLib.SIMPLE_QUANT_INST_ss}.
+
+SEEALSO
+quantHeuristicsLib.SIMPLE_QUANT_INST_ss.
+
+----------------------------------------------------------------------

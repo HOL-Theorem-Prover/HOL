@@ -1,0 +1,28 @@
+----------------------------------------------------------------------
+mk_vartype                                                      (Type)
+----------------------------------------------------------------------
+mk_vartype : string -> hol_type
+
+SYNOPSIS
+Constructs a type variable of the given name.
+
+FAILURE
+Fails if the string does not begin with {'}.
+
+EXAMPLE
+
+- mk_vartype "'giraffe";
+> val it = `:'giraffe` : hol_type
+
+- try mk_vartype "test";
+
+Exception raised at Type.mk_vartype:
+incorrect syntax
+
+
+
+
+SEEALSO
+Type.dest_vartype, Type.is_vartype, Type.mk_type.
+
+----------------------------------------------------------------------

@@ -1,0 +1,24 @@
+----------------------------------------------------------------------
+current_axioms                                                (Theory)
+----------------------------------------------------------------------
+current_axioms : unit -> (string * thm) list
+
+SYNOPSIS
+Return the axioms in the current theory segment.
+
+KEYWORDS
+axiom, theory.
+
+DESCRIBE
+An invocation {current_axioms()} returns a list of the axioms
+asserted in the current theory segment.
+
+FAILURE
+Never fails. If no axioms have been asserted, the empty list is returned.
+
+SEEALSO
+Theory.current_theory, Theory.new_theory, Theory.current_definitions,
+Theory.current_theorems, Theory.constants, Theory.types,
+Theory.parents.
+
+----------------------------------------------------------------------

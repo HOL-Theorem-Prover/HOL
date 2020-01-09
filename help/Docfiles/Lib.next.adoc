@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+next                                                             (Lib)
+----------------------------------------------------------------------
+next : ('a,'b) istream -> ('a,'b) istream
+
+SYNOPSIS
+Move to the next element in the stream.
+
+KEYWORDS
+stream.
+
+DESCRIBE
+An application {next istrm} moves to the next element in the stream.
+
+FAILURE
+If the transition function supplied when building the stream fails on
+the current state.
+
+EXAMPLE
+
+- val istrm = mk_istream (fn x => x+1) 0 (concat "gsym" o int_to_string);
+> val it = <istream> : (int, string) istream
+
+- next istrm;
+> val it = <istream> : (int, string) istream
+
+
+
+
+COMMENTS
+Perhaps the type of {next} should be {('a,'b) istream -> unit}.
+
+SEEALSO
+Lib.mk_istream, Lib.state, Lib.reset.
+
+----------------------------------------------------------------------

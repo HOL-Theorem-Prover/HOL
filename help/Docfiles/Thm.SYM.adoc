@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+SYM                                                              (Thm)
+----------------------------------------------------------------------
+SYM : thm -> thm
+
+SYNOPSIS
+Swaps left-hand and right-hand sides of an equation.
+
+KEYWORDS
+rule, symmetry, equality.
+
+DESCRIBE
+When applied to a theorem {A |- t1 = t2}, the inference rule {SYM} returns
+{A |- t2 = t1}.
+
+    A |- t1 = t2
+   --------------  SYM
+    A |- t2 = t1
+
+
+
+
+FAILURE
+Fails unless the theorem is equational.
+
+SEEALSO
+Conv.GSYM, Drule.NOT_EQ_SYM, Thm.REFL.
+
+----------------------------------------------------------------------

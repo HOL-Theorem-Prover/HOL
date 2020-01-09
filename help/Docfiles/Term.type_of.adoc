@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+type_of                                                         (Term)
+----------------------------------------------------------------------
+type_of : term -> hol_type
+
+SYNOPSIS
+Returns the type of a term.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- type_of boolSyntax.universal;
+> val it = `:('a -> bool) -> bool` : hol_type
+
+
+
+
+----------------------------------------------------------------------

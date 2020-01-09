@@ -1,0 +1,21 @@
+----------------------------------------------------------------------
+REFL                                                             (Thm)
+----------------------------------------------------------------------
+REFL : conv
+
+SYNOPSIS
+Returns theorem expressing reflexivity of equality.
+
+KEYWORDS
+rule, reflexive, equality.
+
+DESCRIBE
+{REFL} maps any term {t} to the corresponding theorem {|- t = t}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+Conv.ALL_CONV, Tactic.REFL_TAC.
+
+----------------------------------------------------------------------

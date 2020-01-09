@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+say                                                              (Lib)
+----------------------------------------------------------------------
+say : string -> unit
+
+SYNOPSIS
+Print a string.
+
+KEYWORDS
+string, print.
+
+DESCRIBE
+An application {say s} prints the string {s} on the standard output.
+
+FAILURE
+Never fails.
+
+COMMENTS
+The Standard ML Basis Library structure {TextIO} offers
+related functions.
+
+----------------------------------------------------------------------

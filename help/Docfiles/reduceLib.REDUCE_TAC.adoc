@@ -1,0 +1,42 @@
+----------------------------------------------------------------------
+REDUCE_TAC                                                 (reduceLib)
+----------------------------------------------------------------------
+REDUCE_TAC : tactic
+
+SYNOPSIS
+Performs arithmetic or boolean reduction on a goal at all levels possible.
+
+LIBRARY
+reduce
+
+DESCRIBE
+{REDUCE_TAC} attempts to transform a goal by applying {REDUCE_CONV}.
+It will prove any true goal which is constructed from numerals and the boolean
+constants {T} and {F}.
+
+FAILURE
+Never fails, but may not advance the goal.
+
+EXAMPLE
+The following example takes a couple of minutes’ CPU time:
+
+
+   #g "((1 EXP 3) + (12 EXP 3) = 1729) /\ ((9 EXP 3) + (10 EXP 3) = 1729)";;
+   "((1 EXP 3) + (12 EXP 3) = 1729) /\ ((9 EXP 3) + (10 EXP 3) = 1729)"
+
+   () : void
+
+   #e REDUCE_TAC;;
+   OK..
+   goal proved
+   |- ((1 EXP 3) + (12 EXP 3) = 1729) /\ ((9 EXP 3) + (10 EXP 3) = 1729)
+
+   Previous subproof:
+   goal proved
+   () : void
+
+
+SEEALSO
+reduceLib.RED_CONV, reduceLib.REDUCE_CONV, reduceLib.REDUCE_RULE.
+
+----------------------------------------------------------------------

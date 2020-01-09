@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+PURE_REWRITE_CONV                                            (Rewrite)
+----------------------------------------------------------------------
+PURE_REWRITE_CONV : (thm list -> conv)
+
+SYNOPSIS
+Rewrites a term with only the given list of rewrites.
+
+KEYWORDS
+conversion.
+
+DESCRIBE
+This conversion provides a method for rewriting a term with the theorems given,
+and excluding simplification with tautologies in {implicit_rewrites}. Matching
+subterms are found recursively, until no more matches are found.
+For more details on rewriting see
+{GEN_REWRITE_CONV}.
+
+USES
+{PURE_REWRITE_CONV} is useful when the simplifications that arise by
+rewriting a theorem with {implicit_rewrites} are not wanted.
+
+FAILURE
+Does not fail. May result in divergence, in which case
+{PURE_ONCE_REWRITE_CONV} can be used.
+
+SEEALSO
+Rewrite.GEN_REWRITE_CONV, Rewrite.ONCE_REWRITE_CONV,
+Rewrite.PURE_ONCE_REWRITE_CONV, Rewrite.REWRITE_CONV.
+
+----------------------------------------------------------------------

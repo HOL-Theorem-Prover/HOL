@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+ETA_CONV                                                       (Drule)
+----------------------------------------------------------------------
+ETA_CONV : conv
+
+SYNOPSIS
+Performs a toplevel eta-conversion.
+
+KEYWORDS
+conversion, extensionality.
+
+DESCRIBE
+{ETA_CONV} maps an eta-redex {\x. (t x)}, where {x} does not occur free
+in {t}, to the theorem {|- (\x. (t x)) = t}.
+
+FAILURE
+Fails if the input term is not an eta-redex.
+
+SEEALSO
+Drule.RIGHT_ETA, Term.eta_conv.
+
+----------------------------------------------------------------------

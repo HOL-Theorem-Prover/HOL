@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+ROTATE_LT                                                   (Tactical)
+----------------------------------------------------------------------
+ROTATE_LT : int -> list_tactic
+
+SYNOPSIS
+Rotates a list of goals
+
+KEYWORDS
+list-tactic.
+
+DESCRIBE
+{ROTATE_LT n gl} rotates a goal list {gl} by {n} places.
+For {n >= 0}, this means moving the first {n} goals to the end of the list.
+A negative {n} means rotating the list in the opposite direction.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+To bring the third goal to first position, leaving the others in order, use
+
+  SPLIT_LT 3 (ROTATE_LT ~1, ALL_LT)
+
+
+COMMENTS
+Using {SPLIT_LT}, {ROTATE_LT} and {REVERSE_LT},
+any reordering of a list of goals is possible.
+
+SEEALSO
+proofManagerLib.rotate, proofManagerLib.r, Tactical.SPLIT_LT,
+Tactical.REVERSE_LT, Tactical.ALL_LT.
+
+----------------------------------------------------------------------

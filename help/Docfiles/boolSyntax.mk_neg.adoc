@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+mk_neg                                                    (boolSyntax)
+----------------------------------------------------------------------
+mk_neg : (term -> term)
+
+SYNOPSIS
+Constructs a negation.
+
+DESCRIBE
+{mk_neg "t"} returns {"~t"}.
+
+FAILURE
+Fails with {mk_neg} unless {t} is of type {bool}.
+
+SEEALSO
+boolSyntax.dest_neg, boolSyntax.is_neg.
+
+----------------------------------------------------------------------

@@ -1,0 +1,41 @@
+----------------------------------------------------------------------
+SPEC_ALL                                                       (Drule)
+----------------------------------------------------------------------
+SPEC_ALL : thm -> thm
+
+SYNOPSIS
+Specializes the conclusion of a theorem with its own quantified variables.
+
+KEYWORDS
+rule.
+
+DESCRIBE
+When applied to a theorem {A |- !x1...xn. t}, the inference rule {SPEC_ALL}
+returns the theorem {A |- t[x1'/x1]...[xn'/xn]} where the {xi'} are distinct
+variants of the corresponding {xi}, chosen to avoid clashes with any variables
+free in the assumption list and with the names of constants. Normally {xi'} is
+just {xi}, in which case {SPEC_ALL} simply removes all universal quantifiers.
+
+       A |- !x1...xn. t
+   ---------------------------  SPEC_ALL
+    A |- t[x1'/x1]...[xn'/xn]
+
+
+
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- SPEC_ALL CONJ_ASSOC;
+> val it = |- t1 /\ t2 /\ t3 = (t1 /\ t2) /\ t3 : thm
+
+
+
+
+SEEALSO
+Thm.GEN, Thm.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC,
+Drule.SPECL, Tactic.SPEC_TAC.
+
+----------------------------------------------------------------------

@@ -1,0 +1,37 @@
+----------------------------------------------------------------------
+pp_term_without_overloads_on                                   (Parse)
+----------------------------------------------------------------------
+Parse.pp_term_without_overloads_on : string list -> term PP.pprinter
+
+SYNOPSIS
+Printing function for terms without using overload mappings of certain tokens.
+
+KEYWORDS
+Pretty-printing
+
+LIBRARY
+Parse
+
+DESCRIBE
+The call {pp_term_without_overloads_on ls} returns a printing function to print
+terms without using any overload mappings of the tokens in {ls}, using the
+system’s standard pretty-printing stream type.
+
+EXAMPLE
+
+ > val termpp = pp_term_without_overloads_on ["+"];
+ val termpp = fn: term Parse.pprinter
+ > val _ = Portable.pprint termpp ``x + y`` ;
+ arithmetic$+ x y
+ val it = (): unit
+
+
+FAILURE
+Should never fail.
+
+SEEALSO
+Parse.pp_term_without_overloads,
+Parse.print_term_without_overloads_on,
+Parse.term_without_overloads_on_to_string, Parse.print_from_grammars.
+
+----------------------------------------------------------------------

@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+SIMP_CONV                                                    (simpLib)
+----------------------------------------------------------------------
+SIMP_CONV : simpset -> thm list -> conv
+
+SYNOPSIS
+Simplify a term with the given simpset and theorems.
+
+DESCRIBE
+{bossLib.SIMP_CONV} is identical to {simpLib.SIMP_CONV}.
+
+SEEALSO
+bossLib.SIMP_CONV.
+
+----------------------------------------------------------------------

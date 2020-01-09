@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+is_pexists                                                (pairSyntax)
+----------------------------------------------------------------------
+is_pexists : (term -> bool)
+
+LIBRARY
+pair
+
+SYNOPSIS
+Tests a term to see if it as a paired existential quantification.
+
+DESCRIBE
+{is_pexists "?pair. t"} returns {true}.
+If the term is not a paired existential quantification the result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+boolSyntax.is_exists, pairSyntax.dest_pexists.
+
+----------------------------------------------------------------------

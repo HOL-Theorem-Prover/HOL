@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+combine                                                          (Lib)
+----------------------------------------------------------------------
+combine : 'a list * 'b list -> ('a * 'b) list
+
+SYNOPSIS
+Transforms a pair of lists into a list of pairs.
+
+KEYWORDS
+list.
+
+DESCRIBE
+{combine ([x1,...,xn],[y1,...,yn])} returns {[(x1,y1),...,(xn,yn)]}.
+
+FAILURE
+Fails if the two lists are of different lengths.
+
+COMMENTS
+Has much the same effect as the SML Basis function {ListPair.zip}
+except that it fails if the arguments are not of equal length. Also
+note that {zip} is a curried version of {combine}
+
+SEEALSO
+Lib.zip, Lib.unzip, Lib.split.
+
+----------------------------------------------------------------------

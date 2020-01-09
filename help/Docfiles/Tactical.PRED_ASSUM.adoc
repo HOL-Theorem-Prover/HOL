@@ -1,0 +1,43 @@
+----------------------------------------------------------------------
+PRED_ASSUM                                                  (Tactical)
+----------------------------------------------------------------------
+PRED_ASSUM : (term -> bool) -> thm_tactic -> tactic
+
+SYNOPSIS
+Discharges a selected assumption and passes it to a theorem-tactic.
+
+KEYWORDS
+theorem-tactic, discharge.
+
+DESCRIBE
+{PRED_ASSUM} finds the first assumption satisfying the prediate given,
+removes it from the assumption list, {ASSUME}s it, passes it to
+the theorem-tactic and then applies the consequent tactic.  Thus,
+where {t} is the first assumption satisfying {p},
+
+   PRED_ASSUM p f ([a1,... ai, t, aj, ... an], goal) =
+     f (ASSUME t) ([a1,... ai, aj,... an], goal)
+
+For example (again, where {t} is the first assumption in {A u {t}}
+satisfying {p}), if
+
+    A ?- c
+   ========  f (ASSUME t)
+    B ?- v
+
+then
+
+    A u {t} ?- c
+   ===============  PRED_ASSUM p f
+       B ?- v
+
+
+FAILURE
+{PRED_ASSUM p} will fail on goals where no
+assumption safisfies {p}.
+
+SEEALSO
+Thm_cont.UNDISCH_THEN, Tactical.PAT_ASSUM, Tactical.POP_ASSUM,
+Tactic.UNDISCH_TAC.
+
+----------------------------------------------------------------------

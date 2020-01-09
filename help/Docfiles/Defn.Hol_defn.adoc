@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+Hol_defn                                                        (Defn)
+----------------------------------------------------------------------
+Hol_defn : string -> term quotation -> defn
+
+SYNOPSIS
+Function definition facility.
+
+DESCRIBE
+{bossLib.Hol_defn} is identical to {Defn.Hol_defn}.
+
+SEEALSO
+bossLib.Hol_defn.
+
+----------------------------------------------------------------------

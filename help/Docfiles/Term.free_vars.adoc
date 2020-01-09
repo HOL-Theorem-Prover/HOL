@@ -1,0 +1,40 @@
+----------------------------------------------------------------------
+free_vars                                                       (Term)
+----------------------------------------------------------------------
+free_vars : term -> term list
+
+SYNOPSIS
+Returns the set of free variables in a term.
+
+KEYWORDS
+variable, term.
+
+DESCRIBE
+An invocation {free_vars tm} returns a list representing the set of
+term variables occurring in {tm}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- free_vars (Term `x /\ y /\ y ==> x`);
+> val it = [`y`, `x`] : term list
+
+
+
+
+COMMENTS
+Code should not depend on how elements are arranged in the
+result of {free_vars}.
+
+{free_vars} is not efficient for large terms with many free variables.
+Demanding applications should be coded with {FVL}.
+
+
+
+SEEALSO
+Term.FVL, Term.free_vars_lr, Term.free_varsl, Term.empty_varset,
+Type.type_vars.
+
+----------------------------------------------------------------------

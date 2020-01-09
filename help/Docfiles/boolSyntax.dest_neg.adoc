@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+dest_neg                                                  (boolSyntax)
+----------------------------------------------------------------------
+dest_neg : term -> term
+
+SYNOPSIS
+Breaks apart a negation, returning its body.
+
+DESCRIBE
+{dest_neg} is a term destructor for negations: if {M} has the
+form {~t}, then {dest_neg M} returns {t}.
+
+FAILURE
+Fails with {dest_neg} if term is not a negation.
+
+SEEALSO
+boolSyntax.mk_neg, boolSyntax.is_neg.
+
+----------------------------------------------------------------------

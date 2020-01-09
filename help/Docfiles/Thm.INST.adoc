@@ -1,0 +1,49 @@
+----------------------------------------------------------------------
+INST                                                             (Thm)
+----------------------------------------------------------------------
+INST : (term,term) subst -> thm -> thm
+
+SYNOPSIS
+Instantiates free variables in a theorem.
+
+KEYWORDS
+rule, instantiate.
+
+DESCRIBE
+{INST} is a rule for substituting arbitrary terms for free variables
+in a theorem.
+
+             A |- t               INST [x1 |-> t1,...,xn |-> tn]
+   -----------------------------
+    A[t1,...,tn/x1,...,xn]
+     |-
+    t[t1,...,tn/x1,...,xn]
+
+
+
+
+FAILURE
+Fails if, for {1 <= i <= n}, some {xi} is not a variable, or if some
+{xi} has a different type than its intended replacement {ti}.
+
+EXAMPLE
+In the following example a theorem is instantiated for a specific term:
+
+   - load"arithmeticTheory";
+
+   - CONJUNCT1 arithmeticTheory.ADD_CLAUSES;
+   > val it = |- 0 + m = m : thm
+
+   - INST [``m:num`` |-> ``2*x``]
+          (CONJUNCT1 arithmeticTheory.ADD_CLAUSES);
+
+   val it = |- 0 + (2 * x) = 2 * x : thm
+
+
+
+
+SEEALSO
+Drule.INST_TY_TERM, Thm.INST_TYPE, Drule.ISPEC, Drule.ISPECL,
+Thm.SPEC, Drule.SPECL, Drule.SUBS, Term.subst, Thm.SUBST, Lib.|->.
+
+----------------------------------------------------------------------

@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+type_varsl                                                      (Type)
+----------------------------------------------------------------------
+type_varsl : hol_type list -> hol_type list
+
+SYNOPSIS
+Returns the set of type variables in a list of types.
+
+KEYWORDS
+variable, type.
+
+DESCRIBE
+An invocation {type_varsl [ty1,...,tyn]} returns a list
+representing the set-theoretic union of the type variables
+occurring in {ty1,...,tyn}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- type_varsl [alpha, beta, bool, ((alpha --> beta) --> bool --> beta)];
+> val it = [`:'a`, `:'b`] : hol_type list
+
+
+
+
+COMMENTS
+Code should not depend on how elements are arranged in the
+result of {type_varsl}.
+
+SEEALSO
+Type.type_vars, Type.type_var_in, Type.exists_tyvar, Type.polymorphic,
+Term.free_vars.
+
+----------------------------------------------------------------------

@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+alpha                                                           (Type)
+----------------------------------------------------------------------
+alpha : hol_type
+
+SYNOPSIS
+Common type variable.
+
+LIBRARY
+Type
+
+DESCRIBE
+The ML variable {Type.alpha} is bound to the type variable {'a}.
+
+SEEALSO
+Type.beta, Type.gamma, Type.delta, Type.bool.
+
+----------------------------------------------------------------------

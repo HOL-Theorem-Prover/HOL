@@ -1,0 +1,45 @@
+----------------------------------------------------------------------
+EXISTS                                                           (Thm)
+----------------------------------------------------------------------
+EXISTS : term * term -> thm -> thm
+
+SYNOPSIS
+Introduces existential quantification given a particular witness.
+
+KEYWORDS
+rule, existential.
+
+DESCRIBE
+When applied to a pair of terms and a theorem, the first term an existentially
+quantified pattern indicating the desired form of the result, and the second a
+witness whose substitution for the quantified variable gives a term which is
+the same as the conclusion of the theorem, {EXISTS} gives the desired theorem.
+
+    A |- p[u/x]
+   -------------  EXISTS (?x. p, u)
+    A |- ?x. p
+
+
+
+
+FAILURE
+Fails unless the substituted pattern is the same as the conclusion of the
+theorem.
+
+EXAMPLE
+The following examples illustrate how it is possible to deduce different
+things from the same theorem:
+
+   - EXISTS (Term `?x. x=T`,T) (REFL T);
+   > val it = |- ?x. x = T : thm
+
+   - EXISTS (Term `?x:bool. x=x`,T) (REFL T);
+   > val it = |- ?x. x = x : thm
+
+
+
+
+SEEALSO
+Thm.CHOOSE, Drule.SIMPLE_EXISTS, Tactic.EXISTS_TAC.
+
+----------------------------------------------------------------------

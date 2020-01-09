@@ -1,0 +1,25 @@
+----------------------------------------------------------------------
+RESTR_EVAL_TAC                                            (computeLib)
+----------------------------------------------------------------------
+RESTR_EVAL_TAC : term list -> tactic
+
+SYNOPSIS
+Symbolically evaluate a theorem, except for specified constants.
+
+KEYWORDS
+evaluation.
+
+DESCRIBE
+This is a tactic version of {RESTR_EVAL_CONV}.
+
+FAILURE
+As for {RESTR_EVAL_CONV}.
+
+USES
+Controlling symbolic evaluation when it loops or becomes exponential.
+
+SEEALSO
+bossLib.EVAL, bossLib.EVAL_RULE, bossLib.EVAL_TAC,
+computeLib.RESTR_EVAL_CONV, computeLib.RESTR_EVAL_RULE.
+
+----------------------------------------------------------------------

@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+ASSUME                                                           (Thm)
+----------------------------------------------------------------------
+ASSUME : term -> thm
+
+SYNOPSIS
+Introduces an assumption.
+
+LIBRARY
+HolKernel
+
+KEYWORDS
+rule, assumption.
+
+DESCRIBE
+When applied to a term {t}, which must have type {bool}, the inference rule
+{ASSUME} returns the theorem {t |- t}.
+
+   --------  ASSUME t
+    t |- t
+
+
+
+
+FAILURE
+Fails unless the term {t} has type {bool}.
+
+SEEALSO
+Drule.ADD_ASSUM, Thm.REFL.
+
+----------------------------------------------------------------------

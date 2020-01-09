@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+HEADGOAL                                                    (Tactical)
+----------------------------------------------------------------------
+HEADGOAL : tactic -> list_tactic
+
+SYNOPSIS
+The list-tactic which applies a tactic to the first member of a list of goals.
+
+KEYWORDS
+tactical.
+
+DESCRIBE
+If {tac} is a tactic, {HEADGOAL tac} is a
+list-tactic which applies the tactic {tac} to the
+first member of a list of goals.
+
+FAILURE
+The application of {HEADGOAL} to a tactic never fails.
+The resulting list-tactic fails the goal list is empty or
+or finally if {tac} fails when applied to the first member of the goal list.
+
+USES
+Applying a tactic to the first subgoal.
+
+EXAMPLE
+Where {tac1} and {tac2} are tactics, {tac1 THEN_LT HEADGOAL tac2}
+applies {tac1} to a goal, and then applies {tac2} to the first resulting
+subgoal.
+
+SEEALSO
+Tactical.THEN_LT, Tactical.NTH_GOAL, Tactical.THEN1,
+Tactical.LASTGOAL.
+
+----------------------------------------------------------------------

@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+universal                                                 (boolSyntax)
+----------------------------------------------------------------------
+universal : term
+
+SYNOPSIS
+Constant denoting universal quantification.
+
+LIBRARY
+boolSyntax
+
+DESCRIBE
+The ML variable {boolSyntax.universal} is bound to the term {bool$!}.
+
+SEEALSO
+boolSyntax.equality, boolSyntax.implication, boolSyntax.select,
+boolSyntax.T, boolSyntax.F, boolSyntax.universal,
+boolSyntax.existential, boolSyntax.exists1, boolSyntax.conjunction,
+boolSyntax.disjunction, boolSyntax.negation, boolSyntax.conditional,
+boolSyntax.bool_case, boolSyntax.let_tm, boolSyntax.arb.
+
+----------------------------------------------------------------------

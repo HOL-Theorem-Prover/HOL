@@ -1,0 +1,28 @@
+----------------------------------------------------------------------
+LIST_CONJ                                                      (Drule)
+----------------------------------------------------------------------
+LIST_CONJ : thm list -> thm
+
+SYNOPSIS
+Conjoins the conclusions of a list of theorems.
+
+KEYWORDS
+rule, conjunction.
+
+DESCRIBE
+
+         A1 |- t1 ... An |- tn
+   ----------------------------------  LIST_CONJ
+    A1 u ... u An |- t1 /\ ... /\ tn
+
+
+
+
+FAILURE
+{LIST_CONJ} fails if applied to an empty list of theorems.
+
+SEEALSO
+Drule.BODY_CONJUNCTS, Thm.CONJ, Thm.CONJUNCT1, Thm.CONJUNCT2,
+Drule.CONJUNCTS, Drule.CONJ_PAIR, Tactic.CONJ_TAC.
+
+----------------------------------------------------------------------

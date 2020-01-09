@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+NOT_FORALL_CONV                                                 (Conv)
+----------------------------------------------------------------------
+NOT_FORALL_CONV : conv
+
+SYNOPSIS
+Moves negation inwards through a universal quantification.
+
+KEYWORDS
+conversion, quantifier, universal, negation.
+
+DESCRIBE
+When applied to a term of the form {~(!x.P)}, the conversion
+{NOT_FORALL_CONV} returns the theorem:
+
+   |- ~(!x.P) = ?x.~P
+
+It is irrelevant whether {x} occurs free in {P}.
+
+FAILURE
+Fails if applied to a term not of the form {~(!x.P)}.
+
+SEEALSO
+Conv.EXISTS_NOT_CONV, Conv.FORALL_NOT_CONV, Conv.NOT_EXISTS_CONV.
+
+----------------------------------------------------------------------

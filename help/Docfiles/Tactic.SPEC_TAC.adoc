@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+SPEC_TAC                                                      (Tactic)
+----------------------------------------------------------------------
+SPEC_TAC : term * term -> tactic
+
+SYNOPSIS
+Generalizes a goal.
+
+KEYWORDS
+tactic.
+
+DESCRIBE
+When applied to a pair of terms {(u,x)}, where {x} is just a variable,
+and a goal {A ?- t}, the tactic {SPEC_TAC} generalizes the goal to
+{A ?- !x. t[x/u]}, that is, all instances of {u} are turned into {x}.
+
+        A ?- t
+   =================  SPEC_TAC (u,x)
+    A ?- !x. t[x/u]
+
+
+
+
+FAILURE
+Fails unless {x} is a variable with the same type as {u}.
+
+USES
+Removing unnecessary speciality in a goal, particularly as a prelude to
+an inductive proof.
+
+SEEALSO
+Thm.GEN, Thm.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC,
+Drule.SPECL, Drule.SPEC_ALL, Tactic.STRIP_TAC.
+
+----------------------------------------------------------------------

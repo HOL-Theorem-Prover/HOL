@@ -1,0 +1,21 @@
+----------------------------------------------------------------------
+frees                                                       (hol88Lib)
+----------------------------------------------------------------------
+frees : term -> term list
+
+SYNOPSIS
+Returns a list of the variables which are free in a term.
+
+DESCRIBE
+{frees} is equivalent to {rev o Term.free_vars}.
+
+FAILURE
+Never fails.
+
+COMMENTS
+Superseded by {Term.free_vars}.
+
+SEEALSO
+hol88Lib.freesl, Term.free_vars.
+
+----------------------------------------------------------------------

@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+DISCH                                                            (Thm)
+----------------------------------------------------------------------
+DISCH : (term -> thm -> thm)
+
+SYNOPSIS
+Discharges an assumption.
+
+KEYWORDS
+rule, discharge, assumption, implication.
+
+DESCRIBE
+
+       A |- t
+--------------------  DISCH u
+ A - {u} |- u ==> t
+
+
+
+
+FAILURE
+{DISCH} will fail if {u} is not boolean.
+
+COMMENTS
+The term {u} need not be a hypothesis.  Discharging {u} will remove all
+identical and alpha-equivalent hypotheses.
+
+SEEALSO
+Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN,
+Tactic.FILTER_DISCH_TAC, Tactic.FILTER_DISCH_THEN, Drule.NEG_DISCH,
+Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL,
+Tactic.UNDISCH_TAC.
+
+----------------------------------------------------------------------

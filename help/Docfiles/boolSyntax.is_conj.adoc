@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+is_conj                                                   (boolSyntax)
+----------------------------------------------------------------------
+is_conj : term -> bool
+
+SYNOPSIS
+Tests a term to see if it is a conjunction.
+
+DESCRIBE
+If {M} has the form {t1 /\ t2}, then {is_conj M} returns {true}. If {M}
+is not a conjunction the result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+boolSyntax.mk_conj, boolSyntax.dest_conj.
+
+----------------------------------------------------------------------

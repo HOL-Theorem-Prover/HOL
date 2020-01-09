@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+CURRY_FORALL_CONV                                          (PairRules)
+----------------------------------------------------------------------
+CURRY_FORALL_CONV : conv
+
+LIBRARY
+pair
+
+SYNOPSIS
+Currys paired universal quantifications into
+consecutive universal quantifications.
+
+EXAMPLE
+
+- CURRY_FORALL_CONV (Term `!(x,y). x + y = y + x`);
+> val it = |- (!(x,y). x + y = y + x) = !x y. x + y = y + x : thm
+
+- CURRY_FORALL_CONV (Term `!((w,x),(y,z)). w+x+y+z = z+y+x+w`);
+> val it =
+    |- (!((w,x),y,z). w + x + y + z = z + y + x + w) =
+       !(w,x) (y,z). w + x + y + z = z + y + x + w : thm
+
+
+
+
+FAILURE
+{CURRY_FORALL_CONV tm} fails if {tm} is not a paired universal quantification.
+
+SEEALSO
+PairRules.CURRY_CONV, PairRules.UNCURRY_CONV,
+PairRules.UNCURRY_FORALL_CONV, PairRules.CURRY_EXISTS_CONV,
+PairRules.UNCURRY_EXISTS_CONV.
+
+----------------------------------------------------------------------

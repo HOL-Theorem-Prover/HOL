@@ -1,0 +1,26 @@
+----------------------------------------------------------------------
+THEN_CONSEQ_CONV                                          (ConseqConv)
+----------------------------------------------------------------------
+THEN_CONSEQ_CONV : (conseq_conv -> conseq_conv -> conseq_conv)
+
+SYNOPSIS
+Applies two consequence conversions in sequence.
+
+DESCRIBE
+{THEN_CONSEQ_CONV cc1 cc2} corresponds to {c1 THENC c2} for
+classical conversions. Thus, if {cc1} returns {|- t' ==> t} when
+applied to {t}, and {cc2} returns {|- t'' ==> t'} when applied to
+{t'}, then {(THEN_CONSEQ_CONV cc1 cc2) t} returns {|- t'' ==> t}.
+{THEN_CONSEQ_CONV} can handle weakening as well: If {cc1} returns
+{|- t ==> t'} when applied to {t}, and {cc2} returns {|- t' ==> t''}
+when applied to {t'}, then {(THEN_CONSEQ_CONV cc1 cc2) t} returns
+{|- t ==> t''}. Finally, if {cc1} returns {|- t = t'} when applied to {t},
+and {cc2} returns {|- t' = t''} when applied to {t'}, then
+{(THEN_CONSEQ_CONV cc1 cc2) t} returns {|- t = t''}. If one of the
+conversions returns an equation, while the other returns an
+implication, the needed implication is automatically deduced.
+
+SEEALSO
+Conv.THENC, ConseqConv.EVERY_CONSEQ_CONV.
+
+----------------------------------------------------------------------

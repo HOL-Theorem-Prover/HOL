@@ -1,0 +1,25 @@
+----------------------------------------------------------------------
+ALL_CONV                                                        (Conv)
+----------------------------------------------------------------------
+ALL_CONV : conv
+
+SYNOPSIS
+Conversion that always raises the {UNCHANGED} exception.
+
+KEYWORDS
+conversion, identity, unchanged.
+
+DESCRIBE
+When applied to a term {t}, the conversion {ALL_CONV} raises the
+special {UNCHANGED} exception, which indicates to leave {t} unchanged.
+
+FAILURE
+Always raises the {UNCHANGED} exception.
+
+USES
+Identity element for {THENC}.
+
+SEEALSO
+Conv.UNCHANGED, Conv.NO_CONV, Thm.REFL.
+
+----------------------------------------------------------------------

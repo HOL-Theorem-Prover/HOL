@@ -1,0 +1,47 @@
+----------------------------------------------------------------------
+thytype_abbrev                                                 (Parse)
+----------------------------------------------------------------------
+thytype_abbrev : {Name:string,Thy:string} * hol_type -> unit
+
+SYNOPSIS
+Abbreviates a type to a specific theory-qualified name.
+
+KEYWORDS
+Parsing, pretty-printing.
+
+DESCRIBE
+A call to {thytype_abbrev({Name=n,Thy=t}, ty)} establishes the
+“kernel” name {t$n} as an abbreviation for the type {ty}, as happens
+with {type_abbrev}. In other words, after the call it becomes possible
+to write {``:args t$n``} to stand for type {ty}. If there are type
+variables in {ty} they become the parameters to the new abbreviated
+type operator. These parameters need to be filled in in the {args}
+position above. If there are no type variables in {ty} then
+abbreviation is of a whole type, and {args} must be blank.
+
+If there was an existing abbreviation for {t$n}, then this will be
+replaced by the call.
+
+In addition, after the given call, this abbreviation will become the
+preferred binding for the bare name {n}. Other abbreviations in
+different theories will need to use the form with fully-qualified
+names ({thy1$n}, {thy2$n} etc).
+
+FAILURE
+Fails if {ty} is a variable type.
+
+COMMENTS
+As with other parsing and pretty-printing functions, there is a
+companion function, {temp_thytype_abbrev}, which has the same effect
+on the global grammar but does not cause the change to persist when
+the theory is exported.
+
+It is legitimate to use a string for the theory component of the
+record that does not correspond to the current theory. Indeed, it is
+perfectly reasonable to do this, if one wants to give priority to a
+particular ancestral abbreviation.
+
+SEEALSO
+Parse.type_abbrev.
+
+----------------------------------------------------------------------

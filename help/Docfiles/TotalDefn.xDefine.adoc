@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+xDefine                                                    (TotalDefn)
+----------------------------------------------------------------------
+xDefine : string -> term quotation -> thm
+
+SYNOPSIS
+General purpose function definition facility.
+
+DESCRIBE
+{bossLib.xDefine} is identical to {TotalDefn.xDefine}.
+
+SEEALSO
+bossLib.xDefine.
+
+----------------------------------------------------------------------

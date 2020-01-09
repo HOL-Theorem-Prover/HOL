@@ -1,0 +1,42 @@
+----------------------------------------------------------------------
+GSYM                                                            (Conv)
+----------------------------------------------------------------------
+GSYM : thm -> thm
+
+SYNOPSIS
+Reverses the first equation(s) encountered in a top-down search.
+
+KEYWORDS
+rule, symmetry, equality.
+
+DESCRIBE
+The inference rule {GSYM} reverses the first equation(s) encountered in a
+top-down search of the conclusion of the argument theorem. An equation will be
+reversed iff it is not a proper subterm of another equation. If a theorem
+contains no equations, it will be returned unchanged.
+
+    A |- ..(s1 = s2)...(t1 = t2)..
+   --------------------------------  GSYM
+    A |- ..(s2 = s1)...(t2 = t1)..
+
+
+
+
+FAILURE
+Never fails, and never loops infinitely.
+
+EXAMPLE
+
+- arithmeticTheory.ADD;
+> val it = |- (!n. 0 + n = n) /\ (!m n. (SUC m) + n = SUC(m + n)) : thm
+
+- GSYM arithmeticTheory.ADD;
+> val it = |- (!n. n = 0 + n) /\ (!m n. SUC(m + n) = (SUC m) + n) : thm
+
+
+
+
+SEEALSO
+Drule.NOT_EQ_SYM, Thm.REFL, Thm.SYM.
+
+----------------------------------------------------------------------

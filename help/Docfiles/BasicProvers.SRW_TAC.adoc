@@ -1,0 +1,15 @@
+----------------------------------------------------------------------
+SRW_TAC                                                 (BasicProvers)
+----------------------------------------------------------------------
+SRW_TAC : ssfrag list -> thm list -> tactic
+
+SYNOPSIS
+A version of {RW_TAC} with an implicit {simpset}.
+
+DESCRIBE
+{bossLib.SRW_TAC} is identical to {BasicProvers.SRW_TAC}.
+
+SEEALSO
+bossLib.SRW_TAC.
+
+----------------------------------------------------------------------

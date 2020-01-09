@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+WORD_SUB_ss                                                 (wordsLib)
+----------------------------------------------------------------------
+WORD_SUB_ss : ssfrag
+
+SYNOPSIS
+Simplification fragment for words.
+
+KEYWORDS
+simplification, words.
+
+DESCRIBE
+The fragment {WORD_SUB_ss} applies the conversion {wordsLib.WORD_SUB_CONV}.
+
+COMMENTS
+This fragment should not be used in combination with {wordsLib.WORD_ARITH_ss},
+which also excludes use with {wordsLib.WORD_ss} and {srw_ss}.
+
+SEEALSO
+wordsLib.WORD_SUB_CONV.
+
+----------------------------------------------------------------------

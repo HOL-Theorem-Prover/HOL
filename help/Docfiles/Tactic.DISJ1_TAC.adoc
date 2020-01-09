@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+DISJ1_TAC                                                     (Tactic)
+----------------------------------------------------------------------
+DISJ1_TAC : tactic
+
+SYNOPSIS
+Selects the left disjunct of a disjunctive goal.
+
+KEYWORDS
+tactic, disjunction.
+
+DESCRIBE
+
+   A ?- t1 \/ t2
+  ===============  DISJ1_TAC
+     A ?- t1
+
+
+
+
+FAILURE
+Fails if the goal is not a disjunction.
+
+SEEALSO
+Thm.DISJ1, Thm.DISJ2, Tactic.DISJ2_TAC.
+
+----------------------------------------------------------------------

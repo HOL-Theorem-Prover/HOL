@@ -1,0 +1,32 @@
+----------------------------------------------------------------------
+EXT_CONSEQ_REWRITE_CONV                                   (ConseqConv)
+----------------------------------------------------------------------
+EXT_CONSEQ_REWRITE_CONV : (thm list -> conv) list -> thm list ->
+                          (thm list * thm list * thm list) ->
+                          directed_conseq_conv
+
+SYNOPSIS
+Applies {CONSEQ_REWRITE_CONV} interleaved with conversions and rewrites.
+
+DESCRIBE
+{CONSEQ_REWRITE_CONV} often results in theorems of the following form
+
+   |- (!x. T) /\ (T /\ (T /\ T)) /\ (\x. P) y /\ T ==>
+      something
+
+The problem is that {CONSEQ_REWRITE_CONV} applies consequence
+conversions, but no normal convs or simplifications. This is changed
+by {EXT_CONSEQ_REWRITE_CONV}. {EXT_CONSEQ_REWRITE_CONV} gets a list of
+conversions and a list of rewrite theorems. Moreover there are the
+parameters of {CONSEQ_REWRITE_CONV}. It then applies these conversions
+(e.g. {DEPTH_CONV BETA_CONV}) and a {REWRITE_CONV} with the given theorem
+list interleaved with {CONSEQ_REWRITE_CONV}. As a result the theorem
+above might look now like
+
+   |- P y ==> something
+
+
+SEEALSO
+ConseqConv.CONSEQ_REWRITE_CONV.
+
+----------------------------------------------------------------------

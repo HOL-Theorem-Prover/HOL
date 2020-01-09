@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+dest_thy_type                                                   (Type)
+----------------------------------------------------------------------
+dest_thy_type
+    : hol_type -> {Thy:string, Tyop:string,
+                   Args:hol_type list}
+
+SYNOPSIS
+Breaks apart a type (other than a variable type).
+
+
+
+DESCRIBE
+If {ty} is an application of a type operator {Tyop}, which
+was declared in theory {Thy}, to a list of types {Args}, then
+{dest_thy_type ty} returns {{Tyop,Thy,Args}}.
+
+FAILURE
+Fails if {ty} is a type variable.
+
+EXAMPLE
+
+- dest_thy_type (alpha --> bool);
+> val it = {Args = [`:'a`, `:bool`], Thy = "min", Tyop = "fun"} :
+
+- try dest_thy_type alpha;
+
+Exception raised at Type.dest_thy_type:
+
+
+
+
+SEEALSO
+Type.mk_thy_type, Type.dest_type, Type.mk_type, Term.mk_thy_const.
+
+----------------------------------------------------------------------

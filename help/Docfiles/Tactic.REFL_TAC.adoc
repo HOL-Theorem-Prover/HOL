@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+REFL_TAC                                                      (Tactic)
+----------------------------------------------------------------------
+REFL_TAC : tactic
+
+SYNOPSIS
+Solves a goal which is an equation between alpha-equivalent terms.
+
+KEYWORDS
+tactic, reflexive, equality, alpha.
+
+DESCRIBE
+When applied to a goal {A ?- t = t'}, where {t} and {t'} are alpha-equivalent,
+{REFL_TAC} completely solves it.
+
+    A ?- t = t'
+   =============  REFL_TAC
+
+
+
+
+
+FAILURE
+Fails unless the goal is an equation between alpha-equivalent terms.
+
+SEEALSO
+Tactic.ACCEPT_TAC, Tactic.MATCH_ACCEPT_TAC, Rewrite.REWRITE_TAC.
+
+----------------------------------------------------------------------

@@ -1,0 +1,39 @@
+----------------------------------------------------------------------
+decls                                                           (Term)
+----------------------------------------------------------------------
+decls : string -> term list
+
+SYNOPSIS
+Returns a list of constants having the same name.
+
+KEYWORDS
+constant, signature.
+
+DESCRIBE
+An invocation {Term.decls s} returns a list of constants found
+in the current theory having the name {s}. If there are no constants
+with name {s}, then the empty list is returned.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- decls "+";
+> val it = [`$+`] : term list
+
+- map dest_thy_const it;
+> val it = [{Name = "+", Thy = "arithmetic", Ty = `:num -> num -> num`}] : ...
+
+
+
+
+COMMENTS
+Useful for untangling confusion arising from overloading and
+also the possibility to declare two different constants with the
+same name in different theories.
+
+SEEALSO
+Type.decls, Term.dest_thy_const.
+
+----------------------------------------------------------------------

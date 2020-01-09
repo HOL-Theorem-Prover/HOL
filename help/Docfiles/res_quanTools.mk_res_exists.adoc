@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+mk_res_exists                                          (res_quanTools)
+----------------------------------------------------------------------
+mk_res_exists : ((term # term # term) -> term)
+
+SYNOPSIS
+Term constructor for restricted existential quantification.
+
+DESCRIBE
+{mk_res_exists("var","P","t")} returns {"?var :: P . t"}.
+
+FAILURE
+Fails with {mk_res_exists} if the first term is not a variable or if {P} and {t}
+are not of type {":bool"}.
+
+SEEALSO
+res_quanTools.dest_res_exists, res_quanTools.is_res_exists,
+res_quanTools.list_mk_res_exists.
+
+----------------------------------------------------------------------

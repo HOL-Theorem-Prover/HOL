@@ -1,0 +1,24 @@
+----------------------------------------------------------------------
+store_thm                                                   (Tactical)
+----------------------------------------------------------------------
+store_thm : string * term * tactic -> thm
+
+SYNOPSIS
+Proves and then stores a theorem in the current theory segment.
+
+DESCRIBE
+The call {store_thm(name, t, tac)} is equivalent to
+{save_thm(name, prove(t, tac))}.
+
+FAILURE
+Whenever {prove} fails to prove the given term.
+
+USES
+Saving theorems for retrieval in later sessions. Binding the result
+of {store_thm} to an ML variable makes it easy to access the theorem
+in the current terminal session.
+
+SEEALSO
+Tactical.prove, Theory.save_thm.
+
+----------------------------------------------------------------------

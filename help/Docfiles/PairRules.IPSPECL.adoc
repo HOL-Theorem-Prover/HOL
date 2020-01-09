@@ -1,0 +1,33 @@
+----------------------------------------------------------------------
+IPSPECL                                                    (PairRules)
+----------------------------------------------------------------------
+IPSPECL : (term list -> thm -> thm)
+
+KEYWORDS
+rule, type.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Specializes a theorem zero or more times, with type instantiation if necessary.
+
+DESCRIBE
+{IPSPECL} is an iterative version of {IPSPEC}
+
+         A |- !p1...pn.tm
+   ----------------------------  IPSPECL ["q1",...,"qn"]
+    A |- t[q1,...qn/p1,...,pn]
+
+(where {qi} is free for {pi} in {tm}).
+
+FAILURE
+{IPSPECL} fails if the list of terms is longer than the number of
+quantified variables in the term, if the type instantiation fails, or
+if the type variable being instantiated is free in the assumptions.
+
+SEEALSO
+Drule.ISPECL, Thm.INST_TYPE, Drule.INST_TY_TERM, PairRules.IPSPEC,
+Thm.SPEC, PairRules.PSPECL.
+
+----------------------------------------------------------------------

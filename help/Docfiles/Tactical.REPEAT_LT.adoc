@@ -1,0 +1,25 @@
+----------------------------------------------------------------------
+REPEAT_LT                                                   (Tactical)
+----------------------------------------------------------------------
+REPEAT_LT : (list_tactic -> list_tactic)
+
+SYNOPSIS
+Repeatedly applies a list-tactic until it fails.
+
+KEYWORDS
+tactical.
+
+DESCRIBE
+The list-tactic {REPEAT_LT ltac} is a list-tactic which applies {ltac}
+to a goal list, and while it succeeds,
+continues applying it to the resulting subgoal list.
+
+FAILURE
+The application of {REPEAT_LT} to a list-tactic never fails,
+and neither does the composite list-tactic,
+even if the basic list-tactic fails immediately.
+
+SEEALSO
+Tactical.REPEAT, Tactical.THEN_LT.
+
+----------------------------------------------------------------------

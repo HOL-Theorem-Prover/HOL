@@ -1,0 +1,37 @@
+----------------------------------------------------------------------
+reset                                                            (Lib)
+----------------------------------------------------------------------
+reset : ('a,'b) istream -> ('a,'b) istream
+
+SYNOPSIS
+Restart an istream.
+
+KEYWORDS
+stream.
+
+DESCRIBE
+An application {reset istrm} replaces the current state of {istrm} with
+the value supplied when {istrm} was constructed.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- reset(next(next
+    (mk_istream (fn x => x+1) 0 (concat "gsym" o int_to_string))));
+> val it = <istream> : (int, string) istream
+
+- state it;
+> val it = "gsym0" : string
+
+
+
+
+COMMENTS
+Perhaps the type of {reset} should be {('a,'b) istream -> unit}.
+
+SEEALSO
+Lib.mk_istream, Lib.next, Lib.state.
+
+----------------------------------------------------------------------

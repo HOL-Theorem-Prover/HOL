@@ -1,0 +1,33 @@
+----------------------------------------------------------------------
+UNDISCH_ALL                                                    (Drule)
+----------------------------------------------------------------------
+UNDISCH_ALL : thm -> thm
+
+SYNOPSIS
+Iteratively undischarges antecedents in a chain of implications.
+
+KEYWORDS
+rule, undischarge, antecedent.
+
+DESCRIBE
+
+    A |- t1 ==> ... ==> tn ==> t
+   ------------------------------  UNDISCH_ALL
+        A, t1, ..., tn |- t
+
+Note that {UNDISCH_ALL} treats {"~u"} as {"u ==> F"}.
+
+FAILURE
+{UNDISCH_ALL} never fails. When called on something other than an implication
+or negation, it simply returns its argument unchanged.
+
+COMMENTS
+Identical or alpha-equivalent terms which are repeated in {A, "t1", ..., "tn"}
+will not be duplicated in the hypotheses of the resulting theorem.
+
+SEEALSO
+Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN,
+Drule.NEG_DISCH, Tactic.FILTER_DISCH_TAC, Tactic.FILTER_DISCH_THEN,
+Tactic.STRIP_TAC, Drule.UNDISCH, Tactic.UNDISCH_TAC.
+
+----------------------------------------------------------------------

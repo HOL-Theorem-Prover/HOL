@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+FILTER_GEN_TAC                                                (Tactic)
+----------------------------------------------------------------------
+FILTER_GEN_TAC : (term -> tactic)
+
+SYNOPSIS
+Strips off a universal quantifier, but fails for a given quantified variable.
+
+KEYWORDS
+tactic, selective, quantifier, universal.
+
+DESCRIBE
+When applied to a term {s} and a goal {A ?- !x. t}, the tactic {FILTER_GEN_TAC}
+fails if the quantified variable {x} is the same as {s}, but otherwise
+advances the goal in the same way as {GEN_TAC}, i.e. returns the goal
+{A ?- t[x'/x]} where {x'} is a variant of {x} chosen to avoid clashing with
+any variables free in the goal’s assumption list. Normally {x'} is just {x}.
+
+     A ?- !x. t
+   ==============  FILTER_GEN_TAC "s"
+    A ?- t[x'/x]
+
+
+
+
+FAILURE
+Fails if the goal’s conclusion is not universally quantified or the
+quantified variable is equal to the given term.
+
+SEEALSO
+Thm.GEN, Tactic.GEN_TAC, Thm.GENL, Drule.GEN_ALL, Thm.SPEC,
+Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC, Tactic.STRIP_TAC.
+
+----------------------------------------------------------------------

@@ -1,0 +1,32 @@
+----------------------------------------------------------------------
+LEFT_OR_PEXISTS_CONV                                       (PairRules)
+----------------------------------------------------------------------
+LEFT_OR_PEXISTS_CONV : conv
+
+KEYWORDS
+conversion, quantifier, existential, disjunction.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Moves a paired existential quantification of the left disjunct outwards
+through a disjunction.
+
+DESCRIBE
+When applied to a term of the form {(?p. t) \/ u}, the conversion
+{LEFT_OR_PEXISTS_CONV} returns the theorem:
+
+   |- (?p. t) \/ u = (?p'. t[p'/p] \/ u)
+
+where {p'} is a primed variant of the pair {p} that does not
+contain any variables free in the input term.
+
+FAILURE
+Fails if applied to a term not of the form {(?p. t) \/ u}.
+
+SEEALSO
+Conv.LEFT_OR_EXISTS_CONV, PairRules.PEXISTS_OR_CONV,
+PairRules.OR_PEXISTS_CONV, PairRules.RIGHT_OR_PEXISTS_CONV.
+
+----------------------------------------------------------------------

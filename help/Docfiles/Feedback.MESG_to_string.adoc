@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+MESG_to_string                                              (Feedback)
+----------------------------------------------------------------------
+MESG_to_string : (string -> string) ref
+
+SYNOPSIS
+Alterable function for formatting {HOL_MESG}.
+
+KEYWORDS
+message, formatting
+
+DESCRIBE
+{MESG_to_string} is a reference to a function for formatting the argument
+to an application of {HOL_MESG}.
+
+The default value of {MESG_to_string} is {format_MESG}.
+
+EXAMPLE
+
+    - fun alt_MESG_report s = String.concat["Dear HOL user: ", s, "\n"];
+
+    - MESG_to_string := alt_MESG_report;
+
+    - HOL_MESG "Hi there."
+
+    Dear HOL user: Hi there.
+    > val it = () : unit
+
+
+
+
+SEEALSO
+Feedback, Feedback.HOL_MESG, Feedback.format_MESG,
+Feedback.ERR_to_string, Feedback.WARNING_to_string.
+
+----------------------------------------------------------------------

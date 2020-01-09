@@ -1,0 +1,31 @@
+----------------------------------------------------------------------
+RIGHT_BETA                                                     (Drule)
+----------------------------------------------------------------------
+RIGHT_BETA : (thm -> thm)
+
+SYNOPSIS
+Beta-reduces a top-level beta-redex on the right-hand side of an equation.
+
+KEYWORDS
+rule.
+
+DESCRIBE
+When applied to an equational theorem, {RIGHT_BETA} applies beta-reduction at
+top level to the right-hand side (only). Variables are renamed if necessary to
+avoid free variable capture.
+
+    A |- s = (\x. t1) t2
+   ----------------------  RIGHT_BETA
+     A |- s = t1[t2/x]
+
+
+
+
+FAILURE
+Fails unless the theorem is equational, with its right-hand side being
+a top-level beta-redex.
+
+SEEALSO
+Thm.BETA_CONV, Conv.BETA_RULE, Tactic.BETA_TAC, Drule.RIGHT_LIST_BETA.
+
+----------------------------------------------------------------------

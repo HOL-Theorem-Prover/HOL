@@ -1,0 +1,28 @@
+----------------------------------------------------------------------
+fetch                                                             (DB)
+----------------------------------------------------------------------
+fetch : string -> string -> thm
+
+SYNOPSIS
+Fetch a theorem by theory and name.
+
+DESCRIBE
+An invocation {fetch thy name} searches through the currently loaded
+theory segments in an attempt to find a theorem, axiom, or definition
+ stored under {name} in theory {thy}.
+
+FAILURE
+If the specified theorem, axiom, or definition cannot be located.
+
+EXAMPLE
+
+- DB.fetch "bool" "NOT_FORALL_THM";
+> val it = |- !P. ~(!x. P x) = ?x. ~P x : thm
+
+
+
+
+SEEALSO
+DB.thms, DB.thy, DB.theorems, DB.axioms, DB.definitions.
+
+----------------------------------------------------------------------

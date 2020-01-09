@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+pair_of_list                                                     (Lib)
+----------------------------------------------------------------------
+pair_of_list : 'a list -> 'a * 'a
+
+SYNOPSIS
+Turns a two-element list into a pair.
+
+DESCRIBE
+{pair_of_list [x, y]} returns {(x, y)}.
+
+FAILURE
+Fails if applied to a list that is not of length 2.
+
+SEEALSO
+Lib.singleton_of_list, Lib.triple_of_list, Lib.quadruple_of_list.
+
+----------------------------------------------------------------------

@@ -1,0 +1,42 @@
+----------------------------------------------------------------------
+RESQ_SPEC                                              (res_quanTools)
+----------------------------------------------------------------------
+RESQ_SPEC : (term -> thm -> thm)
+
+SYNOPSIS
+Specializes the conclusion of a restricted universally quantified theorem.
+
+KEYWORDS
+rule, restricted quantifier.
+
+DESCRIBE
+When applied to a term {u} and a theorem {A |- !x::P. t}, {RESQ_SPEC} returns
+the theorem {A, P u |- t[u/x]}. If necessary, variables will be renamed prior
+to the specialization to ensure that {u} is free for {x} in {t}, that is,
+no variables free in {u} become bound after substitution.
+
+      A |- !x::P. t
+   ------------------  RESQ_SPEC "u"
+    A, P u |- t[u/x]
+
+
+FAILURE
+Fails if the theorem’s conclusion is not restricted universally quantified,
+or if type instantiation fails.
+
+EXAMPLE
+The following example shows how {RESQ_SPEC} renames bound variables if necessary,
+prior to substitution: a straightforward substitution would result in the
+clearly invalid theorem {(\y. 0 < y)y |- y = y}.
+
+   #let th = RESQ_GEN "x:num" "\y.0<y" (REFL "x:num");;
+   th = |- !x :: \y. 0 < y. x = x
+
+   #RESQ_SPEC "y:num" th;;
+   (\y'. 0 < y')y |- y = y
+
+
+SEEALSO
+res_quanTools.RESQ_SPECL.
+
+----------------------------------------------------------------------

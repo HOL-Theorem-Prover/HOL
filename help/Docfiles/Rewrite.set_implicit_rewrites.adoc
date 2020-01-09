@@ -1,0 +1,16 @@
+----------------------------------------------------------------------
+set_implicit_rewrites                                        (Rewrite)
+----------------------------------------------------------------------
+set_implicit_rewrites: rewrites -> unit
+
+SYNOPSIS
+Allows the user to control the built-in database of simplifications used
+in rewriting.
+
+FAILURE
+Never fails.
+
+SEEALSO
+Rewrite.empty_rewrites, Rewrite.add_rewrites.
+
+----------------------------------------------------------------------

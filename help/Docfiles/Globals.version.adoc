@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+version                                                      (Globals)
+----------------------------------------------------------------------
+Globals.version : int
+
+SYNOPSIS
+The version number of the {HOL} system being run.
+
+EXAMPLE
+
+- Globals.version;
+> val it = 2 : int
+
+
+SEEALSO
+Globals.release.
+
+----------------------------------------------------------------------

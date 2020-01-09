@@ -1,0 +1,20 @@
+----------------------------------------------------------------------
+dest_imp_only                                             (boolSyntax)
+----------------------------------------------------------------------
+dest_imp_only : term -> term * term
+
+SYNOPSIS
+Breaks an implication into antecedent and consequent.
+
+DESCRIBE
+If {M} is a term with the form {t1 ==> t2}, then {dest_imp_only M}
+returns {(t1,t2)}.
+
+FAILURE
+Fails if {M} is not an implication.
+
+SEEALSO
+boolSyntax.mk_imp, boolSyntax.dest_imp, boolSyntax.is_imp,
+boolSyntax.is_imp_only, boolSyntax.strip_imp, boolSyntax.list_mk_imp.
+
+----------------------------------------------------------------------

@@ -1,0 +1,21 @@
+----------------------------------------------------------------------
+prime                                                            (Lib)
+----------------------------------------------------------------------
+prime : string -> string
+
+SYNOPSIS
+Attach a prime mark to a string.
+
+KEYWORDS
+string.
+
+DESCRIBE
+A call {prime s} is equal to {s ^ "'"}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+Term.variant.
+
+----------------------------------------------------------------------

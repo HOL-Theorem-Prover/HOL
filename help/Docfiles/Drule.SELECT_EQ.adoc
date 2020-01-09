@@ -1,0 +1,45 @@
+----------------------------------------------------------------------
+SELECT_EQ                                                      (Drule)
+----------------------------------------------------------------------
+SELECT_EQ : (term -> thm -> thm)
+
+SYNOPSIS
+Applies epsilon abstraction to both terms of an equation.
+
+KEYWORDS
+rule, epsilon, equality.
+
+DESCRIBE
+Effects the extensionality of the epsilon operator {@}.
+
+       A |- t1 = t2
+   ------------------------  SELECT_EQ "x"      [where x is not free in A]
+    A |- (@x.t1) = (@x.t2)
+
+
+
+
+FAILURE
+Fails if the conclusion of the theorem is not an equation, or if the
+variable {x} is free in {A}.
+
+EXAMPLE
+Given a theorem which shows the equivalence of two distinct forms of
+defining the property of being an even number:
+
+   th = |- (x MOD 2 = 0) = (?y. x = 2 * y)
+
+A theorem giving the equivalence of the epsilon abstraction of each
+form is obtained:
+
+   - SELECT_EQ (Term `x:num`) th;
+   > val it = |- (@x. x MOD 2 = 0) = (@x. ?y. x = 2 * y) : thm
+
+
+
+
+SEEALSO
+Thm.ABS, Thm.AP_TERM, Drule.EXISTS_EQ, Drule.FORALL_EQ,
+Conv.SELECT_CONV, Drule.SELECT_ELIM, Drule.SELECT_INTRO.
+
+----------------------------------------------------------------------

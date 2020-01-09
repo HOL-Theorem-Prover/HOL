@@ -1,0 +1,40 @@
+----------------------------------------------------------------------
+HYP_CONV_RULE                                                   (Conv)
+----------------------------------------------------------------------
+HYP_CONV_RULE : (term -> bool) -> (conv -> thm -> thm)
+
+SYNOPSIS
+Makes an inference rule by applying a conversion to hypotheses of a theorem.
+
+KEYWORDS
+conversional, rule.
+
+DESCRIBE
+If {conv} is a conversion, then {HYP_CONV_RULE sel conv} is an inference rule
+that applies {conv} to those hypotheses of a theorem 
+which are selected by {sel}.
+That is, if {conv} maps a term {"h"} to the
+theorem {|- h = h'}, then the rule {HYP_CONV_RULE sel conv} infers {A, h' |- c}
+from the theorem {A, h |- c}.
+More precisely, if {conv "h"} returns {A' |- h = h'}, then:
+
+       A, h |- c
+   ----------------  HYP_CONV_RULE sel conv
+    A u A', h' |- c
+
+Note that if the conversion {conv} returns a theorem with assumptions,
+then the resulting inference rule adds these to the assumptions of the
+theorem it returns.
+
+FAILURE
+{HYP_CONV_RULE sel conv th} fails 
+if {sel} fails when applied to a hypothesis of {th},
+or if {conv} fails when applied to a hypothesis selected by {sel}.
+The function returned by {HYP_CONV_RULE sel conv} will also fail
+if the ML function {conv:term->thm} is not, in fact, a conversion
+(i.e. a function that maps a term {h} to a theorem {|- h = h'}).
+
+SEEALSO
+Conv.CONV_RULE, Tactic.CONV_TAC, Conv.RIGHT_CONV_RULE.
+
+----------------------------------------------------------------------

@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+curry                                                            (Lib)
+----------------------------------------------------------------------
+curry : ('a * 'b -> 'c) -> 'a -> 'b -> 'c
+
+SYNOPSIS
+Converts a function on a pair to a corresponding curried function.
+
+DESCRIBE
+The application {curry f} returns {fn x => fn y => f(x,y)}, so that
+
+   curry f x y = f(x,y)
+
+
+
+
+FAILURE
+A call {curry f} never fails; however, {curry f x y} fails if {f (x,y)}
+fails.
+
+EXAMPLE
+
+- val increment = curry op+ 1;
+> val it = increment = fn : int -> int
+
+- increment 6;
+> val it = 7 : int
+
+
+
+
+SEEALSO
+Lib, Lib.uncurry.
+
+----------------------------------------------------------------------

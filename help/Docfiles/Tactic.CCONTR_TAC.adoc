@@ -1,0 +1,29 @@
+----------------------------------------------------------------------
+CCONTR_TAC                                                    (Tactic)
+----------------------------------------------------------------------
+CCONTR_TAC : tactic
+
+SYNOPSIS
+Assumes the negation of the conclusion of a goal.
+
+KEYWORDS
+tactic, contradiction.
+
+DESCRIBE
+Given a goal {A ?- t}, {CCONTR_TAC} makes a new goal which is to prove {F}
+by assuming also the negation of the conclusion {t}.
+
+     A ?- t
+   ==========
+   A, -t ?- F
+
+
+
+
+FAILURE
+Never fails
+
+SEEALSO
+Tactic.CHECK_ASSUME_TAC, Thm.CCONTR, Drule.CONTRAPOS, Thm.NOT_ELIM.
+
+----------------------------------------------------------------------

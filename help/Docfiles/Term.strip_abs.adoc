@@ -1,0 +1,39 @@
+----------------------------------------------------------------------
+strip_abs                                                       (Term)
+----------------------------------------------------------------------
+strip_abs : term -> term list * term
+
+SYNOPSIS
+Break apart consecutive lambda abstractions.
+
+KEYWORDS
+lambda abstraction.
+
+DESCRIBE
+If M is a term of the form {\v1...vn.N}, where {N} is not a lambda abstraction,
+then {strip_abs M} equals {([v1,...,vn],N)}. Otherwise, the result
+is {([],M)}.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- strip_abs (Term `\x y z. x ==> y ==> z`);
+> val it = ([`x`, `y`, `z`], `x ==> y ==> z`) : term list * term
+
+- strip_abs T;
+> val it = ([], `T`) : term list * term
+
+
+
+
+COMMENTS
+In the current implementation of HOL, {strip_abs} is far faster
+than iterating {dest_abs} for terms with many consecutive binders.
+
+SEEALSO
+Term.strip_binder, Term.dest_abs, boolSyntax.strip_forall,
+boolSyntax.strip_exists.
+
+----------------------------------------------------------------------

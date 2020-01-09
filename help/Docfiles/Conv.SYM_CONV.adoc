@@ -1,0 +1,27 @@
+----------------------------------------------------------------------
+SYM_CONV                                                        (Conv)
+----------------------------------------------------------------------
+SYM_CONV : conv
+
+SYNOPSIS
+Interchanges the left and right-hand sides of an equation.
+
+KEYWORDS
+conversion, symmetry, equality.
+
+DESCRIBE
+When applied to an equational term {t1 = t2}, the conversion
+{SYM_CONV} returns the theorem:
+
+   |- (t1 = t2) = (t2 = t1)
+
+
+
+
+FAILURE
+Fails if applied to a term that is not an equation.
+
+SEEALSO
+Thm.SYM.
+
+----------------------------------------------------------------------

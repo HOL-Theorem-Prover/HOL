@@ -1,0 +1,35 @@
+----------------------------------------------------------------------
+trypluck                                                         (Lib)
+----------------------------------------------------------------------
+trypluck : ('a -> 'b) -> 'a list -> 'b * 'a list
+
+SYNOPSIS
+Pull an element out of a list.
+
+KEYWORDS
+list
+
+DESCRIBE
+An invocation {trypluck f [x1,...,xk,...,xn]} returns a pair
+
+   (f(xk),[x1,...,xk-1,xk+1,...xn])
+
+where {xk} has been lifted out of the
+list without disturbing the relative positions of the other elements. For
+this to happen, {f(xk)} must hold, and {f(xi)} must fail for {x1,...,xk-1}.
+
+FAILURE
+If the input list is empty. Also fails if {f} fails on every member of the
+list.
+
+EXAMPLE
+
+- val (x,rst) = trypluck BETA_CONV [``1``,``(\x. x+2) 3``, ``p + q``];
+> val x = |- (\x. x + 2) 3 = 3 + 2 : thm
+  val rst = [``1``, ``p + q``] : term list
+
+
+SEEALSO
+Lib.first, Lib.filter, Lib.mapfilter, Lib.tryfind.
+
+----------------------------------------------------------------------

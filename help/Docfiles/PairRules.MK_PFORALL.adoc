@@ -1,0 +1,33 @@
+----------------------------------------------------------------------
+MK_PFORALL                                                 (PairRules)
+----------------------------------------------------------------------
+MK_PFORALL : (thm -> thm)
+
+KEYWORDS
+rule, quantifier, existential, equality.
+
+LIBRARY
+pair
+
+SYNOPSIS
+Universally quantifies both sides of a universally quantified
+equational theorem.
+
+DESCRIBE
+When applied to a theorem {A |- !p. t1 = t2}, the inference rule {MK_PFORALL}
+returns the theorem {A |- (!x. t1) = (!x. t2)}.
+
+       A |- !p. t1 = t2
+   --------------------------  MK_PFORALL
+    A |- (!p. t1) = (!p. t2)
+
+
+
+
+FAILURE
+Fails unless the theorem is a singly paired universally quantified equation.
+
+SEEALSO
+PairRules.PFORALL_EQ, PairRules.LIST_MK_PFORALL, PairRules.MK_PABS.
+
+----------------------------------------------------------------------

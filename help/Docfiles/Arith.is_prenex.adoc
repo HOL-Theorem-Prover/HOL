@@ -1,0 +1,34 @@
+----------------------------------------------------------------------
+is_prenex                                                      (Arith)
+----------------------------------------------------------------------
+is_prenex : (term -> bool)
+
+SYNOPSIS
+Determines whether a formula is in prenex normal form.
+
+DESCRIBE
+This function returns true if the term it is given as argument is in prenex
+normal form. If the term is not a formula the result will be true provided
+there are no nested Boolean expressions involving quantifiers.
+
+FAILURE
+Never fails.
+
+EXAMPLE
+
+- is_prenex ``!x. ?y. x \/ y``;
+> val it = true : bool
+
+- is_prenex ``!x. x ==> (?y. x /\ y)``;
+> val it = false : bool
+
+
+USES
+Useful for determining whether it is necessary to apply a prenex normaliser to
+a formula before passing it to a function which requires the formula to be in
+prenex normal form.
+
+SEEALSO
+Arith.PRENEX_CONV.
+
+----------------------------------------------------------------------

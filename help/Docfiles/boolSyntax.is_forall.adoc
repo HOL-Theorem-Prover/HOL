@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+is_forall                                                 (boolSyntax)
+----------------------------------------------------------------------
+is_forall : term -> bool
+
+SYNOPSIS
+Tests a term to see if it is a universal quantification.
+
+DESCRIBE
+If {M} is a term with the form {!x. t}, then {is_forall M} returns {true}.
+If {M} is not a universal quantification the result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+boolSyntax.mk_forall, boolSyntax.dest_forall.
+
+----------------------------------------------------------------------

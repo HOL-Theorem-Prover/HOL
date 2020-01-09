@@ -1,0 +1,36 @@
+----------------------------------------------------------------------
+RULE_ASSUM_TAC                                                (Tactic)
+----------------------------------------------------------------------
+RULE_ASSUM_TAC : ((thm -> thm) -> tactic)
+
+SYNOPSIS
+Maps an inference rule over the assumptions of a goal.
+
+KEYWORDS
+tactic, assumption, rule.
+
+DESCRIBE
+When applied to an inference rule {f} and a goal {({A1,...,An} ?- t)},
+the {RULE_ASSUM_TAC} tactical applies the inference rule to each of the
+{ASSUME}d assumptions to give a new goal.
+
+             {A1,...,An} ?- t
+   ====================================  RULE_ASSUM_TAC f
+    {f(A1 |- A1),...,f(An |- An)} ?- t
+
+
+
+
+FAILURE
+The application of {RULE_ASSUM_TAC f} to a goal fails iff {f} fails when
+applied to any of the assumptions of the goal.
+
+COMMENTS
+It does not matter if the goal has no assumptions, but in this case
+{RULE_ASSUM_TAC} has no effect.
+
+SEEALSO
+Tactic.RULE_L_ASSUM_TAC, Tactical.ASSUM_LIST, Tactical.MAP_EVERY,
+Tactical.MAP_FIRST, Tactical.POP_ASSUM_LIST.
+
+----------------------------------------------------------------------

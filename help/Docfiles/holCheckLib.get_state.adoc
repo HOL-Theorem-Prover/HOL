@@ -1,0 +1,12 @@
+----------------------------------------------------------------------
+get_state                                                (holCheckLib)
+----------------------------------------------------------------------
+get_state : model -> term option
+
+SYNOPSIS
+Returns the state tuple used internally by HolCheck for this model, if one has been set.
+
+SEEALSO
+holCheckLib.holCheck, holCheckLib.set_state.
+
+----------------------------------------------------------------------

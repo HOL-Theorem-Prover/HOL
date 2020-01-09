@@ -1,0 +1,39 @@
+----------------------------------------------------------------------
+MODIFY_CONS                                                    (Drule)
+----------------------------------------------------------------------
+MODIFY_CONS : (thm -> thm) -> thm -> thm
+
+SYNOPSIS
+Strips universal quantifiers and antecedents of implications,
+modifies the conclusion, and replaces the antecedents
+
+KEYWORDS
+universal, existential, quantifier, assumption, hypothesis
+
+DESCRIBE
+If {MODIFY_CONS g t} gives {t'}, then
+
+   |- !x. a1 ==> !y. a2 ==> !z. a3 ==> !u. t
+   ----------------------------------------- MODIFY_CONS g
+	   |- a1 ==> a2 ==> a3 ==> t'
+
+
+EXAMPLE
+
+ |- !s t. s SUBSET t ==> (s UNION (t DIFF s) = t) /\ ....
+ -------------------------------------------------------- MODIFY_CONS CONJUNCT1
+       |- s SUBSET t ==> (s UNION (t DIFF s) = t) 
+
+
+FAILURE
+Fails if {g} fails when applied to the consequent
+
+COMMENTS
+Doesn’t replace the quantifiers, because it is just a special case of
+{REORDER_ANTS_MOD}
+
+SEEALSO
+Drule.REORDER_ANTS_MOD, Drule.SPEC_ALL, Drule.GEN_ALL, Thm.UNDISCH,
+Drule.DISCH.
+
+----------------------------------------------------------------------

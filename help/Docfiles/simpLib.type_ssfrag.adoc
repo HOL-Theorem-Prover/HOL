@@ -1,0 +1,52 @@
+----------------------------------------------------------------------
+type_ssfrag                                                  (simpLib)
+----------------------------------------------------------------------
+simpLib.type_ssfrag : string -> ssfrag
+
+SYNOPSIS
+Returns a simpset fragment for simplifying types’ constructors.
+
+KEYWORDS
+simplification, data types
+
+DESCRIBE
+A call to {type_ssfrag(s)} function returns a simpset fragment that
+embodies simplification routines for the type named by the string {s}.
+The fragment includes rewrites that express injectivity and
+disjointness of constructors, and which simplify {case} expressions
+applied to terms that have constructors at the outermost level.
+
+FAILURE
+Fails if the string argument does not correspond to a type stored in
+the {TypeBase}.
+
+EXAMPLE
+
+- val ss = simpLib.type_ssfrag "list";
+> val ss =
+    simpLib.SSFRAG{ac = [], congs = [], convs = [], dprocs = [],
+                   filter = NONE,
+                   rewrs =
+                     [|- (!v f. case v f [] = v) /\
+                         !v f a0 a1. case v f (a0::a1) = f a0 a1,
+                      |- !a1 a0. ~([] = a0::a1),
+                      |- !a1 a0. ~(a0::a1 = []),
+                      |- !a0 a1 a0' a1'. (a0::a1 = a0'::a1') =
+                                         (a0 = a0') /\ (a1 = a1')]}
+     : ssfrag
+
+- SIMP_CONV (bool_ss ++ ss) [] ``h::t = []``;
+<<HOL message: inventing new type variable names: 'a>>
+> val it = |- (h::t = []) = F : thm
+
+
+COMMENTS
+{RW_TAC} and {SRW_TAC} automatically include these simpset fragments.
+
+
+
+SEEALSO
+BasicProvers.RW_TAC, BasicProvers.srw_ss, bossLib.type_rws,
+simpLib.SIMP_CONV, TypeBase.
+
+----------------------------------------------------------------------

@@ -1,0 +1,19 @@
+----------------------------------------------------------------------
+is_disj                                                   (boolSyntax)
+----------------------------------------------------------------------
+is_disj : term -> bool
+
+SYNOPSIS
+Tests a term to see if it is a disjunction.
+
+DESCRIBE
+If {M} has the form {t1 \/ t2}, then {is_disj M} returns {true}. If {M}
+is not a disjunction the result is {false}.
+
+FAILURE
+Never fails.
+
+SEEALSO
+boolSyntax.mk_disj, boolSyntax.dest_disj.
+
+----------------------------------------------------------------------

@@ -1,0 +1,12 @@
+----------------------------------------------------------------------
+REDEPTH_CONSEQ_CONV                                       (ConseqConv)
+----------------------------------------------------------------------
+REDEPTH_CONSEQ_CONV : directed_conseq_conv -> directed_conseq_conv
+
+SYNOPSIS
+Similar to {DEPTH_CONSEQ_CONV}, but revisits modified subterms.
+
+SEEALSO
+ConseqConv.DEPTH_CONSEQ_CONV.
+
+----------------------------------------------------------------------

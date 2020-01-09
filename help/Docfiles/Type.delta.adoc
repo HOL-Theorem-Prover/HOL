@@ -1,0 +1,18 @@
+----------------------------------------------------------------------
+delta                                                           (Type)
+----------------------------------------------------------------------
+delta : hol_type
+
+SYNOPSIS
+Common type variable.
+
+LIBRARY
+Type
+
+DESCRIBE
+The ML variable {Type.delta} is bound to the type variable {'d}.
+
+SEEALSO
+Type.alpha, Type.beta, Type.gamma, Type.bool.
+
+----------------------------------------------------------------------

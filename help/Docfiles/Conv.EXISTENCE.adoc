@@ -1,0 +1,30 @@
+----------------------------------------------------------------------
+EXISTENCE                                                       (Conv)
+----------------------------------------------------------------------
+EXISTENCE : (thm -> thm)
+
+SYNOPSIS
+Deduces existence from unique existence.
+
+KEYWORDS
+rule, unique, existential.
+
+DESCRIBE
+When applied to a theorem with a unique-existentially quantified
+conclusion, {EXISTENCE} returns the same theorem with normal existential
+quantification over the same variable.
+
+    A |- ?!x. p
+   -------------  EXISTENCE
+    A |- ?x. p
+
+
+
+
+FAILURE
+Fails unless the conclusion of the theorem is unique-existentially quantified.
+
+SEEALSO
+Conv.EXISTS_UNIQUE_CONV.
+
+----------------------------------------------------------------------

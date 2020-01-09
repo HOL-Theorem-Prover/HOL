@@ -1,0 +1,48 @@
+----------------------------------------------------------------------
+raw_match_type                                                  (Type)
+----------------------------------------------------------------------
+raw_match_type
+  : hol_type -> hol_type ->
+    (hol_type,hol_type) subst * hol_type list ->
+    (hol_type,hol_type) subst * hol_type list
+
+SYNOPSIS
+Primitive type matching algorithm.
+
+KEYWORDS
+type, matching.
+
+DESCRIBE
+An invocation {raw_match_type pat ty (S,Id)} performs matching, just
+as {match_type}, except that it takes an extra accumulating parameter
+{(S,Id)}, which represents a ’raw’ substitution that the match
+{(theta,id)} of {pat} and {ty} must be compatible with. If matching is
+successful, {(theta,id)} is merged with {(S,Id)} to yield the result.
+
+FAILURE
+A call to {raw_match_type pat ty (S,Id)} will fail
+when {match_type pat ty} would. It will also fail when a
+{{redex,residue}} calculated in the course of matching {pat} and {ty}
+is such that there is a {{redex_i,residue_i}} in {S} and {redex}
+equals {redex_i} but {residue} does not equal {residue_i}.
+
+EXAMPLE
+
+- val res1 = raw_match_type alpha  (alpha --> bool) ([],[]);
+> val it = ([{redex = `:'a`, residue = `:'a -> bool`}], []) : ...
+
+- raw_match_type (alpha --> beta --> gamma)
+                 ((alpha --> bool) --> beta --> ind) res1;
+> val it =([{redex = `:'c`, residue = `:ind`},
+            {redex = `:'a`, residue = `:'a -> bool`}], [`:'b`]) : ....
+
+
+
+
+COMMENTS
+Probably exposes too much internal state of the matching algorithm.
+
+SEEALSO
+Type.match_type.
+
+----------------------------------------------------------------------

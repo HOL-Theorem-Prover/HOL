@@ -1,0 +1,16 @@
+----------------------------------------------------------------------
+add_implicit_rewrites                                        (Rewrite)
+----------------------------------------------------------------------
+Rewrite.add_implicit_rewrites: thm list -> unit
+
+SYNOPSIS
+Augments the built-in database of simplifications automatically included in
+rewriting.
+
+USES
+Used to build up the power of the built-in simplification set.
+
+SEEALSO
+Rewrite.set_implicit_rewrites.
+
+----------------------------------------------------------------------

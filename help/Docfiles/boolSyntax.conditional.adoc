@@ -1,0 +1,22 @@
+----------------------------------------------------------------------
+conditional                                               (boolSyntax)
+----------------------------------------------------------------------
+conditional : term
+
+SYNOPSIS
+Constant denoting conditional expressions.
+
+LIBRARY
+boolSyntax
+
+DESCRIBE
+The ML variable {boolSyntax.conditional} is bound to the term {bool$COND}.
+
+SEEALSO
+boolSyntax.equality, boolSyntax.implication, boolSyntax.select,
+boolSyntax.T, boolSyntax.F, boolSyntax.universal,
+boolSyntax.existential, boolSyntax.exists1, boolSyntax.conjunction,
+boolSyntax.disjunction, boolSyntax.bool_case, boolSyntax.let_tm,
+boolSyntax.arb.
+
+----------------------------------------------------------------------
