@@ -197,10 +197,15 @@ val tm1 = #1 (#board (hd nodel)); cts tm1;
    Level
    ------------------------------------------------------------------------- *)
 
+val tmsize_limit = 100
+fun is_combin x = tmem x [cK,cS] 
+fun cterm_size tm = length (find_terms is_combin tm) 
+
 fun random_walk n board =
-  if n <= 0 then board else
+  if cterm_size (#1 board) > tmsize_limit then NONE else
+  if n <= 0 then SOME board else
   let val movel = available_movel board in
-    if null movel then board else
+    if null movel then NONE else
     random_walk (n-1) (apply_move (random_elem movel) board)
   end
 
@@ -211,25 +216,38 @@ fun random_board size nstep =
     val board1 = (tm, mk_var("dummy",alpha),0)
     val board2 = random_walk nstep board1
   in
-    (tm, #1 board2, 2 * (~(#3 board2))) 
+    if isSome board2 
+    then SOME (tm, #1 (valOf board2), 2 * nstep) 
+    else NONE
   end
 
 fun level_target level =
-  random_board (random_int (5, level)) (random_int (1, level))
+  let 
+    val (a,b) = (random_int (20, level), random_int (1, level))
+    fun loop n = 
+      if n <= 0 
+      then (print_endline ("level_target: " ^ its a ^ " " ^ its b); NONE)
+      else case random_board a b of
+        NONE => loop (n-1)
+      | SOME board => SOME board
+  in
+    loop 1000
+  end
 
 fun level_targetl level = 
   let 
-    val l = List.tabulate (400, fn _ => level_target level)
+    val l1 = List.tabulate (400, fn _ => level_target level)
+    val l2 = map valOf (filter isSome l1)
     fun third_compare cmp ((_,_,a),(_,_,b)) = cmp (b,a)
   in
-    dict_sort (third_compare Int.compare) l
+    dict_sort (third_compare Int.compare) l2
   end    
 
 (*
 load "aiLib"; open aiLib;
 load "mleRewrite"; open mleRewrite;
 val board = random_board 20 5;
-val boardl = level_targetl 20;
+val boardl = level_targetl 30;
 print_endline (#string_of_board (#game rlobj) board); 
 *)
 
@@ -290,7 +308,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleRewrite-combin-1", exwindow = 80000,
+  {expname = "mleRewrite-combin-2", exwindow = 80000,
    ncore = 32, nsim = 1600, decay = 1.0}
 
 val rlobj : (board,move) rlobj =

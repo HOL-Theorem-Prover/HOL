@@ -17,7 +17,7 @@ sig
   val cts : term -> string 
   
   (* example generation *)
-  val random_board : int -> int -> board
+  val random_board : int -> int -> board option
   val level_targetl : int -> board list
   
   (* test *)
