@@ -111,8 +111,13 @@ fun string_of_board (a,b,c) = cts a ^ "\n" ^ cts b ^ "\n" ^ its c
 fun board_compare ((a,b,_),(c,d,_)) = 
   cpl_compare Term.compare Term.compare ((a,b),(c,d))
 
+val tmsize_limit = 100
+fun is_combin x = tmem x [cK,cS] 
+fun cterm_size tm = length (find_terms is_combin tm) 
+
 fun status_of (board as (tm1,tm2,n)) =
-  if term_eq tm1 tm2 then Win
+  if cterm_size (#1 board) > tmsize_limit then Lose 
+  else if term_eq tm1 tm2 then Win
   else if n <= 0 orelse not (is_rewritable tm1) then Lose 
   else Undecided
 
@@ -197,9 +202,7 @@ val tm1 = #1 (#board (hd nodel)); cts tm1;
    Level
    ------------------------------------------------------------------------- *)
 
-val tmsize_limit = 100
-fun is_combin x = tmem x [cK,cS] 
-fun cterm_size tm = length (find_terms is_combin tm) 
+
 
 fun random_walk n board =
   if cterm_size (#1 board) > tmsize_limit then NONE else
