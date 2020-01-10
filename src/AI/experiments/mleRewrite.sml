@@ -281,8 +281,10 @@ fun gen_data n =
 val datadir = HOLDIR ^ "/src/AI/experiments/data_combin"
 
 fun create_data n = 
-  write_boardl (datadir ^ "/train") 
+  let val _ = mkDir_err datadir in
+    write_boardl (datadir ^ "/train") 
     (map fst (dict_sort compare_rmin (gen_data n)))
+  end
 
 fun div_equal n m = 
   let val (q,r) = (n div m, n mod m) in
