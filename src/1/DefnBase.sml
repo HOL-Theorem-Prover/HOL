@@ -1,7 +1,7 @@
 structure DefnBase :> DefnBase =
 struct
 
-open HolKernel boolSyntax Drule
+open HolKernel boolTheory boolSyntax Drule Conv Rewrite
 
 val ERR = mk_HOL_ERR "DefnBase";
 
@@ -250,5 +250,217 @@ fun lookup_indn c =
     in
       Binarymap.peek (!the_indnstore, {Name = Name, Thy = Thy})
     end
+
+(* ----------------------------------------------------------------------
+    one_line_ify : thm -> thm
+
+    Take in a theorem representing a function definition for a single
+    constant (as returned by lookup_defn), and prove a reformulation where
+    all the pattern matching in separate clauses has been replaced by
+    "one" case expression under a single all-variable-argument LHS.
+   ---------------------------------------------------------------------- *)
+fun ERR f msg = mk_HOL_ERR "DefnBase" f msg
+exception FastExit of thm
+
+fun thry (arg as {Thy,Tyop}) =
+    Option.map (fn tyi => {case_const = TypeBasePure.case_const_of tyi,
+                           constructors = TypeBasePure.constructors_of tyi})
+               (TypeBase.read arg)
+
+fun foldli f A list =
+    let fun foldthis (x, (A, i)) = (f i x A, i + 1)
+    in
+      #1 (List.foldl foldthis (A,0) list)
+    end
+fun foldri f A list =
+    let fun recurse _ acc [] = acc
+          | recurse j acc (h::t) = f j h (recurse (j + 1) acc t)
+    in
+      recurse 0 A list
+    end
+
+fun GENASSUME t = SPEC_ALL (ASSUME (gen_all t))
+infix pTHENC
+fun (c pTHENC k) t =
+    case Exn.capture c t of
+        Exn.Res th => EQ_MP (SYM th) (k (rhs (concl th)))
+      | Exn.Exn Conv.UNCHANGED => k t
+      | r => Exn.release r (* will be an exception *)
+
+fun BETAS_CONV t =
+    let
+      val (f, args) = strip_comb t
+    in
+      if is_abs f then
+        if length args = 1 then BETA_CONV t
+        else (RATOR_CONV BETAS_CONV THENC BETA_CONV) t
+      else ALL_CONV t
+    end
+
+val litresolve_conv = PURE_REWRITE_CONV []
+fun cases_prove case_const_def th k t =
+    let
+      fun recurse th =
+          if is_eq (concl th) then
+            let
+              val ths = if is_var (lhs (concl th)) then [th]
+                        else
+                          CONJUNCTS (PURE_REWRITE_RULE [pairTheory.PAIR_EQ] th)
+            in
+              ((PURE_REWRITE_CONV ths THENC
+                PURE_REWRITE_CONV [case_const_def, literal_case_THM] THENC
+                RAND_CONV BETAS_CONV THENC
+                litresolve_conv) pTHENC k) t
+            end
+          else if is_disj (concl th) then
+            let val (th1, th2) = (ASSUME ## ASSUME) (dest_disj (concl th))
+                val t1_th = recurse th1
+                val t2_th = recurse th2
+            in
+              DISJ_CASES th t1_th t2_th
+            end
+          else if is_exists (concl th) then
+            let val (v, bod) = dest_exists (concl th)
+                val v' = variant (free_vars t) v
+                val bod' = subst[v |-> v'] bod
+                val t_th = recurse (ASSUME bod')
+            in
+              CHOOSE (v',th) t_th
+            end
+          else raise ERR "cases_conv" "Badly formed case theorem"
+    in
+      recurse th
+    end
+
+fun attack_top_case k t =
+    if Pmatch.is_case thry (rhs t) then
+      let
+        val(cc,args) = strip_comb (rhs t)
+      in
+        if same_const cc boolSyntax.literal_case then
+          let
+            val _ = HOL_MESG "Saw unexpected literal_case"
+          in
+            GENASSUME t
+          end
+        else
+          let
+            val a = hd args
+            val ty = type_of (hd args)
+            val {Thy,Tyop,...} = dest_thy_type ty
+            val tyi =
+                valOf (TypeBase.read {Thy = Thy,Tyop=Tyop})
+                handle Option => raise ERR "attack_top_case"
+                                       ("No tyinfo for "^Thy^"$"^Tyop)
+          in
+            if is_var a then
+              cases_prove (TypeBasePure.case_def_of tyi)
+                          (ISPEC a (TypeBasePure.nchotomy_of tyi))
+                          (attack_top_case k)
+                          t
+            else
+              (RAND_CONV (PURE_REWRITE_CONV [TypeBasePure.case_def_of tyi] THENC
+                                    BETAS_CONV) pTHENC
+                         attack_top_case k) t
+          end
+      end
+    else k t
+
+fun one_line_ify heuristic def =
+    let
+      val conjs = CONJUNCTS def
+      fun munge_row th =
+          let
+            val (l,r) = th |> concl |> strip_forall |> #2 |> dest_eq
+          in
+            (strip_comb l, r)
+          end
+      val fs_args = map munge_row conjs
+          handle HOL_ERR _ => raise ERR "one_line_ify" "Malformed def'n"
+      val _ = if length fs_args = 1 andalso
+                 List.all is_var (fs_args |> hd |> #1 |> #2)
+              then
+                raise FastExit def
+              else ()
+      val ((f,args1),rhs1) = hd fs_args
+      val _ = List.all (aconv f o #1 o #1) fs_args orelse
+              raise ERR "one_line_ify" "Clauses defining more than one function"
+      fun rowfoldthis i arg (A as (patcols,patfvs)) =
+          if is_var arg then A
+          else (HOLset.add(patcols,i), FVL [arg] patfvs)
+      fun foldthis (((_, row), _), A) = foldli rowfoldthis A row
+      val (patcols,patfvs) =
+          List.foldl foldthis (HOLset.empty Int.compare, empty_tmset) fs_args
+      val (_, safe_row1_vs) =
+          foldri (fn i => fn a => fn (A as (avoids, newvs)) =>
+                     if HOLset.member (patcols, i) then A
+                     else let val v' = variant avoids a
+                          in
+                            (v'::avoids, v'::newvs)
+                          end)
+                 (HOLset.listItems patfvs, [])
+                 args1
+      (* now make var-columns use same vars as first row, except that
+         non-pattern variables in the first row can't be the same as variables
+         that occur in any of the patterns *)
+      fun rowfoldthis i arg (A as (theta, safevs)) =
+          if HOLset.member(patcols, i) then A
+          else ({redex=arg,residue = hd safevs} :: theta, tl safevs)
+      fun foldthis (((_, row), r), cs) =
+          let val (theta, _) = foldli rowfoldthis ([], safe_row1_vs) row
+          in
+            (map (Term.subst theta) row, Term.subst theta r) :: cs
+          end
+      val patexps0 = List.foldr foldthis [] fs_args
+      val (actual_args, _, _) =
+          foldri (fn i => fn a => fn (A,avds,safes) =>
+                     if HOLset.member(patcols, i) then
+                       let val v = numvariant avds (mk_var("v", type_of a))
+                       in
+                         (v::A, v::avds, safes)
+                       end
+                     else (hd safes :: A, avds, tl safes))
+                 ([], safe_row1_vs, safe_row1_vs)
+                 args1
+      (* build (patterns,exp) pairs that will be body of case expression *)
+      fun rowfold i a A =
+          if HOLset.member(patcols, i) then
+            case A of NONE => SOME a | SOME b => SOME (pairSyntax.mk_pair(a,b))
+          else A
+      fun foldthis ((pat,r), A) = (valOf (foldri rowfold NONE pat),r) :: A
+      val pats = List.foldr foldthis [] patexps0
+      val selector_term = valOf (foldri rowfold NONE actual_args)
+      val fakef = genvar(type_of (#1 (hd pats)) --> type_of (#2 (hd pats)))
+      val {functional = abs_body0,...} =
+          let
+            val f = case heuristic of
+                        NONE => (fn f => f)
+                      | SOME h => PmatchHeuristics.with_heuristic h
+          in
+            f (Feedback.quiet_messages (Pmatch.mk_functional thry))
+              (map (fn (l,r) => mk_eq(mk_comb(fakef, l), r)) pats
+                   |> list_mk_conj)
+          end
+      val (_, abs_body) = dest_abs abs_body0
+      val body = beta_conv (mk_comb(abs_body, selector_term))
+      val (seltm, cases) = Pmatch.strip_case thry body
+      val finisher = PURE_REWRITE_CONV (REFL_CLAUSE::conjs) pTHENC GENASSUME
+      val neweqn = mk_eq(list_mk_comb(f, actual_args), body)
+    in
+      if List.exists (fn (_, r) => same_const boolSyntax.arb r) cases then
+        let
+          fun mapthis (l,r) =
+              if same_const boolSyntax.arb r then NONE
+              else SOME (list_mk_exists (free_vars l, mk_eq(seltm, l)))
+          val aa_asm = List.mapPartial mapthis cases
+                                       |> list_mk_disj |> ASSUME
+        in
+          cases_prove pairTheory.pair_case_def aa_asm
+                      (attack_top_case finisher)
+                      neweqn |> PROVE_HYP TRUTH
+        end
+      else
+        attack_top_case finisher neweqn |> PROVE_HYP TRUTH
+    end handle FastExit th => th
 
 end

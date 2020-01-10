@@ -54,4 +54,6 @@ sig
      returns SOME (th, ts), then t will be among the ts.
    *)
 
+  val one_line_ify : PmatchHeuristics.pmatch_heuristic option -> thm -> thm
+
 end
