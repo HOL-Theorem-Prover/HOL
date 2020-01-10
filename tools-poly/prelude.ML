@@ -100,7 +100,6 @@ in
   PolyML.addPrettyPrinter (pp2polypp Arbint.pp_int);
   PolyML.addPrettyPrinter (pp2polypp Arbnum.pp_num);
   PolyML.addPrettyPrinter (pp2polypp Arbrat.pp_rat);
-  PolyML.addPrettyPrinter (pp2polypp DefnBase.pp_defn);
   PolyML.addPrettyPrinter (pp2polypp HOLPP.pp_pretty);
   PolyML.addPrettyPrinter (pp2polypp Hol_pp.pp_theory);
   PolyML.addPrettyPrinter (pp2polypp Hol_pp.pp_thm);

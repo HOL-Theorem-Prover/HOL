@@ -54,6 +54,8 @@ sig
      returns SOME (th, ts), then t will be among the ts.
    *)
 
+  val const_eq_ref : Abbrev.conv ref
+  val elim_triv_literal_CONV : Abbrev.conv
   val one_line_ify : PmatchHeuristics.pmatch_heuristic option -> thm -> thm
 
 end

@@ -16,8 +16,6 @@ val monitoring = ref false;
 (* Interactively:
   val const_eq_ref = ref (!Defn.const_eq_ref);
 *)
-val const_eq_ref = ref Conv.NO_CONV;
-
 (*---------------------------------------------------------------------------
       Miscellaneous support
  ---------------------------------------------------------------------------*)
@@ -586,26 +584,6 @@ fun protect eqns = list_mk_conj (map protect_rhs (strip_conj eqns));
 
 val unprotect_term = rhs o concl o PURE_REWRITE_CONV [combinTheory.I_THM];
 val unprotect_thm  = PURE_REWRITE_RULE [combinTheory.I_THM];
-
-(*---------------------------------------------------------------------------*)
-(* Once patterns are instantiated and the clauses are simplified, there can  *)
-(* still remain right-hand sides with occurrences of fully concrete tests on *)
-(* literals. Here we simplify those away.                                    *)
-(*                                                                           *)
-(* const_eq_ref is a reference cell that decides equality of literals such   *)
-(* as 23, "foo", #"G", 6w, 0b1000w. It gets updated in reduceLib, stringLib  *)
-(* and wordsLib.                                                             *)
-(*---------------------------------------------------------------------------*)
-
-fun elim_triv_literal_CONV tm =
-   let
-      val const_eq_conv = !const_eq_ref
-      val cnv = TRY_CONV (REWR_CONV literal_case_THM THENC BETA_CONV) THENC
-                RATOR_CONV (RATOR_CONV (RAND_CONV const_eq_conv)) THENC
-                PURE_ONCE_REWRITE_CONV [COND_CLAUSES]
-   in
-       cnv tm
-   end
 
 fun checkSV pats SV =
  let fun get_pat (GIVEN(p,_)) = p

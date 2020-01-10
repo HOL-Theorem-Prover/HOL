@@ -352,7 +352,7 @@ val PROD_ALL_MONO = store_thm(
 val _ = IndDefLib.export_mono "PROD_ALL_MONO"
 
 val PROD_ALL_CONG = store_thm(
-  "PROD_ALL_CONG[defncong]",
+  "PROD_ALL_CONG",
   ``!p p' P P' Q Q'.
       (p = p') /\ (!x:'a y:'b. (p' = (x,y)) ==> (P x <=> P' x)) /\
       (!x:'a y:'b. (p' = (x,y)) ==> (Q y <=> Q' y)) ==>
@@ -738,8 +738,6 @@ val LEX_CONG = Q.store_thm
  Ho_Rewrite.REWRITE_TAC [LEX_DEF,FORALL_PROD,PAIR_EQ]
    THEN NTAC 2 (REWRITE_TAC [UNCURRY_VAR,FST,SND] THEN BETA_TAC)
    THEN METIS_TAC[]);
-
-val _ = DefnBase.export_cong "LEX_CONG";
 
 (*---------------------------------------------------------------------------
     Generate some ML that gets evaluated at theory load time.

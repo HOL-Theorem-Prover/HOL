@@ -123,7 +123,10 @@ end;
 
 local open boolTheory
       val non_datatype_congs =
-        ref [LET_CONG, COND_CONG, IMP_CONG, literal_case_CONG]
+        ref ([LET_CONG, COND_CONG, IMP_CONG, literal_case_CONG,
+              pairTheory.LEX_CONG, pairTheory.PROD_ALL_CONG] @
+             map (REWRITE_RULE [AND_IMP_INTRO])
+                 [RES_FORALL_CONG, RES_EXISTS_CONG])
 in
   fun read_congs() = !non_datatype_congs
   fun write_congs L = (non_datatype_congs := L)
@@ -252,6 +255,31 @@ fun lookup_indn c =
     end
 
 (* ----------------------------------------------------------------------
+
+    Once patterns are instantiated and the clauses are simplified,
+    there can still remain right-hand sides with occurrences of fully
+    concrete tests on literals. Here we simplify those away.
+
+    const_eq_ref is a reference cell that decides equality of literals
+    such as 23, "foo", #"G", 6w, 0b1000w. It gets updated in
+    reduceLib, stringLib and wordsLib.
+
+   ---------------------------------------------------------------------- *)
+val const_eq_ref = ref Conv.NO_CONV;
+
+fun elim_triv_literal_CONV tm =
+   let
+      val const_eq_conv = !const_eq_ref
+      val cnv = TRY_CONV (REWR_CONV literal_case_THM THENC BETA_CONV) THENC
+                RATOR_CONV (RATOR_CONV (RAND_CONV const_eq_conv)) THENC
+                PURE_ONCE_REWRITE_CONV [COND_CLAUSES]
+   in
+       cnv tm
+   end
+
+
+
+(* ----------------------------------------------------------------------
     one_line_ify : thm -> thm
 
     Take in a theorem representing a function definition for a single
@@ -278,6 +306,20 @@ fun foldri f A list =
     in
       recurse 0 A list
     end
+local
+  val P = mk_var("P", bool)
+  val x = mk_var("x", alpha)
+  val y = mk_var("y", alpha)
+  val z = mk_var("z", alpha)
+  val goal = mk_eq(mk_cond(P, x, mk_cond(P, y, z)), mk_cond(P, x, z))
+    (* |- if P then x else if P then y else z = if P then x else z *)
+in
+val COND_COND =
+  DISJ_CASES (SPEC P BOOL_CASES_AX)
+    (PURE_REWRITE_CONV [ASSUME (mk_eq(P,T)), COND_CLAUSES, REFL_CLAUSE] goal)
+    (PURE_REWRITE_CONV [ASSUME (mk_eq(P,F)), COND_CLAUSES, REFL_CLAUSE] goal)
+    |> EQT_ELIM
+end
 
 fun GENASSUME t = SPEC_ALL (ASSUME (gen_all t))
 infix pTHENC
@@ -297,7 +339,7 @@ fun BETAS_CONV t =
       else ALL_CONV t
     end
 
-val litresolve_conv = PURE_REWRITE_CONV []
+val litresolve_conv = REPEATC elim_triv_literal_CONV
 fun cases_prove case_const_def th k t =
     let
       fun recurse th =
@@ -310,7 +352,7 @@ fun cases_prove case_const_def th k t =
               ((PURE_REWRITE_CONV ths THENC
                 PURE_REWRITE_CONV [case_const_def, literal_case_THM] THENC
                 RAND_CONV BETAS_CONV THENC
-                litresolve_conv) pTHENC k) t
+                RAND_CONV litresolve_conv) pTHENC k) t
             end
           else if is_disj (concl th) then
             let val (th1, th2) = (ASSUME ## ASSUME) (dest_disj (concl th))
@@ -332,8 +374,10 @@ fun cases_prove case_const_def th k t =
       recurse th
     end
 
-fun attack_top_case k t =
-    if Pmatch.is_case thry (rhs t) then
+fun attack_top_case stoppers k t =
+    if List.exists (fn pat => can (match_term pat) (lhs t)) stoppers then
+      k t
+    else if Pmatch.is_case thry (rhs t) then
       let
         val(cc,args) = strip_comb (rhs t)
       in
@@ -356,32 +400,35 @@ fun attack_top_case k t =
             if is_var a then
               cases_prove (TypeBasePure.case_def_of tyi)
                           (ISPEC a (TypeBasePure.nchotomy_of tyi))
-                          (attack_top_case k)
+                          (attack_top_case stoppers k)
                           t
             else
               (RAND_CONV (PURE_REWRITE_CONV [TypeBasePure.case_def_of tyi] THENC
                                     BETAS_CONV) pTHENC
-                         attack_top_case k) t
+                         attack_top_case stoppers k) t
           end
       end
     else k t
 
+
+
 fun one_line_ify heuristic def =
     let
-      val conjs = CONJUNCTS def
+      val conjs = CONJUNCTS (SPEC_ALL def)
       fun munge_row th =
           let
             val (l,r) = th |> concl |> strip_forall |> #2 |> dest_eq
           in
-            (strip_comb l, r)
+            (strip_comb l, r, th)
           end
-      val fs_args = map munge_row conjs
+      val fs_args0 = map munge_row conjs
           handle HOL_ERR _ => raise ERR "one_line_ify" "Malformed def'n"
-      val _ = if length fs_args = 1 andalso
-                 List.all is_var (fs_args |> hd |> #1 |> #2)
-              then
-                raise FastExit def
-              else ()
+      val stoppers = map (list_mk_comb o #1) fs_args
+      val _ =
+          case List.find (fn((_, row), _, _) => List.all is_var row) fs_args0 of
+              NONE => ()
+            | SOME (_, _, th) => raise FastExit th
+      val fs_args = map (fn (x,y,_) => (x,y)) fs_args0
       val ((f,args1),rhs1) = hd fs_args
       val _ = List.all (aconv f o #1 o #1) fs_args orelse
               raise ERR "one_line_ify" "Clauses defining more than one function"
@@ -420,7 +467,7 @@ fun one_line_ify heuristic def =
                          (v::A, v::avds, safes)
                        end
                      else (hd safes :: A, avds, tl safes))
-                 ([], safe_row1_vs, safe_row1_vs)
+                 ([], safe_row1_vs, List.rev safe_row1_vs)
                  args1
       (* build (patterns,exp) pairs that will be body of case expression *)
       fun rowfold i a A =
@@ -444,7 +491,10 @@ fun one_line_ify heuristic def =
       val (_, abs_body) = dest_abs abs_body0
       val body = beta_conv (mk_comb(abs_body, selector_term))
       val (seltm, cases) = Pmatch.strip_case thry body
-      val finisher = PURE_REWRITE_CONV (REFL_CLAUSE::conjs) pTHENC GENASSUME
+      val finisher =
+          DEPTH_CONV BETA_CONV THENC
+          PURE_REWRITE_CONV (REFL_CLAUSE::COND_COND::conjs) pTHENC
+          GENASSUME
       val neweqn = mk_eq(list_mk_comb(f, actual_args), body)
     in
       if List.exists (fn (_, r) => same_const boolSyntax.arb r) cases then
@@ -456,11 +506,11 @@ fun one_line_ify heuristic def =
                                        |> list_mk_disj |> ASSUME
         in
           cases_prove pairTheory.pair_case_def aa_asm
-                      (attack_top_case finisher)
+                      (attack_top_case stoppers finisher)
                       neweqn |> PROVE_HYP TRUTH
         end
       else
-        attack_top_case finisher neweqn |> PROVE_HYP TRUTH
+        attack_top_case stoppers finisher neweqn |> PROVE_HYP TRUTH
     end handle FastExit th => th
 
 end
