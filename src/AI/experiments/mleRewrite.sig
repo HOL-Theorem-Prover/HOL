@@ -6,7 +6,7 @@ sig
   type board = term * term * int
   type move = term * int list
 
-  (* vocabulary *)
+  (* combinators *)
   val oo : term * term -> term
   val tag : term -> term
   val cA : term
@@ -14,10 +14,14 @@ sig
   val cS : term
   val cK : term
   val cE : term
-  val cts : term -> string 
-  
+  val cts : term -> string
+  val cterm_size : term -> int
+  val elim_kred : term -> term
+
   (* example generation *)
-  val random_board : int -> int -> board option
+  val random_board_fixed : unit -> (board * real) option
+  val gen_data : int -> (board * real) list
+  val create_data : int -> unit
   val level_targetl : int -> board list
   
   (* test *)

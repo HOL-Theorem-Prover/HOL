@@ -58,7 +58,7 @@ fun mk_mctsparam noiseb nsim rlobj =
   noise_root = false,
   noise_coeff = 0.25,
   noise_gen = random_real,
-  noconfl = true, avoidlose = true
+  noconfl = false, avoidlose = true
   }
 
 fun player_from_tnn tnn tob game board =
@@ -228,8 +228,8 @@ fun rl_explore_targetl (unib,noiseb) (rlobj,es) tnn targetl =
   in
     log rlobj ("Exploration time: " ^ rts t);
     log rlobj ("Exploration wins: " ^ its nwin);
-    log rlobj ("Exploration new examples: " ^ its (length rlex) ^ 
-      its (length rlex1) ^ its (length rlex2));
+    log rlobj ("Exploration new examples: " ^ its (length rlex) ^ " " ^ 
+      its (length rlex1) ^ " " ^ its (length rlex2));
     (rlex,b)
   end
 

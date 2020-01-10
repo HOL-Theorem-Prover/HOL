@@ -100,6 +100,13 @@ fun tag_subtm (tm,pos) =
 
 fun tag_eq eq = let val (a,b) = dest_eq eq in mk_eq (tag a, b) end
 
+fun elim_kred tm =
+  if can (subst_cmatch k_thm) tm then
+    let val tm' = subst_cmatch k_thm tm in
+      elim_kred tm'
+    end
+  else tm
+
 (* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
@@ -130,7 +137,7 @@ type move = term * int list
 fun string_of_move (eq,pos) = tts eq ^ ", " ^ string_of_pos pos
 
 fun apply_move (eq,pos) (tm1,tm2,n) = 
-  (subst_cmatch (tag_eq eq) (tag_subtm (tm1,pos)), tm2, n-1)
+  (elim_kred (subst_cmatch (tag_eq eq) (tag_subtm (tm1,pos))), tm2, n-1)
 
 fun moveo_poseq tm ((subtm,pos),eq) =
   if is_cmatch eq subtm then SOME (eq,pos) else NONE
@@ -164,7 +171,7 @@ fun mk_mctsparam nsim =
   decay = 1.0, explo_coeff = 2.0,
   noise_coeff = 0.25, noise_root = false,
   noise_all = false, noise_gen = random_real,
-  noconfl = false, avoidlose = false
+  noconfl = true, avoidlose = true
   }
 
 fun string_of_status status = case status of
@@ -177,7 +184,7 @@ fun mcts_test nsim board =
     val mcts_obj =
       {mctsparam = mk_mctsparam nsim,
        game = game,
-       player = random_player game}
+       player = uniform_player game}
     val tree = starttree_of mcts_obj board
     val (endtree,_) = mcts mcts_obj tree
     val b = #status (dfind [] endtree) = Win
@@ -191,86 +198,12 @@ load "aiLib"; open aiLib;
 load "psMCTS"; open psMCTS;
 load "mleLib"; open mleLib;
 load "mleRewrite"; open mleRewrite;
-val board = random_board 20 20;
-val (_,endtree) = mcts_test 1600 board;
-val nodel = trace_win (#status_of game) endtree [];
-val step = (length nodel - 1);
-val tm1 = #1 (#board (hd nodel)); cts tm1;
+val _ = ((print_endline o cts o #1) board; (print_endline o cts o #2) board);
+val (b,endtree) = mcts_test 1600 board;
+let val nodel = trace_win (#status_of game) endtree [] in
+  app (print_endline o cts o #1 o #board) nodel
+end;
 *)
-
-(* -------------------------------------------------------------------------
-   Level
-   ------------------------------------------------------------------------- *)
-
-
-
-fun random_walk n board =
-  if cterm_size (#1 board) > tmsize_limit then NONE else
-  if n <= 0 then SOME board else
-  let val movel = available_movel board in
-    if null movel then NONE else
-    random_walk (n-1) (apply_move (random_elem movel) board)
-  end
-
-fun random_cterm n = random_term [cA,cS,cK] (n,alpha);
-fun random_board size nstep =
-  let 
-    val tm = random_cterm (2 * size - 1)
-    val board1 = (tm, mk_var("dummy",alpha),0)
-    val board2 = random_walk nstep board1
-  in
-    if isSome board2 
-    then SOME (tm, #1 (valOf board2), 2 * nstep) 
-    else NONE
-  end
-
-fun level_target level =
-  let 
-    val (a,b) = (random_int (20, level), random_int (1, level))
-    fun loop n = 
-      if n <= 0 
-      then (print_endline ("level_target: " ^ its a ^ " " ^ its b); NONE)
-      else case random_board a b of
-        NONE => loop (n-1)
-      | SOME board => SOME board
-  in
-    loop 1000
-  end
-
-fun level_targetl level = 
-  let 
-    val l1 = List.tabulate (400, fn _ => level_target level)
-    val l2 = map valOf (filter isSome l1)
-    fun third_compare cmp ((_,_,a),(_,_,b)) = cmp (b,a)
-  in
-    dict_sort (third_compare Int.compare) l2
-  end    
-
-(*
-load "aiLib"; open aiLib;
-load "mleRewrite"; open mleRewrite;
-val board = random_board 20 5;
-val boardl = level_targetl 30;
-print_endline (#string_of_board (#game rlobj) board); 
-*)
-
-(* -------------------------------------------------------------------------
-   Neural representation of the board
-   ------------------------------------------------------------------------- *)
-
-fun term_of_board (tm1,tm2,_) = mk_cE (tm1,tm2)
-
-fun term_of_move (tm1,tm2,_) (eq,pos) =
-  let val tagboard = mk_cE (tag_subtm (tm1,pos),tm2) in
-    list_mk_comb (eq_adj,[tagboard,eq])
-  end
-
-fun tob board = 
-  tag_heval (term_of_board board) ::
-  map (tag_hpoli o term_of_move board) (available_movel board)
-
-val operl = [eq_adj,head_eval,head_poli,``$= :'a->'a->bool``, 
-  cE,cT,cA,cS,cK,vx,vy,vf,vg];
 
 (* -------------------------------------------------------------------------
    Parallelization
@@ -295,6 +228,117 @@ fun read_boardl file =
 val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
 
 (* -------------------------------------------------------------------------
+   Level
+   ------------------------------------------------------------------------- *)
+
+fun random_walk lim n r board =
+  if cterm_size (#1 board) > Int.min (tmsize_limit,lim) then NONE else
+  if n <= 0 then SOME (board,r) else
+  let 
+    val movel = available_movel board 
+    val newr = r * Real.fromInt (length movel)
+  in
+    if null movel then NONE else
+    random_walk lim (n-1) newr (apply_move (random_elem movel) board)
+  end
+
+fun random_cterm n = random_term [cA,cS,cK] (n,alpha);
+fun random_board size nstep =
+  let 
+    val tm = elim_kred (random_cterm (2 * size - 1))
+    val board1 = (tm, mk_var("dummy",alpha),0)
+    val lim = 2 * cterm_size tm
+    val board2 = random_walk lim nstep 1.0 board1
+  in
+    if isSome board2 
+    then SOME ((tm, #1 (fst (valOf board2)), 2*nstep), snd (valOf board2))
+    else NONE
+  end
+
+fun random_board_fixed () =
+  let 
+    val size = random_int (16, 50)
+    val nstep = random_int (8, size div 2)
+    fun loop n =
+      if n <= 0 
+      then 
+        (print_endline ("level_target: " ^ its size ^ " " ^ its nstep); NONE)
+      else case random_board size nstep of
+        NONE => loop (n-1)
+      | SOME board => SOME board
+  in
+    loop 1000
+  end
+
+fun gen_data n =
+  if n <= 0 then [] else
+  let val boardo = random_board_fixed () in
+    if not (isSome boardo) orelse snd (valOf boardo) < 2000000.0
+    then gen_data n 
+    else (print_endline (its n); valOf boardo :: gen_data (n-1))
+  end
+
+val datadir = HOLDIR ^ "/src/AI/experiments/data_combin"
+
+fun create_data n = 
+  write_boardl (datadir ^ "/train") 
+    (map fst (dict_sort compare_rmin (gen_data n)))
+
+fun div_equal n m = 
+  let val (q,r) = (n div m, n mod m) in
+    List.tabulate (m, fn i => q + (if i < r then 1 else 0))
+  end
+
+fun level_targetl level = 
+  let
+    val boardl1 = read_boardl (datadir ^ "/train") 
+    val boardl2 = first_n level (mk_batch 400 boardl1)
+    val nl = div_equal 400 level
+  in
+    List.concat (map (uncurry random_subset) (combine (nl,boardl2)))
+  end
+
+(*
+load "aiLib"; open aiLib;
+load "psTermGen"; open psTermGen;
+load "psMCTS"; open psMCTS;
+load "mleRewrite"; open mleRewrite;
+val _ = create_data 1200;
+
+val boardl = dict_sort compare_rmin (time gen_data 10);
+val _ = write_boardcompl file boardl;
+
+val rl = map_fst (mcts_test 1600) boardl;
+val (rlyes,rlno) = partition (fst o fst) rl;
+length rlyes; length rlno;
+let val nodel = trace_win (#status_of game) endtree [] in
+  app (print_endline o cts o #1 o #board) nodel
+end;
+
+val board1 = #board (dfind [] endtree);
+val board2 = 
+val r = mcts_test 1600 board2;
+*)
+
+(* -------------------------------------------------------------------------
+   Neural representation of the board
+   ------------------------------------------------------------------------- *)
+
+fun term_of_board (tm1,tm2,_) = mk_cE (tm1,tm2)
+
+fun term_of_move (tm1,tm2,_) (eq,pos) =
+  let val tagboard = mk_cE (tag_subtm (tm1,pos),tm2) in
+    list_mk_comb (eq_adj,[tagboard,eq])
+  end
+
+fun tob board = 
+  tag_heval (term_of_board board) ::
+  map (tag_hpoli o term_of_move board) (available_movel board)
+
+val operl = [eq_adj,head_eval,head_poli,``$= :'a->'a->bool``, 
+  cE,cT,cA,cS,cK,vx,vy,vf,vg];
+
+(* -------------------------------------------------------------------------
    Players
    ------------------------------------------------------------------------- *)
 
@@ -311,7 +355,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleRewrite-combin-2", exwindow = 80000,
+  {expname = "mleRewrite-combin-3", exwindow = 80000,
    ncore = 32, nsim = 1600, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
@@ -328,7 +372,8 @@ val extsearch = mk_extsearch "mleRewrite.extsearch" rlobj
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
-val r = rl_start (rlobj,extsearch) 30;
+val _ = create_data 1200;
+val r = rl_start (rlobj,extsearch) 1;
 *)
 
 (* -------------------------------------------------------------------------
@@ -362,7 +407,7 @@ val bsobj : (board,move) bsobj =
   mctsparam = mctsparam
   };
 
-val board = random_board 40 5;
+val board = valOf (random_board 20 5);
 val _ = run_bigsteps bsobj board;
 val (b1,b2,rlex,rootl) = run_bigsteps bsobj board;
 *)

@@ -184,9 +184,9 @@ fun node_create_backup obj (tree,cache) (id,board) =
          board=board, sum=0.0, vis=0.0, status=status}
       end
     val tree1 = dadd id node tree
-    val tree2 = backup (#decay param) tree1 (id,(#value node))
+    val tree2 = backup (#decay param) tree1 (id, #value node)
   in
-    (tree2, dadd board id cache)
+    (tree2, if #noconfl param then dadd board id cache else cache)
   end
 
 (* -------------------------------------------------------------------------
@@ -226,24 +226,26 @@ fun select_child obj tree id =
     val node = dfind id tree
     val stati = #stati node
     val status = #status node
+    val param = #mctsparam obj
   in
-    if stati <> Undecided then Backup (id,score_status stati) else
-    if status = Lose then Backup (id,score_status status) else
-    let
-        val param = #mctsparam obj
-        val l0 = 
-          if #avoidlose param
-          then filter (not o lead_lose tree) (#pol node)
-          else #pol node
-        val _ = if null l0 then raise ERR "select_child" "" else ()
-        val l1 = map_assoc (puct_choice param tree (#vis node)) l0
-        val l2 = dict_sort compare_rmax l1
-        val cid  = snd (fst (hd l2))
-      in
-        if not (dmem cid tree)
-        then NodeExtension (id,cid)
-        else select_child obj tree cid
-      end
+    if stati <> Undecided 
+      then Backup (id,score_status stati) else
+    if #avoidlose param andalso status = Lose 
+      then Backup (id,score_status status) else
+    let    
+      val l0 = 
+        if #avoidlose param
+        then filter (not o lead_lose tree) (#pol node)
+        else #pol node
+      val _ = if null l0 then raise ERR "select_child" "" else ()
+      val l1 = map_assoc (puct_choice param tree (#vis node)) l0
+      val l2 = dict_sort compare_rmax l1
+      val cid  = snd (fst (hd l2))
+    in
+      if not (dmem cid tree)
+      then NodeExtension (id,cid)
+      else select_child obj tree cid
+    end
   end
 
 (* -------------------------------------------------------------------------
