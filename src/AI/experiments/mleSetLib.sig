@@ -28,9 +28,11 @@ sig
   val operl_plain : term list
 
   (* evaluation *)
-  val eval_term : term -> int list
-  val eval_subst : (term * term) -> int list -> bool
-  val eval64 : term -> (bool * int) list option
+  val qglob : int ref
+  val eval_nat : term -> int -> bool
+  val mk_graph : int -> term -> bool list
+  val has_graph : bool list -> term -> bool
+  val eval64 : term -> int list option
 
   (* search *)
   val start_form : term

@@ -11,12 +11,19 @@ sig
   val id_compare : id * id -> order
   type 'b pol = (('b * real) * id) list
   type ('a,'b) node =
-    {pol : 'b pol, board : 'a, sum : real, vis : real, status : status}
+    {
+    pol : 'b pol,
+    value : real,
+    board : 'a,
+    sum : real,
+    vis : real,
+    status : status
+    }
   type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
 
   (* dirichlet noise *)
   val gamma_distrib : real -> (real * real) list
-  val dirichlet_noise : real -> int -> real list
+  val gamma_noise_gen : real -> (unit -> real)
 
   (* search function *)
   type ('a,'b) game =
@@ -40,13 +47,18 @@ sig
     stopatwin_flag : bool,
     decay : real,
     explo_coeff : real,
-    noise_flag : bool,
+    noise_root : bool,
+    noise_all : bool,
     noise_coeff : real,
-    noise_alpha : real
+    noise_gen : unit -> real
     }
 
   type ('a,'b) mcts_obj =
-    {mcts_param : mcts_param, game : ('a,'b) game, player : ('a,'b) player}
+    {
+    mcts_param : mcts_param,
+    game : ('a,'b) game,
+    player : ('a,'b) player
+    }
 
   val starttree_of : ('a,'b) mcts_obj -> 'a -> ('a,'b) tree
   val mcts : ('a,'b) mcts_obj -> ('a,'b) tree -> ('a,'b) tree

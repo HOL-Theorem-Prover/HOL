@@ -38,7 +38,13 @@ val _ = app tpp ["\\(x,y). x /\\ y",
                  "\\(x,y,z). x /\\ y /\\ z",
                  "\\((x,y),z). x /\\ y /\\ z",
                  "(\\(x,y,z). x /\\ y /\\ z) p",
-                 "case x of (y,z) => y /\\ z"]
+                 "case x of (y,z) => y /\\ z",
+                 "f000000000 arg000000000\n\
+                 \  (case x of\n\
+                 \     INL u => u inl00000000000 inl111111111\n\
+                 \   | INR v => v inr00000000000 inr111111111)\n\
+                 \  (arg222222222222 arg333333333 arg444444444)"
+                ]
 
 (* check LET_INTRO *)
 

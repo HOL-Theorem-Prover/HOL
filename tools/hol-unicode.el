@@ -239,6 +239,7 @@
 (define-key hol-unicode-C-map (kbd "q") "≼")  ; "q" for less-or-eQual
 (define-key hol-unicode-C-map (kbd "=") "≈")
 (define-key hol-unicode-C-map (kbd "<") "≺")
+(define-key hol-unicode-C-map (kbd "^") "⌢")
 
 ; sQuare operators map
 (define-key hol-unicode-Q-map (kbd "q") "⊑")
@@ -377,6 +378,7 @@
 ; arrow maps
 (define-key hol-unicode-leftarrow-map (kbd "-") "←")
 (define-key hol-unicode-leftarrow-map (kbd "C-<") "↞")
+(define-key hol-unicode-leftarrow-map (kbd "C->") "↔")
 (define-key hol-unicode-leftarrow-map (kbd "<") "↢")
 (define-key hol-unicode-leftarrow-map (kbd "|") "↤")
 (define-key hol-unicode-leftarrow-map (kbd "`") "↼")
@@ -385,6 +387,7 @@
 (define-key hol-unicode-leftarrow-map (kbd "=") "⇐")
 (define-key hol-unicode-leftarrow-map (kbd "a") "↫")
 (define-key hol-unicode-leftarrow-map (kbd "c") "↩")
+(define-key hol-unicode-leftarrow-map (kbd "w") "⇜")
 (define-key hol-unicode-leftarrow-map (kbd "~") "↜")
 
 (define-key hol-unicode-rightarrow-map (kbd "-") "→")
@@ -397,4 +400,5 @@
 (define-key hol-unicode-rightarrow-map (kbd "=") "⇒")
 (define-key hol-unicode-rightarrow-map (kbd "a") "↬")
 (define-key hol-unicode-rightarrow-map (kbd "c") "↪")
+(define-key hol-unicode-rightarrow-map (kbd "w") "⇝")
 (define-key hol-unicode-rightarrow-map (kbd "~") "↝")

@@ -41,9 +41,18 @@ val _ = List.app assert [
     ("UTF8.getChar \"\\192\\128\" fails", gcFails "\192\168"),
     ("UTF8.getChar \"\\252\\129\\129\\129\\129\\129\" fails",
      gcFails "\252\129\129\129\129\129"),
-    ("UF8.getChar \"\\244\\129\" fails", gcFails "\244\129"),
+    ("UTF8.getChar \"\\244\\129\" fails", gcFails "\244\129"),
     ("padRight #\" \" on ∀", fn () => UTF8.padRight #" " 5 "∀" = "∀    "),
-    ("padRight #\"a\" on ∀", fn () => UTF8.padRight #"a" 5 "∀" = "∀aaaa")
+    ("padRight #\"a\" on ∀", fn () => UTF8.padRight #"a" 5 "∀" = "∀aaaa"),
+    ("UTF8.substring(\"a\", 0, 1)", fn () => UTF8.substring("a", 0, 1) = "a"),
+    ("UTF8.substring(\"abc\", 0, 3)",
+     fn () => UTF8.substring("abc", 0, 3) = "abc"),
+    ("UTF8.substring(\"abc\", 1, 3)",
+     fn () => (UTF8.substring("abc", 1, 3); false) handle Subscript => true
+                                                        | e => false),
+    ("UTF8.substring(\"ab\", 1, 1)", fn () => UTF8.substring("ab", 1, 1) = "b"),
+    ("UTF8.substring(\"«ab»\", 1, 2)",
+     fn () => UTF8.substring("«ab»", 1, 2) = "ab")
     ]
 
 val _ = tprint "mapFilter executes L-to-R"

@@ -16,18 +16,18 @@ sig
   val cut_tree : id -> ('a,'b) tree -> ('a,'b) tree
 
   (* bigsteps *)
-  type ('a,'b) bigsteps_obj =
+  type ('a,'b,'c) bigsteps_obj =
     {
     verbose : bool,
     temp_flag : bool,
     max_bigsteps : 'a -> int,
-    mcts_obj : ('a,'b) psMCTS.mcts_obj
+    precomp : 'a -> 'c,
+    preplayer : 'c -> ('a,'b) psMCTS.player,
+    game : ('a,'b) psMCTS.game,
+    mcts_param : psMCTS.mcts_param
     }
 
-  val select_bigstep :
-    ('a,'b) bigsteps_obj -> ('a,'b) tree -> id
   val run_bigsteps :
-    ('a,'b) bigsteps_obj -> 'a ->
-    bool * 'a rlex * ('a,'b) psMCTS.node list
+    ('a,'b,'c) bigsteps_obj -> 'a -> bool * bool * 'a rlex * ('a,'b) node list
 
 end

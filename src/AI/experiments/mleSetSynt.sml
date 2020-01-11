@@ -14,8 +14,17 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
 val ERR = mk_HOL_ERR "mleSetSynt"
 
 (* -------------------------------------------------------------------------
-   Helper
+   Global parameter
    ------------------------------------------------------------------------- *)
+
+val graph_size = 64
+
+(* -------------------------------------------------------------------------
+   Helpers
+   ------------------------------------------------------------------------- *)
+
+val graphcat = mk_var ("graphcat", ``:bool -> bool -> bool``)
+val adjgraph = mk_var ("adjgraph", ``: bool -> bool -> bool``);
 
 val uncont_term = mk_var ("uncont_term",alpha)
 val uncont_form = mk_var ("uncont_form",bool)
@@ -28,34 +37,24 @@ fun rw_to_uncont t =
     else list_mk_comb (oper, map rw_to_uncont argl)
   end
 
-val graph_size = 12
-
-fun mk_graph n t =
-  map (eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I))
-
 (* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
 
 type board = ((term * bool list) * term)
 
-val board_compare =
-  cpl_compare
-    (cpl_compare Term.compare (list_compare bool_compare))
-    Term.compare
+fun board_compare (((a,b),c),((d,e),f)) =
+  cpl_compare Term.compare Term.compare ((c,a),(f,d))
 
 fun string_of_board ((_,bl),tm) =
   String.concatWith " " (map bts bl) ^ " :\n" ^ tts tm
-
-fun mk_graph n t =
-  map (eval_subst (xvar,t) o nat_to_bin) (List.tabulate (n,I))
 
 fun mk_startboard tm = ((tm,mk_graph graph_size tm),start_form)
 fun dest_startboard ((tm,_),_) = tm
 
 fun status_of ((orgtm,graph),tm) =
   if not (can (find_term is_cont) tm) then
-    if graph = mk_graph graph_size tm handle HOL_ERR _ => false
+    if has_graph graph tm handle HOL_ERR _ => false
     then Win
     else Lose
   else if term_size (rw_to_uncont tm) > 2 * term_size orgtm
@@ -63,7 +62,7 @@ fun status_of ((orgtm,graph),tm) =
     else Undecided
 
 (* -------------------------------------------------------------------------
-   1) Term representation of the board (default)
+   Term representations of the board
    ------------------------------------------------------------------------- *)
 
 val graphtag = mk_var ("graphtag", ``:bool -> bool``)
@@ -73,107 +72,64 @@ fun string_of_graph graph =
 fun graph_of_string s =
   map string_to_bool (String.tokens Char.isSpace s)
 
-fun numvar_of_graph graph =
+fun embed_of_graph graph =
+  Vector.fromList (map (fn x => if x then 1.0 else ~1.0) graph)
+
+fun term_of_graph dim graph =
   let
-    val vs = tnn_numvar_prefix ^
-      String.concat (map (fn x => if x then "1" else "0") graph)
+    val graphl = mk_batch_full dim graph
+    val bl = map embed_of_graph (butlast graphl)
+    val b1 = embed_of_graph (last graphl)
+    val b2 = Vector.concat [b1,
+      Vector.tabulate (dim - Vector.length b1, fn _ => 0.0)]
+    val varl = map mk_embedding_var (bl @ [b2])
   in
-    mk_var (vs,bool)
+    list_mk_binop graphcat varl
   end
 
-val adjgraph = mk_var ("adjgraph", ``: bool -> bool -> bool``);
-
-fun term_of_board1 ((_,graph),tm) =
-  list_mk_comb (adjgraph,
-    [mk_comb (graphtag, numvar_of_graph graph), rw_to_uncont tm])
+fun term_of_board1 dim ((_,graph),tm) =
+  list_mk_comb (adjgraph, [term_of_graph dim graph, rw_to_uncont tm])
 
 val operl1 = mk_fast_set oper_compare
-  (map_assoc arity_of (graphtag :: adjgraph :: (uncontl @ operl_plain)))
+  (map_assoc arity_of (graphcat :: adjgraph :: (uncontl @ operl_plain)))
 
-(* -------------------------------------------------------------------------
-   2) Annotate operators with number of quantifiers above them
-   ------------------------------------------------------------------------- *)
-
-fun is_numvar v = String.isPrefix tnn_numvar_prefix (fst (dest_var v))
-
-fun annotate_var n v =
-  if tmem v yvarl then v else
-  let val (vs,ty) = dest_var v in mk_var (vs ^ "_" ^ its n, ty) end
-
-fun all_annot v =
-  if tmem v yvarl then [v]
-  else List.tabulate (max_quants + 1, fn n => annotate_var n v)
-
-fun ind_quant n tm =
-  let val (oper,argl) = strip_comb tm in
-    if tmem oper quantl then
-      let
-        val (v,bound,bod) = triple_of_list argl
-        val bound' = ind_quant n bound
-        val bod' = ind_quant (n+1) bod
-      in
-        list_mk_comb (annotate_var n oper,[v,bound',bod'])
-      end
-    else list_mk_comb (annotate_var n oper, map (ind_quant n) argl)
+fun mk_graphv dim dhtnn ((_,graph),_) =
+  let
+    val tmgraph = term_of_graph dim graph
+    val embed = infer_dhtnn_nohead dhtnn tmgraph
+  in
+    mk_embedding_var embed
   end
 
-fun term_of_board2 ((_,graph),tm) =
-  list_mk_comb (adjgraph, [numvar_of_graph graph,
-    ind_quant 0 (rw_to_uncont tm)])
-
-val operl2 = mk_fast_set oper_compare
-  (map_assoc arity_of (
-   graphtag :: adjgraph ::
-   List.concat (map all_annot (uncontl @ operl_plain))))
-
-(* -------------------------------------------------------------------------
-   3) Graph represented by a list
-   ------------------------------------------------------------------------- *)
-
-val graphcat = mk_var ("graphcat", ``:bool -> bool -> bool``)
-fun term_of_graph graph =
-  let val l = map (fn x => if x then T else F) graph in
-    list_mk_binop graphcat l
-  end
-
-fun term_of_board3 ((_,graph),tm) =
-  list_mk_comb (adjgraph, [term_of_graph graph, rw_to_uncont tm])
-
-val operl3 = mk_fast_set oper_compare
-  (map_assoc arity_of
-     (T :: F :: graphcat :: adjgraph :: (uncontl @ operl_plain)));
-
-(* -------------------------------------------------------------------------
-   3) Numvar graph as argument of all nodes
-   ------------------------------------------------------------------------- *)
-
-fun extend_var v =
-  let val (vs,ty) = dest_var v in
-    mk_var (vs ^ "_ext", mk_type ("fun", [bool,ty]))
-  end
-
-fun add_graph numvar tm =
-  let val (oper,argl) = strip_comb tm in
-    list_mk_comb (extend_var oper, numvar :: map (add_graph numvar) argl)
-  end
-
-fun term_of_board4 ((_,graph),tm) =
-  add_graph (numvar_of_graph graph) (rw_to_uncont tm)
-
-val operl4 = mk_fast_set oper_compare
-  (map_assoc arity_of (map extend_var (uncontl @ operl_plain)));
+fun term_of_board1c graphv ((_,_),tm) =
+  list_mk_comb (adjgraph, [graphv, rw_to_uncont tm])
 
 (*
 load "aiLib"; open aiLib;
 load "mleSetLib"; open mleSetLib;
 load "mleSetSynt"; open mleSetSynt;
+
 val l1 = parse_setsyntdata ();
 val tml = map fst l1;
-val board : board = ((T,[true,false]), random_elem tml);
-val tm1 = term_of_board1 board;
-val tm2 = term_of_board2 board;
-val tm3 = term_of_board3 board;
-val tm4 = term_of_board4 board;
+val graph = List.tabulate (64,fn _ => true);
+val board : board = ((T,graph), random_elem tml);
+val tm1 = term_of_board1 12 board;
+val tm = term_of_graph graph;
+*)
+
+(*
+load "aiLib"; open aiLib;
+load "mleSetLib"; open mleSetLib;
+load "mleSetSynt"; open mleSetSynt;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "mlNeuralNetwork"; open mlNeuralNetwork;
+
+val graph = List.tabulate (64,fn _ => true);
+val tmgraph = term_of_graph 12 graph;
+val dhtnn = random_dhtnn dhtnn_param_base;
+val embed1 = time (infer_dhtnn_nohead dhtnn) tmgraph;
+val s = reall_to_string embed1;
+val embed2 = time string_to_reall s;
 *)
 
 (* -------------------------------------------------------------------------
@@ -181,7 +137,6 @@ val tm4 = term_of_board4 board;
    ------------------------------------------------------------------------- *)
 
 type move = term
-
 fun apply_move move (ctxt,tm) = (ctxt, apply_move_aux move tm)
 fun available_move board move = available_move_aux (snd board) move
 fun string_of_move move = tts move
@@ -206,7 +161,7 @@ val game : (board,move) game =
    Big steps limit (redundant with status_of)
    ------------------------------------------------------------------------- *)
 
-fun max_bigsteps ((orgtm,_),_) = 2 * term_size orgtm
+fun max_bigsteps ((orgtm,_),_) = 2 * term_size orgtm + 10
 
 (* -------------------------------------------------------------------------
    Levels
@@ -216,23 +171,14 @@ val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt"
 
 val train_file = datasetsynt_dir ^ "/train_lisp"
 
-fun eval64 t =
-  let
-    val l = List.tabulate (64,I)
-    fun f x = (eval_subst (xvar,t) (nat_to_bin x), x)
-  in
-    map snd (filter fst (map f l))
-  end
-  handle HOL_ERR _ => raise ERR "eval64" (term_to_string t)
-
 fun bin_to_string bin = String.concatWith "," (map its bin)
 
-fun export_setsyntdata () =
+fun create_levels () =
   let
     val formgraphl = parse_setsyntdata ()
     val _ = print_endline ("Reading " ^ its (length formgraphl) ^ " terms");
     val l1 = map (fn (a,b) => (a ,rev b)) formgraphl
-    val l2 = map_assoc (eval64 o fst) l1
+    val l2 = mapfilter (fn x => (x, valOf (eval64 (fst x)))) l1
     fun f ((a,b),c) =
       if b = c then () else
         (
@@ -257,8 +203,9 @@ fun level_targetl level ntarget =
     val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt")
     val tmll2 = map shuffle (first_n level (mk_batch_full 400 tml1))
     val tml3 = List.concat (list_combine tmll2)
+    val tml4 = rev (dict_sort tmsize_compare (first_n ntarget tml3))
   in
-    map mk_startboard (first_n ntarget tml3)
+    map mk_startboard tml4
   end
 
 (* -------------------------------------------------------------------------
@@ -329,103 +276,26 @@ val pre_extsearch =
    ------------------------------------------------------------------------- *)
 
 val schedule_base =
-  [{ncore = 4, verbose = true,
-    learning_rate = 0.02,
-    batch_size = 16, nepoch = 200}]
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
+    batch_size = 16, nepoch = 20}]
 val dhtnn_param_base =
   {
   operl = operl1, nlayer_oper = 2,
   nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 12, dimpoli = length movel
+  dimin = 8, dimpoli = length movel
   }
 val player_base =
   {playerid = "base",
    dhtnn_param = dhtnn_param_base, schedule = schedule_base}
 
-val schedule_4core =
-  [{ncore = 4, verbose = true,
-    learning_rate = 0.02,
-    batch_size = 16, nepoch = 200}]
-val player_4core =
-  {playerid = "4core",
-   dhtnn_param = dhtnn_param_base, schedule = schedule_4core}
-
-val schedule_100epoch =
-  [{ncore = 4, verbose = true,
-    learning_rate = 0.02,
-    batch_size = 16, nepoch = 100}]
-val player_100epoch =
-  {playerid = "100epoch",
-   dhtnn_param = dhtnn_param_base, schedule = schedule_100epoch}
-
-val schedule_4batch =
-  [{ncore = 4, verbose = true,
-    learning_rate = 0.01,
-    batch_size = 4, nepoch = 200}]
-val player_4batch =
-  {playerid = "4batch",
-   dhtnn_param = dhtnn_param_base, schedule = schedule_4batch}
-
-val dhtnn_param_1layer =
-  {
-  operl = operl1, nlayer_oper = 1,
-  nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 12, dimpoli = length movel
-  }
-val player_1layer =
-  {playerid = "1layer",
-   dhtnn_param = dhtnn_param_base, schedule = schedule_base}
-
-val dhtnn_param_quantterm =
-  {
-  operl = operl2, nlayer_oper = 2,
-  nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 12, dimpoli = length movel
-  }
-val player_quantterm =
-  {playerid = "quantterm",
-   dhtnn_param = dhtnn_param_quantterm ,
-   schedule = schedule_base}
-
-val dhtnn_param_listgraph =
-  {
-  operl = operl3, nlayer_oper = 2,
-  nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 12, dimpoli = length movel
-  }
-val player_listgraph =
-  {playerid = "listgraph",
-   dhtnn_param = dhtnn_param_listgraph,
-   schedule = schedule_base}
-
-val dhtnn_param_allgraph =
-  {
-  operl = operl4, nlayer_oper = 2,
-  nlayer_headeval = 2, nlayer_headpoli = 2,
-  dimin = 12, dimpoli = length movel
-  }
-val player_allgraph =
-  {playerid = "allgraph",
-   dhtnn_param = dhtnn_param_allgraph,
-   schedule = schedule_base}
-
-val tobdict = dnew String.compare
-  [
-  ("base",term_of_board1),
-  ("4core",term_of_board1),
-  ("100epoch",term_of_board1),
-  ("4batch",term_of_board1),
-  ("1layer",term_of_board1),
-  ("quantterm",term_of_board2),
-  ("listgraph",term_of_board3),
-  ("allgraph",term_of_board4)
-  ];
+val pretobdict = dnew String.compare
+  [("base", (term_of_board1 (#dimin dhtnn_param_base), term_of_board1c))]
 
 (* -------------------------------------------------------------------------
    Interface
    ------------------------------------------------------------------------- *)
 
-val expname = "mleSetSynt-v2-2"
+val expname = "mleSetSynt-v2-16"
 
 val level_param =
   {
@@ -436,24 +306,23 @@ val level_param =
 
 val rl_param =
   {
-  expname = expname, ex_window = 20000, ex_filter = SOME 10,
-  ngen = 100, ncore_search = 40,
-  nsim_start = 16000, nsim_explore = 16000, nsim_compete = 3200,
-  decay = 0.99
+  expname = expname, ex_window = 200000, ex_filter = NONE,
+  skip_compete = true,
+  ngen = 400, ncore_search = 40,
+  nsim_start = 50000, nsim_explore = 50000, nsim_compete = 50000,
+  decay = 1.0
   }
 
-val rlpreobj : (board,move) rlpreobj =
+val rlpreobj : (board,move,term) rlpreobj =
   {
   rl_param = rl_param,
   level_param = level_param,
   max_bigsteps = max_bigsteps,
   game = game,
   pre_extsearch = pre_extsearch,
-  tobdict = tobdict,
-  dplayerl = [player_base, (* player_4core *)
-              player_100epoch, player_4batch,
-              player_1layer, player_quantterm,
-              player_listgraph, player_allgraph]
+  pretobdict = pretobdict,
+  precomp_dhtnn = mk_graphv (#dimin dhtnn_param_base),
+  dplayerl = [player_base]
   }
 
 val extsearch = mk_extsearch "mleSetSynt.extsearch" rlpreobj
@@ -467,8 +336,58 @@ val rlobj = mk_rlobj rlpreobj extsearch
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleSetSynt"; open mleSetSynt;
-(* export_setsyntdata (); *)
+(* create_levels (); *)
 val r = start_rl_loop rlobj;
 *)
+
+(* -------------------------------------------------------------------------
+   MCTS test with uniform player
+   ------------------------------------------------------------------------- *)
+
+(*
+load "mleSetSynt"; open mleSetSynt;
+load "psMCTS"; open psMCTS;
+load "aiLib"; open aiLib;
+load "mlTacticData"; open mlTacticData;
+
+val mcts_param =
+  {
+  nsim = 32000,
+  stopatwin_flag = true,
+  decay = #decay (#rl_param rlpreobj),
+  explo_coeff = 2.0,
+  noise_all = false,
+  noise_root = false,
+  noise_coeff = 0.25,
+  noise_alpha = 0.2
+  };
+
+val datasetsynt_dir = HOLDIR ^ "/src/AI/experiments/data_setsynt"
+val tml1 = import_terml (datasetsynt_dir ^ "/h4setsynt");
+val targetl1 = map mk_startboard (first_n 100 tml1);
+val graphl = map (snd o fst) targetl1;
+val graph_set = mk_fast_set (list_compare bool_compare) graphl;
+length graph_set;
+
+fun test i target =
+  let
+    val mcts_obj =
+      {mcts_param = mcts_param,
+       game = #game rlpreobj,
+       player = uniform_player (#game rlpreobj)}
+    val tree = starttree_of mcts_obj target
+    val endtree = mcts mcts_obj tree
+  in
+    print_endline (its i);
+    #status (dfind [] endtree) = Win
+  end
+;
+
+val targetl2 = combine (targetl1, mapi test targetl1);
+val targetl3 = filter snd targetl2;
+length targetl3;
+*)
+
+
 
 end (* struct *)

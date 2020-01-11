@@ -2,13 +2,13 @@ TacticToe is a tactic-based prover.
 
 It searches for a proof by repeatedly applying suitable tactics for each goal state that it produces. 
 
-WARNING: Switch to the last tested commit 3971206043e478ced916b0f9bfafd03a890441a4
-as TacticToe easily breaks with HOL4 updates to the style of theories.
+WARNING: Recording has been tested on core theories. 
+  Recording of latter theories might fail.
 
 RECORDING:
   load "tttUnfold"; open tttUnfold;
   load "fooTheory";
-  ttt_record (); (* takes a long time (2-12h) *)
+  ttt_record ();
 
 RECORDING (only one theory:
   ttt_rewrite_thy "foo";

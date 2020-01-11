@@ -8,9 +8,10 @@
 structure hhExportLib :> hhExportLib =
 struct
 
-open HolKernel boolLib aiLib mlThmData hhTranslate
+open HolKernel boolLib aiLib mlThmData hhTranslate combinTheory
 
 val ERR = mk_HOL_ERR "hhExportLib"
+type thmid = string * string
 
 (* -------------------------------------------------------------------------
    Directory
@@ -220,8 +221,9 @@ val boolop_cval =
    Higher-order theorems in a first-order embedding
    ------------------------------------------------------------------------- *)
 
-fun mk_combin_thm thm fvname =
+fun mk_combin_thm thmname fvname =
   let
+    val thm = DB.fetch "combin" thmname
     val (tm0,defl) = translate_thm thm
     val _ = if null defl then () else raise ERR "mk_combin_thm" ""
     val oper = (fst o strip_comb o lhs o snd o strip_forall) tm0
@@ -232,9 +234,9 @@ fun mk_combin_thm thm fvname =
     subst sub tm1
   end
 
-val i_thm = mk_combin_thm combinTheory.I_THM "combin_i"
-val k_thm = mk_combin_thm combinTheory.K_THM "combin_k"
-val s_thm = mk_combin_thm combinTheory.S_THM "combin_s"
+val i_thm = mk_combin_thm "I_THM" "combin_i"
+val k_thm = mk_combin_thm "K_THM" "combin_k"
+val s_thm = mk_combin_thm "S_THM" "combin_s"
 
 (* combin_axioml are already translated *)
 val combin_axioml = [("i_thm",i_thm),("k_thm",k_thm),("s_thm",s_thm)]
@@ -267,7 +269,6 @@ fun all_tyop topty =
 
 fun tyop_set topty = mk_fast_set ida_compare (all_tyop topty)
 
-
 fun tyopset_of_tyl tyl =
   mk_fast_set ida_compare (List.concat (map tyop_set tyl))
 
@@ -295,16 +296,16 @@ fun mgc_of tm =
     let val {Thy,Name,Ty} = dest_thy_const tm in
       prim_mk_const {Thy = Thy, Name = Name}
     end
-  else raise ERR "mgc_of" ""
+  else raise ERR "not a constant" ""
 
-fun mgc_of_aux (tm,a) =
+fun mgca_of (tm,a) =
   if is_const tm then
     let val {Thy,Name,Ty} = dest_thy_const tm in
       (prim_mk_const {Thy = Thy, Name = Name},a)
     end
   else (tm,a)
 
-fun uniq_cvdef_mgc cval = mk_fast_set tma_compare (map mgc_of_aux cval)
+fun uniq_cvdef_mgc cval = mk_fast_set tma_compare (map mgca_of cval)
 
 fun uniq_cvdef_arity cval = mk_term_set (map fst cval)
 
@@ -340,11 +341,11 @@ fun compare_namethm ((_,th1),(_,th2)) =
    Bushy
    ------------------------------------------------------------------------- *)
 
-fun add_bushy_dep thy namethml =
+fun bushy_dep thy namethml =
   let
      fun f (name,thm) = case depo_of_thm thm of
         NONE => NONE
-      | SOME depl => SOME ((thy,name), depl)
+      | SOME depl => SOME ((thy,name),([],depl))
   in
     List.mapPartial f namethml
   end
@@ -355,26 +356,20 @@ fun depo_of_thmid thmid = depo_of_thm (uncurry DB.fetch thmid)
    Chainy dependencies
    ------------------------------------------------------------------------- *)
 
-fun thmidl_in_thyl thyl =
-  let fun f thy = map (fn (name,_) => (thy,name)) (DB.thms thy) in
-    List.concat (map f thyl)
-  end
+fun thmidl_in_thy thy = map (fn (name,_) => (thy,name)) (DB.thms thy)
 
-fun add_chainy_dep thyorder thy namethml =
+fun chainy_dep thyorder thy namethml =
   let
     val thyl = before_elem thy thyorder
-    val thmidl1 = thmidl_in_thyl thyl
     fun f (name,thm) =
       let
         val namethml1 = filter (older_than thm) namethml
         val thmidl2 = map (fn (name,_) => (thy,name)) namethml1
       in
-        ((thy,name), thmidl1 @ thmidl2)
+        ((thy,name), (thyl,thmidl2))
       end
   in
     map f namethml
   end
-
-
 
 end (* struct *)

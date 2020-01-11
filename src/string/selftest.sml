@@ -87,14 +87,14 @@ val _ = set_trace "Unicode" 0
 val _ = app tpp ["P \"a\" /\\ Q",
                  "P (STRCAT a \"b\") /\\ Q",
                  "#\"a\"",
+                 "\"foo\\nbar\"",
+                 quote (String.toString "foo\\bar"),
                  "\"(*\"",
                  "\"*)\""]
 
-val _ = set_trace "paranoid string literal printing" 1
-
 val t = ``"*)"``
-val _ = tprint "Paranoid printing of ``\"*)\"``"
-val s = term_to_string t
+val _ = tprint "Paranoid printing of ‘\"*)\"’"
+val s = trace ("paranoid string literal printing", 1) term_to_string t
 val _ = if s = "\"\\042)\"" then OK()
         else die "FAILED!"
 
@@ -124,5 +124,29 @@ val _ = app test [
   (“fromHexString "10A"”, “SOME 266n”),
   (“num_from_oct_string "126"”, “86n”)
 ]
+
+(* ----------------------------------------------------------------------
+    string literal variations
+   ---------------------------------------------------------------------- *)
+
+val ptpp (* "paranoid tpp" *) =
+    trace ("paranoid string literal printing", 1) tpp
+val _ = quietly Datatype ‘newtype = strinj string | boring num’
+val _ = temp_add_strliteral_form {inj = “strinj”, ldelim = "«"}
+
+val _ = tpp "«foo bar»"
+val _ = tpp "«foo\\n bar»"
+val _ = ptpp "«foo\\n bar»"
+
+val _ = quietly Datatype ‘newtype2 = strinj2 string | boring2 num’
+val _ = temp_add_strliteral_form {inj = “strinj2”, ldelim = "‹"}
+
+val _ = tpp "‹foo bar›"
+
+val _ = quietly Datatype ‘newtype3 = strinj3 string | boring3 num newtype3’
+val _ = temp_add_strliteral_form {inj = “strinj3”, ldelim = "\""}
+
+val _ = tpp "boring3 4 \"foo\""
+
 
 val _ = OS.Process.exit OS.Process.success

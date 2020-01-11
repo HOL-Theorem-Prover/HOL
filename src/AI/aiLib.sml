@@ -906,12 +906,23 @@ fun find_cumul proba cumul = case cumul of
   | [a] => fst a
   | (mv,p) :: m => if proba < (p:real) then mv else find_cumul proba m
 
+fun mk_cumul l =
+  let
+    val l' = cumul_proba 0.0 l
+    val (_,tot) = last l'
+  in
+    (l',tot)
+  end
+
+fun select_in_cumul (l,tot) =
+  find_cumul (random_real () * tot) l
+
 fun select_in_distrib l =
   let
     val l' = cumul_proba 0.0 l
     val (_,tot) = last l'
   in
-    find_cumul (random_real () * tot) l'
+    select_in_cumul (l',tot)
   end
 
 fun select_in_distrib_seeded r l =

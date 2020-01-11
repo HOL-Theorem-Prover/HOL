@@ -11,8 +11,13 @@ struct
 open HolKernel boolLib aiLib mlThmData hhTranslate hhExportLib
 
 val ERR = mk_HOL_ERR "hhExportThf"
-
+type thmid = string * string
 val thfpar = "thf("
+
+(* -------------------------------------------------------------------------
+   Translation functions
+   ------------------------------------------------------------------------- *)
+
 fun th1_translate_tm tm =
   rename_bvarl escape (list_mk_forall (free_vars_lr tm, tm))
 fun th1_translate_thm thm =
@@ -152,8 +157,8 @@ fun th1_ttype arity =
   String.concatWith " > " (List.tabulate (arity + 1, fn _ => ttype))
 
 fun th1_tyopdef oc ((thy,tyop),arity) =
-  let val thfname = name_tyop (thy,tyop) in
-    os oc (thfpar ^ thfname ^ ",type," ^ thfname ^ ":");
+  let val th1name = name_tyop (thy,tyop) in
+    os oc (thfpar ^ th1name ^ ",type," ^ th1name ^ ":");
     os oc (th1_ttype arity); osn oc ")."
   end
 
@@ -180,33 +185,41 @@ val tyopl_extra = tyopset_of_tyl [``:bool -> bool``]
 val cval_extra = boolop_cval
 
 fun th1_thmdef_extra oc =
-  (app (th1_logicdef oc) logic_l1; app (th1_quantdef oc) quant_l2)
+  (app (th1_logicdef oc) logic_l1;
+   app (th1_quantdef oc) quant_l2)
 
 (* -------------------------------------------------------------------------
    Export problem
    ------------------------------------------------------------------------- *)
 
-fun collect_tml (thmid,depl) =
+fun collect_tml thmidl =
   let fun f x = atoms (th1_translate_thm (uncurry DB.fetch x)) in
-    mk_term_set (List.concat (map f (thmid :: depl)))
+    mk_term_set (List.concat (map f thmidl))
   end
 
-fun th1_write_pb dir (thmid,depl) =
+fun th1_preambule oc tml =
   let
-    val _ = mkDir_err dir
-    val file  = dir ^ "/" ^ name_thm thmid ^ ".p"
-    val oc  = TextIO.openOut file
-    val tml = collect_tml (thmid,depl)
     val cvl1 = mk_term_set (List.concat (map (find_terms is_const) tml))
     val cvl2 = map fst cval_extra
     val cvl3 = mk_term_set (map mgc_of (cvl1 @ cvl2))
     val tyopl =  mk_fast_set ida_compare
       (List.concat (tyopl_extra :: map collect_tyop tml))
   in
-    (
     app (th1_tyopdef oc) tyopl;
     app (th1_cvdef oc) cvl3;
-    th1_thmdef_extra oc;
+    th1_thmdef_extra oc
+  end
+
+fun th1_write_pb dir (thmid,(depthyl,depl)) =
+  let
+    val _ = mkDir_err dir
+    val file  = dir ^ "/" ^ name_thm thmid ^ ".p"
+    val oc  = TextIO.openOut file
+    val tml = collect_tml (thmid :: depl)
+  in
+    (
+    app (fn x => osn oc ("include('" ^ x ^ ".ax').")) depthyl;
+    th1_preambule oc tml;
     app (th1_thmdef "axiom" oc) depl;
     th1_thmdef "conjecture" oc thmid;
     TextIO.closeOut oc
@@ -214,15 +227,20 @@ fun th1_write_pb dir (thmid,depl) =
     handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
   end
 
+(*
+load "hhExportTh1"; open hhExportTh1;
+val thmid = ("bool","RES_SELECT_THM");
+val depl = valOf (hhExportLib.depo_of_thmid thmid);
+val dir = HOLDIR ^ "/src/holyhammer/export_th1_test";
+th1_write_pb dir (thmid,([],depl));
+*)
+
 (* -------------------------------------------------------------------------
-   Export theories
+   Bushy problems
    ------------------------------------------------------------------------- *)
 
-val th1_bushy_dir = hh_dir ^ "/export_th1_bushy"
-val th1_chainy_dir = hh_dir ^ "/export_th1_chainy"
-
 fun write_thy_bushy dir thy =
-  let val cjdepl = add_bushy_dep thy (DB.theorems thy) in
+  let val cjdepl = bushy_dep thy (DB.theorems thy) in
     print (thy ^ " "); app (th1_write_pb dir) cjdepl
   end
 
@@ -231,30 +249,50 @@ fun th1_export_bushy dir thyl =
     mkDir_err dir; app (write_thy_bushy dir) thyorder
   end
 
+(* -------------------------------------------------------------------------
+   Chainy problems
+   ------------------------------------------------------------------------- *)
+
+fun th1_export_thy dir thy =
+  let
+    val _ = mkDir_err dir
+    val file  = dir ^ "/" ^ thy ^ ".ax"
+    val oc  = TextIO.openOut file
+    val thmidl = thmidl_in_thy thy
+    val tml = collect_tml thmidl
+  in
+    (
+    th1_preambule oc tml;
+    app (th1_thmdef "axiom" oc) thmidl;
+    TextIO.closeOut oc
+    )
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
 fun write_thy_chainy dir thyorder thy =
-  let val cjdepl = add_chainy_dep thyorder thy (DB.theorems thy) in
+  let val cjdepl = chainy_dep thyorder thy (DB.theorems thy) in
     print (thy ^ " "); app (th1_write_pb dir) cjdepl
   end
 
 fun th1_export_chainy dir thyl =
   let val thyorder = sorted_ancestry thyl in
-    mkDir_err dir; app (write_thy_chainy dir thyorder) thyorder
+    mkDir_err dir;
+    app (th1_export_thy (dir ^ "/theories")) thyorder;
+    app (write_thy_chainy (dir ^ "/problems") thyorder) thyorder
   end
 
-(*
-load "hhExportTh1"; open hhExportTh1;
-val thmid = ("arithmetic","ADD1");
-val depl = valOf (hhExportLib.depo_of_thmid thmid);
-val dir = HOLDIR ^ "/src/holyhammer/export_th1_test";
-th1_write_pb dir (thmid,depl);
-*)
+(* -------------------------------------------------------------------------
+   Export standard library
+   ------------------------------------------------------------------------- *)
 
 (*
 load "hhExportTh1"; open hhExportTh1;
 load "tttUnfold"; tttUnfold.load_sigobj ();
 val thyl = ancestry (current_theory ());
-val bushydir =  HOLDIR ^ "/src/holyhammer/th1_bushy";
+val bushydir = HOLDIR ^ "/src/holyhammer/th1_bushy";
 th1_export_bushy bushydir thyl;
+val chainydir = HOLDIR ^ "/src/holyhammer/th1_chainy";
+th1_export_chainy chainydir thyl;
 *)
 
 end (* struct *)

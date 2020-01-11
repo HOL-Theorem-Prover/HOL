@@ -1094,14 +1094,12 @@ fun ttt_record_thy thy =
   if mem thy ["bool","min"] then () else
   let val scriptorg = find_script thy in
     let
-      val infofile = HOLDIR ^ "/src/tactictoe/info/" ^ thy
       val _ = save_scripts scriptorg
       val _ = print_endline ("TacticToe: ttt_record_thy: " ^ thy ^
         "\n  " ^ scriptorg)
     in
       run_rm_script (mem thy core_theories) (tttsml_of scriptorg);
-      restore_scripts scriptorg;
-      print_endline (String.concatWith "\n" (readl infofile))
+      restore_scripts scriptorg
     end
   end
 

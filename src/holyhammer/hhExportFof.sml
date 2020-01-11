@@ -11,7 +11,7 @@ struct
 open HolKernel boolLib aiLib mlThmData hhTranslate hhExportLib
 
 val ERR = mk_HOL_ERR "hhExportFof"
-
+type thmid = string * string
 val fofpar = "fof("
 
 (* -------------------------------------------------------------------------
@@ -207,59 +207,40 @@ fun fof_arityeq oc (cv,a) =
    Write problem
    ------------------------------------------------------------------------- *)
 
-fun collect_tml (thmid,depl) =
+fun collect_tml thmidl =
   let fun f x =
     let val (formula,defl) = translate_thm (uncurry DB.fetch x) in
       mk_term_set (List.concat (map atoms (formula :: defl)))
     end
   in
-    mk_term_set (List.concat (map f (thmid :: depl)))
+    mk_term_set (List.concat (map f thmidl))
   end
 
-fun fof_write_pb dir (thmid,depl) =
+fun fof_preambule oc tml =
+  let
+    val cval = mk_sameorder_set tma_compare
+      (List.concat (cval_extra :: map collect_arity_noapp tml))
+  in
+    fof_thmdef_extra oc;
+    app (fof_arityeq oc) cval
+  end
+
+fun fof_write_pb dir (thmid,(depthyl,depl)) =
   let
     val _ = mkDir_err dir
     val file  = dir ^ "/" ^ name_thm thmid ^ ".p"
     val oc  = TextIO.openOut file
-    val tml = collect_tml (thmid,depl)
-    val cval = mk_sameorder_set tma_compare
-      (List.concat (cval_extra :: map collect_arity_noapp tml))
+    val tml = collect_tml (thmid :: depl)
+
   in
     (
-    fof_thmdef_extra oc;
-    app (fof_arityeq oc) cval;
+    app (fn x => osn oc ("include('" ^ x ^ ".ax').")) depthyl;
+    fof_preambule oc tml;
     app (fof_thmdef "axiom" oc) depl;
     fof_thmdef "conjecture" oc thmid;
     TextIO.closeOut oc
     )
     handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
-  end
-
-(* -------------------------------------------------------------------------
-   Export theories
-   ------------------------------------------------------------------------- *)
-
-val fof_bushy_dir = hh_dir ^ "/export_fof_bushy"
-val fof_chainy_dir = hh_dir ^ "/export_fof_chainy"
-
-fun write_thy_bushy dir thy =
-  let val cjdepl = add_bushy_dep thy (DB.theorems thy) in
-    print (thy ^ " "); app (fof_write_pb dir) cjdepl
-  end
-
-fun fof_export_bushy dir thyl =
-  let val thyorder = sorted_ancestry thyl in
-    mkDir_err dir; app (write_thy_bushy dir) thyorder
-  end
-
-fun write_thy_chainy dir thyorder thy =
-  let val cjdepl = add_chainy_dep thyorder thy (DB.theorems thy) in
-    print (thy ^ " "); app (fof_write_pb dir) cjdepl
-  end
-
-fun fof_export_chainy dir thyl =
-  let val thyorder = sorted_ancestry thyl in
-    mkDir_err dir; app (write_thy_chainy dir thyorder) thyorder
   end
 
 (*
@@ -268,13 +249,65 @@ val thmid = ("arithmetic","ADD1");
 val depl = valOf (hhExportLib.depo_of_thmid thmid);
 val dir = HOLDIR ^ "/src/holyhammer/export_fof_test";
 fof_write_pb dir (thmid,depl);
+*)
 
+(* -------------------------------------------------------------------------
+   Bushy problems
+   ------------------------------------------------------------------------- *)
+
+fun write_thy_bushy dir thy =
+  let val cjdepl = bushy_dep thy (DB.theorems thy) in
+    print (thy ^ " "); app (fof_write_pb dir) cjdepl
+  end
+
+fun fof_export_bushy dir thyl =
+  let val thyorder = sorted_ancestry thyl in
+    mkDir_err dir; app (write_thy_bushy dir) thyorder
+  end
+
+(* -------------------------------------------------------------------------
+   Chainy problems
+   ------------------------------------------------------------------------- *)
+
+fun fof_export_thy dir thy =
+  let
+    val _ = mkDir_err dir
+    val file  = dir ^ "/" ^ thy ^ ".ax"
+    val oc  = TextIO.openOut file
+    val thmidl = thmidl_in_thy thy
+    val tml = collect_tml thmidl
+  in
+    (
+    fof_preambule oc tml;
+    app (fof_thmdef "axiom" oc) thmidl;
+    TextIO.closeOut oc
+    )
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
+fun write_thy_chainy dir thyorder thy =
+  let val cjdepl = chainy_dep thyorder thy (DB.theorems thy) in
+    print (thy ^ " "); app (fof_write_pb dir) cjdepl
+  end
+
+fun fof_export_chainy dir thyl =
+  let val thyorder = sorted_ancestry thyl in
+    mkDir_err dir;
+    app (fof_export_thy (dir ^ "/theories")) thyorder;
+    app (write_thy_chainy (dir ^ "/problems") thyorder) thyorder
+  end
+
+(* -------------------------------------------------------------------------
+   Export standard library
+   ------------------------------------------------------------------------- *)
+
+(*
 load "hhExportFof"; open hhExportFof;
 load "tttUnfold"; tttUnfold.load_sigobj ();
 val thyl = ancestry (current_theory ());
-val bushydir = "/local1/thibault/fof_bushy";
+val bushydir = HOLDIR ^ "/src/holyhammer/fof_bushy";
 fof_export_bushy bushydir thyl;
-val chainydir = "/local1/thibault/fof_chainy";
+val chainydir = HOLDIR ^ "/src/holyhammer/fof_chainy";
 fof_export_chainy chainydir thyl;
 *)
 

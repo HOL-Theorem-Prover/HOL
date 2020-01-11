@@ -36,6 +36,9 @@ val _ = new_theory "sptree";
 val _ = Datatype`spt = LN | LS 'a | BN spt spt | BS spt 'a spt`
 (* Leaf-None, Leaf-Some, Branch-None, Branch-Some *)
 
+Type num_map[pp] = “:'a spt”
+Type num_set[pp] = “:unit spt”
+
 val _ = overload_on ("isEmpty", ``\t. t = LN``)
 
 val wf_def = Define`
@@ -2195,5 +2198,12 @@ Proof
   \\ qexists_tac `$<`
   \\ fs [relationTheory.irreflexive_def, SORTED_MAP_FST_toSortedAList]
 QED
+
+val _ = let
+  open sptreepp
+in
+  add_ML_dependency "sptreepp";
+  add_user_printer ("sptreepp.sptreepp", “x : 'a spt”)
+end
 
 val _ = export_theory();

@@ -29,4 +29,29 @@ sig
 
   val export_cong : string -> unit
 
+  (* record various flavours of definition, keyed by constant and a
+     "tag", which is a user-choosable string. Assume that "user" and
+     "compute" exist for example.
+
+     Another might be "PMATCH", which would be the definition with
+     case constants translated into PMATCH versions.
+  *)
+  val register_defn : string -> thm -> unit
+  val lookup_defn : term -> string -> thm option
+
+  val register_indn : thm * term list -> unit
+  val lookup_indn : term -> (thm * term list) option
+
+  (* register_defn is given a tag and a theorem which is a conjunction of
+     possibly universally quantified equations.  The machinery here
+     will create a sub-conjunction of the clauses per constant (and this is
+     what is returned by lookup_defn).
+
+     Induction theorems have some number of induction variables (P1,
+     P2, ..) where each corresponds to a defined constant. This list
+     of constants is what is passed into register_indn alongside the
+     induction theorem. When a term is looked up, if lookup_indn t
+     returns SOME (th, ts), then t will be among the ts.
+   *)
+
 end

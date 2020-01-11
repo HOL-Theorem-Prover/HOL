@@ -79,9 +79,13 @@ fun info_thy thy =
   ]
 
 fun write_info thy =
-  let val infodir = HOLDIR ^ "/src/tactictoe/info" in
+  let
+    val infodir = HOLDIR ^ "/src/tactictoe/info"
+    val infol = info_thy thy
+  in
     mkDir_err infodir;
-    writel (infodir ^ "/" ^ thy) (info_thy thy)
+    writel (infodir ^ "/" ^ thy) infol;
+    app print_endline infol
   end
 
 (* -------------------------------------------------------------------------
