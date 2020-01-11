@@ -423,7 +423,7 @@ fun one_line_ify heuristic def =
           end
       val fs_args0 = map munge_row conjs
           handle HOL_ERR _ => raise ERR "one_line_ify" "Malformed def'n"
-      val stoppers = map (list_mk_comb o #1) fs_args
+      val stoppers = map (list_mk_comb o #1) fs_args0
       val _ =
           case List.find (fn((_, row), _, _) => List.all is_var row) fs_args0 of
               NONE => ()
