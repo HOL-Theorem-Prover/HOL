@@ -10,7 +10,17 @@ Termination
   simp[]
 End
 
+fun is_oneline th =
+  let val cs = th |> concl |> strip_conj
+  in
+    length cs = 1 andalso is_eq (hd cs)
+  end
+
 val oneline_zip2 = DefnBase.one_line_ify NONE ZIP2
+val _ = assert
+         (fn l => length l = 1 andalso is_disj (hd l))
+         (hyp oneline_zip2)
+val _ = assert is_oneline oneline_zip2
 
 Definition AEVERY_AUX_def:
   (AEVERY_AUX aux P [] <=> T) /\
@@ -20,8 +30,9 @@ Definition AEVERY_AUX_def:
        P (x,y) /\ AEVERY_AUX (x::aux) P xs)
 End
 
-val oneline_aevery_aux = DefnBase.one_line_ify NONE AEVERY_AUX_def
+Theorem oneline_aevery_aux[local] = DefnBase.one_line_ify NONE AEVERY_AUX_def
 val _ = assert (null o hyp) oneline_aevery_aux
+val _ = assert is_oneline oneline_aevery_aux
 
 Definition incomplete_literal:
   incomplete_literal 1 = 10 /\
@@ -46,15 +57,34 @@ Definition complete_literal0:
 End
 
 Theorem oneline_complete0[local] = DefnBase.one_line_ify NONE complete_literal0
+val _ = assert is_oneline oneline_complete0
+val _ = assert (null o hyp) oneline_complete0
 
-Definition complete_literal1:
-  complete_literal1 [] 1 = 10 /\
-  complete_literal1 (3::t) 2 = 16 /\
-  complete_literal1 (h::t) 2 = 12 + h /\
-  complete_literal1 _ _ = 15
+Definition complete_literal1a:
+  complete_literal1a [] 1 = 10 /\
+  complete_literal1a (3::t) 2 = 16 /\
+  complete_literal1a (h::t) 2 = 12 + h /\
+  complete_literal1a _ _ = 15
 End
 
-Theorem oneline_complete1[local] = DefnBase.one_line_ify NONE complete_literal1
+Theorem oneline_complete1a[local] =
+  DefnBase.one_line_ify NONE complete_literal1a
+
+val _ = assert null (hyp oneline_complete1a)
+val _ = assert is_oneline oneline_complete1a
+
+Definition complete_literal1b:
+  complete_literal1b ([], 1) = 10 /\
+  complete_literal1b (3::t, 2) = 16 /\
+  complete_literal1b (h::t, 2) = 12 + h /\
+  complete_literal1b _ = 15
+End
+
+Theorem oneline_complete1b[local] =
+  DefnBase.one_line_ify NONE complete_literal1b
+
+val _ = assert (null o hyp) oneline_complete1b
+val _ = assert is_oneline oneline_complete1b
 
 Definition complete_literal2:
   complete_literal2 (3, [], 2) = 10 /\
@@ -63,5 +93,7 @@ Definition complete_literal2:
 End
 
 Theorem oneline_complete2[local] = DefnBase.one_line_ify NONE complete_literal2
+val _ = assert (null o hyp) oneline_complete2
+val _ = assert is_oneline oneline_complete2
 
 val _ = export_theory();

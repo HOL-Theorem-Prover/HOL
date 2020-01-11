@@ -306,22 +306,9 @@ fun foldri f A list =
     in
       recurse 0 A list
     end
-local
-  val P = mk_var("P", bool)
-  val x = mk_var("x", alpha)
-  val y = mk_var("y", alpha)
-  val z = mk_var("z", alpha)
-  val goal = mk_eq(mk_cond(P, x, mk_cond(P, y, z)), mk_cond(P, x, z))
-    (* |- if P then x else if P then y else z = if P then x else z *)
-in
-val COND_COND =
-  DISJ_CASES (SPEC P BOOL_CASES_AX)
-    (PURE_REWRITE_CONV [ASSUME (mk_eq(P,T)), COND_CLAUSES, REFL_CLAUSE] goal)
-    (PURE_REWRITE_CONV [ASSUME (mk_eq(P,F)), COND_CLAUSES, REFL_CLAUSE] goal)
-    |> EQT_ELIM
-end
 
-fun GENASSUME t = SPEC_ALL (ASSUME (gen_all t))
+fun GENASSUME t = if same_const t T then TRUTH
+                  else SPEC_ALL (ASSUME (gen_all t))
 infix pTHENC
 fun (c pTHENC k) t =
     case Exn.capture c t of
@@ -337,6 +324,45 @@ fun BETAS_CONV t =
         if length args = 1 then BETA_CONV t
         else (RATOR_CONV BETAS_CONV THENC BETA_CONV) t
       else ALL_CONV t
+    end
+
+val (COND_T,COND_F) = COND_CLAUSES |> SPEC_ALL |> CONJ_PAIR
+val COND_cong = let val P = mk_var("P", bool)
+                in COND_CONG |> SPECL [P,P] |> SPEC_ALL |> REWRITE_RULE []
+                             |> GEN_ALL
+                end
+fun cond1_conv c = RATOR_CONV (RATOR_CONV (RAND_CONV c))
+fun COND_SIMP_CONV t =
+    let
+      fun guard th =
+          cond1_conv (REWR_CONV th) THENC
+          (REWR_CONV COND_T ORELSEC REWR_CONV COND_F) THENC
+          COND_SIMP_CONV
+      fun recurse ctxt_ths t =
+            if is_cond t then
+              (FIRST_CONV (map guard ctxt_ths) ORELSEC
+               congruential_descent ctxt_ths) t
+            else ALL_CONV t
+      and congruential_descent ctxt t =
+          let
+            val (g,l,r) = dest_cond t
+            val lth = Exn.capture (recurse ((ASSUME g |> EQT_INTRO) :: ctxt)) l
+            val rth = Exn.capture
+                        (recurse ((ASSUME (mk_neg g) |> EQF_INTRO) :: ctxt)) r
+          in
+            case (lth,rth) of
+                (Exn.Exn UNCHANGED, Exn.Exn UNCHANGED) => raise UNCHANGED
+              | _ =>
+                let
+                  val lth = Exn.release lth handle UNCHANGED => REFL l
+                  val rth = Exn.release rth handle UNCHANGED => REFL r
+                in
+                  MATCH_MP COND_cong
+                           (CONJ (DISCH g lth) (DISCH (mk_neg g) rth))
+                end
+          end
+    in
+      recurse [] t
     end
 
 val litresolve_conv = REPEATC elim_triv_literal_CONV
@@ -375,9 +401,7 @@ fun cases_prove case_const_def th k t =
     end
 
 fun attack_top_case stoppers k t =
-    if List.exists (fn pat => can (match_term pat) (lhs t)) stoppers then
-      k t
-    else if Pmatch.is_case thry (rhs t) then
+    if Pmatch.is_case thry (rhs t) then
       let
         val(cc,args) = strip_comb (rhs t)
       in
@@ -398,14 +422,21 @@ fun attack_top_case stoppers k t =
                                        ("No tyinfo for "^Thy^"$"^Tyop)
           in
             if is_var a then
-              cases_prove (TypeBasePure.case_def_of tyi)
-                          (ISPEC a (TypeBasePure.nchotomy_of tyi))
-                          (attack_top_case stoppers k)
-                          t
+              if List.exists (fn pat => can (match_term pat) (lhs t)) stoppers
+              then
+                k t
+              else
+                cases_prove (TypeBasePure.case_def_of tyi)
+                            (ISPEC a (TypeBasePure.nchotomy_of tyi))
+                            (attack_top_case stoppers k)
+                            t
             else
-              (RAND_CONV (PURE_REWRITE_CONV [TypeBasePure.case_def_of tyi] THENC
-                                    BETAS_CONV) pTHENC
-                         attack_top_case stoppers k) t
+              (RAND_CONV
+                 (FIRST_CONV
+                    (map REWR_CONV
+                         (CONJUNCTS (TypeBasePure.case_def_of tyi))) THENC
+                    BETAS_CONV) pTHENC
+               attack_top_case stoppers k) t handle HOL_ERR _ => k t
           end
       end
     else k t
@@ -492,8 +523,11 @@ fun one_line_ify heuristic def =
       val body = beta_conv (mk_comb(abs_body, selector_term))
       val (seltm, cases) = Pmatch.strip_case thry body
       val finisher =
+          PURE_REWRITE_CONV (literal_case_THM::conjs) THENC
           DEPTH_CONV BETA_CONV THENC
-          PURE_REWRITE_CONV (REFL_CLAUSE::COND_COND::conjs) pTHENC
+          TOP_DEPTH_CONV COND_SIMP_CONV THENC
+          PURE_REWRITE_CONV [REFL_CLAUSE]
+         pTHENC
           GENASSUME
       val neweqn = mk_eq(list_mk_comb(f, actual_args), body)
     in
@@ -507,10 +541,10 @@ fun one_line_ify heuristic def =
         in
           cases_prove pairTheory.pair_case_def aa_asm
                       (attack_top_case stoppers finisher)
-                      neweqn |> PROVE_HYP TRUTH
+                      neweqn
         end
       else
-        attack_top_case stoppers finisher neweqn |> PROVE_HYP TRUTH
+        attack_top_case stoppers finisher neweqn
     end handle FastExit th => th
 
 end
