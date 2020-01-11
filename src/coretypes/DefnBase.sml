@@ -454,12 +454,23 @@ fun one_line_ify heuristic def =
           end
       val fs_args0 = map munge_row conjs
           handle HOL_ERR _ => raise ERR "one_line_ify" "Malformed def'n"
-      val stoppers = map (list_mk_comb o #1) fs_args0
       val _ =
           case List.find (fn((_, row), _, _) => List.all is_var row) fs_args0 of
               NONE => ()
             | SOME (_, _, th) => raise FastExit th
-      val fs_args = map (fn (x,y,_) => (x,y)) fs_args0
+      fun is_pair_var t =
+          is_var t orelse
+          case Lib.total pairSyntax.dest_pair t of
+              NONE => false
+            | SOME (l,r) => is_pair_var l andalso is_pair_var r
+      val (fs_args, conjs) =
+          case List.find
+                 (fn ((_, row), _, _) => List.all is_pair_var row)
+                 fs_args0
+           of
+              NONE => (map (fn (x,y,_) => (x,y)) fs_args0, conjs)
+            | SOME (x,y,th) => ([(x,y)], [th])
+      val stoppers = map (list_mk_comb o #1) fs_args0
       val ((f,args1),rhs1) = hd fs_args
       val _ = List.all (aconv f o #1 o #1) fs_args orelse
               raise ERR "one_line_ify" "Clauses defining more than one function"
