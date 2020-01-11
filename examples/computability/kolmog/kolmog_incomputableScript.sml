@@ -1829,8 +1829,6 @@ Proof
   fs[unary_rec_fns_phi,rUMibl_recfn]
 QED
 
-(* Up to here *)
-
 Theorem extra_information1:
   univ_mach U ==> ∃c. ∀x y. (CKC U x y) <= (KC U x) + c
 Proof
@@ -1841,7 +1839,7 @@ Proof
   pop_assum (qspec_then `bl2n (pair a b)` (assume_tac o Q.GENL[`a`,`b`])) >> 
   fs[nblsnd_correct2]>> fs[univ_mach_def] >> 
   `∀a b. U (pair b (pair (n2bl i) a)) = SOME a` by fs[on2bl_def] >> 
-  assume_tac rUMibl_index >> fs[] >> rename [`∀x. Phi rUMi x = rUMibl [x]`]
+  assume_tac rUMibl_index >> fs[] >> rename [`∀x. Phi rUMi x = rUMibl [x]`] >>
 
   qabbrev_tac`j = rUMi o i` >> 
   `∀x y. Phi j (bl2n (pair x y)) = Phi rUMi (bl2n y)` by 
@@ -1851,51 +1849,35 @@ Proof
   `univ_mach U` by metis_tac[GSYM univ_mach_def] >>
   `∀x a b. Phi j (bl2n (pair x (pair a b))) = Phi (bl2n a) (bl2n b)` by fs[rUMibl_correct] >>
 
-
-  rw[univ_mach_pair_pair] >> 
-
-  `∃c. ∀x y. MIN_SET {LENGTH (pair i b) | Phi (bl2n i) (bl2n (pair y b)) = SOME (bl2n x)} <= c + MIN_SET {LENGTH (pair a (pair i b)) | Phi (bl2n i) (bl2n (pair a b)) = SOME (bl2n x)}` 
-    suffices_by (rw[] >> qexists_tac`c` >> rw[] >> 
-      first_x_assum (qspecl_then [`x`,`y`] mp_tac) >> qmatch_abbrev_tac`MIN_SET a <= c + MIN_SET b ==> MIN_SET d <= c + MIN_SET e` >> `a=d ∧ b=e` suffices_by fs[] >> 
-      rw[Abbr`a`,Abbr`b`,Abbr`d`,Abbr`e`,EXTENSION,EQ_IMP_THM,PULL_EXISTS] >- metis_tac[] >>
-      `(a = y) ∧ (p = (pair i' b))` by (fs[pair_11]) >>
-      metis_tac[]  ) >>
-
- 
- qexists_tac`2*(LENGTH (n2bl j)) + 1` >> rw[] >>
-  `{LENGTH p | U p = SOME x} <> {}` by 
-    (fs[EXTENSION] >> `{p | U p = SOME x} ≠ ∅` by fs[univ_rf_nonempty] >> 
-     fs[EXTENSION] >> metis_tac[] ) >>
-  `∃a b c. p = pair a (pair b c)` by metis_tac[optionTheory.NOT_NONE_SOME] >>
-  `U (pair y (pair (n2bl j) p)) = SOME x` by
-    (simp[] >> )
-
-  >> 
-
-  `MIN_SET {LENGTH p | U p = SOME x} ∈ {LENGTH p | U p = SOME x} ∧ ∀y. y ∈ {LENGTH p | U p = SOME x} ⇒ MIN_SET {LENGTH p | U p = SOME x} ≤ y` by fs[MIN_SET_LEM] >> fs[PULL_EXISTS] >> 
-  rfs[] >> 
-
- 
-  `{LENGTH p | U (pair y p) = SOME x} <> {}` by   (fs[EXTENSION] >> `{p | U (pair y p) = SOME x} ≠ ∅` by fs[univ_rf_pair_nonempty] >> 
-     fs[EXTENSION] >> metis_tac[] ) >>
-   `MIN_SET {LENGTH p | U (pair y p) = SOME x} ∈ {LENGTH p | U (pair y p) = SOME x} ∧ ∀z. z ∈ {LENGTH p | U (pair y p) = SOME x} ⇒ MIN_SET {LENGTH p | U (pair y p) = SOME x} ≤ z` by fs[MIN_SET_LEM] >> fs[univ_mach_def,PULL_EXISTS] >>
-  
-
-  `(2*(ℓ i)+1) + (MIN_SET {b | b ∈ {LENGTH p | U p = SOME x}} ) = 
-   MIN_SET {(2*(ℓ i) + 1) + b  | b ∈ {LENGTH p | U p = SOME x}}` by (irule MIN_SET_ladd >> fs[]) >> fs[] >>
-  irule SUBSET_MIN_SET >> rw[]
-  >- (fs[EXTENSION] >>metis_tac[] )
-  >- (fs[EXTENSION] >> `{p | U (pair y p) = SOME x} ≠ ∅` by fs[univ_rf_pair_nonempty] >>fs[EXTENSION] >> metis_tac[] )
-  >- (rw[SUBSET_DEF,EXTENSION] >> fs[univ_mach_def] >> qexists_tac`pair (n2bl i) x` >> rw[]
-      >- (simp[pair_LENGTH])
-      >- (`Phi i (fold [bl2n (pair y x)]) = SOME (pr1 nblsnd [bl2n (pair y x)])` by fs[] >>
-          fs[on2bl_def,nblsnd_correct]  )  )
+  qexists_tac`2*(LENGTH (n2bl j)) + 1` >> rw[] >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
+  >- (simp[EXTENSION] >> metis_tac[]) >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[] 
+  >-(fs[EXTENSION] >> `{p | U p = SOME x} ≠ ∅` by fs[univ_rf_nonempty] >> 
+     fs[EXTENSION] >> metis_tac[] ) >> fs[PULL_EXISTS] >>
+  `U (pair y (pair (n2bl j) p')) = SOME x` by metis_tac[] >> 
+  last_x_assum drule >> simp[pair_LENGTH]
 QED
+
+
+val nblfst_i_def =  new_specification ("nblfst_i_def",["nblfst_i"],MATCH_MP unary_rec_fns_phi recfn_nblfst |> SIMP_RULE (srw_ss()) [rec1_def] )
+
+(* Up to here *)
 
 Theorem extra_information2:
   univ_mach U ==> ∃c. ∀x y. KC U x <= KC U (pair x y) + c
 Proof
-
+  rw[KC_def,core_complexity_def] >>
+  fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >> 
+  `univ_rf U` by fs[univ_mach_rf] >> fs[univ_mach_def] >>
+  assume_tac rUMibl_index >> fs[] >> rename [`∀x. Phi rUMi x = rUMibl [x]`] >>
+  qabbrev_tac`j = nblfst_i o rUMi` >> 
+  qexists_tac`2*(LENGTH (n2bl j)) + 1` >> rw[] >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[] 
+  >-(fs[EXTENSION] >> `{p | U p = SOME x} ≠ ∅` by fs[univ_rf_nonempty] >> 
+     fs[EXTENSION] >> metis_tac[] ) >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[] 
+  >-(fs[EXTENSION] >> `{p | U p = SOME (pair x y)} ≠ ∅` by fs[univ_rf_nonempty] >> 
+     fs[EXTENSION] >> metis_tac[] ) >> fs[PULL_EXISTS] >> 
+  `U (`
 QED
 
 Theorem subadditivity1:
