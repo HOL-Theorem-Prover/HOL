@@ -96,4 +96,50 @@ Theorem oneline_complete2[local] = DefnBase.one_line_ify NONE complete_literal2
 val _ = assert (null o hyp) oneline_complete2
 val _ = assert is_oneline oneline_complete2
 
+Definition ADEL_def:
+  (ADEL [] z = []) /\
+  (ADEL ((x:'a,y:'b)::xs) z = if x = z then ADEL xs z else (x,y)::ADEL xs z)
+End
+
+Theorem oneline_ADEL[local] = DefnBase.one_line_ify NONE ADEL_def
+val _ = assert (null o hyp) oneline_ADEL
+val _ = assert is_oneline oneline_ADEL
+
+Definition bar_def:
+  bar = [] : 'a list
+End
+
+Theorem oneline_bar[local] = DefnBase.one_line_ify NONE bar_def
+val _ = assert (null o hyp) oneline_bar
+val _ = assert is_oneline oneline_bar
+
+Definition foo1_def:
+  foo1 = if bar = []:'a list then []:'a list else []
+End
+
+Theorem oneline_foo1[local] = DefnBase.one_line_ify NONE foo1_def
+val _ = assert (null o hyp) oneline_foo1
+val _ = assert is_oneline oneline_foo1
+
+Datatype:
+  tt = A1
+     | B1 tt
+     | C1 (tt option)
+     | D1 (tt list)
+     | E1 (tt # tt)
+End
+
+Definition test_def:
+  test A1 = [()] /\
+  test (B1 x) = test x ++ [()] /\
+  test (C1 NONE) = [] /\
+  test (C1 (SOME x)) = test x ++ REVERSE (test x) /\
+  test (D1 tts) = (case tts of [] => [(); ()]
+                   | (tt :: tts) => test (D1 tts) ++ test tt) /\
+  test (E1 (x, y)) = REVERSE (test x) ++ test y
+End
+
+Theorem oneline_test[local] = DefnBase.one_line_ify NONE test_def
+
+
 val _ = export_theory();

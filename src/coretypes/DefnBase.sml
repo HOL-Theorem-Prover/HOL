@@ -523,7 +523,8 @@ fun one_line_ify heuristic def =
       val body = beta_conv (mk_comb(abs_body, selector_term))
       val (seltm, cases) = Pmatch.strip_case thry body
       val finisher =
-          PURE_REWRITE_CONV (literal_case_THM::conjs) THENC
+          LAND_CONV (ONCE_REWRITE_CONV conjs) THENC
+          PURE_REWRITE_CONV [literal_case_THM] THENC
           DEPTH_CONV BETA_CONV THENC
           TOP_DEPTH_CONV COND_SIMP_CONV THENC
           PURE_REWRITE_CONV [REFL_CLAUSE]
