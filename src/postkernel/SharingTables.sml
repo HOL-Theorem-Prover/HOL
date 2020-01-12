@@ -6,6 +6,41 @@ open Term Type
 structure Map = Binarymap
 
 (* ----------------------------------------------------------------------
+    string sharing table
+   ---------------------------------------------------------------------- *)
+
+type stringtable =
+     {size : int, map : (string,int) Map.dict, list : string list}
+
+val CB = PP.block PP.CONSISTENT 0
+val out = PP.add_string
+val NL = PP.NL
+
+
+val empty_strtable : stringtable =
+    {size = 0, map = Map.mkDict String.compare, list = []}
+
+fun theoryout_strtable (strtable : stringtable) =
+    let
+      fun printstr s = out (Lib.mlquote s)
+    in
+      CB [
+        out "[",
+        PP.block PP.INCONSISTENT 1 (
+          PP.pr_list printstr [PP.add_break(1,0)] (List.rev (#list strtable))
+        ),
+        out "]"
+      ]
+    end
+
+fun new_string s (strtable as {size,list,map}:stringtable) =
+    case Map.peek(map, s) of
+        SOME i => (i, strtable)
+      | NONE => (size, {size = size + 1,
+                        list = s :: list,
+                        map = Map.insert(map,s,size)})
+
+(* ----------------------------------------------------------------------
     IDs (also known as Theory-X pairs, where X is a Name for a constant,
     or Tyops for types)
    ---------------------------------------------------------------------- *)
@@ -13,60 +48,45 @@ structure Map = Binarymap
 type id = {Thy : string, Other : string}
 type idtable = {idsize : int,
                 idmap : (id, int) Map.dict,
-                idlist : id list}
+                idlist : (int * int) list}
 
-fun make_shared_id (id : id) idtable =
+fun make_shared_id (id as {Thy,Other} : id) (strtable, idtable) =
     case Map.peek(#idmap idtable, id) of
-      SOME i => (i, idtable)
+      SOME i => (i, strtable, idtable)
     | NONE => let
         val {idsize, idmap, idlist} = idtable
+        val (thyi, strtable) = new_string Thy strtable
+        val (otheri, strtable) = new_string Other strtable
       in
-        (idsize, {idsize = idsize + 1,
-                  idmap = Map.insert(idmap, id, idsize),
-                  idlist = id :: idlist})
+        (idsize, strtable,
+         {idsize = idsize + 1, idmap = Map.insert(idmap, id, idsize),
+          idlist = (thyi,otheri) :: idlist})
       end
 fun id_compare ({Other = id1, Thy = thy1}, {Other = id2, Thy = thy2}) =
     case String.compare(id1, id2) of
       EQUAL => String.compare(thy1, thy2)
     | x => x
 
-
 val empty_idtable : idtable = {idsize = 0,
                                idmap = Map.mkDict id_compare,
                                idlist = []}
 
 
-val CB = PP.block PP.CONSISTENT 0
-val out = PP.add_string
-val NL = PP.NL
-
-fun output_idtable name (idtable : idtable) = let
-  val idlist = List.rev (#idlist idtable)
-  fun print_id {Thy, Other} =
-    out ("ID(" ^ Lib.mlquote Thy^ ", "^Lib.mlquote Other^")")
-  val print_ids = PP.pr_list print_id [PP.add_break(1,0)]
-in
-  CB [
-    out ("val "^name^" = "), NL,
-    out ("  let fun ID(thy,oth) = {Thy = thy, Other = oth}"), NL,
-    out ("  in Vector.fromList"), NL,
-    out ("["),
-    PP.block PP.INCONSISTENT 0 (print_ids idlist),
-    out "]", NL,
-    out "end;", NL
-  ]
-end
-
 fun theoryout_idtable (idtable : idtable) = let
   val idlist = List.rev (#idlist idtable)
-  fun print_id {Thy, Other} = out (Lib.mlquote Thy^ " " ^ Lib.mlquote Other)
+  fun print_id (Thyi, Otheri) =
+      out (Int.toString Thyi^ " " ^ Int.toString Otheri)
   val print_ids = PP.pr_list print_id [PP.add_string ",", PP.add_break(1,0)]
 in
-  CB [out "[",
-      PP.block PP.INCONSISTENT 1 (print_ids idlist),
-      out "]"
-  ]
+  CB [out "[", PP.block PP.INCONSISTENT 1 (print_ids idlist), out "]"]
 end
+
+fun build_id_vector strings intpairs =
+    Vector.fromList
+      (map (fn (thyi,otheri) => {Thy = Vector.sub(strings,thyi),
+                                 Other = Vector.sub(strings,otheri)})
+           intpairs)
+
 
 (* ----------------------------------------------------------------------
     Types
@@ -79,34 +99,34 @@ type typetable = {tysize : int,
                   tymap : (hol_type, int)Map.dict,
                   tylist : shared_type list}
 
-fun make_shared_type ty idtable table =
+fun make_shared_type ty strtable idtable table =
     case Map.peek(#tymap table, ty) of
-      SOME i => (i, idtable, table)
+      SOME i => (i, strtable, idtable, table)
     | NONE => let
       in
         if is_vartype ty then let
             val {tysize, tymap, tylist} = table
           in
-            (tysize, idtable,
+            (tysize, strtable, idtable,
              {tysize = tysize + 1,
               tymap = Map.insert(tymap, ty, tysize),
               tylist = TYV (dest_vartype ty) :: tylist})
           end
         else let
             val {Thy, Tyop, Args} = dest_thy_type ty
-            val (id, idtable0) =
-                make_shared_id {Thy = Thy, Other = Tyop} idtable
-            fun foldthis (tyarg, (results, idtable, table)) = let
-              val (result, idtable', table') =
-                  make_shared_type tyarg idtable table
+            val (id, strtable0, idtable0) =
+                make_shared_id {Thy = Thy, Other = Tyop} (strtable, idtable)
+            fun foldthis (tyarg, (results, strtable, idtable, table)) = let
+              val (result, strtable', idtable', table') =
+                  make_shared_type tyarg strtable idtable table
             in
-              (result::results, idtable', table')
+              (result::results, strtable', idtable', table')
             end
-            val (newargs, idtable', table') =
-                List.foldr foldthis ([], idtable0, table) Args
+            val (newargs, strtable', idtable', table') =
+                List.foldr foldthis ([], strtable0, idtable0, table) Args
             val {tysize, tymap, tylist} = table'
           in
-            (tysize, idtable',
+            (tysize, strtable', idtable',
              {tysize = tysize + 1,
               tymap = Map.insert(tymap, ty, tysize),
               tylist = TYOP (id :: newargs) :: tylist})
@@ -186,33 +206,33 @@ type termtable = {termsize : int,
 val empty_termtable : termtable =
     {termsize = 0, termmap = Map.mkDict Term.compare, termlist = [] }
 
-fun make_shared_term tm (tables as (idtable,tytable,tmtable)) =
+fun make_shared_term tm (tables as (strtable,idtable,tytable,tmtable)) =
     case Map.peek(#termmap tmtable, tm) of
       SOME i => (i, tables)
     | NONE => let
       in
         if is_var tm then let
             val (s, ty) = dest_var tm
-            val (ty_i, idtable, tytable) =
-                make_shared_type ty idtable tytable
+            val (ty_i, strtable, idtable, tytable) =
+                make_shared_type ty strtable idtable tytable
             val {termsize, termmap, termlist} = tmtable
           in
             (termsize,
-             (idtable, tytable,
+             (strtable, idtable, tytable,
               {termsize = termsize + 1,
                termmap = Map.insert(termmap, tm, termsize),
                termlist = TMV (s, ty_i) :: termlist}))
           end
         else if is_const tm then let
             val {Thy,Name,Ty} = dest_thy_const tm
-            val (id_i, idtable) =
-                make_shared_id {Thy = Thy, Other = Name} idtable
-            val (ty_i, idtable, tytable) =
-                make_shared_type Ty idtable tytable
+            val (id_i, strtable, idtable) =
+                make_shared_id {Thy = Thy, Other = Name} (strtable, idtable)
+            val (ty_i, strtable, idtable, tytable) =
+                make_shared_type Ty strtable idtable tytable
             val {termsize, termmap, termlist} = tmtable
           in
             (termsize,
-             (idtable, tytable,
+             (strtable, idtable, tytable,
               {termsize = termsize + 1,
                termmap = Map.insert(termmap, tm, termsize),
                termlist = TMC (id_i, ty_i) :: termlist}))
@@ -221,11 +241,11 @@ fun make_shared_term tm (tables as (idtable,tytable,tmtable)) =
             val (f, x) = dest_comb tm
             val (f_i, tables) = make_shared_term f tables
             val (x_i, tables) = make_shared_term x tables
-            val (idtable, tytable, tmtable) = tables
+            val (strtable, idtable, tytable, tmtable) = tables
             val {termsize, termmap, termlist} = tmtable
           in
             (termsize,
-             (idtable, tytable,
+             (strtable, idtable, tytable,
               {termsize = termsize + 1,
                termmap = Map.insert(termmap, tm, termsize),
                termlist = TMAp(f_i, x_i) :: termlist}))
@@ -234,11 +254,11 @@ fun make_shared_term tm (tables as (idtable,tytable,tmtable)) =
             val (v, body) = dest_abs tm
             val (v_i, tables) = make_shared_term v tables
             val (body_i, tables) = make_shared_term body tables
-            val (idtable, tytable, tmtable) = tables
+            val (strtable, idtable, tytable, tmtable) = tables
             val {termsize, termmap, termlist} = tmtable
           in
             (termsize,
-             (idtable, tytable,
+             (strtable, idtable, tytable,
               {termsize = termsize + 1,
                termmap = Map.insert(termmap, tm, termsize),
                termlist = TMAbs(v_i, body_i) :: termlist}))

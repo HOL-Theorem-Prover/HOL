@@ -37,9 +37,10 @@ fun load_thydata thyname path =
   let
     val raw_data = TheoryDat_Parser.read_dat_file {filename=path}
     val {thyname = fullthy as (thyname, _, _), parents, new_types,
-         idvector, ...} = raw_data
+         idvector, strvector, ...} = raw_data
     val _ = Theory.link_parents fullthy parents
     val _ = Theory.incorporate_types thyname new_types
+    val idvector = build_id_vector strvector idvector
     val tyvector = build_type_vector idvector (#shared_types raw_data)
     val _ = Theory.incorporate_consts thyname tyvector (#new_consts raw_data)
     val tmvector = build_term_vector idvector tyvector (#shared_terms raw_data)

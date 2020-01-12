@@ -10,9 +10,11 @@ sig
                        | TMAp of int * int
                        | TMAbs of int * int
 
+  type stringtable =
+       {size : int, map : (string,int) Map.dict, list : string list}
   type idtable = {idsize : int,
                   idmap : (id, int) Map.dict,
-                  idlist : id list}
+                  idlist : (int * int) list}
   type typetable = {tysize : int,
                     tymap : (Type.hol_type, int)Map.dict,
                     tylist : shared_type list}
@@ -20,19 +22,23 @@ sig
                     termmap : (Term.term, int)Map.dict,
                     termlist : shared_term list}
 
+  val empty_strtable : stringtable
   val empty_idtable : idtable
   val empty_tytable : typetable
   val empty_termtable : termtable
 
-  val make_shared_type : Type.hol_type -> idtable -> typetable ->
-                         (int * idtable * typetable)
+  val theoryout_strtable : stringtable PP.pprinter
+  val make_shared_type : Type.hol_type -> stringtable -> idtable -> typetable ->
+                         (int * stringtable * idtable * typetable)
 
-  val make_shared_term : Term.term -> (idtable * typetable * termtable) ->
-                         int * (idtable * typetable * termtable)
+  val make_shared_term : Term.term ->
+                         (stringtable * idtable * typetable * termtable) ->
+                         int * (stringtable * idtable * typetable * termtable)
 
-  val output_idtable : string -> idtable -> HOLPP.pretty
   val theoryout_idtable    : idtable PP.pprinter
 
+  val build_id_vector   : string Vector.vector -> (int * int) list ->
+                          id Vector.vector
   val build_type_vector : id Vector.vector -> shared_type list ->
                           Type.hol_type Vector.vector
 

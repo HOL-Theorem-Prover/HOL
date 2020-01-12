@@ -320,16 +320,18 @@ fun pp_thydata info_record = let
   val all_term_atoms_set =
       thml_atoms (map #2 thml) empty_tmset |> Term.all_atomsl thydata_tms
   open SharingTables
-  fun dotypes (ty, (idtable, tytable)) = let
-    val (_, idtable, tytable) = make_shared_type ty idtable tytable
+  fun dotypes (ty, (strtable, idtable, tytable)) = let
+    val (_, strtable, idtable, tytable) =
+        make_shared_type ty strtable idtable tytable
   in
-    (idtable, tytable)
+    (strtable, idtable, tytable)
   end
-  val (idtable, tytable) =
-      List.foldl dotypes (empty_idtable, empty_tytable) (map #2 constants)
+  val (strtable, idtable, tytable) =
+      List.foldl dotypes (empty_strtable, empty_idtable, empty_tytable)
+                 (map #2 constants)
   fun doterms (c, tables) = #2 (make_shared_term c tables)
-  val (idtable, tytable, tmtable) =
-      HOLset.foldl doterms (idtable, tytable, empty_termtable)
+  val (strtable, idtable, tytable, tmtable) =
+      HOLset.foldl doterms (strtable, idtable, tytable, empty_termtable)
                    all_term_atoms_set
 
   val jump = add_newline >> add_newline
@@ -446,6 +448,8 @@ fun pp_thydata info_record = let
       pp_thid_and_parents theory parents0 >> jump >>
       add_string "INCORPORATE_TYPES" >> add_newline >>
       pp_incorporate_types types >> jump >>
+      add_string "STRINGS" >> add_newline >>
+      lift theoryout_strtable strtable >> jump >>
       add_string "IDS" >> add_newline >>
       lift theoryout_idtable idtable >> jump >>
       add_string "TYPES" >> add_newline >>

@@ -235,12 +235,19 @@ Id ::= <string> <string>
 *)
 
 fun Id buf =
-    let val (thy,other) = (parseString buf, parseString buf)
+    let val (thy,other) = (parseInt buf, parseInt buf)
     in
-      {Thy = thy, Other = other}
+      (thy, other)
     end
-val IdVector =
-    Vector.fromList o tagged "IDS" (bracketed "IDS" (commafy isQString Id))
+val IdVector = tagged "IDS" (bracketed "IDS" (commafy isNum Id))
+
+(*
+Strings ::= 'STRINGS' NewStringList
+NewStringList ::= '[' <string>* ']'
+*)
+val StringVector  =
+    Vector.fromList o
+    tagged "STRINGS" (bracketed "STRINGS" (list isQString parseString))
 
 (*
 NewTypes ::= 'INCORPORATE_TYPES' NewTypeList
@@ -272,6 +279,7 @@ fun raw_read_dat buf : dat_info =
       val thyname = ThyName buf
       val parents = Parents buf
       val new_types = NewTypes buf
+      val strvector = StringVector buf
       val idvector = IdVector buf
       val shared_types = SharedTypes buf
       val new_consts = NewConsts buf
@@ -281,6 +289,7 @@ fun raw_read_dat buf : dat_info =
       val thydata = ThyData buf
     in
       {thyname = thyname, parents = parents, new_types = new_types,
+       strvector = strvector,
        idvector = idvector, shared_types = shared_types,
        new_consts = new_consts, shared_terms = shared_terms,
        theorems = theorems, classinfo = classinfo, thydata = thydata}
