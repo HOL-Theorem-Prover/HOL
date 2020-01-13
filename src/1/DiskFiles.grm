@@ -1,5 +1,6 @@
 open DiskFilesHeader HolKernel
-
+infix |>
+fun x |> f = f x
 fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
 
 fun mkidvector strs intps =
