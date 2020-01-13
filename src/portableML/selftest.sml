@@ -74,10 +74,9 @@ val _ = let
   open HOLsexp
   val el1 = Cons(Symbol "bar", Symbol "baz")
   val I = Integer
-  val el2 = fromList [Quote, fromList [I 1,I 2,I 3,String "\203a\"",
-                                       String"foo\n",
-                                       Symbol "1+", String "xy\028"]]
-  val t_out = fromList[Symbol "foo ", el1, el2]
+  val el2 = List [Quote, List [I 1,I 2,I 3,String "\203a\"", String"foo\n",
+                               Symbol "1+", String "xy\028"]]
+  val t_out = List[Symbol "foo ", el1, el2]
   val outstrm = TextIO.openOut "test.sexp"
   val _ = TextIO.output(outstrm,
                         ";; this is an automatically generated test file\n")
