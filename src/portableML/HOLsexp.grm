@@ -1,0 +1,48 @@
+open HOLsexp_dtype
+%%
+%name HOLsexp
+
+%nonterm sexp of HOLsexp_dtype.t
+       | sexp_seq of HOLsexp_dtype.t list * HOLsexp_dtype.t option
+       | dotfree_sexp_seq of HOLsexp_dtype.t list
+       | start of HOLsexp_dtype.t
+
+%term EOF
+    | SYMBOL of string
+    | STRING of string
+    | NUMBER of int
+    | LPAREN
+    | RPAREN
+    | DOT
+    | QUOTE
+%pos int
+%eop EOF
+%noshift EOF
+%verbose
+%pure
+%arg (stringbuffer) : string list ref
+%start start
+
+
+%%
+start : sexp (sexp)
+
+sexp : NUMBER (Integer NUMBER)
+     | SYMBOL (Symbol SYMBOL)
+     | STRING (String STRING)
+     | LPAREN sexp_seq RPAREN
+          (let val (sexps, lastopt) = sexp_seq
+           in
+             List.foldr (fn (t,A) => Cons(t,A))
+                        (case lastopt of
+                             NONE => Symbol "nil"
+                           | SOME t => t)
+                        sexps
+           end)
+     | QUOTE sexp
+          (HOLsexp.fromList [HOLsexp_dtype.Symbol "quote", sexp])
+
+sexp_seq : dotfree_sexp_seq DOT sexp ((dotfree_sexp_seq, SOME sexp))
+         | dotfree_sexp_seq ((dotfree_sexp_seq, NONE))
+
+dotfree_sexp_seq :  ([]) | sexp dotfree_sexp_seq (sexp::dotfree_sexp_seq)
