@@ -2,28 +2,32 @@ open DiskFilesHeader HolKernel
 
 fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
 
-type result = (id array *
-               pretype array *
-               pre_vc array *
-               (string * prethm) list)
+fun mkidvector strs intps =
+    List.foldr (fn ((thyi,namei), A) => {Thy = Vector.sub(strs,thyi),
+                                         Name = Vector.sub(strs,namei)} :: A)
+               []
+               intps |> Vector.fromList
 
 %%
 %name DiskFiles
-%keyword IDS TYPES TERMS THEOREMS
+%keyword STRINGS IDS TYPES TERMS THEOREMS
 
-%nonterm theoryfile of result
-       | ids_section of (int,id)Binarymap.dict
-       | idpair_list of (int,id)Binarymap.dict
-       | idpair of id
-       | types_section of (int,pretype)Binarymap.dict
+%nonterm theoryfile of parse_result
+       | strings_section of string vector
+       | string_list of string list
+       | ids_section of (int * int) list
+       | idpair_list1 of (int * int) list
+       | idpair_list of (int*int) list
+       | idpair of int * int
+       | types_section of pretype vector
        | tysize_spec
        | tmsize_spec
        | idsize_spec
-       | typedecl_list of (int,pretype)Binarymap.dict
+       | typedecl_list of pretype list
        | typedecl of pretype
        | intlist_ne of int list
-       | terms_section of (int,pre_vc)Binarymap.dict
-       | termdecl_list of (int,pre_vc)Binarymap.dict
+       | terms_section of pre_vc vector
+       | termdecl_list of pre_vc list
        | termdecl of pre_vc
        | theorems of (string * prethm) list
        | namethm_list of (string * prethm) list
@@ -40,7 +44,7 @@ type result = (id array *
 
 %term EOF | ID of string | DOLLAR | FULLSTOP | LPAREN | RPAREN | BACKSLASH |
       IDS | TYPES | TERMS | THEOREMS | LBRACKET | RBRACKET | NUMBER of int |
-      TYV | TYOP | TMV | TMC
+      TYV | TYOP | TMV | TMC | STRINGS | COMMA
 
 %eop EOF
 %pos int
@@ -51,29 +55,30 @@ type result = (id array *
 %start theoryfile
 
 %%
-theoryfile : ids_section types_section terms_section theorems
-                (ids_section, types_section, terms_section, theorems)
+theoryfile : strings_section ids_section types_section terms_section theorems
+                (strings_section, mkidvector strings_section ids_section,
+                 types_section, terms_section, theorems)
 
-ids_section : IDS idsize_spec idpair_list (idpair_list)
+strings_section: STRINGS LBRACKET string_list RBRACKET
+                    (Vector.fromList string_list)
 
-idsize_spec : NUMBER ()
+string_list : ([])
+            | ID string_list (ID :: string_list)
 
-idpair_list : (Binarymap.mkDict Int.compare)
-            | idpair_list idpair
-                 (Binarymap.insert(idpair_list, Binarymap.numItems idpair_list,
-                                   idpair))
+ids_section : IDS LBRACKET idpair_list RBRACKET (idpair_list)
 
-idpair : ID DOLLAR ID ( {Thy = ID1, Name = ID2 }  )
+idpair_list : ([])
+            | idpair_list1 (idpair_list1)
 
-types_section : TYPES tysize_spec typedecl_list (typedecl_list)
+idpair_list1 : idpair ([idpair])
+             | idpair COMMA idpair_list1 (idpair :: idpair_list1)
 
-tysize_spec : NUMBER ()
+idpair : NUMBER NUMBER ( (NUMBER1, NUMBER2)  )
 
-typedecl_list : (Binarymap.mkDict Int.compare)
-              | typedecl_list typedecl
-                  (Binarymap.insert(typedecl_list,
-                                    Binarymap.numItems typedecl_list,
-                                    typedecl))
+types_section : TYPES typedecl_list (Vector.fromList typedecl_list)
+
+typedecl_list : ([])
+              | typedecl typedecl_list (typedecl::typedecl_list)
 
 typedecl : TYV ID (ptv ID)
          | TYOP LBRACKET intlist_ne RBRACKET
@@ -82,15 +87,11 @@ typedecl : TYV ID (ptv ID)
 intlist_ne : NUMBER ([NUMBER])
            | NUMBER intlist_ne (NUMBER::intlist_ne)
 
-terms_section : TERMS tmsize_spec termdecl_list (termdecl_list)
+terms_section : TERMS termdecl_list (Vector.fromList termdecl_list)
 
-tmsize_spec : NUMBER ()
-
-termdecl_list : (Binarymap.mkDict Int.compare)
-              | termdecl_list termdecl
-                   (Binarymap.insert(termdecl_list,
-                                     Binarymap.numItems termdecl_list,
-                                     termdecl))
+termdecl_list : ([])
+              | termdecl termdecl_list
+                   (termdecl :: termdecl_list)
 
 termdecl : TMV LBRACKET ID NUMBER RBRACKET (ptm_v(ID, NUMBER))
          | TMC LBRACKET NUMBER NUMBER RBRACKET
@@ -118,4 +119,3 @@ base_term : LPAREN term_a RPAREN (term_a)
           | tmid (atom tmid)
 
 tmid :  NUMBER (NUMBER)
-

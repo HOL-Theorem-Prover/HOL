@@ -27,7 +27,7 @@ type tacdata =
   tacdep : (goal, lbl list) Redblackmap.dict
   }
 
-val empty_tacdata =
+val empty_tacdata : tacdata =
   {
   tacfea = dempty lbl_compare,
   tacfea_cthy = dempty lbl_compare,
@@ -72,21 +72,38 @@ fun read_list l =
 fun readcat_list l =
   let val (ll,cont) = read_list l in (List.concat ll, cont) end
 
-fun read_id l = case l of
-   [s1,s2] => {Thy = read_string s1, Other = read_string s2}
-  | _ => err_msg "read_id" l
+fun read_id l =
+    case l of
+        [s1,s2] => (valOf (Int.fromString s1), valOf (Int.fromString s2))
+      | _ => err_msg "read_id" l
 
 (* -------------------------------------------------------------------------
    Loading sharing tables
    ------------------------------------------------------------------------- *)
 
-fun load_idvector l = case l of
+fun load_strvector l =
+    case l of
+        "STRINGS" :: m =>
+        let
+          val (strings0, cont) = read_list m
+          val strings = case strings0 of [l] => l
+                                       | _ => err_msg "load_strvector" l
+          val strvector = Vector.fromList (map read_string strings)
+        in
+          (strvector, cont)
+        end
+      | _ => err_msg "load_strvector" l
+
+fun load_idvector strv l = case l of
    "IDS" :: m =>
     let
       val (ids,cont) = read_list m
-      val idvector = Vector.fromList (map read_id ids)
+      val intps = map read_id ids
+      val idlist = map (fn (thyi,nmi) => {Thy = Vector.sub(strv,thyi),
+                                          Other = Vector.sub(strv,nmi)})
+                       intps
     in
-      (idvector,cont)
+      (Vector.fromList idlist,cont)
     end
   | _ => err_msg "load_idvector" l
 
@@ -154,13 +171,14 @@ fun create_sharing_tables_termset termset =
     fun leaves (t, acc) = Term.all_atomsl [t] acc
     val allleaves = HOLset.foldl leaves empty_tmset termset
     fun doterms (t, tables) = #2 (make_shared_term t tables)
-    val (idtable,tytable,tmtable) =
-      HOLset.foldl doterms (empty_idtable, empty_tytable, empty_termtable)
+    val (strtable,idtable,tytable,tmtable) =
+      HOLset.foldl doterms
+        (empty_strtable, empty_idtable, empty_tytable, empty_termtable)
       allleaves
     val terml = HOLset.listItems termset
     val termdict = dnew Term.compare (number_snd 0 terml)
   in
-    ((terml,termdict), (idtable,tytable,tmtable))
+    ((terml,termdict), (strtable,idtable,tytable,tmtable))
   end
 
 fun create_sharing_tables_feavl feavl =
@@ -180,7 +198,7 @@ fun create_sharing_tables_feavl feavl =
 
 fun pp_tml tml =
   let
-    val ((_,termdict),(idtable,tytable,tmtable)) =
+    val ((_,termdict),(strtable,idtable,tytable,tmtable)) =
       create_sharing_tables_termset (HOLset.fromList Term.compare tml)
     fun pp_sml_list pfun l =
       PP.block INCONSISTENT 0 (
@@ -195,6 +213,8 @@ fun pp_tml tml =
   in
     PP.block CONSISTENT 0 (
       [
+        PP.add_string "STRINGS", PP.add_newline,
+        theoryout_strtable strtable,
         PP.add_string "IDS", PP.add_newline,
         theoryout_idtable idtable,
         PP.add_newline, PP.add_newline,
@@ -229,7 +249,7 @@ fun export_terml file tml =
 
 fun pp_feavl feavl =
   let
-    val ((terml,termdict),(idtable,tytable,tmtable)) =
+    val ((terml,termdict),(strtable,idtable,tytable,tmtable)) =
       create_sharing_tables_feavl feavl
 
     fun pp_sml_list pfun l =
@@ -271,6 +291,8 @@ fun pp_feavl feavl =
   in
     PP.block CONSISTENT 0 (
       [
+        PP.add_string"STRINGS", PP.add_newline,
+        theoryout_strtable strtable,
         PP.add_string"IDS", PP.add_newline,
         theoryout_idtable idtable,
         PP.add_newline, PP.add_newline,
@@ -312,7 +334,8 @@ fun import_terml file =
   let val l0 = partial_sml_lexer (String.concatWith " " (readl file)) in
     if l0 = [] then [] else
       let
-        val (idvector,l1) = load_idvector l0
+        val (strvector,l0') = load_strvector l0
+        val (idvector,l1) = load_idvector strvector l0'
         val (tyvector,l2) = load_tyvector idvector l1
         val (tmvector,l3) = load_tmvector idvector tyvector l2
         val (term_vector,l4) = read_terml tmvector l3
@@ -376,7 +399,8 @@ fun import_tacfea file =
   let val l0 = partial_sml_lexer (String.concatWith " " (readl file)) in
     if null l0 then dempty lbl_compare else
     let
-      val (idvector,l1) = load_idvector l0
+      val (strvector,l0) = load_strvector l0
+      val (idvector,l1) = load_idvector strvector l0
       val (tyvector,l2) = load_tyvector idvector l1
       val (tmvector,l3) = load_tmvector idvector tyvector l2
       val (term_vector,l4) = read_terml tmvector l3

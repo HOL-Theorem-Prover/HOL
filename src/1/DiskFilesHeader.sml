@@ -10,21 +10,21 @@ datatype pre_vc = ptm_v of string * int | ptm_c of int * int
 datatype preterm = app of preterm * preterm | abs of int * preterm
                  | atom of int
 type prethm = preterm list * preterm
-type 'a array = (int,'a)Binarymap.dict
 type parse_result =
-     id array * pretype array * pre_vc array * (string * prethm) list
+     string vector * id vector * pretype vector * pre_vc vector *
+     (string * prethm) list
 
 infix !
-fun (a ! n) = Binarymap.find (a, n)
-
+fun (a ! i) = Binarymap.find(a,i)
+type 'a array = (int,'a) Binarymap.dict
 fun push (a, item) = Binarymap.insert(a, Binarymap.numItems a, item)
 
-fun convert_pretype (ids : id array) (k, prety, acc : hol_type array) = let
+fun convert_pretype (ids : id vector) (prety, acc : hol_type array) = let
   val result =
       case prety of
         ptv s => mk_vartype s
       | ptop (opnum, arglist) => let
-          val {Thy,Name} = ids ! opnum
+          val {Thy,Name} = Vector.sub(ids, opnum)
           val args = map (fn n => acc ! n) arglist
         in
           mk_thy_type { Args = args, Thy = Thy, Tyop = Name }
@@ -34,14 +34,14 @@ in
 end
 
 fun convert_atom
-      (ids : id array, types : hol_type array)
-      (k, pre_atom, acc : term array)
+      (ids : id vector, types : hol_type array)
+      (pre_atom, acc : term array)
   = let
     val result =
         case pre_atom of
           ptm_v (s, tyn) => mk_var(s, types ! tyn)
         | ptm_c (idn, tyn) => let
-            val {Thy,Name} = ids ! idn
+            val {Thy,Name} = Vector.sub(ids, idn)
             val ty = types ! tyn
           in
             mk_thy_const {Thy = Thy, Name = Name, Ty = ty}
@@ -66,13 +66,13 @@ in
   mk_thm(hyps, c_t)
 end
 
-fun convert_prethms (ids, types, atoms, named_ths) = let
-  val types = Binarymap.foldl (convert_pretype ids)
-                              (Binarymap.mkDict Int.compare)
-                              types
-  val atoms = Binarymap.foldl (convert_atom (ids, types))
-                              (Binarymap.mkDict Int.compare)
-                              atoms
+fun convert_prethms (strs, ids, types, atoms, named_ths) = let
+  val types = Vector.foldl (convert_pretype ids)
+                           (Binarymap.mkDict Int.compare)
+                           types
+  val atoms = Vector.foldl (convert_atom (ids, types))
+                           (Binarymap.mkDict Int.compare)
+                           atoms
 in
   map (fn (s, pth) => (s, convert_thm(atoms, pth))) named_ths
 end

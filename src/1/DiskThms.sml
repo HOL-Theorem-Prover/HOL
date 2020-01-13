@@ -8,6 +8,8 @@ struct
     fun out s = add_string s
     val NL = add_newline
     val SPC = add_break(1,0)
+    fun cblock i = block PP.CONSISTENT i
+    fun iblock i = block PP.INCONSISTENT i
     fun qstr s = String.concat ["\"", String.toString s,  "\""]
     fun emit_string s = out (qstr s)
 
@@ -33,9 +35,11 @@ struct
 
     open SharingTables
     fun doterms (t, tables) = #2 (make_shared_term t tables)
-    val (idtable,tytable,tmtable) =
-        HOLset.foldl doterms (empty_idtable, empty_tytable, empty_termtable)
-                     allleaves
+    val (strtable,idtable,tytable,tmtable) =
+        HOLset.foldl
+          doterms
+          (empty_strtable,empty_idtable,empty_tytable,empty_termtable)
+          allleaves
     fun pr_sty sty =
         case sty of
           TYV s => out ("TYV" ^ qstr s)
@@ -55,7 +59,7 @@ struct
               out (Int.toString i) >> SPC >> out (Int.toString j ^ "]")
             )
         | _ => raise Fail "Expect only vars and consts in term table"
-    fun paren b p = if b then out "(" >> p >> out ")" else p
+    fun paren b p = if b then iblock 1 (out "(" >> p >> out ")") else p
     fun pr_term t = let
       fun recurse newcomb t =
           case dest_term t of
@@ -72,7 +76,7 @@ struct
               out (Int.toString i)
             end
     in
-      paren true (block PP.INCONSISTENT 2 (recurse false t))
+      iblock 1 (paren true (recurse false t))
     end
 
     fun pr_thm th =
@@ -82,32 +86,35 @@ struct
       block PP.CONSISTENT 2 (out (qstr n) >> SPC >> pr_thm th)
 
     val m =
-        block PP.CONSISTENT 0 (* whole file block *) (
-          block PP.CONSISTENT 2 (* IDs block *) (
-            block PP.CONSISTENT 2 (* IDs title block *) (
-              out "IDS" >> SPC >>
-              out (Int.toString (#idsize idtable))
-            ) >> SPC >>
-            block PP.INCONSISTENT 0 (
+        cblock 0 (* whole file block *) (
+          cblock 0 (* STRINGS *) (
+            out "STRINGS [" >>
+            pr_list (fn s => out (Lib.mlquote s)) SPC
+                    (List.rev (#list strtable)) >>
+            out "]"
+          ) >> SPC >>
+          cblock 2 (* IDs block *) (
+            cblock 2 (* IDs title block *) (
+              out "IDS" >> SPC >> out "["
+            ) >>
+            iblock 0 (
               pr_list
-                (fn {Thy,Other} => out (qstr Thy ^ "$" ^ qstr Other)) SPC
+                (fn (Thy,Other) => out (Int.toString Thy) >> SPC >>
+                                   out (Int.toString Other))
+                (out "," >> SPC)
                 (List.rev (#idlist idtable))
-            )
+            ) >> out "]"
           ) (* end IDs block *) >> SPC >>
 
           block PP.CONSISTENT 2 (* types block *) (
-            block PP.CONSISTENT 2 (* type title block *) (
-              out "TYPES" >> SPC >> out (Int.toString (#tysize tytable))
-            ) >> SPC >>
+            out "TYPES" >> SPC >>
             block PP.INCONSISTENT 0 (
               pr_list pr_sty SPC (List.rev (#tylist tytable))
             )
           ) >> SPC >> (* end types block *)
 
           block PP.CONSISTENT 2 (* terms block *) (
-            block PP.CONSISTENT 2 (* terms title block *) (
-              out "TERMS" >> SPC >> out (Int.toString (#termsize tmtable))
-            ) >> SPC >>
+            out "TERMS" >> SPC >>
             block PP.INCONSISTENT 0 (
               pr_list pr_stm SPC (List.rev (#termlist tmtable))
             )

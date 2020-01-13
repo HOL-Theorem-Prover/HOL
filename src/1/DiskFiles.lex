@@ -19,6 +19,7 @@ idstring=\" ([^\"\\] | "\\\"" | "\\\\" | "\\n")* \";
 [\ \t]+ => (continue());
 "$"   => (Tokens.DOLLAR(!pos,!pos));
 "."   => (Tokens.FULLSTOP(!pos,!pos));
+","   => (Tokens.COMMA(!pos,!pos));
 "\\"   => (Tokens.BACKSLASH(!pos,!pos));
 "("   => (Tokens.LPAREN(!pos,!pos));
 ")"   => (Tokens.RPAREN(!pos,!pos));
@@ -32,6 +33,7 @@ idstring=\" ([^\"\\] | "\\\"" | "\\\\" | "\\n")* \";
 "TYPES"   => (Tokens.TYPES(!pos,!pos));
 "TERMS"   => (Tokens.TERMS(!pos,!pos));
 "THEOREMS"   => (Tokens.THEOREMS(!pos,!pos));
+"STRINGS" => (Tokens.STRINGS(!pos,!pos));
 {integer} => (Tokens.NUMBER(Option.valOf (Int.fromString yytext),
                             !pos, !pos));
 {idstring} => (let val substr = String.substring(yytext,1,size yytext - 2)
