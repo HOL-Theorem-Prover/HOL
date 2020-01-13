@@ -40,7 +40,7 @@ sexp : NUMBER (Integer NUMBER)
                         sexps
            end)
      | QUOTE sexp
-          (HOLsexp.fromList [HOLsexp_dtype.Symbol "quote", sexp])
+          (Cons (Symbol "quote", Cons(sexp, Symbol "nil")))
 
 sexp_seq : dotfree_sexp_seq DOT sexp ((dotfree_sexp_seq, SOME sexp))
          | dotfree_sexp_seq ((dotfree_sexp_seq, NONE))

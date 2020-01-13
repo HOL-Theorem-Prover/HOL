@@ -7,12 +7,10 @@ struct
   val Nil = Symbol "nil"
   val Quote = Symbol "quote"
 
-  val fromList = List.foldr Cons Nil
+  val List = List.foldr Cons Nil
 
-  fun scan creader cs =
-      case Int.scan StringCvt.DEC creader cs of
-          SOME (i,cs) => SOME (Integer i, cs)
-        | NONE => raise Fail "bogus"
+  val scan = HOLsexp_parser.scan
+  val fromString = StringCvt.scanString scan
 
   fun is_list s =
       case s of

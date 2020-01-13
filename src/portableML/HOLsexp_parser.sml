@@ -37,4 +37,19 @@ struct
     raw_read_stream strm before TextIO.closeIn strm
   end
 
+  fun scan creader cs =
+      let
+        val csref = ref cs
+        val lexer = HOLsexpParser.makeLexer
+                      (fn _ => case creader (!csref) of
+                                   NONE => ""
+                                 | SOME (c,cs') => (csref := cs'; str c))
+                      (ref [] : string list ref)
+        val _ = HOLsexpLex.UserDeclarations.pos := 1
+      in
+        case Exn.capture invoke lexer of
+            Exn.Res r => SOME(r, !csref)
+          | Exn.Exn e => NONE
+      end
+
 end (* struct *)
