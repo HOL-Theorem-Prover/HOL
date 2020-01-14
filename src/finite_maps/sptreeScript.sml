@@ -2057,7 +2057,7 @@ Proof
 QED
 
 Theorem EVERY_combine_rle:
-  !P xs. EVERY (Q ∘ SND) (combine_rle P xs) <=> EVERY (Q ∘ SND) xs
+  !P xs. EVERY (Q o SND) (combine_rle P xs) <=> EVERY (Q o SND) xs
 Proof
   ho_match_mp_tac combine_rle_ind
   \\ rw [combine_rle_def]
@@ -2066,7 +2066,7 @@ Proof
 QED
 
 Theorem EVERY_empty_SND_combine:
-  !xs. EVERY (isEmpty ∘ SND) xs ==>
+  !xs. EVERY (isEmpty o SND) xs ==>
   xs = [] \/
   (?n. combine_rle isEmpty xs = [(n, LN)] /\ expand_rle xs = REPLICATE n LN)
 Proof
@@ -2094,7 +2094,7 @@ Proof
 QED
 
 Theorem expand_rle_map:
-  expand_rle (MAP (λ(i, x). (i, f x)) xs) = MAP f (expand_rle xs)
+  expand_rle (MAP (\(i, x). (i, f x)) xs) = MAP f (expand_rle xs)
 Proof
   simp [expand_rle_def, MAP_FLAT, MAP_MAP_o, combinTheory.o_DEF]
   \\ simp [pairTheory.ELIM_UNCURRY]
@@ -2157,8 +2157,8 @@ QED
 Theorem combine_rle_props:
   !xs. rle_wf xs ==>
   rle_wf (combine_rle isEmpty xs) /\
-  rle_wf (MAP (λ(i,t). (i,spt_right t)) (combine_rle isEmpty xs)) /\
-  rle_wf (MAP (λ(i,t). (i,spt_left t)) (combine_rle isEmpty xs))
+  rle_wf (MAP (\(i,t). (i,spt_right t)) (combine_rle isEmpty xs)) /\
+  rle_wf (MAP (\(i,t). (i,spt_left t)) (combine_rle isEmpty xs))
 Proof
   ho_match_mp_tac (Q.ISPEC `isEmpty` combine_rle_ind2)
   \\ simp [combine_rle_def, pairTheory.FORALL_PROD]
