@@ -2031,6 +2031,42 @@ QED
 
 (* up to here *)
 
+Definition nblTpow_def:
+  nblTpow = Cn (pr2 $-) [(λl. FUNPOW (λx. 2*x ) ((proj 0) l) ((K 1n) l)  );K 2]
+End
+
+Theorem nblTpow_correct:
+  nblTpow [n] = 2**n - 2
+Proof
+  Induct_on`n` >> fs[nblTpow_def,FUNPOW_SUC,EXP] >> 
+  `FUNPOW (λx. 2 * x) n 1 -2 + 2 = 2 ** n -2 + 2` by fs[] >> Cases_on`n=0` >> simp[]
+  `FUNPOW (λx. 2 * x) n 1 = 2 ** n` by (simp[CANCEL_SUB])
+QED
+
+Definition nblpair_def:
+  nblpair x y = nblconcat (nblconcat (nblconcat ) x) y 
+End
+
+Definition nblpair_flip_def:
+  nblpair_flip = recCn (SOME o pr2 nblpair) [SOME o pr1 nblsnd;rec1 (SOME o nblfst)]
+End
+
+Theorem recfn_nblpair_flip:
+  recfn nblpair_flip 1
+Proof
+  simp[nblpair_to_concat_def] >> irule recfnCn >> rw[recfn_nblsnd,recfn_nblfst,primrec_recfn]
+QED
+
+Theorem nblpair_flip_correct[simp]:
+  nblpair_flip [bl2n (pair x y)] = SOME (bl2n (pair y x))
+Proof
+  simp[nblpair_to_concat_def,recCn_def,nblfst_correct,nblsnd_correct2]
+QED
+
+val nblpf_i_def =  new_specification ("nblpf_i_def",["nblpf_i"],MATCH_MP unary_rec_fns_phi recfn_nblpair_flip)
+
+
+
 Theorem subadditivity2:
   univ_mach U ==> ∃c. ∀x y. KC U (pair x y) <= KC U x +  CKC U y x + c
 Proof
@@ -2066,25 +2102,28 @@ QED
 
 
 Theorem symmetry_of_information1a:
-  unif_mach U ==> ∃c. ∀x y.  CKC U x (pair y (KC U y)) + KC U y <= KC U (pair x y) + c
+  univ_mach U ==> ∃c. ∀x y.  CKC U x (pair y (KC U y)) + KC U y <= KC U (pair x y) + c
 Proof
 
 QED
 
 Theorem symmetry_of_information1b:
-  unif_mach U ==> ∃c. ∀x y. KC U (pair x y) <=  CKC U x (pair y (KC U y)) + KC U y + c
+  univ_mach U ==> ∃c. ∀x y. KC U (pair x y) <=  CKC U x (pair y (KC U y)) + KC U y + c
 Proof
 
 QED
 
 Theorem symmetry_of_information2:
-  unif_mach U ==> ∃c. ∀x y. KC U (pair x y) <= KC U (pair y x) + c
+  univ_mach U ==> ∃c. ∀x y. KC U (pair x y) <= KC U (pair y x) + c
 Proof
-
+  rw[KC_def,core_complexity_def] >>
+  fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >> 
+  `univ_rf U` by fs[univ_mach_rf] >> fs[univ_mach_def] >>
+  
 QED
 
 Theorem symmetry_of_information2b:
-  unif_mach U ==> ∃c. ∀x y.  CKC U y (pair x (KC U x)) + KC U x <= 
+  univ_mach U ==> ∃c. ∀x y.  CKC U y (pair x (KC U x)) + KC U x <= 
                            CKC U x (pair y (KC U y)) + KC U y + c
 Proof
 
