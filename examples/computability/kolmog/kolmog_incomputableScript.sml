@@ -1993,7 +1993,6 @@ Proof
   fs[Excl"num_bool_inv.1"]
 QED
 
-(* up to here *)
 
 Theorem extra_information2:
   univ_mach U ==> ∃c. ∀x y. KC U x <= KC U (pair x y) + c
@@ -2001,30 +2000,36 @@ Proof
   rw[KC_def,core_complexity_def] >>
   fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >> 
   `univ_rf U` by fs[univ_mach_rf] >> fs[univ_mach_def] >>
-  assume_tac rUMibl_index >> fs[] >> rename [`∀x. Phi rUMi x = rUMibl [x]`] >>
-  qabbrev_tac`j = nblfst_i o rUMi` >> 
-  qexists_tac`2*(LENGTH (n2bl j)) + 1` >> rw[] >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[] 
+  assume_tac rUMibl_index >>  assume_tac composition_ub >> fs[] >> 
+  rename [`∀x. Phi rUMi x = rUMibl [x]`,`∀a b. ℓ (a ∘ b) ≤ Ccom + (ℓ a + ℓ b)`] >>
+  qabbrev_tac`j = nblfst_i` >>  (* o rUMi *)
+  qexists_tac`2*(LENGTH (n2bl j)) + 1 + 2*Ccom` >> rw[] >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[] 
   >-(fs[EXTENSION] >> `{p | U p = SOME x} ≠ ∅` by fs[univ_rf_nonempty] >> 
      fs[EXTENSION] >> metis_tac[] ) >>
   DEEP_INTRO_TAC MIN_SET_ELIM >> rw[] 
   >-(fs[EXTENSION] >> `{p | U p = SOME (pair x y)} ≠ ∅` by fs[univ_rf_nonempty] >> 
      fs[EXTENSION] >> metis_tac[] ) >> fs[PULL_EXISTS] >> 
-
-  `∃a b c. p' = pair a (pair b c)` by 
-    (Cases_on`∃a b c. p' = pair a (pair b c)` >> fs[] >- metis_tac[] >> 
-     `U p' = NONE` by metis_tac[] >> fs[]) >>
-  rw[] >>
-  `Phi (bl2n b) (bl2n (pair a c)) = SOME (bl2n (pair x y))` by 
-  `Phi (j o (bl2n b)) (bl2n (pair a c)) = SOME (bl2n x)` by 
-
-  `∀a b. Phi j (bl2n (pair a b)) = Phi k (bl2n a)` by 
-    (simp[Abbr`j`,nblfst_i_def,nblfst_correct,computable_composition_def])
-
-  `U (pair (n2bl j) p') = SOME x` by (fs[])
+  rename[`U pp = SOME (pair x y)`]  >>
+  `∃a b c. pp = pair a (pair b c)` by metis_tac[optionTheory.NOT_SOME_NONE] >> rw[] >>
+  `U (pair a (pair (n2bl (j o bl2n b)) c) ) = SOME x` by 
+    (simp[computable_composition_def] >> rfs[on2bl_SOME] >> `z = bl2n (pair x y)` by simp[] >> 
+     rw[] >> simp[Abbr`j`,computable_composition_def] >> qexists_tac`bl2n x` >> simp[nblfst_i_def,nblfst_correct]) >>
+  `LENGTH (pair a (pair (n2bl (j ∘ bl2n b)) c)) <= 2*Ccom + (2 * ℓ j + (LENGTH (pair a (pair b c)) + 1))` suffices_by metis_tac[LESS_EQ_TRANS] >> simp[pair_LENGTH] >> 
+  `ℓ (j ∘ bl2n b) <= Ccom + LENGTH b + ℓ j` suffices_by fs[] >>
+  `ℓ (j ∘ bl2n b) <= Ccom + LENGTH (n2bl (bl2n b)) + ℓ j` suffices_by fs[] >>
+   fs[Excl"num_bool_inv.1"]
 QED
 
 
+Theorem subadditivity3:
+  univ_mach U ==> ∃c. ∀x y. KC U x + CKC U y x <= KC U x + KC U y + c
+Proof
+  strip_tac >> `∃c. ∀x y. CKC U y x ≤ KC U y + c` 
+    suffices_by (rw[] >> qexists_tac`c` >> rw[LE_ADD_LCANCEL] >> `CKC U y x <= KC U y + c` by fs[] >> simp[] ) >>
+  metis_tac[extra_information1]
+QED
 
+(* up to here *)
 
 Theorem subadditivity2:
   univ_mach U ==> ∃c. ∀x y. KC U (pair x y) <= KC U x +  CKC U y x + c
@@ -2057,11 +2062,7 @@ Proof
   last_x_assum drule >> simp[pair_LENGTH] 
 QED
 
-Theorem subadditivity3:
-  univ_mach U ==> ∃c. ∀x y. KC U x +  CKC U y x <= KC U x + KC U y + c
-Proof
 
-QED
 
 
 Theorem symmetry_of_information1a:
