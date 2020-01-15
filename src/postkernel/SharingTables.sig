@@ -43,7 +43,6 @@ sig
   val dec_strings  : string Vector.vector HOLsexp.decoder
   val dec_ids      : string Vector.vector -> id Vector.vector HOLsexp.decoder
 
-  val theoryout_strtable : stringtable PP.pprinter
   val make_shared_type : Type.hol_type -> stringtable -> idtable -> typetable ->
                          (int * stringtable * idtable * typetable)
 
@@ -51,24 +50,12 @@ sig
                          (stringtable * idtable * typetable * termtable) ->
                          int * (stringtable * idtable * typetable * termtable)
 
-  val theoryout_idtable    : idtable PP.pprinter
-
   val build_id_vector   : string Vector.vector -> (int * int) list ->
                           id Vector.vector
   val build_type_vector : id Vector.vector -> shared_type list ->
                           Type.hol_type Vector.vector
 
-  val output_typetable : {idtable_nm : string, tytable_nm : string} ->
-                         typetable -> PP.pretty
-  val theoryout_typetable    : typetable PP.pprinter
-
   val build_term_vector : id Vector.vector -> Type.hol_type Vector.vector ->
                           shared_term list -> Term.term Vector.vector
-
-  val output_termtable : {idtable_nm : string, tytable_nm : string,
-                          termtable_nm : string} ->
-                         termtable -> PP.pretty
-
-  val theoryout_termtable    : termtable PP.pprinter
 
 end

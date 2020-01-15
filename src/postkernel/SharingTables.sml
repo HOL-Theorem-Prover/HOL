@@ -19,11 +19,6 @@ type idtable = {idsize : int,
                 idmap : (id, int) Map.dict,
                 idlist : (int * int) list}
 
-val CB = PP.block PP.CONSISTENT 0
-val out = PP.add_string
-val NL = PP.NL
-
-
 val empty_strtable : stringtable =
     {size = 0, map = Map.mkDict String.compare, list = []}
 
@@ -189,28 +184,6 @@ in
   Vector.fromList (map #2 (Map.listItems tymap))
 end
 
-fun output_typetable {idtable_nm,tytable_nm} (tytable : typetable) = let
-  fun output_shtype shty =
-      case shty of
-        TYV s => out ("TYV "^Lib.mlquote s)
-      | TYOP args =>
-        out ("TYOP ["^
-             String.concat (Lib.commafy (map Int.toString args))^ "]")
-  val output_shtypes = PP.pr_list output_shtype [out ",", PP.add_break (1,0)]
-in
-  CB [
-    out "local open SharingTables", NL, out "in", NL,
-    out ("val "^tytable_nm^" = build_type_vector "^idtable_nm), NL,
-    out ("["),
-    PP.block PP.INCONSISTENT 0 (output_shtypes (List.rev (#tylist tytable))),
-    out "]", NL, out "end", NL
-  ]
-end
-
-fun theoryout_typetable (tytable : typetable) =
-    HOLsexp.printer (enc_tytable tytable)
-
-
 (* ----------------------------------------------------------------------
     Terms
    ---------------------------------------------------------------------- *)
@@ -336,31 +309,5 @@ fun build_term_vector idv tyv shtmlist = let
 in
   Vector.fromList (map #2 (Map.listItems tmmap))
 end
-
-fun output_termtable names (tmtable: termtable) = let
-  val {idtable_nm,tytable_nm,termtable_nm} = names
-  fun ipair_string (x,y) = "("^Int.toString x^", "^Int.toString y^")"
-  fun output_shtm shtm =
-    case shtm of
-        TMV (s, tyn) => out ("TMV(" ^ Lib.mlquote s ^", "^Int.toString tyn^")")
-      | TMC p => out ("TMC"^ipair_string p)
-      | TMAp p => out ("TMAp"^ipair_string p)
-      | TMAbs p => out ("TMAbs"^ipair_string p)
-  val output_shtms = PP.pr_list output_shtm [out ",", PP.add_break(1,0)]
-in
-  CB [
-    out ("local open SharingTables"), NL,
-    out ("in"), NL,
-    out ("val "^termtable_nm^" = build_term_vector "^idtable_nm^" "^
-         tytable_nm), NL,
-    out ("["),
-    PP.block PP.INCONSISTENT 0 (output_shtms (List.rev (#termlist tmtable))),
-    out ("]"), NL,
-    out "end", NL
-  ]
-end;
-
-fun theoryout_termtable (tmtable: termtable) =
-    HOLsexp.printer (enc_tmtable tmtable)
 
 end; (* struct *)
