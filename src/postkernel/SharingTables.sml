@@ -421,8 +421,10 @@ fun enc_sdata (sd as SDI{strtable,idtable,tytable,tmtable,exp}) =
       fun enc_thm(s,th) =
           let
             val (tag, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
+            val i = Map.find(#map strtable, s)
           in
-            pair3_encode (String,enc_tag,list_encode tm_encode) (s, tag, w::asl)
+            pair3_encode (Integer,enc_tag,list_encode tm_encode)
+                         (i, tag, w::asl)
           end
     in
 
@@ -456,12 +458,12 @@ type sharing_data_out =
 
 type depinfo = {head : string * int, deps : (string * int list) list}
 
-fun read_thm tmvector {name,depinfo:depinfo,tagnames,encoded_hypscon} =
+fun read_thm strv tmvector {name,depinfo:depinfo,tagnames,encoded_hypscon} =
     let
       val dd = (#head depinfo, #deps depinfo)
       val terms = map (Term.read_raw tmvector) encoded_hypscon
     in
-      (name, Thm.disk_thm((dd,tagnames), terms))
+      (Vector.sub(strv, name), Thm.disk_thm((dd,tagnames), terms))
     end
 
 val dep_decode = let
@@ -481,11 +483,11 @@ val deptag_decode = let open HOLsexp in
 val thm_decode =
     let
       open HOLsexp
-      fun thmmunge(s,(di,tags),tms) =
-          {name = s, depinfo = di, tagnames = tags, encoded_hypscon = tms}
+      fun thmmunge(i,(di,tags),tms) =
+          {name = i, depinfo = di, tagnames = tags, encoded_hypscon = tms}
     in
       Option.map thmmunge o
-      pair3_decode (string_decode, deptag_decode, list_decode string_decode)
+      pair3_decode (int_decode, deptag_decode, list_decode string_decode)
     end
 
 val prsexp = HOLPP.pp_to_string 70 HOLsexp.printer
@@ -540,7 +542,7 @@ fun dec_sdata {with_strings,with_stridty} t =
             val nmtys = map (fn (s,i) => (s, Vector.sub(tyv,i))) raw_nmtys
             val untms = map (Term.read_raw tmv) raw_untms
             val nmtms = map (fn (nm,s) => (nm, Term.read_raw tmv s)) raw_nmtms
-            val thms = map (read_thm tmv) rawthms
+            val thms = map (read_thm strv tmv) rawthms
           in
             SOME (strv,idv,tyv,tmv,
                   {named_types = nmtys, unnamed_types = untys,
