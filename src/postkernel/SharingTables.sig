@@ -76,8 +76,8 @@ sig
 
   val dec_sdata :
       {with_strings: (int -> string) -> unit,
-       with_stridty: (int -> string) * (int -> id) * (int -> Type.hol_type) ->
-                      unit} ->
+       with_stridty:
+         (int -> string) * (int -> id) * Type.hol_type Vector.vector -> unit} ->
       sharing_data_out HOLsexp.decoder
   val export_from_sharing_data : sharing_data_out -> extract_data
   val read_term : sharing_data_out -> string -> Term.term

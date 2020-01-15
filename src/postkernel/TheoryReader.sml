@@ -15,11 +15,11 @@ type hol_type = Type.hol_type
 
 open HolKernel SharingTables
 
-fun temp_encoded_update tmvector thyname {data,ty} =
+fun temp_encoded_update sdata thyname {data,ty} =
     Theory.LoadableThyData.temp_encoded_update {
       thy = thyname,
       thydataty = ty,
-      read = Term.read_raw tmvector,
+      read = read_term sdata,
       data = data
     }
 
@@ -111,12 +111,6 @@ fun load_thydata thyname path =
         case raw_data of
             Cons(t1,t2) => (t1,t2)
           | _ => raise TheoryReader "No thy-parentage prefix"
-    val [inctypes_data, stringtable_data, idtable_data, typetable_data,
-         incconsts_data, termtable_data, theorems_data, classes_data,
-         thydata_data] =
-        dtaglist ["incorporate-types", "string-table",
-                  "id-table", "type-table", "incorporate-consts", "term-table",
-                  "theorems", "thm-classes", "loadable-thydata"] rest
     val dec_thy =
         pair3_decode (string_decode,
                       Option.map Arbnum.fromString o string_decode,
@@ -128,50 +122,38 @@ fun load_thydata thyname path =
     val (fullthy as (thyname, _, _)) = force "thyname" dec_thy thy_data
     val parents = force "parents" (list_decode dec_thy) parents_data
     val _ = Theory.link_parents fullthy parents
-
-    val new_types =
-        force "incorporate-types"
-              (list_decode (pair_decode(string_decode, int_decode)))
-              inctypes_data
-    val _ = Theory.incorporate_types thyname new_types
-
-    val strvector =
-        Vector.fromList
-          (force "string-table" (list_decode string_decode) stringtable_data)
-
-    val idvector =
-        build_id_vector strvector (
-          force "id-table" (list_decode (pair_decode(int_decode, int_decode)))
-                idtable_data
-        )
-
-    val tyvector =
-        build_type_vector idvector (
-          force "type-table" (list_decode shared_type_decode) typetable_data
-        )
-
-    val _ =
-        Theory.incorporate_consts thyname tyvector (
-          force "incorporate-consts"
-                (list_decode (pair_decode(string_decode,int_decode)))
-                incconsts_data
-        )
-
-    val tmvector =
-        build_term_vector idvector tyvector (
-          force "term-table" (list_decode shared_term_decode) termtable_data
-        )
-    val named_thms =
-        map (read_thm tmvector) (
-          force "theorems" (list_decode thm_decode) theorems_data
-        )
+    val (core_data, incorporate_data, classinfo, thydata_data) =
+        force "toplevel_decode" (
+          pair4_decode (
+            SOME,
+            tagged_decode "incorporate" SOME,
+            tagged_decode "thm-classes" (
+              list_decode (pair_decode(string_decode, class_decode))
+            ),
+            tagged_decode "loadable-thydata" SOME
+          )
+        ) rest
+    val (new_types, new_consts) =
+        force "incorporate_decode" (
+          pair_decode(
+            tagged_decode "incorporate-types" (
+              list_decode (pair_decode (string_decode, int_decode))
+            ),
+            tagged_decode "incorporate-consts" (
+              list_decode (pair_decode (string_decode, int_decode))
+            )
+          )
+        ) incorporate_data
+    fun with_strings _ = Theory.incorporate_types thyname new_types
+    fun with_stridty (str,id,tyv) =
+        Theory.incorporate_consts thyname tyv new_consts
+    val share_data = force "decoding core-data" (
+          dec_sdata {with_strings = with_strings, with_stridty = with_stridty}
+        ) core_data
+    val {theorems = named_thms,...} = export_from_sharing_data share_data
     val thmdict = Redblackmap.fromList String.compare named_thms
     val _ =
         let
-          val classinfo =
-              force "thm-classes"
-                    (list_decode(pair_decode(string_decode,class_decode)))
-                    classes_data
           fun mapthis (n,c) =
               let val th =
                       Redblackmap.find (thmdict,n)
@@ -183,7 +165,7 @@ fun load_thydata thyname path =
           DB.bindl thyname (map mapthis classinfo)
         end
     val _ =
-        app (temp_encoded_update tmvector thyname) (
+        app (temp_encoded_update share_data thyname) (
           force "thydata" (
             Option.map (map (fn (ty,ds) => {data=String.concat ds,ty=ty})) o
             list_decode(pair_decode(string_decode, list_decode string_decode))

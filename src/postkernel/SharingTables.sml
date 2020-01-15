@@ -354,6 +354,7 @@ fun add_types tys (SDI{strtable,idtable,tytable,tmtable,exp}) =
 
 fun add_terms tms (SDI{strtable,idtable,tytable,tmtable,exp}) =
     let
+      val tms = Term.all_atomsl tms empty_tmset |> HOLset.listItems
       val (strtable,idtable,tytable,tmtable) =
           List.foldl (fn (t,tables) => #2 (make_shared_term t tables))
                      (strtable,idtable,tytable,tmtable)
@@ -529,12 +530,11 @@ fun dec_sdata {with_strings,with_stridty} t =
         | SOME ((strv,intplist,shtylist,shtmlist),
                 ((raw_untys, raw_nmtys), (raw_untms, raw_nmtms), rawthms)) =>
           let
+            fun sub v i = Vector.sub(v,i)
             val _ = with_strings (fn i => Vector.sub(strv,i))
             val idv = build_id_vector strv intplist
             val tyv = build_type_vector idv shtylist
-            val _ = with_stridty ((fn i => Vector.sub(strv, i)),
-                                  (fn i => Vector.sub(idv, i)),
-                                  (fn i => Vector.sub(tyv, i)))
+            val _ = with_stridty (sub strv, sub idv, tyv)
             val tmv = build_term_vector idv tyv shtmlist
             val untys = map (fn i => Vector.sub(tyv,i)) raw_untys
             val nmtys = map (fn (s,i) => (s, Vector.sub(tyv,i))) raw_nmtys

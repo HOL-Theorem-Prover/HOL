@@ -310,30 +310,13 @@ fun pp_thydata info_record = let
       List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
                       parents0
   val thml = axioms@definitions@theorems
-  fun thm_atoms acc th = Term.all_atomsl (Thm.concl th :: Thm.hyp th) acc
-
-  fun thml_atoms thlist acc =
-      case thlist of
-          [] => acc
-        | (th::ths) => thml_atoms ths (thm_atoms acc th)
-
-
-  val all_term_atoms_set =
-      thml_atoms (map #2 thml) empty_tmset |> Term.all_atomsl thydata_tms
   open SharingTables
-  fun dotypes (ty, (strtable, idtable, tytable)) = let
-    val (_, strtable, idtable, tytable) =
-        make_shared_type ty strtable idtable tytable
-  in
-    (strtable, idtable, tytable)
-  end
-  val (strtable, idtable, tytable) =
-      List.foldl dotypes (empty_strtable, empty_idtable, empty_tytable)
-                 (map #2 constants)
-  fun doterms (c, tables) = #2 (make_shared_term c tables)
-  val (strtable, idtable, tytable, tmtable) =
-      HOLset.foldl doterms (strtable, idtable, tytable, empty_termtable)
-                   all_term_atoms_set
+
+  val share_data = build_sharing_data {
+        named_terms = [], named_types = [], unnamed_terms = [],
+        unnamed_types = [], theorems = thml
+      }
+  val share_data = add_terms thydata_tms share_data
 
   local open HOLsexp in
   fun enc_thid(s,i,j) =
@@ -342,73 +325,24 @@ fun pp_thydata info_record = let
       curry (pair_encode(enc_thid, list_encode enc_thid))
   end (* local *)
 
-  fun pp_thid_and_parents theory parents =
-      lift HOLsexp.printer (enc_thid_and_parents theory parents)
-
   fun enc_incorporate_types types =
       let open HOLsexp
       in
         tagged_encode "incorporate-types"
                       (list_encode (pair_encode(String,Integer))) types
       end
-  val pp_incorporate_types = lift HOLsexp.printer o enc_incorporate_types
 
   fun enc_incorporate_constants constants =
       let open HOLsexp
       in
         tagged_encode "incorporate-consts"
-         (list_encode
-            (pair_encode(String,
-                         Integer o (fn ty => Map.find(#tymap tytable, ty)))))
-         constants
+                      (list_encode
+                         (pair_encode(String, Integer o write_type share_data)))
+                      constants
       end
-  val pp_incorporate_constants =
-      lift HOLsexp.printer o enc_incorporate_constants
-
-  fun pparent (s,i,j) = Thry s
-  val term_to_string = Term.write_raw (fn t => Map.find(#termmap tmtable, t))
-
-  val enc_tm = HOLsexp.String o term_to_string
-  val pp_tm = lift HOLsexp.printer o enc_tm
-
-  fun enc_dep ((s,n),dl) =
-      let open HOLsexp
-        fun f (thy,l) = Cons(String thy, list_encode Integer l)
-      in
-        list_encode f ((s,[n]) :: dl)
-      end
-
-  val pp_dep = lift HOLsexp.printer o enc_dep
-
-  fun dest_dep d = case d of
-    DEP_SAVED (did,thydl) => (did,thydl)
-  | DEP_UNSAVED dl     => raise ERR "string_of_dep" ""
-
-  fun enc_tag tag =
-      let open HOLsexp
-        val dep = Tag.dep_of tag
-        val ocl = fst (Tag.dest_tag tag)
-      in
-        pair_encode(enc_dep o dest_dep, list_encode String) (dep,ocl)
-      end
-
-  val pp_tag = lift HOLsexp.printer o enc_tag
-
-  fun enc_thm(s,th) =
-      let open HOLsexp
-        val (tag, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
-      in
-        pair3_encode (String,enc_tag,list_encode enc_tm) (s, tag, w::asl)
-      end
-
-
-  val encoded_theorems =
-      HOLsexp.tagged_encode "theorems" (HOLsexp.list_encode enc_thm)
-                    (List.filter (fn (s,_) => not (is_temp_binding s)) thml)
-  val pp_theorems = lift HOLsexp.printer encoded_theorems
 
   val enc_db = let open HOLsexp in pair_encode (String,Symbol) end
-  fun enc_dblist () =
+  val enc_dblist =
      let open HOLsexp
        fun check cl =
            List.mapPartial (fn (nm, _) => if is_temp_binding nm then NONE
@@ -430,8 +364,7 @@ fun pp_thydata info_record = let
       end
 
   fun list_loadable tmwrite thymap =
-    Binarymap.foldl (fn (k, data, rest) => (k, data tmwrite) :: rest)
-      [] thymap
+    Binarymap.foldl (fn (k, data, rest) => (k, data tmwrite) :: rest) [] thymap
   fun enc_loadable tmwrite thymap =
       let open HOLsexp in
         tagged_encode "loadable-thydata" (list_encode enc_cpl)
@@ -443,15 +376,12 @@ fun pp_thydata info_record = let
         List [
           Symbol "theory",
           enc_thid_and_parents theory parents0,
-          enc_incorporate_types types,
-          enc_strtable strtable,
-          enc_idtable idtable,
-          enc_tytable tytable,
-          enc_incorporate_constants constants,
-          enc_tmtable tmtable,
-          encoded_theorems,
-          enc_dblist (),
-          enc_loadable term_to_string thydata
+          enc_sdata share_data,
+          tagged_encode "incorporate" (
+            pair_encode(enc_incorporate_types, enc_incorporate_constants)
+          ) (types, constants),
+          enc_dblist,
+          enc_loadable (write_term share_data) thydata
         ]
       end
 in
