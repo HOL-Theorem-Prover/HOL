@@ -371,6 +371,32 @@ fun thml_atoms thlist acc =
       [] => acc
     | (th::ths) => thml_atoms ths (thm_atoms acc th)
 
+fun enc_dep findstr ((s,n),dl) =
+    let open HOLsexp
+        fun f (thy,l) = Cons(findstr thy, list_encode Integer l)
+    in
+      list_encode f ((s,[n]) :: dl)
+    end
+
+fun dest_dep d =
+    case d of
+        Dep.DEP_SAVED (did,thydl) => (did,thydl)
+      | Dep.DEP_UNSAVED dl => raise SharingTables "Can't encode unsaved dep"
+
+fun enc_tag findstr tag =
+    let open HOLsexp
+        val dep = Tag.dep_of tag
+        val ocl = #1 (Tag.dest_tag tag)
+    in
+      pair_encode(enc_dep findstr o dest_dep, list_encode String) (dep,ocl)
+    end
+
+fun thm_strings th =
+    let val (sn, dl) = dest_dep (Tag.dep_of (Thm.tag th) )
+    in
+      #1 sn :: map #1 dl
+    end
+
 fun build_sharing_data (ed : extract_data) =
     let
       val {named_types, named_terms, unnamed_types, unnamed_terms, theorems} =
@@ -384,6 +410,7 @@ fun build_sharing_data (ed : extract_data) =
     in
       sdi |> add_terms (HOLset.listItems tm_atoms)
           |> add_strings (map #1 theorems)
+          |> add_strings (List.concat (map (thm_strings o #2) theorems))
     end
 
 fun write_string (SDI{strtable,...}) s = Map.find(#map strtable,s)
@@ -391,30 +418,12 @@ fun write_type (SDI{tytable,...}) ty = Map.find(#tymap tytable,ty)
 fun write_term (SDI{tmtable,...}) =
     Term.write_raw (fn t => Map.find(#termmap tmtable,t))
 
-fun enc_dep ((s,n),dl) =
-    let open HOLsexp
-        fun f (thy,l) = Cons(String thy, list_encode Integer l)
-    in
-      list_encode f ((s,[n]) :: dl)
-    end
-
-fun dest_dep d =
-    case d of
-        Dep.DEP_SAVED (did,thydl) => (did,thydl)
-      | Dep.DEP_UNSAVED dl => raise SharingTables "Can't encode unsaved dep"
-
-fun enc_tag tag =
-    let open HOLsexp
-        val dep = Tag.dep_of tag
-        val ocl = #1 (Tag.dest_tag tag)
-    in
-      pair_encode(enc_dep o dest_dep, list_encode String) (dep,ocl)
-    end
 
 fun enc_sdata (sd as SDI{strtable,idtable,tytable,tmtable,exp}) =
     let
       open HOLsexp
       val {unnamed_types,named_types,unnamed_terms,named_terms,theorems} = exp
+      val find_str = Integer o write_string sd
       val ty_encode = Integer o write_type sd
       val tm_encode = String o write_term sd
 
@@ -423,7 +432,7 @@ fun enc_sdata (sd as SDI{strtable,idtable,tytable,tmtable,exp}) =
             val (tag, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
             val i = Map.find(#map strtable, s)
           in
-            pair3_encode (Integer,enc_tag,list_encode tm_encode)
+            pair3_encode (Integer,enc_tag find_str,list_encode tm_encode)
                          (i, tag, w::asl)
           end
     in
@@ -456,10 +465,13 @@ type sharing_data_out =
       Term.term Vector.vector * extract_data)
 
 
-type depinfo = {head : string * int, deps : (string * int list) list}
+type 'a depinfo = {head : 'a * int, deps : ('a * int list) list}
+fun mapdepinfo f ({head = (a,i),deps}:'a depinfo) : 'b depinfo =
+    {head = (f a, i), deps = map (fn (a,l) => (f a, l)) deps}
 
-fun read_thm strv tmvector {name,depinfo:depinfo,tagnames,encoded_hypscon} =
+fun read_thm strv tmvector {name,depinfo:int depinfo,tagnames,encoded_hypscon} =
     let
+      val depinfo = mapdepinfo (fn i => Vector.sub(strv,i)) depinfo
       val dd = (#head depinfo, #deps depinfo)
       val terms = map (Term.read_raw tmvector) encoded_hypscon
     in
@@ -475,7 +487,7 @@ val dep_decode = let
         | _ => NONE
 in
   Option.mapPartial depmunge o
-  list_decode (pair_decode(string_decode, list_decode int_decode))
+  list_decode (pair_decode(int_decode, list_decode int_decode))
 end
 val deptag_decode = let open HOLsexp in
                       pair_decode(dep_decode, list_decode string_decode)

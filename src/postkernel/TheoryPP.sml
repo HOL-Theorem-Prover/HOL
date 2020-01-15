@@ -341,15 +341,17 @@ fun pp_thydata info_record = let
                       constants
       end
 
-  val enc_db = let open HOLsexp in pair_encode (String,Symbol) end
+  val enc_db = let open HOLsexp in
+                 pair_encode (Integer o write_string share_data,Symbol)
+               end
   val enc_dblist =
      let open HOLsexp
        fun check cl =
            List.mapPartial (fn (nm, _) => if is_temp_binding nm then NONE
-                                         else SOME (nm, cl))
-       val axl  = check "Axm" axioms
-       val defl = check "Def" definitions
-       val thml = check "Thm" theorems
+                                          else SOME (nm, cl))
+       val axl  = check "A" axioms
+       val defl = check "D" definitions
+       val thml = check "T" theorems
      in
        tagged_encode "thm-classes" (list_encode enc_db) (axl@defl@thml)
      end

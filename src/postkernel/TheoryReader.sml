@@ -95,9 +95,9 @@ fun force s dec t =
         NONE => raise TheoryReader ("Couldn't decode \""^s^"\": "^prsexp t)
       | SOME t => t
 
-fun string_to_class "Axm" = SOME DB.Axm
-  | string_to_class "Thm" = SOME DB.Thm
-  | string_to_class "Def" = SOME DB.Def
+fun string_to_class "A" = SOME DB.Axm
+  | string_to_class "T" = SOME DB.Thm
+  | string_to_class "D" = SOME DB.Def
   | string_to_class _ = NONE
 
 val class_decode = Option.mapPartial string_to_class o HOLsexp.symbol_decode
@@ -128,7 +128,7 @@ fun load_thydata thyname path =
             SOME,
             tagged_decode "incorporate" SOME,
             tagged_decode "thm-classes" (
-              list_decode (pair_decode(string_decode, class_decode))
+              list_decode (pair_decode(int_decode, class_decode))
             ),
             tagged_decode "loadable-thydata" SOME
           )
@@ -154,12 +154,13 @@ fun load_thydata thyname path =
     val thmdict = Redblackmap.fromList String.compare named_thms
     val _ =
         let
-          fun mapthis (n,c) =
-              let val th =
-                      Redblackmap.find (thmdict,n)
+          fun mapthis (nm_i,c) =
+              let val nm = read_string share_data nm_i
+                  val th =
+                      Redblackmap.find (thmdict,nm)
                       handle Redblackmap.NotFound =>
-                             raise TheoryReader ("Couldn't lookup "^n)
-              in (n,th,c)
+                             raise TheoryReader ("Couldn't lookup "^nm)
+              in (nm,th,c)
               end
         in
           DB.bindl thyname (map mapthis classinfo)
