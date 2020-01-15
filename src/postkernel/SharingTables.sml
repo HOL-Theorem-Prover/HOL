@@ -220,9 +220,9 @@ fun shared_term_decode s =
           | _ => NONE
     end
 
-fun enc_tmtable tmtab =
-    tagged_encode "term-table" (list_encode shared_term_encode)
-                  (List.rev (#termlist tmtab))
+val enc_tmtable : termtable encoder =
+    tagged_encode "term-table" (list_encode shared_term_encode) o
+    List.rev o #termlist
 end (* local *)
 
 val empty_termtable : termtable =
