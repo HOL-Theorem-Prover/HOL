@@ -1,6 +1,8 @@
 open HolKernel Parse boolLib bossLib;
 open kolmogorov_complexityTheory
 open kraft_ineqTheory
+open invarianceResultsTheory 
+open boolListsTheory
 
 val _ = new_theory "prefix_free_kolmog";
 

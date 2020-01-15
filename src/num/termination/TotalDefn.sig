@@ -2,6 +2,7 @@ signature TotalDefn =
 sig
 
   include Abbrev
+  type defn = DefnBase.defn
 
    (* Support for automated termination proofs *)
 

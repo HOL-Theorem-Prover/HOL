@@ -447,9 +447,11 @@ fs[exten_insert_thm] >> rw[max_def,min_def]
 >- (metis_tac[])
 >- (metis_tac[]) )
 
+
+
 val BETTER_RPOW_UNIQ_EXP = Q.store_thm("BETTER_RPOW_UNIQ_EXP[simp]",
-`1 < a ==> (a rpow b = a rpow c <=> b = c)`,
-rw[] >> eq_tac >> simp[] >> rw[] >> pop_assum (mp_tac o AP_TERM ``ln``) >> fsr[LN_RPOW] >>
+`1r < a ==> (a rpow b = a rpow c <=> b = c)`,
+rw[] >> eq_tac >> simp[] >> rw[] >> pop_assum (mp_tac o AP_TERM ``transc$ln``) >> fsr[LN_RPOW] >>
 disch_then irule >> `ln 1 < ln a` by fsr[LN_MONO_LT] >> fsr[LN_1] )
 
 

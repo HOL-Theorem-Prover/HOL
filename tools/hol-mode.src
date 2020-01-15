@@ -11,6 +11,7 @@
 (require 'thingatpt)
 (require 'cl)
 (require 'subr-x)
+(require 'holscript-mode)
 
 (defgroup hol nil
   "Customising the Emacs interface to the HOL4 proof assistant."
@@ -189,13 +190,13 @@ process in it."
       (goto-char initial-point)
       (format " (*#loc %d %d *)\n" (- row 1) col))))
 
-(defun send-timed-string-to-hol (string echo-p)
+(defun send-timed-string-to-hol (string echo-p &optional loud-opens)
   "Send STRING to HOL (with send-string-to-hol), and emit information about
 how long this took."
   (interactive)
   (send-raw-string-to-hol
    "val hol_mode_time0 = #usr (Timer.checkCPUTimer Globals.hol_clock);" nil nil)
-  (send-string-to-hol string echo-p)
+  (send-string-to-hol string echo-p loud-opens)
   (send-raw-string-to-hol
        "val _ = let val t = #usr (Timer.checkCPUTimer Globals.hol_clock)
                       val elapsed = Time.-(t, hol_mode_time0)
@@ -340,7 +341,7 @@ the region contains no backquotes, then send region instead."
       (send-string-as-hol-goaltree txt)
     (send-string-as-hol-goaltree (hol-term-at-point)))))
 
-(defun copy-region-as-hol-definition (start end arg)
+(defun copy-region-as-hol-definition (start end arg &optional loud-opens)
   "Send selected region to HOL process as definition/expression.  With a
 prefix arg of 4 (hit control-u once), wrap what is sent so that it becomes
 ( .. ) handle e => Raise e, allowing HOL_ERRs to be displayed cleanly.
@@ -357,7 +358,7 @@ variable before and after the region is sent."
                      'send-timed-string-to-hol
                    'send-string-to-hol)))
     (if (= arg 16) (hol-toggle-quietdec))
-    (funcall sender send-string hol-echo-commands-p)
+    (funcall sender send-string hol-echo-commands-p loud-opens)
     (if (> (length send-string) 300)
         (send-string-to-hol
          "val _ = print \"\\n*** Emacs/HOL command completed ***\\n\\n\""))
@@ -368,7 +369,7 @@ variable before and after the region is sent."
 (defun copy-region-as-hol-definition-quietly (start end)
    (interactive "r")
    (hol-toggle-quiet-quietdec)
-   (copy-region-as-hol-definition start end 0)
+   (copy-region-as-hol-definition start end 0 t)
    (hol-toggle-quiet-quietdec))
 
 
@@ -482,7 +483,7 @@ starts >%s%s<"
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
-(defun send-string-to-hol (string &optional echoit)
+(defun send-string-to-hol (string &optional echoit leave-loud-opens)
   "Send a string to HOL process."
   (let ((buf (ensure-hol-buffer-ok))
         (tmpbuf (generate-new-buffer "*HOL temporary*"))
@@ -526,23 +527,25 @@ starts >%s%s<"
           (delete-region (point-min) (point-max))
           (insert string)
           (goto-char (point-min))
-          ; now retraverse string, bracketing open calls with quietdec toggles
-          (while (re-search-forward "\\<open\\s-" (point-max) t)
-            (let* ((start (match-beginning 0))
-                   (end (save-excursion
-                          (if (re-search-forward hol-open-terminator-regexp
-                                                 (point-max) t)
-                              (match-beginning 0)
-                            (point-max))))
-                   (endm (make-marker)))
-              (set-marker endm end)
-              (goto-char end)
-              (insert ";val _ = HOL_Interactive.toggle_quietdec();\n")
-              (goto-char start)
-              (insert "val _ = HOL_Interactive.toggle_quietdec();\n")
-              (goto-char endm) (set-marker endm nil)))
-          (send-buffer-to-hol-maybe-via-file echoit))
-      (kill-buffer tmpbuf)) ; kill buffer always
+          (if (not leave-loud-opens)
+              ;; now retraverse string, bracketing open calls with quietdec
+              ;; toggles
+              (while (re-search-forward "\\<open\\s-" (point-max) t)
+                (let* ((start (match-beginning 0))
+                       (end (save-excursion
+                              (if (re-search-forward hol-open-terminator-regexp
+                                                     (point-max) t)
+                                  (match-beginning 0)
+                                (point-max))))
+                       (endm (make-marker)))
+                  (set-marker endm end)
+                  (goto-char end)
+                  (insert ";val _ = HOL_Interactive.toggle_quietdec();\n")
+                  (goto-char start)
+                  (insert "val _ = HOL_Interactive.toggle_quietdec();\n")
+                  (goto-char endm) (set-marker endm nil))))
+            (send-buffer-to-hol-maybe-via-file echoit))
+          (kill-buffer tmpbuf)) ; kill buffer always
     ;; deactivate-mark will have likely been set by all the editting actions
     ;; in the temporary buffer.  We fix this here, thereby keeping the mark
     ;; active, if it is active.
@@ -1453,7 +1456,7 @@ second is to show the new term.
 
 (add-hook 'sml-mode-hook
           (lambda ()
-            (local-set-key "`" 'hol-backquote-map)
+            (local-set-key "`" 'holscript-backquote-map)
             (message "Running HOL SML hook")
 ))
 

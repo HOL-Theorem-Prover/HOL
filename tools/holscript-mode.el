@@ -35,7 +35,8 @@
     ;; backslash only escapes in strings and certainly shouldn't be seen as
     ;; an escaper inside terms where it just causes pain, particularly in terms
     ;; such as \(x,y). x + y
-    (mapc (lambda (c) (modify-syntax-entry c "_" st)) "._'")
+    (mapc (lambda (c) (modify-syntax-entry c "_" st)) ".")
+    (mapc (lambda (c) (modify-syntax-entry c "w" st)) "_'")
     (mapc (lambda (c) (modify-syntax-entry c "." st)) ",;")
     ;; `!' is not really a prefix-char, oh well!
     (mapc (lambda (c) (modify-syntax-entry c "'"  st)) "~#!")
