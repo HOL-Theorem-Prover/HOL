@@ -146,33 +146,162 @@ fun find_subterm qtm (g as (asl,w)) =
     prim_find_subterm FVs tm g
   end;
 
+(*---------------------------------------------------------------------------*)
+(* Support for pairs copied from coretypes/pairSyntax to be self-contained.  *)
+(*---------------------------------------------------------------------------*)
 
-fun primCases_on st (g as (_,w)) =
+val strip_prod =
+ let fun dest_prod ty =
+   case total dest_thy_type ty of
+      SOME{Tyop = "prod", Thy = "pair", Args = [ty1, ty2]} => (ty1, ty2)
+    | other => raise ERR "dest_prod" "not a product type"
+ in
+    strip_binop (total dest_prod)
+ end
+
+fun mk_prod(ty1,ty2) = mk_thy_type{Thy="pair",Tyop="prod",Args=[ty1,ty2]}
+
+fun mk_pair (t1,t2) =
+ let val pair_const = prim_mk_const {Name=",",Thy="pair"}
+     val pair_const' = inst [alpha |-> type_of t1, beta |-> type_of t2] pair_const
+ in list_mk_comb(pair_const',[t1,t2])
+ end
+
+(*---------------------------------------------------------------------------*)
+(*                                                                           *)
+(*      Gamma, (x = pat[v1,...,vn]) |- M[x]                                  *)
+(*    ------------------------------------------------------------------     *)
+(*      Gamma, ?v1 ... vn. (x = pat[v1,...,vn]) |- M[x]                      *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
+fun CHOOSER v (tm,thm) =
+ let val ex_tm = mk_exists(v,tm)
+ in (ex_tm, CHOOSE(v, ASSUME ex_tm) thm)
+ end;
+
+fun LEFT_EXISTS_INTRO veq thm =
+  let val (_,pat) = dest_eq veq
+  in snd (itlist CHOOSER (free_vars_lr pat) (veq,thm))
+  end;
+
+fun listpair [a,b] = (a,b);
+
+(*---------------------------------------------------------------------------*)
+(* Prove a theorem for "deep" case analysis on a term with an (iterated)     *)
+(* product type.                                                             *)
+(*                                                                           *)
+(*   tupleCases ["a", "b", "c"] (v : ty1 # ty2 # ty3) =                      *)
+(*      |- !v. ?a b c. v = (a,b,c)                                           *)
+(*---------------------------------------------------------------------------*)
+
+fun tupleCases names v =
+ let val pthm = TypeBasePure.nchotomy_of
+                  (Option.valOf (TypeBase.read{Thy="pair",Tyop="prod"}))
+     val (vname,vty) = dest_var v
+     val tys = strip_prod vty
+     val vars = Lib.map2 (curry mk_var) names tys
+     fun tmpvar_types 0 ty = [ty]
+       | tmpvar_types n ty =
+          case dest_thy_type ty
+           of {Thy="pair",Tyop="prod",Args=[ty1,ty2]} => ty::tmpvar_types (n-1) ty2
+	    | otherwise => [ty]
+     val tmp_vars = map genvar (tl (tmpvar_types (length tys - 2) vty))
+     val left_vars = List.take (vars,length vars - 2)
+     val last2_vars = listpair(List.drop (vars,length vars - 2))
+     val rpairs = zip left_vars tmp_vars @ [last2_vars]
+     val rpair_tms = map mk_pair rpairs
+     val eqns = map2 (curry mk_eq) (v::tmp_vars) rpair_tms
+     val thlist = map ASSUME eqns
+     val thm = REWRITE_RULE (tl thlist) (hd thlist)
+     val thm1 = itlist SIMPLE_EXISTS vars thm
+     fun step eqn th =
+      let val th1 = LEFT_EXISTS_INTRO eqn th
+          val V = free_vars_lr (rhs eqn)
+          val th2 = DISCH (list_mk_exists(V,eqn)) th1
+          val th3 = ISPEC (lhs eqn) pthm
+      in MP th2 th3
+      end
+ in
+    GEN v (itlist step eqns thm1)
+ end
+ handle e => raise wrap_exn "BasicProvers" "primCases_on (tupleCases)" e
+
+
+fun envar s v = if s = "_" then v else mk_var(s,snd(dest_var v));
+
+(*---------------------------------------------------------------------------*)
+(* Set specified existentially quantified names in nchotomy thm              *)
+(*---------------------------------------------------------------------------*)
+
+fun set_names names thm =
+ if null names then thm
+ else
+ let val tm = concl thm
+     val (v,body) = dest_forall tm
+     val vty = type_of v
+     val namelists = List.map (String.tokens Char.isSpace) names
+ in
+  case dest_thy_type vty
+   of {Thy="pair",Tyop="prod",...} => tupleCases (hd namelists) v
+    | otherwise =>
+     let val clauses = zip namelists (strip_disj body)
+         fun rename (slist,clause) =
+          let val (bvs,M) = strip_exists clause
+          in if length bvs <> length slist then
+                clause (* fail in such a way that tactic can still be applied. *)
+             else
+             let val vlist = map2 envar slist bvs
+                 val theta = map2 (curry (op |->)) bvs vlist
+                 val M' = subst theta M
+             in list_mk_exists(vlist,M')
+             end
+          end
+         val tm' = mk_forall(v,list_mk_disj(map rename clauses))
+     in
+       EQ_MP (Thm.ALPHA tm tm') thm
+     end
+ end
+ handle e => raise wrap_exn "BasicProvers" "primCases_on (set_names)" e
+;
+
+fun primCases_on names st (g as (_,w)) =
  let val ty = type_of (dest_tmkind st)
      val {Thy,Tyop,...} = dest_thy_type ty
  in case TypeBase.fetch ty
      of SOME facts =>
         let val thm = TypeBasePure.nchotomy_of facts
+            val thm' = set_names names thm
         in case st
            of Free M =>
-               if (is_var M) then VAR_INTRO_TAC (ISPEC M thm) else
+               if (is_var M) then VAR_INTRO_TAC (ISPEC M thm') else
                if ty=bool then ASM_CASES_TAC M
-               else TERM_INTRO_TAC (ISPEC M thm)
+               else TERM_INTRO_TAC (ISPEC M thm')
             | Bound(V,M) => let val (tac,M') = FREEUP V M g
-                            in (tac THEN VAR_INTRO_TAC (ISPEC M' thm)) end
+                            in (tac THEN VAR_INTRO_TAC (ISPEC M' thm')) end
             | Alien M    => if ty=bool then ASM_CASES_TAC M
-                            else TERM_INTRO_TAC (ISPEC M thm)
+                            else TERM_INTRO_TAC (ISPEC M thm')
         end
       | NONE => raise ERR "primCases_on"
                 ("No cases theorem found for type: "^Lib.quote (Thy^"$"^Tyop))
  end g;
 
-fun Cases_on qtm g = primCases_on (find_subterm qtm g) g
+fun Cases_on qtm g = primCases_on [] (find_subterm qtm g) g
   handle e => raise wrap_exn "BasicProvers" "Cases_on" e;
+
+fun namedCases_on names qtm g =
+  primCases_on names (find_subterm qtm g) g
+  handle e => raise wrap_exn "BasicProvers" "namedCases_on" e;
 
 fun Cases (g as (_,w)) =
   let val (Bvar,_) = with_exn dest_forall w (ERR "Cases" "not a forall")
-  in primCases_on (Bound([Bvar],Bvar)) g
+  in primCases_on [] (Bound([Bvar],Bvar)) g
+  end
+  handle e => raise wrap_exn "BasicProvers" "Cases" e;
+
+fun namedCases names (g as (_,w)) =
+  let val (Bvar,_) = with_exn dest_forall w (ERR "namedCases" "not a forall")
+  in primCases_on names (Bound([Bvar],Bvar)) g
   end
   handle e => raise wrap_exn "BasicProvers" "Cases" e;
 

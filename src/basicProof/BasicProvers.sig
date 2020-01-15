@@ -66,8 +66,11 @@ sig
   val primInduct        : tmkind -> tactic -> tactic
   val Cases             : tactic
   val Induct            : tactic
+  val namedCases        : string list -> tactic
+
   val Cases_on          : term quotation -> tactic
   val Induct_on         : term quotation -> tactic
+  val namedCases_on     : string list -> term quotation -> tactic
 
   val PURE_TOP_CASE_TAC : tactic  (* top-most case-split *)
   val PURE_CASE_TAC     : tactic  (* smallest case-split (concl) *)
