@@ -4,6 +4,9 @@ struct
 open Term Type
 
 structure Map = Binarymap
+exception SharingTables of string
+
+type 'a sexppr = 'a -> HOLsexp.t
 
 (* ----------------------------------------------------------------------
     string sharing table
@@ -11,6 +14,10 @@ structure Map = Binarymap
 
 type stringtable =
      {size : int, map : (string,int) Map.dict, list : string list}
+type id = {Thy : string, Other : string}
+type idtable = {idsize : int,
+                idmap : (id, int) Map.dict,
+                idlist : (int * int) list}
 
 val CB = PP.block PP.CONSISTENT 0
 val out = PP.add_string
@@ -20,18 +27,30 @@ val NL = PP.NL
 val empty_strtable : stringtable =
     {size = 0, map = Map.mkDict String.compare, list = []}
 
+local
+  open HOLsexp
+in
+fun enc_strtable (strtable : stringtable) =
+    tagged_encode "string-table" (list_encode String)
+                  (List.rev (#list strtable))
+val dec_strings =
+    Option.map Vector.fromList o
+    tagged_decode "string-table" (list_decode string_decode)
+
+fun enc_idtable (idtable : idtable) =
+    tagged_encode "id-table" (list_encode (pair_encode(Integer,Integer)))
+                  (List.rev (#idlist idtable))
+fun dec_ids strv =
+    Option.map (Vector.fromList o
+                map (fn (i,j) => {Thy = Vector.sub(strv,i),
+                                  Other = Vector.sub(strv,j)})) o
+    tagged_decode "id-table" (list_decode (pair_decode(int_decode,int_decode)))
+
+end (* local *)
+
+
 fun theoryout_strtable (strtable : stringtable) =
-    let
-      fun printstr s = out (Lib.mlquote s)
-    in
-      CB [
-        out "[",
-        PP.block PP.INCONSISTENT 1 (
-          PP.pr_list printstr [PP.add_break(1,0)] (List.rev (#list strtable))
-        ),
-        out "]"
-      ]
-    end
+    HOLsexp.printer (enc_strtable strtable)
 
 fun new_string s (strtable as {size,list,map}:stringtable) =
     case Map.peek(map, s) of
@@ -45,10 +64,6 @@ fun new_string s (strtable as {size,list,map}:stringtable) =
     or Tyops for types)
    ---------------------------------------------------------------------- *)
 
-type id = {Thy : string, Other : string}
-type idtable = {idsize : int,
-                idmap : (id, int) Map.dict,
-                idlist : (int * int) list}
 
 fun make_shared_id (id as {Thy,Other} : id) (strtable, idtable) =
     case Map.peek(#idmap idtable, id) of
@@ -72,14 +87,8 @@ val empty_idtable : idtable = {idsize = 0,
                                idlist = []}
 
 
-fun theoryout_idtable (idtable : idtable) = let
-  val idlist = List.rev (#idlist idtable)
-  fun print_id (Thyi, Otheri) =
-      out (Int.toString Thyi^ " " ^ Int.toString Otheri)
-  val print_ids = PP.pr_list print_id [PP.add_string ",", PP.add_break(1,0)]
-in
-  CB [out "[", PP.block PP.INCONSISTENT 1 (print_ids idlist), out "]"]
-end
+fun theoryout_idtable (idtable : idtable) =
+    HOLsexp.printer (enc_idtable idtable)
 
 fun build_id_vector strings intpairs =
     Vector.fromList
@@ -98,6 +107,23 @@ datatype shared_type = TYV of string
 type typetable = {tysize : int,
                   tymap : (hol_type, int)Map.dict,
                   tylist : shared_type list}
+
+local
+  open HOLsexp
+in
+fun shared_type_encode (TYV s) = String s
+  | shared_type_encode (TYOP is) = List(map Integer is)
+
+fun shared_type_decode s =
+    case string_decode s of
+        SOME str => SOME (TYV str)
+      | _ => Option.map TYOP (list_decode int_decode s)
+
+val enc_tytable : typetable encoder =
+    tagged_encode "type-table" (list_encode shared_type_encode) o List.rev o
+    #tylist
+
+end (* local *)
 
 fun make_shared_type ty strtable idtable table =
     case Map.peek(#tymap table, ty) of
@@ -142,13 +168,20 @@ fun build_type_vector idv shtylist = let
         TYV s => (n + 1, Map.insert(tymap, n, Type.mk_vartype s))
       | TYOP idargs => let
           val (id, Args) = valOf (List.getItem idargs)
-          val args = map (fn i => Map.find(tymap, i)) Args
+          fun mapthis i =
+              Map.find(tymap, i)
+              handle Map.NotFound =>
+                     raise SharingTables ("build_type_vector: (" ^
+                                          String.concatWith " "
+                                                (map Int.toString Args) ^
+                                          "), " ^ Int.toString i ^
+                                          " not found")
+          val args = map mapthis Args
           val {Thy,Other} = Vector.sub(idv, id)
         in
           (n + 1,
            Map.insert(tymap, n,
-                            Type.mk_thy_type {Thy = Thy, Tyop = Other,
-                                              Args = args}))
+                      Type.mk_thy_type {Thy = Thy, Tyop = Other, Args = args}))
         end
   val (_, tymap) =
       List.foldl build1 (0, Map.mkDict Int.compare) shtylist
@@ -174,20 +207,8 @@ in
   ]
 end
 
-fun theoryout_typetable (tytable : typetable) = let
-  fun output_shtype shty =
-      case shty of
-        TYV s => out ("TYV "^ Lib.mlquote s)
-      | TYOP args =>
-        out ("TYOP "^ String.concatWith " " (map Int.toString args))
-  val output_shtypes = PP.pr_list output_shtype [out ",", PP.add_break (1,0)]
-in
-  CB [
-    out "[",
-    PP.block PP.INCONSISTENT 1 (output_shtypes (List.rev (#tylist tytable))),
-    out "]"
-  ]
-end
+fun theoryout_typetable (tytable : typetable) =
+    HOLsexp.printer (enc_tytable tytable)
 
 
 (* ----------------------------------------------------------------------
@@ -202,6 +223,34 @@ datatype shared_term = TMV of string * int
 type termtable = {termsize : int,
                   termmap : (term, int)Map.dict,
                   termlist : shared_term list}
+
+local
+  open HOLsexp
+in
+fun shared_term_encode stm =
+    case stm of
+        TMV (s,i) => List[String s, Integer i]
+      | TMC (i,j) => List[Integer i, Integer j]
+      | TMAp(i,j) => List[Symbol "ap", Integer i, Integer j]
+      | TMAbs(i,j) => List[Symbol "ab", Integer i, Integer j]
+fun shared_term_decode s =
+    let
+      val (els, last) = strip_list s
+    in
+      if last <> NONE then NONE
+      else
+        case els of
+            [String s, Integer i] => SOME (TMV (s,i))
+          | [Integer i, Integer j] => SOME (TMC(i,j))
+          | [Symbol "ap", Integer i, Integer j] => SOME (TMAp(i,j))
+          | [Symbol "ab", Integer i, Integer j] => SOME (TMAbs(i,j))
+          | _ => NONE
+    end
+
+fun enc_tmtable tmtab =
+    tagged_encode "term-table" (list_encode shared_term_encode)
+                  (List.rev (#termlist tmtab))
+end (* local *)
 
 val empty_termtable : termtable =
     {termsize = 0, termmap = Map.mkDict Term.compare, termlist = [] }
@@ -312,22 +361,6 @@ in
 end;
 
 fun theoryout_termtable (tmtable: termtable) =
-  let
-    fun ipair_string (x,y) = Int.toString x^" "^Int.toString y
-    fun output_shtm shtm =
-      case shtm of
-          TMV (s, tyn) =>
-            out ("TMV " ^ Lib.mlquote s ^" "^Int.toString tyn)
-        | TMC p => out ("TMC "^ipair_string p)
-        | TMAp p => out ("TMAp "^ipair_string p)
-        | TMAbs p => out ("TMAbs "^ipair_string p)
-    val output_shtms = PP.pr_list output_shtm [out ",", PP.add_break(1,0)]
-  in
-    CB [
-      out ("["),
-      PP.block PP.INCONSISTENT 1 (output_shtms (List.rev (#termlist tmtable))),
-      out ("]")
-    ]
-  end
+    HOLsexp.printer (enc_tmtable tmtable)
 
 end; (* struct *)

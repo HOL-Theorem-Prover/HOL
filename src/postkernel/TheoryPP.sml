@@ -349,124 +349,128 @@ fun pp_thydata info_record = let
       add_string "]"
       )
 
-  fun pp_thid(s,i,j) = add_string
-    (String.concatWith " " [stringify s, Arbnum.toString i, Arbnum.toString j])
+  local open HOLsexp in
+  fun enc_thid(s,i,j) =
+    List[String s, String (Arbnum.toString i), String (Arbnum.toString j)]
+  val enc_thid_and_parents =
+      curry (pair_encode(enc_thid, list_encode enc_thid))
+  end (* local *)
 
   fun pp_thid_and_parents theory parents =
-    block CONSISTENT 0
-    (pp_thid theory >> add_newline >> pp_sml_list pp_thid parents)
+      lift HOLsexp.printer (enc_thid_and_parents theory parents)
 
-  fun pp_incorporate_types types =
-    block CONSISTENT 0 (pp_sml_list pp_ty_dec types)
+  fun enc_incorporate_types types =
+      let open HOLsexp
+      in
+        tagged_encode "incorporate-types"
+                      (list_encode (pair_encode(String,Integer))) types
+      end
+  val pp_incorporate_types = lift HOLsexp.printer o enc_incorporate_types
 
-  fun pp_incorporate_constants constants =
-    block CONSISTENT 0 (pp_sml_list pp_const_dec constants)
+  fun enc_incorporate_constants constants =
+      let open HOLsexp
+      in
+        tagged_encode "incorporate-consts"
+         (list_encode
+            (pair_encode(String,
+                         Integer o (fn ty => Map.find(#tymap tytable, ty)))))
+         constants
+      end
+  val pp_incorporate_constants =
+      lift HOLsexp.printer o enc_incorporate_constants
 
   fun pparent (s,i,j) = Thry s
   val term_to_string = Term.write_raw (fn t => Map.find(#termmap tmtable, t))
 
-  fun pp_tm tm = add_string ("\"" ^ (term_to_string tm) ^ "\"")
+  val enc_tm = HOLsexp.String o term_to_string
+  val pp_tm = lift HOLsexp.printer o enc_tm
 
-  fun pp_dep ((s,n),dl) =
-  let
-    fun f (thy,l) =
-        add_string (mlquote thy) >> add_break(1,0) >>
-        pr_list (add_string o Int.toString) (add_break(1,0)) l
-  in
-    add_string "[" >>
-    block INCONSISTENT 1 (
-      add_string (mlquote s) >> add_break (1,0) >>
-      add_string (Int.toString n) >>
-      (if not (null dl) then
-        add_string "," >> add_break(1,0) >>
-        pr_list f (add_string "," >> add_break (1,0)) dl
-      else nothing)
-    ) >> add_string "]"
-  end
+  fun enc_dep ((s,n),dl) =
+      let open HOLsexp
+        fun f (thy,l) = Cons(String thy, list_encode Integer l)
+      in
+        list_encode f ((s,[n]) :: dl)
+      end
+
+  val pp_dep = lift HOLsexp.printer o enc_dep
 
   fun dest_dep d = case d of
     DEP_SAVED (did,thydl) => (did,thydl)
   | DEP_UNSAVED dl     => raise ERR "string_of_dep" ""
 
-  fun pp_tag tag =
-  let
-    val dep = Tag.dep_of tag
-    val ocl = fst (Tag.dest_tag tag)
-  in
-    pp_dep (dest_dep dep) >> add_newline >>
-    pp_sml_list (add_string o mlquote) ocl
-  end
+  fun enc_tag tag =
+      let open HOLsexp
+        val dep = Tag.dep_of tag
+        val ocl = fst (Tag.dest_tag tag)
+      in
+        pair_encode(enc_dep o dest_dep, list_encode String) (dep,ocl)
+      end
 
-  fun pr_thm(s, th) = let
-    val (tag, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
-  in
-    if is_temp_binding s then nothing
-    else
-      block CONSISTENT 0
-        (add_string (mlquote s) >> add_newline >>
-         pp_tag tag >> add_newline >>
-         pp_sml_list pp_tm (w::asl))
-  end
+  val pp_tag = lift HOLsexp.printer o enc_tag
 
-  val pp_theorems =
-    block CONSISTENT 0
-      (if null thml then nothing else pr_list pr_thm add_newline thml)
+  fun enc_thm(s,th) =
+      let open HOLsexp
+        val (tag, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
+      in
+        pair3_encode (String,enc_tag,list_encode enc_tm) (s, tag, w::asl)
+      end
 
-  fun pr_db (class,th) =
-    block CONSISTENT 0
-      (add_string (stringify th) >> add_break(1,0) >> add_string class)
-  fun dblist () =
-     let
-       fun check tys =
-           List.mapPartial (fn (s, _) => if is_temp_binding s then NONE
-                                         else SOME (tys, s))
+  val pr_thm = lift HOLsexp.printer o enc_thm
+
+  val encoded_theorems =
+      HOLsexp.tagged_encode "theorems" (HOLsexp.list_encode enc_thm)
+                    (List.filter (fn (s,_) => not (is_temp_binding s)) thml)
+  val pp_theorems = lift HOLsexp.printer encoded_theorems
+
+  val enc_db = let open HOLsexp in pair_encode (String,Symbol) end
+  fun enc_dblist () =
+     let open HOLsexp
+       fun check cl =
+           List.mapPartial (fn (nm, _) => if is_temp_binding nm then NONE
+                                         else SOME (nm, cl))
        val axl  = check "Axm" axioms
        val defl = check "Def" definitions
        val thml = check "Thm" theorems
      in
-       block CONSISTENT 0 (pp_sml_list pr_db (axl@defl@thml))
+       tagged_encode "thm-classes" (list_encode enc_db) (axl@defl@thml)
      end
 
   fun chunks w s =
     if String.size s <= w then [s]
     else String.substring(s, 0, w) :: chunks w (String.extract(s, w, NONE))
 
-  fun pr_cpl (a,b) =
-    block CONSISTENT 0
-      (add_string (stringify a) >> add_break(1,0) >>
-       pr_list (add_string o stringify) (add_break (1,0)) (chunks 65 b))
+  fun enc_cpl (a,b) =
+      let open HOLsexp in
+        pair_encode(String, list_encode String) (a, chunks 65 b)
+      end
 
   fun list_loadable tmwrite thymap =
     Binarymap.foldl (fn (k, data, rest) => (k, data tmwrite) :: rest)
       [] thymap
-  fun pr_loadable tmwrite thymap =
-    block CONSISTENT 0 (pp_sml_list pr_cpl (list_loadable tmwrite thymap))
-  val m =
-    block CONSISTENT 0
-      (
-      add_string "THEORY_AND_PARENTS" >> add_newline >>
-      pp_thid_and_parents theory parents0 >> jump >>
-      add_string "INCORPORATE_TYPES" >> add_newline >>
-      pp_incorporate_types types >> jump >>
-      add_string "STRINGS" >> add_newline >>
-      lift theoryout_strtable strtable >> jump >>
-      add_string "IDS" >> add_newline >>
-      lift theoryout_idtable idtable >> jump >>
-      add_string "TYPES" >> add_newline >>
-      lift theoryout_typetable tytable >> jump >>
-      add_string "INCORPORATE_CONSTS" >> add_newline >>
-      pp_incorporate_constants constants >> jump >>
-      add_string "TERMS" >> add_newline >>
-      lift theoryout_termtable tmtable >> jump >>
-      add_string "THEOREMS" >> add_newline >>
-      pp_theorems >> jump >>
-      add_string "CLASSES" >> add_newline >>
-      dblist () >> jump >>
-      add_string "LOADABLE_THYDATA" >> add_newline >>
-      pr_loadable term_to_string thydata >> jump
-      )
+  fun enc_loadable tmwrite thymap =
+      let open HOLsexp in
+        tagged_encode "loadable-thydata" (list_encode enc_cpl)
+                      (list_loadable tmwrite thymap)
+      end
+  val thysexp =
+      let open HOLsexp
+      in
+        List [
+          Symbol "theory",
+          enc_thid_and_parents theory parents0,
+          enc_incorporate_types types,
+          enc_strtable strtable,
+          enc_idtable idtable,
+          enc_tytable tytable,
+          enc_incorporate_constants constants,
+          enc_tmtable tmtable,
+          encoded_theorems,
+          enc_dblist (),
+          enc_loadable term_to_string thydata
+        ]
+      end
 in
-  mlower ": dat" m
+  mlower ": dat" (lift HOLsexp.printer thysexp)
 end;
 
 

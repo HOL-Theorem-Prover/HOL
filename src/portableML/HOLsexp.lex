@@ -67,6 +67,9 @@ space = [\ \t];
     stringbuffer := str (Char.chr code) :: !stringbuffer ; continue()
   end
 );
+<string>"\\\\" => (stringbuffer := "\\" :: !stringbuffer; continue());
+<string>"\\" . => (raise Fail ("Can't cope with escaping "^yytext^
+                               " inside string literal"));
 <string>. => (raise Fail ("Can't cope with character "^yytext^
                           " inside string literal"));
 
