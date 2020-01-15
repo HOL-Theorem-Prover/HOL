@@ -29,13 +29,6 @@ val pp_sig_hook = ref (fn () => ());
 val concat = String.concat;
 val sort = Lib.sort (fn s1:string => fn s2 => s1<=s2);
 val psort = Lib.sort (fn (s1:string,_:Thm.thm) => fn (s2,_:Thm.thm) => s1<=s2);
-fun thm_atoms acc th = Term.all_atomsl (Thm.concl th :: Thm.hyp th) acc
-
-fun thml_atoms thlist acc =
-    case thlist of
-      [] => acc
-    | (th::ths) => thml_atoms ths (thm_atoms acc th)
-
 fun Thry s = s^"Theory";
 fun ThrySig s = Thry s
 
@@ -317,6 +310,14 @@ fun pp_thydata info_record = let
       List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
                       parents0
   val thml = axioms@definitions@theorems
+  fun thm_atoms acc th = Term.all_atomsl (Thm.concl th :: Thm.hyp th) acc
+
+  fun thml_atoms thlist acc =
+      case thlist of
+          [] => acc
+        | (th::ths) => thml_atoms ths (thm_atoms acc th)
+
+
   val all_term_atoms_set =
       thml_atoms (map #2 thml) empty_tmset |> Term.all_atomsl thydata_tms
   open SharingTables
@@ -333,21 +334,6 @@ fun pp_thydata info_record = let
   val (strtable, idtable, tytable, tmtable) =
       HOLset.foldl doterms (strtable, idtable, tytable, empty_termtable)
                    all_term_atoms_set
-
-  val jump = add_newline >> add_newline
-  fun pp_ty_dec (s,n) =
-      add_string (stringify s ^ " " ^ Int.toString n)
-  fun pp_const_dec (s, ty) =
-      add_string (stringify s ^ " " ^
-                  Int.toString (Map.find(#tymap tytable, ty)))
-  fun pp_sml_list pfun L =
-    block INCONSISTENT 0
-      (
-      add_string "[" >> add_break (0,0) >>
-      pr_list pfun (add_string "," >> add_break (1,0)) L >>
-      add_break (0,0) >>
-      add_string "]"
-      )
 
   local open HOLsexp in
   fun enc_thid(s,i,j) =
@@ -415,7 +401,6 @@ fun pp_thydata info_record = let
         pair3_encode (String,enc_tag,list_encode enc_tm) (s, tag, w::asl)
       end
 
-  val pr_thm = lift HOLsexp.printer o enc_thm
 
   val encoded_theorems =
       HOLsexp.tagged_encode "theorems" (HOLsexp.list_encode enc_thm)

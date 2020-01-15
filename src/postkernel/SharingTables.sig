@@ -58,4 +58,40 @@ sig
   val build_term_vector : id Vector.vector -> Type.hol_type Vector.vector ->
                           shared_term list -> Term.term Vector.vector
 
+  type sharing_data_in
+  type sharing_data_out
+  type extract_data = {named_terms : (string * Term.term) list,
+                       unnamed_terms : Term.term list,
+                       named_types : (string * Type.hol_type) list,
+                       unnamed_types : Type.hol_type list,
+                       theorems : (string * Thm.thm) list}
+  val build_sharing_data : extract_data -> sharing_data_in
+  val add_strings : string list -> sharing_data_in -> sharing_data_in
+  val add_types : Type.hol_type list -> sharing_data_in -> sharing_data_in
+  val add_terms : Term.term list -> sharing_data_in -> sharing_data_in
+  val write_string : sharing_data_in -> string -> int
+  val write_type : sharing_data_in -> Type.hol_type -> int
+  val write_term : sharing_data_in -> Term.term -> string
+  val enc_sdata : sharing_data_in HOLsexp.encoder
+
+  val dec_sdata :
+      {with_strings: (int -> string) -> unit,
+       with_stridty: (int -> string) * (int -> id) * (int -> Type.hol_type) ->
+                      unit} ->
+      sharing_data_out HOLsexp.decoder
+  val export_from_sharing_data : sharing_data_out -> extract_data
+  val read_term : sharing_data_out -> string -> Term.term
+  val read_string : sharing_data_out -> int -> string
+
 end
+
+(*
+    [export_from_sharing_data{data,with_strings,with_stridty}] will
+    return the represented data. The functions with_strings and
+    with_stridty give the caller a chance to update the state of the
+    theory context before types and then terms are constructed. This
+    is necessary in the theory-loading situation where the desired
+    values may depend on new type operators and new term constants
+    that have to be defined before the rest of the process can be
+    continued.
+*)

@@ -65,16 +65,18 @@ struct
   fun singencode a v = List[a v]
   fun pair3_encode (a,b,c) =
       pair_encode(a,pair_encode(b,singencode c)) o r3_to_p12
+  fun pair4_encode (a,b,c,d) =
+      pair_encode(a,pair_encode(b,pair_encode(c,singencode d))) o
+      (fn (u,v,w,x) => (u,(v,(w,x))))
   fun singleton [a] = SOME a
     | singleton _ = NONE
   fun sing_decode d =
       Option.mapPartial singleton o list_decode d
   fun pair3_decode (a,b,c) =
       Option.map p12_to_r3 o pair_decode(a, pair_decode(b,sing_decode c))
-
-
-
-
+  fun pair4_decode (a,b,c,d) =
+      Option.map (fn (u,(v,(w,x))) => (u,v,w,x)) o
+      pair_decode(a,pair_decode(b,pair_decode(c,sing_decode d)))
 
   fun is_list s =
       case s of
