@@ -12,12 +12,23 @@ val _ = new_theory "kolmog_inequalities"
 val _ = intLib.deprecate_int()
 
 (* UCKC is conditional kolmogorov complexity, UKCB is kolmogorov complexity typed the right way *)
+Theorem pair_11[simp]:
+  pair a b = pair c d <=> a=c ∧ b=d
+Proof
+  rw[EQ_IMP_THM,pair_def,bar_def] >>
+  `LENGTH a = LENGTH c ∧ a++b = c++d` by
+    (`Tpow (LENGTH a) ++ [F] ++ (a ++ b) = Tpow (LENGTH c) ++ [F] ++ (c ++ d)` by metis_tac[APPEND_ASSOC] >> metis_tac[Tpow_Fapp_eq]) >>
+  `DROP (LENGTH a) (a++b) = DROP (LENGTH c) (c++d)` by fs[] >>
+  `TAKE (LENGTH a) (a++b) = TAKE (LENGTH c) (c++d)` by fs[] >>
+  fs[rich_listTheory.DROP_LENGTH_APPEND,rich_listTheory.TAKE_LENGTH_APPEND]
+QED
+
 
 
 Definition univ_mach_def:
   univ_mach U <=>
      (∀i y x. U (pair y (pair i x)) = on2bl (Phi (bl2n i) (bl2n (pair y x)))) ∧
-     ∀m i y x. m <> pair y (pair i x) ==> U m = NONE
+     ∀m. (∀i y x. m <> pair y (pair i x)) ==> U m = NONE
 End
 
 Theorem Tpow_0[simp]:
@@ -79,16 +90,13 @@ Proof
   `Phi i (fold [bl2n (F::n2bl x)]) = G [bl2n (F::n2bl x)]` by simp[] >> fs[]
 QED
 
-
-
-Theorem univ_rf_pair_nonempty:
-   univ_mach U  ⇒ {p | U (pair y p) = SOME x} ≠ ∅
+Theorem on2bl_SOME:
+  on2bl x = SOME y <=> (∃z. x = SOME z ∧ y = n2bl z)
 Proof
-  rw[] >> `{p | U p = SOME x} ≠ ∅` by fs[univ_rf_nonempty,univ_mach_rf] >> fs[EXTENSION] >>
-  fs[univ_mach_def] >>
-  `∃ b c. x' = pair y (pair b c)` by (FIRST_X_ASSUM (qspecl_then [`x'`] mp_tac) >> rw[])  >>
-  qexists_tac`pair b c` >> fs[]
+ simp[on2bl_def]
 QED
+
+
 
 (* rename pair to bl pair etc *)
 
@@ -332,6 +340,21 @@ QED
 Theorem nblsnd_correct2[simp] =
   nblsnd_correct |> AP_TERM``bl2n`` |> SIMP_RULE (srw_ss()) [Excl"bl2n_11"]
 
+Theorem univ_rf_pair_nonempty:
+   univ_mach U  ⇒ {p | U (pair y p) = SOME x} ≠ ∅
+Proof
+  rw[] >>
+  ‘{p | U p = SOME x} ≠ ∅’ by fs[univ_rf_nonempty,univ_mach_rf] >>
+  fs[EXTENSION, univ_mach_def] >>
+  rename [‘U a = SOME result’] >>
+  ‘∃i b c. a = pair b (pair i c)’
+    by metis_tac[pair_11, optionTheory.NOT_NONE_SOME] >>
+  rw[] >> rfs[on2bl_SOME] >>
+  qx_choose_then ‘nbli’ strip_assume_tac nblsnd_index >>
+  qexists_tac ‘pair (n2bl (bl2n i o nbli)) (pair b c)’ >>
+  simp[computable_composition_def, on2bl_SOME, PULL_EXISTS]
+QED
+
 Theorem univ_mach_pair_pair:
   univ_mach U ==> ∀p x. U p = SOME x <=>
                         ∃a i b. p = pair a (pair i b) ∧
@@ -341,17 +364,6 @@ Proof
   `∃a b c. p=pair a (pair b c)` by metis_tac[optionTheory.NOT_NONE_SOME] >>
   qexists_tac`a` >> qexists_tac`b` >> qexists_tac`c` >> rw[] >>
   `on2bl (Phi (bl2n b) (bl2n (pair a c)) ) = SOME x` by metis_tac[] >> fs[on2bl_def]
-QED
-
-Theorem pair_11:
-  pair a b = pair c d <=> a=c ∧ b=d
-Proof
-  rw[EQ_IMP_THM,pair_def,bar_def] >>
-  `LENGTH a = LENGTH c ∧ a++b = c++d` by
-    (`Tpow (LENGTH a) ++ [F] ++ (a ++ b) = Tpow (LENGTH c) ++ [F] ++ (c ++ d)` by metis_tac[APPEND_ASSOC] >> metis_tac[Tpow_Fapp_eq]) >>
-  `DROP (LENGTH a) (a++b) = DROP (LENGTH c) (c++d)` by fs[] >>
-  `TAKE (LENGTH a) (a++b) = TAKE (LENGTH c) (c++d)` by fs[] >>
-  fs[rich_listTheory.DROP_LENGTH_APPEND,rich_listTheory.TAKE_LENGTH_APPEND]
 QED
 
 Definition nblft_def:
@@ -691,11 +703,6 @@ QED
 
 val nblpc_i_def =  new_specification ("nblpc_i_def",["nblpc_i"],MATCH_MP unary_rec_fns_phi recfn_nblpair_to_concat)
 
-Theorem on2bl_SOME:
-  on2bl x = SOME y <=> (∃z. x = SOME z ∧ y = n2bl z)
-Proof
- simp[on2bl_def]
-QED
 
 Definition comp_machine_t_def:
   comp_machine_t =
