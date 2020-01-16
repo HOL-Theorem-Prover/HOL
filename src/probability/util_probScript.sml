@@ -631,6 +631,32 @@ val LOGR_MONO_LE_IMP = store_thm
   >> `0 <= ln b` by METIS_TAC [REAL_LT_01, LN_1, REAL_LTE_TRANS, LN_MONO_LE]
   >> METIS_TAC [REAL_LE_INV_EQ, REAL_LE_RMUL_IMP, LN_MONO_LE, REAL_LTE_TRANS]);
 
+Theorem REAL_MAX_REDUCE :
+    !x y :real. x <= y \/ x < y ==> (max x y = y) /\ (max y x = y)
+Proof
+    PROVE_TAC [REAL_LT_IMP_LE, REAL_MAX_ACI, max_def]
+QED
+
+Theorem REAL_MIN_REDUCE :
+    !x y :real. x <= y \/ x < y ==> (min x y = x) /\ (min y x = x)
+Proof
+    PROVE_TAC [REAL_LT_IMP_LE, REAL_MIN_ACI, min_def]
+QED
+
+Theorem REAL_LT_MAX_BETWEEN :
+    !x b d :real. x < max b d /\ b <= x ==> x < d
+Proof
+    RW_TAC std_ss [max_def]
+ >> fs [real_lte]
+QED
+
+Theorem REAL_MIN_LE_BETWEEN :
+    !x a c :real. min a c <= x /\ x < a ==> c <= x
+Proof
+    RW_TAC std_ss [min_def]
+ >> PROVE_TAC [REAL_LET_ANTISYM]
+QED
+
 (* ********************************************* *)
 (*   The mininal element in num sets             *)
 (* ********************************************* *)
