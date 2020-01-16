@@ -855,31 +855,33 @@ QED
 
 
 Theorem extra_information2:
-  univ_mach U ==> ∃c. ∀x y. KC U x <= KC U (pair x y) + c
+  univ_mach U ⇒ ∃c. ∀x y. KC U x ≤ KC U (pair x y) + c
 Proof
   rw[KC_def,core_complexity_def] >>
   fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
   `univ_rf U` by fs[univ_mach_rf] >> fs[univ_mach_def] >>
-  assume_tac rUMibl_index >>  assume_tac composition_ub >> fs[] >>
-  rename [`∀x. Phi rUMi x = rUMibl [x]`,`∀a b. ℓ (a ∘ b) ≤ Ccom + (ℓ a + ℓ b)`] >>
-  qabbrev_tac`j = nblfst_i` >>
-  qexists_tac`2*(LENGTH (n2bl j)) + 1 + 2*Ccom` >> rw[] >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >-(fs[EXTENSION] >> `{p | U p = SOME x} ≠ ∅` by fs[univ_rf_nonempty] >>
-     fs[EXTENSION] >> metis_tac[] ) >>
+  qexists_tac`4 * ℓ nblfst_i + 2 * ℓ comp_bli + 5` >> rw[] >>
   DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >-(fs[EXTENSION] >> `{p | U p = SOME (pair x y)} ≠ ∅` by fs[univ_rf_nonempty] >>
+  >-(fs[EXTENSION] >> `{p | U p = SOME x} ≠ ∅` by fs[univ_rf_nonempty] >>
+     fs[EXTENSION] >> metis_tac[]) >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
+  >-(fs[EXTENSION] >>
+     ‘{p | U p = SOME (pair x y)} ≠ ∅’ by fs[univ_rf_nonempty] >>
      fs[EXTENSION] >> metis_tac[] ) >> fs[PULL_EXISTS] >>
   rename[`U pp = SOME (pair x y)`]  >>
-  `∃a b c. pp = pair a (pair b c)` by metis_tac[optionTheory.NOT_SOME_NONE] >> rw[] >>
-  `U (pair a (pair (n2bl (j o bl2n b)) c) ) = SOME x` by
-    (simp[computable_composition_def] >> rfs[on2bl_SOME] >> `z = bl2n (pair x y)` by simp[] >>
-     rw[] >> simp[Abbr`j`,computable_composition_def] >> qexists_tac`bl2n x` >> simp[nblfst_i_def,nblfst_correct]) >>
-  `LENGTH (pair a (pair (n2bl (j ∘ bl2n b)) c)) <= 2*Ccom + (2 * ℓ j + (LENGTH (pair a (pair b c)) + 1))` suffices_by metis_tac[LESS_EQ_TRANS] >> simp[pair_LENGTH] >>
-  `ℓ (j ∘ bl2n b) <= Ccom + LENGTH b + ℓ j` suffices_by fs[] >>
-  `ℓ (j ∘ bl2n b) <= Ccom + LENGTH (n2bl (bl2n b)) + ℓ j` suffices_by fs[] >>
-   fs[Excl"num_bool_inv.1"]
+  `∃a b c. pp = pair a (pair b c)`
+      by metis_tac[optionTheory.NOT_SOME_NONE] >> rw[] >> rfs[on2bl_SOME] >>
+  qabbrev_tac ‘
+    ARG = pair (pair (n2bl nblfst_i) b) (pair (n2bl comp_bli) (pair a c))
+  ’ >>
+  ‘U ARG = SOME x’ by
+    (simp[computable_composition_def, Abbr‘ARG’, comp_bli, on2bl_SOME,
+          comp_machine_bl_correct] >> ‘z = bl2n (pair x y)’ by simp[] >>
+     rw[nblfst_i_def]) >>
+  qmatch_abbrev_tac ‘LENGTH p ≤ RR’ >>
+  ‘LENGTH ARG ≤ RR’ suffices_by metis_tac[LESS_EQ_TRANS] >>
+  simp[pair_LENGTH, Abbr‘ARG’, Abbr‘RR’, LEFT_ADD_DISTRIB]
 QED
-
 
 Theorem subadditivity3:
   univ_mach U ==> ∃c. ∀x y. KC U x + CKC U y x <= KC U x + KC U y + c
@@ -890,7 +892,10 @@ Proof
 QED
 
 Definition nblTpow_def:
-  nblTpow = Cn (pr2 $-) [(λl. FUNPOW (λx. 2*x ) (Cn succ [proj 0] l) ((K 1n) l)  );K 2]
+  nblTpow = Cn (pr2 $-) [
+    (λl. FUNPOW (λx. 2*x ) (Cn succ [proj 0] l) ((K 1n) l));
+    K 2
+  ]
 End
 
 Theorem nblTpow_compute:
@@ -903,9 +908,6 @@ Proof
   pop_assum mp_tac >> rpt (pop_assum kall_tac) >> rw[] >>
   Induct_on`n` >> rw[FUNPOW_SUC] >>  pop_assum kall_tac >> Induct_on`n` >> rw[FUNPOW_SUC]
 QED
-
-
-
 
 Theorem primrec_nblTpow:
   primrec nblTpow 1
