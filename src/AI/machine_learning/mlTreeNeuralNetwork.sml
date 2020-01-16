@@ -248,12 +248,13 @@ fun se_of fpdict (tm,ev) =
   let
     val fpdatal = dfind tm fpdict
     val doutnv = diff_rvect ev (#outnv (last fpdatal))
-    val r = singleton_of_list (vector_to_list doutnv)
+    val r1 = vector_to_list doutnv
+    val r2 = map (fn x => x * x) r1
   in
-    r * r
+    Math.sqrt (average_real r2) 
   end
 
-fun mse_of fpdict tmevl = Math.sqrt (average_real (map (se_of fpdict) tmevl))
+fun mse_of fpdict tmevl = average_real (map (se_of fpdict) tmevl)
 
 fun fp_loss tnn (tml,tmevl) = mse_of (fp_tnn tnn tml) tmevl
 
@@ -357,7 +358,7 @@ fun is_accurate_one (rl1,rl2) =
     if all test rl3 then true else false
   end
 
-fun is_accurate_tnn tnn e =
+fun is_accurate tnn e =
   let
     val rll1 = map snd (infer_tnn tnn (map fst e))
     val rll2 = map snd e
@@ -366,7 +367,7 @@ fun is_accurate_tnn tnn e =
   end
 
 fun tnn_accuracy tnn set =
-  let val correct = filter (is_accurate_tnn tnn) set in
+  let val correct = filter (is_accurate tnn) set in
     Real.fromInt (length correct) / Real.fromInt (length set)
   end
 

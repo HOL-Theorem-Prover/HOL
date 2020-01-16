@@ -22,6 +22,7 @@ include Abbrev
 
   val infer_tnn : tnn -> term list -> (term * real list) list
   val train_tnn : schedule -> tnn -> tnnex * tnnex -> tnn
+  val is_accurate : tnn -> (term * real list) list -> bool
   val tnn_accuracy : tnn -> tnnex -> real
 
   val traintnn_extspec :

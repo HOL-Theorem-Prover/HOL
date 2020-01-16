@@ -50,27 +50,19 @@ type ('a,'b) rlobj =
 
 fun mk_mctsparam noiseb nsim rlobj =
   {
-  nsim = nsim,
-  stopatwin_flag = false,
-  decay = #decay (#rlparam rlobj),
-  explo_coeff = 2.0,
-  noise_all = noiseb,
-  noise_root = false,
-  noise_coeff = 0.25,
-  noise_gen = random_real,
+  nsim = nsim, stopatwin_flag = false,
+  decay = #decay (#rlparam rlobj), explo_coeff = 2.0,
+  noise_all = noiseb, noise_root = false,
+  noise_coeff = 0.25, noise_gen = random_real,
   noconfl = false, avoidlose = true
   }
 
 fun player_from_tnn tnn tob game board =
   let 
     val movel = (#available_movel game) board
-    val rll = map snd (infer_tnn tnn (tob board)) 
-    val _ = if null rll then raise ERR "player_from_tnn" "" else ()
+    val (e,p) = pair_of_list (map snd (infer_tnn tnn (tob board)))
   in
-    (
-    singleton_of_list (hd rll), 
-    combine (movel, map singleton_of_list (tl rll))
-    )
+    (singleton_of_list e, combine (movel,p))
   end
 
 fun mk_bsobj rlobj (unib,tnn,noiseb,nsim) =
@@ -197,7 +189,7 @@ fun mk_extsearch self (rlobj as {rlparam,gameio,...}) =
 fun rl_train ngen rlobj rlex =
   let
     val {tob,schedule,tnnparam} = #dplayer rlobj
-    fun f (a,b) = combine (tob a, map (fn x => [x]) b)
+    fun f (a,b) = combine (tob a,[[hd b],tl b])
     val tnnex = map f rlex
     val uex = mk_fast_set (list_compare Term.compare) (map (tob o fst) rlex)
     val _ = log rlobj ("Training examples: " ^ its (length rlex))
