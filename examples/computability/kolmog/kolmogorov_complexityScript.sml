@@ -1,10 +1,20 @@
 open HolKernel Parse boolLib bossLib
 open numsAsCompStatesTheory
 open boolListsTheory
-open extNatTheory pred_setTheory recfunsTheory prtermTheory recursivefnsTheory primrecfnsTheory
+open extNatTheory pred_setTheory recfunsTheory prtermTheory recursivefnsTheory
+     primrecfnsTheory arithmeticTheory
 
 val _ = new_theory "kolmogorov_complexity";
 
+
+Theorem TWO_TIMES_DIV[simp]:
+  (2 * n DIV 2 = n) ∧ (2 * n + 1) DIV 2 = n ∧ (2 * n + 2) DIV 2 = n + 1
+Proof
+  reverse (rpt conj_tac)
+  >- (‘2 * n + 2 = 2 * (n + 1)’ by simp[LEFT_ADD_DISTRIB] >>
+      simp[] >> metis_tac[MULT_DIV, DECIDE “0 < 2n”, MULT_COMM]) >>
+  metis_tac[DIV_MULT, DECIDE “1 < 2n”, MULT_COMM, MULT_DIV, DECIDE “0 < 2n”]
+QED
 
 Theorem K_lemma =
     MATCH_MP normal_orderTheory.lameq_bnf_of_cong chap2Theory.lameq_K
@@ -15,7 +25,7 @@ prefix_machine (U:bool list -> bool list option) =
 End
 
 Definition core_complexity_def:
-  core_complexity (U:bool list -> bool list option) x = 
+  core_complexity (U:bool list -> bool list option) x =
     if  { p | U p = SOME x} = {} then NONE
     else SOME (MIN_SET {LENGTH p | U p = SOME x})
 End
@@ -54,13 +64,13 @@ val univ_rf_def = Define`univ_rf U <=> ∀f. ∃g. ∀x. on2bl (recPhi [f;x]) = 
 Theorem univ_rf_nonempty:
   univ_rf U ==> {p | U p = SOME x} <> {}
 Proof
-  rw[univ_rf_def,EXTENSION] >> 
+  rw[univ_rf_def,EXTENSION] >>
   `∃m. Phi m 0 = SOME (bl2n x)` by (simp[Phi_def] >>
     qexists_tac`dBnum (fromTerm (K @@ church (bl2n x)))` >> simp[] >> qexists_tac`church (bl2n x)` >>
-    simp[K_lemma,normal_orderTheory.bnf_bnf_of]) >> 
+    simp[K_lemma,normal_orderTheory.bnf_bnf_of]) >>
   `∃g. ∀x. on2bl (Phi m x) = U (g++(n2bl x))` by fs[]>>
   `on2bl (Phi m 0) = U (g++(n2bl 0))` by fs[] >> qexists_tac`g++(n2bl 0)` >> fs[]>>
-  `on2bl (SOME (bl2n x)) = U (g ++ n2bl 0)` by metis_tac[] >> 
+  `on2bl (SOME (bl2n x)) = U (g ++ n2bl 0)` by metis_tac[] >>
   fs[optionTheory.OPTION_MAP_DEF,on2bl_def]
 QED
 
@@ -134,4 +144,3 @@ val kolmog_fn_def = Define`kolmog_fn f = if (∃n. recfn f n)
 
 
 val _ = export_theory();
-
