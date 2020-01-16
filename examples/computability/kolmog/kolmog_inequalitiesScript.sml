@@ -600,7 +600,10 @@ Proof
   DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
   >-(fs[EXTENSION] >> `{p | U p = SOME x} ≠ ∅` by fs[univ_rf_nonempty] >>
      fs[EXTENSION] >> metis_tac[] ) >> fs[PULL_EXISTS] >>
-  `U (pair y (pair (n2bl j) p')) = SOME x` by metis_tac[] >>
+  ‘∃a b c. p' = pair a (pair b c)’ by metis_tac[optionTheory.NOT_SOME_NONE] >> rw[] >>
+  `U (pair y (pair (n2bl j) (pair b (pair a c)))) = SOME x` by (rw[] >>
+  SIMP_TAC (srw_ss()) [rUMibl_correct] >> rw[] >>
+  ‘on2bl (rUMibl [bl2n (pair b  (pair a c))]) = SOME x’ by metis_tac[]) >>
   last_x_assum drule >> simp[pair_LENGTH]
 QED
 

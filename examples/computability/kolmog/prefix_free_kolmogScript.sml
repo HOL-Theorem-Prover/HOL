@@ -1,13 +1,130 @@
 open HolKernel Parse boolLib bossLib;
 open kolmogorov_complexityTheory
+open pred_setTheory
 open kraft_ineqTheory
 open invarianceResultsTheory 
 open boolListsTheory
+open kolmog_incomputableTheory
+open recursivefnsTheory
+open primrecfnsTheory
+open unary_recfnsTheory
+open kolmog_inequalitiesTheory
 
 val _ = new_theory "prefix_free_kolmog";
 
 
 (* Prefix Universal Turing Machine *)
+
+
+
+Definition univ_pf_def:
+  univ_pf U <=> univ_mach U ∧ prefix_free {p | (∃x. U p = SOME x)}
+End
+
+
+Theorem univ_pf_univ_mach:
+  univ_pf U ==> univ_mach U
+Proof
+  fs[univ_pf_def]
+QED
+
+Definition recfn_cond_def:
+  recfn_cond P f g = recCn
+        (recCn (SOME o pr2 $+)
+           [recCn (SOME o pr2 $* ) [SOME o proj 0; SOME o proj 1];
+            recCn (SOME o pr2 $* ) [recCn (SOME o pr2 $-) [SOME o K 1; SOME o proj 0]; SOME o proj 2]]) [P; f; g]
+End
+
+Theorem recfn_recfn_cond:
+  recfn P n ∧ recfn f n ∧ recfn g n ⇒ recfn (recfn_cond P f g) n
+Proof
+  rw[recfn_cond_def,GSYM (CONJUNCT2 combinTheory.K_o_THM),Excl"K_o_THM"] >> rpt (irule recfnCn >> rw[recfn_rules,GSYM (CONJUNCT2 combinTheory.K_o_THM),Excl"K_o_THM"]) >> irule primrec_recfn >> simp[]
+QED
+
+Definition recfn_predicate_def:
+  recfn_predicate P <=> ∀n. P n = SOME 0n ∨ P n = SOME 1
+End
+
+        (*
+Theorem recfn_cond_thm:
+  recfn_predicate P ==> recfn_cond P f g n = if P n = SOME 1n then f n else g n
+Proof
+  Cases_on‘f n = NONE’ >> Cases_on‘g n = NONE’ >> rw[recfn_predicate_def,recfn_cond_def,recCn_def]
+  >- (‘IS_SOME (f n)’ by fs[quantHeuristicsTheory.IS_SOME_EQ_NOT_NONE] >> fs[quantHeuristicsTheory.SOME_THE_EQ_SYM])
+  >- (‘IS_SOME (f n) ∧ IS_SOME (g n) ∧ IS_SOME (P n)’ by
+      fs[quantHeuristicsTheory.IS_SOME_EQ_NOT_NONE] >> ‘∃a b. f n = SOME a ∧ g n = SOME b’ by
+        fs[optionTheory.IS_SOME_EXISTS]>> rw[] >> ‘P n = SOME 0’ by metis_tac[] >> rw[])
+  >- (fs[])
+  >- ()
+  
+,optionTheory.option_CLAUSES] >> [optionTheory.NOT_SOME_NONE]
+QED *)
+
+Definition univ_pf_fun_def:
+  univ_pf_fun = minimise (λx. if (proj 0 x = 1) ∧ (nblsnd (proj 1 x) = 1) then SOME 0 else SOME 1)
+End
+
+Theorem univ_pf_fun_correct:
+  univ_pf_fun [bl2n (pair a b)] = if bl2n b = 1 then SOME 1 else NONE
+Proof
+  rw[] >> simp[univ_pf_fun_def,minimise_thm] >> rw[nblsnd_correct2] >> DEEP_INTRO_TAC optionTheory.some_intro >> rw[] >> qexists_tac‘1’ >> rw[]
+QED
+
+Theorem recfn_univ_lem1:
+  recfn (λx. if proj 0 x = 1 ∧ nblsnd (proj 1 x) = 1 then SOME 0 else SOME 1) 2
+Proof
+  ‘(λx. if proj 0 x = 1 ∧ nblsnd (proj 1 x) = 1 then SOME 0n else SOME 1) =
+  (SOME o (λx. if proj 0 x = 1 ∧ nblsnd (proj 1 x) = 1 then 0n else 1)) ’ by
+    (rw[FUN_EQ_THM] >> rw[]) >> rw[] >> irule primrec_recfn >>
+  ‘(λx. if proj 0 x = 1 ∧ nblsnd (proj 1 x) = 1 then 0 else 1) =
+   pr_cond (Cn pr_eq [proj 0;K 1]) (pr_cond (Cn pr_eq [Cn pr_nblsnd [proj 1];K 1]) (K 0) (K 1) ) (K 1)’ by (fs[FUN_EQ_THM] >> rw[pr_nblsnd_correct ]) >> rw[] >> irule primrec_pr_cond >> rw[]
+   >- (irule primrec_Cn >> rw[primrec_rules]) >>
+   irule primrec_pr_cond >> rw[] >> irule primrec_Cn >> rw[primrec_rules] >>
+   irule primrec_Cn >> simp[primrec_nblsnd] >> simp[primrec_rules]
+QED
+
+Theorem recfn_univ_pf_fun:
+  recfn univ_pf_fun 1
+Proof
+ fs[univ_pf_fun_def] >> irule (last (CONJUNCTS recfn_rules)) >> rw[] >>simp[recfn_univ_lem1]
+QED
+
+val recfn_univ_pf_i_def =  new_specification ("recfn_univ_pf_i_def",["recfn_univ_pf_i"],MATCH_MP unary_rec_fns_phi recfn_univ_pf_fun)
+
+
+(* NEED TO CHANGE univ_mach to be
+univ_mach U <=> (∀i y x.
+                 U (pair y (pair i x)) = on2bl (Phi (bl2n i) (bl2n (pair y x)))) ∧
+                  ∀m. (∀i y x. m ≠ pair y (pair i x)) ⇒ U m = NONE
+*)
+
+Theorem univ_mach_exists:
+  ∃U. univ_mach U
+Proof
+  simp[univ_mach_def] >> qexists_tac‘(λx. case some (a,b,c). x = (pair a (pair b c)) of
+                              NONE => NONE
+                            | SOME (a,b,c) => on2bl (Phi (bl2n b) (bl2n (pair a c) ) ) )’ >>
+  conj_tac >-( rw[] >> DEEP_INTRO_TAC optionTheory.some_intro >> rw[]
+  >- (PairCases_on‘x'’ >> fs[] >> fs[pair_11])
+  >- (first_x_assum (qspec_then ‘(y,i,x)’ mp_tac) >> rw[]))
+  >- (rw[] >> DEEP_INTRO_TAC optionTheory.some_intro >> rw[])
+QED
+    
+val univ_mach_fn_def =  new_specification ("univ_mach_fn_def",["univ_mach_fn"],univ_mach_exists )
+
+Theorem univ_pf_nonempty:
+  {U | univ_pf U} <> {}
+Proof
+  fs[EXTENSION,univ_pf_def,univ_mach_def] >>
+  qexists_tac‘(λa. )’
+QED
+
+Theorem kolmog_kraft2:
+  univ_pf U ==> bls_size {x | (∃y. U x = SOME y)} n <= 1
+Proof
+  fs[kraft_ineq1,HUTMpf_prefix_free] >> 
+QED
+
 
 
 val PUTM_def = Define`PUTM x = if bar2ed x then recPhi [bl2n (FST (unbar2 0 x));bl2n (SND (unbar2 0 x))] else NONE`
@@ -353,6 +470,10 @@ Theorem kolmog_kraft2:
 Proof
   fs[kraft_ineq1,HUTMpf_prefix_free]
 QED
+
+
+
+
 
 
 val _ = export_theory();
