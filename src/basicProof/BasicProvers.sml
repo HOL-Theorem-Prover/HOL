@@ -228,20 +228,25 @@ fun tupleCases names v =
  handle e => raise wrap_exn "BasicProvers" "primCases_on (tupleCases)" e
 
 
-fun envar s v = if s = "_" then v else mk_var(s,snd(dest_var v));
+fun envar s v = if mem s ["_","-"] then v else mk_var(s,snd(dest_var v));
 
 (*---------------------------------------------------------------------------*)
-(* Set specified existentially quantified names in nchotomy thm              *)
+(* Set specified existentially quantified names in nchotomy thm. The input   *)
+(* thm0 is direct from the TypeBase and therefore not instantiated to the    *)
+(* full type being case-split on. This matters for iterated pair case        *)
+(* analysis.                                                                 *)
 (*---------------------------------------------------------------------------*)
 
-fun set_names names thm =
- if null names then thm
- else
- let val tm = concl thm
-     val (v,body) = dest_forall tm
+fun set_names names ty thm0 =
+ let val vty0 = type_of (fst(dest_forall(concl thm0)))
+     val thm = INST_TYPE (match_type vty0 ty) thm0
+     val tm = concl thm
+     val (v,body) = dest_forall (concl thm)
      val vty = type_of v
      val namelists = List.map (String.tokens Char.isSpace) names
  in
+ if null names then thm
+ else
   case dest_thy_type vty
    of {Thy="pair",Tyop="prod",...} => tupleCases (hd namelists) v
     | otherwise =>
@@ -267,11 +272,10 @@ fun set_names names thm =
 
 fun primCases_on names st (g as (_,w)) =
  let val ty = type_of (dest_tmkind st)
-     val {Thy,Tyop,...} = dest_thy_type ty
  in case TypeBase.fetch ty
      of SOME facts =>
         let val thm = TypeBasePure.nchotomy_of facts
-            val thm' = set_names names thm
+            val thm' = set_names names ty thm
         in case st
            of Free M =>
                if (is_var M) then VAR_INTRO_TAC (ISPEC M thm') else
@@ -282,8 +286,11 @@ fun primCases_on names st (g as (_,w)) =
             | Alien M    => if ty=bool then ASM_CASES_TAC M
                             else TERM_INTRO_TAC (ISPEC M thm')
         end
-      | NONE => raise ERR "primCases_on"
+      | NONE =>
+          let val {Thy,Tyop,...} = dest_thy_type ty
+          in raise ERR "primCases_on"
                 ("No cases theorem found for type: "^Lib.quote (Thy^"$"^Tyop))
+          end
  end g;
 
 fun Cases_on qtm g = primCases_on [] (find_subterm qtm g) g

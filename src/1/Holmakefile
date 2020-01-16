@@ -1,33 +1,5 @@
-MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
-MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
-
-EXTRA_CLEANS = DiskFiles.grm-sig.sml DiskFiles.grm.sml DiskFiles.lex.sml
-
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-
-all: $(TARGETS) selftest.exe
+all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
-
-DiskFiles.grm.sml DiskFiles.grm-sig.sml: DiskFiles.grm
-	$(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $<
-	$(MV) DiskFiles.grm.sig DiskFiles.grm-sig.sml
-
-DiskFiles.grm-sig.uo: DiskFiles.grm-sig.sml
-	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) $<
-
-DiskFiles.grm.uo DiskFiles.grm.ui: DiskFiles.grm.sml DiskFiles.grm-sig.uo DiskFilesHeader.ui
-	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) DiskFiles.grm-sig.ui $<
-
-DiskFiles.lex.sml: DiskFiles.lex
-	$(protect $(HOLDIR)/tools/mllex/mllex.exe) $<
-
-DiskFiles.lex.uo: DiskFiles.lex.sml
-	$(HOLMOSMLC) -toplevel -c DiskFiles.grm-sig.ui $<
-
-AssembleDiskFiles.uo: AssembleDiskFiles.sml AssembleDiskFiles.ui \
-                      DiskFiles.grm.uo DiskFiles.lex.uo DiskFilesHeader.ui
-	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) DiskFiles.grm.ui DiskFiles.lex.ui $<
 
 LVTermNetFunctorApplied.uo: LVTermNetFunctorApplied.sml $(dprot $(SIGOBJ)/LVTermNetFunctor.ui) $(dprot $(SIGOBJ)/HOLset.ui)
 	$(HOLMOSMLC) -c $(protect $(SIGOBJ)/LVTermNetFunctor.ui) $<
