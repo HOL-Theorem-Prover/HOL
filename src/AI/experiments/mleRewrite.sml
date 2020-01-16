@@ -405,7 +405,7 @@ fun level_targetl level =
   let
     val boardl1 = read_boardl (datadir ^ "/train") 
     val boardl2 = first_n level (mk_batch 400 boardl1)
-    val nl = div_equal 400 level
+    val nl = div_equal 400 (length boardl2)
   in
     rev (List.concat (map (uncurry random_subset) (combine (nl,boardl2))))
   end
