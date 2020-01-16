@@ -28,15 +28,17 @@ sig
   (* test *)
   val is_rewritable : term -> bool
   val is_nf : term -> bool
-  
+  val is_normalizable : term -> bool
+
   (* tranformation *)
   val elim_kred : term -> term
-  val lo_norm : int -> term -> term option
+  val random_norm : int -> term -> term option
+  val strip_cA : term -> term list
 
   (* example generation *)
-  val random_board_fixed : unit -> (board * real) option
-  val gen_data : int -> (board * real) list
-  val create_data : int -> unit
+  val random_cterm : int -> term
+  val random_board_try : bool -> int -> int -> int -> (board * real) option
+  val create_data : int -> (board * real) list
   val level_targetl : int -> board list
   
   (* test *)

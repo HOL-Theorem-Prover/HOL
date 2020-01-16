@@ -14,6 +14,12 @@ open HolKernel Abbrev boolLib aiLib psMCTS psBigSteps
 val ERR = mk_HOL_ERR "mlReinforce"
 
 (* -------------------------------------------------------------------------
+   Fixed parameters (could be included in rlparam)
+   ------------------------------------------------------------------------- *)
+
+val level_threshold = 0.9
+
+(* -------------------------------------------------------------------------
    Logs
    ------------------------------------------------------------------------- *)
 
@@ -216,7 +222,7 @@ fun rl_explore_targetl (unib,noiseb) (rlobj,es) tnn targetl =
     val rlex = List.concat (map snd l)
     val rlex2 = filter (fn (_,x) => length x = 2) rlex
     val rlex1 = filter (fn (_,x) => length x = 1) rlex
-    val b = int_div nwin (length targetl) > 0.75
+    val b = int_div nwin (length targetl) > level_threshold
   in
     log rlobj ("Exploration time: " ^ rts t);
     log rlobj ("Exploration wins: " ^ its nwin);
