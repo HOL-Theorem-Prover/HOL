@@ -195,9 +195,6 @@ fun status_of (board as (tm1,tm2,n)) =
    Game
    ------------------------------------------------------------------------- *)
 
-fun profile_apply_move move board =
-  Profile.profile "apply_move" (apply_move move) board
-
 val game : (board,move) game =
   {
   status_of = status_of,
@@ -255,11 +252,9 @@ load "psMCTS"; open psMCTS;
 load "mleLib"; open mleLib;
 load "mleRewrite"; open mleRewrite;
 
-Profile.reset_all ();
 val (board,compl) = valOf (random_board_fixed ());
 val _ = ((print_endline o cts o #1) board; (print_endline o cts o #2) board);
 val ((b,endtree),t) = add_time (mcts_test 1600) board;
-Profile.results ();
 let val nodel = trace_win (#status_of game) endtree [] in
   app (print_endline o cts o #1 o #board) nodel
 end;
