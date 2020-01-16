@@ -5610,10 +5610,12 @@ val NONTRIVIAL_LIMIT_WITHIN = store_thm ("NONTRIVIAL_LIMIT_WITHIN",
 (* Some property holds "sufficiently close" to the limit point.              *)
 (* ------------------------------------------------------------------------- *)
 
-val eventually = new_definition ("eventually",
- ``eventually p net <=>
+Definition eventually :
+    net_eventually p net <=>
         trivial_limit net \/
-        ?y. (?x. netord net x y) /\ (!x. netord net x y ==> p x)``);
+        ?y. (?x. netord net x y) /\ (!x. netord net x y ==> p x)
+End
+val _ = overload_on ("eventually", ``net_eventually``);
 
 val EVENTUALLY_HAPPENS = store_thm ("EVENTUALLY_HAPPENS",
  ``!net p. eventually p net ==> trivial_limit net \/ ?x. p x``,

@@ -32,7 +32,11 @@ val stake_def = Define
 
 val sdrop_def = Define `(sdrop 0 = I) /\ (sdrop (SUC n) = sdrop n o stl)`;
 
-val eventually_def = Define `eventually x y = ?n. sdrop n x = sdrop n y`;
+Definition eventually_def :
+    seq_eventually x y <=> ?n. sdrop n x = sdrop n y
+End
+(* cf. real_topologyTheory.eventually *)
+val _ = overload_on ("eventually", ``seq_eventually``);
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
