@@ -15,8 +15,9 @@ val _ = intLib.deprecate_int()
 
 
 Definition univ_mach_def:
-  univ_mach U <=> (∀i y x. U (pair y (pair i x)) = on2bl (Phi (bl2n i) (bl2n (pair y x)))) ∧
-                  ∀m i y x. m <> pair y (pair i x) ==> U m = NONE
+  univ_mach U <=>
+     (∀i y x. U (pair y (pair i x)) = on2bl (Phi (bl2n i) (bl2n (pair y x)))) ∧
+     ∀m i y x. m <> pair y (pair i x) ==> U m = NONE
 End
 
 Theorem Tpow_0[simp]:
@@ -328,7 +329,8 @@ Proof
   simp[pair_def]
 QED
 
-Theorem nblsnd_correct2 = nblsnd_correct |> AP_TERM``bl2n`` |> SIMP_RULE (srw_ss()) [Excl"bl2n_11"]
+Theorem nblsnd_correct2[simp] =
+  nblsnd_correct |> AP_TERM``bl2n`` |> SIMP_RULE (srw_ss()) [Excl"bl2n_11"]
 
 Theorem univ_mach_pair_pair:
   univ_mach U ==> ∀p x. U p = SOME x <=>
@@ -409,7 +411,7 @@ Proof
   metis_tac[DROP_n2bl,bool_num_inv]
 QED
 
-Theorem nblfst_correct:
+Theorem nblfst_correct[simp]:
   nblfst (bl2n (pair a b)) = bl2n a
 Proof
   `n2bl (nblfst (bl2n (pair a b))) = a` suffices_by
@@ -695,11 +697,120 @@ Proof
  simp[on2bl_def]
 QED
 
-Theorem composition_ub:
-  ∃c. ∀a b. ℓ ((a:num) o b) <= ℓ a + ℓ b + c
+Definition comp_machine_t_def:
+  comp_machine_t =
+  LAM "ijx" (
+    LAM "ij" (
+      LAM "i" (
+        LAM "j" (
+          LAM "x" (
+            cbnf_ofk
+              @@ (LAM "r" (UM @@ (cnpair @@ (cnfst @@ VAR "ij")
+                                         @@ (cforce_num @@ VAR "r"))))
+              @@ (cdAPP @@ (cnumdB @@ (cnsnd @@ VAR "ij"))
+                        @@ (cchurch @@ VAR "x"))
+          ) @@ (cnsnd @@ VAR "ijx")
+        ) @@ (cnsnd @@ VAR "ij")
+      ) @@ (cnfst @@ VAR "ij")
+    ) @@ (cnfst @@ VAR "ijx")
+  )
+End
+
+Theorem FV_comp_machine_t[simp]:
+  FV comp_machine_t = ∅
 Proof
-  cheat
+  simp[comp_machine_t_def, EXTENSION]
 QED
+
+Triviality comp_machine_equiv = brackabs.brackabs_equiv [] comp_machine_t_def
+
+Theorem comp_machine_t_behaviour_good:
+  Phi j x = SOME n ∧ Phi i n = SOME r ⇒
+  (comp_machine_t @@ church ((i ⊗ j) ⊗ x) == church r)
+Proof
+  strip_tac >>
+  Q.UNDISCH_THEN ‘Phi j x = SOME n’ mp_tac >>
+  simp_tac (bsrw_ss()) [comp_machine_equiv, Phi_def] >> strip_tac >>
+  drule cbnf_of_works1 >>
+  simp[] >> simp_tac (bsrw_ss())[] >> disch_then (K ALL_TAC) >>
+  drule PhiSOME_UM_I >> rw[] >> asm_simp_tac(bsrw_ss()) []
+QED
+
+Theorem comp_machine_t_behaviour_bad1:
+  Phi j x = NONE ⇒
+  bnf_of (comp_machine_t @@ church ((i ⊗ j) ⊗ x)) = NONE
+Proof
+  strip_tac >>
+  simp_tac (bsrw_ss()) [comp_machine_equiv] >>
+  simp[PhiNONE_cbnf_ofk]
+QED
+
+Theorem comp_machine_t_behaviour_bad2:
+  Phi j x = SOME n ∧ Phi i n = NONE ⇒
+  bnf_of (comp_machine_t @@ church ((i ⊗ j) ⊗ x)) = NONE
+Proof
+  strip_tac >>
+  Q.UNDISCH_THEN ‘Phi j x = SOME n’ mp_tac >>
+  simp_tac (bsrw_ss()) [comp_machine_equiv, Phi_def] >> strip_tac >>
+  drule cbnf_of_works1 >> simp_tac (bsrw_ss()) [] >> disch_then (K ALL_TAC) >>
+  fs[PhiNONE_UM, normal_orderTheory.bnf_of_NONE]
+QED
+
+Definition comp_machine_i_def:
+  comp_machine_i = dBnum (fromTerm comp_machine_t)
+End
+
+Theorem Phi_comp:
+  Phi comp_machine_i ((i ⊗ j) ⊗ x) = Phi (i o j) x
+Proof
+  simp[computable_composition_def] >>
+  simp[SimpLHS, Phi_def, comp_machine_i_def] >>
+  Cases_on ‘Phi j x’
+  >- simp[comp_machine_t_behaviour_bad1] >>
+  rename [‘Phi j x = SOME r’] >>
+  Cases_on ‘Phi i r’
+  >- (drule_all comp_machine_t_behaviour_bad2 >> simp[]) >>
+  drule_all comp_machine_t_behaviour_good >>
+  asm_simp_tac (bsrw_ss()) [normal_orderTheory.bnf_bnf_of]
+QED
+
+Definition comp_machine_bl:
+  comp_machine_bl =
+    recCn recPhi [
+      SOME o K comp_machine_i;
+      recCn (SOME o pr2 $*,) [
+        recCn (SOME o pr2 $*,) [
+          recCn (rec1 (SOME o nblfst)) [
+            recCn (rec1 (SOME o nblfst)) [SOME o proj 0]
+          ];
+          recCn (SOME o pr1 nblsnd) [
+            recCn (rec1 (SOME o nblfst)) [SOME o proj 0]
+          ]
+        ];
+        recCn (SOME o pr1 nblsnd) [SOME o proj 0]
+      ]
+    ]
+End
+
+Theorem recfn_comp_machine_bl[simp]:
+  recfn comp_machine_bl 1
+Proof
+  simp[comp_machine_bl] >>
+  rpt (irule recfnCn >> simp[recfn_SOMEnpair, recfn_nblsnd, recfn_rules,
+                             recfn_nblfst] >> rw[])
+QED
+
+Theorem comp_machine_bl_correct:
+  comp_machine_bl [bl2n (pair (pair i j) x)] =
+  Phi (bl2n i o bl2n j) (bl2n x)
+Proof
+  simp[comp_machine_bl, recCn_def, Phi_comp]
+QED
+
+val comp_bli = new_specification (
+  "comp_bli", ["comp_bli"],
+  MATCH_MP unary_rec_fns_phi recfn_comp_machine_bl
+);
 
 Theorem subadditivity1:
   univ_mach U ==> ∃c. ∀x y. KC U (x++y) <= KC U (pair x y) + c
@@ -707,21 +818,29 @@ Proof
   rw[KC_def,core_complexity_def] >>
   fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
   `univ_rf U` by fs[univ_mach_rf] >> fs[univ_mach_def] >>
-  assume_tac nblpc_i_def >>  assume_tac composition_ub >> fs[] >>
-  qexists_tac`2*(LENGTH (n2bl nblpc_i)) + 1 + 2*c` >>
+  assume_tac nblpc_i_def >>
+  qexists_tac‘4 * ℓ nblpc_i + 2 * ℓ comp_bli + 5’ >>
   rw[] >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
   >-(fs[EXTENSION] >> `{p | U p = SOME (x++y)} ≠ ∅` by fs[univ_rf_nonempty] >>
      fs[EXTENSION] >> metis_tac[] ) >>
   DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >-(fs[EXTENSION] >> `{p | U p = SOME (pair x y)} ≠ ∅` by fs[univ_rf_nonempty] >>
+  >-(fs[EXTENSION] >>
+     ‘{p | U p = SOME (pair x y)} ≠ ∅’
+      by fs[univ_rf_nonempty] >>
      fs[EXTENSION] >> metis_tac[] ) >>
   fs[PULL_EXISTS] >> rename[`U pp = SOME (pair x y)`] >>
-  `∃pi a b. pp = pair a (pair pi b)` by metis_tac[optionTheory.NOT_SOME_NONE] >> rw[] >>
-  `U (pair a (pair (n2bl (nblpc_i o bl2n pi)) b)) = SOME (x++y)` by (simp[computable_composition_def] >> rfs[on2bl_SOME] >> `z = bl2n (pair x y)` by simp[] >> rw[] ) >>
-  `LENGTH (pair a (pair (n2bl (nblpc_i ∘ bl2n pi)) b)) <= 2*c+ (2 * ℓ nblpc_i + (LENGTH (pair a (pair pi b)) + 1))` suffices_by metis_tac[LESS_EQ_TRANS] >> simp[pair_LENGTH] >>
-  `ℓ (nblpc_i ∘ bl2n pi) <= c + (LENGTH pi + ℓ nblpc_i)` suffices_by fs[] >>
-  `ℓ (nblpc_i ∘ bl2n pi) <= c + LENGTH (n2bl (bl2n pi)) + ℓ nblpc_i` suffices_by simp[] >>
-  fs[Excl"num_bool_inv.1"]
+  ‘∃pi a b. pp = pair a (pair pi b)’ by metis_tac[optionTheory.NOT_SOME_NONE] >>
+  rw[] >> rfs[on2bl_SOME] >>
+  qabbrev_tac ‘
+    ARG = pair (pair (n2bl nblpc_i) pi) (pair (n2bl comp_bli) (pair a b))
+  ’ >>
+  ‘U ARG = SOME (x++y)’
+     by (simp[on2bl_SOME, comp_bli, comp_machine_bl_correct, Abbr‘ARG’,
+              computable_composition_def] >>
+         ‘z = bl2n (pair x y)’ by simp[] >> rw[]) >>
+  qmatch_abbrev_tac ‘LENGTH p ≤ RR’ >>
+  ‘LENGTH ARG <= RR’ suffices_by metis_tac[LESS_EQ_TRANS] >>
+  simp[pair_LENGTH, Abbr‘ARG’, Abbr‘RR’, LEFT_ADD_DISTRIB]
 QED
 
 
