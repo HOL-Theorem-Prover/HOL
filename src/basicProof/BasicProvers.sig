@@ -70,7 +70,7 @@ sig
 
   val Cases_on          : term quotation -> tactic
   val Induct_on         : term quotation -> tactic
-  val namedCases_on     : string list -> term quotation -> tactic
+  val namedCases_on     : term quotation -> string list -> tactic
 
   val PURE_TOP_CASE_TAC : tactic  (* top-most case-split *)
   val PURE_CASE_TAC     : tactic  (* smallest case-split (concl) *)

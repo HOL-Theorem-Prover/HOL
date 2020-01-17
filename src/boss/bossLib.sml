@@ -137,10 +137,12 @@ val cheat:tactic = fn g => ([], fn _ => Thm.mk_oracle_thm "cheat" g)
 
 
 val Cases     = BasicProvers.Cases
+val namedCases = BasicProvers.namedCases
 val Induct    = BasicProvers.Induct
 val recInduct = Induction.recInduct
 
 val Cases_on          = BasicProvers.Cases_on
+val namedCases_on     = BasicProvers.namedCases_on
 val Induct_on         = BasicProvers.Induct_on
 val PairCases_on      = pairLib.PairCases_on;
 val pairarg_tac       = pairLib.pairarg_tac

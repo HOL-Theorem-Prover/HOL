@@ -195,9 +195,22 @@ fun listpair [a,b] = (a,b);
 (*      |- !v. ?a b c. v = (a,b,c)                                           *)
 (*---------------------------------------------------------------------------*)
 
-fun tupleCases names v =
+
+val rename =   (* create names for underscored inputs *)
+  let val prefix = "_gv"
+     fun num2name i = prefix^Int.toString i
+  in fn slist =>
+       let val num_stream = Portable.make_counter{init=0,inc=1}
+           fun gname() = num2name(num_stream())
+           fun transform s = if mem s ["_","-"] then gname() else s
+       in map transform slist
+       end
+  end
+
+fun tupleCases names0 v =
  let val pthm = TypeBasePure.nchotomy_of
                   (Option.valOf (TypeBase.read{Thy="pair",Tyop="prod"}))
+     val names = rename names0
      val (vname,vty) = dest_var v
      val tys = strip_prod vty
      val vars = Lib.map2 (curry mk_var) names tys
@@ -205,7 +218,7 @@ fun tupleCases names v =
        | tmpvar_types n ty =
           case dest_thy_type ty
            of {Thy="pair",Tyop="prod",Args=[ty1,ty2]} => ty::tmpvar_types (n-1) ty2
-	    | otherwise => [ty]
+            | otherwise => [ty]
      val tmp_vars = map genvar (tl (tmpvar_types (length tys - 2) vty))
      val left_vars = List.take (vars,length vars - 2)
      val last2_vars = listpair(List.drop (vars,length vars - 2))
@@ -214,7 +227,6 @@ fun tupleCases names v =
      val eqns = map2 (curry mk_eq) (v::tmp_vars) rpair_tms
      val thlist = map ASSUME eqns
      val thm = REWRITE_RULE (tl thlist) (hd thlist)
-     val thm1 = itlist SIMPLE_EXISTS vars thm
      fun step eqn th =
       let val th1 = LEFT_EXISTS_INTRO eqn th
           val V = free_vars_lr (rhs eqn)
@@ -223,12 +235,10 @@ fun tupleCases names v =
       in MP th2 th3
       end
  in
-    GEN v (itlist step eqns thm1)
+    GEN v (itlist step eqns (itlist SIMPLE_EXISTS vars thm))
  end
  handle e => raise wrap_exn "BasicProvers" "primCases_on (tupleCases)" e
 
-
-fun envar s v = if mem s ["_","-"] then v else mk_var(s,snd(dest_var v));
 
 (*---------------------------------------------------------------------------*)
 (* Set specified existentially quantified names in nchotomy thm. The input   *)
@@ -236,6 +246,8 @@ fun envar s v = if mem s ["_","-"] then v else mk_var(s,snd(dest_var v));
 (* full type being case-split on. This matters for iterated pair case        *)
 (* analysis.                                                                 *)
 (*---------------------------------------------------------------------------*)
+
+fun envar s v = if mem s ["_","-"] then v else mk_var(s,snd(dest_var v));
 
 fun set_names names ty thm0 =
  let val vty0 = type_of (fst(dest_forall(concl thm0)))
@@ -296,7 +308,7 @@ fun primCases_on names st (g as (_,w)) =
 fun Cases_on qtm g = primCases_on [] (find_subterm qtm g) g
   handle e => raise wrap_exn "BasicProvers" "Cases_on" e;
 
-fun namedCases_on names qtm g =
+fun namedCases_on qtm names g =
   primCases_on names (find_subterm qtm g) g
   handle e => raise wrap_exn "BasicProvers" "namedCases_on" e;
 

@@ -32,16 +32,21 @@ sig
   (* Case-splitting and induction operations *)
 
   val Cases             : tactic
+  val namedCases        : string list -> tactic
   val Induct            : tactic
   val recInduct         : thm -> tactic
-  val Cases_on          : term quotation -> tactic
   val Induct_on         : term quotation -> tactic
-  val PairCases_on      : term quotation -> tactic
   val measureInduct_on  : term quotation -> tactic
   val completeInduct_on : term quotation -> tactic
-  val CASE_TAC          : tactic
+
+  val Cases_on          : term quotation -> tactic
+  val namedCases_on     : term quotation -> string list -> tactic
+  val PairCases_on      : term quotation -> tactic
+
   val pairarg_tac       : tactic
   val split_pair_case_tac : tactic
+
+  val CASE_TAC          : tactic
   val CaseEq            : string -> thm
   val CaseEqs           : string list -> thm
   val AllCaseEqs        : unit -> thm
