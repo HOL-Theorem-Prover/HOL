@@ -364,16 +364,16 @@ fun random_board_try b k size nstep =
 
 fun gen_data_false n =
   if n <= 0 then [] else
-  let val boardo = random_board_try false 1000 50 (random_int (10,20)) in
-    if isSome boardo andalso snd (valOf boardo) > 100000.0
+  let val boardo = random_board_try false 1000 50 (random_int (5,15)) in
+    if isSome boardo andalso snd (valOf boardo) > 1000.0
     then (print_endline (its n); valOf boardo :: gen_data_false (n-1))
     else gen_data_false n 
   end
 
 fun gen_data_true n =
   if n <= 0 then [] else
-  let val boardo = random_board_try true 1000 50 (random_int (10,20)) in
-    if isSome boardo andalso snd (valOf boardo) > 100000.0
+  let val boardo = random_board_try true 1000 50 (random_int (5,15)) in
+    if isSome boardo andalso snd (valOf boardo) > 1000.0
     then (print_endline (its n); valOf boardo :: gen_data_true (n-1))
     else gen_data_true n 
   end
@@ -409,7 +409,6 @@ load "aiLib"; open aiLib;
 load "psTermGen"; open psTermGen;
 load "psMCTS"; open psMCTS;
 load "mleRewrite"; open mleRewrite;
-val l1 = create_data 10000;
 val l2 = map snd l1;
 val l3 = dict_sort Int.compare (map (cterm_size o #1 o fst) l1);
 
@@ -425,7 +424,7 @@ end;
 
 val board1 = #board (dfind [] endtree);
 val board2 = 
-val r = mcts_test 1600 board2;
+val r = mcts_test 1600 board25;
 *)
 
 (* -------------------------------------------------------------------------
@@ -446,12 +445,12 @@ fun tob board =
 
 val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
-    batch_size = 16, nepoch = 50}]
+    batch_size = 16, nepoch = 20}]
 
 val operl = [head_eval,cE,cT,cA,cS,cK,cX,cY,cZ];
 
-val dim = 12
-fun dim_head_poli n = [dim,2*dim,n]
+val dim = 8
+fun dim_head_poli n = [dim,n]
 
 val tnnparam = map_assoc (dim_std (1,dim)) operl @
   range ((1,tmsize_limit div 4), fn n => (mk_head_poli n, dim_head_poli n))
@@ -463,8 +462,8 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleRewrite-combin-5", exwindow = 40000,
-   ncore = 32, nsim = 3200, decay = 1.0}
+  {expname = "mleRewrite-combin-6", exwindow = 40000,
+   ncore = 32, nsim = 1600, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {
@@ -480,7 +479,7 @@ val extsearch = mk_extsearch "mleRewrite.extsearch" rlobj
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
-(* val _ = create_data 10000; *)
+(* val _ = create_data 4000; *)
 val r = rl_start (rlobj,extsearch) 1;
 *)
 
