@@ -396,9 +396,10 @@ fun div_equal n m =
 
 fun level_targetl level = 
   let
+    val n = 200
     val boardl1 = read_boardl (datadir ^ "/train") 
-    val boardl2 = first_n level (mk_batch 400 boardl1)
-    val nl = div_equal 400 (length boardl2)
+    val boardl2 = first_n level (mk_batch n boardl1)
+    val nl = div_equal n (length boardl2)
   in
     rev (List.concat (map (uncurry random_subset) (combine (nl,boardl2))))
   end
@@ -445,14 +446,14 @@ fun tob board =
 
 val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
-    batch_size = 16, nepoch = 100}]
+    batch_size = 16, nepoch = 50}]
 
 val operl = [head_eval,cE,cT,cA,cS,cK,cX,cY,cZ];
 
-val dim = 8
+val dim = 12
 fun dim_head_poli n = [dim,2*dim,n]
 
-val tnnparam = map_assoc (dim_std (2,dim)) operl @
+val tnnparam = map_assoc (dim_std (1,dim)) operl @
   range ((1,tmsize_limit div 4), fn n => (mk_head_poli n, dim_head_poli n))
 
 val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
@@ -462,8 +463,8 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleRewrite-combin-4", exwindow = 40000,
-   ncore = 32, nsim = 1600, decay = 1.0}
+  {expname = "mleRewrite-combin-5", exwindow = 40000,
+   ncore = 32, nsim = 3200, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {
@@ -481,18 +482,6 @@ load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
 (* val _ = create_data 10000; *)
 val r = rl_start (rlobj,extsearch) 1;
-*)
-
-(* debug 
-load "mlReinforce"; open mlReinforce;
-load "mleRewrite"; open mleRewrite;
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-val dummy = random_tnn (#tnnparam (#dplayer rlobj));
-write_tnn "/home/thibault/test" dummy;
-val tnn = read_tnn "/home/thibault/test";
-
-S (S x x x) x x
-
 *)
 
 (* -------------------------------------------------------------------------

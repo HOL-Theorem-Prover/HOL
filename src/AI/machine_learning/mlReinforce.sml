@@ -217,7 +217,6 @@ fun rl_train ngen rlobj rlex =
 
 fun rl_explore_targetl (unib,noiseb) (rlobj,es) tnn targetl =
   let
-    val _ =  log rlobj "Exploration: start"
     val ncore = #ncore (#rlparam rlobj)
     val nsim = #nsim (#rlparam rlobj)
     val splayer = (unib,tnn,noiseb,nsim)
