@@ -134,6 +134,7 @@ fun read_result gameio file =
 
 fun write_target gameio file target = 
   (#write_boardl gameio) (file ^ "_target") [target]
+  handle Subscript => raise ERR "write_target" ""
 
 fun read_target gameio file = 
   singleton_of_list ((#read_boardl gameio) (file ^ "_target"))
