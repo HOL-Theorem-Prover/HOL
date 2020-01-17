@@ -453,7 +453,7 @@ val dim = 8
 fun dim_head_poli n = [dim,2*dim,n]
 
 val tnnparam = map_assoc (dim_std (2,dim)) operl @
-  List.tabulate (tmsize_limit + 1, fn n => (mk_head_poli n,dim_head_poli n))
+  range ((1,tmsize_limit div 4), fn n => (mk_head_poli n, dim_head_poli n))
 
 val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
@@ -489,6 +489,9 @@ load "mleRewrite"; open mleRewrite;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 val dummy = random_tnn (#tnnparam (#dplayer rlobj));
 write_tnn "/home/thibault/test" dummy;
+val tnn = read_tnn "/home/thibault/test";
+
+S (S x x x) x x
 
 *)
 

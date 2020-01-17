@@ -88,7 +88,7 @@ sig
     ('a, int) Redblackmap.dict -> 'a list -> ('a, int) Redblackmap.dict
 
   (* list *)
-  val is_single : 'a list -> bool
+  val range : (int * int) * (int -> 'a) -> 'a list
   val one_in_n : int -> int -> 'a list -> 'a list
   val map_snd : ('a -> 'b) -> ('c * 'a) list -> ('c * 'b) list
   val map_fst : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list

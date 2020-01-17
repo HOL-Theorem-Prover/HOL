@@ -176,8 +176,6 @@ fun decr x = x := (!x) - 1
    List
    ------------------------------------------------------------------------- *)
 
-fun is_single l = case l of [a] => true | _ => false
-
 fun one_in_n n start l = case l of
     [] => []
   | a :: m => if start mod n = 0
@@ -187,6 +185,9 @@ fun one_in_n n start l = case l of
 fun map_snd f l   = map (fn (a,b) => (a, f b)) l
 fun map_fst f l   = map (fn (a,b) => (f a, b)) l
 fun map_assoc f l = map (fn a => (a, f a)) l
+
+fun range ((a,b),f) = 
+  if a > b then raise ERR "range" "" else List.tabulate (b-a+1,fn x => f (x+a))
 
 fun cartesian_product l1 l2 =
   List.concat (map (fn x => map (fn y => (x,y)) l2) l1)
