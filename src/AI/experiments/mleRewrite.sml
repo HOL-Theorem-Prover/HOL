@@ -16,7 +16,6 @@ open HolKernel boolLib Abbrev aiLib smlParallel psMCTS psTermGen
 val ERR = mk_HOL_ERR "mleRewrite"
 
 val tmsize_limit = 100
-val move_limit = 16
 
 (* -------------------------------------------------------------------------
    Vocabulary
@@ -186,7 +185,7 @@ fun available_movel (tm,_,_) =
 fun status_of (board as (tm1,tm2,n)) =
   if term_eq tm1 tm2 then Win
   else if n <= 0 orelse (let val x = length (available_movel board) in
-    x = 0 orelse x > move_limit end) orelse (cterm_size tm1 > tmsize_limit)   
+    x = 0 end) orelse (cterm_size tm1 > tmsize_limit)   
   then Lose 
   else Undecided
 
@@ -454,7 +453,7 @@ val dim = 8
 fun dim_head_poli n = [dim,2*dim,n]
 
 val tnnparam = map_assoc (dim_std (2,dim)) operl @
-  List.tabulate (move_limit + 1, fn n => (mk_head_poli n,dim_head_poli n))
+  List.tabulate (tmsize_limit + 1, fn n => (mk_head_poli n,dim_head_poli n))
 
 val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
@@ -482,6 +481,15 @@ load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
 (* val _ = create_data 10000; *)
 val r = rl_start (rlobj,extsearch) 1;
+*)
+
+(* debug 
+load "mlReinforce"; open mlReinforce;
+load "mleRewrite"; open mleRewrite;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+val dummy = random_tnn (#tnnparam (#dplayer rlobj));
+write_tnn "/home/thibault/test" dummy;
+
 *)
 
 (* -------------------------------------------------------------------------

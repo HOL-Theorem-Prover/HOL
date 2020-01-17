@@ -96,12 +96,15 @@ fun string_of_wl wl =
 
 fun string_of_nn nn =
   let
+    val _ = print_endline "1";
     val diml = map (mat_dim o #w) nn
     fun f (a,b) = its a ^ "," ^ its b
   in
+    print_endline "2";
     String.concatWith " " (map f diml) ^ "\n" ^
     String.concatWith "\n\n" (map (string_of_mat o #w) nn)
   end
+  
 
 fun write_nn file nn = writel file [string_of_nn nn]
 
