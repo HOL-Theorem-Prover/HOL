@@ -1091,6 +1091,64 @@ Overload rfst = “rec1 (SOME o nblfst)”
 Overload rsnd = “SOME o pr1 nblsnd”
 Overload rpair = “SOME o nblpair”
 
+
+Definition extra_info_cond_prog_def:
+   extra_info_cond_prog = (* f ((y,z),(a,b)) = U(y,(a,b)) = Phi a (y,b)  *)
+   recCn recPhi [recCn rfst [recCn rsnd [SOME o proj 0]]; 
+                recCn rpair [recCn rfst [recCn rfst [SOME o proj 0]];
+                             recCn rsnd [recCn rsnd [SOME o proj 0] ]] ]
+End
+
+Theorem recfn_extra_info_cond_prog:
+  recfn extra_info_cond_prog 1
+Proof
+  simp[extra_info_cond_prog_def] >>
+  rpt (irule recfnCn >> simp[recfn_SOMEnpair, recfn_nblsnd, recfn_rules,
+                             recfn_nblfst, primrec_recfn, primrec_nblpair] >>
+       rw[])
+QED
+
+Theorem extra_info_cond_prog_correct:
+  extra_info_cond_prog [bl2n (pair (pair y z) (pair a b) )] = Phi (bl2n a) (bl2n (pair y  b))
+Proof
+  simp[extra_info_cond_prog_def, recCn_def, nblpair_correct]
+QED
+
+Theorem extra_information_cond1:
+  univ_mach U ==> ∃c. ∀x y z. CKC U x (pair y z) <= CKC U x y + c
+Proof
+  rw[KC_def,core_complexity_def,CKC_def,cond_core_complexity_def] >>
+  fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
+  `univ_rf U` by fs[univ_mach_rf] >> fs[univ_mach_def] >>
+
+  qx_choose_then ‘exinfoprog_i’ strip_assume_tac
+  (MATCH_MP unary_rec_fns_phi recfn_extra_info_cond_prog) >>
+  qexists_tac ‘2 * ℓ exinfoprog_i + 7’ >> rw[] >>
+  
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
+  >- (fs[EXTENSION] >> ‘univ_mach U’ by metis_tac[univ_mach_def] >>
+      simp[SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_pair_nonempty]) >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
+  >- (fs[EXTENSION] >> ‘univ_mach U’ by metis_tac[univ_mach_def] >>
+      simp[SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_pair_nonempty]) >>
+  fs[PULL_EXISTS] >>
+  rename [‘U (pair (pair y z) p1) = SOME x’, ‘U (pair y p2) = SOME x’]>>
+  ‘∃a b. p2 = pair a b’ by metis_tac[optionTheory.NOT_SOME_NONE,pair_11] >>
+  rw[] >> rfs[on2bl_SOME] >> rw[] >>
+  
+  rename [‘Phi (bl2n a) _ = SOME x’] >>
+  qabbrev_tac‘
+    ARG = (pair (n2bl exinfoprog_i) (pair a b))
+  ’ >>
+  ‘U (pair (pair y z) ARG) = SOME (n2bl x)’
+    by simp[Abbr‘ARG’, extra_info_cond_prog_correct, on2bl_def] >>
+  qmatch_abbrev_tac ‘LENGTH p1 ≤ RR’ >>
+  ‘LENGTH ARG ≤ RR’ suffices_by metis_tac[LESS_EQ_TRANS,pair_11] >>
+  simp[Abbr‘ARG’, Abbr‘RR’, pair_LENGTH, LEFT_ADD_DISTRIB]
+QED
+
+
+         
 Definition subaddprog_def:
   subaddprog = (* f (a,b,c,u,v) =  pair(b(a,c), u(b(a,c), v))*)
   let bac =
@@ -1136,6 +1194,8 @@ Proof
   Cases_on ‘Phi (bl2n u) (bl2n (pair (n2bl x) v))’ >> simp[]
 QED
 
+
+
 Theorem subadditivity2:
   univ_mach U ==> ∃c. ∀x y. KC U (pair x y) <= KC U x +  CKC U y x + c
 Proof
@@ -1179,20 +1239,39 @@ QED
 
 
 Theorem symmetry_of_information1a:
-  univ_mach U ==> ∃c. ∀x y.  CKC U x (pair y (KC U y)) + KC U y <= KC U (pair x y) + c
+  univ_mach U ==> ∃c. ∀x y.  CKC U x (pair y (n2bl (KC U y))) + KC U y <= KC U (pair x y) + c
 Proof
-
+  rw[KC_def,core_complexity_def,CKC_def,cond_core_complexity_def] >>
+  fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
+  `univ_rf U` by fs[univ_mach_rf] >> fs[univ_mach_def] >>
+  qx_choose_then ‘subaddprog_i’ strip_assume_tac
+    (MATCH_MP unary_rec_fns_phi recfn_subaddproj) >>
+  qexists_tac ‘2 * ℓ subaddprog_i’ >> rw[] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
+  >- (fs[EXTENSION] >>
+      ‘{ p | U p = SOME y } ≠ ∅’ by simp[univ_rf_nonempty] >>
+      fs[EXTENSION] >> metis_tac[]) >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
+  >- (fs[EXTENSION] >> ‘univ_mach U’ by metis_tac[univ_mach_def] >>
+      simp[SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_pair_nonempty]) >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
+  >- (fs[EXTENSION] >>
+      ‘{ p | U p = SOME (pair x y) } ≠ ∅’ by simp[univ_rf_nonempty] >>
+      fs[EXTENSION] >> metis_tac[]) >>
+  fs[PULL_EXISTS]
 QED
 
-Theorem symmetry_of_information1b:
-  univ_mach U ==> ∃c. ∀x y. KC U (pair x y) <=  CKC U x (pair y (KC U y)) + KC U y + c
-Proof
 
+
+Theorem symmetry_of_information1b:
+  univ_mach U ==> ∃c. ∀x y. KC U (pair x y) <=  CKC U x (pair y (n2bl (KC U y))) + KC U y + c
+Proof
+  
 QED
 
 Theorem symmetry_of_information2b:
   univ_mach U ==> ∃c. ∀x y.  CKC U y (pair x (KC U x)) + KC U x <=
-                           CKC U x (pair y (KC U y)) + KC U y + c
+                             CKC U x (pair y (KC U y)) + KC U y + c
 Proof
 
 QED
