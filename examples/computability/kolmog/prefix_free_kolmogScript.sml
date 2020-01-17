@@ -15,19 +15,141 @@ val _ = new_theory "prefix_free_kolmog";
 
 (* Prefix Universal Turing Machine *)
 
+Theorem prefix_univ_rf_not_exists:
+ ~∃U. prefix_machine U ∧ univ_rf U
+Proof
+  fs[prefix_machine_def,univ_rf_def] >> rw[] >>
+  Cases_on‘∃f. ∀g. ∃x. on2bl (Phi f x) ≠ U (g ++ n2bl x)’ >> rw[] >> fs[] >>
+  Cases_on‘∃x. x ∈ P ⇎ ∃y. U x = SOME y’ >> rw[] >> fs[] >>
+  fs[prefix_free_def] >> 
+  ‘∃g. ∀x. on2bl (Phi nblfst_i x) = U (g++ n2bl x)’ by fs[] >>
+  qexists_tac‘g++n2bl 2’ >> qexists_tac‘g++n2bl 6’ >> rw[]
+  >- (qexists_tac‘n2bl (nblfst 2)’ >>
+      ‘on2bl (Phi nblfst_i 2) = SOME (n2bl (nblfst 2))’ by fs[nblfst_i_def,on2bl_SOME] >>
+      metis_tac[])
+  >- (qexists_tac‘n2bl (nblfst 6)’ >>
+      ‘on2bl (Phi nblfst_i 6) = SOME (n2bl (nblfst 6))’ by fs[nblfst_i_def,on2bl_SOME] >>
+      metis_tac[])
+  >- (EVAL_TAC >> rw[rich_listTheory.IS_PREFIX_APPENDS])
+QED
 
-
-Definition univ_pf_def:
-  univ_pf U <=> univ_mach U ∧ prefix_free {p | (∃x. U p = SOME x)}
+Definition univ_pf_rf_def:
+  univ_pf_rf U <=> ((∀f. ∃g. ∀x. on2bl (recPhi [f; x]) = U (bar g ++ bar (n2bl x))) ∧
+                    ∀p. (∀a b. p <> (bar a) ++ (bar b)) ==> U p = NONE)
 End
 
 
-Theorem univ_pf_univ_mach:
-  univ_pf U ==> univ_mach U
+Theorem bar_bar_pf:
+  ~(bar a ++ bar b ≺ bar c ++ bar d)
 Proof
-  fs[univ_pf_def]
+  rw[GSYM bar2_def]
+QED
+        
+
+Theorem univ_pf_rf_prefix_machine:
+  univ_pf_rf U ==> prefix_machine U
+Proof
+  rw[univ_pf_rf_def,prefix_machine_def] >>
+  qexists_tac‘{p | (∃g x. p = bar g ++ bar (n2bl x)) ∧ (∃y. U p = SOME y)}’ >> rw[]
+  >- (rw[prefix_free_def] >> rw[GSYM bar2_def] >>
+      assume_tac (Q.INST [‘s’|->‘{(g,n2bl x);(g',n2bl x')}’] bar2_PF) >>
+      fs[prefix_free_def] >> metis_tac[] )
+  >- (eq_tac >> rw[] >> ‘~(∀a b. x ≠ bar a ++ bar b)’ by metis_tac[optionTheory.NOT_NONE_SOME] >>
+      fs[] >> qexists_tac‘a’ >> qexists_tac‘bl2n b’ >> rw[])
 QED
 
+Theorem kolmog_kraft2:
+  prefix_machine U ==> bls_size {x | (∃y. U x = SOME y)} n <= 1
+Proof
+  rw[] >> irule kraft_ineq1 >> fs[prefix_machine_def] >>
+  ‘{x | (∃y. U x = SOME y)} = P’ suffices_by fs[] >> fs[EXTENSION]
+QED
+
+Theorem kolmog_kraft3:
+  univ_pf_rf U ==> bls_size {x | (∃y. U x = SOME y)} n <= 1
+Proof
+  rw[kolmog_kraft2,univ_pf_rf_prefix_machine]
+QED
+
+Theorem univ_pf_rf_nonempty:
+  univ_pf_rf U ⇒ {p | U p = SOME x} ≠ ∅
+Proof
+  rw[univ_pf_rf_def,EXTENSION] >> assume_tac Phi_x_0 >>
+  ‘∃k. Phi k 0 = SOME (bl2n x)’  by metis_tac[] >>
+  ‘∃g. ∀m. on2bl (Phi k m) = U (bar g ++ bar (n2bl m))’ by metis_tac[] >>
+  ‘on2bl (Phi k 0) = U (bar g ++ bar (n2bl 0))’ by fs[] >>
+  qexists_tac‘bar g ++ bar (n2bl 0)’ >>
+  ‘on2bl (Phi k 0) = SOME x’ suffices_by fs[] >>
+  ‘on2bl (SOME (bl2n x)) = SOME x’ suffices_by metis_tac[] >> fs[on2bl_SOME]
+QED
+
+
+Theorem MIN_SET_lmult:
+  s<> {} ∧ k<>0 ==> (k:num) * MIN_SET {b | b ∈ s} = MIN_SET { k*b | b ∈ s}
+Proof
+  rw[] >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[] 
+  >- (fs[EXTENSION] >> metis_tac[]) >>
+  ‘b*k <= x*k’ by fs[] >> ‘x <= b’ by fs[] >>
+  ‘x*k <= b*k’ by fs[] >> ‘k * x <= b*k’ by metis_tac[arithmeticTheory.MULT_COMM] >>
+  ‘b*k <= k*x’ by metis_tac[arithmeticTheory.MULT_COMM]>>
+  metis_tac[arithmeticTheory.LESS_EQUAL_ANTISYM]
+QED
+
+Theorem invariance_theorem_pf:
+  ∀U T. univ_pf_rf U ==> ∃C. ∀x. (core_complexity U x) <= 
+                                 (core_complexity (λy. on2bl (recPhi [T;bl2n y])) x) +
+                                 (core_complexity (λy. on2bl (recPhi [T;bl2n y])) x) + (C U T)
+Proof
+  rw[univ_pf_rf_def,core_complexity_def] >>  fs[univ_pf_rf_def] >>
+  `∃g. ∀x. on2bl (Phi T' x) = U (bar g++ bar (n2bl x))` by fs[] >>
+  qexists_tac`λx y. SOME (2* LENGTH g + 2) ` >> rw[]
+  >- (`univ_pf_rf U` by fs[univ_pf_rf_def] >>`{p| U p = SOME x} <> {}` by fs[univ_pf_rf_nonempty] >> fs[])
+  >- (`MIN_SET (IMAGE LENGTH {p | U p = SOME x}) ∈
+        IMAGE LENGTH ({p | U p = SOME x})` by fs[MIN_SET_LEM] >> fs[IMAGE_DEF] >>
+      qabbrev_tac`U_x = x'` >>
+      `MIN_SET (IMAGE LENGTH { y | U (bar g ++ bar y) = SOME x}) ∈
+        IMAGE LENGTH ({ y | U (bar g ++ bar y) = SOME x})` by fs[MIN_SET_LEM] >> fs[IMAGE_DEF] >>
+      qabbrev_tac`T_x = x''` >>
+      `{LENGTH y | U (bar g ++ bar y) = SOME x} <> {}` by (fs[EXTENSION] >> qexists_tac`T_x`>>fs[])>>
+      qabbrev_tac`a=LENGTH g` >>
+      `a + MIN_SET {b | b ∈  {LENGTH y | U (bar g ++ bar y) = SOME x}} =
+        MIN_SET {a + b | b ∈  {LENGTH y | U (bar g ++ bar y) = SOME x}}` by fs[MIN_SET_ladd] >>
+      fs[] >>
+      `{LENGTH p | U p = SOME x} <> {}` by (`IMAGE LENGTH { p | U p = SOME x} ≠ ∅` by
+        fs[IMAGE_EQ_EMPTY] >>
+        `{LENGTH p | p ∈ {q | U q= SOME x}} ≠ ∅` by metis_tac[IMAGE_DEF] >> fs[]) >>
+      `MIN_SET {LENGTH p | U p = SOME x} ∈ {LENGTH p | U p = SOME x} ∧
+        ∀q. q ∈ {LENGTH p | U p = SOME x} ⇒ MIN_SET {LENGTH p | U p = SOME x} ≤ q` by
+        fs[MIN_SET_LEM] >>
+      `MIN_SET {LENGTH x' | U x' = SOME x} ≤
+       2*MIN_SET {(a + b) | (∃y. b = LENGTH y ∧ U (bar g ++ bar y) = SOME x)}+2`
+         suffices_by fs[]>>
+       DEEP_INTRO_TAC MIN_SET_ELIM >> rw[] >>
+      DEEP_INTRO_TAC MIN_SET_ELIM >> rw[] 
+       >- (fs[EXTENSION] >> qexists_tac`T_x`>>fs[]) >>
+       fs[Abbr`a`] >>
+       ‘LENGTH x'⁴' ≤ LENGTH (bar g ++ bar y)’ by metis_tac[] >>
+       ‘LENGTH (bar g ++ bar y) = 2 * (LENGTH g + LENGTH y) + 2’ suffices_by fs[] >>
+       fs[listTheory.LENGTH_APPEND,length_bar]  )
+QED
+
+
+(* Cleaned up invariance theorem *)
+
+
+Theorem clean_invariance_theorem_pf:
+  ∀U V. univ_pf_rf U ∧ (i ∈ indexes_of V ) ==> ∃C. ∀x. (core_complexity U x) <= (core_complexity V x) + (core_complexity V x) + (C U i)
+Proof
+  rw[indexes_of_def] >> qspecl_then [`U`,`i`] mp_tac invariance_theorem_pf >> rw[]
+QED
+
+
+
+
+(*  New stuff might not need  *)
+
+(*
 Definition recfn_cond_def:
   recfn_cond P f g = recCn
         (recCn (SOME o pr2 $+)
@@ -41,24 +163,6 @@ Proof
   rw[recfn_cond_def,GSYM (CONJUNCT2 combinTheory.K_o_THM),Excl"K_o_THM"] >> rpt (irule recfnCn >> rw[recfn_rules,GSYM (CONJUNCT2 combinTheory.K_o_THM),Excl"K_o_THM"]) >> irule primrec_recfn >> simp[]
 QED
 
-Definition recfn_predicate_def:
-  recfn_predicate P <=> ∀n. P n = SOME 0n ∨ P n = SOME 1
-End
-
-        (*
-Theorem recfn_cond_thm:
-  recfn_predicate P ==> recfn_cond P f g n = if P n = SOME 1n then f n else g n
-Proof
-  Cases_on‘f n = NONE’ >> Cases_on‘g n = NONE’ >> rw[recfn_predicate_def,recfn_cond_def,recCn_def]
-  >- (‘IS_SOME (f n)’ by fs[quantHeuristicsTheory.IS_SOME_EQ_NOT_NONE] >> fs[quantHeuristicsTheory.SOME_THE_EQ_SYM])
-  >- (‘IS_SOME (f n) ∧ IS_SOME (g n) ∧ IS_SOME (P n)’ by
-      fs[quantHeuristicsTheory.IS_SOME_EQ_NOT_NONE] >> ‘∃a b. f n = SOME a ∧ g n = SOME b’ by
-        fs[optionTheory.IS_SOME_EXISTS]>> rw[] >> ‘P n = SOME 0’ by metis_tac[] >> rw[])
-  >- (fs[])
-  >- ()
-  
-,optionTheory.option_CLAUSES] >> [optionTheory.NOT_SOME_NONE]
-QED *)
 
 Definition univ_pf_fun_def:
   univ_pf_fun = minimise (λx. if (proj 0 x = 1) ∧ (nblsnd (proj 1 x) = 1) then SOME 0 else SOME 1)
@@ -92,12 +196,6 @@ QED
 val recfn_univ_pf_i_def =  new_specification ("recfn_univ_pf_i_def",["recfn_univ_pf_i"],MATCH_MP unary_rec_fns_phi recfn_univ_pf_fun)
 
 
-(* NEED TO CHANGE univ_mach to be
-univ_mach U <=> (∀i y x.
-                 U (pair y (pair i x)) = on2bl (Phi (bl2n i) (bl2n (pair y x)))) ∧
-                  ∀m. (∀i y x. m ≠ pair y (pair i x)) ⇒ U m = NONE
-*)
-
 Theorem univ_mach_exists:
   ∃U. univ_mach U
 Proof
@@ -112,21 +210,16 @@ QED
     
 val univ_mach_fn_def =  new_specification ("univ_mach_fn_def",["univ_mach_fn"],univ_mach_exists )
 
-Theorem univ_pf_nonempty:
-  {U | univ_pf U} <> {}
-Proof
-  fs[EXTENSION,univ_pf_def,univ_mach_def] >>
-  qexists_tac‘(λa. )’
-QED
-
-Theorem kolmog_kraft2:
-  univ_pf U ==> bls_size {x | (∃y. U x = SOME y)} n <= 1
-Proof
-  fs[kraft_ineq1,HUTMpf_prefix_free] >> 
-QED
 
 
+*)
 
+
+(*
+
+
+(* OLD STUFF *)
+        
 val PUTM_def = Define`PUTM x = if bar2ed x then recPhi [bl2n (FST (unbar2 0 x));bl2n (SND (unbar2 0 x))] else NONE`
 
 
@@ -472,7 +565,7 @@ Proof
 QED
 
 
-
+*)
 
 
 
