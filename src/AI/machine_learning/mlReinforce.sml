@@ -215,17 +215,18 @@ fun rl_train ngen rlobj rlex =
 
 fun rl_explore_targetl (unib,noiseb) (rlobj,es) tnn targetl =
   let
+    val _ =  log rlobj "Exploration: start"
     val ncore = #ncore (#rlparam rlobj)
     val nsim = #nsim (#rlparam rlobj)
     val splayer = (unib,tnn,noiseb,nsim)
     val (l,t) = add_time (parmap_queue_extern ncore es splayer) targetl
+    val _ =  log rlobj ("Exploration time: " ^ rts t)
     val nwin = length (filter fst l)
+    val _ = log rlobj ("Exploration wins: " ^ its nwin)
     val rlex = List.concat (map snd l)
+    val _ = log rlobj ("Exploration new examples: " ^ its (length rlex))
     val b = int_div nwin (length targetl) > level_threshold
   in
-    log rlobj ("Exploration time: " ^ rts t);
-    log rlobj ("Exploration wins: " ^ its nwin);
-    log rlobj ("Exploration new examples: " ^ its (length rlex));
     (rlex,b)
   end
 
