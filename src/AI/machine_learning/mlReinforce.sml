@@ -108,6 +108,7 @@ fun write_splayer file (unib,tnn,noiseb,nsim) =
   writel (file ^ "_flags") [String.concatWith " " (map bts [unib,noiseb])];
   writel (file ^ "_nsim") [its nsim]
   )
+  handle Subscript => raise ERR "write_splayer" ""
 
 fun read_splayer file =
   let

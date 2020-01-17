@@ -396,15 +396,16 @@ fun parmap_queue_extern ncore es param argl =
     val widl = List.tabulate (ncore,I)
     val pd = #parallel_dir es
     val _ = clean_parallel_dirs pd widl
+    val _ = print_endline "writing parameters"
     val _ = #write_param es (param_file pd) param
+    val warg = #write_arg es
+    fun rr wid = #read_result es (result_file pd wid)
+    val arglv = Vector.fromList argl
+    val pendingl = List.tabulate (Vector.length arglv,I)
     val _ = print_endline ("start " ^ its ncore ^ " workers")
     fun fork wid = Thread.fork (fn () =>
       boss_start_worker pd (code_of_extspec es) wid, attrib)
     val threadl = map fork widl
-    fun rr wid = #read_result es (result_file pd wid)
-    val arglv = Vector.fromList argl
-    val pendingl = List.tabulate (Vector.length arglv,I)
-    val warg = #write_arg es
   in
     boss_wait_upl pd widl;
     print_endline ("  " ^ its ncore ^ " workers started");
