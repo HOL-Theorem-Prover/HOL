@@ -169,9 +169,8 @@ fun cterm_size tm = length (find_terms is_combin tm)
 type move = term * int list
 
 fun string_of_move (eq,pos) = 
-  if term_eq eq s_thm 
-  then "s_thm, " ^ string_of_pos pos else
-  raise ERR "string_of_move" "unexpected equality"
+  (if term_eq eq s_thm then "s_thm" else tts eq) ^ " " ^ 
+  string_of_pos pos
 
 fun apply_move (eq,pos) (tm1,tm2,n) = 
   (elim_kred (subst_cmatch (tag_eq eq) (tag_subtm (tm1,pos))), tm2, n-1)
@@ -446,11 +445,10 @@ fun tob board =
    ------------------------------------------------------------------------- *)
 
 val schedule =
-  [{ncore = 1, verbose = true, learning_rate = 0.02,
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 100}]
 
-val operl = [eq_adj,head_eval,``$= :'a->'a->bool``, 
-             cE,cT,cA,cS,cK,cX,cY,cZ];
+val operl = [head_eval,cE,cT,cA,cS,cK,cX,cY,cZ];
 
 val dim = 8
 fun dim_head_poli n = [dim,2*dim,n]

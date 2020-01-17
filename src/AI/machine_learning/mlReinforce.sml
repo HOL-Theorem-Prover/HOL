@@ -173,6 +173,7 @@ fun extsearch_fun rlobj splayer target =
   in
     (b1,rlex)
   end
+  handle Subscript => raise ERR "extsearch_fun" "subscript"
 
 fun mk_extsearch self (rlobj as {rlparam,gameio,...}) =
   {
@@ -220,14 +221,11 @@ fun rl_explore_targetl (unib,noiseb) (rlobj,es) tnn targetl =
     val (l,t) = add_time (parmap_queue_extern ncore es splayer) targetl
     val nwin = length (filter fst l)
     val rlex = List.concat (map snd l)
-    val rlex2 = filter (fn (_,x) => length x = 2) rlex
-    val rlex1 = filter (fn (_,x) => length x = 1) rlex
     val b = int_div nwin (length targetl) > level_threshold
   in
     log rlobj ("Exploration time: " ^ rts t);
     log rlobj ("Exploration wins: " ^ its nwin);
-    log rlobj ("Exploration new examples: " ^ its (length rlex) ^ " " ^ 
-      its (length rlex1) ^ " " ^ its (length rlex2));
+    log rlobj ("Exploration new examples: " ^ its (length rlex));
     (rlex,b)
   end
 
