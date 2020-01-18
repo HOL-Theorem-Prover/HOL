@@ -481,6 +481,8 @@ load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
 (* val _ = create_data 4000; *)
 val r = rl_start (rlobj,extsearch) 1;
+
+simple idea: move up a level when fails to prove.
 *)
 
 (* -------------------------------------------------------------------------
