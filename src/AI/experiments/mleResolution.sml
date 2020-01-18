@@ -438,7 +438,6 @@ val extsearch = mk_extsearch "mleResolution.extsearch" rlobj
 load "mleResolution"; open mleResolution;
 load "mlReinforce"; open mlReinforce;
 val pbl = (#level_targetl rlobj) 4;
-
 val r = rl_start (rlobj,extsearch) 4;
 *)
 

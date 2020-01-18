@@ -30,9 +30,6 @@ val cZ = mk_var ("cZ",alpha)
 val cA = mk_var ("cA",``:'a -> 'a -> 'a``)
 val cT = mk_var ("cT",``:'a -> 'a``)
 val cE = mk_var ("cE", ``:'a -> 'a -> 'a``)
-
-
-
 val vf = mk_var ("vf",alpha)
 val vg = mk_var ("vg",alpha)
 val vy = mk_var ("vy",alpha)
@@ -309,15 +306,12 @@ val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
    Level
    ------------------------------------------------------------------------- *)
 
-fun random_walk n r board =
+fun random_walk n board =
   if cterm_size (#1 board) > tmsize_limit then NONE else
-  if n <= 0 then SOME (board,r) else
-  let 
-    val movel = available_movel board 
-    val newr = r * Real.fromInt (length movel)
-  in
+  if n <= 0 then SOME board else
+  let val movel = available_movel board in
     if null movel then NONE else
-    random_walk (n-1) newr (apply_move (random_elem movel) board)
+    random_walk (n-1) (apply_move (random_elem movel) board)
   end
 
 fun random_norm n tm =
@@ -343,10 +337,10 @@ fun random_board b size nstep =
   then NONE else
     let
       val board1 = (tm, mk_var("dummy",alpha),0)
-      val board2 = random_walk nstep 1.0 board1
+      val board2 = random_walk nstep board1
     in
       if isSome board2 
-      then SOME ((tm, #1 (fst (valOf board2)), 2*nstep), snd (valOf board2))
+      then SOME (tm, #1 (valOf board2), 2*nstep)
       else NONE
     end
   end
@@ -364,29 +358,46 @@ fun random_board_try b k size nstep =
 
 fun gen_data_false n =
   if n <= 0 then [] else
-  let val boardo = random_board_try false 1000 50 (random_int (5,15)) in
-    if isSome boardo andalso snd (valOf boardo) > 1000.0
+  let val boardo = random_board_try false 1000 40 (random_int (1,15)) in
+    if isSome boardo
     then (print_endline (its n); valOf boardo :: gen_data_false (n-1))
     else gen_data_false n 
   end
 
 fun gen_data_true n =
   if n <= 0 then [] else
-  let val boardo = random_board_try true 1000 50 (random_int (5,15)) in
-    if isSome boardo andalso snd (valOf boardo) > 1000.0
+  let val boardo = random_board_try true 1000 40 (random_int (1,15)) in
+    if isSome boardo
     then (print_endline (its n); valOf boardo :: gen_data_true (n-1))
     else gen_data_true n 
   end
 
 val datadir = HOLDIR ^ "/src/AI/experiments/data_combin"
 
+fun compare_third cmp ((_,_,a),(_,_,b)) = cmp (a,b)
+
+fun stats_il il = 
+  let 
+    fun f (a,b) = its a ^ "-" ^ its b
+    val l = dlist (count_dict (dempty Int.compare) il) 
+  in
+    print_endline (String.concatWith ", " (map f l))
+  end
+
 fun create_data n = 
   let 
     val _ = mkDir_err datadir 
     val l1 =  (gen_data_true (n div 2) @ gen_data_false (n div 2))
-    val l2 = dict_sort compare_rmin l1
+    val l2 = dict_sort (compare_third Int.compare) l1
   in  
-    write_boardl (datadir ^ "/train") (map fst l1); l2
+    write_boardl (datadir ^ "/train") l2;
+    print_endline "cterm size in:"; 
+    stats_il (map (cterm_size o #1) l2);
+    print_endline "cterm size out:";
+    stats_il (map (cterm_size o #2) l2);
+    print_endline "nstep:";
+    stats_il (map ((fn x => x div 2) o #3) l2);
+    l2
   end
 
 fun div_equal n m = 
@@ -462,7 +473,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleRewrite-combin-6", exwindow = 40000,
+  {expname = "mleRewrite-combin-7", exwindow = 40000,
    ncore = 32, nsim = 1600, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
@@ -479,10 +490,10 @@ val extsearch = mk_extsearch "mleRewrite.extsearch" rlobj
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
-(* val _ = create_data 4000; *)
+val _ = create_data 4000;
 val r = rl_start (rlobj,extsearch) 1;
 
-simple idea: move up a level when fails to prove.
+simple innovative idea: move up a level when fails to prove.
 *)
 
 (* -------------------------------------------------------------------------
