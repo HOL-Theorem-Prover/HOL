@@ -17,7 +17,7 @@
         (list (regexp-opt '("let" "local" "in" "end" "fun" "val" "open") 'words)
               'quote
               'holscript-smlsyntax)
-        '("\\<cheat\\>" . 'hol-cheat-face)
+        '("\\<cheat\\>" . 'holscript-cheat-face)
         '(hol-find-quoted-material 0 'holscript-quoted-material prepend)))
 
 (defconst holscript-font-lock-defaults '(holscript-font-lock-keywords))
