@@ -1205,6 +1205,30 @@ Theorem symmetry_of_information1b:
   univ_mach U ==>
   ∃c. ∀x y. KC U (pair x y) ≤ CKC U x (pair y (n2bl (KC U y))) + KC U y + c
 Proof
+  rw[KC_def,core_complexity_def,CKC_def,cond_core_complexity_def] >>
+  fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
+  `univ_rf U` by fs[univ_mach_rf] >> fs[univ_mach_def] >>
+  qexists_tac ‘ℓ SIb_machine_i + 7’ >> rw[] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
+  >- simp[EXTENSION, SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_nonempty] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
+  >- simp[EXTENSION, SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_nonempty] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
+  >- simp[EXTENSION, univ_mach_def,
+          SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_pair_nonempty] >>
+  fs[PULL_EXISTS] >>
+  rename [‘U p = SOME (pair x y)’, ‘U p1 = SOME y’,
+          ‘U (pair (pair y (n2bl (LENGTH p1))) p2) = SOME x’] >>
+  ‘∃a1 i1 b1. p1 = pair a1 (pair i1 b1)’
+    by metis_tac[optionTheory.NOT_SOME_NONE] >>
+  rw[] >> rfs[on2bl_SOME] >> rw[] >>
+  qabbrev_tac ‘N1 = LENGTH (pair a1 (pair i1 b1))’ >>
+  ‘∃i2 b2. p2 = pair i2 b2’ by metis_tac[optionTheory.NOT_SOME_NONE, pair_11] >>
+  rw[] >> rfs[on2bl_SOME] >> rw[] >>
+  rename [‘U p = SOME (pair (n2bl x) (n2bl y))’] >>
+
+
+
   cheat
 QED
 
