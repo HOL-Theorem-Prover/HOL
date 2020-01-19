@@ -1109,7 +1109,8 @@ Proof
 QED
 
 Theorem extra_info_cond_prog_correct:
-  extra_info_cond_prog [bl2n (pair (pair y z) (pair a b) )] = Phi (bl2n a) (bl2n (pair y  b))
+  extra_info_cond_prog [bl2n (pair (pair y z) (pair a b))] =
+  Phi (bl2n a) (bl2n (pair y  b))
 Proof
   simp[extra_info_cond_prog_def, recCn_def, nblpair_correct]
 QED
@@ -1196,6 +1197,18 @@ QED
 
 
 
+
+
+(* up to here *)
+
+Theorem symmetry_of_information1b:
+  univ_mach U ==>
+  ∃c. ∀x y. KC U (pair x y) ≤ CKC U x (pair y (n2bl (KC U y))) + KC U y + c
+Proof
+  cheat
+QED
+
+
 Theorem subadditivity2:
   univ_mach U ==> ∃c. ∀x y. KC U (pair x y) <= KC U x +  CKC U y x + c
 Proof
@@ -1232,14 +1245,16 @@ Proof
     by simp[Abbr‘ARG’, subaddprog_correct, on2bl_def] >>
   qmatch_abbrev_tac ‘LENGTH p1 ≤ RR’ >>
   ‘LENGTH ARG ≤ RR’ suffices_by metis_tac[LESS_EQ_TRANS] >>
-  simp_tac std_ss [Abbr‘ARG’, Abbr‘RR’, pair_LENGTH, LEFT_ADD_DISTRIB]
+  simp_tac std_ss [Abbr‘ARG’, Abbr‘RR’, pair_LENGTH, LEFT_ADD_DISTRIB] >>
+  cheat
 QED
 
 
 
 
 Theorem symmetry_of_information1a:
-  univ_mach U ==> ∃c. ∀x y.  CKC U x (pair y (n2bl (KC U y))) + KC U y <= KC U (pair x y) + c
+  univ_mach U ==>
+  ∃c. ∀x y.  CKC U x (pair y (n2bl (KC U y))) + KC U y <= KC U (pair x y) + c
 Proof
   rw[KC_def,core_complexity_def,CKC_def,cond_core_complexity_def] >>
   fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
@@ -1258,22 +1273,16 @@ Proof
   >- (fs[EXTENSION] >>
       ‘{ p | U p = SOME (pair x y) } ≠ ∅’ by simp[univ_rf_nonempty] >>
       fs[EXTENSION] >> metis_tac[]) >>
-  fs[PULL_EXISTS]
-QED
-
-
-
-Theorem symmetry_of_information1b:
-  univ_mach U ==> ∃c. ∀x y. KC U (pair x y) <=  CKC U x (pair y (n2bl (KC U y))) + KC U y + c
-Proof
-
+  fs[PULL_EXISTS] >> cheat
 QED
 
 Theorem symmetry_of_information2b:
-  univ_mach U ==> ∃c. ∀x y.  CKC U y (pair x (KC U x)) + KC U x <=
-                             CKC U x (pair y (KC U y)) + KC U y + c
+  univ_mach U ==>
+  ∃c. ∀x y.
+    CKC U y (pair x (n2bl (KC U x))) + KC U x ≤
+    CKC U x (pair y (n2bl (KC U y))) + KC U y + c
 Proof
-
+  cheat
 QED
 
 
