@@ -473,7 +473,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleRewrite-combin-7", exwindow = 40000,
+  {expname = "mleRewrite-combin-8", exwindow = 40000,
    ncore = 32, nsim = 1600, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
@@ -490,8 +490,8 @@ val extsearch = mk_extsearch "mleRewrite.extsearch" rlobj
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
-val _ = create_data 4000;
-val r = rl_start (rlobj,extsearch) 1;
+(* val _ = create_data 4000; *)
+val r = rl_start (rlobj,extsearch) 20;
 
 simple innovative idea: move up a level when fails to prove.
 *)
