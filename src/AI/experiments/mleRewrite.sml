@@ -15,7 +15,7 @@ open HolKernel boolLib Abbrev aiLib smlParallel psMCTS psTermGen
 
 val ERR = mk_HOL_ERR "mleRewrite"
 
-val tmsize_limit = 100
+val tmsize_limit = 200
 
 (* -------------------------------------------------------------------------
    Vocabulary
@@ -37,7 +37,7 @@ val vx = mk_var ("vx",alpha)
 val eq_adj = mk_var ("eq_adj", ``:'a -> bool -> 'a``)
 val head_eval = mk_var ("head_eval", ``:'a -> 'a``)
 fun mk_head_poli n = mk_var ("head_poli" ^ its n, ``:'a -> 'a``)
-
+val prehead_poli = mk_var ("prehead_poli", ``:'a -> 'a``)
 
 fun is_cconst x = is_var x andalso hd_string (fst (dest_var x)) = #"c"
 
@@ -169,13 +169,13 @@ fun string_of_move (eq,pos) =
   string_of_pos pos
 
 fun apply_move (eq,pos) (tm1,tm2,n) = 
-  (elim_kred (subst_cmatch (tag_eq eq) (tag_subtm (tm1,pos))), tm2, n-1)
+  ((subst_cmatch (tag_eq eq) (tag_subtm (tm1,pos))), tm2, n-1)
 
 fun moveo_poseq tm ((subtm,pos),eq) =
   if is_cmatch eq subtm then SOME (eq,pos) else NONE
 
 fun available_movel (tm,_,_) = 
-  let val l = cartesian_product (all_subtmpos tm) [s_thm] in
+  let val l = cartesian_product (all_subtmpos tm) [s_thm,k_thm] in
     List.mapPartial (moveo_poseq tm) l
   end
 
@@ -271,13 +271,11 @@ val (gr,_) = METIS_TAC [] goal;
 
 val tm = elim_kred (random_cterm 99);
 
-val (board,r) = valOf (random_board_try false 1000 50 10);
+val board = valOf (random_board_try 1000 40 10);
 val tm = #1 board;
-val tm' = random_norm 100 tm;
 print_endline (cts tm); 
 val tml = strip_cA tm;
 app (print_endline o cts) tml;
-
 *)
 
 (* -------------------------------------------------------------------------
@@ -314,62 +312,48 @@ fun random_walk n board =
     random_walk (n-1) (apply_move (random_elem movel) board)
   end
 
-fun random_norm n tm =
+fun lo_norm n tm =
   let 
     val board = (tm,F,0)
     val movel = available_movel board 
   in
     if null movel then SOME tm 
     else if n <= 0 then NONE 
-    else random_norm (n-1) (#1 (apply_move (random_elem movel) board))
+    else lo_norm (n-1) (#1 (apply_move (hd movel) board))
   end
-
-fun is_normalizable tm = isSome (random_norm 100 tm)
+fun is_normalizable tm = isSome (lo_norm 100 tm)
 
 fun random_cterm n = random_term [cA,cS,cK] (n,alpha);
-fun random_board b size nstep =
+fun random_board size nstep =
   let 
-    val tm = elim_kred (random_cterm (2 * size - 1)) 
+    val tm = random_cterm (2 * size - 1) 
     val l = strip_cA tm
+    val board1 = (tm, mk_var("dummy",alpha),0)
+    val board2 = random_walk nstep board1
   in
-  if term_eq (hd l) cK orelse length l <= 3 orelse 
-     (b <> is_normalizable tm)
-  then NONE else
-    let
-      val board1 = (tm, mk_var("dummy",alpha),0)
-      val board2 = random_walk nstep board1
-    in
-      if isSome board2 
-      then SOME (tm, #1 (valOf board2), 2*nstep)
-      else NONE
-    end
+    if isSome board2 
+    then SOME (tm, #1 (valOf board2), 2*nstep)
+    else NONE
   end
 
-fun random_board_try b k size nstep =
+
+fun random_board_try k size nstep =
   let
     fun loop n =
       if n <= 0 then NONE
-      else case random_board b size nstep of
+      else case random_board size nstep of
         NONE => loop (n-1)
       | SOME board => SOME board
   in
     loop k
   end
 
-fun gen_data_false n =
+fun gen_data n =
   if n <= 0 then [] else
-  let val boardo = random_board_try false 1000 40 (random_int (1,15)) in
+  let val boardo = random_board_try 1000 40 (random_int (1,10)) in
     if isSome boardo
-    then (print_endline (its n); valOf boardo :: gen_data_false (n-1))
-    else gen_data_false n 
-  end
-
-fun gen_data_true n =
-  if n <= 0 then [] else
-  let val boardo = random_board_try true 1000 40 (random_int (1,15)) in
-    if isSome boardo
-    then (print_endline (its n); valOf boardo :: gen_data_true (n-1))
-    else gen_data_true n 
+    then (print_endline (its n); valOf boardo :: gen_data (n-1))
+    else gen_data n
   end
 
 val datadir = HOLDIR ^ "/src/AI/experiments/data_combin"
@@ -387,7 +371,7 @@ fun stats_il il =
 fun create_data n = 
   let 
     val _ = mkDir_err datadir 
-    val l1 =  (gen_data_true (n div 2) @ gen_data_false (n div 2))
+    val l1 = gen_data n
     val l2 = dict_sort (compare_third Int.compare) l1
   in  
     write_boardl (datadir ^ "/train") l2;
@@ -403,6 +387,14 @@ fun create_data n =
 fun div_equal n m = 
   let val (q,r) = (n div m, n mod m) in
     List.tabulate (m, fn i => q + (if i < r then 1 else 0))
+  end
+
+fun insert_elem (l,i) a =
+  let val (l1,l2) = part_n i l in l1 @ [a] @ l2 end
+    
+fun shift_elem (i1,i2) l =
+  let val (l1,l2) = part_n i1 l in
+    if null l2 then l2 else insert_elem (l1 @ tl l2, i2) (hd l2)
   end
 
 fun level_targetl level = 
@@ -447,24 +439,25 @@ fun term_of_board (tm1,tm2,_) = mk_cE (tm1,tm2)
 fun tob board =
   let val n = length (available_movel board) in
     [tag_heval (term_of_board board), 
-     tag_hpoli n (term_of_board board)]
+     tag_hpoli n (mk_comb (prehead_poli,(term_of_board board)))]
   end
 
 (* -------------------------------------------------------------------------
-   Players
+   Player
    ------------------------------------------------------------------------- *)
 
 val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 20}]
 
-val operl = [head_eval,cE,cT,cA,cS,cK,cX,cY,cZ];
+val operl = [cE,cT,cA,cS,cK];
 
 val dim = 8
 fun dim_head_poli n = [dim,n]
 
 val tnnparam = map_assoc (dim_std (1,dim)) operl @
-  range ((1,tmsize_limit div 4), fn n => (mk_head_poli n, dim_head_poli n))
+  range ((1,tmsize_limit div 4), fn n => (mk_head_poli n, dim_head_poli n)) @ 
+  [(head_eval,[dim,dim,1]),(prehead_poli,[dim,dim,dim])]
 
 val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
@@ -490,7 +483,7 @@ val extsearch = mk_extsearch "mleRewrite.extsearch" rlobj
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
-(* val _ = create_data 4000; *)
+(* val _ = create_data 40; *)
 val r = rl_start (rlobj,extsearch) 20;
 
 simple innovative idea: move up a level when fails to prove.
@@ -544,11 +537,6 @@ val r = hd neg; cts (fst (hd r));
 
 val size = 50;
 val tm1 = random_term [cA,cS,cK] (2*size-1,alpha);
-
-val (board as (tm1,tm2,n),r) = valOf (random_board_fixed ());
-val tm1' = lo_norm 200 tm1;
-val tm2' = lo_norm 200 tm2;
-n;r;
 val (b,_,_) = psBigSteps.run_bigsteps bsobj board;
 
 

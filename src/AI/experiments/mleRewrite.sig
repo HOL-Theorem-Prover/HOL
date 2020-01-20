@@ -32,12 +32,12 @@ sig
 
   (* tranformation *)
   val elim_kred : term -> term
-  val random_norm : int -> term -> term option
+  val lo_norm : int -> term -> term option
   val strip_cA : term -> term list
 
   (* example generation *)
   val random_cterm : int -> term
-  val random_board_try : bool -> int -> int -> int -> board option
+  val random_board_try : int -> int -> int -> board option
   val create_data : int -> board list
   val level_targetl : int -> board list
   
