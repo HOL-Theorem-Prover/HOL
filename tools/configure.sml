@@ -502,10 +502,13 @@ in
       BinIO.closeOut ostrm;
       mk_xable tgt;
       print "Quote-filter built\n"
-    end handle e => print "0.Quote-filter build failed (continuing anyway)\n"
-  else              print "1.Quote-filter build failed (continuing anyway)\n"
-  ;
-  FileSys.chDir cwd
+    end handle e =>
+               (print ("Quote-filter build failed: " ^ General.exnMessage e);
+                OS.Process.exit OS.Process.failure)
+  else (
+    print "Quote-filter build failed\n";
+    OS.Process.exit OS.Process.failure
+  )
 end
 
 (*---------------------------------------------------------------------------
