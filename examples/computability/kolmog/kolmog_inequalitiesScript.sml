@@ -1250,8 +1250,43 @@ Proof
        rw[])
 QED
 
-        
+
+Definition nblbar_def:
+  nblbar = Cn (pr2 nblconcat) [Cn nblTpow [Cn (pr1 (λp. ℓ p)) [proj 0]];
+                               Cn (pr2 nblconcat) [K 1;proj 0] ]
+End
+
+Theorem nblconcat_thm:
+  nblconcat a b = bl2n (n2bl a ++ n2bl b)
+Proof
+  ‘∃m. a = bl2n m’ by (qexists_tac‘n2bl a’ >> fs[]) >>
+  ‘∃n. b = bl2n n’ by (qexists_tac‘n2bl b’ >> fs[]) >>
+  rw[]
+QED
+
+Theorem nblbar_correct:
+  nblbar [l] = bl2n (bar (n2bl l))
+Proof
+  simp[nblbar_def,nblconcat_thm,nblTpow_correct,bar_def] >> EVAL_TAC
+QED
+
+Theorem primrec_nblbar:
+  primrec nblbar 1
+Proof
+  fs[nblbar_def] >>
+  rpt (irule primrec_Cn >> rw[primrec_nblconcat,primrec_nblTpow,primrec_ell,primrec_rules])
+QED
+
 (* up to here *)
+
+
+(* unbar needs a Pr def
+
+Definition nblunbar:
+  nblunbar = if 
+End
+
+        *)
 
 
 
