@@ -27,8 +27,8 @@ QED
 
 Definition univ_mach_def:
   univ_mach U <=>
-     (∀i y x. U (pair y (pair i x)) = on2bl (Phi (bl2n i) (bl2n (pair y x)))) ∧
-     ∀m. (∀i y x. m <> pair y (pair i x)) ==> U m = NONE
+     (∀i y x. U (pair y (pair i (bar x))) = on2bl (Phi (bl2n i) (bl2n (pair y x)))) ∧
+     ∀m. (∀i y x. m <> pair y (pair i (bar x))) ==> U m = NONE
 End
 
 Theorem Tpow_0[simp]:
@@ -82,6 +82,10 @@ Proof
   pop_assum (simp o single o GSYM)
 QED
 
+(* univ_mach does not imply univ_rf anymore  *)
+
+(* 
+
 Theorem univ_mach_rf:
   univ_mach U ==> univ_rf U
 Proof
@@ -96,6 +100,8 @@ Proof
   `G [bl2n (F::n2bl x)] = Phi f (bl2n (n2bl x))` by fs[] >>
   `Phi i (fold [bl2n (F::n2bl x)]) = G [bl2n (F::n2bl x)]` by simp[] >> fs[]
 QED
+
+*)
 
 Theorem on2bl_SOME:
   on2bl x = SOME y <=> (∃z. x = SOME z ∧ y = n2bl z)
