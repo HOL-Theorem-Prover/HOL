@@ -1035,47 +1035,41 @@ print depth are printed as \holtxt{...}. For example:
 \index{quotation, in HOL logic@quotation, in \HOL{} logic!parser for}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax|(}
 Logic-related syntax in the HOL system is typically passed to the
-parser in special forms known as \emph{quotations}.  A basic quotation
-is delimited by single back-ticks (i.e., \ml{`}, ASCII character~96).  When
-quotation values are printed out by the ML interactive loop, they look
-rather ugly because of the special filtering that is done to these
-values before the ML interpreter even sees them:
+parser in special forms known as \emph{quotations}.
+A basic quotation is delimited by single quotation characters (`...', Unicode code-points U+2018 and U+2019), or single back-ticks (i.e., \ml{\`}, ASCII character~96).
+When quotation values are printed out by the ML interactive loop, they look rather ugly because of the special filtering that is done to these values before the ML interpreter even sees them:
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
->> val q = `f x = 3`;
+>> val q = ‘f x = 3’;
 \end{alltt}
 \end{session}
-Quotations (Moscow ML prints the type as \ml{'a frag list}) are the
-raw input form expected by the various HOL parsers.  They are also
-polymorphic (to be explained below).  Thus the function
-\ml{Parse.Term} takes a (term) quotation and returns a term,
-and is thus of type \[ \ml{term quotation -> term}
+Quotations (the ML environment prints the type as \ml{'a frag list}) are the raw input form expected by the various HOL parsers.
+They are also polymorphic (to be explained below).
+Thus the function \ml{Parse.Term} takes a (term) quotation and returns a term, and is of type
+\[
+  \ml{term quotation -> term}
 \]
 
 The term and type parsers can also be called implicitly by using
-double back-ticks as delimiters.  For the type parser, the first
-non-space character after the leading delimiter must also be a colon.
+double quotations (with ``\dots'', characters U+201C and U+201D), or doubled back-ticks as delimiters.
+For the type parser, the first non-space character after the leading delimiter must also be a colon.
 Thus:
 \begin{session}
 \begin{alltt}
->> val t = ``p /\ q``;
+>> val t1 = “\x:num. x + 3”;
+>> val t2 = ``p /\ q``;
 
->> val ty = ``:'a -> bool``;
+>> val ty = “:'a -> bool”;
 \end{alltt}
 \end{session}
-
-The expression bound to ML variable \ml{t} above is actually expanded
+The expression bound to ML variable \ml{t1} above is actually expanded
 to an application of the function \ml{Parse.Term} to the quotation
-argument \ml{`p /\bs{} q`}.  Similarly, the second expression expands
-into an application of \ml{Parse.Type} to the quotation \ml{`:'a -> bool`}.
+argument `\ml{p /\bs{} q}'.
+Similarly, the declaration of \ml{ty}'s expression expands into an application of \ml{Parse.Type} to the quotation `\ml{:'a -> bool}'.
 
-The significant advantage of quotations over normal \ML{} strings is
-that they can include new-line and backslash characters without
-requiring special quoting.  Newlines occur whenever terms get beyond
-the trivial in size, while backslashes occur in not just the
-representation of $\lambda$, but also the syntax for conjunction and
-disjunction.
+The significant advantage of quotations over normal \ML{} strings is that they can include new-line and backslash characters without requiring special quoting.
+Newlines occur whenever terms get beyond the trivial in size, while backslashes occur in not just the representation of $\lambda$, but also the syntax for conjunction and disjunction.
 
 If a quotation is to include a back-quote character, then this should be done by using the quotation syntax's own escape character, the caret (\ml{\^}, ASCII character~94).
 To get a bare caret, things are slightly more complicated.
@@ -1085,9 +1079,9 @@ Otherwise, one caret can be obtained by writing two in a row.
 Thus:
 \begin{session}
 \begin{alltt}
->> ``f ^` x ``;
+>> “f ^` x”;
 
->> ``f ^ x``;
+>> “f ^ x”;
 \end{alltt}
 \end{session}
 
@@ -1095,7 +1089,7 @@ Finally, if a single caret is followed by a ``symbol'' character, then the caret
 Thus the following example illustrates two different ways of writing the same thing (in the first input, two carets become one):
 \begin{session}
 \begin{alltt}
->> ``f ^^+ x``;
+>> “f ^^+ x”;
 
 >>+ ``f ^+ x``;
 \end{alltt}
@@ -1117,8 +1111,8 @@ of the form {\small\verb+^(+}$t${\small\verb+)+}
 \index{antiquotation, in HOL logic terms@antiquotation, in \HOL{} logic terms}%
 %
 An antiquotation \holtxt{\^{}($t$)} evaluates to the
-\ML{} value of $t$. For example,{\small\verb+``x \/ ^(mk_conj(``y:bool``, ``z:bool``))``+}
-evaluates to the same term as {\small\verb+``x \/ (y /\ z)``+}. The
+\ML{} value of $t$. For example, ``{\small\verb+x \/ ^(mk_conj(+``\verb+y:bool+''\verb+, +``\verb+z:bool+''\verb+))+}''
+evaluates to the same term as {\small``\verb+x \/ (y /\ z)+''}. The
 most common use of antiquotation is when the term $t$ is bound to an \ML\
 variable $x$. In this case {\small\verb+^(+}$x${\small\verb+)+} can be
 abbreviated by {\small\verb+^+}$x$.
@@ -1129,11 +1123,11 @@ The following session illustrates antiquotation.
 \begin{session}
 \begin{alltt}
 >>__ remove_ovl_mapping "+" {Name = "int_add", Thy = "integer"};
->> val y = ``x+1``;
+>> val y = “x+1”;
 
->> val z = ``y = ^y``;
+>> val z = “y = ^y”;
 
->> ``!x:num.?y:num.^z``;
+>> “!x:num.?y:num.^z”;
 \end{alltt}
 \end{session}
 
@@ -1141,9 +1135,9 @@ The following session illustrates antiquotation.
 
 \begin{session}
 \begin{alltt}
->> val pred = ``:'a -> bool``;
+>> val pred = “:'a -> bool”;
 
->> ``:^pred -> bool``;
+>> “:^pred -> bool”;
 \end{alltt}
 \end{session}
 
@@ -1157,9 +1151,9 @@ terms, antiquoting a type into a term quotation requires the use of
 
 \begin{session}
 \begin{alltt}
->>+ ``!P:^pred. P x ==> Q x``;
+>>+ “!P:^pred. P x ==> Q x”;
 
->> ``!P:^(ty_antiq pred). P x ==> Q x``;
+>> “!P:^(ty_antiq pred). P x ==> Q x”;
 \end{alltt}
 \end{session}
 %
