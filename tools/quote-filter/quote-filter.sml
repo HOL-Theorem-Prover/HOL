@@ -41,7 +41,7 @@ val (instream, outstream, intp, qfixp) =
       | _ => usage failure
 
 open QuoteFilter.UserDeclarations
-val state as QFS args = newstate intp
+val state as QFS args = newstate {inscriptp = intp, quotefixp = qfixp}
 
 
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
