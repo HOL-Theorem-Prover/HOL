@@ -16,7 +16,7 @@ open HolKernel boolLib Abbrev aiLib smlParallel psMCTS psTermGen
 val ERR = mk_HOL_ERR "mleRewrite"
 
 val tmsize_limit = 200
-val version = 12
+val version = 13
 
 (* -------------------------------------------------------------------------
    Vocabulary
@@ -165,7 +165,7 @@ fun add_tag eq tm =
 fun apply_move eq (tm1,tm2,n) = 
   (add_tag eq (subst_cmatch eq tm1), tm2, n-1)
 
-(* very slow: consider putting the tagged term in the board *)
+(* slow: consider putting the tagged term in the board *)
 fun available_movel (tm,_,_) = 
   filter (fn eq => can (subst_cmatch eq) tm) movel
 
@@ -330,7 +330,9 @@ fun random_board_try k size nstep =
 
 fun gen_data n =
   if n <= 0 then [] else
-  let val boardo = random_board_try 100 20 (random_int (1,10)) in
+  let val boardo = random_board_try 100 
+    (random_int (30,50)) (random_int (1,20)) 
+  in
     if isSome boardo
     then (print_endline (its n); valOf boardo :: gen_data (n-1))
     else gen_data n
@@ -465,7 +467,7 @@ val extsearch = mk_extsearch "mleRewrite.extsearch" rlobj
 load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
 val _ = create_data 4000;
-val r = rl_start (rlobj,extsearch) 1;
+val r = rl_start (rlobj,extsearch) 5;
 *)
 
 (* -------------------------------------------------------------------------
