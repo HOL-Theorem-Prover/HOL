@@ -385,7 +385,7 @@ fun shift_elem (i1,i2) l =
 
 fun level_targetl level = 
   let
-    val n = 400
+    val n = 4000
     val boardl1 = read_boardl datafile
     val boardl2 = first_n level (mk_batch n boardl1)
     val nl = div_equal n (length boardl2)
@@ -458,7 +458,7 @@ val extsearch = mk_extsearch "mleRewrite.extsearch" rlobj
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
-val _ = create_data 4000;
+val _ = create_data 40000;
 val r = rl_start (rlobj,extsearch) 1;
 *)
 
