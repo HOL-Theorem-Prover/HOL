@@ -24,13 +24,42 @@ Proof
   fs[rich_listTheory.DROP_LENGTH_APPEND,rich_listTheory.TAKE_LENGTH_APPEND]
 QED
 
+Theorem pair_LENGTH[simp]:
+  LENGTH (pair a b) = 2*LENGTH a + 1 + LENGTH b
+Proof
+  simp[pair_def]
+QED
 
+Definition plist_def[simp]:
+  plist f [] = [] ∧
+  plist f [x] = f x ∧
+  plist f (x::xs) = pair x (plist f xs)
+End
+
+Theorem plist_bar_CONS:
+  plist bar (x::t) = pair x (plist bar t)
+Proof
+  Cases_on ‘t’ >> simp[] >> simp[pair_def]
+QED
+
+Theorem LENGTH_plist[simp]:
+  LENGTH (plist bar (x::y)) = LENGTH (bar x) + LENGTH (plist bar y)
+Proof
+  Cases_on ‘y’ >> simp[]
+QED
+
+Theorem plist_bar_APPEND:
+  plist bar xs = FLAT (MAP bar xs)
+Proof
+  Induct_on ‘xs’ >> simp[plist_bar_CONS, pair_def]
+QED
 
 Definition univ_mach_def:
   univ_mach U <=>
-     (∀i y x.
-        U (pair y (pair i (bar x))) = on2bl (Phi (bl2n i) (bl2n (pair y x)))) ∧
-     ∀m. (∀i y x. m <> pair y (pair i (bar x))) ==> U m = NONE
+     (∀i x rest.
+        U (pair x (plist bar (i::rest))) =
+        on2bl (Phi (bl2n i) (bl2n (plist bar (x::rest))))) ∧
+     ∀m. (∀i x rest. m <> pair x (plist bar (i::rest))) ==> U m = NONE
 End
 
 Theorem Tpow_0[simp]:
@@ -359,41 +388,9 @@ Proof
   first_x_assum (qspec_then ‘[x]’ mp_tac) >> rw[]
 QED
 
-Theorem pair_LENGTH:
-  LENGTH (pair a b) = 2*LENGTH a + 1 + LENGTH b
-Proof
-  simp[pair_def]
-QED
-
 Theorem nblsnd_correct2[simp] =
   nblsnd_correct |> AP_TERM“bl2n” |> SIMP_RULE (srw_ss()) [Excl"bl2n_11"]
 
-Theorem univ_rf_pair_nonempty:
-   univ_mach U  ⇒ {p | U (pair y p) = SOME x} ≠ ∅
-Proof
-  rw[] >>
-  ‘{p | U p = SOME x} ≠ ∅’ by fs[univ_rf_nonempty,univ_mach_rf] >>
-  fs[EXTENSION, univ_mach_def] >>
-  rename [‘U a = SOME result’] >>
-  ‘∃i b c. a = pair b (pair i c)’
-    by metis_tac[pair_11, optionTheory.NOT_NONE_SOME] >>
-  rw[] >> rfs[on2bl_SOME] >>
-  qx_choose_then ‘nbli’ strip_assume_tac nblsnd_index >>
-  qexists_tac ‘pair (n2bl (bl2n i o nbli)) (pair b c)’ >>
-  simp[computable_composition_def, on2bl_SOME, PULL_EXISTS]
-QED
-
-Theorem univ_mach_pair_pair:
-  univ_mach U ==> ∀p x. U p = SOME x <=>
-                        ∃a i b. p = pair a (pair i b) ∧
-                                Phi (bl2n i) (bl2n (pair a b)) = SOME (bl2n x)
-Proof
-  reverse (rw[univ_mach_def,EQ_IMP_THM]) >- rw[on2bl_def] >>
-  ‘∃a b c. p=pair a (pair b c)’ by metis_tac[optionTheory.NOT_NONE_SOME] >>
-  qexists_tac‘a’ >> qexists_tac‘b’ >> qexists_tac‘c’ >> rw[] >>
-  ‘on2bl (Phi (bl2n b) (bl2n (pair a c)) ) = SOME x’ by metis_tac[] >>
-  fs[on2bl_def]
-QED
 
 Definition nblft_def:
   nblft x 0 = 0n ∧
@@ -470,20 +467,6 @@ Proof
    LENGTH a ⊗ bl2n ([F] ++ (a ++ b))’
      by metis_tac[nblsnd0_correct] >> fs[rich_listTheory.TAKE_LENGTH_APPEND] >>
   simp[GSYM DROP_bl2n] >> fs[rich_listTheory.TAKE_LENGTH_APPEND]
-QED
-
-Definition rUMibl_def:
-  rUMibl = recCn recPhi
-                [recCn (SOME o (pr1 nblfst))
-                       [SOME o proj 0];
-                 recCn (SOME o (pr1 nblsnd))
-                       [SOME o proj 0]]
-End
-
-Theorem rUMibl_correct:
-  rUMibl [bl2n (pair a b)] = Phi (bl2n a) (bl2n b)
-Proof
-  fs[rUMibl_def,rec2_def,recCn_def,nblfst_correct,nblsnd_correct2]
 QED
 
 Definition lam_nblft_def:
@@ -590,6 +573,57 @@ Proof
   >- (simp[recCn_def] >>  simp[pr_nblsr_correct,Excl"nblsr_def",ADD1,pr_nblsnd0_correct])
 QED
 
+val nblfst_i_def = new_specification(
+  "nblfst_i_def", ["nblfst_i"],
+  MATCH_MP unary_rec_fns_phi recfn_nblfst
+);
+
+Theorem univ_mach_nonempty[simp]:
+  univ_mach U ⇒ ∀x. ∃y. U y = SOME x
+Proof
+  rw[univ_mach_def] >>
+  qexists_tac ‘pair x (plist bar [n2bl nblfst_i; []])’ >>
+  simp[on2bl_SOME, nblfst_i_def]
+QED
+
+Theorem univ_mach_nonempty'[simp]:
+  univ_mach U ⇒ ∀x. (∀y. U y ≠ SOME x) = F
+Proof
+  rpt strip_tac >>
+  drule_then (qspec_then ‘x’ strip_assume_tac) univ_mach_nonempty >>
+  simp[]
+QED
+
+Theorem univ_mach_pair_nonempty:
+   univ_mach U  ⇒ {p | U (pair y p) = SOME x} ≠ ∅
+Proof
+  rw[EXTENSION] >>
+  ‘∃a. U a = SOME x’ by simp[] >>
+  fs[univ_mach_def] >>
+  ‘∃i b c. a = pair b (plist bar (i::c))’
+    by metis_tac[optionTheory.NOT_NONE_SOME] >>
+  rw[] >> rfs[on2bl_SOME] >>
+  qx_choose_then ‘nbli’ strip_assume_tac nblsnd_index >>
+  qexists_tac ‘pair (n2bl (bl2n i o nbli)) (plist bar (b :: c))’ >>
+  fs[computable_composition_def, on2bl_SOME, PULL_EXISTS, Excl "plist_def",
+     plist_def |> GSYM |> CONJUNCT2 |> CONJUNCT2] >>
+  simp[plist_def]
+QED
+
+Definition rUMibl_def:
+  rUMibl = recCn recPhi
+                [recCn (SOME o (pr1 nblfst))
+                       [SOME o proj 0];
+                 recCn (SOME o (pr1 nblsnd))
+                       [SOME o proj 0]]
+End
+
+Theorem rUMibl_correct:
+  rUMibl [bl2n (pair a b)] = Phi (bl2n a) (bl2n b)
+Proof
+  fs[rUMibl_def,rec2_def,recCn_def,nblfst_correct,nblsnd_correct2]
+QED
+
 Theorem rec1_pr1:
   SOME o pr1 f = rec1 (SOME o f)
 Proof
@@ -599,7 +633,10 @@ QED
 Theorem rUMibl_recfn:
   recfn rUMibl 1
 Proof
-  fs[rUMibl_def] >> irule recfnCn >> rw[] >> irule recfnCn >> rw[recfn_rules,recfn_nblsnd,recfn_nblfst] >> ‘(SOME ∘ pr1 nblfst) = rec1 (SOME o nblfst)’ suffices_by fs[recfn_nblfst] >> fs[rec1_pr1]
+  fs[rUMibl_def] >> irule recfnCn >> rw[] >> irule recfnCn >>
+  rw[recfn_rules,recfn_nblsnd,recfn_nblfst] >>
+  ‘(SOME ∘ pr1 nblfst) = rec1 (SOME o nblfst)’ suffices_by fs[recfn_nblfst] >>
+  fs[rec1_pr1]
 QED
 
 Theorem rUMibl_index:
@@ -608,41 +645,38 @@ Proof
   fs[unary_rec_fns_phi,rUMibl_recfn]
 QED
 
+Theorem CKC_thm[simp]:
+  univ_mach U ⇒ CKC U x y = MIN_SET {LENGTH p | U (pair y p) = SOME x}
+Proof
+  simp[CKC_def, cond_core_complexity_def, univ_mach_pair_nonempty]
+QED
+
+Theorem KC_thm[simp]:
+  univ_mach U ⇒ KC U x = MIN_SET {LENGTH p | U p = SOME x}
+Proof
+  simp[KC_def, core_complexity_def, EXTENSION]
+QED
+
 Theorem extra_information1:
   univ_mach U ==> ∃c. ∀x y. (CKC U x y) <= (KC U x) + c
 Proof
-  rw[KC_def,CKC_def,cond_core_complexity_def,core_complexity_def] >>
-  fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  ‘univ_rf U’ by fs[univ_mach_rf] >>
-  strip_assume_tac nblsnd_index >>
-  pop_assum (qspec_then ‘bl2n (pair a b)’ (assume_tac o Q.GENL[‘a’,‘b’])) >>
-  fs[nblsnd_correct2]>> fs[univ_mach_def] >>
-  ‘∀a b. U (pair b (pair (n2bl i) a)) = SOME a’ by fs[on2bl_def] >>
-  assume_tac rUMibl_index >> fs[] >> rename [‘∀x. Phi rUMi x = rUMibl [x]’] >>
-
-  qabbrev_tac‘j = rUMi o i’ >>
-  ‘∀x y. Phi j (bl2n (pair x y)) = Phi rUMi (bl2n y)’ by
-    (simp[Abbr‘j’,computable_composition_def,nblsnd_correct2]) >>
-  pop_assum (qspecl_then [‘x’,‘pair a b’] (assume_tac o Q.GENL[‘x’,‘a’,‘b’])) >>
-  ‘∀x a b. U (pair x (pair (n2bl j) (pair a b))) = U (pair a (pair (n2bl rUMi) b))’ by fs[] >>
-  ‘univ_mach U’ by metis_tac[GSYM univ_mach_def] >>
-  ‘∀x a b. Phi j (bl2n (pair x (pair a b))) = Phi (bl2n a) (bl2n b)’ by fs[rUMibl_correct] >>
-
-  qexists_tac‘2*(LENGTH (n2bl j)) + 1’ >> rw[] >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- (simp[EXTENSION] >> metis_tac[]) >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >-(fs[EXTENSION] >> ‘{p | U p = SOME x} ≠ ∅’ by fs[univ_rf_nonempty] >>
-     fs[EXTENSION] >> metis_tac[] ) >> fs[PULL_EXISTS] >>
-  ‘∃a b c. p' = pair a (pair b c)’ by metis_tac[optionTheory.NOT_SOME_NONE] >> rw[] >>
-  ‘U (pair y (pair (n2bl j) (pair b (pair a c)))) = SOME x’ by (rw[] >>
-  SIMP_TAC (srw_ss()) [rUMibl_correct] >> rw[] >>
-  ‘on2bl (rUMibl [bl2n (pair b  (pair a c))]) = SOME x’ by metis_tac[]) >>
-  last_x_assum drule >> simp[pair_LENGTH]
+  rw[] >>
+  qx_choose_then ‘nblsnd_i’ strip_assume_tac nblsnd_index >>
+  qx_choose_then ‘rUMi’ strip_assume_tac rUMibl_index >>
+  qabbrev_tac‘j = rUMi o nblsnd_i’ >>
+  qexists_tac‘2 * ℓ j + 1’ >> rw[] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >>
+  rw[EXTENSION, SIMP_RULE (srw_ss()) [EXTENSION] univ_mach_pair_nonempty] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[EXTENSION] >> fs[PULL_EXISTS] >>
+  rename [‘univ_mach U’, ‘U p2 = SOME x’] >>
+  fs[univ_mach_def] >>
+  ‘∃a i b. p2 = pair a (plist bar (i::b))’
+     by metis_tac[optionTheory.NOT_SOME_NONE] >> rw[] >>
+  qabbrev_tac ‘ARG2 = plist bar(n2bl j::i::a::b)’ >>
+  ‘U (pair y ARG2) = SOME x’
+    by rfs[Abbr‘ARG2’, Abbr‘j’, computable_composition_def, rUMibl_correct] >>
+  last_x_assum drule >> simp[Abbr‘ARG2’]
 QED
-
-
-val nblfst_i_def =  new_specification ("nblfst_i_def",["nblfst_i"],MATCH_MP unary_rec_fns_phi recfn_nblfst |> SIMP_RULE (srw_ss()) [rec1_def] )
-
 
 Definition nblconcat_def:
   nblconcat a b = a + b * 2 ** (LENGTH (n2bl a))
@@ -914,70 +948,51 @@ new_specification ("nbl_comp2_i_def", ["nbl_comp2_i"],
 Theorem subadditivity1:
   univ_mach U ==> ∃c. ∀x y. KC U (x++y) <= KC U (pair x y) + c
 Proof
-  rw[KC_def,core_complexity_def] >>
-  fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  ‘univ_rf U’ by fs[univ_mach_rf] >> fs[univ_mach_def] >>
+  rw[] >>
   assume_tac nblpc_i_def >>
-  qexists_tac‘4 * ℓ nblpc_i + 2 * ℓ comp_bli + 5’ >>
-  rw[] >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >-(fs[EXTENSION] >> ‘{p | U p = SOME (x++y)} ≠ ∅’ by fs[univ_rf_nonempty] >>
-     fs[EXTENSION] >> metis_tac[] ) >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >-(fs[EXTENSION] >>
-     ‘{p | U p = SOME (pair x y)} ≠ ∅’
-      by fs[univ_rf_nonempty] >>
-     fs[EXTENSION] >> metis_tac[] ) >>
-  fs[PULL_EXISTS] >> rename[‘U pp = SOME (pair x y)’] >>
-  ‘∃pi a b. pp = pair a (pair pi b)’ by metis_tac[optionTheory.NOT_SOME_NONE] >>
+  qexists_tac‘4 * ℓ nblpc_i + 2 * ℓ comp_bli + 3’ >>
+  rw[] >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[EXTENSION] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[EXTENSION] >> fs[PULL_EXISTS] >>
+  rename[‘U pp = SOME (pair x y)’] >> fs[univ_mach_def] >>
+  ‘∃pi a b. pp = pair a (plist bar (pi::b))’
+    by metis_tac[optionTheory.NOT_SOME_NONE] >>
   rw[] >> rfs[on2bl_SOME] >>
   qabbrev_tac ‘
-    ARG = pair (pair (n2bl nblpc_i) pi) (pair (n2bl comp_bli) (pair a b))
+    ARG = pair (pair (n2bl nblpc_i) pi) (plist bar (n2bl comp_bli :: a :: b))
   ’ >>
   ‘U ARG = SOME (x++y)’
-     by (simp[on2bl_SOME, comp_bli, comp_machine_bl_correct, Abbr‘ARG’,
-              computable_composition_def] >>
-         ‘z = bl2n (pair x y)’ by simp[] >> rw[]) >>
-  qmatch_abbrev_tac ‘LENGTH p ≤ RR’ >>
-  ‘LENGTH ARG <= RR’ suffices_by metis_tac[LESS_EQ_TRANS] >>
-  simp[pair_LENGTH, Abbr‘ARG’, Abbr‘RR’, LEFT_ADD_DISTRIB]
+     by (simp[Abbr‘ARG’, comp_bli, Excl "plist_def"] >>
+         ‘z = bl2n (pair x y)’ by simp[] >>
+         rw[comp_machine_bl_correct, on2bl_SOME, computable_composition_def]) >>
+  last_x_assum drule >> simp[Abbr‘ARG’]
 QED
-
 
 Theorem extra_information2:
   univ_mach U ⇒ ∃c. ∀x y. KC U x ≤ KC U (pair x y) + c
 Proof
-  rw[KC_def,core_complexity_def] >>
-  fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  ‘univ_rf U’ by fs[univ_mach_rf] >> fs[univ_mach_def] >>
+  rw[] >>
   qexists_tac‘4 * ℓ nblfst_i + 2 * ℓ comp_bli + 5’ >> rw[] >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >-(fs[EXTENSION] >> ‘{p | U p = SOME x} ≠ ∅’ by fs[univ_rf_nonempty] >>
-     fs[EXTENSION] >> metis_tac[]) >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >-(fs[EXTENSION] >>
-     ‘{p | U p = SOME (pair x y)} ≠ ∅’ by fs[univ_rf_nonempty] >>
-     fs[EXTENSION] >> metis_tac[] ) >> fs[PULL_EXISTS] >>
-  rename[‘U pp = SOME (pair x y)’]  >>
-  ‘∃a b c. pp = pair a (pair b c)’
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[EXTENSION] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[EXTENSION] >>
+  rename[‘U pp = SOME (pair x y)’] >>
+  fs[univ_mach_def, PULL_EXISTS] >>
+  ‘∃a i c. pp = pair a (plist bar (i::c))’
       by metis_tac[optionTheory.NOT_SOME_NONE] >> rw[] >> rfs[on2bl_SOME] >>
   qabbrev_tac ‘
-    ARG = pair (pair (n2bl nblfst_i) b) (pair (n2bl comp_bli) (pair a c))
+    ARG = pair (pair (n2bl nblfst_i) i) (plist bar (n2bl comp_bli::a::c))
   ’ >>
   ‘U ARG = SOME x’ by
     (simp[computable_composition_def, Abbr‘ARG’, comp_bli, on2bl_SOME,
-          comp_machine_bl_correct] >> ‘z = bl2n (pair x y)’ by simp[] >>
+          comp_machine_bl_correct, plist_def] >>
+     ‘z = bl2n (pair x y)’ by simp[] >>
      rw[nblfst_i_def]) >>
-  qmatch_abbrev_tac ‘LENGTH p ≤ RR’ >>
-  ‘LENGTH ARG ≤ RR’ suffices_by metis_tac[LESS_EQ_TRANS] >>
-  simp[pair_LENGTH, Abbr‘ARG’, Abbr‘RR’, LEFT_ADD_DISTRIB]
+  last_x_assum drule >> simp[Abbr‘ARG’, LEFT_ADD_DISTRIB]
 QED
 
 Theorem subadditivity3:
   univ_mach U ==> ∃c. ∀x y. KC U x + CKC U y x <= KC U x + KC U y + c
 Proof
-  strip_tac >> ‘∃c. ∀x y. CKC U y x ≤ KC U y + c’
-    suffices_by (rw[] >> qexists_tac‘c’ >> rw[LE_ADD_LCANCEL] >> ‘CKC U y x <= KC U y + c’ by fs[] >> simp[] ) >>
-  metis_tac[extra_information1]
+  metis_tac[ADD_ASSOC,LE_ADD_LCANCEL, extra_information1]
 QED
 
 Definition nblTpow_def:
@@ -1080,31 +1095,23 @@ val nblpf_i_def =  new_specification ("nblpf_i_def",["nblpf_i"],MATCH_MP unary_r
 Theorem symmetry_of_information2a:
   univ_mach U ==> ∃c. ∀x y. KC U (pair x y) <= KC U (pair y x) + c
 Proof
-  rw[KC_def,core_complexity_def] >>
-  fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  ‘univ_rf U’ by fs[univ_mach_rf] >> fs[univ_mach_def] >>
-  qexists_tac‘4 * ℓ nblpf_i + 2 * ℓ comp_bli + 5’ >> rw[] >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >-(fs[EXTENSION] >>
-     ‘{p | U p = SOME (pair x y)} ≠ ∅’ by fs[univ_rf_nonempty] >>
-     fs[EXTENSION] >> metis_tac[]) >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >-(fs[EXTENSION] >>
-     ‘{p | U p = SOME (pair y x)} ≠ ∅’ by fs[univ_rf_nonempty] >>
-     fs[EXTENSION] >> metis_tac[] ) >> fs[PULL_EXISTS] >>
-  rename[‘U pp = SOME (pair y x)’]  >>
-  ‘∃a b c. pp = pair a (pair b c)’ by metis_tac[optionTheory.NOT_SOME_NONE] >>
   rw[] >>
+  qexists_tac‘4 * ℓ nblpf_i + 2 * ℓ comp_bli + 5’ >> rw[] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[EXTENSION] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[EXTENSION] >>
+  fs[PULL_EXISTS, univ_mach_def] >>
+  rename[‘U pp = SOME (pair y x)’] >>
+  ‘∃a i b. pp = pair a (plist bar (i::b))’
+    by metis_tac[optionTheory.NOT_SOME_NONE] >>
+  rw[] >> rfs[on2bl_SOME] >>
   qabbrev_tac ‘
-    ARG = pair (pair (n2bl nblpf_i) b) (pair (n2bl comp_bli) (pair a c))
-  ’ >> rfs[on2bl_SOME] >>
+    ARG = pair (pair (n2bl nblpf_i) i) (plist bar (n2bl comp_bli :: a :: b))
+  ’ >>
   ‘U ARG = SOME (pair x y)’
-    by (simp[Abbr‘ARG’, comp_bli, comp_machine_bl_correct,
-             computable_composition_def, nblpf_i_def] >>
+    by (simp[Abbr‘ARG’, comp_bli, Excl "plist_def"] >>
+        simp[comp_machine_bl_correct,computable_composition_def, nblpf_i_def] >>
         ‘z = bl2n (pair y x)’ by simp[] >> rw[on2bl_def]) >>
-  qmatch_abbrev_tac ‘LENGTH p ≤ RR’ >>
-  ‘LENGTH ARG ≤ RR’ suffices_by metis_tac[LESS_EQ_TRANS] >>
-  simp[Abbr‘ARG’, Abbr‘RR’, pair_LENGTH]
+  last_x_assum drule >> simp[Abbr‘ARG’]
 QED
 
 val nblpair_i_def = new_specification(
@@ -1144,37 +1151,31 @@ QED
 Theorem extra_information_cond1:
   univ_mach U ==> ∃c. ∀x y z. CKC U x (pair y z) <= CKC U x y + c
 Proof
-  rw[KC_def,core_complexity_def,CKC_def,cond_core_complexity_def] >>
-  fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  ‘univ_rf U’ by fs[univ_mach_rf] >> fs[univ_mach_def] >>
-
+  rw[] >>
   qx_choose_then ‘exinfoprog_i’ strip_assume_tac
-  (MATCH_MP unary_rec_fns_phi recfn_extra_info_cond_prog) >>
+                 (MATCH_MP unary_rec_fns_phi recfn_extra_info_cond_prog) >>
   qexists_tac ‘2 * ℓ exinfoprog_i + 7’ >> rw[] >>
 
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- (fs[EXTENSION] >> ‘univ_mach U’ by metis_tac[univ_mach_def] >>
-      simp[SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_pair_nonempty]) >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- (fs[EXTENSION] >> ‘univ_mach U’ by metis_tac[univ_mach_def] >>
-      simp[SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_pair_nonempty]) >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >>
+  rw[EXTENSION, SIMP_RULE (srw_ss()) [EXTENSION] univ_mach_pair_nonempty] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >>
+  rw[EXTENSION, SIMP_RULE (srw_ss()) [EXTENSION] univ_mach_pair_nonempty] >>
   fs[PULL_EXISTS] >>
   rename [‘U (pair (pair y z) p1) = SOME x’, ‘U (pair y p2) = SOME x’]>>
-  ‘∃a b. p2 = pair a b’ by metis_tac[optionTheory.NOT_SOME_NONE,pair_11] >>
+  fs[univ_mach_def] >>
+  ‘∃a b. p2 = plist bar (a::b)’
+     by metis_tac[optionTheory.NOT_SOME_NONE, pair_11] >>
   rw[] >> rfs[on2bl_SOME] >> rw[] >>
 
   rename [‘Phi (bl2n a) _ = SOME x’] >>
   qabbrev_tac‘
-    ARG = (pair (n2bl exinfoprog_i) (pair a b))
+    ARG = plist bar (n2bl exinfoprog_i::a::b)
   ’ >>
   ‘U (pair (pair y z) ARG) = SOME (n2bl x)’
-    by simp[Abbr‘ARG’, extra_info_cond_prog_correct, on2bl_def] >>
-  qmatch_abbrev_tac ‘LENGTH p1 ≤ RR’ >>
-  ‘LENGTH ARG ≤ RR’ suffices_by metis_tac[LESS_EQ_TRANS,pair_11] >>
-  simp[Abbr‘ARG’, Abbr‘RR’, pair_LENGTH, LEFT_ADD_DISTRIB]
+    by (simp[Abbr‘ARG’, extra_info_cond_prog_correct, on2bl_def,
+             plist_bar_CONS] >> fs[plist_bar_CONS]) >>
+  last_x_assum drule >> simp[Abbr‘ARG’]
 QED
-
-
 
 Definition subaddprog_def:
   subaddprog = (* f (a,b,c,u,v) =  pair(b(a,c), u(b(a,c), v))*)
@@ -1252,10 +1253,16 @@ Theorem SIb_machine_correct:
     SOME (bl2n (pair (n2bl y) (n2bl x)))
   od
 Proof
-  strip_tac >> fs[SIb_machine_def,recCn_def,pr_nblsr_correct,nblsr_thm,nblft_thm,rich_listTheory.DROP_LENGTH_APPEND,rich_listTheory.TAKE_LENGTH_APPEND,nblpair_correct] >>
-  Cases_on‘ Phi (bl2n i) (bl2n (pair a b))’ >> simp[] >>
-  Cases_on‘ Phi (bl2n j) (bl2n
-                          (pair (pair (n2bl x) (n2bl (LENGTH (pair a (pair i b))))) c))’ >> simp[]
+  strip_tac >>
+  fs[SIb_machine_def,recCn_def,pr_nblsr_correct,nblsr_thm,nblft_thm,
+     rich_listTheory.DROP_LENGTH_APPEND,rich_listTheory.TAKE_LENGTH_APPEND,
+     nblpair_correct,Excl "pair_LENGTH"] >>
+  Cases_on‘ Phi (bl2n i) (bl2n (pair a b))’ >> simp[Excl "pair_LENGTH"] >>
+  Cases_on‘
+    Phi (bl2n j)
+        (bl2n
+         (pair (pair (n2bl x) (n2bl (LENGTH (pair a (pair i b))))) c))’ >>
+  simp[Excl "pair_LENGTH"]
 QED
 
 Theorem recfn_nblft:
@@ -1305,77 +1312,30 @@ QED
 
 (* up to here *)
 
-
-(* unbar needs a Pr def
-
-Definition nblunbar:
-  nblunbar = if
-End
-
-        *)
-
-
-
-Theorem symmetry_of_information1blem:
-  univ_mach U ==>
-  ∃c. ∀x y. KC U (pair x y) ≤ CKC U x (pair (pair y (n2bl (KC U y))) x) + KC U y + c
-Proof
-  rw[KC_def,core_complexity_def,CKC_def,cond_core_complexity_def] >>
-  fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  ‘univ_rf U’ by fs[univ_mach_rf] >> fs[univ_mach_def] >>
-  qx_choose_then ‘SIb_i’ strip_assume_tac (MATCH_MP unary_rec_fns_phi recfn_SIb_machine) >>
-  qexists_tac ‘2 * ℓ SIb_i + 7’ >> rw[] >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- simp[EXTENSION, SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_nonempty] >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- simp[EXTENSION, SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_nonempty] >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- simp[EXTENSION, univ_mach_def,
-          SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_pair_nonempty] >>
-  fs[PULL_EXISTS] >>
-  rename [‘U p = SOME (pair x y)’, ‘U p1 = SOME y’,
-          ‘U (pair (pair y (n2bl (LENGTH p1))) p2) = SOME x’] >>
-  ‘∃a1 i1 b1. p1 = pair a1 (pair i1 b1)’
-    by metis_tac[optionTheory.NOT_SOME_NONE] >>
-  rw[] >> rfs[on2bl_SOME] >> rw[] >>
-  qabbrev_tac ‘N1 = LENGTH (pair a1 (pair i1 b1))’ >>
-  ‘∃i2 b2. p2 = pair i2 b2’ by metis_tac[optionTheory.NOT_SOME_NONE, pair_11] >>
-  rw[] >> rfs[on2bl_SOME] >> rw[] >>
-  rename [‘U p = SOME (pair (n2bl x) (n2bl y))’] >>
-  qabbrev_tac‘ARG = pair (n2bl N1) (pair (n2bl SIb_i) (pair a1 (pair i1 b1) ++ pair i2 b2) )’ >>
-  ‘U ARG = SOME (pair (n2bl x) (n2bl y))’ by (simp[Abbr‘ARG’,SIb_machine_correct,on2bl_SOME]) >>
-  qmatch_abbrev_tac‘LENGTH p <= RR’ >> ‘LENGTH ARG <= RR’ suffices_by metis_tac[LESS_EQ_TRANS] >>
-  simp[Abbr‘ARG’,Abbr‘RR’,Abbr‘N1’,pair_LENGTH]
-
-QED
-
 Theorem symmetry_of_information1b:
   univ_mach U ==>
   ∃c. ∀x y. KC U (pair x y) ≤ CKC U x (pair y (n2bl (KC U y))) + KC U y + c
 Proof
-  rw[KC_def,core_complexity_def,CKC_def,cond_core_complexity_def] >>
-  fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  ‘univ_rf U’ by fs[univ_mach_rf] >> fs[univ_mach_def] >>
-  qx_choose_then ‘SIb_i’ strip_assume_tac (MATCH_MP unary_rec_fns_phi recfn_SIb_machine) >>
+  rw[] >>
+  qx_choose_then ‘SIb_i’ strip_assume_tac
+                 (MATCH_MP unary_rec_fns_phi recfn_SIb_machine) >>
   qexists_tac ‘2 * ℓ SIb_i + 7’ >> rw[] >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- simp[EXTENSION, SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_nonempty] >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- simp[EXTENSION, SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_nonempty] >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- simp[EXTENSION, univ_mach_def,
-          SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_pair_nonempty] >>
-  fs[PULL_EXISTS] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[EXTENSION] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[EXTENSION] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >>
+  rw[EXTENSION, SIMP_RULE (srw_ss()) [EXTENSION] univ_mach_pair_nonempty] >>
+  fs[PULL_EXISTS, univ_mach_def] >>
   rename [‘U p = SOME (pair x y)’, ‘U p1 = SOME y’,
           ‘U (pair (pair y (n2bl (LENGTH p1))) p2) = SOME x’] >>
-  ‘∃a1 i1 b1. p1 = pair a1 (pair i1 b1)’
+  ‘∃a1 i1 b1. p1 = pair a1 (plist bar (i1::b1))’
     by metis_tac[optionTheory.NOT_SOME_NONE] >>
-  rw[] >> rfs[on2bl_SOME] >> rw[] >>
-  qabbrev_tac ‘N1 = LENGTH (pair a1 (pair i1 b1))’ >>
-  ‘∃i2 b2. p2 = pair i2 b2’ by metis_tac[optionTheory.NOT_SOME_NONE, pair_11] >>
-  rw[] >> rfs[on2bl_SOME] >> rw[] >>
+  rw[] >> rfs[on2bl_SOME, Excl "pair_LENGTH"] >> rw[] >>
+  qabbrev_tac ‘N1 = LENGTH (pair a1 (plist bar (i1::b1)))’ >>
+  ‘∃i2 b2. p2 = plist bar (i2::b2)’
+     by metis_tac[optionTheory.NOT_SOME_NONE, pair_11] >>
+  rw[] >> rfs[on2bl_SOME, Excl "pair_LENGTH"] >> rw[] >>
   rename [‘U p = SOME (pair (n2bl x) (n2bl y))’] >>
-  qabbrev_tac‘ARG = pair (n2bl N1) (pair (n2bl SIb_i) (pair a1 (pair i1 b1) ++ pair i2 b2) )’ >>
+  qabbrev_tac‘ARG = pair (n2bl N1) (plist bar (n2bl SIb_i :: a1 :: i1 :: b1) ++ pair i2 b2) )’ >>
   ‘U ARG = SOME (pair (n2bl x) (n2bl y))’ by (simp[Abbr‘ARG’,SIb_machine_correct,on2bl_SOME]) >>
   qmatch_abbrev_tac‘LENGTH p <= RR’ >> ‘LENGTH ARG <= RR’ suffices_by metis_tac[LESS_EQ_TRANS] >>
   simp[Abbr‘ARG’,Abbr‘RR’,Abbr‘N1’,pair_LENGTH]
