@@ -350,14 +350,14 @@ fun random_board_try k size nstep =
 
 fun gen_data n =
   if n <= 0 then [] else
-  let val boardo = random_board_try 1000 40 (random_int (1,10)) in
+  let val boardo = random_board_try 1000 100 (random_int (1,5)) in
     if isSome boardo
     then (print_endline (its n); valOf boardo :: gen_data (n-1))
     else gen_data n
   end
 
 val datadir = HOLDIR ^ "/src/AI/experiments/data_combin"
-
+val datafile =  datadir ^ "/train-10"
 fun compare_third cmp ((_,_,a),(_,_,b)) = cmp (a,b)
 
 fun stats_il il = 
@@ -374,7 +374,7 @@ fun create_data n =
     val l1 = gen_data n
     val l2 = dict_sort (compare_third Int.compare) l1
   in  
-    write_boardl (datadir ^ "/train-9") l2;
+    write_boardl datafile l2;
     print_endline "cterm size in:"; 
     stats_il (map (cterm_size o #1) l2);
     print_endline "cterm size out:";
@@ -399,8 +399,8 @@ fun shift_elem (i1,i2) l =
 
 fun level_targetl level = 
   let
-    val n = 200
-    val boardl1 = read_boardl (datadir ^ "/train-9") 
+    val n = 400
+    val boardl1 = read_boardl datafile
     val boardl2 = first_n level (mk_batch n boardl1)
     val nl = div_equal n (length boardl2)
   in
@@ -448,7 +448,7 @@ fun tob board =
 
 val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
-    batch_size = 16, nepoch = 20}]
+    batch_size = 16, nepoch = 40}]
 
 val operl = [cE,cT,cA,cS,cK];
 
@@ -466,7 +466,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleRewrite-combin-9", exwindow = 40000,
+  {expname = "mleRewrite-combin-10", exwindow = 40000,
    ncore = 32, nsim = 1600, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
@@ -484,9 +484,7 @@ val extsearch = mk_extsearch "mleRewrite.extsearch" rlobj
 load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
 val _ = create_data 4000;
-val r = rl_start (rlobj,extsearch) 20;
-
-simple innovative idea: move up a level when fails to prove.
+val r = rl_start (rlobj,extsearch) 1;
 *)
 
 (* -------------------------------------------------------------------------
