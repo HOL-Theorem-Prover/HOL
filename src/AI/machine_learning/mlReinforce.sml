@@ -60,7 +60,7 @@ fun mk_mctsparam noiseb nsim rlobj =
   decay = #decay (#rlparam rlobj), explo_coeff = 2.0,
   noise_all = noiseb, noise_root = false,
   noise_coeff = 0.25, noise_gen = random_real,
-  noconfl = false, avoidlose = true
+  noconfl = false, avoidlose = false
   }
 
 fun player_from_tnn tnn tob game board =

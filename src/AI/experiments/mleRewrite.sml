@@ -49,12 +49,12 @@ fun tag_hpoli n x = mk_comb (mk_head_poli n,x)
 infix oo
 fun op oo (a,b) = list_mk_comb (cA,[a,b])
 
-val s_thm = mk_eq (cS oo vf oo vg oo vx, (vf oo vx) oo (vg oo vx))
-val k_thm = mk_eq (cK oo vx oo vy, vx)
+val s_thm = mk_eq (tag (cS oo vf oo vg oo vx), (vf oo vx) oo (vg oo vx))
+val k_thm = mk_eq (tag (cK oo vx oo vy), vx)
+val left_thm = mk_eq (tag (vf oo vg), tag vf oo vg)
+val right_thm = mk_eq (tag (vf oo vg), vf oo tag vg)
 
-val tag_redex_thm = 
-  mk_eq (cS oo vf oo vg oo vx, tag (cS oo vf oo vg oo vx))
-
+  
 fun strip_cA_aux tm =
   if is_var tm then [tm] else
   let 
@@ -157,32 +157,30 @@ fun board_compare ((a,b,_),(c,d,_)) =
 fun is_combin x = tmem x [cK,cS] 
 fun cterm_size tm = length (find_terms is_combin tm) 
 
-
 (* -------------------------------------------------------------------------
    Move
    ------------------------------------------------------------------------- *)
 
-type move = term * int list
+type move = term
+val movel = [s_thm,k_thm,left_thm,right_thm]
 
-fun string_of_move (eq,pos) = 
-  (if term_eq eq s_thm then "s_thm" else tts eq) ^ " " ^ 
-  string_of_pos pos
+fun string_of_move eq = tts eq
 
-fun apply_move (eq,pos) (tm1,tm2,n) = 
-  ((subst_cmatch (tag_eq eq) (tag_subtm (tm1,pos))), tm2, n-1)
+fun add_tag eq tm =
+  if tmem eq [k_thm,s_thm] then tag tm else tm
 
-fun moveo_poseq tm ((subtm,pos),eq) =
-  if is_cmatch eq subtm then SOME (eq,pos) else NONE
+fun apply_move eq (tm1,tm2,n) = 
+  (add_tag eq (subst_cmatch eq tm1), tm2, n-1)
 
+(* very slow: consider putting the tagged term in the board *)
 fun available_movel (tm,_,_) = 
-  let val l = cartesian_product (all_subtmpos tm) [s_thm,k_thm] in
-    List.mapPartial (moveo_poseq tm) l
-  end
+  filter (fn eq => can (subst_cmatch eq) tm) movel
 
 fun status_of (board as (tm1,tm2,n)) =
   if term_eq tm1 tm2 then Win
-  else if n <= 0 orelse (let val x = length (available_movel board) in
-    x = 0 end) orelse (cterm_size tm1 > tmsize_limit)   
+  else if n <= 0 orelse 
+    null (available_movel board) orelse 
+    cterm_size tm1 > tmsize_limit  
   then Lose 
   else Undecided
 
@@ -197,7 +195,9 @@ val game : (board,move) game =
   available_movel = available_movel,  
   string_of_board = string_of_board,
   string_of_move = string_of_move,
-  board_compare = board_compare
+  board_compare = board_compare,
+  move_compare = Term.compare,
+  movel = movel
   }
 
 (* -------------------------------------------------------------------------
@@ -210,7 +210,7 @@ fun mk_mctsparam nsim =
   decay = 1.0, explo_coeff = 2.0,
   noise_coeff = 0.25, noise_root = false,
   noise_all = false, noise_gen = random_real,
-  noconfl = false, avoidlose = true
+  noconfl = false, avoidlose = false
   }
 
 fun string_of_status status = case status of
@@ -247,6 +247,8 @@ load "psMCTS"; open psMCTS;
 load "mleLib"; open mleLib;
 load "mleRewrite"; open mleRewrite;
 
+val board = random_cterm 20;
+
 val (board,compl) = valOf (random_board_fixed ());
 val _ = ((print_endline o cts o #1) board; (print_endline o cts o #2) board);
 val ((b,endtree),t) = add_time (mcts_test 1600) board;
@@ -268,9 +270,6 @@ val s_thm' = list_mk_forall ([vf,vg,vx],s_thm);
 val k_thm'  = list_mk_forall ([vx,vy],k_thm);
 val goal = ([s_thm',k_thm'],cj);
 val (gr,_) = METIS_TAC [] goal;
-
-val tm = elim_kred (random_cterm 99);
-
 val board = valOf (random_board_try 1000 40 10);
 val tm = #1 board;
 print_endline (cts tm); 
@@ -323,11 +322,11 @@ fun lo_norm n tm =
   end
 fun is_normalizable tm = isSome (lo_norm 100 tm)
 
-fun random_cterm n = random_term [cA,cS,cK] (n,alpha);
+fun random_cterm n = random_term [cA,cS,cK] (2*n-1,alpha);
+
 fun random_board size nstep =
   let 
-    val tm = random_cterm (2 * size - 1) 
-    val l = strip_cA tm
+    val tm = tag (random_cterm size)
     val board1 = (tm, mk_var("dummy",alpha),0)
     val board2 = random_walk nstep board1
   in
@@ -335,7 +334,6 @@ fun random_board size nstep =
     then SOME (tm, #1 (valOf board2), 2*nstep)
     else NONE
   end
-
 
 fun random_board_try k size nstep =
   let
@@ -350,14 +348,14 @@ fun random_board_try k size nstep =
 
 fun gen_data n =
   if n <= 0 then [] else
-  let val boardo = random_board_try 1000 100 (random_int (1,5)) in
+  let val boardo = random_board_try 100 20 (random_int (1,10)) in
     if isSome boardo
     then (print_endline (its n); valOf boardo :: gen_data (n-1))
     else gen_data n
   end
 
 val datadir = HOLDIR ^ "/src/AI/experiments/data_combin"
-val datafile =  datadir ^ "/train-10"
+val datafile =  datadir ^ "/train-11"
 fun compare_third cmp ((_,_,a),(_,_,b)) = cmp (a,b)
 
 fun stats_il il = 
@@ -412,22 +410,10 @@ load "aiLib"; open aiLib;
 load "psTermGen"; open psTermGen;
 load "psMCTS"; open psMCTS;
 load "mleRewrite"; open mleRewrite;
-val l2 = map snd l1;
-val l3 = dict_sort Int.compare (map (cterm_size o #1 o fst) l1);
-
-val boardl = dict_sort compare_rmin (time gen_data 10);
-val _ = write_boardcompl file boardl;
-
-val rl = map_fst (mcts_test 1600) boardl;
-val (rlyes,rlno) = partition (fst o fst) rl;
-length rlyes; length rlno;
-let val nodel = trace_win (#status_of game) endtree [] in
-  app (print_endline o cts o #1 o #board) nodel
-end;
-
-val board1 = #board (dfind [] endtree);
-val board2 = 
-val r = mcts_test 1600 board25;
+val board =(tag (random_cterm 20),T,0);
+val ml = (#available_movel (#game rlobj)) board;
+val board1 = (#apply_move (#game rlobj)) (hd ml) board;
+app (print_endline o cts o #1) [board,board1];
 *)
 
 (* -------------------------------------------------------------------------
@@ -466,7 +452,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleRewrite-combin-10", exwindow = 40000,
+  {expname = "mleRewrite-combin-11", exwindow = 40000,
    ncore = 32, nsim = 1600, decay = 1.0}
 
 val rlobj : (board,move) rlobj =

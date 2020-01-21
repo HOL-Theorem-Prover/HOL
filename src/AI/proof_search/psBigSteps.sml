@@ -107,9 +107,11 @@ fun add_rootex game tree rlex =
     val board  = #board root
     val (dis,tot) = mk_dis tree
     val eval = #sum root / #vis root
-    val poli = map (fn (_,r) => r / tot) dis
+    val poli1 = map (fn (((m,_),_),r) => (m,r / tot)) dis
+    val poli2 = dnew (#move_compare game) poli1
+    fun f m = dfind m poli2 handle NotFound => 0.0
   in
-    (board, eval :: poli) :: rlex
+    (board, eval :: (map f (#movel game))) :: rlex
   end
 
 (* -------------------------------------------------------------------------
@@ -126,13 +128,10 @@ type ('a,'b) bsobj =
   }
 
 fun debug_board b game board =
-  if b then 
-  (
-  print_endline "\nBoard";
-  print_endline ((#string_of_board game) board)
-  ) 
+  if b 
+  then print_endline ("\nBoard\n" ^ (#string_of_board game) board) 
   else ()
-
+  
 (* rootl and rlex are reversed *)
 fun loop_bigsteps bsobj mctsobj (rlex,rootl) (tree,cache) =
   let
@@ -178,16 +177,16 @@ load "psBigSteps"; open psBigSteps;
 
 val mctsparam =
   {
-  nsim = 16000,
-  stopatwin_flag = true,
+  nsim = 3200,
+  stopatwin_flag = false,
   decay = 1.0,
   explo_coeff = 2.0,
-  noise_all = false,
+  noise_all = true,
   noise_root = false,
   noise_coeff = 0.25,
-  noise_gen = gamma_noise_gen 0.2,
-  noconfl = true,
-  avoidlose = true
+  noise_gen = random_real,
+  noconfl = false,
+  avoidlose = false
   };
 
 val bsobj : (toy_board,toy_move) bsobj =
@@ -199,7 +198,7 @@ val bsobj : (toy_board,toy_move) bsobj =
   mctsparam = mctsparam
   };
 
-val target = (0,100,200);
+val target = (0,10,100);
 val (_,t) = add_time (run_bigsteps bsobj) target;
 val (winb,rlex,rootl) = run_bigsteps bsobj target;
 *)

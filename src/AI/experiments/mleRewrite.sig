@@ -4,7 +4,7 @@ sig
   include Abbrev
 
   type board = term * term * int
-  type move = term * int list
+  type move = term
 
   (* combinators *)
   val oo : term * term -> term
@@ -37,6 +37,7 @@ sig
 
   (* example generation *)
   val random_cterm : int -> term
+  val random_walk : int -> board -> board option
   val random_board_try : int -> int -> int -> board option
   val create_data : int -> board list
   val level_targetl : int -> board list

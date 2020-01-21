@@ -38,7 +38,9 @@ type ('a,'b) game =
   available_movel : 'a -> 'b list,
   string_of_board : 'a -> string,
   string_of_move : 'b -> string,
-  board_compare : 'a * 'a -> order
+  board_compare : 'a * 'a -> order,
+  move_compare : 'b * 'b -> order,
+  movel : 'b list
   }
 
 fun uniform_player game board = 
@@ -356,7 +358,9 @@ fun toy_status_of (start,finish,timer) =
     else if start < 0 orelse timer <= 0 then Lose 
     else Undecided
 
+val toy_movel = [Incr,Decr]
 fun toy_available_movel board = [Incr,Decr]
+fun toy_string_of_move x = case x of Incr => "Incr" | Decr => "Decr"
 
 fun toy_apply_move m (start,finish,timer) = case m of
    Incr => (start+1,finish,timer-1)
@@ -368,9 +372,12 @@ val toy_game =
   apply_move = toy_apply_move,
   available_movel = toy_available_movel,
   string_of_board = (fn (a,b,c) => (its a ^ " " ^ its b ^ " " ^ its c)),
-  string_of_move = (fn x => case x of Incr => "Incr" | Decr => "Decr"),
-  board_compare = (fn ((a,b,c),(d,e,f)) => cpl_compare Int.compare
-    Int.compare ((a,b),(d,e)))
+  string_of_move = toy_string_of_move,
+  board_compare = (fn ((a,b,c),(d,e,f)) => 
+    cpl_compare Int.compare Int.compare ((a,b),(d,e))),
+  move_compare = (fn (a,b) => 
+    String.compare (toy_string_of_move a, toy_string_of_move b)),
+  movel = toy_movel
   }
 
 (*
@@ -387,8 +394,8 @@ val mctsparam =
   noise_root = false,
   noise_coeff = 0.25,
   noise_gen = gamma_noise_gen 0.2,
-  noconfl = true,
-  avoidlose = true
+  noconfl = false,
+  avoidlose = false
   };
 
 val mctsobj : (toy_board,toy_move) mctsobj =
@@ -398,10 +405,11 @@ val mctsobj : (toy_board,toy_move) mctsobj =
   player = uniform_player toy_game
   };
 
-val starttree = starttree_of mctsobj (0,50,1000);
+val starttree = starttree_of mctsobj (0,10,100);
 val ((tree,cache),t) = add_time (mcts mctsobj) starttree;
+dlength tree;
 val status = #status (dfind [] tree);
-Profile.results ();
+val root = dfind [] tree;
 val nodel = trace_win (#status_of (#game mctsobj)) tree [];
 
 *)

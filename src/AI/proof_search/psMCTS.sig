@@ -29,7 +29,9 @@ sig
     available_movel : 'a -> 'b list,
     string_of_board : 'a -> string,
     string_of_move : 'b -> string,
-    board_compare : 'a * 'a -> order
+    board_compare : 'a * 'a -> order,
+    move_compare : 'b * 'b -> order,
+    movel : 'b list
     }
 
   type ('a,'b) player = 'a -> real * ('b * real) list
