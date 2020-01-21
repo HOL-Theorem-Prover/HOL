@@ -32,7 +32,6 @@ sig
   val is_normalizable : term -> bool
 
   (* tranformation *)
-  val elim_kred : term -> term
   val lo_norm : int -> term -> term option
   val strip_cA : term -> term list
 

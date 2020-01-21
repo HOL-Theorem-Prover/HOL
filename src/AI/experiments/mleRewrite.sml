@@ -16,6 +16,7 @@ open HolKernel boolLib Abbrev aiLib smlParallel psMCTS psTermGen
 val ERR = mk_HOL_ERR "mleRewrite"
 
 val tmsize_limit = 200
+val version = 12
 
 (* -------------------------------------------------------------------------
    Vocabulary
@@ -134,13 +135,6 @@ fun tag_subtml (tm,posl) =
   end
 
 fun tag_eq eq = let val (a,b) = dest_eq eq in mk_eq (tag a, b) end
-
-fun elim_kred tm =
-  if can (subst_cmatch k_thm) tm then
-    let val tm' = subst_cmatch k_thm tm in
-      elim_kred tm'
-    end
-  else tm
 
 (* -------------------------------------------------------------------------
    Board
@@ -294,19 +288,19 @@ val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
 fun random_walk n board =
   if cterm_size (#1 board) > tmsize_limit then NONE else
   if n <= 0 then SOME board else
-  let val movel = available_movel board in
-    if null movel then NONE else
-    random_walk (n-1) (apply_move (random_elem movel) board)
+  let val amovel = available_movel board in
+    if null amovel then NONE else
+    random_walk (n-1) (apply_move (random_elem amovel) board)
   end
 
 fun lo_norm n tm =
   let 
     val board = (tm,F,0)
-    val movel = available_movel board 
+    val amovel = available_movel board 
   in
-    if null movel then SOME tm 
+    if null amovel then SOME tm 
     else if n <= 0 then NONE 
-    else lo_norm (n-1) (#1 (apply_move (hd movel) board))
+    else lo_norm (n-1) (#1 (apply_move (hd amovel) board))
   end
 fun is_normalizable tm = isSome (lo_norm 100 tm)
 
@@ -343,15 +337,19 @@ fun gen_data n =
   end
 
 val datadir = HOLDIR ^ "/src/AI/experiments/data_combin"
-val datafile =  datadir ^ "/train-11"
+val datafile =  datadir ^ "/train-" ^ its version
 fun compare_third cmp ((_,_,a),(_,_,b)) = cmp (a,b)
 
-fun stats_il il = 
+val stats_dir = HOLDIR ^ "/src/AI/experiments/stats_combin"
+fun stats_il header il = 
   let 
     fun f (a,b) = its a ^ "-" ^ its b
     val l = dlist (count_dict (dempty Int.compare) il) 
+    val _ = mkDir_err stats_dir
+    val s = header ^ "\n" ^ String.concatWith ", " (map f l)
   in
-    print_endline (String.concatWith ", " (map f l))
+    append_file (stats_dir ^ "/stats-" ^ its version) s;
+    print_endline s
   end
 
 fun create_data n = 
@@ -361,12 +359,9 @@ fun create_data n =
     val l2 = dict_sort (compare_third Int.compare) l1
   in  
     write_boardl datafile l2;
-    print_endline "cterm size in:"; 
-    stats_il (map (cterm_size o #1) l2);
-    print_endline "cterm size out:";
-    stats_il (map (cterm_size o #2) l2);
-    print_endline "nstep:";
-    stats_il (map ((fn x => x div 2) o #3) l2);
+    stats_il "size_in" (map (cterm_size o #1) l2);
+    stats_il "size_out" (map (cterm_size o #2) l2);
+    stats_il "nstep" (map ((fn x => x div 2) o #3) l2);
     l2
   end
 
@@ -385,12 +380,15 @@ fun shift_elem (i1,i2) l =
 
 fun level_targetl level = 
   let
-    val n = 4000
+    val n = 400
     val boardl1 = read_boardl datafile
     val boardl2 = first_n level (mk_batch n boardl1)
     val nl = div_equal n (length boardl2)
+    val boardl3 = 
+      List.concat (map (uncurry random_subset) (combine (nl,boardl2)))
   in
-    rev (List.concat (map (uncurry random_subset) (combine (nl,boardl2))))
+    stats_il "nstep_level" (map #3 boardl3);
+    rev boardl3
   end
 
 (*
@@ -441,7 +439,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleRewrite-combin-11", exwindow = 40000,
+  {expname = "mleRewrite-combin-" ^ its version, exwindow = 40000,
    ncore = 32, nsim = 1600, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
@@ -458,7 +456,7 @@ val extsearch = mk_extsearch "mleRewrite.extsearch" rlobj
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
-val _ = create_data 40000;
+val _ = create_data 4000;
 val r = rl_start (rlobj,extsearch) 1;
 *)
 
@@ -516,7 +514,6 @@ val (b,_,_) = psBigSteps.run_bigsteps bsobj board;
 val tm2 = elim_kred tm1;
 val tm3 = tag_all_redex tm2;
 app (print_endline o cts) [tm1,tm2];
-
 
 measure of complexity: 
   1) how many tries it takes the random strategy to solve it?
