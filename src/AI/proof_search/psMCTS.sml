@@ -170,10 +170,13 @@ fun node_create_backup obj (tree,cache) (id,board) =
       let
         fun add_cid pol = let fun f i x = (x, i :: id) in mapi f pol end
         val stati = 
-          if (#noconfl param andalso dmem board cache) orelse
-             null (#available_movel game board)
+          if (#noconfl param andalso dmem board cache)
           then Lose
           else (#status_of game) board
+        val stati' = 
+          if stati = Undecided andalso null (#available_movel game board)
+          then Lose
+          else stati
         val (value,pol1) = case stati of
             Win       => (1.0,[])
           | Lose      => (0.0,[])
@@ -184,8 +187,8 @@ fun node_create_backup obj (tree,cache) (id,board) =
           then add_noise param pol2
           else pol2
       in
-        {pol= add_cid pol3, value=value, stati=stati,
-         board=board, sum=0.0, vis=0.0, status=stati}
+        {pol= add_cid pol3, value=value, stati=stati',
+         board=board, sum=0.0, vis=0.0, status=stati'}
       end
     val tree1 = dadd id node tree
     val tree2 = backup (#decay param) tree1 (id, #value node)

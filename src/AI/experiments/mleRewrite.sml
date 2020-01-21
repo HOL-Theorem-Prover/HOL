@@ -346,7 +346,7 @@ fun stats_il header il =
     fun f (a,b) = its a ^ "-" ^ its b
     val l = dlist (count_dict (dempty Int.compare) il) 
     val _ = mkDir_err stats_dir
-    val s = header ^ "\n" ^ String.concatWith ", " (map f l)
+    val s = header ^ "\n" ^ String.concatWith ", " (map f l) ^ "\n"
   in
     append_file (stats_dir ^ "/stats-" ^ its version) s;
     print_endline s
@@ -365,7 +365,7 @@ fun create_data n =
     l2
   end
 
-fun div_equal n m = 
+fun div_equal n m =
   let val (q,r) = (n div m, n mod m) in
     List.tabulate (m, fn i => q + (if i < r then 1 else 0))
   end
@@ -396,6 +396,14 @@ load "aiLib"; open aiLib;
 load "psTermGen"; open psTermGen;
 load "psMCTS"; open psMCTS;
 load "mleRewrite"; open mleRewrite;
+val boardl = create_data 4000;
+val boardl1 = first_n 400 boardl;
+val board = random_elem boardl1;
+val rl = map (mcts_test 1600) boardl1;
+val rlno = map snd (filter (not o fst) rl);
+length rlno;
+val nodel = dlist (hd rlno);
+
 val board =(tag (random_cterm 20),T,0);
 val ml = (#available_movel (#game rlobj)) board;
 val board1 = (#apply_move (#game rlobj)) (hd ml) board;
