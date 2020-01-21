@@ -16,10 +16,11 @@ Theorem pair_11[simp]:
   pair a b = pair c d <=> a=c ∧ b=d
 Proof
   rw[EQ_IMP_THM,pair_def,bar_def] >>
-  `LENGTH a = LENGTH c ∧ a++b = c++d` by
-    (`Tpow (LENGTH a) ++ [F] ++ (a ++ b) = Tpow (LENGTH c) ++ [F] ++ (c ++ d)` by metis_tac[APPEND_ASSOC] >> metis_tac[Tpow_Fapp_eq]) >>
-  `DROP (LENGTH a) (a++b) = DROP (LENGTH c) (c++d)` by fs[] >>
-  `TAKE (LENGTH a) (a++b) = TAKE (LENGTH c) (c++d)` by fs[] >>
+  ‘LENGTH a = LENGTH c ∧ a++b = c++d’ by
+    (‘Tpow (LENGTH a) ++ [F] ++ (a ++ b) = Tpow (LENGTH c) ++ [F] ++ (c ++ d)’
+       by metis_tac[APPEND_ASSOC] >> metis_tac[Tpow_Fapp_eq]) >>
+  ‘DROP (LENGTH a) (a++b) = DROP (LENGTH c) (c++d)’ by fs[] >>
+  ‘TAKE (LENGTH a) (a++b) = TAKE (LENGTH c) (c++d)’ by fs[] >>
   fs[rich_listTheory.DROP_LENGTH_APPEND,rich_listTheory.TAKE_LENGTH_APPEND]
 QED
 
@@ -27,7 +28,8 @@ QED
 
 Definition univ_mach_def:
   univ_mach U <=>
-     (∀i y x. U (pair y (pair i (bar x))) = on2bl (Phi (bl2n i) (bl2n (pair y x)))) ∧
+     (∀i y x.
+        U (pair y (pair i (bar x))) = on2bl (Phi (bl2n i) (bl2n (pair y x)))) ∧
      ∀m. (∀i y x. m <> pair y (pair i (bar x))) ==> U m = NONE
 End
 
@@ -71,20 +73,20 @@ QED
 Theorem unary_rec_fns_phi:
   recfn f 1 ==> ∃i. ∀x. Phi i x = f [x]
 Proof
-  rw[] >> drule_then strip_assume_tac recfns_in_Phi >> qexists_tac`i` >> rw[] >>
-  `Phi i (fold [x]) = f [x]` by fs[] >> fs[unary_recfnsTheory.fold_def]
+  rw[] >> drule_then strip_assume_tac recfns_in_Phi >> qexists_tac‘i’ >> rw[] >>
+  ‘Phi i (fold [x]) = f [x]’ by fs[] >> fs[unary_recfnsTheory.fold_def]
 QED
 
 Theorem binary_rec_fns_phi:
   recfn f 2 ⇒ ∃i. ∀x y. Phi i (x ⊗ y) = f [x;y]
 Proof
-  rw[] >> drule_then strip_assume_tac recfns_in_Phi >> qexists_tac`i` >> rw[] >>
+  rw[] >> drule_then strip_assume_tac recfns_in_Phi >> qexists_tac‘i’ >> rw[] >>
   pop_assum (simp o single o GSYM)
 QED
 
 (* univ_mach does not imply univ_rf anymore  *)
 
-(* 
+(*
 
 Theorem univ_mach_rf:
   univ_mach U ==> univ_rf U
@@ -120,15 +122,16 @@ End
 Theorem dropWhile_Tpow:
   dropWhile ((=) T) (Tpow n ++ [F] ++ a ++ b) = [F]++a++b
 Proof
-  Induct_on`n` >> fs[tpow_suc]
+  Induct_on‘n’ >> fs[tpow_suc]
 QED
 
 Theorem blsnd_pair[simp]:
   blsnd (pair a b) = b
 Proof
-  fs[blsnd_def,pair_def,bar_def,dropWhile_Tpow] >> qmatch_abbrev_tac`DROP m _ = _` >>
-  `m = LENGTH a` suffices_by fs[rich_listTheory.DROP_LENGTH_APPEND] >>
-  fs[Abbr`m`]
+  fs[blsnd_def,pair_def,bar_def,dropWhile_Tpow] >>
+  qmatch_abbrev_tac‘DROP m _ = _’ >>
+  ‘m = LENGTH a’ suffices_by fs[rich_listTheory.DROP_LENGTH_APPEND] >>
+  fs[Abbr‘m’]
 QED
 
 Definition nblsnd0_def:
@@ -136,20 +139,22 @@ Definition nblsnd0_def:
                 ((nfst nr)+1) *, (nsnd nr)
               else 0 *, x
 Termination
-WF_REL_TAC`$<` >>rw[DIV_LT_X]
+WF_REL_TAC‘$<’ >>rw[DIV_LT_X]
 End
 
 Theorem bl2n_eq0[simp]:
   bl2n x = 0 <=> x = []
 Proof
-  Cases_on`x` >> simp[bool_list_to_num_def] >> rw[]
+  Cases_on‘x’ >> simp[bool_list_to_num_def] >> rw[]
 QED
 
 Theorem nblsnd0_correct:
   nblsnd0 (bl2n (Tpow n ++ [F] ++ x)) = n *, bl2n ([F] ++ x)
 Proof
-  Induct_on`n` >-  fs[Once nblsnd0_def,bool_list_to_num_def,tpow_suc,EVEN_ADD,EVEN_MULT] >>
-  simp[Once nblsnd0_def] >> simp[bool_list_to_num_def,tpow_suc,EVEN_ADD,EVEN_MULT]
+  Induct_on‘n’
+  >- fs[Once nblsnd0_def,bool_list_to_num_def,tpow_suc,EVEN_ADD,EVEN_MULT] >>
+  simp[Once nblsnd0_def] >>
+  simp[bool_list_to_num_def,tpow_suc,EVEN_ADD,EVEN_MULT]
 QED
 
 Definition nblsr_def[simp]:
@@ -160,7 +165,7 @@ End
 Theorem nblsr0[simp]:
   nblsr 0 n = 0
 Proof
-  Induct_on`n` >> simp[]
+  Induct_on‘n’ >> simp[]
 QED
 
 
@@ -168,14 +173,15 @@ QED
 Theorem DROP_n2bl:
   ∀n x. DROP n (n2bl x) = n2bl (nblsr x n)
 Proof
-  Induct_on`n` >> simp[] >> rw[] >>
-  Cases_on`x=0`  >> simp[]
+  Induct_on‘n’ >> simp[] >> rw[] >>
+  Cases_on‘x=0’  >> simp[]
   >- (rpt (simp[Once num_to_bool_list_def]) ) >>
-  Cases_on`n2bl x` >> simp[]
-  >- (pop_assum (mp_tac o Q.AP_TERM `bl2n`) >> simp[bool_list_to_num_def,Excl"bl2n_11"] ) >>
-  FIRST_X_ASSUM (qspecl_then [`bl2n t`] mp_tac) >> rw[] >>
-  `bl2n t = (x-1) DIV 2` suffices_by fs[] >>
-  pop_assum kall_tac >> pop_assum (mp_tac o Q.AP_TERM `bl2n`) >>
+  Cases_on‘n2bl x’ >> simp[]
+  >- (pop_assum (mp_tac o Q.AP_TERM ‘bl2n’) >>
+      simp[bool_list_to_num_def,Excl"bl2n_11"] ) >>
+  FIRST_X_ASSUM (qspecl_then [‘bl2n t’] mp_tac) >> rw[] >>
+  ‘bl2n t = (x-1) DIV 2’ suffices_by fs[] >>
+  pop_assum kall_tac >> pop_assum (mp_tac o Q.AP_TERM ‘bl2n’) >>
   simp[bool_list_to_num_def,Excl"bl2n_11"] >> rw[]
 QED
 
@@ -187,10 +193,12 @@ Theorem nblsnd_correct:
   n2bl (nblsnd (bl2n (pair a b))) = b
 Proof
   fs[nblsnd_def,GSYM DROP_n2bl,pair_def,bar_def] >>
-  ` DROP (nfst (nblsnd0 (bl2n (Tpow (LENGTH a) ++ [F] ++ (a ++ b))))+1)
-     (n2bl (nsnd (nblsnd0 (bl2n (Tpow (LENGTH a) ++ [F] ++ (a ++ b)))))) = b` suffices_by fs[] >>
-  `nblsnd0 (bl2n (Tpow (LENGTH a) ++ [F] ++ (a ++ b))) =  (LENGTH a)  ⊗ bl2n ([F] ++ (a ++ b))`
-    by metis_tac[nblsnd0_correct] >> fs[rich_listTheory.DROP_LENGTH_APPEND]
+  ‘DROP (nfst (nblsnd0 (bl2n (Tpow (LENGTH a) ++ [F] ++ (a ++ b))))+1)
+        (n2bl (nsnd (nblsnd0 (bl2n (Tpow (LENGTH a) ++ [F] ++ (a ++ b)))))) =
+     b’ suffices_by fs[] >>
+  ‘nblsnd0 (bl2n (Tpow (LENGTH a) ++ [F] ++ (a ++ b))) =
+   LENGTH a ⊗ bl2n ([F] ++ (a ++ b))’
+     by metis_tac[nblsnd0_correct] >> fs[rich_listTheory.DROP_LENGTH_APPEND]
 QED
 
 
@@ -202,10 +210,10 @@ End
 Theorem pr_nblsr_correct:
   ∀n r. pr_nblsr [n;r] = nblsr r n
 Proof
-  Induct_on`n` >> simp[pr_nblsr_def,nblsr_def] >> rw[] >>
-  ` (Pr (proj 0) (Cn pr_div [Cn (pr2 $-) [proj 1; K 1]; K 2]) [n; r] − 1) DIV
-        2 = pr_nblsr [n; (r − 1) DIV 2]` suffices_by fs[] >> pop_assum kall_tac >>
-  rw[pr_nblsr_def] >> Induct_on`n` >> simp[]
+  Induct_on‘n’ >> simp[pr_nblsr_def,nblsr_def] >> rw[] >>
+  ‘ (Pr (proj 0) (Cn pr_div [Cn (pr2 $-) [proj 1; K 1]; K 2]) [n; r] − 1) DIV
+        2 = pr_nblsr [n; (r − 1) DIV 2]’ suffices_by fs[] >> pop_assum kall_tac >>
+  rw[pr_nblsr_def] >> Induct_on‘n’ >> simp[]
 QED
 
 Theorem primrec_pr_nblsr:
@@ -233,19 +241,25 @@ End
 Theorem n_sub2_div2:
   ¬((n-2) DIV 2 < n) ==> n=0
 Proof
-  rw[] >> `n <= (n-2) DIV 2` by fs[] >> `2*n <= 2* ((n-2) DIV 2)` by fs[] >>
-  `2*n <= n-2` by fs[X_LE_DIV] >> Cases_on`n=0` >> simp[]
+  rw[] >> ‘n <= (n-2) DIV 2’ by fs[] >> ‘2*n <= 2* ((n-2) DIV 2)’ by fs[] >>
+  ‘2*n <= n-2’ by fs[X_LE_DIV] >> Cases_on‘n=0’ >> simp[]
 QED
 
 Theorem pr_nblsnd0_correct:
   pr_nblsnd0 [n] = (pr1 nblsnd0) [n]
 Proof
-  completeInduct_on`n` >> simp[Once pr_nblsnd0_def,Once nblsnd0_def,Once prnlistTheory.WFM_correct] >>
+  completeInduct_on‘n’ >>
+  simp[Once pr_nblsnd0_def,Once nblsnd0_def,Once prnlistTheory.WFM_correct] >>
   rw[]
-  >- (qmatch_abbrev_tac`nfst a = nfst b` >> `a=b` suffices_by fs[] >> simp[Abbr`a`,Abbr`b`] >>
-      `pr_nblsnd0 [(n-2) DIV 2] = pr1 nblsnd0 [(n-2) DIV 2]` by fs[] >> fs[] >> fs[Once pr_nblsnd0_def])
-  >- (qmatch_abbrev_tac`nsnd a = nsnd b` >> `a=b` suffices_by fs[] >> simp[Abbr`a`,Abbr`b`] >>
-       `pr_nblsnd0 [(n-2) DIV 2] = pr1 nblsnd0 [(n-2) DIV 2]` by fs[] >> fs[] >> fs[Once pr_nblsnd0_def]) >> metis_tac[n_sub2_div2]
+  >- (qmatch_abbrev_tac‘nfst a = nfst b’ >> ‘a=b’ suffices_by fs[] >>
+      simp[Abbr‘a’,Abbr‘b’] >>
+      ‘pr_nblsnd0 [(n-2) DIV 2] = pr1 nblsnd0 [(n-2) DIV 2]’ by fs[] >> fs[] >>
+      fs[Once pr_nblsnd0_def])
+  >- (qmatch_abbrev_tac‘nsnd a = nsnd b’ >> ‘a=b’ suffices_by fs[] >>
+      simp[Abbr‘a’,Abbr‘b’] >>
+      ‘pr_nblsnd0 [(n-2) DIV 2] = pr1 nblsnd0 [(n-2) DIV 2]’ by fs[] >> fs[] >>
+      fs[Once pr_nblsnd0_def]) >>
+  metis_tac[n_sub2_div2]
 QED
 
 
@@ -272,7 +286,7 @@ End
 Theorem primrec_restr_lem:
   primrec (λl. restr (proj 0 l) (proj 1 l) (proj 2 l)) 3
 Proof
-  `(λl. restr (proj 0 l) (proj 1 l) (proj 2 l)) = pr_cond (Cn pr_le [proj 2;proj 0]) (Cn (pr2 nel) [proj 2;proj 1]) (zerof)` by (fs[FUN_EQ_THM] >> rw[prnlistTheory.restr_def]) >> rw[] >>
+  ‘(λl. restr (proj 0 l) (proj 1 l) (proj 2 l)) = pr_cond (Cn pr_le [proj 2;proj 0]) (Cn (pr2 nel) [proj 2;proj 1]) (zerof)’ by (fs[FUN_EQ_THM] >> rw[prnlistTheory.restr_def]) >> rw[] >>
   irule primrec_pr_cond >> rw[primrec_rules]
 QED
 
@@ -280,7 +294,7 @@ Theorem primrec_pr_nblsnd0:
   primrec pr_nblsnd0 1
 Proof
   fs[pr_nblsnd0_def] >> irule prnlistTheory.primrec_WFM >> irule primrec_pr2 >> fs[] >>
-  qexists_tac`pr_cond (Cn pr_eq
+  qexists_tac‘pr_cond (Cn pr_eq
                           [Cn pr_mod
                               [Cn succ
                                   [proj 0];
@@ -297,11 +311,11 @@ Proof
                       (Cn (pr2 npair)
                           [zerof;
                            Cn succ
-                              [proj 0] ] )` >> rw[]
+                              [proj 0] ] )’ >> rw[]
   >- (irule primrec_pr_cond >> rw[primrec_rules] >> rpt (irule unary_recfnsTheory.primrec_Cn >>
       rw[primrec_rules]) >> fs[primrec_restr_lem] )
-  >- (`¬EVEN (SUC m)` by fs[ADD1] >> fs[MOD_2] >> rw[ADD1])
-  >- (`EVEN (SUC m)` by fs[ADD1] >> fs[MOD_2] >> rw[ADD1])
+  >- (‘¬EVEN (SUC m)’ by fs[ADD1] >> fs[MOD_2] >> rw[ADD1])
+  >- (‘EVEN (SUC m)’ by fs[ADD1] >> fs[MOD_2] >> rw[ADD1])
 QED
 
 Definition pr_nblsnd_def:
@@ -318,8 +332,8 @@ Theorem pr_nblsnd_correct:
   pr_nblsnd [n] = (pr1 nblsnd) [n]
 Proof
   fs[pr_nblsnd_def,nblsnd_def] >>
-  `nsnd (pr_nblsnd0 [n]) = nsnd (nblsnd0 n)` by simp[pr_nblsnd0_correct] >>
-  `SUC (nfst (pr_nblsnd0 [n])) = nfst (nblsnd0 n) + 1` by simp[pr_nblsnd0_correct] >>
+  ‘nsnd (pr_nblsnd0 [n]) = nsnd (nblsnd0 n)’ by simp[pr_nblsnd0_correct] >>
+  ‘SUC (nfst (pr_nblsnd0 [n])) = nfst (nblsnd0 n) + 1’ by simp[pr_nblsnd0_correct] >>
   simp[pr_nblsr_correct,Excl"nblsr_def"]
 QED
 
@@ -334,14 +348,15 @@ QED
 Theorem recfn_nblsnd:
   recfn (SOME o (pr1 nblsnd)) 1
 Proof
-  irule primrec_recfn >> irule primrecfnsTheory.primrec_pr1 >> qexists_tac`pr_nblsnd` >> rw[primrec_nblsnd,pr_nblsnd_correct]
+  irule primrec_recfn >> irule primrecfnsTheory.primrec_pr1 >> qexists_tac‘pr_nblsnd’ >> rw[primrec_nblsnd,pr_nblsnd_correct]
 QED
 
 Theorem nblsnd_index:
   ∃i. ∀x. Phi i x = (SOME o (pr1 nblsnd)) [x]
 Proof
-  assume_tac recfn_nblsnd >> drule recfns_in_Phi >> rw[] >> qexists_tac`i` >> rw[] >>
-  first_x_assum (qspec_then `[x]` mp_tac) >> rw[]
+  assume_tac recfn_nblsnd >> drule recfns_in_Phi >> rw[] >>
+  qexists_tac‘i’ >> rw[] >>
+  first_x_assum (qspec_then ‘[x]’ mp_tac) >> rw[]
 QED
 
 Theorem pair_LENGTH:
@@ -351,7 +366,7 @@ Proof
 QED
 
 Theorem nblsnd_correct2[simp] =
-  nblsnd_correct |> AP_TERM``bl2n`` |> SIMP_RULE (srw_ss()) [Excl"bl2n_11"]
+  nblsnd_correct |> AP_TERM“bl2n” |> SIMP_RULE (srw_ss()) [Excl"bl2n_11"]
 
 Theorem univ_rf_pair_nonempty:
    univ_mach U  ⇒ {p | U (pair y p) = SOME x} ≠ ∅
@@ -374,9 +389,10 @@ Theorem univ_mach_pair_pair:
                                 Phi (bl2n i) (bl2n (pair a b)) = SOME (bl2n x)
 Proof
   reverse (rw[univ_mach_def,EQ_IMP_THM]) >- rw[on2bl_def] >>
-  `∃a b c. p=pair a (pair b c)` by metis_tac[optionTheory.NOT_NONE_SOME] >>
-  qexists_tac`a` >> qexists_tac`b` >> qexists_tac`c` >> rw[] >>
-  `on2bl (Phi (bl2n b) (bl2n (pair a c)) ) = SOME x` by metis_tac[] >> fs[on2bl_def]
+  ‘∃a b c. p=pair a (pair b c)’ by metis_tac[optionTheory.NOT_NONE_SOME] >>
+  qexists_tac‘a’ >> qexists_tac‘b’ >> qexists_tac‘c’ >> rw[] >>
+  ‘on2bl (Phi (bl2n b) (bl2n (pair a c)) ) = SOME x’ by metis_tac[] >>
+  fs[on2bl_def]
 QED
 
 Definition nblft_def:
@@ -389,7 +405,7 @@ End
 Theorem nblft_zero[simp]:
   nblft 0 x = 0
 Proof
-  Induct_on`x` >> fs[nblft_def]
+  Induct_on‘x’ >> fs[nblft_def]
 QED
 
 Theorem n2bl_zero[simp]:
@@ -402,24 +418,26 @@ QED
 Theorem n2bl_2_EVEN_lem:
    T::n2bl (x) = n2bl (2 * x + 2)
 Proof
-  `EVEN (2 * x + 2)` by
-    (`EVEN (2*(x+1))` suffices_by rw[LEFT_ADD_DISTRIB] >> metis_tac[EVEN_DOUBLE]) >>
-  `n2bl (2*x + 2) = T::(n2bl x)` by (simp[Once num_to_bool_list_def]) >> metis_tac[]
+  ‘EVEN (2 * x + 2)’ by
+    (‘EVEN (2*(x+1))’ suffices_by rw[LEFT_ADD_DISTRIB] >> metis_tac[EVEN_DOUBLE]) >>
+  ‘n2bl (2*x + 2) = T::(n2bl x)’ by (simp[Once num_to_bool_list_def]) >> metis_tac[]
 QED
 
 Theorem n2bl_1_ODD_lem:
    F::n2bl (x) = n2bl (2 * x + 1)
 Proof
-  `ODD (2 * x + 1)` by
-    (`∃m. 2*x + 1 = SUC (2*m)` by (qexists_tac`x` >> fs[]) >> metis_tac[ODD_EXISTS] ) >>
-  `~EVEN (2 * x + 1)` by fs[ODD_EVEN] >>
-  `n2bl (2*x + 1) = F::(n2bl x)` by (simp[Once num_to_bool_list_def]) >> metis_tac[]
+  ‘ODD (2 * x + 1)’ by
+    (‘∃m. 2*x + 1 = SUC (2*m)’ by (qexists_tac‘x’ >> fs[]) >>
+     metis_tac[ODD_EXISTS] ) >>
+  ‘~EVEN (2 * x + 1)’ by fs[ODD_EVEN] >>
+  ‘n2bl (2*x + 1) = F::(n2bl x)’ by (simp[Once num_to_bool_list_def]) >>
+  metis_tac[]
 QED
 
 Theorem TAKE_n2bl:
   ∀n x. TAKE n (n2bl x) = n2bl (nblft x n)
 Proof
-  Induct_on`n` >> simp[] >> rw[]  >>
+  Induct_on‘n’ >> simp[] >> rw[]  >>
   simp[nblft_def] >>rw[] >>
   simp[Once num_to_bool_list_def] >> rw[n2bl_1_ODD_lem,n2bl_2_EVEN_lem]
 QED
@@ -431,24 +449,26 @@ End
 Theorem DROP_bl2n:
   ∀x n. DROP n x = n2bl (nblsr (bl2n x) n)
 Proof
-  rw[] >> `DROP n (n2bl (bl2n x)) = n2bl (nblsr (bl2n (n2bl (bl2n x))) n)` suffices_by
-    (rw[] >> fs[bool_num_inv]) >>
+  rw[] >>
+  ‘DROP n (n2bl (bl2n x)) = n2bl (nblsr (bl2n (n2bl (bl2n x))) n)’ suffices_by
+   (rw[] >> fs[bool_num_inv]) >>
   metis_tac[DROP_n2bl,bool_num_inv]
 QED
 
 Theorem nblfst_correct[simp]:
   nblfst (bl2n (pair a b)) = bl2n a
 Proof
-  `n2bl (nblfst (bl2n (pair a b))) = a` suffices_by
-    (rw[] >> `bl2n (n2bl (nblfst (bl2n (pair a b)))) = bl2n a` by fs[] >>
+  ‘n2bl (nblfst (bl2n (pair a b))) = a’ suffices_by
+    (rw[] >> ‘bl2n (n2bl (nblfst (bl2n (pair a b)))) = bl2n a’ by fs[] >>
      metis_tac[bool_num_inv]) >>
   fs[nblfst_def,nblsnd_def,GSYM TAKE_n2bl,pair_def,bar_def] >>
-  `TAKE (nfst (nblsnd0 (bl2n (Tpow (LENGTH a) ++ [F] ++ (a ++ b) ))))
-     (n2bl
-        (nblsr (nsnd (nblsnd0 (bl2n (Tpow (LENGTH a) ++ [F] ++ (a ++ b))))) 1)) =
-   a` suffices_by fs[] >>
-  `nblsnd0 (bl2n (Tpow (LENGTH a) ++ [F] ++ (a ++ b))) =  (LENGTH a)  ⊗ bl2n ([F] ++ (a ++ b))`
-    by metis_tac[nblsnd0_correct] >> fs[rich_listTheory.TAKE_LENGTH_APPEND] >>
+  ‘TAKE (nfst (nblsnd0 (bl2n (Tpow (LENGTH a) ++ [F] ++ (a ++ b) ))))
+        (n2bl
+          (nblsr(nsnd (nblsnd0 (bl2n (Tpow (LENGTH a) ++ [F] ++ (a ++ b))))) 1))
+      = a’ suffices_by fs[] >>
+  ‘nblsnd0 (bl2n (Tpow (LENGTH a) ++ [F] ++ (a ++ b))) =
+   LENGTH a ⊗ bl2n ([F] ++ (a ++ b))’
+     by metis_tac[nblsnd0_correct] >> fs[rich_listTheory.TAKE_LENGTH_APPEND] >>
   simp[GSYM DROP_bl2n] >> fs[rich_listTheory.TAKE_LENGTH_APPEND]
 QED
 
@@ -503,19 +523,19 @@ Theorem lam_nblft_equiv = brackabs.brackabs_equiv [] lam_nblft_def
 Theorem lam_nblft_behaviour:
    ∀x y. lam_nblft @@ church x @@ church y == church (nblft x y)
 Proof
-  Induct_on`y` >> simp_tac (bsrw_ss()) [lam_nblft_equiv,nblft_def] >> rw[] >>
+  Induct_on‘y’ >> simp_tac (bsrw_ss()) [lam_nblft_equiv,nblft_def] >> rw[] >>
   simp_tac (bsrw_ss()) [churchboolTheory.cB_behaviour] >> fs[EVEN_MOD2] >>
   simp_tac (bsrw_ss()) [churchboolTheory.cB_behaviour] >>
   full_simp_tac (bsrw_ss()) [lam_nblft_equiv] >> simp[]
 QED
 
 Theorem lam_nblft_phi:
-  Phi (dBnum (fromTerm (S @@ (B @@ lam_nblft @@ cnfst) @@ cnsnd) ) ) (m *, n) = SOME (nblft m n)
+  Phi (dBnum (fromTerm (S @@ (B @@ lam_nblft @@ cnfst) @@ cnsnd) ) ) (m *, n) =
+  SOME (nblft m n)
 Proof
-  simp[Phi_def] >> simp_tac (bsrw_ss()) [lam_nblft_behaviour,normal_orderTheory.bnf_bnf_of]
+  simp[Phi_def] >>
+  simp_tac (bsrw_ss()) [lam_nblft_behaviour,normal_orderTheory.bnf_bnf_of]
 QED
-
-
 
 Theorem nblft_phiii:
   ∀z1 z2. rec2 (λx y. SOME (nblft x y)) [z1;z2] =
@@ -536,11 +556,11 @@ rec2 (λx y. SOME (nblft x y)) =
        [(λx. SOME (K (dBnum (fromTerm (S @@ (B @@ lam_nblft @@ cnfst) @@ cnsnd) ) ) x ) ) ;
         SOME o proj 0 ]) [(SOME ∘ pr2 $*,)]
 Proof
-  rw[FUN_EQ_THM,Excl"fromTerm_def"] >> Cases_on`x` >> rw[Excl"fromTerm_def"]
-  >-(simp[recCn_def,Excl"fromTerm_def"] >> `SOME 0 =
-     Phi (dBnum (fromTerm (S @@ (B @@ lam_nblft @@ cnfst) @@ cnsnd))) (0 *, 0)`
+  rw[FUN_EQ_THM,Excl"fromTerm_def"] >> Cases_on‘x’ >> rw[Excl"fromTerm_def"]
+  >-(simp[recCn_def,Excl"fromTerm_def"] >> ‘SOME 0 =
+     Phi (dBnum (fromTerm (S @@ (B @@ lam_nblft @@ cnfst) @@ cnsnd))) (0 *, 0)’
        suffices_by simp[Excl"fromTerm_def"] >> simp[lam_nblft_phi]) >>
-  Cases_on`t` >> rw[Excl"fromTerm_def"]
+  Cases_on‘t’ >> rw[Excl"fromTerm_def"]
   >-(simp[recCn_def,Excl"fromTerm_def"] >> simp[lam_nblft_phi]) >>
   simp[recCn_def,Excl"fromTerm_def"] >> simp[lam_nblft_phi]
 QED
@@ -548,16 +568,16 @@ QED
 Theorem recfn_some_num:
   recfn (λx. SOME (a:num)) 1
 Proof
-  `(λ(x:num list). SOME a) = K (SOME a)` by (simp[FUN_EQ_THM,combinTheory.K_THM]) >>
-  `recfn (K (SOME a)) 1` suffices_by simp[] >> simp[recfn_K]
+  ‘(λ(x:num list). SOME a) = K (SOME a)’ by (simp[FUN_EQ_THM,combinTheory.K_THM]) >>
+  ‘recfn (K (SOME a)) 1’ suffices_by simp[] >> simp[recfn_K]
 QED
 
 Theorem recfn_nblfst:
   recfn (rec1 (SOME o nblfst)) 1
 Proof
   irule recfn_rec1 >> fs[nblfst_def] >>
-  qexists_tac`recCn (rec2 (λx y. SOME (nblft x y) )) [SOME o Cn pr_nblsr [K 1;Cn (pr1 nsnd) [Cn pr_nblsnd0 [proj 0]] ];
-                    SOME o Cn (pr1 nfst) [Cn pr_nblsnd0 [proj 0]] ]` >> rw[]
+  qexists_tac‘recCn (rec2 (λx y. SOME (nblft x y) )) [SOME o Cn pr_nblsr [K 1;Cn (pr1 nsnd) [Cn pr_nblsnd0 [proj 0]] ];
+                    SOME o Cn (pr1 nfst) [Cn pr_nblsnd0 [proj 0]] ]’ >> rw[]
   >- (irule recfnCn >> rw[recfn_rules]
       >- (irule primrec_recfn >>
           rpt (irule unary_recfnsTheory.primrec_Cn >> simp[primrec_pr_nblsr,primrec_rules,primrec_pr_nblsnd0]) )
@@ -573,13 +593,13 @@ QED
 Theorem rec1_pr1:
   SOME o pr1 f = rec1 (SOME o f)
 Proof
-  simp[FUN_EQ_THM] >> Cases_on`x` >> rw[rec1_def,pr1_def]
+  simp[FUN_EQ_THM] >> Cases_on‘x’ >> rw[rec1_def,pr1_def]
 QED
 
 Theorem rUMibl_recfn:
   recfn rUMibl 1
 Proof
-  fs[rUMibl_def] >> irule recfnCn >> rw[] >> irule recfnCn >> rw[recfn_rules,recfn_nblsnd,recfn_nblfst] >> `(SOME ∘ pr1 nblfst) = rec1 (SOME o nblfst)` suffices_by fs[recfn_nblfst] >> fs[rec1_pr1]
+  fs[rUMibl_def] >> irule recfnCn >> rw[] >> irule recfnCn >> rw[recfn_rules,recfn_nblsnd,recfn_nblfst] >> ‘(SOME ∘ pr1 nblfst) = rec1 (SOME o nblfst)’ suffices_by fs[recfn_nblfst] >> fs[rec1_pr1]
 QED
 
 Theorem rUMibl_index:
@@ -593,28 +613,28 @@ Theorem extra_information1:
 Proof
   rw[KC_def,CKC_def,cond_core_complexity_def,core_complexity_def] >>
   fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  `univ_rf U` by fs[univ_mach_rf] >>
+  ‘univ_rf U’ by fs[univ_mach_rf] >>
   strip_assume_tac nblsnd_index >>
-  pop_assum (qspec_then `bl2n (pair a b)` (assume_tac o Q.GENL[`a`,`b`])) >>
+  pop_assum (qspec_then ‘bl2n (pair a b)’ (assume_tac o Q.GENL[‘a’,‘b’])) >>
   fs[nblsnd_correct2]>> fs[univ_mach_def] >>
-  `∀a b. U (pair b (pair (n2bl i) a)) = SOME a` by fs[on2bl_def] >>
-  assume_tac rUMibl_index >> fs[] >> rename [`∀x. Phi rUMi x = rUMibl [x]`] >>
+  ‘∀a b. U (pair b (pair (n2bl i) a)) = SOME a’ by fs[on2bl_def] >>
+  assume_tac rUMibl_index >> fs[] >> rename [‘∀x. Phi rUMi x = rUMibl [x]’] >>
 
-  qabbrev_tac`j = rUMi o i` >>
-  `∀x y. Phi j (bl2n (pair x y)) = Phi rUMi (bl2n y)` by
-    (simp[Abbr`j`,computable_composition_def,nblsnd_correct2]) >>
-  pop_assum (qspecl_then [`x`,`pair a b`] (assume_tac o Q.GENL[`x`,`a`,`b`])) >>
-  `∀x a b. U (pair x (pair (n2bl j) (pair a b))) = U (pair a (pair (n2bl rUMi) b))` by fs[] >>
-  `univ_mach U` by metis_tac[GSYM univ_mach_def] >>
-  `∀x a b. Phi j (bl2n (pair x (pair a b))) = Phi (bl2n a) (bl2n b)` by fs[rUMibl_correct] >>
+  qabbrev_tac‘j = rUMi o i’ >>
+  ‘∀x y. Phi j (bl2n (pair x y)) = Phi rUMi (bl2n y)’ by
+    (simp[Abbr‘j’,computable_composition_def,nblsnd_correct2]) >>
+  pop_assum (qspecl_then [‘x’,‘pair a b’] (assume_tac o Q.GENL[‘x’,‘a’,‘b’])) >>
+  ‘∀x a b. U (pair x (pair (n2bl j) (pair a b))) = U (pair a (pair (n2bl rUMi) b))’ by fs[] >>
+  ‘univ_mach U’ by metis_tac[GSYM univ_mach_def] >>
+  ‘∀x a b. Phi j (bl2n (pair x (pair a b))) = Phi (bl2n a) (bl2n b)’ by fs[rUMibl_correct] >>
 
-  qexists_tac`2*(LENGTH (n2bl j)) + 1` >> rw[] >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
+  qexists_tac‘2*(LENGTH (n2bl j)) + 1’ >> rw[] >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
   >- (simp[EXTENSION] >> metis_tac[]) >>
   DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >-(fs[EXTENSION] >> `{p | U p = SOME x} ≠ ∅` by fs[univ_rf_nonempty] >>
+  >-(fs[EXTENSION] >> ‘{p | U p = SOME x} ≠ ∅’ by fs[univ_rf_nonempty] >>
      fs[EXTENSION] >> metis_tac[] ) >> fs[PULL_EXISTS] >>
   ‘∃a b c. p' = pair a (pair b c)’ by metis_tac[optionTheory.NOT_SOME_NONE] >> rw[] >>
-  `U (pair y (pair (n2bl j) (pair b (pair a c)))) = SOME x` by (rw[] >>
+  ‘U (pair y (pair (n2bl j) (pair b (pair a c)))) = SOME x’ by (rw[] >>
   SIMP_TAC (srw_ss()) [rUMibl_correct] >> rw[] >>
   ‘on2bl (rUMibl [bl2n (pair b  (pair a c))]) = SOME x’ by metis_tac[]) >>
   last_x_assum drule >> simp[pair_LENGTH]
@@ -661,18 +681,18 @@ QED
 Theorem primrec_ell:
   primrec (pr1 ℓ) 1
 Proof
-  irule primrec_pr1 >> qexists_tac`pr_ell` >> rw[]
+  irule primrec_pr1 >> qexists_tac‘pr_ell’ >> rw[]
   >- (fs[pr_ell] >> irule prnlistTheory.primrec_WFM >>
       rw[prnlistTheory.restr_def,DIV_LESS_EQ] >>
-      `∀n. (n-1) DIV 2 <= n` by (intLib.ARITH_TAC) >> simp[] >> irule primrec_pr2 >> simp[] >>
-      qexists_tac`pr_cond (Cn pr_mod [proj 0; K 2])
+      ‘∀n. (n-1) DIV 2 <= n’ by (intLib.ARITH_TAC) >> simp[] >> irule primrec_pr2 >> simp[] >>
+      qexists_tac‘pr_cond (Cn pr_mod [proj 0; K 2])
                           (Cn succ [Cn (pr2 nel) [Cn (pr_div) [Cn (pr2 $-) [proj 0;K 1]; K 2];proj 1]])
-                          (Cn succ [Cn (pr2 nel) [Cn (pr_div) [proj 0; K 2];proj 1]])` >> rw[]
+                          (Cn succ [Cn (pr2 nel) [Cn (pr_div) [proj 0; K 2];proj 1]])’ >> rw[]
       >- (irule primrec_pr_cond >> rw[] >> rpt (irule primrec_Cn >> simp[primrec_rules] ) ) >>
-      rw[pr_cond_def] >- (`m MOD 2 = 1` suffices_by simp[] >> fs[EVEN_ADD,MOD_2]) >>
-      `m MOD 2 = 0` suffices_by simp[] >> fs[EVEN_ADD,MOD_2]  ) >>
+      rw[pr_cond_def] >- (‘m MOD 2 = 1’ suffices_by simp[] >> fs[EVEN_ADD,MOD_2]) >>
+      ‘m MOD 2 = 0’ suffices_by simp[] >> fs[EVEN_ADD,MOD_2]  ) >>
 
-  completeInduct_on`n` >> simp[Once pr_ell_thm,Once num_to_bool_list_def] >>  rw[ADD1]>>
+  completeInduct_on‘n’ >> simp[Once pr_ell_thm,Once num_to_bool_list_def] >>  rw[ADD1]>>
   first_x_assum irule >> intLib.ARITH_TAC
 QED
 
@@ -683,20 +703,20 @@ Theorem primrec_nblconcat[simp]:
 Proof
   irule primrec_pr2 >> fs[nblconcat_def] >>
   qexists_tac
-  `Cn (pr2 $+ )
+  ‘Cn (pr2 $+ )
       [proj 0 ;
        Cn (pr2 $* )
           [proj 1 ;
            Cn (λl. FUNPOW (λx. 2*x ) ((proj 0) l) ((K 1n) l)  )
               [Cn (pr1 ℓ )
-                  [proj 0] ] ] ] ` >> rw[]
+                  [proj 0] ] ] ] ’ >> rw[]
   >- (rpt (irule unary_recfnsTheory.primrec_Cn >>
            rw[primrec_pr_mult,primrec_pr_add,primrec_rules,primrec_ell]) >>
       HO_MATCH_MP_TAC primrec_FUNPOW >> rw[]
-      >- (irule primrec_pr1 >> qexists_tac`Cn (pr2 $*) [K 2;proj 0]` >> simp[primrec_rules])
-      >- (`(λ(l:num list). 1n) = K 1` suffices_by simp[] >> simp[FUN_EQ_THM] ) >>
+      >- (irule primrec_pr1 >> qexists_tac‘Cn (pr2 $*) [K 2;proj 0]’ >> simp[primrec_rules])
+      >- (‘(λ(l:num list). 1n) = K 1’ suffices_by simp[] >> simp[FUN_EQ_THM] ) >>
       simp_tac (srw_ss()++boolSimps.ETA_ss) [primrec_rules] ) >>
-  Q.SPEC_TAC (`ℓ m`,`k`) >> Induct >> simp[FUNPOW_SUC,EXP]
+  Q.SPEC_TAC (‘ℓ m’,‘k’) >> Induct >> simp[FUNPOW_SUC,EXP]
 QED
 
 
@@ -896,18 +916,18 @@ Theorem subadditivity1:
 Proof
   rw[KC_def,core_complexity_def] >>
   fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  `univ_rf U` by fs[univ_mach_rf] >> fs[univ_mach_def] >>
+  ‘univ_rf U’ by fs[univ_mach_rf] >> fs[univ_mach_def] >>
   assume_tac nblpc_i_def >>
   qexists_tac‘4 * ℓ nblpc_i + 2 * ℓ comp_bli + 5’ >>
   rw[] >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >-(fs[EXTENSION] >> `{p | U p = SOME (x++y)} ≠ ∅` by fs[univ_rf_nonempty] >>
+  >-(fs[EXTENSION] >> ‘{p | U p = SOME (x++y)} ≠ ∅’ by fs[univ_rf_nonempty] >>
      fs[EXTENSION] >> metis_tac[] ) >>
   DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
   >-(fs[EXTENSION] >>
      ‘{p | U p = SOME (pair x y)} ≠ ∅’
       by fs[univ_rf_nonempty] >>
      fs[EXTENSION] >> metis_tac[] ) >>
-  fs[PULL_EXISTS] >> rename[`U pp = SOME (pair x y)`] >>
+  fs[PULL_EXISTS] >> rename[‘U pp = SOME (pair x y)’] >>
   ‘∃pi a b. pp = pair a (pair pi b)’ by metis_tac[optionTheory.NOT_SOME_NONE] >>
   rw[] >> rfs[on2bl_SOME] >>
   qabbrev_tac ‘
@@ -928,17 +948,17 @@ Theorem extra_information2:
 Proof
   rw[KC_def,core_complexity_def] >>
   fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  `univ_rf U` by fs[univ_mach_rf] >> fs[univ_mach_def] >>
-  qexists_tac`4 * ℓ nblfst_i + 2 * ℓ comp_bli + 5` >> rw[] >>
+  ‘univ_rf U’ by fs[univ_mach_rf] >> fs[univ_mach_def] >>
+  qexists_tac‘4 * ℓ nblfst_i + 2 * ℓ comp_bli + 5’ >> rw[] >>
   DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >-(fs[EXTENSION] >> `{p | U p = SOME x} ≠ ∅` by fs[univ_rf_nonempty] >>
+  >-(fs[EXTENSION] >> ‘{p | U p = SOME x} ≠ ∅’ by fs[univ_rf_nonempty] >>
      fs[EXTENSION] >> metis_tac[]) >>
   DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
   >-(fs[EXTENSION] >>
      ‘{p | U p = SOME (pair x y)} ≠ ∅’ by fs[univ_rf_nonempty] >>
      fs[EXTENSION] >> metis_tac[] ) >> fs[PULL_EXISTS] >>
-  rename[`U pp = SOME (pair x y)`]  >>
-  `∃a b c. pp = pair a (pair b c)`
+  rename[‘U pp = SOME (pair x y)’]  >>
+  ‘∃a b c. pp = pair a (pair b c)’
       by metis_tac[optionTheory.NOT_SOME_NONE] >> rw[] >> rfs[on2bl_SOME] >>
   qabbrev_tac ‘
     ARG = pair (pair (n2bl nblfst_i) b) (pair (n2bl comp_bli) (pair a c))
@@ -955,8 +975,8 @@ QED
 Theorem subadditivity3:
   univ_mach U ==> ∃c. ∀x y. KC U x + CKC U y x <= KC U x + KC U y + c
 Proof
-  strip_tac >> `∃c. ∀x y. CKC U y x ≤ KC U y + c`
-    suffices_by (rw[] >> qexists_tac`c` >> rw[LE_ADD_LCANCEL] >> `CKC U y x <= KC U y + c` by fs[] >> simp[] ) >>
+  strip_tac >> ‘∃c. ∀x y. CKC U y x ≤ KC U y + c’
+    suffices_by (rw[] >> qexists_tac‘c’ >> rw[LE_ADD_LCANCEL] >> ‘CKC U y x <= KC U y + c’ by fs[] >> simp[] ) >>
   metis_tac[extra_information1]
 QED
 
@@ -970,18 +990,18 @@ End
 Theorem nblTpow_compute:
   nblTpow [n] = 2**(n+1) - 2
 Proof
-  Induct_on`n` >> fs[nblTpow_def,FUNPOW_SUC,EXP,GSYM ADD1] >>
-  `2*FUNPOW (λx. 2 * x) n 1 -2 + 2 = 2*2 ** n -2 + 2` by fs[] >> Cases_on`n=0` >> simp[] >>
-  `2*FUNPOW (λx. 2 * x) n 1 = 2*2 ** n` suffices_by rw[] >>
-  `2 <= FUNPOW (λx. 2 * x) n 1 ∧ 2<= 2**n` suffices_by fs[SUB_ADD] >> rw[X_LE_X_EXP] >>
+  Induct_on‘n’ >> fs[nblTpow_def,FUNPOW_SUC,EXP,GSYM ADD1] >>
+  ‘2*FUNPOW (λx. 2 * x) n 1 -2 + 2 = 2*2 ** n -2 + 2’ by fs[] >> Cases_on‘n=0’ >> simp[] >>
+  ‘2*FUNPOW (λx. 2 * x) n 1 = 2*2 ** n’ suffices_by rw[] >>
+  ‘2 <= FUNPOW (λx. 2 * x) n 1 ∧ 2<= 2**n’ suffices_by fs[SUB_ADD] >> rw[X_LE_X_EXP] >>
   pop_assum mp_tac >> rpt (pop_assum kall_tac) >> rw[] >>
-  Induct_on`n` >> rw[FUNPOW_SUC] >>  pop_assum kall_tac >> Induct_on`n` >> rw[FUNPOW_SUC]
+  Induct_on‘n’ >> rw[FUNPOW_SUC] >>  pop_assum kall_tac >> Induct_on‘n’ >> rw[FUNPOW_SUC]
 QED
 
 Theorem primrec_nblTpow:
   primrec nblTpow 1
 Proof
-  simp[nblTpow_def,Excl"K_THM.1",Excl"Cn0123.1"] >> irule primrec_Cn >> rw[Excl"K_THM.1",Excl"Cn0123.1"] >> irule primrec_FUNPOW >> rw[primrec_rules] >> irule primrec_pr1 >> rw[] >> qexists_tac`Cn (pr2 $*) [K 2;proj 0]` >> rw[] >> irule primrec_Cn >> rw[primrec_rules]
+  simp[nblTpow_def,Excl"K_THM.1",Excl"Cn0123.1"] >> irule primrec_Cn >> rw[Excl"K_THM.1",Excl"Cn0123.1"] >> irule primrec_FUNPOW >> rw[primrec_rules] >> irule primrec_pr1 >> rw[] >> qexists_tac‘Cn (pr2 $*) [K 2;proj 0]’ >> rw[] >> irule primrec_Cn >> rw[primrec_rules]
 QED
 
 
@@ -1010,21 +1030,21 @@ QED
 Theorem nblconcat_correct2:
   nblconcat a b = bl2n ((n2bl a)++(n2bl b))
 Proof
-  `∃x. a = bl2n x ∧ ∃y. b=bl2n y` by (qexists_tac`n2bl a` >> rw[] >> qexists_tac`n2bl b` >> rw[]) >>  fs[nblconcat_correct]
+  ‘∃x. a = bl2n x ∧ ∃y. b=bl2n y’ by (qexists_tac‘n2bl a’ >> rw[] >> qexists_tac‘n2bl b’ >> rw[]) >>  fs[nblconcat_correct]
 QED
 
 Theorem nblTpow_correct:
   nblTpow [n] = bl2n (Tpow n)
 Proof
-  simp[Tpow_def,nblTpow_compute] >> Induct_on`n` >> rw[] >- simp[Once bool_list_to_num_def] >>
+  simp[Tpow_def,nblTpow_compute] >> Induct_on‘n’ >> rw[] >- simp[Once bool_list_to_num_def] >>
   simp[GSYM ADD1,EXP,GENLIST_CONS,Once bool_list_to_num_def] >> fs[EXP,GSYM ADD1] >>
-  Cases_on`n=0` >- fs[Once bool_list_to_num_def] >>
-  `4 * 2 ** n − 2 - 2 = 2 * bl2n (GENLIST (K T) n) + 2 - 2 ` by fs[CANCEL_SUB] >>
+  Cases_on‘n=0’ >- fs[Once bool_list_to_num_def] >>
+  ‘4 * 2 ** n − 2 - 2 = 2 * bl2n (GENLIST (K T) n) + 2 - 2 ’ by fs[CANCEL_SUB] >>
   fs[] >>
-  `4 * 2 ** n − 4 + 2 = 2 * bl2n (GENLIST (K T) n) + 2` by fs[] >>
-  `4 * 2 ** n − 4 + 2 = 4 * 2 ** n − 2` suffices_by fs[] >>
+  ‘4 * 2 ** n − 4 + 2 = 2 * bl2n (GENLIST (K T) n) + 2’ by fs[] >>
+  ‘4 * 2 ** n − 4 + 2 = 4 * 2 ** n − 2’ suffices_by fs[] >>
   rpt (pop_assum kall_tac) >>
-  Induct_on`n` >> simp[EXP]
+  Induct_on‘n’ >> simp[EXP]
 QED
 
 
@@ -1062,7 +1082,7 @@ Theorem symmetry_of_information2a:
 Proof
   rw[KC_def,core_complexity_def] >>
   fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  `univ_rf U` by fs[univ_mach_rf] >> fs[univ_mach_def] >>
+  ‘univ_rf U’ by fs[univ_mach_rf] >> fs[univ_mach_def] >>
   qexists_tac‘4 * ℓ nblpf_i + 2 * ℓ comp_bli + 5’ >> rw[] >>
   DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
   >-(fs[EXTENSION] >>
@@ -1072,7 +1092,7 @@ Proof
   >-(fs[EXTENSION] >>
      ‘{p | U p = SOME (pair y x)} ≠ ∅’ by fs[univ_rf_nonempty] >>
      fs[EXTENSION] >> metis_tac[] ) >> fs[PULL_EXISTS] >>
-  rename[`U pp = SOME (pair y x)`]  >>
+  rename[‘U pp = SOME (pair y x)’]  >>
   ‘∃a b c. pp = pair a (pair b c)’ by metis_tac[optionTheory.NOT_SOME_NONE] >>
   rw[] >>
   qabbrev_tac ‘
@@ -1126,7 +1146,7 @@ Theorem extra_information_cond1:
 Proof
   rw[KC_def,core_complexity_def,CKC_def,cond_core_complexity_def] >>
   fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  `univ_rf U` by fs[univ_mach_rf] >> fs[univ_mach_def] >>
+  ‘univ_rf U’ by fs[univ_mach_rf] >> fs[univ_mach_def] >>
 
   qx_choose_then ‘exinfoprog_i’ strip_assume_tac
   (MATCH_MP unary_rec_fns_phi recfn_extra_info_cond_prog) >>
@@ -1246,7 +1266,7 @@ Proof
                              recfn_nblfst, primrec_recfn, primrec_nblpair,recfn_pr_nblsr] >>
        rw[])
 QED
-        
+
 Theorem recfn_SIb_machine:
   recfn SIb_machine 1
 Proof
@@ -1289,7 +1309,7 @@ QED
 (* unbar needs a Pr def
 
 Definition nblunbar:
-  nblunbar = if 
+  nblunbar = if
 End
 
         *)
@@ -1302,7 +1322,7 @@ Theorem symmetry_of_information1blem:
 Proof
   rw[KC_def,core_complexity_def,CKC_def,cond_core_complexity_def] >>
   fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  `univ_rf U` by fs[univ_mach_rf] >> fs[univ_mach_def] >>
+  ‘univ_rf U’ by fs[univ_mach_rf] >> fs[univ_mach_def] >>
   qx_choose_then ‘SIb_i’ strip_assume_tac (MATCH_MP unary_rec_fns_phi recfn_SIb_machine) >>
   qexists_tac ‘2 * ℓ SIb_i + 7’ >> rw[] >>
   DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
@@ -1335,7 +1355,7 @@ Theorem symmetry_of_information1b:
 Proof
   rw[KC_def,core_complexity_def,CKC_def,cond_core_complexity_def] >>
   fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  `univ_rf U` by fs[univ_mach_rf] >> fs[univ_mach_def] >>
+  ‘univ_rf U’ by fs[univ_mach_rf] >> fs[univ_mach_def] >>
   qx_choose_then ‘SIb_i’ strip_assume_tac (MATCH_MP unary_rec_fns_phi recfn_SIb_machine) >>
   qexists_tac ‘2 * ℓ SIb_i + 7’ >> rw[] >>
   DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
@@ -1368,7 +1388,7 @@ Theorem subadditivity2:
 Proof
   rw[KC_def,core_complexity_def,CKC_def,cond_core_complexity_def] >>
   fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  `univ_rf U` by fs[univ_mach_rf] >> fs[univ_mach_def] >>
+  ‘univ_rf U’ by fs[univ_mach_rf] >> fs[univ_mach_def] >>
   qx_choose_then ‘subaddprog_i’ strip_assume_tac
     (MATCH_MP unary_rec_fns_phi recfn_subaddproj) >>
   qexists_tac ‘2 * ℓ subaddprog_i’ >> rw[] >>
@@ -1412,7 +1432,7 @@ Theorem symmetry_of_information1a:
 Proof
   rw[KC_def,core_complexity_def,CKC_def,cond_core_complexity_def] >>
   fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  `univ_rf U` by fs[univ_mach_rf] >> fs[univ_mach_def] >>
+  ‘univ_rf U’ by fs[univ_mach_rf] >> fs[univ_mach_def] >>
   qx_choose_then ‘subaddprog_i’ strip_assume_tac
     (MATCH_MP unary_rec_fns_phi recfn_subaddproj) >>
   qexists_tac ‘2 * ℓ subaddprog_i’ >> rw[] >>
