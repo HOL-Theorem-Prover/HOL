@@ -177,10 +177,7 @@ fun available_movel (tm,_,_) =
 
 fun status_of (board as (tm1,tm2,n)) =
   if term_eq tm1 tm2 then Win
-  else if n <= 0 orelse 
-    null (available_movel board) orelse 
-    cterm_size tm1 > tmsize_limit  
-  then Lose 
+  else if n <= 0 orelse cterm_size tm1 > tmsize_limit then Lose 
   else Undecided
 
 (* -------------------------------------------------------------------------
@@ -245,25 +242,17 @@ load "aiLib"; open aiLib;
 load "psMCTS"; open psMCTS;
 load "mleLib"; open mleLib;
 load "mleRewrite"; open mleRewrite;
-
-val board = random_cterm 20;
-
-val (board,compl) = valOf (random_board_fixed ());
-val _ = ((print_endline o cts o #1) board; (print_endline o cts o #2) board);
+val board = (tag (random_cterm 20),cT,40);
+val _ = (print_endline o cts o #1) board;
 val ((b,endtree),t) = add_time (mcts_test 1600) board;
 let val nodel = trace_win (#status_of game) endtree [] in
   app (print_endline o cts o #1 o #board) nodel
 end;
-
-val rl = map (psBigSteps.run_bigsteps bsobj) (map fst boardl3);
-val (rlwin,rllose) = partition #1 rl;
-length rlwin;
-app (print_endline o cts o #1 o #board) (#3 (hd rlwin));
-
-val board = (tm1,tm2,n);
 val _ = psBigSteps.run_bigsteps bsobj board;
 print_endline (bts b);
+*)
 
+(*
 val cj = mk_eq (#1 board,#2 board);
 val s_thm' = list_mk_forall ([vf,vg,vx],s_thm);
 val k_thm'  = list_mk_forall ([vx,vy],k_thm);
@@ -443,7 +432,7 @@ val dim = 12
 fun dim_head_poli n = [dim,n]
 
 val tnnparam = map_assoc (dim_std (1,dim)) operl @ 
-  [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,dim])]
+  [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
 
 val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 

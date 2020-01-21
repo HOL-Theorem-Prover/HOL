@@ -65,10 +65,12 @@ fun mk_mctsparam noiseb nsim rlobj =
 
 fun player_from_tnn tnn tob game board =
   let 
-    val movel = (#available_movel game) board
+    val amovel = (#available_movel game) board
     val (e,p) = pair_of_list (map snd (infer_tnn tnn (tob board)))
+    val d = dnew (#move_compare game) (combine (#movel game,p))
+    fun f x = dfind x d handle NotFound => raise ERR "player_from_tnn" ""
   in
-    (singleton_of_list e, combine (movel,p))
+    (singleton_of_list e, map_assoc f amovel)
   end
 
 fun mk_bsobj rlobj (unib,tnn,noiseb,nsim) =

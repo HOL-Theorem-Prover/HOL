@@ -170,7 +170,9 @@ fun node_create_backup obj (tree,cache) (id,board) =
       let
         fun add_cid pol = let fun f i x = (x, i :: id) in mapi f pol end
         val status = 
-          if #noconfl param andalso dmem board cache then Lose
+          if (#noconfl param andalso dmem board cache) orelse
+             null (#available_movel game board)
+          then Lose
           else (#status_of game) board
         val (value,pol1) = case status of
             Win       => (1.0,[])
