@@ -16,7 +16,7 @@ open HolKernel boolLib Abbrev aiLib smlParallel psMCTS psTermGen
 val ERR = mk_HOL_ERR "mleRewrite"
 
 val tmsize_limit = 200
-val version = 13
+val version = 14
 
 (* -------------------------------------------------------------------------
    Vocabulary
@@ -330,8 +330,8 @@ fun random_board_try k size nstep =
 
 fun gen_data n =
   if n <= 0 then [] else
-  let val boardo = random_board_try 100 
-    (random_int (30,50)) (random_int (1,20)) 
+  let val boardo = random_board_try 10
+    (random_int (60,100)) (random_int (1,20)) 
   in
     if isSome boardo
     then (print_endline (its n); valOf boardo :: gen_data (n-1))
@@ -436,7 +436,7 @@ val schedule =
 
 val operl = [cE,cT,cA,cS,cK];
 
-val dim = 12
+val dim = 8
 fun dim_head_poli n = [dim,n]
 
 val tnnparam = map_assoc (dim_std (1,dim)) operl @ 
@@ -468,6 +468,9 @@ load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
 val _ = create_data 4000;
 val r = rl_start (rlobj,extsearch) 5;
+
+todo: avoid duplicate boards + 
+make different paths from the same starting point.
 *)
 
 (* -------------------------------------------------------------------------
