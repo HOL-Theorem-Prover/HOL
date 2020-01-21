@@ -36,15 +36,14 @@ val vy = mk_var ("vy",alpha)
 val vx = mk_var ("vx",alpha)
 val eq_adj = mk_var ("eq_adj", ``:'a -> bool -> 'a``)
 val head_eval = mk_var ("head_eval", ``:'a -> 'a``)
-fun mk_head_poli n = mk_var ("head_poli" ^ its n, ``:'a -> 'a``)
-val prehead_poli = mk_var ("prehead_poli", ``:'a -> 'a``)
+val head_poli = mk_var ("head_poli", ``:'a -> 'a``)
 
 fun is_cconst x = is_var x andalso hd_string (fst (dest_var x)) = #"c"
 
 fun mk_cE (a,b) = list_mk_comb (cE,[a,b])
 fun tag x = mk_comb (cT,x)
 fun tag_heval x = mk_comb (head_eval,x)
-fun tag_hpoli n x = mk_comb (mk_head_poli n,x)
+fun tag_hpoli x = mk_comb (head_poli,x)
 
 infix oo
 fun op oo (a,b) = list_mk_comb (cA,[a,b])
@@ -423,9 +422,11 @@ app (print_endline o cts o #1) [board,board1];
 fun term_of_board (tm1,tm2,_) = mk_cE (tm1,tm2)
 
 fun tob board =
-  let val n = length (available_movel board) in
-    [tag_heval (term_of_board board), 
-     tag_hpoli n (mk_comb (prehead_poli,(term_of_board board)))]
+  let 
+    val n = length (available_movel board) 
+    val tm = term_of_board board 
+  in
+    [tag_heval tm, tag_hpoli tm]
   end
 
 (* -------------------------------------------------------------------------
@@ -441,9 +442,8 @@ val operl = [cE,cT,cA,cS,cK];
 val dim = 12
 fun dim_head_poli n = [dim,n]
 
-val tnnparam = map_assoc (dim_std (1,dim)) operl @
-  range ((1,tmsize_limit div 3), fn n => (mk_head_poli n, dim_head_poli n)) @ 
-  [(head_eval,[dim,dim,1]),(prehead_poli,[dim,dim,dim])]
+val tnnparam = map_assoc (dim_std (1,dim)) operl @ 
+  [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,dim])]
 
 val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 

@@ -17,10 +17,11 @@ sig
   val cts : term -> string
   val cterm_size : term -> int
   val s_thm : term
-  val k_thm : term 
+  val k_thm : term
+  val left_thm : term
+  val right_thm : term
   
   (* neural networks addition *)
-  val tag_hpoli : int -> term -> term
   val tag_subtm : (term * int list) -> term
   val tag_subtml : (term * int list list) -> term
   val mk_cE : term * term -> term
