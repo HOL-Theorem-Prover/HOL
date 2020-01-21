@@ -452,11 +452,11 @@ val schedule =
 
 val operl = [cE,cT,cA,cS,cK];
 
-val dim = 8
+val dim = 12
 fun dim_head_poli n = [dim,n]
 
 val tnnparam = map_assoc (dim_std (1,dim)) operl @
-  range ((1,tmsize_limit div 4), fn n => (mk_head_poli n, dim_head_poli n)) @ 
+  range ((1,tmsize_limit div 3), fn n => (mk_head_poli n, dim_head_poli n)) @ 
   [(head_eval,[dim,dim,1]),(prehead_poli,[dim,dim,dim])]
 
 val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
