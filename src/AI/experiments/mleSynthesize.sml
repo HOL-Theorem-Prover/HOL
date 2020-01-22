@@ -185,7 +185,7 @@ fun tob (tm1,tm2,_) =
    ------------------------------------------------------------------------- *)
 
 val schedule =
-  [{ncore = 1, verbose = true, learning_rate = 0.02,
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 40}]
 
 val dim = 8
@@ -203,7 +203,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleSynthesize-combin-" ^ its version, exwindow = 40000,
-   ncore = 4, level_threshold = 0.9, nsim = 1600, decay = 1.0}
+   ncore = 32, level_threshold = 0.9, nsim = 1600, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {
@@ -219,7 +219,7 @@ val extsearch = mk_extsearch "mleSynthesize.extsearch" rlobj
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleSynthesize"; open mleSynthesize;
-(* val boardl = create_levels 400; *)
+val boardl = create_levels 400;
 val r = rl_start (rlobj,extsearch) 1;
 *)
 
