@@ -682,10 +682,11 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
               (tactic "THEN" tactic)
               (tactic "THEN1" tactic)
               (tactic "THENL" tactic)
+              (quotedmaterial "by" tactic)
               ("[" tactics "]"))
       (tactics (tactic) (tactics "," tactics)))
     '((assoc ","))
-    '((assoc ">>" "\\\\" ">-"  ">|" "THEN" "THEN1" "THENL")))))
+    '((assoc ">>" "\\\\" ">-"  ">|" "THEN" "THEN1" "THENL") (assoc "by")))))
 
 (defvar holscript-smie-keywords-regexp
   (regexp-opt '("Definition" "Theorem" "Proof" "QED" ">>" ">-" "\\\\"
@@ -741,11 +742,14 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
      (message "In (:list-intro \"\"))") holscript-indent-level)
     (`(:after . ":") 2)
     (`(:before . ":") holscript-indent-level)
+    (`(:before . "by") 2)
     (`(:after . "Proof") 2)
     (`(:before . "Proof") 0)
     (`(:after . "Termination") 2)
     (`(:close-all . _) t)
     (`(:after . "[") 2)
+    (`(:after . ">-") 1)
+    (`(:after . "THEN1") 1)
 ))
 
 ;;; returns true and moves forward a sexp if this is possible, returns nil
