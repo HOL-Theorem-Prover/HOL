@@ -11,6 +11,65 @@ open unary_recfnsTheory
 val _ = new_theory "kolmog_inequalities"
 val _ = intLib.deprecate_int()
 
+Theorem on2bl_SOME:
+  on2bl x = SOME y <=> (∃z. x = SOME z ∧ y = n2bl z)
+Proof
+ simp[on2bl_def]
+QED
+
+Definition nblconcat_def:
+  nblconcat a b = a + b * 2 ** (LENGTH (n2bl a))
+End
+
+Theorem nblconcat_correct[simp]:
+  nblconcat (bl2n a) (bl2n b) = bl2n (a++b)
+Proof
+  fs[nblconcat_def,bl2n_append]
+QED
+
+
+Theorem pr_log2_thm[compute]:
+  pr_log2 [i] = if i <= 1 then 1 else 1 + pr_log2 [i DIV 2]
+Proof
+  fs[pr_log2_def,Once prnlistTheory.WFM_correct]
+QED
+
+Definition pr_ell:
+  pr_ell = WFM (λf n. if n=0 then 0
+                      else if EVEN n then 1 + f ((n-2) DIV 2)
+                           else 1 + f ((n-1) DIV 2) )
+End
+
+Theorem pr_ell_thm:
+  pr_ell [n] = if n=0 then 0
+               else if EVEN n then 1 + pr_ell [(n-2) DIV 2]
+                    else 1 + pr_ell [(n-1) DIV 2]
+Proof
+  fs[pr_ell,Once prnlistTheory.WFM_correct] >> rw[] >> intLib.ARITH_TAC
+QED
+
+
+
+
+Theorem primrec_ell:
+  primrec (pr1 ℓ) 1
+Proof
+  irule primrec_pr1 >> qexists_tac‘pr_ell’ >> rw[]
+  >- (fs[pr_ell] >> irule prnlistTheory.primrec_WFM >>
+      rw[prnlistTheory.restr_def,DIV_LESS_EQ] >>
+      ‘∀n. (n-1) DIV 2 <= n’ by (intLib.ARITH_TAC) >> simp[] >> irule primrec_pr2 >> simp[] >>
+      qexists_tac‘pr_cond (Cn pr_mod [proj 0; K 2])
+                          (Cn succ [Cn (pr2 nel) [Cn (pr_div) [Cn (pr2 $-) [proj 0;K 1]; K 2];proj 1]])
+                          (Cn succ [Cn (pr2 nel) [Cn (pr_div) [proj 0; K 2];proj 1]])’ >> rw[]
+      >- (irule primrec_pr_cond >> rw[] >> rpt (irule primrec_Cn >> simp[primrec_rules] ) ) >>
+      rw[pr_cond_def] >- (‘m MOD 2 = 1’ suffices_by simp[] >> fs[EVEN_ADD,MOD_2]) >>
+      ‘m MOD 2 = 0’ suffices_by simp[] >> fs[EVEN_ADD,MOD_2]  ) >>
+
+  completeInduct_on‘n’ >> simp[Once pr_ell_thm,Once num_to_bool_list_def] >>  rw[ADD1]>>
+  first_x_assum irule >> intLib.ARITH_TAC
+QED
+
+
 (* UCKC is conditional kolmogorov complexity, UKCB is kolmogorov complexity typed the right way *)
 Theorem pair_11[simp]:
   pair a b = pair c d <=> a=c ∧ b=d
@@ -30,37 +89,23 @@ Proof
   simp[pair_def]
 QED
 
-Definition plist_def[simp]:
-  plist f [] = [] ∧
-  plist f [x] = f x ∧
-  plist f (x::xs) = pair x (plist f xs)
-End
-
-Theorem plist_bar_CONS:
-  plist bar (x::t) = pair x (plist bar t)
+Theorem Tpow_11[simp]:
+  Tpow n = Tpow m ⇔ n = m
 Proof
-  Cases_on ‘t’ >> simp[] >> simp[pair_def]
+  simp[Tpow_def, EQ_IMP_THM, LIST_EQ_REWRITE]
 QED
 
-Theorem LENGTH_plist[simp]:
-  LENGTH (plist bar (x::y)) = LENGTH (bar x) + LENGTH (plist bar y)
-Proof
-  Cases_on ‘y’ >> simp[]
-QED
 
-Theorem plist_bar_APPEND:
-  plist bar xs = FLAT (MAP bar xs)
+Theorem bar_prefix_append[simp]:
+  bar x ≼ bar y ++ l ⇔ x = y
 Proof
-  Induct_on ‘xs’ >> simp[plist_bar_CONS, pair_def]
+  simp[bar_def, EQ_IMP_THM, rich_listTheory.IS_PREFIX_APPEND] >> strip_tac >>
+  rename [‘_ ++ l = _ ++ m’] >>
+  ‘y ++ l = x ++ m’  by metis_tac[Tpow_Fapp_eq, APPEND_ASSOC, APPEND_11] >>
+  full_simp_tac bool_ss [GSYM APPEND_ASSOC, APPEND_11] >> fs[] >>
+  ‘LENGTH l = LENGTH m’ by (pop_assum (mp_tac o Q.AP_TERM ‘LENGTH’) >> simp[])>>
+  metis_tac[APPEND_LENGTH_EQ]
 QED
-
-Definition univ_mach_def:
-  univ_mach U <=>
-     (∀i x rest.
-        U (pair x (plist bar (i::rest))) =
-        on2bl (Phi (bl2n i) (bl2n (plist bar (x::rest))))) ∧
-     ∀m. (∀i x rest. m <> pair x (plist bar (i::rest))) ==> U m = NONE
-End
 
 Theorem Tpow_0[simp]:
   Tpow 0 = []
@@ -133,14 +178,6 @@ Proof
 QED
 
 *)
-
-Theorem on2bl_SOME:
-  on2bl x = SOME y <=> (∃z. x = SOME z ∧ y = n2bl z)
-Proof
- simp[on2bl_def]
-QED
-
-
 
 (* rename pair to bl pair etc *)
 
@@ -578,11 +615,204 @@ val nblfst_i_def = new_specification(
   MATCH_MP unary_rec_fns_phi recfn_nblfst
 );
 
+Theorem nblfst_bar[simp]:
+  nblfst (bl2n (bar x)) = bl2n x
+Proof
+  assume_tac (GEN_ALL nblfst_correct) >>
+  full_simp_tac bool_ss [pair_def] >>
+  metis_tac [APPEND_NIL]
+QED
+
+Definition pfPhi_def:
+  pfPhi i j = if prefix_free { n2bl a | Phi i a <> NONE } then Phi i j
+              else NONE
+End
+
+Definition checkbar_def:
+  checkbar =
+  minimise (λx. if proj 0 x = nblfst (proj 1 x) ∧
+                   nfst (nblsnd0 (proj 1 x)) + 1 = ℓ (nsnd (nblsnd0 (proj 1 x)))
+                then
+                  SOME 0
+                else SOME 1)
+End
+
+Theorem EXISTS_bar[simp]:
+  EXISTS ($~ o $= T) (bar x)
+Proof
+  simp[bar_def]
+QED
+
+Theorem nblsnd0_correct' =
+  nblsnd0_correct |> Q.INST [‘x’ |-> ‘a ++ b’] |> SIMP_RULE (srw_ss()) []
+
+Theorem checkbar_correct:
+  checkbar [bl2n (pair a b)] = if b = [] then SOME (bl2n a) else NONE
+Proof
+  reverse (rw[checkbar_def, minimise_thm] >>
+           DEEP_INTRO_TAC optionTheory.some_intro >> rw[pair_def])
+  >- (fs[nblsnd0_correct', bar_def, ADD1] >> Cases_on ‘b’ >> fs[]) >>
+  qexists_tac‘bl2n a’ >> rw[] >>
+  fs[nblsnd0_correct, bar_def, ADD1]
+QED
+
+Theorem checkbar_correct'[simp] =
+  checkbar_correct |> Q.INST [‘b’ |-> ‘[]’] |> SIMP_RULE (srw_ss()) [pair_def]
+
+Definition recfn_cond_def:
+  recfn_cond P f g = recCn
+        (recCn (SOME o pr2 $+)
+           [recCn (SOME o pr2 $* ) [SOME o proj 0; SOME o proj 1];
+            recCn (SOME o pr2 $* ) [recCn (SOME o pr2 $-) [SOME o K 1; SOME o proj 0]; SOME o proj 2]]) [P; f; g]
+End
+
+Theorem recfn_recfn_cond:
+  recfn P n ∧ recfn f n ∧ recfn g n ⇒ recfn (recfn_cond P f g) n
+Proof
+  rw[recfn_cond_def,GSYM (CONJUNCT2 combinTheory.K_o_THM),Excl"K_o_THM"] >> rpt (irule recfnCn >> rw[recfn_rules,GSYM (CONJUNCT2 combinTheory.K_o_THM),Excl"K_o_THM"]) >> irule primrec_recfn >> simp[]
+QED
+
+Theorem recfn_checkbar_lem1:
+  recfn (λx. if proj 0 x = nblfst (proj 1 x) ∧
+                nfst (nblsnd0 (proj 1 x)) + 1 = ℓ (nsnd (nblsnd0 (proj 1 x)))
+             then
+                SOME 0
+             else SOME 1) 2
+Proof
+  ‘(λx. if proj 0 x = nblfst (proj 1 x) ∧
+                nfst (nblsnd0 (proj 1 x)) + 1 = ℓ (nsnd (nblsnd0 (proj 1 x)))
+        then SOME 0n
+        else SOME 1) =
+   recfn_cond (
+     recCn (SOME o pr_eq) [
+       SOME o proj 0;
+       recCn (rec1 (SOME o nblfst)) [SOME o proj 1]
+     ]
+   ) (
+     SOME o pr_cond (
+       Cn pr_eq [
+         Cn succ [Cn (pr1 nfst) [Cn pr_nblsnd0 [proj 1]]];
+         Cn (pr1 ℓ) [Cn (pr1 nsnd) [Cn pr_nblsnd0 [proj 1]]]
+       ]
+     ) (K 0) (K 1)
+   )
+   (K (SOME 1))’
+     by (rw[FUN_EQ_THM, recfn_cond_def,recCn_def, pr_nblsnd_correct] >>
+         rw[] >> fs[ADD1, pr_nblsnd0_correct] >>
+         Cases_on ‘proj 0 x = nblfst (proj 1 x)’ >> simp[]) >>
+  rw[] >>
+  irule recfn_recfn_cond >> rw[]
+  >- (irule recfnCn >> rw[recfn_rules, recfnCn, recfn_nblfst, primrec_recfn])
+  >- (irule primrec_recfn >>
+      rpt ((irule primrec_Cn ORELSE irule primrec_pr_cond) >>
+           rw[primrec_rules, primrec_nblsnd, primrec_pr_nblsnd0,primrec_ell]))>>
+  ‘(K (SOME 1) : num list -> num option) = SOME o K 1’ by simp[] >>
+  pop_assum SUBST1_TAC >> irule primrec_recfn >> simp[]
+QED
+
+Theorem recfn_checkbar:
+  recfn checkbar 1
+Proof
+ fs[checkbar_def] >> irule (last (CONJUNCTS recfn_rules)) >> rw[] >>
+ simp[recfn_checkbar_lem1]
+QED
+
+val checkbar_i_def =  new_specification (
+  "checkbar_i_def",["checkbar_i"],
+  MATCH_MP unary_rec_fns_phi recfn_checkbar
+);
+
+Theorem bl2n_onto:
+  !x. ?y. x = bl2n y
+Proof
+  metis_tac[bool_num_inv]
+QED
+
+Theorem nblsnd0_Tpow[simp]:
+  nblsnd0 (bl2n (Tpow n)) = n ⊗ 0
+Proof
+  Induct_on ‘n’ >>
+  simp[Once nblsnd0_def, tpow_suc, bool_list_to_num_def, EVEN_MULT, EVEN_ADD]
+QED
+
+Theorem checkbar_EQ_NONE[simp]:
+  checkbar [x] = NONE ⇔ ∀y. x ≠ bl2n (bar y)
+Proof
+  rw[checkbar_def, minimise_thm] >> DEEP_INTRO_TAC optionTheory.some_intro >>
+  rw[]
+  >- (qspec_then ‘x’ strip_assume_tac bl2n_onto >> rw[] >> fs[] >>
+      rename [‘bl2n bl’] >>
+      Cases_on ‘MEM F bl’
+      >- (fs[Once MEM_SPLIT_APPEND_first] >>
+          ‘∃n. pfx = Tpow n’
+            by (simp[Tpow_def] >>
+                qexists_tac‘LENGTH pfx’ >> rw[LIST_EQ_REWRITE] >>
+                CCONTR_TAC >> ‘EL x pfx = F’ by simp[] >>
+                Q.UNDISCH_THEN ‘~MEM F pfx’ MP_TAC >> simp[MEM_EL] >>
+                metis_tac[]) >>
+          rw[] >> fs[nblsnd0_correct, ADD1] >>
+          simp[bar_def]) >>
+      ‘∃n. bl = Tpow n’
+         by (simp[Tpow_def] >>
+             qexists_tac‘LENGTH bl’ >> rw[LIST_EQ_REWRITE] >>
+             CCONTR_TAC >> ‘EL x bl = F’ by simp[] >>
+             Q.UNDISCH_THEN ‘~MEM F bl’ MP_TAC >> simp[MEM_EL] >>
+             metis_tac[]) >>
+      rw[] >> fs[]) >>
+  fs[AllCaseEqs()] >>
+  strip_tac >> rw[] >> fs[bar_def, nblsnd0_correct] >> rfs[]
+QED
+
+Theorem pf_machines_exist:
+  ∀i. ∃j. ∀a. pfPhi j (bl2n (bar a)) = Phi i (bl2n a)
+Proof
+  simp[pfPhi_def] >> gen_tac >> qexists_tac‘i o checkbar_i’ >>
+  simp[computable_composition_def, checkbar_i_def] >> rw[] >>
+  fs[prefix_free_def] >> rw[] >> fs[]
+QED
+
+Definition univ_mach_def:
+  univ_mach U <=>
+     (∀i x y.
+        U (pair x (pair i y)) =
+        on2bl (pfPhi (bl2n i) (bl2n (pair x y)))) ∧
+     ∀m. (∀i x y. m <> pair x (pair i y)) ==> U m = NONE
+End
+
+Theorem univ_mach_pf:
+  univ_mach U ⇒ prefix_machine U
+Proof
+  rw[univ_mach_def, prefix_machine_def] >>
+  qexists_tac‘{ x | ∃y. U x = SOME y}’ >> simp[] >>
+  rw[prefix_free_def] >> strip_tac >>
+  rename [‘a1 ≺ a2’, ‘U a1 = SOME r1’, ‘U a2 = SOME r2’] >>
+  ‘(∃x y z. a1 = pair x (pair y z)) ∧
+   (∃u v w. a2 = pair u (pair v w))’
+     by metis_tac[optionTheory.NOT_NONE_SOME] >> rw[] >>
+  fs[prefix_def, pair_def] >>
+  reverse (Cases_on ‘x = u’) >>
+  full_simp_tac bool_ss [rich_listTheory.IS_PREFIX_APPENDS,GSYM APPEND_ASSOC]
+  >- (drule rich_listTheory.IS_PREFIX_APPEND1 >> simp[]) >>
+  reverse (Cases_on ‘y = v’) >>
+  full_simp_tac bool_ss [rich_listTheory.IS_PREFIX_APPENDS,GSYM APPEND_ASSOC]
+  >- (drule rich_listTheory.IS_PREFIX_APPEND1 >> simp[]) >> rw[] >>
+  rfs[on2bl_SOME, pfPhi_def] >> rw[] >>
+  rename [‘x ≼ y’, ‘Phi (bl2n M) (bl2n (bar a1 ++ x)) = SOME r1’,
+          ‘Phi (bl2n M) (bl2n (bar a1 ++ y)) = SOME r2’] >>
+  ‘bar a1 ++ x ∈ {n2bl a | Phi (bl2n M) a ≠ NONE} ∧
+   bar a1 ++ y ∈ {n2bl a | Phi (bl2n M) a ≠ NONE}’
+    by (simp[] >> metis_tac[num_bool_inv, optionTheory.NOT_NONE_SOME]) >>
+  ‘¬(bar a1 ++ x ≺ bar a1 ++ y)’ by metis_tac[prefix_free_def] >>
+  fs[prefix_def]
+QED
+
+
+
 Theorem univ_mach_nonempty[simp]:
   univ_mach U ⇒ ∀x. ∃y. U y = SOME x
 Proof
   rw[univ_mach_def] >>
-  qexists_tac ‘pair x (plist bar [n2bl nblfst_i; []])’ >>
+  qexists_tac ‘pair x (pair (n2bl nblfst_i) [])’ >>
   simp[on2bl_SOME, nblfst_i_def]
 QED
 
@@ -600,15 +830,16 @@ Proof
   rw[EXTENSION] >>
   ‘∃a. U a = SOME x’ by simp[] >>
   fs[univ_mach_def] >>
-  ‘∃i b c. a = pair b (plist bar (i::c))’
+  ‘∃i b c. a = pair b (pair i (bar c))’
     by metis_tac[optionTheory.NOT_NONE_SOME] >>
   rw[] >> rfs[on2bl_SOME] >>
   qx_choose_then ‘nbli’ strip_assume_tac nblsnd_index >>
-  qexists_tac ‘pair (n2bl (bl2n i o nbli)) (plist bar (b :: c))’ >>
-  fs[computable_composition_def, on2bl_SOME, PULL_EXISTS, Excl "plist_def",
-     plist_def |> GSYM |> CONJUNCT2 |> CONJUNCT2] >>
-  simp[plist_def]
+  qexists_tac ‘pair (n2bl (bl2n i o nbli)) (bar (pair b c))’ >>
+  fs[computable_composition_def, on2bl_SOME, PULL_EXISTS]
 QED
+
+Theorem univ_mach_pair_nonempty'[simp] =
+  SIMP_RULE (srw_ss()) [EXTENSION] univ_mach_pair_nonempty
 
 Definition rUMibl_def:
   rUMibl = recCn recPhi
@@ -670,65 +901,14 @@ Proof
   DEEP_INTRO_TAC MIN_SET_ELIM >> rw[EXTENSION] >> fs[PULL_EXISTS] >>
   rename [‘univ_mach U’, ‘U p2 = SOME x’] >>
   fs[univ_mach_def] >>
-  ‘∃a i b. p2 = pair a (plist bar (i::b))’
+  ‘∃a i b. p2 = pair a (pair i (bar b))’
      by metis_tac[optionTheory.NOT_SOME_NONE] >> rw[] >>
-  qabbrev_tac ‘ARG2 = plist bar(n2bl j::i::a::b)’ >>
+  qabbrev_tac ‘ARG2 = pair (n2bl j) (bar (pair i (pair a b)))’ >>
   ‘U (pair y ARG2) = SOME x’
     by rfs[Abbr‘ARG2’, Abbr‘j’, computable_composition_def, rUMibl_correct] >>
-  last_x_assum drule >> simp[Abbr‘ARG2’]
+  last_x_assum drule >> simp[Abbr‘ARG2’, LEFT_ADD_DISTRIB]
 QED
 
-Definition nblconcat_def:
-  nblconcat a b = a + b * 2 ** (LENGTH (n2bl a))
-End
-
-Theorem nblconcat_correct[simp]:
-  nblconcat (bl2n a) (bl2n b) = bl2n (a++b)
-Proof
-  fs[nblconcat_def,bl2n_append]
-QED
-
-
-Theorem pr_log2_thm[compute]:
-  pr_log2 [i] = if i <= 1 then 1 else 1 + pr_log2 [i DIV 2]
-Proof
-  fs[pr_log2_def,Once prnlistTheory.WFM_correct]
-QED
-
-Definition pr_ell:
-  pr_ell = WFM (λf n. if n=0 then 0
-                      else if EVEN n then 1 + f ((n-2) DIV 2)
-                           else 1 + f ((n-1) DIV 2) )
-End
-
-Theorem pr_ell_thm:
-  pr_ell [n] = if n=0 then 0
-               else if EVEN n then 1 + pr_ell [(n-2) DIV 2]
-                    else 1 + pr_ell [(n-1) DIV 2]
-Proof
-  fs[pr_ell,Once prnlistTheory.WFM_correct] >> rw[] >> intLib.ARITH_TAC
-QED
-
-
-
-
-Theorem primrec_ell:
-  primrec (pr1 ℓ) 1
-Proof
-  irule primrec_pr1 >> qexists_tac‘pr_ell’ >> rw[]
-  >- (fs[pr_ell] >> irule prnlistTheory.primrec_WFM >>
-      rw[prnlistTheory.restr_def,DIV_LESS_EQ] >>
-      ‘∀n. (n-1) DIV 2 <= n’ by (intLib.ARITH_TAC) >> simp[] >> irule primrec_pr2 >> simp[] >>
-      qexists_tac‘pr_cond (Cn pr_mod [proj 0; K 2])
-                          (Cn succ [Cn (pr2 nel) [Cn (pr_div) [Cn (pr2 $-) [proj 0;K 1]; K 2];proj 1]])
-                          (Cn succ [Cn (pr2 nel) [Cn (pr_div) [proj 0; K 2];proj 1]])’ >> rw[]
-      >- (irule primrec_pr_cond >> rw[] >> rpt (irule primrec_Cn >> simp[primrec_rules] ) ) >>
-      rw[pr_cond_def] >- (‘m MOD 2 = 1’ suffices_by simp[] >> fs[EVEN_ADD,MOD_2]) >>
-      ‘m MOD 2 = 0’ suffices_by simp[] >> fs[EVEN_ADD,MOD_2]  ) >>
-
-  completeInduct_on‘n’ >> simp[Once pr_ell_thm,Once num_to_bool_list_def] >>  rw[ADD1]>>
-  first_x_assum irule >> intLib.ARITH_TAC
-QED
 
 
 
