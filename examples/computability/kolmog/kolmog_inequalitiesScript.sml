@@ -764,7 +764,7 @@ Proof
 QED
 
 Theorem pf_machines_exist:
-  ∀i. ∃j. ∀a. pfPhi j (bl2n (bar a)) = Phi i (bl2n a)
+  ∀i. ∃j. ∀a. pfPhi j (bl2n (bar a)) = Phi i (bl2n a) ∧ ((∀b. a <> bar b) ==> pfPhi j (bl2n a) = NONE)
 Proof
   simp[pfPhi_def] >> gen_tac >> qexists_tac‘i o checkbar_i’ >>
   simp[computable_composition_def, checkbar_i_def] >> rw[] >>
@@ -812,8 +812,11 @@ Theorem univ_mach_nonempty[simp]:
   univ_mach U ⇒ ∀x. ∃y. U y = SOME x
 Proof
   rw[univ_mach_def] >>
-  qexists_tac ‘pair x (pair (n2bl nblfst_i) [])’ >>
-  simp[on2bl_SOME, nblfst_i_def]
+  ‘recfn (SOME o (K (bl2n x))) 1’ by (irule primrec_recfn >> fs[primrec_rules]) >>
+  ‘∃i. ∀y. Phi i y = (SOME o (K (bl2n x))) [y]’ by (irule unary_rec_fns_phi >> fs[]) >> 
+  ‘∃j. ∀a. pfPhi j (bl2n (bar a)) = Phi i (bl2n a)’ by simp[pf_machines_exist] >>
+  qexists_tac ‘pair x (pair (n2bl j) [])’ >>
+  simp[on2bl_SOME,pair_def]
 QED
 
 Theorem univ_mach_nonempty'[simp]:
@@ -824,18 +827,30 @@ Proof
   simp[]
 QED
 
+Theorem pfPhi_SOME:
+  pfPhi a b = SOME c ==> prefix_free {n2bl i | Phi a i ≠ NONE} ∧ Phi a b = SOME c
+Proof
+  rw[pfPhi_def]
+QED
+
+(* Need to define pfPhi composition  *)
+(* Up to here! *)
+
+
 Theorem univ_mach_pair_nonempty:
    univ_mach U  ⇒ {p | U (pair y p) = SOME x} ≠ ∅
 Proof
   rw[EXTENSION] >>
   ‘∃a. U a = SOME x’ by simp[] >>
   fs[univ_mach_def] >>
-  ‘∃i b c. a = pair b (pair i (bar c))’
+  ‘∃i b c. a = pair b (pair i c)’
     by metis_tac[optionTheory.NOT_NONE_SOME] >>
   rw[] >> rfs[on2bl_SOME] >>
   qx_choose_then ‘nbli’ strip_assume_tac nblsnd_index >>
-  qexists_tac ‘pair (n2bl (bl2n i o nbli)) (bar (pair b c))’ >>
-  fs[computable_composition_def, on2bl_SOME, PULL_EXISTS]
+  ‘∃j. ∀a. pfPhi j (bl2n (bar a)) = Phi nbli (bl2n a) ∧ ((∀b. a ≠ bar b) ⇒ pfPhi j (bl2n a) = NONE)’ by simp[pf_machines_exist] >> fs[]
+  qexists_tac ‘pair (n2bl (bl2n i o j)) (bar (pair b c))’ >>
+  fs[computable_composition_def, on2bl_SOME, PULL_EXISTS] >>
+  simp[pfPhi_def] >> fs[computable_composition_def, on2bl_SOME, PULL_EXISTS] >> 
 QED
 
 Theorem univ_mach_pair_nonempty'[simp] =
@@ -887,6 +902,8 @@ Theorem KC_thm[simp]:
 Proof
   simp[KC_def, core_complexity_def, EXTENSION]
 QED
+
+
 
 Theorem extra_information1:
   univ_mach U ==> ∃c. ∀x y. (CKC U x y) <= (KC U x) + c
