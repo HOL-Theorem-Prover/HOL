@@ -19,148 +19,26 @@ val tmsize_limit = 200
 val version = 14
 
 (* -------------------------------------------------------------------------
-   Vocabulary
-   ------------------------------------------------------------------------- *)
-
-val cI = mk_var ("cI",alpha)
-val cK = mk_var ("cK",alpha)
-val cS = mk_var ("cS",alpha)
-val cX = mk_var ("cX",alpha)
-val cY = mk_var ("cY",alpha)
-val cZ = mk_var ("cZ",alpha)
-val cA = mk_var ("cA",``:'a -> 'a -> 'a``)
-val cT = mk_var ("cT",``:'a -> 'a``)
-val cE = mk_var ("cE", ``:'a -> 'a -> 'a``)
-val vf = mk_var ("vf",alpha)
-val vg = mk_var ("vg",alpha)
-val vy = mk_var ("vy",alpha)
-val vx = mk_var ("vx",alpha)
-val eq_adj = mk_var ("eq_adj", ``:'a -> bool -> 'a``)
-val head_eval = mk_var ("head_eval", ``:'a -> 'a``)
-val head_poli = mk_var ("head_poli", ``:'a -> 'a``)
-
-fun is_cconst x = is_var x andalso hd_string (fst (dest_var x)) = #"c"
-
-fun mk_cE (a,b) = list_mk_comb (cE,[a,b])
-fun tag x = mk_comb (cT,x)
-fun tag_heval x = mk_comb (head_eval,x)
-fun tag_hpoli x = mk_comb (head_poli,x)
-
-infix oo
-fun op oo (a,b) = list_mk_comb (cA,[a,b])
-
-val s_thm = mk_eq (tag (cS oo vf oo vg oo vx), (vf oo vx) oo (vg oo vx))
-val k_thm = mk_eq (tag (cK oo vx oo vy), vx)
-val left_thm = mk_eq (tag (vf oo vg), tag vf oo vg)
-val right_thm = mk_eq (tag (vf oo vg), vf oo tag vg)
-
-  
-fun strip_cA_aux tm =
-  if is_var tm then [tm] else
-  let 
-    val (oper,argl) = strip_comb tm
-    val _ = if term_eq oper cA then () else raise ERR "strip_cA" ""
-    val (a1,a2) = pair_of_list argl    
-  in
-    a2 :: strip_cA_aux a1
-  end
-
-fun strip_cA tm = rev (strip_cA_aux tm)
-
-(* -------------------------------------------------------------------------
-   Pretty-printing combinator expressions
-   ------------------------------------------------------------------------- *)
-
-fun cts_par tm = 
-  if is_cconst tm then tl_string (fst (dest_var tm)) else 
-    case (snd (strip_comb tm)) of
-      [a] => "[" ^ cts a ^ "]"
-    | [a,b] =>  "(" ^ cts a ^ " " ^ cts_par b ^ ")"
-    | _ => raise ERR "cts_par" ""
-and cts tm = 
-  if is_cconst tm then tl_string (fst (dest_var tm)) else 
-    case (snd (strip_comb tm)) of
-      [a] => "[" ^ cts a ^ "]"
-    | [a,b] =>  cts a ^ " " ^ cts_par b
-    | _ => raise ERR "cts" ""
-
-(* -------------------------------------------------------------------------
-   Rewriting
-   ------------------------------------------------------------------------- *)
-
-fun is_cmatch eq tm = 
-  let val (sub,_) = match_term (lhs eq) tm in
-    not (exists is_cconst (map #redex sub))
-  end
-  handle HOL_ERR _ => false
-
-fun exists_cmatch eq tm = can (find_term (is_cmatch eq)) tm
-fun is_rewritable tm = exists_cmatch s_thm tm
-fun is_nf tm = not (is_rewritable tm)
-
-fun subst_cmatch eq tm =
-  let 
-    val subtm = find_term (is_cmatch eq) tm
-    val sub1 = fst (match_term (lhs eq) subtm)
-    val eqinst = subst sub1 eq
-    val sub2 = [{redex = lhs eqinst, residue = rhs eqinst}]
-  in
-    subst sub2 tm
-  end
-  handle HOL_ERR _ => raise ERR "subst_cmatch" (cts tm ^ " -- " ^ tts eq)
-
-fun tag_subtm (tm,pos) =
-  if null pos then tag tm else
-  let 
-    val (oper,argl) = strip_comb tm 
-    fun f i arg = 
-      if i = hd pos then tag_subtm (List.nth (argl,hd pos), tl pos) else arg
-  in
-    list_mk_comb (oper, mapi f argl)
-  end
-
-fun tag_subtml (tm,posl) =
-  if null posl then tm else
-  let 
-    val (oper,argl) = strip_comb tm 
-    fun f i arg = 
-      let val posl' = 
-        filter (fn pos => not (null pos) andalso hd pos = i) posl
-      in
-        tag_subtml (arg, map tl posl')
-      end
-  in
-    (if exists null posl then tag else I)
-    (list_mk_comb (oper, mapi f argl))
-  end
-
-fun tag_eq eq = let val (a,b) = dest_eq eq in mk_eq (tag a, b) end
-
-(* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
 
 type board = term * term * int
 
 fun string_of_board (a,b,c) = cts a ^ "\n" ^ cts b ^ "\n" ^ its c
-
 fun board_compare ((a,b,_),(c,d,_)) = 
   cpl_compare Term.compare Term.compare ((a,b),(c,d))
-
-fun is_combin x = tmem x [cK,cS] 
-fun cterm_size tm = length (find_terms is_combin tm) 
 
 (* -------------------------------------------------------------------------
    Move
    ------------------------------------------------------------------------- *)
 
 type move = term
-val movel = [s_thm,k_thm,left_thm,right_thm]
+val movel = [s_thm_tagged,k_thm_tagged,left_thm,right_thm]
 
 fun string_of_move eq = tts eq
 
 fun add_tag eq tm =
-  if tmem eq [k_thm,s_thm] then tag tm else tm
+  if tmem eq [k_thm_tagged,s_thm_tagged] then tag tm else tm
 
 fun apply_move eq (tm1,tm2,n) = 
   (add_tag eq (subst_cmatch eq tm1), tm2, n-1)
@@ -248,8 +126,6 @@ print_endline (bts b);
 
 (*
 val cj = mk_eq (#1 board,#2 board);
-val s_thm' = list_mk_forall ([vf,vg,vx],s_thm);
-val k_thm'  = list_mk_forall ([vx,vy],k_thm);
 val goal = ([s_thm',k_thm'],cj);
 val (gr,_) = METIS_TAC [] goal;
 val board = valOf (random_board_try 1000 40 10);
@@ -293,19 +169,6 @@ fun random_walk n board =
     random_walk (n-1) (apply_move (random_elem amovel) board)
   end
 
-fun lo_norm n tm =
-  let 
-    val board = (tm,F,0)
-    val amovel = available_movel board 
-  in
-    if null amovel then SOME tm 
-    else if n <= 0 then NONE 
-    else lo_norm (n-1) (#1 (apply_move (hd amovel) board))
-  end
-fun is_normalizable tm = isSome (lo_norm 100 tm)
-
-fun random_cterm n = random_term [cA,cS,cK] (2*n-1,alpha);
-
 fun random_board size nstep =
   let 
     val tm = tag (random_cterm size)
@@ -340,7 +203,6 @@ fun gen_data n =
 
 val datadir = HOLDIR ^ "/src/AI/experiments/data_combin"
 val datafile =  datadir ^ "/train-" ^ its version
-fun compare_third cmp ((_,_,a),(_,_,b)) = cmp (a,b)
 
 val stats_dir = HOLDIR ^ "/src/AI/experiments/stats_combin"
 fun stats_il header il = 
@@ -354,7 +216,7 @@ fun stats_il header il =
     print_endline s
   end
 
-fun create_data n = 
+fun create_levels n = 
   let 
     val _ = mkDir_err datadir 
     val l1 = gen_data n
@@ -413,18 +275,14 @@ app (print_endline o cts o #1) [board,board1];
 *)
 
 (* -------------------------------------------------------------------------
-   Neural representation of the board
+   Neural network representation of the board
    ------------------------------------------------------------------------- *)
 
-fun term_of_board (tm1,tm2,_) = mk_cE (tm1,tm2)
-
-fun tob board =
-  let 
-    val n = length (available_movel board) 
-    val tm = term_of_board board 
-  in
-    [tag_heval tm, tag_hpoli tm]
-  end
+val head_eval = mk_var ("head_eval", ``:'a -> 'a``)
+val head_poli = mk_var ("head_poli", ``:'a -> 'a``)
+fun tag_heval x = mk_comb (head_eval,x)
+fun tag_hpoli x = mk_comb (head_poli,x)
+fun tob board = [tag_heval (mk_cE (tm1,tm2)), tag_hpoli (mk_cE (tm1,tm2))]
 
 (* -------------------------------------------------------------------------
    Player
@@ -433,15 +291,10 @@ fun tob board =
 val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 40}]
-
-val operl = [cE,cT,cA,cS,cK];
-
 val dim = 8
 fun dim_head_poli n = [dim,n]
-
-val tnnparam = map_assoc (dim_std (1,dim)) operl @ 
+val tnnparam = map_assoc (dim_std (1,dim)) [cE,cT,cA,cS,cK] @ 
   [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
-
 val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 (* -------------------------------------------------------------------------
@@ -450,7 +303,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleRewrite-combin-" ^ its version, exwindow = 40000,
-   ncore = 32, nsim = 1600, decay = 1.0}
+   ncore = 32, level_threshold = 0.9, nsim = 1600, decay = 0.95}
 
 val rlobj : (board,move) rlobj =
   {
@@ -467,7 +320,7 @@ val extsearch = mk_extsearch "mleRewrite.extsearch" rlobj
 load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
 val _ = create_data 4000;
-val r = rl_start (rlobj,extsearch) 5;
+val r = rl_start (rlobj,extsearch) 10;
 
 todo: avoid duplicate boards + 
 make different paths from the same starting point.

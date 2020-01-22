@@ -14,12 +14,6 @@ open HolKernel Abbrev boolLib aiLib psMCTS psBigSteps
 val ERR = mk_HOL_ERR "mlReinforce"
 
 (* -------------------------------------------------------------------------
-   Fixed parameters (could be included in rlparam)
-   ------------------------------------------------------------------------- *)
-
-val level_threshold = 0.9
-
-(* -------------------------------------------------------------------------
    Logs
    ------------------------------------------------------------------------- *)
 
@@ -40,7 +34,8 @@ type 'a dplayer =
   {tob : 'a -> term list, schedule : schedule, tnnparam : tnnparam}
 type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
 type rlparam =
-  {expname : string, exwindow : int, ncore : int, nsim : int, decay : real}
+  {expname : string, exwindow : int, ncore : int, 
+   level_threshold : real, nsim : int, decay : real}
 type ('a,'b) rlobj =
   {
   rlparam : rlparam,
@@ -219,8 +214,7 @@ fun rl_train ngen rlobj rlex =
 
 fun rl_explore_targetl (unib,noiseb) (rlobj,es) tnn targetl =
   let
-    val ncore = #ncore (#rlparam rlobj)
-    val nsim = #nsim (#rlparam rlobj)
+    val {ncore,nsim,level_threshold,...} = #rlparam rlobj
     val splayer = (unib,tnn,noiseb,nsim)
     val (l,t) = add_time (parmap_queue_extern ncore es splayer) targetl
     val _ =  log rlobj ("Exploration time: " ^ rts t)

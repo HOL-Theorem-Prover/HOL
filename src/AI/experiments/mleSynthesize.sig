@@ -3,18 +3,13 @@ sig
 
   include Abbrev
 
-  type board = ((term * int) * term)
-  type move = (term * int)
+  type board = term * term * int
+  type move = term
 
-  val mk_startboard : term -> board
-  val dest_startboard : board -> term
+  val witness_cache : (term, term) Redblackmap.dict ref
 
-  val extsearch : board mlReinforce.extsearch
-  val rlobj : board mlReinforce.rlobj
-
-  val create_levels : unit -> unit
-  val max_sizeeval_atgen : unit -> int list
-  val stats_sizeeval : string -> (int * int) list
-
+  val create_levels : int -> board list
+  val extsearch : board mlReinforce.es
+  val rlobj : (board,move) mlReinforce.rlobj
 
 end

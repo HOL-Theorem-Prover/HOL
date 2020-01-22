@@ -24,10 +24,10 @@ sig
   (* parallelization of the search *)
   type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
 
-  (* all parameters *)
+  (* reinforcement learning parameters *)
   type rlparam =
-    {expname : string, exwindow : int, ncore : int, nsim : int, decay : real}
-   
+    {expname : string, exwindow : int, ncore : int, 
+     level_threshold : real, nsim : int, decay : real}
   type ('a,'b) rlobj =
     {
     rlparam : rlparam,
@@ -36,7 +36,6 @@ sig
     level_targetl : int -> 'a list,
     dplayer : 'a dplayer
     }
-  
   val mk_bsobj : ('a,'b) rlobj -> splayer -> ('a,'b) psBigSteps.bsobj
   val mk_extsearch : string -> ('a,'b) rlobj -> 'a es
 
