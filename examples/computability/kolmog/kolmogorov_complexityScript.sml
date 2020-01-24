@@ -141,6 +141,17 @@ val kolmog_fn_def = Define`kolmog_fn f = if (∃n. recfn f n)
 
 
 
+Definition print_index_def:
+  print_index = dBnum (fromTerm (I))
+End
 
+Theorem print_index_correct:
+  Phi print_index x = SOME x
+Proof
+  fs[Phi_def,print_index_def] >>  qexists_tac`church x` >>
+  simp[] >> ‘I @@ church x == church x’ by fs[chap2Theory.lameq_I] >>
+  ‘bnf_of (church x) = SOME (church x)’ suffices_by metis_tac[normal_orderTheory.lameq_bnf_of_cong] >>
+  metis_tac[churchnumTheory.bnf_church,normal_orderTheory.bnf_bnf_of]
+QED
 
 val _ = export_theory();
