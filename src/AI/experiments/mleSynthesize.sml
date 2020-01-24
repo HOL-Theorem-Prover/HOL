@@ -196,7 +196,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleSynthesize-combin-" ^ its version, exwindow = 40000,
-   ncore = 30, ntarget = 100, nsim = 6400, decay = 1.0}
+   ncore = 30, ntarget = 100, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {
