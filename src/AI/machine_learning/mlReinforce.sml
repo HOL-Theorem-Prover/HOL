@@ -253,10 +253,11 @@ fun rl_compete_targetl unib (rlobj,es) tnn targetl =
 
 fun select_from_targetd rlobj ntot targetd =
   let  
-    fun is_win k l = not (null l) andalso
+    fun is_new l = length l < 4
+    fun is_win k l = not (is_new l) andalso
       (length (filter I (first_n 4 l)) = k)
     fun f k = map fst (filter (fn (_,(_,l)) => is_win k l) (dlist targetd))
-    val lnewtot1 = filter (fn (_,(_,l)) => null l) (dlist targetd)
+    val lnewtot1 = filter (fn (_,(_,l)) => is_new l) (dlist targetd)
     fun cmp ((_,(i1,_)),(_,(i2,_))) = Int.compare (i1,i2)
     val lnewtot2 = map fst (dict_sort cmp lnewtot1)
     val l4tot = f 4

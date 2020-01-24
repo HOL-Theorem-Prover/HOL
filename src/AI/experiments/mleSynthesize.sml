@@ -13,7 +13,7 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlReinforce mleLib mleArithData
 
 val ERR = mk_HOL_ERR "mleSynthesize"
-val version = 4
+val version = 5
 
 (* -------------------------------------------------------------------------
    Board
@@ -181,7 +181,7 @@ val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 40}]
 
-val dim = 8
+val dim = 10
 fun dim_head_poli n = [dim,n]
 
 val tnnparam = map_assoc (dim_std (1,dim)) [cE,cX,cV1,cV2,cV3,cA,cS,cK] @ 
@@ -196,7 +196,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleSynthesize-combin-" ^ its version, exwindow = 40000,
-   ncore = 30, ntarget = 200, nsim = 3200, decay = 1.0}
+   ncore = 30, ntarget = 100, nsim = 6400, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {
