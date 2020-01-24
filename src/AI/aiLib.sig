@@ -34,6 +34,7 @@ sig
   val list_imax : int list -> int
   val list_imin : int list -> int
   val tmsize_compare : term * term -> order
+  val div_equal : int -> int -> int list
 
   (* time *)
   val add_time : ('a -> 'b) -> 'a -> 'b * real

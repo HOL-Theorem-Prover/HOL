@@ -8,7 +8,8 @@ sig
   type tnnparam = mlTreeNeuralNetwork.tnnparam
   type schedule = mlNeuralNetwork.schedule
   type 'a rlex = 'a psBigSteps.rlex
-  
+  type 'a targetd = ('a, int * bool list) Redblackmap.dict
+
   (* I/O *)
   type 'a gameio =
     {write_boardl : string -> 'a list -> unit,
@@ -27,13 +28,12 @@ sig
   (* reinforcement learning parameters *)
   type rlparam =
     {expname : string, exwindow : int, ncore : int, 
-     level_threshold : real, nsim : int, decay : real}
+     ntarget : int, nsim : int, decay : real}
   type ('a,'b) rlobj =
     {
     rlparam : rlparam,
     game : ('a,'b) psMCTS.game,
     gameio : 'a gameio,
-    level_targetl : int -> 'a list,
     dplayer : 'a dplayer
     }
   val mk_bsobj : ('a,'b) rlobj -> splayer -> ('a,'b) psBigSteps.bsobj
@@ -45,9 +45,11 @@ sig
   val retrieve_rlex : ('a,'b) rlobj -> int -> 'a rlex
   val store_tnn : ('a,'b) rlobj -> int -> tnn -> unit
   val retrieve_tnn : ('a,'b) rlobj -> int -> tnn
+  val store_targetd : ('a,'b) rlobj -> int -> 'a targetd -> unit
+  val retrieve_targetd : ('a,'b) rlobj -> int -> 'a targetd
   
   (* main functions *)
-  val rl_start : ('a,'b) rlobj * 'a es -> int -> unit
-  val rl_restart : int -> ('a,'b) rlobj * 'a es -> int -> unit
+  val rl_start : ('a,'b) rlobj * 'a es -> 'a targetd -> unit
+  val rl_restart : int -> ('a,'b) rlobj * 'a es -> 'a targetd -> unit
 
 end

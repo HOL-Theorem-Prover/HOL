@@ -187,7 +187,8 @@ fun map_fst f l   = map (fn (a,b) => (f a, b)) l
 fun map_assoc f l = map (fn a => (a, f a)) l
 
 fun range ((a,b),f) = 
-  if a > b then raise ERR "range" "" else List.tabulate (b-a+1,fn x => f (x+a))
+  if a > b then raise ERR "range" "" else 
+  List.tabulate (b-a+1,fn x => f (x+a))
 
 fun cartesian_product l1 l2 =
   List.concat (map (fn x => map (fn y => (x,y)) l2) l1)
@@ -325,7 +326,7 @@ fun sort_thyl thyl =
 
 (* -------------------------------------------------------------------------
    The functions from this section affects other in subtle ways.
-   Please becareful to keep their "weird" semantics.
+   Please be careful to keep their "weird" semantics.
    ------------------------------------------------------------------------- *)
 
 (* keeps the order *)
@@ -455,7 +456,7 @@ fun term_of_lisp x =
   end
 
 (* ---------------------------------------------------------------------------
-   Reals
+   Reals and integers
    -------------------------------------------------------------------------- *)
 
 fun sum_real l = case l of [] => 0.0 | a :: m => a + sum_real m
@@ -475,8 +476,12 @@ fun list_imin l = case l of
   | [a] => a
   | a :: m => Int.min (a,list_imin m)
 
-fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
+fun div_equal n m =
+  let val (q,r) = (n div m, n mod m) in
+    List.tabulate (m, fn i => q + (if i < r then 1 else 0))
+  end
 
+fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
 
 fun average_real l = sum_real l / Real.fromInt (length l)
 fun average_int l = average_real (map Real.fromInt l)

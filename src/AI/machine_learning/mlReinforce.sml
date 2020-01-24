@@ -26,6 +26,7 @@ fun log rlobj s = (log_in_eval rlobj s; print_endline s)
    Types
    ------------------------------------------------------------------------- *)
 
+type 'a targetd = ('a, int * bool list) Redblackmap.dict
 type 'a gameio =
   {write_boardl : string -> 'a list -> unit,
    read_boardl : string -> 'a list}
@@ -35,13 +36,12 @@ type 'a dplayer =
 type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
 type rlparam =
   {expname : string, exwindow : int, ncore : int, 
-   level_threshold : real, nsim : int, decay : real}
+   ntarget : int, nsim : int, decay : real}
 type ('a,'b) rlobj =
   {
   rlparam : rlparam,
   game : ('a,'b) psMCTS.game,
   gameio : 'a gameio,
-  level_targetl : int -> 'a list,
   dplayer : 'a dplayer
   }
 
@@ -161,6 +161,27 @@ fun tnn_file rlobj n =
 fun store_tnn rlobj n tnn = write_tnn (tnn_file rlobj n) tnn
 fun retrieve_tnn rlobj n = read_tnn (tnn_file rlobj n)
 
+fun targetd_file rlobj n = 
+  eval_dir ^ "/" ^ (#expname (#rlparam rlobj)) ^ "/targetd" ^ its n
+fun blts (a,bl) = its a ^ " " ^ String.concatWith " " (map bts bl)
+fun stbl s = 
+  let val l = (String.tokens Char.isSpace s) in
+    (string_to_int (hd l), map string_to_bool (tl l))
+  end
+fun store_targetd rlobj n targetd =
+  let val (l1,l2) = split (dlist targetd) in
+    #write_boardl (#gameio rlobj) 
+       ((targetd_file rlobj n) ^ "_boardl") l1;
+    writel ((targetd_file rlobj n) ^ "_ibl") (map blts l2)
+  end
+fun retrieve_targetd rlobj n =
+  let 
+    val l1 = #read_boardl (#gameio rlobj) ((targetd_file rlobj n) ^ "_boardl")
+    val l2 = map stbl (readl ((targetd_file rlobj n) ^ "_ibl"))
+  in 
+    dnew (#board_compare (#game rlobj)) (combine (l1,l2))
+  end
+
 (* -------------------------------------------------------------------------
    External parallelization
    ------------------------------------------------------------------------- *)
@@ -214,82 +235,125 @@ fun rl_train ngen rlobj rlex =
 
 fun rl_explore_targetl (unib,noiseb) (rlobj,es) tnn targetl =
   let
-    val {ncore,nsim,level_threshold,...} = #rlparam rlobj
+    val {ncore,nsim,...} = #rlparam rlobj
     val splayer = (unib,tnn,noiseb,nsim)
     val (l,t) = add_time (parmap_queue_extern ncore es splayer) targetl
     val _ =  log rlobj ("Exploration time: " ^ rts t)
+    val resultl = combine (targetl, map fst l)
     val nwin = length (filter fst l)
     val _ = log rlobj ("Exploration wins: " ^ its nwin)
     val rlex = List.concat (map snd l)
     val _ = log rlobj ("Exploration new examples: " ^ its (length rlex))
-    val b = int_div nwin (length targetl) > level_threshold
   in
-    (rlex,b)
+    (rlex,resultl)
   end
 
 fun rl_compete_targetl unib (rlobj,es) tnn targetl =
   rl_explore_targetl (unib,false) (rlobj,es) tnn targetl
 
-fun rl_explore_level unib (rlobj,es) (tnn,level) =
-  let
-    val rlparam = #rlparam rlobj
-    val (targetl,t) = add_time (#level_targetl rlobj) level
-    val _ = log rlobj ("Exploration: " ^ its (length targetl) ^ 
-      " targets generated in " ^ rts t ^ " seconds")
-    val (rlex,b) = rl_explore_targetl (unib,true) (rlobj,es) tnn targetl 
-    val _ = if (b andalso not unib)
-      then log rlobj ("Level up: " ^ its (level + 1)) else ()
+fun select_from_targetd rlobj ntot targetd =
+  let  
+    fun is_win k l = not (null l) andalso
+      (length (filter I (first_n 4 l)) = k)
+    fun f k = map fst (filter (fn (_,(_,l)) => is_win k l) (dlist targetd))
+    val lnewtot1 = filter (fn (_,(_,l)) => null l) (dlist targetd)
+    fun cmp ((_,(i1,_)),(_,(i2,_))) = Int.compare (i1,i2)
+    val lnewtot2 = map fst (dict_sort cmp lnewtot1)
+    val l4tot = f 4
+    val l4 = random_subset (ntot div 2) l4tot
+    val n4 = ntot - length l4
+    val l3tot = f 3
+    val l3 = random_subset (n4 div 2) l3tot
+    val n3 = n4 - length l3
+    val l2tot = f 2
+    val l2 = random_subset (n3 div 2) l2tot
+    val n2 = n3 - length l2
+    val l1tot = f 1
+    val l1 = random_subset (n2 div 2) l1tot
+    val n1 = n2 - length l1
+    val l0tot = f 0
+    val l0 = random_subset (if null lnewtot2 then n1 else (n1 div 2)) l0tot
+    val n0 = n1 - length l0
+    val lnew = first_n n0 lnewtot2
+    val lfin = rev (List.concat [l4,l3,l2,l1,l0,lnew])
   in
-    (rlex, if (b andalso not unib) then level + 1 else level)
+    log rlobj ("Exploration: " ^ its (length lfin) ^ " targets ");
+    log rlobj ("  selection: " ^
+      (String.concatWith " " 
+      (map (its o length) [l4,l3,l2,l1,l0,lnew])));
+    log rlobj ("  distribution: " ^
+      (String.concatWith " " 
+      (map (its o length) [l4tot,l3tot,l2tot,l1tot,l0tot,lnewtot2])));
+    lfin
   end
 
-fun rl_explore_init ngen (rlobj,es) level =
+fun update_targetd ((board,winb),targetd) = 
+  let 
+    val (i,oldl) = dfind board targetd 
+      handle NotFound => raise ERR "update_targetd" ""
+  in
+    dadd board (i,winb :: oldl) targetd
+  end
+ 
+fun rl_explore_targetd unib (rlobj,es) (tnn,targetd) =
+  let
+    val rlparam = #rlparam rlobj
+    val targetl = select_from_targetd rlobj (#ntarget rlparam) targetd
+    val (rlex,resultl) = 
+      rl_explore_targetl (unib,true) (rlobj,es) tnn targetl
+    val newtargetd = foldl update_targetd targetd resultl
+  in
+    (rlex, newtargetd)
+  end
+
+fun rl_explore_init ngen (rlobj,es) targetd = 
   let
     val _ = log rlobj "Exploration: initialization"  
     val dummy = random_tnn (#tnnparam (#dplayer rlobj))
-    val (rlex,_) = rl_explore_level true (rlobj,es) (dummy,level)
+    val (rlex,_) = rl_explore_targetd true (rlobj,es) (dummy,targetd)
   in
     store_rlex rlobj ngen rlex; rlex
   end
 
-fun rl_explore_cont ngen (rlobj,es) (tnn,rlex,level) =
+fun rl_explore_cont ngen (rlobj,es) (tnn,rlex,targetd) =
   let 
-    val (rlex1,newlevel) = rl_explore_level false (rlobj,es) (tnn,level) 
+    val (rlex1,newtargetd) = rl_explore_targetd false (rlobj,es) (tnn,targetd) 
     val rlex2 = first_n (#exwindow (#rlparam rlobj)) (rlex1 @ rlex)
   in
     store_rlex rlobj ngen rlex1;
-    (rlex2, newlevel)
+    store_targetd rlobj ngen newtargetd;
+    (rlex2, newtargetd)
   end
 
 (* -------------------------------------------------------------------------
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
 
-fun rl_loop ngen (rlobj,es) (rlex,level) =
+fun rl_loop ngen (rlobj,es) (rlex,targetd) =
   let 
     val _ = log rlobj ("\nGeneration " ^ its ngen)
     val tnn = rl_train ngen rlobj rlex
-    val (newrlex,newlevel) = rl_explore_cont ngen (rlobj,es) (tnn,rlex,level)
+    val (newrlex,newtargetd) = rl_explore_cont ngen (rlobj,es) (tnn,rlex,targetd)
   in
-    rl_loop (ngen + 1) (rlobj,es) (newrlex,newlevel)
+    rl_loop (ngen + 1) (rlobj,es) (newrlex,newtargetd)
   end   
 
-fun rl_start (rlobj,es) level =
+fun rl_start (rlobj,es) targetd =
   let 
     val expdir = eval_dir ^ "/" ^ #expname (#rlparam rlobj)
     val _ = app mkDir_err [eval_dir,expdir]
-    val rlex = rl_explore_init 0 (rlobj,es) level
+    val rlex = rl_explore_init 0 (rlobj,es) targetd
   in
-    rl_loop 1 (rlobj,es) (rlex,level)
+    rl_loop 1 (rlobj,es) (rlex,targetd)
   end
 
-fun rl_restart ngen (rlobj,es) level =
+fun rl_restart ngen (rlobj,es) targetd =
   let 
     val expdir = eval_dir ^ "/" ^ #expname (#rlparam rlobj)
     val _ = app mkDir_err [eval_dir,expdir]
     val rlex = retrieve_rlex rlobj ngen
   in
-    rl_loop (ngen + 1) (rlobj,es) (rlex,level)
+    rl_loop (ngen + 1) (rlobj,es) (rlex,targetd)
   end
 
 end (* struct *)

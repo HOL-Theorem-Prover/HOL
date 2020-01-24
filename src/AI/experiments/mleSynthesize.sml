@@ -13,7 +13,7 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlReinforce mleLib mleArithData
 
 val ERR = mk_HOL_ERR "mleSynthesize"
-val version = 1
+val version = 4
 
 (* -------------------------------------------------------------------------
    Board
@@ -95,12 +95,13 @@ fun read_boardl file =
 val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
 
 (* -------------------------------------------------------------------------
-   Levels
+   Targets
    ------------------------------------------------------------------------- *)
 
-val datadir = HOLDIR ^ "/src/AI/experiments/data_combin"
-val datafile =  datadir ^ "/synt-" ^ its version
+val targetdir = HOLDIR ^ "/src/AI/experiments/target_combin"
+val targetfile = targetdir ^ "/targetl-synt-" ^ its version
 val stats_dir = HOLDIR ^ "/src/AI/experiments/stats_combin"
+val stats_file = stats_dir ^ "/stats-synt-" ^ its version
 fun stats_il header il = 
   let 
     fun f (a,b) = its a ^ "-" ^ its b
@@ -108,65 +109,57 @@ fun stats_il header il =
     val _ = mkDir_err stats_dir
     val s = header ^ "\n" ^ String.concatWith ", " (map f l) ^ "\n"
   in
-    append_file (stats_dir ^ "/synt-" ^ its version) s;
+    append_file stats_file s;
     print_endline s
   end
 
-val witness_cache = ref (dempty Term.compare)
-
-fun gen_board k cache =
-  (
-  print_endline (its (dlength cache));
-  if dlength cache >= k then map snd (dlist cache) else
+fun cgen_random n (a,b) =
   let 
-    val nstep = random_int (10,30)
-    val tm = list_mk_cA [random_cterm nstep,cV1,cV2,cV3]
-    val tmo = lo_cnorm 100 [s_thm,k_thm] tm
+    val size = random_int (a,b)
+    val tml = List.tabulate (n, fn _ => 
+      list_mk_cA [random_cterm size,cV1,cV2,cV3])
   in
-    if not (isSome tmo) orelse 
-       can (find_term (C tmem [cS,cK])) (valOf tmo)
-      then gen_board k cache
-    else if dmem (valOf tmo) cache then 
-      let val (_,_,nstep') = dfind  (valOf tmo) cache in
-        if 2*nstep < nstep' 
-        then (witness_cache := dadd (valOf tmo) tm (!witness_cache);
-             gen_board k (dadd (valOf tmo) (cX,valOf tmo,2*nstep) cache))
-        else gen_board k cache
-      end
-    else (witness_cache := dadd (valOf tmo) tm (!witness_cache);
-          gen_board k (dadd (valOf tmo) (cX,valOf tmo,2*nstep) cache)) 
-  end
-  )
+    mk_fast_set Term.compare tml
+  end 
 
-fun create_levels n = 
-  let 
-    val _ = mkDir_err datadir 
-    val l1 = gen_board n (dempty Term.compare)
-    val l2 = dict_sort (compare_third Int.compare) l1
-  in  
-    write_boardl datafile l2;
-    stats_il "size_in" (map (cterm_size o #1) l2);
-    stats_il "size_out" (map (cterm_size o #2) l2);
-    stats_il "nstep" (map ((fn x => x div 2) o #3) l2);
-    l2
-  end
+fun cgen_exhaustive size = gen_term [cA,cS,cK] (2*size-1,alpha)
 
-fun div_equal n m =
-  let val (q,r) = (n div m, n mod m) in
-    List.tabulate (m, fn i => q + (if i < r then 1 else 0))
-  end
-
-fun level_targetl level = 
+fun create_targetl tml =
   let
-    val n = 400
-    val boardl1 = read_boardl datafile
-    val boardl2 = first_n level (mk_batch n boardl1)
-    val nl = div_equal n (length boardl2)
-    val boardl3 = 
-      List.concat (map (uncurry random_subset) (combine (nl,boardl2)))
+    fun f tm = 
+      let val tmo =
+        lo_cnorm 100 [s_thm,k_thm] (list_mk_cA [tm,cV1,cV2,cV3])
+      in
+        if not (isSome tmo) orelse 
+           can (find_term (C tmem [cS,cK])) (valOf tmo)
+        then NONE
+        else tmo
+      end
+    val l1 = map_assoc f tml    
+    val l2 = filter (fn x => isSome (snd x)) l1    
+    val l3 = map_snd valOf l2
+    val l4 = dregroup Term.compare (map swap l3)
+    val l5 = map_snd (list_imin o map term_size) (dlist l4)
+    val l6 = map (fn (a,b) => (cX,a,2 * b)) l5
   in
-    stats_il "nstep_level" (map #3 boardl3);
-    rev boardl3
+    stats_il "size_in" (map (cterm_size o #1) l6);
+    stats_il "size_out" (map (cterm_size o #2) l6);
+    stats_il "nstep" (map ((fn x => x div 2) o #3) l6);
+    dict_sort (compare_third Int.compare) l6
+  end
+
+fun export_targetl targetl = 
+  let val _ = mkDir_err targetdir in 
+    write_boardl targetfile targetl
+  end
+
+fun import_targetd () =
+  let 
+    val l1 = read_boardl targetfile
+    val l2 = number_snd 0 l1
+    val l3 = map (fn (x,i) => (x,(i,[]))) l2
+  in
+    dnew board_compare l3
   end
 
 (* -------------------------------------------------------------------------
@@ -202,15 +195,14 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleSynthesize-combin-" ^ its version, exwindow = 80000,
-   ncore = 32, level_threshold = 0.9, nsim = 1600, decay = 1.0}
+  {expname = "mleSynthesize-combin-" ^ its version, exwindow = 40000,
+   ncore = 30, ntarget = 200, nsim = 3200, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {
   rlparam = rlparam,
   game = game,
   gameio = gameio,
-  level_targetl = level_targetl,
   dplayer = dplayer
   }
 
@@ -219,23 +211,10 @@ val extsearch = mk_extsearch "mleSynthesize.extsearch" rlobj
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleSynthesize"; open mleSynthesize;
-val boardl = create_levels 400;
-val r = rl_start (rlobj,extsearch) 1;
+  val tml = cgen_exhaustive 10; length tml;
+  val targetl = create_targetl tml; length targetl;
+  val _ = export_targetl targetl;
+val r = rl_start (rlobj,extsearch) (import_targetd ());
 *)
-
-(*
-load "aiLib"; open aiLib;
-load "mleLib"; open mleLib;
-load "mlReinforce"; open mlReinforce;
-load "mleSynthesize"; open mleSynthesize;
-val boardl = create_levels 100;
-val tm = list_mk_cA [list_mk_cA[cS,cK,cS],cV1,cV2,cV3];
-val tmo = lo_cnorm 100 [s_thm,k_thm] tm;
-
-val tml = map #2 boardl;
-tmem tm tml;
-val witness = dfind tm (!witness_cache);
-*)
-
 
 end (* struct *)
