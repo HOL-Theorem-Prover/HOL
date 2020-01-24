@@ -1595,75 +1595,59 @@ Proof
   ‘n < 2 ** n’ by fs[X_LT_EXP_X] >> fs[]
 QED
 
-(* Up to here *)
 
-   (*
+   
 
 Theorem subadditivity2:
-  univ_mach U ==> ∃c. ∀x y. KC U (pair x y) <= KC U x +  CKC U y x + c
+  univ_plmach U ==> ∃c. ∀x y. KC U (pair x y) <= KC U x +  CKC U y x + 2*(LENGTH x) +  c
 Proof
-  rw[KC_def,core_complexity_def,CKC_def,cond_core_complexity_def] >>
-  fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  ‘univ_rf U’ by fs[univ_mach_rf] >> fs[univ_mach_def] >>
-  qx_choose_then ‘subaddprog_i’ strip_assume_tac
-    (MATCH_MP unary_rec_fns_phi recfn_subaddproj) >>
-  qexists_tac ‘2 * ℓ subaddprog_i’ >> rw[] >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- (fs[EXTENSION] >>
-      ‘{ p | U p = SOME (pair x y) } ≠ ∅’ by simp[univ_rf_nonempty] >>
-      fs[EXTENSION] >> metis_tac[]) >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- (fs[EXTENSION] >>
-      ‘{ p | U p = SOME x } ≠ ∅’ by simp[univ_rf_nonempty] >>
-      fs[EXTENSION] >> metis_tac[]) >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- (fs[EXTENSION] >> ‘univ_mach U’ by metis_tac[univ_mach_def] >>
-      simp[SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_pair_nonempty]) >>
-  fs[PULL_EXISTS] >>
-  rename [‘U p1 = SOME (pair x y)’, ‘U p2 = SOME x’, ‘U (pair x p3) = SOME y’]>>
-  ‘∃a b c. p2 = pair a (pair b c)’ by metis_tac[optionTheory.NOT_SOME_NONE] >>
-  rw[] >> rfs[on2bl_SOME] >> rw[] >>
-  ‘∃u v. p3 = pair u v’ by metis_tac[optionTheory.NOT_SOME_NONE, pair_11] >>
-  rw[] >> rfs[on2bl_SOME] >> rw[] >>
-  rename [‘Phi (bl2n b) _ = SOME x’,
-          ‘Phi (bl2n u) (bl2n (pair (n2bl x) v)) = SOME y’,
-          ‘pair u v’] >>
-  qabbrev_tac‘
-    ARG = pair a (pair (n2bl subaddprog_i) (pair b (pair c (pair u v))))
-  ’ >>
-  ‘U ARG = SOME (pair (n2bl x) (n2bl y))’
-    by simp[Abbr‘ARG’, subaddprog_correct, on2bl_def] >>
-  qmatch_abbrev_tac ‘LENGTH p1 ≤ RR’ >>
-  ‘LENGTH ARG ≤ RR’ suffices_by metis_tac[LESS_EQ_TRANS] >>
-  simp_tac std_ss [Abbr‘ARG’, Abbr‘RR’, pair_LENGTH, LEFT_ADD_DISTRIB] >>
-  cheat
+  strip_tac >>
+  ‘∃c. ∀x y.CKC U y (pair x (n2bl (KC U x))) + KC U x + 2*(LENGTH x)  <=
+            KC U x +  CKC U y x + 2*(LENGTH x) +  c’ by
+    (assume_tac extra_information_cond1 >>
+     ‘∃c. ∀x y z. CKC U x (pair y z) ≤ CKC U x y + c’ by fs[] >>
+     qexists_tac‘c’ >> rw[Excl"KC_thm",Excl"CKC_thm"] >>
+     ‘CKC U y (pair x (n2bl (KC U x))) ≤ CKC U y x + c’ by metis_tac[] >>
+      qmatch_abbrev_tac‘2 * lx + (Kx + CKCUyxK) <= c + (2*xl + (Kx +CKCUxy))’ >> fs[]) >>
+  assume_tac symmetry_of_information1b  >>
+  ‘∃c1.∀x y.KC U (pair x y) ≤
+          CKC U x (pair y (n2bl (KC U y))) + KC U y + 2 * LENGTH y + c1’ by metis_tac[] >>
+  assume_tac symmetry_of_information2a >>
+  ‘∃c2. ∀x y. KC U (pair x y) ≤ KC U (pair y x) + c2’ by metis_tac[] >>
+  qexists_tac‘c+c1+c2’ >> rw[Excl"KC_thm",Excl"CKC_thm"] >>
+  ‘CKC U y (pair x (n2bl (KC U x))) + KC U x + 2 * LENGTH x +c1 +c2 ≤
+   KC U x + CKC U y x + 2 * LENGTH x + c +c1 +c2’ by metis_tac[LESS_EQ_MONO_ADD_EQ] >>
+   ‘KC U (pair y x) +c2≤
+            CKC U y (pair x (n2bl (KC U x))) + KC U x + 2 * LENGTH x + c1 + c2’ by
+     metis_tac[LESS_EQ_MONO_ADD_EQ] >>
+   ‘KC U (pair x y) <= KC U (pair y x) + c2’ by metis_tac[] >>            
+  fs[LESS_EQ_TRANS,Excl"KC_thm",Excl"CKC_thm"]
 QED
 
 
+(* Up to here *)
 
+(*
 
 Theorem symmetry_of_information1a:
-  univ_mach U ==>
-  ∃c. ∀x y.  CKC U x (pair y (n2bl (KC U y))) + KC U y <= KC U (pair x y) + c
+  univ_plmach U ==>
+  ∃c. ∀x y.  CKC U x (pair y (n2bl (KC U y))) + KC U y <= KC U (pair x y) + 2*LENGTH x + c
 Proof
-  rw[KC_def,core_complexity_def,CKC_def,cond_core_complexity_def] >>
-  fs[univ_rf_nonempty,univ_rf_pair_nonempty,univ_mach_rf] >>
-  ‘univ_rf U’ by fs[univ_mach_rf] >> fs[univ_mach_def] >>
-  qx_choose_then ‘subaddprog_i’ strip_assume_tac
-    (MATCH_MP unary_rec_fns_phi recfn_subaddproj) >>
-  qexists_tac ‘2 * ℓ subaddprog_i’ >> rw[] >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- (fs[EXTENSION] >>
-      ‘{ p | U p = SOME y } ≠ ∅’ by simp[univ_rf_nonempty] >>
-      fs[EXTENSION] >> metis_tac[]) >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- (fs[EXTENSION] >> ‘univ_mach U’ by metis_tac[univ_mach_def] >>
-      simp[SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_pair_nonempty]) >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
-  >- (fs[EXTENSION] >>
-      ‘{ p | U p = SOME (pair x y) } ≠ ∅’ by simp[univ_rf_nonempty] >>
-      fs[EXTENSION] >> metis_tac[]) >>
-  fs[PULL_EXISTS] >> cheat
+  rw[] >>
+  qx_choose_then ‘SIb_i’ strip_assume_tac
+                 (MATCH_MP unary_rec_fns_phi recfn_SIb_machine) >>
+  qexists_tac ‘2 * ℓ SIb_i + 20 + 3 * ℓ (print_index ∘ nblfst_i)’ >> rw[] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[EXTENSION] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[EXTENSION] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >>
+  rw[EXTENSION, SIMP_RULE (srw_ss()) [EXTENSION] univ_plmach_pair_nonempty] >>
+  fs[PULL_EXISTS, univ_plmach_def] >>
+  rename[‘LENGTH p1 + LENGTH p2 <= LENGTH p3 + _’] >>
+  (* Maybe not too bad actually
+     If the program runs (rsnd o p3) then checks if rfst o rfst is equal to the output, if it isn't then it outputs the output, otherwise output (rfst o p3)
+     The problem with this is that we end up with 2*p3+c <= p3+c
+  *)
+  ‘U (pair (pair y (n2bl (LENGTH p1))) p4) = SOME x ∧ U p5 = SOME y ∧ LENGTH (p4++p5) <= LENGTH p3 + _’
 QED
 
 Theorem symmetry_of_information2b:
