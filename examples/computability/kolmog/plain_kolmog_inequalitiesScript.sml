@@ -1625,6 +1625,16 @@ Proof
 QED
 
 
+Theorem univ_plmach_univ_rf:
+  univ_plmach U ==> univ_rf U
+Proof
+  rw[univ_plmach_def,univ_rf_def] >>
+  qexists_tac‘pair [] (pair (n2bl (f o nblsnd_i)) [])’ >> strip_tac >>
+  ‘pair [] (pair (n2bl (f ∘ nblsnd_i)) []) ++ n2bl x = pair [] (pair (n2bl (f ∘ nblsnd_i)) ( n2bl x))’ by fs[pair_def] >>
+  ‘on2bl (Phi f x) = on2bl (Phi (bl2n (n2bl (f ∘ nblsnd_i))) (bl2n (pair [] (n2bl x))))’ suffices_by
+   metis_tac[] >> fs[on2bl_SOME,computable_composition_def,Excl"pair_nil",nblsnd_i_def]
+QED
+
 (* Up to here *)
 
 (*
