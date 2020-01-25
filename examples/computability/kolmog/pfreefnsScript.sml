@@ -613,10 +613,14 @@ Proof
 QED
 
 Theorem pfsearch_thm:
-  pfsearch @@ church (dBnum (fromTerm t)) @@ church x @@ church i ==
-  cB (x < i ∧ bnf (steps i (t @@ church x)) ∧
-      prefix_free { n2bl j | bnf (steps i (t @@ church j)) ∧ j < i })
+  pfsearch @@ church M @@ church x @@ church i ==
+  cB (x < i ∧ bnf (steps i (toTerm (numdB M) @@ church x)) ∧
+      prefix_free { n2bl j | bnf (steps i (toTerm (numdB M) @@ church j)) ∧
+                             j < i })
 Proof
+  ‘∃db. M = dBnum db’ by metis_tac[enumerationsTheory.dBnumdB] >>
+  rw[] >>
+  ‘∃t. db = fromTerm t’ by metis_tac[pure_dBTheory.fromtoTerm] >> rw[]>>
   simp_tac (bsrw_ss()) [pfsearch_eqn, calc_fn_alist_behaviour, cmap_cvlist,
                         MAP_MAP_o, pairTheory.o_UNCURRY_R,
                         combinTheory.o_ABS_R] >>
@@ -648,5 +652,125 @@ Proof
   simp[prefix_free_def, MEM_MAP, PULL_EXISTS, pairTheory.FORALL_PROD,
        MEM_FILTER, MEM_GENLIST]
 QED
+
+Definition Upf_def:
+  Upf = LAM "Mi" (
+     cfindleast
+       @@ (pfsearch @@ (cnfst @@ VAR "Mi") @@ (cnsnd @@ VAR "Mi"))
+       @@ LAM "stepcount" (UM @@ VAR "Mi")
+  )
+End
+
+Theorem FV_Upf[simp]:
+  FV Upf = ∅
+Proof
+  simp[Upf_def, EXTENSION]
+QED
+
+val Upf_eqn = brackabs.brackabs_equiv [] Upf_def
+
+Definition pfi_def:
+  pfi i ⇔ prefix_free { n2bl x | Phi i x <> NONE }
+End
+
+Theorem Phi_EQ_NONE_bnf_steps:
+  Phi M x = NONE ⇔ ∀n. ¬bnf (steps n (toTerm (numdB M) @@ church x))
+Proof
+  simp[PhiNONE_UM] >> simp_tac (bsrw_ss()) [UM_def] >> eq_tac
+  >- (strip_tac >>
+      ‘dAPP (numdB M) (fromTerm (church x)) =
+       fromTerm (toTerm (numdB M) @@ church x)’ by simp[] >>
+      pop_assum SUBST_ALL_TAC >>
+      drule cbnf_force_num_fails >>
+      simp[numsAsCompStatesTheory.bnf_of_EQ_NONE_steps]) >>
+  CONV_TAC CONTRAPOS_CONV >> simp[] >>
+  fs[normal_orderTheory.has_bnf_of] >> strip_tac >>
+  drule normal_orderTheory.bnf_of_SOME >> strip_tac >>
+  drule_all cbnf_ofk_works2 >> simp[] >> metis_tac[stepsTheory.bnf_steps]
+QED
+
+Theorem Upf_succeeds:
+  pfi M ∧ Phi M i = SOME res ⇒ Upf @@ church (M ⊗ i) == church res
+Proof
+  simp_tac (bsrw_ss()) [Upf_eqn, churchnumTheory.cnfst_behaviour] >>
+  strip_tac >>
+  drule_then (qx_choose_then ‘res_t’ strip_assume_tac) PhiSOME_cbnf_ofk >>
+  first_x_assum (qspec_then ‘cforce_num’ strip_assume_tac) >>
+  full_simp_tac (bsrw_ss()) [cforce_num_behaviour] >>
+  fs[GSYM chap3Theory.betastar_lameq_bnf,
+     GSYM normal_orderTheory.nstar_betastar_bnf] >>
+  drule cbnf_ofk_works2 >> simp[] >>
+  disch_then (qx_choose_then ‘res_t'’ strip_assume_tac) >>
+  fs[stepsTheory.bnf_steps] >> rename [‘steps n _ = toTerm _’] >>
+  ‘pfsearch @@ church M @@ church i @@ church (MAX (i+1) n) == cB T’
+    by (simp_tac (bsrw_ss()) [pfsearch_thm] >> conj_tac
+        >- (‘bnf (steps n (toTerm (numdB M) @@ church i))’ by simp[] >>
+            Cases_on ‘n = MAX (i + 1) n’ >> simp[] >- metis_tac[] >>
+            ‘n < MAX (i + 1) n’ by fs[MAX_DEF] >>
+            drule_all stepsTheory.bnf_steps_upwards_closed >> simp[]) >>
+        fs[pfi_def, prefix_free_def, PULL_EXISTS] >>
+        qx_genl_tac [‘a’, ‘b’] >>
+        disch_then (REPEAT_TCL CONJUNCTS_THEN assume_tac) >>
+        first_x_assum match_mp_tac >> metis_tac[Phi_EQ_NONE_bnf_steps]) >>
+  ‘∀j. ∃b. pfsearch @@ church M @@ church i @@ church j == cB b’
+    by simp_tac (bsrw_ss()) [pfsearch_thm] >>
+  drule_all_then assume_tac churchnumTheory.cfindleast_termI >>
+  asm_simp_tac (bsrw_ss()) [] >> fs[PhiSOME_UM] >>
+  asm_simp_tac (bsrw_ss()) []
+QED
+
+Theorem bnf_of_SOME_lameq:
+  bnf_of M = SOME N ⇔ M == N ∧ bnf N
+Proof
+  eq_tac
+  >- (strip_tac >> drule normal_orderTheory.bnf_of_SOME >>
+      simp_tac (bsrw_ss())[]) >>
+  ACCEPT_TAC normal_orderTheory.lameq_bnf_of_SOME_I
+QED
+
+Theorem Upf_fails1:
+  Phi M i = NONE ⇒ ¬has_bnf (Upf @@ church (M ⊗ i))
+Proof
+  rpt strip_tac >> fs[normal_orderTheory.has_bnf_of, PhiNONE_UM] >>
+  full_simp_tac (bsrw_ss()) [Upf_eqn, bnf_of_SOME_lameq] >>
+  ‘∀j. ∃b. pfsearch @@ church M @@ church i @@ church j == cB b’
+    by simp_tac (bsrw_ss()) [pfsearch_thm] >>
+  drule_all_then (qx_choose_then ‘res’ strip_assume_tac)
+                 churchnumTheory.cfindleast_bnfE >>
+  full_simp_tac (bsrw_ss()) [] >>
+  metis_tac[lameq_sym]
+QED
+
+Theorem Upf_pfree:
+  prefix_free { n2bl i | has_bnf (Upf @@ church (M ⊗ i)) }
+Proof
+  simp[prefix_free_def, PULL_EXISTS] >> qx_genl_tac [‘a’, ‘b’] >>
+  simp[normal_orderTheory.has_bnf_of] >>
+  simp_tac (bsrw_ss()) [Upf_eqn, bnf_of_SOME_lameq] >>
+  disch_then (CONJUNCTS_THEN2 (qx_choose_then ‘N1’ strip_assume_tac) mp_tac) >>
+  ‘∀j. ∃b. pfsearch @@ church M @@ church a @@ church j == cB b’
+    by simp_tac (bsrw_ss()) [pfsearch_thm] >>
+  drule_all_then (qx_choose_then ‘res1’ strip_assume_tac)
+                 churchnumTheory.cfindleast_bnfE >>
+  full_simp_tac(bsrw_ss()) [pfsearch_thm] >>
+  disch_then (qx_choose_then ‘N2’ strip_assume_tac) >>
+  ‘∀j. ∃bl. pfsearch @@ church M @@ church b @@ church j == cB bl’
+    by simp_tac (bsrw_ss()) [pfsearch_thm] >>
+  drule_all_then (qx_choose_then ‘res2’ strip_assume_tac)
+                 churchnumTheory.cfindleast_bnfE >>
+  full_simp_tac(bsrw_ss()) [pfsearch_thm] >>
+  Cases_on ‘res1 ≤ res2’
+  >- (qpat_x_assum ‘prefix_free { n2bl j | _ ∧ j < res2}’ mp_tac >>
+      simp[prefix_free_def, PULL_EXISTS] >> disch_then match_mp_tac >>
+      simp[] >> Cases_on ‘res1 = res2’ >- metis_tac[] >>
+      ‘res1 < res2’ by simp[] >>
+      metis_tac[stepsTheory.bnf_steps_upwards_closed]) >>
+  ‘res2 < res1’ by simp[] >>
+  qpat_x_assum ‘prefix_free { n2bl j | _ ∧ j < res1}’ mp_tac >>
+  simp[prefix_free_def, PULL_EXISTS] >> disch_then match_mp_tac >>
+  simp[] >> metis_tac[stepsTheory.bnf_steps_upwards_closed]
+QED
+
+
 
 val _ = export_theory();
