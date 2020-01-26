@@ -15,6 +15,7 @@ val _ = new_theory "prefix_free_kolmog";
 
 (* Prefix Universal Turing Machine *)
 
+
 Theorem prefix_univ_rf_not_exists:
  ~∃U. prefix_machine U ∧ univ_rf U
 Proof
@@ -33,11 +34,12 @@ Proof
   >- (EVAL_TAC >> rw[rich_listTheory.IS_PREFIX_APPENDS])
 QED
 
+
+(*
 Definition univ_pf_rf_def:
   univ_pf_rf U <=> ((∀f. ∃g. ∀x. on2bl (recPhi [f; x]) = U (bar g ++ bar (n2bl x))) ∧
                     ∀p. (∀a b. p <> (bar a) ++ (bar b)) ==> U p = NONE)
 End
-
 
 Theorem bar_bar_pf:
   ~(bar a ++ bar b ≺ bar c ++ bar d)
@@ -57,6 +59,7 @@ Proof
   >- (eq_tac >> rw[] >> ‘~(∀a b. x ≠ bar a ++ bar b)’ by metis_tac[optionTheory.NOT_NONE_SOME] >>
       fs[] >> qexists_tac‘a’ >> qexists_tac‘bl2n b’ >> rw[])
 QED
+*)
 
 Theorem kolmog_kraft2:
   prefix_machine U ==> bls_size {x | (∃y. U x = SOME y)} n <= 1
@@ -66,10 +69,12 @@ Proof
 QED
 
 Theorem kolmog_kraft3:
-  univ_pf_rf U ==> bls_size {x | (∃y. U x = SOME y)} n <= 1
+  univ_mach U ==> bls_size {x | (∃y. U x = SOME y)} n <= 1
 Proof
-  rw[kolmog_kraft2,univ_pf_rf_prefix_machine]
+  rw[kolmog_kraft2,univ_mach_pf]
 QED
+
+(*
 
 Theorem univ_pf_rf_nonempty:
   univ_pf_rf U ⇒ {p | U p = SOME x} ≠ ∅
@@ -145,7 +150,7 @@ Proof
 QED
 
 
-
+*)
 
 (*  New stuff might not need  *)
 

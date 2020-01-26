@@ -7,6 +7,7 @@ open churchoptionTheory churchlistTheory recfunsTheory numsAsCompStatesTheory
 open churchDBTheory
 open recursivefnsTheory primrecfnsTheory prtermTheory
 open unary_recfnsTheory
+open numsAsCompStatesTheory
 
 val _ = new_theory "kolmog_inequalities"
 val _ = intLib.deprecate_int()
@@ -806,7 +807,11 @@ Proof
   fs[prefix_def]
 QED
 
-
+Theorem univ_mach_pf':
+  univ_mach U ==> ∃P. prefix_free P ∧ ∀x. x ∈ P ⇔ ∃y. U x = SOME y
+Proof
+  metis_tac[univ_mach_pf,prefix_machine_def]
+QED
 
 Theorem univ_mach_nonempty[simp]:
   univ_mach U ⇒ ∀x. ∃y. U y = SOME x
@@ -1502,13 +1507,35 @@ Proof
   rpt (irule primrec_Cn >> rw[primrec_nblconcat,primrec_nblTpow,primrec_ell,primrec_rules])
 QED
 
+(*
+
+(* up to here *)
+
+(* I think what we want is a version of rUMibl which iterates over pfPhi *)
+
+Definition pfUMibl_def:
+  pfUMibl = 
+End
+
+Theorem pfUMibl_correct:
+  pfUMibl [bl2n (pair a b)] = pfPhi (bl2n a) (bl2n b)
+Proof
+  
+QED
+
+Theorem recfn_pfUMIbl:
+  recfn pfUMibl 1
+Proof
+
+QED
+
 
 Theorem extra_information1:
   univ_mach U ==> ∃c. ∀x y. (CKC U x y) <= (KC U x) + c
 Proof
   rw[] >>
   qx_choose_then ‘rUMi’ strip_assume_tac rUMibl_index >>
-  qabbrev_tac‘j = rUMi o (checkbar_i o nblsnd_i)’ >>
+  qabbrev_tac‘j = rUMi o nblsnd_i’ >>
   qexists_tac‘2 * ℓ j + 1’ >> rw[] >>
   DEEP_INTRO_TAC MIN_SET_ELIM >>
   rw[EXTENSION, SIMP_RULE (srw_ss()) [EXTENSION] univ_mach_pair_nonempty] >>
@@ -1632,7 +1659,6 @@ Proof
   last_x_assum drule >> simp[Abbr‘ARG’]
 QED
         
-(* up to here *)
 
 Theorem symmetry_of_information1b:
   univ_mach U ==>
@@ -1741,6 +1767,6 @@ Proof
   cheat
 QED
 
-
+*)
 
 val _ = export_theory()

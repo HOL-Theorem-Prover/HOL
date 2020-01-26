@@ -55,7 +55,55 @@ Proof
   rw[indexes_of_def] >> qspecl_then [`U`,`i`] mp_tac invariance_theorem >> rw[]
 QED
 
+(*
 
+Theorem univ_rf_recfn:
+  univ_rf U ==> ∃i.  ∀x. (λy. on2bl (Phi i (bl2n y))) = U
+Proof
+  rw[FUN_EQ_THM,univ_rf_def]
+QED
+
+Theorem clean_univ_invariance_theorem:
+  ∀U V. univ_rf U ∧ univ_rf V ==> ∃C. ∀x. (KC U x) <= (KC V x) + (C U V)
+Proof
+  rw[KC_def,univ_rf_def,core_complexity_def] >>  fs[univ_rf_def] >>
+  ‘∀x. {p | V p = SOME x} ≠ ∅’ by (rw[] >> `univ_rf V` by fs[univ_rf_def] >>
+    `{p| V p = SOME x} <> {}` by fs[univ_rf_nonempty] >> fs[]) >>
+  ‘∀x. {p | U p = SOME x} ≠ ∅’ by (rw[] >> `univ_rf U` by fs[univ_rf_def] >>
+    `{p| U p = SOME x} <> {}` by fs[univ_rf_nonempty] >> fs[]) >> fs[] >>
+  CCONTR_TAC >> fs[arithmeticTheory.NOT_LESS_EQUAL] >>
+  ‘∀x. Phi print_index x = SOME x’  by metis_tac[print_index_correct] >>
+  ‘∃g1. ∀x. on2bl (Phi print_index x) = U (g1 ++ (n2bl x))’ by fs[] >>
+  ‘∃g2. ∀x. on2bl (Phi print_index x) = V (g2 ++ (n2bl x))’ by fs[] >>
+  ‘∃x. MIN_SET {LENGTH p | V p = SOME x} + 2*(LENGTH g1 + LENGTH g2) <
+       MIN_SET {LENGTH p | U p = SOME x}’ by fs[] >>
+  ‘Phi print_index (bl2n x) = SOME (bl2n x)’ by fs[] >>
+  ‘on2bl (Phi print_index (bl2n x)) = on2bl (SOME (bl2n x))’ by metis_tac[] >>
+  ‘U (g1 ++ x) = SOME x’ by (rfs[on2bl_def] >> ‘SOME (n2bl (bl2n x)) = U (g1 ++(n2bl (bl2n x)))’ by fs[] >> fs[]) >>
+  ‘V (g2 ++ x) = SOME x’ by (rfs[on2bl_def] >> ‘SOME (n2bl (bl2n x)) = V (g2 ++(n2bl (bl2n x)))’ by fs[] >> fs[]) >>
+  ‘univ_rf U ’ by fs[univ_rf_def] >>
+  ‘univ_rf V ’ by fs[univ_rf_def] >>
+
+  ‘MIN_SET {LENGTH p | U p = SOME x} <= LENGTH (g1++x)’ by
+    (DEEP_INTRO_TAC MIN_SET_ELIM >>
+     rw[EXTENSION, SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_nonempty] >>
+     ‘(∃p. LENGTH g1 + LENGTH x = LENGTH p ∧ U p = SOME x)’ by (qexists_tac‘(g1++x)’ >>rw[]) >>
+     metis_tac[] ) >>
+  ‘MIN_SET {LENGTH p | V p = SOME x} + 2*(LENGTH g1 + LENGTH g2) < LENGTH (g1++x)’ by
+    (fs[arithmeticTheory.LESS_TRANS]) >>
+  ‘MIN_SET {LENGTH p | V p = SOME x}  <= LENGTH (g2++x)’ by
+    (DEEP_INTRO_TAC MIN_SET_ELIM >>
+     rw[EXTENSION, SIMP_RULE (srw_ss()) [EXTENSION] univ_rf_nonempty] >>
+     ‘(∃p. LENGTH g2 + LENGTH x = LENGTH p ∧ V p = SOME x)’ by (qexists_tac‘(g2++x)’ >>rw[]) >>
+     metis_tac[]) >>
+   rename[‘p1 + 2*(LENGTH g1 + LENGTH g2) < p2’,‘p1 + 2*(LENGTH g1 + LENGTH g2) < LENGTH (g1++x)’] >>
+  ‘p1 + 2*(LENGTH g1 + LENGTH g2) + p1 < LENGTH (g1 ++x) + LENGTH (g2 ++ x)’ by fs[] >> fs[]
+  ‘(LENGTH g1 + LENGTH g2) <= LENGTH (g1++x) - LENGTH (g2++x)’ by
+    (‘p1 + (LENGTH g1 + LENGTH g2) <= LENGTH (g1++x)’ by fs[] >>
+     ‘(p1 + (LENGTH g1 + LENGTH g2)) - p1 <= LENGTH (g1++x) - LENGTH (g2 ++ x)’ by )
+ 
+QED
+*)
 
 val _ = export_theory();
 
