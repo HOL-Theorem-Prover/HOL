@@ -8,6 +8,7 @@ open churchDBTheory
 open recursivefnsTheory primrecfnsTheory prtermTheory
 open unary_recfnsTheory
 open numsAsCompStatesTheory
+open pfreefnsTheory
 
 val _ = new_theory "kolmog_inequalities"
 val _ = intLib.deprecate_int()
@@ -158,27 +159,6 @@ Proof
   rw[] >> drule_then strip_assume_tac recfns_in_Phi >> qexists_tac‘i’ >> rw[] >>
   pop_assum (simp o single o GSYM)
 QED
-
-(* univ_mach does not imply univ_rf anymore  *)
-
-(*
-
-Theorem univ_mach_rf:
-  univ_mach U ==> univ_rf U
-Proof
-  rw[univ_mach_def,univ_rf_def] >>
-  qabbrev_tac`G=recCn recPhi [K (SOME f);subndiv2 1]` >>
-  `recfn G 1` by (simp[Abbr`G`] >> rpt (irule recfnCn >> rw[])) >>
-  ‘∀x. G [bl2n (F::x)] = Phi f (bl2n x)’ by
-    (simp[Abbr`G`,recCn_def,bool_list_to_num_def]) >>
-  drule_then strip_assume_tac recfns_in_Phi >>
-  LAST_X_ASSUM (qspecl_then [`n2bl i`,`[]`] mp_tac) >> rw[] >> fs[pair_def] >>
-  qexists_tac`F::bar (n2bl i)` >> rw[] >> `Phi f x = Phi i (bl2n (F::n2bl x))` suffices_by fs[]>>
-  `G [bl2n (F::n2bl x)] = Phi f (bl2n (n2bl x))` by fs[] >>
-  `Phi i (fold [bl2n (F::n2bl x)]) = G [bl2n (F::n2bl x)]` by simp[] >> fs[]
-QED
-
-*)
 
 (* rename pair to bl pair etc *)
 
@@ -624,11 +604,6 @@ Proof
   metis_tac [APPEND_NIL]
 QED
 
-Definition pfPhi_def:
-  pfPhi i j = if prefix_free { n2bl a | Phi i a <> NONE } then Phi i j
-              else NONE
-End
-
 Definition checkbar_def:
   checkbar =
   minimise (λx. if proj 0 x = nblfst (proj 1 x) ∧
@@ -764,28 +739,30 @@ Proof
   strip_tac >> rw[] >> fs[bar_def, nblsnd0_correct] >> rfs[]
 QED
 
-Theorem pf_machines_exist:
-  ∀i. ∃j. ∀a. pfPhi j (bl2n (bar a)) = Phi i (bl2n a) ∧ ((∀b. a <> bar b) ==> pfPhi j (bl2n a) = NONE)
-Proof
-  simp[pfPhi_def] >> gen_tac >> qexists_tac‘i o checkbar_i’ >>
-  simp[computable_composition_def, checkbar_i_def] >> rw[] >>
-  fs[prefix_free_def] >> rw[] >> fs[]
-QED
-
 Definition univ_mach_def:
   univ_mach U <=>
      (∀i x y.
         U (pair x (pair i y)) =
-        on2bl (pfPhi (bl2n i) (bl2n (pair x y)))) ∧
+        on2bl (Phi Upfi (bl2n i ⊗ bl2n (pair x y)))) ∧
      ∀m. (∀i x y. m <> pair x (pair i y)) ==> U m = NONE
 End
+
+Theorem prefix_machine_thm:
+  prefix_machine M ⇔ prefix_free { x | M x <> NONE }
+Proof
+  simp[prefix_machine_def, Once EQ_IMP_THM, PULL_EXISTS] >> rw[]
+  >- (‘{ x | M x <> NONE } = P’ suffices_by simp[] >>
+      simp[EXTENSION] >> qx_gen_tac ‘a’ >> Cases_on ‘M a’ >> simp[]) >>
+  qexists_tac ‘{ x | M x <> NONE}’ >> simp[] >>
+  qx_gen_tac ‘a’ >> Cases_on ‘M a’ >> simp[]
+QED
 
 Theorem univ_mach_pf:
   univ_mach U ⇒ prefix_machine U
 Proof
-  rw[univ_mach_def, prefix_machine_def] >>
-  qexists_tac‘{ x | ∃y. U x = SOME y}’ >> simp[] >>
+  rw[univ_mach_def, prefix_machine_thm] >>
   rw[prefix_free_def] >> strip_tac >>
+  rename [‘a1 ≺ a2’] >> map_every Cases_on [‘U a1’,‘U a2’] >> fs[] >>
   rename [‘a1 ≺ a2’, ‘U a1 = SOME r1’, ‘U a2 = SOME r2’] >>
   ‘(∃x y z. a1 = pair x (pair y z)) ∧
    (∃u v w. a2 = pair u (pair v w))’
@@ -793,24 +770,31 @@ Proof
   fs[prefix_def, pair_def] >>
   reverse (Cases_on ‘x = u’) >>
   full_simp_tac bool_ss [rich_listTheory.IS_PREFIX_APPENDS,GSYM APPEND_ASSOC]
-  >- (drule rich_listTheory.IS_PREFIX_APPEND1 >> simp[]) >>
+  >- (drule rich_listTheory.IS_PREFIX_APPEND1 >> simp[]) >> rw[] >>
   reverse (Cases_on ‘y = v’) >>
   full_simp_tac bool_ss [rich_listTheory.IS_PREFIX_APPENDS,GSYM APPEND_ASSOC]
   >- (drule rich_listTheory.IS_PREFIX_APPEND1 >> simp[]) >> rw[] >>
-  rfs[on2bl_SOME, pfPhi_def] >> rw[] >>
-  rename [‘x ≼ y’, ‘Phi (bl2n M) (bl2n (bar a1 ++ x)) = SOME r1’,
-          ‘Phi (bl2n M) (bl2n (bar a1 ++ y)) = SOME r2’] >>
-  ‘bar a1 ++ x ∈ {n2bl a | Phi (bl2n M) a ≠ NONE} ∧
-   bar a1 ++ y ∈ {n2bl a | Phi (bl2n M) a ≠ NONE}’
+  rfs[on2bl_SOME] >> rw[] >>
+  rename [‘x ≼ y’, ‘Phi Upfi (bl2n M ⊗ bl2n (bar a1 ++ x)) = SOME r1’,
+          ‘Phi Upfi (bl2n M ⊗ bl2n (bar a1 ++ y)) = SOME r2’] >>
+  ‘bar a1 ++ x ∈ {n2bl a | Phi Upfi (bl2n M ⊗ a) ≠ NONE} ∧
+   bar a1 ++ y ∈ {n2bl a | Phi Upfi (bl2n M ⊗ a) ≠ NONE}’
     by (simp[] >> metis_tac[num_bool_inv, optionTheory.NOT_NONE_SOME]) >>
-  ‘¬(bar a1 ++ x ≺ bar a1 ++ y)’ by metis_tac[prefix_free_def] >>
+  ‘¬(bar a1 ++ x ≺ bar a1 ++ y)’ by metis_tac[prefix_free_def, Upfi_pfree] >>
   fs[prefix_def]
 QED
 
 Theorem univ_mach_pf':
-  univ_mach U ==> ∃P. prefix_free P ∧ ∀x. x ∈ P ⇔ ∃y. U x = SOME y
+  univ_mach U ==> prefix_free { a | U a <> NONE}
 Proof
-  metis_tac[univ_mach_pf,prefix_machine_def]
+  metis_tac[univ_mach_pf,prefix_machine_thm]
+QED
+
+Theorem pfi_checkbar_i[simp]:
+  pfi (j o checkbar_i)
+Proof
+  simp[pfi_def, computable_composition_def, prefix_free_def, PULL_EXISTS,
+       checkbar_i_def]
 QED
 
 Theorem univ_mach_nonempty[simp]:
@@ -818,10 +802,12 @@ Theorem univ_mach_nonempty[simp]:
 Proof
   rw[univ_mach_def] >>
   ‘recfn (SOME o (K (bl2n x))) 1’ by (irule primrec_recfn >> fs[primrec_rules]) >>
-  ‘∃i. ∀y. Phi i y = (SOME o (K (bl2n x))) [y]’ by (irule unary_rec_fns_phi >> fs[]) >> 
-  ‘∃j. ∀a. pfPhi j (bl2n (bar a)) = Phi i (bl2n a)’ by metis_tac[pf_machines_exist] >>
-  qexists_tac ‘pair x (pair (n2bl j) [])’ >>
-  simp[on2bl_SOME,pair_def]
+  ‘∃i. ∀y. Phi i y = (SOME o (K (bl2n x))) [y]’ by (irule unary_rec_fns_phi >> fs[]) >>
+  ‘∀a. Phi (i o checkbar_i) (bl2n (bar a)) = Phi i (bl2n a)’
+     by simp[computable_composition_def, checkbar_i_def] >>
+  qexists_tac ‘pair x (pair (n2bl (i o checkbar_i)) [])’ >>
+  simp[on2bl_SOME] >> simp[Upfi_correct1] >>
+  simp[computable_composition_def, checkbar_i_def, pair_def]
 QED
 
 Theorem univ_mach_nonempty'[simp]:
@@ -832,35 +818,18 @@ Proof
   simp[]
 QED
 
-Theorem pfPhi_SOME:
-  pfPhi a b = SOME c ==> prefix_free {n2bl i | Phi a i ≠ NONE} ∧ Phi a b = SOME c
+Theorem pfi_composition:
+  pfi b ⇒ pfi (a o b)
 Proof
-  rw[pfPhi_def]
+  simp[pfi_def, computable_composition_def, prefix_free_def, PULL_EXISTS]
 QED
 
-
-Theorem pf_composition:
-  prefix_free {n2bl p | Phi a p ≠ NONE} ∧ prefix_free {n2bl p | Phi b p ≠ NONE} ==>
-    ∀c. pfPhi (a o b) c = Phi (a o b) c
+Theorem Phi_Upfi_composition:
+  pfi b ⇒ ∀c. Phi Upfi ((a o b) ⊗ c) = Phi (a o b) c
 Proof
-  rw[pfPhi_def] >> rw[] >> fs[prefix_free_def] >>
-  rename[‘p1≺p2’,‘p1 = n2bl n1’, ‘p2 = n2bl n2’] >>
-  fs[computable_composition_def] >>
-  ‘(∃p. p1 = n2bl p ∧ Phi b p ≠ NONE) ∧
-            (∃p. p2 = n2bl p ∧ Phi b p ≠ NONE) ⇒
-            ~(p1 ≺ p2)’ by metis_tac[] >> metis_tac[]
-QED
-
-
-
-Definition pffi_def:
- pffi i = prefix_free {n2bl p | Phi i p <> NONE}
-End
-
-Theorem pffi_correct:
-  pffi i ==> pfPhi i = Phi i
-Proof
-  rw[pffi_def,FUN_EQ_THM,pfPhi_def]
+  rpt strip_tac >> irule Upfi_correct1 >>
+  fs[pfi_def, computable_composition_def] >>
+  fs[prefix_free_def, PULL_EXISTS]
 QED
 
 val nblsnd_i_def =  new_specification (
@@ -906,13 +875,13 @@ QED
 
 Theorem nblsr_correct' = GSYM DROP_bl2n |> SPEC_ALL |> Q.AP_TERM ‘bl2n’ |> SIMP_RULE (srw_ss()) [Excl"bl2n_11"]
 
-                
+
 Theorem nblsnd_behav:
   ∀p1 x cr. (nblsnd p1) = bl2n (bar x) ==> (nblsnd (bl2n ((n2bl p1) ++ cr)) ) = bl2n ( bar x ++ cr)
 Proof
   GEN_TAC >> strip_assume_tac bar_decomp >>
   rw[nblsnd_def,nblsnd0_correct,nblsnd0_correct',nblsnd0_Tpow,nblsr_correct',
-     rich_listTheory.DROP_APPEND] 
+     rich_listTheory.DROP_APPEND]
   >- (‘n <= LENGTH x’ suffices_by (strip_tac >> ‘n - LENGTH x = 0’ by simp[] >> simp[]) >>
   CCONTR_TAC >> ‘LENGTH x < n’ by fs[] >> ‘n >= LENGTH x’ by fs[] >>
   ‘DROP n x = []’ by fs[DROP_NIL] >> ‘bar x' = []’ by fs[] >> fs[bar_def]) >>
@@ -920,12 +889,13 @@ Proof
   ‘[] = bar x’ by metis_tac[num_bool_inv,n2bl_zero] >> fs[bar_def]
 QED
 
-Theorem pffi_checkbar:
-  pffi (checkbar_i o nblsnd_i)
+Theorem pfi_checkbar_nblsnd:
+  pfi (checkbar_i o nblsnd_i)
 Proof
-  fs[pffi_def,computable_composition_def,prefix_free_def] >> rw[] >> rename[‘~(n2bl p1 ≺ n2bl p2)’] >>
+  fs[pfi_def,computable_composition_def,prefix_free_def] >> rw[] >>
+  rename[‘~(n2bl p1 ≺ n2bl p2)’] >>
   ‘(∃f. Phi nblsnd_i p1 = SOME f) ∧ ∃g. Phi nblsnd_i p2 = SOME g’ by
-    (rw[] >>metis_tac[optionTheory.option_CASES]) >> 
+    (rw[] >>metis_tac[optionTheory.option_CASES]) >>
   strip_tac >> fs[nblsnd_i_def,checkbar_i_def] >>  rw[] >>
   ‘∃cr. n2bl p2  = n2bl p1 ++ cr’ by fs[prefix_append] >>
   ‘(nblsnd (bl2n ((n2bl p1) ++ cr)) ) = bl2n ( bar y ++ cr)’ by fs[nblsnd_behav] >>
@@ -934,18 +904,6 @@ Proof
   ‘bar y' = bay y ++ cr’ by fs[] >> fs[bar_def]
 QED
 
-Theorem pffi_comp:
-  pffi g ==> pffi (f o g)
-Proof
-  rw[pffi_def,computable_composition_def] >>
-  ‘{n2bl p | Phi g p ≠ NONE ∧ ∀x. Phi g p = SOME x ⇒ Phi f x ≠ NONE} ⊆ 
-    {n2bl p | Phi g p ≠ NONE}’ by (rw[SUBSET_DEF] >> metis_tac[]) >>
-  metis_tac[prefix_free_subset]
-QED
-
-
-
-        
 Theorem univ_mach_pair_nonempty:
    univ_mach U  ⇒ {p | U (pair y p) = SOME x} ≠ ∅
 Proof
@@ -955,30 +913,31 @@ Proof
   ‘∃i b c. a = pair b (pair i c)’
     by metis_tac[optionTheory.NOT_NONE_SOME] >>
   rw[] >> rfs[on2bl_SOME] >>
-  
-  qexists_tac ‘pair (n2bl (bl2n i o (checkbar_i o nblsnd_i ))) (bar (pair b c))’ >>
+  ‘∃j. pfi j ∧ Phi Upfi (j ⊗ bl2n (pair b c)) = SOME z’
+    by metis_tac[Upfi_SOME_pfree_exists] >>
+  qexists_tac ‘pair (n2bl (j o (checkbar_i o nblsnd_i ))) (bar (pair b c))’ >>
   fs[computable_composition_def, on2bl_SOME, PULL_EXISTS] >>
-  ‘pffi (bl2n i ∘ (checkbar_i ∘ nblsnd_i))’ by (assume_tac pffi_checkbar >> simp[pffi_comp]) >>
-  fs[pffi_correct] >>
-  fs[computable_composition_def, on2bl_SOME, PULL_EXISTS,checkbar_i_def,nblsnd_i_def] >>
-  fs[pfPhi_def]
+  ‘pfi (j ∘ (checkbar_i ∘ nblsnd_i))’
+    by (assume_tac pfi_checkbar_nblsnd >> simp[pfi_composition]) >>
+  rfs[Upfi_correct1] >>
+  simp[computable_composition_def, on2bl_SOME, PULL_EXISTS,checkbar_i_def,
+       nblsnd_i_def]
 QED
 
-Theorem univ_mach_pair_nonempty'[simp] =
-  SIMP_RULE (srw_ss()) [EXTENSION] univ_mach_pair_nonempty
-
 Definition rUMibl_def:
-  rUMibl = recCn recPhi
-                [recCn (SOME o (pr1 nblfst))
-                       [SOME o proj 0];
-                 recCn (SOME o (pr1 nblsnd))
-                       [SOME o proj 0]]
+  rUMibl = recCn recPhi [
+    SOME o K Upfi;
+    recCn (SOME o pr2 npair) [
+      recCn (SOME o (pr1 nblfst)) [SOME o proj 0];
+      recCn (SOME o (pr1 nblsnd)) [SOME o proj 0]
+    ]
+  ]
 End
 
 Theorem rUMibl_correct:
-  rUMibl [bl2n (pair a b)] = Phi (bl2n a) (bl2n b)
+  rUMibl [bl2n (pair a b)] = Phi Upfi (bl2n a ⊗ bl2n b)
 Proof
-  fs[rUMibl_def,rec2_def,recCn_def,nblfst_correct,nblsnd_correct2]
+  fs[rUMibl_def,recCn_def,nblfst_correct,nblsnd_correct2]
 QED
 
 Theorem rec1_pr1:
@@ -991,9 +950,11 @@ Theorem rUMibl_recfn:
   recfn rUMibl 1
 Proof
   fs[rUMibl_def] >> irule recfnCn >> rw[] >> irule recfnCn >>
-  rw[recfn_rules,recfn_nblsnd,recfn_nblfst] >>
-  ‘(SOME ∘ pr1 nblfst) = rec1 (SOME o nblfst)’ suffices_by fs[recfn_nblfst] >>
-  fs[rec1_pr1]
+  rw[recfn_rules,recfn_nblsnd,recfn_nblfst]
+  >- (‘(SOME ∘ pr1 nblfst) = rec1 (SOME o nblfst)’
+        suffices_by fs[recfn_nblfst, recfn_rules] >>
+      fs[rec1_pr1]) >>
+  irule primrec_recfn >> simp[]
 QED
 
 Theorem rUMibl_index:
@@ -1013,13 +974,6 @@ Theorem KC_thm[simp]:
 Proof
   simp[KC_def, core_complexity_def, EXTENSION]
 QED
-
-(* Up to here! *)
-
-
-
-
-
 
 Theorem primrec_nblconcat[simp]:
   primrec (pr2 nblconcat) 2
@@ -1041,8 +995,6 @@ Proof
       simp_tac (srw_ss()++boolSimps.ETA_ss) [primrec_rules] ) >>
   Q.SPEC_TAC (‘ℓ m’,‘k’) >> Induct >> simp[FUNPOW_SUC,EXP]
 QED
-
-
 
 Definition nblpair_to_concat_def:
   nblpair_to_concat = recCn (SOME o pr2 nblconcat) [rec1 (SOME o nblfst);SOME o pr1 nblsnd]
@@ -1233,11 +1185,6 @@ QED
 val nbl_comp2_i_def =
 new_specification ("nbl_comp2_i_def", ["nbl_comp2_i"],
                    MATCH_MP unary_rec_fns_phi recfn_nbl_comp2)
-
-
-
-
-
 
 Definition nblTpow_def:
   nblTpow = Cn (pr2 $-) [
@@ -1507,34 +1454,60 @@ Proof
   rpt (irule primrec_Cn >> rw[primrec_nblconcat,primrec_nblTpow,primrec_ell,primrec_rules])
 QED
 
-(*
+val rUMi_def = new_specification("rUMi_def", ["rUMi"], rUMibl_index)
 
-(* up to here *)
-
-(* I think what we want is a version of rUMibl which iterates over pfPhi *)
-
-Definition pfUMibl_def:
-  pfUMibl = 
-End
-
-Theorem pfUMibl_correct:
-  pfUMibl [bl2n (pair a b)] = pfPhi (bl2n a) (bl2n b)
+Theorem nblfst_Tpow[simp]:
+  nblfst (bl2n (Tpow n)) = 0
 Proof
-  
+  simp[nblfst_def]
 QED
 
-Theorem recfn_pfUMIbl:
-  recfn pfUMibl 1
+Theorem nblsnd_Tpow[simp]:
+  nblsnd (bl2n (Tpow n)) = 0
 Proof
-
+  simp[nblsnd_def]
 QED
 
+Theorem nblsnd_Tpow_F:
+  nblsnd (bl2n (Tpow n ++ [F] ++ sfx)) = bl2n (DROP n sfx)
+Proof
+  simp[nblsnd_def, nblsnd0_correct, nblsr_thm]
+QED
+
+Theorem nblfst_Tpow_F:
+  nblfst (bl2n (Tpow n ++ [F] ++ sfx)) = bl2n (TAKE n sfx)
+Proof
+  simp[nblfst_def, nblsnd0_correct, nblsr_thm, nblft_thm]
+QED
+
+(* true if nblfst/snd would loop on malformed input *)
+Theorem pfi_rUMi :
+  pfi rUMi
+Proof
+  simp[pfi_def, rUMi_def, prefix_free_def, PULL_EXISTS] >>
+  qx_genl_tac[‘a’, ‘b’] >>
+  rw[rUMibl_def, recCn_def] >> strip_tac >>
+  qspec_then ‘a’ strip_assume_tac (bar_decomp |> Q.GEN ‘p1’) >>
+  fs[nblfst_Tpow, nblfst_Tpow_F, prefix_append, nblsnd_Tpow_F]
+  >- (rename [‘n2bl b = Tpow n ++ [F] ++ x ++ sfx’] >>
+      ‘n2bl b = Tpow n ++ [F] ++ (x ++ sfx)’ by simp[] >>
+      qabbrev_tac ‘y = x ++ sfx’ >> fs[] >>
+      ‘b = bl2n (Tpow n ++ [F] ++ y)’ by metis_tac[bool_num_inv] >>
+      fs[nblfst_Tpow_F] >>
+      Cases_on ‘n ≤ LENGTH x’
+      >- (fs[Abbr‘y’, TAKE_APPEND1, nblsnd_Tpow_F, rich_listTheory.DROP_APPEND1] >>
+          mp_tac (Upfi_pfree |> Q.INST [‘M’ |-> ‘bl2n (TAKE n x)’]) >>
+          simp[prefix_free_def, PULL_EXISTS, prefix_append] >>
+          metis_tac[num_bool_inv]) >>
+      fs[nblsnd_Tpow_F] >>
+      fs[Abbr‘y’, TAKE_LENGTH_TOO_LONG, DROP_LENGTH_TOO_LONG, TAKE_APPEND2,
+         rich_listTheory.DROP_APPEND2] >> cheat)
+QED
 
 Theorem extra_information1:
   univ_mach U ==> ∃c. ∀x y. (CKC U x y) <= (KC U x) + c
 Proof
   rw[] >>
-  qx_choose_then ‘rUMi’ strip_assume_tac rUMibl_index >>
   qabbrev_tac‘j = rUMi o nblsnd_i’ >>
   qexists_tac‘2 * ℓ j + 1’ >> rw[] >>
   DEEP_INTRO_TAC MIN_SET_ELIM >>
@@ -1543,14 +1516,20 @@ Proof
   rename [‘univ_mach U’, ‘U p2 = SOME x’] >>
   fs[univ_mach_def] >>
   ‘∃a i b. p2 = pair a (pair i b)’
-     by metis_tac[optionTheory.NOT_SOME_NONE] >> rw[] >>
-  qabbrev_tac ‘ARG2 = pair (n2bl j) ((pair i (pair a b)))’ >>
-  ‘U (pair y ARG2) = SOME x’
-    by (rfs[Abbr‘ARG2’, Abbr‘j’, computable_composition_def, rUMibl_correct,on2bl_SOME] >>
+     by metis_tac[optionTheory.NOT_SOME_NONE] >> rw[] >> rfs[on2bl_SOME] >> rw[] >>
+  rename [‘U (pair y p) = SOME (n2bl z)’] >>
+  ‘∃k. pfi k ∧ Phi Upfi (k ⊗ bl2n (pair a b)) = SOME z’
+    by metis_tac[Upfi_SOME_pfree_exists] >>
+  qabbrev_tac ‘ARG2 = pair (n2bl j) (pair (n2bl k) (pair a b))’ >>
+  ‘U (pair y ARG2) = SOME (n2bl z)’
+    by (simp[Abbr‘ARG2’, Abbr‘j’, computable_composition_def, on2bl_SOME] >>
+        ‘pfi (rUMibli o nblsnd_i)’
+          by (simp[pfi_def, computable_composition_def] >>
+              simp[prefix_free_def, PULL_EXISTS]
         ‘pffi (rUMi ∘ checkbar_i ∘ nblsnd_i)’ by (assume_tac pffi_checkbar >> simp[pffi_comp] )>>
         fs[pffi_correct]  >> rfs[computable_composition_def, rUMibl_correct,on2bl_SOME]
-        
-        
+
+
         qexists_tac‘z’ >> rw[] >> ‘prefix_free {n2bl p | Phi (bl2n i) p ≠ NONE}’ by
           metis_tac[pfPhi_SOME] >> simp[pfPhi_def] >> rw[]
     >- (simp[computable_composition_def] >> )  >> fs[computable_composition_def,rUMibl_correct,pfPhi_def] )
@@ -1658,7 +1637,7 @@ Proof
              plist_bar_CONS] >> fs[plist_bar_CONS]) >>
   last_x_assum drule >> simp[Abbr‘ARG’]
 QED
-        
+
 
 Theorem symmetry_of_information1b:
   univ_mach U ==>
