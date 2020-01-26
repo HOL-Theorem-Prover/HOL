@@ -53,12 +53,6 @@ End
 
 val prefix_rec_fun_def = Define`prefix_rec_fun i = prefix_free (IMAGE n2bl {x|Phi i x <> NONE})`
 
-val pr_log2_def = Define`pr_log2 = WFM (λf n. if n<=1 then 1 else 1+(f (n DIV 2)) )`
-
-Definition on2bl_def:
-  on2bl x = OPTION_MAP n2bl x
-End
-
 val univ_rf_def = Define`univ_rf U <=> ∀f. ∃g. ∀x. on2bl (recPhi [f;x]) = U (g++(n2bl x))`
 
 Theorem univ_rf_nonempty:

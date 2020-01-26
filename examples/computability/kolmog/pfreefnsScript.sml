@@ -10,6 +10,8 @@ open unary_recfnsTheory
 
 val _ = new_theory "pfreefns";
 
+val _ = intLib.deprecate_int()
+
 Theorem bnf_of_SOME_lameq:
   bnf_of M = SOME N ⇔ M == N ∧ bnf N
 Proof
@@ -339,9 +341,7 @@ Theorem cn2bl0_thm:
      cn2bl0 @@ church t @@ church n == cvlist (MAP cB (n2bl n))
 Proof
   simp_tac (bsrw_ss()) [cn2bl0_eqn] >>
-  Induct >>
-  asm_simp_tac (bsrw_ss()) [churchnumTheory.natrec_behaviour]
-  >- simp[Once num_to_bool_list_def] >>
+  Induct >> asm_simp_tac (bsrw_ss()) [churchnumTheory.natrec_behaviour] >>
   qx_gen_tac ‘n’ >> strip_tac >> Cases_on ‘n = SUC t’ >>
   asm_simp_tac (bsrw_ss() ++ ARITH_ss)
                [churchboolTheory.cB_behaviour, DIV_LESS_EQ] >>
