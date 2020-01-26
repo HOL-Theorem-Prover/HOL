@@ -673,20 +673,39 @@ Definition pfi_def:
   pfi i ⇔ prefix_free { n2bl x | Phi i x <> NONE }
 End
 
+Theorem Phi_SOME_lameq:
+  Phi M x = SOME res ⇔
+  ∃t. toTerm (numdB M) @@ church x == t ∧ bnf t ∧ force_num t = res
+Proof
+  simp[PhiSOME_UM] >> simp_tac(bsrw_ss()) [UM_def] >> eq_tac
+  >- (qmatch_abbrev_tac ‘CBNF_T == church res ⇒ _’ >>
+      strip_tac >> ‘CBNF_T -n->* church res’ by asm_simp_tac (bsrw_ss()) [] >>
+      qunabbrev_tac ‘CBNF_T’ >> ‘bnf (church res)’ by simp[] >>
+      drule_all cbnf_ofk_works2 >>
+      simp_tac (bsrw_ss()) [cforce_num_behaviour] >> metis_tac[bnf_of_SOME_lameq])>>
+  strip_tac >>
+  ‘bnf_of (toTerm (numdB M) @@ church x) = SOME t’
+    by metis_tac[bnf_of_SOME_lameq] >>
+  drule cbnf_of_works1 >> asm_simp_tac (bsrw_ss()) []
+QED
+
+Theorem Phi_EQ_NONE_has_bnf:
+  Phi M x = NONE ⇔ ¬has_bnf (toTerm (numdB M) @@ church x)
+Proof
+  simp[PhiNONE_UM] >> simp[normal_orderTheory.has_bnf_of] >>
+  simp_tac (bsrw_ss()) [UM_def] >> eq_tac >> strip_tac
+  >- (drule normal_orderTheory.bnf_of_SOME >> strip_tac >>
+      drule_all cbnf_ofk_works2 >> simp[PULL_EXISTS]) >>
+  drule_all cbnf_of_works1 >>
+  simp_tac (bsrw_ss()) [normal_orderTheory.bnf_bnf_of]
+QED
+
 Theorem Phi_EQ_NONE_bnf_steps:
   Phi M x = NONE ⇔ ∀n. ¬bnf (steps n (toTerm (numdB M) @@ church x))
 Proof
-  simp[PhiNONE_UM] >> simp_tac (bsrw_ss()) [UM_def] >> eq_tac
-  >- (strip_tac >>
-      ‘dAPP (numdB M) (fromTerm (church x)) =
-       fromTerm (toTerm (numdB M) @@ church x)’ by simp[] >>
-      pop_assum SUBST_ALL_TAC >>
-      drule cbnf_force_num_fails >>
-      simp[numsAsCompStatesTheory.bnf_of_EQ_NONE_steps]) >>
-  CONV_TAC CONTRAPOS_CONV >> simp[] >>
-  fs[normal_orderTheory.has_bnf_of] >> strip_tac >>
-  drule normal_orderTheory.bnf_of_SOME >> strip_tac >>
-  drule_all cbnf_ofk_works2 >> simp[] >> metis_tac[stepsTheory.bnf_steps]
+  simp[Phi_EQ_NONE_has_bnf, normal_orderTheory.has_bnf_of] >>
+  ‘∀x. (∀N:term. x <> SOME N) ⇔ x = NONE’ by (Cases >> simp[]) >> simp[] >>
+  fs[numsAsCompStatesTheory.bnf_of_EQ_NONE_steps]
 QED
 
 Theorem Upf_succeeds:
@@ -771,6 +790,143 @@ Proof
   simp[] >> metis_tac[stepsTheory.bnf_steps_upwards_closed]
 QED
 
+(* limitMS M s i = M(i) if i < s and M on i terminates in fewer than s steps
+     o/wise, it loops
+*)
+Definition limitMS_def:
+  limitMS =
+  LAM "M" (
+    LAM "s" (
+      LAM "i" (
+        cless @@ VAR "i" @@ VAR "s" @@ (
+          LAM "t" (
+            cbnf @@ VAR "t" @@ (cforce_num @@ VAR "t") @@ Ω
+          ) @@ (
+            csteps @@ VAR "s"
+                   @@ (cdAPP @@ (cnumdB @@ VAR "M") @@ (cchurch @@ VAR "i"))
+          )
+        ) @@ Ω
+      )
+    )
+  )
+End
 
+Theorem FV_limitMS[simp]:
+  FV limitMS = ∅
+Proof
+  simp[limitMS_def, EXTENSION]
+QED
+
+val limitMS_eqn = brackabs.brackabs_equiv [] limitMS_def
+
+Theorem Omega_NEQ_church[simp]:
+  ¬(Ω == church n) ∧ ¬(church n == Ω)
+Proof
+  metis_tac[normal_orderTheory.bnf_of_Omega, bnf_of_SOME_lameq,
+            optionTheory.NOT_NONE_SOME, lameq_sym, churchnumTheory.bnf_church]
+QED
+
+Theorem limitMS_termination_behaviour_eqn:
+  limitMS @@ church M @@ church s @@ church i == church n ⇔
+  ∃t. steps s (toTerm (numdB M) @@ church i) = t ∧ bnf t ∧ force_num t = n ∧ i < s
+Proof
+  simp_tac (bsrw_ss())[limitMS_eqn, csteps_behaviour, cbnf_behaviour] >>
+  Cases_on ‘i < s’ >> asm_simp_tac (bsrw_ss()) [] >>
+  Cases_on ‘bnf (steps s (toTerm (numdB M) @@ church i))’ >>
+  asm_simp_tac (bsrw_ss()) []
+QED
+
+Theorem limitMS_termination_behaviour_I:
+  (∃t. steps s (toTerm (numdB M) @@ church i) = t ∧ bnf t ∧ force_num t = n ∧ i < s)
+ ⇒
+  limitMS @@ church M @@ church s @@ church i == church n
+Proof
+  metis_tac[limitMS_termination_behaviour_eqn]
+QED
+
+Theorem limitMS_loop_behaviour1:
+  s ≤ i ⇒ ¬has_bnf (limitMS @@ church M @@ church s @@ church i)
+Proof
+  simp_tac (bsrw_ss() ++ ARITH_ss)[normal_orderTheory.has_bnf_of, limitMS_eqn]
+QED
+
+Theorem limitMS_looop_behaviour2:
+  ¬bnf (steps s (toTerm (numdB M) @@ church i)) ⇒
+  ¬has_bnf (limitMS @@ church M @@ church s @@ church i)
+Proof
+  simp_tac (bsrw_ss() ++ ARITH_ss)[normal_orderTheory.has_bnf_of, limitMS_eqn] >>
+  Cases_on ‘i < s’ >>
+  asm_simp_tac (bsrw_ss() ++ ARITH_ss)[csteps_behaviour, cbnf_behaviour]
+QED
+
+Theorem limitMS_thm:
+  limitMS @@ church M @@ church s @@ church i ==
+  if i < s ∧ bnf (steps s (toTerm (numdB M) @@ church i)) then UM @@ church (M ⊗ i)
+  else Ω
+Proof
+  simp_tac (bsrw_ss()) [limitMS_eqn] >> Cases_on ‘i < s’ >>
+  asm_simp_tac (bsrw_ss()) [cbnf_behaviour, csteps_behaviour] >>
+  Cases_on ‘bnf (steps s (toTerm (numdB M) @@ church i))’ >>
+  asm_simp_tac (bsrw_ss()) [cbnf_behaviour, csteps_behaviour, UM_def] >>
+  qabbrev_tac ‘Mi = toTerm (numdB M) @@ church i’ >>
+  ‘bnf_of Mi = SOME (steps s Mi)’ by metis_tac[stepsTheory.bnf_steps] >>
+  drule cbnf_of_works1 >> simp_tac (bsrw_ss()) [Abbr‘Mi’]
+QED
+
+Theorem exists_steps_bnf:
+  (∃n. bnf (steps n t)) ⇔ has_bnf t
+Proof
+  metis_tac[numsAsCompStatesTheory.bnf_of_EQ_NONE_steps,
+            normal_orderTheory.bnf_of_NONE]
+QED
+
+Theorem Upf_SOME_pfree_exists:
+  Upf @@ church (M ⊗ i) == t ∧ bnf t ∧ res = force_num t ⇒
+  ∃N. pfi N ∧ Phi N i = SOME res
+Proof
+  simp_tac (bsrw_ss()) [Upf_eqn] >>
+  ‘∀j. ∃b. pfsearch @@ church M @@ church i @@ church j == cB b’
+    by simp_tac (bsrw_ss()) [pfsearch_thm] >> strip_tac >>
+  drule_all_then (qx_choose_then ‘step_count’ strip_assume_tac)
+                 churchnumTheory.cfindleast_bnfE >>
+  full_simp_tac (bsrw_ss()) [pfsearch_thm] >>
+  qexists_tac ‘dBnum (fromTerm (limitMS @@ church M @@ church step_count))’ >>
+  asm_simp_tac (bsrw_ss())[Phi_SOME_lameq, limitMS_thm] >> reverse conj_tac
+  >- metis_tac[lameq_sym, churchnumTheory.bnf_church,
+               churchnumTheory.force_num_church] >>
+  simp[pfi_def, Phi_EQ_NONE_bnf_steps, exists_steps_bnf,
+       normal_orderTheory.has_bnf_of] >>
+  simp_tac (bsrw_ss()) [limitMS_thm] >> pop_assum (K ALL_TAC) >>
+  fs[prefix_free_def, PULL_EXISTS] >> rw[]
+QED
+
+Definition Upfi_def:
+  Upfi = dBnum (fromTerm Upf)
+End
+
+Theorem Upfi_correct1:
+  pfi M ⇒ (Phi Upfi (M ⊗ i) = Phi M i)
+Proof
+  simp[SimpLHS, Phi_def, Upfi_def] >>
+  Cases_on ‘Phi M i’
+  >- (drule Upf_fails1 >> simp[GSYM normal_orderTheory.bnf_of_NONE]) >>
+  strip_tac >> drule_all_then strip_assume_tac Upf_succeeds >>
+  asm_simp_tac (bsrw_ss()) [normal_orderTheory.bnf_bnf_of]
+QED
+
+Theorem Upfi_pfree:
+  prefix_free {n2bl i | Phi Upfi (M ⊗ i) ≠ NONE }
+Proof
+  ‘∀x. Phi Upfi x ≠ NONE ⇔ has_bnf (Upf @@ church x)’
+    suffices_by simp[Upf_pfree] >>
+  simp[Phi_EQ_NONE_has_bnf, Upfi_def]
+QED
+
+Theorem Upfi_SOME_pfree_exists:
+  Phi Upfi (M ⊗ i) = SOME x ⇒ ∃N. pfi N ∧ Phi Upfi (N ⊗ i) = SOME x
+Proof
+  strip_tac >> csimp[Upfi_correct1] >> irule Upf_SOME_pfree_exists >>
+  fs[Phi_SOME_lameq, Upfi_def] >> metis_tac[]
+QED
 
 val _ = export_theory();
