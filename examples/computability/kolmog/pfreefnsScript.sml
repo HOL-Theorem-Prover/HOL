@@ -10,6 +10,15 @@ open unary_recfnsTheory
 
 val _ = new_theory "pfreefns";
 
+Theorem bnf_of_SOME_lameq:
+  bnf_of M = SOME N ⇔ M == N ∧ bnf N
+Proof
+  eq_tac
+  >- (strip_tac >> drule normal_orderTheory.bnf_of_SOME >>
+      simp_tac (bsrw_ss())[]) >>
+  ACCEPT_TAC normal_orderTheory.lameq_bnf_of_SOME_I
+QED
+
 Definition calc_fn_alist_def :
   calc_fn_alist =
   LAM "M" (
@@ -736,15 +745,6 @@ Proof
   drule_all_then assume_tac churchnumTheory.cfindleast_termI >>
   asm_simp_tac (bsrw_ss()) [] >> fs[PhiSOME_UM] >>
   asm_simp_tac (bsrw_ss()) []
-QED
-
-Theorem bnf_of_SOME_lameq:
-  bnf_of M = SOME N ⇔ M == N ∧ bnf N
-Proof
-  eq_tac
-  >- (strip_tac >> drule normal_orderTheory.bnf_of_SOME >>
-      simp_tac (bsrw_ss())[]) >>
-  ACCEPT_TAC normal_orderTheory.lameq_bnf_of_SOME_I
 QED
 
 Theorem Upf_fails1:
