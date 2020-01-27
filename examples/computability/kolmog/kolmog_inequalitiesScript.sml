@@ -765,31 +765,29 @@ Proof
   metis_tac[ADD_ASSOC,LE_ADD_LCANCEL, extra_information1]
 QED
 
-(*
 Theorem symmetry_of_information2a:
   univ_mach U ==> ∃c. ∀x y. KC U (pair x y) <= KC U (pair y x) + c
 Proof
   rw[] >>
-  qexists_tac‘4 * ℓ nblpf_i + 2 * ℓ comp_bli + 5’ >> rw[] >>
+  qexists_tac‘2 * ℓ (nblpf_i o rUMi) + 5’ >> rw[] >>
   DEEP_INTRO_TAC MIN_SET_ELIM >> rw[EXTENSION] >>
   DEEP_INTRO_TAC MIN_SET_ELIM >> rw[EXTENSION] >>
   fs[PULL_EXISTS, univ_mach_def] >>
   rename[‘U pp = SOME (pair y x)’] >>
-  ‘∃a i b. pp = pair a (plist bar (i::b))’
+  ‘∃a i b. pp = pair a (pair i b)’
     by metis_tac[optionTheory.NOT_SOME_NONE] >>
   rw[] >> rfs[on2bl_SOME] >>
   qabbrev_tac ‘
-    ARG = pair (pair (n2bl nblpf_i) i) (plist bar (n2bl comp_bli :: a :: b))
+    ARG = pair i (pair (n2bl (nblpf_i o rUMi)) (pair a b))
   ’ >>
   ‘U ARG = SOME (pair x y)’
-    by (simp[Abbr‘ARG’, comp_bli, Excl "plist_def"] >>
-        simp[comp_machine_bl_correct,computable_composition_def, nblpf_i_def] >>
+    by (simp[Abbr‘ARG’, computable_composition_def, nblpf_i_def, Upfi_correct1,
+             pfi_composition, pfi_rUMi] >>
         ‘z = bl2n (pair y x)’ by simp[] >> rw[on2bl_def]) >>
   last_x_assum drule >> simp[Abbr‘ARG’]
 QED
 
-
-Theorem extra_information_cond1:
+(* Theorem extra_information_cond1:
   univ_mach U ==> ∃c. ∀x y z. CKC U x (pair y z) <= CKC U x y + c
 Proof
   rw[] >>
@@ -804,17 +802,17 @@ Proof
   fs[PULL_EXISTS] >>
   rename [‘U (pair (pair y z) p1) = SOME x’, ‘U (pair y p2) = SOME x’]>>
   fs[univ_mach_def] >>
-  ‘∃a b. p2 = plist bar (a::b)’
+  ‘∃a b. p2 = pair a b’
      by metis_tac[optionTheory.NOT_SOME_NONE, pair_11] >>
   rw[] >> rfs[on2bl_SOME] >> rw[] >>
 
-  rename [‘Phi (bl2n a) _ = SOME x’] >>
+  rename [‘Phi Upfi (bl2n a ⊗ _) = SOME x’] >>
   qabbrev_tac‘
-    ARG = plist bar (n2bl exinfoprog_i::a::b)
+    ARG = pair (n2bl exinfoprog_i) (pair a b)
   ’ >>
   ‘U (pair (pair y z) ARG) = SOME (n2bl x)’
-    by (simp[Abbr‘ARG’, extra_info_cond_prog_correct, on2bl_def,
-             plist_bar_CONS] >> fs[plist_bar_CONS]) >>
+    by (simp[Abbr‘ARG’, extra_info_cond_prog_correct, on2bl_def]
+             ) >>
   last_x_assum drule >> simp[Abbr‘ARG’]
 QED
 
