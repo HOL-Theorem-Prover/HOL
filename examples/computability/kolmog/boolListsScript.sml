@@ -1120,16 +1120,6 @@ Proof
   ‘n2bl 0 = n2bl (bl2n (bar x))’ by fs[] >>
   ‘[] = bar x’ by metis_tac[num_bool_inv,n2bl_zero] >> fs[bar_def]
 QED
-(*
-Definition checkbar_def:
-  checkbar =
-  minimise (λx. if proj 0 x = nblfst (proj 1 x) ∧
-                   nfst (nblsnd0 (proj 1 x)) + 1 = ℓ (nsnd (nblsnd0 (proj 1 x)))
-                then
-                  SOME 0
-                else SOME 1)
-End
-*)
 
 Definition nblTpow_def:
   nblTpow = Cn (pr2 $-) [
@@ -1168,4 +1158,89 @@ Proof
   ‘2 ≤ 2 ** (n + 1)’ by simp[X_LE_X_EXP] >>
   ‘2 ** (n + 1) = bl2n (GENLIST (K T) n) + 2’ by simp[] >> simp[]
 QED
+
+Definition checkpair_def:
+  checkpair =
+  minimise (λx. if proj 0 x = proj 1 x ∧
+                   nfst (nblsnd0 (proj 1 x)) + 1 ≤ ℓ (nsnd (nblsnd0 (proj 1 x)))
+                then
+                  SOME 0
+                else SOME 1)
+End
+
+Theorem checkpair_correct[simp]:
+  checkpair [bl2n (pair a b)] = SOME (bl2n (pair a b))
+Proof
+  rw[checkpair_def, minimise_thm] >>
+  DEEP_INTRO_TAC optionTheory.some_intro >> rw[pair_def, bar_def] >>
+  simp[AllCaseEqs()] >> csimp[]
+QED
+
+Theorem MEM_Tpow[simp]:
+  MEM b (Tpow n) ⇔ 0 < n ∧ b
+Proof
+  Induct_on ‘n’ >> simp[tpow_suc]
+QED
+
+Theorem checkpair_loops[simp]:
+  checkpair [x] = NONE ⇔ ∀a b. x ≠ bl2n (pair a b)
+Proof
+  csimp[checkpair_def, minimise_thm, AllCaseEqs()] >>
+  DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >> conj_tac >>
+  qspec_then ‘x’ STRUCT_CASES_TAC (bar_decomp |> GEN_ALL) >>
+  simp[pair_def, bar_def]
+  >- (strip_tac >> rename [‘n + 1 ≤ SUC (LENGTH l)’] >>
+      map_every qexists_tac [‘TAKE n l’, ‘DROP n l’] >> simp[])
+  >- (rpt strip_tac >>
+      rename [‘Tpow n ++ [F] ++ l = Tpow (LENGTH a) ++ [F] ++ a ++ b’] >>
+      ‘n = LENGTH a ∧ l = a ++ b’ by metis_tac[Tpow_Fapp_eq, APPEND_ASSOC] >>
+      rw[] >> fs[]) >>
+  rpt strip_tac >> pop_assum (mp_tac o Q.AP_TERM ‘MEM F’) >> simp[]
+QED
+
+Theorem pr_eq_predicate:
+  pr_predicate pr_eq
+Proof
+  simp[pr_predicate_def, pr_eq_def, cflip_def] >>
+  Cases >> simp[] >> rename [‘pr_le (h::t)’] >> Cases_on ‘t’ >> simp[]
+QED
+
+Theorem pr_ell_correct[simp]:
+  pr_ell [n] = ℓ n
+Proof
+  completeInduct_on ‘n’ >>
+  simp[Once pr_ell_thm, Once num_to_bool_list_def] >>
+  rw[ADD1] >> first_x_assum irule >> intLib.ARITH_TAC
+QED
+
+Theorem recfn_checkpair[simp]:
+  recfn checkpair 1
+Proof
+  simp[checkpair_def] >> irule (last (CONJUNCTS recfn_rules)) >> simp[] >>
+  qmatch_abbrev_tac ‘recfn f 2’ >>
+  ‘f =
+   SOME o (
+     pr_cond pr_eq (
+       pr_cond (
+         Cn pr_le [
+           Cn (pr2 $+) [Cn (pr1 nfst) [Cn pr_nblsnd0 [proj 1]]; K 1];
+           Cn (pr1 ℓ) [Cn (pr1 nsnd) [Cn pr_nblsnd0 [proj 1]]]
+         ]
+       ) (K 0) (K 1)
+     ) (K 1))’
+     by (simp[FUN_EQ_THM,pr_cond_thm,Abbr‘f’, pr_eq_predicate, pr_nblsnd0_correct]>>
+         rw[] >> fs[] >> rename [‘pr_eq x’] >> Cases_on ‘x’ >>
+         fs[pr_eq_def, cflip_def] >>
+         rename [‘pr_le (_ :: t)’] >> Cases_on ‘t’ >> fs[]) >>
+  pop_assum SUBST1_TAC >> irule primrec_recfn >>
+  rpt ((irule primrec_pr_cond ORELSE irule primrec_Cn) >>
+       rw[primrec_rules, primrec_pr_nblsnd0, primrec_ell])
+QED
+
+val checkpair_i_def = new_specification(
+  "checkpair_i_def", ["checkpair_i"],
+  MATCH_MP unary_rec_fns_phi recfn_checkpair);
+val _ = export_rewrites ["checkpair_i_def"]
+
+
 val _ = export_theory();
