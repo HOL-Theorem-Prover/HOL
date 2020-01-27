@@ -7,8 +7,6 @@ sig
   type move = term
 
   (* target *)
-  val cgen_random : int -> (int * int) -> term list 
-  val cgen_exhaustive : int -> term list
   val create_targetl : term list -> board list
   val export_targetl : board list -> unit
   val import_targetd : unit -> (board, int * bool list) Redblackmap.dict

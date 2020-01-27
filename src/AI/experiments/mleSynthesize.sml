@@ -13,7 +13,7 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlReinforce mleLib mleArithData
 
 val ERR = mk_HOL_ERR "mleSynthesize"
-val version = 5
+val version = 6
 
 (* -------------------------------------------------------------------------
    Board
@@ -113,17 +113,6 @@ fun stats_il header il =
     print_endline s
   end
 
-fun cgen_random n (a,b) =
-  let 
-    val size = random_int (a,b)
-    val tml = List.tabulate (n, fn _ => 
-      list_mk_cA [random_cterm size,cV1,cV2,cV3])
-  in
-    mk_fast_set Term.compare tml
-  end 
-
-fun cgen_exhaustive size = gen_term [cA,cS,cK] (2*size-1,alpha)
-
 fun create_targetl tml =
   let
     fun f tm = 
@@ -196,7 +185,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleSynthesize-combin-" ^ its version, exwindow = 40000,
-   ncore = 30, ntarget = 100, nsim = 32000, decay = 1.0}
+   ncore = 30, ntarget = 100, nsim = 6400, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {
@@ -216,5 +205,48 @@ load "mleSynthesize"; open mleSynthesize;
   val _ = export_targetl targetl;
 val r = rl_start (rlobj,extsearch) (import_targetd ());
 *)
+
+(*
+load "psTermGen"; open psTermGen;
+load "mlReinforce"; open mlReinforce;
+load "mleSynthesize"; open mleSynthesize;
+load "aiLib"; open aiLib;
+load "mleLib"; open mleLib;
+load "smlTimeout"; open smlTimeout;
+ val tml = cgen_exhaustive 8; length tml;
+  val targetl = create_targetl tml; length targetl;
+  val _ = export_targetl targetl;
+val d = import_targetd ();
+val boardl = map fst (dlist d);
+
+fun goal_of_board (board: board) = 
+  let
+    val tm = #2 board
+    val v = mk_var ("v",alpha)
+    val target = 
+      mk_exists (v, 
+      (list_mk_forall ([cV1,cV2,cV3], 
+                     mk_eq (list_mk_cA [v,cV1,cV2,cV3],tm))
+      ))
+  in
+    ([s_thm_quant,k_thm_quant],target)
+  end
+
+fun test (board: board) =
+ let 
+   val goal = goal_of_board boards
+   val glo = timeout_tactic 1.0 (METIS_TAC []) goal
+ in
+   isSome glo andalso null (valOf glo)
+ end
+val (rlwin,rllose) = partition snd (map_assoc test boardl);
+length rlwin; length rllose;
+
+val board = fst (hd rllose);
+val goal = goal_of_board board;
+load "holyHammer"; open holyHammer;
+hh_pb [Eprover] [] goal;
+*)
+
 
 end (* struct *)

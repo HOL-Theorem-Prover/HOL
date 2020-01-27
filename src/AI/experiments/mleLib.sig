@@ -69,5 +69,8 @@ sig
   val list_mk_cA : term list-> term
   val strip_cA : term -> term list
   val random_cterm : int -> term
+  val cgen_random : int -> (int * int) -> term list 
+  val cgen_exhaustive : int -> term list  
+
 
 end

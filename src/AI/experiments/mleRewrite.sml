@@ -158,48 +158,27 @@ fun read_boardl file =
 val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
 
 (* -------------------------------------------------------------------------
-   Level
+   Targets
    ------------------------------------------------------------------------- *)
 
-fun random_walk n board =
-  if cterm_size (#1 board) > tmsize_limit then NONE else
-  if n <= 0 then SOME board else
-  let val amovel = available_movel board in
-    if null amovel then NONE else
-    random_walk (n-1) (apply_move (random_elem amovel) board)
+fun lo_walk (n,maxn) tm =
+  if cterm_size tm > tmsize_limit then NONE 
+  else if is_tagged_nf tm then SOME (tm,n)
+  else if n >= maxn then NONE
+  else lo_walk (n+1,maxn) (apply_move (hd (available_movel board)) board)
+ 
+fun create_board maxn tm = 
+  let val nfo = lo_walk (0,maxn) tm in
+    if not (isSome nfo) then NONE else 
+    let val (nf,n) = valOf nfo in
+      (* if can (find_term (C tmem [cS,cK])) nf 
+      then NONE 
+      else *) SOME (tm,nf,n)
+    end
   end
 
-fun random_board size nstep =
-  let 
-    val tm = tag (random_cterm size)
-    val board1 = (tm, mk_var("dummy",alpha),0)
-    val board2 = random_walk nstep board1
-  in
-    if isSome board2 
-    then SOME (tm, #1 (valOf board2), 2*nstep)
-    else NONE
-  end
-
-fun random_board_try k size nstep =
-  let
-    fun loop n =
-      if n <= 0 then NONE
-      else case random_board size nstep of
-        NONE => loop (n-1)
-      | SOME board => SOME board
-  in
-    loop k
-  end
-
-fun gen_data n =
-  if n <= 0 then [] else
-  let val boardo = random_board_try 10
-    (random_int (60,100)) (random_int (1,20)) 
-  in
-    if isSome boardo
-    then (print_endline (its n); valOf boardo :: gen_data (n-1))
-    else gen_data n
-  end
+fun create_boardl n = 
+  List.mapPartial (create_board 1000) (gen_exhaustive n)
 
 val datadir = HOLDIR ^ "/src/AI/experiments/data_combin"
 val datafile =  datadir ^ "/train-" ^ its version
@@ -216,43 +195,16 @@ fun stats_il header il =
     print_endline s
   end
 
-fun create_levels n = 
+fun export_targetl targetl = 
+  (mkDir_err targetdir; write_boardl targetfile targetl)
+
+fun import_targetd () =
   let 
-    val _ = mkDir_err datadir 
-    val l1 = gen_data n
-    val l2 = dict_sort (compare_third Int.compare) l1
-  in  
-    write_boardl datafile l2;
-    stats_il "size_in" (map (cterm_size o #1) l2);
-    stats_il "size_out" (map (cterm_size o #2) l2);
-    stats_il "nstep" (map ((fn x => x div 2) o #3) l2);
-    l2
-  end
-
-fun div_equal n m =
-  let val (q,r) = (n div m, n mod m) in
-    List.tabulate (m, fn i => q + (if i < r then 1 else 0))
-  end
-
-fun insert_elem (l,i) a =
-  let val (l1,l2) = part_n i l in l1 @ [a] @ l2 end
-    
-fun shift_elem (i1,i2) l =
-  let val (l1,l2) = part_n i1 l in
-    if null l2 then l2 else insert_elem (l1 @ tl l2, i2) (hd l2)
-  end
-
-fun level_targetl level = 
-  let
-    val n = 400
-    val boardl1 = read_boardl datafile
-    val boardl2 = first_n level (mk_batch n boardl1)
-    val nl = div_equal n (length boardl2)
-    val boardl3 = 
-      List.concat (map (uncurry random_subset) (combine (nl,boardl2)))
+    val l1 = read_boardl targetfile
+    val l2 = number_snd 0 l1
+    val l3 = map (fn (x,i) => (x,(i,[]))) l2
   in
-    stats_il "nstep_level" (map #3 boardl3);
-    rev boardl3
+    dnew board_compare l3
   end
 
 (*

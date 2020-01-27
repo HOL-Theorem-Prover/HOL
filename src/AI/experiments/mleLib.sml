@@ -257,8 +257,17 @@ fun lo_cnorm n eql tm =
     let val tm' = subst_cmatch_first eql tm in
       lo_cnorm (n-1) eql tm'
     end
-    
+  
+fun cgen_random n (a,b) =
+  let 
+    val size = random_int (a,b)
+    val tml = List.tabulate (n, fn _ => 
+      list_mk_cA [random_cterm size,cV1,cV2,cV3])
+  in
+    mk_fast_set Term.compare tml
+  end 
 
+fun cgen_exhaustive size = gen_term [cA,cS,cK] (2*size-1,alpha)
 
 end (* struct *)
 

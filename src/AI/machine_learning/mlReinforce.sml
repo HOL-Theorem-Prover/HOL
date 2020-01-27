@@ -55,7 +55,7 @@ fun mk_mctsparam noiseb nsim rlobj =
   decay = #decay (#rlparam rlobj), explo_coeff = 2.0,
   noise_all = noiseb, noise_root = false,
   noise_coeff = 0.25, noise_gen = random_real,
-  noconfl = false, avoidlose = false
+  noconfl = false, avoidlose = true
   }
 
 fun player_from_tnn tnn tob game board =
@@ -251,6 +251,12 @@ fun rl_explore_targetl (unib,noiseb) (rlobj,es) tnn targetl =
 fun rl_compete_targetl unib (rlobj,es) tnn targetl =
   rl_explore_targetl (unib,false) (rlobj,es) tnn targetl
 
+fun first_n_skewed n m l =
+  if m > length l then random_subset n l 
+  else if random_int (0,1) = 0 
+  then random_subset n (first_n m l)
+  else first_n_skewed n (2*m) l
+
 fun select_from_targetd rlobj ntot targetd =
   let  
     fun is_new l = length l < 4
@@ -272,8 +278,10 @@ fun select_from_targetd rlobj ntot targetd =
     val l1tot = f 1
     val l1 = random_subset (n2 div 2) l1tot
     val n1 = n2 - length l1
-    val l0tot = f 0
-    val l0 = random_subset (if null lnewtot2 then n1 else (n1 div 2)) l0tot
+    val l0tot1 = filter (fn (_,(_,l)) => is_win 0 l) (dlist targetd)
+    val l0tot2 = map fst (dict_sort cmp l0tot1)
+    val n1' = if null lnewtot2 then n1 else (n1 div 2)
+    val l0 = first_n_skewed n1' n1' l0tot2
     val n0 = n1 - length l0
     val lnew = first_n n0 lnewtot2
     val lfin = rev (List.concat [l4,l3,l2,l1,l0,lnew])
@@ -284,7 +292,7 @@ fun select_from_targetd rlobj ntot targetd =
       (map (its o length) [l4,l3,l2,l1,l0,lnew])));
     log rlobj ("  distribution: " ^
       (String.concatWith " " 
-      (map (its o length) [l4tot,l3tot,l2tot,l1tot,l0tot,lnewtot2])));
+      (map (its o length) [l4tot,l3tot,l2tot,l1tot,l0tot2,lnewtot2])));
     lfin
   end
 
