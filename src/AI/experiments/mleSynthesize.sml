@@ -185,7 +185,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleSynthesize-combin-" ^ its version, exwindow = 40000,
-   ncore = 30, ntarget = 100, nsim = 6400, decay = 1.0}
+   ncore = 30, ntarget = 100, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {
@@ -213,6 +213,8 @@ load "mleSynthesize"; open mleSynthesize;
 load "aiLib"; open aiLib;
 load "mleLib"; open mleLib;
 load "smlTimeout"; open smlTimeout;
+load "hhExportFof"; open hhExportFof;
+
  val tml = cgen_exhaustive 8; length tml;
   val targetl = create_targetl tml; length targetl;
   val _ = export_targetl targetl;
@@ -222,7 +224,7 @@ val boardl = map fst (dlist d);
 fun goal_of_board (board: board) = 
   let
     val tm = #2 board
-    val v = mk_var ("v",alpha)
+    val v = mk_var ("Vv",alpha)
     val target = 
       mk_exists (v, 
       (list_mk_forall ([cV1,cV2,cV3], 
@@ -231,7 +233,14 @@ fun goal_of_board (board: board) =
   in
     ([s_thm_quant,k_thm_quant],target)
   end
+val goal = goal_of_board (hd boardl);
+type_flag := false;
+fof_export_goal "/home/thibault/HOL/src/holyhammer/provers/test/atp_in" goal;
 
+
+*)
+
+(*
 fun test (board: board) =
  let 
    val goal = goal_of_board boards
@@ -241,7 +250,6 @@ fun test (board: board) =
  end
 val (rlwin,rllose) = partition snd (map_assoc test boardl);
 length rlwin; length rllose;
-
 val board = fst (hd rllose);
 val goal = goal_of_board board;
 load "holyHammer"; open holyHammer;
