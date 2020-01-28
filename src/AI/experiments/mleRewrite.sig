@@ -6,19 +6,12 @@ sig
   type board = term * term * int
   type move = term
 
-  (* tranformation *)
-  val lo_norm : int -> term -> term option
-  val list_mk_cA : term list -> term
-  val strip_cA : term -> term list
-
-  (* example generation *)
-  val random_cterm : int -> term
-  val random_walk : int -> board -> board option
-  val create_levels : int -> board list
-  val level_targetl : int -> board list
+  (* target *)
+  val create_targetl : term list -> board list
+  val export_targetl : board list -> unit
+  val import_targetd : unit -> (board, int * bool list) Redblackmap.dict
   
   (* test *)
-  val game : (board,move) psMCTS.game
   val mcts_test : int -> board -> bool * (board, move) psMCTS.tree
   val bsobj : (board,move) psBigSteps.bsobj
 

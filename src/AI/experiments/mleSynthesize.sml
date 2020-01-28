@@ -99,7 +99,7 @@ val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
    ------------------------------------------------------------------------- *)
 
 val targetdir = HOLDIR ^ "/src/AI/experiments/target_combin"
-val targetfile = targetdir ^ "/targetl-synt-" ^ its version
+val targetfile = targetdir ^ "/targetl-synt-6"
 val stats_dir = HOLDIR ^ "/src/AI/experiments/stats_combin"
 val stats_file = stats_dir ^ "/stats-synt-" ^ its version
 fun stats_il header il = 
@@ -200,7 +200,7 @@ val extsearch = mk_extsearch "mleSynthesize.extsearch" rlobj
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleSynthesize"; open mleSynthesize;
-  val tml = cgen_exhaustive 10; length tml;
+  val tml = cgen_random 100000 (5,20); length tml;
   val targetl = create_targetl tml; length targetl;
   val _ = export_targetl targetl;
 val r = rl_start (rlobj,extsearch) (import_targetd ());
@@ -224,17 +224,43 @@ val boardl = map fst (dlist d);
 fun goal_of_board (board: board) = 
   let
     val tm = #2 board
-    val v = mk_var ("Vv",alpha)
-    val target = 
-      mk_exists (v, 
+    val Vc = mk_var ("Vc",alpha)
+    val target =
+      mk_exists (Vc, 
       (list_mk_forall ([cV1,cV2,cV3], 
-                     mk_eq (list_mk_cA [v,cV1,cV2,cV3],tm))
+                     mk_eq (list_mk_cA [Vc,cV1,cV2,cV3],cV2))
       ))
   in
     ([s_thm_quant,k_thm_quant],target)
   end
-val goal = goal_of_board (hd boardl);
+
+fun goal_of_board2 (board: board) = 
+  let
+    val tm = #2 board
+    val Vc = mk_var ("Vc",alpha)
+    val target =
+      mk_exists (Vc, 
+      list_mk_forall ([cV1,cV2,cV3],
+        list_mk_imp ([mk_eval (cV1,cV1),mk_eval(cV2,cV2),mk_eval(cV3,cV3)], 
+        (mk_eval (list_mk_cA [Vc,cV1,cV2,cV3],cV2)))))
+  in
+    (eval_axl,target)
+  end
+
+
+fun goal_of_board3 (board: board) = 
+  let
+    val tm = #2 board
+    val Vc = mk_var ("Vc",alpha)
+    val rtm = mk_cR (list_mk_cA [Vc,cV1,cV2,cV3],cV2)
+    val target = mk_exists (Vc, list_mk_forall ([cV1,cV2,cV3],rtm))
+  in
+    (rw_axl,target)
+  end
+
+val goal = goal_of_board3 (hd boardl);
 type_flag := false;
+p_flag := false;
 fof_export_goal "/home/thibault/HOL/src/holyhammer/provers/test/atp_in" goal;
 
 

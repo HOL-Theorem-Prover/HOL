@@ -155,15 +155,44 @@ val cT = mk_var ("cT",``:'a -> 'a``)
 val cE = mk_var ("cE", ``:'a -> 'a -> 'a``)
 val vf = mk_var ("Vf",alpha)
 val vg = mk_var ("Vg",alpha)
-val vy = mk_var ("Vy",alpha)
+
 val vx = mk_var ("Vx",alpha)
+val vy = mk_var ("Vy",alpha)
+val vz = mk_var ("Vz",alpha)
+val vu = mk_var ("Vu",alpha)
+val vv = mk_var ("Vv",alpha)
+val vw = mk_var ("Vw",alpha)
+
 val cX = mk_var ("cX",alpha)
 val cV1 = mk_var ("cV1",alpha)
 val cV2 = mk_var ("cV2",alpha)
 val cV3 = mk_var ("cV3",alpha)
+val cEval = mk_var ("cEval",``:'a -> 'a -> bool``)
+val cR = mk_var ("cR",``:'a -> 'a -> bool``)
+
+fun mk_cR (a,b) = list_mk_comb (cR,[a,b]);
 
 fun mk_cE (a,b) = list_mk_comb (cE,[a,b])
+fun mk_eval (a,b) = list_mk_comb (cEval,[a,b])
 fun tag x = mk_comb (cT,x)
+
+fun dest_cA tm = 
+  let 
+    val (oper,argl) = strip_comb tm
+    val _ = if term_eq oper cA then () else raise ERR "dest_cA" ""
+  in
+    pair_of_list argl
+  end
+
+fun dest_tag tm = 
+  let 
+    val (oper,argl) = strip_comb tm
+    val _ = if term_eq oper cT then () else raise ERR "dest_tag" ""
+  in
+    singleton_of_list argl
+  end
+
+fun lhs_tag x = fst (dest_cA (dest_tag x))
 
 infix oo
 fun op oo (a,b) = list_mk_comb (cA,[a,b])
@@ -200,6 +229,56 @@ fun cterm_size tm =
     length (find_terms test tm) 
   end
 fun random_cterm n = random_term [cA,cS,cK] (2*n-1,alpha);
+
+
+(* big step semantics *)
+val eval_ax1 = 
+  mk_imp (mk_eval (vx,vv), mk_eval (list_mk_cA [cK,vx,vy],vv));
+val eval_ax2 = 
+  mk_imp (mk_eval (
+   (vx oo vz) oo (vy oo vz),vv), mk_eval (list_mk_cA [cS,vx,vy,vz],vv));
+val eval_ax3 = mk_eval (cK,cK);
+val eval_ax4 = mk_imp (mk_eval (vx,vv), mk_eval (cK oo vx, cK oo vv));
+val eval_ax5 = mk_eval (cS,cS);
+val eval_ax6 = mk_imp (mk_eval (vx,vv), mk_eval (cS oo vx, cS oo vv));
+val eval_ax7 = 
+  list_mk_imp ([mk_eval (vx,vu),mk_eval (vy,vv)], 
+    mk_eval (cS oo vx oo vy, cS oo vu oo vv));
+val eval_ax8 = 
+  list_mk_imp ([mk_eval (vx,vu),mk_eval (vy,vv),mk_eval (vu oo vv,vw)], 
+    mk_eval (vx oo vy,vw));
+val eval_axl = 
+  let fun f x = 
+     let val vl = 
+       filter (fn y => tmem y [vx,vy,vz,vu,vv,vw]) (free_vars_lr x) 
+     in
+       list_mk_forall (vl,x)
+     end
+  in
+  map f
+    [eval_ax1,eval_ax2,eval_ax3,eval_ax4,eval_ax5,eval_ax6,
+     eval_ax7,eval_ax8]
+  end
+
+(* small step semantics *)
+val rw_ax1 = mk_cR (vx,vx)
+val rw_ax2 = 
+  list_mk_imp ([mk_cR (vf,vg), mk_cR (vx,vy)], mk_cR (vf oo vx, vg oo vy));
+val rw_ax3 = mk_cR (list_mk_cA [cS,vx,vy,vz], (vx oo vz) oo (vy oo vz));
+val rw_ax4 = mk_cR (list_mk_cA [cK,vx,vy], vx);
+val rw_ax5 = list_mk_imp ([mk_cR (vx,vy),mk_cR(vy,vz)], mk_cR(vx,vz));
+
+val rw_axl = 
+  let fun f x = 
+     let val vl = 
+       filter (fn y => tmem y [vx,vy,vz,vf,vg]) (free_vars_lr x) 
+     in
+       list_mk_forall (vl,x)
+     end
+  in
+  map f
+    [rw_ax1,rw_ax2,rw_ax3,rw_ax4,rw_ax5]
+  end
 
 (* -------------------------------------------------------------------------
    Printing combinators
@@ -258,6 +337,8 @@ fun lo_cnorm n eql tm =
       lo_cnorm (n-1) eql tm'
     end
   
+fun is_nf tm = not (exists (C exists_cmatch tm) [s_thm,k_thm])
+
 fun cgen_random n (a,b) =
   let 
     val size = random_int (a,b)

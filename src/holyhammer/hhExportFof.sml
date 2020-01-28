@@ -13,6 +13,7 @@ open HolKernel boolLib aiLib mlThmData hhTranslate hhExportLib
 val ERR = mk_HOL_ERR "hhExportFof"
 type thmid = string * string
 val type_flag = ref true
+val p_flag = ref true
 val fofpar = "fof("
 
 (* -------------------------------------------------------------------------
@@ -83,7 +84,9 @@ fun fof_pred oc tm =
       then fof_binop oc "<=>" (l,r)
       else (os oc "("; fof_term oc l; os oc " = "; fof_term oc r; os oc ")")
     end
-  else (os oc "p("; fof_term oc tm; os oc ")")
+  else (if !p_flag 
+       then (os oc "p("; fof_term oc tm; os oc ")")
+       else fof_term oc tm)
 and fof_binop oc s (l,r) =
   (os oc "("; fof_pred oc l; os oc (" " ^ s ^ " ");
    fof_pred oc r; os oc ")")

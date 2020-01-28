@@ -15,8 +15,8 @@ open HolKernel boolLib Abbrev aiLib smlParallel psMCTS psTermGen
 
 val ERR = mk_HOL_ERR "mleRewrite"
 
-val tmsize_limit = 200
-val version = 14
+val tmsize_limit = 100
+val version = 15
 
 (* -------------------------------------------------------------------------
    Board
@@ -40,10 +40,21 @@ fun string_of_move eq = tts eq
 fun add_tag eq tm =
   if tmem eq [k_thm_tagged,s_thm_tagged] then tag tm else tm
 
+fun apply_eq eq tm = add_tag eq (subst_cmatch eq tm)
 fun apply_move eq (tm1,tm2,n) = 
   (add_tag eq (subst_cmatch eq tm1), tm2, n-1)
 
-(* slow: consider putting the tagged term in the board *)
+fun available_eql tm =
+  let fun test eq =
+    if term_eq eq left_thm 
+    then 
+      can (subst_cmatch eq) tm andalso 
+      not (is_nf (lhs_tag (find_term (is_cmatch eq) tm)))
+    else can (subst_cmatch eq) tm
+  in
+    filter test movel 
+  end
+
 fun available_movel (tm,_,_) = 
   filter (fn eq => can (subst_cmatch eq) tm) movel
 
@@ -163,25 +174,35 @@ val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
 
 fun lo_walk (n,maxn) tm =
   if cterm_size tm > tmsize_limit then NONE 
-  else if is_tagged_nf tm then SOME (tm,n)
+  else if is_nf tm then SOME (tm,n)
   else if n >= maxn then NONE
-  else lo_walk (n+1,maxn) (apply_move (hd (available_movel board)) board)
- 
+  else 
+    let val movel = available_eql tm in
+      if null movel 
+      then raise ERR "lo_walk" (tts tm)
+      else lo_walk (n+1,maxn) (apply_eq (hd movel) tm)
+    end
+
 fun create_board maxn tm = 
-  let val nfo = lo_walk (0,maxn) tm in
+  let 
+    val newtm = tag (list_mk_cA [tm,cV1,cV2,cV3])
+    val nfo = lo_walk (0,maxn) newtm in
     if not (isSome nfo) then NONE else 
     let val (nf,n) = valOf nfo in
       (* if can (find_term (C tmem [cS,cK])) nf 
       then NONE 
-      else *) SOME (tm,nf,n)
+      else *) SOME (newtm,nf,n)
     end
   end
 
-fun create_boardl n = 
-  List.mapPartial (create_board 1000) (gen_exhaustive n)
+fun create_targetl tml = 
+  let val targetl = List.mapPartial (create_board 1000) tml in
+    dict_sort (compare_third Int.compare) 
+      (mk_fast_set board_compare targetl)
+  end
 
-val datadir = HOLDIR ^ "/src/AI/experiments/data_combin"
-val datafile =  datadir ^ "/train-" ^ its version
+val targetdir = HOLDIR ^ "/src/AI/experiments/target_combin"
+val targetfile =  targetdir ^ "/rewrite-" ^ its version
 
 val stats_dir = HOLDIR ^ "/src/AI/experiments/stats_combin"
 fun stats_il header il = 
@@ -209,21 +230,11 @@ fun import_targetd () =
 
 (*
 load "aiLib"; open aiLib;
+load "mleLib"; open mleLib;
 load "psTermGen"; open psTermGen;
 load "psMCTS"; open psMCTS;
 load "mleRewrite"; open mleRewrite;
-val boardl = create_data 4000;
-val boardl1 = first_n 400 boardl;
-val board = random_elem boardl1;
-val rl = map (mcts_test 1600) boardl1;
-val rlno = map snd (filter (not o fst) rl);
-length rlno;
-val nodel = dlist (hd rlno);
 
-val board =(tag (random_cterm 20),T,0);
-val ml = (#available_movel (#game rlobj)) board;
-val board1 = (#apply_move (#game rlobj)) (hd ml) board;
-app (print_endline o cts o #1) [board,board1];
 *)
 
 (* -------------------------------------------------------------------------
@@ -234,7 +245,8 @@ val head_eval = mk_var ("head_eval", ``:'a -> 'a``)
 val head_poli = mk_var ("head_poli", ``:'a -> 'a``)
 fun tag_heval x = mk_comb (head_eval,x)
 fun tag_hpoli x = mk_comb (head_poli,x)
-fun tob board = [tag_heval (mk_cE (tm1,tm2)), tag_hpoli (mk_cE (tm1,tm2))]
+fun tob (tm1,tm2,n) = 
+  [tag_heval (mk_cE (tm1,tm2)), tag_hpoli (mk_cE (tm1,tm2))]
 
 (* -------------------------------------------------------------------------
    Player
@@ -255,14 +267,13 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleRewrite-combin-" ^ its version, exwindow = 40000,
-   ncore = 32, level_threshold = 0.9, nsim = 1600, decay = 0.95}
+   ncore = 32, ntarget = 100, nsim = 1600, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {
   rlparam = rlparam,
   game = game,
   gameio = gameio,
-  level_targetl = level_targetl,
   dplayer = dplayer
   }
 
@@ -271,12 +282,13 @@ val extsearch = mk_extsearch "mleRewrite.extsearch" rlobj
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
-val _ = create_data 4000;
-val r = rl_start (rlobj,extsearch) 10;
-
-todo: avoid duplicate boards + 
-make different paths from the same starting point.
+  val tml = cgen_random 2000 (5,15); length tml;
+  val targetl = create_targetl tml; length targetl;
+  val _ = export_targetl targetl;
+val r = rl_start (rlobj,extsearch) (import_targetd ());
 *)
+
+(* ordered by proven at least once then difficulty *)
 
 (* -------------------------------------------------------------------------
    Training test

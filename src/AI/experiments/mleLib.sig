@@ -61,16 +61,30 @@ sig
   val k_thm_quant : term
   val left_thm : term
   val right_thm : term
-  
-  (* combinator others *)
+  val eval_axl : term list
+  val rw_axl : term list
+
+  (* constructors and destructors *)
   val mk_cE : term * term -> term
-  val lo_cnorm : int -> term list -> term -> term option
-  val subst_cmatch : term -> term -> term
+  val mk_cR : term * term -> term
+  val mk_eval : term * term -> term
+  val mk_cA : term * term -> term
+  val dest_cA : term -> term * term
   val list_mk_cA : term list-> term
   val strip_cA : term -> term list
+  val lhs_tag : term -> term
+  
+  
+  (* rewriting *)
+  val is_cmatch : term -> term -> bool
+  val lo_cnorm : int -> term list -> term -> term option
+  val subst_cmatch : term -> term -> term
+  val is_nf : term -> bool
+ 
+  (* generation *)
   val random_cterm : int -> term
   val cgen_random : int -> (int * int) -> term list 
   val cgen_exhaustive : int -> term list  
-
+   
 
 end
