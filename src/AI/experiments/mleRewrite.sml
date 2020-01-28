@@ -257,7 +257,7 @@ val schedule =
     batch_size = 16, nepoch = 40}]
 val dim = 8
 fun dim_head_poli n = [dim,n]
-val tnnparam = map_assoc (dim_std (1,dim)) [cE,cT,cA,cS,cK] @ 
+val tnnparam = map_assoc (dim_std (1,dim)) [cE,cT,cA,cS,cK,cV1,cV2,cV3] @ 
   [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
 val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
@@ -267,7 +267,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleRewrite-combin-" ^ its version, exwindow = 40000,
-   ncore = 32, ntarget = 100, nsim = 1600, decay = 1.0}
+   ncore = 32, ntarget = 100, nsim = 3200, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {
@@ -281,6 +281,7 @@ val extsearch = mk_extsearch "mleRewrite.extsearch" rlobj
 
 (*
 load "mlReinforce"; open mlReinforce;
+load "mleLib"; open mleLib;
 load "mleRewrite"; open mleRewrite;
   val tml = cgen_random 2000 (5,15); length tml;
   val targetl = create_targetl tml; length targetl;
