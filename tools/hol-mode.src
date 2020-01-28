@@ -11,7 +11,6 @@
 (require 'thingatpt)
 (require 'cl)
 (require 'subr-x)
-(require 'holscript-mode)
 
 (defgroup hol nil
   "Customising the Emacs interface to the HOL4 proof assistant."
@@ -34,6 +33,12 @@
   "Path-name for the Holmake executable."
   :group 'hol
   :type '(file :must-match t))
+
+(defconst holdir
+  (file-name-directory
+   (directory-file-name (file-name-directory hol-executable))))
+(setq load-path (cons (concat holdir "tools/") load-path))
+(require 'holscript-mode)
 
 (defcustom hol-new-buffer-style-default 'new-frame
   "Default style for creating new HOL buffers. Possible values are
