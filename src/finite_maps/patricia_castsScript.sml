@@ -154,59 +154,6 @@ val PTREE_OF_STRINGSET_INSERT = store_thm("PTREE_OF_STRINGSET_INSERT",
 );
 *)
 
-val l2n_APPEND = store_thm("l2n_APPEND",
-  `!b l1 l2. l2n b (l1 ++ l2) = l2n b l1 + b ** (LENGTH l1) * l2n b l2`,
-  Induct_on `l1` \\ SRW_TAC [ARITH_ss] [EXP, l2n_def]);
-
-val EXP_MONO = prove(
-  `!b m n x. 1 < b /\ m < n /\ x < b ** m ==> (b ** m + x < b ** n)`,
-  Induct_on `n`
-    \\ SRW_TAC [ARITH_ss] [EXP]
-    \\ Cases_on `m = n`
-    \\ SRW_TAC [ARITH_ss] []
-    >| [
-      `?p. b ** m = p + x` by METIS_TAC [LESS_ADD]
-         \\ `?q. b = 1 + (q + 1)` by METIS_TAC [LESS_ADD_1]
-         \\ FULL_SIMP_TAC arith_ss [LEFT_ADD_DISTRIB],
-      `m < n` by DECIDE_TAC \\ RES_TAC
-        \\ `b ** n < b * b ** n` by SRW_TAC [ARITH_ss] []
-        \\ DECIDE_TAC]);
-
-val l2n_LENGTH = store_thm("l2n_LENGTH",
-  `!b l. 1 < b ==> l2n b l < b ** LENGTH l`,
-  Induct_on `l` \\ SRW_TAC [ARITH_ss] [EXP, l2n_def]
-    \\ RES_TAC \\ IMP_RES_TAC LESS_ADD_1
-    \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM SUBST1_TAC
-    \\ SRW_TAC [ARITH_ss] [LEFT_ADD_DISTRIB, MOD_LESS,
-          DECIDE ``a < b ==> (x + a < b + (y + x))``]);
-
-val l2n_b_1 = prove(
-  `!b. 1 < b ==> (l2n b [1] = 1)`,
-  SRW_TAC [] [l2n_def]);
-
-val l2n_11 = store_thm("l2n_11",
-  `!b l1 l2.
-      1 < b /\ EVERY ($> b) l1 /\ EVERY ($> b) l2 ==>
-      ((l2n b (l1 ++ [1]) = l2n b (l2 ++ [1])) = (l1 = l2))`,
-  REPEAT STRIP_TAC \\ EQ_TAC \\ SRW_TAC [] []
-    \\ MATCH_MP_TAC LIST_EQ
-    \\ sg `LENGTH l1 = LENGTH l2`
-    \\ SRW_TAC [] []
-    >| [
-      SPOSE_NOT_THEN STRIP_ASSUME_TAC
-        \\ PAT_X_ASSUM `l2n b x = l2n b y` MP_TAC
-        \\ ASM_SIMP_TAC (srw_ss()++ARITH_ss) [l2n_APPEND, l2n_b_1]
-        \\ `(LENGTH l1 < LENGTH l2) \/ (LENGTH l2 < LENGTH l1)`
-        by METIS_TAC [LESS_LESS_CASES]
-        >| [MATCH_MP_TAC (DECIDE ``a < b ==> ~(a = b + x)``),
-            MATCH_MP_TAC (DECIDE ``b < a ==> ~(a + x = b)``)]
-        \\ MATCH_MP_TAC EXP_MONO
-        \\ SRW_TAC [] [l2n_LENGTH],
-      `x < LENGTH l1` by DECIDE_TAC
-        \\ IMP_RES_TAC (GSYM l2n_DIGIT)
-        \\ NTAC 2 (POP_ASSUM SUBST1_TAC)
-        \\ FULL_SIMP_TAC (srw_ss()) [l2n_APPEND]]);
-
 val EVERY_MAP_ORD = store_thm("EVERY_MAP_ORD",
   `!l. EVERY ($> 256) (MAP ORD l)`,
   Induct \\ SRW_TAC [] [GREATER_DEF, stringTheory.ORD_BOUND]);
@@ -315,7 +262,7 @@ val IMAGE_string_to_num = store_thm("IMAGE_string_to_num",
        \\ `LENGTH (MAP ORD (REVERSE s) ++ [ORD c]) = LENGTH s + 1`
        by SRW_TAC [] []
        \\ `l2n 256 (MAP ORD (REVERSE s) ++ [ORD c]) < 256 ** (LENGTH s + 1)`
-       by METIS_TAC [l2n_LENGTH, DECIDE ``1 < 256``]
+       by METIS_TAC [l2n_lt, DECIDE ``0 < 256``]
        \\ SRW_TAC [ARITH_ss] [s2n_def, LOG_ADD_COMM, DIV_MULT_1,
                               SPECL [`256`, `a ++ b`] l2n_APPEND]
     ]);
