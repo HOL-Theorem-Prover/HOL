@@ -1,2 +1,2 @@
-cat $2 | parallel -I% --max-args 1 -P $1 ./eprover.sh %
+ls ./$2/i/*.p | parallel -I% --max-args 1 -P $1 ./eprover.sh %
 
