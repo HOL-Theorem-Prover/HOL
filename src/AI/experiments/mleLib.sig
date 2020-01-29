@@ -39,7 +39,7 @@ sig
   val lo_prooflength : int -> term -> int
 
   (* combinator terms *)
-  val tag : term -> term
+ 
   val cA : term
   val cT : term
   val cS : term
@@ -72,6 +72,8 @@ sig
   val dest_cA : term -> term * term
   val list_mk_cA : term list-> term
   val strip_cA : term -> term list
+  val tag : term -> term
+  val dest_tag : term -> term
   val lhs_tag : term -> term
   
   

@@ -286,10 +286,68 @@ load "mleRewrite"; open mleRewrite;
   val tml = cgen_random 2000 (5,15); length tml;
   val targetl = create_targetl tml; length targetl;
   val _ = export_targetl targetl;
-val r = rl_start (rlobj,extsearch) (import_targetd ());
+val targetl = import_targetd (); length targetl;
+val r = rl_start (rlobj,extsearch) targetl;
 *)
 
-(* ordered by proven at least once then difficulty *)
+(* -------------------------------------------------------------------------
+   Transformation of problems to ATP goals
+   ------------------------------------------------------------------------- *)
+
+fun goal_of_board_eq (tm1,tm2,n) =
+ ([s_thm_quant,k_thm_quant], 
+   list_mk_forall ([cV1,cV2,cV3], mk_eq (dest_tag tm1, dest_tag tm2)))
+
+fun goal_of_board_rw (tm1,tm2,n) =
+  (rw_axl, 
+   list_mk_forall ([cV1,cV2,cV3], mk_cR (dest_tag tm1, dest_tag tm2)))
+
+fun goal_of_board_ev (tm1,tm2,n) =
+  (eval_axl,
+   list_mk_forall ([cV1,cV2,cV3], 
+     list_mk_imp (
+       map (fn x => mk_eval (x,x)) [cV1,cV2,cV3],
+       mk_eval (dest_tag tm1, dest_tag tm2)))
+  )
+
+(* -------------------------------------------------------------------------
+   TPTP export
+   ------------------------------------------------------------------------- *)
+
+(*
+load "mlReinforce"; open mlReinforce;
+load "mleLib"; open mleLib;
+load "aiLib"; open aiLib;
+load "mleRewrite"; open mleRewrite;
+load "hhExportFof"; open hhExportFof;
+
+  val tml = cgen_random 2000 (5,15); length tml;
+  val targetl = create_targetl tml; length targetl;
+  val _ = export_targetl targetl;
+val targetd = import_targetd ();
+val targetl = dict_sort (compare_third Int.compare) (dkeys targetd);
+
+fun export_goal dir (goal,n) =
+  let 
+    val tptp_dir = HOLDIR ^ "/src/AI/experiments/TPTP"
+    val _ = mkDir_err tptp_dir
+    val file = tptp_dir ^ "/" ^ dir ^ "/i/" ^ its n ^ ".p"
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir)
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/i")
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/o")
+  in 
+    type_flag := false;
+    p_flag := false;
+    fof_export_goal file goal
+  end;
+
+val goall_eq = map goal_of_board_eq targetl;
+val _ = app (export_goal "rw-eq") (number_snd 0 goall_eq);
+val goall_rw = map goal_of_board_rw targetl;
+val _ = app (export_goal "rw-rw") (number_snd 0 goall_rw);
+val goall_ev = map goal_of_board_ev targetl;
+val _ = app (export_goal "rw-ev") (number_snd 0 goall_ev);
+*)
 
 (* -------------------------------------------------------------------------
    Training test
