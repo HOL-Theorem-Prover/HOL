@@ -11,171 +11,48 @@ struct
 open HolKernel Abbrev boolLib aiLib numTheory arithmeticTheory psTermGen
 
 val ERR = mk_HOL_ERR "mleLib"
-
 fun compare_third cmp ((_,_,a),(_,_,b)) = cmp (a,b)
-
-(* -------------------------------------------------------------------------
-   Arithmetic
-   ------------------------------------------------------------------------- *)
-
-fun mk_suc x = mk_comb (``SUC``,x);
-fun mk_add (a,b) = list_mk_comb (``$+``,[a,b]);
-val zero = ``0:num``;
-fun mk_sucn n = funpow n mk_suc zero;
-fun mk_mult (a,b) = list_mk_comb (``$*``,[a,b]);
-fun dest_suc x =
-  let val (a,b) = dest_comb x in
-    if not (term_eq  a ``SUC``) then raise ERR "" "" else b
-  end
-fun dest_add tm =
-  let val (oper,argl) = strip_comb tm in
-    if not (term_eq oper ``$+``) then raise ERR "" "" else pair_of_list argl
-  end
-fun is_suc_only tm =
-  if term_eq tm zero then true else
-  (is_suc_only (dest_suc tm)  handle HOL_ERR _ => false)
-fun eval_numtm tm =
-  (string_to_int o term_to_string o rhs o concl o computeLib.EVAL_CONV) tm
-
-(* -------------------------------------------------------------------------
-   Position
-   ------------------------------------------------------------------------- *)
-
-type pos = int list
-
-fun string_of_pos pos = String.concatWith " " (map its pos)
-fun pos_of_string s = map string_to_int (String.tokens Char.isSpace s)
-
-fun subst_pos (tm,pos) res =
-  if null pos then res else
-  let
-    val (oper,argl) = strip_comb tm
-    fun f i x = if i = hd pos then subst_pos (x,tl pos) res else x
-    val newargl = mapi f argl
-  in
-    list_mk_comb (oper,newargl)
-  end
-
-fun find_subtm (tm,pos) =
-  if null pos then tm else
-  let val (oper,argl) = strip_comb tm in
-    find_subtm (List.nth (argl,hd pos), tl pos)
-  end
-
-fun narg_ge n (tm,pos) =
-  let val (_,argl) = strip_comb (find_subtm (tm,pos)) in length argl >= n end
-
-fun all_pos tm =
-  let
-    val (oper,argl) = strip_comb tm
-    fun f i arg = map (fn x => i :: x) (all_pos arg)
-  in
-    [] :: List.concat (mapi f argl)
-  end
-
-fun all_subtmpos tm =
-  let
-    val (oper,argl) = strip_comb tm
-    fun f i arg = map_snd (fn x => i :: x) (all_subtmpos arg)
-  in
-    (tm,[]) :: List.concat (mapi f argl)
-  end
-
-(* -------------------------------------------------------------------------
-   Equality
-   ------------------------------------------------------------------------- *)
-
-fun sym x = mk_eq (swap (dest_eq x))
-fun unify a b = Unify.simp_unify_terms [] a b
-fun paramod_ground eq (tm,pos) =
-  let
-    val (eql,eqr) = dest_eq eq
-    val subtm = find_subtm (tm,pos)
-    val sigma = unify eql subtm
-    val eqrsig = subst sigma eqr
-    val tmsig = subst sigma tm
-    val result = subst_pos (tmsig,pos) eqrsig
-  in
-    if term_eq result tm orelse length (free_vars_lr result) > 0
-    then NONE
-    else SOME result
-  end
-  handle Interrupt => raise Interrupt | _ => NONE
-
-(* -------------------------------------------------------------------------
-   Arithmetical proof using left outer most strategy
-   ------------------------------------------------------------------------- *)
-
-val robinson_eq_list =
- [``x + 0 = x``,``x + SUC y = SUC (x + y)``,``x * 0 = 0``,
-   ``x * SUC y = x * y + x``]
-val robinson_eq_vect = Vector.fromList robinson_eq_list
-fun trySome f l = case l of
-    [] => NONE
-  | a :: m => (case f a of NONE => trySome f m | SOME b => SOME b)
-fun lo_rwpos tm =
-  let
-    fun f pos =
-      let fun test x = isSome (paramod_ground x (tm,pos)) in
-        exists test robinson_eq_list
-      end
-  in
-    List.find f (all_pos tm)
-  end
-fun lo_trace nmax toptm =
-  let
-    val l = ref []
-    val acc = ref 0
-    fun loop tm =
-      if is_suc_only tm then (SOME (rev (!l),!acc))
-      else if !acc > nmax then NONE else
-    let
-      val pos = valOf (lo_rwpos tm)
-      val tm' = valOf (trySome (C paramod_ground (tm,pos)) robinson_eq_list)
-    in
-      (l := (tm,pos) :: !l; acc := length pos + 1 + !acc; loop tm')
-    end
-  in
-    loop toptm
-  end
-fun lo_prooflength n tm = snd (valOf (lo_trace n tm))
 
 (* -------------------------------------------------------------------------
    Combinators
    ------------------------------------------------------------------------- *)
 
-val cI = mk_var ("cI",alpha)
-val cK = mk_var ("cK",alpha)
-val cS = mk_var ("cS",alpha)
-val cX = mk_var ("cX",alpha)
-val cY = mk_var ("cY",alpha)
-val cZ = mk_var ("cZ",alpha)
-val cA = mk_var ("cA",``:'a -> 'a -> 'a``)
-val cT = mk_var ("cT",``:'a -> 'a``)
-val cE = mk_var ("cE", ``:'a -> 'a -> 'a``)
-val vf = mk_var ("Vf",alpha)
-val vg = mk_var ("Vg",alpha)
+(* variables *)
+val cI = mk_var ("i",alpha)
+val cK = mk_var ("k",alpha)
+val cS = mk_var ("s",alpha)
+val cX = mk_var ("x",alpha)
+val cA = mk_var ("a",``:'a -> 'a -> 'a``)
+val cT = mk_var ("t",``:'a -> 'a``)
 
-val vx = mk_var ("Vx",alpha)
-val vy = mk_var ("Vy",alpha)
-val vz = mk_var ("Vz",alpha)
-val vu = mk_var ("Vu",alpha)
-val vv = mk_var ("Vv",alpha)
-val vw = mk_var ("Vw",alpha)
+val vx = mk_var ("X",alpha)
+val vy = mk_var ("Y",alpha)
+val vz = mk_var ("Z",alpha)
+val vu = mk_var ("U",alpha)
+val vv = mk_var ("V",alpha)
+val vw = mk_var ("W",alpha)
+val v1 = mk_var ("V1",alpha)
+val v2 = mk_var ("V2",alpha)
+val v3 = mk_var ("V3",alpha)
 
-val cX = mk_var ("cX",alpha)
-val cV1 = mk_var ("cV1",alpha)
-val cV2 = mk_var ("cV2",alpha)
-val cV3 = mk_var ("cV3",alpha)
-val cEval = mk_var ("cEval",``:'a -> 'a -> bool``)
-val cR = mk_var ("cR",``:'a -> 'a -> bool``)
+(* constructors *)
+val cEV = mk_var ("ev",``:'a -> 'a -> bool``)
+val cRW = mk_var ("rw",``:'a -> 'a -> bool``)
+fun mk_cRW (a,b) = list_mk_comb (cRW,[a,b])
+fun mk_cEV (a,b) = list_mk_comb (cEV,[a,b])
 
-fun mk_cR (a,b) = list_mk_comb (cR,[a,b]);
-
-fun mk_cE (a,b) = list_mk_comb (cE,[a,b])
-fun mk_eval (a,b) = list_mk_comb (cEval,[a,b])
-fun tag x = mk_comb (cT,x)
-
+fun mk_tag x = mk_comb (cT,x)
+fun dest_tag tm = 
+  let 
+    val (oper,argl) = strip_comb tm
+    val _ = if term_eq oper cT then () else raise ERR "dest_tag" ""
+  in
+    singleton_of_list argl
+  end
+ 
+infix oo
+fun op oo (a,b) = list_mk_comb (cA,[a,b])
+fun mk_cA (a,b) = list_mk_comb (cA,[a,b])
 fun dest_cA tm = 
   let 
     val (oper,argl) = strip_comb tm
@@ -184,35 +61,10 @@ fun dest_cA tm =
     pair_of_list argl
   end
 
-fun dest_tag tm = 
-  let 
-    val (oper,argl) = strip_comb tm
-    val _ = if term_eq oper cT then () else raise ERR "dest_tag" ""
-  in
-    singleton_of_list argl
-  end
-
-fun lhs_tag x = fst (dest_cA (dest_tag x))
-
-infix oo
-fun op oo (a,b) = list_mk_comb (cA,[a,b])
-
-val s_thm = mk_eq (cS oo vf oo vg oo vx, (vf oo vx) oo (vg oo vx))
-val k_thm = mk_eq (cK oo vx oo vy, vx)
-val s_thm_tagged = mk_eq (tag (cS oo vf oo vg oo vx), (vf oo vx) oo (vg oo vx))
-val k_thm_tagged = mk_eq (tag (cK oo vx oo vy), vx)
-val s_thm_quant = list_mk_forall ([vf,vg,vx],s_thm);
-val k_thm_quant  = list_mk_forall ([vx,vy],k_thm);
-
-val left_thm = mk_eq (tag (vf oo vg), tag vf oo vg)
-val right_thm = mk_eq (tag (vf oo vg), vf oo tag vg)
-
-fun mk_cA (a,b) = list_mk_comb (cA,[a,b])
 fun list_mk_cA tml = case tml of
     [] => raise ERR "list_mk_cA" ""
   | [tm] => tm
   | a :: b :: m => list_mk_cA (mk_cA (a,b) :: m)
-
 fun strip_cA_aux tm =
   if is_var tm then [tm] else
   let 
@@ -223,127 +75,132 @@ fun strip_cA_aux tm =
     a2 :: strip_cA_aux a1
   end
 fun strip_cA tm = rev (strip_cA_aux tm)
-fun is_cconst x = is_var x andalso hd_string (fst (dest_var x)) = #"c"
-fun cterm_size tm = 
-  let fun test x = is_cconst x andalso not (term_eq x cA) in
-    length (find_terms test tm) 
-  end
-fun random_cterm n = random_term [cA,cS,cK] (2*n-1,alpha);
 
+
+(* theorems *)
+fun forall_capital tm =
+  let 
+    fun test v = (Char.isUpper o hd_string o fst o dest_var) v
+    val vl = filter test (free_vars_lr tm)
+  in
+    list_mk_forall (vl,tm)
+  end
+
+
+val s_thm_bare = mk_eq (cS oo vx oo vy oo vz, (vx oo vz) oo (vy oo vz))
+val k_thm_bare = mk_eq (cK oo vx oo vy, vx)
+val eq_axl = map forall_capital [s_thm_bare,k_thm_bare]
+
+fun tag_lhs eq = let val (a,b) = dest_eq eq in mk_eq (mk_tag a, b) end
+val s_thm_tag = tag_lhs s_thm_bare
+val k_thm_tag = tag_lhs k_thm_bare
+val left_thm = mk_eq (mk_tag (vx oo vy), mk_tag vx oo vy)
+val right_thm = mk_eq (mk_tag (vx oo vy), vx oo mk_tag vy)
+val tag_axl = map forall_capital [s_thm_tag,k_thm_tag,left_thm,right_thm]
+
+fun cterm_size tm = 
+  let val (oper,argl) = strip_comb tm in
+    if tmem oper [cA,cT] then 0 else 1 + sum_int (map cterm_size argl)
+  end
 
 (* big step semantics *)
-val eval_ax1 = 
-  mk_imp (mk_eval (vx,vv), mk_eval (list_mk_cA [cK,vx,vy],vv));
-val eval_ax2 = 
-  mk_imp (mk_eval (
-   (vx oo vz) oo (vy oo vz),vv), mk_eval (list_mk_cA [cS,vx,vy,vz],vv));
-val eval_ax3 = mk_eval (cK,cK);
-val eval_ax4 = mk_imp (mk_eval (vx,vv), mk_eval (cK oo vx, cK oo vv));
-val eval_ax5 = mk_eval (cS,cS);
-val eval_ax6 = mk_imp (mk_eval (vx,vv), mk_eval (cS oo vx, cS oo vv));
-val eval_ax7 = 
-  list_mk_imp ([mk_eval (vx,vu),mk_eval (vy,vv)], 
-    mk_eval (cS oo vx oo vy, cS oo vu oo vv));
-val eval_ax8 = 
-  list_mk_imp ([mk_eval (vx,vu),mk_eval (vy,vv),mk_eval (vu oo vv,vw)], 
-    mk_eval (vx oo vy,vw));
-val eval_axl = 
-  let fun f x = 
-     let val vl = 
-       filter (fn y => tmem y [vx,vy,vz,vu,vv,vw]) (free_vars_lr x) 
-     in
-       list_mk_forall (vl,x)
-     end
-  in
-  map f
-    [eval_ax1,eval_ax2,eval_ax3,eval_ax4,eval_ax5,eval_ax6,
-     eval_ax7,eval_ax8]
-  end
+val ev_ax1 = 
+  mk_imp (mk_cEV (vx,vv), mk_cEV (list_mk_cA [cK,vx,vy],vv));
+val ev_ax2 = 
+  mk_imp (mk_cEV (
+   (vx oo vz) oo (vy oo vz),vv), mk_cEV (list_mk_cA [cS,vx,vy,vz],vv));
+val ev_ax3 = mk_cEV (cK,cK);
+val ev_ax4 = mk_imp (mk_cEV (vx,vv), mk_cEV (cK oo vx, cK oo vv));
+val ev_ax5 = mk_cEV (cS,cS);
+val ev_ax6 = mk_imp (mk_cEV (vx,vv), mk_cEV (cS oo vx, cS oo vv));
+val ev_ax7 = 
+  list_mk_imp ([mk_cEV (vx,vu),mk_cEV (vy,vv)], 
+    mk_cEV (cS oo vx oo vy, cS oo vu oo vv));
+val ev_ax8 = 
+  list_mk_imp ([mk_cEV (vx,vu),mk_cEV (vy,vv),mk_cEV (vu oo vv,vw)], 
+    mk_cEV (vx oo vy,vw));
+val ev_axl = 
+  map forall_capital
+    [ev_ax1,ev_ax2,ev_ax3,ev_ax4,ev_ax5,ev_ax6,ev_ax7,ev_ax8]
 
 (* small step semantics *)
-val rw_ax1 = mk_cR (vx,vx)
+val rw_ax1 = mk_cRW (vx,vx)
 val rw_ax2 = 
-  list_mk_imp ([mk_cR (vf,vg), mk_cR (vx,vy)], mk_cR (vf oo vx, vg oo vy));
-val rw_ax3 = mk_cR (list_mk_cA [cS,vx,vy,vz], (vx oo vz) oo (vy oo vz));
-val rw_ax4 = mk_cR (list_mk_cA [cK,vx,vy], vx);
-val rw_ax5 = list_mk_imp ([mk_cR (vx,vy),mk_cR(vy,vz)], mk_cR(vx,vz));
-
+  list_mk_imp ([mk_cRW (vu,vv), mk_cRW (vx,vy)], mk_cRW (vu oo vx, vv oo vy));
+val rw_ax3 = mk_cRW (list_mk_cA [cS,vx,vy,vz], (vx oo vz) oo (vy oo vz));
+val rw_ax4 = mk_cRW (list_mk_cA [cK,vx,vy], vx);
+val rw_ax5 = list_mk_imp ([mk_cRW (vx,vy), mk_cRW(vy,vz)], mk_cRW(vx,vz));
 val rw_axl = 
-  let fun f x = 
-     let val vl = 
-       filter (fn y => tmem y [vx,vy,vz,vf,vg]) (free_vars_lr x) 
-     in
-       list_mk_forall (vl,x)
-     end
-  in
-  map f
-    [rw_ax1,rw_ax2,rw_ax3,rw_ax4,rw_ax5]
-  end
+  map forall_capital [rw_ax1,rw_ax2,rw_ax3,rw_ax4,rw_ax5]
 
 (* -------------------------------------------------------------------------
    Printing combinators
    ------------------------------------------------------------------------- *)
 
-fun cts_par tm = 
-  if is_cconst tm then tl_string (fst (dest_var tm)) else 
-    case (snd (strip_comb tm)) of
-      [a] => "[" ^ cts a ^ "]"
-    | [a,b] =>  "(" ^ cts a ^ " " ^ cts_par b ^ ")"
-    | _ => raise ERR "cts_par" ""
-and cts tm = 
-  if is_cconst tm then tl_string (fst (dest_var tm)) else 
-    case (snd (strip_comb tm)) of
-      [a] => "[" ^ cts a ^ "]"
-    | [a,b] =>  cts a ^ " " ^ cts_par b
-    | _ => raise ERR "cts" ""
+fun cts tm = 
+  if is_var tm then fst (dest_var tm) else
+  let val tml = strip_cA tm in
+    "(" ^ String.concatWith " " (map cts tml) ^ ")"
+  end
 
 (* -------------------------------------------------------------------------
    Rewriting combinators
    ------------------------------------------------------------------------- *)
 
-fun is_cmatch eq tm = 
-  let val (sub,_) = match_term (lhs eq) tm in
-    not (exists is_cconst (map #redex sub))
+fun is_match eq tm = 
+  let 
+    val (vl,bod) = strip_forall eq
+    fun test tm = tmem tm vl
+    val (sub,_) = match_term (lhs bod) tm 
+  in
+    all test (map #redex sub)
   end
   handle HOL_ERR _ => false
 
-fun exists_cmatch eq tm = can (find_term (is_cmatch eq)) tm
+fun exists_match eq tm = can (find_term (is_match eq)) tm
 
-fun subst_cmatch eq tm =
+fun subst_match eq tm =
   let 
-    val subtm = find_term (is_cmatch eq) tm
-    val sub1 = fst (match_term (lhs eq) subtm)
-    val eqinst = subst sub1 eq
+    val subtm = find_term (is_match eq) tm
+    val eqbare = snd (strip_forall eq)
+    val sub1 = fst (match_term (lhs eqbare) subtm)
+    val eqinst = subst sub1 eqbare
     val sub2 = [{redex = lhs eqinst, residue = rhs eqinst}]
   in
     subst_occs [[1]] sub2 tm
   end
 
-fun subst_cmatch_first eql tm =
+fun subst_match_first eql tm =
   let 
-    val subtm = find_term (fn x => exists (fn eq => is_cmatch eq x) eql) tm
-    val eq = valOf (List.find (fn eq => is_cmatch eq subtm) eql)
-    val sub1 = fst (match_term (lhs eq) subtm)
-    val eqinst = subst sub1 eq
+    val subtm = find_term (fn x => exists (fn eq => is_match eq x) eql) tm
+    val eq = valOf (List.find (fn eq => is_match eq subtm) eql)
+    val eqbare = snd (strip_forall eq)
+    val sub1 = fst (match_term (lhs eqbare) subtm)
+    val eqinst = subst sub1 eqbare
     val sub2 = [{redex = lhs eqinst, residue = rhs eqinst}]
   in
     subst_occs [[1]] sub2 tm
   end
 
 fun lo_cnorm n eql tm =
-  if not (exists (C exists_cmatch tm) eql) then SOME tm
+  if not (exists (C exists_match tm) eql) then SOME tm
   else if n <= 0 orelse cterm_size tm >= 100 then NONE else
-    let val tm' = subst_cmatch_first eql tm in
+    let val tm' = subst_match_first eql tm in
       lo_cnorm (n-1) eql tm'
     end
   
-fun is_nf tm = not (exists (C exists_cmatch tm) [s_thm,k_thm])
+fun is_nf tm = not (exists (C exists_match tm) eq_axl)
+
+(* -------------------------------------------------------------------------
+   Generating commbinators
+   ------------------------------------------------------------------------- *)
+
+fun random_cterm n = random_term [cA,cS,cK] (2*n-1,alpha)
 
 fun cgen_random n (a,b) =
   let 
     val size = random_int (a,b)
-    val tml = List.tabulate (n, fn _ => 
-      list_mk_cA [random_cterm size,cV1,cV2,cV3])
+    val tml = List.tabulate (n, fn _ => random_cterm size)
   in
     mk_fast_set Term.compare tml
   end 

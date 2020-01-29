@@ -11,12 +11,12 @@ struct
 
 open HolKernel boolLib Abbrev aiLib smlParallel psMCTS psTermGen
   mlNeuralNetwork mlTreeNeuralNetwork mlTacticData
-  mlReinforce mleLib mleArithData combinTheory
+  mlReinforce mleLib combinTheory
 
 val ERR = mk_HOL_ERR "mleRewrite"
 
 val tmsize_limit = 100
-val version = 15
+val version = 16
 
 (* -------------------------------------------------------------------------
    Board
@@ -33,30 +33,32 @@ fun board_compare ((a,b,_),(c,d,_)) =
    ------------------------------------------------------------------------- *)
 
 type move = term
-val movel = [s_thm_tagged,k_thm_tagged,left_thm,right_thm]
+val movel = tag_axl
 
 fun string_of_move eq = tts eq
 
 fun add_tag eq tm =
-  if tmem eq [k_thm_tagged,s_thm_tagged] then tag tm else tm
+  if tmem eq (first_n 2 tag_axl) then mk_tag tm else tm
 
-fun apply_eq eq tm = add_tag eq (subst_cmatch eq tm)
-fun apply_move eq (tm1,tm2,n) = 
-  (add_tag eq (subst_cmatch eq tm1), tm2, n-1)
+fun apply_eq eq tm = add_tag eq (subst_match eq tm)
+fun apply_move eq (tm1,tm2,n) =
+  (add_tag eq (subst_match eq tm1), tm2, n-1)
 
 fun available_eql tm =
-  let fun test eq =
-    if term_eq eq left_thm 
+  let 
+    fun lhs_tag x = fst (dest_cA (dest_tag x))
+    fun test eq =
+    if term_eq eq (List.nth (tag_axl,2))
     then 
-      can (subst_cmatch eq) tm andalso 
-      not (is_nf (lhs_tag (find_term (is_cmatch eq) tm)))
-    else can (subst_cmatch eq) tm
+      can (subst_match eq) tm andalso 
+      not (is_nf (lhs_tag (find_term (is_match eq) tm)))
+    else can (subst_match eq) tm
   in
     filter test movel 
   end
 
 fun available_movel (tm,_,_) = 
-  filter (fn eq => can (subst_cmatch eq) tm) movel
+  filter (fn eq => can (subst_match eq) tm) movel
 
 fun status_of (board as (tm1,tm2,n)) =
   if term_eq tm1 tm2 then Win
@@ -135,17 +137,6 @@ val _ = psBigSteps.run_bigsteps bsobj board;
 print_endline (bts b);
 *)
 
-(*
-val cj = mk_eq (#1 board,#2 board);
-val goal = ([s_thm',k_thm'],cj);
-val (gr,_) = METIS_TAC [] goal;
-val board = valOf (random_board_try 1000 40 10);
-val tm = #1 board;
-print_endline (cts tm); 
-val tml = strip_cA tm;
-app (print_endline o cts) tml;
-*)
-
 (* -------------------------------------------------------------------------
    Parallelization
    ------------------------------------------------------------------------- *)
@@ -185,7 +176,7 @@ fun lo_walk (n,maxn) tm =
 
 fun create_board maxn tm = 
   let 
-    val newtm = tag (list_mk_cA [tm,cV1,cV2,cV3])
+    val newtm = mk_tag (list_mk_cA [tm,v1,v2,v3])
     val nfo = lo_walk (0,maxn) newtm in
     if not (isSome nfo) then NONE else 
     let val (nf,n) = valOf nfo in
@@ -241,12 +232,12 @@ load "mleRewrite"; open mleRewrite;
    Neural network representation of the board
    ------------------------------------------------------------------------- *)
 
-val head_eval = mk_var ("head_eval", ``:'a -> 'a``)
-val head_poli = mk_var ("head_poli", ``:'a -> 'a``)
+val head_eval = mk_var ("head_eval", ``:bool -> 'a``)
+val head_poli = mk_var ("head_poli", ``:bool -> 'a``)
 fun tag_heval x = mk_comb (head_eval,x)
 fun tag_hpoli x = mk_comb (head_poli,x)
 fun tob (tm1,tm2,n) = 
-  [tag_heval (mk_cE (tm1,tm2)), tag_hpoli (mk_cE (tm1,tm2))]
+  [tag_heval (mk_eq (tm1,tm2)), tag_hpoli (mk_eq (tm1,tm2))]
 
 (* -------------------------------------------------------------------------
    Player
@@ -257,7 +248,9 @@ val schedule =
     batch_size = 16, nepoch = 40}]
 val dim = 8
 fun dim_head_poli n = [dim,n]
-val tnnparam = map_assoc (dim_std (1,dim)) [cE,cT,cA,cS,cK,cV1,cV2,cV3] @ 
+
+val equality = ``$= : 'a -> 'a -> bool``
+val tnnparam = map_assoc (dim_std (1,dim)) [equality,cT,cA,cS,cK,v1,v2,v3] @ 
   [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
 val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
@@ -295,20 +288,16 @@ val r = rl_start (rlobj,extsearch) targetl;
    ------------------------------------------------------------------------- *)
 
 fun goal_of_board_eq (tm1,tm2,n) =
- ([s_thm_quant,k_thm_quant], 
-   list_mk_forall ([cV1,cV2,cV3], mk_eq (dest_tag tm1, dest_tag tm2)))
+  (eq_axl, forall_capital (mk_eq (dest_tag tm1, dest_tag tm2)))
 
 fun goal_of_board_rw (tm1,tm2,n) =
-  (rw_axl, 
-   list_mk_forall ([cV1,cV2,cV3], mk_cR (dest_tag tm1, dest_tag tm2)))
+  (rw_axl, forall_capital (mk_cRW (dest_tag tm1, dest_tag tm2)))
 
 fun goal_of_board_ev (tm1,tm2,n) =
-  (eval_axl,
-   list_mk_forall ([cV1,cV2,cV3], 
-     list_mk_imp (
-       map (fn x => mk_eval (x,x)) [cV1,cV2,cV3],
-       mk_eval (dest_tag tm1, dest_tag tm2)))
-  )
+  (ev_axl,
+    forall_capital (
+      list_mk_imp (map (fn x => mk_cEV (x,x)) [v1,v2,v3],
+        mk_cEV (dest_tag tm1, dest_tag tm2))))
 
 (* -------------------------------------------------------------------------
    TPTP export
@@ -336,6 +325,7 @@ fun export_goal dir (goal,n) =
     val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/i")
     val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/o")
   in 
+    name_flag := false;
     type_flag := false;
     p_flag := false;
     fof_export_goal file goal

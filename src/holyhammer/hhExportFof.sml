@@ -14,7 +14,12 @@ val ERR = mk_HOL_ERR "hhExportFof"
 type thmid = string * string
 val type_flag = ref true
 val p_flag = ref true
+val name_flag = ref true
 val fofpar = "fof("
+fun nameplain_cv (cv,_:int) = 
+  if is_const cv then fst (dest_const cv)
+  else if is_var cv then fst (dest_var cv)
+  else raise ERR "nameplain_cv" ""
 
 (* -------------------------------------------------------------------------
    FOF type
@@ -37,7 +42,10 @@ fun fof_type oc ty =
    FOF quantifier
    ------------------------------------------------------------------------- *)
 
-fun fof_vzero oc v = os oc (namea_v (v,0))
+fun fof_vzero oc v = 
+  if !name_flag 
+  then os oc (namea_v (v,0)) 
+  else os oc (nameplain_cv (v,0))
 
 fun fof_quant_vl oc s vl =
   if null vl then () else
@@ -58,12 +66,14 @@ fun fof_forall_tyvarl_tm oc tm =
    ------------------------------------------------------------------------- *)
 
 fun fof_term oc tm =
-  let val (rator,argl) = strip_comb tm in
+  let 
+    val namef = if !name_flag then namea_cv else nameplain_cv 
+    val (rator,argl) = strip_comb tm in
     if !type_flag then 
       (os oc "s("; fof_type oc (type_of tm); os oc ",";
-      fo_fun oc (namea_cv (rator,length argl), fof_term, argl);
+      fo_fun oc (namef (rator,length argl), fof_term, argl);
       os oc ")")
-    else fo_fun oc (namea_cv (rator,length argl), fof_term, argl)
+    else fo_fun oc (namef (rator,length argl), fof_term, argl)
   end
 
 (* -------------------------------------------------------------------------

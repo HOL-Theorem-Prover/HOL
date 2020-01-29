@@ -7,6 +7,7 @@ include Abbrev
   
   val type_flag : bool ref
   val p_flag : bool ref
+  val name_flag : bool ref
 
   val fof_write_pb : string -> (thmid * (string list * thmid list)) -> unit
   val fof_export_bushy : string -> string list -> unit
