@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib
 open boolSimps lcsymtacs
 
 open listTheory pred_setTheory finite_mapTheory locationTheory
-open relationTheory
+open relationTheory finite_setTheory
 
 val FLAT_APPEND = rich_listTheory.FLAT_APPEND
 val rveq = rpt BasicProvers.VAR_EQ_TAC
@@ -27,7 +27,7 @@ End
 Datatype:
   grammar = <|
    start : 'b inf;
-   rules : 'b inf |-> ('a,'b)symbol list set
+   rules : 'b inf |-> ('a,'b)symbol list fset
   |>
 End
 
@@ -68,7 +68,7 @@ End
 Definition valid_ptree_def[simp,nocompute]:
   (valid_ptree G (Lf _) ⇔ T) ∧
   (valid_ptree G (Nd (nt,l) children) ⇔
-    nt ∈ FDOM G.rules ∧ MAP ptree_head children ∈ G.rules ' nt ∧
+    nt ∈ FDOM G.rules ∧ fIN (MAP ptree_head children) (G.rules ' nt) ∧
     ∀pt. pt ∈ set children ⇒ valid_ptree G pt)
 Termination
    WF_REL_TAC `measure (ptree_size o SND)` THEN
@@ -149,7 +149,7 @@ Theorem valid_lptree_thm[simp]:
   (valid_lptree G (Lf p) ⇔ T) ∧
   (valid_lptree G (Nd (n, l) children) ⇔
       l = merge_list_locs (MAP ptree_loc children) ∧
-      n ∈ FDOM G.rules ∧ MAP ptree_head children ∈ G.rules ' n ∧
+      n ∈ FDOM G.rules ∧ fIN (MAP ptree_head children) (G.rules ' n) ∧
       ∀pt. MEM pt children ⇒ valid_lptree G pt)
 Proof simp[valid_lptree_def] >> metis_tac[]
 QED
@@ -163,7 +163,7 @@ End
 Definition derive_def:
   derive G sf1 sf2 ⇔
     ∃p sym rhs s. sf1 = p ++ [NT sym] ++ s ∧ sf2 = p ++ rhs ++ s ∧
-                  sym ∈ FDOM G.rules ∧ rhs ∈ G.rules ' sym
+                  sym ∈ FDOM G.rules ∧ fIN rhs (G.rules ' sym)
 End
 
 val RTC1 = RTC_RULES |> Q.SPEC `R` |> CONJUNCT2
@@ -188,7 +188,7 @@ Proof metis_tac [derive_common_prefix, derive_common_suffix,
                  RTC_RULES]
 QED
 
-Theorem derive_1NT[simp]: derive G [NT s] l ⇔ s ∈ FDOM G.rules ∧ l ∈ G.rules ' s
+Theorem derive_1NT[simp]: derive G [NT s] l ⇔ s ∈ FDOM G.rules ∧ fIN l (G.rules ' s)
 Proof rw[derive_def, APPEND_EQ_CONS]
 QED
 
