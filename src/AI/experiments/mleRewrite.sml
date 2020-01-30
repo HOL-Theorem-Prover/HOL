@@ -293,7 +293,7 @@ fun goal_of_board_rw (tm1,tm2,n) =
 fun goal_of_board_ev (tm1,tm2,n) =
   (ev_axl,
     forall_capital (
-      list_mk_imp (map (fn x => mk_cEV (x,x)) [v1,v2,v3],
+      list_mk_imp (map (fn x => mk_cL x) [v1,v2,v3],
         mk_cEV (dest_tag tm1, dest_tag tm2))))
 
 (* -------------------------------------------------------------------------

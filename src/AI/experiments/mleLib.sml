@@ -24,6 +24,8 @@ val cS = mk_var ("s",alpha)
 val cX = mk_var ("x",alpha)
 val cA = mk_var ("a",``:'a -> 'a -> 'a``)
 val cT = mk_var ("t",``:'a -> 'a``)
+val cV = mk_var ("v",``:'a -> bool``)
+val cL = mk_var ("l",``:'a -> bool``)
 
 val vx = mk_var ("X",alpha)
 val vy = mk_var ("Y",alpha)
@@ -36,6 +38,9 @@ val v2 = mk_var ("V2",alpha)
 val v3 = mk_var ("V3",alpha)
 
 (* constructors *)
+fun mk_cV a = mk_comb (cV,a)
+fun mk_cL a = mk_comb (cL,a)
+
 val cEV = mk_var ("ev",``:'a -> 'a -> bool``)
 val cRW = mk_var ("rw",``:'a -> 'a -> bool``)
 fun mk_cRW (a,b) = list_mk_comb (cRW,[a,b])
@@ -75,7 +80,6 @@ fun strip_cA_aux tm =
 
 fun strip_cA tm = rev (strip_cA_aux tm)
 
-
 (* theorems *)
 fun forall_capital tm =
   let 
@@ -103,24 +107,29 @@ fun cterm_size tm =
   end
 
 (* big step semantics *)
-val ev_ax1 = 
-  mk_imp (mk_cEV (vx,vv), mk_cEV (list_mk_cA [cK,vx,vy],vv));
-val ev_ax2 = 
-  mk_imp (mk_cEV (
-   (vx oo vz) oo (vy oo vz),vv), mk_cEV (list_mk_cA [cS,vx,vy,vz],vv));
-val ev_ax3 = mk_cEV (cK,cK);
-val ev_ax4 = mk_imp (mk_cEV (vx,vv), mk_cEV (cK oo vx, cK oo vv));
-val ev_ax5 = mk_cEV (cS,cS);
-val ev_ax6 = mk_imp (mk_cEV (vx,vv), mk_cEV (cS oo vx, cS oo vv));
-val ev_ax7 = 
+val ev_ax1 = mk_cV (cK)
+val ev_ax2 = mk_imp (mk_cV vv, mk_cV (mk_cA (cK,vv)))
+val ev_ax3 = mk_cV (cS)
+val ev_ax4 = mk_imp (mk_cV vv, mk_cV (mk_cA (cS,vv)))
+val ev_ax5 = mk_imp (mk_cV vv, mk_cV (list_mk_cA [cS,vu,vv]))
+val ev_ax6 = mk_imp (mk_cL vv,mk_cV vv)
+val ev_ax7 = list_mk_imp ([mk_cL vu, mk_cV vv],mk_cL(mk_cA(vu,vv)))
+val ev_ax8 = mk_imp (mk_cV vv, mk_cEV (vv,vv))
+val ev_ax9 = mk_imp (mk_cEV (vx,vv), mk_cEV (list_mk_cA [cK,vx,vy],vv))
+val ev_ax10 = mk_imp (mk_cEV ((vx oo vz) oo (vy oo vz),vv), 
+  mk_cEV (list_mk_cA [cS,vx,vy,vz],vv))
+val ev_ax11 = mk_imp (mk_cEV (vx,vv), mk_cEV (cK oo vx, cK oo vv));
+val ev_ax12 = mk_imp (mk_cEV (vx,vv), mk_cEV (cS oo vx, cS oo vv));
+val ev_ax13 = 
   list_mk_imp ([mk_cEV (vx,vu),mk_cEV (vy,vv)], 
     mk_cEV (cS oo vx oo vy, cS oo vu oo vv));
-val ev_ax8 = 
+val ev_ax14 = 
   list_mk_imp ([mk_cEV (vx,vu),mk_cEV (vy,vv),mk_cEV (vu oo vv,vw)], 
     mk_cEV (vx oo vy,vw));
 val ev_axl = 
   map forall_capital
-    [ev_ax1,ev_ax2,ev_ax3,ev_ax4,ev_ax5,ev_ax6,ev_ax7,ev_ax8]
+    [ev_ax1,ev_ax2,ev_ax3,ev_ax4,ev_ax5,ev_ax6,ev_ax7,ev_ax8,
+     ev_ax9,ev_ax10,ev_ax11,ev_ax12,ev_ax13,ev_ax14]
 
 (* small step semantics *)
 val rw_ax1 = mk_cRW (vx,vx)

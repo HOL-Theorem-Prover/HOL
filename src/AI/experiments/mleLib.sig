@@ -13,6 +13,8 @@ sig
   val cS : term
   val cK : term
   val cX : term
+  val cL : term
+  val cV : term
   val v1 : term
   val v2 : term
   val v3 : term
@@ -28,6 +30,8 @@ sig
   val rw_axl : term list
 
   (* constructors and destructors *)
+  val mk_cV : term -> term
+  val mk_cL : term -> term  
   val mk_cEV : term * term -> term
   val mk_cRW : term * term -> term
   val mk_cA : term * term -> term
