@@ -387,7 +387,9 @@ fun fof_export_pb dir (cj,namethml) =
   end
 
 (* -------------------------------------------------------------------------
-   This function is a work-in-progress.
+   This function is a work-in-progress. 
+   To be runned with all flag off to export a problem that is already
+   in first-order format with TPTP capitalization
    Exporting a problem stated as goal.
    Free variables should start with lowercase.
    ------------------------------------------------------------------------- *)
@@ -398,7 +400,7 @@ fun fof_export_goal file (axl,cj) =
             then raise ERR "fof_export_pbtm" "not of type bool"
             else ()
     fun f i k = (k,"axiom" ^ its i)
-    val axlnamed = mapi f (map (rename_bvarl escape) axl)
+    val axlnamed = mapi f axl
     val oc = TextIO.openOut file
     fun fax (ax,fofname) =
       (os oc (fofpar ^ fofname ^ ",axiom,"); 
@@ -407,7 +409,7 @@ fun fof_export_goal file (axl,cj) =
   in
     app fax axlnamed; 
     os oc (fofpar ^ "conjecture" ^ ",conjecture,"); 
-    fof_formula oc (rename_bvarl escape cj);
+    fof_formula oc cj;
     osn oc ").";
     TextIO.closeOut oc
   end

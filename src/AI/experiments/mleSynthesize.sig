@@ -15,4 +15,9 @@ sig
   val extsearch : board mlReinforce.es
   val rlobj : (board,move) mlReinforce.rlobj
 
+  (* transformation to goals for TPTP export *)
+  val goal_of_board_eq : board -> goal
+  val goal_of_board_rw : board -> goal
+  val goal_of_board_ev : board -> goal
+
 end

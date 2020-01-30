@@ -67,13 +67,12 @@ fun list_mk_cA tml = case tml of
   | a :: b :: m => list_mk_cA (mk_cA (a,b) :: m)
 fun strip_cA_aux tm =
   if is_var tm then [tm] else
-  let 
-    val (oper,argl) = strip_comb tm
-    val _ = if term_eq oper cA then () else raise ERR "strip_cA" ""
-    val (a1,a2) = pair_of_list argl    
-  in
-    a2 :: strip_cA_aux a1
+  let val (oper,argl) = strip_comb tm in
+    if term_eq oper cA then 
+      let val (a1,a2) = pair_of_list argl in a2 :: strip_cA_aux a1 end 
+    else [tm]
   end
+
 fun strip_cA tm = rev (strip_cA_aux tm)
 
 
@@ -86,21 +85,21 @@ fun forall_capital tm =
     list_mk_forall (vl,tm)
   end
 
-
 val s_thm_bare = mk_eq (cS oo vx oo vy oo vz, (vx oo vz) oo (vy oo vz))
 val k_thm_bare = mk_eq (cK oo vx oo vy, vx)
-val eq_axl = map forall_capital [s_thm_bare,k_thm_bare]
+val eq_axl_bare = [s_thm_bare,k_thm_bare]
+val eq_axl = map forall_capital eq_axl_bare
 
 fun tag_lhs eq = let val (a,b) = dest_eq eq in mk_eq (mk_tag a, b) end
 val s_thm_tag = tag_lhs s_thm_bare
 val k_thm_tag = tag_lhs k_thm_bare
 val left_thm = mk_eq (mk_tag (vx oo vy), mk_tag vx oo vy)
 val right_thm = mk_eq (mk_tag (vx oo vy), vx oo mk_tag vy)
-val tag_axl = map forall_capital [s_thm_tag,k_thm_tag,left_thm,right_thm]
+val tag_axl_bare = [s_thm_tag,k_thm_tag,left_thm,right_thm]
 
 fun cterm_size tm = 
   let val (oper,argl) = strip_comb tm in
-    if tmem oper [cA,cT] then 0 else 1 + sum_int (map cterm_size argl)
+    (if tmem oper [cA,cT] then 0 else 1) + sum_int (map cterm_size argl)
   end
 
 (* big step semantics *)
@@ -130,8 +129,7 @@ val rw_ax2 =
 val rw_ax3 = mk_cRW (list_mk_cA [cS,vx,vy,vz], (vx oo vz) oo (vy oo vz));
 val rw_ax4 = mk_cRW (list_mk_cA [cK,vx,vy], vx);
 val rw_ax5 = list_mk_imp ([mk_cRW (vx,vy), mk_cRW(vy,vz)], mk_cRW(vx,vz));
-val rw_axl = 
-  map forall_capital [rw_ax1,rw_ax2,rw_ax3,rw_ax4,rw_ax5]
+val rw_axl = map forall_capital [rw_ax1,rw_ax2,rw_ax3,rw_ax4,rw_ax5]
 
 (* -------------------------------------------------------------------------
    Printing combinators
@@ -147,13 +145,12 @@ fun cts tm =
    Rewriting combinators
    ------------------------------------------------------------------------- *)
 
+fun is_capital_var tm = is_var tm andalso 
+  Char.isUpper (hd_string (fst (dest_var tm)))
+
 fun is_match eq tm = 
-  let 
-    val (vl,bod) = strip_forall eq
-    fun test tm = tmem tm vl
-    val (sub,_) = match_term (lhs bod) tm 
-  in
-    all test (map #redex sub)
+  let val (sub,_) = match_term (lhs eq) tm in
+    all is_capital_var (map #redex sub)
   end
   handle HOL_ERR _ => false
 
@@ -162,9 +159,8 @@ fun exists_match eq tm = can (find_term (is_match eq)) tm
 fun subst_match eq tm =
   let 
     val subtm = find_term (is_match eq) tm
-    val eqbare = snd (strip_forall eq)
-    val sub1 = fst (match_term (lhs eqbare) subtm)
-    val eqinst = subst sub1 eqbare
+    val sub1 = fst (match_term (lhs eq) subtm)
+    val eqinst = subst sub1 eq
     val sub2 = [{redex = lhs eqinst, residue = rhs eqinst}]
   in
     subst_occs [[1]] sub2 tm
@@ -173,10 +169,9 @@ fun subst_match eq tm =
 fun subst_match_first eql tm =
   let 
     val subtm = find_term (fn x => exists (fn eq => is_match eq x) eql) tm
-    val eq = valOf (List.find (fn eq => is_match eq subtm) eql)
-    val eqbare = snd (strip_forall eq)
-    val sub1 = fst (match_term (lhs eqbare) subtm)
-    val eqinst = subst sub1 eqbare
+    val eq = valOf (List.find (fn x => is_match x subtm) eql)
+    val sub1 = fst (match_term (lhs eq) subtm)
+    val eqinst = subst sub1 eq
     val sub2 = [{redex = lhs eqinst, residue = rhs eqinst}]
   in
     subst_occs [[1]] sub2 tm
@@ -189,7 +184,7 @@ fun lo_cnorm n eql tm =
       lo_cnorm (n-1) eql tm'
     end
   
-fun is_nf tm = not (exists (C exists_match tm) eq_axl)
+fun is_nf tm = not (exists (C exists_match tm) eq_axl_bare)
 
 (* -------------------------------------------------------------------------
    Generating commbinators

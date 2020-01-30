@@ -21,7 +21,8 @@ sig
   
   (* combinator theorems *)
   val forall_capital : term -> term
-  val tag_axl : term list
+  val tag_axl_bare : term list
+  val eq_axl_bare : term list
   val eq_axl : term list
   val ev_axl : term list
   val rw_axl : term list

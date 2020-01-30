@@ -33,12 +33,14 @@ fun board_compare ((a,b,_),(c,d,_)) =
    ------------------------------------------------------------------------- *)
 
 type move = term
-val movel = tag_axl
+val movel = tag_axl_bare
+val tag_axl_bare12 = first_n 2 tag_axl_bare
+val tag_axl_bare3 = List.nth (tag_axl_bare,2)
 
 fun string_of_move eq = tts eq
 
 fun add_tag eq tm =
-  if tmem eq (first_n 2 tag_axl) then mk_tag tm else tm
+  if tmem eq tag_axl_bare12 then mk_tag tm else tm
 
 fun apply_eq eq tm = add_tag eq (subst_match eq tm)
 fun apply_move eq (tm1,tm2,n) =
@@ -48,11 +50,11 @@ fun available_eql tm =
   let 
     fun lhs_tag x = fst (dest_cA (dest_tag x))
     fun test eq =
-    if term_eq eq (List.nth (tag_axl,2))
-    then 
-      can (subst_match eq) tm andalso 
-      not (is_nf (lhs_tag (find_term (is_match eq) tm)))
-    else can (subst_match eq) tm
+      if term_eq eq tag_axl_bare3
+      then 
+        can (subst_match eq) tm andalso 
+        not (is_nf (lhs_tag (find_term (is_match eq) tm)))
+      else can (subst_match eq) tm
   in
     filter test movel 
   end
@@ -168,14 +170,18 @@ fun lo_walk (n,maxn) tm =
   else if is_nf tm then SOME (tm,n)
   else if n >= maxn then NONE
   else 
-    let val movel = available_eql tm in
+    let 
+      val movel = available_eql tm 
+      val _ = print "."
+    in
       if null movel 
       then raise ERR "lo_walk" (tts tm)
       else lo_walk (n+1,maxn) (apply_eq (hd movel) tm)
     end
 
-fun create_board maxn tm = 
+fun create_board maxn (tm,i) = 
   let 
+    val _ = print_endline (its i)
     val newtm = mk_tag (list_mk_cA [tm,v1,v2,v3])
     val nfo = lo_walk (0,maxn) newtm in
     if not (isSome nfo) then NONE else 
@@ -187,7 +193,7 @@ fun create_board maxn tm =
   end
 
 fun create_targetl tml = 
-  let val targetl = List.mapPartial (create_board 1000) tml in
+  let val targetl = List.mapPartial (create_board 1000) (number_snd 0 tml) in
     dict_sort (compare_third Int.compare) 
       (mk_fast_set board_compare targetl)
   end
@@ -218,15 +224,6 @@ fun import_targetd () =
   in
     dnew board_compare l3
   end
-
-(*
-load "aiLib"; open aiLib;
-load "mleLib"; open mleLib;
-load "psTermGen"; open psTermGen;
-load "psMCTS"; open psMCTS;
-load "mleRewrite"; open mleRewrite;
-
-*)
 
 (* -------------------------------------------------------------------------
    Neural network representation of the board
@@ -310,9 +307,9 @@ load "aiLib"; open aiLib;
 load "mleRewrite"; open mleRewrite;
 load "hhExportFof"; open hhExportFof;
 
-  val tml = cgen_random 2000 (5,15); length tml;
-  val targetl = create_targetl tml; length targetl;
-  val _ = export_targetl targetl;
+val tml = cgen_random 2000 (5,15); length tml;
+val targetl = create_targetl tml; length targetl;
+val _ = export_targetl targetl;
 val targetd = import_targetd ();
 val targetl = dict_sort (compare_third Int.compare) (dkeys targetd);
 
@@ -338,66 +335,5 @@ val _ = app (export_goal "rw-rw") (number_snd 0 goall_rw);
 val goall_ev = map goal_of_board_ev targetl;
 val _ = app (export_goal "rw-ev") (number_snd 0 goall_ev);
 *)
-
-(* -------------------------------------------------------------------------
-   Training test
-   ------------------------------------------------------------------------- *)
-
-(*
-load "aiLib"; open aiLib;
-load "psTermGen"; open psTermGen;
-load "mleRewrite"; open mleRewrite;
-val {available_movel, apply_move, ...} = #game rlobj;
-
-fun gen_ex sizeo (n1,n2) =
-  let
-    val size = if isSome sizeo then valOf sizeo else random_int (n1,n2)
-    val tm = elim_kred (random_term [cA,cS,cK] (2*size-1,alpha)); 
-    val board = (tm,F,0);
-    val movel = available_movel board;
-    val tot = length movel
-  in
-    if tot <> 2 then gen_ex (SOMEval (b,_,_) = psBigSteps.run_bigsteps bsobj board; size) (n1,n2) else
-    let
-      val moven = random_int (0, tot - 1);
-      val move = List.nth (movel,moven);
-      val expectv = List.tabulate (tot, fn x => if x = moven then 1.0 else 0.0)
-      val (newtm,_,_) = apply_move move board
-      val (tm',newtm') = (subst ccsubst tm, subst ccsubst newtm)
-    in
-      [(tag_hpoli tot (mk_cE (tm,newtm)),expectv)]
-    end
-  end;
-
-val exl = List.tabulate (10000, fn _ => gen_ex NONE (15,15));
-
-val tml = map fst (List.concat exl);
-val d = dregroup Int.compare (map swap (map_assoc term_size tml));
-val l = map_snd length (dlist d);
-
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-val {schedule,tnnparam,tob} = #dplayer rlobj;
-val (exl1,exl2) = part_pct 0.9 exl
-val tnn = train_tnn schedule (random_tnn tnnparam) (exl1,exl2);
-val (pos,neg) = partition (is_accurate tnn) exl2;
-val acc = tnn_accuracy tnn exl2;
-
-0.975
-val r = hd neg; cts (fst (hd r));
-
-val size = 50;
-val tm1 = random_term [cA,cS,cK] (2*size-1,alpha);
-val (b,_,_) = psBigSteps.run_bigsteps bsobj board;
-
-
-val tm2 = elim_kred tm1;
-val tm3 = tag_all_redex tm2;
-app (print_endline o cts) [tm1,tm2];
-
-measure of complexity: 
-  1) how many tries it takes the random strategy to solve it?
-  2) does the left-outermost rewriting on both sides solve it?
-*)
-
 
 end (* struct *)

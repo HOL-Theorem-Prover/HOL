@@ -10,10 +10,10 @@ struct
 
 open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlNeuralNetwork mlTreeNeuralNetwork mlTacticData
-  mlReinforce mleLib mleArithData
+  mlReinforce mleLib
 
 val ERR = mk_HOL_ERR "mleSynthesize"
-val version = 6
+val version = 7
 
 (* -------------------------------------------------------------------------
    Board
@@ -27,8 +27,8 @@ fun board_compare ((a,b,c),(d,e,f)) =
 
 fun status_of (tm1,tm2,n) =
   let 
-    val tm1a = list_mk_cA [tm1,cV1,cV2,cV3]
-    val tm1o = lo_cnorm 100 [s_thm,k_thm] tm1a
+    val tm1a = list_mk_cA [tm1,v1,v2,v3]
+    val tm1o = lo_cnorm 100 eq_axl_bare tm1a
   in
     if isSome tm1o andalso term_eq (valOf tm1o) tm2
       then Win
@@ -99,7 +99,7 @@ val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
    ------------------------------------------------------------------------- *)
 
 val targetdir = HOLDIR ^ "/src/AI/experiments/target_combin"
-val targetfile = targetdir ^ "/targetl-synt-6"
+val targetfile = targetdir ^ "/targetl-synt-" ^ its version
 val stats_dir = HOLDIR ^ "/src/AI/experiments/stats_combin"
 val stats_file = stats_dir ^ "/stats-synt-" ^ its version
 fun stats_il header il = 
@@ -116,8 +116,7 @@ fun stats_il header il =
 fun create_targetl tml =
   let
     fun f tm = 
-      let val tmo =
-        lo_cnorm 100 [s_thm,k_thm] (list_mk_cA [tm,cV1,cV2,cV3])
+      let val tmo = lo_cnorm 100 eq_axl_bare (list_mk_cA [tm,v1,v2,v3])
       in
         if not (isSome tmo) orelse 
            can (find_term (C tmem [cS,cK])) (valOf tmo)
@@ -155,12 +154,12 @@ fun import_targetd () =
    Neural network representation of the board
    ------------------------------------------------------------------------- *)
 
-val head_eval = mk_var ("head_eval", ``:'a -> 'a``)
-val head_poli = mk_var ("head_poli", ``:'a -> 'a``)
+val head_eval = mk_var ("head_eval", ``:bool -> 'a``)
+val head_poli = mk_var ("head_poli", ``:bool -> 'a``)
 fun tag_heval x = mk_comb (head_eval,x)
 fun tag_hpoli x = mk_comb (head_poli,x)
 fun tob (tm1,tm2,_) = 
-  [tag_heval (mk_cE (tm1,tm2)), tag_hpoli (mk_cE (tm1,tm2))]
+  [tag_heval (mk_eq (tm1,tm2)), tag_hpoli (mk_eq (tm1,tm2))]
 
 (* -------------------------------------------------------------------------
    Player
@@ -172,10 +171,9 @@ val schedule =
 
 val dim = 10
 fun dim_head_poli n = [dim,n]
-
-val tnnparam = map_assoc (dim_std (1,dim)) [cE,cX,cV1,cV2,cV3,cA,cS,cK] @ 
+val equality = ``$= : 'a -> 'a -> bool``
+val tnnparam = map_assoc (dim_std (1,dim)) [equality,cX,v1,v2,v3,cA,cS,cK] @ 
   [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
-
 
 val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
@@ -206,80 +204,76 @@ load "mleSynthesize"; open mleSynthesize;
 val r = rl_start (rlobj,extsearch) (import_targetd ());
 *)
 
+(* -------------------------------------------------------------------------
+   Transformation of problems to ATP goals
+   ------------------------------------------------------------------------- *)
+
+val vc = mk_var ("Vc",alpha)
+
+fun goal_of_board_eq (_,tm2,n) =
+  let val tm =
+    mk_exists (vc, (list_mk_forall ([v1,v2,v3], 
+      mk_eq (list_mk_cA [vc,v1,v2,v3],tm2))))
+  in
+    (eq_axl,tm)
+  end
+
+fun goal_of_board_rw (_,tm2,n) =
+  let val tm =
+    mk_exists (vc, (list_mk_forall ([v1,v2,v3], 
+      mk_cRW (list_mk_cA [vc,v1,v2,v3],tm2))))
+  in
+    (rw_axl,tm)
+  end
+
+fun goal_of_board_ev (_,tm2,n) =
+  let val tm =
+    mk_exists (vc, (list_mk_forall ([v1,v2,v3], 
+      list_mk_imp (map (fn x => mk_cEV (x,x)) [v1,v2,v3],
+        mk_cEV (list_mk_cA [vc,v1,v2,v3],tm2)))))
+  in
+    (ev_axl,tm)
+  end
+
+
+(* -------------------------------------------------------------------------
+   TPTP export
+   ------------------------------------------------------------------------- *)
+
 (*
-load "psTermGen"; open psTermGen;
 load "mlReinforce"; open mlReinforce;
-load "mleSynthesize"; open mleSynthesize;
-load "aiLib"; open aiLib;
 load "mleLib"; open mleLib;
-load "smlTimeout"; open smlTimeout;
+load "aiLib"; open aiLib;
+load "mleSynthesize"; open mleSynthesize;
 load "hhExportFof"; open hhExportFof;
 
- val tml = cgen_exhaustive 8; length tml;
-  val targetl = create_targetl tml; length targetl;
-  val _ = export_targetl targetl;
-val d = import_targetd ();
-val boardl = map fst (dlist d);
+val tml = cgen_exhaustive 8; length tml;
+val targetl = create_targetl tml; length targetl;
+val _ = export_targetl targetl;
+val targetd = import_targetd ();
+val targetl = dict_sort (compare_third Int.compare) (dkeys targetd);
 
-fun goal_of_board (board: board) = 
-  let
-    val tm = #2 board
-    val Vc = mk_var ("Vc",alpha)
-    val target =
-      mk_exists (Vc, 
-      (list_mk_forall ([cV1,cV2,cV3], 
-                     mk_eq (list_mk_cA [Vc,cV1,cV2,cV3],cV2))
-      ))
-  in
-    ([s_thm_quant,k_thm_quant],target)
-  end
+fun export_goal dir (goal,n) =
+  let 
+    val tptp_dir = HOLDIR ^ "/src/AI/experiments/TPTP"
+    val _ = mkDir_err tptp_dir
+    val file = tptp_dir ^ "/" ^ dir ^ "/i/" ^ its n ^ ".p"
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir)
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/i")
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/o")
+  in 
+    name_flag := false;
+    type_flag := false;
+    p_flag := false;
+    fof_export_goal file goal
+  end;
 
-fun goal_of_board2 (board: board) = 
-  let
-    val tm = #2 board
-    val Vc = mk_var ("Vc",alpha)
-    val target =
-      mk_exists (Vc, 
-      list_mk_forall ([cV1,cV2,cV3],
-        list_mk_imp ([mk_eval (cV1,cV1),mk_eval(cV2,cV2),mk_eval(cV3,cV3)], 
-        (mk_eval (list_mk_cA [Vc,cV1,cV2,cV3],cV2)))))
-  in
-    (eval_axl,target)
-  end
-
-
-fun goal_of_board3 (board: board) = 
-  let
-    val tm = #2 board
-    val Vc = mk_var ("Vc",alpha)
-    val rtm = mk_cR (list_mk_cA [Vc,cV1,cV2,cV3],cV2)
-    val target = mk_exists (Vc, list_mk_forall ([cV1,cV2,cV3],rtm))
-  in
-    (rw_axl,target)
-  end
-
-val goal = goal_of_board3 (hd boardl);
-type_flag := false;
-p_flag := false;
-fof_export_goal "/home/thibault/HOL/src/holyhammer/provers/test/atp_in" goal;
-
-
-*)
-
-(*
-fun test (board: board) =
- let 
-   val goal = goal_of_board boards
-   val glo = timeout_tactic 1.0 (METIS_TAC []) goal
- in
-   isSome glo andalso null (valOf glo)
- end
-val (rlwin,rllose) = partition snd (map_assoc test boardl);
-length rlwin; length rllose;
-val board = fst (hd rllose);
-val goal = goal_of_board board;
-load "holyHammer"; open holyHammer;
-hh_pb [Eprover] [] goal;
+val goall_eq = map goal_of_board_eq targetl;
+val _ = app (export_goal "sy-eq") (number_snd 0 goall_eq);
+val goall_rw = map goal_of_board_rw targetl;
+val _ = app (export_goal "sy-rw") (number_snd 0 goall_rw);
+val goall_ev = map goal_of_board_ev targetl;
+val _ = app (export_goal "sy-ev") (number_snd 0 goall_ev);
 *)
 
 
