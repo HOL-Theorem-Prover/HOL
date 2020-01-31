@@ -115,13 +115,14 @@ fun stats_il header il =
 
 fun create_targetl tml =
   let
+    val i = ref 0
     fun f tm = 
       let val tmo = fast_lo_cnorm 100 eq_axl_bare (list_mk_cA [tm,v1,v2,v3])
       in
         if not (isSome tmo) orelse 
            can (find_term (C tmem [cS,cK])) (valOf tmo)
-        then (print_endline "."; NONE)
-        else (print_endline "done"; tmo)
+        then NONE
+        else (print_endline (its (!i)); incr i; tmo)
       end
     val l1 = map_assoc f tml    
     val l2 = filter (fn x => isSome (snd x)) l1    
@@ -197,6 +198,7 @@ val extsearch = mk_extsearch "mleSynthesize.extsearch" rlobj
 
 (*
 load "mlReinforce"; open mlReinforce;
+load "mleLib"; open mleLib;
 load "mleSynthesize"; open mleSynthesize;
   val tml = cgen_exhaustive 10; length tml;
   val targetl = create_targetl tml; length targetl;
