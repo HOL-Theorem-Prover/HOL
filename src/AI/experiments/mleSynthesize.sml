@@ -120,8 +120,8 @@ fun create_targetl tml =
       in
         if not (isSome tmo) orelse 
            can (find_term (C tmem [cS,cK])) (valOf tmo)
-        then NONE
-        else tmo
+        then (print_endline "."; NONE)
+        else (print_endline "done"; tmo)
       end
     val l1 = map_assoc f tml    
     val l2 = filter (fn x => isSome (snd x)) l1    
