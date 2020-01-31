@@ -135,6 +135,8 @@ val ev_axl =
 val rw_ax1 = mk_cRW (vx,vx)
 val rw_ax2 = 
   list_mk_imp ([mk_cRW (vu,vv), mk_cRW (vx,vy)], mk_cRW (vu oo vx, vv oo vy));
+
+
 val rw_ax3 = mk_cRW (list_mk_cA [cS,vx,vy,vz], (vx oo vz) oo (vy oo vz));
 val rw_ax4 = mk_cRW (list_mk_cA [cK,vx,vy], vx);
 val rw_ax5 = list_mk_imp ([mk_cRW (vx,vy), mk_cRW(vy,vz)], mk_cRW(vx,vz));
@@ -192,7 +194,32 @@ fun lo_cnorm n eql tm =
     let val tm' = subst_match_first eql tm in
       lo_cnorm (n-1) eql tm'
     end
-  
+
+fun fast_lo_cnorm n eql tm =
+  let
+    val i = ref 0
+    fun fast_lo_cnorm_aux n eql tm = 
+      let val eqo = List.find (fn x => is_match x tm) eql in
+        case eqo of
+          SOME eq => 
+          let 
+            val sub1 = fst (match_term (lhs eq) tm)
+            val newtm = subst sub1 (rhs eq)
+            val _ = incr i
+            val _ = if !i > n then raise ERR "fast_lo_cnorm" "" else () 
+          in
+            fast_lo_cnorm_aux n eql newtm
+          end   
+        | NONE => 
+          let val (oper,argl) = strip_comb tm in
+            list_mk_comb (oper, map (fast_lo_cnorm_aux n eql) argl)
+          end  
+      end
+  in
+    SOME (fast_lo_cnorm_aux n eql tm) handle HOL_ERR _ => NONE
+  end
+
+ 
 fun is_nf tm = not (exists (C exists_match tm) eq_axl_bare)
 
 (* -------------------------------------------------------------------------

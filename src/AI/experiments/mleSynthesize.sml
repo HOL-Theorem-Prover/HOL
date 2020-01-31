@@ -28,7 +28,7 @@ fun board_compare ((a,b,c),(d,e,f)) =
 fun status_of (tm1,tm2,n) =
   let 
     val tm1a = list_mk_cA [tm1,v1,v2,v3]
-    val tm1o = lo_cnorm 100 eq_axl_bare tm1a
+    val tm1o = fast_lo_cnorm 100 eq_axl_bare tm1a
   in
     if isSome tm1o andalso term_eq (valOf tm1o) tm2
       then Win
@@ -116,7 +116,7 @@ fun stats_il header il =
 fun create_targetl tml =
   let
     fun f tm = 
-      let val tmo = lo_cnorm 100 eq_axl_bare (list_mk_cA [tm,v1,v2,v3])
+      let val tmo = fast_lo_cnorm 100 eq_axl_bare (list_mk_cA [tm,v1,v2,v3])
       in
         if not (isSome tmo) orelse 
            can (find_term (C tmem [cS,cK])) (valOf tmo)
@@ -130,8 +130,8 @@ fun create_targetl tml =
     val l5 = map_snd (list_imin o map term_size) (dlist l4)
     val l6 = map (fn (a,b) => (cX,a,2 * b)) l5
   in
-    stats_il "size_in" (map (cterm_size o #1) l6);
-    stats_il "size_out" (map (cterm_size o #2) l6);
+    stats_il "size_in" (map (term_size o #1) l6);
+    stats_il "size_out" (map (term_size o #2) l6);
     stats_il "nstep" (map ((fn x => x div 2) o #3) l6);
     dict_sort (compare_third Int.compare) l6
   end
@@ -198,7 +198,7 @@ val extsearch = mk_extsearch "mleSynthesize.extsearch" rlobj
 (*
 load "mlReinforce"; open mlReinforce;
 load "mleSynthesize"; open mleSynthesize;
-  val tml = cgen_random 100000 (5,20); length tml;
+  val tml = cgen_exhaustive 10; length tml;
   val targetl = create_targetl tml; length targetl;
   val _ = export_targetl targetl;
 val r = rl_start (rlobj,extsearch) (import_targetd ());

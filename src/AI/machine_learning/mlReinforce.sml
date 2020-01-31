@@ -76,7 +76,8 @@ fun mk_bsobj rlobj (unib,tnn,noiseb,nsim) =
   in
     {
     verbose = false, temp_flag = false,
-    player = player, game = game,
+    player = if unib then uniform_player game else player, 
+    game = game,
     mctsparam = mk_mctsparam noiseb nsim rlobj
     }
   end
@@ -251,52 +252,50 @@ fun rl_explore_targetl (unib,noiseb) (rlobj,es) tnn targetl =
 fun rl_compete_targetl unib (rlobj,es) tnn targetl =
   rl_explore_targetl (unib,false) (rlobj,es) tnn targetl
 
-fun first_n_skewed n m l =
-  if m > length l then random_subset n l 
-  else if random_int (0,3) = 0 
-  then random_subset n (first_n m l)
-  else first_n_skewed n (2*m) l
+
+fun row_win l = 
+  case l of [] => 0 | a :: m => if a then 1 + row_win m else 0
+fun row_lose l = 
+  case l of [] => 0 | a :: m => if not a then 1 + row_lose m else 0
+fun row_either l = Int.max (row_lose l, row_win l)
+
+fun stats_select_one rlobj (s,targetl) =
+  let 
+    val il = map (row_either o snd o snd) targetl
+    fun f (a,b) = its a ^ "-" ^ its b
+    val l = dlist (count_dict (dempty Int.compare) il)  
+  in
+    log rlobj ("  " ^ s);
+    log rlobj ("     " ^ (String.concatWith " " (map f l)))
+  end
+
+fun stats_select rlobj nfin (neg,pos,negsel,possel) =
+  let 
+    val l = [("neg",neg),("pos",pos),("negsel",negsel),("possel",possel)] 
+  in
+    log rlobj ("Exploration: " ^ its nfin ^ " targets ");
+    app (stats_select_one rlobj) l
+  end
+
 
 fun select_from_targetd rlobj ntot targetd =
-  let  
-    fun is_new l = length l < 4
-    fun is_win k l = not (is_new l) andalso
-      (length (filter I (first_n 4 l)) = k)
-    fun f k = map fst (filter (fn (_,(_,l)) => is_win k l) (dlist targetd))
-    val lnewtot1 = filter (fn (_,(_,l)) => is_new l) (dlist targetd)
-    fun cmp ((_,(i1,_)),(_,(i2,_))) = Int.compare (i1,i2)
-    val lnewtot2 = map fst (dict_sort cmp lnewtot1)
-    val l4tot = f 4
-    val l4 = random_subset (ntot div 2) l4tot
-    val n4 = ntot - length l4
-    val l3tot = f 3
-    val l3 = random_subset (n4 div 2) l3tot
-    val n3 = n4 - length l3
-    val l2tot = f 2
-    val l2 = random_subset (n3 div 2) l2tot
-    val n2 = n3 - length l2
-    val l1tot = f 1
-    val l1 = random_subset (n2 div 2) l1tot
-    val n1 = n2 - length l1
-    val l0tot1 = filter (fn (_,(_,l)) => is_win 0 l) (dlist targetd)
-    fun cmp2 ((_,(i1,bl1)),(_,(i2,bl2))) = 
-       cpl_compare Int.compare Int.compare 
-       ((~ (length (filter I bl1)),i1),(~(length (filter I bl1)),i2))
-    val l0tot2 = map fst (dict_sort cmp2 l0tot1)
-    
-    val n1' = if null lnewtot2 then n1 else (n1 div 2)
-    val l0 = first_n_skewed n1' n1' l0tot2
-    val n0 = n1 - length l0
-    val lnew = first_n n0 lnewtot2
-    val lfin = rev (List.concat [l4,l3,l2,l1,l0,lnew])
+  let
+    fun f x = 1.0 / Math.pow (2.0,Real.fromInt x)
+    fun g x = 
+      let 
+        val y = random_real () * x 
+        val y' = if y < epsilon then epsilon else y 
+      in 
+        x / y' 
+      end
+    fun h (a,(b,winl)) = ((a,(b,winl)), (g o f o row_either) winl)
+    fun test (_,(_,winl)) = null winl orelse not (hd winl)
+    val (neg,pos) = partition test (dlist targetd)
+    val negsel = first_n (ntot div 2) (dict_sort compare_rmax (map h neg))
+    val possel = first_n (ntot div 2) (dict_sort compare_rmax (map h pos))
+    val lfin = map (fst o fst) (rev negsel @ possel)
   in
-    log rlobj ("Exploration: " ^ its (length lfin) ^ " targets ");
-    log rlobj ("  selection: " ^
-      (String.concatWith " " 
-      (map (its o length) [l4,l3,l2,l1,l0,lnew])));
-    log rlobj ("  distribution: " ^
-      (String.concatWith " " 
-      (map (its o length) [l4tot,l3tot,l2tot,l1tot,l0tot2,lnewtot2])));
+    stats_select rlobj (length lfin) (neg,pos, map fst negsel, map fst possel);
     lfin
   end
 
@@ -316,16 +315,22 @@ fun rl_explore_targetd unib (rlobj,es) (tnn,targetd) =
       rl_explore_targetl (unib,true) (rlobj,es) tnn targetl
     val newtargetd = foldl update_targetd targetd resultl
   in
-    (rlex, newtargetd)
+    (rlex,newtargetd)
   end
 
 fun rl_explore_init ngen (rlobj,es) targetd = 
   let
     val _ = log rlobj "Exploration: initialization"  
     val dummy = random_tnn (#tnnparam (#dplayer rlobj))
-    val (rlex,_) = rl_explore_targetd true (rlobj,es) (dummy,targetd)
+    val rlparam = #rlparam rlobj
+    val targetl = map fst (dlist targetd)
+    val (rlex,resultl) = 
+      rl_explore_targetl (true,false) (rlobj,es) dummy targetl
+    val newtargetd = foldl update_targetd targetd resultl
   in
-    store_rlex rlobj ngen rlex; rlex
+    store_rlex rlobj ngen rlex; 
+    store_targetd rlobj ngen newtargetd;
+    (rlex,newtargetd)
   end
 
 fun rl_explore_cont ngen (rlobj,es) (tnn,rlex,targetd) =
@@ -355,9 +360,9 @@ fun rl_start (rlobj,es) targetd =
   let 
     val expdir = eval_dir ^ "/" ^ #expname (#rlparam rlobj)
     val _ = app mkDir_err [eval_dir,expdir]
-    val rlex = rl_explore_init 0 (rlobj,es) targetd
+    val (rlex,newtargetd) = rl_explore_init 0 (rlobj,es) targetd
   in
-    rl_loop 1 (rlobj,es) (rlex,targetd)
+    rl_loop 1 (rlobj,es) (rlex,newtargetd)
   end
 
 fun rl_restart ngen (rlobj,es) targetd =

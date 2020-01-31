@@ -307,7 +307,7 @@ load "aiLib"; open aiLib;
 load "mleRewrite"; open mleRewrite;
 load "hhExportFof"; open hhExportFof;
 
-val tml = cgen_random 2000 (5,15); length tml;
+val tml = cgen_random 100 (10,20); length tml;
 val targetl = create_targetl tml; length targetl;
 val _ = export_targetl targetl;
 val targetd = import_targetd ();
@@ -335,5 +335,27 @@ val _ = app (export_goal "rw-rw") (number_snd 0 goall_rw);
 val goall_ev = map goal_of_board_ev targetl;
 val _ = app (export_goal "rw-ev") (number_snd 0 goall_ev);
 *)
+
+
+(*
+load "mlReinforce"; open mlReinforce;
+load "mleLib"; open mleLib;
+load "aiLib"; open aiLib;
+load "mleRewrite"; open mleRewrite;
+load "hhExportFof"; open hhExportFof;
+
+val eq_thml = map ASSUME eq_axl;
+val (tm1,tm2,n) = hd targetl;val (l1,t2) = add_time (map (lo_cnorm 100 eq_axl_bare)) l0;
+val (l1,t1) = add_time (map (fst o ASM_REWRITE_TAC [])) goall_eq;
+val l2 = filter (not o null) l1;
+
+val l0 = map (dest_tag o #1) targetl;
+val (l1,t2) = add_time (map (lo_cnorm 100 eq_axl_bare)) l0;
+val l2 = filter (not o isSome) l1;
+
+val (l1,t3) = add_time (map (fast_lo_cnorm 100 eq_axl_bare)) l0;
+val l2 = filter (not o isSome) l1;
+*)
+
 
 end (* struct *)

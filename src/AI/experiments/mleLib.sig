@@ -44,6 +44,7 @@ sig
   (* rewriting *)
   val is_match : term -> term -> bool
   val lo_cnorm : int -> term list -> term -> term option
+  val fast_lo_cnorm : int -> term list -> term -> term option
   val subst_match : term -> term -> term
   val is_nf : term -> bool
  
