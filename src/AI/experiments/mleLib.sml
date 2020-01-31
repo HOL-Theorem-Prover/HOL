@@ -195,9 +195,11 @@ fun lo_cnorm n eql tm =
       lo_cnorm (n-1) eql tm'
     end
 
-fun fast_lo_cnorm n eql tm =
+exception Break
+
+fun fast_lo_cnorm n eql maintm =
   let
-    val i = ref 0
+    val i = ref 0    
     fun fast_lo_cnorm_aux n eql tm = 
       let val eqo = List.find (fn x => is_match x tm) eql in
         case eqo of
@@ -206,7 +208,7 @@ fun fast_lo_cnorm n eql tm =
             val sub1 = fst (match_term (lhs eq) tm)
             val newtm = subst sub1 (rhs eq)
             val _ = incr i
-            val _ = if !i > n then raise ERR "fast_lo_cnorm" "" else () 
+            val _ = if !i > n then raise Break else () 
           in
             fast_lo_cnorm_aux n eql newtm
           end   
@@ -215,8 +217,12 @@ fun fast_lo_cnorm n eql tm =
             list_mk_comb (oper, map (fast_lo_cnorm_aux n eql) argl)
           end  
       end
+    fun loop tm =
+      if not (exists (C exists_match tm) eql)
+      then SOME tm
+      else loop (fast_lo_cnorm_aux n eql tm)
   in
-    SOME (fast_lo_cnorm_aux n eql tm) handle HOL_ERR _ => NONE
+    loop maintm handle Break => NONE
   end
 
  

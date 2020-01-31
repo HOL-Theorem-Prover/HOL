@@ -13,7 +13,7 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlReinforce mleLib
 
 val ERR = mk_HOL_ERR "mleSynthesize"
-val version = 7
+val version = 8
 
 (* -------------------------------------------------------------------------
    Board
@@ -28,7 +28,7 @@ fun board_compare ((a,b,c),(d,e,f)) =
 fun status_of (tm1,tm2,n) =
   let 
     val tm1a = list_mk_cA [tm1,v1,v2,v3]
-    val tm1o = lo_cnorm 100 eq_axl_bare tm1a
+    val tm1o = fast_lo_cnorm 100 eq_axl_bare tm1a
   in
     if isSome tm1o andalso term_eq (valOf tm1o) tm2
       then Win
@@ -117,7 +117,7 @@ fun create_targetl tml =
   let
     val i = ref 0
     fun f tm = 
-      let val tmo = lo_cnorm 100 eq_axl_bare (list_mk_cA [tm,v1,v2,v3])
+      let val tmo = fast_lo_cnorm 100 eq_axl_bare (list_mk_cA [tm,v1,v2,v3])
       in
         if not (isSome tmo) orelse 
            can (find_term (C tmem [cS,cK])) (valOf tmo)
@@ -168,9 +168,9 @@ fun tob (tm1,tm2,_) =
 
 val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
-    batch_size = 16, nepoch = 40}]
+    batch_size = 16, nepoch = 20}]
 
-val dim = 10
+val dim = 8
 fun dim_head_poli n = [dim,n]
 val equality = ``$= : 'a -> 'a -> bool``
 val tnnparam = map_assoc (dim_std (1,dim)) [equality,cX,v1,v2,v3,cA,cS,cK] @ 
@@ -200,7 +200,7 @@ val extsearch = mk_extsearch "mleSynthesize.extsearch" rlobj
 load "mlReinforce"; open mlReinforce;
 load "mleLib"; open mleLib;
 load "mleSynthesize"; open mleSynthesize;
-  val tml = cgen_exhaustive 10; length tml;
+  val tml = cgen_exhaustive 9; length tml;
   val targetl = create_targetl tml; length targetl;
   val _ = export_targetl targetl;
 val r = rl_start (rlobj,extsearch) (import_targetd ());

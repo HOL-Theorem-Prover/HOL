@@ -351,10 +351,19 @@ val l2 = filter (not o null) l1;
 
 val l0 = map (dest_tag o #1) targetl;
 val (l1,t2) = add_time (map (lo_cnorm 100 eq_axl_bare)) l0;
-val l2 = filter (not o isSome) l1;
+val l2 = filter (isSome) l1;
+val tml1 = map valOf l2
 
 val (l1,t3) = add_time (map (fast_lo_cnorm 100 eq_axl_bare)) l0;
-val l2 = filter (not o isSome) l1;
+val l2 = filter (isSome) l1;
+val tml2 = map valOf l2;
+
+val tml3 = filter (fn (x,y) => not (term_eq x y)) (combine (tml1,tml2));
+
+
+val tm = random_cterm 50;
+val tm1 = fast_lo_cnorm 100 eq_axl_bare tm;
+val tm2 = lo_cnorm 100 eq_axl_bare tm;
 *)
 
 
