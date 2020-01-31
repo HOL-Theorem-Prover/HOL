@@ -28,7 +28,7 @@ fun board_compare ((a,b,c),(d,e,f)) =
 fun status_of (tm1,tm2,n) =
   let 
     val tm1a = list_mk_cA [tm1,v1,v2,v3]
-    val tm1o = fast_lo_cnorm 100 eq_axl_bare tm1a
+    val tm1o = lo_cnorm 100 eq_axl_bare tm1a
   in
     if isSome tm1o andalso term_eq (valOf tm1o) tm2
       then Win
@@ -117,7 +117,7 @@ fun create_targetl tml =
   let
     val i = ref 0
     fun f tm = 
-      let val tmo = fast_lo_cnorm 100 eq_axl_bare (list_mk_cA [tm,v1,v2,v3])
+      let val tmo = lo_cnorm 100 eq_axl_bare (list_mk_cA [tm,v1,v2,v3])
       in
         if not (isSome tmo) orelse 
            can (find_term (C tmem [cS,cK])) (valOf tmo)
