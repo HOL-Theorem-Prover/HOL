@@ -283,9 +283,9 @@ fun select_from_targetd rlobj ntot targetd =
     fun f x = 1.0 / Math.pow (2.0,Real.fromInt x)
     fun g x = 
       let 
-        val y = random_real () * x 
+        val y = random_real ()
         val y' = if y < epsilon then epsilon else y 
-      in 
+      in
         x / y' 
       end
     fun h (a,(b,winl)) = ((a,(b,winl)), (g o f o row_either) winl)
@@ -323,7 +323,7 @@ fun rl_explore_init ngen (rlobj,es) targetd =
     val _ = log rlobj "Exploration: initialization"  
     val dummy = random_tnn (#tnnparam (#dplayer rlobj))
     val rlparam = #rlparam rlobj
-    val targetl = map fst (dlist targetd)
+    val targetl = select_from_targetd rlobj (#ntarget rlparam) targetd
     val (rlex,resultl) = 
       rl_explore_targetl (true,false) (rlobj,es) dummy targetl
     val newtargetd = foldl update_targetd targetd resultl
