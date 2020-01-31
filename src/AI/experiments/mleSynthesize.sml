@@ -13,7 +13,7 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlReinforce mleLib
 
 val ERR = mk_HOL_ERR "mleSynthesize"
-val version = 8
+val version = 9
 
 (* -------------------------------------------------------------------------
    Board
