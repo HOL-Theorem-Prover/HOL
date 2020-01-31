@@ -346,12 +346,12 @@ the region contains no backquotes, then send region instead."
       (send-string-as-hol-goaltree txt)
     (send-string-as-hol-goaltree (hol-term-at-point)))))
 
-(defun copy-region-as-hol-definition (start end arg &optional loud-opens)
+(defun copy-region-as-hol-definition (start end arg &optional loud-opens0)
   "Send selected region to HOL process as definition/expression.  With a
 prefix arg of 4 (hit control-u once), wrap what is sent so that it becomes
 ( .. ) handle e => Raise e, allowing HOL_ERRs to be displayed cleanly.
-With a prefix arg of 16 (hit control-u twice), toggle Moscow ML's quiet-dec
-variable before and after the region is sent."
+With a prefix arg of 16 (hit control-u twice), toggle `quiet-declarations'
+before and after the region is sent."
   (interactive "r\np")
   (let* ((buffer-string
             (with-hol-locpragma start (buffer-substring start end)))
@@ -359,15 +359,19 @@ variable before and after the region is sent."
           (if (= arg 4)
               (concat "(" buffer-string ") handle e => Raise e")
             buffer-string))
+         (loud-opens (if (= arg 16) t loud-opens0))
          (sender (if hol-emit-time-elapsed-p
                      'send-timed-string-to-hol
                    'send-string-to-hol)))
     (if (= arg 16) (hol-toggle-quietdec))
-    (funcall sender send-string hol-echo-commands-p loud-opens)
-    (if (> (length send-string) 300)
-        (send-string-to-hol
-         "val _ = print \"\\n*** Emacs/HOL command completed ***\\n\\n\""))
-    (if (= (prefix-numeric-value arg) 16) (hol-toggle-quietdec))))
+    (unwind-protect
+        (progn
+          (funcall sender send-string hol-echo-commands-p loud-opens)
+          (if (> (length send-string) 300)
+              (send-string-to-hol
+               (concat "val _ = print \"\\n*** Emacs/HOL command completed "
+                       "***\\n\\n\""))))
+      (if (= (prefix-numeric-value arg) 16) (hol-toggle-quietdec)))))
 
 
 
@@ -441,42 +445,8 @@ starts >%s%s<"
           (delete-region (- start 1) (point))))))
 
 
-(defun remove-sml-junk (start end)
-  "Removes all sml comments, HOL terms and strings in the given region."
-  (interactive "r")
-  (let ((m (make-marker))
-        (regexp
-         (concat "(\\*\\|`\\|\"\\|“\\|‘\\|"
-                 hol-quoted-theorem-proof-re-begin "\\|"
-                 hol-quoted-definition-re-begin)))
-    (set-marker m end)
-    (save-excursion
-      (goto-char start)
-      (while (re-search-forward regexp m t)
-        (let ((ms (match-string 0)))
-          (cond ((string= ms "(*") (remove-sml-comments m))
-                ((string= ms "\"") (remove-hol-string m))
-                ((string= ms "“") (remove-quoted-hol-term "“" "”" m))
-                ((string= ms "‘") (remove-quoted-hol-term "‘" "’" m))
-                ((string-prefix-p "Theorem" ms)
-                 (remove-quoted-hol-term ms "^Proof" m 7))
-                ((string-prefix-p "Triviality" ms)
-                 (remove-quoted-hol-term ms "^Proof" m 10))
-                ((string-prefix-p "Definition" ms)
-                 (remove-quoted-hol-term ms "^\\(Termination\\|End\\)" m 10))
-                ((string-prefix-p "Inductive" ms)
-                 (remove-quoted-hol-term ms "^End" m 9))
-                ((string-prefix-p "CoInductive" ms)
-                 (remove-quoted-hol-term ms "^End" m 11))
-                (t ; must be a back-tick
-                 (if (not (looking-at "`"))
-                     (remove-quoted-hol-term "`" "`" m)
-                   (forward-char 1)
-                   (remove-quoted-hol-term "``" "``" m))))))
-      (set-marker m nil))))
-
 (defun word-list-to-regexp (words)
-  (mapconcat (lambda (s) (concat "\\b" s "\\b")) words "\\|"))
+  (mapconcat (lambda (s) (concat "\\<" s "\\>")) words "\\|"))
 
 (setq hol-open-terminator-regexp
       (concat ";\\|"
@@ -496,61 +466,91 @@ starts >%s%s<"
     (unwind-protect
         (save-excursion
           (set-buffer tmpbuf)
-          (modify-syntax-entry ?_ "w")
+          (holscript-mode)
           (setq hol-buffer-name buf) ; version of this variable in tmpbuf
           (setq case-fold-search nil) ; buffer-local version
           (insert string)
           (goto-char (point-min))
-          (remove-sml-junk (point-min) (point-max))
-          (goto-char (point-min))
           ;; first thing to do is to search through buffer looking for
           ;; identifiers of form id.id.  When spotted such identifiers need
           ;; to have the first component of the name loaded.
-          (if hol-auto-load-p
-             (while (re-search-forward (concat "\\(" sml-struct-id-regexp
-                                            "\\)\\.\\w+")
-                                       (point-max) t)
-               (hol-load-string (match-string 1)))
-             t)
-          ;; next thing to do is to look for open declarations
-          (goto-char (point-min))
-          ;; search through buffer for open declarations
-          (while (re-search-forward "\\<open\\s-" (point-max) t)
-            ;; point now after an open, now search forward to end of
-            ;; buffer or a semi-colon, or an infix declaration or a
-            ;; val or a fun or another open  (as per the regexp defined just
-            ;; before this function definition
-            (let ((start (point))
-                  (end
-                   (save-excursion
-                     (if (re-search-forward hol-open-terminator-regexp
-                                            (point-max) t)
-                         (- (point) (length (match-string 0)))
-                       (point-max)))))
-              (hol-load-modules-in-region start end)))
+          (let ((regexp
+                 (concat "`\\|“\\|‘\\|"
+                         hol-quoted-theorem-proof-re-begin "\\|"
+                         hol-quoted-definition-re-begin "\\|"
+                         "\\(" sml-struct-id-regexp "\\)\\.\\w+" "\\|"
+                         "\\<open\\>")))
+            (while (re-search-forward regexp (point-max) t)
+              (let ((pp (syntax-ppss))
+                    (ms (match-string-no-properties 0)))
+                (if (and (not (nth 3 pp)) (not (nth 4 pp)))
+                    ;; maybe looking at termish thing that needs dodging
+                    (cond
+                     ((string= ms "`")
+                      (let ((term
+                             (if (looking-at "`") ; double backtick
+                                 (progn (forward-char 1) "``") "`")))
+                        (if (not (re-search-forward term nil t))
+                            (error
+                             (concat "Unbalanced " term " in region")))))
+                     ((string= ms "“")
+                      (if (not (re-search-forward "”" nil t))
+                          (error "Unbalanced “ in region")))
+                     ((string= ms "‘")
+                      (if (not (re-search-forward "’" nil t))
+                          (error "Unbalanced “ in region")))
+                     ((string-prefix-p "Theorem" ms)
+                      (if (not (re-search-forward "^Proof" nil t))
+                          (error "Unbalanced `Theorem' in region")))
+                     ((string-prefix-p "Triviality" ms)
+                      (if (not (re-search-forward "^Proof" nil t))
+                          (error "Unbalanced `Theorem' in region")))
+                     ((string-prefix-p "Definition" ms)
+                      (if (not
+                           (re-search-forward "^Termination\\|^End" nil t))
+                          (error "Unbalanced `Definition' in region")))
+                     ((or (string-prefix-p "Inductive" ms)
+                          (string-prefix-p "CoInductive" ms))
+                      (if (not (re-search-forward "^End" nil t))
+                          (error "Unbalanced [Co]Inductive in region")))
+                     ((string= ms "open")
+                      ;; point now after an open, now search forward
+                      ;; to end of buffer or a semi-colon, or an infix
+                      ;; declaration or a val or a fun or another open
+                      ;; or whatever, (as per the regexp defined just
+                      ;; before this function definition)
+                      (let ((open-start (match-beginning 0))
+                            (start (point))
+                            (end
+                             (save-excursion
+                               (if (re-search-forward
+                                    hol-open-terminator-regexp
+                                    nil t)
+                                   (- (point) (length (match-string 0)))
+                                 (point-max))))
+                            (endm (make-marker)))
+                        (if hol-auto-load-p
+                            (hol-load-modules-in-region start end))
+                        (if leave-loud-opens nil
+                            ;; now bracket the open decl with quietdec toggles
+                          (set-marker endm end)
+                          (goto-char end)
+                          (insert
+                           ";val _ = HOL_Interactive.toggle_quietdec();\n")
+                          (goto-char open-start)
+                          (insert
+                           "val _ = HOL_Interactive.toggle_quietdec();\n")
+                          (goto-char endm) (set-marker endm nil))))
+                     (t
+                      ; (message "Saw \"%s\"; position = %d; loading: %s"
+                      ;           ms (point) (match-string 6))
+                      (if hol-auto-load-p
+                          (hol-load-string (match-string 6))))))))
           ;; send the string
-          (delete-region (point-min) (point-max))
-          (insert string)
           (goto-char (point-min))
-          (if (not leave-loud-opens)
-              ;; now retraverse string, bracketing open calls with quietdec
-              ;; toggles
-              (while (re-search-forward "\\<open\\s-" (point-max) t)
-                (let* ((start (match-beginning 0))
-                       (end (save-excursion
-                              (if (re-search-forward hol-open-terminator-regexp
-                                                     (point-max) t)
-                                  (match-beginning 0)
-                                (point-max))))
-                       (endm (make-marker)))
-                  (set-marker endm end)
-                  (goto-char end)
-                  (insert ";val _ = HOL_Interactive.toggle_quietdec();\n")
-                  (goto-char start)
-                  (insert "val _ = HOL_Interactive.toggle_quietdec();\n")
-                  (goto-char endm) (set-marker endm nil))))
-            (send-buffer-to-hol-maybe-via-file echoit))
-          (kill-buffer tmpbuf)) ; kill buffer always
+            (send-buffer-to-hol-maybe-via-file echoit)))
+      (kill-buffer tmpbuf) ; kill buffer always (inside unwind-protect)
+      )
     ;; deactivate-mark will have likely been set by all the editting actions
     ;; in the temporary buffer.  We fix this here, thereby keeping the mark
     ;; active, if it is active.
