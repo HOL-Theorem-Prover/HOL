@@ -133,8 +133,8 @@ val _ = set_implicit_rewrites bool_rewrites;
 (* Main rewriting conversion                                            *)
 (* =====================================================================*)
 
-fun GEN_REWRITE_CONV (rw_func:conv->conv) rws thl =
-   rw_func (REWRITES_CONV (add_rewrites rws thl));
+fun GEN_REWRITE_CONV (rw_func:conv->conv) rws thl t =
+   rw_func (REWRITES_CONV (add_rewrites rws thl)) t;
 
 (* ---------------------------------------------------------------------*)
 (* Rewriting conversions.                                               *)
