@@ -3,7 +3,7 @@
 (* Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar (2013, 2015)            *)
 (* HVG Group, Concordia University, Montreal                                 *)
 (* ------------------------------------------------------------------------- *)
-(* Updated and further enriched by Chun Tian (2018-2019)                     *)
+(* Updated and further enriched by Chun Tian (2018-2020)                     *)
 (* Fondazione Bruno Kessler and University of Trento, Italy                  *)
 (* ------------------------------------------------------------------------- *)
 
@@ -11,11 +11,15 @@ open HolKernel Parse boolLib bossLib;
 
 open metisLib combinTheory pred_setTheory res_quanTools pairTheory
      prim_recTheory arithmeticTheory realTheory realLib real_sigmaTheory
-     seqTheory limTheory Diff transcTheory jrhUtils;
+     seqTheory limTheory Diff transcTheory jrhUtils pred_setLib;
 
 open hurdUtils util_probTheory cardinalTheory;
 
 val _ = new_theory "extreal";
+
+val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
+fun METIS ths tm = prove(tm, METIS_TAC ths);
+val set_ss = std_ss ++ PRED_SET_ss;
 
 (* ********************************************* *)
 (*              Type Definiton                   *)
@@ -43,6 +47,11 @@ End
 Definition real_def :
     real x = if (x = NegInf) \/ (x = PosInf) then (0 :real)
              else @r. x = Normal r
+End
+
+(* convert an extreal set to a real set, used in borelTheory *)
+Definition real_set_def :
+    real_set s = {real x | x <> PosInf /\ x <> NegInf /\ x IN s}
 End
 
 Theorem real_normal :
@@ -587,6 +596,12 @@ val le_addr = store_thm
   rpt Cases
   >> RW_TAC std_ss [extreal_add_def, extreal_le_def, le_infty, extreal_of_num_def,
                     extreal_not_infty, REAL_LE_ADDR]);
+
+val le_addl_imp = store_thm
+  ("le_addl_imp", ``!x y. 0 <= x ==> y <= x + y``,
+    rpt Cases
+ >> RW_TAC std_ss [extreal_add_def, extreal_le_def, le_infty, extreal_of_num_def,
+                   extreal_not_infty, REAL_LE_ADDL]);
 
 val le_addr_imp = store_thm
   ("le_addr_imp", ``!x y. 0 <= y ==> x <= x + y``,
@@ -2901,7 +2916,7 @@ val EXTREAL_SUM_IMAGE_CMUL2 = store_thm
  >> METIS_TAC [extreal_le_def, add_ldistrib_normal, REAL_LT_IMP_LE, IN_INSERT]);
  *)
 
-(* more antecedents added *)
+(* more antecedents added, cf. SUM_IMAGE_INJ_o *)
 Theorem EXTREAL_SUM_IMAGE_IMAGE :
     !s. FINITE s ==>
         !f'. INJ f' s (IMAGE f' s) ==>
@@ -2944,6 +2959,23 @@ Proof
   >> `(!x y. x IN s /\ y IN s ==> (f' x = f' y) ==> (x = y))` by METIS_TAC [IN_INSERT]
   >> `(!x. x IN IMAGE f' s ==> f x <> PosInf)` by METIS_TAC [IN_INSERT]
   >> FULL_SIMP_TAC std_ss []
+QED
+
+Theorem EXTREAL_SUM_IMAGE_PERMUTES :
+    !s. FINITE s ==> !g. g PERMUTES s ==>
+        !f. (!x. x IN (IMAGE g s) ==> f x <> NegInf) \/
+            (!x. x IN (IMAGE g s) ==> f x <> PosInf) ==>
+            (EXTREAL_SUM_IMAGE (f o g) s = EXTREAL_SUM_IMAGE f s)
+Proof
+    NTAC 5 STRIP_TAC >> DISCH_TAC
+ >> `INJ g s s /\ SURJ g s s` by METIS_TAC [BIJ_DEF]
+ >> `IMAGE g s = s` by SRW_TAC[][GSYM IMAGE_SURJ]
+ >> `s SUBSET univ(:'a)` by SRW_TAC[][SUBSET_UNIV]
+ >> `INJ g s univ(:'a)` by METIS_TAC[INJ_SUBSET, SUBSET_REFL]
+ >> Know `EXTREAL_SUM_IMAGE (f o g) s = EXTREAL_SUM_IMAGE f (IMAGE g s)`
+ >- (MATCH_MP_TAC EQ_SYM \\
+     irule EXTREAL_SUM_IMAGE_IMAGE >> rw [])
+ >> SRW_TAC[][]
 QED
 
 Theorem EXTREAL_SUM_IMAGE_DISJOINT_UNION : (* more antecedents added *)
@@ -3760,6 +3792,11 @@ val sup_const = store_thm
   ("sup_const", ``!x. sup (\y. y = x) = x``,
     RW_TAC real_ss [sup_eq, le_refl]);
 
+val sup_sing = store_thm ("sup_sing",
+  ``!a:extreal. sup {a} = a``,
+  REWRITE_TAC [METIS [EXTENSION, IN_SING, IN_DEF] ``{a} = (\x. x = a)``] THEN
+  SIMP_TAC std_ss [sup_const]);
+
 val sup_const_alt = store_thm
   ("sup_const_alt", ``!p z. (?x. p x) /\ (!x. p x ==> (x = z)) ==> (sup p = z)``,
     RW_TAC std_ss [sup_eq,le_refl]
@@ -4528,6 +4565,39 @@ val lt_inf_epsilon = store_thm
  >> Q.EXISTS_TAC `x'`
  >> RW_TAC std_ss []);
 
+Theorem sup_comm : (* was: SUP_commute *)
+    !f. sup {sup {f i j | j IN univ(:num)} | i IN univ(:num)} =
+        sup {sup {f i j | i IN univ(:num)} | j IN univ(:num)}
+Proof
+  RW_TAC std_ss [sup_eq] THENL
+  [POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION]) THEN
+   RW_TAC std_ss [GSPECIFICATION] THEN SIMP_TAC std_ss [sup_le] THEN
+   GEN_TAC THEN GEN_REWR_TAC LAND_CONV [GSYM SPECIFICATION] THEN
+   RW_TAC std_ss [GSPECIFICATION] THEN SIMP_TAC std_ss [le_sup] THEN
+   GEN_TAC THEN DISCH_THEN (MP_TAC o Q.SPEC `sup {f i (j:num) | i IN univ(:num)}`) THEN
+   Q_TAC SUFF_TAC `{sup {f i j | i IN univ(:num)} | j IN univ(:num)}
+    (sup {f i j | i IN univ(:num)})` THENL
+   [DISCH_TAC, ONCE_REWRITE_TAC [GSYM SPECIFICATION] THEN SET_TAC []] THEN
+   RW_TAC std_ss [] THEN MATCH_MP_TAC le_trans THEN
+   Q.EXISTS_TAC `sup {f i j | i IN univ(:num)}` THEN ASM_REWRITE_TAC [le_sup] THEN
+   GEN_TAC THEN DISCH_THEN MATCH_MP_TAC THEN
+   ONCE_REWRITE_TAC [GSYM SPECIFICATION] THEN SET_TAC [],
+   ALL_TAC] THEN
+  SIMP_TAC std_ss [sup_le] THEN GEN_TAC THEN
+  GEN_REWR_TAC LAND_CONV [GSYM SPECIFICATION] THEN
+  RW_TAC std_ss [GSPECIFICATION] THEN SIMP_TAC std_ss [sup_le] THEN
+  GEN_TAC THEN GEN_REWR_TAC LAND_CONV [GSYM SPECIFICATION] THEN
+  RW_TAC std_ss [GSPECIFICATION] THEN
+  FIRST_X_ASSUM (MP_TAC o Q.SPEC `sup {f (i:num) j | j IN univ(:num)}`) THEN
+  Q_TAC SUFF_TAC `{sup {f i j | j IN univ(:num)} | i IN univ(:num)}
+   (sup {f i j | j IN univ(:num)})` THENL
+  [ALL_TAC, ONCE_REWRITE_TAC [GSYM SPECIFICATION] THEN SET_TAC []] THEN
+  RW_TAC std_ss [] THEN MATCH_MP_TAC le_trans THEN
+  Q.EXISTS_TAC `sup {f i j | j IN univ(:num)}` THEN ASM_SIMP_TAC std_ss [le_sup] THEN
+  GEN_TAC THEN DISCH_THEN MATCH_MP_TAC THEN
+  ONCE_REWRITE_TAC [GSYM SPECIFICATION] THEN SET_TAC []
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Limit superior and limit inferior (limsup and liminf) [1, p.313] [4]     *)
 (*  Used in Fatou's lemma (lebesgueTheory) and the 2nd part of SLLN          *)
@@ -4564,6 +4634,20 @@ in
   val ext_suminf_def = new_specification
     ("ext_suminf_def", ["ext_suminf"], thm);
 end;
+
+Theorem ext_suminf_alt : (* without IMAGE *)
+    !f. (!n. 0 <= f n) ==>
+        (ext_suminf (\x. f x) = sup {SIGMA (\i. f i) (count n) | n IN UNIV})
+Proof
+    RW_TAC std_ss [ext_suminf_def, IMAGE_DEF]
+QED
+
+Theorem ext_suminf_alt' : (* without IMAGE, further simplified *)
+    !f. (!n. 0 <= f n) ==>
+        (ext_suminf (\x. f x) = sup {SIGMA f (count n) | n | T})
+Proof
+    RW_TAC bool_ss [ext_suminf_alt, ETA_AX, IN_UNIV]
+QED
 
 Theorem ext_suminf_add :
     !f g. (!n. 0 <= f n /\ 0 <= g n) ==>
@@ -5116,6 +5200,93 @@ val ext_suminf_sigma = store_thm
 val ext_suminf_sigma' = save_thm
   ("ext_suminf_sigma'", REWRITE_RULE [o_DEF] ext_suminf_sigma);
 
+val lemma = prove (
+  ``!f n'. (!i. (!m n. m <= n ==> (\x. f x i) m <= (\x. f x i) n)) /\
+        (!n i. 0 <= f n i) ==>
+        (SIGMA (\i. sup {f k i | k IN univ(:num)}) (count n') =
+         sup {SIGMA (\i. f k i) (count n') | k IN UNIV})``,
+  RW_TAC std_ss [] THEN Q.ABBREV_TAC `s = count n'` THEN
+  `FINITE s` by METIS_TAC [FINITE_COUNT] THEN POP_ASSUM MP_TAC THEN
+  Q.SPEC_TAC (`s`,`s`) THEN SET_INDUCT_TAC THENL
+  [SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_EMPTY, IN_UNIV] THEN
+   ONCE_REWRITE_TAC [SET_RULE ``{0 | k | T} = {0}``] THEN
+   SIMP_TAC std_ss [sup_sing],
+   ALL_TAC] THEN
+  Q_TAC SUFF_TAC `sup {SIGMA (\i. f k i) s' + SIGMA (\i. f k i) {e} | k IN univ(:num)} =
+   sup {SIGMA (\i. f k i) s' | k IN univ(:num)} +
+   sup {SIGMA (\i. f k i) {e} | k IN univ(:num)}` THENL
+  [ALL_TAC,
+   SIMP_TAC std_ss [GSYM IMAGE_DEF] THEN
+   ONCE_REWRITE_TAC [METIS [] ``SIGMA (\i. f k i) s' + SIGMA (\i. f k i) {e} =
+     (\k. SIGMA (\i. f k i) s') k + (\k. SIGMA (\i. f k i) {e}) k``] THEN
+   MATCH_MP_TAC sup_add_mono THEN RW_TAC std_ss [] THENL
+   [MATCH_MP_TAC EXTREAL_SUM_IMAGE_POS THEN ASM_SIMP_TAC std_ss [],
+    FIRST_ASSUM (MATCH_MP_TAC o MATCH_MP EXTREAL_SUM_IMAGE_MONO) THEN
+    RW_TAC std_ss [] THEN DISJ1_TAC THEN GEN_TAC THEN
+    SIMP_TAC std_ss [lt_infty] THEN DISCH_TAC THEN
+    METIS_TAC [lte_trans, num_not_infty, lt_infty],
+    ASM_SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_SING],
+    ALL_TAC] THEN
+   RW_TAC std_ss [EXTREAL_SUM_IMAGE_SING]] THEN
+  DISCH_TAC THEN `FINITE {e}` by SIMP_TAC std_ss [FINITE_SING] THEN
+  `DISJOINT s' {e}` by ASM_SET_TAC [] THEN
+  `!k.
+   (!x. x IN (s' UNION {e}) ==> (\i. f k i) x <> NegInf) \/
+   (!x. x IN (s' UNION {e}) ==> (\i. f k i) x <> PosInf) ==>
+   (SIGMA (\i. f k i) (s' UNION {e}) = SIGMA (\i. f k i) s' + SIGMA (\i. f k i) {e})` by
+   METIS_TAC [EXTREAL_SUM_IMAGE_DISJOINT_UNION] THEN
+  Q_TAC SUFF_TAC `!k. (SIGMA (\i. f k i) (s' UNION {e}) =
+       SIGMA (\i. f k i) s' + SIGMA (\i. f k i) {e})` THENL
+  [ALL_TAC,
+   GEN_TAC THEN POP_ASSUM MATCH_MP_TAC THEN DISJ1_TAC THEN
+   RW_TAC std_ss [lt_infty] THEN METIS_TAC [lte_trans, num_not_infty, lt_infty]] THEN
+  DISCH_TAC THEN ONCE_REWRITE_TAC [SET_RULE ``e INSERT s' = s' UNION {e}``] THEN
+  ASM_REWRITE_TAC [] THEN
+  `(!x. x IN s' UNION {e} ==> (\i. sup {f k i | k IN univ(:num)}) x <> NegInf) \/
+   (!x. x IN s' UNION {e} ==> (\i. sup {f k i | k IN univ(:num)}) x <> PosInf) ==>
+   (SIGMA (\i. sup {f k i | k IN univ(:num)}) (s' UNION {e}) =
+    SIGMA (\i. sup {f k i | k IN univ(:num)}) s' + SIGMA (\i. sup {f k i | k IN univ(:num)}) {e})`
+   by (MATCH_MP_TAC EXTREAL_SUM_IMAGE_DISJOINT_UNION THEN ASM_SIMP_TAC std_ss []) THEN
+  Q_TAC SUFF_TAC `(SIGMA (\i. sup {f k i | k IN univ(:num)}) (s' UNION {e}) =
+        SIGMA (\i. sup {f k i | k IN univ(:num)}) s' +
+        SIGMA (\i. sup {f k i | k IN univ(:num)}) {e})` THENL
+  [ALL_TAC,
+   POP_ASSUM MATCH_MP_TAC THEN DISJ1_TAC THEN RW_TAC std_ss [sup_eq] THEN
+   DISJ1_TAC THEN Q.EXISTS_TAC `f k x` THEN CONJ_TAC THENL
+   [ONCE_REWRITE_TAC [GSYM SPECIFICATION] THEN SET_TAC [], ALL_TAC] THEN
+   SIMP_TAC std_ss [GSYM extreal_lt_def] THEN
+   METIS_TAC [lte_trans, num_not_infty, lt_infty]] THEN
+  DISC_RW_KILL THEN ASM_SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_SING]);
+
+Theorem ext_suminf_sup_eq : (* was: suminf_SUP_eq *)
+   !(f:num->num->extreal).
+     (!i. (!m n. m <= n ==> (\x. f x i) m <= (\x. f x i) n)) /\
+     (!n i. 0 <= f n i) ==>
+     (suminf (\i. sup {f n i | n IN UNIV}) = sup {suminf (\i. f n i) | n IN UNIV})
+Proof
+    rpt STRIP_TAC
+ >> Know `!n. 0 <= (\i. sup {f n i | n IN UNIV}) n`
+ >- (RW_TAC set_ss [IN_UNIV, le_sup'] \\
+     MATCH_MP_TAC le_trans \\
+     Q.EXISTS_TAC `f 0 n` >> rw [] \\
+     POP_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC `0` >> rw [])
+ >> RW_TAC std_ss [ext_suminf_def, IMAGE_DEF]
+ >> Suff `!n. SIGMA (\i. sup {f k i | k IN UNIV}) (count n) =
+              sup {SIGMA (\i. f k i) (count n) | k IN UNIV}`
+ >- (DISCH_TAC \\
+     Know `sup {SIGMA (\i. sup {f n i | n IN UNIV}) (count n) | n IN UNIV} =
+           sup {sup {SIGMA (\i. f k i) (count n) | k IN UNIV} | n IN UNIV}`
+     >- (AP_TERM_TAC THEN AP_TERM_TAC THEN ABS_TAC THEN METIS_TAC []) \\
+     DISC_RW_KILL \\
+     Know
+    `sup {sup {(\k n. SIGMA (\i. f k i) (count n)) k n | k IN UNIV} | n IN UNIV} =
+     sup {sup {(\k n. SIGMA (\i. f k i) (count n)) k n | n IN UNIV} | k IN UNIV}`
+     >- (Q.ABBREV_TAC `g = (\k n. SIGMA (\i. f k i) (count n))` \\
+         SIMP_TAC std_ss [sup_comm]) \\
+     METIS_TAC [])
+ >> ASM_SIMP_TAC std_ss [lemma]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Further theorems concerning the relationship of suminf and SIGMA         *)
 (*  Used by the new measureTheory. (Chun Tian)                               *)
@@ -5184,9 +5355,9 @@ Proof
  >> FULL_SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_NORMAL, FINITE_COUNT, lt_infty]
 QED
 
-val pow_half_ser = store_thm
-  ("pow_half_ser", ``ext_suminf (\n. (1 / 2) pow (n + 1)) = 1``,
- (* proof *)
+Theorem pow_half_ser : (* was: suminf_half_series_ereal (HVG) *)
+    ext_suminf (\n. (1 / 2) pow (n + 1)) = 1
+Proof
     Know `(1 / 2) = Normal (1 / 2)`
  >- (`(1 = Normal 1) /\ (2 = Normal 2) /\ 2 <> Normal 0`
         by RW_TAC real_ss [extreal_of_num_def, extreal_11] \\
@@ -5236,7 +5407,8 @@ val pow_half_ser = store_thm
  >> GEN_TAC >> MATCH_MP_TAC REAL_SUM_IMAGE_MONO_SET
  >> RW_TAC arith_ss [IN_COUNT, FINITE_COUNT, COUNT_SUC, GSYM ADD1, SUBSET_INSERT, SUBSET_REFL]
  >> MATCH_MP_TAC POW_POS
- >> PROVE_TAC [HALF_POS, REAL_LT_LE]);
+ >> PROVE_TAC [HALF_POS, REAL_LT_LE]
+QED
 
 (* the lemma is non-trivial because it depends on "pos_summable" *)
 val summable_ext_suminf = store_thm

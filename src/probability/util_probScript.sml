@@ -15,10 +15,6 @@ open metisLib pairTheory combinTheory pred_setTheory pred_setLib
 
 val _ = new_theory "util_prob";
 
-(* ------------------------------------------------------------------------- *)
-(* bool theory subtypes.                                                     *)
-(* ------------------------------------------------------------------------- *)
-
 val _ = set_fixity "->" (Infixr 250);
 val _ = overload_on ("->",
       ``FUNSET  :'a set -> 'b set -> ('a -> 'b) set``);
@@ -46,6 +42,22 @@ val PAIR_UNIV = store_thm
 val PAIRED_BETA_THM = store_thm
   ("PAIRED_BETA_THM", ``!f z. UNCURRY f z = f (FST z) (SND z)``,
     STRIP_TAC >> Cases >> RW_TAC std_ss []);
+
+val prod_sets_def = Define `
+    prod_sets a b = {s CROSS t | s IN a /\ t IN b}`;
+
+val IN_o = store_thm
+  ("IN_o", ``!x f s. x IN (s o f) <=> f x IN s``,
+    RW_TAC std_ss [SPECIFICATION, o_THM]);
+
+val IN_PROD_SETS = store_thm
+  ("IN_PROD_SETS",
+   ``!s a b. s IN prod_sets a b <=> ?t u. (s = t CROSS u) /\ t IN a /\ u IN b``,
+   RW_TAC std_ss [prod_sets_def, GSPECIFICATION, UNCURRY]
+   >> EQ_TAC >- PROVE_TAC []
+   >> RW_TAC std_ss []
+   >> Q.EXISTS_TAC `(t, u)`
+   >> RW_TAC std_ss []);
 
 (* ------------------------------------------------------------------------- *)
 (* ----- Defining real-valued power, log, and log base 2 functions --------- *)
@@ -243,7 +255,6 @@ val NUM_2D_BIJ_NZ_ALT2_INV = store_thm
    PROVE_TAC [NUM_2D_BIJ_NZ_ALT2, BIJ_SYM]);
 
 (* Two concrete NUM_2D_BIJ lemmas using numpairTheory *)
-
 val NUM_2D_BIJ_nfst_nsnd = store_thm
   ("NUM_2D_BIJ_nfst_nsnd", ``BIJ (\n. (nfst n, nsnd n)) UNIV (UNIV CROSS UNIV)``,
     REWRITE_TAC [BIJ_ALT, IN_CROSS, IN_FUNSET, IN_UNIV]
@@ -263,24 +274,6 @@ val NUM_2D_BIJ_npair = store_thm
  >> POP_ASSUM (REWRITE_TAC o wrap)
  >> REWRITE_TAC [nfst_npair, nsnd_npair, npair_11]
  >> Cases_on `x'` >> SIMP_TAC std_ss []);
-
-val prod_sets_def = Define `
-    prod_sets a b = {s CROSS t | s IN a /\ t IN b}`;
-
-(* (not used anywhere)
-val IN_o = store_thm
-  ("IN_o", ``!x f s. x IN (s o f) = f x IN s``,
-    RW_TAC std_ss [SPECIFICATION, o_THM]);
- *)
-
-val IN_PROD_SETS = store_thm
-  ("IN_PROD_SETS",
-   ``!s a b. s IN prod_sets a b <=> ?t u. (s = t CROSS u) /\ t IN a /\ u IN b``,
-   RW_TAC std_ss [prod_sets_def, GSPECIFICATION, UNCURRY]
-   >> EQ_TAC >- PROVE_TAC []
-   >> RW_TAC std_ss []
-   >> Q.EXISTS_TAC `(t, u)`
-   >> RW_TAC std_ss []);
 
 val finite_enumeration_of_sets_has_max_non_empty = store_thm
   ("finite_enumeration_of_sets_has_max_non_empty",
