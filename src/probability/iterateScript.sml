@@ -217,21 +217,50 @@ val SET_RECURSION_LEMMA = store_thm ("SET_RECURSION_LEMMA",
       EVAL_TAC THEN FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT, SUBSET_REFL]]]);
 
 (* TODO: re-define it as theorem of "ITSET" in pred_setTheory *)
-val ITSET = Define
-   `ITSET f s b = (@g. (g {} = b) /\ !x s. FINITE s
-                  ==> (g (x INSERT s) = if x IN s then g s else f x (g s))) s`;
+Definition ITSET' :
+    ITSET' f s b =
+      (@g. (g {} = b) /\
+           !x s. FINITE s ==>
+                 (g (x INSERT s) = if x IN s then g s else f x (g s))) s
+End
 
-val FINITE_RECURSION = store_thm ("FINITE_RECURSION",
- ``!(f:'a->'b->'b) b.
+(* This lemma is only needed by ITERATE_CLAUSES_GEN *)
+Triviality FINITE_RECURSION' :
+    !(f:'a->'b->'b) b.
+        (!x y s. ~(x = y) ==> (f x (f y s) = f y (f x s)))
+        ==> (ITSET' f {} b = b) /\
+            !x s. FINITE s
+                  ==> (ITSET' f (x INSERT s) b =
+                       if x IN s then ITSET' f s b
+                                 else f x (ITSET' f s b))
+Proof
+  rpt GEN_TAC >> DISCH_TAC >> REWRITE_TAC [ITSET'] \\
+  CONV_TAC SELECT_CONV \\
+  MATCH_MP_TAC SET_RECURSION_LEMMA >> art []
+QED
+
+(* This proof is based on pred_set$ITSET (pred_setTheory.ITSET_def) *)
+Theorem FINITE_RECURSION :
+    !(f:'a->'b->'b) b.
         (!x y s. ~(x = y) ==> (f x (f y s) = f y (f x s)))
         ==> (ITSET f {} b = b) /\
             !x s. FINITE s
                   ==> (ITSET f (x INSERT s) b =
                        if x IN s then ITSET f s b
-                                 else f x (ITSET f s b))``,
-  REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[ITSET] THEN
-  CONV_TAC SELECT_CONV THEN MATCH_MP_TAC SET_RECURSION_LEMMA THEN
-  ASM_REWRITE_TAC[]);
+                                 else f x (ITSET f s b))
+Proof
+    RW_TAC std_ss [ITSET_EMPTY]
+ >> Cases_on `x IN s`
+ >- (`x INSERT s = s` by PROVE_TAC [ABSORPTION] >> art [])
+ >> ASM_SIMP_TAC std_ss []
+ >> Know `ITSET f s b = ITSET f (s DELETE x) b`
+ >- (`s DELETE x = s` by PROVE_TAC [DELETE_NON_ELEMENT] >> art [])
+ >> Rewr'
+ >> MATCH_MP_TAC COMMUTING_ITSET_RECURSES
+ >> rename1 `i IN s` >> RW_TAC std_ss []
+ >> Cases_on `x = y` >- art []
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
 
 val CARD_UNION_EQ = store_thm ("CARD_UNION_EQ",
   ``!s t u.
@@ -512,15 +541,15 @@ val REAL_SUP_UNIQUE = store_thm ("REAL_SUP_UNIQUE",
   ASM_MESON_TAC[REAL_NOT_LE, REAL_LE_ANTISYM]);
 
 (* there's another REAL_SUP_LE in HOL's realTheory *)
-val REAL_SUP_LE_S = store_thm
-  ("REAL_SUP_LE_S",
+val REAL_SUP_LE' = store_thm
+  ("REAL_SUP_LE'",
  ``!s b:real. ~(s = {}) /\ (!x. x IN s ==> x <= b) ==> sup s <= b``,
   METIS_TAC[SUP]);
 
 val REAL_SUP_LE_SUBSET = store_thm ("REAL_SUP_LE_SUBSET",
  ``!s t:real->bool. ~(s = {}) /\ s SUBSET t /\ (?b. !x. x IN t ==> x <= b)
          ==> sup s <= sup t``,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC REAL_SUP_LE_S THEN
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC REAL_SUP_LE' THEN
   MP_TAC(SPEC ``t:real->bool`` SUP) THEN ASM_SET_TAC[]);
 
 val REAL_LE_SUP = store_thm ("REAL_LE_SUP",
@@ -1019,11 +1048,10 @@ val MONOIDAL_AC = store_thm("MONOIDAL_AC",
 val support = new_definition ("support",
   ``support op (f:'a->'b) s = {x | x IN s /\ ~(f x = neutral op)}``);
 
-(* it is based on ITSET?! *)
 val iterate = new_definition ("iterate",
   ``iterate op (s:'a->bool) f =
          if FINITE(support op f s)
-         then ITSET (\x a. op (f x) a) (support op f s) (neutral op)
+         then ITSET' (\x a. op (f x) a) (support op f s) (neutral op)
          else neutral op``);
 
 val IN_SUPPORT = store_thm  ("IN_SUPPORT",
@@ -1099,7 +1127,7 @@ val ITERATE_CLAUSES_GEN = store_thm ("ITERATE_CLAUSES_GEN",
                                 else op (f x) (iterate op s f)))``,
   GEN_TAC THEN STRIP_TAC THEN CONV_TAC AND_FORALL_CONV THEN
   GEN_TAC THEN MP_TAC(ISPECL [``\x a. (op:'b->'b->'b) ((f:'a->'b)(x)) a``,
-                              ``neutral op :'b``] FINITE_RECURSION) THEN
+                              ``neutral op :'b``] FINITE_RECURSION') THEN
   KNOW_TAC ``(!(x :'a) (y :'a) (s :'b). x <> y ==>
         ((\(x :'a) (a :'b). (op :'b -> 'b -> 'b) ((f :'a -> 'b) x) a) x
         ((\(x :'a) (a :'b). op (f x) a) y s) = (\(x :'a) (a :'b). op (f x) a) y

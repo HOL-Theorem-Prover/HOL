@@ -267,15 +267,26 @@ Proof
  >> ASM_MESON_TAC [REAL_LE_REFL]
 QED
 
-val INTERVAL_LOWERBOUND_NONEMPTY = store_thm ("INTERVAL_LOWERBOUND_NONEMPTY",
- ``!a b:real. ~(interval[a,b] = {}) ==>
-               (interval_lowerbound(interval[a,b]) = a)``,
-  SIMP_TAC std_ss [INTERVAL_LOWERBOUND, INTERVAL_NE_EMPTY]);
+Theorem INTERVAL_LOWERBOUND_NONEMPTY :
+    !a b:real. ~(interval[a,b] = {}) ==>
+               (interval_lowerbound(interval[a,b]) = a)
+Proof
+    SIMP_TAC std_ss [INTERVAL_LOWERBOUND, INTERVAL_NE_EMPTY]
+QED
 
-val INTERVAL_UPPERBOUND_NONEMPTY = store_thm ("INTERVAL_UPPERBOUND_NONEMPTY",
- ``!a b:real. ~(interval[a,b] = {}) ==>
-               (interval_upperbound(interval[a,b]) = b)``,
-  SIMP_TAC std_ss [INTERVAL_UPPERBOUND, INTERVAL_NE_EMPTY]);
+Theorem INTERVAL_UPPERBOUND_NONEMPTY :
+    !a b:real. ~(interval[a,b] = {}) ==>
+               (interval_upperbound(interval[a,b]) = b)
+Proof
+    SIMP_TAC std_ss [INTERVAL_UPPERBOUND, INTERVAL_NE_EMPTY]
+QED
+
+Theorem INTERVAL_BOUNDS_EMPTY :
+    (interval_upperbound {} = 0) /\
+    (interval_lowerbound {} = 0)
+Proof
+    rw [interval_upperbound, interval_lowerbound]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Content (length) of an interval.                                          *)
@@ -1961,10 +1972,14 @@ val has_integral_alt = store_thm ("has_integral_alt",
 val integrable_on = new_definition ("integrable_on",
  ``f integrable_on i <=> ?y. (f has_integral y) i``);
 
-val integral = new_definition ("integral",
- ``Integral i f = @y. (f has_integral y) i``);
+(* renamed `integral` to `HK_integral` (Henstock-Kurzweil integral)
+   to prevent naming conflicts with lebesgueTheory. -- Chun Tian
+ *)
+Definition integral :
+    HK_integral i f = @y. (f has_integral y) i
+End
 
-val _ = overload_on ("integral", ``Integral``);
+val _ = overload_on ("integral", ``HK_integral``);
 
 val INTEGRABLE_INTEGRAL = store_thm ("INTEGRABLE_INTEGRAL",
  ``!f i. f integrable_on i ==> (f has_integral (integral i f)) i``,
@@ -4200,7 +4215,7 @@ val HAS_INTEGRAL_COMPONENT_LE = store_thm ("HAS_INTEGRAL_COMPONENT_LE",
     REAL_ARITH_TAC]);
 
 val INTEGRAL_COMPONENT_LE = store_thm ("INTEGRAL_COMPONENT_LE",
- ``!f:real->real g:real->real s k.
+ ``!f:real->real g:real->real s.
         f integrable_on s /\ g integrable_on s /\
         (!x. x IN s ==> (f x) <= (g x))
         ==> (integral s f) <= (integral s g)``,
@@ -20566,5 +20581,19 @@ val HAS_BOUNDED_VARIATION_ON_INDEFINITE_INTEGRAL_LEFT = store_thm ("HAS_BOUNDED_
   FIRST_ASSUM(MP_TAC o MATCH_MP ABSOLUTELY_INTEGRABLE_IMP_INTEGRABLE) THEN
   MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INTEGRABLE_ON_SUBINTERVAL) THEN
   ASM_REWRITE_TAC[SUBSET_INTERVAL] THEN ASM_REAL_ARITH_TAC);
+
+(* TODO: hol-light's "Multivariate/integration.ml", starting from line 21056:
+
+   CONTINUOUS_BV_IMP_UNIFORMLY_CONTINUOUS
+   HAS_BOUNDED_VARIATION_ON_DARBOUX_IMP_CONTINUOUS
+   VECTOR_VARIATION_ON_INTERIOR
+   VECTOR_VARIATION_ON_CLOSURE
+   HAS_BOUNDED_VARIATION_IMP_BAIRE1
+   INCREASING_IMP_BAIRE1
+   DECREASING_IMP_BAIRE1
+   FACTOR_THROUGH_VARIATION
+   FACTOR_CONTINUOUS_THROUGH_VARIATION
+   ...
+ *)
 
 val _ = export_theory();

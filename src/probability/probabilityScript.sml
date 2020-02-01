@@ -38,6 +38,8 @@ val _ = new_theory "probability";
 
   -- A. N. Kolmogorov, "Foundations of the Theory of Probability." [1] *)
 
+val _ = hide "S";
+
 (* ------------------------------------------------------------------------- *)
 (* Basic probability theory definitions.                                     *)
 (* ------------------------------------------------------------------------- *)
@@ -3680,11 +3682,11 @@ val finite_second_moments_indicator_fn = store_thm
  >> MATCH_MP_TAC let_trans >> Q.EXISTS_TAC `1`
  >> METIS_TAC [PROB_LE_1, extreal_of_num_def, lt_infty]);
 
-val variance_eq_indicator_fn = store_thm
-  ("variance_eq_inficator_fn",
-  ``!p s. prob_space p /\ s IN events p ==>
+Theorem variance_eq_indicator_fn :
+    !p s. prob_space p /\ s IN events p ==>
          (variance p (indicator_fn s) =
-          expectation p (indicator_fn s) - (expectation p (indicator_fn s)) pow 2)``,
+          expectation p (indicator_fn s) - (expectation p (indicator_fn s)) pow 2)
+Proof
     rpt STRIP_TAC
  >> Suff `variance p (indicator_fn s) =
           expectation p (\x. (indicator_fn s x) pow 2) - (expectation p (indicator_fn s)) pow 2`
@@ -3697,12 +3699,13 @@ val variance_eq_indicator_fn = store_thm
  >> Know `integrable p (\x. (indicator_fn s x) pow 2) <=> finite_second_moments p (indicator_fn s)`
  >- (MATCH_MP_TAC EQ_SYM \\
      MATCH_MP_TAC finite_second_moments_eq_integrable_square >> art []) >> Rewr'
- >> MATCH_MP_TAC finite_second_moments_indicator_fn >> art []);
+ >> MATCH_MP_TAC finite_second_moments_indicator_fn >> art []
+QED
 
-val variance_le_indicator_fn = store_thm
-  ("variance_le_indicator_fn",
-  ``!p s. prob_space p /\ s IN events p ==>
-          variance p (indicator_fn s) <= expectation p (indicator_fn s)``,
+Theorem variance_le_indicator_fn :
+    !p s. prob_space p /\ s IN events p ==>
+          variance p (indicator_fn s) <= expectation p (indicator_fn s)
+Proof
     rpt STRIP_TAC
  >> Suff `variance p (indicator_fn s) <= expectation p (\x. (indicator_fn s x) pow 2)`
  >- (Know `expectation p (\x. (indicator_fn s x) pow 2) = expectation p (indicator_fn s)`
@@ -3714,23 +3717,23 @@ val variance_le_indicator_fn = store_thm
  >> Know `integrable p (\x. (indicator_fn s x) pow 2) <=> finite_second_moments p (indicator_fn s)`
  >- (MATCH_MP_TAC EQ_SYM \\
      MATCH_MP_TAC finite_second_moments_eq_integrable_square >> art []) >> Rewr'
- >> MATCH_MP_TAC finite_second_moments_indicator_fn >> art []);
+ >> MATCH_MP_TAC finite_second_moments_indicator_fn >> art []
+QED
 
 (* for indicator_fn r.v.'s, pairwise independence implies additive of variances *)
-val variance_sum_indicator_fn = store_thm
-  ("variance_sum_indicator_fn",
-  ``!p E J. prob_space p /\ pairwise_indep_events p E J /\ FINITE J ==>
+Theorem variance_sum_indicator_fn :
+    !p E J. prob_space p /\ pairwise_indep_events p E J /\ FINITE J ==>
            (variance p (\x. SIGMA (\n. (indicator_fn o E) n x) J) =
-            SIGMA (\n. variance p ((indicator_fn o E) n)) J)``,
+            SIGMA (\n. variance p ((indicator_fn o E) n)) J)
+Proof
     RW_TAC bool_ss [pairwise_indep_events_def]
  >> MATCH_MP_TAC variance_sum
  >> RW_TAC std_ss [o_DEF, uncorrelated_vars_def, uncorrelated_def,
                    finite_second_moments_indicator_fn, INDICATOR_FN_REAL_RV]
  >> REWRITE_TAC [GSYM INDICATOR_FN_INTER]
  >> `E i INTER E j IN events p` by PROVE_TAC [EVENTS_INTER]
- >> ASM_SIMP_TAC std_ss [expectation_indicator] >> fs [indep_def]);
-
-val _ = hide "S";
+ >> ASM_SIMP_TAC std_ss [expectation_indicator] >> fs [indep_def]
+QED
 
 (* The harder part of Borel-Cantelli Lemma (of pairwise independence) *)
 val Borel_Cantelli_Lemma2p = store_thm
