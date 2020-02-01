@@ -3,10 +3,24 @@
 (* Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar                         *)
 (* HVG Group, Concordia University, Montreal                                 *)
 (*                                                                           *)
-(* Updated by Chun Tian (2019)                                               *)
 (* Fondazione Bruno Kessler and University of Trento, Italy                  *)
 (* ------------------------------------------------------------------------- *)
 (* Based on the work of Aaron Coble, Cambridge University                    *)
+(* ------------------------------------------------------------------------- *)
+(* Updated by Chun Tian (2019-2020) using some materials from:               *)
+(*                                                                           *)
+(*        Lebesgue Measure Theory (lebesgue_measure_hvgScript.sml)           *)
+(*                                                                           *)
+(*        (c) Copyright 2015,                                                *)
+(*                       Muhammad Qasim,                                     *)
+(*                       Osman Hasan,                                        *)
+(*                       Hardware Verification Group,                        *)
+(*                       Concordia University                                *)
+(*                                                                           *)
+(*            Contact:  <m_qasi@ece.concordia.ca>                            *)
+(*                                                                           *)
+(* Note: This theory is inspired by Isabelle/HOL                             *)
+(*                                                                           *)
 (* ------------------------------------------------------------------------- *)
 
 open HolKernel Parse boolLib bossLib;
@@ -17,9 +31,12 @@ open arithmeticTheory prim_recTheory pairTheory pred_setTheory
 open realTheory realLib seqTheory transcTheory real_sigmaTheory jrhUtils;
 
 open hurdUtils util_probTheory extrealTheory sigma_algebraTheory measureTheory
-     borelTheory;
+     borelTheory real_topologyTheory;
 
 val _ = new_theory "lebesgue";
+
+val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
+fun METIS ths tm = prove(tm, METIS_TAC ths);
 
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)
@@ -29,7 +46,9 @@ val _ = new_theory "lebesgue";
    f is a normal function defined on extended reals ('a -> extreal),
    a_i (i IN s) are mutually disjoint measurable sets in m,
    x_i are (normal) reals.
-  `g = \t. SIGMA (\i. Normal (x i) * (indicator_fn (a i) t)) s` is the simple function of f,
+  `g = \t. SIGMA (\i. Normal (x i) * (indicator_fn (a i) t)) s`
+      is the simple function of f.
+
    BIGUNION and DISJOINT indicate that this is a standard representation of g.
  *)
 val pos_simple_fn_def = Define
@@ -65,10 +84,15 @@ val psfis_def = Define
 val pos_fn_integral_def = Define
    `pos_fn_integral m f = sup {r | ?g. r IN psfis m g /\ !x. g x <= f x}`;
 
-(* the integral of arbitrary function is the integrals of positive parts minus
-   negative parts *)
-val integral_def = Define
-   `integral m f = pos_fn_integral m (fn_plus f) - pos_fn_integral m (fn_minus f)`;
+(* Lebesgue integral of arbitrary function is the integrals of positive parts minus
+   negative parts. Renamed to `L_integral` (Lebesgue integral) to prevent conflicts
+   with integrationTheory.
+ *)
+Definition integral_def :
+    L_integral m f = pos_fn_integral m (fn_plus f) - pos_fn_integral m (fn_minus f)
+End
+
+val _ = overload_on ("integral", ``L_integral``);
 
 (* Lebesgue integrable = the integral is defined (i.e. no `PosInf - PosInf`) *)
 val integrable_def = Define
@@ -127,6 +151,11 @@ val _ = overload_on ("<<", ``measure_absolutely_continuous``);
 (* The measure with density (function) f with respect to m,
    from HVG's lebesgue_measureScript.sml, simplified.
 
+   The use of `density`, e.g. in RN_deriv_def, should guarantee that:
+
+   1) the involved function `f` is non-negative in the measure space `m`.
+   2) the resulting `f * m` is always called on measurable sets of `m`.
+
    TODO: show `density m f` is a measure, i.e.
    |- measure_space (m_space m, measurable_sets m, density m f) [1, p.81]
  *)
@@ -163,6 +192,11 @@ val _ = overload_on ("*", ``\f m. density m f``);
           ==> AE x::m. (f x = f' x)``
 
    To be proved in martingaleTheory.
+
+   Differences with HVG's definition:
+
+   1. `!x. 0 <= f x` is replaced by `!x. x IN m_space m ==> 0 <= f x`
+   2. `density` ( * ) is used, with `integral` instead of `pos_fn_integral`
  *)
 val RN_deriv_def = Define (* or `dv / dm` *)
    `RN_deriv v m =
@@ -172,7 +206,6 @@ val RN_deriv_def = Define (* or `dv / dm` *)
 
 (* `f = RN_deriv v m` is denoted by `f = v / m`, also see "density_def" *)
 val _ = overload_on ("/", ``RN_deriv``);
-
 
 (*****************************************************************************)
 
@@ -3025,6 +3058,577 @@ val lemma_fn_in_psfis = prove (
       >> METIS_TAC [IN_MEASURABLE_BOREL_ALL, measurable_sets_def,subsets_def,space_def,m_space_def])
   >> FULL_SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_NOT_INFTY]);
 
+(* This huge theorem (from HVG) cannot be put in borelTheory as it depends on
+   several local lemmas here in lebesgueTheory.
+
+   NOTE: IN_MEASURABLE_BOREL_TIMES is not included in this result.
+ *)
+Theorem BOREL_INDUCT : (* was: Induct_on_Borel_functions *)
+  !f m P.
+     measure_space m /\
+     f IN measurable (m_space m, measurable_sets m) Borel /\ (!x. 0 <= f x) /\
+     (!f g. f IN measurable (m_space m, measurable_sets m) Borel /\
+            g IN measurable (m_space m, measurable_sets m) Borel /\
+            (!x. x IN m_space m ==> (f x = g x)) /\ P f ==> P g) /\
+     (!A. A IN measurable_sets m ==> P (indicator_fn A)) /\
+     (!f c. f IN measurable (m_space m, measurable_sets m) Borel /\
+            0 <= c /\ (!x. 0 <= f x) /\ P f ==> P (\x. c * f x)) /\
+     (!f g. f IN measurable (m_space m, measurable_sets m) Borel /\
+            g IN measurable (m_space m, measurable_sets m) Borel /\
+            (!x. 0 <= f x) /\ P f /\ (!x. 0 <= g x) /\ P g ==>
+            P (\x. f x + g x)) /\
+     (!u. (!i:num. (u i) IN measurable (m_space m, measurable_sets m) Borel) /\
+          (!i x. 0 <= u i x) /\ (!x. mono_increasing (\i. u i x)) /\
+          (!i. P (u i)) ==> P (\x. sup (IMAGE (\i. u i x) UNIV))) ==> P f
+Proof
+  RW_TAC std_ss [] THEN FIRST_ASSUM MATCH_MP_TAC THEN
+  Q.EXISTS_TAC `(\x. sup (IMAGE (\i. fn_seq m f i x) univ(:num)))` THEN
+  ASM_SIMP_TAC std_ss [lemma_fn_sup] THEN
+
+  Know `!i. (\x. SIGMA
+          (\k. &k / 2 pow i *
+             indicator_fn {x |
+                x IN m_space m /\ &k / 2 pow i <= f x /\
+                f x < (&k + 1) / 2 pow i} x) (count (4 ** i)))
+          IN measurable (m_space m, measurable_sets m) Borel` THEN1
+  (Q.X_GEN_TAC `i` THEN
+   Q.ABBREV_TAC `s = count (4 ** i)` THEN
+   Q.ABBREV_TAC `g = (\k x. &k / 2 pow i *
+        indicator_fn
+          {x |
+           x IN m_space m /\ &k / 2 pow i <= f x /\
+           f x < (&k + 1) / 2 pow i} x)` THEN
+
+   Suff `FINITE s /\ sigma_algebra (m_space m, measurable_sets m) /\
+     (!i. i IN s ==> g i IN measurable (m_space m, measurable_sets m) Borel) /\
+     (!i x. i IN s /\ x IN space (m_space m, measurable_sets m) ==> g i x <> NegInf) /\
+     (!x. x IN space (m_space m, measurable_sets m) ==>
+      ((\x. SIGMA
+     (\k. &k / 2 pow i *
+        indicator_fn {x |
+           x IN m_space m /\ &k / 2 pow i <= f x /\
+           f x < (&k + 1) / 2 pow i} x) s) x = SIGMA (\i. g i x) s))` THEN1
+   (DISCH_THEN (MP_TAC o MATCH_MP IN_MEASURABLE_BOREL_SUM) THEN
+    SIMP_TAC std_ss []) THEN
+
+   Q.UNABBREV_TAC `s` THEN Q.UNABBREV_TAC `g` THEN
+   FULL_SIMP_TAC std_ss [measure_space_def, FINITE_COUNT] THEN
+   SIMP_TAC std_ss [space_def, IN_UNIV] THEN
+
+  `2 pow i <> NegInf /\ 2 pow i <> PosInf`
+      by METIS_TAC [pow_not_infty, num_not_infty] THEN
+   Know `real (2 pow i) <> 0`
+   >- (ASM_SIMP_TAC std_ss [GSYM extreal_11, normal_real,
+                            GSYM extreal_of_num_def] THEN
+       Suff `(0 :extreal) < 2 pow i` >- METIS_TAC [lt_imp_ne] THEN
+       METIS_TAC [lt_02, pow_pos_lt]) >> DISCH_TAC THEN
+
+   Reverse CONJ_TAC THEN1
+   (Q.X_GEN_TAC `n` THEN
+    RW_TAC std_ss [lt_infty] THEN MATCH_MP_TAC lte_trans THEN
+    Q.EXISTS_TAC `0` THEN SIMP_TAC std_ss [GSYM lt_infty, num_not_infty] THEN
+    MATCH_MP_TAC le_mul THEN REWRITE_TAC [INDICATOR_FN_POS] THEN
+    `2 pow i = Normal (real (2 pow i))` by METIS_TAC [normal_real] THEN
+    POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
+    ASM_SIMP_TAC std_ss [extreal_div_def] THEN
+    MATCH_MP_TAC le_mul THEN SIMP_TAC std_ss [le_num] THEN
+    ASM_SIMP_TAC real_ss [extreal_inv_def] THEN
+    SIMP_TAC std_ss [extreal_of_num_def, extreal_le_def] THEN
+    SIMP_TAC std_ss [REAL_LE_INV_EQ] THEN SIMP_TAC std_ss [GSYM extreal_le_def] THEN
+    ASM_SIMP_TAC std_ss [normal_real, GSYM extreal_of_num_def] THEN
+    METIS_TAC [le_02, pow_pos_le]) THEN
+
+   Q.X_GEN_TAC `n` THEN
+   RW_TAC std_ss [] THEN MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL THEN
+   take [`(\x. indicator_fn
+               {x | x IN m_space m /\ &n / 2 pow i <= f x /\ f x < (&n + 1) / 2 pow i} x)`,
+         `real (&n / 2 pow i)`] THEN
+
+   Know `&n / 2 pow i <> NegInf /\ &n / 2 pow i <> PosInf` THEN1
+   (`2 pow i = Normal (real (2 pow i))` by METIS_TAC [normal_real] THEN
+    POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
+    `&n = Normal (&n)` by PROVE_TAC [extreal_of_num_def] >> POP_ORW \\
+    ASM_SIMP_TAC std_ss [extreal_div_eq, extreal_not_infty]) >> STRIP_TAC THEN
+
+   ASM_SIMP_TAC std_ss [normal_real] THEN
+   MATCH_MP_TAC IN_MEASURABLE_BOREL_INDICATOR THEN
+   Q.EXISTS_TAC `{x | x IN m_space m /\ &n / 2 pow i <= f x /\ f x < (&n + 1) / 2 pow i}` THEN
+   ASM_SIMP_TAC std_ss [] THEN
+   Q_TAC SUFF_TAC
+   `{x | x IN m_space m /\ &n / 2 pow i <= f x /\ f x < (&n + 1) / 2 pow i} =
+    PREIMAGE f {x | &n / 2 pow i <= x /\ x < (&n + 1) / 2 pow i} INTER
+    space (m_space m, measurable_sets m)` THENL
+   [DISC_RW_KILL,
+    SIMP_TAC std_ss [PREIMAGE_def, space_def, INTER_UNIV] THEN
+    SET_TAC []] THEN
+   FULL_SIMP_TAC std_ss [IN_MEASURABLE] THEN
+   FIRST_X_ASSUM MATCH_MP_TAC THEN
+
+   Suff `(&n + 1) / 2 pow i <> NegInf /\ (&n + 1) / 2 pow i <> PosInf`
+   >- (STRIP_TAC THEN METIS_TAC [BOREL_MEASURABLE_SETS_CO, normal_real]) THEN
+
+   `2 pow i = Normal (real (2 pow i))` by METIS_TAC [normal_real] THEN
+    POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
+    Know `&n + 1 = Normal (&n + 1)`
+    >- (REWRITE_TAC [extreal_of_num_def, extreal_add_def]) >> Rewr' THEN
+    ASM_SIMP_TAC std_ss [extreal_div_eq, extreal_not_infty]
+  ) THEN DISCH_TAC THEN
+
+  Know `!i. (\x. 2 pow i * indicator_fn {x | x IN m_space m /\ 2 pow i <= f x} x)
+            IN measurable (m_space m, measurable_sets m) Borel` THEN1
+  (GEN_TAC THEN MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL THEN
+   `2 pow i <> NegInf /\ 2 pow i <> PosInf` by
+    METIS_TAC [pow_not_infty, num_not_infty] THEN
+   Q.EXISTS_TAC `(\x. indicator_fn {x | x IN m_space m /\ 2 pow i <= f x} x)` THEN
+   Q.EXISTS_TAC `real (2 pow i)` THEN ASM_SIMP_TAC std_ss [normal_real] THEN
+   FULL_SIMP_TAC std_ss [measure_space_def] THEN
+   MATCH_MP_TAC IN_MEASURABLE_BOREL_INDICATOR THEN
+   Q.EXISTS_TAC `{x | x IN m_space m /\ 2 pow i <= f x}` THEN
+   ASM_SIMP_TAC std_ss [space_def, IN_UNIV] THEN
+   Q_TAC SUFF_TAC `{x | x IN m_space m /\ 2 pow i <= f x} =
+    PREIMAGE f {x | 2 pow i <= x} INTER space (m_space m,measurable_sets m)` THENL
+   [DISC_RW_KILL,
+    SIMP_TAC std_ss [PREIMAGE_def, space_def, INTER_UNIV] THEN
+    SET_TAC []] THEN
+   FULL_SIMP_TAC std_ss [IN_MEASURABLE] THEN
+   FIRST_X_ASSUM MATCH_MP_TAC THEN METIS_TAC [BOREL_MEASURABLE_SETS_CR, normal_real]
+   ) THEN DISCH_TAC THEN
+
+  Know `(!i. fn_seq m f i IN measurable (m_space m,measurable_sets m) Borel)` THEN1
+  (SIMP_TAC std_ss [fn_seq_def] THEN GEN_TAC THEN
+   MATCH_MP_TAC IN_MEASURABLE_BOREL_ADD THEN
+   take [`(\x. SIGMA
+          (\k. &k / 2 pow i *
+             indicator_fn {x |
+                x IN m_space m /\ &k / 2 pow i <= f x /\
+                f x < (&k + 1) / 2 pow i} x) (count (4 ** i)))`,
+         `(\x. 2 pow i * indicator_fn {x | x IN m_space m /\ 2 pow i <= f x} x)`] THEN
+   POP_ASSUM MP_TAC THEN POP_ASSUM MP_TAC THEN FULL_SIMP_TAC std_ss [measure_space_def] THEN
+
+   `2 pow i <> NegInf /\ 2 pow i <> PosInf`
+      by METIS_TAC [pow_not_infty, num_not_infty] THEN
+    Know `real (2 pow i) <> 0`
+    >- (ASM_SIMP_TAC std_ss [GSYM extreal_11, normal_real,
+                             GSYM extreal_of_num_def] THEN
+        Suff `(0 :extreal) < 2 pow i` >- METIS_TAC [lt_imp_ne] THEN
+        METIS_TAC [lt_02, pow_pos_lt]) >> DISCH_TAC THEN
+
+   RW_TAC std_ss [] THEN1
+   (SIMP_TAC std_ss [lt_infty] THEN MATCH_MP_TAC lte_trans THEN
+    Q.EXISTS_TAC `0` THEN SIMP_TAC std_ss [GSYM lt_infty, num_not_infty] THEN
+    MATCH_MP_TAC EXTREAL_SUM_IMAGE_POS THEN REWRITE_TAC [FINITE_COUNT] THEN
+    Q.X_GEN_TAC `n` THEN RW_TAC std_ss [IN_UNIV] THEN
+    MATCH_MP_TAC le_mul THEN REWRITE_TAC [INDICATOR_FN_POS] THEN
+   `2 pow i = Normal (real (2 pow i))` by METIS_TAC [normal_real] THEN
+    POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
+    ASM_SIMP_TAC std_ss [extreal_div_def] THEN
+    MATCH_MP_TAC le_mul THEN SIMP_TAC std_ss [le_num] THEN
+    ASM_SIMP_TAC real_ss [extreal_inv_def] THEN
+    SIMP_TAC std_ss [extreal_of_num_def, extreal_le_def] THEN
+    SIMP_TAC std_ss [REAL_LE_INV_EQ] THEN SIMP_TAC std_ss [GSYM extreal_le_def] THEN
+    ASM_SIMP_TAC std_ss [normal_real, GSYM extreal_of_num_def] THEN
+    METIS_TAC [le_02, pow_pos_le]) THEN
+
+   SIMP_TAC std_ss [lt_infty] THEN MATCH_MP_TAC lte_trans THEN
+   Q.EXISTS_TAC `0` THEN SIMP_TAC std_ss [GSYM lt_infty, num_not_infty] THEN
+   MATCH_MP_TAC le_mul THEN CONJ_TAC THENL
+   [ALL_TAC,
+    SIMP_TAC std_ss [indicator_fn_def] THEN COND_CASES_TAC THEN
+    SIMP_TAC real_ss [le_refl, extreal_le_def, extreal_of_num_def]] THEN
+   SIMP_TAC std_ss [extreal_of_num_def, extreal_pow_def, extreal_le_def] THEN
+   MATCH_MP_TAC POW_POS THEN SIMP_TAC real_ss []
+   ) THEN DISCH_TAC THEN
+
+  CONJ_TAC THENL
+  [MATCH_MP_TAC IN_MEASURABLE_BOREL_MONO_SUP THEN
+   Q.EXISTS_TAC `fn_seq m f` THEN SIMP_TAC std_ss [] THEN
+   CONJ_TAC THENL
+   [METIS_TAC [measure_space_def], ALL_TAC] THEN
+   CONJ_TAC THENL
+   [ALL_TAC,
+    GEN_TAC THEN GEN_TAC THEN
+    `mono_increasing (\n. fn_seq m f n x)` by METIS_TAC [lemma_fn_mono_increasing] THEN
+    FULL_SIMP_TAC std_ss [ext_mono_increasing_def] THEN
+    FIRST_X_ASSUM MATCH_MP_TAC] THEN ASM_SIMP_TAC std_ss [],
+   ALL_TAC] THEN
+
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  ASM_SIMP_TAC std_ss [lemma_fn_mono_increasing, lemma_fn_5] THEN
+
+  GEN_TAC THEN SIMP_TAC std_ss [fn_seq_def] THEN
+  Suff `P (\x.
+    (\x. SIGMA
+      (\k. &k / 2 pow i *
+         indicator_fn {x |
+            x IN m_space m /\ &k / 2 pow i <= f x /\
+            f x < (&k + 1) / 2 pow i} x) (count (4 ** i))) x +
+    (\x. 2 pow i * indicator_fn {x | x IN m_space m /\ 2 pow i <= f x} x) x)`
+  >- (SIMP_TAC std_ss []) THEN
+  FIRST_ASSUM MATCH_MP_TAC THEN ASM_SIMP_TAC std_ss [IN_UNIV] THEN
+  CONJ_TAC >-
+  (GEN_TAC THEN
+   MATCH_MP_TAC EXTREAL_SUM_IMAGE_POS THEN REWRITE_TAC [FINITE_COUNT] THEN
+   Q.X_GEN_TAC `n` THEN RW_TAC std_ss [IN_COUNT] THEN
+   MATCH_MP_TAC le_mul THEN REWRITE_TAC [INDICATOR_FN_POS] THEN
+
+   `2 pow i <> NegInf /\ 2 pow i <> PosInf`
+      by METIS_TAC [pow_not_infty, num_not_infty] THEN
+    Know `real (2 pow i) <> 0`
+    >- (ASM_SIMP_TAC std_ss [GSYM extreal_11, normal_real,
+                             GSYM extreal_of_num_def] THEN
+        Suff `(0 :extreal) < 2 pow i` >- METIS_TAC [lt_imp_ne] THEN
+        METIS_TAC [lt_02, pow_pos_lt]) >> DISCH_TAC THEN
+
+   `2 pow i = Normal (real (2 pow i))` by METIS_TAC [normal_real] THEN
+    POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
+    ASM_SIMP_TAC std_ss [extreal_div_def] THEN
+    MATCH_MP_TAC le_mul THEN SIMP_TAC std_ss [le_num] THEN
+    ASM_SIMP_TAC real_ss [extreal_inv_def] THEN
+    SIMP_TAC std_ss [extreal_of_num_def, extreal_le_def] THEN
+    SIMP_TAC std_ss [REAL_LE_INV_EQ] THEN SIMP_TAC std_ss [GSYM extreal_le_def] THEN
+    ASM_SIMP_TAC std_ss [normal_real, GSYM extreal_of_num_def] THEN
+    METIS_TAC [le_02, pow_pos_le]) THEN
+
+  CONJ_TAC THEN1
+  (`FINITE (count (4 ** i))` by SIMP_TAC std_ss [FINITE_COUNT] THEN
+   Suff `(\s. P
+    (\x. SIGMA
+       (\k. &k / 2 pow i *
+          indicator_fn {x | x IN m_space m /\ &k / 2 pow i <= f x /\ f x < (&k + 1) / 2 pow i} x) (s)))
+         (count (4 ** i))`
+   >- (SIMP_TAC std_ss []) THEN
+   POP_ASSUM MP_TAC THEN
+   Q.ABBREV_TAC `s = count (4 ** i)` THEN Q.SPEC_TAC (`s`,`s`) THEN
+   MATCH_MP_TAC FINITE_INDUCT THEN
+   Q.UNABBREV_TAC `s` THEN SIMP_TAC std_ss [FINITE_COUNT] THEN
+   SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_EMPTY] THEN
+   CONJ_TAC THEN1
+   (FIRST_ASSUM MATCH_MP_TAC THEN Q.EXISTS_TAC `indicator_fn {}` THEN
+    RW_TAC std_ss [] THENL
+    [MATCH_MP_TAC IN_MEASURABLE_BOREL_INDICATOR THEN Q.EXISTS_TAC `{}` THEN
+     FULL_SIMP_TAC std_ss [measure_space_def] THEN METIS_TAC [SIGMA_ALGEBRA],
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST THEN Q.EXISTS_TAC `0` THEN
+     FULL_SIMP_TAC std_ss [measure_space_def],
+     SIMP_TAC std_ss [indicator_fn_def, NOT_IN_EMPTY],
+     ALL_TAC] THEN
+    FIRST_ASSUM MATCH_MP_TAC THEN
+    FULL_SIMP_TAC std_ss [measure_space_def, SIGMA_ALGEBRA, subsets_def]) THEN
+   RW_TAC std_ss [] THEN
+   Know `!x.
+     SIGMA
+       (\k.
+          &k / 2 pow i *
+          indicator_fn
+            {x | x IN m_space m /\ &k / 2 pow i <= f x /\ f x < (&k + 1) / 2 pow i} x)
+       (e INSERT s) =
+      (\k. &k / 2 pow i *
+      indicator_fn {x | x IN m_space m /\ &k / 2 pow i <= f x /\ f x < (&k + 1) / 2 pow i} x) e +
+      SIGMA
+       (\k.
+          &k / 2 pow i *
+          indicator_fn
+            {x | x IN m_space m /\ &k / 2 pow i <= f x /\ f x < (&k + 1) / 2 pow i} x)
+       (s DELETE e)` THEN1
+   (GEN_TAC THEN FIRST_ASSUM (MP_TAC o MATCH_MP EXTREAL_SUM_IMAGE_PROPERTY) THEN
+    DISCH_THEN MATCH_MP_TAC THEN DISJ1_TAC THEN
+    Q.X_GEN_TAC `n` THEN DISCH_TAC THEN
+    SIMP_TAC std_ss [lt_infty] THEN MATCH_MP_TAC lte_trans THEN
+    Q.EXISTS_TAC `0` THEN SIMP_TAC std_ss [GSYM lt_infty, num_not_infty] THEN
+    MATCH_MP_TAC le_mul THEN REWRITE_TAC [INDICATOR_FN_POS] THEN
+
+   `2 pow i <> NegInf /\ 2 pow i <> PosInf`
+       by METIS_TAC [pow_not_infty, num_not_infty] THEN
+    Know `real (2 pow i) <> 0`
+    >- (ASM_SIMP_TAC std_ss [GSYM extreal_11, normal_real,
+                             GSYM extreal_of_num_def] THEN
+        Suff `(0 :extreal) < 2 pow i` >- METIS_TAC [lt_imp_ne] THEN
+        METIS_TAC [lt_02, pow_pos_lt]) >> DISCH_TAC THEN
+
+   `2 pow i = Normal (real (2 pow i))` by METIS_TAC [normal_real] THEN
+    POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
+    ASM_SIMP_TAC std_ss [extreal_div_def] THEN
+    MATCH_MP_TAC le_mul THEN SIMP_TAC std_ss [le_num] THEN
+    ASM_SIMP_TAC real_ss [extreal_inv_def] THEN
+    SIMP_TAC std_ss [extreal_of_num_def, extreal_le_def] THEN
+    SIMP_TAC std_ss [REAL_LE_INV_EQ] THEN SIMP_TAC std_ss [GSYM extreal_le_def] THEN
+    ASM_SIMP_TAC std_ss [normal_real, GSYM extreal_of_num_def] THEN
+    METIS_TAC [le_02, pow_pos_le]) THEN DISC_RW_KILL THEN
+   ASM_SIMP_TAC std_ss [SET_RULE ``e NOTIN s ==> (s DELETE e = s)``] THEN
+   Suff `P (\x.
+     (\x. &e / 2 pow i *
+     indicator_fn {x | x IN m_space m /\ &e / 2 pow i <= f x /\ f x < (&e + 1) / 2 pow i}
+       x) x +
+     (\x. SIGMA
+       (\k. &k / 2 pow i *
+     indicator_fn {x | x IN m_space m /\ &k / 2 pow i <= f x /\ f x < (&k + 1) / 2 pow i} x) s) x)`
+   >- (SIMP_TAC std_ss []) THEN
+   FIRST_ASSUM MATCH_MP_TAC THEN ASM_SIMP_TAC std_ss [] THEN
+
+   CONJ_TAC THEN1
+   (MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL THEN
+    Know `&e / 2 pow i <> NegInf /\ &e / 2 pow i <> PosInf` THEN1
+    (`2 pow i <> NegInf /\ 2 pow i <> PosInf` by
+     METIS_TAC [pow_not_infty, num_not_infty] THEN
+     `2 pow i = Normal (real (2 pow i))` by METIS_TAC [normal_real] THEN
+     POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
+     Know `real (2 pow i) <> 0`
+     >- (ASM_SIMP_TAC std_ss [GSYM extreal_11, normal_real,
+                              GSYM extreal_of_num_def] THEN
+         Suff `(0 :extreal) < 2 pow i` >- METIS_TAC [lt_imp_ne] THEN
+         METIS_TAC [lt_02, pow_pos_lt]) >> DISCH_TAC THEN
+     `&e = Normal (&e)` by PROVE_TAC [extreal_of_num_def] >> POP_ORW \\
+     ASM_SIMP_TAC std_ss [extreal_div_eq, extreal_not_infty]) THEN STRIP_TAC THEN
+
+    take [`(\x. indicator_fn
+           {x | x IN m_space m /\ &e / 2 pow i <= f x /\ f x < (&e + 1) / 2 pow i} x)`,
+          `real (&e / 2 pow i)`] THEN ASM_SIMP_TAC std_ss [normal_real] THEN
+    FULL_SIMP_TAC std_ss [measure_space_def] THEN
+    MATCH_MP_TAC IN_MEASURABLE_BOREL_INDICATOR THEN
+    Q.EXISTS_TAC `{x | x IN m_space m /\ &e / 2 pow i <= f x /\ f x < (&e + 1) / 2 pow i}` THEN
+    ASM_SIMP_TAC std_ss [space_def, IN_UNIV] THEN
+    Q_TAC SUFF_TAC `{x | x IN m_space m /\ &e / 2 pow i <= f x /\ f x < (&e + 1) / 2 pow i} =
+     PREIMAGE f {x | &e / 2 pow i <= x /\ x < (&e + 1) / 2 pow i} INTER
+     space (m_space m, measurable_sets m)` THENL
+    [DISC_RW_KILL,
+     SIMP_TAC std_ss [PREIMAGE_def, space_def, INTER_UNIV] THEN
+     SET_TAC []] THEN
+    FULL_SIMP_TAC std_ss [IN_MEASURABLE] THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN
+    REWRITE_TAC [BOREL_MEASURABLE_SETS_CO]) THEN
+
+   CONJ_TAC THEN1
+   (Q.ABBREV_TAC `g = (\k x.
+             &k / 2 pow i *
+             indicator_fn
+               {x | x IN m_space m /\ &k / 2 pow i <= f x /\ f x < (&k + 1) / 2 pow i} x)` THEN
+
+    Suff `FINITE s /\ sigma_algebra (m_space m, measurable_sets m) /\
+     (!i. i IN s ==> g i IN measurable (m_space m, measurable_sets m) Borel) /\
+     (!i x. i IN s /\ x IN space (m_space m, measurable_sets m) ==> g i x <> NegInf) /\
+     (!x. x IN space (m_space m, measurable_sets m) ==>
+      ((\x. SIGMA
+     (\k.
+        &k / 2 pow i *
+        indicator_fn
+          {x | x IN m_space m /\ &k / 2 pow i <= f x /\ f x < (&k + 1) / 2 pow i} x) s) x =
+      SIGMA (\i. g i x) s))`
+    >- (DISCH_THEN (MP_TAC o MATCH_MP IN_MEASURABLE_BOREL_SUM) THEN
+        ASM_SIMP_TAC std_ss []) THEN
+   Q.UNABBREV_TAC `g` THEN
+   FULL_SIMP_TAC std_ss [measure_space_def, FINITE_COUNT] THEN
+   SIMP_TAC std_ss [space_def, IN_UNIV] THEN
+   Reverse CONJ_TAC THEN1
+   (Q.X_GEN_TAC `n` THEN
+    RW_TAC std_ss [lt_infty] THEN MATCH_MP_TAC lte_trans THEN
+    Q.EXISTS_TAC `0` THEN SIMP_TAC std_ss [GSYM lt_infty, num_not_infty] THEN
+    MATCH_MP_TAC le_mul THEN REWRITE_TAC [INDICATOR_FN_POS] THEN
+
+   `2 pow i <> NegInf /\ 2 pow i <> PosInf`
+       by METIS_TAC [pow_not_infty, num_not_infty] THEN
+    Know `real (2 pow i) <> 0`
+    >- (ASM_SIMP_TAC std_ss [GSYM extreal_11, normal_real,
+                             GSYM extreal_of_num_def] THEN
+        Suff `(0 :extreal) < 2 pow i` >- METIS_TAC [lt_imp_ne] THEN
+        METIS_TAC [lt_02, pow_pos_lt]) >> DISCH_TAC THEN
+
+   `2 pow i = Normal (real (2 pow i))` by METIS_TAC [normal_real] THEN
+    POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
+    ASM_SIMP_TAC std_ss [extreal_div_def] THEN
+    MATCH_MP_TAC le_mul THEN SIMP_TAC std_ss [le_num] THEN
+    ASM_SIMP_TAC real_ss [extreal_inv_def] THEN
+    SIMP_TAC std_ss [extreal_of_num_def, extreal_le_def] THEN
+    SIMP_TAC std_ss [REAL_LE_INV_EQ] THEN SIMP_TAC std_ss [GSYM extreal_le_def] THEN
+    ASM_SIMP_TAC std_ss [normal_real, GSYM extreal_of_num_def] THEN
+    METIS_TAC [le_02, pow_pos_le]) THEN
+   Q.X_GEN_TAC `n` THEN
+   RW_TAC std_ss [] THEN MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL THEN
+   take [`(\x. indicator_fn
+          {x | x IN m_space m /\ &n / 2 pow i <= f x /\ f x < (&n + 1) / 2 pow i} x)`,
+         `real (&n / 2 pow i)`] THEN
+
+   Know `&n / 2 pow i <> NegInf /\ &n / 2 pow i <> PosInf` THEN1
+   ( `2 pow i <> NegInf /\ 2 pow i <> PosInf` by
+     METIS_TAC [pow_not_infty, num_not_infty] THEN
+     `2 pow i = Normal (real (2 pow i))` by METIS_TAC [normal_real] THEN
+     POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
+     Know `real (2 pow i) <> 0`
+     >- (ASM_SIMP_TAC std_ss [GSYM extreal_11, normal_real,
+                              GSYM extreal_of_num_def] THEN
+         Suff `(0 :extreal) < 2 pow i` >- METIS_TAC [lt_imp_ne] THEN
+         METIS_TAC [lt_02, pow_pos_lt]) >> DISCH_TAC THEN
+     `&n = Normal (&n)` by PROVE_TAC [extreal_of_num_def] >> POP_ORW \\
+     ASM_SIMP_TAC std_ss [extreal_div_eq, extreal_not_infty] ) THEN STRIP_TAC THEN
+
+   ASM_SIMP_TAC std_ss [normal_real] THEN
+   MATCH_MP_TAC IN_MEASURABLE_BOREL_INDICATOR THEN
+   Q.EXISTS_TAC `{x | x IN m_space m /\ &n / 2 pow i <= f x /\ f x < (&n + 1) / 2 pow i}` THEN
+   ASM_SIMP_TAC std_ss [] THEN
+   Know
+   `{x | x IN m_space m /\ &n / 2 pow i <= f x /\ f x < (&n + 1) / 2 pow i} =
+    PREIMAGE f {x | &n / 2 pow i <= x /\ x < (&n + 1) / 2 pow i} INTER
+    space (m_space m,measurable_sets m)`
+   >- (SIMP_TAC std_ss [PREIMAGE_def, space_def, INTER_UNIV] THEN
+       SET_TAC []) THEN DISC_RW_KILL THEN
+
+   FULL_SIMP_TAC std_ss [IN_MEASURABLE] THEN
+   FIRST_X_ASSUM MATCH_MP_TAC THEN
+   REWRITE_TAC [BOREL_MEASURABLE_SETS_CO] ) THEN
+
+   CONJ_TAC THEN1
+   (Q.X_GEN_TAC `x` THEN
+    MATCH_MP_TAC le_mul THEN REWRITE_TAC [INDICATOR_FN_POS] THEN
+
+   `2 pow i <> NegInf /\ 2 pow i <> PosInf`
+       by METIS_TAC [pow_not_infty, num_not_infty] THEN
+    Know `real (2 pow i) <> 0`
+    >- (ASM_SIMP_TAC std_ss [GSYM extreal_11, normal_real,
+                             GSYM extreal_of_num_def] THEN
+        Suff `(0 :extreal) < 2 pow i` >- METIS_TAC [lt_imp_ne] THEN
+        METIS_TAC [lt_02, pow_pos_lt]) >> DISCH_TAC THEN
+
+   `2 pow i = Normal (real (2 pow i))` by METIS_TAC [normal_real] THEN
+    POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
+    ASM_SIMP_TAC std_ss [extreal_div_def] THEN
+    MATCH_MP_TAC le_mul THEN SIMP_TAC std_ss [le_num] THEN
+    ASM_SIMP_TAC real_ss [extreal_inv_def] THEN
+    SIMP_TAC std_ss [extreal_of_num_def, extreal_le_def] THEN
+    SIMP_TAC std_ss [REAL_LE_INV_EQ] THEN SIMP_TAC std_ss [GSYM extreal_le_def] THEN
+    ASM_SIMP_TAC std_ss [normal_real, GSYM extreal_of_num_def] THEN
+    METIS_TAC [le_02, pow_pos_le] ) THEN
+
+   Reverse CONJ_TAC THEN1
+   (Q.X_GEN_TAC `x` THEN
+    MATCH_MP_TAC EXTREAL_SUM_IMAGE_POS THEN ASM_REWRITE_TAC [] THEN
+    Q.X_GEN_TAC `n` >> RW_TAC std_ss [FINITE_COUNT, IN_UNIV] THEN
+    MATCH_MP_TAC le_mul THEN REWRITE_TAC [INDICATOR_FN_POS] THEN
+
+   `2 pow i <> NegInf /\ 2 pow i <> PosInf`
+       by METIS_TAC [pow_not_infty, num_not_infty] THEN
+    Know `real (2 pow i) <> 0`
+    >- (ASM_SIMP_TAC std_ss [GSYM extreal_11, normal_real,
+                             GSYM extreal_of_num_def] THEN
+        Suff `(0 :extreal) < 2 pow i` >- METIS_TAC [lt_imp_ne] THEN
+        METIS_TAC [lt_02, pow_pos_lt]) >> DISCH_TAC THEN
+
+   `2 pow i = Normal (real (2 pow i))` by METIS_TAC [normal_real] THEN
+    POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
+    ASM_SIMP_TAC std_ss [extreal_div_def] THEN
+    MATCH_MP_TAC le_mul THEN SIMP_TAC std_ss [le_num] THEN
+    ASM_SIMP_TAC real_ss [extreal_inv_def] THEN
+    SIMP_TAC std_ss [extreal_of_num_def, extreal_le_def] THEN
+    SIMP_TAC std_ss [REAL_LE_INV_EQ] THEN SIMP_TAC std_ss [GSYM extreal_le_def] THEN
+    ASM_SIMP_TAC std_ss [normal_real, GSYM extreal_of_num_def] THEN
+    METIS_TAC [le_02, pow_pos_le] ) THEN
+
+   Suff `P (\x. &e / 2 pow i *
+     (\x. indicator_fn {x | x IN m_space m /\ &e / 2 pow i <= f x /\ f x < (&e + 1) / 2 pow i}
+       x) x)`
+   >- (SIMP_TAC std_ss []) THEN
+   FIRST_ASSUM MATCH_MP_TAC THEN ASM_SIMP_TAC std_ss [] THEN
+
+   CONJ_TAC THEN1
+   (MATCH_MP_TAC IN_MEASURABLE_BOREL_INDICATOR THEN
+    Q.EXISTS_TAC `{x | x IN m_space m /\ &e / 2 pow i <= f x /\ f x < (&e + 1) / 2 pow i}` THEN
+    ASM_SIMP_TAC std_ss [space_def, IN_UNIV] THEN
+    Know `{x | x IN m_space m /\ &e / 2 pow i <= f x /\ f x < (&e + 1) / 2 pow i} =
+     PREIMAGE f {x | &e / 2 pow i <= x /\ x < (&e + 1) / 2 pow i} INTER
+     space (m_space m,measurable_sets m)`
+    >- (SIMP_TAC std_ss [PREIMAGE_def, space_def, INTER_UNIV] THEN
+        SET_TAC []) THEN DISC_RW_KILL THEN
+
+    FULL_SIMP_TAC std_ss [IN_MEASURABLE] THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN
+    REWRITE_TAC [BOREL_MEASURABLE_SETS_CO] ) THEN
+
+   CONJ_TAC THEN1
+   (`2 pow i <> NegInf /\ 2 pow i <> PosInf`
+      by METIS_TAC [pow_not_infty, num_not_infty] THEN
+    Know `real (2 pow i) <> 0`
+    >- (ASM_SIMP_TAC std_ss [GSYM extreal_11, normal_real,
+                             GSYM extreal_of_num_def] THEN
+        Suff `(0 :extreal) < 2 pow i` >- METIS_TAC [lt_imp_ne] THEN
+        METIS_TAC [lt_02, pow_pos_lt]) >> DISCH_TAC THEN
+
+   `2 pow i = Normal (real (2 pow i))` by METIS_TAC [normal_real] THEN
+    POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
+    ASM_SIMP_TAC std_ss [extreal_div_def] THEN
+    MATCH_MP_TAC le_mul THEN SIMP_TAC std_ss [le_num] THEN
+    ASM_SIMP_TAC real_ss [extreal_inv_def] THEN
+    SIMP_TAC std_ss [extreal_of_num_def, extreal_le_def] THEN
+    SIMP_TAC std_ss [REAL_LE_INV_EQ] THEN SIMP_TAC std_ss [GSYM extreal_le_def] THEN
+    ASM_SIMP_TAC std_ss [normal_real, GSYM extreal_of_num_def] THEN
+    METIS_TAC [le_02, pow_pos_le] ) THEN
+
+   CONJ_TAC THENL
+   [GEN_TAC THEN SIMP_TAC std_ss [indicator_fn_def] THEN COND_CASES_TAC THEN
+    SIMP_TAC real_ss [le_refl, extreal_le_def, extreal_of_num_def],
+    ALL_TAC] THEN
+   Q_TAC SUFF_TAC `P
+     (indicator_fn {x | x IN m_space m /\ &e / 2 pow i <= f x /\ f x < (&e + 1) / 2 pow i})` THENL
+   [METIS_TAC [ETA_AX], ALL_TAC] THEN
+   FIRST_ASSUM MATCH_MP_TAC THEN
+
+   ONCE_REWRITE_TAC [METIS [subsets_def]
+    ``measurable_sets m = subsets (m_space m, measurable_sets m)``] THEN
+    Know `{x | x IN m_space m /\ &e / 2 pow i <= f x /\ f x < (&e + 1) / 2 pow i} =
+     PREIMAGE f {x | &e / 2 pow i <= x /\ x < (&e + 1) / 2 pow i} INTER
+     space (m_space m,measurable_sets m)`
+    >- (SIMP_TAC std_ss [PREIMAGE_def, space_def, INTER_UNIV] THEN
+        SET_TAC []) THEN DISC_RW_KILL THEN
+    FULL_SIMP_TAC std_ss [IN_MEASURABLE] THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN
+    REWRITE_TAC [BOREL_MEASURABLE_SETS_CO] ) THEN
+
+  CONJ_TAC THEN1
+  (GEN_TAC THEN MATCH_MP_TAC le_mul THEN SIMP_TAC std_ss [indicator_fn_def] THEN
+   CONJ_TAC THENL
+   [ALL_TAC, COND_CASES_TAC THEN
+    SIMP_TAC real_ss [le_refl, extreal_of_num_def, extreal_le_def]] THEN
+   SIMP_TAC std_ss [extreal_of_num_def, extreal_pow_def, extreal_le_def] THEN
+   MATCH_MP_TAC POW_POS THEN SIMP_TAC real_ss [] ) THEN
+
+  Suff `P (\x. 2 pow i *
+     (\x. indicator_fn {x |  x IN m_space m /\ 2 pow i <= f x} x) x)`
+  >- (SIMP_TAC std_ss []) THEN
+  FIRST_ASSUM MATCH_MP_TAC THEN ASM_SIMP_TAC std_ss [] THEN
+
+  CONJ_TAC THENL
+  [MATCH_MP_TAC IN_MEASURABLE_BOREL_INDICATOR THEN
+   Q.EXISTS_TAC `{x | x IN m_space m /\ 2 pow i <= f x}` THEN
+   ASM_SIMP_TAC std_ss [space_def, IN_UNIV] THEN
+   Q_TAC SUFF_TAC `{x | x IN m_space m /\ 2 pow i <= f x} =
+   PREIMAGE f {x | 2 pow i <= x} INTER
+    space (m_space m,measurable_sets m)` THENL
+   [DISC_RW_KILL,
+    SIMP_TAC std_ss [PREIMAGE_def, space_def, INTER_UNIV] THEN
+    SET_TAC []] THEN
+   FULL_SIMP_TAC std_ss [IN_MEASURABLE] THEN
+   FIRST_X_ASSUM MATCH_MP_TAC THEN
+   `2 pow i <> NegInf /\ 2 pow i <> PosInf` by
+    METIS_TAC [pow_not_infty, num_not_infty] THEN
+   METIS_TAC [BOREL_MEASURABLE_SETS_CR, normal_real], ALL_TAC] THEN
+  CONJ_TAC THENL
+  [SIMP_TAC std_ss [extreal_of_num_def, extreal_pow_def, extreal_le_def] THEN
+   MATCH_MP_TAC POW_POS THEN SIMP_TAC real_ss [], ALL_TAC] THEN
+  CONJ_TAC THENL
+  [GEN_TAC THEN SIMP_TAC std_ss [indicator_fn_def] THEN COND_CASES_TAC THEN
+   SIMP_TAC real_ss [le_refl, extreal_of_num_def, extreal_le_def], ALL_TAC] THEN
+  Q_TAC SUFF_TAC `P (indicator_fn {x | x IN m_space m /\ 2 pow i <= f x})` THENL
+  [METIS_TAC [ETA_AX], ALL_TAC] THEN
+  FIRST_ASSUM MATCH_MP_TAC THEN
+  ONCE_REWRITE_TAC [METIS [subsets_def]
+    ``measurable_sets m = subsets (m_space m, measurable_sets m)``] THEN
+  Q_TAC SUFF_TAC `{x | x IN m_space m /\ 2 pow i <= f x} = PREIMAGE f {x | 2 pow i <= x} INTER
+     space (m_space m,measurable_sets m)` THENL
+  [DISC_RW_KILL,
+   SIMP_TAC std_ss [PREIMAGE_def, space_def, INTER_UNIV] THEN
+   SET_TAC []] THEN
+  FULL_SIMP_TAC std_ss [IN_MEASURABLE] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  `2 pow i <> NegInf /\ 2 pow i <> PosInf` by
+    METIS_TAC [pow_not_infty, num_not_infty] THEN
+  METIS_TAC [BOREL_MEASURABLE_SETS_CR, normal_real]
+QED
 
 (*****************************************************************)
 
