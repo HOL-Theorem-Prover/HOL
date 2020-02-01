@@ -265,13 +265,13 @@ fun stats_select_one rlobj (s,targetl) =
     fun f (a,b) = its a ^ "-" ^ its b
     val l = dlist (count_dict (dempty Int.compare) il)  
   in
-    log rlobj ("  " ^ s);
-    log rlobj ("     " ^ (String.concatWith " " (map f l)))
+    log rlobj ("  " ^ s ^ " tot-" ^ its (length il) ^ "  " ^ 
+      (String.concatWith " " (map f l)))
   end
 
 fun stats_select rlobj nfin (neg,pos,negsel,possel) =
   let 
-    val l = [("neg",neg),("pos",pos),("negsel",negsel),("possel",possel)] 
+    val l = [("neg:   ",neg),("negsel:",negsel),("pos:   ",pos),("possel:",possel)] 
   in
     log rlobj ("Exploration: " ^ its nfin ^ " targets ");
     app (stats_select_one rlobj) l
