@@ -223,13 +223,13 @@ the first three are the following:
 \index{axiom of choice}
 \index{axioms!of choice}
 \index{choice operator, in HOL logic@choice operator, in \HOL{} logic!primitive axiom for}
-\begin{verbatim}
-   BOOL_CASES_AX   |- !t. (t = T) \/ (t = F)
+\begin{alltt}
+##thm BOOL_CASES_AX
 
-   ETA_AX          |- !t. (\x. t x) = t
+##thm ETA_AX
 
-   SELECT_AX       |- !P:'a->bool x. P x ==> P($@ P)
-\end{verbatim}
+##thm SELECT_AX
+\end{alltt}
 \end{hol}
 
 \noindent
@@ -243,11 +243,10 @@ definitions are:
 \index{ONTO_DEF@\ml{ONTO\_DEF}}
 \index{one-to-one predicate, in HOL logic@one-to-one predicate, in \HOL{} logic!definitional axiom for}
 \index{onto predicate, in HOL logic@onto predicate, in \HOL{} logic!definitional axiom for}
-\begin{verbatim}
-   ONE_ONE_DEF |- ONE_ONE f = (!x1 x2. (f x1 = f x2) ==> (x1 = x2))
-
-   ONTO_DEF    |- ONTO f    = (!y. ?x. y = f x)
-\end{verbatim}
+\begin{alltt}
+##thm ONE_ONE_DEF
+##thm ONTO_DEF
+\end{alltt}
 \end{hol}
 
 \noindent The Axiom of Infinity\index{axioms!in bool theory@in \ml{bool} theory} is
@@ -256,9 +255,9 @@ definitions are:
 \index{INFINITY_AX@\ml{INFINITY\_AX}}
 \index{axiom of infinity}
 \index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!in infinity axiom}
-\begin{verbatim}
-  INFINITY_AX  |- ?f:ind->ind. ONE_ONE f /\ ~(ONTO f)
-\end{verbatim}
+\begin{alltt}
+##thm INFINITY_AX
+\end{alltt}
 \end{hol}
 %
 \noindent
@@ -290,11 +289,11 @@ useful constants.
 \index{COND, the HOL constant@\holtxt{COND}, the \HOL{} constant}
 \index{LET, the HOL constant@\ml{LET}, the \HOL{} constant}
 \index{conditionals, in HOL logic@conditionals, in \HOL{} logic!definitional axiom for}
-\begin{verbatim}
-   LET_DEF  |- LET  = \f x. f x
-   COND_DEF |- COND = \t t1 t2. @x. ((t=T)==>(x=t1)) /\ ((t=F)==>(x=t2))
-   IN_DEF   |- IN   = \x (f:'a -> bool). f x
-\end{verbatim}
+\begin{alltt}
+##thm LET_DEF
+##thm COND_DEF
+##thm IN_DEF
+\end{alltt}
 \end{hol}
 
 The constant \holtxt{LET}
@@ -339,16 +338,12 @@ The theory \theoryimp{bool} also defines constants that implement
 subtypes and dependent types with predicates. The most heavily used
 are restrictions of the existential and universal quantifiers:
 %
-\begin{verbatim}
-   RES_FORALL_DEF |- RES_FORALL = \P m. !x. x IN P ==> m x
+\begin{alltt}
+##thm RES_FORALL_DEF
+##thm RES_EXISTS_DEF
 
-   RES_EXISTS_DEF |- RES_EXISTS = \P m. ?x. x IN P /\ m x
-
-   RES_ABSTRACT_DEF |- (!P m x. x IN P ==> (RES_ABSTRACT P m x = m x) /\
-                       (!P m1 m2.
-                           (!x. x IN P ==> (m1 x = m2 x)) ==>
-                            (RES_ABSTRACT P m1 = RES_ABSTRACT P m2)
-\end{verbatim}
+##thm RES_ABSTRACT_DEF
+\end{alltt}
 %
 The definition of \ml{RES\_ABSTRACT} is a characterising formula, rather
 than a direct equation.  There are two important properties
@@ -361,14 +356,10 @@ than a direct equation.  There are two important properties
 
 For completeness, restricted versions of unique existence and
 indefinite description are provided, although hardly used.
-\begin{verbatim}
-   RES_EXISTS_UNIQUE_DEF
-    |- RES_EXISTS_UNIQUE = \P m. (?x :: P. m x) /\
-                                 (!x y :: P. m x /\ m y ==> (x = y))
-
-   RES_SELECT_DEF
-     |- RES_SELECT = \P m. @x. x IN P /\ m x
-\end{verbatim}
+\begin{alltt}
+##thm RES_EXISTS_UNIQUE_DEF
+##thm RES_SELECT_DEF
+\end{alltt}
 
 The definition of \ml{RES\_EXISTS\_UNIQUE} uses the restricted
 quantification syntax with the {\small\verb+::+} symbol, referring to
@@ -816,10 +807,10 @@ The type operator {\small\verb%prod%} is defined by invoking \ml{new\_type\_defi
 \ml{prod\_TY\_DEF} shown below being asserted in the theory \ml{pair}.
 %
 \begin{hol}
-\begin{verbatim}
-   prod_TY_DEF
-     |- ?rep. TYPE_DEFINITION (\p. ?x y. p = (\a b. (a = x) /\ (b = y))) rep
-\end{verbatim}
+\begin{alltt}
+>>__ open pairTheory
+##thm prod_TY_DEF
+\end{alltt}
 \end{hol}
 %
 Next, the representation and abstraction functions \holtxt{REP\_prod}
@@ -828,10 +819,9 @@ following characterizing theorem, by use of the function
 \ml{define\_new\_type\_bijections}.
 %
 \begin{hol}
-\begin{verbatim}
-  |- (!a. ABS_prod (REP_prod a) = a) /\
-     (!r. (\p. ?x y. p = (\a b. (a=x) /\ (b=y)) r = (REP_prod(ABS_prod r) = r)
-\end{verbatim}
+\begin{alltt}
+##thm ABS_REP_prod
+\end{alltt}
 \end{hol}
 
 \paragraph {Pairs and projections}
@@ -845,13 +835,11 @@ every term having a product type can be decomposed into a pair of terms.
 \index{pairing constructor, in HOL logic@pairing constructor, in \HOL{} logic!definition of}
 \index{PAIR_EQ@\ml{PAIR\_EQ}}
 \index{ABS_PAIR_THM@\ml{ABS\_PAIR\_THM}}
-\begin{verbatim}
-   COMMA_DEF    |- !x y. $, x y = ABS_prod (\a b. (a = x) /\(b = y))
-
-   PAIR_EQ      |- ((x,y) = (a,b)) = (x=a) /\ (y=b)
-
-   ABS_PAIR_THM |- !x. ?q r. x = (q,r)
-\end{verbatim}
+\begin{alltt}
+##thm COMMA_DEF
+##thm PAIR_EQ
+##thm ABS_PAIR_THM
+\end{alltt}
 \end{hol}
 %
 By Skolemizing {\small\verb+ABS_PAIR_THM+} and making constant specifications
@@ -863,11 +851,11 @@ are proved.
 \index{FST, the HOL constant@\ml{FST}, the \HOL{} constant!definition of}
 \index{SND, the HOL constant@\ml{SND}, the \HOL{} constant!definition of}
 \index{selectors, in HOL logic@selectors, in \HOL{} logic!for pairs}
-\begin{verbatim}
-   PAIR     |- !x. (FST x,SND x) = x
-   FST      |- !x y. FST(x,y) = x
-   SND      |- !x y. SND(x,y) = y
-\end{verbatim}
+\begin{alltt}
+##thm PAIR
+##thm FST
+##thm SND
+\end{alltt}
 \end{hol}
 \index{pairs, in HOL logic@pairs, in \HOL{} logic|)}
 \index{product types!in HOL logic@in \HOL{} logic|)}
@@ -883,13 +871,13 @@ This conversion is accomplished by the functions \holtxt{CURRY} and
 \begin{hol}
 \index{CURRY, the HOL constant@\ml{CURRY}, the \HOL{} constant}
 \index{UNCURRY, the HOL constant@\ml{UNCURRY}, the \HOL{} constant}
-\begin{verbatim}
-   CURRY_DEF    |- !f x y. CURRY f x y = f (x,y)
-   UNCURRY_DEF  |- !f x y. UNCURRY f (x,y) = f x y
+\begin{alltt}
+##thm CURRY_DEF
+##thm UNCURRY_DEF
 
-   CURRY_UNCURRY_THM |- !f. CURRY (UNCURRY f) = f
-   UNCURRY_CURRY_THM |- !f. UNCURRY (CURRY f) = f
-\end{verbatim}
+##thm CURRY_UNCURRY_THM
+##thm UNCURRY_CURRY_THM
+\end{alltt}
 \end{hol}
 
 
@@ -902,9 +890,9 @@ $\alpha \# \beta$ to obtain a pair of type $\gamma_1 \# \gamma_2$.
 \begin{hol}
 \index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for pairs}
 \index{ PAIR_MAP function@\ml{\#\#} (\holtxt{PAIR\_MAP} function)}
-\begin{verbatim}
-   PAIR_MAP_THM  |- !f g x y. (f ## g) (x,y) = (f x,g y)
-\end{verbatim}
+\begin{alltt}
+##thm PAIR_MAP_THM
+\end{alltt}
 \end{hol}
 
 \paragraph {Binders and pairs}
@@ -916,11 +904,11 @@ replace the variables with tuples of variables. The following theorems
 support this.
 %
 \begin{hol}
-\begin{verbatim}
-  FORALL_PROD  |- (!p. P p) = !p_1 p_2. P (p_1,p_2)
-  EXISTS_PROD  |- (?p. P p) = ?p_1 p_2. P (p_1,p_2)
-  LAMBDA_PROD  |- !P. (\p. P p) = \(p1,p2). P (p1,p2)
-\end{verbatim}
+\begin{alltt}
+##thm FORALL_PROD
+##thm EXISTS_PROD
+##thm LAMBDA_PROD
+\end{alltt}
 \end{hol}
 %
 The theorem \ml{LAMBDA\_PROD} involves a \emph{paired
@@ -938,12 +926,10 @@ of wellfounded relations delivers a wellfounded relation is easy to
 prove.
 %
 \begin{hol}
-\begin{verbatim}
-   LEX_DEF =
-      |- !R1 R2. R1 LEX R2 = (\(s,t) (u,v). R1 s u \/ (s = u) /\ R2 t v)
-   WF_LEX
-      |- !R Q. WF R /\ WF Q ==> WF (R LEX Q)
-\end{verbatim}
+\begin{alltt}
+##thm LEX_DEF
+##thm WF_LEX
+\end{alltt}
 \end{hol}
 
 \subsubsection{Paired abstractions}
