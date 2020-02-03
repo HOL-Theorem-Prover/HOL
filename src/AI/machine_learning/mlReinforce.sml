@@ -280,7 +280,7 @@ fun stats_select rlobj nfin (neg,pos,negsel,possel) =
 
 fun select_from_targetd rlobj ntot targetd =
   let
-    fun f x = 1.0 / Math.pow (2.0,Real.fromInt x)
+    fun f x = 1.0 / (1.0 + Real.fromInt x)
     fun g x = 
       let 
         val y = random_real ()
