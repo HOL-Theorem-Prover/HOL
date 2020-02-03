@@ -168,8 +168,8 @@ fun load_thydata thyname path =
     val _ =
         app (temp_encoded_update share_data thyname) (
           force "thydata" (
-            Option.map (map (fn (ty,ds) => {data=String.concat ds,ty=ty})) o
-            list_decode(pair_decode(string_decode, list_decode string_decode))
+            Option.map (map (fn (ty,d) => {data=d,ty=ty})) o
+            list_decode(pair_decode(string_decode, SOME))
           ) thydata_data
         )
   in

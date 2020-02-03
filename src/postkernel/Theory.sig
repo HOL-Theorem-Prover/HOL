@@ -61,8 +61,8 @@ sig
     val new : {thydataty : string, pp : 'a -> string,
                merge : 'a * 'a -> 'a,
                terms : 'a -> term list,
-               read : (string -> term) -> string -> 'a option,
-               write : (term -> string) -> 'a -> string} ->
+               read : (string -> term) -> HOLsexp.t -> 'a option,
+               write : (term -> string) -> 'a -> HOLsexp.t} ->
               ('a -> t) * (t -> 'a option)
     val segment_data : {thy: string, thydataty: string} -> t option
     val segment_data_string : {thy:string,thydataty:string} -> string option
@@ -79,7 +79,7 @@ sig
 
     val temp_encoded_update : {thy : string, thydataty : string,
                                read : string -> term,
-                               data : string} -> unit
+                               data : HOLsexp.t} -> unit
     (* updates segment data using an encoded string *)
   end
 

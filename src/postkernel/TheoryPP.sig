@@ -33,7 +33,7 @@ sig
       struct_ps   : (unit -> PP.pretty) option list,
       mldeps      : string list,
       thydata     : Term.term list *
-                    (string,(Term.term -> string) -> string)Binarymap.dict}
+                    (string,(Term.term -> string) -> HOLsexp.t)Binarymap.dict}
      PP.pprinter
 
  val pp_thydata
@@ -47,7 +47,7 @@ sig
       struct_ps   : (unit -> PP.pretty) option list,
       mldeps      : string list,
       thydata     : Term.term list *
-                    (string,(Term.term -> string) -> string)Binarymap.dict}
+                    (string,(Term.term -> string) -> HOLsexp.t)Binarymap.dict}
      PP.pprinter
 
  val temp_binding : string -> string

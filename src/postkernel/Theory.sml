@@ -257,7 +257,7 @@ fun drop_Axkind (Axiom rth) = rth
  *---------------------------------------------------------------------------*)
 
 datatype thydata = Loaded of UniversalType.t
-                 | Pending of (string * (string -> term)) list
+                 | Pending of (HOLsexp.t * (string -> term)) list
 type ThyDataMap = (string,thydata)Binarymap.dict
                   (* map from string identifying the "type" of the data,
                      e.g., "simp", "mono", "cong", "grammar_update",
@@ -704,8 +704,8 @@ struct
 
   type t = UniversalType.t
   type DataOps = {merge : t * t -> t, pp : t -> string,
-                  read : (string -> term) -> string -> t option,
-                  write : (term -> string) -> t -> string,
+                  read : (string -> term) -> HOLsexp.t -> t option,
+                  write : (term -> string) -> t -> HOLsexp.t,
                   terms : t -> term list}
   val allthydata = ref (Binarymap.mkDict String.compare :
                         (string, ThyDataMap) Binarymap.dict)
@@ -736,6 +736,7 @@ struct
       case Binarymap.peek (!dataops, thydataty) of
           SOME {pp,...} => Option.map pp (segment_data arg)
         | NONE => raise Fail ("No pp-fn for "^thydataty)
+  val sexp_string_dbg = HOLPP.pp_to_string 75 HOLsexp.printer
 
   fun write_data_update {thydataty,data} =
       case Binarymap.peek(!dataops, thydataty) of
@@ -757,10 +758,11 @@ struct
                             val newdata_s =
                                 case newdata of
                                     Loaded t => pp t
-                                  | Pending ds => "Pending[" ^
-                                                  String.concatWith
-                                                    ", "
-                                                    (List.map fst ds) ^ "]"
+                                  | Pending ds =>
+                                    "Pending[" ^
+                                    String.concatWith ", " (
+                                      List.map (sexp_string_dbg o fst) ds
+                                    ) ^ "]"
                           in
                             "write_data_update/" ^ thydataty ^ ": writing " ^
                             newdata_s ^ "\n"
@@ -788,28 +790,31 @@ struct
                         $$)
         end
 
-  fun temp_encoded_update {thy, thydataty, data, read = tmread} = let
-    val (s as {thydata, thid, ...}) = theCT()
-    open Binarymap
-    fun updatemap inmap = let
-      val baddecode = ERR "temp_encoded_update"
-                          ("Bad decode for "^thydataty^" ("^data^")")
-      val newdata =
-        case (peek(inmap, thydataty), peek(!dataops,thydataty)) of
-          (NONE, NONE) => Pending [(data,tmread)]
-        | (NONE, SOME {read,...}) =>
-            Loaded (valOf (read tmread data) handle Option => raise baddecode)
-        | (SOME (Loaded t), NONE) =>
-             raise Fail "temp_encoded_update invariant failure 1"
-        | (SOME (Loaded t), SOME {merge,read,...}) =>
-             Loaded (merge(t, valOf (read tmread data)
-                              handle Option => raise baddecode))
-        | (SOME (Pending ds), NONE) => Pending ((data,tmread)::ds)
-        | (SOME (Pending _), SOME _) =>
-             raise Fail "temp_encoded_update invariant failure 2"
-    in
-      insert(inmap, thydataty, newdata)
-    end
+  fun temp_encoded_update {thy, thydataty, data : HOLsexp.t, read = tmread} =
+      let
+        val (s as {thydata, thid, ...}) = theCT()
+        open Binarymap
+        fun updatemap inmap = let
+          val baddecode = ERR "temp_encoded_update"
+                          ("Bad decode for "^thydataty^" (" ^
+                           sexp_string_dbg data ^ ")" )
+          val newdata =
+              case (peek(inmap, thydataty), peek(!dataops,thydataty)) of
+                  (NONE, NONE) => Pending [(data,tmread)]
+                | (NONE, SOME {read,...}) =>
+                  Loaded (valOf (read tmread data)
+                          handle Option => raise baddecode)
+                | (SOME (Loaded t), NONE) =>
+                  raise Fail "temp_encoded_update invariant failure 1"
+                | (SOME (Loaded t), SOME {merge,read,...}) =>
+                  Loaded (merge(t, valOf (read tmread data)
+                                   handle Option => raise baddecode))
+                | (SOME (Pending ds), NONE) => Pending ((data,tmread)::ds)
+                | (SOME (Pending _), SOME _) =>
+                  raise Fail "temp_encoded_update invariant failure 2"
+        in
+          insert(inmap, thydataty, newdata)
+        end
   in
     if thy = thyid_name thid then
       makeCT (update_seg s (U #thydata (updatemap thydata)) $$)

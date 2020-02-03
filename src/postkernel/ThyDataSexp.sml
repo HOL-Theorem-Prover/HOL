@@ -150,21 +150,24 @@ fun sterms0 (s, acc) =
     | _ => acc
 fun sterms s = sterms0 (s, [])
 
-open Coding
-fun listwrite w l =
-  IntData.encode (length l) ^ String.concat (List.map w l)
-val >~ = op>-
-infix 2 >~ >* >>
-infix 0 ||
-fun ntimes n r =
-  if n <= 0 then return []
-  else r >~ (fn h => ntimes (n-1) r >~ (fn t => return (h::t)))
-fun listreader r =
-  IntData.reader >~ (fn i => ntimes i r)
+infix >~ >> ||
+fun (f >~ g) = Option.mapPartial g o f
+fun (f >> g) = Option.map g o f
+fun (f || g) = fn x => case f x of NONE => g x | res => res
 
+val list_decode = HOLsexp.list_decode
+val string_decode = HOLsexp.string_decode
+val symbol_decode = HOLsexp.symbol_decode
+val pair_decode = HOLsexp.pair_decode
+val pair4_decode = HOLsexp.pair4_decode
+val int_decode = HOLsexp.int_decode
+val tagged_decode = HOLsexp.tagged_decode
 fun dlwrite (s, ilist) =
-  StringData.encode s ^ listwrite IntData.encode ilist
-val dlreader = StringData.reader >* listreader IntData.reader
+    let open HOLsexp
+    in
+      pair_encode (String, list_encode Integer) (s,ilist)
+    end
+val dlreader = pair_decode (string_decode, list_decode int_decode)
 
 fun tagwrite t =
   let
@@ -174,21 +177,20 @@ fun tagwrite t =
         case dep of
             Dep.DEP_SAVED p => p
           | _ => raise mk_HOL_ERR "ThyDataSexp" "tagwrite" "Bad dep"
+    open HOLsexp
   in
-    StringData.encode s ^ IntData.encode n ^
-    listwrite dlwrite thydl ^
-    listwrite StringData.encode ocl
+    pair4_encode (String, Integer, list_encode dlwrite, list_encode String)
+                 (s, n, thydl, ocl)
   end
 
 val tagreader =
     let
-      fun combine (s,(n,(dls,ocls))) : Thm.depdisk * string list =
+      fun combine (s,n,dls,ocls) : Thm.depdisk * string list =
         (((s,n), dls), ocls)
     in
-      map combine
-          (StringData.reader >* (
-              IntData.reader >*
-                (listreader dlreader >* listreader StringData.reader)))
+      pair4_decode (string_decode, int_decode, list_decode dlreader,
+                    list_decode string_decode) >>
+      combine
     end
 
 fun deps_saved th =
@@ -201,40 +203,46 @@ fun thmwrite tmw th0 =
     val th = if deps_saved th0 then th0
              else Thm.save_dep (Theory.current_theory()) th0
   in
-    tagwrite (Thm.tag th) ^
-    listwrite (StringData.encode o tmw) (concl th :: hyp th)
+    HOLsexp.pair_encode (tagwrite, HOLsexp.list_encode (HOLsexp.String o tmw))
+                        (Thm.tag th, concl th :: hyp th)
   end
 fun thmreader tmr =
-  map Thm.disk_thm (tagreader >* listreader (map tmr StringData.reader))
+    pair_decode (tagreader, list_decode (string_decode >> tmr)) >> Thm.disk_thm
 
+fun tag s enc x = HOLsexp.tagged_encode s enc x
 fun write tmw s =
   case s of
-      Int i => "I" ^ Coding.IntData.encode i
-    | String s => "S" ^ Coding.StringData.encode s
-    | List sl => "L" ^ listwrite (write tmw) sl
-    | Term tm => "T" ^ StringData.encode (tmw tm)
-    | Type ty => "Y" ^ StringData.encode (tmw (Term.mk_var("x", ty)))
-    | Thm th => "H" ^ thmwrite tmw th
-    | Sym s => "M" ^ StringData.encode s
-    | Char c => "C" ^ CharData.encode c
-    | Bool b => "B" ^ BoolData.encode b
-    | Option NONE => "N"
-    | Option (SOME s) => "S" ^ write tmw s
+      Int i => HOLsexp.Integer i
+    | String s => HOLsexp.String s
+    | List sl => tag "list" (HOLsexp.list_encode (write tmw)) sl
+    | Term tm => tag "tm" HOLsexp.String (tmw tm)
+    | Type ty => tag "ty" HOLsexp.String (tmw (Term.mk_var("x", ty)))
+    | Thm th => tag "th" (thmwrite tmw) th
+    | Sym s => HOLsexp.Symbol s
+    | Char c => tag "ch" (HOLsexp.Integer o Char.ord) c
+    | Bool b => tag "b" (fn b => if b then HOLsexp.Symbol "t"
+                                 else HOLsexp.Nil) b
+    | Option NONE => HOLsexp.Nil
+    | Option (SOME s) => tag "some" (write tmw) s
 
 fun reader tmr s = (* necessary eta-expansion! *)
   let
+    fun opt_chr i = if i < 256 then SOME (Char.chr i) else NONE
     val core =
-        literal "I" >> map Int (IntData.reader) ||
-        literal "S" >> map String (StringData.reader) ||
-        literal "L" >> map List (listreader (reader tmr)) ||
-        literal "T" >> map (Term o tmr) (StringData.reader) ||
-        literal "Y" >> map (Type o type_of o tmr) (StringData.reader) ||
-        literal "H" >> map Thm (thmreader tmr) ||
-        literal "M" >> map Sym StringData.reader ||
-        literal "C" >> map Char CharData.reader ||
-        literal "B" >> map Bool BoolData.reader ||
-        literal "N" >> return (Option NONE) ||
-        literal "S" >> map (Option o SOME) (reader tmr)
+        (int_decode >> Int) ||
+        (string_decode >> String) ||
+        (symbol_decode >> Sym) ||
+        (tagged_decode "list" (list_decode (reader tmr)) >> List) ||
+        (tagged_decode "tm" string_decode >> tmr >> Term) ||
+        (tagged_decode "ty" string_decode >> tmr >> type_of >> Type) ||
+        (tagged_decode "th" (thmreader tmr) >> Thm) ||
+        (tagged_decode "ch" int_decode >~ opt_chr >> Char) ||
+        (tagged_decode "b" (fn d => if d = HOLsexp.Nil then SOME (Bool false)
+                                    else if d = HOLsexp.Symbol "t" then
+                                      SOME (Bool true) else NONE)) ||
+        (tagged_decode "some" (reader tmr) >> SOME >> Option) ||
+        (fn d => if d = HOLsexp.Nil then SOME (Option NONE)
+                 else NONE)
   in
     core s
   end
@@ -245,7 +253,7 @@ fun new {thydataty, load, other_tds, merge} =
     val (todata, fromdata) =
         LTD.new{thydataty = thydataty, pp = bare_toString,
                 merge = (fn (t1,t2) => merge {old = t1, new = t2}),
-                terms = sterms, read = lift o reader, write = write}
+                terms = sterms, read = reader, write = write}
     fun segment_data {thyname} =
       Option.join
         (Option.map fromdata

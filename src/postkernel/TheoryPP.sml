@@ -360,10 +360,7 @@ fun pp_thydata info_record = let
     if String.size s <= w then [s]
     else String.substring(s, 0, w) :: chunks w (String.extract(s, w, NONE))
 
-  fun enc_cpl (a,b) =
-      let open HOLsexp in
-        pair_encode(String, list_encode String) (a, chunks 65 b)
-      end
+  val enc_cpl = HOLsexp.pair_encode(HOLsexp.String, fn x => x)
 
   fun list_loadable tmwrite thymap =
     Binarymap.foldl (fn (k, data, rest) => (k, data tmwrite) :: rest) [] thymap
