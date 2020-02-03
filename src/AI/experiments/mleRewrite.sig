@@ -7,6 +7,7 @@ sig
   type move = term
 
   (* target *)
+  val random_walk : int -> term -> term option  
   val create_targetl : term list -> board list
   val export_targetl : board list -> unit
   val import_targetd : unit -> (board, int * bool list) Redblackmap.dict

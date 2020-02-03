@@ -165,30 +165,73 @@ val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
    Targets
    ------------------------------------------------------------------------- *)
 
-fun lo_walk (n,maxn) tm =
-  if cterm_size tm > tmsize_limit then NONE 
-  else if is_nf tm then SOME (tm,n)
-  else if n >= maxn then NONE
-  else 
+fun random_walk n tm =
+  if cterm_size tm > tmsize_limit then NONE else
+  if n <= 0 then SOME tm else
     let 
-      val movel = available_eql tm 
-      val _ = print "."
+      fun test (subtm,_) = exists (C is_match subtm) eq_axl_bare
+      val movel = filter test (all_pos tm)
     in
-      if null movel 
-      then raise ERR "lo_walk" (tts tm)
-      else lo_walk (n+1,maxn) (apply_eq (hd movel) tm)
+      if null movel then NONE else
+        let 
+          val (subtm,pos) = random_elem movel
+          val eq = valOf (List.find (fn x => is_match x subtm) eq_axl_bare)
+          val sub = fst (match_term (lhs eq) subtm)
+          val res = subst sub (rhs eq)
+          val newtm = subst_pos (tm,pos) res
+        in
+          random_walk (n-1) newtm
+        end
     end
+
+(*
+load "aiLib"; open aiLib;
+load "mleLib"; open mleLib;
+load "mleRewrite"; open mleRewrite;
+
+fun gen_board () =
+  let
+    val tm1 = random_cterm 20
+    val tm2 = list_mk_cA [tm1,v1,v2,v3]
+    val tmo = random_walk 100 tm2
+  in
+    (tm2, valOf tmo, 0)
+  end
+
+val targetl = mapfilter gen_board (List.tabulate (20, fn _ => ()));
+length targetl;
+
+load "hhExportFof"; open hhExportFof;
+fun export_goal dir (goal,n) =
+  let 
+    val tptp_dir = HOLDIR ^ "/src/AI/experiments/TPTP"
+    val _ = mkDir_err tptp_dir
+    val file = tptp_dir ^ "/" ^ dir ^ "/i/" ^ its n ^ ".p"
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir)
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/i")
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/o")
+  in 
+    name_flag := false;
+    type_flag := false;
+    p_flag := false;
+    fof_export_goal file goal 
+  end;
+fun goal_of_boardCBY_eq (tm1,tm2,n) =
+  (eq_axl, forall_capital (mk_eq (tm1,tm2)))
+val goall_eq = map goal_of_boardCBY_eq targetl;
+val _ = app (export_goal "rwCBY-eq") (number_snd 0 goall_eq);
+
+*)
+
 
 fun create_board maxn (tm,i) = 
   let 
     val _ = print_endline (its i)
     val newtm = mk_tag (list_mk_cA [tm,v1,v2,v3])
-    val nfo = lo_walk (0,maxn) newtm in
+    val nfo = SOME (T,0) in
     if not (isSome nfo) then NONE else 
     let val (nf,n) = valOf nfo in
-      (* if can (find_term (C tmem [cS,cK])) nf 
-      then NONE 
-      else *) SOME (newtm,nf,n)
+      SOME (newtm,nf,n)
     end
   end
 
@@ -305,7 +348,7 @@ load "mlReinforce"; open mlReinforce;
 load "mleLib"; open mleLib;
 load "aiLib"; open aiLib;
 load "mleRewrite"; open mleRewrite;
-load "hhExportFof"; open hhExportFof;
+
 
 val tml = cgen_random 100 (10,20); length tml;
 val targetl = create_targetl tml; length targetl;
@@ -313,6 +356,7 @@ val _ = export_targetl targetl;
 val targetd = import_targetd ();
 val targetl = dict_sort (compare_third Int.compare) (dkeys targetd);
 
+load "hhExportFof"; open hhExportFof;
 fun export_goal dir (goal,n) =
   let 
     val tptp_dir = HOLDIR ^ "/src/AI/experiments/TPTP"
@@ -325,8 +369,12 @@ fun export_goal dir (goal,n) =
     name_flag := false;
     type_flag := false;
     p_flag := false;
-    fof_export_goal file goal
+    fof_export_goal file goal 
   end;
+fun goal_of_boardCBY_eq (tm1,tm2,n) =
+  (eq_axl, forall_capital (mk_eq (tm1,tm2)))
+val goall_eq = map goal_of_boardCBY_eq targetl;
+val _ = app (export_goal "rwCBY-eq") (number_snd 0 goall_eq);
 
 val goall_eq = map goal_of_board_eq targetl;
 val _ = app (export_goal "rw-eq") (number_snd 0 goall_eq);
@@ -334,6 +382,9 @@ val goall_rw = map goal_of_board_rw targetl;
 val _ = app (export_goal "rw-rw") (number_snd 0 goall_rw);
 val goall_ev = map goal_of_board_ev targetl;
 val _ = app (export_goal "rw-ev") (number_snd 0 goall_ev);
+
+
+
 *)
 
 

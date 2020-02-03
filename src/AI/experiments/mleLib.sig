@@ -7,6 +7,10 @@ sig
   val compare_third :
     ('a * 'b -> order) -> ('d * 'e * 'a) * ('f * 'g * 'b) -> order
   
+  (* position *)
+  val subst_pos : term * int list -> term -> term
+  val all_pos : term -> (term * int list) list
+  
   (* combinator terms *)
   val cA : term
   val cT : term

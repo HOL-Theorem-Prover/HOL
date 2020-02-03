@@ -183,7 +183,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleSynthesize-combin-" ^ its version, exwindow = 40000,
+  {expname = "mleSynthesize-combin-" ^ its version, exwindow = 100000,
    ncore = 30, ntarget = 100, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
@@ -204,6 +204,7 @@ load "mleSynthesize"; open mleSynthesize;
   val targetl = create_targetl tml; length targetl;
   val _ = export_targetl targetl;
 val r = rl_start (rlobj,extsearch) (import_targetd ());
+val r = rl_restart 115 (rlobj,extsearch) (retrieve_targetd rlobj 115);
 *)
 
 (* -------------------------------------------------------------------------
@@ -249,11 +250,17 @@ load "aiLib"; open aiLib;
 load "mleSynthesize"; open mleSynthesize;
 load "hhExportFof"; open hhExportFof;
 
-val tml = cgen_exhaustive 8; length tml;
-val targetl = create_targetl tml; length targetl;
 val _ = export_targetl targetl;
 val targetd = import_targetd ();
 val targetl = dict_sort (compare_third Int.compare) (dkeys targetd);
+
+fun f x = (print_endline (its x); List.tabulate (50000, 
+  fn i => (print_endline ("  " ^ its i); random_cterm x)));
+val tml = List.concat (range ((11,20),f));
+val tml' = mk_term_set tml; length tml';
+val targetl = create_targetl tml'; length targetl;
+
+
 
 fun export_goal dir (goal,n) =
   let 
@@ -270,12 +277,13 @@ fun export_goal dir (goal,n) =
     fof_export_goal file goal
   end;
 
+val prefix = "sy11to20"
 val goall_eq = map goal_of_board_eq targetl;
-val _ = app (export_goal "sy-eq") (number_snd 0 goall_eq);
+val _ = app (export_goal (prefix ^ "-eq")) (number_snd 0 goall_eq);
 val goall_rw = map goal_of_board_rw targetl;
-val _ = app (export_goal "sy-rw") (number_snd 0 goall_rw);
+val _ = app (export_goal (prefix ^ "-rw")) (number_snd 0 goall_rw);
 val goall_ev = map goal_of_board_ev targetl;
-val _ = app (export_goal "sy-ev") (number_snd 0 goall_ev);
+val _ = app (export_goal (prefix ^ "-ev")) (number_snd 0 goall_ev);
 *)
 
 

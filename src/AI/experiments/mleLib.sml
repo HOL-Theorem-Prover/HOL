@@ -14,6 +14,28 @@ val ERR = mk_HOL_ERR "mleLib"
 fun compare_third cmp ((_,_,a),(_,_,b)) = cmp (a,b)
 
 (* -------------------------------------------------------------------------
+   Position
+   ------------------------------------------------------------------------- *)
+
+fun subst_pos (tm,pos) res =
+  if null pos then res else
+  let
+    val (oper,argl) = strip_comb tm
+    fun f i x = if i = hd pos then subst_pos (x,tl pos) res else x
+    val newargl = mapi f argl
+  in
+    list_mk_comb (oper,newargl)
+  end
+
+fun all_pos tm =
+  let
+    val (oper,argl) = strip_comb tm
+    fun f i arg = map_snd (fn x => i :: x) (all_pos arg)
+  in
+    (tm,[]) :: List.concat (mapi f argl)
+  end
+
+(* -------------------------------------------------------------------------
    Combinators
    ------------------------------------------------------------------------- *)
 
@@ -21,11 +43,16 @@ fun compare_third cmp ((_,_,a),(_,_,b)) = cmp (a,b)
 val cI = mk_var ("i",alpha)
 val cK = mk_var ("k",alpha)
 val cS = mk_var ("s",alpha)
+val cC = mk_var ("c",alpha)
+val cB = mk_var ("b",alpha)
+val cY = mk_var ("y",alpha)
+
 val cX = mk_var ("x",alpha)
 val cA = mk_var ("a",``:'a -> 'a -> 'a``)
 val cT = mk_var ("t",``:'a -> 'a``)
 val cV = mk_var ("v",``:'a -> bool``)
 val cL = mk_var ("l",``:'a -> bool``)
+
 
 val vx = mk_var ("X",alpha)
 val vy = mk_var ("Y",alpha)
@@ -91,15 +118,17 @@ fun forall_capital tm =
 
 val s_thm_bare = mk_eq (cS oo vx oo vy oo vz, (vx oo vz) oo (vy oo vz))
 val k_thm_bare = mk_eq (cK oo vx oo vy, vx)
+val c_thm_bare = mk_eq (cC oo vx oo vy oo vz, vx oo vz oo vy)
+val b_thm_bare = mk_eq (cB oo vx oo vy oo vz, vx oo (vy oo vz))
+val y_thm_bare = mk_eq (cY oo vx, vx oo (cY oo vx))
+
 val eq_axl_bare = [s_thm_bare,k_thm_bare]
 val eq_axl = map forall_capital eq_axl_bare
 
 fun tag_lhs eq = let val (a,b) = dest_eq eq in mk_eq (mk_tag a, b) end
-val s_thm_tag = tag_lhs s_thm_bare
-val k_thm_tag = tag_lhs k_thm_bare
 val left_thm = mk_eq (mk_tag (vx oo vy), mk_tag vx oo vy)
 val right_thm = mk_eq (mk_tag (vx oo vy), vx oo mk_tag vy)
-val tag_axl_bare = [s_thm_tag,k_thm_tag,left_thm,right_thm]
+val tag_axl_bare = map tag_lhs eq_axl_bare @ [left_thm,right_thm]
 
 fun cterm_size tm = 
   let val (oper,argl) = strip_comb tm in
