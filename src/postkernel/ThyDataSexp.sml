@@ -222,7 +222,7 @@ fun write tmw s =
     | Char c => tag "ch" (HOLsexp.Integer o Char.ord) c
     | Bool b => tag "b" (fn b => if b then HOLsexp.Symbol "t"
                                  else HOLsexp.Nil) b
-    | Option NONE => HOLsexp.Nil
+    | Option NONE => tag "none" (fn () => HOLsexp.Nil) ()
     | Option (SOME s) => tag "some" (write tmw) s
 
 fun reader tmr s = (* necessary eta-expansion! *)
@@ -241,8 +241,9 @@ fun reader tmr s = (* necessary eta-expansion! *)
                                     else if d = HOLsexp.Symbol "t" then
                                       SOME (Bool true) else NONE)) ||
         (tagged_decode "some" (reader tmr) >> SOME >> Option) ||
-        (fn d => if d = HOLsexp.Nil then SOME (Option NONE)
-                 else NONE)
+        (tagged_decode "none" (fn d => if d = HOLsexp.Nil then
+                                         SOME (Option NONE)
+                                       else NONE))
   in
     core s
   end
