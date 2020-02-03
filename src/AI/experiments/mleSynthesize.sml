@@ -170,7 +170,7 @@ val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 20}]
 
-val dim = 8
+val dim = 12
 fun dim_head_poli n = [dim,n]
 val equality = ``$= : 'a -> 'a -> bool``
 val tnnparam = map_assoc (dim_std (1,dim)) [equality,cX,v1,v2,v3,cA,cS,cK] @ 
@@ -197,14 +197,12 @@ val rlobj : (board,move) rlobj =
 val extsearch = mk_extsearch "mleSynthesize.extsearch" rlobj
 
 (*
+load "mleSynthesize"; open mleSynthesize;
 load "mlReinforce"; open mlReinforce;
 load "mleLib"; open mleLib;
-load "mleSynthesize"; open mleSynthesize;
-  val tml = cgen_exhaustive 9; length tml;
-  val targetl = create_targetl tml; length targetl;
-  val _ = export_targetl targetl;
 val r = rl_start (rlobj,extsearch) (import_targetd ());
-val r = rl_restart 115 (rlobj,extsearch) (retrieve_targetd rlobj 115);
+
+(* val r = rl_restart 48 (rlobj,extsearch) (retrieve_targetd rlobj 48); *)
 *)
 
 (* -------------------------------------------------------------------------
