@@ -25,6 +25,8 @@ fun string_of_board (a,b,c)= tts a ^ " " ^ tts b ^ " " ^ its c
 fun board_compare ((a,b,c),(d,e,f)) =
   (cpl_compare Term.compare Term.compare) ((a,b),(d,e))
 
+val k_thm_bare = List.nth (eq_axl_bare,1)
+
 fun status_of (tm1,tm2,n) =
   if not (can (find_term (fn x => term_eq x cX)) tm1) then
     let 
@@ -33,7 +35,7 @@ fun status_of (tm1,tm2,n) =
     in
       if isSome tm1o andalso term_eq (valOf tm1o) tm2 then Win else Lose
     end
-  else if n <= 0 orelse can (find_term (fn x => is_match (snd eq_axl_bare)) x
+  else if n <= 0 orelse can (find_term (fn x => is_match k_thm_bare x)) tm1
     then Lose else Undecided
 
 (* -------------------------------------------------------------------------
