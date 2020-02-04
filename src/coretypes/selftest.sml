@@ -205,5 +205,12 @@ val _ = require_msg (check_result (aconv ``v:'a``)) term_to_string
                     ``one_CASE () (v:'a)``
 end
 
+(* github issue #765; induction principle for pairs is wrong *)
+val _ = hide "p"
+val _ = tprint "Induction principle for pairs"
+val res = Exn.capture (BasicProvers.Induct_on ‘p’) ([], “FST p ≠ SND p”)
+val _ = case res of
+            Exn.Res _ => OK()
+          | Exn.Exn e => sdie ("Exception : " ^ General.exnMessage e)
 
 val _ = Process.exit Process.success

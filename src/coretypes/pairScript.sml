@@ -326,7 +326,7 @@ val FORALL_PROD = Q.store_thm("FORALL_PROD",
  THEN ASM_REWRITE_TAC[]);
 
 
-val pair_induction = save_thm("pair_induction", #2(EQ_IMP_RULE FORALL_PROD));
+Theorem pair_induction = #2(EQ_IMP_RULE FORALL_PROD) |> GEN_ALL
 
 (* ----------------------------------------------------------------------
     PROD_ALL
