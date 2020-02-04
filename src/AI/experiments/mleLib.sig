@@ -53,6 +53,7 @@ sig
   val is_nf : term -> bool
  
   (* generation *)
+  val is_reducible : term -> bool
   val random_cterm : int -> term
   val cgen_random : int -> (int * int) -> term list 
   val cgen_exhaustive : int -> term list
