@@ -164,6 +164,7 @@ fun run_bigsteps bsobj target =
       player = #player bsobj
       }
     val (tree,cache) = starttree_of mctsobj target
+    val mctsparam = #mctsparam bsobj
     val tree' = 
       (if #noise_root mctsparam then add_rootnoise mctsparam else I) tree
   in

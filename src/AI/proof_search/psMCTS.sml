@@ -194,9 +194,13 @@ fun node_create_backup obj (tree,cache) (id,board) =
   end
 
 fun add_rootnoise param tree = 
-  let val {pol,value,stati,board,sum,vis,status} = dfind [] tree in
-    {pol=add_noise param pol, value=value, stati=stati, board=board,
-     sum=sum,vis=vis,status=status}
+  let 
+    val {pol,value,stati,board,sum,vis,status} = dfind [] tree 
+    val prepol = add_noise param (map fst pol)
+    val newpol = combine (prepol, map snd pol)
+  in
+    dadd [] {pol= newpol, value=value, stati=stati, 
+     board=board, sum=sum, vis=vis, status=status} tree
   end
 
 (* -------------------------------------------------------------------------
