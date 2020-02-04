@@ -13,7 +13,7 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlReinforce mleLib
 
 val ERR = mk_HOL_ERR "mleSynthesize"
-val version = 10
+val version = 11
 
 (* -------------------------------------------------------------------------
    Board
@@ -26,16 +26,14 @@ fun board_compare ((a,b,c),(d,e,f)) =
   (cpl_compare Term.compare Term.compare) ((a,b),(d,e))
 
 fun status_of (tm1,tm2,n) =
-  let 
-    val tm1a = list_mk_cA [tm1,v1,v2,v3]
-    val tm1o = fast_lo_cnorm 100 eq_axl_bare tm1a
-  in
-    if isSome tm1o andalso term_eq (valOf tm1o) tm2
-      then Win
-    else if n <= 0 
-      then Lose
-    else Undecided
-  end
+  if not (can (find_term cX) tm) then
+    let 
+      val tm1a = list_mk_cA [tm1,v1,v2,v3]
+      val tm1o = fast_lo_cnorm 100 eq_axl_bare tm1a
+    in
+      if isSome tm1o andalso term_eq (valOf tm1o) tm2 then Win else Lose
+    end
+  else if n <= 0 then Lose else Undecided
 
 (* -------------------------------------------------------------------------
    Move
@@ -99,7 +97,7 @@ val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
    ------------------------------------------------------------------------- *)
 
 val targetdir = HOLDIR ^ "/src/AI/experiments/target_combin"
-val targetfile = targetdir ^ "/targetl-synt-" ^ its version
+val targetfile = targetdir ^ "/targetl-synt"
 val stats_dir = HOLDIR ^ "/src/AI/experiments/stats_combin"
 val stats_file = stats_dir ^ "/stats-synt-" ^ its version
 fun stats_il header il = 
@@ -137,14 +135,34 @@ fun create_targetl tml =
     dict_sort (compare_third Int.compare) l6
   end
 
-fun export_targetl targetl = 
-  let val _ = mkDir_err targetdir in 
-    write_boardl targetfile targetl
+fun create_policy_supervised tml =
+  let
+    val i = ref 0
+    fun f tm = 
+      let val tmo = fast_lo_cnorm 100 eq_axl_bare (list_mk_cA [tm,v1,v2,v3])
+      in
+        if not (isSome tmo) orelse 
+           can (find_term (C tmem [cS,cK])) (valOf tmo)
+        then NONE
+        else (print_endline (its (!i)); incr i; tmo)
+      end
+    val l1 = map_assoc f tml    
+    val l2 = filter (fn x => isSome (snd x)) l1    
+    val l3 = map_snd valOf l2
+    val d = dregroup Term.compare (map swap l3)
+  in
+    d
   end
 
-fun import_targetd () =
+fun export_targetl name targetl = 
+  let val _ = mkDir_err targetdir in 
+    write_boardl (targetfile ^ "-" ^ name) targetl
+  end
+
+fun import_targetl name = read_boardl (targetfile ^ "-" ^ name)
+ 
+fun mk_targetd l1 =
   let 
-    val l1 = read_boardl targetfile
     val l2 = number_snd 0 l1
     val l3 = map (fn (x,i) => (x,(i,[]))) l2
   in
@@ -200,9 +218,16 @@ val extsearch = mk_extsearch "mleSynthesize.extsearch" rlobj
 load "mleSynthesize"; open mleSynthesize;
 load "mlReinforce"; open mlReinforce;
 load "mleLib"; open mleLib;
-val r = rl_start (rlobj,extsearch) (import_targetd ());
 
-(* val r = rl_restart 48 (rlobj,extsearch) (retrieve_targetd rlobj 48); *)
+val tml = cgen_synt 10; length tml;
+val targetl1 = create_targetl tml; length targetl;
+fun cmp (b1,b2) = cpl_compare 
+  (compare_third Int.compare) (#board_compare (#game rlobj)) 
+  ((b1,b1),(b2,b2));
+val targetl2 = dict_sort cmp targetl1;
+val _ = export_targetl "sy9" targetl2;
+
+val r = rl_start (rlobj,extsearch) (mk_targetl (import_targetl "sy9"));
 *)
 
 (* -------------------------------------------------------------------------
@@ -248,17 +273,18 @@ load "aiLib"; open aiLib;
 load "mleSynthesize"; open mleSynthesize;
 load "hhExportFof"; open hhExportFof;
 
-val _ = export_targetl targetl;
-val targetd = import_targetd ();
-val targetl = dict_sort (compare_third Int.compare) (dkeys targetd);
+val tml = cgen_synt 10; length tml;
+val targetl1 = create_targetl tml; length targetl;
+fun cmp (b1,b2) = cpl_compare 
+  (compare_third Int.compare) (#board_compare (#game rlobj)) 
+  ((b1,b1),(b2,b2));
+val targetl2 = dict_sort cmp targetl1;
 
-fun f x = (print_endline (its x); List.tabulate (50000, 
-  fn i => (print_endline ("  " ^ its i); random_cterm x)));
-val tml = List.concat (range ((11,20),f));
-val tml' = mk_term_set tml; length tml';
-val targetl = create_targetl tml'; length targetl;
+val _ = export_targetl "sy10" targetl2;
+val targetl3 = import_targetl "sy10";
 
-
+val targetl4 = map (fn (a,b,x) => (a,b,((x div 2) + 1) div 2)) targetl3;
+fun select y = filter (fn (_,_,x) => x <= y) targetl4;
 
 fun export_goal dir (goal,n) =
   let 
@@ -275,13 +301,43 @@ fun export_goal dir (goal,n) =
     fof_export_goal file goal
   end;
 
-val prefix = "sy11to20"
-val goall_eq = map goal_of_board_eq targetl;
-val _ = app (export_goal (prefix ^ "-eq")) (number_snd 0 goall_eq);
-val goall_rw = map goal_of_board_rw targetl;
-val _ = app (export_goal (prefix ^ "-rw")) (number_snd 0 goall_rw);
-val goall_ev = map goal_of_board_ev targetl;
-val _ = app (export_goal (prefix ^ "-ev")) (number_snd 0 goall_ev);
+fun tptp_targetl size = 
+  let 
+    val prefix = "sy" ^ its size 
+    val targetl = select size
+    val goall_eq = map goal_of_board_eq targetl
+    val goall_rw = map goal_of_board_rw targetl
+    val goall_ev = map goal_of_board_ev targetl
+  in
+    app (export_goal (prefix ^ "-eq")) (number_snd 0 goall_eq);
+    app (export_goal (prefix ^ "-rw")) (number_snd 0 goall_rw);
+    app (export_goal (prefix ^ "-ev")) (number_snd 0 goall_ev)
+  end;
+
+app tptp_targetl (List.tabulate (10, fn x => x + 1));
+*)
+
+(* -------------------------------------------------------------------------
+   Supervised learning for the policy.
+   ------------------------------------------------------------------------- *)
+
+(*
+load "mleLib"; open mleLib;
+load "aiLib"; open aiLib;
+load "mleSynthesize"; open mleSynthesize;
+
+val tml = cgen_synt 10; length tml;
+val d = create_policy_supervised tml;
+val (a,l) = hd (dlist d);
+
+fun f ctm (a,l) = 
+  if 
+  let 
+    val ctma =
+    val ctms = 
+    val ctmk =
+
+
 *)
 
 
