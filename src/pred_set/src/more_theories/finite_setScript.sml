@@ -516,6 +516,27 @@ Proof
   xfer_back_tac >> simp[MEM_FILTER, CONJ_COMM]
 QED
 
+Definition fFILTER_def:
+  fFILTER = ((I ---> I) ---> fset_REP ---> fset_ABS) FILTER
+End
+
+Theorem fFILTER_relates[transfer_rule]:
+  (((=) |==> (=)) |==> FSET0 |==> FSET0) FILTER fFILTER
+Proof
+  irule HK_thm2 >>
+  goal_assum (mp_tac o Uchain (GG fFILTER_def)) >>
+  rpt (goal_assum (mp_tac o Uchain (GG funQ))) >>
+  rpt (goal_assum (mp_tac o Uchain (GG idQ))) >>
+  rpt (goal_assum (mp_tac o Uchain (GG fset0Q))) >>
+  simp[FUN_REL_def, fsequiv_def, LIST_TO_SET_FILTER]
+QED
+
+Theorem fIN_FILTER[simp]:
+  !e s P. fIN e (fFILTER P s) <=> fIN e s /\ P e
+Proof
+  xfer_back_tac >> simp[MEM_FILTER] >> metis_tac[]
+QED
+
 Definition fDIFF_def:
   fDIFF = (fset_REP ---> fset_REP ---> fset_ABS)
           (\l1 l2. FILTER (\x. ~MEM x l2) l1)
