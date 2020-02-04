@@ -26,7 +26,7 @@ fun board_compare ((a,b,c),(d,e,f)) =
   (cpl_compare Term.compare Term.compare) ((a,b),(d,e))
 
 fun status_of (tm1,tm2,n) =
-  if not (can (find_term cX) tm) then
+  if not (can (find_term (fn x => term_eq x cX)) tm1) then
     let 
       val tm1a = list_mk_cA [tm1,v1,v2,v3]
       val tm1o = fast_lo_cnorm 100 eq_axl_bare tm1a
@@ -219,7 +219,7 @@ load "mleSynthesize"; open mleSynthesize;
 load "mlReinforce"; open mlReinforce;
 load "mleLib"; open mleLib;
 
-val tml = cgen_synt 10; length tml;
+val tml = cgen_synt 9; length tml;
 val targetl1 = create_targetl tml; length targetl;
 fun cmp (b1,b2) = cpl_compare 
   (compare_third Int.compare) (#board_compare (#game rlobj)) 
