@@ -182,10 +182,7 @@ fun node_create_backup obj (tree,cache) (id,board) =
           | Lose      => (0.0,[])
           | Undecided => (#player obj) board
         val pol2 = normalize_prepol pol1
-        val pol3 =
-          if #noise_all param orelse (#noise_root param andalso null id)
-          then add_noise param pol2
-          else pol2
+        val pol3 = if #noise_all param then add_noise param pol2 else pol2
       in
         {pol= add_cid pol3, value=value, stati=stati',
          board=board, sum=0.0, vis=0.0, status=stati'}
@@ -194,6 +191,12 @@ fun node_create_backup obj (tree,cache) (id,board) =
     val tree2 = backup (#decay param) tree1 (id, #value node)
   in
     (tree2, if #noconfl param then dadd board id cache else cache)
+  end
+
+fun add_rootnoise param tree = 
+  let val {pol,value,stati,board,sum,vis,status} = dfind [] tree in
+    {pol=add_noise param pol, value=value, stati=stati, board=board,
+     sum=sum,vis=vis,status=status}
   end
 
 (* -------------------------------------------------------------------------

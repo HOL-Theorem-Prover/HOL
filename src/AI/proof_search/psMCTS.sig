@@ -58,6 +58,8 @@ sig
     game : ('a,'b) game,
     player : ('a,'b) player
     }
+  
+  val add_rootnoise : mctsparam -> ('a,'b) tree -> ('a,'b) tree
 
   val starttree_of : ('a,'b) mctsobj -> 'a -> 
     (('a,'b) tree * ('a,id) Redblackmap.dict)
