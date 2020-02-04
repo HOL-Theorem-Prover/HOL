@@ -33,7 +33,8 @@ fun status_of (tm1,tm2,n) =
     in
       if isSome tm1o andalso term_eq (valOf tm1o) tm2 then Win else Lose
     end
-  else if n <= 0 orelse is_reducible tm1 then Lose else Undecided
+  else if n <= 0 orelse can (find_term (fn x => is_match (snd eq_axl_bare)) x
+    then Lose else Undecided
 
 (* -------------------------------------------------------------------------
    Move
