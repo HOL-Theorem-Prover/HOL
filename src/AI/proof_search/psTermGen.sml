@@ -136,7 +136,7 @@ fun gen_term operl (size,ty) =
     val tycset = map (fn x => (type_of x, x)) operl
     val d = dregroup Type.compare tycset
     val cache = ref (dnew Int.compare [(1,d)])
-    fun g n = dfind ty (gen_size cache n) handle NotFound => []
+    fun g n = dfind ty (gen_size cache (n+1)) handle NotFound => []
   in
     List.concat (List.tabulate (size, g))
   end

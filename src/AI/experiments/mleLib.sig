@@ -55,7 +55,9 @@ sig
   (* generation *)
   val random_cterm : int -> term
   val cgen_random : int -> (int * int) -> term list 
-  val cgen_exhaustive : int -> term list  
+  val cgen_exhaustive : int -> term list
+  val cgen_synt : int -> term list
+ 
    
 
 end

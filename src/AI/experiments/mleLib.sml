@@ -118,9 +118,6 @@ fun forall_capital tm =
 
 val s_thm_bare = mk_eq (cS oo vx oo vy oo vz, (vx oo vz) oo (vy oo vz))
 val k_thm_bare = mk_eq (cK oo vx oo vy, vx)
-val c_thm_bare = mk_eq (cC oo vx oo vy oo vz, vx oo vz oo vy)
-val b_thm_bare = mk_eq (cB oo vx oo vy oo vz, vx oo (vy oo vz))
-val y_thm_bare = mk_eq (cY oo vx, vx oo (cY oo vx))
 
 val eq_axl_bare = [s_thm_bare,k_thm_bare]
 val eq_axl = map forall_capital eq_axl_bare
@@ -136,9 +133,9 @@ fun cterm_size tm =
   end
 
 (* big step semantics *)
-val ev_ax1 = mk_cV (cK)
+val ev_ax1 = mk_cV cK
 val ev_ax2 = mk_imp (mk_cV vv, mk_cV (mk_cA (cK,vv)))
-val ev_ax3 = mk_cV (cS)
+val ev_ax3 = mk_cV cS
 val ev_ax4 = mk_imp (mk_cV vv, mk_cV (mk_cA (cS,vv)))
 val ev_ax5 = mk_imp (mk_cV vv, mk_cV (list_mk_cA [cS,vu,vv]))
 val ev_ax6 = mk_imp (mk_cL vv,mk_cV vv)
@@ -272,6 +269,39 @@ fun cgen_random n (a,b) =
   end 
 
 fun cgen_exhaustive size = gen_term [cA,cS,cK] (2*size-1,alpha)
+
+fun cgen_synt_cache cache n = dfind n (!cache) handle NotFound =>
+  if n <= 1 then raise ERR "cgen_synt_aux" "" else
+    let 
+      val l = map pair_of_list (number_partition 2 n) 
+      fun f (n1,n2) =
+      let
+        val l1 = cgen_synt_cache cache n1
+        val l2 = cgen_synt_cache cache n2
+      in
+        map mk_cA (cartesian_product l1 l2)
+      end
+      val l3 = List.concat (map f l)
+    in
+      cache := dadd n l3 (!cache); l3
+    end
+
+fun cgen_synt n = 
+  let 
+    val cache = ref (dnew Int.compare [(1,[cS,cK])])
+    val il = List.tabulate (n, fn x => x + 1)
+  in
+    List.concat (map (cgen_synt_cache cache) il)
+  end
+
+(*
+load "mleLib"; open mleLib;
+val tml = cgen_synt 8; length tml;
+val tml' = cgen_exhaustive 8; length tml';
+
+*)
+
+
 
 end (* struct *)
 
