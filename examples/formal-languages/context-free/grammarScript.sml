@@ -2,8 +2,8 @@ open HolKernel Parse boolLib bossLib
 
 open boolSimps lcsymtacs
 
-open listTheory pred_setTheory finite_mapTheory locationTheory
-open relationTheory finite_setTheory
+open listTheory finite_mapTheory locationTheory
+open relationTheory finite_setTheory pred_setTheory
 
 val FLAT_APPEND = rich_listTheory.FLAT_APPEND
 val rveq = rpt BasicProvers.VAR_EQ_TAC
@@ -222,9 +222,9 @@ Theorem ptree_ind =
 Theorem valid_ptree_derive:
   ∀pt. valid_ptree G pt ⇒ derives G [ptree_head pt] (ptree_fringe pt)
 Proof
-  ho_match_mp_tac ptree_ind >> rw[] >> Cases_on`pt` >> fs[] >>
-  match_mp_tac RTC1 >> qexists_tac `MAP ptree_head l` >> rw[] >>
-  qpat_x_assum `SS ∈ G.rules ' s` (K ALL_TAC) >> Induct_on `l` >> rw[] >>
+  ho_match_mp_tac ptree_ind >> rw[] >> Cases_on‘pt’ >> fs[] >>
+  match_mp_tac RTC1 >> qexists_tac ‘MAP ptree_head l’ >> rw[] >>
+  qpat_x_assum ‘fIN _ (G.rules ' s)’ (K ALL_TAC) >> Induct_on ‘l’ >> rw[] >>
   fs[DISJ_IMP_THM, FORALL_AND_THM] >>
   metis_tac [derives_paste_horizontally, APPEND]
 QED
@@ -416,16 +416,17 @@ val singleton_derives_ptree = store_thm(
       valid_ptree G pt ∧ ptree_head pt = h ∧ ptree_fringe pt = sf``,
   strip_tac >> qspec_then `Lf (h,l)` mp_tac ptrees_derive_extensible >> simp[]);
 
-val derives_language = store_thm(
-  "derives_language",
-  ``language G = { ts | derives G [NT G.start] (MAP TOK ts) }``,
+Theorem derives_language:
+  language G = { ts | derives G [NT G.start] (MAP TOK ts) }
+Proof
   rw[language_def, EXTENSION, complete_ptree_def] >> eq_tac
   >- metis_tac[valid_ptree_derive] >>
   strip_tac >>
-  qspecl_then [`Lf (NT G.start, ())`, `MAP TOK x`] mp_tac
+  qspecl_then [‘Lf (NT G.start, ())’, ‘MAP TOK x’] mp_tac
     ptrees_derive_extensible >> simp[] >>
-  disch_then (qxch `pt` strip_assume_tac) >> qexists_tac `pt` >>
-  simp[] >> dsimp[MEM_MAP]);
+  disch_then (qxch ‘pt’ strip_assume_tac) >> qexists_tac ‘pt’ >>
+  simp[] >> dsimp[MEM_MAP]
+QED
 
 val derives_leading_nonNT_E = store_thm(
   "derives_leading_nonNT_E",
