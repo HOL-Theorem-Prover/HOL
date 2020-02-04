@@ -31,10 +31,12 @@
     (modify-syntax-entry ?” ")“" st)
     (modify-syntax-entry ?‘ "(’" st)
     (modify-syntax-entry ?’ ")‘" st)
-    (modify-syntax-entry ?\\ "." st)
-    ;; backslash only escapes in strings and certainly shouldn't be seen as
-    ;; an escaper inside terms where it just causes pain, particularly in terms
-    ;; such as \(x,y). x + y
+    (modify-syntax-entry ?\\ "\\" st)
+    ;; backslash only escapes in strings but we need to have it seen
+    ;; as one in general if the hol-mode isn't to get seriously
+    ;; confused by script files that contain escaped quotation
+    ;; characters. This despite the fact that it does cause pain in
+    ;; terms such as \(x,y). x + y
     (mapc (lambda (c) (modify-syntax-entry c "_" st)) ".")
     (mapc (lambda (c) (modify-syntax-entry c "w" st)) "_'")
     (mapc (lambda (c) (modify-syntax-entry c "." st)) ",;")
