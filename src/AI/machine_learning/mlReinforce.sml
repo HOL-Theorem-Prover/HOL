@@ -53,7 +53,7 @@ fun mk_mctsparam noiseb nsim rlobj =
   {
   nsim = nsim, stopatwin_flag = false,
   decay = #decay (#rlparam rlobj), explo_coeff = 2.0,
-  noise_all = noiseb, noise_root = false,
+  noise_all = false, noise_root = noiseb,
   noise_coeff = 0.25, noise_gen = random_real,
   noconfl = false, avoidlose = false
   }
