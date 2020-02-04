@@ -185,7 +185,9 @@ fun LEFT_EXISTS_INTRO veq thm =
   in snd (itlist CHOOSER (free_vars_lr pat) (veq,thm))
   end;
 
-fun listpair [a,b] = (a,b);
+fun listpair [a,b] = (a,b)
+  | listpair l = raise ERR "listpair"
+                       ("List of wrong length (" ^Int.toString (length l) ^ ")")
 
 (*---------------------------------------------------------------------------*)
 (* Prove a theorem for "deep" case analysis on a term with an (iterated)     *)
