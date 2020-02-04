@@ -46,22 +46,26 @@ val _ = add_listform { block_info = (PP.INCONSISTENT, 0),
 
 val _ = overload_on ("’", ``λs. ⟪ SX_SYM "quote" ; s ⟫``)
 
-val valid_first_symchar_def = Define`
-  valid_first_symchar c ⇔ isGraph c ∧ c ∉ {#"'"; #"("; #")"; #"."; #"\""} ∧ ¬isDigit c`;
+Definition valid_first_symchar_def[simp]:
+  valid_first_symchar c ⇔
+    isGraph c ∧ c ∉ {#"'"; #"("; #")"; #"."; #"\""} ∧ ¬isDigit c
+End
 
-val valid_symchar_def =  Define`
-  valid_symchar c ⇔ isGraph c ∧ c ∉ {#"'"; #"("; #")"}`;
+Definition valid_symchar_def[simp]:
+  valid_symchar c ⇔ isGraph c ∧ c ∉ {#"'"; #"("; #")"}
+End
 
-val valid_symbol_def = Define`
+Definition valid_symbol_def[simp]:
    (valid_symbol "" ⇔ F) ∧
-   (valid_symbol (c::cs) ⇔ valid_first_symchar c ∧ EVERY valid_symchar cs)`;
+   (valid_symbol (c::cs) ⇔ valid_first_symchar c ∧ EVERY valid_symchar cs)
+End
 
-val valid_sexp_def = Define`
+Definition valid_sexp_def[simp]:
   (valid_sexp (SX_SYM s) ⇔ valid_symbol s) ∧
   (valid_sexp (SX_CONS s1 s2) ⇔ valid_sexp s1 ∧ valid_sexp s2) ∧
   (valid_sexp (SX_STR s) ⇔ EVERY isPrint s) ∧
-  (valid_sexp s ⇔ T)`;
-val _ = export_rewrites["valid_first_symchar_def","valid_symchar_def","valid_symbol_def","valid_sexp_def"];
+  (valid_sexp s ⇔ T)
+End
 
 val arb_sexp_def = Define`arb_sexp = SX_NUM 0`;
 
@@ -113,7 +117,7 @@ val dstrip_sexp_def = Define`
 val tokmap = List.foldl (fn ((s,t), acc) => Binarymap.insert(acc, s, t))
                         (Binarymap.mkDict String.compare)
   [("(", ``#"("``), (")", ``#")"``), ("'", ``#"'"``),
-   ("\"", ``#"\""``), ("\\", ``#"\\"``), (".", ``#"."``)]
+   (str (Char.chr 34), ``#"\""``), ("\\", ``#"\\"``), (".", ``#"."``)]
 
 fun toklookup s =
   Binarymap.find(tokmap, s)
@@ -124,32 +128,32 @@ val ginfo = { tokmap = toklookup,
               gname = "sexpG", mkntname = (fn s => "sxnt_" ^ s) }
 
 
-val sexpG_def = mk_grammar_def ginfo `
+val sexpG_def = mk_grammar_def ginfo ‘
   sexp ::= WSsexp grabWS ;
   WSsexp ::= grabWS sexp0 ;
   grabWS ::= WS grabWS | ;
-  WS ::= ^(``{ c | isSpace c }``) ;
+  WS ::= ^(“{ c | isSpace c }”) ;
   sexp0 ::= sexpsym | sexpnum | sexpstr | "(" sexpseq grabWS ")"
          | "(" sexp "." sexp ")" | "'" WSsexp ;
 
   sexpseq ::= WSsexp sexpseq | ;
 
   sexpnum ::= sexpnum digit | digit ;
-  digit ::= ^(``{ c | isDigit c}``);
+  digit ::= ^(“{ c | isDigit c}”);
 
   sexpstr ::= "\"" strcontents "\"" ;
   strcontents ::= | strchar strcontents ;
   strchar ::= normstrchar | escapedstrchar ;
-  normstrchar ::= ^(``{ c | isPrint c ∧ c ≠ #"\\" ∧ c ≠ #"\"" }``) ;
+  normstrchar ::= ^(“{ c | isPrint c ∧ c ≠ #"\\" ∧ c ≠ #"\"" }”) ;
   escapedstrchar ::= "\\" escapablechar ;
   escapablechar ::= "\\" | "\"" ;
 
   sexpsym ::= first_symchar symchars ;
-  first_symchar ::= ^(``{ c | valid_first_symchar c }``)
+  first_symchar ::= ^(“{ c | valid_first_symchar c }”)
  ;
   symchars ::= symchar symchars | ;
-  symchar ::= ^(``{ c | valid_symchar c }``);
-`;
+  symchar ::= ^(“{ c | valid_symchar c }”);
+’;
 
 val _ = type_abbrev("NT", ``:sexpNT inf``)
 val _ = overload_on("mkNT", ``INL : sexpNT -> NT``)

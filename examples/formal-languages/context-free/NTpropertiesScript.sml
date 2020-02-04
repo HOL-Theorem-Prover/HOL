@@ -80,16 +80,16 @@ QED
 Theorem nullable_CONS_NT:
   nullable G (NT n :: rest) <=>
       nullable G rest ∧ n ∈ FDOM G.rules ∧
-      ∃r. r ∈ G.rules ' n ∧ nullable G r
+      ∃r. fIN r (G.rules ' n) ∧ nullable G r
 Proof
   simp[nullable_def] >> REVERSE eq_tac
   >- (strip_tac >> match_mp_tac RTC_R_I >> simp[derive_def] >>
       qexists_tac `r ++ rest` >> REVERSE conj_tac
       >- metis_tac[derives_paste_horizontally, listTheory.APPEND] >>
       qexists_tac `[]` >> simp[]) >>
-  `NT n :: rest = [NT n] ++ rest` by simp[] >> pop_assum SUBST1_TAC >>
+  ‘NT n :: rest = [NT n] ++ rest’ by simp[] >> pop_assum SUBST1_TAC >>
   simp[derives_split_horizontally] >> strip_tac >>
-  Q.UNDISCH_THEN `derives G [NT n] []`
+  Q.UNDISCH_THEN ‘derives G [NT n] []’
      (mp_tac o SIMP_RULE (srw_ss()) [Once relationTheory.RTC_CASES1]) >>
   metis_tac[]
 QED
@@ -103,7 +103,10 @@ val GSPEC_INTER = prove(
   simp[GSPECIFICATION, EXTENSION, SPECIFICATION] >> qx_gen_tac `e` >>
   simp[paireq] >> metis_tac[])
 
-val _ = SIMP_CONV (srw_ss())[GSPEC_INTER, combinTheory.o_ABS_R, combinTheory.S_ABS_R, combinTheory.S_ABS_L, pairTheory.o_UNCURRY_R, pairTheory.S_UNCURRY_R] ``{ n + m | n > 10 ∧ m < 3 } ∩ Q``
+val _ = SIMP_CONV (srw_ss())[
+  GSPEC_INTER, combinTheory.o_ABS_R, combinTheory.S_ABS_R, combinTheory.S_ABS_L,
+  pairTheory.o_UNCURRY_R, pairTheory.S_UNCURRY_R
+] ``{ n + m | n > 10 ∧ m < 3 } ∩ Q``
 
 (* nullableML is an "executable" version of nullable that examines the grammar
    to determine nullability. I put the "executable" in quotes because of the
@@ -114,7 +117,8 @@ Definition nullableML_def:
   nullableML seen (TOK t :: _) = F ∧
   nullableML seen (NT n :: rest) =
       if n ∈ FDOM G.rules ∧ n ∉ seen then
-        if G.rules ' n ∩ { r | nullableML (n INSERT seen) r } = ∅ then F
+        if fFILTER (λr. nullableML (n INSERT seen) r) (G.rules ' n) = fEMPTY
+        then F
         else nullableML seen rest
       else F
 Termination
@@ -137,7 +141,8 @@ Proof
   HO_MATCH_MP_TAC (theorem "nullableML_ind") >>
   simp[nullableML_def, nullable_CONS_NT] >>
   map_every qx_gen_tac [`sn`, `N`, `sf`] >> rpt strip_tac >>
-  qpat_x_assum `SS ≠ ∅` mp_tac >> simp[EXTENSION] >> metis_tac[]
+  qpat_x_assum `SS ≠ fEMPTY` mp_tac >>
+  simp[finite_setTheory.EXTENSION] >> metis_tac[]
 QED
 
 
@@ -183,7 +188,7 @@ Proof
   dsimp[FLAT_EQ_NIL, listTheory.MEM_MAP] >>
   map_every qx_gen_tac [`N`, `sn`] >> Cases_on `N` >>
   simp[nullableML_def, ptree_NTs_def, ptree_rptfree_def] >>
-  strip_tac >> simp[EXTENSION] >>
+  strip_tac >> simp[finite_setTheory.EXTENSION] >>
   qexists_tac `MAP ptree_head subs` >> simp[] >>
   simp[Once nullableML_by_singletons] >> dsimp[listTheory.MEM_MAP] >>
   rw[] >> res_tac >> rw[]
@@ -226,7 +231,7 @@ Proof
       ∀p. MEM p subs' ⇒
             valid_ptree G p ∧ ptree_fringe p = [] ∧
             ptree_rptfree p`
-    by (qpat_x_assum `MAP ptree_head subs ∈ G.rules ' q` (K ALL_TAC) >>
+    by (qpat_x_assum `fIN (MAP ptree_head subs) (G.rules ' q)` (K ALL_TAC) >>
         Induct_on `subs` >- (rpt strip_tac >> qexists_tac `[]` >> simp[]) >>
         dsimp[] >> qx_gen_tac `h` >> rpt strip_tac >> fs[] >>
         qexists_tac `pt'::subs'` >> dsimp[] >> metis_tac[]) >>
@@ -328,7 +333,7 @@ QED
 Theorem firstSet_NT:
   firstSet G (NT N :: rest) =
       if N ∈ FDOM G.rules then
-        BIGUNION (IMAGE (firstSet G) (G.rules ' N)) ∪
+        BIGUNION (IMAGE (firstSet G) (toSet (G.rules ' N))) ∪
         (if nullable G [NT N] then firstSet G rest
          else {})
       else {}
@@ -337,14 +342,14 @@ Proof
   >- simp[firstSet_def, derives_leading_nonNT] >>
   simp[Once EXTENSION] >> qx_gen_tac `t` >> reverse eq_tac
   >- (dsimp[] >> rw[] >> fs[firstSet_def]
-      >- (asm_match `rhs ∈ G.rules ' N` >>
+      >- (asm_match `rhs ∈ toSet (G.rules ' N)` >>
           asm_match `derives G rhs (TOK t :: rest0)` >>
           qexists_tac`rest0 ++ rest` >>
           match_mp_tac RTC_R_I >>
           qexists_tac `rhs ++ rest` >> simp[grammarTheory.derive_def] >>
           metis_tac [listTheory.APPEND, APPEND_ASSOC,
                      grammarTheory.derives_paste_horizontally,
-                     relationTheory.RTC_REFL]) >>
+                     relationTheory.RTC_REFL, finite_setTheory.fIN_IN]) >>
       fs[nullable_def] >>
       metis_tac [listTheory.APPEND,
                  grammarTheory.derives_paste_horizontally]) >>
@@ -357,7 +362,7 @@ Proof
   fs[] >> rveq >>
   qpat_x_assum `derives G [NT N] X`
     (mp_tac o ONCE_REWRITE_RULE [relationTheory.RTC_CASES1]) >>
-  simp[] >> metis_tac[]
+  simp[] >> metis_tac[finite_setTheory.fIN_IN]
 QED
 
 Definition firstSetML_def:
@@ -367,7 +372,7 @@ Definition firstSetML_def:
     if n ∈ FDOM G.rules then
       (if n ∉ seen then
         BIGUNION (IMAGE (firstSetML (n INSERT seen))
-                        (G.rules ' n))
+                        (toSet (G.rules ' n)))
        else {}) ∪
       (if nullable G [NT n] then firstSetML seen rest
        else {})
@@ -407,12 +412,10 @@ Definition nts_derive_def[simp]:
   (nts_derive G [] tok ⇔ F) ∧
   (nts_derive G [N] tok ⇔
     N ∈ FDOM G.rules ∧
-    ∃p s. p ++ [TOK tok] ++ s ∈ G.rules ' N ∧
-          nullable G p) ∧
+    ∃p s. fIN (p ++ [TOK tok] ++ s) (G.rules ' N) ∧ nullable G p) ∧
   (nts_derive G (N1::N2::NS) tok ⇔
     N1 ∈ FDOM G.rules ∧
-    ∃p s. p ++ [NT N2] ++ s ∈ G.rules ' N1 ∧
-          nullable G p ∧
+    ∃p s. fIN (p ++ [NT N2] ++ s) (G.rules ' N1) ∧ nullable G p ∧
           nts_derive G (N2::NS) tok)
 End
 
@@ -451,14 +454,16 @@ Proof
   >- (simp[firstSetML_def] >> map_every qx_gen_tac [`N`, `seen`] >>
       simp[Once EXTENSION] >> dsimp[] >>
       map_every qx_gen_tac [`p`, `s`] >> strip_tac >>
-      qexists_tac `p ++ [TOK tok] ++ s` >> simp[] >>
+      qexists_tac `p ++ [TOK tok] ++ s` >>
+      simp[GSYM finite_setTheory.fIN_IN] >>
       REWRITE_TAC [GSYM APPEND_ASSOC] >>
       match_mp_tac firstSetML_nullable_prefix >>
       simp[firstSetML_def]) >>
   simp[EXTENSION] >> rpt strip_tac >>
-  asm_match `p ++ [NT N'] ++ s ∈ G.rules ' N` >>
+  asm_match `fIN (p ++ [NT N'] ++ s) (G.rules ' N)` >>
   simp[firstSetML_def] >> `N ∉ sn` by metis_tac[] >>
-  dsimp[] >> qexists_tac `p ++ [NT N'] ++ s` >> simp[] >>
+  dsimp[] >> qexists_tac `p ++ [NT N'] ++ s` >>
+  simp[GSYM finite_setTheory.fIN_IN] >>
   REWRITE_TAC [GSYM APPEND_ASSOC] >>
   match_mp_tac firstSetML_nullable_prefix >> simp[] >>
   match_mp_tac firstSetML_CONS_I >> fs[] >>
@@ -531,7 +536,7 @@ Proof
   >- (map_every qexists_tac [`[]`, `TOK tk`, `sf`] >> simp[])
   >- (fs[APPEND_EQ_CONS] >> rw[] >> fs[])
   >- (fs[firstSet_NT] >> pop_assum mp_tac >> rw[]
-      >- (asm_match `rhs ∈ G.rules ' N` >>
+      >- (asm_match `rhs ∈ toSet (G.rules ' N)` >>
           map_every qexists_tac [`[]`, `NT N`, `sf`] >> simp[] >>
           dsimp[firstSet_NT] >> metis_tac[])
       >- (asm_match `nullableNT G N` >> asm_match `tk ∈ firstSet G [e]` >>
@@ -539,7 +544,8 @@ Proof
           map_every qexists_tac [`NT N::p`, `e`] >> simp[] >>
           simp[Once nullable_by_singletons, DISJ_IMP_THM, FORALL_AND_THM] >>
           metis_tac[nullable_by_singletons]) >>
-      asm_match `tk ∈ firstSet G rhs` >> asm_match `rhs ∈ G.rules ' N` >>
+      asm_match `tk ∈ firstSet G rhs` >>
+      asm_match `rhs ∈ toSet (G.rules ' N)` >>
       map_every qexists_tac [`[]`, `NT N`, `sf`] >> simp[] >>
       simp[firstSet_NT] >> metis_tac[]) >>
   Cases_on `p` >> fs[] >> rw[] >- simp[firstSet_CONS_I] >>
