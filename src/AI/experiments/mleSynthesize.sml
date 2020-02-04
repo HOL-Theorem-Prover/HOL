@@ -13,7 +13,7 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlReinforce mleLib
 
 val ERR = mk_HOL_ERR "mleSynthesize"
-val version = 11
+val version = 12
 
 (* -------------------------------------------------------------------------
    Board
@@ -33,7 +33,7 @@ fun status_of (tm1,tm2,n) =
     in
       if isSome tm1o andalso term_eq (valOf tm1o) tm2 then Win else Lose
     end
-  else if n <= 0 then Lose else Undecided
+  else if n <= 0 orelse is_reducible tm1 then Lose else Undecided
 
 (* -------------------------------------------------------------------------
    Move
@@ -202,7 +202,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleSynthesize-combin-" ^ its version, exwindow = 100000,
-   ncore = 30, ntarget = 100, nsim = 32000, decay = 1.0}
+   ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {
@@ -217,17 +217,18 @@ val extsearch = mk_extsearch "mleSynthesize.extsearch" rlobj
 (*
 load "mleSynthesize"; open mleSynthesize;
 load "mlReinforce"; open mlReinforce;
+load "aiLib"; open aiLib;
 load "mleLib"; open mleLib;
 
 val tml = cgen_synt 9; length tml;
-val targetl1 = create_targetl tml; length targetl;
+val targetl1 = create_targetl tml; length targetl1;
 fun cmp (b1,b2) = cpl_compare 
   (compare_third Int.compare) (#board_compare (#game rlobj)) 
   ((b1,b1),(b2,b2));
 val targetl2 = dict_sort cmp targetl1;
 val _ = export_targetl "sy9" targetl2;
 
-val r = rl_start (rlobj,extsearch) (mk_targetl (import_targetl "sy9"));
+val r = rl_start (rlobj,extsearch) (mk_targetd (import_targetl "sy9"));
 *)
 
 (* -------------------------------------------------------------------------
@@ -326,17 +327,69 @@ load "mleLib"; open mleLib;
 load "aiLib"; open aiLib;
 load "mleSynthesize"; open mleSynthesize;
 
-val tml = cgen_synt 10; length tml;
+val tml = cgen_synt 9; length tml;
 val d = create_policy_supervised tml;
-val (a,l) = hd (dlist d);
 
-fun f ctm (a,l) = 
-  if 
+fun reduces l =
   let 
-    val ctma =
-    val ctms = 
-    val ctmk =
+    val l1 = map_assoc term_size l
+    val n = list_imin (map snd l1) 
+  in
+    map fst (filter (fn x => snd x = n) l1)
+  end
 
+val ll = map_snd reduces (dlist d);
+
+val game = #game rlobj;
+
+fun is_ground tm = not (can (find_term (fn x => term_eq x cX)) tm)
+
+fun rename_cX maintm = 
+  let
+  fun loop i tm =
+    if is_ground tm then tm else
+      let val sub = [{redex = cX, residue = mk_var ("X" ^ its i,alpha)}] in    
+        loop (i+1) (subst_occs [[1]] sub tm)
+      end
+  in
+    loop 0 maintm
+  end;
+
+fun eq_of tm1 = mk_eq (rename_cX tm1,cX)
+fun is_correct l ((tm1,_,_):board) = exists (is_match (eq_of tm1)) l;
+fun one_ex l board = 
+  let 
+    val boardl = map (fn x => (#apply_move game) x board) (#movel game) 
+    fun test x = is_correct l x
+    fun f x = if test x then 1.0 else 0.0
+  in
+    ((board,map f boardl), filter test boardl)
+  end;
+fun all_ex l board =
+  if #status_of game board <> psMCTS.Undecided then [] else 
+    let val (ex,boardl) = one_ex l board in
+      ex :: List.concat (map (all_ex l) boardl)
+    end;
+
+fun all_ex_fin (a,l) = all_ex l (cX,a,10000);
+val exl = List.concat (map all_ex_fin ll);
+
+val trainex = map (fn ((tm1,tm2,_),rl) => [(mk_eq (tm1,tm2),rl)]) exl;
+write_tnnex "/home/thibault/test" trainex;
+
+load "mleLib"; open mleLib;
+load "aiLib"; open aiLib;
+load "mleSynthesize"; open mleSynthesize;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+val trainex = read_tnnex "/home/thibault/test";
+
+val schedule = [{ncore = 1, verbose = true,
+   learning_rate = 0.02, batch_size = 16, nepoch = 100}];
+val dim = 12;
+val equality = ``$= : 'a -> 'a -> bool``;
+val tnnparam = map_assoc (dim_std (2,dim)) [cX,cA,cS,cK,v1,v2,v3] @ 
+  [(equality,[2*dim,dim,3])];
+val tnn = train_tnn schedule (random_tnn tnnparam) (part_pct 0.95 trainex);
 
 *)
 

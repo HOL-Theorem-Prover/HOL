@@ -382,9 +382,6 @@ val goall_rw = map goal_of_board_rw targetl;
 val _ = app (export_goal "rw-rw") (number_snd 0 goall_rw);
 val goall_ev = map goal_of_board_ev targetl;
 val _ = app (export_goal "rw-ev") (number_snd 0 goall_ev);
-
-
-
 *)
 
 
