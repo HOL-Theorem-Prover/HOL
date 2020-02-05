@@ -795,9 +795,8 @@ struct
                         $$)
         end
 
-  fun temp_encoded_update (r as {thy, thydataty, data : HOLsexp.t, ...}) =
+  fun temp_encoded_update (r as {thy,thydataty,data,shared_readmaps}) =
       let
-        val {shared_readmaps,...} = r
         val (s as {thydata, thid, ...}) = theCT()
         open Binarymap
         fun updatemap inmap = let
