@@ -758,6 +758,31 @@ fun add_strliteral_form0 {ldelim,inj} =
 val temp_add_strliteral_form = mk_temp add_strliteral_form0
 val add_strliteral_form = mk_perm add_strliteral_form0
 
+fun remove_strliteral_form0 (r as {tmnm : string}) =
+    case strlit_map (term_grammar()) r of
+        NONE => raise ERROR "remove_strliteral_form"
+                      "No such term as string literal injector"
+      | SOME ldelim =>
+        let
+          open Overload
+          val injname = GrammarSpecials.mk_stringinjn_name ldelim
+          val oinfo = overload_info (term_grammar())
+          fun find_term ({actual_ops,...} : overloaded_op_info) =
+              List.find (fn t => #1 (dest_const t) = tmnm
+                                 handle HOL_ERR _ => false)
+                        actual_ops
+        in
+          case Option.mapPartial find_term (info_for_name oinfo injname) of
+              NONE => raise ERROR "remove_strliteral_form"
+                            "No constant with that name in overloading info"
+            | SOME t => [
+                RM_STRLIT r,
+                RMOVMAP(injname, {Name = tmnm, Thy = #Thy (dest_thy_const t)})
+              ]
+        end
+val temp_remove_strliteral_form = mk_temp remove_strliteral_form0
+val remove_strliteral_form = mk_perm remove_strliteral_form0
+
 fun temp_give_num_priority c = let open term_grammar in
     the_term_grammar := give_num_priority (term_grammar()) c;
     term_grammar_changed := true

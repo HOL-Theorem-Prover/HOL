@@ -145,6 +145,7 @@ sig
   val remove_numeral_form : grammar -> char -> grammar
 
   val add_strlit_injector: {ldelim: string, tmnm: string} -> grammar -> grammar
+  val remove_strlit_injector : {tmnm:string} -> grammar -> grammar
   val strlit_map : grammar -> {tmnm:string} -> string option
 
   (*------------------------------------------------------------------------*

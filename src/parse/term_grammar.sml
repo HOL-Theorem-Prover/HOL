@@ -1023,6 +1023,8 @@ fun add_numeral_form G (c, stropt) =
 fun strlit_map (GCONS g) {tmnm} = Symtab.lookup (#strlit_map g) tmnm
 fun add_strlit_injector {tmnm,ldelim} =
     fupdate_strlit_map (Symtab.update(tmnm,ldelim))
+fun remove_strlit_injector {tmnm} =
+    fupdate_strlit_map (Symtab.delete_safe tmnm)
 
 structure userSyntaxFns = struct
   type 'a getter = string -> 'a
@@ -1088,6 +1090,7 @@ fun add_delta ud G =
         new_absyn_postprocessor (codename, code) G
       end
     | ADD_STRLIT r => add_strlit_injector r G
+    | RM_STRLIT r => remove_strlit_injector r G
 
 fun add_deltas uds G = List.foldl (uncurry add_delta) G uds
 
@@ -1647,6 +1650,7 @@ fun user_delta_encode write_tm ud =
     | RMTMTOK {term_name,tok} =>
         "RK" ^ StringData.encode term_name ^ StringData.encode tok
     | RMTOK s => "RMT" ^ StringData.encode s
+    | RM_STRLIT {tmnm} => "RMS" ^ StringData.encode tmnm
 
 
 fun user_delta_reader read_tm = let
@@ -1683,6 +1687,7 @@ in
    Coding.map GRMOVMAP
               (StringData.reader >* Coding.map read_tm StringData.reader)) ||
   (literal "RMO" >> Coding.map RMOVMAP skid_reader) ||
+  (literal "RMS" >> Coding.map (fn s => RM_STRLIT{tmnm=s}) StringData.reader) ||
   (literal "RMT" >> Coding.map RMTOK StringData.reader) ||
   (literal "RN" >> Coding.map RMTMNM StringData.reader)
 end
