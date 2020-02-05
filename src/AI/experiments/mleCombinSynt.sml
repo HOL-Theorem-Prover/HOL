@@ -5,12 +5,12 @@
 (* DATE          : 2019                                                      *)
 (* ========================================================================= *)
 
-structure mleSynthesize :> mleSynthesize =
+structure mleCombinSynt :> mleCombinSynt =
 struct
 
 open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlNeuralNetwork mlTreeNeuralNetwork mlTacticData
-  mlReinforce mleLib
+  mlReinforce mleCombinLib
 
 val ERR = mk_HOL_ERR "mleSynthesize"
 val version = 12
