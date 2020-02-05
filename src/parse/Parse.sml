@@ -748,6 +748,8 @@ val add_bare_numeral_form = mk_perm add_bare_numeral_form0
 fun add_strliteral_form0 {ldelim,inj} =
     let
       val (nm, _) = dest_const inj
+                    handle HOL_ERR _ => raise ERROR "add_strliteral_form"
+                                              "Injector must be constant"
       val _ = Literal.delim_pair{ldelim=ldelim} (* checks it's legit *)
               handle Fail s => raise ERROR "add_strliteral_form" s
       val injname = GrammarSpecials.mk_stringinjn_name ldelim
