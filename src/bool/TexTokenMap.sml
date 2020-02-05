@@ -32,7 +32,7 @@ struct
   fun (f oo g) = Option.mapPartial f o g
 
   val (mk,dest) = Theory.LoadableThyData.new {
-        thydataty = tyname, merge = op@, terms = K [],
+        thydataty = tyname, merge = op@, terms = K [], strings = K [],
         read = K (Coding.lift read_deltas oo HOLsexp.string_decode),
         pp = fn dl => "[" ^
                       String.concatWith ", " (map pr_delta dl) ^

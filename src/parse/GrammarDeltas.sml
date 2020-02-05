@@ -78,12 +78,13 @@ val (tyd_toData, tyd_fromData) = LoadableThyData.new {
       merge = op@,
       pp =
         fn tydl => "[" ^ String.concatWith ", " (map tyd_toString tydl) ^ "]",
-      terms = tydeltal_terms,
-      read = (fn rtm => Coding.lift (Coding.many (tydelta_reader rtm)) oo
-                        HOLsexp.string_decode
+      terms = tydeltal_terms, strings = K [],
+      read = (fn {terms = rtm,...} =>
+                 Coding.lift (Coding.many (tydelta_reader rtm)) oo
+                 HOLsexp.string_decode
              ),
-      write = (fn wtm => HOLsexp.String o
-                         String.concat o map (tydelta_encode wtm))
+      write = (fn {terms = wtm, ...} =>
+                  HOLsexp.String o String.concat o map (tydelta_encode wtm))
     }
 
 fun revise_tydata td =
@@ -122,11 +123,12 @@ val (toData, fromData) = LoadableThyData.new {
       merge = op@,
       pp =
         fn tmds => "[" ^ Int.toString (length tmds) ^ " term-grammar-deltas]",
-      terms = tmdeltal_terms,
-      read = (fn rtm => Coding.lift (Coding.many (user_delta_reader rtm)) oo
-                        HOLsexp.string_decode),
-      write = (fn wtm => HOLsexp.String o
-                         String.concat o map (user_delta_encode wtm))
+      terms = tmdeltal_terms, strings = K [],
+      read = (fn {terms = rtm,...} =>
+                 Coding.lift (Coding.many (user_delta_reader rtm)) oo
+                 HOLsexp.string_decode),
+      write = (fn {terms = wtm, ...} =>
+                  HOLsexp.String o String.concat o map (user_delta_encode wtm))
 }
 
 fun thy_deltas {thyname} =

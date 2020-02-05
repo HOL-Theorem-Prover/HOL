@@ -10,6 +10,8 @@ struct
 type thm      = Thm.thm;
 type term     = Term.term
 type hol_type = Type.hol_type
+type shared_writemaps = {strings : string -> int, terms : Term.term -> string}
+type shared_readmaps = {strings : int -> string, terms : string -> Term.term}
 
 open Feedback Lib Portable Dep;
 
@@ -196,9 +198,8 @@ fun mlower s m =
 
 fun pp_struct info_record = let
   open Term Thm
-  val {theory as (name,i1,i2), parents=parents0,
-       thydata = (thydata_tms, thydata), mldeps,
-       axioms,definitions,theorems,types,constants,struct_ps} = info_record
+  val {theory as (name,i1,i2), parents=parents0, thydata, mldeps, axioms,
+       definitions,theorems,types,constants,struct_ps} = info_record
   val parents1 =
     List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
                     parents0
@@ -304,7 +305,7 @@ end
 fun pp_thydata info_record = let
   open Term Thm
   val {theory as (name,i1,i2), parents=parents0,
-       thydata = (thydata_tms, thydata), mldeps,
+       thydata = (thydata_strings,thydata_tms, thydata), mldeps,
        axioms,definitions,theorems,types,constants,struct_ps} = info_record
   val parents1 =
       List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
@@ -316,6 +317,7 @@ fun pp_thydata info_record = let
         named_terms = [], named_types = [], unnamed_terms = [],
         unnamed_types = [], theorems = thml
       }
+  val share_data = add_strings thydata_strings share_data
   val share_data = add_terms thydata_tms share_data
 
   local open HOLsexp in
@@ -362,12 +364,15 @@ fun pp_thydata info_record = let
 
   val enc_cpl = HOLsexp.pair_encode(HOLsexp.String, fn x => x)
 
-  fun list_loadable tmwrite thymap =
-    Binarymap.foldl (fn (k, data, rest) => (k, data tmwrite) :: rest) [] thymap
-  fun enc_loadable tmwrite thymap =
+  fun list_loadable shared_writers thydata_map =
+    Binarymap.foldl
+      (fn (k, data, rest) => (k, data shared_writers) :: rest)
+      []
+      thydata_map
+  fun enc_loadable shared_writers thydata_map =
       let open HOLsexp in
         tagged_encode "loadable-thydata" (list_encode enc_cpl)
-                      (list_loadable tmwrite thymap)
+                      (list_loadable shared_writers thydata_map)
       end
   val thysexp =
       let open HOLsexp
@@ -380,7 +385,9 @@ fun pp_thydata info_record = let
             pair_encode(enc_incorporate_types, enc_incorporate_constants)
           ) (types, constants),
           enc_dblist,
-          enc_loadable (write_term share_data) thydata
+          enc_loadable {terms = write_term share_data,
+                        strings = write_string share_data}
+                       thydata
         ]
       end
 in

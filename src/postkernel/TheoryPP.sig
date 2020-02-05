@@ -9,6 +9,8 @@ signature TheoryPP =
 sig
  type thm = Thm.thm
  type hol_type = Type.hol_type
+ type shared_writemaps = {strings : string -> int, terms : Term.term -> string}
+ type shared_readmaps = {strings : int -> string, terms : string -> Term.term}
 
  val pp_type : string -> string -> hol_type -> PP.pretty
 
@@ -32,8 +34,8 @@ sig
       theorems    : (string * thm) list,
       struct_ps   : (unit -> PP.pretty) option list,
       mldeps      : string list,
-      thydata     : Term.term list *
-                    (string,(Term.term -> string) -> HOLsexp.t)Binarymap.dict}
+      thydata     : string list * Term.term list *
+                    (string,shared_writemaps -> HOLsexp.t)Binarymap.dict}
      PP.pprinter
 
  val pp_thydata
@@ -46,8 +48,8 @@ sig
       theorems    : (string * thm) list,
       struct_ps   : (unit -> PP.pretty) option list,
       mldeps      : string list,
-      thydata     : Term.term list *
-                    (string,(Term.term -> string) -> HOLsexp.t)Binarymap.dict}
+      thydata     : string list * Term.term list *
+                    (string,shared_writemaps -> HOLsexp.t)Binarymap.dict}
      PP.pprinter
 
  val temp_binding : string -> string

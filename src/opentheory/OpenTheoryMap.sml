@@ -56,7 +56,7 @@ struct
   val tyname = "OpenTheoryMap"
   val (mk,dest) =
       Theory.LoadableThyData.new {
-        thydataty = tyname, terms = Lib.K [],
+        thydataty = tyname, terms = Lib.K [], strings = Lib.K [],
         pp = fn l => "[OpenTheory stuff...]",
         merge = fn((a,b),(c,d))=>(c@a,d@b),
         read = Lib.K (Option.mapPartial (Coding.lift read_deltas) o

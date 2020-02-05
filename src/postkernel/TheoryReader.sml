@@ -19,7 +19,7 @@ fun temp_encoded_update sdata thyname {data,ty} =
     Theory.LoadableThyData.temp_encoded_update {
       thy = thyname,
       thydataty = ty,
-      read = read_term sdata,
+      shared_readmaps = {strings = read_string sdata, terms = read_term sdata},
       data = data
     }
 
