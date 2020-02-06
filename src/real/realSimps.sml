@@ -25,7 +25,7 @@ val real_SS = simpLib.SSFRAG
    convs = [],
    dprocs = [],
    filter = NONE,
-   rewrs = map (fn s => (SOME s, DB.fetch "real" s)) [
+   rewrs = map (fn s => (SOME {Thy = "real", Name = s}, DB.fetch "real" s)) [
      (* addition *)
      "REAL_ADD_LID", "REAL_ADD_RID",
      (* subtraction *)

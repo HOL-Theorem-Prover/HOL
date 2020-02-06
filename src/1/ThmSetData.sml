@@ -6,8 +6,11 @@ open DB Lib HolKernel
 val ERR = mk_HOL_ERR "ThmSetData"
 
 type data = LoadableThyData.t
+type thname = KernelSig.kernelname
+val name_toString = KernelSig.name_toString
+datatype setdelta = ADD of thname * thm | REMOVE of string
 datatype setdelta =
-         ADD of string * thm   (* must be in qualified thy.name form *)
+         ADD of thname * thm
        | REMOVE of string (* could be anything *)
 
 val added_thms = List.mapPartial (fn ADD (_, th) => SOME th | _ => NONE)
@@ -22,20 +25,22 @@ end
 
 fun mk_store_name_safe s =
    case String.fields (equal #".") s of
-       [s0] => current_theory() ^ "." ^ s
-     | [s1,s2] => s
+       [s0] => {Thy = current_theory(), Name = s}
+     | [s1,s2] => {Thy = s1, Name = s2}
      | _ => raise mk_HOL_ERR "ThmSetData" "mk_store_name_safe"
                   ("Malformed name: " ^ s)
 
-fun lookup_exn ty nm = uncurry DB.fetch (splitnm nm)
+fun lookup_exn ty {Thy,Name} = DB.fetch Thy Name
 
 fun lookup ty nm =
     SOME (lookup_exn ty nm)
-    handle HOL_ERR _ =>
-           (Feedback.HOL_WARNING "ThmSetData" "lookup"
-                                 ("Bad theorem name: \"" ^ nm ^
-                                  "\" for set-type \"" ^ ty ^ "\"");
-            NONE)
+    handle HOL_ERR _ => (
+      Feedback.HOL_WARNING
+        "ThmSetData" "lookup"
+        ("Bad theorem name: \"" ^ name_toString nm ^ "\" for set-type \"" ^
+         ty ^ "\"");
+      NONE
+    )
 
 local
   open ThyDataSexp
@@ -44,7 +49,7 @@ val pp_sexp = pp_sexp Parse.pp_type Parse.pp_term Parse.pp_thm
 fun sexp2string sexp = PP.pp_to_string (!Globals.linewidth) pp_sexp sexp
 end;
 
-datatype read_result = OK of setdelta | BAD_ADD of string
+datatype read_result = OK of setdelta | BAD_ADD of thname
 
 fun read ty sexp =
     let
@@ -52,7 +57,7 @@ fun read ty sexp =
       fun decode1 sexp =
           case sexp of
               List[SharedString thy, SharedString thnm] =>
-              let val nm = thy ^ "." ^ thnm
+              let val nm = {Thy = thy, Name = thnm}
               in
                 (OK (ADD (nm,lookup_exn ty nm)) handle HOL_ERR _ => BAD_ADD nm)
               end
@@ -67,10 +72,8 @@ fun read ty sexp =
 fun write_deltas ds =
     let
       open ThyDataSexp
-      fun mapthis (ADD(nm,th)) = let val (thy,thmnm) = splitnm nm
-                                 in
-                                   List[SharedString thy, SharedString thmnm]
-                                 end
+      fun mapthis (ADD({Thy,Name},th)) =
+          List[SharedString Thy, SharedString Name]
         | mapthis (REMOVE s) = List[String s]
       val sexps = map mapthis ds
     in
@@ -94,7 +97,7 @@ fun write1 d = write_deltas [d]
    ---------------------------------------------------------------------- *)
 
 type exportfns =
-     { add : {thy : string, named_thms : (string * thm) list} -> unit,
+     { add : {thy : string, named_thms : (thname * thm) list} -> unit,
        remove : {thy : string, removes : string list} -> unit}
 
 type tabledata = ({thyname:string}->setdelta list) * exportfns
@@ -124,8 +127,9 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
   val dropBads =
       List.mapPartial
         (fn OK sd => SOME sd
-        | BAD_ADD s => (HOL_WARNING "ThmSetData" "apply_delta"
-                                    ("Bad add command, with name: "^s); NONE))
+        | BAD_ADD s => (
+          HOL_WARNING "ThmSetData" "apply_delta"
+                      ("Bad add command, with name: "^name_toString s); NONE))
   fun apply_deltas thyname ds =
       let
         fun appthis (ADD (s,th)) =
@@ -137,13 +141,13 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
   fun loadfn {data,thyname} = apply_deltas thyname (dropBads (read name data))
   fun uptodate_thmdelta (ADD (s,th)) = uptodate_thm th
     | uptodate_thmdelta _ = true
-  fun neqbinding s1 (ADD (s2,_)) =
-         s1 <> s2 andalso current_theory () ^ "." ^ s1 <> s2
+  fun neqbinding s1 (ADD ({Thy,Name},_)) =
+         s1 <> Name orelse current_theory () <> Thy
     | neqbinding _ _ = true
-  fun toString (ADD (s,_)) = "ADD<" ^ s ^ ">"
+  fun toString (ADD (s,_)) = "ADD<" ^ name_toString s ^ ">"
     | toString (REMOVE s) = "REMOVE<" ^ s ^ ">"
   fun read_result_toString (OK sd) = toString sd
-    | read_result_toString (BAD_ADD s) = "ADD<" ^ s ^ ">"
+    | read_result_toString (BAD_ADD s) = "ADD<" ^ name_toString s ^ ">"
   fun check_result P (OK d) = P d
     | check_result _ (BAD_ADD s) = false
   fun revise_data P (deltas_sexp,td) =
@@ -190,9 +194,9 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
   fun onload thy = apply_deltas thy (segdata {thyname = thy})
 
   fun export_nameonly s =
-      let val s = mk_store_name_safe s
+      let val thnm = mk_store_name_safe s
       in
-        export(s, lookup_exn name s)
+        export(thnm, lookup_exn name thnm)
       end
   fun delete s = let
     val data = write1 (REMOVE s)
@@ -203,7 +207,8 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
 
   fun store_attrfun {attrname,name,thm} = export (mk_store_name_safe name,thm)
   fun local_attrfun {attrname,name,thm} =
-    add {thy = current_theory(), named_thms = [(name,thm)]}
+    add {thy = current_theory(),
+         named_thms = [({Thy = current_theory(), Name = name},thm)]}
 in
   data_map := Symtab.update(name,(segdata, efns)) (!data_map);
   ThmAttribute.register_attribute (

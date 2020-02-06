@@ -34,7 +34,8 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
 
 UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack \
          $(protect $(SIGOBJ)/KNametab) $(protect $(SIGOBJ)/Symtab) \
-         $(protect $(SIGOBJ)/Inttab) $(protect $(SIGOBJ)/HOLsexp)
+         $(protect $(SIGOBJ)/Inttab) $(protect $(SIGOBJ)/HOLsexp) \
+	 $(protect $(SIGOBJ)/ThmSetData)
 
 EXTRA_CLEANS = $(TARGET)
 
