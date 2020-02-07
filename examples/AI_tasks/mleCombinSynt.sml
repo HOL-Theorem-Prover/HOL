@@ -51,9 +51,6 @@ fun apply_move move (tm1,tm2,n) =
     (subst_occs [[1]] sub tm1, tm2, n-1)
   end
 
-fun contain_red tm =
-  can (find_term (fn x => exists (C is_match x) eq_axl_bare)) tm
-
 fun available_movel board = 
   (if contain_red (#1 (apply_move cA board)) then [] else [cA]) @ [cS,cK]
 
@@ -101,7 +98,7 @@ val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
    Targets
    ------------------------------------------------------------------------- *)
 
-val targetdir = HOLDIR ^ "/src/AI/experiments/target_combin"
+val targetdir = selfdir ^ "/combin_target"
 
 fun create_targetl tml =
   let
@@ -183,10 +180,9 @@ val extsearch = mk_extsearch "mleCombinSynt.extsearch" rlobj
 load "mleCombinSynt"; open mleCombinSynt;
 load "mlReinforce"; open mlReinforce;
 load "aiLib"; open aiLib;
-load "mleLib"; open mleLib;
+load "mleCombinLib"; open mleCombinLib;
 
 val tml = cgen_synt 9; length tml;
-val tml = List.mapPartial (fast_lo_cnorm 100 eq_axl_bare) tml; length tml;
 
 val targetl1 = create_targetl tml; length targetl1;
 fun cmp (b1,b2) = cpl_compare 
@@ -196,10 +192,9 @@ val targetl2 = dict_sort cmp targetl1;
 val stats = dlist (count_dict (dempty Int.compare) 
    (map ((fn x => x div 4 + 1) o #3) targetl2)); 
 
-val _ = export_targetl "sy9norm" targetl2;
-val r = rl_start (rlobj,extsearch) (mk_targetd (import_targetl "sy9norm"));
-
-val targetl = import_targetl "sy9norm";
+val _ = export_targetl "sy9" targetl2;
+val r = rl_start (rlobj,extsearch) (mk_targetd (import_targetl "sy9"));
+val targetl = import_targetl "sy9";
 *)
 (* -------------------------------------------------------------------------
    Transformation of problems to ATP goals

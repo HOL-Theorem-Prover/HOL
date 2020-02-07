@@ -50,10 +50,10 @@ sig
   val lo_cnorm : int -> term list -> term -> term option
   val fast_lo_cnorm : int -> term list -> term -> term option
   val subst_match : term -> term -> term
+  val contain_red : term -> bool
   val is_nf : term -> bool
  
   (* generation *)
-  val is_reducible : term -> bool
   val random_cterm : int -> term
   val cgen_random : int -> (int * int) -> term list 
   val cgen_exhaustive : int -> term list

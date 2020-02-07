@@ -21,8 +21,4 @@ sig
   val goal_of_board_rw : board -> goal
   val goal_of_board_ev : board -> goal
 
-  (* testing *)
-  val create_policy_supervised : 
-    term list -> (term, term list) Redblackmap.dict
-
 end

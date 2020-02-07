@@ -249,8 +249,9 @@ fun fast_lo_cnorm n eql maintm =
     loop maintm handle Break => NONE
   end
 
- 
 fun is_nf tm = not (exists (C exists_match tm) eq_axl_bare)
+fun contain_red tm =
+  can (find_term (fn x => exists (C is_match x) eq_axl_bare)) tm
 
 (* -------------------------------------------------------------------------
    Generating commbinators
@@ -268,20 +269,6 @@ fun cgen_random n (a,b) =
 
 fun cgen_exhaustive size = gen_term [cA,cS,cK] (2*size-1,alpha)
 
-fun is_reducible tm =
-  let 
-    val tml = strip_cA tm 
-    val oper = hd tml
-    val n = length tml
-  in
-    if n <= 2 then false else
-    if term_eq oper cK andalso length tml >= 3 then true else 
-    if n <= 3 then false else
-      (term_size (valOf (fast_lo_cnorm 100 eq_axl_bare tm)) < 
-       term_size tm
-       handle Option => false)
-  end
-    
 fun cgen_synt_cache cache n = dfind n (!cache) handle NotFound =>
   if n <= 1 then raise ERR "cgen_synt_aux" "" else
     let 
@@ -291,7 +278,7 @@ fun cgen_synt_cache cache n = dfind n (!cache) handle NotFound =>
         val l1 = cgen_synt_cache cache n1
         val l2 = cgen_synt_cache cache n2
       in
-        filter (not o is_reducible) (map mk_cA (cartesian_product l1 l2))
+        filter is_nf (map mk_cA (cartesian_product l1 l2))
       end
       val l3 = List.concat (map f l)
     in
