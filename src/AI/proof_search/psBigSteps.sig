@@ -3,7 +3,6 @@ sig
 
   include Abbrev
 
-
   (* tree *)
   type id = psMCTS.id
   type ('a,'b) node = ('a,'b) psMCTS.node

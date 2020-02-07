@@ -1,19 +1,19 @@
 (* ========================================================================= *)
-(* FILE          : mleSynthesize.sml                                         *)
+(* FILE          : mleCombinSynt.sml                                         *)
 (* DESCRIPTION   : Specification of a term synthesis game                    *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2019                                                      *)
 (* ========================================================================= *)
 
-structure mleSynthesize :> mleSynthesize =
+structure mleCombinSynt :> mleCombinSynt =
 struct
 
 open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlNeuralNetwork mlTreeNeuralNetwork mlTacticData
-  mlReinforce mleLib
+  mlReinforce mleCombinLib
 
-val ERR = mk_HOL_ERR "mleSynthesize"
-val version = 12
+val ERR = mk_HOL_ERR "mleCombinSynt"
+val version = 13
 
 (* -------------------------------------------------------------------------
    Board
@@ -29,13 +29,13 @@ val k_thm_bare = List.nth (eq_axl_bare,1)
 
 fun status_of (tm1,tm2,n) =
   if not (can (find_term (fn x => term_eq x cX)) tm1) then
-    let 
-      val tm1a = list_mk_cA [tm1,v1,v2,v3]
-      val tm1o = fast_lo_cnorm 100 eq_axl_bare tm1a
+    let
+      val tm1o = fast_lo_cnorm 100 eq_axl_bare (list_mk_cA [tm1,v1,v2,v3])
     in
       if isSome tm1o andalso term_eq (valOf tm1o) tm2 then Win else Lose
     end
-  else if n <= 0 orelse can (find_term (fn x => is_match k_thm_bare x)) tm1
+  else if n <= 0 orelse 
+    can (find_term (fn x => exists (C is_match x) eq_axl_bare)) tm1
     then Lose else Undecided
 
 (* -------------------------------------------------------------------------
@@ -132,9 +132,6 @@ fun create_targetl tml =
     val l5 = map_snd (list_imin o map term_size) (dlist l4)
     val l6 = map (fn (a,b) => (cX,a,2 * b)) l5
   in
-    stats_il "size_in" (map (term_size o #1) l6);
-    stats_il "size_out" (map (term_size o #2) l6);
-    stats_il "nstep" (map ((fn x => x div 2) o #3) l6);
     dict_sort (compare_third Int.compare) l6
   end
 
@@ -204,37 +201,40 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleSynthesize-combin-" ^ its version, exwindow = 100000,
+  {expname = "mleCombinSynt-combin-" ^ its version, exwindow = 100000,
    ncore = 30, ntarget = 100, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
-  {
-  rlparam = rlparam,
-  game = game,
-  gameio = gameio,
-  dplayer = dplayer
-  }
+  {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer}
 
-val extsearch = mk_extsearch "mleSynthesize.extsearch" rlobj
+val extsearch = mk_extsearch "mleCombinSynt.extsearch" rlobj
 
 (*
-load "mleSynthesize"; open mleSynthesize;
+load "mleCombinSynt"; open mleCombinSynt;
 load "mlReinforce"; open mlReinforce;
 load "aiLib"; open aiLib;
 load "mleLib"; open mleLib;
 
 val tml = cgen_synt 9; length tml;
+(* val tml = List.mapPartial (fast_lo_cnorm 100 eq_axl_bare) tml; 
+   length tml;*)
+
 val targetl1 = create_targetl tml; length targetl1;
 fun cmp (b1,b2) = cpl_compare 
   (compare_third Int.compare) (#board_compare (#game rlobj)) 
   ((b1,b1),(b2,b2));
 val targetl2 = dict_sort cmp targetl1;
-val _ = export_targetl "sy9" targetl2;
+val stats = dlist (count_dict (dempty Int.compare) 
+   (map ((fn x => x div 4 + 1) o #3) targetl2)); 
+
+val _ = export_targetl "sy9norm" targetl2;
 
 val r = rl_start (rlobj,extsearch) (mk_targetd (import_targetl "sy9"));
+
+val targetl = import_targetl "sy9";
+
 (* todo output the number of theorem proven at least once *)
 *)
-
 (* -------------------------------------------------------------------------
    Transformation of problems to ATP goals
    ------------------------------------------------------------------------- *)
@@ -275,7 +275,7 @@ fun goal_of_board_ev (_,tm2,n) =
 load "mlReinforce"; open mlReinforce;
 load "mleLib"; open mleLib;
 load "aiLib"; open aiLib;
-load "mleSynthesize"; open mleSynthesize;
+load "mleCombinSynt"; open mleCombinSynt;
 load "hhExportFof"; open hhExportFof;
 
 val tml = cgen_synt 10; length tml;
@@ -329,7 +329,7 @@ app tptp_targetl (List.tabulate (10, fn x => x + 1));
 (*
 load "mleLib"; open mleLib;
 load "aiLib"; open aiLib;
-load "mleSynthesize"; open mleSynthesize;
+load "mleCombinSynt"; open mleCombinSynt;
 
 val tml = cgen_synt 9; length tml;
 val d = create_policy_supervised tml;
@@ -383,7 +383,7 @@ write_tnnex "/home/thibault/test" trainex;
 
 load "mleLib"; open mleLib;
 load "aiLib"; open aiLib;
-load "mleSynthesize"; open mleSynthesize;
+load "mleCombinSynt"; open mleCombinSynt;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 val trainex = read_tnnex "/home/thibault/test";
 
@@ -394,7 +394,6 @@ val equality = ``$= : 'a -> 'a -> bool``;
 val tnnparam = map_assoc (dim_std (2,dim)) [cX,cA,cS,cK,v1,v2,v3] @ 
   [(equality,[2*dim,dim,3])];
 val tnn = train_tnn schedule (random_tnn tnnparam) (part_pct 0.95 trainex);
-
 *)
 
 

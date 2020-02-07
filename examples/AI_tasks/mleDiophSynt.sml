@@ -1,23 +1,75 @@
 (* ========================================================================= *)
-(* FILE          : mleSynthesize.sml                                         *)
+(* FILE          : mleDiophSynt.sml                                          *)
 (* DESCRIPTION   : Specification of a term synthesis game                    *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2019                                                      *)
 (* ========================================================================= *)
 
-structure mleCombinSynt :> mleCombinSynt =
+structure mleDiophSynt :> mleDiophSynt =
 struct
 
 open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlNeuralNetwork mlTreeNeuralNetwork mlTacticData
-  mlReinforce mleCombinLib
+  mlReinforce arithmeticTheory numLib
 
-val ERR = mk_HOL_ERR "mleSynthesize"
-val version = 12
+(* 
+load "aiLib"; open aiLib;
+load "numLib"; open numLib;
+val ERR = mk_HOL_ERR "mleDiophSynt";
+val version = 1
+*)
+(*
 
 (* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
+
+val modulo = 16;
+
+fun eval_f tm =
+  if is_var tm then 
+    let val i = string_to_int (tl_string (fst (dest_var tm))) in
+      (fn l => List.nth (l,i))
+    end
+  else if is_numeral tm then 
+    let val n = int_of_term tm in (fn l => n) end
+  else
+  let val (oper,argl) = strip_comb tm
+    else if term_eq oper ``$+`` then 
+      let val (f1,f2) = pair_of_list (map eval_f argl) in
+        fn l => (f1 l + f2 l) mod modulo
+      end
+    else if term_eq oper ``$*`` then
+      let val (f1,f2) = pair_of_list (map eval_f argl) in
+        fn l => (f1 l * f2 l) mod modulo
+      end
+    else raise ERR "eval_f" (tts tm)
+  end;
+
+val numberl = List.tabulate (modulo,I);
+val numbertml =  ``NUMERAL ZERO`` :: 
+  tl (map (Parse.Term o (fn x => [QUOTE (its x)])) numberl);
+
+fun has_solution bl diophf k =
+  let
+    val l1 = cartesian_productl 
+      (map (fn b => if b then numberl else [0]) bl)
+    val l2 = map (fn l => k :: l) l1
+  in
+    exists (fn l => diophf l = 0) l2
+  end
+
+fun dioph_set diophtm = 
+  let 
+    val vl = free_vars diophtm
+    fun test x = tmem x vl
+    val bl = map test varl 
+    val diophf = eval_f diophtm 
+  in 
+    filter (has_solution bl diophf) numberl
+  end
+
+
 
 type board = term * term * int
 fun string_of_board (a,b,c)= tts a ^ " " ^ tts b ^ " " ^ its c
@@ -25,17 +77,14 @@ fun string_of_board (a,b,c)= tts a ^ " " ^ tts b ^ " " ^ its c
 fun board_compare ((a,b,c),(d,e,f)) =
   (cpl_compare Term.compare Term.compare) ((a,b),(d,e))
 
-val k_thm_bare = List.nth (eq_axl_bare,1)
-
-fun status_of (tm1,tm2,n) =
+fun status_of (diophset,tm2,n) =
   if not (can (find_term (fn x => term_eq x cX)) tm1) then
     let 
-      val tm1a = list_mk_cA [tm1,v1,v2,v3]
-      val tm1o = fast_lo_cnorm 100 eq_axl_bare tm1a
+      val tm1a = dioph_match diophset
     in
       if isSome tm1o andalso term_eq (valOf tm1o) tm2 then Win else Lose
     end
-  else if n <= 0 orelse can (find_term (fn x => is_match k_thm_bare x)) tm1
+  else if n <= 0
     then Lose else Undecided
 
 (* -------------------------------------------------------------------------
@@ -43,15 +92,115 @@ fun status_of (tm1,tm2,n) =
    ------------------------------------------------------------------------- *)
 
 type move = term
-val movel = [cA,cS,cK]
+val movel = 
+  numbertml @ [``$+``,``$*``,``k0:num``,``k0:num``,``k0:num``,``k0:num``,``k0:num``,
+``k0:num``,``k0:num``,``k0:num``,
+``v1:num``,``v1:num``,``v1:num``,``v1:num``,``v2:num``,``v2:num``,``v3:num``]
+
+val movel = 
+  numbertml @ [``$+``,``$*``,``k0:num``,``v1:num``,``v2:num``,``v3:num``]
+(* todo forbid addition or multiplication of numbers *)
+
+val movel = 
+  numbertml @ [``$+``,``$*``,``k0:num``,``v1:num``,``v2:num``,``v3:num``]
+
+val varfreq =
+ [``k0:num``,``k0:num``,``k0:num``,``k0:num``,``k0:num``,
+  ``k0:num``,``k0:num``,``k0:num``,
+  ``v1:num``,``v1:num``,``v1:num``,``v1:num``,``v2:num``,``v2:num``,``v3:num``]
+
+can't sum two sums or 
+product two products.
+
+
+
+val basetml = numbertml @ [``k0:num``,``v1:num``,``v2:num``,``v3:num``];
+
+val basevl = [``x:num``,``y:num``,``z:num``];
+val ll = cartesian_productl (List.tabulate (length basevl,fn _ => expl));
+
+
+fun random_monomial () = 
+  let 
+    val expl = [random_int (0,4),random_int (0,4),random_int (0,4)]
+    val l = combine (basevl,expl)
+    fun f (v,n) = if n = 0 then ``1`` else 
+      list_mk_mult (List.tabulate (n,fn _ => v))
+  in
+    list_mk_mult (random_elem numbertml :: map f l)
+  end
+
+fun random_polynomial () =
+  let val n = random_int (1,5) in
+    list_mk_plus (List.tabulate (n, fn _ => random_monomial ()))
+  end
+
+val polyl = List.tabulate (1000, fn _ => random_polynomial ());
+length polyl;
+val diophl1 = map_assoc dioph_set polyl;
+val diophl2 = dlist (dregroup (list_compare Int.compare) (map swap diophl1));
+length diophl2;
+
+fun dterm_size tm = 
+  if is_var tm orelse is_numeral tm then 1 else
+  let val (oper,argl) = strip_comb tm in
+    1 + sum_int (map dterm_size argl)
+  end
+
+
+fun gen_diophset n d =
+  if dlength d >= n then d else
+  let 
+    val tm = random_polynomial () 
+    val set = dioph_set tm
+  in
+    if dmem set d then 
+      let val oldtm = dfind set d in
+        if dterm_size tm < dterm_size oldtm 
+        then gen_diophset n (dadd set tm d)
+        else gen_diophset n d
+      end
+    else (print_endline (its ((dlength d) + 1)); 
+          gen_diophset n (dadd set tm d))
+  end
+
+
+val d = gen_diophset 1000 (dempty (list_compare Int.compare));
+load "mlTacticData"; open mlTacticData;
+
+fun ilts il = String.concatWith " " (map its il);
+val _ = writel  (HOLDIR ^ "/src/AI/experiments/diophgraph") (map (ilts o fst) (dlist d));
+val _ = export_terml (HOLDIR ^ "/src/AI/experiments/diophlist")
+  (map snd (dlist d));
+
+
+val movel1 = 
+  List.tabulate (16, fn i => mk_var ("n" ^ its i, alpha));
+val movel2 = 
+  [
+   mk_var ("eplus",``:'a -> b -> num``),
+   mk_var ("emult",``:'a -> num -> num``),
+   mk_var ("mult",``:num -> num -> num``) 
+  ]
+val operl = [``k0:num``,``v1:num``,``v2:num``,``v3:num``] @ movel1 @ movel2;
+val l0 = gen_term operl (5,``:num``); length l0;
+
+fun contain_k0 tm = tmem ``k0:num`` (free_vars tm);
+load "psTermGen"; open psTermGen;
+
+val l1 = filter contain_k0 l0; length l1;
+
+val tm = random_term movel (9,``:num``);
+val il = dioph_set tm;
+
 val move_compare = Term.compare
 
-fun apply_move move (tm1,tm2,n) = 
+fun apply_move move tm1 = 
   let
     val res = list_mk_comb (move, List.tabulate (arity_of move, fn _ => cX))
     val sub = [{redex = cX, residue = res}]
   in
-    (subst_occs [[1]] sub tm1, tm2, n-1)
+    subst_occs [[1]] sub tm1
   end
 
 fun available_movel board = movel
@@ -204,7 +353,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleSynthesize-combin-" ^ its version, exwindow = 100000,
+  {expname = "mleDiophSynt-combin-" ^ its version, exwindow = 100000,
    ncore = 30, ntarget = 100, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
@@ -215,10 +364,10 @@ val rlobj : (board,move) rlobj =
   dplayer = dplayer
   }
 
-val extsearch = mk_extsearch "mleSynthesize.extsearch" rlobj
+val extsearch = mk_extsearch "mleDiophSynt.extsearch" rlobj
 
 (*
-load "mleSynthesize"; open mleSynthesize;
+load "mleDiophSynt"; open mleDiophSynt;
 load "mlReinforce"; open mlReinforce;
 load "aiLib"; open aiLib;
 load "mleLib"; open mleLib;
@@ -275,7 +424,7 @@ fun goal_of_board_ev (_,tm2,n) =
 load "mlReinforce"; open mlReinforce;
 load "mleLib"; open mleLib;
 load "aiLib"; open aiLib;
-load "mleSynthesize"; open mleSynthesize;
+load "mleDiophSynt"; open mleDiophSynt;
 load "hhExportFof"; open hhExportFof;
 
 val tml = cgen_synt 10; length tml;
@@ -329,7 +478,7 @@ app tptp_targetl (List.tabulate (10, fn x => x + 1));
 (*
 load "mleLib"; open mleLib;
 load "aiLib"; open aiLib;
-load "mleSynthesize"; open mleSynthesize;
+load "mleDiophSynt"; open mleDiophSynt;
 
 val tml = cgen_synt 9; length tml;
 val d = create_policy_supervised tml;
@@ -383,7 +532,7 @@ write_tnnex "/home/thibault/test" trainex;
 
 load "mleLib"; open mleLib;
 load "aiLib"; open aiLib;
-load "mleSynthesize"; open mleSynthesize;
+load "mleDiophSynt"; open mleDiophSynt;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 val trainex = read_tnnex "/home/thibault/test";
 
@@ -396,6 +545,6 @@ val tnnparam = map_assoc (dim_std (2,dim)) [cX,cA,cS,cK,v1,v2,v3] @
 val tnn = train_tnn schedule (random_tnn tnnparam) (part_pct 0.95 trainex);
 
 *)
-
+*)
 
 end (* struct *)

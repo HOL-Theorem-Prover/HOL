@@ -258,6 +258,7 @@ fun row_win l =
 fun row_lose l = 
   case l of [] => 0 | a :: m => if not a then 1 + row_lose m else 0
 fun row_either l = Int.max (row_lose l, row_win l)
+fun exists_win l = exists I l
 
 fun stats_select_one rlobj (s,targetl) =
   let 
@@ -269,14 +270,14 @@ fun stats_select_one rlobj (s,targetl) =
       (String.concatWith " " (map f l)))
   end
 
-fun stats_select rlobj nfin (neg,pos,negsel,possel) =
+fun stats_select rlobj nfin nwin (neg,pos,negsel,possel) =
   let 
-    val l = [("neg:   ",neg),("negsel:",negsel),("pos:   ",pos),("possel:",possel)] 
+    val l = [("neg:",neg),("ns :",negsel),("pos:   ",pos),("ps :",possel)] 
   in
     log rlobj ("Exploration: " ^ its nfin ^ " targets ");
+    log rlobj ("Exploration: " ^ its nwin ^ " targets proven at least once");
     app (stats_select_one rlobj) l
   end
-
 
 fun select_from_targetd rlobj ntot targetd =
   let
@@ -294,8 +295,10 @@ fun select_from_targetd rlobj ntot targetd =
     val negsel = first_n (ntot div 2) (dict_sort compare_rmax (map h neg))
     val possel = first_n (ntot div 2) (dict_sort compare_rmax (map h pos))
     val lfin = map (fst o fst) (rev negsel @ possel)
+    val lwin = filter exists_win (map (snd o snd) (dlist targetd))
   in
-    stats_select rlobj (length lfin) (neg,pos, map fst negsel, map fst possel);
+    stats_select rlobj (length lfin) 
+       (length lwin) (neg,pos, map fst negsel, map fst possel);
     lfin
   end
 

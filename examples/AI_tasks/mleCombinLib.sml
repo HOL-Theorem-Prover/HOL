@@ -1,16 +1,16 @@
 (* ========================================================================= *)
-(* FILE          : mleLib.sml                                                *)
+(* FILE          : mleCombinLib.sml                                          *)
 (* DESCRIPTION   : Useful functions for the experiments                      *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
 (* DATE          : 2018                                                      *)
 (* ========================================================================= *)
 
-structure mleLib :> mleLib =
+structure mleCombinLib :> mleCombinLib =
 struct
 
 open HolKernel Abbrev boolLib aiLib numTheory arithmeticTheory psTermGen
 
-val ERR = mk_HOL_ERR "mleLib"
+val ERR = mk_HOL_ERR "mleCombinLib"
 fun compare_third cmp ((_,_,a),(_,_,b)) = cmp (a,b)
 
 (* -------------------------------------------------------------------------
@@ -161,8 +161,6 @@ val ev_axl =
 val rw_ax1 = mk_cRW (vx,vx)
 val rw_ax2 = 
   list_mk_imp ([mk_cRW (vu,vv), mk_cRW (vx,vy)], mk_cRW (vu oo vx, vv oo vy));
-
-
 val rw_ax3 = mk_cRW (list_mk_cA [cS,vx,vy,vz], (vx oo vz) oo (vy oo vz));
 val rw_ax4 = mk_cRW (list_mk_cA [cK,vx,vy], vx);
 val rw_ax5 = list_mk_imp ([mk_cRW (vx,vy), mk_cRW(vy,vz)], mk_cRW(vx,vz));
@@ -309,7 +307,7 @@ fun cgen_synt n =
   end
 
 (*
-load "mleLib"; open mleLib;
+load "mleCombinLib"; open mleCombinLib;
 val tml = cgen_synt 10; length tml;
 329699;
 
