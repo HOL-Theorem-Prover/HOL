@@ -17,7 +17,7 @@ val ERR = mk_HOL_ERR "mlReinforce"
    Logs
    ------------------------------------------------------------------------- *)
 
-val eval_dir = HOLDIR ^ "/src/AI/experiments/eval"
+val eval_dir = HOLDIR ^ "/examples/AI_tasks/eval"
 fun log_in_eval rlobj s =
   append_endline (eval_dir ^ "/" ^ (#expname (#rlparam rlobj)) ^ "/log") s
 fun log rlobj s = (log_in_eval rlobj s; print_endline s)
