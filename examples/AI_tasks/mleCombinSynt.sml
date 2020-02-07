@@ -14,6 +14,7 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
 
 val ERR = mk_HOL_ERR "mleCombinSynt"
 val version = 13
+val selfdir = HOLDIR ^ "/examples/AI_tasks"
 
 (* -------------------------------------------------------------------------
    Board
@@ -101,19 +102,6 @@ val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
    ------------------------------------------------------------------------- *)
 
 val targetdir = HOLDIR ^ "/src/AI/experiments/target_combin"
-val targetfile = targetdir ^ "/targetl-synt"
-val stats_dir = HOLDIR ^ "/src/AI/experiments/stats_combin"
-val stats_file = stats_dir ^ "/stats-synt-" ^ its version
-fun stats_il header il = 
-  let 
-    fun f (a,b) = its a ^ "-" ^ its b
-    val l = dlist (count_dict (dempty Int.compare) il) 
-    val _ = mkDir_err stats_dir
-    val s = header ^ "\n" ^ String.concatWith ", " (map f l) ^ "\n"
-  in
-    append_file stats_file s;
-    print_endline s
-  end
 
 fun create_targetl tml =
   let
@@ -136,31 +124,12 @@ fun create_targetl tml =
     dict_sort (compare_third Int.compare) l6
   end
 
-fun create_policy_supervised tml =
-  let
-    val i = ref 0
-    fun f tm = 
-      let val tmo = fast_lo_cnorm 100 eq_axl_bare (list_mk_cA [tm,v1,v2,v3])
-      in
-        if not (isSome tmo) orelse 
-           can (find_term (C tmem [cS,cK])) (valOf tmo)
-        then NONE
-        else (print_endline (its (!i)); incr i; tmo)
-      end
-    val l1 = map_assoc f tml    
-    val l2 = filter (fn x => isSome (snd x)) l1    
-    val l3 = map_snd valOf l2
-    val d = dregroup Term.compare (map swap l3)
-  in
-    d
-  end
-
 fun export_targetl name targetl = 
   let val _ = mkDir_err targetdir in 
-    write_boardl (targetfile ^ "-" ^ name) targetl
+    write_boardl (targetdir ^ "/" ^ name) targetl
   end
 
-fun import_targetl name = read_boardl (targetfile ^ "-" ^ name)
+fun import_targetl name = read_boardl (targetdir ^ "/" ^ name)
  
 fun mk_targetd l1 =
   let 
@@ -318,80 +287,5 @@ fun tptp_targetl size =
 
 app tptp_targetl (List.tabulate (10, fn x => x + 1));
 *)
-
-(* -------------------------------------------------------------------------
-   Supervised learning for the policy.
-   ------------------------------------------------------------------------- *)
-
-(*
-load "mleLib"; open mleLib;
-load "aiLib"; open aiLib;
-load "mleCombinSynt"; open mleCombinSynt;
-
-val tml = cgen_synt 9; length tml;
-val d = create_policy_supervised tml;
-
-fun reduces l =
-  let 
-    val l1 = map_assoc term_size l
-    val n = list_imin (map snd l1) 
-  in
-    map fst (filter (fn x => snd x = n) l1)
-  end
-
-val ll = map_snd reduces (dlist d);
-
-val game = #game rlobj;
-
-fun is_ground tm = not (can (find_term (fn x => term_eq x cX)) tm)
-
-fun rename_cX maintm = 
-  let
-  fun loop i tm =
-    if is_ground tm then tm else
-      let val sub = [{redex = cX, residue = mk_var ("X" ^ its i,alpha)}] in    
-        loop (i+1) (subst_occs [[1]] sub tm)
-      end
-  in
-    loop 0 maintm
-  end;
-
-fun eq_of tm1 = mk_eq (rename_cX tm1,cX)
-fun is_correct l ((tm1,_,_):board) = exists (is_match (eq_of tm1)) l;
-fun one_ex l board = 
-  let 
-    val boardl = map (fn x => (#apply_move game) x board) (#movel game) 
-    fun test x = is_correct l x
-    fun f x = if test x then 1.0 else 0.0
-  in
-    ((board,map f boardl), filter test boardl)
-  end;
-fun all_ex l board =
-  if #status_of game board <> psMCTS.Undecided then [] else 
-    let val (ex,boardl) = one_ex l board in
-      ex :: List.concat (map (all_ex l) boardl)
-    end;
-
-fun all_ex_fin (a,l) = all_ex l (cX,a,10000);
-val exl = List.concat (map all_ex_fin ll);
-
-val trainex = map (fn ((tm1,tm2,_),rl) => [(mk_eq (tm1,tm2),rl)]) exl;
-write_tnnex "/home/thibault/test" trainex;
-
-load "mleLib"; open mleLib;
-load "aiLib"; open aiLib;
-load "mleCombinSynt"; open mleCombinSynt;
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-val trainex = read_tnnex "/home/thibault/test";
-
-val schedule = [{ncore = 1, verbose = true,
-   learning_rate = 0.02, batch_size = 16, nepoch = 100}];
-val dim = 12;
-val equality = ``$= : 'a -> 'a -> bool``;
-val tnnparam = map_assoc (dim_std (2,dim)) [cX,cA,cS,cK,v1,v2,v3] @ 
-  [(equality,[2*dim,dim,3])];
-val tnn = train_tnn schedule (random_tnn tnnparam) (part_pct 0.95 trainex);
-*)
-
 
 end (* struct *)
