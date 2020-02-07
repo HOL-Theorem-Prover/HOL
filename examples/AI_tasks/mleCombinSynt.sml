@@ -25,8 +25,6 @@ fun string_of_board (a,b,c)= tts a ^ " " ^ tts b ^ " " ^ its c
 fun board_compare ((a,b,c),(d,e,f)) =
   (cpl_compare Term.compare Term.compare) ((a,b),(d,e))
 
-val k_thm_bare = List.nth (eq_axl_bare,1)
-
 fun status_of (tm1,tm2,n) =
   if not (can (find_term (fn x => term_eq x cX)) tm1) then
     let
@@ -34,9 +32,7 @@ fun status_of (tm1,tm2,n) =
     in
       if isSome tm1o andalso term_eq (valOf tm1o) tm2 then Win else Lose
     end
-  else if n <= 0 orelse 
-    can (find_term (fn x => exists (C is_match x) eq_axl_bare)) tm1
-    then Lose else Undecided
+  else if n <= 0 then Lose else Undecided
 
 (* -------------------------------------------------------------------------
    Move
@@ -54,7 +50,12 @@ fun apply_move move (tm1,tm2,n) =
     (subst_occs [[1]] sub tm1, tm2, n-1)
   end
 
-fun available_movel board = movel
+fun contain_red tm =
+  can (find_term (fn x => exists (C is_match x) eq_axl_bare)) tm
+
+fun available_movel board = 
+  (if contain_red (#1 (apply_move cA board)) then [] else [cA]) @ [cS,cK]
+
 fun string_of_move tm = tts tm
 
 (* -------------------------------------------------------------------------
@@ -216,8 +217,7 @@ load "aiLib"; open aiLib;
 load "mleLib"; open mleLib;
 
 val tml = cgen_synt 9; length tml;
-(* val tml = List.mapPartial (fast_lo_cnorm 100 eq_axl_bare) tml; 
-   length tml;*)
+val tml = List.mapPartial (fast_lo_cnorm 100 eq_axl_bare) tml; length tml;
 
 val targetl1 = create_targetl tml; length targetl1;
 fun cmp (b1,b2) = cpl_compare 
@@ -228,12 +228,9 @@ val stats = dlist (count_dict (dempty Int.compare)
    (map ((fn x => x div 4 + 1) o #3) targetl2)); 
 
 val _ = export_targetl "sy9norm" targetl2;
+val r = rl_start (rlobj,extsearch) (mk_targetd (import_targetl "sy9norm"));
 
-val r = rl_start (rlobj,extsearch) (mk_targetd (import_targetl "sy9"));
-
-val targetl = import_targetl "sy9";
-
-(* todo output the number of theorem proven at least once *)
+val targetl = import_targetl "sy9norm";
 *)
 (* -------------------------------------------------------------------------
    Transformation of problems to ATP goals
