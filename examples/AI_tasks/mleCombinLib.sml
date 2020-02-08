@@ -11,7 +11,6 @@ struct
 open HolKernel Abbrev boolLib aiLib numTheory arithmeticTheory psTermGen
 
 val ERR = mk_HOL_ERR "mleCombinLib"
-fun compare_third cmp ((_,_,a),(_,_,b)) = cmp (a,b)
 
 (* -------------------------------------------------------------------------
    Position

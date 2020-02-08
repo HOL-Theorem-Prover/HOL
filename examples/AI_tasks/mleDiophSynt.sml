@@ -10,33 +10,43 @@ struct
 
 open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlNeuralNetwork mlTreeNeuralNetwork mlTacticData
-  mlReinforce arithmeticTheory numLib numSyntax
+  mlReinforce arithmeticTheory numLib numSyntax mleDiophLib
 
 val ERR = mk_HOL_ERR "mleDiophSynt"
 val version = 1
 val selfdir = HOLDIR ^ "/examples/AI_tasks"
 
+(* -------------------------------------------------------------------------
+   Conversion of some object to string
+   ------------------------------------------------------------------------- *)
 
-
-(*
-load "aiLib"; open aiLib;
-load "mleDiophSynt"; open mleDiophSynt;
-val tm = random_polynomial ();
-val d = gen_diophset 100 (dempty (list_compare Int.compare));
-*)
+fun blts graph = String.concatWith " " (map bts graph)
+fun stbl s = map string_to_bool (String.tokens Char.isSpace s)
+fun ilts il = String.concatWith " " (map its il)
+fun illts ill = String.concatWith "," (map ilts ill)
+fun stil s = map string_to_int (String.tokens Char.isSpace s)
+fun still s = map stil (String.tokens (fn c => c = #",") s)
 
 (* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
 
-type board = int list list * int list * int
-fun string_of_board (a,b,c)= tts a ^ " " ^ ilts b ^ " " ^ its c
+type board = int list list * bool list * int
+fun string_of_board (a,b,c)= illts a ^ " -- " ^ blts b ^ " -- " ^ its c
 
 fun board_compare ((a,b,c),(d,e,f)) =
-  (cpl_compare Term.compare Term.compare) ((a,b),(d,e))
+  cpl_compare (list_compare (list_compare Int.compare)) 
+              (list_compare bool_compare) 
+    ((a,b),(d,e))
 
-fun status_of (ill,set,n) =
-  if dioph_match (ill_to_term (tl ill)) set then Win 
+fun fullboard_compare ((a,b,c),(d,e,f)) =
+  triple_compare Int.compare
+                 (list_compare (list_compare Int.compare)) 
+                 (list_compare bool_compare)
+   ((c,a,b),(f,d,e))
+
+fun status_of (poly,graph,n) =
+  if dioph_match poly graph then Win 
   else if n <= 0 then Lose
   else Undecided
 
@@ -45,76 +55,29 @@ fun status_of (ill,set,n) =
    ------------------------------------------------------------------------- *)
 
 datatype move = Add of int | Exp of int
-val movel = map Add numberl @ map Exp expl
+val movel = map Add numberl @ map Exp (List.tabulate (maxexponent + 1, I))
+
+fun string_of_move move = case move of
+    Add i => "A" ^ its i
+  | Exp i => "E" ^ its i
+
+fun move_compare (a,b) = String.compare (string_of_move a, string_of_move b) 
 
 fun apply_move_ill move ill =
   case move of
-    Add c => if length ill >= 5 
+    Add c => if length ill >= maxmonomial 
              then raise ERR "apply_move_ill" "plus"
-             else [c] :: ill
-  | Exp c => if null ill orelse length (hd ill) >= (length basekvl + 1)
+             else ill @ [[c]]
+  | Exp c => if null ill orelse length (last ill) >= maxvar + 1
              then raise ERR "apply_move_ill" "mult"
-             else (c :: hd ill) :: tl ill
+             else butlast ill @ [last ill @ [c]]
 
 fun apply_move move (ill,graph,n) = (apply_move_ill move ill, graph, n-1)
 
 fun available_movel_ill ill =
-  filter (fn x => (can apply_move_ill) x ill) movel
+  filter (fn x => can (apply_move_ill x) ill) movel
 
 fun available_movel (ill,_,_) = available_movel_ill ill
-
-(*
-val polyl = List.tabulate (1000, fn _ => random_polynomial ());
-length polyl;
-val diophl1 = map_assoc dioph_set polyl;
-val diophl2 = dlist (dregroup (list_compare Int.compare) (map swap diophl1));
-length diophl2;
-*)
-
-(*
-load "mlTacticData"; open mlTacticData;
-load "aiLib"; open aiLib;
-fun ilts il = String.concatWith " " (map its il);
-val _ = writel  (HOLDIR ^ "/src/AI/experiments/diophgraph") (map (ilts o fst) (dlist d));
-val _ = export_terml (HOLDIR ^ "/src/AI/experiments/diophlist")
-  (map snd (dlist d));
-
-
-val l = import_terml (selfdir ^ "/diophlist");
-val il = map term_size l;
-val stats = dlist (count_dict (dempty Int.compare) il); 
-
-val movel1 = 
-  List.tabulate (16, fn i => mk_var ("n" ^ its i, alpha));
-val movel2 = 
-  [
-   mk_var ("eplus",``:'a -> b -> num``),
-   mk_var ("emult",``:'a -> num -> num``),
-   mk_var ("mult",``:num -> num -> num``) 
-  ]
-val operl = [``k0:num``,``v1:num``,``v2:num``,``v3:num``] @ movel1 @ movel2;
-val l0 = gen_term operl (5,``:num``); length l0;
-
-fun contain_k0 tm = tmem ``k0:num`` (free_vars tm);
-load "psTermGen"; open psTermGen;
-
-val l1 = filter contain_k0 l0; length l1;
-
-val tm = random_term movel (9,``:num``);
-val il = dioph_set tm;
-
-val move_compare = Term.compare
-
-fun apply_move move tm1 = 
-  let
-    val res = list_mk_comb (move, List.tabulate (arity_of move, fn _ => cX))
-    val sub = [{redex = cX, residue = res}]
-  in
-    subst_occs [[1]] sub tm1
-  end
-
-fun available_movel board = movel
-fun string_of_move tm = tts tm
 
 (* -------------------------------------------------------------------------
    Game
@@ -128,7 +91,7 @@ val game : (board,move) game =
   string_of_board = string_of_board,
   string_of_move = string_of_move,
   board_compare = board_compare,
-  move_compare = Term.compare,
+  move_compare = move_compare,
   movel = movel
   }
 
@@ -138,15 +101,15 @@ val game : (board,move) game =
 
 fun write_boardl file boardl =
   let val (l1,l2,l3) = split_triple boardl in
-    export_terml (file ^ "_in") l1;
-    export_terml (file ^ "_out") l2; 
+    writel (file ^ "_poly") (map illts l1);
+    writel (file ^ "_graph") (map blts l2); 
     writel (file ^ "_timer") (map its l3)
   end
 
 fun read_boardl file =
   let
-    val l1 = import_terml (file ^ "_in")
-    val l2 = import_terml (file ^ "_out")
+    val l1 = map still (readl_empty (file ^ "_poly"))
+    val l2 = map stbl (readl (file ^ "_graph"))
     val l3 = map string_to_int (readl (file ^ "_timer"))
   in
     combine_triple (l1,l2,l3)
@@ -158,70 +121,23 @@ val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
    Targets
    ------------------------------------------------------------------------- *)
 
-val targetdir = HOLDIR ^ "/src/AI/experiments/target_combin"
-val targetfile = targetdir ^ "/targetl-synt"
-val stats_dir = HOLDIR ^ "/src/AI/experiments/stats_combin"
-val stats_file = stats_dir ^ "/stats-synt-" ^ its version
-fun stats_il header il = 
-  let 
-    fun f (a,b) = its a ^ "-" ^ its b
-    val l = dlist (count_dict (dempty Int.compare) il) 
-    val _ = mkDir_err stats_dir
-    val s = header ^ "\n" ^ String.concatWith ", " (map f l) ^ "\n"
-  in
-    append_file stats_file s;
-    print_endline s
-  end
+val targetdir = selfdir ^ "/dioph_target"
 
-fun create_targetl tml =
-  let
-    val i = ref 0
-    fun f tm = 
-      let val tmo = fast_lo_cnorm 100 eq_axl_bare (list_mk_cA [tm,v1,v2,v3])
-      in
-        if not (isSome tmo) orelse 
-           can (find_term (C tmem [cS,cK])) (valOf tmo)
-        then NONE
-        else (print_endline (its (!i)); incr i; tmo)
-      end
-    val l1 = map_assoc f tml    
-    val l2 = filter (fn x => isSome (snd x)) l1    
-    val l3 = map_snd valOf l2
-    val l4 = dregroup Term.compare (map swap l3)
-    val l5 = map_snd (list_imin o map term_size) (dlist l4)
-    val l6 = map (fn (a,b) => (cX,a,2 * b)) l5
-  in
-    stats_il "size_in" (map (term_size o #1) l6);
-    stats_il "size_out" (map (term_size o #2) l6);
-    stats_il "nstep" (map ((fn x => x div 2) o #3) l6);
-    dict_sort (compare_third Int.compare) l6
-  end
+fun graph_to_bl graph = map (fn x => mem x graph) numberl
 
-fun create_policy_supervised tml =
-  let
-    val i = ref 0
-    fun f tm = 
-      let val tmo = fast_lo_cnorm 100 eq_axl_bare (list_mk_cA [tm,v1,v2,v3])
-      in
-        if not (isSome tmo) orelse 
-           can (find_term (C tmem [cS,cK])) (valOf tmo)
-        then NONE
-        else (print_endline (its (!i)); incr i; tmo)
-      end
-    val l1 = map_assoc f tml    
-    val l2 = filter (fn x => isSome (snd x)) l1    
-    val l3 = map_snd valOf l2
-    val d = dregroup Term.compare (map swap l3)
+fun create_targetl l =
+  let fun f (graph,poly) = 
+    ([], graph_to_bl graph, 2 * length (List.concat poly)) 
   in
-    d
+    dict_sort fullboard_compare (map f l)
   end
 
 fun export_targetl name targetl = 
   let val _ = mkDir_err targetdir in 
-    write_boardl (targetfile ^ "-" ^ name) targetl
+    write_boardl (targetdir ^ "/" ^ name) targetl
   end
 
-fun import_targetl name = read_boardl (targetfile ^ "-" ^ name)
+fun import_targetl name = read_boardl (targetdir ^ "/" ^ name)
  
 fun mk_targetd l1 =
   let 
@@ -235,12 +151,20 @@ fun mk_targetd l1 =
    Neural network representation of the board
    ------------------------------------------------------------------------- *)
 
+fun term_of_graph graph = mk_embedding_var
+  (Vector.fromList (map (fn x => if x then 1.0 else ~1.0) graph))
+
 val head_eval = mk_var ("head_eval", ``:bool -> 'a``)
 val head_poli = mk_var ("head_poli", ``:bool -> 'a``)
-fun tag_heval x = mk_comb (head_eval,x)
-fun tag_hpoli x = mk_comb (head_poli,x)
-fun tob (tm1,tm2,_) = 
-  [tag_heval (mk_eq (tm1,tm2)), tag_hpoli (mk_eq (tm1,tm2))]
+val graph_tag = mk_var ("graph_tag", ``:bool -> num``)
+
+fun tob (poly,graph,_) = 
+  let val (tm1,tm2) = 
+    (term_of_poly poly, mk_comb (graph_tag, term_of_graph graph))
+  in
+    [mk_comb (head_eval, (mk_eq (tm1,tm2))), 
+     mk_comb (head_poli, (mk_eq (tm1,tm2)))]
+  end
 
 (* -------------------------------------------------------------------------
    Player
@@ -250,12 +174,20 @@ val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 20}]
 
-val dim = 12
-fun dim_head_poli n = [dim,n]
-val equality = ``$= : 'a -> 'a -> bool``
-val tnnparam = map_assoc (dim_std (1,dim)) [equality,cX,v1,v2,v3,cA,cS,cK] @ 
-  [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
+val dioph_operl = 
+  [``$= : num -> num -> bool``,
+   graph_tag,``$+``,``$*``,mk_var ("start",``:num``)] @
+  map (fn i => mk_var ("n" ^ its i,``:num``)) numberl @
+  List.concat 
+    (List.tabulate (maxvar, fn v => 
+     List.tabulate (maxexponent + 1, fn p => 
+       mk_var ("v" ^ its v ^ "p" ^ its p,``:num``))))
 
+val dim = 16
+fun dim_head_poli n = [dim,n]
+
+val tnnparam = map_assoc (dim_std (1,dim)) dioph_operl @
+  [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
 val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 (* -------------------------------------------------------------------------
@@ -263,7 +195,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleDiophSynt-combin-" ^ its version, exwindow = 100000,
+  {expname = "mleDiophSynt-" ^ its version, exwindow = 100000,
    ncore = 30, ntarget = 100, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
@@ -277,184 +209,49 @@ val rlobj : (board,move) rlobj =
 val extsearch = mk_extsearch "mleDiophSynt.extsearch" rlobj
 
 (*
-load "mleDiophSynt"; open mleDiophSynt;
-load "mlReinforce"; open mlReinforce;
 load "aiLib"; open aiLib;
-load "mleLib"; open mleLib;
+load "mlReinforce"; open mlReinforce;
+load "mleDiophLib"; open mleDiophLib;
+load "mleDiophSynt"; open mleDiophSynt;
 
-val tml = cgen_synt 9; length tml;
-val targetl1 = create_targetl tml; length targetl1;
-fun cmp (b1,b2) = cpl_compare 
-  (compare_third Int.compare) (#board_compare (#game rlobj)) 
-  ((b1,b1),(b2,b2));
-val targetl2 = dict_sort cmp targetl1;
-val _ = export_targetl "sy9" targetl2;
+val d = gen_diophset 1000 (dempty (list_compare Int.compare));
+val targetl = create_targetl (dlist d); length targetl;
+val _ = export_targetl "dioph1000" targetl;
 
-val r = rl_start (rlobj,extsearch) (mk_targetd (import_targetl "sy9"));
-(* todo output the number of theorem proven at least once *)
+val targetl = import_targetl "dioph1000"; length targetl;
+val r = rl_start (rlobj,extsearch) (mk_targetd targetl);
 *)
 
-(* -------------------------------------------------------------------------
-   Transformation of problems to ATP goals
-   ------------------------------------------------------------------------- *)
-
-val vc = mk_var ("Vc",alpha)
-
-fun goal_of_board_eq (_,tm2,n) =
-  let val tm =
-    mk_exists (vc, (list_mk_forall ([v1,v2,v3], 
-      mk_eq (list_mk_cA [vc,v1,v2,v3],tm2))))
-  in
-    (eq_axl,tm)
-  end
-
-fun goal_of_board_rw (_,tm2,n) =
-  let val tm =
-    mk_exists (vc, (list_mk_forall ([v1,v2,v3], 
-      mk_cRW (list_mk_cA [vc,v1,v2,v3],tm2))))
-  in
-    (rw_axl,tm)
-  end
-
-fun goal_of_board_ev (_,tm2,n) =
-  let val tm =
-    mk_exists (vc, (list_mk_forall ([v1,v2,v3], 
-      list_mk_imp (map (fn x => mk_cEV (x,x)) [v1,v2,v3],
-        mk_cEV (list_mk_cA [vc,v1,v2,v3],tm2)))))
-  in
-    (ev_axl,tm)
-  end
-
-
-(* -------------------------------------------------------------------------
-   TPTP export
-   ------------------------------------------------------------------------- *)
-
 (*
-load "mlReinforce"; open mlReinforce;
-load "mleLib"; open mleLib;
-load "aiLib"; open aiLib;
-load "mleDiophSynt"; open mleDiophSynt;
-load "hhExportFof"; open hhExportFof;
-
-val tml = cgen_synt 10; length tml;
-val targetl1 = create_targetl tml; length targetl;
-fun cmp (b1,b2) = cpl_compare 
-  (compare_third Int.compare) (#board_compare (#game rlobj)) 
-  ((b1,b1),(b2,b2));
-val targetl2 = dict_sort cmp targetl1;
-
-val _ = export_targetl "sy10" targetl2;
-val targetl3 = import_targetl "sy10";
-
-val targetl4 = map (fn (a,b,x) => (a,b,((x div 2) + 1) div 2)) targetl3;
-fun select y = filter (fn (_,_,x) => x <= y) targetl4;
-
-fun export_goal dir (goal,n) =
-  let 
-    val tptp_dir = HOLDIR ^ "/src/AI/experiments/TPTP"
-    val _ = mkDir_err tptp_dir
-    val file = tptp_dir ^ "/" ^ dir ^ "/i/" ^ its n ^ ".p"
-    val _ = mkDir_err (tptp_dir ^ "/" ^ dir)
-    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/i")
-    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/o")
-  in 
-    name_flag := false;
-    type_flag := false;
-    p_flag := false;
-    fof_export_goal file goal
-  end;
-
-fun tptp_targetl size = 
-  let 
-    val prefix = "sy" ^ its size 
-    val targetl = select size
-    val goall_eq = map goal_of_board_eq targetl
-    val goall_rw = map goal_of_board_rw targetl
-    val goall_ev = map goal_of_board_ev targetl
-  in
-    app (export_goal (prefix ^ "-eq")) (number_snd 0 goall_eq);
-    app (export_goal (prefix ^ "-rw")) (number_snd 0 goall_rw);
-    app (export_goal (prefix ^ "-ev")) (number_snd 0 goall_ev)
-  end;
-
-app tptp_targetl (List.tabulate (10, fn x => x + 1));
-*)
-
-(* -------------------------------------------------------------------------
-   Supervised learning for the policy.
-   ------------------------------------------------------------------------- *)
-
-(*
-load "mleLib"; open mleLib;
-load "aiLib"; open aiLib;
-load "mleDiophSynt"; open mleDiophSynt;
-
-val tml = cgen_synt 9; length tml;
-val d = create_policy_supervised tml;
-
-fun reduces l =
-  let 
-    val l1 = map_assoc term_size l
-    val n = list_imin (map snd l1) 
-  in
-    map fst (filter (fn x => snd x = n) l1)
-  end
-
-val ll = map_snd reduces (dlist d);
-
-val game = #game rlobj;
-
-fun is_ground tm = not (can (find_term (fn x => term_eq x cX)) tm)
-
-fun rename_cX maintm = 
-  let
-  fun loop i tm =
-    if is_ground tm then tm else
-      let val sub = [{redex = cX, residue = mk_var ("X" ^ its i,alpha)}] in    
-        loop (i+1) (subst_occs [[1]] sub tm)
-      end
-  in
-    loop 0 maintm
-  end;
-
-fun eq_of tm1 = mk_eq (rename_cX tm1,cX)
-fun is_correct l ((tm1,_,_):board) = exists (is_match (eq_of tm1)) l;
-fun one_ex l board = 
-  let 
-    val boardl = map (fn x => (#apply_move game) x board) (#movel game) 
-    fun test x = is_correct l x
-    fun f x = if test x then 1.0 else 0.0
-  in
-    ((board,map f boardl), filter test boardl)
-  end;
-fun all_ex l board =
-  if #status_of game board <> psMCTS.Undecided then [] else 
-    let val (ex,boardl) = one_ex l board in
-      ex :: List.concat (map (all_ex l) boardl)
-    end;
-
-fun all_ex_fin (a,l) = all_ex l (cX,a,10000);
-val exl = List.concat (map all_ex_fin ll);
-
-val trainex = map (fn ((tm1,tm2,_),rl) => [(mk_eq (tm1,tm2),rl)]) exl;
-write_tnnex "/home/thibault/test" trainex;
-
-load "mleLib"; open mleLib;
-load "aiLib"; open aiLib;
-load "mleDiophSynt"; open mleDiophSynt;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-val trainex = read_tnnex "/home/thibault/test";
+load "psBigSteps" ; open psBigSteps;
 
-val schedule = [{ncore = 1, verbose = true,
-   learning_rate = 0.02, batch_size = 16, nepoch = 100}];
-val dim = 12;
-val equality = ``$= : 'a -> 'a -> bool``;
-val tnnparam = map_assoc (dim_std (2,dim)) [cX,cA,cS,cK,v1,v2,v3] @ 
-  [(equality,[2*dim,dim,3])];
-val tnn = train_tnn schedule (random_tnn tnnparam) (part_pct 0.95 trainex);
+val mctsparam =
+  {
+  nsim = 3200,
+  stopatwin_flag = false,
+  decay = 1.0,
+  explo_coeff = 2.0,
+  noise_all = false,
+  noise_root = false,
+  noise_coeff = 0.25,
+  noise_gen = random_real,
+  noconfl = false,
+  avoidlose = false
+  };
 
+val bsobj : (board,move) bsobj =
+  {
+  verbose = true,
+  temp_flag = false,
+  player = psMCTS.uniform_player (#game rlobj),
+  game = (#game rlobj),
+  mctsparam = mctsparam
+  };
+
+val target = List.nth (targetl,10);
+val _ = run_bigsteps bsobj target;
 *)
-*)
+
 
 end (* struct *)

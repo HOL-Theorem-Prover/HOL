@@ -117,6 +117,7 @@ fun create_targetl tml =
     val l4 = dregroup Term.compare (map swap l3)
     val l5 = map_snd (list_imin o map term_size) (dlist l4)
     val l6 = map (fn (a,b) => (cX,a,2 * b)) l5
+    fun compare_third cmp ((_,_,a),(_,_,b)) = cmp (a,b)
   in
     dict_sort (compare_third Int.compare) l6
   end

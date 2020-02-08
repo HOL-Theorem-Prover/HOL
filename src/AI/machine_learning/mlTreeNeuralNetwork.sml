@@ -150,7 +150,7 @@ fun embed_nn v =
     in
       [{a = idactiv, da = didactiv, w = Vector.fromList e2}]
     end
-  else msg_err "embed_nn" (fst (dest_var v))
+  else msg_err "embed_nn" (tts v)
 
 fun mk_embedding_var rv =
   mk_var (embedding_prefix ^ reall_to_string (vector_to_list rv), bool)
@@ -168,7 +168,7 @@ fun fp_oper tnn fpdict tm =
   in
     fp_nn nn inv
   end
-  handle Subscript => msg_err "fp_oper" (fst (dest_var tm))
+  handle Subscript => msg_err "fp_oper" (tts tm)
 
 fun fp_tnn_aux tnn fpdict tml = case tml of
     []      => fpdict
