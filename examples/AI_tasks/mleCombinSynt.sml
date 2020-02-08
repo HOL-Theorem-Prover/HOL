@@ -1,8 +1,8 @@
 (* ========================================================================= *)
 (* FILE          : mleCombinSynt.sml                                         *)
-(* DESCRIPTION   : Specification of a term synthesis game                    *)
+(* DESCRIPTION   : Specification of term synthesis on combinators            *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
-(* DATE          : 2019                                                      *)
+(* DATE          : 2020                                                      *)
 (* ========================================================================= *)
 
 structure mleCombinSynt :> mleCombinSynt =
@@ -168,7 +168,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleCombinSynt-combin-" ^ its version, exwindow = 100000,
+  {expname = "mleCombinSynt-" ^ its version, exwindow = 100000,
    ncore = 30, ntarget = 100, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =

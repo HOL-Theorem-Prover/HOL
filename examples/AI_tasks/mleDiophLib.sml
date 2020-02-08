@@ -1,17 +1,105 @@
 (* ========================================================================= *)
-(* FILE          : mleLib.sml                                                *)
-(* DESCRIPTION   : Useful functions for the experiments                      *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
-(* DATE          : 2018                                                      *)
+(* FILE          : mleDiophLib.sml                                           *)
+(* DESCRIPTION   : Tools for term synthesis on Diophantin equations          *)
+(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
+(* DATE          : 2020                                                      *)
 (* ========================================================================= *)
 
-structure mleLib :> mleLib =
+structuremleDiophLib :>mleDiophLib =
 struct
 
 open HolKernel Abbrev boolLib aiLib numTheory arithmeticTheory psTermGen
 
 val ERR = mk_HOL_ERR "mleLib"
+
 fun compare_third cmp ((_,_,a),(_,_,b)) = cmp (a,b)
+
+val modulo = 16
+val numberl = List.tabulate (modulo,I)
+val expl = List.tabulate (5,I)
+val numbertml = map (fn x => mk_var ("n" ^ its x, ``:num``)) numberl
+val basevl = [``v1:num``,``v2:num``,``v3:num``]
+val basekvl = [``k0:num``] @ basevl
+val basetml = numbertml @ basekvl
+
+fun eval_f tm =
+  if is_var tm then 
+    let 
+      val s = fst (dest_var tm)
+      val sn = tl_string s
+    in 
+      if hd_string s = #"n" 
+      then let val n = string_to_int sn in (fn l => n) end
+      else let val i = string_to_int sn in (fn l => List.nth (l,i)) end
+    end
+  else let val (oper,argl) = strip_comb tm in
+    if term_eq oper ``$+`` then 
+      let val (f1,f2) = pair_of_list (map eval_f argl) in
+        fn l => (f1 l + f2 l) mod modulo
+      end
+    else if term_eq oper ``$*`` then
+      let val (f1,f2) = pair_of_list (map eval_f argl) in
+        fn l => (f1 l * f2 l) mod modulo
+      end
+    else raise ERR "eval_f" (tts tm)
+  end
+
+fun has_solution bl diophf k =
+  let
+    val l1 = cartesian_productl 
+      (map (fn b => if b then numberl else [0]) bl)
+    val l2 = map (fn l => k :: l) l1
+  in
+    exists (fn l => diophf l = 0) l2
+  end
+
+fun dioph_set diophtm = 
+  let 
+    val vl = free_vars diophtm
+    fun test x = tmem x vl
+    val bl = map test basevl
+    val diophf = eval_f diophtm 
+  in 
+    filter (has_solution bl diophf) numberl
+  end
+
+fun random_monomial () = 
+  let 
+    val expl = List.tabulate (length basekvl, fn _ => random_elem expl)
+    val l = combine (basekvl,expl)
+    fun f (v,n) = if n = 0 then ``n1:num`` else 
+      list_mk_mult (List.tabulate (n,fn _ => v))
+  in
+    list_mk_mult (random_elem (tl numbertml) :: map f l)
+  end
+
+fun random_polynomial () =
+  let val n = random_int (1,5) in
+    list_mk_plus (List.tabulate (n, fn _ => random_monomial ()))
+  end
+
+fun dterm_size tm = 
+  if is_var tm orelse is_numeral tm then 1 else
+  let val (oper,argl) = strip_comb tm in
+    1 + sum_int (map dterm_size argl)
+  end
+
+fun gen_diophset n d =
+  if dlength d >= n then d else
+  let 
+    val tm = random_polynomial () 
+    val set = dioph_set tm
+  in
+    if dmem set d then 
+      let val oldtm = dfind set d in
+        if dterm_size tm < dterm_size oldtm 
+        then (print "*"; gen_diophset n (dadd set tm d))
+        else (print "."; gen_diophset n d)
+      end
+    else (print_endline (its ((dlength d) + 1)); 
+          gen_diophset n (dadd set tm d))
+  end
+
 
 (* -------------------------------------------------------------------------
    Position
@@ -308,7 +396,7 @@ fun cgen_synt n =
   end
 
 (*
-load "mleLib"; open mleLib;
+load "mleLib"; openmleDiophLib;
 val tml = cgen_synt 10; length tml;
 329699;
 

@@ -1,8 +1,8 @@
 (* ========================================================================= *)
 (* FILE          : mleDiophSynt.sml                                          *)
-(* DESCRIPTION   : Specification of a term synthesis game                    *)
+(* DESCRIPTION   : Specification of term synthesis on Diophantine equations  *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
-(* DATE          : 2019                                                      *)
+(* DATE          : 2020                                                      *)
 (* ========================================================================= *)
 
 structure mleDiophSynt :> mleDiophSynt =
@@ -10,169 +10,79 @@ struct
 
 open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlNeuralNetwork mlTreeNeuralNetwork mlTacticData
-  mlReinforce arithmeticTheory numLib
+  mlReinforce arithmeticTheory numLib numSyntax
 
-(* 
-load "aiLib"; open aiLib;
-load "numLib"; open numLib;
-val ERR = mk_HOL_ERR "mleDiophSynt";
+val ERR = mk_HOL_ERR "mleDiophSynt"
 val version = 1
-*)
+val selfdir = HOLDIR ^ "/examples/AI_tasks"
+
+
+
 (*
+load "aiLib"; open aiLib;
+load "mleDiophSynt"; open mleDiophSynt;
+val tm = random_polynomial ();
+val d = gen_diophset 100 (dempty (list_compare Int.compare));
+*)
 
 (* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
 
-val modulo = 16;
-
-fun eval_f tm =
-  if is_var tm then 
-    let val i = string_to_int (tl_string (fst (dest_var tm))) in
-      (fn l => List.nth (l,i))
-    end
-  else if is_numeral tm then 
-    let val n = int_of_term tm in (fn l => n) end
-  else
-  let val (oper,argl) = strip_comb tm
-    else if term_eq oper ``$+`` then 
-      let val (f1,f2) = pair_of_list (map eval_f argl) in
-        fn l => (f1 l + f2 l) mod modulo
-      end
-    else if term_eq oper ``$*`` then
-      let val (f1,f2) = pair_of_list (map eval_f argl) in
-        fn l => (f1 l * f2 l) mod modulo
-      end
-    else raise ERR "eval_f" (tts tm)
-  end;
-
-val numberl = List.tabulate (modulo,I);
-val numbertml =  ``NUMERAL ZERO`` :: 
-  tl (map (Parse.Term o (fn x => [QUOTE (its x)])) numberl);
-
-fun has_solution bl diophf k =
-  let
-    val l1 = cartesian_productl 
-      (map (fn b => if b then numberl else [0]) bl)
-    val l2 = map (fn l => k :: l) l1
-  in
-    exists (fn l => diophf l = 0) l2
-  end
-
-fun dioph_set diophtm = 
-  let 
-    val vl = free_vars diophtm
-    fun test x = tmem x vl
-    val bl = map test varl 
-    val diophf = eval_f diophtm 
-  in 
-    filter (has_solution bl diophf) numberl
-  end
-
-
-
-type board = term * term * int
-fun string_of_board (a,b,c)= tts a ^ " " ^ tts b ^ " " ^ its c
+type board = int list list * int list * int
+fun string_of_board (a,b,c)= tts a ^ " " ^ ilts b ^ " " ^ its c
 
 fun board_compare ((a,b,c),(d,e,f)) =
   (cpl_compare Term.compare Term.compare) ((a,b),(d,e))
 
-fun status_of (diophset,tm2,n) =
-  if not (can (find_term (fn x => term_eq x cX)) tm1) then
-    let 
-      val tm1a = dioph_match diophset
-    in
-      if isSome tm1o andalso term_eq (valOf tm1o) tm2 then Win else Lose
-    end
-  else if n <= 0
-    then Lose else Undecided
+fun status_of (ill,set,n) =
+  if dioph_match (ill_to_term (tl ill)) set then Win 
+  else if n <= 0 then Lose
+  else Undecided
 
 (* -------------------------------------------------------------------------
    Move
    ------------------------------------------------------------------------- *)
 
-type move = term
-val movel = 
-  numbertml @ [``$+``,``$*``,``k0:num``,``k0:num``,``k0:num``,``k0:num``,``k0:num``,
-``k0:num``,``k0:num``,``k0:num``,
-``v1:num``,``v1:num``,``v1:num``,``v1:num``,``v2:num``,``v2:num``,``v3:num``]
+datatype move = Add of int | Exp of int
+val movel = map Add numberl @ map Exp expl
 
-val movel = 
-  numbertml @ [``$+``,``$*``,``k0:num``,``v1:num``,``v2:num``,``v3:num``]
-(* todo forbid addition or multiplication of numbers *)
+fun apply_move_ill move ill =
+  case move of
+    Add c => if length ill >= 5 
+             then raise ERR "apply_move_ill" "plus"
+             else [c] :: ill
+  | Exp c => if null ill orelse length (hd ill) >= (length basekvl + 1)
+             then raise ERR "apply_move_ill" "mult"
+             else (c :: hd ill) :: tl ill
 
-val movel = 
-  numbertml @ [``$+``,``$*``,``k0:num``,``v1:num``,``v2:num``,``v3:num``]
+fun apply_move move (ill,graph,n) = (apply_move_ill move ill, graph, n-1)
 
-val varfreq =
- [``k0:num``,``k0:num``,``k0:num``,``k0:num``,``k0:num``,
-  ``k0:num``,``k0:num``,``k0:num``,
-  ``v1:num``,``v1:num``,``v1:num``,``v1:num``,``v2:num``,``v2:num``,``v3:num``]
+fun available_movel_ill ill =
+  filter (fn x => (can apply_move_ill) x ill) movel
 
-can't sum two sums or 
-product two products.
+fun available_movel (ill,_,_) = available_movel_ill ill
 
-
-
-val basetml = numbertml @ [``k0:num``,``v1:num``,``v2:num``,``v3:num``];
-
-val basevl = [``x:num``,``y:num``,``z:num``];
-val ll = cartesian_productl (List.tabulate (length basevl,fn _ => expl));
-
-
-fun random_monomial () = 
-  let 
-    val expl = [random_int (0,4),random_int (0,4),random_int (0,4)]
-    val l = combine (basevl,expl)
-    fun f (v,n) = if n = 0 then ``1`` else 
-      list_mk_mult (List.tabulate (n,fn _ => v))
-  in
-    list_mk_mult (random_elem numbertml :: map f l)
-  end
-
-fun random_polynomial () =
-  let val n = random_int (1,5) in
-    list_mk_plus (List.tabulate (n, fn _ => random_monomial ()))
-  end
-
+(*
 val polyl = List.tabulate (1000, fn _ => random_polynomial ());
 length polyl;
 val diophl1 = map_assoc dioph_set polyl;
 val diophl2 = dlist (dregroup (list_compare Int.compare) (map swap diophl1));
 length diophl2;
+*)
 
-fun dterm_size tm = 
-  if is_var tm orelse is_numeral tm then 1 else
-  let val (oper,argl) = strip_comb tm in
-    1 + sum_int (map dterm_size argl)
-  end
-
-
-fun gen_diophset n d =
-  if dlength d >= n then d else
-  let 
-    val tm = random_polynomial () 
-    val set = dioph_set tm
-  in
-    if dmem set d then 
-      let val oldtm = dfind set d in
-        if dterm_size tm < dterm_size oldtm 
-        then gen_diophset n (dadd set tm d)
-        else gen_diophset n d
-      end
-    else (print_endline (its ((dlength d) + 1)); 
-          gen_diophset n (dadd set tm d))
-  end
-
-
-val d = gen_diophset 1000 (dempty (list_compare Int.compare));
+(*
 load "mlTacticData"; open mlTacticData;
-
+load "aiLib"; open aiLib;
 fun ilts il = String.concatWith " " (map its il);
 val _ = writel  (HOLDIR ^ "/src/AI/experiments/diophgraph") (map (ilts o fst) (dlist d));
 val _ = export_terml (HOLDIR ^ "/src/AI/experiments/diophlist")
   (map snd (dlist d));
 
+
+val l = import_terml (selfdir ^ "/diophlist");
+val il = map term_size l;
+val stats = dlist (count_dict (dempty Int.compare) il); 
 
 val movel1 = 
   List.tabulate (16, fn i => mk_var ("n" ^ its i, alpha));

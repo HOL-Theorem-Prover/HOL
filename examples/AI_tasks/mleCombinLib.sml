@@ -1,8 +1,8 @@
 (* ========================================================================= *)
 (* FILE          : mleCombinLib.sml                                          *)
-(* DESCRIPTION   : Useful functions for the experiments                      *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
-(* DATE          : 2018                                                      *)
+(* DESCRIPTION   : Tools for term synthesis on combinators                   *)
+(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
+(* DATE          : 2020                                                      *)
 (* ========================================================================= *)
 
 structure mleCombinLib :> mleCombinLib =
@@ -52,7 +52,6 @@ val cA = mk_var ("a",``:'a -> 'a -> 'a``)
 val cT = mk_var ("t",``:'a -> 'a``)
 val cV = mk_var ("v",``:'a -> bool``)
 val cL = mk_var ("l",``:'a -> bool``)
-
 
 val vx = mk_var ("X",alpha)
 val vy = mk_var ("Y",alpha)
@@ -254,7 +253,7 @@ fun contain_red tm =
   can (find_term (fn x => exists (C is_match x) eq_axl_bare)) tm
 
 (* -------------------------------------------------------------------------
-   Generating commbinators
+   Generating combinators
    ------------------------------------------------------------------------- *)
 
 fun random_cterm n = random_term [cA,cS,cK] (2*n-1,alpha)
@@ -296,12 +295,7 @@ fun cgen_synt n =
 (*
 load "mleCombinLib"; open mleCombinLib;
 val tml = cgen_synt 10; length tml;
-329699;
-
-val tml' = cgen_exhaustive 8; length tml';
 *)
-
-
 
 end (* struct *)
 
