@@ -178,7 +178,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleCombinSyntHp-" ^ its version, exwindow = 100000,
-   ncore = 30, ntarget = 5, nsim = 32000, decay = 1.0}
+   ncore = 30, ntarget = 100, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer}
