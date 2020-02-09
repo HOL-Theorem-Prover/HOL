@@ -161,7 +161,7 @@ fun tob ((c1,pos,_),c2,_) =
    ------------------------------------------------------------------------- *)
 
 val schedule =
-  [{ncore = 1, verbose = true, learning_rate = 0.02,
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 20}]
 
 val dim = 12
@@ -178,7 +178,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleCombinSyntHp-" ^ its version, exwindow = 100000,
-   ncore = 5, ntarget = 5, nsim = 32000, decay = 1.0}
+   ncore = 30, ntarget = 5, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer}
