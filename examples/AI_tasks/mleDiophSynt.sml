@@ -220,7 +220,13 @@ val _ = export_targetl "dioph1000" targetl;
 
 val targetl = import_targetl "dioph1000"; length targetl;
 val r = rl_start (rlobj,extsearch) (mk_targetd targetl);
+
+(* todo restrict to lexico graphical order of polynomials *)
 *)
+
+(* -------------------------------------------------------------------------
+   Big steps test
+   ------------------------------------------------------------------------- *)
 
 (*
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;

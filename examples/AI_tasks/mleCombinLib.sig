@@ -6,7 +6,8 @@ sig
   (* position *)
   val subst_pos : term * int list -> term -> term
   val all_pos : term -> (term * int list) list
-  
+  val tag_pos : term * int list -> term
+
   (* combinator terms *)
   val cA : term
   val cT : term

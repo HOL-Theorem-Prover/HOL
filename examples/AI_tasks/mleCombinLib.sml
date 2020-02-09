@@ -79,7 +79,17 @@ fun dest_tag tm =
   in
     singleton_of_list argl
   end
- 
+
+fun tag_pos (tm,pos) =
+  if null pos then mk_tag tm else
+  let
+    val (oper,argl) = strip_comb tm
+    fun f i x = if i = hd pos then tag_pos (x,tl pos) else x
+    val newargl = mapi f argl
+  in
+    list_mk_comb (oper,newargl)
+  end
+
 infix oo
 fun op oo (a,b) = list_mk_comb (cA,[a,b])
 fun mk_cA (a,b) = list_mk_comb (cA,[a,b])
@@ -212,7 +222,7 @@ fun subst_match_first eql tm =
 
 fun lo_cnorm n eql tm =
   if not (exists (C exists_match tm) eql) then SOME tm
-  else if n <= 0 orelse cterm_size tm >= 100 then NONE else
+  else if n <= 0 then NONE else
     let val tm' = subst_match_first eql tm in
       lo_cnorm (n-1) eql tm'
     end
