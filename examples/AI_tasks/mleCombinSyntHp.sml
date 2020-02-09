@@ -13,7 +13,7 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlReinforce mleCombinLib mleCombinLibHp
 
 val ERR = mk_HOL_ERR "mleCombinSyntHp"
-val version = 2
+val version = 3
 val selfdir = HOLDIR ^ "/examples/AI_tasks"
 
 (* -------------------------------------------------------------------------
@@ -62,9 +62,9 @@ fun add_apply sk n (c,pos) = case (c,pos) of
   | _ => raise ERR "add_apply" "position_mismatch"
 
 fun apply_move move ((c1,pos,_),c2,n) = case move of
-    AS => ((add_apply S 0 (c1,pos), pos @ [Left], false), c2, n-2)
-  | AK => ((add_apply K 0 (c1,pos), pos @ [Left], false), c2, n-2)
-  | NextPos => (((c1,next_pos pos, true), c2, n) 
+    AS => ((add_apply S 0 (c1,pos), pos @ [Left], false), c2, n-1)
+  | AK => ((add_apply K 0 (c1,pos), pos @ [Left], false), c2, n-1)
+  | NextPos => (((c1,next_pos pos, true), c2, n-1) 
       handle HOL_ERR _ => raise Redex)
 
 fun available_movel board =

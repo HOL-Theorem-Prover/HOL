@@ -272,7 +272,7 @@ fun stats_select_one rlobj (s,targetl) =
 
 fun stats_select rlobj nfin nwin (neg,pos,negsel,possel) =
   let 
-    val l = [("neg:",neg),("ns :",negsel),("pos:   ",pos),("ps :",possel)] 
+    val l = [("neg:",neg),("ns :",negsel),("pos:",pos),("ps :",possel)] 
   in
     log rlobj ("Exploration: " ^ its nfin ^ " targets ");
     log rlobj ("Exploration: " ^ its nwin ^ " targets proven at least once");
