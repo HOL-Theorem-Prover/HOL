@@ -51,13 +51,18 @@ fun combin_size combin = case combin of
    Printing combinators
    ------------------------------------------------------------------------- *)
 
-fun combin_to_string combin = case combin of 
+fun strip_A_aux c = case c of
+    A (c1,c2) => c2 :: strip_A_aux c1
+  | _ => [c]
+fun strip_A c = rev (strip_A_aux c)
+
+fun combin_to_string c = case c of 
     S => "S"
   | K => "K"
   | V1 => "V1"
   | V2 => "V2"
   | V3 => "V3"
-  | A (c1,c2) => "(" ^ combin_to_string c1 ^ " " ^ combin_to_string c2 ^ ")"
+  | A _ => "(" ^ String.concatWith " " (map combin_to_string (strip_A c)) ^ ")"
 
 fun combin_compare (c1,c2) = case (c1,c2) of
     (A x, A y) => cpl_compare combin_compare combin_compare (x,y)

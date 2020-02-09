@@ -56,8 +56,8 @@ exception Redex
 fun add_apply sk n (c,pos) = case (c,pos) of
     (A(c1,c2), Left :: m) => A (add_apply sk (n+1) (c1,m), c2)
   | (A(c1,c2), Right :: m) => A (c1, add_apply sk 0 (c2,m))
-  | (S, []) => if n >= 3 then raise Redex else A(S,sk)
-  | (K, []) => if n >= 2 then raise Redex else A(K,sk)
+  | (S, []) => if n >= 2 then raise Redex else A(S,sk)
+  | (K, []) => if n >= 1 then raise Redex else A(K,sk)
   | _ => raise ERR "add_apply" "position_mismatch"
 
 fun apply_move move ((c1,pos),c2,n) = case move of
@@ -196,6 +196,10 @@ val r = rl_start (rlobj,extsearch) (mk_targetd targetl);
    ------------------------------------------------------------------------- *)
 
 (*
+load "mleCombinLibHp"; open mleCombinLibHp;
+load "mleCombinSyntHp"; open mleCombinSyntHp;
+load "mlReinforce"; open mlReinforce;
+load "aiLib"; open aiLib;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "psBigSteps" ; open psBigSteps;
 
@@ -223,7 +227,7 @@ val bsobj : (board,move) bsobj =
   };
 
 val targetl = import_targetl "sy9";
-val target = List.nth (targetl,100);
+val target = List.nth (targetl,200);
 val _ = run_bigsteps bsobj target;
 *)
 
