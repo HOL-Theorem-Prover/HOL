@@ -3,7 +3,7 @@ sig
 
   include Abbrev
 
-  type board = (mleCombinLibHp.combin * mleCombinLibHp.pose list) *
+  type board = (mleCombinLibHp.combin * mleCombinLibHp.pose list * bool) *
     mleCombinLibHp.combin * int
   datatype move = AS | AK | NextPos
 

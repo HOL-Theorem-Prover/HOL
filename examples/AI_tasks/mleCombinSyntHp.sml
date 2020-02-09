@@ -20,17 +20,18 @@ val selfdir = HOLDIR ^ "/examples/AI_tasks"
    Board
    ------------------------------------------------------------------------- *)
 
-type board = (combin * pose list) * combin * int
-fun string_of_board ((c1,pos),c2,n)= 
+type board = (combin * pose list * bool) * combin * int
+fun string_of_board ((c1,pos,b),c2,n)= 
   combin_to_string c1 ^ " " ^ pos_to_string pos ^ 
   combin_to_string c2 ^ " " ^ its n
 
 fun board_compare ((a,b,c),(d,e,f)) =
-  (cpl_compare (cpl_compare combin_compare pos_compare) combin_compare) 
+  (cpl_compare 
+   (triple_compare combin_compare pos_compare bool_compare) combin_compare) 
   ((a,b),(d,e))
 
-fun status_of ((c1,_),c2,n) =
-  let val nfo = hp_norm 100 (A(A(A(c1,V1),V2),V3)) in
+fun status_of ((c1,_,b),c2,n) =
+  let val nfo = if b then NONE else hp_norm 100 (A(A(A(c1,V1),V2),V3)) in
     if isSome nfo andalso valOf nfo = c2 then Win
     else if n <= 0 then Lose else Undecided
   end
@@ -60,10 +61,11 @@ fun add_apply sk n (c,pos) = case (c,pos) of
   | (K, []) => if n >= 1 then raise Redex else A(K,sk)
   | _ => raise ERR "add_apply" "position_mismatch"
 
-fun apply_move move ((c1,pos),c2,n) = case move of
-    AS => ((add_apply S 0 (c1,pos), pos @ [Left]), c2, n-1)
-  | AK => ((add_apply K 0 (c1,pos), pos @ [Left]), c2, n-1)
-  | NextPos => (((c1,next_pos pos),c2, n-1) handle HOL_ERR _ => raise Redex)
+fun apply_move move ((c1,pos,_),c2,n) = case move of
+    AS => ((add_apply S 0 (c1,pos), pos @ [Left], false), c2, n-1)
+  | AK => ((add_apply K 0 (c1,pos), pos @ [Left], false), c2, n-1)
+  | NextPos => (((c1,next_pos pos, true),c2, n-1) 
+      handle HOL_ERR _ => raise Redex)
 
 fun available_movel board =
   filter (fn x => (ignore (apply_move x board); true) 
@@ -92,10 +94,11 @@ val game : (board,move) game =
 fun write_boardl file boardl =
   let 
     val (l1,l2,l3) = split_triple boardl 
-    val (l1a,l1b) = split l1
+    val (l1a,l1b,l1c) = split_triple l1
   in
     export_terml (file ^ "_in") (map hp_to_cterm l1a);
     writel (file ^ "_pos") (map pos_to_string l1b);
+    writel (file ^ "_bool") (map bts l1c);
     export_terml (file ^ "_out") (map hp_to_cterm l2); 
     writel (file ^ "_timer") (map its l3)
   end
@@ -104,10 +107,11 @@ fun read_boardl file =
   let
     val l1a = map cterm_to_hp (import_terml (file ^ "_in"))
     val l1b = map string_to_pos (readl_empty (file ^ "_pos"))
+    val l1c = map string_to_bool (readl_empty (file ^ "_bool"))
     val l2 = map cterm_to_hp (import_terml (file ^ "_out"))
     val l3 = map string_to_int (readl (file ^ "_timer"))
   in
-    combine_triple (combine (l1a,l1b),l2,l3)
+    combine_triple (combine_triple (l1a,l1b,l1c),l2,l3)
   end
 
 val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
@@ -121,7 +125,7 @@ fun import_targetl name =
   let 
     val f = #read_boardl (#gameio (mleCombinSynt.rlobj))
     val boardl = f (targetdir ^ "/" ^ name)
-    fun g (a,b,c) = ((S,[]), cterm_to_hp b, c)
+    fun g (a,b,c) = ((S,[],false), cterm_to_hp b, c)
   in
     map g boardl
   end
@@ -142,7 +146,7 @@ val head_eval = mk_var ("head_eval", ``:bool -> 'a``)
 val head_poli = mk_var ("head_poli", ``:bool -> 'a``)
 fun tag_heval x = mk_comb (head_eval,x)
 fun tag_hpoli x = mk_comb (head_poli,x)
-fun tob ((c1,pos),c2,_) = 
+fun tob ((c1,pos,_),c2,_) = 
   let 
     fun f x = case x of Left => 0 | Right => 1
     val newpos = map f pos
@@ -157,7 +161,7 @@ fun tob ((c1,pos),c2,_) =
    ------------------------------------------------------------------------- *)
 
 val schedule =
-  [{ncore = 4, verbose = true, learning_rate = 0.02,
+  [{ncore = 1, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 20}]
 
 val dim = 12
@@ -174,7 +178,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleCombinSyntHp-" ^ its version, exwindow = 100000,
-   ncore = 30, ntarget = 100, nsim = 32000, decay = 1.0}
+   ncore = 5, ntarget = 5, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer}
@@ -227,7 +231,7 @@ val bsobj : (board,move) bsobj =
   };
 
 val targetl = import_targetl "sy9";
-val target = List.nth (targetl,200);
+val target = List.nth (targetl,150);
 val _ = run_bigsteps bsobj target;
 *)
 
