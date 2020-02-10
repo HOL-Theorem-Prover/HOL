@@ -4519,6 +4519,12 @@ Proof
     RW_TAC real_ss [DROP_INDICATOR]
 QED
 
+Theorem INDICATOR_EMPTY :
+    indicator {} = (\x. 0)
+Proof
+    SET_TAC [indicator]
+QED
+
 val negligible = new_definition ("negligible",
  ``negligible s <=> !a b. (indicator s has_integral (0)) (interval[a,b])``);
 
