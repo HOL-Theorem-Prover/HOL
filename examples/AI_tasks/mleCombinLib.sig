@@ -51,11 +51,7 @@ sig
   val is_nf : term -> bool
  
   (* generation *)
-  val random_cterm : int -> term
-  val cgen_random : int -> (int * int) -> term list 
-  val cgen_exhaustive : int -> term list
-  val cgen_synt : int -> term list
- 
-   
+  val random_nf : int -> term
+  val gen_nf_exhaustive : int -> term list
 
 end

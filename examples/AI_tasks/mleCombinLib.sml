@@ -39,13 +39,9 @@ fun all_pos tm =
    ------------------------------------------------------------------------- *)
 
 (* variables *)
-val cI = mk_var ("i",alpha)
+
 val cK = mk_var ("k",alpha)
 val cS = mk_var ("s",alpha)
-val cC = mk_var ("c",alpha)
-val cB = mk_var ("b",alpha)
-val cY = mk_var ("y",alpha)
-
 val cX = mk_var ("x",alpha)
 val cA = mk_var ("a",``:'a -> 'a -> 'a``)
 val cT = mk_var ("t",``:'a -> 'a``)
@@ -257,7 +253,8 @@ fun fast_lo_cnorm n eql maintm =
     loop maintm handle Break => NONE
   end
 
-fun is_nf tm = not (exists (C exists_match tm) eq_axl_bare)
+fun is_nf tm = 
+  not (exists (C exists_match tm) eq_axl_bare)
 fun contain_red tm =
   can (find_term (fn x => exists (C is_match x) eq_axl_bare)) tm
 
@@ -265,45 +262,38 @@ fun contain_red tm =
    Generating combinators
    ------------------------------------------------------------------------- *)
 
-fun random_cterm n = random_term [cA,cS,cK] (2*n-1,alpha)
+val s2 = mk_var ("s2", ``:'a -> 'a -> 'a``)
+val s1 = mk_var ("s1", ``:'a -> 'a``)
+val s0 = mk_var ("s0", alpha)
+val k1 = mk_var ("k1", ``:'a -> 'a``)
+val k0 = mk_var ("k0", alpha)
 
-fun cgen_random n (a,b) =
-  let 
-    val size = random_int (a,b)
-    val tml = List.tabulate (n, fn _ => random_cterm size)
-  in
-    mk_fast_set Term.compare tml
-  end 
+fun to_apply tm = case strip_comb tm of
+    (oper,[c1,c2]) => (
+    if term_eq oper s2 then list_mk_cA [cS, to_apply c1, to_apply c2]
+    else raise ERR "to_apply" "")
+  | (oper,[c1]) => (
+    if term_eq oper s1 then mk_cA (cS, to_apply c1)
+    else if term_eq oper k1 then mk_cA (cK, to_apply c1)
+    else raise ERR "to_apply" "")
+  | (oper,_) => (
+    if term_eq oper s0 then cS
+    else if term_eq oper k0 then cK
+    else raise ERR "to_apply" "")
+  | _ => raise ERR "to_apply" ""
 
-fun cgen_exhaustive size = gen_term [cA,cS,cK] (2*size-1,alpha)
+fun random_nf size = 
+  to_apply (random_term [s2,s1,s0,k1,k0] (size,alpha))
 
-fun cgen_synt_cache cache n = dfind n (!cache) handle NotFound =>
-  if n <= 1 then raise ERR "cgen_synt_aux" "" else
-    let 
-      val l = map pair_of_list (number_partition 2 n)  
-      fun f (n1,n2) =
-      let
-        val l1 = cgen_synt_cache cache n1
-        val l2 = cgen_synt_cache cache n2
-      in
-        filter is_nf (map mk_cA (cartesian_product l1 l2))
-      end
-      val l3 = List.concat (map f l)
-    in
-      cache := dadd n l3 (!cache); l3
-    end
-
-fun cgen_synt n = 
-  let 
-    val cache = ref (dnew Int.compare [(1,[cS,cK])])
-    val il = List.tabulate (n, fn x => x + 1)
-  in
-    List.concat (map (cgen_synt_cache cache) il)
-  end
+fun gen_nf_exhaustive size = 
+  map to_apply (gen_term [s2,s1,s0,k1,k0] (size,alpha))
 
 (*
+load "aiLib"; open aiLib;
 load "mleCombinLib"; open mleCombinLib;
-val tml = cgen_synt 10; length tml;
+load "psTermGen"; open psTermGen;
+val tml = gen_nf_exhaustive 10; length tml;
+val n = sum_real (List.tabulate (10,fn i => nterm [s2,s1,s0,k1,k0] (i,alpha)));
 *)
 
 end (* struct *)

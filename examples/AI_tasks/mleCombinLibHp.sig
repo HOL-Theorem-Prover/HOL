@@ -12,7 +12,8 @@ sig
   datatype combin = V1 | V2 | V3 | S | K | A of combin * combin 
   val combin_to_string : combin -> string
   val combin_compare : combin * combin -> order
-  
+  val combin_size : combin -> int
+
   val hp_norm : int -> combin -> combin option 
   val hp_nf : combin -> bool
   val cterm_to_hp : term -> combin

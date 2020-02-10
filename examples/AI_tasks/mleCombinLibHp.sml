@@ -122,14 +122,44 @@ fun hp_to_cterm c = case c of
    A (c1,c2) => mk_cA (hp_to_cterm c1, hp_to_cterm c2)
 
 (*
+load "aiLib"; open aiLib;
 load "mleCombinLib"; open mleCombinLib;
 load "mleCombinLibHp"; open mleCombinLibHp;
-val tml = cgen_synt 10; length tml;
-val hpl = map cterm_to_hp tml;
-all hp_nf hpl;
-val tm = random_cterm 20;
-val r1 = time (fast_lo_cnorm 1000 eq_axl_bare) tm;
-val r2 = time (hp_norm 1000) (cterm_to_hp tm);
+
+fun add_varl c = (A(A(A(c,V1),V2),V3));
+fun contains_sk c = case c of
+    S => true
+  | K => true
+  | V1 => false
+  | V2 => false
+  | V3 => false
+  | A (c1,c2) => contains_sk c1 orelse contains_sk c2;
+fun compare_csize (a,b) = Int.compare (combin_size a, combin_size b);
+fun smallest_csize l = hd (dict_sort compare_csize l);
+
+fun find_newex n d =
+  if dlength d >= 2200 then (d,n) else
+  let 
+    val c = cterm_to_hp (random_nf (random_int (1,20)))
+    val cnorm = valOf (hp_norm 100 (add_varl c)) handle Option => K 
+  in
+    if contains_sk cnorm then find_newex (n+1) d 
+    else if dmem cnorm d then
+      let val oldc = dfind cnorm d in
+        if compare_csize (c,oldc) = LESS 
+        then find_newex (n+1) (dadd cnorm c d) 
+        else find_newex (n+1) d
+      end
+    else 
+      (print_endline (its (dlength d + 1)); 
+       find_newex (n+1) (dadd cnorm c d))
+  end;
+
+val (dfull,ntry) = find_newex 0 (dempty combin_compare);
+
+val il = map (combin_size o snd) (dlist dfull);
+val statsl = dlist (count_dict (dempty Int.compare) 
+  (map (fn x => (x + 1) div 2) il));
 *)
 
 end (* struct *)

@@ -31,7 +31,10 @@ fun board_compare ((a,b,c),(d,e,f)) =
   ((a,b),(d,e))
 
 fun status_of ((c1,_,b),c2,n) =
-  let val nfo = if b then NONE else hp_norm 100 (A(A(A(c1,V1),V2),V3)) in
+  let val nfo = if b orelse c1 = V1 
+                then NONE 
+                else hp_norm 100 (A(A(A(c1,V1),V2),V3)) 
+  in
     if isSome nfo andalso valOf nfo = c2 then Win
     else if n <= 0 then Lose else Undecided
   end
@@ -61,11 +64,16 @@ fun add_apply sk n (c,pos) = case (c,pos) of
   | (K, []) => if n >= 1 then raise Redex else A(K,sk)
   | _ => raise ERR "add_apply" "position_mismatch"
 
-fun apply_move move ((c1,pos,_),c2,n) = case move of
-    AS => ((add_apply S 0 (c1,pos), pos @ [Left], false), c2, n-1)
-  | AK => ((add_apply K 0 (c1,pos), pos @ [Left], false), c2, n-1)
-  | NextPos => (((c1,next_pos pos, true), c2, n-1) 
-      handle HOL_ERR _ => raise Redex)
+fun apply_move move ((c1,pos,_),c2,n) = 
+  if c1 = V1 then case move of
+      AS => (S,[],false), c2, n-1)
+    | AK => (K,[],false), c2, n-1)
+    | NextPos => raise Redex
+  else case move of
+      AS => ((add_apply S 0 (c1,pos), pos @ [Left], false), c2, n-1)
+    | AK => ((add_apply K 0 (c1,pos), pos @ [Left], false), c2, n-1)
+    | NextPos => (((c1,next_pos pos, true), c2, n-1) 
+        handle HOL_ERR _ => raise Redex)
 
 fun available_movel board =
   filter (fn x => (ignore (apply_move x board); true) 
@@ -125,7 +133,7 @@ fun import_targetl name =
   let 
     val f = #read_boardl (#gameio (mleCombinSynt.rlobj))
     val boardl = f (targetdir ^ "/" ^ name)
-    fun g (a,b,c) = ((S,[],false), cterm_to_hp b, c)
+    fun g (a,b,c) = ((V1,[],false), cterm_to_hp b, c)
   in
     map g boardl
   end
@@ -164,7 +172,7 @@ val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 20}]
 
-val dim = 12
+val dim = 16
 fun dim_head_poli n = [dim,n]
 val tnnparam = map_assoc (dim_std (1,dim)) 
   [``$= : 'a -> 'a -> bool``,cT,v1,v2,v3,cA,cS,cK] @ 
@@ -233,6 +241,11 @@ val bsobj : (board,move) bsobj =
 val targetl = import_targetl "sy9";
 val target = List.nth (targetl,150);
 val _ = run_bigsteps bsobj target;
+
+(5 div 20)
+
+load "aiLib";
+
 *)
 
 

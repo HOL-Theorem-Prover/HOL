@@ -12,8 +12,24 @@ open HolKernel Abbrev boolLib aiLib numTheory arithmeticTheory
 numSyntax psTermGen
 
 val ERR = mk_HOL_ERR "mleDiophLib"
+val selfdir = HOLDIR ^ "/examples/AI_tasks"
+
+(* -------------------------------------------------------------------------
+   Types for graphs and polynomials
+   ------------------------------------------------------------------------- *)
+
+type graph = bool list
+val graph_compare = list_compare bool_compare
+fun graph_to_string graph = String.concatWith " " (map bts graph)
+fun string_to_graph s = map string_to_bool (String.tokens Char.isSpace s)
 
 type poly = int list list
+val poly_compare = list_compare (list_compare Int.compare)
+fun ilts il = String.concatWith " " (map its il)
+fun stil s = map string_to_int (String.tokens Char.isSpace s)
+fun poly_to_string poly = String.concatWith "," (map ilts poly)
+fun string_to_poly s = map stil (String.tokens (fn c => c = #",") s)
+fun poly_size poly = length (List.concat poly)
 
 (* -------------------------------------------------------------------------
    Parameters
@@ -29,7 +45,7 @@ val numberl = List.tabulate (modulo,I)
    Computing the Diophantine set of a formula
    ------------------------------------------------------------------------- *)
 
-fun eval_exp (i,n) = fn l => int_pow (List.nth (l,i)) n mod 16
+fun eval_exp (i,n) l = int_pow (List.nth (l,i)) n mod 16
 
 fun eval_mono il =
   let 
@@ -86,20 +102,21 @@ fun random_poly () =
 
 fun poly_size poly = length (List.concat poly)
 
-fun gen_diophset n d =
-  if dlength d >= n then d else
+fun gen_diophset n nmax d =
+  if dlength d >= nmax then (d,n) else
   let 
-    val poly = random_poly () 
+    val _ = if n mod 1000 = 0 then print_endline ("try " ^ its n) else ()
+    val poly = random_poly ()
     val set = dioph_set poly
   in
     if dmem set d then 
       let val oldpoly = dfind set d in
         if poly_size poly < poly_size oldpoly 
-        then (print "*"; gen_diophset n (dadd set poly d))
-        else (print "."; gen_diophset n d)
+        then gen_diophset (n+1) nmax (dadd set poly d)
+        else gen_diophset (n+1) nmax d
       end
     else (print_endline (its ((dlength d) + 1)); 
-          gen_diophset n (dadd set poly d))
+          gen_diophset (n+1) nmax (dadd set poly d))
   end
 
 (* -------------------------------------------------------------------------
@@ -122,11 +139,52 @@ fun term_of_poly poly =
   then mk_var ("start",``:num``)
   else list_mk_plus (map term_of_mono poly)
 
+(* -------------------------------------------------------------------------
+   Export for later re-usage in a more human-readable format
+   ------------------------------------------------------------------------- *)
+
+fun human_of_mono mono = 
+  let 
+    val _ = if null mono then raise ERR "term_of_mono" "" else ()
+    val (coeff,expl) = (hd mono, tl mono)
+    val iexpl = combine (first_n (length expl) ["k","x","y","z"], expl)
+    fun f (is,n) = if n = 0 then "" else is ^ 
+      (if n = 1 then "" else "^" ^ its n)
+    val coeffs = 
+      if not (all (fn x => x = 0) expl) andalso coeff = 1 
+      then "" else its coeff
+  in
+    String.concat (coeffs :: map f iexpl)
+  end
+
+fun human_of_poly poly = String.concatWith " + " (map human_of_mono poly)
+
+fun export_data (train,test) =
+  let 
+    val l = train @ test
+    val targetdir = selfdir ^ "/dioph_target"
+    val _ = mkDir_err targetdir
+    fun f1 (graph,poly) = "graph: " ^ ilts graph ^
+      "\npoly: " ^ poly_to_string poly ^ 
+      "\n%poly(human): " ^ human_of_poly poly
+    val il = map (poly_size o snd) l
+    val statsl = dlist (count_dict (dempty Int.compare) il);
+    fun f2 (i,j) = its i ^ "-" ^ its j
+    val train_sorted = 
+      dict_sort (cpl_compare (list_compare Int.compare) poly_compare) train
+    val test_sorted = 
+      dict_sort (cpl_compare (list_compare Int.compare) poly_compare) test
+  in
+    writel (targetdir ^ "/train_export") (map f1 train_sorted);
+    writel (targetdir ^ "/test_export") (map f1 test_sorted);
+    writel (targetdir ^ "/distrib") (map f2 statsl)  
+  end
+
 (*
 load "aiLib"; open aiLib;
 load "mleDiophLib"; open mleDiophLib;
-val d = gen_diophset 100 (dempty (list_compare Int.compare));
-val l = map_snd term_of_poly (dlist d);
+val (dfull,ntry) = gen_diophset 0 (dempty (list_compare Int.compare));
+val _ = export_human (dlist dfull);
 *)
 
 

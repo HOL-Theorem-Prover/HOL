@@ -17,33 +17,18 @@ val version = 1
 val selfdir = HOLDIR ^ "/examples/AI_tasks"
 
 (* -------------------------------------------------------------------------
-   Conversion of some object to string
-   ------------------------------------------------------------------------- *)
-
-fun blts graph = String.concatWith " " (map bts graph)
-fun stbl s = map string_to_bool (String.tokens Char.isSpace s)
-fun ilts il = String.concatWith " " (map its il)
-fun illts ill = String.concatWith "," (map ilts ill)
-fun stil s = map string_to_int (String.tokens Char.isSpace s)
-fun still s = map stil (String.tokens (fn c => c = #",") s)
-
-(* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
 
 type board = int list list * bool list * int
-fun string_of_board (a,b,c)= illts a ^ " -- " ^ blts b ^ " -- " ^ its c
+fun string_of_board (a,b,c)= 
+  poly_to_string a ^ " -- " ^ graph_to_string b ^ " -- " ^ its c
 
 fun board_compare ((a,b,c),(d,e,f)) =
-  cpl_compare (list_compare (list_compare Int.compare)) 
-              (list_compare bool_compare) 
-    ((a,b),(d,e))
+  cpl_compare poly_compare graph_compare ((a,b),(d,e))
 
 fun fullboard_compare ((a,b,c),(d,e,f)) =
-  triple_compare Int.compare
-                 (list_compare (list_compare Int.compare)) 
-                 (list_compare bool_compare)
-   ((c,a,b),(f,d,e))
+  triple_compare Int.compare poly_compare graph_compare ((c,a,b),(f,d,e))
 
 fun status_of (poly,graph,n) =
   if dioph_match poly graph then Win 
@@ -101,15 +86,15 @@ val game : (board,move) game =
 
 fun write_boardl file boardl =
   let val (l1,l2,l3) = split_triple boardl in
-    writel (file ^ "_poly") (map illts l1);
-    writel (file ^ "_graph") (map blts l2); 
+    writel (file ^ "_poly") (map poly_to_string l1);
+    writel (file ^ "_graph") (map graph_to_string l2); 
     writel (file ^ "_timer") (map its l3)
   end
 
 fun read_boardl file =
   let
-    val l1 = map still (readl_empty (file ^ "_poly"))
-    val l2 = map stbl (readl (file ^ "_graph"))
+    val l1 = map string_to_poly (readl_empty (file ^ "_poly"))
+    val l2 = map string_to_graph (readl (file ^ "_graph"))
     val l3 = map string_to_int (readl (file ^ "_timer"))
   in
     combine_triple (l1,l2,l3)
@@ -126,10 +111,13 @@ val targetdir = selfdir ^ "/dioph_target"
 fun graph_to_bl graph = map (fn x => mem x graph) numberl
 
 fun create_targetl l =
-  let fun f (graph,poly) = 
-    ([], graph_to_bl graph, 2 * length (List.concat poly)) 
+  let 
+    val (train,test) = part_pct (10.0/11.0) (shuffle l)
+    val _ = export_data (train,test)
+    fun f (graph,poly) = ([], graph_to_bl graph, 2 * poly_size poly) 
   in
-    dict_sort fullboard_compare (map f l)
+    (dict_sort fullboard_compare (map f train),
+     dict_sort fullboard_compare (map f test))
   end
 
 fun export_targetl name targetl = 
@@ -214,11 +202,10 @@ load "mlReinforce"; open mlReinforce;
 load "mleDiophLib"; open mleDiophLib;
 load "mleDiophSynt"; open mleDiophSynt;
 
-val d = gen_diophset 1000 (dempty (list_compare Int.compare));
-val targetl = create_targetl (dlist d); length targetl;
-val _ = export_targetl "dioph1000" targetl;
-
-val targetl = import_targetl "dioph1000"; length targetl;
+val (dfull,ntry) = gen_diophset 0 2200 (dempty (list_compare Int.compare));
+val (train,test) = create_targetl (dlist dfull); length train; length test;
+val _ = (export_targetl "train" train; export_targetl "test" test);
+val targetl = import_targetl "train"; length targetl;
 val r = rl_start (rlobj,extsearch) (mk_targetd targetl);
 
 (* todo restrict to lexico graphical order of polynomials *)
