@@ -280,7 +280,6 @@ fun to_apply tm = case strip_comb tm of
     if term_eq oper s0 then cS
     else if term_eq oper k0 then cK
     else raise ERR "to_apply" "")
-  | _ => raise ERR "to_apply" ""
 
 fun random_nf size = 
   to_apply (random_term [s2,s1,s0,k1,k0] (size,alpha))

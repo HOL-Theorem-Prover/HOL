@@ -13,7 +13,7 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlReinforce mleCombinLib mleCombinLibHp
 
 val ERR = mk_HOL_ERR "mleCombinSyntHp"
-val version = 3
+val version = 4
 val selfdir = HOLDIR ^ "/examples/AI_tasks"
 
 (* -------------------------------------------------------------------------
@@ -29,6 +29,15 @@ fun board_compare ((a,b,c),(d,e,f)) =
   (cpl_compare 
    (triple_compare combin_compare pos_compare bool_compare) combin_compare) 
   ((a,b),(d,e))
+
+fun fullboard_compare ((a,b,c),(d,e,f)) =
+  (triple_compare 
+     Int.compare
+    (triple_compare combin_compare pos_compare bool_compare) 
+     combin_compare
+  )   
+  ((c,a,b),(f,d,e))
+
 
 fun status_of ((c1,_,b),c2,n) =
   let val nfo = if b orelse c1 = V1 
@@ -65,15 +74,21 @@ fun add_apply sk n (c,pos) = case (c,pos) of
   | _ => raise ERR "add_apply" "position_mismatch"
 
 fun apply_move move ((c1,pos,_),c2,n) = 
-  if c1 = V1 then case move of
-      AS => (S,[],false), c2, n-1)
-    | AK => (K,[],false), c2, n-1)
+  if c1 = V1 then 
+    (
+    case move of
+      AS => ((S,[],false), c2, n-1)
+    | AK => ((K,[],false), c2, n-1)
     | NextPos => raise Redex
-  else case move of
+    )
+  else 
+    (
+    case move of
       AS => ((add_apply S 0 (c1,pos), pos @ [Left], false), c2, n-1)
     | AK => ((add_apply K 0 (c1,pos), pos @ [Left], false), c2, n-1)
     | NextPos => (((c1,next_pos pos, true), c2, n-1) 
-        handle HOL_ERR _ => raise Redex)
+                  handle HOL_ERR _ => raise Redex)
+    )
 
 fun available_movel board =
   filter (fn x => (ignore (apply_move x board); true) 
@@ -147,6 +162,37 @@ fun mk_targetd l1 =
   end
 
 (* -------------------------------------------------------------------------
+   Targets
+   ------------------------------------------------------------------------- *)
+
+val targetdir = selfdir ^ "/combin_target"
+
+fun create_targetl l =
+  let 
+    val (train,test) = part_pct (10.0/11.0) (shuffle l)
+    val _ = export_data (train,test)
+    fun f (headnf,combin) = ((V1,[],false), headnf , 2 * combin_size combin)
+  in
+    (dict_sort fullboard_compare (map f train),
+     dict_sort fullboard_compare (map f test))
+  end
+
+fun export_targetl name targetl = 
+  let val _ = mkDir_err targetdir in 
+    write_boardl (targetdir ^ "/" ^ name) targetl
+  end
+
+fun import_targetl name = read_boardl (targetdir ^ "/" ^ name)
+ 
+fun mk_targetd l1 =
+  let 
+    val l2 = number_snd 0 l1
+    val l3 = map (fn (x,i) => (x,(i,[]))) l2
+  in
+    dnew board_compare l3
+  end
+
+(* -------------------------------------------------------------------------
    Neural network representation of the board
    ------------------------------------------------------------------------- *)
 
@@ -186,7 +232,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleCombinSyntHp-" ^ its version, exwindow = 100000,
-   ncore = 30, ntarget = 100, nsim = 32000, decay = 1.0}
+   ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer}
@@ -194,12 +240,16 @@ val rlobj : (board,move) rlobj =
 val extsearch = mk_extsearch "mleCombinSyntHp.extsearch" rlobj
 
 (*
+load "aiLib"; open aiLib;
+load "mlReinforce"; open mlReinforce;
 load "mleCombinLibHp"; open mleCombinLibHp;
 load "mleCombinSyntHp"; open mleCombinSyntHp;
-load "mlReinforce"; open mlReinforce;
-load "aiLib"; open aiLib;
 
-val targetl = import_targetl "sy9";
+val (dfull,ntry) = gen_headnf 2200 (dempty combin_compare);
+val (train,test) = create_targetl (dlist dfull); length train; length test;
+val _ = (export_targetl "train" train; export_targetl "test" test);
+
+val targetl = import_targetl "train";
 val r = rl_start (rlobj,extsearch) (mk_targetd targetl);
 *)
 
@@ -241,11 +291,6 @@ val bsobj : (board,move) bsobj =
 val targetl = import_targetl "sy9";
 val target = List.nth (targetl,150);
 val _ = run_bigsteps bsobj target;
-
-(5 div 20)
-
-load "aiLib";
-
 *)
 
 

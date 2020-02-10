@@ -8,6 +8,8 @@ sig
   datatype move = AS | AK | NextPos
 
   (* target *)
+  val create_targetl : (combin * combin) list -> (board list * board list)
+  val export_targetl : string -> board list -> unit
   val import_targetl : string -> board list
   val mk_targetd : board list -> (board, int * bool list) Redblackmap.dict
 

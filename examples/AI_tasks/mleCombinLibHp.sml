@@ -11,6 +11,7 @@ struct
 open HolKernel Abbrev boolLib aiLib numTheory arithmeticTheory mleCombinLib
 
 val ERR = mk_HOL_ERR "mleCombinLibHp"
+val selfdir = HOLDIR ^ "/examples/AI_tasks"
 
 (* -------------------------------------------------------------------------
    Position
@@ -56,6 +57,13 @@ fun strip_A_aux c = case c of
   | _ => [c]
 fun strip_A c = rev (strip_A_aux c)
 
+fun list_mk_A_aux l = case l of
+    [] => raise ERR "list_mk_A" ""
+  | [c] => c
+  | a :: m => A(list_mk_A_aux m,a)
+
+fun list_mk_A l = list_mk_A_aux (rev l)
+
 fun combin_to_string c = case c of 
     S => "S"
   | K => "K"
@@ -64,6 +72,18 @@ fun combin_to_string c = case c of
   | V3 => "V3"
   | A _ => "(" ^ String.concatWith " " (map combin_to_string (strip_A c)) ^ ")"
 
+fun string_to_combin s = 
+  let 
+    val s' = if mem s ["S","K","V1","V2","V3"] then "(" ^ s ^ ")" else s
+    val sexp = singleton_of_list (lisp_parser s')
+    val assocl = map swap (map_assoc combin_to_string [S,K,V1,V2,V3])
+    fun parse sexp = case sexp of
+      Lterm l => list_mk_A (map parse l)
+    | Lstring s => assoc s assocl
+  in
+    parse sexp
+  end
+ 
 fun combin_compare (c1,c2) = case (c1,c2) of
     (A x, A y) => cpl_compare combin_compare combin_compare (x,y)
   | (_, A _) => LESS
@@ -121,46 +141,75 @@ fun hp_to_cterm c = case c of
    S => cS | K => cK | V1 => v1 | V2 => v2 | V3 => v3 |
    A (c1,c2) => mk_cA (hp_to_cterm c1, hp_to_cterm c2)
 
-(*
-load "aiLib"; open aiLib;
-load "mleCombinLib"; open mleCombinLib;
-load "mleCombinLibHp"; open mleCombinLibHp;
-
-fun add_varl c = (A(A(A(c,V1),V2),V3));
 fun contains_sk c = case c of
     S => true
   | K => true
   | V1 => false
   | V2 => false
   | V3 => false
-  | A (c1,c2) => contains_sk c1 orelse contains_sk c2;
-fun compare_csize (a,b) = Int.compare (combin_size a, combin_size b);
-fun smallest_csize l = hd (dict_sort compare_csize l);
+  | A (c1,c2) => contains_sk c1 orelse contains_sk c2
 
-fun find_newex n d =
-  if dlength d >= 2200 then (d,n) else
+fun compare_csize (a,b) = Int.compare (combin_size a, combin_size b)
+fun smallest_csize l = hd (dict_sort compare_csize l)
+
+fun gen_headnf_aux n nmax d =
+  if dlength d >= nmax then (d,n) else
   let 
     val c = cterm_to_hp (random_nf (random_int (1,20)))
-    val cnorm = valOf (hp_norm 100 (add_varl c)) handle Option => K 
+    val cnorm = valOf (hp_norm 100 (A(A(A(c,V1),V2),V3))) handle Option => K 
   in
-    if contains_sk cnorm then find_newex (n+1) d 
+    if contains_sk cnorm then gen_headnf_aux (n+1) nmax d 
     else if dmem cnorm d then
       let val oldc = dfind cnorm d in
         if compare_csize (c,oldc) = LESS 
-        then find_newex (n+1) (dadd cnorm c d) 
-        else find_newex (n+1) d
+        then gen_headnf_aux (n+1) nmax (dadd cnorm c d) 
+        else gen_headnf_aux (n+1) nmax d
       end
     else 
       (print_endline (its (dlength d + 1)); 
-       find_newex (n+1) (dadd cnorm c d))
-  end;
+       gen_headnf_aux (n+1) nmax (dadd cnorm c d))
+  end
 
-val (dfull,ntry) = find_newex 0 (dempty combin_compare);
+fun gen_headnf nmax d = gen_headnf_aux 0 nmax d
 
-val il = map (combin_size o snd) (dlist dfull);
-val statsl = dlist (count_dict (dempty Int.compare) 
-  (map (fn x => (x + 1) div 2) il));
-*)
+(* -------------------------------------------------------------------------
+   Export
+   ------------------------------------------------------------------------- *)
+
+val targetdir = selfdir ^ "/combin_target"
+
+fun export_data (train,test) =
+  let 
+    val l = train @ test
+    val _ = mkDir_err targetdir
+    fun f1 (headnf,witness) = 
+      "headnf: " ^ combin_to_string headnf ^
+      "\ncombin: " ^ combin_to_string witness 
+    val il = map (combin_size o snd) l
+    val statsl = dlist (count_dict (dempty Int.compare) il);
+    fun f2 (i,j) = its i ^ "-" ^ its j
+    val train_sorted = 
+      dict_sort (cpl_compare combin_compare combin_compare) train
+    val test_sorted = 
+      dict_sort (cpl_compare combin_compare combin_compare) test
+  in
+    writel (targetdir ^ "/train_export") (map f1 train_sorted);
+    writel (targetdir ^ "/test_export") (map f1 test_sorted);
+    writel (targetdir ^ "/distrib") (map f2 statsl)  
+  end
+
+fun import_data file =
+  let 
+    val sl = readl (targetdir ^ "/" ^ file)
+    val l = map pair_of_list (mk_batch 2 sl) 
+    fun f (a,b) = 
+      (
+      string_to_combin (snd (split_string "headnf: " a)), 
+      string_to_combin (snd (split_string "combin: " b))
+      )
+  in
+    map f l
+  end
 
 end (* struct *)
 

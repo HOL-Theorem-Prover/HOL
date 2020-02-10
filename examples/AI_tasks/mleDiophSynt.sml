@@ -215,6 +215,7 @@ load "mleDiophSynt"; open mleDiophSynt;
 val (dfull,ntry) = gen_diophset 0 2200 (dempty (list_compare Int.compare));
 val (train,test) = create_targetl (dlist dfull); length train; length test;
 val _ = (export_targetl "train" train; export_targetl "test" test);
+
 val targetl = import_targetl "train"; length targetl;
 val r = rl_start (rlobj,extsearch) (mk_targetd targetl);
 *)

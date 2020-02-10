@@ -146,7 +146,7 @@ fun term_of_poly poly =
   else list_mk_plus (map term_of_mono poly)
 
 (* -------------------------------------------------------------------------
-   Export for later re-usage in a more human-readable format
+   Export
    ------------------------------------------------------------------------- *)
 
 fun human_of_mono mono = 
