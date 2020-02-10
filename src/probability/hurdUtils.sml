@@ -1248,10 +1248,9 @@ val ASM_MATCH_MP_TAC = ASM_MATCH_MP_TAC_N 10;
 
 val art = ASM_REWRITE_TAC;
 
-(* Tacticals for better expressivity, added by Chun Tian *)
+fun fix   ts = MAP_EVERY Q.X_GEN_TAC    ts;
+fun set   ts = MAP_EVERY Q.ABBREV_TAC   ts;
+fun unset ts = MAP_EVERY Q.UNABBREV_TAC ts;
+fun take  ts = MAP_EVERY Q.EXISTS_TAC   ts;
 
-fun fix   ts = MAP_EVERY Q.X_GEN_TAC ts;        (* from HOL Light *)
-fun set   ts = MAP_EVERY Q.ABBREV_TAC ts;       (* from HOL mizar mode *)
-fun take  ts = MAP_EVERY Q.EXISTS_TAC ts;       (* from HOL mizar mode *)
-
-end; (* probTools *)
+end; (* hurdUtils *)

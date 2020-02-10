@@ -26,7 +26,7 @@ open HolKernel Parse boolLib bossLib;
 
 open arithmeticTheory prim_recTheory numLib combinTheory optionTheory
      res_quanTheory res_quanTools pairTheory jrhUtils mesonLib
-     pred_setTheory pred_setLib listTheory quotientTheory;
+     pred_setTheory pred_setLib listTheory quotientTheory relationTheory;
 
 open realTheory realLib seqTheory transcTheory real_sigmaTheory RealArith;
 
@@ -36,7 +36,6 @@ open hurdUtils util_probTheory extrealTheory sigma_algebraTheory
 val _ = new_theory "borel";
 
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) >> ARITH_TAC; (* numLib *)
-val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
 fun METIS ths tm = prove(tm, METIS_TAC ths);
 
@@ -91,6 +90,15 @@ val INDICATOR_FN_INTER = store_thm (* new *)
       by METIS_TAC [indicator_fn_def]
  >> RW_TAC std_ss [indicator_fn_def, mul_lone, IN_INTER, mul_lzero]
  >> FULL_SIMP_TAC std_ss []);
+
+val INDICATOR_FN_MUL_INTER = store_thm
+  ("INDICATOR_FN_MUL_INTER",
+  ``!A B. (\t. (indicator_fn A t) * (indicator_fn B t)) = (\t. indicator_fn (A INTER B) t)``,
+    RW_TAC std_ss [FUN_EQ_THM]
+ >> `indicator_fn (A INTER B) t = if t IN (A INTER B) then 1 else 0`
+       by METIS_TAC [indicator_fn_def]
+ >> RW_TAC std_ss [indicator_fn_def, mul_lone, IN_INTER, mul_lzero]
+ >> FULL_SIMP_TAC real_ss []);
 
 val INDICATOR_FN_INTER_MIN = store_thm (* new *)
   ("INDICATOR_FN_INTER_MIN",
@@ -286,15 +294,45 @@ Proof
  >> FULL_SIMP_TAC std_ss [FINITE_COUNT, FINITE_DELETE, IN_COUNT, IN_DELETE, indicator_fn_def]
 QED
 
+Theorem INDICATOR_FN_ABS[simp] :
+    !s. abs o (indicator_fn s) = indicator_fn s
+Proof
+    GEN_TAC >> FUN_EQ_TAC
+ >> RW_TAC std_ss [o_DEF]
+ >> REWRITE_TAC [abs_refl, INDICATOR_FN_POS]
+QED
+
+Theorem INDICATOR_FN_ABS_MUL :
+    !f s. abs o (\x. f x * indicator_fn s x) = (\x. (abs o f) x * indicator_fn s x)
+Proof
+    RW_TAC std_ss [o_DEF, abs_mul]
+ >> FUN_EQ_TAC
+ >> RW_TAC std_ss []
+ >> Suff `abs (indicator_fn s x) = indicator_fn s x` >- rw []
+ >> rw [abs_refl, INDICATOR_FN_POS]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Positive and negative parts of functions                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val fn_plus_def = Define (* f+ *)
+val fn_plus_def = Define (* f^+ *)
    `fn_plus (f :'a -> extreal) = (\x. if 0 < f x then f x else 0)`;
 
-val fn_minus_def = Define (* f- *)
+val _ = overload_on ("TC", ``fn_plus``); (* relationTheory *)
+
+val fn_minus_def = Define (* f^- *)
    `fn_minus (f :'a -> extreal) = (\x. if f x < 0 then ~(f x) else 0)`;
+
+val _ = add_rule { fixity = Suffix 2100,
+                   block_style = (AroundEachPhrase, (Portable.CONSISTENT,0)),
+                   paren_style = OnlyIfNecessary,
+                   pp_elements = [TOK "^-"],
+                   term_name = "fn_minus"};
+val _ = Unicode.unicode_version {u = Unicode.UChar.sup_minus, tmnm = "fn_minus"};
+val _ = TeX_notation {hol = Unicode.UChar.sup_minus,
+                      TeX = ("\\HOLTokenSupMinus{}", 1)};
+val _ = TeX_notation {hol = "^-", TeX = ("\\HOLTokenSupMinus{}", 1)};
 
 (* alternative definitions of fn_plus and fn_minus using max/min *)
 val FN_PLUS_ALT = store_thm
@@ -305,6 +343,16 @@ val FN_PLUS_ALT = store_thm
  >- (`~(f x <= 0)` by PROVE_TAC [let_antisym] >> fs [])
  >> `f x <= 0` by PROVE_TAC [extreal_lt_def]
  >> fs []);
+
+(* !f. fn_plus f = (\x. max 0 (f x)) *)
+val FN_PLUS_ALT' = save_thm
+  ("FN_PLUS_ALT'", ONCE_REWRITE_RULE [max_comm] FN_PLUS_ALT);
+
+Theorem fn_plus : (* original definition *)
+    !f x. fn_plus f x = max 0 (f x)
+Proof
+    RW_TAC std_ss [FN_PLUS_ALT']
+QED
 
 val FN_MINUS_ALT = store_thm
   ("FN_MINUS_ALT", ``!f. fn_minus f = (\x. -min (f x) 0)``,
@@ -317,6 +365,16 @@ val FN_MINUS_ALT = store_thm
  >> Cases_on `f x <= 0`
  >- (`f x = 0` by PROVE_TAC [le_antisym] >> fs [neg_0])
  >> fs [neg_0]);
+
+(* |- !f. fn_minus f = (\x. -min 0 (f x)) *)
+val FN_MINUS_ALT' = save_thm
+  ("FN_MINUS_ALT'", ONCE_REWRITE_RULE [min_comm] FN_MINUS_ALT);
+
+Theorem fn_minus : (* original definition *)
+    !f x. fn_minus f x = -min 0 (f x)
+Proof
+    RW_TAC std_ss [FN_MINUS_ALT']
+QED
 
 val FN_DECOMP = store_thm (* new *)
   ("FN_DECOMP", ``!f x. f x = fn_plus f x - fn_minus f x``,
@@ -581,21 +639,23 @@ val FN_MINUS_ADD_LE = store_thm
  >> `0 < -(f x + g x) <=> f x + g x < 0` by PROVE_TAC [neg_0, lt_neg] >> POP_ORW
  >> REWRITE_TAC []);
 
-val FN_PLUS_LE_ABS = store_thm
-  ("FN_PLUS_LE_ABS", ``!f x. fn_plus f x <= abs (f x)``,
-    rpt GEN_TAC
- >> REWRITE_TAC [SIMP_RULE std_ss [o_DEF] FN_ABS]
+Theorem FN_PLUS_LE_ABS :
+    !f x. fn_plus f x <= abs (f x)
+Proof
+    rpt GEN_TAC >> REWRITE_TAC [SIMP_RULE std_ss [o_DEF] FN_ABS]
  >> ACCEPT_TAC
-      (REWRITE_RULE [le_refl, add_rzero, FN_MINUS_POS]
-                    (Q.SPECL [`fn_plus f x`, `fn_plus f x`, `0`, `fn_minus f x`] le_add2)));
+      (((REWRITE_RULE [le_refl, add_rzero, FN_MINUS_POS]) o
+        (Q.SPECL [`fn_plus f x`, `fn_plus f x`, `0`, `fn_minus f x`])) le_add2)
+QED
 
-val FN_MINUS_LE_ABS = store_thm
-  ("FN_MINUS_LE_ABS", ``!f x. fn_minus f x <= abs (f x)``,
-    rpt GEN_TAC
- >> REWRITE_TAC [SIMP_RULE std_ss [o_DEF] FN_ABS]
+Theorem FN_MINUS_LE_ABS :
+    !f x. fn_minus f x <= abs (f x)
+Proof
+    rpt GEN_TAC >> REWRITE_TAC [SIMP_RULE std_ss [o_DEF] FN_ABS]
  >> ACCEPT_TAC
-      (REWRITE_RULE [le_refl, add_lzero, FN_PLUS_POS]
-                    (Q.SPECL [`0`, `fn_plus f x`, `fn_minus f x`, `fn_minus f x`] le_add2)));
+      (((REWRITE_RULE [le_refl, add_lzero, FN_PLUS_POS]) o
+        (Q.SPECL [`0`, `fn_plus f x`, `fn_minus f x`, `fn_minus f x`])) le_add2)
+QED
 
 (* ******************************************* *)
 (*   Non-negative functions                    *)
@@ -607,6 +667,10 @@ val nonneg_def = Define
 val nonneg_abs = store_thm
   ("nonneg_abs", ``!f. nonneg (abs o f)``,
     RW_TAC std_ss [o_DEF, nonneg_def, abs_pos]);
+
+val nonneg_fn_abs = store_thm
+  ("nonneg_fn_abs", ``!f. nonneg f ==> (abs o f = f)``,
+    RW_TAC std_ss [nonneg_def, o_DEF, FUN_EQ_THM, abs_refl]);
 
 val nonneg_fn_plus = store_thm
   ("nonneg_fn_plus", ``!f. nonneg f ==> (fn_plus f = f)``,
@@ -1657,6 +1721,18 @@ val IN_MEASURABLE_BOREL_LE = store_thm
   >> `{x | g x < f x} INTER space a IN subsets a` by RW_TAC std_ss [IN_MEASURABLE_BOREL_LT]
   >> METIS_TAC [algebra_def, IN_MEASURABLE_BOREL, sigma_algebra_def]);
 
+val IN_MEASURABLE_BOREL_EQ = store_thm
+  ("IN_MEASURABLE_BOREL_EQ",
+ ``!f g M. (!x. x IN m_space M ==> (f x = g x)) /\
+      g IN measurable (m_space M,measurable_sets M) Borel ==>
+      f IN measurable (m_space M,measurable_sets M) Borel``,
+  RW_TAC std_ss [] THEN FULL_SIMP_TAC std_ss [IN_MEASURABLE_BOREL] THEN
+  CONJ_TAC THENL
+  [EVAL_TAC THEN SRW_TAC[] [IN_DEF, space_def, IN_FUNSET], ALL_TAC] THEN
+  GEN_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `c`) THEN
+  MATCH_MP_TAC EQ_IMPLIES THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+  ASM_SET_TAC [space_def]);
+
 (*****************************************************)
 
 val BOREL_MEASURABLE_SETS_RO_r = prove (
@@ -2253,6 +2329,14 @@ val IN_MEASURABLE_BOREL_CONST = store_thm
           >> METIS_TAC [extreal_lt_def])
  >> METIS_TAC [sigma_algebra_def,algebra_def,INTER_IDEMPOT,DIFF_EMPTY]);
 
+Theorem IN_MEASURABLE_BOREL_CONST' :
+    !a k. sigma_algebra a ==> (\x. k) IN measurable a Borel
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST
+ >> Q.EXISTS_TAC `k` >> RW_TAC std_ss []
+QED
+
 val IN_MEASURABLE_BOREL_INDICATOR = store_thm
   ("IN_MEASURABLE_BOREL_INDICATOR",
   ``!a A f. sigma_algebra a /\ A IN subsets a /\
@@ -2341,6 +2425,14 @@ val IN_MEASURABLE_BOREL_ABS = store_thm
  >> REWRITE_TAC [GSYM ABS_BETWEEN]
  >> ASM_REWRITE_TAC [REAL_ADD_LID, REAL_SUB_LZERO, REAL_SUB_RZERO]
  >> METIS_TAC [REAL_LET_ANTISYM, REAL_NOT_LE]);
+
+Theorem IN_MEASURABLE_BOREL_ABS' :
+    !a f. sigma_algebra a /\ f IN measurable a Borel ==> (abs o f) IN measurable a Borel
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS
+ >> Q.EXISTS_TAC `f` >> RW_TAC std_ss [o_DEF]
+QED
 
 val IN_MEASURABLE_BOREL_SQR = store_thm
   ("IN_MEASURABLE_BOREL_SQR",
@@ -2449,6 +2541,7 @@ val IN_MEASURABLE_BOREL_SUB = store_thm
       Cases_on `f x` >> Cases_on `g x` \\
       METIS_TAC [le_infty, extreal_ainv_def, extreal_sub_def, extreal_add_def, real_sub] ]);
 
+(* cf. IN_MEASURABLE_BOREL_TIMES (lebesgueTheory) for a more general version *)
 val IN_MEASURABLE_BOREL_MUL = store_thm
   ("IN_MEASURABLE_BOREL_MUL",
   ``!a f g h. sigma_algebra a /\ f IN measurable a Borel  /\
@@ -2609,6 +2702,22 @@ val IN_MEASURABLE_BOREL_MAX = store_thm
          ({x | f x < c} INTER space a) INTER ({x | g x < c} INTER space a)`
         by METIS_TAC [INTER_ASSOC, INTER_COMM, INTER_IDEMPOT]
  >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER]);
+
+val IN_MEASURABLE_BOREL_MIN = store_thm
+  ("IN_MEASURABLE_BOREL_MIN",
+  ``!a f g. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel
+        ==> (\x. min (f x) (g x)) IN measurable a Borel``,
+    RW_TAC std_ss [IN_MEASURABLE_BOREL, extreal_min_def, IN_FUNSET, IN_UNIV]
+ >> Know `!c. {x | (if f x <= g x then f x else g x) < c} =
+              {x | f x < c} UNION {x | g x < c}`
+ >- (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_UNION] \\
+     EQ_TAC >- RW_TAC std_ss [] \\
+     RW_TAC std_ss [] >- METIS_TAC [let_trans] \\
+     METIS_TAC [extreal_lt_def, lt_trans]) >> DISCH_TAC
+ >> `!c. {x | (if f x <= g x then f x else g x) < c} INTER space a =
+         ({x | f x < c} INTER space a) UNION ({x | g x < c} INTER space a)`
+       by ASM_SET_TAC []
+ >> METIS_TAC [sigma_algebra_def, ALGEBRA_UNION]);
 
 val IN_MEASURABLE_BOREL_MONO_SUP = store_thm
   ("IN_MEASURABLE_BOREL_MONO_SUP",
@@ -3568,7 +3677,7 @@ QED
    all empty sets, then sort the rest of sets to guarantee that the first n
    sets still form a right-open interval.  -- Chun Tian, 26/1/2020
  *)
-local open relationTheory rich_listTheory sortingTheory
+local open rich_listTheory sortingTheory
 in
 val lborel0_finite_additive = store_thm (
    "lborel0_finite_additive", ``finite_additive lborel0``,
@@ -3600,8 +3709,7 @@ val lborel0_finite_additive = store_thm (
  >> Q.ABBREV_TAC `n0 = LENGTH filtered`
  (* n0 <= n *)
  >> Know `n0 <= LENGTH (COUNT_LIST n)`
- >- (Q.UNABBREV_TAC `n0` \\
-     Q.UNABBREV_TAC `filtered` \\
+ >- (unset [`n0`, `filtered`] \\
      REWRITE_TAC [LENGTH_FILTER_LEQ])
  >> DISCH_THEN (ASSUME_TAC o (REWRITE_RULE [LENGTH_COUNT_LIST]))
  >> Know `BIGUNION (IMAGE f (count n)) = BIGUNION (IMAGE f (set filtered))`
@@ -3627,8 +3735,7 @@ val lborel0_finite_additive = store_thm (
          DISJ1_TAC >> NTAC 2 STRIP_TAC \\
          MATCH_MP_TAC pos_not_neginf \\
          fs [positive_def, measure_def, measurable_sets_def]) \\
-     Q.UNABBREV_TAC `empties` \\
-     Q.UNABBREV_TAC `filtered` \\
+     unset [`empties`, `filtered`] \\
      RW_TAC std_ss [Once EXTENSION, MEM_FILTER, MEM_COUNT_LIST,
                     IN_DIFF, IN_COUNT] \\
      EQ_TAC >> RW_TAC std_ss []) >> Rewr'
@@ -3751,8 +3858,7 @@ val lborel0_finite_additive = store_thm (
          fs [positive_def, measure_def, measurable_sets_def]) \\
      MATCH_MP_TAC INJ_IMAGE \\
      Q.EXISTS_TAC `set sorted` \\
-     Q.UNABBREV_TAC `h` \\
-     Q.UNABBREV_TAC `n0` >> rw [INJ_DEF, EL_MEM] \\
+     unset [`h`, `n0`] >> rw [INJ_DEF, EL_MEM] \\
      METIS_TAC [EL_ALL_DISTINCT_EL_EQ]) >> Rewr'
  (* clean up useless assumptions *)
  >> Q.PAT_X_ASSUM `GENLIST _ n0 = MAP f filtered`                K_TAC
@@ -3809,8 +3915,7 @@ val lborel0_finite_additive = store_thm (
  >- (rpt STRIP_TAC >> `i < n0` by RW_TAC arith_ss [] \\
      Q.PAT_X_ASSUM `!i j. i < j /\ j < n0 ==> P`
        (MP_TAC o Q.SPECL [`i`, `j`]) \\
-     Q.UNABBREV_TAC `n0` \\
-     Q.UNABBREV_TAC `R` >> RW_TAC std_ss [] \\
+     unset [`n0`, `R`] >> RW_TAC std_ss [] \\
      CCONTR_TAC \\
     `h i IN subsets right_open_intervals /\
      h j IN subsets right_open_intervals` by PROVE_TAC [] \\
@@ -3878,8 +3983,7 @@ val lborel0_finite_additive = store_thm (
     `b1 < a2` by METIS_TAC [REAL_LT_LE] \\ (* [a1, b1) < [a2, b2) *)
      Q.PAT_X_ASSUM `b1 <> a2` K_TAC \\
      Q.PAT_X_ASSUM `b1 <= a2` K_TAC \\
-     Q.UNABBREV_TAC `b1` \\
-     Q.UNABBREV_TAC `a2` \\
+     unset [`b1`, `a2`] \\
      Know `h i <> {} /\ h i IN subsets right_open_intervals` >- PROVE_TAC [] \\
      DISCH_THEN (STRIP_ASSUME_TAC o
                  (REWRITE_RULE [in_right_open_intervals_nonempty])) \\
@@ -4289,7 +4393,7 @@ Proof
      REWRITE_TAC [Once ADD_COMM, GSYM SUC_ONE_ADD] \\
      METIS_TAC [REAL_HALF_BETWEEN, POW_POS_LT, REAL_LT_MUL]) >> DISCH_TAC
  >> Know `!n. J n SUBSET H n`
- >- (GEN_TAC >> Q.UNABBREV_TAC `J` >> Q.UNABBREV_TAC `H` >> BETA_TAC \\
+ >- (GEN_TAC >> unset [`J`, `H`] >> BETA_TAC \\
      RW_TAC std_ss [SUBSET_DEF, IN_INTERVAL, in_right_open_interval] \\
      MATCH_MP_TAC REAL_LT_IMP_LE >> art []) >> DISCH_TAC
  >> Know `!n. J n <> {}`
@@ -4642,6 +4746,12 @@ Proof
     PROVE_TAC [lborel_def, GSYM SPACE, CLOSED_PAIR_EQ, space_borel]
 QED
 
+Theorem m_space_lborel :
+    m_space lborel = space borel
+Proof
+    PROVE_TAC [lborel_def, GSYM SPACE, CLOSED_PAIR_EQ]
+QED
+
 Theorem sets_lborel :
     measurable_sets lborel = subsets borel
 Proof
@@ -4935,6 +5045,9 @@ Definition lebesgue_def :
               (\A. sup {Normal (integral (line n) (indicator A)) | n IN UNIV}))
 End
 
+(* MATHEMATICAL BOLD SCRIPT CAPITAL L, for its special position in AE *)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x1D4DB, tmnm = "lebesgue"};
+
 Theorem space_lebesgue :
     m_space lebesgue = univ(:real)
 Proof
@@ -5062,17 +5175,11 @@ Proof
     SIMP_TAC std_ss [measure_def, lebesgue_def]
 QED
 
-Theorem indicator_empty :
-    indicator {} = (\x. 0)
-Proof
-    SET_TAC [indicator]
-QED
-
 Theorem positive_lebesgue :
     positive lebesgue
 Proof
   SIMP_TAC std_ss [lebesgue_def, positive_def, sets_lebesgue, measure_lebesgue] THEN
-  SIMP_TAC std_ss [indicator_empty, IN_UNIV, INTEGRAL_0, extreal_of_num_def] THEN
+  SIMP_TAC std_ss [INDICATOR_EMPTY, IN_UNIV, INTEGRAL_0, extreal_of_num_def] THEN
    REWRITE_TAC [SET_RULE ``{Normal 0 | n | T} = {Normal 0}``, sup_sing] THEN
   RW_TAC std_ss [] THEN MATCH_MP_TAC le_sup_imp THEN
   ONCE_REWRITE_TAC [GSYM SPECIFICATION] THEN SIMP_TAC std_ss [GSPECIFICATION] THEN
@@ -5264,7 +5371,7 @@ Proof
 [GEN_TAC THEN Induct_on `m` THENL
   [REWRITE_TAC [realTheory.sum, LT] THEN
   REWRITE_TAC [SET_RULE ``{f i | i | F} = {}``, BIGUNION_EMPTY] THEN
-  SIMP_TAC real_ss [indicator_empty, INTEGRAL_0], ALL_TAC] THEN
+  SIMP_TAC real_ss [INDICATOR_EMPTY, INTEGRAL_0], ALL_TAC] THEN
  KNOW_TAC ``!m. BIGUNION {(f:num->real->bool) i | i < m} IN
                 measurable_sets lebesgue`` THENL
  [GEN_TAC THEN MATCH_MP_TAC lebesgueI THEN GEN_TAC THEN
@@ -5629,20 +5736,36 @@ val AE_def = Define `$AE = \P. almost_everywhere lebesgue P`;
 val _ = set_fixity "AE" Binder;
 val _ = associate_restriction ("AE", "almost_everywhere");
 
+(* LATIN CAPITAL LETTER AE (doesn't look good)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x00C6, tmnm = "AE"};
+ *)
+
 val AE_THM = store_thm
-  ("AE_THM", ``!m P. (AE x::m. P x) = almost_everywhere m P``,
+  ("AE_THM", ``!m P. (AE x::m. P x) <=> almost_everywhere m P``,
     SIMP_TAC std_ss [almost_everywhere_def]);
 
-(* lebesgue is the default measure used in `AE x. ...` with a restriction *)
+(* `lebesgue` is the default measure used in `AE x. ...` (without restriction) *)
 val AE_default = store_thm
-  ("AE_default", ``!P. (AE x. P x) = (AE x::lebesgue. P x)``,
+  ("AE_default", ``!P. (AE x. P x) <=> (AE x::lebesgue. P x)``,
     RW_TAC std_ss [AE_def]);
 
-val AE_ALT = store_thm (* [1, p.89] *)
-  ("AE_ALT", ``!m P. (AE x::m. P x) =
-                     ?N. null_set m N /\ {x | x IN m_space m /\ ~P x} SUBSET N``,
+(* see [1, p.89] *)
+Theorem AE_ALT :
+    !m P. (AE x::m. P x) <=>
+          ?N. null_set m N /\ {x | x IN m_space m /\ ~P x} SUBSET N
+Proof
     RW_TAC std_ss [AE_THM, almost_everywhere_def, SUBSET_DEF, GSPECIFICATION, IN_DIFF]
- >> METIS_TAC []);
+ >> METIS_TAC []
+QED
+
+Theorem AE_filter : (* was: AE + ae_filter *)
+    !m P. (AE x::m. P x) <=>
+          ?N. N IN null_set m /\ {x | x IN m_space m /\ x NOTIN P} SUBSET N
+Proof
+    RW_TAC std_ss [AE_ALT]
+ >> EQ_TAC >> rpt STRIP_TAC >> Q.EXISTS_TAC `N` (* 2 subgoals, same tactics *)
+ >> fs [IN_APP]
+QED
 
 val FORALL_IMP_AE = store_thm
   ("FORALL_IMP_AE",
@@ -5650,7 +5773,6 @@ val FORALL_IMP_AE = store_thm
     RW_TAC std_ss [AE_THM, almost_everywhere_def]
  >> Q.EXISTS_TAC `{}`
  >> RW_TAC std_ss [NULL_SET_EMPTY, IN_DIFF, NOT_IN_EMPTY]);
-
 
 (* ------------------------------------------------------------------------- *)
 (* Some Useful Theorems about Almost everywhere (ported by Waqar Ahmed)      *)
@@ -5693,6 +5815,13 @@ Proof
   MATCH_MP_TAC INCREASING THEN ASM_SIMP_TAC std_ss [MEASURE_SPACE_INCREASING] THEN
   `N SUBSET m_space M` by METIS_TAC [MEASURABLE_SETS_SUBSET_SPACE] THEN
   ASM_SET_TAC []
+QED
+
+Theorem AE_NOT_IN :
+    !N M. null_set M N ==> AE x::M. x NOTIN N
+Proof
+    rw [AE_ALT, EXTENSION] >> Q.EXISTS_TAC `N`
+ >> ASM_SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION] >> rw [IN_DEF]
 QED
 
 Theorem AE_not_in :

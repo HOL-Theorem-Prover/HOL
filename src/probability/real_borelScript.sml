@@ -851,18 +851,7 @@ Proof
    SIMP_TAC std_ss [], ALL_TAC] THEN
   METIS_TAC [OPEN_HALFSPACE_COMPONENT_LT, borel_open]
 QED
-
-Theorem REAL_ARCH_INV : (* was: reals_Archimedean *)
-    !x:real. 0 < x ==> ?n. inv &(SUC n) < x
-Proof
-  RW_TAC real_ss [REAL_INV_1OVER] THEN SIMP_TAC real_ss [REAL_LT_LDIV_EQ] THEN
-  ONCE_REWRITE_TAC [REAL_MUL_SYM] THEN
-  ASM_SIMP_TAC real_ss [GSYM REAL_LT_LDIV_EQ] THEN
-  MP_TAC (ISPEC ``1 / x:real`` SIMP_REAL_ARCH) THEN STRIP_TAC THEN
-  Q.EXISTS_TAC `n` THEN FULL_SIMP_TAC real_ss [real_div] THEN
-  RULE_ASSUM_TAC (ONCE_REWRITE_RULE [GSYM REAL_LT_INV_EQ]) THEN
-  REWRITE_TAC [ADD1, GSYM add_ints] THEN ASM_REAL_ARITH_TAC
-QED
+val borel_eq_halfspace_less = borel_eq_less;
 
 Theorem borel_eq_le : (* was: borel_eq_halfspace_le *)
     borel = sigma UNIV (IMAGE (\a. {x | x <= a}) UNIV)
@@ -889,7 +878,7 @@ Proof
     BIGUNION {{x | x <= a - 1 / &(SUC n)} | n IN UNIV}`` THENL
   [RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION, IN_UNIV] THEN
    ASM_CASES_TAC ``x < a:real`` THENL
-   [ASM_REWRITE_TAC [] THEN MP_TAC (ISPEC ``a - x:real`` REAL_ARCH_INV) THEN
+   [ASM_REWRITE_TAC [] THEN MP_TAC (ISPEC ``a - x:real`` REAL_ARCH_INV_SUC) THEN
     ASM_REWRITE_TAC [REAL_SUB_LT] THEN STRIP_TAC THEN
     RULE_ASSUM_TAC (ONCE_REWRITE_RULE [REAL_ARITH
      ``a < b - c <=> c < b - a:real``]) THEN
@@ -918,6 +907,7 @@ Proof
   SIMP_TAC std_ss [GSYM borel_eq_less] THEN GEN_TAC THEN
   MATCH_MP_TAC borel_closed THEN SIMP_TAC std_ss [CLOSED_HALFSPACE_COMPONENT_LE]
 QED
+val borel_eq_halfspace_le = borel_eq_le;
 
 Theorem borel_eq_gr : (* borel_eq_greaterThan *)
     borel = sigma UNIV (IMAGE (\a. {x | a < x}) UNIV)
@@ -956,6 +946,7 @@ Proof
   SIMP_TAC std_ss [subsets_def] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
   SIMP_TAC std_ss [IN_IMAGE, IN_UNIV] THEN METIS_TAC []
 QED
+val borel_eq_greaterThan = borel_eq_gr;
 
 Theorem borel_eq_ge_le : (* borel_eq_atLeastAtMost *)
     borel = sigma UNIV (IMAGE (\(a,b). {x | a <= x /\ x <= b}) UNIV)
@@ -996,6 +987,7 @@ Proof
   RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_UNIV] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
   SET_TAC []
 QED
+val borel_eq_atLeastAtMost = borel_eq_ge_le;
 
 (* this is the original definition *)
 val borel_def = save_thm ("borel_def", borel_eq_le);

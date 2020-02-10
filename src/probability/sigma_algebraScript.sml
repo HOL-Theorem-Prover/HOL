@@ -17,7 +17,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open arithmeticTheory optionTheory pairTheory combinTheory pred_setTheory
-     pred_setLib seqTheory hurdUtils util_probTheory;
+     pred_setLib numLib realLib seqTheory hurdUtils util_probTheory;
 
 val _ = new_theory "sigma_algebra";
 
@@ -1893,7 +1893,7 @@ Proof
     rpt GEN_TAC THEN SET_TAC [subset_class_def]
 QED
 
-Theorem INTER_SPACE_EQ2 : (* was: Int_space_eq2 *)
+Theorem INTER_SPACE_REDUCE : (* was: Int_space_eq2 *)
     !sp sts. subset_class sp sts ==> !x. x IN sts ==> (x INTER sp = x)
 Proof
     rpt GEN_TAC THEN SET_TAC [subset_class_def]
@@ -1901,7 +1901,8 @@ QED
 
 Theorem SEMIRING_SETS_COLLECT : (* was: sets_Collect_conj *)
     !sp sts P Q. semiring (sp, sts) /\
-                {x | x IN sp /\ P x} IN sts /\ {x | x IN sp /\ Q x} IN sts ==>
+                {x | x IN sp /\ P x} IN sts /\
+                {x | x IN sp /\ Q x} IN sts ==>
                 {x | x IN sp /\ P x /\ Q x} IN sts
 Proof
  rpt GEN_TAC THEN SIMP_TAC std_ss [semiring_def] THEN
@@ -1989,7 +1990,7 @@ Proof
   FULL_SIMP_TAC std_ss [ring_def, subsets_def, semiring_def]
 QED
 
-Theorem RING_OF_SETS_IF : (* was: ring_of_setsI *)
+Theorem ring_alt_pow_imp : (* was: ring_of_setsI *)
     !sp sts. sts SUBSET POW sp /\ {} IN sts /\
             (!a b. a IN sts /\ b IN sts ==> a UNION b IN sts) /\
             (!a b. a IN sts /\ b IN sts ==> a DIFF b IN sts) ==> ring (sp, sts)
@@ -2005,14 +2006,14 @@ Proof
   ASM_SET_TAC []
 QED
 
-Theorem RING_OF_SETS_IFF : (* was: ring_of_sets_iff *)
+Theorem ring_alt_pow : (* was: ring_of_sets_iff *)
     !sp sts. ring (sp, sts) <=>
              sts SUBSET POW sp /\ {} IN sts /\
              (!s t. s IN sts /\ t IN sts ==> s UNION t IN sts) /\
              (!s t. s IN sts /\ t IN sts ==> s DIFF t IN sts)
 Proof
   rpt GEN_TAC THEN EQ_TAC THENL
-  [ALL_TAC, METIS_TAC [RING_OF_SETS_IF]] THEN
+  [ALL_TAC, METIS_TAC [ring_alt_pow_imp]] THEN
   REWRITE_TAC [ring_def, subsets_def, space_def, semiring_def, subset_class_def, POW_DEF] THEN
   REWRITE_TAC [SET_RULE ``sts SUBSET {s | s SUBSET sp} <=>
                 !x. x IN sts ==> x SUBSET sp``] THEN
@@ -2021,29 +2022,46 @@ Proof
   ASM_SIMP_TAC std_ss [ring_def, space_def, subsets_def, semiring_def, subset_class_def]
 QED
 
+Theorem RING_BIGUNION : (* was: UNION_in_sets *)
+    !sp sts (A:num->'a->bool) n.
+        ring (sp,sts) /\ IMAGE A UNIV SUBSET sts ==>
+        BIGUNION {A i | i < n} IN sts
+Proof
+  GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN INDUCT_TAC THENL
+  [SIMP_TAC real_ss [GSPECIFICATION] THEN
+   REWRITE_TAC [SET_RULE ``{A i | i | F} = {}``] THEN
+   SIMP_TAC std_ss [BIGUNION_EMPTY, ring_alt, semiring_alt],
+   ALL_TAC] THEN
+  FULL_SIMP_TAC std_ss [GSPECIFICATION] THEN
+  RW_TAC std_ss [ARITH_PROVE ``i < SUC n <=> i < n \/ (i = n)``] THEN
+  REWRITE_TAC [SET_RULE ``BIGUNION {(A:num->'a->bool) i | i < n \/ (i = n)} =
+                          BIGUNION {A i | i < n} UNION A n``] THEN
+  FULL_SIMP_TAC std_ss [ring_alt_pow] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN FULL_SIMP_TAC std_ss [SUBSET_DEF] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN SET_TAC []
+QED
+
+Theorem ring_disjointed_sets : (* was: range_disjointed_sets *)
+    !sp sts A. ring (sp,sts) /\ IMAGE A UNIV SUBSET sts ==>
+               IMAGE (\n. disjointed A n) UNIV SUBSET sts
+Proof
+  RW_TAC std_ss [disjointed] THEN
+  SIMP_TAC std_ss [IN_IMAGE, SUBSET_DEF, IN_UNIV] THEN
+  FULL_SIMP_TAC std_ss [GSPECIFICATION, ring_alt_pow] THEN
+  RW_TAC std_ss [] THEN FIRST_ASSUM MATCH_MP_TAC THEN
+  KNOW_TAC
+  ``BIGUNION {(A:num->'a->bool) i | i IN {x | 0 <= x /\ x < n}} IN sts`` THENL
+  [SIMP_TAC std_ss [GSPECIFICATION] THEN
+   MATCH_MP_TAC RING_BIGUNION THEN SIMP_TAC std_ss [ring_alt_pow] THEN
+   METIS_TAC [], DISCH_TAC] THEN
+  FULL_SIMP_TAC std_ss [GSPECIFICATION, SUBSET_DEF] THEN ASM_SET_TAC []
+QED
+
 Theorem RING_INSERT : (* was: insert_in_sets *)
-    !x A sp sts. ring (sp, sts) /\ {x} IN sts /\ A IN sts ==> x INSERT A IN sts
+    !x A sp sts. ring (sp,sts) /\ {x} IN sts /\ A IN sts ==> x INSERT A IN sts
 Proof
   REWRITE_TAC [ring_def, subsets_def, space_def] THEN rpt STRIP_TAC THEN
   ONCE_REWRITE_TAC [SET_RULE ``x INSERT A = {x} UNION A``] THEN
-  ASM_SET_TAC []
-QED
-
-Theorem RING_SETS_COLLECT : (* was: sets_Collect_disj *)
-    !sp sts P Q. semiring (sp, sts) /\
-                {x | x IN sp /\ P x} IN sts /\
-                {x | x IN sp /\ Q x} IN sts ==>
-                {x | x IN sp /\ P x /\ Q x} IN sts
-Proof
-  rpt GEN_TAC THEN SIMP_TAC std_ss [ring_def, subsets_def, space_def, semiring_def] THEN
-  rpt STRIP_TAC THEN
-  FIRST_X_ASSUM (K_TAC o SPECL
-   [``{x | x IN sp /\ P x}``,``{x | x IN sp /\ Q x}``]) THEN
-  FIRST_X_ASSUM (MP_TAC o SPECL
-   [``{x | x IN sp /\ P x}``,``{x | x IN sp /\ Q x}``]) THEN
-  RW_TAC std_ss[] THEN
-  REWRITE_TAC [SET_RULE ``{x | x IN sp /\ P x /\ Q x} =
-                {x | x IN sp /\ P x} INTER {x | x IN sp /\ Q x}``] THEN
   ASM_SET_TAC []
 QED
 
@@ -2230,7 +2248,7 @@ Proof
   SIMP_TAC std_ss [BINARY_RANGE] THEN SET_TAC []
 QED
 
-Theorem sigma_algebra_alt : (* was: SIGMA_ALGEBRA_ALT_EQ / sigma_algebra_alt_eq *)
+Theorem sigma_algebra_alt : (* was: sigma_algebra_alt_eq *)
     !sp sts. sigma_algebra (sp,sts) <=>
              algebra (sp,sts) /\
              !A. IMAGE A UNIV SUBSET sts ==> BIGUNION {A i | i IN univ(:num)} IN sts

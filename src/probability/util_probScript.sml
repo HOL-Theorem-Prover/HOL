@@ -9,11 +9,15 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open metisLib pairTheory combinTheory pred_setTheory pred_setLib
-     arithmeticTheory realTheory realLib transcTheory seqTheory
-     real_sigmaTheory numpairTheory hurdUtils;
+open metisLib pairTheory combinTheory pred_setTheory pred_setLib jrhUtils
+     arithmeticTheory realTheory realLib transcTheory seqTheory numLib
+     real_sigmaTheory numpairTheory hurdUtils RealArith;
 
 val _ = new_theory "util_prob";
+
+val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
+
+(* ------------------------------------------------------------------------- *)
 
 val _ = set_fixity "->" (Infixr 250);
 val _ = overload_on ("->",
@@ -648,6 +652,25 @@ Theorem REAL_MIN_LE_BETWEEN :
 Proof
     RW_TAC std_ss [min_def]
  >> PROVE_TAC [REAL_LET_ANTISYM]
+QED
+
+Theorem REAL_ARCH_INV_SUC : (* was: reals_Archimedean *)
+    !x:real. 0 < x ==> ?n. inv &(SUC n) < x
+Proof
+  RW_TAC real_ss [REAL_INV_1OVER] THEN SIMP_TAC real_ss [REAL_LT_LDIV_EQ] THEN
+  ONCE_REWRITE_TAC [REAL_MUL_SYM] THEN
+  ASM_SIMP_TAC real_ss [GSYM REAL_LT_LDIV_EQ] THEN
+  MP_TAC (ISPEC ``1 / x:real`` SIMP_REAL_ARCH) THEN STRIP_TAC THEN
+  Q.EXISTS_TAC `n` THEN FULL_SIMP_TAC real_ss [real_div] THEN
+  RULE_ASSUM_TAC (ONCE_REWRITE_RULE [GSYM REAL_LT_INV_EQ]) THEN
+  REWRITE_TAC [ADD1, GSYM add_ints] THEN ASM_REAL_ARITH_TAC
+QED
+
+Theorem REAL_ARCH_INV' : (* was: ex_inverse_of_nat_less *)
+    !x:real. 0 < x ==> ?n. inv (&n) < x
+Proof
+  RW_TAC std_ss [] THEN FIRST_ASSUM (MP_TAC o MATCH_MP REAL_ARCH_INV_SUC) THEN
+  METIS_TAC []
 QED
 
 (* ********************************************* *)
@@ -1583,6 +1606,129 @@ val INCREASING_TO_DISJOINT_SETS' = store_thm
         CCONTR_TAC >> fs [] \\
        `x IN f n` by PROVE_TAC [SUBSET_DEF] ] ]);
 
+(* ------------------------------------------------------------------------- *)
+(* Other types of disjointness definitions (from Concordia HVG)              *)
+(* ------------------------------------------------------------------------- *)
+
+(* This is not more general than disjoint_def *)
+val disjoint_family_on = new_definition ("disjoint_family_on",
+  ``disjoint_family_on a s =
+      (!m n. m IN s /\ n IN s /\ (m <> n) ==> (a m INTER a n = {}))``);
+
+val disjoint_family = new_definition ("disjoint_family",
+  ``disjoint_family A = disjoint_family_on A UNIV``);
+
+(* This is the way to convert a family of sets into a disjoint family *)
+(* of sets, cf. SETS_TO_DISJOINT_SETS -- Chun Tian *)
+val disjointed = new_definition ("disjointed",
+  ``!A n. disjointed A n =
+          A n DIFF BIGUNION {A i | i IN {x:num | 0 <= x /\ x < n}}``);
+
+val disjointed_subset = store_thm ("disjointed_subset",
+  ``!A n. disjointed A n SUBSET A n``,
+  RW_TAC std_ss [disjointed] THEN ASM_SET_TAC []);
+
+val disjoint_family_disjoint = store_thm ("disjoint_family_disjoint",
+  ``!A. disjoint_family (disjointed A)``,
+  SIMP_TAC std_ss [disjoint_family, disjoint_family_on, IN_UNIV] THEN
+  RW_TAC std_ss [disjointed, EXTENSION, GSPECIFICATION, IN_INTER] THEN
+  SIMP_TAC std_ss [NOT_IN_EMPTY, IN_DIFF, IN_BIGUNION] THEN
+  ASM_CASES_TAC ``(x NOTIN A (m:num) \/ ?s. x IN s /\ s IN {A i | i < m})`` THEN
+  ASM_REWRITE_TAC [] THEN RW_TAC std_ss [] THEN
+  ASM_CASES_TAC ``x NOTIN A (n:num)`` THEN FULL_SIMP_TAC std_ss [] THEN
+  FULL_SIMP_TAC std_ss [GSPECIFICATION] THEN
+  ASM_CASES_TAC ``m < n:num`` THENL [METIS_TAC [], ALL_TAC] THEN
+  `n < m:num` by ASM_SIMP_TAC arith_ss [] THEN METIS_TAC []);
+
+val finite_UN_disjointed_eq = prove (
+  ``!A n. BIGUNION {disjointed A i | i IN {x | 0 <= x /\ x < n}} =
+          BIGUNION {A i | i IN {x | 0 <= x /\ x < n}}``,
+  GEN_TAC THEN INDUCT_TAC THENL
+  [FULL_SIMP_TAC real_ss [GSPECIFICATION] THEN SET_TAC [], ALL_TAC] THEN
+  FULL_SIMP_TAC real_ss [GSPECIFICATION] THEN
+  GEN_REWR_TAC (LAND_CONV o ONCE_DEPTH_CONV)
+   [ARITH_PROVE ``i < SUC n <=> i < n \/ (i = n)``] THEN
+  REWRITE_TAC [SET_RULE ``BIGUNION {(A:num->'a->bool) i | i < n \/ (i = n)} =
+                          BIGUNION {A i | i < n} UNION A n``] THEN
+  ASM_REWRITE_TAC [disjointed] THEN SIMP_TAC std_ss [GSPECIFICATION] THEN
+  SIMP_TAC std_ss [UNION_DEF] THEN
+  REWRITE_TAC [ARITH_PROVE ``i < SUC n <=> i < n \/ (i = n)``] THEN
+  REWRITE_TAC [SET_RULE ``BIGUNION {(A:num->'a->bool) i | i < n \/ (i = n)} =
+                          BIGUNION {A i | i < n} UNION A n``] THEN
+  SET_TAC []);
+
+val atLeast0LessThan = prove (
+  ``{x:num | 0 <= x /\ x < n} = {x | x < n}``,
+  SIMP_TAC arith_ss [EXTENSION, GSPECIFICATION]);
+
+val UN_UN_finite_eq = prove (
+  ``!A.
+     BIGUNION {BIGUNION {A i | i IN {x | 0 <= x /\ x < n}} | n IN univ(:num)} =
+     BIGUNION {A n | n IN UNIV}``,
+  SIMP_TAC std_ss [atLeast0LessThan] THEN
+  RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION, IN_UNIV] THEN
+  EQ_TAC THEN RW_TAC std_ss [] THENL
+  [POP_ASSUM (MP_TAC o Q.SPEC `x`) THEN ASM_REWRITE_TAC [] THEN
+   RW_TAC std_ss [] THEN METIS_TAC [], ALL_TAC] THEN
+  Q.EXISTS_TAC `BIGUNION {A i | i IN {x | 0 <= x /\ x < SUC n}}` THEN
+  RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION, IN_UNIV] THENL
+  [ALL_TAC, METIS_TAC []] THEN Q.EXISTS_TAC `A n` THEN
+  FULL_SIMP_TAC std_ss [] THEN Q.EXISTS_TAC `n` THEN
+  SIMP_TAC arith_ss []);
+
+val UN_finite_subset = prove (
+  ``!A C. (!n. BIGUNION {A i | i IN {x | 0 <= x /\ x < n}} SUBSET C) ==>
+               BIGUNION {A n | n IN univ(:num)} SUBSET C``,
+  RW_TAC std_ss [] THEN ONCE_REWRITE_TAC [GSYM UN_UN_finite_eq] THEN
+  FULL_SIMP_TAC std_ss [SUBSET_DEF] THEN RW_TAC std_ss [] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  FULL_SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION, IN_UNIV] THEN
+  POP_ASSUM (MP_TAC o Q.SPEC `x`) THEN ASM_REWRITE_TAC [] THEN STRIP_TAC THEN
+  Q.EXISTS_TAC `n` THEN Q.EXISTS_TAC `s'` THEN METIS_TAC []);
+
+val UN_finite2_subset = prove (
+  ``!A B n k.
+    (!n. BIGUNION {A i | i IN {x | 0 <= x /\ x < n}} SUBSET
+         BIGUNION {B i | i IN {x | 0 <= x /\ x < n + k}}) ==>
+         BIGUNION {A n | n IN univ(:num)} SUBSET BIGUNION {B n | n IN univ(:num)}``,
+  RW_TAC std_ss [] THEN MATCH_MP_TAC UN_finite_subset THEN
+  ONCE_REWRITE_TAC [GSYM UN_UN_finite_eq] THEN
+  FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_BIGUNION, GSPECIFICATION, IN_UNIV] THEN
+  RW_TAC std_ss [] THEN FIRST_X_ASSUM (MP_TAC o Q.SPECL [`n`,`x`]) THEN
+  Q_TAC SUFF_TAC `(?s. x IN s /\ ?i. (s = A i) /\ i < n)` THENL
+  [ALL_TAC, METIS_TAC []] THEN DISCH_TAC THEN ASM_REWRITE_TAC [] THEN
+  STRIP_TAC THEN Q.EXISTS_TAC `BIGUNION {B i | i < n + k}` THEN
+  CONJ_TAC THENL [ALL_TAC, METIS_TAC []] THEN
+  SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION] THEN METIS_TAC []);
+
+val UN_finite2_eq = prove (
+  ``!A B k.
+    (!n. BIGUNION {A i | i IN {x | 0 <= x /\ x < n}} =
+         BIGUNION {B i | i IN {x | 0 <= x /\ x < n + k}}) ==>
+    (BIGUNION {A n | n IN univ(:num)} = BIGUNION {B n | n IN univ(:num)})``,
+  RW_TAC std_ss [] THEN MATCH_MP_TAC SUBSET_ANTISYM THEN CONJ_TAC THENL
+  [MATCH_MP_TAC  UN_finite2_subset THEN REWRITE_TAC [atLeast0LessThan] THEN
+   METIS_TAC [SUBSET_REFL], ALL_TAC] THEN
+  FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_UNIV, GSPECIFICATION] THEN
+  RW_TAC std_ss [] THEN FIRST_X_ASSUM (MP_TAC o Q.SPEC `SUC n`) THEN
+  GEN_REWR_TAC LAND_CONV [EXTENSION] THEN
+  DISCH_THEN (MP_TAC o Q.SPEC `x`) THEN
+  SIMP_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_UNIV, GSPECIFICATION] THEN
+  Q_TAC SUFF_TAC `?s. x IN s /\ ?i. (s = B i) /\ i < SUC n + k` THENL
+  [ALL_TAC,
+   Q.EXISTS_TAC `B n` THEN ASM_REWRITE_TAC [] THEN
+   Q.EXISTS_TAC `n` THEN SIMP_TAC arith_ss []] THEN
+  DISCH_TAC THEN ASM_REWRITE_TAC [] THEN RW_TAC std_ss [] THEN
+  METIS_TAC []);
+
+Theorem BIGUNION_disjointed : (* was: UN_disjointed_eq *)
+    !A. BIGUNION {disjointed A i | i IN UNIV} = BIGUNION {A i | i IN UNIV}
+Proof
+  GEN_TAC THEN MATCH_MP_TAC UN_finite2_eq THEN
+  Q.EXISTS_TAC `0` THEN RW_TAC arith_ss [GSPECIFICATION] THEN
+  ASSUME_TAC finite_UN_disjointed_eq THEN
+  FULL_SIMP_TAC arith_ss [GSPECIFICATION]
+QED
 
 (******************************************************************************)
 (*  liminf and limsup [1, p.74] [2, p.76] - the set-theoretic version         *)

@@ -1370,7 +1370,7 @@ val finite_additivity_sufficient_for_finite_spaces2 = store_thm
    >> RW_TAC std_ss [space_def, subsets_def, MEASURE_SPACE_REDUCE]);
 
 (* added ``measure m t < PosInf`` into antecedents, cf. MEASURE_SPACE_FINITE_DIFF_SUBSET *)
-val MEASURE_DIFF_SUBSET = store_thm
+val MEASURE_DIFF_SUBSET = store_thm (* was: measure_Diff *)
   ("MEASURE_DIFF_SUBSET",
   ``!m s t.
        measure_space m /\ s IN measurable_sets m /\ t IN measurable_sets m /\
@@ -4392,9 +4392,8 @@ QED
 val null_set_def = Define
    `null_set m s <=> s IN measurable_sets m /\ (measure m s = 0)`;
 
-(* MATHEMATICAL SCRIPT CAPITAL N, this is too much, disabled:
+(* MATHEMATICAL SCRIPT CAPITAL N *)
 val _ = Unicode.unicode_version {u = UTF8.chr 0x1D4A9, tmnm = "null_set"};
- *)
 
 (* a measure space m which is not yet complete can be completed *)
 val complete_of_def = Define
@@ -4412,6 +4411,13 @@ val complete_measure_space_def = Define
 val IN_NULL_SET = store_thm
   ("IN_NULL_SET", ``!m s. s IN null_set m <=> null_set m s``,
     GEN_TAC >> SIMP_TAC std_ss [IN_APP]);
+
+(* This is HVG's original definition of "null_sets" *)
+Theorem null_sets :
+    null_set M = {N | N IN measurable_sets M /\ (measure M N = 0)}
+Proof
+    RW_TAC std_ss [Once EXTENSION, GSPECIFICATION, IN_NULL_SET, null_set_def]
+QED
 
 val NULL_SET_EMPTY = store_thm
   ("NULL_SET_EMPTY", ``!m. measure_space m ==> null_set m {}``,
@@ -4462,6 +4468,16 @@ val COMPLETE_MEASURE_THM = store_thm
 (* ------------------------------------------------------------------------- *)
 (*  Alternative definitions of `sigma_finite`                                *)
 (* ------------------------------------------------------------------------- *)
+
+Theorem FINITE_IMP_SIGMA_FINITE :
+    !m. measure_space m /\ measure m (m_space m) <> PosInf ==> sigma_finite m
+Proof
+    RW_TAC std_ss [sigma_finite_def]
+ >> Q.EXISTS_TAC `\n. m_space m`
+ >> RW_TAC std_ss [IN_FUNSET, IN_UNIV, GSYM lt_infty, SUBSET_REFL,
+                   MEASURE_SPACE_MSPACE_MEASURABLE]
+ >> RW_TAC std_ss [Once EXTENSION, IN_BIGUNION_IMAGE, IN_UNIV]
+QED
 
 (* The increasing sequence in "sigma_finite_def" is not required *)
 val SIGMA_FINITE_ALT = store_thm (* was: sigma_finite (HVG) *)
@@ -4541,6 +4557,63 @@ val SIGMA_FINITE_ALT2 = store_thm (* was: sigma_finite_measure (HVG) *)
       REWRITE_TAC [IN_IMAGE, IN_UNIV] \\
       Q.EXISTS_TAC `n` >> REWRITE_TAC [] ]);
 
+Theorem sigma_finite :
+    !m. measure_space m /\ sigma_finite m ==>
+        ?A. IMAGE A UNIV SUBSET measurable_sets m /\
+            (BIGUNION {A i | i IN UNIV} = m_space m) /\
+            (!i:num. measure m (A i) <> PosInf)
+Proof
+    rpt STRIP_TAC
+ >> fs [MATCH_MP SIGMA_FINITE_ALT2 (ASSUME ``measure_space m``)]
+ >> Cases_on `A = {}`
+ >- (FULL_SIMP_TAC std_ss [NOT_IN_EMPTY, BIGUNION_EMPTY] \\
+     Q.EXISTS_TAC `\n. {}` \\
+     SIMP_TAC std_ss [IMAGE_DEF, SUBSET_DEF] \\
+     REWRITE_TAC [SET_RULE ``{{} | i IN univ(:num)} = {{}}``] \\
+     ASM_SIMP_TAC std_ss [BIGUNION_SING, IN_SING] \\
+     ASM_SIMP_TAC std_ss [MEASURE_SPACE_MSPACE_MEASURABLE] \\
+     CONJ_TAC >- (SET_TAC []) \\
+     METIS_TAC [MEASURE_EMPTY, num_not_infty])
+ >> Q.PAT_X_ASSUM `COUNTABLE A` (STRIP_ASSUME_TAC o (REWRITE_RULE [COUNTABLE_ENUM]))
+ >> Q.EXISTS_TAC `f` >> rw []
+ >> Q.PAT_X_ASSUM `_ = m_space m` (ONCE_REWRITE_TAC o wrap o SYM)
+ >> SET_TAC []
+QED
+
+Theorem sigma_finite_disjoint :
+    !m. measure_space m /\ sigma_finite m ==>
+        ?A. IMAGE A UNIV SUBSET measurable_sets m /\
+           (BIGUNION {A i | i IN UNIV} = m_space m) /\
+           (!i:num. measure m (A i) <> PosInf) /\ disjoint_family A
+Proof
+    RW_TAC std_ss []
+ >> `?A. IMAGE A univ(:num) SUBSET measurable_sets m /\
+       (BIGUNION {A i | i IN univ(:num)} = m_space m) /\
+       !i. measure m (A i) <> PosInf` by METIS_TAC [sigma_finite]
+ >> Know `!i. measure m (disjointed A i) <= measure m (A i)`
+ >- (GEN_TAC THEN
+     MATCH_MP_TAC INCREASING THEN SIMP_TAC std_ss [disjointed_subset] \\
+     Reverse CONJ_TAC
+     >- (Reverse CONJ_TAC >- ASM_SET_TAC [] \\
+        `IMAGE (\n. disjointed A n) UNIV SUBSET measurable_sets m`
+           by METIS_TAC [measure_space_def, sigma_algebra_alt, algebra_alt,
+                         ring_disjointed_sets] \\
+         ASM_SET_TAC []) \\
+     FULL_SIMP_TAC std_ss [MEASURE_SPACE_INCREASING])
+ >> DISCH_TAC
+ >> Know `!i. measure m (disjointed A i) <> PosInf`
+ >- (FULL_SIMP_TAC std_ss [lt_infty] >> METIS_TAC [let_trans])
+ >> DISCH_TAC
+ >> Q.EXISTS_TAC `\n. disjointed A n` >> RW_TAC std_ss []
+ >| [ (* goal 1 (of 3) *)
+      MATCH_MP_TAC ring_disjointed_sets THEN Q.EXISTS_TAC `m_space m` THEN
+      FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_alt, algebra_alt],
+      (* goal 2 (of 3) *)
+      ASM_SIMP_TAC std_ss [BIGUNION_disjointed],
+      (* gpa; 3 (of 3) *)
+      METIS_TAC [disjoint_family_disjoint, ETA_AX] ]
+QED
+
 Theorem MEASURABLE_IF : (* was: measurable_If *)
     !f g M N P. f IN measurable (m_space M, measurable_sets M)
                                 (m_space N, measurable_sets N) /\
@@ -4590,6 +4663,50 @@ Proof
                                A INTER m_space M``] THEN
   ASM_SIMP_TAC std_ss []
 QED
+
+val lemma1 = prove (
+  ``!A sp M u. A IN (univ(:num) -> measurable_sets (sp,M,u)) <=>
+              IMAGE A UNIV SUBSET M``,
+  REPEAT STRIP_TAC THEN SIMP_TAC std_ss [measurable_sets_def] THEN
+  EVAL_TAC THEN SRW_TAC[] [IN_FUNSET,IN_UNIV,SUBSET_DEF,IMAGE_DEF] THEN METIS_TAC[]);
+
+val lemma2 = prove (
+  ``!A. (!m n. m <> n ==> DISJOINT (A m) (A n)) <=> disjoint_family A``,
+  STRIP_TAC THEN SIMP_TAC std_ss [disjoint_family, disjoint_family_on] THEN
+  SET_TAC []);
+
+val lemma3 = prove (
+  ``!A sp M u. BIGUNION (IMAGE A univ(:num)) IN measurable_sets (sp,M,u) <=>
+               BIGUNION {A i | i IN UNIV} IN M``,
+  REPEAT STRIP_TAC THEN SIMP_TAC std_ss [measurable_sets_def, IMAGE_DEF]);
+
+Theorem countably_additive_alt_eq :
+    !sp M u. countably_additive (sp,M,u) <=>
+             !A. IMAGE A UNIV SUBSET M ==> disjoint_family A ==>
+                 BIGUNION {A i | i IN UNIV} IN M ==>
+                (u (BIGUNION {A i | i IN univ(:num)}) = suminf (u o A))
+Proof
+  SIMP_TAC std_ss [countably_additive_def] THEN REPEAT STRIP_TAC THEN
+  SIMP_TAC std_ss [measure_def, o_DEF, lemma2, lemma3] THEN
+  SIMP_TAC std_ss [GSYM IMAGE_DEF, SUBSET_DEF, measurable_sets_def] THEN
+  EQ_TAC THEN RW_TAC std_ss [] THENL
+  [FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_SIMP_TAC std_ss [] THEN
+   EVAL_TAC THEN ASM_SET_TAC [IN_IMAGE,IN_FUNSET], ALL_TAC] THEN
+  FIRST_X_ASSUM (MP_TAC o Q.SPEC `f`) THEN RW_TAC std_ss [] THEN
+  POP_ASSUM MATCH_MP_TAC THEN
+  fs [IN_IMAGE, IN_UNIV, IN_FUNSET] >> RW_TAC std_ss [] >> art []
+QED
+
+val sets_eq_imp_space_eq = store_thm ("sets_eq_imp_space_eq",
+  ``!M M'. measure_space M /\ measure_space M' /\
+          (measurable_sets M = measurable_sets M') ==> (m_space M = m_space M')``,
+  REPEAT STRIP_TAC THEN POP_ASSUM MP_TAC THEN
+  FIRST_ASSUM (MP_TAC o MATCH_MP MEASURE_SPACE_MSPACE_MEASURABLE) THEN
+  POP_ASSUM (MP_TAC o REWRITE_RULE [measure_space_def, sigma_algebra_alt_pow]) THEN
+  FIRST_ASSUM (MP_TAC o MATCH_MP MEASURE_SPACE_MSPACE_MEASURABLE) THEN
+  POP_ASSUM (MP_TAC o REWRITE_RULE [measure_space_def, sigma_algebra_alt_pow]) THEN
+  REPEAT STRIP_TAC THEN FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_POW] THEN
+  ASM_SET_TAC []);
 
 val _ = export_theory ();
 
