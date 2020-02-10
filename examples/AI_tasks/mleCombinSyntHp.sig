@@ -2,9 +2,9 @@ signature mleCombinSyntHp =
 sig
 
   include Abbrev
-
-  type board = (mleCombinLibHp.combin * mleCombinLibHp.pose list * bool) *
-    mleCombinLibHp.combin * int
+  
+  type combin = mleCombinLibHp.combin
+  type board = (combin * mleCombinLibHp.pose list * bool) * combin * int
   datatype move = AS | AK | NextPos
 
   (* target *)
