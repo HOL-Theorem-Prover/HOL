@@ -8683,7 +8683,7 @@ val split_space_into_finite_sets_and_rest = prove (
   PROVE_TAC [let_antisym]);
 
 (* M is finite, while N can be infinite *)
-Theorem Radon_Nikodym_finite_infinite : (* was: Radon_Nikodym_finite_measure_infinite *)
+Theorem Radon_Nikodym_finite_arbitrary : (* was: Radon_Nikodym_finite_measure_infinite *)
     !M N. measure_space M /\ measure_space N /\
          (m_space M = m_space N) /\ (measurable_sets M = measurable_sets N) /\
          (measure M (m_space M) <> PosInf) /\
@@ -9475,7 +9475,7 @@ QED
 
 (* The most general version (M: sigma-finite, N: arbitrary).
 
-   cf. Radon_Nikodym_finite, Radon_Nikodym_finite_infinite
+   cf. Radon_Nikodym_finite, Radon_Nikodym_finite_arbitrary
  *)
 Theorem Radon_Nikodym_sigma_finite : (* was: RADON_NIKODYM *)
     !M N. measure_space M /\ measure_space N /\
@@ -9568,7 +9568,7 @@ Proof
       METIS_TAC [IN_SING]) THEN
   Suff `measure_absolutely_continuous (measure N) mt` >-
   (STRIP_TAC \\
-   MP_TAC (Q.SPECL [`mt`, `N`] Radon_Nikodym_finite_infinite) \\
+   MP_TAC (Q.SPECL [`mt`, `N`] Radon_Nikodym_finite_arbitrary) \\
   `m_space mt = m_space M` by METIS_TAC [m_space_def] \\
   `measurable_sets mt = measurable_sets M` by METIS_TAC [measurable_sets_def] THEN
    RW_TAC std_ss [] THEN POP_ASSUM MP_TAC THEN
