@@ -103,7 +103,8 @@ fun random_poly () =
 fun poly_size poly = length (List.concat poly)
 
 fun compare_mono (l1,l2) =
-  list_compare Int.compare (tl l1 @ [hd l1], tl l2 @ [hd l2])
+  cpl_compare (list_compare Int.compare) Int.compare 
+    ((tl l1,hd l1),(tl l2,hd l2))
 
 fun norm_poly poly = dict_sort compare_mono poly
 
@@ -164,10 +165,11 @@ fun human_of_mono mono =
 
 fun human_of_poly poly = String.concatWith " + " (map human_of_mono poly)
 
+val targetdir = selfdir ^ "/dioph_target"
+
 fun export_data (train,test) =
   let 
     val l = train @ test
-    val targetdir = selfdir ^ "/dioph_target"
     val _ = mkDir_err targetdir
     fun f1 (graph,poly) = 
       let val poly' = norm_poly poly in 
@@ -191,8 +193,12 @@ fun export_data (train,test) =
 fun import_data file =
   let 
     val sl = readl (targetdir ^ "/" ^ file)
-    val l = map (triple_of_list o (mk_batch 3)) sl 
-    val f (a,b,_) = (stil a, string_to_poly b)
+    val l = map triple_of_list (mk_batch 3 sl) 
+    fun f (a,b,_) = 
+      (
+      stil (snd (split_string "graph: " a)), 
+      string_to_poly (snd (split_string "poly: " b))
+      )
   in
     map f l
   end
@@ -200,7 +206,6 @@ fun import_data file =
 (*
 load "aiLib"; open aiLib;
 load "mleDiophLib"; open mleDiophLib;
-
 val train = import_data "train_export";
 val test = import_data "test_export";
 export_data (train,test);
