@@ -13,7 +13,7 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlReinforce arithmeticTheory numLib numSyntax mleDiophLib
 
 val ERR = mk_HOL_ERR "mleDiophSynt"
-val version = 1
+val version = 2
 val selfdir = HOLDIR ^ "/examples/AI_tasks"
 
 (* -------------------------------------------------------------------------
@@ -194,7 +194,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleDiophSynt-" ^ its version, exwindow = 100000,
-   ncore = 30, ntarget = 100, nsim = 32000, decay = 1.0}
+   ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {
