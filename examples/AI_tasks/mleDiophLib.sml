@@ -88,10 +88,10 @@ fun dioph_match poly graph =
   end
 
 (* -------------------------------------------------------------------------
-   Generating random polynomials and Diophantine sets
+   Generating random polynomials and compute their Diophantine sets
    ------------------------------------------------------------------------- *)
 
-fun random_mono () = 
+fun random_mono () =
   random_int (1,modulo-1) ::
   List.tabulate (random_int (0,maxvar), fn _ => random_int (0,maxexponent))
 
@@ -101,6 +101,11 @@ fun random_poly () =
   end
 
 fun poly_size poly = length (List.concat poly)
+
+fun compare_mono (l1,l2) =
+  list_compare Int.compare (tl l1 @ [hd l1], tl l2 @ [hd l2])
+
+fun norm_poly poly = dict_sort compare_mono poly
 
 fun gen_diophset n nmax d =
   if dlength d >= nmax then (d,n) else
@@ -164,9 +169,12 @@ fun export_data (train,test) =
     val l = train @ test
     val targetdir = selfdir ^ "/dioph_target"
     val _ = mkDir_err targetdir
-    fun f1 (graph,poly) = "graph: " ^ ilts graph ^
-      "\npoly: " ^ poly_to_string poly ^ 
-      "\n%poly(human): " ^ human_of_poly poly
+    fun f1 (graph,poly) = 
+      let val poly' = norm_poly poly in 
+        "graph: " ^ ilts graph ^
+        "\npoly: " ^ poly_to_string poly' ^ 
+        "\n%poly(human): " ^ human_of_poly poly'
+      end
     val il = map (poly_size o snd) l
     val statsl = dlist (count_dict (dempty Int.compare) il);
     fun f2 (i,j) = its i ^ "-" ^ its j
@@ -180,11 +188,22 @@ fun export_data (train,test) =
     writel (targetdir ^ "/distrib") (map f2 statsl)  
   end
 
+fun import_data file =
+  let 
+    val sl = readl (targetdir ^ "/" ^ file)
+    val l = map (triple_of_list o (mk_batch 3)) sl 
+    val f (a,b,_) = (stil a, string_to_poly b)
+  in
+    map f l
+  end
+
 (*
 load "aiLib"; open aiLib;
 load "mleDiophLib"; open mleDiophLib;
-val (dfull,ntry) = gen_diophset 0 (dempty (list_compare Int.compare));
-val _ = export_human (dlist dfull);
+
+val train = import_data "train_export";
+val test = import_data "test_export";
+export_data (train,test);
 *)
 
 

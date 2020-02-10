@@ -32,5 +32,6 @@ sig
   val term_of_poly : poly -> term
 
   val export_data : (int list * poly) list * (int list * poly) list -> unit
+  val import_data : string -> (int list * poly) list
 
 end

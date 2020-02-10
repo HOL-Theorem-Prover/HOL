@@ -48,21 +48,31 @@ fun string_of_move move = case move of
 
 fun move_compare (a,b) = String.compare (string_of_move a, string_of_move b) 
 
-fun apply_move_ill move ill =
+fun apply_move_poly move poly =
   case move of
-    Add c => if length ill >= maxmonomial 
-             then raise ERR "apply_move_ill" "plus"
-             else ill @ [[c]]
-  | Exp c => if null ill orelse length (last ill) >= maxvar + 1
-             then raise ERR "apply_move_ill" "mult"
-             else butlast ill @ [last ill @ [c]]
+    Add c => if length poly >= maxmonomial 
+             then raise ERR "apply_move_poly" "plus"
+             else poly @ [[c]]
+  | Exp c => if null poly orelse length (last poly) >= maxvar + 1
+               then raise ERR "apply_move_poly" "mult"
+             else if length poly >= 2 andalso
+               let 
+                 val prevexp = tl (last (butlast poly))
+                 val curexp = tl (last poly) @ [c]
+                 val m = Int.min (length curexp,length prevexp)
+               in
+                 list_compare Int.compare (first_n m prevexp, first_n m curexp)
+                 = GREATER
+               end
+             then raise ERR "apply_move_poly" "non-increasing"
+             else  butlast poly @ [last poly @ [c]]
 
-fun apply_move move (ill,graph,n) = (apply_move_ill move ill, graph, n-1)
+fun apply_move move (poly,graph,n) = (apply_move_poly move poly, graph, n-1)
 
-fun available_movel_ill ill =
-  filter (fn x => can (apply_move_ill x) ill) movel
+fun available_movel_poly poly =
+  filter (fn x => can (apply_move_poly x) poly) movel
 
-fun available_movel (ill,_,_) = available_movel_ill ill
+fun available_movel (poly,_,_) = available_movel_poly poly
 
 (* -------------------------------------------------------------------------
    Game
@@ -207,8 +217,6 @@ val (train,test) = create_targetl (dlist dfull); length train; length test;
 val _ = (export_targetl "train" train; export_targetl "test" test);
 val targetl = import_targetl "train"; length targetl;
 val r = rl_start (rlobj,extsearch) (mk_targetd targetl);
-
-(* todo restrict to lexico graphical order of polynomials *)
 *)
 
 (* -------------------------------------------------------------------------
