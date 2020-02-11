@@ -236,10 +236,8 @@ fun bp_tnn fpdict (tml,tmevl) =
 
 fun infer_tnn tnn tml =
   let 
-    val fpdict = Profile.profile "fp" (fp_tnn tnn) (
-      Profile.profile "order_subtm" order_subtm tml) 
-    fun f x = Profile.profile "descale" 
-      descale_out (#outnv (last (dfind x fpdict)))
+    val fpdict = fp_tnn tnn (order_subtm tml) 
+    fun f x = descale_out (#outnv (last (dfind x fpdict)))
   in
     map_assoc f tml
   end
@@ -468,11 +466,6 @@ val (trainex,testex) = part_pct 0.9 ex1;
 val nlayer = 1;
 val dim = 16;
 val randtnn = random_tnn_std (nlayer,dim) (vhead :: varl);
-
-(* profiling *)
-Profile.reset_all ();
-val r = map (infer_tnn randtnn) (map (map fst) trainex);
-Profile.results ();
 
 (*
 [("descale",
