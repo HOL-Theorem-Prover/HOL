@@ -175,6 +175,15 @@ Proof
   metis_tac[fset_ABS_REP]
 QED
 
+Overload fromList = “fset_ABS”
+Theorem fromList_11[simp]:
+  fromList l1 = fromList l2 <=> fsequiv l1 l2
+Proof
+  simp[definition "fset_ABS_def"] >>
+  metis_tac[bijection2, fsequiv_equiv, quotientTheory.EQUIV_def]
+QED
+Theorem fset_ABS_11 = fromList_11
+
 Definition FSET_def:
   FSET AB al bfs <=> ?bl. LIST_REL AB al bl /\ bfs = fset_ABS bl
 End
@@ -196,16 +205,6 @@ Theorem FSET_surj[transfer_safe]:
   surj AB ==> surj (FSET AB)
 Proof
   simp[FSET_def, surj_def] >> metis_tac[fset_ABS_onto, LIST_REL_surj, surj_def]
-QED
-
-Theorem fset_ABS_11[simp]:
-  fset_ABS l1 = fset_ABS l2 <=> fsequiv l1 l2
-Proof
-  rw[EQ_IMP_THM, definition "fset_ABS_def"]
-  >- (pop_assum (mp_tac o Q.AP_TERM ‘fset_REP_CLASS’) >>
-      simp[bijection2, Excl "REP_CLASS_11"]) >>
-  ‘fsequiv l1 = fsequiv l2’ suffices_by metis_tac[bijection2, REP_CLASS_11] >>
-  metis_tac[fsequiv_equiv, quotientTheory.EQUIV_def]
 QED
 
 Theorem total_FSET[transfer_safe]:
@@ -843,6 +842,14 @@ Theorem toSet_11:
   !fs1 fs2. (toSet fs1 = toSet fs2) <=> fs1 = fs2
 Proof
   xfer_back_tac >> simp[fsequiv_def]
+QED
+
+Theorem toSet_fset_ABS[simp]:
+  toSet (fset_ABS l) = set l
+Proof
+  simp[toSet_def, fIN_def] >>
+  simp[definition "fset_REP_def", definition "fset_ABS_def"] >>
+  SELECT_ELIM_TAC >> simp[fsequiv_def] >> metis_tac[]
 QED
 
 Theorem equalityp_relset[transfer_safe]:
