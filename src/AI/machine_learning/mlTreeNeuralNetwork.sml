@@ -467,14 +467,6 @@ val nlayer = 1;
 val dim = 16;
 val randtnn = random_tnn_std (nlayer,dim) (vhead :: varl);
 
-(*
-[("descale",
- {gc = 0.000, n = 2618, real = 0.010, sys = 0.001, usr = 0.004}),
-("fp", {gc = 0.005, n = 2618, real = 0.105, sys = 0.010, usr = 0.084}),
-("order_subtm",
- {gc = 0.000, n = 2618, real = 0.035, sys = 0.003, usr = 0.026})]:
-*)
-
 (* training *)
 val trainparam =
   {ncore = 1, verbose = true,
