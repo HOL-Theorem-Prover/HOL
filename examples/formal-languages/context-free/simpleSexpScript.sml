@@ -116,43 +116,69 @@ val dstrip_sexp_def = Define`
 
 val tokmap = List.foldl (fn ((s,t), acc) => Binarymap.insert(acc, s, t))
                         (Binarymap.mkDict String.compare)
-  [("(", ``#"("``), (")", ``#")"``), ("'", ``#"'"``),
+  [("(", ``#"("``), (")", ``#")"``), ("'", ``#"'"``), (" ", “#" "”),
+   ("\\n", “#"\n"”),
    (str (Char.chr 34), ``#"\""``), ("\\", ``#"\\"``), (".", ``#"."``)]
+  |>
+  (fn m => List.foldl
+             (fn (c,m) => Binarymap.insert(m,str c,Literal.mk_charlit_term c))
+             m
+             (explode "0123456789"))
 
 fun toklookup s =
   Binarymap.find(tokmap, s)
   handle Binarymap.NotFound => raise Fail ("No tok def for "^s)
 
 val ginfo = { tokmap = toklookup,
-              tokty = ``:char``, nt_tyname = "sexpNT", start = "sexp",
+              tokty = “:char”, nt_tyname = "sexpNT", start = "sexp",
               gname = "sexpG", mkntname = (fn s => "sxnt_" ^ s) }
 
+Definition allChars_def:
+  allChars = fromList (SET_TO_LIST univ(:char))
+End
+
+Theorem IN_allChars[simp]:
+  c ∈ᶠ allChars
+Proof
+  simp[allChars_def, finite_setTheory.fIN_IN, listTheory.SET_TO_LIST_INV]
+QED
+
+Definition mkCharRHS_def:
+  mkCharRHS P = fIMAGE (λc. [c]) (fFILTER P allChars)
+End
+
+Theorem IN_mkCharRHS:
+  s ∈ᶠ mkCharRHS P ⇔ ∃c. P c ∧ s = [c]
+Proof
+  simp[mkCharRHS_def]
+QED
 
 val sexpG_def = mk_grammar_def ginfo ‘
   sexp ::= WSsexp grabWS ;
   WSsexp ::= grabWS sexp0 ;
   grabWS ::= WS grabWS | ;
-  WS ::= ^(“{ c | isSpace c }”) ;
+  WS ::= " " | "\\n" ;
   sexp0 ::= sexpsym | sexpnum | sexpstr | "(" sexpseq grabWS ")"
          | "(" sexp "." sexp ")" | "'" WSsexp ;
 
   sexpseq ::= WSsexp sexpseq | ;
 
   sexpnum ::= sexpnum digit | digit ;
-  digit ::= ^(“{ c | isDigit c}”);
+  digit ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
 
   sexpstr ::= "\"" strcontents "\"" ;
   strcontents ::= | strchar strcontents ;
   strchar ::= normstrchar | escapedstrchar ;
-  normstrchar ::= ^(“{ c | isPrint c ∧ c ≠ #"\\" ∧ c ≠ #"\"" }”) ;
-  escapedstrchar ::= "\\" escapablechar ;
+  normstrchar ::= ^(“mkCharRHS (λc. isPrint c ∧ c ≠ #"\\" ∧ c ≠ #"\"")”);
+
+    escapedstrchar ::= "\\" escapablechar ;
   escapablechar ::= "\\" | "\"" ;
 
   sexpsym ::= first_symchar symchars ;
-  first_symchar ::= ^(“{ c | valid_first_symchar c }”)
+  first_symchar ::= ^(“mkCharRHS valid_first_symchar”)
  ;
   symchars ::= symchar symchars | ;
-  symchar ::= ^(“{ c | valid_symchar c }”);
+  symchar ::= ^(“mkCharRHS valid_symchar”);
 ’;
 
 val _ = type_abbrev("NT", ``:sexpNT inf``)

@@ -315,90 +315,44 @@ fun mkNT nty ({tokty,mkntname,...}:ginfo) s =
     mk_comb(inst [alpha |-> nty, beta |-> tokty] NT_t, mkNT0 nty mkntname s)
 
 
-fun sym_to_term nty (gi as {tokmap,tokty,mkntname,...}:ginfo) sym used = let
+fun sym_to_term nty (gi as {tokmap,tokty,mkntname,...}:ginfo) sym = let
   val TOK_t' = inst [alpha |-> tokty, beta |-> nty] TOK_t
   fun mktok t = mk_comb(TOK_t', t)
   fun termsym_to_term t = let
-    val (_, ty) = dest_const t handle HOL_ERR _ =>
+    val _ = is_const t orelse
                   raise mk_HOL_ERR "grammarLib" "mk_grammar_def"
                         ("Term " ^ Lib.quote (term_to_string t) ^
                          " is not a constant")
-    val (args, r) = strip_fun ty
-    fun var aty used = let
-      val t = variant used (mk_var(appletter aty, aty))
-    in
-      (t::used, Some t)
-    end
-    val (used, vs) =
-        case mmap var args used of
-            (_, Error _) => raise Fail "Impossible"
-          | (used, Some vs) => (used, vs)
   in
-    (used, Some (mktok (list_mk_comb(t, vs))))
+    mktok t
   end
 in
   case sym of
-      TOK (S s) => (used,  Some (mktok (tokmap s)))
+      TOK (S s) => mktok (tokmap s)
     | TOK (TMnm n) => termsym_to_term (Parse.Term [QUOTE n])
-    | NT n => (used, Some (mkNT nty gi n))
-end
-
-fun image f destty t = let
-  open pred_setSyntax pairSyntax
-  fun err() = mk_HOL_ERR "grammarLib" "mk_grammar_def"
-                         ("Can't handle form of antiquoted term " ^
-                          term_to_string t)
-in
-  if same_const t empty_tm then inst [alpha |-> destty] empty_tm
-  else
-    case Lib.total dest_insert t of
-        SOME (e, rest) => mk_insert(f e, image f destty rest)
-      | NONE =>
-        let
-        in
-          case Lib.total dest_union t of
-              SOME(s1,s2) => mk_union(image f destty s1, image f destty s2)
-            | NONE =>
-              let
-              in
-                case Lib.total dest_comb t of
-                    SOME (g,x) => if same_const g gspec_tm then
-                                    let val (v, body) = dest_pabs x
-                                        val (e, cond) = dest_pair body
-                                    in
-                                      mk_icomb(gspec_tm,
-                                               mk_pabs(v,mk_pair(f e, cond)))
-                                    end
-                                  else raise err()
-                  | NONE => raise err()
-              end
-        end
+    | NT n => mkNT nty gi n
 end
 
 fun clause_to_termSet nty (gi as {tokty,...}:ginfo) c = let
   val symty = mk_symty(tokty,nty)
-  open pred_setSyntax pairSyntax listSyntax
+  open finite_setSyntax pairSyntax listSyntax
+  val expected_ty = mk_fset_ty (listSyntax.mk_list_type tokty)
+  val term_to_string = trace ("Unicode", 0) term_to_string
+  val type_to_string = trace ("Unicode", 0) type_to_string
 in
   case c of
       Syms slist =>
       let
-        val (used, ts) =
-            case mmap (sym_to_term nty gi) slist [] of
-                (used, Some ts) => (used, ts)
-             |  _ => raise Fail "Can't happen"
+        val ts = map (sym_to_term nty gi) slist
         val body = mk_list(ts, symty)
       in
-        case used of
-            [] => mk_insert(body, inst [alpha |-> type_of body] empty_tm)
-          | _ => mk_icomb(gspec_tm, mk_pabs(list_mk_pair used, mk_pair(body, T)))
+        mk_set1 [body]
       end
-    | TmAQ t =>
-      let
-        val TOK_t' = inst [alpha |-> tokty, beta |-> nty] TOK_t
-        val symlist_ty = mk_list_type symty
-      in
-        image (fn t => mk_list([mk_comb(TOK_t', t)], symty)) symlist_ty t
-      end
+    | TmAQ t => if type_of t = expected_ty then t
+                else raise mk_HOL_ERR "grammarLib" "mk_grammar"
+                           ("Term " ^ term_to_string t ^ " has type\n  " ^
+                            type_to_string (type_of t) ^ "\nnot\n  " ^
+                            type_to_string expected_ty)
 end
 
 
@@ -423,15 +377,18 @@ fun mk_grammar_def0 (gi:ginfo) (g:t) = let
   fun foldthis ((ntnm, cs), rules_fm) = let
     val nt_t = mkNT0 nty (#mkntname gi) ntnm
     val rhs_sets = map (clause_to_termSet nty gi) cs
-    val rhs_set = list_mk_lbinop (curry pred_setSyntax.mk_union) rhs_sets
+    val rhs_set = list_mk_lbinop (curry finite_setSyntax.mk_union) rhs_sets
   in
     finite_mapSyntax.mk_fupdate(rules_fm, pairSyntax.mk_pair(nt_t, rhs_set))
   end
 
-  val rules = List.foldl foldthis
-                         (finite_mapSyntax.mk_fempty
-                            (mk_infty nty, listSyntax.mk_list_type symty --> bool))
-                         g
+  val rules =
+      List.foldl foldthis
+                 (finite_mapSyntax.mk_fempty
+                    (mk_infty nty,
+                     finite_setSyntax.mk_fset_ty
+                       (listSyntax.mk_list_type symty)))
+                 g
   val grammar_t =
       TypeBase.mk_record (gty, [("start", mkNT0 nty mkntname start),
                                 ("rules", rules)])
