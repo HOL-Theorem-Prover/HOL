@@ -149,8 +149,9 @@ fun mk_targetd l1 =
    Neural network representation of the board
    ------------------------------------------------------------------------- *)
 
-fun term_of_graph graph = mk_embedding_var
-  (Vector.fromList (map (fn x => if x then 1.0 else ~1.0) graph))
+fun term_of_graph graph = 
+  mk_embedding_var
+  (Vector.fromList (map (fn x => if x then 1.0 else ~1.0) graph), bool)
 
 val head_eval = mk_var ("head_eval", ``:bool -> 'a``)
 val head_poli = mk_var ("head_poli", ``:bool -> 'a``)
