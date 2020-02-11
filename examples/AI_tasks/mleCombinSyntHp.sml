@@ -235,7 +235,7 @@ val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 10}]
 
-val dim = 16
+val dim = 12
 fun dim_head_poli n = [dim,n]
 val tnnparam = map_assoc (dim_std (1,dim)) 
   [``$= : 'a -> 'a -> bool``,cT,v1,v2,v3,cA,cS,cK] @ 
