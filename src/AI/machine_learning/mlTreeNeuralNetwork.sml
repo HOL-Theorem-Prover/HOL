@@ -154,8 +154,8 @@ fun embed_nn v =
     end
   else msg_err "embed_nn" (tts v)
 
-fun mk_embedding_var rv =
-  mk_var (embedding_prefix ^ reall_to_string (vector_to_list rv), bool)
+fun mk_embedding_var (rv,ty) =
+  mk_var (embedding_prefix ^ reall_to_string (vector_to_list rv), ty)
 
 (* -------------------------------------------------------------------------
    Forward propagation
@@ -247,7 +247,7 @@ fun precomp_embed tnn tm =
     val fpdict = fp_tnn tnn (order_subtm [tm]) 
     val embedv = #outnv (last (dfind tm fpdict))
   in
-    mk_embedding_var embedv
+    mk_embedding_var (embedv, type_of tm)
   end
 
 (* -------------------------------------------------------------------------

@@ -269,8 +269,8 @@ val _ = (export_targetl "train" train; export_targetl "test" test);
 val targetl = import_targetl "train";
 val r = rl_start (rlobj,extsearch) (mk_targetd targetl);
 
-val targetd = retrieve_targetd rlobj 18;
-val _ = rl_restart 18 (rlobj,extsearch) targetd;
+val targetd = retrieve_targetd rlobj 23;
+val _ = rl_restart 23 (rlobj,extsearch) targetd;
 *)
 
 (* -------------------------------------------------------------------------

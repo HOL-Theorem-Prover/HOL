@@ -11,7 +11,7 @@ include Abbrev
   val random_tnn : (term * int list) list -> tnn
   val dim_std : int * int -> term -> int list
   val random_tnn_std : (int * int) -> term list -> tnn
-  val mk_embedding_var : real vector -> term 
+  val mk_embedding_var : (real vector * hol_type) -> term 
   
   val write_tnn : string -> tnn -> unit
   val read_tnn : string -> tnn
