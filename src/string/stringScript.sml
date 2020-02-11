@@ -168,6 +168,24 @@ REPEAT STRIP_TAC
 
 val char_size_def = Define `char_size (c:char) = 0`;
 
+val _ = TypeBase.export [
+  TypeBasePure.mk_nondatatype_info(
+    “:char”, {
+      encode = NONE, nchotomy = SOME ranged_char_nchotomy,
+      induction = SOME CHAR_INDUCT_THM,
+      size = SOME (“char_size”, char_size_def)
+    }
+  )
+]
+
+Theorem FINITE_CHARSET[simp]:
+  FINITE (s : char set)
+Proof
+  irule pred_setTheory.SUBSET_FINITE_I >> qexists_tac ‘UNIV’ >>
+  simp[pred_setTheory.FINITE_WEAK_ENUMERATE] >>
+  map_every qexists_tac [‘CHR’, ‘256’] >> Cases >> csimp[]
+QED
+
 (*---------------------------------------------------------------------------
       Strings are represented as lists of characters. This gives us
       EXPLODE and IMPLODE as the functions mapping into, and from, the
@@ -573,26 +591,6 @@ val string_lt_trans = store_thm("string_lt_trans",
 
 val _ = computeLib.add_persistent_funs
           ["IMPLODE_EXPLODE_I", "ORD_CHR_COMPUTE", "CHAR_EQ_THM"];
-
-fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
-  struct_ps = SOME (fn _ =>
-                       PP.block PP.CONSISTENT 0
-                                (PP.pr_list PP.add_string [PP.NL] l))};
-
-val _ = adjoin_to_theory_struct [
-  "val _ =",
-  "let open Lib boolSyntax",
-  "    val (v,M) = dest_forall(concl char_size_def)",
-  "    val char_size_tm = fst(strip_comb(lhs M))",
-  "in",
-  " TypeBase.write",
-  " [TypeBasePure.mk_nondatatype_info",
-  "  (type_of v, ",
-  "    {nchotomy = SOME ranged_char_nchotomy,",
-  "     induction = NONE,",
-  "     size = SOME(char_size_tm,char_size_def),",
-  "     encode = NONE})]",
-  "end;"];
 
 val _ = export_theory();
 
