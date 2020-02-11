@@ -216,7 +216,7 @@ fun tob ((c1,pos,_),c2,_) =
 
 val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
-    batch_size = 16, nepoch = 20}]
+    batch_size = 16, nepoch = 10}]
 
 val dim = 16
 fun dim_head_poli n = [dim,n]
@@ -231,7 +231,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleCombinSyntHp-" ^ its version, exwindow = 100000,
+  {expname = "mleCombinSyntHp-" ^ its version, exwindow = 200000,
    ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
@@ -251,6 +251,9 @@ val _ = (export_targetl "train" train; export_targetl "test" test);
 
 val targetl = import_targetl "train";
 val r = rl_start (rlobj,extsearch) (mk_targetd targetl);
+
+val targetd = retrieve_targetd rlobj 18;
+val _ = rl_restart 18 (rlobj,extsearch) targetd;
 *)
 
 (* -------------------------------------------------------------------------

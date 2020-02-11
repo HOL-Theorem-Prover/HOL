@@ -170,7 +170,7 @@ fun tob (poly,graph,_) =
 
 val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
-    batch_size = 16, nepoch = 20}]
+    batch_size = 16, nepoch = 10}]
 
 val dioph_operl = 
   [``$= : num -> num -> bool``,
@@ -193,7 +193,7 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleDiophSynt-" ^ its version, exwindow = 100000,
+  {expname = "mleDiophSynt-" ^ its version, exwindow = 200000,
    ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
@@ -217,10 +217,10 @@ val (train,test) = create_targetl (dlist dfull); length train; length test;
 val _ = (export_targetl "train" train; export_targetl "test" test);
 
 val targetl = import_targetl "train"; length targetl;
-val r = rl_start (rlobj,extsearch) (mk_targetd targetl);
+val _ = rl_start (rlobj,extsearch) (mk_targetd targetl);
 
 val targetd = retrieve_targetd rlobj 28;
-
+val _ = rl_restart 28 (rlobj,extsearch) targetd;
 *)
 
 (* -------------------------------------------------------------------------
