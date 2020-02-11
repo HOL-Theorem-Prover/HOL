@@ -241,7 +241,15 @@ fun infer_tnn tnn tml =
   in
     map_assoc f tml
   end
-  
+
+fun precomp_embed tnn tm =
+  let 
+    val fpdict = fp_tnn tnn (order_subtm [tm]) 
+    val embedv = #outnv (last (dfind tm fpdict))
+  in
+    mk_embedding_var embedv
+  end
+
 (* -------------------------------------------------------------------------
    Training
    ------------------------------------------------------------------------- *)

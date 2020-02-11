@@ -200,15 +200,32 @@ val head_eval = mk_var ("head_eval", ``:bool -> 'a``)
 val head_poli = mk_var ("head_poli", ``:bool -> 'a``)
 fun tag_heval x = mk_comb (head_eval,x)
 fun tag_hpoli x = mk_comb (head_poli,x)
-fun tob ((c1,pos,_),c2,_) = 
+
+fun convert_pos pos = 
+  let fun f x = case x of Left => 0 | Right => 1 in
+    map f pos
+  end
+
+fun tob1 ((c1,pos,_),c2,_) = 
   let 
-    fun f x = case x of Left => 0 | Right => 1
-    val newpos = map f pos
     val (tm1,tm2) = (hp_to_cterm c1, hp_to_cterm c2)
-    val tm = mk_eq (tag_pos (tm1,newpos), tm2)
+    val tm = mk_eq (tag_pos (tm1,convert_pos pos), tm2)
   in
     [tag_heval tm, tag_hpoli tm]
   end
+
+fun tob2 embedv ((c1,pos,_),_,_) = 
+  let 
+    val (tm1,tm2) = (hp_to_cterm c1, embedv)
+    val tm = mk_eq (tag_pos (tm1,convert_pos pos), tm2)
+  in
+    [tag_heval tm, tag_hpoli tm]
+  end
+
+fun pretob boardtnno = case boardtnno of
+    NONE => tob1
+  | SOME ((_,headnf,_),tnn) => 
+    tob2 (precomp_embed tnn (hp_to_cterm headnf))
 
 (* -------------------------------------------------------------------------
    Player
@@ -224,7 +241,7 @@ val tnnparam = map_assoc (dim_std (1,dim))
   [``$= : 'a -> 'a -> bool``,cT,v1,v2,v3,cA,cS,cK] @ 
   [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
 
-val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
+val dplayer = {pretob = pretob, tnnparam = tnnparam, schedule = schedule}
 
 (* -------------------------------------------------------------------------
    Interface

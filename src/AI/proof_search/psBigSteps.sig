@@ -19,7 +19,7 @@ sig
     {
     verbose : bool,
     temp_flag : bool,
-    player : ('a,'b) psMCTS.player,
+    preplayer : 'a -> ('a,'b) psMCTS.player,
     game : ('a,'b) psMCTS.game,
     mctsparam : psMCTS.mctsparam
     }

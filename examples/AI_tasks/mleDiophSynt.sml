@@ -154,15 +154,31 @@ fun term_of_graph graph = mk_embedding_var
 
 val head_eval = mk_var ("head_eval", ``:bool -> 'a``)
 val head_poli = mk_var ("head_poli", ``:bool -> 'a``)
+fun tag_heval x = mk_comb (head_eval,x)
+fun tag_hpoli x = mk_comb (head_poli,x)
 val graph_tag = mk_var ("graph_tag", ``:bool -> num``)
+fun tag_graph x = mk_comb (graph_tag,x)
 
-fun tob (poly,graph,_) = 
-  let val (tm1,tm2) = 
-    (term_of_poly poly, mk_comb (graph_tag, term_of_graph graph))
+fun tob1 (poly,graph,_) = 
+  let 
+    val (tm1,tm2) = (term_of_poly poly, tag_graph (term_of_graph graph))
+    val tm = mk_eq (tm1,tm2)
   in
-    [mk_comb (head_eval, (mk_eq (tm1,tm2))), 
-     mk_comb (head_poli, (mk_eq (tm1,tm2)))]
+    [tag_heval tm, tag_hpoli tm]
   end
+
+fun tob2 embedv (poly,_,_) = 
+  let 
+    val (tm1,tm2) = (term_of_poly poly, embedv)
+    val tm = mk_eq (tm1,tm2)
+  in
+    [tag_heval tm, tag_hpoli tm]
+  end
+
+fun pretob boardtnno = case boardtnno of
+    NONE => tob1
+  | SOME ((_,graph,_),tnn) => 
+    tob2 (precomp_embed tnn (tag_graph (term_of_graph graph)))
 
 (* -------------------------------------------------------------------------
    Player
@@ -186,7 +202,7 @@ fun dim_head_poli n = [dim,n]
 
 val tnnparam = map_assoc (dim_std (1,dim)) dioph_operl @
   [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
-val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
+val dplayer = {pretob = pretob, tnnparam = tnnparam, schedule = schedule}
 
 (* -------------------------------------------------------------------------
    Interface
@@ -219,8 +235,8 @@ val _ = (export_targetl "train" train; export_targetl "test" test);
 val targetl = import_targetl "train"; length targetl;
 val _ = rl_start (rlobj,extsearch) (mk_targetd targetl);
 
-val targetd = retrieve_targetd rlobj 28;
-val _ = rl_restart 28 (rlobj,extsearch) targetd;
+val targetd = retrieve_targetd rlobj 29;
+val _ = rl_restart 29 (rlobj,extsearch) targetd;
 *)
 
 (* -------------------------------------------------------------------------

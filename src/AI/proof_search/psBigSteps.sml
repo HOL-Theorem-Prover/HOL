@@ -122,7 +122,7 @@ type ('a,'b) bsobj =
   {
   verbose : bool,
   temp_flag : bool,
-  player : ('a,'b) player,
+  preplayer : 'a -> ('a,'b) player,
   game : ('a,'b) game,
   mctsparam : mctsparam
   }
@@ -161,7 +161,7 @@ fun run_bigsteps bsobj target =
       {
       mctsparam = #mctsparam bsobj,
       game = #game bsobj,
-      player = #player bsobj
+      player = #preplayer bsobj target
       }
     val (tree,cache) = starttree_of mctsobj target
     val mctsparam = #mctsparam bsobj
@@ -198,7 +198,7 @@ val bsobj : (toy_board,toy_move) bsobj =
   {
   verbose = true,
   temp_flag = false,
-  player = uniform_player toy_game,
+  preplayer = fn target => uniform_player toy_game,
   game = toy_game,
   mctsparam = mctsparam
   };

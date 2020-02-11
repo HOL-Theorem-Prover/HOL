@@ -17,11 +17,8 @@ sig
   val mat_smult    : real -> mat -> mat
   val mat_map      : ('a -> 'b) -> 'a vector vector -> 'b vector vector
   val mat_tabulate : (int -> int -> 'a) -> int * int -> 'a vector vector
-  val mat3_tabulate : (int -> int -> int -> 'a) ->
-    int * int * int -> 'a vector vector vector
   val mat_dim      : 'a vector vector -> int * int
   val mat_sub      : 'a vector vector -> int -> int -> 'a
-  val mat3_sub     : 'a vector vector vector -> int -> int -> int -> 'a
   val mat_update   : 'a vector vector -> (int * int) * 'a -> 'a vector vector
   val mat_add      : mat -> mat -> mat
   val matl_add     : mat list -> mat

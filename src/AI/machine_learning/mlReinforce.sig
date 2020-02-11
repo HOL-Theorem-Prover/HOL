@@ -20,7 +20,8 @@ sig
   (* players *)
   type splayer = bool * tnn * bool * int
   type 'a dplayer = 
-    {tob : 'a -> term list, schedule : schedule, tnnparam : tnnparam}
+    {pretob : ('a * tnn) option -> 'a -> term list, 
+     schedule : schedule, tnnparam : tnnparam}
   
   (* parallelization of the search *)
   type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec

@@ -145,7 +145,7 @@ val head_eval = mk_var ("head_eval", ``:bool -> 'a``)
 val head_poli = mk_var ("head_poli", ``:bool -> 'a``)
 fun tag_heval x = mk_comb (head_eval,x)
 fun tag_hpoli x = mk_comb (head_poli,x)
-fun tob (tm1,tm2,_) = 
+fun pretob _ (tm1,tm2,_) = 
   [tag_heval (mk_eq (tm1,tm2)), tag_hpoli (mk_eq (tm1,tm2))]
 
 (* -------------------------------------------------------------------------
@@ -162,7 +162,7 @@ val equality = ``$= : 'a -> 'a -> bool``
 val tnnparam = map_assoc (dim_std (1,dim)) [equality,cX,v1,v2,v3,cA,cS,cK] @ 
   [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
 
-val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
+val dplayer = {pretob = pretob, tnnparam = tnnparam, schedule = schedule}
 
 (* -------------------------------------------------------------------------
    Interface

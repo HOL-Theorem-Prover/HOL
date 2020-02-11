@@ -32,7 +32,8 @@ type 'a gameio =
    read_boardl : string -> 'a list}
 type splayer = bool * tnn * bool * int
 type 'a dplayer = 
-  {tob : 'a -> term list, schedule : schedule, tnnparam : tnnparam}
+  {pretob : ('a * tnn) option -> 'a -> term list, 
+   schedule : schedule, tnnparam : tnnparam}
 type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
 type rlparam =
   {expname : string, exwindow : int, ncore : int, 
@@ -71,12 +72,17 @@ fun player_from_tnn tnn tob game board =
 fun mk_bsobj rlobj (unib,tnn,noiseb,nsim) =
   let
     val game = #game rlobj
-    val tob = #tob (#dplayer rlobj)
-    fun player board = player_from_tnn tnn tob game board
+    val pretob = #pretob (#dplayer rlobj)
+    fun preplayer target =
+      let val tob = pretob (SOME (target,tnn)) in
+        fn board => player_from_tnn tnn tob game board
+      end
+    fun uniform_preplayer target = 
+      (fn board => uniform_player game board)
   in
     {
     verbose = false, temp_flag = false,
-    player = if unib then uniform_player game else player, 
+    preplayer = if unib then uniform_preplayer else preplayer, 
     game = game,
     mctsparam = mk_mctsparam noiseb nsim rlobj
     }
@@ -216,7 +222,8 @@ fun mk_extsearch self (rlobj as {rlparam,gameio,...}) =
 
 fun rl_train ngen rlobj rlex =
   let
-    val {tob,schedule,tnnparam} = #dplayer rlobj
+    val {pretob,schedule,tnnparam} = #dplayer rlobj
+    fun tob board = pretob NONE board
     fun f (a,b) = combine (tob a,[[hd b],tl b])
     val tnnex = map f rlex
     val uex = mk_fast_set (list_compare Term.compare) (map (tob o fst) rlex)

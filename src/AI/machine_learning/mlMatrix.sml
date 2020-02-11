@@ -52,18 +52,11 @@ fun mat_tabulate f (linen,coln) =
     Vector.tabulate (linen, mk_line)
   end
 
-fun mat3_tabulate f (an,bn,cn) =
-  let fun g i = mat_tabulate (f i) (bn,cn) in
-    Vector.tabulate (an,g)
-  end
-
 fun mat_smult (k:real) m = mat_map (fn x => k * x) m
 
 fun mat_dim m = (Vector.length m, Vector.length (Vector.sub (m,0)))
 
 fun mat_sub m i j = Vector.sub (Vector.sub (m,i), j)
-
-fun mat3_sub m i j k = Vector.sub (Vector.sub (Vector.sub (m,i), j), k)
 
 fun mat_update m ((i,j),k) =
   let val newv = Vector.update (Vector.sub(m,i),j,k) in
@@ -71,7 +64,7 @@ fun mat_update m ((i,j),k) =
   end
 
 fun mat_add m1 m2 =
-  let fun f i j = (mat_sub m1 i j : real) + mat_sub m2 i j in
+  let fun f i j = mat_sub m1 i j + mat_sub m2 i j in
     mat_tabulate f (mat_dim m1)
   end
 
