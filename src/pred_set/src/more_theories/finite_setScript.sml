@@ -251,6 +251,12 @@ Theorem FSETEQ[transfer_rule] = MATCH_MP Qt_EQ fset0Q
 Definition fIN_def:
   fIN = (I ---> fset_REP ---> I) MEM
 End
+val _ = set_mapped_fixity{
+  fixity = Infix(NONASSOC, 425), term_name = "fIN", tok = "∈ᶠ"         (* UOK *)
+}
+Overload "∉ᶠ" = “\e s. ~(fIN e s)”                                     (* UOK *)
+val _ = set_fixity "∉ᶠ" (Infix(NONASSOC, 425))                         (* UOK *)
+
 
 Theorem MEM_transfers[transfer_rule]:
   bi_unique AB ==> (AB |==> LIST_REL AB |==> (=)) MEM MEM
@@ -283,6 +289,10 @@ QED
 Definition fUNION_def:
   fUNION = (fset_REP ---> fset_REP ---> fset_ABS) APPEND
 End
+
+val _ = set_mapped_fixity{
+  fixity = Infixl 500, term_name = "fUNION", tok = "∪ᶠ"                (* UOK *)
+}
 
 Theorem fUNION_relates[transfer_rule]:
   (FSET0 |==> FSET0 |==> FSET0) APPEND fUNION
@@ -317,6 +327,14 @@ QED
 Definition fINSERT_def:
   fINSERT = (I ---> fset_REP ---> fset_ABS) CONS
 End
+
+val _ = add_listform {block_info = (PP.CONSISTENT, 2),
+                      cons = "fINSERT",
+                      leftdelim = [TOK "{"],
+                      nilstr = "fEMPTY",
+                      rightdelim = [TOK "}ᶠ"],                         (* UOK *)
+                      separator = [TOK ";", BreakSpace(1,0)]}
+Overload "∅ᶠ" = “fEMPTY”                                               (* UOK *)
 
 Theorem fINSERT_relates[transfer_rule]:
   ((=) |==> FSET0 |==> FSET0) CONS fINSERT
@@ -367,6 +385,7 @@ Proof
   simp[fsequiv_def, pred_setTheory.EXTENSION] >> metis_tac[]
 QED
 
+
 Theorem NOT_EMPTY_INSERT[simp]:
   !h t. fEMPTY <> fINSERT h t
 Proof
@@ -399,6 +418,12 @@ Proof
   goal_assum (mp_tac o Uchain (GG idQ)) >>
   (* respectfulness *)
   simp[FUN_REL_def, fsequiv_def, LIST_TO_SET_FILTER]
+QED
+
+Theorem IN_DELETE[simp]:
+  !e1 e2 s. fIN e1 (fDELETE e2 s) <=> e1 <> e2 /\ fIN e1 s
+Proof
+  xfer_back_tac >> simp[MEM_FILTER] >> metis_tac[]
 QED
 
 Definition fCARD_def:
@@ -497,6 +522,8 @@ Definition fINTER_def:
   fINTER = (fset_REP ---> fset_REP ---> fset_ABS)
            (FILTER o combin$C MEM)
 End
+val _ = set_mapped_fixity {fixity = Infixl 600, term_name = "fINTER",
+                           tok = "∩ᶠ"}                                 (* UOK *)
 
 Theorem fINTER_relates[transfer_rule]:
   (FSET0 |==> FSET0 |==> FSET0) (FILTER o combin$C MEM) fINTER
@@ -676,11 +703,41 @@ Proof
   simp[FUN_REL_def, fsequiv_def]
 QED
 
+Definition fSIGMA_def:
+  fSIGMA f s = SUM_IMAGE f (toSet s)
+End
+
+Theorem toSet_thm[simp]:
+  toSet fEMPTY = {} /\
+  toSet (fINSERT e s) = e INSERT toSet s /\
+  toSet (fDELETE e s) = toSet s DELETE e
+Proof
+  simp[toSet_def, pred_setTheory.EXTENSION] >> metis_tac[]
+QED
+
 Theorem FINITE_toSet[simp]:
   !s. FINITE (toSet s)
 Proof
   ho_match_mp_tac fset_induction >> simp[toSet_def, pred_setTheory.GSPEC_OR]
 QED
+
+Theorem fSIGMA_thm[simp]:
+  fSIGMA f fEMPTY = 0 /\
+  fSIGMA f (fINSERT e s) = f e + fSIGMA f (fDELETE e s)
+Proof
+  simp[fSIGMA_def, pred_setTheory.SUM_IMAGE_THM]
+QED
+
+val _ = TypeBase.export [
+  TypeBasePure.mk_nondatatype_info (
+    “:'a fset”, {
+      nchotomy = SOME fset_cases,
+      induction = SOME fset_induction,
+      size = SOME(“fSIGMA”,fSIGMA_thm),
+      encode = NONE
+    }
+  )
+]
 
 Definition fBIGUNION_def:
   fBIGUNION = ((MAP fset_REP o fset_REP) ---> fset_ABS) FLAT
