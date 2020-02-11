@@ -291,6 +291,19 @@ fun tmsize_compare (a,b) =
     if r = EQUAL then Term.compare (a,b) else r
   end
 
+fun all_subterms tm =
+  let
+    val r = ref []
+    fun traverse tm = 
+      let val (oper,argl) = strip_comb tm in
+        r := oper :: (!r);
+        app traverse argl
+      end
+  in
+    traverse tm; !r
+  end
+
+
 fun fold_left f l orig = case l of
     [] => orig
   | a :: m => let val new_orig = f a orig in fold_left f m new_orig end

@@ -25,18 +25,18 @@ fun sum_rvect v = Vector.foldl (op +) 0.0 v
 fun average_rvect v = sum_rvect v / Real.fromInt (Vector.length v)
 
 fun diff_rvect v1 v2 =
-  let fun f i = (Vector.sub (v1,i): real) - Vector.sub (v2,i) in
+  let fun f i = Vector.sub (v1,i) - Vector.sub (v2,i) in
     Vector.tabulate (Vector.length v1, f)
   end
 
 fun mult_rvect v1 v2 =
-  let fun f i = (Vector.sub (v1,i): real) * Vector.sub (v2,i) in
+  let fun f i = Vector.sub (v1,i) * Vector.sub (v2,i) in
     Vector.tabulate (Vector.length v1, f)
   end
 
 fun scalar_product v1 v2 = sum_rvect (mult_rvect v1 v2)
 
-fun scalar_mult (k:real) v = Vector.map (fn x => (k:real) * x) v
+fun scalar_mult k v = Vector.map (fn x => k * x) v
 
 (* -------------------------------------------------------------------------
    Matrix

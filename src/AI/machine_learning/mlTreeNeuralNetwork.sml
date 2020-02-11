@@ -110,18 +110,20 @@ fun read_tnnex file =
    TNN Examples: ordering subterms and scaling output values
    ------------------------------------------------------------------------- *)
 
-fun fst_compare cmp (a,b) = cmp (fst a, fst b)
-
 fun order_subtm tml =
   let
-    fun f x =
-      let val (_,argl) = strip_comb x in
-        (x, mk_fast_set Term.compare argl) :: List.concat (map f argl)
+    val d = ref (dempty (cpl_compare Int.compare Term.compare))
+    fun traverse tm = 
+      let 
+        val (oper,argl) = strip_comb tm 
+        val nl = map traverse argl
+        val n = 1 + sum_int nl
+      in
+        d := dadd (n, tm) () (!d); n
       end
-    val tmdepl = mk_fast_set (fst_compare Term.compare) 
-      (List.concat (map f tml))
+    val subtml = (app (ignore o traverse) tml; dkeys (!d))
   in
-    topo_sort Term.compare tmdepl
+    map snd subtml
   end
 
 fun prepare_tnnex tnnex =
@@ -162,8 +164,8 @@ fun mk_embedding_var rv =
 fun fp_oper tnn fpdict tm =
   let
     val (f,argl) = strip_comb tm
-    val nn = dfind f tnn handle NotFound => embed_nn f
-    val invl = map (fn x => #outnv (last (dfind x fpdict))) argl
+    val nn = (dfind f) tnn handle NotFound => embed_nn f
+    val invl = (map (fn x => #outnv (last (dfind x fpdict)))) argl
     val inv = Vector.concat invl
   in
     fp_nn nn inv
@@ -234,8 +236,10 @@ fun bp_tnn fpdict (tml,tmevl) =
 
 fun infer_tnn tnn tml =
   let 
-    val fpdict = fp_tnn tnn (order_subtm tml) 
-    fun f x = descale_out (#outnv (last (dfind x fpdict)))
+    val fpdict = Profile.profile "fp" (fp_tnn tnn) (
+      Profile.profile "order_subtm" order_subtm tml) 
+    fun f x = Profile.profile "descale" 
+      descale_out (#outnv (last (dfind x fpdict)))
   in
     map_assoc f tml
   end
@@ -438,8 +442,6 @@ load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 (* terms *)
 val vx = mk_var ("x",alpha);
 val vy = mk_var ("y",alpha);load "aiLib"; open aiLib;
-load "psTermGen"; open psTermGen;
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 val vz = mk_var ("z",alpha);
 val vf = ``f:'a->'a->'a``;
 val vg = ``g:'a -> 'a``;
@@ -463,9 +465,22 @@ val ex1 = map (fn (a,b) => single (mk_comb (vhead,a),b)) ex0;
 val (trainex,testex) = part_pct 0.9 ex1;
 
 (* TNN *)
-val nlayer = 2;
-val dim = 12;
+val nlayer = 1;
+val dim = 16;
 val randtnn = random_tnn_std (nlayer,dim) (vhead :: varl);
+
+(* profiling *)
+Profile.reset_all ();
+val r = map (infer_tnn randtnn) (map (map fst) trainex);
+Profile.results ();
+
+(*
+[("descale",
+ {gc = 0.000, n = 2618, real = 0.010, sys = 0.001, usr = 0.004}),
+("fp", {gc = 0.005, n = 2618, real = 0.105, sys = 0.010, usr = 0.084}),
+("order_subtm",
+ {gc = 0.000, n = 2618, real = 0.035, sys = 0.003, usr = 0.026})]:
+*)
 
 (* training *)
 val trainparam =
@@ -475,8 +490,6 @@ val schedule = [trainparam];
 val tnn = train_tnn schedule randtnn (trainex,testex);
 
 (* testing *)
-val tml = map fst (hd (shuffle testex));
-val r = infer_tnn tnn tml;
 val acc = tnn_accuracy tnn testex;
 *)
 
