@@ -196,11 +196,12 @@ val v3a1 = mk_var ("v3a1",``:'a -> 'a``)
 val v3a2 = mk_var ("v3a2",``:'a -> 'a -> 'a``)
 val v3a3 = mk_var ("v3a3",``:'a -> 'a -> 'a -> 'a``)
 val v3a4 = mk_var ("v3a4",``:'a -> 'a -> 'a -> 'a -> 'a``)
+val metavar = mk_var ("metavar",``:'a``)
 val skvarl = 
   [cS0,cS1,cS2,cK0,cK1,
    v1a0,v1a1,v1a2,v1a3,v1a4, 
    v2a0,v2a1,v2a2,v2a3,v2a4,
-   v3a0,v3a1,v3a2,v3a3,v3a4]
+   v3a0,v3a1,v3a2,v3a3,v3a4,metavar]
 
 fun witness_to_nntm combin = case combin of
     A(A(S,x),y) => list_mk_comb (cS2, map witness_to_nntm [x,y])
@@ -208,6 +209,7 @@ fun witness_to_nntm combin = case combin of
   | S => cS0
   | A(K,x) => mk_comb (cK1, witness_to_nntm x)
   | K => cK0
+  | V1 => metavar
   | _ => raise ERR "witness_to_nntm" ""
 
 fun headnf_to_nntm combin = case combin of
