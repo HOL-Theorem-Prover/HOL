@@ -108,9 +108,8 @@ fun available_movel board =
 
 val game : (board,move) game =
   {
-  status_of = Profile.profile "status_of" status_of,
-  apply_move = Profile.profile "apply_move" apply_move,
-  available_movel = Profile.profile "available_movel" available_movel,  
+  status_of = status_of,
+  apply_move = apply_move,
   string_of_board = string_of_board,
   string_of_move = string_of_move,
   board_compare = board_compare,
@@ -312,7 +311,6 @@ val _ = (export_targetl "train" train; export_targetl "test" test);
 
 val targetl = import_targetl "train";
 val r = rl_start (rlobj,extsearch) (mk_targetd targetl);
-Profile.results ();
 
 val targetd = retrieve_targetd rlobj 26;
 val _ = rl_restart 26 (rlobj,extsearch) targetd;
@@ -355,7 +353,6 @@ val bsobj : (board,move) bsobj =
 
 val targetl = import_targetl "train";
 val _ = map (run_bigsteps bsobj) (random_subset 10 targetl);
-Profile.results ();
 *)
 
 
