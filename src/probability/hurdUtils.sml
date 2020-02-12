@@ -1248,9 +1248,4 @@ val ASM_MATCH_MP_TAC = ASM_MATCH_MP_TAC_N 10;
 
 val art = ASM_REWRITE_TAC;
 
-fun fix   ts = MAP_EVERY Q.X_GEN_TAC    ts;
-fun set   ts = MAP_EVERY Q.ABBREV_TAC   ts;
-fun unset ts = MAP_EVERY Q.UNABBREV_TAC ts;
-fun take  ts = MAP_EVERY Q.EXISTS_TAC   ts;
-
 end; (* hurdUtils *)

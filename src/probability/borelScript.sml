@@ -26,7 +26,8 @@ open HolKernel Parse boolLib bossLib;
 
 open arithmeticTheory prim_recTheory numLib combinTheory optionTheory
      res_quanTheory res_quanTools pairTheory jrhUtils mesonLib
-     pred_setTheory pred_setLib listTheory quotientTheory relationTheory;
+     pred_setTheory pred_setLib listTheory quotientTheory relationTheory
+     rich_listTheory sortingTheory;
 
 open realTheory realLib seqTheory transcTheory real_sigmaTheory RealArith;
 
@@ -345,8 +346,7 @@ val FN_PLUS_ALT = store_thm
  >> fs []);
 
 (* !f. fn_plus f = (\x. max 0 (f x)) *)
-val FN_PLUS_ALT' = save_thm
-  ("FN_PLUS_ALT'", ONCE_REWRITE_RULE [max_comm] FN_PLUS_ALT);
+Theorem FN_PLUS_ALT' = ONCE_REWRITE_RULE [max_comm] FN_PLUS_ALT;
 
 Theorem fn_plus : (* original definition *)
     !f x. fn_plus f x = max 0 (f x)
@@ -367,8 +367,7 @@ val FN_MINUS_ALT = store_thm
  >> fs [neg_0]);
 
 (* |- !f. fn_minus f = (\x. -min 0 (f x)) *)
-val FN_MINUS_ALT' = save_thm
-  ("FN_MINUS_ALT'", ONCE_REWRITE_RULE [min_comm] FN_MINUS_ALT);
+Theorem FN_MINUS_ALT' = ONCE_REWRITE_RULE [min_comm] FN_MINUS_ALT;
 
 Theorem fn_minus : (* original definition *)
     !f x. fn_minus f x = -min 0 (f x)
@@ -2577,7 +2576,7 @@ val IN_MEASURABLE_BOREL_MUL = store_thm
         >> Q.EXISTS_TAC `(\x. (f x + g x))`
         >> RW_TAC std_ss []
         >> MATCH_MP_TAC IN_MEASURABLE_BOREL_ADD
-        >> take [`f`, `g`]
+        >> qexistsl_tac [`f`, `g`]
         >> RW_TAC std_ss [],
         MATCH_MP_TAC IN_MEASURABLE_BOREL_SQR
         >> METIS_TAC [],
@@ -3677,11 +3676,9 @@ QED
    all empty sets, then sort the rest of sets to guarantee that the first n
    sets still form a right-open interval.  -- Chun Tian, 26/1/2020
  *)
-local open rich_listTheory sortingTheory
-in
-val lborel0_finite_additive = store_thm (
-   "lborel0_finite_additive", ``finite_additive lborel0``,
- (* proof *)
+Theorem lborel0_finite_additive :
+    finite_additive lborel0
+Proof
     RW_TAC std_ss [finite_additive_def, measure_def, measurable_sets_def]
  >> ASSUME_TAC right_open_intervals_semiring
  >> ASSUME_TAC lborel0_positive
@@ -3709,7 +3706,7 @@ val lborel0_finite_additive = store_thm (
  >> Q.ABBREV_TAC `n0 = LENGTH filtered`
  (* n0 <= n *)
  >> Know `n0 <= LENGTH (COUNT_LIST n)`
- >- (unset [`n0`, `filtered`] \\
+ >- (qunabbrevl_tac [`n0`, `filtered`] \\
      REWRITE_TAC [LENGTH_FILTER_LEQ])
  >> DISCH_THEN (ASSUME_TAC o (REWRITE_RULE [LENGTH_COUNT_LIST]))
  >> Know `BIGUNION (IMAGE f (count n)) = BIGUNION (IMAGE f (set filtered))`
@@ -3735,7 +3732,7 @@ val lborel0_finite_additive = store_thm (
          DISJ1_TAC >> NTAC 2 STRIP_TAC \\
          MATCH_MP_TAC pos_not_neginf \\
          fs [positive_def, measure_def, measurable_sets_def]) \\
-     unset [`empties`, `filtered`] \\
+     qunabbrevl_tac [`empties`, `filtered`] \\
      RW_TAC std_ss [Once EXTENSION, MEM_FILTER, MEM_COUNT_LIST,
                     IN_DIFF, IN_COUNT] \\
      EQ_TAC >> RW_TAC std_ss []) >> Rewr'
@@ -3858,7 +3855,7 @@ val lborel0_finite_additive = store_thm (
          fs [positive_def, measure_def, measurable_sets_def]) \\
      MATCH_MP_TAC INJ_IMAGE \\
      Q.EXISTS_TAC `set sorted` \\
-     unset [`h`, `n0`] >> rw [INJ_DEF, EL_MEM] \\
+     qunabbrevl_tac [`h`, `n0`] >> rw [INJ_DEF, EL_MEM] \\
      METIS_TAC [EL_ALL_DISTINCT_EL_EQ]) >> Rewr'
  (* clean up useless assumptions *)
  >> Q.PAT_X_ASSUM `GENLIST _ n0 = MAP f filtered`                K_TAC
@@ -3915,7 +3912,7 @@ val lborel0_finite_additive = store_thm (
  >- (rpt STRIP_TAC >> `i < n0` by RW_TAC arith_ss [] \\
      Q.PAT_X_ASSUM `!i j. i < j /\ j < n0 ==> P`
        (MP_TAC o Q.SPECL [`i`, `j`]) \\
-     unset [`n0`, `R`] >> RW_TAC std_ss [] \\
+     qunabbrevl_tac [`n0`, `R`] >> RW_TAC std_ss [] \\
      CCONTR_TAC \\
     `h i IN subsets right_open_intervals /\
      h j IN subsets right_open_intervals` by PROVE_TAC [] \\
@@ -3964,7 +3961,7 @@ val lborel0_finite_additive = store_thm (
          RW_TAC std_ss [Once EXTENSION, IN_BIGUNION_IMAGE, IN_COUNT, NOT_IN_EMPTY] \\
         `h i <> {}` by METIS_TAC [] \\
          FULL_SIMP_TAC std_ss [GSYM MEMBER_NOT_EMPTY] \\
-         take [`x`, `i`] >> art []) \\
+         qexistsl_tac [`x`, `i`] >> art []) \\
      REWRITE_TAC [in_right_open_intervals_nonempty] \\
      STRIP_TAC >> POP_ASSUM MP_TAC \\
      SIMP_TAC std_ss [GSPECIFICATION, right_open_interval, IN_BIGUNION_IMAGE,
@@ -3983,7 +3980,7 @@ val lborel0_finite_additive = store_thm (
     `b1 < a2` by METIS_TAC [REAL_LT_LE] \\ (* [a1, b1) < [a2, b2) *)
      Q.PAT_X_ASSUM `b1 <> a2` K_TAC \\
      Q.PAT_X_ASSUM `b1 <= a2` K_TAC \\
-     unset [`b1`, `a2`] \\
+     qunabbrevl_tac [`b1`, `a2`] \\
      Know `h i <> {} /\ h i IN subsets right_open_intervals` >- PROVE_TAC [] \\
      DISCH_THEN (STRIP_ASSUME_TAC o
                  (REWRITE_RULE [in_right_open_intervals_nonempty])) \\
@@ -4103,8 +4100,8 @@ val lborel0_finite_additive = store_thm (
       MATCH_MP_TAC REAL_LTE_TRANS \\
       Q.EXISTS_TAC `interval_upperbound (h j)` >> art [],
       (* goal 3 (of 3) *)
-      REWRITE_TAC [REAL_LTE_TOTAL] ]);
-end; (* local open ... *)
+      REWRITE_TAC [REAL_LTE_TOTAL] ]
+QED
 
 (* Proposition 6.3 [1, p.46], for constructing `lborel` by CARATHEODORY_SEMIRING *)
 Theorem lborel0_premeasure :
@@ -4335,7 +4332,7 @@ Proof
  >> Know `BIGUNION (IMAGE h UNIV) <> {}`
  >- (RW_TAC std_ss [Once EXTENSION, NOT_IN_EMPTY, IN_BIGUNION_IMAGE, IN_UNIV] \\
     `h 0 <> {}` by PROVE_TAC [] >> fs [GSYM MEMBER_NOT_EMPTY] \\
-     take [`x`, `0`] >> art []) >> DISCH_TAC
+     qexistsl_tac [`x`, `0`] >> art []) >> DISCH_TAC
  >> Know `?a b. BIGUNION (IMAGE h UNIV) = right_open_interval a b`
  >- (Q.PAT_X_ASSUM `BIGUNION (IMAGE h UNIV) IN subsets right_open_intervals`
        (MP_TAC o
@@ -4393,7 +4390,7 @@ Proof
      REWRITE_TAC [Once ADD_COMM, GSYM SUC_ONE_ADD] \\
      METIS_TAC [REAL_HALF_BETWEEN, POW_POS_LT, REAL_LT_MUL]) >> DISCH_TAC
  >> Know `!n. J n SUBSET H n`
- >- (GEN_TAC >> unset [`J`, `H`] >> BETA_TAC \\
+ >- (GEN_TAC >> qunabbrevl_tac [`J`, `H`] >> BETA_TAC \\
      RW_TAC std_ss [SUBSET_DEF, IN_INTERVAL, in_right_open_interval] \\
      MATCH_MP_TAC REAL_LT_IMP_LE >> art []) >> DISCH_TAC
  >> Know `!n. J n <> {}`
@@ -5592,11 +5589,10 @@ Proof
 QED
 
 (* |- !c. measure lebesgue {c} = 0 *)
-val lebesgue_sing = save_thm
-  ("lebesgue_sing",
+Theorem lebesgue_sing =
    ((Q.GEN `c`) o
     (SIMP_RULE real_ss [REAL_LE_REFL, GSYM extreal_of_num_def, INTERVAL_SING]) o
-    (Q.SPECL [`c`,`c`])) lebesgue_closed_interval);
+    (Q.SPECL [`c`,`c`])) lebesgue_closed_interval;
 
 Theorem lebesgue_empty :
     measure lebesgue {} = 0
@@ -5624,7 +5620,7 @@ Theorem lambda_eq : (* was: lborel_eqI *)
         !s. s IN subsets borel ==> (lambda s = measure m s)
 Proof
     rpt STRIP_TAC >> irule UNIQUENESS_OF_MEASURE
- >> take [`univ(:real)`, `{interval [a,b] | T}`]
+ >> qexistsl_tac [`univ(:real)`, `{interval [a,b] | T}`]
  >> CONJ_TAC (* INTER_STABLE *)
  >- (POP_ASSUM K_TAC >> RW_TAC std_ss [GSPECIFICATION] \\
      Cases_on `x` >> Cases_on `x'` >> fs [] \\
@@ -5708,8 +5704,7 @@ Proof
 QED
 
 (* |- !s. s IN subsets borel ==> measure lebesgue s = lambda s *)
-val lebesgue_eq_lambda = save_thm
-  ("lebesgue_eq_lambda", GSYM lambda_eq_lebesgue);
+Theorem lebesgue_eq_lambda = GSYM lambda_eq_lebesgue;
 
 (* a sample application of "lebesgue_eq_lambda" *)
 Theorem lebesgue_open_interval :

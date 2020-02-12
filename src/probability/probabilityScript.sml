@@ -891,7 +891,7 @@ val PROB_DISCRETE_EVENTS_COUNTABLE = store_thm
       by (RW_TAC std_ss [SUBSET_DEF,GSPECIFICATION] >> METIS_TAC [SUBSET_DEF])
   >> `countable {{x} | x IN s}`
       by (Suff `{{x} | x IN s} = IMAGE (\x. {x}) s`
-  >- METIS_TAC [image_countable, COUNTABLE_SUBSET]
+          >- METIS_TAC [image_countable, COUNTABLE_SUBSET]
           >> RW_TAC std_ss [EXTENSION,GSPECIFICATION,IN_IMAGE])
   >> METIS_TAC [EVENTS_COUNTABLE_UNION]);
 
@@ -900,7 +900,7 @@ val PROB_DISCRETE_EVENTS_COUNTABLE = store_thm
 Theorem distribution_distr :
     distribution = distr
 Proof
-    rpt FUN_EQ_TAC >> fix [`p`, `X`, `s`]
+    rpt FUN_EQ_TAC >> qx_genl_tac [`p`, `X`, `s`]
  >> RW_TAC std_ss [distribution_def, distr_def, prob_def, p_space_def]
 QED
 
@@ -1886,7 +1886,7 @@ val finite_second_moments_all = store_thm (* new *)
            `?r. X x = Normal r` by PROVE_TAC [extreal_cases] >> POP_ORW \\
            REWRITE_TAC [extreal_sub_def, extreal_not_infty]) \\
        MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
-       take [`X`, `\x. Normal c`] \\
+       qexistsl_tac [`X`, `\x. Normal c`] \\
        ASM_SIMP_TAC std_ss [extreal_not_infty] \\
        MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST >> Q.EXISTS_TAC `Normal c` \\
        ASM_SIMP_TAC std_ss [],
@@ -2085,7 +2085,7 @@ val finite_second_moments_eq_integrable_squares = store_thm
             `?r. X x = Normal r` by PROVE_TAC [extreal_cases] >> POP_ORW \\
              REWRITE_TAC [extreal_sub_def, extreal_not_infty]) \\
          MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
-         take [`X`, `\x. Normal c`] >> RW_TAC std_ss [] \\
+         qexistsl_tac [`X`, `\x. Normal c`] >> RW_TAC std_ss [] \\
          MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST >> Q.EXISTS_TAC `Normal c` \\
          RW_TAC std_ss [space_def],
          (* goal 1.2 (of 3) *)
@@ -2475,7 +2475,7 @@ val INDEP_FAMILIES_SIGMA_lemma = Q.prove (
  >> Q.ABBREV_TAC `v = \x. prob p (B n) * prob p x`
  >> Suff `u t = v t` >- METIS_TAC []
  >> irule UNIQUENESS_OF_MEASURE_FINITE
- >> take [`p_space p`, `G`]
+ >> qexistsl_tac [`p_space p`, `G`]
  (* !s t. s IN G /\ t IN G ==> s INTER t IN G *)
  >> CONJ_TAC
  >- (Q.UNABBREV_TAC `G` >> RW_TAC std_ss [GSPECIFICATION, IN_INSERT] >| (* 4 subgoals *)
@@ -2704,7 +2704,7 @@ val INDEP_FAMILIES_SIGMA_lemma2 = store_thm
        MATCH_MP_TAC EXTREAL_PROD_IMAGE_DISJOINT_UNION >> art [] \\
        CONJ_TAC >- PROVE_TAC [SUBSET_FINITE_I] \\
        MATCH_MP_TAC SUBSET_DISJOINT \\
-       take [`N`, `M`] >> art [DISJOINT_SYM] ])
+       qexistsl_tac [`N`, `M`] >> art [DISJOINT_SYM] ])
  >> DISCH_TAC
  >> Know `!s a. a IN G /\ s IN subsets (sigma (p_space p) (IMAGE (B a) M)) ==>
                 indep p (B a n) s`
@@ -3392,7 +3392,7 @@ val variance_sum = store_thm
          CONJ_TAC >> MATCH_MP_TAC pos_not_neginf >> REWRITE_TAC [le_pow2]) \\
      CONJ_TAC
      >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL \\
-         take [`\x. X q x - E1`, `\x. X r x - E2`] \\
+         qexistsl_tac [`\x. X q x - E1`, `\x. X r x - E2`] \\
          fs [prob_space_def, measure_space_def, space_def, p_space_def, events_def] \\
          CONJ_TAC
          >- (`!x. X q x - E1 = X q x - (\x. E1) x` by METIS_TAC [] >> POP_ORW \\

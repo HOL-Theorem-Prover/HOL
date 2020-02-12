@@ -362,11 +362,13 @@ val mul_lone = store_thm
   Cases
   >> RW_TAC real_ss [extreal_mul_def, extreal_of_num_def, REAL_MUL_LID]);
 
-val entire = store_thm (* was: mul2_zero *)
-  ("entire", ``!x y. (x * y = 0) <=> (x = 0) \/ (y = 0)``,
-  rpt Cases
-  >> RW_TAC std_ss [extreal_mul_def, num_not_infty, extreal_of_num_def,
-                    extreal_11, REAL_ENTIRE]);
+Theorem entire : (* was: mul2_zero *)
+    !x y. (x * y = 0) <=> (x = 0) \/ (y = 0)
+Proof
+    rpt Cases
+ >> RW_TAC std_ss [extreal_mul_def, num_not_infty, extreal_of_num_def,
+                   extreal_11, REAL_ENTIRE]
+QED
 
 (***************)
 (*    Order    *)
@@ -1278,7 +1280,7 @@ Proof
                   (REWRITE_RULE [Once (GSYM lt_neg), neg_0])) ]
 QED
 
-Theorem abs_eq_0 :
+Theorem abs_eq_0[simp] :
     !x. (abs x = 0) <=> (x = 0)
 Proof
     GEN_TAC
@@ -1288,19 +1290,19 @@ Proof
  >> fs [REWRITE_RULE [neg_0, le_antisym] (Q.SPECL [`x`, `0`] abs_bounds)]
 QED
 
-Theorem abs_le_0 :
+Theorem abs_le_0[simp] :
     !x. abs x <= 0 <=> (x = 0)
 Proof
     METIS_TAC [abs_pos, abs_eq_0, le_antisym]
 QED
 
-Theorem abs_gt_0 :
+Theorem abs_gt_0[simp] :
     !x. 0 < abs x <=> x <> 0
 Proof
     RW_TAC std_ss [Once (GSYM abs_eq_0)]
  >> STRIP_ASSUME_TAC (REWRITE_RULE [le_lt] (Q.SPEC `x` abs_pos))
  >- fs [lt_le]
- >> fs [lt_refl]
+ >> FULL_SIMP_TAC std_ss [lt_refl]
 QED
 
 (*********************)
@@ -7008,11 +7010,13 @@ val EXTREAL_SUP_SEQ = store_thm
           >> SELECT_ELIM_TAC
           >> RW_TAC std_ss []
           >> `?x. P x /\ seq_sup P n < x` by METIS_TAC [sup_lt,SPECIFICATION]
+          >> rename1 `seq_sup P n < x2`
           >> `?x. P x /\ sup P < x + Normal ((1 / 2) pow (SUC n))` by METIS_TAC []
-          >> Q.EXISTS_TAC `max x'' x'''`
+          >> rename1 `sup P < x3 + _`
+          >> Q.EXISTS_TAC `max x2 x3`
           >> RW_TAC std_ss [extreal_max_def,SPECIFICATION]
-          >- (`x''' < x''` by FULL_SIMP_TAC std_ss [GSYM extreal_lt_def]
-              >> `x''' +  Normal ((1 / 2) pow (SUC n)) <= x'' +  Normal ((1 / 2) pow (SUC n))`
+          >- (`x3 < x2` by FULL_SIMP_TAC std_ss [GSYM extreal_lt_def]
+              >> `x3 +  Normal ((1 / 2) pow (SUC n)) <= x2 +  Normal ((1 / 2) pow (SUC n))`
                   by METIS_TAC [lt_radd,lt_le,extreal_not_infty]
               >> METIS_TAC [lte_trans])
           >> METIS_TAC [lte_trans])
@@ -7021,11 +7025,13 @@ val EXTREAL_SUP_SEQ = store_thm
           >> SELECT_ELIM_TAC
           >> RW_TAC std_ss []
           >- (`?x. P x /\ seq_sup P n < x` by METIS_TAC [sup_lt,SPECIFICATION]
+              >> rename1 `sup_sup P n < x2`
               >> `?x. P x /\ sup P < x + Normal ((1 / 2) pow (SUC n))` by METIS_TAC []
-              >> Q.EXISTS_TAC `max x'' x'''`
+              >> rename1 `sup P < x3 + _`
+              >> Q.EXISTS_TAC `max x2 x3`
               >> RW_TAC std_ss [extreal_max_def,SPECIFICATION]
-              >- (`x''' < x''` by FULL_SIMP_TAC std_ss [GSYM extreal_lt_def]
-                  >> `x''' + Normal ((1 / 2) pow (SUC n)) <= x'' + Normal ((1 / 2) pow (SUC n))`
+              >- (`x3 < x2` by FULL_SIMP_TAC std_ss [GSYM extreal_lt_def]
+                  >> `x3 + Normal ((1 / 2) pow (SUC n)) <= x2 + Normal ((1 / 2) pow (SUC n))`
                       by METIS_TAC [lt_radd,lt_le,extreal_not_infty]
                   >> METIS_TAC [lte_trans])
               >> METIS_TAC [lte_trans])
@@ -7042,11 +7048,13 @@ val EXTREAL_SUP_SEQ = store_thm
           >> SELECT_ELIM_TAC
           >> RW_TAC std_ss []
           >- (`?x. P x /\ seq_sup P n < x` by METIS_TAC [sup_lt,SPECIFICATION]
+              >> rename1 `sup_sup P n < x2`
               >> `?x. P x /\ sup P < x + Normal ((1 / 2) pow (SUC n))` by METIS_TAC []
-              >> Q.EXISTS_TAC `max x'' x'''`
+              >> rename1 `sup P < x3 + _`
+              >> Q.EXISTS_TAC `max x2 x3`
               >> RW_TAC std_ss [extreal_max_def,SPECIFICATION]
-              >- (`x''' < x''` by FULL_SIMP_TAC std_ss [GSYM extreal_lt_def]
-                  >> `x''' + Normal ((1 / 2) pow (SUC n)) <= x'' + Normal ((1 / 2) pow (SUC n))`
+              >- (`x3 < x2` by FULL_SIMP_TAC std_ss [GSYM extreal_lt_def]
+                  >> `x3 + Normal ((1 / 2) pow (SUC n)) <= x2 + Normal ((1 / 2) pow (SUC n))`
                       by METIS_TAC [lt_radd,lt_le,extreal_not_infty]
                   >> METIS_TAC [lte_trans])
               >> METIS_TAC [lte_trans])
