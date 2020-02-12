@@ -1856,7 +1856,7 @@ Proof
 QED
 
 Theorem ldiv_le_imp :
-    !x y (z :extreal). 0 < z /\ z <> PosInf /\ x <= y ==> x / z <= y / z 
+    !x y (z :extreal). 0 < z /\ z <> PosInf /\ x <= y ==> x / z <= y / z
 Proof
     RW_TAC std_ss []
  >> `z <> NegInf` by METIS_TAC [lt_imp_le, pos_not_neginf]
