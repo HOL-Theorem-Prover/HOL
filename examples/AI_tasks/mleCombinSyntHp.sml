@@ -109,6 +109,7 @@ fun available_movel board =
 val game : (board,move) game =
   {
   status_of = status_of,
+  available_movel = available_movel,
   apply_move = apply_move,
   string_of_board = string_of_board,
   string_of_move = string_of_move,
