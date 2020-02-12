@@ -1459,7 +1459,7 @@ Proof
     RW_TAC std_ss [subsets_def, right_open_intervals,
                    right_open_interval, GSPECIFICATION]
  >> EQ_TAC >> rpt STRIP_TAC
- >- (Cases_on `x` >> fs [] >> take [`q`, `r`] >> rw [])
+ >- (Cases_on `x` >> fs [] >> qexistsl_tac [`q`, `r`] >> rw [])
  >> Q.EXISTS_TAC `(a,b)` >> rw []
 QED
 
@@ -1467,7 +1467,7 @@ Theorem right_open_interval_in_intervals :
     !a b. (right_open_interval a b) IN subsets right_open_intervals
 Proof
     RW_TAC std_ss [in_right_open_intervals]
- >> take [`a`, `b`] >> REWRITE_TAC []
+ >> qexistsl_tac [`a`, `b`] >> REWRITE_TAC []
 QED
 
 Theorem right_open_interval_empty :
@@ -1489,7 +1489,7 @@ Proof
  >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
  >| [ (* goal 1 (of 3) *)
       Cases_on `x` >> fs [right_open_interval_empty] \\
-      take [`q`, `r`] >> art [],
+      qexistsl_tac [`q`, `r`] >> art [],
       (* goal 2 (of 3) *)
       METIS_TAC [right_open_interval_empty],
       (* goal 3 (of 3) *)
@@ -1810,7 +1810,7 @@ Proof
   *)
  >> Cases_on `b <= c` (* case 1 *)
  >- (Q.EXISTS_TAC `{right_open_interval a b}` \\
-     rw [FINITE_SING, disjoint_sing] >- (take [`a`, `b`] >> rw []) \\
+     rw [FINITE_SING, disjoint_sing] >- (qexistsl_tac [`a`, `b`] >> rw []) \\
      RW_TAC std_ss [right_open_interval, EXTENSION, IN_DIFF,
                     GSPECIFICATION, NOT_IN_EMPTY, SUBSET_DEF, IN_BIGUNION] \\
      Suff `x < b ==> ~(c <= x)` >- METIS_TAC [] \\
@@ -1820,7 +1820,7 @@ Proof
  >> Cases_on `a <= c` (* case 2 *)
  >- (Cases_on `b <= d`
      >- (Q.EXISTS_TAC `{right_open_interval a c}` \\
-         rw [FINITE_SING, disjoint_sing] >- (take [`a`, `c`] >> rw []) \\
+         rw [FINITE_SING, disjoint_sing] >- (qexistsl_tac [`a`, `c`] >> rw []) \\
          RW_TAC std_ss [right_open_interval, IN_DIFF, EXTENSION, GSPECIFICATION] \\
          EQ_TAC >> RW_TAC std_ss [real_lte] >|
          [ PROVE_TAC [REAL_LT_REFL, REAL_LTE_TRANS],
@@ -1828,8 +1828,8 @@ Proof
      POP_ASSUM (ASSUME_TAC o (REWRITE_RULE [real_lte])) \\
      Q.EXISTS_TAC `{right_open_interval a c; right_open_interval d b}` \\
      rw [FINITE_TWO]
-     >- (take [`a`, `c`] >> rw [])
-     >- (take [`d`, `b`] >> rw [])
+     >- (qexistsl_tac [`a`, `c`] >> rw [])
+     >- (qexistsl_tac [`d`, `b`] >> rw [])
      >- (MATCH_MP_TAC right_open_interval_disjoint >> PROVE_TAC [REAL_LT_IMP_LE]) \\
      RW_TAC std_ss [right_open_interval, IN_DIFF, IN_UNION, EXTENSION, GSPECIFICATION] \\
      EQ_TAC >> RW_TAC real_ss [real_lte] >> fs [] >|
@@ -1840,7 +1840,7 @@ Proof
  >> Cases_on `a <= d` (* case 3 *)
  >- (Cases_on `d <= b`
      >- (Q.EXISTS_TAC `{right_open_interval d b}` \\
-         rw [FINITE_SING, disjoint_sing] >- (take [`d`, `b`] >> rw []) \\
+         rw [FINITE_SING, disjoint_sing] >- (qexistsl_tac [`d`, `b`] >> rw []) \\
          RW_TAC std_ss [right_open_interval, IN_DIFF, EXTENSION, GSPECIFICATION] \\
          EQ_TAC >> RW_TAC std_ss [real_lte] >> fs [GSYM real_lte] >|
          [ PROVE_TAC [REAL_LTE_ANTISYM, REAL_LT_TRANS],
@@ -1858,7 +1858,7 @@ Proof
  (* case 4 *)
  >> POP_ASSUM (ASSUME_TAC o (REWRITE_RULE [real_lte]))
  >> Q.EXISTS_TAC `{right_open_interval a b}`
- >> rw [FINITE_SING, disjoint_sing] >- (take [`a`, `b`] >> rw [])
+ >> rw [FINITE_SING, disjoint_sing] >- (qexistsl_tac [`a`, `b`] >> rw [])
  >> RW_TAC std_ss [right_open_interval, IN_DIFF, EXTENSION, GSPECIFICATION]
  >> EQ_TAC >> RW_TAC real_ss [real_lte] >> fs [GSYM real_lte]
  >> DISJ2_TAC

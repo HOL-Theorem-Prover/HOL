@@ -168,7 +168,7 @@ val density_def = Define (* was: density *)
 
 (* `v = density m f` is denoted by `v = f * m` (cf. "RN_deriv_def" below)
 
-   The idea is to syntactically have (`*` is not communitive here):
+   The idea is to syntactically have (`*` is not commutative here):
 
       `(f * m = v) <=> (f = v / m)`     or      `v / m * m = v`
  *)
@@ -3166,7 +3166,8 @@ Proof
 
    Q.X_GEN_TAC `n` THEN
    RW_TAC std_ss [] THEN MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL THEN
-   take [`(\x. indicator_fn
+   qexistsl_tac
+        [`(\x. indicator_fn
                {x | x IN m_space m /\ &n / 2 pow i <= f x /\ f x < (&n + 1) / 2 pow i} x)`,
          `real (&n / 2 pow i)`] THEN
 
@@ -3223,7 +3224,8 @@ Proof
   Know `(!i. fn_seq m f i IN measurable (m_space m,measurable_sets m) Borel)` THEN1
   (SIMP_TAC std_ss [fn_seq_def] THEN GEN_TAC THEN
    MATCH_MP_TAC IN_MEASURABLE_BOREL_ADD THEN
-   take [`(\x. SIGMA
+   qexistsl_tac
+        [`(\x. SIGMA
           (\k. &k / 2 pow i *
              indicator_fn {x |
                 x IN m_space m /\ &k / 2 pow i <= f x /\
@@ -3405,7 +3407,8 @@ Proof
      `&e = Normal (&e)` by PROVE_TAC [extreal_of_num_def] >> POP_ORW \\
      ASM_SIMP_TAC std_ss [extreal_div_eq, extreal_not_infty]) THEN STRIP_TAC THEN
 
-    take [`(\x. indicator_fn
+    qexistsl_tac
+         [`(\x. indicator_fn
            {x | x IN m_space m /\ &e / 2 pow i <= f x /\ f x < (&e + 1) / 2 pow i} x)`,
           `real (&e / 2 pow i)`] THEN ASM_SIMP_TAC std_ss [normal_real] THEN
     FULL_SIMP_TAC std_ss [measure_space_def] THEN
@@ -3468,7 +3471,8 @@ Proof
     METIS_TAC [le_02, pow_pos_le]) THEN
    Q.X_GEN_TAC `n` THEN
    RW_TAC std_ss [] THEN MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL THEN
-   take [`(\x. indicator_fn
+   qexistsl_tac
+        [`(\x. indicator_fn
           {x | x IN m_space m /\ &n / 2 pow i <= f x /\ f x < (&n + 1) / 2 pow i} x)`,
          `real (&n / 2 pow i)`] THEN
 
@@ -3957,7 +3961,7 @@ Proof
  >> CONJ_TAC
  >- (RW_TAC std_ss [] \\
      (MATCH_MP_TAC o INST_TYPE [beta |-> ``:num``]) IN_MEASURABLE_BOREL_SUM \\
-      take [`f`, `count i`] \\
+      qexistsl_tac [`f`, `count i`] \\
       RW_TAC std_ss [FINITE_COUNT]
       >- FULL_SIMP_TAC std_ss [measure_space_def] \\
       METIS_TAC [lt_infty, lte_trans, num_not_infty])
@@ -6489,7 +6493,7 @@ Proof
          MATCH_MP_TAC lt_imp_le >> art [] ] ]) >> DISCH_TAC
  >> Know `!i. pos_fn_integral m (fi' i) <= pos_fn_integral m (\x. &i * indicator_fn N x)`
  >- (GEN_TAC >> MATCH_MP_TAC pos_fn_integral_mono \\
-     RW_TAC std_ss [] >> unset [`fi'`, `fi`] >> BETA_TAC \\
+     RW_TAC std_ss [] >> qunabbrevl_tac [`fi'`, `fi`] >> BETA_TAC \\
      Reverse (Cases_on `x IN N`)
      >- (ASM_SIMP_TAC std_ss [indicator_fn_def, mul_rzero, le_refl]) \\
      ASM_SIMP_TAC std_ss [indicator_fn_def, mul_rone, min_le2])
@@ -7243,17 +7247,17 @@ val lemma_radon_max_in_F = Q.prove (
  >> Q.ABBREV_TAC `A1 = {x | x IN A /\ g x < f x}`
  >> Q.ABBREV_TAC `A2 = {x | x IN A /\ f x <= g x}`
  >> `DISJOINT A1 A2`
-       by (unset [`A1`, `A2`] \\
+       by (qunabbrevl_tac [`A1`, `A2`] \\
            RW_TAC std_ss [IN_DISJOINT, GSPECIFICATION] \\
            METIS_TAC [extreal_lt_def])
  >> `A1 UNION A2 = A`
-       by (unset [`A1`, `A2`] \\
+       by (qunabbrevl_tac [`A1`, `A2`] \\
            RW_TAC std_ss [IN_UNION, EXTENSION, GSPECIFICATION] \\
            METIS_TAC [extreal_lt_def])
  >> `(\x. max (f x) (g x) * indicator_fn A x) =
      (\x. (\x. max (f x) (g x) * indicator_fn A1 x) x +
           (\x. max (f x) (g x) * indicator_fn A2 x) x)`
-       by (unset [`A1`, `A2`] \\
+       by (qunabbrevl_tac [`A1`, `A2`] \\
            RW_TAC std_ss [indicator_fn_def, GSPECIFICATION, FUN_EQ_THM] \\
            Cases_on `g x < f x`
            >- (RW_TAC std_ss [mul_rone,mul_rzero,add_rzero] >> METIS_TAC [extreal_lt_def])
@@ -7683,7 +7687,7 @@ Theorem Radon_Nikodym_finite : (* was: Radon_Nikodym *)
           !A. A IN measurable_sets M ==>
              (pos_fn_integral M (\x. f x * indicator_fn A x) = measure N A)
 Proof
-    fix [`m`, `v`] >> rpt STRIP_TAC
+    qx_genl_tac [`m`, `v`] >> rpt STRIP_TAC
  >> Q.PAT_X_ASSUM `m_space m = m_space v` (ASSUME_TAC o (MATCH_MP EQ_SYM))
  >> Q.PAT_X_ASSUM `measurable_sets m = measurable_sets v` (ASSUME_TAC o (MATCH_MP EQ_SYM))
  >> `?f_n. (!n. f_n n IN RADON_F m v) /\ (!x n. f_n n x <= f_n (SUC n) x) /\
@@ -8358,7 +8362,7 @@ val split_space_into_finite_sets_and_rest = prove (
       >- (RW_TAC std_ss [SUBSET_DEF, IN_IMAGE] THEN METIS_TAC []) THEN
       DISCH_TAC THEN
       Suff `!i. measure N (D i) <= SIGMA (\i. measure N (Q' i)) {x | x <= i}`
-      >- (DISCH_TAC THEN GEN_TAC THEN unset [`D`, `Q`] THEN
+      >- (DISCH_TAC THEN GEN_TAC THEN qunabbrevl_tac [`D`, `Q`] THEN
           FULL_SIMP_TAC std_ss [GSPECIFICATION] THEN CONJ_TAC THENL
           [METIS_TAC [], ALL_TAC] THEN
           REWRITE_TAC [lt_infty] THEN MATCH_MP_TAC let_trans THEN
@@ -8549,7 +8553,7 @@ val split_space_into_finite_sets_and_rest = prove (
    Reverse CONJ_TAC
    >- (MATCH_MP_TAC MEASURE_SPACE_UNION >> rfs []) THEN
    Q.PAT_X_ASSUM  `A SUBSET m_space N DIFF BIGUNION {QQ i | i IN univ(:num)}` MP_TAC THEN
-   unset [`QQ`, `O_o`] THEN BETA_TAC THEN
+   qunabbrevl_tac [`QQ`, `O_o`] THEN BETA_TAC THEN
    Suff `BIGUNION {D i | i IN univ(:num)} =
          BIGUNION {if i = 0 then Q' 0 else D i DIFF D (i - 1) | i IN univ(:num)}`
    >- (Rewr' >> SET_TAC []) THEN
@@ -8738,7 +8742,7 @@ Proof
    ASM_REWRITE_TAC [] THEN
    Know `measure_absolutely_continuous (measure (NN i)) (MM i)` >-
    (FULL_SIMP_TAC std_ss [measure_absolutely_continuous_def] THEN
-    unset [`MM`, `NN`] THEN
+    qunabbrevl_tac [`MM`, `NN`] THEN
     SIMP_TAC std_ss [measure_def, measurable_sets_def] THEN
     SIMP_TAC std_ss [INDICATOR_FN_MUL_INTER] THEN
     REWRITE_TAC [METIS [ETA_AX] ``(\x. indicator_fn (Q i) x) = indicator_fn (Q i)``] THEN
@@ -8749,10 +8753,10 @@ Proof
     FULL_SIMP_TAC std_ss [subsets_def, pos_fn_integral_indicator]) THEN
    DISCH_TAC THEN ASM_REWRITE_TAC [] THEN
    Know `m_space (MM i) = m_space (NN i)`
-   >- (unset [`MM`, `NN`] >> SIMP_TAC std_ss [m_space_def]) THEN
+   >- (qunabbrevl_tac [`MM`, `NN`] >> SIMP_TAC std_ss [m_space_def]) THEN
    DISCH_TAC THEN ASM_REWRITE_TAC [] THEN
    FULL_SIMP_TAC std_ss [measure_space_def] THEN
-   unset [`MM`, `NN`] THEN
+   qunabbrevl_tac [`MM`, `NN`] THEN
    FULL_SIMP_TAC std_ss [m_space_def, measurable_sets_def, measure_def] THEN
    REWRITE_TAC [GSYM CONJ_ASSOC] THEN CONJ_TAC
    >- (SIMP_TAC std_ss [positive_def, measure_def, measurable_sets_def] THEN
@@ -9223,9 +9227,10 @@ Proof
   CONJ_TAC THENL [METIS_TAC [], ALL_TAC] THEN ASM_SET_TAC [DISJOINT_DEF]
 QED
 
-val suminf_cmult_indicator = store_thm ("suminf_cmult_indicator",
-  ``!A f x i. disjoint_family A /\ x IN A i /\ (!i. 0 <= f i) ==>
-              (suminf (\n. f n * indicator_fn (A n) x) = f i)``,
+Theorem ext_suminf_cmult_indicator :
+    !A f x i. disjoint_family A /\ x IN A i /\ (!i. 0 <= f i) ==>
+              (suminf (\n. f n * indicator_fn (A n) x) = f i)
+Proof
   RW_TAC std_ss [disjoint_family, disjoint_family_on, IN_UNIV] THEN
   Q_TAC SUFF_TAC `!n. f n * indicator_fn (A n) x = if n = i then f n else 0` THENL
   [DISCH_TAC,
@@ -9262,7 +9267,8 @@ val suminf_cmult_indicator = store_thm ("suminf_cmult_indicator",
    MATCH_MP_TAC EXTREAL_SUM_IMAGE_0] THEN
   RW_TAC std_ss [FINITE_COUNT] THEN POP_ASSUM MP_TAC THEN
   ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN RW_TAC std_ss [] THEN
-  SIMP_TAC arith_ss [count_def, GSPECIFICATION]);
+  SIMP_TAC arith_ss [count_def, GSPECIFICATION]
+QED
 
 Theorem finite_integrable_function_exists : (* was: Ex_finite_integrable_function *)
     !m. measure_space m /\ sigma_finite m ==>
@@ -9347,7 +9353,7 @@ Proof
    Cases_on `measure m (A i) = 0`
    >- (POP_ASSUM MP_TAC THEN POP_ASSUM MP_TAC THEN POP_ASSUM MP_TAC THEN
        POP_ASSUM (MP_TAC o Q.SPEC `i`) THEN
-       unset [`inv'`, `B`] THEN RW_TAC std_ss [] THEN
+       qunabbrevl_tac [`inv'`, `B`] THEN RW_TAC std_ss [] THEN
        FULL_SIMP_TAC std_ss [mul_rzero]) THEN
    MATCH_MP_TAC lt_trans THEN
    Q.EXISTS_TAC `inv' (2 pow SUC i * measure m (A i))` THEN
@@ -9360,7 +9366,7 @@ Proof
    DISCH_TAC THEN
    `?r. 2 pow SUC i = Normal r` by METIS_TAC [extreal_cases] THEN
    `?a. measure m (A i) = Normal a` by METIS_TAC [extreal_cases] THEN
-   unset [`inv'`, `B`] THEN BETA_TAC THEN
+   qunabbrevl_tac [`inv'`, `B`] THEN BETA_TAC THEN
    ONCE_ASM_REWRITE_TAC [] THEN
    SIMP_TAC std_ss [extreal_mul_def, extreal_of_num_def, extreal_11] THEN
    `(0 :extreal) < 2 pow (SUC i)` by METIS_TAC [pow_pos_lt, lt_02] THEN
@@ -9432,7 +9438,7 @@ Proof
   Know `!x i. x IN A i ==> (h x = f i)`
   >- (RW_TAC std_ss [] \\
       Q.UNABBREV_TAC `h` >> BETA_TAC \\
-      MATCH_MP_TAC suminf_cmult_indicator \\
+      MATCH_MP_TAC ext_suminf_cmult_indicator \\
       ASM_SIMP_TAC std_ss []) THEN DISCH_TAC THEN
   Know `!x. x IN m_space m ==> 0 < h x /\ h x < PosInf`
   >- (RW_TAC std_ss []
@@ -9599,7 +9605,7 @@ Proof
     Q.EXISTS_TAC `(\x. h x * f x)` THEN
     CONJ_TAC (* (\x. h x * f x) is borel-measurable *)
     >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_TIMES \\
-        take [`h`, `f`] >> ASM_SIMP_TAC std_ss []) \\
+        qexistsl_tac [`h`, `f`] >> ASM_SIMP_TAC std_ss []) \\
     CONJ_TAC (* 0 <= h x * f x *)
     >- (GEN_TAC >> BETA_TAC >> MATCH_MP_TAC le_mul >> art []) \\
     RW_TAC std_ss [] >> REV_FULL_SIMP_TAC std_ss [mul_assoc])

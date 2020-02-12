@@ -368,10 +368,4 @@ sig
   val ASM_MATCH_MP_TAC_N : int -> thm list -> tactic
   val ASM_MATCH_MP_TAC : thm list -> tactic
 
-  (* Tacticals for better expressivity *)
-  val fix   : Q.tmquote list -> tactic
-  val set   : Q.tmquote list -> tactic
-  val unset : Q.tmquote list -> tactic
-  val take  : Q.tmquote list -> tactic
-
 end
