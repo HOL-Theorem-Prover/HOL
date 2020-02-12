@@ -4,8 +4,8 @@ sig
   include Abbrev
   
   type combin = mleCombinLibHp.combin
-  type board = (combin * mleCombinLibHp.pose list * bool) * combin * int
-  datatype move = AS | AK | NextPos
+  type board = combin * combin * int
+  datatype move = S0 | S1 | S2 | K0 | K1
 
   (* target *)
   val create_targetl : (combin * combin) list -> (board list * board list)

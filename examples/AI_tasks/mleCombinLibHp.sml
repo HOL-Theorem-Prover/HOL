@@ -45,7 +45,7 @@ val pos_compare = list_compare pose_compare
 datatype combin = V1 | V2 | V3 | S | K | A of combin * combin 
 
 fun combin_size combin = case combin of
-    A (c1,c2) => 1 + combin_size c1 + combin_size c2
+    A (c1,c2) => combin_size c1 + combin_size c2
   | _ => 1
 
 (* -------------------------------------------------------------------------
@@ -149,6 +149,11 @@ fun contains_sk c = case c of
   | V3 => false
   | A (c1,c2) => contains_sk c1 orelse contains_sk c2
 
+fun has_bigarity c =
+  let val argl = tl (strip_A c) in
+    length argl > 4 orelse exists has_bigarity argl
+  end
+
 fun compare_csize (a,b) = Int.compare (combin_size a, combin_size b)
 fun smallest_csize l = hd (dict_sort compare_csize l)
 
@@ -158,7 +163,10 @@ fun gen_headnf_aux n nmax d =
     val c = cterm_to_hp (random_nf (random_int (1,20)))
     val cnorm = valOf (hp_norm 100 (A(A(A(c,V1),V2),V3))) handle Option => K 
   in
-    if contains_sk cnorm then gen_headnf_aux (n+1) nmax d 
+    if contains_sk cnorm orelse 
+       combin_size cnorm > 20 orelse 
+       has_bigarity cnorm
+    then gen_headnf_aux (n+1) nmax d 
     else if dmem cnorm d then
       let val oldc = dfind cnorm d in
         if compare_csize (c,oldc) = LESS 
@@ -178,6 +186,14 @@ fun gen_headnf nmax d = gen_headnf_aux 0 nmax d
 
 val targetdir = selfdir ^ "/combin_target"
 
+fun distrib_il il = 
+  let 
+    val l = dlist (count_dict (dempty Int.compare) il)
+    fun f (i,j) = its i ^ "-" ^ its j
+  in
+    String.concatWith " " (map f l)
+  end
+
 fun export_data (train,test) =
   let 
     val l = train @ test
@@ -185,9 +201,8 @@ fun export_data (train,test) =
     fun f1 (headnf,witness) = 
       "headnf: " ^ combin_to_string headnf ^
       "\ncombin: " ^ combin_to_string witness 
-    val il = map (combin_size o snd) l
-    val statsl = dlist (count_dict (dempty Int.compare) il);
-    fun f2 (i,j) = its i ^ "-" ^ its j
+    val il1 = map (combin_size o fst) l
+    val il2 = map (combin_size o snd) l
     val train_sorted = 
       dict_sort (cpl_compare combin_compare combin_compare) train
     val test_sorted = 
@@ -195,7 +210,8 @@ fun export_data (train,test) =
   in
     writel (targetdir ^ "/train_export") (map f1 train_sorted);
     writel (targetdir ^ "/test_export") (map f1 test_sorted);
-    writel (targetdir ^ "/distrib") (map f2 statsl)  
+    writel (targetdir ^ "/distrib-headnf") [distrib_il il1];
+    writel (targetdir ^ "/distrib-witness") [distrib_il il2]
   end
 
 fun import_data file =

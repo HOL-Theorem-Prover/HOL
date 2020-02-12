@@ -13,86 +13,87 @@ open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlReinforce mleCombinLib mleCombinLibHp
 
 val ERR = mk_HOL_ERR "mleCombinSyntHp"
-val version = 4
+val version = 5
 val selfdir = HOLDIR ^ "/examples/AI_tasks"
 
 (* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
 
-type board = (combin * pose list * bool) * combin * int
-fun string_of_board ((c1,pos,b),c2,n)= 
-  combin_to_string c1 ^ " " ^ pos_to_string pos ^ 
-  combin_to_string c2 ^ " " ^ its n
+type board = combin * combin * int
+
+fun string_of_board (c1,c2,n)= 
+  combin_to_string c1 ^ " " ^ combin_to_string c2 ^ " " ^ its n
 
 fun board_compare ((a,b,c),(d,e,f)) =
-  (cpl_compare 
-   (triple_compare combin_compare pos_compare bool_compare) combin_compare) 
-  ((a,b),(d,e))
+  (cpl_compare combin_compare combin_compare) ((a,b),(d,e))
 
 fun fullboard_compare ((a,b,c),(d,e,f)) =
-  (triple_compare 
-     Int.compare
-    (triple_compare combin_compare pos_compare bool_compare) 
-     combin_compare
-  )   
-  ((c,a,b),(f,d,e))
+  (triple_compare Int.compare combin_compare combin_compare) ((c,a,b),(f,d,e))
 
+fun ignore_metavar c = case c of
+    A(c1,V1) => ignore_metavar c1
+  | A(c1,c2) => A(c1, ignore_metavar c2) 
+  | S => S
+  | K => K
+  | _ => raise ERR "ignore_metavar" ""
 
-fun status_of ((c1,_,b),c2,n) =
-  let val nfo = if b orelse c1 = V1 
-                then NONE 
-                else hp_norm 100 (A(A(A(c1,V1),V2),V3)) 
+fun no_metavar c = case c of    
+    A(c1,c2) => no_metavar c1 andalso no_metavar c2
+  | V1 => false
+  | _ => true
+
+fun status_of (c1,c2,n) =
+  let
+    val c1' = ignore_metavar c1
+    val nfo = hp_norm 100 (A(A(A(c1',V1),V2),V3)) 
   in
     if isSome nfo andalso valOf nfo = c2 then Win
-    else if n <= 0 then Lose else Undecided
+    else if n <= 0 orelse no_metavar c1 then Lose else Undecided
   end
 
 (* -------------------------------------------------------------------------
    Move
    ------------------------------------------------------------------------- *)
 
-datatype move = AS | AK | NextPos
+datatype move = S0 | S1 | S2 | K0 | K1
 
-val movel = [AS,AK,NextPos]
+val movel = [S0,S1,S2,K0,K1]
 
 fun string_of_move move = case move of
-    AS => "AS"
-  | AK => "AK"
-  | NextPos => "NextPos"
+    S0 => "S0"
+  | S1 => "S1"
+  | S2 => "S2"
+  | K0 => "K0"
+  | K1 => "K1"
 
 fun move_compare (m1,m2) = 
   String.compare (string_of_move m1, string_of_move m2)
 
-exception Redex
+fun res_of_move move = case move of
+    S0 => S
+  | S1 => A(S,V1)
+  | S2 => A(A(S,V1),V1)
+  | K0 => K
+  | K1 => A(K,V1)
 
-fun add_apply sk n (c,pos) = case (c,pos) of
-    (A(c1,c2), Left :: m) => A (add_apply sk (n+1) (c1,m), c2)
-  | (A(c1,c2), Right :: m) => A (c1, add_apply sk 0 (c2,m))
-  | (S, []) => if n >= 2 then raise Redex else A(S,sk)
-  | (K, []) => if n >= 1 then raise Redex else A(K,sk)
-  | _ => raise ERR "add_apply" "position_mismatch"
+fun replace_metavar move c = case c of
+    A(c1,c2) => 
+    let val c1o = replace_metavar move c1 in
+      case c1o of
+        NONE => 
+        let val c2o = replace_metavar move c2 in
+          case c2o of NONE => NONE | SOME c2new => SOME (A(c1,c2new))
+        end
+      | SOME c1new => SOME (A(c1new,c2))
+    end
+  | V1 => SOME (res_of_move move)
+  | _ => NONE
+  
+fun apply_move move (c1,c2,n) =
+  (valOf (replace_metavar move c1), c2, n-1)  
 
-fun apply_move move ((c1,pos,_),c2,n) = 
-  if c1 = V1 then 
-    (
-    case move of
-      AS => ((S,[],false), c2, n-1)
-    | AK => ((K,[],false), c2, n-1)
-    | NextPos => raise Redex
-    )
-  else 
-    (
-    case move of
-      AS => ((add_apply S 0 (c1,pos), pos @ [Left], false), c2, n-1)
-    | AK => ((add_apply K 0 (c1,pos), pos @ [Left], false), c2, n-1)
-    | NextPos => (((c1,next_pos pos, true), c2, n-1) 
-                  handle HOL_ERR _ => raise Redex)
-    )
-
-fun available_movel board =
-  filter (fn x => (ignore (apply_move x board); true) 
-          handle Redex => false) movel
+fun available_movel board = movel
 
 (* -------------------------------------------------------------------------
    Game
@@ -117,49 +118,22 @@ val game : (board,move) game =
 fun write_boardl file boardl =
   let 
     val (l1,l2,l3) = split_triple boardl 
-    val (l1a,l1b,l1c) = split_triple l1
   in
-    export_terml (file ^ "_in") (map hp_to_cterm l1a);
-    writel (file ^ "_pos") (map pos_to_string l1b);
-    writel (file ^ "_bool") (map bts l1c);
-    export_terml (file ^ "_out") (map hp_to_cterm l2); 
+    export_terml (file ^ "_witness") (map hp_to_cterm l1);
+    export_terml (file ^ "_headnf") (map hp_to_cterm l2); 
     writel (file ^ "_timer") (map its l3)
   end
 
 fun read_boardl file =
   let
-    val l1a = map cterm_to_hp (import_terml (file ^ "_in"))
-    val l1b = map string_to_pos (readl_empty (file ^ "_pos"))
-    val l1c = map string_to_bool (readl_empty (file ^ "_bool"))
-    val l2 = map cterm_to_hp (import_terml (file ^ "_out"))
+    val l1 = map cterm_to_hp (import_terml (file ^ "_witness"))
+    val l2 = map cterm_to_hp (import_terml (file ^ "_headnf"))
     val l3 = map string_to_int (readl (file ^ "_timer"))
   in
-    combine_triple (combine_triple (l1a,l1b,l1c),l2,l3)
+    combine_triple (l1,l2,l3)
   end
 
 val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
-
-(* -------------------------------------------------------------------------
-   Targets
-   ------------------------------------------------------------------------- *)
-
-val targetdir = selfdir ^ "/combin_target"
-fun import_targetl name = 
-  let 
-    val f = #read_boardl (#gameio (mleCombinSynt.rlobj))
-    val boardl = f (targetdir ^ "/" ^ name)
-    fun g (a,b,c) = ((V1,[],false), cterm_to_hp b, c)
-  in
-    map g boardl
-  end
-
-fun mk_targetd l1 =
-  let 
-    val l2 = number_snd 0 l1
-    val l3 = map (fn (x,i) => (x,(i,[]))) l2
-  in
-    dnew board_compare l3
-  end
 
 (* -------------------------------------------------------------------------
    Targets
@@ -171,7 +145,7 @@ fun create_targetl l =
   let 
     val (train,test) = part_pct (10.0/11.0) (shuffle l)
     val _ = export_data (train,test)
-    fun f (headnf,combin) = ((V1,[],false), headnf , 2 * combin_size combin)
+    fun f (headnf,combin) = (V1, headnf, 2 * combin_size combin)
   in
     (dict_sort fullboard_compare (map f train),
      dict_sort fullboard_compare (map f test))
@@ -201,23 +175,84 @@ val head_poli = mk_var ("head_poli", ``:bool -> 'a``)
 fun tag_heval x = mk_comb (head_eval,x)
 fun tag_hpoli x = mk_comb (head_poli,x)
 
+val cS0 = mk_var ("s0",``:'a``)
+val cS1 = mk_var ("s1",``:'a -> 'a ``)
+val cS2 = mk_var ("s2",``:'a -> 'a -> 'a``)
+val cK0 = mk_var ("k0",``:'a``)
+val cK1 = mk_var ("k1",``:'a -> 'a ``)
+val v1a0 = mk_var ("v1a0",``:'a``)
+val v1a1 = mk_var ("v1a1",``:'a -> 'a``)
+val v1a2 = mk_var ("v1a2",``:'a -> 'a -> 'a``)
+val v1a3 = mk_var ("v1a3",``:'a -> 'a -> 'a -> 'a``)
+val v1a4 = mk_var ("v1a4",``:'a -> 'a -> 'a -> 'a -> 'a``)
+val v2a0 = mk_var ("v2a0",``:'a``)
+val v2a1 = mk_var ("v2a1",``:'a -> 'a``)
+val v2a2 = mk_var ("v2a2",``:'a -> 'a -> 'a``)
+val v2a3 = mk_var ("v2a3",``:'a -> 'a -> 'a -> 'a``)
+val v2a4 = mk_var ("v2a4",``:'a -> 'a -> 'a -> 'a -> 'a``)
+val v3a0 = mk_var ("v3a0",``:'a``)
+val v3a1 = mk_var ("v3a1",``:'a -> 'a``)
+val v3a2 = mk_var ("v3a2",``:'a -> 'a -> 'a``)
+val v3a3 = mk_var ("v3a3",``:'a -> 'a -> 'a -> 'a``)
+val v3a4 = mk_var ("v3a4",``:'a -> 'a -> 'a -> 'a -> 'a``)
+val skvarl = 
+  [cS0,cS1,cS2,cK0,cK1,
+   v1a0,v1a1,v1a2,v1a3,v1a4, 
+   v2a0,v2a1,v2a2,v2a3,v2a4,
+   v3a0,v3a1,v3a2,v3a3,v3a4]
+
+fun witness_to_nntm combin = case combin of
+    A(A(S,x),y) => list_mk_comb (cS2, map witness_to_nntm [x,y])
+  | A(S,x) => mk_comb (cS1, witness_to_nntm x)
+  | S => cS0
+  | A(K,x) => mk_comb (cK1, witness_to_nntm x)
+  | K => cK0
+  | _ => raise ERR "witness_to_nntm" ""
+
+fun headnf_to_nntm combin = case combin of
+    A(A(A(A(V1,x),y),z),w) => 
+    list_mk_comb (v1a4, map witness_to_nntm [x,y,z,w])
+  | A(A(A(V1,x),y),z) =>
+    list_mk_comb (v1a3, map witness_to_nntm [x,y,z])
+  | A(A(V1,x),y) => 
+    list_mk_comb (v1a2, map witness_to_nntm [x,y])
+  | A(V1,x) => mk_comb (v1a1, witness_to_nntm x)
+  | V1 => v1a0
+  | A(A(A(A(V2,x),y),z),w) => 
+    list_mk_comb (v2a4, map witness_to_nntm [x,y,z,w])
+  | A(A(A(V2,x),y),z) =>
+    list_mk_comb (v2a3, map witness_to_nntm [x,y,z])
+  | A(A(V2,x),y) => 
+    list_mk_comb (v2a2, map witness_to_nntm [x,y])
+  | A(V2,x) => mk_comb (v2a1, witness_to_nntm x)
+  | V2 => v2a0
+  | A(A(A(A(V3,x),y),z),w) => 
+    list_mk_comb (v3a4, map witness_to_nntm [x,y,z,w])
+  | A(A(A(V3,x),y),z) =>
+    list_mk_comb (v3a3, map witness_to_nntm [x,y,z])
+  | A(A(V3,x),y) => 
+    list_mk_comb (v3a2, map witness_to_nntm [x,y])
+  | A(V3,x) => mk_comb (v3a1, witness_to_nntm x)
+  | V3 => v3a0
+  | _ => raise ERR "headnf_to_nntm" ""
+
 fun convert_pos pos = 
   let fun f x = case x of Left => 0 | Right => 1 in
     map f pos
   end
 
-fun tob1 ((c1,pos,_),c2,_) = 
+fun tob1 (c1,c2,_) = 
   let 
-    val (tm1,tm2) = (hp_to_cterm c1, hp_to_cterm c2)
-    val tm = mk_eq (tag_pos (tm1,convert_pos pos), tm2)
+    val (tm1,tm2) = (witness_to_nntm c1, headnf_to_nntm c2)
+    val tm = mk_eq (tm1,tm2)
   in
     [tag_heval tm, tag_hpoli tm]
   end
 
-fun tob2 embedv ((c1,pos,_),_,_) = 
+fun tob2 embedv (c1,_,_) = 
   let 
-    val (tm1,tm2) = (hp_to_cterm c1, embedv)
-    val tm = mk_eq (tag_pos (tm1,convert_pos pos), tm2)
+    val (tm1,tm2) = (witness_to_nntm c1, embedv)
+    val tm = mk_eq (tm1,tm2)
   in
     [tag_heval tm, tag_hpoli tm]
   end
@@ -225,7 +260,7 @@ fun tob2 embedv ((c1,pos,_),_,_) =
 fun pretob boardtnno = case boardtnno of
     NONE => tob1
   | SOME ((_,headnf,_),tnn) => 
-    tob2 (precomp_embed tnn (hp_to_cterm headnf))
+    tob2 (precomp_embed tnn (headnf_to_nntm headnf))
 
 (* -------------------------------------------------------------------------
    Player
@@ -235,10 +270,10 @@ val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 10}]
 
-val dim = 12
+val dim = 16
 fun dim_head_poli n = [dim,n]
 val tnnparam = map_assoc (dim_std (1,dim)) 
-  [``$= : 'a -> 'a -> bool``,cT,v1,v2,v3,cA,cS,cK] @ 
+  ([``$= : 'a -> 'a -> bool``] @ skvarl) @ 
   [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
 
 val dplayer = {pretob = pretob, tnnparam = tnnparam, schedule = schedule}
@@ -269,8 +304,8 @@ val _ = (export_targetl "train" train; export_targetl "test" test);
 val targetl = import_targetl "train";
 val r = rl_start (rlobj,extsearch) (mk_targetd targetl);
 
-val targetd = retrieve_targetd rlobj 23;
-val _ = rl_restart 23 (rlobj,extsearch) targetd;
+val targetd = retrieve_targetd rlobj 26;
+val _ = rl_restart 26 (rlobj,extsearch) targetd;
 *)
 
 (* -------------------------------------------------------------------------
