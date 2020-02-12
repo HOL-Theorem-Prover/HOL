@@ -44,6 +44,7 @@ fun no_metavar c = case c of
   | _ => true
 
 fun status_of (c1,c2,n) =
+  if c1 = V1 then Undecided else
   let
     val c1' = ignore_metavar c1
     val nfo = hp_norm 100 (A(A(A(c1',V1),V2),V3)) 
