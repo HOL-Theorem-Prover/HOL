@@ -65,9 +65,10 @@ fun apply_move_poly move poly =
                  = GREATER
                end
              then raise ERR "apply_move_poly" "non-increasing"
-             else  butlast poly @ [last poly @ [c]]
+             else butlast poly @ [last poly @ [c]]
 
-fun apply_move move (poly,graph,n) = (apply_move_poly move poly, graph, n-1)
+fun apply_move move (poly,graph,n) = (
+  Profile.profile "apply_move" (apply_move_poly move) poly, graph, n-1)
 
 fun available_movel_poly poly =
   filter (fn x => can (apply_move_poly x) poly) movel
@@ -80,9 +81,9 @@ fun available_movel (poly,_,_) = available_movel_poly poly
 
 val game : (board,move) game =
   {
-  status_of = status_of,
+  status_of = Profile.profile "status_of" status_of,
   apply_move = apply_move,
-  available_movel = available_movel,  
+  available_movel = Profile.profile "available_movel" available_movel,  
   string_of_board = string_of_board,
   string_of_move = string_of_move,
   board_compare = board_compare,
@@ -214,12 +215,7 @@ val rlparam =
    ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
-  {
-  rlparam = rlparam,
-  game = game,
-  gameio = gameio,
-  dplayer = dplayer
-  }
+  {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer}
 
 val extsearch = mk_extsearch "mleDiophSynt.extsearch" rlobj
 
@@ -232,10 +228,8 @@ load "mleDiophSynt"; open mleDiophSynt;
 val (dfull,ntry) = gen_diophset 0 2200 (dempty (list_compare Int.compare));
 val (train,test) = create_targetl (dlist dfull); length train; length test;
 val _ = (export_targetl "train" train; export_targetl "test" test);
-
 val targetl = import_targetl "train"; length targetl;
 val _ = rl_start (rlobj,extsearch) (mk_targetd targetl);
-
 val targetd = retrieve_targetd rlobj 33;
 val _ = rl_restart 33 (rlobj,extsearch) targetd;
 *)
@@ -245,8 +239,11 @@ val _ = rl_restart 33 (rlobj,extsearch) targetd;
    ------------------------------------------------------------------------- *)
 
 (*
+load "aiLib"; open aiLib;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "psBigSteps" ; open psBigSteps;
+load "mleDiophSynt"; open mleDiophSynt;
+load "Profile"; open Profile;
 
 val mctsparam =
   {
@@ -262,17 +259,23 @@ val mctsparam =
   avoidlose = false
   };
 
+val tnn = random_tnn (#tnnparam (#dplayer rlobj));
+fun tob x = (#pretob (#dplayer rlobj)) NONE x;
+val tnnplayer = mlReinforce.player_from_tnn tnn tob (#game rlobj);
+
 val bsobj : (board,move) bsobj =
   {
   verbose = true,
   temp_flag = false,
-  player = psMCTS.uniform_player (#game rlobj),
+  preplayer = fn target => (Profile.profile "tnnplayer" tnnplayer),
   game = (#game rlobj),
   mctsparam = mctsparam
   };
 
-val target = List.nth (targetl,10);
-val _ = run_bigsteps bsobj target;
+val targetl = import_targetl "train"; length targetl;
+reset_all ();
+val _ = map (run_bigsteps bsobj) (first_n 3 (rev targetl));
+results ();
 *)
 
 

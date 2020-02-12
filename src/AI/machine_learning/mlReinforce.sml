@@ -80,7 +80,7 @@ fun mk_bsobj rlobj (unib,tnn,noiseb,nsim) =
     fun random_preplayer target board = random_player game board
   in
     {
-    verbose = true, temp_flag = false,
+    verbose = false, temp_flag = false,
     preplayer = if unib then random_preplayer else preplayer, 
     game = game,
     mctsparam = mk_mctsparam noiseb nsim rlobj

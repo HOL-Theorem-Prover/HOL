@@ -22,6 +22,9 @@ sig
   type 'a dplayer = 
     {pretob : ('a * tnn) option -> 'a -> term list, 
      schedule : schedule, tnnparam : tnnparam}
+  val player_from_tnn : 
+    tnn -> ('a -> term list) -> ('a,'b) psMCTS.game -> 'a -> 
+    (real * ('b * real) list)
   
   (* parallelization of the search *)
   type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec

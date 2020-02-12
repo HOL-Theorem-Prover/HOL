@@ -45,44 +45,52 @@ val numberl = List.tabulate (modulo,I)
    Computing the Diophantine set of a formula
    ------------------------------------------------------------------------- *)
 
-fun eval_exp (i,n) l = int_pow (List.nth (l,i)) n mod 16
+fun eval_exp_bare (a,b) = int_pow a b mod 16
+val expv = 
+  (Vector.tabulate (16, fn i => Vector.tabulate 
+  (5, fn j => eval_exp_bare (i,j))));
+fun eval_exp_vect (a,b) = Vector.sub (Vector.sub (expv,a),b);
+fun eval_exp k v i n = 
+  eval_exp_vect (if i = 0 then k else Vector.sub (v,i-1), n)
 
-fun eval_mono il =
-  let 
-    val (coeff,expl) = (hd il, tl il) 
-    val iexpl = number_fst 0 expl
-    val fl = map eval_exp iexpl
-  in
-    fn l => coeff * int_product (map (fn f => f l) fl) mod 16 
-  end
+fun eval_mono mono k v =
+  hd mono * int_product (mapi (eval_exp k v) (tl mono)) mod 16
+fun eval_poly poly k v = 
+  sum_int (map (fn x => eval_mono x k v) poly) mod 16
 
-fun eval_poly poly = 
-  let val fl = map eval_mono poly in
-    fn l => (sum_int (map (fn f => f l) fl) mod 16)
-  end
+val car0 = map Vector.fromList
+  (cartesian_productl (List.tabulate (0, fn _ => numberl)))
+val car1 = map Vector.fromList
+  (cartesian_productl (List.tabulate (1, fn _ => numberl)))
+val car2 =  map Vector.fromList
+  (cartesian_productl (List.tabulate (2, fn _ => numberl)))
+val car3 = map Vector.fromList
+  (cartesian_productl (List.tabulate (3, fn _ => numberl)))
 
-fun has_solution n f k =
+fun has_solution nvar f k =
   let
-    val l1 = if n >= 2 
-             then cartesian_productl (List.tabulate (n-2, fn _ => numberl))
-             else []
-    val l2 = map (fn l => k :: l) l1
+    val l = 
+      if nvar = 0 then car0 
+      else if nvar = 1 then car1
+      else if nvar = 2 then car2
+      else if nvar = 3 then car3
+      else raise ERR "has_solution" "nvar"
   in
-    exists (fn l => f l = 0) l2
+    Profile.profile "exists" (exists (fn v => f k v = 0)) l
   end
 
 fun dioph_set poly = 
   if null poly then numberl else
-  let val n = list_imax (map length poly) in 
-    filter (has_solution n (eval_poly poly)) numberl
+  let val nvar = Int.max (list_imax (map length poly) - 2, 0) in 
+    filter (has_solution nvar (eval_poly poly)) numberl
   end
 
 fun dioph_match poly graph =
   if null poly then false else
   let 
-    val n = list_imax (map length poly)
+    val nvar = Int.max (list_imax (map length poly) - 2, 0)
     val diophf = eval_poly poly
-    fun f (b,i) = (has_solution n diophf i = b)
+    fun f (b,k) = (has_solution nvar diophf k = b)
   in 
     all f (number_snd 0 graph)
   end

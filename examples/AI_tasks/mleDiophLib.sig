@@ -22,7 +22,7 @@ sig
   val maxvar : int
   val numberl : int list
 
-  val eval_poly : poly -> int list -> int
+  val eval_poly : poly -> int -> int vector -> int
   val random_poly : unit -> poly
 
   val dioph_set : poly -> int list
