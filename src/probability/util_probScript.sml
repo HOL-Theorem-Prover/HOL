@@ -1808,6 +1808,18 @@ val tail_countable = store_thm
  >- PROVE_TAC [COUNTABLE_IMAGE_NUM]
  >> RW_TAC std_ss [EXTENSION, IN_IMAGE, GSPECIFICATION]);
 
+Theorem THREE_SETS_INTER :
+    !A B C. A INTER B INTER (C INTER B) = A INTER C INTER B
+Proof
+    RW_TAC std_ss [GSYM INTER_ASSOC]
+ >> `B INTER (C INTER B) = B INTER (B INTER C)` by RW_TAC std_ss [INTER_COMM]
+ >> ONCE_ASM_REWRITE_TAC []
+ >> `B INTER (B INTER C) = B INTER C`
+       by RW_TAC std_ss [INTER_ASSOC, INTER_IDEMPOT]
+ >> ONCE_ASM_REWRITE_TAC []
+ >> FULL_SIMP_TAC std_ss [INTER_COMM]
+QED
+
 val _ = export_theory ();
 
 (* References:

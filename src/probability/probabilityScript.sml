@@ -30,8 +30,8 @@
 open HolKernel Parse boolLib bossLib;
 
 open pairTheory combinTheory optionTheory prim_recTheory arithmeticTheory
-     res_quanTheory res_quanTools pred_setTheory realTheory realLib
-     seqTheory transcTheory real_sigmaTheory real_topologyTheory;
+     res_quanTheory res_quanTools pred_setTheory pred_setLib realTheory realLib
+     seqTheory transcTheory real_sigmaTheory real_topologyTheory mesonLib;
 
 open hurdUtils util_probTheory extrealTheory sigma_algebraTheory measureTheory
      real_borelTheory borelTheory lebesgueTheory martingaleTheory;
@@ -54,6 +54,11 @@ val _ = new_theory "probability";
     probabilities and conditional expectations (Chapter V). ..."
 
   -- A. N. Kolmogorov, "Foundations of the Theory of Probability." [1] *)
+
+val COUNTABLE_IMAGE = image_countable;
+val FINITE_COUNTABLE = finite_countable;
+val set_ss = std_ss ++ PRED_SET_ss;
+val std_ss' = std_ss ++ boolSimps.ETA_ss;
 
 val _ = hide "S";
 
@@ -123,6 +128,7 @@ val conditional_distribution_def = Define
 val expectation_def = Define
    `expectation = integral`;
 
+(* not used *)
 val conditional_expectation_def = Define
    `conditional_expectation p X s =
         @f. real_random_variable f p /\
@@ -130,10 +136,15 @@ val conditional_expectation_def = Define
                (expectation p (\x. f x * indicator_fn g x) =
                 expectation p (\x. X x * indicator_fn g x))`;
 
+(* not used *)
 val conditional_prob_def = Define
    `conditional_prob p e1 e2 =
     conditional_expectation p (indicator_fn e1) e2`;
 
+val cond_prob_def = Define
+   `cond_prob p e1 e2 = (prob p (e1 INTER e2)) / (prob p e2)`;
+
+(* not used *)
 val rv_conditional_expectation_def = Define
    `rv_conditional_expectation (p :'a p_space) s X Y =
        conditional_expectation p X (IMAGE (\a. (PREIMAGE Y a) INTER p_space p) (subsets s))`;
@@ -1849,12 +1860,6 @@ val expectation_posinf = store_thm
   ``!p. prob_space p ==> (expectation p (\x. PosInf) = PosInf)``,
     RW_TAC std_ss [prob_space_def, p_space_def, expectation_def]
  >> MATCH_MP_TAC integral_posinf >> art [lt_01]);
-
-val expectation_indicator = store_thm
-  ("expectation_indicator",
-  ``!p s. prob_space p /\ s IN events p ==> (expectation p (indicator_fn s) = prob p s)``,
-    RW_TAC std_ss [expectation_def, events_def, prob_space_def, prob_def]
- >> MATCH_MP_TAC integral_indicator >> art []);
 
 (* a deep lemma: all second moments are finite iff one of them is finite *)
 val finite_second_moments_all = store_thm (* new *)
@@ -3625,8 +3630,8 @@ val PROB_LIMINF = store_thm
     RW_TAC std_ss [prob_space_def, p_space_def, events_def, prob_def]
  >> MATCH_MP_TAC measure_liminf >> art []);
 
-val expectation_indicator_fn = store_thm
-  ("expectation_indicator_fn",
+val expectation_indicator = store_thm
+  ("expectation_indicator",
   ``!p s. prob_space p /\ s IN events p ==> (expectation p (indicator_fn s) = prob p s)``,
     RW_TAC std_ss [prob_space_def, events_def, expectation_def, prob_def]
  >> MATCH_MP_TAC integral_indicator >> art []);
@@ -3655,7 +3660,7 @@ val Borel_Cantelli_Lemma1 = store_thm
  >> Q.PAT_X_ASSUM `suminf (\x. prob p (E x)) < PosInf` MP_TAC
  >> Know `!x. prob p (E x) = integral p (indicator_fn (E x))`
  >- (GEN_TAC >> MATCH_MP_TAC EQ_SYM \\
-     MATCH_MP_TAC (REWRITE_RULE [expectation_def] expectation_indicator_fn) >> art [])
+     MATCH_MP_TAC (REWRITE_RULE [expectation_def] expectation_indicator) >> art [])
  >> Rewr'
  >> Know `!x. integral p (indicator_fn (E x)) = pos_fn_integral p (indicator_fn (E x))`
  >- (GEN_TAC >> MATCH_MP_TAC integral_pos_fn \\
@@ -3717,7 +3722,7 @@ val finite_second_moments_indicator_fn = store_thm
  >- (fs [prob_space_def, p_space_def, expectation_def, events_def] \\
      MATCH_MP_TAC integral_indicator_pow_eq >> ASM_SIMP_TAC arith_ss []) >> Rewr'
  >> Know `expectation p (indicator_fn s) = prob p s`
- >- (MATCH_MP_TAC expectation_indicator_fn >> art []) >> Rewr'
+ >- (MATCH_MP_TAC expectation_indicator >> art []) >> Rewr'
  >> MATCH_MP_TAC let_trans >> Q.EXISTS_TAC `1`
  >> METIS_TAC [PROB_LE_1, extreal_of_num_def, lt_infty]);
 
@@ -3788,7 +3793,7 @@ val Borel_Cantelli_Lemma2p = store_thm
  >> Know `!n. (prob p o E) n = expectation p (X n)`
  >- (Q.UNABBREV_TAC `X` \\
      RW_TAC std_ss [o_DEF] >> MATCH_MP_TAC EQ_SYM \\
-     MATCH_MP_TAC expectation_indicator_fn >> art []) >> DISCH_TAC
+     MATCH_MP_TAC expectation_indicator >> art []) >> DISCH_TAC
  (* this result can be also derived directly from independence (for any events) *)
  >> Know `!i j. i <> j ==> (expectation p (\x. (X i) x * (X j) x) =
                             expectation p (X i) * expectation p (X j))`
@@ -4246,6 +4251,598 @@ Proof
  >- (MATCH_MP_TAC pos_fn_integral_cong \\
      RW_TAC std_ss [m_space_lborel, indicator_fn_def, mul_rone, mul_rzero, le_refl])
  >> Rewr' >> art []
+QED
+
+(* ========================================================================= *)
+(*                      Condition Probability Library                        *)
+(* ========================================================================= *)
+
+Theorem EVENTS_BIGUNION :
+    !p f n. prob_space p /\ (f IN ((count n) -> events p)) ==>
+            BIGUNION (IMAGE f (count n)) IN events p
+Proof
+    RW_TAC std_ss [IN_FUNSET, IN_COUNT]
+ >> `BIGUNION (IMAGE f (count n)) = BIGUNION (IMAGE (\m. (if m < n then f m else {})) UNIV)`
+     by (RW_TAC std_ss [EXTENSION,IN_BIGUNION_IMAGE, IN_COUNT, IN_UNIV] >> METIS_TAC [NOT_IN_EMPTY])
+ >> POP_ORW
+ >> (MATCH_MP_TAC o REWRITE_RULE [subsets_def, space_def] o
+        Q.SPECL [`(p_space p, events p)`,`(\m. if m < n then A m else {})`]) SIGMA_ALGEBRA_ENUM
+ >> RW_TAC std_ss [EVENTS_SIGMA_ALGEBRA] >> RW_TAC std_ss [IN_FUNSET, IN_UNIV, DISJOINT_EMPTY]
+ >> METIS_TAC [EVENTS_EMPTY]
+QED
+
+Theorem PROB_INTER_ZERO :
+    !p A B. prob_space p /\ A IN events p /\ B IN events p /\ (prob p B = 0) ==>
+           (prob p (A INTER B) = 0)
+Proof
+    RW_TAC std_ss []
+ >> `(A INTER B) SUBSET B` by RW_TAC std_ss [INTER_SUBSET]
+ >> `prob p (A INTER B) <= prob p B` by FULL_SIMP_TAC std_ss [PROB_INCREASING, EVENTS_INTER]
+ >> `0 <= prob p (A INTER B)` by FULL_SIMP_TAC std_ss [PROB_POSITIVE, EVENTS_INTER]
+ >> METIS_TAC [le_antisym]
+QED
+
+Theorem PROB_ZERO_INTER :
+    !p A B. prob_space p /\ A IN events p /\ B IN events p /\ (prob p A = 0) ==>
+           (prob p (A INTER B) = 0)
+Proof
+    RW_TAC std_ss [] >> (MP_TAC o Q.SPECL [`p`, `B`, `A`]) PROB_INTER_ZERO
+ >> RW_TAC std_ss [INTER_COMM]
+QED
+
+Theorem COND_PROB_ZERO :
+    !p A B. prob_space p /\ A IN events p /\ B IN events p /\
+           (prob p A = 0) /\ prob p B <> 0 ==> (cond_prob p A B = 0)
+Proof
+    RW_TAC std_ss [cond_prob_def, PROB_ZERO_INTER, zero_div]
+QED
+
+Theorem COND_PROB_ZERO_INTER :
+    !p A B. prob_space p /\ A IN events p /\ B IN events p /\
+           (prob p (A INTER B) = 0) /\ prob p B <> 0 ==> (cond_prob p A B = 0)
+Proof
+    RW_TAC std_ss [cond_prob_def, zero_div]
+QED
+
+Theorem COND_PROB_INCREASING :
+    !p A B C. prob_space p /\ A IN events p /\ B IN events p /\ C IN events p /\
+              prob p C <> 0 ==> cond_prob p (A INTER B) C <= cond_prob p A C
+Proof
+    RW_TAC std_ss [cond_prob_def, real_div]
+ >> `(A INTER B INTER C) SUBSET (A INTER C)` by SET_TAC []
+ >> `A INTER C IN events p` by METIS_TAC [EVENTS_INTER]
+ >> `A INTER B INTER C IN events p` by METIS_TAC [EVENTS_INTER]
+ >> `0 < prob p C` by METIS_TAC [le_lt, PROB_POSITIVE]
+ >> MATCH_MP_TAC ldiv_le_imp
+ >> ASM_SIMP_TAC std_ss [PROB_FINITE]
+ >> MATCH_MP_TAC PROB_INCREASING >> art []
+QED
+
+Theorem POS_COND_PROB_IMP_POS_PROB :
+    !A B p. prob_space p /\ A IN events p /\ B IN events p /\
+            0 < cond_prob p A B /\ prob p B <> 0 ==> prob p (A INTER B) <> 0
+Proof
+    RW_TAC std_ss []
+ >> `0 < prob p B` by METIS_TAC [lt_le, PROB_POSITIVE]
+ >> FULL_SIMP_TAC std_ss [cond_prob_def]
+ >> CCONTR_TAC >> fs []
+ >> `0 / prob p B = 0` by METIS_TAC [zero_div]
+ >> METIS_TAC [lt_refl]
+QED
+
+Theorem COND_PROB_BOUNDS :
+    !p A B. prob_space p /\ A IN events p /\ B IN events p /\
+            prob p B <> 0 ==> 0 <= cond_prob p A B /\ cond_prob p A B <= 1
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> `0 < prob p B` by METIS_TAC [lt_le, PROB_POSITIVE]
+ >> `prob p B <> 0` by METIS_TAC [lt_le]
+ >> `prob p B <> PosInf /\ prob p B <> NegInf` by METIS_TAC [PROB_FINITE]
+ >> `?r. prob p B = Normal r` by METIS_TAC [extreal_cases]
+ >> `0 < r` by METIS_TAC [extreal_of_num_def, extreal_lt_eq]
+ >> `A INTER B IN events p` by METIS_TAC [EVENTS_INTER]
+ >> `0 <= prob p (A INTER B)` by METIS_TAC [PROB_POSITIVE]
+ >> REWRITE_TAC [cond_prob_def]
+ >> CONJ_TAC
+ >- (`(prob p (A INTER B) = 0) \/ 0 < prob p (A INTER B)` by METIS_TAC [le_lt]
+     >- (POP_ORW >> Suff `0 / prob p B = 0` >- rw [le_refl] \\
+         MATCH_MP_TAC zero_div >> art []) \\
+     MATCH_MP_TAC lt_imp_le >> art [] \\
+     MATCH_MP_TAC lt_div >> art [])
+ >> ASM_SIMP_TAC std_ss [GSYM le_ldiv, mul_lone]
+ >> Q.PAT_X_ASSUM `prob p B = Normal r` (ONCE_REWRITE_TAC o wrap o SYM)
+ >> MATCH_MP_TAC PROB_INCREASING
+ >> ASM_SIMP_TAC std_ss [INTER_SUBSET]
+QED
+
+Theorem COND_PROB_FINITE : (* new *)
+    !p A B. prob_space p /\ A IN events p /\ B IN events p /\
+            prob p B <> 0 ==> cond_prob p A B <> PosInf /\ cond_prob p A B <> NegInf
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> `0 <= cond_prob p A B /\ cond_prob p A B <= 1` by METIS_TAC [COND_PROB_BOUNDS]
+ >> Reverse CONJ_TAC
+ >- (MATCH_MP_TAC pos_not_neginf >> art [])
+ >> REWRITE_TAC [lt_infty]
+ >> MATCH_MP_TAC let_trans
+ >> Q.EXISTS_TAC `1` >> art [num_not_infty, GSYM lt_infty]
+QED
+
+Theorem COND_PROB_ITSELF :
+    !p B. prob_space p /\ B IN events p /\ prob p B <> 0 ==> (cond_prob p B B = 1)
+Proof
+    RW_TAC real_ss [cond_prob_def, INTER_IDEMPOT]
+ >> `0 < prob p B` by METIS_TAC [le_lt, PROB_POSITIVE]
+ >> MATCH_MP_TAC div_refl
+ >> METIS_TAC [PROB_FINITE]
+QED
+
+Theorem COND_PROB_COMPL :
+    !p A B. prob_space p /\ A IN events p /\ COMPL A IN events p /\
+            B IN events p /\ prob p B <> 0 ==>
+           (cond_prob p (COMPL A) B = 1 - cond_prob p A B)
+Proof
+    RW_TAC std_ss [cond_prob_def]
+ >> `prob p B <> PosInf /\ prob p B <> NegInf` by METIS_TAC [PROB_FINITE]
+ >> `prob p B < PosInf` by METIS_TAC [lt_infty]
+ >> `0 < prob p B` by METIS_TAC [le_lt, PROB_POSITIVE]
+ >> ASM_SIMP_TAC std_ss [ldiv_eq]
+ >> `A INTER B IN events p` by METIS_TAC [EVENTS_INTER]
+ >> `prob p (A INTER B) <> PosInf /\
+     prob p (A INTER B) <> NegInf` by METIS_TAC [PROB_FINITE]
+ >> Know `prob p (A INTER B) / prob p B <> PosInf /\
+          prob p (A INTER B) / prob p B <> NegInf`
+ >- (`?a. prob p (A INTER B) = Normal a` by METIS_TAC [extreal_cases] \\
+     `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
+     `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] \\
+     ASM_SIMP_TAC std_ss [extreal_div_eq, extreal_not_infty])
+ >> STRIP_TAC
+ >> ASM_SIMP_TAC std_ss [sub_rdistrib, num_not_infty, mul_lone]
+ >> Know `prob p (A INTER B) / prob p B * prob p B = prob p (A INTER B)`
+ >- (MATCH_MP_TAC EQ_SYM \\
+    `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
+    `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
+     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >> ASM_SIMP_TAC std_ss [eq_sub_ladd]
+ >> `prob p ((COMPL A) INTER B) + prob p (A INTER B) =
+     prob p (((COMPL A) INTER B) UNION (A INTER B))`
+       by (ONCE_REWRITE_TAC [EQ_SYM_EQ] >> MATCH_MP_TAC PROB_ADDITIVE
+          >> RW_TAC std_ss [EVENTS_INTER, DISJOINT_DEF, EXTENSION]
+          >> RW_TAC std_ss [NOT_IN_EMPTY, IN_COMPL, IN_INTER] >> METIS_TAC []) >> POP_ORW
+ >> `(COMPL A INTER B UNION A INTER B) = B`
+        by (SET_TAC [EXTENSION, IN_INTER, IN_UNION, IN_COMPL] >> METIS_TAC [])
+ >> RW_TAC std_ss []
+QED
+
+Theorem COND_PROB_DIFF :
+    !p A1 A2 B. prob_space p /\ A1 IN events p /\ A2 IN events p /\
+                B IN events p /\ prob p B <> 0 ==>
+               (cond_prob p (A1 DIFF A2) B =
+                cond_prob p A1 B - cond_prob p (A1 INTER A2) B)
+Proof
+    RW_TAC std_ss [cond_prob_def]
+ >> `(A1 DIFF A2) INTER B IN events p` by METIS_TAC [EVENTS_INTER, EVENTS_DIFF]
+ >> `A1 INTER B IN events p` by METIS_TAC [EVENTS_INTER]
+ >> `A1 INTER A2 INTER B IN events p` by METIS_TAC [EVENTS_INTER]
+ >> `prob p B <> PosInf /\ prob p B <> NegInf` by METIS_TAC [PROB_FINITE]
+ >> `prob p B < PosInf` by METIS_TAC [lt_infty]
+ >> `0 < prob p B` by METIS_TAC [le_lt, PROB_POSITIVE]
+ >> ASM_SIMP_TAC std_ss [ldiv_eq]
+ >> `prob p (A1 INTER B) <> PosInf /\
+     prob p (A1 INTER B) <> NegInf` by METIS_TAC [PROB_FINITE]
+ >> `prob p (A1 INTER A2 INTER B) <> PosInf /\
+     prob p (A1 INTER A2 INTER B) <> NegInf` by METIS_TAC [PROB_FINITE]
+ >> Know `prob p (A1 INTER B) / prob p B <> PosInf /\
+          prob p (A1 INTER B) / prob p B <> NegInf`
+ >- (`?a. prob p (A1 INTER B) = Normal a` by METIS_TAC [extreal_cases] \\
+     POP_ORW >> METIS_TAC [div_not_infty]) >> STRIP_TAC
+ >> Know `prob p (A1 INTER A2 INTER B) / prob p B <> PosInf /\
+          prob p (A1 INTER A2 INTER B) / prob p B <> NegInf`
+ >- (`?a. prob p (A1 INTER A2 INTER B) = Normal a`
+          by METIS_TAC [extreal_cases] >> POP_ORW \\
+     METIS_TAC [div_not_infty]) >> STRIP_TAC
+ >> ASM_SIMP_TAC std_ss [sub_rdistrib]
+ >> Know `prob p (A1 INTER B) / prob p B * prob p B = prob p (A1 INTER B)`
+ >- (MATCH_MP_TAC EQ_SYM \\
+    `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
+    `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
+     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >> Know `prob p (A1 INTER A2 INTER B) / prob p B * prob p B =
+          prob p (A1 INTER A2 INTER B)`
+ >- (MATCH_MP_TAC EQ_SYM \\
+    `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
+    `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
+     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >> ASM_SIMP_TAC std_ss [eq_sub_ladd]
+ >> `prob p ((A1 DIFF A2) INTER B) + prob p (A1 INTER A2 INTER B) =
+        prob p (((A1 DIFF A2) INTER B) UNION (A1 INTER A2 INTER B))`
+        by (ONCE_REWRITE_TAC [EQ_SYM_EQ] >> MATCH_MP_TAC PROB_ADDITIVE
+           >> RW_TAC std_ss [EVENTS_INTER, EVENTS_DIFF, DISJOINT_DEF, EXTENSION]
+           >> RW_TAC std_ss [IN_DIFF, IN_INTER, NOT_IN_EMPTY] >> PROVE_TAC [])
+ >> `((A1 DIFF A2) INTER B UNION A1 INTER A2 INTER B) = (A1 INTER B)`
+        by (RW_TAC std_ss [EXTENSION, IN_INTER, IN_DIFF, IN_UNION] THEN PROVE_TAC [])
+ >> RW_TAC std_ss []
+QED
+
+Theorem COND_PROB_MUL_RULE :
+    !p A B. prob_space p /\ A IN events p /\ B IN events p /\ prob p B <> 0 ==>
+           (prob p (A INTER B) = (prob p B) * (cond_prob p A B))
+Proof
+    RW_TAC std_ss []
+ >> `prob p B <> PosInf /\ prob p B <> NegInf` by METIS_TAC [PROB_FINITE]
+ >> `prob p B < PosInf` by METIS_TAC [lt_infty]
+ >> `0 < prob p B` by METIS_TAC [le_lt, PROB_POSITIVE]
+ >> ASM_SIMP_TAC std_ss [cond_prob_def, ldiv_eq, Once mul_comm]
+ >> `?b. prob p B = Normal b` by METIS_TAC [extreal_cases]
+ >> `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art []
+ >> MATCH_MP_TAC div_mul_refl >> art []
+QED
+
+Theorem COND_PROB_MUL_EQ :
+    !p A B. prob_space p /\ A IN events p /\ B IN events p /\
+            prob p A <> 0 /\ prob p B <> 0 ==>
+           (cond_prob p A B * prob p B = cond_prob p B A * prob p A)
+Proof
+    RW_TAC std_ss [cond_prob_def, Once INTER_COMM]
+ >> `prob p A <> PosInf /\ prob p A <> NegInf` by METIS_TAC [PROB_FINITE]
+ >> `prob p A < PosInf` by METIS_TAC [lt_infty]
+ >> `0 < prob p A` by METIS_TAC [le_lt, PROB_POSITIVE]
+ >> `prob p B <> PosInf /\ prob p B <> NegInf` by METIS_TAC [PROB_FINITE]
+ >> `prob p B < PosInf` by METIS_TAC [lt_infty]
+ >> `0 < prob p B` by METIS_TAC [le_lt, PROB_POSITIVE]
+ >> Know `prob p (B INTER A) / prob p A * prob p A = prob p (B INTER A)`
+ >- (MATCH_MP_TAC EQ_SYM \\
+    `?a. prob p A = Normal a` by METIS_TAC [extreal_cases] \\
+    `a <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
+     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >> Know `prob p (B INTER A) / prob p B * prob p B = prob p (B INTER A)`
+ >- (MATCH_MP_TAC EQ_SYM \\
+    `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
+    `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
+     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr
+QED
+
+Theorem COND_PROB_UNION :
+    !p A1 A2 B.
+       prob_space p /\ A1 IN events p /\ A2 IN events p /\ B IN events p /\
+       prob p B <> 0 ==>
+      (cond_prob p (A1 UNION A2) B =
+       (cond_prob p A1 B) + (cond_prob p A2 B) - (cond_prob p (A1 INTER A2) B))
+Proof
+    RW_TAC std_ss []
+ >> `cond_prob p A1 B <> PosInf /\ cond_prob p A1 B <> NegInf /\
+     cond_prob p A2 B <> PosInf /\ cond_prob p A2 B <> NegInf`
+      by METIS_TAC [COND_PROB_FINITE]
+ >> ASM_SIMP_TAC std_ss [Once add_comm]
+ >> `A1 INTER A2 IN events p` by METIS_TAC [EVENTS_INTER]
+ >> `cond_prob p (A1 INTER A2) B <> PosInf /\
+     cond_prob p (A1 INTER A2) B <> NegInf` by METIS_TAC [COND_PROB_FINITE]
+ >> Know `cond_prob p A2 B + cond_prob p A1 B - cond_prob p (A1 INTER A2) B =
+          cond_prob p A2 B + (cond_prob p A1 B - cond_prob p (A1 INTER A2) B)`
+ >- (`?a. cond_prob p A2 B = Normal a` by METIS_TAC [extreal_cases] >> POP_ORW \\
+     `?b. cond_prob p A1 B = Normal b` by METIS_TAC [extreal_cases] >> POP_ORW \\
+     `?c. cond_prob p (A1 INTER A2) B = Normal c` by METIS_TAC [extreal_cases] \\
+     POP_ORW >> SIMP_TAC real_ss [extreal_add_def, extreal_sub_def, extreal_11] \\
+     REAL_ARITH_TAC) >> Rewr'
+ >> `cond_prob p A1 B - cond_prob p (A1 INTER A2) B = cond_prob p (A1 DIFF A2) B`
+        by PROVE_TAC [COND_PROB_DIFF] >> POP_ORW
+ >> `prob p B <> PosInf /\ prob p B <> NegInf` by METIS_TAC [PROB_FINITE]
+ >> `prob p B < PosInf` by METIS_TAC [lt_infty]
+ >> `0 < prob p B` by METIS_TAC [le_lt, PROB_POSITIVE]
+ >> ASM_SIMP_TAC std_ss [cond_prob_def, ldiv_eq]
+ >> Know `(prob p (A2 INTER B) / prob p B +
+           prob p ((A1 DIFF A2) INTER B) / prob p B) * prob p B =
+           prob p (A2 INTER B) / prob p B * prob p B +
+           prob p ((A1 DIFF A2) INTER B) / prob p B * prob p B`
+ >- (`?r. prob p B = Normal r` by METIS_TAC [extreal_cases] >> art [] \\
+     MATCH_MP_TAC add_rdistrib_normal >> DISJ1_TAC \\
+     POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM) \\
+     REWRITE_TAC [GSYM cond_prob_def] >> art [] \\
+    `A1 DIFF A2 IN events p` by METIS_TAC [EVENTS_DIFF] \\
+     METIS_TAC [COND_PROB_FINITE]) >> Rewr'
+ >> Know `prob p (A2 INTER B) / prob p B * prob p B = prob p (A2 INTER B)`
+ >- (MATCH_MP_TAC EQ_SYM \\
+    `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
+    `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
+     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >> Know `prob p ((A1 DIFF A2) INTER B) / prob p B * prob p B =
+          prob p ((A1 DIFF A2) INTER B)`
+ >- (MATCH_MP_TAC EQ_SYM \\
+    `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
+    `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
+     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >> `(A1 UNION A2) INTER B IN events p` by METIS_TAC [EVENTS_UNION, EVENTS_INTER]
+ >> `A2 INTER B IN events p` by METIS_TAC [EVENTS_INTER]
+ >> `(A1 DIFF A2) INTER B IN events p` by METIS_TAC [EVENTS_INTER, EVENTS_DIFF]
+ >> `prob p (A2 INTER B) + prob p ((A1 DIFF A2) INTER B) =
+       prob p ((A2 INTER B) UNION ((A1 DIFF A2) INTER B))`
+       by (ONCE_REWRITE_TAC [EQ_SYM_EQ] >> MATCH_MP_TAC PROB_ADDITIVE
+          >> RW_TAC std_ss [EVENTS_INTER, EVENTS_DIFF, DISJOINT_DEF, EXTENSION]
+          >> RW_TAC std_ss [IN_INTER, IN_DIFF, NOT_IN_EMPTY] >> PROVE_TAC [])
+ >> `(A2 INTER B UNION (A1 DIFF A2) INTER B) = ((A1 UNION A2) INTER B)`
+        by (RW_TAC std_ss [EXTENSION, IN_INTER, IN_DIFF, IN_UNION] THEN PROVE_TAC [])
+ >> RW_TAC std_ss []
+QED
+
+val INSERT_THM1 = prove (``!(x:'a) s. x IN (x INSERT s)``,
+    RW_TAC std_ss [IN_INSERT]);
+
+val INSERT_THM2 = prove (``!(x:'a) y s. x IN s ==> x IN (y INSERT s)``,
+    RW_TAC std_ss [IN_INSERT]);
+
+Theorem PROB_FINITE_ADDITIVE :
+    !p s f t. prob_space p /\ FINITE s /\ (!x. x IN s ==> f x IN events p) /\
+             (!a b. (a:'b) IN s /\ b IN s /\ ~(a = b) ==> DISJOINT (f a) (f b)) /\
+             (t = BIGUNION (IMAGE f s)) ==> (prob p t = SIGMA (prob p o f) s)
+Proof
+    Suff `!s. FINITE (s:'b -> bool) ==>
+        ((\s. !p f t. prob_space p  /\ (!x. x IN s ==> f x IN events p) /\
+        (!a b. a IN s /\ b IN s /\ a <> b ==> DISJOINT (f a) (f b)) /\
+        (t = BIGUNION (IMAGE f s)) ==> (prob p t = SIGMA (prob p o f) s)) s)` >- METIS_TAC []
+ >> MATCH_MP_TAC FINITE_INDUCT >> RW_TAC std_ss [IMAGE_EMPTY]
+ >- RW_TAC std_ss [EXTREAL_SUM_IMAGE_EMPTY, BIGUNION_EMPTY, PROB_EMPTY]
+ >> Know `SIGMA (prob p o f) ((e:'b) INSERT s) =
+                (prob p o f) e + SIGMA (prob p o f) (s DELETE e)`
+ >- (irule EXTREAL_SUM_IMAGE_PROPERTY >> art [] \\
+     DISJ1_TAC >> GEN_TAC >> DISCH_TAC \\
+     SIMP_TAC std_ss [o_DEF] >> METIS_TAC [PROB_FINITE])
+ >> `s DELETE (e:'b) = s` by FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]
+ >> RW_TAC std_ss [IMAGE_INSERT, BIGUNION_INSERT]
+ >> Know `DISJOINT (f e) (BIGUNION (IMAGE f s))`
+ >- (RW_TAC set_ss [DISJOINT_BIGUNION, IN_IMAGE] \\
+    `e IN e INSERT s` by FULL_SIMP_TAC std_ss [INSERT_THM1] \\
+    `x IN e INSERT s` by FULL_SIMP_TAC std_ss [INSERT_THM2] \\
+    `e <> x` by METIS_TAC [] \\
+     FULL_SIMP_TAC std_ss []) >> DISCH_TAC
+ >> `(f e) IN events p` by FULL_SIMP_TAC std_ss [IN_FUNSET, INSERT_THM1]
+ >> `BIGUNION (IMAGE f s) IN events p`
+        by (MATCH_MP_TAC EVENTS_COUNTABLE_UNION >> RW_TAC std_ss []
+           >- (RW_TAC std_ss [SUBSET_DEF,IN_IMAGE] THEN METIS_TAC [IN_INSERT])
+           >> MATCH_MP_TAC COUNTABLE_IMAGE >> RW_TAC std_ss [FINITE_COUNTABLE])
+ >> `(prob p (f e UNION BIGUNION (IMAGE f s))) = prob p (f e) + prob p (BIGUNION (IMAGE f s))`
+        by (MATCH_MP_TAC PROB_ADDITIVE >> FULL_SIMP_TAC std_ss [])
+ >> RW_TAC std_ss [INSERT_THM1, INSERT_THM2]
+QED
+
+val INTER_BIGUNION = prove (
+  ``(!s t. BIGUNION s INTER t = BIGUNION {x INTER t | x IN s}) /\
+    (!s t. t INTER BIGUNION s = BIGUNION {t INTER x | x IN s})``,
+    ONCE_REWRITE_TAC [EXTENSION]
+ >> SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION, IN_INTER]
+ >> MESON_TAC [IN_INTER]);
+
+Theorem COND_PROB_FINITE_ADDITIVE :
+    !p A B n s. prob_space p /\ B IN events p /\ A IN ((count n) -> events p) /\
+                (s = BIGUNION (IMAGE A (count n))) /\ prob p B <> 0 /\
+                (!a b. a <> b ==> DISJOINT (A a) (A b)) ==>
+                (cond_prob p s B = SIGMA (\i. cond_prob p (A i) B) (count n))
+Proof
+    RW_TAC std_ss [IN_FUNSET, IN_COUNT]
+ >> `0 <= prob p (B:'a -> bool)` by RW_TAC std_ss [PROB_POSITIVE]
+ >> `BIGUNION (IMAGE A (count n)) IN events p` by METIS_TAC [EVENTS_BIGUNION, IN_FUNSET, IN_COUNT]
+ >> `prob p B <> PosInf /\ prob p B <> NegInf` by METIS_TAC [PROB_FINITE]
+ >> `prob p B < PosInf` by METIS_TAC [lt_infty]
+ >> `0 < prob p B` by METIS_TAC [le_lt, PROB_POSITIVE]
+ >> GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [cond_prob_def]
+ >> ASM_SIMP_TAC std_ss [ldiv_eq, Once mul_comm]
+ >> Know `prob p B * SIGMA (\i. cond_prob p (A i) B) (count n) =
+          SIGMA (\i. prob p B * (\i. cond_prob p (A i) B) i) (count n)`
+ >- (`?r. prob p B = Normal r` by METIS_TAC [extreal_cases] >> POP_ORW \\
+     MATCH_MP_TAC EQ_SYM >> irule EXTREAL_SUM_IMAGE_CMUL \\
+     REWRITE_TAC [FINITE_COUNT] >> DISJ1_TAC \\
+     RW_TAC std_ss [IN_COUNT] >> METIS_TAC [COND_PROB_FINITE])
+ >> BETA_TAC >> Rewr'
+ >> REWRITE_TAC [cond_prob_def, Once mul_comm]
+ >> Know `!i. prob p (A i INTER B) / prob p B * prob p B = prob p (A i INTER B)`
+ >- (GEN_TAC >> MATCH_MP_TAC EQ_SYM \\
+    `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
+    `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
+     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >> `SIGMA (\i. prob p (A i INTER B)) (count n) = SIGMA (prob p o (\i. A i INTER B)) (count n)`
+        by METIS_TAC [] >> POP_ORW
+ >> Know `BIGUNION (IMAGE A (count n)) INTER B = BIGUNION (IMAGE (\i. A i INTER B) (count n))`
+ >- (RW_TAC set_ss [INTER_COMM, INTER_BIGUNION, Once EXTENSION, IN_IMAGE] \\
+     EQ_TAC >> rpt STRIP_TAC >| (* 3 subgoals *)
+     [ (* goal 1 (of 3) *)
+       rename1 `s = A i` >> Q.EXISTS_TAC `B INTER (A i)` \\
+       Reverse CONJ_TAC >- (Q.EXISTS_TAC `i` >> art []) \\
+       METIS_TAC [IN_INTER],
+       (* goal 2 (of 3) *)
+       fs [IN_INTER] >> Q.EXISTS_TAC `A i` >> art [] \\
+       Q.EXISTS_TAC `i` >> art [],
+       (* goal 3 (of 3) *)
+       fs [IN_INTER] ]) >> Rewr'
+ >> MATCH_MP_TAC PROB_FINITELY_ADDITIVE
+ >> RW_TAC std_ss [IN_FUNSET, IN_COUNT]
+ >- METIS_TAC [EVENTS_INTER]
+ >> MATCH_MP_TAC DISJOINT_RESTRICT_L
+ >> PROVE_TAC []
+QED
+
+Theorem BAYES_RULE :
+    !p A B. prob_space p /\ A IN events p /\ B IN events p /\
+            prob p A <> 0 /\ prob p B <> 0 ==>
+           (cond_prob p B A = (cond_prob p A B) * (prob p B) / (prob p A))
+Proof
+    RW_TAC std_ss []
+ >> `prob p A <> PosInf /\ prob p A <> NegInf` by METIS_TAC [PROB_FINITE]
+ >> `prob p A < PosInf` by METIS_TAC [lt_infty]
+ >> `0 < prob p A` by METIS_TAC [le_lt, PROB_POSITIVE]
+ >> `prob p B <> PosInf /\ prob p B <> NegInf` by METIS_TAC [PROB_FINITE]
+ >> `prob p B < PosInf` by METIS_TAC [lt_infty]
+ >> `0 < prob p B` by METIS_TAC [le_lt, PROB_POSITIVE]
+ >> GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [cond_prob_def]
+ >> ASM_SIMP_TAC std_ss [ldiv_eq]
+ >> Know `cond_prob p A B * prob p B / prob p A * prob p A =
+          cond_prob p A B * prob p B`
+ >- (MATCH_MP_TAC EQ_SYM \\
+    `?a. prob p A = Normal a` by METIS_TAC [extreal_cases] \\
+    `a <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
+     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >> REWRITE_TAC [cond_prob_def]
+ >> Know `prob p (A INTER B) / prob p B * prob p B = prob p (A INTER B)`
+ >- (MATCH_MP_TAC EQ_SYM \\
+    `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
+    `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
+     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >> REWRITE_TAC [Once INTER_COMM]
+QED
+
+Theorem TOTAL_PROB_SIGMA :
+    !p A B s. prob_space p /\ A IN events p /\ FINITE s /\
+             (!x. x IN s ==> B x IN events p /\ prob p (B x) <> 0) /\
+             (!a b. a IN s /\ b IN s /\ ~(a = b) ==> DISJOINT (B a) (B b)) /\
+             (BIGUNION (IMAGE B s) = p_space p) ==>
+             (prob p A = SIGMA (\i. (prob p (B i)) * (cond_prob p A (B i))) s)
+Proof
+    RW_TAC std_ss []
+ >> `!x. x IN s ==> prob p (B x) <> PosInf /\
+                    prob p (B x) <> NegInf` by METIS_TAC [PROB_FINITE]
+ >> `!x. x IN s ==> prob p (B x) < PosInf` by METIS_TAC [lt_infty]
+ >> `!x. x IN s ==> 0 < prob p (B x)` by METIS_TAC [le_lt, PROB_POSITIVE]
+ >> Know `SIGMA (\i. prob p (B i) * cond_prob p A (B i)) (s:'b -> bool) =
+          SIGMA (\i. prob p (A INTER (B i))) s`
+ >- (irule EXTREAL_SUM_IMAGE_EQ \\
+     STRONG_CONJ_TAC
+     >- (RW_TAC std_ss [cond_prob_def, Once mul_comm] \\
+         MATCH_MP_TAC EQ_SYM \\
+        `?b. prob p (B x) = Normal b` by METIS_TAC [extreal_cases] \\
+        `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
+         MATCH_MP_TAC div_mul_refl >> art []) \\
+     RW_TAC std_ss [] >> DISJ1_TAC >> GEN_TAC >> DISCH_TAC \\
+    `A INTER B x IN events p` by METIS_TAC [EVENTS_INTER] \\
+     METIS_TAC [PROB_FINITE]) >> Rewr'
+ >> MATCH_MP_TAC PROB_EXTREAL_SUM_IMAGE_FN
+ >> RW_TAC std_ss [EVENTS_INTER, INTER_IDEMPOT]
+QED
+
+Theorem BAYES_RULE_GENERAL_SIGMA :
+    !p A B s k. prob_space p /\ A IN events p /\ prob p A <> 0 /\ FINITE s /\
+        (!x . x IN s ==> B x IN events p /\ prob p (B x) <> 0) /\
+         k IN s /\ (!a b. a IN s /\ b IN s /\ ~(a = b) ==> DISJOINT (B a) (B b)) /\
+        (BIGUNION (IMAGE B s) = p_space p) ==>
+        (cond_prob p (B k) A = ((cond_prob p A (B k)) * prob p (B k)) /
+                                (SIGMA (\i. (prob p (B i)) * (cond_prob p A (B i)))) s)
+Proof
+    RW_TAC std_ss [GSYM TOTAL_PROB_SIGMA]
+ >> MATCH_MP_TAC BAYES_RULE
+ >> RW_TAC std_ss []
+QED
+
+Theorem COND_PROB_ADDITIVE :
+    !p A B s. prob_space p /\ FINITE s /\ B IN events p /\
+             (!x. x IN s ==> A x IN events p) /\ prob p B <> 0 /\
+             (!x y. x IN s /\ y IN s /\ x <> y ==> DISJOINT (A x) (A y)) /\
+             (BIGUNION (IMAGE A s) = p_space p) ==>
+             (SIGMA (\i. cond_prob p (A i) B) s = 1)
+Proof
+    RW_TAC std_ss []
+ >> `prob p B <> PosInf /\ prob p B <> NegInf` by METIS_TAC [PROB_FINITE]
+ >> `prob p B < PosInf` by METIS_TAC [lt_infty]
+ >> `0 < prob p B` by METIS_TAC [le_lt, PROB_POSITIVE]
+ >> `(SIGMA (\i. cond_prob p (A i) B) (s:'b -> bool) = 1) <=>
+          (prob p B * SIGMA (\i. cond_prob p (A i) B) s = prob p B * 1)`
+     by METIS_TAC [mul_lcancel] >> POP_ORW
+ >> Know `prob p B * SIGMA (\i. cond_prob p (A i) B) (s:'b -> bool) =
+          SIGMA (\i. prob p B * (\i. cond_prob p (A i) B) i) s`
+ >- (`?r. prob p B = Normal r` by METIS_TAC [extreal_cases] >> POP_ORW \\
+     MATCH_MP_TAC EQ_SYM >> irule EXTREAL_SUM_IMAGE_CMUL \\
+     RW_TAC std_ss [COND_PROB_FINITE]) >> BETA_TAC >> Rewr'
+ >> RW_TAC std_ss [cond_prob_def, Once mul_comm]
+ >> Know `!i. prob p (A i INTER B) / prob p B * prob p B = prob p (A i INTER B)`
+ >- (GEN_TAC >> MATCH_MP_TAC EQ_SYM \\
+    `?b. prob p B = Normal b` by METIS_TAC [extreal_cases] \\
+    `b <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] >> art [] \\
+     MATCH_MP_TAC div_mul_refl >> art []) >> Rewr'
+ >> REWRITE_TAC [mul_rone, Once EQ_SYM_EQ, Once INTER_COMM]
+ >> MATCH_MP_TAC PROB_EXTREAL_SUM_IMAGE_FN
+ >> RW_TAC std_ss [INTER_IDEMPOT, EVENTS_INTER]
+QED
+
+Theorem COND_PROB_SWAP :
+    !p A B C.
+       prob_space p /\ A IN events p /\ B IN events p /\ C IN events p /\
+       prob p (B INTER C) <> 0 /\ prob p (A INTER C) <> 0 ==>
+      (cond_prob p A (B INTER C) * cond_prob p B C =
+       cond_prob p B (A INTER C) * cond_prob p A C)
+Proof
+    RW_TAC std_ss []
+ >> `B INTER C IN events p` by METIS_TAC [EVENTS_INTER]
+ >> `A INTER B IN events p` by METIS_TAC [EVENTS_INTER]
+ >> `A INTER C IN events p` by METIS_TAC [EVENTS_INTER]
+ >> Know `prob p C <> 0`
+ >- (CCONTR_TAC >> fs [] \\
+    `0 < prob p (B INTER C)` by METIS_TAC [PROB_POSITIVE, le_lt] \\
+     Know `prob p (B INTER C) <= prob p C`
+     >- (MATCH_MP_TAC PROB_INCREASING >> ASM_SET_TAC [EVENTS_INTER]) \\
+     DISCH_TAC >> METIS_TAC [lte_trans, lt_refl]) >> DISCH_TAC
+ >> RW_TAC std_ss [cond_prob_def]
+ >> `A INTER (B INTER C) = B INTER (A INTER C)`
+       by METIS_TAC [GSYM INTER_ASSOC, INTER_COMM] >> POP_ORW
+ >> `B INTER (A INTER C) IN events p` by METIS_TAC [EVENTS_INTER]
+ >> `?a. prob p (B INTER (A INTER C)) = Normal a` by METIS_TAC [PROB_FINITE, extreal_cases]
+ >> `?b. prob p (B INTER C) = Normal b` by METIS_TAC [PROB_FINITE, extreal_cases]
+ >> `?c. prob p (A INTER C) = Normal c` by METIS_TAC [PROB_FINITE, extreal_cases]
+ >> `?d. prob p C = Normal d` by METIS_TAC [PROB_FINITE, extreal_cases]
+ >> `b <> 0 /\ c <> 0 /\ d <> 0` by METIS_TAC [extreal_of_num_def, extreal_11]
+ >> ASM_SIMP_TAC std_ss [extreal_mul_def, extreal_div_eq, extreal_11]
+ >> `!(a:real) b c d. a * b * (c * d) = a * (b * c) * d` by METIS_TAC [REAL_MUL_ASSOC]
+ >> RW_TAC std_ss [real_div, REAL_MUL_LINV, REAL_MUL_LID, REAL_MUL_RID]
+QED
+
+Theorem PROB_INTER_SPLIT :
+    !p A B C.
+       prob_space p /\ A IN events p /\ B IN events p /\ C IN events p /\
+       prob p (B INTER C) <> 0 ==>
+      (prob p (A INTER B INTER C) =
+       cond_prob p A (B INTER C) * cond_prob p B C * prob p C)
+Proof
+    RW_TAC std_ss []
+ >> `B INTER C IN events p` by METIS_TAC [EVENTS_INTER]
+ >> `A INTER B IN events p` by METIS_TAC [EVENTS_INTER]
+ >> Know `prob p C <> 0`
+ >- (CCONTR_TAC >> fs [] \\
+    `0 < prob p (B INTER C)` by METIS_TAC [PROB_POSITIVE, le_lt] \\
+     Know `prob p (B INTER C) <= prob p C`
+     >- (MATCH_MP_TAC PROB_INCREASING >> ASM_SET_TAC [EVENTS_INTER]) \\
+     DISCH_TAC >> METIS_TAC [lte_trans, lt_refl]) >> DISCH_TAC
+ >> RW_TAC std_ss [cond_prob_def]
+ >> `A INTER (B INTER C) = A INTER B INTER C` by SET_TAC [] >> POP_ORW
+ >> `A INTER B INTER C IN events p` by METIS_TAC [EVENTS_INTER]
+ >> `?a. prob p (A INTER B INTER C) = Normal a` by METIS_TAC [PROB_FINITE, extreal_cases]
+ >> `?b. prob p (B INTER C) = Normal b` by METIS_TAC [PROB_FINITE, extreal_cases]
+ >> `?c. prob p C = Normal c` by METIS_TAC [PROB_FINITE, extreal_cases]
+ >> `b <> 0 /\ c <> 0` by METIS_TAC [extreal_of_num_def, extreal_11]
+ >> ASM_SIMP_TAC std_ss [extreal_mul_def, extreal_div_eq, extreal_11]
+ >> `!(a:real) b c d e. a * b * (c * d) * e = a * (b * c) * (d * e)` by METIS_TAC [REAL_MUL_ASSOC]
+ >> RW_TAC std_ss [real_div, REAL_MUL_LINV, REAL_MUL_LID, REAL_MUL_RID]
+QED
+
+Theorem COND_PROB_INTER_SPLIT :
+    !p A B C.
+        prob_space p /\ A IN events p /\ B IN events p /\ C IN events p /\
+        prob p (B INTER C) <> 0 ==>
+        (cond_prob p (A INTER B) C = cond_prob p A (B INTER C) * cond_prob p B C)
+Proof
+    RW_TAC std_ss []
+ >> `B INTER C IN events p` by METIS_TAC [EVENTS_INTER]
+ >> Know `prob p C <> 0`
+ >- (CCONTR_TAC >> fs [] \\
+    `0 < prob p (B INTER C)` by METIS_TAC [PROB_POSITIVE, le_lt] \\
+     Know `prob p (B INTER C) <= prob p C`
+     >- (MATCH_MP_TAC PROB_INCREASING >> ASM_SET_TAC [EVENTS_INTER]) \\
+     DISCH_TAC >> METIS_TAC [lte_trans, lt_refl]) >> DISCH_TAC
+ >> RW_TAC std_ss [cond_prob_def]
+ >> `A INTER (B INTER C) = A INTER B INTER C` by SET_TAC [] >> POP_ORW
+ >> `A INTER B INTER C IN events p` by METIS_TAC [EVENTS_INTER]
+ >> `?a. prob p (A INTER B INTER C) = Normal a` by METIS_TAC [PROB_FINITE, extreal_cases]
+ >> `?b. prob p (B INTER C) = Normal b` by METIS_TAC [PROB_FINITE, extreal_cases]
+ >> `?c. prob p C = Normal c` by METIS_TAC [PROB_FINITE, extreal_cases]
+ >> `b <> 0 /\ c <> 0` by METIS_TAC [extreal_of_num_def, extreal_11]
+ >> ASM_SIMP_TAC std_ss [extreal_mul_def, extreal_div_eq, extreal_11]
+ >> `!(x:real) y z w. x * y * (z * w) = x * (y * z) * w`
+        by METIS_TAC [REAL_MUL_ASSOC, REAL_MUL_COMM]
+ >> RW_TAC std_ss [real_div, REAL_MUL_LINV, REAL_MUL_RID]
 QED
 
 val _ = export_theory ();
