@@ -23,7 +23,7 @@ val selfdir = HOLDIR ^ "/examples/AI_tasks"
 type board = combin * combin * int
 
 fun string_of_board (c1,c2,n)= 
-  combin_to_string c1 ^ " " ^ combin_to_string c2 ^ " " ^ its n
+  combin_to_string c1 ^ "\n" ^ combin_to_string c2 ^ "\n" ^ its n
 
 fun board_compare ((a,b,c),(d,e,f)) =
   (cpl_compare combin_compare combin_compare) ((a,b),(d,e))
@@ -50,7 +50,7 @@ fun status_of (c1,c2,n) =
     val nfo = hp_norm 100 (A(A(A(c1',V1),V2),V3)) 
   in
     if isSome nfo andalso valOf nfo = c2 then Win
-    else if n <= 0 orelse no_metavar c1 then Lose else Undecided
+    else if n <= 0 then Lose else Undecided
   end
 
 (* -------------------------------------------------------------------------
@@ -90,11 +90,17 @@ fun replace_metavar move c = case c of
     end
   | V1 => SOME (res_of_move move)
   | _ => NONE
-  
-fun apply_move move (c1,c2,n) =
-  (valOf (replace_metavar move c1), c2, n-1)  
 
-fun available_movel board = movel
+exception Break;  
+
+fun apply_move move (c1,c2,n) =
+  (let val c1new = valOf (replace_metavar move c1) in
+     if no_metavar c1new then raise Break else c1new 
+   end, 
+   c2, n-1)  
+
+fun available_movel board = 
+  ((ignore ((apply_move S0) board); movel) handle Break => [S1,S2,K1])
 
 (* -------------------------------------------------------------------------
    Game
@@ -102,9 +108,9 @@ fun available_movel board = movel
 
 val game : (board,move) game =
   {
-  status_of = status_of,
-  apply_move = apply_move,
-  available_movel = available_movel,  
+  status_of = Profile.profile "status_of" status_of,
+  apply_move = Profile.profile "apply_move" apply_move,
+  available_movel = Profile.profile "available_movel" available_movel,  
   string_of_board = string_of_board,
   string_of_move = string_of_move,
   board_compare = board_compare,
@@ -210,32 +216,32 @@ fun witness_to_nntm combin = case combin of
   | A(K,x) => mk_comb (cK1, witness_to_nntm x)
   | K => cK0
   | V1 => metavar
-  | _ => raise ERR "witness_to_nntm" ""
+  | _ => raise ERR "witness_to_nntm" (combin_to_string combin)
 
 fun headnf_to_nntm combin = case combin of
     A(A(A(A(V1,x),y),z),w) => 
-    list_mk_comb (v1a4, map witness_to_nntm [x,y,z,w])
+    list_mk_comb (v1a4, map headnf_to_nntm [x,y,z,w])
   | A(A(A(V1,x),y),z) =>
-    list_mk_comb (v1a3, map witness_to_nntm [x,y,z])
+    list_mk_comb (v1a3, map headnf_to_nntm [x,y,z])
   | A(A(V1,x),y) => 
-    list_mk_comb (v1a2, map witness_to_nntm [x,y])
-  | A(V1,x) => mk_comb (v1a1, witness_to_nntm x)
+    list_mk_comb (v1a2, map headnf_to_nntm [x,y])
+  | A(V1,x) => mk_comb (v1a1, headnf_to_nntm x)
   | V1 => v1a0
   | A(A(A(A(V2,x),y),z),w) => 
-    list_mk_comb (v2a4, map witness_to_nntm [x,y,z,w])
+    list_mk_comb (v2a4, map headnf_to_nntm [x,y,z,w])
   | A(A(A(V2,x),y),z) =>
-    list_mk_comb (v2a3, map witness_to_nntm [x,y,z])
+    list_mk_comb (v2a3, map headnf_to_nntm [x,y,z])
   | A(A(V2,x),y) => 
-    list_mk_comb (v2a2, map witness_to_nntm [x,y])
-  | A(V2,x) => mk_comb (v2a1, witness_to_nntm x)
+    list_mk_comb (v2a2, map headnf_to_nntm [x,y])
+  | A(V2,x) => mk_comb (v2a1, headnf_to_nntm x)
   | V2 => v2a0
   | A(A(A(A(V3,x),y),z),w) => 
-    list_mk_comb (v3a4, map witness_to_nntm [x,y,z,w])
+    list_mk_comb (v3a4, map headnf_to_nntm [x,y,z,w])
   | A(A(A(V3,x),y),z) =>
-    list_mk_comb (v3a3, map witness_to_nntm [x,y,z])
+    list_mk_comb (v3a3, map headnf_to_nntm [x,y,z])
   | A(A(V3,x),y) => 
-    list_mk_comb (v3a2, map witness_to_nntm [x,y])
-  | A(V3,x) => mk_comb (v3a1, witness_to_nntm x)
+    list_mk_comb (v3a2, map headnf_to_nntm [x,y])
+  | A(V3,x) => mk_comb (v3a1, headnf_to_nntm x)
   | V3 => v3a0
   | _ => raise ERR "headnf_to_nntm" ""
 
@@ -270,7 +276,7 @@ fun pretob boardtnno = case boardtnno of
    ------------------------------------------------------------------------- *)
 
 val schedule =
-  [{ncore = 4, verbose = true, learning_rate = 0.02,
+  [{ncore = 1, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 10}]
 
 val dim = 16
@@ -287,7 +293,7 @@ val dplayer = {pretob = pretob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleCombinSyntHp-" ^ its version, exwindow = 200000,
-   ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
+   ncore = 2, ntarget = 20, nsim = 10, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer}
@@ -306,6 +312,7 @@ val _ = (export_targetl "train" train; export_targetl "test" test);
 
 val targetl = import_targetl "train";
 val r = rl_start (rlobj,extsearch) (mk_targetd targetl);
+Profile.results ();
 
 val targetd = retrieve_targetd rlobj 26;
 val _ = rl_restart 26 (rlobj,extsearch) targetd;
@@ -325,7 +332,7 @@ load "psBigSteps" ; open psBigSteps;
 
 val mctsparam =
   {
-  nsim = 3200,
+  nsim = 160,
   stopatwin_flag = false,
   decay = 1.0,
   explo_coeff = 2.0,
@@ -341,14 +348,14 @@ val bsobj : (board,move) bsobj =
   {
   verbose = true,
   temp_flag = false,
-  player = psMCTS.random_player (#game rlobj),
+  preplayer = fn target => psMCTS.uniform_player (#game rlobj),
   game = (#game rlobj),
   mctsparam = mctsparam
   };
 
-val targetl = import_targetl "sy9";
-val target = List.nth (targetl,150);
-val _ = run_bigsteps bsobj target;
+val targetl = import_targetl "train";
+val _ = map (run_bigsteps bsobj) (random_subset 10 targetl);
+Profile.results ();
 *)
 
 

@@ -77,12 +77,11 @@ fun mk_bsobj rlobj (unib,tnn,noiseb,nsim) =
       let val tob = pretob (SOME (target,tnn)) in
         fn board => player_from_tnn tnn tob game board
       end
-    fun uniform_preplayer target = 
-      (fn board => uniform_player game board)
+    fun random_preplayer target board = random_player game board
   in
     {
-    verbose = false, temp_flag = false,
-    preplayer = if unib then uniform_preplayer else preplayer, 
+    verbose = true, temp_flag = false,
+    preplayer = if unib then random_preplayer else preplayer, 
     game = game,
     mctsparam = mk_mctsparam noiseb nsim rlobj
     }

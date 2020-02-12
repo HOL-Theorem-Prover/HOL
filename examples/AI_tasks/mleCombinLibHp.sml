@@ -112,11 +112,12 @@ fun hp_nf c = case c of
 fun hp_norm n mainc =
   let
     val i = ref 0
-    fun incra () = (incr i; if !i > n then raise Break else ())   
+    fun incra c = (incr i; if (combin_size c > 100 orelse !i > n) 
+                           then raise Break else ())   
     fun hp_norm_aux n c = 
       case c of
-        A(A(A(S,x),y),z) => (incra (); hp_norm_aux n (A(A(x,z),A(y,z))) )  
-      | A(A(K,x),y) => (incra (); hp_norm_aux n x)
+        A(A(A(S,x),y),z) => (incra c; hp_norm_aux n (A(A(x,z),A(y,z))) )  
+      | A(A(K,x),y) => (incra c; hp_norm_aux n x)
       | A(c1,c2) => A(hp_norm_aux n c1, hp_norm_aux n c2)  
       | x => x
     fun loop c =
