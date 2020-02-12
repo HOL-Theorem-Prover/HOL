@@ -276,7 +276,7 @@ fun pretob boardtnno = case boardtnno of
    ------------------------------------------------------------------------- *)
 
 val schedule =
-  [{ncore = 1, verbose = true, learning_rate = 0.02,
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 10}]
 
 val dim = 16
@@ -293,7 +293,7 @@ val dplayer = {pretob = pretob, tnnparam = tnnparam, schedule = schedule}
 
 val rlparam =
   {expname = "mleCombinSyntHp-" ^ its version, exwindow = 200000,
-   ncore = 2, ntarget = 20, nsim = 10, decay = 1.0}
+   ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer}
