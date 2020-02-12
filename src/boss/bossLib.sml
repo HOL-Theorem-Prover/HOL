@@ -208,8 +208,10 @@ val wlog_then = wlog_then
 
   (* useful quotation-based tactics (from Q) *)
   val qx_gen_tac : term quotation -> tactic = Q.X_GEN_TAC
+  val qx_genl_tac = map_every qx_gen_tac
   val qx_choose_then = Q.X_CHOOSE_THEN
   val qexists_tac : term quotation -> tactic = Q.EXISTS_TAC
+  val qexistsl_tac = map_every qexists_tac
   val qsuff_tac : term quotation -> tactic = Q_TAC SUFF_TAC
   val qspec_tac = Q.SPEC_TAC
   val qid_spec_tac : term quotation -> tactic = Q.ID_SPEC_TAC
@@ -238,9 +240,9 @@ val wlog_then = wlog_then
 
   val qabbrev_tac : term quotation -> tactic = Q.ABBREV_TAC
   val qunabbrev_tac : term quotation -> tactic = Q.UNABBREV_TAC
+  val qunabbrevl_tac = map_every qunabbrev_tac
   val unabbrev_all_tac : tactic = markerLib.UNABBREV_ALL_TAC
 
-  val qx_genl_tac = map_every qx_gen_tac
   fun qx_choosel_then [] ttac = ttac
     | qx_choosel_then (q::qs) ttac = qx_choose_then q (qx_choosel_then qs ttac)
 
