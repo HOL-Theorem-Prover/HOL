@@ -76,7 +76,7 @@ fun has_solution nvar f k =
       else if nvar = 3 then car3
       else raise ERR "has_solution" "nvar"
   in
-    Profile.profile "exists" (exists (fn v => f k v = 0)) l
+    exists (fn v => f k v = 0) l
   end
 
 fun dioph_set poly = 

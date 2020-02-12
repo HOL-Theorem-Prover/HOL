@@ -67,8 +67,7 @@ fun apply_move_poly move poly =
              then raise ERR "apply_move_poly" "non-increasing"
              else butlast poly @ [last poly @ [c]]
 
-fun apply_move move (poly,graph,n) = (
-  Profile.profile "apply_move" (apply_move_poly move) poly, graph, n-1)
+fun apply_move move (poly,graph,n) = (apply_move_poly move poly, graph, n-1)
 
 fun available_movel_poly poly =
   filter (fn x => can (apply_move_poly x) poly) movel
@@ -81,9 +80,9 @@ fun available_movel (poly,_,_) = available_movel_poly poly
 
 val game : (board,move) game =
   {
-  status_of = Profile.profile "status_of" status_of,
+  status_of = status_of,
   apply_move = apply_move,
-  available_movel = Profile.profile "available_movel" available_movel,  
+  available_movel = available_movel,  
   string_of_board = string_of_board,
   string_of_move = string_of_move,
   board_compare = board_compare,
@@ -243,7 +242,6 @@ load "aiLib"; open aiLib;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "psBigSteps" ; open psBigSteps;
 load "mleDiophSynt"; open mleDiophSynt;
-load "Profile"; open Profile;
 
 val mctsparam =
   {
@@ -267,7 +265,7 @@ val bsobj : (board,move) bsobj =
   {
   verbose = true,
   temp_flag = false,
-  preplayer = fn target => (Profile.profile "tnnplayer" tnnplayer),
+  preplayer = fn target => tnnplayer,
   game = (#game rlobj),
   mctsparam = mctsparam
   };
