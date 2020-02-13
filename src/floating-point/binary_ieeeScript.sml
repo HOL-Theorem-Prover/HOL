@@ -604,46 +604,35 @@ val () = Feedback.set_trace "Theory.save_thm_reporting" 1
 val rrw = SRW_TAC [boolSimps.LET_ss, realSimps.REAL_ARITH_ss]
 
 (* |- !n. 0 < 2 pow n *)
-val zero_lt_twopow = Theory.save_thm("zero_lt_twopow",
-   realTheory.REAL_POW_LT
-   |> Q.SPEC `2`
-   |> SIMP_RULE (srw_ss()) []
-   )
+Theorem zero_lt_twopow[simp] =
+   realTheory.REAL_POW_LT |> Q.SPEC `2` |> SIMP_RULE (srw_ss()) [];
 
 (* |- !n. 0 <= 2 pow n *)
-val zero_le_twopow = Theory.save_thm("zero_le_twopow",
-   MATCH_MP realTheory.REAL_LT_IMP_LE (Drule.SPEC_ALL zero_lt_twopow)
-   |> GEN_ALL
-   )
+Theorem zero_le_twopow[simp] =
+   MATCH_MP realTheory.REAL_LT_IMP_LE (Drule.SPEC_ALL zero_lt_twopow) |> GEN_ALL;
 
-(* |- !n. 2 pow n <> 0 *)
-val zero_neq_twopow = Theory.save_thm("zero_neq_twopow",
-   realTheory.POW_ZERO
-   |> Q.SPECL [`n`, `2`]
-   |> SIMP_RULE (srw_ss()) []
-   |> GEN_ALL
-   )
 
-val () = bossLib.export_rewrites
-           ["zero_lt_twopow", "zero_le_twopow", "zero_neq_twopow"]
+Theorem zero_neq_twopow:   !n. 2 pow n <> 0
+Proof simp[]
+QED
 
-val zero_le_pos_div_twopow = Q.store_thm("zero_le_pos_div_twopow",
-   `!m n. 0 <= &m / 2 pow n`,
-   rw [realTheory.REAL_LE_DIV, realTheory.REAL_LT_IMP_LE])
+Theorem zero_le_pos_div_twopow[simp]:
+   !m n. 0 <= &m / 2 pow n
+Proof
+  rw [realTheory.REAL_LE_DIV, realTheory.REAL_LT_IMP_LE]
+QED
 
-val div_eq0 = Q.store_thm("div_eq0",
-   `!a b. 0r < b ==> ((a / b = 0) = (a = 0))`,
-   rw [realTheory.REAL_EQ_LDIV_EQ])
-
-val () = bossLib.export_rewrites ["zero_le_pos_div_twopow", "div_eq0"]
+Theorem div_eq0[simp]:
+   !a b. 0r < b ==> ((a / b = 0) = (a = 0))
+Proof
+   rw [realTheory.REAL_EQ_LDIV_EQ]
+QED
 
 (* !b. 2 <= 2 ** b <=> 1 <= b *)
-val exp_ge2 = Theory.save_thm("exp_ge2",
-  logrootTheory.LE_EXP_ISO
-  |> Q.SPECL [`2`, `1`]
-  |> reduceLib.REDUCE_RULE
-  |> Conv.GSYM
-  )
+Theorem exp_ge2[simp] =
+  logrootTheory.LE_EXP_ISO |> Q.SPECL [`2`, `1`] |> reduceLib.REDUCE_RULE
+  |> Conv.GSYM;
+
 
 (* !b. 4 <= 2 ** b <=> 2 <= b *)
 val exp_ge4 =
@@ -652,14 +641,12 @@ val exp_ge4 =
   |> reduceLib.REDUCE_RULE
   |> Conv.GSYM
 
-val exp_gt2 = Theory.save_thm("exp_gt2",
+Theorem exp_gt2[simp] =
   logrootTheory.LT_EXP_ISO
   |> Q.SPECL [`2`, `1`]
   |> reduceLib.REDUCE_RULE
   |> Conv.GSYM
-  )
-
-val () = bossLib.export_rewrites ["exp_ge2", "exp_gt2"]
+  ;
 
 (* !n x u. (x / 2 pow n = u / 2 pow n) <=> (x = u) *)
 val div_twopow =
@@ -1285,10 +1272,11 @@ val float_to_real_negate = Q.store_thm("float_to_real_negate",
    \\ rsimp []
    )
 
-val float_negate_negate = Q.store_thm("float_negate_negate",
-   `!x. float_negate (float_negate x) = x`,
+Theorem float_negate_negate[simp]:
+   !x. float_negate (float_negate x) = x
+Proof
    simp [float_negate_def, float_component_equality]
-   )
+QED
 
 (* ------------------------------------------------------------------------
    Lemma support for rounding theorems

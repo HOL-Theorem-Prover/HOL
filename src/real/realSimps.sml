@@ -616,13 +616,14 @@ local
       else
         case total dest_pow t of
             SOME(b,_) => b
-          | NONE => t
+          | NONE => (case total dest_inv t of SOME b => b | NONE => t)
+
 
   val mulcompare = inv_img_cmp termbase Term.compare
 
   val addPOW1 = REWR_CONV (GSYM POW_1)
   val mulPOWs = TRY_CONV (REWR_CONV REAL_POW_POW THENC
-                          RAND_CONV (computeLib.CBV_CONV realreduce_cs))
+                          RAND_CONV (REWR_CONV arithmeticTheory.MULT_RIGHT_1))
   val POW_E0 = CONJUNCT1 pow
   val mulcombine0 =
       LAND_CONV (addPOW1 THENC mulPOWs) THENC
