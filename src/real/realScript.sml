@@ -4041,7 +4041,7 @@ Proof
   simp[nonzerop_EQ1_I, REAL_INV_0, REAL_POW_INV, REAL_POW_ADD,
        REAL_INV_MUL] >>
   Cases_on ‘0 < m’ >> simp[REAL_INV_EQ_0] >> fs[] >>
-  ‘x pow m ≠ 0’ by simp[] >>
+  ‘x pow m <> 0’ by simp[] >>
   qmatch_abbrev_tac ‘XM * (XDi * inv XM) = XDi’ >>
   ‘XM * (XDi * inv XM) = (XM * inv XM) * XDi’
     by simp[simpLib.AC REAL_MUL_ASSOC REAL_MUL_COMM] >>
