@@ -1,7 +1,7 @@
 signature hhExportSexpr =
 sig
 
-include Abbrev
+  include Abbrev
 
   val sexpr_export : string list -> unit
 
