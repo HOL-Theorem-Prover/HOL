@@ -229,8 +229,9 @@ val (train,test) = create_targetl (dlist dfull); length train; length test;
 val _ = (export_targetl "train" train; export_targetl "test" test);
 val targetl = import_targetl "train"; length targetl;
 val _ = rl_start (rlobj,extsearch) (mk_targetd targetl);
-val targetd = retrieve_targetd rlobj 33;
-val _ = rl_restart 33 (rlobj,extsearch) targetd;
+
+val targetd = retrieve_targetd rlobj 75;
+val _ = rl_restart 75 (rlobj,extsearch) targetd;
 *)
 
 (* -------------------------------------------------------------------------

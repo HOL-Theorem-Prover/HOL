@@ -17,10 +17,11 @@ val version = 5
 val selfdir = HOLDIR ^ "/examples/AI_tasks"
 
 (* -------------------------------------------------------------------------
-   Board
+   Board: synthesized combinator * head normal form * timer
+   V1 used as a meta variable in the synthesized combinator.
    ------------------------------------------------------------------------- *)
 
-type board = combin * combin * int
+type board = combin * combin * int  
 
 fun string_of_board (c1,c2,n)= 
   combin_to_string c1 ^ "\n" ^ combin_to_string c2 ^ "\n" ^ its n
@@ -313,8 +314,8 @@ val _ = (export_targetl "train" train; export_targetl "test" test);
 val targetl = import_targetl "train";
 val r = rl_start (rlobj,extsearch) (mk_targetd targetl);
 
-val targetd = retrieve_targetd rlobj 26;
-val _ = rl_restart 26 (rlobj,extsearch) targetd;
+val targetd = retrieve_targetd rlobj 83;
+val _ = rl_restart 83 (rlobj,extsearch) targetd;
 *)
 
 (* -------------------------------------------------------------------------
@@ -331,8 +332,8 @@ load "psBigSteps" ; open psBigSteps;
 
 val mctsparam =
   {
-  nsim = 160,
-  stopatwin_flag = false,
+  nsim = 16000,
+  stopatwin_flag = true,
   decay = 1.0,
   explo_coeff = 2.0,
   noise_all = false,
@@ -343,16 +344,28 @@ val mctsparam =
   avoidlose = false
   };
 
+val game = #game rlobj;
+
 val bsobj : (board,move) bsobj =
   {
   verbose = true,
   temp_flag = false,
-  preplayer = fn target => psMCTS.uniform_player (#game rlobj),
-  game = (#game rlobj),
+  preplayer = fn target => psMCTS.random_player (#game rlobj),
+  game = game,
   mctsparam = mctsparam
   };
 
+val mctsobj = {game = game, mctsparam = mctsparam, 
+  player =  psMCTS.random_player (#game rlobj)};
+
+val headnf = A(V2,(list_mk_A[V1,V2,V3]));
+val target = (V1,headnf,100);
+val tree = psMCTS.starttree_of mctsobj target;
+val (newtree,_) = mcts mctsobj tree;
+val nodel = trace_win (#status_of game) newtree [];
+
 val targetl = import_targetl "train";
+val d = mcts
 val _ = map (run_bigsteps bsobj) (random_subset 10 targetl);
 *)
 
