@@ -1600,6 +1600,9 @@ val INTER_BIGUNION = prove (
   SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION, IN_INTER] THEN
   MESON_TAC[IN_INTER]);
 
+val THREE_SETS_INTER = Q.prove (
+   `!A B C. A INTER B INTER (C INTER B) = A INTER C INTER B`, SET_TAC []);
+
 val COND_PROB_FINITE_ADDITIVE = store_thm
   ("COND_PROB_FINITE_ADDITIVE",
   ``!p A B n s. prob_space p /\ B IN events p /\ A IN ((count n) -> events p) /\
