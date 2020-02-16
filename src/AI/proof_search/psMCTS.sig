@@ -40,7 +40,8 @@ sig
 
   type mctsparam =
     {
-    nsim : int,
+    timer : real option,
+    nsim : int option,
     stopatwin_flag : bool,
     decay : real,
     explo_coeff : real,

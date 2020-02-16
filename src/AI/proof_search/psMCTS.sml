@@ -53,7 +53,8 @@ type ('a,'b) player = 'a -> real * ('b * real) list
 
 type mctsparam =
   {
-  nsim : int,
+  timer : real option,
+  nsim : int option,
   stopatwin_flag : bool,
   decay : real,
   explo_coeff : real,
@@ -222,9 +223,6 @@ fun puct_choice param tree vtot ((move,polv),cid) =
    Selection of a node to extend by traversing the tree.
    ------------------------------------------------------------------------- *)
 
-(* to do renormalize taking account that blocking state are 
-   different from losing state *)
-
 datatype ('a,'b) select = Backup of (id * real) | NodeExtension of (id * id)
 
 fun score_status status = case status of
@@ -292,10 +290,17 @@ fun starttree_of obj board =
 
 fun mcts obj (starttree,startcache) =
   let
+    val loc_timer = Timer.startRealTimer ()
     val param = #mctsparam obj
     fun loop (tree,cache) =
-      if #vis (dfind [] tree) > Real.fromInt (#nsim param) + 0.5 orelse
-         (#stopatwin_flag param andalso #status (dfind [] tree) = Win)
+      if (isSome (#nsim param) andalso
+          #vis (dfind [] tree) > Real.fromInt (valOf (#nsim param)) + 0.5)
+         orelse
+         (#stopatwin_flag param andalso #status (dfind [] tree) = Win) 
+         orelse
+         (isSome (#timer param) andalso 
+          Timer.checkRealTimer loc_timer > 
+            Time.fromReal (valOf (#timer param)))
       then (tree,cache) else
         let val (newtree,newcache) = case select_child obj tree [] of
             Backup (id,sc) => (backup (#decay param) tree (id,sc), cache)
@@ -398,8 +403,9 @@ load "psMCTS"; open psMCTS;
 
 val mctsparam =
   {
-  nsim = 16000,
-  stopatwin_flag = true,
+  timer = SOME 5.0,
+  nsim = (NONE : int option),
+  stopatwin_flag = false,
   decay = 1.0,
   explo_coeff = 2.0,
   noise_all = false,
