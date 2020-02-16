@@ -218,7 +218,36 @@ val rlobj : (board,move) rlobj =
 
 val extsearch = mk_extsearch "mleDiophSynt.extsearch" rlobj
 
-val ft_extsearch = ft_mk_extsearch "mleDiophSynt.ft_extsearch" rlobj
+(* -------------------------------------------------------------------------
+   Final test
+   ------------------------------------------------------------------------- *)
+
+val ft_extsearch_uniform = 
+  ft_mk_extsearch "mleDiophSynt.ft_extsearch_uniform" rlobj
+    (uniform_player game) 
+
+fun graph_distance bl1 bl2 = 
+  let 
+    val bbl1 = combine (bl1,bl2) 
+    val bbl2 = filter (fn (a,b) => a = b) bbl1
+  in
+    int_div (length bbl2) (length bl1)
+  end
+
+fun distance_player (board as (poly,set,_)) = 
+  let 
+    val e = if null poly 
+            then 0.0 
+            else graph_distance (graph_to_bl (dioph_set poly)) set
+  in
+    (e, map (fn x => (x,1.0)) (available_movel board))
+  end
+
+val ft_extsearch_distance =
+  ft_mk_extsearch "mleDiophSynt.ft_extsearch_distance" rlobj distance_player
+
+val fttnn_extsearch =
+  fttnn_mk_extsearch "mleDiophSynt.fttnn_extsearch" rlobj
 
 (*
 load "aiLib"; open aiLib;
@@ -290,18 +319,37 @@ load "smlParallel"; open smlParallel;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "mleDiophSynt"; open mleDiophSynt;
 
-val tnn = random_tnn (#tnnparam (#dplayer rlobj));
-val targetl = import_targetl "test"; length targetl;
-val splayer = (true,tnn,false,0);
-val (l,t) = add_time (parmap_queue_extern 4 ft_extsearch splayer) 
-  (first_n 4 targetl);
-
+val dataset = "test";
+val targetl = import_targetl dataset; length targetl; 
 val dir1 = HOLDIR ^ "/examples/AI_tasks/dioph_results";
-val dir2 = dir1 ^ "/test_uniform";
-fun f (a,i) = #write_result ft_extsearch (dir2 ^ "/" ^ its i) a;
-val _ = app mkDir_err [dir1,dir2];
+val _ = mkDir_err dir1;
+fun store_result dir (a,i) = 
+  #write_result ft_extsearch_uniform (dir ^ "/" ^ its i) a;
 
-app f (number_snd 0 l);
+(* uniform *)
+val (l,t) = add_time (parmap_queue_extern 20 ft_extsearch_uniform ()) targetl;
+val winb = filter I (map #1 l); length winb;
+val dir2 = dir1 ^ "/" ^ dataset ^ "_uniform";
+val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l);
+
+(* distance *)
+val (l,t) = add_time (parmap_queue_extern 20 ft_extsearch_distance ()) targetl;
+val winb = filter I (map #1 l); length winb;
+val dir2 = dir1 ^ "/" ^ dataset ^ "_distance";
+val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l);
+
+(* tnn *)
+val tnn = mlReinforce.retrieve_tnn rlobj 197;
+val (l,t) = 
+  add_time (parmap_queue_extern 20 fttnn_extsearch_distance tnn) targetl;
+val winb = filter I (map #1 l); length winb;
+val dir2 = dir1 ^ "/" ^ dataset ^ "_tnn";
+val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l);
+*)
+
+
+(*
+(* processing back the final evaluation *)
 fun g i = #read_result ft_extsearch (dir2 ^ "/" ^ its i);
 val (bstatus,nstep,boardo) = g 0;
 *)

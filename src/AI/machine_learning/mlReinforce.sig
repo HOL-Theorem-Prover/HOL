@@ -57,8 +57,10 @@ sig
   val rl_restart : int -> ('a,'b) rlobj * 'a es -> 'a targetd -> unit
 
   (* final testing *)
-  type 'a ftes = (splayer, 'a, bool * int * 'a option) smlParallel.extspec
-
-  val ft_mk_extsearch : string -> ('a,'b) rlobj -> 'a ftes
+  type 'a ftes = (unit, 'a, bool * int * 'a option) smlParallel.extspec
+  type 'a fttnnes = (tnn, 'a, bool * int * 'a option) smlParallel.extspec
+  val ft_mk_extsearch : string -> ('a,'b) rlobj -> 
+    ('a,'b) psMCTS.player -> 'a ftes
+  val fttnn_mk_extsearch : string -> ('a,'b) rlobj -> 'a fttnnes
 
 end
