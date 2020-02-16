@@ -1602,7 +1602,7 @@ val development0_cases = save_thm(
   (GEN_ALL o CONV_RULE (RENAME_VARS_CONV ["sigma", "ps"]) o
    SIMP_RULE (srw_ss()) [pairTheory.FORALL_PROD,
                          development_f_def, GSYM development0_def] o
-   CONV_RULE (REWR_CONV EXTENSION) o
+   CONV_RULE (REWR_CONV EXTENSION) o SYM o
    CONJUNCT1)
     (MATCH_MP fixedPointTheory.gfp_greatest_fixedpoint
               (SPEC_ALL development_f_monotone)));
@@ -1614,20 +1614,21 @@ val term_posset_development_def = Define`
 
 val _ = overload_on ("development", ``term_posset_development``);
 
-val development_thm = store_thm(
-  "development_thm",
-  ``(stopped_at x IN development M ps <=> (M = x) /\ ps SUBSET M) /\
-    (pcons x r p IN development M ps  <=>
-             (M = x) /\ ps SUBSET M /\
-             labelled_redn beta x r (first p) /\ r IN ps /\
-             p IN development (first p) (residual1 x r (first p) ps))``,
+Theorem development_thm:
+  (stopped_at x IN development M ps <=> (M = x) /\ ps SUBSET M) /\
+  (pcons x r p IN development M ps  <=>
+           (M = x) /\ ps SUBSET M /\
+           labelled_redn beta x r (first p) /\ r IN ps /\
+           p IN development (first p) (residual1 x r (first p) ps))
+Proof
   REPEAT STRIP_TAC THEN
   `!sigma M ps. sigma IN development M ps <=> development M ps sigma`
      by SRW_TAC [][SPECIFICATION] THEN
   SRW_TAC [][term_posset_development_def] THEN
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [development0_cases])) THEN
   SRW_TAC [][EQ_IMP_THM, redexes_all_occur_def, IN_term_IN_redex_posns] THEN
-  PROVE_TAC [residual1_SUBSET, SUBSET_DEF]);
+  PROVE_TAC [residual1_SUBSET, SUBSET_DEF]
+QED
 
 val development_cases = store_thm(
   "development_cases",
