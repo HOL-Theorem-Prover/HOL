@@ -266,6 +266,10 @@ load "mleCombinLibHp"; open mleCombinLibHp;
 val data = import_data "test_export";
 val gl = map (goal_of_headnf o fst) data;
 app (export_goal "combin_test") (number_snd 0 gl);
+
+val data = import_data "train_export";
+val gl = map (goal_of_headnf o fst) data;
+app (export_goal "combin_train") (number_snd 0 gl);
 *)
 
 
