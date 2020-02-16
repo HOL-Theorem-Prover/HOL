@@ -1,5 +1,5 @@
 # I/O files
-OU=$(echo $1 | sed 's;/i/;/eprover/;g')
+OU=$(echo $1 | sed 's;/i/;/eprover_schedule/;g')
 OUT1="$OU.out1"
 OUT2="$OU.out2"
 OUT="$OU.core"

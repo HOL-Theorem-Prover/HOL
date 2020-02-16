@@ -1,5 +1,5 @@
 # I/O files
-OU=$(echo $1 | sed 's;/i/;/vampire/;g')
+OU=$(echo $1 | sed 's;/i/;/vampire_casc/;g')
 OUT1="$OU.out1"
 OUT2="$OU.out2"
 OUT="$OU.core"

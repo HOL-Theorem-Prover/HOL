@@ -252,7 +252,8 @@ fun export_goal dir (goal,n) =
     val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/i")
     val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/eprover")
     val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/vampire")
-    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/z3")
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/eprover_schedule")
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/vampire_casc")
   in
     name_flag := false;
     type_flag := false;
