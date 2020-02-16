@@ -6,7 +6,7 @@ OUT="$OU.core"
 STATUS="$OU.status"
 
 # Running eprover
-timeout 60 ./eprover_v2.4 -s --cpu-limit=60 --tptp3-in \
+timeout 60 ./eprover_v2.4 -s --cpu-limit=60 --auto-schedule --tptp3-in \
 -R --print-statistics -p --tstp-format $1 | grep "file[(]'\|# SZS" > $OUT1
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS
