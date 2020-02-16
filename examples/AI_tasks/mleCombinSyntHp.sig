@@ -16,5 +16,8 @@ sig
   (* reinforcement learning *)
   val extsearch : board mlReinforce.es
   val rlobj : (board,move) mlReinforce.rlobj
+  
+  (* final testing *)
+  val ft_extsearch : board mlReinforce.ftes
 
 end

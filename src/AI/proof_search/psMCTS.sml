@@ -348,18 +348,20 @@ fun max_depth tree id =
     1 + (if null l then 0 else list_imax l)
   end
 
-fun is_win tree id = #status (dfind id tree) = Win handle NotFound => false
-
-fun trace_win status_of tree id =
-  if not (dmem id tree) then raise ERR "trace_win" "id is not a node" else
+fun trace_win tree id =
   let
+    val _ = if not (dmem id tree) 
+            then raise ERR "trace_win" "id is not a node"
+            else ()
     val node = dfind id tree
     val cidl = map snd (#pol node)
+    fun is_win tree id = #status (dfind id tree) = Win 
+                         handle NotFound => false
     val l = filter (is_win tree) cidl
   in
-    if status_of (#board node) = Win then [node] else
+    if #stati node = Win then [node] else
     if null l then raise ERR "trace_win" "no winning path" else
-    node :: trace_win status_of tree (hd l)
+    node :: trace_win tree (hd l)
   end
 
 (* -------------------------------------------------------------------------

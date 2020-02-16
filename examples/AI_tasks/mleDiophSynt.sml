@@ -218,6 +218,8 @@ val rlobj : (board,move) rlobj =
 
 val extsearch = mk_extsearch "mleDiophSynt.extsearch" rlobj
 
+val ft_extsearch = ft_mk_extsearch "mleDiophSynt.ft_extsearch" rlobj
+
 (*
 load "aiLib"; open aiLib;
 load "mlReinforce"; open mlReinforce;
@@ -246,7 +248,8 @@ load "mleDiophSynt"; open mleDiophSynt;
 
 val mctsparam =
   {
-  nsim = 3200,
+  timer = (NONE: real option),
+  nsim = SOME 3200,
   stopatwin_flag = false,
   decay = 1.0,
   explo_coeff = 2.0,
@@ -277,5 +280,30 @@ val _ = map (run_bigsteps bsobj) (first_n 3 (rev targetl));
 results ();
 *)
 
+(* -------------------------------------------------------------------------
+   Final testing
+   ------------------------------------------------------------------------- *)
+
+(*
+load "aiLib"; open aiLib;
+load "smlParallel"; open smlParallel;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "mleDiophSynt"; open mleDiophSynt;
+
+val tnn = random_tnn (#tnnparam (#dplayer rlobj));
+val targetl = import_targetl "test"; length targetl;
+val splayer = (true,tnn,false,0);
+val (l,t) = add_time (parmap_queue_extern 4 ft_extsearch splayer) 
+  (first_n 4 targetl);
+
+val dir1 = HOLDIR ^ "/examples/AI_tasks/dioph_results";
+val dir2 = dir1 ^ "/test_uniform";
+fun f (a,i) = #write_result ft_extsearch (dir2 ^ "/" ^ its i) a;
+val _ = app mkDir_err [dir1,dir2];
+
+app f (number_snd 0 l);
+fun g i = #read_result ft_extsearch (dir2 ^ "/" ^ its i);
+val (bstatus,nstep,boardo) = g 0;
+*)
 
 end (* struct *)

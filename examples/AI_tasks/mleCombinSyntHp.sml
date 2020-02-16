@@ -301,6 +301,8 @@ val rlobj : (board,move) rlobj =
 
 val extsearch = mk_extsearch "mleCombinSyntHp.extsearch" rlobj
 
+val ft_extsearch = mk_extsearch "mleCombinSyntHp.ft_extsearch" rlobj
+
 (*
 load "aiLib"; open aiLib;
 load "mlReinforce"; open mlReinforce;

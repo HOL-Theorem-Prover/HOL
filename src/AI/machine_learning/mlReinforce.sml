@@ -384,4 +384,89 @@ fun rl_restart ngen (rlobj,es) targetd =
     rl_loop (ngen + 1) (rlobj,es) (rlex,targetd)
   end
 
+(* -------------------------------------------------------------------------
+   Final MCTS Testing
+   ------------------------------------------------------------------------- *)
+
+type 'a ftes = (splayer, 'a, bool * int * 'a option) smlParallel.extspec
+
+fun option_to_list vo = if isSome vo then [valOf vo] else []
+fun list_to_option l = 
+  case l of [] => NONE | [a] => SOME a | _ => raise ERR "list_to_option" ""
+
+fun ft_write_result gameio file (b,nstep,boardo) =
+  (
+  writel (file ^ "_bstatus") [bts b];
+  writel (file ^ "_nstep") [its nstep];
+  (#write_boardl gameio) (file ^ "_boardo") (option_to_list boardo)
+  )
+
+fun ft_read_result gameio file =
+  let
+    val s1 = singleton_of_list (readl (file ^ "_bstatus"))
+    val s2 = singleton_of_list (readl (file ^ "_nstep"))
+  in
+    (
+    string_to_bool s1,
+    string_to_int s2, 
+    list_to_option ((#read_boardl gameio) (file ^ "_boardo"))
+    )
+  end
+
+val ft_mctsparam =
+  {
+  timer = SOME 60.0, 
+  nsim = NONE, stopatwin_flag = true,
+  decay = 1.0, explo_coeff = 2.0,
+  noise_all = false, noise_root = false,
+  noise_coeff = 0.25, noise_gen = random_real,
+  noconfl = false, avoidlose = false
+  }
+
+fun mk_mctsobj rlobj (unib,tnn,noiseb,nsim) target =
+  let
+    val game = #game rlobj
+    val pretob = #pretob (#dplayer rlobj)
+    fun preplayer target =
+      let val tob = pretob (SOME (target,tnn)) in
+        fn board => player_from_tnn tnn tob game board
+      end
+  in
+    {
+    mctsparam = ft_mctsparam,
+    game = game,
+    player = if unib 
+             then uniform_player game
+             else preplayer target
+    }
+  end
+
+fun ft_extsearch_fun rlobj splayer target =
+  let
+    val mctsobj = mk_mctsobj rlobj splayer target
+    val (tree,_) = mcts mctsobj (starttree_of mctsobj target)
+    val b = #status (dfind [] tree) = Win
+    val boardo = if not b then NONE else
+      let val nodel = trace_win tree [] in
+        SOME (#board (last nodel))
+      end
+  in
+    (b,dlength tree-1,boardo)
+  end
+
+fun ft_mk_extsearch self (rlobj as {rlparam,gameio,...}) =
+  {
+  self = self,
+  parallel_dir = default_parallel_dir ^ "_finaltest",
+  reflect_globals = fn () => "()",
+  function = ft_extsearch_fun rlobj,
+  write_param = write_splayer,
+  read_param = read_splayer,
+  write_arg = write_target gameio,
+  read_arg = read_target gameio,
+  write_result = ft_write_result gameio,
+  read_result = ft_read_result gameio
+  }
+
+
 end (* struct *)
