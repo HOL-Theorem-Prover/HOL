@@ -301,7 +301,17 @@ val rlobj : (board,move) rlobj =
 
 val extsearch = mk_extsearch "mleCombinSyntHp.extsearch" rlobj
 
-val ft_extsearch = mk_extsearch "mleCombinSyntHp.ft_extsearch" rlobj
+(* -------------------------------------------------------------------------
+   Final test
+   ------------------------------------------------------------------------- *)
+
+val ft_extsearch_uniform = 
+  ft_mk_extsearch "mleCombinSyntHp.ft_extsearch_uniform" rlobj
+    (uniform_player game) 
+
+val fttnn_extsearch =
+  fttnn_mk_extsearch "mleCombinSyntHp.fttnn_extsearch" rlobj
+
 
 (*
 load "aiLib"; open aiLib;
@@ -371,5 +381,41 @@ val d = mcts
 val _ = map (run_bigsteps bsobj) (random_subset 10 targetl);
 *)
 
+(* -------------------------------------------------------------------------
+   Final testing
+   ------------------------------------------------------------------------- *)
+
+(*
+load "aiLib"; open aiLib;
+load "smlParallel"; open smlParallel;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "mleCombinSyntHp"; open mleCombinSyntHp;
+
+val dataset = "test";
+val targetl = import_targetl dataset; length targetl; 
+val dir1 = HOLDIR ^ "/examples/AI_tasks/dioph_results";
+val _ = mkDir_err dir1;
+fun store_result dir (a,i) = 
+  #write_result ft_extsearch_uniform (dir ^ "/" ^ its i) a;
+
+(* uniform *)
+val (l,t) = add_time (parmap_queue_extern 20 ft_extsearch_uniform ()) targetl;
+val winb = filter I (map #1 l); length winb;
+val dir2 = dir1 ^ "/" ^ dataset ^ "_uniform";
+val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l);
+
+(* tnn *)
+val tnn = mlReinforce.retrieve_tnn rlobj 318;
+val (l,t) = add_time (parmap_queue_extern 20 fttnn_extsearch tnn) targetl;
+val winb = filter I (map #1 l); length winb;
+val dir2 = dir1 ^ "/" ^ dataset ^ "_tnn";
+val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l);
+*)
+
+(*
+(* processing back the final evaluation *)
+fun g i = #read_result ft_extsearch (dir2 ^ "/" ^ its i);
+val (bstatus,nstep,boardo) = g 0;
+*)
 
 end (* struct *)

@@ -340,8 +340,7 @@ val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l);
 
 (* tnn *)
 val tnn = mlReinforce.retrieve_tnn rlobj 197;
-val (l,t) = 
-  add_time (parmap_queue_extern 20 fttnn_extsearch_distance tnn) targetl;
+val (l,t) = add_time (parmap_queue_extern 20 fttnn_extsearch tnn) targetl;
 val winb = filter I (map #1 l); length winb;
 val dir2 = dir1 ^ "/" ^ dataset ^ "_tnn";
 val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l);

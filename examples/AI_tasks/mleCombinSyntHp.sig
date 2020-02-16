@@ -18,6 +18,7 @@ sig
   val rlobj : (board,move) mlReinforce.rlobj
   
   (* final testing *)
-  val ft_extsearch : board mlReinforce.ftes
+  val ft_extsearch_uniform : board mlReinforce.ftes
+  val fttnn_extsearch : board mlReinforce.fttnnes
 
 end
