@@ -29,4 +29,8 @@ sig
   val export_data : (combin * combin) list * (combin * combin) list -> unit
   val import_data : string -> (combin * combin) list
 
+  (* TPTP *)
+  val goal_of_headnf : combin -> goal
+  val export_goal : string -> (goal * int) -> unit
+
 end

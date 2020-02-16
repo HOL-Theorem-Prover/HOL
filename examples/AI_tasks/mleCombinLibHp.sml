@@ -8,7 +8,8 @@
 structure mleCombinLibHp :> mleCombinLibHp =
 struct
 
-open HolKernel Abbrev boolLib aiLib numTheory arithmeticTheory mleCombinLib
+open HolKernel Abbrev boolLib aiLib numTheory arithmeticTheory 
+mleCombinLib hhExportFof
 
 val ERR = mk_HOL_ERR "mleCombinLibHp"
 val selfdir = HOLDIR ^ "/examples/AI_tasks"
@@ -227,6 +228,47 @@ fun import_data file =
   in
     map f l
   end
+
+(* -------------------------------------------------------------------------
+   TPTP Export
+   ------------------------------------------------------------------------- *)
+
+fun goal_of_headnf headnf =
+  let 
+    val vc = mk_var ("Vc",alpha)
+    val tm =
+    mk_exists (vc, (list_mk_forall ([v1,v2,v3], 
+      mk_eq (list_mk_cA [vc,v1,v2,v3],hp_to_cterm headnf))))
+  in
+    (eq_axl,tm)
+  end
+
+fun export_goal dir (goal,n) =
+  let 
+    val tptp_dir = HOLDIR ^ "/examples/AI_tasks/TPTP"
+    val _ = mkDir_err tptp_dir
+    val file = tptp_dir ^ "/" ^ dir ^ "/i/" ^ its n ^ ".p"
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir)
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/i")
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/eprover")
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/vampire")
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/z3")
+  in
+    name_flag := false;
+    type_flag := false;
+    p_flag := false;
+    fof_export_goal file goal
+  end
+
+(* 
+load "aiLib"; open aiLib;
+load "mleCombinLibHp"; open mleCombinLibHp;
+val data = import_data "test_export";
+val gl = map (goal_of_headnf o fst) data;
+app (export_goal "combin_test") (number_snd 0 gl);
+*)
+
+
 
 end (* struct *)
 

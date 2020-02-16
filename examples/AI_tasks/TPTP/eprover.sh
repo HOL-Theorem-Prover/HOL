@@ -1,12 +1,12 @@
 # I/O files
-OU=$(echo $1 | sed 's;/i/;/o/;g')
+OU=$(echo $1 | sed 's;/i/;/eprover/;g')
 OUT1="$OU.out1"
 OUT2="$OU.out2"
 OUT="$OU.core"
 STATUS="$OU.status"
 
 # Running eprover
-timeout 10 ./eprover -s --cpu-limit=10 --auto-schedule --tptp3-in \
+timeout 60 ./eprover_v2.4 -s --cpu-limit=60 --auto-schedule --tptp3-in \
 -R --print-statistics -p --tstp-format $1 | grep "file[(]'\|# SZS" > $OUT1
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS
