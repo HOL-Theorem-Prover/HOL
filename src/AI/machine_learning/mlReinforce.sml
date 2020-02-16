@@ -52,7 +52,8 @@ type ('a,'b) rlobj =
 
 fun mk_mctsparam noiseb nsim rlobj =
   {
-  nsim = nsim, stopatwin_flag = false,
+  timer = NONE, 
+  nsim = SOME nsim, stopatwin_flag = false,
   decay = #decay (#rlparam rlobj), explo_coeff = 2.0,
   noise_all = false, noise_root = noiseb,
   noise_coeff = 0.25, noise_gen = random_real,

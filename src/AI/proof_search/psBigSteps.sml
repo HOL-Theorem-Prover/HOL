@@ -182,7 +182,8 @@ load "psBigSteps"; open psBigSteps;
 
 val mctsparam =
   {
-  nsim = 3200,
+  timer = (NONE : real option),
+  nsim = SOME 3200,
   stopatwin_flag = false,
   decay = 1.0,
   explo_coeff = 2.0,
