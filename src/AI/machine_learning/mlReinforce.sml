@@ -534,15 +534,19 @@ fun fttnnbs_extsearch_fun rlobj tnn target =
            player = preplayer target} 
         val (endtree,_) = mcts mctsobj (tree,cache)
         val cid = select_bigstep endtree
-        val newtree = cut_tree cid endtree
-        val newcache = build_cache game newtree
         val status = #status (dfind [] endtree)
       in
         if status = Undecided
-          then loop (tl timl) (newtree,newcache)   
+          then 
+            let 
+              val newtree = cut_tree cid endtree
+              val newcache = build_cache game newtree
+            in 
+              loop (tl timl) (newtree,newcache)
+            end 
         else if status = Win 
           then  
-            let val nodel = trace_win tree [] in
+            let val nodel = trace_win endtree [] in
               (status = Win, 8 - length timl, SOME (#board (last nodel)))
             end
         else (status = Win, 8 - length timl, NONE)
