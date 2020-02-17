@@ -521,7 +521,7 @@ fun fttnnbs_extsearch_fun rlobj tnn target =
       let val tob = pretob (SOME (target',tnn)) in
         fn board => player_from_tnn tnn tob game board
       end
-    val timerl = List.tabulate (20, fn _ => 60.0)
+    val timerl = [30.0, 15.0, 7.5, 7.5/2.0, 7.5/4.0, 7.5/8.0, 7.5/8.0]
     val startmctsobj = 
       {mctsparam = mk_ft_mctsparam (hd timerl), game = #game rlobj, 
        player = preplayer target}
@@ -536,7 +536,7 @@ fun fttnnbs_extsearch_fun rlobj tnn target =
         val cid = select_bigstep endtree
         val newtree = cut_tree cid endtree
         val newcache = build_cache game newtree
-        val status = #status (dfind [] tree)
+        val status = #status (dfind [] endtree)
       in
         if status = Undecided
           then loop (tl timl) (newtree,newcache)   
