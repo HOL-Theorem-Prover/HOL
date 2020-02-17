@@ -2,12 +2,13 @@ signature mleCombinSynt =
 sig
 
   include Abbrev
-
-  type board = term * term * int
-  type move = term
+  
+  type combin = mleCombinLib.combin
+  type board = combin * combin * int
+  datatype move = S0 | S1 | S2 | K0 | K1
 
   (* target *)
-  val create_targetl : term list -> board list
+  val create_targetl : (combin * combin) list -> (board list * board list)
   val export_targetl : string -> board list -> unit
   val import_targetl : string -> board list
   val mk_targetd : board list -> (board, int * bool list) Redblackmap.dict
@@ -15,10 +16,10 @@ sig
   (* reinforcement learning *)
   val extsearch : board mlReinforce.es
   val rlobj : (board,move) mlReinforce.rlobj
-
-  (* transformation to goals for TPTP export *)
-  val goal_of_board_eq : board -> goal
-  val goal_of_board_rw : board -> goal
-  val goal_of_board_ev : board -> goal
+  
+  (* final testing *)
+  val ft_extsearch_uniform : board mlReinforce.ftes
+  val fttnn_extsearch : board mlReinforce.fttnnes
+  val fttnnbs_extsearch : board mlReinforce.fttnnes
 
 end

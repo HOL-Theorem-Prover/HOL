@@ -210,7 +210,7 @@ val dplayer = {pretob = pretob, tnnparam = tnnparam, schedule = schedule}
    ------------------------------------------------------------------------- *)
 
 val rlparam =
-  {expname = "mleDiophSynt-" ^ its version, exwindow = 200000,
+  {expname = "mleDiophSyntHp-" ^ its version, exwindow = 200000,
    ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
@@ -269,47 +269,59 @@ val _ = rl_restart 75 (rlobj,extsearch) targetd;
 *)
 
 (* -------------------------------------------------------------------------
-   Big steps test
+   MCTS test for inspection of the results
    ------------------------------------------------------------------------- *)
+
+fun solve_target (unib,tim,tnn) target =
+  let
+    val mctsparam =
+    {
+    timer = SOME tim,
+    nsim = (NONE : int option),
+    stopatwin_flag = true,
+    decay = 1.0,
+    explo_coeff = 2.0,
+    noise_all = false,
+    noise_root = false,
+    noise_coeff = 0.25,
+    noise_gen = random_real,
+    noconfl = false,
+    avoidlose = false
+    }
+  val pretob = (#pretob (#dplayer rlobj));
+  fun preplayer target =
+    let val tob = pretob (SOME (target,tnn)) in
+      fn board => mlReinforce.player_from_tnn tnn tob (#game rlobj) board
+    end;
+  val mctsobj =
+    {mctsparam = mctsparam, game = #game rlobj, 
+     player = if unib then uniform_player (#game rlobj) else preplayer target}
+  in
+    fst (mcts mctsobj (starttree_of mctsobj target))
+  end
+
+fun solve_diophset (unib,tim,tnn) diophset =
+  let 
+    val target = ([]:poly,graph_to_bl diophset,40);
+    val tree = solve_target (unib,tim,tnn) target;
+    val b = #status (dfind [] tree) = Win;
+  in
+    if b then 
+      let val nodel = trace_win tree [] in
+        print_endline (its (dlength tree));
+        print_endline (human_of_poly (#1 (#board (last nodel))))
+      end
+    else 
+      (print_endline (its (dlength tree)); print_endline "Time out")
+  end
 
 (*
 load "aiLib"; open aiLib;
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-load "psBigSteps" ; open psBigSteps;
 load "mleDiophSynt"; open mleDiophSynt;
-
-val mctsparam =
-  {
-  timer = (NONE: real option),
-  nsim = SOME 3200,
-  stopatwin_flag = false,
-  decay = 1.0,
-  explo_coeff = 2.0,
-  noise_all = false,
-  noise_root = false,
-  noise_coeff = 0.25,
-  noise_gen = random_real,
-  noconfl = false,
-  avoidlose = false
-  };
-
-val tnn = random_tnn (#tnnparam (#dplayer rlobj));
-fun tob x = (#pretob (#dplayer rlobj)) NONE x;
-val tnnplayer = mlReinforce.player_from_tnn tnn tob (#game rlobj);
-
-val bsobj : (board,move) bsobj =
-  {
-  verbose = true,
-  temp_flag = false,
-  preplayer = fn target => tnnplayer,
-  game = (#game rlobj),
-  mctsparam = mctsparam
-  };
-
-val targetl = import_targetl "train"; length targetl;
-reset_all ();
-val _ = map (run_bigsteps bsobj) (first_n 3 (rev targetl));
-results ();
+val tnn = mlReinforce.retrieve_tnn rlobj 197;
+val diophset = [1,3];
+solve_diophset_uniform diophset;
+solve_diophset diophset;
 *)
 
 (* -------------------------------------------------------------------------
@@ -322,38 +334,64 @@ load "smlParallel"; open smlParallel;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "mleDiophSynt"; open mleDiophSynt;
 
-val dataset = "train";
-val targetl = import_targetl dataset; length targetl; 
-val dir1 = HOLDIR ^ "/examples/AI_tasks/dioph_results";
+val dir1 = HOLDIR ^ "/examples/AI_tasks/dioph_results_nolimit";
 val _ = mkDir_err dir1;
 fun store_result dir (a,i) = 
   #write_result ft_extsearch_uniform (dir ^ "/" ^ its i) a;
 
+(*** Testing set ***)
+val dataset = "test";
+val pretargetl = import_targetl dataset; 
+val targetl = map (fn (a,b,_) => (a,b,1000000)) pretargetl; 
+length targetl; 
+(* uniform *)
+val (l1',t) = add_time (parmap_queue_extern 20 ft_extsearch_uniform ()) targetl;
+val winb = filter I (map #1 l1'); length winb;
+val dir2 = dir1 ^ "/" ^ dataset ^ "_uniform";
+val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l1');
+(* distance *)
+val (l2',t) = 
+  add_time (parmap_queue_extern 20 ft_extsearch_distance ()) targetl;
+val winb = filter I (map #1 l2'); length winb;
+val dir2 = dir1 ^ "/" ^ dataset ^ "_distance";
+val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l2');
+(* tnn *)
+val tnn = mlReinforce.retrieve_tnn rlobj 197;
+val (l3',t) = add_time (parmap_queue_extern 20 fttnn_extsearch tnn) targetl;
+val winb = filter I (map #1 l3'); length winb;
+val dir2 = dir1 ^ "/" ^ dataset ^ "_tnn";
+val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l3');
+
+(*** Training set ***)
+val dataset = "train";
+val pretargetl = import_targetl dataset; 
+val targetl = map (fn (a,b,_) => (a,b,1000000)) pretargetl;
+length targetl;
 (* uniform *)
 val (l1,t) = add_time (parmap_queue_extern 20 ft_extsearch_uniform ()) targetl;
 val winb = filter I (map #1 l1); length winb;
 val dir2 = dir1 ^ "/" ^ dataset ^ "_uniform";
 val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l1);
-
 (* distance *)
-val (l2,t) = add_time (parmap_queue_extern 20 ft_extsearch_distance ()) targetl;
+val (l2,t) = 
+  add_time (parmap_queue_extern 20 ft_extsearch_distance ()) targetl;
 val winb = filter I (map #1 l2); length winb;
 val dir2 = dir1 ^ "/" ^ dataset ^ "_distance";
 val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l2);
-
 (* tnn *)
 val tnn = mlReinforce.retrieve_tnn rlobj 197;
 val (l3,t) = add_time (parmap_queue_extern 20 fttnn_extsearch tnn) targetl;
 val winb = filter I (map #1 l3); length winb;
 val dir2 = dir1 ^ "/" ^ dataset ^ "_tnn";
 val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l3);
-
 *)
 
+(* -------------------------------------------------------------------------
+   Final testing statistics
+   ------------------------------------------------------------------------- *)
 
 (*
-(* processing back the final evaluation *)
-fun g i = #read_result ft_extsearch (dir2 ^ "/" ^ its i);
+fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
 val (bstatus,nstep,boardo) = g 0;
 *)
 

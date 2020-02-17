@@ -3,6 +3,7 @@ sig
 
   include Abbrev
 
+  type tnn = mlTreeNeuralNetwork.tnn
   type poly = mleDiophLib.poly
   type board = poly * bool list * int
   datatype move = Add of int | Exp of int
@@ -16,6 +17,10 @@ sig
   (* reinforcement learning *)
   val extsearch : board mlReinforce.es
   val rlobj : (board,move) mlReinforce.rlobj
+
+  (* mcts for manual inspection *)
+  val solve_target : (bool * real * tnn) -> board -> (board,move) psMCTS.tree    
+  val solve_diophset : (bool * real * tnn) -> int list -> unit
 
   (* final testing *)
   val ft_extsearch_uniform : board mlReinforce.ftes

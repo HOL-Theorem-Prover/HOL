@@ -1,6 +1,6 @@
 (* ========================================================================= *)
-(* FILE          : mleCombinLib.sml                                          *)
-(* DESCRIPTION   : Tools for term synthesis on combinators                   *)
+(* FILE          : mleCombinLib.sml                                        *)
+(* DESCRIPTION   : Tools for term synthesis on combinator datatype           *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2020                                                      *)
 (* ========================================================================= *)
@@ -8,84 +8,27 @@
 structure mleCombinLib :> mleCombinLib =
 struct
 
-open HolKernel Abbrev boolLib aiLib numTheory arithmeticTheory psTermGen
+open HolKernel Abbrev boolLib aiLib psTermGen hhExportFof
 
 val ERR = mk_HOL_ERR "mleCombinLib"
+val selfdir = HOLDIR ^ "/examples/AI_tasks"
 
 (* -------------------------------------------------------------------------
-   Position
-   ------------------------------------------------------------------------- *)
-
-fun subst_pos (tm,pos) res =
-  if null pos then res else
-  let
-    val (oper,argl) = strip_comb tm
-    fun f i x = if i = hd pos then subst_pos (x,tl pos) res else x
-    val newargl = mapi f argl
-  in
-    list_mk_comb (oper,newargl)
-  end
-
-fun all_pos tm =
-  let
-    val (oper,argl) = strip_comb tm
-    fun f i arg = map_snd (fn x => i :: x) (all_pos arg)
-  in
-    (tm,[]) :: List.concat (mapi f argl)
-  end
-
-(* -------------------------------------------------------------------------
-   Combinators
+   Combinator terms
    ------------------------------------------------------------------------- *)
 
 (* variables *)
-
-val cK = mk_var ("k",alpha)
 val cS = mk_var ("s",alpha)
-val cX = mk_var ("x",alpha)
+val cK = mk_var ("k",alpha)
 val cA = mk_var ("a",``:'a -> 'a -> 'a``)
-val cT = mk_var ("t",``:'a -> 'a``)
-val cV = mk_var ("v",``:'a -> bool``)
-val cL = mk_var ("l",``:'a -> bool``)
-
 val vx = mk_var ("X",alpha)
 val vy = mk_var ("Y",alpha)
 val vz = mk_var ("Z",alpha)
-val vu = mk_var ("U",alpha)
-val vv = mk_var ("V",alpha)
-val vw = mk_var ("W",alpha)
 val v1 = mk_var ("V1",alpha)
 val v2 = mk_var ("V2",alpha)
 val v3 = mk_var ("V3",alpha)
 
 (* constructors *)
-fun mk_cV a = mk_comb (cV,a)
-fun mk_cL a = mk_comb (cL,a)
-
-val cEV = mk_var ("ev",``:'a -> 'a -> bool``)
-val cRW = mk_var ("rw",``:'a -> 'a -> bool``)
-fun mk_cRW (a,b) = list_mk_comb (cRW,[a,b])
-fun mk_cEV (a,b) = list_mk_comb (cEV,[a,b])
-
-fun mk_tag x = mk_comb (cT,x)
-fun dest_tag tm = 
-  let 
-    val (oper,argl) = strip_comb tm
-    val _ = if term_eq oper cT then () else raise ERR "dest_tag" ""
-  in
-    singleton_of_list argl
-  end
-
-fun tag_pos (tm,pos) =
-  if null pos then mk_tag tm else
-  let
-    val (oper,argl) = strip_comb tm
-    fun f i x = if i = hd pos then tag_pos (x,tl pos) else x
-    val newargl = mapi f argl
-  in
-    list_mk_comb (oper,newargl)
-  end
-
 infix oo
 fun op oo (a,b) = list_mk_comb (cA,[a,b])
 fun mk_cA (a,b) = list_mk_comb (cA,[a,b])
@@ -96,7 +39,6 @@ fun dest_cA tm =
   in
     pair_of_list argl
   end
-
 fun list_mk_cA tml = case tml of
     [] => raise ERR "list_mk_cA" ""
   | [tm] => tm
@@ -108,7 +50,6 @@ fun strip_cA_aux tm =
       let val (a1,a2) = pair_of_list argl in a2 :: strip_cA_aux a1 end 
     else [tm]
   end
-
 fun strip_cA tm = rev (strip_cA_aux tm)
 
 (* theorems *)
@@ -122,144 +63,11 @@ fun forall_capital tm =
 
 val s_thm_bare = mk_eq (cS oo vx oo vy oo vz, (vx oo vz) oo (vy oo vz))
 val k_thm_bare = mk_eq (cK oo vx oo vy, vx)
-
 val eq_axl_bare = [s_thm_bare,k_thm_bare]
 val eq_axl = map forall_capital eq_axl_bare
 
-fun tag_lhs eq = let val (a,b) = dest_eq eq in mk_eq (mk_tag a, b) end
-val left_thm = mk_eq (mk_tag (vx oo vy), mk_tag vx oo vy)
-val right_thm = mk_eq (mk_tag (vx oo vy), vx oo mk_tag vy)
-val tag_axl_bare = map tag_lhs eq_axl_bare @ [left_thm,right_thm]
-
-fun cterm_size tm = 
-  let val (oper,argl) = strip_comb tm in
-    (if tmem oper [cA,cT] then 0 else 1) + sum_int (map cterm_size argl)
-  end
-
-(* big step semantics *)
-val ev_ax1 = mk_cV cK
-val ev_ax2 = mk_imp (mk_cV vv, mk_cV (mk_cA (cK,vv)))
-val ev_ax3 = mk_cV cS
-val ev_ax4 = mk_imp (mk_cV vv, mk_cV (mk_cA (cS,vv)))
-val ev_ax5 = mk_imp (mk_cV vv, mk_cV (list_mk_cA [cS,vu,vv]))
-val ev_ax6 = mk_imp (mk_cL vv,mk_cV vv)
-val ev_ax7 = list_mk_imp ([mk_cL vu, mk_cV vv],mk_cL(mk_cA(vu,vv)))
-val ev_ax8 = mk_imp (mk_cV vv, mk_cEV (vv,vv))
-val ev_ax9 = mk_imp (mk_cEV (vx,vv), mk_cEV (list_mk_cA [cK,vx,vy],vv))
-val ev_ax10 = mk_imp (mk_cEV ((vx oo vz) oo (vy oo vz),vv), 
-  mk_cEV (list_mk_cA [cS,vx,vy,vz],vv))
-val ev_ax11 = mk_imp (mk_cEV (vx,vv), mk_cEV (cK oo vx, cK oo vv));
-val ev_ax12 = mk_imp (mk_cEV (vx,vv), mk_cEV (cS oo vx, cS oo vv));
-val ev_ax13 = 
-  list_mk_imp ([mk_cEV (vx,vu),mk_cEV (vy,vv)], 
-    mk_cEV (cS oo vx oo vy, cS oo vu oo vv));
-val ev_ax14 = 
-  list_mk_imp ([mk_cEV (vx,vu),mk_cEV (vy,vv),mk_cEV (vu oo vv,vw)], 
-    mk_cEV (vx oo vy,vw));
-val ev_axl = 
-  map forall_capital
-    [ev_ax1,ev_ax2,ev_ax3,ev_ax4,ev_ax5,ev_ax6,ev_ax7,ev_ax8,
-     ev_ax9,ev_ax10,ev_ax11,ev_ax12,ev_ax13,ev_ax14]
-
-(* small step semantics *)
-val rw_ax1 = mk_cRW (vx,vx)
-val rw_ax2 = 
-  list_mk_imp ([mk_cRW (vu,vv), mk_cRW (vx,vy)], mk_cRW (vu oo vx, vv oo vy));
-val rw_ax3 = mk_cRW (list_mk_cA [cS,vx,vy,vz], (vx oo vz) oo (vy oo vz));
-val rw_ax4 = mk_cRW (list_mk_cA [cK,vx,vy], vx);
-val rw_ax5 = list_mk_imp ([mk_cRW (vx,vy), mk_cRW(vy,vz)], mk_cRW(vx,vz));
-val rw_axl = map forall_capital [rw_ax1,rw_ax2,rw_ax3,rw_ax4,rw_ax5]
-
 (* -------------------------------------------------------------------------
-   Printing combinators
-   ------------------------------------------------------------------------- *)
-
-fun cts tm = 
-  if is_var tm then fst (dest_var tm) else
-  let val tml = strip_cA tm in
-    "(" ^ String.concatWith " " (map cts tml) ^ ")"
-  end
-
-(* -------------------------------------------------------------------------
-   Rewriting combinators
-   ------------------------------------------------------------------------- *)
-
-fun is_capital_var tm = is_var tm andalso 
-  Char.isUpper (hd_string (fst (dest_var tm)))
-
-fun is_match eq tm = 
-  let val (sub,_) = match_term (lhs eq) tm in
-    all is_capital_var (map #redex sub)
-  end
-  handle HOL_ERR _ => false
-
-fun exists_match eq tm = can (find_term (is_match eq)) tm
-
-fun subst_match eq tm =
-  let 
-    val subtm = find_term (is_match eq) tm
-    val sub1 = fst (match_term (lhs eq) subtm)
-    val eqinst = subst sub1 eq
-    val sub2 = [{redex = lhs eqinst, residue = rhs eqinst}]
-  in
-    subst_occs [[1]] sub2 tm
-  end
-
-fun subst_match_first eql tm =
-  let 
-    val subtm = find_term (fn x => exists (fn eq => is_match eq x) eql) tm
-    val eq = valOf (List.find (fn x => is_match x subtm) eql)
-    val sub1 = fst (match_term (lhs eq) subtm)
-    val eqinst = subst sub1 eq
-    val sub2 = [{redex = lhs eqinst, residue = rhs eqinst}]
-  in
-    subst_occs [[1]] sub2 tm
-  end
-
-fun lo_cnorm n eql tm =
-  if not (exists (C exists_match tm) eql) then SOME tm
-  else if n <= 0 then NONE else
-    let val tm' = subst_match_first eql tm in
-      lo_cnorm (n-1) eql tm'
-    end
-
-exception Break
-
-fun fast_lo_cnorm n eql maintm =
-  let
-    val i = ref 0    
-    fun fast_lo_cnorm_aux n eql tm = 
-      let val eqo = List.find (fn x => is_match x tm) eql in
-        case eqo of
-          SOME eq => 
-          let 
-            val sub1 = fst (match_term (lhs eq) tm)
-            val newtm = subst sub1 (rhs eq)
-            val _ = incr i
-            val _ = if !i > n then raise Break else () 
-          in
-            fast_lo_cnorm_aux n eql newtm
-          end   
-        | NONE => 
-          let val (oper,argl) = strip_comb tm in
-            list_mk_comb (oper, map (fast_lo_cnorm_aux n eql) argl)
-          end  
-      end
-    fun loop tm =
-      if not (exists (C exists_match tm) eql)
-      then SOME tm
-      else loop (fast_lo_cnorm_aux n eql tm)
-  in
-    loop maintm handle Break => NONE
-  end
-
-fun is_nf tm = 
-  not (exists (C exists_match tm) eq_axl_bare)
-fun contain_red tm =
-  can (find_term (fn x => exists (C is_match x) eq_axl_bare)) tm
-
-(* -------------------------------------------------------------------------
-   Generating combinators
+   Generating combinator terms using psTermGen
    ------------------------------------------------------------------------- *)
 
 val s2 = mk_var ("s2", ``:'a -> 'a -> 'a``)
@@ -287,13 +95,268 @@ fun random_nf size =
 fun gen_nf_exhaustive size = 
   map to_apply (gen_term [s2,s1,s0,k1,k0] (size,alpha))
 
-(*
+(* -------------------------------------------------------------------------
+   Position
+   ------------------------------------------------------------------------- *)
+
+datatype pose = Left | Right
+
+fun pose_compare (a,b) = case (a,b) of
+    (Left,Right) => LESS
+  | (Right,Left) => GREATER
+  | _ => EQUAL
+
+fun pose_to_string pose = case pose of 
+    Left => "L"
+  | Right => "R"
+
+fun string_to_pose s = 
+  if s = "L" then Left else if s = "R" then Right else 
+    raise ERR "string_to_pose" ""
+
+fun pos_to_string pos = String.concatWith " " (map pose_to_string pos)
+fun string_to_pos s = 
+  map string_to_pose (String.tokens Char.isSpace s)
+
+val pos_compare = list_compare pose_compare
+
+(* -------------------------------------------------------------------------
+   Combinators
+   ------------------------------------------------------------------------- *)
+
+datatype combin = V1 | V2 | V3 | S | K | A of combin * combin 
+
+fun combin_size combin = case combin of
+    A (c1,c2) => combin_size c1 + combin_size c2
+  | _ => 1
+
+(* -------------------------------------------------------------------------
+   Printing combinators
+   ------------------------------------------------------------------------- *)
+
+fun strip_A_aux c = case c of
+    A (c1,c2) => c2 :: strip_A_aux c1
+  | _ => [c]
+fun strip_A c = rev (strip_A_aux c)
+
+fun list_mk_A_aux l = case l of
+    [] => raise ERR "list_mk_A" ""
+  | [c] => c
+  | a :: m => A(list_mk_A_aux m,a)
+
+fun list_mk_A l = list_mk_A_aux (rev l)
+
+fun combin_to_string c = case c of 
+    S => "S"
+  | K => "K"
+  | V1 => "V1"
+  | V2 => "V2"
+  | V3 => "V3"
+  | A _ => "(" ^ String.concatWith " " (map combin_to_string (strip_A c)) ^ ")"
+
+fun string_to_combin s = 
+  let 
+    val s' = if mem s ["S","K","V1","V2","V3"] then "(" ^ s ^ ")" else s
+    val sexp = singleton_of_list (lisp_parser s')
+    val assocl = map swap (map_assoc combin_to_string [S,K,V1,V2,V3])
+    fun parse sexp = case sexp of
+      Lterm l => list_mk_A (map parse l)
+    | Lstring s => assoc s assocl
+  in
+    parse sexp
+  end
+ 
+fun combin_compare (c1,c2) = case (c1,c2) of
+    (A x, A y) => cpl_compare combin_compare combin_compare (x,y)
+  | (_, A _) => LESS
+  | (A _,_) => GREATER
+  | _ => String.compare (combin_to_string c1, combin_to_string c2)
+
+(* -------------------------------------------------------------------------
+   Rewriting combinators
+   ------------------------------------------------------------------------- *)
+
+fun next_pos_aux l = case l of
+    [] => raise ERR "next_pos" ""
+  | Left :: m => Right :: m
+  | Right :: m => next_pos_aux m
+
+fun next_pos l = rev (next_pos_aux (rev l))
+
+exception Break
+
+fun combin_nf c = case c of
+    A(A(A(S,x),y),z) => false
+  | A(A(K,x),y) => false
+  | A(c1,c2) => combin_nf c1 andalso combin_nf c2
+  | _ => true
+
+fun combin_norm n mainc =
+  let
+    val i = ref 0
+    fun incra c = (incr i; if (combin_size c > 100 orelse !i > n) 
+                           then raise Break else ())   
+    fun combin_norm_aux n c = 
+      case c of
+        A(A(A(S,x),y),z) => (incra c; combin_norm_aux n (A(A(x,z),A(y,z))) )  
+      | A(A(K,x),y) => (incra c; combin_norm_aux n x)
+      | A(c1,c2) => A(combin_norm_aux n c1, combin_norm_aux n c2)  
+      | x => x
+    fun loop c =
+      if combin_nf c then SOME c else loop (combin_norm_aux n c)
+  in
+    loop mainc handle Break => NONE
+  end
+
+(* -------------------------------------------------------------------------
+   Generating combinators
+   ------------------------------------------------------------------------- *)
+
+fun cterm_to_combin cterm = 
+  if term_eq cterm cS then S 
+  else if term_eq cterm cK then K
+  else if term_eq cterm v1 then V1
+  else if term_eq cterm v2 then V2
+  else if term_eq cterm v3 then V3
+  else let val (a,b) = dest_cA cterm in A (cterm_to_combin a, cterm_to_combin b) end
+
+fun combin_to_cterm c = case c of 
+   S => cS | K => cK | V1 => v1 | V2 => v2 | V3 => v3 |
+   A (c1,c2) => mk_cA (combin_to_cterm c1, combin_to_cterm c2)
+
+fun contains_sk c = case c of
+    S => true
+  | K => true
+  | V1 => false
+  | V2 => false
+  | V3 => false
+  | A (c1,c2) => contains_sk c1 orelse contains_sk c2
+
+fun has_bigarity c =
+  let val argl = tl (strip_A c) in
+    length argl > 4 orelse exists has_bigarity argl
+  end
+
+fun compare_csize (a,b) = Int.compare (combin_size a, combin_size b)
+fun smallest_csize l = hd (dict_sort compare_csize l)
+
+fun gen_headnf_aux n nmax d =
+  if dlength d >= nmax then (d,n) else
+  let 
+    val c = cterm_to_combin (random_nf (random_int (1,20)))
+    val cnorm = valOf (combin_norm 100 (A(A(A(c,V1),V2),V3))) 
+                handle Option => K 
+  in
+    if contains_sk cnorm orelse 
+       combin_size cnorm > 20 orelse 
+       has_bigarity cnorm
+    then gen_headnf_aux (n+1) nmax d 
+    else if dmem cnorm d then
+      let val oldc = dfind cnorm d in
+        if compare_csize (c,oldc) = LESS 
+        then gen_headnf_aux (n+1) nmax (dadd cnorm c d) 
+        else gen_headnf_aux (n+1) nmax d
+      end
+    else 
+      (print_endline (its (dlength d + 1)); 
+       gen_headnf_aux (n+1) nmax (dadd cnorm c d))
+  end
+
+fun gen_headnf nmax d = gen_headnf_aux 0 nmax d
+
+(* -------------------------------------------------------------------------
+   Export
+   ------------------------------------------------------------------------- *)
+
+val targetdir = selfdir ^ "/combin_target"
+
+fun distrib_il il = 
+  let 
+    val l = dlist (count_dict (dempty Int.compare) il)
+    fun f (i,j) = its i ^ "-" ^ its j
+  in
+    String.concatWith " " (map f l)
+  end
+
+fun export_data (train,test) =
+  let 
+    val l = train @ test
+    val _ = mkDir_err targetdir
+    fun f1 (headnf,witness) = 
+      "headnf: " ^ combin_to_string headnf ^
+      "\ncombin: " ^ combin_to_string witness 
+    val il1 = map (combin_size o fst) l
+    val il2 = map (combin_size o snd) l
+    val train_sorted = 
+      dict_sort (cpl_compare combin_compare combin_compare) train
+    val test_sorted = 
+      dict_sort (cpl_compare combin_compare combin_compare) test
+  in
+    writel (targetdir ^ "/train_export") (map f1 train_sorted);
+    writel (targetdir ^ "/test_export") (map f1 test_sorted);
+    writel (targetdir ^ "/distrib-headnf") [distrib_il il1];
+    writel (targetdir ^ "/distrib-witness") [distrib_il il2]
+  end
+
+fun import_data file =
+  let 
+    val sl = readl (targetdir ^ "/" ^ file)
+    val l = map pair_of_list (mk_batch 2 sl) 
+    fun f (a,b) = 
+      (
+      string_to_combin (snd (split_string "headnf: " a)), 
+      string_to_combin (snd (split_string "combin: " b))
+      )
+  in
+    map f l
+  end
+
+(* -------------------------------------------------------------------------
+   TPTP Export
+   ------------------------------------------------------------------------- *)
+
+fun goal_of_headnf headnf =
+  let 
+    val vc = mk_var ("Vc",alpha)
+    val tm =
+    mk_exists (vc, (list_mk_forall ([v1,v2,v3], 
+      mk_eq (list_mk_cA [vc,v1,v2,v3],combin_to_cterm headnf))))
+  in
+    (eq_axl,tm)
+  end
+
+fun export_goal dir (goal,n) =
+  let 
+    val tptp_dir = HOLDIR ^ "/examples/AI_tasks/TPTP"
+    val _ = mkDir_err tptp_dir
+    val file = tptp_dir ^ "/" ^ dir ^ "/i/" ^ its n ^ ".p"
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir)
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/i")
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/eprover")
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/vampire")
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/eprover_schedule")
+    val _ = mkDir_err (tptp_dir ^ "/" ^ dir ^ "/vampire_casc")
+  in
+    name_flag := false;
+    type_flag := false;
+    p_flag := false;
+    fof_export_goal file goal
+  end
+
+(* 
 load "aiLib"; open aiLib;
 load "mleCombinLib"; open mleCombinLib;
-load "psTermGen"; open psTermGen;
-val tml = gen_nf_exhaustive 10; length tml;
-val n = sum_real (List.tabulate (10,fn i => nterm [s2,s1,s0,k1,k0] (i,alpha)));
+
+val data = import_data "test_export";
+val gl = map (goal_of_headnf o fst) data;
+app (export_goal "combin_test") (number_snd 0 gl);
+
+val data = import_data "train_export";
+val gl = map (goal_of_headnf o fst) data;
+app (export_goal "combin_train") (number_snd 0 gl);
 *)
+
+
 
 end (* struct *)
 

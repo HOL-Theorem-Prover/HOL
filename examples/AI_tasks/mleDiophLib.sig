@@ -30,6 +30,7 @@ sig
   val gen_diophset : int -> int -> (int list, poly) Redblackmap.dict ->
     ((int list, poly) Redblackmap.dict * int)
   val term_of_poly : poly -> term
+  val human_of_poly : poly -> string
 
   val export_data : (int list * poly) list * (int list * poly) list -> unit
   val import_data : string -> (int list * poly) list
