@@ -393,7 +393,7 @@ load "smlParallel"; open smlParallel;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "mleCombinSyntHp"; open mleCombinSyntHp;
 
-val dataset = "test";
+val dataset = "train";
 val targetl = import_targetl dataset; length targetl; 
 val dir1 = HOLDIR ^ "/examples/AI_tasks/combin_results";
 val _ = mkDir_err dir1;
@@ -401,25 +401,17 @@ fun store_result dir (a,i) =
   #write_result ft_extsearch_uniform (dir ^ "/" ^ its i) a;
 
 (* uniform *)
-val (l,t) = add_time (parmap_queue_extern 20 ft_extsearch_uniform ()) targetl;
-val winb = filter I (map #1 l); length winb;
+val (l1,t) = add_time (parmap_queue_extern 20 ft_extsearch_uniform ()) targetl;
+val winb = filter I (map #1 l1); length winb;
 val dir2 = dir1 ^ "/" ^ dataset ^ "_uniform";
-val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l);
+val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l1);
 
 (* tnn *)
 val tnn = mlReinforce.retrieve_tnn rlobj 318;
-val (l,t) = add_time (parmap_queue_extern 20 fttnn_extsearch tnn) targetl;
-val winb = filter I (map #1 l); length winb;
+val (l2,t) = add_time (parmap_queue_extern 20 fttnn_extsearch tnn) targetl;
+val winb = filter I (map #1 l2); length winb;
 val dir2 = dir1 ^ "/" ^ dataset ^ "_tnn";
-val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l);
-
-(* tnn *)
-val tnn = mlReinforce.retrieve_tnn rlobj 318;
-val (l,t) = add_time (parmap_queue_extern 20 fttnnbs_extsearch tnn) targetl;
-val winb = filter I (map #1 l); length winb;
-val dir2 = dir1 ^ "/" ^ dataset ^ "_tnnbs";
-val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l);
-
+val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l2);
 *)
 
 (*
