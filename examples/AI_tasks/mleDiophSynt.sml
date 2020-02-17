@@ -249,6 +249,9 @@ val ft_extsearch_distance =
 val fttnn_extsearch =
   fttnn_mk_extsearch "mleDiophSynt.fttnn_extsearch" rlobj
 
+val fttnnbs_extsearch = 
+  fttnnbs_mk_extsearch "mleDiophSynt.fttnnbs_extsearch" rlobj
+
 (*
 load "aiLib"; open aiLib;
 load "mlReinforce"; open mlReinforce;
