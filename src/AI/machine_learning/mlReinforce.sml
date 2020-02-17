@@ -521,7 +521,7 @@ fun fttnnbs_extsearch_fun rlobj tnn target =
       let val tob = pretob (SOME (target',tnn)) in
         fn board => player_from_tnn tnn tob game board
       end
-    val timerl = List.tabulate (#3 target, fn _ => int_div 60 (#3 target))
+    val timerl = List.tabulate (30, fn _ => int_div 60 30)
     val startmctsobj = 
       {mctsparam = mk_ft_mctsparam (hd timerl), game = #game rlobj, 
        player = preplayer target}
