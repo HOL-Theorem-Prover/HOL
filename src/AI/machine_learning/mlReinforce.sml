@@ -539,10 +539,13 @@ fun fttnnbs_extsearch_fun rlobj tnn target =
         val status = #status (dfind [] tree)
       in
         if status = Undecided
-        then loop (tl timl) (newtree,newcache) else      
-          let val nodel = trace_win tree [] in
-            (status = Win, 8 - length timl, SOME (#board (last nodel)))
-          end
+          then loop (tl timl) (newtree,newcache)   
+        else if status = Win 
+          then  
+            let val nodel = trace_win tree [] in
+              (status = Win, 8 - length timl, SOME (#board (last nodel)))
+            end
+        else (status = Win, 8 - length timl, NONE)
       end
   in
     loop timerl (starttree,startcache)
