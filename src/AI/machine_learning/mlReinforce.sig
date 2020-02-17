@@ -62,5 +62,6 @@ sig
   val ft_mk_extsearch : string -> ('a,'b) rlobj -> 
     ('a,'b) psMCTS.player -> 'a ftes
   val fttnn_mk_extsearch : string -> ('a,'b) rlobj -> 'a fttnnes
+  val fttnnbs_mk_extsearch : string -> ('a,'b) rlobj -> 'a fttnnes
 
 end

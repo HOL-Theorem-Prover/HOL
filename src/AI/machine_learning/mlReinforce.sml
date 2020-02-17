@@ -424,6 +424,16 @@ val ft_mctsparam =
   noconfl = false, avoidlose = false
   }
 
+fun mk_ft_mctsparam tim =
+  {
+  timer = SOME tim, 
+  nsim = NONE, stopatwin_flag = true,
+  decay = 1.0, explo_coeff = 2.0,
+  noise_all = false, noise_root = false,
+  noise_coeff = 0.25, noise_gen = random_real,
+  noconfl = false, avoidlose = false
+  } 
+
 fun ft_extsearch_fun rlobj player (_:unit) target =
   let
     val mctsobj = 
@@ -488,6 +498,71 @@ fun fttnn_mk_extsearch self (rlobj as {rlparam,gameio,...}) =
   read_result = ft_read_result gameio
   }
 
+
+fun mk_dis tree =
+  let
+    val pol = #pol (dfind [] tree)
+    val _ = if null pol then raise ERR "mk_dis" "pol" else ()
+    fun f (_,cid) = #vis (dfind cid tree) handle NotFound => 0.0
+    val dis = map_assoc f pol
+    val tot = sum_real (map snd dis)
+    val _ = if tot < 0.5 then raise ERR "mk_dis" "tot" else ()
+  in
+    (dis,tot)
+  end
+
+fun select_bigstep tree = snd (best_in_distrib (fst (mk_dis tree)))
+
+fun fttnnbs_extsearch_fun rlobj tnn target =
+  let
+    val pretob = #pretob (#dplayer rlobj)
+    val game = #game rlobj
+    fun preplayer target' =
+      let val tob = pretob (SOME (target',tnn)) in
+        fn board => player_from_tnn tnn tob game board
+      end
+    val timerl = [30.0, 15.0, 7.5, 7.5/2.0, 7.5/4.0, 7.5/8.0, 7.5/8.0]
+    val startmctsobj = 
+      {mctsparam = mk_ft_mctsparam (hd timerl), game = #game rlobj, 
+       player = preplayer target}
+    val (starttree,startcache) = starttree_of startmctsobj target
+    fun loop timl (tree,cache) = 
+      if null timl then (false, 8, NONE) else
+      let
+        val mctsobj = 
+          {mctsparam = mk_ft_mctsparam (hd timl), game = #game rlobj, 
+           player = preplayer target} 
+        val (endtree,_) = mcts mctsobj (tree,cache)
+        val cid = select_bigstep endtree
+        val newtree = cut_tree cid endtree
+        val newcache = build_cache game newtree
+        val status = #status (dfind [] tree)
+      in
+        if status = Undecided
+        then loop (tl timl) (newtree,newcache) else      
+          let val nodel = trace_win tree [] in
+            (status = Win, 8 - length timl, SOME (#board (last nodel)))
+          end
+      end
+  in
+    loop timerl (starttree,startcache)
+  end
+
+
+
+fun fttnnbs_mk_extsearch self (rlobj as {rlparam,gameio,...}) =
+  {
+  self = self,
+  parallel_dir = default_parallel_dir ^ "_finaltest",
+  reflect_globals = fn () => "()",
+  function = fttnnbs_extsearch_fun rlobj,
+  write_param = (fn file => (fn tnn => write_tnn (file ^ "_tnn") tnn)),
+  read_param = (fn file => read_tnn (file ^ "_tnn")),
+  write_arg = write_target gameio,
+  read_arg = read_target gameio,
+  write_result = ft_write_result gameio,
+  read_result = ft_read_result gameio
+  }
 
 
 

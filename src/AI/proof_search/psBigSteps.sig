@@ -13,6 +13,8 @@ sig
 
   (* tree reuse *)
   val cut_tree : id -> ('a,'b) tree -> ('a,'b) tree
+  val build_cache : ('a,'b) psMCTS.game -> ('a,'b) tree -> 
+    ('a, psMCTS.id) Redblackmap.dict
 
   (* bigsteps *)
   type ('a,'b) bsobj =
