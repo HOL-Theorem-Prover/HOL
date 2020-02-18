@@ -5981,6 +5981,19 @@ val UNION_FROM_COUNT = store_thm
   ("UNION_FROM_COUNT", ``!n. (from n) UNION (count n) = UNIV``,
     RW_TAC std_ss [Once UNION_COMM, UNION_COUNT_FROM]);
 
+Theorem FROM_NOT_EMPTY :
+    !n. from n <> {}
+Proof
+    RW_TAC std_ss [GSYM MEMBER_NOT_EMPTY, from_def, GSPECIFICATION]
+ >> Q.EXISTS_TAC `n` >> REWRITE_TAC [LESS_EQ_REFL]
+QED
+
+Theorem COUNTABLE_FROM :
+    !n. COUNTABLE (from n)
+Proof
+    PROVE_TAC [COUNTABLE_NUM]
+QED
+
 val FROM_INTER_NUMSEG_GEN = store_thm ("FROM_INTER_NUMSEG_GEN",
  ``!k m n. (from k) INTER (m..n) = (if m < k then k..n else m..n)``,
   REPEAT GEN_TAC THEN COND_CASES_TAC THEN POP_ASSUM MP_TAC THEN
