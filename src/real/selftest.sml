@@ -45,13 +45,28 @@ val _ = List.app
                            {testf=standard_tpp_message, input=s1, output=s2})
           [("realinv 2", "2⁻¹"), ("inv (TC R)", "R⁺ ᵀ")]
 
-val _ = List.app testutils.convtest [
-      ("MULCANON1", REALMULCANON, “x:real * y * x”, “x pow 2 * y”),
-      ("MULCANON2", REALMULCANON, “x:real * y * x * 2”, “2 * (x pow 2 * y)”),
-      ("MULCANON3", REALMULCANON,
+fun UNCH_test (n,c,t) =
+  shouldfail {checkexn = fn Conv.UNCHANGED => true | _ => false,
+              printarg = fn t => "UNCHANGED " ^ n ^ ": " ^ term_to_string t,
+              printresult = thm_to_string, testfn = c} t
+fun nftest (r as (n,c,t1,t2)) =
+    (testutils.convtest r; UNCH_test(n,c,t2))
+val _ = List.app nftest [
+      ("MULCANON01", REALMULCANON, “x:real * y * x”, “x pow 2 * y”),
+      ("MULCANON02", REALMULCANON, “x:real * y * x * 2”, “2 * (x pow 2 * y)”),
+      ("MULCANON03", REALMULCANON,
        “10 * (x:real) * y * x pow 3 * y * x pow 4 * z * 6”,
        “60 * (x pow 8 * y pow 2 * z)”),
-      ("MULCANON4", REALMULCANON, “x * 1r * z”, “x:real * z”),
+      ("MULCANON04", REALMULCANON, “x * 1r * z”, “x:real * z”),
+      ("MULCANON05", REALMULCANON, “x * y * inv x * a”, “a * y * NZ x”),
+      ("MULCANON06", REALMULCANON, “b * x pow 2 * y * inv x * a”,
+       “a * b * x * y * NZ x”),
+      ("MULCANON07", REALMULCANON, “b * x * y * inv (x pow 2) * 2 * a”,
+       “2 * (a * b * inv x * y * NZ x)”),
+      ("MULCANON08", REALMULCANON, “b * x * y * inv (x pow 2) * a * inv x”,
+       “a * b * inv x pow 2 * y * NZ x”),
+      ("MULCANON09", REALMULCANON, “x * 2r”, “2r * x”),
+      ("MULCANON10", REALMULCANON, “x * 2r * y”, “2r * (x * y)”),
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]

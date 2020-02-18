@@ -4032,9 +4032,9 @@ Proof
 QED
 
 Theorem pow_inv_mul_powlt:
-  m < n ==> (x pow m * inv x pow n = inv x pow (n - m) * NZ x)
+  !x m n. m < n ==> (x pow m * inv x pow n = inv x pow (n - m) * NZ x)
 Proof
-  strip_tac >>
+  rpt strip_tac >>
   qabbrev_tac ‘d = n - m’ >> ‘0 < d’ by simp[Abbr‘d’] >>
   ‘n = m + d’ by simp[Abbr‘d’] >>
   Cases_on ‘x = 0’ >>
@@ -4048,10 +4048,10 @@ Proof
   simp[REAL_MUL_RINV]
 QED
 
-Theorem pow_inv_invlt:
-  n < m ==> (x pow m * inv x pow n = x pow (m - n) * NZ x)
+Theorem pow_inv_mul_invlt:
+  !x m n. n < m ==> (x pow m * inv x pow n = x pow (m - n) * NZ x)
 Proof
-  strip_tac >>
+  rpt strip_tac >>
   qabbrev_tac ‘d = m - n’ >> ‘0 < d /\ (m = n + d)’ by simp[Abbr‘d’] >>
   Cases_on ‘x = 0’ >>
   simp[nonzerop_EQ1_I, REAL_INV_0, REAL_POW_INV, REAL_POW_ADD,

@@ -609,15 +609,33 @@ fun oksort cmp [] = true
       cmp(t1,t2) = LESS andalso oksort cmp rest
 
 val realreduce_cs = real_compset()
+fun REPORT_ALL_CONV t =
+    (print ("\nGiving up on " ^ term_to_string t ^ "\n"); ALL_CONV t)
+val REAL_REDUCE = computeLib.CBV_CONV realreduce_cs
+val NUM_REDUCE = reduceLib.REDUCE_CONV
 
 local
+  val NZ_t = prim_mk_const{Thy = "real", Name = "nonzerop"}
+  fun is_NZ t = is_comb t andalso rator t ~~ NZ_t
+  infix *~
+  fun sd f x = case f x of NONE => x | SOME y => y
+  fun (f *~ g) x =
+      case f x of
+          NONE => sd f (sd g x)
+        | SOME y => sd g y
   fun termbase t =
       if is_real_literal t then literalbase
+      else if is_NZ t then t
       else
-        case total dest_pow t of
-            SOME(b,_) => b
-          | NONE => (case total dest_inv t of SOME b => b | NONE => t)
-
+        ((Option.map #1 o total dest_pow) *~ total dest_inv) t
+  fun powinv_fix t =
+      let val (l,r) = dest_mult t
+          val (lb,_) = dest_pow l
+      in
+        if is_inv lb then REWR_CONV REAL_MUL_COMM
+        else ALL_CONV
+      end t
+  val normNZs = REWR_CONV nonzerop_mulXX
 
   val mulcompare = inv_img_cmp termbase Term.compare
 
@@ -625,18 +643,42 @@ local
   val mulPOWs = TRY_CONV (REWR_CONV REAL_POW_POW THENC
                           RAND_CONV (REWR_CONV arithmeticTheory.MULT_RIGHT_1))
   val POW_E0 = CONJUNCT1 pow
+  val (inv_th1, inv_th2) = CONJ_PAIR realTheory.REAL_INV_nonzerop
+  fun compare_exponents t =
+      let val (l,r) = dest_mult t
+          val (e1,e2) = ((snd o dest_pow) ## (snd o dest_pow)) (l,r)
+          val (m,n) = (numSyntax.dest_numeral ## numSyntax.dest_numeral) (e1,e2)
+          val finish = LAND_CONV (RAND_CONV NUM_REDUCE)
+          val cth =
+              if Arbnum.<(m,n) then
+                MATCH_MP pow_inv_mul_powlt
+                         (numSyntax.mk_less(e1,e2) |> NUM_REDUCE |> EQT_ELIM)
+              else
+                MATCH_MP pow_inv_mul_invlt
+                         (numSyntax.mk_less(e2,e1) |> NUM_REDUCE |> EQT_ELIM)
+      in
+        REWR_CONV cth THENC finish
+      end t
+  val combine_exponents =
+      (REWR_CONV (GSYM REAL_POW_ADD) THENC
+       RAND_CONV (CHANGED_CONV (computeLib.CBV_CONV realreduce_cs))) ORELSEC
+      (powinv_fix THENC (
+          REWR_CONV pow_inv_eq ORELSEC
+          compare_exponents ORELSEC
+          REPORT_ALL_CONV
+      ))
+
   val mulcombine0 =
       LAND_CONV (addPOW1 THENC mulPOWs) THENC
       RAND_CONV (addPOW1 THENC mulPOWs) THENC
-      REWR_CONV (GSYM REAL_POW_ADD) THENC
-      RAND_CONV  (computeLib.CBV_CONV realreduce_cs) THENC
+      combine_exponents THENC
       TRY_CONV (FIRST_CONV (map REWR_CONV [POW_1, POW_E0]))
   fun mulcombine t =
       if is_real_literal (rand t) then
         computeLib.CBV_CONV realreduce_cs t
-      else mulcombine0 t
+      else (normNZs ORELSEC mulcombine0) t
 
-  val mulpre = ALL_CONV
+  val mulpre = REWRITE_CONV [GSYM REAL_POW_INV]
 
   val mulsort = {
     assoc = REAL_MUL_ASSOC,
@@ -647,6 +689,12 @@ local
     combine = mulcombine,
     preprocess = mulpre
   }
+  fun leading_coeff_norm t =
+      case total dest_mult t of
+          SOME (l,r) => if is_real_literal l then
+                          RAND_CONV (PURE_REWRITE_CONV [REAL_MUL_ASSOC]) t
+                        else PURE_REWRITE_CONV [REAL_MUL_ASSOC] t
+        | _ => ALL_CONV t
 in
   fun REALMULCANON t =
       let
@@ -662,7 +710,9 @@ in
         then
           AC_Sort.sort mulsort THENC
           TRY_CONV (REWR_CONV REAL_MUL_LID) THENC
-          RAND_CONV (PURE_REWRITE_CONV [REAL_MUL_ASSOC])
+          AC_Sort.sort mulsort THENC
+          REWRITE_CONV[POW_1] THENC
+          leading_coeff_norm
         else ALL_CONV
       end t
 end (* local *)
