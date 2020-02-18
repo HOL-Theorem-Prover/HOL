@@ -4330,6 +4330,15 @@ val integral_pos_fn = store_thm
  >- RW_TAC std_ss [pos_fn_integral_zero, sub_rzero]
  >> RW_TAC std_ss [FN_PLUS_POS_ID, FN_MINUS_POS_ZERO]);
 
+Theorem integral_pos :
+    !m f. measure_space m /\ (!x. 0 <= f x) ==> 0 <= integral m f
+Proof
+    rpt STRIP_TAC
+ >> Know `integral m f = pos_fn_integral m f`
+ >- (MATCH_MP_TAC integral_pos_fn >> art []) >> Rewr'
+ >> MATCH_MP_TAC pos_fn_integral_pos >> art []
+QED
+
 Theorem integral_abs_pos_fn :
     !m f. measure_space m ==> (integral m (abs o f) = pos_fn_integral m (abs o f))
 Proof
