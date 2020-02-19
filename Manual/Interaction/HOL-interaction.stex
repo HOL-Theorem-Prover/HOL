@@ -15,8 +15,8 @@
 
 \title{\bf\Large Guide to HOL4 interaction and basic proofs\vspace{-0.3em}}
 
-\author{\normalsize Magnus O. Myreen and Minchao Wu}
-\date{~\vspace{-2em}}
+%\author{\normalsize Magnus O. Myreen and Minchao Wu}
+%\date{~\vspace{-2em}}
 
 \maketitle
 
@@ -49,55 +49,35 @@ The text assumes that the reader has HOL4 installed. You can download and instal
 
 \mysec{Interaction with HOL4 (via emacs)\label{interaction}}
 
-Michael Norrish has written an emacs script which makes interaction
-with HOL easy. To install the script add the following line to your emacs initialisation file ({\tt
-.emacs} or \texttt{.emacs.d/init.el}) with {\tt <path>} replaced with the full path to your HOL4
-installation.
+HOL comes with emacs modes that make script files look prettier, and help when interacting with HOL sessions.
+To install the scripts, add the following lines to your emacs initialisation file ({\tt .emacs} or \texttt{.emacs.d/init.el}) with {\tt <path>} replaced with the full path to your HOL4 installation:
 \begin{code}
 (load "<path>/HOL/tools/hol-mode")
-\end{code}
-I recommend adding the following (by Chun Tian) to the same file
-in order to turn off automatic indentation for the SML mode.
-\begin{code}
-(defun my-sml-mode-hook ()
-  "Local defaults for SML mode"
-  (setq electric-indent-chars '()))
-
-(add-hook 'sml-mode-hook 'my-sml-mode-hook)
+(load "<path>/HOL/tools/hol-unicode")
 \end{code}
 
-If your version of emacs does not highlight the active region, also add the following line
-to your initialisation file:
+If your version of emacs does not highlight the active region be default,
+also add the following line to your initialisation file:
 \begin{code}
 (transient-mark-mode 1)
 \end{code}
-
-To enable the HOL4 input method that supports inputting Unicode characters, add the following to the same file:
-\begin{code}
-(load "<path>/HOL/tools/hol-input.el")
-
-(add-hook 'sml-mode-hook
-	  (lambda () (set-input-method "Hol")))
-\end{code}
-
 Restart emacs to make these changes take effect.
 
 \mysubsec{Starting a HOL4 session}
 
 \begin{enum}
 \item Start emacs.
-\item Press {\tt C-x C-f} to open a file for your proof script.
-\item Press {\tt M-h 3} to split the emacs window into two columns and start HOL4.
+\item Press {\tt C-x C-f} to open a file with file with a name ending in {\tt Script.sml}
+\item Press {\tt M-h H}, then press {\tt RET} or down arrow and then {\tt RET}.
 \end{enum}
 The HOL window should look something like this:
 \begin{code}
 ---------------------------------------------------------------------
-       HOL-4 [Kananaskis 11 (stdknl, built Mon Feb 05 12:44:20 2018)]
+       HOL-4 [Kananaskis 13 (stdknl, built Tue Feb 18 15:39:00 2020)]
 
        For introductory HOL help, type: help "hol";
        To exit type <Control>-D
 ---------------------------------------------------------------------
-[Use-ing configuration file /Users/myreen/.hol-config.sml]
 > > > > >
 \end{code}
 
@@ -116,21 +96,26 @@ For example, selecting the following line, and then pressing {\tt M-h M-r}
 open arithmeticTheory listTheory;
 \end{code}
 makes HOL4 open the library theories for arithmetic (over natural numbers)
-and lists. HOL4 prints a long list of definitions and already proved results.
-
-\noindent\rule{0em}{1.5em}\emph{Tip:} To avoid long printouts as above, prefix your command with
-{\tt C-u C-u} i.e. instead of pressing {\tt M-h M-r} press
-{\tt C-u C-u M-h M-r}.
+and lists. This should not produce any significant output.
 
 \mysubsec{Starting a goal-oriented proof}
 
 Most HOL4 proofs are constructed using an interactive \emph{goal
-  stack} and then put together using the ML function {\tt prove}
+  stack} and then put together using tactic combinators
 (Section~\ref{prove1}, \ref{prove2}). To start the goal stack:
 \begin{enum}
-\item Write a goal, \eg{} {\tt \sq !n{.}~n~<~n~+~1\sq}.
-  We can write $\forall$ as {\tt !} in HOL4. Alternatively, type {\tt \textbackslash forall} to input $\forall$. Most of the Unicode characters can be input in a similar way. For example, {\tt \textbackslash exists} gives us $\exists$, {\tt \textbackslash wedge} gives us $\wedge$ \dots
-\item Move the cursor inside the back-quotes ({\tt \sq}).
+\item Write the outline of a theorem, in this case called {\tt less\_add\_1}:
+\begin{code}
+Theorem less_add_1:
+  !n. n < n + 1
+Proof
+
+QED
+\end{code}
+  We can write $\forall$ as {\tt !}\ in HOL4. Alternatively, type {\tt C-shift-!}\ to input~$\forall$.
+  There are many abbreviations for common Unicode characters on \texttt{C-shift} modifiers.
+  For example, \texttt{C-shift-l} gives a $\lambda$ character.
+\item Move the cursor between the {\tt Theorem}-line and {\tt Proof}-line.
 \item Press {\tt M-h~g} to push the goal onto the goal stack.
 \end{enum}
 The HOL4 window should look something like this:
@@ -165,22 +150,24 @@ One can pop goals off the goal stack by pressing {\tt M-h d}, which gives:
 
 \mysubsec{Saving the resulting theorem\label{prove1}}
 
-One can use {\tt prove} to store the result of a proof (called a
-\emph{theorem}), \eg{} the following stores the theorem $\forall n.\;n < n +
-1$ in an ML variable {\tt LESS\_ADD\_1}:
+The tactic should be written between the {\tt Proof}-line and the {\tt QED}-line.
 \begin{code}
-val LESS_ADD_1 = Q.prove(`!n. n < n + 1`, decide_tac);
+Theorem less_add_1:
+  !n. n < n + 1
+Proof
+  decide_tac
+QED
 \end{code}
-When the above line is copied into HOL4 (using text-selection then
+When the above lines are copied into HOL4 (using text-selection then
 {\tt M-h M-r}, as described in Section~\ref{copy}), HOL4 responds with:
 \begin{code}
 >>__ open arithmeticTheory
->>- LESS_ADD_1
+>>- val less_add_1 = prove(``!n. n < n + 1``,decide_tac);
 \end{code}
 
 \mysubsec{Saving proofs based on multiple tactics\label{prove2}}
 
-Suppose we have proved the goal {\tt \sq !n{.}~n <= n * n\sq} with the following tactics:
+Suppose we have proved the goal {\tt !n{.}~n <= n * n} with the following tactics:
 \begin{code}
 Induct_on `n`                   (* comment: induction on n  *)
 
@@ -189,14 +176,21 @@ Induct_on `n`                   (* comment: induction on n  *)
   asm_simp_tac bool_ss [MULT]   (* comment: simplify goal   *)
   decide_tac                    (* comment: solve step case *)
 \end{code}
-Tactics can be pieced together for {\tt prove} using \ml{\gt\gt} and \ml{\gt-}. The \ml{\gt\gt} operator is an infix that composes tactics. Similarly, \ml{\gt-} \emph{tac} proves the first subgoal using \emph{tac}.
+Tactics can be composed together for {\tt Theorem} using \ml{\gt\gt} and \ml{\gt-}.
+The \ml{\gt\gt} operator is an infix that composes two tactics into one.
+The \ml{\gt-} is used to prove subgoals: \ml{\gt-} \emph{tactic} proves the first subgoal using \emph{tactic}.
+
+\newpage
+\noindent Here is the entire proof when composed using \ml{\gt\gt} and \ml{\gt-}.
 \begin{code}
-val LESS_EQ_MULT = Q.prove(
-  `!n:num. n <= n * n`,
+Theorem less_eq_mult:
+  !n:num. n <= n * n
+Proof
   Induct_on `n`
   >- decide_tac
   >- (asm_simp_tac bool_ss [MULT]
-      \gt\gt decide_tac));
+      \gt\gt decide_tac)
+QED
 \end{code}
 Copy the above into HOL4 using text-selection, and then {\tt M-h M-r}, as in Section~\ref{copy}.
 
@@ -208,7 +202,7 @@ Copy the above into HOL4 using text-selection, and then {\tt M-h M-r}, as in Sec
 
 \begin{displaymath}
 \begin{array}{lllll}
-\itemy{\itemz{\rule{0em}{1.5em}M-h h}{start HOL}}{\itemz{M-h g}{push goal onto goal stack}}
+\itemy{\itemz{\rule{0em}{1.5em}M-h H}{start HOL}}{\itemz{M-h g}{push goal onto goal stack}}
 \itemy{\itemz{M-h M-r}{copy region into HOL}}{\itemz{M-h e}{apply tactic to goal}}
 \itemy{\itemz{M-h C-t}{display types on/off}}{\itemz{M-h b}{move back in proof}}
 \itemy{\itemz{M-h C-c}{interrupt HOL}}{\itemz{M-h p}{print current goal}}
@@ -233,30 +227,33 @@ Press {\tt M-h~C-c} to interrupt HOL4 --- useful when a tactic fails to terminat
 
 \mysubsec{Making a definition\label{definition}}
 
-Function can be defined using {\tt Define}, \eg{} square is defined as follows.
+Functions are defined using {\tt Definition ...\ End}, \eg{} a function that squares a natural number is defined as follows.
 \begin{code}
-val SQUARE_def = Define `SQUARE n = n * n`;
+Definition SQUARE_def:
+  SQUARE n = n * n
+End
 \end{code}
 
 \noindent
-Data-types are defined using {\tt Datatype}, \eg{} a binary tree
+Data-types are defined using {\tt Datatype ...\ End}, \eg{} a binary tree
 which holds values of type {\tt 'a} (a type variable) at the leaves:
 \begin{code}
-val _ = Datatype `TREE = LEAF 'a | BRANCH TREE TREE`;
+Datatype:
+  TREE = LEAF 'a | BRANCH TREE TREE
+End
 \end{code}
-
-\noindent
 A valid tree is \eg{} {\tt BRANCH (LEAF 5) (BRANCH (LEAF 1) (LEAF 7))}
 with type {\tt num TREE}, where {\tt  num} is the type name for a natural
 number. We can define recursive functions, \eg{}
 \begin{code}
-val MAP_TREE_def = Define `
+Definition MAP_TREE_def:
   (MAP_TREE f (LEAF n) = LEAF (f n)) \conj{}
-  (MAP_TREE f (BRANCH u v) = BRANCH (MAP_TREE f u) (MAP_TREE f v))`;
+  (MAP_TREE f (BRANCH u v) = BRANCH (MAP_TREE f u) (MAP_TREE f v))
+End
 \end{code}
 {\tt  SQUARE\_def} and {\tt  MAP\_TREE\_def} are theorems containing the
 above definitions. Theorems describing {\tt  TREE} can be retrieved by copying
-the following into HOL4 (by pressing {\tt C-space} then {\tt M-h M-r}, Section~\ref{copy}).
+the following into HOL4 by pressing {\tt C-space} then {\tt M-h M-r}, as described in Section~\ref{copy}.
 \begin{code}
 val TREE_11 = fetch "-" "TREE_11";
 val TREE_distinct = fetch "-" "TREE_distinct";
@@ -266,27 +263,34 @@ val TREE_distinct = fetch "-" "TREE_distinct";
 
 Proofs and definitions are stored in files called scripts, \eg{} we
 can store the definitions from above in a file called {\tt
-  mytreeScript.sml}, which should begin with the lines
+  less\_lemmaScript.sml}, which should begin with the lines
 \begin{code}
 open HolKernel boolLib bossLib Parse
-val _ = new_theory "mytree";
+val _ = new_theory "less_lemma";
 \end{code}
 and end with the line
 \begin{code}
 val _ = export_theory();
 \end{code}
-Replace {\tt prove} by {\tt store\_thm} for results you
-wish to export from the theory, \eg{}
-\begin{code}
-val LESS_ADD_1 = Q.store_thm("LESS_ADD_1",{`}!n.n<n+1{`},decide_tac);
-\end{code}
-Make sure your script only consists of ML definitions ({\tt \small val
-  x = y}, {\tt \small fun g x = y}), open commands ({\tt \small
-  open x y z}) and comments {\tt \small (* comment *)}.
 
-The theory {\tt mytreeTheory} is created by executing {\tt Holmake} in
-the directory where {\tt mytreeScript.sml} is stored. A
-readable version of the theory is stored under {\tt mytreeTheory.sig}.
+\noindent
+Thus, the entire file can be:
+\begin{code}
+open HolKernel boolLib bossLib Parse
+val _ = new_theory "less_lemma";
+
+Theorem less_add_1:
+  !n. n < n + 1
+Proof
+  decide_tac
+QED
+
+val _ = export_theory();
+\end{code}
+
+The theory file {\tt less\_lemmaTheory} is created by executing {\tt Holmake} in
+the directory where {\tt less\_lemmaScript.sml} is stored. A human
+readable version of the compiled theory is stored under {\tt less\_lemmaTheory.sig}.
 
 \mysec{Searching for theorems and theories\label{search}}
 
@@ -322,7 +326,7 @@ context using {\tt print\_match}, \eg{} with {\tt arithmeticTheory} opened,
 \begin{code}
 print_match [] {`}`n DIV m <= k{`}`
 \end{code}
-prints a list of theorems containing $n\; \texttt{\small DIV} \;m \leq k$ for some $n,m,k$:
+prints a list of theorems containing $n\; \texttt{\small DIV} \;m \leq k$ for some $n,m,k$:\vspace{-1.5em}
 \begin{code}
 >>- print_match [] ``n DIV m <= k``
 \end{code}
