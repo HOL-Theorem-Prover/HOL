@@ -112,15 +112,9 @@ Proof
 
 QED
 \end{code}
-  We can write $\forall$ as {\tt !} in HOL4. Alternatively, type {\tt \textbackslash forall} to input $\forall$.
-  Most of the Unicode characters can be input in a similar way.
-  For example, {\tt \textbackslash exists} gives us $\exists$, {\tt \textbackslash and} gives us $\land$ \dots
-  (To get a backslash on its own, type backslash twice.)%
-\footnote{%
-  For more on this facility, read about Emacs input methods.
-  There are also many abbreviations for common Unicode characters on \texttt{$<$control$>$-$<$shift$>$} modifiers.
-  For example, \texttt{$<$control$>$-$<$shift$>$-l} gives a $\lambda$ character, which is quicker to type than \texttt{\textbackslash{}lambda}.
-}
+  We can write $\forall$ as {\tt !}\ in HOL4. Alternatively, type {\tt C-shift-!}\ to input~$\forall$.
+  There are many abbreviations for common Unicode characters on \texttt{C-shift} modifiers.
+  For example, \texttt{C-shift-l} gives a $\lambda$ character.
 \item Move the cursor between the {\tt Theorem}-line and {\tt Proof}-line.
 \item Press {\tt M-h~g} to push the goal onto the goal stack.
 \end{enum}
