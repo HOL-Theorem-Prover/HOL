@@ -631,7 +631,12 @@ local
       if is_real_literal t then literalbase
       else if is_NZ t then t
       else
-        (powbase *~ total dest_inv) t
+        case total dest_pow t of
+            NONE => (case total dest_inv t of NONE => t | SOME t' => t')
+          | SOME (b0,e) =>
+            (case total dest_inv b0 of
+                 NONE => if numSyntax.is_numeral e then b0 else t
+               | SOME b => if numSyntax.is_numeral e then b else mk_pow(b,e))
   fun powinv_fix t =
       let val (l,r) = dest_mult t
           val (lb,_) = dest_pow l
@@ -687,8 +692,9 @@ local
           NONE => ALL_CONV t
         | SOME t0 => if is_real_literal t0 then ALL_CONV t
                      else REWR_CONV REAL_NEG_MINUS1 t
-  val mulpre = REWRITE_CONV [GSYM REAL_POW_INV] THENC
-               neg_nonnum_conv
+  val mulpre =
+      REWRITE_CONV [GSYM REAL_POW_INV, REAL_INV_INV, REAL_POW_POW] THENC
+      neg_nonnum_conv
 
   val mulsort = {
     assoc = REAL_MUL_ASSOC,
@@ -721,7 +727,8 @@ in
           AC_Sort.sort mulsort THENC
           TRY_CONV (REWR_CONV REAL_MUL_LID) THENC
           AC_Sort.sort mulsort THENC
-          REWRITE_CONV[POW_1] THENC
+          REWRITE_CONV[POW_1, nonzerop_NUMERAL, POW_ONE, REAL_MUL_LID,
+                       REAL_MUL_RID] THENC
           leading_coeff_norm
         else ALL_CONV
       end t

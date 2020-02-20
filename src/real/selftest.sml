@@ -50,7 +50,31 @@ fun UNCH_test (n,c,t) =
               printarg = fn t => "UNCHANGED " ^ n ^ ": " ^ term_to_string t,
               printresult = thm_to_string, testfn = c} t
 fun nftest (r as (n,c,t1,t2)) =
-    (testutils.convtest r; UNCH_test(n,c,t2))
+    let
+      fun test (t1,t2) = (Exn.capture c t1, Exn.capture c t2)
+      fun check t res =
+          case res of
+              Exn.Res (Exn.Res rth, Exn.Exn Conv.UNCHANGED) =>
+                rhs (concl rth) ~~ t
+            | _ => false
+      fun pr1 t (Exn.Exn e) = "On first call, unexpected exn: " ^
+                                General.exnMessage e
+        | pr1 t (Exn.Res th) = if is_eq (concl th) andalso
+                                  rhs (concl th) ~~ t
+                               then ""
+                               else "On first call, unexpected thm:\n  " ^
+                                    thm_to_string th
+      fun nlnzero "" = "" | nlnzero s = s ^ "\n"
+      fun pr2 (Exn.Exn Conv.UNCHANGED) s = s
+        | pr2 (Exn.Exn e) s = nlnzero s ^ "On 2nd call, unexpected exn: " ^
+                              General.exnMessage e
+        | pr2 (Exn.Res th) s = nlnzero s ^ "On 2nd call, unexpected thm:\n  " ^
+                               thm_to_string th
+      fun pr t (r1,r2) = pr2 r2 (pr1 t r1)
+    in
+      tprint (n ^ ": " ^ term_to_string t1);
+      require_msg (check t2) (pr t2) test (t1,t2)
+    end
 val _ = List.app nftest [
       ("MULCANON01", REALMULCANON, “x:real * y * x”, “x pow 2 * y”),
       ("MULCANON02", REALMULCANON, “x:real * y * x * 2”, “2 * (x pow 2 * y)”),
@@ -73,6 +97,9 @@ val _ = List.app nftest [
        “10 * (z * 2 pow n * 2 pow x)”),
       ("MULCANON13", REALMULCANON, “-(2 pow x) * z * -10 * 2 pow n”,
        “10 * (z * 2 pow n * 2 pow x)”),
+      ("MULCANON14", REALMULCANON, “inv 2 pow x * z * 2 pow x”, “z:real”),
+      ("MULCANON15", REALMULCANON, “inv (2 pow x) * z * 3 * 2 pow x”,
+       “3 * z:real”),
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]

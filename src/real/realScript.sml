@@ -691,16 +691,20 @@ val REAL_INV_1OVER = store_thm("REAL_INV_1OVER",
   “!x. inv x = &1 / x”,
   GEN_TAC THEN REWRITE_TAC[real_div, REAL_MUL_LID]);
 
-val REAL_LT_INV_EQ = store_thm("REAL_LT_INV_EQ",
- Term`!x. 0 < inv x = 0 < x`,
+Theorem REAL_LT_INV_EQ[simp]:
+  !x. 0 < inv x <=> 0 < x
+Proof
   GEN_TAC THEN EQ_TAC THEN REWRITE_TAC[REAL_INV_POS] THEN
   GEN_REWRITE_TAC (funpow 2 RAND_CONV) [GSYM REAL_INV_INV] THEN
-  REWRITE_TAC[REAL_INV_POS]);;
+  REWRITE_TAC[REAL_INV_POS]
+QED
 
-val REAL_LE_INV_EQ = store_thm("REAL_LE_INV_EQ",
- Term`!x. 0 <= inv x = 0 <= x`,
+Theorem REAL_LE_INV_EQ[simp]:
+  !x. 0 <= inv x <=> 0 <= x
+Proof
   REWRITE_TAC[REAL_LE_LT, REAL_LT_INV_EQ, REAL_INV_EQ_0] THEN
-  MESON_TAC[REAL_INV_EQ_0]);;
+  MESON_TAC[REAL_INV_EQ_0]
+QED
 
 val REAL_LE_INV = store_thm("REAL_LE_INV",
  Term `!x. 0 <= x ==> 0 <= inv(x)`,
@@ -1116,10 +1120,14 @@ val REAL_INV_MUL = store_thm("REAL_INV_MUL",
   REWRITE_TAC[REAL_MUL_LID])
 *)
 
-val REAL_LE_LMUL = store_thm("REAL_LE_LMUL",
-  “!x y z. 0 < x ==> ((x * y) <= (x * z) = y <= z)”,
+Theorem REAL_LE_LMUL:
+  !x y z. 0 < x ==> ((x * y) <= (x * z) = y <= z)
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_NOT_LT] THEN
-  AP_TERM_TAC THEN MATCH_MP_TAC REAL_LT_LMUL THEN ASM_REWRITE_TAC[]);
+  AP_TERM_TAC THEN MATCH_MP_TAC REAL_LT_LMUL THEN ASM_REWRITE_TAC[]
+QED
+
+
 
 val REAL_LE_RMUL = store_thm("REAL_LE_RMUL",
   “!x y z. 0 < z ==> ((x * z) <= (y * z) = x <= y)”,
@@ -2473,6 +2481,20 @@ val REAL_MUL_RNEG = store_thm("REAL_MUL_RNEG",
 val REAL_MUL_LNEG = store_thm ("REAL_MUL_LNEG",
 Term`!x y. ~x * y = ~(x * y)`,
   MESON_TAC[REAL_MUL_SYM, REAL_MUL_RNEG]);
+
+Theorem REAL_LE_LMUL_NEG:
+  !x y z. x < 0 ==> (x * y <= x * z <=> z <= y)
+Proof
+  rpt strip_tac >>
+  ‘0 < -x’ by simp[] >>
+  Cases_on ‘z <= y’
+  >- (‘-x * z <= -x * y’ by simp[REAL_LE_LMUL] >>
+      fs[REAL_LE_NEG, REAL_MUL_LNEG]) >>
+  fs[REAL_NOT_LE] >>
+  ‘-x * y < -x * z’ by simp[REAL_LT_LMUL] >>
+  fs[REAL_LT_NEG, REAL_MUL_LNEG] >>
+  metis_tac[REAL_LET_ANTISYM]
+QED
 
 val real_lt = store_thm ("real_lt",
 Term`!y x. x < y = ~(y <= x)`,
