@@ -67,6 +67,12 @@ val _ = List.app nftest [
        “a * b * inv x pow 2 * y * NZ x”),
       ("MULCANON09", REALMULCANON, “x * 2r”, “2r * x”),
       ("MULCANON10", REALMULCANON, “x * 2r * y”, “2r * (x * y)”),
+      ("MULCANON11", REALMULCANON, “x * 3 * y * x pow n * z”,
+       “3 * (x * y * z * x pow n)”),
+      ("MULCANON12", REALMULCANON, “2 pow x * z * 10 * 2 pow n”,
+       “10 * (z * 2 pow n * 2 pow x)”),
+      ("MULCANON13", REALMULCANON, “-(2 pow x) * z * -10 * 2 pow n”,
+       “10 * (z * 2 pow n * 2 pow x)”),
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]

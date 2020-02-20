@@ -28,6 +28,8 @@ sig
      mulcanon on each summand *)
   val REALADDCANON : conv
   val REALMULCANON : conv
+  val RMULCANON_ss : simpLib.ssfrag
+  val RADDCANON_ss : simpLib.ssfrag
 
 
   val real_compset : unit -> computeLib.compset

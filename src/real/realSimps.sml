@@ -623,11 +623,15 @@ local
       case f x of
           NONE => sd f (sd g x)
         | SOME y => sd g y
+  fun powbase t =
+      case total dest_pow t of
+          NONE => NONE
+        | SOME (b,e) => if numSyntax.is_numeral e then SOME b else NONE
   fun termbase t =
       if is_real_literal t then literalbase
       else if is_NZ t then t
       else
-        ((Option.map #1 o total dest_pow) *~ total dest_inv) t
+        (powbase *~ total dest_inv) t
   fun powinv_fix t =
       let val (l,r) = dest_mult t
           val (lb,_) = dest_pow l
@@ -678,7 +682,13 @@ local
         computeLib.CBV_CONV realreduce_cs t
       else (normNZs ORELSEC mulcombine0) t
 
-  val mulpre = REWRITE_CONV [GSYM REAL_POW_INV]
+  fun neg_nonnum_conv t =
+      case total dest_negated t of
+          NONE => ALL_CONV t
+        | SOME t0 => if is_real_literal t0 then ALL_CONV t
+                     else REWR_CONV REAL_NEG_MINUS1 t
+  val mulpre = REWRITE_CONV [GSYM REAL_POW_INV] THENC
+               neg_nonnum_conv
 
   val mulsort = {
     assoc = REAL_MUL_ASSOC,
@@ -716,6 +726,19 @@ in
         else ALL_CONV
       end t
 end (* local *)
+
+val RMULCANON_ss = SSFRAG {
+      ac = [], congs = [], dprocs = [], filter = NONE,
+      name = SOME "RMULCANON_ss",
+      rewrs = [],
+      convs = [
+        {conv = K (K REALMULCANON), trace = 2,
+         key = SOME ([], mk_mult(mk_var("x",real_ty), mk_var("y",real_ty))),
+         name = "REALMULCANON"}
+      ]
+}
+
+val _ = BasicProvers.augment_srw_ss [RMULCANON_ss]
 
 local
   val x = mk_var("x", real_ty)
@@ -772,6 +795,17 @@ in
       end t
 end (* local *)
 
+val RADDCANON_ss = SSFRAG {
+      ac = [], congs = [], dprocs = [], filter = NONE,
+      name = SOME "RADDCANON_ss",
+      rewrs = [],
+      convs = [
+        {conv = K (K REALADDCANON), trace = 2,
+         key = SOME ([], mk_plus(mk_var("x",real_ty), mk_var("y",real_ty))),
+         name = "REALADDCANON"}
+      ]
+}
 
+(* val _ = augment_srw_ss [RMULCANON_ss] *)
 
 end

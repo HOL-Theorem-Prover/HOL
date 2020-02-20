@@ -1844,15 +1844,37 @@ val POW_2_LT = store_thm("POW_2_LT",
   REWRITE_TAC[ADD1, GSYM REAL_ADD, GSYM REAL_DOUBLE] THEN
   MATCH_MP_TAC REAL_LTE_ADD2 THEN ASM_REWRITE_TAC[POW_2_LE1]);
 
-val POW_MINUS1 = store_thm("POW_MINUS1",
-  “!n. ~1 pow (2 * n) = 1”,
+Theorem POW_MINUS1[simp]:
+  !n. ~1 pow (2 * n) = 1
+Proof
   INDUCT_TAC THEN REWRITE_TAC[MULT_CLAUSES, pow] THEN
   REWRITE_TAC(map num_CONV [Term`2:num`,Term`1:num`] @ [ADD_CLAUSES]) THEN
   REWRITE_TAC[pow] THEN
   REWRITE_TAC[SYM(num_CONV “2:num”), SYM(num_CONV “1:num”)] THEN
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[GSYM REAL_NEG_LMUL, GSYM REAL_NEG_RMUL] THEN
-  REWRITE_TAC[REAL_MUL_LID, REAL_NEGNEG]);
+  REWRITE_TAC[REAL_MUL_LID, REAL_NEGNEG]
+QED
+
+Theorem POW_MINUS1_ODD:    !n. ~1 pow (2 * n + 1) = ~1
+Proof simp[POW_ADD]
+QED
+
+Theorem NEGATED_POW[simp]:
+  ((-x) pow NUMERAL (BIT1 n) = -(x pow NUMERAL (BIT1 n))) /\
+  ((-x) pow NUMERAL (BIT2 n) = x pow NUMERAL (BIT2 n))
+Proof
+  reverse conj_tac >> ONCE_REWRITE_TAC [REAL_NEG_MINUS1] >>
+  REWRITE_TAC [POW_MUL]
+  >- (‘NUMERAL (BIT2 n) = 2 * (n + 1)’ suffices_by
+        (disch_then SUBST_ALL_TAC >> simp[]) >>
+      CONV_TAC (LAND_CONV (REWRITE_CONV [NUMERAL_DEF, BIT2])) >>
+      simp[]) >>
+  ‘NUMERAL (BIT1 n) = 2 * n + 1’ suffices_by
+     (disch_then SUBST_ALL_TAC >> simp[POW_MINUS1_ODD]) >>
+  CONV_TAC (LAND_CONV (REWRITE_CONV [NUMERAL_DEF, BIT1])) >>
+  simp[]
+QED
 
 val POW_LT = store_thm("POW_LT",
   “!n x y. 0 <= x /\ x < y ==> (x pow (SUC n)) < (y pow (SUC n))”,
@@ -3967,6 +3989,13 @@ Theorem nonzerop_0[simp]:
   nonzerop 0 = 0
 Proof
   rw[nonzerop_def]
+QED
+
+Theorem nonzerop_NUMERAL[simp]:
+  (NZ (&NUMERAL (BIT1 n)) = 1) /\ (NZ (&NUMERAL (BIT2 n)) = 1)
+Proof
+  REWRITE_TAC[NUMERAL_DEF, BIT1, BIT2, ALT_ZERO, ADD_CLAUSES,
+              nonzerop_def, REAL_OF_NUM_EQ, NOT_SUC]
 QED
 
 Theorem REAL_INV_nonzerop:
