@@ -5245,40 +5245,40 @@ Proof
  >> STRIP_ASSUME_TAC (Q.SPEC `b / e` SIMP_REAL_ARCH)
  >> Q.EXISTS_TAC `n`
  >> Q.X_GEN_TAC `m` >> DISCH_TAC
- >> `variance p (S (SUC m)) <= Normal (&SUC m * b)` by PROVE_TAC []
+ >> `variance p (S (SUC m)) <= Normal (b * &SUC m)`
+       by PROVE_TAC [REAL_MUL_COMM] (* `b * &n` in assumption *)
  >> `?v. variance p (S (SUC m)) = Normal v` by METIS_TAC [extreal_cases]
  >> `0 <= v` by METIS_TAC [variance_pos, extreal_of_num_def, extreal_le_eq]
  >> Q.PAT_X_ASSUM `_ = Normal v`
       (fn th => fs [th, extreal_of_num_def, extreal_le_eq,
                     extreal_mul_def, real_normal])
- >> Know `abs (inv (&SUC m) pow 2 * v) = inv (&SUC m) pow 2 * v`
+ >> Know `abs (v * inv (&SUC m) pow 2) = v * inv (&SUC m) pow 2`
  >- (rw [] >> MATCH_MP_TAC REAL_LE_MUL >> art [] \\
      MATCH_MP_TAC POW_POS \\
      MATCH_MP_TAC REAL_LT_IMP_LE \\
      MATCH_MP_TAC REAL_INV_POS >> RW_TAC real_ss []) >> Rewr'
  >> MATCH_MP_TAC REAL_LET_TRANS
- >> Q.EXISTS_TAC `inv (&SUC m) pow 2 * (&SUC m) * b`
+ >> Q.EXISTS_TAC `b * (&SUC m) * inv (&SUC m) pow 2`
  >> CONJ_TAC
- >- (REWRITE_TAC [GSYM REAL_MUL_ASSOC] \\
-     Know `(0 :real) < inv (&SUC m) pow 2`
+ >- (Know `(0 :real) < inv (&SUC m) pow 2`
      >- (MATCH_MP_TAC REAL_POW_LT \\
          MATCH_MP_TAC REAL_INV_POS >> RW_TAC real_ss []) \\
-     DISCH_THEN (MP_TAC o (MATCH_MP REAL_LE_LMUL)) >> Rewr' >> art [])
+     DISCH_THEN (MP_TAC o (MATCH_MP REAL_LE_RMUL)) >> Rewr' >> art [])
  >> REWRITE_TAC [POW_2]
  >> `&n <= &m :real` by (RW_TAC real_ss [])
  >> `b / e <= &m` by PROVE_TAC [REAL_LE_TRANS]
  >> `b <= e * &m` by METIS_TAC [REAL_LE_LDIV_EQ, REAL_MUL_COMM]
- >> Know `inv (&SUC m) * &SUC m = (1 :real)`
- >- (ONCE_REWRITE_TAC [REAL_MUL_COMM] \\
-     MATCH_MP_TAC REAL_MUL_RINV >> RW_TAC real_ss []) >> DISCH_TAC
- >> REWRITE_TAC [GSYM REAL_MUL_ASSOC]
- >> Know `realinv (&SUC m) * (&SUC m * b) = b`
- >- (rw [REAL_MUL_ASSOC]) >> Rewr'
+ >> Know `(&SUC m) * inv (&SUC m) = (1 :real)`
+ >- (MATCH_MP_TAC REAL_MUL_RINV >> RW_TAC real_ss []) >> DISCH_TAC
+ >> REWRITE_TAC [REAL_MUL_ASSOC]
+ >> Know `b * (&SUC m) * inv (&SUC m) = b`
+ >- (ASM_SIMP_TAC real_ss [GSYM REAL_MUL_ASSOC]) >> Rewr'
+ >> ONCE_REWRITE_TAC [REAL_MUL_COMM]
  >> Know `inv (&SUC m) * b < e <=> (&SUC m) * inv (&SUC m) * b < (&SUC m) * e`
  >- (MATCH_MP_TAC EQ_SYM \\
      ONCE_REWRITE_TAC [GSYM REAL_MUL_ASSOC] \\
      MATCH_MP_TAC REAL_LT_LMUL >> RW_TAC real_ss []) >> Rewr'
- >> POP_ASSUM (ONCE_REWRITE_TAC o wrap o (ONCE_REWRITE_RULE [REAL_MUL_COMM]))
+ >> POP_ORW
  >> rw [Once REAL_MUL_COMM]
  >> MATCH_MP_TAC REAL_LET_TRANS
  >> Q.EXISTS_TAC `e * &m` >> art []
