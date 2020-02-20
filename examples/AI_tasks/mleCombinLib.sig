@@ -14,9 +14,9 @@ sig
   val string_to_pos: string -> pose list
   val pos_compare : pose list * pose list -> order
   val next_pos : pose list -> pose list
-  
+
   (* combinator datatype *)
-  datatype combin = V1 | V2 | V3 | S | K | A of combin * combin 
+  datatype combin = V1 | V2 | V3 | S | K | A of combin * combin
   val combin_to_string : combin -> string
   val string_to_combin : string -> combin
   val combin_to_cterm : combin -> term
@@ -26,9 +26,9 @@ sig
   val strip_A : combin -> combin list
   val list_mk_cA : term list -> term
   val list_mk_A : combin list -> combin
-  
+
   (* normalization *)
-  val combin_norm : int -> combin -> combin option 
+  val combin_norm : int -> combin -> combin option
 
   (* problem generation *)
   val gen_headnf : int ->

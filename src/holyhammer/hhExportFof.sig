@@ -4,7 +4,7 @@ sig
 include Abbrev
 
   type thmid = string * string
-  
+
   val type_flag : bool ref
   val p_flag : bool ref
   val name_flag : bool ref

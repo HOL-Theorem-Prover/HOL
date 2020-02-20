@@ -2,12 +2,12 @@ signature mleDiophLib =
 sig
 
   include Abbrev
-  
+
   type graph = bool list
   val graph_compare : graph * graph -> order
   val graph_to_string : bool list -> string
   val string_to_graph : string -> bool list
-  val graph_to_il : bool list -> int list  
+  val graph_to_il : bool list -> int list
 
   type poly = int list list
   val poly_compare : poly * poly -> order

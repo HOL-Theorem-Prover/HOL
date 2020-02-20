@@ -74,9 +74,9 @@ fun debug_ep obj mctsobj dis root =
     val {game,player,mctsparam} = mctsobj
     val old_eval = #value root
     val new_eval = #sum root / #vis root
-    fun f1 (((move,r),_),_) = 
-      pretty_real r  ^ ": " ^ #string_of_move game move 
-    fun f2 (((move,_),_),r) = 
+    fun f1 (((move,r),_),_) =
+      pretty_real r  ^ ": " ^ #string_of_move game move
+    fun f2 (((move,_),_),r) =
       pretty_real r  ^ ": " ^ #string_of_move game move
   in
     print_endline ("Old Eval: " ^ pretty_real old_eval);
@@ -89,8 +89,8 @@ fun debug_ep obj mctsobj dis root =
 fun select_bigstep obj mctsobj tree =
   let
     val (dis,_) = mk_dis tree
-    val (_,cid) = if #temp_flag obj 
-      then select_in_distrib dis 
+    val (_,cid) = if #temp_flag obj
+      then select_in_distrib dis
       else best_in_distrib dis
     val _ = debug_ep obj mctsobj dis (dfind [] tree)
   in
@@ -128,10 +128,10 @@ type ('a,'b) bsobj =
   }
 
 fun debug_board b game board =
-  if b 
-  then print_endline ("\nBoard\n" ^ (#string_of_board game) board) 
+  if b
+  then print_endline ("\nBoard\n" ^ (#string_of_board game) board)
   else ()
-  
+
 (* rootl and rlex are reversed *)
 fun loop_bigsteps bsobj mctsobj (rlex,rootl) (tree,cache) =
   let
@@ -144,8 +144,8 @@ fun loop_bigsteps bsobj mctsobj (rlex,rootl) (tree,cache) =
       val (endtree,_) = mcts mctsobj (tree,cache)
       val root = dfind [] endtree
       val cid = select_bigstep bsobj mctsobj endtree
-      val newtree = 
-        (if #noise_root mctsparam then add_rootnoise mctsparam else I) 
+      val newtree =
+        (if #noise_root mctsparam then add_rootnoise mctsparam else I)
         (cut_tree cid endtree)
       val newcache = build_cache game newtree
       val newrlex = add_rootex game endtree rlex
@@ -165,7 +165,7 @@ fun run_bigsteps bsobj target =
       }
     val (tree,cache) = starttree_of mctsobj target
     val mctsparam = #mctsparam bsobj
-    val tree' = 
+    val tree' =
       (if #noise_root mctsparam then add_rootnoise mctsparam else I) tree
   in
     loop_bigsteps bsobj mctsobj ([],[]) (tree',cache)

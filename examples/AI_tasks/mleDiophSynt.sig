@@ -13,13 +13,13 @@ sig
   val export_targetl : string -> board list -> unit
   val import_targetl : string -> board list
   val mk_targetd : board list -> (board, int * bool list) Redblackmap.dict
-  
+
   (* reinforcement learning *)
   val extsearch : board mlReinforce.es
   val rlobj : (board,move) mlReinforce.rlobj
 
   (* mcts for manual inspection *)
-  val solve_target : (bool * real * tnn) -> board -> (board,move) psMCTS.tree    
+  val solve_target : (bool * real * tnn) -> board -> (board,move) psMCTS.tree
   val solve_diophset : (bool * real * tnn) -> int list -> unit
 
   (* final testing *)

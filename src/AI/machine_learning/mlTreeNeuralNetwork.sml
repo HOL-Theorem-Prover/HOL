@@ -25,26 +25,26 @@ type tnn = (term,nn) Redblackmap.dict
 fun oper_nn diml = case diml of
     [] => raise ERR "oper_nn" ""
   | a :: m =>
-    if a = 0 
-    then random_nn (idactiv,didactiv) [0,last m] 
+    if a = 0
+    then random_nn (idactiv,didactiv) [0,last m]
     else random_nn (tanh,dtanh) diml
 
 fun random_tnn tnnparam = dnew Term.compare (map_snd oper_nn tnnparam)
 
 fun dim_std (nlayer,dim) oper =
-  let 
-    val a = arity_of oper 
-    val dim_alt = 
+  let
+    val a = arity_of oper
+    val dim_alt =
       if is_var oper andalso String.isPrefix "head_" (fst (dest_var oper))
       then 1
       else dim
-  in  
-    (if a = 0 then [0] else List.tabulate (nlayer, fn _ => a * dim)) @ 
+  in
+    (if a = 0 then [0] else List.tabulate (nlayer, fn _ => a * dim)) @
     [dim_alt]
   end
 
 fun random_tnn_std (nlayer,dim) operl =
-  random_tnn (map_assoc (dim_std (nlayer,dim)) operl) 
+  random_tnn (map_assoc (dim_std (nlayer,dim)) operl)
 
 (* -------------------------------------------------------------------------
    TNN I/O
@@ -53,22 +53,22 @@ fun random_tnn_std (nlayer,dim) operl =
 fun write_tnn file tnn =
   let val (l1,l2) = split (dlist tnn) in
     export_terml (file ^ "_oper") l1;
-    writel (file ^ "_nn") 
+    writel (file ^ "_nn")
       [String.concatWith "\n\nnnstop\n\n" (map string_of_nn l2)]
   end
 
 fun read_tnn file =
   let
-    val l1 = import_terml (file ^ "_oper") 
+    val l1 = import_terml (file ^ "_oper")
     val l2 = map read_nn_sl (rpt_split_sl "nnstop" (readl (file ^ "_nn")))
   in
     dnew Term.compare (combine (l1,l2))
   end
 
 fun write_tnnparam file tnnparam =
-  let 
+  let
     fun ilts x = String.concatWith " " (map its x)
-    val (l1,l2) = split tnnparam 
+    val (l1,l2) = split tnnparam
   in
     export_terml (file ^ "_oper") l1;
     writel (file ^ "_diml") (map ilts l2)
@@ -76,7 +76,7 @@ fun write_tnnparam file tnnparam =
 
 fun read_tnnparam file =
   let
-    val l1 = import_terml (file ^ "_oper") 
+    val l1 = import_terml (file ^ "_oper")
     fun stil s = map string_to_int (String.tokens Char.isSpace s)
     val l2 = map stil (readl (file ^ "_diml"))
   in
@@ -99,7 +99,7 @@ fun write_tnnex file ex =
 fun read_tnnex file =
   let
     val tml = import_terml (file ^ "_term")
-    val rll = map string_to_reall (readl (file ^ "_reall")) 
+    val rll = map string_to_reall (readl (file ^ "_reall"))
     val ex = combine (tml,rll)
     val groupl = map string_to_int (readl (file ^ "_group"))
   in
@@ -113,9 +113,9 @@ fun read_tnnex file =
 fun order_subtm tml =
   let
     val d = ref (dempty (cpl_compare Int.compare Term.compare))
-    fun traverse tm = 
-      let 
-        val (oper,argl) = strip_comb tm 
+    fun traverse tm =
+      let
+        val (oper,argl) = strip_comb tm
         val nl = map traverse argl
         val n = 1 + sum_int nl
       in
@@ -127,7 +127,7 @@ fun order_subtm tml =
   end
 
 fun prepare_tnnex tnnex =
-  let fun f x = (order_subtm (map fst x), map_snd scale_out x) in 
+  let fun f x = (order_subtm (map fst x), map_snd scale_out x) in
     map f tnnex
   end
 
@@ -174,8 +174,8 @@ fun fp_oper tnn fpdict tm =
 
 fun fp_tnn_aux tnn fpdict tml = case tml of
     []      => fpdict
-  | tm :: m => 
-    let val fpdatal = fp_oper tnn fpdict tm in 
+  | tm :: m =>
+    let val fpdatal = fp_oper tnn fpdict tm in
       fp_tnn_aux tnn (dadd tm fpdatal fpdict) m
     end
 
@@ -217,7 +217,7 @@ fun bp_tnn_aux doutnvdict fpdict bpdict revtml = case revtml of
     end
 
 fun bp_tnn fpdict (tml,tmevl) =
-  let 
+  let
     fun f (tm,ev) =
       let
         val fpdatal = dfind tm fpdict
@@ -235,16 +235,16 @@ fun bp_tnn fpdict (tml,tmevl) =
    ------------------------------------------------------------------------- *)
 
 fun infer_tnn tnn tml =
-  let 
-    val fpdict = fp_tnn tnn (order_subtm tml) 
+  let
+    val fpdict = fp_tnn tnn (order_subtm tml)
     fun f x = descale_out (#outnv (last (dfind x fpdict)))
   in
     map_assoc f tml
   end
 
 fun precomp_embed tnn tm =
-  let 
-    val fpdict = fp_tnn tnn (order_subtm [tm]) 
+  let
+    val fpdict = fp_tnn tnn (order_subtm [tm])
     val embedv = #outnv (last (dfind tm fpdict))
   in
     mk_embedding_var (embedv, type_of tm)
@@ -261,7 +261,7 @@ fun se_of fpdict (tm,ev) =
     val r1 = vector_to_list doutnv
     val r2 = map (fn x => x * x) r1
   in
-    Math.sqrt (average_real r2) 
+    Math.sqrt (average_real r2)
   end
 
 fun mse_of fpdict tmevl = average_real (map (se_of fpdict) tmevl)
@@ -269,13 +269,13 @@ fun mse_of fpdict tmevl = average_real (map (se_of fpdict) tmevl)
 fun fp_loss tnn (tml,tmevl) = mse_of (fp_tnn tnn tml) tmevl
 
 fun train_tnn_one tnn (tml,tmevl) =
-  let 
+  let
     val fpdict = fp_tnn tnn tml
     val bpdict = bp_tnn fpdict (tml,tmevl)
   in
     (bpdict, mse_of fpdict tmevl)
   end
- 
+
 fun train_tnn_subbatch tnn subbatch =
   let val (bpdictl,lossl) = split (map (train_tnn_one tnn) subbatch) in
     (dmap sum_operdwll (dconcat Term.compare bpdictl), lossl)
@@ -297,7 +297,7 @@ fun train_tnn_batch param pf tnn batch =
     val (bpdictl,lossll) = split (pf (train_tnn_subbatch tnn) subbatchl)
     val bpdict = dconcat Term.compare bpdictl
   in
-    (foldl (update_oper param) tnn (dlist bpdict), 
+    (foldl (update_oper param) tnn (dlist bpdict),
      average_real (List.concat lossll))
   end
 
@@ -316,7 +316,7 @@ fun train_tnn_nepoch param pf i tnn (train,test) =
     val (newtnn,loss) = train_tnn_epoch param pf [] tnn batchl
     val testloss = if null test then "" else
       (" test: " ^ pretty_real (average_real (map (fp_loss newtnn) test)))
-     val _ = msg param (its i ^ " train: " ^ pretty_real loss ^ testloss)  
+     val _ = msg param (its i ^ " train: " ^ pretty_real loss ^ testloss)
   in
     train_tnn_nepoch param pf (i+1) newtnn (train,test)
   end
@@ -335,13 +335,13 @@ fun train_tnn_schedule schedule tnn (train,test) =
       (close_threadl (); r)
     end
 
-fun stats_head (oper,rll) = 
-  let 
+fun stats_head (oper,rll) =
+  let
     val s1 = "\n  length: " ^ its (length rll)
     val rll' = list_combine rll
-    val s2 = "\n  means: " ^ 
+    val s2 = "\n  means: " ^
       String.concatWith " " (map (pretty_real o average_real) rll')
-    val s3 = "\n  standard deviations: " ^ 
+    val s3 = "\n  standard deviations: " ^
       String.concatWith " " (map (pretty_real o standard_deviation) rll')
   in
     tts oper ^ s1 ^ s2 ^ s3
@@ -351,8 +351,8 @@ fun output_info ex =
   if null ex then " empty" else
   let
     fun oper_of tm = fst (strip_comb tm)
-    val d = dregroup Term.compare (map_fst oper_of (List.concat ex)) 
-  in  
+    val d = dregroup Term.compare (map_fst oper_of (List.concat ex))
+  in
     "total length: " ^ its (length ex) ^ "\n\n" ^
     String.concatWith "\n\n" (map stats_head (dlist d))
   end
@@ -361,7 +361,7 @@ fun train_tnn schedule randtnn (trainex,testex) =
   let
     val _ = print_endline ("training set statistics:\n" ^ output_info trainex)
     val _ = print_endline ("testing set statistics:\n" ^ output_info testex)
-    val (tnn,t) = add_time (train_tnn_schedule schedule randtnn) 
+    val (tnn,t) = add_time (train_tnn_schedule schedule randtnn)
       (prepare_tnnex trainex, prepare_tnnex testex)
   in
     print_endline ("Tree neural network training time: " ^ rts t); tnn

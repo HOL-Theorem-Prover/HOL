@@ -21,9 +21,9 @@ val selfdir = HOLDIR ^ "/examples/AI_tasks"
    V1 used as a meta variable in the synthesized combinator.
    ------------------------------------------------------------------------- *)
 
-type board = combin * combin * int  
+type board = combin * combin * int
 
-fun string_of_board (c1,c2,n)= 
+fun string_of_board (c1,c2,n)=
   combin_to_string c1 ^ "\n" ^ combin_to_string c2 ^ "\n" ^ its n
 
 fun board_compare ((a,b,c),(d,e,f)) =
@@ -34,12 +34,12 @@ fun fullboard_compare ((a,b,c),(d,e,f)) =
 
 fun ignore_metavar c = case c of
     A(c1,V1) => ignore_metavar c1
-  | A(c1,c2) => A(c1, ignore_metavar c2) 
+  | A(c1,c2) => A(c1, ignore_metavar c2)
   | S => S
   | K => K
   | _ => raise ERR "ignore_metavar" ""
 
-fun no_metavar c = case c of    
+fun no_metavar c = case c of
     A(c1,c2) => no_metavar c1 andalso no_metavar c2
   | V1 => false
   | _ => true
@@ -48,7 +48,7 @@ fun status_of (c1,c2,n) =
   if c1 = V1 then Undecided else
   let
     val c1' = ignore_metavar c1
-    val nfo = combin_norm 100 (A(A(A(c1',V1),V2),V3)) 
+    val nfo = combin_norm 100 (A(A(A(c1',V1),V2),V3))
   in
     if isSome nfo andalso valOf nfo = c2 then Win
     else if n <= 0 then Lose else Undecided
@@ -69,7 +69,7 @@ fun string_of_move move = case move of
   | K0 => "K0"
   | K1 => "K1"
 
-fun move_compare (m1,m2) = 
+fun move_compare (m1,m2) =
   String.compare (string_of_move m1, string_of_move m2)
 
 fun res_of_move move = case move of
@@ -80,10 +80,10 @@ fun res_of_move move = case move of
   | K1 => A(K,V1)
 
 fun replace_metavar move c = case c of
-    A(c1,c2) => 
+    A(c1,c2) =>
     let val c1o = replace_metavar move c1 in
       case c1o of
-        NONE => 
+        NONE =>
         let val c2o = replace_metavar move c2 in
           case c2o of NONE => NONE | SOME c2new => SOME (A(c1,c2new))
         end
@@ -92,15 +92,15 @@ fun replace_metavar move c = case c of
   | V1 => SOME (res_of_move move)
   | _ => NONE
 
-exception Break;  
+exception Break;
 
 fun apply_move move (c1,c2,n) =
   (let val c1new = valOf (replace_metavar move c1) in
-     if no_metavar c1new then raise Break else c1new 
-   end, 
-   c2, n-1)  
+     if no_metavar c1new then raise Break else c1new
+   end,
+   c2, n-1)
 
-fun available_movel board = 
+fun available_movel board =
   ((ignore ((apply_move S0) board); movel) handle Break => [S1,S2,K1])
 
 (* -------------------------------------------------------------------------
@@ -124,11 +124,11 @@ val game : (board,move) game =
    ------------------------------------------------------------------------- *)
 
 fun write_boardl file boardl =
-  let 
-    val (l1,l2,l3) = split_triple boardl 
+  let
+    val (l1,l2,l3) = split_triple boardl
   in
     export_terml (file ^ "_witness") (map combin_to_cterm l1);
-    export_terml (file ^ "_headnf") (map combin_to_cterm l2); 
+    export_terml (file ^ "_headnf") (map combin_to_cterm l2);
     writel (file ^ "_timer") (map its l3)
   end
 
@@ -150,7 +150,7 @@ val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
 val targetdir = selfdir ^ "/combin_target"
 
 fun create_targetl l =
-  let 
+  let
     val (train,test) = part_pct (10.0/11.0) (shuffle l)
     val _ = export_data (train,test)
     fun f (headnf,combin) = (V1, headnf, 2 * combin_size combin)
@@ -159,15 +159,15 @@ fun create_targetl l =
      dict_sort fullboard_compare (map f test))
   end
 
-fun export_targetl name targetl = 
-  let val _ = mkDir_err targetdir in 
+fun export_targetl name targetl =
+  let val _ = mkDir_err targetdir in
     write_boardl (targetdir ^ "/" ^ name) targetl
   end
 
 fun import_targetl name = read_boardl (targetdir ^ "/" ^ name)
- 
+
 fun mk_targetd l1 =
-  let 
+  let
     val l2 = number_snd 0 l1
     val l3 = map (fn (x,i) => (x,(i,[]))) l2
   in
@@ -204,9 +204,9 @@ val v3a2 = mk_var ("v3a2",``:'a -> 'a -> 'a``)
 val v3a3 = mk_var ("v3a3",``:'a -> 'a -> 'a -> 'a``)
 val v3a4 = mk_var ("v3a4",``:'a -> 'a -> 'a -> 'a -> 'a``)
 val metavar = mk_var ("metavar",``:'a``)
-val skvarl = 
+val skvarl =
   [cS0,cS1,cS2,cK0,cK1,
-   v1a0,v1a1,v1a2,v1a3,v1a4, 
+   v1a0,v1a1,v1a2,v1a3,v1a4,
    v2a0,v2a1,v2a2,v2a3,v2a4,
    v3a0,v3a1,v3a2,v3a3,v3a4,metavar]
 
@@ -220,47 +220,47 @@ fun witness_to_nntm combin = case combin of
   | _ => raise ERR "witness_to_nntm" (combin_to_string combin)
 
 fun headnf_to_nntm combin = case combin of
-    A(A(A(A(V1,x),y),z),w) => 
+    A(A(A(A(V1,x),y),z),w) =>
     list_mk_comb (v1a4, map headnf_to_nntm [x,y,z,w])
   | A(A(A(V1,x),y),z) =>
     list_mk_comb (v1a3, map headnf_to_nntm [x,y,z])
-  | A(A(V1,x),y) => 
+  | A(A(V1,x),y) =>
     list_mk_comb (v1a2, map headnf_to_nntm [x,y])
   | A(V1,x) => mk_comb (v1a1, headnf_to_nntm x)
   | V1 => v1a0
-  | A(A(A(A(V2,x),y),z),w) => 
+  | A(A(A(A(V2,x),y),z),w) =>
     list_mk_comb (v2a4, map headnf_to_nntm [x,y,z,w])
   | A(A(A(V2,x),y),z) =>
     list_mk_comb (v2a3, map headnf_to_nntm [x,y,z])
-  | A(A(V2,x),y) => 
+  | A(A(V2,x),y) =>
     list_mk_comb (v2a2, map headnf_to_nntm [x,y])
   | A(V2,x) => mk_comb (v2a1, headnf_to_nntm x)
   | V2 => v2a0
-  | A(A(A(A(V3,x),y),z),w) => 
+  | A(A(A(A(V3,x),y),z),w) =>
     list_mk_comb (v3a4, map headnf_to_nntm [x,y,z,w])
   | A(A(A(V3,x),y),z) =>
     list_mk_comb (v3a3, map headnf_to_nntm [x,y,z])
-  | A(A(V3,x),y) => 
+  | A(A(V3,x),y) =>
     list_mk_comb (v3a2, map headnf_to_nntm [x,y])
   | A(V3,x) => mk_comb (v3a1, headnf_to_nntm x)
   | V3 => v3a0
   | _ => raise ERR "headnf_to_nntm" ""
 
-fun convert_pos pos = 
+fun convert_pos pos =
   let fun f x = case x of Left => 0 | Right => 1 in
     map f pos
   end
 
-fun tob1 (c1,c2,_) = 
-  let 
+fun tob1 (c1,c2,_) =
+  let
     val (tm1,tm2) = (witness_to_nntm c1, headnf_to_nntm c2)
     val tm = mk_eq (tm1,tm2)
   in
     [tag_heval tm, tag_hpoli tm]
   end
 
-fun tob2 embedv (c1,_,_) = 
-  let 
+fun tob2 embedv (c1,_,_) =
+  let
     val (tm1,tm2) = (witness_to_nntm c1, embedv)
     val tm = mk_eq (tm1,tm2)
   in
@@ -269,7 +269,7 @@ fun tob2 embedv (c1,_,_) =
 
 fun pretob boardtnno = case boardtnno of
     NONE => tob1
-  | SOME ((_,headnf,_),tnn) => 
+  | SOME ((_,headnf,_),tnn) =>
     tob2 (precomp_embed tnn (headnf_to_nntm headnf))
 
 (* -------------------------------------------------------------------------
@@ -282,8 +282,8 @@ val schedule =
 
 val dim = 16
 fun dim_head_poli n = [dim,n]
-val tnnparam = map_assoc (dim_std (1,dim)) 
-  ([``$= : 'a -> 'a -> bool``] @ skvarl) @ 
+val tnnparam = map_assoc (dim_std (1,dim))
+  ([``$= : 'a -> 'a -> bool``] @ skvarl) @
   [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
 
 val dplayer = {pretob = pretob, tnnparam = tnnparam, schedule = schedule}
@@ -305,9 +305,9 @@ val extsearch = mk_extsearch "mleCombinSynt.extsearch" rlobj
    Final test
    ------------------------------------------------------------------------- *)
 
-val ft_extsearch_uniform = 
+val ft_extsearch_uniform =
   ft_mk_extsearch "mleCombinSynt.ft_extsearch_uniform" rlobj
-    (uniform_player game) 
+    (uniform_player game)
 
 val fttnn_extsearch =
   fttnn_mk_extsearch "mleCombinSynt.fttnn_extsearch" rlobj
@@ -359,7 +359,7 @@ val mctsparam =
   };
 
 val game = #game rlobj;
-val mctsobj = {game = game, mctsparam = mctsparam, 
+val mctsobj = {game = game, mctsparam = mctsparam,
   player =  psMCTS.random_player (#game rlobj)};
 
 val headnf = A(V2,(list_mk_A[V1,V2,V3]));
@@ -381,16 +381,16 @@ load "mleCombinSynt"; open mleCombinSynt;
 
 val dir1 = HOLDIR ^ "/examples/AI_tasks/combin_results";
 val _ = mkDir_err dir1;
-fun store_result dir (a,i) = 
+fun store_result dir (a,i) =
   #write_result ft_extsearch_uniform (dir ^ "/" ^ its i) a;
 
 (*** Test ***)
 val dataset = "test";
-val pretargetl = import_targetl dataset; 
-val targetl = map (fn (a,b,_) => (a,b,1000000)) pretargetl; 
-length targetl; 
+val pretargetl = import_targetl dataset;
+val targetl = map (fn (a,b,_) => (a,b,1000000)) pretargetl;
+length targetl;
 (* uniform *)
-val (l1',t) = 
+val (l1',t) =
   add_time (parmap_queue_extern 20 ft_extsearch_uniform ()) targetl;
 val winb = filter I (map #1 l1'); length winb;
 val dir2 = dir1 ^ "/" ^ dataset ^ "_uniform";
@@ -404,9 +404,9 @@ val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l2');
 
 (*** Train ***)
 val dataset = "train";
-val pretargetl = import_targetl dataset; 
-val targetl = map (fn (a,b,_) => (a,b,1000000)) pretargetl; 
-length targetl; 
+val pretargetl = import_targetl dataset;
+val targetl = map (fn (a,b,_) => (a,b,1000000)) pretargetl;
+length targetl;
 (* uniform *)
 val (l1,t) = add_time (parmap_queue_extern 20 ft_extsearch_uniform ()) targetl;
 val winb = filter I (map #1 l1); length winb;

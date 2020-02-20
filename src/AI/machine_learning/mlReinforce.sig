@@ -19,19 +19,19 @@ sig
 
   (* players *)
   type splayer = bool * tnn * bool * int
-  type 'a dplayer = 
-    {pretob : ('a * tnn) option -> 'a -> term list, 
+  type 'a dplayer =
+    {pretob : ('a * tnn) option -> 'a -> term list,
      schedule : schedule, tnnparam : tnnparam}
-  val player_from_tnn : 
-    tnn -> ('a -> term list) -> ('a,'b) psMCTS.game -> 'a -> 
+  val player_from_tnn :
+    tnn -> ('a -> term list) -> ('a,'b) psMCTS.game -> 'a ->
     (real * ('b * real) list)
-  
+
   (* parallelization of the search *)
   type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
 
   (* reinforcement learning parameters *)
   type rlparam =
-    {expname : string, exwindow : int, ncore : int, 
+    {expname : string, exwindow : int, ncore : int,
      ntarget : int, nsim : int, decay : real}
   type ('a,'b) rlobj =
     {
@@ -45,13 +45,13 @@ sig
 
   (* storage *)
   val log : ('a,'b) rlobj -> string -> unit
-  val store_rlex : ('a,'b) rlobj -> int -> 'a rlex -> unit  
+  val store_rlex : ('a,'b) rlobj -> int -> 'a rlex -> unit
   val retrieve_rlex : ('a,'b) rlobj -> int -> 'a rlex
   val store_tnn : ('a,'b) rlobj -> int -> tnn -> unit
   val retrieve_tnn : ('a,'b) rlobj -> int -> tnn
   val store_targetd : ('a,'b) rlobj -> int -> 'a targetd -> unit
   val retrieve_targetd : ('a,'b) rlobj -> int -> 'a targetd
-  
+
   (* main functions *)
   val rl_start : ('a,'b) rlobj * 'a es -> 'a targetd -> unit
   val rl_restart : int -> ('a,'b) rlobj * 'a es -> 'a targetd -> unit
@@ -59,7 +59,7 @@ sig
   (* final testing *)
   type 'a ftes = (unit, 'a, bool * int * 'a option) smlParallel.extspec
   type 'a fttnnes = (tnn, 'a, bool * int * 'a option) smlParallel.extspec
-  val ft_mk_extsearch : string -> ('a,'b) rlobj -> 
+  val ft_mk_extsearch : string -> ('a,'b) rlobj ->
     ('a,'b) psMCTS.player -> 'a ftes
   val fttnn_mk_extsearch : string -> ('a,'b) rlobj -> 'a fttnnes
   val fttnnbs_mk_extsearch : string -> ('a,'b) rlobj -> 'a fttnnes

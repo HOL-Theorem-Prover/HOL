@@ -3,6 +3,6 @@ sig
 
   include Abbrev
 
-  val COMBIN_PROVE : term * term -> thm 
+  val COMBIN_PROVE : term * term -> thm
 
 end

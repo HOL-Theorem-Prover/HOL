@@ -30,15 +30,15 @@ val cC = mk_var ("c",alpha);
    ------------------------------------------------------------------------- *)
 
 fun COMBIN_PROVE (witness,headnf) =
-  let   
+  let
     val eq = mk_eq (list_mk_cA [cC,v1,v2,v3],headnf)
     val prop = list_mk_forall ([v1,v2,v3],eq)
     val goal = (eq_axl, subst [{redex = cC, residue = witness}] prop)
   in
     TAC_PROOF (goal, ASM_REWRITE_TAC [])
   end
-    
-(* 
+
+(*
 load "aiLib"; open aiLib;
 load "mleCombinProve"; open mleCombinProve;
 val witness = cK;
@@ -59,7 +59,7 @@ load "mleCombinProve"; open mleCombinProve;
 val dir2 = HOLDIR ^ "/examples/AI_tasks/combin_results/test_tnn_nolimit";
 fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
 val boardl = mapfilter (valOf o #3) (List.tabulate (200,g)); length boardl;
-val pairl = map (fn (a,b,_) => 
+val pairl = map (fn (a,b,_) =>
   (combin_to_cterm (ignore_metavar a), combin_to_cterm b)) boardl;
 
 val (thml,t) = add_time (map COMBIN_PROVE) pairl; length thml;
@@ -69,10 +69,10 @@ fun f_charl cl = case cl of
   | [a] => [a]
   | a :: b :: m => if Char.isSpace a andalso Char.isSpace b
                    then f (b :: m)
-                   else if Char.isSpace a 
+                   else if Char.isSpace a
                    then #" " :: f ( b :: m)
 val minspace = implode o f o explode;
-val _ = writel (dir2 ^ "/theorems") 
+val _ = writel (dir2 ^ "/theorems")
   (map (minspace o string_of_goal o dest_thm) thml);
 *)
 

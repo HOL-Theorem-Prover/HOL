@@ -9,7 +9,7 @@
 structure mleDiophProve :> mleDiophProve =
 struct
 
-open HolKernel Abbrev boolLib aiLib numTheory arithmeticTheory 
+open HolKernel Abbrev boolLib aiLib numTheory arithmeticTheory
 pred_setTheory numSyntax
 
 val ERR = mk_HOL_ERR "mleDiophProve"
@@ -28,9 +28,9 @@ val vn = mk_var ("n",``:num``)
 val cP = mk_var ("p",``:num -> bool``);
 val cQ = mk_var ("q",``:num -> bool``);
 
-val disj16 = list_mk_disj 
+val disj16 = list_mk_disj
   (List.tabulate (16, fn i => (mk_eq (vn,term_of_int i))));
-  
+
 val tm16 = term_of_int 16
 fun mod16 x = mk_mod (x,tm16)
 fun less16 x = mk_less (x,tm16)
@@ -48,22 +48,22 @@ fun inst_v16 v thm = INST [{redex = v, residue = mk_mod (v,tm16)}] thm
 
 val goal:goal = ([], mk_eq (``n < 16``, disj16));
 
-fun CASES_LEFT_TAC goal = 
+fun CASES_LEFT_TAC goal =
   let val v = hd (free_vars_lr (snd goal)) in
     (SPEC_TAC (v,v) THEN Cases THENL [simp [],ALL_TAC]) goal
   end
 
-val LESS16 = TAC_PROOF (([],mk_eq (less16 vn,disj16)), 
+val LESS16 = TAC_PROOF (([],mk_eq (less16 vn,disj16)),
    NTAC 16 CASES_LEFT_TAC THEN simp []);
 
-val MOD16 = 
+val MOD16 =
   let val thm = TAC_PROOF (([],``n MOD 16 < 16``), simp []) in
     MATCH_MP (fst (EQ_IMP_RULE LESS16)) thm
   end
 
 val plenum = List.tabulate (16, fn x => mk_comb(cP,term_of_int x))
 val plgen = mk_imp (list_mk_conj plenum, mk_comb(cP,vn))
-val PRED16 = PROVE_HYP MOD16 
+val PRED16 = PROVE_HYP MOD16
    (inst_v16 vn (TAC_PROOF (([disj16],plgen), METIS_TAC [])));
 
 (* -------------------------------------------------------------------------
@@ -71,17 +71,17 @@ val PRED16 = PROVE_HYP MOD16
    ------------------------------------------------------------------------- *)
 
 val triplesubl =
-  let 
+  let
     val l = List.tabulate (16,I)
     val triplel = map triple_of_list (cartesian_productl [l,l,l])
-    fun f (a,b,c) = 
+    fun f (a,b,c) =
       [{redex = vx, residue = term_of_int a},
        {redex = vy, residue = term_of_int b},
        {redex = vz, residue = term_of_int c}]
   in
     map f triplel
   end
- 
+
 fun EXISTS_TRIPLE_TAC (xw,yw,zw) goal =
   let
     val sub = [{redex = vx, residue = xw},
@@ -105,9 +105,9 @@ fun POLY_EXISTS_SOL poly =
                EXISTS_TRIPLE_TAC (xw,yw,zw))
   end
 
-(* 
+(*
 load "mleDiophProve"; open mleDiophProve;
-val poly = ``2 + 14 * x * y * z``; 
+val poly = ``2 + 14 * x * y * z``;
 val thm = POLY_EXISTS_SOL poly;
 *)
 
@@ -115,7 +115,7 @@ val thm = POLY_EXISTS_SOL poly;
    Proves that a solution does not exist
    ------------------------------------------------------------------------- *)
 
-fun enumvar v tm = (tm, List.tabulate (16, 
+fun enumvar v tm = (tm, List.tabulate (16,
   fn x => subst [{redex = v, residue = term_of_int x}] tm))
 
 fun forall_enum v (gen,thml) =
@@ -127,11 +127,11 @@ fun forall_enum v (gen,thml) =
     PROVE_HYP (LIST_CONJ thml) convthm
   end
 
-fun forall_enumz (gen,thml) = 
+fun forall_enumz (gen,thml) =
   forall_enum vz (gen,thml)
-fun forall_enumy (gen,thml) = 
+fun forall_enumy (gen,thml) =
   forall_enum vy (subst [rep16 vz] gen, thml)
-fun forall_enumx (gen,thml) = 
+fun forall_enumx (gen,thml) =
   forall_enum vx (subst (map rep16 [vy,vz]) gen, thml)
 
 fun POLY_NEG_EXISTS_SOL poly =
@@ -139,7 +139,7 @@ fun POLY_NEG_EXISTS_SOL poly =
     val polyx = [enumvar vx poly]
     val polyxy = map_snd (map (enumvar vy)) polyx
     val polyxyz = (map_snd (map_snd (map (enumvar vz)))) polyxy
-    val polyxyzthm = 
+    val polyxyzthm =
       (map_snd (map_snd (map_snd (map (PROVE_EVAL o diff0))))) polyxyz
     val polyxythm = map_snd (map_snd (map forall_enumz)) polyxyzthm
     val polyxthm = map_snd (map forall_enumy) polyxythm
@@ -151,7 +151,7 @@ fun POLY_NEG_EXISTS_SOL poly =
     MP (snd (EQ_IMP_RULE convthm)) (GENL [vx,vy,vz] polythm)
   end
 
-(* 
+(*
 load "mleDiophProve"; open mleDiophProve;
 val poly = ``1 + 14 * x * y * z``;
 val thm = POLY_NEG_EXISTS_SOL poly;
@@ -161,39 +161,39 @@ val thm = POLY_NEG_EXISTS_SOL poly;
    Express the verified formula as an equality between sets
    ------------------------------------------------------------------------- *)
 
-val PQ16 = 
+val PQ16 =
   let
-    fun mk_pq i = 
+    fun mk_pq i =
       mk_eq (mk_comb (cP, term_of_int i), mk_comb (cQ, term_of_int i));
     val pqconjl = list_mk_conj (List.tabulate (16,mk_pq));
-    val goal = ([pqconjl],``(\k. k < 16 /\ p k) = (\n. n < 16 /\ q n)``) 
+    val goal = ([pqconjl],``(\k. k < 16 /\ p k) = (\n. n < 16 /\ q n)``)
   in
-    TAC_PROOF 
+    TAC_PROOF
       (goal, ABS_TAC THEN CONV_TAC (REWRITE_CONV [LESS16]) THEN METIS_TAC [])
   end
 
-val PQSET16 = 
+val PQSET16 =
   let val thm = METIS_PROVE []
      ``((p :num -> bool) = q) ==> ({u :num | p u} = {v :num | q v})``
   in
     HO_MATCH_MP thm PQ16
   end
 
-fun ENUMSET il = 
-  let 
+fun ENUMSET il =
+  let
     val disj = list_mk_disj (map (fn x => mk_eq (vn,term_of_int x)) il)
     val a = pred_setSyntax.mk_set_spec (vn,disj)
     val b = pred_setSyntax.mk_set (map term_of_int il)
   in
-    TAC_PROOF (([],mk_eq (a,b)), simp [EXTENSION,IN_SING,IN_INSERT])  
+    TAC_PROOF (([],mk_eq (a,b)), simp [EXTENSION,IN_SING,IN_INSERT])
   end
 
 fun CONJLESS16 il =
-  let 
+  let
     val disj = list_mk_disj (map (fn x => mk_eq (vn,term_of_int x)) il)
-    val disjless = mk_conj (less16 vn, disj)  
+    val disjless = mk_conj (less16 vn, disj)
   in
-    TAC_PROOF (([],mk_eq (disjless,disj)), METIS_TAC [LESS16])  
+    TAC_PROOF (([],mk_eq (disjless,disj)), METIS_TAC [LESS16])
   end
 
 (* -------------------------------------------------------------------------
@@ -207,13 +207,13 @@ fun PROVE_PQEQ poly il k =
     val poly16 = subst (map rep16 [vx,vy,vz]) poly
     val pdef = mk_abs (vk, list_mk_exists ([vx,vy,vz], eq0 poly16))
     val convthm = BETA_CONV (mk_comb (pdef,term_of_int k))
-    val thm1 = 
+    val thm1 =
       let val polyk = subst [{redex = vk, residue = term_of_int k}] poly in
-        if mem k il 
+        if mem k il
         then POLY_EXISTS_SOL polyk
         else POLY_NEG_EXISTS_SOL polyk
       end
-    val thm1' = PURE_ONCE_REWRITE_RULE [SYM convthm] thm1 
+    val thm1' = PURE_ONCE_REWRITE_RULE [SYM convthm] thm1
     val qtm = mk_comb (qdef,term_of_int k)
     val tac = CONV_TAC (TOP_DEPTH_CONV BETA_CONV) THEN DECIDE_TAC
     val thm2 = if mem k il
@@ -230,15 +230,15 @@ fun PROVE_PQEQ poly il k =
    ------------------------------------------------------------------------- *)
 
 fun DIOPH_PROVE (poly,il) =
-  let 
+  let
     val pql = List.tabulate (16, PROVE_PQEQ poly il)
     val pq = LIST_CONJ pql
     val pdef = (rator o lhs o concl o hd) pql
     val qdef = (rator o rhs o concl o hd) pql
-    val inst = (INST [{redex = cP, residue = pdef}, 
+    val inst = (INST [{redex = cP, residue = pdef},
                       {redex = cQ, residue = qdef}] PQSET16)
     val seteq = PROVE_HYP pq inst
-    val reduce = CONV_RULE (TOP_DEPTH_CONV BETA_CONV) seteq    
+    val reduce = CONV_RULE (TOP_DEPTH_CONV BETA_CONV) seteq
     val rmless16 = PURE_ONCE_REWRITE_RULE [CONJLESS16 il] reduce
   in
     PURE_ONCE_REWRITE_RULE [ENUMSET il] rmless16
@@ -248,7 +248,7 @@ fun DIOPH_PROVE (poly,il) =
 load "mleDiophProve"; open mleDiophProve;
 val poly = ``k + 14 * x * y * z``;
 val il = [0,2,4,6,8,10,12,14];
-val thm = DIOPH_PROVE poly il;
+val thm = DIOPH_PROVE (poly,il);
 *)
 
 (* -------------------------------------------------------------------------
@@ -274,10 +274,10 @@ fun f_charl cl = case cl of
   | [a] => [a]
   | a :: b :: m => if Char.isSpace a andalso Char.isSpace b
                    then f (b :: m)
-                   else if Char.isSpace a 
+                   else if Char.isSpace a
                    then #" " :: f ( b :: m)
 val minspace = implode o f o explode;
-val _ = writel (dir2 ^ "/__theorems") (map (minspace o string_of_goal o dest_thm) thml);
+val _ = writel (dir2 ^ "/theorems") (map (minspace o string_of_goal o dest_thm) thml);
 *)
 
 end (* struct *)

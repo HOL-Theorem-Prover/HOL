@@ -76,8 +76,8 @@ fun run_buildheap dir core_flag file =
     val filel = find_genscriptdep dir file
     val fileout = dir ^ "/buildheap_" ^ bare file
     val state =
-      if core_flag 
-      then HOLDIR ^ "/bin/hol.state0" 
+      if core_flag
+      then HOLDIR ^ "/bin/hol.state0"
       else find_heapname dir file
     val cmd =
       String.concatWith " "

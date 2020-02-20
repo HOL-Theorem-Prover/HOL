@@ -59,7 +59,7 @@ fun typearg_of_const tm =
     val {Thy, Name, Ty} = dest_thy_const tm
     val mgty = type_of (prim_mk_const {Thy = Thy, Name = Name})
     val subst = full_match_type mgty Ty
-  in 
+  in
     map #residue subst
   end
 
@@ -81,7 +81,7 @@ fun th1_tyop ty =
 fun th1b_thm (thy,name) = escape ("thm" ^ "." ^ thy ^ "." ^ name)
 
 (* -------------------------------------------------------------------------
-   S-expression escaping 
+   S-expression escaping
    Double quotes needed because lisp is not case senstive.
    ------------------------------------------------------------------------- *)
 
@@ -237,10 +237,10 @@ fun write_thy (f_tydef,f_constdef,f_thmdef,fb_thm) export_dir thy =
         Int.compare (depnumber_of_thm th1, depnumber_of_thm th2)
       val thml = dict_sort cmp (cjl @ axl)
     in
-      app (write_dep ocdep fb_thm thy) thml; 
+      app (write_dep ocdep fb_thm thy) thml;
       app (f_thmdef oc thy) thml;
       app TextIO.closeOut [oc,ocdep]
-    end 
+    end
     handle Interrupt => (app TextIO.closeOut [oc,ocdep]; raise Interrupt)
   end
 
@@ -249,7 +249,7 @@ fun write_thy (f_tydef,f_constdef,f_thmdef,fb_thm) export_dir thy =
    ------------------------------------------------------------------------- *)
 
 fun add_ancestry thy = thy :: ancestry thy
-fun sorted_ancestry thyl = 
+fun sorted_ancestry thyl =
   sort_thyl (mk_string_set (List.concat (map add_ancestry thyl)))
 
 fun sexpr_export thyl =
@@ -263,9 +263,9 @@ fun sexpr_export thyl =
     writel file [String.concatWith " " (sorted_ancestry thyl)]
   end
 
-(* 
+(*
 load "hhExportSexpr"; open hhExportSexpr;
-load "tttUnfold"; open tttUnfold; 
+load "tttUnfold"; open tttUnfold;
 load_sigobj ();
 val thyl = ancestry "scratch";
 sexport_export thyl;

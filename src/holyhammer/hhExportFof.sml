@@ -16,7 +16,7 @@ val type_flag = ref true
 val p_flag = ref true
 val name_flag = ref true
 val fofpar = "fof("
-fun nameplain_cv (cv,_:int) = 
+fun nameplain_cv (cv,_:int) =
   if is_const cv then fst (dest_const cv)
   else if is_var cv then fst (dest_var cv)
   else raise ERR "nameplain_cv" ""
@@ -42,9 +42,9 @@ fun fof_type oc ty =
    FOF quantifier
    ------------------------------------------------------------------------- *)
 
-fun fof_vzero oc v = 
-  if !name_flag 
-  then os oc (namea_v (v,0)) 
+fun fof_vzero oc v =
+  if !name_flag
+  then os oc (namea_v (v,0))
   else os oc (nameplain_cv (v,0))
 
 fun fof_quant_vl oc s vl =
@@ -57,7 +57,7 @@ fun fof_forall_tyvarl_tm oc tm =
     fun f oc x = os oc (name_vartype x)
   in
     if null tvl orelse not (!type_flag)
-    then () 
+    then ()
     else (os oc "!["; oiter oc ", " f tvl; os oc "]: ")
   end
 
@@ -66,10 +66,10 @@ fun fof_forall_tyvarl_tm oc tm =
    ------------------------------------------------------------------------- *)
 
 fun fof_term oc tm =
-  let 
-    val namef = if !name_flag then namea_cv else nameplain_cv 
+  let
+    val namef = if !name_flag then namea_cv else nameplain_cv
     val (rator,argl) = strip_comb tm in
-    if !type_flag then 
+    if !type_flag then
       (os oc "s("; fof_type oc (type_of tm); os oc ",";
       fo_fun oc (namef (rator,length argl), fof_term, argl);
       os oc ")")
@@ -94,7 +94,7 @@ fun fof_pred oc tm =
       then fof_binop oc "<=>" (l,r)
       else (os oc "("; fof_term oc l; os oc " = "; fof_term oc r; os oc ")")
     end
-  else (if !p_flag 
+  else (if !p_flag
        then (os oc "p("; fof_term oc tm; os oc ")")
        else fof_term oc tm)
 and fof_binop oc s (l,r) =
@@ -387,7 +387,7 @@ fun fof_export_pb dir (cj,namethml) =
   end
 
 (* -------------------------------------------------------------------------
-   This function is a work-in-progress. 
+   This function is a work-in-progress.
    To be runned with all flag off to export a problem that is already
    in first-order format with TPTP capitalization
    Exporting a problem stated as goal.
@@ -403,12 +403,12 @@ fun fof_export_goal file (axl,cj) =
     val axlnamed = mapi f axl
     val oc = TextIO.openOut file
     fun fax (ax,fofname) =
-      (os oc (fofpar ^ fofname ^ ",axiom,"); 
-       fof_formula oc ax; 
-       osn oc ").")     
+      (os oc (fofpar ^ fofname ^ ",axiom,");
+       fof_formula oc ax;
+       osn oc ").")
   in
-    app fax axlnamed; 
-    os oc (fofpar ^ "conjecture" ^ ",conjecture,"); 
+    app fax axlnamed;
+    os oc (fofpar ^ "conjecture" ^ ",conjecture,");
     fof_formula oc cj;
     osn oc ").";
     TextIO.closeOut oc

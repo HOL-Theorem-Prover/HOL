@@ -24,7 +24,7 @@ sig
   (* search function *)
   type ('a,'b) game =
     {
-    status_of : 'a -> status, 
+    status_of : 'a -> status,
     apply_move : 'b -> 'a -> 'a,
     available_movel : 'a -> 'b list,
     string_of_board : 'a -> string,
@@ -59,12 +59,12 @@ sig
     game : ('a,'b) game,
     player : ('a,'b) player
     }
-  
+
   val add_rootnoise : mctsparam -> ('a,'b) tree -> ('a,'b) tree
 
-  val starttree_of : ('a,'b) mctsobj -> 'a -> 
+  val starttree_of : ('a,'b) mctsobj -> 'a ->
     (('a,'b) tree * ('a,id) Redblackmap.dict)
-  val mcts : ('a,'b) mctsobj -> (('a,'b) tree * ('a,id) Redblackmap.dict) ->    
+  val mcts : ('a,'b) mctsobj -> (('a,'b) tree * ('a,id) Redblackmap.dict) ->
     (('a,'b) tree * ('a,id) Redblackmap.dict)
 
   (* statistics *)

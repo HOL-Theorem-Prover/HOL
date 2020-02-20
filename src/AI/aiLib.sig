@@ -21,7 +21,7 @@ sig
   val triple_compare :
     ('a * 'b -> order) ->
     ('c * 'd -> order) ->
-    ('e * 'f -> order) -> 
+    ('e * 'f -> order) ->
     ('a * 'c * 'e) * ('b * 'd * 'f) -> order
 
   val goal_compare : goal * goal -> order

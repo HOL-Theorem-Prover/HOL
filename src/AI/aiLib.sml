@@ -87,7 +87,7 @@ fun cpl_compare cmp1 cmp2 ((a1,a2),(b1,b2)) =
     if r = EQUAL then cmp2 (a2,b2) else r
   end
 
-fun triple_compare cmp1 cmp2 cmp3 ((a1,a2,a3),(b1,b2,b3)) = 
+fun triple_compare cmp1 cmp2 cmp3 ((a1,a2,a3),(b1,b2,b3)) =
   cpl_compare (cpl_compare cmp1 cmp2) cmp3 (((a1,a2),a3),((b1,b2),b3))
 
 fun lbl_compare ((stac1,_,g1,_),(stac2,_,g2,_)) =
@@ -186,8 +186,8 @@ fun map_snd f l   = map (fn (a,b) => (a, f b)) l
 fun map_fst f l   = map (fn (a,b) => (f a, b)) l
 fun map_assoc f l = map (fn a => (a, f a)) l
 
-fun range ((a,b),f) = 
-  if a > b then raise ERR "range" "" else 
+fun range ((a,b),f) =
+  if a > b then raise ERR "range" "" else
   List.tabulate (b-a+1,fn x => f (x+a))
 
 fun cartesian_product l1 l2 =
@@ -294,7 +294,7 @@ fun tmsize_compare (a,b) =
 fun all_subterms tm =
   let
     val r = ref []
-    fun traverse tm = 
+    fun traverse tm =
       let val (oper,argl) = strip_comb tm in
         r := oper :: (!r);
         app traverse argl
@@ -652,8 +652,8 @@ fun list_mk_binop binop l = case l of
 fun arity_of t = length (fst (strip_type (type_of t)))
 
 fun strip_binop binop tm = case strip_comb tm of
-    (oper,[a,b]) => 
-    if term_eq oper binop  
+    (oper,[a,b]) =>
+    if term_eq oper binop
     then a :: strip_binop binop b
     else [tm]
   | _ => [tm]
@@ -680,7 +680,7 @@ fun its i = int_to_string i
 
 fun reall_to_string rl = String.concatWith " " (map rts rl)
 
-fun realll_to_string rll = 
+fun realll_to_string rll =
   String.concatWith "," (map reall_to_string rll)
 
 fun string_to_reall s =
@@ -960,8 +960,8 @@ fun random_int (a,b) =
     if c >= b then b else c
   end
 
-fun random_elem l = 
-  if null l then raise ERR "random_elem" "empty" else 
+fun random_elem l =
+  if null l then raise ERR "random_elem" "empty" else
     List.nth (l, random_int (0, length l - 1))
 
 fun random_subset n l = first_n n (shuffle l)

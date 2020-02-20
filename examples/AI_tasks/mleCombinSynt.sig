@@ -2,7 +2,7 @@ signature mleCombinSynt =
 sig
 
   include Abbrev
-  
+
   type combin = mleCombinLib.combin
   type board = combin * combin * int
   datatype move = S0 | S1 | S2 | K0 | K1
@@ -19,7 +19,7 @@ sig
   (* reinforcement learning *)
   val extsearch : board mlReinforce.es
   val rlobj : (board,move) mlReinforce.rlobj
-  
+
   (* final testing *)
   val ft_extsearch_uniform : board mlReinforce.ftes
   val fttnn_extsearch : board mlReinforce.fttnnes
