@@ -173,8 +173,8 @@ val PQ16 =
   end
 
 val PQSET16 = 
-  let val thm = METIS_PROVE [] 
-     ``(p : num -> bool) = q ==> {u | p u} = {v | q v}``
+  let val thm = METIS_PROVE []
+     ``(p :num -> bool) = q ==> {u :num | p u} = {v :num | q v}``
   in
     HO_MATCH_MP thm PQ16
   end
