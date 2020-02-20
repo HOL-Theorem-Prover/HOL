@@ -7,6 +7,9 @@ sig
   type board = combin * combin * int
   datatype move = S0 | S1 | S2 | K0 | K1
 
+  (* optimization for unfinished terms *)
+  val ignore_metavar : combin -> combin
+
   (* target *)
   val create_targetl : (combin * combin) list -> (board list * board list)
   val export_targetl : string -> board list -> unit

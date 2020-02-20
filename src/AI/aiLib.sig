@@ -151,6 +151,7 @@ sig
   val string_to_reall : string -> real list
   val string_to_realll : string -> real list list
   val string_of_goal : goal -> string
+  val string_of_goal_noquote : goal -> string
   val trace_tacl : tactic list -> goal -> unit
   val readl : string -> string list
   val bare_readl : string -> string list

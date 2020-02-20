@@ -22,6 +22,7 @@ type graph = bool list
 val graph_compare = list_compare bool_compare
 fun graph_to_string graph = String.concatWith " " (map bts graph)
 fun string_to_graph s = map string_to_bool (String.tokens Char.isSpace s)
+fun graph_to_il bl = map snd (filter fst (number_snd 0 bl))
 
 type poly = int list list
 val poly_compare = list_compare (list_compare Int.compare)
@@ -134,7 +135,7 @@ fun gen_diophset n nmax d =
   end
 
 (* -------------------------------------------------------------------------
-   Converting polynomials to a term representation
+   Converting polynomials to a term representation for the TNN
    ------------------------------------------------------------------------- *)
 
 fun term_of_mono mono = 
@@ -152,6 +153,32 @@ fun term_of_poly poly =
   if null poly 
   then mk_var ("start",``:num``)
   else list_mk_plus (map term_of_mono poly)
+
+(* -------------------------------------------------------------------------
+   Converting polynomials to a term representation for verification
+   ------------------------------------------------------------------------- *)
+
+fun veri_of_mono mono = 
+  let 
+    val _ = if null mono then raise ERR "term_of_mono" "" else ()
+    val (coeff,expl) = (hd mono, tl mono)
+    val iexpl = number_fst 0 expl
+    fun f (i,n) = List.tabulate (n, fn _ => 
+      if i = 0 then mk_var ("k",``:num``) else
+      if i = 1 then mk_var ("x",``:num``) else
+      if i = 2 then mk_var ("y",``:num``) else
+      if i = 3 then mk_var ("z",``:num``) else
+      raise ERR "veri_of_mono" "")
+    val coefftm = numSyntax.term_of_int coeff
+  in
+    list_mk_mult (coefftm :: List.concat (map f iexpl))
+  end
+
+fun veri_of_poly poly = 
+  if null poly 
+  then raise ERR "veritm_of_poly" ""
+  else list_mk_plus (map veri_of_mono poly)
+
 
 (* -------------------------------------------------------------------------
    Export

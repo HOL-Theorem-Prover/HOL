@@ -7,6 +7,7 @@ sig
   val graph_compare : graph * graph -> order
   val graph_to_string : bool list -> string
   val string_to_graph : string -> bool list
+  val graph_to_il : bool list -> int list  
 
   type poly = int list list
   val poly_compare : poly * poly -> order
@@ -31,6 +32,7 @@ sig
     ((int list, poly) Redblackmap.dict * int)
   val term_of_poly : poly -> term
   val human_of_poly : poly -> string
+  val veri_of_poly : poly -> term
 
   val export_data : (int list * poly) list * (int list * poly) list -> unit
   val import_data : string -> (int list * poly) list

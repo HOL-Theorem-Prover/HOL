@@ -619,6 +619,21 @@ fun string_of_goal (asm,w) =
     s1
   end
 
+fun string_of_goal_noquote (asm,w) =
+  let
+    val mem = !show_types
+    val _   = show_types := false
+    val s   =
+      (if null asm
+         then "[]"
+         else "[" ^ String.concatWith "," (map term_to_string asm) ^ "]")
+    val s1 = "(" ^ s ^ "," ^ (term_to_string w) ^ ")"
+  in
+    show_types := mem;
+    s1
+  end
+
+
 fun trace_tacl tacl g = case tacl of
     tac :: m =>
     (print_endline (string_of_goal g); trace_tacl m (hd (fst (tac g))))

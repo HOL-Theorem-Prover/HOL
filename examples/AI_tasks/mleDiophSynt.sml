@@ -391,8 +391,18 @@ val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l3);
    ------------------------------------------------------------------------- *)
 
 (*
+load "aiLib"; open aiLib;
+load "smlParallel"; open smlParallel;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "mleDiophSynt"; open mleDiophSynt;
+
+val dir2 = HOLDIR ^ "/examples/AI_tasks/dioph_results/test_uniform";
 fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
-val (bstatus,nstep,boardo) = g 0;
+val l1 = List.tabulate (10,g);
+val l2 = filter #1 l1;
+val l3 = map (valOf o #3) l2;
+val l4 = map (fn (a,b,c) => (a,b)) l3;
+mleDiophLib.dioph_set (fst (hd l4));
 *)
 
 end (* struct *)

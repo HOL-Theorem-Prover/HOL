@@ -379,7 +379,7 @@ load "smlParallel"; open smlParallel;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "mleCombinSynt"; open mleCombinSynt;
 
-val dir1 = HOLDIR ^ "/examples/AI_tasks/combin_results_nolimit";
+val dir1 = HOLDIR ^ "/examples/AI_tasks/combin_results";
 val _ = mkDir_err dir1;
 fun store_result dir (a,i) = 
   #write_result ft_extsearch_uniform (dir ^ "/" ^ its i) a;

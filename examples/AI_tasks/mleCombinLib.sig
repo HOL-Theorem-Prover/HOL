@@ -24,6 +24,7 @@ sig
   val combin_compare : combin * combin -> order
   val combin_size : combin -> int
   val strip_A : combin -> combin list
+  val list_mk_cA : term list -> term
   val list_mk_A : combin list -> combin
   
   (* normalization *)
