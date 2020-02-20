@@ -673,10 +673,12 @@ val REAL_INV_INV = store_thm("REAL_INV_INV",
   MATCH_MP_TAC REAL_MUL_LINV THEN
   ASM_REWRITE_TAC[]);;
 
-val REAL_INV_EQ_0 = store_thm("REAL_INV_EQ_0",
- Term`!x. (inv(x) = 0) = (x = 0)`,
+Theorem REAL_INV_EQ_0[simp]:
+ !x. (inv(x) = 0) = (x = 0)
+Proof
   GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[REAL_INV_0] THEN
-  ONCE_REWRITE_TAC[GSYM REAL_INV_INV] THEN ASM_REWRITE_TAC[REAL_INV_0]);;
+  ONCE_REWRITE_TAC[GSYM REAL_INV_INV] THEN ASM_REWRITE_TAC[REAL_INV_0]
+QED
 
 val REAL_NEG_INV = store_thm("REAL_NEG_INV",
   “!x. ~(x = 0) ==> (~inv x = inv (~x))”,
