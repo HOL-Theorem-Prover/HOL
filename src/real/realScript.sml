@@ -680,6 +680,11 @@ Proof
   ONCE_REWRITE_TAC[GSYM REAL_INV_INV] THEN ASM_REWRITE_TAC[REAL_INV_0]
 QED
 
+Theorem REAL_INV_EQ_0'[simp]:
+  !x. (0 = inv x) <=> (x = 0)
+Proof metis_tac[REAL_INV_EQ_0]
+QED
+
 val REAL_NEG_INV = store_thm("REAL_NEG_INV",
   “!x. ~(x = 0) ==> (~inv x = inv (~x))”,
   GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC REAL_LINV_UNIQ THEN
@@ -2686,10 +2691,9 @@ val REAL_INV_LT_ANTIMONO = store_thm
    THEN MATCH_MP_TAC REAL_LT_INV
    THEN RW_TAC boolSimps.bool_ss [REAL_INV_POS]);
 
-val REAL_INV_INJ = store_thm
-  ("REAL_INV_INJ",
-   ``!x y : real. (inv x = inv y) = (x = y)``,
-   PROVE_TAC [REAL_INV_INV])
+Theorem REAL_INV_INJ[simp]:   !x y : real. (inv x = inv y) = (x = y)
+Proof PROVE_TAC [REAL_INV_INV]
+QED
 
 val REAL_DIV_RMUL_CANCEL = store_thm
   ("REAL_DIV_RMUL_CANCEL",
