@@ -738,7 +738,9 @@ file to \"use\" first."
   (save-excursion
     (goto-char start)
     (while (re-search-forward (concat "\\b" sml-struct-id-regexp "\\b") end t)
-      (hol-load-string (match-string 0)))))
+      (let ((ppss (syntax-ppss)))
+        (if (and (not (nth 4 ppss)) (not (nth 3 ppss)))
+            (hol-load-string (match-string 0)))))))
 
 (defun hol-load-file (arg)
   "Gets HOL session to \"load\" the file at point.
