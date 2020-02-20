@@ -1792,21 +1792,18 @@ val inv_lt_antimono = store_thm (* new *)
      MATCH_MP_TAC REAL_INV_POS >> art [])
  >> MATCH_MP_TAC REAL_INV_LT_ANTIMONO >> art []);
 
-val inv_inj = store_thm (* new *)
-  ("inv_inj", ``!x y :extreal. 0 < x /\ 0 < y ==> ((inv x = inv y) <=> (x = y))``,
+Theorem inv_inj :
+    !x y :extreal. 0 < x /\ 0 < y ==> ((inv x = inv y) <=> (x = y))
+Proof
     rpt STRIP_TAC
  >> `x <> 0 /\ y <> 0` by PROVE_TAC [lt_le]
  >> Cases_on `x` >> Cases_on `y`
- >> fs [extreal_inv_def, extreal_of_num_def, extreal_11, extreal_not_infty, lt_infty,
-        extreal_lt_eq] (* 3 subgoals *)
- >| [ (* goal 1 (of 3) *)
-      Suff `0 < inv r` >- METIS_TAC [REAL_LT_LE] \\
-      MATCH_MP_TAC REAL_INV_POS >> art [],
-      (* goal 2 (of 3) *)
-      Suff `0 < inv r` >- METIS_TAC [REAL_LT_LE] \\
-      MATCH_MP_TAC REAL_INV_POS >> art [],
-      (* goal 3 (of 3) *)
-      REWRITE_TAC [REAL_INV_INJ] ]);
+ >> fs [extreal_inv_def, extreal_of_num_def, extreal_11,
+        extreal_not_infty, lt_infty, extreal_lt_eq]
+ >- (Suff `0 < inv r` >- METIS_TAC [REAL_LT_LE] \\
+     MATCH_MP_TAC REAL_INV_POS >> art [])
+ >> REWRITE_TAC [REAL_INV_INJ]
+QED
 
 val inv_le_antimono = store_thm
   ("inv_le_antimono", ``!x y :extreal. 0 < x /\ 0 < y ==> (inv x <= inv y <=> y <= x)``,
