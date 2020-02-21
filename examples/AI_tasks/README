@@ -1,6 +1,35 @@
-Below are the instructions how to run the experiments accompanying the paper 
-...
+Below are instructions for the experiments accompanying the paper
+Deep Reinforcement Learning for Term Synthesis. 
+The framework can be found under the src/AI directory and 
+the specification of the tasks under examples/AI_tasks.
 
+First, install PolyML and install HOL (see HOL/INSTALL file).
+Then in the examples/AI_tasks directory and run the following commands:
+- Holmake
+- sh link_sigobj_all.sh
 
+To run the training, first modify the file mleCombinSynt (or mleDiophSynt) to choose the number of cores by modifying the field ncore (default = 30).
+You can choose your experiment name by modifying the field expname.
+The results of the experiments will be stored under "eval/experiment_name/log":
 
-sh link_sigobj_all.sh
+> val rlparam =
+  {expname = "experiment_name", exwindow = 200000,
+   ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
+
+Download the training problems from and copy the combin_target folder
+(and dioph_target) in the examples/AI_tasks directory.
+Launch hol (rlwrap bin/hol or bin/hol) and execute the following commands 
+to start training:
+
+> load "aiLib"; open aiLib;
+> load "mlReinforce"; open mlReinforce;
+> load "mleCombinLib"; open mleCombinLib;
+> load "mleCombinSynt"; open mleCombinSynt;
+> val targetl = import_targetl "train";
+> val r = rl_start (rlobj,extsearch) (mk_targetd targetl);
+
+The evaluation can be replicated after training 
+by following the interactive code in comments under the section "Final testing".
+It is possible to choose the TNN generation number by modifying the number 318 to the desired generation in the following command:
+ 
+> val tnn = mlReinforce.retrieve_tnn rlobj 318;

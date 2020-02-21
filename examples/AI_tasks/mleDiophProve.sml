@@ -273,10 +273,12 @@ fun f_charl cl = case cl of
   [] => []
   | [a] => [a]
   | a :: b :: m => if Char.isSpace a andalso Char.isSpace b
-                   then f (b :: m)
+                   then f_charl (b :: m)
                    else if Char.isSpace a
-                   then #" " :: f ( b :: m)
-val minspace = implode o f o explode;
+                   then #" " :: f_charl (b :: m)
+                   else a :: f_charl (b :: m)
+;
+val minspace = implode o f_charl o explode;
 val _ = writel (dir2 ^ "/theorems") (map (minspace o string_of_goal o dest_thm) thml);
 *)
 
