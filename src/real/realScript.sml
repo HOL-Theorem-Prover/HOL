@@ -4090,31 +4090,36 @@ Proof
   metis_tac[REAL_MUL_ASSOC, REAL_MUL_COMM, REAL_INV_nonzerop]
 QED
 
+Theorem POW_0':
+  0 < n ==> (0 pow n = 0)
+Proof
+  Cases_on ‘n’ >> simp[POW_0]
+QED
+
 Theorem pow_inv_mul_powlt:
-  !x m n. m < n ==> (x pow m * inv x pow n = inv x pow (n - m) * NZ x)
+  !x m n. m < n ==> (x pow m * inv x pow n = inv x pow (n - m))
 Proof
   rpt strip_tac >>
   qabbrev_tac ‘d = n - m’ >> ‘0 < d’ by simp[Abbr‘d’] >>
   ‘n = m + d’ by simp[Abbr‘d’] >>
   Cases_on ‘x = 0’ >>
   simp[nonzerop_EQ1_I, REAL_INV_0, REAL_POW_INV, REAL_POW_ADD,
-       REAL_INV_MUL] >>
-  Cases_on ‘0 < m’ >> simp[REAL_INV_EQ_0] >> fs[] >>
-  ‘x pow m <> 0’ by simp[] >>
+       REAL_INV_MUL, POW_0'] >>
   qmatch_abbrev_tac ‘XM * (XDi * inv XM) = XDi’ >>
   ‘XM * (XDi * inv XM) = (XM * inv XM) * XDi’
     by simp[simpLib.AC REAL_MUL_ASSOC REAL_MUL_COMM] >>
+  ‘XM <> 0’ by simp[Abbr‘XM’] >>
   simp[REAL_MUL_RINV]
 QED
 
 Theorem pow_inv_mul_invlt:
-  !x m n. n < m ==> (x pow m * inv x pow n = x pow (m - n) * NZ x)
+  !x m n. n < m ==> (x pow m * inv x pow n = x pow (m - n))
 Proof
   rpt strip_tac >>
   qabbrev_tac ‘d = m - n’ >> ‘0 < d /\ (m = n + d)’ by simp[Abbr‘d’] >>
   Cases_on ‘x = 0’ >>
   simp[nonzerop_EQ1_I, REAL_INV_0, REAL_POW_INV, REAL_POW_ADD,
-       REAL_INV_MUL] >>
+       REAL_INV_MUL, POW_0'] >>
   ‘x pow n <> 0’ by simp[] >>
   metis_tac[REAL_MUL_ASSOC, REAL_MUL_RINV, REAL_MUL_RID]
 QED
@@ -4125,6 +4130,23 @@ Proof
   Cases_on ‘x = 0’ >> simp[nonzerop_EQ1_I, REAL_POW_INV, REAL_MUL_RINV] >>
   Cases_on ‘m’ >> simp[pow]
 QED
+
+Theorem ZERO_LT_POW[simp]:
+  (0 < x pow NUMERAL (BIT2 n) <=> x <> 0) /\
+  (0 < x pow NUMERAL (BIT1 n) <=> 0 < x)
+Proof
+  REWRITE_TAC[NUMERAL_DEF, BIT2, BIT1, ADD_CLAUSES] >>
+  simp[EQ_IMP_THM] >> rpt strip_tac
+  >- fs[pow]
+  >- (‘SUC (SUC (2 * n)) = 2 * (n + 1)’ by simp[] >>
+      simp[GSYM REAL_POW_POW, POW_2, REAL_POW_LT])
+  >- (fs[pow] >> Cases_on ‘x = 0’ >> fs[] >>
+      ‘0 < x pow (2 * n)’ suffices_by metis_tac[REAL_LT_RMUL_0] >>
+      simp[GSYM REAL_POW_POW, POW_2, REAL_POW_LT]) >>
+  simp[pow] >> ‘0 < x pow (2 * n)’ suffices_by metis_tac[REAL_LT_RMUL_0] >>
+  simp[GSYM REAL_POW_POW, POW_2, REAL_POW_LT]
+QED
+
 
 
 val _ = export_theory();

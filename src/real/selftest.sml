@@ -75,6 +75,7 @@ fun nftest (r as (n,c,t1,t2)) =
       tprint (n ^ ": " ^ term_to_string t1);
       require_msg (check t2) (pr t2) test (t1,t2)
     end
+val simp = SIMP_CONV (BasicProvers.srw_ss()) []
 val _ = List.app nftest [
       ("MULCANON01", REALMULCANON, “x:real * y * x”, “x pow 2 * y”),
       ("MULCANON02", REALMULCANON, “x:real * y * x * 2”, “2 * (x pow 2 * y)”),
@@ -84,11 +85,11 @@ val _ = List.app nftest [
       ("MULCANON04", REALMULCANON, “x * 1r * z”, “x:real * z”),
       ("MULCANON05", REALMULCANON, “x * y * inv x * a”, “a * y * NZ x”),
       ("MULCANON06", REALMULCANON, “b * x pow 2 * y * inv x * a”,
-       “a * b * x * y * NZ x”),
+       “a * b * x * y”),
       ("MULCANON07", REALMULCANON, “b * x * y * inv (x pow 2) * 2 * a”,
-       “2 * (a * b * inv x * y * NZ x)”),
+       “2 * (a * b * inv x * y)”),
       ("MULCANON08", REALMULCANON, “b * x * y * inv (x pow 2) * a * inv x”,
-       “a * b * inv x pow 2 * y * NZ x”),
+       “a * b * inv x pow 2 * y”),
       ("MULCANON09", REALMULCANON, “x * 2r”, “2r * x”),
       ("MULCANON10", REALMULCANON, “x * 2r * y”, “2r * (x * y)”),
       ("MULCANON11", REALMULCANON, “x * 3 * y * x pow n * z”,
@@ -100,6 +101,13 @@ val _ = List.app nftest [
       ("MULCANON14", REALMULCANON, “inv 2 pow x * z * 2 pow x”, “z:real”),
       ("MULCANON15", REALMULCANON, “inv (2 pow x) * z * 3 * 2 pow x”,
        “3 * z:real”),
+      ("MULRELNORM01", simp,
+       “z <> 0 ⇒ 2r * z pow 2 * inv yy = 5 * z pow 2 * inv y * a”,
+       “z <> 0 ⇒ 2 * inv yy = 5 * (a * inv y)”),
+      ("MULRELNORM02", simp, “z * 4 = inv x * 6”, “2 * z = 3 * inv x”),
+      ("MULRELNORM03", simp,
+       “y <> 0 ==> 2 * inv y pow 2 <= 9 * inv y * z”,
+       “y <> 0 ==> 2 <= 9 * (y * z)”),
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]
