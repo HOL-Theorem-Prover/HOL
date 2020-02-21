@@ -188,7 +188,7 @@ fun string_literalpp {ldelim,rdelim} s =
         val toString = String.toString
         fun recurse A lastc start i =
             if i >= limit then
-              concat (List.rev(rdelim :: extract(start,NONE)::A))
+              concat (List.rev(rdelim :: toString (extract(start,NONE))::A))
             else
               case (lastc, sub i) of
                 (#"(", #"*") => let

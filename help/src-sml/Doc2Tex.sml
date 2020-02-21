@@ -48,8 +48,13 @@ fun mktheta (com,argl,argr) = [
    com ^ "(" ^ com ^ "sp" ^ argl ^ "-1" ^ argr ^ com ^ ")"),
   ("\194\171", com ^ "guillemotleft" ^ argl ^ argr),
   ("\194\187", com ^ "guillemotright" ^ argl ^ argr),
+  ("\206\177", com ^ "ensuremath" ^ argl ^ com ^ "alpha" ^ argr),
+  ("\206\178", com ^ "ensuremath" ^ argl ^ com ^ "beta"  ^ argr),
+  ("\206\187", com ^ "ensuremath" ^ argl ^ com ^ "lambda"  ^ argr),
   ("\226\128\185", com ^ "guilsinglleft" ^ argl ^ argr),
-  ("\226\128\186", com ^ "guilsinglright" ^ argl ^ argr)
+  ("\226\128\186", com ^ "guilsinglright" ^ argl ^ argr),
+  ("\226\138\162", com ^ "ensuremath" ^ argl ^ com ^ "vdash" ^ argr),
+  ("\226\167\186", "++")
 ]
 
 fun print_verb1(ss, ostr) = let

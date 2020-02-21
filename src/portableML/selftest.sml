@@ -1,5 +1,5 @@
 
-val _ =print "\n"
+val _ =print "\n";
 
 fun die s = (print (s^"\n"); OS.Process.exit OS.Process.failure)
 
@@ -41,9 +41,18 @@ val _ = List.app assert [
     ("UTF8.getChar \"\\192\\128\" fails", gcFails "\192\168"),
     ("UTF8.getChar \"\\252\\129\\129\\129\\129\\129\" fails",
      gcFails "\252\129\129\129\129\129"),
-    ("UF8.getChar \"\\244\\129\" fails", gcFails "\244\129"),
+    ("UTF8.getChar \"\\244\\129\" fails", gcFails "\244\129"),
     ("padRight #\" \" on ∀", fn () => UTF8.padRight #" " 5 "∀" = "∀    "),
-    ("padRight #\"a\" on ∀", fn () => UTF8.padRight #"a" 5 "∀" = "∀aaaa")
+    ("padRight #\"a\" on ∀", fn () => UTF8.padRight #"a" 5 "∀" = "∀aaaa"),
+    ("UTF8.substring(\"a\", 0, 1)", fn () => UTF8.substring("a", 0, 1) = "a"),
+    ("UTF8.substring(\"abc\", 0, 3)",
+     fn () => UTF8.substring("abc", 0, 3) = "abc"),
+    ("UTF8.substring(\"abc\", 1, 3)",
+     fn () => (UTF8.substring("abc", 1, 3); false) handle Subscript => true
+                                                        | e => false),
+    ("UTF8.substring(\"ab\", 1, 1)", fn () => UTF8.substring("ab", 1, 1) = "b"),
+    ("UTF8.substring(\"«ab»\", 1, 2)",
+     fn () => UTF8.substring("«ab»", 1, 2) = "ab")
     ]
 
 val _ = tprint "mapFilter executes L-to-R"
@@ -58,6 +67,28 @@ in
   else
     die ("\n Evaluation gave wrong result: [" ^
          String.concatWith ", " (map Int.toString res) ^ "]")
+end
+
+val _ = tprint "Checking HOLsexp-reading"
+val _ = let
+  open HOLsexp
+  val el1 = Cons(Symbol "bar", Symbol "baz")
+  val I = Integer
+  val el2 = List [Quote, List [I 1,I 2,I 3,String "\203a\"", String"foo\n",
+                               Symbol "1+", String "xy\028"]]
+  val t_out = List[Symbol "foo ", el1, el2]
+  val outstrm = TextIO.openOut "test.sexp"
+  val _ = TextIO.output(outstrm,
+                        ";; this is an automatically generated test file\n")
+  val _ = TextIO.output(outstrm, HOLPP.pp_to_string 70 printer t_out ^
+                                 "; another comment \n")
+  val _ = TextIO.closeOut outstrm
+  val t_in = HOLsexp_parser.raw_read_file "test.sexp"
+in
+  if t_in = t_out then print "OK\n"
+  else
+    die ("FAILED, read back:\n  "^
+         HOLPP.pp_to_string 70 printer t_in)
 end
 
 val _ = OS.Process.exit OS.Process.success

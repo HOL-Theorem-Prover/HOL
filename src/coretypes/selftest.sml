@@ -38,7 +38,13 @@ val _ = app tpp ["\\(x,y). x /\\ y",
                  "\\(x,y,z). x /\\ y /\\ z",
                  "\\((x,y),z). x /\\ y /\\ z",
                  "(\\(x,y,z). x /\\ y /\\ z) p",
-                 "case x of (y,z) => y /\\ z"]
+                 "case x of (y,z) => y /\\ z",
+                 "f000000000 arg000000000\n\
+                 \  (case x of\n\
+                 \     INL u => u inl00000000000 inl111111111\n\
+                 \   | INR v => v inr00000000000 inr111111111)\n\
+                 \  (arg222222222222 arg333333333 arg444444444)"
+                ]
 
 (* check LET_INTRO *)
 
@@ -199,5 +205,12 @@ val _ = require_msg (check_result (aconv ``v:'a``)) term_to_string
                     ``one_CASE () (v:'a)``
 end
 
+(* github issue #765; induction principle for pairs is wrong *)
+val _ = hide "p"
+val _ = tprint "Induction principle for pairs"
+val res = Exn.capture (BasicProvers.Induct_on ‘p’) ([], “FST p ≠ SND p”)
+val _ = case res of
+            Exn.Res _ => OK()
+          | Exn.Exn e => sdie ("Exception : " ^ General.exnMessage e)
 
 val _ = Process.exit Process.success

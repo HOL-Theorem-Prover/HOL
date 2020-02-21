@@ -4,13 +4,13 @@ INCLUDES = $(CMPDIR)
 
 .PHONY: all
 
-all: stringlit_output otherTheory.uo sampleTheory.uo
+all: stringlit_output $(DEFAULT_TARGETS)
 
-stringlit_output: stringlit_input munge.exe expected-stringlit
+stringlit_output: stringlit_input munge.exe expected-stringlit $(CMPDIR)/cmp.exe
 	./munge.exe < $< > $@
 	$(CMPDIR)/cmp.exe stringlit_output expected-stringlit
 
-munge.exe: $(dprot $(SIGOBJ)/stringLib.uo) $(dprot $(HOLDIR)/bin/mkmunge.exe)
-	$(protect $(HOLDIR)/bin/mkmunge.exe) stringLib
+munge.exe: $(dprot $(SIGOBJ)/stringLib.uo) $(dprot $(HOLDIR)/bin/mkmunge.exe) injected_strlitTheory.uo
+	$(protect $(HOLDIR)/bin/mkmunge.exe) stringLib injected_strlitTheory
 
 EXTRA_CLEANS = stringlit_output munge.exe munger.o

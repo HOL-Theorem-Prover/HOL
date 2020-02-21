@@ -1947,6 +1947,14 @@ val delete_thm = Q.store_thm ("delete_thm",
          metis_tac [FCARD_DEF])
      >- to_fmap_tac));
 
+Theorem lookup_delete:
+ good_cmp cmp /\ invariant cmp t ==>
+ lookup cmp k (delete cmp k' t) =
+ if cmp k k' = Equal then NONE else lookup cmp k t
+Proof
+ rw[lookup_thm,delete_thm,FLOOKUP_DRESTRICT] \\ metis_tac[key_set_eq,FLOOKUP_DEF]
+QED
+
 val restrict_set_def = Define `
 restrict_set cmp lo hi =
 { k | option_cmp cmp lo (SOME k) = Less ∧
@@ -2723,6 +2731,29 @@ val MEM_toAscList = Q.store_thm("MEM_toAscList",
   `(key_set cmp k,v) ∈ lift_key cmp (set (toAscList t))`
   by (simp_tac std_ss [lift_key_def] \\ simp[EXISTS_PROD] \\ metis_tac[])
   \\ rfs[]);
+
+Theorem ALOOKUP_toAscList:
+  good_cmp cmp /\ invariant cmp t /\ (!x y. cmp x y = Equal <=> x = y) ==>
+  ALOOKUP (toAscList t) k = lookup cmp k t
+Proof
+  rw []
+  \\ imp_res_tac toAscList_thm
+  \\ Cases_on `lookup cmp k t`
+  >- (
+    Cases_on `ALOOKUP (toAscList t) k` \\ simp []
+    \\ imp_res_tac ALOOKUP_MEM
+    \\ imp_res_tac MEM_toAscList
+    \\ rfs [lookup_thm]
+  )
+  >- (
+    fs [lift_key_def, EXISTS_PROD, pred_setTheory.EXTENSION]
+    \\ first_x_assum (qspec_then `(key_set cmp k, x)` mp_tac)
+    \\ rfs [lookup_thm, key_set_eq]
+    \\ metis_tac [comparisonTheory.good_cmp_Less_irrefl_trans,
+        MAP_FST_toAscList, sortingTheory.SORTED_ALL_DISTINCT,
+        ALOOKUP_ALL_DISTINCT_MEM]
+  )
+QED
 
 val compare_good_cmp = Q.store_thm ("compare_good_cmp",
 `!cmp1 cmp2. good_cmp cmp1 ∧ good_cmp cmp2 ⇒ good_cmp (compare cmp1 cmp2)`,

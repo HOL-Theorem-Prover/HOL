@@ -38,7 +38,8 @@ struct
           {bind = bind, ignorebind = determOpt ign_opt, unit = unit,
            fail = determOpt failopt, guard = determOpt guardopt,
            choice = determOpt choiceopt}
-      | _ => raise ERR "fromSexp" "bad format - not a list of 5 elements"
+      | _ => raise ERR "fromSexp"
+                   "bad format - not an appropriately shaped list of 6 elements"
 end
 
 val monadDB =

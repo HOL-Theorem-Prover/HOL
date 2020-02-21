@@ -71,6 +71,8 @@ val polyc = NONE : string option
 val polymllibdir = "";
 val DOT_PATH = SOME "";
 val MLTON = SOME "";
+val POLY_LDFLAGS = [] : string list;
+val POLY_LDFLAGS_STATIC = [] : string list;
 
 val _ = let
   val override = "tools-poly/poly-includes.ML"

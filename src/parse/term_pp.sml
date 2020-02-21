@@ -1787,18 +1787,23 @@ fun pp_term (G : grammar) TyG backend = let
                      fun p body =
                          get_gspec >-
                          (fn b => if b orelse parens then
-                                    add_string "(" >> block PP.CONSISTENT 1 body >> add_string ")"
+                                    block PP.CONSISTENT 1 (
+                                      add_string "(" >>  body >> add_string ")"
+                                    )
                                   else
                                     block PP.CONSISTENT 0 body)
-                     val casebar = add_break(1,0) >> add_string "|" >> hardspace 1
+                     val casebar =
+                         add_break(1,0) >> add_string "|" >> hardspace 1
                      fun do_split rprec (l,r) =
                          record_bvars
                              (free_vars l)
-                             (block PP.CONSISTENT 0
-                                    (pr_term l Top Top Top (decdepth depth) >>
-                                     hardspace 1 >>
-                                     add_string "=>" >> add_break(1,2) >>
-                                     block PP.CONSISTENT 0 (pr_term r Top Top rprec (decdepth depth))))
+                             (block PP.CONSISTENT 0 (
+                                 pr_term l Top Top Top (decdepth depth) >>
+                                 hardspace 1 >>
+                                 add_string "=>" >> add_break(1,2) >>
+                                 block PP.CONSISTENT 0
+                                   (pr_term r Top Top rprec (decdepth depth)))
+                             )
                    in
                      p (block PP.CONSISTENT 0
                             (add_string (prettyprint_cases_name ()) >>

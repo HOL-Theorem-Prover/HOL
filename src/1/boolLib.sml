@@ -10,17 +10,9 @@ open boolTheory boolSyntax Hol_pp ParseExtras
      Drule Tactical Tactic Thm_cont Conv Rewrite Prim_rec Abbrev DB
      BoundedRewrites TexTokenMap
 
-local open DefnBase TypeBase Ho_Rewrite Psyntax Rsyntax in end
+local open TypeBase Ho_Rewrite Psyntax Rsyntax in end
 
 val parse_from_grammars = Parse.parse_from_grammars;
-
-(* ----------------------------------------------------------------------
-    Update DefnBase with some extra congruence rules
-   ---------------------------------------------------------------------- *)
-
-val _ = DefnBase.write_congs (DefnBase.read_congs() @
-                              map (REWRITE_RULE [AND_IMP_INTRO])
-                                  [RES_FORALL_CONG, RES_EXISTS_CONG])
 
 (*---------------------------------------------------------------------------
       Stock the rewriter in Ho_Rewrite with some rules not yet

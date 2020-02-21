@@ -131,7 +131,8 @@ fun tppw width {input=s,output,testf} = let
   val t = Parse.Term [QUOTE s]
           handle HOL_ERR _ => raise InternalDie "Parse failed!"
   val res = HOLPP.pp_to_string width Parse.pp_term t
-  fun f s = String.translate (fn #" " => UTF8.chr 0x2423 | c => str c) s
+  fun f s = String.translate
+              (fn #" " => UTF8.chr 0x2423 | #"\n" => "\n      " | c => str c) s
 in
   if res = output then OK() else
   die ("  Saw:\n    >|" ^ clear (f res) ^

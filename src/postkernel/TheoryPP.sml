@@ -10,6 +10,8 @@ struct
 type thm      = Thm.thm;
 type term     = Term.term
 type hol_type = Type.hol_type
+type shared_writemaps = {strings : string -> int, terms : Term.term -> string}
+type shared_readmaps = {strings : int -> string, terms : string -> Term.term}
 
 open Feedback Lib Portable Dep;
 
@@ -29,13 +31,6 @@ val pp_sig_hook = ref (fn () => ());
 val concat = String.concat;
 val sort = Lib.sort (fn s1:string => fn s2 => s1<=s2);
 val psort = Lib.sort (fn (s1:string,_:Thm.thm) => fn (s2,_:Thm.thm) => s1<=s2);
-fun thm_atoms acc th = Term.all_atomsl (Thm.concl th :: Thm.hyp th) acc
-
-fun thml_atoms thlist acc =
-    case thlist of
-      [] => acc
-    | (th::ths) => thml_atoms ths (thm_atoms acc th)
-
 fun Thry s = s^"Theory";
 fun ThrySig s = Thry s
 
@@ -203,9 +198,8 @@ fun mlower s m =
 
 fun pp_struct info_record = let
   open Term Thm
-  val {theory as (name,i1,i2), parents=parents0,
-       thydata = (thydata_tms, thydata), mldeps,
-       axioms,definitions,theorems,types,constants,struct_ps} = info_record
+  val {theory as (name,i1,i2), parents=parents0, thydata, mldeps, axioms,
+       definitions,theorems,types,constants,struct_ps} = info_record
   val parents1 =
     List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
                     parents0
@@ -311,158 +305,93 @@ end
 fun pp_thydata info_record = let
   open Term Thm
   val {theory as (name,i1,i2), parents=parents0,
-       thydata = (thydata_tms, thydata), mldeps,
+       thydata = (thydata_strings,thydata_tms, thydata), mldeps,
        axioms,definitions,theorems,types,constants,struct_ps} = info_record
   val parents1 =
       List.mapPartial (fn (s,_,_) => if "min"=s then NONE else SOME (Thry s))
                       parents0
   val thml = axioms@definitions@theorems
-  val all_term_atoms_set =
-      thml_atoms (map #2 thml) empty_tmset |> Term.all_atomsl thydata_tms
   open SharingTables
-  fun dotypes (ty, (idtable, tytable)) = let
-    val (_, idtable, tytable) = make_shared_type ty idtable tytable
-  in
-    (idtable, tytable)
-  end
-  val (idtable, tytable) =
-      List.foldl dotypes (empty_idtable, empty_tytable) (map #2 constants)
-  fun doterms (c, tables) = #2 (make_shared_term c tables)
-  val (idtable, tytable, tmtable) =
-      HOLset.foldl doterms (idtable, tytable, empty_termtable)
-                   all_term_atoms_set
 
-  val jump = add_newline >> add_newline
-  fun pp_ty_dec (s,n) =
-      add_string (stringify s ^ " " ^ Int.toString n)
-  fun pp_const_dec (s, ty) =
-      add_string (stringify s ^ " " ^
-                  Int.toString (Map.find(#tymap tytable, ty)))
-  fun pp_sml_list pfun L =
-    block INCONSISTENT 0
-      (
-      add_string "[" >> add_break (0,0) >>
-      pr_list pfun (add_string "," >> add_break (1,0)) L >>
-      add_break (0,0) >>
-      add_string "]"
-      )
+  val share_data = build_sharing_data {
+        named_terms = [], named_types = [], unnamed_terms = [],
+        unnamed_types = [], theorems = thml
+      }
+  val share_data = add_strings thydata_strings share_data
+  val share_data = add_terms thydata_tms share_data
 
-  fun pp_thid(s,i,j) = add_string
-    (String.concatWith " " [stringify s, Arbnum.toString i, Arbnum.toString j])
+  local open HOLsexp in
+  fun enc_thid(s,i,j) =
+    List[String s, String (Arbnum.toString i), String (Arbnum.toString j)]
+  val enc_thid_and_parents =
+      curry (pair_encode(enc_thid, list_encode enc_thid))
+  end (* local *)
 
-  fun pp_thid_and_parents theory parents =
-    block CONSISTENT 0
-    (pp_thid theory >> add_newline >> pp_sml_list pp_thid parents)
+  fun enc_incorporate_types types =
+      let open HOLsexp
+      in
+        tagged_encode "incorporate-types"
+                      (list_encode (pair_encode(String,Integer))) types
+      end
 
-  fun pp_incorporate_types types =
-    block CONSISTENT 0 (pp_sml_list pp_ty_dec types)
+  fun enc_incorporate_constants constants =
+      let open HOLsexp
+      in
+        tagged_encode "incorporate-consts"
+                      (list_encode
+                         (pair_encode(String, Integer o write_type share_data)))
+                      constants
+      end
 
-  fun pp_incorporate_constants constants =
-    block CONSISTENT 0 (pp_sml_list pp_const_dec constants)
-
-  fun pparent (s,i,j) = Thry s
-  val term_to_string = Term.write_raw (fn t => Map.find(#termmap tmtable, t))
-
-  fun pp_tm tm = add_string ("\"" ^ (term_to_string tm) ^ "\"")
-
-  fun pp_dep ((s,n),dl) =
-  let
-    fun f (thy,l) =
-        add_string (mlquote thy) >> add_break(1,0) >>
-        pr_list (add_string o Int.toString) (add_break(1,0)) l
-  in
-    add_string "[" >>
-    block INCONSISTENT 1 (
-      add_string (mlquote s) >> add_break (1,0) >>
-      add_string (Int.toString n) >>
-      (if not (null dl) then
-        add_string "," >> add_break(1,0) >>
-        pr_list f (add_string "," >> add_break (1,0)) dl
-      else nothing)
-    ) >> add_string "]"
-  end
-
-  fun dest_dep d = case d of
-    DEP_SAVED (did,thydl) => (did,thydl)
-  | DEP_UNSAVED dl     => raise ERR "string_of_dep" ""
-
-  fun pp_tag tag =
-  let
-    val dep = Tag.dep_of tag
-    val ocl = fst (Tag.dest_tag tag)
-  in
-    pp_dep (dest_dep dep) >> add_newline >>
-    pp_sml_list (add_string o mlquote) ocl
-  end
-
-  fun pr_thm(s, th) = let
-    val (tag, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
-  in
-    if is_temp_binding s then nothing
-    else
-      block CONSISTENT 0
-        (add_string (mlquote s) >> add_newline >>
-         pp_tag tag >> add_newline >>
-         pp_sml_list pp_tm (w::asl))
-  end
-
-  val pp_theorems =
-    block CONSISTENT 0
-      (if null thml then nothing else pr_list pr_thm add_newline thml)
-
-  fun pr_db (class,th) =
-    block CONSISTENT 0
-      (add_string (stringify th) >> add_break(1,0) >> add_string class)
-  fun dblist () =
-     let
-       fun check tys =
-           List.mapPartial (fn (s, _) => if is_temp_binding s then NONE
-                                         else SOME (tys, s))
-       val axl  = check "Axm" axioms
-       val defl = check "Def" definitions
-       val thml = check "Thm" theorems
+  val enc_db = let open HOLsexp in
+                 pair_encode (Integer o write_string share_data,Symbol)
+               end
+  val enc_dblist =
+     let open HOLsexp
+       fun check cl =
+           List.mapPartial (fn (nm, _) => if is_temp_binding nm then NONE
+                                          else SOME (nm, cl))
+       val axl  = check "A" axioms
+       val defl = check "D" definitions
+       val thml = check "T" theorems
      in
-       block CONSISTENT 0 (pp_sml_list pr_db (axl@defl@thml))
+       tagged_encode "thm-classes" (list_encode enc_db) (axl@defl@thml)
      end
 
   fun chunks w s =
     if String.size s <= w then [s]
     else String.substring(s, 0, w) :: chunks w (String.extract(s, w, NONE))
 
-  fun pr_cpl (a,b) =
-    block CONSISTENT 0
-      (add_string (stringify a) >> add_break(1,0) >>
-       pr_list (add_string o stringify) (add_break (1,0)) (chunks 65 b))
+  val enc_cpl = HOLsexp.pair_encode(HOLsexp.String, fn x => x)
 
-  fun list_loadable tmwrite thymap =
-    Binarymap.foldl (fn (k, data, rest) => (k, data tmwrite) :: rest)
-      [] thymap
-  fun pr_loadable tmwrite thymap =
-    block CONSISTENT 0 (pp_sml_list pr_cpl (list_loadable tmwrite thymap))
-  val m =
-    block CONSISTENT 0
-      (
-      add_string "THEORY_AND_PARENTS" >> add_newline >>
-      pp_thid_and_parents theory parents0 >> jump >>
-      add_string "INCORPORATE_TYPES" >> add_newline >>
-      pp_incorporate_types types >> jump >>
-      add_string "IDS" >> add_newline >>
-      lift theoryout_idtable idtable >> jump >>
-      add_string "TYPES" >> add_newline >>
-      lift theoryout_typetable tytable >> jump >>
-      add_string "INCORPORATE_CONSTS" >> add_newline >>
-      pp_incorporate_constants constants >> jump >>
-      add_string "TERMS" >> add_newline >>
-      lift theoryout_termtable tmtable >> jump >>
-      add_string "THEOREMS" >> add_newline >>
-      pp_theorems >> jump >>
-      add_string "CLASSES" >> add_newline >>
-      dblist () >> jump >>
-      add_string "LOADABLE_THYDATA" >> add_newline >>
-      pr_loadable term_to_string thydata >> jump
-      )
+  fun list_loadable shared_writers thydata_map =
+    Binarymap.foldl
+      (fn (k, data, rest) => (k, data shared_writers) :: rest)
+      []
+      thydata_map
+  fun enc_loadable shared_writers thydata_map =
+      let open HOLsexp in
+        tagged_encode "loadable-thydata" (list_encode enc_cpl)
+                      (list_loadable shared_writers thydata_map)
+      end
+  val thysexp =
+      let open HOLsexp
+      in
+        List [
+          Symbol "theory",
+          enc_thid_and_parents theory parents0,
+          enc_sdata share_data,
+          tagged_encode "incorporate" (
+            pair_encode(enc_incorporate_types, enc_incorporate_constants)
+          ) (types, constants),
+          enc_dblist,
+          enc_loadable {terms = write_term share_data,
+                        strings = write_string share_data}
+                       thydata
+        ]
+      end
 in
-  mlower ": dat" m
+  mlower ": dat" (lift HOLsexp.printer thysexp)
 end;
 
 

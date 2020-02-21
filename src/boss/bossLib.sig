@@ -16,7 +16,7 @@ sig
   val xDefine      : string -> term quotation -> thm
   val tDefine      : string -> term quotation -> tactic -> thm
   val WF_REL_TAC   : term quotation -> tactic
-  val Hol_defn     : string -> term quotation -> defn
+  val Hol_defn     : string -> term quotation -> DefnBase.defn
 
   (* new (inductive) relations *)
   val Hol_reln     : term quotation -> thm * thm * thm
@@ -32,16 +32,21 @@ sig
   (* Case-splitting and induction operations *)
 
   val Cases             : tactic
+  val namedCases        : string list -> tactic
   val Induct            : tactic
   val recInduct         : thm -> tactic
-  val Cases_on          : term quotation -> tactic
   val Induct_on         : term quotation -> tactic
-  val PairCases_on      : term quotation -> tactic
   val measureInduct_on  : term quotation -> tactic
   val completeInduct_on : term quotation -> tactic
-  val CASE_TAC          : tactic
+
+  val Cases_on          : term quotation -> tactic
+  val namedCases_on     : term quotation -> string list -> tactic
+  val PairCases_on      : term quotation -> tactic
+
   val pairarg_tac       : tactic
   val split_pair_case_tac : tactic
+
+  val CASE_TAC          : tactic
   val CaseEq            : string -> thm
   val CaseEqs           : string list -> thm
   val AllCaseEqs        : unit -> thm
@@ -164,8 +169,11 @@ sig
 
   (* useful quotation-based tactics (from Q) *)
   val qx_gen_tac : term quotation -> tactic
+  val qx_genl_tac : term quotation list -> tactic
   val qx_choose_then : term quotation -> thm_tactic -> thm_tactic
+  val qx_choosel_then : term quotation list -> thm_tactic -> thm_tactic
   val qexists_tac : term quotation -> tactic
+  val qexistsl_tac : term quotation list -> tactic
   val qsuff_tac : term quotation -> tactic
   val qid_spec_tac : term quotation -> tactic
   val qspec_tac : term quotation * term quotation -> tactic
@@ -189,9 +197,8 @@ sig
   val rename : term quotation list -> tactic
   val qabbrev_tac : term quotation -> tactic
   val qunabbrev_tac : term quotation -> tactic
+  val qunabbrevl_tac : term quotation list -> tactic
   val unabbrev_all_tac : tactic
-  val qx_genl_tac : term quotation list -> tactic
-  val qx_choosel_then : term quotation list -> thm_tactic -> thm_tactic
 
   (* Derived search functions *)
   val find_consts_thy : string list -> hol_type -> term list

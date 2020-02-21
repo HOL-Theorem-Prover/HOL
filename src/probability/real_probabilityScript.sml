@@ -11,8 +11,7 @@ open HolKernel Parse boolLib bossLib arithmeticTheory realTheory prim_recTheory
      rich_listTheory pairTheory combinTheory realLib optionTheory transcTheory
      real_sigmaTheory hurdUtils;
 
-open util_probTheory sigma_algebraTheory real_measureTheory real_borelTheory
-     real_lebesgueTheory;
+open util_probTheory sigma_algebraTheory real_measureTheory real_lebesgueTheory;
 
 val _ = new_theory "real_probability";
 

@@ -3,9 +3,10 @@ sig
 
   type data = Theory.LoadableThyData.t
   type thm = Thm.thm
-  datatype setdelta = ADD of string * thm | REMOVE of string
+  type thname = KernelSig.kernelname
+  datatype setdelta = ADD of thname * thm | REMOVE of string
   type exportfns =
-       { add : {thy : string, named_thms : (string * thm) list} -> unit,
+       { add : {thy : string, named_thms : (thname * thm) list} -> unit,
          remove : {thy : string, removes : string list} -> unit}
   val added_thms : setdelta list -> thm list
 
