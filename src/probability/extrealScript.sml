@@ -1772,12 +1772,14 @@ val div_eq_mul_linv = store_thm
  >> `y * inv y = 1` by PROVE_TAC [mul_comm, mul_linv_pos]
  >> ASM_REWRITE_TAC [mul_rone]);
 
-val inv_lt_antimono = store_thm (* new *)
-  ("inv_lt_antimono", ``!x y :extreal. 0 < x /\ 0 < y ==> (inv x < inv y <=> y < x)``,
-    rpt STRIP_TAC
+Theorem inv_lt_antimono: (* new *)
+  !x y :extreal. 0 < x /\ 0 < y ==> (inv x < inv y <=> y < x)
+Proof
+    rpt strip_tac
  >> `x <> 0 /\ y <> 0` by PROVE_TAC [lt_le]
- >> Cases_on `x` >> fs [lt_infty, extreal_inv_def, extreal_of_num_def, lt_refl, extreal_11,
-                        extreal_lt_eq]
+ >> Cases_on `x`
+ >> fs [lt_infty, extreal_inv_def, extreal_of_num_def, lt_refl, extreal_11,
+        extreal_lt_eq]
  >- (fs [GSYM extreal_of_num_def] \\
      Reverse EQ_TAC >> DISCH_TAC >| (* 2 subgoals *)
      [ (* goal 1 (of 2) *)
@@ -1786,11 +1788,12 @@ val inv_lt_antimono = store_thm (* new *)
        REWRITE_TAC [GSYM lt_infty] \\
        CCONTR_TAC >> fs [extreal_inv_def] \\
        fs [GSYM extreal_of_num_def, lt_refl] ])
- >> Cases_on `y` >> fs [lt_infty, extreal_inv_def, extreal_of_num_def, lt_refl, extreal_11,
-                        extreal_lt_eq]
- >- (REWRITE_TAC [real_lt] >> MATCH_MP_TAC REAL_LT_IMP_LE \\
-     MATCH_MP_TAC REAL_INV_POS >> art [])
- >> MATCH_MP_TAC REAL_INV_LT_ANTIMONO >> art []);
+ >> Cases_on `y`
+ >> fs [lt_infty, extreal_inv_def, extreal_of_num_def, lt_refl, extreal_11,
+        extreal_lt_eq]
+ >- (REWRITE_TAC [real_lt] >> MATCH_MP_TAC REAL_LT_IMP_LE \\ art[])
+ >> MATCH_MP_TAC REAL_INV_LT_ANTIMONO >> art []
+QED
 
 Theorem inv_inj: (* new *)
   !x y :extreal. 0 < x /\ 0 < y ==> ((inv x = inv y) <=> (x = y))

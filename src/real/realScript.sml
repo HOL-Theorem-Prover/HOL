@@ -2503,6 +2503,19 @@ Proof
   metis_tac[REAL_LET_ANTISYM]
 QED
 
+Theorem REAL_LT_LMUL_NEG:
+  !x y z. x < 0 ==> (x * y < x * z <=> z < y)
+Proof
+  rpt strip_tac >>
+  ‘0 < -x’ by simp[] >>
+  Cases_on ‘z < y’
+  >- (‘-x * z < -x * y’ by simp[REAL_LT_LMUL] >>
+      fs[REAL_LT_NEG, REAL_MUL_LNEG]) >>
+  ‘y <= z’ by fs[REAL_NOT_LT] >>
+  ‘-x * y <= -x * z’ by simp[REAL_LE_LMUL] >>
+  fs[REAL_LE_NEG, REAL_MUL_LNEG] >> metis_tac[REAL_LET_ANTISYM]
+QED
+
 val real_lt = store_thm ("real_lt",
 Term`!y x. x < y = ~(y <= x)`,
   let
@@ -4147,6 +4160,65 @@ Proof
   simp[GSYM REAL_POW_POW, POW_2, REAL_POW_LT]
 QED
 
+Theorem REAL_INV_LT0[simp]:
+  inv x < 0 <=> x < 0
+Proof
+  PURE_ONCE_REWRITE_TAC[DECIDE “(p <=> q) <=> (~p <=> ~q)”] >>
+  PURE_REWRITE_TAC [REAL_NOT_LT] >> simp[]
+QED
 
+Theorem REAL_POW_POS:
+  0 < x pow n <=> (n = 0) \/ 0 < x \/ x < 0 /\ EVEN n
+Proof
+  Induct_on ‘n’ >> simp[pow] >> eq_tac >> simp[EVEN] >>
+  Cases_on ‘EVEN n’ >> fs[]
+  >- (Cases_on ‘0 < x pow n’ >> simp[REAL_LT_RMUL_0] >> rfs[] >>
+      fs[REAL_NOT_LT] >> ‘x = 0’ by metis_tac[REAL_LE_ANTISYM] >>
+      simp[])
+  >- (Cases_on ‘0 < x pow n’ >> simp[REAL_LT_RMUL_0] >> rfs[] >>
+      fs[REAL_NOT_LT] >> fs[REAL_LE_LT])
+  >- simp[REAL_LT_LMUL_0]
+  >- (strip_tac >> simp[REAL_LT_LMUL_0] >>
+      Cases_on ‘0 < x pow n’ >> simp[REAL_LT_RMUL_0] >> rfs[] >> fs[] >>
+      fs[REAL_NOT_LT] >> fs[REAL_LE_LT] >> fs[] >> rfs[] >>
+      metis_tac[REAL_NEG_GT0, REAL_NEG_MUL2, REAL_LT_MUL])
+QED
+
+Theorem REAL_POW_NEG[simp]:
+  x pow n < 0 <=> ODD n /\ x < 0
+Proof
+  ‘!r. r < 0 <=> r <> 0 /\ ~(0 < r)’
+    by metis_tac[REAL_LT_NEGTOTAL,REAL_NEG_GT0,REAL_LT_REFL,REAL_LT_ANTISYM] >>
+  pop_assum (fn th => simp[SimpLHS, th]) >>
+  simp[REAL_POW_POS] >> csimp[REAL_NOT_LT, arithmeticTheory.ODD_EVEN] >>
+  csimp[REAL_LE_LT] >>
+  metis_tac[REAL_LT_REFL, arithmeticTheory.EVEN, REAL_LT_ANTISYM]
+QED
+
+Theorem REAL_POW_GE0[simp]:
+  0 <= x pow n <=> 0 <= x \/ EVEN n
+Proof
+  PURE_ONCE_REWRITE_TAC[DECIDE “(p <=> q) <=> (~p <=> ~q)”] >>
+  PURE_REWRITE_TAC[REAL_NOT_LE] >>
+  simp[REAL_POW_NEG, REAL_NOT_LE, arithmeticTheory.ODD_EVEN, CONJ_COMM]
+QED
+
+Theorem REAL_POW_LE0:
+  x pow n <= 0 <=> 0 < n /\ (x = 0) \/ x < 0 /\ ODD n
+Proof
+  PURE_ONCE_REWRITE_TAC[DECIDE “(p <=> q) <=> (~p <=> ~q)”] >>
+  PURE_REWRITE_TAC[REAL_NOT_LE] >>
+  simp[REAL_POW_POS] >>
+  csimp[arithmeticTheory.ODD_EVEN, REAL_NOT_LT, REAL_LE_LT] >>
+  Cases_on ‘n = 0’ >> simp[] >> Cases_on ‘0 < x’ >> csimp[]
+  >- (strip_tac >> fs[]) >>
+  fs[REAL_NOT_LT, REAL_LE_LT] >> metis_tac[REAL_LT_REFL]
+QED
+
+Theorem ZERO_LT_invx[simp]:
+  0 < inv x pow n <=> 0 < x pow n
+Proof
+  simp[REAL_POW_POS]
+QED
 
 val _ = export_theory();

@@ -101,6 +101,8 @@ val _ = List.app nftest [
       ("MULCANON14", REALMULCANON, “inv 2 pow x * z * 2 pow x”, “z:real”),
       ("MULCANON15", REALMULCANON, “inv (2 pow x) * z * 3 * 2 pow x”,
        “3 * z:real”),
+      ("MULCANON16", REALMULCANON, “inv (2 pow x) * z * 3”,
+       “3 * (z * inv 2 pow x)”),
       ("MULRELNORM01", simp,
        “z <> 0 ⇒ 2r * z pow 2 * inv yy = 5 * z pow 2 * inv y * a”,
        “z <> 0 ⇒ 2 * inv yy = 5 * (a * inv y)”),
@@ -108,6 +110,17 @@ val _ = List.app nftest [
       ("MULRELNORM03", simp,
        “y <> 0 ==> 2 * inv y pow 2 <= 9 * inv y * z”,
        “y <> 0 ==> 2 <= 9 * (y * z)”),
+      ("MULRELNORM04", simp,
+       “inv (2 pow x) * inv y pow 2 <= 9 * inv y * inv 2 pow x”,
+       “inv y pow 2 <= 9 * inv y”),
+      ("MULRELNORM05", simp,
+       “y <> 0 ==>
+        inv (2 pow x) * inv y pow 2 <= 9 * inv y pow 6 * inv 2 pow x”,
+       “y <> 0 ==> y pow 4 <= 9”),
+      ("MULRELNORM06", simp,
+       “0 < x ==> 3 * x pow 2 <= x”, “0 < x ==> 3 * x <= 1r”),
+      ("MULRELNORM07", simp,
+       “0 < x ==> 3 * x pow 2 <= inv x”, “0 < x ==> 3 * x pow 3 <= 1r”),
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]

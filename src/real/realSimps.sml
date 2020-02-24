@@ -608,6 +608,12 @@ fun oksort cmp [] = true
   | oksort cmp (t1::(rest as (t2::ts))) =
       cmp(t1,t2) = LESS andalso oksort cmp rest
 
+val MUL_ASSOC' = GSYM REAL_MUL_ASSOC
+val REAL_MUL_RID' = GSYM REAL_MUL_RID
+val REAL_POW_ADD' = GSYM REAL_POW_ADD
+val REAL_POW_INV' = GSYM REAL_POW_INV
+val POW_1' = GSYM POW_1
+
 val realreduce_cs = real_compset()
 fun REPORT_ALL_CONV t =
     (print ("\nGiving up on " ^ term_to_string t ^ "\n"); ALL_CONV t)
@@ -653,7 +659,7 @@ local
 
   val mulcompare = inv_img_cmp termbase litcompare
 
-  val addPOW1 = REWR_CONV (GSYM POW_1)
+  val addPOW1 = REWR_CONV POW_1'
   val mulPOWs = TRY_CONV (REWR_CONV REAL_POW_POW THENC
                           RAND_CONV (REWR_CONV arithmeticTheory.MULT_RIGHT_1))
   val POW_E0 = CONJUNCT1 pow
@@ -819,9 +825,6 @@ val RADDCANON_ss = SSFRAG {
 }
 
 (* val _ = augment_srw_ss [RMULCANON_ss] *)
-val MUL_ASSOC' = GSYM REAL_MUL_ASSOC
-val REAL_MUL_RID' = GSYM REAL_MUL_RID
-val REAL_POW_ADD' = GSYM REAL_POW_ADD
 fun ifMULT c1 c2 t = if is_mult t then c1 t else c2 t
 fun mul_extract P t =
     case total dest_mult t of
@@ -844,11 +847,19 @@ fun mkexp (b0,e) =
     in
       mk_pow(b, numSyntax.mk_numeral (Arbint.toNat i))
     end
+
+val sign_rwts = [REAL_POW_POS, REAL_POW_NEG,
+                 REAL_POW_GE0, REAL_POW_LE0,
+                 ZERO_LT_POW,
+                 REAL_LT_INV_EQ, REAL_INV_LT0]
 (* val R = “$<= : real -> real -> bool”
    val Rthms = [REAL_LE_LMUL, REAL_LE_LMUL_NEG]
-   val solver = solver val stk = []
+   fun solver0 stk t = base_solver [ASSUME “y <> 0r”] stk t val stk = []
 *)
-fun mulrelnorm R Rthms solver stk t =
+fun giveexp t =
+    if is_pow t then ALL_CONV t
+    else REWR_CONV POW_1' t
+fun mulrelnorm R Rthms solver0 stk t =
     let
       val mkE = mk_HOL_ERR "realSimps" "mulrelnorm"
       val (l,r) = dest_binop R (mkE ("Not a " ^ term_to_string R)) t
@@ -856,6 +867,11 @@ fun mulrelnorm R Rthms solver stk t =
                           map mul_termbase o strip_mult
       val ls = sorted_cbases l
       val rs = sorted_cbases r
+      fun solver stk t =
+          let val eqn = QCONV (PURE_REWRITE_CONV sign_rwts) t
+          in
+            EQ_MP (SYM eqn) (solver0 stk (rhs (concl eqn)))
+          end
       fun apply_thm th0 t =
           let
             val th = PART_MATCH (lhs o #2 o strip_imp) th0 t
@@ -890,9 +906,11 @@ fun mulrelnorm R Rthms solver stk t =
             end
           else if el = er then
             let fun chk t = pair_eq aconv equal (mul_termbase t) (l_t, el)
+                val prc = PURE_REWRITE_CONV [REAL_POW_INV'] THENC giveexp
             in
               BINOP_CONV (mul_extract chk THENC
-                          ifMULT ALL_CONV (REWR_CONV REAL_MUL_RID')) THENC
+                          ifMULT (LAND_CONV prc)
+                                 (prc THENC REWR_CONV REAL_MUL_RID')) THENC
               apply_thms
             end
           else
@@ -921,17 +939,16 @@ fun mulrelnorm R Rthms solver stk t =
                             end
                       in
                         (REWR_CONV REAL_MUL_COMM THENC stage2 THENC
-                         RAND_CONV NUM_REDUCE THENC
-                         TRY_CONV (REWR_CONV POW_1)) mul_t |> SYM
+                         RAND_CONV NUM_REDUCE ) mul_t |> SYM
                       end
             in
               FORK_CONV (mul_extract (chk (l_t,el)) THENC
-                         ifMULT (LAND_CONV (common false ld))
-                                (common true ld) THENC
+                         ifMULT (LAND_CONV (giveexp THENC common false ld))
+                                (giveexp THENC common true ld) THENC
                          TRY_CONV (REWR_CONV MUL_ASSOC'),
                          mul_extract (chk (r_t,er)) THENC
-                         ifMULT (LAND_CONV (common false rd))
-                                (common true rd) THENC
+                         ifMULT (LAND_CONV (giveexp THENC common false rd))
+                                (giveexp THENC common true rd) THENC
                          TRY_CONV (REWR_CONV MUL_ASSOC')) THENC
               apply_thms
             end
@@ -948,11 +965,9 @@ fun mulrelnorm R Rthms solver stk t =
       findelim ls rs t
     end
 (*
-fun solver stk t =
+fun base_solver asms stk t =
     let
       val _ = print ("Solving "^term_to_string t)
-      val asms = [ASSUME “0r < y”, ASSUME “y <> 0r”, ASSUME “x < 0r”,
-                  ASSUME “x <> 0r”, ASSUME “x pow 3 < 0”]
     in
       case Exn.capture (EQT_ELIM o QCONV (SIMP_CONV (srw_ss()) asms)) t of
           Exn.Res th => (print " - OK\n"; th)
@@ -991,7 +1006,7 @@ val RMULRELNORM_ss = SSFRAG {
      name = "RMUL_EQNORM1", trace = 2
     },
     {key = SOME ([], mk_less(x,y)),
-     conv = mulrelnorm less_tm [REAL_LT_LMUL],
+     conv = mulrelnorm less_tm [REAL_LT_LMUL, REAL_LT_LMUL_NEG],
      name = "RMUL_EQNORM", trace = 2
     }
   ]
