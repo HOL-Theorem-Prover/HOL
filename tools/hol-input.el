@@ -1139,6 +1139,8 @@ Suitable for use in the :set field of `defcustom'."
 (quail-defrule "!" "∀" "Hol")
 (quail-defrule "?" "∃" "Hol")
 (quail-defrule "?!" ["∃!"] "Hol")
+(quail-defrule "!!" "!" "Hol")
+(quail-defrule "??" "?" "Hol")
 (quail-defrule "<=>" "⇔" "Hol")
 (quail-defrule "<>" "≠" "Hol")
 (quail-defrule "<=" "≤" "Hol")
