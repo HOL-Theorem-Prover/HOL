@@ -11,7 +11,7 @@ open HolKernel Parse boolLib bossLib arithmeticTheory realTheory
      rich_listTheory pairTheory combinTheory realLib optionTheory
      real_sigmaTheory;
 
-open hurdUtils util_probTheory sigma_algebraTheory;
+open hurdUtils util_probTheory sigma_algebraTheory real_borelTheory;
 
 val _ = new_theory "real_measure";
 
@@ -27,6 +27,7 @@ val m_space_def = Define
 val measurable_sets_def = Define
    `measurable_sets (sp:'a->bool, sts:('a->bool)->bool, mu:('a->bool)->real) = sts`;
 
+val _ = hide "measure"; (* prim_recTheory *)
 val measure_def = Define
    `measure (sp:'a->bool, sts:('a->bool)->bool, mu:('a->bool)->real) = mu`;
 
@@ -102,11 +103,6 @@ val smallest_closed_cdi_def = Define
    `smallest_closed_cdi a =
      (space a, BIGINTER {b | (subsets a) SUBSET b /\ closed_cdi (space a, b)})`;
 
-val measurable_def = Define
-   `measurable a b = {f | sigma_algebra a /\ sigma_algebra b /\
-                          f IN (space a -> space b) /\
-                          !s. s IN subsets b ==> ((PREIMAGE f s)INTER(space a)) IN subsets a}`;
-
 val measure_preserving_def = Define
    `measure_preserving m1 m2 =
     {f |
@@ -115,6 +111,11 @@ val measure_preserving_def = Define
      !s.
       s IN measurable_sets m2 ==>
            (measure m1 ((PREIMAGE f s)INTER(m_space m1)) = measure m2 s)}`;
+
+val mono_convergent_def = Define
+   `mono_convergent u f s <=>
+        (!x m n. m <= n /\ x IN s ==> u m x <= u n x) /\
+        (!x. x IN s ==> (\i. u i x) --> f x)`;
 
 (* ------------------------------------------------------------------------- *)
 (* Basic measure theory theorems                                             *)
@@ -1644,171 +1645,6 @@ val MEASURABLE_SETS_SUBSET_SPACE = store_thm
    RW_TAC std_ss [measure_space_def, sigma_algebra_def, algebra_def, subsets_def, space_def,
                   subset_class_def]);
 
-val MEASURABLE_DIFF_PROPERTY = store_thm
-  ("MEASURABLE_DIFF_PROPERTY",
-   ``!a b f. sigma_algebra a /\ sigma_algebra b /\
-             f IN (space a -> space b) /\
-             (!s. s IN subsets b ==> PREIMAGE f s IN subsets a) ==>
-        (!s. s IN subsets b ==>
-                (PREIMAGE f (space b DIFF s) = space a DIFF PREIMAGE f s))``,
-   RW_TAC std_ss [SIGMA_ALGEBRA, IN_FUNSET, subsets_def, space_def, GSPECIFICATION,
-                  PREIMAGE_DIFF, IN_IMAGE]
-   >> MATCH_MP_TAC SUBSET_ANTISYM
-   >> RW_TAC std_ss [SUBSET_DEF, IN_DIFF, IN_PREIMAGE]
-   >> Q.PAT_X_ASSUM `!s. s IN subsets b ==> PREIMAGE f s IN subsets a`
-        (MP_TAC o Q.SPEC `space b DIFF s`)
-   >> Know `x IN PREIMAGE f (space b DIFF s)`
-   >- RW_TAC std_ss [IN_PREIMAGE, IN_DIFF]
-   >> PROVE_TAC [subset_class_def, SUBSET_DEF]);
-
-val MEASURABLE_BIGUNION_PROPERTY = store_thm
-  ("MEASURABLE_BIGUNION_PROPERTY",
-   ``!a b f. sigma_algebra a /\ sigma_algebra b /\
-             f IN (space a -> space b) /\
-             (!s. s IN subsets b ==> PREIMAGE f s IN subsets a) ==>
-        (!c. c SUBSET subsets b ==>
-                (PREIMAGE f (BIGUNION c) = BIGUNION (IMAGE (PREIMAGE f) c)))``,
-   RW_TAC std_ss [SIGMA_ALGEBRA, IN_FUNSET, subsets_def, space_def, GSPECIFICATION,
-                  PREIMAGE_BIGUNION, IN_IMAGE]);
-
-val MEASUBABLE_BIGUNION_LEMMA = store_thm
-  ("MEASUBABLE_BIGUNION_LEMMA",
-   ``!a b f. sigma_algebra a /\ sigma_algebra b /\
-             f IN (space a -> space b) /\
-             (!s. s IN subsets b ==> PREIMAGE f s IN subsets a) ==>
-        (!c. countable c /\ c SUBSET (IMAGE (PREIMAGE f) (subsets b)) ==>
-                BIGUNION c IN IMAGE (PREIMAGE f) (subsets b))``,
-   RW_TAC std_ss [SIGMA_ALGEBRA, IN_FUNSET, IN_IMAGE]
-   >> Q.EXISTS_TAC `BIGUNION (IMAGE (\x. @x'. x' IN subsets b /\ (PREIMAGE f x' = x)) c)`
-   >> Reverse CONJ_TAC
-   >- (Q.PAT_X_ASSUM `!c. countable c /\ c SUBSET subsets b ==> BIGUNION c IN subsets b`
-           MATCH_MP_TAC
-       >> RW_TAC std_ss [image_countable, SUBSET_DEF, IN_IMAGE]
-       >> Suff `(\x''. x'' IN subsets b) (@x''. x'' IN subsets b /\ (PREIMAGE f x'' = x'))`
-       >- RW_TAC std_ss []
-       >> MATCH_MP_TAC SELECT_ELIM_THM
-       >> FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_IMAGE]
-       >> PROVE_TAC [])
-   >> RW_TAC std_ss [PREIMAGE_BIGUNION, IMAGE_IMAGE]
-   >> RW_TAC std_ss [Once EXTENSION, IN_BIGUNION, IN_IMAGE]
-   >> FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_IMAGE]
-   >> EQ_TAC
-   >- (RW_TAC std_ss [] >> Q.EXISTS_TAC `s` >> ASM_REWRITE_TAC []
-       >> Q.PAT_X_ASSUM `!x. x IN c ==> ?x'. (x = PREIMAGE f x') /\ x' IN subsets b`
-             (MP_TAC o Q.SPEC `s`)
-       >> RW_TAC std_ss []
-       >> Q.EXISTS_TAC `PREIMAGE f x'` >> ASM_REWRITE_TAC []
-       >> Suff `(\x''. PREIMAGE f x' = PREIMAGE f x'')
-                (@x''. x'' IN subsets b /\ (PREIMAGE f x'' = PREIMAGE f x'))`
-       >- METIS_TAC []
-       >> MATCH_MP_TAC SELECT_ELIM_THM
-       >> PROVE_TAC [])
-   >> RW_TAC std_ss []
-   >> Q.EXISTS_TAC `x'`
-   >> ASM_REWRITE_TAC []
-   >> Know `(\x''. x IN PREIMAGE f x'' ==> x IN x')
-                   (@x''. x'' IN subsets b /\ (PREIMAGE f x'' = x'))`
-   >- (MATCH_MP_TAC SELECT_ELIM_THM
-       >> RW_TAC std_ss []
-       >> PROVE_TAC [])
-   >> RW_TAC std_ss []);
-
-val MEASURABLE_SIGMA_PREIMAGES = store_thm
-  ("MEASURABLE_SIGMA_PREIMAGES",
-   ``!a b f. sigma_algebra a /\ sigma_algebra b /\
-             f IN (space a -> space b) /\
-             (!s. s IN subsets b ==> PREIMAGE f s IN subsets a) ==>
-             sigma_algebra (space a, IMAGE (PREIMAGE f) (subsets b))``,
-   RW_TAC std_ss [SIGMA_ALGEBRA, IN_FUNSET, subsets_def, space_def]
-   >| [FULL_SIMP_TAC std_ss [subset_class_def, GSPECIFICATION, IN_IMAGE]
-       >> PROVE_TAC [],
-       RW_TAC std_ss [IN_IMAGE]
-       >> Q.EXISTS_TAC `{}`
-       >> RW_TAC std_ss [PREIMAGE_EMPTY],
-       RW_TAC std_ss [IN_IMAGE, PREIMAGE_DIFF]
-       >> FULL_SIMP_TAC std_ss [IN_IMAGE]
-       >> Q.EXISTS_TAC `space b DIFF x`
-       >> RW_TAC std_ss [PREIMAGE_DIFF]
-       >> MATCH_MP_TAC SUBSET_ANTISYM
-       >> RW_TAC std_ss [SUBSET_DEF, IN_DIFF, IN_PREIMAGE]
-       >> Q.PAT_X_ASSUM `!s. s IN subsets b ==> PREIMAGE f s IN subsets a`
-             (MP_TAC o Q.SPEC `space b DIFF x`)
-       >> Know `x' IN PREIMAGE f (space b DIFF x)`
-       >- RW_TAC std_ss [IN_PREIMAGE, IN_DIFF]
-       >> PROVE_TAC [subset_class_def, SUBSET_DEF],
-       (MP_TAC o REWRITE_RULE [IN_FUNSET, SIGMA_ALGEBRA] o Q.SPECL [`a`, `b`, `f`])
-               MEASUBABLE_BIGUNION_LEMMA
-       >> RW_TAC std_ss []]);
-
-val IN_MEASURABLE = store_thm
-  ("IN_MEASURABLE",
-  ``!a b f. f IN measurable a b <=>
-            sigma_algebra a /\ sigma_algebra b /\
-            f IN (space a -> space b) /\
-            (!s. s IN subsets b ==> ((PREIMAGE f s)INTER(space a)) IN subsets a)``,
-    RW_TAC std_ss [measurable_def, GSPECIFICATION]);
-
-val MEASURABLE_SIGMA = store_thm
-  ("MEASURABLE_SIGMA",
-  ``!f a b sp.
-       sigma_algebra a /\
-       subset_class sp b /\
-       f IN (space a -> sp) /\
-       (!s. s IN b ==> ((PREIMAGE f s)INTER(space a)) IN subsets a)
-      ==>
-       f IN measurable a (sigma sp b)``,
-   RW_TAC std_ss []
-   >> REWRITE_TAC [IN_MEASURABLE]
-   >> CONJ_TAC >- FULL_SIMP_TAC std_ss [sigma_def, space_def]
-   >> RW_TAC std_ss [SIGMA_ALGEBRA_SIGMA, SPACE_SIGMA, subsets_def, GSPECIFICATION]
-   >> Know `subsets (sigma sp b) SUBSET {x' | ((PREIMAGE f x')INTER(space a)) IN subsets a /\
-                                         x' SUBSET sp}`
-   >- (MATCH_MP_TAC SIGMA_PROPERTY
-       >> RW_TAC std_ss [subset_class_def, GSPECIFICATION, IN_INTER, EMPTY_SUBSET,
-                         PREIMAGE_EMPTY, PREIMAGE_DIFF, SUBSET_INTER, SIGMA_ALGEBRA,
-                         DIFF_SUBSET, SUBSET_DEF, NOT_IN_EMPTY, IN_DIFF,
-                         PREIMAGE_BIGUNION, IN_BIGUNION]
-       >| [FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, INTER_EMPTY],
-           PROVE_TAC [subset_class_def, SUBSET_DEF],
-           Know `(PREIMAGE f sp DIFF PREIMAGE f s') INTER space a =
-                 (PREIMAGE f sp INTER space a) DIFF (PREIMAGE f s' INTER space a)`
-           >- (RW_TAC std_ss [Once EXTENSION, IN_DIFF, IN_INTER, IN_PREIMAGE] >> DECIDE_TAC)
-           >> RW_TAC std_ss []
-           >> Know `PREIMAGE f sp INTER space a = space a`
-           >- (RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_PREIMAGE] >> METIS_TAC [IN_FUNSET])
-           >> FULL_SIMP_TAC std_ss [sigma_algebra_def, ALGEBRA_COMPL],
-           FULL_SIMP_TAC std_ss [sigma_algebra_def]
-           >> `BIGUNION (IMAGE (PREIMAGE f) c) INTER space a =
-               BIGUNION (IMAGE (\x. (PREIMAGE f x) INTER (space a)) c)`
-                by (RW_TAC std_ss [Once EXTENSION, IN_BIGUNION, IN_INTER, IN_IMAGE]
-                    >> FULL_SIMP_TAC std_ss [IN_FUNSET]
-                    >> EQ_TAC
-                    >- (RW_TAC std_ss []
-                        >> Q.EXISTS_TAC `PREIMAGE f x' INTER space a`
-                        >> ASM_REWRITE_TAC [IN_INTER]
-                        >> Q.EXISTS_TAC `x'` >> RW_TAC std_ss [])
-                    >> RW_TAC std_ss [] >> METIS_TAC [IN_INTER, IN_PREIMAGE])
-           >> RW_TAC std_ss []
-           >> Q.PAT_X_ASSUM `!c. countable c /\ c SUBSET subsets a ==>
-                 BIGUNION c IN subsets a` MATCH_MP_TAC
-           >> RW_TAC std_ss [image_countable, SUBSET_DEF, IN_IMAGE]
-           >> PROVE_TAC [],
-           PROVE_TAC []])
-   >> RW_TAC std_ss [SUBSET_DEF, GSPECIFICATION]);
-
-val MEASURABLE_SUBSET = store_thm
-  ("MEASURABLE_SUBSET",
-   ``!a b. measurable a b SUBSET measurable a (sigma (space b) (subsets b))``,
-   RW_TAC std_ss [SUBSET_DEF]
-   >> MATCH_MP_TAC MEASURABLE_SIGMA
-   >> FULL_SIMP_TAC std_ss [IN_MEASURABLE, SIGMA_ALGEBRA, space_def, subsets_def]);
-
-val MEASURABLE_LIFT = store_thm
-  ("MEASURABLE_LIFT",
-   ``!f a b.
-       f IN measurable a b ==> f IN measurable a (sigma (space b) (subsets b))``,
-   PROVE_TAC [MEASURABLE_SUBSET, SUBSET_DEF]);
-
 val IN_MEASURE_PRESERVING = store_thm
   ("IN_MEASURE_PRESERVING",
    ``!m1 m2 f.
@@ -1943,114 +1779,6 @@ val MEASURE_PRESERVING_SUBSET = store_thm
    >> MATCH_MP_TAC MEASURE_PRESERVING_LIFT
    >> PROVE_TAC []);
 
-val MEASURABLE_I = store_thm
-  ("MEASURABLE_I",
-   ``!a. sigma_algebra a ==> I IN measurable a a``,
-   RW_TAC std_ss [IN_MEASURABLE, I_THM, PREIMAGE_I, IN_FUNSET, GSPEC_ID, SPACE, SUBSET_REFL]
-   >> Know `s INTER space a = s`
-   >- (FULL_SIMP_TAC std_ss [Once EXTENSION, sigma_algebra_def, algebra_def, IN_INTER,
-                             subset_class_def, SUBSET_DEF]
-       >> METIS_TAC [])
-   >> RW_TAC std_ss []);
-
-val MEASURABLE_COMP = store_thm
-  ("MEASURABLE_COMP",
-   ``!f g a b c.
-       f IN measurable a b /\ g IN measurable b c ==>
-       (g o f) IN measurable a c``,
-   RW_TAC std_ss [IN_MEASURABLE, GSYM PREIMAGE_COMP, IN_FUNSET, SIGMA_ALGEBRA, space_def,
-                  subsets_def, GSPECIFICATION]
-   >> `PREIMAGE f (PREIMAGE g s) INTER space a =
-       PREIMAGE f (PREIMAGE g s INTER space b) INTER space a`
-        by (RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_PREIMAGE] >> METIS_TAC [])
-   >> METIS_TAC []);
-
-val MEASURABLE_COMP_STRONG = store_thm
-  ("MEASURABLE_COMP_STRONG",
-   ``!f g a b c.
-       f IN measurable a b /\
-       sigma_algebra c /\
-       g IN (space b -> space c) /\
-       (!x. x IN (subsets c) ==> PREIMAGE g x INTER (IMAGE f (space a)) IN subsets b) ==>
-       (g o f) IN measurable a c``,
-   RW_TAC bool_ss [IN_MEASURABLE]
-   >| [FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, IN_FUNSET] >> PROVE_TAC [],
-       RW_TAC std_ss [PREIMAGE_ALT]
-       >> ONCE_REWRITE_TAC [o_ASSOC]
-       >> ONCE_REWRITE_TAC [GSYM PREIMAGE_ALT]
-       >> Know `PREIMAGE f (s o g) INTER space a =
-                PREIMAGE f (s o g INTER (IMAGE f (space a))) INTER space a`
-       >- (RW_TAC std_ss [GSYM PREIMAGE_ALT]
-           >> RW_TAC std_ss [Once EXTENSION, IN_PREIMAGE, IN_INTER, IN_IMAGE]
-           >> EQ_TAC
-           >> RW_TAC std_ss []
-           >> FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_PREIMAGE]
-           >> Q.EXISTS_TAC `x`
-           >> Know `g (f x) IN space c`
-           >- (FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, subset_class_def, SUBSET_DEF] >> PROVE_TAC [])
-           >> PROVE_TAC [])
-       >> STRIP_TAC >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
-       >> FULL_SIMP_TAC std_ss [PREIMAGE_ALT]]);
-
-val MEASURABLE_COMP_STRONGER = store_thm
-  ("MEASURABLE_COMP_STRONGER",
-   ``!f g a b c t.
-       f IN measurable a b /\
-       sigma_algebra c /\
-       g IN (space b -> space c) /\
-       (IMAGE f (space a)) SUBSET t /\
-       (!s. s IN subsets c ==> (PREIMAGE g s INTER t) IN subsets b) ==>
-       (g o f) IN measurable a c``,
-   RW_TAC bool_ss [IN_MEASURABLE]
-   >| [FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, IN_FUNSET] >> PROVE_TAC [],
-       RW_TAC std_ss [PREIMAGE_ALT]
-       >> ONCE_REWRITE_TAC [o_ASSOC]
-       >> ONCE_REWRITE_TAC [GSYM PREIMAGE_ALT]
-       >> Know `(PREIMAGE (f:'a->'b) (((s : 'c -> bool) o (g :'b -> 'c)) INTER
-                (t :'b -> bool)) INTER space a = PREIMAGE f (s o g) INTER space a)`
-       >- (RW_TAC std_ss [GSYM PREIMAGE_ALT]
-           >> RW_TAC std_ss [Once EXTENSION, IN_PREIMAGE, IN_INTER, IN_IMAGE]
-           >> EQ_TAC
-           >> RW_TAC std_ss []
-            >> Know `g (f x) IN space c`
-           >- (FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, subset_class_def, SUBSET_DEF] >> PROVE_TAC [])
-           >> STRIP_TAC
-           >> Know `(f x) IN space b`
-           >- FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_PREIMAGE, IN_FUNSET]
-           >> STRIP_TAC
-           >> Know `x IN space a`
-           >- FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_PREIMAGE]
-           >> STRIP_TAC
-           >> FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_IMAGE]
-           >> Q.PAT_X_ASSUM `!x. (?x'. (x = f x') /\ x' IN space a) ==> x IN t` MATCH_MP_TAC
-           >> Q.EXISTS_TAC `x`
-           >> ASM_REWRITE_TAC [])
-       >> DISCH_THEN (ONCE_REWRITE_TAC o wrap o GSYM)
-       >> RW_TAC std_ss [PREIMAGE_ALT]
-       >> RW_TAC std_ss [GSYM PREIMAGE_ALT, GSYM PREIMAGE_COMP]]);
-
-val MEASURABLE_UP_LIFT = store_thm
-  ("MEASURABLE_UP_LIFT",
-   ``!sp a b c f. f IN measurable (sp, a) c /\
-               sigma_algebra (sp, b) /\ a SUBSET b ==> f IN measurable (sp,b) c``,
-   RW_TAC std_ss [IN_MEASURABLE, GSPECIFICATION, SUBSET_DEF, IN_FUNSET, space_def, subsets_def]);
-
-val MEASURABLE_UP_SUBSET = store_thm
-  ("MEASURABLE_UP_SUBSET",
-   ``!sp a b c. a SUBSET b /\ sigma_algebra (sp, b)
-            ==> measurable (sp, a) c SUBSET measurable (sp, b) c``,
-   RW_TAC std_ss [MEASURABLE_UP_LIFT, SUBSET_DEF]
-   >> MATCH_MP_TAC MEASURABLE_UP_LIFT
-   >> Q.EXISTS_TAC `a`
-   >> ASM_REWRITE_TAC [SUBSET_DEF]);
-
-val MEASURABLE_UP_SIGMA = store_thm
-  ("MEASURABLE_UP_SIGMA",
-   ``!a b. measurable a b SUBSET measurable (sigma (space a) (subsets a)) b``,
-   RW_TAC std_ss [SUBSET_DEF, IN_MEASURABLE, space_def, subsets_def, SPACE_SIGMA]
-   >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA])
-   >> PROVE_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF]);
-
 val MEASURE_PRESERVING_UP_LIFT = store_thm
   ("MEASURE_PRESERVING_UP_LIFT",
    ``!m1 m2 f a.
@@ -2092,31 +1820,6 @@ val MEASURE_PRESERVING_UP_SIGMA = store_thm
    >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, space_def, subsets_def]);
 
 (* ****************** *)
-
-val MEASURABLE_PROD_SIGMA = store_thm
-  ("MEASURABLE_PROD_SIGMA",
-   ``!a a1 a2 f.
-       sigma_algebra a /\
-       (FST o f) IN measurable a a1 /\
-       (SND o f) IN measurable a a2 ==>
-       f IN measurable a (sigma ((space a1) CROSS (space a2))
-                                (prod_sets (subsets a1) (subsets a2)))``,
-   rpt STRIP_TAC
-   >> MATCH_MP_TAC MEASURABLE_SIGMA
-   >> FULL_SIMP_TAC std_ss [IN_MEASURABLE]
-   >> CONJ_TAC
-   >- (RW_TAC std_ss [subset_class_def, subsets_def, space_def, IN_PROD_SETS]
-      >> PROVE_TAC [SIGMA_ALGEBRA, CROSS_SUBSET, SUBSET_DEF, subset_class_def, subsets_def,
-                    space_def])
-   >> CONJ_TAC
-   >- (RW_TAC std_ss [IN_FUNSET, SPACE_SIGMA, IN_CROSS]
-       >> FULL_SIMP_TAC std_ss [IN_FUNSET, o_DEF])
-   >> RW_TAC std_ss [IN_PROD_SETS]
-   >> RW_TAC std_ss [PREIMAGE_CROSS]
-   >> `PREIMAGE (FST o f) t INTER PREIMAGE (SND o f) u INTER space a =
-       (PREIMAGE (FST o f) t INTER space a) INTER (PREIMAGE (SND o f) u INTER space a)`
-        by (RW_TAC std_ss [Once EXTENSION, IN_INTER] >> DECIDE_TAC)
-   >> PROVE_TAC [sigma_algebra_def, ALGEBRA_INTER]);
 
 val MEASURABLE_RANGE_REDUCE = store_thm
   ("MEASURABLE_RANGE_REDUCE",
@@ -2445,6 +2148,353 @@ val MEASURE_SPACE_CMUL = store_thm
   >> RW_TAC std_ss [countably_additive_def,measure_def,measurable_sets_def,o_DEF]
   >> METIS_TAC [SER_CMUL,countably_additive_def]);
 
-(* All Borel and Borel-measurable theorems were deleted here. -- Chun Tian *)
+Theorem borel_measurable_le_iff :
+    !m. measure_space m ==>
+        !f. f IN borel_measurable (m_space m, measurable_sets m) <=>
+            !a. {w | w IN m_space m /\ f w <= a} IN measurable_sets m
+Proof
+    RW_TAC std_ss [measure_space_def, in_borel_measurable_le,
+                   space_def, subsets_def, IN_FUNSET, IN_UNIV]
+QED
+
+Theorem borel_measurable_gr_iff :
+    !m. measure_space m ==>
+        !f. f IN borel_measurable (m_space m, measurable_sets m) <=>
+            !a. {w | w IN m_space m /\ a < f w} IN measurable_sets m
+Proof
+    RW_TAC std_ss [measure_space_def, in_borel_measurable_gr,
+                   space_def, subsets_def, IN_FUNSET, IN_UNIV]
+QED
+
+Theorem borel_measurable_less_iff :
+    !m. measure_space m ==>
+        !f. f IN borel_measurable (m_space m, measurable_sets m) <=>
+            !a. {w | w IN m_space m /\ f w < a} IN measurable_sets m
+Proof
+    RW_TAC std_ss [measure_space_def, in_borel_measurable_less,
+                   space_def, subsets_def, IN_FUNSET, IN_UNIV]
+QED
+
+Theorem borel_measurable_ge_iff :
+    !m. measure_space m ==>
+        !f. f IN borel_measurable (m_space m, measurable_sets m) <=>
+            !a. {w | w IN m_space m /\ a <= f w} IN measurable_sets m
+Proof
+    RW_TAC std_ss [measure_space_def, in_borel_measurable_ge,
+                   space_def, subsets_def, IN_FUNSET, IN_UNIV]
+QED
+
+val affine_borel_measurable = store_thm
+  ("affine_borel_measurable",
+   ``!m g. measure_space m /\ g IN borel_measurable (m_space m, measurable_sets m) ==>
+           !(a:real) (b:real). (\x. a + (g x) * b) IN borel_measurable (m_space m, measurable_sets m)``,
+   rpt STRIP_TAC
+   >> Cases_on `b=0`
+   >- (RW_TAC real_ss [] >> FULL_SIMP_TAC std_ss [measure_space_def, borel_measurable_const])
+   >> `!x c. (a + g x * b <= c) = (g x * b <= c - a)`
+        by (rpt STRIP_TAC >> REAL_ARITH_TAC)
+   >> RW_TAC std_ss [borel_measurable_le_iff]
+   >> POP_ASSUM (K ALL_TAC)
+   >> Reverse (Cases_on `b < 0`)
+   >- (`0 < b` by METIS_TAC [REAL_LT_LE, real_lt]
+       >> `! x c. (g x * b <= c - a) = (g x <= (c - a) / b)`
+        by (rpt STRIP_TAC
+            >> MATCH_MP_TAC (GSYM REAL_LE_RDIV_EQ)
+            >> ASM_REWRITE_TAC [])
+       >> `!c. {w | w IN m_space m /\ a + g w * b <= c} =
+               {w | w IN m_space m /\ g w <= (c - a) / b}`
+                by (RW_TAC std_ss [Once EXTENSION, GSPECIFICATION]
+                    >> FULL_SIMP_TAC std_ss [REAL_LE_SUB_LADD]
+                    >> FULL_SIMP_TAC std_ss [Once REAL_ADD_COMM])
+       >> RW_TAC std_ss [REAL_LE_SUB_LADD]
+       >> METIS_TAC [borel_measurable_le_iff])
+   >> RW_TAC std_ss [Once (GSYM REAL_LE_NEG), Once (GSYM REAL_MUL_RNEG)]
+   >> `!x. (~(a' - a) <= g x * ~b) = ((~(a' - a))/(~b) <= g x)`
+        by (STRIP_TAC >> MATCH_MP_TAC (GSYM REAL_LE_LDIV_EQ)
+            >> RW_TAC std_ss [REAL_NEG_GT0])
+   >> POP_ORW
+   >> `{x | x IN m_space m /\ ~(a' - a) / ~b <= g x} =
+        m_space m DIFF {x | x IN m_space m /\ g x < ~(a' - a) / ~b}`
+        by (RW_TAC std_ss [Once EXTENSION, IN_DIFF, GSPECIFICATION, real_lt]
+            >> DECIDE_TAC)
+   >> POP_ORW
+   >> Suff `{x | x IN m_space m /\ g x < ~(a' - a) / ~b} IN measurable_sets m`
+   >- METIS_TAC [SPACE, subsets_def, space_def, measurable_sets_def, m_space_def, SIGMA_ALGEBRA, measure_space_def]
+   >> METIS_TAC [borel_measurable_less_iff]);
+
+val borel_measurable_less_borel_measurable = store_thm
+  ("borel_measurable_less_borel_measurable",
+   ``!m f g. measure_space m /\
+             f IN borel_measurable (m_space m, measurable_sets m) /\
+             g IN borel_measurable (m_space m, measurable_sets m) ==>
+                {w | w IN m_space m /\ f w < g w} IN measurable_sets m``,
+   rpt STRIP_TAC
+   >> `{w | w IN m_space m /\ f w < g w} =
+        BIGUNION (IMAGE (\i. {w | w IN m_space m /\ f w < i} INTER {w | w IN m_space m /\ i < g w })
+                        real_rat_set)`
+        by (MATCH_MP_TAC SUBSET_ANTISYM
+            >> CONJ_TAC
+            >- (RW_TAC std_ss [SUBSET_DEF, GSPECIFICATION, IN_BIGUNION, IN_IMAGE, IN_INTER]
+                >> Suff `?i. x IN {w | w IN m_space m /\ f w < i} INTER
+                                  {w | w IN m_space m /\ i < g w} /\ i IN real_rat_set`
+                >- METIS_TAC []
+                >> RW_TAC std_ss [IN_INTER, GSPECIFICATION]
+                >> METIS_TAC [REAL_RAT_DENSE])
+            >> RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_IMAGE]
+            >> FULL_SIMP_TAC std_ss [IN_INTER, GSPECIFICATION]
+            >> METIS_TAC [REAL_LT_TRANS])
+   >> POP_ORW
+   >> `sigma_algebra (m_space m,measurable_sets m)` by FULL_SIMP_TAC std_ss [measure_space_def]
+   >> FULL_SIMP_TAC std_ss [sigma_algebra_def, subsets_def, space_def]
+   >> Q.PAT_ASSUM `!c. P c ==> BIGUNION c IN measurable_sets m` MATCH_MP_TAC
+   >> RW_TAC std_ss [image_countable, countable_real_rat_set, SUBSET_DEF, IN_IMAGE, IN_INTER]
+   >> `measurable_sets m = subsets (m_space m, measurable_sets m)` by RW_TAC std_ss [subsets_def]
+   >> POP_ORW >> MATCH_MP_TAC ALGEBRA_INTER
+   >> RW_TAC std_ss [subsets_def]
+   >> METIS_TAC [borel_measurable_less_iff, borel_measurable_gr_iff]);
+
+val borel_measurable_leq_borel_measurable = store_thm
+  ("borel_measurable_leq_borel_measurable",
+   ``!m f g. measure_space m /\
+             f IN borel_measurable (m_space m, measurable_sets m) /\
+             g IN borel_measurable (m_space m, measurable_sets m) ==>
+                {w | w IN m_space m /\ f w <= g w} IN measurable_sets m``,
+   rpt STRIP_TAC
+   >> `{w | w IN m_space m /\ f w <= g w} =
+       m_space m DIFF {w | w IN m_space m /\ g w < f w}`
+        by (RW_TAC std_ss [Once EXTENSION, IN_DIFF, GSPECIFICATION, real_lt] >> DECIDE_TAC)
+   >> POP_ORW
+   >> `{w | w IN m_space m /\ g w < f w} IN measurable_sets m`
+        by RW_TAC std_ss [borel_measurable_less_borel_measurable]
+   >> FULL_SIMP_TAC std_ss [measure_space_def, SIGMA_ALGEBRA, subsets_def, space_def]);
+
+val borel_measurable_eq_borel_measurable = store_thm
+  ("borel_measurable_eq_borel_measurable",
+   ``!m f g. measure_space m /\
+             f IN borel_measurable (m_space m, measurable_sets m) /\
+             g IN borel_measurable (m_space m, measurable_sets m) ==>
+                {w | w IN m_space m /\ (f w = g w)} IN measurable_sets m``,
+   rpt STRIP_TAC
+   >> `{w | w IN m_space m /\ (f w = g w)} =
+       {w | w IN m_space m /\ f w <= g w} DIFF {w | w IN m_space m /\ f w < g w}`
+        by (RW_TAC std_ss [Once EXTENSION, IN_DIFF, GSPECIFICATION, real_lt] >> METIS_TAC [REAL_LE_ANTISYM])
+   >> POP_ORW
+   >> `{w | w IN m_space m /\ f w < g w} IN measurable_sets m`
+        by RW_TAC std_ss [borel_measurable_less_borel_measurable]
+   >> `{w | w IN m_space m /\ f w <= g w} IN measurable_sets m`
+        by RW_TAC std_ss [borel_measurable_leq_borel_measurable]
+
+   >> FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def, subsets_def, space_def]
+   >> `measurable_sets m = subsets (m_space m, measurable_sets m)` by RW_TAC std_ss [subsets_def]
+   >> POP_ORW >> MATCH_MP_TAC ALGEBRA_DIFF
+   >> RW_TAC std_ss [subsets_def]);
+
+val borel_measurable_neq_borel_measurable = store_thm
+  ("borel_measurable_neq_borel_measurable",
+   ``!m f g. measure_space m /\
+             f IN borel_measurable (m_space m, measurable_sets m) /\
+             g IN borel_measurable (m_space m, measurable_sets m) ==>
+                {w | w IN m_space m /\ ~(f w = g w)} IN measurable_sets m``,
+   rpt STRIP_TAC
+   >> `{w | w IN m_space m /\ ~(f w = g w)} =
+       m_space m DIFF {w | w IN m_space m /\ (f w = g w)}`
+        by (RW_TAC std_ss [Once EXTENSION, IN_DIFF, GSPECIFICATION] >> DECIDE_TAC)
+   >> POP_ORW
+   >> `{w | w IN m_space m /\ (f w = g w)} IN measurable_sets m`
+        by RW_TAC std_ss [borel_measurable_eq_borel_measurable]
+   >> FULL_SIMP_TAC std_ss [measure_space_def, SIGMA_ALGEBRA, subsets_def, space_def]);
+
+val borel_measurable_plus_borel_measurable = store_thm
+  ("borel_measurable_plus_borel_measurable",
+   ``!m f g. measure_space m /\
+             f IN borel_measurable (m_space m, measurable_sets m) /\
+             g IN borel_measurable (m_space m, measurable_sets m) ==>
+             (\x. f x + g x) IN borel_measurable (m_space m, measurable_sets m)``,
+   rpt STRIP_TAC
+   >> `!a. {w | w IN m_space m /\ a <= f w + g w} =
+           {w | w IN m_space m /\ a + (g w) * (~1) <= f w}`
+        by RW_TAC real_ss [Once EXTENSION, GSPECIFICATION, GSYM real_sub, REAL_LE_SUB_RADD]
+   >> `!a. (\w. a + (g w) * (~1)) IN borel_measurable (m_space m, measurable_sets m)`
+        by RW_TAC std_ss [affine_borel_measurable]
+   >> `!a. {w | w IN m_space m /\ (\w. a + (g w)*(~1)) w <= f w} IN measurable_sets m`
+        by RW_TAC std_ss [borel_measurable_leq_borel_measurable]
+   >> `!a. {w | w IN m_space m /\ a <= f w + g w} IN measurable_sets m`
+        by FULL_SIMP_TAC std_ss []
+   >> RW_TAC bool_ss [borel_measurable_ge_iff]);
+
+val borel_measurable_square = store_thm
+  ("borel_measurable_square",
+   ``!m f g. measure_space m /\
+             f IN borel_measurable (m_space m, measurable_sets m) ==>
+                (\x. (f x) pow 2) IN borel_measurable (m_space m, measurable_sets m)``,
+   rpt STRIP_TAC
+   >> RW_TAC std_ss [borel_measurable_le_iff]
+   >> `!a. 0 <= a pow 2`
+        by (STRIP_TAC
+            >> Cases_on `a = 0` >- RW_TAC real_ss [POW_0]
+            >> RW_TAC bool_ss [Once (GSYM REAL_POW2_ABS)]
+            >> `0 < abs (a)` by METIS_TAC [REAL_LT_LE, REAL_ABS_POS, ABS_ZERO]
+            >> METIS_TAC [REAL_POW_LT, REAL_LT_IMP_LE])
+   >> `!a. (a pow 2 = 0) = (a = 0)`
+        by (STRIP_TAC >> EQ_TAC >> RW_TAC real_ss [POW_0]
+            >> POP_ASSUM MP_TAC >> RW_TAC bool_ss [Once (GSYM REAL_POW2_ABS)]
+            >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
+            >> `0 < abs a` by METIS_TAC [REAL_LT_LE, REAL_ABS_POS, ABS_ZERO]
+            >> (MP_TAC o Q.SPECL [`2`,`0`, `abs a`]) REAL_POW_LT2
+            >> RW_TAC real_ss [POW_0])
+   >> Cases_on `a < 0`
+   >- (`{x | x IN m_space m /\ f x pow 2 <= a} = {}`
+        by (RW_TAC std_ss [Once EXTENSION, NOT_IN_EMPTY, GSPECIFICATION]
+            >> Reverse (Cases_on `(x IN m_space m)`) >> RW_TAC std_ss []
+            >> RW_TAC std_ss [GSYM real_lt] >> MATCH_MP_TAC REAL_LTE_TRANS >> Q.EXISTS_TAC `0`
+            >> RW_TAC std_ss [])
+       >> FULL_SIMP_TAC std_ss [measure_space_def, SIGMA_ALGEBRA, subsets_def])
+   >> Cases_on `a = 0`
+   >- (ASM_REWRITE_TAC []
+       >> `{x | x IN m_space m /\ f x pow 2 <= 0} =
+           {x | x IN m_space m /\ f x <= 0} INTER
+           {x | x IN m_space m /\ 0 <= f x}`
+        by (RW_TAC std_ss [Once EXTENSION, IN_INTER, GSPECIFICATION]
+            >> METIS_TAC [REAL_LE_ANTISYM])
+        >> POP_ORW
+        >> `{x | x IN m_space m /\ f x <= 0} IN measurable_sets m /\
+            {x | x IN m_space m /\ 0 <= f x} IN measurable_sets m`
+                by METIS_TAC [borel_measurable_le_iff, borel_measurable_ge_iff]
+        >> `measurable_sets m = subsets (m_space m, measurable_sets m)` by RW_TAC std_ss [subsets_def]
+        >> POP_ORW >> MATCH_MP_TAC ALGEBRA_INTER
+        >> FULL_SIMP_TAC std_ss [subsets_def, measure_space_def, sigma_algebra_def])
+   >> `0 < a` by METIS_TAC [REAL_LT_TOTAL]
+   >> `!b. 0 < b ==> ?q. 0 < q /\ (q pow 2 = b)`
+        by METIS_TAC [SQRT_POS_LT, SQRT_POW_2, REAL_LT_IMP_LE]
+   >> POP_ASSUM (MP_TAC o Q.SPEC `a`) >> RW_TAC std_ss []
+   >> `!x. (f x pow 2 <= q pow 2) =
+           (~ q <= f x /\ f x <= q)`
+        by (STRIP_TAC >> RW_TAC bool_ss [Once (GSYM REAL_POW2_ABS)]
+            >> ONCE_REWRITE_TAC [GSYM ABS_BOUNDS]
+            >> RW_TAC std_ss [GSYM REAL_NOT_LT]
+            >> Reverse EQ_TAC
+            >- (STRIP_TAC >> MATCH_MP_TAC REAL_POW_LT2 >> RW_TAC real_ss [REAL_LT_IMP_LE])
+            >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
+            >> POP_ASSUM MP_TAC
+            >> RW_TAC std_ss [REAL_LT_LE]
+            >- (SIMP_TAC std_ss [GSYM REAL_NOT_LT] >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
+                >> (MP_TAC o Q.SPECL [`2`, `abs (f x)`, `q`]) REAL_POW_LT2
+                >> RW_TAC real_ss [REAL_ABS_POS]
+                >> METIS_TAC [REAL_LT_ANTISYM])
+            >> METIS_TAC [REAL_LT_ANTISYM])
+   >> POP_ORW
+   >> `{x | x IN m_space m /\ ~q <= f x /\ f x <= q} =
+       {x | x IN m_space m /\ ~q <= f x} INTER
+       {x | x IN m_space m /\ f x <= q}`
+        by (RW_TAC std_ss [Once EXTENSION, IN_INTER, GSPECIFICATION]
+            >> METIS_TAC [REAL_LE_ANTISYM])
+   >>  POP_ORW
+   >> `{x | x IN m_space m /\ ~q <= f x} IN measurable_sets m /\
+       {x | x IN m_space m /\ f x <= q} IN measurable_sets m`
+                by METIS_TAC [borel_measurable_le_iff, borel_measurable_ge_iff]
+   >> `measurable_sets m = subsets (m_space m, measurable_sets m)` by RW_TAC std_ss [subsets_def]
+   >> POP_ORW >> MATCH_MP_TAC ALGEBRA_INTER
+   >> FULL_SIMP_TAC std_ss [subsets_def, measure_space_def, sigma_algebra_def]);
+
+val pow2_binomial = prove
+  (``!(f:real) g. (f+g) pow 2 = f pow 2 + 2 * (f*g) + g pow 2``,
+   RW_TAC std_ss [POW_2, REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB] >> REAL_ARITH_TAC);
+
+val times_eq_sum_squares = prove
+  (``!(f:real) g. f*g = ((f+g) pow 2)/4 - ((f-g)pow 2)/4``,
+   RW_TAC std_ss [real_sub, pow2_binomial, real_div, REAL_MUL_RNEG]
+   >> `~g pow 2 = g pow 2` by METIS_TAC [GSYM REAL_POW2_ABS, ABS_NEG]
+   >> POP_ORW
+   >> Q.ABBREV_TAC `a = f * g` >> Q.ABBREV_TAC `b = f pow 2` >> Q.ABBREV_TAC `c = g pow 2`
+   >> ONCE_REWRITE_TAC [GSYM REAL_MUL_LNEG]
+   >> ONCE_REWRITE_TAC [GSYM REAL_ADD_RDISTRIB]
+   >> ONCE_REWRITE_TAC [GSYM real_div]
+   >> (MP_TAC o Q.SPECL [`a`, `(b + 2 * a + c + ~(b + ~(2 * a) + c))`, `4`]) REAL_EQ_RDIV_EQ
+   >> RW_TAC real_ss [GSYM real_sub]
+   >> REAL_ARITH_TAC);
+
+val borel_measurable_times_borel_measurable = store_thm
+  ("borel_measurable_times_borel_measurable",
+   ``!m f g. measure_space m /\
+             f IN borel_measurable (m_space m, measurable_sets m) /\
+             g IN borel_measurable (m_space m, measurable_sets m) ==>
+             (\x. f x * g x) IN borel_measurable (m_space m, measurable_sets m)``,
+   rpt STRIP_TAC
+   >> `(\x. f x * g x) = (\x. ((f x + g x) pow 2)/4 - ((f x - g x) pow 2)/4)`
+        by RW_TAC std_ss [times_eq_sum_squares]
+   >> POP_ORW
+   >> RW_TAC bool_ss [real_div, real_sub]
+   >> Suff `(\x. (f x + g x) pow 2 * inv 4) IN borel_measurable (m_space m,measurable_sets m) /\
+            (\x. ~((f x + ~g x) pow 2 * inv 4)) IN borel_measurable (m_space m,measurable_sets m)`
+   >- RW_TAC std_ss [borel_measurable_plus_borel_measurable]
+   >> ONCE_REWRITE_TAC [GSYM REAL_ADD_LID]
+   >> CONJ_TAC >- METIS_TAC [affine_borel_measurable, borel_measurable_square, borel_measurable_plus_borel_measurable]
+   >> ONCE_REWRITE_TAC [GSYM REAL_MUL_RNEG]
+   >> Suff `(\x. ~ g x) IN borel_measurable (m_space m,measurable_sets m)`
+   >- METIS_TAC [affine_borel_measurable, borel_measurable_square, borel_measurable_plus_borel_measurable]
+   >> `!x. ~ g x = 0 + (g x) * ~1` by RW_TAC real_ss []
+   >> POP_ORW
+   >> RW_TAC std_ss [affine_borel_measurable]);
+
+val borel_measurable_sub_borel_measurable = store_thm
+  ("borel_measurable_sub_borel_measurable",
+   ``!m f g. measure_space m /\
+             f IN borel_measurable (m_space m, measurable_sets m) /\
+             g IN borel_measurable (m_space m, measurable_sets m) ==>
+             (\x. f x - g x) IN borel_measurable (m_space m, measurable_sets m)``,
+   RW_TAC bool_ss [real_sub]
+   >> Suff `(\x. ~ g x) IN borel_measurable (m_space m,measurable_sets m)`
+   >- METIS_TAC [borel_measurable_plus_borel_measurable]
+   >> `!x. ~ g x = 0 + (g x) * ~1` by RW_TAC real_ss []
+   >> POP_ORW
+   >> RW_TAC std_ss [affine_borel_measurable]);
+
+val mono_convergent_borel_measurable = store_thm
+  ("mono_convergent_borel_measurable",
+   ``!u m f. measure_space m /\ (!n. u n IN borel_measurable (m_space m, measurable_sets m)) /\
+             mono_convergent u f (m_space m) ==>
+                f IN borel_measurable (m_space m, measurable_sets m)``,
+   rpt STRIP_TAC
+   >> RW_TAC std_ss [borel_measurable_le_iff]
+   >> `!w. w IN m_space m /\ f w <= a <=> w IN m_space m /\ !i. u i w <= a`
+        by (FULL_SIMP_TAC std_ss [mono_convergent_def] >> STRIP_TAC >> EQ_TAC
+            >- (RW_TAC std_ss [] >> MATCH_MP_TAC REAL_LE_TRANS >> Q.EXISTS_TAC `f w`
+                >> ASM_REWRITE_TAC [] >> `u i w = (\i. u i w) i` by SIMP_TAC std_ss [] >> POP_ORW
+                >> MATCH_MP_TAC SEQ_MONO_LE >> RW_TAC arith_ss [])
+            >> RW_TAC std_ss [] >> MATCH_MP_TAC SEQ_LE_IMP_LIM_LE
+            >> Q.EXISTS_TAC `(\i. u i w)` >> RW_TAC std_ss [])
+   >> POP_ORW
+   >> `{w: 'a | w IN m_space m /\ !i:num. (u :num -> 'a -> real) i w <= (a:real)} =
+        (m_space m) DIFF
+        (BIGUNION (IMAGE (\i. (m_space m) DIFF
+                              {w | w IN m_space m /\ (u :num -> 'a -> real) i w <= (a:real)})
+                  (UNIV:num->bool)))`
+        by (RW_TAC std_ss [Once EXTENSION, GSPECIFICATION, IN_DIFF, IN_BIGUNION_IMAGE, IN_UNIV]
+            >> METIS_TAC [])
+   >> POP_ORW
+   >> `sigma_algebra (m_space m, measurable_sets m)` by FULL_SIMP_TAC std_ss [measure_space_def]
+   >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA, space_def, subsets_def]
+   >> Suff `(BIGUNION (IMAGE (\i. (m_space m) DIFF
+                              {w | w IN m_space m /\ (u :num -> 'a -> real) i w <= (a:real)})
+                  (UNIV:num->bool))) IN measurable_sets m`
+   >- RW_TAC std_ss []
+   >> Q.PAT_X_ASSUM `!c. P c ==> BIGUNION c IN measurable_sets m` MATCH_MP_TAC
+   >> RW_TAC std_ss [image_countable, COUNTABLE_NUM, SUBSET_DEF, IN_IMAGE, IN_UNIV]
+   >> POP_ASSUM MATCH_MP_TAC
+   >> METIS_TAC [borel_measurable_le_iff]);
+
+val borel_measurable_SIGMA_borel_measurable = store_thm
+  ("borel_measurable_SIGMA_borel_measurable",
+   ``!m f s. measure_space m /\ FINITE s /\
+           (!i. i IN s ==> f i IN borel_measurable (m_space m, measurable_sets m)) ==>
+           (\x. SIGMA (\i. f i x) s) IN borel_measurable (m_space m, measurable_sets m)``,
+   rpt STRIP_TAC
+   >> Suff `!s. FINITE s ==> (\s. !f. (!i. i IN s ==> f i IN borel_measurable (m_space m, measurable_sets m)) ==>
+           (\x. SIGMA (\i. f i x) s) IN borel_measurable (m_space m, measurable_sets m)) s`
+   >- METIS_TAC []
+   >> MATCH_MP_TAC FINITE_INDUCT
+   >> RW_TAC std_ss [REAL_SUM_IMAGE_THM, IN_INSERT, DELETE_NON_ELEMENT]
+   >- FULL_SIMP_TAC std_ss [measure_space_def, borel_measurable_const]
+   >> METIS_TAC [borel_measurable_plus_borel_measurable]);
 
 val _ = export_theory ();

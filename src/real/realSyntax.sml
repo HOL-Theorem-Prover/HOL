@@ -177,6 +177,6 @@ in
     else Arbint.~(Arbint.fromNat n)
   end
 
-
+  val (inv_tm,mk_inv,dest_inv,is_inv) = syntax_fns1 "realax" "inv"
 
 end ;

@@ -8,7 +8,24 @@
 (* ------------------------------------------------------------------------- *)
 (* Based on the work of Joe Hurd [7] and Aaron Coble [8]                     *)
 (* Cambridge University.                                                     *)
-(* ------------------------------------------------------------------------- *)
+(* ========================================================================= *)
+(* Updated by Chun Tian (2020) using some materials from:                    *)
+(*                                                                           *)
+(*                 Probability Density Function Theory [11]                  *)
+(*                                                                           *)
+(*        (c) Copyright,                                                     *)
+(*                       Muhammad Qasim,                                     *)
+(*                       Osman Hasan,                                        *)
+(*                       Hardware Verification Group,                        *)
+(*                       Concordia University                                *)
+(*                                                                           *)
+(*            Contact:  <m_qasi@ece.concordia.ca>                            *)
+(*                                                                           *)
+(*                                                                           *)
+(* Note: This theory has been ported from hol light                          *)
+(* Last update: Jan, 2015                                                    *)
+(*                                                                           *)
+(* ========================================================================= *)
 
 open HolKernel Parse boolLib bossLib;
 
@@ -16,8 +33,8 @@ open pairTheory combinTheory optionTheory prim_recTheory arithmeticTheory
      res_quanTheory res_quanTools pred_setTheory realTheory realLib
      seqTheory transcTheory real_sigmaTheory real_topologyTheory;
 
-open hurdUtils util_probTheory extrealTheory sigma_algebraTheory
-     measureTheory borelTheory lebesgueTheory martingaleTheory;
+open hurdUtils util_probTheory extrealTheory sigma_algebraTheory measureTheory
+     real_borelTheory borelTheory lebesgueTheory martingaleTheory;
 
 val _ = new_theory "probability";
 
@@ -25,8 +42,8 @@ val _ = new_theory "probability";
     introduction of Lebesgue's theories of measure and integration. ...
     But if probability theory was to be based on the above analogies, it
     still was necessary to make the theories of measure and integration
-    independent of the geometric elements which were in the
-    foreground with Lebesgue. ...
+    independent of the geometric elements which were in the foreground
+    with Lebesgue. ...
 
     I wish to call attention to those points of the present exposition
     which are outside the above-mentioned range of ideas familiar to
@@ -37,6 +54,8 @@ val _ = new_theory "probability";
     probabilities and conditional expectations (Chapter V). ..."
 
   -- A. N. Kolmogorov, "Foundations of the Theory of Probability." [1] *)
+
+val _ = hide "S";
 
 (* ------------------------------------------------------------------------- *)
 (* Basic probability theory definitions.                                     *)
@@ -70,8 +89,11 @@ val real_random_variable_def = Define
    `real_random_variable X p <=>
          random_variable X p Borel /\ (!x. X x <> NegInf /\ X x <> PosInf)`;
 
-(* A (probability) distribution is a probability measure on `(p_space p, events p)` *)
-val distribution_def = Define
+(* A (probability) distribution is a probability measure on `(p_space p,events p)`,
+
+   cf. lebesgueTheory.distr_def, of type ``:'a m_space``
+ *)
+val distribution_def = Define (* was: pmf in [10] *)
    `distribution (p :'a p_space) X = (\s. prob p ((PREIMAGE X s) INTER p_space p))`;
 
 (* c.f. [2, p.36], [4, p.206], [6, p.256], etc. *)
@@ -85,6 +107,13 @@ val joint_distribution_def = Define
 val joint_distribution3_def = Define
    `joint_distribution3 (p :'a p_space) X Y Z =
       (\a. prob p (PREIMAGE (\x. (X x,Y x,Z x)) a INTER p_space p))`;
+
+(* from [10], not used
+Definition joint_distributions_def : (* was: joint_pmf_sequence *)
+    joint_distributions p X s =
+      (\V. prob p (BIGINTER (IMAGE (\i. PREIMAGE (X i) (V i)) s)) INTER p_space p)
+End
+ *)
 
 val conditional_distribution_def = Define
    `conditional_distribution (p :'a p_space) X Y a b =
@@ -113,6 +142,9 @@ val rv_conditional_expectation_def = Define
 val uniform_distribution_def = Define
    `uniform_distribution (s :'a algebra) =
       (\(a :'a set). (&CARD a / &CARD (space s)) :extreal)`;
+
+(* Probability Density Function [11] *)
+val PDF_def = Define `PDF p X = RN_deriv (distribution p X) lborel`;
 
 (* ------------------------------------------------------------------------- *)
 (*  Basic probability theorems                                               *)
@@ -859,9 +891,18 @@ val PROB_DISCRETE_EVENTS_COUNTABLE = store_thm
       by (RW_TAC std_ss [SUBSET_DEF,GSPECIFICATION] >> METIS_TAC [SUBSET_DEF])
   >> `countable {{x} | x IN s}`
       by (Suff `{{x} | x IN s} = IMAGE (\x. {x}) s`
-  >- METIS_TAC [image_countable, COUNTABLE_SUBSET]
+          >- METIS_TAC [image_countable, COUNTABLE_SUBSET]
           >> RW_TAC std_ss [EXTENSION,GSPECIFICATION,IN_IMAGE])
   >> METIS_TAC [EVENTS_COUNTABLE_UNION]);
+
+(* ************************************************************************* *)
+
+Theorem distribution_distr :
+    distribution = distr
+Proof
+    rpt FUN_EQ_TAC >> qx_genl_tac [`p`, `X`, `s`]
+ >> RW_TAC std_ss [distribution_def, distr_def, prob_def, p_space_def]
+QED
 
 (* ************************************************************************* *)
 
@@ -1845,7 +1886,7 @@ val finite_second_moments_all = store_thm (* new *)
            `?r. X x = Normal r` by PROVE_TAC [extreal_cases] >> POP_ORW \\
            REWRITE_TAC [extreal_sub_def, extreal_not_infty]) \\
        MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
-       take [`X`, `\x. Normal c`] \\
+       qexistsl_tac [`X`, `\x. Normal c`] \\
        ASM_SIMP_TAC std_ss [extreal_not_infty] \\
        MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST >> Q.EXISTS_TAC `Normal c` \\
        ASM_SIMP_TAC std_ss [],
@@ -2044,7 +2085,7 @@ val finite_second_moments_eq_integrable_squares = store_thm
             `?r. X x = Normal r` by PROVE_TAC [extreal_cases] >> POP_ORW \\
              REWRITE_TAC [extreal_sub_def, extreal_not_infty]) \\
          MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
-         take [`X`, `\x. Normal c`] >> RW_TAC std_ss [] \\
+         qexistsl_tac [`X`, `\x. Normal c`] >> RW_TAC std_ss [] \\
          MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST >> Q.EXISTS_TAC `Normal c` \\
          RW_TAC std_ss [space_def],
          (* goal 1.2 (of 3) *)
@@ -2434,7 +2475,7 @@ val INDEP_FAMILIES_SIGMA_lemma = Q.prove (
  >> Q.ABBREV_TAC `v = \x. prob p (B n) * prob p x`
  >> Suff `u t = v t` >- METIS_TAC []
  >> irule UNIQUENESS_OF_MEASURE_FINITE
- >> take [`p_space p`, `G`]
+ >> qexistsl_tac [`p_space p`, `G`]
  (* !s t. s IN G /\ t IN G ==> s INTER t IN G *)
  >> CONJ_TAC
  >- (Q.UNABBREV_TAC `G` >> RW_TAC std_ss [GSPECIFICATION, IN_INSERT] >| (* 4 subgoals *)
@@ -2663,7 +2704,7 @@ val INDEP_FAMILIES_SIGMA_lemma2 = store_thm
        MATCH_MP_TAC EXTREAL_PROD_IMAGE_DISJOINT_UNION >> art [] \\
        CONJ_TAC >- PROVE_TAC [SUBSET_FINITE_I] \\
        MATCH_MP_TAC SUBSET_DISJOINT \\
-       take [`N`, `M`] >> art [DISJOINT_SYM] ])
+       qexistsl_tac [`N`, `M`] >> art [DISJOINT_SYM] ])
  >> DISCH_TAC
  >> Know `!s a. a IN G /\ s IN subsets (sigma (p_space p) (IMAGE (B a) M)) ==>
                 indep p (B a n) s`
@@ -3025,7 +3066,7 @@ val Kolmogorov_0_1_Law = store_thm
  >> METIS_TAC [INDEP_REFL]);
 
 (******************************************************************************)
-(*  Uncorrelatedness of r.v.'s [2, p.107-108]                                 *)
+(*  noncorrelation of r.v.'s [2, p.107-108]                                   *)
 (******************************************************************************)
 
 (* "The requirement of finite second moments seems unnecessary, but it does ensure the
@@ -3351,7 +3392,7 @@ val variance_sum = store_thm
          CONJ_TAC >> MATCH_MP_TAC pos_not_neginf >> REWRITE_TAC [le_pow2]) \\
      CONJ_TAC
      >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL \\
-         take [`\x. X q x - E1`, `\x. X r x - E2`] \\
+         qexistsl_tac [`\x. X q x - E1`, `\x. X r x - E2`] \\
          fs [prob_space_def, measure_space_def, space_def, p_space_def, events_def] \\
          CONJ_TAC
          >- (`!x. X q x - E1 = X q x - (\x. E1) x` by METIS_TAC [] >> POP_ORW \\
@@ -3680,11 +3721,11 @@ val finite_second_moments_indicator_fn = store_thm
  >> MATCH_MP_TAC let_trans >> Q.EXISTS_TAC `1`
  >> METIS_TAC [PROB_LE_1, extreal_of_num_def, lt_infty]);
 
-val variance_eq_indicator_fn = store_thm
-  ("variance_eq_inficator_fn",
-  ``!p s. prob_space p /\ s IN events p ==>
+Theorem variance_eq_indicator_fn :
+    !p s. prob_space p /\ s IN events p ==>
          (variance p (indicator_fn s) =
-          expectation p (indicator_fn s) - (expectation p (indicator_fn s)) pow 2)``,
+          expectation p (indicator_fn s) - (expectation p (indicator_fn s)) pow 2)
+Proof
     rpt STRIP_TAC
  >> Suff `variance p (indicator_fn s) =
           expectation p (\x. (indicator_fn s x) pow 2) - (expectation p (indicator_fn s)) pow 2`
@@ -3697,12 +3738,13 @@ val variance_eq_indicator_fn = store_thm
  >> Know `integrable p (\x. (indicator_fn s x) pow 2) <=> finite_second_moments p (indicator_fn s)`
  >- (MATCH_MP_TAC EQ_SYM \\
      MATCH_MP_TAC finite_second_moments_eq_integrable_square >> art []) >> Rewr'
- >> MATCH_MP_TAC finite_second_moments_indicator_fn >> art []);
+ >> MATCH_MP_TAC finite_second_moments_indicator_fn >> art []
+QED
 
-val variance_le_indicator_fn = store_thm
-  ("variance_le_indicator_fn",
-  ``!p s. prob_space p /\ s IN events p ==>
-          variance p (indicator_fn s) <= expectation p (indicator_fn s)``,
+Theorem variance_le_indicator_fn :
+    !p s. prob_space p /\ s IN events p ==>
+          variance p (indicator_fn s) <= expectation p (indicator_fn s)
+Proof
     rpt STRIP_TAC
  >> Suff `variance p (indicator_fn s) <= expectation p (\x. (indicator_fn s x) pow 2)`
  >- (Know `expectation p (\x. (indicator_fn s x) pow 2) = expectation p (indicator_fn s)`
@@ -3714,23 +3756,23 @@ val variance_le_indicator_fn = store_thm
  >> Know `integrable p (\x. (indicator_fn s x) pow 2) <=> finite_second_moments p (indicator_fn s)`
  >- (MATCH_MP_TAC EQ_SYM \\
      MATCH_MP_TAC finite_second_moments_eq_integrable_square >> art []) >> Rewr'
- >> MATCH_MP_TAC finite_second_moments_indicator_fn >> art []);
+ >> MATCH_MP_TAC finite_second_moments_indicator_fn >> art []
+QED
 
 (* for indicator_fn r.v.'s, pairwise independence implies additive of variances *)
-val variance_sum_indicator_fn = store_thm
-  ("variance_sum_indicator_fn",
-  ``!p E J. prob_space p /\ pairwise_indep_events p E J /\ FINITE J ==>
+Theorem variance_sum_indicator_fn :
+    !p E J. prob_space p /\ pairwise_indep_events p E J /\ FINITE J ==>
            (variance p (\x. SIGMA (\n. (indicator_fn o E) n x) J) =
-            SIGMA (\n. variance p ((indicator_fn o E) n)) J)``,
+            SIGMA (\n. variance p ((indicator_fn o E) n)) J)
+Proof
     RW_TAC bool_ss [pairwise_indep_events_def]
  >> MATCH_MP_TAC variance_sum
  >> RW_TAC std_ss [o_DEF, uncorrelated_vars_def, uncorrelated_def,
                    finite_second_moments_indicator_fn, INDICATOR_FN_REAL_RV]
  >> REWRITE_TAC [GSYM INDICATOR_FN_INTER]
  >> `E i INTER E j IN events p` by PROVE_TAC [EVENTS_INTER]
- >> ASM_SIMP_TAC std_ss [expectation_indicator] >> fs [indep_def]);
-
-val _ = hide "S";
+ >> ASM_SIMP_TAC std_ss [expectation_indicator] >> fs [indep_def]
+QED
 
 (* The harder part of Borel-Cantelli Lemma (of pairwise independence) *)
 val Borel_Cantelli_Lemma2p = store_thm
@@ -3823,7 +3865,7 @@ val Borel_Cantelli_Lemma2p = store_thm
      Q.PAT_X_ASSUM `!n. (prob p o E) n = expectation p (X n)` K_TAC \\
      RW_TAC std_ss [FINITE_COUNT, COUNT_MONO, IN_COUNT, o_DEF] \\
      MATCH_MP_TAC PROB_POSITIVE >> art []) >> DISCH_TAC
- (* Step 1: variance of S is smaller than M, by uncorrelatedness *)
+ (* Step 1: variance of S is smaller than M, by noncorrelation *)
  >> Know `!n. variance p (S n) <= M n`
  >- (GEN_TAC >> Q.UNABBREV_TAC `S` >> Q.UNABBREV_TAC `X` >> BETA_TAC \\
      Know `variance p (\s. SIGMA (\i. (indicator_fn o E) i s) (count n)) =
@@ -4148,7 +4190,63 @@ val Borel_0_1_Law = store_thm
       DISJ1_TAC >> MATCH_MP_TAC Borel_Cantelli_Lemma1 \\
       fs [GSYM lt_infty, pairwise_indep_events_def] ]);
 
-(* TO BE CONTINUED *)
+(* ========================================================================= *)
+(*                 Probability Density Function Theory [11]                  *)
+(* ========================================================================= *)
+
+Theorem PDF_LE_POS :
+    !p X. prob_space p /\ random_variable X p borel /\ distribution p X << lborel
+          ==> !x. 0 <= PDF p X x
+Proof
+    rpt STRIP_TAC
+ >> `measure_space (space borel, subsets borel, distribution p X)`
+       by PROVE_TAC [distribution_prob_space, prob_space_def]
+ >> ASSUME_TAC sigma_finite_lborel
+ >> ASSUME_TAC measure_space_lborel
+ >> MP_TAC (ISPECL [(* m *) ``lborel``,
+                    (* v *) ``distribution (p :'a m_space) (X :'a -> real)``]
+                   Radon_Nikodym)
+ >> RW_TAC std_ss [m_space_lborel, sets_lborel]
+ >> SIMP_TAC std_ss [PDF_def, RN_deriv_def, m_space_def, measurable_sets_def,
+                     m_space_lborel, sets_lborel]
+ >> SELECT_ELIM_TAC >> METIS_TAC []
+QED
+
+Theorem EXPECTATION_PDF_1 : (* was: INTEGRAL_PDF_1 *)
+    !p X. prob_space p /\ random_variable X p borel /\ distribution p X << lborel
+          ==> (expectation lborel (PDF p X) = 1)
+Proof
+    rpt STRIP_TAC
+ >> `prob_space (space borel, subsets borel, distribution p X)`
+       by PROVE_TAC [distribution_prob_space]
+ >> NTAC 2 (POP_ASSUM MP_TAC) >> KILL_TAC
+ >> RW_TAC std_ss [prob_space_def, p_space_def, m_space_def, measure_def,
+                   expectation_def]
+ >> ASSUME_TAC sigma_finite_lborel
+ >> ASSUME_TAC measure_space_lborel
+ >> MP_TAC (ISPECL [(* m *) ``lborel``,
+                    (* v *) ``distribution (p :'a m_space) (X :'a -> real)``]
+                   Radon_Nikodym)
+ >> RW_TAC std_ss [m_space_lborel, sets_lborel, m_space_def, measure_def]
+ >> SIMP_TAC std_ss [PDF_def, RN_deriv_def, m_space_def, measurable_sets_def,
+                     m_space_lborel, sets_lborel]
+ >> SELECT_ELIM_TAC
+ >> CONJ_TAC >- METIS_TAC []
+ >> Q.X_GEN_TAC `g`
+ >> RW_TAC std_ss [density_measure_def]
+ >> POP_ASSUM (MP_TAC o Q.SPEC `space borel`)
+ >> Know `space borel IN subsets borel`
+ >- (`sigma_algebra borel` by PROVE_TAC [sigma_algebra_borel] \\
+     PROVE_TAC [sigma_algebra_def, ALGEBRA_SPACE])
+ >> RW_TAC std_ss []
+ >> Know `integral lborel g = pos_fn_integral lborel g`
+ >- (MATCH_MP_TAC integral_pos_fn >> art []) >> Rewr'
+ >> Know `pos_fn_integral lborel g =
+          pos_fn_integral lborel (\x. g x * indicator_fn (space borel) x)`
+ >- (MATCH_MP_TAC pos_fn_integral_cong \\
+     RW_TAC std_ss [m_space_lborel, indicator_fn_def, mul_rone, mul_rzero, le_refl])
+ >> Rewr' >> art []
+QED
 
 val _ = export_theory ();
 
@@ -4166,4 +4264,8 @@ val _ = export_theory ();
   [8] Coble, A.R.: Anonymity, information, and machine-assisted proof. University of Cambridge (2010).
   [9] Schilling, R.L.: Measures, Integrals and Martingales (Second Edition).
       Cambridge University Press (2017).
+  [10] Mhamdi, T., Hasan, O., Tahar, S.: Formalization of Measure Theory and Lebesgue
+       Integration for Probabilistic Analysis in HOL. ACM Trans. Embedded Comput. Syst.
+       12, 1-23 (2013). DOI:10.1145/2406336.2406349
+  [11] Qasim, M.: Formalization of Normal Random Variables, Concordia University (2016).
  *)

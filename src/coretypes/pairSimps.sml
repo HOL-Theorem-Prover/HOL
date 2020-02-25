@@ -12,7 +12,7 @@ val PAIR_ss =
     SSFRAG
       {name=SOME"PAIR", convs=[],
        rewrs = map (fn th => (NONE, th)) pairTheory.pair_rws @
-               map (fn s => (SOME s, DB.fetch "pair" s)) [
+               map (fn s => (SOME{Thy = "pair",Name = s}, DB.fetch "pair" s)) [
                  "CLOSED_PAIR_EQ", "CURRY_UNCURRY_THM", "UNCURRY_CURRY_THM",
                  "CURRY_ONE_ONE_THM", "UNCURRY_ONE_ONE_THM", "CURRY_DEF",
                  "PAIR_MAP_THM", "UNCURRY_DEF"

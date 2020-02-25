@@ -160,6 +160,7 @@ For more information, see \ml{type\_abbrev}'s entry in \REFERENCE.
 \index{types, in HOL logic@types, in \HOL{} logic!parsing of|)}
 
 \index{special syntactic forms for scripts!Type@\ml{Type}}
+\index{Type (special syntactic form)@\ml{Type} (special syntactic form)}
 There are special syntactic forms available for both type abbreviation entry-points.
 Instead of
 \begin{hol}

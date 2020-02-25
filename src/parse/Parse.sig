@@ -100,6 +100,7 @@ signature Parse = sig
                       nilstr : string, block_info : block_info} -> unit
   val add_numeral_form : (char * string option) -> unit
   val add_strliteral_form : {ldelim:string,inj:term} -> unit
+  val remove_strliteral_form : {tmnm : string} -> unit
   val add_bare_numeral_form : (char * string option) -> unit
   val give_num_priority : char -> unit
   val remove_numeral_form : char -> unit
@@ -157,6 +158,7 @@ signature Parse = sig
   val temp_add_bare_numeral_form : (char * string option) -> unit
   val temp_give_num_priority : char -> unit
   val temp_add_strliteral_form : {ldelim:string,inj:term} -> unit
+  val temp_remove_strliteral_form : {tmnm : string} -> unit
   val temp_remove_numeral_form : char -> unit
   val temp_associate_restriction : (string * string) -> unit
   val temp_prefer_form_with_tok : {term_name : string, tok : string} -> unit

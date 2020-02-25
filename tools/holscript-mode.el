@@ -31,10 +31,12 @@
     (modify-syntax-entry ?” ")“" st)
     (modify-syntax-entry ?‘ "(’" st)
     (modify-syntax-entry ?’ ")‘" st)
-    (modify-syntax-entry ?\\ "." st)
-    ;; backslash only escapes in strings and certainly shouldn't be seen as
-    ;; an escaper inside terms where it just causes pain, particularly in terms
-    ;; such as \(x,y). x + y
+    (modify-syntax-entry ?\\ "\\" st)
+    ;; backslash only escapes in strings but we need to have it seen
+    ;; as one in general if the hol-mode isn't to get seriously
+    ;; confused by script files that contain escaped quotation
+    ;; characters. This despite the fact that it does cause pain in
+    ;; terms such as \(x,y). x + y
     (mapc (lambda (c) (modify-syntax-entry c "_" st)) ".")
     (mapc (lambda (c) (modify-syntax-entry c "w" st)) "_'")
     (mapc (lambda (c) (modify-syntax-entry c "." st)) ",;")
@@ -661,6 +663,9 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
   (holscript-mode-variables)
 )
 
+(require 'hol-input)
+(add-hook 'holscript-mode-hook (lambda () (set-input-method "Hol")))
+
 ;; smie grammar
 
 (require 'smie)
@@ -669,12 +674,16 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
    (smie-bnf->prec2
     '((id)
       (decl ("Theorem" theorem-contents "QED")
+            ("Theorem=" id )
+            ("Triviality=" id)
             ("Definition" definition-contents "End")
             ("Datatype:" quotedmaterial "End"))
       (theorem-contents (id-quoted "Proof" tactic))
       (definition-contents (id-quoted "Termination" tactic) (id-quoted))
       (id-quoted (id ":" quotedmaterial))
       (quotedmaterial)
+      (quotation ("‘" quotedmaterial "’"))
+      (termtype ("“" quotedmaterial "”"))
       (tactic (tactic ">>" tactic)
               (tactic "\\\\" tactic)
               (tactic ">-" tactic)
@@ -682,7 +691,7 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
               (tactic "THEN" tactic)
               (tactic "THEN1" tactic)
               (tactic "THENL" tactic)
-              (quotedmaterial "by" tactic)
+              (quotation "by" tactic)
               ("[" tactics "]"))
       (tactics (tactic) (tactics "," tactics)))
     '((assoc ","))
@@ -698,7 +707,12 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
   (cond
    ((looking-at holscript-smie-keywords-regexp)
     (goto-char (match-end 0))
-    (match-string-no-properties 0))
+    (let ((ms (match-string-no-properties 0)))
+      (if (or (string=  ms "Theorem") (string= ms "Triviality"))
+          (let ((eolpoint (save-excursion (end-of-line) (point))))
+            (save-excursion
+              (if (re-search-forward ":" eolpoint t) ms (concat ms "="))))
+        ms)))
    ((looking-at holscript-quotedmaterial-delimiter-regexp)
     (goto-char (match-end 0))
     (match-string-no-properties 0))
@@ -717,7 +731,12 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
    (; am I just after a keyword?
     (looking-back holscript-smie-keywords-regexp (- (point) 15) t)
     (goto-char (match-beginning 0))
-    (match-string-no-properties 0))
+    (let ((ms (match-string-no-properties 0)))
+      (if (or (string=  ms "Theorem") (string= ms "Triviality"))
+          (let ((eolpoint (save-excursion (end-of-line) (point))))
+            (save-excursion
+              (if (re-search-forward ":" eolpoint t) ms (concat ms "="))))
+        ms)))
    (; am I just after a quotation mark
     (looking-back holscript-quotedmaterial-delimiter-regexp (- (point) 1) t)
     (goto-char (match-beginning 0))
@@ -738,6 +757,8 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
   (pcase (cons kind token)
     (`(:elem  . basic) (message "In elem rule") holscript-indent-level)
     (`(:list-intro . ":") (message "In list-intro :") holscript-indent-level)
+    (`(:list-intro . "‘") 1)
+    (`(:list-intro . "“") 1)
     (`(:list-intro . "")
      (message "In (:list-intro \"\"))") holscript-indent-level)
     (`(:after . ":") 2)
@@ -749,6 +770,8 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
     (`(:close-all . _) t)
     (`(:after . "[") 2)
     (`(:after . ">-") 1)
+    (`(:after . "‘") 1)
+    (`(:after . "“") 1)
     (`(:after . "THEN1") 1)
 ))
 

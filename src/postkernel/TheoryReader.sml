@@ -19,7 +19,7 @@ fun temp_encoded_update sdata thyname {data,ty} =
     Theory.LoadableThyData.temp_encoded_update {
       thy = thyname,
       thydataty = ty,
-      read = read_term sdata,
+      shared_readmaps = {strings = read_string sdata, terms = read_term sdata},
       data = data
     }
 
@@ -168,8 +168,8 @@ fun load_thydata thyname path =
     val _ =
         app (temp_encoded_update share_data thyname) (
           force "thydata" (
-            Option.map (map (fn (ty,ds) => {data=String.concat ds,ty=ty})) o
-            list_decode(pair_decode(string_decode, list_decode string_decode))
+            Option.map (map (fn (ty,d) => {data=d,ty=ty})) o
+            list_decode(pair_decode(string_decode, SOME))
           ) thydata_data
         )
   in

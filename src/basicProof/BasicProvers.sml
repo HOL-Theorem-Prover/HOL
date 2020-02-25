@@ -185,7 +185,9 @@ fun LEFT_EXISTS_INTRO veq thm =
   in snd (itlist CHOOSER (free_vars_lr pat) (veq,thm))
   end;
 
-fun listpair [a,b] = (a,b);
+fun listpair [a,b] = (a,b)
+  | listpair l = raise ERR "listpair"
+                       ("List of wrong length (" ^Int.toString (length l) ^ ")")
 
 (*---------------------------------------------------------------------------*)
 (* Prove a theorem for "deep" case analysis on a term with an (iterated)     *)
@@ -1170,7 +1172,7 @@ open LoadableThyData
 val thy_ssfrags = ref (Binarymap.mkDict String.compare)
 fun thy_ssfrag s = Binarymap.find(!thy_ssfrags, s)
 
-fun add_rewrites thyname (thms : (string * thm) list) = let
+fun add_rewrites thyname (thms : (KernelSig.kernelname * thm) list) = let
   val ssfrag = simpLib.named_rewrites_with_names thyname thms
   open Binarymap
 in
