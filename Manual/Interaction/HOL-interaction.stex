@@ -1,6 +1,7 @@
 \documentclass[a4paper,10pt]{article}
 
 \usepackage[T1]{fontenc}
+\usepackage{stmaryrd}
 \usepackage{upquote}
 \usepackage{alltt}
 \usepackage{url}
@@ -112,9 +113,6 @@ Proof
 
 QED
 \end{code}
-  We can write $\forall$ as {\tt !}\ in HOL4. Alternatively, type {\tt C-shift-!}\ to input~$\forall$.
-  There are many abbreviations for common Unicode characters on \texttt{C-shift} modifiers.
-  For example, \texttt{C-shift-l} gives a $\lambda$ character.
 \item Move the cursor between the {\tt Theorem}-line and {\tt Proof}-line.
 \item Press {\tt M-h~g} to push the goal onto the goal stack.
 \end{enum}
@@ -122,6 +120,83 @@ The HOL4 window should look something like this:
 \begin{code}
 >>- g `!n. n < n + 1`
 \end{code}
+
+\paragraph{Typing Special Symbols in Emacs}
+As above, we can write $\forall$ as {\tt !}\ in HOL4.
+Indeed, with the special HOL-input map turned on in Emacs (which happens by default, and is indicated by the presence of a $\Pi$ on the left of the modeline), typing \texttt{!} will produce a $\forall$ character automatically.
+A number of other connectives are handled in similar ways.
+There are also many abbreviations for even more common Unicode characters on \texttt{Control}-\texttt{Shift} modifiers (i.e., keys that are pressed at the same time as the Control and Shift modifier keys are held down).
+For example, \texttt{C-S-l} gives a $\lambda$ character.
+Finally, there are yet more options when a leading backslash is typed.
+For example \texttt{\textbackslash{}a} will generate an $\alpha$ character (as will typing out \texttt{\textbackslash{}alpha} in full).
+In some situations, the machinery is even more sophisticated.
+If one types \texttt{\textbackslash{}l}, this will generate a listing of many different left arrow options in the mini-buffer.
+If a space character is entered, the currently highlighted option will be selected.
+Alternatively, pick a number or move the cursor with left and right arrow keys to choose that option (which will become the default option for next time).
+See Table~\ref{tab:unicode-input} for more information.
+
+\begin{table}
+\begin{center}
+\begin{tabular}{ccc}
+Symbol & Control-Shift keybinding & ``Quail'' binding(s)\\
+\hline
+$\forall$ & \texttt{C-S-!} & \texttt{!}\quad\texttt{\textbackslash{}all} \\
+$\exists$ & \texttt{C-S-?} & \texttt{?}\quad\texttt{\textbackslash{}exists} \\
+$\land$ & \texttt{C-S-\&} & \texttt{/\textbackslash}\quad\texttt{\textbackslash{}and} \\
+$\lor$ & \texttt{C-S-|} & \texttt{\textbackslash/}\quad\texttt{\textbackslash{}or} \\
+$\neg$ & \texttt{C-S-\~} & \texttt{\textbackslash{}neg}\\
+$\iff$ & \texttt{C-S-=} & \texttt{\textbackslash{}lr=} \texttt{\textbackslash{}iff}$^\dagger$\\
+$\neq$ & \texttt{C-M-S-\textbackslash{}~=} & \texttt{<>}\quad\texttt{\textbackslash{}neq}\\
+$\Rightarrow$ & \texttt{C-M-S-$>$} & \texttt{==$>$}\quad\texttt{\textbackslash{}r=}$^\dagger$\\[2mm]
+%
+% Greek letters
+%
+$\alpha$ & \texttt{C-S-a} & \texttt{\textbackslash{}a}\quad\texttt{\textbackslash{}alpha}\\
+$\beta$ & \texttt{C-S-b} &
+  \texttt{\textbackslash{}b}\quad\texttt{\textbackslash{}beta}\\
+$\gamma$ & \texttt{C-S-g} &
+  \texttt{\textbackslash{}g}\quad\texttt{\textbackslash{}gamma}\\
+$\Gamma$ & \texttt{C-M-S-g} &
+  \texttt{\textbackslash{}GG}\quad\texttt{\textbackslash{}Gamma}\\
+$\delta$ & \texttt{C-S-d} &
+  \texttt{\textbackslash{}d}\quad\texttt{\textbackslash{}delta}\\
+$\Delta$ & \texttt{C-M-S-d} &
+  \texttt{\textbackslash{}GD}\quad\texttt{\textbackslash{}Delta}\\
+$\lambda$ & \texttt{C-S-l} & \texttt{\textbackslash{}lambda}\\
+$\Lambda$ & \texttt{C-M-S-l} & \texttt{\textbackslash{}GL}\quad\texttt{\textbackslash{}Lambda}\\
+\multicolumn{3}{c}{\dots}\\[2mm]
+%
+% set operators
+%
+$\cup$ & \texttt{C-S-u} &
+  \texttt{\textbackslash{}cup}\quad\texttt{\textbackslash{}union}$^\dagger$\\
+$\cap$ & \texttt{C-S-i} &
+  \texttt{\textbackslash{}cap}\quad\texttt{\textbackslash{}i}$^\dagger$\\
+$\in$ & \texttt{C-S-:} & \texttt{\textbackslash{}in}\\
+$\notin$ & \texttt{C-M-S-\textbackslash{} :} & \texttt{\textbackslash{}notin}\\
+$\emptyset$ & \texttt{C-M-S-\textbackslash{} 0} & \texttt{\textbackslash{}empty}\\
+$\subseteq$ & \texttt{C-S-c} & \texttt{\textbackslash{}subseteq}\\[2mm]
+
+$\llparenthesis$ & \texttt{C-M-S-( C-M-S-|} \\
+$\rrparenthesis$ & \texttt{C-M-S-) C-M-S-|} \\
+$\llbracket$ & \texttt{C-S-[} & \texttt{\textbackslash(}$^\dagger$\\
+$\rrbracket$ & \texttt{C-S-]} & \texttt{\textbackslash)}$^\dagger$\\
+$\langle$ & \texttt{C-M-S-( C-S-$<$} &
+  \texttt{\textbackslash{}langle}\quad\texttt{\textbackslash(}$^\dagger$\\
+$\rangle$ & \texttt{C-M-S-) C-S-$>$} &
+  \texttt{\textbackslash{}rangle}\quad\texttt{\textbackslash)}$^\dagger$
+\end{tabular}
+\end{center}
+\caption{Illustrative Input methods for various Unicode symbols.
+Multiple keys (separated by spaces) in the Control-Shift column indicate that a sequence of keys must be struck to achieve the desired character.
+(For example, the \texttt{C-M-S-\textbackslash} prefix is used to open up a set of bindings for characters with various forms of slash through them; following that with a colon puts a slash through the $\in$ symbol.)
+Quail bindings are enabled if there is a $\Pi$ character visible on the left of the current buffer's mode-line.
+Quail can be toggled on and off with the \texttt{C-\textbackslash} keybinding.
+Full details of the ``quail'' input map can be seen interactively by typing the command \texttt{M-x~hol-input-show-translations}.
+Quail bindings marked with daggers ($^\dagger$) are those that lead to multi-way selections that need to be made with numbers or left-right arrow keys.
+Finally note that it is always possible to enter characters without special processing by first typing a \texttt{C-q}.}
+\label{tab:unicode-input}
+\end{table}
 
 \mysubsec{Applying a tactic\label{apply}}
 
@@ -530,3 +605,6 @@ Section~\ref{search}) and the HTML reference (mentioned in
 Section~\ref{html}) most helpful.
 
 \end{document}
+%%% Local Variables:
+%%% mode: latex
+%%% End:
