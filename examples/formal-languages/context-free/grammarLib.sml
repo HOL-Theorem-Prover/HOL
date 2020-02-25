@@ -333,8 +333,14 @@ in
     | NT n => mkNT nty gi n
 end
 
+val fIMAGE_tm = prim_mk_const{Name= "fIMAGE", Thy = "finite_set"}
+
 fun clause_to_termSet nty (gi as {tokty,...}:ginfo) c = let
   val symty = mk_symty(tokty,nty)
+  val TOK_t = mk_thy_const{Thy = "grammar", Name = "TOK",
+                           Ty = tokty --> symty}
+  val MAPTOK_t = mk_icomb(listSyntax.map_tm, TOK_t)
+  val fIMAGEMAPTOK_t = mk_icomb(fIMAGE_tm, MAPTOK_t)
   open finite_setSyntax pairSyntax listSyntax
   val expected_ty = mk_fset_ty (listSyntax.mk_list_type tokty)
   val term_to_string = trace ("Unicode", 0) term_to_string
@@ -348,11 +354,12 @@ in
       in
         mk_set1 [body]
       end
-    | TmAQ t => if type_of t = expected_ty then t
-                else raise mk_HOL_ERR "grammarLib" "mk_grammar"
-                           ("Term " ^ term_to_string t ^ " has type\n  " ^
-                            type_to_string (type_of t) ^ "\nnot\n  " ^
-                            type_to_string expected_ty)
+    | TmAQ t =>
+      if type_of t = expected_ty then mk_comb(fIMAGEMAPTOK_t, t)
+      else raise mk_HOL_ERR "grammarLib" "mk_grammar"
+                 ("Term " ^ term_to_string t ^ " has type\n  " ^
+                  type_to_string (type_of t) ^ "\nnot\n  " ^
+                  type_to_string expected_ty)
 end
 
 

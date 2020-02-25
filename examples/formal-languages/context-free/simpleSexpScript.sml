@@ -8,27 +8,19 @@ open monadsyntax lcsymtacs pegTheory
 val _ = new_theory "simpleSexp";
 
 val _ = temp_add_monadsyntax()
-
-val _ = overload_on ("monad_bind", ``OPTION_BIND``)
-val _ = overload_on ("monad_unitbind", ``OPTION_IGNORE_BIND``)
-val _ = temp_overload_on ("return", ``SOME``)
-val _ = temp_overload_on ("SOME", ``SOME``)
+val _ = temp_enable_monad "option"
 
 val _ = computeLib.add_persistent_funs ["option.OPTION_BIND_def",
                                         "option.OPTION_IGNORE_BIND_def",
                                         "option.OPTION_GUARD_def",
                                         "option.OPTION_CHOICE_def"]
 
-val _ = overload_on ("assert", ``option$OPTION_GUARD : bool -> unit option``)
-val _ = overload_on ("++", ``option$OPTION_CHOICE``)
-
-
-val _ = Datatype`
+Datatype:
   sexp = SX_CONS sexp sexp
        | SX_SYM string
        | SX_NUM num
        | SX_STR string
-`;
+End
 
 val _ = add_numeral_form(#"s", SOME "SX_NUM")
 val _ = overload_on ("nil", ``SX_SYM "nil"``)
@@ -181,9 +173,9 @@ val sexpG_def = mk_grammar_def ginfo ‘
   symchar ::= ^(“mkCharRHS valid_symchar”);
 ’;
 
-val _ = type_abbrev("NT", ``:sexpNT inf``)
-val _ = overload_on("mkNT", ``INL : sexpNT -> NT``)
-val _ = overload_on ("TK", ``TOK : char -> (char,sexpNT)symbol``)
+Type NT = “:sexpNT inf”
+Overload mkNT = “INL : sexpNT -> NT”
+Overload TK = “TOK : char -> (char,sexpNT)symbol”
 
 
 val ptree_digit_def = Define`
