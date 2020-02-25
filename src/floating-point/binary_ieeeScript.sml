@@ -7,6 +7,7 @@ open intrealTheory realLib wordsLib
 
 val () = new_theory "binary_ieee"
 val _ = ParseExtras.temp_loose_equality()
+val _ = diminish_srw_ss ["RMULCANON_ss","RMULRELNORM_ss"]
 
 local
    open String

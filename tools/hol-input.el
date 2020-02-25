@@ -632,7 +632,7 @@ order for the change to take effect."
 
   ;; Other punctuation and symbols.
 
-  ("\\"         . ("\\"))
+  ("\\"         . ("\\\\"))
   ("en"         . ("–"))
   ("em"         . ("—"))
   ("^i"         . ("ⁱ"))
@@ -1133,6 +1133,17 @@ Suitable for use in the :set field of `defcustom'."
 ;; Set up the input method.
 
 (hol-input-setup)
+(quail-defrule "/\\" "∧" "Hol")
+(quail-defrule "\\/" "∨" "Hol")
+(quail-defrule "==>" "⇒" "Hol")
+(quail-defrule "!" "∀" "Hol")
+(quail-defrule "?" "∃" "Hol")
+(quail-defrule "?!" ["∃!"] "Hol")
+(quail-defrule "!!" "!" "Hol")
+(quail-defrule "??" "?" "Hol")
+(quail-defrule "<=>" "⇔" "Hol")
+(quail-defrule "<>" "≠" "Hol")
+(quail-defrule "<=" "≤" "Hol")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Administrative details

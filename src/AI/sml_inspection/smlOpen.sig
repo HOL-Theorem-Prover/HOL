@@ -3,9 +3,9 @@ sig
 
   val core_theories : string list
   val theory_files : string -> string list
-  val find_heapname : string -> string
-  val find_genscriptdep : string -> string list
-  val run_buildheap : bool -> string option -> string -> unit
+  val find_heapname : string -> string -> string
+  val find_genscriptdep : string -> string -> string list
+  val run_buildheap : string -> bool -> string -> unit
   val run_rm_script : bool -> string -> unit
 
   val sml_cleanval : unit -> unit

@@ -916,7 +916,7 @@ The theorem \ml{LAMBDA\_PROD} involves a \emph{paired
 
 
 \paragraph {Wellfounded relations on pairs}
-
+\index{wellfounded relations!lexicographic combination}
 Wellfoundedness, defined in Section \ref{prim-rec-conseq},
 is a useful notion, especially for proving termination of
 recursive functions. For pairs, the lexicographic combination
@@ -1554,7 +1554,7 @@ justifying recursive definitions. For example, the theory
 ##thm DC
 \end{alltt}
 \end{hol}
-
+\index{wellfounded relations!absence of infinite descending chains}
 The proof uses {\small\verb+SELECT_AX+}. The theorem {\small\verb+DC+}
 is useful when one wishes to build a function having a certain
 property from a relation. For example, one way to define the
@@ -1562,7 +1562,6 @@ wellfoundedness of a relation $R$ is to say that it has no infinite
 decreasing $R$ chains.
 %
 \begin{hol}
-\index{wellfounded, the HOL constant@\holtxt{wellfounded}, the \HOL{} constant}
 \begin{alltt}
 ##thm wellfounded_def
 ##thm WF_IFF_WELLFOUNDED
@@ -4273,6 +4272,7 @@ Note how the suffix binds more tightly than function application, so that in \ml
 \end{hol}
 
 \paragraph {Wellfounded relations}
+\index{wellfounded relations!existence of minimal elements|(}
 
 A relation $R$ is wellfounded ({\small\verb+WF+}) if every non-empty set
 has an $R$-minimal element. Wellfoundedness is used to justify the
@@ -4339,6 +4339,7 @@ that they propagate wellfoundedness.
 ##thm WF_EMPTY_REL
 \end{alltt}
 \end{hol}
+\index{wellfounded relations!existence of minimal elements}
 
 \paragraph {Term Rewriting}
 

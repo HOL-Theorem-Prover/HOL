@@ -1210,6 +1210,7 @@ specified by the original input.
 \end{hol}
 
 \paragraph{Termination}
+\index{termination!of recursively defined functions}
 
 When processing the specification of a recursive function, \ml{Definition}
 must perform a termination proof. It automatically constructs
@@ -1350,6 +1351,7 @@ It may also return theorems that do not look quite like what was originally inpu
 For more on this, see the discussion of case expressions (into which the clauses in a \ml{Definition} are converted internally) in Section~\ref{CaseExp}.
 
 \subsection{When termination is not automatically proved}
+\index{termination!of recursively defined functions}
 
 If the termination proof for a prospective definition fails, the invocation of the definitional machinery fails.
 In such situations, the user must supply a termination argument explicitly.
@@ -1411,8 +1413,10 @@ type \ml{defn}, it is more convenient to invoke
 \end{alltt}
 \end{session}
 %
+\index{wellfounded relations!as part of a termination argument}
 The goal is to find a wellfounded relation on the arguments to \holtxt{qsort}
 and show that the arguments to \holtxt{qsort} are in the relation.
+\index{WF_REL_TAC@\ml{WF\_REL\_TAC}}
 The function \ml{WF\_REL\_TAC} is almost invariably used at this point to
 initiate the termination proof. Clearly, \ml{qsort} terminates because the list
 argument gets shorter. Invoking \ml{WF\_REL\_TAC} with the appropriate

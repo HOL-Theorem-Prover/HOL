@@ -663,6 +663,9 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
   (holscript-mode-variables)
 )
 
+(require 'hol-input)
+(add-hook 'holscript-mode-hook (lambda () (set-input-method "Hol")))
+
 ;; smie grammar
 
 (require 'smie)

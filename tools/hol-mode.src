@@ -449,12 +449,15 @@ starts >%s%s<"
   (mapconcat (lambda (s) (concat "\\<" s "\\>")) words "\\|"))
 
 (setq hol-open-terminator-regexp
-      (concat ";\\|"
-              (word-list-to-regexp
-               '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
-                 "datatype" "nonfix" "exception" "end" "structure"
-                 "Theorem" "Definition" "Inductive" "CoInductive"
-                 "Triviality" "Datatype" "Type" "Overload"))))
+      (concat
+       (mapconcat (lambda (s) (concat "^" s "\\>"))
+                  '("Theorem" "Definition" "Inductive" "CoInductive"
+                    "Triviality" "Datatype" "Type" "Overload")
+                  "\\|")
+       "\\|"
+       (word-list-to-regexp
+        '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
+          "datatype" "nonfix" "exception" "end" "structure"))))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
@@ -523,12 +526,14 @@ starts >%s%s<"
                             (start (point))
                             (end
                              (save-excursion
-                               (if (re-search-forward
-                                    hol-open-terminator-regexp
-                                    nil t)
-                                   (- (point) (length (match-string 0)))
-                                 (point-max))))
+                               (let ((case-fold-search nil))
+                                 (if (re-search-forward
+                                      hol-open-terminator-regexp
+                                      nil t)
+                                     (- (point) (length (match-string 0)))
+                                   (point-max)))))
                             (endm (make-marker)))
+                        (message "Handling an open")
                         (if hol-auto-load-p
                             (hol-load-modules-in-region start end))
                         (if leave-loud-opens nil
@@ -738,7 +743,9 @@ file to \"use\" first."
   (save-excursion
     (goto-char start)
     (while (re-search-forward (concat "\\b" sml-struct-id-regexp "\\b") end t)
-      (hol-load-string (match-string 0)))))
+      (let ((ppss (syntax-ppss)))
+        (if (and (not (nth 4 ppss)) (not (nth 3 ppss)))
+            (hol-load-string (match-string 0)))))))
 
 (defun hol-load-file (arg)
   "Gets HOL session to \"load\" the file at point.

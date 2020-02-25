@@ -8,7 +8,10 @@ open pairTheory pred_setTheory prim_recTheory numTheory arithmeticTheory
 open numLib realLib Ho_Rewrite
 
 val () = new_theory "float"
+
 val _ = ParseExtras.temp_loose_equality()
+val _ = diminish_srw_ss ["RMULCANON_ss", "RMULRELNORM_ss"]
+
 
 (* Compute some constant values *)
 
@@ -441,8 +444,9 @@ val REAL_POW_MONO = Q.prove (
   \\ metis_tac [REAL_LE_LMUL_IMP, REAL_POW_LE_1, POW_POS, REAL_LE_TRANS,
                 REAL_LE_01])
 
-val VAL_FINITE = Q.store_thm ("VAL_FINITE",
-  `!a. Finite a ==> abs (Val a) <= largest float_format`,
+Theorem VAL_FINITE:
+  !a. Finite a ==> abs (Val a) <= largest float_format
+Proof
   rw [Val, VALOF, ISFINITE, IS_FINITE_EXPLICIT, float_format, fracwidth, bias,
       emax, expwidth, largest, GSYM POW_ABS, REAL_ABS_MUL, REAL_ABS_DIV,
       ABS_NEG, ABS_N, POW_ONE, realTheory.mult_rat]
@@ -465,7 +469,7 @@ val VAL_FINITE = Q.store_thm ("VAL_FINITE",
   \\ SUBST1_TAC (GSYM (EVAL ``^exp_pemax_tm * ^pfrac_tm``))
   \\ match_mp_tac realTheory.REAL_LE_MUL2
   \\ fs [realTheory.POW_POS]
-  )
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Explicit numeric value for threshold, to save repeated recalculation.     *)

@@ -28,6 +28,19 @@ sig
      mulcanon on each summand *)
   val REALADDCANON : conv
   val REALMULCANON : conv
+  val RMULCANON_ss : simpLib.ssfrag
+  val RADDCANON_ss : simpLib.ssfrag
+
+  (* eliminate common terms from either side of a relation symbol, factoring
+     as necessary.  First argument is relation symbol, second is list of
+     theorems justifying removal of common factors on left.
+     Third argument is solver to discharge side conditions to
+     do with non-zero ness and signs. The list passed to it is the stack of
+     previous side condition attempts. *)
+  val mulrelnorm : term -> thm list ->
+                   (term list -> term -> thm) ->
+                   term list -> term -> thm
+  val RMULRELNORM_ss : simpLib.ssfrag
 
 
   val real_compset : unit -> computeLib.compset

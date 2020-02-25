@@ -18,6 +18,12 @@ sig
     ('a * 'b -> order) ->
     ('c * 'd -> order) ->
     ('a * 'c) * ('b * 'd) -> order
+  val triple_compare :
+    ('a * 'b -> order) ->
+    ('c * 'd -> order) ->
+    ('e * 'f -> order) ->
+    ('a * 'c * 'e) * ('b * 'd * 'f) -> order
+
   val goal_compare : goal * goal -> order
   val lbl_compare : lbl * lbl -> order
   val compare_rmin : (('a * real) * ('a * real)) -> order
@@ -28,6 +34,8 @@ sig
   val list_imax : int list -> int
   val list_imin : int list -> int
   val tmsize_compare : term * term -> order
+  val all_subterms : term -> term list
+  val div_equal : int -> int -> int list
 
   (* time *)
   val add_time : ('a -> 'b) -> 'a -> 'b * real
@@ -82,17 +90,20 @@ sig
     ('a, int) Redblackmap.dict -> 'a list -> ('a, int) Redblackmap.dict
 
   (* list *)
-  val only_hd : 'a list -> 'a
+  val range : (int * int) * (int -> 'a) -> 'a list
   val one_in_n : int -> int -> 'a list -> 'a list
   val map_snd : ('a -> 'b) -> ('c * 'a) list -> ('c * 'b) list
   val map_fst : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list
   val map_assoc : ('a -> 'b) -> 'a list -> ('a * 'b) list
+  val all_pairs : 'a list -> ('a * 'a) list
   val cartesian_product : 'a list -> 'b list -> ('a * 'b) list
   val cartesian_productl : 'a list list -> 'a list list
   val findSome  : ('a -> 'b option) -> 'a list -> 'b option
   val first_n   : int -> 'a list -> 'a list
   val first_test_n : ('a -> bool) -> int -> 'a list -> 'a list
   val part_n : int -> 'a list -> ('a list * 'a list)
+  val part_pct :  real -> 'a list -> 'a list * 'a list
+  val part_group : int list -> 'a list -> 'a list list
   val number_list : int -> 'a list -> (int * 'a) list
   val list_diff : ''a list -> ''a list -> ''a list
   val subset : ''a list -> ''a list -> bool
@@ -123,19 +134,24 @@ sig
   val shuffle   : 'a list -> 'a list
   val random_elem : 'a list -> 'a
   val random_int : (int * int) -> int (* uses random_elem *)
+  val random_subset : int -> 'a list -> 'a list
   val mk_cumul : ('a * real) list -> ('a * real) list * real
   val select_in_cumul : ('a * real) list * real -> 'a
   val select_in_distrib : ('a * real) list -> 'a
   val select_in_distrib_seeded : real -> ('a * real) list -> 'a
   val best_in_distrib : ('a * real) list -> 'a
-  val random_percent : real -> 'a list -> 'a list * 'a list
   val uniform_proba : int -> real list
   val normalize_proba : real list -> real list
   val uniform_distrib : 'a  list -> ('a * real) list
   val normalize_distrib : ('a * real) list -> ('a * real) list
 
   (* input/output *)
+  val reall_to_string : real list -> string
+  val realll_to_string : real list list -> string
+  val string_to_reall : string -> real list
+  val string_to_realll : string -> real list list
   val string_of_goal : goal -> string
+  val string_of_goal_noquote : goal -> string
   val trace_tacl : tactic list -> goal -> unit
   val readl : string -> string list
   val bare_readl : string -> string list
@@ -154,7 +170,6 @@ sig
     string -> string * string -> (int * int) list -> unit
   val readl_rm : string -> string list
   val writel_atomic : string -> string list -> unit
-
 
   (* parse *)
   val hd_string : string -> char
@@ -213,6 +228,7 @@ sig
   val has_boolty : term -> bool
   val only_concl : thm -> term
   val list_mk_binop : term -> term list -> term
+  val strip_binop : term -> term -> term list
   val arity_of : term -> int
 
   (* thread *)

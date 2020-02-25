@@ -6649,11 +6649,10 @@ Proof
                            extreal_11, extreal_le_eq, extreal_lt_eq] \\
      rfs [extreal_inv_eq, extreal_le_eq, REAL_INV_1OVER] \\
      rfs [REAL_LE_LDIV_EQ, REAL_LT_LDIV_EQ] \\
-     ONCE_REWRITE_TAC [Once REAL_MUL_COMM] \\
      MATCH_MP_TAC REAL_LE_TRANS \\
-     Q.EXISTS_TAC `&n * r` >> art [] \\
+     Q.EXISTS_TAC `r * &n` >> art [] \\
     `(&n :real) < &SUC n` by RW_TAC real_ss [] \\
-     ASM_SIMP_TAC real_ss [REAL_LE_RMUL]) >> DISCH_TAC
+     ASM_SIMP_TAC real_ss [REAL_LE_LMUL]) >> DISCH_TAC
  >> Know `(abs o f) IN measurable (m_space m,measurable_sets m) Borel`
  >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS' >> art []) >> DISCH_TAC
  >> Know `{x | 0 < (abs o f) x} INTER m_space m IN measurable_sets m`

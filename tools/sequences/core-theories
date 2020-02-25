@@ -27,7 +27,6 @@ src/num/termination
 [poly]src/AI/sml_inspection
 [poly]src/AI/proof_search
 [poly]src/AI/machine_learning
-[poly]src/AI/experiments
 [poly]src/tactictoe/src
 [poly]src/holyhammer
 
