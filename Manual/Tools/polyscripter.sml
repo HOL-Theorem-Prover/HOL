@@ -406,8 +406,8 @@ in
     end
   else if String.isPrefix ">>-" line then
     let
-      val firstline = String.extract(line, 3, NONE)
-      val (input, blankstr) = getRest 3 [firstline]
+      val (firstline,d) = poss_space_extract 3 line
+      val (input, blankstr) = getRest d [firstline]
       val raw_output = compile (lnumdie (linenum lbuf)) (String.concat input)
     in
       ("", transformOutput umap ws raw_output ^ blankstr)
