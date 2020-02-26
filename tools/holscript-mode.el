@@ -48,17 +48,9 @@
 
 ;; key maps
 
-(define-prefix-command 'holscript-backquote-map)
-(define-key holscript-backquote-map "`" 'holscript-dbl-backquote)
-(define-key holscript-backquote-map (kbd "<left>") 'holscript-to-left-quote)
-(define-key holscript-backquote-map (kbd "<right>") 'holscript-to-right-quote)
-(define-key holscript-backquote-map (kbd "C-q")
-  (lambda() (interactive) (insert "`")))
-
-
 (defvar holscript-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "`" holscript-backquote-map)
+    (define-key map (kbd "`") 'holscript-dbl-backquote)
     (define-key map (kbd "<RET>") 'holscript-newline-and-relative-indent)
     ;;(define-key map "\M-f" 'forward-hol-tactic)
     ;;(define-key map "\M-b" 'backward-hol-tactic)
@@ -86,28 +78,30 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
 ‘-’ pair, leaving the cursor on the right quote, ready to insert text."
   (interactive)
   (cond
+   ((use-region-p)
+    (let ((beg (region-beginning))
+          (end (region-end)))
+      (goto-char end)
+      (insert "’")
+      (goto-char beg)
+      (insert "‘")
+      (backward-char 1)))
    ((looking-at "’")
-    (if (catch 'exit
-          (save-mark-and-excursion
-            (re-search-backward "‘\\|’" nil t)
-            (if (looking-at "‘")
-                (progn (delete-char 1) (insert "“")
-                         (throw 'exit t))
-              (throw 'exit nil))))
+    (if (= (char-before) #x2018) ; U+2018 = ‘
         (progn
-          (if (looking-at "“") (forward-char 1))
-          (delete-char 1) (insert "”") (backward-char 1))))
+          (backward-char 1)
+          (delete-char 2)
+          (insert "“”")
+          (backward-char 1))
+      (forward-char 1)))
    ((looking-at "”")
-    (if (catch 'exit
-          (save-mark-and-excursion
-            (re-search-backward "“\\|”" nil t)
-            (if (looking-at "“")
-                (progn (delete-char 1) (insert "‘")
-                       (throw 'exit t))
-              (throw 'exit nil))))
-        (progn
-          (if (looking-at "‘") (forward-char 1))
-          (delete-char 1) (insert "’") (backward-char 1))))
+    (if (= (char-before) #x201C)  ; U+201C = “
+           (progn
+             (backward-char 1)
+             (delete-char 2)
+             (insert "‘’")
+             (backward-char 1))
+      (forward-char 1)))
    ((looking-at "“")
     (if (catch 'exit
           (save-mark-and-excursion
