@@ -526,10 +526,22 @@ starts >%s%s<"
                             (start (point))
                             (end
                              (save-excursion
-                               (let ((case-fold-search nil))
-                                 (if (re-search-forward
-                                      hol-open-terminator-regexp
-                                      nil t)
+                               (let ((case-fold-search nil)
+                                     (foundp nil)
+                                     (abortedp nil))
+                                 ;; complicated loop required to avoid being
+                                 ;; confused by input such as
+                                 ;; open listSyntax (* ; *) integerTheory;
+                                 (while (and (not foundp) (not abortedp))
+                                   (if (re-search-forward
+                                        hol-open-terminator-regexp
+                                        nil t)
+                                       (setq foundp
+                                             (let ((pp (syntax-ppss)))
+                                               (and (not (nth 3 pp))
+                                                    (not (nth 4 pp)))))
+                                     (setq abortedp t)))
+                                 (if foundp
                                      (- (point) (length (match-string 0)))
                                    (point-max)))))
                             (endm (make-marker)))
