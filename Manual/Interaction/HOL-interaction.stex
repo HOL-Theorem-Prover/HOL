@@ -145,8 +145,8 @@ See Table~\ref{tab:unicode-input} for more information.
 \itemy{\itemz{M-h M-r}{copy region into HOL}}{\itemz{M-h e}{apply tactic to goal}}
 \itemy{\itemz{M-h C-t}{display types on/off}}{\itemz{M-h b}{move back in proof}}
 \itemy{\itemz{M-h C-c}{interrupt HOL}}{\itemz{M-h p}{print current goal}}
-\itemy{\itemz{`{`}}{writes \lsquo{}\rsquo{}}}{\itemz{M-h d}{drop current goal}}
-\itemy{\itemz{`{`}`{`}}{writes \ldquo{}\rdquo{}}}{\itemz{M-h M-s}{start subgoal proof for {\tt by}}}
+\itemy{\itemz{`}{writes \lsquo{}\rsquo{}}}{\itemz{M-h d}{drop current goal}}
+\itemy{\itemz{`{`}}{writes \ldquo{}\rdquo{}}}{\itemz{M-h M-s}{start subgoal proof for {\tt by}}}
 \end{array}
 \end{displaymath}
 \caption{Most important key bindings in the emacs HOL4 mode.
@@ -257,12 +257,17 @@ When the above lines are copied into HOL4 (using text-selection then
 {\tt M-h M-r}, as described in Section~\ref{copy}), HOL4 responds with:
 \begin{code}
 >>__ open arithmeticTheory
->>- val less_add_1 = prove(``!n. n < n + 1``,decide_tac);
+>>- Theorem less_add_1:
+      ∀n. n < n + 1
+    Proof
+      decide_tac
+    QED
 \end{code}
 
 \mysubsec{Saving proofs based on multiple tactics\label{prove2}}
 
-Suppose we have proved the goal {\tt $\forall$n{.}~n <= n * n} with the following tactics. Note that {\tt \lsquo{}n\rsquo{}} can be typed by pressing {\tt \bq{}} twice to produce {\tt \lsquo{}\rsquo{}}.
+Suppose we have proved the goal {\tt $\forall$n{.}~n <= n * n} with the following tactics.
+Note that {\tt \lsquo{}n\rsquo{}} (with the ``pretty'' single quotation marks) can be produced by typing {\tt \bq{}n\bq}.
 \begin{code}
 Induct_on \lsquo{}n\rsquo{}                    (* comment: induction on n  *)
 
@@ -283,7 +288,7 @@ Proof
   Induct_on \lsquo{}n\rsquo{}
   >- decide_tac
   >- (asm_simp_tac bool_ss [MULT]
-      \gt\gt decide_tac)
+      >>> decide_tac)
 QED
 \end{code}
 Copy the above into HOL4 using text-selection, and then {\tt M-h M-r}, as in Section~\ref{copy}.
@@ -311,25 +316,25 @@ End
 Data-types are defined using {\tt Datatype ...\ End}, \eg{} a binary tree
 which holds values of type {\tt 'a} (a type variable) at the leaves:
 \begin{code}
-Datatype:
-  TREE = LEAF 'a | BRANCH TREE TREE
-End
+##eval Datatype:
+         TREE = LEAF 'a | BRANCH TREE TREE
+       End
 \end{code}
 A valid tree is \eg{} {\tt BRANCH (LEAF 5) (BRANCH (LEAF 1) (LEAF 7))}
 with type {\tt num TREE}, where {\tt  num} is the type name for a natural
 number. We can define recursive functions, \eg{}
 \begin{code}
-Definition MAP_TREE_def:
-  (MAP_TREE f (LEAF n) = LEAF (f n)) \(\land\)
-  (MAP_TREE f (BRANCH u v) = BRANCH (MAP_TREE f u) (MAP_TREE f v))
-End
+##eval Definition MAP_TREE_def:
+        (MAP_TREE f (LEAF n) = LEAF (f n)) ∧
+        (MAP_TREE f (BRANCH u v) = BRANCH (MAP_TREE f u) (MAP_TREE f v))
+       End
 \end{code}
 {\tt  SQUARE\_def} and {\tt  MAP\_TREE\_def} are theorems containing the
 above definitions. Theorems describing {\tt  TREE} can be retrieved by copying
 the following into HOL4 by pressing {\tt C-space} then {\tt M-h M-r}, as described in Section~\ref{copy}.
 \begin{code}
-val TREE_11 = fetch "-" "TREE_11";
-val TREE_distinct = fetch "-" "TREE_distinct";
+##eval val TREE_11 = fetch "-" "TREE_11";
+##eval val TREE_distinct = fetch "-" "TREE_distinct";
 \end{code}
 
 \mysubsec{Making a theory}
