@@ -1480,7 +1480,7 @@ second is to show the new term.
 
 (add-hook 'sml-mode-hook
           (lambda ()
-            (local-set-key "`" 'holscript-backquote-map)
+            (local-set-key "`" 'holscript-dbl-backquote)
             (message "Running HOL SML hook")
 ))
 
