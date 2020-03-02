@@ -1,4 +1,26 @@
-INCLUDES=../tools ../deep_embeddings ../translations ../model_check ${HOLDIR}/examples/PSL/path ${HOLDIR}/examples/PSL/1.1/official-semantics/
+INCLUDES = ../tools ../deep_embeddings ../translations ../model_check \
+	${HOLDIR}/examples/PSL/path ${HOLDIR}/examples/PSL/1.1/official-semantics/
 
+OPTIONS = QUIT_ON_FAILURE
+EXTRA_CLEANS = heap ltl2omega.exe
 
+ifdef POLY
+HOLHEAP = heap
+OBJNAMES = pred_setTheory ../translations/translationsLib
+OBJS = $(SIGOBJ)/pred_setTheory.uo ../translations/translationsLib.uo
 
+all: $(HOLHEAP)
+
+$(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state)
+	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
+endif
+
+all: ltl2omega.exe selftest.exe
+
+ltl2omega.exe: ltl2omega.uo
+	$(HOLMOSMLC) -o $@ $<
+
+selftest.exe: ltl2omega.exe
+	./ltl2omega.exe
+
+.PHOHY: all

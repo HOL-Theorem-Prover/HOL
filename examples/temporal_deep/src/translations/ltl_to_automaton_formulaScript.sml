@@ -2716,10 +2716,8 @@ val LEMMA_5_36___PSUNTIL =
 
 
 (*now we can prove the lemma for SUNTIL*)
-val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL = store_thm
-  ("CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL",
-
-   ``!b11 b12 b21 b22 a DS DS' l1 l2 pf1 pf2.
+Theorem CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL :
+    !b11 b12 b21 b22 a DS DS' l1 l2 pf1 pf2.
         (DS' = EXTEND_LTL_TO_GEN_BUECHI_DS DS 1 [] {}
                [\sv. XP_EQUIV(XP_PROP (sv DS.SN), XP_OR(XP_CURRENT (pf2 sv),
                                                         XP_AND(
@@ -2729,8 +2727,8 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL = store_thm
                {(LTL_SUNTIL(l1, l2), b11 /\ b21 /\ a, b12 /\ b22, \sv. P_PROP(sv DS.SN))}) ==>
 
         ((LTL_TO_GEN_BUECHI_DS___SEM DS /\ (l1, b11, b12, pf1) IN DS.B /\ (l2, b21, b22, pf2) IN DS.B) ==>
-        LTL_TO_GEN_BUECHI_DS___SEM DS')``,
-
+        LTL_TO_GEN_BUECHI_DS___SEM DS')
+Proof
   REPEAT STRIP_TAC THEN
   ASM_SIMP_TAC std_ss [] THEN
   MATCH_MP_TAC (SIMP_RULE std_ss [] EXTEND_LTL_TO_GEN_BUECHI_DS___SEM) THEN
@@ -2840,7 +2838,6 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL = store_thm
           EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES, GSYM IN_UNION, IN_ABS] THEN
         METIS_TAC[P_USED_VARS_INTER_SUBSET_THM],
 
-
         Cases_on `b11 /\ b21 /\ a` THEN (
           CLEAN_ASSUMPTIONS_TAC THEN
           FULL_SIMP_TAC list_ss []
@@ -2866,7 +2863,6 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL = store_thm
             METIS_TAC[P_USED_VARS_INTER_SUBSET_THM]
         ]
       ],
-
 
       GSYM_NO_TAC 17 (*Def. DS'*) THEN
       GSYM_NO_TAC 11 (*Definition of P*) THEN
@@ -2937,14 +2933,11 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL = store_thm
             METIS_TAC[]
           ) THEN
 
-
           REMAINS_TAC `!n w. LTL_TO_GEN_BUECHI_DS___FAIR_RUN DS i w sv ==>
                           (((INPUT_RUN_PATH_UNION (LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON DS sv) i w n)
                           INTER (LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS DS sv UNION DS.IV)) =
                           ((INPUT_RUN_PATH_UNION (LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON DS' sv) i w n)
                           INTER (LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS DS sv UNION DS.IV)))` THEN1 (
-
-
             (*Cleaning up*)
             NTAC 2 UNDISCH_HD_TAC (*current FairRun Stuff*) THEN
             UNDISCH_NO_TAC 18 (*w Fair run*) THEN
@@ -2985,7 +2978,6 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL = store_thm
             REPEAT WEAKEN_HD_TAC THEN
             REPEAT DISCH_TAC THEN
             ASM_REWRITE_TAC[] THEN
-
             SIMP_ALL_TAC list_ss [LTL_TO_GEN_BUECHI_DS___FAIR_RUN_def, IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def,
               IS_TRANSITION_def, LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def,
               symbolic_semi_automaton_REWRITES, EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES,
@@ -2998,7 +2990,6 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL = store_thm
             REPEAT STRIP_TAC THENL [
               REWRITE_TAC[],
               METIS_TAC[],
-
               WEAKEN_NO_TAC 3 THEN
               FULL_SIMP_TAC list_ss [A_BIGAND_def, A_SEM_THM,
                 ACCEPT_COND_GF_def, ACCEPT_COND_SEM_def, ACCEPT_COND_SEM_TIME_def,
@@ -3040,7 +3031,6 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL = store_thm
           METIS_TAC[P_USED_VARS_INTER_SUBSET_THM]
         ) THEN
 
-
         (*Cleaning up*)
         GSYM_NO_TAC 6 (*Definition q*) THEN
         GSYM_NO_TAC 6 (*Definition v*) THEN
@@ -3058,13 +3048,11 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL = store_thm
         REPEAT STRIP_TAC THENL [
           METIS_TAC[],
           METIS_TAC[],
-
           ASSUME_TAC LTL_UNTIL_SUNTIL_CONDITION THEN
           FULL_SIMP_TAC std_ss [LTL_SEM_def, LTL_ALWAYS_SEM, LTL_EQUIV_SEM] THEN
           SPECL_NO_ASSUM 0 [``v:num->'a set``, ``LTL_PROP ((pf1:(num->'a)->'a prop_logic) sv)``,
             ``LTL_PROP ((pf2:(num->'a)->'a prop_logic) sv)``, ``q:'a ltl``] THEN
           METIS_TAC[],
-
           ASM_SIMP_TAC std_ss [LTL_UNTIL_def, LTL_OR_SEM]
         ]
       ]
@@ -3081,14 +3069,11 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL = store_thm
       P_USED_VARS_def, P_IMPL_def, P_OR_def] THEN
     `(!n. n < DS.SN ==> n < DS.SN + 1) /\ DS.SN < DS.SN + 1` by
         DECIDE_TAC THEN
-    METIS_TAC[]
-  ]);
+    METIS_TAC[] ]
+QED
 
-
-val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL = store_thm
-  ("CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL",
-
-   ``!b11 b12 b21 b22 DS DS' l1 l2 pf1 pf2.
+Theorem CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL :
+    !b11 b12 b21 b22 DS DS' l1 l2 pf1 pf2.
         (DS' = EXTEND_LTL_TO_GEN_BUECHI_DS DS 1 [(DS.SN, F)] {}
                [\sv. XP_EQUIV(XP_NEXT_PROP (sv DS.SN), XP_OR(XP_CURRENT (pf2 sv),
                                                         XP_AND(
@@ -3096,21 +3081,18 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL = store_thm
                                                           XP_PROP (sv DS.SN))))]
                []
                {(LTL_PSUNTIL(l1, l2), b11 /\ b21, b12 /\ b22, \sv. (P_OR(pf2 sv, P_AND(pf1 sv, P_PROP(sv DS.SN)))))}) ==>
-
         ((LTL_TO_GEN_BUECHI_DS___SEM DS /\ (l1, b11, b12, pf1) IN DS.B /\ (l2, b21, b22, pf2) IN DS.B) ==>
-        LTL_TO_GEN_BUECHI_DS___SEM DS')``,
-
+        LTL_TO_GEN_BUECHI_DS___SEM DS')
+Proof
   REPEAT STRIP_TAC THEN
   ASM_SIMP_TAC std_ss [] THEN
   MATCH_MP_TAC (SIMP_RULE std_ss [] EXTEND_LTL_TO_GEN_BUECHI_DS___SEM) THEN
   ASM_SIMP_TAC list_ss [LIST_BIGUNION_def, UNION_EMPTY, IN_SING, IMAGE_SING, BIGUNION_SING] THEN
   REPEAT STRIP_TAC THENL [
 
-
     `?P. (\n. n > 0 /\ LTL_SEM_TIME (PRE n) (INPUT_RUN_PATH_UNION (LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON DS' sv) i w)
                    (LTL_PSUNTIL(LTL_PROP (pf1 sv), LTL_PROP (pf2 sv)))) = P` by METIS_TAC [] THEN
     `?w'. PATH_EXTENSION w (sv DS.SN) P = w'` by PROVE_TAC[] THEN
-
 
     `PATH_SUBSET w (LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS DS sv)` by
         METIS_TAC[LTL_TO_GEN_BUECHI_DS___FAIR_RUN___PATH_SUBSET] THEN
@@ -3127,7 +3109,6 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL = store_thm
     LEFT_CONJ_TAC THEN1 (
       METIS_TAC [PATH_EXTENSION_EQUIV_THM]
     ) THEN
-
 
     (*some usefull lemmata*)
     `P_USED_VARS (pf1 sv) SUBSET LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS DS sv UNION DS.IV /\
@@ -3148,7 +3129,6 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL = store_thm
       SIMP_TAC arith_ss []
     ) THEN
 
-
     REPEAT STRIP_TAC THENL [
       ASM_SIMP_TAC list_ss [SIMP_RULE std_ss [] EXTEND_LTL_TO_GEN_BUECHI_DS___FAIR_RUN] THEN
       GSYM_NO_TAC 4 (*w = PATH_RESTRICT w'*) THEN
@@ -3164,13 +3144,9 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL = store_thm
         `DS.SN < DS.SN + 1 /\ !n. n < DS.SN ==> n < DS.SN + 1` by DECIDE_TAC THEN
         PROVE_TAC[],
 
-
         UNDISCH_HD_TAC THEN
         GSYM_NO_TAC 8 (*Definition P*) THEN
         ASM_SIMP_TAC arith_ss [],
-
-
-
 
         UNDISCH_NO_TAC 1 (*sv DS.SN IN_INPUT_RUN_...*) THEN
         ASM_SIMP_TAC std_ss [XP_SEM_THM, INPUT_RUN_PATH_UNION_def, XP_SEM___XP_CURRENT, INPUT_RUN_STATE_UNION_def, LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def,
@@ -3227,7 +3203,6 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL = store_thm
         REPEAT GEN_TAC THEN REPEAT BOOL_EQ_STRIP_TAC THEN
         METIS_TAC[]
       ],
-
 
       GSYM_NO_TAC 16 (*Def. DS'*) THEN
       GSYM_NO_TAC 10 (*Definition of P*) THEN
@@ -3289,16 +3264,12 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL = store_thm
         REPEAT GEN_TAC THEN REPEAT BOOL_EQ_STRIP_TAC THEN
         METIS_TAC[],
 
-
-
-
         GEN_TAC THEN DISCH_TAC THEN
         SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN GEN_TAC THEN
         REMAINS_TAC `!t. ((sv DS.SN IN w'' t) = (t > 0) /\ LTL_SEM_TIME (PRE t)
                           (INPUT_RUN_PATH_UNION (LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON DS' sv)
                               i w'')
                           (LTL_PSUNTIL (LTL_PROP (pf1 sv),LTL_PROP (pf2 sv))))` THEN1 (
-
 
           UNDISCH_HD_TAC THEN
           ASM_SIMP_TAC std_ss [P_SEM_def, LTL_SEM_THM] THEN
@@ -3316,7 +3287,6 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL = store_thm
             SIMP_ALL_TAC list_ss [] THEN
             METIS_TAC[]
           ) THEN
-
 
           DISCH_TAC THEN WEAKEN_HD_TAC THEN
           SUBGOAL_TAC `!n. (((INPUT_RUN_PATH_UNION (LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON DS' sv) i w' n)
@@ -3361,8 +3331,7 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL = store_thm
             METIS_TAC[]
           ) THEN
 
-
-          (*Cleaning up*)
+          (* cleaning up *)
           SPECL_NO_ASSUM 4 [``PATH_RESTRICT (w'':num->'a set) (LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS (DS:'a ltl_to_gen_buechi_ds) sv)``] THEN
           SPECL_NO_ASSUM 6 [``PATH_RESTRICT (w'':num->'a set) (LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS (DS:'a ltl_to_gen_buechi_ds) sv)``] THEN
           NTAC 4 UNDISCH_HD_TAC (*path constraints*) THEN
@@ -3372,10 +3341,8 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL = store_thm
           METIS_TAC[P_USED_VARS_INTER_SUBSET_THM]
         ) THEN
 
-
         `?q. q = LTL_NEXT(LTL_PROP (P_PROP (sv DS.SN)))` by METIS_TAC[] THEN
         `?v. v = (INPUT_RUN_PATH_UNION (LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON DS' sv) i w'')` by METIS_TAC[] THEN
-
 
         REMAINS_TAC `(!t. (sv DS.SN IN w'' t = (t > 0 /\ LTL_SEM_TIME (PRE t) v q))) /\
                      (LTL_SEM v (LTL_ALWAYS(LTL_EQUIV(q, LTL_OR(LTL_PROP (pf2 sv), LTL_AND(LTL_PROP (pf1 sv), LTL_PSNEXT q))))))` THEN1 (
@@ -3420,8 +3387,6 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL = store_thm
         ]
       ]
     ],
-
-
     FULL_SIMP_TAC list_ss [XP_USED_VARS_def, XP_USED_CURRENT_VARS_def,
       XP_EQUIV_def, XP_IMPL_def, XP_OR_def, XP_USED_X_VARS_def,
       XP_CURRENT___XP_USED_VARS, UNION_EMPTY, SUBSET_DEF, IN_UNION,
@@ -3432,11 +3397,10 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL = store_thm
     `(!n. n < DS.SN ==> n < DS.SN + 1) /\ DS.SN < DS.SN + 1` by
         DECIDE_TAC THEN
     METIS_TAC[]
-  ]);
+  ]
+QED
 
-
-val LTL_TO_GEN_BUECHI___EXTEND_def =
- Define
+val LTL_TO_GEN_BUECHI___EXTEND_def = Define
   `(LTL_TO_GEN_BUECHI___EXTEND (LTL_PROP p) b1 b2 DS = ((\sv:num->'a. p:'a prop_logic),
     (EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS DS {(LTL_PROP p, b1, b2, \sv. p)} (P_USED_VARS p)))) /\
 
@@ -3453,23 +3417,24 @@ val LTL_TO_GEN_BUECHI___EXTEND_def =
      ((pf2', DS2') = (LTL_TO_GEN_BUECHI___EXTEND l2 b1 b2 DS1'))
      in
     ((\sv. P_AND (pf1' sv, pf2' sv)),
-     EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS DS2' {(LTL_AND(l1,l2), b1, b2, \sv. P_AND (pf1' sv, pf2' sv))} {})))) /\
-
+     EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS DS2'
+       {(LTL_AND(l1,l2), b1, b2, \sv. P_AND (pf1' sv, pf2' sv))} {})))) /\
 
    (LTL_TO_GEN_BUECHI___EXTEND (LTL_NEXT l) b1 b2 DS = (let
      ((pf1', DS1') = (LTL_TO_GEN_BUECHI___EXTEND l b1 b2 DS))
     in
     ((\sv. P_PROP (sv DS1'.SN)),
-      EXTEND_LTL_TO_GEN_BUECHI_DS DS1' 1 [] {} [\sv. XP_EQUIV(XP_PROP (sv DS1'.SN), XP_NEXT (pf1' sv))] [] {
-          (LTL_NEXT l, b1, b2, \sv. P_PROP(sv DS1'.SN))}))) /\
+      EXTEND_LTL_TO_GEN_BUECHI_DS DS1' 1 [] {}
+        [\sv. XP_EQUIV(XP_PROP (sv DS1'.SN), XP_NEXT (pf1' sv))] []
+        {(LTL_NEXT l, b1, b2, \sv. P_PROP(sv DS1'.SN))}))) /\
 
    (LTL_TO_GEN_BUECHI___EXTEND (LTL_PSNEXT l) b1 b2 DS = (let
      ((pf1', DS1') = (LTL_TO_GEN_BUECHI___EXTEND l b1 b2 DS))
     in
     ((\sv. P_PROP (sv DS1'.SN)),
-      EXTEND_LTL_TO_GEN_BUECHI_DS DS1' 1 [(DS1'.SN, F)] {} [\sv. XP_EQUIV(XP_NEXT_PROP (sv DS1'.SN), XP_CURRENT (pf1' sv))] [] {
-          (LTL_PSNEXT l, b1, b2, \sv. P_PROP(sv DS1'.SN))}))) /\
-
+      EXTEND_LTL_TO_GEN_BUECHI_DS DS1' 1 [(DS1'.SN, F)] {}
+         [\sv. XP_EQUIV(XP_NEXT_PROP (sv DS1'.SN), XP_CURRENT (pf1' sv))] []
+         {(LTL_PSNEXT l, b1, b2, \sv. P_PROP(sv DS1'.SN))}))) /\
 
    (LTL_TO_GEN_BUECHI___EXTEND (LTL_SUNTIL (l1, l2)) b1 b2 DS = (let
      ((pf1', DS1') = (LTL_TO_GEN_BUECHI___EXTEND l1 b1 b2 DS))
@@ -3495,28 +3460,23 @@ val LTL_TO_GEN_BUECHI___EXTEND_def =
      in
     ((\sv. (P_OR(pf2' sv, P_AND(pf1' sv, P_PROP(sv DS2'.SN))))),
     EXTEND_LTL_TO_GEN_BUECHI_DS DS2' 1 [(DS2'.SN, F)] {}
-               [\sv. XP_EQUIV(XP_NEXT_PROP (sv DS2'.SN), XP_OR(XP_CURRENT (pf2' sv),
-                                                        XP_AND(
+       [\sv. XP_EQUIV(XP_NEXT_PROP (sv DS2'.SN), XP_OR(XP_CURRENT (pf2' sv),
+                                                       XP_AND(
                                                           XP_CURRENT (pf1' sv),
                                                           XP_PROP (sv DS2'.SN))))]
-               []
-               {(LTL_PSUNTIL(l1, l2), b1, b2, \sv. (P_OR(pf2' sv, P_AND(pf1' sv, P_PROP(sv DS2'.SN)))))}))))`;
+       []
+       {(LTL_PSUNTIL(l1, l2), b1, b2, \sv. (P_OR(pf2' sv, P_AND(pf1' sv, P_PROP(sv DS2'.SN)))))}))))`;
 
+val LTL_TO_GEN_BUECHI_def = Define
+   `LTL_TO_GEN_BUECHI l b1 b2 =
+    LTL_TO_GEN_BUECHI___EXTEND l b1 b2 (EMPTY_LTL_TO_GEN_BUECHI_DS)`;
 
-
-val LTL_TO_GEN_BUECHI_def =
- Define
-  `LTL_TO_GEN_BUECHI l b1 b2 = LTL_TO_GEN_BUECHI___EXTEND l b1 b2 (EMPTY_LTL_TO_GEN_BUECHI_DS)`;
-
-
-val LTL_TO_GEN_BUECHI___EXTEND___THM = store_thm
-  ("LTL_TO_GEN_BUECHI___EXTEND___THM",
-
-``!l b1 b2 DS DS' pf. ((pf, DS') = LTL_TO_GEN_BUECHI___EXTEND l b1 b2 DS) ==> (
-  ((l, b1, b2, pf) IN DS'.B /\ (DS.B SUBSET DS'.B) /\
-  (LTL_TO_GEN_BUECHI_DS___SEM DS ==> LTL_TO_GEN_BUECHI_DS___SEM DS')))``,
-
-
+Theorem LTL_TO_GEN_BUECHI___EXTEND___THM :
+    !l b1 b2 DS DS' pf.
+       ((pf, DS') = LTL_TO_GEN_BUECHI___EXTEND l b1 b2 DS) ==>
+       ((l, b1, b2, pf) IN DS'.B /\ (DS.B SUBSET DS'.B) /\
+        (LTL_TO_GEN_BUECHI_DS___SEM DS ==> LTL_TO_GEN_BUECHI_DS___SEM DS'))
+Proof
 ONCE_REWRITE_TAC[GSYM PAIR] THEN
 REWRITE_TAC[PAIR_EQ] THEN
 INDUCT_THEN ltl_induct ASSUME_TAC THENL [
@@ -3526,7 +3486,6 @@ INDUCT_THEN ltl_induct ASSUME_TAC THENL [
   REPEAT STRIP_TAC THEN
   METIS_TAC[LTL_TO_GEN_BUECHI_DS___SEM___WEAKEN_BINDING, CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PROP,
   EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS_def],
-
 
   SIMP_TAC (list_ss++pairSimps.gen_beta_ss) [LTL_TO_GEN_BUECHI___EXTEND_def, LET_THM,
     EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS_def, EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES] THEN
@@ -3539,7 +3498,6 @@ INDUCT_THEN ltl_induct ASSUME_TAC THENL [
     METIS_TAC[CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_NOT]
   ],
 
-
   SIMP_TAC (list_ss++pairSimps.gen_beta_ss) [LTL_TO_GEN_BUECHI___EXTEND_def, LET_THM,
     EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS_def, EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES] THEN
   REPEAT STRIP_TAC THENL [
@@ -3549,10 +3507,7 @@ INDUCT_THEN ltl_induct ASSUME_TAC THENL [
     ASSUME_TAC CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_AND THEN
     Q_SPECL_NO_ASSUM 0 [`SND (LTL_TO_GEN_BUECHI___EXTEND l' b1 b2
                (SND (LTL_TO_GEN_BUECHI___EXTEND l b1 b2 DS)))`, `b1`, `b2`, `b1`, `b2`] THEN
-    METIS_TAC[SUBSET_DEF]
-  ],
-
-
+    METIS_TAC[SUBSET_DEF] ],
 
   SIMP_TAC (list_ss++pairSimps.gen_beta_ss) [LTL_TO_GEN_BUECHI___EXTEND_def, LET_THM,
     EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES] THEN
@@ -3560,7 +3515,6 @@ INDUCT_THEN ltl_induct ASSUME_TAC THENL [
     PROVE_TAC[SUBSET_UNION, SUBSET_TRANS],
     METIS_TAC[CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_NEXT]
   ],
-
 
   SIMP_TAC (list_ss++pairSimps.gen_beta_ss) [LTL_TO_GEN_BUECHI___EXTEND_def, LET_THM,
     EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES] THEN
@@ -3576,14 +3530,12 @@ INDUCT_THEN ltl_induct ASSUME_TAC THENL [
     )
   ],
 
-
   SIMP_TAC (list_ss++pairSimps.gen_beta_ss) [LTL_TO_GEN_BUECHI___EXTEND_def, LET_THM,
     EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES] THEN
   REPEAT STRIP_TAC THENL [
     PROVE_TAC[SUBSET_UNION, SUBSET_TRANS],
     METIS_TAC[CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSNEXT, SUBSET_DEF]
   ],
-
 
   SIMP_TAC (list_ss++pairSimps.gen_beta_ss) [LTL_TO_GEN_BUECHI___EXTEND_def, LET_THM,
     EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES] THEN
@@ -3593,8 +3545,8 @@ INDUCT_THEN ltl_induct ASSUME_TAC THENL [
     ASSUME_TAC CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL THEN
     Q_SPECL_NO_ASSUM 0 [`b1`, `b2`, `b1`, `b2`] THEN
     METIS_TAC[SUBSET_DEF]
-  ]
-]);
+  ] ]
+QED
 
 (* main theorem *)
 Theorem LTL_TO_GEN_BUECHI_THM :
@@ -3604,7 +3556,9 @@ Theorem LTL_TO_GEN_BUECHI_THM :
 Proof
   REPEAT GEN_TAC THEN
   REWRITE_TAC[LTL_TO_GEN_BUECHI_def] THEN
-  ASSUME_TAC (SPECL [``l:'a ltl``, ``b1:bool``, ``b2:bool``, ``EMPTY_LTL_TO_GEN_BUECHI_DS:'a ltl_to_gen_buechi_ds``] LTL_TO_GEN_BUECHI___EXTEND___THM) THEN
+  ASSUME_TAC (SPECL [``l:'a ltl``, ``b1:bool``, ``b2:bool``,
+                     ``EMPTY_LTL_TO_GEN_BUECHI_DS:'a ltl_to_gen_buechi_ds``]
+                    LTL_TO_GEN_BUECHI___EXTEND___THM) THEN
   UNDISCH_HD_TAC THEN
   ONCE_REWRITE_TAC[GSYM PAIR] THEN
   REWRITE_TAC[PAIR_EQ] THEN
@@ -3612,70 +3566,59 @@ Proof
   METIS_TAC[EMPTY_LTL_TO_GEN_BUECHI_DS___SEM]
 QED
 
-val LTL_TO_GEN_BUECHI___EXTEND___IS_LTL_G_F =
- store_thm
-  ("LTL_TO_GEN_BUECHI___EXTEND___IS_LTL_G_F",
+Theorem LTL_TO_GEN_BUECHI___EXTEND___IS_LTL_G_F :
+    !l DS. (IS_LTL_G l ==> ((SND (LTL_TO_GEN_BUECHI___EXTEND l T F DS)).FC = DS.FC)) /\
+           (IS_LTL_F l ==> ((SND (LTL_TO_GEN_BUECHI___EXTEND l F T DS)).FC = DS.FC))
+Proof
+  INDUCT_THEN ltl_induct ASSUME_TAC THEN
+  ASM_SIMP_TAC (list_ss++pairSimps.gen_beta_ss)
+               [IS_LTL_G_def, LTL_TO_GEN_BUECHI___EXTEND_def,
+                EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS_def, LET_THM,
+                EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES,
+                ltl_to_gen_buechi_ds_REWRITES]
+QED
 
-``!l DS. (IS_LTL_G l ==> ((SND (LTL_TO_GEN_BUECHI___EXTEND l T F DS)).FC = DS.FC)) /\
-         (IS_LTL_F l ==> ((SND (LTL_TO_GEN_BUECHI___EXTEND l F T DS)).FC = DS.FC))``,
-
-  INDUCT_THEN ltl_induct ASSUME_TAC THEN (
-    ASM_SIMP_TAC (list_ss++pairSimps.gen_beta_ss) [IS_LTL_G_def, LTL_TO_GEN_BUECHI___EXTEND_def,
-      EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS_def, LET_THM,
-      EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES, ltl_to_gen_buechi_ds_REWRITES]
-  ));
-
-
-val LTL_TO_GEN_BUECHI___IS_LTL_G_F =
- store_thm
-  ("LTL_TO_GEN_BUECHI___IS_LTL_G_F",
-
-``!l. (IS_LTL_G l ==> ((SND (LTL_TO_GEN_BUECHI l T F)).FC = [])) /\
-      (IS_LTL_F l ==> ((SND (LTL_TO_GEN_BUECHI l F T)).FC = []))``,
-
+Theorem LTL_TO_GEN_BUECHI___IS_LTL_G_F :
+    !l. (IS_LTL_G l ==> ((SND (LTL_TO_GEN_BUECHI l T F)).FC = [])) /\
+        (IS_LTL_F l ==> ((SND (LTL_TO_GEN_BUECHI l F T)).FC = []))
+Proof
   SIMP_TAC std_ss [LTL_TO_GEN_BUECHI_def, LTL_TO_GEN_BUECHI___EXTEND___IS_LTL_G_F,
-    EMPTY_LTL_TO_GEN_BUECHI_DS_def, ltl_to_gen_buechi_ds_REWRITES]);
+                   EMPTY_LTL_TO_GEN_BUECHI_DS_def, ltl_to_gen_buechi_ds_REWRITES]
+QED
 
-
-val LTL_TO_GEN_BUECHI___EXTEND___USED_INPUT_VARS = store_thm
-  ("LTL_TO_GEN_BUECHI___EXTEND___USED_INPUT_VARS",
-
-``!l b1 b2 DS. (SND (LTL_TO_GEN_BUECHI___EXTEND l b1 b2 DS)).IV = (LTL_USED_VARS l) UNION DS.IV``,
-
+Theorem LTL_TO_GEN_BUECHI___EXTEND___USED_INPUT_VARS :
+    !l b1 b2 DS. (SND (LTL_TO_GEN_BUECHI___EXTEND l b1 b2 DS)).IV = (LTL_USED_VARS l) UNION DS.IV
+Proof
   INDUCT_THEN ltl_induct ASSUME_TAC THEN (
     ASM_SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [LTL_TO_GEN_BUECHI___EXTEND_def,
       EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS_def, LET_THM,
       EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES, ltl_to_gen_buechi_ds_REWRITES,
       LTL_USED_VARS_def, NOT_IN_EMPTY, EXTENSION, IN_UNION] THEN
     REPEAT GEN_TAC THEN REPEAT BOOL_EQ_STRIP_TAC
-  ));
+  )
+QED
 
-
-val LTL_TO_GEN_BUECHI___USED_INPUT_VARS = store_thm
-  ("LTL_TO_GEN_BUECHI___USED_INPUT_VARS",
-
-``!l b1 b2. (SND (LTL_TO_GEN_BUECHI l b1 b2)).IV = (LTL_USED_VARS l)``,
-
+Theorem LTL_TO_GEN_BUECHI___USED_INPUT_VARS :
+    !l b1 b2. (SND (LTL_TO_GEN_BUECHI l b1 b2)).IV = (LTL_USED_VARS l)
+Proof
   SIMP_TAC std_ss [LTL_TO_GEN_BUECHI_def, LTL_TO_GEN_BUECHI___EXTEND___USED_INPUT_VARS,
-    EMPTY_LTL_TO_GEN_BUECHI_DS_def, ltl_to_gen_buechi_ds_REWRITES, UNION_EMPTY]);
+    EMPTY_LTL_TO_GEN_BUECHI_DS_def, ltl_to_gen_buechi_ds_REWRITES, UNION_EMPTY]
+QED
 
-(*Derived construction rules for operators defined as
-  syntactic sugar*)
-val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_BEFORE = store_thm
-  ("CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_BEFORE",
-
-   ``!b11 b12 b21 b22 a DS DS' l1 l2 pf1 pf2.
+(* Derived construction rules for operators defined as syntactic sugar *)
+Theorem CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_BEFORE :
+    !b11 b12 b21 b22 a DS DS' l1 l2 pf1 pf2.
         (DS' = EXTEND_LTL_TO_GEN_BUECHI_DS DS 1 [] {}
                [\sv. XP_EQUIV(XP_PROP (sv DS.SN), XP_OR(XP_CURRENT (pf2 sv),
                                                         XP_AND(
                                                           XP_CURRENT (P_NOT (pf1 sv)),
                                                           XP_NEXT_PROP (sv DS.SN))))]
                (if ~(b12 /\ b21 /\ a) then [] else [\sv. P_IMPL(P_PROP(sv DS.SN), pf2 sv)])
-               {(LTL_BEFORE(l1, l2), b11 /\ b22, b12 /\ b21 /\ a, \sv. P_NOT (P_PROP(sv DS.SN)))}) ==>
-
+               {(LTL_BEFORE(l1, l2), b11 /\ b22, b12 /\ b21 /\ a, \sv. P_NOT (P_PROP(sv DS.SN)))})
+       ==>
         ((LTL_TO_GEN_BUECHI_DS___SEM DS /\ (l1, b11, b12, pf1) IN DS.B /\ (l2, b21, b22, pf2) IN DS.B) ==>
-        LTL_TO_GEN_BUECHI_DS___SEM DS')``,
-
+         LTL_TO_GEN_BUECHI_DS___SEM DS')
+Proof
     REWRITE_TAC [LTL_BEFORE_def] THEN
     REPEAT STRIP_TAC THEN
 
@@ -3716,7 +3659,6 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_BEFORE = store_thm
     ) THEN
     `?pf. pf = (\(sv :num -> 'a).
                P_PROP (sv (DS1 :'a ltl_to_gen_buechi_ds).SN))` by METIS_TAC[] THEN
-
     (*NOT*)
     ASSUME_TAC CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_NOT THEN
     Q_SPECL_NO_ASSUM 0 [`b12 /\ b21 /\ a`, `b11 /\ b22`, `DS2`, `LTL_SUNTIL (LTL_NOT l1,l2)`, `pf`] THEN
@@ -3735,12 +3677,11 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_BEFORE = store_thm
     REPEAT STRIP_TAC THEN
     FULL_SIMP_TAC list_ss [EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES, SUBSET_DEF, IN_UNION,
       IN_SING, IN_INSERT, DISJ_IMP_THM] THEN
-    METIS_TAC[]);
+    METIS_TAC[]
+QED
 
-val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PBEFORE = store_thm
-  ("CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PBEFORE",
-
-   ``!b11 b12 b21 b22 DS DS' l1 l2 pf1 pf2.
+Theorem CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PBEFORE :
+    !b11 b12 b21 b22 DS DS' l1 l2 pf1 pf2.
         (DS' = EXTEND_LTL_TO_GEN_BUECHI_DS DS 1 [(DS.SN,F)] {}
                [\sv. XP_EQUIV(XP_NEXT_PROP (sv DS.SN), XP_OR(XP_CURRENT (pf2 sv),
                                                         XP_AND(
@@ -3752,8 +3693,8 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PBEFORE = store_thm
                 (P_OR (pf2 sv,P_AND (P_NOT (pf1 sv),P_PROP (sv DS.SN))))))}) ==>
 
         ((LTL_TO_GEN_BUECHI_DS___SEM DS /\ (l1, b11, b12, pf1) IN DS.B /\ (l2, b21, b22, pf2) IN DS.B) ==>
-        LTL_TO_GEN_BUECHI_DS___SEM DS')``,
-
+        LTL_TO_GEN_BUECHI_DS___SEM DS')
+Proof
     REWRITE_TAC [LTL_PBEFORE_def] THEN
     REPEAT STRIP_TAC THEN
 
@@ -3773,7 +3714,8 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PBEFORE = store_thm
 
     (*PSUNTIL*)
     ASSUME_TAC (SIMP_RULE std_ss [] CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSUNTIL) THEN
-    Q_SPECL_NO_ASSUM 0 [`b12`, `b11`, `b21`, `b22`, `DS1`, `LTL_NOT l1`, `l2`, `(\sv. P_NOT (pf1 sv))`, `pf2`] THEN
+    Q_SPECL_NO_ASSUM 0 [`b12`, `b11`, `b21`, `b22`, `DS1`, `LTL_NOT l1`, `l2`,
+                        `(\sv. P_NOT (pf1 sv))`, `pf2`] THEN
     UNDISCH_HD_TAC THEN
     `?DS2. (EXTEND_LTL_TO_GEN_BUECHI_DS DS1 1 [(DS1.SN,F)] {}
           [(\sv.
@@ -3796,8 +3738,8 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PBEFORE = store_thm
     ) THEN
     `?pf. pf = (\(sv:num -> 'a).
                  P_OR
-                   (pf2 sv,P_AND (P_NOT (pf1 sv),P_PROP (sv (DS1:'a ltl_to_gen_buechi_ds).SN))))` by METIS_TAC[] THEN
-
+                   (pf2 sv,P_AND (P_NOT (pf1 sv),P_PROP (sv (DS1:'a ltl_to_gen_buechi_ds).SN))))`
+          by METIS_TAC[] THEN
     (*NOT*)
     ASSUME_TAC CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_NOT THEN
     Q_SPECL_NO_ASSUM 0 [`b12 /\ b21`, `b11 /\ b22`, `DS2`, `LTL_PSUNTIL (LTL_NOT l1,l2)`, `pf`] THEN
@@ -3815,20 +3757,18 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PBEFORE = store_thm
     MATCH_MP_TAC LTL_TO_GEN_BUECHI_DS___SEM___REMOVE_BINDINGS THEN
     REPEAT STRIP_TAC THEN
     FULL_SIMP_TAC list_ss [EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES, SUBSET_DEF, IN_UNION,
-      IN_SING, IN_INSERT, DISJ_IMP_THM]);
+      IN_SING, IN_INSERT, DISJ_IMP_THM]
+QED
 
-val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PNEXT = store_thm
-  ("CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PNEXT",
-
-   ``!b1 b2 DS DS' l pf.
+Theorem CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PNEXT :
+    !b1 b2 DS DS' l pf.
         (DS' = EXTEND_LTL_TO_GEN_BUECHI_DS DS 1 [(DS.SN,F)] {}
                [(\sv. XP_EQUIV
                   (XP_NEXT_PROP (sv DS.SN),XP_CURRENT (P_NOT (pf sv))))] []
                {(LTL_PNEXT l, b1, b2, (\sv. P_NOT (P_PROP (sv DS.SN))))}) ==>
-
         ((LTL_TO_GEN_BUECHI_DS___SEM DS /\ (l, b1, b2, pf) IN DS.B) ==>
-        LTL_TO_GEN_BUECHI_DS___SEM DS')``,
-
+        LTL_TO_GEN_BUECHI_DS___SEM DS')
+Proof
     REWRITE_TAC [LTL_PNEXT_def] THEN
     REPEAT STRIP_TAC THEN
 
@@ -3865,7 +3805,6 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PNEXT = store_thm
     ) THEN
     `?pf2. pf2 = (\(sv:num -> 'a).
                  P_PROP (sv (DS1:'a ltl_to_gen_buechi_ds).SN))` by METIS_TAC[] THEN
-
     (*NOT*)
     ASSUME_TAC CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_NOT THEN
     Q_SPECL_NO_ASSUM 0 [`b2`,`b1`, `DS2`, `LTL_PSNEXT (LTL_NOT l)`, `pf2`] THEN
@@ -3883,7 +3822,8 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PNEXT = store_thm
     MATCH_MP_TAC LTL_TO_GEN_BUECHI_DS___SEM___REMOVE_BINDINGS THEN
     REPEAT STRIP_TAC THEN
     FULL_SIMP_TAC list_ss [EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES, SUBSET_DEF, IN_UNION,
-      IN_SING, IN_INSERT, DISJ_IMP_THM]);
+      IN_SING, IN_INSERT, DISJ_IMP_THM]
+QED
 
 val LTL_TO_GEN_BUECHI_DS___BINDING_RUN_EQUIV = store_thm
   ("LTL_TO_GEN_BUECHI_DS___BINDING_RUN_EQUIV",
@@ -3897,7 +3837,6 @@ val LTL_TO_GEN_BUECHI_DS___BINDING_RUN_EQUIV = store_thm
       LTL_TO_GEN_BUECHI_DS___MAX_FAIR_RUN_def,
       LTL_TO_GEN_BUECHI_DS___MIN_FAIR_RUN_def, P_SEM_THM] THEN
     METIS_TAC[]);
-
 
 val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_EQUIV = store_thm
   ("CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_EQUIV",
