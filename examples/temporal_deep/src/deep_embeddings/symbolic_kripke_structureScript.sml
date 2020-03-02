@@ -1,46 +1,25 @@
 open HolKernel Parse boolLib bossLib;
 
-(*
-quietdec := true;
-
-val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/tools") :: !loadPath;
-
-map load
- ["xprop_logicTheory", "prop_logicTheory", "infinite_pathTheory", "pred_setTheory", "listTheory", "pairTheory", "set_lemmataTheory",
-   "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory", "arithmeticTheory"];
-*)
-
 open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
      containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
      tuerk_tacticsLib temporal_deep_mixedTheory arithmeticTheory;
+
 open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
 val _ = hide "K";
 
-(*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
-quietdec := false;
-*)
-
-
 val _ = new_theory "symbolic_kripke_structure";
 
-
-val symbolic_kripke_structure_def =
- Hol_datatype
-  `symbolic_kripke_structure =
-    <| S0: 'state prop_logic;              (*initial states*)
-       R:  'state xprop_logic              (*transition function*)
-    |>`;
-
-
+(* Difference with symbolic_semi_automaton: the latter has input vars, which is 
+   the used variables in S0 and R minus the set of state variables (S).
+ *)
+val symbolic_kripke_structure_def = Hol_datatype
+   `symbolic_kripke_structure =
+    <| S0: 'state prop_logic; (* initial states *)
+       R:  'state xprop_logic (* transition function *)
+     |>`;
 
 val symbolic_kripke_structure_S0 = DB.fetch "-" "symbolic_kripke_structure_S0";
 val symbolic_kripke_structure_R = DB.fetch "-" "symbolic_kripke_structure_R";

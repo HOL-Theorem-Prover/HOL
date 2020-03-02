@@ -22,8 +22,8 @@ fun ltl2omega_rewrite t l =
     val (typeString, ltl_type) = (dest_type (type_of l));
     val _ = if (typeString = "ltl") then T else raise NoLTLTerm;
     val ltl_type = hd (ltl_type);
-    val thm = if t then LTL_TO_GEN_BUECHI___TRANSLATION_THM___MAX else
-                LTL_TO_GEN_BUECHI___TRANSLATION_THM___MIN;
+    val thm = if t then LTL_TO_GEN_BUECHI___TRANSLATION_THM___MAX
+              else LTL_TO_GEN_BUECHI___TRANSLATION_THM___MIN;
     val thm = INST_TYPE [alpha |-> ltl_type] thm;
     val thm = SPECL [``F:bool``, l] thm;
     val thm = SIMP_RULE list_ss [LTL_TO_GEN_BUECHI_def,
@@ -52,11 +52,9 @@ fun ltl2omega_rewrite t l =
     thm
   end;
 
+(* A more sophistacted translations, that is able to exploit term-sharing *)
 
-(*A more sophistacted translations, that is able to
-  exploit term-sharing*)
-
-(*some general helpers*)
+(* some general helpers *)
 fun boolToHOL b = if b then T else F;
 fun HOLToBool b = (b ~~ T);
 
@@ -111,15 +109,12 @@ in
     end;
 end;
 
-
-
-(*ltl_to_omega_internal and ltl_to_omega*)
+(* ltl_to_omega_internal and ltl_to_omega *)
 local
   exception UnsupportedLTLTerm;
   exception UnsupportedTerm;
   exception NotYetImplemented;
   exception ImplementionError;
-
 
   val SIMP_DS___BASIC =
     let
@@ -128,7 +123,6 @@ local
     in
       CONV_RULE (CBV_CONV compset)
     end;
-
 
   val SIMP_DS___USED_VARS =
     let
@@ -139,10 +133,8 @@ local
       CONV_RULE (RAND_CONV (RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV (conv))))))
     end;
 
-
   val SIMP_DS___USED_VARS___DUPLICATES =
       CONV_RULE (RAND_CONV (RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV (SETIFY_CONV))))))
-
 
   val SIMP_DS___USED_STATE_VARS =
     let
@@ -150,8 +142,6 @@ local
     in
       CONV_RULE (RAND_CONV (RATOR_CONV (RATOR_CONV (RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV (conv))))))))
     end;
-
-
 
   val SIMP_DS___FAIRNESS_CONSTRAINT =
     let
@@ -161,14 +151,11 @@ local
       CONV_RULE (RAND_CONV (RATOR_CONV (RAND_CONV (conv))))
     end;
 
-
-
   fun BUILD_LIST_FIRST_CONV term conv =
     if (is_comb term) then
       BUILD_LIST_FIRST_CONV (rator term) (RATOR_CONV conv)
     else
       (term, conv);
-
 
   val compset = new_compset [XP_CURRENT_def, XP_NEXT_def]
   fun SIMP_DS___FIRST_TRANSITION thm =
@@ -181,7 +168,6 @@ local
       CONV_RULE conv thm
     end;
 
-
   fun SIMP_DS___BODY thm =
     let
       val thm = SIMP_DS___USED_VARS thm
@@ -190,7 +176,6 @@ local
     in
       thm
     end;
-
 
   fun ltl2omega_internal2 b1 b2 l dsThm TSPECL =
       let
@@ -555,8 +540,6 @@ local
         thm
       end;
 
-
-
   val ltl_ss = std_ss ++ rewrites [LTL_ALWAYS_PALWAYS_ALTERNATIVE_DEFS,
         LTL_IMPL_def,
         LTL_COND_def,
@@ -573,18 +556,19 @@ local
         LTL_INIT_def];
 
   val emptyDSThm = SIMP_RULE std_ss [EMPTY_LTL_TO_GEN_BUECHI_DS_def]
-        EMPTY_LTL_TO_GEN_BUECHI_DS___SEM;
+                             EMPTY_LTL_TO_GEN_BUECHI_DS___SEM;
 
+  val basic_compset = new_compset [ltl_to_gen_buechi_ds_REWRITES,
+                                   LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR_def]
 
-  val basic_compset = new_compset [ltl_to_gen_buechi_ds_REWRITES, LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR_def]
   val final_compset = new_compset [LTL_TO_GEN_BUECHI_DS___A_NDET_def,
-                    LTL_TO_GEN_BUECHI_DS___A_UNIV_def,
-                    ltl_to_gen_buechi_ds_REWRITES,
-                    LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def,
-                    LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def,
-                    LTL_TO_GEN_BUECHI_DS___INITIAL_STATES_def,
-                    LTL_TO_GEN_BUECHI_DS___FAIRNESS_CONSTRAINTS_def,
-                    MAP]
+                                   LTL_TO_GEN_BUECHI_DS___A_UNIV_def,
+                                   ltl_to_gen_buechi_ds_REWRITES,
+                                   LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def,
+                                   LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def,
+                                   LTL_TO_GEN_BUECHI_DS___INITIAL_STATES_def,
+                                   LTL_TO_GEN_BUECHI_DS___FAIRNESS_CONSTRAINTS_def,
+                                   MAP]
 
 in
 

@@ -1,18 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 
-(*
-quietdec := true;
-
-val home_dir = (Globals.HOLDIR ^ "/examples/temporal_deep/");
-loadPath := (home_dir ^ "src/deep_embeddings") ::
-            (home_dir ^ "src/tools") :: !loadPath;
-
-map load
- ["xprop_logicTheory", "prop_logicTheory", "infinite_pathTheory", "pred_setTheory", "listTheory", "pairTheory", "set_lemmataTheory",
-   "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory"];
-*)
-
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory containerTheory prop_logicTheory set_lemmataTheory prim_recTheory;
+open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
+     containerTheory prop_logicTheory set_lemmataTheory prim_recTheory;
 
 open term_grammar tuerk_tacticsLib temporal_deep_mixedTheory;
 open Sanity;
@@ -21,211 +10,156 @@ val _ = hide "S";
 val _ = hide "K";
 val _ = hide "I";
 
-(*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
-quietdec := false;
-*)
-
-
 val _ = new_theory "symbolic_semi_automaton";
 val _ = ParseExtras.temp_loose_equality()
-
 
 (*****************************************************************************)
 (* symbolic representation of non deterministic semi automata                 *)
 (*****************************************************************************)
-val symbolic_semi_automaton_def =
- Hol_datatype
-  `symbolic_semi_automaton =
-    <| S:  'var set;                     (*set of all used statevariables *)
-       S0: 'var prop_logic;              (*initial states*)
-       R:  'var xprop_logic              (*transition relation, current state # input # next state*) |>`;
 
+(* Difference with symbolic_kripke_structure: the latter does not distinguish
+   from input and state variables, i.e. no "S" component.
 
-val SEMI_AUTOMATON_USED_INPUT_VARS_def=
- Define
-   `(SEMI_AUTOMATON_USED_INPUT_VARS A) = ((P_USED_VARS A.S0 UNION XP_USED_VARS A.R) DIFF A.S)`;
+  `symbolic_semi_automaton` is used in LTL to Omega automata translation, where
+   variables used in LTL formula are treated as input variables. (ltl2omega.sml)
+ *)
+val symbolic_semi_automaton_def = Hol_datatype
+   `symbolic_semi_automaton =
+    <| S:  'var set;        (* set of all used state variables *)
+       S0: 'var prop_logic; (* initial states *)
+       R:  'var xprop_logic (* transition relation, current state # input # next state *)
+     |>`;
 
-val SEMI_AUTOMATON_USED_VARS_def =
- Define
-  `(SEMI_AUTOMATON_USED_VARS A) = (SEMI_AUTOMATON_USED_INPUT_VARS A) UNION A.S`;
+val SEMI_AUTOMATON_USED_INPUT_VARS_def = Define
+   `SEMI_AUTOMATON_USED_INPUT_VARS A = (P_USED_VARS A.S0 UNION XP_USED_VARS A.R) DIFF A.S`;
 
+val SEMI_AUTOMATON_USED_VARS_def = Define
+   `SEMI_AUTOMATON_USED_VARS A = (SEMI_AUTOMATON_USED_INPUT_VARS A) UNION A.S`;
 
-val SEMI_AUTOMATON_USED_VARS___DIRECT_DEF =
- store_thm (
-  "SEMI_AUTOMATON_USED_VARS___DIRECT_DEF",
-  ``!A. (SEMI_AUTOMATON_USED_VARS A) = (P_USED_VARS A.S0 UNION XP_USED_VARS A.R UNION A.S)``,
-
+Theorem SEMI_AUTOMATON_USED_VARS___DIRECT_DEF :
+    !A. (SEMI_AUTOMATON_USED_VARS A) = (P_USED_VARS A.S0 UNION XP_USED_VARS A.R UNION A.S)
+Proof
     SIMP_TAC std_ss [SEMI_AUTOMATON_USED_VARS_def, EXTENSION, IN_UNION,
       IN_DIFF, SEMI_AUTOMATON_USED_INPUT_VARS_def] THEN
-    PROVE_TAC[]);
+    PROVE_TAC[]
+QED
 
+val SEMI_AUTOMATON_VAR_RENAMING_def = Define
+   `SEMI_AUTOMATON_VAR_RENAMING (f:'a->'b) (symbolic_semi_automaton S S0 R) =
+      (symbolic_semi_automaton (IMAGE f S) (P_VAR_RENAMING f S0) (XP_VAR_RENAMING f R))`;
 
-val SEMI_AUTOMATON_VAR_RENAMING_def =
- Define
-   `(SEMI_AUTOMATON_VAR_RENAMING (f:'a->'b) (symbolic_semi_automaton S S0 R) =
-     (symbolic_semi_automaton (IMAGE f S) (P_VAR_RENAMING f S0) (XP_VAR_RENAMING f R)))`;
+Theorem SEMI_AUTOMATON_VAR_RENAMING_REWRITES :
+    !A f. ((SEMI_AUTOMATON_VAR_RENAMING f A).S = IMAGE f A.S) /\
+          ((SEMI_AUTOMATON_VAR_RENAMING f A).S0 = P_VAR_RENAMING f A.S0) /\
+          ((SEMI_AUTOMATON_VAR_RENAMING f A).R = XP_VAR_RENAMING f A.R)
+Proof
+    Cases_on `A` >> EVAL_TAC >> PROVE_TAC []
+QED
 
-
-val SEMI_AUTOMATON_VAR_RENAMING_REWRITES =
- store_thm
-  ("SEMI_AUTOMATON_VAR_RENAMING_REWRITES",
-
-   ``!A f. ((SEMI_AUTOMATON_VAR_RENAMING f A).S = (IMAGE f A.S)) /\
-           ((SEMI_AUTOMATON_VAR_RENAMING f A).S0 = (P_VAR_RENAMING f A.S0)) /\
-           ((SEMI_AUTOMATON_VAR_RENAMING f A).R = (XP_VAR_RENAMING f A.R))``,
-
-   Cases_on `A` THEN
-   EVAL_TAC THEN
-   PROVE_TAC[]);
-
-
-
-val symbolic_semi_automaton_S = DB.fetch "-" "symbolic_semi_automaton_S";
+val symbolic_semi_automaton_S  = DB.fetch "-" "symbolic_semi_automaton_S";
 val symbolic_semi_automaton_S0 = DB.fetch "-" "symbolic_semi_automaton_S0";
-val symbolic_semi_automaton_R = DB.fetch "-" "symbolic_semi_automaton_R";
+val symbolic_semi_automaton_R  = DB.fetch "-" "symbolic_semi_automaton_R";
 val symbolic_semi_automaton_11 = DB.fetch "-" "symbolic_semi_automaton_11";
 
-val symbolic_semi_automaton_REWRITES = save_thm("symbolic_semi_automaton_REWRITES", LIST_CONJ [symbolic_semi_automaton_S, symbolic_semi_automaton_S0, symbolic_semi_automaton_R, symbolic_semi_automaton_11]);
-
-
+Theorem symbolic_semi_automaton_REWRITES =
+    LIST_CONJ [symbolic_semi_automaton_S, symbolic_semi_automaton_S0,
+               symbolic_semi_automaton_R, symbolic_semi_automaton_11];
 
 (*=============================================================================
 = Semantic
 =============================================================================*)
 
 (*****************************************************************************)
-(* symbolic representation of non deterministic semi automata                 *)
+(* symbolic representation of non deterministic semi automata                *)
 (*****************************************************************************)
 
-val INPUT_RUN_STATE_UNION_def =
- Define
-  `(INPUT_RUN_STATE_UNION A i s) = s UNION (i DIFF A.S)`;
+val INPUT_RUN_STATE_UNION_def = Define
+   `INPUT_RUN_STATE_UNION A i s = s UNION (i DIFF A.S)`;
 
+val INPUT_RUN_PATH_UNION_def = Define
+   `INPUT_RUN_PATH_UNION A i w = \n. INPUT_RUN_STATE_UNION A (i n) (w n)`;
 
-val INPUT_RUN_PATH_UNION_def =
- Define
-  `(INPUT_RUN_PATH_UNION A i w) = \n. INPUT_RUN_STATE_UNION A (i n) (w n)`;
-
-
-val IS_TRANSITION_def =
- Define
-  `(IS_TRANSITION A s1 i1 s2 i2 =
-        XP_SEM A.R (INPUT_RUN_STATE_UNION A i1 s1, INPUT_RUN_STATE_UNION A i2 s2))`;
-
-
+val IS_TRANSITION_def = Define
+   `IS_TRANSITION A s1 i1 s2 i2 =
+       XP_SEM A.R (INPUT_RUN_STATE_UNION A i1 s1, INPUT_RUN_STATE_UNION A i2 s2)`;
 
 (*****************************************************************************)
-(* RUN A i w is true iff p is a run of i through A                             *)
+(* RUN A i w is true iff p is a run of i through A                           *)
 (*****************************************************************************)
-val IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def =
- Define
-  `IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w =
-    ((PATH_SUBSET w A.S) /\ (P_SEM (INPUT_RUN_PATH_UNION A i w 0) A.S0) /\
-    (!n. IS_TRANSITION A (w n) (i n) (w (SUC n)) (i (SUC n))))`;
-
-
-
-
-
+val IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def = Define
+   `IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w =
+      (PATH_SUBSET w A.S /\
+       P_SEM (INPUT_RUN_PATH_UNION A i w 0) A.S0 /\
+       !n. IS_TRANSITION A (w n) (i n) (w (SUC n)) (i (SUC n)))`;
 
 (*=============================================================================
 = Syntactic Sugar and elementary lemmata
 =============================================================================*)
 
-val EXISTS_AT_MOST_ONE_def =
-  Definition.new_definition
-  ("EXISTS_AT_MOST_ONE_def", Term `EXISTS_AT_MOST_ONE = \P:'a->bool.
-                                      !x y. P x /\ P y ==> (x=y)`);
-
+val EXISTS_AT_MOST_ONE_def = Define
+   `EXISTS_AT_MOST_ONE = \P:'a->bool. !x y. P x /\ P y ==> (x=y)`;
 val _ = set_fixity "EXISTS_AT_MOST_ONE" Binder;
 
-(* old way:
-val _ = (add_binder ("EXISTS_AT_MOST_ONE", std_binder_precedence);
-         add_const "EXISTS_AT_MOST_ONE")
- *)
-
-val IS_DET_SYMBOLIC_SEMI_AUTOMATON_def =
- Define
-  `IS_DET_SYMBOLIC_SEMI_AUTOMATON A =
+val IS_DET_SYMBOLIC_SEMI_AUTOMATON_def = Define
+   `IS_DET_SYMBOLIC_SEMI_AUTOMATON A =
       (!i. EXISTS_AT_MOST_ONE s. ((s SUBSET A.S) /\ (P_SEM (INPUT_RUN_STATE_UNION A i s) A.S0))) /\
       (!s1 i1 i2. EXISTS_AT_MOST_ONE s2. ((s2 SUBSET A.S) /\ IS_TRANSITION A s1 i1 s2 i2))`;
 
-
-val IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON_def =
- Define
-  `IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A =
+val IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON_def = Define
+   `IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A =
       (!i. ?s. ((s SUBSET A.S) /\ (P_SEM (INPUT_RUN_STATE_UNION A i s) A.S0))) /\
       (!s1 i1 i2. ?s2. ((s2 SUBSET A.S) /\ IS_TRANSITION A s1 i1 s2 i2))`;
 
-
-val IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_def =
- Define
-  `IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A =
+val IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_def = Define
+   `IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A =
       IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A /\ IS_DET_SYMBOLIC_SEMI_AUTOMATON A`;
 
-
-val IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_THM =
- store_thm
-  ("IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_THM",
-   ``IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A =
-      (!i. ?!s. ((s SUBSET A.S) /\ (P_SEM (INPUT_RUN_STATE_UNION A i s) A.S0))) /\
-      (!s1 i1 i2. ?!s2. ((s2 SUBSET A.S) /\ IS_TRANSITION A s1 i1 s2 i2))``,
-
+Theorem IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_THM :
+    !A. IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A =
+       (!i. ?!s. ((s SUBSET A.S) /\ (P_SEM (INPUT_RUN_STATE_UNION A i s) A.S0))) /\
+       (!s1 i1 i2. ?!s2. ((s2 SUBSET A.S) /\ IS_TRANSITION A s1 i1 s2 i2))
+Proof
+   GEN_TAC THEN
    SIMP_TAC std_ss [IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_def,
                     IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON_def,
                     IS_DET_SYMBOLIC_SEMI_AUTOMATON_def,
                     EXISTS_AT_MOST_ONE_def] THEN
-   PROVE_TAC[]);
+   PROVE_TAC[]
+QED
 
+(* A semi-automaton without some syntactic sugar *)
+val IS_SIMPLE_SYMBOLIC_SEMI_AUTOMATON_def = Define
+   `IS_SIMPLE_SYMBOLIC_SEMI_AUTOMATON A =
+      (P_USED_VARS A.S0 SUBSET A.S /\ XP_USED_X_VARS A.R SUBSET A.S)`;
 
-(*A semiautomaton without some syntactic sugar*)
-val IS_SIMPLE_SYMBOLIC_SEMI_AUTOMATON_def =
- Define
-  `IS_SIMPLE_SYMBOLIC_SEMI_AUTOMATON A =
-      ((P_USED_VARS A.S0 SUBSET A.S) /\
-       (XP_USED_X_VARS A.R SUBSET A.S))`;
+val IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON_def = Define
+   `IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON A i w =
+      (PATH_SUBSET w A.S /\ P_SEM (w 0) A.S0 /\
+       !n. XP_SEM A.R ((w n) UNION (i n DIFF A.S), (w (SUC n))))`;
 
-
-val IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON_def =
- Define
-  `IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON A i w =
-    ((PATH_SUBSET w A.S) /\ (P_SEM (w 0) A.S0) /\
-    (!n. XP_SEM A.R ((w n) UNION (i n DIFF A.S), (w (SUC n)))))`;
-
-
-
-val IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON_THM =
- store_thm
-  ("IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON_THM",
-
-  ``!A. IS_SIMPLE_SYMBOLIC_SEMI_AUTOMATON A ==>
-    (!i w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w =
-          IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON A i w)``,
-
-
+Theorem IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON_THM :
+    !A. IS_SIMPLE_SYMBOLIC_SEMI_AUTOMATON A ==>
+        !i w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w =
+              IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON A i w
+Proof
     SIMP_TAC std_ss [IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def,
-                    IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON_def,
-                    IS_SIMPLE_SYMBOLIC_SEMI_AUTOMATON_def,
-                    IS_TRANSITION_def,
-                    INPUT_RUN_PATH_UNION_def,
-                    INPUT_RUN_STATE_UNION_def,
-                    PATH_SUBSET_def] THEN
+                     IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON_def,
+                     IS_SIMPLE_SYMBOLIC_SEMI_AUTOMATON_def,
+                     IS_TRANSITION_def,
+                     INPUT_RUN_PATH_UNION_def,
+                     INPUT_RUN_STATE_UNION_def,
+                     PATH_SUBSET_def] THEN
     REPEAT STRIP_TAC THEN
     BOOL_EQ_STRIP_TAC THEN
     SUBGOAL_TAC `!n. (w n UNION (i n DIFF A.S)) INTER A.S = w n` THEN1 (
       SIMP_ALL_TAC std_ss [EXTENSION, IN_UNION, IN_INTER, IN_DIFF, SUBSET_DEF] THEN
       METIS_TAC[]
     ) THEN
-    PROVE_TAC[P_USED_VARS_INTER_SUBSET_THM, XP_USED_VARS_INTER_SUBSET_THM]);
+    PROVE_TAC[P_USED_VARS_INTER_SUBSET_THM, XP_USED_VARS_INTER_SUBSET_THM]
+QED
 
-
-val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON_def =
- Define
-  `IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON A A' f =
+val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON_def = Define
+   `IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON A A' f =
     (!i. i IN SEMI_AUTOMATON_USED_INPUT_VARS A' ==>
         ~(f i IN (A'.S UNION SEMI_AUTOMATON_USED_INPUT_VARS A' UNION IMAGE f (SEMI_AUTOMATON_USED_INPUT_VARS A' DIFF {i})))) /\
     (A = symbolic_semi_automaton (A'.S UNION
@@ -235,134 +169,106 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON_def =
               XP_BIGAND (SET_TO_LIST (IMAGE (\i. XP_EQUIV(XP_PROP (f i), XP_PROP i))
                         (SEMI_AUTOMATON_USED_INPUT_VARS A'))))))`;
 
+val PRODUCT_SEMI_AUTOMATON_def = Define
+   `PRODUCT_SEMI_AUTOMATON (symbolic_semi_automaton S_1 S0_1 R_1)
+                           (symbolic_semi_automaton S_2 S0_2 R_2) =
+      symbolic_semi_automaton (S_1 UNION S_2) (P_AND(S0_1, S0_2)) (XP_AND(R_1, R_2))`;
 
-val PRODUCT_SEMI_AUTOMATON_def =
- Define
-   `(PRODUCT_SEMI_AUTOMATON (symbolic_semi_automaton S_1 S0_1 R_1) (symbolic_semi_automaton S_2 S0_2 R_2)) =
-            (symbolic_semi_automaton (S_1 UNION S_2) (P_AND(S0_1, S0_2)) (XP_AND(R_1, R_2)))`;
-
-
-val PRODUCT_SEMI_AUTOMATON_THM =
- store_thm
-  ("PRODUCT_SEMI_AUTOMATON_THM",
-   ``!A B C. (PRODUCT_SEMI_AUTOMATON A B = C) =
-             ((C.S = (A.S UNION B.S)) /\
-             (C.S0 = (P_AND(A.S0,B.S0))) /\
-             (C.R = (XP_AND(A.R, B.R))))``,
-
+Theorem PRODUCT_SEMI_AUTOMATON_THM :
+    !A B C. (PRODUCT_SEMI_AUTOMATON A B = C) <=>
+            (C.S = (A.S UNION B.S)) /\
+            (C.S0 = (P_AND(A.S0,B.S0))) /\
+            (C.R = (XP_AND(A.R, B.R)))
+Proof
    Cases_on `A` THEN
    Cases_on `B` THEN
    Cases_on `C` THEN
    EVAL_TAC THEN
-   PROVE_TAC[]);
+   PROVE_TAC[]
+QED
 
+Theorem PRODUCT_SEMI_AUTOMATON_REWRITES :
+    !A B. ((PRODUCT_SEMI_AUTOMATON A B).S = (A.S UNION B.S)) /\
+          ((PRODUCT_SEMI_AUTOMATON A B).S0 = (P_AND(A.S0,B.S0))) /\
+          ((PRODUCT_SEMI_AUTOMATON A B).R = (XP_AND(A.R, B.R)))
+Proof
+   PROVE_TAC[PRODUCT_SEMI_AUTOMATON_THM]
+QED
 
-val PRODUCT_SEMI_AUTOMATON_REWRITES =
- store_thm
-  ("PRODUCT_SEMI_AUTOMATON_REWRITES",
-   ``!A B. ((PRODUCT_SEMI_AUTOMATON A B).S = (A.S UNION B.S)) /\
-           ((PRODUCT_SEMI_AUTOMATON A B).S0 = (P_AND(A.S0,B.S0))) /\
-           ((PRODUCT_SEMI_AUTOMATON A B).R = (XP_AND(A.R, B.R)))``,
+val ID_SEMI_AUTOMATON_def = Define
+   `ID_SEMI_AUTOMATON = symbolic_semi_automaton EMPTY P_TRUE XP_TRUE`;
 
-   PROVE_TAC[PRODUCT_SEMI_AUTOMATON_THM]);
-
-
-val ID_SEMI_AUTOMATON_def =
- Define
-   `ID_SEMI_AUTOMATON = (symbolic_semi_automaton EMPTY P_TRUE XP_TRUE)`;
-
-
-val ID_SEMI_AUTOMATON_RUN =
- store_thm
-  ("ID_SEMI_AUTOMATON_RUN",
-  ``!i w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON ID_SEMI_AUTOMATON i w = (w = EMPTY_PATH)``,
-
+Theorem ID_SEMI_AUTOMATON_RUN :
+    !i w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON ID_SEMI_AUTOMATON i w = (w = EMPTY_PATH)
+Proof
   EVAL_TAC THEN
-  PROVE_TAC[SUBSET_EMPTY]);
+  PROVE_TAC[SUBSET_EMPTY]
+QED
 
+Theorem ID_SEMI_AUTOMATON_REWRITES :
+    (ID_SEMI_AUTOMATON.S = EMPTY) /\
+    (ID_SEMI_AUTOMATON.S0 = P_TRUE) /\
+    (ID_SEMI_AUTOMATON.R = XP_TRUE)
+Proof
+  EVAL_TAC
+QED
 
-val ID_SEMI_AUTOMATON_REWRITES =
- store_thm
-  ("ID_SEMI_AUTOMATON_REWRITES",
-  ``(ID_SEMI_AUTOMATON.S = EMPTY) /\
-      (ID_SEMI_AUTOMATON.S0 = P_TRUE) /\
-      (ID_SEMI_AUTOMATON.R = XP_TRUE)``,
-
-  EVAL_TAC);
-
-
-
-val SYMBOLIC_SEMI_AUTOMATON___REWRITE =
- store_thm
-  ("SYMBOLIC_SEMI_AUTOMATON___REWRITE",
-
-   ``!A. (symbolic_semi_automaton A.S A.S0 A.R = A)``,
-
+Theorem SYMBOLIC_SEMI_AUTOMATON___REWRITE :
+    !A. symbolic_semi_automaton A.S A.S0 A.R = A
+Proof
    Cases_on `A` THEN
-   EVAL_TAC);
+   EVAL_TAC
+QED
 
-
-
-val FINITE___SEMI_AUTOMATON_USED_INPUT_VARS =
- store_thm
-  ("FINITE___SEMI_AUTOMATON_USED_INPUT_VARS",
-
-  ``!A. FINITE(SEMI_AUTOMATON_USED_INPUT_VARS A)``,
-
+Theorem FINITE___SEMI_AUTOMATON_USED_INPUT_VARS :
+    !A. FINITE (SEMI_AUTOMATON_USED_INPUT_VARS A)
+Proof
   Cases_on `A` THEN
   REWRITE_TAC[SEMI_AUTOMATON_USED_INPUT_VARS_def] THEN
-  METIS_TAC[FINITE___P_USED_VARS, FINITE___XP_USED_VARS, FINITE_UNION, FINITE_DIFF]);
+  METIS_TAC[FINITE___P_USED_VARS, FINITE___XP_USED_VARS, FINITE_UNION, FINITE_DIFF]
+QED
 
-
-val SEMI_AUTOMATON_VAR_RENAMING___USED_VARS =
- store_thm
-  ("SEMI_AUTOMATON_VAR_RENAMING___USED_VARS",
-
-   ``!A f. (SEMI_AUTOMATON_USED_VARS (SEMI_AUTOMATON_VAR_RENAMING f A) =
-       (IMAGE f (SEMI_AUTOMATON_USED_VARS A)))``,
-
+Theorem SEMI_AUTOMATON_VAR_RENAMING___USED_VARS :
+    !A f. SEMI_AUTOMATON_USED_VARS (SEMI_AUTOMATON_VAR_RENAMING f A) =
+          IMAGE f (SEMI_AUTOMATON_USED_VARS A)
+Proof
    Cases_on `A` THEN
    REWRITE_TAC[SEMI_AUTOMATON_USED_VARS_def, SEMI_AUTOMATON_USED_INPUT_VARS_def,
                SEMI_AUTOMATON_VAR_RENAMING_def,
                symbolic_semi_automaton_REWRITES] THEN
    SIMP_TAC std_ss [DIFF_UNION_ELIM] THEN
-   REWRITE_TAC[IMAGE_UNION, P_VAR_RENAMING___USED_VARS, XP_VAR_RENAMING___USED_VARS]);
+   REWRITE_TAC[IMAGE_UNION, P_VAR_RENAMING___USED_VARS, XP_VAR_RENAMING___USED_VARS]
+QED
 
-
-val SEMI_AUTOMATON_VAR_RENAMING___USED_INPUT_VARS =
- store_thm
-  ("SEMI_AUTOMATON_VAR_RENAMING___USED_INPUT_VARS",
-
-   ``!A f. (INJ f (SEMI_AUTOMATON_USED_VARS A) UNIV) ==>
-       (SEMI_AUTOMATON_USED_INPUT_VARS (SEMI_AUTOMATON_VAR_RENAMING f A) =
-       (IMAGE f (SEMI_AUTOMATON_USED_INPUT_VARS A)))``,
-
+Theorem SEMI_AUTOMATON_VAR_RENAMING___USED_INPUT_VARS :
+    !A f. INJ f (SEMI_AUTOMATON_USED_VARS A) UNIV ==>
+          (SEMI_AUTOMATON_USED_INPUT_VARS (SEMI_AUTOMATON_VAR_RENAMING f A) =
+          (IMAGE f (SEMI_AUTOMATON_USED_INPUT_VARS A)))
+Proof
    Cases_on `A` THEN
    REWRITE_TAC[SEMI_AUTOMATON_USED_INPUT_VARS_def, SEMI_AUTOMATON_VAR_RENAMING_def,
                SEMI_AUTOMATON_USED_VARS_def, DIFF_UNION_ELIM,
                symbolic_semi_automaton_REWRITES,
                P_VAR_RENAMING___USED_VARS, XP_VAR_RENAMING___USED_VARS] THEN
-   METIS_TAC[IMAGE_UNION, IMAGE_DIFF]);
+   METIS_TAC[IMAGE_UNION, IMAGE_DIFF]
+QED
 
-
-
-val TOTAL_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC =
- store_thm
-  ("TOTAL_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC",
-   ``!A. IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A ==> ?R_FUNC. !s1 s2 i1 i2. (R_FUNC s1 i1 i2 = s2) ==> (((s2 SUBSET A.S) /\ (IS_TRANSITION A s1 i1 s2 i2)))``,
-
+Theorem TOTAL_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC :
+    !A. IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A ==>
+        ?R_FUNC. !s1 s2 i1 i2. (R_FUNC s1 i1 i2 = s2) ==>
+                               s2 SUBSET A.S /\ IS_TRANSITION A s1 i1 s2 i2
+Proof
    SIMP_TAC std_ss [IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON_def] THEN
    REPEAT STRIP_TAC THEN
    ASSUME_TAC (SKOLEM_CONV ``!s1 i1 i2. ?s2. s2 SUBSET A.S /\ IS_TRANSITION A s1 i1 s2 i2``) THEN
    PROVE_TAC[]
-);
+QED
 
-
-val DET_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC =
- store_thm
-  ("DET_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC",
-   ``!A. IS_DET_SYMBOLIC_SEMI_AUTOMATON A ==> ?R_FUNC. !s1 s2 i1 i2. (((s2 SUBSET A.S) /\ (IS_TRANSITION A s1 i1 s2 i2))) ==> (R_FUNC s1 i1 i2 = s2)``,
-
+Theorem DET_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC :
+    !A. IS_DET_SYMBOLIC_SEMI_AUTOMATON A ==>
+        ?R_FUNC. !s1 s2 i1 i2. s2 SUBSET A.S /\ IS_TRANSITION A s1 i1 s2 i2 ==>
+                               (R_FUNC s1 i1 i2 = s2)
+Proof
    SIMP_TAC std_ss [IS_DET_SYMBOLIC_SEMI_AUTOMATON_def, EXISTS_AT_MOST_ONE_def] THEN
    REPEAT STRIP_TAC THEN
    EXISTS_TAC ``\s1 i1 i2. @s2. (s2 SUBSET A.S /\ IS_TRANSITION A s1 i1 s2 i2)`` THEN
@@ -370,48 +276,44 @@ val DET_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC =
    REPEAT STRIP_TAC THEN
    SELECT_ELIM_TAC THEN
    METIS_TAC[]
-);
+QED
 
-
-val TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC =
- store_thm
-  ("TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC",
-   ``!A. IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A ==> ?R_FUNC. !s1 s2 i1 i2. (((s2 SUBSET A.S) /\ (IS_TRANSITION A s1 i1 s2 i2)) = (R_FUNC s1 i1 i2 = s2))``,
-
+Theorem TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC :
+    !A. IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A ==>
+        ?R_FUNC. !s1 s2 i1 i2. (((s2 SUBSET A.S) /\ (IS_TRANSITION A s1 i1 s2 i2)) <=>
+                 (R_FUNC s1 i1 i2 = s2))
+Proof
    SIMP_TAC std_ss [IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_THM] THEN
    REPEAT STRIP_TAC THEN
    ASSUME_TAC (SKOLEM_CONV ``!s1 i1 i2. ?s2. s2 SUBSET A.S /\ IS_TRANSITION A s1 i1 s2 i2``) THEN
    `?f. !s1 i1 i2. (f s1 i1 i2) SUBSET A.S /\ IS_TRANSITION A s1 i1 (f s1 i1 i2) i2` by PROVE_TAC[] THEN
    EXISTS_TAC ``f:'a set -> 'a set -> 'a set -> 'a set`` THEN
    METIS_TAC[]
-);
+QED
 
-
-val DET_SYMBOLIC_SEMI_AUTOMATON_EXISTS_AT_MOST_ONE_RUN =
- store_thm
+val DET_SYMBOLIC_SEMI_AUTOMATON_EXISTS_AT_MOST_ONE_RUN = store_thm
   ("DET_SYMBOLIC_SEMI_AUTOMATON_EXISTS_AT_MOST_ONE_RUN",
    ``!A i. IS_DET_SYMBOLIC_SEMI_AUTOMATON A ==> EXISTS_AT_MOST_ONE w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w``,
 
-   SIMP_TAC std_ss [IS_DET_SYMBOLIC_SEMI_AUTOMATON_def, EXISTS_AT_MOST_ONE_def, IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def,
+   SIMP_TAC std_ss [IS_DET_SYMBOLIC_SEMI_AUTOMATON_def, EXISTS_AT_MOST_ONE_def,
+                    IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def,
                     PATH_SUBSET_def, INPUT_RUN_PATH_UNION_def] THEN
    REPEAT STRIP_TAC THEN
    ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
    Induct_on `x'` THEN
    PROVE_TAC[]);
 
-
-
-
-val TOTAL_SYMBOLIC_SEMI_AUTOMATON_EXISTS_RUN =
- store_thm
+val TOTAL_SYMBOLIC_SEMI_AUTOMATON_EXISTS_RUN = store_thm
   ("TOTAL_SYMBOLIC_SEMI_AUTOMATON_EXISTS_RUN",
-   ``!A i. IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A ==> ?w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w``,
+   ``!A i. IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A ==>
+           ?w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w``,
 
    SIMP_TAC std_ss [IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON_def, EXISTS_AT_MOST_ONE_def, IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def,
                     PATH_SUBSET_def, INPUT_RUN_PATH_UNION_def] THEN
    REPEAT STRIP_TAC THEN
-   `?R_FUNC. !s1 s2 i1 i2. (s2 = R_FUNC s1 i1 i2) ==> (s2 SUBSET A.S /\ (IS_TRANSITION A s1 i1 s2 i2))` by METIS_TAC[DET_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC] THEN
-
+   `?R_FUNC. !s1 s2 i1 i2. (s2 = R_FUNC s1 i1 i2) ==>
+                           (s2 SUBSET A.S /\ (IS_TRANSITION A s1 i1 s2 i2))`
+       by METIS_TAC[DET_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC] THEN
    `?s. s SUBSET A.S /\ P_SEM (INPUT_RUN_STATE_UNION A (i 0) s) A.S0` by PROVE_TAC[] THEN
    `?f:num -> 'a set -> 'a set. f= (\n s. R_FUNC s (i n) (i (SUC n)))` by METIS_TAC[] THEN
    `?t. (t 0 = s) /\ !n. t (SUC n) = f n (t n)` by METIS_TAC[num_Axiom] THEN
@@ -422,11 +324,10 @@ val TOTAL_SYMBOLIC_SEMI_AUTOMATON_EXISTS_RUN =
       METIS_TAC[]
    ]);
 
-
-val TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_UNIQUE_RUN =
- store_thm
+val TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_UNIQUE_RUN = store_thm
   ("TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_UNIQUE_RUN",
-   ``!A i. IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A ==> ?! w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w``,
+   ``!A i. IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A ==>
+           ?!w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w``,
 
    SIMP_TAC std_ss [IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_def, EXISTS_UNIQUE_DEF] THEN
    REPEAT STRIP_TAC THENL [
@@ -434,9 +335,7 @@ val TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON_UNIQUE_RUN =
       METIS_TAC[DET_SYMBOLIC_SEMI_AUTOMATON_EXISTS_AT_MOST_ONE_RUN, EXISTS_AT_MOST_ONE_def]
    ]);
 
-
-val PRODUCT_SEMI_AUTOMATON_COMM_RUN =
- store_thm
+val PRODUCT_SEMI_AUTOMATON_COMM_RUN = store_thm
   ("PRODUCT_SEMI_AUTOMATON_COMM_RUN",
 
   ``!A B v w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (PRODUCT_SEMI_AUTOMATON A B) v w = IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (PRODUCT_SEMI_AUTOMATON B A) v w``,
@@ -446,8 +345,6 @@ val PRODUCT_SEMI_AUTOMATON_COMM_RUN =
   SIMP_TAC std_ss [PRODUCT_SEMI_AUTOMATON_def, IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def, PATH_SUBSET_def, INPUT_RUN_PATH_UNION_def, INPUT_RUN_STATE_UNION_def,
     symbolic_semi_automaton_REWRITES, UNION_COMM, P_SEM_def, IS_TRANSITION_def, XP_SEM_def] THEN
   PROVE_TAC[]);
-
-
 
 val PRODUCT_SEMI_AUTOMATON_RUN =
  store_thm
@@ -495,11 +392,6 @@ val PRODUCT_SEMI_AUTOMATON_RUN =
       ) THEN
       PROVE_TAC[XP_USED_VARS_INTER_SUBSET_BOTH_THM]
     ]);
-
-
-
-
-
 
 val PRODUCT_SEMI_AUTOMATON_RUN2___FIRST =
    store_thm
@@ -623,9 +515,6 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUN_INPUT_VARS =
       METIS_TAC[]
     ) THEN
     ASM_SIMP_TAC std_ss []);
-
-
-
 
 val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS =
  store_thm
@@ -886,7 +775,6 @@ val INPUT_RUN_PATH_UNION___SPLIT =
       PATH_RESTRICT_def, EXTENSION, IN_UNION, PATH_MAP_def, IN_INTER, IN_DIFF] THEN
     PROVE_TAC[]);
 
-
 val INPUT_RUN_STATE_UNION___SPLIT =
  store_thm
   ("INPUT_RUN_STATE_UNION___SPLIT",
@@ -896,7 +784,6 @@ val INPUT_RUN_STATE_UNION___SPLIT =
     SIMP_TAC std_ss [INPUT_RUN_STATE_UNION_def,
       PATH_RESTRICT_def, EXTENSION, IN_UNION, PATH_MAP_def, IN_INTER, IN_DIFF] THEN
     PROVE_TAC[]);
-
 
 val IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___SPLIT =
  store_thm
@@ -908,7 +795,6 @@ val IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___SPLIT =
   SIMP_TAC std_ss [IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def, symbolic_semi_automaton_REWRITES, P_SEM_def, IS_TRANSITION_def, XP_SEM_def,
     INPUT_RUN_PATH_UNION_def, INPUT_RUN_STATE_UNION_def] THEN
   PROVE_TAC[]);
-
 
 val IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___R_AND_SPLIT =
  store_thm
@@ -923,56 +809,52 @@ val IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___R_AND_SPLIT =
   PROVE_TAC[]);
 
 
-val IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___R_AND_SPLIT_MINIMAL =
- store_thm
-  ("IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___R_AND_SPLIT_MINIMAL",
-
-  ``!S S0 R1 R2 i w. (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S S0 (XP_AND(R1, R2))) i w) =
+Theorem IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___R_AND_SPLIT_MINIMAL :
+    !S S0 R1 R2 i w.
+      (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S S0 (XP_AND(R1, R2))) i w)
+       <=>
   (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S S0 XP_TRUE) i w /\
    IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S P_TRUE R1) i w /\
-   IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S P_TRUE R2) i w)``,
+   IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S P_TRUE R2) i w)
+Proof
+  METIS_TAC [IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___R_AND_SPLIT,     
+             IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___SPLIT]
+QED
 
+Theorem IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___S0_AND_SPLIT :
+    !S S0_1 S0_2 R i w.
+      (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S (P_AND(S0_1, S0_2)) R) i w)
+       <=> 
+      (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S S0_1 R) i w /\
+       IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S S0_2 R) i w)
+Proof
+  SIMP_TAC std_ss [IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def,
+                   symbolic_semi_automaton_REWRITES, P_SEM_def, IS_TRANSITION_def,
+                   XP_SEM_def, INPUT_RUN_PATH_UNION_def, INPUT_RUN_STATE_UNION_def] THEN
+  METIS_TAC[]
+QED
 
-  METIS_TAC[IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___R_AND_SPLIT, IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___SPLIT]);
-
-
-val IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___S0_AND_SPLIT =
- store_thm
-  ("IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___S0_AND_SPLIT",
-
-  ``!S S0_1 S0_2 R i w. (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S (P_AND(S0_1, S0_2)) R) i w) =
-  (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S S0_1 R) i w /\ IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S S0_2 R) i w)``,
-
-
-  SIMP_TAC std_ss [IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def, symbolic_semi_automaton_REWRITES, P_SEM_def, IS_TRANSITION_def, XP_SEM_def,
-    INPUT_RUN_PATH_UNION_def, INPUT_RUN_STATE_UNION_def] THEN
-  METIS_TAC[]);
-
-
-val IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___S0_AND_SPLIT_MINIMAL =
- store_thm
-  ("IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___S0_AND_SPLIT_MINIMAL",
-
-  ``!S S0_1 S0_2 R i w. (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S (P_AND(S0_1, S0_2)) R) i w) =
+Theorem IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___S0_AND_SPLIT_MINIMAL :
+    !S S0_1 S0_2 R i w.
+      IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S (P_AND(S0_1, S0_2)) R) i w
+      <=>
   (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S P_TRUE R) i w /\
    IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S S0_1 XP_TRUE) i w /\
-   IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S S0_2 XP_TRUE) i w)``,
-
-
+   IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S S0_2 XP_TRUE) i w)
+Proof
   SIMP_TAC std_ss [IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def, symbolic_semi_automaton_REWRITES, P_SEM_def, IS_TRANSITION_def, XP_SEM_def,
     INPUT_RUN_PATH_UNION_def, INPUT_RUN_STATE_UNION_def] THEN
-  METIS_TAC[]);
+  METIS_TAC[]
+QED
 
-
-val IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___S_EXTENSION =
- store_thm
-  ("IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___S_EXTENSION",
-
-  ``!S1 S2 S' S0 R i w.
-        ((S2 = S1 UNION S') /\ (DISJOINT S' (P_USED_VARS S0 UNION XP_USED_VARS R)) /\
-      (PATH_SUBSET w S2)) ==>
-      ((IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S2 S0 R) i w) = (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S1 S0 R) i (PATH_RESTRICT w S1)))``,
-
+Theorem IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___S_EXTENSION :
+    !S1 S2 S' S0 R i w.
+      ((S2 = S1 UNION S') /\ (DISJOINT S' (P_USED_VARS S0 UNION XP_USED_VARS R)) /\
+       (PATH_SUBSET w S2)) ==>
+      (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S2 S0 R) i w <=>
+       IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (symbolic_semi_automaton S1 S0 R) i
+         (PATH_RESTRICT w S1))
+Proof
   SIMP_TAC std_ss [IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def, symbolic_semi_automaton_REWRITES, IS_TRANSITION_def, INPUT_RUN_PATH_UNION_def, INPUT_RUN_STATE_UNION_def,
     PATH_SUBSET_def, PATH_RESTRICT_def, PATH_MAP_def, INTER_SUBSET, DISJOINT_UNION_BOTH, GSYM SUBSET_COMPL_DISJOINT,
     UNION_SUBSET] THEN
@@ -987,13 +869,13 @@ val IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON___S_EXTENSION =
   ) THEN
   PROVE_TAC[P_USED_VARS_INTER_SUBSET_THM, XP_USED_VARS_INTER_SUBSET_BOTH_THM]);
 
-
-val SEMI_AUTOMATON___VAR_RENAMING =
- store_thm
-  ("SEMI_AUTOMATON___VAR_RENAMING",
-   ``!A v f w. (INJ f (PATH_USED_VARS v UNION PATH_USED_VARS w UNION SEMI_AUTOMATON_USED_VARS A) UNIV) ==>
-      ((IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A v w) = (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON (SEMI_AUTOMATON_VAR_RENAMING f A) (PATH_VAR_RENAMING f v) (PATH_VAR_RENAMING f w)))``,
-
+Theorem SEMI_AUTOMATON___VAR_RENAMING :
+    !A v f w.
+      (INJ f (PATH_USED_VARS v UNION PATH_USED_VARS w UNION SEMI_AUTOMATON_USED_VARS A) UNIV) ==>
+      (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A v w =
+       IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON
+         (SEMI_AUTOMATON_VAR_RENAMING f A) (PATH_VAR_RENAMING f v) (PATH_VAR_RENAMING f w))
+Proof
    Cases_on `A` THEN
    FULL_SIMP_TAC std_ss [IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def, IS_TRANSITION_def, INPUT_RUN_PATH_UNION_def, PATH_VAR_RENAMING_def, PATH_MAP_def, symbolic_semi_automaton_REWRITES,
       SEMI_AUTOMATON_VAR_RENAMING_def, INPUT_RUN_STATE_UNION_def, PATH_SUBSET_def, PATH_USED_VARS_def, SEMI_AUTOMATON_USED_VARS_def, INJ_DEF,
@@ -1016,7 +898,6 @@ val SEMI_AUTOMATON___VAR_RENAMING =
       FULL_SIMP_TAC std_ss [GSYM IMAGE_DIFF, GSYM IMAGE_UNION] THEN
       PROVE_TAC[P_SEM___VAR_RENAMING],
 
-
       FORALL_EQ_STRIP_TAC THEN
       SUBGOAL_TAC `!n. INJ f' (v n UNION f) UNIV /\
                        INJ f' ((w n UNION (v n DIFF f)) UNION (w (SUC n) UNION (v (SUC n) DIFF f)) UNION (XP_USED_VARS x)) UNIV` THEN1 (
@@ -1024,9 +905,8 @@ val SEMI_AUTOMATON___VAR_RENAMING =
         METIS_TAC[]
       ) THEN
       FULL_SIMP_TAC std_ss [GSYM IMAGE_DIFF, GSYM IMAGE_UNION] THEN
-      METIS_TAC[XP_SEM___VAR_RENAMING]
-  ]);
-
+      METIS_TAC[XP_SEM___VAR_RENAMING] ]
+QED
 
 val SEMI_AUTOMATON___STATE_VAR_RENAMING =
  store_thm
