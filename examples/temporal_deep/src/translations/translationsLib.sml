@@ -1,28 +1,6 @@
 structure translationsLib :> translationsLib =
 struct
 
-(*
-quietdec := true;
-
-val hol_dir = concat Globals.HOLDIR "/";
-val home_dir = (concat hol_dir "examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/translations") ::
-            (concat home_dir "src/tools") ::
-            (concat hol_dir "examples/PSL/path") ::
-            (concat hol_dir "examples/PSL/1.1/official-semantics") :: !loadPath;
-
-map load
- ["full_ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
-  "infinite_pathTheory", "tuerk_tacticsLib", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory", "pred_setSyntax",
-  "temporal_deep_mixedTheory", "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "pairTheory",
-  "ltl_to_automaton_formulaTheory", "rltl_to_ltlTheory",
-  "numLib", "listLib", "translationsLibTheory", "rltlTheory", "computeLib",
-  "congLib", "temporal_deep_simplificationsLib", "Trace",
-  "symbolic_kripke_structureTheory", "pred_setLib", "Varmap", "HOLset", "ListConv1",
-  "psl_lemmataTheory", "ProjectionTheory", "psl_to_rltlTheory"];
-*)
-
 open HolKernel boolLib bossLib
      full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
@@ -32,23 +10,13 @@ open HolKernel boolLib bossLib
      rltl_to_ltlTheory rltlTheory computeLib congLib temporal_deep_simplificationsLib
      Trace symbolic_kripke_structureTheory psl_lemmataTheory ProjectionTheory psl_to_rltlTheory;
 
-(*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
-quietdec := false;
-*)
-
-
 exception NoLTLTerm;
 
+(* This function is recursive *)
 fun SETIFY_CONV tm =
-    (SUB_CONV (SETIFY_CONV) THENC TRY_CONV (pred_setLib.INSERT_CONV NO_CONV)) tm
+    (SUB_CONV (SETIFY_CONV) THENC TRY_CONV (pred_setLib.INSERT_CONV NO_CONV)) tm;
 
-
-(*the translation of ltl to gen. Buechi using just rewrite
-  rules *)
+(* The translation of LTL to GEN_BUECHI using just rewrite rules *)
 fun ltl2omega_rewrite t l =
   let
     val (typeString, ltl_type) = (dest_type (type_of l));
@@ -89,11 +57,8 @@ fun ltl2omega_rewrite t l =
   exploit term-sharing*)
 
 (*some general helpers*)
-fun boolToHOL b =
-  if b then ``T:bool`` else ``F:bool``;
-
-fun HOLToBool b = (b = ``T:bool``);
-
+fun boolToHOL b = if b then T else F;
+fun HOLToBool b = (b ~~ T);
 
 fun dsExtractFromThm dsThm =
   hd (snd (strip_comb(concl (dsThm))));
@@ -112,7 +77,7 @@ fun getBindingFor b1 b2 l [] = (false, false, ``dummy:num``)
         val hList = strip_pair h;
         val (l', a1, a2, pf) = (el 1 hList, HOLToBool(el 2 hList), HOLToBool(el 3 hList), el 4 hList);
       in
-        if ((l' = l) andalso ((not b1) orelse a1) andalso ((not b2) orelse a2)) then
+        if ((l' ~~ l) andalso ((not b1) orelse a1) andalso ((not b2) orelse a2)) then
           (a1, a2, pf)
         else
           getBindingFor b1 b2 l l1
@@ -649,7 +614,6 @@ in
       (l, equivTHM, thm, ds, pf, b1', b2')
     end;
 
-
     fun ltl2omega fast neg l =
       let
         val (typeString, ltl_type) = (dest_type (type_of l));
@@ -929,7 +893,7 @@ fun ks_fair_emptyness___num___impl thm ltl_type used_vars_num =
       the theorem is of the form X ==> X and will be simplified to T*)
     val lhs = rand (rator (concl imp_thm))
     val rhs = rand (concl imp_thm)
-    val imp_thm = if (lhs = rhs) then imp_thm else REDUCE_RULE imp_thm
+    val imp_thm = if (lhs ~~ rhs) then imp_thm else REDUCE_RULE imp_thm
 
     val thm = SPEC_ALL thm
     val thm = UNDISCH thm
@@ -1042,7 +1006,7 @@ in
       val eval_thm = EVAL_CONV t
       val cs_free_term = liteLib.mk_icomb (``F_CLOCK_SERE_FREE:'a fl->bool``, t);
       val cs_free_thm = ((REWRITE_CONV [eval_thm]) THENC (REWRITE_CONV [ F_CLOCK_SERE_FREE_def, F_CLOCK_FREE_def, F_SERE_FREE_def])) cs_free_term;
-      val _ = if ((rhs (concl cs_free_thm)) = T) then true else (
+      val _ = if ((rhs (concl cs_free_thm)) ~~ T) then true else (
         let
           val _ = print "! ERROR: Could not prove that\n! ";
           val _ = print_term t;
