@@ -10,7 +10,11 @@ open HolKernel Parse boolLib bossLib;
 open optionTheory listTheory rich_listTheory arithmeticTheory hurdUtils;
 
 (* local theories *)
-open prop_logicTheory full_ltlTheory;
+open prop_logicTheory full_ltlTheory translationsLib ltl_to_automaton_formulaTheory;
+
+(* Tuerk's translations between different LTL syntax (unused)
+open ltl_translationsTheory;
+ *)
 
 val _ = new_theory "runtime_verification";
 
