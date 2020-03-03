@@ -54,13 +54,13 @@ val ltl_to_gen_buechi_ds_B  = DB.fetch "-" "ltl_to_gen_buechi_ds_B";
 val ltl_to_gen_buechi_ds_11 = DB.fetch "-" "ltl_to_gen_buechi_ds_11";
 
 Theorem ltl_to_gen_buechi_ds_REWRITES = LIST_CONJ
-    [ltl_to_gen_buechi_ds_SN,
-     ltl_to_gen_buechi_ds_S0,
-     ltl_to_gen_buechi_ds_IV,
-     ltl_to_gen_buechi_ds_R,
-     ltl_to_gen_buechi_ds_FC,
-     ltl_to_gen_buechi_ds_B,
-     ltl_to_gen_buechi_ds_11];
+   [ltl_to_gen_buechi_ds_SN,
+    ltl_to_gen_buechi_ds_S0,
+    ltl_to_gen_buechi_ds_IV,
+    ltl_to_gen_buechi_ds_R,
+    ltl_to_gen_buechi_ds_FC,
+    ltl_to_gen_buechi_ds_B,
+    ltl_to_gen_buechi_ds_11];
 
 (* some definitions to get meaning to this datastructure *)
 val LTL_TO_GEN_BUECHI_DS___INITIAL_STATES_def = Define
