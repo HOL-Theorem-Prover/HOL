@@ -12,17 +12,18 @@ val _ = hide "I";
 val _ = new_theory "full_ltl";
 val _ = ParseExtras.temp_loose_equality()
 
-(******************************************************************************
-* Syntax
-******************************************************************************)
-val _  = Datatype `
-    ltl = LTL_PROP    ('prop prop_logic)
-        | LTL_NOT      ltl
-        | LTL_AND     (ltl # ltl)
-        | LTL_NEXT     ltl         (* X in NuSMV *)
-        | LTL_SUNTIL  (ltl # ltl)  (* U in NuSMV *)
-        | LTL_PSNEXT   ltl         (* Y in NuSMV *)
-        | LTL_PSUNTIL (ltl # ltl)  (* S in NuSMV *)
+(*****************************************************************************)
+(* Syntax                                                                    *)
+(*****************************************************************************)
+
+val _ = Datatype `
+  ltl = LTL_PROP    ('prop prop_logic)
+      | LTL_NOT      ltl
+      | LTL_AND     (ltl # ltl)
+      | LTL_NEXT     ltl         (* X in NuSMV *)
+      | LTL_SUNTIL  (ltl # ltl)  (* U in NuSMV *)
+      | LTL_PSNEXT   ltl         (* Y in NuSMV *)
+      | LTL_PSUNTIL (ltl # ltl)  (* S in NuSMV *)
 `;
 
 val _ = overload_on ("LTL_P_PROP", ``\p. LTL_PROP (P_PROP p)``);
@@ -39,26 +40,26 @@ Theorem ltl_induct = Q.GEN `P`
          [`P`,`\(f1,f2). P f1 /\ P f2`]
          (TypeBase.induction_of ``:'a ltl``))));
 
-(******************************************************************************
-* Semantics
-******************************************************************************)
+(*****************************************************************************)
+(* Semantics                                                                 *)
+(*****************************************************************************)
+
 val LTL_SEM_TIME_def = Define
   `(LTL_SEM_TIME t v (LTL_NOT f) = ~(LTL_SEM_TIME t v f)) /\
    (LTL_SEM_TIME t v (LTL_AND (f1,f2)) =
     LTL_SEM_TIME t v f1 /\ LTL_SEM_TIME t v f2) /\
    (LTL_SEM_TIME t v (LTL_PROP b) = (P_SEM (v t) b)) /\
    (LTL_SEM_TIME t v (LTL_NEXT f) = LTL_SEM_TIME (SUC t) v f) /\
-   (LTL_SEM_TIME t v (LTL_SUNTIL (f1,f2)) =
+   (LTL_SEM_TIME t v (LTL_SUNTIL(f1,f2)) =
      ?k. k >= t /\ LTL_SEM_TIME k v f2 /\
         !j. (t <= j /\ j < k) ==> (LTL_SEM_TIME j v f1)) /\
    (LTL_SEM_TIME t v (LTL_PSNEXT f) =
      ((t > 0) /\ LTL_SEM_TIME (PRE t) v f)) /\
-   (LTL_SEM_TIME t v (LTL_PSUNTIL (f1,f2)) =
+   (LTL_SEM_TIME t v (LTL_PSUNTIL(f1,f2)) =
      ?k. k <= t /\ LTL_SEM_TIME k v f2 /\
         !j. (k < j /\ j <= t) ==> (LTL_SEM_TIME j v f1))`;
 
-val LTL_SEM_def = Define
-   `LTL_SEM v f = LTL_SEM_TIME 0 v f`;
+val LTL_SEM_def = Define `LTL_SEM v f = LTL_SEM_TIME 0 v f`;
 
 val LTL_KS_SEM_def = Define
    `LTL_KS_SEM M f =
@@ -178,16 +179,13 @@ val IS_LTL_G_def = Define
     (IS_LTL_F (LTL_PSNEXT f) = IS_LTL_F f) /\
     (IS_LTL_F (LTL_PSUNTIL(f,g)) = (IS_LTL_F f /\ IS_LTL_F g))`;
 
-
-val IS_LTL_PREFIX_def =
-  Define
+val IS_LTL_PREFIX_def = Define
    `(IS_LTL_PREFIX (LTL_NOT f) = IS_LTL_PREFIX f) /\
     (IS_LTL_PREFIX (LTL_AND (f,g)) = (IS_LTL_PREFIX f /\ IS_LTL_PREFIX g)) /\
     (IS_LTL_PREFIX f = (IS_LTL_G f \/ IS_LTL_F f))`;
 
 
-val IS_LTL_GF_def=
- Define
+val IS_LTL_GF_def = Define
    `(IS_LTL_GF (LTL_PROP p) = T) /\
     (IS_LTL_GF (LTL_NOT f) = IS_LTL_FG f) /\
     (IS_LTL_GF (LTL_AND (f,g)) = (IS_LTL_GF f /\ IS_LTL_GF g)) /\
@@ -204,42 +202,35 @@ val IS_LTL_GF_def=
     (IS_LTL_FG (LTL_PSNEXT f) = IS_LTL_FG f) /\
     (IS_LTL_FG (LTL_PSUNTIL(f,g)) = (IS_LTL_FG f /\ IS_LTL_FG g))`;
 
-
-val IS_LTL_STREET_def =
-  Define
+val IS_LTL_STREET_def = Define
    `(IS_LTL_STREET (LTL_NOT f) = IS_LTL_STREET f) /\
     (IS_LTL_STREET (LTL_AND (f,g)) = (IS_LTL_STREET f /\ IS_LTL_STREET g)) /\
     (IS_LTL_STREET f = (IS_LTL_GF f \/ IS_LTL_FG f))`;
 
-
-val IS_LTL_THM = save_thm("IS_LTL_THM",
+Theorem IS_LTL_THM =
    LIST_CONJ [IS_FUTURE_LTL_def,
               IS_PAST_LTL_def,
               IS_LTL_G_def,
               IS_LTL_GF_def,
               IS_LTL_PREFIX_def,
-              IS_LTL_STREET_def]);
+              IS_LTL_STREET_def];
 
-
-val IS_LTL_RELATIONS =
- store_thm
-  ("IS_LTL_RELATIONS",
-   ``!f. ((IS_LTL_F f = IS_LTL_G (LTL_NOT f)) /\ (IS_LTL_G f = IS_LTL_F (LTL_NOT f)) /\
+Theorem IS_LTL_RELATIONS :
+    !f. ((IS_LTL_F f = IS_LTL_G (LTL_NOT f)) /\ (IS_LTL_G f = IS_LTL_F (LTL_NOT f)) /\
           (IS_LTL_FG f = IS_LTL_GF (LTL_NOT f)) /\ (IS_LTL_GF f = IS_LTL_FG (LTL_NOT f)) /\
           (IS_LTL_F f ==> IS_LTL_FG f) /\ (IS_LTL_G f ==> IS_LTL_GF f) /\
           (IS_LTL_G f ==> IS_LTL_FG f) /\ (IS_LTL_F f ==> IS_LTL_GF f) /\
-          (IS_LTL_PREFIX f ==> (IS_LTL_FG f /\ IS_LTL_GF f)))``,
-
+          (IS_LTL_PREFIX f ==> (IS_LTL_FG f /\ IS_LTL_GF f)))
+Proof
       INDUCT_THEN ltl_induct ASSUME_TAC THEN
       REWRITE_TAC[IS_LTL_THM] THEN
       METIS_TAC[]
-  );
+QED
 
 (******************************************************************************
 * Lemmata
 ******************************************************************************)
-val LTL_USED_VARS_def=
- Define
+val LTL_USED_VARS_def = Define
    `(LTL_USED_VARS (LTL_PROP p) = P_USED_VARS p) /\
     (LTL_USED_VARS (LTL_NOT f) = LTL_USED_VARS f) /\
     (LTL_USED_VARS (LTL_AND (f,g)) = (LTL_USED_VARS f UNION LTL_USED_VARS g)) /\
@@ -248,12 +239,10 @@ val LTL_USED_VARS_def=
     (LTL_USED_VARS (LTL_PSNEXT f) = LTL_USED_VARS f) /\
     (LTL_USED_VARS (LTL_PSUNTIL(f,g)) = (LTL_USED_VARS f UNION LTL_USED_VARS g))`;
 
-
-val LTL_USED_VARS_INTER_SUBSET_THM =
- store_thm
-  ("LTL_USED_VARS_INTER_SUBSET_THM",
-   ``!f t v S. (LTL_USED_VARS f) SUBSET S ==> (LTL_SEM_TIME t v f = LTL_SEM_TIME t (PATH_RESTRICT v S) f)``,
-
+Theorem LTL_USED_VARS_INTER_SUBSET_THM :
+    !f t v S. (LTL_USED_VARS f) SUBSET S ==>
+              (LTL_SEM_TIME t v f = LTL_SEM_TIME t (PATH_RESTRICT v S) f)
+Proof
    INDUCT_THEN ltl_induct ASSUME_TAC THENL [
       SIMP_TAC arith_ss [LTL_SEM_TIME_def, LTL_USED_VARS_def, PATH_RESTRICT_def, PATH_MAP_def] THEN
       PROVE_TAC[P_USED_VARS_INTER_SUBSET_THM],
@@ -275,8 +264,8 @@ val LTL_USED_VARS_INTER_SUBSET_THM =
 
       REWRITE_TAC[LTL_SEM_TIME_def, LTL_USED_VARS_def, UNION_SUBSET] THEN
       PROVE_TAC[]
-   ]);
-
+   ]
+QED
 
 val LTL_USED_VARS_INTER_THM =
  store_thm
@@ -284,7 +273,6 @@ val LTL_USED_VARS_INTER_THM =
    ``!f t v. (LTL_SEM_TIME t v f = LTL_SEM_TIME t (PATH_RESTRICT v (LTL_USED_VARS f)) f)``,
 
    METIS_TAC  [LTL_USED_VARS_INTER_SUBSET_THM, SUBSET_REFL]);
-
 
 val FINITE___LTL_USED_VARS =
  store_thm

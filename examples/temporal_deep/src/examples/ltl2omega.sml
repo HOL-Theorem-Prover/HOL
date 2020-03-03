@@ -158,8 +158,8 @@ val test3RLTL = ``RLTL_ACCEPT (RLTL_SUNTIL (RLTL_PROP (P_PROP a),
 (* Some examples to execute at interactivly. Just change the
    number of the test terms or introduce on terms
 
-   syntax: ltl2omega fast neg ltl *)
-
+   syntax: ltl2omega fast neg ltl
+ *)
 fun ltl2omega_test (test_fn, problem, result) = let
     val _ = tprint (term_to_string problem);
 in
