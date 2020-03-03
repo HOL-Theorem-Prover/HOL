@@ -1,7 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 open quotient
 
-open listTheory liftingTheory transferTheory transferLib
+open listTheory liftingTheory transferTheory transferLib finite_mapTheory
 
 val _ = new_theory "finite_set";
 
@@ -612,6 +612,10 @@ Definition toSet_def:
   toSet fs = { x | fIN x fs }
 End
 
+Definition fromSet_def:
+  fromSet s = fromList (SET_TO_LIST s)
+End
+
 Definition rel_set_def:
   rel_set AB A B <=>
     (!a. a IN A ==> ?b. b IN B /\ AB a b) /\
@@ -838,6 +842,8 @@ Proof
   xfer_back_tac >> simp[LIST_TO_SET_FLAT]
 QED
 
+
+
 Theorem toSet_11:
   !fs1 fs2. (toSet fs1 = toSet fs2) <=> fs1 = fs2
 Proof
@@ -864,6 +870,12 @@ Proof
   xfer_back_tac
 QED
 
+Theorem IN_fromSet:
+  FINITE s ==> (fIN x (fromSet s) <=> x IN s)
+Proof
+  simp[fromSet_def, fIN_IN]
+QED
+
 Theorem set_IMAGE:
   !f fs. toSet (fIMAGE f fs) = IMAGE f (toSet fs)
 Proof
@@ -874,6 +886,13 @@ Theorem IN_BIGUNION:
   fIN e (fBIGUNION fss) = ?fs. fIN fs fss /\ fIN e fs
 Proof
   simp[fIN_IN, set_BIGUNION, set_IMAGE, PULL_EXISTS] >> metis_tac[]
+QED
+
+Theorem BIGUNION_thm[simp]:
+  fBIGUNION fEMPTY = fEMPTY /\
+  !s ss. fBIGUNION (fINSERT s ss) = fUNION s (fBIGUNION ss)
+Proof
+  conj_tac >> dsimp[Once EXTENSION, IN_BIGUNION]
 QED
 
 (*
@@ -935,5 +954,35 @@ Proof
 
   xfer_back_tac
 *)
+
+Definition ffDOM_def:
+  ffDOM fm = fromList (SET_TO_LIST (FDOM fm))
+End
+Overload "FDOMᶠ" = “ffDOM”
+
+Theorem ffDOM_thm[simp]:
+  FDOMᶠ FEMPTY = fEMPTY ∧
+  FDOMᶠ (fm |+ (k,v)) = fINSERT k (FDOMᶠ fm)
+Proof
+  simp[ffDOM_def, EXTENSION, fIN_IN]
+QED
+
+Definition ffRANGE_def:
+  ffRANGE fm = fromList (SET_TO_LIST (FRANGE fm))
+End
+
+Theorem ffRANGE_thm[simp]:
+  ffRANGE FEMPTY = ∅ᶠ ∧
+  ffRANGE (fm |+ (k,v)) = fINSERT v (ffRANGE (fm \\ k))
+Proof
+  simp[ffRANGE_def, fIN_IN, EXTENSION]
+QED
+
+Definition fSUBSET_def:
+  fSUBSET fs1 fs2 <=> !x. fIN x fs1 ==> fIN x fs2
+End
+
+Overload "⊆ᶠ" = “fSUBSET”                                              (* UOK *)
+val _ = set_fixity "⊆ᶠ" (Infix(NONASSOC, 450))                         (* UOK *)
 
 val _ = export_theory();

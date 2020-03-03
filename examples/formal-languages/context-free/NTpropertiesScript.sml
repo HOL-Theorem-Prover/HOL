@@ -4,6 +4,7 @@ open listTheory
 open grammarTheory
 open lcsymtacs
 open pred_setTheory
+open finite_mapTheory
 
 val rveq = rpt BasicProvers.VAR_EQ_TAC
 fun asm_match q = Q.MATCH_ASSUM_RENAME_TAC q
@@ -576,26 +577,25 @@ QED
     follow sets
    ---------------------------------------------------------------------- *)
 
-(*
 Definition followSet_def:
-  followSet (g:(α,β) grammar) (sym:(α,β) symbol) =
-    { ts | ∃s pfx sfx.
-             MEM s (MAP ruleRhs (rules g)) ∧
-             RTC (derives g) s (pfx++[sym]++[TS ts]++sfx) }
+  followSet (G:(α,β) grammar) (sym:(α,β) symbol) =
+    { tk | ∃n sf pfx sfx.
+             sf ∈ᶠ G.rules ' n ∧
+             derives G sf (pfx++[sym]++[TOK tk]++sfx) }
 End
 
 Definition augment_def:
   augment k v fm =
     case FLOOKUP fm k of
       NONE => fm |+ (k,v)
-    | SOME v0 => fm |+ (k, v0 ∪ v)
+    | SOME v0 => fm |+ (k, v0 ∪ᶠ v)
 End
 
 Definition subfmset_map_def:
   subfmset_map fm1 fm2 ⇔
-     ∀k. k ∈ FDOM fm1 ⇒ k ∈ FDOM fm2 ∧ fm1 ' k ⊆ fm2 ' k
+     ∀k. k ∈ FDOM fm1 ⇒ k ∈ FDOM fm2 ∧ fm1 ' k ⊆ᶠ fm2 ' k
 End
-
+(*
 Theorem subfmset_map_REFL[simp]:
   subfmset_map fm fm
 Proof
@@ -620,49 +620,35 @@ Proof
   rw[subfmset_map_def, augment_def, FLOOKUP_DEF, FAPPLY_FUPDATE_THM] >>
   rw[] >> fs[]
 QED
-
+*)
 Definition safelookup_def:
   safelookup fm k =
-    case FLOOKUP fm k of NONE => ∅ | SOME v => v
+    case FLOOKUP fm k of NONE => ∅ᶠ | SOME v => v
 End
 
+(* processing a rule
+     N -> sf
+   symbol by symbol, augmenting the finite-map of information in A
+*)
 Definition follow_sf_def[simp]:
   follow_sf g N [] A = A ∧
-  follow_sf g N (TS _ :: rest) A = follow_sf g N rest A ∧
-  follow_sf g N (NTS n :: rest) A =
+  follow_sf g N (TOK _ :: rest) A = follow_sf g N rest A ∧
+  follow_sf g N (NT n :: rest) A =
     follow_sf g N rest
-              (augment n (firstSetList g rest ∪
-                          if nullable g rest then safelookup A N else ∅)
+              (augment n (fromSet (firstSet g rest) ∪ᶠ
+                          if nullable g rest then safelookup A N else ∅ᶠ)
                        A)
 End
 
-Definition nonTerminals'_def:
-  nonTerminals' g = { n | NTS n ∈ nonTerminals g }
-End
-
-Theorem IN_nonTerminals[simp]:
-  NTS n ∈ nonTerminals g ⇔ n ∈ nonTerminals' g
-Proof
-  simp[nonTerminals'_def]
-QED
-
-Theorem FINITE_nonTerminals'[simp]:
-  FINITE (nonTerminals' (g:(α,β)grammar))
-Proof
-  qabbrev_tac ‘s:(α,β)symbol set = IMAGE NTS (nonTerminals' g)’ >>
-  ‘s ⊆ nonTerminals g’ by simp[SUBSET_DEF, PULL_EXISTS, Abbr‘s’] >>
-  ‘FINITE s’ by metis_tac[finite_nts, SUBSET_FINITE] >>
-  fs[INJECTIVE_IMAGE_FINITE, Abbr‘s’]
-QED
-
+(*
 (* smash together all sets in the range of the finite map *)
 Definition range_max_def:
-  range_max A = BIGUNION { s | ∃nt. FLOOKUP A nt = SOME s}
+  range_max A = fBIGUNION (ffRANGE A)
 End
 Theorem range_max_FEMPTY[simp]:
-  range_max FEMPTY = ∅
+  range_max FEMPTY = ∅ᶠ
 Proof
-  simp[EXTENSION, range_max_def]
+  simp[range_max_def]
 QED
 
 Definition max_map_def:

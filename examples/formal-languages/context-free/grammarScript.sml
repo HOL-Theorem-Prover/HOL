@@ -31,6 +31,36 @@ Datatype:
   |>
 End
 
+Definition nonTerminals_def:
+  nonTerminals G = G.start INSERT FDOM G.rules ∪
+                   { n | ∃n0 sf. n0 ∈ FDOM G.rules ∧ sf ∈ᶠ (G.rules ' n0) ∧
+                                 MEM (NT n) sf }
+End
+
+Theorem FINITE_nonTerminals[simp]:
+  FINITE (nonTerminals (G:(α,β)grammar))
+Proof
+  simp[nonTerminals_def] >>
+  qmatch_abbrev_tac ‘FINITE s’ >>
+  ‘s = BIGUNION (IMAGE (λn0. { n | ∃sf. sf ∈ᶠ G.rules ' n0 ∧ MEM (NT n) sf})
+                       (FDOM G.rules))’
+    by (simp[Once EXTENSION, PULL_EXISTS, Abbr‘s’] >> metis_tac[]) >>
+  simp[PULL_EXISTS] >> rw[] >>
+  qmatch_abbrev_tac ‘FINITE t’ >>
+  ‘t = BIGUNION (IMAGE (λsf. { n | MEM (NT n) sf}) (toSet (G.rules ' n0)))’
+    by (simp[Once EXTENSION, PULL_EXISTS, Abbr‘t’, finite_setTheory.fIN_IN] >>
+        metis_tac[]) >>
+  simp[PULL_EXISTS] >> rw[] >>
+  qmatch_abbrev_tac ‘FINITE u’ >>
+  ‘u = BIGUNION (IMAGE (λsym. case sym of TOK t => ∅ | NT n => {n}) (set sf))’
+    by (simp[Once EXTENSION, PULL_EXISTS, Abbr‘u’] >> rw[EQ_IMP_THM]
+        >- (rename [‘MEM (NT n) sf’] >> qexists_tac‘NT n’ >> simp[]) >>
+        rename [‘symbol_CASE sym’] >> Cases_on ‘sym’ >> fs[]) >>
+  simp[PULL_EXISTS] >> Cases >> simp[]
+QED
+
+
+
 Datatype:
   parsetree = Lf (('a,'b) symbol # 'locs)
             | Nd ('b inf # 'locs) (parsetree list)
