@@ -15,12 +15,9 @@ $(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state)
 	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
 endif
 
-all: ltl2omega.exe selftest.exe
+all: ltl2omega.exe
 
 ltl2omega.exe: ltl2omega.uo
 	$(HOLMOSMLC) -o $@ $<
-
-selftest.exe: ltl2omega.exe
-	./ltl2omega.exe
 
 .PHOHY: all
