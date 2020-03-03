@@ -1121,7 +1121,6 @@ val LTL_STRONG___WEAK__IMPL___UNTIL =
    REWRITE_TAC[LTL_UNTIL_def, LTL_OR_SEM] THEN
    PROVE_TAC[]);
 
-
 val LTL_COND___OR =
  store_thm
   ("LTL_COND___OR",
@@ -1131,13 +1130,9 @@ val LTL_COND___OR =
    REWRITE_TAC[LTL_SEM_THM, LTL_COND_def] THEN
    METIS_TAC[]);
 
-
-val LTL_MONOTICITY_LAWS =
- store_thm
-  ("LTL_MONOTICITY_LAWS",
-   ``!As Aw Bs Bw v. ((!t. LTL_SEM_TIME t v Aw ==> LTL_SEM_TIME t v As) /\
-                      (!t. LTL_SEM_TIME t v Bw ==> LTL_SEM_TIME t v Bs)) ==> (
-
+Theorem LTL_MONOTICITY_LAWS :
+    !As Aw Bs Bw v. ((!t. LTL_SEM_TIME t v Aw ==> LTL_SEM_TIME t v As) /\
+                     (!t. LTL_SEM_TIME t v Bw ==> LTL_SEM_TIME t v Bs)) ==>
          (!t. LTL_SEM_TIME t v (LTL_NOT As) ==> LTL_SEM_TIME t v (LTL_NOT Aw)) /\
          (!t. LTL_SEM_TIME t v (LTL_NEXT Aw) ==> LTL_SEM_TIME t v (LTL_NEXT As)) /\
          (!t. LTL_SEM_TIME t v (LTL_AND(Aw, Bw)) ==> LTL_SEM_TIME t v (LTL_AND(As, Bs))) /\
@@ -1156,13 +1151,10 @@ val LTL_MONOTICITY_LAWS =
          (!t. LTL_SEM_TIME t v (LTL_PSUNTIL(Aw, Bw)) ==> LTL_SEM_TIME t v (LTL_PSUNTIL(As, Bs))) /\
          (!t. LTL_SEM_TIME t v (LTL_PBEFORE(Aw, Bs)) ==> LTL_SEM_TIME t v (LTL_PBEFORE(As, Bw))) /\
          (!t. LTL_SEM_TIME t v (LTL_PSBEFORE(Aw, Bs)) ==> LTL_SEM_TIME t v (LTL_PSBEFORE(As, Bw)))
-   )
-   ``,
-
-   REWRITE_TAC[LTL_SEM_THM, LTL_UNTIL_def, LTL_BEFORE_def, LTL_SBEFORE_def,
-      LTL_PUNTIL_def, LTL_PBEFORE_def, LTL_PSBEFORE_def] THEN
-   METIS_TAC[]
-   );
-
+Proof
+    REWRITE_TAC [LTL_SEM_THM, LTL_UNTIL_def, LTL_BEFORE_def, LTL_SBEFORE_def,
+                 LTL_PUNTIL_def, LTL_PBEFORE_def, LTL_PSBEFORE_def]
+ >> METIS_TAC []
+QED
 
 val _ = export_theory();
