@@ -692,6 +692,12 @@ val REAL_NEG_INV = store_thm("REAL_NEG_INV",
   POP_ASSUM(fn th => REWRITE_TAC[MATCH_MP REAL_MUL_LINV th]) THEN
   REWRITE_TAC[REAL_NEGNEG]);
 
+Theorem REAL_NEG_INV':
+  -inv x = inv (-x)
+Proof
+  Cases_on ‘x = 0’ >> simp[REAL_NEG_INV]
+QED
+
 val REAL_INV_1OVER = store_thm("REAL_INV_1OVER",
   “!x. inv x = &1 / x”,
   GEN_TAC THEN REWRITE_TAC[real_div, REAL_MUL_LID]);
@@ -1478,6 +1484,8 @@ val ABS_NZ = store_thm("ABS_NZ",
     CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC[] THEN
     DISCH_THEN SUBST1_TAC THEN
     REWRITE_TAC[abs, REAL_LT_REFL, REAL_LE_REFL]]);
+
+Theorem ABS_NZ'[simp] = GSYM ABS_NZ
 
 val ABS_INV = store_thm("ABS_INV",
   “!x. ~(x = 0) ==> (abs(inv x) = inv(abs(x)))”,
@@ -3594,20 +3602,23 @@ val pow_rat = store_thm(
   ASM_SIMP_TAC bool_ss [REAL_MUL, REAL_MUL_LNEG,
                         REAL_MUL_RNEG, REAL_NEG_NEG]);
 
-val neg_rat = store_thm(
-  "neg_rat",
-  ``(~(x / y) = if y = 0 then ~ (unint(x/y)) else ~x / y) /\
-    (x / ~y   = if y = 0 then unint(x/y) else ~x/y)``,
-  SRW_TAC [][ui] THEN
-  SRW_TAC [][real_div, GSYM REAL_NEG_INV, REAL_MUL_LNEG, REAL_MUL_RNEG]);
+Theorem neg_rat:
+  (-(x / y) = -x / y) /\ (x / -y = -x/y)
+Proof
+  Cases_on ‘y = 0’ >> simp[] >- simp[real_div] >>
+  SRW_TAC [][ui] >>
+  SRW_TAC [][real_div, GSYM REAL_NEG_INV, REAL_MUL_LNEG, REAL_MUL_RNEG]
+QED
 
-val eq_rat = store_thm(
-  "eq_rat",
-  ``(x / y = u / v) = if y = 0 then unint (x/y) = u / v
-                      else if v = 0 then x / y = unint (u/v)
-                      else if y = v then x = u
-                      else x * v = y * u``,
+Theorem eq_rat:
+  (x / y = u / v) = if y = 0 then (u = 0) \/ (v = 0)
+                    else if v = 0 then x = 0
+                    else if y = v then x = u
+                    else x * v = y * u
+Proof
   SRW_TAC [][ui] THENL [
+    simp[real_div],
+    simp[real_div],
     METIS_TAC [REAL_DIV_LMUL, REAL_EQ_LMUL],
     `~(y * v = 0)` by SRW_TAC [][REAL_ENTIRE] THEN
     `(x/y = u/v) = ((y * v) * (x/y) = (y * v) * (u/v))`
@@ -3619,7 +3630,8 @@ val eq_rat = store_thm(
            CONV_TAC (AC_CONV(REAL_MUL_ASSOC, REAL_MUL_COMM))) THEN
     ASM_REWRITE_TAC [] THEN SRW_TAC [][REAL_DIV_LMUL] THEN
     SRW_TAC [][REAL_MUL_COMM]
-  ]);
+  ]
+QED
 
 val eq_ratl = store_thm(
   "eq_ratl",
@@ -3653,14 +3665,16 @@ val eq_ints = store_thm(
 
 val REALMUL_AC = CONV_TAC (AC_CONV (REAL_MUL_ASSOC, REAL_MUL_COMM))
 
-val div_ratr = store_thm(
-  "div_ratr",
-  ``x / (y / z) = if (y = 0) \/ (z = 0) then x / unint(y/z)
-                  else x * z / y``,
+Theorem div_ratr:
+  x / (y / z) = x * z / y
+Proof
+  Cases_on ‘y = 0’ >- simp[real_div] >>
+  Cases_on ‘z = 0’ >- simp[real_div] >>
   SRW_TAC [][ui] THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
   SRW_TAC [][real_div, REAL_INV_MUL, REAL_INV_EQ_0, REAL_INV_INV] THEN
-  REALMUL_AC);
+  REALMUL_AC
+QED
 
 val div_ratl = store_thm(
   "div_ratl",

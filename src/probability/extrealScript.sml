@@ -1538,7 +1538,7 @@ Proof
     rpt STRIP_TAC
  >> Cases_on `x` >> Cases_on `y`
  >> RW_TAC std_ss [extreal_abs_def, extreal_mul_def]
- >> fs [abs_0, ABS_NZ]
+ >> fs []
  >> REWRITE_TAC [ABS_MUL]
 QED
 
