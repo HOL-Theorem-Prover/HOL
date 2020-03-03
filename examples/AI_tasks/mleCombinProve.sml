@@ -42,6 +42,9 @@ fun COMBIN_PROVE (witness,headnf) =
 load "aiLib"; open aiLib;
 load "mleCombinProve"; open mleCombinProve;
 val witness = cK;
+val v1 = mk_var ("V1",alpha)
+val v2 = mk_var ("V2",alpha)
+val v3 = mk_var ("V3",alpha);
 val headnf = list_mk_cA [v1,v3];
 val thm = COMBIN_PROVE (witness,headnf);
 *)
