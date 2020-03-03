@@ -24,15 +24,25 @@ val _ = ParseExtras.temp_loose_equality()
  * is explicitely modelled and all parameters get
  * a function enumeration state var distinct from this
  * set of input variables
+ *
+ * see LTL_TO_GEN_BUECHI_DS___SEM_def for its semantics
+ * see LTL_TO_GEN_BUECHI___EXTEND_def for the translation algorithm
+ * see LTL_TO_GEN_BUECHI_def for the translation interface
+ * see LTL_TO_GEN_BUECHI_THM for the main theorem
+ *
  ****************************************************************)
+
+val _ = type_abbrev ("state",   “:(num -> 'var) -> 'var prop_logic”);
+val _ = type_abbrev ("xstate",  “:(num -> 'var) -> 'var xprop_logic”);
+
 Datatype :
     ltl_to_gen_buechi_ds =
-    <| SN: num;               (* number of needed state variables *)
-       S0: (num # bool) list; (* initial states, state variables can be true or false or unspecified *)
-       IV: ('var -> bool);                           (* the set of input variables *)
-       R:  ((num -> 'var) -> 'var xprop_logic) list; (* transition relation *)
-       FC: ((num -> 'var) -> 'var prop_logic) list;  (* fairness conditions *)
-       B:  ('var ltl # bool # bool # ((num->'var) -> 'var prop_logic)) set (* bindings *)
+    <| SN: num;                (* number of needed state variables *)
+       S0: (num # bool) list;  (* initial states, state variables can be true or false or unspecified *)
+       IV: ('var -> bool);     (* the set of input variables *)
+       R : ('var xstate) list; (* transition relation *)
+       FC: ('var state) list;  (* fairness conditions *)
+       B : ('var ltl # bool # bool # ('var state)) set (* bindings *)
      |>
 End
 
@@ -91,7 +101,7 @@ Proof
                      IMAGE_FINITE, FINITE_COUNT]
 QED
 
-(* all used variables = state + input *)
+(* all used variables = state + input (in R, FC and B) *)
 val LTL_TO_GEN_BUECHI_DS___USED_VARS_def = Define
    `LTL_TO_GEN_BUECHI_DS___USED_VARS DS =
     (\sv. (LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS DS sv) UNION
@@ -109,8 +119,8 @@ val LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def = Define
             (XP_BIGAND (MAP (\xp. xp sv) DS.R)))`;
 
 (* a suitable function creating new state variables *)
-val LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR_def = Define `
-    LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR DS sv = IS_ELEMENT_ITERATOR sv DS.SN DS.IV`;
+val LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR_def = Define
+   `LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR DS sv = IS_ELEMENT_ITERATOR sv DS.SN DS.IV`;
 
 (* a fair run (i,w) which infinitely often satisfies the fairness constraints *)
 val LTL_TO_GEN_BUECHI_DS___FAIR_RUN_def = Define
@@ -198,7 +208,13 @@ val LTL_TO_GEN_BUECHI_DS___BINDING_RUN___REWRITE = store_thm
                    symbolic_semi_automaton_REWRITES]
   );
 
-(* The meaning "semantics" of the datastructure *)
+(* The meaning or "semantics" of the data structure:
+   
+   1. initial states (S0) is from SN (number of needed state vars)
+   2. all used vars are from used state vars (SN) and input vars (IV)
+   3. for every input trace `i` and every LTL `l` in binding (B), there exists
+      a fair run (i,w) as the LTL binding run.
+ *)
 val LTL_TO_GEN_BUECHI_DS___SEM_def = Define
    `LTL_TO_GEN_BUECHI_DS___SEM DS =
       !sv. LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR DS sv ==>
@@ -206,8 +222,8 @@ val LTL_TO_GEN_BUECHI_DS___SEM_def = Define
           (LTL_TO_GEN_BUECHI_DS___USED_VARS DS sv SUBSET
            LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS DS sv UNION DS.IV) /\
           (!i. ?w. LTL_TO_GEN_BUECHI_DS___FAIR_RUN DS i w sv /\
-              (!l b1 b2 pf. (l,b1,b2,pf) IN DS.B ==>
-                            LTL_TO_GEN_BUECHI_DS___BINDING_RUN DS w (l,b1,b2,pf) i sv))`;
+               (!l b1 b2 pf. (l,b1,b2,pf) IN DS.B ==>
+                             LTL_TO_GEN_BUECHI_DS___BINDING_RUN DS w (l,b1,b2,pf) i sv))`;
 
 val LTL_TO_GEN_BUECHI_DS___EQUIVALENT_def = Define
    `LTL_TO_GEN_BUECHI_DS___EQUIVALENT DS DS' =
@@ -238,8 +254,8 @@ val LTL_TO_GEN_BUECHI_DS___KRIPKE_STRUCTURE_def = Define
 (* connection between automata_formula (NDET) and LTL_SEM *)
 Theorem LTL_TO_GEN_BUECHI_DS___SEM___MAX :
     !DS l pf sv a.
-    (LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR DS sv /\
-     LTL_TO_GEN_BUECHI_DS___SEM DS /\ (l, T, a, pf) IN DS.B) ==>
+       (LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR DS sv /\
+        LTL_TO_GEN_BUECHI_DS___SEM DS /\ (l, T, a, pf) IN DS.B) ==>
        !i. LTL_SEM i l = A_SEM i (LTL_TO_GEN_BUECHI_DS___A_NDET DS pf sv)
 Proof
     SIMP_TAC std_ss [LTL_TO_GEN_BUECHI_DS___SEM_def, LTL_SEM_def,
@@ -442,7 +458,6 @@ val GEN_BUECHI_KS_SEM___TO___KRIPKE_STRUCTURE_EMPTY = store_thm
       (SYMBOLIC_KRIPKE_STRUCTURE_PRODUCT M
       (symbolic_kripke_structure A.S0 A.R))) fc)``,
 
-
 SIMP_TAC std_ss [A_IS_EMPTY_def, A_KS_SEM_def,
   A_SEM_THM, IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_def,
   IS_FAIR_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def,
@@ -506,8 +521,6 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
   METIS_TAC[INPUT_RUN_PATH_UNION_def]
 ]);
 
-
-
 val LTL_TO_GEN_BUECHI_DS___KS_SEM___KRIPKE_STRUCTURE = store_thm
   ("LTL_TO_GEN_BUECHI_DS___KS_SEM___KRIPKE_STRUCTURE",
 
@@ -542,7 +555,9 @@ val LTL_TO_GEN_BUECHI_DS___KS_SEM___KRIPKE_STRUCTURE = store_thm
         symbolic_semi_automaton_REWRITES, INPUT_RUN_PATH_UNION_def,
         INPUT_RUN_STATE_UNION_def, P_SEM_THM, ACCEPT_COND_PROP_def,
         ACCEPT_COND_SEM_def, ACCEPT_COND_SEM_TIME_def, IMP_DISJ_THM,
-        IS_TRANSITION_def, LTL_TO_GEN_BUECHI_DS___FAIRNESS_CONSTRAINTS_def, MAP_MAP_o, combinTheory.o_DEF, A_KS_SEM_def] THEN
+        IS_TRANSITION_def,
+        LTL_TO_GEN_BUECHI_DS___FAIRNESS_CONSTRAINTS_def, MAP_MAP_o,
+        combinTheory.o_DEF, A_KS_SEM_def] THEN
       FORALL_EQ_STRIP_TAC THEN
       BOOL_EQ_STRIP_TAC THEN
       FORALL_EQ_STRIP_TAC THEN
@@ -561,18 +576,15 @@ val LTL_TO_GEN_BUECHI_DS___KS_SEM___KRIPKE_STRUCTURE = store_thm
     PROVE_TAC[]
   );
 
-
 val LTL_TO_GEN_BUECHI_DS___SEM___CONTRADICTION___KRIPKE_STRUCTURE = save_thm
   ("LTL_TO_GEN_BUECHI_DS___SEM___CONTRADICTION___KRIPKE_STRUCTURE",
     SIMP_RULE std_ss [LTL_TO_GEN_BUECHI_DS___A_NDET___IS_EMPTY___TO___KRIPKE_STRUCTURE_EMPTY]
     LTL_TO_GEN_BUECHI_DS___SEM___CONTRADICTION___MAX);
 
-
 val LTL_TO_GEN_BUECHI_DS___SEM___GEN_CONTRADICTION___KRIPKE_STRUCTURE = save_thm
   ("LTL_TO_GEN_BUECHI_DS___SEM___GEN_CONTRADICTION___KRIPKE_STRUCTURE",
     SIMP_RULE std_ss [LTL_TO_GEN_BUECHI_DS___A_NDET___IS_EMPTY___TO___KRIPKE_STRUCTURE_EMPTY]
     LTL_TO_GEN_BUECHI_DS___SEM___GEN_CONTRADICTION___MAX);
-
 
 val LTL_TO_GEN_BUECHI_DS___SEM___USED_BINDING_VARS = store_thm
   ("LTL_TO_GEN_BUECHI_DS___SEM___USED_BINDING_VARS",
@@ -2739,7 +2751,6 @@ Proof
       METIS_TAC [PATH_EXTENSION_EQUIV_THM]
     ) THEN
 
-
     (*some usefull lemmata*)
     `P_USED_VARS (pf1 sv) SUBSET LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS DS sv UNION DS.IV /\
       P_USED_VARS (pf2 sv) SUBSET LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS DS sv UNION DS.IV` by
@@ -2775,7 +2786,6 @@ Proof
       EXISTS_TAC ``DS.SN`` THEN
       SIMP_TAC arith_ss []
     ) THEN
-
 
     REPEAT STRIP_TAC THENL [
       ASM_SIMP_TAC list_ss [SIMP_RULE std_ss [] EXTEND_LTL_TO_GEN_BUECHI_DS___FAIR_RUN] THEN
@@ -3381,6 +3391,7 @@ Proof
   ]
 QED
 
+(* This is the actual translation (tableaux) algorithm *)
 val LTL_TO_GEN_BUECHI___EXTEND_def = Define
   `(LTL_TO_GEN_BUECHI___EXTEND (LTL_PROP p) b1 b2 DS = ((\sv:num->'a. p:'a prop_logic),
     (EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS DS {(LTL_PROP p, b1, b2, \sv. p)} (P_USED_VARS p)))) /\
