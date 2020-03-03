@@ -26,23 +26,22 @@ val _ = ParseExtras.temp_loose_equality()
  * set of input variables
  *
  * see LTL_TO_GEN_BUECHI_DS___SEM_def for its semantics
- * see LTL_TO_GEN_BUECHI___EXTEND_def for the translation algorithm
+ * see LTL_TO_GEN_BUECHI___EXTEND_def for the actual algorithm
  * see LTL_TO_GEN_BUECHI_def for the translation interface
  * see LTL_TO_GEN_BUECHI_THM for the main theorem
  *
  ****************************************************************)
 
-val _ = type_abbrev ("state",   “:(num -> 'var) -> 'var prop_logic”);
-val _ = type_abbrev ("xstate",  “:(num -> 'var) -> 'var xprop_logic”);
+val _ = type_abbrev ( "state", “:(num -> 'var) -> 'var  prop_logic”);
+val _ = type_abbrev ("xstate", “:(num -> 'var) -> 'var xprop_logic”);
 
-Datatype :
-    ltl_to_gen_buechi_ds =
+Datatype : ltl_to_gen_buechi_ds =
     <| SN: num;                (* number of needed state variables *)
        S0: (num # bool) list;  (* initial states, state variables can be true or false or unspecified *)
        IV: ('var -> bool);     (* the set of input variables *)
        R : ('var xstate) list; (* transition relation *)
-       FC: ('var state) list;  (* fairness conditions *)
-       B : ('var ltl # bool # bool # ('var state)) set (* bindings *)
+       FC: ('var  state) list; (* fairness conditions *)
+       B : ('var ltl # bool # bool # ('var state)) set (* bindings (l, b1, b2, pf) *)
      |>
 End
 
@@ -143,6 +142,9 @@ QED
 
 (* a fair run (i,w), that is "minimal" according to some special propositional formula.
 
+   Why "minimal"? !w'::fair. f(w) <= f(w') or f(w) ==> f(w'), where
+
+   f(w) = P_SEM (INPUT_RUN_PATH_UNION (LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON DS sv) i w t) p
  *)
 val LTL_TO_GEN_BUECHI_DS___MIN_FAIR_RUN_def = Define
    `LTL_TO_GEN_BUECHI_DS___MIN_FAIR_RUN DS i w p sv =
@@ -157,6 +159,9 @@ val LTL_TO_GEN_BUECHI_DS___MAX_FAIR_RUN_def = Define
 
 (* the alternative definition of maximal fair run, only swapping w and w'
 
+   Why "maximal"? !w'::fair. f(w') <= f(w) or f(w') ==> f(w), where
+
+   f(w) = P_SEM (INPUT_RUN_PATH_UNION (LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON DS sv) i w t) p
  *)
 Theorem LTL_TO_GEN_BUECHI_DS___MAX_FAIR_RUN_alt : (* new *)
   !DS i w p sv.
@@ -182,31 +187,31 @@ val LTL_TO_GEN_BUECHI_DS___BINDING_RUN_def = Define
         (b1 ==> LTL_TO_GEN_BUECHI_DS___MAX_FAIR_RUN DS i w (pf sv) sv) /\
         (b2 ==> LTL_TO_GEN_BUECHI_DS___MIN_FAIR_RUN DS i w (pf sv) sv))`;
 
+(* BINDING_RUN and LTL_SEM_TIME
 
-val LTL_TO_GEN_BUECHI_DS___BINDING_RUN___REWRITE = store_thm
-  ("LTL_TO_GEN_BUECHI_DS___BINDING_RUN___REWRITE",
-  ``!DS sv i w l pf b1 b2.
-        LTL_TO_GEN_BUECHI_DS___BINDING_RUN DS w (l, b1, b2, pf) i sv =
-                (!wi. (wi = INPUT_RUN_PATH_UNION (LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON DS sv) i w) ==>
-
-                ((!t. (LTL_SEM_TIME t i l = P_SEM (wi t) (pf sv))) /\
-                 !w' wi'. (LTL_TO_GEN_BUECHI_DS___FAIR_RUN DS i w' sv /\
-                           (wi' = INPUT_RUN_PATH_UNION (LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON DS sv) i w')) ==>
-                           ((!t. (b1 /\ P_SEM (wi' t) (pf sv) ==> P_SEM (wi t) (pf sv))) /\
-                            (!t. (b2 /\ P_SEM (wi t) (pf sv) ==> P_SEM (wi' t) (pf sv))))
-                            ))``,
-
-  SIMP_TAC std_ss [LTL_TO_GEN_BUECHI_DS___BINDING_RUN_def, P_SEM_def,
-    LTL_TO_GEN_BUECHI_DS___MAX_FAIR_RUN_def, LTL_TO_GEN_BUECHI_DS___MIN_FAIR_RUN_def] THEN
-  REPEAT GEN_TAC THEN
-  REMAINS_TAC `!t. (w t UNION (i t DIFF LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS DS sv)) =
-                   (INPUT_RUN_PATH_UNION (LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON DS sv) i w t)` THEN1 (
-    METIS_TAC[]
-  ) THEN
-  SIMP_TAC std_ss [INPUT_RUN_PATH_UNION_def, INPUT_RUN_STATE_UNION_def,
-                   LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def,
-                   symbolic_semi_automaton_REWRITES]
-  );
+   NOTE: If `b1 /\ b2`, then `!wi' t. P_SEM (wi' t) (pf sv) <=> P_SEM (wi t) (pf sv))`
+ *)
+Theorem LTL_TO_GEN_BUECHI_DS___BINDING_RUN___REWRITE :
+    !DS sv i w l pf b1 b2.
+        LTL_TO_GEN_BUECHI_DS___BINDING_RUN DS w (l, b1, b2, pf) i sv <=>
+       !wi. (wi = INPUT_RUN_PATH_UNION (LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON DS sv) i w) ==>
+            (!t. LTL_SEM_TIME t i l = P_SEM (wi t) (pf sv)) /\
+             !w' wi'. LTL_TO_GEN_BUECHI_DS___FAIR_RUN DS i w' sv /\
+                     (wi' = INPUT_RUN_PATH_UNION (LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON DS sv) i w')
+                 ==> (!t. b1 /\ P_SEM (wi' t) (pf sv) ==> P_SEM (wi  t) (pf sv)) /\
+                     (!t. b2 /\ P_SEM (wi  t) (pf sv) ==> P_SEM (wi' t) (pf sv))
+Proof
+    SIMP_TAC std_ss [LTL_TO_GEN_BUECHI_DS___BINDING_RUN_def, P_SEM_def,
+                     LTL_TO_GEN_BUECHI_DS___MAX_FAIR_RUN_def,
+                     LTL_TO_GEN_BUECHI_DS___MIN_FAIR_RUN_def]
+ >> rpt GEN_TAC
+ >> REMAINS_TAC `!t. w t UNION (i t DIFF LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS DS sv) =
+                    (INPUT_RUN_PATH_UNION (LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON DS sv) i w t)`
+ >- METIS_TAC []
+ >> SIMP_TAC std_ss [INPUT_RUN_PATH_UNION_def, INPUT_RUN_STATE_UNION_def,
+                     LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def,
+                     symbolic_semi_automaton_REWRITES]
+QED
 
 (* The meaning or "semantics" of the data structure:
    
@@ -230,7 +235,7 @@ val LTL_TO_GEN_BUECHI_DS___EQUIVALENT_def = Define
       (LTL_TO_GEN_BUECHI_DS___SEM DS = LTL_TO_GEN_BUECHI_DS___SEM DS')`;
 
 (* This meaning implies that all bindings in it, we can easily construct
-   equivalent generalised buechi automata (:'a automata_formula)
+   equivalent generalised buechi automata (of type `:'a automata_formula`)
  *)
 val LTL_TO_GEN_BUECHI_DS___A_NDET_def = Define
    `LTL_TO_GEN_BUECHI_DS___A_NDET DS (pf :(num -> 'a) -> 'a prop_logic) =

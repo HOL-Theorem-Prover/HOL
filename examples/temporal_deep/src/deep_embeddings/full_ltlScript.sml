@@ -1,55 +1,34 @@
 open HolKernel Parse boolLib bossLib;
 
-(*
-quietdec := true;
+open pred_setTheory prop_logicTheory xprop_logicTheory infinite_pathTheory
+     tuerk_tacticsLib numLib arithmeticTheory symbolic_kripke_structureTheory
+     set_lemmataTheory;
 
-val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/tools") :: !loadPath;
-
-map load
- ["prop_logicTheory", "xprop_logicTheory", "infinite_pathTheory", "pred_setTheory", "tuerk_tacticsLib", "numLib", "arithmeticTheory", "symbolic_kripke_structureTheory", "set_lemmataTheory"];
-*)
-
-open pred_setTheory prop_logicTheory xprop_logicTheory infinite_pathTheory tuerk_tacticsLib numLib
-  arithmeticTheory symbolic_kripke_structureTheory set_lemmataTheory;
 open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
 
-(*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
-quietdec := false;
-*)
-
-
 val _ = new_theory "full_ltl";
 val _ = ParseExtras.temp_loose_equality()
-
 
 (******************************************************************************
 * Syntax
 ******************************************************************************)
-val ltl_def =
- Hol_datatype
-  `ltl = LTL_PROP        of 'prop prop_logic
-      | LTL_NOT          of ltl
-      | LTL_AND          of ltl # ltl
-      | LTL_NEXT         of ltl
-      | LTL_SUNTIL       of ltl # ltl
-      | LTL_PSNEXT       of ltl
-      | LTL_PSUNTIL      of ltl # ltl`;
+val _  = Datatype `
+    ltl = LTL_PROP    ('prop prop_logic)
+        | LTL_NOT      ltl
+        | LTL_AND     (ltl # ltl)
+        | LTL_NEXT     ltl         (* X in NuSMV *)
+        | LTL_SUNTIL  (ltl # ltl)  (* U in NuSMV *)
+        | LTL_PSNEXT   ltl         (* Y in NuSMV *)
+        | LTL_PSUNTIL (ltl # ltl)  (* S in NuSMV *)
+`;
 
-val ltl_induct =
- save_thm
-  ("ltl_induct",
-   Q.GEN
-    `P`
-    (MATCH_MP
+val _ = overload_on ("LTL_P_PROP", ``\p. LTL_PROP (P_PROP p)``);
+
+Theorem ltl_induct = Q.GEN `P`
+   (MATCH_MP
      (DECIDE ``(A ==> (B1 /\ B2)) ==> (A ==> B1)``)
      (SIMP_RULE
        std_ss
@@ -58,158 +37,113 @@ val ltl_induct =
         PROVE[]``(!x y. P y ==> Q(x,y)) = !y. P y ==> !x. Q(x,y)``]
        (Q.SPECL
          [`P`,`\(f1,f2). P f1 /\ P f2`]
-         (TypeBase.induction_of ``:'a ltl``)))));
-
+         (TypeBase.induction_of ``:'a ltl``))));
 
 (******************************************************************************
-* Semantic
+* Semantics
 ******************************************************************************)
-val LTL_SEM_TIME_def =
- Define
-   `(LTL_SEM_TIME t v (LTL_NOT f) =
-      ~(LTL_SEM_TIME t v f))
-    /\
-    (LTL_SEM_TIME t v (LTL_AND (f1,f2)) =
-      LTL_SEM_TIME t v f1 /\ LTL_SEM_TIME t v f2)
-    /\
-    (LTL_SEM_TIME t v (LTL_PROP b) =
-       (P_SEM (v t) b))
-    /\
-    (LTL_SEM_TIME t v (LTL_NEXT f) =
-      LTL_SEM_TIME (SUC t) v f)
-    /\
-    (LTL_SEM_TIME t v (LTL_SUNTIL(f1,f2)) =
-      ?k. (k >= t) /\ (LTL_SEM_TIME k v f2) /\ (!j. (t <= j /\ j < k) ==> (LTL_SEM_TIME j v f1)))
-    /\
-    (LTL_SEM_TIME t v (LTL_PSNEXT f) =
-      ((t > 0) /\ LTL_SEM_TIME (PRE t) v f))
-    /\
-    (LTL_SEM_TIME t v (LTL_PSUNTIL(f1,f2)) =
-      ?k. (k <= t) /\ (LTL_SEM_TIME k v f2) /\ (!j. (k < j /\ j <= t) ==> (LTL_SEM_TIME j v f1)))`;
+val LTL_SEM_TIME_def = Define
+  `(LTL_SEM_TIME t v (LTL_NOT f) = ~(LTL_SEM_TIME t v f)) /\
+   (LTL_SEM_TIME t v (LTL_AND (f1,f2)) =
+    LTL_SEM_TIME t v f1 /\ LTL_SEM_TIME t v f2) /\
+   (LTL_SEM_TIME t v (LTL_PROP b) = (P_SEM (v t) b)) /\
+   (LTL_SEM_TIME t v (LTL_NEXT f) = LTL_SEM_TIME (SUC t) v f) /\
+   (LTL_SEM_TIME t v (LTL_SUNTIL (f1,f2)) =
+     ?k. k >= t /\ LTL_SEM_TIME k v f2 /\
+        !j. (t <= j /\ j < k) ==> (LTL_SEM_TIME j v f1)) /\
+   (LTL_SEM_TIME t v (LTL_PSNEXT f) =
+     ((t > 0) /\ LTL_SEM_TIME (PRE t) v f)) /\
+   (LTL_SEM_TIME t v (LTL_PSUNTIL (f1,f2)) =
+     ?k. k <= t /\ LTL_SEM_TIME k v f2 /\
+        !j. (k < j /\ j <= t) ==> (LTL_SEM_TIME j v f1))`;
 
-
-val LTL_SEM_def =
- Define
+val LTL_SEM_def = Define
    `LTL_SEM v f = LTL_SEM_TIME 0 v f`;
 
-
-val LTL_KS_SEM_def =
- Define
+val LTL_KS_SEM_def = Define
    `LTL_KS_SEM M f =
       !p. IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p ==> LTL_SEM p f`;
-
 
 (******************************************************************************
 * Syntactic Sugar
 ******************************************************************************)
-val LTL_EQUIVALENT_def =
- Define
+val LTL_EQUIVALENT_def = Define
    `LTL_EQUIVALENT b1 b2 = !t w. (LTL_SEM_TIME t w b1) = (LTL_SEM_TIME t w b2)`;
 
-val LTL_EQUIVALENT_INITIAL_def =
- Define
+val LTL_EQUIVALENT_INITIAL_def = Define
    `LTL_EQUIVALENT_INITIAL b1 b2 = !w. (LTL_SEM w b1) = (LTL_SEM w b2)`;
 
-val LTL_OR_def =
- Define
+val LTL_OR_def = Define
    `LTL_OR(f1,f2) = LTL_NOT (LTL_AND((LTL_NOT f1),(LTL_NOT f2)))`;
 
-val LTL_IMPL_def =
- Define
+val LTL_IMPL_def = Define
    `LTL_IMPL(f1, f2) = LTL_OR(LTL_NOT f1, f2)`;
 
-val LTL_COND_def =
- Define
+val LTL_COND_def = Define
    `LTL_COND(c, f1, f2) = LTL_AND(LTL_IMPL(c, f1), LTL_IMPL(LTL_NOT c, f2))`;
 
-val LTL_EQUIV_def =
- Define
+val LTL_EQUIV_def = Define
    `LTL_EQUIV(b1, b2) = LTL_AND(LTL_IMPL(b1, b2),LTL_IMPL(b2, b1))`;
 
-
-val LTL_EVENTUAL_def =
- Define
+val LTL_EVENTUAL_def = Define
    `LTL_EVENTUAL f = LTL_SUNTIL (LTL_PROP(P_TRUE),f)`;
 
-val LTL_ALWAYS_def =
- Define
+val LTL_ALWAYS_def = Define
    `LTL_ALWAYS f = LTL_NOT (LTL_EVENTUAL (LTL_NOT f))`;
 
-val LTL_UNTIL_def =
- Define
+val LTL_UNTIL_def = Define
    `LTL_UNTIL(f1,f2) = LTL_OR(LTL_SUNTIL(f1,f2),LTL_ALWAYS f1)`;
 
-val LTL_BEFORE_def =
- Define
+val LTL_BEFORE_def = Define
    `LTL_BEFORE(f1,f2) = LTL_NOT(LTL_SUNTIL(LTL_NOT f1,f2))`;
 
-val LTL_SBEFORE_def =
- Define
+val LTL_SBEFORE_def = Define
    `LTL_SBEFORE(f1,f2) = LTL_SUNTIL(LTL_NOT f2,LTL_AND(f1, LTL_NOT f2))`;
 
-val LTL_WHILE_def =
- Define
+val LTL_WHILE_def = Define
    `LTL_WHILE(f1,f2) = LTL_NOT(LTL_SUNTIL(LTL_OR(LTL_NOT f1, LTL_NOT f2),LTL_AND(f2, LTL_NOT f1)))`;
 
-val LTL_SWHILE_def =
- Define
+val LTL_SWHILE_def = Define
    `LTL_SWHILE(f1,f2) = LTL_SUNTIL(LTL_NOT f2,LTL_AND(f1, f2))`;
 
-
-
-val LTL_PEVENTUAL_def =
- Define
+val LTL_PEVENTUAL_def = Define
    `LTL_PEVENTUAL f = LTL_PSUNTIL (LTL_PROP(P_TRUE),f)`;
 
-val LTL_PALWAYS_def =
- Define
+val LTL_PALWAYS_def = Define
    `LTL_PALWAYS f = LTL_NOT (LTL_PEVENTUAL (LTL_NOT f))`;
 
-val LTL_PUNTIL_def =
- Define
+val LTL_PUNTIL_def = Define
    `LTL_PUNTIL(f1,f2) = LTL_OR(LTL_PSUNTIL(f1,f2),LTL_PALWAYS f1)`;
 
-val LTL_PNEXT_def =
- Define
+val LTL_PNEXT_def = Define
    `LTL_PNEXT f = LTL_NOT(LTL_PSNEXT (LTL_NOT f))`;
 
-val LTL_PBEFORE_def =
- Define
+val LTL_PBEFORE_def = Define
    `LTL_PBEFORE(f1,f2) = LTL_NOT(LTL_PSUNTIL(LTL_NOT f1,f2))`;
 
-val LTL_PSBEFORE_def =
- Define
+val LTL_PSBEFORE_def = Define
    `LTL_PSBEFORE(f1,f2) = LTL_PSUNTIL(LTL_NOT f2,LTL_AND(f1, LTL_NOT f2))`;
 
-val LTL_PWHILE_def =
- Define
+val LTL_PWHILE_def = Define
    `LTL_PWHILE(f1,f2) = LTL_NOT(LTL_PSUNTIL(LTL_OR(LTL_NOT f1, LTL_NOT f2),LTL_AND(f2, LTL_NOT f1)))`;
 
-val LTL_PSWHILE_def =
- Define
+val LTL_PSWHILE_def = Define
    `LTL_PSWHILE(f1,f2) = LTL_PSUNTIL(LTL_NOT f2,LTL_AND(f1, f2))`;
 
-val LTL_TRUE_def =
- Define
+val LTL_TRUE_def = Define
    `LTL_TRUE = LTL_PROP P_TRUE`;
 
-val LTL_FALSE_def =
- Define
+val LTL_FALSE_def = Define
    `LTL_FALSE = LTL_PROP P_FALSE`;
 
-val LTL_INIT_def =
- Define
+val LTL_INIT_def = Define
    `LTL_INIT = LTL_NOT (LTL_PSNEXT (LTL_PROP P_TRUE))`;
-
-
-
 
 (******************************************************************************
 * Classes of LTL
 ******************************************************************************)
 
-val IS_FUTURE_LTL_def =
- Define
+val IS_FUTURE_LTL_def = Define
    `(IS_FUTURE_LTL (LTL_PROP b) = T) /\
     (IS_FUTURE_LTL (LTL_NOT f) = (IS_FUTURE_LTL f)) /\
     (IS_FUTURE_LTL (LTL_AND(f1,f2)) = (IS_FUTURE_LTL f1 /\ IS_FUTURE_LTL f2)) /\
@@ -218,9 +152,7 @@ val IS_FUTURE_LTL_def =
     (IS_FUTURE_LTL (LTL_PSNEXT f) = F) /\
     (IS_FUTURE_LTL (LTL_PSUNTIL(f1,f2)) = F)`;
 
-
-val IS_PAST_LTL_def =
- Define
+val IS_PAST_LTL_def = Define
    `(IS_PAST_LTL (LTL_PROP b) = T) /\
     (IS_PAST_LTL (LTL_NOT f) = (IS_PAST_LTL f)) /\
     (IS_PAST_LTL (LTL_AND(f1,f2)) = (IS_PAST_LTL f1 /\ IS_PAST_LTL f2)) /\
@@ -229,11 +161,7 @@ val IS_PAST_LTL_def =
     (IS_PAST_LTL (LTL_NEXT f) = F) /\
     (IS_PAST_LTL (LTL_SUNTIL(f1,f2)) = F)`;
 
-
-
-
-val IS_LTL_G_def =
- Define
+val IS_LTL_G_def = Define
    `(IS_LTL_G (LTL_PROP p) = T) /\
     (IS_LTL_G (LTL_NOT f) = IS_LTL_F f) /\
     (IS_LTL_G (LTL_AND (f,g)) = (IS_LTL_G f /\ IS_LTL_G g)) /\
