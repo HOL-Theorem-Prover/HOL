@@ -1,10 +1,10 @@
 open HolKernel Parse boolLib bossLib;
 
-open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
-     infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
-     temporal_deep_mixedTheory pred_setTheory rich_listTheory set_lemmataTheory pairTheory rltlTheory
-     ltl_to_automaton_formulaTheory numLib listLib translationsLib rltl_to_ltlTheory psl_to_rltlTheory
-     UnclockedSemanticsTheory SyntacticSugarTheory congLib temporal_deep_simplificationsLib;
+open full_ltlTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
+     symbolic_semi_automatonTheory
+     temporal_deep_mixedTheory rltlTheory
+     ltl_to_automaton_formulaTheory translationsLib rltl_to_ltlTheory psl_to_rltlTheory
+     temporal_deep_simplificationsLib;
 
 open testutils;
 

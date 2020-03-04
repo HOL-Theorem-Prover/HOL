@@ -1,8 +1,9 @@
 structure translationsLib :> translationsLib =
 struct
 
-open HolKernel boolLib bossLib
-     full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
+open HolKernel Parse boolLib bossLib;
+
+open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
      temporal_deep_mixedTheory pred_setTheory rich_listTheory set_lemmataTheory
      pairTheory pred_setSyntax
@@ -12,9 +13,9 @@ open HolKernel boolLib bossLib
 
 exception NoLTLTerm;
 
-(* This function is recursive *)
+(* This function is recursive thus cannot be defined as a value *)
 fun SETIFY_CONV tm =
-    (SUB_CONV (SETIFY_CONV) THENC TRY_CONV (pred_setLib.INSERT_CONV NO_CONV)) tm;
+   (SUB_CONV (SETIFY_CONV) THENC TRY_CONV (pred_setLib.INSERT_CONV NO_CONV)) tm;
 
 (* The translation of LTL to GEN_BUECHI using just rewrite rules *)
 fun ltl2omega_rewrite t l =
@@ -30,7 +31,6 @@ fun ltl2omega_rewrite t l =
                   LTL_ALWAYS_def, LTL_EVENTUAL_def,
                   LTL_TO_GEN_BUECHI_DS___A_NDET_def,
                   LTL_TO_GEN_BUECHI_DS___A_UNIV_def,
-                  LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def,
                   LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def,
                   LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def,
                   LTL_TO_GEN_BUECHI_DS___INITIAL_STATES_def,
@@ -70,7 +70,7 @@ fun dsBindingsExtractFromThm dsThm =
   end;
 
 fun getBindingFor b1 b2 l [] = (false, false, ``dummy:num``)
-    | getBindingFor b1 b2 l (h::l1) =
+  | getBindingFor b1 b2 l (h::l1) =
       let
         val hList = strip_pair h;
         val (l', a1, a2, pf) = (el 1 hList, HOLToBool(el 2 hList), HOLToBool(el 3 hList), el 4 hList);
@@ -81,9 +81,8 @@ fun getBindingFor b1 b2 l [] = (false, false, ``dummy:num``)
           getBindingFor b1 b2 l l1
       end;
 
-
 exception T_IMP_Error;
-val t_imp_elim_rwt = prove (``!x. (T ==> x) = x``, REWRITE_TAC[])
+val t_imp_elim_rwt = prove (``!x. (T ==> x) = x``, REWRITE_TAC[]);
 
 fun T_IMP_ELIM_RULE thm =
   (CONV_RULE (REWR_CONV t_imp_elim_rwt) thm) handle _ => (
@@ -93,8 +92,7 @@ fun T_IMP_ELIM_RULE thm =
     in
       raise T_IMP_Error
     end
-  )
-
+  );
 
 local
   val bindings_compset = new_compset [IN_SING, IN_INSERT, OR_CLAUSES, AND_CLAUSES]
@@ -419,7 +417,6 @@ local
         )
       end;
 
-
   fun dsSingBindingExtractFromThm dsThm =
     let
       val ds = dsExtractFromThm dsThm;
@@ -430,7 +427,6 @@ local
     in
       (ds, l, b1, b2, pf)
     end;
-
 
   local
     val compset = new_compset [MAP, APPEND_NIL,
@@ -622,8 +618,7 @@ in
       end;
 end;
 
-
-(*ltl_to_ks functions*)
+(* ltl_to_ks functions *)
 local
   val final_compset_ks = new_compset [LTL_TO_GEN_BUECHI_DS___A_NDET_def,
                     LTL_TO_GEN_BUECHI_DS___A_UNIV_def,
@@ -632,21 +627,21 @@ local
                     LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def,
                     LTL_TO_GEN_BUECHI_DS___INITIAL_STATES_def,
                     LTL_TO_GEN_BUECHI_DS___FAIRNESS_CONSTRAINTS_def,
-                    MAP, XP_NEXT_THM, XP_CURRENT_THM, P_BIGAND_def, XP_BIGAND_def]
-
+                    MAP, XP_NEXT_THM, XP_CURRENT_THM, P_BIGAND_def, XP_BIGAND_def];
 
   val final_compset_ks___product = new_compset [SYMBOLIC_KRIPKE_STRUCTURE_PRODUCT_def,
     symbolic_kripke_structure_REWRITES, SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def,
     UNION_EMPTY, P_USED_VARS_EVAL, XP_USED_VARS_EVAL, UNION_SING,
-    INSERT_UNION_EQ, INSERT_INSERT]
+    INSERT_UNION_EQ, INSERT_INSERT];
 
   val special_CS = CSFRAG {rewrs  = [],
       relations = [],
       dprocs = [],
       congs  = [IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_cong]};
 
+  val basic_compset = new_compset [ltl_to_gen_buechi_ds_REWRITES, 
+                                   LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR_def];
 
-  val basic_compset = new_compset [ltl_to_gen_buechi_ds_REWRITES, LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR_def]
   val final_cs = mk_congset [prop_logic_CS, xprop_logic_CS, special_CS];
 
 in
@@ -670,7 +665,6 @@ in
       thm
     end;
 
-
   fun ltl_equivalent2ks_fair_emptyness fast l1 l2 =
     let
       val contr_thm = ISPECL [l1, l2] LTL_EQUIVALENT___TO___CONTRADICTION;
@@ -681,7 +675,6 @@ in
       thm
     end;
 
-
   fun ltl_equivalent_initial2ks_fair_emptyness fast l1 l2 =
     let
       val contr_thm = ISPECL [l1, l2] LTL_EQUIVALENT_INITIAL___TO___CONTRADICTION;
@@ -691,7 +684,6 @@ in
     in
       thm
     end;
-
 
   fun ltl_ks_sem2ks_fair_emptyness___no_ks fast l =
     let
@@ -713,7 +705,6 @@ in
       thm
     end;
 
-
   fun ltl_ks_sem2ks_fair_emptyness fast l M =
     let
       val thm = ltl_ks_sem2ks_fair_emptyness___no_ks fast l;
@@ -725,9 +716,7 @@ in
     end;
 end;
 
-
-
-(*ltl_to_ks num functions*)
+(* ltl_to_ks num functions *)
 local
   val used_vars_compset =
     new_compset [LTL_USED_VARS_EVAL,
@@ -1013,7 +1002,6 @@ in
 
 end;
 
-
 fun psl_contradiction2ks_fair_emptyness fast f =
     let
       val (eval_thm, cs_free_thm, ltl_thm, l) = prepare_psl_term f;
@@ -1025,7 +1013,6 @@ fun psl_contradiction2ks_fair_emptyness fast f =
     in
       thm
     end
-
 
 fun psl_contradiction2ks_fair_emptyness___num mode fast f =
     let
@@ -1039,7 +1026,6 @@ fun psl_contradiction2ks_fair_emptyness___num mode fast f =
       (thm, uv)
     end
 
-
 fun psl_ks_sem2ks_fair_emptyness___no_ks fast f =
     let
       val (eval_thm, cs_free_thm, ltl_thm, l) = prepare_psl_term f;
@@ -1047,13 +1033,11 @@ fun psl_ks_sem2ks_fair_emptyness___no_ks fast f =
       val to_ltl_thm = ISPEC f to_ltl_thm;
       val to_ltl_thm = MP to_ltl_thm cs_free_thm
 
-
       val thm = ltl_ks_sem2ks_fair_emptyness___no_ks fast l
       val thm = REWRITE_RULE [GSYM ltl_thm, GSYM to_ltl_thm] thm
     in
       thm
     end
-
 
 fun psl_ks_sem2ks_fair_emptyness fast f M =
     let
@@ -1067,8 +1051,6 @@ fun psl_ks_sem2ks_fair_emptyness fast f M =
       thm
     end
 
-
-
 fun psl_ks_sem2ks_fair_emptyness___num mode fast f M =
     let
       val (eval_thm, cs_free_thm, ltl_thm, l) = prepare_psl_term f;
@@ -1080,7 +1062,6 @@ fun psl_ks_sem2ks_fair_emptyness___num mode fast f M =
     in
       (thm, uv)
     end
-
 
 fun psl_equivalent2ks_fair_emptyness fast f1 f2 =
   let
@@ -1099,9 +1080,6 @@ fun psl_equivalent2ks_fair_emptyness fast f1 f2 =
   in
     thm
   end;
-
-
-
 
 fun psl_equivalent2ks_fair_emptyness___num mode fast f1 f2 =
   let
