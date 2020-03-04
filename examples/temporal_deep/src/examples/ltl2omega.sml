@@ -1,4 +1,7 @@
-open HolKernel boolLib bossLib;
+structure ltl2omega :> ltl2omega =
+struct
+
+open HolKernel Parse boolLib bossLib;
 
 open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
@@ -290,7 +293,7 @@ val test_cases =
 
 val _ = List.app (ignore o ltl2omega_test) test_cases;
 
-(* simplified tests, only make sure the test function has no exception *)
+(* simplified tests, only make sure the test raise no exception *)
 fun ltl2omega_test_simple (test_fn, problem) = let
     val _ = tprint (term_to_string problem);
 in
@@ -434,4 +437,4 @@ LTL_TO_GEN_BUECHI_DS___MIN_FAIR_RUN_def
 LTL_TO_GEN_BUECHI_DS___MAX_FAIR_RUN_def
 *)
 
-val _ = Process.exit Process.success;
+end

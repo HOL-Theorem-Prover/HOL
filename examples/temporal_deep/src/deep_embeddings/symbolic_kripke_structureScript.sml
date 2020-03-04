@@ -12,8 +12,9 @@ val _ = hide "K";
 
 val _ = new_theory "symbolic_kripke_structure";
 
-(* NOTE: symbolic_semi_automaton has concepts of input vars,
-         while symbolic_kripke_structure doesn't have.
+(* NOTE: `symbolic_semi_automaton` has concepts of input vars, used as the translation
+   results of LTL, etc., while `symbolic_kripke_structure` has only state variables,
+   thus only suitable for representing system models (no fairness constraints).
  *)
 Datatype : symbolic_kripke_structure =
     <| S0: 'state prop_logic; (* initial states *)
@@ -31,14 +32,14 @@ Theorem symbolic_kripke_structure_REWRITES = LIST_CONJ
     symbolic_kripke_structure_11];
 
 val IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def = Define
-   `IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K p =
-     ((!n. XP_SEM K.R (p n, p (SUC n))))`;
+   `IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K p = !n. XP_SEM K.R (p n, p (SUC n))`;
 
 val IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def = Define
    `IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K FC p =
      (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K p /\
       (!b. MEM b FC ==> (!t0. ?t. t >= t0 /\ (P_SEM (p t) b))))`;
 
+(* added quantifiers *)
 Theorem IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE___ALTERNATIVE_DEF :
     !K FC p.
         IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K FC p =
