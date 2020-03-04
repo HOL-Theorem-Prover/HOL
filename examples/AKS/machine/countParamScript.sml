@@ -111,7 +111,8 @@ val _ = monadsyntax.enable_monad "Count";
                                     param_seekM m c n 2
                                   od
                               od
-#  param_seekM_value   |- !m c n k. valueOf (param_seekM m c n k) = param_seek m c n k
+#  param_seekM_value   |- !m c n k. valueOf (param_seekM m c n k) =
+                                    if k = 0 then bad else param_seek m c n k
 #  paramM_value        |- !n. valueOf (paramM n) = param n
    paramM_value_alt    |- !n. valueOf (paramM n) = aks_param n
 
@@ -150,7 +151,7 @@ val _ = monadsyntax.enable_monad "Count";
                                               size (m - ordz k n) + if m <= ordz k n then 0 else size k
                                     in !k. body k <=
                                            TWICE (size m) + TWICE (size c) + 4 * size k +
-                                           size n * size k + 29 * k * size n * size k ** 7)
+                                           size n * size k + 27 * k * size n * size k ** 7)
    param_seekM_body_bound
                        |- !m c n. (let body k = size k +
                                          if k = 0 then 0
@@ -159,18 +160,18 @@ val _ = monadsyntax.enable_monad "Count";
                                          else stepsOf (ordzM k n) + size (MAX m (ordz k n)) +
                                               size (m - ordz k n) + if m <= ordz k n then 0 else size k
                                     in !k. body k <=
-                                           38 * MAX 1 k * size m * size c * size n * size k ** 7)
+                                           36 * MAX 1 k * size m * size c * size n * size k ** 7)
    param_seekM_steps_upper
                        |- !m c n k. stepsOf (param_seekM m c n k) <=
                                     1 + TWICE (size (MAX c k)) +
-                                        38 * (c - k) * c * size m * size n * size c ** 8
+                                        36 * (c - k) * c * size m * size n * size c ** 8
    param_seekM_steps_bound
                        |- !m c n k. stepsOf (param_seekM m c n k) <=
-                                    41 * MAX 1 (c - k) * MAX 1 c * size (MAX c k) * size m * size n *
+                                    39 * MAX 1 (c - k) * MAX 1 c * size (MAX c k) * size m * size n *
                                          size c ** 7
    paramM_steps_upper  |- !n. stepsOf (paramM n) <=
-                                 19 * size n + 16904 * size n ** 2 + 1418141046 * size n ** 20
-   paramM_steps_bound  |- !n. stepsOf (paramM n) <= 1418157969 * size n ** 20
+                                 19 * size n + 16904 * size n ** 2 + 1348963434 * size n ** 20
+   paramM_steps_bound  |- !n. stepsOf (paramM n) <= 1348980357 * size n ** 20
    paramM_steps_O_poly |- stepsOf o paramM IN O_poly 20
    paramM_steps_big_O  |- stepsOf o paramM IN big_O (\n. ulog n ** 20)
    paramM_thm          |- !n. (valueOf (paramM n) = param n) /\
@@ -216,11 +217,17 @@ val _ = computeLib.set_skip computeLib.the_compset ``ifM`` (SOME 1);
 > param_seek_def;
 val it = |- !n m k c.
           param_seek m c n k =
-          if k = 0 then bad
-          else if c <= k then bad
+          if c <= k then bad
           else if n MOD k = 0 then nice k
           else if m <= ordz k n then good k
           else param_seek m c n (k + 1): thm
+*)
+(* Although param_seek_def does not check k = 0, as the caller ensures k = 2,
+param_seekM_def has to check k = 0, in order that complexity analysis can be
+carried out independently on (param_seek m c n k), for all values of k.
+This is particular true when going deeper into !k. body k <= cover k, and MONO cover.
+If (param_seek m c n 0) is undefined, it is difficult to bound (body k),
+unless we develop a theory of partial cover and partial MONO, to derive partial bounds.
 *)
 
 (* Define the parameter seek loop *)
@@ -252,7 +259,7 @@ val param_seekM_def = tDefine "param_seekM" `
 
 (*
 > EVAL ``param_seekM 25 31 31 2``;
-val it = |- param_seekM 31 25 31 31 = (good 29,Count 39367): thm
+val it = |- param_seekM 31 25 31 31 = (good 29,Count 38712): thm
 
 Step 2: Use 31 to find a suitable k to make the modulus x^k - 1
 AKS parameter search: n=31, m=25
@@ -288,7 +295,7 @@ val paramM_def = Define`
 
 (*
 > EVAL ``paramM 31``;
-val it = |- paramM 31 = (good 29,Count 40083): thm
+val it = |- paramM 31 = (good 29,Count 39428): thm
 *)
 
 
@@ -296,9 +303,10 @@ val it = |- paramM 31 = (good 29,Count 40083): thm
 (* Proof: by param_seekM_def, param_seek_def *)
 val param_seekM_value = store_thm(
   "param_seekM_value[simp]",
-  ``!m c n k. valueOf (param_seekM m c n k) = param_seek m c n k``,
+  ``!m c n k. valueOf (param_seekM m c n k) =
+             if k = 0 then bad else param_seek m c n k``,
   ho_match_mp_tac (theorem "param_seekM_ind") >>
-  rw[] >>
+  rpt strip_tac >>
   (rw[Once param_seekM_def, Once param_seek_def] >> fs[]));
 
 (* Theorem: valueOf (paramM n) = param n *)
@@ -403,14 +411,15 @@ val paramM_steps_thm = store_thm(
   rw[paramM_def, ulog_eq_0, ulog_eq_1, size_max]);
 
 (* Theorem: let quit k = 2 * size m + if m <= 1 then 0 else if k = 0 then 1 else 1 + 2 * size k;
-                 body k = 2 * size m + if m <= 1 then 0
+                body k = 2 * size m + if m <= 1 then 0
                    else size k + if k = 0 then 0
                    else size c + size (c - k) + size n * size k + size (n MOD k) + if n MOD k = 0 then 0
                    else stepsOf (ordzM k n) + size (MAX m (ordz k n)) + size (m - ordz k n) + if m <= ordz k n then 0
                    else size k;
-                 exit k = ((k = 0) \/ (n MOD k = 0) \/ m <= ordz k n)
-              in !k. stepsOf (param_seekM m c n k) = if c <= k then quit k
-                     else body k + if exit k then 0 else stepsOf (param_seekM m c n (k + 1)) *)
+                exit k = ((k = 0) \/ (n MOD k = 0) \/ m <= ordz k n)
+             in !k. stepsOf (param_seekM m c n k) =
+                    if c <= k then quit k
+                    else body k + if exit k then 0 else stepsOf (param_seekM m c n (k + 1)) *)
 (* Proof:
      stepsOf (param_seekM m c n k)
    = size k + if k = 0 then 0
@@ -483,8 +492,9 @@ suitable for: loop_inc_count_cover_exit_le
       else stepsOf (ordzM k n) + size (MAX m (ordz k n)) + size (m - ordz k n) + if m <= ordz k n then 0
       else size k                                      by given
    <= size k + size c + size (c - k) + size n * size k + size (n MOD k) +
-      stepsOf (ordzM k n) + size (MAX m (ordz k n)) + size (m - ordz k n) + size k
-                                                       by every if-conditions set to false
+      stepsOf (ordzM k n) + size (MAX m (ordz k n)) + size (m - ordz k n) +
+      if m <= ordz k n then 0 else size k
+                                                       by ignoring n MOD k = 0
       Note c - k <= c, so size (c - k) <= size c       by size_monotone_le
        and size (m - ordz k n) <= size m               by size_monotone_le
        and n MOD k < k                                 by MOD_LESS, k <> 0
@@ -493,7 +503,7 @@ suitable for: loop_inc_count_cover_exit_le
            size (MAX m (ordz k n)) = size (ordz k n)   by MAX_DEF
        now ordz k n <= k                               by ZN_order_le, 0 < k
         so size (MAX m (ordz k n)) <= size k           by size_monotone_le
-        but size k is included when we ignore m <= ordz k n.
+        but m <= ordz k n gives the last term 0.
       If ~(m <= ordz k n), or ordz k n < m
         so size (MAX m (ordz k n)) = size m            by MAX_DEF
  Thus body k
@@ -502,10 +512,10 @@ suitable for: loop_inc_count_cover_exit_le
     = 2 * size m + 2 * size c + 4 * size k + size n * size k + stepsOf (ordzM k n)
 
       stepsOf (ordzM k n)
-   <= 29 * MAX 1 k * size n * size k ** 7              by ordzM_steps_bound
-    = 29 * k * size n * size k ** 7                    by MAX_DEF, k <> 0
+   <= 27 * MAX 1 k * size n * size k ** 7              by ordzM_steps_bound
+    = 27 * k * size n * size k ** 7                    by MAX_DEF, k <> 0
  Thus body k
-   <= 2 * size m + 2 * size c + 4 * size k + size n * size k + 29 * k * size n * size k ** 7
+   <= 2 * size m + 2 * size c + 4 * size k + size n * size k + 27 * k * size n * size k ** 7
 *)
 val param_seekM_body_upper = store_thm(
   "param_seekM_body_upper",
@@ -515,7 +525,7 @@ val param_seekM_body_upper = store_thm(
                else stepsOf (ordzM k n) + size (MAX m (ordz k n)) + size (m - ordz k n) + if m <= ordz k n then 0
                else size k
             in !k. body k <=
-                   2 * size m + 2 * size c + 4 * size k + size n * size k + 29 * k * size n * size k ** 7``,
+                   2 * size m + 2 * size c + 4 * size k + size n * size k + 27 * k * size n * size k ** 7``,
   rw_tac std_ss[] >>
   Cases_on `k = 0` >> simp[Abbr`body`] >>
   `size (c - k) <= size c` by rw[size_monotone_le] >>
@@ -524,7 +534,7 @@ val param_seekM_body_upper = store_thm(
   `size (m - ordz k n) <= size m` by rw[size_monotone_le] >>
   `size (n MOD k) <= size k` by rw[MOD_LESS, size_monotone_lt] >>
   `MAX 1 k = k` by rw[MAX_DEF] >>
-  `stepsOf (ordzM k n) <= 29 * k * size n * size k ** 7` by metis_tac[ordzM_steps_bound] >>
+  `stepsOf (ordzM k n) <= 27 * k * size n * size k ** 7` by metis_tac[ordzM_steps_bound] >>
   (Cases_on `m <= ordz k n` >> simp[]) >| [
     `MAX m (ordz k n) = ordz k n` by rw[MAX_DEF] >>
     `ordz k n <= k` by rw[ZN_order_le] >>
@@ -540,14 +550,14 @@ val param_seekM_body_upper = store_thm(
                  else size c + size (c - k) + size n * size k + size (n MOD k) + if n MOD k = 0 then 0
                  else stepsOf (ordzM k n) + size (MAX m (ordz k n)) + size (m - ordz k n) + if m <= ordz k n then 0
                  else size k
-              in body k <= 38 * (MAX 1 k) * size m * size c * size n * size k ** 7 *)
+              in body k <= 36 * (MAX 1 k) * size m * size c * size n * size k ** 7 *)
 (* Proof:
        body k
-    <= 2 * size m + 2 * size c + 4 * size k + size n * size k + 29 * k * size n * size k ** 7
+    <= 2 * size m + 2 * size c + 4 * size k + size n * size k + 27 * k * size n * size k ** 7
                                                by param_seekM_body_upper
-    <= (2 + 2 + 4 + 1 + 29) * k * size m * size c * size n * size k ** 7
+    <= (2 + 2 + 4 + 1 + 27) * k * size m * size c * size n * size k ** 7
                                                by dominant term
-     = 38 * k * size m * size c * size n * size k ** 7
+     = 36 * k * size m * size c * size n * size k ** 7
    Use (MAX 1 k) to cater for k = 0.
 *)
 val param_seekM_body_bound = store_thm(
@@ -557,7 +567,7 @@ val param_seekM_body_bound = store_thm(
                else size c + size (c - k) + size n * size k + size (n MOD k) + if n MOD k = 0 then 0
                else stepsOf (ordzM k n) + size (MAX m (ordz k n)) + size (m - ordz k n) + if m <= ordz k n then 0
                else size k
-            in !k. body k <= 38 * (MAX 1 k) * size m * size c * size n * size k ** 7``,
+            in !k. body k <= 36 * (MAX 1 k) * size m * size c * size n * size k ** 7``,
   rpt strip_tac >>
   assume_tac param_seekM_body_upper >>
   last_x_assum (qspecl_then [`m`, `c`, `n`] strip_assume_tac) >>
@@ -598,7 +608,7 @@ val param_seekM_body_bound = store_thm(
   decide_tac);
 
 (* Theorem: stepsOf (param_seekM m c n k) <=
-            1 + 2 * size (MAX c k) + (c - k) * 38 * c * size m * size n * size c ** 8 *)
+            1 + 2 * size (MAX c k) + (c - k) * 36 * c * size m * size n * size c ** 8 *)
 (* Proof:
    Let quit = (\k. if k = 0 then 1 else 1 + 2 * size k),
        body = (\k. size k +
@@ -606,7 +616,7 @@ val param_seekM_body_bound = store_thm(
                  else size c + size (c - k) + size n * size k + size (n MOD k) + if n MOD k = 0 then 0
                  else stepsOf (ordzM k n) + size (MAX m (ordz k n)) + size (m - ordz k n) + if m <= ordz k n then 0
                  else size k),
-       cover = (\k. 38 * (MAX 1 k) * size m * size c * size n * size k ** 7),
+       cover = (\k. 36 * (MAX 1 k) * size m * size c * size n * size k ** 7),
        exit = (\k. k = 0 \/ n MOD k = 0 \/ m <= ordz k n)
        loop = (\k. stepsOf (param_seekM m c n k)).
 
@@ -627,15 +637,15 @@ val param_seekM_body_bound = store_thm(
       loop k <= quit c + (c - k) * cover c     keep (c - k).
       Note 0 < c                               by k < c
         so quit c = 1 + 2 * size c
-       and cover c = 38 * (MAX 1 c) * size m * size c * size n * size c ** 7
-                   = 38 * c * size m * size n * size c ** 8
+       and cover c = 36 * (MAX 1 c) * size m * size c * size n * size c ** 7
+                   = 36 * c * size m * size n * size c ** 8
    Putting all together,
-      loop k <= 1 + 2 * size (MAX c k) + (c - k) * 38 * c * size m * size n * size c ** 8.
+      loop k <= 1 + 2 * size (MAX c k) + (c - k) * 36 * c * size m * size n * size c ** 8.
 *)
 val param_seekM_steps_upper = store_thm(
   "param_seekM_steps_upper",
   ``!m c n k. stepsOf (param_seekM m c n k) <=
-             1 + 2 * size (MAX c k) + 38 * (c - k) * c * size m * size n * size c ** 8``,
+             1 + 2 * size (MAX c k) + 36 * (c - k) * c * size m * size n * size c ** 8``,
   rpt strip_tac >>
   assume_tac param_seekM_steps_by_inc_loop >>
   last_x_assum (qspecl_then [`m`, `c`, `n`] strip_assume_tac) >>
@@ -647,10 +657,10 @@ val param_seekM_steps_upper = store_thm(
                  else size c + size (c - k) + size n * size k + size (n MOD k) + if n MOD k = 0 then 0
                  else stepsOf (ordzM k n) + size (MAX m (ordz k n)) + size (m - ordz k n) + if m <= ordz k n then 0
                  else size k` >>
-  qabbrev_tac `cover = \k. 38 * (MAX 1 k) * size m * size c * size n * size k ** 7` >>
+  qabbrev_tac `cover = \k. 36 * (MAX 1 k) * size m * size c * size n * size k ** 7` >>
   qabbrev_tac `exit = \k. (k = 0) \/ (n MOD k = 0) \/ m <= ordz k n` >>
   qabbrev_tac `loop = \k. stepsOf (param_seekM m c n k)` >>
-  `loop k <= 1 + 2 * size (MAX c k) + 38 * (c - k) * c * size m * size n * size c ** 8` suffices_by rw[] >>
+  `loop k <= 1 + 2 * size (MAX c k) + 36 * (c - k) * c * size m * size n * size c ** 8` suffices_by rw[] >>
   `!k. loop k = if c <= k then quit k else body k + if exit k then 0 else loop (k + 1)` by metis_tac[] >>
   `0 < 1` by decide_tac >>
   `!x. body x <= cover x` by metis_tac[] >>
@@ -672,34 +682,34 @@ val param_seekM_steps_upper = store_thm(
     `bop 1 c k = c - k` by rw[bop_1_m_c] >>
     `z = c` by rw[Abbr`z`] >>
     `size (MAX c k) = size c` by rw[size_monotone_le, MAX_DEF] >>
-    `cover z = 38 * MAX 1 c * size m * size c * size n * size c ** 7` by rw[Abbr`cover`] >>
+    `cover z = 36 * MAX 1 c * size m * size c * size n * size c ** 7` by rw[Abbr`cover`] >>
     `MAX 1 c = c` by rw[MAX_DEF] >>
     `size c * size c ** 7 = size c ** 8` by rw[] >>
-    `38 * MAX 1 c * size m * size c * size n * size c ** 7 =
-    38 * MAX 1 c * size m * size n * (size c * size c ** 7)` by decide_tac >>
-    `_ = 38 * c * size m * size n * size c ** 8` by rw[] >>
+    `36 * MAX 1 c * size m * size c * size n * size c ** 7 =
+    36 * MAX 1 c * size m * size n * (size c * size c ** 7)` by decide_tac >>
+    `_ = 36 * c * size m * size n * size c ** 8` by rw[] >>
     `quit z <= 1 + 2 * size c` by rw[Abbr`quit`] >>
-    `bop 1 c k * cover z = (c - k) * (38 * c * size m * size n * size c ** 8)` by metis_tac[] >>
+    `bop 1 c k * cover z = (c - k) * (36 * c * size m * size n * size c ** 8)` by metis_tac[] >>
     `size c <= size (MAX c k)` by rw[size_monotone_le] >>
     decide_tac
   ]);
 
 (* Theorem: stepsOf (param_seekM m c n k) <=
-            45 * (MAX 1 ((c - k) * c)) * size (MAX c k) * size m * size n * size c ** 7 *)
+            39 * (MAX 1 ((c - k) * c)) * size (MAX c k) * size m * size n * size c ** 7 *)
 (* Proof:
       stepsOf (param_seekM m c n k)
-   <= 1 + 2 * size (MAX c k) + 38 * (c - k) * c * size m * size n * size c ** 8
+   <= 1 + 2 * size (MAX c k) + 36 * (c - k) * c * size m * size n * size c ** 8
                                                     by param_seekM_steps_upper
-   <= (1 + 2 + 38) * (c - k) * c * size (MAX c k) * size m * size n * size c ** 7
+   <= (1 + 2 + 36) * (c - k) * c * size (MAX c k) * size m * size n * size c ** 7
                                                     by dominant term
-    = 41 * (c - k) * c * size (MAX c k) * size m * size n * size c ** 7
+    = 39 * (c - k) * c * size (MAX c k) * size m * size n * size c ** 7
    Use (MAX 1 (c - k)) to cater for c = k,
    and (MAX 1 c) to cater for c = 0.
 *)
 val param_seekM_steps_bound = store_thm(
   "param_seekM_steps_bound",
   ``!m c n k. stepsOf (param_seekM m c n k) <=
-             41 * (MAX 1 (c - k)) * (MAX 1 c) * size (MAX c k) * size m * size n * size c ** 7``,
+             39 * (MAX 1 (c - k)) * (MAX 1 c) * size (MAX c k) * size m * size n * size c ** 7``,
   rpt strip_tac >>
   assume_tac param_seekM_steps_upper >>
   last_x_assum (qspecl_then [`m`, `c`, `n`, `k`] strip_assume_tac) >>
@@ -707,7 +717,7 @@ val param_seekM_steps_bound = store_thm(
   qabbrev_tac `y = MAX 1 c` >>
   qabbrev_tac `z = MAX c k` >>
   qabbrev_tac `t = x * y * size z * size m * size n * size c ** 7` >>
-  `stepsOf (param_seekM m c n k) <= 41 * t` suffices_by rw[Abbr`t`] >>
+  `stepsOf (param_seekM m c n k) <= 39 * t` suffices_by rw[Abbr`t`] >>
   `1 <= x /\ (c - k) <= x` by rw[MAX_DEF, Abbr`x`] >>
   `1 <= y /\ c <= y` by rw[Abbr`y`] >>
   `c <= z /\ k <= z` by rw[Abbr`z`] >>
@@ -780,10 +790,10 @@ val param_seekM_steps_bound = store_thm(
           <= 15 * (5 ** 3) * (3 ** 2) * size n ** 2
            = 16875 * size n ** 2
      Now z = stepsOf (param_seekM (SQ (ulog n)) (2 + HALF (ulog n ** 5)) n 2)  for #6 term
-          <= 41 * MAX 1 h * MAX 1 (2 + h) * size (MAX (2 + h) 2) * size m * size n * size (2 + h) ** 7
+          <= 39 * MAX 1 h * MAX 1 (2 + h) * size (MAX (2 + h) 2) * size m * size n * size (2 + h) ** 7
                                                    by param_seekM_steps_bound, m = SQ (ulog n)
-           = 41 * MAX 1 h * (2 + h) * size (2 + h) * size (SQ (ulog n)) * size n * size (2 + h) ** 7
-           = 41 * MAX 1 h * (2 + h) * size (SQ (ulog n)) * size n * size (2 + h) ** 8
+           = 39 * MAX 1 h * (2 + h) * size (2 + h) * size (SQ (ulog n)) * size n * size (2 + h) ** 7
+           = 39 * MAX 1 h * (2 + h) * size (SQ (ulog n)) * size n * size (2 + h) ** 8
 
      Note MAX 1 h <= MAX 1 k = k                   by MAX_LE, 1 <= k, h <= k, 0 < k
       and 2 + h <= 3 * k                           by above
@@ -793,20 +803,21 @@ val param_seekM_steps_bound = store_thm(
        <= 2 * size n                               by size_size_le
       and size (2 + h) <= 7 * size n               by above
 
-     Thus z <= 41 * size n ** 5 * 3 * size n ** 5 * (2 * size n) * size n * (7 * size n) ** 8
-             = 41 * 3 * 2 * 7 ** 8 * size n ** (5 + 5 + 1 + 1 + 8)   by EXP_ADD
-             = 1418141046 * size n ** 20
+     Thus z <= 39 * size n ** 5 * 3 * size n ** 5 * (2 * size n) * size n * (7 * size n) ** 8
+             = 39 * 3 * 2 * 7 ** 8 * size n ** (5 + 5 + 1 + 1 + 8)   by EXP_ADD
+             = 1348963434 * size n ** 20
 
     Finally,
          stepsOf (paramM n)
       <= 2 * size n + size n ** 2 + 2 * (5 * size n) + 7 * size n +
-         28 * size n ** 2 + 16875 * size n ** 2 + 1418141046 * size n ** 20
-       = 19 * size n + (1 + 28 + 16875) * size n ** 2 + 1418141046 * size n ** 20
-       = 19 * size n + 16904 * size n ** 2 + 1418141046 * size n ** 20
+         28 * size n ** 2 + 16875 * size n ** 2 + 1348963434 * size n ** 20
+       = 19 * size n + (1 + 28 + 16875) * size n ** 2 + 1348963434 * size n ** 20
+       = 19 * size n + 16904 * size n ** 2 + 1348963434 * size n ** 20
 *)
 val paramM_steps_upper = store_thm(
   "paramM_steps_upper",
-  ``!n. stepsOf (paramM n) <= 19 * size n + 16904 * size n ** 2 + 1418141046 * size n ** 20``,
+  ``!n. stepsOf (paramM n) <=
+       19 * size n + 16904 * size n ** 2 + 1348963434 * size n ** 20``,
   rpt strip_tac >>
   assume_tac paramM_steps_thm >>
   last_x_assum (qspec_then `n` strip_assume_tac) >>
@@ -853,8 +864,8 @@ val paramM_steps_upper = store_thm(
   `15 * MAX 1 5 ** 3 * size (ulog n) ** 2 * (size 5) ** 2 = 15 * 125 * 9 * size (ulog n) ** 2` by rw[] >>
   `size (ulog n) ** 2 <= size n ** 2` by rw[] >>
   decide_tac) >>
-  `z <= 1418141046 * size n ** 20` by
-        (`z <= 41 * MAX 1 (2 + h - 2) * (MAX 1 (2 + h)) * size (MAX (2 + h) 2) * size (SQ (ulog n)) * size n * size (2 + h) ** 7` by rw[param_seekM_steps_bound, Abbr`z`, Abbr`h`] >>
+  `z <= 1348963434 * size n ** 20` by
+        (`z <= 39 * MAX 1 (2 + h - 2) * (MAX 1 (2 + h)) * size (MAX (2 + h) 2) * size (SQ (ulog n)) * size n * size (2 + h) ** 7` by rw[param_seekM_steps_bound, Abbr`z`, Abbr`h`] >>
   `2 + h - 2 = h` by decide_tac >>
   `MAX 1 h <= MAX 1 k` by rw[] >>
   `MAX 1 k = k` by rw[MAX_DEF, Abbr`k`] >>
@@ -870,28 +881,29 @@ val paramM_steps_upper = store_thm(
   `size (2 + h) ** 7 <= (7 * size n) ** 7` by rw[] >>
   `(7 * size n) ** 7 = 7 ** 7 * size n ** 7` by rw[EXP_BASE_MULT] >>
   `size (2 + h) ** 7 <= 7 ** 7 * size n ** 7` by decide_tac >>
-  `41 * MAX 1 (2 + h - 2) * MAX 1 (2 + h) * size (MAX (2 + h) 2) * size (SQ (ulog n)) * size n * size (2 + h) ** 7 <=
-    41 * size n ** 5 * (3 * size n ** 5) * (7 * size n) * (2 * size n) * size n * (7 ** 7 * size n ** 7)` by rw[LE_MONO_MULT2] >>
-  `z <= 41 * 3 * 7 * 2 * 7 ** 7 * (size n ** 5 * size n ** 5 * size n * size n * size n * size n ** 7)` by decide_tac >>
+  `39 * MAX 1 (2 + h - 2) * MAX 1 (2 + h) * size (MAX (2 + h) 2) * size (SQ (ulog n)) * size n * size (2 + h) ** 7 <=
+    39 * size n ** 5 * (3 * size n ** 5) * (7 * size n) * (2 * size n) * size n * (7 ** 7 * size n ** 7)` by rw[LE_MONO_MULT2] >>
+  `z <= 39 * 3 * 7 * 2 * 7 ** 7 * (size n ** 5 * size n ** 5 * size n * size n * size n * size n ** 7)` by decide_tac >>
   `SQ (size n ** 5) * size n * size n * size n * size n ** 7 =
     SQ (size n ** 5) * size n ** 1 * size n ** 1 * size n ** 1 * size n ** 7` by rw[] >>
   `_ = size n ** 20` by rw[] >>
-  `41 * 3 * 7 * 2 * 7 ** 7 = 1418141046` by EVAL_TAC >>
+  `39 * 3 * 7 * 2 * 7 ** 7 = 1348963434` by EVAL_TAC >>
   metis_tac[]) >>
   decide_tac);
 
-(* Theorem: stepsOf (paramM n) <= 1418157969 * size n ** 20 *)
+(* Theorem: stepsOf (paramM n) <= 1348980357 * size n ** 20 *)
 (* Proof:
       stepsOf (paramM n)
-   <= 19 * size n + 16904 * size n ** 2 + 1418141046 * size n ** 20   by paramM_steps_upper
-   <= (19 + 16904 + 1418141046) * size n ** 20                        by dominant term
-    = 1418157969 * size n ** 20
+   <= 19 * size n + 16904 * size n ** 2 + 1348963434 * size n ** 20   by paramM_steps_upper
+   <= (19 + 16904 + 1348963434) * size n ** 20                        by dominant term
+    = 1348980357 * size n ** 20
 *)
 val paramM_steps_bound = store_thm(
   "paramM_steps_bound",
-  ``!n. stepsOf (paramM n) <= 1418157969 * size n ** 20``,
+  ``!n. stepsOf (paramM n) <= 1348980357 * size n ** 20``,
   rpt strip_tac >>
-  `stepsOf (paramM n) <= 19 * size n + 16904 * size n ** 2 + 1418141046 * size n ** 20` by rw[paramM_steps_upper] >>
+  assume_tac paramM_steps_upper >>
+  last_x_assum (qspec_then `n` strip_assume_tac) >>
   `size n ** 1 <= size n ** 20` by rw[EXP_BASE_LEQ_MONO_IMP] >>
   `size n ** 2 <= size n ** 20` by rw[EXP_BASE_LEQ_MONO_IMP] >>
   `size n = size n ** 1` by rw[] >>
@@ -901,8 +913,8 @@ val paramM_steps_bound = store_thm(
 (* Proof:
    By O_poly_thm, this is to show:
       ?h k. !n. h < n ==> stepsOf (paramM n) <= k * size n ** 20
-   Note stepsOf (paramM n) <= 1556513191 * size n ** 17   by paramM_steps_bound
-   Take any h, but use k = 1556513191, the result follows.
+   Note stepsOf (paramM n) <= 1348980357 * size n ** 17   by paramM_steps_bound
+   Take any h, but use k = 1348980357, the result follows.
 *)
 val paramM_steps_O_poly = store_thm(
   "paramM_steps_O_poly",

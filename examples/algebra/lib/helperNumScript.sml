@@ -188,6 +188,10 @@ open gcdTheory; (* for P_EUCLIDES *)
                                  if n = 0 then 1
                                  else (let result = SQ b ** HALF n MOD m
                                         in if EVEN n then result else (b * result) MOD m))
+   EXP_MOD_ALT       |- !b n m. 1 < m ==>
+                                (b ** n MOD m =
+                                 if n = 0 then 1
+                                 else ((if EVEN n then 1 else b) * SQ b ** HALF n MOD m) MOD m)
    EXP_EXP_SUC       |- !x y n. x ** y ** SUC n = (x ** y) ** y ** n
    EXP_LOWER_LE_LOW  |- !n m. 1 + n * m <= (1 + m) ** n
    EXP_LOWER_LT_LOW  |- !n m. 0 < m /\ 1 < n ==> 1 + n * m < (1 + m) ** n
@@ -1789,6 +1793,22 @@ val EXP_MOD_EQN = store_thm(
   rw[EXP_0, ONE_MOD] >-
   metis_tac[EXP_EVEN, EXP_2] >>
   metis_tac[EXP_ODD, EXP_2, EVEN_ODD]);
+
+(* Pretty version of EXP_MOD_EQN, same pattern as EXP_EQN_ALT. *)
+
+(* Theorem: 1 < m ==> b ** n MOD m =
+           if n = 0 then 1 else
+           ((if EVEN n then 1 else b) * ((SQ b ** HALF n) MOD m)) MOD m *)
+(* Proof: by EXP_MOD_EQN *)
+val EXP_MOD_ALT = store_thm(
+  "EXP_MOD_ALT",
+  ``!b n m. 1 < m ==> b ** n MOD m =
+           if n = 0 then 1 else
+           ((if EVEN n then 1 else b) * ((SQ b ** HALF n) MOD m)) MOD m``,
+  rpt strip_tac >>
+  imp_res_tac EXP_MOD_EQN >>
+  last_x_assum (qspecl_then [`n`, `b`] strip_assume_tac) >>
+  rw[]);
 
 (* Theorem: x ** (y ** SUC n) = (x ** y) ** y ** n *)
 (* Proof:
