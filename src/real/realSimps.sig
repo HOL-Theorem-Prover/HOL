@@ -31,6 +31,14 @@ sig
   val RMULCANON_ss : simpLib.ssfrag
   val RADDCANON_ss : simpLib.ssfrag
 
+  (* put literal values into a canonical form:
+     - integral values are left alone
+     - inverses applied to integers are turned into 1/n
+     - negative signs are moved to denominators
+     - fractions are reduced by gcds
+  *)
+  val REAL_LITCANON : conv
+
   (* eliminate common terms from either side of a relation symbol, factoring
      as necessary.  First argument is relation symbol, second is list of
      theorems justifying removal of common factors on left.

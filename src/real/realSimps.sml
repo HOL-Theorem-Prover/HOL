@@ -613,6 +613,10 @@ val REAL_MUL_RID' = GSYM REAL_MUL_RID
 val REAL_POW_ADD' = GSYM REAL_POW_ADD
 val REAL_POW_INV' = GSYM REAL_POW_INV
 val POW_1' = GSYM POW_1
+val (NEG_FRAC, NEG_DENOM) = CONJ_PAIR neg_rat
+val NEG_INV = REAL_NEG_INV'
+val INV_1OVER = REAL_INV_1OVER
+val NEG_MINUS1' = GSYM REAL_NEG_MINUS1
 
 val realreduce_cs = real_compset()
 fun REPORT_ALL_CONV t =
@@ -620,10 +624,37 @@ fun REPORT_ALL_CONV t =
 val REAL_REDUCE = computeLib.CBV_CONV realreduce_cs
 val NUM_REDUCE = reduceLib.REDUCE_CONV
 
+fun is_literalish t =
+    is_real_literal t orelse
+    case total dest_inv t of
+        NONE => (case total dest_div t of
+                     NONE => (case total dest_negated t of
+                                  NONE => false
+                                | SOME t0 => is_literalish t0)
+                   | SOME (n,d) => is_literalish n andalso is_literalish d)
+      | SOME t0 => is_literalish t0
+
+val NORMLIT_phase1 =
+    PURE_REWRITE_CONV [NEG_FRAC, NEG_DENOM, NEG_INV, REAL_NEGNEG, INV_1OVER]
+val GCDELIM = REAL_REDUCE
+
+fun is_real_fraction t =
+    is_real_literal t orelse
+    case Exn.capture dest_div t of
+        Exn.Res(n,d) =>
+        is_real_literal n andalso is_real_literal d andalso
+        not (is_negated d)
+      | _ => false
+fun REAL_LITCANON t = if is_literalish t then
+                        if is_real_fraction t then raise UNCHANGED
+                        else
+                          (NORMLIT_phase1 THENC REAL_REDUCE) t
+                      else NO_CONV t
+
 val NZ_t = prim_mk_const{Thy = "real", Name = "nonzerop"}
 fun is_NZ t = is_comb t andalso rator t ~~ NZ_t
 fun mul_termbase t =
-    if is_real_literal t then (t, Arbint.one)
+    if is_real_fraction t then (t, Arbint.one)
     else if is_NZ t then (t, Arbint.one)
     else
       case total dest_pow t of
@@ -641,10 +672,10 @@ fun mul_termbase t =
                else (mk_pow(b,e), Arbint.~ Arbint.one))
 
 fun litcompare(t1,t2) =
-    if is_real_literal t1 then
-      if is_real_literal t2 then EQUAL
+    if is_real_fraction t1 then
+      if is_real_fraction t2 then EQUAL
       else LESS
-    else if is_real_literal t2 then GREATER
+    else if is_real_fraction t2 then GREATER
     else Term.compare(t1,t2)
 local
   fun termbase t = #1 (mul_termbase t)
@@ -694,8 +725,7 @@ local
       combine_exponents THENC
       TRY_CONV (FIRST_CONV (map REWR_CONV [POW_1, POW_E0]))
   fun mulcombine t =
-      if is_real_literal (rand t) then
-        computeLib.CBV_CONV realreduce_cs t
+      if is_real_fraction (rand t) then REAL_REDUCE t
       else (normNZs ORELSEC mulcombine0) t
 
   fun neg_nonnum_conv t =
@@ -703,9 +733,12 @@ local
           NONE => ALL_CONV t
         | SOME t0 => if is_real_literal t0 then ALL_CONV t
                      else REWR_CONV REAL_NEG_MINUS1 t
+  fun diag s c t = (print (s t ^ "\n"); c t)
+
   val mulpre =
-      REWRITE_CONV [GSYM REAL_POW_INV, REAL_INV_INV, REAL_POW_POW] THENC
-      neg_nonnum_conv
+      REAL_LITCANON ORELSEC
+      (REWRITE_CONV [GSYM REAL_POW_INV, REAL_INV_INV, REAL_POW_POW] THENC
+       neg_nonnum_conv)
 
   val mulsort = {
     assoc = REAL_MUL_ASSOC,
@@ -713,13 +746,14 @@ local
     dest = realSyntax.dest_mult,
     mk = realSyntax.mk_mult,
     cmp = mulcompare,
-    combine = mulcombine,
-    preprocess = mulpre
+    combine = (* diag (fn t => "mulcombine on "^term_to_string t)*) mulcombine,
+    preprocess = (* diag (fn t => "mulpre on "^term_to_string t)*)  mulpre
   }
   fun leading_coeff_norm t =
       case total dest_mult t of
           SOME (l,r) => if is_real_literal l then
-                          RAND_CONV (PURE_REWRITE_CONV [REAL_MUL_ASSOC]) t
+                          (RAND_CONV (PURE_REWRITE_CONV [REAL_MUL_ASSOC]) THENC
+                           TRY_CONV (REWR_CONV NEG_MINUS1')) t
                         else PURE_REWRITE_CONV [REAL_MUL_ASSOC] t
         | _ => ALL_CONV t
 in
@@ -730,9 +764,9 @@ in
                 SOME(t1,t2) => strip (t2::A) t1
               | NONE => t::A
         val (l,r) = dest_mult t handle HOL_ERR _ => raise UNCHANGED
-        val ts = strip [] (if is_real_literal l then r else t)
+        val ts = strip [] (if is_real_fraction l then r else t)
       in
-        if List.exists (fn t => is_mult t orelse is_real_literal t) ts orelse
+        if List.exists (fn t => is_mult t orelse is_literalish t) ts orelse
            not (oksort mulcompare ts)
         then
           AC_Sort.sort mulsort THENC
@@ -744,6 +778,8 @@ in
         else ALL_CONV
       end t
 end (* local *)
+
+
 
 val RMULCANON_ss = SSFRAG {
       ac = [], congs = [], dprocs = [], filter = NONE,
@@ -854,7 +890,7 @@ val sign_rwts = [REAL_POW_POS, REAL_POW_NEG,
                  REAL_LT_INV_EQ, REAL_INV_LT0]
 (* val R = “$<= : real -> real -> bool”
    val Rthms = [REAL_LE_LMUL, REAL_LE_LMUL_NEG]
-   fun solver0 stk t = base_solver [ASSUME “y <> 0r”] stk t val stk = []
+   fun solver0 stk t = base_solver [ASSUME “0r <= y”] stk t val stk = []
 *)
 fun giveexp t =
     if is_pow t then ALL_CONV t
@@ -881,8 +917,9 @@ fun mulrelnorm R Rthms solver0 stk t =
               | SOME (h,c) => MATCH_MP th (solver (t::stk) h)
           end
       val apply_thms = FIRST_CONV (map apply_thm Rthms)
+      fun positivep i = Arbint.<=(Arbint.zero, i)
       fun process (l_t,el) (r_t,er) =
-          if is_real_literal l_t then
+          if is_real_literal l_t andalso positivep el andalso positivep er then
             let val li = int_of_term l_t and ri = int_of_term r_t
                 val toN = Arbint.toNat o Arbint.abs
                 val ln = toN li and rn = toN ri
