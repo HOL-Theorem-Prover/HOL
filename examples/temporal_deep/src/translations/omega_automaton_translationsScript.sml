@@ -1,55 +1,33 @@
+(******************************************************************************)
+(*                                                                            *)
+(*    Translations between explicit-state finite-state or omega automata.     *)
+(*                                                                            *)
+(******************************************************************************)
+
 open HolKernel Parse boolLib bossLib;
 
-(*
-quietdec := true;
-
-val base_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat base_dir "src/tools") :: (concat base_dir "src/deep_embeddings") :: !loadPath;
-map load
- ["full_ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
-  "infinite_pathTheory", "tuerk_tacticsLib", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory",
-  "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "temporal_deep_mixedTheory",
-  "pairTheory", "symbolic_kripke_structureTheory",
-  "numLib", "semi_automatonTheory", "omega_automatonTheory",
-  "kripke_structureTheory", "containerTheory", "relationTheory"];
-*)
-
-open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
-     prop_logicTheory
+open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
-     pred_setTheory rich_listTheory set_lemmataTheory temporal_deep_mixedTheory pairTheory symbolic_kripke_structureTheory
+     pred_setTheory rich_listTheory set_lemmataTheory temporal_deep_mixedTheory pairTheory 
+     symbolic_kripke_structureTheory
      numLib semi_automatonTheory omega_automatonTheory kripke_structureTheory
      containerTheory relationTheory;
+
 open Sanity;
 
 val _ = hide "K";
 val _ = hide "S";
 val _ = hide "I";
 
-
-(*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
-quietdec := false;
-*)
-
-
 val _ = new_theory "omega_automaton_translations";
 val _ = ParseExtras.temp_loose_equality()
 
-
-
-
-val DETERMINISED_SEMI_AUTOMATON_def =
- Define
-  `DETERMINISED_SEMI_AUTOMATON A =
-    (semi_automaton (POW A.S) A.I ((\(s, i). (i SUBSET A.I) /\
-                                                (!x. (x IN s) = ((x, i) IN A.S0))))
+val DETERMINISED_SEMI_AUTOMATON_def = Define
+   `DETERMINISED_SEMI_AUTOMATON A =
+     (semi_automaton (POW A.S) A.I ((\(s, i). (i SUBSET A.I) /\
+                                              (!x. (x IN s) = ((x, i) IN A.S0))))
                      (\(s1, i, s2, i'). (s1 SUBSET A.S /\ i SUBSET A.I /\
                         (!x. x IN s2 = (?s1'. s1' IN s1 /\ (s1', i, x, i') IN A.R)))))`;
-
 
 val DETERMINISED_SEMI_AUTOMATON___IS_DET_TOTAL =
   store_thm (
