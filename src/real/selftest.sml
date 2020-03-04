@@ -109,6 +109,8 @@ val _ = List.app nftest [
       ("MULCANON19", REALMULCANON, “2 * (inv 3 * z * 6 * inv 4)”, “z:real”),
       ("MULCANON21", REALMULCANON, “-z * x: real”, “-(x * z:real)”),
       ("MULCANON22", REALMULCANON, “2 * (-inv 3 * z * 6 * inv 4)”, “-z:real”),
+      ("MULCANON23", REALMULCANON,
+       “(2/3) * (z * y:real)”, “(2/3) * (y * z:real)”),
       ("MULRELNORM01", simp,
        “z <> 0 ⇒ 2r * z pow 2 * inv yy = 5 * z pow 2 * inv y * a”,
        “z <> 0 ⇒ 2 * inv yy = 5 * (a * inv y)”),

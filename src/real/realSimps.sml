@@ -751,7 +751,7 @@ local
   }
   fun leading_coeff_norm t =
       case total dest_mult t of
-          SOME (l,r) => if is_real_literal l then
+          SOME (l,r) => if is_real_fraction l then
                           (RAND_CONV (PURE_REWRITE_CONV [REAL_MUL_ASSOC]) THENC
                            TRY_CONV (REWR_CONV NEG_MINUS1')) t
                         else PURE_REWRITE_CONV [REAL_MUL_ASSOC] t
