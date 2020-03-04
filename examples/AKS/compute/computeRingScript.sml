@@ -109,7 +109,7 @@ open rich_listTheory; (* for FRONT and LAST *)
    ZN_poly_add_zero_zero   |- !n. [] +z [] = []
    ZN_poly_add_alt         |- !n p q. zweak p /\ zweak q /\ (LENGTH p = LENGTH q) ==> (p +z q = p zwadd q)
    ZN_poly_add_length      |- !n p q. (LENGTH p = LENGTH q) ==> (LENGTH (p +z q) = LENGTH q)
-   ZN_poly_cmult_alt       |- !n p c. zweak p /\ c < n ==> (c oz p = c zcmult p)
+   ZN_poly_cmult_alt       |- !n p c. zweak p ==> (c oz p = c zcmult p)
    ZN_poly_cmult_length    |- !n p c. LENGTH (c oz p) = LENGTH p
    ZN_slide_alt            |- !n q p1 p2. 0 < n /\ zweak p1 /\ zweak p2 /\ zweak q /\ (LENGTH p1 = LENGTH p2) ==>
                                           (ZN_slide n p1 p2 q = poly_slide (ZN n) p1 p2 q)
@@ -317,18 +317,16 @@ val ZN_poly_add_length = store_thm(
 
 (* Theorem: zweak p /\ c < n ==> (c oz p = c zcmult p) *)
 (* Proof:
-   Note c < n ==> c IN (ZN n).carrier        by ZN_property
    By ZN_poly_cmult_def, weak_cmult_map, this is to show:
-      zweak p /\ c < m ==> MAP (\x. (c * x) MOD n) p = MAP (\x. (ZN n).prod.op c x) p
+      zweak p ==> MAP (\x. (c * x) MOD n) p = MAP (\x. (ZN n).prod.op c x) p
    Note MEM x p ==> x IN (ZN n).carrier      by weak_every_mem
     ==> (ZN n).prod.op c x = (c * x) MOD n   by ZN_property
    Thus the maps are equal                   by MAP_CONG
 *)
 val ZN_poly_cmult_alt = store_thm(
   "ZN_poly_cmult_alt",
-  ``!(n:num) p c. zweak p /\ c < n ==> (c oz p = c zcmult p)``,
+  ``!(n:num) p c. zweak p ==> (c oz p = c zcmult p)``,
   rpt strip_tac >>
-  `c IN (ZN n).carrier` by rw[ZN_property] >>
   rw[ZN_poly_cmult_def, weak_cmult_map] >>
   (irule MAP_CONG >> simp[]) >>
   metis_tac[weak_every_mem, ZN_property]);
@@ -359,8 +357,7 @@ val ZN_poly_cmult_length = store_thm(
         and LENGTH (h oz p2) = LENGTH p2          by ZN_poly_cmult_length
         and LENGTH (h oz p2 +z p1) = LENGTH p1    by ZN_poly_add_length
         and LENGTH (turn p2) = LENGTH p2          by turn_length
-       Note h < n                                 by ZN_property, h IN (ZN n).carrier
-        Now h oz p2 = h zcmult p2                 by ZN_poly_cmult_alt, h < n
+       Note h oz p2 = h zcmult p2                 by ZN_poly_cmult_alt
         ==> zweak (h oz p2)                       by weak_cmult_weak, Ring (ZN n)
        Also h oz p2 +z p1 = (h zcmult p2) zwadd p1   by ZN_poly_add_alt, [1]
         ==> zweak (h oz p2 +z p1)                 by weak_add_weak
@@ -384,7 +381,7 @@ val ZN_slide_alt = store_thm(
   `LENGTH (h oz p2 +z p1) = LENGTH p1` by rw_tac std_ss[ZN_poly_add_length] >>
   `LENGTH (turn p2) = LENGTH p2` by rw_tac std_ss[turn_length] >>
   `Ring (ZN n)` by rw_tac std_ss[ZN_ring] >>
-  `h oz p2 = h zcmult p2` by rw_tac std_ss[ZN_poly_cmult_alt, GSYM ZN_property] >>
+  `h oz p2 = h zcmult p2` by rw_tac std_ss[ZN_poly_cmult_alt] >>
   `zweak (h oz p2)` by rw_tac std_ss[weak_cmult_weak] >>
   `h oz p2 +z p1 = (h zcmult p2) zwadd p1` by rw_tac std_ss[ZN_poly_add_alt] >>
   `zweak (h oz p2 +z p1)` by metis_tac[weak_add_weak] >>
@@ -606,7 +603,7 @@ val ZN_poly_exp_length = store_thm(
       = PAD_RIGHT 0 k
             (c MOD n::PAD_LEFT 0 (m MOD k) [1])  by ZN_poly_special_def
       = PAD_RIGHT (ZN n).sum.id k
-            ((ZN n).sum.exp 1 c::PAD_LEFT (ZN n).sum.id (m MOD k) [(ZN m).prod.id])  by above
+            ((ZN n).sum.exp 1 c::PAD_LEFT (ZN n).sum.id (m MOD k) [(ZN n).prod.id])  by above
       = unity_mod_special (ZN n) k m c           by unity_mod_special_def
 *)
 val ZN_poly_special_alt = store_thm(

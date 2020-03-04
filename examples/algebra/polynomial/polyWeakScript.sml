@@ -3193,7 +3193,7 @@ val _ = export_rewrites ["weak_one_ne_zero", "weak_one"];
 (* Proof:
    Note |1| = if #1 = #0 then [] else [#1]   by poly_one
    If #1 = #0, weak []           by weak_of_zero
-        If #1 <> #0, weak [#1]        by weak_one
+   If #1 <> #0, weak [#1]        by weak_one
 *)
 val weak_one_poly = store_thm(
   "weak_one_poly",
