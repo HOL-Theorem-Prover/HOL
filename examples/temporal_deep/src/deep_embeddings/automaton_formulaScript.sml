@@ -1,9 +1,15 @@
+(* -*- Mode: holscript; -*- ***************************************************)
+(*                                                                            *)
+(*     Automaton formula (symbolic semi-automaton + acceptance_condition)     *)
+(*                                                                            *)
+(******************************************************************************)
+
 open HolKernel Parse boolLib bossLib;
 
 open symbolic_semi_automatonTheory prop_logicTheory xprop_logicTheory
      set_lemmataTheory pred_setTheory listTheory pairTheory
-     containerTheory infinite_pathTheory symbolic_kripke_structureTheory tuerk_tacticsLib
-     temporal_deep_mixedTheory;
+     containerTheory infinite_pathTheory symbolic_kripke_structureTheory
+     tuerk_tacticsLib temporal_deep_mixedTheory;
 
 open Sanity;
 
@@ -13,26 +19,20 @@ val _ = hide "I";
 val _ = new_theory "automaton_formula";
 val _ = ParseExtras.temp_loose_equality()
 
-
 (*****************************************************************************
- * Acceptance conditions
+ * Acceptance conditions (a limited form of LTL formula with only G operator)
  *****************************************************************************)
-val acceptance_condition =
- Hol_datatype
-  `acceptance_condition =
-    ACCEPT_PROP of 'a prop_logic
+Datatype :
+    acceptance_condition =
+          ACCEPT_PROP ('a prop_logic)
         | ACCEPT_TRUE
-        | ACCEPT_NOT  of acceptance_condition
-        | ACCEPT_AND  of acceptance_condition # acceptance_condition
-        | ACCEPT_G    of acceptance_condition`;
+        | ACCEPT_NOT   acceptance_condition
+        | ACCEPT_AND  (acceptance_condition # acceptance_condition)
+        | ACCEPT_G     acceptance_condition
+End
 
-
-val acceptance_condition_induct =
- save_thm
-  ("acceptance_condition_induct",
-   Q.GEN
-    `P`
-    (MATCH_MP
+Theorem acceptance_condition_induct = Q.GEN `P`
+   (MATCH_MP
      (DECIDE ``(A ==> (B1 /\ B2)) ==> (A ==> B1)``)
      (SIMP_RULE
        std_ss
@@ -41,48 +41,46 @@ val acceptance_condition_induct =
         PROVE[]``(!x y. P y ==> Q(x,y)) = !y. P y ==> !x. Q(x,y)``]
        (Q.SPECL
          [`P`,`\(f1,f2). P f1 /\ P f2`]
-         (TypeBase.induction_of ``:'a acceptance_condition``)))));
+         (TypeBase.induction_of ``:'a acceptance_condition``))));
 
-
-val ACCEPT_COND_USED_VARS_def=
- Define
-   `(ACCEPT_COND_USED_VARS (ACCEPT_PROP p) = P_USED_VARS p) /\
-    (ACCEPT_COND_USED_VARS ACCEPT_TRUE = EMPTY) /\
-    (ACCEPT_COND_USED_VARS (ACCEPT_NOT a) = ACCEPT_COND_USED_VARS a) /\
-    (ACCEPT_COND_USED_VARS (ACCEPT_G a) = ACCEPT_COND_USED_VARS a) /\
-    (ACCEPT_COND_USED_VARS (ACCEPT_AND(a, b)) = (ACCEPT_COND_USED_VARS a) UNION (ACCEPT_COND_USED_VARS b))`;
+val ACCEPT_COND_USED_VARS_def = Define
+  `(ACCEPT_COND_USED_VARS (ACCEPT_PROP p) = P_USED_VARS p) /\
+   (ACCEPT_COND_USED_VARS ACCEPT_TRUE = EMPTY) /\
+   (ACCEPT_COND_USED_VARS (ACCEPT_NOT a) = ACCEPT_COND_USED_VARS a) /\
+   (ACCEPT_COND_USED_VARS (ACCEPT_G a) = ACCEPT_COND_USED_VARS a) /\
+   (ACCEPT_COND_USED_VARS (ACCEPT_AND(a, b)) =
+     (ACCEPT_COND_USED_VARS a) UNION (ACCEPT_COND_USED_VARS b))`;
 
 (*****************************************************************************
  * Automaton formulas
  *****************************************************************************)
-val automaton_formula = Hol_datatype
-   `automaton_formula =
-          ACCEPT_COND of 'a acceptance_condition
-        | A_NDET      of 'a symbolic_semi_automaton # automaton_formula
-        | A_NOT       of automaton_formula
-        | A_AND       of automaton_formula # automaton_formula
-        | A_TRUE`;
+Datatype : (* see [1, p.8] *)
+    automaton_formula =
+          ACCEPT_COND ('a acceptance_condition)
+        | A_NDET      ('a symbolic_semi_automaton # automaton_formula)
+        | A_NOT        automaton_formula
+        | A_AND       (automaton_formula # automaton_formula)
+        | A_TRUE
+End
 
-val automaton_formula_induct = save_thm
-  ("automaton_formula_induct",
-   Q.GEN `P0` (
-    (MATCH_MP
+Theorem automaton_formula_induct = Q.GEN `P0`
+   (MATCH_MP
      (DECIDE ``(A ==> (B1 /\ B2)) ==> (A ==> B1)``)
-     (SIMP_RULE
-       std_ss
+     (SIMP_RULE std_ss
        [pairTheory.FORALL_PROD,
         PROVE[]``(!x y. P0 x ==> Q(x,y)) = !x. P0 x ==> !y. Q(x,y)``,
         PROVE[]``(!x y. P0 y ==> Q(x,y)) = !y. P0 y ==> !x. Q(x,y)``]
        (Q.SPECL
          [`P0`,`\(A, f). P0 f`,`\(f1,f2). P0 f1 /\ P0 f2`]
-         (TypeBase.induction_of ``:'a automaton_formula``))))));
+         (TypeBase.induction_of ``:'a automaton_formula``))));
 
 val A_USED_INPUT_VARS_def = Define
   `(A_USED_INPUT_VARS (ACCEPT_COND p) = ACCEPT_COND_USED_VARS p) /\
    (A_USED_INPUT_VARS A_TRUE = EMPTY) /\
-   (A_USED_INPUT_VARS (A_NDET(A, f)) = (SEMI_AUTOMATON_USED_INPUT_VARS A UNION
-        (A_USED_INPUT_VARS f DIFF A.S))) /\
-   (A_USED_INPUT_VARS (A_NOT a) = (A_USED_INPUT_VARS a)) /\
+   (A_USED_INPUT_VARS (A_NDET(A, f)) =
+     (SEMI_AUTOMATON_USED_INPUT_VARS A) UNION
+     (A_USED_INPUT_VARS f DIFF A.S)) /\
+   (A_USED_INPUT_VARS (A_NOT a) = A_USED_INPUT_VARS a) /\
    (A_USED_INPUT_VARS (A_AND(a, b)) = (A_USED_INPUT_VARS a) UNION (A_USED_INPUT_VARS b))`;
 
 val A_USED_STATE_VARS_def = Define
@@ -95,46 +93,42 @@ val A_USED_STATE_VARS_def = Define
 val A_USED_VARS_def = Define
    `A_USED_VARS a = (A_USED_INPUT_VARS a) UNION (A_USED_STATE_VARS a)`;
 
-val A_USED_VARS___DIRECT_DEF =
- store_thm (
-   "A_USED_VARS___DIRECT_DEF",
-   ``(A_USED_VARS (ACCEPT_COND p) = ACCEPT_COND_USED_VARS p) /\
-     (A_USED_VARS A_TRUE = EMPTY) /\
-     (A_USED_VARS (A_NDET(A, f)) = (SEMI_AUTOMATON_USED_VARS A UNION
-       (A_USED_VARS f))) /\
-     (A_USED_VARS (A_NOT a) = (A_USED_VARS a)) /\
-     (A_USED_VARS (A_AND(a, b)) = (A_USED_VARS a) UNION (A_USED_VARS b))``,
-
+(* added toplevel quantifiers *)
+Theorem A_USED_VARS___DIRECT_DEF :
+   !A f p a b.
+   (A_USED_VARS (ACCEPT_COND p) = ACCEPT_COND_USED_VARS p) /\
+   (A_USED_VARS A_TRUE = EMPTY) /\
+   (A_USED_VARS (A_NDET(A, f)) = (SEMI_AUTOMATON_USED_VARS A UNION (A_USED_VARS f))) /\
+   (A_USED_VARS (A_NOT a) = (A_USED_VARS a)) /\
+   (A_USED_VARS (A_AND(a, b)) = (A_USED_VARS a) UNION (A_USED_VARS b))
+Proof
     SIMP_TAC std_ss [A_USED_VARS_def, A_USED_INPUT_VARS_def,
-                     A_USED_STATE_VARS_def, UNION_EMPTY] THEN
-    REPEAT STRIP_TAC THENL [
-      SIMP_TAC std_ss [EXTENSION, IN_UNION,
-        SEMI_AUTOMATON_USED_VARS_def, IN_DIFF] THEN
-      PROVE_TAC[],
+                     A_USED_STATE_VARS_def, UNION_EMPTY]
+ >> rpt STRIP_TAC
+ >| [ SIMP_TAC std_ss [EXTENSION, IN_UNION,
+                       SEMI_AUTOMATON_USED_VARS_def, IN_DIFF] \\
+      PROVE_TAC [],
+      SIMP_TAC std_ss [EXTENSION, IN_UNION] >> PROVE_TAC [] ]
+QED
 
-      SIMP_TAC std_ss [EXTENSION, IN_UNION] THEN
-      PROVE_TAC[]
-    ]);
+val STATE_VARDISJOINT_AUTOMATON_FORMULA_def = Define
+  `(STATE_VARDISJOINT_AUTOMATON_FORMULA (ACCEPT_COND p) = T) /\
+   (STATE_VARDISJOINT_AUTOMATON_FORMULA A_TRUE = T) /\
+   (STATE_VARDISJOINT_AUTOMATON_FORMULA (A_NDET(A, f)) =
+     (DISJOINT A.S (A_USED_STATE_VARS f) /\ STATE_VARDISJOINT_AUTOMATON_FORMULA f)) /\
+   (STATE_VARDISJOINT_AUTOMATON_FORMULA (A_NOT a) = STATE_VARDISJOINT_AUTOMATON_FORMULA a) /\
+   (STATE_VARDISJOINT_AUTOMATON_FORMULA (A_AND(a, b)) =
+     (DISJOINT (A_USED_STATE_VARS a) (A_USED_STATE_VARS b) /\
+      STATE_VARDISJOINT_AUTOMATON_FORMULA a /\ STATE_VARDISJOINT_AUTOMATON_FORMULA b))`;
 
-
-val STATE_VARDISJOINT_AUTOMATON_FORMULA_def=
- Define
-   `(STATE_VARDISJOINT_AUTOMATON_FORMULA (ACCEPT_COND p) = T) /\
-    (STATE_VARDISJOINT_AUTOMATON_FORMULA A_TRUE = T) /\
-    (STATE_VARDISJOINT_AUTOMATON_FORMULA (A_NDET(A, f)) = ((DISJOINT A.S (A_USED_STATE_VARS f)) /\ (STATE_VARDISJOINT_AUTOMATON_FORMULA f))) /\
-    (STATE_VARDISJOINT_AUTOMATON_FORMULA (A_NOT a) = STATE_VARDISJOINT_AUTOMATON_FORMULA a) /\
-    (STATE_VARDISJOINT_AUTOMATON_FORMULA (A_AND(a, b)) = (DISJOINT (A_USED_STATE_VARS a) (A_USED_STATE_VARS b)) /\ (STATE_VARDISJOINT_AUTOMATON_FORMULA a) /\ (STATE_VARDISJOINT_AUTOMATON_FORMULA b))`;
-
-
-val VARDISJOINT_AUTOMATON_FORMULA_def=
- Define
-   `(VARDISJOINT_AUTOMATON_FORMULA f =
-      (STATE_VARDISJOINT_AUTOMATON_FORMULA f) /\ DISJOINT (A_USED_STATE_VARS f) (A_USED_INPUT_VARS f))`;
-
-
+(* also disjoint with input variables *)
+val VARDISJOINT_AUTOMATON_FORMULA_def = Define
+   `VARDISJOINT_AUTOMATON_FORMULA f =
+     (STATE_VARDISJOINT_AUTOMATON_FORMULA f /\
+      DISJOINT (A_USED_STATE_VARS f) (A_USED_INPUT_VARS f))`;
 
 (*****************************************************************************
- * Varibal renamings
+ * Variable renamings
  *****************************************************************************)
 val ACCEPT_VAR_RENAMING_def = Define
   `(ACCEPT_VAR_RENAMING (f:'a->'b) (ACCEPT_TRUE) = ACCEPT_TRUE) /\
@@ -153,7 +147,7 @@ val A_VAR_RENAMING_def = Define
    (A_VAR_RENAMING f (A_AND(a, b)) = (A_AND (A_VAR_RENAMING f a, A_VAR_RENAMING f b)))`;
 
 (*=============================================================================
-= Semantic
+= Semantics
 =============================================================================*)
 
 (*****************************************************************************
@@ -163,11 +157,13 @@ val ACCEPT_COND_SEM_TIME_def = Define
   `(ACCEPT_COND_SEM_TIME t v (ACCEPT_PROP p) = P_SEM (v t) p) /\
    (ACCEPT_COND_SEM_TIME t v ACCEPT_TRUE = T) /\
    (ACCEPT_COND_SEM_TIME t v (ACCEPT_NOT a) = ~(ACCEPT_COND_SEM_TIME t v a)) /\
-   (ACCEPT_COND_SEM_TIME t v (ACCEPT_G a) = (!t':num. (t' >= t) ==> (ACCEPT_COND_SEM_TIME t' v a))) /\
-   (ACCEPT_COND_SEM_TIME t v (ACCEPT_AND(a, b)) = ((ACCEPT_COND_SEM_TIME t v a) /\ ACCEPT_COND_SEM_TIME t v b))`;
+   (ACCEPT_COND_SEM_TIME t v (ACCEPT_G a) =
+     !t':num. t' >= t ==> ACCEPT_COND_SEM_TIME t' v a) /\
+   (ACCEPT_COND_SEM_TIME t v (ACCEPT_AND(a, b)) =
+     (ACCEPT_COND_SEM_TIME t v a /\ ACCEPT_COND_SEM_TIME t v b))`;
 
 val ACCEPT_COND_SEM_def = Define
-  `(ACCEPT_COND_SEM v f = ACCEPT_COND_SEM_TIME 0 v f)`;
+   `ACCEPT_COND_SEM v f = ACCEPT_COND_SEM_TIME 0 v f`;
 
 (*****************************************************************************
  * Automaton formulas
@@ -215,7 +211,7 @@ val ACCEPT_BIGAND_def = Define
  * Automaton formulas
  *****************************************************************************)
 val A_BIGAND_def = Define
-  `(A_BIGAND ([]:'a automaton_formula list) = (A_TRUE:'a automaton_formula)) /\
+  `(A_BIGAND ([] :'a automaton_formula list) = (A_TRUE :'a automaton_formula)) /\
    (A_BIGAND (e::C) = A_AND(e, A_BIGAND C))`;
 
 val A_UNIV_def = Define
@@ -239,66 +235,70 @@ val A_NDET_CONSTRAINED_def = Define
 val A_UNIV_CONSTRAINED_def = Define
    `A_UNIV_CONSTRAINED(A, C, f) = A_UNIV(A, A_IMPL(A_BIGAND C, f))`;
 
-val A_SEM_THM = store_thm
-  ("A_SEM_THM",
-  ``!A f v p a b. (((A_SEM v (ACCEPT_COND p)) = (ACCEPT_COND_SEM v p)) /\
-     ((A_SEM v (A_UNIV(A, f))) = (!w. (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A v w) ==> (A_SEM (INPUT_RUN_PATH_UNION A v w) f))) /\
-     ((A_SEM v (A_NDET(A, f))) = (?w. (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A v w) /\ (A_SEM (INPUT_RUN_PATH_UNION A v w) f))) /\
-     (A_SEM v (A_TRUE)) /\ ~(A_SEM v (A_FALSE)) /\
-     ((A_SEM v (A_NOT a)) = ~(A_SEM v a)) /\
-     ((A_SEM v (A_AND(a, b))) = ((A_SEM v a) /\ A_SEM v b)) /\
-     ((A_SEM v (A_OR(a, b))) = ((A_SEM v a) \/ A_SEM v b)) /\
-     ((A_SEM v (A_IMPL(a, b))) = ((A_SEM v a) ==> A_SEM v b)) /\
-     ((A_SEM v (A_EQUIV(a, b))) = ((A_SEM v a) = A_SEM v b)))``,
-
-   SIMP_TAC arith_ss [A_UNIV_def, A_FALSE_def, A_OR_def, A_IMPL_def, A_EQUIV_def, A_SEM_def] THEN
-   REPEAT STRIP_TAC THEN PROVE_TAC[]);
+(* `v` is input trace *)
+Theorem A_SEM_THM :
+    !A f v p a b.
+      (A_SEM v (ACCEPT_COND p) = ACCEPT_COND_SEM v p) /\
+      (A_SEM v (A_UNIV(A, f)) =
+        !w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A v w ==> A_SEM (INPUT_RUN_PATH_UNION A v w) f) /\
+      (A_SEM v (A_NDET(A, f)) =
+        ?w. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A v w /\ A_SEM (INPUT_RUN_PATH_UNION A v w) f) /\
+      (A_SEM v A_TRUE) /\
+     ~(A_SEM v A_FALSE) /\
+      (A_SEM v (A_NOT a) = ~(A_SEM v a)) /\
+      (A_SEM v (A_AND(a, b)) = (A_SEM v a /\ A_SEM v b)) /\
+      (A_SEM v (A_OR(a, b)) = (A_SEM v a \/ A_SEM v b)) /\
+      (A_SEM v (A_IMPL(a, b)) = (A_SEM v a ==> A_SEM v b)) /\
+      (A_SEM v (A_EQUIV(a, b)) = (A_SEM v a <=> A_SEM v b))
+Proof
+    SIMP_TAC arith_ss [A_UNIV_def, A_FALSE_def, A_OR_def, A_IMPL_def, A_EQUIV_def, A_SEM_def]
+ >> rpt STRIP_TAC >> PROVE_TAC []
+QED
 
 val A_USED_STATE_VARS_COMPATIBLE_def = Define
    `A_USED_STATE_VARS_COMPATIBLE a1 a2 =
-       DISJOINT (A_USED_INPUT_VARS a1) (A_USED_STATE_VARS a2) /\
-       DISJOINT (A_USED_INPUT_VARS a2) (A_USED_STATE_VARS a1) /\
-       DISJOINT (A_USED_STATE_VARS a1) (A_USED_STATE_VARS a2)`;
+     (DISJOINT (A_USED_INPUT_VARS a1) (A_USED_STATE_VARS a2) /\
+      DISJOINT (A_USED_INPUT_VARS a2) (A_USED_STATE_VARS a1) /\
+      DISJOINT (A_USED_STATE_VARS a1) (A_USED_STATE_VARS a2))`;
 
-val VARDISJOINT_AUTOMATON_FORMULA___A_USED_STATE_VARS_COMPATIBLE = store_thm
-  ("VARDISJOINT_AUTOMATON_FORMULA___A_USED_STATE_VARS_COMPATIBLE",
+(* added toplevel quantifiers *)
+Theorem VARDISJOINT_AUTOMATON_FORMULA___A_USED_STATE_VARS_COMPATIBLE :
+    !a1 a2. VARDISJOINT_AUTOMATON_FORMULA (A_AND(a1, a2)) ==>
+            A_USED_STATE_VARS_COMPATIBLE a1 a2
+Proof
+    rpt GEN_TAC
+ >> REWRITE_TAC [VARDISJOINT_AUTOMATON_FORMULA_def,
+                 A_USED_STATE_VARS_COMPATIBLE_def,
+                 A_USED_STATE_VARS_def, A_USED_INPUT_VARS_def,
+                 STATE_VARDISJOINT_AUTOMATON_FORMULA_def, DISJOINT_UNION_BOTH]
+ >> PROVE_TAC []
+QED
 
-   ``(VARDISJOINT_AUTOMATON_FORMULA (A_AND(a1, a2))) ==>
-      A_USED_STATE_VARS_COMPATIBLE a1 a2``,
-
-   REWRITE_TAC[VARDISJOINT_AUTOMATON_FORMULA_def,
-               A_USED_STATE_VARS_COMPATIBLE_def,
-               A_USED_STATE_VARS_def,
-               A_USED_INPUT_VARS_def,
-               STATE_VARDISJOINT_AUTOMATON_FORMULA_def,
-               DISJOINT_UNION_BOTH] THEN
-   PROVE_TAC[]);
-
-
+(* two automata are equivalent if they accept the same set of input traces *)
 val AUTOMATON_EQUIV_def = Define
-   `AUTOMATON_EQUIV a1 a2 = !v. (A_SEM v a1) = (A_SEM v a2)`;
+   `AUTOMATON_EQUIV a1 a2 = !v. A_SEM v a1 <=> A_SEM v a2`;
 
-val AUTOMATON_EQUIV_THM = store_thm
-  ("AUTOMATON_EQUIV_THM",
-    ``(!A f. AUTOMATON_EQUIV (A_NDET(A, f)) (A_NOT (A_UNIV(A, A_NOT f)))) /\
+Theorem AUTOMATON_EQUIV_THM :
+      (!A f. AUTOMATON_EQUIV (A_NDET(A, f)) (A_NOT (A_UNIV(A, A_NOT f)))) /\
       (!A f. AUTOMATON_EQUIV (A_UNIV(A, f)) (A_NOT (A_NDET(A, A_NOT f)))) /\
-      (!a1 a2.  (AUTOMATON_EQUIV (A_NOT a1) (A_NOT a2)) = AUTOMATON_EQUIV a1 a2) /\
-      (!a1 a2. (AUTOMATON_EQUIV (A_AND (a1,a2)) (A_AND (a2,a1)))) /\
-      (!a1 a2 b. (AUTOMATON_EQUIV a1 a2) ==> (AUTOMATON_EQUIV (A_AND (a1,b)) (A_AND (a2,b)))) /\
-      (!a1 a2. (!v. (A_SEM v (A_EQUIV(a1, a2)))) = (AUTOMATON_EQUIV a1 a2)) /\
-      (!a1 a2. (AUTOMATON_EQUIV (A_OR (a1,a2)) (A_OR (a2,a1)))) /\
-      (!a1 a2 b. (AUTOMATON_EQUIV a1 a2) ==> (AUTOMATON_EQUIV (A_OR (a1,b)) (A_OR (a2,b)))) /\
-      (!a1 a2 b. (AUTOMATON_EQUIV a1 a2) ==> (AUTOMATON_EQUIV (A_IMPL (a1,b)) (A_IMPL (a2,b)))) /\
-      (!a1 a2 b. (AUTOMATON_EQUIV a1 a2) ==> (AUTOMATON_EQUIV (A_IMPL (b,a1)) (A_IMPL (b,a2)))) /\
-      (!A a1 a2. (AUTOMATON_EQUIV a1 a2) ==> AUTOMATON_EQUIV (A_NDET(A, a1)) (A_NDET(A, a2))) /\
-      (!A a1 a2. (AUTOMATON_EQUIV a1 a2) ==> AUTOMATON_EQUIV (A_UNIV(A, a1)) (A_UNIV(A, a2))) /\
-      (!a1 a2. (AUTOMATON_EQUIV a1 a2) = (AUTOMATON_EQUIV a2 a1)) /\
-      (!a1. (AUTOMATON_EQUIV a1 a1)) /\
-      (!a1 a2 a3. ((AUTOMATON_EQUIV a1 a2) /\ (AUTOMATON_EQUIV a2 a3)) ==> (AUTOMATON_EQUIV a1 a3))``,
-
-   REWRITE_TAC[AUTOMATON_EQUIV_def, A_SEM_THM] THEN
-   REPEAT STRIP_TAC THEN
-   PROVE_TAC []);
+      (!a1 a2. AUTOMATON_EQUIV (A_NOT a1) (A_NOT a2) <=> AUTOMATON_EQUIV a1 a2) /\
+      (!a1 a2. AUTOMATON_EQUIV (A_AND (a1,a2)) (A_AND (a2,a1))) /\
+      (!a1 a2 b. AUTOMATON_EQUIV a1 a2 ==> AUTOMATON_EQUIV (A_AND (a1,b)) (A_AND (a2,b))) /\
+      (!a1 a2. (!v. A_SEM v (A_EQUIV(a1, a2))) <=> AUTOMATON_EQUIV a1 a2) /\
+      (!a1 a2. AUTOMATON_EQUIV (A_OR (a1,a2)) (A_OR (a2,a1))) /\
+      (!a1 a2 b. AUTOMATON_EQUIV a1 a2 ==> AUTOMATON_EQUIV (A_OR (a1,b)) (A_OR (a2,b))) /\
+      (!a1 a2 b. AUTOMATON_EQUIV a1 a2 ==> AUTOMATON_EQUIV (A_IMPL (a1,b)) (A_IMPL (a2,b))) /\
+      (!a1 a2 b. AUTOMATON_EQUIV a1 a2 ==> AUTOMATON_EQUIV (A_IMPL (b,a1)) (A_IMPL (b,a2))) /\
+      (!A a1 a2. AUTOMATON_EQUIV a1 a2 ==> AUTOMATON_EQUIV (A_NDET(A, a1)) (A_NDET(A, a2))) /\
+      (!A a1 a2. AUTOMATON_EQUIV a1 a2 ==> AUTOMATON_EQUIV (A_UNIV(A, a1)) (A_UNIV(A, a2))) /\
+      (!a1 a2. AUTOMATON_EQUIV a1 a2 <=> AUTOMATON_EQUIV a2 a1) /\
+      (!a1. AUTOMATON_EQUIV a1 a1) /\
+      (!a1 a2 a3. AUTOMATON_EQUIV a1 a2 /\ AUTOMATON_EQUIV a2 a3 ==> AUTOMATON_EQUIV a1 a3)
+Proof
+    REWRITE_TAC [AUTOMATON_EQUIV_def, A_SEM_THM]
+ >> rpt STRIP_TAC
+ >> PROVE_TAC []
+QED
 
 val A_BIGAND___A_USED_INPUT_VARS = store_thm
   ("A_BIGAND___A_USED_INPUT_VARS",
@@ -1661,6 +1661,11 @@ val A_UNIV___SIMPLIFIED_SEMI_AUTOMATON_THM =
   ) THEN
   ASM_SIMP_TAC std_ss [ACCEPT_VAR_RENAMING_def]);
 
-
-
 val _ = export_theory();
+
+(* References:
+
+[1] Tuerk, T., Schneider, K., Gordon, M.: Model Checking PSL Using HOL and SMV.
+    In: Bin, E., Ziv, A., and Ur, S. (eds.) LNCS 4383 - Hardware and Software:
+    Verification and Testing (HVC 2006). pp. 1-15. Springer, Berlin, Heidelberg (2007).
+ *)
