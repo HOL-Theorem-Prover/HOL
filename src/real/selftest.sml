@@ -130,7 +130,10 @@ val _ = List.app nftest [
       ("MULRELNORM07", simp,
        “0 < x ==> 3 * x pow 2 <= inv x”, “0 < x ==> 3 * x pow 3 <= 1r”),
       ("MULRELNORM08", simp, “2 * x <= inv 2 * y * z”, “4r * x <= y * z”),
-      ("MULRELNORM09", simp, “0r < x ==> x <= x * y”, “0r < x ==> 1 <= y”),
+      ("MULRELNORM09", simp, “2 * x <= 1/2 * (y * z:real)”, “4r * x <= y * z”),
+      ("MULRELNORM10", simp,
+       “3/4 * x <= 5/6 * (y * z:real)”, “9r * x <= 10 * (y * z)”),
+      ("MULRELNORM11", simp, “0r < x ==> x <= x * y”, “0r < x ==> 1 <= y”),
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]

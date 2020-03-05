@@ -888,14 +888,25 @@ val sign_rwts = [REAL_POW_POS, REAL_POW_NEG,
                  REAL_POW_GE0, REAL_POW_LE0,
                  ZERO_LT_POW,
                  REAL_LT_INV_EQ, REAL_INV_LT0]
-(* val R = “$<= : real -> real -> bool”
+(*
+fun base_solver asms stk t =
+    let
+      val _ = print ("Solving "^term_to_string t)
+    in
+      case Exn.capture (EQT_ELIM o QCONV (SIMP_CONV (srw_ss()) asms)) t of
+          Exn.Res th => (print " - OK\n"; th)
+        | Exn.Exn e => (print " - FAILED\n"; raise e)
+    end
+
+
+val R = “$<= : real -> real -> bool”
    val Rthms = [REAL_LE_LMUL, REAL_LE_LMUL_NEG]
-   fun solver0 stk t = base_solver [ASSUME “0r <= y”] stk t val stk = []
+   fun solver0 stk t = base_solver [] stk t val stk = []
 *)
 fun giveexp t =
     if is_pow t then ALL_CONV t
     else REWR_CONV POW_1' t
-fun mulrelnorm R Rthms solver0 stk t =
+fun mulrelnorm0 R Rthms solver0 stk t =
     let
       val mkE = mk_HOL_ERR "realSimps" "mulrelnorm"
       val (l,r) = dest_binop R (mkE ("Not a " ^ term_to_string R)) t
@@ -919,7 +930,9 @@ fun mulrelnorm R Rthms solver0 stk t =
       val apply_thms = FIRST_CONV (map apply_thm Rthms)
       fun positivep i = Arbint.<=(Arbint.zero, i)
       fun process (l_t,el) (r_t,er) =
-          if is_real_literal l_t andalso positivep el andalso positivep er then
+          if is_real_literal l_t andalso is_real_literal r_t andalso
+             positivep el andalso positivep er
+          then
             let val li = int_of_term l_t and ri = int_of_term r_t
                 val toN = Arbint.toNat o Arbint.abs
                 val ln = toN li and rn = toN ri
@@ -940,6 +953,24 @@ fun mulrelnorm R Rthms solver0 stk t =
               FORK_CONV(extract_n_factor l_t leqn, extract_n_factor r_t reqn)
                 THENC
               apply_thms
+            end
+          else if is_real_fraction l_t orelse is_real_fraction r_t then
+            let
+              fun denom (t,e) =
+                  case total dest_div t of
+                      NONE => if positivep e then Arbint.one
+                              else int_of_term t
+                    | SOME (_, d) => int_of_term d
+              val ld = denom (l_t, el)
+              val rd = denom (r_t, er)
+              val mt = Arbint.*(ld,rd) |> term_of_int
+              val sidecond1 = mk_less(zero_tm, mt) |> REAL_REDUCE
+              val sidecond2 = mk_neg(mk_eq(mt,zero_tm)) |> REAL_REDUCE
+              val th = hd Rthms |> SPEC mt
+                            |> REWRITE_RULE [sidecond1,sidecond2]
+                            |> GSYM
+            in
+              REWR_CONV th
             end
           else if el = er then
             let fun chk t = pair_eq aconv equal (mul_termbase t) (l_t, el)
@@ -1001,15 +1032,10 @@ fun mulrelnorm R Rthms solver0 stk t =
     in
       findelim ls rs t
     end
+
+fun mulrelnorm R Rthms solver stk =
+    BINOP_CONV REALMULCANON THENC mulrelnorm0 R Rthms solver stk
 (*
-fun base_solver asms stk t =
-    let
-      val _ = print ("Solving "^term_to_string t)
-    in
-      case Exn.capture (EQT_ELIM o QCONV (SIMP_CONV (srw_ss()) asms)) t of
-          Exn.Res th => (print " - OK\n"; th)
-        | Exn.Exn e => (print " - FAILED\n"; raise e)
-    end
 
 val lenorm = mulrelnorm “$<= : real -> real -> bool”
                   [REAL_LE_LMUL, REAL_LE_LMUL_NEG] solver []
