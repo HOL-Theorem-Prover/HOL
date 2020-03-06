@@ -4237,4 +4237,80 @@ Proof
   simp[REAL_POW_POS]
 QED
 
+Theorem REAL_LE_LT_EQ:
+  ! a b.
+    (a <= b) = ((a < b) \/ (a = b))
+Proof
+  rpt strip_tac >> EQ_TAC >> strip_tac
+  >> qspecl_then [`a`, `b`] assume_tac REAL_LT_TOTAL >> fs[real_lte, REAL_LE_REFL]
+  >- (metis_tac[])
+  >- (metis_tac[REAL_LT_GT])
+  >- (`a < a` by (irule REAL_LT_TRANS >> qexists_tac `b` >> fs[])
+      >> metis_tac [REAL_LT_REFL])
+  >> metis_tac [REAL_LT_REFL]
+QED
+
+Theorem REAL_LE_EQ:
+  !a b.
+    a <= b /\ b <= a ==> (a = b)
+Proof
+  fs[REAL_LE_LT_EQ] >> rpt strip_tac >> fs[]
+  >> `a < a` by (irule REAL_LT_TRANS >> qexists_tac `b` >> fs[])
+  >> metis_tac [REAL_LT_REFL]
+QED
+
+Theorem REAL_ABS_LE0:
+  !v.
+   (abs v <= 0) <=> (v = 0)
+Proof
+  fs[ABS_BOUNDS] >> rpt strip_tac >> EQ_TAC >> strip_tac
+  >> fs[REAL_LE_EQ]
+QED
+
+Theorem REAL_INV_LE_ANTIMONO:
+  ! x y.
+    0 < x /\ 0 < y ==> (inv x <= inv y <=> y <= x)
+Proof
+  rpt strip_tac
+  >> `inv x < inv y <=> y < x`
+    by (match_mp_tac REAL_INV_LT_ANTIMONO >> fs [])
+  >> EQ_TAC
+  >> fs [REAL_LE_LT]
+  >> strip_tac
+  >> fs [REAL_INV_INJ]
+QED
+
+Theorem REAL_INV_LE_ANTIMONO_IMPR:
+  ! x y.
+    0 < x /\ 0 < y /\ y <= x ==> inv x <= inv y
+Proof
+  rpt strip_tac >> fs[REAL_INV_LE_ANTIMONO]
+QED
+
+Theorem REAL_INV_LE_ANTIMONO_IMPL:
+  ! x y.
+    x < 0 /\ y < 0 /\ y <= x ==> inv x <= inv y
+Proof
+  rpt strip_tac
+  >> once_rewrite_tac [GSYM REAL_LE_NEG]
+  >> `- inv y = inv (- y)` by (irule REAL_NEG_INV >> CCONTR_TAC >> fs[])
+  >> `- inv x = inv (- x)` by (irule REAL_NEG_INV >> CCONTR_TAC >> fs[])
+  >> ntac 2(FIRST_X_ASSUM (fn thm => once_rewrite_tac [ thm]))
+  >> irule REAL_INV_LE_ANTIMONO_IMPR >> fs[]
+QED
+
+Theorem REAL_MUL_LE_COMPAT_NEG_L:
+  ! a b c.
+    a <= 0 /\ b <= c ==> a * c <= a * b
+Proof
+  rpt strip_tac
+  >> once_rewrite_tac [SYM (SPEC ``a:real`` REAL_NEG_NEG)]
+  >> once_rewrite_tac [SYM (SPECL [``a:real``, ``c:real``] REAL_MUL_LNEG)]
+  >> once_rewrite_tac [REAL_LE_NEG]
+  >> `0 <= - (a:real)`
+    by (once_rewrite_tac [SYM (SPEC ``-(a:real)`` REAL_NEG_LE0)]
+        >> fs [REAL_NEG_NEG])
+  >> match_mp_tac REAL_LE_LMUL_IMP >> fs[]
+QED
+
 val _ = export_theory();
