@@ -1,3 +1,9 @@
+(* -*- Mode: holscript; -*- ***************************************************)
+(*                                                                            *)
+(*   Symbolic (Fair) Kripke Structure                                         *)
+(*                                                                            *)
+(******************************************************************************)
+
 open HolKernel Parse boolLib bossLib;
 
 open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
@@ -34,35 +40,36 @@ Theorem symbolic_kripke_structure_REWRITES = LIST_CONJ
 val IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def = Define
    `IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K p = !n. XP_SEM K.R (p n, p (SUC n))`;
 
+(* key concept: p is a fair path of K w.r.t fair condition FC *)
 val IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def = Define
    `IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K FC p =
      (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K p /\
-      (!b. MEM b FC ==> (!t0. ?t. t >= t0 /\ (P_SEM (p t) b))))`;
+      !b. MEM b FC ==> !t0. ?t. t >= t0 /\ P_SEM (p t) b)`;
 
-(* added quantifiers *)
+(* added toplevel quantifiers *)
 Theorem IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE___ALTERNATIVE_DEF :
     !K FC p.
-        IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K FC p =
+       IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K FC p =
         (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K p /\
-        (!b. MEM b FC ==> (!t0. ?t. (P_SEM (p (t0 + t + 1)) b))))
+         !b. MEM b FC ==> !t0. ?t. P_SEM (p (t0 + t + 1)) b)
 Proof
-    rpt GEN_TAC THEN
-  REWRITE_TAC[IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def] THEN
-  BOOL_EQ_STRIP_TAC THEN
-  FORALL_EQ_STRIP_TAC THEN
-  BOOL_EQ_STRIP_TAC THEN
-  EQ_TAC THEN REPEAT STRIP_TAC THENL [
-    Q_SPEC_NO_ASSUM 0 `SUC t0` THEN
-    CLEAN_ASSUMPTIONS_TAC THEN
-    Q_TAC EXISTS_TAC `PRE (t - t0)` THEN
-    `t0 + PRE (t - t0) + 1 = t` by DECIDE_TAC THEN
-    ASM_REWRITE_TAC[],
-
-    Q_SPEC_NO_ASSUM 0 `t0` THEN
-    CLEAN_ASSUMPTIONS_TAC THEN
-    Q_TAC EXISTS_TAC `t0 + t + 1` THEN
-    ASM_SIMP_TAC arith_ss []
-  ]
+    rpt GEN_TAC
+ >> REWRITE_TAC [IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def]
+ >> BOOL_EQ_STRIP_TAC
+ >> FORALL_EQ_STRIP_TAC
+ >> BOOL_EQ_STRIP_TAC
+ >> EQ_TAC >> rpt STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      Q_SPEC_NO_ASSUM 0 `SUC t0` \\
+      CLEAN_ASSUMPTIONS_TAC \\
+      Q_TAC EXISTS_TAC `PRE (t - t0)` \\
+     `t0 + PRE (t - t0) + 1 = t` by DECIDE_TAC \\
+      ASM_REWRITE_TAC [],
+      (* goal 2 (of 2) *)
+      Q_SPEC_NO_ASSUM 0 `t0` \\
+      CLEAN_ASSUMPTIONS_TAC \\
+      Q_TAC EXISTS_TAC `t0 + t + 1` \\
+      ASM_SIMP_TAC arith_ss [] ]
 QED
 
 val IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def = Define
@@ -71,8 +78,7 @@ val IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def = Define
 
 val IS_FAIR_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def = Define
    `IS_FAIR_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K FC p =
-     (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K FC p /\
-      P_SEM (p 0) K.S0)`;
+     (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K FC p /\ P_SEM (p 0) K.S0)`;
 
 Theorem PATHS_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE___REWRITES =
    LIST_CONJ [IS_FAIR_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def,
@@ -114,9 +120,9 @@ val SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING_def = Define
 
 Theorem IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___IDENTIFY_VARIABLES :
     !f K fc.
-        IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE K fc ==>
-        IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE
-          (SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING f K) (MAP (P_VAR_RENAMING f) fc)
+       IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE K fc ==>
+       IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE
+        (SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING f K) (MAP (P_VAR_RENAMING f) fc)
 Proof
     SIMP_TAC std_ss [IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_def,
                      PATHS_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE___REWRITES,
@@ -129,11 +135,11 @@ QED
 
 Theorem IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING :
     !f K fc. INJ f
-        (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS K UNION
-         LIST_BIGUNION (MAP P_USED_VARS fc)) UNIV ==>
-        (IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE K fc =
-         IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE
-           (SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING f K) (MAP (P_VAR_RENAMING f) fc))
+      (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS K UNION
+       LIST_BIGUNION (MAP P_USED_VARS fc)) UNIV ==>
+      (IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE K fc =
+       IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE
+         (SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING f K) (MAP (P_VAR_RENAMING f) fc))
 Proof
     rpt STRIP_TAC
  >> EQ_TAC
