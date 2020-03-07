@@ -16,7 +16,6 @@ val _ = hide "S";
 val _ = hide "I";
 
 val _ = new_theory "full_ltl";
-val _ = ParseExtras.temp_loose_equality()
 
 (*****************************************************************************)
 (* Syntax                                                                    *)
@@ -51,7 +50,7 @@ Theorem ltl_induct = Q.GEN `P`
 val LTL_SEM_TIME_def = Define
   `(LTL_SEM_TIME t v (LTL_NOT f) = ~(LTL_SEM_TIME t v f)) /\
    (LTL_SEM_TIME t v (LTL_AND (f1,f2)) =
-    LTL_SEM_TIME t v f1 /\ LTL_SEM_TIME t v f2) /\
+     (LTL_SEM_TIME t v f1 /\ LTL_SEM_TIME t v f2)) /\
    (LTL_SEM_TIME t v (LTL_PROP b) = (P_SEM (v t) b)) /\
    (LTL_SEM_TIME t v (LTL_NEXT f) = LTL_SEM_TIME (SUC t) v f) /\
    (LTL_SEM_TIME t v (LTL_SUNTIL(f1,f2)) =
@@ -150,18 +149,18 @@ val LTL_INIT_def = Define
 
 val IS_FUTURE_LTL_def = Define
   `(IS_FUTURE_LTL (LTL_PROP b) = T) /\
-   (IS_FUTURE_LTL (LTL_NOT f) = (IS_FUTURE_LTL f)) /\
+   (IS_FUTURE_LTL (LTL_NOT f) = IS_FUTURE_LTL f) /\
    (IS_FUTURE_LTL (LTL_AND(f1,f2)) = (IS_FUTURE_LTL f1 /\ IS_FUTURE_LTL f2)) /\
-   (IS_FUTURE_LTL (LTL_NEXT f) = (IS_FUTURE_LTL f)) /\
+   (IS_FUTURE_LTL (LTL_NEXT f) = IS_FUTURE_LTL f) /\
    (IS_FUTURE_LTL (LTL_SUNTIL(f1,f2)) = (IS_FUTURE_LTL f1 /\ IS_FUTURE_LTL f2)) /\
    (IS_FUTURE_LTL (LTL_PSNEXT f) = F) /\
    (IS_FUTURE_LTL (LTL_PSUNTIL(f1,f2)) = F)`;
 
 val IS_PAST_LTL_def = Define
   `(IS_PAST_LTL (LTL_PROP b) = T) /\
-   (IS_PAST_LTL (LTL_NOT f) = (IS_PAST_LTL f)) /\
+   (IS_PAST_LTL (LTL_NOT f) = IS_PAST_LTL f) /\
    (IS_PAST_LTL (LTL_AND(f1,f2)) = (IS_PAST_LTL f1 /\ IS_PAST_LTL f2)) /\
-   (IS_PAST_LTL (LTL_PSNEXT f) = (IS_PAST_LTL f)) /\
+   (IS_PAST_LTL (LTL_PSNEXT f) = IS_PAST_LTL f) /\
    (IS_PAST_LTL (LTL_PSUNTIL(f1,f2)) = (IS_PAST_LTL f1 /\ IS_PAST_LTL f2)) /\
    (IS_PAST_LTL (LTL_NEXT f) = F) /\
    (IS_PAST_LTL (LTL_SUNTIL(f1,f2)) = F)`;
@@ -284,6 +283,7 @@ Proof
 QED
 
 Theorem LTL_USED_VARS_EVAL :
+    !p r r1 r2.
     (LTL_USED_VARS (LTL_PROP p) = P_USED_VARS p) /\
     (LTL_USED_VARS (LTL_NOT r) = LTL_USED_VARS r) /\
     (LTL_USED_VARS (LTL_AND (r1,r2)) = LTL_USED_VARS r1 UNION LTL_USED_VARS r2) /\
@@ -311,7 +311,8 @@ Theorem LTL_USED_VARS_EVAL :
     (LTL_USED_VARS (LTL_PSWHILE (r1,r2)) = LTL_USED_VARS r1 UNION LTL_USED_VARS r2) /\
     (LTL_USED_VARS (LTL_PSBEFORE (r1,r2)) = LTL_USED_VARS r1 UNION LTL_USED_VARS r2)
 Proof
-    SIMP_TAC std_ss [LTL_USED_VARS_def, LTL_OR_def, LTL_IMPL_def, LTL_EQUIV_def,
+    rpt GEN_TAC
+ >> SIMP_TAC std_ss [LTL_USED_VARS_def, LTL_OR_def, LTL_IMPL_def, LTL_EQUIV_def,
                      LTL_ALWAYS_def, LTL_EVENTUAL_def, P_VAR_RENAMING_EVAL,
                      LTL_PNEXT_def, LTL_TRUE_def, LTL_FALSE_def, LTL_INIT_def,
                      LTL_PALWAYS_def, LTL_PEVENTUAL_def, LTL_WHILE_def,

@@ -1,3 +1,9 @@
+(* -*- Mode: holscript; -*- ***************************************************)
+(*                                                                            *)
+(*     LTL to symbolic Omega automata (automaton formula) Translation         *)
+(*                                                                            *)
+(******************************************************************************)
+
 open HolKernel Parse boolLib bossLib;
 
 open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
@@ -214,7 +220,7 @@ Proof
 QED
 
 (* The meaning or "semantics" of the data structure:
-   
+
    1. initial states (S0) is from SN (number of needed state vars)
    2. all used vars are from used state vars (SN) and input vars (IV)
    3. for every input trace `i` and every LTL `l` in binding (B), there exists
@@ -3464,6 +3470,7 @@ val LTL_TO_GEN_BUECHI___EXTEND_def = Define
        []
        {(LTL_PSUNTIL(l1, l2), b1, b2, \sv. (P_OR(pf2' sv, P_AND(pf1' sv, P_PROP(sv DS2'.SN)))))}))))`;
 
+(* main definition *)
 val LTL_TO_GEN_BUECHI_def = Define
    `LTL_TO_GEN_BUECHI l b1 b2 =
     LTL_TO_GEN_BUECHI___EXTEND l b1 b2 (EMPTY_LTL_TO_GEN_BUECHI_DS)`;
@@ -3822,32 +3829,34 @@ Proof
       IN_SING, IN_INSERT, DISJ_IMP_THM]
 QED
 
-val LTL_TO_GEN_BUECHI_DS___BINDING_RUN_EQUIV = store_thm
-  ("LTL_TO_GEN_BUECHI_DS___BINDING_RUN_EQUIV",
-   ``!DS i w l1 pf1 l2 pf2 sv.
-        (LTL_TO_GEN_BUECHI_DS___BINDING_RUN DS w (l1, T, T, pf1) i sv  /\
-         LTL_TO_GEN_BUECHI_DS___BINDING_RUN DS w (l2, T, T, pf2) i sv) ==>
-         LTL_TO_GEN_BUECHI_DS___BINDING_RUN DS w (LTL_EQUIV(l1, l2), T, T, (\sv. P_EQUIV(pf1 sv, pf2 sv))) i sv``,
+Theorem LTL_TO_GEN_BUECHI_DS___BINDING_RUN_EQUIV :
+    !DS i w l1 pf1 l2 pf2 sv.
+        LTL_TO_GEN_BUECHI_DS___BINDING_RUN DS w (l1, T, T, pf1) i sv /\
+        LTL_TO_GEN_BUECHI_DS___BINDING_RUN DS w (l2, T, T, pf2) i sv ==>
+        LTL_TO_GEN_BUECHI_DS___BINDING_RUN DS w
+          (LTL_EQUIV(l1, l2), T, T, (\sv. P_EQUIV(pf1 sv, pf2 sv))) i sv
+Proof
+    rpt GEN_TAC
+ >> SIMP_TAC std_ss [LTL_TO_GEN_BUECHI_DS___BINDING_RUN_def, LTL_SEM_THM,
+                     LTL_TO_GEN_BUECHI_DS___MAX_FAIR_RUN_def,
+                     LTL_TO_GEN_BUECHI_DS___MIN_FAIR_RUN_def, P_SEM_THM]
+ >> METIS_TAC []
+QED
 
-    REPEAT GEN_TAC THEN
-    SIMP_TAC std_ss [LTL_TO_GEN_BUECHI_DS___BINDING_RUN_def, LTL_SEM_THM,
-      LTL_TO_GEN_BUECHI_DS___MAX_FAIR_RUN_def,
-      LTL_TO_GEN_BUECHI_DS___MIN_FAIR_RUN_def, P_SEM_THM] THEN
-    METIS_TAC[]);
-
-val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_EQUIV = store_thm
-  ("CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_EQUIV",
-   ``!DS l1 l2 pf1 pf2.
+Theorem CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_EQUIV :
+    !DS l1 l2 pf1 pf2.
         LTL_TO_GEN_BUECHI_DS___SEM DS /\
         (l1, T, T, pf1) IN DS.B /\
         (l2, T, T, pf2) IN DS.B ==>
-        LTL_TO_GEN_BUECHI_DS___SEM (EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS DS {(LTL_EQUIV(l1,l2), T, T, \sv. P_EQUIV (pf1 sv, pf2 sv))} {})``,
-
-  REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS___SEM THEN
-  ASM_SIMP_TAC list_ss [UNION_EMPTY, P_USED_VARS_EVAL, LTL_USED_VARS_EVAL,
-    UNION_SUBSET, IN_SING] THEN
-  METIS_TAC[LTL_TO_GEN_BUECHI_DS___BINDING_RUN_EQUIV]);
-
+        LTL_TO_GEN_BUECHI_DS___SEM
+          (EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS DS
+            {(LTL_EQUIV(l1,l2), T, T, \sv. P_EQUIV (pf1 sv, pf2 sv))} {})
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS___SEM
+ >> ASM_SIMP_TAC list_ss [UNION_EMPTY, P_USED_VARS_EVAL, LTL_USED_VARS_EVAL,
+                          UNION_SUBSET, IN_SING]
+ >> METIS_TAC [LTL_TO_GEN_BUECHI_DS___BINDING_RUN_EQUIV]
+QED
 
 val _ = export_theory();

@@ -8,7 +8,7 @@ open HolKernel Parse boolLib bossLib;
 
 open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
-     pred_setTheory rich_listTheory set_lemmataTheory temporal_deep_mixedTheory pairTheory 
+     pred_setTheory rich_listTheory set_lemmataTheory temporal_deep_mixedTheory pairTheory
      symbolic_kripke_structureTheory
      numLib semi_automatonTheory omega_automatonTheory kripke_structureTheory
      containerTheory relationTheory;

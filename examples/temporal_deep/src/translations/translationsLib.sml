@@ -6,8 +6,7 @@ open HolKernel Parse boolLib bossLib;
 open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
      temporal_deep_mixedTheory pred_setTheory rich_listTheory set_lemmataTheory
-     pairTheory pred_setSyntax
-     ltl_to_automaton_formulaTheory numLib listLib translationsLibTheory
+     pairTheory pred_setSyntax ltl_to_automaton_formulaTheory numLib listLib translationsLibTheory
      rltl_to_ltlTheory rltlTheory computeLib congLib temporal_deep_simplificationsLib
      Trace symbolic_kripke_structureTheory psl_lemmataTheory ProjectionTheory psl_to_rltlTheory;
 
@@ -18,8 +17,7 @@ fun SETIFY_CONV tm =
    (SUB_CONV (SETIFY_CONV) THENC TRY_CONV (pred_setLib.INSERT_CONV NO_CONV)) tm;
 
 (* The translation of LTL to GEN_BUECHI using just rewrite rules *)
-fun ltl2omega_rewrite t l =
-  let
+fun ltl2omega_rewrite t l = let
     val (typeString, ltl_type) = (dest_type (type_of l));
     val _ = if (typeString = "ltl") then T else raise NoLTLTerm;
     val ltl_type = hd (ltl_type);
@@ -52,7 +50,9 @@ fun ltl2omega_rewrite t l =
     thm
   end;
 
-(* A more sophistacted translations, that is able to exploit term-sharing *)
+(******************************************************************************)
+(* A more sophistacted translations, that is able to exploit term-sharing     *)
+(******************************************************************************)
 
 (* some general helpers *)
 fun boolToHOL b = if b then T else F;
@@ -639,7 +639,7 @@ local
       dprocs = [],
       congs  = [IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_cong]};
 
-  val basic_compset = new_compset [ltl_to_gen_buechi_ds_REWRITES, 
+  val basic_compset = new_compset [ltl_to_gen_buechi_ds_REWRITES,
                                    LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR_def];
 
   val final_cs = mk_congset [prop_logic_CS, xprop_logic_CS, special_CS];

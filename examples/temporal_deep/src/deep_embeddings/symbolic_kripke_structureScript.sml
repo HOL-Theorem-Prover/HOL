@@ -1,6 +1,6 @@
 (* -*- Mode: holscript; -*- ***************************************************)
 (*                                                                            *)
-(*   Symbolic (Fair) Kripke Structure                                         *)
+(*   Symbolic Kripke Structure (with external fair conditions)                *)
 (*                                                                            *)
 (******************************************************************************)
 
