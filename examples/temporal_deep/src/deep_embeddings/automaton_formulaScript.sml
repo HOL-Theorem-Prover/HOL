@@ -136,7 +136,7 @@ val ACCEPT_VAR_RENAMING_def = Define
    (ACCEPT_VAR_RENAMING f (ACCEPT_NOT b) = ACCEPT_NOT (ACCEPT_VAR_RENAMING f b)) /\
    (ACCEPT_VAR_RENAMING f (ACCEPT_G b) = ACCEPT_G (ACCEPT_VAR_RENAMING f b)) /\
    (ACCEPT_VAR_RENAMING f (ACCEPT_AND(b1,b2)) =
-      (ACCEPT_AND(ACCEPT_VAR_RENAMING f b1, ACCEPT_VAR_RENAMING f b2)))`;
+      ACCEPT_AND(ACCEPT_VAR_RENAMING f b1, ACCEPT_VAR_RENAMING f b2))`;
 
 val A_VAR_RENAMING_def = Define
   `(A_VAR_RENAMING (f:'a -> 'b) (ACCEPT_COND p) = ACCEPT_COND (ACCEPT_VAR_RENAMING f p)) /\
@@ -433,8 +433,7 @@ Theorem A_NDET_CONSTRAINED_11 :
 Proof
     EVAL_TAC
  >> Induct_on `C`
- >> Cases_on `D`
- >> EVAL_TAC >> PROVE_TAC []
+ >> Cases_on `D` >> EVAL_TAC >> PROVE_TAC []
 QED
 
 (******************************************************************************)
@@ -1400,7 +1399,7 @@ Proof
       ASM_SIMP_TAC std_ss [ACCEPT_COND_SEM_TIME_def],
       ASM_SIMP_TAC std_ss [ACCEPT_COND_SEM_TIME_def],
       ASM_SIMP_TAC std_ss [ACCEPT_COND_SEM_TIME_def] \\
-      rpt STRIP_TAC >> EQ_TAC >> rpt STRIP_TAC >|
+      rpt STRIP_TAC >> EQ_TAC >> rpt STRIP_TAC >| (* 2 subgoals *)
       [ rename1 `t3 >= t1` \\
        `t3 + t2 >= t1 + t2` by DECIDE_TAC \\
         PROVE_TAC [],
@@ -1506,13 +1505,13 @@ Proof
  >> SIMP_TAC std_ss []
  >> SUBGOAL_TAC `!A ac i. A_SEM i (A_NDET (A, A_NOT (ACCEPT_COND ac))) =
                           A_SEM i (A_NDET (A, ACCEPT_COND (ACCEPT_NOT ac)))`
- >- (SIMP_TAC std_ss [A_SEM_def, ACCEPT_COND_SEM_def, ACCEPT_COND_SEM_TIME_def])
+ >- SIMP_TAC std_ss [A_SEM_def, ACCEPT_COND_SEM_def, ACCEPT_COND_SEM_TIME_def]
  >> ASM_REWRITE_TAC []
  >> WEAKEN_HD_TAC
  >> ASSUME_TAC A_NDET___SIMPLIFIED_SEMI_AUTOMATON_THM
  >> Q_SPECL_NO_ASSUM 0 [`A`, `A'`, `f`, `ACCEPT_NOT ac`]
  >> PROVE_CONDITION_NO_ASSUM 0
- >- (ASM_SIMP_TAC std_ss [ACCEPT_COND_USED_VARS_def])
+ >- ASM_SIMP_TAC std_ss [ACCEPT_COND_USED_VARS_def]
  >> ASM_SIMP_TAC std_ss [ACCEPT_VAR_RENAMING_def]
 QED
 
@@ -1533,6 +1532,6 @@ val _ = export_theory();
      pp. 39–54. Springer, Berlin, Heidelberg (2001).
 
  [4] Schneider, K., Hoffmann, D.W.: A HOL Conversion for Translating Linear Time
-     Temporal Logic to 'y-Automata. In: LNCS 1690 - Theorem Proving in Higher Order
+     Temporal Logic to omega-Automata. In: LNCS 1690 - Theorem Proving in Higher Order
      Logics (TPHOLs 1999). pp. 255–272. Springer, Berlin, Heidelberg (1999).
 *)
