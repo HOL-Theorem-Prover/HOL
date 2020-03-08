@@ -19,9 +19,15 @@ val _ = hide "I";
 val _ = new_theory "automaton_formula";
 val _ = ParseExtras.temp_loose_equality()
 
-(*****************************************************************************
- * Acceptance conditions (a limited form of LTL formula with only G operator)
- *****************************************************************************)
+(******************************************************************************)
+(*                                                                            *)
+(*     Acceptance conditions (a limited form of LTL with only G operator)     *)
+(*                                                                            *)
+(******************************************************************************)
+
+(* see omega_automaton_translationTheory.ACCEPT_COND_TO_LTL_def for a direct
+   translation to LTL, where ACCEPT_G is translated to LTL_ALWAYS
+ *)
 Datatype :
     acceptance_condition =
           ACCEPT_PROP ('a prop_logic)
