@@ -12,7 +12,7 @@ open HolKernel Abbrev boolLib aiLib psTermGen mlTacticData
 mlTreeNeuralNetwork mlFeature numSyntax
 
 val ERR = mk_HOL_ERR "mleArithData"
-val datadir = HOLDIR ^ "/examples/TNN_tasks/data_arith"
+val arithdir = HOLDIR ^ "/examples/TNN_tasks/data_arith"
 
 (* -------------------------------------------------------------------------
    Arithmetic
@@ -78,15 +78,15 @@ fun create_test tml nex = create_exset tml nex (10,10)
 
 fun create_export_arithdata () =
   let
-    val _ = mkDir_err datadir
+    val _ = mkDir_err arithdir
     val tmltrain = create_train 200
     val tmlvalid = create_valid tmltrain 200
     val tmltest = create_test (tmltrain @ tmlvalid) 200
     fun f tm = tts tm ^ "," ^ its (eval_numtm tm)
   in
-    writel (datadir ^ "/train") (map f tmltrain);
-    writel (datadir ^ "/valid") (map f tmlvalid);
-    writel (datadir ^ "/test") (map f tmltest)
+    writel (arithdir ^ "/train") (map f tmltrain);
+    writel (arithdir ^ "/valid") (map f tmlvalid);
+    writel (arithdir ^ "/test") (map f tmltest)
   end
 
 (*
@@ -104,7 +104,7 @@ fun lisp_to_arith lisp =
 
 fun import_arithdata dataname = 
   let 
-    val l1 = readl (datadir ^ "/" ^ dataname)
+    val l1 = readl (arithdir ^ "/" ^ dataname)
     val l2 = map pair_of_list (mk_batch_full 2 l1)
     val l3 = map_snd string_to_int l2
     fun f x = if x = "0" then zero_tm else
@@ -125,7 +125,7 @@ val train = import_arithdata "train";
 
 fun export_arithfea dataname =
   let
-    val _ = mkDir_err datadir
+    val _ = mkDir_err arithdir
     val tml' = map fst (
       List.concat (map import_arithdata ["test","train"]))
     fun all_features x =
@@ -143,7 +143,7 @@ fun export_arithfea dataname =
         ("+" ^ its (i mod 16) ^ " " ^ String.concatWith " " il2)
       end
   in
-    writel (datadir ^ "/" ^ dataname ^ "_fea") (map f tml)
+    writel (arithdir ^ "/" ^ dataname ^ "_fea") (map f tml)
   end
 
 (*
@@ -159,62 +159,6 @@ fun regroup_by_metric f tml =
   let val d = dregroup Int.compare (map swap (map_assoc f tml)) in
     map_snd length (dlist d)
   end
-
-(*
-load "aiLib"; open aiLib;
-load "mleArithData"; open mleArithData;
-val traintml = read_arithtml "train";
-fun compare_termsize (a,b) = Int.compare (term_size b,term_size a);
-length traintml;
-val trainsize = regroup_by_metric term_size traintml;
-write_texgraph (dir ^ "/trainsize") ("size","number") trainsize;
-val trainvalue = regroup_by_metric eval_numtm traintml;
-write_texgraph (dir ^ "/trainvalue") ("value","number") trainvalue;
-val x = sum_int (map snd (filter (fn x => fst x <= 100) trainvalue));
-fun U x = Int.min (term_size x, eval_numtm x);
-val trainU= regroup_by_metric U traintml;
-write_texgraph (dir ^ "/trainU") ("U","number") trainU;
-fun mod16 x = eval_numtm x mod 16;
-val trainmod16 = regroup_by_metric mod16 traintml;
-write_texgraph (dir ^ "/trainmod16") ("mod16","number") trainmod16;
-fun valsize x = if (eval_numtm x > term_size x) then 2
-            else if eval_numtm x = term_size x then 1 else 0;
-val trainvalsize = regroup_by_metric valsize traintml;
-map_snd (fn x => int_div x 11990) trainvalsize;
-load "mleLib"; open mleLib;
-fun f x = lo_prooflength 500 x handle Option => ~1;
-val trainlength = regroup_by_metric f traintml;
-write_texgraph (dir ^ "/trainlength") ("length","number") trainlength;
-val x = sum_int (map snd (filter (fn x => fst x <= 100) trainlength));
-
-
-load "mleArithData"; open mleArithData;
-val tml = create_alt 1000;
-fun f x = lo_prooflength 10000 x handle Option => ~1;
-val trainlength = regroup_by_metric f traintml;
-val validtml = read_arithtml "valid";
-length validtml;
-val validsize = regroup_by_metric term_size validtml;
-write_texgraph (dir ^ "/validsize") ("size","number") validsize;
-val testtml = read_arithtml "test";
-length testtml;
-val testsize = regroup_by_metric term_size testtml;
-write_texgraph (dir ^ "/testsize") ("size","number") testsize;
-load "psTermGen"; open psTermGen;
-fun mk_train_alt (n,m) =
-  random_terml [``SUC``,``0``,``$+``,``$*``] (n,``:num``) m;
-val train_alt = List.concat (map mk_train_alt trainsize);
-val train_alt = it;
-length train_alt;
-val l = filter (fn x => eval_numtm x = 0) train_alt;
-int_div (length l) (length train_alt);
-val l12 = filter (fn x => term_size x = 12) traintml;
-val l12' = filter (fn x => eval_numtm x = 0) l12;
-int_div (length l12') (length l12);
-val l = filter (fn x => eval_numtm x = 0) traintml;
-int_div (length l) (length traintml);
-*)
-
 
 
 end (* struct *)

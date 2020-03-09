@@ -8,10 +8,10 @@
 structure mleEntail :> mleEntail =
 struct
 
-open HolKernel Abbrev boolLib aiLib psTermGen mlTreeNeuralNetwork mleLib
+open HolKernel Abbrev boolLib aiLib psTermGen mlTreeNeuralNetwork
 
 val ERR = mk_HOL_ERR "mleEntail"
-val entail_dir = HOLDIR ^ "/examples/TNN_tasks/data_entail"
+val entaildir = HOLDIR ^ "/examples/TNN_tasks/data_entail"
 
 (* -------------------------------------------------------------------------
    Parse examples from string
@@ -33,7 +33,8 @@ fun parse_ex s =
              else raise ERR "translate_token" ""
     fun dm_to_hol s =
        let val s' = String.translate translate_token s in
-         (Parse.Term [HOLPP.QUOTE s'] handle HOL_ERR _ => raise ERR "read_ex" s')
+         (Parse.Term [HOLPP.QUOTE s'] 
+          handle HOL_ERR _ => raise ERR "read_ex" s')
        end
   in
     (mk_imp (dm_to_hol s1, dm_to_hol s2), [Real.fromInt (string_to_int s3)])
@@ -57,44 +58,48 @@ fun read_false_exl file =
   end
 
 (* -------------------------------------------------------------------------
-   Normalize examples
+   Vocabulary
    ------------------------------------------------------------------------- *)
 
 val prime_tag = mk_var ("prime_tag", ``:bool -> bool``)
 fun prime_term n tm =
    if n <= 0 then tm else mk_comb (prime_tag, prime_term (n - 1) tm)
 fun mk_boolvar i = mk_var ("V" ^ its i,bool)
-
 fun prime_boolvar_sub m =
   List.tabulate
     (m, fn n => {redex = mk_boolvar n, residue = prime_term n ``x:bool``})
+val operl = [prime_tag,``x:bool``,``$/\``,``$\/``,``$~``,``$==>``]
+val head_entail = mk_var ("head_entail",``:bool -> bool``)
+fun mk_head x = mk_comb (head_entail, x)
 
+(* -------------------------------------------------------------------------
+   Import and normalize examples
+   ------------------------------------------------------------------------- *)
 
-fun exprimed_from_file maxvar basename =
+fun import_entaildata maxvar basename =
   let
-    val ex1 = map parse_ex (readl (entail_dir ^ "/" ^ basename))
+    val ex1 = map parse_ex (readl (entaildir ^ "/" ^ basename))
     val ex2 = map_fst rename_allvar ex1
+    val ex3 = map_fst (subst (prime_boolvar_sub maxvar)) ex2
   in
-    map_fst (subst (prime_boolvar_sub maxvar)) ex2
+    map (fn (a,b) => [(mk_head a,b)]) ex3
   end
 
 (* -------------------------------------------------------------------------
    Tree neural network
    ------------------------------------------------------------------------- *)
 
-fun entail_random_tnn dim =
-  let
-    val operl =
-      [(``$/\``,2),(``$\/``,2),(``$~``,1),(``$==>``,2),
-       (``$= :bool -> bool -> bool``,2)] @
-      [(``x:bool``,0),(prime_tag,1)]
-    val tnn_param =
-      {dimin = dim, dimout = 1,
-       nlayer_headnn = 2, nlayer_oper = 2,
-       operl = operl}
-  in
-    random_tnn tnn_param
-  end
+val tnnparam = map_assoc (dim_std (2,12)) operl @ [(head_entail,[12,12,1])]
+
+val schedule =
+  [{ncore = 1, verbose = true, learning_rate = 0.02,
+    batch_size = 8, nepoch = 50}] @
+  [{ncore = 1, verbose = true, learning_rate = 0.02,
+    batch_size = 16, nepoch = 50}] @
+  [{ncore = 1, verbose = true, learning_rate = 0.02,
+    batch_size = 32, nepoch = 50}] @
+  [{ncore = 1, verbose = true, learning_rate = 0.02,
+    batch_size = 64, nepoch = 50}]
 
 (* -------------------------------------------------------------------------
    Train
@@ -102,15 +107,11 @@ fun entail_random_tnn dim =
 
 fun train_fixed () =
   let
-    val trainex = exprimed_from_file 10 "train.txt"
-    val schedule =
-      [{batch_size = 16, learning_rate = 0.02,
-       ncore = 4, nepoch = 100, verbose = true}]
-    val randtnn = entail_random_tnn 12
-    val tnn = train_tnn schedule randtnn (trainex,first_n 100 trainex)
+    val trainex = import_entaildata 10 "train.txt"
+    val tnn = train_tnn schedule (random_tnn tnnparam) (trainex,[])
   in
-    write_tnn (entail_dir ^ "/tnn") tnn;
-    tnn
+    mkDir_err entaildir;
+    write_tnn (entaildir ^ "/tnn") tnn; tnn
   end
 
 (* ------------------------------------------------------------------------
@@ -122,7 +123,7 @@ fun test_fixed tnn =
     val filel =
       ["validate.txt","test_easy.txt","test_hard.txt",
        "test_big.txt","test_massive.txt","test_exam.txt"]
-    val exl = map (exprimed_from_file 26) filel
+    val exl = map (import_entaildata 26) filel
   in
     map (tnn_accuracy tnn) exl
   end
@@ -130,7 +131,7 @@ fun test_fixed tnn =
 (*
 load "aiLib"; open aiLib;
 load "mleEntail"; open mleEntail;
-val tnn = train_fixed ();
+val tnn = train_fixed (); (* takes a minute to parse the data set *)
 val l = test_fixed tnn;
 *)
 

@@ -2,14 +2,11 @@ signature mleEntail =
 sig
 
   include Abbrev
-
-  val entail_dir : string
-  val parse_ex : string -> term * real list
-  val read_true_exl : string -> term list
-  val read_false_exl : string -> term list
-  val exprimed_from_file : int -> string -> (term * real list) list
-  val entail_random_tnn : int -> mlTreeNeuralNetwork.tnn
-  val train_fixed : unit -> mlTreeNeuralNetwork.tnn
+  type tnn = mlTreeNeuralNetwork.tnn
+  
+  val import_entaildata : int -> string -> ((term * real list) list) list
+  
+  val train_fixed : unit -> tnn
   val test_fixed : mlTreeNeuralNetwork.tnn -> real list
 
 end
