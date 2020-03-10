@@ -37,6 +37,15 @@ Definition nonTerminals_def:
                                  MEM (NT n) sf }
 End
 
+Theorem EXISTS_symbol:
+  (?) (P : (α,β) symbol -> bool) ⇔ (∃t. P (TOK t)) ∨ (∃n. P (NT n))
+Proof
+  ‘P = (λx. P x)’ by simp[FUN_EQ_THM] >> pop_assum SUBST_ALL_TAC >>
+  eq_tac >> rw[]
+  >- (rename [‘P (TOK _)’, ‘P sym’] >> Cases_on ‘sym’ >> metis_tac[]) >>
+  metis_tac[]
+QED
+
 Theorem FINITE_nonTerminals[simp]:
   FINITE (nonTerminals (G:(α,β)grammar))
 Proof
@@ -59,7 +68,32 @@ Proof
   simp[PULL_EXISTS] >> Cases >> simp[]
 QED
 
+Definition terminals_def:
+  terminals G = {
+    t | ∃n sf. n ∈ FDOM G.rules ∧ sf ∈ᶠ (G.rules ' n) ∧
+               MEM (TOK t) sf
+  }
+End
 
+Theorem FINITE_terminals[simp]:
+  FINITE (terminals G)
+Proof
+  simp[terminals_def] >>
+  qmatch_abbrev_tac ‘FINITE s’ >>
+  ‘s = BIGUNION (IMAGE (λn. { t | ∃sf. sf ∈ᶠ G.rules ' n ∧ MEM (TOK t) sf })
+                       (FDOM G.rules))’
+    by simp[Once EXTENSION, PULL_EXISTS, Abbr‘s’, AC CONJ_ASSOC CONJ_COMM] >>
+  simp[PULL_EXISTS] >> rw[] >>
+  qmatch_abbrev_tac‘FINITE s’ >>
+  ‘s = BIGUNION (IMAGE (λsf. { t | MEM (TOK t) sf }) (toSet (G.rules ' n)))’
+    by simp[Once EXTENSION, PULL_EXISTS, Abbr‘s’, AC CONJ_COMM CONJ_ASSOC,
+            finite_setTheory.fIN_IN] >>
+  rw[] >>
+  qmatch_abbrev_tac ‘FINITE s’ >>
+  ‘s = BIGUNION (IMAGE (λsym. case sym of TOK t => {t} | NT n => ∅) (set sf))’
+    by dsimp[Abbr‘s’, Once EXTENSION, PULL_EXISTS, EXISTS_symbol] >>
+  simp[PULL_EXISTS] >> Cases >> simp[]
+QED
 
 Datatype:
   parsetree = Lf (('a,'b) symbol # 'locs)
