@@ -92,13 +92,13 @@ fun import_entaildata maxvar basename =
 val tnnparam = map_assoc (dim_std (2,12)) operl @ [(head_entail,[12,12,1])]
 
 val schedule =
-  [{ncore = 1, verbose = true, learning_rate = 0.02,
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 8, nepoch = 50}] @
-  [{ncore = 1, verbose = true, learning_rate = 0.02,
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 50}] @
-  [{ncore = 1, verbose = true, learning_rate = 0.02,
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 32, nepoch = 50}] @
-  [{ncore = 1, verbose = true, learning_rate = 0.02,
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 64, nepoch = 50}]
 
 (* -------------------------------------------------------------------------
