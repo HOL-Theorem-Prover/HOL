@@ -11,6 +11,8 @@ open numposrepTheory
 
 val _ = new_theory "bitstring"
 
+val _ = diminish_srw_ss ["NORMEQ_ss"]
+
 (* ------------------------------------------------------------------------- *)
 
 (* MSB is head of list, e.g. [T, F] represents 2 *)
