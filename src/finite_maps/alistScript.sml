@@ -3,6 +3,8 @@ open pairTheory boolSimps relationTheory
 
 val _ = new_theory "alist";
 
+val _ = diminish_srw_ss ["NORMEQ_ss"]
+
 val _ = type_abbrev("alist",``:(('a # 'b) list)``);
 
 val fmap_to_alist_def = Define`
