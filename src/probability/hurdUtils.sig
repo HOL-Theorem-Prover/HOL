@@ -335,7 +335,6 @@ sig
   val PURE_CONV_TAC : conv -> tactic
   val ASMLIST_CASES : tactic -> (term -> tactic) -> tactic
   val POP_ASSUM_TAC : tactic -> tactic
-  val Reverse : tactic -> tactic
   val TRUTH_TAC : tactic
   val S_TAC : tactic
   val Strip : tactic

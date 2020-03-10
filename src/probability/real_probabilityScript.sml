@@ -383,7 +383,7 @@ val PROB_ZERO_UNION = store_thm
   >> STRIP_TAC
   >> Know `prob p (t DIFF s) = 0`
   >- (ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
-      >> Reverse CONJ_TAC >- PROVE_TAC [PROB_POSITIVE]
+      >> reverse CONJ_TAC >- PROVE_TAC [PROB_POSITIVE]
       >> Q.PAT_X_ASSUM `prob p t = 0` (ONCE_REWRITE_TAC o wrap o SYM)
       >> MATCH_MP_TAC PROB_INCREASING
       >> RW_TAC std_ss [DIFF_SUBSET])
@@ -496,7 +496,7 @@ val PROB_FINITELY_ADDITIVE = store_thm
        (prob p o (\m. if m < n then f m else {})) sums
        sum (0, n) (prob p o f)`
    >- PROVE_TAC [SUM_UNIQ]
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (Know
        `sum (0,n) (prob p o f) =
         sum (0,n) (prob p o (\m. (if m < n then f m else {})))`
@@ -578,7 +578,7 @@ val PROB_COUNTABLY_SUBADDITIVE = store_thm
         RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_IMAGE, IN_COUNT]
         >> PROVE_TAC [LT_SUC],
         RW_TAC std_ss [EXTENSION, IN_BIGUNION_IMAGE, IN_UNIV, IN_COUNT]
-        >> Reverse EQ_TAC >- PROVE_TAC []
+        >> reverse EQ_TAC >- PROVE_TAC []
         >> RW_TAC std_ss []
         >> Q.EXISTS_TAC `SUC x'`
         >> Q.EXISTS_TAC `x'`
@@ -622,7 +622,7 @@ val PROB_COUNTABLY_ZERO = store_thm
    >> NTAC 2 (POP_ASSUM K_TAC)
    >> STRIP_TAC
    >> ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (MATCH_MP_TAC PROB_POSITIVE
        >> RW_TAC std_ss []
        >> MATCH_MP_TAC EVENTS_COUNTABLE_UNION
@@ -958,7 +958,7 @@ val uniform_distribution_prob_space = store_thm
           >> METIS_TAC [CHOICE_DEF, NOT_IN_EMPTY])
   >> `CARD (space s) <> 0` by METIS_TAC [CARD_EQ_0]
   >> `&CARD (space s) <> 0:real` by RW_TAC real_ss []
-  >> Reverse (RW_TAC std_ss [prob_space_def, measure_def, PSPACE])
+  >> reverse (RW_TAC std_ss [prob_space_def, measure_def, PSPACE])
   >- RW_TAC std_ss [uniform_distribution_def, REAL_DIV_REFL]
   >> MATCH_MP_TAC finite_additivity_sufficient_for_finite_spaces
   >> CONJ_TAC >- FULL_SIMP_TAC std_ss [random_variable_def, IN_MEASURABLE]
@@ -1632,7 +1632,7 @@ val COND_PROB_FINITE_ADDITIVE = store_thm
      EQ_TAC >> rpt STRIP_TAC >| (* 3 subgoals *)
      [ (* goal 1 (of 3) *)
        rename1 `s = A i` >> Q.EXISTS_TAC `B INTER (A i)` \\
-       Reverse CONJ_TAC >- (Q.EXISTS_TAC `i` >> art []) \\
+       reverse CONJ_TAC >- (Q.EXISTS_TAC `i` >> art []) \\
        METIS_TAC [IN_INTER],
        (* goal 2 (of 3) *)
        fs [IN_INTER] >> Q.EXISTS_TAC `A i` >> art [] \\

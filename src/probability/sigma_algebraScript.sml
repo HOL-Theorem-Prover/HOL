@@ -194,7 +194,7 @@ val SIGMA_ALGEBRA_ALT = store_thm
    >> EQ_TAC
    >- (RW_TAC std_ss [COUNTABLE_ALT, IN_FUNSET, IN_UNIV]
        >> Q.PAT_X_ASSUM `!c. P c ==> Q c` MATCH_MP_TAC
-       >> Reverse (RW_TAC std_ss [IN_IMAGE, SUBSET_DEF, IN_UNIV])
+       >> reverse (RW_TAC std_ss [IN_IMAGE, SUBSET_DEF, IN_UNIV])
        >- PROVE_TAC []
        >> Q.EXISTS_TAC `f`
        >> RW_TAC std_ss []
@@ -246,7 +246,7 @@ val SIGMA_ALGEBRA_ALT_MONO = store_thm
        >> PROVE_TAC [])
    >> DISCH_THEN (REWRITE_TAC o wrap)
    >> POP_ASSUM MATCH_MP_TAC
-   >> Reverse (RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_COUNT, IN_IMAGE,
+   >> reverse (RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_COUNT, IN_IMAGE,
                               COUNT_ZERO, IMAGE_EMPTY, BIGUNION_EMPTY])
    >- (Q.EXISTS_TAC `f x'`
        >> RW_TAC std_ss []
@@ -254,7 +254,7 @@ val SIGMA_ALGEBRA_ALT_MONO = store_thm
        >> DECIDE_TAC)
    >> MATCH_MP_TAC ALGEBRA_FINITE_UNION
    >> POP_ASSUM MP_TAC
-   >> Reverse (RW_TAC std_ss [IN_FUNSET, IN_UNIV, SUBSET_DEF, IN_IMAGE])
+   >> reverse (RW_TAC std_ss [IN_FUNSET, IN_UNIV, SUBSET_DEF, IN_IMAGE])
    >- PROVE_TAC []
    >> MATCH_MP_TAC IMAGE_FINITE
    >> RW_TAC std_ss [FINITE_COUNT]);
@@ -278,7 +278,7 @@ val SIGMA_ALGEBRA_ALT_DISJOINT = store_thm
    >- (POP_ASSUM K_TAC
        >> ONCE_REWRITE_TAC [EXTENSION]
        >> RW_TAC std_ss [IN_BIGUNION, IN_IMAGE, IN_UNIV, IN_DIFF]
-       >> Reverse EQ_TAC
+       >> reverse EQ_TAC
        >- (RW_TAC std_ss []
            >> POP_ASSUM MP_TAC
            >> RW_TAC std_ss [IN_DIFF]
@@ -531,14 +531,14 @@ val PREIMAGE_SIGMA_ALGEBRA = store_thm (* [1, p.16] *)
       (* goal 3 (of 5) *)
       fs [IN_IMAGE, IN_FUNSET] \\
       Q.EXISTS_TAC `space A DIFF s'` \\
-      Reverse CONJ_TAC
+      reverse CONJ_TAC
       >- (MATCH_MP_TAC ALGEBRA_COMPL >> fs [sigma_algebra_def]) \\
       RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_DIFF, IN_INTER] \\
       EQ_TAC >> RW_TAC std_ss [],
       (* goal 4 (of 5) *)
       fs [IN_IMAGE, IN_FUNSET] \\
       Q.EXISTS_TAC `s' UNION s''` \\
-      Reverse CONJ_TAC
+      reverse CONJ_TAC
       >- (MATCH_MP_TAC ALGEBRA_UNION >> fs [sigma_algebra_def]) \\
       RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_UNION, IN_INTER] \\
       EQ_TAC >> RW_TAC std_ss [] >> art [],
@@ -547,7 +547,7 @@ val PREIMAGE_SIGMA_ALGEBRA = store_thm (* [1, p.16] *)
      `f' = \x. PREIMAGE f (f'' x) INTER sp` by PROVE_TAC [] >> POP_ORW \\
      `!x. f'' x IN subsets A` by PROVE_TAC [] \\
       Q.EXISTS_TAC `BIGUNION (IMAGE f'' UNIV)` \\
-      Reverse CONJ_TAC
+      reverse CONJ_TAC
       >- (fs [SIGMA_ALGEBRA_FN] \\
           FIRST_X_ASSUM MATCH_MP_TAC >> art [IN_FUNSET, IN_UNIV]) \\
       RW_TAC std_ss [EXTENSION, IN_BIGUNION_IMAGE, IN_PREIMAGE, IN_UNIV, IN_INTER] \\
@@ -802,7 +802,7 @@ Theorem SMALLEST_RING_OF_SEMIRING :
 Proof
     RW_TAC std_ss [smallest_ring_def, subsets_def]
  >> RW_TAC std_ss [Once EXTENSION, GSPECIFICATION, IN_BIGINTER]
- >> Reverse EQ_TAC >> RW_TAC std_ss []
+ >> reverse EQ_TAC >> RW_TAC std_ss []
  >- (MATCH_MP_TAC (REWRITE_RULE [subsets_def]
                                 (Q.SPEC `(sp,P)` RING_FINITE_UNION)) >> art [] \\
      MATCH_MP_TAC SUBSET_TRANS \\
@@ -884,7 +884,7 @@ Proof
      ASM_REWRITE_TAC [BIGUNION_IMAGE_OVER_INTER_L] \\
      REWRITE_TAC [BIGUNION_IMAGE_OVER_INTER_R] \\
      FIRST_ASSUM MATCH_MP_TAC \\
-     Reverse CONJ_TAC (* some easy goals *)
+     reverse CONJ_TAC (* some easy goals *)
      >- (CONJ_TAC >- (MATCH_MP_TAC IMAGE_FINITE >> REWRITE_TAC [FINITE_COUNT]) \\
          MATCH_MP_TAC disjointI \\
          NTAC 2 GEN_TAC >> SIMP_TAC std_ss [IN_IMAGE, IN_COUNT] \\
@@ -903,7 +903,7 @@ Proof
   (* IMAGE (\i. BIGUNION (IMAGE (\i'. f i INTER f' i') (count n'))) (count n) SUBSET S *)
      RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_COUNT] \\
      FIRST_ASSUM MATCH_MP_TAC \\
-     Reverse CONJ_TAC (* some easy goals *)
+     reverse CONJ_TAC (* some easy goals *)
      >- (CONJ_TAC >- (MATCH_MP_TAC IMAGE_FINITE >> REWRITE_TAC [FINITE_COUNT]) \\
          MATCH_MP_TAC disjointI \\
          NTAC 2 GEN_TAC >> SIMP_TAC std_ss [IN_IMAGE, IN_COUNT] \\
@@ -1003,7 +1003,7 @@ Proof
      REWRITE_TAC [BIGUNION_IMAGE_OVER_INTER_L] \\
      REWRITE_TAC [MATCH_MP BIGINTER_IMAGE_OVER_INTER_R (ASSUME ``0:num < n'``)] \\
      BETA_TAC >> FIRST_ASSUM MATCH_MP_TAC \\
-     Reverse CONJ_TAC (* some easy goals *)
+     reverse CONJ_TAC (* some easy goals *)
      >- (CONJ_TAC >- (MATCH_MP_TAC IMAGE_FINITE >> REWRITE_TAC [FINITE_COUNT]) \\
          MATCH_MP_TAC disjointI \\
          NTAC 2 GEN_TAC >> SIMP_TAC std_ss [IN_IMAGE, IN_COUNT] \\
@@ -1153,7 +1153,7 @@ val DYNKIN_SYSTEM_ALT_MONO = store_thm
         >- (POP_ASSUM K_TAC
             >> ONCE_REWRITE_TAC [EXTENSION]
             >> RW_TAC std_ss [IN_BIGUNION, IN_IMAGE, IN_UNIV, IN_DIFF]
-            >> Reverse EQ_TAC
+            >> reverse EQ_TAC
             >- (RW_TAC std_ss []
                 >> POP_ASSUM MP_TAC
                 >> RW_TAC std_ss [IN_DIFF]
@@ -1234,7 +1234,7 @@ val DYNKIN_SYSTEM_ALT_MONO = store_thm
       POP_ASSUM MATCH_MP_TAC \\
       SIMP_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_COUNT, IN_IMAGE,
                        COUNT_ZERO, IMAGE_EMPTY, BIGUNION_EMPTY] \\
-      Reverse CONJ_TAC
+      reverse CONJ_TAC
       >- (RW_TAC std_ss [] \\
           Q.EXISTS_TAC `f x'` >> RW_TAC std_ss [] \\
           Q.EXISTS_TAC `x'` >> DECIDE_TAC) \\
@@ -1258,7 +1258,7 @@ val DYNKIN_SYSTEM_ALT_MONO = store_thm
       DISCH_THEN (ONCE_REWRITE_TAC o wrap) \\
       Q.PAT_ASSUM `!s t. X ==> t DIFF s IN subsets d` MATCH_MP_TAC \\
       ASM_REWRITE_TAC [DIFF_SUBSET] \\
-      Reverse CONJ_TAC >- ASM_SET_TAC [] \\
+      reverse CONJ_TAC >- ASM_SET_TAC [] \\
       Q.PAT_ASSUM `!s t. X ==> t DIFF s IN subsets d` MATCH_MP_TAC >> art [] \\
       CONJ_TAC (* 2 subgoals *)
       >- (Q.PAT_ASSUM `!s t. X ==> t DIFF s IN subsets d` MATCH_MP_TAC >> art []) \\
@@ -1295,7 +1295,7 @@ val DYNKIN_SYSTEM_ALT = store_thm
         >- (POP_ASSUM K_TAC
             >> ONCE_REWRITE_TAC [EXTENSION]
             >> RW_TAC std_ss [IN_BIGUNION, IN_IMAGE, IN_UNIV, IN_DIFF]
-            >> Reverse EQ_TAC
+            >> reverse EQ_TAC
             >- (RW_TAC std_ss []
                 >> POP_ASSUM MP_TAC
                 >> RW_TAC std_ss [IN_DIFF]
@@ -1597,7 +1597,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA = store_thm
    RW_TAC std_ss []
    >> MATCH_MP_TAC SUBSET_TRANS
    >> Q.EXISTS_TAC `subsets (dynkin sp a)`
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (RW_TAC std_ss [SUBSET_DEF, dynkin_def, IN_BIGINTER,
                       GSPECIFICATION, subsets_def, space_def]
        >> PROVE_TAC [SUBSET_DEF])
@@ -1701,7 +1701,7 @@ val DYNKIN_LEMMA = store_thm
   ("DYNKIN_LEMMA",
   ``!d. dynkin_system d /\ (!s t. s IN subsets d /\ t IN subsets d ==> s INTER t IN subsets d)
         <=> sigma_algebra d``,
-    GEN_TAC >> Reverse EQ_TAC
+    GEN_TAC >> reverse EQ_TAC
  >- (rpt STRIP_TAC >- IMP_RES_TAC SIGMA_ALGEBRA_IMP_DYNKIN_SYSTEM \\
      MATCH_MP_TAC ALGEBRA_INTER >> PROVE_TAC [sigma_algebra_def])
  >> rpt STRIP_TAC
@@ -2624,7 +2624,7 @@ val MEASUBABLE_BIGUNION_LEMMA = store_thm
                 BIGUNION c IN IMAGE (PREIMAGE f) (subsets b))``,
    RW_TAC std_ss [SIGMA_ALGEBRA, IN_FUNSET, IN_IMAGE]
    >> Q.EXISTS_TAC `BIGUNION (IMAGE (\x. @x'. x' IN subsets b /\ (PREIMAGE f x' = x)) c)`
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (Q.PAT_X_ASSUM `!c. countable c /\ c SUBSET subsets b ==> BIGUNION c IN subsets b`
            MATCH_MP_TAC
        >> RW_TAC std_ss [image_countable, SUBSET_DEF, IN_IMAGE]

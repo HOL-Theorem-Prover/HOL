@@ -1048,7 +1048,7 @@ Theorem sub_lt_eq :
     !x y z. x <> NegInf /\ x <> PosInf ==> (y - x < z <=> y < z + x)
 Proof
     rpt STRIP_TAC
- >> Reverse EQ_TAC >- PROVE_TAC [sub_lt_imp]
+ >> reverse EQ_TAC >- PROVE_TAC [sub_lt_imp]
  >> Cases_on `x` >> Cases_on `y` >> Cases_on `z`
  >> RW_TAC std_ss [extreal_lt_def, extreal_le_def, extreal_add_def, extreal_sub_def]
  >> METIS_TAC [real_lt, REAL_LT_SUB_RADD]
@@ -1340,7 +1340,7 @@ Theorem abs_eq_0[simp] :
     !x. (abs x = 0) <=> (x = 0)
 Proof
     GEN_TAC
- >> Reverse EQ_TAC >- rw [abs_0]
+ >> reverse EQ_TAC >- rw [abs_0]
  >> `0 <= abs x` by PROVE_TAC [abs_pos]
  >> rw [Once (GSYM le_antisym)]
  >> fs [REWRITE_RULE [neg_0, le_antisym] (Q.SPECL [`x`, `0`] abs_bounds)]
@@ -1834,7 +1834,7 @@ Proof
  >> fs [lt_infty, extreal_inv_def, extreal_of_num_def, lt_refl, extreal_11,
         extreal_lt_eq]
  >- (fs [GSYM extreal_of_num_def] \\
-     Reverse EQ_TAC >> DISCH_TAC >| (* 2 subgoals *)
+     reverse EQ_TAC >> DISCH_TAC >| (* 2 subgoals *)
      [ (* goal 1 (of 2) *)
        MATCH_MP_TAC inv_pos' >> art [lt_infty],
        (* goal 2 (of 2) *)
@@ -2170,7 +2170,7 @@ val abs_le_square_plus1 = store_thm
  >- (fs [GSYM abs_refl] \\
      Cases_on `1 <= x`
      >- (MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `x pow 2 + 0` \\
-         Reverse CONJ_TAC
+         reverse CONJ_TAC
          >- (MATCH_MP_TAC le_add2 >> REWRITE_TAC [le_refl, le_01]) \\
          REWRITE_TAC [add_rzero, pow_2] \\
         `x = 1 * x` by PROVE_TAC [mul_lone] \\
@@ -2202,7 +2202,7 @@ val abs_le_square_plus1 = store_thm
  >> `1 <= -x` by PROVE_TAC [le_neg, neg_neg]
  >> MATCH_MP_TAC le_trans
  >> Q.EXISTS_TAC `x pow 2 + 0`
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (MATCH_MP_TAC le_add2 >> REWRITE_TAC [le_refl, le_01])
  >> REWRITE_TAC [add_rzero]
  >> `x pow 2 = -x * -x` by REWRITE_TAC [pow_2, neg_mul2] >> POP_ORW
@@ -2216,7 +2216,7 @@ val abs_pow_le_mono = store_thm
     rpt STRIP_TAC
  >> Cases_on `1 <= x`
  >- (MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `0 + (abs x) pow m` \\
-     Reverse CONJ_TAC
+     reverse CONJ_TAC
      >- (MATCH_MP_TAC le_add2 >> REWRITE_TAC [le_01, le_refl]) \\
      REWRITE_TAC [add_lzero] \\
      MATCH_MP_TAC pow_le_mono >> art [] \\
@@ -2226,7 +2226,7 @@ val abs_pow_le_mono = store_thm
  >> fs [GSYM extreal_lt_def]
  >> Cases_on `x <= -1`
  >- (MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `0 + (abs x) pow m` \\
-     Reverse CONJ_TAC
+     reverse CONJ_TAC
      >- (MATCH_MP_TAC le_add2 >> REWRITE_TAC [le_01, le_refl]) \\
      REWRITE_TAC [add_lzero] \\
      MATCH_MP_TAC pow_le_mono >> art [] \\
@@ -2235,7 +2235,7 @@ val abs_pow_le_mono = store_thm
      MATCH_MP_TAC let_trans >> Q.EXISTS_TAC `-1` >> art [lt_10])
  >> fs [GSYM extreal_lt_def]
  >> MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `1 + 0`
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (MATCH_MP_TAC le_add2 >> art [le_refl] \\
      MATCH_MP_TAC pow_pos_le >> REWRITE_TAC [abs_pos])
  >> REWRITE_TAC [add_rzero, Once (GSYM (Q.SPEC `n` one_pow))]
@@ -3310,7 +3310,7 @@ Proof
       >> `!x. x IN e INSERT s ==> (f o f') x <> NegInf` by METIS_TAC [o_DEF]
       >> RW_TAC std_ss [EXTREAL_SUM_IMAGE_PROPERTY]
       >> `~ (f' e IN IMAGE f' s)`
-        by (RW_TAC std_ss [IN_IMAGE] >> Reverse (Cases_on `x IN s`)
+        by (RW_TAC std_ss [IN_IMAGE] >> reverse (Cases_on `x IN s`)
             >- ASM_REWRITE_TAC [] >> METIS_TAC [IN_INSERT])
       >> `s DELETE e = s` by METIS_TAC [DELETE_NON_ELEMENT]
       >> `(IMAGE f' s) DELETE f' e = IMAGE f' s` by METIS_TAC [DELETE_NON_ELEMENT]
@@ -3323,7 +3323,7 @@ Proof
   >> `!x. x IN e INSERT s ==> (f o f') x <> PosInf` by METIS_TAC [o_DEF]
   >> RW_TAC std_ss [EXTREAL_SUM_IMAGE_PROPERTY]
   >> `f' e NOTIN IMAGE f' s`
-        by (RW_TAC std_ss [IN_IMAGE] >> Reverse (Cases_on `x IN s`)
+        by (RW_TAC std_ss [IN_IMAGE] >> reverse (Cases_on `x IN s`)
             >- ASM_REWRITE_TAC [] >> METIS_TAC [IN_INSERT])
   >> `s DELETE e = s` by METIS_TAC [DELETE_NON_ELEMENT]
   >> `(IMAGE f' s) DELETE f' e = IMAGE f' s` by METIS_TAC [DELETE_NON_ELEMENT]
@@ -3838,7 +3838,7 @@ val EXTREAL_SUM_IMAGE_IN_IF_ALT = store_thm
  >> RW_TAC std_ss [EXTREAL_SUM_IMAGE_EMPTY]
  >- (`!i. i IN e INSERT s ==> (\x. if x IN e INSERT s then f x else z) i <> NegInf`
        by RW_TAC std_ss []
-     >> Reverse (RW_TAC std_ss [EXTREAL_SUM_IMAGE_PROPERTY]) (* 2 sub-goals here *)
+     >> reverse (RW_TAC std_ss [EXTREAL_SUM_IMAGE_PROPERTY]) (* 2 sub-goals here *)
      >> FULL_SIMP_TAC std_ss [IN_INSERT]                     (* 1 remains *)
      >> FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]
      >> Suff `EXTREAL_SUM_IMAGE f s = EXTREAL_SUM_IMAGE (\x. if x IN e INSERT s then f x else z) s`
@@ -3849,7 +3849,7 @@ val EXTREAL_SUM_IMAGE_IN_IF_ALT = store_thm
      >> (MATCH_MP_TAC o UNDISCH o Q.SPEC `s`) EXTREAL_SUM_IMAGE_EQ
      >> RW_TAC std_ss [IN_INSERT])
  >> `!i. i IN e INSERT s ==> (\x. if x IN e INSERT s then f x else z) i <> PosInf` by RW_TAC std_ss []
- >> Reverse (RW_TAC std_ss [EXTREAL_SUM_IMAGE_PROPERTY])
+ >> reverse (RW_TAC std_ss [EXTREAL_SUM_IMAGE_PROPERTY])
  >- FULL_SIMP_TAC std_ss [IN_INSERT]
  >> FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]
  >> Suff `EXTREAL_SUM_IMAGE f s = EXTREAL_SUM_IMAGE (\x. if x IN e INSERT s then f x else z) s`
@@ -4041,7 +4041,7 @@ val le_sup_imp = store_thm
       RW_TAC std_ss [extreal_le_def] \\
       MATCH_MP_TAC REAL_IMP_LE_SUP \\
       CONJ_TAC >- METIS_TAC [] \\
-      Reverse CONJ_TAC >- (Q.EXISTS_TAC `r` >> RW_TAC real_ss []) \\
+      reverse CONJ_TAC >- (Q.EXISTS_TAC `r` >> RW_TAC real_ss []) \\
       Cases_on `x'` >| (* 3 subgoals *)
       [ METIS_TAC [le_infty],
         RW_TAC std_ss [],
@@ -4077,7 +4077,7 @@ val sup_le = store_thm
               RW_TAC std_ss [] \\
               MATCH_MP_TAC REAL_IMP_LE_SUP \\
               CONJ_TAC >- METIS_TAC [] \\
-              Reverse CONJ_TAC >- (Q.EXISTS_TAC `r''` >> RW_TAC real_ss []) \\
+              reverse CONJ_TAC >- (Q.EXISTS_TAC `r''` >> RW_TAC real_ss []) \\
               Q.EXISTS_TAC `r'` \\
               RW_TAC std_ss [] \\
               METIS_TAC [extreal_le_def] ]) \\
@@ -4369,7 +4369,7 @@ val sup_seq = store_thm
   >- (MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `f x'''''' + e / 2`
       >> RW_TAC std_ss [] >> MATCH_MP_TAC REAL_LET_TRANS
       >> Q.EXISTS_TAC `f n + e / 2`
-      >> Reverse CONJ_TAC >- METIS_TAC [REAL_LET_ADD2,REAL_LT_HALF2,REAL_LE_REFL]
+      >> reverse CONJ_TAC >- METIS_TAC [REAL_LET_ADD2,REAL_LT_HALF2,REAL_LE_REFL]
       >> RW_TAC std_ss [REAL_LE_RADD]
       >> METIS_TAC [mono_increasing_def])
    >> MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `sup (IMAGE f UNIV)`
@@ -4436,7 +4436,7 @@ val sup_add_mono = store_thm
                                        extreal_of_num_def, extreal_not_infty]
   >> MATCH_MP_TAC le_trans
   >> Q.EXISTS_TAC `sup (IMAGE (\n. (sup (IMAGE f UNIV)) + g n) UNIV)`
-  >> Reverse (RW_TAC std_ss [sup_le])
+  >> reverse (RW_TAC std_ss [sup_le])
   >- (POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
       >> RW_TAC std_ss [IN_IMAGE,IN_UNIV]
       >> Suff `sup (IMAGE f UNIV) <= y - g n` >- RW_TAC std_ss [le_sub_eq]
@@ -5247,7 +5247,7 @@ Proof
  >> Know `sup (IMAGE (\n. SIGMA f (count n)) univ(:num)) <> NegInf`
  >- (RW_TAC std_ss [lt_infty, GSYM sup_lt', IN_IMAGE, IN_UNIV] \\
      Q.EXISTS_TAC `SIGMA f (count 0)` \\
-     Reverse (RW_TAC bool_ss []) >- FULL_SIMP_TAC std_ss [lt_infty] \\
+     reverse (RW_TAC bool_ss []) >- FULL_SIMP_TAC std_ss [lt_infty] \\
      Q.EXISTS_TAC `0` >> REWRITE_TAC []) >> DISCH_TAC
  >> `!m. SIGMA g (count m) + sup (IMAGE (\n. SIGMA f (count n)) univ(:num)) <= y`
        by METIS_TAC [le_sub_eq2, add_comm]
@@ -5260,7 +5260,7 @@ Proof
  >> Know `sup (IMAGE (\n. SIGMA g (count n)) univ(:num)) <> NegInf`
  >- (RW_TAC std_ss [lt_infty, GSYM sup_lt', IN_IMAGE, IN_UNIV] \\
      Q.EXISTS_TAC `SIGMA g (count 0)` \\
-     Reverse (RW_TAC bool_ss []) >- FULL_SIMP_TAC std_ss [lt_infty] \\
+     reverse (RW_TAC bool_ss []) >- FULL_SIMP_TAC std_ss [lt_infty] \\
      Q.EXISTS_TAC `0` >> REWRITE_TAC []) >> DISCH_TAC
  >> METIS_TAC [le_sub_eq2, add_comm]
 QED
@@ -5275,7 +5275,7 @@ Proof
  >> RW_TAC std_ss [ext_suminf_def]
  >> `c <> NegInf` by METIS_TAC [lt_infty, num_not_infty, lte_trans]
  >> `!n. f n <> NegInf` by METIS_TAC [lt_infty, num_not_infty, lte_trans]
- >> Reverse (Cases_on `c` >> (RW_TAC std_ss []))
+ >> reverse (Cases_on `c` >> (RW_TAC std_ss []))
  >- (`!n. SIGMA (\n. Normal r * f n) (count n) =
           Normal r * SIGMA f (count n)`
        by METIS_TAC [EXTREAL_SUM_IMAGE_CMUL, FINITE_COUNT] >> POP_ORW \\
@@ -6135,7 +6135,7 @@ val ext_suminf_2d = store_thm
  (* RHS reduce of the goal *)
  >> Know `suminf (\x. Normal (g' x)) = Normal (suminf g')`
  >- (MATCH_MP_TAC ext_suminf_suminf \\
-     Reverse CONJ_TAC >- fs [GSYM lt_infty] \\
+     reverse CONJ_TAC >- fs [GSYM lt_infty] \\
      Q.UNABBREV_TAC `g'` >> REWRITE_TAC [o_DEF] >> BETA_TAC \\
      REWRITE_TAC [GSYM extreal_le_eq] \\
      GEN_TAC >> REWRITE_TAC [GSYM extreal_of_num_def] \\
@@ -6248,7 +6248,7 @@ Proof
     rpt STRIP_TAC
  >> `!n. SIGMA f (count n) = (\n. SIGMA f (count n)) n` by PROVE_TAC []
  >> POP_ORW >> MATCH_MP_TAC sup_le_mono
- >> BETA_TAC >> Reverse CONJ_TAC
+ >> BETA_TAC >> reverse CONJ_TAC
  >- ASM_SIMP_TAC std_ss [GSYM ext_suminf_def]
  >> GEN_TAC >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_MONO_SET
  >> fs [FINITE_COUNT, COUNT_SUC]
@@ -6292,14 +6292,14 @@ Proof
                            (\n. SIGMA (\i. SIGMA (f i) (count n)) (count n))
                            univ(:num))`
  >- (REWRITE_TAC [GSYM le_antisym] \\
-     Reverse CONJ_TAC >| (* easy goal first *)
+     reverse CONJ_TAC >| (* easy goal first *)
      [ (* goal 1 (of 2) *)
        RW_TAC std_ss [sup_le', IN_IMAGE, IN_UNIV] \\
        Q.PAT_X_ASSUM `suminf g = PosInf` (ONCE_REWRITE_TAC o wrap o SYM) \\
        POP_ASSUM (REWRITE_TAC o wrap o (MATCH_MP ext_suminf_def)) \\
        RW_TAC std_ss [le_sup', IN_IMAGE, IN_UNIV] \\
        MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `SIGMA g (count n)` \\
-       Reverse CONJ_TAC >- (POP_ASSUM MATCH_MP_TAC \\
+       reverse CONJ_TAC >- (POP_ASSUM MATCH_MP_TAC \\
                             Q.EXISTS_TAC `n` >> REWRITE_TAC []) \\
        irule EXTREAL_SUM_IMAGE_MONO \\
        SIMP_TAC std_ss [FINITE_COUNT, IN_COUNT] \\
@@ -6336,7 +6336,7 @@ Proof
            rpt GEN_TAC >> STRIP_TAC >> MATCH_MP_TAC pos_not_neginf >> art []) >> Rewr' \\
        MATCH_MP_TAC le_trans \\
        Q.EXISTS_TAC `SIGMA (\i. SIGMA (f i) (count (MAX n n'))) (count (MAX n n'))` \\
-       Reverse CONJ_TAC >- (POP_ASSUM MATCH_MP_TAC \\
+       reverse CONJ_TAC >- (POP_ASSUM MATCH_MP_TAC \\
                             Q.EXISTS_TAC `MAX n n'` >> REWRITE_TAC []) \\
        MATCH_MP_TAC EXTREAL_SUM_IMAGE_SUM_IMAGE_MONO \\
        RW_TAC arith_ss [] ])
@@ -6346,7 +6346,7 @@ Proof
     `!n. SIGMA (\i. SIGMA (f i) (count n)) (count n) =
          (\n. SIGMA (\i. SIGMA (f i) (count n)) (count n)) n` by PROVE_TAC [] >> POP_ORW \\
      MATCH_MP_TAC sup_le_mono >> BETA_TAC \\
-     Reverse CONJ_TAC >- PROVE_TAC [] \\
+     reverse CONJ_TAC >- PROVE_TAC [] \\
      GEN_TAC >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_SUM_IMAGE_MONO \\
      RW_TAC arith_ss [])
  >> DISCH_TAC
@@ -6904,10 +6904,10 @@ val COUNTABLE_ENUM_Q = store_thm
   ("COUNTABLE_ENUM_Q",
    ``!c. countable c <=> (c = {}) \/ (?f:extreal->'a. c = IMAGE f Q_set)``,
   RW_TAC std_ss []
-  >> Reverse EQ_TAC
+  >> reverse EQ_TAC
   >- (NTAC 2 (RW_TAC std_ss [countable_EMPTY])
       >> RW_TAC std_ss [image_countable, Q_COUNTABLE])
-  >> Reverse (RW_TAC std_ss [COUNTABLE_ALT_BIJ])
+  >> reverse (RW_TAC std_ss [COUNTABLE_ALT_BIJ])
   >- (DISJ2_TAC
       >> `countable Q_set` by RW_TAC std_ss [Q_COUNTABLE]
       >> `~(FINITE Q_set)` by RW_TAC std_ss [Q_INFINITE]
@@ -7164,7 +7164,7 @@ val EXTREAL_PROD_IMAGE_IMAGE = store_thm
  >> `FINITE (IMAGE f' s)` by METIS_TAC [IMAGE_FINITE]
  >> RW_TAC std_ss [EXTREAL_PROD_IMAGE_PROPERTY]
  >> `~(f' e IN IMAGE f' s)`
-        by (RW_TAC std_ss [IN_IMAGE] >> Reverse (Cases_on `x IN s`)
+        by (RW_TAC std_ss [IN_IMAGE] >> reverse (Cases_on `x IN s`)
             >- ASM_REWRITE_TAC [] >> METIS_TAC [IN_INSERT])
  >> `s DELETE e = s` by METIS_TAC [DELETE_NON_ELEMENT]
  >> `(IMAGE f' s) DELETE f' e = IMAGE f' s` by METIS_TAC [DELETE_NON_ELEMENT]
