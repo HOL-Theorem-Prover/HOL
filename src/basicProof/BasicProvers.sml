@@ -1084,7 +1084,8 @@ val bool_ss = boolSimps.bool_ss;
        just when a datatype is declared.
  ---------------------------------------------------------------------------*)
 
-val (srw_ss : simpset ref) = ref (bool_ss ++ combinSimps.COMBIN_ss);
+val (srw_ss : simpset ref) = ref (bool_ss ++ combinSimps.COMBIN_ss
+                          ++ boolSimps.NORMEQ_ss);
 
 val srw_ss_initialised = ref false;
 
