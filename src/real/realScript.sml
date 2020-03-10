@@ -4291,4 +4291,12 @@ Proof
   >> match_mp_tac REAL_LE_LMUL_IMP >> fs[]
 QED
 
+Theorem REAL_DIV_ZERO:
+  !a b.
+    b <> 0 ==>
+    ((a / b = 0) <=> (a = 0))
+Proof
+  rpt strip_tac \\ EQ_TAC \\ fs[REAL_DIV_LZERO, real_div]
+QED
+
 val _ = export_theory();
