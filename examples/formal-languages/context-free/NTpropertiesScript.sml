@@ -591,40 +591,69 @@ Definition augment_def:
     | SOME v0 => fm |+ (k, v0 ∪ᶠ v)
 End
 
+Definition safelookup_def:
+  safelookup fm k =
+    case FLOOKUP fm k of NONE => ∅ᶠ | SOME v => v
+End
+
 Definition subfmset_map_def:
   subfmset_map fm1 fm2 ⇔
-     ∀k. k ∈ FDOM fm1 ⇒ k ∈ FDOM fm2 ∧ fm1 ' k ⊆ᶠ fm2 ' k
+     ∀k. k ∈ FDOM fm1 ⇒ fm1 ' k ⊆ᶠ safelookup fm2 k
 End
-(*
+
 Theorem subfmset_map_REFL[simp]:
   subfmset_map fm fm
 Proof
-  simp[subfmset_map_def]
+  simp[subfmset_map_def, finite_setTheory.fSUBSET_def, safelookup_def,
+       FLOOKUP_DEF]
+QED
+
+Theorem fSUBSET_EMPTY[simp]:
+  fSUBSET fEMPTY fs /\ (fSUBSET fs fEMPTY <=> fs = fEMPTY)
+Proof
+  simp[finite_setTheory.fSUBSET_def, finite_setTheory.EXTENSION]
+QED
+
+Theorem fSUBSET_TRANS:
+  fSUBSET fs1 fs2 /\ fSUBSET fs2 fs3 ==> fSUBSET fs1 fs3
+Proof
+  simp[finite_setTheory.fSUBSET_def] >> metis_tac[]
+QED
+
+Theorem fUNION_EQ_EMPTY[simp]:
+  fUNION fs1 fs2 = fEMPTY <=> fs1 = fEMPTY /\ fs2 = fEMPTY
+Proof
+  simp[finite_setTheory.EXTENSION] >> metis_tac[]
+QED
+
+Theorem fUNION_EMPTY[simp]:
+  fUNION fEMPTY s = s /\ fUNION s fEMPTY = s
+Proof
+  simp[finite_setTheory.EXTENSION]
 QED
 
 Theorem subfmset_map_TRANS:
   subfmset_map fm1 fm2 ∧ subfmset_map fm2 fm3 ⇒ subfmset_map fm1 fm3
 Proof
-  simp[subfmset_map_def] >> metis_tac[SUBSET_TRANS]
+  simp[subfmset_map_def, safelookup_def, FLOOKUP_DEF] >>
+  rw[] >> rpt (first_x_assum (qspec_then ‘k’ mp_tac)) >> rw[] >> fs[] >>
+  metis_tac[fSUBSET_TRANS]
 QED
 
 Theorem subfmset_map_update[simp]:
-  subfmset_map fm (fm |+ (k,v)) ⇔ k ∈ FDOM fm ⇒ fm ' k ⊆ v
+  subfmset_map fm (fm |+ (k,v)) ⇔ k ∈ FDOM fm ⇒ fm ' k ⊆ᶠ v
 Proof
-  simp[subfmset_map_def, FAPPLY_FUPDATE_THM] >> metis_tac[SUBSET_REFL]
+  simp[subfmset_map_def, FAPPLY_FUPDATE_THM, safelookup_def, FLOOKUP_DEF] >>
+  metis_tac[finite_setTheory.fSUBSET_def]
 QED
 
 Theorem subfmset_map_augment[simp]:
   subfmset_map fm (augment k v fm)
 Proof
-  rw[subfmset_map_def, augment_def, FLOOKUP_DEF, FAPPLY_FUPDATE_THM] >>
-  rw[] >> fs[]
+  rw[subfmset_map_def, augment_def, FLOOKUP_DEF, FAPPLY_FUPDATE_THM,
+     safelookup_def] >>
+  rw[] >> fs[finite_setTheory.fSUBSET_def]
 QED
-*)
-Definition safelookup_def:
-  safelookup fm k =
-    case FLOOKUP fm k of NONE => ∅ᶠ | SOME v => v
-End
 
 (* processing a rule
      N -> sf
@@ -640,7 +669,6 @@ Definition follow_sf_def[simp]:
                        A)
 End
 
-(*
 (* smash together all sets in the range of the finite map *)
 Definition range_max_def:
   range_max A = fBIGUNION (ffRANGE A)
@@ -653,18 +681,18 @@ QED
 
 Definition max_map_def:
   max_map A g =
-    FUN_FMAP (K (terminals g ∪ range_max A)) (nonTerminals' g)
+    FUN_FMAP (K (fromSet (terminals g) ∪ᶠ range_max A)) (nonTerminals g)
 End
 
 Theorem FDOM_max_map[simp]:
-  FDOM (max_map A g) = nonTerminals' g
+  FDOM (max_map A g) = nonTerminals g
 Proof
   simp[max_map_def]
 QED
 
 Definition fmset_union_def:
   fmset_union fm1 fm2 =
-    FUN_FMAP (λk. safelookup fm1 k ∪ safelookup fm2 k) (FDOM fm1 ∪ FDOM fm2)
+    FUN_FMAP (λk. safelookup fm1 k ∪ᶠ safelookup fm2 k) (FDOM fm1 ∪ FDOM fm2)
 End
 
 Theorem FDOM_fmset_union[simp]:
@@ -677,9 +705,8 @@ Theorem subfmset_map_union[simp]:
   subfmset_map A (fmset_union A B)
 Proof
   simp[subfmset_map_def, fmset_union_def, FUN_FMAP_DEF, safelookup_def,
-       FLOOKUP_DEF]
+       FLOOKUP_DEF, finite_setTheory.fSUBSET_def]
 QED
-
 
 Theorem follow_sf_SUBDOM:
   ∀A. subfmset_map A (follow_sf g N sf A)
@@ -688,27 +715,36 @@ Proof
   metis_tac[subfmset_map_augment, subfmset_map_TRANS]
 QED
 
-Theorem TS_IN_rule_nonterminals[simp]:
-  TS t ∈ rule_nonterminals r ⇔ F
+Theorem subfmset_map_augment':
+   subfmset_map (augment k v fm1) fm2 ⇔
+   subfmset_map fm1 fm2 ∧ v ⊆ᶠ safelookup fm2 k
 Proof
-  Cases_on ‘r’ >> simp[rule_nonterminals_def] Induct_on ‘r’ >>
+  simp[subfmset_map_def, safelookup_def, augment_def] >>
+  Cases_on ‘FLOOKUP fm1 k’ >>
+  simp[DISJ_IMP_THM, FORALL_AND_THM, FAPPLY_FUPDATE_THM] >>
+  asm_simp_tac (srw_ss() ++ boolSimps.COND_elim_ss)[]
+  >- (‘∀k'. k' ∈ FDOM fm1 ⇒ k' ≠ k’ by (rpt strip_tac >> fs[FLOOKUP_DEF]) >>
+      simp[] >> Cases_on ‘FLOOKUP fm2 k’ >> simp[] >> metis_tac[]) >>
+  Cases_on ‘FLOOKUP fm2 k’ >> csimp[] >> eq_tac >> rw[]
+  >- (first_x_assum drule >> rw[] >> fs[FLOOKUP_DEF])
+  >- (first_x_assum (qspec_then ‘k’ mp_tac) >> fs[FLOOKUP_DEF])
+  >- (first_x_assum drule >> rw[] >> rfs[] >> fs[FLOOKUP_DEF] >>
+      metis_tac[finite_setTheory.IN_UNION, finite_setTheory.fSUBSET_def])
+  >- metis_tac[finite_setTheory.IN_UNION, finite_setTheory.fSUBSET_def]
+  >- (first_x_assum (qspec_then ‘k’ mp_tac) >> fs[FLOOKUP_DEF] >>
+      metis_tac[finite_setTheory.IN_UNION, finite_setTheory.fSUBSET_def]) >>
+  first_x_assum (qspec_then ‘k’ mp_tac) >> fs[FLOOKUP_DEF] >>
+  metis_tac[finite_setTheory.IN_UNION, finite_setTheory.fSUBSET_def]
+QED
 
-Theorem TS_IN_nonTerminals[simp]:
-  TS t ∈ nonTerminals g ⇔ F
-Proof
-  Cases_on ‘g’ >> simp[nonTerminals_def] >> qx_gen_tac ‘s’ >>
-  Cases_on ‘TS t ∈ s’ >> simp[] >> qx_gen_tac ‘rle’ >>
-  rename [‘MEM rle rs’] >> Cases_on ‘MEM rle rs’ >> simp[] >> strip_tac >>
-  rw[]
-
-
-Theorem firstSetList_SUBSET_terminals:
+(* Theorem firstSetList_SUBSET_terminals:
   (∀t. MEM t sf ⇒ t ∈ allSyms g) ⇒
   firstSetList g sf ⊆ terminals g
 Proof
   simp[firstSetList_def, SUBSET_DEF, PULL_EXISTS] >> Induct_on ‘RTC’ >> rw[]
   >- (fs[DISJ_IMP_THM, FORALL_AND_THM, allSyms_def]
-
+*)
+(*
 Theorem follow_sf_max:
   ∀A B. (∀t. MEM t sf ⇒ t ∈ allSyms g) ∧
         subfmset_map B (fmset_union A (max_map A g)) ⇒
@@ -716,6 +752,7 @@ Theorem follow_sf_max:
 Proof
   Induct_on ‘sf’ >> simp[] >> Cases >> simp[DISJ_IMP_THM, FORALL_AND_THM] >>
   rpt strip_tac >> fs[] >> first_x_assum irule >>
+  simp[subfmset_map_augment']
   pop_assum mp_tac >> rename [‘NTS n ∈ allSyms g’] >>
   simp[augment_def, subfmset_map_def, safelookup_def, FLOOKUP_DEF] >>
   strip_tac >> qx_gen_tac ‘k’ >>
