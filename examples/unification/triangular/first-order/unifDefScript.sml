@@ -5,6 +5,7 @@ open stringTheory arithmeticTheory finite_mapTheory pred_setTheory bagTheory
      walkstarTheory
 
 val _ = new_theory "unifDef";
+val _ = delsimps ["NORMEQ_CONV"]
 val _ = monadsyntax.temp_add_monadsyntax()
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 };
 val _ = overload_on("monad_bind",``OPTION_BIND``);
