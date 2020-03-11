@@ -617,6 +617,7 @@ val (NEG_FRAC, NEG_DENOM) = CONJ_PAIR neg_rat
 val NEG_INV = REAL_NEG_INV'
 val INV_1OVER = REAL_INV_1OVER
 val NEG_MINUS1' = GSYM REAL_NEG_MINUS1
+val Flor = OR_CLAUSES |> SPEC_ALL |> CONJUNCTS |> el 3
 
 val realreduce_cs = real_compset()
 fun REPORT_ALL_CONV t =
@@ -898,18 +899,19 @@ fun base_solver asms stk t =
         | Exn.Exn e => (print " - FAILED\n"; raise e)
     end
 
-
 val R = “$<= : real -> real -> bool”
-   val Rthms = [REAL_LE_LMUL, REAL_LE_LMUL_NEG]
-   fun solver0 stk t = base_solver [] stk t val stk = []
+val Rthms = [REAL_LE_LMUL, REAL_LE_LMUL_NEG]
+val R = “$= : real -> real -> bool”
+val Rthms = [REAL_EQ_LMUL]
+fun solver0 stk t = base_solver [ASSUME ``0r < x``] stk t val stk = []
 *)
 fun giveexp t =
     if is_pow t then ALL_CONV t
     else REWR_CONV POW_1' t
 fun mulrelnorm0 R Rthms solver0 stk t =
     let
-      val mkE = mk_HOL_ERR "realSimps" "mulrelnorm"
-      val (l,r) = dest_binop R (mkE ("Not a " ^ term_to_string R)) t
+      val mkERR = mk_HOL_ERR "realSimps" "mulrelnorm"
+      val (l,r) = dest_binop R (mkERR ("Not a " ^ term_to_string R)) t
       val sorted_cbases = Listsort.sort (inv_img_cmp #1 litcompare) o
                           map mul_termbase o strip_mult
       val ls = sorted_cbases l
@@ -929,7 +931,7 @@ fun mulrelnorm0 R Rthms solver0 stk t =
           end
       val apply_thms = FIRST_CONV (map apply_thm Rthms)
       fun positivep i = Arbint.<=(Arbint.zero, i)
-      fun process (l_t,el) (r_t,er) =
+      fun process (l_t,el) (r_t,er) t =
           if is_real_literal l_t andalso is_real_literal r_t andalso
              positivep el andalso positivep er
           then
@@ -938,7 +940,7 @@ fun mulrelnorm0 R Rthms solver0 stk t =
                 val ln = toN li and rn = toN ri
                 val dn = Arbnum.gcd (ln,rn)
                 val _ = dn <> Arbnum.one orelse
-                        raise mkE "Literals are coprime"
+                        raise mkERR "Literals are coprime"
                 val di = Arbint.fromNat dn
                 val dt = term_of_int di
                 val lc = Arbint.div(li,di) and rc = Arbint.div(ri,di)
@@ -953,7 +955,7 @@ fun mulrelnorm0 R Rthms solver0 stk t =
               FORK_CONV(extract_n_factor l_t leqn, extract_n_factor r_t reqn)
                 THENC
               apply_thms
-            end
+            end t
           else if is_real_fraction l_t orelse is_real_fraction r_t then
             let
               fun denom (t,e) =
@@ -971,7 +973,7 @@ fun mulrelnorm0 R Rthms solver0 stk t =
                             |> GSYM
             in
               REWR_CONV th
-            end
+            end t
           else if el = er then
             let fun chk t = pair_eq aconv equal (mul_termbase t) (l_t, el)
                 val prc = PURE_REWRITE_CONV [REAL_POW_INV'] THENC giveexp
@@ -980,7 +982,7 @@ fun mulrelnorm0 R Rthms solver0 stk t =
                           ifMULT (LAND_CONV prc)
                                  (prc THENC REWR_CONV REAL_MUL_RID')) THENC
               apply_thms
-            end
+            end t
           else
             let val (c,ld,rd) = if Arbint.<(el,er) then
                                   (el,Arbint.zero,Arbint.-(er,el))
@@ -1019,16 +1021,42 @@ fun mulrelnorm0 R Rthms solver0 stk t =
                                 (giveexp THENC common true rd) THENC
                          TRY_CONV (REWR_CONV MUL_ASSOC')) THENC
               apply_thms
+            end t
+      fun eqcleanup t =
+          if is_disj t then
+            let val subth = solver (t::stk) (mk_neg (lhand t))
+            in
+              LAND_CONV (REWR_CONV (EQF_INTRO subth)) THENC
+              REWR_CONV Flor
+            end t
+          else ALL_CONV t
+
+      (* direction = true <=> move from left to right *)
+      fun maybemove direction (b,e) t =
+          if not (is_literalish b) andalso positivep e then NO_CONV t
+          else
+            let val f =
+                    if is_literalish b then #2 (dest_div b)
+                    else mk_pow(b,
+                                numSyntax.mk_numeral(Arbint.toNat(Arbint.~ e)))
+                val (rel, args) = strip_comb t
+                val l = hd args and r = hd (tl args)
+                val t' = list_mk_comb(rel, [mk_mult(f,l), mk_mult(f,r)])
+                val th = apply_thms t' |> SYM |> CONV_RULE (LAND_CONV eqcleanup)
+                val cv_al = if direction then LAND_CONV else RAND_CONV
+            in
+              CONV_RULE (RAND_CONV (cv_al REALMULCANON)) th
             end
       fun findelim lefts rights t =
           case (lefts, rights) of
-              ([], _) => raise mkE "No common eliminable terms"
-            | (_, []) => raise mkE "No common eliminable terms"
-            | (l1::ls, r1::rs) =>
-              case litcompare(#1 l1,#1 r1) of
-                  LESS => findelim ls rights t
-                | GREATER => findelim lefts rs t
-                | EQUAL => process l1 r1 t handle HOL_ERR _ => findelim ls rs t
+              ([], []) => raise mkERR "No common eliminable terms"
+            | (l1::ls, []) => (maybemove true l1 ORELSEC findelim ls []) t
+            | ([], r1::rs) => (maybemove false r1 ORELSEC findelim [] rs) t
+            | ((l1 as (bl,_))::ls, (r1 as (br,_))::rs) =>
+              case litcompare(bl,br) of
+                  LESS => (maybemove true l1 ORELSEC findelim ls rights) t
+                | GREATER => (maybemove false r1 ORELSEC findelim lefts rs) t
+                | EQUAL => (process l1 r1 ORELSEC findelim ls rs) t
     in
       findelim ls rs t
     end

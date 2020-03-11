@@ -4081,7 +4081,7 @@ Proof
   rw[nonzerop_def]
 QED
 
-Theorem nonzerop_EQ1_I:
+Theorem nonzerop_EQ1_I[simp]:
   r <> 0 ==> (nonzerop r = 1)
 Proof
   rw[nonzerop_def]

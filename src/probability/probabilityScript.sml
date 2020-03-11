@@ -4435,17 +4435,15 @@ Proof
          [ (* goal 1 (of 2) *)
            MATCH_MP_TAC le_trans \\
            Q.EXISTS_TAC `-(1 / &SUC (SUC n))` >> art [] \\
-           rw [extreal_of_num_def, extreal_div_eq, extreal_ainv_def, extreal_le_eq] \\
-           rw [GSYM REAL_INV_1OVER] \\
-           MATCH_MP_TAC REAL_LT_IMP_LE \\
-           MATCH_MP_TAC REAL_LT_INV >> RW_TAC real_ss [],
+           rw [extreal_of_num_def, extreal_div_eq, extreal_ainv_def,
+               extreal_le_eq] \\
+           rw [GSYM REAL_INV_1OVER],
            (* goal 2 (of 2) *)
            MATCH_MP_TAC le_trans \\
            Q.EXISTS_TAC `1 / &SUC (SUC n)` >> art [] \\
            rw [extreal_of_num_def, extreal_div_eq, extreal_ainv_def, extreal_le_eq] \\
-           rw [GSYM REAL_INV_1OVER] \\
-           MATCH_MP_TAC REAL_LT_IMP_LE \\
-           MATCH_MP_TAC REAL_LT_INV >> RW_TAC real_ss [] ]) >> POP_ORW \\
+           rw [GSYM REAL_INV_1OVER]
+         ]) >> POP_ORW \\
      REWRITE_TAC [GSYM prob_def] \\
      Suff `IMAGE (prob p o (\n. B (1 / &SUC n))) univ(:num) = (\y. y = 1)`
      >- (Rewr' >> REWRITE_TAC [inf_const]) \\
@@ -4498,8 +4496,7 @@ Proof
  >> `?b. Y x = Normal b` by METIS_TAC [extreal_cases]
  >> `(&SUC n) :real <> 0` by RW_TAC real_ss []
  >> fs [real_normal, extreal_sub_def, extreal_abs_def, extreal_inv_eq,
-        extreal_of_num_def, extreal_div_eq, extreal_le_eq]
- >> METIS_TAC [REAL_INV_1OVER]
+        extreal_of_num_def, extreal_div_eq, extreal_le_eq, real_div]
 QED
 
 (* Theorem 4.1.1 [1, p.69] (2') *)

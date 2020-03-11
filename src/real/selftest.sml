@@ -75,7 +75,8 @@ fun nftest (r as (n,c,t1,t2)) =
       tprint (n ^ ": " ^ term_to_string t1);
       require_msg (check t2) (pr t2) test (t1,t2)
     end
-val simp = SIMP_CONV (BasicProvers.srw_ss()) []
+fun simpl ths = SIMP_CONV (BasicProvers.srw_ss()) ths
+val simp = simpl []
 val _ = List.app nftest [
       ("MULCANON01", REALMULCANON, “x:real * y * x”, “x pow 2 * y”),
       ("MULCANON02", REALMULCANON, “x:real * y * x * 2”, “2 * (x pow 2 * y)”),
@@ -134,6 +135,18 @@ val _ = List.app nftest [
       ("MULRELNORM10", simp,
        “3/4 * x <= 5/6 * (y * z:real)”, “9r * x <= 10 * (y * z)”),
       ("MULRELNORM11", simp, “0r < x ==> x <= x * y”, “0r < x ==> 1 <= y”),
+      ("MULRELNORM12", simp, “inv 2 * x <= y”, “x:real <= 2 * y”),
+      ("MULRELNORM13", simp, “x <= y * 3 * inv 4”, “4 * x:real <= 3 * y”),
+      ("MULRELNORM14", simp, “0 < x ==> 2 / 3 * x <= x pow 2 * y”,
+       “0 < x ==> 2r <= 3 * (x * y)”),
+      ("MULRELNORM15", simp,
+       “0 < x /\ x <> 0 ==> inv x <= y * 3”,
+       “0 < x /\ x <> 0 ==> 1 <= 3 * (x * y:real)”),
+      ("MULRELNORM16", simp,
+       “0 < x /\ x <> 0 ==> inv x pow 2 <= y * 3”,
+       “0 < x /\ x <> 0 ==> 1 <= 3 * (x pow 2 * y:real)”),
+      ("MULRELNORM17", simp,
+       “x * inv (& SUC (SUC n)) <= 1”, “x <= &SUC (SUC n)”),
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]

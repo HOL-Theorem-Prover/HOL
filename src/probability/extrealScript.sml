@@ -1844,8 +1844,7 @@ Proof
  >> Cases_on `y`
  >> fs [lt_infty, extreal_inv_def, extreal_of_num_def, lt_refl, extreal_11,
         extreal_lt_eq]
- >- (REWRITE_TAC [real_lt] >> MATCH_MP_TAC REAL_LT_IMP_LE \\ art[])
- >> MATCH_MP_TAC REAL_INV_LT_ANTIMONO >> art []
+ >> ASM_REWRITE_TAC [real_lt, REAL_LE_LT]
 QED
 
 Theorem inv_inj: (* new *)
@@ -2249,13 +2248,15 @@ val REAL_LE_RSUB_GE0 = save_thm
     Q.GENL [`x`, `y`] (REWRITE_RULE [GSYM real_sub, REAL_SUB_RNEG, REAL_ADD_LID]
                                     (Q.SPECL [`0`, `-x`, `y`] REAL_LE_SUB_RADD)));
 
-val ABS_LE_HALF_POW2 = store_thm
-  ("ABS_LE_HALF_POW2", ``!x y :real. abs (x * y) <= 1/2 * (x pow 2 + y pow 2)``,
+Theorem ABS_LE_HALF_POW2:
+  !x y :real. abs (x * y) <= 1/2 * (x pow 2 + y pow 2)
+Proof
     rpt GEN_TAC
  >> Cases_on `0 <= x * y`
  >- (ASM_SIMP_TAC real_ss [abs] \\
      Know `x * y = (1 / 2) * 2 * x * y`
-     >- (Suff `1 / 2 * 2 = 1r` >- (Rewr' >> REWRITE_TAC [GSYM REAL_MUL_ASSOC, REAL_MUL_LID]) \\
+     >- (Suff `1 / 2 * 2 = 1r`
+         >- (Rewr' >> REWRITE_TAC [GSYM REAL_MUL_ASSOC, REAL_MUL_LID]) \\
          MATCH_MP_TAC REAL_DIV_RMUL >> SIMP_TAC real_ss []) >> Rewr' \\
      REWRITE_TAC [GSYM REAL_MUL_ASSOC] \\
      MATCH_MP_TAC REAL_LE_MUL2 >> SIMP_TAC real_ss [REAL_LE_REFL] \\
@@ -2263,28 +2264,20 @@ val ABS_LE_HALF_POW2 = store_thm
      ONCE_REWRITE_TAC [REAL_LE_RSUB_GE0] \\
      Suff `x pow 2 + y pow 2 - 2 * (x * y) = (x - y) pow 2`
      >- (Rewr' >> REWRITE_TAC [REAL_LE_POW2]) \\
-     SIMP_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB,
-                       REAL_ADD_ASSOC, POW_2, GSYM REAL_DOUBLE] \\
+     SIMP_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_LDISTRIB,
+                       REAL_ADD_RDISTRIB, REAL_ADD_ASSOC, POW_2,
+                       GSYM REAL_DOUBLE] \\
      REAL_ARITH_TAC)
  >> ASM_SIMP_TAC real_ss [abs]
  >> fs [GSYM real_lt]
- >> Know `-(x * y) = (1 / 2) * 2 * -(x * y)`
- >- (Suff `1 / 2 * 2 = 1r` >- (Rewr' >> REWRITE_TAC [GSYM REAL_MUL_ASSOC, REAL_MUL_LID]) \\
-     MATCH_MP_TAC REAL_DIV_RMUL >> SIMP_TAC real_ss []) >> Rewr'
- >> REWRITE_TAC [GSYM REAL_MUL_ASSOC]
- >> MATCH_MP_TAC REAL_LE_MUL2 >> SIMP_TAC real_ss [REAL_LE_REFL]
- >> CONJ_TAC
- >- (REWRITE_TAC [REAL_NEG_GE0] \\
-    `0 = 2 * 0r` by RW_TAC real_ss [REAL_MUL_RZERO] >> POP_ORW \\
-     Know `2 * (x * y) <= 2 * 0 <=> x * y <= 0`
-     >- (MATCH_MP_TAC REAL_LE_LMUL >> RW_TAC real_ss []) >> Rewr' \\
-     IMP_RES_TAC REAL_LT_IMP_LE)
- >> REWRITE_TAC [Once REAL_LE_RSUB_GE0, REAL_SUB_RNEG]
+ >> REWRITE_TAC [Once REAL_LE_RSUB_GE0, REAL_SUB_RNEG, REAL_MUL_RNEG]
  >> Suff `x pow 2 + y pow 2 + 2 * (x * y) = (x + y) pow 2`
  >- (Rewr' >> REWRITE_TAC [REAL_LE_POW2])
- >> SIMP_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB,
-                      REAL_ADD_ASSOC, POW_2, GSYM REAL_DOUBLE]
- >> REAL_ARITH_TAC);
+ >> SIMP_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_LDISTRIB,
+                      REAL_ADD_RDISTRIB, REAL_ADD_ASSOC, POW_2,
+                      GSYM REAL_DOUBLE]
+ >> REAL_ARITH_TAC
+QED
 
 (* this result is needed for proving Cauchy-Schwarz inequality *)
 val abs_le_half_pow2 = store_thm
