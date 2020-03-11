@@ -1309,13 +1309,6 @@ fun prim_mk_defn stem eqns =
      | (_::_::_) => (* mutrec defns being made *)
         mutrec_defn (facts, stem, eqns)
  end
- handle e as HOL_ERR {origin_structure = "Defn", message = message, ...} =>
-       if not (String.isPrefix "at Induction.mk_induction" message) orelse
-          PmatchHeuristics.is_classic ()
-          then raise wrap_exn "Defn" "prim_mk_defn" e
-       else ( Feedback.HOL_MESG "Trying classic cases heuristic..."
-            ; PmatchHeuristics.with_classic_heuristic (prim_mk_defn stem) eqns)
-      | e => raise wrap_exn "Defn" "prim_mk_defn" e
 
 (*---------------------------------------------------------------------------*)
 (* Version of mk_defn that restores the term signature and grammar if it     *)
