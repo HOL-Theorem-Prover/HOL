@@ -4293,8 +4293,7 @@ QED
 
 Theorem REAL_DIV_ZERO:
   !a b.
-    b <> 0 ==>
-    ((a / b = 0) <=> (a = 0))
+    (a / b = 0) <=> ((a = 0) \/ (b = 0))
 Proof
   rpt strip_tac \\ EQ_TAC \\ fs[REAL_DIV_LZERO, real_div]
 QED
