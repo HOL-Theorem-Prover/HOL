@@ -95,6 +95,16 @@ Proof
   simp[PULL_EXISTS] >> Cases >> simp[]
 QED
 
+Definition allSyms_def:
+  allSyms G = IMAGE NT (nonTerminals G) ∪ IMAGE TOK (terminals G)
+End
+
+Theorem FINITE_allSyms[simp]:
+  FINITE (allSyms G)
+Proof
+  simp[allSyms_def]
+QED
+
 Datatype:
   parsetree = Lf (('a,'b) symbol # 'locs)
             | Nd ('b inf # 'locs) (parsetree list)
