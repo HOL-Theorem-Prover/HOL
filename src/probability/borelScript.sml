@@ -255,7 +255,7 @@ Proof
      >- (FULL_SIMP_TAC std_ss [IN_BIGUNION_IMAGE, IN_UNIV] \\
          RW_TAC std_ss [indicator_fn_def, EXTREAL_SUM_IMAGE_ZERO, FINITE_COUNT, le_refl, le_01]) \\
      FULL_SIMP_TAC std_ss [IN_BIGUNION_IMAGE, IN_UNIV, indicator_fn_def] \\
-     Reverse (RW_TAC std_ss []) >- METIS_TAC [] \\
+     reverse (RW_TAC std_ss []) >- METIS_TAC [] \\
     `!n. n <> x' ==> ~(x IN a n)` by METIS_TAC [DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY] \\
      Cases_on `~(x' IN count n)`
      >- (`SIGMA (\i. if x IN a i then 1 else 0) (count n) = 0`
@@ -278,7 +278,7 @@ Proof
  >> Know `!n. SIGMA (\i. indicator_fn (a i) x) (count n) <= y`
  >- (RW_TAC std_ss [] >> POP_ASSUM MATCH_MP_TAC \\
      Q.EXISTS_TAC `n` >> REWRITE_TAC []) >> DISCH_TAC
- >> Reverse (RW_TAC std_ss [indicator_fn_def, IN_BIGUNION_IMAGE, IN_UNIV])
+ >> reverse (RW_TAC std_ss [indicator_fn_def, IN_BIGUNION_IMAGE, IN_UNIV])
  >- (`0 <= SIGMA (\i. indicator_fn (a i) x) (count 0)`
         by RW_TAC std_ss [COUNT_ZERO, EXTREAL_SUM_IMAGE_EMPTY, le_refl] \\
      METIS_TAC [le_trans])
@@ -2646,7 +2646,7 @@ val IN_MEASURABLE_BOREL_MUL_INDICATOR = store_thm
              RW_TAC std_ss [mul_rone, mul_rzero]) >> POP_ORW \\
      MATCH_MP_TAC ALGEBRA_UNION \\
      CONJ_TAC >- FULL_SIMP_TAC std_ss [sigma_algebra_def] \\
-     Reverse CONJ_TAC >- FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def] \\
+     reverse CONJ_TAC >- FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def] \\
      MATCH_MP_TAC ALGEBRA_INTER \\
      FULL_SIMP_TAC std_ss [sigma_algebra_def])
  >> `{x | f x * indicator_fn s x <= Normal c} INTER space a =
@@ -3507,7 +3507,7 @@ Theorem right_open_interval_between_bounds :
             x < interval_upperbound (right_open_interval a b)
 Proof
     rpt GEN_TAC
- >> Reverse (Cases_on `a < b`)
+ >> reverse (Cases_on `a < b`)
  >- (FULL_SIMP_TAC std_ss [GSYM right_open_interval_empty] \\
      rw [NOT_IN_EMPTY, INTERVAL_BOUNDS_EMPTY] \\
      REAL_ARITH_TAC)
@@ -3760,7 +3760,7 @@ Proof
  >- (Suff `ALL_DISTINCT (MAP f filtered)`
      >- METIS_TAC [ALL_DISTINCT_PERM] \\
      MATCH_MP_TAC ALL_DISTINCT_MAP_INJ \\
-     Reverse CONJ_TAC
+     reverse CONJ_TAC
      >- (Q.UNABBREV_TAC `filtered` \\
          MATCH_MP_TAC FILTER_ALL_DISTINCT \\
          RW_TAC std_ss [COUNT_LIST_GENLIST, ALL_DISTINCT_GENLIST]) \\
@@ -3778,7 +3778,7 @@ Proof
           SIGMA lambda0 (IMAGE f (set filtered))`
  >- (MATCH_MP_TAC EQ_SYM >> irule EXTREAL_SUM_IMAGE_IMAGE \\
      SIMP_TAC std_ss [FINITE_LIST_TO_SET, IN_IMAGE, IN_COUNT] \\
-     Reverse CONJ_TAC
+     reverse CONJ_TAC
      >- (MATCH_MP_TAC INJ_IMAGE \\
          Q.EXISTS_TAC `set (MAP f filtered)` \\
          SIMP_TAC std_ss [INJ_DEF, MEM_MAP] \\
@@ -4167,7 +4167,7 @@ Proof
      subadditive lborel1 /\ finite_subadditive lborel1`
        by METIS_TAC [RING_ADDITIVE_EVERYTHING]
  >> Q.ABBREV_TAC `lambda1 = measure lborel1`
- >> Reverse (rw [GSYM le_antisym])
+ >> reverse (rw [GSYM le_antisym])
  (* easy part: suminf (lambda0 o f) <= lambda0 (BIGUNION (IMAGE f univ(:num))) *)
  >- (rw [ext_suminf_def, sup_le', GSPECIFICATION] \\
     `lambda0 (BIGUNION (IMAGE f univ(:num))) =
@@ -4273,7 +4273,7 @@ Proof
        MATCH_MP_TAC le_trans \\
        Q.ABBREV_TAC `m = SUC (MAX_SET (IMAGE g (count n)))` \\
        Q.EXISTS_TAC `SIGMA l (count m)` \\
-       Reverse CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC \\
+       reverse CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC \\
                             Q.EXISTS_TAC `m` >> art []) \\
        Q.UNABBREV_TAC `m` \\
        MATCH_MP_TAC EXTREAL_SUM_IMAGE_MONO_SET \\
@@ -4297,7 +4297,7 @@ Proof
        IMP_RES_TAC BIJ_INV >> fs [IN_UNIV, o_DEF] \\
        Q.ABBREV_TAC `m = SUC (MAX_SET (IMAGE g' (count n INTER P)))` \\
        Q.EXISTS_TAC `SIGMA l (IMAGE g (count m))` \\
-       Reverse CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC \\
+       reverse CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC \\
                             Q.EXISTS_TAC `m` >> art []) \\
        Q.UNABBREV_TAC `m` \\
        Know `SIGMA l (count n) = SIGMA l (count n INTER P)`
@@ -4341,7 +4341,7 @@ Proof
  >> `a < b` by PROVE_TAC [right_open_interval_empty]
  (* stage work *)
  >> MATCH_MP_TAC le_epsilon >> rpt STRIP_TAC
- >> Reverse (Cases_on `e < Normal (b - a)`)
+ >> reverse (Cases_on `e < Normal (b - a)`)
  >- (POP_ASSUM (ASSUME_TAC o (REWRITE_RULE [extreal_lt_def])) \\
      IMP_RES_TAC REAL_LT_IMP_LE >> rw [lambda0_def] \\
      MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `e` >> rw [] \\
@@ -4470,7 +4470,7 @@ Proof
  >> rpt STRIP_TAC
  >> MATCH_MP_TAC le_trans
  >> Q.EXISTS_TAC `SIGMA (lambda0 o h) (count N)`
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (POP_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC `N` >> art [])
   (* now there's no infinity anywhere *)
  >> ASSUME_TAC lborel0_additive
@@ -4484,7 +4484,7 @@ Proof
      >- (ASM_REWRITE_TAC [REAL_LT_SUB_RADD, REAL_LT_ADDR] \\
         `a < b - r <=> r < b - a` by REAL_ARITH_TAC >> POP_ORW \\
          MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `d` \\
-         Reverse CONJ_TAC >- fs [extreal_lt_eq] \\
+         reverse CONJ_TAC >- fs [extreal_lt_eq] \\
          Q.UNABBREV_TAC `r` \\
          MATCH_MP_TAC REAL_LE_LDIV >> RW_TAC real_ss [] \\
          MATCH_MP_TAC (SIMP_RULE real_ss []
@@ -4615,7 +4615,7 @@ Proof
      DISJ1_TAC (* this one is easier *) \\
      Q.X_GEN_TAC `n` >> Q.UNABBREV_TAC `D` >> SIMP_TAC std_ss [o_DEF] \\
      DISCH_TAC \\
-     Reverse CONJ_TAC >- (Q.PAT_X_ASSUM `!n. lambda0 _ = Normal _`
+     reverse CONJ_TAC >- (Q.PAT_X_ASSUM `!n. lambda0 _ = Normal _`
                             (ONCE_REWRITE_TAC o wrap) \\
                           REWRITE_TAC [extreal_not_infty]) \\
      MATCH_MP_TAC pos_not_neginf \\
@@ -4678,7 +4678,7 @@ Proof
      MATCH_MP_TAC REAL_LT_IMP_LE \\
     `a < b - r <=> r < b - a` by REAL_ARITH_TAC >> POP_ORW \\
      MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `d` \\
-     Reverse CONJ_TAC >- fs [extreal_lt_eq] \\
+     reverse CONJ_TAC >- fs [extreal_lt_eq] \\
      Q.UNABBREV_TAC `r` \\
      MATCH_MP_TAC REAL_LE_LDIV >> RW_TAC real_ss [] \\
      MATCH_MP_TAC (SIMP_RULE real_ss []
@@ -4899,7 +4899,7 @@ Proof
  >- REWRITE_TAC [right_open_interval, borel_measurable_sets] >> DISCH_TAC
  >> STRONG_CONJ_TAC
  >- REWRITE_TAC [borel_measurable_sets] >> DISCH_TAC
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (MATCH_MP_TAC ALGEBRA_UNION >> art [] \\
      REWRITE_TAC [REWRITE_RULE [sigma_algebra_def] sigma_algebra_borel])
  >> ONCE_REWRITE_TAC [DISJOINT_SYM]
@@ -5290,7 +5290,7 @@ Proof
   Q.EXISTS_TAC `x''''` THEN RW_TAC std_ss [REAL_LT_SUB_RADD] THENL
   [MATCH_MP_TAC REAL_LET_TRANS THEN Q.EXISTS_TAC `f x'''' + e / 2` THEN
    RW_TAC std_ss [] THEN MATCH_MP_TAC REAL_LET_TRANS THEN
-   Q.EXISTS_TAC `(f:num->real) n + e / 2` THEN Reverse CONJ_TAC THENL
+   Q.EXISTS_TAC `(f:num->real) n + e / 2` THEN reverse CONJ_TAC THENL
    [METIS_TAC [REAL_LET_ADD2,REAL_LT_HALF2,REAL_LE_REFL], ALL_TAC] THEN
    RW_TAC std_ss [REAL_LE_RADD] THEN
    METIS_TAC [mono_increasing_def], ALL_TAC] THEN
@@ -6029,11 +6029,11 @@ val measure_limsup_finite = store_thm
  >| [ (* goal 1 (of 2) *)
       REWRITE_TAC [lt_infty] \\
       MATCH_MP_TAC let_trans >> Q.EXISTS_TAC `measure p (m_space p)` \\
-      Reverse CONJ_TAC >- art [] \\
+      reverse CONJ_TAC >- art [] \\
       MATCH_MP_TAC INCREASING >> art [] \\
       CONJ_TAC >- PROVE_TAC [MEASURE_SPACE_INCREASING] \\
       fs [measure_space_def, sigma_algebra_def, space_def, subsets_def] \\
-      Reverse CONJ_TAC >- PROVE_TAC [ALGEBRA_SPACE, space_def, subsets_def] \\
+      reverse CONJ_TAC >- PROVE_TAC [ALGEBRA_SPACE, space_def, subsets_def] \\
       METIS_TAC [algebra_def, subset_class_def, space_def, subsets_def],
       (* goal 2 (of 2) *)
       RW_TAC arith_ss [SUBSET_DEF, IN_BIGUNION, GSPECIFICATION] \\

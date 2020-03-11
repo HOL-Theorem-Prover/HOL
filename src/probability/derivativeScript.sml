@@ -1797,7 +1797,7 @@ val lemma_sum_eq = prove (
  >> Know `neutral $+ = 0:real`
  >- (SIMP_TAC std_ss [neutral] >> MATCH_MP_TAC SELECT_UNIQUE \\
      RW_TAC real_ss [] \\
-     Reverse EQ_TAC >- REAL_ARITH_TAC \\
+     reverse EQ_TAC >- REAL_ARITH_TAC \\
      DISCH_THEN (MP_TAC o Q.SPEC `1`) >> REAL_ARITH_TAC)
  >> DISCH_THEN ((FULL_SIMP_TAC std_ss) o wrap)
  >> SIMP_TAC std_ss [ITSET'] >> SELECT_ELIM_TAC

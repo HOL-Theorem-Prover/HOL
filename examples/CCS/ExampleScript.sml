@@ -209,7 +209,7 @@ Theorem WG_example1 :
     WG (\t. prefix a t + prefix b t + prefix c (var Y))
 Proof
     HO_MATCH_MP_TAC WG4
- >> Reverse CONJ_TAC >- REWRITE_TAC [WG2]
+ >> reverse CONJ_TAC >- REWRITE_TAC [WG2]
  >> HO_MATCH_MP_TAC WG4
  >> REWRITE_TAC [WG1]
 QED
@@ -218,7 +218,7 @@ Theorem WG_example2 :
     WG (\t. prefix a (var X) + prefix b (var X) + prefix c t)
 Proof
     HO_MATCH_MP_TAC WG4
- >> Reverse CONJ_TAC >- REWRITE_TAC [WG1]
+ >> reverse CONJ_TAC >- REWRITE_TAC [WG1]
  >> REWRITE_TAC [WG2]
 QED
 
