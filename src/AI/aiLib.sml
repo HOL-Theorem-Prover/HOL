@@ -87,6 +87,9 @@ fun cpl_compare cmp1 cmp2 ((a1,a2),(b1,b2)) =
     if r = EQUAL then cmp2 (a2,b2) else r
   end
 
+fun triple_compare cmp1 cmp2 cmp3 ((a1,a2,a3),(b1,b2,b3)) =
+  cpl_compare (cpl_compare cmp1 cmp2) cmp3 (((a1,a2),a3),((b1,b2),b3))
+
 fun lbl_compare ((stac1,_,g1,_),(stac2,_,g2,_)) =
   cpl_compare String.compare goal_compare ((stac1,g1),(stac2,g2))
 
@@ -138,8 +141,6 @@ fun dappend (k,v) d =
 
 fun dappendl kvl d = foldl (uncurry dappend) d kvl
 
-
-
 fun dconcat cmp dictl =
   let
     val l0 = List.concat (map dlist dictl)
@@ -175,8 +176,6 @@ fun decr x = x := (!x) - 1
    List
    ------------------------------------------------------------------------- *)
 
-fun only_hd x = case x of [a] => a | _ => raise ERR "only_hd" ""
-
 fun one_in_n n start l = case l of
     [] => []
   | a :: m => if start mod n = 0
@@ -187,8 +186,17 @@ fun map_snd f l   = map (fn (a,b) => (a, f b)) l
 fun map_fst f l   = map (fn (a,b) => (f a, b)) l
 fun map_assoc f l = map (fn a => (a, f a)) l
 
+fun range ((a,b),f) =
+  if a > b then raise ERR "range" "" else
+  List.tabulate (b-a+1,fn x => f (x+a))
+
 fun cartesian_product l1 l2 =
   List.concat (map (fn x => map (fn y => (x,y)) l2) l1)
+
+fun all_pairs l = case l of
+    [] => []
+  | [a] => []
+  | a :: m => map (fn x => (a,x)) m @ all_pairs m
 
 fun quintuple_of_list l = case l of
     [a,b,c,d,e] => (a,b,c,d,e)
@@ -230,6 +238,14 @@ fun part_aux n acc l =
   else part_aux (n - 1) (hd l :: acc) (tl l)
 
 fun part_n n l = part_aux n [] l
+
+fun part_group groupl l = case groupl of
+    [] => if null l then [] else raise ERR "part_group" ""
+  | a :: m => let val (l1,l2) = part_n a l in
+                l1 :: part_group m l2
+              end
+
+fun part_pct r l = part_n (Real.round (Real.fromInt (length l) * r)) l
 
 fun number_list start l = case l of
     []      => []
@@ -275,6 +291,19 @@ fun tmsize_compare (a,b) =
     if r = EQUAL then Term.compare (a,b) else r
   end
 
+fun all_subterms tm =
+  let
+    val r = ref []
+    fun traverse tm =
+      let val (oper,argl) = strip_comb tm in
+        r := oper :: (!r);
+        app traverse argl
+      end
+  in
+    traverse tm; !r
+  end
+
+
 fun fold_left f l orig = case l of
     [] => orig
   | a :: m => let val new_orig = f a orig in fold_left f m new_orig end
@@ -308,10 +337,10 @@ fun topo_sort cmp graph =
 fun sort_thyl thyl =
     topo_sort String.compare (map (fn x => (x, ancestry x)) thyl)
 
-(* -------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    The functions from this section affects other in subtle ways.
-   Please becareful to keep their "weird" semantics.
-   ------------------------------------------------------------------------- *)
+   Please be careful to keep their "weird" semantics.
+   ------------------------------------------------------------------------ *)
 
 (* keeps the order *)
 fun mk_batch_aux size (acc,accsize) res l =
@@ -348,9 +377,9 @@ fun cut_modulo n l =
     map snd (dlist d)
   end
 
-(* -------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    List (continued)
-   ------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun number_partition m n =
   if m > n orelse m <= 0 then raise ERR "partition" "" else
@@ -387,9 +416,9 @@ fun combine_triple (l1,l2,l3) = case (l1,l2,l3) of
   | (a1 :: m1, a2 :: m2, a3 :: m3) => (a1,a2,a3) :: combine_triple (m1,m2,m3)
   | _ => raise ERR "combine_triple" "different lengths"
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Parsing
-   ------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun hd_string s = String.sub (s,0)
 fun tl_string s = String.substring (s, 1, String.size s - 1)
@@ -439,9 +468,9 @@ fun term_of_lisp x =
     list_mk_comb (opertm, map term_of_lisp argl)
   end
 
-(* ---------------------------------------------------------------------------
-   Reals
-   -------------------------------------------------------------------------- *)
+(* ------------------------------------------------------------------------
+   Reals and integers
+   ------------------------------------------------------------------------ *)
 
 fun sum_real l = case l of [] => 0.0 | a :: m => a + sum_real m
 
@@ -460,8 +489,12 @@ fun list_imin l = case l of
   | [a] => a
   | a :: m => Int.min (a,list_imin m)
 
-fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
+fun div_equal n m =
+  let val (q,r) = (n div m, n mod m) in
+    List.tabulate (m, fn i => q + (if i < r then 1 else 0))
+  end
 
+fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
 
 fun average_real l = sum_real l / Real.fromInt (length l)
 fun average_int l = average_real (map Real.fromInt l)
@@ -519,9 +552,9 @@ fun rts r = Real.toString r
 fun rts_round n r = rts (approx n r)
 fun pretty_real r = pad 8 "0" (rts_round 6 r)
 
-(* -------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Terms
-   ------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun rename_bvarl f tm =
   let
@@ -551,7 +584,6 @@ fun rename_allvar tm =
   in
     tm2
   end
-
 
 fun all_bvar tm =
   mk_fast_set Term.compare (map (fst o dest_abs) (find_terms is_abs tm))
@@ -587,20 +619,53 @@ fun string_of_goal (asm,w) =
     s1
   end
 
+fun string_of_goal_noquote (asm,w) =
+  let
+    val mem = !show_types
+    val _   = show_types := false
+    val s   =
+      (if null asm
+         then "[]"
+         else "[" ^ String.concatWith "," (map term_to_string asm) ^ "]")
+    val s1 = "(" ^ s ^ "," ^ (term_to_string w) ^ ")"
+  in
+    show_types := mem;
+    s1
+  end
+
+
 fun trace_tacl tacl g = case tacl of
     tac :: m =>
     (print_endline (string_of_goal g); trace_tacl m (hd (fst (tac g))))
   | [] => print_endline (string_of_goal g)
 
-fun bts b = if b then "true" else "false"
-fun string_to_bool s =
-  if s = "true" then true else if s = "false" then false
-  else raise ERR "string_to_bool" ""
-
 fun only_concl x =
   let val (a,b) = dest_thm x in
     if null a then b else raise ERR "only_concl" ""
   end
+
+fun list_mk_binop binop l = case l of
+    [] => raise ERR "list_mk_binop" "empty"
+  | [a] => a
+  | a :: m => list_mk_comb  (binop, [a, list_mk_binop binop m])
+
+fun arity_of t = length (fst (strip_type (type_of t)))
+
+fun strip_binop binop tm = case strip_comb tm of
+    (oper,[a,b]) =>
+    if term_eq oper binop
+    then a :: strip_binop binop b
+    else [tm]
+  | _ => [tm]
+
+(* ------------------------------------------------------------------------
+   I/O
+   ------------------------------------------------------------------------ *)
+
+fun bts b = if b then "true" else "false"
+fun string_to_bool s =
+  if s = "true" then true else if s = "false" then false
+  else raise ERR "string_to_bool" ""
 
 fun tts tm = case dest_term tm of
     VAR(Name,Ty)       => Name
@@ -613,17 +678,18 @@ fun tts tm = case dest_term tm of
 
 fun its i = int_to_string i
 
-fun list_mk_binop binop l = case l of
-    [] => raise ERR "list_mk_binop" "empty"
-  | [a] => a
-  | a :: m => list_mk_comb  (binop, [a, list_mk_binop binop m])
+fun reall_to_string rl = String.concatWith " " (map rts rl)
 
-fun arity_of t = length (fst (strip_type (type_of t)))
+fun realll_to_string rll =
+  String.concatWith "," (map reall_to_string rll)
 
+fun string_to_reall s =
+  map (valOf o Real.fromString) (String.tokens Char.isSpace s)
 
-(* -------------------------------------------------------------------------
-   I/O
-   ------------------------------------------------------------------------- *)
+fun string_to_realll s =
+  let val sl = String.tokens (fn x => x = #",") s in
+    map string_to_reall sl
+  end
 
 fun bare_readl path =
   let
@@ -728,9 +794,9 @@ fun writel_atomic file sl =
 fun readl_rm file =
   let val sl = readl file in OS.FileSys.remove file; sl end
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Profiling
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun add_time f x =
   let
@@ -746,9 +812,9 @@ fun total_time total f x =
 
 fun print_time s r = print (s ^ ": " ^ Real.toString r ^ "\n")
 
-(* -------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    String
-   ------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun unquote_string s =
   if String.sub (s,0) = #"\"" andalso String.sub (s,String.size s - 1) = #"\""
@@ -837,9 +903,9 @@ fun rm_space_aux l = case l of
 
 fun rm_space s = implode (rm_space_aux (explode s))
 
-(* -------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Escape
-   ------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun escape_char c =
   if Char.isAlphaNum c then Char.toString c
@@ -871,7 +937,7 @@ fun unescape_aux l = case l of
 fun unescape s = implode (unescape_aux (explode s))
 
 (* ------------------------------------------------------------------------
-   Probability
+   Random
    ------------------------------------------------------------------------ *)
 
 val new_real = Random.newgen ()
@@ -884,9 +950,6 @@ fun shuffle l =
       map fst (dict_sort compare_rmin l')
   end
 
-fun random_elem l = hd (shuffle l)
-  handle Empty => raise ERR "random_elem" "empty"
-
 fun random_int (a,b) =
   if a > b then raise ERR "random_int" "" else
   if a = b then a else
@@ -896,6 +959,16 @@ fun random_int (a,b) =
   in
     if c >= b then b else c
   end
+
+fun random_elem l =
+  if null l then raise ERR "random_elem" "empty" else
+    List.nth (l, random_int (0, length l - 1))
+
+fun random_subset n l = first_n n (shuffle l)
+
+(* ------------------------------------------------------------------------
+   Distribution
+   ------------------------------------------------------------------------ *)
 
 fun cumul_proba (tot:real) l = case l of
     [] => []
@@ -937,9 +1010,6 @@ fun best_in_distrib distrib =
   let fun cmp (a,b) = Real.compare (snd b,snd a) in
     fst (hd (dict_sort cmp distrib))
   end
-
-fun random_percent percent l =
-  part_n (Real.floor (percent * Real.fromInt (length l))) (shuffle l)
 
 val epsilon = 0.000000001
 

@@ -17,7 +17,7 @@
         (list (regexp-opt '("let" "local" "in" "end" "fun" "val" "open") 'words)
               'quote
               'holscript-smlsyntax)
-        '("\\<cheat\\>" . 'hol-cheat-face)
+        '("\\<cheat\\>" . 'holscript-cheat-face)
         '(hol-find-quoted-material 0 'holscript-quoted-material prepend)))
 
 (defconst holscript-font-lock-defaults '(holscript-font-lock-keywords))
@@ -31,10 +31,12 @@
     (modify-syntax-entry ?” ")“" st)
     (modify-syntax-entry ?‘ "(’" st)
     (modify-syntax-entry ?’ ")‘" st)
-    (modify-syntax-entry ?\\ "." st)
-    ;; backslash only escapes in strings and certainly shouldn't be seen as
-    ;; an escaper inside terms where it just causes pain, particularly in terms
-    ;; such as \(x,y). x + y
+    (modify-syntax-entry ?\\ "\\" st)
+    ;; backslash only escapes in strings but we need to have it seen
+    ;; as one in general if the hol-mode isn't to get seriously
+    ;; confused by script files that contain escaped quotation
+    ;; characters. This despite the fact that it does cause pain in
+    ;; terms such as \(x,y). x + y
     (mapc (lambda (c) (modify-syntax-entry c "_" st)) ".")
     (mapc (lambda (c) (modify-syntax-entry c "w" st)) "_'")
     (mapc (lambda (c) (modify-syntax-entry c "." st)) ",;")
@@ -46,17 +48,9 @@
 
 ;; key maps
 
-(define-prefix-command 'holscript-backquote-map)
-(define-key holscript-backquote-map "`" 'holscript-dbl-backquote)
-(define-key holscript-backquote-map (kbd "<left>") 'holscript-to-left-quote)
-(define-key holscript-backquote-map (kbd "<right>") 'holscript-to-right-quote)
-(define-key holscript-backquote-map (kbd "C-q")
-  (lambda() (interactive) (insert "`")))
-
-
 (defvar holscript-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "`" holscript-backquote-map)
+    (define-key map (kbd "`") 'holscript-dbl-backquote)
     (define-key map (kbd "<RET>") 'holscript-newline-and-relative-indent)
     ;;(define-key map "\M-f" 'forward-hol-tactic)
     ;;(define-key map "\M-b" 'backward-hol-tactic)
@@ -84,28 +78,30 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
 ‘-’ pair, leaving the cursor on the right quote, ready to insert text."
   (interactive)
   (cond
+   ((use-region-p)
+    (let ((beg (region-beginning))
+          (end (region-end)))
+      (goto-char end)
+      (insert "’")
+      (goto-char beg)
+      (insert "‘")
+      (backward-char 1)))
    ((looking-at "’")
-    (if (catch 'exit
-          (save-mark-and-excursion
-            (re-search-backward "‘\\|’" nil t)
-            (if (looking-at "‘")
-                (progn (delete-char 1) (insert "“")
-                         (throw 'exit t))
-              (throw 'exit nil))))
+    (if (= (char-before) #x2018) ; U+2018 = ‘
         (progn
-          (if (looking-at "“") (forward-char 1))
-          (delete-char 1) (insert "”") (backward-char 1))))
+          (backward-char 1)
+          (delete-char 2)
+          (insert "“”")
+          (backward-char 1))
+      (forward-char 1)))
    ((looking-at "”")
-    (if (catch 'exit
-          (save-mark-and-excursion
-            (re-search-backward "“\\|”" nil t)
-            (if (looking-at "“")
-                (progn (delete-char 1) (insert "‘")
-                       (throw 'exit t))
-              (throw 'exit nil))))
-        (progn
-          (if (looking-at "‘") (forward-char 1))
-          (delete-char 1) (insert "’") (backward-char 1))))
+    (if (= (char-before) #x201C)  ; U+201C = “
+           (progn
+             (backward-char 1)
+             (delete-char 2)
+             (insert "‘’")
+             (backward-char 1))
+      (forward-char 1)))
    ((looking-at "“")
     (if (catch 'exit
           (save-mark-and-excursion
@@ -622,6 +618,13 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
         (hol-movement-backward-sexp (1- arg)))
     (backward-sexp arg)))
 
+(defun holscript-fix-quotations (start end)
+  (interactive "r")
+  (shell-command-on-region start end
+                           (concat (file-name-directory hol-executable)
+                                   "unquote --quotefix")
+                           nil
+                           t))
 
 (defun holscript-mode-variables ()
   (set-syntax-table holscript-mode-syntax-table)
@@ -654,6 +657,9 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
   (holscript-mode-variables)
 )
 
+(require 'hol-input)
+(add-hook 'holscript-mode-hook (lambda () (set-input-method "Hol")))
+
 ;; smie grammar
 
 (require 'smie)
@@ -662,12 +668,16 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
    (smie-bnf->prec2
     '((id)
       (decl ("Theorem" theorem-contents "QED")
+            ("Theorem=" id )
+            ("Triviality=" id)
             ("Definition" definition-contents "End")
             ("Datatype:" quotedmaterial "End"))
       (theorem-contents (id-quoted "Proof" tactic))
       (definition-contents (id-quoted "Termination" tactic) (id-quoted))
       (id-quoted (id ":" quotedmaterial))
       (quotedmaterial)
+      (quotation ("‘" quotedmaterial "’"))
+      (termtype ("“" quotedmaterial "”"))
       (tactic (tactic ">>" tactic)
               (tactic "\\\\" tactic)
               (tactic ">-" tactic)
@@ -675,10 +685,11 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
               (tactic "THEN" tactic)
               (tactic "THEN1" tactic)
               (tactic "THENL" tactic)
+              (quotation "by" tactic)
               ("[" tactics "]"))
       (tactics (tactic) (tactics "," tactics)))
     '((assoc ","))
-    '((assoc ">>" "\\\\" ">-"  ">|" "THEN" "THEN1" "THENL")))))
+    '((assoc ">>" "\\\\" ">-"  ">|" "THEN" "THEN1" "THENL") (assoc "by")))))
 
 (defvar holscript-smie-keywords-regexp
   (regexp-opt '("Definition" "Theorem" "Proof" "QED" ">>" ">-" "\\\\"
@@ -690,7 +701,12 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
   (cond
    ((looking-at holscript-smie-keywords-regexp)
     (goto-char (match-end 0))
-    (match-string-no-properties 0))
+    (let ((ms (match-string-no-properties 0)))
+      (if (or (string=  ms "Theorem") (string= ms "Triviality"))
+          (let ((eolpoint (save-excursion (end-of-line) (point))))
+            (save-excursion
+              (if (re-search-forward ":" eolpoint t) ms (concat ms "="))))
+        ms)))
    ((looking-at holscript-quotedmaterial-delimiter-regexp)
     (goto-char (match-end 0))
     (match-string-no-properties 0))
@@ -709,7 +725,12 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
    (; am I just after a keyword?
     (looking-back holscript-smie-keywords-regexp (- (point) 15) t)
     (goto-char (match-beginning 0))
-    (match-string-no-properties 0))
+    (let ((ms (match-string-no-properties 0)))
+      (if (or (string=  ms "Theorem") (string= ms "Triviality"))
+          (let ((eolpoint (save-excursion (end-of-line) (point))))
+            (save-excursion
+              (if (re-search-forward ":" eolpoint t) ms (concat ms "="))))
+        ms)))
    (; am I just after a quotation mark
     (looking-back holscript-quotedmaterial-delimiter-regexp (- (point) 1) t)
     (goto-char (match-beginning 0))
@@ -730,14 +751,22 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
   (pcase (cons kind token)
     (`(:elem  . basic) (message "In elem rule") holscript-indent-level)
     (`(:list-intro . ":") (message "In list-intro :") holscript-indent-level)
+    (`(:list-intro . "‘") 1)
+    (`(:list-intro . "“") 1)
     (`(:list-intro . "")
      (message "In (:list-intro \"\"))") holscript-indent-level)
-    (`(:after . ":") (message "in after : rule") 2)
+    (`(:after . ":") 2)
+    (`(:before . ":") holscript-indent-level)
+    (`(:before . "by") 2)
     (`(:after . "Proof") 2)
     (`(:before . "Proof") 0)
     (`(:after . "Termination") 2)
     (`(:close-all . _) t)
     (`(:after . "[") 2)
+    (`(:after . ">-") 1)
+    (`(:after . "‘") 1)
+    (`(:after . "“") 1)
+    (`(:after . "THEN1") 1)
 ))
 
 ;;; returns true and moves forward a sexp if this is possible, returns nil

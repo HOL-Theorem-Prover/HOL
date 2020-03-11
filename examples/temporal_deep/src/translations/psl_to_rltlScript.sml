@@ -1,22 +1,10 @@
+(******************************************************************************)
+(*                                                                            *)
+(*    Translation from Property Specification Language (PSL) to Reset LTL     *)
+(*                                                                            *)
+(******************************************************************************)
+
 open HolKernel Parse boolLib bossLib;
-
-(*
-quietdec := true;
-
-val hol_dir = concat Globals.HOLDIR "/";
-val home_dir = (concat hol_dir "examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/translations") ::
-            (concat home_dir "src/tools") ::
-            (concat hol_dir "examples/PSL/path") ::
-            (concat hol_dir "examples/PSL/1.1/official-semantics") :: !loadPath;
-
-map load
- ["FinitePSLPathTheory", "PSLPathTheory", "UnclockedSemanticsTheory", "SyntacticSugarTheory", "LemmasTheory", "RewritesTheory",
-  "RewritesPropertiesTheory", "ProjectionTheory", "SyntacticSugarTheory", "arithmeticTheory", "psl_lemmataTheory",
-  "listTheory", "numLib", "intLib", "rich_listTheory", "pred_setTheory", "ModelTheory", "rltl_to_ltlTheory",
-  "rltlTheory", "full_ltlTheory", "tuerk_tacticsLib", "prop_logicTheory", "infinite_pathTheory", "res_quanTools", "temporal_deep_mixedTheory"];
-*)
 
 open FinitePSLPathTheory PSLPathTheory UnclockedSemanticsTheory SyntacticSugarTheory
      LemmasTheory RewritesTheory ModelTheory rltl_to_ltlTheory
@@ -25,91 +13,59 @@ open FinitePSLPathTheory PSLPathTheory UnclockedSemanticsTheory SyntacticSugarTh
      listTheory numLib intLib rich_listTheory pred_setTheory prop_logicTheory
      infinite_pathTheory temporal_deep_mixedTheory
      rltlTheory full_ltlTheory tuerk_tacticsLib res_quanTools;
+
 open Sanity;
 
 val _ = intLib.deprecate_int();
 
-(*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
-quietdec := false;
-*)
-
-
 val _ = new_theory "psl_to_rltl";
 
-
-val TRANSLATE_TOP_BOTTOM_def =
- Define
+val TRANSLATE_TOP_BOTTOM_def = Define
   `(TRANSLATE_TOP_BOTTOM (t:'prop) (b:'prop) TOP   = (\x.x = t)) /\
    (TRANSLATE_TOP_BOTTOM (t:'prop) (b:'prop) BOTTOM   = (\x.x = b)) /\
    (TRANSLATE_TOP_BOTTOM (t:'prop) (b:'prop) (STATE s) = s)`;
 
+val TRANSLATE_STATE_def = Define
+   `TRANSLATE_STATE (STATE s) = s`;
 
-val TRANSLATE_STATE_def =
- Define
-  `(TRANSLATE_STATE (STATE s) = s)`;
+val CONVERT_PATH_PSL_LTL_def = Define
+   `CONVERT_PATH_PSL_LTL (t:'prop) (b:'prop) =
+     (\p.\n. if (n < LENGTH p) then ((TRANSLATE_TOP_BOTTOM t b) (ELEM p n)) else EMPTY)`;
 
+val CONVERT_PATH_PSL_LTL___NO_TOP_BOT_def = Define
+   `CONVERT_PATH_PSL_LTL___NO_TOP_BOT =
+     (\p.\n. if (n < LENGTH p) then (TRANSLATE_STATE (ELEM p n)) else EMPTY)`;
 
-val CONVERT_PATH_PSL_LTL_def =
- Define
-  `CONVERT_PATH_PSL_LTL (t:'prop) (b:'prop) =  (\p.\n. if (n < LENGTH p) then ((TRANSLATE_TOP_BOTTOM t b) (ELEM p n)) else EMPTY)`;
+val CONVERT_PATH_LTL_PSL_def = Define
+   `CONVERT_PATH_LTL_PSL = (\p. INFINITE (\n. STATE (p n)))`;
 
-
-val CONVERT_PATH_PSL_LTL___NO_TOP_BOT_def =
- Define
-  `CONVERT_PATH_PSL_LTL___NO_TOP_BOT =  (\p.\n. if (n < LENGTH p) then (TRANSLATE_STATE (ELEM p n)) else EMPTY)`;
-
-
-val CONVERT_PATH_LTL_PSL_def =
- Define
-  `CONVERT_PATH_LTL_PSL = (\p. INFINITE (\n. STATE (p n)))`;
-
-
-val BEXP_TO_PROP_LOGIC_def =
- Define
+val BEXP_TO_PROP_LOGIC_def = Define
   `(BEXP_TO_PROP_LOGIC (B_PROP b) = P_PROP b) /\
    (BEXP_TO_PROP_LOGIC (B_TRUE) = P_TRUE) /\
    (BEXP_TO_PROP_LOGIC (B_FALSE) = P_FALSE) /\
    (BEXP_TO_PROP_LOGIC (B_NOT p) = P_NOT (BEXP_TO_PROP_LOGIC p)) /\
    (BEXP_TO_PROP_LOGIC (B_AND (p1, p2)) = P_AND(BEXP_TO_PROP_LOGIC p1,BEXP_TO_PROP_LOGIC p2))`;
 
-
-val PROP_LOGIC_TO_BEXP_def =
- Define
+val PROP_LOGIC_TO_BEXP_def = Define
   `(PROP_LOGIC_TO_BEXP (P_PROP b) = B_PROP b) /\
    (PROP_LOGIC_TO_BEXP (P_TRUE) = B_TRUE) /\
    (PROP_LOGIC_TO_BEXP (P_NOT p) = B_NOT (PROP_LOGIC_TO_BEXP p)) /\
    (PROP_LOGIC_TO_BEXP (P_AND (p1, p2)) = B_AND(PROP_LOGIC_TO_BEXP p1,PROP_LOGIC_TO_BEXP p2))`;
 
+val PSL_TO_RLTL_def = Define (* see [1, p.31] *)
+  `(PSL_TO_RLTL (F_STRONG_BOOL b) = RLTL_PROP (BEXP_TO_PROP_LOGIC b)) /\
+   (PSL_TO_RLTL (F_WEAK_BOOL b)   = RLTL_PROP (BEXP_TO_PROP_LOGIC b)) /\
+   (PSL_TO_RLTL (F_NOT f)         = RLTL_NOT (PSL_TO_RLTL f)) /\
+   (PSL_TO_RLTL (F_AND(f1,f2))    = RLTL_AND(PSL_TO_RLTL f1,PSL_TO_RLTL f2)) /\
+   (PSL_TO_RLTL (F_NEXT f)        = RLTL_NEXT(PSL_TO_RLTL f)) /\
+   (PSL_TO_RLTL (F_UNTIL(f1,f2))  = RLTL_SUNTIL(PSL_TO_RLTL f1,PSL_TO_RLTL f2)) /\
+   (PSL_TO_RLTL (F_ABORT (f,b))   = RLTL_ACCEPT(PSL_TO_RLTL f, BEXP_TO_PROP_LOGIC b))`;
 
-val PSL_TO_RLTL_def =
- Define
-  `(PSL_TO_RLTL (F_STRONG_BOOL b)   = (RLTL_PROP (BEXP_TO_PROP_LOGIC b)))
-   /\
-   (PSL_TO_RLTL (F_WEAK_BOOL b)     = (RLTL_PROP (BEXP_TO_PROP_LOGIC b)))
-   /\
-   (PSL_TO_RLTL (F_NOT f)           = RLTL_NOT (PSL_TO_RLTL f))
-   /\
-   (PSL_TO_RLTL (F_AND(f1,f2))      = RLTL_AND(PSL_TO_RLTL f1,PSL_TO_RLTL f2))
-   /\
-   (PSL_TO_RLTL (F_NEXT f)          = RLTL_NEXT(PSL_TO_RLTL f))
-   /\
-   (PSL_TO_RLTL (F_UNTIL(f1,f2))    = RLTL_SUNTIL(PSL_TO_RLTL f1,PSL_TO_RLTL f2))
-   /\
-   (PSL_TO_RLTL (F_ABORT (f,b))     = RLTL_ACCEPT(PSL_TO_RLTL f, BEXP_TO_PROP_LOGIC b))`;
+val PSL_TO_LTL_def = Define
+   `PSL_TO_LTL f = (RLTL_TO_LTL P_FALSE P_FALSE (PSL_TO_RLTL f))`;
 
-
-val PSL_TO_LTL_def =
- Define
-  `PSL_TO_LTL f = (RLTL_TO_LTL P_FALSE P_FALSE (PSL_TO_RLTL f))`;
-
-val PSL_TO_LTL_CLOCK_def =
- Define
-  `PSL_TO_LTL_CLOCK c f = (RLTL_TO_LTL P_FALSE P_FALSE (PSL_TO_RLTL (F_CLOCK_COMP c f)))`;
-
+val PSL_TO_LTL_CLOCK_def = Define
+   `PSL_TO_LTL_CLOCK c f = (RLTL_TO_LTL P_FALSE P_FALSE (PSL_TO_RLTL (F_CLOCK_COMP c f)))`;
 
 val CONVERT_PATH_PSL_LTL___NO_TOP_BOT_LEMMA =
  store_thm
@@ -1150,3 +1106,8 @@ val IS_LTL_PSL_THM =
       FULL_SIMP_TAC std_ss[IS_PSL_THM, IS_LTL_THM, IS_FUTURE_LTL_def, FUTURE_LTL_TO_PSL_def, LTL_OR_def]);
 
 val _ = export_theory();
+
+(* References:
+
+  [1] Tuerk, T., Schneider, K.: A hierarchy for Accellera's property specification language, (2005).
+ *)

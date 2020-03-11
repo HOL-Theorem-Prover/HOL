@@ -9,8 +9,8 @@ open extra_listTheory hurdUtils extra_realTheory extra_boolTheory
 
 open util_probTheory sigma_algebraTheory real_measureTheory real_probabilityTheory;
 open subtypeTheory extra_pred_setTheory extra_pred_setTools;
-open sequenceTheory sequenceTools;
 open prob_algebraTheory prob_canonTools prob_canonTheory;
+open sequenceTheory sequenceTools;
 
 val _ = new_theory "prob";
 val _ = ParseExtras.temp_loose_equality()
@@ -107,7 +107,7 @@ val prob_while_witness_def = Define
    else ARB`;
 
 val nonevent_def = Define
-  `nonevent = IMAGE (\x. @y. eventually x y) UNIV`;
+   `nonevent = IMAGE (\x. @y. eventually (x :num->'a) (y :num->'a)) UNIV`;
 
 val nonevent_seq_def = Define
   `(nonevent_seq 0 = nonevent) /\
@@ -3487,7 +3487,8 @@ val NONEVENT = store_thm
        >> Q.EXISTS_TAC `x`
        >> RW_TAC std_ss [])
    >> STRIP_TAC
-   >> Know `?y. eventually x y` >- PROVE_TAC [EVENTUALLY_REFL]
+   >> Know `?y. eventually (x :num -> bool) (y :num -> bool)`
+   >- PROVE_TAC [EVENTUALLY_REFL]
    >> DISCH_THEN (MP_TAC o REWRITE_RULE [EXISTS_DEF])
    >> BETA_TAC
    >> DISCH_THEN (MP_TAC o ONCE_REWRITE_RULE [eventually_def])

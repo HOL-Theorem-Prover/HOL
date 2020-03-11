@@ -25,18 +25,18 @@ fun sum_rvect v = Vector.foldl (op +) 0.0 v
 fun average_rvect v = sum_rvect v / Real.fromInt (Vector.length v)
 
 fun diff_rvect v1 v2 =
-  let fun f i = (Vector.sub (v1,i): real) - Vector.sub (v2,i) in
+  let fun f i = Vector.sub (v1,i) - Vector.sub (v2,i) in
     Vector.tabulate (Vector.length v1, f)
   end
 
 fun mult_rvect v1 v2 =
-  let fun f i = (Vector.sub (v1,i): real) * Vector.sub (v2,i) in
+  let fun f i = Vector.sub (v1,i) * Vector.sub (v2,i) in
     Vector.tabulate (Vector.length v1, f)
   end
 
 fun scalar_product v1 v2 = sum_rvect (mult_rvect v1 v2)
 
-fun scalar_mult (k:real) v = Vector.map (fn x => (k:real) * x) v
+fun scalar_mult k v = Vector.map (fn x => k * x) v
 
 (* -------------------------------------------------------------------------
    Matrix
@@ -52,18 +52,11 @@ fun mat_tabulate f (linen,coln) =
     Vector.tabulate (linen, mk_line)
   end
 
-fun mat3_tabulate f (an,bn,cn) =
-  let fun g i = mat_tabulate (f i) (bn,cn) in
-    Vector.tabulate (an,g)
-  end
-
 fun mat_smult (k:real) m = mat_map (fn x => k * x) m
 
 fun mat_dim m = (Vector.length m, Vector.length (Vector.sub (m,0)))
 
 fun mat_sub m i j = Vector.sub (Vector.sub (m,i), j)
-
-fun mat3_sub m i j k = Vector.sub (Vector.sub (Vector.sub (m,i), j), k)
 
 fun mat_update m ((i,j),k) =
   let val newv = Vector.update (Vector.sub(m,i),j,k) in
@@ -71,7 +64,7 @@ fun mat_update m ((i,j),k) =
   end
 
 fun mat_add m1 m2 =
-  let fun f i j = (mat_sub m1 i j : real) + mat_sub m2 i j in
+  let fun f i j = mat_sub m1 i j + mat_sub m2 i j in
     mat_tabulate f (mat_dim m1)
   end
 

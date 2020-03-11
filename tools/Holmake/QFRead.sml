@@ -19,11 +19,14 @@ fun exhaust_lexer (read, close, _) =
 
 fun reset st = fn () => QuoteFilter.UserDeclarations.resetstate st
 
+fun mkstate b = {inscriptp = b, quotefixp = false}
+
 fun file_to_lexer fname =
   let
+
     val instrm = TextIO.openIn fname handle e => exndie e
     val isscript = String.isSuffix "Script.sml" fname
-    val qstate = QuoteFilter.UserDeclarations.newstate isscript
+    val qstate = QuoteFilter.UserDeclarations.newstate (mkstate isscript)
     val read = QuoteFilter.makeLexer (fn n => TextIO.input instrm) qstate
   in
     (#2 o read, (fn () => TextIO.closeIn instrm), reset qstate)
@@ -31,7 +34,7 @@ fun file_to_lexer fname =
 
 fun string_to_lexer isscriptp s =
   let
-    val qstate = QuoteFilter.UserDeclarations.newstate isscriptp
+    val qstate = QuoteFilter.UserDeclarations.newstate (mkstate isscriptp)
     val sr = ref s
     fun str_read _ = (!sr before sr := "")
     val read = QuoteFilter.makeLexer str_read qstate
@@ -41,7 +44,7 @@ fun string_to_lexer isscriptp s =
 
 fun stream_to_lexer isscriptp strm =
   let
-    val qstate = QuoteFilter.UserDeclarations.newstate isscriptp
+    val qstate = QuoteFilter.UserDeclarations.newstate (mkstate isscriptp)
     val read = QuoteFilter.makeLexer (fn n => TextIO.input strm) qstate
   in
     (#2 o read, (fn () => ()), reset qstate)

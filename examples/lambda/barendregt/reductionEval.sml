@@ -67,7 +67,7 @@ val congs = [lameq_APPcong, SPEC_ALL lameq_LAM,
 val user_rewrites = ref (SSFRAG {dprocs = [], ac = [], rewrs = [],
                                  congs = [], filter = NONE,
                                  name = SOME "betasimps", convs = []})
-fun add_rwts (ths : (string * thm) list) =
+fun add_rwts (ths : (KernelSig.kernelname * thm) list) =
     user_rewrites :=
       simpLib.merge_ss [!user_rewrites, simpLib.rewrites (map #2 ths)]
 
@@ -123,7 +123,8 @@ in
                rewrs = [MATCH_MP RTC_SINGLE
                                  (SPEC_ALL (CONJUNCT1 weak_head_rules))]} ss ++
   SSFRAG {dprocs = [], ac = [],
-          rewrs = [(SOME "lemma14b", lemma14b), (SOME "bnf_whnf", bnf_whnf)],
+          rewrs = [(SOME {Thy = "term", Name = "lemma14b"}, lemma14b),
+                   (SOME {Thy = "head_reduction", Name = "bnf_whnf"},bnf_whnf)],
           congs = congs, filter = NONE, name = NONE, convs = []}
 end
 
@@ -269,8 +270,9 @@ val NORMSTAR_ss = SSFRAG {
             key = SOME([], mk_comb(noreduct_t, Mv_t)),
             name = "noreduct_CONV", trace = 2}],
   filter = SOME normstar_filter, dprocs = [], name = SOME "NORMSTAR_ss",
-  rewrs = [(SOME "normstar_nopath", normstar_nopath),
-           (SOME "lemma14b", termTheory.lemma14b)]};
+  rewrs = [(SOME{Thy = "normal_order", Name = "normstar_nopath"},
+            normstar_nopath),
+           (SOME{Thy = "term", Name = "lemma14b"}, termTheory.lemma14b)]};
 
 (* ----------------------------------------------------------------------
     unvarify_tac

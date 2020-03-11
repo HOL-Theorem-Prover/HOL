@@ -1,0 +1,43 @@
+\DOC
+
+\BLTYPE
+all_monads :
+  unit ->
+  (string *
+   {bind : term, unit : term, ignorebind : term option,
+    choice : term option, fail : term option, guard : term option}) list
+\ELTYPE
+
+
+\SYNOPSIS
+Lists all declared monads
+
+\KEYWORDS
+Monads, parsing, pretty-printing
+
+\DESCRIBE
+Returns a list of all declared monad types. These can be enabled with
+calls to {enable_monad}.
+
+\FAILURE
+Never fails.
+
+\EXAMPLE
+{
+> all_monads();
+val it =
+   [("list",
+     {bind = “LIST_BIND”, choice = SOME (“$++”), fail = SOME (“[]”),
+      guard = SOME (“LIST_GUARD”), ignorebind = SOME (“LIST_IGNORE_BIND”),
+      unit = “λx. [x]”}),
+    ("option",
+     {bind = “OPTION_BIND”, choice = SOME (“OPTION_CHOICE”),
+      fail = SOME (“NONE”), guard = SOME (“OPTION_GUARD”),
+      ignorebind = SOME (“OPTION_IGNORE_BIND”), unit = “SOME”})]:
+   (string * monadinfo) list
+}
+
+\SEEALSO
+monadsyntax.declare_monad, monadsyntax.enable_monad.
+
+\ENDDOC

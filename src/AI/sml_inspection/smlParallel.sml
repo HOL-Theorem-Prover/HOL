@@ -339,8 +339,7 @@ and boss_collect pd threadl rr arglv warg (pendingl,runningl,completedl) =
 fun boss_start_worker pd code_of wid =
   (
   writel (widscript_file pd wid) (code_of wid);
-  smlOpen.run_buildheap false
-    (SOME (widscript_file pd wid ^ ".out")) (widscript_file pd wid)
+  smlOpen.run_buildheap (wid_dir pd wid) false (widscript_file pd wid)
   )
 
 val attrib = [Thread.InterruptState Thread.InterruptAsynch,
@@ -397,15 +396,16 @@ fun parmap_queue_extern ncore es param argl =
     val widl = List.tabulate (ncore,I)
     val pd = #parallel_dir es
     val _ = clean_parallel_dirs pd widl
+    val _ = print_endline "writing parameters"
     val _ = #write_param es (param_file pd) param
+    val warg = #write_arg es
+    fun rr wid = #read_result es (result_file pd wid)
+    val arglv = Vector.fromList argl
+    val pendingl = List.tabulate (Vector.length arglv,I)
     val _ = print_endline ("start " ^ its ncore ^ " workers")
     fun fork wid = Thread.fork (fn () =>
       boss_start_worker pd (code_of_extspec es) wid, attrib)
     val threadl = map fork widl
-    fun rr wid = #read_result es (result_file pd wid)
-    val arglv = Vector.fromList argl
-    val pendingl = List.tabulate (Vector.length arglv,I)
-    val warg = #write_arg es
   in
     boss_wait_upl pd widl;
     print_endline ("  " ^ its ncore ^ " workers started");
@@ -425,7 +425,8 @@ val idspec : (unit,int,int) extspec =
   write_param = let fun f _ () = () in f end,
   read_param = let fun f _ = () in f end,
   write_arg = let fun f file arg = writel file [its arg] in f end,
-  read_arg = let fun f file = string_to_int (only_hd (readl file)) in f end,
+  read_arg = let fun f file =
+     string_to_int (singleton_of_list (readl file)) in f end,
   write_result = let fun f file r = writel file [its r] in f end,
   read_result = let fun f file = string_to_int (hd (readl_rm file)) in f end
   }

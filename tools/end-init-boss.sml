@@ -26,6 +26,7 @@ end;
 
 val _ = installPP (mosmlpp simpLib.pp_ssfrag);
 val _ = installPP (mosmlpp simpLib.pp_simpset)
+val _ = installPP (mosmlpp DefnBase.pp_defn)
 
 open bossLib;  (* Any others? *)
 

@@ -11,6 +11,7 @@ sig
   val absval_tm      : term
   val negate_tm      : term
   val real_injection : term (* the injection from :num -> :real *)
+  val inv_tm         : term
 
   (* binary operators *)
   val div_tm         : term
@@ -91,5 +92,9 @@ sig
   val is_pow         : term -> bool
   val dest_pow       : term -> term * term
   val mk_pow         : term * term -> term
+
+  val is_inv         : term -> bool
+  val dest_inv       : term -> term
+  val mk_inv         : term -> term
 
 end

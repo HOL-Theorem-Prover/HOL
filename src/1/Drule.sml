@@ -2071,7 +2071,7 @@ local
   fun norm th =
     if is_forall (concl th) then norm (SPEC_ALL th)
     else
-      case Lib.total dest_imp (concl th) of
+      case Lib.total dest_imp_only (concl th) of
           NONE => th
         | SOME (l,r) =>
           if is_conj l then norm (AIMP_RULE th)

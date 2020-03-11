@@ -148,5 +148,23 @@ val _ = temp_add_strliteral_form {inj = “strinj3”, ldelim = "\""}
 
 val _ = tpp "boring3 4 \"foo\""
 
+val _ = tprint "Removing a string literal form"
+fun test2 (Exn.Exn _) = raise Fail "impossible"
+  | test2 _ = (
+      shouldfail {
+        checkexn = fn e =>
+                      is_struct_HOL_ERR "Preterm" e orelse
+                      is_struct_HOL_ERR "Parse" e,
+        printarg = (fn _ => "Checking subsequent parse of ‘boring3 4 \"foo\"’"),
+        printresult = term_to_string,
+        testfn = Parse.Term |> quietly
+                            |> trace ("show_typecheck_errors",0)
+      } ‘boring3 4 "foo"’
+  )
+val _ = require_msgk (check_result (fn _ => true))
+                     (fn _ => "()")
+                     temp_remove_strliteral_form test2
+                     {tmnm = "strinj3"}
+val _ = tpp "\"a string\""
 
 val _ = OS.Process.exit OS.Process.success
