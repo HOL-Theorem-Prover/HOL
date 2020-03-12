@@ -88,6 +88,7 @@ fun read_tnnparam file =
    ------------------------------------------------------------------------- *)
 
 type tnnex = ((term * real list) list) list
+type tnnbatch = (term list * (term * mlMatrix.vect) list) list
 
 fun write_tnnex file ex =
   let val (tml,rll) = split (List.concat ex) in
@@ -308,6 +309,13 @@ fun train_tnn_epoch param pf lossl tnn batchl = case batchl of
       train_tnn_epoch param pf (loss :: lossl) newtnn m
     end
 
+fun train_tnn_epoch_nopar param lossl tnn batchl = case batchl of
+    [] => (tnn, average_real lossl)
+  | batch :: m =>
+    let val (newtnn,loss) = train_tnn_batch param map tnn batch in
+      train_tnn_epoch_nopar param (loss :: lossl) newtnn m
+    end
+
 fun train_tnn_nepoch param pf i tnn (train,test) =
   if i >= #nepoch param then tnn else
   let
@@ -467,7 +475,7 @@ val (l1,l2) = split (List.tabulate (20, fn n => mk_dataset (n + 1)));
 val (l1',l2') = (List.concat l1, List.concat l2);
 val (pos,neg) = (map_assoc (fn x => [1.0]) l1', map_assoc (fn x => [0.0]) l2');
 val ex0 = shuffle (pos @ neg);
-val ex1 = map (fn (a,b) => single (mk_comb (vhead,a),b)) ex0;
+val ex1 = map (fn (a,b) => [(mk_comb (vhead,a),b)]) ex0;
 val (trainex,testex) = part_pct 0.9 ex1;
 
 (* TNN *)

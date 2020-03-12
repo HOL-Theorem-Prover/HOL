@@ -7,6 +7,7 @@ include Abbrev
   type tnnex = ((term * real list) list) list
   type tnnparam = (term * int list) list
   type schedule = mlNeuralNetwork.schedule
+  type tnnbatch = (term list * (term * mlMatrix.vect) list) list
 
   val random_tnn : (term * int list) list -> tnn
   val dim_std : int * int -> term -> int list
@@ -22,7 +23,13 @@ include Abbrev
 
   val infer_tnn : tnn -> term list -> (term * real list) list
   val precomp_embed : tnn -> term -> term
+  val prepare_tnnex : tnnex -> tnnbatch
+  val train_tnn_epoch_nopar : 
+    mlNeuralNetwork.trainparam -> real list -> tnn -> tnnbatch list -> 
+    tnn * real
+
   val train_tnn : schedule -> tnn -> tnnex * tnnex -> tnn
+  
   val is_accurate : tnn -> (term * real list) list -> bool
   val tnn_accuracy : tnn -> tnnex -> real
 
