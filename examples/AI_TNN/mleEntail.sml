@@ -11,7 +11,7 @@ struct
 open HolKernel Abbrev boolLib aiLib psTermGen mlTreeNeuralNetwork
 
 val ERR = mk_HOL_ERR "mleEntail"
-val entaildir = HOLDIR ^ "/examples/TNN_tasks/data_entail"
+val entaildir = HOLDIR ^ "/examples/AI_TNN/data_entail"
 
 (* -------------------------------------------------------------------------
    Parse examples from string

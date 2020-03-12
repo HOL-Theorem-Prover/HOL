@@ -12,7 +12,7 @@ open HolKernel Abbrev boolLib aiLib psTermGen mlTacticData
 mlTreeNeuralNetwork mlFeature numSyntax
 
 val ERR = mk_HOL_ERR "mleArithData"
-val arithdir = HOLDIR ^ "/examples/TNN_tasks/data_arith"
+val arithdir = HOLDIR ^ "/examples/AI_TNN/data_arith"
 
 (* -------------------------------------------------------------------------
    Arithmetic
