@@ -18,7 +18,7 @@ val arithdir = HOLDIR ^ "/examples/AI_TNN/data_arith"
    Arithmetic
    ------------------------------------------------------------------------- *)
 
-fun mk_sucn n = funpow n mk_suc zero_tm;
+fun mk_sucn n = funpow n mk_suc zero_tm
 
 fun eval_numtm tm =
   (string_to_int o term_to_string o rhs o concl o computeLib.EVAL_CONV) tm
@@ -27,7 +27,7 @@ fun eval_numtm tm =
    Arithmetical term generation
    ------------------------------------------------------------------------- *)
 
-fun num_operl n =
+fun num_operl n = 
   [``SUC``,``$+``,``$*``] @ map mk_sucn (List.tabulate (n+1,I))
 fun random_numtm (nsuc,nsize) = 
   random_term (num_operl nsuc) (nsize,``:num``)
@@ -125,9 +125,7 @@ val train = import_arithdata "train";
 
 fun export_arithfea dataname =
   let
-    val _ = mkDir_err arithdir
-    val tml' = map fst (
-      List.concat (map import_arithdata ["test","train"]))
+    val tml' = map fst (List.concat (map import_arithdata ["test","train"]))
     fun all_features x =
       let val l = List.concat (map (feahash_of_term_mod 1299827) x) in
         dnew Int.compare (number_snd 0 (mk_fast_set Int.compare l))

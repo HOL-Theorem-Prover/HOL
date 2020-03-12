@@ -132,7 +132,7 @@ fun test_fixed tnn =
 load "aiLib"; open aiLib;
 load "mleEntail"; open mleEntail;
 val tnn = train_fixed (); (* takes a minute to parse the data set *)
-val l = test_fixed tnn;
+val r = test_fixed tnn;
 *)
 
 

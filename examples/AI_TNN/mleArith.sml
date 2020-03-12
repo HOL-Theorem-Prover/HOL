@@ -12,7 +12,7 @@ open HolKernel Abbrev boolLib aiLib psTermGen smlParallel
 mlTreeNeuralNetwork mleArithData
 
 val ERR = mk_HOL_ERR "mleArith"
-val arithdir = HOLDIR ^ "/examples/TNN_tasks/data_arith"
+val arithdir = HOLDIR ^ "/examples/AI_TNN/data_arith"
 
 (* -------------------------------------------------------------------------
    Syntax
@@ -63,12 +63,6 @@ fun test_fixed tnn =
 (*
 load "mleArith"; open mleArith;
 val tnn = train_fixed ();
-val r = test_fixed tnn;
-
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-load "mleArith"; open mleArith;
-val arithdir = HOLDIR ^ "/examples/TNN_tasks/data_arith"
-val tnn = read_tnn  (arithdir ^ "/tnn");
 val r = test_fixed tnn;
 *)
 
