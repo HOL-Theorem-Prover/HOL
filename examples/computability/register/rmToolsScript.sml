@@ -241,15 +241,17 @@ QED
 Theorem rmcorr_seq_V:
   (∀rs. Q rs ⇒ Q' rs) ∧
   rmcorr m q1 P (SOME q2) Q ∧ rmcorr m q2 Q' q3 R
-⇒ rmcorr m q1 P q3 R
+⇒
+  rmcorr m q1 P q3 R
 Proof
   rw[rmcorr_def] >>
   first_x_assum drule >> rw[] >>
   first_x_assum drule >> rw[] >>
   first_x_assum drule >> rw[] >>
-  map_every qexists_tac [`n+n'`,`rs''`] >>
-  `run_step m (rs,SOME q1) (n + n') =  run_step m (run_step m (rs,SOME q1) n) n' `
-    by simp[combo_steps] >> rw[]
+  rename [‘run_step m (rs, SOME q0) n0 = (rs1, SOME q1)’,
+          ‘run_step m (rs1, SOME q1) n1 = (rs2, qopt2)’] >>
+  map_every qexists_tac [`n0+n1`,`rs2`] >>
+  simp[GSYM combo_steps]
 QED
 
 Theorem rmcorr_inc:
@@ -303,7 +305,8 @@ Proof
        >> rw[run_step_def, run_machine_1_def])
   >> `rs r = 0` by simp[]
   >> first_x_assum drule_all
-  >> strip_tac >> map_every qexists_tac [`SUC n`, `rs'`]
+  >> disch_then (qx_choosel_then [‘n’, ‘rs'’] strip_assume_tac)
+  >> map_every qexists_tac [`SUC n`, `rs'`]
   >> rw[run_step_def, run_machine_1_def]
 QED
 
@@ -324,10 +327,11 @@ QED
 
 Theorem loop_correct_0:
 ∀ m q INV gd body exit.
-  (∀N. rmcorr m body (λrs. INV (rs(| gd |-> rs gd + 1|)) ∧ rs gd = N) (SOME q) (λrs'. INV rs' ∧ rs' gd <= N))
-∧ (m.tf(q) = Dec gd (SOME body) exit) ∧ q ∈ m.Q
-
-==> rmcorr m q INV exit (λrs. INV rs ∧ rs gd = 0)
+    (∀N. rmcorr m body (λrs. INV (rs(| gd |-> rs gd + 1|)) ∧ rs gd = N) (SOME q)
+                       (λrs'. INV rs' ∧ rs' gd <= N)) ∧
+    m.tf(q) = Dec gd (SOME body) exit ∧ q ∈ m.Q
+ ==>
+    rmcorr m q INV exit (λrs. INV rs ∧ rs gd = 0)
 Proof
   rw[rmcorr_def] >>
   completeInduct_on `rs gd` >>
@@ -338,11 +342,13 @@ Proof
      `run_machine_1 m (rs, SOME q) = (rsx, SOME body)` by simp[run_machine_1_def] >>
       first_x_assum (qspec_then `rsx` mp_tac) >>
       impl_tac
-      >- rw[Abbr `rsx`, APPLY_UPDATE_THM, APPLY_UPDATE_ID, UPDATE_EQ]
-      >> strip_tac >>
-      `rs' gd < rs gd` by fs[Abbr`rsx`, APPLY_UPDATE_THM] >>
+      >- rw[Abbr `rsx`, APPLY_UPDATE_THM, APPLY_UPDATE_ID, UPDATE_EQ] >>
+      disch_then (qx_choosel_then [‘n’, ‘rs1’] strip_assume_tac) >>
+      `rs1 gd < rs gd` by fs[Abbr`rsx`, APPLY_UPDATE_THM] >>
       first_x_assum drule_all >> rw[] >>
-      map_every qexists_tac [`SUC (n + n')`, `rs''`] >>
+      rename [‘run_step m (rsx, SOME body) n1 = (rs1, SOME q)’,
+              ‘run_step m (rs1, SOME q) n2 = (rs2, exit)’] >>
+      map_every qexists_tac [`SUC (n1 + n2)`, `rs2`] >>
       simp[run_step_def, GSYM combo_steps]
     )
   >> map_every qexists_tac [`SUC 0`, `rs`]
@@ -839,23 +845,24 @@ Definition liftP_V_def:
   liftP_V n P X = (λrs. P (λr. rs (n ⊗ r)) ∧ X rs)
 End
 
-
 Theorem mrInst_correct_kV:
- ∀RS M q P Q opt mnum P' Q'. (wfrm M ∧ q ∈ M.Q ∧ P' = liftP_V mnum P (λrs. ∀k. nfst k ≠ mnum ⇒ rs k = RS k)
-       ∧ Q' = liftP_V mnum Q (λrs. ∀k. nfst k ≠ mnum ⇒ rs k = RS k))
+ ∀RS M q P Q opt mnum P' Q'.
+   wfrm M ∧ q ∈ M.Q ∧
+   P' = liftP_V mnum P (λrs. ∀k. nfst k ≠ mnum ⇒ rs k = RS k) ∧
+   Q' = liftP_V mnum Q (λrs. ∀k. nfst k ≠ mnum ⇒ rs k = RS k)
   ⇒
-  (rmcorr M q P opt Q ⇒ rmcorr (mrInst mnum M) q P' opt Q')
+   (rmcorr M q P opt Q ⇒ rmcorr (mrInst mnum M) q P' opt Q')
 Proof
   rw[liftP_V_def, rmcorr_def] >>
   first_x_assum drule >> rw[] >>
-  map_every qexists_tac[`n`,`λr. if nfst r = mnum then rs' (nsnd r) else RS r`] >>
+  rename [‘run_step _ _ n = (rs2, opt)’] >>
+  map_every qexists_tac[`n`,`λr. if nfst r = mnum then rs2 (nsnd r) else RS r`] >>
   rw[]
   >- (drule mrInst_run_step >> rw[]
       >> first_x_assum irule >> rw[]
       >> qexists_tac `λr. rs (mnum ⊗ r)`
-      >> qexists_tac `rs'` >> rw[]
-      >- rw[rs_mrInst_B4_def]
-      >> rw[rs_mrInst_Aft_def])
+      >> goal_assum drule
+      >> rw[rs_mrInst_B4_def, rs_mrInst_Aft_def])
   >> metis_tac[]
 QED
 
