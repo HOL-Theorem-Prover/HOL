@@ -678,7 +678,7 @@ val dc_valid_outputs_eq_outputs = store_thm
                 >> POP_ASSUM (ASSUME_TAC o Q.SPEC `0`) >> FULL_SIMP_TAC arith_ss [STRCAT_toString_inj])
             >> STRIP_TAC
             >> `(!i. ~(i <= SUC (SUC n')) \/ ~(x' = STRCAT "coin" (toString i)))`
-                by (STRIP_TAC >> Reverse (Cases_on `i <= SUC (SUC n')`) >- ASM_REWRITE_TAC []
+                by (STRIP_TAC >> reverse (Cases_on `i <= SUC (SUC n')`) >- ASM_REWRITE_TAC []
                     >> Q.PAT_X_ASSUM `!i. ~(i <= SUC (SUC (SUC n'))) \/ ~(x' = STRCAT "coin" (toString i))`
                         (ASSUME_TAC o Q.SPEC `i`)
                     >> FULL_SIMP_TAC arith_ss [])
@@ -824,7 +824,7 @@ val ALL_DISTINCT_n_minus_1_announces_list = prove
        ~MEM s (n_minus_1_announces_list n))`
    >> ASM_REWRITE_TAC []
    >> FULL_SIMP_TAC bool_ss []
-   >> RW_TAC bool_ss [] >> Reverse (Cases_on `MEM s' (n_minus_1_announces_list n)`) >> ASM_REWRITE_TAC []
+   >> RW_TAC bool_ss [] >> reverse (Cases_on `MEM s' (n_minus_1_announces_list n)`) >> ASM_REWRITE_TAC []
    >> RW_TAC bool_ss [FUN_EQ_THM] >> Q.EXISTS_TAC `STRCAT "announces" (toString (SUC n))`
    >> RW_TAC bool_ss [n_minus_1_announces_list_SUC_n]);
 
@@ -882,7 +882,7 @@ val valid_coin_set_eq_valid_coin_assignment = store_thm
                    valid_coin_assignment r out p n (SUC (SUC n))})``,
    RW_TAC std_ss [EXTENSION, GSPECIFICATION]
    >> RW_TAC std_ss [GSYM EXTENSION]
-   >> Reverse (Cases_on `x IN dc_random_states (SUC (SUC n))`) >> ASM_REWRITE_TAC []
+   >> reverse (Cases_on `x IN dc_random_states (SUC (SUC n))`) >> ASM_REWRITE_TAC []
    >> `(\s. s = STRCAT "pays" (toString p)) IN dc_high_states F (SUC (SUC (SUC n)))`
         by (RW_TAC std_ss [dc_high_states_def, IN_dc_high_states_set] >> Q.EXISTS_TAC `p` >> RW_TAC std_ss [])
    >> EQ_TAC
@@ -990,7 +990,7 @@ val valid_coin_assignment_eq_2_element_set = store_thm
            >- (ASM_SIMP_TAC arith_ss [coin_assignment_result1]
                >> FULL_SIMP_TAC std_ss [IN_dc_random_states]
                >> Q.PAT_X_ASSUM `!x''. b ==> ~x x''` MATCH_MP_TAC
-               >> STRIP_TAC >> Reverse (Cases_on `i <= SUC (SUC n)`) >> ASM_REWRITE_TAC []
+               >> STRIP_TAC >> reverse (Cases_on `i <= SUC (SUC n)`) >> ASM_REWRITE_TAC []
                >> FULL_SIMP_TAC arith_ss [])
            >> FULL_SIMP_TAC std_ss [] >> Q.PAT_X_ASSUM `i <= SUC (SUC n)` MP_TAC
            >> Q.SPEC_TAC (`i:num`,`i:num`) >> Induct
@@ -1009,7 +1009,7 @@ val valid_coin_assignment_eq_2_element_set = store_thm
        >- (ASM_SIMP_TAC arith_ss [coin_assignment_result1]
            >> FULL_SIMP_TAC std_ss [IN_dc_random_states]
            >> Q.PAT_X_ASSUM `!x''. b ==> ~x x''` MATCH_MP_TAC
-           >> STRIP_TAC >> Reverse (Cases_on `i <= SUC (SUC n)`) >> ASM_REWRITE_TAC []
+           >> STRIP_TAC >> reverse (Cases_on `i <= SUC (SUC n)`) >> ASM_REWRITE_TAC []
            >> FULL_SIMP_TAC arith_ss [])
        >> FULL_SIMP_TAC std_ss [] >> Q.PAT_X_ASSUM `i <= SUC (SUC n)` MP_TAC
        >> Q.SPEC_TAC (`i:num`,`i:num`) >> Induct
@@ -1331,13 +1331,13 @@ val dc_leakage_result = store_thm
                         >> RW_TAC std_ss []
                         >> (MP_TAC o Q.ISPEC `x': bool state # bool state`) pair_CASES
                         >> RW_TAC bool_ss [] >> RW_TAC std_ss []
-                        >> Reverse (Cases_on `(x = (q,r))`) >> RW_TAC std_ss []
+                        >> reverse (Cases_on `(x = (q,r))`) >> RW_TAC std_ss []
                         >> FULL_SIMP_TAC std_ss [FST,SND])
                     >> DISJ1_TAC
                     >> RW_TAC std_ss []
                     >> (MP_TAC o Q.ISPEC `x': bool state # bool state`) pair_CASES
                     >> RW_TAC bool_ss [] >> RW_TAC std_ss []
-                    >> Reverse (Cases_on `(x = (q,r))`) >> RW_TAC std_ss []
+                    >> reverse (Cases_on `(x = (q,r))`) >> RW_TAC std_ss []
                     >> FULL_SIMP_TAC std_ss [FST,SND])
              >> `FINITE {(h:bool state, r: bool state) |
                         h IN dc_high_states_set (SUC (SUC n)) /\
@@ -1561,8 +1561,8 @@ val dc_leakage_result = store_thm
                                 coin_assignment (dcprog (SUC (SUC (SUC n))) s') p n T (SUC (SUC n)))) \/
                                 ~(p < SUC (SUC (SUC n))))`
                     >> ASM_REWRITE_TAC [] >> FULL_SIMP_TAC std_ss []
-                    >> RW_TAC std_ss [] >> Reverse (Cases_on `p' < SUC (SUC (SUC n))`) >> ASM_REWRITE_TAC []
-                    >> Reverse (Cases_on `((\s. s = STRCAT "pays" (toString p)) =
+                    >> RW_TAC std_ss [] >> reverse (Cases_on `p' < SUC (SUC (SUC n))`) >> ASM_REWRITE_TAC []
+                    >> reverse (Cases_on `((\s. s = STRCAT "pays" (toString p)) =
                                   (\s. s = STRCAT "pays" (toString p')))`) >> ASM_REWRITE_TAC []
                     >> `p' = p` by METIS_TAC [STRCAT_toString_inj]
                     >> ASM_SIMP_TAC arith_ss [coin_assignment_result3, LESS_EQ_REFL])
@@ -3857,7 +3857,7 @@ val biased_dc3_leakage_result2 = store_thm
                 3/32 * &(CARD {(h,r)| h IN biased_high_states foo /\ r IN biased_random_states foo /\
                        ~ r (STRCAT "coin" (toString 1)) /\
                             (insider_dcprog (SUC foo) ((h,z),r) = x)}) else 0)`
-        by (Reverse (RW_TAC real_ss [])
+        by (reverse (RW_TAC real_ss [])
             >- (RW_TAC bool_ss [GSYM INTER_ASSOC]
                 >> Suff `PREIMAGE L {z} INTER (biased_high_states foo CROSS biased_low_states CROSS
                                                 biased_random_states foo) = {}`
@@ -3919,12 +3919,12 @@ val biased_dc3_leakage_result2 = store_thm
                 by (RW_TAC std_ss [DISJOINT_DEF] >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, NOT_IN_EMPTY, IN_IMAGE, GSPECIFICATION]
                     >> Cases_on `SND x' (STRCAT "coin" (toString 1))`
                     >- (DISJ2_TAC >> STRIP_TAC >> `x'' = (FST x'',SND x'')` by RW_TAC std_ss [PAIR]
-                        >> POP_ORW >> RW_TAC std_ss [] >> Reverse (Cases_on `x' = ((FST x'',z),SND x'')`) >> RW_TAC std_ss []
+                        >> POP_ORW >> RW_TAC std_ss [] >> reverse (Cases_on `x' = ((FST x'',z),SND x'')`) >> RW_TAC std_ss []
                         >> `x' = (FST x',SND x')` by RW_TAC std_ss [PAIR]
                         >> POP_ORW >> RW_TAC std_ss [PAIR_EQ]
                         >> METIS_TAC [FST, SND, PAIR_EQ, PAIR])
                     >> DISJ1_TAC >> STRIP_TAC >> `x'' = (FST x'',SND x'')` by RW_TAC std_ss [PAIR]
-                    >> POP_ORW >> RW_TAC std_ss [] >> Reverse (Cases_on `x' = ((FST x'',z),SND x'')`) >> RW_TAC std_ss []
+                    >> POP_ORW >> RW_TAC std_ss [] >> reverse (Cases_on `x' = ((FST x'',z),SND x'')`) >> RW_TAC std_ss []
                     >> `x' = (FST x',SND x')` by RW_TAC std_ss [PAIR]
                     >> POP_ORW >> RW_TAC std_ss [PAIR_EQ]
                     >> METIS_TAC [FST, SND, PAIR_EQ, PAIR])
@@ -4049,7 +4049,7 @@ val biased_dc3_leakage_result2 = store_thm
                 3/32 * & (CARD (biased_high_states foo)) *
                         &(CARD {r| r IN biased_random_states foo /\ ~r (STRCAT "coin" (toString 1))})
          else 0)`
-        by (Reverse (RW_TAC real_ss [])
+        by (reverse (RW_TAC real_ss [])
             >- (Suff `PREIMAGE L {z} INTER (biased_high_states foo CROSS biased_low_states CROSS
                                                 biased_random_states foo) = {}`
                 >- RW_TAC bool_ss [INTER_EMPTY, REAL_SUM_IMAGE_THM]
@@ -4103,12 +4103,12 @@ val biased_dc3_leakage_result2 = store_thm
                 by (RW_TAC std_ss [DISJOINT_DEF] >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_INTER, NOT_IN_EMPTY, IN_IMAGE, GSPECIFICATION]
                     >> Cases_on `SND x (STRCAT "coin" (toString 1))`
                     >- (DISJ2_TAC >> STRIP_TAC >> `x' = (FST x',SND x')` by RW_TAC std_ss [PAIR]
-                        >> POP_ORW >> RW_TAC std_ss [] >> Reverse (Cases_on `x = ((FST x',z),SND x')`) >> RW_TAC std_ss []
+                        >> POP_ORW >> RW_TAC std_ss [] >> reverse (Cases_on `x = ((FST x',z),SND x')`) >> RW_TAC std_ss []
                         >> `x = (FST x,SND x)` by RW_TAC std_ss [PAIR]
                         >> POP_ORW >> RW_TAC std_ss [PAIR_EQ]
                         >> METIS_TAC [FST, SND, PAIR_EQ, PAIR])
                     >> DISJ1_TAC >> STRIP_TAC >> `x' = (FST x',SND x')` by RW_TAC std_ss [PAIR]
-                    >> POP_ORW >> RW_TAC std_ss [] >> Reverse (Cases_on `x = ((FST x',z),SND x')`) >> RW_TAC std_ss []
+                    >> POP_ORW >> RW_TAC std_ss [] >> reverse (Cases_on `x = ((FST x',z),SND x')`) >> RW_TAC std_ss []
                     >> `x = (FST x,SND x)` by RW_TAC std_ss [PAIR]
                     >> POP_ORW >> RW_TAC std_ss [PAIR_EQ]
                     >> METIS_TAC [FST, SND, PAIR_EQ, PAIR])
@@ -4188,7 +4188,7 @@ val biased_dc3_leakage_result2 = store_thm
                           r (STRCAT "coin" (toString 1))} =
                 (biased_high_states foo) CROSS {r | r IN biased_random_states foo /\ r (STRCAT "coin" (toString 1))}`
                 by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [GSPECIFICATION, IN_CROSS]
-                    >> Reverse (EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss [])
+                    >> reverse (EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss [])
                     >- (Q.EXISTS_TAC `(FST x, SND x)` >> RW_TAC std_ss [PAIR_EQ])
                     >> POP_ASSUM MP_TAC >> `(x':bool state # bool state) = (FST x',SND x')` by RW_TAC std_ss [PAIR]
                     >> POP_ORW >> RW_TAC std_ss [PAIR_EQ])
@@ -4197,7 +4197,7 @@ val biased_dc3_leakage_result2 = store_thm
                           ~r (STRCAT "coin" (toString 1))} =
                 (biased_high_states foo) CROSS {r | r IN biased_random_states foo /\ ~r (STRCAT "coin" (toString 1))}`
                 by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [GSPECIFICATION, IN_CROSS]
-                    >> Reverse (EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss [])
+                    >> reverse (EQ_TAC >> RW_TAC std_ss [] >> RW_TAC std_ss [])
                     >- (Q.EXISTS_TAC `(FST x, SND x)` >> RW_TAC std_ss [PAIR_EQ])
                     >> POP_ASSUM MP_TAC >> `(x':bool state # bool state) = (FST x',SND x')` by RW_TAC std_ss [PAIR]
                     >> POP_ORW >> RW_TAC std_ss [PAIR_EQ])
@@ -4242,7 +4242,7 @@ val biased_dc3_leakage_result2 = store_thm
                 + 3/32 * & (CARD {r | r IN biased_random_states foo /\ ~r (STRCAT "coin" (toString 1)) /\
                                       (insider_dcprog (SUC foo) ((y,z),r) = x)})
          else 0)`
-        by (Reverse (RW_TAC real_ss [])
+        by (reverse (RW_TAC real_ss [])
             >- (RW_TAC bool_ss [GSYM INTER_ASSOC]
                 >> Suff `PREIMAGE FST {(y,z)} INTER (biased_high_states foo CROSS biased_low_states CROSS
                                                 biased_random_states foo) = {}`
@@ -4381,7 +4381,7 @@ val biased_dc3_leakage_result2 = store_thm
                 1/32 * & (CARD {r | r IN biased_random_states foo /\ r (STRCAT "coin" (toString 1))})
                 + 3/32 * & (CARD {r | r IN biased_random_states foo /\ ~r (STRCAT "coin" (toString 1))})
          else 0)`
-        by (Reverse (RW_TAC real_ss [])
+        by (reverse (RW_TAC real_ss [])
             >- (Suff `PREIMAGE FST {(y,z)} INTER (biased_high_states foo CROSS biased_low_states CROSS
                                                 biased_random_states foo) = {}`
                 >- RW_TAC bool_ss [INTER_EMPTY, REAL_SUM_IMAGE_THM]
