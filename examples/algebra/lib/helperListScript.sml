@@ -439,6 +439,22 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    DILATE_0_EQ_NIL  |- !l e n. (DILATE e 0 n l = []) <=> (l = [])
    DILATE_0_LAST    |- !l e n. LAST (DILATE e 0 n l) = LAST l
 
+   List Conjunction and Disjunction:
+   for_all_range_sing    |- !a j. a <= j /\ j <= a <=> (j = a)
+   for_all_range_cons    |- !f a b. a <= b ==>
+                                    ((!j. a <= j /\ j <= b ==> f j) <=>
+                                      f a /\ !j. a + 1 <= j /\ j <= b ==> f j)
+   exists_range_sing     |- !a. ?j. a <= j /\ j <= a <=> (j = a)
+   exists_range_cons     |- !f a b. a <= b ==>
+                                    ((?j. a <= j /\ j <= b /\ f j) <=>
+                                     f a \/ ?j. a + 1 <= j /\ j <= b /\ f j)
+   conjunct_def          |- (!f. conjunct f [] <=> T) /\
+                             !f h t. conjunct f (h::t) <=> f h /\ conjunct f t
+   disjunct_def          |- (!f. disjunct f [] <=> F) /\
+                             !f h t. disjunct f (h::t) <=> f h \/ disjunct f t
+   conjunct_thm          |- !f a b. conjunct f [a .. b] <=> !j. a <= j /\ j <= b ==> f j
+   disjunct_thm          |- !f a b. disjunct f [a .. b] <=> ?j. a <= j /\ j <= b /\ f j
+   disjunct_conjunct_thm |- !f a b. disjunct f [a .. b] <=> ~conjunct ($~ o f) [a .. b]
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -6632,6 +6648,195 @@ val DILATE_0_LAST = store_thm(
   `k DIV m = PRE (LENGTH l)` by metis_tac[MULT_DIV, MULT_COMM] >>
   `k < LENGTH (DILATE e 0 n l)` by rw[Abbr`k`] >>
   rw[DILATE_0_EL]);
+
+(* ------------------------------------------------------------------------- *)
+(* List Conjunction and Disjunction                                          *)
+(* ------------------------------------------------------------------------- *)
+
+(* Theorem: a <= j /\ j <= a <=> (j = a) *)
+(* Proof: trivial by arithmetic. *)
+val for_all_range_sing = store_thm(
+  "for_all_range_sing",
+  ``!a j:num. a <= j /\ j <= a <=> (j = a)``,
+  decide_tac);
+
+(* Theorem: a <= b ==>
+    ((!j. a <= j /\ j <= b ==> f j) <=> (f a /\ !j. a + 1 <= j /\ j <= b ==> f j)) *)
+(* Proof:
+   If part: !j. a <= j /\ j <= b ==> f j ==>
+              f a /\ !j. a + 1 <= j /\ j <= b ==> f j
+      This is trivial since a + 1 = SUC a.
+   Only-if part: f a /\ !j. a + 1 <= j /\ j <= b ==> f j ==>
+                 !j. a <= j /\ j <= b ==> f j
+      Note a <= j <=> a = j or a < j      by arithmetic
+      If a = j, this is trivial.
+      If a < j, then a + 1 <= j, also trivial.
+*)
+val for_all_range_cons = store_thm(
+  "for_all_range_cons",
+  ``!f a b. a <= b ==>
+    ((!j. a <= j /\ j <= b ==> f j) <=> (f a /\ !j. a + 1 <= j /\ j <= b ==> f j))``,
+  rw[EQ_IMP_THM] >>
+  `(a = j) \/ (a < j)` by decide_tac >-
+  fs[] >>
+  fs[]);
+
+(* Theorem: ?j. a <= j /\ j <= a <=> (j = a) *)
+(* Proof: trivial by arithmetic. *)
+val exists_range_sing = store_thm(
+  "exists_range_sing",
+  ``!a. ?j:num. a <= j /\ j <= a <=> (j = a)``,
+  metis_tac[LESS_EQ_REFL]);
+
+(* Theorem: a <= b ==>
+    ((?j. a <= j /\ j <= b /\ f j) <=> (f a \/ ?j. a + 1 <= j /\ j <= b /\ f j)) *)
+(* Proof:
+   If part: ?j. a <= j /\ j <= b /\ f j ==>
+              f a \/ ?j. a + 1 <= j /\ j <= b /\ f j
+      This is trivial since a + 1 = SUC a.
+   Only-if part: f a /\ ?j. a + 1 <= j /\ j <= b /\ f j ==>
+                 ?j. a <= j /\ j <= b /\ f j
+      Note a <= j <=> a = j or a < j      by arithmetic
+      If a = j, this is trivial.
+      If a < j, then a + 1 <= j, also trivial.
+*)
+val exists_range_cons = store_thm(
+  "exists_range_cons",
+  ``!f a b. a <= b ==>
+    ((?j. a <= j /\ j <= b /\ f j) <=> (f a \/ ?j. a + 1 <= j /\ j <= b /\ f j))``,
+  rw[EQ_IMP_THM] >| [
+    `(a = j) \/ (a < j)` by decide_tac >-
+    fs[] >>
+    `a + 1 <= j` by decide_tac >>
+    metis_tac[],
+    metis_tac[LESS_EQ_REFL],
+    `a <= j` by decide_tac >>
+    metis_tac[]
+  ]);
+
+(* Define conjunction like SUM or PROD. *)
+val conjunct_def = Define`
+    (conjunct f [] <=> T) /\
+    (conjunct f (h::t) <=> f h /\ conjunct f t)
+`;
+
+(* EVAL ``conjunct f [1 .. 5]``; = f 1 /\ f 2 /\ f 3 /\ f 4 /\ f 5 *)
+
+(* Define disjunction like SUM or PROD. *)
+val disjunct_def = Define`
+    (disjunct f [] <=> F) /\
+    (disjunct f (h::t) <=> f h \/ disjunct f t)
+`;
+
+(* EVAL ``disjunct f [1 .. 5]``; = f 1 \/ f 2 \/ f 3 \/ f 4 \/ f 5 *)
+
+
+(* Theorem: conjunct f [a .. b] <=> !j. a <= j /\ j <= b ==> f j *)
+(* Proof:
+   By induction on (b - a).
+   Base: 0 = b - a ==> (conjunct f [a .. b] <=> !j. a <= j /\ j <= b ==> f j)
+      Note 0 = b - a ==> b <= a, which means b < a or b = a.
+      If b < a,
+         then [a .. b] = []           by listRangeINC_EMPTY
+          and conjunct f [] = T       by conjunct_def
+          and RHS is true by default.
+      If b = a,
+         then [a .. b] = [a]          by listRangeINC_SING
+          and conjunct f [a] = f a    by conjunct_def
+          and RHS = f a               by a <= j /\ j <= a
+   Step: !b a. v = b - a ==>
+               (conjunct f [a .. b] <=> !j. a <= j /\ j <= b ==> f j) ==>
+         !b a. SUC v = b - a ==>
+               (conjunct f [a .. b] <=> !j. a <= j /\ j <= b ==> f j)
+      Note a < b                      by b - a = SUC v > 0
+        so v = b - (a + 1)            by arithmetic
+           conjunct f [a .. b]
+         = conjunct f (a ::[(a +1) .. b])            by listRangeINC_CONS
+         = f a /\ conjunct f [(a + 1) .. b]          by conjunct_def
+         = f a /\ !j. a + 1 <= j /\ j <= b ==> f j   by induction hypothesis
+         = !j. a <= j /\ j <= b ==> f j              by for_all_range_cons, a < b
+*)
+val conjunct_thm = store_thm(
+  "conjunct_thm",
+  ``!f a b. conjunct f [a .. b] <=> (!j. a <= j /\ j <= b ==> f j)``,
+  rpt strip_tac >>
+  Induct_on `b - a` >| [
+    rw[] >>
+    `b < a \/ (b = a)` by decide_tac >-
+    rw[conjunct_def, listRangeINC_EMPTY] >>
+    rw[conjunct_def, listRangeINC_SING] >>
+    `!j. a <= j /\ j <= a <=> (j = a)` by decide_tac >>
+    metis_tac[],
+    rw[] >>
+    `a < b` by decide_tac >>
+    `v = b - (a + 1)` by decide_tac >>
+    `conjunct f [a .. b] = conjunct f (a ::[(a +1) .. b])` by rw[listRangeINC_CONS] >>
+    `_ = (f a /\ conjunct f [(a + 1) .. b])` by rw[conjunct_def] >>
+    `_ = (f a /\ !j. a + 1 <= j /\ j <= b ==> f j)` by fs[] >>
+    `_ = (!j. a <= j /\ j <= b ==> f j)` by fs[for_all_range_cons] >>
+    simp[]
+  ]);
+
+(* Theorem: disjunct f [a .. b] <=> ?j. a <= j /\ j <= b /\ f j *)
+(* Proof:
+   By induction on (b - a).
+   Base: 0 = b - a ==> (disjunct f [a .. b] <=> ?j. a <= j /\ j <= b /\ f j)
+      Note 0 = b - a ==> b <= a, which means b < a or b = a.
+      If b < a,
+         then [a .. b] = []           by listRangeINC_EMPTY
+          and conjunct f [] = T       by conjunct_def
+          and RHS is true by default.
+      If b = a,
+         then [a .. b] = [a]          by listRangeINC_SING
+          and conjunct f [a] = f a    by conjunct_def
+          and RHS = f a               by for_all_range_sing
+   Step: !b a. v = b - a ==>
+               (disjunct f [a .. b] <=> ?j. a <= j /\ j <= b /\ f j) ==>
+         !b a. SUC v = b - a ==>
+               (disjunct f [a .. b] <=> ?j. a <= j /\ j <= b /\ f j)
+      Note a < b                      by b - a = SUC v > 0
+        so v = b - (a + 1)            by arithmetic
+           disjunct f [a .. b]
+         = disjunct f (a ::[(a +1) .. b])            by listRangeINC_CONS
+         = f a \/ disjunct f [(a + 1) .. b]          by disjunct_def
+         = f a \/ ?j. a + 1 <= j /\ j <= b /\ f j    by induction hypothesis
+         = ?j. a <= j /\ j <= b /\ f j               by exists_range_cons, a < b
+*)
+val disjunct_thm = store_thm(
+  "disjunct_thm",
+  ``!f a b. disjunct f [a .. b] <=> (?j. a <= j /\ j <= b /\ f j)``,
+  rpt strip_tac >>
+  Induct_on `b - a` >| [
+    rw[] >>
+    `b < a \/ (b = a)` by decide_tac >| [
+      rw[disjunct_def, listRangeINC_EMPTY] >>
+      decide_tac,
+      rw[disjunct_def, listRangeINC_SING] >>
+      metis_tac[for_all_range_sing]
+    ],
+    rw[] >>
+    `a < b` by decide_tac >>
+    `v = b - (a + 1)` by decide_tac >>
+    `disjunct f [a .. b] = disjunct f (a ::[(a +1) .. b])` by rw[listRangeINC_CONS] >>
+    `_ = (f a \/ disjunct f [(a + 1) .. b])` by rw[disjunct_def] >>
+    `_ = (f a \/ ?j. a + 1 <= j /\ j <= b /\ f j)` by fs[] >>
+    `_ = (?j. a <= j /\ j <= b /\ f j)` by fs[exists_range_cons] >>
+    simp[]
+  ]);
+
+(* Theorem: disjunct f [a .. b] <=> ~(conjunct ($~ o f) [a .. b]) *)
+(* Proof:
+       disjunct f [a .. b]
+   <=> ?j. a <= j /\ j <= b /\ f j           by disjunct_thm
+   <=> ~(!j. a <= j /\ j <= b ==> (~f j))    by negation
+   <=> ~(conjunct ($~ o f) [a .. b])         by conjunct_thm
+*)
+val disjunct_conjunct_thm = store_thm(
+  "disjunct_conjunct_thm",
+  ``!f a b. disjunct f [a .. b] <=> ~(conjunct ($~ o f) [a .. b])``,
+  rw[disjunct_thm, conjunct_thm] >>
+  metis_tac[]);
+
 
 (* ------------------------------------------------------------------------- *)
 
