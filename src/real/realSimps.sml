@@ -608,10 +608,20 @@ fun oksort cmp [] = true
   | oksort cmp (t1::(rest as (t2::ts))) =
       cmp(t1,t2) = LESS andalso oksort cmp rest
 
+val x_real = mk_var("x", real_ty)
+val a_num = mk_var("a", numSyntax.num)
+val b_num = mk_var("b", numSyntax.num)
+val NUMERALa = mk_comb(numSyntax.numeral_tm, a_num)
+val NUMERALb = mk_comb(numSyntax.numeral_tm, b_num)
 val MUL_ASSOC' = GSYM REAL_MUL_ASSOC
 val REAL_MUL_RID' = GSYM REAL_MUL_RID
 val REAL_POW_ADD' = GSYM REAL_POW_ADD
 val REAL_POW_INV' = GSYM REAL_POW_INV
+val REAL_POW_INV_NUMERAL' =
+    REAL_POW_INV' |> SPECL [x_real, NUMERALa] |> GENL [x_real, a_num]
+val REAL_POW_POW_NUMERAL =
+    REAL_POW_POW |> SPECL [x_real, NUMERALa, NUMERALb]
+                 |> GENL [x_real, a_num, b_num]
 val POW_1' = GSYM POW_1
 val (NEG_FRAC, NEG_DENOM) = CONJ_PAIR neg_rat
 val NEG_INV = REAL_NEG_INV'
@@ -680,6 +690,7 @@ fun litcompare(t1,t2) =
     else Term.compare(t1,t2)
 local
   fun termbase t = #1 (mul_termbase t)
+  (* puts the inverted term on the right *)
   fun powinv_fix t =
       let val (l,r) = dest_mult t
           val (lb,_) = dest_pow l
@@ -717,12 +728,16 @@ local
       (powinv_fix THENC (
           REWR_CONV pow_inv_eq ORELSEC
           compare_exponents ORELSEC
+          REWR_CONV (GSYM POW_2) ORELSEC
           REPORT_ALL_CONV
       ))
 
+  fun give_pow t =
+      case total dest_pow t of
+          NONE => addPOW1 t
+        | SOME (b,e) => if numSyntax.is_numeral e then ALL_CONV t else addPOW1 t
   val mulcombine0 =
-      LAND_CONV (addPOW1 THENC mulPOWs) THENC
-      RAND_CONV (addPOW1 THENC mulPOWs) THENC
+      BINOP_CONV give_pow THENC
       combine_exponents THENC
       TRY_CONV (FIRST_CONV (map REWR_CONV [POW_1, POW_E0]))
   fun mulcombine t =
@@ -736,9 +751,17 @@ local
                      else REWR_CONV REAL_NEG_MINUS1 t
   fun diag s c t = (print (s t ^ "\n"); c t)
 
+  fun pow_inv_nonnumeral_out t =
+      case total dest_pow t of
+          SOME (b,e) => if numSyntax.is_numeral e then ALL_CONV t
+                        else TRY_CONV (LAND_CONV pow_inv_nonnumeral_out THENC
+                                       REWR_CONV REAL_POW_INV) t
+        | NONE => ALL_CONV t
   val mulpre =
       REAL_LITCANON ORELSEC
-      (REWRITE_CONV [GSYM REAL_POW_INV, REAL_INV_INV, REAL_POW_POW] THENC
+      (REWRITE_CONV [REAL_POW_INV_NUMERAL', REAL_INV_INV,
+                     REAL_POW_POW_NUMERAL] THENC
+       pow_inv_nonnumeral_out THENC
        neg_nonnum_conv)
 
   val mulsort = {
@@ -747,8 +770,8 @@ local
     dest = realSyntax.dest_mult,
     mk = realSyntax.mk_mult,
     cmp = mulcompare,
-    combine = (* diag (fn t => "mulcombine on "^term_to_string t)*) mulcombine,
-    preprocess = (* diag (fn t => "mulpre on "^term_to_string t)*)  mulpre
+    combine = (* diag (fn t => "mulcombine on "^term_to_string t) *) mulcombine,
+    preprocess = (* diag (fn t => "mulpre on "^term_to_string t)  *) mulpre
   }
   fun leading_coeff_norm t =
       case total dest_mult t of
@@ -774,13 +797,11 @@ in
           TRY_CONV (REWR_CONV REAL_MUL_LID) THENC
           AC_Sort.sort mulsort THENC
           REWRITE_CONV[POW_1, nonzerop_NUMERAL, POW_ONE, REAL_MUL_LID,
-                       REAL_MUL_RID] THENC
+                       REAL_MUL_RID, nonzerop_pow] THENC
           leading_coeff_norm
         else ALL_CONV
       end t
 end (* local *)
-
-
 
 val RMULCANON_ss = SSFRAG {
       ac = [], congs = [], dprocs = [], filter = NONE,
@@ -900,10 +921,14 @@ fun base_solver asms stk t =
     end
 
 val R = “$<= : real -> real -> bool”
-val Rthms = [REAL_LE_LMUL, REAL_LE_LMUL_NEG]
+val Rthms = [(REAL_LE_LMUL, rhs), (REAL_LE_LMUL_NEG, rhs)]
 val R = “$= : real -> real -> bool”
-val Rthms = [REAL_EQ_LMUL]
-fun solver0 stk t = base_solver [ASSUME ``0r < x``] stk t val stk = []
+val Rthms = [(REAL_EQ_LMUL, (rand o rhs))]
+val R = “$< : real -> real -> bool”
+val Rthms = [(REAL_LT_LMUL, rhs), (REAL_LT_LMUL_NEG, rhs)]
+
+fun solver0 stk t = base_solver [ASSUME ``z <> 0r``] stk t
+val stk = []
 *)
 fun giveexp t =
     if is_pow t then ALL_CONV t
@@ -921,7 +946,7 @@ fun mulrelnorm0 R Rthms solver0 stk t =
           in
             EQ_MP (SYM eqn) (solver0 stk (rhs (concl eqn)))
           end
-      fun apply_thm th0 t =
+      fun apply_thm (th0,_) t =
           let
             val th = PART_MATCH (lhs o #2 o strip_imp) th0 t
           in
@@ -930,6 +955,17 @@ fun mulrelnorm0 R Rthms solver0 stk t =
               | SOME (h,c) => MATCH_MP th (solver (t::stk) h)
           end
       val apply_thms = FIRST_CONV (map apply_thm Rthms)
+      fun mkmove_th x (th0, f) t =
+          let
+            val th = PART_MATCH (f o #2 o strip_imp) (SPEC x th0) t
+          in
+            case total dest_imp (concl th) of
+                NONE => SYM th
+              | SOME (h,c) => MATCH_MP th (solver(t::stk) h) |> SYM
+          end
+      fun mkmove_thms xyz = FIRST_CONV (map (mkmove_th xyz) Rthms)
+
+
       fun positivep i = Arbint.<=(Arbint.zero, i)
       fun process (l_t,el) (r_t,er) t =
           if is_real_literal l_t andalso is_real_literal r_t andalso
@@ -968,9 +1004,9 @@ fun mulrelnorm0 R Rthms solver0 stk t =
               val mt = Arbint.*(ld,rd) |> term_of_int
               val sidecond1 = mk_less(zero_tm, mt) |> REAL_REDUCE
               val sidecond2 = mk_neg(mk_eq(mt,zero_tm)) |> REAL_REDUCE
-              val th = hd Rthms |> SPEC mt
-                            |> REWRITE_RULE [sidecond1,sidecond2]
-                            |> GSYM
+              val th = hd Rthms |> #1 |> SPEC mt
+                                |> REWRITE_RULE [sidecond1,sidecond2]
+                                |> GSYM
             in
               REWR_CONV th
             end t
@@ -1032,7 +1068,7 @@ fun mulrelnorm0 R Rthms solver0 stk t =
           else ALL_CONV t
 
       (* direction = true <=> move from left to right *)
-      fun maybemove direction (b,e) t =
+      fun maybemove (b,e) t =
           if not (is_literalish b) andalso positivep e then NO_CONV t
           else
             let val f =
@@ -1041,21 +1077,19 @@ fun mulrelnorm0 R Rthms solver0 stk t =
                                 numSyntax.mk_numeral(Arbint.toNat(Arbint.~ e)))
                 val (rel, args) = strip_comb t
                 val l = hd args and r = hd (tl args)
-                val t' = list_mk_comb(rel, [mk_mult(f,l), mk_mult(f,r)])
-                val th = apply_thms t' |> SYM |> CONV_RULE (LAND_CONV eqcleanup)
-                val cv_al = if direction then LAND_CONV else RAND_CONV
+                val th = mkmove_thms f t |> CONV_RULE (LAND_CONV eqcleanup)
             in
-              CONV_RULE (RAND_CONV (cv_al REALMULCANON)) th
+              CONV_RULE (RAND_CONV (BINOP_CONV REALMULCANON)) th
             end
       fun findelim lefts rights t =
           case (lefts, rights) of
               ([], []) => raise mkERR "No common eliminable terms"
-            | (l1::ls, []) => (maybemove true l1 ORELSEC findelim ls []) t
-            | ([], r1::rs) => (maybemove false r1 ORELSEC findelim [] rs) t
+            | (l1::ls, []) => (maybemove l1 ORELSEC findelim ls []) t
+            | ([], r1::rs) => (maybemove r1 ORELSEC findelim [] rs) t
             | ((l1 as (bl,_))::ls, (r1 as (br,_))::rs) =>
               case litcompare(bl,br) of
-                  LESS => (maybemove true l1 ORELSEC findelim ls rights) t
-                | GREATER => (maybemove false r1 ORELSEC findelim lefts rs) t
+                  LESS => (maybemove l1 ORELSEC findelim ls rights) t
+                | GREATER => (maybemove r1 ORELSEC findelim lefts rs) t
                 | EQUAL => (process l1 r1 ORELSEC findelim ls rs) t
     in
       findelim ls rs t
@@ -1085,20 +1119,20 @@ val RMULRELNORM_ss = SSFRAG {
   rewrs = [],
   convs = [
     {key = SOME ([], mk_leq(x,y)),
-     conv = mulrelnorm leq_tm [REAL_LE_LMUL, REAL_LE_LMUL_NEG] ,
+     conv = mulrelnorm leq_tm [(REAL_LE_LMUL, rhs), (REAL_LE_LMUL_NEG, rhs)] ,
      name = "RMUL_LEQNORM", trace = 2
     },
     {key = SOME ([], mk_eq(x,mk_mult(y,z))),
-     conv = mulrelnorm equality [REAL_EQ_LMUL],
+     conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
      name = "RMUL_EQNORM1", trace = 2
     },
     {key = SOME ([], mk_eq(mk_mult(x,y),z)),
-     conv = mulrelnorm equality [REAL_EQ_LMUL],
-     name = "RMUL_EQNORM1", trace = 2
+     conv = mulrelnorm equality [(REAL_EQ_LMUL, rand o rhs)],
+     name = "RMUL_EQNORM2", trace = 2
     },
     {key = SOME ([], mk_less(x,y)),
-     conv = mulrelnorm less_tm [REAL_LT_LMUL, REAL_LT_LMUL_NEG],
-     name = "RMUL_EQNORM", trace = 2
+     conv = mulrelnorm less_tm [(REAL_LT_LMUL, rhs), (REAL_LT_LMUL_NEG, rhs)],
+     name = "RMUL_LTNORM", trace = 2
     }
   ]
 }

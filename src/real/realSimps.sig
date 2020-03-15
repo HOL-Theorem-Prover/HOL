@@ -40,12 +40,24 @@ sig
   val REAL_LITCANON : conv
 
   (* eliminate common terms from either side of a relation symbol, factoring
-     as necessary.  First argument is relation symbol, second is list of
-     theorems justifying removal of common factors on left.
-     Third argument is solver to discharge side conditions to
-     do with non-zero ness and signs. The list passed to it is the stack of
-     previous side condition attempts. *)
-  val mulrelnorm : term -> thm list ->
+     as necessary.  Arguments:
+       1. relation symbol;
+       2. list of (theorem * selector-fn) pairs.
+          The theorem justifies removal of common factors on left and the
+          common factor must be the first universally quantified variable in
+          the theorem statement. The selector-fn identifies where in the
+          equation the smaller-term appears.  (For example, in the
+          inequalities, it's always   x * y  R   x * z   <=>    _  R  _
+          so the selector-fn is just rhs, but for equality we have
+
+             x * y = x * z  <=>  x = 0 \/ y = z
+
+          so the selector-fn is (rand o rhs);
+       3. solver to discharge side conditions to do with non-zero ness and
+          signs. The list passed to it is the stack of previous side
+          condition attempts.
+   *)
+  val mulrelnorm : term -> (thm * (term -> term)) list ->
                    (term list -> term -> thm) ->
                    term list -> term -> thm
   val RMULRELNORM_ss : simpLib.ssfrag
