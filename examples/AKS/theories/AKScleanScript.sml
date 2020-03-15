@@ -135,8 +135,8 @@ open GaussTheory; (* for phi_le *)
                                 case aks_param n of
                                   nice j => j = n
                                 | good k =>
-                                    conjunct (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))
-                                             [1 .. SQRT (phi k) * ulog n]
+                                    EVERY (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))
+                                          [1 .. SQRT (phi k) * ulog n]
                                 | bad => F
    aks_param_good_for_prime
                |- !n k. (aks_param n = good k) /\ power_free n ==>
@@ -797,8 +797,8 @@ EVAL ``poly_intro_checks 31 29 25``; -- symbolic by for all
                       case aks_param n of
                         nice j => j = n
                       | good k =>
-                        conjunct (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))
-                                 [1 .. (SQRT (phi k) * ulog n)]
+                        EVERY (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))
+                              [1 .. (SQRT (phi k) * ulog n)]
                       | bad => F *)
 (* Proof: by aks_def, poly_intro_checks_thm] *)
 val aks_eval = store_thm(
@@ -808,8 +808,8 @@ val aks_eval = store_thm(
                    nice j => j = n
                  | good k =>
                    (* poly_intro_checks n k (SQRT (phi k) * ulog n) *)
-                   conjunct (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))
-                            [1 .. (SQRT (phi k) * ulog n)]
+                   EVERY (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))
+                         [1 .. (SQRT (phi k) * ulog n)]
                  | bad => F``,
   simp[aks_def, poly_intro_checks_thm]);
 

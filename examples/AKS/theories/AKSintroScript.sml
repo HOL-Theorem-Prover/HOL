@@ -71,7 +71,7 @@ open computeRingTheory; (* for overloads on x^, x+^, x^+, x^- *)
 (* (* val _ = load "helperNumTheory"; -- in monoidTheory *) *)
 (* (* val _ = load "helperSetTheory"; -- in monoidTheory *) *)
 open helperNumTheory helperSetTheory helperFunctionTheory;
-open helperListTheory; (* for conjunct *)
+open helperListTheory; (* for listRangeINC_EVERY *)
 
 (* open dependent theories *)
 open pred_setTheory listTheory arithmeticTheory;
@@ -139,8 +139,8 @@ open dividesTheory gcdTheory;
                                !m n s. poly_intro_range r k m s /\ poly_intro_range r k n s ==>
                                        poly_intro_range r k (m * n) s
    poly_intro_checks_thm    |- !n k s. poly_intro_checks n k s <=>
-                                       conjunct (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))
-                                                [1 .. s]
+                                       EVERY (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))
+                                             [1 .. s]
    ZN_intro_checks_def      |- !n k s. ZN_intro_checks n k s <=> poly_intro_checks n k s
    ZN_intro_eqn             |- !n k. 0 < k /\ 0 < n ==>
                                  !c. poly_intro (ZN n) k n (x+ n c) <=>
@@ -1004,22 +1004,22 @@ val _ = overload_on("poly_intro_checks",
                     ``\n k m. !c. 0 < c /\ c <= m ==> (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))``);
 (* This is poly_intro_range in the ring (ZN n) *)
 
-(* Using conjunct to perform poly_intro_checks:
-EVAL ``let n = 7; k = 7 in conjunct (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))) [1 .. k]``;
+(* Using EVERY to perform poly_intro_checks:
+EVAL ``let n = 7; k = 7 in EVERY (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))) [1 .. k]``;
 <=> T
 *)
 
 (* Theorem: poly_intro_checks n k s <=>
-            conjunct (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))) [1 .. s] *)
-(* Proof: by conjunct_thm, overloading of poly_intro_checks *)
+            EVERY (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))) [1 .. s] *)
+(* Proof: by listRangeINC_EVERY, overloading of poly_intro_checks *)
 val poly_intro_checks_thm = store_thm(
   "poly_intro_checks_thm",
   ``!n k s. poly_intro_checks n k s <=>
-           conjunct (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))) [1 .. s]``,
+           EVERY (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))) [1 .. s]``,
   rpt strip_tac >>
   `!c. 0 < c <=> 1 <= c` by decide_tac >>
-  rw[conjunct_thm]);
-(* cannot put into computeLib due to lambda expression *)
+  rw[listRangeINC_EVERY]);
+(* cannot put into computeLib due to LHS is a lambda expression *)
 
 (* Put poly_intro_checks as definition (for printing) *)
 val ZN_intro_checks_def = Define`
