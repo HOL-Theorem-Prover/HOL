@@ -68,6 +68,8 @@ open gcdTheory; (* for P_EUCLIDES *)
    TWICE_EQ_0        |- !n. (TWICE n = 0) <=> (n = 0)
    SQ_EQ_0           |- !n. (SQ n = 0) <=> (n = 0)
    SQ_EQ_1           |- !n. (SQ n = 1) <=> (n = 1)
+   MULT3_EQ_0        |- !x y z. (x * y * z = 0) <=> ((x = 0) \/ (y = 0) \/ (z = 0))
+   MULT3_EQ_1        |- !x y z. (x * y * z = 1) <=> ((x = 1) /\ (y = 1) /\ (z = 1))
 
    Maximum and minimum:
    MAX_ALT           |- !m n. MAX m n = if m <= n then n else m
@@ -534,6 +536,20 @@ val SQ_EQ_1 = store_thm(
   "SQ_EQ_1",
   ``!n. (SQ n = 1) <=> (n = 1)``,
   rw[]);
+
+(* Theorem: (x * y * z = 0) <=> ((x = 0) \/ (y = 0) \/ (z = 0)) *)
+(* Proof: by MULT_EQ_0 *)
+val MULT3_EQ_0 = store_thm(
+  "MULT3_EQ_0",
+  ``!x y z. (x * y * z = 0) <=> ((x = 0) \/ (y = 0) \/ (z = 0))``,
+  metis_tac[MULT_EQ_0]);
+
+(* Theorem: (x * y * z = 1) <=> ((x = 1) /\ (y = 1) /\ (z = 1)) *)
+(* Proof: by MULT_EQ_1 *)
+val MULT3_EQ_1 = store_thm(
+  "MULT3_EQ_1",
+  ``!x y z. (x * y * z = 1) <=> ((x = 1) /\ (y = 1) /\ (z = 1))``,
+  metis_tac[MULT_EQ_1]);
 
 (* ------------------------------------------------------------------------- *)
 (* Maximum and minimum                                                       *)
