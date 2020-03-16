@@ -430,8 +430,7 @@ val ((tree,cache),t) = add_time (mcts mctsobj) starttree;
 dlength tree;
 val status = #status (dfind [] tree);
 val root = dfind [] tree;
-val nodel = trace_win (#status_of (#game mctsobj)) tree [];
-
+val nodel = trace_win tree [];
 *)
 
 

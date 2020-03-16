@@ -355,7 +355,7 @@ fun stats_head (oper,rll) =
     tts oper ^ s1 ^ s2 ^ s3
   end
 
-fun output_info ex =
+fun stats_tnnex ex =
   if null ex then " empty" else
   let
     fun oper_of tm = fst (strip_comb tm)
@@ -367,8 +367,8 @@ fun output_info ex =
 
 fun train_tnn schedule randtnn (trainex,testex) =
   let
-    val _ = print_endline ("training set statistics:\n" ^ output_info trainex)
-    val _ = print_endline ("testing set statistics:\n" ^ output_info testex)
+    val _ = print_endline ("training set statistics:\n" ^ stats_tnnex trainex)
+    val _ = print_endline ("testing set statistics:\n" ^ stats_tnnex testex)
     val (tnn,t) = add_time (train_tnn_schedule schedule randtnn)
       (prepare_tnnex trainex, prepare_tnnex testex)
   in

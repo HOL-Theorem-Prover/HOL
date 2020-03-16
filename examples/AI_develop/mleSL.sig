@@ -2,10 +2,13 @@ signature mleSL =
 sig
 
   include Abbrev
+  
 
-  type board = tnn * (real * int) list 
+  type board = mlTreeNeuralNetwork.tnn * (real * int) list 
   datatype move = Incr | Decr | Still
 
-  val game : (board,move) game
+  val boardstart : board
+  val game : (board,move) psMCTS.game
+  val loss_player : (board,move) psMCTS.player
 
 end

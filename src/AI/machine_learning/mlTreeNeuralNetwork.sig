@@ -27,6 +27,7 @@ include Abbrev
   val train_tnn_epoch_nopar : 
     mlNeuralNetwork.trainparam -> real list -> tnn -> tnnbatch list -> 
     tnn * real
+  val stats_tnnex : tnnex -> string
 
   val train_tnn : schedule -> tnn -> tnnex * tnnex -> tnn
   
