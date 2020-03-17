@@ -668,6 +668,7 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
    (smie-bnf->prec2
     '((id)
       (decl ("Theorem" theorem-contents "QED")
+            ("Triviality" theorem-contents "QED")
             ("Theorem=" id )
             ("Triviality=" id)
             ("Definition" definition-contents "End")
