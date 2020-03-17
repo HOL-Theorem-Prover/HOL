@@ -445,6 +445,68 @@ val traintnn_extspec =
   }
 
 (* -------------------------------------------------------------------------
+   AutoML: automatic tuning of hyperparameters (in development)
+   ------------------------------------------------------------------------- *)
+
+fun neighb_bsize bsize = 
+  [
+  let 
+    val r1 = Real.round (Real.fromInt bsize * 1.1)
+    val r2 = if r1 = bsize then r1 + 1 else r1
+  in
+    if r2 >= 1024 then 1024 else r2
+  end,
+  let 
+    val r1 = Real.round (Real.fromInt bsize / 1.1)
+    val r2 = if r1 = bsize then r1 - 1 else r1
+  in
+    if r2 <= 1 then 1 else r2
+  end,
+  bsize
+  ]
+
+fun neighb_lrate lrate = 
+  [
+  let val r = lrate * 1.1 in if r > 10.0 then 10.0 else r end,
+  let val r = lrate / 1.1 in if r < 0.0001 then 0.0001 else r end,
+  lrate
+  ]
+
+fun lookahead_one tnn prebatch (lrate,bsize)  =
+  let 
+    val trainparam =
+      {ncore = 1, verbose = true,
+       learning_rate = lrate, batch_size = bsize, nepoch = 1}
+    val batchl = mk_batch bsize (shuffle prebatch)
+    val (newtnn,loss) = train_tnn_epoch_nopar trainparam [] tnn batchl
+  in
+    (newtnn,loss)
+  end
+
+fun lookahead_all prebatch (tnn,(lrate,bsize)) = 
+  let 
+    val paraml = cartesian_product [lrate] (neighb_bsize bsize)
+    val rl = map_assoc (lookahead_one tnn prebatch) paraml
+    fun cmp ((_,(_,a)),(_,(_,b))) = Real.compare (a,b)
+    val ((newlrate,newbsize),(newtnn,loss)) = hd (dict_sort cmp rl)
+    val _ = print_endline (pretty_real loss ^ ": " ^ 
+      pretty_real newlrate ^ "," ^ its newbsize)
+  in
+    (newtnn,(newlrate,newbsize))
+  end
+
+fun train_tnn_automl {ncore,verbose,learning_rate,batch_size,nepoch} 
+  randtnn trainex =
+  let
+    val _ = print_endline ("training set statistics:\n" ^ stats_tnnex trainex)
+    val prebatch = prepare_tnnex trainex
+    val start = (randtnn,(learning_rate,batch_size))
+    val ((tnn,_),t) = add_time (funpow nepoch (lookahead_all prebatch)) start
+  in
+    print_endline ("Tree neural network training time: " ^ rts t); tnn
+  end
+
+(* -------------------------------------------------------------------------
    Toy example: learning to guess if a term contains the variable "x"
    ------------------------------------------------------------------------- *)
 
@@ -490,8 +552,15 @@ val trainparam =
 val schedule = [trainparam];
 val tnn = train_tnn schedule randtnn (trainex,testex);
 
+(* training automl *)
+val trainparam =
+  {ncore = 1, verbose = true,
+   learning_rate = 0.02, batch_size = 16, nepoch = 20};
+val tnn = train_tnn_automl trainparam randtnn trainex;
+
 (* testing *)
 val acc = tnn_accuracy tnn testex;
+
 *)
 
 end (* struct *)

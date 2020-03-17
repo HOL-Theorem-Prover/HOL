@@ -51,6 +51,17 @@ fun train_fixed () =
     write_tnn (arithdir ^ "/tnn") tnn; tnn
   end
 
+val trainparam = {ncore = 1, verbose = true, learning_rate = 0.02,
+    batch_size = 16, nepoch = 200}
+
+fun train_automl_fixed () = 
+  let
+    val exl = prepare_ex (import_arithdata "train")
+    val tnn = train_tnn_automl trainparam (random_tnn tnnparam) exl
+  in 
+    write_tnn (arithdir ^ "/tnn_automl") tnn; tnn
+  end 
+
 (* ------------------------------------------------------------------------
    Testing
    ------------------------------------------------------------------------ *)
@@ -64,6 +75,9 @@ fun test_fixed tnn =
 load "mleArith"; open mleArith;
 val tnn = train_fixed ();
 val r = test_fixed tnn;
+
+val tnn_automl = train_automl_fixed ();
+val r = test_fixed tnn_automl;
 *)
 
 end (* struct *)

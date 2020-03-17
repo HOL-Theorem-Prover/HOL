@@ -36,5 +36,7 @@ include Abbrev
 
   val traintnn_extspec :
     (unit, (tnnex * schedule * tnnparam), tnn) smlParallel.extspec
+  
+   val train_tnn_automl : mlNeuralNetwork.trainparam -> tnn -> tnnex -> tnn
 
 end
