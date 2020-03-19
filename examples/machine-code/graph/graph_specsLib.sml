@@ -256,11 +256,13 @@ local
     val tm = post |> rator |> rand |> rand |> rator |> rand
     val supdate = dest_supdate tm
     val r0 = ``"r0"``
+    val r1 = ``"r1"``
     val r14 = ``"r14"``
+    val ret_reg_name = (if !arch_name = RISCV then r1 else r14)
     val ret_str = ``"ret"``
     val ret_addr_input_str = ``"ret_addr_input"``
     val (is_tail_call,ret) = let
-      val u = first (fn (t,x) => aconv t r14) supdate |> snd
+      val u = first (fn (t,x) => aconv t ret_reg_name) supdate |> snd
       val res = EVAL ``(^u s = VarWord (^pc1+4w)) \/ (^u s = VarWord (^pc1+2w))``
         |> concl |> rand
       in if aconv res T then
@@ -276,7 +278,7 @@ local
         in pairSyntax.mk_pair(ret_addr_input_str,var_acc_r0) end
       else let
         val tm2 = if is_tail_call then tm else
-                  if aconv tm ret_str then r14 else tm
+                  if aconv tm ret_str then ret_reg_name else tm
         val rhs = first (fn (t,x) => (aconv t tm2)) supdate |> snd
                   handle HOL_ERR _ => mk_comb(var_acc,tm)
         in pairSyntax.mk_pair(tm,rhs) end
