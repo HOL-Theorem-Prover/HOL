@@ -552,8 +552,8 @@ order for the change to take effect."
 
   ;; Parentheses.
 
-  ("(" . ,(hol-input-to-string-list "([{⁅⁽₍〈⎴⟅⟦⟨⟪⦃〈《‹«「『【〔〖〚︵︷︹︻︽︿﹁﹃﹙﹛﹝（［｛｢"))
-  (")" . ,(hol-input-to-string-list ")]}⁆⁾₎〉⎵⟆⟧⟩⟫⦄〉》›»」』】〕〗〛︶︸︺︼︾﹀﹂﹄﹚﹜﹞）］｝｣"))
+  ("(" . ,(hol-input-to-string-list "([{⦇⁅⁽₍〈⎴⟅⟦⟨⟪⦃〈《‹«「『【〔〖〚︵︷︹︻︽︿﹁﹃﹙﹛﹝（［｛｢"))
+  (")" . ,(hol-input-to-string-list ")]}⦈⁆⁾₎〉⎵⟆⟧⟩⟫⦄〉》›»」』】〕〗〛︶︸︺︼︾﹀﹂﹄﹚﹜﹞）］｝｣"))
 
   ("[[" . ("⟦"))
   ("]]" . ("⟧"))
