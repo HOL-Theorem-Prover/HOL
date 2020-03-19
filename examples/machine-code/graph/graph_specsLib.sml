@@ -145,7 +145,6 @@ fun STATE_INTRO_RULE th = let
   val conv = PURE_REWRITE_CONV [state_thm,emp_STAR] THENC
              BINOP_CONV STAR_AC_CONV THENC REWRITE_CONV []
   val lemma = auto_conv_prove "STATE_INTRO_RULE - 1" goal conv
-
   val th = th |> CONV_RULE (PRE_CONV (REWR_CONV lemma))
   (* make post into just state *)
   val th = PURE_REWRITE_RULE [STAR_IF] th
@@ -436,8 +435,12 @@ in
          then make_ASM th else make_SWITCH th)
     | make_INST (i,(th1',l',j'),SOME (th2',l:int,j:int option)) = let
         val th1 = make_INST (i,(th1',l',j'),NONE)
-        val th2 = th2' |> make_ASM
+        val th2 = th2' |> DISCH_ALL
+                       |> REWRITE_RULE [CALL_TAG_def] |> UNDISCH_ALL |> make_ASM
         val not_guard = th2 |> concl |> find_term (can (match_term ``ASM (SOME k)``))
+                            |> rand |> rand |> dest_abs |> snd
+                        handle HOL_ERR _ =>
+                        th2 |> concl |> find_term (can (match_term ``CALL (SOME k)``))
                             |> rand |> rand |> dest_abs |> snd
         val guard = dest_neg not_guard handle HOL_ERR _ => mk_neg not_guard
         val c = (RAND_CONV o RATOR_CONV o RAND_CONV) (SIMP_CONV std_ss [])
