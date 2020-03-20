@@ -828,6 +828,12 @@ Proof
  >> RW_TAC std_ss [extreal_abs_def,le_infty,extreal_of_num_def,extreal_le_def,ABS_REFL]
 QED
 
+Theorem abs_abs[simp]:
+    !x :extreal. abs(abs(x)) = abs(x)
+Proof
+    RW_TAC std_ss [abs_refl, abs_pos]
+QED
+
 Theorem let_total :
     !x y :extreal. x <= y \/ y < x
 Proof
@@ -860,6 +866,19 @@ val abs_bounds_lt = store_thm
   >> RW_TAC std_ss [extreal_abs_def,extreal_lt_eq,
                     lt_infty,le_infty,extreal_ainv_def]
   >> REAL_ARITH_TAC);
+
+Theorem lt_abs_bounds :
+   !k x :extreal. k < abs x <=> x < -k \/ k < x
+Proof
+    RW_TAC std_ss [extreal_lt_def]
+ >> PROVE_TAC [abs_bounds]
+QED
+
+Theorem le_abs_bounds :
+   !k x :extreal. k <= abs x <=> x <= -k \/ k <= x
+Proof
+   METIS_TAC [extreal_lt_def, abs_bounds_lt]
+QED
 
 val abs_not_infty = store_thm
   ("abs_not_infty", ``!x. x <> PosInf /\ x <> NegInf ==> abs x <> PosInf /\ abs x <> NegInf``,
@@ -1359,6 +1378,24 @@ Proof
  >> STRIP_ASSUME_TAC (REWRITE_RULE [le_lt] (Q.SPEC `x` abs_pos))
  >- fs [lt_le]
  >> FULL_SIMP_TAC std_ss [lt_refl]
+QED
+
+Theorem abs_triangle :
+    !x y. x <> PosInf /\ x <> NegInf /\ y <> PosInf /\ y <> NegInf ==>
+          abs(x + y) <= abs(x) + abs(y)
+Proof
+    RW_TAC std_ss []
+ >> Cases_on `x` >> Cases_on `y`
+ >> rw [extreal_abs_def, extreal_add_def, extreal_le_eq, ABS_TRIANGLE]
+QED
+
+Theorem abs_triangle_sub :
+    !x y. x <> PosInf /\ x <> NegInf /\ y <> PosInf /\ y <> NegInf ==>
+          abs(x) <= abs(y) + abs(x - y)
+Proof
+    RW_TAC std_ss []
+ >> Cases_on `x` >> Cases_on `y`
+ >> rw [extreal_abs_def, extreal_add_def, extreal_sub_def, extreal_le_eq, ABS_TRIANGLE_SUB]
 QED
 
 (*********************)
@@ -1943,6 +1980,33 @@ Proof
  >> REWRITE_TAC [REAL_EQ_MUL_LCANCEL]
 QED
 
+Theorem inv_mul :
+    !x y. x <> 0 /\ y <> 0 ==> (inv (x * y) = inv x * inv y)
+Proof
+    rpt STRIP_TAC
+ >> Cases_on `x` >> Cases_on `y`
+ >> FULL_SIMP_TAC real_ss [extreal_mul_def, extreal_inv_def, extreal_not_infty,
+                           extreal_of_num_def, extreal_11]
+ >> TRY (Cases_on `0 < r` >> rw [extreal_inv_def])
+ >> `r * r' <> 0` by METIS_TAC [REAL_ENTIRE]
+ >> ASM_SIMP_TAC std_ss [extreal_inv_eq, extreal_11]
+ >> MATCH_MP_TAC REAL_INV_MUL >> art []
+QED
+
+Theorem abs_div :
+    !x y :extreal. x <> PosInf /\ x <> NegInf /\ y <> 0 ==>
+                  (abs (x / y) = abs x / abs y)
+Proof
+    rpt STRIP_TAC
+ >> Cases_on `x` >> Cases_on `y`
+ >> FULL_SIMP_TAC real_ss [extreal_div_def, extreal_inv_def, extreal_not_infty,
+                           extreal_of_num_def, extreal_11, extreal_abs_def,
+                           extreal_mul_def]
+ >> rename1 `s <> 0`
+ >> `abs s <> 0` by PROVE_TAC [ABS_ZERO]
+ >> ASM_SIMP_TAC real_ss [extreal_div_eq, ABS_MUL, extreal_11, real_div, ABS_INV]
+QED
+
 (***************************)
 (*         x pow n         *)
 (***************************)
@@ -2022,6 +2086,18 @@ val pow_lt2 = store_thm
     STRIP_TAC >> NTAC 2 Cases
   >> RW_TAC std_ss [extreal_pow_def,extreal_of_num_def,extreal_le_def,REAL_POW_LT2,
                     lt_infty,le_infty,extreal_not_infty,extreal_lt_eq]);
+
+Theorem pow_le_full :
+    !n x y :extreal. n <> 0 /\ 0 <= x /\ 0 <= y ==>
+                    (x <= y <=> x pow n <= y pow n)
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC >> DISCH_TAC
+ >- (MATCH_MP_TAC pow_le >> art [])
+ >> SPOSE_NOT_THEN (ASSUME_TAC o (REWRITE_RULE [GSYM extreal_lt_def]))
+ >> `y pow n < x pow n` by PROVE_TAC [pow_lt2]
+ >> METIS_TAC [let_antisym]
+QED
 
 val pow_le_mono = store_thm
   ("pow_le_mono", ``!x n m. 1 <= x /\ n <= m ==> x pow n <= x pow m``,
@@ -4766,6 +4842,13 @@ val inf_const = store_thm
   ("inf_const", ``!x. extreal_inf (\y. y = x) = x``,
     RW_TAC real_ss [inf_eq, le_refl]);
 
+Theorem inf_sing :
+    !a:extreal. inf {a} = a
+Proof
+    REWRITE_TAC [METIS [EXTENSION, IN_SING, IN_DEF] ``{a} = (\x. x = a)``]
+ >> SIMP_TAC std_ss [inf_const]
+QED
+
 val inf_const_alt = store_thm
   ("inf_const_alt", ``!p z. (?x. p x) /\ (!x. p x ==> (x = z)) ==> (inf p = z)``,
   RW_TAC std_ss [inf_eq,le_refl]
@@ -6374,6 +6457,20 @@ Proof
  >> GEN_TAC >> BETA_TAC >> DISCH_TAC >> art []
 QED
 
+Theorem harmonic_series_pow_2 :
+    ext_suminf (\n. inv (&(SUC n) pow 2)) < PosInf
+Proof
+    Q.ABBREV_TAC `f :num -> real = \n. inv (&(SUC n) pow 2)`
+ >> Suff `(\n. inv (&(SUC n) pow 2)) = Normal o f`
+ >- (Rewr' >> MATCH_MP_TAC summable_ext_suminf \\
+     rw [HARMONIC_SERIES_POW_2, Abbr `f`])
+ >> RW_TAC real_ss [Abbr `f`, o_DEF, FUN_EQ_THM]
+ >> Know `(0 :real) < &(SUC n) pow 2`
+ >- (MATCH_MP_TAC REAL_POW_LT >> RW_TAC real_ss []) >> DISCH_TAC
+ >> `&(SUC n) pow 2 <> (0 :real)` by PROVE_TAC [REAL_LT_IMP_NE]
+ >> ASM_SIMP_TAC real_ss [extreal_of_num_def, extreal_inv_eq, extreal_pow_def]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Minimum and maximum                                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -6497,6 +6594,52 @@ Proof
  >> MATCH_MP_TAC lt_trans >> Q.EXISTS_TAC `0` >> art []
  >> POP_ASSUM (REWRITE_TAC o wrap o
                 (REWRITE_RULE [Once (GSYM lt_neg), neg_0]))
+QED
+
+(* `sup` is the maximal element of any finite non-empty extreal set,
+    see also le_sup_imp'.
+ *)
+Theorem sup_maximal :
+    !p. FINITE p /\ p <> {} ==> extreal_sup p IN p
+Proof
+    Suff `!p. FINITE p ==> p <> {} ==> extreal_sup p IN p` >- rw []
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> RW_TAC std_ss []
+ >> Cases_on `p = EMPTY` >- fs [sup_sing]
+ >> Suff `sup (e INSERT p) = max e (sup p)`
+ >- (Rewr' >> rw [extreal_max_def])
+ >> RW_TAC std_ss [sup_eq']
+ >| [ (* goal 1 (of 2) *)
+      fs [IN_INSERT, le_max] \\
+      DISJ2_TAC \\
+      MATCH_MP_TAC le_sup_imp' >> art [],
+      (* goal 2 (of 2) *)
+      POP_ASSUM MATCH_MP_TAC \\
+      fs [IN_INSERT, extreal_max_def] \\
+      Cases_on `e <= sup p` >> fs [] ]
+QED
+
+(* `inf` is the minimal element of any finite non-empty extreal set.
+    see also inf_le_imp'.
+ *)
+Theorem inf_minimal :
+    !p. FINITE p /\ p <> {} ==> extreal_inf p IN p
+Proof
+    Suff `!p. FINITE p ==> p <> {} ==> extreal_inf p IN p` >- rw []
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> RW_TAC std_ss []
+ >> Cases_on `p = EMPTY` >- fs [inf_sing]
+ >> Suff `inf (e INSERT p) = min e (inf p)`
+ >- (Rewr' >> rw [extreal_min_def])
+ >> RW_TAC std_ss [inf_eq']
+ >| [ (* goal 1 (of 2) *)
+      fs [IN_INSERT, min_le] \\
+      DISJ2_TAC \\
+      MATCH_MP_TAC inf_le_imp' >> art [],
+      (* goal 2 (of 2) *)
+      POP_ASSUM MATCH_MP_TAC \\
+      fs [IN_INSERT, extreal_min_def] \\
+      Cases_on `e <= inf p` >> fs [] ]
 QED
 
 (* ================================================================= *)

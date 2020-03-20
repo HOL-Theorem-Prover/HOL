@@ -3,7 +3,7 @@
 (* Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar                         *)
 (* HVG Group, Concordia University, Montreal                                 *)
 (*                                                                           *)
-(* Extended by Chun Tian (2019)                                              *)
+(* Extended by Chun Tian (2019-2020)                                         *)
 (* Fondazione Bruno Kessler and University of Trento, Italy                  *)
 (* ------------------------------------------------------------------------- *)
 
@@ -671,6 +671,50 @@ Theorem REAL_ARCH_INV' : (* was: ex_inverse_of_nat_less *)
 Proof
   RW_TAC std_ss [] THEN FIRST_ASSUM (MP_TAC o MATCH_MP REAL_ARCH_INV_SUC) THEN
   METIS_TAC []
+QED
+
+Theorem HARMONIC_SERIES_POW_2 :
+    summable (\n. inv (&(SUC n) pow 2))
+Proof
+    MATCH_MP_TAC POS_SUMMABLE
+ >> CONJ_TAC >- rw []
+ >> Q.EXISTS_TAC `2`
+ >> GEN_TAC
+ >> Cases_on `n` >- rw [sum]
+ >> MATCH_MP_TAC REAL_LE_TRANS
+ >> Q.EXISTS_TAC `1 + sum (1,n') (\n. inv (&n) - inv (&SUC n))`
+ >> CONJ_TAC
+ >- (Know `sum (0,SUC n') (\n. inv (&SUC n pow 2)) =
+           sum (0,1) (\n. inv (&SUC n pow 2)) + sum (1,n') (\n. inv (&SUC n pow 2))`
+     >- (MATCH_MP_TAC EQ_SYM \\
+         MP_TAC (Q.SPECL [`\n. inv (&SUC n pow 2)`, `1`, `n'`] SUM_TWO) \\
+         RW_TAC arith_ss [ADD1]) >> Rewr' \\
+     Know `sum (0,1) (\n. inv (&SUC n pow 2)) = 1`
+     >- (REWRITE_TAC [sum, ONE] >> rw []) >> Rewr' \\
+     REWRITE_TAC [REAL_LE_LADD] \\
+     MATCH_MP_TAC SUM_LE \\
+     RW_TAC real_ss [REAL_INV_1OVER] \\
+    `&r <> 0` by RW_TAC real_ss [] \\
+    `&SUC r <> 0` by RW_TAC real_ss [] \\
+     ASM_SIMP_TAC real_ss [REAL_SUB_RAT] \\
+    `&SUC r - &r = 1` by METIS_TAC [REAL, REAL_ADD_SUB] >> POP_ORW \\
+     ASM_SIMP_TAC std_ss [POW_2, GSYM REAL_INV_1OVER] \\
+    `0 < &SUC r * &SUC r` by rw [] \\
+     Know `0 < &(r * SUC r)`
+     >- (rw [] >> `0 = r * 0` by RW_TAC arith_ss [] >> POP_ORW \\
+         rw [LT_MULT_LCANCEL]) >> DISCH_TAC \\
+     MATCH_MP_TAC REAL_LT_IMP_LE \\
+     ASM_SIMP_TAC real_ss [REAL_INV_LT_ANTIMONO] \\
+    `SUC r ** 2 = SUC r * SUC r` by RW_TAC arith_ss [] >> POP_ORW \\
+     RW_TAC arith_ss [LT_MULT_RCANCEL])
+ >> `2 = 1 + (1 :real)` by RW_TAC real_ss [] >> POP_ORW
+ >> REWRITE_TAC [REAL_LE_LADD]
+ >> Q.ABBREV_TAC `f = \n. -inv (&n)`
+ >> Know `!n. inv (&n) - inv (&SUC n) = f (SUC n) - f n`
+ >- (RW_TAC real_ss [Abbr `f`] \\
+     REAL_ASM_ARITH_TAC) >> Rewr'
+ >> REWRITE_TAC [SUM_CANCEL]
+ >> rw [Abbr `f`, REAL_SUB_NEG2, REAL_LE_SUB_RADD, REAL_LE_ADDR]
 QED
 
 (* ********************************************* *)

@@ -2747,6 +2747,82 @@ val IN_MEASURABLE_BOREL_MONO_SUP = store_thm
           RW_TAC std_ss [IN_FUNSET, IN_UNIV, space_def, subsets_def, SPACE])
  >> METIS_TAC []);
 
+(* a generalized version of IN_MEASURABLE_BOREL_MAX, cf. sup_maximal *)
+Theorem IN_MEASURABLE_BOREL_MAXIMAL :
+    !N. FINITE (N :'b set) ==>
+        !g f a. sigma_algebra a /\ (!n. g n IN measurable a Borel) /\
+               (!x. f x = sup (IMAGE (\n. g n x) N)) ==> f IN measurable a Borel
+Proof
+    HO_MATCH_MP_TAC FINITE_INDUCT
+ >> RW_TAC std_ss [sup_empty, IMAGE_EMPTY, IMAGE_INSERT]
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST \\
+     Q.EXISTS_TAC `NegInf` >> art [])
+ >> Cases_on `N = {}`
+ >- (fs [IMAGE_EMPTY, sup_sing] >> METIS_TAC [])
+ >> Know `!x. sup (g e x INSERT (IMAGE (\n. g n x) N)) =
+              max (g e x) (sup (IMAGE (\n. g n x) N))`
+ >- (RW_TAC std_ss [sup_eq'] >| (* 2 subgoals *)
+    [ (* goal 1 (of 2) *)
+      fs [IN_INSERT, le_max] >> DISJ2_TAC \\
+      MATCH_MP_TAC le_sup_imp' >> rw [IN_IMAGE] \\
+      Q.EXISTS_TAC `n` >> art [],
+      (* goal 2 (of 2) *)
+      POP_ASSUM MATCH_MP_TAC \\
+      fs [IN_INSERT, extreal_max_def] \\
+      Cases_on `g e x <= sup (IMAGE (\n. g n x) N)` >> fs [] \\
+      DISJ2_TAC \\
+     `FINITE (IMAGE (\n. g n x) N)` by METIS_TAC [IMAGE_FINITE] \\
+      Know `IMAGE (\n. g n x) N <> {}`
+      >- (RW_TAC set_ss [NOT_IN_EMPTY, Once EXTENSION]) >> DISCH_TAC \\
+     `sup (IMAGE (\n. g n x) N) IN (IMAGE (\n. g n x) N)` by METIS_TAC [sup_maximal] \\
+      fs [IN_IMAGE] >> Q.EXISTS_TAC `n` >> art [] ])
+ >> DISCH_THEN (fs o wrap)
+ >> Q.PAT_X_ASSUM `!g f a. P => f IN Borel_measurable a`
+      (MP_TAC o (Q.SPECL [`g`, `\x. sup (IMAGE (\n. g n x) N)`, `a`]))
+ >> rw []
+ >> `f = \x. max (g e x) ((\x. sup (IMAGE (\n. g n x) N)) x)` by METIS_TAC []
+ >> POP_ORW
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_MAX >> art []
+QED
+
+(* a generalized version of IN_MEASURABLE_BOREL_MIN, cf. inf_minimal *)
+Theorem IN_MEASURABLE_BOREL_MINIMAL :
+    !N. FINITE (N :'b set) ==>
+        !g f a. sigma_algebra a /\ (!n. g n IN measurable a Borel) /\
+               (!x. f x = inf (IMAGE (\n. g n x) N)) ==> f IN measurable a Borel
+Proof
+    HO_MATCH_MP_TAC FINITE_INDUCT
+ >> RW_TAC std_ss [inf_empty, IMAGE_EMPTY, IMAGE_INSERT]
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST \\
+     Q.EXISTS_TAC `PosInf` >> art [])
+ >> Cases_on `N = {}`
+ >- (fs [IMAGE_EMPTY, inf_sing] >> METIS_TAC [])
+ >> Know `!x. inf (g e x INSERT (IMAGE (\n. g n x) N)) =
+              min (g e x) (inf (IMAGE (\n. g n x) N))`
+ >- (RW_TAC std_ss [inf_eq'] >| (* 2 subgoals *)
+    [ (* goal 1 (of 2) *)
+      fs [IN_INSERT, min_le] >> DISJ2_TAC \\
+      MATCH_MP_TAC inf_le_imp' >> rw [IN_IMAGE] \\
+      Q.EXISTS_TAC `n` >> art [],
+      (* goal 2 (of 2) *)
+      POP_ASSUM MATCH_MP_TAC \\
+      fs [IN_INSERT, extreal_min_def] \\
+      Cases_on `g e x <= inf (IMAGE (\n. g n x) N)` >> fs [] \\
+      DISJ2_TAC \\
+     `FINITE (IMAGE (\n. g n x) N)` by METIS_TAC [IMAGE_FINITE] \\
+      Know `IMAGE (\n. g n x) N <> {}`
+      >- (RW_TAC set_ss [NOT_IN_EMPTY, Once EXTENSION]) >> DISCH_TAC \\
+     `inf (IMAGE (\n. g n x) N) IN (IMAGE (\n. g n x) N)` by METIS_TAC [inf_minimal] \\
+      fs [IN_IMAGE] >> Q.EXISTS_TAC `n` >> art [] ])
+ >> DISCH_THEN (fs o wrap)
+ >> Q.PAT_X_ASSUM `!g f a. P => f IN Borel_measurable a`
+      (MP_TAC o (Q.SPECL [`g`, `\x. inf (IMAGE (\n. g n x) N)`, `a`]))
+ >> rw []
+ >> `f = \x. min (g e x) ((\x. inf (IMAGE (\n. g n x) N)) x)` by METIS_TAC []
+ >> POP_ORW
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_MIN >> art []
+QED
+
 Theorem IN_MEASURABLE_BOREL_SUMINF :
     !fn f a. sigma_algebra a /\ (!n:num. fn n IN measurable a Borel) /\
             (!i x. x IN space a ==> 0 <= fn i x) /\

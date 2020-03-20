@@ -113,6 +113,14 @@ val ROOT_UNIQUE = Q.store_thm("ROOT_UNIQUE",
    THEN METIS_TAC [DECIDE ``a < b ==> SUC a <= b``, exp_lemma3, LESS_EQ_TRANS,
                    DECIDE ``a <= b ==> ~(b < a:num)``, ROOT]);
 
+Theorem ROOT_EXP :
+    !n r. 0 < r ==> ROOT r (n ** r) = n
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC ROOT_UNIQUE
+ >> RW_TAC arith_ss []
+QED
+
 val log_exists = Q.prove(
    `!a n. 1 < a /\ 0 < n ==> ?log. a ** log <= n /\ n < a ** SUC log`,
    REPEAT STRIP_TAC

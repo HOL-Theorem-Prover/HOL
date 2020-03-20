@@ -1726,6 +1726,10 @@ val pow = new_recursive_definition
    rec_axiom = num_Axiom};
 val _ = set_fixity "pow" (Infixr 700);
 
+(* from arithmeticTheory.EXP *)
+val _ = overload_on (UnicodeChars.sup_2, “\x. x pow 2”);
+val _ = overload_on (UnicodeChars.sup_3, “\x. x pow 3”);
+
 Theorem pow0[simp] = CONJUNCT1 pow;
 
 val POW_0 = store_thm("POW_0",
