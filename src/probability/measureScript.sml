@@ -4465,6 +4465,42 @@ val COMPLETE_MEASURE_THM = store_thm
     RW_TAC std_ss [complete_measure_space_def]
  >> PROVE_TAC [NULL_SET_THM, IN_NULL_SET]);
 
+Theorem NULL_SET_UNION :
+    !m N1 N2. measure_space m /\ N1 IN null_set m /\ N2 IN null_set m ==>
+        (N1 UNION N2) IN null_set m
+Proof
+    rpt GEN_TAC
+ >> SIMP_TAC std_ss [IN_NULL_SET, null_set_def]
+ >> STRIP_TAC
+ >> STRONG_CONJ_TAC >- (MATCH_MP_TAC MEASURE_SPACE_UNION >> art [])
+ >> DISCH_TAC
+ >> REWRITE_TAC [GSYM le_antisym]
+ >> reverse CONJ_TAC
+ >- (IMP_RES_TAC MEASURE_SPACE_POSITIVE >> fs [positive_def])
+ >> `0 = measure m N1 + measure m N2` by METIS_TAC [add_rzero]
+ >> POP_ORW
+ >> MATCH_MP_TAC SUBADDITIVE >> art []
+ >> IMP_RES_TAC MEASURE_SPACE_SUBADDITIVE
+QED
+
+Theorem NULL_SET_INTER :
+    !m N1 N2. measure_space m /\ N1 IN null_set m /\ N2 IN null_set m ==>
+        (N1 INTER N2) IN null_set m
+Proof
+    rpt GEN_TAC
+ >> SIMP_TAC std_ss [IN_NULL_SET, null_set_def]
+ >> STRIP_TAC
+ >> STRONG_CONJ_TAC >- (MATCH_MP_TAC MEASURE_SPACE_INTER >> art [])
+ >> DISCH_TAC
+ >> REWRITE_TAC [GSYM le_antisym]
+ >> reverse CONJ_TAC
+ >- (IMP_RES_TAC MEASURE_SPACE_POSITIVE >> fs [positive_def])
+ >> Q.PAT_X_ASSUM `measure m N1 = 0` (ONCE_REWRITE_TAC o wrap o SYM)
+ >> MATCH_MP_TAC INCREASING >> art []
+ >> reverse CONJ_TAC >- SET_TAC []
+ >> IMP_RES_TAC MEASURE_SPACE_INCREASING
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Alternative definitions of `sigma_finite`                                *)
 (* ------------------------------------------------------------------------- *)

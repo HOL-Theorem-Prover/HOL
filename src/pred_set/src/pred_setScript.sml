@@ -3065,15 +3065,17 @@ val CARD_DIFF =
        RES_TAC THEN ASM_REWRITE_TAC [DIFF_INSERT]]]);
 
 (* Improved version of the above - DIFF's second argument can be infinite *)
-val CARD_DIFF_EQN = store_thm(
-  "CARD_DIFF_EQN",
-  ``!s. FINITE s ==> (CARD (s DIFF t) = CARD s - CARD (s INTER t))``,
+Theorem CARD_DIFF_EQN :
+    !t s. FINITE s ==> (CARD (s DIFF t) = CARD s - CARD (s INTER t))
+Proof
+  GEN_TAC THEN
   Induct_on `FINITE` THEN SRW_TAC [][] THEN
   Cases_on `e IN t` THEN
   SRW_TAC [][INSERT_INTER, INSERT_DIFF, INTER_FINITE] THEN
   `CARD (s INTER t) <= CARD s`
     by METIS_TAC [CARD_INTER_LESS_EQ] THEN
-  SRW_TAC [numSimps.ARITH_ss][]);
+  SRW_TAC [numSimps.ARITH_ss][]
+QED
 
 (* ---------------------------------------------------------------------*)
 (* A theorem from homeier@aero.uniblab (Peter Homeier)                  *)

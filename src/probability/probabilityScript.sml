@@ -4,34 +4,33 @@
 (* HVG Group, Concordia University, Montreal                                 *)
 (*                                                                           *)
 (* Further enriched by Chun Tian (2019-2020)                                 *)
-(* Fondazione Bruno Kessler and University of Trento, Italy                  *)
 (* ------------------------------------------------------------------------- *)
 (* Based on the work of Joe Hurd [7] and Aaron Coble [8]                     *)
 (* Cambridge University.                                                     *)
 (* ========================================================================= *)
-(* Updated by Chun Tian (2020) using some materials from:                    *)
+(* Convergence Concepts and The Laws of Large Numbers                        *)
 (*                                                                           *)
-(*                 Probability Density Function Theory [11]                  *)
+(* Author: Chun Tian <binghe.lisp@gmail.com> (2020)                          *)
+(* Fondazione Bruno Kessler and University of Trento, Italy                  *)
+(* ========================================================================= *)
 (*                                                                           *)
-(*        (c) Copyright,                                                     *)
+(*                 Probability Density Function (PDF) [11]                   *)
+(*                                                                           *)
+(*        (c) Copyright 2015,                                                *)
 (*                       Muhammad Qasim,                                     *)
 (*                       Osman Hasan,                                        *)
 (*                       Hardware Verification Group,                        *)
 (*                       Concordia University                                *)
 (*                                                                           *)
 (*            Contact:  <m_qasi@ece.concordia.ca>                            *)
-(*                                                                           *)
-(*                                                                           *)
-(* Note: This theory has been ported from hol light                          *)
-(* Last update: Jan, 2015                                                    *)
-(*                                                                           *)
 (* ========================================================================= *)
 
 open HolKernel Parse boolLib bossLib;
 
 open pairTheory combinTheory optionTheory prim_recTheory arithmeticTheory
      res_quanTheory res_quanTools pred_setTheory pred_setLib realTheory realLib
-     seqTheory transcTheory real_sigmaTheory real_topologyTheory mesonLib;
+     seqTheory transcTheory real_sigmaTheory real_topologyTheory mesonLib
+     RealArith logrootTheory;
 
 open hurdUtils util_probTheory extrealTheory sigma_algebraTheory measureTheory
      real_borelTheory borelTheory lebesgueTheory martingaleTheory;
@@ -55,12 +54,11 @@ val _ = new_theory "probability";
 
   -- A. N. Kolmogorov, "Foundations of the Theory of Probability." [1] *)
 
-val COUNTABLE_IMAGE = image_countable;
-val FINITE_COUNTABLE = finite_countable;
 val set_ss = std_ss ++ PRED_SET_ss;
 val std_ss' = std_ss ++ boolSimps.ETA_ss;
 
 val _ = hide "S";
+val _ = hide "W";
 
 (* ------------------------------------------------------------------------- *)
 (* Basic probability theory definitions.                                     *)
@@ -514,48 +512,20 @@ val PROB_LE_1 = store_thm
  >> RW_TAC std_ss [GSYM PROB_COMPL]
  >> RW_TAC std_ss [EVENTS_COMPL, PROB_POSITIVE]);
 
-val PROB_EQ_BIGUNION_IMAGE = store_thm
-  ("PROB_EQ_BIGUNION_IMAGE",
-  ``!p. prob_space p /\ f IN (UNIV -> events p) /\ g IN (UNIV -> events p) /\
-       (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) /\
-       (!m n. ~(m = n) ==> DISJOINT (g m) (g n)) /\
-       (!n: num. prob p (f n) = prob p (g n)) ==>
-       (prob p (BIGUNION (IMAGE f UNIV)) = prob p (BIGUNION (IMAGE g UNIV)))``,
+Theorem PROB_EQ_BIGUNION_IMAGE :
+    !p f g. prob_space p /\ f IN (UNIV -> events p) /\ g IN (UNIV -> events p) /\
+           (!m n. m <> n ==> DISJOINT (f m) (f n)) /\
+           (!m n. m <> n ==> DISJOINT (g m) (g n)) /\
+           (!n :num. prob p (f n) = prob p (g n)) ==>
+       (prob p (BIGUNION (IMAGE f UNIV)) = prob p (BIGUNION (IMAGE g UNIV)))
+Proof
     RW_TAC std_ss []
  >> Know `prob p (BIGUNION (IMAGE f UNIV)) = suminf (prob p o f)`
  >- PROVE_TAC [PROB_COUNTABLY_ADDITIVE]
  >> Know `prob p (BIGUNION (IMAGE g UNIV)) = suminf (prob p o g)`
  >- PROVE_TAC [PROB_COUNTABLY_ADDITIVE]
- >> METIS_TAC [o_DEF]);
-
-val PROB_FINITELY_ADDITIVE = store_thm
-  ("PROB_FINITELY_ADDITIVE",
-  ``!p s f n. prob_space p /\ f IN ((count n) -> events p) /\
-             (!a b. a < n /\ b < n /\ ~(a = b) ==> DISJOINT (f a) (f b)) /\
-             (s = BIGUNION (IMAGE f (count n))) ==>
-             (prob p s = SIGMA (prob p o f) (count n))``,
- (* proof *)
-    RW_TAC std_ss [IN_FUNSET, IN_COUNT]
- >> Suff `(ext_suminf (prob p o (\m. if m < n then f m else {})) =
-           prob p (BIGUNION (IMAGE f (count n)))) /\
-          (ext_suminf (prob p o (\m. if m < n then f m else {})) = SIGMA (prob p o f) (count n))`
- >- METIS_TAC []
- >> reverse CONJ_TAC
- >- (Know `SIGMA (prob p o f) (count n) = SIGMA (prob p o (\m. (if m < n then f m else {}))) (count n)`
-     >- ((MATCH_MP_TAC o REWRITE_RULE [FINITE_COUNT] o Q.ISPEC `count n`) EXTREAL_SUM_IMAGE_EQ
-         >> RW_TAC std_ss [IN_COUNT]
-         >> METIS_TAC [PROB_FINITE])
-     >> RW_TAC std_ss []
-     >> MATCH_MP_TAC ext_suminf_sum
-     >> RW_TAC std_ss [PROB_EMPTY,PROB_POSITIVE,le_refl]
-     >> METIS_TAC [NOT_LESS])
- >> Know `BIGUNION (IMAGE f (count n)) = BIGUNION (IMAGE (\m. (if m < n then f m else {})) UNIV)`
- >- (RW_TAC std_ss [EXTENSION,IN_BIGUNION_IMAGE, IN_COUNT, IN_UNIV]
-     >> METIS_TAC [NOT_IN_EMPTY])
- >> Rewr
- >> MATCH_MP_TAC (GSYM PROB_COUNTABLY_ADDITIVE)
- >> RW_TAC std_ss [IN_FUNSET, IN_UNIV, DISJOINT_EMPTY]
- >> METIS_TAC [EVENTS_EMPTY]);
+ >> METIS_TAC [o_DEF]
+QED
 
 val ABS_1_MINUS_PROB = store_thm
   ("ABS_1_MINUS_PROB",
@@ -680,6 +650,47 @@ Proof
  >> MATCH_MP_TAC PROB_COUNTABLY_SUBADDITIVE
  >> RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_UNIV]
  >> RW_TAC std_ss []
+QED
+
+(* This theorem is more general than measureTheory.FINITE_ADDITIVE:
+
+  `f :'b -> 'a -> bool` has an finite index set of type ('b set)
+ *)
+Theorem PROB_FINITE_ADDITIVE :
+    !p s f t. prob_space p /\ FINITE s /\ (!x. x IN s ==> f x IN events p) /\
+             (!a b. (a :'b) IN s /\ b IN s /\ a <> b ==> DISJOINT (f a) (f b)) /\
+             (t = BIGUNION (IMAGE f s)) ==> (prob p t = SIGMA (prob p o f) s)
+Proof
+    Suff `!s. FINITE (s:'b -> bool) ==>
+        ((\s. !p f t. prob_space p  /\ (!x. x IN s ==> f x IN events p) /\
+        (!a b. a IN s /\ b IN s /\ a <> b ==> DISJOINT (f a) (f b)) /\
+        (t = BIGUNION (IMAGE f s)) ==> (prob p t = SIGMA (prob p o f) s)) s)`
+ >- rw []
+ >> MATCH_MP_TAC FINITE_INDUCT >> RW_TAC std_ss [IMAGE_EMPTY]
+ >- RW_TAC std_ss [EXTREAL_SUM_IMAGE_EMPTY, BIGUNION_EMPTY, PROB_EMPTY]
+ >> Know `SIGMA (prob p o f) ((e:'b) INSERT s) =
+                (prob p o f) e + SIGMA (prob p o f) (s DELETE e)`
+ >- (irule EXTREAL_SUM_IMAGE_PROPERTY >> art [] \\
+     DISJ1_TAC >> GEN_TAC >> DISCH_TAC \\
+     SIMP_TAC std_ss [o_DEF] >> METIS_TAC [PROB_FINITE])
+ >> `s DELETE (e:'b) = s` by FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]
+ >> RW_TAC std_ss [IMAGE_INSERT, BIGUNION_INSERT]
+ >> Know `DISJOINT (f e) (BIGUNION (IMAGE f s))`
+ >- (RW_TAC set_ss [DISJOINT_BIGUNION, IN_IMAGE] \\
+    `e IN e INSERT s` by PROVE_TAC [IN_INSERT] \\
+    `x IN e INSERT s` by PROVE_TAC [IN_INSERT] \\
+    `e <> x` by METIS_TAC [] \\
+     FULL_SIMP_TAC std_ss []) >> DISCH_TAC
+ >> `(f e) IN events p` by PROVE_TAC [IN_INSERT]
+ >> `BIGUNION (IMAGE f s) IN events p`
+        by (MATCH_MP_TAC EVENTS_COUNTABLE_UNION >> RW_TAC std_ss []
+           >- (RW_TAC std_ss [SUBSET_DEF,IN_IMAGE] >> METIS_TAC [IN_INSERT])
+           >> MATCH_MP_TAC image_countable >> RW_TAC std_ss [finite_countable])
+ >> `(prob p (f e UNION BIGUNION (IMAGE f s))) = prob p (f e) + prob p (BIGUNION (IMAGE f s))`
+        by (MATCH_MP_TAC PROB_ADDITIVE >> FULL_SIMP_TAC std_ss [])
+ >> POP_ORW
+ >> Suff `prob p (BIGUNION (IMAGE f s)) = SIGMA (prob p o f) s` >- rw []
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> rw [IN_INSERT]
 QED
 
 val PROB_EXTREAL_SUM_IMAGE = store_thm
@@ -2059,6 +2070,14 @@ val finite_second_moments_alt = store_thm
     rpt STRIP_TAC
  >> METIS_TAC [finite_second_moments_eq_finite_variance, lemma]);
 
+(* |- !p X.
+         prob_space p /\ real_random_variable X p ==>
+         (finite_second_moments p X <=> expectation p (\x. (X x) pow 2) < PosInf)
+ *)
+Theorem finite_second_moments_literally =
+    REWRITE_RULE [second_moment_def, moment_def, sub_rzero]
+                 finite_second_moments_alt;
+
 val finite_second_moments_eq_integrable_square = store_thm
   ("finite_second_moments_eq_integrable_square",
   ``!p X. prob_space p /\ real_random_variable X p ==>
@@ -2159,6 +2178,65 @@ val finite_second_moments_imp_finite_expectation = store_thm
     rpt GEN_TAC >> STRIP_TAC
  >> MATCH_MP_TAC integrable_imp_finite_expectation >> art []
  >> MATCH_MP_TAC finite_second_moments_imp_integrable >> art []);
+
+Theorem expectation_real_affine :
+    !p X c. prob_space p /\ real_random_variable X p /\ integrable p X /\
+            c <> PosInf /\ c <> NegInf ==>
+           (expectation p (\x. X x + c) = expectation p X + c)
+Proof
+    RW_TAC std_ss [real_random_variable_def, prob_space_def, p_space_def,
+                   events_def, expectation_def]
+ >> `?r. c = Normal r` by METIS_TAC [extreal_cases] >> POP_ORW
+ >> Know `integral p (\x. X x + (\x. Normal r) x) =
+          integral p X + integral p (\x. Normal r)`
+ >- (MATCH_MP_TAC integral_add >> rw [integral_const] \\
+     MATCH_MP_TAC integrable_const >> rw [lt_infty])
+ >> BETA_TAC >> Rewr'
+ >> rw [integral_const, extreal_add_def, extreal_sub_def]
+QED
+
+Theorem expectation_normal :
+    !p X. prob_space p /\ integrable p X ==> ?r. expectation p X = Normal r
+Proof
+    fs [prob_space_def, expectation_def, integrable_normal_integral]
+QED
+
+Theorem expectation_finite :
+    !p X. prob_space p /\ integrable p X ==>
+          expectation p X <> PosInf /\ expectation p X <> NegInf
+Proof
+    METIS_TAC [expectation_normal, extreal_not_infty]
+QED
+
+Theorem variance_real_affine :
+    !p X c. prob_space p /\ real_random_variable X p /\ integrable p X /\
+            c <> PosInf /\ c <> NegInf ==> (variance p (\x. X x + c) = variance p X)
+Proof
+    RW_TAC std_ss [variance_alt]
+ >> Suff `!x. X x + c - expectation p (\x. X x + c) = X x - expectation p X`
+ >- rw []
+ >> GEN_TAC
+ >> ASM_SIMP_TAC std_ss [expectation_real_affine]
+ >> `?r. c = Normal r` by METIS_TAC [extreal_cases] >> POP_ORW
+ >> `?e. expectation p X = Normal e` by METIS_TAC [expectation_normal]
+ >> fs [real_random_variable_def]
+ >> `?z. X x = Normal z` by METIS_TAC [extreal_cases]
+ >> rw [extreal_add_def, extreal_sub_def]
+ >> REAL_ARITH_TAC
+QED
+
+Theorem variance_real_affine' :
+    !p X c. prob_space p /\ real_random_variable X p /\ integrable p X /\
+            c <> PosInf /\ c <> NegInf ==> (variance p (\x. X x - c) = variance p X)
+Proof
+    rpt STRIP_TAC
+ >> Know `!x. X x - c = X x + -c`
+ >- (GEN_TAC >> MATCH_MP_TAC extreal_sub_add \\
+     fs [real_random_variable_def]) >> Rewr'
+ >> MATCH_MP_TAC variance_real_affine >> art []
+ >> `?r. c = Normal r` by METIS_TAC [extreal_cases]
+ >> rw [extreal_ainv_def, extreal_not_infty]
+QED
 
 (* Markov's inequality for Probability (general version) *)
 Theorem prob_markov_inequality :
@@ -2893,11 +2971,10 @@ val _ = overload_on ("tail_algebra", ``tail_algebra_of_rv``);
   ([5, p.3] or [2, p.264]) under a different definition of "tail field" generated by
   `sigma_functions` (martingaleTheory).
  *)
-val Kolmogorov_0_1_Law = store_thm
-  ("Kolmogorov_0_1_Law",
-  ``!p E. prob_space p /\ indep_events p E UNIV ==>
-          !e. e IN subsets (tail_algebra p E) ==> (prob p e = 0) \/ (prob p e = 1)``,
- (* proof *)
+Theorem Kolmogorov_0_1_Law :
+    !p E. prob_space p /\ indep_events p E UNIV ==>
+          !e. e IN subsets (tail_algebra p E) ==> (prob p e = 0) \/ (prob p e = 1)
+Proof
     RW_TAC std_ss [tail_algebra_def, subsets_def, IN_BIGINTER_IMAGE, IN_UNIV]
  >> Know `e IN events p`
  >- (fs [indep_events_def] \\
@@ -3013,10 +3090,10 @@ val Kolmogorov_0_1_Law = store_thm
            Q.EXISTS_TAC `x` >> RW_TAC std_ss [in_max_set] \\
            REWRITE_TAC [DIV2_def] >> MATCH_MP_TAC DIV_LESS_EQ >> RW_TAC arith_ss []) \\
        DISCH_TAC \\
-       Know `n INSERT IMAGE DIV2 N' SUBSET n INSERT count n`
+       Know `n INSERT (IMAGE DIV2 N') SUBSET (n INSERT (count n))`
        >- (RW_TAC std_ss [SUBSET_DEF, IN_COUNT, IN_INSERT, IN_IMAGE] \\
            DISJ2_TAC >> PROVE_TAC []) \\
-       Know `n INSERT IMAGE DIV2 N' <> {}`
+       Know `~(n INSERT (IMAGE DIV2 N') = {})`
        >- (RW_TAC std_ss [Once EXTENSION, IN_INSERT, NOT_IN_EMPTY] \\
            Q.EXISTS_TAC `n` >> DISJ1_TAC >> REWRITE_TAC []) \\
        Know `FINITE (n INSERT (IMAGE DIV2 N'))`
@@ -3089,7 +3166,8 @@ val Kolmogorov_0_1_Law = store_thm
      MATCH_MP_TAC SIGMA_MONOTONE \\
      MATCH_MP_TAC IMAGE_SUBSET >> REWRITE_TAC [SUBSET_UNIV]) >> DISCH_TAC
  >> `indep p e e` by PROVE_TAC []
- >> METIS_TAC [INDEP_REFL]);
+ >> METIS_TAC [INDEP_REFL]
+QED
 
 (******************************************************************************)
 (*  noncorrelation of r.v.'s [2, p.107-108]                                   *)
@@ -3266,17 +3344,13 @@ val uncorrelated_covariance = store_thm
     RW_TAC std_ss [covariance_def]
  >> MATCH_MP_TAC uncorrelated_thm >> art []);
 
-val uncorrelated_orthogonal = store_thm
-  ("uncorrelated_orthogonal",
-  ``!p X Y. prob_space p /\ real_random_variable X p /\ real_random_variable Y p /\
-            uncorrelated p X Y /\ (expectation p X = 0) /\ (expectation p Y = 0)
-        ==> orthogonal p X Y``,
-    RW_TAC std_ss [orthogonal_def]
- >- fs [uncorrelated_def]
- >- fs [uncorrelated_def]
- >> Know `!s. X s * Y s = (X s - expectation p X) * (Y s - expectation p Y)`
- >- art [sub_rzero] >> Rewr'
- >> MATCH_MP_TAC uncorrelated_thm >> art []);
+Theorem uncorrelated_orthogonal :
+    !p X Y. prob_space p /\ real_random_variable X p /\ real_random_variable Y p /\
+            (expectation p X = 0) /\ (expectation p Y = 0) ==>
+            (uncorrelated p X Y <=> orthogonal p X Y)
+Proof
+    rw [orthogonal_def, uncorrelated_def]
+QED
 
 (* Fundamental relation of uncorrelated r.v.'s [2, p.108] *)
 val variance_sum = store_thm
@@ -5367,6 +5441,1143 @@ Proof
  >> Q.EXISTS_TAC `c` >> RW_TAC std_ss []
 QED
 
+(* Theorem 5.1.2 [2, p.108]: The Strong Law of Large Numbers
+
+   (uncorrelated random sequence with a common bound of variances)
+
+   without loss of generality we may suppose that expectation (X j) = 0 for
+   each j, so that the (X j)'s are orthogonal.
+ *)
+Theorem SLLN_uncorrelated_wlog[local] :
+    !p X S M c. prob_space p /\ (!n. real_random_variable (X n) p) /\
+       (!i j. i <> j ==> uncorrelated p (X i) (X j)) /\
+       c <> PosInf /\ (!n. variance p (X n) <= c) /\
+       (!n x. S n x = SIGMA (\i. X i x) (count n)) /\
+       (!n. M n = expectation p (S n)) ==>
+       ?(Y :num -> 'a -> extreal) Z.
+           (!n x. Z n x = SIGMA (\i. Y i x) (count n)) /\
+           (!n x. S n x - M n = Z n x) /\
+           (!n. expectation p (Y n) = 0) /\
+           (!n. real_random_variable (Y n) p) /\
+           (!n. finite_second_moments p (Y n)) /\
+           (!n. variance p (Y n) <= c) /\
+           (!n. integrable p (Y n)) /\
+           (!i j. i <> j ==> orthogonal p (Y i) (Y j))
+Proof
+    rpt STRIP_TAC
+ >> Know `!n. finite_second_moments p (X n)`
+ >- (RW_TAC std_ss [finite_second_moments_eq_finite_variance] \\
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC `c` >> rw [GSYM lt_infty]) >> DISCH_TAC
+ >> Know `!n. integrable p (X n)`
+ >- (GEN_TAC >> MATCH_MP_TAC finite_second_moments_imp_integrable >> art [])
+ >> DISCH_TAC
+ (* `Y n` is centered `X n` such that `!n. expectation p (Y n) = 0` *)
+ >> Q.ABBREV_TAC `Y = \n x. X n x - expectation p (X n)`
+ >> Know `!n. expectation p (Y n) = 0`
+ >- (RW_TAC std_ss [Abbr `Y`, expectation_def] \\
+     fs [real_random_variable_def] \\
+    `!x. X n x - integral p (X n) = X n x + (\x. -integral p (X n)) x`
+       by METIS_TAC [prob_space_def, integrable_finite_integral,
+                     extreal_sub_add] >> POP_ORW \\
+     Know `integral p (\x. X n x + (\x. -integral p (X n)) x) =
+           integral p (X n) + integral p (\x. -integral p (X n))`
+     >- (MATCH_MP_TAC integral_add \\
+         fs [prob_space_def, p_space_def, integrable_finite_integral] \\
+        `?r. integral p (X n) = Normal r` by METIS_TAC [integrable_normal_integral] \\
+         POP_ORW >> rw [extreal_ainv_def, extreal_not_infty] \\
+         MATCH_MP_TAC integrable_const >> rw [extreal_of_num_def, lt_infty]) >> Rewr' \\
+    `?r. integral p (X n) = Normal r`
+       by METIS_TAC [integrable_normal_integral, prob_space_def] \\
+     ASM_SIMP_TAC std_ss [extreal_ainv_def, GSYM expectation_def, expectation_const] \\
+     METIS_TAC [extreal_not_infty, sub_refl, GSYM extreal_ainv_def, extreal_sub_add])
+ >> DISCH_TAC
+ >> Know `!n. real_random_variable (Y n) p`
+ >- (GEN_TAC >> Q.UNABBREV_TAC `Y` \\
+     fs [real_random_variable_def, random_variable_def, p_space_def, events_def] \\
+     reverse CONJ_TAC
+     >- (GEN_TAC \\
+        `?a. X n x = Normal a` by METIS_TAC [extreal_cases] \\
+        `?b. expectation p (X n) = Normal b` by METIS_TAC [expectation_normal] \\
+         rw [extreal_sub_def, extreal_not_infty]) \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
+     qexistsl_tac [`X n`, `\x. expectation p (X n)`] \\
+     ASM_SIMP_TAC std_ss [expectation_finite, space_def] \\
+     fs [prob_space_def, measure_space_def, expectation_finite, space_def,
+         IN_MEASURABLE_BOREL_CONST']) >> DISCH_TAC
+ >> Know `!n. finite_second_moments p (Y n) /\ variance p (Y n) <= c`
+ >- (GEN_TAC \\
+     ASM_SIMP_TAC std_ss [finite_second_moments_eq_finite_variance, Abbr `Y`] \\
+    `expectation p (X n) <> PosInf /\
+     expectation p (X n) <> NegInf` by METIS_TAC [expectation_finite] \\
+    `variance p (\x. X n x - expectation p (X n)) = variance p (X n)`
+       by METIS_TAC [variance_real_affine'] >> POP_ORW >> art [] \\
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC `c` >> rw [GSYM lt_infty])
+ >> DISCH_THEN (STRIP_ASSUME_TAC o (CONV_RULE FORALL_AND_CONV))
+ >> `!n. integrable p (Y n)` by PROVE_TAC [finite_second_moments_imp_integrable]
+ >> Know `!i j. i <> j ==> orthogonal p (Y i) (Y j)`
+ >- (RW_TAC std_ss [orthogonal_def, Abbr `Y`] \\
+     MATCH_MP_TAC uncorrelated_thm >> RW_TAC std_ss []) >> DISCH_TAC
+ (* `Z n` is the parial sums of `Y n` *)
+ >> Q.ABBREV_TAC `Z = \n x. SIGMA (\i. Y i x) (count n)`
+ >> qexistsl_tac [`Y`, `Z`]
+ >> RW_TAC std_ss [Abbr `Y`, Abbr `Z`]
+ >> `!i. X i x - expectation p (X i) =
+        (\i. X i x) i - (\i. expectation p (X i)) i` by METIS_TAC [] >> POP_ORW
+ >> Know `SIGMA (\i. (\i. X i x) i - (\i. expectation p (X i)) i) (count n) =
+          SIGMA (\i. X i x) (count n) -
+          SIGMA (\i. expectation p (X i)) (count n)`
+ >- (irule EXTREAL_SUM_IMAGE_SUB >> art [FINITE_COUNT, IN_COUNT] \\
+     DISJ1_TAC (* or DISJ2_TAC *) >> fs [real_random_variable_def] \\
+     METIS_TAC [expectation_finite]) >> Rewr'
+ >> Suff `expectation p (S n) =
+          SIGMA (\i. expectation p (X i)) (count n)` >- rw []
+ >> `S n = \x. SIGMA (\i. X i x) (count n)` by METIS_TAC [] >> POP_ORW
+ >> MATCH_MP_TAC (REWRITE_RULE [GSYM expectation_def] integral_sum)
+ >> fs [FINITE_COUNT, prob_space_def, real_random_variable_def]
+QED
+
+Theorem SLLN_uncorrelated :
+    !p X S M. prob_space p /\ (!n. real_random_variable (X n) p) /\
+       (!i j. i <> j ==> uncorrelated p (X i) (X j)) /\
+       (?c. c <> PosInf /\ !n. variance p (X n) <= c) /\
+       (!n x. S n x = SIGMA (\i. X i x) (count n)) /\
+       (!n. M n = expectation p (S n)) ==>
+       ((\n x. (S (SUC n) x - M (SUC n)) / &SUC n) --> (\x. 0)) (almost_everywhere p)
+Proof
+    rpt STRIP_TAC
+ (* without loss of generality *)
+ >> MP_TAC (Q.SPECL [`p`, `X`, `S`, `M`, `c`] SLLN_uncorrelated_wlog)
+ >> RW_TAC std_ss []
+ >> Q.PAT_X_ASSUM `!n x. _ = Z n x` (ONCE_REWRITE_TAC o wrap)
+ (* clean up X and S *)
+ >> Q.PAT_X_ASSUM `!n. real_random_variable (X n) p`            K_TAC
+ >> Q.PAT_X_ASSUM `!i j. i <> j ==> uncorrelated p (X i) (X j)` K_TAC
+ >> Q.PAT_X_ASSUM `!n. variance p (X n) <= c`                   K_TAC
+ >> Q.PAT_X_ASSUM `!n x. S n x = SIGMA (\i. X i x) (count n)`   K_TAC
+ >> Q.PAT_X_ASSUM `!n. M n = expectation p (S n)`               K_TAC
+ >> rename1 `!n x. S n x = SIGMA (\i. X i x) (count n)`
+ >> rename1 `M <> PosInf`
+ (* now the actual proof *)
+ >> Know `0 <= M`
+ >- (MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `variance p (X 0)` \\
+     ASM_SIMP_TAC std_ss [variance_pos]) >> DISCH_TAC
+ >> Know `M <> NegInf`
+ >- (MATCH_MP_TAC pos_not_neginf >> art []) >> DISCH_TAC
+ (* properties of (S n) *)
+ >> Know `!n. variance p (S n) <= &n * M`
+ >- (GEN_TAC \\
+    `S n = \x. SIGMA (\i. X i x) (count n)` by METIS_TAC [] >> POP_ORW \\
+     Know `variance p (\x. SIGMA (\i. X i x) (count n)) =
+           SIGMA (\i. variance p (X i)) (count n)`
+     >- (MATCH_MP_TAC variance_sum >> rw [FINITE_COUNT] \\
+         RW_TAC std_ss [uncorrelated_vars_def] \\
+         METIS_TAC [uncorrelated_orthogonal]) >> Rewr' \\
+     Know `SIGMA (\x. M) (count n) = &CARD (count n) * M`
+     >- (irule EXTREAL_SUM_IMAGE_FINITE_CONST >> rw [FINITE_COUNT]) \\
+     REWRITE_TAC [Once EQ_SYM_EQ, CARD_COUNT] >> Rewr' \\
+     irule EXTREAL_SUM_IMAGE_MONO >> rw [IN_COUNT, FINITE_COUNT] \\
+     DISJ2_TAC >> GEN_TAC >> DISCH_TAC \\
+     REWRITE_TAC [lt_infty] \\
+     MATCH_MP_TAC let_trans >> Q.EXISTS_TAC `M` >> art [GSYM lt_infty])
+ >> DISCH_TAC
+ >> Know `!n. expectation p (S n) = 0`
+ >- (GEN_TAC \\
+    `S n = \x. SIGMA (\i. X i x) (count n)` by METIS_TAC [] >> POP_ORW \\
+     fs [prob_space_def, real_random_variable_def, expectation_def,
+         random_variable_def, p_space_def, events_def] \\
+     Know `integral p (\x. SIGMA (\i. X i x) (count n)) =
+           SIGMA (\i. integral p (X i)) (count n)`
+     >- (MATCH_MP_TAC integral_sum \\
+         RW_TAC std_ss [IN_COUNT, FINITE_COUNT]) >> Rewr' >> rw [] \\
+     MATCH_MP_TAC EXTREAL_SUM_IMAGE_ZERO >> REWRITE_TAC [FINITE_COUNT])
+ >> DISCH_TAC
+ >> Know `!n x. S n x <> PosInf`
+ >- (RW_TAC std_ss [] >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF \\
+     fs [real_random_variable_def, FINITE_COUNT, IN_COUNT]) >> DISCH_TAC
+ >> Know `!n x. S n x <> NegInf`
+ >- (RW_TAC std_ss [] >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF \\
+     fs [real_random_variable_def, FINITE_COUNT, IN_COUNT]) >> DISCH_TAC
+ >> Know `!n. real_random_variable (S n) p`
+ >- (RW_TAC std_ss [real_random_variable_def, random_variable_def,
+                    p_space_def, events_def] \\
+    `S n = \x. SIGMA (\i. X i x) (count n)` by METIS_TAC [] >> POP_ORW \\
+     MATCH_MP_TAC (INST_TYPE [``:'b`` |-> ``:num``] IN_MEASURABLE_BOREL_SUM) \\
+     qexistsl_tac [`X`, `count n`] \\
+     fs [real_random_variable_def, random_variable_def, p_space_def,
+         events_def, space_def, prob_space_def, measure_space_def]) >> DISCH_TAC
+ >> Know `!n. finite_second_moments p (S n)`
+ >- (RW_TAC std_ss [finite_second_moments_eq_finite_variance] \\
+     MATCH_MP_TAC let_trans >> Q.EXISTS_TAC `&n * M` >> art [] \\
+    `?r. M = Normal r` by METIS_TAC [extreal_cases] \\
+     rw [extreal_not_infty, extreal_of_num_def, extreal_mul_def, GSYM lt_infty])
+ >> DISCH_TAC
+ (* applying chebyshev_ineq_variance *)
+ >> Know `!n e. 0 < n /\ 0 < e /\ e <> PosInf ==>
+             prob p ({x | &n * e <= abs (S n x - expectation p (S n))} INTER p_space p)
+             <= inv ((&n * e) pow 2) * variance p (S n)`
+ >- (rpt STRIP_TAC \\
+     MATCH_MP_TAC chebyshev_ineq_variance >> art [] \\
+     MATCH_MP_TAC lt_mul >> fs [extreal_of_num_def, extreal_lt_eq])
+ >> Q.PAT_ASSUM `!n. expectation p (S n) = 0` (ONCE_REWRITE_TAC o wrap)
+ >> REWRITE_TAC [sub_rzero] >> DISCH_TAC
+ >> Know `!n e. 0 < n /\ 0 < e /\ e <> PosInf ==>
+             prob p ({x | &n * e <= abs (S n x)} INTER p_space p)
+             <= inv ((&n * e) pow 2) * (&n * M)`
+ >- (rpt STRIP_TAC >> MATCH_MP_TAC le_trans \\
+     Q.EXISTS_TAC `inv ((&n * e) pow 2) * variance p (S n)` \\
+     CONJ_TAC >- ASM_SIMP_TAC std_ss [] \\
+     MATCH_MP_TAC le_lmul_imp >> art [] \\
+     MATCH_MP_TAC le_inv \\
+     MATCH_MP_TAC pow_pos_lt \\
+     MATCH_MP_TAC lt_mul >> fs [extreal_of_num_def, extreal_lt_eq])
+ >> POP_ASSUM K_TAC >> DISCH_TAC
+ >> Know `!n e. 0 < n /\ 0 < e /\ e <> PosInf ==>
+             prob p ({x | &n * e <= abs (S n x)} INTER p_space p)
+             <= inv (&n * e pow 2) * M`
+ >- (rpt STRIP_TAC \\
+     Suff `inv (&n * e pow 2) * M = inv ((&n * e) pow 2) * (&n * M)`
+     >- (Rewr' >> FIRST_X_ASSUM MATCH_MP_TAC >> art []) \\
+    `&n <> (0 :real)` by RW_TAC real_ss [] \\
+    `e <> NegInf` by METIS_TAC [lt_le, pos_not_neginf] \\
+    `?a. e = Normal a` by METIS_TAC [extreal_cases] \\
+     Know `0 < &n * e pow 2`
+     >- (MATCH_MP_TAC lt_mul \\
+         CONJ_TAC >- (rw [extreal_of_num_def, extreal_lt_eq]) \\
+         MATCH_MP_TAC pow_pos_lt >> art []) >> DISCH_TAC \\
+    `&n * e pow 2 <> 0` by PROVE_TAC [lt_imp_ne] \\
+    `?m. M = Normal m` by METIS_TAC [extreal_cases] \\
+     ASM_SIMP_TAC std_ss [extreal_inv_eq, extreal_of_num_def, extreal_mul_def,
+                          extreal_pow_def] \\
+     Know `0 < (&n * a) pow 2`
+     >- (MATCH_MP_TAC REAL_POW_LT \\
+         MATCH_MP_TAC REAL_LT_MUL \\
+         FULL_SIMP_TAC real_ss [extreal_of_num_def, extreal_lt_eq]) >> DISCH_TAC \\
+    `(&n * a) pow 2 <> 0` by PROVE_TAC [REAL_LT_IMP_NE] \\
+     Know `0 < a pow 2`
+     >- (MATCH_MP_TAC REAL_POW_LT \\
+         METIS_TAC [extreal_of_num_def, extreal_lt_eq]) >> DISCH_TAC \\
+    `a pow 2 <> 0` by PROVE_TAC [REAL_LT_IMP_NE] \\
+     Know `0 < &n * a pow 2`
+     >- (MATCH_MP_TAC REAL_LT_MUL >> rw []) >> DISCH_TAC \\
+    `&n * a pow 2 <> 0` by PROVE_TAC [REAL_LT_IMP_NE] \\
+     FULL_SIMP_TAC real_ss [extreal_inv_eq, extreal_mul_def,
+                           extreal_11, REAL_INV_MUL, REAL_ENTIRE, POW_2] \\
+    `&n <> (0 :real)` by RW_TAC real_ss [] \\
+     rw [nonzerop_def])
+ >> POP_ASSUM K_TAC >> DISCH_TAC
+ >> Know `!n e. 0 < n /\ 0 < e /\ e <> PosInf ==>
+             prob p {x | x IN p_space p /\ &n * e < abs (S n x)}
+             <= inv (&n * e pow 2) * M`
+ >- (rpt STRIP_TAC \\
+     MATCH_MP_TAC le_trans \\
+     Q.EXISTS_TAC `prob p ({x | &n * e <= abs (S n x)} INTER p_space p)` \\
+     reverse CONJ_TAC
+     >- (FIRST_X_ASSUM MATCH_MP_TAC >> art []) \\
+     Q.ABBREV_TAC `f = \x. abs (S n x)` \\
+    `!x. abs (S n x) = f x` by METIS_TAC [] >> POP_ORW \\
+     Q.ABBREV_TAC `P = \x. &n * e < f x` \\
+    `!x. (&n * e < f x) <=> P x` by METIS_TAC [] >> POP_ORW \\
+     SIMP_TAC std_ss [PROB_GSPEC, Abbr `P`] \\
+     MATCH_MP_TAC PROB_INCREASING \\
+     CONJ_TAC >- art [] (* prob_space p *) \\
+     Know `f IN measurable (m_space p,measurable_sets p) Borel`
+     >- (Q.UNABBREV_TAC `f` \\
+         MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS \\
+         Q.EXISTS_TAC `S n` \\
+         fs [space_def, real_random_variable_def, random_variable_def,
+             p_space_def, events_def, prob_space_def, measure_space_def]) \\
+     DISCH_TAC \\
+     ASM_SIMP_TAC std_ss [p_space_def, events_def,
+                          IN_MEASURABLE_BOREL_ALL_MEASURE] \\
+     rw [SUBSET_DEF, IN_INTER, GSPECIFICATION] \\
+     MATCH_MP_TAC lt_imp_le >> art [])
+ >> Know `!n e. {x | x IN p_space p /\ &n * e < abs (S n x)} IN events p`
+ >- (rpt GEN_TAC >> Q.ABBREV_TAC `f = \x. abs (S n x)` \\
+    `!x. abs (S n x) = f x` by METIS_TAC [] >> POP_ORW \\
+     Know `f IN measurable (m_space p,measurable_sets p) Borel`
+     >- (Q.UNABBREV_TAC `f` \\
+         MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS \\
+         Q.EXISTS_TAC `S n` \\
+         fs [space_def, real_random_variable_def, random_variable_def,
+             p_space_def, events_def, prob_space_def, measure_space_def]) \\
+     DISCH_TAC \\
+    `{x | x IN p_space p /\ &n * e < f x} =
+     {x | &n * e < f x} INTER p_space p` by SET_TAC [] >> POP_ORW \\
+     ASM_SIMP_TAC std_ss [p_space_def, events_def,
+                          IN_MEASURABLE_BOREL_ALL_MEASURE])
+ >> POP_ASSUM K_TAC >> rpt DISCH_TAC
+ (* applying Borel_Cantelli_Lemma1 *)
+ >> Q.ABBREV_TAC `E = \e n. {x | x IN p_space p /\
+                                 &(SUC n ** 2) * e < abs (S (SUC n ** 2) x)}`
+ >> Know `!e. 0 < e /\ e <> PosInf ==> (prob p (limsup (E e)) = 0)`
+ >- (rpt STRIP_TAC \\
+     MATCH_MP_TAC Borel_Cantelli_Lemma1 >> art [] \\
+     CONJ_TAC >- (GEN_TAC >> Q.UNABBREV_TAC `E` >> BETA_TAC >> art []) \\
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC `suminf (\n. inv (&(SUC n ** 2) * e pow 2) * M)` \\
+     CONJ_TAC (* mono *)
+     >- (MATCH_MP_TAC ext_suminf_mono \\
+         Q.UNABBREV_TAC `E` >> SIMP_TAC std_ss [o_DEF] \\
+         CONJ_TAC >- (GEN_TAC >> MATCH_MP_TAC PROB_POSITIVE >> art []) \\
+         GEN_TAC >> FIRST_X_ASSUM MATCH_MP_TAC >> RW_TAC arith_ss []) \\
+     Know `!n. inv (&(SUC n ** 2) * e pow 2) * M =
+               inv (e pow 2) * M * (\n. inv (&(SUC n) pow 2)) n`
+     >- (RW_TAC std_ss [] \\
+         Know `&(SUC n ** 2) = &SUC n pow 2`
+         >- (REWRITE_TAC [pow_2] \\
+             REWRITE_TAC [EXP, ONE, TWO, MULT_ASSOC] \\
+             RW_TAC real_ss [extreal_mul_def, extreal_of_num_def]) >> Rewr' \\
+        `0 < e pow 2` by PROVE_TAC [pow_pos_lt] \\
+         Know `0 < &SUC n pow 2`
+         >- (MATCH_MP_TAC pow_pos_lt \\
+             RW_TAC real_ss [extreal_of_num_def, extreal_lt_eq]) >> DISCH_TAC \\
+        `e pow 2 <> 0 /\ &SUC n pow 2 <> 0` by METIS_TAC [lt_imp_ne] \\
+         ASM_SIMP_TAC real_ss [inv_mul] \\
+         METIS_TAC [mul_comm, mul_assoc]) >> Rewr' \\
+     Q.ABBREV_TAC `f = \n. inv (&SUC n pow 2)` \\
+     Know `0 <= suminf f`
+     >- (MATCH_MP_TAC ext_suminf_pos \\
+         RW_TAC std_ss [Abbr `f`] \\
+         MATCH_MP_TAC le_inv \\
+         MATCH_MP_TAC pow_pos_lt \\
+         RW_TAC real_ss [extreal_of_num_def, extreal_lt_eq]) >> DISCH_TAC \\
+     Know `suminf (\n. inv (e pow 2) * M * f n) = inv (e pow 2) * M * suminf f`
+     >- (MATCH_MP_TAC ext_suminf_cmul \\
+         CONJ_TAC >- (MATCH_MP_TAC le_mul >> art [] \\
+                      MATCH_MP_TAC le_inv \\
+                      MATCH_MP_TAC pow_pos_lt >> art []) \\
+         RW_TAC std_ss [Abbr `f`] \\
+         MATCH_MP_TAC le_inv \\
+         MATCH_MP_TAC pow_pos_lt \\
+         RW_TAC real_ss [extreal_of_num_def, extreal_lt_eq]) >> Rewr' \\
+    `suminf f <> NegInf` by METIS_TAC [pos_not_neginf] \\
+     Know `suminf f <> PosInf`
+     >- (Q.UNABBREV_TAC `f` >> REWRITE_TAC [lt_infty] \\
+         REWRITE_TAC [harmonic_series_pow_2]) >> DISCH_TAC \\
+     REWRITE_TAC [GSYM lt_infty] \\
+     Know `inv (e pow 2) <> PosInf /\ inv (e pow 2) <> NegInf`
+     >- (MATCH_MP_TAC inv_not_infty \\
+         Suff `0 < e pow 2` >- METIS_TAC [lt_imp_ne] \\
+         MATCH_MP_TAC pow_pos_lt >> art []) >> STRIP_TAC \\
+    `?a. inv (e pow 2) = Normal a` by METIS_TAC [extreal_cases] \\
+    `?b. M = Normal b` by METIS_TAC [extreal_cases] \\
+    `?c. suminf f = Normal c` by METIS_TAC [extreal_cases] \\
+     ASM_SIMP_TAC std_ss [extreal_mul_def, extreal_not_infty])
+ >> Q.UNABBREV_TAC `E` >> BETA_TAC
+ >> Know `!e n x. &(SUC n ** 2) * e < abs (S (SUC n ** 2) x) <=>
+                  e < abs (S (SUC n ** 2) x / &(SUC n ** 2))`
+ >- (rpt GEN_TAC \\
+     Know `abs (S (SUC n ** 2) x / &(SUC n ** 2)) =
+           abs (S (SUC n ** 2) x) / abs &(SUC n ** 2)`
+     >- (MATCH_MP_TAC abs_div >> art [] \\
+         RW_TAC real_ss [extreal_of_num_def, extreal_11]) >> Rewr' \\
+     Know `abs (&(SUC n ** 2)) = &(SUC n ** 2)`
+     >- (REWRITE_TAC [abs_refl] \\
+         RW_TAC real_ss [extreal_of_num_def, extreal_le_eq]) >> Rewr' \\
+    `0 < &(SUC n ** 2)` by RW_TAC real_ss [extreal_of_num_def, extreal_lt_eq] \\
+    `&(SUC n ** 2) <> PosInf` by METIS_TAC [num_not_infty] \\
+     Know `e < abs (S (SUC n ** 2) x) / &(SUC n ** 2) <=>
+           e * &(SUC n ** 2) <
+           abs (S (SUC n ** 2) x) / &(SUC n ** 2) * &(SUC n ** 2)`
+     >- (MATCH_MP_TAC EQ_SYM \\
+         MATCH_MP_TAC lt_rmul >> art []) >> Rewr' \\
+    `&(SUC n ** 2) <> 0` by METIS_TAC [lt_imp_ne] \\
+    `&(SUC n ** 2) <> NegInf` by METIS_TAC [num_not_infty] \\
+    `?r. &(SUC n ** 2) = Normal r` by METIS_TAC [extreal_cases] \\
+    `r <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] \\
+     Q.PAT_X_ASSUM `_ = Normal r` (ONCE_REWRITE_TAC o wrap) \\
+     Know `abs (S (SUC n ** 2) x) / Normal r * Normal r = abs (S (SUC n ** 2) x)`
+     >- (MATCH_MP_TAC EQ_SYM \\
+         MATCH_MP_TAC div_mul_refl >> art []) >> Rewr' \\
+     REWRITE_TAC [Once mul_comm]) >> Rewr'
+ (* applying converge_AE_alt_limsup *)
+ >> Q.ABBREV_TAC `Z = \n x. S (SUC n ** 2) x / &(SUC n ** 2)`
+ >> `!n x. S (SUC n ** 2) x / &(SUC n ** 2) = Z n x`
+        by METIS_TAC [] >> POP_ORW
+ >> Q.PAT_X_ASSUM `!n e. 0 < n /\ 0 < e /\ e <> PosInf ==> P` K_TAC
+ >> DISCH_TAC
+ >> Know `!n. real_random_variable (Z n) p`
+ >- (GEN_TAC \\
+     SIMP_TAC std_ss [real_random_variable_def, random_variable_def, Abbr `Z`] \\
+    `0 < &(SUC n ** 2)` by RW_TAC real_ss [extreal_of_num_def, extreal_lt_eq] \\
+    `&(SUC n ** 2) <> 0` by METIS_TAC [lt_imp_ne] \\
+    `&(SUC n ** 2) <> PosInf` by METIS_TAC [num_not_infty] \\
+    `&(SUC n ** 2) <> NegInf` by METIS_TAC [num_not_infty] \\
+    `?r. &(SUC n ** 2) = Normal r` by METIS_TAC [extreal_cases] \\
+    `r <> 0` by METIS_TAC [extreal_of_num_def, extreal_11] \\
+     Q.PAT_X_ASSUM `_ = Normal r` (ONCE_REWRITE_TAC o wrap) \\
+    `!z. z / Normal r = z * inv (Normal r)` by METIS_TAC [extreal_div_def] \\
+     POP_ORW \\
+    `inv (Normal r) = Normal (inv r)` by METIS_TAC [extreal_inv_def] >> POP_ORW \\
+     reverse CONJ_TAC
+     >- (GEN_TAC \\
+        `?a. S (SUC n ** 2) x = Normal a` by METIS_TAC [extreal_cases] >> POP_ORW \\
+         rw [extreal_mul_def, extreal_not_infty]) \\
+     ONCE_REWRITE_TAC [mul_comm] \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL \\
+     qexistsl_tac [`S (SUC n ** 2)`, `inv r`] \\
+     fs [real_random_variable_def, random_variable_def, p_space_def, events_def,
+         prob_space_def, measure_space_def, space_def]) >> DISCH_TAC
+ >> Know `(Z --> (\x. 0)) (almost_everywhere p)`
+ >- (MP_TAC (SIMP_RULE std_ss [sub_rzero]
+                       (Q.SPECL [`p`, `Z`, `\x. 0`] converge_AE_alt_limsup)) \\
+    `real_random_variable (\x. 0) p` by PROVE_TAC [real_random_variable_zero] \\
+     RW_TAC std_ss []) >> DISCH_TAC
+ >> Q.PAT_X_ASSUM `!e. 0 < e /\ e <> PosInf ==> P` K_TAC
+ (* preparing for "method of subsequences" *)
+ >> Q.ABBREV_TAC `N = \n. {k | n ** 2 <= k /\ k < SUC n ** 2}`
+ >> Know `!n m. FINITE {k | n ** 2 <= k /\ k < m}`
+ >- (rpt GEN_TAC \\
+     irule SUBSET_FINITE >> Q.EXISTS_TAC `count m` \\
+     rw [FINITE_COUNT, count_def, SUBSET_DEF]) >> DISCH_TAC
+ >> `!n. FINITE (N n)` by (RW_TAC std_ss [Abbr `N`])
+ >> Q.ABBREV_TAC `d = \n k x. abs (S k x - S (&(n ** 2)) x)`
+ >> Know `!n k x. d n k x <> PosInf /\ d n k x <> NegInf`
+ >- (rpt GEN_TAC >> SIMP_TAC std_ss [Abbr `d`] \\
+    `?a. S k x = Normal a` by METIS_TAC [extreal_cases] \\
+    `?b. S (n ** 2) x = Normal b` by METIS_TAC [extreal_cases] \\
+     ASM_SIMP_TAC std_ss [extreal_sub_def, extreal_abs_def,
+                          extreal_not_infty]) >> DISCH_TAC
+ >> Q.ABBREV_TAC `D = \n x. sup (IMAGE (\k. d n k x) (N n))`
+ (* NOTE: for different x, the maximal k may be different *)
+ >> Know `!n x. ?k. n ** 2 <= k /\ k < SUC n ** 2 /\ D n x = d n k x`
+ >- (rpt GEN_TAC \\
+     Know `D n x IN (IMAGE (\k. d n k x) {k | n ** 2 <= k /\ k < SUC n ** 2})`
+     >- (RW_TAC std_ss [Abbr `D`, Abbr `N`] \\
+         MATCH_MP_TAC sup_maximal \\
+         reverse CONJ_TAC
+         >- (rw [Once EXTENSION, NOT_IN_EMPTY, IN_IMAGE] \\
+             Q.EXISTS_TAC `n ** 2` >> rw []) \\
+         MATCH_MP_TAC IMAGE_FINITE >> art []) \\
+     rw [IN_IMAGE] >> Q.EXISTS_TAC `k` >> art []) >> DISCH_TAC
+ (* now k becomes a function f of n and x, and from now on the original
+    definition of `d` is not needed. *)
+ >> POP_ASSUM (STRIP_ASSUME_TAC o (SIMP_RULE std_ss [SKOLEM_THM]))
+ (* HARD: now finding the upper bound of E[D(n)^2] *)
+ >> Know `!n. expectation p (\x. D n x pow 2) <=
+              SIGMA (\k. expectation p (\x. (d n k x) pow 2)) (N n)`
+ >- (GEN_TAC >> art [expectation_def] \\
+  (* Here we have to prove:
+
+     integral p (\x. (d n (f n x) x) pow 2) <=
+       SIGMA (\k. integral p (\x. (d n k x) pow 2))
+             {k | n ** 2 <= k /\ k < (SUC n) ** 2}
+
+     The tricky part is, we cannot just pick one element from the RHS in SIGMA
+     (which equals LHS) and prove the inequality by showing all other elements
+     are non-negative, because the `k` (= f n x) at LHS is a function of x, i.e.
+     for each point in the integration the corresponding k is jumping. The
+     solution is to put SIGMA inside the integral first (by integral_sum).
+   *)
+     Know `!k.       integral p (\x. (d n k x) pow 2) =
+              pos_fn_integral p (\x. (d n k x) pow 2)`
+     >- (GEN_TAC >> MATCH_MP_TAC integral_pos_fn \\
+         fs [le_pow2, prob_space_def]) >> Rewr' \\
+     Know `       integral p (\x. (d n (f n x) x) pow 2) =
+           pos_fn_integral p (\x. (d n (f n x) x) pow 2)`
+     >- (MATCH_MP_TAC integral_pos_fn >> fs [le_pow2, prob_space_def]) >> Rewr' \\
+     Know `SIGMA (\k. pos_fn_integral p ((\k x. d n k x pow 2) k)) (N n) =
+           pos_fn_integral p (\x. SIGMA (\k. (\k x. d n k x pow 2) k x) (N n))`
+     >- (MATCH_MP_TAC EQ_SYM \\
+         MATCH_MP_TAC pos_fn_integral_sum \\
+         fs [prob_space_def, p_space_def, le_pow2, real_random_variable_def,
+             random_variable_def, events_def] \\
+         RW_TAC set_ss [Abbr `N`, Abbr `d`, abs_pow2] \\
+         Know `DISJOINT {k | n ** 2 <= k /\ k < i} (count (n ** 2))`
+         >- (RW_TAC set_ss [DISJOINT_ALT, IN_COUNT] >> rw []) >> DISCH_TAC \\
+         Know `count i = {k | n ** 2 <= k /\ k < i} UNION (count (n ** 2))`
+         >- (RW_TAC set_ss [Once EXTENSION, IN_COUNT] >> rw []) >> Rewr' \\
+         Know `!x. SIGMA (\i. X i x) ({k | n ** 2 <= k /\ k < i} UNION (count (n ** 2))) =
+                   SIGMA (\i. X i x) {k | n ** 2 <= k /\ k < i} +
+                   SIGMA (\i. X i x) (count (n ** 2))`
+         >- (GEN_TAC \\
+             irule EXTREAL_SUM_IMAGE_DISJOINT_UNION >> rw [FINITE_COUNT]) >> Rewr' \\
+         Know `!x. SIGMA (\i. X i x) (count (n ** 2)) <> PosInf`
+         >- (GEN_TAC >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF \\
+             rw [FINITE_COUNT]) >> DISCH_TAC \\
+         Know `!x. SIGMA (\i. X i x) (count (n ** 2)) <> NegInf`
+         >- (GEN_TAC >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF \\
+             rw [FINITE_COUNT]) >> DISCH_TAC \\
+         Know `!x. SIGMA (\i. X i x) {k | n ** 2 <= k /\ k < i} +
+                   SIGMA (\i. X i x) (count (n ** 2)) -
+                   SIGMA (\i. X i x) (count (n ** 2)) =
+                   SIGMA (\i. X i x) {k | n ** 2 <= k /\ k < i}`
+         >- (GEN_TAC >> MATCH_MP_TAC add_sub >> art []) >> Rewr' \\
+         HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_POW \\
+         CONJ_TAC >- fs [measure_space_def] \\
+         reverse CONJ_TAC
+         >- (RW_TAC std_ss [space_def] >| (* 2 subgoals *)
+             [ (* goal 1 (of 2) *)
+               MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF \\
+               ASM_SIMP_TAC set_ss [],
+               (* goal 2 (of 2) *)
+               MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF \\
+               ASM_SIMP_TAC set_ss [] ]) \\
+         MATCH_MP_TAC (INST_TYPE [``:'b`` |-> ``:num``] IN_MEASURABLE_BOREL_SUM) \\
+         qexistsl_tac [`X`, `{k | n ** 2 <= k /\ k < i}`] \\
+         fs [space_def, measure_space_def]) >> BETA_TAC >> Rewr' \\
+     MATCH_MP_TAC pos_fn_integral_mono \\
+     RW_TAC std_ss [le_pow2] \\
+    `DISJOINT {f n x} (N n DELETE (f n x))` by SET_TAC [] \\
+     Know `{f n x} UNION (N n DELETE (f n x)) = N n`
+     >- (Suff `f n x IN (N n)` >- SET_TAC [] \\
+         RW_TAC set_ss [Abbr `N`]) >> DISCH_TAC \\
+     Know `SIGMA (\k. (d n k x) pow 2) ({f n x} UNION (N n DELETE (f n x))) =
+           SIGMA (\k. (d n k x) pow 2) {f n x} +
+           SIGMA (\k. (d n k x) pow 2) (N n DELETE (f n x))`
+     >- (irule EXTREAL_SUM_IMAGE_DISJOINT_UNION >> fs [FINITE_SING] \\
+         DISJ1_TAC >> RW_TAC std_ss [] \\ (* 2 subgoals, same tactics *)
+         (MATCH_MP_TAC pos_not_neginf >> rw [le_pow2])) >> POP_ORW >> Rewr' \\
+     SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_SING] \\
+     MATCH_MP_TAC le_addr_imp \\
+     MATCH_MP_TAC EXTREAL_SUM_IMAGE_POS >> fs [le_pow2]) >> DISCH_TAC
+ >> Know `!n. expectation p (\x. D n x pow 2) <=
+              SIGMA (\k. expectation p (\x. (d n (SUC n ** 2) x) pow 2)) (N n)`
+ >- (GEN_TAC >> MATCH_MP_TAC le_trans \\
+     Q.EXISTS_TAC `SIGMA (\k. expectation p (\x. (d n k x) pow 2)) (N n)` \\
+     POP_ASSUM (REWRITE_TAC o wrap) \\
+     irule EXTREAL_SUM_IMAGE_MONO >> art [] \\
+     reverse CONJ_TAC
+     >- (DISJ1_TAC >> GEN_TAC >> DISCH_TAC \\
+         RW_TAC std_ss [expectation_def] \\ (* 2 subgoals, same tactics *)
+         (MATCH_MP_TAC pos_not_neginf \\
+          MATCH_MP_TAC integral_pos >> fs [prob_space_def, le_pow2])) \\
+     RW_TAC set_ss [Abbr `N`, Abbr `d`, abs_pow2] \\
+     rename1 `n ** 2 <= k` \\
+     Know `count k = {j | n ** 2 <= j /\ j < k} UNION (count (n ** 2))`
+     >- (RW_TAC set_ss [Once EXTENSION, IN_COUNT] >> rw []) >> Rewr' \\
+     Know `DISJOINT {j | n ** 2 <= j /\ j < k} (count (n ** 2))`
+     >- (RW_TAC set_ss [DISJOINT_ALT, IN_COUNT] >> rw []) >> DISCH_TAC \\
+     Know `count (SUC n ** 2) = {j | n ** 2 <= j /\ j < SUC n ** 2} UNION (count (n ** 2))`
+     >- (RW_TAC set_ss [Once EXTENSION, IN_COUNT] >> rw []) >> Rewr' \\
+     Know `DISJOINT {j | n ** 2 <= j /\ j < SUC n ** 2} (count (n ** 2))`
+     >- (RW_TAC set_ss [DISJOINT_ALT, IN_COUNT] >> rw []) >> DISCH_TAC \\
+     FULL_SIMP_TAC std_ss [real_random_variable_def] \\
+     Know `!x. SIGMA (\i. X i x) ({j | n ** 2 <= j /\ j < k} UNION (count (n ** 2))) =
+               SIGMA (\i. X i x) {j | n ** 2 <= j /\ j < k} +
+               SIGMA (\i. X i x) (count (n ** 2))`
+     >- (GEN_TAC >> irule EXTREAL_SUM_IMAGE_DISJOINT_UNION \\
+         rw [FINITE_SING, FINITE_COUNT]) >> Rewr' \\
+     Know `!x. SIGMA (\i. X i x)
+                     ({j | n ** 2 <= j /\ j < SUC n ** 2} UNION (count (n ** 2))) =
+               SIGMA (\i. X i x) {j | n ** 2 <= j /\ j < SUC n ** 2} +
+               SIGMA (\i. X i x) (count (n ** 2))`
+     >- (GEN_TAC >> irule EXTREAL_SUM_IMAGE_DISJOINT_UNION \\
+         fs [FINITE_SING, FINITE_COUNT]) >> Rewr' \\
+     Know `!x. SIGMA (\i. X i x) (count (n ** 2)) <> PosInf`
+     >- (GEN_TAC >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF \\
+         rw [FINITE_COUNT]) >> DISCH_TAC \\
+     Know `!x. SIGMA (\i. X i x) (count (n ** 2)) <> NegInf`
+     >- (GEN_TAC >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF \\
+         rw [FINITE_COUNT]) >> DISCH_TAC \\
+     rw [add_sub] \\
+     (* now converting LHS and RHS to variances *)
+     Know `!m x. SIGMA (\i. X i x) {j | n ** 2 <= j /\ j < m} =
+                 (\x. SIGMA (\i. X i x) {j | n ** 2 <= j /\ j < m}) x -
+                 expectation p (\x. SIGMA (\i. X i x) {j | n ** 2 <= j /\ j < m})`
+     >- (rpt GEN_TAC \\
+         Suff `expectation p (\x. SIGMA (\i. X i x) {j | n ** 2 <= j /\ j < m}) = 0`
+         >- rw [sub_rzero] \\
+         REWRITE_TAC [expectation_def] \\
+         Know `integral p (\x. SIGMA (\i. X i x) {j | n ** 2 <= j /\ j < m}) =
+               SIGMA (\i. integral p (X i)) {j | n ** 2 <= j /\ j < m}`
+         >- (MATCH_MP_TAC integral_sum \\
+             fs [prob_space_def, expectation_def]) >> Rewr' \\
+         fs [expectation_def] \\
+         MATCH_MP_TAC EXTREAL_SUM_IMAGE_ZERO >> art []) >> Rewr' \\
+     REWRITE_TAC [GSYM variance_alt] \\
+     Know `!m. variance p (\x. SIGMA (\i. X i x) {j | n ** 2 <= j /\ j < m}) =
+               SIGMA (\i. variance p (X i)) {j | n ** 2 <= j /\ j < m}`
+     >- (GEN_TAC >> MATCH_MP_TAC variance_sum \\
+         rw [uncorrelated_vars_def, real_random_variable_def] \\
+         METIS_TAC [REWRITE_RULE [real_random_variable_def]
+                                 uncorrelated_orthogonal]) >> Rewr' \\
+     MATCH_MP_TAC EXTREAL_SUM_IMAGE_MONO_SET \\
+     ASM_SIMP_TAC std_ss [variance_pos] \\
+     RW_TAC set_ss [SUBSET_DEF] \\
+     MATCH_MP_TAC LESS_TRANS >> Q.EXISTS_TAC `k` >> art [])
+ >> POP_ASSUM K_TAC
+ >> Know `!n k. expectation p (\x. (d n (SUC n ** 2) x) pow 2) =
+                variance p (\x. SIGMA (\i. X i x) {j | n ** 2 <= j /\ j < SUC n ** 2})`
+ >- (RW_TAC std_ss [Abbr `d`, variance_alt, abs_pow2] \\
+     Know `count (SUC n ** 2) = (N n) UNION (count (n ** 2))`
+     >- (RW_TAC set_ss [Abbr `N`, Once EXTENSION, IN_COUNT] \\
+         EQ_TAC >> RW_TAC arith_ss [] \\
+         MATCH_MP_TAC LESS_TRANS >> Q.EXISTS_TAC `n ** 2` >> rw []) >> Rewr' \\
+     Know `DISJOINT (N n) (count (n ** 2))`
+     >- (RW_TAC set_ss [Abbr `N`, DISJOINT_ALT, IN_COUNT] >> rw []) >> DISCH_TAC \\
+     FULL_SIMP_TAC std_ss [real_random_variable_def] \\
+     Know `!x. SIGMA (\i. X i x) (N n UNION (count (n ** 2))) =
+               SIGMA (\i. X i x) (N n) + SIGMA (\i. X i x) (count (n ** 2))`
+     >- (GEN_TAC >> irule EXTREAL_SUM_IMAGE_DISJOINT_UNION \\
+         fs [FINITE_SING, FINITE_COUNT]) >> Rewr' \\
+     Know `!x. SIGMA (\i. X i x) (count (n ** 2)) <> PosInf`
+     >- (GEN_TAC >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF \\
+         rw [FINITE_COUNT]) >> DISCH_TAC \\
+     Know `!x. SIGMA (\i. X i x) (count (n ** 2)) <> NegInf`
+     >- (GEN_TAC >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF \\
+         rw [FINITE_COUNT]) >> DISCH_TAC \\
+     rw [add_sub] \\
+     Suff `expectation p (\x. SIGMA (\i. X i x) (N n)) = 0` >- rw [sub_rzero] \\
+     RW_TAC std_ss [expectation_def, Abbr `N`] \\
+     Know `integral p (\x. SIGMA (\i. X i x) {j | n ** 2 <= j /\ j < SUC n ** 2}) =
+                SIGMA (\i. integral p (X i)) {j | n ** 2 <= j /\ j < SUC n ** 2}`
+     >- (MATCH_MP_TAC integral_sum \\
+         fs [prob_space_def, expectation_def]) >> Rewr' \\
+     FULL_SIMP_TAC std_ss [expectation_def] \\
+     MATCH_MP_TAC EXTREAL_SUM_IMAGE_ZERO >> art []) >> Rewr'
+ >> Know `!n. SIGMA (\k. variance p (\x. SIGMA (\i. X i x)
+                                         {j | n ** 2 <= j /\ j < SUC n ** 2})) (N n) =
+              &CARD (N n) * (variance p (\x. SIGMA (\i. X i x)
+                                             {j | n ** 2 <= j /\ j < SUC n ** 2}))`
+ >- (GEN_TAC >> irule EXTREAL_SUM_IMAGE_FINITE_CONST \\
+     ASM_SIMP_TAC std_ss [] \\
+     DISJ1_TAC >> MATCH_MP_TAC pos_not_neginf \\
+     MATCH_MP_TAC variance_pos >> art []) >> Rewr'
+ >> Know `!n. variance p (\x. SIGMA (\i. X i x) {j | n ** 2 <= j /\ j < SUC n ** 2}) =
+                   SIGMA (\i. variance p (X i)) (N n)`
+ >- (RW_TAC std_ss [Abbr `N`] >> MATCH_MP_TAC variance_sum \\
+     rw [uncorrelated_vars_def, real_random_variable_def] \\
+     METIS_TAC [uncorrelated_orthogonal]) >> Rewr'
+ >> DISCH_TAC
+ >> Know `!n. expectation p (\x. (D n x) pow 2) <= &CARD (N n) * SIGMA (\i. M) (N n)`
+ >- (GEN_TAC >> MATCH_MP_TAC le_trans \\
+     Q.EXISTS_TAC `&CARD (N n) * (SIGMA (\i. variance p (X i)) (N n))` >> art [] \\
+     MATCH_MP_TAC le_lmul_imp \\
+     CONJ_TAC >- RW_TAC real_ss [extreal_of_num_def, extreal_le_eq] \\
+     irule EXTREAL_SUM_IMAGE_MONO >> ASM_SIMP_TAC std_ss [] \\
+     DISJ1_TAC >> GEN_TAC >> DISCH_TAC \\
+     MATCH_MP_TAC pos_not_neginf \\
+     MATCH_MP_TAC variance_pos >> art [])
+ >> POP_ASSUM K_TAC
+ >> Know `!n. SIGMA (\i. M) (N n) = &CARD (N n) * M`
+ >- (GEN_TAC >> irule EXTREAL_SUM_IMAGE_FINITE_CONST \\
+     ASM_SIMP_TAC std_ss []) >> Rewr'
+ >> REWRITE_TAC [mul_assoc, GSYM pow_2]
+ >> Know `!n. CARD (N n) = 2 * n + 1`
+ >- (RW_TAC std_ss [Abbr `N`] \\
+     Know `{k | n ** 2 <= k /\ k < SUC n ** 2} = (count (SUC n ** 2)) DIFF (count (n ** 2))`
+     >- (RW_TAC set_ss [Once EXTENSION] >> rw []) >> Rewr' \\
+     Know `CARD (count (SUC n ** 2) DIFF (count (n ** 2))) =
+           CARD (count (SUC n ** 2)) - CARD (count (SUC n ** 2) INTER (count (n ** 2)))`
+     >- (MATCH_MP_TAC CARD_DIFF_EQN >> REWRITE_TAC [FINITE_COUNT]) >> Rewr' \\
+     Know `count (SUC n ** 2) INTER (count (n ** 2)) = count (n ** 2)`
+     >- (RW_TAC set_ss [Once EXTENSION, IN_COUNT] \\
+         EQ_TAC >> RW_TAC arith_ss [] \\
+         MATCH_MP_TAC LESS_TRANS >> Q.EXISTS_TAC `n ** 2` >> rw []) >> Rewr' \\
+     REWRITE_TAC [CARD_COUNT, ADD1, SUM_SQUARED] >> rw []) >> Rewr'
+ >> DISCH_TAC
+ (* stage work, now prove the AE convergence of D(n)/n^2 *)
+ >> Q.ABBREV_TAC `W = (\n x. D (SUC n) x / &(SUC n ** 2))`
+ >> Know `!n. real_random_variable (W n) p`
+ >- (GEN_TAC \\
+     SIMP_TAC std_ss [Abbr `W`, real_random_variable_def,
+                      random_variable_def, p_space_def, events_def] \\
+     reverse CONJ_TAC
+     >- (GEN_TAC >> art [extreal_of_num_def] \\
+        `?r. d (SUC n) (f (SUC n) x) x = Normal r` by METIS_TAC [extreal_cases] \\
+         POP_ORW \\
+         Suff `&(SUC n ** 2) <> (0 :real)`
+         >- METIS_TAC [extreal_div_eq, extreal_not_infty] \\
+         rw []) \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL \\
+     qexistsl_tac [`D (SUC n)`, `inv (&(SUC n ** 2))`] \\
+     fs [prob_space_def, measure_space_def, p_space_def, events_def, space_def] \\
+     reverse CONJ_TAC
+     >- (RW_TAC std_ss [extreal_of_num_def] \\
+        `&(SUC n ** 2) <> (0 :real)` by RW_TAC real_ss [] \\
+         ASM_SIMP_TAC real_ss [GSYM extreal_inv_def] \\
+         MATCH_MP_TAC div_eq_mul_linv \\
+         rw [extreal_of_num_def, extreal_lt_eq]) \\
+     NTAC 2 (POP_ASSUM K_TAC) \\
+     Q.UNABBREV_TAC `D` >> BETA_TAC \\
+     irule (INST_TYPE [``:'b`` |-> ``:num``] IN_MEASURABLE_BOREL_MAXIMAL) >> art [] \\
+     qexistsl_tac [`N (SUC n)`, `d (SUC n)`] \\
+     ASM_SIMP_TAC std_ss [] \\
+     Q.X_GEN_TAC `k` >> Q.UNABBREV_TAC `d` >> BETA_TAC \\
+     POP_ASSUM K_TAC (* clean up *) \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS \\
+     Q.EXISTS_TAC `\x. S k x - S (SUC n ** 2) x` \\
+     CONJ_TAC >- art [] \\
+     reverse CONJ_TAC >- rw [space_def] \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
+     qexistsl_tac [`S k`, `S (SUC n ** 2)`] \\
+     fs [space_def, real_random_variable_def, random_variable_def,
+         p_space_def, events_def]) >> DISCH_TAC
+ >> Know `!n. finite_second_moments p (W n)`
+ >- (RW_TAC std_ss [finite_second_moments_literally, expectation_def] \\
+     Q.UNABBREV_TAC `W` >> BETA_TAC \\
+     Know `!x. D (SUC n) x / &(SUC n ** 2) = inv (&(SUC n ** 2)) * D (SUC n) x`
+     >- (GEN_TAC \\
+         MATCH_MP_TAC div_eq_mul_linv >> art [] \\
+         RW_TAC real_ss [extreal_of_num_def, extreal_lt_eq]) >> Rewr' \\
+     Know `       integral p (\x. (inv (&(SUC n ** 2)) * D (SUC n) x) pow 2) =
+           pos_fn_integral p (\x. (inv (&(SUC n ** 2)) * D (SUC n) x) pow 2)`
+     >- (MATCH_MP_TAC integral_pos_fn \\
+         FULL_SIMP_TAC std_ss [le_pow2, prob_space_def]) >> Rewr' \\
+     REWRITE_TAC [pow_mul, extreal_of_num_def] \\
+     Know `(inv (Normal &(SUC n ** 2))) pow 2 = Normal ((inv &(SUC n ** 2)) pow 2)`
+     >- (`&(SUC n ** 2) <> (0 :real)` by RW_TAC real_ss [] \\
+         ASM_SIMP_TAC std_ss [extreal_inv_eq, extreal_pow_def]) >> Rewr' \\
+     Know `pos_fn_integral p
+              (\x. Normal ((inv &(SUC n ** 2)) pow 2) * (\x. (D (SUC n) x) pow 2) x) =
+           Normal ((inv &(SUC n ** 2)) pow 2) * pos_fn_integral p (\x. (D (SUC n) x) pow 2)`
+     >- (MATCH_MP_TAC pos_fn_integral_cmul \\
+         fs [prob_space_def, le_pow2]) >> BETA_TAC >> Rewr' \\
+     Q.ABBREV_TAC `c = Normal ((inv &(SUC n ** 2)) pow 2)` \\
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC `c * (&(2 * SUC n + 1) pow 2) * M` \\
+     reverse CONJ_TAC
+     >- (Q.UNABBREV_TAC `c` \\
+        `?r. M = Normal r` by METIS_TAC [extreal_cases] \\
+         ASM_SIMP_TAC std_ss [extreal_pow_def, extreal_of_num_def,
+                              lt_infty, extreal_mul_def]) \\
+     ONCE_REWRITE_TAC [GSYM mul_assoc] \\
+     MATCH_MP_TAC le_lmul_imp \\
+     CONJ_TAC >- (Q.UNABBREV_TAC `c` \\
+                  rw [extreal_of_num_def, extreal_le_eq, le_pow2]) \\
+     Suff `pos_fn_integral p (\x. (D (SUC n) x) pow 2) =
+               expectation p (\x. (D (SUC n) x) pow 2)`
+     >- (Rewr' >> art []) \\
+     REWRITE_TAC [expectation_def, Once EQ_SYM_EQ] \\
+     MATCH_MP_TAC integral_pos_fn \\
+     FULL_SIMP_TAC std_ss [prob_space_def, le_pow2]) >> DISCH_TAC
+ >> Know `(W --> (\x. 0)) (almost_everywhere p)`
+ >- (`real_random_variable (\x. 0) p` by METIS_TAC [real_random_variable_zero] \\
+     RW_TAC std_ss [converge_AE_alt_limsup, sub_rzero] \\
+     MATCH_MP_TAC Borel_Cantelli_Lemma1 >> BETA_TAC >> art [] \\
+     STRONG_CONJ_TAC
+     >- (GEN_TAC \\
+        `{x | x IN p_space p /\ e < abs (W n x)} =
+         {x | e < abs (W n x)} INTER p_space p` by SET_TAC [] >> POP_ORW \\
+         REWRITE_TAC [lt_abs_bounds] \\
+        `{x | W n x < -e \/ e < W n x} INTER p_space p =
+         ({x | W n x < -e} INTER p_space p) UNION
+         ({x | e < W n x} INTER p_space p)` by SET_TAC [] >> POP_ORW \\
+         MATCH_MP_TAC EVENTS_UNION \\
+         fs [events_def, p_space_def, real_random_variable_def,
+             random_variable_def] \\
+         METIS_TAC [IN_MEASURABLE_BOREL_ALL_MEASURE]) >> DISCH_TAC \\
+     Know `!n. {x | x IN p_space p /\ e <= abs (W n x)} IN events p`
+     >- (GEN_TAC \\
+        `{x | x IN p_space p /\ e <= abs (W n x)} =
+         {x | e <= abs (W n x)} INTER p_space p` by SET_TAC [] >> POP_ORW \\
+         REWRITE_TAC [le_abs_bounds] \\
+        `{x | W n x <= -e \/ e <= W n x} INTER p_space p =
+         ({x | W n x <= -e} INTER p_space p) UNION
+         ({x | e <= W n x} INTER p_space p)` by SET_TAC [] >> POP_ORW \\
+         MATCH_MP_TAC EVENTS_UNION \\
+         fs [events_def, p_space_def, real_random_variable_def,
+             random_variable_def] \\
+         METIS_TAC [IN_MEASURABLE_BOREL_ALL_MEASURE]) >> DISCH_TAC \\
+     SIMP_TAC std_ss [o_DEF] \\
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC `suminf (\n. prob p {x | x IN p_space p /\ e <= abs (W n x)})` \\
+     CONJ_TAC >- (MATCH_MP_TAC ext_suminf_mono \\
+                  CONJ_TAC >- METIS_TAC [PROB_POSITIVE] \\
+                  RW_TAC std_ss [] \\
+                  MATCH_MP_TAC PROB_INCREASING >> art [] \\
+                  RW_TAC set_ss [SUBSET_DEF] \\
+                  MATCH_MP_TAC lt_imp_le >> art []) \\
+     Know `!n x. e <= abs (W n x) <=> e pow 2 <= abs ((\x. (W n x) pow 2) x)`
+     >- (rpt GEN_TAC >> BETA_TAC \\
+        `abs ((W n x) pow 2) = (abs (W n x)) pow 2`
+            by METIS_TAC [abs_refl, le_pow2, abs_pow2] >> POP_ORW \\
+         MATCH_MP_TAC pow_le_full >> rw [abs_pos] \\
+         MATCH_MP_TAC lt_imp_le >> art []) >> DISCH_TAC \\
+     (* applying prob_markov_ineq *)
+    `!n. {x | x IN p_space p /\ e <= abs (W n x)} =
+         {x | e <= abs (W n x)} INTER p_space p` by SET_TAC [] >> POP_ORW \\
+     ASM_REWRITE_TAC [] \\
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC `suminf (\n. inv (e pow 2) * expectation p (abs o (\x. (W n x) pow 2)))` \\
+     CONJ_TAC
+     >- (MATCH_MP_TAC ext_suminf_mono \\
+         CONJ_TAC >- (GEN_TAC \\
+                      POP_ASSUM (ONCE_REWRITE_TAC o wrap o GSYM) \\
+                      BETA_TAC >> MATCH_MP_TAC PROB_POSITIVE \\
+                      Suff `{x | e <= abs (W n x)} INTER p_space p =
+                            {x | x IN p_space p /\ e <= abs (W n x)}` >- rw [] \\
+                      SET_TAC []) \\
+         GEN_TAC >> BETA_TAC \\
+         HO_MATCH_MP_TAC prob_markov_ineq >> art [] \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC pow_pos_lt >> art []) \\
+         METIS_TAC [finite_second_moments_eq_integrable_square]) \\
+     SIMP_TAC std_ss [o_DEF] \\
+    `!n x. abs ((W n x) pow 2) = (W n x) pow 2`
+        by METIS_TAC [abs_refl, le_pow2] >> POP_ORW \\
+     NTAC 3 (POP_ASSUM K_TAC) \\
+     REWRITE_TAC [expectation_def] \\
+     Know `!n.    integral p (\x. (W n x) pow 2) =
+           pos_fn_integral p (\x. (W n x) pow 2)`
+     >- (GEN_TAC >> MATCH_MP_TAC integral_pos_fn \\
+         fs [prob_space_def, le_pow2]) >> Rewr' \\
+     Q.UNABBREV_TAC `W` >> BETA_TAC \\
+     Know `!n x. D (SUC n) x / &(SUC n ** 2) = inv (&(SUC n ** 2)) * D (SUC n) x`
+     >- (rpt GEN_TAC \\
+         MATCH_MP_TAC div_eq_mul_linv >> art [] \\
+         RW_TAC real_ss [extreal_of_num_def, extreal_lt_eq]) >> Rewr' \\
+     REWRITE_TAC [pow_mul, extreal_of_num_def] \\
+     Know `!n. (inv (Normal &(SUC n ** 2))) pow 2 = Normal ((inv &(SUC n ** 2)) pow 2)`
+     >- (GEN_TAC >> `&(SUC n ** 2) <> (0 :real)` by RW_TAC real_ss [] \\
+         ASM_SIMP_TAC std_ss [extreal_inv_eq, extreal_pow_def]) >> Rewr' \\
+     Know `!n. pos_fn_integral p
+                 (\x. Normal ((inv &(SUC n ** 2)) pow 2) * (\x. (D (SUC n) x) pow 2) x) =
+               Normal ((inv &(SUC n ** 2)) pow 2) *
+                 pos_fn_integral p (\x. (D (SUC n) x) pow 2)`
+     >- (GEN_TAC >> MATCH_MP_TAC pos_fn_integral_cmul \\
+         fs [prob_space_def, le_pow2]) >> BETA_TAC >> Rewr' \\
+     ONCE_REWRITE_TAC [mul_assoc] \\
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC `suminf (\n. inv (e pow 2) * Normal ((inv &(SUC n ** 2)) pow 2) *
+                               (&(2 * SUC n + 1)) pow 2 * M)` \\
+     CONJ_TAC
+     >- (MATCH_MP_TAC ext_suminf_mono >> BETA_TAC \\
+         Know `!n. 0 <= inv (e pow 2) * Normal ((inv &(SUC n ** 2)) pow 2)`
+         >- (GEN_TAC >> MATCH_MP_TAC le_mul \\
+             CONJ_TAC >- (MATCH_MP_TAC lt_imp_le \\
+                          MATCH_MP_TAC inv_pos' \\
+                          CONJ_TAC >- (MATCH_MP_TAC pow_pos_lt >> art []) \\
+                         `e <> NegInf` by METIS_TAC [pos_not_neginf, lt_imp_le] \\
+                          METIS_TAC [pow_not_infty]) \\
+             RW_TAC real_ss [extreal_of_num_def, extreal_le_eq, REAL_LE_POW2]) \\
+         DISCH_TAC \\
+         CONJ_TAC >- (GEN_TAC >> MATCH_MP_TAC le_mul >> art [] \\
+                      MATCH_MP_TAC pos_fn_integral_pos \\
+                      fs [prob_space_def, le_pow2]) \\
+         GEN_TAC \\
+         Q.ABBREV_TAC `z = inv (e pow 2) * Normal ((inv &(SUC n ** 2)) pow 2)` \\
+         ONCE_REWRITE_TAC [GSYM mul_assoc] \\
+         MATCH_MP_TAC le_lmul_imp \\
+         Q.UNABBREV_TAC `z` >> CONJ_TAC >- art [] \\
+         Suff `pos_fn_integral p (\x. (D (SUC n) x) pow 2) =
+                   expectation p (\x. (D (SUC n) x) pow 2)` >- (Rewr' >> art []) \\
+         REWRITE_TAC [expectation_def, Once EQ_SYM_EQ] \\
+         MATCH_MP_TAC integral_pos_fn >> fs [prob_space_def, le_pow2]) \\
+  (* now the dirty (ext)real arithmetics *)
+     Know `!n. Normal ((inv &(SUC n ** 2)) pow 2) = inv ((&SUC n) pow 4)`
+     >- (RW_TAC std_ss [extreal_of_num_def] \\
+        `&SUC n <> (0 :real)` by RW_TAC real_ss [] \\
+         ASM_SIMP_TAC std_ss [extreal_inv_eq, extreal_pow_def] \\
+         Know `(&SUC n) pow 4 <> (0 :real)`
+         >- (Suff `(0 :real) < (&SUC n) pow 4` >- rw [] \\
+             MATCH_MP_TAC REAL_POW_LT >> rw []) >> DISCH_TAC \\
+         ASM_SIMP_TAC std_ss [extreal_inv_eq, extreal_11] \\
+        `&(SUC n ** 2) :real = (&SUC n) pow 2` by METIS_TAC [REAL_OF_NUM_POW] >> POP_ORW \\
+         ASM_SIMP_TAC real_ss [POW_INV, REAL_POW_POW]) >> Rewr' \\
+     Q.ABBREV_TAC `z = \n. inv (e pow 2) * inv ((&n) pow 4)` \\
+    `!n. inv (e pow 2) * inv ((&SUC n) pow 4) = z (SUC n)` by METIS_TAC [] >> POP_ORW \\
+     Know `!n. 0 <= z (SUC n)`
+     >- (RW_TAC std_ss [Abbr `z`] \\
+         MATCH_MP_TAC le_mul \\
+         CONJ_TAC >- (MATCH_MP_TAC lt_imp_le >> MATCH_MP_TAC inv_pos' \\
+                      CONJ_TAC >- (MATCH_MP_TAC pow_pos_lt >> art []) \\
+                     `e <> NegInf` by METIS_TAC [pos_not_neginf, lt_imp_le] \\
+                      METIS_TAC [pow_not_infty]) \\
+         MATCH_MP_TAC lt_imp_le >> MATCH_MP_TAC inv_pos' \\
+         CONJ_TAC >- (MATCH_MP_TAC pow_pos_lt \\
+                      rw [extreal_of_num_def, extreal_lt_eq]) \\
+         SIMP_TAC std_ss [extreal_of_num_def, extreal_pow_def, extreal_not_infty]) \\
+     DISCH_TAC \\
+     MATCH_MP_TAC let_trans \\
+     Q.EXISTS_TAC `suminf (\n. z (SUC n) * ((3 * &SUC n) pow 2) * M)` \\
+     CONJ_TAC
+     >- (MATCH_MP_TAC ext_suminf_mono >> BETA_TAC \\
+         CONJ_TAC >- (GEN_TAC >> MATCH_MP_TAC le_mul >> art [] \\
+                      MATCH_MP_TAC le_mul >> art [le_pow2]) \\
+         GEN_TAC \\
+         MATCH_MP_TAC le_rmul_imp >> art [] \\
+         MATCH_MP_TAC le_lmul_imp >> art [] \\
+         MATCH_MP_TAC pow_le \\
+         rw [extreal_of_num_def, extreal_le_eq, extreal_mul_def]) \\
+     POP_ASSUM K_TAC \\
+     Q.UNABBREV_TAC `z` >> BETA_TAC \\
+  (* applying harmonic_series_pow_2 *)
+     Suff `!n. inv (e pow 2) * inv ((&SUC n) pow 4) * (3 * &SUC n) pow 2 * M =
+               inv (e pow 2) * M * 3 pow 2 * (\n. inv ((&SUC n) pow 2)) n`
+     >- (Rewr' \\
+         Know `suminf (\n. inv (e pow 2) * M * 3 pow 2 * (\n. inv ((&SUC n) pow 2)) n) =
+               inv (e pow 2) * M * 3 pow 2 * suminf (\n. inv ((&SUC n) pow 2))`
+         >- (MATCH_MP_TAC ext_suminf_cmul >> BETA_TAC \\
+             CONJ_TAC >- (MATCH_MP_TAC le_mul \\
+                          reverse CONJ_TAC >- (MATCH_MP_TAC pow_pos_le \\
+                                               rw [extreal_of_num_def,  extreal_le_eq]) \\
+                          MATCH_MP_TAC le_mul >> art [] \\
+                          MATCH_MP_TAC lt_imp_le >> MATCH_MP_TAC inv_pos' \\
+                          CONJ_TAC >- (MATCH_MP_TAC pow_pos_lt >> art []) \\
+                         `e <> NegInf` by METIS_TAC [pos_not_neginf, lt_imp_le] \\
+                          METIS_TAC [pow_not_infty]) \\
+             GEN_TAC >> MATCH_MP_TAC lt_imp_le >> MATCH_MP_TAC inv_pos' \\
+             CONJ_TAC >- (MATCH_MP_TAC pow_pos_lt \\
+                          rw [extreal_of_num_def, extreal_lt_eq]) \\
+             METIS_TAC [pow_not_infty, extreal_of_num_def, extreal_not_infty]) \\
+         Rewr' \\
+         Know `0 <= suminf (\n. inv ((&SUC n) pow 2))`
+         >- (MATCH_MP_TAC ext_suminf_pos >> RW_TAC std_ss [] \\
+             MATCH_MP_TAC lt_imp_le >> MATCH_MP_TAC inv_pos' \\
+             CONJ_TAC >- (MATCH_MP_TAC pow_pos_lt \\
+                          rw [extreal_of_num_def, extreal_lt_eq]) \\
+             METIS_TAC [pow_not_infty, extreal_of_num_def, extreal_not_infty]) \\
+         DISCH_TAC \\
+        `suminf (\n. inv ((&SUC n) pow 2)) <> NegInf` by METIS_TAC [pos_not_neginf] \\
+        `suminf (\n. inv ((&SUC n) pow 2)) <> PosInf`
+            by METIS_TAC [harmonic_series_pow_2, lt_infty] \\
+        `?r. suminf (\n. inv ((&SUC n) pow 2)) = Normal r`
+            by METIS_TAC [extreal_cases] >> POP_ORW \\
+        `?b. M = Normal b` by METIS_TAC [extreal_cases] >> POP_ORW \\
+        `e <> NegInf` by METIS_TAC [pos_not_neginf, lt_imp_le] \\
+        `?a. e = Normal a` by METIS_TAC [extreal_cases] \\
+         ASM_SIMP_TAC std_ss [GSYM lt_infty, extreal_of_num_def, extreal_pow_def] \\
+        `0 < a` by METIS_TAC [extreal_of_num_def, extreal_lt_eq] \\
+        `a pow 2 <> 0` by METIS_TAC [REAL_POW_LT, REAL_LT_IMP_NE] \\
+         ASM_SIMP_TAC std_ss [extreal_inv_eq, extreal_mul_def, extreal_not_infty]) \\
+     GEN_TAC >> BETA_TAC \\
+     REWRITE_TAC [GSYM mul_assoc] \\
+     Suff `inv ((&SUC n) pow 4) * ((3 * &SUC n) pow 2 * M) =
+           M * (3 pow 2 * inv ((&SUC n) pow 2))` >- RW_TAC std_ss [] \\
+     GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [mul_comm] \\
+     REWRITE_TAC [mul_assoc] \\
+     Suff `inv ((&SUC n) pow 4) * (3 * &SUC n) pow 2 =
+           3 pow 2 * inv ((&SUC n) pow 2)` >- RW_TAC std_ss [] \\
+     REWRITE_TAC [pow_mul] \\
+     GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [mul_comm] \\
+     REWRITE_TAC [GSYM mul_assoc] \\
+     Suff `(&SUC n) pow 2 * inv ((&SUC n) pow 4) = inv ((&SUC n) pow 2)` >- rw [] \\
+    `4 = 2 + (2 :num)` by RW_TAC arith_ss [] >> POP_ORW \\
+     REWRITE_TAC [pow_add] \\
+     Know `inv (&SUC n pow 2 * &SUC n pow 2) =
+           inv (&SUC n pow 2) * inv (&SUC n pow 2)`
+     >- (MATCH_MP_TAC inv_mul >> REWRITE_TAC [] \\
+         Suff `0 < (&SUC n) pow 2` >- METIS_TAC [lt_imp_ne] \\
+         MATCH_MP_TAC pow_pos_lt \\
+         RW_TAC real_ss [extreal_of_num_def, extreal_lt_eq]) >> Rewr' \\
+     REWRITE_TAC [mul_assoc] \\
+     Suff `(&SUC n) pow 2 * inv (&SUC n pow 2) = 1`
+     >- (Rewr' >> REWRITE_TAC [mul_lone]) \\
+     ONCE_REWRITE_TAC [mul_comm] \\
+     MATCH_MP_TAC mul_linv_pos \\
+     CONJ_TAC >- (MATCH_MP_TAC pow_pos_lt \\
+                  RW_TAC real_ss [extreal_of_num_def, extreal_lt_eq]) \\
+     REWRITE_TAC [extreal_of_num_def, extreal_pow_def, extreal_not_infty])
+ >> DISCH_TAC
+ (* pre-final stage *)
+ >> Know `!k x. abs (S (SUC k) x) / &SUC k <=
+               (abs (S (&(ROOT 2 (SUC k) ** 2)) x) + abs (D (&(ROOT 2 (SUC k))) x))
+                / &(ROOT 2 (SUC k) ** 2)`
+ >- (rpt GEN_TAC \\
+     Q.ABBREV_TAC `n = ROOT 2 (SUC k)` \\
+     Know `0 < n`
+     >- (Q.UNABBREV_TAC `n` \\
+         MATCH_MP_TAC LESS_LESS_EQ_TRANS \\
+         Q.EXISTS_TAC `1` >> RW_TAC arith_ss [] \\
+        `ROOT 2 1 = 1` by EVAL_TAC \\
+         POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM) \\
+         irule ROOT_LE_MONO >> RW_TAC arith_ss []) >> DISCH_TAC \\
+     MATCH_MP_TAC le_trans \\
+     Q.EXISTS_TAC `abs (S (SUC k) x) / &(n ** 2)` \\
+     CONJ_TAC
+     >- (Know `abs (S (SUC k) x) / &SUC k = inv (&SUC k) * abs (S (SUC k) x)`
+         >- (MATCH_MP_TAC div_eq_mul_linv \\
+             SIMP_TAC real_ss [extreal_of_num_def, extreal_lt_eq] \\
+             MATCH_MP_TAC abs_not_infty >> art []) >> Rewr' \\
+         Know `abs (S (SUC k) x) / &(n ** 2) = inv (&(n ** 2)) * abs (S (SUC k) x)`
+         >- (MATCH_MP_TAC div_eq_mul_linv \\
+             ONCE_REWRITE_TAC [CONJ_ASSOC] \\
+             CONJ_TAC >- (MATCH_MP_TAC abs_not_infty >> art []) \\
+             ASM_SIMP_TAC real_ss [extreal_of_num_def, extreal_lt_eq]) >> Rewr' \\
+         MATCH_MP_TAC le_rmul_imp >> REWRITE_TAC [abs_pos] \\
+         Know `inv (&SUC k) <= inv (&(n ** 2)) <=> &(n ** 2) <= &SUC k`
+         >- (MATCH_MP_TAC inv_le_antimono \\
+             RW_TAC real_ss [extreal_of_num_def, extreal_lt_eq]) >> Rewr' \\
+         SIMP_TAC real_ss [Abbr `n`, extreal_of_num_def, extreal_le_eq] \\
+         PROVE_TAC [SIMP_RULE arith_ss [] (Q.SPEC `2` ROOT)]) \\
+     Know `abs (S (SUC k) x) / &(n ** 2) = inv (&(n ** 2)) * abs (S (SUC k) x)`
+     >- (MATCH_MP_TAC div_eq_mul_linv \\
+         SIMP_TAC real_ss [extreal_of_num_def, extreal_lt_eq] \\
+         ONCE_REWRITE_TAC [CONJ_ASSOC] \\
+         reverse CONJ_TAC >- art [] \\
+         MATCH_MP_TAC abs_not_infty >> art []) >> Rewr' \\
+     Know `(abs (S (n ** 2) x) + abs (D n x)) / &(n ** 2) =
+           inv (&(n ** 2)) * (abs (S (n ** 2) x) + abs (D n x))`
+     >- (MATCH_MP_TAC div_eq_mul_linv \\
+         ONCE_REWRITE_TAC [CONJ_ASSOC] \\
+         reverse CONJ_TAC
+         >- (ASM_SIMP_TAC real_ss [extreal_of_num_def, extreal_lt_eq]) \\
+        `?r. S (n ** 2) x = Normal r` by METIS_TAC [extreal_cases] \\
+        `?a. D n x = Normal a` by METIS_TAC [extreal_cases] \\
+         ASM_SIMP_TAC std_ss [extreal_abs_def, extreal_add_def,
+                              extreal_not_infty]) >> Rewr' \\
+     MATCH_MP_TAC le_lmul_imp \\
+     CONJ_TAC >- (MATCH_MP_TAC lt_imp_le >> MATCH_MP_TAC inv_pos' \\
+                  rw [extreal_of_num_def, extreal_lt_eq, extreal_not_infty]) \\
+    `D n x = d n (f n x) x` by PROVE_TAC [] >> POP_ORW \\
+    `d n (f n x) x = abs (S (f n x) x - S (n ** 2) x)` by PROVE_TAC [] >> POP_ORW \\
+     REWRITE_TAC [abs_abs] \\
+     MATCH_MP_TAC le_trans \\
+     Q.EXISTS_TAC `abs (S (n ** 2) x) + abs (S (SUC k) x - S (n ** 2) x)` \\
+     CONJ_TAC
+     >- (MATCH_MP_TAC abs_triangle_sub >> art []) \\
+     Know `abs (S (n ** 2) x) + abs (S (SUC k) x - S (n ** 2) x) <=
+           abs (S (n ** 2) x) + abs (S (f n x) x - S (n ** 2) x) <=>
+           abs (S (SUC k) x - S (n ** 2) x) <= abs (S (f n x) x - S (n ** 2) x)`
+     >- (MATCH_MP_TAC le_ladd \\
+         ONCE_REWRITE_TAC [CONJ_SYM] \\
+         MATCH_MP_TAC abs_not_infty >> art []) >> Rewr' \\
+    `abs (S (SUC k) x - S (n ** 2) x) = d n (SUC k) x` by PROVE_TAC [] >> POP_ORW \\
+    `abs (S (f n x) x - S (n ** 2) x) = d n (f n x) x` by PROVE_TAC [] >> POP_ORW \\
+    `d n (f n x) x = sup (IMAGE (\k. d n k x) (N n))` by METIS_TAC [] >> POP_ORW \\
+     MATCH_MP_TAC le_sup_imp' \\
+     RW_TAC set_ss [Abbr `N`, IN_IMAGE] \\
+     Q.EXISTS_TAC `SUC k` >> art [] \\
+     Q.UNABBREV_TAC `n` \\
+     MATCH_MP_TAC logrootTheory.ROOT (* amazing *) \\
+     RW_TAC arith_ss []) >> DISCH_TAC
+ (* final stage *)
+ >> Q.PAT_X_ASSUM `(Z --> (\x. 0)) (almost_everywhere p)`
+      (MP_TAC o (SIMP_RULE std_ss [converge_AE_def, AE_THM, almost_everywhere_def,
+                                   GSYM IN_NULL_SET, LIM_SEQUENTIALLY, dist]))
+ >> DISCH_THEN (Q.X_CHOOSE_THEN `N1` STRIP_ASSUME_TAC)
+ >> Q.PAT_X_ASSUM `(W --> (\x. 0)) (almost_everywhere p)`
+      (MP_TAC o (SIMP_RULE std_ss [converge_AE_def, AE_THM, almost_everywhere_def,
+                                   GSYM IN_NULL_SET, LIM_SEQUENTIALLY, dist]))
+ >> DISCH_THEN (Q.X_CHOOSE_THEN `N2` STRIP_ASSUME_TAC)
+ >> SIMP_TAC std_ss [converge_AE_def, AE_THM, almost_everywhere_def,
+                     GSYM IN_NULL_SET, LIM_SEQUENTIALLY, dist]
+ >> Q.EXISTS_TAC `N1 UNION N2`
+ >> STRONG_CONJ_TAC
+ >- (MATCH_MP_TAC NULL_SET_UNION \\
+     FULL_SIMP_TAC bool_ss [prob_space_def]) >> DISCH_TAC
+ >> rpt STRIP_TAC
+ >> `(m_space p DIFF (N1 UNION N2)) SUBSET (m_space p DIFF N1)` by SET_TAC []
+ >> `(m_space p DIFF (N1 UNION N2)) SUBSET (m_space p DIFF N2)` by SET_TAC []
+ (* clean up disturbing assumptions *)
+ >> Q.PAT_X_ASSUM `!n x. S n x = SIGMA (\i. X i x) (count n)` K_TAC
+ >> Q.PAT_X_ASSUM `!n. expectation p (X n) = 0`               K_TAC
+ >> Q.PAT_X_ASSUM `!n. real_random_variable (X n) p`          K_TAC
+ >> Q.PAT_X_ASSUM `!n. finite_second_moments p (X n)`         K_TAC
+ >> Q.PAT_X_ASSUM `!n. variance p (X n) <= M`                 K_TAC
+ >> Q.PAT_X_ASSUM `!n. integrable p (X n)`                    K_TAC
+ >> Q.PAT_X_ASSUM `!i j. i <> j ==> orthogonal p (X i) (X j)` K_TAC
+ (* simplify assumptions *)
+ >> Q.PAT_X_ASSUM `!x. x IN m_space p DIFF N1 ==> P` (MP_TAC o Q.SPEC `x`)
+ >> Know `x IN m_space p DIFF N1` >- ASM_SET_TAC []
+ >> RW_TAC std_ss []
+ >> Q.PAT_X_ASSUM `!x. x IN m_space p DIFF N2 ==> P` (MP_TAC o Q.SPEC `x`)
+ >> Know `x IN m_space p DIFF N2` >- ASM_SET_TAC []
+ >> RW_TAC std_ss []
+ >> `real 0 = 0` by METIS_TAC [extreal_of_num_def, real_normal]
+ >> POP_ASSUM (fn th => FULL_SIMP_TAC bool_ss [REAL_SUB_RZERO, th])
+ >> NTAC 3 (Q.PAT_X_ASSUM `_ IN null_set p`           K_TAC)
+ >> NTAC 2 (Q.PAT_X_ASSUM `_ SUBSET m_space p DIFF _` K_TAC)
+ >> NTAC 3 (Q.PAT_X_ASSUM `x IN m_space p DIFF _`     K_TAC)
+ >> Q.PAT_X_ASSUM `M <> PosInf` K_TAC
+ >> Q.PAT_X_ASSUM `M <> NegInf` K_TAC
+ >> Q.PAT_X_ASSUM `0 <= M`      K_TAC
+ (* clean up Z and W *)
+ >> Q.PAT_X_ASSUM `!n. real_random_variable (Z n) p`  K_TAC
+ >> Q.PAT_X_ASSUM `!n. real_random_variable (W n) p`  K_TAC
+ >> Q.PAT_X_ASSUM `!n. finite_second_moments p (W n)` K_TAC
+ >> qunabbrevl_tac [`Z`, `W`]
+ >> FULL_SIMP_TAC std_ss []
+ (* translate real inequations to extreal ineq. *)
+ >> Know `!n. abs (real (S (SUC n) x / &SUC n)) < e <=>
+              abs (S (SUC n) x) / &SUC n < Normal e`
+ >- (GEN_TAC \\
+    `?r. S (SUC n) x = Normal r` by METIS_TAC [extreal_cases] >> POP_ORW \\
+    `&SUC n <> (0: real)` by RW_TAC real_ss [] \\
+     ASM_SIMP_TAC real_ss [extreal_of_num_def, extreal_abs_def, real_normal,
+                           extreal_div_eq, extreal_lt_eq, ABS_DIV, ABS_N])
+ >> Rewr'
+ >> Know `!n e. abs (real (S (SUC n ** 2) x / &(SUC n ** 2))) < e <=>
+                abs (S (SUC n ** 2) x) / &(SUC n ** 2) < Normal e`
+ >- (rpt GEN_TAC \\
+    `?r. S (SUC n ** 2) x = Normal r` by METIS_TAC [extreal_cases] >> POP_ORW \\
+    `&(SUC n ** 2) <> (0: real)` by RW_TAC real_ss [] \\
+     ASM_SIMP_TAC real_ss [extreal_of_num_def, extreal_abs_def, real_normal,
+                           extreal_div_eq, extreal_lt_eq, ABS_DIV, ABS_N])
+ >> DISCH_THEN ((FULL_SIMP_TAC bool_ss) o wrap)
+ >> Know `!n e. abs (real (D (SUC n) x / &(SUC n ** 2))) < e <=>
+                abs (D (SUC n) x) / &(SUC n ** 2) < Normal e`
+ >- (rpt GEN_TAC \\
+    `?r. D (SUC n) x = Normal r` by METIS_TAC [extreal_cases] >> POP_ORW \\
+    `&(SUC n ** 2) <> (0: real)` by RW_TAC real_ss [] \\
+     ASM_SIMP_TAC real_ss [extreal_of_num_def, extreal_abs_def, real_normal,
+                           extreal_div_eq, extreal_lt_eq, ABS_DIV, ABS_N])
+ >> DISCH_THEN ((FULL_SIMP_TAC bool_ss) o wrap)
+ (* continue estimating N *)
+ >> NTAC 2 (Q.PAT_X_ASSUM `!e. 0 < e ==> P` (MP_TAC o (Q.SPEC `e / 2`)))
+ >> Know `0 < e / 2`
+ >- (MATCH_MP_TAC REAL_LT_DIV >> RW_TAC real_ss [])
+ >> `!n x. D n x <> PosInf /\ D n x <> NegInf` by METIS_TAC []
+ >> Q.PAT_X_ASSUM (* to prevent `D n x` from being rewritten *)
+      `!n x. n ** 2 <= f n x /\ f n x < SUC n ** 2 /\ D n x = d n (f n x) x` K_TAC
+ >> RW_TAC std_ss []
+ >> rename1 `!n. m1 <= n ==> abs (S (SUC n ** 2) x) / &(SUC n ** 2) < Normal (e / 2)`
+ >> rename1 `!n. m2 <= n ==> abs (D (SUC n) x) / &(SUC n ** 2) < Normal (e / 2)`
+ (* final-final *)
+ >> Q.EXISTS_TAC `(m1 + m2 + 1) ** 2 - 1`
+ >> RW_TAC std_ss []
+ >> MATCH_MP_TAC let_trans
+ >> Q.EXISTS_TAC `(abs (S (ROOT 2 (SUC n) ** 2) x) + abs (D (ROOT 2 (SUC n)) x)) /
+                  &(ROOT 2 (SUC n) ** 2)`
+ >> CONJ_TAC >- art []
+ >> Q.PAT_X_ASSUM `!k x. abs (S (SUC k) x) / &SUC k <= _` K_TAC
+ >> Q.ABBREV_TAC `k = ROOT 2 (SUC n)`
+ >> Know `0 < k`
+ >- (Q.UNABBREV_TAC `k` >> MATCH_MP_TAC LESS_LESS_EQ_TRANS \\
+     Q.EXISTS_TAC `1` >> RW_TAC arith_ss [] \\
+    `ROOT 2 1 = 1` by EVAL_TAC \\
+     POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM) \\
+     irule ROOT_LE_MONO >> RW_TAC arith_ss []) >> DISCH_TAC
+ >> `?m. m = k - 1` by RW_TAC arith_ss []
+ >> `k = SUC m` by RW_TAC arith_ss [] >> POP_ORW
+ >> Know `(abs (S (SUC m ** 2) x) + abs (D (SUC m) x)) / &(SUC m ** 2) =
+           abs (S (SUC m ** 2) x) / &(SUC m ** 2) + abs (D (SUC m) x) / &(SUC m ** 2)`
+ >- (MATCH_MP_TAC EQ_SYM \\
+     MATCH_MP_TAC div_add \\
+     ONCE_REWRITE_TAC [CONJ_ASSOC] \\
+     CONJ_TAC >- (MATCH_MP_TAC abs_not_infty >> art []) \\
+     ONCE_REWRITE_TAC [CONJ_ASSOC] \\
+     CONJ_TAC >- (MATCH_MP_TAC abs_not_infty >> art []) \\
+     RW_TAC real_ss [extreal_of_num_def, extreal_11]) >> Rewr'
+ >> `Normal e = Normal (e / 2) + Normal (e / 2)`
+       by METIS_TAC [extreal_add_def, REAL_HALF_DOUBLE] >> POP_ORW
+ >> MATCH_MP_TAC lt_add2
+ >> CONJ_TAC (* 2 subgoals, similar tactics *)
+ >| [ (* goal 1 (of 2) *)
+      FIRST_X_ASSUM MATCH_MP_TAC \\
+     `m1 <= m <=> m1 + 1 <= k` by RW_TAC arith_ss [] >> POP_ORW \\
+      NTAC 2 (POP_ASSUM K_TAC) \\
+      Q.UNABBREV_TAC `k` \\
+      Know `(m1 + 1) ** 2 <= SUC n`
+      >- (MATCH_MP_TAC LESS_EQ_TRANS \\
+          Q.EXISTS_TAC `(m1 + m2 + 1) ** 2` \\
+          CONJ_TAC >- RW_TAC arith_ss [] \\
+          PROVE_TAC [ADD_COMM, ADD1]) \\
+      POP_ASSUM K_TAC >> DISCH_TAC \\
+      Know `ROOT 2 ((m1 + 1) ** 2) = m1 + 1`
+      >- (MATCH_MP_TAC ROOT_EXP >> RW_TAC arith_ss []) \\
+      DISCH_THEN (ONCE_REWRITE_TAC o wrap o SYM) \\
+      irule ROOT_LE_MONO >> RW_TAC arith_ss [],
+      (* goal 2 (of 2) *)
+      FIRST_X_ASSUM MATCH_MP_TAC \\
+     `m2 <= m <=> m2 + 1 <= k` by RW_TAC arith_ss [] >> POP_ORW \\
+      NTAC 2 (POP_ASSUM K_TAC) \\
+      Q.UNABBREV_TAC `k` \\
+      Know `(m2 + 1) ** 2 <= SUC n`
+      >- (MATCH_MP_TAC LESS_EQ_TRANS \\
+          Q.EXISTS_TAC `(m1 + m2 + 1) ** 2` \\
+          CONJ_TAC >- RW_TAC arith_ss [] \\
+          PROVE_TAC [ADD_COMM, ADD1]) \\
+      POP_ASSUM K_TAC >> DISCH_TAC \\
+      Know `ROOT 2 ((m2 + 1) ** 2) = m2 + 1`
+      >- (MATCH_MP_TAC ROOT_EXP >> RW_TAC arith_ss []) \\
+      DISCH_THEN (ONCE_REWRITE_TAC o wrap o SYM) \\
+      irule ROOT_LE_MONO >> RW_TAC arith_ss [] ]
+QED
+
 (* ========================================================================= *)
 (*                 Probability Density Function Theory [11]                  *)
 (* ========================================================================= *)
@@ -5736,46 +6947,6 @@ Proof
  >> RW_TAC std_ss []
 QED
 
-val INSERT_THM1 = prove (``!(x:'a) s. x IN (x INSERT s)``,
-    RW_TAC std_ss [IN_INSERT]);
-
-val INSERT_THM2 = prove (``!(x:'a) y s. x IN s ==> x IN (y INSERT s)``,
-    RW_TAC std_ss [IN_INSERT]);
-
-Theorem PROB_FINITE_ADDITIVE :
-    !p s f t. prob_space p /\ FINITE s /\ (!x. x IN s ==> f x IN events p) /\
-             (!a b. (a:'b) IN s /\ b IN s /\ ~(a = b) ==> DISJOINT (f a) (f b)) /\
-             (t = BIGUNION (IMAGE f s)) ==> (prob p t = SIGMA (prob p o f) s)
-Proof
-    Suff `!s. FINITE (s:'b -> bool) ==>
-        ((\s. !p f t. prob_space p  /\ (!x. x IN s ==> f x IN events p) /\
-        (!a b. a IN s /\ b IN s /\ a <> b ==> DISJOINT (f a) (f b)) /\
-        (t = BIGUNION (IMAGE f s)) ==> (prob p t = SIGMA (prob p o f) s)) s)` >- METIS_TAC []
- >> MATCH_MP_TAC FINITE_INDUCT >> RW_TAC std_ss [IMAGE_EMPTY]
- >- RW_TAC std_ss [EXTREAL_SUM_IMAGE_EMPTY, BIGUNION_EMPTY, PROB_EMPTY]
- >> Know `SIGMA (prob p o f) ((e:'b) INSERT s) =
-                (prob p o f) e + SIGMA (prob p o f) (s DELETE e)`
- >- (irule EXTREAL_SUM_IMAGE_PROPERTY >> art [] \\
-     DISJ1_TAC >> GEN_TAC >> DISCH_TAC \\
-     SIMP_TAC std_ss [o_DEF] >> METIS_TAC [PROB_FINITE])
- >> `s DELETE (e:'b) = s` by FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]
- >> RW_TAC std_ss [IMAGE_INSERT, BIGUNION_INSERT]
- >> Know `DISJOINT (f e) (BIGUNION (IMAGE f s))`
- >- (RW_TAC set_ss [DISJOINT_BIGUNION, IN_IMAGE] \\
-    `e IN e INSERT s` by FULL_SIMP_TAC std_ss [INSERT_THM1] \\
-    `x IN e INSERT s` by FULL_SIMP_TAC std_ss [INSERT_THM2] \\
-    `e <> x` by METIS_TAC [] \\
-     FULL_SIMP_TAC std_ss []) >> DISCH_TAC
- >> `(f e) IN events p` by FULL_SIMP_TAC std_ss [IN_FUNSET, INSERT_THM1]
- >> `BIGUNION (IMAGE f s) IN events p`
-        by (MATCH_MP_TAC EVENTS_COUNTABLE_UNION >> RW_TAC std_ss []
-           >- (RW_TAC std_ss [SUBSET_DEF,IN_IMAGE] THEN METIS_TAC [IN_INSERT])
-           >> MATCH_MP_TAC COUNTABLE_IMAGE >> RW_TAC std_ss [FINITE_COUNTABLE])
- >> `(prob p (f e UNION BIGUNION (IMAGE f s))) = prob p (f e) + prob p (BIGUNION (IMAGE f s))`
-        by (MATCH_MP_TAC PROB_ADDITIVE >> FULL_SIMP_TAC std_ss [])
- >> RW_TAC std_ss [INSERT_THM1, INSERT_THM2]
-QED
-
 val INTER_BIGUNION = prove (
   ``(!s t. BIGUNION s INTER t = BIGUNION {x INTER t | x IN s}) /\
     (!s t. t INTER BIGUNION s = BIGUNION {t INTER x | x IN s})``,
@@ -5824,8 +6995,8 @@ Proof
        Q.EXISTS_TAC `i` >> art [],
        (* goal 3 (of 3) *)
        fs [IN_INTER] ]) >> Rewr'
- >> MATCH_MP_TAC PROB_FINITELY_ADDITIVE
- >> RW_TAC std_ss [IN_FUNSET, IN_COUNT]
+ >> MATCH_MP_TAC PROB_FINITE_ADDITIVE
+ >> RW_TAC std_ss [IN_FUNSET, IN_COUNT, FINITE_COUNT]
  >- METIS_TAC [EVENTS_INTER]
  >> MATCH_MP_TAC DISJOINT_RESTRICT_L
  >> PROVE_TAC []
@@ -6029,8 +7200,10 @@ val _ = export_theory ();
   [4] Shiryaev, A.N.: Probability-1. Springer-Verlag New York (2016).
   [5] Shiryaev, A.N.: Probability-2. Springer-Verlag New York (2019).
   [6] Billingsley, P.: Probability and Measure (Third Edition). Wiley-Interscience (1995).
-  [7] Hurd, J.: Formal verification of probabilistic algorithms. University of Cambridge (2001).
-  [8] Coble, A.R.: Anonymity, information, and machine-assisted proof. University of Cambridge (2010).
+  [7] Hurd, J.: Formal verification of probabilistic algorithms.
+      University of Cambridge (2003). UCAM-CL-TR-566
+  [8] Coble, A.R.: Anonymity, information, and machine-assisted proof.
+      University of Cambridge (2010). UCAM-CL-TR-785
   [9] Schilling, R.L.: Measures, Integrals and Martingales (Second Edition).
       Cambridge University Press (2017).
   [10] Mhamdi, T., Hasan, O., Tahar, S.: Formalization of Measure Theory and Lebesgue
