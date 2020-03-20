@@ -2026,8 +2026,9 @@ val GENLIST_1 = store_thm(
   rw[]);
 
 (* Theorem alias *)
-val GENLIST_EQ = save_thm("GENLIST_EQ",
-   indexedListsTheory.GENLIST_CONG |> GEN ``n:num`` |> GEN ``f2:num -> 'a`` |> GEN ``f1:num -> 'a``);
+Theorem GENLIST_EQ =
+   listTheory.GENLIST_CONG |> GEN ``n:num`` |> GEN ``f2:num -> 'a``
+                           |> GEN ``f1:num -> 'a``;
 (*
 val GENLIST_EQ = |- !f1 f2 n. (!m. m < n ==> f1 m = f2 m) ==> GENLIST f1 n = GENLIST f2 n: thm
 *)
