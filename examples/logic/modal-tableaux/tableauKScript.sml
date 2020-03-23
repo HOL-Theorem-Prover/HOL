@@ -130,6 +130,12 @@ Proof
   Induct_on ‘Γ’ >> simp[] >> Cases >> simp[] >> metis_tac[]
 QED
 
+Theorem unbox_APPEND:
+  unbox (Γ ++ Δ) = unbox Γ ++ unbox Δ
+Proof
+  Induct_on ‘Γ’ >> simp[] >> Cases >> simp[]
+QED
+
 
 Definition undia_def[simp]:
   undia (Dia f :: rest) = f :: undia rest ∧
@@ -473,6 +479,7 @@ Inductive tableauR:
       tableauR (p ++ [f2] ++ s) r ⇒ tableauR (p ++ [Disj f1 f2] ++ s) r) ∧
   (∀G.
       (∀f. MEM f G ⇒ ¬is_conj f ∧ ¬is_disj f) ∧ (∃f. MEM f G ∧ is_dia f) ∧
+      contradiction G = NONE ∧
       LIST_REL (λf r. tableauR (dest_dia f :: unbox G) r)
                (FILTER is_dia G)
                rs
@@ -604,11 +611,61 @@ Theorem tableauR_tableau_EQ_NONE:
 Proof
   Cases_on ‘tableau Γ’ >> simp[] >> metis_tac[tableau_tableauR]
 QED
-(*
+
+
 Theorem tableauR_sound:
+  ∀Γ r. tableauR Γ r ⇒ ∀f. MEM f Γ ⇒ forces (tree_model r) r f
 Proof
+  Induct_on ‘tableauR’ >> rw[] >> simp[]
+  >- (rename [‘forces _ _ ϕ’] >>
+      ‘¬is_conj ϕ ∧ ¬is_disj ϕ’ by metis_tac[] >>
+      Cases_on ‘ϕ’ >> fs[]
+      >- (fs[contradiction_EQ_NONE] >> metis_tac[])
+      >- (rename [‘MEM (Box ϕ) Γ’] >>
+          fs[LIST_REL_EL_EQN] >> simp[tree_rel_def, PULL_EXISTS] >>
+          qx_gen_tac ‘t'’ >> strip_tac >>
+          ‘∃i. i < LENGTH rs ∧ t' = EL i rs’ by metis_tac[MEM_EL] >>
+          first_x_assum (qspec_then ‘i’ mp_tac)  >> simp[] >> strip_tac >>
+          first_x_assum (qspec_then ‘ϕ’ mp_tac) >> simp[MEM_unbox] >>
+          strip_tac >> irule forces_grows_backward >>
+          qexists_tac ‘tree_model (EL i rs)’ >> simp[] >> reverse conj_tac
+          >- (simp[SUBSET_DEF, tree_model_def] >> qx_gen_tac ‘w’ >> strip_tac >>
+              irule (relationTheory.RTC_RULES |> SPEC_ALL |> CONJUNCT2) >>
+              simp[tree_rel_def] >> metis_tac[MEM_EL]) >>
+          simp[tree_rel_def, tree_model_def, PULL_EXISTS] >> rw[] >>
+          irule (relationTheory.RTC_RULES_RIGHT1 |> SPEC_ALL |> CONJUNCT2) >>
+          metis_tac[tree_rel_def])
+      >- (rename [‘MEM (Dia ϕ) Γ’] >>
+          fs[LIST_REL_EL_EQN] >>
+          ‘MEM (Dia ϕ) (FILTER is_dia Γ)’ by simp[MEM_FILTER] >>
+          ‘∃i. i < LENGTH rs ∧ Dia ϕ = EL i (FILTER is_dia Γ)’
+            by metis_tac[MEM_EL] >>
+          first_x_assum (qspec_then ‘i’ mp_tac) >> simp[] >> strip_tac >>
+          first_x_assum (qspec_then ‘ϕ’ mp_tac) >> impl_tac
+          >- (first_x_assum (SUBST_ALL_TAC o SYM) >> simp[]) >>
+          strip_tac >> qexists_tac ‘EL i rs’ >> rw[]
+          >- (simp[tree_model_def] >> irule relationTheory.RTC_SINGLE >>
+              metis_tac[tree_rel_def, MEM_EL])
+          >- (metis_tac[tree_rel_def, MEM_EL]) >>
+          irule forces_grows_backward >> qexists_tac ‘tree_model (EL i rs)’ >>
+          simp[] >> rw[tree_model_def, SUBSET_DEF, tree_rel_def]
+          >- (irule (relationTheory.RTC_RULES_RIGHT1 |> SPEC_ALL |> CONJUNCT2)>>
+              metis_tac[tree_rel_def]) >>
+          irule (relationTheory.RTC_RULES |> SPEC_ALL |> CONJUNCT2) >>
+          metis_tac[tree_rel_def, MEM_EL])) >>
+  first_x_assum drule >> rename [‘MEM ϕ Γ’] >> Cases_on ‘ϕ’ >> simp[]
+  >- metis_tac[contradiction_EQ_NONE] >>
+  simp[tree_model_def, tree_rel_def]
 QED
 
+Theorem tableau_EQ_NONE_tableauR:
+  tableau Γ = NONE ⇒ ∀t. ¬tableauR Γ t
+Proof
+  rpt strip_tac >>
+  map_every drule [tableau_complete |> INST_TYPE [alpha |-> “:tmodel”],
+                   tableauR_sound] >>
+  metis_tac[tree_model_thm]
+QED
 
 Theorem FA_NOT_SOME:
   (∀x. y ≠ SOME x) ⇔ y = NONE
@@ -616,91 +673,104 @@ Proof
   Cases_on ‘y’ >> simp[]
 QED
 
-Theorem contradiction_Disj:
-  contradiction (p ++ [Disj f1 f2] ++ s) = SOME i ⇒
-  (∃j. contradiction (p ++ [f1] ++ s) = SOME j) ∧
-  (∃j. contradiction (p ++ [f2] ++ s) = SOME j)
+Theorem tableau_EQ_NONE_IFF:
+  tableau Γ = NONE ⇔ ∀r. ¬tableauR Γ r
 Proof
-  CCONTR_TAC >> fs[FA_NOT_SOME] >> drule contradiction_EQ_SOME >>
-  fs[contradiction_EQ_NONE] >> metis_tac[]
+  metis_tac [tableau_EQ_NONE_tableauR, tableau_tableauR, FA_NOT_SOME]
 QED
 
-Theorem conjsplit_preserves_Disj:
-  conjsplit (p ++ [Disj f1 f2] ++ s) = SOME G ⇒
-  ∃p' s'. G = p' ++ [Disj f1 f2] ++ s
+Theorem tableauR_tableau:
+  ∀Γ t. tableauR Γ t ⇒ ∃t'. tableau Γ = SOME t'
 Proof
+  CCONTR_TAC >> fs[FA_NOT_SOME] >> metis_tac[tableau_EQ_NONE_tableauR]
+QED
 
-Theorem tableau_disj:
-  ∀G.
-    tableau G = NONE ⇒
-    ∀p s f1 f2. G = p ++ [Disj f1 f2] ++ s ⇒
-                tableau (p ++ [f1] ++ s) = NONE ∧
-                tableau (p ++ [f2] ++ s) = NONE
+Theorem contradiction_EQ_NONE_APPEND:
+  contradiction (l1 ++ l2) = NONE ⇒
+  contradiction l1 = NONE ∧ contradiction l2 = NONE
 Proof
-  ho_match_mp_tac tableau_ind >> gen_tac >> strip_tac >>
-  simp[SimpL “$==>”, Once tableau_def] >>
-  simp_tac (srw_ss()) [AllCaseEqs(), PULL_EXISTS, MEM_MAP] >>
-  reverse (Cases_on ‘contradiction G’) >>
-  first_x_assum
-    (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th]) >> assume_tac th) >>
-  ASM_REWRITE_TAC [] >> simp_tac (srw_ss()) []
-  >- (fs[] >> rw[] >> ONCE_REWRITE_TAC [tableau_def] >>
-      drule_then strip_assume_tac contradiction_Disj >> simp[]) >>
-  reverse (Cases_on ‘conjsplit G’) >>
-  first_x_assum
-    (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th]) >> assume_tac th)
-  >- (fs[] >> strip_tac >> rpt gen_tac >> strip_tac >> fs[] >>
-      first_x_assum irule
-      ONCE_REWRITE_TAC [tableau_def] >> simp_tac (srw_ss()) [AllCaseEqs()] >>
-      Cases_on ‘contradiction (p ++ [f1] ++ s)’ >> simp[] >>
-      Cases_on ‘contradiction (p ++ [f2] ++ s)’ >> simp[]
-      rw[]
+  simp[contradiction_EQ_NONE] >> metis_tac[]
+QED
 
-
-induct_on ‘p’ >> simp[]
-  >- (simp[SimpLHS, Once tableau_def, AllCaseEqs(), PULL_EXISTS] >> rw[] >>
-      simp[]
-
-Theorem tableau_tableauR:
-  ∀Γ r. tableauR Γ r ⇒ tableau Γ ≠ NONE
+Theorem tableauR_weakening:
+  ∀Γ Δ r. tableauR (Γ ++ Δ) r ⇒ ∃r. tableauR Γ r
 Proof
   Induct_on ‘tableauR’ >> rw[]
-  >-
-  ho_match_mp_tac tableau_ind >> qx_gen_tac ‘G’ >> strip_tac >>
-  ONCE_REWRITE_TAC [tableau_def] >> simp[AllCaseEqs(), PULL_EXISTS, MEM_MAP] >>
-  rw[]
-  >- (simp[Once tableauR_cases] >> rw[]
-      >- (fs[conjsplit_EQ_NONE] >> disj1_tac >> strip_tac >> fs[] >>
-          metis_tac[])
-      >- (fs[disjsplit_EQ_NONE] >> disj1_tac >> strip_tac >> fs[] >>
-          metis_tac[])
-      >- (fs[disjsplit_EQ_NONE] >> disj1_tac >> strip_tac >> fs[] >>
-          metis_tac[]) >>
-      fs[MEM_MAP, PULL_EXISTS] >> rw[] >> rpt disj2_tac >>
-      strip_tac >> fs[MEM_undia] >>
-      ‘MEM (Dia d) (FILTER is_dia G)’ by simp[MEM_FILTER] >>
-      drule_all LIST_REL_MEM_IMP >> simp[])
-  >- (simp[Once tableauR_cases] >> rw[]
-      >- (fs[conjsplit_EQ_NONE] >> disj1_tac >> strip_tac >> fs[] >>metis_tac[])
-      >- (fs[]
+  >- (pop_assum mp_tac >> simp[APPEND_EQ_APPEND, APPEND_EQ_CONS] >> rw[] >>
+      simp[]
+      >- (rename[‘tableauR (p ++ [Conj f1 f2] ++ s)’] >>
+          ‘∃r. tableauR (p ++ [f1;f2] ++ s) r’
+            suffices_by metis_tac[tableauR_rules] >>
+          first_x_assum irule >> simp[]) >>
+      rename [‘tableauR (p ++ [Conj f1 f2])’] >>
+      ‘∃r. tableauR (p ++ [f1;f2]) r’
+        suffices_by metis_tac[tableauR_rules, APPEND_NIL] >>
+      first_x_assum irule >> simp[])
+  >- (pop_assum mp_tac >> simp[APPEND_EQ_APPEND, APPEND_EQ_CONS] >> rw[] >>
+      simp[]
+      >- (rename [‘tableauR (p ++ [Disj f1 f2] ++ s)’] >>
+          ‘∃r. tableauR (p ++ [f1] ++ s) r’
+            suffices_by metis_tac[tableauR_rules] >>
+          first_x_assum irule >> simp[]) >>
+      rename [‘tableauR (p ++ [Disj f1 f2])’] >>
+      ‘∃r. tableauR (p ++ [f1]) r’
+        suffices_by metis_tac[tableauR_rules, APPEND_NIL] >>
+      first_x_assum irule >> simp[])
+  >- (pop_assum mp_tac >> simp[APPEND_EQ_APPEND, APPEND_EQ_CONS] >> rw[] >>
+      simp[]
+      >- (rename [‘tableauR (p ++ [Disj f1 f2] ++ s)’] >>
+          ‘∃r. tableauR (p ++ [f2] ++ s) r’
+            suffices_by metis_tac[tableauR_rules] >>
+          first_x_assum irule >> simp[]) >>
+      rename [‘tableauR (p ++ [Disj f1 f2])’] >>
+      ‘∃r. tableauR (p ++ [f2]) r’
+        suffices_by metis_tac[tableauR_rules, APPEND_NIL] >>
+      first_x_assum irule >> simp[])
+  >- (reverse (Cases_on ‘∃g. is_dia g ∧ MEM g Γ’)
+      >- (rename [‘is_dia ϕ’, ‘MEM ϕ (Γ ++ Δ)’] >>
+          ‘¬MEM ϕ Γ’ by metis_tac[] >>
+          fs[FILTER_APPEND_DISTRIB] >>
+          qexists_tac ‘Nd (unvar Γ) []’ >>
+          irule (last (CONJUNCTS tableauR_rules)) >>
+          fs[contradiction_EQ_NONE] >> Cases >> simp[] >>
+          metis_tac[is_conj_def, is_disj_def, is_dia_def]) >>
+      pop_assum strip_assume_tac >>
+      qpat_x_assum ‘MEM _ (_ ++ _)’ (K ALL_TAC) >>
+      fs[FILTER_APPEND_DISTRIB, DISJ_IMP_THM, FORALL_AND_THM, unbox_APPEND]>>
+      drule_then strip_assume_tac contradiction_EQ_NONE_APPEND >>
+      drule_then (drule_then (drule_then drule))
+                 (SIMP_RULE bool_ss [PULL_EXISTS]
+                    (el 4 (CONJUNCTS tableauR_rules))) >>
+      disch_then (fn th =>
+      ‘∃ts. LIST_REL (λf r. tableauR (dest_dia f :: unbox Γ) r)
+            (FILTER is_dia Γ) ts’
+                   suffices_by metis_tac[th]) >>
+      fs[LIST_REL_SPLIT1] >>
+      qpat_assum ‘LIST_REL _ (FILTER is_dia Γ) _’
+                 (mp_then (Pos last) mp_tac LIST_REL_mono) >>
+      disch_then (qspec_then ‘λf r0. ∃r. tableauR (dest_dia f :: unbox Γ) r’
+                  mp_tac) >> impl_tac
+      >- rw[] >>
+      simp[LIST_REL_EL_EQN] >>
+      CONV_TAC (LAND_CONV (SIMP_CONV (srw_ss())
+                           [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM])) >>
+      simp[PULL_EXISTS] >> qx_gen_tac ‘ff’ >> strip_tac >>
+      qexists_tac ‘GENLIST ff (LENGTH (FILTER is_dia Γ))’ >>
+      simp[]) >>
+  metis_tac[contradiction_EQ_NONE_APPEND, tableauR_rules, MEM_APPEND]
+QED
 
-
-(*
-Theorem weakening:
-  ∀Γ. tableau Γ = NONE ⇒ ∀f. tableau (f::Γ) = NONE
+Theorem tableau_EQ_NONE_weakening:
+  ∀Γ Δ. tableau Γ = NONE ⇒ tableau (Γ ++ Δ) = NONE
 Proof
-  ho_match_mp_tac tableau_ind >> qx_gen_tac ‘G’ >> strip_tac >>
-  ONCE_REWRITE_TAC [tableau_def] >> simp[MEM_MAP,AllCaseEqs(), PULL_EXISTS] >>
-  rw[]
-  >- (Cases_on ‘contradiction (f::G)’ >> simp[] >>
-      reverse (Cases_on ‘conjsplit (f::G)’) >> simp[]
-      >- (Cases_on ‘f’ >> fs[AllCaseEqs()] >> fs[]
-*)
-
+  metis_tac[tableau_EQ_NONE_IFF, tableauR_weakening]
+QED
 (*
-Theorem exchange:
-  ∀Γ₁ Γ₂. PERM Γ₁ Γ₂ ⇒ (tableau Γ₁ = NONE ⇔ tableau Γ₂ = NONE)
+Theorem tableauR_exchange:
+  ∀Γ₁ t₁. tableauR Γ₁ t₁ ⇒ ∀Γ₂. PERM Γ₁ Γ₂ ⇒ ∃t₂. tableauR Γ₂ t₂
 Proof
+  Induct_on ‘tableauR’ >> rw[]
+  >- (
   ho_match_mp_tac tableau_ind >> qx_gen_tac ‘G1’ >> strip_tac >>
   qx_gen_tac ‘G2’ >> Cases_on ‘PERM G1 G2’ >> ASM_REWRITE_TAC [] >>
   ONCE_REWRITE_TAC [tableau_def] >>
@@ -731,6 +801,5 @@ strip_tacrw[]recInduct_on ‘PERM’ >> simp[] >> rw[]
                 simp[contradiction_EQ_NONE] >>
                 metis_tac[PERM_MEM_EQ]) >>
           simp[] >>
-*)
 *)
 val _ = export_theory();
