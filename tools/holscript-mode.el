@@ -687,10 +687,12 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
               (tactic "THEN1" tactic)
               (tactic "THENL" tactic)
               (quotation "by" tactic)
+              (quotation "suffices_by" tactic)
               ("[" tactics "]"))
       (tactics (tactic) (tactics "," tactics)))
     '((assoc ","))
-    '((assoc ">>" "\\\\" ">-"  ">|" "THEN" "THEN1" "THENL") (assoc "by")))))
+    '((assoc ">>" "\\\\" ">-"  ">|" "THEN" "THEN1" "THENL")
+      (assoc "by" "suffices_by")))))
 
 (defvar holscript-smie-keywords-regexp
   (regexp-opt '("Definition" "Theorem" "Proof" "QED" ">>" ">-" "\\\\"
@@ -759,6 +761,7 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
     (`(:after . ":") 2)
     (`(:before . ":") holscript-indent-level)
     (`(:before . "by") 2)
+    (`(:before . "suffices_by") 2)
     (`(:after . "Proof") 2)
     (`(:before . "Proof") 0)
     (`(:after . "Termination") 2)
