@@ -583,8 +583,9 @@ SRW_TAC [][] THEN
 Cases_on `tunify s t t'` THEN SRW_TAC [][]
 )
 
-val ext_s_check_def = RWDefine`
-ext_s_check s v t = if oc s t v then NONE else SOME (s |+ (v,t))`
+Definition ext_s_check_def[simp]:
+  ext_s_check s v t = if oc s t v then NONE else SOME (s |+ (v,t))
+End
 
 val unify_exists = prove(
 ``?unify.!s t1 t2.wfs s ==> (unify s t1 t2 =
