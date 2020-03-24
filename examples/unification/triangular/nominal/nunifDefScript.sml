@@ -6,17 +6,21 @@ open HolKernel boolLib bossLib Parse stringTheory arithmeticTheory
 
 val _ = new_theory "nunifDef"
 val _ = monadsyntax.temp_add_monadsyntax()
+val _ = monadsyntax.enable_monad "option";
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 
-val nvR_update = Q.prove(
-  `v NOTIN FDOM s /\ x <> v ==> (nvR (s |+ (v,t)) y x <=> nvR s y x)`,
+Triviality nvR_update:
+  v NOTIN FDOM s /\ x <> v ==> (nvR (s |+ (v,t)) y x <=> nvR s y x)
+Proof
   SRW_TAC [][nvR_def] THEN
   Cases_on `x IN FDOM s` THEN
-  SRW_TAC [][FLOOKUP_DEF,FAPPLY_FUPDATE_THM]);
+  SRW_TAC [][FLOOKUP_DEF,FAPPLY_FUPDATE_THM]
+QED
 
-val TC_nvR_update = Q.prove(
-`!y x. (nvR (s |+ (v,t)))^+ y x ==> v NOTIN FDOM s ==>
-    (nvR s)^+ y x \/ ?u. (nvR s)^* v x /\ u IN nvars t /\ (nvR s)^* y u`,
+Triviality TC_nvR_update:
+  !y x. (nvR (s |+ (v,t)))^+ y x ==> v NOTIN FDOM s ==>
+        (nvR s)^+ y x \/ ?u. (nvR s)^* v x /\ u IN nvars t /\ (nvR s)^* y u
+Proof
 HO_MATCH_MP_TAC TC_STRONG_INDUCT THEN CONJ_TAC THENL [
   MAP_EVERY Q.X_GEN_TAC [`y`,`x`] THEN SRW_TAC [][] THEN
   Cases_on `x = v` THENL [
@@ -29,12 +33,13 @@ HO_MATCH_MP_TAC TC_STRONG_INDUCT THEN CONJ_TAC THENL [
     THEN1 METIS_TAC [TC_RULES] THEN
   DISJ2_TAC THEN Q.EXISTS_TAC `u` THEN
   METIS_TAC [TC_RTC,RTC_TRANSITIVE,transitive_def]
-]);
+]
+QED
 
-val nwfs_extend = Q.store_thm(
-  "nwfs_extend",
-  `nwfs s /\ v NOTIN FDOM s /\ v NOTIN nvars (nwalkstar s t) ==>
-   nwfs (s |+ (v, t))`,
+Theorem nwfs_extend:
+  nwfs s /\ v NOTIN FDOM s /\ v NOTIN nvars (nwalkstar s t) ==>
+  nwfs (s |+ (v, t))
+Proof
   SRW_TAC [boolSimps.CONJ_ss][noc_eq_nvars_nwalkstar, nwfs_no_cycles] THEN
   STRIP_TAC THEN
   `!u. u IN nvars t ==> ~(nvR s)^+ v u`
@@ -43,49 +48,57 @@ val nwfs_extend = Q.store_thm(
      by METIS_TAC [TC_nvR_update] THEN
   FULL_SIMP_TAC (srw_ss()) [RTC_CASES_TC] THEN
   METIS_TAC [NOT_FDOM_nwalkstar,nwfs_no_cycles,TC_RULES]
-);
+QED
 
-val _ = type_abbrev("fe",``:(string # num) set``);
-val _ = type_abbrev_pp("pkg", ``:('a nsubst # fe)``);
+Type fe = ``:(string # num) set``
+Type pkg[pp] = ``:('a nsubst # fe)``
 
-val term_fcs_def = tDefine "term_fcs" `
+Definition term_fcs_def:
   term_fcs a t =
   case t
   of Nom b => if a = b then NONE else SOME {}
    | Sus p v => SOME {(lswapstr (REVERSE p) a, v)}
    | Tie b tt => if a = b then SOME {} else term_fcs a tt
    | nPair t1 t2 => OPTION_MAP2 $UNION (term_fcs a t1) (term_fcs a t2)
-   | nConst _ => SOME {}`
-(WF_REL_TAC `measure (npair_count o SND)` THEN SRW_TAC [ARITH_ss][]);
+   | nConst _ => SOME {}
+Termination
+  WF_REL_TAC `measure (npair_count o SND)` THEN SRW_TAC [ARITH_ss][]
+End
 
-val _ = overload_on("monad_bind",``OPTION_BIND``);
-
-val term_fcs_monadic_thm = Q.store_thm("term_fcs_monadic_thm",
-` term_fcs a t =
+Theorem term_fcs_monadic_thm:
+ term_fcs a t =
   case t
   of Nom b => if a = b then NONE else SOME {}
    | Sus p v => SOME {(lswapstr (REVERSE p) a, v)}
    | Tie b tt => if a = b then SOME {} else term_fcs a tt
-   | nPair t1 t2 => do fe1 <- term_fcs a t1; fe2 <- term_fcs a t2; SOME (fe1 ∪ fe2) od
-   | nConst _ => SOME {}`,
+   | nPair t1 t2 => do fe1 <- term_fcs a t1;
+                       fe2 <- term_fcs a t2;
+                       return (fe1 ∪ fe2)
+                    od
+   | nConst _ => SOME {}
+Proof
 Cases_on `t` THEN SRW_TAC [][Once term_fcs_def] THEN
 Q.MATCH_RENAME_TAC `OPTION_MAP2 $UNION x1 x2 = _` THEN
 Cases_on `x1` THEN SRW_TAC [][] THEN
-Cases_on `x2` THEN SRW_TAC [][]);
+Cases_on `x2` THEN SRW_TAC [][]
+QED
 
-val fcs_acc = Define`
-  fcs_acc s (a,v) ac = OPTION_MAP2 $UNION ac (term_fcs a (nwalk* s (Sus [] v)))`;
+Definition fcs_acc_def:
+  fcs_acc s (a,v) ac = OPTION_MAP2 $UNION ac (term_fcs a (nwalk* s (Sus [] v)))
+End
 
-val unify_eq_vars_def = Define`
+Definition unify_eq_vars_def:
   unify_eq_vars ds v (s,fe) =
-  do fex <- ITSET (fcs_acc s) (IMAGE (λa. (a,v)) ds) (SOME {});
-     SOME (s,fe UNION fex)
-  od`;
+    do fex <- ITSET (fcs_acc s) (IMAGE (λa. (a,v)) ds) (SOME {});
+       SOME (s,fe UNION fex)
+    od
+End
 
-val add_bdg_def = RWDefine`
+Definition add_bdg_def[simp]:
   add_bdg pi v t0 (s,fe) =
   let t = (apply_pi (REVERSE pi) t0) in
-    if noc s t v then NONE else SOME ((s|+(v,t)),fe)`
+    if noc s t v then NONE else SOME ((s|+(v,t)),fe)
+End
 
 val ntunify_defn_q = `
   ntunify (s,fe) t1 t2 =
@@ -117,39 +130,37 @@ val _ = store_term_thm("ntunify_defn", TermWithCase ntunify_defn_q)
 
 val SOME ntunify_aux_defn = Defn.aux_defn ntunify_defn
 
-val sysvars_def = Define`
+Definition sysvars_def:
   sysvars s (t1:'a nterm) (t2:'a nterm) =
     nvars t1 UNION nvars t2 UNION
-    FDOM s UNION BIGUNION (FRANGE (nvars o_f s))`
+    FDOM s UNION BIGUNION (FRANGE (nvars o_f s))
+End
 
-val FINITE_sysvars = RWstore_thm(
-"FINITE_sysvars",
-`FINITE (sysvars s t1 t2)`,
-SRW_TAC [][sysvars_def] THEN
-FULL_SIMP_TAC (srw_ss()) [FRANGE_DEF] THEN
-Cases_on `s ' x'` THEN SRW_TAC [][o_f_DEF])
+Theorem FINITE_sysvars[simp]: FINITE (sysvars s t1 t2)
+Proof
+  SRW_TAC [][sysvars_def] THEN
+  FULL_SIMP_TAC (srw_ss()) [FRANGE_DEF] THEN
+  Cases_on `s ' x'` THEN SRW_TAC [][o_f_DEF]
+QED
 
-val sysvars_comm = Q.store_thm(
-"sysvars_comm",
-`sysvars s t1 t2 = sysvars s t2 t1`,
-SRW_TAC [][sysvars_def] THEN
-METIS_TAC [UNION_COMM])
+Theorem sysvars_comm:   sysvars s t1 t2 = sysvars s t2 t1
+Proof SRW_TAC [][sysvars_def] THEN METIS_TAC [UNION_COMM]
+QED
 
-val sysvars_apply_pi = Q.store_thm(
-"sysvars_apply_pi",
-`(sysvars s t1 t2 = sysvars s (apply_pi pi t1) t2)`,
-SRW_TAC [][sysvars_def])
+Theorem sysvars_apply_pi:   (sysvars s t1 t2 = sysvars s (apply_pi pi t1) t2)
+Proof SRW_TAC [][sysvars_def]
+QED
 
-val uR_def = Define`
-uR = \((sx,fex:fe),c,c2) ((s,fe:fe),t,t2).
-   nwfs sx
-/\ s SUBMAP sx
-/\ sysvars sx c c2 SUBSET sysvars s t t2
-/\ measure (npair_count o (nwalkstar sx)) c t`
+Definition uR_def:
+   uR = λ((sx,fex:fe),c,c2) ((s,fe:fe),t,t2).
+              nwfs sx
+           /\ s SUBMAP sx
+           /\ sysvars sx c c2 SUBSET sysvars s t t2
+           /\ measure (npair_count o (nwalkstar sx)) c t
+End
 
-val WF_uR = Q.store_thm(
-"WF_uR",
-`WF nunifDef$uR`,
+Theorem WF_uR: WF nunifDef$uR
+Proof
 SRW_TAC [][WF_IFF_WELLFOUNDED,wellfounded_def,uR_def,UNCURRY] THEN
 SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
 Q.ABBREV_TAC `f1 = \n. FST (FST (f n))` THEN
@@ -218,7 +229,8 @@ Q.ABBREV_TAC `z = MAX m m'` THEN
 FULL_SIMP_TAC bool_ss [WF_IFF_WELLFOUNDED,wellfounded_def] THEN
 POP_ASSUM (Q.SPEC_THEN `\n. f2(z+n+1)` MP_TAC) THEN
 SRW_TAC [][ADD_CLAUSES] THEN
-SRW_TAC [ARITH_ss][])
+SRW_TAC [ARITH_ss][]
+QED
 
 val nwalkstar_subpair = Q.store_thm(
 "nwalkstar_subpair",
@@ -837,9 +849,9 @@ PROVE_HYP WF_uR |>
 (fn th => PROVE_HYP (prove(hd(hyp th),SRW_TAC[][tcd_thm])) th) |>
 (fn th => PROVE_HYP (prove(hd(hyp th),SRW_TAC[][tca_thm])) th);
 
-val aux_eq_ntunify = Q.store_thm(
-"aux_eq_ntunify",
-`!s fe t1 t2. ntunify_tupled_aux uR ((s,fe),t1,t2) = ntunify (s,fe) t1 t2`,
+Theorem aux_eq_ntunify:
+  !s fe t1 t2. ntunify_tupled_aux uR ((s,fe),t1,t2) = ntunify (s,fe) t1 t2
+Proof
 HO_MATCH_MP_TAC ntunify_ind THEN
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
@@ -853,7 +865,8 @@ SRW_TAC [][] THENL [
   Q.MATCH_ASSUM_RENAME_TAC `nwalk q t1 = nPair t1a t1d` THEN
   Q.MATCH_ASSUM_RENAME_TAC `nwalk q t2 = nPair t2a t2d` THEN
   Cases_on `ntunify (q,fe) t1a t2a` THEN SRW_TAC [][UNCURRY]
-]);
+]
+QED
 
 val nunify_exists = prove(
 ``∃nunify.∀s fe t1 t2. nwfs s ⇒ (nunify (s,fe) t1 t2 =

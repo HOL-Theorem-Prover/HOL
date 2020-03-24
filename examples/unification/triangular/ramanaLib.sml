@@ -31,10 +31,6 @@ end
 
 fun RWstore_thm (s,q,t) = Q.store_thm(s,q,t) before export_rewrites [s]
 fun RWsave_thm (s,t) = save_thm(s,t) before export_rewrites [s]
-fun RWDefine q =
-  case q |> Absyn |> Defn.parse_absyn of
-    (_,[name]) => Define q before export_rewrites[name^"_def"]
-  | _ => raise ERR "RWDefine" "Multiple definitions"
 fun RWnew_specification (s,l,t) =
     new_specification (s,l,t) before export_rewrites [s]
 fun RWtDefine s q t = tDefine s q t before export_rewrites [s^"_def"]
