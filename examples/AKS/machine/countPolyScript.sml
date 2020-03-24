@@ -1813,14 +1813,13 @@ EVAL ``poly_eqM [1;1;0;1;0;0;1] [1;1;0;0;1;0;1]``; = (F,Count 28): thm
      else (HD p = HD q) /\ (TL p = TL q)         by induction hypothesis
    = (p = q)                                     by LIST_EQ_HEAD_TAIL
 *)
-val poly_eqM_value = store_thm(
-  "poly_eqM_value[simp]",
-  ``!p q. valueOf (poly_eqM p q) = (p = q)``,
+Theorem poly_eqM_value[simp]:
+  !p q. valueOf (poly_eqM p q) = (p = q)
+Proof
   ho_match_mp_tac (theorem "poly_eqM_ind") >>
   rw[] >>
-  rw[Once poly_eqM_def] >-
-  metis_tac[] >>
-  rw[LIST_EQ_HEAD_TAIL]);
+  rw[Once poly_eqM_def] >> rw[LIST_EQ_HEAD_TAIL]
+QED
 
 (* Theorem: stepsOf (poly_eqM p q) =
             2 + if ((p = []) \/ (q = [])) then 0

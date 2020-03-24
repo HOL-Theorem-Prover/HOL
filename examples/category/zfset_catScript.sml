@@ -3,7 +3,8 @@ open HolKernel Parse boolLib boolSimps bossLib pred_setTheory zfset_axiomsTheory
 val _ = new_theory "zfset_cat";
 val _ = ParseExtras.temp_loose_equality()
 
-
+val _ = srw_ss()
+val _ = diminish_srw_ss ["NORMEQ_ss"]
 val explode_def = Define`
   explode z = {x | x In z}`;
 
