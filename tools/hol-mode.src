@@ -115,8 +115,9 @@ evaluations.")
 (put 'hol-term 'end-op
      (function
       (lambda ()
-        (let ((pthm-point (save-excursion
-                            (re-search-forward "^Proof\\|^Theorem" nil t))))
+        (let ((pthm-point
+               (save-excursion
+                 (re-search-forward "^Proof\\|^Theorem\\|^Triviality" nil t))))
           (if (and pthm-point (equal (match-string 0) "Proof"))
               (progn (goto-char (match-beginning 0))
                      (setq hol-term-end-delim "Proof"))
