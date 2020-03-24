@@ -573,6 +573,45 @@ Proof
   metis_tac [SUBSET_DEF, firstSetML_firstSet]
 QED
 
+Theorem RHSes_in_allSyms:
+  N ∈ FDOM g.rules ∧ rhs ∈ᶠ g.rules ' N ∧ MEM s rhs ⇒
+  s ∈ allSyms g
+Proof
+  strip_tac >> Cases_on ‘s’ >>
+  simp[allSyms_def,  terminals_def, nonTerminals_def] >> metis_tac[]
+QED
+
+Theorem firstSet_SUBSET_terminals:
+  (∀t. MEM t sf ⇒ t ∈ allSyms g) ⇒ firstSet g sf ⊆ terminals g
+Proof
+  simp[firstSet_def, SUBSET_DEF, PULL_EXISTS] >> Induct_on ‘RTC’ >> rw[]
+  >- fs[DISJ_IMP_THM, FORALL_AND_THM, allSyms_def] >>
+  first_x_assum irule >> fs[derive_def, DISJ_IMP_THM, FORALL_AND_THM] >>
+  metis_tac[RHSes_in_allSyms]
+QED
+
+Theorem firstSet_SUBSET:
+  firstSet g sf ⊆ terminals g ∪ { t | MEM (TOK t) sf }
+Proof
+  simp[firstSet_def, SUBSET_DEF, PULL_EXISTS] >> Induct_on ‘RTC’ >> rw[] >>
+  simp[] >>
+  fs[derive_def, DISJ_IMP_THM, FORALL_AND_THM] >> rfs[] >>
+  drule_all RHSes_in_allSyms >> simp[allSyms_def]
+QED
+
+Theorem FINITE_firstSet[simp]:
+  FINITE (firstSet g sf)
+Proof
+  irule SUBSET_FINITE_I >> qexists_tac ‘terminals g ∪ { t | MEM (TOK t) sf }’ >>
+  simp[firstSet_SUBSET] >>
+  ‘{ t | MEM (TOK t) sf } =
+   BIGUNION (IMAGE (λs. case s of TOK t => {t} | NT _ => ∅) (set sf))’
+    by (simp[Once EXTENSION, PULL_EXISTS] >> rw[EQ_IMP_THM]
+        >- (rename [‘MEM (TOK x) sf’] >> qexists_tac ‘TOK x’ >> simp[]) >>
+        rename [‘symbol_CASE sym’] >> Cases_on ‘sym’ >> fs[]) >>
+  simp[PULL_EXISTS] >> Cases >> simp[]
+QED
+
 (* ----------------------------------------------------------------------
     follow sets
    ---------------------------------------------------------------------- *)
@@ -737,37 +776,67 @@ Proof
   metis_tac[finite_setTheory.IN_UNION, finite_setTheory.fSUBSET_def]
 QED
 
-(* Theorem firstSetList_SUBSET_terminals:
-  (∀t. MEM t sf ⇒ t ∈ allSyms g) ⇒
-  firstSetList g sf ⊆ terminals g
+Theorem toSet_fromSet[simp]:
+  FINITE s ⇒ toSet (fromSet s) = s
 Proof
-  simp[firstSetList_def, SUBSET_DEF, PULL_EXISTS] >> Induct_on ‘RTC’ >> rw[]
-  >- (fs[DISJ_IMP_THM, FORALL_AND_THM, allSyms_def]
-*)
-(*
+  simp[finite_setTheory.fromSet_def, SET_TO_LIST_INV]
+QED
+
+Theorem toSet_fUNION[simp]:
+  toSet (A ∪ᶠ B) = toSet A ∪ toSet B
+Proof
+  simp[EXTENSION, GSYM finite_setTheory.fIN_IN]
+QED
+
+Theorem toSet_fBIGUNION[simp]:
+  toSet (fBIGUNION fs) = BIGUNION (toSet (fIMAGE toSet fs))
+Proof
+  simp[Once EXTENSION, GSYM finite_setTheory.fIN_IN,
+       finite_setTheory.IN_BIGUNION, PULL_EXISTS]>>
+  metis_tac[]
+QED
+
+Theorem toSet_fIMAGE[simp]:
+  toSet (fIMAGE f s) = IMAGE f (toSet s)
+Proof
+  simp[EXTENSION, GSYM finite_setTheory.fIN_IN] >> metis_tac[]
+QED
+
 Theorem follow_sf_max:
-  ∀A B. (∀t. MEM t sf ⇒ t ∈ allSyms g) ∧
+  ∀A B. (∀t. MEM t sf ⇒ t ∈ allSyms g) ∧ N ∈ nonTerminals g ∧
         subfmset_map B (fmset_union A (max_map A g)) ⇒
         subfmset_map (follow_sf g N sf B) (fmset_union A (max_map A g))
 Proof
   Induct_on ‘sf’ >> simp[] >> Cases >> simp[DISJ_IMP_THM, FORALL_AND_THM] >>
   rpt strip_tac >> fs[] >> first_x_assum irule >>
-  simp[subfmset_map_augment']
-  pop_assum mp_tac >> rename [‘NTS n ∈ allSyms g’] >>
-  simp[augment_def, subfmset_map_def, safelookup_def, FLOOKUP_DEF] >>
-  strip_tac >> qx_gen_tac ‘k’ >>
-  Cases_on ‘n ∈ FDOM B’ >> simp[] >> Cases_on ‘n = k’ >> simp[] >> rw[]
-      Cases_on ‘FLOOKUP Acc n’ >> simp[] >> rw[] >> fs[allSyms_def]
-      >- (fs[FLOOKUP_DEF, safelookup_def, fmset_union_def] >>
-          Cases_on ‘N ∈ FDOM Acc’ >> simp[FUN_FMAP_DEF] >>
-          simp[max_map_def, FUN_FMAP_DEF, range_max_def, SUBSET_DEF,
-               FLOOKUP_DEF, PULL_EXISTS] >> metis_tac[])
-      >- (fs[FLOOKUP_DEF] >> simp[FAPPLY_FUPDATE_THM] >> rw[] >> fs[] >>
-          simp[SUBSET_DEF, fmset_union_def, FUN_FMAP_DEF, safelookup_def,
-               FLOOKUP_DEF])
-
- simp[safelookup_def, fmset_union_def]
-
+  simp[subfmset_map_augment', finite_setTheory.fSUBSET_def] >>
+  rw[]
+  >- (drule firstSet_SUBSET_terminals >>
+      simp[safelookup_def, fmset_union_def, FLOOKUP_DEF] >>
+      rename [‘NT s ∈ allSyms g’] >>
+      ‘s ∈ nonTerminals g’ by fs[allSyms_def] >> simp[FUN_FMAP_DEF] >>
+      simp[max_map_def, FUN_FMAP_DEF] >>
+      fs[finite_setTheory.IN_fromSet] >>
+      metis_tac[SUBSET_DEF])
+  >- (fs[allSyms_def, subfmset_map_def, safelookup_def, FLOOKUP_DEF] >>
+      ‘N ∈ FDOM B’ by (CCONTR_TAC >> fs[]) >> fs[] >>
+      first_x_assum drule >> simp[finite_setTheory.fSUBSET_def] >>
+      disch_then drule >>
+      simp[fmset_union_def, FLOOKUP_DEF, FUN_FMAP_DEF, safelookup_def,
+           max_map_def, range_max_def, finite_setTheory.IN_BIGUNION,
+           finite_setTheory.ffRANGE_def, finite_setTheory.fIN_IN,
+           PULL_EXISTS] >> strip_tac >> simp[]
+      >- (Cases_on ‘N ∈ FDOM A’ >> fs[] >>
+          simp[FRANGE_DEF, PULL_EXISTS] >> metis_tac[]) >>
+      metis_tac[]) >>
+  drule firstSet_SUBSET_terminals >>
+  fs[allSyms_def, SUBSET_DEF, finite_setTheory.fIN_IN] >>
+  simp[fmset_union_def, FLOOKUP_DEF, FUN_FMAP_DEF, safelookup_def,
+       max_map_def, range_max_def, finite_setTheory.IN_BIGUNION,
+       finite_setTheory.ffRANGE_def, finite_setTheory.fIN_IN,
+       PULL_EXISTS]
+QED
+(*
 Definition follow_rule_def:
   follow_rule g (rule N sf) A = follow_sf g N sf A
 End
