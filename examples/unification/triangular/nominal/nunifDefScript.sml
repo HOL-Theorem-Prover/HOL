@@ -843,7 +843,8 @@ val aux_eq_ntunify = Q.store_thm(
 HO_MATCH_MP_TAC ntunify_ind THEN
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
-SRW_TAC [][Once aux_eqn] THEN
+reverse (SRW_TAC [][Once aux_eqn])
+>- simp[Once ntunify_def] >>
 SRW_TAC [][Once ntunify_def,SimpRHS] THEN
 Cases_on `nwalk s t1` THEN Cases_on `nwalk s t2` THEN
 SRW_TAC [][] THENL [
