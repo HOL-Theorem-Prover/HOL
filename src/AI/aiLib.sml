@@ -597,6 +597,15 @@ fun strip_type ty =
       end
     | _             => ([],ty)
 
+fun strip_type_n n ty =
+  if is_vartype ty orelse n = 0 then ([],ty) else
+    case dest_type ty of
+      ("fun",[a,b]) =>
+      let val (tyl,im) = strip_type_n (n-1) b in
+        (a :: tyl, im)
+      end
+    | _             => raise ERR "strip_type_n" ""
+
 fun has_boolty x = type_of x = bool
 
 fun only_concl x =

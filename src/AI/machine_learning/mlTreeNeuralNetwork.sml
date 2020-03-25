@@ -449,21 +449,7 @@ val traintnn_extspec =
    ------------------------------------------------------------------------- *)
 
 fun neighb_bsize bsize = 
-  [
-  let 
-    val r1 = Real.round (Real.fromInt bsize * 1.1)
-    val r2 = if r1 = bsize then r1 + 1 else r1
-  in
-    if r2 >= 1024 then 1024 else r2
-  end,
-  let 
-    val r1 = Real.round (Real.fromInt bsize / 1.1)
-    val r2 = if r1 = bsize then r1 - 1 else r1
-  in
-    if r2 <= 1 then 1 else r2
-  end,
-  bsize
-  ]
+  [8,16,32,64]
 
 fun neighb_lrate lrate = 
   [
@@ -477,10 +463,16 @@ fun lookahead_one tnn prebatch (lrate,bsize)  =
     val trainparam =
       {ncore = 1, verbose = true,
        learning_rate = lrate, batch_size = bsize, nepoch = 1}
-    val batchl = mk_batch bsize (shuffle prebatch)
-    val (newtnn,loss) = train_tnn_epoch_nopar trainparam [] tnn batchl
+    fun loop (loctnn,loss) n =
+      if n <= 0 then (loctnn,loss) else 
+      let 
+        val batchl = mk_batch bsize (shuffle prebatch)
+        val (newtnn,newloss) = train_tnn_epoch_nopar trainparam [] tnn batchl
+      in
+        loop (newtnn,newloss) (n-1)
+      end
   in
-    (newtnn,loss)
+    loop (tnn,0.0) 1
   end
 
 fun lookahead_all prebatch (tnn,(lrate,bsize)) = 
@@ -501,7 +493,8 @@ fun train_tnn_automl {ncore,verbose,learning_rate,batch_size,nepoch}
     val _ = print_endline ("training set statistics:\n" ^ stats_tnnex trainex)
     val prebatch = prepare_tnnex trainex
     val start = (randtnn,(learning_rate,batch_size))
-    val ((tnn,_),t) = add_time (funpow nepoch (lookahead_all prebatch)) start
+    val ((tnn,_),t) = 
+      add_time (funpow nepoch (lookahead_all prebatch)) start
   in
     print_endline ("Tree neural network training time: " ^ rts t); tnn
   end

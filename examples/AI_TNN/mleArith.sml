@@ -34,10 +34,10 @@ fun prepare_ex exl = map (fn (a,b) => [(mk_head a, bin_rep 4 b)]) exl
 
 val tnnparam = map_assoc (dim_std (2,12)) operl @ [(head_bin4,[12,12,4])]
 val schedule =
-  [{ncore = 1, verbose = true, learning_rate = 0.02,
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 8, nepoch = 50}] @
-  [{ncore = 1, verbose = true, learning_rate = 0.02,
-    batch_size = 16, nepoch = 50}] @
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
+    batch_size = 16, nepoch = 50}]  @
   [{ncore = 1, verbose = true, learning_rate = 0.02,
     batch_size = 32, nepoch = 50}] @
   [{ncore = 1, verbose = true, learning_rate = 0.02,
@@ -52,7 +52,7 @@ fun train_fixed () =
   end
 
 val trainparam = {ncore = 1, verbose = true, learning_rate = 0.02,
-    batch_size = 16, nepoch = 200}
+    batch_size = 1, nepoch = 200}
 
 fun train_automl_fixed () = 
   let

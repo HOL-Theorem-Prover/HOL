@@ -225,6 +225,7 @@ sig
   val rename_allvar : term -> term
   val all_bvar : term -> term list
   val strip_type : hol_type -> (hol_type list * hol_type)
+  val strip_type_n : int -> hol_type -> (hol_type list * hol_type)
   val has_boolty : term -> bool
   val only_concl : thm -> term
   val list_mk_binop : term -> term list -> term
