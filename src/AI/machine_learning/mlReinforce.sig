@@ -8,7 +8,7 @@ sig
   type tnnparam = mlTreeNeuralNetwork.tnnparam
   type schedule = mlNeuralNetwork.schedule
   type 'a rlex = 'a psBigSteps.rlex
-  type 'a targetd = ('a, int * bool list) Redblackmap.dict
+  type 'a targetd = ('a, int * bool list * int list) Redblackmap.dict
 
   (* I/O *)
   type 'a gameio =
@@ -27,7 +27,7 @@ sig
     (real * ('b * real) list)
 
   (* parallelization of the search *)
-  type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
+  type 'a es = (splayer, 'a, bool * 'a rlex * int) smlParallel.extspec
 
   (* reinforcement learning parameters *)
   type rlparam =
@@ -38,7 +38,9 @@ sig
     rlparam : rlparam,
     game : ('a,'b) psMCTS.game,
     gameio : 'a gameio,
-    dplayer : 'a dplayer
+    dplayer : 'a dplayer,
+    process_rootl : 'a list -> int,
+    modify_board : int
     }
   val mk_bsobj : ('a,'b) rlobj -> splayer -> ('a,'b) psBigSteps.bsobj
   val mk_extsearch : string -> ('a,'b) rlobj -> 'a es

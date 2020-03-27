@@ -26,7 +26,7 @@ fun log rlobj s = (log_in_eval rlobj s; print_endline s)
    Types
    ------------------------------------------------------------------------- *)
 
-type 'a targetd = ('a, int * bool list) Redblackmap.dict
+type 'a targetd = ('a, int * bool list * int list) Redblackmap.dict
 type 'a gameio =
   {write_boardl : string -> 'a list -> unit,
    read_boardl : string -> 'a list}
@@ -34,7 +34,7 @@ type splayer = bool * tnn * bool * int
 type 'a dplayer =
   {pretob : ('a * tnn) option -> 'a -> term list,
    schedule : schedule, tnnparam : tnnparam}
-type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
+type 'a es = (splayer, 'a, bool * 'a rlex * int) smlParallel.extspec
 type rlparam =
   {expname : string, exwindow : int, ncore : int,
    ntarget : int, nsim : int, decay : real}
@@ -43,7 +43,9 @@ type ('a,'b) rlobj =
   rlparam : rlparam,
   game : ('a,'b) psMCTS.game,
   gameio : 'a gameio,
-  dplayer : 'a dplayer
+  dplayer : 'a dplayer,
+  process_rootl : 'a list -> int,
+  modify_board : int
   }
 
 (* -------------------------------------------------------------------------
@@ -126,15 +128,21 @@ fun read_splayer file =
     (unib,tnn,noiseb,nsim)
   end
 
-fun write_result gameio file (b,rlex) =
+fun write_result gameio file (b,rlex,n) =
   (
   writel (file ^ "_bstatus") [bts b];
-  write_rlex gameio (file ^ "_rlex") rlex
+  write_rlex gameio (file ^ "_rlex") rlex;
+  writel (file ^ "_ntime") [its n]
   )
 
 fun read_result gameio file =
-  let val s = singleton_of_list (readl (file ^ "_bstatus")) in
-    (string_to_bool s, read_rlex gameio (file ^ "_rlex"))
+  let 
+    val s1 = singleton_of_list (readl (file ^ "_bstatus")) 
+    val s2 = singleton_of_list (readl (file ^ "_ntime")) 
+  in
+    (string_to_bool s1, 
+     read_rlex gameio (file ^ "_rlex"),
+     string_to_int s2)
   end
 
 fun write_target gameio file target =
@@ -148,10 +156,13 @@ fun read_target gameio file =
    I/O for storage and restart
    ------------------------------------------------------------------------- *)
 
+(* Examples *)
 fun rlex_file rlobj n =
   eval_dir ^ "/" ^ (#expname (#rlparam rlobj)) ^ "/rlex" ^ its n
+
 fun store_rlex rlobj n rlex =
   write_rlex (#gameio rlobj) (rlex_file rlobj n) rlex
+
 fun gather_ex rlobj acc n =
   let
     val exwindow = #exwindow (#rlparam rlobj)
@@ -163,28 +174,42 @@ fun gather_ex rlobj acc n =
   end
 fun retrieve_rlex rlobj n = gather_ex rlobj [] n
 
+
+(* TNN *)
 fun tnn_file rlobj n =
   eval_dir ^ "/" ^ (#expname (#rlparam rlobj)) ^ "/tnn" ^ its n
 fun store_tnn rlobj n tnn = write_tnn (tnn_file rlobj n) tnn
 fun retrieve_tnn rlobj n = read_tnn (tnn_file rlobj n)
 
+
+(* Targets *)
 fun targetd_file rlobj n =
   eval_dir ^ "/" ^ (#expname (#rlparam rlobj)) ^ "/targetd" ^ its n
-fun blts (a,bl) = its a ^ " " ^ String.concatWith " " (map bts bl)
+
+fun blts (a,bl,nl) = 
+   its a ^ "," ^ String.concatWith " " (map bts bl) ^ "," ^
+   String.concatWith " " (map its nl)
+
 fun stbl s =
-  let val l = (String.tokens Char.isSpace s) in
-    (string_to_int (hd l), map string_to_bool (tl l))
+  let val (s1,s2,s3) = triple_of_list (String.tokens (fn c => c = #",") s) in
+    (
+    string_to_int s1,  
+    map string_to_bool (String.tokens Char.isSpace s2),
+    map string_to_int (String.tokens Char.isSpace s3)
+    )
   end
+
 fun store_targetd rlobj n targetd =
   let val (l1,l2) = split (dlist targetd) in
     #write_boardl (#gameio rlobj)
        ((targetd_file rlobj n) ^ "_boardl") l1;
-    writel ((targetd_file rlobj n) ^ "_ibl") (map blts l2)
+    writel ((targetd_file rlobj n) ^ "_iblnl") (map blts l2)
   end
+
 fun retrieve_targetd rlobj n =
   let
     val l1 = #read_boardl (#gameio rlobj) ((targetd_file rlobj n) ^ "_boardl")
-    val l2 = map stbl (readl ((targetd_file rlobj n) ^ "_ibl"))
+    val l2 = map stbl (readl ((targetd_file rlobj n) ^ "_iblnl"))
   in
     dnew (#board_compare (#game rlobj)) (combine (l1,l2))
   end
@@ -196,9 +221,9 @@ fun retrieve_targetd rlobj n =
 fun extsearch_fun rlobj splayer target =
   let
     val bsobj = mk_bsobj rlobj splayer
-    val (b1,rlex,_) = run_bigsteps bsobj target
+    val (b1, rlex, rootl) = run_bigsteps bsobj target
   in
-    (b1,rlex)
+    (b1, rlex, (#process_rootl rlobj) (map #board rootl))
   end
   handle Subscript => raise ERR "extsearch_fun" "subscript"
 
@@ -245,12 +270,13 @@ fun rl_explore_targetl (unib,noiseb) (rlobj,es) tnn targetl =
   let
     val {ncore,nsim,...} = #rlparam rlobj
     val splayer = (unib,tnn,noiseb,nsim)
-    val (l,t) = add_time (parmap_queue_extern ncore es splayer) targetl
+    val (l, t) = 
+      add_time (parmap_queue_extern ncore es splayer) targetl
     val _ =  log rlobj ("Exploration time: " ^ rts t)
-    val resultl = combine (targetl, map fst l)
-    val nwin = length (filter fst l)
+    val resultl = combine_triple (targetl, map #1 l, map #3 l)
+    val nwin = length (filter #1 l)
     val _ = log rlobj ("Exploration wins: " ^ its nwin)
-    val rlex = List.concat (map snd l)
+    val rlex = List.concat (map #2 l)
     val _ = log rlobj ("Exploration new examples: " ^ its (length rlex))
   in
     (rlex,resultl)
@@ -288,6 +314,7 @@ fun stats_select rlobj nfin nwin (neg,pos,negsel,possel) =
 
 fun select_from_targetd rlobj ntot targetd =
   let
+    val targetwinl = map (fn (a,(b,c,_)) => (a,(b,c))) (dlist targetd)
     fun f x = 1.0 / (1.0 + Real.fromInt x)
     fun g x =
       let
@@ -298,23 +325,24 @@ fun select_from_targetd rlobj ntot targetd =
       end
     fun h (a,(b,winl)) = ((a,(b,winl)), (g o f o row_either) winl)
     fun test (_,(_,winl)) = null winl orelse not (hd winl)
-    val (neg,pos) = partition test (dlist targetd)
+    val (neg,pos) = partition test targetwinl
     val negsel = first_n (ntot div 2) (dict_sort compare_rmax (map h neg))
     val possel = first_n (ntot div 2) (dict_sort compare_rmax (map h pos))
     val lfin = map (fst o fst) (rev negsel @ possel)
-    val lwin = filter exists_win (map (snd o snd) (dlist targetd))
+    val lwin = filter exists_win (map (snd o snd) targetwinl)
+    
   in
     stats_select rlobj (length lfin)
        (length lwin) (neg,pos, map fst negsel, map fst possel);
-    lfin
+    map (#modify_board rlobj targetd) lfin
   end
 
-fun update_targetd ((board,winb),targetd) =
+fun update_targetd ((board,b,n),targetd) =
   let
-    val (i,oldl) = dfind board targetd
+    val (i,bl,nl) = dfind board targetd
       handle NotFound => raise ERR "update_targetd" ""
   in
-    dadd board (i,winb :: oldl) targetd
+    dadd board (i, b :: bl, n :: nl) targetd
   end
 
 fun rl_explore_targetd unib (rlobj,es) (tnn,targetd) =

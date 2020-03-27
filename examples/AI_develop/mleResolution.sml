@@ -9,11 +9,9 @@ structure mleResolution :> mleResolution =
 struct
 
 open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
-  mlNeuralNetwork mlTreeNeuralNetwork mlTacticData mlReinforce mleLib mleSetLib
+  mlNeuralNetwork mlTreeNeuralNetwork mlTacticData mlReinforce
 
 val ERR = mk_HOL_ERR "mleResolution"
-
-val max_vars_glob = 20
 
 (* -------------------------------------------------------------------------
    Comparison function
@@ -23,16 +21,23 @@ type lit = int * bool
 type clause = lit list
 val lit_compare = cpl_compare Int.compare bool_compare
 val clause_compare = list_compare lit_compare 
+type pb = clause list
 
 (* -------------------------------------------------------------------------
    Subsumption
    ------------------------------------------------------------------------- *)
 
+val subsume_calls = ref 0
 fun subsume c1 c2 = 
-  let val d = dset lit_compare c2 in all (fn x => dmem x d) c1 end 
-
+  let 
+    val _ = incr subsume_calls
+    val d = dset lit_compare c2 
+  in 
+    all (fn x => dmem x d) c1 
+  end 
 fun subsumel c1l c2 = exists (fn x => subsume x c2) c1l
 
+(* todo: do it properly *)
 fun inter_reduce cl = case cl of
     [] => []
   | c :: m => if subsumel m c then inter_reduce m else c :: inter_reduce m
@@ -52,8 +57,14 @@ fun resolve_aux b (c1,c2) = case (c1:clause,c2:clause) of
       else if b then raise ERR "resolve_aux" "multiple matches"
            else resolve_aux true (m1,m2)
 
-fun resolve (c1:clause, c2:clause) = (resolve_aux false (c1,c2) : clause)
-  
+val resolve_calls = ref 0
+
+fun resolve (c1:clause, c2:clause) = 
+  (
+  incr resolve_calls;
+  (resolve_aux false (c1,c2) : clause)
+  )
+
 fun resolve_ctxt pb (c1,c2) = 
   let val c = resolve (c1,c2) in 
     if mem c pb orelse subsumel pb c 
@@ -81,8 +92,8 @@ fun resolve_brute (pb,l1,l2) =
     mapfilter (resolve_cost pb) l
   end
 
-fun brute_pb_aux (i,n) (pb,l1,l2) =
-  if dmem [] pb then ("solved",i, SOME (dfind [] pb))
+fun brute_pb_aux aimf (i,n) (pb,l1,l2) =
+  if aimf pb then ("solved", i, SOME (dkeys pb))
   else if null l2 then ("saturated", i, NONE)  
   else if i >= n then ("timeout", i, NONE)
   else
@@ -90,17 +101,17 @@ fun brute_pb_aux (i,n) (pb,l1,l2) =
       val cl1 = dlist (dregroup clause_compare (resolve_brute (pb,l1,l2))) 
       val cl2 = map_snd list_imin cl1
     in
-      brute_pb_aux (i+1,n) (daddl cl2 pb, l2 @ l1, cl2)
+      brute_pb_aux aimf (i+1,n) (daddl cl2 pb, l2 @ l1, cl2)
     end
 
-fun brute_pb n (l: clause list) = 
+fun brute_pb aimf n (l: clause list) = 
   let val lcost = map_assoc (fn _ => 0) l in
-    brute_pb_aux (0,n) (dnew clause_compare lcost, [], lcost)
+    brute_pb_aux aimf (0,n) (dnew clause_compare lcost, [], lcost)
   end
 
-fun difficulty n l = case brute_pb n l of
-    ("solved", _, SOME i) => (print_endline (its i); SOME i)
-  | _ => NONE
+fun abs_time pb =
+  (resolve_calls := 0; ignore (brute_pb (dmem []) 20 pb); !resolve_calls)
+
 
 (* -------------------------------------------------------------------------
    Evaluation
@@ -151,24 +162,150 @@ fun random_pb nclause nlit nvar =
   end
 
 (*
+load "aiLib"; open aiLib;
+load "mleResolution"; open mleResolution;
+val ERR = mk_HOL_ERR "mleResolution";
 val max_lit = 3;
-val max_var = 8;
-val max_clause = 40;
-val c = random_clause max_lit max_var;
-val pb = random_pb max_clause max_lit max_var;
-val b = is_sat pb;
-val r = brute_pb 32 pb;
+val max_var = 5;
+val max_clause = 25;
 
+val atim = abs_time pb;
+fun provable_pb n =
+  if n <= 0 then [] else
+  let val pb = random_pb max_clause max_lit max_var in
+    if is_sat pb 
+    then provable_pb n 
+    else pb :: provable_pb (n-1)
+  end
+
+val pbl = provable_pb 100;
+val pbatiml = map_assoc abs_time pbl;
+
+fun sigmoid x = Math.tanh x / 2.0 + 0.5;
+fun scale_real x = 2.0 * x - 1.0;
+
+fun random_selection (pb,pbtim) = 
+  let 
+    val randoml = List.tabulate (length pb, fn _ => random_int (0,1))
+    val vect = Vector.fromList (map (scale_real o Real.fromInt) randoml)
+    val newpb = map fst (filter (fn x => snd x = 1) (combine (pb,randoml)))
+  in
+    if is_sat newpb 
+    then ((pb,vect), 0.0)
+    else ((pb,vect), sigmoid (int_div pbtim (abs_time newpb)))
+  end;
+
+val ex = (hd pbatiml);
+selection or not selection
+
+(*
+fun random_selectionl (posl,negl) pbatim =
+  if (length posl >= 5 andalso length negl >= 5) orelse 
+     (length posl >= 100 orelse length negl >= 100)
+  then 
+    (first_n 5 posl, first_n 5 negl)
+  else
+  let val ex = random_selection pbatim in
+    if snd ex > 0.5 
+    then random_selectionl (ex :: posl, negl) pbatim
+    else random_selectionl (posl, ex :: negl) pbatim
+  end
+*)
+
+val (posl,negl) = random_selectionl ([],[]) (hd pbatiml);
+
+val exl = List.concat 
+  (map ((fn (a,b) => a @ b) o random_selectionl ([],[])) pbatiml);
+
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+
+val ((pb,sel),afreq) = hd exl;
+
+val headvar = mk_var ("head_", ``:bool -> bool``);
+
+val operl = 
+  map_assoc (dim_std (1,25))
+  (List.tabulate (5, mk_bvar) @ 
+   [empty_list_var,``$~``,``$/\``,``$\/``]);
+  @ (headvar, [25,25,25])
+
+
+fun term_of_pb (pb,sel) = 
+  let
+    val pbtm = term_of_clausel pb
+    val cattm = list_mk_comb (catvar,[pbtm,seltm])
+    val headtm = mk_comb (headvar,cattm)
+  end
+
+fun prep_ex (pbsel,afreq) = (term_of_pbsel pbsel,[afreq])
+
+val schedule =
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
+    batch_size = 16, nepoch = 20}]
+
+val tnnparam = map_assoc (dim_std (2,12)) operl
+
+*)
+
+
+(*
+let
+  val _ = resolve_calls := 0
+  val pb = random_pb max_clause max_lit max_var
+  val r = if is_sat pb then raise ERR "" "" else brute_pb (dmem []) 32 pb
+  val depth = #2 r
+  val pbend = valOf (#3 r)
+in
+  print_endline ("Depth: " ^ its depth);
+  print_endline ("Generated clauses: " ^ its (length pbend));
+  print_endline ("Resolve calls: " ^ its (!resolve_calls))
+  print_endline ("Axioms");
+  print_endline (string_of_pb pb);
+  print_endline ("Derived clauses");
+  print_endline (string_of_pb pbend)
+end;
+*)
+
+(*
+fun print_c
+3^4 - 2 ^ 4;
+3^7 - 2 ^ 7; 3^5
+(* could be subsumes instead of subset *)
+fun min_cut cut pb =
+  let fun aimf d = all (fn x => dmem x d) cut in
+    snd (valOf (#3 (brute_pb aimf 5 pb)))
+  end;
+fun improving_cut () = 
+  let val pb = random_pb max_clause max_lit max_var in
+    if is_sat pb then (print "s"; improving_cut ()) else
+    let
+      val _ = print_endline "p"
+      val cut = random_pb (random_int (1,10)) max_lit max_var
+      val rtot = (min_proof pb handle _ => 0)
+      val r2 = (min_proof (pb @ cut) handle _ => 1000)
+      val r1 = (min_cut cut pb handle _ => 1000)
+    in
+      if r1 + r2 < rtot then (pb,cut) else improving_cut ()
+    end
+  end;
+*)
+
+(*
+Todo define what is a good cut: take random subset of the proof?
+*)
+
+(*
+val max_lit = 3;
+val max_var = 5;val ERR = mk_HOL_ERR "mleResolution"
+val max_clause = 20;
 val pbl = List.tabulate (100, fn _ => random_pb max_clause max_lit max_var);
 val (pbl_sat, pbl_unsat) = partition is_sat pbl;
 length pbl_unsat;
-
 val pbl_result = map (brute_pb 32) pbl_unsat;
 val pbl_solved = filter (fn x => #1 x = "solved") pbl_result;
 length (filter (fn x => #1 x = "solved") pbl_result);
 length (filter (fn x => #1 x = "saturated") pbl_result);
 length (filter (fn x => #1 x = "timeout") pbl_result);
-
 val diffl = map (valOf o #3) pbl_solved;
 val diffd = count_dict (dempty Int.compare) diffl;
 (dlist diffd);
@@ -178,41 +315,42 @@ val diffd = count_dict (dempty Int.compare) diffl;
    Board
    ------------------------------------------------------------------------- *)
 
-type board = clause list * clause option * int
+type board = pb * pb * int list
+val pb_compare = list_compare clause_compare
 
-fun mk_startboard cl = (cl, NONE, 2 * length cl)
+fun mk_startboard cl = (cl, [])
 
 fun string_of_lit (i,b) = if b then its i else "~" ^ its i
 fun string_of_clause c = 
   "(" ^ String.concatWith " " (map string_of_lit c) ^ ")"
-fun string_of_clausel cl = 
+fun string_of_pb cl = 
   if null cl 
   then "empty clause list"
   else String.concatWith "\n" (map string_of_clause cl)
-fun string_of_board (cl1,co,n) =
-  String.concatWith "\n\n" 
-  [string_of_clausel cl1, 
-   if co = NONE then "" else string_of_clause (valOf co), its n]  
 
-fun board_compare ((cl,co,n),(cl',co',n')) =
-  cpl_compare 
-    (list_compare clause_compare) (option_compare clause_compare)
-    ((cl,co),(cl',co'))
+fun string_of_board (cl1,cl2,nl) =
+  string_of_pb cl1 ^ "\n\n" ^ string_of_pb cl2 ^ "\n\n" ^
+  String.concatWith " " (map its nl)  
 
-fun available_movel (cl,co,_) =
-  if co = NONE 
-  then filter (fn c => exists_match cl cl c) cl
-  else filter_match cl (valOf co) cl
+val board_compare = 
+  triple_compare pb_compare pb_compare (list_compare Int.compare)
 
-fun status_of (board as (cl,co,n)) =
-  if mem [] cl then Win
-  else if n <= 0 orelse null (available_movel board) then Lose
-  else Undecided
+fun status_of (cl1,cl2,nl) =
+  let val pb = cl2 @ cl1 in
+    if is_sat pb then Lose else
+    let val atim = abs_time pb in 
+      if atim < last (first_n 10 nl)
+      then Win
+      else if null cl1 then Lose
+      else Undecided
+    end
+  end
 
 (* -------------------------------------------------------------------------
    Neural representation of the board
    ------------------------------------------------------------------------- *)
 
+(*
 val empty_list_var = mk_var ("empty_list_var", bool)
 val pair_cat = mk_var ("pair_cat", ``:bool -> bool -> bool``)
 val cat_move = mk_var ("cat_move", ``:bool -> bool -> 'a``); 
@@ -262,9 +400,10 @@ val head_poli = mk_var ("head_poli", ``:'a -> 'a``)
 fun tag_heval x = mk_comb (head_eval,x)
 fun tag_hpoli x = mk_comb (head_poli,x)
 
-val operl = List.tabulate (max_vars_glob, mk_bvar) @ 
+val operl = List.tabulate (5, mk_bvar) @ 
   [empty_list_var, cat_move,
    pair_cat, ``$~``,``$/\``,``$\/``,head_eval,head_poli]
+*)
 
 (*
 load "aiLib"; open aiLib;
@@ -277,17 +416,23 @@ val tm = term_of_board (board,NONE,0);
    Move
    ------------------------------------------------------------------------- *)
 
-type move = clause
+datatype move = Select | Delete
+val movel = [Select,Delete]
 
-val string_of_move = string_of_clause 
-val move_compare = list_compare lit_compare
+fun string_of_move move = 
+  case move of Select => "Select" | Delete => "Delete"
 
-fun apply_move move (cl,co,n) = 
-  if co = NONE then (cl,SOME move,n) else
-  let val newc = resolve (valOf co, move) in
-     (mk_fast_set clause_compare (newc :: cl), NONE, n-1)
-  end
+fun move_compare (a,b) = 
+  String.compare (string_of_move a, string_of_move b)
 
+fun available_movel _ = movel
+
+fun apply_move move (cl1,cl2,nl) = 
+  if null cl1 then raise ERR "apply_move" "" else
+  case move of
+    Select => (tl cl1, hd cl1 :: cl2, nl)
+  | Delete => (tl cl1, cl2, nl)
+  
 (* -------------------------------------------------------------------------
    Game
    ------------------------------------------------------------------------- *)
@@ -296,9 +441,11 @@ val game : (board,move) game =
   {
   status_of = status_of,
   apply_move = apply_move,
+  movel = movel,
   available_movel = available_movel,  
   string_of_board = string_of_board,
   string_of_move = string_of_move,
+  move_compare = move_compare,
   board_compare = board_compare
   }
 
@@ -308,11 +455,16 @@ val game : (board,move) game =
 
 fun mk_mctsparam nsim =
   {
-  nsim = nsim, stopatwin_flag = true,
+  timer = NONE,
+  nsim = SOME nsim,
+  stopatwin_flag = true,
   decay = 1.0, explo_coeff = 2.0,
-  noise_coeff = 0.25, noise_root = false,
-  noise_all = false, noise_gen = random_real,
-  noconfl = true, avoidlose = true
+  noise_coeff = 0.25, 
+  noise_root = false,
+  noise_all = false, 
+  noise_gen = random_real,
+  noconfl = false, 
+  avoidlose = false
   }
 
 fun string_of_status status = case status of
@@ -320,13 +472,13 @@ fun string_of_status status = case status of
   | Lose => "lose"
   | Undecided => "undecided"
 
-fun mcts_test nsim pb =
+fun mcts_test nsim target =
   let
     val mctsobj =
       {mctsparam = mk_mctsparam nsim,
        game = game,
        player = random_player game}
-    val tree = starttree_of mctsobj (mk_startboard pb)
+    val tree = starttree_of mctsobj target
     val (endtree,_) = mcts mctsobj tree
     val b = #status (dfind [] endtree) = Win
   in
@@ -336,48 +488,50 @@ fun mcts_test nsim pb =
 
 (*
 load "aiLib"; open aiLib;
+load "psMCTS"; open psMCTS;
 load "mleResolution"; open mleResolution;
 
-val pbl_unsat  = List.tabulate (1000, fn _ => level_pb 4);
-val pbl_result = map_assoc (brute_pb 15) pbl_unsat;
-val pbl_solved = filter (fn x => #1 (snd x) = "solved") pbl_result;
-val pbl1 = map (fn x => (fst x, valOf (#3 (snd x)))) pbl_solved;
-map_snd length (dlist (dregroup Int.compare (map swap pbl1)));
-val pbl2 = dict_sort compare_imin pbl1;
+val max_lit = 3;
+val max_var = 5;
+val max_clause = 25;
 
-val (pb,diff) = List.nth (pbl2,100);
-val pb' = inter_reduce pb;
-val tm = term_of_board (mk_startboard pb');
-val (win,endtree) = mcts_test 1000 pb';
+fun provable_pb n =
+  if n <= 0 then [] else
+  let val pb = random_pb max_clause max_lit max_var in
+    if is_sat pb 
+    then provable_pb n 
+    else pb :: provable_pb (n-1)
+  end;
+
+val pbl = provable_pb 100;
+val pbl1 = map_assoc abs_time pbl;
+val targetl = map (fn (a,b) => (a,([]:pb),List.tabulate (10,fn _ => b))) pbl1;
+
+fun update_target target =
+  let val (win,endtree) = mcts_test 1000 target in
+    if win then
+      let
+        val nodel = trace_win endtree []
+        val (pb,_,nl) = #board (last nodel)
+        val atim = abs_time pb
+      in
+        (pb, [], dict_sort Int.compare (atim :: nl))
+      end
+    else target
+  end;
+
+val targetl2 = map update_target targetl;
+val targetl3 = map update_target targetl2;
+val targetl4 = map update_target targetl3;
+val targetl5 = map update_target targetl4;
+
+val targetl10 = funpow 5 (map update_target) targetl5;
+val targetl15 = funpow 5 (map update_target) targetl10;
+val l1 = map_assoc list_imin (map #3 targetl15);
+val l2 = map fst (dict_sort compare_imin l1);
 *)
 
-(* -------------------------------------------------------------------------
-   Initialization of the levels
-   ------------------------------------------------------------------------- *)
-
-fun level_pb level =
-  let 
-    val nvar = random_int (4,level)
-    val nlit = 3
-    val nclause = random_int (nvar * 2, nvar * 3)   
-    fun loop () =
-      let val pb = random_pb nclause nlit nvar in
-        if is_sat pb then loop () else pb
-      end
-  in
-    inter_reduce (mk_sameorder_set clause_compare (loop ()))
-  end
-
-fun level_targetl level =
-  let 
-    val level_alt = if level > max_vars_glob then max_vars_glob else level
-    val l1 = List.tabulate (400, fn _=> level_pb level_alt)
-    val l2 = map mk_startboard l1
-    fun cmp ((_,_,a1),(_,_,a2)) = Int.compare (a2,a1)
-  in
-    dict_sort cmp l2
-  end
-
+(*
 (* -------------------------------------------------------------------------
    Parallelization
    ------------------------------------------------------------------------- *)
@@ -419,20 +573,20 @@ val dplayer = {tob = tob, tnnparam = tnnparam, schedule = schedule}
    Interface
    ------------------------------------------------------------------------- *)
 
+val version = 1
+
 val rlparam =
-  {expname = "mleResolution-5", exwindow = 80000,
-   ncore = 32, nsim = 1600, decay = 1.0}
+  {expname = "mleResolution-" ^ its version, exwindow = 200000,
+   ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
-  {
-  rlparam = rlparam,
-  game = game,
-  gameio = gameio,
-  level_targetl = level_targetl,
-  dplayer = dplayer
-  }
+  {rlparam = rlparam, 
+   game = game, 
+   gameio = gameio, 
+   dplayer = dplayer}
 
 val extsearch = mk_extsearch "mleResolution.extsearch" rlobj
+*)
 
 (*
 load "mleResolution"; open mleResolution;

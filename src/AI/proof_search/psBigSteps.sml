@@ -142,13 +142,14 @@ fun loop_bigsteps bsobj mctsobj (rlex,rootl) (tree,cache) =
     if stati <> Undecided then (stati = Win, rlex, rootl) else
     let
       val (endtree,_) = mcts mctsobj (tree,cache)
-      val root = dfind [] endtree
+
       val cid = select_bigstep bsobj mctsobj endtree
       val newtree =
         (if #noise_root mctsparam then add_rootnoise mctsparam else I)
         (cut_tree cid endtree)
       val newcache = build_cache game newtree
       val newrlex = add_rootex game endtree rlex
+      val root = dfind [] newtree
       val newrootl = root :: rootl
     in
       loop_bigsteps bsobj mctsobj (newrlex,newrootl) (newtree,newcache)
@@ -168,7 +169,7 @@ fun run_bigsteps bsobj target =
     val tree' =
       (if #noise_root mctsparam then add_rootnoise mctsparam else I) tree
   in
-    loop_bigsteps bsobj mctsobj ([],[]) (tree',cache)
+    loop_bigsteps bsobj mctsobj ([],[dfind [] tree']) (tree',cache)
   end
 
 (* -------------------------------------------------------------------------

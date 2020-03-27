@@ -4,7 +4,7 @@ sig
   include Abbrev
 
   (* outcome *)
-  datatype status = Undecided | Win | Lose
+  datatype status = Undecided | Win of real | Lose
 
   (* search tree: 'a is a board position, 'b is a move *)
   type id = int list
