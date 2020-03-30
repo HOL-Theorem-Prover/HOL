@@ -139,10 +139,9 @@ fun loop_bigsteps bsobj mctsobj (rlex,rootl) (tree,cache) =
     val {board,stati,...} = dfind [] tree
     val _ = debug_board (#verbose bsobj) game board
   in
-    if stati <> Undecided then (stati = Win, rlex, rootl) else
+    if not (is_undecided stati) then (is_win stati, rlex, rootl) else
     let
       val (endtree,_) = mcts mctsobj (tree,cache)
-
       val cid = select_bigstep bsobj mctsobj endtree
       val newtree =
         (if #noise_root mctsparam then add_rootnoise mctsparam else I)
@@ -193,7 +192,8 @@ val mctsparam =
   noise_coeff = 0.25,
   noise_gen = random_real,
   noconfl = false,
-  avoidlose = false
+  avoidlose = false,
+  eval_endstate = false
   };
 
 val bsobj : (toy_board,toy_move) bsobj =

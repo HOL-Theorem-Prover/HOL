@@ -25,6 +25,7 @@ sig
   datatype move = Select | Delete
   val game : (board,move) psMCTS.game
 
+  val eval_board : board -> real
   val mcts_test : int -> board -> bool * (board, move) psMCTS.tree
 
 end

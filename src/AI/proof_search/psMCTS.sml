@@ -13,10 +13,26 @@ open HolKernel Abbrev boolLib aiLib
 val ERR = mk_HOL_ERR "psMCTS"
 
 (* -------------------------------------------------------------------------
+   Status
+   ------------------------------------------------------------------------- *)
+
+datatype status = Undecided | Win | Lose
+fun is_win x = case x of Win => true | _ => false
+fun is_lose x = case x of Lose => true | _ => false
+fun is_undecided x = case x of Undecided => true | _ => false
+fun score_status status = case status of
+    Undecided => raise ERR "score_status" ""
+  | Win => 1.0
+  | Lose => 0.0
+fun string_of_status status = case status of
+    Win => "win"
+  | Lose => "lose"
+  | Undecided => "undecided"
+
+(* -------------------------------------------------------------------------
    Search tree
    ------------------------------------------------------------------------- *)
 
-datatype status = Undecided | Win of real | Lose
 type id = int list (* node identifier *)
 val id_compare = list_compare Int.compare
 type 'b pol = (('b * real) * id) list
@@ -63,7 +79,8 @@ type mctsparam =
   noise_coeff : real,
   noise_gen : unit -> real,
   noconfl : bool,
-  avoidlose : bool
+  avoidlose : bool,
+  eval_endstate : bool
   }
 
 type ('a,'b) mctsobj =
@@ -72,10 +89,6 @@ type ('a,'b) mctsobj =
 (* -------------------------------------------------------------------------
    Backup
    ------------------------------------------------------------------------- *)
-
-fun is_win x = case x of Win _ => true | _ => false
-fun is_lose x = case x of Lose => true | _ => false
-fun is_undecided x = case x of Undecided => true | _ => false
 
 fun quant_status quant test tree pol =
   let
@@ -91,7 +104,7 @@ fun all_lose tree pol = quant_status all is_lose tree pol
 fun update_node decay tree reward {board,pol,value,stati,sum,vis,status} =
   let val newstatus =
     if not (is_undecided status) then status
-    else if exists_win tree pol then (Win 1.0)
+    else if exists_win tree pol then Win
     else if all_lose tree pol then Lose
     else Undecided
   in
@@ -182,8 +195,18 @@ fun node_create_backup obj (tree,cache) (id,board) =
           then Lose
           else stati
         val (value,pol1) = case stati' of
-            Win reward => (reward,[])
-          | Lose      => (0.0,[])
+            Win => (
+                   if #eval_endstate param 
+                   then fst ((#player obj) board) 
+                   else 1.0,
+                   []
+                   )
+          | Lose => (
+                    if #eval_endstate param 
+                    then fst ((#player obj) board) 
+                    else 0.0,
+                    []
+                    )
           | Undecided => (#player obj) board
         val pol2 = normalize_prepol pol1
         val pol3 = if #noise_all param then add_noise param pol2 else pol2
@@ -228,11 +251,6 @@ fun puct_choice param tree vtot ((move,polv),cid) =
 
 datatype ('a,'b) select = Backup of (id * real) | NodeExtension of (id * id)
 
-fun score_status status = case status of
-    Undecided => raise ERR "score_status" ""
-  | Win r => r
-  | Lose => 0.0
-
 fun lead_lose tree ((move,polv),cid) =
   (is_lose (#status (dfind cid tree)) handle NotFound => false)
 
@@ -244,9 +262,14 @@ fun select_child obj tree id =
     val param = #mctsparam obj
   in
     if not (is_undecided stati)
-      then Backup (id,score_status stati) else
-    if #avoidlose param andalso is_lose status
-      then Backup (id,score_status status) else
+      then Backup (id, if #eval_endstate param 
+                       then fst ((#player obj) (#board node)) (* inefficient *)
+                       else score_status stati)
+    else if #avoidlose param andalso is_lose status
+      then Backup (id, if #eval_endstate param 
+                       then fst ((#player obj) (#board node)) (* inefficient *)
+                       else score_status status)
+    else 
     let
       val l0 =
         if #avoidlose param
@@ -376,7 +399,7 @@ type toy_board = (int * int * int)
 datatype toy_move = Incr | Decr
 
 fun toy_status_of (start,finish,timer) =
-  if start >= finish then (Win 1.0)
+  if start >= finish then Win
   else if start < 0 orelse timer <= 0 then Lose
   else Undecided
 
@@ -418,7 +441,8 @@ val mctsparam =
   noise_coeff = 0.25,
   noise_gen = gamma_noise_gen 0.2,
   noconfl = false,
-  avoidlose = false
+  avoidlose = false,
+  eval_endstate = false
   };
 
 val mctsobj : (toy_board,toy_move) mctsobj =

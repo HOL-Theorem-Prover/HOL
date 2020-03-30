@@ -40,7 +40,7 @@ sig
     gameio : 'a gameio,
     dplayer : 'a dplayer,
     process_rootl : 'a list -> int,
-    modify_board : int
+    modify_board : 'a targetd -> 'a -> 'a
     }
   val mk_bsobj : ('a,'b) rlobj -> splayer -> ('a,'b) psBigSteps.bsobj
   val mk_extsearch : string -> ('a,'b) rlobj -> 'a es
@@ -58,12 +58,12 @@ sig
   val rl_start : ('a,'b) rlobj * 'a es -> 'a targetd -> unit
   val rl_restart : int -> ('a,'b) rlobj * 'a es -> 'a targetd -> unit
 
-  (* final testing *)
+  (* final testing 
   type 'a ftes = (unit, 'a, bool * int * 'a option) smlParallel.extspec
   type 'a fttnnes = (tnn, 'a, bool * int * 'a option) smlParallel.extspec
   val ft_mk_extsearch : string -> ('a,'b) rlobj ->
     ('a,'b) psMCTS.player -> 'a ftes
   val fttnn_mk_extsearch : string -> ('a,'b) rlobj -> 'a fttnnes
   val fttnnbs_mk_extsearch : string -> ('a,'b) rlobj -> 'a fttnnes
-
+  *)
 end

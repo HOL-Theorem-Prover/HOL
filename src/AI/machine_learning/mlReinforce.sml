@@ -45,7 +45,7 @@ type ('a,'b) rlobj =
   gameio : 'a gameio,
   dplayer : 'a dplayer,
   process_rootl : 'a list -> int,
-  modify_board : int
+  modify_board : 'a targetd -> 'a -> 'a
   }
 
 (* -------------------------------------------------------------------------
@@ -54,12 +54,12 @@ type ('a,'b) rlobj =
 
 fun mk_mctsparam noiseb nsim rlobj =
   {
-  timer = NONE,
-  nsim = SOME nsim, stopatwin_flag = false,
+  timer = NONE, nsim = SOME nsim, stopatwin_flag = false,
   decay = #decay (#rlparam rlobj), explo_coeff = 2.0,
   noise_all = false, noise_root = noiseb,
   noise_coeff = 0.25, noise_gen = random_real,
-  noconfl = false, avoidlose = false
+  noconfl = false, avoidlose = false,
+  eval_endstate = false
   }
 
 fun player_from_tnn tnn tob game board =
@@ -285,7 +285,7 @@ fun rl_explore_targetl (unib,noiseb) (rlobj,es) tnn targetl =
 fun rl_compete_targetl unib (rlobj,es) tnn targetl =
   rl_explore_targetl (unib,false) (rlobj,es) tnn targetl
 
-
+(*
 fun row_win l =
   case l of [] => 0 | a :: m => if a then 1 + row_win m else 0
 fun row_lose l =
@@ -311,7 +311,9 @@ fun stats_select rlobj nfin nwin (neg,pos,negsel,possel) =
     log rlobj ("Exploration: " ^ its nwin ^ " targets proven at least once");
     app (stats_select_one rlobj) l
   end
+*)
 
+(*
 fun select_from_targetd rlobj ntot targetd =
   let
     val targetwinl = map (fn (a,(b,c,_)) => (a,(b,c))) (dlist targetd)
@@ -334,8 +336,12 @@ fun select_from_targetd rlobj ntot targetd =
   in
     stats_select rlobj (length lfin)
        (length lwin) (neg,pos, map fst negsel, map fst possel);
-    map (#modify_board rlobj targetd) lfin
+    lfin
   end
+*)
+
+fun select_from_targetd rlobj ntot targetd =
+  map (#modify_board rlobj targetd) (dkeys targetd)
 
 fun update_targetd ((board,b,n),targetd) =
   let
@@ -416,6 +422,7 @@ fun rl_restart ngen (rlobj,es) targetd =
    Final MCTS Testing
    ------------------------------------------------------------------------- *)
 
+(*
 type 'a ftes = (unit, 'a, bool * int * 'a option) smlParallel.extspec
 type 'a fttnnes = (tnn, 'a, bool * int * 'a option) smlParallel.extspec
 
@@ -467,7 +474,7 @@ fun ft_extsearch_fun rlobj player (_:unit) target =
     val mctsobj =
       {mctsparam = ft_mctsparam, game = #game rlobj, player = player}
     val (tree,_) = mcts mctsobj (starttree_of mctsobj target)
-    val b = #status (dfind [] tree) = Win
+    val b = is_win (#status (dfind [] tree))
     val boardo = if not b then NONE else
       let val nodel = trace_win tree [] in
         SOME (#board (last nodel))
@@ -596,7 +603,7 @@ fun fttnnbs_mk_extsearch self (rlobj as {rlparam,gameio,...}) =
   write_result = ft_write_result gameio,
   read_result = ft_read_result gameio
   }
-
+*)
 
 
 end (* struct *)

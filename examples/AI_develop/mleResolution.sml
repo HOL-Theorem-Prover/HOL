@@ -158,7 +158,7 @@ fun random_pb nclause nlit nvar =
       then d 
       else loop (dadd (random_clause nlit nvar) () d)
   in
-    dkeys (loop (dempty clause_compare))
+    shuffle (dkeys (loop (dempty clause_compare)))
   end
 
 (*
@@ -178,7 +178,7 @@ fun provable_pb n =
     else pb :: provable_pb (n-1)
   end
 
-val pbl = provable_pb 100;
+val pbl = provable_pb 20;
 val pbatiml = map_assoc abs_time pbl;
 
 fun sigmoid x = Math.tanh x / 2.0 + 0.5;
@@ -335,15 +335,23 @@ fun string_of_board (cl1,cl2,nl) =
 val board_compare = 
   triple_compare pb_compare pb_compare (list_compare Int.compare)
 
-fun status_of (cl1,cl2,nl) =
+fun find_index nl a = case nl of
+    [] => 0
+  | b :: m => if b <= a then 1 + find_index m a else 0
+
+fun eval_board (cl1,cl2,nl) = 
   let val pb = cl2 @ cl1 in
-    if is_sat pb then Lose else
-    let val atim = abs_time pb in 
-      if atim < last (first_n 10 nl)
-      then Win
-      else if null cl1 then Lose
-      else Undecided
-    end
+    if is_sat pb 
+    then 0.0 
+    else 10.0 * (1.0 / (1.0 + Math.ln (Real.fromInt (abs_time pb))))
+  end
+
+(* todo: should not recheck after deleting *)
+fun status_of (board as (cl1,cl2,nl)) =
+  let val pb = cl2 @ cl1 in
+    if is_sat pb then Lose 
+    else if null cl1 then Win
+    else Undecided
   end
 
 (* -------------------------------------------------------------------------
@@ -425,7 +433,8 @@ fun string_of_move move =
 fun move_compare (a,b) = 
   String.compare (string_of_move a, string_of_move b)
 
-fun available_movel _ = movel
+fun available_movel (cl1,cl2,nl) = 
+  if null cl1 then [] else movel
 
 fun apply_move move (cl1,cl2,nl) = 
   if null cl1 then raise ERR "apply_move" "" else
@@ -457,30 +466,30 @@ fun mk_mctsparam nsim =
   {
   timer = NONE,
   nsim = SOME nsim,
-  stopatwin_flag = true,
+  stopatwin_flag = false,
   decay = 1.0, explo_coeff = 2.0,
   noise_coeff = 0.25, 
   noise_root = false,
   noise_all = false, 
   noise_gen = random_real,
   noconfl = false, 
-  avoidlose = false
+  avoidlose = false,
+  eval_endstate = true
   }
 
-fun string_of_status status = case status of
-    Win => "win"
-  | Lose => "lose"
-  | Undecided => "undecided"
+fun smart_player game (board as (cl1,cl2,nl)) =
+  (eval_board board, 
+   map (fn x => (x,1.0)) (#available_movel game board))
 
 fun mcts_test nsim target =
   let
     val mctsobj =
       {mctsparam = mk_mctsparam nsim,
        game = game,
-       player = random_player game}
+       player = smart_player game}
     val tree = starttree_of mctsobj target
     val (endtree,_) = mcts mctsobj tree
-    val b = #status (dfind [] endtree) = Win
+    val b = is_win (#status (dfind [] endtree))
   in
     print_endline (string_of_status (#status (dfind [] endtree)));
     (b, endtree)
@@ -503,32 +512,65 @@ fun provable_pb n =
     else pb :: provable_pb (n-1)
   end;
 
-val pbl = provable_pb 100;
+val pbl = provable_pb 1;
 val pbl1 = map_assoc abs_time pbl;
-val targetl = map (fn (a,b) => (a,([]:pb),List.tabulate (10,fn _ => b))) pbl1;
+val targetl = map (fn (a,b) => (a,([]:pb),[b])) pbl1;
 
-fun update_target target =
-  let val (win,endtree) = mcts_test 1000 target in
-    if win then
-      let
-        val nodel = trace_win endtree []
-        val (pb,_,nl) = #board (last nodel)
-        val atim = abs_time pb
-      in
-        (pb, [], dict_sort Int.compare (atim :: nl))
-      end
-    else target
+(*
+fun minimize target =
+  let 
+    val (_,endtree) = mcts_test 10000 target
+    val nodel = map (fn x => dfind x endtree) (mostexplored_path endtree [])
+  in
+    map_assoc abs_board (map #board nodel)
   end;
 
-val targetl2 = map update_target targetl;
-val targetl3 = map update_target targetl2;
-val targetl4 = map update_target targetl3;
-val targetl5 = map update_target targetl4;
+val ex1 = hd (map_assoc minimize targetl);
+length (snd ex1);
+*)
 
-val targetl10 = funpow 5 (map update_target) targetl5;
-val targetl15 = funpow 5 (map update_target) targetl10;
-val l1 = map_assoc list_imin (map #3 targetl15);
-val l2 = map fst (dict_sort compare_imin l1);
+load "psBigSteps"; open psBigSteps;
+
+val mctsparam =
+  {
+  timer = NONE,
+  nsim = SOME 1600,
+  stopatwin_flag = false,
+  decay = 1.0, explo_coeff = 2.0,
+  noise_coeff = 0.25, 
+  noise_root = false,
+  noise_all = false, 
+  noise_gen = random_real,
+  noconfl = false, 
+  avoidlose = false,
+  eval_endstate = true
+  };
+
+fun abs_board (cl1,cl2,nl) = 
+  let val pb = cl2 @ cl1 in if is_sat pb then 1000000 else abs_time pb end;
+
+fun smart_player (game : (board,move) game) (board as (cl1,cl2,nl)) =
+  (eval_board board, 
+   map (fn x => (x,1.0)) (#available_movel game board));
+
+val bsobj = 
+   {game = game,
+    mctsparam = mctsparam,
+    preplayer = fn _ => smart_player game, 
+    temp_flag = false, 
+    verbose = true};
+
+val pbl = provable_pb 1;
+val pbl1 = map_assoc abs_time pbl;
+val targetl = map (fn (a,b) => (a,([]:pb),[b])) pbl1;
+
+val object = run_bigsteps bsobj (hd targetl);
+val (_,_,nodel) = object;
+val board = #board (hd nodel);
+print_endline (#string_of_board game (hd targetl));
+print_endline (#string_of_board game board);
+map (abs_board o #board) (rev nodel);
+
 *)
 
 (*

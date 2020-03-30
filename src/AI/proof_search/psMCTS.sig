@@ -4,7 +4,11 @@ sig
   include Abbrev
 
   (* outcome *)
-  datatype status = Undecided | Win of real | Lose
+  datatype status = Undecided | Win | Lose
+  val is_undecided : status -> bool 
+  val is_win : status -> bool
+  val is_lose : status -> bool
+  val string_of_status : status -> string  
 
   (* search tree: 'a is a board position, 'b is a move *)
   type id = int list
@@ -50,7 +54,8 @@ sig
     noise_coeff : real,
     noise_gen : unit -> real,
     noconfl : bool,
-    avoidlose : bool
+    avoidlose : bool,
+    eval_endstate : bool
     }
 
   type ('a,'b) mctsobj =
