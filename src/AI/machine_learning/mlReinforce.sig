@@ -39,7 +39,8 @@ sig
     rlparam : rlparam,
     game : ('a,'b) psMCTS.game,
     gameio : 'a gameio,
-    dplayer : 'a dplayer
+    dplayer : 'a dplayer,
+    infobs : 'a list -> unit
     }
   val mk_bsobj : ('a,'b) rlobj -> splayer -> ('a,'b) psBigSteps.bsobj
   val mk_extsearch : string -> ('a,'b) rlobj -> 'a es

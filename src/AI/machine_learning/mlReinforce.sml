@@ -43,7 +43,8 @@ type ('a,'b) rlobj =
   rlparam : rlparam,
   game : ('a,'b) psMCTS.game,
   gameio : 'a gameio,
-  dplayer : 'a dplayer
+  dplayer : 'a dplayer,
+  infobs : 'a list -> unit
   }
 
 (* -------------------------------------------------------------------------
@@ -57,7 +58,7 @@ fun mk_mctsparam splayer rlobj =
   noise_all = false, noise_root = (#noiseb splayer),
   noise_coeff = 0.25, noise_gen = random_real,
   noconfl = false, avoidlose = false,
-  eval_endstate = true (* todo : reflect this parameter in rlparam *)
+  evalwin = true (* todo : reflect this parameter in rlparam *)
   }
 
 fun player_from_tnn tnn tob game board =
@@ -200,9 +201,9 @@ fun retrieve_targetd rlobj n =
 fun extsearch_fun rlobj splayer target =
   let
     val bsobj = mk_bsobj rlobj splayer
-    val (b1, rlex, _) = run_bigsteps bsobj target
+    val (b1,rlex,nodel) = run_bigsteps bsobj target
   in
-    ((b1, rlex) : bool * 'a rlex)
+    (#infobs rlobj (map #board nodel); (b1,rlex))
   end
   handle Subscript => raise ERR "extsearch_fun" "subscript"
 

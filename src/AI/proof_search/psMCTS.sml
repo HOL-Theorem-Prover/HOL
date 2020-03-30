@@ -80,7 +80,7 @@ type mctsparam =
   noise_gen : unit -> real,
   noconfl : bool,
   avoidlose : bool,
-  eval_endstate : bool
+  evalwin : bool
   }
 
 type ('a,'b) mctsobj =
@@ -195,18 +195,10 @@ fun node_create_backup obj (tree,cache) (id,board) =
           then Lose
           else stati
         val (value,pol1) = case stati' of
-            Win => (
-                   if #eval_endstate param 
-                   then fst ((#player obj) board) 
-                   else 1.0,
-                   []
-                   )
-          | Lose => (
-                    if #eval_endstate param 
+            Win => (if #evalwin param 
                     then fst ((#player obj) board) 
-                    else 0.0,
-                    []
-                    )
+                    else 1.0, [])
+          | Lose => (0.0,[])
           | Undecided => (#player obj) board
         val pol2 = normalize_prepol pol1
         val pol3 = if #noise_all param then add_noise param pol2 else pol2
@@ -262,13 +254,11 @@ fun select_child obj tree id =
     val param = #mctsparam obj
   in
     if not (is_undecided stati)
-      then Backup (id, if #eval_endstate param 
+      then Backup (id, if #evalwin param andalso is_win stati 
                        then fst ((#player obj) (#board node)) (* inefficient *)
                        else score_status stati)
     else if #avoidlose param andalso is_lose status
-      then Backup (id, if #eval_endstate param 
-                       then fst ((#player obj) (#board node)) (* inefficient *)
-                       else score_status status)
+      then Backup (id, score_status status)
     else 
     let
       val l0 =
@@ -442,7 +432,7 @@ val mctsparam =
   noise_gen = gamma_noise_gen 0.2,
   noconfl = false,
   avoidlose = false,
-  eval_endstate = false
+  evalwin = false
   };
 
 val mctsobj : (toy_board,toy_move) mctsobj =
