@@ -26,15 +26,15 @@ fun log rlobj s = (log_in_eval rlobj s; print_endline s)
    Types
    ------------------------------------------------------------------------- *)
 
-type 'a targetd = ('a, int * bool list * int list) Redblackmap.dict
+type 'a targetd = ('a, bool list) Redblackmap.dict
 type 'a gameio =
-  {write_boardl : string -> 'a list -> unit,
-   read_boardl : string -> 'a list}
-type splayer = bool * tnn * bool * int
+  {write_boardl : string -> 'a list -> unit, read_boardl : string -> 'a list}
+type splayer = 
+  {unib : bool, tnn : tnn, noiseb : bool, nsim : int}
 type 'a dplayer =
   {pretob : ('a * tnn) option -> 'a -> term list,
    schedule : schedule, tnnparam : tnnparam}
-type 'a es = (splayer, 'a, bool * 'a rlex * int) smlParallel.extspec
+type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
 type rlparam =
   {expname : string, exwindow : int, ncore : int,
    ntarget : int, nsim : int, decay : real}
@@ -43,23 +43,21 @@ type ('a,'b) rlobj =
   rlparam : rlparam,
   game : ('a,'b) psMCTS.game,
   gameio : 'a gameio,
-  dplayer : 'a dplayer,
-  process_rootl : 'a list -> int,
-  modify_board : 'a targetd -> 'a -> 'a
+  dplayer : 'a dplayer
   }
 
 (* -------------------------------------------------------------------------
    Big steps
    ------------------------------------------------------------------------- *)
 
-fun mk_mctsparam noiseb nsim rlobj =
+fun mk_mctsparam splayer rlobj =
   {
-  timer = NONE, nsim = SOME nsim, stopatwin_flag = false,
+  timer = NONE, nsim = SOME (#nsim splayer), stopatwin_flag = false,
   decay = #decay (#rlparam rlobj), explo_coeff = 2.0,
-  noise_all = false, noise_root = noiseb,
+  noise_all = false, noise_root = (#noiseb splayer),
   noise_coeff = 0.25, noise_gen = random_real,
   noconfl = false, avoidlose = false,
-  eval_endstate = false
+  eval_endstate = true (* todo : reflect this parameter in rlparam *)
   }
 
 fun player_from_tnn tnn tob game board =
@@ -72,7 +70,7 @@ fun player_from_tnn tnn tob game board =
     (singleton_of_list e, map_assoc f amovel)
   end
 
-fun mk_bsobj rlobj (unib,tnn,noiseb,nsim) =
+fun mk_bsobj rlobj (splayer as {unib,tnn,noiseb,nsim}) =
   let
     val game = #game rlobj
     val pretob = #pretob (#dplayer rlobj)
@@ -86,7 +84,7 @@ fun mk_bsobj rlobj (unib,tnn,noiseb,nsim) =
     verbose = false, temp_flag = false,
     preplayer = if unib then random_preplayer else preplayer,
     game = game,
-    mctsparam = mk_mctsparam noiseb nsim rlobj
+    mctsparam = mk_mctsparam splayer rlobj
     }
   end
 
@@ -108,13 +106,12 @@ fun read_rlex gameio file =
     combine (boardl,rll)
   end
 
-fun write_splayer file (unib,tnn,noiseb,nsim) =
+fun write_splayer file {unib,tnn,noiseb,nsim} =
   (
   write_tnn (file ^ "_tnn") tnn;
   writel (file ^ "_flags") [String.concatWith " " (map bts [unib,noiseb])];
   writel (file ^ "_nsim") [its nsim]
   )
-  handle Subscript => raise ERR "write_splayer" ""
 
 fun read_splayer file =
   let
@@ -125,25 +122,16 @@ fun read_splayer file =
            (singleton_of_list (readl (file ^ "_flags")))))
     val nsim = string_to_int (singleton_of_list (readl (file ^ "_nsim")))
   in
-    (unib,tnn,noiseb,nsim)
+    {unib=unib,tnn=tnn,noiseb=noiseb,nsim=nsim}
   end
 
-fun write_result gameio file (b,rlex,n) =
-  (
-  writel (file ^ "_bstatus") [bts b];
-  write_rlex gameio (file ^ "_rlex") rlex;
-  writel (file ^ "_ntime") [its n]
-  )
+fun write_result gameio file (b,rlex) =
+  (writel (file ^ "_bstatus") [bts b];
+   write_rlex gameio (file ^ "_rlex") rlex)
 
 fun read_result gameio file =
-  let 
-    val s1 = singleton_of_list (readl (file ^ "_bstatus")) 
-    val s2 = singleton_of_list (readl (file ^ "_ntime")) 
-  in
-    (string_to_bool s1, 
-     read_rlex gameio (file ^ "_rlex"),
-     string_to_int s2)
-  end
+  (string_to_bool (singleton_of_list (readl (file ^ "_bstatus"))), 
+   read_rlex gameio (file ^ "_rlex"))
 
 fun write_target gameio file target =
   (#write_boardl gameio) (file ^ "_target") [target]
@@ -156,7 +144,7 @@ fun read_target gameio file =
    I/O for storage and restart
    ------------------------------------------------------------------------- *)
 
-(* Examples *)
+(* Example *)
 fun rlex_file rlobj n =
   eval_dir ^ "/" ^ (#expname (#rlparam rlobj)) ^ "/rlex" ^ its n
 
@@ -174,42 +162,33 @@ fun gather_ex rlobj acc n =
   end
 fun retrieve_rlex rlobj n = gather_ex rlobj [] n
 
-
 (* TNN *)
 fun tnn_file rlobj n =
   eval_dir ^ "/" ^ (#expname (#rlparam rlobj)) ^ "/tnn" ^ its n
 fun store_tnn rlobj n tnn = write_tnn (tnn_file rlobj n) tnn
 fun retrieve_tnn rlobj n = read_tnn (tnn_file rlobj n)
 
-
-(* Targets *)
+(* Target *)
 fun targetd_file rlobj n =
   eval_dir ^ "/" ^ (#expname (#rlparam rlobj)) ^ "/targetd" ^ its n
 
-fun blts (a,bl,nl) = 
-   its a ^ "," ^ String.concatWith " " (map bts bl) ^ "," ^
-   String.concatWith " " (map its nl)
-
-fun stbl s =
-  let val (s1,s2,s3) = triple_of_list (String.tokens (fn c => c = #",") s) in
-    (
-    string_to_int s1,  
-    map string_to_bool (String.tokens Char.isSpace s2),
-    map string_to_int (String.tokens Char.isSpace s3)
-    )
-  end
+fun blts bl = String.concatWith " " (map bts bl)
+fun stbl s = map string_to_bool (String.tokens Char.isSpace s)
 
 fun store_targetd rlobj n targetd =
-  let val (l1,l2) = split (dlist targetd) in
-    #write_boardl (#gameio rlobj)
-       ((targetd_file rlobj n) ^ "_boardl") l1;
-    writel ((targetd_file rlobj n) ^ "_iblnl") (map blts l2)
+  let 
+    val file = targetd_file rlobj n
+    val (l1,l2) = split (dlist targetd) 
+  in
+    #write_boardl (#gameio rlobj) (file ^ "_boardl") l1;
+    writel (file ^ "_bl") (map blts l2)
   end
 
 fun retrieve_targetd rlobj n =
   let
-    val l1 = #read_boardl (#gameio rlobj) ((targetd_file rlobj n) ^ "_boardl")
-    val l2 = map stbl (readl ((targetd_file rlobj n) ^ "_iblnl"))
+    val file = targetd_file rlobj n
+    val l1 = #read_boardl (#gameio rlobj) (file ^ "_boardl")
+    val l2 = map stbl (readl (file ^ "_bl"))
   in
     dnew (#board_compare (#game rlobj)) (combine (l1,l2))
   end
@@ -221,9 +200,9 @@ fun retrieve_targetd rlobj n =
 fun extsearch_fun rlobj splayer target =
   let
     val bsobj = mk_bsobj rlobj splayer
-    val (b1, rlex, rootl) = run_bigsteps bsobj target
+    val (b1, rlex, _) = run_bigsteps bsobj target
   in
-    (b1, rlex, (#process_rootl rlobj) (map #board rootl))
+    ((b1, rlex) : bool * 'a rlex)
   end
   handle Subscript => raise ERR "extsearch_fun" "subscript"
 
@@ -269,14 +248,13 @@ fun rl_train ngen rlobj rlex =
 fun rl_explore_targetl (unib,noiseb) (rlobj,es) tnn targetl =
   let
     val {ncore,nsim,...} = #rlparam rlobj
-    val splayer = (unib,tnn,noiseb,nsim)
-    val (l, t) = 
-      add_time (parmap_queue_extern ncore es splayer) targetl
+    val splayer = {unib=unib,tnn=tnn,noiseb=noiseb,nsim=nsim}
+    val (l,t) = add_time (parmap_queue_extern ncore es splayer) targetl
     val _ =  log rlobj ("Exploration time: " ^ rts t)
-    val resultl = combine_triple (targetl, map #1 l, map #3 l)
-    val nwin = length (filter #1 l)
+    val resultl = combine (targetl, map fst l)
+    val nwin = length (filter fst l)
     val _ = log rlobj ("Exploration wins: " ^ its nwin)
-    val rlex = List.concat (map #2 l)
+    val rlex = List.concat (map snd l)
     val _ = log rlobj ("Exploration new examples: " ^ its (length rlex))
   in
     (rlex,resultl)
@@ -340,15 +318,12 @@ fun select_from_targetd rlobj ntot targetd =
   end
 *)
 
-fun select_from_targetd rlobj ntot targetd =
-  map (#modify_board rlobj targetd) (dkeys targetd)
+fun select_from_targetd rlobj ntot targetd = dkeys targetd
+  (* map (#modify_board rlobj targetd) *)
 
-fun update_targetd ((board,b,n),targetd) =
-  let
-    val (i,bl,nl) = dfind board targetd
-      handle NotFound => raise ERR "update_targetd" ""
-  in
-    dadd board (i, b :: bl, n :: nl) targetd
+fun update_targetd ((board,b),targetd) =
+  let val bl = dfind board targetd handle NotFound => [] in
+    dadd board (b :: bl) targetd
   end
 
 fun rl_explore_targetd unib (rlobj,es) (tnn,targetd) =
