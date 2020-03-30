@@ -396,7 +396,7 @@ val operl = List.tabulate (5, mk_bvar) @
   [empty_list_var, cat_move,
    pair_cat, ``$~``,``$/\``,``$\/``,head_eval]
 
-val tnnparam = map_assoc (dim_std (1,16)) operl @ [(head_poli,[16,2])]
+val tnnparam = map_assoc (dim_std (1,12)) operl @ [(head_poli,[12,2])]
 
 fun pretob _ board = 
   let val tm = term_of_board board in [tag_heval tm, tag_hpoli tm] end
@@ -407,7 +407,7 @@ val dplayer = {pretob = pretob, tnnparam = tnnparam, schedule = schedule}
    Interface
    ------------------------------------------------------------------------- *)
 
-val version = 1
+val version = 2
 
 fun infobs boardl = 
   let 
@@ -424,8 +424,8 @@ fun infobs boardl =
   end
 
 val rlparam =
-  {expname = "mleResolution-" ^ its version, exwindow = 200000,
-   ncore = 30, ntarget = 200, nsim = 3200, decay = 1.0}
+  {expname = "mleResolution-" ^ its version, exwindow = 40000,
+   ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {rlparam = rlparam,  game = game, gameio = gameio, dplayer = dplayer,
@@ -440,7 +440,7 @@ load "mlReinforce"; open mlReinforce;
 load "mleResolution"; open mleResolution;
 
 val max_lit = 3; val max_var = 5; val max_clause = 25;
-val pbl = provable_pb (max_clause,max_lit,max_var) 100;
+val pbl = provable_pb (max_clause,max_lit,max_var) 200;
 val targetl = map (fn x => (x,[]:pb,abs_time x)) pbl;
 val targetd = dnew (#board_compare game) (map (fn x => (x,[])) targetl)
 val r = rl_start (rlobj,extsearch) targetd;
