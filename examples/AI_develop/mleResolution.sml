@@ -389,7 +389,7 @@ val gameio = {write_boardl = write_boardl, read_boardl = read_boardl}
    ------------------------------------------------------------------------- *)
 
 val schedule =
-  [{ncore = 1, verbose = true, learning_rate = 0.02,
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 20}]
 
 val operl = List.tabulate (5, mk_bvar) @ 
@@ -425,7 +425,7 @@ fun infobs boardl =
 
 val rlparam =
   {expname = "mleResolution-" ^ its version, exwindow = 200000,
-   ncore = 4, ntarget = 200, nsim = 3200, decay = 1.0}
+   ncore = 30, ntarget = 200, nsim = 3200, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
   {rlparam = rlparam,  game = game, gameio = gameio, dplayer = dplayer,
@@ -440,7 +440,7 @@ load "mlReinforce"; open mlReinforce;
 load "mleResolution"; open mleResolution;
 
 val max_lit = 3; val max_var = 5; val max_clause = 25;
-val pbl = provable_pb (max_clause,max_lit,max_var) 4;
+val pbl = provable_pb (max_clause,max_lit,max_var) 100;
 val targetl = map (fn x => (x,[]:pb,abs_time x)) pbl;
 val targetd = dnew (#board_compare game) (map (fn x => (x,[])) targetl)
 val r = rl_start (rlobj,extsearch) targetd;
