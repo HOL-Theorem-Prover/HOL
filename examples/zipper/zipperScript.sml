@@ -1,6 +1,5 @@
 open HolKernel Parse boolLib bossLib;
 
-open lcsymtacs
 open listTheory
 
 fun asimp thl = asm_simp_tac(srw_ss() ++ ARITH_ss) thl

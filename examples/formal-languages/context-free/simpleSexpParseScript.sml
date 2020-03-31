@@ -1,4 +1,4 @@
-open HolKernel boolLib bossLib lcsymtacs finite_mapSyntax
+open HolKernel boolLib bossLib BasicProvers finite_mapSyntax
 open ASCIInumbersTheory simpleSexpTheory
 open pegTheory pegexecTheory;
 open simpleSexpPEGTheory

@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib;
+open HolKernel Parse boolLib bossLib BasicProvers;
 
 val _ = new_theory "for_compile";
 
@@ -17,7 +17,7 @@ The compiler consists of three phasees:
 *)
 
 open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
-open lcsymtacs forTheory listTheory arithmeticTheory;
+open forTheory listTheory arithmeticTheory;
 
 val _ = temp_tight_equality ();
 

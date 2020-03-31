@@ -3,8 +3,6 @@ open HolKernel Parse boolLib bossLib
 open listTheory rich_listTheory
 open primrecfnsTheory
 
-open lcsymtacs
-
 val _ = new_theory "recursivefns"
 
 val minimise_def = Define`

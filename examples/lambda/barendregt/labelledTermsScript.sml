@@ -3,7 +3,6 @@ open pred_setTheory
 
 open binderLib
 open basic_swapTheory nomsetTheory generic_termsTheory
-open lcsymtacs
 open nomdatatype
 open boolSimps
 

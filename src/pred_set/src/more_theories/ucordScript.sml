@@ -1,7 +1,6 @@
 (* theory stub about uncountable ordinals *)
 open HolKernel Parse boolLib bossLib
 
-open lcsymtacs
 open pred_setTheory
 open ordinalTheory cardinalTheory
 

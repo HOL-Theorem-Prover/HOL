@@ -1,6 +1,5 @@
 open HolKernel Parse boolLib bossLib BasicProvers;
 open optionTheory pairTheory stringTheory listTheory arithmeticTheory totoTheory;
-open lcsymtacs;
 
 val _ = new_theory "comparison";
 

@@ -1,7 +1,7 @@
 (* Use the logical relation to verify an optimisation that does beta-value
  * reduction on all beta-value reducable sub-terms. *)
 
-open HolKernel boolLib bossLib lcsymtacs Parse;
+open HolKernel boolLib bossLib Parse;
 open integerTheory stringTheory alistTheory listTheory pred_setTheory;
 open pairTheory optionTheory finite_mapTheory arithmeticTheory;
 open rich_listTheory;

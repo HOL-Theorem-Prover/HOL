@@ -6,7 +6,7 @@ val _ = set_trace "Unicode" 0;
 
 open pred_setTheory res_quanTheory arithmeticTheory wordsLib wordsTheory bitTheory;
 open pairTheory listTheory rich_listTheory relationTheory pairTheory integerTheory;
-open fcpTheory lcsymtacs;
+open fcpTheory;
 open ASCIInumbersTheory
 
 val _ = numLib.prefer_num();
