@@ -27,7 +27,7 @@
 (* for example regexp_compare.                                               *)
 (*---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib bossLib lcsymtacs;
+open HolKernel Parse boolLib bossLib BasicProvers;
 open optionTheory listTheory pred_setTheory comparisonTheory
      balanced_mapTheory osetTheory finite_mapTheory regexpTheory;
 

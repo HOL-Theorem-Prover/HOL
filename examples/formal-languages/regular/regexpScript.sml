@@ -2,7 +2,7 @@
 (* Theory of regular expressions.                                            *)
 (*===========================================================================*)
 
-open HolKernel Parse boolLib bossLib lcsymtacs;
+open HolKernel Parse boolLib bossLib BasicProvers;
 open arithmeticTheory listTheory optionTheory rich_listTheory
      pairTheory relationTheory sortingTheory stringTheory
      comparisonTheory bagTheory containerTheory pred_setTheory

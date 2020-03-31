@@ -2,7 +2,7 @@
 (* Set up context                                                            *)
 (*---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib bossLib lcsymtacs numLib;
+open HolKernel Parse boolLib bossLib numLib;
 open optionTheory pairTheory relationTheory arithmeticTheory
      pred_setTheory bagTheory containerTheory
      listTheory rich_listTheory stringTheory sortingTheory mergesortTheory

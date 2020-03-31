@@ -1,4 +1,4 @@
-open HolKernel boolLib bossLib lcsymtacs Parse
+open HolKernel boolLib bossLib Parse BasicProvers
      integerTheory stringTheory alistTheory listTheory pred_setTheory
      pairTheory optionTheory finite_mapTheory arithmeticTheory
 

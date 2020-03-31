@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib lcsymtacs categoryTheory functorTheory;
+open HolKernel Parse boolLib bossLib categoryTheory functorTheory;
 
 val _ = new_theory "nat_trans";
 val _ = ParseExtras.temp_loose_equality()

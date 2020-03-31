@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib SatisfySimps pred_setTheory categoryTheory functorTheory nat_transTheory hom_functorTheory ens_catTheory lcsymtacs;
+open HolKernel Parse boolLib bossLib SatisfySimps pred_setTheory categoryTheory functorTheory nat_transTheory hom_functorTheory ens_catTheory;
 
 val _ = new_theory "Yoneda";
 

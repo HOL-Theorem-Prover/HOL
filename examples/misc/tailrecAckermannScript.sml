@@ -21,7 +21,7 @@ val A'_defn = Hol_defn "A'" `
           A' results (DO (SUC n0) m0::PENDING n0::rest)
       | PENDING n :: rest => A' (TL results) (DO n (HD results) :: rest)
 `
-open lcsymtacs
+
 val (A'_def, A'_ind) = Defn.tprove(A'_defn,
   WF_REL_TAC `inv_image (mlt1 ($< LEX $<)) (LIST_TO_BAG o MAP wsize o SND)`
   >- simp[bagTheory.WF_mlt1, pairTheory.WF_LEX, prim_recTheory.WF_LESS] >>

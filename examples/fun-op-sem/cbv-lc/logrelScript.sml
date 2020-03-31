@@ -3,7 +3,7 @@
  * approximation *)
 
 
-open HolKernel boolLib bossLib lcsymtacs Parse;
+open HolKernel boolLib bossLib Parse;
 open integerTheory stringTheory alistTheory listTheory pred_setTheory;
 open pairTheory optionTheory finite_mapTheory arithmeticTheory;
 open cbvTheory

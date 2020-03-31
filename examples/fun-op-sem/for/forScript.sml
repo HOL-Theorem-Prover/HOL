@@ -19,7 +19,7 @@ This file defines:
 *)
 
 open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
-open integerTheory lcsymtacs;
+open integerTheory;
 
 val _ = temp_tight_equality ();
 

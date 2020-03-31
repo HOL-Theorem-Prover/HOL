@@ -13,8 +13,6 @@ val _ = new_theory "countMacro";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;

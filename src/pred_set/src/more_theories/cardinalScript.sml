@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib mesonLib
 
-open boolSimps pred_setTheory set_relationTheory lcsymtacs jrhUtils tautLib
+open boolSimps pred_setTheory set_relationTheory jrhUtils tautLib
 
 open prim_recTheory arithmeticTheory numTheory numLib pairTheory quotientTheory;
 open sumTheory ind_typeTheory wellorderTheory;

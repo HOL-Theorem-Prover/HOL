@@ -1,4 +1,4 @@
-open HolKernel boolLib bossLib lcsymtacs Parse;
+open HolKernel boolLib bossLib Parse BasicProvers;
 open listTheory rich_listTheory llistTheory pred_setTheory optionTheory;
 
 val _ = set_trace "Goalstack.print_goal_at_top" 0;

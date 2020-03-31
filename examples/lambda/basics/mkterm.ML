@@ -1,5 +1,5 @@
 (*  this is an -*- sml -*- file *)
-open lcsymtacs boolSimps
+open bossLib boolSimps
 open pred_setTheory nomsetTheory generic_termsTheory
 
 fun rpt_hyp_dest_conj th = let

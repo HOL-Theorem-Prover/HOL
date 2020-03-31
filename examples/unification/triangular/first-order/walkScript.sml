@@ -235,8 +235,6 @@ val _ = store_term_thm("vwalk_rhs_defn_print", Term vwalk_rhs_q);
 
 val vwalk_rhs_ind = theorem "vwalk_rhs_ind";
 
-open lcsymtacs
-
 val example1 = Q.prove(
 `(y ≠ x) ⇒ (vwalk_al [(y,Var x);(x,Const c)] x = Const c)`,
 strip_tac >>
