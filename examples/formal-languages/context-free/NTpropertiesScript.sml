@@ -619,9 +619,50 @@ QED
 Definition followSet_def:
   followSet (G:(α,β) grammar) (sym:(α,β) symbol) =
     { tk | ∃n sf pfx sfx.
-             sf ∈ᶠ G.rules ' n ∧
+             sf ∈ᶠ G.rules ' n ∧ n ∈ FDOM G.rules ∧
              derives G sf (pfx++[sym]++[TOK tk]++sfx) }
 End
+
+Inductive follow:
+  (∀p N s M a.
+     p ++ [NT N] ++ s ∈ᶠ G.rules ' M ∧ M ∈ FDOM G.rules ∧ a ∈ firstSet G s
+    ⇒
+     follow G N a) ∧
+  (∀p N s M a.
+     p ++ [NT N] ++ s ∈ᶠ G.rules ' M ∧ M ∈ FDOM G.rules ∧ nullable G s ∧
+     follow G M a
+    ⇒
+     follow G N a)
+End
+
+Theorem follow_followSet:
+  ∀N x. follow G N x ⇒ x ∈ followSet G (NT N)
+Proof
+  Induct_on ‘follow’ >> simp[followSet_def, PULL_EXISTS] >> rw[]
+  >- (fs[firstSet_def] >> goal_assum drule >>
+      rename [‘p ++ [NT N] ++ s’, ‘derives _ s (TOK a :: rest)’] >>
+      qexistsl_tac [‘p’,‘rest’] >>
+      ‘derives G (p ++ [NT N]) (p ++ [NT N])’ by simp[] >>
+      dxrule_all derives_paste_horizontally >>
+      ASM_REWRITE_TAC[GSYM APPEND_ASSOC, APPEND]) >>
+  rename [‘derives _ sf (p0 ++ [NT N1] ++ [TOK a] ++ s0)’,
+          ‘sf ∈ᶠ G.rules ' N0’, ‘p1 ++ [NT N2] ++ s1 ∈ᶠ G.rules ' N1’] >>
+  qexistsl_tac [‘N0’, ‘sf’, ‘p0 ++ p1’, ‘s0’] >> simp[] >>
+  ONCE_REWRITE_TAC [relationTheory.RTC_CASES_RTC_TWICE] >>
+  goal_assum drule >> irule derives_common_suffix >>
+  irule derives_common_suffix >> REWRITE_TAC [GSYM APPEND_ASSOC] >>
+  irule derives_common_prefix >>
+  irule (relationTheory.RTC_RULES |> SPEC_ALL |> CONJUNCT2) >>
+  simp[derive_def] >> goal_assum drule >>
+  REWRITE_TAC [GSYM APPEND_ASSOC] >> irule derives_common_prefix >>
+  metis_tac[APPEND_NIL, nullable_def, derives_common_prefix]
+QED
+
+Theorem followSet_follow:
+  a ∈ followSet G (NT N) ⇒ follow G N a
+Proof
+  simp[followSet_def, PULL_EXISTS] >> Induct_on ‘RTC’ >> rw[] >> cheat
+QED
 
 Definition augment_def:
   augment k v fm =
