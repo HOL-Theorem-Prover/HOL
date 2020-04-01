@@ -1,10 +1,10 @@
-name: hol-monad
-version: 1.1
-description: HOL monad theories
+name: hol-analysis
+version: 1.0
+description: HOL real analysis
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
 requires: base
-requires: hol-base
+requires: hol-real
 show: "HOL4"
 show: "Data.Bool"
 show: "Data.List"
@@ -13,6 +13,6 @@ show: "Function"
 show: "Number.Natural"
 show: "Relation"
 main {
-  article: "hol4-monad-unint.art"
-  interpretation: "../../opentheory/hol4.int"
+  article: "hol4-analysis-unint.art"
+  interpretation: "../opentheory/hol4.int"
 }

@@ -46,6 +46,7 @@ src/pattern_matches
 !src/pattern_matches/interactive_tests
 src/HolSat/vector_def_CNF
 src/boss/ml_evaluation
+(otknl)src/opentheory/reader
 src/boss
 # Up to this point is needed for hol (which loads bossLib).
 # (Maybe unwind could be omitted).
