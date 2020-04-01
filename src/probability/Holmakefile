@@ -1,0 +1,47 @@
+EXTRA_CLEANS = heap
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+ifdef POLY
+HOLHEAP = heap
+OBJNAMES = realTheory realLib real_sigmaTheory seqTheory transcTheory \
+	RealArith sortingTheory pred_setLib numpairTheory res_quanTools \
+	logrootTheory
+
+OBJS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
+
+all: $(HOLHEAP)
+
+$(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state)
+	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
+endif
+
+all: $(TARGETS)
+
+ifeq ($(KERNELID),otknl)
+
+ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+
+# this takes a lot of time, disabled by default
+# all: $(ARTFILES) hol4-analysis-unint.art hol4-probability-unint.art
+
+hol4-analysis-unint.art: hol4-analysis-unint.thy $(ARTFILES)
+	opentheory info --article -o $@ $<
+
+hol4-analysis.art: hol4-analysis.thy hol4-analysis-unint.art ../opentheory/hol4.int
+	opentheory info --article -o $@ $<
+
+hol4-probability-unint.art: hol4-probability-unint.thy $(ARTFILES)
+	opentheory info --article -o $@ $<
+
+hol4-probability.art: hol4-probability.thy hol4-probability-unint.art ../opentheory/hol4.int
+	opentheory info --article -o $@ $<
+
+real_topology.art: real_topology.otd
+extreal.art: extreal.otd
+probability.art: probability.otd
+
+endif
+
+.PHONY: all

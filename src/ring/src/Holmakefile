@@ -5,7 +5,7 @@ all: $(TARGETS) selftest.exe
 
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
-all: $(ARTFILES)
+all: $(ARTFILES) hol4-ring.art
 
 ring.art: ring.otd
 semi_ring.art: semi_ring.otd
