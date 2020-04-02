@@ -1522,13 +1522,17 @@ val FINITE_FINITE_BIGUNIONS = store_thm ("FINITE_FINITE_BIGUNIONS",
   SIMP_TAC std_ss [FINITE_UNION, FINITE_EMPTY, FINITE_INSERT] THEN MESON_TAC[]);
 
 (* old name IMP_CONJ seems to be a conv function *)
-val CONJ_EQ_IMP = store_thm ("CONJ_EQ_IMP",
-  ``!p q. p /\ q ==> r <=> p ==> q ==> r``,
-  REWRITE_TAC [AND_IMP_INTRO]);
+Theorem CONJ_EQ_IMP :
+    !p q r. p /\ q ==> r <=> p ==> q ==> r
+Proof
+    REWRITE_TAC [AND_IMP_INTRO]
+QED
 
-val IMP_CONJ_ALT = store_thm ("IMP_CONJ_ALT",
-  ``!p q. p /\ q ==> r <=> q ==> p ==> r``,
-  METIS_TAC [AND_IMP_INTRO]);
+Theorem IMP_CONJ_ALT :
+    !p q r. p /\ q ==> r <=> q ==> p ==> r
+Proof
+    METIS_TAC [AND_IMP_INTRO]
+QED
 
 val LT_SUC_LE = store_thm ("LT_SUC_LE",
  ``!m n. (m < SUC n) <=> (m <= n)``,

@@ -22,7 +22,7 @@ open numTheory numLib unwindLib tautLib Arith prim_recTheory RealArith
      combinTheory quotientTheory arithmeticTheory realaxTheory realTheory
      jrhUtils pairTheory boolTheory pred_setTheory optionTheory
      sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
-     seqTheory limTheory transcTheory realLib topologyTheory;
+     seqTheory limTheory transcTheory realLib topologyTheory metricTheory;
 
 open wellorderTheory cardinalTheory iterateTheory productTheory hurdUtils;
 
@@ -516,8 +516,18 @@ val REAL_WLOG_LT = store_thm ("REAL_WLOG_LT",
 (* Metric function. (TODO: merge with metricTheory)                          *)
 (* ------------------------------------------------------------------------- *)
 
-val dist = new_definition ("dist",
-  ``Dist(x:real,y:real) = abs(x - y)``);
+(* new definition based on metricTheory *)
+Definition dist_def :
+    Dist = dist mr1
+End
+
+(* old definition (now becomes a theorem) *)
+Theorem dist :
+    !x y. Dist(x:real,y:real) = abs(x - y)
+Proof
+    RW_TAC std_ss [dist_def, MR1_DEF]
+ >> REAL_ARITH_TAC
+QED
 
 val _ = overload_on ("dist",``Dist``);
 
@@ -2368,161 +2378,7 @@ val DIM_SUBSET_UNIV = store_thm ("DIM_SUBSET_UNIV",
   MATCH_MP_TAC DIM_SUBSET THEN REWRITE_TAC[SUBSET_UNIV]);
 
 (* ------------------------------------------------------------------------- *)
-(* General notion of a topology. (moved to real/topologyTheory)              *)
-(* ------------------------------------------------------------------------- *)
-
-(* ------------------------------------------------------------------------- *)
-(* Open sets. (moved to real/topologyTheory)                                 *)
-(* ------------------------------------------------------------------------- *)
-
-(* ------------------------------------------------------------------------- *)
-(* Closed sets. (moved to real/topologyTheory)                               *)
-(* ------------------------------------------------------------------------- *)
-
-(* ------------------------------------------------------------------------- *)
-(* Subspace topology.                                                        *)
-(* ------------------------------------------------------------------------- *)
-
-val subtopology = new_definition ("subtopology",
- ``subtopology top u = topology {s INTER u | open_in top s}``);
-
-val SUBSET_IMAGE = store_thm ("SUBSET_IMAGE",
- ``!f:'a->'b s t. s SUBSET (IMAGE f t) <=> ?u. u SUBSET t /\ (s = IMAGE f u)``,
-  REPEAT GEN_TAC THEN EQ_TAC THENL [ALL_TAC, MESON_TAC[IMAGE_SUBSET]] THEN
-  DISCH_TAC THEN EXISTS_TAC ``{x | x IN t /\ (f:'a->'b) x IN s}`` THEN
-  POP_ASSUM MP_TAC THEN
-  SIMP_TAC std_ss [EXTENSION, SUBSET_DEF, IN_IMAGE, GSPECIFICATION] THEN
-  MESON_TAC[]);
-
-val INTER_BIGUNION = store_thm ("INTER_BIGUNION",
- ``(!s t. BIGUNION s INTER t = BIGUNION {x INTER t | x IN s}) /\
-   (!s t. t INTER BIGUNION s = BIGUNION {t INTER x | x IN s})``,
-  ONCE_REWRITE_TAC[EXTENSION] THEN
-  SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION, IN_INTER] THEN
-  MESON_TAC[IN_INTER]);
-
-val ISTOPLOGY_SUBTOPOLOGY = store_thm ("ISTOPLOGY_SUBTOPOLOGY",
- ``!top u:'a->bool. istopology {s INTER u | open_in top s}``,
-  REWRITE_TAC[istopology, SET_RULE
-   ``{s INTER u | open_in top s} =
-    IMAGE (\s. s INTER u) {s | open_in top s}``] THEN
-  SIMP_TAC std_ss [GSYM AND_IMP_INTRO, FORALL_IN_IMAGE, RIGHT_FORALL_IMP_THM] THEN
-  SIMP_TAC std_ss [SUBSET_IMAGE, IN_IMAGE, GSPECIFICATION, SUBSET_DEF] THEN
-  REPEAT GEN_TAC THEN REPEAT CONJ_TAC THENL
-   [EXISTS_TAC ``{}:'a->bool`` THEN REWRITE_TAC[OPEN_IN_EMPTY, INTER_EMPTY],
-    SIMP_TAC std_ss [SET_RULE ``(s INTER u) INTER (t INTER u) = (s INTER t) INTER u``] THEN
-    ASM_MESON_TAC[OPEN_IN_INTER],
-    X_GEN_TAC ``f:('a->bool)->bool`` THEN DISCH_THEN (X_CHOOSE_TAC ``g:('a->bool)->bool``) THEN
-    EXISTS_TAC ``BIGUNION g :'a->bool`` THEN
-    ASM_SIMP_TAC std_ss [OPEN_IN_BIGUNION, INTER_BIGUNION] THEN SET_TAC[]]);
-
-val OPEN_IN_SUBTOPOLOGY = store_thm ("OPEN_IN_SUBTOPOLOGY",
- ``!top u s. open_in (subtopology top u) s <=>
-                ?t. open_in top t /\ (s = t INTER u)``,
-  REWRITE_TAC[subtopology] THEN
-  SIMP_TAC std_ss [REWRITE_RULE[CONJUNCT2 topology_tybij] ISTOPLOGY_SUBTOPOLOGY] THEN
-  GEN_REWR_TAC (QUANT_CONV o QUANT_CONV o QUANT_CONV o LAND_CONV) [GSYM SPECIFICATION] THEN
-  SIMP_TAC std_ss [EXTENSION, GSPECIFICATION] THEN METIS_TAC []);
-
-val TOPSPACE_SUBTOPOLOGY = store_thm ("TOPSPACE_SUBTOPOLOGY",
- ``!top u. topspace(subtopology top u) = topspace top INTER u``,
-  REWRITE_TAC[topspace, OPEN_IN_SUBTOPOLOGY, INTER_BIGUNION] THEN
-  REPEAT STRIP_TAC THEN AP_TERM_TAC THEN GEN_REWR_TAC I [EXTENSION] THEN
-  SIMP_TAC std_ss [GSPECIFICATION] THEN METIS_TAC []);
-
-val CLOSED_IN_SUBTOPOLOGY = store_thm ("CLOSED_IN_SUBTOPOLOGY",
- ``!top u s. closed_in (subtopology top u) s <=>
-                ?t:'a->bool. closed_in top t /\ (s = t INTER u)``,
-  REWRITE_TAC[closed_in, TOPSPACE_SUBTOPOLOGY] THEN
-  SIMP_TAC std_ss [SUBSET_INTER, OPEN_IN_SUBTOPOLOGY, GSYM RIGHT_EXISTS_AND_THM] THEN
-  REPEAT STRIP_TAC THEN EQ_TAC THEN
-  DISCH_THEN(X_CHOOSE_THEN ``t:'a->bool`` STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC ``topspace top DIFF t :'a->bool`` THEN
-  ASM_SIMP_TAC std_ss [CLOSED_IN_TOPSPACE, OPEN_IN_DIFF, CLOSED_IN_DIFF,
-               OPEN_IN_TOPSPACE] THEN
-  REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]);
-
-val OPEN_IN_SUBTOPOLOGY_EMPTY = store_thm ("OPEN_IN_SUBTOPOLOGY_EMPTY",
- ``!top s. open_in (subtopology top {}) s <=> (s = {})``,
-  REWRITE_TAC[OPEN_IN_SUBTOPOLOGY, INTER_EMPTY] THEN
-  MESON_TAC[OPEN_IN_EMPTY]);
-
-val CLOSED_IN_SUBTOPOLOGY_EMPTY = store_thm ("CLOSED_IN_SUBTOPOLOGY_EMPTY",
- ``!top s. closed_in (subtopology top {}) s <=> (s = {})``,
-  REWRITE_TAC[CLOSED_IN_SUBTOPOLOGY, INTER_EMPTY] THEN
-  MESON_TAC[CLOSED_IN_EMPTY]);
-
-val OPEN_IN_SUBTOPOLOGY_REFL = store_thm ("OPEN_IN_SUBTOPOLOGY_REFL",
- ``!top u:'a->bool. open_in (subtopology top u) u <=> u SUBSET topspace top``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN EQ_TAC THENL
-   [REPEAT STRIP_TAC THEN ONCE_ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC(SET_RULE ``s SUBSET u ==> s INTER t SUBSET u``) THEN
-    ASM_SIMP_TAC std_ss [OPEN_IN_SUBSET],
-    DISCH_TAC THEN EXISTS_TAC ``topspace top:'a->bool`` THEN
-    REWRITE_TAC[OPEN_IN_TOPSPACE] THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]]);
-
-val CLOSED_IN_SUBTOPOLOGY_REFL = store_thm ("CLOSED_IN_SUBTOPOLOGY_REFL",
- ``!top u:'a->bool. closed_in (subtopology top u) u <=> u SUBSET topspace top``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[CLOSED_IN_SUBTOPOLOGY] THEN EQ_TAC THENL
-   [REPEAT STRIP_TAC THEN ONCE_ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC(SET_RULE ``s SUBSET u ==> s INTER t SUBSET u``) THEN
-    ASM_SIMP_TAC std_ss [CLOSED_IN_SUBSET],
-    DISCH_TAC THEN EXISTS_TAC ``topspace top:'a->bool`` THEN
-    REWRITE_TAC[CLOSED_IN_TOPSPACE] THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]]);
-
-val SUBTOPOLOGY_SUPERSET = store_thm ("SUBTOPOLOGY_SUPERSET",
- ``!top s:'a->bool. topspace top SUBSET s ==> (subtopology top s = top)``,
-  REPEAT GEN_TAC THEN SIMP_TAC std_ss [TOPOLOGY_EQ, OPEN_IN_SUBTOPOLOGY] THEN
-  DISCH_TAC THEN X_GEN_TAC ``u:'a->bool`` THEN EQ_TAC THENL
-   [DISCH_THEN(CHOOSE_THEN(CONJUNCTS_THEN2 MP_TAC SUBST1_TAC)) THEN
-    DISCH_THEN(fn th => MP_TAC th THEN
-      ASSUME_TAC(MATCH_MP OPEN_IN_SUBSET th)) THEN
-    MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN REPEAT (POP_ASSUM MP_TAC) THEN
-    SET_TAC[],
-    DISCH_TAC THEN EXISTS_TAC ``u:'a->bool`` THEN
-    FIRST_ASSUM(MP_TAC o MATCH_MP OPEN_IN_SUBSET) THEN
-    REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]]);
-
-val SUBTOPOLOGY_TOPSPACE = store_thm ("SUBTOPOLOGY_TOPSPACE",
- ``!top. subtopology top (topspace top) = top``,
-  SIMP_TAC std_ss [SUBTOPOLOGY_SUPERSET, SUBSET_REFL]);
-
-val SUBTOPOLOGY_UNIV = store_thm ("SUBTOPOLOGY_UNIV",
- ``!top. subtopology top UNIV = top``,
-  SIMP_TAC std_ss [SUBTOPOLOGY_SUPERSET, SUBSET_UNIV]);
-
-val OPEN_IN_IMP_SUBSET = store_thm ("OPEN_IN_IMP_SUBSET",
- ``!top s t. open_in (subtopology top s) t ==> t SUBSET s``,
-  REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN SET_TAC[]);
-
-val CLOSED_IN_IMP_SUBSET = store_thm ("CLOSED_IN_IMP_SUBSET",
- ``!top s t. closed_in (subtopology top s) t ==> t SUBSET s``,
-  REWRITE_TAC[closed_in, TOPSPACE_SUBTOPOLOGY] THEN SET_TAC[]);
-
-val OPEN_IN_SUBTOPOLOGY_UNION = store_thm ("OPEN_IN_SUBTOPOLOGY_UNION",
- ``!top s t u:'a->bool.
-        open_in (subtopology top t) s /\ open_in (subtopology top u) s
-        ==> open_in (subtopology top (t UNION u)) s``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN
-  DISCH_THEN(CONJUNCTS_THEN2
-   (X_CHOOSE_THEN ``s':'a->bool`` STRIP_ASSUME_TAC)
-   (X_CHOOSE_THEN ``t':'a->bool`` STRIP_ASSUME_TAC)) THEN
-  EXISTS_TAC ``s' INTER t':'a->bool`` THEN ASM_SIMP_TAC std_ss [OPEN_IN_INTER] THEN
-  REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]);
-
-val CLOSED_IN_SUBTOPOLOGY_UNION = store_thm ("CLOSED_IN_SUBTOPOLOGY_UNION",
- ``!top s t u:'a->bool.
-        closed_in (subtopology top t) s /\ closed_in (subtopology top u) s
-        ==> closed_in (subtopology top (t UNION u)) s``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[CLOSED_IN_SUBTOPOLOGY] THEN
-  DISCH_THEN(CONJUNCTS_THEN2
-   (X_CHOOSE_THEN ``s':'a->bool`` STRIP_ASSUME_TAC)
-   (X_CHOOSE_THEN ``t':'a->bool`` STRIP_ASSUME_TAC)) THEN
-  EXISTS_TAC ``s' INTER t':'a->bool`` THEN ASM_SIMP_TAC std_ss [CLOSED_IN_INTER] THEN
-  REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]);
-
-(* ------------------------------------------------------------------------- *)
-(* OPEN                                                                      *)
+(* Open and closed sets                                                      *)
 (* ------------------------------------------------------------------------- *)
 
 val open_def = new_definition ("open_def",
@@ -2729,8 +2585,19 @@ val CLOSED_BIGUNION = store_thm ("CLOSED_BIGUNION",
 (* Open and closed balls.                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-val ball = new_definition ("ball",
-  ``ball(x,e) = { y | dist(x,y) < e}``);
+(* new definition based on metricTheory *)
+Definition ball_def :
+    ball = metric$B(mr1)
+End
+
+(* old definition now becomes a theorem *)
+Theorem ball :
+    !x e. ball(x,e) = { y | dist(x,y) < e}
+Proof
+    RW_TAC std_ss [ball_def, dist_def, metricTheory.ball,
+                   Once EXTENSION, GSPECIFICATION]
+ >> rw [IN_APP]
+QED
 
 val cball = new_definition ("cball",
   ``cball(x,e) = { y | dist(x,y) <= e}``);
