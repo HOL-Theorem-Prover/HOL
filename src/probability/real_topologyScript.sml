@@ -7636,22 +7636,23 @@ val SUBSET_BALLS = store_thm ("SUBSET_BALLS",
    [tac, tac, ALL_TAC, ALL_TAC] THEN REWRITE_TAC[lemma] THEN
   REPEAT(POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC);
 
-(* NOTE: this proof needs 10s to finish (last step created 2048*4 subgoals *)
-val INTER_BALLS_EQ_EMPTY = store_thm
-  ("INTER_BALLS_EQ_EMPTY",
- ``(!a b:real r s. (ball(a,r) INTER ball(b,s) = {}) <=>
+(* NOTE: this proof needs 10s to finish *)
+Theorem INTER_BALLS_EQ_EMPTY :
+   (!a b:real r s. (ball(a,r) INTER ball(b,s) = {}) <=>
                      r <= &0 \/ s <= &0 \/ r + s <= dist(a,b)) /\
    (!a b:real r s. (ball(a,r) INTER cball(b,s) = {}) <=>
                      r <= &0 \/ s < &0 \/ r + s <= dist(a,b)) /\
    (!a b:real r s. (cball(a,r) INTER ball(b,s) = {}) <=>
                      r < &0 \/ s <= &0 \/ r + s <= dist(a,b)) /\
    (!a b:real r s. (cball(a,r) INTER cball(b,s) = {}) <=>
-                     r < &0 \/ s < &0 \/ r + s < dist(a,b))``,
-  REPEAT STRIP_TAC THENL
-  [KNOW_TAC ``!b:real. 0 <= b ==>
+                     r < &0 \/ s < &0 \/ r + s < dist(a,b))
+Proof
+  rpt STRIP_TAC >| (* 4 subgoals *)
+  [(* goal 1 (of 4) *)
+   Suff `!b:real. 0 <= b ==>
                !r s:real. ((ball (0,r) INTER ball (b,s) = {}) <=>
-                r <= 0 \/ s <= 0 \/ r + s <= dist (0,b))`` THENL
-   [ALL_TAC, SIMP_TAC std_ss [ball, dist, REAL_ARITH ``abs (0 - x:real) = abs x``,
+                r <= 0 \/ s <= 0 \/ r + s <= dist (0,b))` >-
+   (SIMP_TAC std_ss [ball, dist, REAL_ARITH ``abs (0 - x:real) = abs x``,
                     EXTENSION, GSPECIFICATION, INTER_DEF, NOT_IN_EMPTY, REAL_NOT_LT] THEN
     DISCH_TAC THEN POP_ASSUM (MP_TAC o SPEC ``abs (a - b:real)``) THEN
     REWRITE_TAC [ABS_POS, ABS_ABS] THEN DISCH_TAC THEN
@@ -7663,12 +7664,12 @@ val INTER_BALLS_EQ_EMPTY = store_thm
     EQ_TAC THENL [DISCH_TAC THEN GEN_TAC THEN
     POP_ASSUM (MP_TAC o SPEC ``a + x:real``) THEN REAL_ARITH_TAC,
     DISCH_TAC THEN GEN_TAC THEN
-    POP_ASSUM (MP_TAC o SPEC ``-(a - x):real``) THEN REAL_ARITH_TAC]],
-
-   KNOW_TAC ``!b:real. 0 <= b ==>
+    POP_ASSUM (MP_TAC o SPEC ``-(a - x):real``) THEN REAL_ARITH_TAC]),
+   (* goal 2 (of 4) *)
+   Suff `!b:real. 0 <= b ==>
                !r s:real. ((ball (0,r) INTER cball (b,s) = {}) <=>
-                r <= 0 \/ s < 0 \/ r + s <= dist (0,b))`` THENL
-   [ALL_TAC, SIMP_TAC std_ss [ball, cball, dist, REAL_ARITH ``abs (0 - x:real) = abs x``,
+                r <= 0 \/ s < 0 \/ r + s <= dist (0,b))` >-
+   (SIMP_TAC std_ss [ball, cball, dist, REAL_ARITH ``abs (0 - x:real) = abs x``,
                     EXTENSION, GSPECIFICATION, INTER_DEF, NOT_IN_EMPTY, REAL_NOT_LT] THEN
     DISCH_TAC THEN POP_ASSUM (MP_TAC o SPEC ``abs (a - b:real)``) THEN
     REWRITE_TAC [ABS_POS, ABS_ABS] THEN DISCH_TAC THEN
@@ -7680,12 +7681,12 @@ val INTER_BALLS_EQ_EMPTY = store_thm
     EQ_TAC THENL [DISCH_TAC THEN GEN_TAC THEN
     POP_ASSUM (MP_TAC o SPEC ``a + x:real``) THEN REAL_ARITH_TAC,
     DISCH_TAC THEN GEN_TAC THEN
-    POP_ASSUM (MP_TAC o SPEC ``-(a - x):real``) THEN REAL_ARITH_TAC]],
-
-   KNOW_TAC ``!b:real. 0 <= b ==>
+    POP_ASSUM (MP_TAC o SPEC ``-(a - x):real``) THEN REAL_ARITH_TAC]),
+   (* goal 3 (of 4) *)
+   Suff `!b:real. 0 <= b ==>
                !r s:real. ((cball (0,r) INTER ball (b,s) = {}) <=>
-                r < 0 \/ s <= 0 \/ r + s <= dist (0,b))`` THENL
-   [ALL_TAC, SIMP_TAC std_ss [ball, cball, dist, REAL_ARITH ``abs (0 - x:real) = abs x``,
+                r < 0 \/ s <= 0 \/ r + s <= dist (0,b))` >-
+   (SIMP_TAC std_ss [ball, cball, dist, REAL_ARITH ``abs (0 - x:real) = abs x``,
                     EXTENSION, GSPECIFICATION, INTER_DEF, NOT_IN_EMPTY, REAL_NOT_LT] THEN
     DISCH_TAC THEN POP_ASSUM (MP_TAC o SPEC ``abs (a - b:real)``) THEN
     REWRITE_TAC [ABS_POS, ABS_ABS] THEN DISCH_TAC THEN
@@ -7697,12 +7698,12 @@ val INTER_BALLS_EQ_EMPTY = store_thm
     EQ_TAC THENL [DISCH_TAC THEN GEN_TAC THEN
     POP_ASSUM (MP_TAC o SPEC ``a + x:real``) THEN REAL_ARITH_TAC,
     DISCH_TAC THEN GEN_TAC THEN
-    POP_ASSUM (MP_TAC o SPEC ``-(a - x):real``) THEN REAL_ARITH_TAC]],
-
-   KNOW_TAC ``!b:real. 0 <= b ==>
+    POP_ASSUM (MP_TAC o SPEC ``-(a - x):real``) THEN REAL_ARITH_TAC]),
+   (* goal 4 (of 4) *)
+   Suff `!b:real. 0 <= b ==>
                !r s:real. ((cball (0,r) INTER cball (b,s) = {}) <=>
-                r < 0 \/ s < 0 \/ r + s < dist (0,b))`` THENL
-   [ALL_TAC, SIMP_TAC std_ss [ball, cball, dist, REAL_ARITH ``abs (0 - x:real) = abs x``,
+                r < 0 \/ s < 0 \/ r + s < dist (0,b))` >-
+   (SIMP_TAC std_ss [ball, cball, dist, REAL_ARITH ``abs (0 - x:real) = abs x``,
                     EXTENSION, GSPECIFICATION, INTER_DEF, NOT_IN_EMPTY, REAL_NOT_LT] THEN
     DISCH_TAC THEN POP_ASSUM (MP_TAC o SPEC ``abs (a - b:real)``) THEN
     REWRITE_TAC [ABS_POS, ABS_ABS] THEN DISCH_TAC THEN
@@ -7714,13 +7715,12 @@ val INTER_BALLS_EQ_EMPTY = store_thm
     EQ_TAC THENL [DISCH_TAC THEN GEN_TAC THEN
     POP_ASSUM (MP_TAC o SPEC ``a + x:real``) THEN REAL_ARITH_TAC,
     DISCH_TAC THEN GEN_TAC THEN
-    POP_ASSUM (MP_TAC o SPEC ``-(a - x):real``) THEN REAL_ARITH_TAC]]] THEN
-
-  REPEAT STRIP_TAC THEN
+    POP_ASSUM (MP_TAC o SPEC ``-(a - x):real``) THEN REAL_ARITH_TAC])] THEN
+  (* still 4 subgoals *)
+  rpt STRIP_TAC THEN
   REWRITE_TAC[EXTENSION, NOT_IN_EMPTY, IN_INTER, IN_CBALL, IN_BALL] THEN
-  (EQ_TAC THENL
-    [ALL_TAC, SPEC_TAC(``b:real``,``v:real``) THEN
-              REWRITE_TAC [dist] THEN REAL_ARITH_TAC]) THEN
+  (reverse EQ_TAC
+   >- (Q.SPEC_TAC (`b`, `v`) THEN REWRITE_TAC [dist] THEN REAL_ARITH_TAC)) THEN
   DISCH_THEN(MP_TAC o GEN ``c:real`` o SPEC ``c:real``) THEN
   SIMP_TAC std_ss [ABS_MUL, LESS_EQ_REFL, dist, ABS_NEG,
            REAL_SUB_LZERO, GSYM REAL_SUB_RDISTRIB, REAL_MUL_RID] THEN
@@ -7737,11 +7737,10 @@ val INTER_BALLS_EQ_EMPTY = store_thm
   SIMP_TAC std_ss [real_div, ABS_MUL, REAL_ARITH ``2 <> 0:real``, ABS_INV, ABS_N] THEN
   SIMP_TAC std_ss [GSYM real_div] THEN
   FULL_SIMP_TAC std_ss [REAL_LT_RDIV_EQ, REAL_LE_RDIV_EQ,
-                       REAL_LT_LDIV_EQ, REAL_LE_LDIV_EQ, REAL_ARITH ``0 < 2:real``] THEN
-
-  RW_TAC bool_ss [abs, max_def, min_def] THEN (* 2048 subgoals (each) *)
-  ASM_REAL_ARITH_TAC THEN
-  PRINT_TAC "stage work in INTER_BALLS_EQ_EMPTY");
+                        REAL_LT_LDIV_EQ, REAL_LE_LDIV_EQ, REAL_ARITH ``0 < 2:real``] THEN
+  RW_TAC real_ss [abs, max_def, min_def] THEN (* 1024 subgoals (for each goals) *)
+  ASM_REAL_ARITH_TAC
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Every closed set is a G_Delta.                                            *)
@@ -17932,19 +17931,56 @@ val IMAGE_AFFINITY_INTERVAL = store_thm ("IMAGE_AFFINITY_INTERVAL",
 (* Infinite sums of vectors. Allow general starting point (and more).        *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = set_fixity "sums" (Infix(NONASSOC, 450));
-
 val _ = hide "sums";
 val _ = hide "summable";
 
-val sums = new_definition ("sums",
-  ``(f sums l) s = ((\n. sum (s INTER ((0:num)..n)) f) --> l) sequentially``);
+val _ = set_fixity "sums" (Infix(NONASSOC, 450));
 
-val infsum = new_definition ("infsum",
- ``infsum s f = @l. (f sums l) s``);
+Definition sums : (* cf. seqTheory.sums *)
+   (f sums l) s = ((\n. sum (s INTER ((0:num)..n)) f) --> l) sequentially
+End
 
-val summable = new_definition ("summable",
- ``summable s f = ?l. (f sums l) s``);
+Definition infsum : (* cf. seqTheory.suminf *)
+    infsum s f = @l. (f sums l) s
+End
+val _ = overload_on ("suminf", ``infsum``);
+
+Definition summable : (* cf. seqTheory.summable *)
+    summable s f = ?l. (f sums l) s
+End
+
+(* connections to related concepts in seqTheory *)
+Theorem sums_univ :
+    !(f :num -> real) (l :real). (f sums l) univ(:num) <=> seq$sums f l
+Proof
+    RW_TAC std_ss [seqTheory.sums, sums, dist, INTER_UNIV, SEQ, LIM_SEQUENTIALLY]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      Q.PAT_X_ASSUM `!e. 0 < e ==> P` (MP_TAC o (Q.SPEC `e`)) \\
+      RW_TAC std_ss [] \\
+      Q.EXISTS_TAC `SUC N` >> rpt STRIP_TAC \\
+      Cases_on `n` >- fs [] \\
+      REWRITE_TAC [GSYM sum_real] \\
+      FIRST_X_ASSUM MATCH_MP_TAC >> rw [],
+      (* goal 2 (of 2) *)
+      Q.PAT_X_ASSUM `!e. 0 < e ==> P` (MP_TAC o (Q.SPEC `e`)) \\
+      RW_TAC std_ss [] \\
+      Q.EXISTS_TAC `N` >> rpt STRIP_TAC \\
+      REWRITE_TAC [sum_real] \\
+      FIRST_X_ASSUM MATCH_MP_TAC >> rw [] ]
+QED
+
+Theorem suminf_univ :
+    !(f :num -> real). infsum univ(:num) f = seq$suminf f
+Proof
+    RW_TAC std_ss [infsum, suminf, sums_univ]
+QED
+
+Theorem summable_univ :
+    !(f :num -> real). summable univ(:num) f <=> seq$summable f
+Proof
+    RW_TAC std_ss [summable, seqTheory.summable, sums_univ]
+QED
 
 val SUMS_SUMMABLE = store_thm ("SUMS_SUMMABLE",
  ``!f l s. (f sums l) s ==> summable s f``,

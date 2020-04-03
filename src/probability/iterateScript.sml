@@ -2983,6 +2983,16 @@ val REAL_OF_NUM_SUM_NUMSEG = store_thm ("REAL_OF_NUM_SUM_NUMSEG",
  ``!f m n. (&(nsum(m..n) f) = sum (m..n) (\i. &(f i)))``,
   SIMP_TAC std_ss [REAL_OF_NUM_SUM, FINITE_NUMSEG]);
 
+(* connection to realTheory.sum *)
+Theorem sum_real :
+    !f n. sum(0..n) f = real$sum(0,SUC n) f
+Proof
+    GEN_TAC
+ >> Induct_on `n`
+ >- (SIMP_TAC real_ss [sum, SUM_CLAUSES_RIGHT, SUM_SING_NUMSEG])
+ >> ASM_SIMP_TAC real_ss [sum, SUM_CLAUSES_RIGHT]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Partial summation and other theorems specific to number segments.         *)
 (* ------------------------------------------------------------------------- *)
