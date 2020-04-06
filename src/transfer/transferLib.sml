@@ -3,7 +3,6 @@ struct
 
 open HolKernel boolLib
 open transferTheory FullUnify
-val PART_MATCH' = mp_then.PART_MATCH'
 val op $ = Portable.$
 
 val SIMP_CONV = simpLib.SIMP_CONV

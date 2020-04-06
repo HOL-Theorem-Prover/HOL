@@ -1289,6 +1289,44 @@ fun PART_MATCH_A partfn th =
       fn tm => INST_TY_TERM (match_term pat tm) th
    end
 
+(* ----------------------------------------------------------------------
+    version of PART_MATCH that only specialises universally quantified
+    variables that are necessary to make the match go through.
+    Others are left as quantifiers
+   ---------------------------------------------------------------------- *)
+
+fun avSPEC_ALL avds th =
+  let
+    fun recurse avds acc th =
+      case Lib.total dest_forall (concl th) of
+          SOME (v,bod) =>
+          let
+            val v' = variant avds v
+          in
+            recurse (v'::avds) (v'::acc) (SPEC v' th)
+          end
+        | NONE => (List.rev acc, th)
+  in
+    recurse avds [] th
+  end
+
+fun PART_MATCH' f th t =
+  let
+    val (vs, _) = strip_forall (concl th)
+    val hypfvs_set = hyp_frees th
+    val hypfvs = HOLset.listItems hypfvs_set
+    val hyptyvs = HOLset.listItems (hyp_tyvars th)
+    val tfvs = free_vars t
+    val dontspec = op_union aconv tfvs hypfvs
+    val (vs, speccedth) = avSPEC_ALL dontspec th
+    val s as (tmsig,tysig) =
+        match_terml hyptyvs hypfvs_set (f (concl speccedth)) t
+    val dontgen = op_union aconv (map #redex tmsig) dontspec
+  in
+    GENL (op_set_diff aconv (map (Term.inst tysig) vs) dontgen)
+         (INST_TY_TERM s speccedth)
+  end
+
 (* --------------------------------------------------------------------------*
     EXISTS_LEFT, EXISTS_LEFT1
     existentially quantifying variables which appear only in the hypotheses
