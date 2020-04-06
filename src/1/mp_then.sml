@@ -3,6 +3,8 @@ struct
 
 open HolKernel Drule Conv Parse boolTheory boolSyntax
 
+open thmpos_dtype
+
 fun match_subterm pat = find_term (can (match_term pat))
 
 val op$ = Portable.$
@@ -10,12 +12,6 @@ val notT = el 2 (CONJUNCTS NOT_CLAUSES)
 val imp_clauses = IMP_CLAUSES |> SPEC_ALL |> CONJUNCTS
 val Timp = el 1 imp_clauses
 val impF = last imp_clauses
-
-datatype match_position =
-  Any
-| Pat of term quotation
-| Pos of (term list -> term)
-| Concl
 
 fun mp_then pos (ttac : thm_tactic) ith0 rth (g as (asl,w)) =
   let
