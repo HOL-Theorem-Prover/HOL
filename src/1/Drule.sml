@@ -2457,6 +2457,26 @@ in
       end
 end
 
+
+fun GEN_TYVARIFY th =
+    let
+      val concl_tyvs = HOLset.addList (
+            HOLset.empty Type.compare,
+            type_vars_in_term (concl th)
+          )
+      val tyvs = HOLset.difference(concl_tyvs, hyp_tyvars th)
+    in
+      INST_TYPE (gen_tyvar_sigma (HOLset.listItems tyvs)) th
+    end
+
+fun FULL_GEN_TYVARIFY th =
+    let
+      val tyvs = HOLset.addList(hyp_tyvars th, type_vars_in_term (concl th))
+    in
+      INST_TYPE (gen_tyvar_sigma (HOLset.listItems tyvs)) th
+    end
+
+
 end (* Drule *)
 
 (* ======================================================================

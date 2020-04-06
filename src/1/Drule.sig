@@ -81,6 +81,8 @@ sig
                           -> thm -> thm
   val INST_TT_HYPS     : (term,term)subst * (hol_type,hol_type)subst
                           -> thm -> thm * term list
+  val GEN_TYVARIFY     : thm -> thm
+  val FULL_GEN_TYVARIFY: thm -> thm
   val GSPEC            : thm -> thm
 
   val PART_MATCH       : (term -> term) -> thm -> term -> thm

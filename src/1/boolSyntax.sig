@@ -185,7 +185,9 @@ sig
   val FVLset : term list -> term HOLset.set
   val ES : term HOLset.set
 
-  (* Type unification *)
+  (* (Type) unification *)
+  val gen_tyvar_sigma : hol_type list -> (hol_type,hol_type) Lib.subst
+  val gen_tyvarify : term -> term
   val type_unify : hol_type -> hol_type -> (hol_type, hol_type) Lib.subst
   val sep_type_unify : hol_type -> hol_type ->
               (hol_type, hol_type) Lib.subst * (hol_type, hol_type) Lib.subst
