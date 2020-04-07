@@ -1434,7 +1434,7 @@ val subspt_eq = Define `
      (spt_center t = SOME x) /\
      subspt t1 (spt_left t) /\ subspt t2 (spt_right t))`
 
-val _ = save_thm("subspt_eq",subspt_eq);
+val _ = save_thm("subspt_eq[compute]",subspt_eq);
 
 val subspt_lookup_lemma = Q.prove(
   `(!x y. ((if x = 0:num then SOME a else f x) = SOME y) ==> p x y)
@@ -1488,7 +1488,7 @@ val subspt_domain = Q.store_thm("subspt_domain",
      subspt t1 t2 <=> domain t1 SUBSET domain t2`,
   fs [subspt_lookup,domain_lookup,SUBSET_DEF]);
 
-val subspt_def = Q.store_thm("subspt_def[compute]",
+val subspt_def = Q.store_thm("subspt_def",
   `!sp1 sp2.
      subspt sp1 sp2 <=>
      !k. k IN domain sp1 ==> k IN domain sp2 /\
