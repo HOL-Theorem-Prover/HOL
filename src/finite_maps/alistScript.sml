@@ -337,13 +337,14 @@ qsuff_tac `MAP f2 ls = MAP f1 ls` >- rw[] >>
 rw[MAP_EQ_f,Abbr`f1`,Abbr`f2`,Abbr`ls`,DOMSUB_FAPPLY_THM])
 val _ = export_rewrites["ALL_DISTINCT_fmap_to_alist_keys"]
 
-val fmap_to_alist_inj = store_thm(
-"fmap_to_alist_inj",
-``!f1 f2. (fmap_to_alist f1 = fmap_to_alist f2) ==> (f1 = f2)``,
+Theorem fmap_to_alist_inj:
+  !f1 f2. (fmap_to_alist f1 = fmap_to_alist f2) ==> (f1 = f2)
+Proof
 rw[] >>
 qmatch_assum_abbrev_tac `af1 = af2` >>
 qsuff_tac `alist_to_fmap af1 = alist_to_fmap af2` >- metis_tac[fmap_to_alist_to_fmap] >>
-rw[GSYM fmap_EQ_THM,pairTheory.EXISTS_PROD,MEM_MAP,MEM_fmap_to_alist])
+simp[GSYM fmap_EQ_THM,pairTheory.EXISTS_PROD,MEM_MAP,MEM_fmap_to_alist]
+QED
 
 val fmap_to_alist_preserves_FDOM = store_thm(
 "fmap_to_alist_preserves_FDOM",

@@ -7696,8 +7696,8 @@ Theorem Radon_Nikodym_finite : (* was: Radon_Nikodym *)
              (pos_fn_integral M (\x. f x * indicator_fn A x) = measure N A)
 Proof
     qx_genl_tac [`m`, `v`] >> rpt STRIP_TAC
- >> Q.PAT_X_ASSUM `m_space m = m_space v` (ASSUME_TAC o (MATCH_MP EQ_SYM))
- >> Q.PAT_X_ASSUM `measurable_sets m = measurable_sets v` (ASSUME_TAC o (MATCH_MP EQ_SYM))
+ >> Q.PAT_X_ASSUM `m_space m = m_space v` (ASSUME_TAC o SYM)
+ >> Q.PAT_X_ASSUM `measurable_sets m = measurable_sets v` (ASSUME_TAC o SYM)
  >> `?f_n. (!n. f_n n IN RADON_F m v) /\ (!x n. f_n n x <= f_n (SUC n) x) /\
            (sup (IMAGE (\n. pos_fn_integral m (f_n n)) univ(:num)) = sup (RADON_F_integrals m v))`
        by RW_TAC std_ss [lemma_radon_seq_conv_sup]
@@ -7876,28 +7876,35 @@ Proof
            METIS_TAC [MEASURE_SPACE_CMUL, REAL_LT_IMP_LE, mul_not_infty, extreal_not_infty])
  >> Q.ABBREV_TAC `g' = (\x. g x + Normal e * indicator_fn (A') x)`
  >> `!A. A IN measurable_sets m ==>
-        (pos_fn_integral m (\x. g' x * indicator_fn A x) =
-         pos_fn_integral m (\x. g x * indicator_fn A x) + Normal e * measure m (A INTER A'))`
-       by (rpt STRIP_TAC
-           >> `measure m (A'' INTER A') = pos_fn_integral m (indicator_fn (A'' INTER A'))`
-                by METIS_TAC [pos_fn_integral_indicator,MEASURE_SPACE_INTER]
-           >> POP_ORW
-           >> `Normal e * pos_fn_integral m (indicator_fn (A'' INTER A')) =
-               pos_fn_integral m (\x. Normal e * indicator_fn (A'' INTER A') x)`
-                by ((MATCH_MP_TAC o GSYM) pos_fn_integral_cmul
-                    >> RW_TAC real_ss [REAL_LT_IMP_LE,indicator_fn_def,le_01,le_refl])
-           >> POP_ORW
-           >> Q.UNABBREV_TAC `g'`
-           >> `(\x. (\x. g x + Normal e * indicator_fn A' x) x * indicator_fn A'' x) =
-               (\x. (\x. g x * indicator_fn A'' x) x + (\x. Normal e * indicator_fn (A'' INTER A') x) x)`
-                by (RW_TAC std_ss [FUN_EQ_THM, indicator_fn_def, IN_INTER] \\
-                    METIS_TAC [mul_rone, mul_rzero, add_rzero, indicator_fn_def, IN_INTER])
-           >> POP_ORW
-           >> MATCH_MP_TAC pos_fn_integral_add
-           >> FULL_SIMP_TAC std_ss []
-           >> CONJ_TAC >- (RW_TAC std_ss [indicator_fn_def,le_01,le_refl,mul_rone,mul_rzero]
-                           >> FULL_SIMP_TAC std_ss [extreal_of_num_def,extreal_le_def,REAL_LT_IMP_LE])
-           >> RW_TAC std_ss []
+         pos_fn_integral m (\x. g' x * indicator_fn A x) =
+         pos_fn_integral m (\x. g x * indicator_fn A x) +
+         Normal e * measure m (A INTER A')`
+   by (rpt STRIP_TAC
+       >> `measure m (A'' INTER A') =
+             pos_fn_integral m (indicator_fn (A'' INTER A'))`
+         by METIS_TAC [pos_fn_integral_indicator,MEASURE_SPACE_INTER]
+       >> POP_ORW
+       >> `Normal e * pos_fn_integral m (indicator_fn (A'' INTER A')) =
+             pos_fn_integral m (\x. Normal e * indicator_fn (A'' INTER A') x)`
+         by ((MATCH_MP_TAC o GSYM) pos_fn_integral_cmul
+             >> RW_TAC real_ss [REAL_LT_IMP_LE,indicator_fn_def,le_01,le_refl])
+       >> POP_ORW
+       >> Q.UNABBREV_TAC `g'`
+       >> `(\x. (\x. g x + Normal e * indicator_fn A' x) x * indicator_fn A'' x)
+              =
+           (\x. (\x. g x * indicator_fn A'' x) x +
+                (\x. Normal e * indicator_fn (A'' INTER A') x) x)`
+         by (RW_TAC std_ss [FUN_EQ_THM, indicator_fn_def, IN_INTER] \\
+             METIS_TAC [mul_rone, mul_rzero, add_rzero, indicator_fn_def,
+                        IN_INTER])
+       >> POP_ORW
+       >> MATCH_MP_TAC pos_fn_integral_add
+       >> FULL_SIMP_TAC std_ss []
+       >> CONJ_TAC
+       >- (RW_TAC std_ss [indicator_fn_def,le_01,le_refl,mul_rone,mul_rzero]
+           >> FULL_SIMP_TAC std_ss [extreal_of_num_def,extreal_le_def,
+                                    REAL_LT_IMP_LE])
+       >> RW_TAC std_ss []
            >- METIS_TAC [IN_MEASURABLE_BOREL_MUL_INDICATOR, measure_space_def,
                          measurable_sets_def, subsets_def]
            >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL

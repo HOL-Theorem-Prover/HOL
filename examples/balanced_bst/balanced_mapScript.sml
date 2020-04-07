@@ -19,44 +19,14 @@ Triviality list_rel_lem1:
      (n ≠ LENGTH l ∧ n = LENGTH l') ∨
      (n ≠ LENGTH l ∧ n ≠ LENGTH l' ∧ ~f (EL n l) (EL n l')))
 Proof
- srw_tac[][] >>
- `FINITE { n | n ≤ LENGTH l ∧ n ≤ LENGTH l' ∧ LIST_REL f (TAKE n l) (TAKE n l') }`
-         by (rw [GSPEC_AND, LE_LT1] >>
-             match_mp_tac FINITE_INTER >>
-             disj1_tac >>
-             rw [GSYM count_def]) >>
- qabbrev_tac `nset = { n | n ≤ LENGTH l ∧ n ≤ LENGTH l' ∧ LIST_REL f (TAKE n l) (TAKE n l') }` >>
- Cases_on `nset = {}` >>
- srw_tac[] []
- >- (full_simp_tac (srw_ss()) [markerTheory.Abbrev_def, EXTENSION] >>
-     qexists_tac `0` >>
-     srw_tac[][] >>
-     Cases_on `l` >>
-     Cases_on `l'` >>
-     full_simp_tac (srw_ss()) [] >>
-     pop_assum (qspecl_then [`0`] mp_tac) >>
-     srw_tac[][])
- >- (imp_res_tac MAX_SET_DEF >>
-     qexists_tac `MAX_SET nset` >>
-     qabbrev_tac `max_nset = MAX_SET nset` >>
-     qunabbrev_tac `nset` >>
-     imp_res_tac in_max_set >>
-     REV_FULL_SIMP_TAC (srw_ss()) [] >>
-     srw_tac[] [] >>
-     full_simp_tac (srw_ss()) [LESS_OR_EQ] >>
-     srw_tac [ARITH_ss] [] >>
-     full_simp_tac (srw_ss()) [TAKE_LENGTH_ID] >>
-     CCONTR_TAC >>
-     full_simp_tac (srw_ss()) [] >>
-     `LIST_REL f (TAKE (max_nset + 1) l) (TAKE (max_nset + 1) l')`
-            by (full_simp_tac (srw_ss())
-                              [rich_listTheory.TAKE_EL_SNOC, SNOC_APPEND,
-                               rich_listTheory.LIST_REL_APPEND_SING]) >>
-     `max_nset + 1 ∈ {n | (n < LENGTH l ∨ n = LENGTH l) ∧ (n < LENGTH l' ∨ n = LENGTH l') ∧ LIST_REL f (TAKE n l) (TAKE n l')}`
-            by srw_tac [ARITH_ss] [] >>
-     imp_res_tac in_max_set >>
-     unabbrev_all_tac >>
-     decide_tac)
+ Induct_on ‘l’ >> simp[] >> Cases_on‘l'’ >> rw[]
+ >- (qexists_tac ‘0’ >> simp[]) >>
+ rename [‘¬P (EL _ (h1::l1)) (EL _ (h2 :: l2))’] >>
+ reverse (Cases_on ‘P h1 h2’)
+ >- (qexists_tac ‘0’ >> simp[]) >>
+ first_x_assum (drule_then (qx_choose_then ‘m’ strip_assume_tac)) >>
+ (* 3 cases *)
+ qexists_tac ‘SUC m’ >> simp[] >> rw[] >> fs[]
 QED
 
 val _ = augment_srw_ss [rewrites [listTheory.TAKE_def]]

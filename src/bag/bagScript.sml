@@ -1749,10 +1749,10 @@ val BAG_IMAGE_FINITE_I = store_thm(
  before
  export_rewrites ["BAG_IMAGE_FINITE_I"];
 
-val BAG_IN_FINITE_BAG_IMAGE = store_thm(
-  "BAG_IN_FINITE_BAG_IMAGE",
-  ``FINITE_BAG b ==>
-    (BAG_IN x (BAG_IMAGE f b) = ?y. (f y = x) /\ BAG_IN y b)``,
+Theorem BAG_IN_FINITE_BAG_IMAGE[simp]:
+  FINITE_BAG b ==>
+    (BAG_IN x (BAG_IMAGE f b) = ?y. (f y = x) /\ BAG_IN y b)
+Proof
   SRW_TAC [][BAG_IMAGE_DEF] THEN EQ_TAC THEN STRIP_TAC THENL [
     FULL_SIMP_TAC (srw_ss()) [BAG_IN, BAG_INN] THEN
     Q.ABBREV_TAC `bf = BAG_FILTER (\e0. f e0 = x) b` THEN
@@ -1762,7 +1762,7 @@ val BAG_IN_FINITE_BAG_IMAGE = store_thm(
         by PROVE_TAC [arithmeticTheory.num_CASES,
                       arithmeticTheory.NOT_ZERO_LT_ZERO] THEN
     `?e bf0. (bf = BAG_INSERT e bf0)` by PROVE_TAC [BCARD_SUC] THEN
-    `BAG_IN e bf` by SRW_TAC [][] THEN
+    `BAG_IN e bf` by simp[] THEN
     `BAG_IN e (BAG_FILTER (\e0. f e0 = x) b)` by PROVE_TAC [] THEN
     POP_ASSUM (STRIP_ASSUME_TAC o SIMP_RULE bool_ss [BAG_IN_BAG_FILTER]) THEN
     PROVE_TAC [BAG_IN, BAG_INN],
@@ -1770,9 +1770,8 @@ val BAG_IN_FINITE_BAG_IMAGE = store_thm(
     `b = BAG_INSERT y b0` by PROVE_TAC [BAG_DELETE] THEN
     SIMP_TAC (srw_ss()) [BAG_IN, BAG_INN] THEN SRW_TAC [][] THEN
     FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) [BAG_CARD_THM]
-  ])
- before
- export_rewrites ["BAG_IN_FINITE_BAG_IMAGE"];
+  ]
+QED
 
 val BAG_IMAGE_EQ_EMPTY = store_thm(
   "BAG_IMAGE_EQ_EMPTY",
@@ -2105,25 +2104,24 @@ val BAG_FILTER_EQ_EMPTY = Q.store_thm(
   `n = 1` by DECIDE_TAC THEN
   SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []);
 
-val SET_OF_BAG_IMAGE = Q.store_thm(
-  "SET_OF_BAG_IMAGE",
-  `SET_OF_BAG (BAG_IMAGE f b) = IMAGE f (SET_OF_BAG b)`,
-  SRW_TAC [][EXTENSION,BAG_IMAGE_DEF,BAG_IN,BAG_INN] THEN
-  Q.ABBREV_TAC `bf = BAG_FILTER (\e0. f e0 = x) b` THEN
-  Q.ISPEC_THEN `bf` MP_TAC BAG_cases THEN
-  SRW_TAC [][] THEN
-  SRW_TAC [][] THENL [
+Theorem SET_OF_BAG_IMAGE[simp]:
+  SET_OF_BAG (BAG_IMAGE f b) = IMAGE f (SET_OF_BAG b)
+Proof
+  SRW_TAC[][EXTENSION, BAG_IMAGE_DEF, BAG_IN, BAG_INN] >>
+  Q.ABBREV_TAC `bf = BAG_FILTER (\e0. f e0 = x) b` >>
+  qspec_then ‘bf’ mp_tac BAG_cases THEN
+  SRW_TAC [][] THEN SRW_TAC [][] THENL [
     FULL_SIMP_TAC (srw_ss()) [BAG_FILTER_EQ_EMPTY,BAG_EVERY,BAG_IN,BAG_INN] THEN
     PROVE_TAC [],
-    `FINITE_BAG b0` by PROVE_TAC [FINITE_BAG_INSERT] THEN
-    SRW_TAC [ARITH_ss][BAG_CARD_THM],
+    fs[BAG_CARD_THM],
     FULL_SIMP_TAC (srw_ss()) [],
-    ALL_TAC ] THEN
+    ALL_TAC
+  ] THEN
   `~BAG_EVERY ($~ o (\e0. f e0 = x)) b`
     by PROVE_TAC [BAG_FILTER_EQ_EMPTY,BAG_INSERT_NOT_EMPTY] THEN
   FULL_SIMP_TAC (srw_ss()) [BAG_EVERY,BAG_IN,BAG_INN] THEN
-  PROVE_TAC []);
-val _ = export_rewrites ["SET_OF_BAG_IMAGE"];
+  PROVE_TAC []
+QED
 
 val BAG_IMAGE_FINITE_RESTRICTED_I = store_thm(
   "BAG_IMAGE_FINITE_RESTRICTED_I",

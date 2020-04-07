@@ -302,6 +302,13 @@ in
   ]
 end;
 
+fun printgoal (asms,w) =
+    "([" ^ String.concatWith "," (map term_to_string asms) ^ ", " ^
+    term_to_string w ^ ")"
+fun printgoals (sgs, _) =
+    "[" ^ String.concatWith ",\n" (map printgoal sgs) ^ "]"
+
+
 (* flavours of Req* *)
 val _ = let
   open pureSimps
@@ -319,11 +326,6 @@ val _ = let
                                          Exn.Res (sgs,_) =>
                                            list_eq goal_eq [(asms, t)] sgs
                                        | _ => false)
-        fun printgoal (asms,w) =
-            "([" ^ String.concatWith "," (map term_to_string asms) ^ ", " ^
-            term_to_string w ^ ")"
-        fun printgoals (sgs, _) =
-            "[" ^ String.concatWith ",\n" (map printgoal sgs) ^ "]"
 
       in
         require_msg testresult printgoals (VALID (ASM_SIMP_TAC pure_ss thl))
@@ -350,5 +352,23 @@ List.app (ignore o req_test) [
 
 ]
 end;
+
+
+val _ = let
+  fun testresult outgs res =
+      case res of
+          Exn.Res (sgs, _) => list_eq goal_eq outgs sgs
+        | _ => false
+  fun test (msg, tac, ing, outgs) =
+      (tprint msg;
+       require_msg (testresult outgs)  printgoals (VALID tac) ing)
+in
+  List.app (ignore o test) [
+    ("Abbrev var not rewritten",
+     rev_full_simp_tac (bool_ss ++ ABBREV_CONG_ss) [],
+     ([“Abbrev (v = q:bool)”, “v = F”], “P (v:bool):bool”),
+     [([“Abbrev (v = q:bool)”, “~v”], “P F:bool”)])
+  ]
+end
 
 val _ = Process.exit Process.success

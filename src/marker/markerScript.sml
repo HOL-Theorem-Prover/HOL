@@ -89,6 +89,11 @@ val unint_def = new_definition(
 val Abbrev_def = new_definition("Abbrev_def", ``Abbrev (x:bool) = x``)
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="marker",Name="Abbrev"},name=(["Unwanted"],"id")}
 
+val Abbrev_CONG = store_thm(
+  "Abbrev_CONG",
+  “r1 = r2 ==> Abbrev(v = r1) = Abbrev (v = r2)”,
+  STRIP_TAC THEN ASM_REWRITE_TAC[]);
+
 
 (* ----------------------------------------------------------------------
    For telling the simplifier to case-split on if-then-else terms in

@@ -100,6 +100,10 @@ val CONG_ss = SSFRAG
    convs = [], rewrs = [], filter=NONE, ac=[], dprocs=[]}
 end;
 
+val ABBREV_CONG_ss = SSFRAG {
+      name = SOME "ABBREV_CONG",
+      congs = [markerTheory.Abbrev_CONG],
+      convs = [], rewrs = [], filter= NONE, ac = [], dprocs=[]}
 
 (* ---------------------------------------------------------------------
  * NOT_ss

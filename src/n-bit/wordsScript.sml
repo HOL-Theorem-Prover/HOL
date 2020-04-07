@@ -882,7 +882,7 @@ Proof
   THEN REPEAT STRIP_TAC
   THENL [
     SPOSE_NOT_THEN ASSUME_TAC THEN
-    `r < INT_MIN(:'a)` by SRW_TAC [ARITH_ss][Abbr`r`] THEN
+    `r < INT_MIN(:'a)` by SRW_TAC [ARITH_ss][] THEN
     `n DIV INT_MIN(:'a) = 2 * q`
        by (SRW_TAC [][] THEN METIS_TAC [DIV_MULT,
                                         MULT_COMM,

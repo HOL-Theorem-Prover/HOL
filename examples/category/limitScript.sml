@@ -363,9 +363,8 @@ srw_tac [][] >>
 match_mp_tac is_functor_discrete_functor >>
 srw_tac [][]);
 
-val is_binary_product_thm = Q.store_thm(
-"is_binary_product_thm",
-`∀c a b l. is_category c ∧ a ∈ c.obj ∧ b ∈ c.obj ⇒
+Theorem is_binary_product_thm:
+∀c a b l. is_category c ∧ a ∈ c.obj ∧ b ∈ c.obj ⇒
   (is_limit (product_diagram c a b) l =
    ∃ab π1 π2.
      (l = mk_cone (product_diagram c a b) ab (λn. if n = 1 then π1 else π2)) ∧
@@ -376,100 +375,100 @@ val is_binary_product_thm = Q.store_thm(
        p2 :- p → b -:c ⇒
          ∃!m. m :- p → ab -:c ∧
            (π1 o m -:c = p1) ∧
-           (π2 o m -:c = p2))`,
-rpt strip_tac >>
-qabbrev_tac `d = product_diagram c a b` >>
-`is_functor d` by (srw_tac [][is_functor_product_diagram,Abbr`d`]) >>
-EQ_TAC >- (
-  strip_tac >>
-  map_every qexists_tac [`vertex l`,`proj l 1`,`proj l 2`] >>
-  conj_tac >- (
-    fsrw_tac [][is_limit_def,mk_cone_def,is_terminal_def] >>
-    pop_assum (K ALL_TAC) >>
-    pop_assum mp_tac >>
-    srw_tac [][is_cone_thm] >>
-    fsrw_tac [][morphism_component_equality,oneTheory.one] >>
-    srw_tac [][mk_nt_def,restrict_def,FUN_EQ_THM] >>
-    fsrw_tac [][extensional_def] >>
-    unabbrev_all_tac >>
-    srw_tac [][] ) >>
-  ntac 2 (conj_asm1_tac >- (
-    match_mp_tac proj_maps_to >>
-    qexists_tac `d` >>
-    srw_tac [][Abbr`d`] )) >>
-  srw_tac [][] >>
-  qabbrev_tac `co = mk_cone d p (λn. if n = 1 then p1 else p2)` >>
-  `co ∈ (cone_cat d).obj` by (
-    qunabbrev_tac `co` >>
-    fsrw_tac [][is_cone_mk_cone] >>
-    imp_res_tac maps_to_obj >>
-    qunabbrev_tac `d` >>
-    fsrw_tac [][maps_to_in_def] >>
-    srw_tac [][] >> fsrw_tac [][] ) >>
-  Q.ISPECL_THEN [`d`,`l`,`co`] mp_tac limit_universal >>
-  srw_tac [][EXISTS_UNIQUE_THM] >- (
-    pop_assum (K ALL_TAC) >>
-    pop_assum mp_tac >>
-    srw_tac [][cone_cat_maps_to] >>
-    qexists_tac `FST m.map` >>
-    pop_assum (K ALL_TAC) >>
-    pop_assum mp_tac >>
-    unabbrev_all_tac >>
-    fsrw_tac [][mk_cone_proj_ext] >>
-    srw_tac [][restrict_def] >|[
-      pop_assum (qspec_then `1` mp_tac),
-      pop_assum (qspec_then `2` mp_tac)] >>
-    srw_tac [][] ) >>
-  qmatch_rename_tac `ma = mb` >>
-  qabbrev_tac `mma = mk_cone_mor co l ma` >>
-  qabbrev_tac `mmb = mk_cone_mor co l mb` >>
-  `mma :- co → l -:cone_cat d` by (
-    srw_tac [][maps_to_in_def,Abbr`mma`] >>
-    srw_tac [][is_cone_mor_mk_cone_mor] >- (
-      srw_tac [][Abbr`co`,Abbr`d`] ) >>
-    pop_assum mp_tac >>
-    srw_tac [][Abbr`d`,Abbr`co`,mk_cone_proj_ext,restrict_def] ) >>
-  `mmb :- co → l -:cone_cat d` by (
-    srw_tac [][maps_to_in_def,Abbr`mmb`] >>
-    srw_tac [][is_cone_mor_mk_cone_mor] >- (
-      srw_tac [][Abbr`co`,Abbr`d`] ) >>
-    pop_assum mp_tac >>
-    srw_tac [][Abbr`d`,Abbr`co`,mk_cone_proj_ext,restrict_def] ) >>
-  `mma = mmb` by res_tac >>
-  fsrw_tac [][Abbr`mma`,Abbr`mmb`,mk_cone_mor_def]) >>
-srw_tac [][is_limit_def] >>
-fsrw_tac [][is_terminal_def] >>
-conj_asm1_tac >- (
-  imp_res_tac maps_to_obj >>
-  srw_tac [][is_cone_mk_cone,Abbr`d`] >> srw_tac [][] >>
-  fsrw_tac [][maps_to_in_def] ) >>
-qmatch_assum_abbrev_tac `is_cone d co` >>
-qx_gen_tac `c2` >> strip_tac >>
-Q.ISPECL_THEN [`d`,`c2`] mp_tac is_cone_thm >>
-srw_tac [DNF_ss][Abbr`d`] >>
-first_x_assum (qspecl_then [`c2.dom`,`proj c2 1`,`proj c2 2`] mp_tac) >>
-srw_tac [][EXISTS_UNIQUE_THM] >- (
-  pop_assum (K ALL_TAC) >>
-  qexists_tac `mk_cone_mor c2 co m` >>
-  srw_tac [][cone_cat_maps_to,Abbr`co`,mk_cone_proj_ext,restrict_def] >>
-  srw_tac [][] >> fsrw_tac [][maps_to_in_def] ) >>
-qmatch_rename_tac `f1 = f2` >>
-first_x_assum (qspecl_then [`FST f1.map`,`FST f2.map`] assume_tac) >>
-qsuff_tac `FST f1.map = FST f2.map` >- (
-  simp_tac std_ss [morphism_component_equality] >>
-  fsrw_tac [][maps_to_in_def] >>
-  Cases_on `f1.map` >> Cases_on `f2.map` >> srw_tac [][] >>
-  srw_tac [][morphism_component_equality] ) >>
-first_x_assum match_mp_tac >>
-unabbrev_all_tac >>
-ntac 2 (pop_assum mp_tac) >>
-fsrw_tac [][maps_to_in_def,is_cone_mor_thm] >>
-strip_tac >> strip_tac >>
-first_assum (qspec_then `1` mp_tac) >>
-first_x_assum (qspec_then `2` mp_tac) >>
-first_assum (qspec_then `1` mp_tac) >>
-first_x_assum (qspec_then `2` mp_tac) >>
-fsrw_tac [][mk_cone_proj_ext,restrict_def]);
+           (π2 o m -:c = p2))
+Proof
+  rpt strip_tac >>
+  qabbrev_tac `d = product_diagram c a b` >>
+  `is_functor d` by (srw_tac [][is_functor_product_diagram,Abbr`d`]) >>
+  EQ_TAC
+  >- (strip_tac >>
+      map_every qexists_tac [`vertex l`,`proj l 1`,`proj l 2`] >>
+      conj_tac
+      >- (fsrw_tac [][is_limit_def,mk_cone_def,is_terminal_def] >>
+          pop_assum (K ALL_TAC) >>
+          pop_assum mp_tac >>
+          srw_tac [][is_cone_thm] >>
+          fsrw_tac [][morphism_component_equality,oneTheory.one] >>
+          srw_tac [][mk_nt_def,restrict_def,FUN_EQ_THM] >>
+          fsrw_tac [][extensional_def] >>
+          srw_tac [][] >> fs[]) >>
+      ntac 2 (conj_asm1_tac >- (match_mp_tac proj_maps_to >>
+                                qexists_tac `d` >>
+                                srw_tac [][Abbr`d`] )) >>
+      srw_tac [][] >>
+      qabbrev_tac `co = mk_cone d p (λn. if n = 1 then p1 else p2)` >>
+      `co ∈ (cone_cat d).obj` by (
+        qunabbrev_tac `co` >>
+        fsrw_tac [][is_cone_mk_cone] >>
+        imp_res_tac maps_to_obj >>
+        qunabbrev_tac `d` >>
+        fsrw_tac [][maps_to_in_def] >>
+        srw_tac [][] >> fsrw_tac [][] ) >>
+      Q.ISPECL_THEN [`d`,`l`,`co`] mp_tac limit_universal >>
+      srw_tac [][EXISTS_UNIQUE_THM]
+      >- (pop_assum (K ALL_TAC) >>
+          pop_assum mp_tac >>
+          srw_tac [][cone_cat_maps_to] >>
+          qexists_tac `FST m.map` >>
+          pop_assum (K ALL_TAC) >>
+          pop_assum mp_tac >>
+          unabbrev_all_tac >>
+          fsrw_tac [][mk_cone_proj_ext] >>
+          srw_tac [][restrict_def] >|[
+            pop_assum (qspec_then `1` mp_tac),
+            pop_assum (qspec_then `2` mp_tac)] >>
+          srw_tac [][] ) >>
+      qmatch_rename_tac `ma = mb` >>
+      qabbrev_tac `mma = mk_cone_mor co l ma` >>
+      qabbrev_tac `mmb = mk_cone_mor co l mb` >>
+      `mma :- co → l -:cone_cat d` by (
+        srw_tac [][maps_to_in_def,Abbr`mma`] >>
+        srw_tac [][is_cone_mor_mk_cone_mor] >- (
+                                             srw_tac [][Abbr`co`,Abbr`d`] ) >>
+        pop_assum mp_tac >>
+        srw_tac [][Abbr`d`,Abbr`co`,mk_cone_proj_ext,restrict_def] ) >>
+      `mmb :- co → l -:cone_cat d` by (
+        srw_tac [][maps_to_in_def,Abbr`mmb`] >>
+        srw_tac [][is_cone_mor_mk_cone_mor]
+        >- (srw_tac [][Abbr`co`,Abbr`d`] ) >>
+        pop_assum mp_tac >>
+        srw_tac [][Abbr`d`,Abbr`co`,mk_cone_proj_ext,restrict_def] ) >>
+      `mma = mmb` by res_tac >>
+      fsrw_tac [][Abbr`mma`,Abbr`mmb`,mk_cone_mor_def]) >>
+  srw_tac [][is_limit_def] >>
+  fsrw_tac [][is_terminal_def] >>
+  conj_asm1_tac
+  >- (imp_res_tac maps_to_obj >>
+      srw_tac [][is_cone_mk_cone,Abbr`d`] >> srw_tac [][] >>
+      fsrw_tac [][maps_to_in_def] ) >>
+  qmatch_assum_abbrev_tac `is_cone d co` >>
+  qx_gen_tac `c2` >> strip_tac >>
+  Q.ISPECL_THEN [`d`,`c2`] mp_tac is_cone_thm >>
+  srw_tac [DNF_ss][Abbr`d`] >>
+  first_x_assum (qspecl_then [`c2.dom`,`proj c2 1`,`proj c2 2`] mp_tac) >>
+  srw_tac [][EXISTS_UNIQUE_THM]
+  >- (pop_assum (K ALL_TAC) >>
+      qexists_tac `mk_cone_mor c2 co m` >>
+      srw_tac [][cone_cat_maps_to,Abbr`co`,mk_cone_proj_ext,restrict_def] >>
+      srw_tac [][] >> fsrw_tac [][maps_to_in_def] ) >>
+  qmatch_rename_tac `f1 = f2` >>
+  first_x_assum (qspecl_then [`FST f1.map`,`FST f2.map`] assume_tac) >>
+  qsuff_tac `FST f1.map = FST f2.map`
+  >- (simp_tac std_ss [morphism_component_equality] >>
+      fsrw_tac [][maps_to_in_def] >>
+      Cases_on `f1.map` >> Cases_on `f2.map` >> srw_tac [][] >>
+      srw_tac [][morphism_component_equality] ) >>
+  first_x_assum match_mp_tac >>
+  unabbrev_all_tac >>
+  ntac 2 (pop_assum mp_tac) >>
+  fsrw_tac [][maps_to_in_def,is_cone_mor_thm] >>
+  strip_tac >> strip_tac >>
+  first_assum (qspec_then `1` mp_tac) >>
+  first_x_assum (qspec_then `2` mp_tac) >>
+  first_assum (qspec_then `1` mp_tac) >>
+  first_x_assum (qspec_then `2` mp_tac) >>
+  fsrw_tac [][mk_cone_proj_ext,restrict_def]
+QED
 
 val has_binary_products_def = Define`
   has_binary_products c = has_limits (discrete_cat {1;2}) c`;

@@ -783,19 +783,30 @@ fun orient th =
          end
  end;
 
-fun VSUBST_TAC tm = UNDISCH_THEN tm (SUBST_ALL_TAC o orient);
+fun eliminable_eqvar t =
+    if is_bool_atom t then
+      if is_neg t then SOME (dest_neg t) else SOME t
+    else let val (l,r) = dest_eq t
+         in
+           if l ~~ r then NONE
+           else if is_var l then SOME l else SOME r
+         end
+
+fun VSUBST_TAC abbrset tm =
+    case eliminable_eqvar tm of
+        NONE => UNDISCH_THEN tm (K ALL_TAC)
+      | SOME v => if HOLset.member(abbrset, v) then
+                    markerLib.UNABBREV_TAC (#1 (dest_var v))
+                  else
+                    UNDISCH_THEN tm (SUBST_ALL_TAC o orient)
 
 fun var_eq tm =
-   let val (lhs,rhs) = dest_eq tm
-   in
-       aconv lhs rhs
-     orelse
-       (is_var lhs andalso not (free_in lhs rhs))
-     orelse
-       (is_var rhs andalso not (free_in rhs lhs))
-   end
-   handle HOL_ERR _ => is_bool_atom tm
-
+    let val (lhs,rhs) = dest_eq tm
+    in
+      aconv lhs rhs orelse
+      (is_var lhs andalso not (free_in lhs rhs)) orelse
+      (is_var rhs andalso not (free_in rhs lhs))
+    end handle HOL_ERR _ => is_bool_atom tm
 
 fun grab P f v =
   let fun grb [] = v
@@ -804,8 +815,20 @@ fun grab P f v =
   end;
 
 fun ASSUM_TAC f P = W (fn (asl,_) => grab P f NO_TAC asl)
-
-val VAR_EQ_TAC = ASSUM_TAC VSUBST_TAC var_eq;
+val old_behaviour = ref false
+val _ =
+  Feedback.register_btrace("BasicProvers.var_eq_old", old_behaviour)
+fun VAR_EQ_TAC (g as (asl,_)) =
+    let
+      fun foldthis (a, acc) =
+          case total markerSyntax.dest_abbrev a of
+              NONE => acc
+            | SOME (s, r) => HOLset.add(acc, mk_var(s, type_of r))
+      val abbrev_set = if !old_behaviour then empty_tmset
+                       else List.foldl foldthis empty_tmset asl
+    in
+      ASSUM_TAC (VSUBST_TAC abbrev_set) var_eq g
+    end
 val var_eq_tac = VAR_EQ_TAC
 
 fun ASSUMS_TAC f P = W (fn (asl,_) =>
@@ -1092,7 +1115,8 @@ val bool_ss = boolSimps.bool_ss;
  ---------------------------------------------------------------------------*)
 
 val (srw_ss : simpset ref) = ref (bool_ss ++ combinSimps.COMBIN_ss
-                          ++ boolSimps.NORMEQ_ss);
+                                          ++ boolSimps.NORMEQ_ss
+                                          ++ boolSimps.ABBREV_CONG_ss);
 
 val srw_ss_initialised = ref false;
 
