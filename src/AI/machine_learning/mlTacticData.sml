@@ -218,21 +218,18 @@ fun import_tacdata filel =
 
 val ttt_tacdata_dir = HOLDIR ^ "/src/tactictoe/ttt_tacdata"
 
-fun exists_tacdata_thy thy = exists_file (ttt_tacdata_dir ^ "/" ^ thy)
-
 fun ttt_create_tacdata () =
   let
     val thyl = ancestry (current_theory ())
     fun f x = ttt_tacdata_dir ^ "/" ^ x
-    val ethyl1 = filter (not o exists_tacdata_thy) thyl
-    val ethyl2 = filter (fn x => not (mem x ["bool","min"])) ethyl1
-    val _ =
-      if null ethyl2 then () else
-      print_endline
-        ("Warning: missing tactic data for theories:" ^
-        (String.concatWith " " ethyl2))
-    val filel = filter exists_file (map f thyl)
-    val tacdata = import_tacdata filel
+    val filel1 = filter exists_file (map f thyl)
+    val filel2 = filter (not o null o readl) filel1
+    val thyl1 = map OS.Path.file filel2
+    val thyl2 = list_diff thyl thyl1
+    val thyl3 = filter (fn x => not (mem x ["bool","min"])) thyl2
+    val _ = if null thyl3 then () else print_endline
+      ("Missing tactic data for theories:" ^  String.concatWith " " thyl3)
+    val tacdata = import_tacdata filel2
     val is = int_to_string (dlength (#tacfea tacdata))
   in
     print_endline ("Loading " ^ is ^ " tactics");
