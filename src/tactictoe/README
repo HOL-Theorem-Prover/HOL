@@ -29,4 +29,12 @@ CLEANING:
 EXAMPLE: see examples in src/tactictoe/examples.
 
 NOTES FOR DEVELOPERS:
-  Keep up-to-date: infix tokens in tttInfix.sml, polyml values in tttUnfold.sml.
+  Keep up-to-date: 
+  - core theories in src/AI/sml_inspection/smlOpen.sml
+  - infix tokens in src/tactictoe/src/tttInfix.sml, 
+  - polyml values in src/tactictoe/src/tttUnfold.sml.
+  Debugging directories:
+  - Output of the modified theory foo is can be found in 
+    src/AI/sml_inspection/buildheap/build_fooScript_ttt
+    Thm.dest_thm is expected intentionnaly to output errors.
+  - A copy of the modified theory is saved under src/tactictoe/src/scripts

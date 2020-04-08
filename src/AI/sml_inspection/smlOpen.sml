@@ -23,6 +23,7 @@ fun bare file = OS.Path.base (OS.Path.file file)
    Running buildheap
    ------------------------------------------------------------------------- *)
 
+(* ancestry "scratch"; *)
 val core_theories =
   ["ConseqConv", "quantHeuristics", "patternMatches", "ind_type", "while",
    "one", "sum", "option", "pair", "combin", "sat", "normalForms",

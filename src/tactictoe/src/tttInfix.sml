@@ -97,10 +97,10 @@ val l0 = String.tokens Char.isSpace
    "++ && |-> THEN THEN1 THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC",
    "THEN_TCL ORELSE_TCL ?> |> |>> ||> ||->",
    ">> >- >| \\\\ >>> >>- ??",
-   "~~ !~ Un Isct -- IN"
+   "~~ !~ Un Isct -- IN -*"
   ]
   )
-val l1 = String.tokens Char.isSpace "## $"
+val l1 = String.tokens Char.isSpace "## $ ?"
 val l2 = String.tokens Char.isSpace "via by suffices_by"
 
 val overlay_infixity =

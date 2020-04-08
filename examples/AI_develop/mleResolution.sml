@@ -286,7 +286,6 @@ load "psMCTS"; open psMCTS;
 load "psBigSteps"; open psBigSteps;
 load "mleResolution"; open mleResolution;
 
-
 val mctsparam =
   {
   timer = NONE, nsim = SOME 10000, stopatwin_flag = false,
@@ -321,8 +320,6 @@ fun convert_sc n = 10.0 * (1.0 / (1.0 + Math.ln (Real.fromInt n)));
 val l1 = map (abs_time o (fn (a,b,c) => a @ b) o #board) (rev nodel);
 val l2 = map convert_sc l1;
 *)
-
-(* should not use eval for 0.0 *)
 
 (* -------------------------------------------------------------------------
    Neural representation of the board
@@ -372,6 +369,106 @@ val pbl = provable_pb (max_clause,max_lit,max_var) 1;
 val target = (hd pbl, ([]:pb), abs_time (hd pbl));
 val tm = term_of_board target;
 *)
+
+(* -------------------------------------------------------------------------
+   Supervised learning greedy minimization.
+   ------------------------------------------------------------------------- *)
+
+(*
+load "aiLib"; open aiLib;
+load "mleResolution"; open mleResolution;
+val max_lit = 3; val max_var = 4; val max_clause = 5;
+val pbl = provable_pb (max_clause,max_lit,max_var) 1000;
+val targetl = map (fn x => (x,[]:pb,abs_time x)) pbl;
+
+fun onestep ex (cl1,cl2,tim) =
+  let 
+    val delpb = tl cl1 @ cl2 
+    val deltim = abs_time delpb
+    val value = if deltim <= tim then 1.0 else 0.0
+  in
+    ex := ((cl1,cl2,tim),value) :: !ex;
+    if deltim <= tim 
+    then (tl cl1, cl2, deltim) 
+    else (tl cl1, hd cl1 :: cl2, tim)
+  end;
+
+fun repeatstep i starttarget =
+  let 
+    val _ = print_endline (its i)
+    val ex = ref []
+    fun loop (cl1,cl2,tim) = 
+      if null cl1 then (cl2,tim) else loop (onestep ex (cl1,cl2,tim))
+  in
+    (loop starttarget, !ex)
+  end;
+
+val (minil,exll) = split (mapi repeatstep targetl);
+
+val exl1 = List.concat exll;
+val head_eval = mk_var ("head_eval", ``:bool -> bool``);
+fun tag_heval x = mk_comb (head_eval,x);
+val exl2 = map_fst (tag_heval o term_of_board) exl1;
+val exl3 = map_snd single exl2;
+val exl4 = map single exl3;
+
+
+val empty_list_var = mk_var ("empty_list_var", bool)
+val pair_cat = mk_var ("pair_cat", ``:bool -> bool -> bool``)
+fun mk_bvar i = mk_var ("V" ^ its i, bool)
+val operl = List.tabulate (5, mk_bvar) @ 
+  [empty_list_var, pair_cat, ``$~``,``$/\``,``$\/``,head_eval]
+val tnnparam = map_assoc (dim_std (2,12)) operl;
+
+(* val tnnparam = #tnnparam (#dplayer rlobj); *)
+val schedule =
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
+    batch_size = 16, nepoch = 200}];
+
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+val tnn = train_tnn schedule (random_tnn tnnparam) (exl4,[]);
+
+val schedule =
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
+    batch_size = 24, nepoch = 100}];
+val tnn2 = train_tnn schedule tnn (exl4,[]);
+
+val schedule =
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
+    batch_size = 32, nepoch = 100}];
+val tnn3 = train_tnn schedule tnn2 (exl4,[]);
+
+val schedule =
+  [{ncore = 4, verbose = true, learning_rate = 0.02,
+    batch_size = 48, nepoch = 100}];
+val tnn4 = train_tnn schedule tnn3 (exl4,[]);
+
+fun minimize_target tnn (cl1,cl2) = 
+  if null cl1 then (cl2, abs_time cl2) else
+  let 
+    val value = (hd o snd o hd) 
+      (infer_tnn tnn [((tag_heval o term_of_board) (cl1,cl2,0))])
+  in
+    if value > 0.5 
+    then minimize_target tnn (tl cl1, cl2) 
+    else minimize_target tnn (tl cl1, hd cl1 :: cl2)
+  end
+    
+val targetl2 = map (fn (a,b,c) => (a,b)) targetl;
+val minitnnl = map (minimize_target tnn4) targetl2;
+val l = combine_triple (targetl2, minil, minitnnl);
+random_elem l;
+
+
+val minitnnl_sorted = dict_sort compare_imin minitnnl;
+val minil_sorted = dict_sort compare_imin minil;
+
+val pb = hd (provable_pb (max_clause,max_lit,max_var) 1);
+val r = minimize_target tnn4 (pb,[]);
+
+
+*)
+
 
 (* -------------------------------------------------------------------------
    Parallelization
