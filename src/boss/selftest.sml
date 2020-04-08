@@ -274,3 +274,31 @@ in
 val _ = tprint "TFL nested recursion + Unicode parameter name"
 val _ = require_msg (check_result check_defs) prdefpair test quotation
 end
+
+val _ = let
+  val _ = tprint "tmCases_on (.doc file example)"
+  val g = ([], “MAP (f:num -> num) l = []”)
+  val expected = [([] : term list, “MAP (f:num -> num) [] = []”),
+                  ([] : term list , “MAP (f:num -> num) (e::es) = []”)]
+  val pp = HOLPP.block HOLPP.CONSISTENT 0 o
+           HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
+in
+  require_msg (check_result (list_eq goal_eq expected))
+              (HOLPP.pp_to_string 75 pp)
+              (fst o tmCases_on (mk_var("l", alpha)) ["", "e es"])
+              g
+end
+
+val _ = let
+  val _ = tprint "tmCases_on (bound l)"
+  val g = ([], “!l. MAP (f:num -> num) l = []”)
+  val expected = [([] : term list, “MAP (f:num -> num) [] = []”),
+                  ([] : term list , “MAP (f:num -> num) (e::es) = []”)]
+  val pp = HOLPP.block HOLPP.CONSISTENT 0 o
+           HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
+in
+  require_msg (check_result (list_eq goal_eq expected))
+              (HOLPP.pp_to_string 75 pp)
+              (fst o tmCases_on (mk_var("l", alpha)) ["", "e es"])
+              g
+end

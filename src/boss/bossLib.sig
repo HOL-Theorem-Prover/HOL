@@ -33,6 +33,7 @@ sig
 
   val Cases             : tactic
   val Cases_on          : term quotation -> tactic
+  val tmCases_on        : term -> string list -> tactic
   val PairCases         : tactic
   val PairCases_on      : term quotation -> tactic
   val Induct            : tactic

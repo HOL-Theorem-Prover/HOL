@@ -310,6 +310,13 @@ fun primCases_on names st (g as (_,w)) =
 fun Cases_on qtm g = primCases_on [] (find_subterm qtm g) g
   handle e => raise wrap_exn "BasicProvers" "Cases_on" e;
 
+fun tmCases_on tm names (g as (asl,w)) =
+    let
+      val fvs = FVL (w::asl) empty_tmset |> HOLset.listItems
+    in
+      primCases_on names (prim_find_subterm fvs tm g) g
+    end handle e => raise wrap_exn "BasicProvers" "tmCases_on" e;
+
 fun namedCases_on qtm names g =
   primCases_on names (find_subterm qtm g) g
   handle e => raise wrap_exn "BasicProvers" "namedCases_on" e;
