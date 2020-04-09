@@ -2,7 +2,7 @@ signature mleArith =
 sig
 
   include Abbrev
- 
+
   type tnn = mlTreeNeuralNetwork.tnn
 
   val train_fixed : unit -> tnn

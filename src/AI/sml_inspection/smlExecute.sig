@@ -17,7 +17,7 @@ sig
   val metistac_glob     : (thm list -> tactic) option ref
 
   (* tests *)
-  val is_thm_value     : 
+  val is_thm_value     :
     (string * PolyML.NameSpace.Values.value) list -> string -> bool
   val is_thm           : string -> bool
   val is_tactic        : string -> bool

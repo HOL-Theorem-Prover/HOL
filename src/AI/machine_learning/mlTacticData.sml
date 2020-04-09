@@ -133,7 +133,7 @@ fun enc_feavl feavl =
               unnamed_types = [], theorems = []}
     val sdi = build_sharing_data ed
     val sdi = add_terms all_terms sdi
-    fun write_term_aux sdi t = write_term sdi t 
+    fun write_term_aux sdi t = write_term sdi t
       handle NotFound => raise ERR "write_term" (term_to_string t)
     val enc_feavldata = list_encode (enc_feav (String o write_term_aux sdi))
   in
@@ -233,7 +233,7 @@ fun import_tacdata filel =
 
 val ttt_tacdata_dir = HOLDIR ^ "/src/tactictoe/ttt_tacdata"
 
-fun exists_tacdata_thy thy = 
+fun exists_tacdata_thy thy =
   let val file = ttt_tacdata_dir ^ "/" ^ thy in
     exists_file file andalso (not o null o readl) file
   end

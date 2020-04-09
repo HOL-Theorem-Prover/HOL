@@ -8,7 +8,7 @@
 structure mleArith :> mleArith =
 struct
 
-open HolKernel Abbrev boolLib aiLib psTermGen smlParallel 
+open HolKernel Abbrev boolLib aiLib psTermGen smlParallel
 mlTreeNeuralNetwork mleArithData
 
 val ERR = mk_HOL_ERR "mleArith"
@@ -47,20 +47,20 @@ fun train_fixed () =
   let
     val exl = prepare_ex (import_arithdata "train")
     val tnn = train_tnn schedule (random_tnn tnnparam) (exl,[])
-  in 
+  in
     write_tnn (arithdir ^ "/tnn") tnn; tnn
   end
 
 val trainparam = {ncore = 1, verbose = true, learning_rate = 0.02,
     batch_size = 1, nepoch = 200}
 
-fun train_automl_fixed () = 
+fun train_automl_fixed () =
   let
     val exl = prepare_ex (import_arithdata "train")
     val tnn = train_tnn_automl trainparam (random_tnn tnnparam) exl
-  in 
+  in
     write_tnn (arithdir ^ "/tnn_automl") tnn; tnn
-  end 
+  end
 
 (* ------------------------------------------------------------------------
    Testing

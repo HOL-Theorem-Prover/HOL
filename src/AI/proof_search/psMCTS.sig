@@ -5,10 +5,10 @@ sig
 
   (* outcome *)
   datatype status = Undecided | Win | Lose
-  val is_undecided : status -> bool 
+  val is_undecided : status -> bool
   val is_win : status -> bool
   val is_lose : status -> bool
-  val string_of_status : status -> string  
+  val string_of_status : status -> string
 
   (* search tree: 'a is a board position, 'b is a move *)
   type id = int list

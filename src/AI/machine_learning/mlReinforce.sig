@@ -17,11 +17,11 @@ sig
   val read_rlex : 'a gameio -> string -> 'a rlex
 
   (* players *)
-  type splayer = 
+  type splayer =
     {unib : bool, tnn : tnn, noiseb : bool, nsim : int}
   type 'a dplayer =
     {pretob : ('a * tnn) option -> 'a -> term list,
-     schedule : schedule, 
+     schedule : schedule,
      tnnparam : tnnparam}
   val player_from_tnn :
     tnn -> ('a -> term list) -> ('a,'b) psMCTS.game -> 'a ->
@@ -58,7 +58,7 @@ sig
   val rl_start : ('a,'b) rlobj * 'a es -> 'a targetd -> unit
   val rl_restart : int -> ('a,'b) rlobj * 'a es -> 'a targetd -> unit
 
-  (* final testing 
+  (* final testing
   type 'a ftes = (unit, 'a, bool * int * 'a option) smlParallel.extspec
   type 'a fttnnes = (tnn, 'a, bool * int * 'a option) smlParallel.extspec
   val ft_mk_extsearch : string -> ('a,'b) rlobj ->

@@ -93,7 +93,7 @@ type ('a,'b) mctsobj =
 fun quant_status quant test tree pol =
   let
     val cidl = map snd pol
-    fun is_status cid = 
+    fun is_status cid =
       test (#status (dfind cid tree)) handle NotFound => false
   in
     quant is_status cidl
@@ -195,8 +195,8 @@ fun node_create_backup obj (tree,cache) (id,board) =
           then Lose
           else stati
         val (value,pol1) = case stati' of
-            Win => (if #evalwin param 
-                    then fst ((#player obj) board) 
+            Win => (if #evalwin param
+                    then fst ((#player obj) board)
                     else 1.0, [])
           | Lose => (0.0,[])
           | Undecided => (#player obj) board
@@ -254,12 +254,12 @@ fun select_child obj tree id =
     val param = #mctsparam obj
   in
     if not (is_undecided stati)
-      then Backup (id, if #evalwin param andalso is_win stati 
+      then Backup (id, if #evalwin param andalso is_win stati
                        then fst ((#player obj) (#board node)) (* inefficient *)
                        else score_status stati)
     else if #avoidlose param andalso is_lose status
       then Backup (id, score_status status)
-    else 
+    else
     let
       val l0 =
         if #avoidlose param

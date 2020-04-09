@@ -29,7 +29,7 @@ fun log rlobj s = (log_in_eval rlobj s; print_endline s)
 type 'a targetd = ('a, bool list) Redblackmap.dict
 type 'a gameio =
   {write_boardl : string -> 'a list -> unit, read_boardl : string -> 'a list}
-type splayer = 
+type splayer =
   {unib : bool, tnn : tnn, noiseb : bool, nsim : int}
 type 'a dplayer =
   {pretob : ('a * tnn) option -> 'a -> term list,
@@ -131,7 +131,7 @@ fun write_result gameio file (b,rlex) =
    write_rlex gameio (file ^ "_rlex") rlex)
 
 fun read_result gameio file =
-  (string_to_bool (singleton_of_list (readl (file ^ "_bstatus"))), 
+  (string_to_bool (singleton_of_list (readl (file ^ "_bstatus"))),
    read_rlex gameio (file ^ "_rlex"))
 
 fun write_target gameio file target =
@@ -177,9 +177,9 @@ fun blts bl = String.concatWith " " (map bts bl)
 fun stbl s = map string_to_bool (String.tokens Char.isSpace s)
 
 fun store_targetd rlobj n targetd =
-  let 
+  let
     val file = targetd_file rlobj n
-    val (l1,l2) = split (dlist targetd) 
+    val (l1,l2) = split (dlist targetd)
   in
     #write_boardl (#gameio rlobj) (file ^ "_boardl") l1;
     writel (file ^ "_bl") (map blts l2)
@@ -311,7 +311,7 @@ fun select_from_targetd rlobj ntot targetd =
     val possel = first_n (ntot div 2) (dict_sort compare_rmax (map h pos))
     val lfin = map (fst o fst) (rev negsel @ possel)
     val lwin = filter exists_win (map (snd o snd) targetwinl)
-    
+
   in
     stats_select rlobj (length lfin)
        (length lwin) (neg,pos, map fst negsel, map fst possel);

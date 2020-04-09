@@ -80,8 +80,8 @@ fun is_thm s =
     val sval = "tactictoe_untyped_value"
     val b = exec_sml "is_thm"
       (
-      "val " ^ sval ^ " = (" ^ s ^ ");" ^ 
-      "\nval _ = smlExecute.sml_bool_glob := " ^ 
+      "val " ^ sval ^ " = (" ^ s ^ ");" ^
+      "\nval _ = smlExecute.sml_bool_glob := " ^
       "smlExecute.is_thm_value (#allVal (PolyML.globalNameSpace) ()) " ^
       quote sval ^ ";" ^
       "\nval _ = PolyML.Compiler.forgetValue " ^ quote sval ^ ";"

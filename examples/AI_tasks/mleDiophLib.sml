@@ -246,14 +246,14 @@ val test = import_data "test_export";
 val l1 = map (poly_size o snd) (train @ test);
 val l2 = dlist (count_dict (dempty Int.compare) l1);
 
-fun real_product l = 
+fun real_product l =
   case l of [] => 1.0 | a :: m => (a:real) * real_product m
 
 fun freqmono i = Real.fromInt (16 * int_pow 5 (i - 1));
 fun freqpoly partl = real_product (map freqmono partl);
 fun freqpoly_n n =
-  let val partll = 
-    List.concat (List.tabulate (6, fn i => (number_partition (i+1) n 
+  let val partll =
+    List.concat (List.tabulate (6, fn i => (number_partition (i+1) n
     handle HOL_ERR _ => [])))
   in
     sum_real (map freqpoly partll)

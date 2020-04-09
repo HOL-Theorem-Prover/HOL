@@ -20,17 +20,17 @@ val ERR = mk_HOL_ERR "mleResolution"
 type lit = int * bool
 type clause = lit list
 val lit_compare = cpl_compare Int.compare bool_compare
-val clause_compare = list_compare lit_compare 
+val clause_compare = list_compare lit_compare
 type pb = clause list
 
 (* -------------------------------------------------------------------------
    Subsumption
    ------------------------------------------------------------------------- *)
 
-fun subsume c1 c2 = 
-  let val d = dset lit_compare c2 in 
-    all (fn x => dmem x d) c1 
-  end 
+fun subsume c1 c2 =
+  let val d = dset lit_compare c2 in
+    all (fn x => dmem x d) c1
+  end
 fun subsumel c1l c2 = exists (fn x => subsume x c2) c1l
 
 (* todo: do it properly *)
@@ -47,28 +47,28 @@ fun resolve_aux b (c1,c2) = case (c1:clause,c2:clause) of
   | (_,[]) => if b then c1 else raise ERR "resolve_aux" "no match"
   | ((a1,b1) :: m1, (a2,b2) :: m2) =>
     if a1 < a2 then (a1,b1) :: resolve_aux b (m1,c2)
-    else if a2 < a1 then (a2,b2) :: resolve_aux b (c1,m2) 
-    else 
+    else if a2 < a1 then (a2,b2) :: resolve_aux b (c1,m2)
+    else
       if b1 = b2 then (a1,b1) :: resolve_aux b (m1,m2)
       else if b then raise ERR "resolve_aux" "multiple matches"
            else resolve_aux true (m1,m2)
 
 val resolve_calls = ref 0
 
-fun resolve (c1:clause, c2:clause) = 
+fun resolve (c1:clause, c2:clause) =
   (incr resolve_calls; (resolve_aux false (c1,c2) : clause))
 
-fun resolve_ctxt pb (c1,c2) = 
-  let val c = resolve (c1,c2) in 
-    if mem c pb orelse subsumel pb c 
-    then raise ERR "resolve_ctxt" "" 
+fun resolve_ctxt pb (c1,c2) =
+  let val c = resolve (c1,c2) in
+    if mem c pb orelse subsumel pb c
+    then raise ERR "resolve_ctxt" ""
     else c
   end
 
-fun exists_match pb l c = 
+fun exists_match pb l c =
   exists (fn x => can (resolve_ctxt pb) (x,c)) l
 
-fun filter_match pb c l = 
+fun filter_match pb c l =
   filter (fn x => can (resolve_ctxt pb) (c,x)) l
 
 (* -------------------------------------------------------------------------
@@ -87,17 +87,17 @@ fun resolve_brute (pb,l1,l2) =
 
 fun brute_pb_aux aimf (i,n) (pb,l1,l2) =
   if aimf pb then ("solved", i, SOME (dkeys pb))
-  else if null l2 then ("saturated", i, NONE)  
+  else if null l2 then ("saturated", i, NONE)
   else if i >= n then ("timeout", i, NONE)
   else
-    let 
-      val cl1 = dlist (dregroup clause_compare (resolve_brute (pb,l1,l2))) 
+    let
+      val cl1 = dlist (dregroup clause_compare (resolve_brute (pb,l1,l2)))
       val cl2 = map_snd list_imin cl1
     in
       brute_pb_aux aimf (i+1,n) (daddl cl2 pb, l2 @ l1, cl2)
     end
 
-fun brute_pb aimf n (l: clause list) = 
+fun brute_pb aimf n (l: clause list) =
   let val lcost = map_assoc (fn _ => 0) l in
     brute_pb_aux aimf (0,n) (dnew clause_compare lcost, [], lcost)
   end
@@ -106,7 +106,7 @@ fun brute_pb aimf n (l: clause list) =
    Evaluation
    ------------------------------------------------------------------------- *)
 
-fun eval_lit assign (lit,b) = 
+fun eval_lit assign (lit,b) =
   if b then Vector.sub (assign,lit) else not (Vector.sub (assign,lit))
 
 fun eval_clause assign c = exists (eval_lit assign) c
@@ -114,10 +114,10 @@ fun eval_clause assign c = exists (eval_lit assign) c
 fun eval_pb assign pb = all (eval_clause assign) pb
 
 fun all_assign nvar =
-  map Vector.fromList 
+  map Vector.fromList
   (cartesian_productl (List.tabulate (nvar,fn _ => [false,true])))
 
-fun is_sat pb = 
+fun is_sat pb =
   let val nvar = list_imax (map fst (List.concat pb)) in
     exists (C eval_pb pb) (all_assign (nvar + 1))
   end
@@ -130,12 +130,12 @@ fun abs_time pb =
    Generation of a random problem for 3-SAT
    ------------------------------------------------------------------------- *)
 
-fun random_lit nvar = 
+fun random_lit nvar =
   (random_int (0, nvar - 1), random_elem [true,false])
 
-fun random_clause nlit nvar = 
-  let 
-    fun loop n d = 
+fun random_clause nlit nvar =
+  let
+    fun loop n d =
       if n <= 0 then d else
       let val (i,b) = random_lit nvar in
         if dmem i d then loop (n-1) d else loop (n-1) (dadd i b d)
@@ -145,10 +145,10 @@ fun random_clause nlit nvar =
   end
 
 fun random_pb nclause nlit nvar =
-  let 
+  let
     fun loop d =
-      if dlength d >= nclause 
-      then d 
+      if dlength d >= nclause
+      then d
       else loop (dadd (random_clause nlit nvar) () d)
   in
     shuffle (dkeys (loop (dempty clause_compare)))
@@ -157,8 +157,8 @@ fun random_pb nclause nlit nvar =
 fun provable_pb (max_clause,max_lit,max_var) n =
   if n <= 0 then [] else
   let val pb = random_pb max_clause max_lit max_var in
-    if is_sat pb 
-    then provable_pb (max_clause,max_lit,max_var) n 
+    if is_sat pb
+    then provable_pb (max_clause,max_lit,max_var) n
     else pb :: provable_pb (max_clause,max_lit,max_var) (n-1)
   end
 
@@ -170,28 +170,28 @@ type board = pb * pb * int
 val pb_compare = list_compare clause_compare
 
 fun string_of_lit (i,b) = if b then its i else "~" ^ its i
-fun lit_of_string s = 
-  if hd_string s = #"~" 
+fun lit_of_string s =
+  if hd_string s = #"~"
   then (string_to_int (tl_string s), false)
   else (string_to_int s, true)
 
-fun string_of_clause c = 
+fun string_of_clause c =
   if null c then "emptyclause" else
   String.concatWith "_" (map string_of_lit c)
 fun clause_of_string s =
   if s = "emptyclause" then [] else
   map lit_of_string (String.tokens (fn c => c = #"_") s)
 
-fun string_of_pb cl = 
-  if null cl then "emptypb" else 
+fun string_of_pb cl =
+  if null cl then "emptypb" else
   String.concatWith "," (map string_of_clause cl)
-fun pb_of_string s = 
+fun pb_of_string s =
   if s = "emptypb" then [] else
   map clause_of_string (String.tokens (fn c => c = #",") s)
 
 fun string_of_board (cl1,cl2,n) =
   string_of_pb cl1 ^ " " ^ string_of_pb cl2 ^ " " ^ its n
-fun board_of_string s = 
+fun board_of_string s =
   let val (a,b,c) = triple_of_list (String.tokens Char.isSpace s) in
     (pb_of_string a, pb_of_string b, string_to_int c)
   end
@@ -206,7 +206,7 @@ fun eval_board (_,_,n) = 10.0 * (1.0 / (1.0 + Math.ln (Real.fromInt n)))
 
 fun status_of (board as (cl1,cl2,_)) =
   let val pb = cl2 @ cl1 in
-    if is_sat pb then Lose 
+    if is_sat pb then Lose
     else if null cl1 then Win
     else Undecided
   end
@@ -218,21 +218,21 @@ fun status_of (board as (cl1,cl2,_)) =
 datatype move = Select | Delete
 val movel = [Select,Delete]
 
-fun string_of_move move = 
+fun string_of_move move =
   case move of Select => "Select" | Delete => "Delete"
 
-fun move_compare (a,b) = 
+fun move_compare (a,b) =
   String.compare (string_of_move a, string_of_move b)
 
-fun available_movel (cl1,cl2,_) = 
+fun available_movel (cl1,cl2,_) =
   if null cl1 then [] else movel
 
-fun apply_move move (cl1,cl2,n) = 
+fun apply_move move (cl1,cl2,n) =
   if null cl1 then raise ERR "apply_move" "" else
   case move of
     Select => (tl cl1, hd cl1 :: cl2, n)
   | Delete => (tl cl1, cl2, abs_time (tl cl1 @ cl2))
-  
+
 (* -------------------------------------------------------------------------
    Game
    ------------------------------------------------------------------------- *)
@@ -242,7 +242,7 @@ val game : (board,move) game =
   status_of = status_of,
   apply_move = apply_move,
   movel = movel,
-  available_movel = available_movel,  
+  available_movel = available_movel,
   string_of_board = string_of_board,
   string_of_move = string_of_move,
   move_compare = move_compare,
@@ -257,13 +257,13 @@ fun mk_mctsparam nsim =
   {
   timer = NONE, nsim = SOME nsim, stopatwin_flag = false,
   decay = 1.0, explo_coeff = 2.0,
-  noise_coeff = 0.25, noise_root = false, noise_all = false, 
+  noise_coeff = 0.25, noise_root = false, noise_all = false,
   noise_gen = random_real,
   noconfl = false, avoidlose = false, evalwin = true
   }
 
 fun smart_player game board =
-  (eval_board board, 
+  (eval_board board,
    map (fn x => (x,1.0)) (#available_movel game board))
 
 fun mcts_test nsim target =
@@ -290,20 +290,20 @@ val mctsparam =
   {
   timer = NONE, nsim = SOME 10000, stopatwin_flag = false,
   decay = 1.0, explo_coeff = 2.0,
-  noise_coeff = 0.25, noise_root = false, noise_all = false, 
+  noise_coeff = 0.25, noise_root = false, noise_all = false,
   noise_gen = random_real,
   noconfl = false, avoidlose = false, evalwin = true
   };
 
 fun smart_player (game : (board,move) game) (board as (cl1,cl2,nl)) =
-  (eval_board board, 
+  (eval_board board,
    map (fn x => (x,1.0)) (#available_movel game board));
 
-val bsobj = 
+val bsobj =
    {game = game,
     mctsparam = mctsparam,
-    preplayer = fn _ => smart_player game, 
-    temp_flag = false, 
+    preplayer = fn _ => smart_player game,
+    temp_flag = false,
     verbose = true};
 
 val max_lit = 3; val max_var = 5; val max_clause = 25;
@@ -327,26 +327,26 @@ val l2 = map convert_sc l1;
 
 val empty_list_var = mk_var ("empty_list_var", bool)
 val pair_cat = mk_var ("pair_cat", ``:bool -> bool -> bool``)
-val cat_move = mk_var ("cat_move", ``:bool -> bool -> 'a``); 
+val cat_move = mk_var ("cat_move", ``:bool -> bool -> 'a``);
 
 fun mk_bvar i = mk_var ("V" ^ its i, bool)
 fun bvar_of_term tm = string_to_int (tl_string (fst (dest_var tm)))
 
 fun mk_lit (i,b) = (if b then I else mk_neg) (mk_bvar i)
-fun lit_of_term tm = 
-  if is_neg tm 
-  then (bvar_of_term (dest_neg tm), false) 
+fun lit_of_term tm =
+  if is_neg tm
+  then (bvar_of_term (dest_neg tm), false)
   else (bvar_of_term tm, true)
 
 fun term_of_clause c = list_mk_disj (map mk_lit c)
 fun clause_of_term ctm = map lit_of_term (strip_disj ctm)
 
-fun term_of_clausel cl = 
-  if null cl 
-  then empty_list_var 
+fun term_of_clausel cl =
+  if null cl
+  then empty_list_var
   else list_mk_conj (map term_of_clause cl)
-fun clausel_of_term tm = 
-  if term_eq empty_list_var tm 
+fun clausel_of_term tm =
+  if term_eq empty_list_var tm
   then []
   else map clause_of_term (strip_conj tm)
 
@@ -354,7 +354,7 @@ fun term_of_pb d = term_of_clausel (dkeys d)
 fun pb_of_term tm = dset clause_compare (clausel_of_term tm)
 
 fun term_of_board (cl1,cl2,_) =
-  list_mk_comb (pair_cat, [term_of_clausel cl1, term_of_clausel cl2])    
+  list_mk_comb (pair_cat, [term_of_clausel cl1, term_of_clausel cl2])
 
 val head_eval = mk_var ("head_eval", ``:bool -> bool``)
 val head_poli = mk_var ("head_poli", ``:bool -> bool``)
@@ -382,22 +382,22 @@ val pbl = provable_pb (max_clause,max_lit,max_var) 1000;
 val targetl = map (fn x => (x,[]:pb,abs_time x)) pbl;
 
 fun onestep ex (cl1,cl2,tim) =
-  let 
-    val delpb = tl cl1 @ cl2 
+  let
+    val delpb = tl cl1 @ cl2
     val deltim = abs_time delpb
     val value = if deltim <= tim then 1.0 else 0.0
   in
     ex := ((cl1,cl2,tim),value) :: !ex;
-    if deltim <= tim 
-    then (tl cl1, cl2, deltim) 
+    if deltim <= tim
+    then (tl cl1, cl2, deltim)
     else (tl cl1, hd cl1 :: cl2, tim)
   end;
 
 fun repeatstep i starttarget =
-  let 
+  let
     val _ = print_endline (its i)
     val ex = ref []
-    fun loop (cl1,cl2,tim) = 
+    fun loop (cl1,cl2,tim) =
       if null cl1 then (cl2,tim) else loop (onestep ex (cl1,cl2,tim))
   in
     (loop starttarget, !ex)
@@ -416,7 +416,7 @@ val exl4 = map single exl3;
 val empty_list_var = mk_var ("empty_list_var", bool)
 val pair_cat = mk_var ("pair_cat", ``:bool -> bool -> bool``)
 fun mk_bvar i = mk_var ("V" ^ its i, bool)
-val operl = List.tabulate (5, mk_bvar) @ 
+val operl = List.tabulate (5, mk_bvar) @
   [empty_list_var, pair_cat, ``$~``,``$/\``,``$\/``,head_eval]
 val tnnparam = map_assoc (dim_std (2,12)) operl;
 
@@ -443,17 +443,17 @@ val schedule =
     batch_size = 48, nepoch = 100}];
 val tnn4 = train_tnn schedule tnn3 (exl4,[]);
 
-fun minimize_target tnn (cl1,cl2) = 
+fun minimize_target tnn (cl1,cl2) =
   if null cl1 then (cl2, abs_time cl2) else
-  let 
-    val value = (hd o snd o hd) 
+  let
+    val value = (hd o snd o hd)
       (infer_tnn tnn [((tag_heval o term_of_board) (cl1,cl2,0))])
   in
-    if value > 0.5 
-    then minimize_target tnn (tl cl1, cl2) 
+    if value > 0.5
+    then minimize_target tnn (tl cl1, cl2)
     else minimize_target tnn (tl cl1, hd cl1 :: cl2)
   end
-    
+
 val targetl2 = map (fn (a,b,c) => (a,b)) targetl;
 val minitnnl = map (minimize_target tnn4) targetl2;
 val l = combine_triple (targetl2, minil, minitnnl);
@@ -489,13 +489,13 @@ val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 20}]
 
-val operl = List.tabulate (5, mk_bvar) @ 
+val operl = List.tabulate (5, mk_bvar) @
   [empty_list_var, cat_move,
    pair_cat, ``$~``,``$/\``,``$\/``,head_eval]
 
 val tnnparam = map_assoc (dim_std (1,12)) operl @ [(head_poli,[12,2])]
 
-fun pretob _ board = 
+fun pretob _ board =
   let val tm = term_of_board board in [tag_heval tm, tag_hpoli tm] end
 
 val dplayer = {pretob = pretob, tnnparam = tnnparam, schedule = schedule}
@@ -506,12 +506,12 @@ val dplayer = {pretob = pretob, tnnparam = tnnparam, schedule = schedule}
 
 val version = 2
 
-fun infobs boardl = 
-  let 
-    fun f x = String.translate 
+fun infobs boardl =
+  let
+    fun f x = String.translate
       (fn x => if Char.isSpace x then "\n" else Char.toString x)
       (string_of_board x)
-    val dir = HOLDIR ^ "/examples/AI_develop/log" ^ its version 
+    val dir = HOLDIR ^ "/examples/AI_develop/log" ^ its version
     val _ = mkDir_err dir
     val file = dir ^ "/" ^ its (hash_string (string_of_board (last boardl)))
   in

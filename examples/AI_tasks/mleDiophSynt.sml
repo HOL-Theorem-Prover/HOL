@@ -405,7 +405,7 @@ val (l3,l3') = partition #1 (l1 @ l2);
 val nsim_tnn = average_int (map #2 l3');
 val l4 = map (valOf o #3) l3;
 val l5 = map (fn (a,b,c) => veri_of_poly a) l4;
-val l6 = map (fn (a,b,c) => ((graph_to_il b, veri_of_poly a), poly_size a)) 
+val l6 = map (fn (a,b,c) => ((graph_to_il b, veri_of_poly a), poly_size a))
 l4;
 val l7 = dict_sort compare_imax l6;
 hd l7;
@@ -413,13 +413,13 @@ val d = dnew (list_compare Int.compare) l6;
 
 val l6 = map (fn (a,b,c) => (graph_to_il b, veri_of_poly a, c)) l4;
 
-val longest = 
+val longest =
   let fun cmp (a,b) = Int.compare (#2 b, #2 a) in
     dict_sort cmp l3
   end;
 
 val (a,b,c) = valOf (#3 (hd longest));
-veri_of_poly a; 
+veri_of_poly a;
 graph_to_il b;
 
 
@@ -461,14 +461,14 @@ load "aiLib"; open aiLib;
 load "mleDiophLib"; open mleDiophLib;
 load "mleDiophSynt"; open mleDiophSynt;
 
-val targetdl = List.tabulate (230, 
+val targetdl = List.tabulate (230,
   fn x => mlReinforce.retrieve_targetd rlobj (x+1));
 val l1 = map dlist targetdl;
 val l2 = map (map (snd o snd)) l1;
 
-fun btr b = if b then 1.0 else 0.0 
+fun btr b = if b then 1.0 else 0.0
 
-fun expectancy_one bl = 
+fun expectancy_one bl =
   if null bl then 0.0 else average_real (map btr (first_n 5 bl))
 fun expectancy bll = sum_real (map expectancy_one bll);
 val expectl = map expectancy l2;

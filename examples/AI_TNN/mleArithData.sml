@@ -8,7 +8,7 @@
 structure mleArithData :> mleArithData =
 struct
 
-open HolKernel Abbrev boolLib aiLib psTermGen mlTacticData 
+open HolKernel Abbrev boolLib aiLib psTermGen mlTacticData
 mlTreeNeuralNetwork mlFeature numSyntax
 
 val ERR = mk_HOL_ERR "mleArithData"
@@ -27,9 +27,9 @@ fun eval_numtm tm =
    Arithmetical term generation
    ------------------------------------------------------------------------- *)
 
-fun num_operl n = 
+fun num_operl n =
   [``SUC``,``$+``,``$*``] @ map mk_sucn (List.tabulate (n+1,I))
-fun random_numtm (nsuc,nsize) = 
+fun random_numtm (nsuc,nsize) =
   random_term (num_operl nsuc) (nsize,``:num``)
 
 (* -------------------------------------------------------------------------
@@ -94,7 +94,7 @@ load "mleArithData"; open mleArithData;
 val _ = create_export_arithdata ();
 *)
 
-fun lisp_to_arith lisp = 
+fun lisp_to_arith lisp =
   case lisp of
     Lstring "0" => zero_tm
   | Lterm [Lstring "S",a] => mk_suc (lisp_to_arith a)
@@ -102,8 +102,8 @@ fun lisp_to_arith lisp =
   | Lterm [Lstring "*",a,b] => mk_mult (lisp_to_arith a, lisp_to_arith b)
   | _ => raise ERR "lisp_to_arith" ""
 
-fun import_arithdata dataname = 
-  let 
+fun import_arithdata dataname =
+  let
     val l1 = readl (arithdir ^ "/" ^ dataname)
     val l2 = map pair_of_list (mk_batch_full 2 l1)
     val l3 = map_snd string_to_int l2
@@ -111,7 +111,7 @@ fun import_arithdata dataname =
       (lisp_to_arith o singleton_of_list o lisp_parser) x
   in
     map_fst f l3
-  end 
+  end
 
 (*
 load "mleArithData"; open mleArithData;

@@ -24,19 +24,19 @@ include Abbrev
   val infer_tnn : tnn -> term list -> (term * real list) list
   val precomp_embed : tnn -> term -> term
   val prepare_tnnex : tnnex -> tnnbatch
-  val train_tnn_epoch_nopar : 
-    mlNeuralNetwork.trainparam -> real list -> tnn -> tnnbatch list -> 
+  val train_tnn_epoch_nopar :
+    mlNeuralNetwork.trainparam -> real list -> tnn -> tnnbatch list ->
     tnn * real
   val stats_tnnex : tnnex -> string
 
   val train_tnn : schedule -> tnn -> tnnex * tnnex -> tnn
-  
+
   val is_accurate : tnn -> (term * real list) list -> bool
   val tnn_accuracy : tnn -> tnnex -> real
 
   val traintnn_extspec :
     (unit, (tnnex * schedule * tnnparam), tnn) smlParallel.extspec
-  
+
    val train_tnn_automl : mlNeuralNetwork.trainparam -> tnn -> tnnex -> tnn
 
 end

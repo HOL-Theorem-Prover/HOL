@@ -13,7 +13,7 @@ sig
   val create_export_arithdata : unit -> unit
   val import_arithdata : string -> (term * int) list
   val export_arithfea : string -> unit
-  
+
   (* statistics *)
   val regroup_by_metric : ('a -> int) -> 'a list -> (int * int) list
 

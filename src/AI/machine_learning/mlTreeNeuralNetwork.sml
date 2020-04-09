@@ -448,10 +448,10 @@ val traintnn_extspec =
    AutoML: automatic tuning of hyperparameters (in development)
    ------------------------------------------------------------------------- *)
 
-fun neighb_bsize bsize = 
+fun neighb_bsize bsize =
   [8,16,32,64]
 
-fun neighb_lrate lrate = 
+fun neighb_lrate lrate =
   [
   let val r = lrate * 1.1 in if r > 10.0 then 10.0 else r end,
   let val r = lrate / 1.1 in if r < 0.0001 then 0.0001 else r end,
@@ -459,13 +459,13 @@ fun neighb_lrate lrate =
   ]
 
 fun lookahead_one tnn prebatch (lrate,bsize)  =
-  let 
+  let
     val trainparam =
       {ncore = 1, verbose = true,
        learning_rate = lrate, batch_size = bsize, nepoch = 1}
     fun loop (loctnn,loss) n =
-      if n <= 0 then (loctnn,loss) else 
-      let 
+      if n <= 0 then (loctnn,loss) else
+      let
         val batchl = mk_batch bsize (shuffle prebatch)
         val (newtnn,newloss) = train_tnn_epoch_nopar trainparam [] tnn batchl
       in
@@ -475,25 +475,25 @@ fun lookahead_one tnn prebatch (lrate,bsize)  =
     loop (tnn,0.0) 1
   end
 
-fun lookahead_all prebatch (tnn,(lrate,bsize)) = 
-  let 
+fun lookahead_all prebatch (tnn,(lrate,bsize)) =
+  let
     val paraml = cartesian_product [lrate] (neighb_bsize bsize)
     val rl = map_assoc (lookahead_one tnn prebatch) paraml
     fun cmp ((_,(_,a)),(_,(_,b))) = Real.compare (a,b)
     val ((newlrate,newbsize),(newtnn,loss)) = hd (dict_sort cmp rl)
-    val _ = print_endline (pretty_real loss ^ ": " ^ 
+    val _ = print_endline (pretty_real loss ^ ": " ^
       pretty_real newlrate ^ "," ^ its newbsize)
   in
     (newtnn,(newlrate,newbsize))
   end
 
-fun train_tnn_automl {ncore,verbose,learning_rate,batch_size,nepoch} 
+fun train_tnn_automl {ncore,verbose,learning_rate,batch_size,nepoch}
   randtnn trainex =
   let
     val _ = print_endline ("training set statistics:\n" ^ stats_tnnex trainex)
     val prebatch = prepare_tnnex trainex
     val start = (randtnn,(learning_rate,batch_size))
-    val ((tnn,_),t) = 
+    val ((tnn,_),t) =
       add_time (funpow nepoch (lookahead_all prebatch)) start
   in
     print_endline ("Tree neural network training time: " ^ rts t); tnn

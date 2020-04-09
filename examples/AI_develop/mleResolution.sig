@@ -2,7 +2,7 @@ signature mleResolution =
 sig
 
   include Abbrev
-  
+
   type lit = int * bool
   type clause = lit list
   val clause_compare : clause * clause -> order
@@ -25,13 +25,13 @@ sig
 
   val is_sat : pb -> bool
   val inter_reduce : pb -> pb
-  
+
   val game : (board,move) psMCTS.game
   val eval_board : board -> real
   val mcts_test : int -> board -> bool * (board, move) psMCTS.tree
 
   val term_of_board : board -> term
-  
+
   (* reinforcement learning *)
   val extsearch : board mlReinforce.es
   val rlobj : (board,move) mlReinforce.rlobj

@@ -33,7 +33,7 @@ fun parse_ex s =
              else raise ERR "translate_token" ""
     fun dm_to_hol s =
        let val s' = String.translate translate_token s in
-         (Parse.Term [HOLPP.QUOTE s'] 
+         (Parse.Term [HOLPP.QUOTE s']
           handle HOL_ERR _ => raise ERR "read_ex" s')
        end
   in
