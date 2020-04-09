@@ -71,7 +71,7 @@ fun is_thm_value l s =
     val s2 = smlLexer.partial_sml_lexer s1
   in
     case s2 of
-      [a] => (drop_sig a = "thm" handle _ => false)
+      [a] => (drop_sig a = "thm" handle HOL_ERR _ => false)
     | _   => false
   end
 
