@@ -72,6 +72,7 @@ fun export_terml file tml =
 (* -------------------------------------------------------------------------
    Exporting tactic data
    ------------------------------------------------------------------------- *)
+
 open HOLsexp
 fun enc_goal enc_tm (asl,w) = list_encode enc_tm (w::asl)
 fun dec_goal dec_tm =
@@ -109,18 +110,32 @@ fun dec_feav dec_tm =
       )
     )
 
+fun compare_exact (t1,t2) = case (dest_term t1, dest_term t2) of
+     (VAR _, VAR _) => Term.compare (t1,t2)
+   | (VAR _, _) => LESS
+   | (_, VAR _) => GREATER
+   | (CONST _, CONST _) => Term.compare (t1,t2)
+   | (CONST _, _) => LESS
+   | (_, CONST _) => GREATER
+   | (COMB p1, COMB p2) => cpl_compare compare_exact compare_exact (p1,p2)
+   | (COMB _, _) => LESS
+   | (_, COMB _) => GREATER
+   | (LAMB p1, LAMB p2) => cpl_compare compare_exact compare_exact (p1,p2)
+
 fun enc_feavl feavl =
   let
+    val empty_exact = HOLset.empty compare_exact
     fun goal_terms ((asl,w),A) = HOLset.addList(A, w::asl)
     fun feav_terms (((stac,t,g,gl), fea), A) =
         List.foldl goal_terms A (g::gl)
-    val all_terms = List.foldl feav_terms empty_tmset feavl |> HOLset.listItems
+    val all_terms = List.foldl feav_terms empty_exact feavl |> HOLset.listItems
     val ed = {named_terms = [], unnamed_terms = [], named_types = [],
               unnamed_types = [], theorems = []}
     val sdi = build_sharing_data ed
     val sdi = add_terms all_terms sdi
-
-    val enc_feavldata = list_encode (enc_feav (String o write_term sdi))
+    fun write_term_aux sdi t = write_term sdi t 
+      handle NotFound => raise ERR "write_term" (term_to_string t)
+    val enc_feavldata = list_encode (enc_feav (String o write_term_aux sdi))
   in
     tagged_encode "feavl" (pair_encode(enc_sdata, enc_feavldata)) (sdi,feavl)
   end
@@ -218,21 +233,25 @@ fun import_tacdata filel =
 
 val ttt_tacdata_dir = HOLDIR ^ "/src/tactictoe/ttt_tacdata"
 
+fun exists_tacdata_thy thy = 
+  let val file = ttt_tacdata_dir ^ "/" ^ thy in
+    exists_file file andalso (not o null o readl) file
+  end
+
 fun ttt_create_tacdata () =
   let
+    fun test file = exists_file file andalso (not o null o readl) file
     val thyl = ancestry (current_theory ())
     fun f x = ttt_tacdata_dir ^ "/" ^ x
-    val filel1 = filter exists_file (map f thyl)
-    val filel2 = filter (not o null o readl) filel1
-    val thyl1 = map OS.Path.file filel2
+    val filel = filter test (map f thyl)
+    val thyl1 = map OS.Path.file filel
     val thyl2 = list_diff thyl thyl1
     val thyl3 = filter (fn x => not (mem x ["bool","min"])) thyl2
     val _ = if null thyl3 then () else print_endline
-      ("Missing tactic data for theories:" ^  String.concatWith " " thyl3)
-    val tacdata = import_tacdata filel2
-    val is = int_to_string (dlength (#tacfea tacdata))
+      ("Missing tactic data for theories: " ^  String.concatWith " " thyl3)
+    val tacdata = import_tacdata filel
   in
-    print_endline ("Loading " ^ is ^ " tactics");
+    print_endline ("Loading " ^ its (dlength (#tacfea tacdata)) ^ " tactics");
     tacdata
   end
 

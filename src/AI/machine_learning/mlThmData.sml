@@ -26,34 +26,6 @@ val namespace_tag = "namespace_tag"
    Namespace theorems
    ------------------------------------------------------------------------- *)
 
-fun string_of_pretty p =
-  let
-    val acc = ref []
-    fun f s = acc := s :: !acc
-  in
-    PolyML.prettyPrint (f,80) p;
-    String.concatWith " " (rev (!acc))
-  end
-
-fun smltype_of_value l s =
-  let
-    val v = assoc s l handle _ => raise ERR "type_of_value" s
-    val t = PolyML.NameSpace.Values.typeof v;
-    val p = PolyML.NameSpace.Values.printType (t,0,NONE)
-  in
-    string_of_pretty p
-  end
-
-fun is_thm_value l s =
-  let
-    val s1 = smltype_of_value l s
-    val s2 = smlLexer.partial_sml_lexer s1
-  in
-    case s2 of
-      [a] => (drop_sig a = "thm" handle _ => false)
-    | _   => false
-  end
-
 fun unsafe_namespace_thms () =
   let
     val l0 = #allVal (PolyML.globalNameSpace) ()

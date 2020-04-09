@@ -37,7 +37,7 @@ NOTES FOR DEVELOPERS:
   Debugging directories:
   - Output of the modified theory foo is can be found in 
     src/AI/sml_inspection/buildheap/build_fooScript_ttt
-    Thm.dest_thm is expected intentionnaly to output errors.
   - A copy of the modified theory is saved under src/tactictoe/scripts
     for further inspection.
-  - The src/tactictoe/debug directory might contain more information.
+  - The src/tactictoe/debug directory will contain debug information if
+    the flag aiLib.debug_flag is set to true before recording.

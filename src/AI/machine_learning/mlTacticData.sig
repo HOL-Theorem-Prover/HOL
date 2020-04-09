@@ -25,6 +25,7 @@ sig
 
   (* tactictoe database *)
   val ttt_tacdata_dir : string
+  val exists_tacdata_thy : string -> bool
   val ttt_create_tacdata : unit -> tacdata
   val ttt_update_tacdata : (lbl * tacdata) -> tacdata
   val ttt_export_tacdata : string -> tacdata -> unit

@@ -233,9 +233,12 @@ fun start_record_thy thy = ()
 
 fun end_record_thy thy =
   (
-  ttt_export_tacdata thy (!tacdata_glob);
+  print_endline "Recording successful";
+  print_endline "Exporting tactic data";
   write_info thy;
-  debug "\nrecord successful"
+  ttt_export_tacdata thy (!tacdata_glob);
+  print_endline "Export successful";
+  debug "\nrecording successful"
   )
 
 end (* struct *)

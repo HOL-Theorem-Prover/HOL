@@ -47,7 +47,48 @@ fun exec_sml file s =
    Tests
    ------------------------------------------------------------------------- *)
 
-fun is_thm s = exec_sml "is_thm" ("val _ = Thm.dest_thm (" ^ s ^ ")")
+fun string_of_pretty p =
+  let
+    val acc = ref []
+    fun f s = acc := s :: !acc
+  in
+    PolyML.prettyPrint (f,80) p;
+    String.concatWith " " (rev (!acc))
+  end
+
+fun smltype_of_value l s =
+  let
+    val v = assoc s l handle HOL_ERR _ => raise ERR "type_of_value" s
+    val t = PolyML.NameSpace.Values.typeof v;
+    val p = PolyML.NameSpace.Values.printType (t,0,NONE)
+  in
+    string_of_pretty p
+  end
+
+fun is_thm_value l s =
+  let
+    val s1 = smltype_of_value l s
+    val s2 = smlLexer.partial_sml_lexer s1
+  in
+    case s2 of
+      [a] => (drop_sig a = "thm" handle _ => false)
+    | _   => false
+  end
+
+fun is_thm s =
+  let
+    val sval = "tactictoe_untyped_value"
+    val b = exec_sml "is_thm"
+      (
+      "val " ^ sval ^ " = (" ^ s ^ ");" ^ 
+      "\nval _ = smlExecute.sml_bool_glob := " ^ 
+      "smlExecute.is_thm_value (#allVal (PolyML.globalNameSpace) ()) " ^
+      quote sval ^ ";" ^
+      "\nval _ = PolyML.Compiler.forgetValue " ^ quote sval ^ ";"
+      )
+  in
+    b andalso (!sml_bool_glob)
+  end
 
 fun thm_of_sml s =
   let val b = exec_sml "thm_of_sml" ("smlExecute.sml_thm_glob := " ^ s) in
