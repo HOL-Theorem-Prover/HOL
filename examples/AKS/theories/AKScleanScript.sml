@@ -131,6 +131,13 @@ open GaussTheory; (* for phi_le *)
                                   nice j => j = n
                                 | good k => poly_intro_checks n k (SQRT (phi k) * ulog n)
                                 | bad => F
+   aks_eval    |- !n. aks n <=> power_free n /\
+                                case aks_param n of
+                                  nice j => j = n
+                                | good k =>
+                                    EVERY (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))
+                                          [1 .. SQRT (phi k) * ulog n]
+                                | bad => F
    aks_param_good_for_prime
                |- !n k. (aks_param n = good k) /\ power_free n ==>
                         (prime n <=> poly_intro_checks n k (SQRT (phi k) * ulog n))
@@ -746,7 +753,7 @@ val aks_main_theorem = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Express AKS algorithm in terms of possible results of AKS parameter search. *)
-val aks_def = Define`
+val aks_def = zDefine`
     aks n <=>
        power_free n /\         (* power_free n implies 1 < n *)
        case aks_param n of     (* search for AKS parameter given n *)
@@ -755,6 +762,71 @@ val aks_def = Define`
             poly_intro_checks n k (SQRT (phi k) * ulog n)
        | bad => F              (* impossible *)
 `;
+(* Note: use zDefine to avoid putting into computeLib by default,
+   as poly_intro_checks uses !c. 0 < c /\ c <= m ==> ((x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))
+   which is symbolic.
+
+EVAL ``aks_param 31``; = good 29
+EVAL ``SQRT (phi 29) * ulog 31``; = 25
+EVAL ``(x+^ 31 1 31 == x^+ 31 1 31) (pmod (ZN 31) (x^- 31 29))``; <=> T
+EVAL ``(x+^ 31 2 31 == x^+ 31 2 31) (pmod (ZN 31) (x^- 31 29))``; <=> T
+EVAL ``!c. 0 < c /\ c <= 25 ==> ((x+^ 31 c 31 == x^+ 31 c 31) (pmod (ZN 31) (x^- 31 29)))``;
+-- symbolic evaluation with c
+
+EVAL ``let c = 2 in (x+^ 31 c 31 == x^+ 31 c 31) (pmod (ZN 31) (x^- 31 29))``;
+EVAL ``let c = 10 in (x+^ 31 c 31 == x^+ 31 c 31) (pmod (ZN 31) (x^- 31 29))``;
+EVAL ``let c = 20 in (x+^ 31 c 31 == x^+ 31 c 31) (pmod (ZN 31) (x^- 31 29))``;
+EVAL ``let c = 25 in (x+^ 31 c 31 == x^+ 31 c 31) (pmod (ZN 31) (x^- 31 29))``;
+all return T.
+
+> time EVAL ``aks_compute 5``;
+runtime: 0.01082s,    gctime: 0.00082s,     systime: 0.00072s.
+val it = |- aks_compute 5 <=> T: thm
+> time EVAL ``aks_compute 31``;
+runtime: 56.2s,    gctime: 5.5s,     systime: 4.1s.
+val it = |- aks_compute 31 <=> T: thm
+*)
+
+(*
+EVAL ``aks_param 31``; = good 29
+EVAL ``SQRT (phi 29) * ulog 31``; = 25
+EVAL ``poly_intro_checks 31 29 25``; -- symbolic by for all
+*)
+
+(* Theorem: aks n <=> power_free n /\
+                      case aks_param n of
+                        nice j => j = n
+                      | good k =>
+                        EVERY (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))
+                              [1 .. (SQRT (phi k) * ulog n)]
+                      | bad => F *)
+(* Proof: by aks_def, poly_intro_checks_thm] *)
+val aks_eval = store_thm(
+  "aks_eval[compute]",
+  ``!n. aks n <=> power_free n /\
+                 case aks_param n of
+                   nice j => j = n
+                 | good k =>
+                   (* poly_intro_checks n k (SQRT (phi k) * ulog n) *)
+                   EVERY (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))
+                         [1 .. (SQRT (phi k) * ulog n)]
+                 | bad => F``,
+  simp[aks_def, poly_intro_checks_thm]);
+
+(*
+EVAL ``aks 7``; <=> T
+EVAL ``aks 17``; <=> T
+EVAL ``aks 27``; <=> F
+EVAL ``aks 31``; <=> T
+time EVAL ``aks 31``; <=> T
+runtime: 24.7s,    gctime: 2.6s,     systime: 1.7s.
+val it = |- aks 31 <=> T: thm
+> time EVAL ``aks 97``;
+runtime: 9m01s,    gctime: 52.4s,     systime: 32.7s.
+val it = |- aks 97 <=> T: thm
+
+This makes (aks_compute n) redundant.
+*)
 
 (* Theorem: (aks_param n = good k) /\ power_free n ==>
             (prime n <=> poly_intro_checks n k (SQRT (phi k) * ulog n)) *)

@@ -33,6 +33,12 @@ QED
 
 val GG = GEN_TYVARIFY o GEN_ALL
 
+(* a little like strip_tac on a theorem, or more accurately
+     GEN_TAC ORELSE DISCH_THEN (REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC)
+   either removing a universal quantification (with SPEC), or moving
+   implications into the assumptions and stripping apart conjunctions as it
+   does so.
+*)
 fun UDISCH' th =
     let
       val (l,r) = dest_imp (concl th)
@@ -48,6 +54,8 @@ fun UDISCH' th =
       SPEC bv th
     end
 
+(* moves a bunch of hypotheses from a theorem into an implication, conjoining
+   them all rather than creating iterated implications *)
 fun DISCHl tms th =
     let
       val cjt = list_mk_conj tms

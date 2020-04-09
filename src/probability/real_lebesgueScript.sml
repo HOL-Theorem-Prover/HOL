@@ -649,14 +649,14 @@ val pos_simple_fn_integral_add = store_thm
    >> RW_TAC std_ss [] >> ASM_SIMP_TAC std_ss []
    >> Q.EXISTS_TAC `k` >> Q.EXISTS_TAC `c` >> Q.EXISTS_TAC `(\i. z i + z' i)`
    >> FULL_SIMP_TAC std_ss [pos_simple_fn_def, pos_simple_fn_integral_def]
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (RW_TAC std_ss [GSYM REAL_SUM_IMAGE_ADD]
        >> `!i. z i * measure m (c i) + z' i * measure m (c i) =
            (z i + z' i) * measure m (c i)`
         by (STRIP_TAC >> REAL_ARITH_TAC)
        >> RW_TAC std_ss [])
    >> CONJ_TAC >- RW_TAC std_ss [REAL_LE_ADD]
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- RW_TAC std_ss [REAL_LE_ADD]
    >> rpt STRIP_TAC
    >> `SIGMA (\i. x i * indicator_fn (a i) x') s =
@@ -1158,7 +1158,7 @@ val real_fn_plus_fn_minus_pos_times = prove
   (``!a. 0 <= a ==> (fn_plus (\x. a * f x) = (\x. a * fn_plus f x)) /\
                     (fn_minus (\x. a * f x) = (\x. a * fn_minus f x))``,
     RW_TAC std_ss [fn_plus_def, fn_minus_def, FUN_EQ_THM]
-  >> ( Reverse (RW_TAC real_ss [REAL_ENTIRE, REAL_NEG_EQ0])
+  >> ( reverse (RW_TAC real_ss [REAL_ENTIRE, REAL_NEG_EQ0])
     >- METIS_TAC [REAL_LE_MUL]
     >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
     >> `0 < a * f x` by METIS_TAC [REAL_LE_LT, REAL_ENTIRE]
@@ -1246,7 +1246,7 @@ val psfis_borel_measurable = store_thm
 val real_le_mult_sustain = prove
   (``!r y. (!z. 0 < z /\ z < 1 ==> z * r <= y) ==> r <= y``,
    rpt STRIP_TAC
-   >> Reverse (Cases_on `0<y`)
+   >> reverse (Cases_on `0<y`)
    >- (`0<(1:real)` by RW_TAC real_ss []
        >> `?z. 0 < z /\ z < 1` by (MATCH_MP_TAC REAL_MEAN >> RW_TAC std_ss [])
        >> `z * r <= y` by RW_TAC std_ss []
@@ -1366,7 +1366,7 @@ val psfis_mono_conv_mono = store_thm
    >> MATCH_MP_TAC SEQ_LE
    >> Q.EXISTS_TAC `(\n. ((\n. z) n) * (\n. SIGMA (\i. x' i * measure m (a i INTER B' n)) s') n)`
    >> Q.EXISTS_TAC `x`
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (ASM_REWRITE_TAC [GREATER_EQ] >> Q.EXISTS_TAC `0` >> RW_TAC arith_ss [])
    >> MATCH_MP_TAC SEQ_MUL
    >> RW_TAC std_ss [SEQ_CONST]
@@ -1934,7 +1934,7 @@ val borel_measurable_mon_conv_psfis = store_thm
                             >> RW_TAC std_ss [GSYM REAL_ADD_RDISTRIB]
                             >> RW_TAC std_ss [GSYM real_div, REAL_LT_RDIV_EQ]
                             >> Q.UNABBREV_TAC `i` >> RW_TAC real_ss [])
-                >> Reverse CONJ_TAC >- RW_TAC std_ss []
+                >> reverse CONJ_TAC >- RW_TAC std_ss []
                 >> Cases_on `f t < &(2*i+1)/(2 * (2 pow n))`
                 >- (RW_TAC std_ss []
                     >> `t IN A (n+1) (2 * i)`
@@ -1996,7 +1996,7 @@ val borel_measurable_mon_conv_psfis = store_thm
                     >> RW_TAC std_ss [GSPECIFICATION]
                     >> Suff `~(t IN A n y)` >- RW_TAC real_ss [indicator_fn_def]
                     >> Q.UNABBREV_TAC `A` >> FULL_SIMP_TAC std_ss [IN_INTER, GSPECIFICATION]
-                    >> Reverse (Cases_on `& y / 2 pow n <= f t`) >> RW_TAC std_ss []
+                    >> reverse (Cases_on `& y / 2 pow n <= f t`) >> RW_TAC std_ss []
                     >> FULL_SIMP_TAC std_ss [REAL_NOT_LT]
                     >> MATCH_MP_TAC REAL_LE_TRANS >> Q.EXISTS_TAC `&n`
                     >> FULL_SIMP_TAC std_ss [REAL_LE_LDIV_EQ, REAL_OF_NUM_POW, REAL_MUL, REAL_LE, REAL_LT]
@@ -2373,7 +2373,7 @@ val markov_ineq = store_thm
    >> CONJ_TAC
    >- METIS_TAC [integral_times]
    >> rpt STRIP_TAC
-   >> Reverse (Cases_on `a <= f t`)
+   >> reverse (Cases_on `a <= f t`)
    >- RW_TAC real_ss [indicator_fn_def, GSPECIFICATION, POW_POS, ABS_POS]
    >> `abs (f t) pow n = abs (f t) pow n * 1` by RW_TAC real_ss []
    >> POP_ORW >> MATCH_MP_TAC REAL_LE_MUL2
@@ -2675,7 +2675,7 @@ val finite_space_POW_integral_reduce = store_thm
                 (\x. if (x = i) /\ 0 <= f (c i) then f(c i) else 0)`
                 by (ONCE_REWRITE_TAC [FUN_EQ_THM] >> POP_ORW
                     >> STRIP_TAC >> SIMP_TAC real_ss [indicator_fn_def, IN_SING]
-                    >> Reverse (Cases_on `x IN count n`) >- METIS_TAC []
+                    >> reverse (Cases_on `x IN count n`) >- METIS_TAC []
                     >> ASM_SIMP_TAC std_ss []
                     >> Cases_on `x = i`
                     >> RW_TAC real_ss []
@@ -2712,7 +2712,7 @@ val finite_space_POW_integral_reduce = store_thm
                 (\x. if (x = i) /\ f (c i) <= 0 then ~f(c i) else 0)`
                 by (ONCE_REWRITE_TAC [FUN_EQ_THM] >> POP_ORW
                     >> STRIP_TAC >> SIMP_TAC real_ss [indicator_fn_def, IN_SING]
-                    >> Reverse (Cases_on `x IN count n`) >- METIS_TAC []
+                    >> reverse (Cases_on `x IN count n`) >- METIS_TAC []
                     >> ASM_SIMP_TAC std_ss []
                     >> Cases_on `x = i`
                     >> RW_TAC real_ss []
@@ -3244,7 +3244,7 @@ Proof
      >> POP_ORW
      >> MATCH_MP_TAC psfis_intro
      >> ASM_SIMP_TAC std_ss [pred_setTheory.FINITE_COUNT]
-     >> Reverse CONJ_TAC
+     >> reverse CONJ_TAC
      >- (FULL_SIMP_TAC real_ss [IN_IMAGE, fn_plus_def]
          >> METIS_TAC [REAL_LE_REFL])
      >> `(fn_plus f) IN borel_measurable (m_space m, measurable_sets m)`
@@ -3333,7 +3333,7 @@ Proof
  >> POP_ORW
  >> MATCH_MP_TAC psfis_intro
  >> ASM_SIMP_TAC std_ss [pred_setTheory.FINITE_COUNT]
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (FULL_SIMP_TAC real_ss [IN_IMAGE, fn_minus_def]
      >> METIS_TAC [REAL_LE_REFL, REAL_LE_NEGTOTAL])
  >> `(fn_minus f) IN borel_measurable (m_space m, measurable_sets m)`

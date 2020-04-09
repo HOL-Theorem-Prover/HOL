@@ -115,8 +115,9 @@ evaluations.")
 (put 'hol-term 'end-op
      (function
       (lambda ()
-        (let ((pthm-point (save-excursion
-                            (re-search-forward "^Proof\\|^Theorem" nil t))))
+        (let ((pthm-point
+               (save-excursion
+                 (re-search-forward "^Proof\\|^Theorem\\|^Triviality" nil t))))
           (if (and pthm-point (equal (match-string 0) "Proof"))
               (progn (goto-char (match-beginning 0))
                      (setq hol-term-end-delim "Proof"))
@@ -449,12 +450,15 @@ starts >%s%s<"
   (mapconcat (lambda (s) (concat "\\<" s "\\>")) words "\\|"))
 
 (setq hol-open-terminator-regexp
-      (concat ";\\|"
-              (word-list-to-regexp
-               '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
-                 "datatype" "nonfix" "exception" "end" "structure"
-                 "Theorem" "Definition" "Inductive" "CoInductive"
-                 "Triviality" "Datatype" "Type" "Overload"))))
+      (concat
+       (mapconcat (lambda (s) (concat "^" s "\\>"))
+                  '("Theorem" "Definition" "Inductive" "CoInductive"
+                    "Triviality" "Datatype" "Type" "Overload")
+                  "\\|")
+       "\\|"
+       (word-list-to-regexp
+        '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
+          "datatype" "nonfix" "exception" "end" "structure"))))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
@@ -523,12 +527,26 @@ starts >%s%s<"
                             (start (point))
                             (end
                              (save-excursion
-                               (if (re-search-forward
-                                    hol-open-terminator-regexp
-                                    nil t)
-                                   (- (point) (length (match-string 0)))
-                                 (point-max))))
+                               (let ((case-fold-search nil)
+                                     (foundp nil)
+                                     (abortedp nil))
+                                 ;; complicated loop required to avoid being
+                                 ;; confused by input such as
+                                 ;; open listSyntax (* ; *) integerTheory;
+                                 (while (and (not foundp) (not abortedp))
+                                   (if (re-search-forward
+                                        hol-open-terminator-regexp
+                                        nil t)
+                                       (setq foundp
+                                             (let ((pp (syntax-ppss)))
+                                               (and (not (nth 3 pp))
+                                                    (not (nth 4 pp)))))
+                                     (setq abortedp t)))
+                                 (if foundp
+                                     (- (point) (length (match-string 0)))
+                                   (point-max)))))
                             (endm (make-marker)))
+                        ; (message "Handling an open")
                         (if hol-auto-load-p
                             (hol-load-modules-in-region start end))
                         (if leave-loud-opens nil
@@ -1463,7 +1481,7 @@ second is to show the new term.
 
 (add-hook 'sml-mode-hook
           (lambda ()
-            (local-set-key "`" 'holscript-backquote-map)
+            (local-set-key "`" 'holscript-dbl-backquote)
             (message "Running HOL SML hook")
 ))
 

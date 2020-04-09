@@ -270,7 +270,7 @@ val preimage_group_def = Define `
     preimage_group (f:'a -> 'b) (g1:'a group) (g2:'b group) (h:'b -> bool) =
     <| carrier := PREIMAGE f h INTER g1.carrier;
             op := g1.op;
-                  id := g1.id
+            id := g1.id
      |>
 `;
 (* This is subset_group g1 (PREIMAGE f h INTER g1.carrier) *)
@@ -637,11 +637,11 @@ val bij_corres = store_thm(
    Note f restrict to f^{-1}('h) is a group homomorphism
         from the group f^{-1}('h) to the group 'h. by previous thm
         (maybe we need to give another name to the restricted f, all in f'.)
-          so k is also the kernel of f'.
-          by the first isomorphism thm, Iso 'h f^{-1}('h) / k
-          by iso_group_same_card, CARD 'h = CARD f^{-1}('h) / k
-          by counting_formula, CARD f^{-1}('h) = CARD f^{-1}('h) / k * CARD k
-          substitute CARD f^{-1}('h) by CARD 'h, the result follows.
+   so k is also the kernel of f'.
+   by the first isomorphism thm, Iso 'h f^{-1}('h) / k
+   by iso_group_same_card, CARD 'h = CARD f^{-1}('h) / k
+   by counting_formula, CARD f^{-1}('h) = CARD f^{-1}('h) / k * CARD k
+   substitute CARD f^{-1}('h) by CARD 'h, the result follows.
 *)
 
 (* Theorem: FiniteGroup g1 /\ Group g2 /\ h <= g2 /\ GroupHomo f g1 g2 ==>

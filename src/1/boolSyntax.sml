@@ -486,20 +486,12 @@ local
       tyS' @
       (List.map (fn {redex, residue} => redex |-> type_subst tyS' residue) tyS)
 
-  fun zip_aux _ [] [] = []
-    | zip_aux f (x::xs) (y::ys) = f (x, y) (zip_aux f xs ys)
-    | zip_aux _ _ _ = raise UERR "zip - lists different lengths"
-  fun zipwith f xs ys = zip_aux (Lib.cons o (Lib.uncurry f)) xs ys
-
   fun type_new_vars vars =
     let
       val gvars = List.map (fn _ => gen_tyvar ()) vars
-      val old_to_new = zipwith (curry op|->) vars gvars
-      val new_to_old = zipwith (curry op|->) gvars vars
     in
-      (gvars, (old_to_new, new_to_old))
-    end;
-
+      (gvars, ListPair.map op|->(vars,gvars), ListPair.map op|->(gvars,vars))
+    end
   fun is_tyvar vars ty = is_vartype ty andalso Lib.mem ty vars
   fun find_redex r = Lib.first (fn rr as {redex, residue} => r = redex)
   fun clean_subst s = Lib.filter (fn {redex, residue} => redex <> residue) s
@@ -539,8 +531,8 @@ local
 
   fun sep_var_type_unify (vars1, ty1) (vars2, ty2) =
     let
-      val (gvars1, (old_to_new1, new_to_old1)) = type_new_vars vars1
-      val (gvars2, (old_to_new2, new_to_old2)) = type_new_vars vars2
+      val (gvars1, old_to_new1, new_to_old1) = type_new_vars vars1
+      val (gvars2, old_to_new2, new_to_old2) = type_new_vars vars2
       val ty1' = type_subst old_to_new1 ty1
       val ty2' = type_subst old_to_new2 ty2
       val sub = var_type_unify (gvars1 @ gvars2) ty1' ty2'
@@ -571,6 +563,13 @@ in
     end
 
   fun list_mk_ucomb (f, args) = List.foldl (mk_ucomb o swap) f args
+
+  (* only generates one list *)
+  fun gen_tyvar_sigma (tys : hol_type list) =
+      map (fn ty => {redex = ty, residue = gen_tyvar()}) tys
+  fun gen_tyvarify tm =
+      Term.inst (gen_tyvar_sigma (type_vars_in_term tm)) tm
+
 
 end
 

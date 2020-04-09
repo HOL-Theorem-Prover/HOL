@@ -1567,9 +1567,9 @@ val it = |- to_bits 7 4 = [1; 1; 1; 0]: thm
        = f 0:: GENLIST (f o SUC) m                 by above
        = GENLIST f (SUC m)                         by GENLIST_CONS
 *)
-val to_bits_n_m = store_thm(
-  "to_bits_n_m",
-  ``!m n. to_bits n m = GENLIST (\j. (n DIV 2 ** j) MOD 2) m``,
+Theorem to_bits_n_m:
+ !m n. to_bits n m = GENLIST (\j. (n DIV 2 ** j) MOD 2) m
+Proof
   Induct >-
   rw[to_bits_def] >>
   rpt strip_tac >>
@@ -1579,9 +1579,10 @@ val to_bits_n_m = store_thm(
   `_ = n MOD 2::GENLIST (\j. ((HALF n) DIV 2 ** j) MOD 2) m` by rw[] >>
   `_ = n MOD 2::GENLIST (\j. (n DIV (2 * 2 ** j)) MOD 2) m` by rw[DIV_DIV_DIV_MULT] >>
   `_ = n MOD 2::GENLIST (\j. (n DIV (2 ** (SUC j))) MOD 2) m` by rw[GSYM EXP] >>
-  `_ = n MOD 2::GENLIST (f o SUC) m` by rw[indexedListsTheory.GENLIST_CONG, Abbr`f`] >>
+  `_ = n MOD 2::GENLIST (f o SUC) m` by rw[GENLIST_CONG, Abbr`f`] >>
   `_ = GENLIST f (SUC m)` by rw[GENLIST_CONS] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: LENGTH (to_bits n m) = m *)
 (* Proof:

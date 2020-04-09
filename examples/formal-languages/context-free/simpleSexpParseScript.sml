@@ -5,6 +5,8 @@ open simpleSexpPEGTheory
 
 val _ = new_theory"simpleSexpParse"
 
+val _ = delsimps ["NORMEQ_CONV"]
+
 (* TODO: move *)
 
 val MAP_DROP = Q.store_thm("MAP_DROP",

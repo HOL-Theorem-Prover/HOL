@@ -3,37 +3,7 @@ struct
 
 open HolKernel Drule Conv Parse boolTheory boolSyntax
 
-fun avSPEC_ALL avds th =
-  let
-    fun recurse avds acc th =
-      case Lib.total dest_forall (concl th) of
-          SOME (v,bod) =>
-          let
-            val v' = variant avds v
-          in
-            recurse (v'::avds) (v'::acc) (SPEC v' th)
-          end
-        | NONE => (List.rev acc, th)
-  in
-    recurse avds [] th
-  end
-
-fun PART_MATCH' f th t =
-  let
-    val (vs, _) = strip_forall (concl th)
-    val hypfvs_set = hyp_frees th
-    val hypfvs = HOLset.listItems hypfvs_set
-    val hyptyvs = HOLset.listItems (hyp_tyvars th)
-    val tfvs = free_vars t
-    val dontspec = op_union aconv tfvs hypfvs
-    val (vs, speccedth) = avSPEC_ALL dontspec th
-    val s as (tmsig,tysig) =
-        match_terml hyptyvs hypfvs_set (f (concl speccedth)) t
-    val dontgen = op_union aconv (map #redex tmsig) dontspec
-  in
-    GENL (op_set_diff aconv (map (Term.inst tysig) vs) dontgen)
-         (INST_TY_TERM s speccedth)
-  end
+open thmpos_dtype
 
 fun match_subterm pat = find_term (can (match_term pat))
 
@@ -42,12 +12,6 @@ val notT = el 2 (CONJUNCTS NOT_CLAUSES)
 val imp_clauses = IMP_CLAUSES |> SPEC_ALL |> CONJUNCTS
 val Timp = el 1 imp_clauses
 val impF = last imp_clauses
-
-datatype match_position =
-  Any
-| Pat of term quotation
-| Pos of (term list -> term)
-| Concl
 
 fun mp_then pos (ttac : thm_tactic) ith0 rth (g as (asl,w)) =
   let

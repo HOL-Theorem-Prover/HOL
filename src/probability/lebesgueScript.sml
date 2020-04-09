@@ -1122,7 +1122,7 @@ val pos_simple_fn_max = store_thm
  >> `FINITE (IMAGE p' (s CROSS s'))` by RW_TAC std_ss [IMAGE_FINITE]
  >> FULL_SIMP_TAC std_ss []
  >> CONJ_TAC >- METIS_TAC []
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (RW_TAC std_ss [max_def] >> FULL_SIMP_TAC std_ss [IN_IMAGE,IN_CROSS])
  >> RW_TAC std_ss []
  >- ((MP_TAC o Q.SPEC `(\i. Normal (y i) * indicator_fn (b i) x')` o UNDISCH o
@@ -1384,7 +1384,7 @@ val pos_simple_fn_integral_add = store_thm
  >> RW_TAC std_ss [] >> ASM_SIMP_TAC std_ss []
  >> Q.EXISTS_TAC `k` >> Q.EXISTS_TAC `c` >> Q.EXISTS_TAC `(\i. z i + z' i)`
  >> FULL_SIMP_TAC std_ss [pos_simple_fn_def, pos_simple_fn_integral_def]
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (RW_TAC std_ss [GSYM extreal_add_def] \\
     `!i. i IN k ==> Normal (z i) <> NegInf /\ Normal (z' i) <> NegInf /\
                     0 <= Normal (z i) /\ 0 <= Normal (z' i)`
@@ -1881,7 +1881,7 @@ val pos_simple_fn_integral_sub = store_thm
              >> `g y' = Normal (z' x')` by METIS_TAC [pos_simple_fn_def, pos_simple_fn_thm1]
              >> `0 <= z x' - z' x'` by METIS_TAC [extreal_le_def, REAL_SUB_LE, extreal_of_num_def]
              >> METIS_TAC [mul_not_infty,positive_not_infty, MEASURE_SPACE_POSITIVE])
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (`!i. (Normal (if (i IN k /\ ~(c i = {})) then z i - z' i else 0) * measure m (c i)) =
           (Normal (if i IN k then z i - z' i else 0) * measure m (c i))`
          by (RW_TAC std_ss [] >> FULL_SIMP_TAC real_ss [MEASURE_EMPTY, mul_rzero]) \\
@@ -1930,7 +1930,7 @@ val pos_simple_fn_integral_sub = store_thm
  >> `!x. g x <> NegInf` by METIS_TAC [lt_infty,lte_trans,extreal_not_infty,extreal_of_num_def]
  >> CONJ_TAC
  >- METIS_TAC [le_sub_imp,add_lzero]
- >> Reverse (RW_TAC real_ss [])
+ >> reverse (RW_TAC real_ss [])
  >- (`?q. q IN c i` by METIS_TAC [CHOICE_DEF]
       >> METIS_TAC [pos_simple_fn_thm1,REAL_SUB_LE,extreal_le_def])
  >> `!i. (Normal (if (i IN k /\ ~(c i = {})) then z i - z' i else 0) * indicator_fn (c i) x') =
@@ -2038,7 +2038,7 @@ val pos_fn_integral_mspace = store_thm
       >> POP_ASSUM (MP_TAC o REWRITE_RULE [Once (GSYM SPECIFICATION)])
       >> RW_TAC real_ss [GSPECIFICATION,indicator_fn_def]
       >> Q.EXISTS_TAC `(\x. g x * indicator_fn (m_space m) x)`
-      >> Reverse (RW_TAC real_ss [indicator_fn_def,IN_psfis_eq,mul_rone,mul_rzero,le_refl])
+      >> reverse (RW_TAC real_ss [indicator_fn_def,IN_psfis_eq,mul_rone,mul_rzero,le_refl])
       >> FULL_SIMP_TAC std_ss [IN_psfis_eq,pos_simple_fn_def]
       >> Q.EXISTS_TAC `s`
       >> Q.EXISTS_TAC `a`
@@ -2134,7 +2134,7 @@ val pos_fn_integral_cmul = store_thm
       >> POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
       >> RW_TAC std_ss [GSPECIFICATION]
       >> Q.EXISTS_TAC `(\x. g x / (Normal c))`
-      >> Reverse (RW_TAC std_ss [])
+      >> reverse (RW_TAC std_ss [])
       >- METIS_TAC [mul_comm,le_ldiv]
       >> RW_TAC std_ss [extreal_div_def]
       >> `inv (Normal c) * y IN psfis m (\x. inv (Normal c) * g x)`
@@ -2290,7 +2290,7 @@ val lebesgue_monotone_convergence_lemma = store_thm
       >- (RW_TAC std_ss [mul_lzero,GSYM extreal_of_num_def]
           >> MATCH_MP_TAC le_trans
           >> Q.EXISTS_TAC `ri (1:num)`
-          >> Reverse (RW_TAC std_ss [])
+          >> reverse (RW_TAC std_ss [])
           >- (POP_ASSUM MATCH_MP_TAC
               >> ONCE_REWRITE_TAC [GSYM SPECIFICATION]
               >> RW_TAC std_ss [IN_IMAGE,IN_UNIV]
@@ -2467,7 +2467,7 @@ val lebesgue_monotone_convergence = store_thm
         (!x. mono_increasing (\i. fi i x)) /\
         (!x. x IN m_space m ==> (sup (IMAGE (\i. fi i x) UNIV) = f x)) ==>
         (pos_fn_integral m f = sup (IMAGE (\i. pos_fn_integral m (fi i)) UNIV))``,
-  Reverse (RW_TAC std_ss [GSYM le_antisym])
+  reverse (RW_TAC std_ss [GSYM le_antisym])
   >- (RW_TAC std_ss [sup_le]
       >> POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
       >> RW_TAC std_ss [IN_IMAGE,IN_UNIV]
@@ -2943,7 +2943,7 @@ val lemma_fn_in_psfis = prove (
           >> RW_TAC std_ss []
           >> MATCH_MP_TAC add_comm
           >> DISJ1_TAC
-          >> Reverse CONJ_TAC
+          >> reverse CONJ_TAC
           >- (RW_TAC std_ss [indicator_fn_def,mul_rone,mul_rzero,num_not_infty]
               >> METIS_TAC [extreal_of_num_def,extreal_pow_def,extreal_not_infty])
           >> FULL_SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_NOT_INFTY])
@@ -2964,7 +2964,7 @@ val lemma_fn_in_psfis = prove (
       >- RW_TAC real_ss [extreal_of_num_def,extreal_pow_def,extreal_le_def,REAL_LT_IMP_LE,POW_POS,REAL_LE_DIV]
       >> CONJ_TAC
       >- (RW_TAC real_ss [DISJOINT_DEF,IN_COUNT,IN_INTER,EXTENSION,GSPECIFICATION]
-         >| [Reverse EQ_TAC
+         >| [reverse EQ_TAC
              >- RW_TAC std_ss [NOT_IN_EMPTY]
                 >> RW_TAC real_ss []
              >> RW_TAC std_ss [NOT_IN_EMPTY]
@@ -2982,7 +2982,7 @@ val lemma_fn_in_psfis = prove (
              >> `(&j + 1) = &(j + 1)` by METIS_TAC [extreal_of_num_def,extreal_add_def,REAL_ADD]
              >> METIS_TAC [lte_trans,extreal_lt_def],
 
-             Reverse EQ_TAC >- RW_TAC std_ss [NOT_IN_EMPTY]
+             reverse EQ_TAC >- RW_TAC std_ss [NOT_IN_EMPTY]
              >> RW_TAC std_ss []
              >> RW_TAC real_ss [NOT_IN_EMPTY]
              >> `&(i + 1) <= &(4 ** n):real` by RW_TAC real_ss []
@@ -2993,7 +2993,7 @@ val lemma_fn_in_psfis = prove (
              >> `(&i + 1) = &(i + 1)` by METIS_TAC [extreal_of_num_def,extreal_add_def,REAL_ADD]
              >> METIS_TAC [le_trans,extreal_lt_def],
 
-             Reverse EQ_TAC >- RW_TAC std_ss [NOT_IN_EMPTY]
+             reverse EQ_TAC >- RW_TAC std_ss [NOT_IN_EMPTY]
              >> RW_TAC real_ss []
              >> RW_TAC std_ss [NOT_IN_EMPTY]
              >> `&(j + 1) <= &(4 ** n):real` by RW_TAC real_ss []
@@ -3074,7 +3074,7 @@ val lemma_fn_in_psfis = prove (
   >> FULL_SIMP_TAC std_ss []
   >> MATCH_MP_TAC add_comm
   >> DISJ1_TAC
-  >> Reverse CONJ_TAC
+  >> reverse CONJ_TAC
   >- (RW_TAC std_ss [extreal_of_num_def,extreal_pow_def]
       >> `0:real <= 2 pow n` by FULL_SIMP_TAC std_ss [REAL_LT_IMP_LE]
       >> Suff `{x | x IN m_space m /\ Normal (2 pow n) <= f x} IN measurable_sets m`
@@ -3149,7 +3149,7 @@ Proof
        Suff `(0 :extreal) < 2 pow i` >- METIS_TAC [lt_imp_ne] THEN
        METIS_TAC [lt_02, pow_pos_lt]) >> DISCH_TAC THEN
 
-   Reverse CONJ_TAC THEN1
+   reverse CONJ_TAC THEN1
    (Q.X_GEN_TAC `n` THEN
     RW_TAC std_ss [lt_infty] THEN MATCH_MP_TAC lte_trans THEN
     Q.EXISTS_TAC `0` THEN SIMP_TAC std_ss [GSYM lt_infty, num_not_infty] THEN
@@ -3446,7 +3446,7 @@ Proof
    Q.UNABBREV_TAC `g` THEN
    FULL_SIMP_TAC std_ss [measure_space_def, FINITE_COUNT] THEN
    SIMP_TAC std_ss [space_def, IN_UNIV] THEN
-   Reverse CONJ_TAC THEN1
+   reverse CONJ_TAC THEN1
    (Q.X_GEN_TAC `n` THEN
     RW_TAC std_ss [lt_infty] THEN MATCH_MP_TAC lte_trans THEN
     Q.EXISTS_TAC `0` THEN SIMP_TAC std_ss [GSYM lt_infty, num_not_infty] THEN
@@ -3526,7 +3526,7 @@ Proof
     ASM_SIMP_TAC std_ss [normal_real, GSYM extreal_of_num_def] THEN
     METIS_TAC [le_02, pow_pos_le] ) THEN
 
-   Reverse CONJ_TAC THEN1
+   reverse CONJ_TAC THEN1
    (Q.X_GEN_TAC `x` THEN
     MATCH_MP_TAC EXTREAL_SUM_IMAGE_POS THEN ASM_REWRITE_TAC [] THEN
     Q.X_GEN_TAC `n` >> RW_TAC std_ss [FINITE_COUNT, IN_UNIV] THEN
@@ -4330,6 +4330,15 @@ val integral_pos_fn = store_thm
  >- RW_TAC std_ss [pos_fn_integral_zero, sub_rzero]
  >> RW_TAC std_ss [FN_PLUS_POS_ID, FN_MINUS_POS_ZERO]);
 
+Theorem integral_pos :
+    !m f. measure_space m /\ (!x. 0 <= f x) ==> 0 <= integral m f
+Proof
+    rpt STRIP_TAC
+ >> Know `integral m f = pos_fn_integral m f`
+ >- (MATCH_MP_TAC integral_pos_fn >> art []) >> Rewr'
+ >> MATCH_MP_TAC pos_fn_integral_pos >> art []
+QED
+
 Theorem integral_abs_pos_fn :
     !m f. measure_space m ==> (integral m (abs o f) = pos_fn_integral m (abs o f))
 Proof
@@ -4783,12 +4792,12 @@ val integrable_sub = store_thm
  >> MATCH_MP_TAC integrable_eq
  >> Q.EXISTS_TAC `(\x. f x + (\x. -g x) x)`
  >> CONJ_TAC >- art []
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (RW_TAC std_ss [FUN_EQ_THM] \\
      MATCH_MP_TAC EQ_SYM \\
      MATCH_MP_TAC extreal_sub_add >> DISJ1_TAC >> METIS_TAC [])
  >> MATCH_MP_TAC integrable_add >> art []
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (RW_TAC std_ss [] >> CCONTR_TAC >> fs [] \\
     `g x = PosInf` by PROVE_TAC [neg_neg, extreal_ainv_def] >> RES_TAC)
  >> `(\x. -g x) = (\x. Normal (-1) * g x)`
@@ -4830,7 +4839,7 @@ val integrable_mul_indicator = store_thm
  >> Q.EXISTS_TAC `abs o f`
  >> ASM_SIMP_TAC std_ss [o_DEF]
  >> CONJ_TAC >- (MATCH_MP_TAC (REWRITE_RULE [o_DEF] integrable_abs) >> art [])
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (RW_TAC std_ss [] \\
      Cases_on `x IN s` >- ASM_SIMP_TAC std_ss [indicator_fn_def, mul_rone, le_refl] \\
      ASM_SIMP_TAC std_ss [indicator_fn_def, mul_rzero, abs_0, abs_pos])
@@ -5034,7 +5043,7 @@ val integrable_not_infty_alt3 = store_thm
        by METIS_TAC [integrable_not_infty_alt2, FN_PLUS_POS, FN_MINUS_POS, integrable_pos]
  >> `integrable m (\x. if fn_minus f x = PosInf then 0 else fn_minus f x)`
        by METIS_TAC [integrable_not_infty_alt2, FN_PLUS_POS, FN_MINUS_POS, integrable_pos]
- >> Reverse (RW_TAC std_ss [integral_def, integrable_def, GSYM fn_plus_def, GSYM fn_minus_def])
+ >> reverse (RW_TAC std_ss [integral_def, integrable_def, GSYM fn_plus_def, GSYM fn_minus_def])
  >| [ (* goal 1 (of 4) *)
       METIS_TAC [integrable_not_infty_alt2, FN_PLUS_POS, FN_MINUS_POS],
       (* goal 2 (of 4) *)
@@ -5464,7 +5473,7 @@ val integral_sum = store_thm
  >> Know `integral m (\x. f e x + (\x. SIGMA (\i. f i x) s) x) =
           integral m (f e) + integral m (\x. SIGMA (\i. f i x) s)`
  >- (MATCH_MP_TAC integral_add >> fs [IN_INSERT] \\
-     Reverse CONJ_TAC
+     reverse CONJ_TAC
      >- (GEN_TAC >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF >> RW_TAC std_ss []) \\
      MATCH_MP_TAC integrable_sum >> METIS_TAC []) >> Rewr'
  >> Know `integral m (\x. SIGMA (\i. f i x) s) = SIGMA (\i. integral m (f i)) s`
@@ -5518,7 +5527,7 @@ val finite_support_integral_reduce = store_thm
             (\i. if 0 <= (c i) then c i else 0)`
  >- (RW_TAC std_ss [pos_simple_fn_def, FINITE_COUNT, FN_PLUS_POS, FN_MINUS_POS] >| (* 4 subgoals *)
      [ (* goal 1 (of 4) *)
-       Reverse (RW_TAC real_ss [fn_plus_def])
+       reverse (RW_TAC real_ss [fn_plus_def])
        >- (FULL_SIMP_TAC std_ss [extreal_lt_def, indicator_fn_def, IN_INTER]
            >> (MP_TAC o Q.SPEC `(\i. Normal (if 0 <= c i then c i else 0) *
                                     if t IN PREIMAGE f {Normal (c i)} then 1 else 0)` o
@@ -5539,7 +5548,7 @@ val finite_support_integral_reduce = store_thm
            >- RW_TAC std_ss [EXTREAL_SUM_IMAGE_ZERO]
            >> RW_TAC std_ss [FUN_EQ_THM]
            >> Cases_on `~(x IN count n)` >- RW_TAC std_ss []
-           >> Reverse (RW_TAC std_ss [mul_rone, mul_rzero])
+           >> reverse (RW_TAC std_ss [mul_rone, mul_rzero])
            >- RW_TAC std_ss [extreal_of_num_def]
            >> FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_COUNT, IN_IMAGE,
                                     IN_PREIMAGE, IN_SING]
@@ -5560,7 +5569,7 @@ val finite_support_integral_reduce = store_thm
            Suff `0 <= if 0 <= c x then c x else 0`
            >- PROVE_TAC [extreal_of_num_def, extreal_le_eq] \\
            Cases_on `0 <= c x` >> RW_TAC real_ss [])
-       >> Reverse (RW_TAC std_ss [EXTREAL_SUM_IMAGE_THM, FINITE_DELETE, GSYM extreal_of_num_def,
+       >> reverse (RW_TAC std_ss [EXTREAL_SUM_IMAGE_THM, FINITE_DELETE, GSYM extreal_of_num_def,
                    mul_lzero, DELETE_DELETE, add_lzero])
        >- METIS_TAC [extreal_of_num_def, extreal_lt_eq, lt_antisym, real_lt]
        >> RW_TAC std_ss [indicator_fn_def, IN_INTER, DELETE_DELETE, mul_rzero, add_lzero,
@@ -5569,7 +5578,7 @@ val finite_support_integral_reduce = store_thm
                             if c i = c i' then 1 else 0) (count n DELETE i) = 0`
        >- RW_TAC std_ss [add_rzero]
        >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_0
-       >> Reverse (RW_TAC std_ss [FINITE_DELETE, mul_rone, mul_rzero])
+       >> reverse (RW_TAC std_ss [FINITE_DELETE, mul_rone, mul_rzero])
        >- RW_TAC std_ss [extreal_of_num_def]
        >> METIS_TAC [IN_DELETE],
        (* goal 2 (of 4) *)
@@ -5587,7 +5596,7 @@ val finite_support_integral_reduce = store_thm
             (\i. if c i <= 0 then ~(c i) else 0)`
  >- (RW_TAC std_ss [pos_simple_fn_def, FINITE_COUNT, FN_PLUS_POS, FN_MINUS_POS] >| (* 4 subgoals *)
      [ (* goal 1 (of 4) *)
-       Reverse (RW_TAC real_ss [fn_minus_def])
+       reverse (RW_TAC real_ss [fn_minus_def])
        >- (FULL_SIMP_TAC std_ss [extreal_lt_def, indicator_fn_def, IN_INTER]
            >> (MP_TAC o Q.SPEC `(\i. Normal (if c i <= 0 then -c i else 0) *
                                      if t IN PREIMAGE f {Normal (c i)} then 1 else 0)` o
@@ -5608,7 +5617,7 @@ val finite_support_integral_reduce = store_thm
            >> RW_TAC std_ss [FUN_EQ_THM]
            >> Cases_on `~(x IN count n)`
            >- RW_TAC std_ss []
-           >> Reverse (RW_TAC std_ss [mul_rone, mul_rzero])
+           >> reverse (RW_TAC std_ss [mul_rone, mul_rzero])
            >- RW_TAC std_ss [extreal_of_num_def]
            >> FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_COUNT, IN_IMAGE,
                                     IN_PREIMAGE, IN_SING]
@@ -5629,7 +5638,7 @@ val finite_support_integral_reduce = store_thm
            Suff `0 <= if c x <= 0 then (-c x) else 0`
            >- PROVE_TAC [extreal_of_num_def, extreal_le_eq] \\
            Cases_on `c x <= 0` >> fs [] >> PROVE_TAC [])
-       >> Reverse (RW_TAC std_ss [EXTREAL_SUM_IMAGE_THM, FINITE_DELETE, GSYM extreal_of_num_def,
+       >> reverse (RW_TAC std_ss [EXTREAL_SUM_IMAGE_THM, FINITE_DELETE, GSYM extreal_of_num_def,
                                   mul_lzero, DELETE_DELETE, add_lzero])
        >- METIS_TAC [extreal_lt_eq, real_lt, extreal_of_num_def, lt_antisym]
        >> RW_TAC std_ss [indicator_fn_def, IN_INTER, DELETE_DELETE, mul_rzero,
@@ -5638,7 +5647,7 @@ val finite_support_integral_reduce = store_thm
                             if c i = c i' then 1 else 0) (count n DELETE i) = 0`
        >- METIS_TAC [add_rzero, extreal_ainv_def]
        >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_0
-       >> Reverse (RW_TAC std_ss [FINITE_DELETE, mul_rone, mul_rzero])
+       >> reverse (RW_TAC std_ss [FINITE_DELETE, mul_rone, mul_rzero])
        >- RW_TAC std_ss [extreal_of_num_def]
        >> METIS_TAC [IN_DELETE],
        (* goal 2 (of 4) *)
@@ -5804,7 +5813,7 @@ val finite_space_POW_integral_reduce = store_thm
             (count n) (\i. {c i}) (\i. if 0 <= x i then x i else 0)`
  >- (RW_TAC std_ss [pos_simple_fn_def, FINITE_COUNT, FN_PLUS_POS, FN_MINUS_POS] >| (* 4 subgoals *)
      [ (* goal 1 (of 4) *)
-       Reverse (RW_TAC real_ss [fn_plus_def])
+       reverse (RW_TAC real_ss [fn_plus_def])
        >- (FULL_SIMP_TAC std_ss [extreal_lt_def, IN_INTER]
            >> (MP_TAC o Q.SPEC `(\i. Normal (if 0 <= x i then x i else 0) *
                                      indicator_fn {c i} t)` o
@@ -5825,7 +5834,7 @@ val finite_space_POW_integral_reduce = store_thm
            >- RW_TAC std_ss [EXTREAL_SUM_IMAGE_ZERO]
            >> RW_TAC std_ss [FUN_EQ_THM]
            >> Cases_on `~(x' IN count n)` >- RW_TAC std_ss []
-           >> Reverse (RW_TAC std_ss [mul_rone, mul_rzero])
+           >> reverse (RW_TAC std_ss [mul_rone, mul_rzero])
            >- RW_TAC std_ss [GSYM extreal_of_num_def, mul_lzero]
            >> rename1 `i IN count n`
            >> Cases_on `c i <> t` >- PROVE_TAC [INDICATOR_FN_SING_0, mul_rzero]
@@ -5847,7 +5856,7 @@ val finite_space_POW_integral_reduce = store_thm
            MATCH_MP_TAC pos_not_neginf \\
            MATCH_MP_TAC le_mul >> REWRITE_TAC [INDICATOR_FN_POS] \\
            METIS_TAC [extreal_le_eq, extreal_of_num_def, le_refl])
-       >> Reverse (RW_TAC std_ss [EXTREAL_SUM_IMAGE_THM, FINITE_DELETE, GSYM extreal_of_num_def,
+       >> reverse (RW_TAC std_ss [EXTREAL_SUM_IMAGE_THM, FINITE_DELETE, GSYM extreal_of_num_def,
                                   mul_lzero, DELETE_DELETE, add_lzero])
        >- METIS_TAC [extreal_of_num_def, extreal_lt_eq, lt_antisym, real_lt]
        >> RW_TAC std_ss [indicator_fn_def, IN_INTER, DELETE_DELETE, mul_rzero, add_lzero,
@@ -5856,7 +5865,7 @@ val finite_space_POW_integral_reduce = store_thm
                             if c i = c i' then 1 else 0) (count n DELETE i) = 0`
        >- RW_TAC std_ss [add_rzero]
        >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_0
-       >> Reverse (RW_TAC std_ss [FINITE_DELETE, mul_rone, mul_rzero])
+       >> reverse (RW_TAC std_ss [FINITE_DELETE, mul_rone, mul_rzero])
        >- RW_TAC std_ss [extreal_of_num_def]
        >> METIS_TAC [IN_DELETE],
        (* goal 2 (of 4) *)
@@ -5874,7 +5883,7 @@ val finite_space_POW_integral_reduce = store_thm
             (count n) (\i. {c i}) (\i. if x i <= 0 then -(x i) else 0)`
  >- (RW_TAC std_ss [pos_simple_fn_def, FINITE_COUNT, FN_MINUS_POS, FN_MINUS_POS] >| (* 4 subgoals *)
      [ (* goal 1 (of 4) *)
-       Reverse (RW_TAC real_ss [fn_minus_def])
+       reverse (RW_TAC real_ss [fn_minus_def])
        >- (FULL_SIMP_TAC std_ss [extreal_lt_def, IN_INTER]
            >> (MP_TAC o Q.SPEC `(\i. Normal (if x i <= 0 then -x i else 0) *
                                      indicator_fn {c i} t)` o
@@ -5895,7 +5904,7 @@ val finite_space_POW_integral_reduce = store_thm
            >- RW_TAC std_ss [EXTREAL_SUM_IMAGE_ZERO]
            >> RW_TAC std_ss [FUN_EQ_THM]
            >> Cases_on `~(x' IN count n)` >- RW_TAC std_ss []
-           >> Reverse (RW_TAC std_ss [mul_rone, mul_rzero])
+           >> reverse (RW_TAC std_ss [mul_rone, mul_rzero])
            >- RW_TAC std_ss [GSYM extreal_of_num_def, mul_lzero]
            >> rename1 `i IN count n`
            >> Cases_on `c i <> t` >- PROVE_TAC [INDICATOR_FN_SING_0, mul_rzero]
@@ -5923,7 +5932,7 @@ val finite_space_POW_integral_reduce = store_thm
                `0 <= -x x'` by PROVE_TAC [REAL_LE_NEG, REAL_NEG_0] \\
                PROVE_TAC [extreal_of_num_def, extreal_le_eq]) \\
            ASM_SIMP_TAC std_ss [GSYM extreal_of_num_def, le_refl])
-       >> Reverse (RW_TAC std_ss [EXTREAL_SUM_IMAGE_THM, FINITE_DELETE, GSYM extreal_of_num_def,
+       >> reverse (RW_TAC std_ss [EXTREAL_SUM_IMAGE_THM, FINITE_DELETE, GSYM extreal_of_num_def,
                                   mul_lzero, DELETE_DELETE, add_lzero])
        >- METIS_TAC [extreal_of_num_def, extreal_lt_eq, lt_antisym, real_lt]
        >> RW_TAC std_ss [indicator_fn_def, IN_INTER, DELETE_DELETE, mul_rzero, add_lzero,
@@ -5932,7 +5941,7 @@ val finite_space_POW_integral_reduce = store_thm
                       if c i = c i' then 1 else 0) (count n DELETE i) = 0`
        >- RW_TAC std_ss [add_rzero, extreal_ainv_def]
        >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_0
-       >> Reverse (RW_TAC std_ss [FINITE_DELETE, mul_rone, mul_rzero])
+       >> reverse (RW_TAC std_ss [FINITE_DELETE, mul_rone, mul_rzero])
        >- RW_TAC std_ss [extreal_of_num_def]
        >> METIS_TAC [IN_DELETE],
        (* goal 2 (of 4) *)
@@ -6285,15 +6294,15 @@ Proof
  >- (MATCH_MP_TAC integral_pos_fn >> art [] \\
      RW_TAC std_ss [] \\
      MATCH_MP_TAC le_mul >> CONJ_TAC >- art [extreal_of_num_def, extreal_le_eq] \\
-     MATCH_MP_TAC le_mul >> Reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
-     MATCH_MP_TAC le_mul >> Reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
+     MATCH_MP_TAC le_mul >> reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
+     MATCH_MP_TAC le_mul >> reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
      REWRITE_TAC [extreal_of_num_def, extreal_le_eq] \\
      MATCH_MP_TAC REAL_LT_IMP_LE >> art []) >> Rewr'
  >> Know `integral m (\x. abs (f x) * indicator_fn a x) =
    pos_fn_integral m (\x. abs (f x) * indicator_fn a x)`
  >- (MATCH_MP_TAC integral_pos_fn >> art [] \\
      RW_TAC std_ss [] \\
-     MATCH_MP_TAC le_mul >> Reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
+     MATCH_MP_TAC le_mul >> reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
      REWRITE_TAC [abs_pos]) >> Rewr'
  >> Know `pos_fn_integral m (\x. Normal (inv r) *
                                 (\t. Normal r * indicator_fn {x | Normal r <= abs (f x)} t
@@ -6302,8 +6311,8 @@ Proof
                                                   * indicator_fn a t)`
  >- (MATCH_MP_TAC pos_fn_integral_cmul >> art [] \\
      RW_TAC std_ss [] \\
-     MATCH_MP_TAC le_mul >> Reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
-     MATCH_MP_TAC le_mul >> Reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
+     MATCH_MP_TAC le_mul >> reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
+     MATCH_MP_TAC le_mul >> reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
      REWRITE_TAC [extreal_of_num_def, extreal_le_eq] \\
      MATCH_MP_TAC REAL_LT_IMP_LE >> art []) >> BETA_TAC >> Rewr'
  >> MATCH_MP_TAC le_lmul_imp
@@ -6315,8 +6324,8 @@ Proof
  >> CONJ_TAC
  >- (MATCH_MP_TAC pos_fn_integral_mono \\
      RW_TAC std_ss []
-     >- (MATCH_MP_TAC le_mul >> Reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
-         MATCH_MP_TAC le_mul >> Reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
+     >- (MATCH_MP_TAC le_mul >> reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
+         MATCH_MP_TAC le_mul >> reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
          REWRITE_TAC [extreal_of_num_def, extreal_le_eq] \\
          MATCH_MP_TAC REAL_LT_IMP_LE >> art []) \\
      Cases_on `Normal r <= abs (f x)`
@@ -6326,8 +6335,8 @@ Proof
      ASM_SIMP_TAC std_ss [indicator_fn_def, GSPECIFICATION, mul_lzero, mul_rzero, le_refl])
  >> MATCH_MP_TAC pos_fn_integral_mono
  >> RW_TAC std_ss []
- >- (MATCH_MP_TAC le_mul >> Reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
-     MATCH_MP_TAC le_mul >> Reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
+ >- (MATCH_MP_TAC le_mul >> reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
+     MATCH_MP_TAC le_mul >> reverse CONJ_TAC >- REWRITE_TAC [INDICATOR_FN_POS] \\
      REWRITE_TAC [abs_pos])
  >> MATCH_MP_TAC le_rmul_imp
  >> REWRITE_TAC [INDICATOR_FN_POS]
@@ -6476,7 +6485,7 @@ Proof
        POP_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC `0` >> REWRITE_TAC [],
        (* goal 3 (of 3) *)
        RW_TAC std_ss [ext_mono_increasing_suc] \\
-       Reverse (Cases_on `x IN N`)
+       reverse (Cases_on `x IN N`)
        >- (ASM_SIMP_TAC std_ss [indicator_fn_def, mul_rzero, le_refl]) \\
        ASM_SIMP_TAC std_ss [indicator_fn_def, mul_rone] \\
        Q.UNABBREV_TAC `fi` >> BETA_TAC \\
@@ -6494,7 +6503,7 @@ Proof
  >> Know `!i. pos_fn_integral m (fi' i) <= pos_fn_integral m (\x. &i * indicator_fn N x)`
  >- (GEN_TAC >> MATCH_MP_TAC pos_fn_integral_mono \\
      RW_TAC std_ss [] >> qunabbrevl_tac [`fi'`, `fi`] >> BETA_TAC \\
-     Reverse (Cases_on `x IN N`)
+     reverse (Cases_on `x IN N`)
      >- (ASM_SIMP_TAC std_ss [indicator_fn_def, mul_rzero, le_refl]) \\
      ASM_SIMP_TAC std_ss [indicator_fn_def, mul_rone, min_le2])
  >> Know `!i. pos_fn_integral m (\x. &i * indicator_fn N x) =
@@ -6562,7 +6571,7 @@ Proof
      POP_ORW >> METIS_TAC [IN_MEASURABLE_BOREL_ALL_MEASURE]) >> DISCH_TAC
  >> ONCE_REWRITE_TAC [CONJ_SYM]
  >> STRONG_CONJ_TAC (* by definition of AE and null_set *)
- >- (Reverse EQ_TAC
+ >- (reverse EQ_TAC
      >- (RW_TAC std_ss [AE_ALT, null_set_def] \\
          Q.EXISTS_TAC `{x | x IN m_space m /\ f x <> 0}` \\
          ASM_REWRITE_TAC [SUBSET_REFL, abs_eq_0]) \\
@@ -6578,7 +6587,7 @@ Proof
        MATCH_MP_TAC INCREASING >> fs [abs_eq_0] ]) >> DISCH_TAC
  >> `sigma_algebra (m_space m,measurable_sets m)` by PROVE_TAC [measure_space_def]
  (* RHS ==> LHS, by AE and integral_null_set *)
- >> Reverse EQ_TAC
+ >> reverse EQ_TAC
  >- (SIMP_TAC bool_ss [AE_ALT, GSYM IN_NULL_SET] >> STRIP_TAC \\
      Know `(abs o f) IN measurable (m_space m, measurable_sets m) Borel`
      >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS' >> art []) >> DISCH_TAC \\
@@ -6609,7 +6618,7 @@ Proof
            integral m (\x. 0)` >- (Rewr' >> MATCH_MP_TAC integral_zero >> art []) \\
      MATCH_MP_TAC integral_eq >> art [] \\
      RW_TAC bool_ss [] \\
-     Reverse (Cases_on `x IN (m_space m DIFF {x | x IN m_space m /\ (abs o f) x <> 0})`)
+     reverse (Cases_on `x IN (m_space m DIFF {x | x IN m_space m /\ (abs o f) x <> 0})`)
      >- (ASM_SIMP_TAC bool_ss [indicator_fn_def, mul_rzero]) \\
      POP_ASSUM MP_TAC \\
      RW_TAC bool_ss [IN_DIFF, GSPECIFICATION, mul_lzero])
@@ -6622,7 +6631,7 @@ Proof
           BIGUNION (IMAGE (\n. {x | 1 / &(SUC n) <= abs (f x)} INTER m_space m) UNIV)`
  >- (RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_BIGUNION_IMAGE, IN_UNIV,
                     GSPECIFICATION] \\
-     Reverse EQ_TAC >> rpt STRIP_TAC >> RW_TAC std_ss []
+     reverse EQ_TAC >> rpt STRIP_TAC >> RW_TAC std_ss []
      >- (MATCH_MP_TAC lte_trans >> Q.EXISTS_TAC `1 / &(SUC n)` >> art [] \\
         `&(SUC n) = Normal &(SUC n)` by METIS_TAC [extreal_of_num_def] >> POP_ORW \\
          MATCH_MP_TAC lt_div >> RW_TAC real_ss [lt_01]) \\
@@ -6667,7 +6676,7 @@ Proof
      GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [o_DEF] \\
      SIMP_TAC std_ss [] \\
      MATCH_MP_TAC markov_ineq >> art [] \\
-     Reverse CONJ_TAC
+     reverse CONJ_TAC
      >- (`&(SUC n) = Normal &(SUC n)` by METIS_TAC [extreal_of_num_def] >> POP_ORW \\
          MATCH_MP_TAC lt_div >> art [lt_01] \\
          RW_TAC real_ss [extreal_of_num_def, extreal_lt_eq]) \\
@@ -6717,7 +6726,7 @@ Proof
      Suff `{x | x IN m_space M /\ u^+ x <> (abs o u)^+ x} =
            {x | x IN m_space M /\ ~(0 <= u x)}` >- rw [] \\
      RW_TAC std_ss [Once EXTENSION, GSPECIFICATION, fn_plus_def] \\
-     Reverse EQ_TAC >> rpt STRIP_TAC >> RW_TAC std_ss []
+     reverse EQ_TAC >> rpt STRIP_TAC >> RW_TAC std_ss []
      >- (fs [GSYM extreal_lt_def] \\
          `~(0 < u x)` by METIS_TAC [lt_antisym] >> fs [] \\
          `u x <> 0` by METIS_TAC [lt_le] \\
@@ -6736,7 +6745,7 @@ Proof
  >> Suff `{x | x IN m_space M /\ u^- x <> 0} =
           {x | x IN m_space M /\ ~(0 <= u x)}` >- rw []
  >> RW_TAC std_ss [Once EXTENSION, GSPECIFICATION, fn_minus_def]
- >> Reverse EQ_TAC >> rpt STRIP_TAC >> RW_TAC std_ss []
+ >> reverse EQ_TAC >> rpt STRIP_TAC >> RW_TAC std_ss []
  >- (fs [GSYM extreal_lt_def] >> rfs [] \\
      `u x <> 0` by METIS_TAC [lt_le] >> METIS_TAC [neg_eq0])
  >> `~(u x < 0)` by METIS_TAC [extreal_lt_def] >> fs []
@@ -6776,7 +6785,7 @@ Proof
    FULL_SIMP_TAC std_ss [measure_space_def] THEN
    MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST THEN METIS_TAC []] THEN
   `!x. 0 <= g x` by METIS_TAC [le_max1] THEN
-   Reverse (Cases_on `c = PosInf`)
+   reverse (Cases_on `c = PosInf`)
    >- (`c <> NegInf` by METIS_TAC [le_infty, le_trans, num_not_infty] THEN
        `c = Normal (real c)` by METIS_TAC [normal_real] THEN
        POP_ASSUM (fn th => ONCE_REWRITE_TAC [th]) THEN
@@ -7059,7 +7068,7 @@ Proof
    Know `pos_fn_integral (density M (fn_plus f)) (\x. max 0 (g' x)) =
          pos_fn_integral (density M (fn_plus f)) (\x. max 0 (f' x))` THEN1
    (MATCH_MP_TAC pos_fn_integral_cong THEN ASM_SIMP_TAC std_ss [le_max1] THEN
-    Reverse CONJ_TAC
+    reverse CONJ_TAC
     >- (RW_TAC std_ss [density_def, density_measure_def, m_space_def]) \\
     MATCH_MP_TAC measure_space_density' >> art []) THEN DISC_RW_KILL THEN
    ASM_SIMP_TAC std_ss [] THEN MATCH_MP_TAC pos_fn_integral_cong THEN
@@ -7616,7 +7625,7 @@ val RN_lemma2 = Q.prove (
  >> Q.EXISTS_TAC `BIGINTER (IMAGE A UNIV)`
  >> CONJ_TAC >- METIS_TAC [SIGMA_ALGEBRA_FN_BIGINTER, IN_UNIV, IN_FUNSET,
                            subsets_def, measurable_sets_def, measure_space_def]
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (RW_TAC std_ss [] \\
      SPOSE_NOT_THEN ASSUME_TAC \\
      FULL_SIMP_TAC std_ss [GSYM extreal_lt_def] \\
@@ -8185,7 +8194,7 @@ val measure_subadditive_finite = store_thm
      MATCH_MP_TAC ALGEBRA_UNION \\
      FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_def] \\
     `{A i | i IN s} = IMAGE A s` by SET_TAC [] >> POP_ORW \\
-     Reverse CONJ_TAC >- FULL_SIMP_TAC std_ss [subsets_def] \\
+     reverse CONJ_TAC >- FULL_SIMP_TAC std_ss [subsets_def] \\
      MATCH_MP_TAC ALGEBRA_FINITE_UNION \\
      FULL_SIMP_TAC std_ss [IMAGE_FINITE, subsets_def],
      (* goal 5 of 5) *)
@@ -8388,7 +8397,7 @@ val split_space_into_finite_sets_and_rest = prove (
       (ASM_REWRITE_TAC [sup_le'] THEN GEN_TAC THEN
        SIMP_TAC std_ss [GSPECIFICATION] THEN STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
        MATCH_MP_TAC INCREASING THEN ASM_SIMP_TAC std_ss [MEASURE_SPACE_INCREASING] THEN
-       Reverse CONJ_TAC
+       reverse CONJ_TAC
        >- (ONCE_REWRITE_TAC [METIS [subsets_def]
             ``measurable_sets m = subsets (m_space m, measurable_sets m)``] THEN
            MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_UNION THEN
@@ -8515,7 +8524,7 @@ val split_space_into_finite_sets_and_rest = prove (
    FULL_SIMP_TAC arith_ss [NOT_LESS_EQUAL], ALL_TAC] THEN
   CONJ_TAC THENL
   [ASM_SET_TAC [], ALL_TAC] THEN
-  Reverse CONJ_TAC >-
+  reverse CONJ_TAC >-
   (GEN_TAC THEN Q.UNABBREV_TAC `QQ` THEN BETA_TAC THEN
    ASM_CASES_TAC ``i = 0:num`` THEN ASM_SIMP_TAC std_ss [] THENL
    [ASM_SET_TAC [], ALL_TAC] THEN
@@ -8549,7 +8558,7 @@ val split_space_into_finite_sets_and_rest = prove (
   Know `measure M O_o + measure M A = measure M (O_o UNION A)` >-
   (ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN MATCH_MP_TAC ADDITIVE THEN
    ASM_SIMP_TAC std_ss [MEASURE_SPACE_ADDITIVE, DISJOINT_DEF] THEN
-   Reverse CONJ_TAC
+   reverse CONJ_TAC
    >- (MATCH_MP_TAC MEASURE_SPACE_UNION >> rfs []) THEN
    Q.PAT_X_ASSUM  `A SUBSET m_space N DIFF BIGUNION {QQ i | i IN univ(:num)}` MP_TAC THEN
    qunabbrevl_tac [`QQ`, `O_o`] THEN BETA_TAC THEN
@@ -8624,7 +8633,7 @@ val split_space_into_finite_sets_and_rest = prove (
     CONJ_TAC THENL [METIS_TAC [], ALL_TAC] THEN
     SIMP_TAC std_ss [lt_infty] THEN MATCH_MP_TAC let_trans THEN
     Q.EXISTS_TAC `measure N (D i') + measure N A` THEN
-    Reverse CONJ_TAC
+    reverse CONJ_TAC
     >- (SIMP_TAC std_ss [GSYM lt_infty] THEN
         MATCH_MP_TAC (METIS [add_not_infty]
           ``x <> PosInf /\ y <> PosInf ==> x + y <> PosInf``) THEN
@@ -8886,7 +8895,7 @@ Proof
    Q.EXISTS_TAC `(\n x. SIGMA (\i. f i x * indicator_fn (Q i) x) (count n))` THEN
    SIMP_TAC std_ss [space_def] THEN
    CONJ_TAC >- METIS_TAC [measure_space_def] THEN
-   Reverse CONJ_TAC
+   reverse CONJ_TAC
    >- (rpt STRIP_TAC THEN MATCH_MP_TAC EXTREAL_SUM_IMAGE_MONO_SET THEN
        SIMP_TAC std_ss [FINITE_COUNT, count_def] THEN
        SIMP_TAC arith_ss [SUBSET_DEF, GSPECIFICATION] THEN
@@ -8900,7 +8909,7 @@ Proof
    ASM_REWRITE_TAC [] THEN DISCH_THEN (MATCH_MP_TAC) THEN
    SIMP_TAC std_ss [FINITE_COUNT, space_def] THEN
    CONJ_TAC >- METIS_TAC [measure_space_def] THEN
-   Reverse CONJ_TAC
+   reverse CONJ_TAC
    >- (rpt GEN_TAC >> STRIP_TAC THEN MATCH_MP_TAC pos_not_neginf THEN
        MATCH_MP_TAC le_mul THEN art [INDICATOR_FN_POS]) THEN
    GEN_TAC THEN STRIP_TAC THEN MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR THEN
@@ -9022,7 +9031,7 @@ Proof
      Q.EXISTS_TAC `(\n x. SIGMA (\i. f i x * indicator_fn (Q i INTER A) x) (count n))` THEN
      SIMP_TAC std_ss [] THEN
      CONJ_TAC >- METIS_TAC [measure_space_def] THEN
-     Reverse CONJ_TAC
+     reverse CONJ_TAC
      >- (rpt STRIP_TAC THEN MATCH_MP_TAC EXTREAL_SUM_IMAGE_MONO_SET THEN
          SIMP_TAC std_ss [FINITE_COUNT] THEN
          CONJ_TAC >- (MATCH_MP_TAC COUNT_MONO >> RW_TAC arith_ss []) THEN
@@ -9037,7 +9046,7 @@ Proof
                      ``count n``] IN_MEASURABLE_BOREL_SUM) THEN
      ASM_REWRITE_TAC [] THEN DISCH_THEN (MATCH_MP_TAC) THEN
      SIMP_TAC std_ss [FINITE_COUNT] THEN CONJ_TAC THENL [METIS_TAC [measure_space_def], ALL_TAC] THEN
-     Reverse CONJ_TAC
+     reverse CONJ_TAC
      >- (rpt GEN_TAC THEN STRIP_TAC THEN
          MATCH_MP_TAC pos_not_neginf THEN
          MATCH_MP_TAC le_mul THEN ASM_SIMP_TAC std_ss [INDICATOR_FN_POS]) THEN

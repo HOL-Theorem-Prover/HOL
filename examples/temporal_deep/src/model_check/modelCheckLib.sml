@@ -1,28 +1,6 @@
 structure modelCheckLib :> modelCheckLib =
 struct
 
-(*
-quietdec := true;
-
-val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/translations") ::
-            (concat home_dir "src/tools") ::
-            (concat hol_dir "examples/PSL/path") ::
-            (concat hol_dir "examples/PSL/1.1/official-semantics") :: !loadPath;
-
-map load
- ["full_ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
-  "infinite_pathTheory", "tuerk_tacticsLib", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory", "pred_setSyntax",
-  "temporal_deep_mixedTheory", "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "pairTheory",
-  "ltl_to_automaton_formulaTheory", "rltl_to_ltlTheory",
-  "numLib", "listLib", "translationsLibTheory", "rltlTheory", "computeLib",
-  "congLib", "temporal_deep_simplificationsLib", "Trace",
-  "symbolic_kripke_structureTheory", "pred_setLib", "Varmap", "HOLset", "ListConv1",
-  "psl_lemmataTheory", "ProjectionTheory", "psl_to_rltlTheory",
-  "translationsLib", "temporalLib", "bdd", "ctl_starTheory"];
-*)
-
 open HolKernel boolLib bossLib
     full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory

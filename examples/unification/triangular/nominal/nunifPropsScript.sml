@@ -2303,13 +2303,16 @@ val equiv_fcs_q = `
   (equiv_fcs (Sus p1 v1) (Sus p2 v2) =
    if v1 = v2 then SOME {(a,v1) | a ∈ dis_set p1 p2} else NONE) ∧
   (equiv_fcs (Tie a1 t1) (Tie a2 t2) =
-   if a1 = a2 then equiv_fcs t1 t2
-   else OPTION_MAP2 $UNION (term_fcs a1 t2) (equiv_fcs t1 (apply_pi [(a1,a2)] t2))) ∧
-  (equiv_fcs (nPair t1a t1d) (nPair t2a t2d) = OPTION_MAP2 $UNION (equiv_fcs t1a t2a) (equiv_fcs t1d t2d)) ∧
+     if a1 = a2 then equiv_fcs t1 t2
+     else OPTION_MAP2 $UNION (term_fcs a1 t2)
+                             (equiv_fcs t1 (apply_pi [(a1,a2)] t2))) ∧
+  (equiv_fcs (nPair t1a t1d) (nPair t2a t2d) =
+     OPTION_MAP2 $UNION (equiv_fcs t1a t2a) (equiv_fcs t1d t2d)) ∧
   (equiv_fcs (nConst c1) (nConst c2) = if c1 = c2 then SOME {} else NONE) ∧
   (equiv_fcs t1 t2 = NONE)`
 
-val equiv_fcs_def = RWDefine equiv_fcs_q;
+val equiv_fcs_def = Define equiv_fcs_q;
+val _ = export_rewrites ["equiv_fcs_def"]
 val _ = store_term_thm("equiv_fcs_def_print",TermWithCase equiv_fcs_q);
 
 val equiv_fcs_minimal = Q.store_thm(

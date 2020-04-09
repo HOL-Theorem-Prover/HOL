@@ -1471,7 +1471,7 @@ val loop2_div_fall_count_cover_exit_le = store_thm(
   `!x y. loop x y = if guard x y then quit2 x y else body x y + if exit x y then 0 else loop (f x) (modify y)` by metis_tac[] >>
   `FALLING modify` by rw[divide_falling, Abbr`modify`] >>
   assume_tac loop2_fall_fall_count_cover_exit_le >>
-  first_x_assum (qspecl_then [`loop`, `body`, `quit2`, `exit`, `guard`, `modify`, `f`, `R`] strip_assume_tac) >>
+  first_x_assum (qspecl_then [`loop`, `guard`, `body`, `quit2`, `exit`, `modify`, `f`, `R`] strip_assume_tac) >>
   first_x_assum (drule_all_then strip_assume_tac) >>
   first_x_assum (qspecl_then [`x`, `y`, `cover`] strip_assume_tac) >>
   metis_tac[]);
@@ -2159,7 +2159,7 @@ val loop2_div_count_exit_by_sum = store_thm(
   `!x y. ~guard x y ==> R (f x,modify y) (x,y)` by rw[Abbr`guard`, Abbr`R`, Abbr`modify`] >>
   `!x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (f x) (modify y)` by metis_tac[] >>
   assume_tac (loop2_modify_count_exit_by_sum |> ISPEC ``loop:'a -> num -> num``) >>
-  last_x_assum (qspecl_then [`body`, `c`, `exit`, `guard`, `modify`, `f`, `R`] strip_assume_tac) >>
+  last_x_assum (qspecl_then [`guard`, `body`, `c`, `exit`, `modify`, `f`, `R`] strip_assume_tac) >>
   `loop x y <= c + SUM (MAP (UNCURRY body) (loop2_arg guard modify f x y))` by metis_tac[] >>
   `MAP (UNCURRY body) (loop2_arg guard modify f x y) =
     MAP2 body (iterating f x (pop b y)) (divide_by b y)` by rw[iterating_divide_eq_loop2_arg, Abbr`guard`, Abbr`modify`] >>
@@ -2198,7 +2198,7 @@ val loop2_div_count_cover_exit_upper = store_thm(
   `!x1 x2 y1 y2. R (x1,y1) (x2,y2) ==> cover x1 y1 <= cover x2 y2` by rw[Abbr`R`] >>
   `!x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (f x) (modify y)` by metis_tac[] >>
   assume_tac (loop2_modify_count_bcover_exit_upper |> ISPEC ``loop:'a -> num -> num``) >>
-  last_x_assum (qspecl_then [`body`, `c`, `exit`, `cover`, `guard`, `modify`, `f`, `R`] strip_assume_tac) >>
+  last_x_assum (qspecl_then [`guard`, `body`, `c`, `exit`, `cover`, `modify`, `f`, `R`] strip_assume_tac) >>
   `loop2_count guard modify f x y = pop b y` by rw[pop_eq_loop2_count, Abbr`guard`, Abbr`modify`] >>
   metis_tac[]);
 

@@ -252,7 +252,7 @@ val EVENTS_BERN_STL = store_thm
   ("EVENTS_BERN_STL",
   ``!p. (p o stl) IN events bern = p IN events bern``,
     STRIP_TAC
- >> Reverse EQ_TAC
+ >> reverse EQ_TAC
  >- ( RW_TAC std_ss [] \\
       `p o stl = PREIMAGE stl p` by PROVE_TAC [PREIMAGE_ALT] \\
       POP_ORW \\
@@ -282,7 +282,7 @@ val PROB_PRESERVING_BERN_SUBSET = store_thm
      SUBSET prob_preserving bern bern``,
    MATCH_MP_TAC SUBSET_TRANS
    >> Q.EXISTS_TAC `prob_preserving bern (space prob_algebra, subsets prob_algebra, prob bern)`
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- ( REWRITE_TAC [SYM SPACE_BERN] \\
         MATCH_MP_TAC PROB_PRESERVING_SUBSET \\
         RW_TAC std_ss [EVENTS_BERN, SPACE_BERN, PROB_SPACE_BERN, PROB_ALGEBRA_ALGEBRA] )
@@ -412,7 +412,7 @@ val EVENTS_BERN_SING = store_thm
         >> STRIP_TAC
         >> REPEAT (POP_ASSUM MP_TAC)
         >> Cases_on `l` >- RW_TAC arith_ss [LENGTH]
-        >> Reverse (Cases_on `t`) >- RW_TAC arith_ss [LENGTH]
+        >> reverse (Cases_on `t`) >- RW_TAC arith_ss [LENGTH]
         >> RW_TAC arith_ss [LENGTH, prefix_set_def, IN_INTER, IN_HALFSPACE, shd_def] )
    >> RW_TAC std_ss []
    >> SEQ_CASES_TAC `w`
@@ -451,7 +451,7 @@ val PROB_BERN_SING = store_thm
    RW_TAC std_ss []
    >> ASSUME_TAC (Q.SPEC `x` EVENTS_BERN_SING)
    >> ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
-   >> Reverse CONJ_TAC >- PROVE_TAC [PROB_POSITIVE, PROB_SPACE_BERN]
+   >> reverse CONJ_TAC >- PROVE_TAC [PROB_POSITIVE, PROB_SPACE_BERN]
    >> MATCH_MP_TAC REAL_LE_EPSILON
    >> RW_TAC real_ss []
    >> MP_TAC (Q.SPEC `e` POW_HALF_SMALL)
@@ -460,7 +460,7 @@ val PROB_BERN_SING = store_thm
    >> RW_TAC std_ss []
    >> MATCH_MP_TAC REAL_LE_TRANS
    >> Q.EXISTS_TAC `prob bern (prefix_set l)`
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (RW_TAC std_ss [PROB_BERN_PREFIX_SET]
        >> PROVE_TAC [REAL_LT_IMP_LE])
    >> MATCH_MP_TAC PROB_INCREASING
@@ -599,7 +599,7 @@ val EVENTS_BERN_MIRROR = store_thm
    >> MP_TAC MEASURABLE_BERN_MIRROR
    >> RW_TAC std_ss [IN_MEASURABLE, PREIMAGE_ALT, subsets_def, space_def,
                      SPACE_BERN, SPACE_PROB_ALGEBRA, INTER_UNIV]
-   >> Reverse EQ_TAC >- RW_TAC std_ss []
+   >> reverse EQ_TAC >- RW_TAC std_ss []
    >> POP_ASSUM (MP_TAC o Q.SPEC `s o mirror`)
    >> RW_TAC std_ss [GSYM o_ASSOC, MIRROR_o_MIRROR, I_o_ID]);
 
@@ -1149,7 +1149,7 @@ val INDEP_FN_NONEXAMPLE = store_thm
        >> Q.EXISTS_TAC `scons T (scons F s)`
        >> RW_TAC std_ss [IN_INSERT, prefix_set_def, IN_UNIV, STL_SCONS,
                          sdrop_def, LENGTH, I_THM, SCONS_EQ])
-   >> Reverse (Cases_on `t'`)
+   >> reverse (Cases_on `t'`)
    >- (Q.EXISTS_TAC `h :: h' :: t''`
        >> MP_TAC
           (Q.SPECL [`h' :: t''`, `LENGTH (t'' : bool list)`]
@@ -1799,7 +1799,7 @@ val PROB_BERN_BIND_FINITE = store_thm
    >- (SET_EQ_TAC
        >> RW_TAC std_ss [IN_INTER]
        >> RW_TAC std_ss [SPECIFICATION, o_THM]
-       >> Reverse (Cases_on `FST (f x) = c n`) >- PROVE_TAC []
+       >> reverse (Cases_on `FST (f x) = c n`) >- PROVE_TAC []
        >> RW_TAC std_ss [BIND_DEF, UNCURRY, o_THM])
    >> Rewr
    >> Suff `(p o FST o g (c n)) IN events bern`
@@ -1858,7 +1858,7 @@ val PROB_BERN_BIND_INFINITE = store_thm
    >- (SET_EQ_TAC
        >> RW_TAC std_ss [IN_INTER]
        >> RW_TAC std_ss [SPECIFICATION, o_THM]
-       >> Reverse (Cases_on `FST (f x') = c x`) >- PROVE_TAC []
+       >> reverse (Cases_on `FST (f x') = c x`) >- PROVE_TAC []
        >> RW_TAC std_ss [BIND_DEF, UNCURRY, o_THM])
    >> Rewr
    >> Suff `(p o FST o g (c x)) IN events bern`
@@ -1871,7 +1871,7 @@ val INDEP_FN_ENUM_RANGE = store_thm
        f IN indep_fn ==>
        (?c : num -> 'a. BIJ c UNIV (range (FST o f))) \/
        (?c n. BIJ c (count n) (range (FST o f)))``,
-   Reverse (RW_TAC std_ss [indep_fn_def, GSPECIFICATION, COUNTABLE_ALT_BIJ])
+   reverse (RW_TAC std_ss [indep_fn_def, GSPECIFICATION, COUNTABLE_ALT_BIJ])
    >- PROVE_TAC []
    >> PROVE_TAC [FINITE_BIJ_COUNT_EQ]);
 
@@ -2189,7 +2189,7 @@ val PROB_BERN_PROB_WHILE_CUT = store_thm
    >> Q.EXISTS_TAC
       `prob bern (c o FST o b a) * p pow n +
        (1 - prob bern (c o FST o b a)) * 0`
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (RW_TAC std_ss [pow, REAL_MUL_RZERO, REAL_ADD_RID]
        >> MATCH_MP_TAC REAL_LE_RMUL_IMP
        >> RW_TAC std_ss []
@@ -2517,7 +2517,7 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
           ~c (FST (FUNPOW (UNCURRY b) m (a,s)))}`
    >- (RW_TAC std_ss [EXTENSION, GSPECIFICATION]
        >> RW_TAC std_ss [GSYM EXTENSION]
-       >> Reverse EQ_TAC >- PROVE_TAC []
+       >> reverse EQ_TAC >- PROVE_TAC []
        >> RW_TAC std_ss [MINIMAL_EXISTS])
    >> Rewr
    >> Ho_Rewrite.REWRITE_TAC [GBIGUNION_IMAGE]
@@ -2647,7 +2647,7 @@ val PROB_WHILE_TERMINATES_PREFIX_COVER_STAR = store_thm
    >> Q.PAT_X_ASSUM `!x. P x \/ Q x` (MP_TAC o Q.SPEC `n'`)
    >> RW_TAC std_ss [] >- RW_TAC std_ss [INTER_EMPTY]
    >> RW_TAC std_ss []
-   >> Reverse (RW_TAC std_ss [prefix_cover_level_def, GDEST])
+   >> reverse (RW_TAC std_ss [prefix_cover_level_def, GDEST])
    >- (Suff `!s. minimal (\n. ~c (FST (FUNPOW (UNCURRY b) n (a,s)))) = 0`
        >- RW_TAC std_ss [GEMPTY, IMAGE_EMPTY, BIGUNION_EMPTY, INTER_EMPTY]
        >> STRIP_TAC
@@ -2746,18 +2746,18 @@ val PROB_WHILE_WITNESS_BIND = store_thm
        prob_while_witness c b a =
        if c a then BIND (b a) (prob_while_witness c b) else UNIT a``,
    FUN_EQ_TAC
-   >> Reverse (RW_TAC std_ss [])
-   >- (Reverse (RW_TAC std_ss [prob_while_witness_def, UNIT_DEF])
+   >> reverse (RW_TAC std_ss [])
+   >- (reverse (RW_TAC std_ss [prob_while_witness_def, UNIT_DEF])
        >- PROVE_TAC [FUNPOW, FST]
        >> Suff `minimal (\n. ~c (FST (FUNPOW (UNCURRY b) n (a,x)))) = 0`
        >- RW_TAC std_ss [FUNPOW]
        >> MATCH_MP_TAC EQ_SYM
        >> MATCH_MP_TAC MINIMAL_EQ_IMP
        >> RW_TAC arith_ss [FUNPOW])
-   >> Reverse (RW_TAC std_ss [prob_while_witness_def,
+   >> reverse (RW_TAC std_ss [prob_while_witness_def,
                               PROB_WHILE_WITNESS_CLOSED])
    >- RW_TAC std_ss [BIND_DEF, o_THM, prob_while_witness_def, UNCURRY]
-   >> Reverse (RW_TAC std_ss [BIND_DEF, o_THM, prob_while_witness_def,
+   >> reverse (RW_TAC std_ss [BIND_DEF, o_THM, prob_while_witness_def,
                               UNCURRY])
    >- PROVE_TAC []
    >> Suff
@@ -2842,7 +2842,7 @@ val PROB_WHILE_WITNESS_COUNTABLE_RANGE = store_thm
    >> Q.EXISTS_TAC
       `FST (ARB : 'a # (num -> bool)) INSERT
        BIGUNION (IMAGE (\n. range (FST o FUNPOW (UNCURRY b) n o UNIT a)) UNIV)`
-   >> Reverse (RW_TAC bool_ss [countable_INSERT, SUBSET_DEF, IN_INSERT,
+   >> reverse (RW_TAC bool_ss [countable_INSERT, SUBSET_DEF, IN_INSERT,
                                IN_BIGUNION_IMAGE, IN_UNIV])
    >- (MATCH_MP_TAC COUNTABLE_BIGUNION
        >> RW_TAC bool_ss [IN_IMAGE, IN_UNIV, COUNTABLE_IMAGE_NUM]
@@ -2923,7 +2923,7 @@ val PROB_WHILE_WITNESS_MEASURABLE_FST = store_thm
                      IN_UNIV]
    >> Ho_Rewrite.ONCE_REWRITE_TAC [GINTER]
    >> MATCH_MP_TAC EVENTS_INTER
-   >> Reverse (RW_TAC std_ss [PROB_SPACE_BERN]) (* 2 sub-goals here *)
+   >> reverse (RW_TAC std_ss [PROB_SPACE_BERN]) (* 2 sub-goals here *)
    >- (ONCE_REWRITE_TAC [CONJ_COMM]
        >> (MP_TAC o
            Q.GEN `s` o
@@ -3024,7 +3024,7 @@ val PROB_WHILE_WITNESS_MEASURABLE_SND = store_thm
                      IN_UNIV]
    >> Ho_Rewrite.ONCE_REWRITE_TAC [GINTER]
    >> MATCH_MP_TAC EVENTS_INTER
-   >> Reverse (RW_TAC std_ss [PROB_SPACE_BERN]) (* 2 sub-goals here *)
+   >> reverse (RW_TAC std_ss [PROB_SPACE_BERN]) (* 2 sub-goals here *)
    >- (ONCE_REWRITE_TAC [CONJ_COMM]
        >> (MP_TAC o
            Q.GEN `s` o
@@ -3087,7 +3087,7 @@ val PROB_WHILE_EXISTS = store_thm
        PROB_WHILE_TERMINATES_PREFIX_COVER_STAR
    >> Cond >- RW_TAC std_ss []
    >> STRIP_TAC
-   >> Reverse CONJ_TAC >- RW_TAC std_ss [PROB_WHILE_WITNESS_BIND]
+   >> reverse CONJ_TAC >- RW_TAC std_ss [PROB_WHILE_WITNESS_BIND]
    >> SIMP_TAC std_ss [indep_fn_def, GSPECIFICATION]
    >> CONJ_TAC >- RW_TAC std_ss [PROB_WHILE_WITNESS_COUNTABLE_RANGE]
    >> CONJ_TAC >- RW_TAC std_ss [PROB_WHILE_WITNESS_MEASURABLE_FST]
@@ -3142,7 +3142,7 @@ val PROB_WHILE_CUT_REV = store_thm
                          UNIT_DEF])
    >> REPEAT GEN_TAC
    >> ONCE_REWRITE_TAC [prob_while_cut_def]
-   >> Reverse (Cases_on `c a`)
+   >> reverse (Cases_on `c a`)
    >- RW_TAC std_ss [BIND_DEF, UNIT_DEF, o_DEF, UNCURRY]
    >> RW_TAC std_ss [GSYM BIND_ASSOC]
    >> AP_TERM_TAC
@@ -3194,7 +3194,7 @@ val PROB_WHILE_TERMINATES_SUFFICIENT = store_thm
    >> Know `!x : real. (x = 0) ==> (1 - x = 1)` >- REAL_ARITH_TAC
    >> DISCH_THEN MATCH_MP_TAC
    >> ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- PROVE_TAC [PROB_POSITIVE, PROB_SPACE_BERN]
    >> MATCH_MP_TAC LE_SEQ_IMP_LE_LIM
    >> Q.EXISTS_TAC `\N. prob bern {s | c (FST (prob_while_cut c b N a s))}`
@@ -3324,7 +3324,7 @@ val PROB_BERN_MIRROR_IMAGE_STL = store_thm
        >> RW_TAC std_ss [PREIMAGE_ALT, PROB_BERN_STL])
    >> SET_EQ_TAC
    >> RW_TAC std_ss [IN_PREIMAGE, IN_IMAGE]
-   >> Reverse EQ_TAC >- PROVE_TAC []
+   >> reverse EQ_TAC >- PROVE_TAC []
    >> RW_TAC std_ss []
    >> SEQ_CASES_TAC `x'`
    >> SEQ_CASES_TAC `x`
@@ -3442,7 +3442,7 @@ val NONEVENT = store_thm
   ("NONEVENT",
    ``~(nonevent IN events bern)``,
    STRIP_TAC
-   >> Reverse (Cases_on `prob bern nonevent = 0`)
+   >> reverse (Cases_on `prob bern nonevent = 0`)
    >- (Know `0 < prob bern nonevent`
        >- (RW_TAC std_ss [REAL_LT_LE]
            >> MATCH_MP_TAC PROB_POSITIVE
@@ -3929,7 +3929,7 @@ val PROB_BERN_BIND_COUNTABLE = store_thm
        >> Know
           `!n'. ((!m. m < n' ==> ~(c m = c n')) /\ (c n' = c k)) = (n' = k)`
        >- (RW_TAC std_ss []
-           >> Reverse EQ_TAC >- (RW_TAC std_ss [] >> PROVE_TAC [])
+           >> reverse EQ_TAC >- (RW_TAC std_ss [] >> PROVE_TAC [])
            >> RW_TAC std_ss []
            >> Suff `~(n' < k) /\ ~(k < n')` >- DECIDE_TAC
            >> PROVE_TAC [])
@@ -4263,7 +4263,7 @@ val NONEVENT_ALT = store_thm
   ("NONEVENT_ALT",
    ``!x. ?!y. eventually x y /\ y IN nonevent``,
    CONV_TAC (DEPTH_CONV EXISTS_UNIQUE_CONV)
-   >> Reverse (RW_TAC std_ss [])
+   >> reverse (RW_TAC std_ss [])
    >- PROVE_TAC [EVENTUALLY_IN_NONEVENT, EVENTUALLY_TRANS, EVENTUALLY_SYM]
    >> RW_TAC std_ss [nonevent_def, IN_IMAGE, IN_UNIV]
    >> Q.EXISTS_TAC `@y. eventually x y`
@@ -4557,7 +4557,7 @@ val PROB_TERMINATES_COST = store_thm
        prob_while_terminates (c o FST) (prob_cost SUC b) =
        prob_while_terminates c b``,
    RW_TAC std_ss [PROB_WHILE_TERMINATES]
-   >> Reverse EQ_TAC >|
+   >> reverse EQ_TAC >|
    [RW_TAC std_ss []
     >> Cases_on `a`
     >> POP_ASSUM (MP_TAC o Q.SPEC `q`)
@@ -4710,7 +4710,7 @@ val PROB_TERMINATES_HART_LEMMA = store_thm
         >> Induct_on `n`
         >- RW_TAC std_ss [prob_while_cut_def]
         >> REPEAT GEN_TAC
-        >> Reverse (Cases_on `c a`)
+        >> reverse (Cases_on `c a`)
         >- RW_TAC std_ss [prob_while_cut_def, BIND_DEF, UNCURRY, o_THM]
         >> STRIP_TAC
         >> RW_TAC std_ss [prob_while_cut_def, BIND_DEF, UNCURRY, o_THM]
@@ -4731,7 +4731,7 @@ val PROB_TERMINATES_HART_LEMMA = store_thm
         >- (RW_TAC std_ss []
             >> Q.EXISTS_TAC `0`
             >> FULL_SIMP_TAC std_ss [prob_while_cut_def])
-        >> Reverse (RW_TAC std_ss [prob_while_cut_def, UNIT_DEF])
+        >> reverse (RW_TAC std_ss [prob_while_cut_def, UNIT_DEF])
         >- (Q.EXISTS_TAC `0`
             >> RW_TAC std_ss [prob_while_cut_def, UNIT_DEF])
         >> Suff `?n. ~c (FST (prob_while_cut c b (N a + n) a s))`
@@ -4833,7 +4833,7 @@ val PROB_TERMINATES_HART_LEMMA = store_thm
    >> Induct_on `n`
    >- RW_TAC std_ss [pow, prob_while_cut_def, PROB_POSITIVE, PROB_SPACE_BERN,
                      INDEP_FN_FST_EVENTS, INDEP_FN_UNIT, REAL_SUB_REFL]
-   >> Reverse (RW_TAC std_ss [prob_while_cut_def])
+   >> reverse (RW_TAC std_ss [prob_while_cut_def])
    >- (Know `{x | ~c x} o FST o UNIT a = (UNIV:(num->bool)->bool)`
        >- (SET_EQ_TAC
            >> RW_TAC std_ss [UNIT_DEF, IN_o, o_THM, GSPECIFICATION, IN_UNIV])
@@ -4849,7 +4849,7 @@ val PROB_TERMINATES_HART_LEMMA = store_thm
        +
        (1 - prob bern ({x | ~c x} o FST o prob_while_cut c b (N a) a)) *
        (1 - (1 - e) pow n)`
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (MATCH_MP_TAC PROB_BERN_BIND_LOWER
        >> RW_TAC std_ss [INDEP_FN_PROB_WHILE_CUT, GSPECIFICATION]
        >> Suff
@@ -4942,7 +4942,7 @@ val PROBABLY_CONJ = store_thm
        >> RW_TAC std_ss [PROB_SPACE_BERN])
    >> MATCH_MP_TAC EQ_TRANS
    >> Q.EXISTS_TAC `prob bern {s | q s}`
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (POP_ASSUM MP_TAC
        >> RW_TAC std_ss [probably_def, probably_bern_def])
    >> HO_MATCH_MP_TAC PROB_BERN_UNIVERSAL
@@ -4963,7 +4963,7 @@ val PROBABLY_IMP = store_thm
        >> PROVE_TAC [EVENTS_COMPL_BERN, PROB_SPACE_BERN])
    >> MATCH_MP_TAC EQ_TRANS
    >> Q.EXISTS_TAC `prob bern {s | q s}`
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (POP_ASSUM MP_TAC
        >> RW_TAC std_ss [probably_def, probably_bern_def])
    >> HO_MATCH_MP_TAC PROB_BERN_UNIVERSAL
@@ -4992,7 +4992,7 @@ val PROBABLY_MP = store_thm
        >> PROVE_TAC [EVENTS_COMPL, PROB_SPACE_BERN])
    >> MATCH_MP_TAC EQ_TRANS
    >> Q.EXISTS_TAC `prob bern {s | p s}`
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (POP_ASSUM MP_TAC
        >> POP_ASSUM MP_TAC
        >> RW_TAC std_ss [probably_def, probably_bern_def])
@@ -5048,7 +5048,7 @@ val PROB_WHILE_HOARE = store_thm
    >> CONJ_TAC
    >- RW_TAC std_ss [PROB_LE_1, PROB_SPACE_BERN, INDEP_FN_FST_EVENTS,
                      INDEP_FN_PROB_WHILE_CUT]
-   >> Reverse (Cases_on `c a`)
+   >> reverse (Cases_on `c a`)
    >- (RW_TAC std_ss [PROB_WHILE_CUT_ID]
        >> Suff `{a | p a} o FST o UNIT a = (UNIV:(num->bool)->bool)`
        >- RW_TAC std_ss [PROB_BERN_UNIV, REAL_LE_REFL]
@@ -5069,7 +5069,7 @@ val PROB_WHILE_HOARE = store_thm
                          INDEP_FN_PROB_WHILE_CUT, IN_UNIV, IN_o, o_THM,
                          GSPECIFICATION])
    >> MATCH_MP_TAC PROB_BERN_BIND_LOWER
-   >> Reverse (RW_TAC std_ss [INDEP_FN_PROB_WHILE_CUT, GSPECIFICATION])
+   >> reverse (RW_TAC std_ss [INDEP_FN_PROB_WHILE_CUT, GSPECIFICATION])
    >- (RW_TAC std_ss [PROB_POSITIVE, PROB_SPACE_BERN, INDEP_FN_FST_EVENTS,
                       INDEP_FN_PROB_WHILE_CUT])
    >> Suff
@@ -5095,7 +5095,7 @@ val PROB_TERMINATES_MORGAN = store_thm
    >> MP_TAC (Q.SPECL [`c`, `b`] PROB_TERMINATES_HART)
    >> Cond >- RW_TAC std_ss []
    >> Rewr
-   >> Reverse (Cases_on `p <= 1`)
+   >> reverse (Cases_on `p <= 1`)
    >- (Suff `!a. ~c a`
        >- (RW_TAC std_ss [PROB_WHILE_CUT_ID, GUNIV, PROB_BERN_UNIV]
            >> Q.EXISTS_TAC `1`
@@ -5125,7 +5125,7 @@ val PROB_TERMINATES_MORGAN = store_thm
    >> MATCH_MP_TAC REAL_LE_TRANS
    >> Q.EXISTS_TAC
       `prob bern {s | ~c (FST (prob_while_cut c b (SUC (f a)) a s))}`
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (MATCH_MP_TAC PROB_INCREASING
        >> SIMP_TAC std_ss [GBIGUNION_IMAGE]
        >> Know `!f:(num->bool)->'a#(num->bool).
@@ -5141,7 +5141,7 @@ val PROB_TERMINATES_MORGAN = store_thm
         >> RW_TAC std_ss [PROB_SPACE_BERN, INDEP_FN_FST_EVENTS,
                           INDEP_FN_PROB_WHILE_CUT],
         PROVE_TAC []])
-   >> Reverse (Cases_on `c a`)
+   >> reverse (Cases_on `c a`)
    >- RW_TAC std_ss [PROB_WHILE_CUT_ID, UNIT_DEF, GUNIV, PROB_BERN_UNIV,
                      POW_LE_1]
    >> MATCH_MP_TAC REAL_LE_TRANS
@@ -5160,7 +5160,7 @@ val PROB_TERMINATES_MORGAN = store_thm
        CONV_RULE
        (DEPTH_CONV RIGHT_IMP_FORALL_CONV THENC HO_REWR_CONV SWAP_FORALL_THM))
    >> RW_TAC std_ss []
-   >> Reverse (Cases_on `c a`)
+   >> reverse (Cases_on `c a`)
    >- RW_TAC std_ss [PROB_WHILE_CUT_ID, UNIT_DEF, GUNIV, PROB_BERN_UNIV,
                      REAL_LE_REFL, POW_LE_1]
    >> Know `!f:(num->bool)->'a#(num->bool).
@@ -5190,7 +5190,7 @@ val PROB_TERMINATES_MORGAN = store_thm
        >> SET_EQ_TAC
        >> RW_TAC std_ss [GSPECIFICATION, IN_o, o_THM])
    >> MATCH_MP_TAC PROB_BERN_BIND_LOWER
-   >> Reverse (RW_TAC std_ss [INDEP_FN_PROB_WHILE_CUT, GSPECIFICATION])
+   >> reverse (RW_TAC std_ss [INDEP_FN_PROB_WHILE_CUT, GSPECIFICATION])
    >- (MATCH_MP_TAC PROB_POSITIVE
        >> RW_TAC std_ss [PROB_SPACE_BERN, INDEP_FN_FST_EVENTS,
                          INDEP_FN_PROB_WHILE_CUT])

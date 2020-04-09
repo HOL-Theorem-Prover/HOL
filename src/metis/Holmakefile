@@ -3,3 +3,7 @@ all: selftest.exe $(DEFAULT_TARGETS)
 
 selftest.exe: selftest.uo normalForms.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifeq ($(KERNELID),otknl)
+all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+endif

@@ -79,7 +79,7 @@ val _ = monadsyntax.enable_monad "Count";
                                         b' <- sqM b;
                                         n' <- halfM n;
                                         r <- expM b' n';
-                                        ifM (evenM n) (idM r) (mulM b r)
+                                        ifM (evenM n) (return r) (mulM b r)
                                       od
                                   od
 #  expM_value        |- !b n. valueOf (expM b n) = b ** n
@@ -367,7 +367,7 @@ val expM_def = tDefine "expM" `
                  b' <- sqM b;
                  n' <- halfM n;
                  r  <- expM b' n';
-                 ifM (evenM n) (idM r) (mulM b r);
+                 ifM (evenM n) (return r) (mulM b r);
               od
       od
 `(WF_REL_TAC `measure (\(b,n). n)` >> simp[]);
@@ -399,7 +399,7 @@ val expM_value = store_thm(
           stepsOf (halfM n) +
           stepsOf (expM (b * b) (HALF n)) +
           stepsOf (evenM n) +
-          if EVEN n then stepsOf (idM (b * b) ** (HALF n))
+          if EVEN n then stepsOf (return (b * b) ** (HALF n))
                     else stepsOf (mulM b (b * b) ** (HALF n))
    = size n + if n = 0 then 0
      else (size b) ** 2 +

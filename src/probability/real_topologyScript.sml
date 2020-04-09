@@ -1272,7 +1272,7 @@ val ABS_TRIANGLE_EQ = store_thm ("ABS_TRIANGLE_EQ",
       >- ( ASM_SIMP_TAC bool_ss [REAL_EQ_RADD, Once REAL_MUL_SYM] \\
            EQ_TAC >- PROVE_TAC [] \\
            REWRITE_TAC [REAL_EQ_LMUL] \\
-           Reverse STRIP_TAC >- ( MATCH_MP_TAC EQ_SYM >> ASM_REWRITE_TAC [] ) \\
+           reverse STRIP_TAC >- ( MATCH_MP_TAC EQ_SYM >> ASM_REWRITE_TAC [] ) \\
            REWRITE_TAC [REAL_EQ_RINV] \\
            FULL_SIMP_TAC bool_ss [REAL_ADD_RID] ) \\
       FULL_SIMP_TAC bool_ss [REAL_NEG_ADD] \\
@@ -5981,6 +5981,19 @@ val UNION_FROM_COUNT = store_thm
   ("UNION_FROM_COUNT", ``!n. (from n) UNION (count n) = UNIV``,
     RW_TAC std_ss [Once UNION_COMM, UNION_COUNT_FROM]);
 
+Theorem FROM_NOT_EMPTY :
+    !n. from n <> {}
+Proof
+    RW_TAC std_ss [GSYM MEMBER_NOT_EMPTY, from_def, GSPECIFICATION]
+ >> Q.EXISTS_TAC `n` >> REWRITE_TAC [LESS_EQ_REFL]
+QED
+
+Theorem COUNTABLE_FROM :
+    !n. COUNTABLE (from n)
+Proof
+    PROVE_TAC [COUNTABLE_NUM]
+QED
+
 val FROM_INTER_NUMSEG_GEN = store_thm ("FROM_INTER_NUMSEG_GEN",
  ``!k m n. (from k) INTER (m..n) = (if m < k then k..n else m..n)``,
   REPEAT GEN_TAC THEN COND_CASES_TAC THEN POP_ASSUM MP_TAC THEN
@@ -6364,7 +6377,7 @@ val LIM_MIN = store_thm ("LIM_MIN",
   REWRITE_TAC[AND_IMP_INTRO] THEN
   DISCH_THEN(MP_TAC o MATCH_MP LIM_NEG o MATCH_MP LIM_MAX) THEN
   MATCH_MP_TAC EQ_IMPLIES THEN AP_THM_TAC THEN
-  Reverse BINOP_TAC >- PROVE_TAC [GSYM REAL_MIN_MAX, REAL_MIN_ACI] THEN
+  reverse BINOP_TAC >- PROVE_TAC [GSYM REAL_MIN_MAX, REAL_MIN_ACI] THEN
   SIMP_TAC std_ss [FUN_EQ_THM] THEN
   GEN_TAC >> PROVE_TAC [GSYM REAL_MIN_MAX, REAL_MIN_ACI]);
 
@@ -21040,7 +21053,7 @@ Proof
   REWRITE_TAC[MESON[CBALL_SING] ``{a} = cball(a:real,&0)``] THEN
   ASM_REWRITE_TAC[SETDIST_BALLS, REAL_LT_REFL] THEN
   X_GEN_TAC ``c:real`` THEN REWRITE_TAC[IN_CBALL] THEN
-  Reverse EQ_TAC
+  reverse EQ_TAC
   >- (RW_TAC real_ss [dist, max_def] \\
      `~(r < 0)` by PROVE_TAC [real_lte] >> rw [] \\
       REAL_ASM_ARITH_TAC) THEN

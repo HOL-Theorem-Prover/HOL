@@ -96,13 +96,14 @@ val mk_minimum = prove(
   dsimp[SUM_IMAGE_THM, DELETE_NON_ELEMENT_RWT] >>
   rpt strip_tac >> res_tac >> simp[]);
 
-val mk_onto = prove(
-  ``∀n. ∃s. FINITE s ∧ mk s = n``,
+Triviality mk_onto:
+  ∀n. ∃s. FINITE s ∧ mk s = n
+Proof
   completeInduct_on `n` >>
   qspec_then `n` strip_assume_tac bound_exists >>
   qabbrev_tac `m = LEAST m. n < 2 EXP m` >>
   Cases_on `m = 0`
-  >- (fs[] >> `n = 0` by simp[] >> qexists_tac `∅` >>
+  >- (Q.UNABBREV_TAC ‘m’ >> fs[] >> `n = 0` by simp[] >> qexists_tac `∅` >>
       simp[SUM_IMAGE_THM]) >>
   `m - 1 < m` by simp[] >>
   `2 ** (m - 1) ≤ n` by simp[] >>
@@ -118,7 +119,8 @@ val mk_onto = prove(
       `2 * M = 2 ** m` suffices_by simp[] >>
       simp[Abbr`M`]  >> fs[GSYM arithmeticTheory.EXP] >>
       `SUC (m - 1) = m` by simp[] >> lfs[]) >>
-  simp[DELETE_NON_ELEMENT_RWT]);
+  simp[DELETE_NON_ELEMENT_RWT]
+QED
 
 val split_sets = prove(
   ``s1 = (s1 ∩ s2) ∪ (s1 DIFF s2)``,

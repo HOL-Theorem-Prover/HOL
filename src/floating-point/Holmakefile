@@ -23,7 +23,7 @@ fp64Syntax.uo: fp-functor.uo fp64Syntax.sml
 
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
-all: $(ARTFILES)
+all: $(ARTFILES) hol4-floating-point-unint.art
 
 hol4-floating-point-unint.art: hol4-floating-point-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<

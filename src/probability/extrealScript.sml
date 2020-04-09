@@ -9,7 +9,7 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open metisLib combinTheory pred_setTheory res_quanTools pairTheory
+open metisLib combinTheory pred_setTheory res_quanTools pairTheory RealArith
      prim_recTheory arithmeticTheory realTheory realLib real_sigmaTheory
      seqTheory limTheory Diff transcTheory jrhUtils pred_setLib tautLib;
 
@@ -18,6 +18,7 @@ open hurdUtils util_probTheory cardinalTheory;
 val _ = new_theory "extreal";
 
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
+val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
 fun METIS ths tm = prove(tm, METIS_TAC ths);
 val set_ss = std_ss ++ PRED_SET_ss;
 
@@ -177,13 +178,13 @@ Proof
     RW_TAC std_ss [extreal_of_num_def]
 QED
 
-Theorem extreal_not_infty :
+Theorem extreal_not_infty[simp] :
     !x. (Normal x <> NegInf) /\ (Normal x <> PosInf)
 Proof
     RW_TAC std_ss []
 QED
 
-Theorem num_not_infty :
+Theorem num_not_infty[simp] :
     !n. (&n <> NegInf) /\ (&n <> PosInf)
 Proof
     RW_TAC std_ss [extreal_of_num_def]
@@ -272,9 +273,31 @@ val extreal_logr_def = Define
 val extreal_lg_def = Define
    `extreal_lg x = extreal_logr 2 x`;
 
+(* old definition: (`ln 0` is not defined)
 val extreal_ln_def = Define
   `(extreal_ln (Normal x) = Normal (ln x)) /\
    (extreal_ln PosInf = PosInf)`;
+
+   new definition: (ln 0 = NegInf)
+ *)
+local
+  val thm = Q.prove (
+     `?f. (!x. 0 < x ==> f (Normal x) = Normal (ln x)) /\
+          (f (Normal 0) = NegInf) /\
+          (f PosInf = PosInf)`,
+      Q.EXISTS_TAC `\y. if (y = Normal 0) then NegInf
+                        else if (y = PosInf) then PosInf
+                        else if (?r. (y = Normal r) /\ r <> 0) then Normal (ln (real y))
+                        else ARB` \\
+      RW_TAC std_ss [extreal_not_infty, real_normal, REAL_LT_REFL]);
+in
+   (* |- (!x. 0 < x ==> extreal_ln (Normal x) = Normal (ln x)) /\
+         extreal_ln (Normal 0) = NegInf /\
+         extreal_ln PosInf = PosInf
+    *)
+   val extreal_ln_def = new_specification
+     ("extreal_ln_def", ["extreal_ln"], thm);
+end;
 
 val extreal_exp_def = Define
   `(extreal_exp (Normal x) = Normal (exp x)) /\
@@ -338,32 +361,36 @@ val _ = TeX_notation {hol = UnicodeChars.sup_4, TeX = ("\\ensuremath{^4}", 1)};
 (*     Properties of Arithmetic Operations       *)
 (* ********************************************* *)
 
-val mul_rzero = store_thm
-  ("mul_rzero",
-   ``!x. x * 0 = 0``,
-  Cases
-  >> RW_TAC real_ss [extreal_mul_def,extreal_of_num_def,REAL_MUL_RZERO]);
+Theorem mul_rzero[simp] :
+    !x :extreal. x * 0 = 0
+Proof
+    Cases
+ >> RW_TAC real_ss [extreal_mul_def,extreal_of_num_def,REAL_MUL_RZERO]
+QED
 
-val mul_lzero = store_thm
-  ("mul_lzero",
-   ``!x. 0 * x = 0``,
-  Cases
-  >> RW_TAC real_ss [extreal_mul_def, extreal_of_num_def, REAL_MUL_LZERO]);
+Theorem mul_lzero[simp] :
+    !x :extreal. 0 * x = 0
+Proof
+    Cases
+ >> RW_TAC real_ss [extreal_mul_def, extreal_of_num_def, REAL_MUL_LZERO]
+QED
 
-val mul_rone = store_thm
-  ("mul_rone",
-   ``!x. x * 1 = x``,
-  Cases
-  >> RW_TAC real_ss [extreal_mul_def, extreal_of_num_def, REAL_MUL_RID]);
+Theorem mul_rone[simp] :
+    !x :extreal. x * 1 = x
+Proof
+    Cases
+ >> RW_TAC real_ss [extreal_mul_def, extreal_of_num_def, REAL_MUL_RID]
+QED
 
-val mul_lone = store_thm
-  ("mul_lone",
-   ``!x. 1 * x = x``,
-  Cases
-  >> RW_TAC real_ss [extreal_mul_def, extreal_of_num_def, REAL_MUL_LID]);
+Theorem mul_lone[simp] :
+    !x :extreal. 1 * x = x
+Proof
+    Cases
+ >> RW_TAC real_ss [extreal_mul_def, extreal_of_num_def, REAL_MUL_LID]
+QED
 
-Theorem entire : (* was: mul2_zero *)
-    !x y. (x * y = 0) <=> (x = 0) \/ (y = 0)
+Theorem entire[simp] : (* was: mul2_zero *)
+    !x y :extreal. (x * y = 0) <=> (x = 0) \/ (y = 0)
 Proof
     rpt Cases
  >> RW_TAC std_ss [extreal_mul_def, num_not_infty, extreal_of_num_def,
@@ -379,21 +406,29 @@ val extreal_not_lt = store_thm ("extreal_not_lt",
   REWRITE_TAC [TAUT `(~a <=> b) <=> (a <=> ~b)`] THEN
   SIMP_TAC std_ss [extreal_lt_def]);
 
-val extreal_lt_eq = store_thm
-  ("extreal_lt_eq", ``!x y. Normal x < Normal y <=> x < y``,
-    METIS_TAC [extreal_lt_def, extreal_le_def, real_lt]);
+Theorem extreal_lt_eq :
+    !x y. Normal x < Normal y <=> x < y
+Proof
+    METIS_TAC [extreal_lt_def, extreal_le_def, real_lt]
+QED
 
-val extreal_le_eq = store_thm
-  ("extreal_le_eq", ``!x y. Normal x <= Normal y <=> x <= y``,
-    METIS_TAC [extreal_le_def]);
+Theorem extreal_le_eq :
+    !x y. Normal x <= Normal y <=> x <= y
+Proof
+    METIS_TAC [extreal_le_def]
+QED
 
-val le_refl = store_thm
-  ("le_refl", ``!x:extreal. x <= x``,
-    Cases >> RW_TAC std_ss [extreal_le_def, REAL_LE_REFL]);
+Theorem le_refl[simp] :
+    !x:extreal. x <= x
+Proof
+    Cases >> RW_TAC std_ss [extreal_le_def, REAL_LE_REFL]
+QED
 
-val lt_refl = store_thm
-  ("lt_refl", ``!x:extreal. ~(x < x)``,
-    RW_TAC std_ss [extreal_lt_def, le_refl]);
+Theorem lt_refl[simp] :
+    !x:extreal. ~(x < x)
+Proof
+    RW_TAC std_ss [extreal_lt_def, le_refl]
+QED
 
 val le_infty = store_thm
   ("le_infty", ``(!x. NegInf <= x /\ x <= PosInf) /\
@@ -494,32 +529,32 @@ val lt_total = store_thm
  >> RW_TAC std_ss [extreal_le_def, extreal_lt_def, GSYM real_lt, REAL_LT_TOTAL]);
 
 val le_01 = store_thm
-  ("le_01", ``0 <= 1``,
+  ("le_01[simp]", ``0 <= 1``,
     RW_TAC std_ss [extreal_of_num_def, extreal_le_def, REAL_LE_01]);
 
 val lt_01 = store_thm
-  ("lt_01", ``0 < 1``,
+  ("lt_01[simp]", ``0 < 1``,
     METIS_TAC [extreal_of_num_def, extreal_lt_def, extreal_le_def,
                REAL_LT_01, real_lt]);
 
 val ne_01 = store_thm
-  ("ne_01", ``0 <> 1``,
+  ("ne_01[simp]", ``0 <> 1``,
     RW_TAC std_ss [extreal_of_num_def, REAL_10]);
 
 val le_02 = store_thm
-  ("le_02", ``0 <= 2``,
+  ("le_02[simp]", ``0 <= 2``,
     RW_TAC real_ss [extreal_of_num_def, extreal_le_def]);
 
 val lt_02 = store_thm
-  ("lt_02", ``0 < 2``,
+  ("lt_02[simp]", ``0 < 2``,
     RW_TAC real_ss [extreal_of_num_def, extreal_lt_def, extreal_le_def]);
 
 val lt_10 = store_thm
-  ("lt_10", ``-1 < 0``,
+  ("lt_10[simp]", ``-1 < 0``,
     RW_TAC real_ss [extreal_of_num_def, extreal_lt_def, extreal_le_def, extreal_ainv_def]);
 
 val ne_02 = store_thm
-  ("ne_02", ``0 <> 2``,
+  ("ne_02[simp]", ``0 <> 2``,
     RW_TAC real_ss [extreal_of_num_def]);
 
 val le_num = store_thm
@@ -527,7 +562,7 @@ val le_num = store_thm
     RW_TAC real_ss [extreal_of_num_def, extreal_le_def]);
 
 val num_lt_infty = store_thm
-  ("num_lt_infty", ``!n:num. &n < PosInf``,
+  ("num_lt_infty[simp]", ``!n:num. &n < PosInf``,
     RW_TAC std_ss [extreal_of_num_def, lt_infty]);
 
 val lt_le = store_thm
@@ -786,9 +821,18 @@ val abs_neg = store_thm
  >- fs [extreal_of_num_def, le_infty]
  >> fs [extreal_abs_def, extreal_of_num_def, extreal_le_eq, abs, extreal_ainv_def]);
 
-val abs_refl = store_thm
-  ("abs_refl", ``!x :extreal. (abs x = x) <=> (0 <= x)``,
-  Cases >> RW_TAC std_ss [extreal_abs_def,le_infty,extreal_of_num_def,extreal_le_def,ABS_REFL]);
+Theorem abs_refl :
+    !x :extreal. (abs x = x) <=> (0 <= x)
+Proof
+    Cases
+ >> RW_TAC std_ss [extreal_abs_def,le_infty,extreal_of_num_def,extreal_le_def,ABS_REFL]
+QED
+
+Theorem abs_abs[simp]:
+    !x :extreal. abs(abs(x)) = abs(x)
+Proof
+    RW_TAC std_ss [abs_refl, abs_pos]
+QED
 
 Theorem let_total :
     !x y :extreal. x <= y \/ y < x
@@ -822,6 +866,19 @@ val abs_bounds_lt = store_thm
   >> RW_TAC std_ss [extreal_abs_def,extreal_lt_eq,
                     lt_infty,le_infty,extreal_ainv_def]
   >> REAL_ARITH_TAC);
+
+Theorem lt_abs_bounds :
+   !k x :extreal. k < abs x <=> x < -k \/ k < x
+Proof
+    RW_TAC std_ss [extreal_lt_def]
+ >> PROVE_TAC [abs_bounds]
+QED
+
+Theorem le_abs_bounds :
+   !k x :extreal. k <= abs x <=> x <= -k \/ k <= x
+Proof
+   METIS_TAC [extreal_lt_def, abs_bounds_lt]
+QED
 
 val abs_not_infty = store_thm
   ("abs_not_infty", ``!x. x <> PosInf /\ x <> NegInf ==> abs x <> PosInf /\ abs x <> NegInf``,
@@ -899,13 +956,17 @@ val add_not_infty = store_thm
           (x <> PosInf /\ y <> PosInf ==> x + y <> PosInf)``,
     NTAC 2 Cases >> RW_TAC std_ss [extreal_add_def]);
 
-val add_rzero = store_thm
-  ("add_rzero", ``!x. x + 0 = x``,
-    Cases >> METIS_TAC [extreal_add_def, extreal_of_num_def, REAL_ADD_RID]);
+Theorem add_rzero[simp] :
+    !x :extreal. x + 0 = x
+Proof
+    Cases >> METIS_TAC [extreal_add_def, extreal_of_num_def, REAL_ADD_RID]
+QED
 
-val add_lzero = store_thm
-  ("add_lzero", ``!x. 0 + x = x``,
-    Cases >> METIS_TAC [extreal_add_def, extreal_of_num_def, REAL_ADD_LID]);
+Theorem add_lzero[simp] :
+    !x :extreal. 0 + x = x
+Proof
+    Cases >> METIS_TAC [extreal_add_def, extreal_of_num_def, REAL_ADD_LID]
+QED
 
 (* added one ancedent in the first part due to new definition of ``extreal_add`` *)
 val add_infty = store_thm
@@ -947,14 +1008,18 @@ val lt_addr_imp = save_thm
 (*   Substraction    *)
 (*********************)
 
-val sub_rzero = store_thm
-  ("sub_rzero", ``!x. x - 0 = x``,
-    Cases >> METIS_TAC [extreal_sub_def, extreal_of_num_def, REAL_SUB_RZERO]);
+Theorem sub_rzero[simp] :
+    !x :extreal. x - 0 = x
+Proof
+    Cases >> METIS_TAC [extreal_sub_def, extreal_of_num_def, REAL_SUB_RZERO]
+QED
 
-val sub_lzero = store_thm
-  ("sub_lzero", ``!x. 0 - x = -x``,
+Theorem sub_lzero[simp] :
+    !x :extreal. 0 - x = -x
+Proof
     Cases
- >> METIS_TAC [extreal_ainv_def, extreal_sub_def, extreal_of_num_def, REAL_SUB_LZERO]);
+ >> METIS_TAC [extreal_ainv_def, extreal_sub_def, extreal_of_num_def, REAL_SUB_LZERO]
+QED
 
 val sub_le_imp = store_thm
   ("sub_le_imp",
@@ -1002,7 +1067,7 @@ Theorem sub_lt_eq :
     !x y z. x <> NegInf /\ x <> PosInf ==> (y - x < z <=> y < z + x)
 Proof
     rpt STRIP_TAC
- >> Reverse EQ_TAC >- PROVE_TAC [sub_lt_imp]
+ >> reverse EQ_TAC >- PROVE_TAC [sub_lt_imp]
  >> Cases_on `x` >> Cases_on `y` >> Cases_on `z`
  >> RW_TAC std_ss [extreal_lt_def, extreal_le_def, extreal_add_def, extreal_sub_def]
  >> METIS_TAC [real_lt, REAL_LT_SUB_RADD]
@@ -1132,28 +1197,38 @@ val extreal_sub_add = store_thm
     rpt Cases
  >> RW_TAC std_ss [extreal_ainv_def, extreal_sub_def, extreal_add_def, real_sub]);
 
-val sub_0 = store_thm
-  ("sub_0", ``!x y. (x - y = 0) ==> (x = y)``,
+Theorem sub_0 :
+    !x y :extreal. (x - y = 0) ==> (x = y)
+Proof
     rpt Cases
  >> RW_TAC std_ss [extreal_sub_def, num_not_infty, extreal_of_num_def, extreal_11,
-                   REAL_SUB_0]);
+                   REAL_SUB_0]
+QED
 
-val neg_neg = store_thm
-  ("neg_neg", ``!x. --x = x``,
-    Cases >> RW_TAC std_ss [extreal_ainv_def, REAL_NEG_NEG]);
+Theorem neg_neg[simp] :
+    !x. --x = x
+Proof
+    Cases >> RW_TAC std_ss [extreal_ainv_def, REAL_NEG_NEG]
+QED
 
-val neg_0 = store_thm
-  ("neg_0", ``-0 = 0``,
-    RW_TAC real_ss [extreal_ainv_def, extreal_of_num_def]);
+Theorem neg_0[simp] :
+    -0 = 0
+Proof
+    RW_TAC real_ss [extreal_ainv_def, extreal_of_num_def]
+QED
 
-val neg_eq0 = store_thm
-  ("neg_eq0", ``!x. (-x = 0) <=> (x = 0)``,
+Theorem neg_eq0[simp] :
+    !x :extreal. (-x = 0) <=> (x = 0)
+Proof
     Cases
- >> RW_TAC std_ss [extreal_ainv_def, extreal_of_num_def, REAL_NEG_EQ0]);
+ >> RW_TAC std_ss [extreal_ainv_def, extreal_of_num_def, REAL_NEG_EQ0]
+QED
 
-val eq_neg = store_thm
-  ("eq_neg", ``!x y. (-x = -y) <=> (x = y)``,
-    NTAC 2 Cases >> RW_TAC std_ss [extreal_ainv_def, REAL_EQ_NEG]);
+Theorem eq_neg[simp] :
+    !x y :extreal. (-x = -y) <=> (x = y)
+Proof
+    NTAC 2 Cases >> RW_TAC std_ss [extreal_ainv_def, REAL_EQ_NEG]
+QED
 
 val neg_minus1 = store_thm
   ("neg_minus1", ``!x. -x = -1 * x``,
@@ -1284,7 +1359,7 @@ Theorem abs_eq_0[simp] :
     !x. (abs x = 0) <=> (x = 0)
 Proof
     GEN_TAC
- >> Reverse EQ_TAC >- rw [abs_0]
+ >> reverse EQ_TAC >- rw [abs_0]
  >> `0 <= abs x` by PROVE_TAC [abs_pos]
  >> rw [Once (GSYM le_antisym)]
  >> fs [REWRITE_RULE [neg_0, le_antisym] (Q.SPECL [`x`, `0`] abs_bounds)]
@@ -1303,6 +1378,24 @@ Proof
  >> STRIP_ASSUME_TAC (REWRITE_RULE [le_lt] (Q.SPEC `x` abs_pos))
  >- fs [lt_le]
  >> FULL_SIMP_TAC std_ss [lt_refl]
+QED
+
+Theorem abs_triangle :
+    !x y. x <> PosInf /\ x <> NegInf /\ y <> PosInf /\ y <> NegInf ==>
+          abs(x + y) <= abs(x) + abs(y)
+Proof
+    RW_TAC std_ss []
+ >> Cases_on `x` >> Cases_on `y`
+ >> rw [extreal_abs_def, extreal_add_def, extreal_le_eq, ABS_TRIANGLE]
+QED
+
+Theorem abs_triangle_sub :
+    !x y. x <> PosInf /\ x <> NegInf /\ y <> PosInf /\ y <> NegInf ==>
+          abs(x) <= abs(y) + abs(x - y)
+Proof
+    RW_TAC std_ss []
+ >> Cases_on `x` >> Cases_on `y`
+ >> rw [extreal_abs_def, extreal_add_def, extreal_sub_def, extreal_le_eq, ABS_TRIANGLE_SUB]
 QED
 
 (*********************)
@@ -1453,25 +1546,18 @@ val add_rdistrib_normal = store_thm
 val add_rdistrib_normal2 = save_thm (* for backward compatibility *)
   ("add_rdistrib_normal2", add_rdistrib_normal);
 
-(* more antecedents added *)
-val add_ldistrib = store_thm
-  ("add_ldistrib",
-  ``!x y z. (0 <= y /\ 0 <= z) \/
-            (y <= 0 /\ z <= 0) \/
-            (y <> NegInf /\ z <> NegInf /\ y <= 0 /\ z <= 0) \/
-            (y <> PosInf /\ z <> PosInf /\ 0 <= y /\ 0 <= z)
-        ==> (x * (y + z) = x * y + x * z)``,
-    METIS_TAC [add_ldistrib_pos, add_ldistrib_neg_neg, add_ldistrib_pos_pos, add_ldistrib_neg]);
+Theorem add_ldistrib :
+    !x y z. (0 <= y /\ 0 <= z) \/ (y <= 0 /\ z <= 0) ==> (x * (y + z) = x * y + x * z)
+Proof
+    METIS_TAC [add_ldistrib_pos, add_ldistrib_neg_neg,
+               add_ldistrib_pos_pos, add_ldistrib_neg]
+QED
 
-(* more antecedents added *)
-val add_rdistrib = store_thm
-  ("add_rdistrib",
-  ``!x y z. (0 <= y /\ 0 <= z) \/
-            (y <= 0 /\ z <= 0) \/
-            (y <> NegInf /\ z <> NegInf /\ y <= 0 /\ z <= 0) \/
-            (y <> PosInf /\ z <> PosInf /\ 0 <= y /\ 0 <= z)
-        ==> ((y + z) * x = y * x + z * x)``,
-    METIS_TAC [add_ldistrib, mul_comm]);
+Theorem add_rdistrib :
+    !x y z. (0 <= y /\ 0 <= z) \/ (y <= 0 /\ z <= 0) ==> ((y + z) * x = y * x + z * x)
+Proof
+    METIS_TAC [add_ldistrib, mul_comm]
+QED
 
 val mul_lneg = store_thm
   ("mul_lneg", ``!x y. -x * y = -(x * y)``,
@@ -1544,7 +1630,7 @@ Proof
     rpt STRIP_TAC
  >> Cases_on `x` >> Cases_on `y`
  >> RW_TAC std_ss [extreal_abs_def, extreal_mul_def]
- >> fs [abs_0, ABS_NZ]
+ >> fs []
  >> REWRITE_TAC [ABS_MUL]
 QED
 
@@ -1566,9 +1652,11 @@ val normal_inv_eq = store_thm
   ("normal_inv_eq", ``!x. x <> 0 ==> (Normal (inv x) = inv (Normal x))``,
     METIS_TAC [extreal_inv_def]);
 
-val inv_one = store_thm
-  ("inv_one", ``inv 1 = 1``,
-    RW_TAC std_ss [extreal_inv_def, extreal_of_num_def, REAL_10, REAL_INV1]);
+Theorem inv_one[simp] :
+    extreal_inv 1 = 1
+Proof
+    RW_TAC std_ss [extreal_inv_def, extreal_of_num_def, REAL_10, REAL_INV1]
+QED
 
 val inv_1over = store_thm
   ("inv_1over", ``!x. x <> 0 ==> (inv x = 1 / x)``,
@@ -1576,10 +1664,12 @@ val inv_1over = store_thm
  >> RW_TAC real_ss [extreal_inv_def, extreal_div_def, extreal_mul_def,
                     extreal_of_num_def, REAL_10, REAL_INV1]);
 
-val div_one = store_thm
-  ("div_one", ``!x. x / 1 = x``,
+Theorem div_one[simp] :
+    !x :extreal. x / 1 = x
+Proof
     RW_TAC real_ss [extreal_div_def, extreal_of_num_def, extreal_inv_def]
- >> REWRITE_TAC [REAL_INV1, GSYM extreal_of_num_def, mul_rone])
+ >> REWRITE_TAC [REAL_INV1, GSYM extreal_of_num_def, mul_rone]
+QED
 
 val div_refl = store_thm
   ("div_refl",
@@ -1739,7 +1829,7 @@ val infty_div = store_thm
  >> RW_TAC real_ss [extreal_div_def, extreal_inv_def, GSYM extreal_of_num_def,
                     extreal_mul_def, mul_rzero, REAL_INV_POS, REAL_INV_EQ_0]);
 
-val zero_div = store_thm
+val zero_div = store_thm (* cf. REAL_DIV_LZERO *)
   ("zero_div", ``!x :extreal. x <> 0 ==> (0 / x = 0)``,
     Cases
  >> RW_TAC std_ss [extreal_div_def, mul_lzero, extreal_of_num_def]);
@@ -1772,25 +1862,27 @@ val div_eq_mul_linv = store_thm
  >> `y * inv y = 1` by PROVE_TAC [mul_comm, mul_linv_pos]
  >> ASM_REWRITE_TAC [mul_rone]);
 
-val inv_lt_antimono = store_thm (* new *)
-  ("inv_lt_antimono", ``!x y :extreal. 0 < x /\ 0 < y ==> (inv x < inv y <=> y < x)``,
-    rpt STRIP_TAC
+Theorem inv_lt_antimono: (* new *)
+  !x y :extreal. 0 < x /\ 0 < y ==> (inv x < inv y <=> y < x)
+Proof
+    rpt strip_tac
  >> `x <> 0 /\ y <> 0` by PROVE_TAC [lt_le]
- >> Cases_on `x` >> fs [lt_infty, extreal_inv_def, extreal_of_num_def, lt_refl, extreal_11,
-                        extreal_lt_eq]
+ >> Cases_on `x`
+ >> fs [lt_infty, extreal_inv_def, extreal_of_num_def, lt_refl, extreal_11,
+        extreal_lt_eq]
  >- (fs [GSYM extreal_of_num_def] \\
-     Reverse EQ_TAC >> DISCH_TAC >| (* 2 subgoals *)
+     reverse EQ_TAC >> DISCH_TAC >| (* 2 subgoals *)
      [ (* goal 1 (of 2) *)
        MATCH_MP_TAC inv_pos' >> art [lt_infty],
        (* goal 2 (of 2) *)
        REWRITE_TAC [GSYM lt_infty] \\
        CCONTR_TAC >> fs [extreal_inv_def] \\
        fs [GSYM extreal_of_num_def, lt_refl] ])
- >> Cases_on `y` >> fs [lt_infty, extreal_inv_def, extreal_of_num_def, lt_refl, extreal_11,
-                        extreal_lt_eq]
- >- (REWRITE_TAC [real_lt] >> MATCH_MP_TAC REAL_LT_IMP_LE \\
-     MATCH_MP_TAC REAL_INV_POS >> art [])
- >> MATCH_MP_TAC REAL_INV_LT_ANTIMONO >> art []);
+ >> Cases_on `y`
+ >> fs [lt_infty, extreal_inv_def, extreal_of_num_def, lt_refl, extreal_11,
+        extreal_lt_eq]
+ >> ASM_REWRITE_TAC [real_lt, REAL_LE_LT]
+QED
 
 Theorem inv_inj: (* new *)
   !x y :extreal. 0 < x /\ 0 < y ==> ((inv x = inv y) <=> (x = y))
@@ -1838,6 +1930,83 @@ Proof
  >> RW_TAC real_ss [REAL_MUL_LINV, GSYM extreal_of_num_def, mul_rone]
 QED
 
+Theorem mul_div_refl :
+    !(x :extreal) r. x <> PosInf /\ x <> NegInf /\ 0 < r ==>
+                    (x = x * (Normal r) / (Normal r))
+Proof
+    rpt STRIP_TAC
+ >> Know `x * (Normal r) / (Normal r) = (inv (Normal r)) * (x * (Normal r))`
+ >- (MATCH_MP_TAC div_eq_mul_linv \\
+    `?a. x = Normal a` by METIS_TAC [extreal_cases] \\
+     RW_TAC std_ss [extreal_not_infty, extreal_mul_def, extreal_of_num_def,
+                    extreal_lt_eq]) >> Rewr'
+ >> ONCE_REWRITE_TAC [mul_comm]
+ >> ONCE_REWRITE_TAC [GSYM mul_assoc]
+ >> `Normal r * inv (Normal r) = inv (Normal r) * Normal r`
+      by PROVE_TAC [mul_comm] >> POP_ORW
+ >> Know `inv (Normal r) * Normal r = 1`
+ >- (MATCH_MP_TAC mul_linv_pos \\
+     RW_TAC std_ss [extreal_of_num_def, extreal_lt_eq, extreal_not_infty])
+ >> Rewr' >> REWRITE_TAC [mul_rone]
+QED
+
+Theorem ldiv_le_imp :
+    !x y (z :extreal). 0 < z /\ z <> PosInf /\ x <= y ==> x / z <= y / z
+Proof
+    RW_TAC std_ss []
+ >> `z <> NegInf` by METIS_TAC [lt_imp_le, pos_not_neginf]
+ >> `?r. z = Normal r` by METIS_TAC [extreal_cases]
+ >> `0 < r` by METIS_TAC [extreal_of_num_def, extreal_lt_eq]
+ >> `r <> 0` by METIS_TAC [REAL_LT_LE]
+ >> Cases_on `x` >> Cases_on `y`
+ >> fs [le_infty, extreal_div_eq, infty_div, le_refl, extreal_le_eq]
+ >> fs [REAL_LE_LT] >> DISJ1_TAC >> rw [REAL_LT_RDIV]
+QED
+
+val extreal_distinct = DB.fetch "extreal" "extreal_distinct";
+
+(* cf. REAL_EQ_MUL_LCANCEL *)
+Theorem mul_lcancel :
+    !x y (z :extreal). x <> PosInf /\ x <> NegInf ==>
+                     ((x * y = x * z) <=> (x = 0) \/ (y = z))
+Proof
+    rpt STRIP_TAC
+ >> `?r. x = Normal r` by METIS_TAC [extreal_cases]
+ >> POP_ORW >> KILL_TAC
+ >> Cases_on `y` >> Cases_on `z`
+ >> RW_TAC std_ss [extreal_mul_def, extreal_not_infty, extreal_of_num_def,
+                   extreal_11, extreal_distinct,
+                   REAL_MUL_LZERO, REAL_MUL_RZERO]
+ >> REWRITE_TAC [REAL_EQ_MUL_LCANCEL]
+QED
+
+Theorem inv_mul :
+    !x y. x <> 0 /\ y <> 0 ==> (inv (x * y) = inv x * inv y)
+Proof
+    rpt STRIP_TAC
+ >> Cases_on `x` >> Cases_on `y`
+ >> FULL_SIMP_TAC real_ss [extreal_mul_def, extreal_inv_def, extreal_not_infty,
+                           extreal_of_num_def, extreal_11]
+ >> TRY (Cases_on `0 < r` >> rw [extreal_inv_def])
+ >> `r * r' <> 0` by METIS_TAC [REAL_ENTIRE]
+ >> ASM_SIMP_TAC std_ss [extreal_inv_eq, extreal_11]
+ >> MATCH_MP_TAC REAL_INV_MUL >> art []
+QED
+
+Theorem abs_div :
+    !x y :extreal. x <> PosInf /\ x <> NegInf /\ y <> 0 ==>
+                  (abs (x / y) = abs x / abs y)
+Proof
+    rpt STRIP_TAC
+ >> Cases_on `x` >> Cases_on `y`
+ >> FULL_SIMP_TAC real_ss [extreal_div_def, extreal_inv_def, extreal_not_infty,
+                           extreal_of_num_def, extreal_11, extreal_abs_def,
+                           extreal_mul_def]
+ >> rename1 `s <> 0`
+ >> `abs s <> 0` by PROVE_TAC [ABS_ZERO]
+ >> ASM_SIMP_TAC real_ss [extreal_div_eq, ABS_MUL, extreal_11, real_div, ABS_INV]
+QED
+
 (***************************)
 (*         x pow n         *)
 (***************************)
@@ -1864,10 +2033,12 @@ val pow_2 = store_thm
   ("pow_2", ``!x. x pow 2 = x * x``,
     Cases >> RW_TAC std_ss [extreal_pow_def, extreal_mul_def, POW_2]);
 
-val pow_zero = store_thm
-  ("pow_zero[simp]", ``!n x. (x pow (SUC n) = 0) = (x = 0)``,
+Theorem pow_zero[simp] :
+    !n x :extreal. (x pow (SUC n) = 0) <=> (x = 0)
+Proof
     STRIP_TAC >> Cases
- >> RW_TAC std_ss [extreal_pow_def, extreal_of_num_def, POW_ZERO_EQ]);
+ >> RW_TAC std_ss [extreal_pow_def, extreal_of_num_def, POW_ZERO_EQ]
+QED
 
 val pow_zero_imp = store_thm
   ("pow_zero_imp[simp]", ``!n x. (x pow n = 0) ==> (x = 0)``,
@@ -1915,6 +2086,18 @@ val pow_lt2 = store_thm
     STRIP_TAC >> NTAC 2 Cases
   >> RW_TAC std_ss [extreal_pow_def,extreal_of_num_def,extreal_le_def,REAL_POW_LT2,
                     lt_infty,le_infty,extreal_not_infty,extreal_lt_eq]);
+
+Theorem pow_le_full :
+    !n x y :extreal. n <> 0 /\ 0 <= x /\ 0 <= y ==>
+                    (x <= y <=> x pow n <= y pow n)
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC >> DISCH_TAC
+ >- (MATCH_MP_TAC pow_le >> art [])
+ >> SPOSE_NOT_THEN (ASSUME_TAC o (REWRITE_RULE [GSYM extreal_lt_def]))
+ >> `y pow n < x pow n` by PROVE_TAC [pow_lt2]
+ >> METIS_TAC [let_antisym]
+QED
 
 val pow_le_mono = store_thm
   ("pow_le_mono", ``!x n m. 1 <= x /\ n <= m ==> x pow n <= x pow m``,
@@ -2028,6 +2211,33 @@ val pow_not_infty = store_thm
     Cases
  >> METIS_TAC [extreal_pow_def, extreal_not_infty, extreal_cases]);
 
+Theorem pow_inv : (* cf. REAL_POW_INV *)
+    !n y. y <> 0 ==> inv (y pow n) = (inv y) pow n
+Proof
+    rpt STRIP_TAC
+ >> Cases_on `n = 0` >- rw [pow_0, inv_one]
+ >> `0 < n` by RW_TAC arith_ss []
+ >> `0 pow n = (0 :real)` by (Cases_on `n` >> rw [POW_0])
+ >> Cases_on `y` >> RW_TAC std_ss [extreal_pow_def, extreal_inv_def]
+ >> `r <> 0` by METIS_TAC [extreal_of_num_def, extreal_11]
+ >> `r pow n <> 0` by PROVE_TAC [POW_NZ]
+ >> ASM_SIMP_TAC std_ss [extreal_inv_eq, extreal_pow_def, extreal_11]
+ >> REWRITE_TAC [REAL_POW_INV]
+QED
+
+Theorem pow_div : (* cf. REAL_POW_DIV *)
+    !n x y. x <> PosInf /\ x <> NegInf /\ 0 < y ==>
+           ((x / y) pow n = x pow n / y pow n)
+Proof
+    rpt STRIP_TAC
+ >> `x pow n <> PosInf /\ x pow n <> NegInf` by METIS_TAC [pow_not_infty]
+ >> `0 < y pow n` by METIS_TAC [pow_pos_lt]
+ >> ASM_SIMP_TAC std_ss [div_eq_mul_linv, pow_mul]
+ >> Suff `inv (y pow n) = (inv y) pow n` >- RW_TAC std_ss []
+ >> MATCH_MP_TAC pow_inv
+ >> FULL_SIMP_TAC std_ss [lt_le]
+QED
+
 val abs_le_square_plus1 = store_thm
   ("abs_le_square_plus1", ``!(x :extreal). abs x <= x pow 2 + 1``,
     GEN_TAC
@@ -2035,7 +2245,7 @@ val abs_le_square_plus1 = store_thm
  >- (fs [GSYM abs_refl] \\
      Cases_on `1 <= x`
      >- (MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `x pow 2 + 0` \\
-         Reverse CONJ_TAC
+         reverse CONJ_TAC
          >- (MATCH_MP_TAC le_add2 >> REWRITE_TAC [le_refl, le_01]) \\
          REWRITE_TAC [add_rzero, pow_2] \\
         `x = 1 * x` by PROVE_TAC [mul_lone] \\
@@ -2067,7 +2277,7 @@ val abs_le_square_plus1 = store_thm
  >> `1 <= -x` by PROVE_TAC [le_neg, neg_neg]
  >> MATCH_MP_TAC le_trans
  >> Q.EXISTS_TAC `x pow 2 + 0`
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (MATCH_MP_TAC le_add2 >> REWRITE_TAC [le_refl, le_01])
  >> REWRITE_TAC [add_rzero]
  >> `x pow 2 = -x * -x` by REWRITE_TAC [pow_2, neg_mul2] >> POP_ORW
@@ -2081,7 +2291,7 @@ val abs_pow_le_mono = store_thm
     rpt STRIP_TAC
  >> Cases_on `1 <= x`
  >- (MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `0 + (abs x) pow m` \\
-     Reverse CONJ_TAC
+     reverse CONJ_TAC
      >- (MATCH_MP_TAC le_add2 >> REWRITE_TAC [le_01, le_refl]) \\
      REWRITE_TAC [add_lzero] \\
      MATCH_MP_TAC pow_le_mono >> art [] \\
@@ -2091,7 +2301,7 @@ val abs_pow_le_mono = store_thm
  >> fs [GSYM extreal_lt_def]
  >> Cases_on `x <= -1`
  >- (MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `0 + (abs x) pow m` \\
-     Reverse CONJ_TAC
+     reverse CONJ_TAC
      >- (MATCH_MP_TAC le_add2 >> REWRITE_TAC [le_01, le_refl]) \\
      REWRITE_TAC [add_lzero] \\
      MATCH_MP_TAC pow_le_mono >> art [] \\
@@ -2100,7 +2310,7 @@ val abs_pow_le_mono = store_thm
      MATCH_MP_TAC let_trans >> Q.EXISTS_TAC `-1` >> art [lt_10])
  >> fs [GSYM extreal_lt_def]
  >> MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `1 + 0`
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (MATCH_MP_TAC le_add2 >> art [le_refl] \\
      MATCH_MP_TAC pow_pos_le >> REWRITE_TAC [abs_pos])
  >> REWRITE_TAC [add_rzero, Once (GSYM (Q.SPEC `n` one_pow))]
@@ -2114,13 +2324,15 @@ val REAL_LE_RSUB_GE0 = save_thm
     Q.GENL [`x`, `y`] (REWRITE_RULE [GSYM real_sub, REAL_SUB_RNEG, REAL_ADD_LID]
                                     (Q.SPECL [`0`, `-x`, `y`] REAL_LE_SUB_RADD)));
 
-val ABS_LE_HALF_POW2 = store_thm
-  ("ABS_LE_HALF_POW2", ``!x y :real. abs (x * y) <= 1/2 * (x pow 2 + y pow 2)``,
+Theorem ABS_LE_HALF_POW2:
+  !x y :real. abs (x * y) <= 1/2 * (x pow 2 + y pow 2)
+Proof
     rpt GEN_TAC
  >> Cases_on `0 <= x * y`
  >- (ASM_SIMP_TAC real_ss [abs] \\
      Know `x * y = (1 / 2) * 2 * x * y`
-     >- (Suff `1 / 2 * 2 = 1r` >- (Rewr' >> REWRITE_TAC [GSYM REAL_MUL_ASSOC, REAL_MUL_LID]) \\
+     >- (Suff `1 / 2 * 2 = 1r`
+         >- (Rewr' >> REWRITE_TAC [GSYM REAL_MUL_ASSOC, REAL_MUL_LID]) \\
          MATCH_MP_TAC REAL_DIV_RMUL >> SIMP_TAC real_ss []) >> Rewr' \\
      REWRITE_TAC [GSYM REAL_MUL_ASSOC] \\
      MATCH_MP_TAC REAL_LE_MUL2 >> SIMP_TAC real_ss [REAL_LE_REFL] \\
@@ -2128,28 +2340,20 @@ val ABS_LE_HALF_POW2 = store_thm
      ONCE_REWRITE_TAC [REAL_LE_RSUB_GE0] \\
      Suff `x pow 2 + y pow 2 - 2 * (x * y) = (x - y) pow 2`
      >- (Rewr' >> REWRITE_TAC [REAL_LE_POW2]) \\
-     SIMP_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB,
-                       REAL_ADD_ASSOC, POW_2, GSYM REAL_DOUBLE] \\
+     SIMP_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_LDISTRIB,
+                       REAL_ADD_RDISTRIB, REAL_ADD_ASSOC, POW_2,
+                       GSYM REAL_DOUBLE] \\
      REAL_ARITH_TAC)
  >> ASM_SIMP_TAC real_ss [abs]
  >> fs [GSYM real_lt]
- >> Know `-(x * y) = (1 / 2) * 2 * -(x * y)`
- >- (Suff `1 / 2 * 2 = 1r` >- (Rewr' >> REWRITE_TAC [GSYM REAL_MUL_ASSOC, REAL_MUL_LID]) \\
-     MATCH_MP_TAC REAL_DIV_RMUL >> SIMP_TAC real_ss []) >> Rewr'
- >> REWRITE_TAC [GSYM REAL_MUL_ASSOC]
- >> MATCH_MP_TAC REAL_LE_MUL2 >> SIMP_TAC real_ss [REAL_LE_REFL]
- >> CONJ_TAC
- >- (REWRITE_TAC [REAL_NEG_GE0] \\
-    `0 = 2 * 0r` by RW_TAC real_ss [REAL_MUL_RZERO] >> POP_ORW \\
-     Know `2 * (x * y) <= 2 * 0 <=> x * y <= 0`
-     >- (MATCH_MP_TAC REAL_LE_LMUL >> RW_TAC real_ss []) >> Rewr' \\
-     IMP_RES_TAC REAL_LT_IMP_LE)
- >> REWRITE_TAC [Once REAL_LE_RSUB_GE0, REAL_SUB_RNEG]
+ >> REWRITE_TAC [Once REAL_LE_RSUB_GE0, REAL_SUB_RNEG, REAL_MUL_RNEG]
  >> Suff `x pow 2 + y pow 2 + 2 * (x * y) = (x + y) pow 2`
  >- (Rewr' >> REWRITE_TAC [REAL_LE_POW2])
- >> SIMP_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB,
-                      REAL_ADD_ASSOC, POW_2, GSYM REAL_DOUBLE]
- >> REAL_ARITH_TAC);
+ >> SIMP_TAC real_ss [REAL_SUB_LDISTRIB, REAL_SUB_RDISTRIB, REAL_ADD_LDISTRIB,
+                      REAL_ADD_RDISTRIB, REAL_ADD_ASSOC, POW_2,
+                      GSYM REAL_DOUBLE]
+ >> REAL_ARITH_TAC
+QED
 
 (* this result is needed for proving Cauchy-Schwarz inequality *)
 val abs_le_half_pow2 = store_thm
@@ -2211,8 +2415,88 @@ val logr_not_infty = store_thm
     Cases >> RW_TAC std_ss [extreal_logr_def, extreal_not_infty]);
 
 (***************************)
-(*         Exp             *)
+(*      Exp and powr       *)
 (***************************)
+
+Theorem exp_pos :
+    !x :extreal. 0 <= exp x
+Proof
+    GEN_TAC >> Cases_on `x`
+ >> RW_TAC real_ss [extreal_exp_def, le_infty, extreal_of_num_def,
+                    extreal_le_eq, EXP_POS_LE]
+QED
+
+Theorem powr_pos :
+    !x a :extreal. 0 <= x powr a
+Proof
+    RW_TAC std_ss [extreal_powr_def, exp_pos]
+QED
+
+Theorem normal_exp :
+    !r. exp (Normal r) = Normal (exp r)
+Proof
+    RW_TAC std_ss [extreal_exp_def]
+QED
+
+(* `0 rpow a` is not defined in transcTheory (cf. rpow_def) *)
+Theorem normal_powr :
+    !r a. 0 < r /\ 0 < a ==> (Normal r) powr (Normal a) = Normal (r powr a)
+Proof
+    RW_TAC real_ss [extreal_exp_def, extreal_mul_def, extreal_powr_def,
+                    extreal_ln_def, rpow_def]
+QED
+
+Theorem exp_0[simp] :
+    exp 0 = (1 :extreal)
+Proof
+    rw [extreal_of_num_def, normal_exp, extreal_11, EXP_0]
+QED
+
+Theorem powr_0[simp] :
+    !x. x powr 0 = (1 :extreal)
+Proof
+    rw [extreal_powr_def, exp_0]
+QED
+
+(* only possible after the new definition of `ln` *)
+Theorem zero_rpow :
+    !x :extreal. 0 < x ==> 0 powr x = 0
+Proof
+    RW_TAC std_ss [extreal_of_num_def, extreal_powr_def, extreal_ln_def]
+ >> Cases_on `x`
+ >- METIS_TAC [lt_infty]
+ >- RW_TAC std_ss [extreal_mul_def, extreal_exp_def]
+ >> FULL_SIMP_TAC std_ss [extreal_mul_def, extreal_lt_eq]
+ >> `r <> 0` by PROVE_TAC [REAL_LT_LE]
+ >> ASM_SIMP_TAC std_ss [extreal_exp_def]
+QED
+
+(* only possible after the new definition of `ln`, cf. GEN_RPOW *)
+Theorem gen_powr :
+    !a n. 0 <= a ==> (a pow n = a powr (&n :extreal))
+Proof
+    rpt STRIP_TAC
+ >> Cases_on `n = 0` >- rw []
+ >> Cases_on `a`
+ >- METIS_TAC [lt_imp_le, le_not_infty]
+ >- (`(0 :real) < &n` by RW_TAC real_ss [] \\
+     `(0 :extreal) < &n` by METIS_TAC [extreal_of_num_def, extreal_lt_eq] \\
+     ASM_SIMP_TAC std_ss [extreal_pow_def, extreal_powr_def, extreal_ln_def,
+                          mul_infty, extreal_exp_def])
+ >> `(0 :real) < &n` by RW_TAC real_ss []
+ >> `(0 :extreal) < &n` by METIS_TAC [extreal_of_num_def, extreal_lt_eq]
+ >> FULL_SIMP_TAC std_ss [le_lt]
+ >- (`?b. &n = Normal (&n)`
+       by METIS_TAC [num_not_infty, extreal_cases, extreal_of_num_def] \\
+     POP_ORW \\
+     FULL_SIMP_TAC std_ss [extreal_pow_def, normal_powr, extreal_lt_eq,
+                           extreal_11, extreal_of_num_def] \\
+     MATCH_MP_TAC GEN_RPOW >> art [])
+ >> Q.PAT_X_ASSUM `0 = Normal r` (ONCE_REWRITE_TAC o wrap o SYM)
+ >> ASM_SIMP_TAC std_ss [zero_rpow]
+ >> MATCH_MP_TAC zero_pow
+ >> RW_TAC arith_ss []
+QED
 
 (* an extended version of EXP_LE_X, needed by Borel_Cantelli_lemma2 (direct proof):
 val EXP_LE_X_FULL = store_thm
@@ -3095,7 +3379,7 @@ Proof
       >> `!x. x IN e INSERT s ==> (f o f') x <> NegInf` by METIS_TAC [o_DEF]
       >> RW_TAC std_ss [EXTREAL_SUM_IMAGE_PROPERTY]
       >> `~ (f' e IN IMAGE f' s)`
-        by (RW_TAC std_ss [IN_IMAGE] >> Reverse (Cases_on `x IN s`)
+        by (RW_TAC std_ss [IN_IMAGE] >> reverse (Cases_on `x IN s`)
             >- ASM_REWRITE_TAC [] >> METIS_TAC [IN_INSERT])
       >> `s DELETE e = s` by METIS_TAC [DELETE_NON_ELEMENT]
       >> `(IMAGE f' s) DELETE f' e = IMAGE f' s` by METIS_TAC [DELETE_NON_ELEMENT]
@@ -3108,7 +3392,7 @@ Proof
   >> `!x. x IN e INSERT s ==> (f o f') x <> PosInf` by METIS_TAC [o_DEF]
   >> RW_TAC std_ss [EXTREAL_SUM_IMAGE_PROPERTY]
   >> `f' e NOTIN IMAGE f' s`
-        by (RW_TAC std_ss [IN_IMAGE] >> Reverse (Cases_on `x IN s`)
+        by (RW_TAC std_ss [IN_IMAGE] >> reverse (Cases_on `x IN s`)
             >- ASM_REWRITE_TAC [] >> METIS_TAC [IN_INSERT])
   >> `s DELETE e = s` by METIS_TAC [DELETE_NON_ELEMENT]
   >> `(IMAGE f' s) DELETE f' e = IMAGE f' s` by METIS_TAC [DELETE_NON_ELEMENT]
@@ -3623,7 +3907,7 @@ val EXTREAL_SUM_IMAGE_IN_IF_ALT = store_thm
  >> RW_TAC std_ss [EXTREAL_SUM_IMAGE_EMPTY]
  >- (`!i. i IN e INSERT s ==> (\x. if x IN e INSERT s then f x else z) i <> NegInf`
        by RW_TAC std_ss []
-     >> Reverse (RW_TAC std_ss [EXTREAL_SUM_IMAGE_PROPERTY]) (* 2 sub-goals here *)
+     >> reverse (RW_TAC std_ss [EXTREAL_SUM_IMAGE_PROPERTY]) (* 2 sub-goals here *)
      >> FULL_SIMP_TAC std_ss [IN_INSERT]                     (* 1 remains *)
      >> FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]
      >> Suff `EXTREAL_SUM_IMAGE f s = EXTREAL_SUM_IMAGE (\x. if x IN e INSERT s then f x else z) s`
@@ -3634,7 +3918,7 @@ val EXTREAL_SUM_IMAGE_IN_IF_ALT = store_thm
      >> (MATCH_MP_TAC o UNDISCH o Q.SPEC `s`) EXTREAL_SUM_IMAGE_EQ
      >> RW_TAC std_ss [IN_INSERT])
  >> `!i. i IN e INSERT s ==> (\x. if x IN e INSERT s then f x else z) i <> PosInf` by RW_TAC std_ss []
- >> Reverse (RW_TAC std_ss [EXTREAL_SUM_IMAGE_PROPERTY])
+ >> reverse (RW_TAC std_ss [EXTREAL_SUM_IMAGE_PROPERTY])
  >- FULL_SIMP_TAC std_ss [IN_INSERT]
  >> FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT]
  >> Suff `EXTREAL_SUM_IMAGE f s = EXTREAL_SUM_IMAGE (\x. if x IN e INSERT s then f x else z) s`
@@ -3826,7 +4110,7 @@ val le_sup_imp = store_thm
       RW_TAC std_ss [extreal_le_def] \\
       MATCH_MP_TAC REAL_IMP_LE_SUP \\
       CONJ_TAC >- METIS_TAC [] \\
-      Reverse CONJ_TAC >- (Q.EXISTS_TAC `r` >> RW_TAC real_ss []) \\
+      reverse CONJ_TAC >- (Q.EXISTS_TAC `r` >> RW_TAC real_ss []) \\
       Cases_on `x'` >| (* 3 subgoals *)
       [ METIS_TAC [le_infty],
         RW_TAC std_ss [],
@@ -3862,7 +4146,7 @@ val sup_le = store_thm
               RW_TAC std_ss [] \\
               MATCH_MP_TAC REAL_IMP_LE_SUP \\
               CONJ_TAC >- METIS_TAC [] \\
-              Reverse CONJ_TAC >- (Q.EXISTS_TAC `r''` >> RW_TAC real_ss []) \\
+              reverse CONJ_TAC >- (Q.EXISTS_TAC `r''` >> RW_TAC real_ss []) \\
               Q.EXISTS_TAC `r'` \\
               RW_TAC std_ss [] \\
               METIS_TAC [extreal_le_def] ]) \\
@@ -4154,7 +4438,7 @@ val sup_seq = store_thm
   >- (MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `f x'''''' + e / 2`
       >> RW_TAC std_ss [] >> MATCH_MP_TAC REAL_LET_TRANS
       >> Q.EXISTS_TAC `f n + e / 2`
-      >> Reverse CONJ_TAC >- METIS_TAC [REAL_LET_ADD2,REAL_LT_HALF2,REAL_LE_REFL]
+      >> reverse CONJ_TAC >- METIS_TAC [REAL_LET_ADD2,REAL_LT_HALF2,REAL_LE_REFL]
       >> RW_TAC std_ss [REAL_LE_RADD]
       >> METIS_TAC [mono_increasing_def])
    >> MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `sup (IMAGE f UNIV)`
@@ -4221,7 +4505,7 @@ val sup_add_mono = store_thm
                                        extreal_of_num_def, extreal_not_infty]
   >> MATCH_MP_TAC le_trans
   >> Q.EXISTS_TAC `sup (IMAGE (\n. (sup (IMAGE f UNIV)) + g n) UNIV)`
-  >> Reverse (RW_TAC std_ss [sup_le])
+  >> reverse (RW_TAC std_ss [sup_le])
   >- (POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION])
       >> RW_TAC std_ss [IN_IMAGE,IN_UNIV]
       >> Suff `sup (IMAGE f UNIV) <= y - g n` >- RW_TAC std_ss [le_sub_eq]
@@ -4557,6 +4841,13 @@ val inf_eq' = store_thm
 val inf_const = store_thm
   ("inf_const", ``!x. extreal_inf (\y. y = x) = x``,
     RW_TAC real_ss [inf_eq, le_refl]);
+
+Theorem inf_sing :
+    !a:extreal. inf {a} = a
+Proof
+    REWRITE_TAC [METIS [EXTENSION, IN_SING, IN_DEF] ``{a} = (\x. x = a)``]
+ >> SIMP_TAC std_ss [inf_const]
+QED
 
 val inf_const_alt = store_thm
   ("inf_const_alt", ``!p z. (?x. p x) /\ (!x. p x ==> (x = z)) ==> (inf p = z)``,
@@ -5032,7 +5323,7 @@ Proof
  >> Know `sup (IMAGE (\n. SIGMA f (count n)) univ(:num)) <> NegInf`
  >- (RW_TAC std_ss [lt_infty, GSYM sup_lt', IN_IMAGE, IN_UNIV] \\
      Q.EXISTS_TAC `SIGMA f (count 0)` \\
-     Reverse (RW_TAC bool_ss []) >- FULL_SIMP_TAC std_ss [lt_infty] \\
+     reverse (RW_TAC bool_ss []) >- FULL_SIMP_TAC std_ss [lt_infty] \\
      Q.EXISTS_TAC `0` >> REWRITE_TAC []) >> DISCH_TAC
  >> `!m. SIGMA g (count m) + sup (IMAGE (\n. SIGMA f (count n)) univ(:num)) <= y`
        by METIS_TAC [le_sub_eq2, add_comm]
@@ -5045,7 +5336,7 @@ Proof
  >> Know `sup (IMAGE (\n. SIGMA g (count n)) univ(:num)) <> NegInf`
  >- (RW_TAC std_ss [lt_infty, GSYM sup_lt', IN_IMAGE, IN_UNIV] \\
      Q.EXISTS_TAC `SIGMA g (count 0)` \\
-     Reverse (RW_TAC bool_ss []) >- FULL_SIMP_TAC std_ss [lt_infty] \\
+     reverse (RW_TAC bool_ss []) >- FULL_SIMP_TAC std_ss [lt_infty] \\
      Q.EXISTS_TAC `0` >> REWRITE_TAC []) >> DISCH_TAC
  >> METIS_TAC [le_sub_eq2, add_comm]
 QED
@@ -5060,7 +5351,7 @@ Proof
  >> RW_TAC std_ss [ext_suminf_def]
  >> `c <> NegInf` by METIS_TAC [lt_infty, num_not_infty, lte_trans]
  >> `!n. f n <> NegInf` by METIS_TAC [lt_infty, num_not_infty, lte_trans]
- >> Reverse (Cases_on `c` >> (RW_TAC std_ss []))
+ >> reverse (Cases_on `c` >> (RW_TAC std_ss []))
  >- (`!n. SIGMA (\n. Normal r * f n) (count n) =
           Normal r * SIGMA f (count n)`
        by METIS_TAC [EXTREAL_SUM_IMAGE_CMUL, FINITE_COUNT] >> POP_ORW \\
@@ -5920,7 +6211,7 @@ val ext_suminf_2d = store_thm
  (* RHS reduce of the goal *)
  >> Know `suminf (\x. Normal (g' x)) = Normal (suminf g')`
  >- (MATCH_MP_TAC ext_suminf_suminf \\
-     Reverse CONJ_TAC >- fs [GSYM lt_infty] \\
+     reverse CONJ_TAC >- fs [GSYM lt_infty] \\
      Q.UNABBREV_TAC `g'` >> REWRITE_TAC [o_DEF] >> BETA_TAC \\
      REWRITE_TAC [GSYM extreal_le_eq] \\
      GEN_TAC >> REWRITE_TAC [GSYM extreal_of_num_def] \\
@@ -6033,7 +6324,7 @@ Proof
     rpt STRIP_TAC
  >> `!n. SIGMA f (count n) = (\n. SIGMA f (count n)) n` by PROVE_TAC []
  >> POP_ORW >> MATCH_MP_TAC sup_le_mono
- >> BETA_TAC >> Reverse CONJ_TAC
+ >> BETA_TAC >> reverse CONJ_TAC
  >- ASM_SIMP_TAC std_ss [GSYM ext_suminf_def]
  >> GEN_TAC >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_MONO_SET
  >> fs [FINITE_COUNT, COUNT_SUC]
@@ -6077,14 +6368,14 @@ Proof
                            (\n. SIGMA (\i. SIGMA (f i) (count n)) (count n))
                            univ(:num))`
  >- (REWRITE_TAC [GSYM le_antisym] \\
-     Reverse CONJ_TAC >| (* easy goal first *)
+     reverse CONJ_TAC >| (* easy goal first *)
      [ (* goal 1 (of 2) *)
        RW_TAC std_ss [sup_le', IN_IMAGE, IN_UNIV] \\
        Q.PAT_X_ASSUM `suminf g = PosInf` (ONCE_REWRITE_TAC o wrap o SYM) \\
        POP_ASSUM (REWRITE_TAC o wrap o (MATCH_MP ext_suminf_def)) \\
        RW_TAC std_ss [le_sup', IN_IMAGE, IN_UNIV] \\
        MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `SIGMA g (count n)` \\
-       Reverse CONJ_TAC >- (POP_ASSUM MATCH_MP_TAC \\
+       reverse CONJ_TAC >- (POP_ASSUM MATCH_MP_TAC \\
                             Q.EXISTS_TAC `n` >> REWRITE_TAC []) \\
        irule EXTREAL_SUM_IMAGE_MONO \\
        SIMP_TAC std_ss [FINITE_COUNT, IN_COUNT] \\
@@ -6121,7 +6412,7 @@ Proof
            rpt GEN_TAC >> STRIP_TAC >> MATCH_MP_TAC pos_not_neginf >> art []) >> Rewr' \\
        MATCH_MP_TAC le_trans \\
        Q.EXISTS_TAC `SIGMA (\i. SIGMA (f i) (count (MAX n n'))) (count (MAX n n'))` \\
-       Reverse CONJ_TAC >- (POP_ASSUM MATCH_MP_TAC \\
+       reverse CONJ_TAC >- (POP_ASSUM MATCH_MP_TAC \\
                             Q.EXISTS_TAC `MAX n n'` >> REWRITE_TAC []) \\
        MATCH_MP_TAC EXTREAL_SUM_IMAGE_SUM_IMAGE_MONO \\
        RW_TAC arith_ss [] ])
@@ -6131,7 +6422,7 @@ Proof
     `!n. SIGMA (\i. SIGMA (f i) (count n)) (count n) =
          (\n. SIGMA (\i. SIGMA (f i) (count n)) (count n)) n` by PROVE_TAC [] >> POP_ORW \\
      MATCH_MP_TAC sup_le_mono >> BETA_TAC \\
-     Reverse CONJ_TAC >- PROVE_TAC [] \\
+     reverse CONJ_TAC >- PROVE_TAC [] \\
      GEN_TAC >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_SUM_IMAGE_MONO \\
      RW_TAC arith_ss [])
  >> DISCH_TAC
@@ -6164,6 +6455,20 @@ Proof
  >> CONJ_TAC >- (MATCH_MP_TAC FINITE_CROSS >> REWRITE_TAC [FINITE_COUNT])
  >> CONJ_TAC >- (MATCH_MP_TAC IMAGE_FINITE >> REWRITE_TAC [FINITE_COUNT])
  >> GEN_TAC >> BETA_TAC >> DISCH_TAC >> art []
+QED
+
+Theorem harmonic_series_pow_2 :
+    ext_suminf (\n. inv (&(SUC n) pow 2)) < PosInf
+Proof
+    Q.ABBREV_TAC `f :num -> real = \n. inv (&(SUC n) pow 2)`
+ >> Suff `(\n. inv (&(SUC n) pow 2)) = Normal o f`
+ >- (Rewr' >> MATCH_MP_TAC summable_ext_suminf \\
+     rw [HARMONIC_SERIES_POW_2, Abbr `f`])
+ >> RW_TAC real_ss [Abbr `f`, o_DEF, FUN_EQ_THM]
+ >> Know `(0 :real) < &(SUC n) pow 2`
+ >- (MATCH_MP_TAC REAL_POW_LT >> RW_TAC real_ss []) >> DISCH_TAC
+ >> `&(SUC n) pow 2 <> (0 :real)` by PROVE_TAC [REAL_LT_IMP_NE]
+ >> ASM_SIMP_TAC real_ss [extreal_of_num_def, extreal_inv_eq, extreal_pow_def]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -6289,6 +6594,52 @@ Proof
  >> MATCH_MP_TAC lt_trans >> Q.EXISTS_TAC `0` >> art []
  >> POP_ASSUM (REWRITE_TAC o wrap o
                 (REWRITE_RULE [Once (GSYM lt_neg), neg_0]))
+QED
+
+(* `sup` is the maximal element of any finite non-empty extreal set,
+    see also le_sup_imp'.
+ *)
+Theorem sup_maximal :
+    !p. FINITE p /\ p <> {} ==> extreal_sup p IN p
+Proof
+    Suff `!p. FINITE p ==> p <> {} ==> extreal_sup p IN p` >- rw []
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> RW_TAC std_ss []
+ >> Cases_on `p = EMPTY` >- fs [sup_sing]
+ >> Suff `sup (e INSERT p) = max e (sup p)`
+ >- (Rewr' >> rw [extreal_max_def])
+ >> RW_TAC std_ss [sup_eq']
+ >| [ (* goal 1 (of 2) *)
+      fs [IN_INSERT, le_max] \\
+      DISJ2_TAC \\
+      MATCH_MP_TAC le_sup_imp' >> art [],
+      (* goal 2 (of 2) *)
+      POP_ASSUM MATCH_MP_TAC \\
+      fs [IN_INSERT, extreal_max_def] \\
+      Cases_on `e <= sup p` >> fs [] ]
+QED
+
+(* `inf` is the minimal element of any finite non-empty extreal set.
+    see also inf_le_imp'.
+ *)
+Theorem inf_minimal :
+    !p. FINITE p /\ p <> {} ==> extreal_inf p IN p
+Proof
+    Suff `!p. FINITE p ==> p <> {} ==> extreal_inf p IN p` >- rw []
+ >> HO_MATCH_MP_TAC FINITE_INDUCT
+ >> RW_TAC std_ss []
+ >> Cases_on `p = EMPTY` >- fs [inf_sing]
+ >> Suff `inf (e INSERT p) = min e (inf p)`
+ >- (Rewr' >> rw [extreal_min_def])
+ >> RW_TAC std_ss [inf_eq']
+ >| [ (* goal 1 (of 2) *)
+      fs [IN_INSERT, min_le] \\
+      DISJ2_TAC \\
+      MATCH_MP_TAC inf_le_imp' >> art [],
+      (* goal 2 (of 2) *)
+      POP_ASSUM MATCH_MP_TAC \\
+      fs [IN_INSERT, extreal_min_def] \\
+      Cases_on `e <= inf p` >> fs [] ]
 QED
 
 (* ================================================================= *)
@@ -6689,10 +7040,10 @@ val COUNTABLE_ENUM_Q = store_thm
   ("COUNTABLE_ENUM_Q",
    ``!c. countable c <=> (c = {}) \/ (?f:extreal->'a. c = IMAGE f Q_set)``,
   RW_TAC std_ss []
-  >> Reverse EQ_TAC
+  >> reverse EQ_TAC
   >- (NTAC 2 (RW_TAC std_ss [countable_EMPTY])
       >> RW_TAC std_ss [image_countable, Q_COUNTABLE])
-  >> Reverse (RW_TAC std_ss [COUNTABLE_ALT_BIJ])
+  >> reverse (RW_TAC std_ss [COUNTABLE_ALT_BIJ])
   >- (DISJ2_TAC
       >> `countable Q_set` by RW_TAC std_ss [Q_COUNTABLE]
       >> `~(FINITE Q_set)` by RW_TAC std_ss [Q_INFINITE]
@@ -6949,7 +7300,7 @@ val EXTREAL_PROD_IMAGE_IMAGE = store_thm
  >> `FINITE (IMAGE f' s)` by METIS_TAC [IMAGE_FINITE]
  >> RW_TAC std_ss [EXTREAL_PROD_IMAGE_PROPERTY]
  >> `~(f' e IN IMAGE f' s)`
-        by (RW_TAC std_ss [IN_IMAGE] >> Reverse (Cases_on `x IN s`)
+        by (RW_TAC std_ss [IN_IMAGE] >> reverse (Cases_on `x IN s`)
             >- ASM_REWRITE_TAC [] >> METIS_TAC [IN_INSERT])
  >> `s DELETE e = s` by METIS_TAC [DELETE_NON_ELEMENT]
  >> `(IMAGE f' s) DELETE f' e = IMAGE f' s` by METIS_TAC [DELETE_NON_ELEMENT]

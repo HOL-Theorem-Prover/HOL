@@ -81,7 +81,7 @@ val REAL_INVINV_ALL = store_thm
   ("REAL_INVINV_ALL",
    ``!x. inv (inv x) = x``,
    STRIP_TAC
-   >> Reverse (Cases_on `x = 0`) >- RW_TAC std_ss [REAL_INVINV]
+   >> reverse (Cases_on `x = 0`) >- RW_TAC std_ss [REAL_INVINV]
    >> RW_TAC std_ss [REAL_INV_0]);
 
 val ABS_BETWEEN_LE = store_thm
@@ -411,7 +411,7 @@ val INCREASING_SEQ = store_thm
    >> RW_TAC std_ss []
    >> Q.EXISTS_TAC `n`
    >> ONCE_REWRITE_TAC [ABS_SUB]
-   >> Reverse (RW_TAC std_ss [abs])
+   >> reverse (RW_TAC std_ss [abs])
    >- (Q.PAT_X_ASSUM `~x` MP_TAC
        >> Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n'`)
        >> REAL_ARITH_TAC)
@@ -569,7 +569,7 @@ val SER_BIJ_COMPRESS1 = store_thm
        >> STRIP_TAC
        >> MATCH_MP_TAC REAL_LE_TRANS
        >> Q.EXISTS_TAC `sum (0, N n) f`
-       >> Reverse CONJ_TAC
+       >> reverse CONJ_TAC
        >- (MATCH_MP_TAC SER_POS_LE
            >> RW_TAC std_ss [])
        >> Know `sum (0, N n) f = sum (0, N n) (f o I)`
@@ -628,7 +628,7 @@ val SER_BIJ_COMPRESS1 = store_thm
        ((\x. sum_CASE x f (K 0)) o
         (\i. if i < n then INL (h i) else INR (i - n)))`
    >- (KILL_TAC
-       >> Reverse (Induct_on `N`)
+       >> reverse (Induct_on `N`)
        >- RW_TAC arith_ss [sum, o_THM, ADD_CLAUSES, K_THM, REAL_ADD_RID]
        >> RW_TAC arith_ss []
        >> MATCH_MP_TAC SUM_EQ
@@ -674,7 +674,7 @@ val SER_BIJ_COMPRESS2 = store_thm
        >> RW_TAC std_ss [INTER_SUBSET, IN_INTER]
        >> MATCH_MP_TAC REAL_LE_TRANS
        >> Q.EXISTS_TAC `sum (0, N) (f o h)`
-       >> Reverse CONJ_TAC
+       >> reverse CONJ_TAC
        >- (MATCH_MP_TAC SER_POS_LE
            >> RW_TAC std_ss [o_THM])
        >> Know
@@ -690,7 +690,7 @@ val SER_BIJ_COMPRESS2 = store_thm
         ((\x. sum_CASE x f (K 0)) o
          (\i. if i < N then INL (h i) else INR (i - N)))`
        >- (KILL_TAC
-           >> Reverse (Induct_on `n`)
+           >> reverse (Induct_on `n`)
            >- RW_TAC arith_ss [sum, o_THM, ADD_CLAUSES, K_THM, REAL_ADD_RID]
            >> RW_TAC arith_ss []
            >> MATCH_MP_TAC SUM_EQ
@@ -890,7 +890,7 @@ val POW_LE_1 = store_thm
    >> RW_TAC std_ss [pow, REAL_LE_REFL]
    >> MATCH_MP_TAC REAL_LE_TRANS
    >> Q.EXISTS_TAC `p * 1`
-   >> Reverse CONJ_TAC >- RW_TAC real_ss []
+   >> reverse CONJ_TAC >- RW_TAC real_ss []
    >> RW_TAC std_ss [REAL_LE_LMUL]);
 
 val POW_LE_1_MONO = store_thm
@@ -905,7 +905,7 @@ val POW_LE_1_MONO = store_thm
    >> RW_TAC std_ss [ADD_CLAUSES, pow]
    >> MATCH_MP_TAC REAL_LE_TRANS
    >> Q.EXISTS_TAC `1 * p pow (d + m)`
-   >> Reverse CONJ_TAC >- RW_TAC real_ss []
+   >> reverse CONJ_TAC >- RW_TAC real_ss []
    >> RW_TAC std_ss [REAL_LE_RMUL, REAL_POW_LT]);
 
 val REAL_LE_MUL_EPSILON = store_thm
@@ -1359,7 +1359,7 @@ val jensen_pos_convex_SIGMA = store_thm
                         Q.SPECL [`(\x. g x / (1 - g e) * g' x)`,`s`]) REAL_SUM_IMAGE_POS
                 >> RW_TAC real_ss [] >> Cases_on `g x = 0` >- RW_TAC real_ss []
                 >> MATCH_MP_TAC REAL_LE_MUL
-                >> Reverse CONJ_TAC >- PROVE_TAC [REAL_LT_IMP_LE, REAL_LT_LE]
+                >> reverse CONJ_TAC >- PROVE_TAC [REAL_LT_IMP_LE, REAL_LT_LE]
                 >> RW_TAC real_ss [] >> MATCH_MP_TAC REAL_LE_DIV
                 >> RW_TAC real_ss [] >> PROVE_TAC [REAL_LT_IMP_LE])
             >> Q.PAT_X_ASSUM `SIGMA (\x. g x * g' x) s =

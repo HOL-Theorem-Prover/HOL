@@ -3,7 +3,7 @@
 (* Authors: Tarek Mhamdi, Osman Hasan, Sofiene Tahar                         *)
 (* HVG Group, Concordia University, Montreal                                 *)
 (*                                                                           *)
-(* Extended by Chun Tian (2019)                                              *)
+(* Extended by Chun Tian (2019-2020)                                         *)
 (* Fondazione Bruno Kessler and University of Trento, Italy                  *)
 (* ------------------------------------------------------------------------- *)
 
@@ -156,7 +156,7 @@ val NUM_2D_BIJ = store_thm
        BIJ f ((UNIV : num -> bool) CROSS (UNIV : num -> bool))
        (UNIV : num -> bool)``,
    MATCH_MP_TAC BIJ_INJ_SURJ
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (Q.EXISTS_TAC `FST`
        >> RW_TAC std_ss [SURJ_DEF, IN_UNIV, IN_CROSS]
        >> Q.EXISTS_TAC `(x, 0)`
@@ -181,7 +181,7 @@ val NUM_2D_BIJ_NZ = store_thm
        BIJ f ((UNIV : num -> bool) CROSS ((UNIV : num -> bool) DIFF {0}))
        (UNIV : num -> bool)``,
    MATCH_MP_TAC BIJ_INJ_SURJ
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (Q.EXISTS_TAC `FST`
        >> RW_TAC std_ss [SURJ_DEF, IN_UNIV, IN_CROSS,DIFF_DEF,GSPECIFICATION,IN_UNIV,IN_SING]
        >> Q.EXISTS_TAC `(x, 1)`
@@ -206,7 +206,7 @@ val NUM_2D_BIJ_NZ_ALT = store_thm
        BIJ f ((UNIV : num -> bool) CROSS (UNIV : num -> bool))
        ((UNIV : num -> bool) DIFF {0})``,
    MATCH_MP_TAC BIJ_INJ_SURJ
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (Q.EXISTS_TAC `(\(x,y). x + 1:num)`
        >> RW_TAC std_ss [SURJ_DEF, IN_UNIV, IN_CROSS]
                 >- (Cases_on `x` >> RW_TAC std_ss [DIFF_DEF,GSPECIFICATION,IN_UNIV,IN_SING])
@@ -238,7 +238,7 @@ val NUM_2D_BIJ_NZ_ALT2 = store_thm
        BIJ f (((UNIV : num -> bool) DIFF {0}) CROSS ((UNIV : num -> bool) DIFF {0}))
        (UNIV : num -> bool)``,
    MATCH_MP_TAC BIJ_INJ_SURJ
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (Q.EXISTS_TAC `(\(x,y). x - 1:num)`
        >> RW_TAC std_ss [SURJ_DEF, IN_UNIV, IN_CROSS]
        >> Q.EXISTS_TAC `(x+1,1)`
@@ -430,7 +430,7 @@ val REAL_MUL_IDEMPOT = store_thm
   ("REAL_MUL_IDEMPOT",
    ``!r: real. (r * r = r) <=> (r = 0) \/ (r = 1)``,
    GEN_TAC
-   >> Reverse EQ_TAC
+   >> reverse EQ_TAC
    >- (RW_TAC real_ss [] >> RW_TAC std_ss [REAL_MUL_LZERO, REAL_MUL_LID])
    >> RW_TAC std_ss []
    >> Know `r * r = 1 * r` >- RW_TAC real_ss []
@@ -673,6 +673,50 @@ Proof
   METIS_TAC []
 QED
 
+Theorem HARMONIC_SERIES_POW_2 :
+    summable (\n. inv (&(SUC n) pow 2))
+Proof
+    MATCH_MP_TAC POS_SUMMABLE
+ >> CONJ_TAC >- rw []
+ >> Q.EXISTS_TAC `2`
+ >> GEN_TAC
+ >> Cases_on `n` >- rw [sum]
+ >> MATCH_MP_TAC REAL_LE_TRANS
+ >> Q.EXISTS_TAC `1 + sum (1,n') (\n. inv (&n) - inv (&SUC n))`
+ >> CONJ_TAC
+ >- (Know `sum (0,SUC n') (\n. inv (&SUC n pow 2)) =
+           sum (0,1) (\n. inv (&SUC n pow 2)) + sum (1,n') (\n. inv (&SUC n pow 2))`
+     >- (MATCH_MP_TAC EQ_SYM \\
+         MP_TAC (Q.SPECL [`\n. inv (&SUC n pow 2)`, `1`, `n'`] SUM_TWO) \\
+         RW_TAC arith_ss [ADD1]) >> Rewr' \\
+     Know `sum (0,1) (\n. inv (&SUC n pow 2)) = 1`
+     >- (REWRITE_TAC [sum, ONE] >> rw []) >> Rewr' \\
+     REWRITE_TAC [REAL_LE_LADD] \\
+     MATCH_MP_TAC SUM_LE \\
+     RW_TAC real_ss [REAL_INV_1OVER] \\
+    `&r <> 0` by RW_TAC real_ss [] \\
+    `&SUC r <> 0` by RW_TAC real_ss [] \\
+     ASM_SIMP_TAC real_ss [REAL_SUB_RAT] \\
+    `&SUC r - &r = 1` by METIS_TAC [REAL, REAL_ADD_SUB] >> POP_ORW \\
+     ASM_SIMP_TAC std_ss [POW_2, GSYM REAL_INV_1OVER] \\
+    `0 < &SUC r * &SUC r` by rw [] \\
+     Know `0 < &(r * SUC r)`
+     >- (rw [] >> `0 = r * 0` by RW_TAC arith_ss [] >> POP_ORW \\
+         rw [LT_MULT_LCANCEL]) >> DISCH_TAC \\
+     MATCH_MP_TAC REAL_LT_IMP_LE \\
+     ASM_SIMP_TAC real_ss [REAL_INV_LT_ANTIMONO] \\
+    `SUC r ** 2 = SUC r * SUC r` by RW_TAC arith_ss [] >> POP_ORW \\
+     RW_TAC arith_ss [LT_MULT_RCANCEL])
+ >> `2 = 1 + (1 :real)` by RW_TAC real_ss [] >> POP_ORW
+ >> REWRITE_TAC [REAL_LE_LADD]
+ >> Q.ABBREV_TAC `f = \n. -inv (&n)`
+ >> Know `!n. inv (&n) - inv (&SUC n) = f (SUC n) - f n`
+ >- (RW_TAC real_ss [Abbr `f`] \\
+     REAL_ASM_ARITH_TAC) >> Rewr'
+ >> REWRITE_TAC [SUM_CANCEL]
+ >> rw [Abbr `f`, REAL_SUB_NEG2, REAL_LE_SUB_RADD, REAL_LE_ADDR]
+QED
+
 (* ********************************************* *)
 (*   The mininal element in num sets             *)
 (* ********************************************* *)
@@ -682,7 +726,7 @@ val minimal_def = Define
 
 val MINIMAL_EXISTS0 = store_thm
   ("MINIMAL_EXISTS0", ``(?(n:num). P n) = (?n. P n /\ (!m. m < n ==> ~(P m)))``,
-    Reverse EQ_TAC >- PROVE_TAC []
+    reverse EQ_TAC >- PROVE_TAC []
    >> RW_TAC std_ss []
    >> CCONTR_TAC
    >> Suff `!n. ~P n` >- PROVE_TAC []
@@ -738,7 +782,7 @@ val MINIMAL_EQ = store_thm
   ("MINIMAL_EQ",
   ``!p m. p m /\ (m = minimal p) <=> p m /\ (!n. n < m ==> ~p n)``,
     RW_TAC std_ss []
- >> Reverse EQ_TAC >- PROVE_TAC [MINIMAL_EQ_IMP]
+ >> reverse EQ_TAC >- PROVE_TAC [MINIMAL_EQ_IMP]
  >> RW_TAC std_ss []
  >> Know `?n. p n` >- PROVE_TAC []
  >> RW_TAC std_ss [MINIMAL_EXISTS]);
@@ -1248,7 +1292,7 @@ val countable_disjoint_decomposition = store_thm (* new *)
  >> CONJ_TAC >- METIS_TAC [NOT_LESS]
  >> CONJ_TAC
  >- (art [] >> MATCH_MP_TAC IMAGE_CONG >> RW_TAC std_ss [IN_COUNT])
- >> Reverse CONJ_TAC >- METIS_TAC []
+ >> reverse CONJ_TAC >- METIS_TAC []
  >> art [] >> KILL_TAC
  >> SIMP_TAC std_ss [Once EXTENSION, IN_BIGUNION_IMAGE, IN_COUNT, IN_UNIV]
  >> GEN_TAC >> EQ_TAC >> rpt STRIP_TAC
@@ -1420,7 +1464,7 @@ val SETS_TO_DISJOINT_SETS = store_thm
       Suff `BIGUNION (IMAGE f (count n)) UNION (BIGINTER (IMAGE (\i. sp DIFF f i) (count n))) = sp`
       >- (DISCH_THEN (REWRITE_TAC o wrap) \\
           REWRITE_TAC [INTER_SUBSET_EQN, UNION_SUBSET] \\
-          Reverse CONJ_TAC >- PROVE_TAC [] \\
+          reverse CONJ_TAC >- PROVE_TAC [] \\
           REWRITE_TAC [BIGUNION_SUBSET, IN_IMAGE] >> PROVE_TAC []) \\
       (* BIGUNION (IMAGE f (count n)) UNION BIGINTER (IMAGE (\i. sp DIFF f i) (count n)) = sp *)
      `0 < n` by PROVE_TAC [NOT_ZERO_LT_ZERO] \\
@@ -1757,7 +1801,7 @@ val infinitely_often_lemma = store_thm
  >> `!N. (!n. n IN N ==> P n) <=> N SUBSET P` by PROVE_TAC [SUBSET_DEF, IN_APP]
  >> ASM_REWRITE_TAC []
  >> SIMP_TAC std_ss []
- >> Reverse EQ_TAC >> rpt STRIP_TAC
+ >> reverse EQ_TAC >> rpt STRIP_TAC
  >| [ (* goal 1 (of 2) *)
       Cases_on `~(N SUBSET P)` >- art [] >> fs [] \\
       Suff `FINITE P` >- PROVE_TAC [SUBSET_FINITE_I] \\

@@ -513,7 +513,7 @@ val LAMBDA_SYSTEM_CARATHEODORY = store_thm
     >> CONJ_TAC
     >- (RW_TAC std_ss [EXTENSION, IN_INTER, IN_BIGUNION, IN_IMAGE, IN_UNIV,
                        o_DEF]
-        >> Reverse EQ_TAC >- PROVE_TAC []
+        >> reverse EQ_TAC >- PROVE_TAC []
         >> RW_TAC std_ss [GSYM EXTENSION]
         >> Q.EXISTS_TAC `f x' INTER g`
         >> RW_TAC std_ss [IN_INTER]
@@ -726,7 +726,7 @@ val INF_MEASURE_AGREES = store_thm
        >- (Q.EXISTS_TAC `0`
            >> METIS_TAC [INF_MEASURE_POS0])
        >> Q.EXISTS_TAC `measure m s`
-       >> Reverse CONJ_TAC >- RW_TAC std_ss [REAL_LE_REFL]
+       >> reverse CONJ_TAC >- RW_TAC std_ss [REAL_LE_REFL]
        >> MATCH_MP_TAC INF_MEASURE_NONEMPTY
        >> RW_TAC std_ss [SUBSET_REFL])
    >> MATCH_MP_TAC LE_INF
@@ -784,7 +784,7 @@ val INF_MEASURE_EMPTY = store_thm
    ``!m. algebra (m_space m, measurable_sets m) /\ positive m ==> (inf_measure m {} = 0)``,
    RW_TAC std_ss []
    >> ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
-   >> Reverse CONJ_TAC >- PROVE_TAC [INF_MEASURE_POS, EMPTY_SUBSET]
+   >> reverse CONJ_TAC >- PROVE_TAC [INF_MEASURE_POS, EMPTY_SUBSET]
    >> RW_TAC std_ss [inf_measure_def]
    >> MATCH_MP_TAC INF_LE
    >> CONJ_TAC >- METIS_TAC [INF_MEASURE_POS0, EMPTY_SUBSET]
@@ -884,7 +884,7 @@ val INF_MEASURE_LE = store_thm
     >> Q.EXISTS_TAC
        `f (minimal (\n. x IN f n)) DIFF
         BIGUNION (IMAGE f (count (minimal (\n. x IN f n))))`
-    >> Reverse CONJ_TAC >- PROVE_TAC []
+    >> reverse CONJ_TAC >- PROVE_TAC []
     >> RW_TAC std_ss [IN_DIFF, IN_BIGUNION, IN_IMAGE, IN_COUNT]
     >> PROVE_TAC []]);
 
@@ -1045,7 +1045,7 @@ val ALGEBRA_SUBSET_LAMBDA_SYSTEM = store_thm
            >> Q.EXISTS_TAC `measure m o f`
            >> RW_TAC std_ss [GREATER_EQ]
            >> Q.EXISTS_TAC `0`
-           >> Reverse (RW_TAC arith_ss [o_THM, abs])
+           >> reverse (RW_TAC arith_ss [o_THM, abs])
            >- PROVE_TAC [positive_def, (REWRITE_RULE [subsets_def, space_def] o
                          Q.SPEC `(m_space m,measurable_sets m)`) ALGEBRA_INTER]
            >> MATCH_MP_TAC INCREASING
@@ -1318,7 +1318,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
     >> MATCH_MP_TAC CLOSED_CDI_INCREASING
     >> Q.PAT_X_ASSUM `f IN X` MP_TAC
     >> RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    >- (Reverse (Cases_on `m`) >- RW_TAC arith_ss []
+    >- (reverse (Cases_on `m`) >- RW_TAC arith_ss []
         >> RW_TAC arith_ss []
         >> PROVE_TAC [SMALLEST_CLOSED_CDI, ALGEBRA_EMPTY, SUBSET_DEF])
     >> Cases_on `n` >- RW_TAC arith_ss [num_case_def, EMPTY_SUBSET]
@@ -1431,7 +1431,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
     >> MATCH_MP_TAC CLOSED_CDI_INCREASING
     >> Q.PAT_X_ASSUM `f IN X` MP_TAC
     >> RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    >- (Reverse (Cases_on `m`) >- RW_TAC arith_ss []
+    >- (reverse (Cases_on `m`) >- RW_TAC arith_ss []
         >> RW_TAC arith_ss []
         >> PROVE_TAC [SMALLEST_CLOSED_CDI, ALGEBRA_EMPTY, SUBSET_DEF])
     >> Cases_on `n` >- RW_TAC arith_ss [num_case_def, EMPTY_SUBSET]
@@ -1474,7 +1474,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA = store_thm
    RW_TAC std_ss []
    >> MATCH_MP_TAC SUBSET_TRANS
    >> Q.EXISTS_TAC `subsets (smallest_closed_cdi (sp, a))`
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (RW_TAC std_ss [SUBSET_DEF, smallest_closed_cdi_def, IN_BIGINTER,
                       GSPECIFICATION, subsets_def, space_def]
        >> PROVE_TAC [SUBSET_DEF])
@@ -1573,7 +1573,7 @@ val MEASURE_COUNTABLE_INCREASING = store_thm
    >- (FULL_SIMP_TAC std_ss [EXTENSION, IN_UNION, IN_DIFF, DISJOINT_DEF, NOT_IN_EMPTY, IN_INTER,
                              SUBSET_DEF, IN_BIGUNION, IN_IMAGE, IN_UNIV, DIFF_DEF]
        >> STRIP_TAC
-       >> Reverse (EQ_TAC >> RW_TAC std_ss [])
+       >> reverse (EQ_TAC >> RW_TAC std_ss [])
        >- PROVE_TAC []
        >> Know `x IN f x'` >- PROVE_TAC []
        >> NTAC 2 (POP_ASSUM K_TAC)
@@ -1664,7 +1664,7 @@ val MEASURE_PRESERVING_LIFT = store_thm
        f IN measure_preserving m1 (m_space m2, a, measure m2) ==>
        f IN measure_preserving m1 m2``,
    RW_TAC std_ss []
-   >> Reverse (Cases_on `algebra (m_space m2, a)`)
+   >> reverse (Cases_on `algebra (m_space m2, a)`)
    >- FULL_SIMP_TAC std_ss [IN_MEASURE_PRESERVING, IN_MEASURABLE, m_space_def,
                             measurable_sets_def, sigma_algebra_def]
    >> Suff `f IN measure_preserving m1 (m_space m2, measurable_sets m2, measure m2)`
@@ -2195,7 +2195,7 @@ val affine_borel_measurable = store_thm
         by (rpt STRIP_TAC >> REAL_ARITH_TAC)
    >> RW_TAC std_ss [borel_measurable_le_iff]
    >> POP_ASSUM (K ALL_TAC)
-   >> Reverse (Cases_on `b < 0`)
+   >> reverse (Cases_on `b < 0`)
    >- (`0 < b` by METIS_TAC [REAL_LT_LE, real_lt]
        >> `! x c. (g x * b <= c - a) = (g x <= (c - a) / b)`
         by (rpt STRIP_TAC
@@ -2345,7 +2345,7 @@ val borel_measurable_square = store_thm
    >> Cases_on `a < 0`
    >- (`{x | x IN m_space m /\ f x pow 2 <= a} = {}`
         by (RW_TAC std_ss [Once EXTENSION, NOT_IN_EMPTY, GSPECIFICATION]
-            >> Reverse (Cases_on `(x IN m_space m)`) >> RW_TAC std_ss []
+            >> reverse (Cases_on `(x IN m_space m)`) >> RW_TAC std_ss []
             >> RW_TAC std_ss [GSYM real_lt] >> MATCH_MP_TAC REAL_LTE_TRANS >> Q.EXISTS_TAC `0`
             >> RW_TAC std_ss [])
        >> FULL_SIMP_TAC std_ss [measure_space_def, SIGMA_ALGEBRA, subsets_def])
@@ -2372,7 +2372,7 @@ val borel_measurable_square = store_thm
         by (STRIP_TAC >> RW_TAC bool_ss [Once (GSYM REAL_POW2_ABS)]
             >> ONCE_REWRITE_TAC [GSYM ABS_BOUNDS]
             >> RW_TAC std_ss [GSYM REAL_NOT_LT]
-            >> Reverse EQ_TAC
+            >> reverse EQ_TAC
             >- (STRIP_TAC >> MATCH_MP_TAC REAL_POW_LT2 >> RW_TAC real_ss [REAL_LT_IMP_LE])
             >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
             >> POP_ASSUM MP_TAC

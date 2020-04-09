@@ -68,6 +68,8 @@ open gcdTheory; (* for P_EUCLIDES *)
    TWICE_EQ_0        |- !n. (TWICE n = 0) <=> (n = 0)
    SQ_EQ_0           |- !n. (SQ n = 0) <=> (n = 0)
    SQ_EQ_1           |- !n. (SQ n = 1) <=> (n = 1)
+   MULT3_EQ_0        |- !x y z. (x * y * z = 0) <=> ((x = 0) \/ (y = 0) \/ (z = 0))
+   MULT3_EQ_1        |- !x y z. (x * y * z = 1) <=> ((x = 1) /\ (y = 1) /\ (z = 1))
 
    Maximum and minimum:
    MAX_ALT           |- !m n. MAX m n = if m <= n then n else m
@@ -188,6 +190,10 @@ open gcdTheory; (* for P_EUCLIDES *)
                                  if n = 0 then 1
                                  else (let result = SQ b ** HALF n MOD m
                                         in if EVEN n then result else (b * result) MOD m))
+   EXP_MOD_ALT       |- !b n m. 1 < m ==>
+                                (b ** n MOD m =
+                                 if n = 0 then 1
+                                 else ((if EVEN n then 1 else b) * SQ b ** HALF n MOD m) MOD m)
    EXP_EXP_SUC       |- !x y n. x ** y ** SUC n = (x ** y) ** y ** n
    EXP_LOWER_LE_LOW  |- !n m. 1 + n * m <= (1 + m) ** n
    EXP_LOWER_LT_LOW  |- !n m. 0 < m /\ 1 < n ==> 1 + n * m < (1 + m) ** n
@@ -530,6 +536,20 @@ val SQ_EQ_1 = store_thm(
   "SQ_EQ_1",
   ``!n. (SQ n = 1) <=> (n = 1)``,
   rw[]);
+
+(* Theorem: (x * y * z = 0) <=> ((x = 0) \/ (y = 0) \/ (z = 0)) *)
+(* Proof: by MULT_EQ_0 *)
+val MULT3_EQ_0 = store_thm(
+  "MULT3_EQ_0",
+  ``!x y z. (x * y * z = 0) <=> ((x = 0) \/ (y = 0) \/ (z = 0))``,
+  metis_tac[MULT_EQ_0]);
+
+(* Theorem: (x * y * z = 1) <=> ((x = 1) /\ (y = 1) /\ (z = 1)) *)
+(* Proof: by MULT_EQ_1 *)
+val MULT3_EQ_1 = store_thm(
+  "MULT3_EQ_1",
+  ``!x y z. (x * y * z = 1) <=> ((x = 1) /\ (y = 1) /\ (z = 1))``,
+  metis_tac[MULT_EQ_1]);
 
 (* ------------------------------------------------------------------------- *)
 (* Maximum and minimum                                                       *)
@@ -1789,6 +1809,22 @@ val EXP_MOD_EQN = store_thm(
   rw[EXP_0, ONE_MOD] >-
   metis_tac[EXP_EVEN, EXP_2] >>
   metis_tac[EXP_ODD, EXP_2, EVEN_ODD]);
+
+(* Pretty version of EXP_MOD_EQN, same pattern as EXP_EQN_ALT. *)
+
+(* Theorem: 1 < m ==> b ** n MOD m =
+           if n = 0 then 1 else
+           ((if EVEN n then 1 else b) * ((SQ b ** HALF n) MOD m)) MOD m *)
+(* Proof: by EXP_MOD_EQN *)
+val EXP_MOD_ALT = store_thm(
+  "EXP_MOD_ALT",
+  ``!b n m. 1 < m ==> b ** n MOD m =
+           if n = 0 then 1 else
+           ((if EVEN n then 1 else b) * ((SQ b ** HALF n) MOD m)) MOD m``,
+  rpt strip_tac >>
+  imp_res_tac EXP_MOD_EQN >>
+  last_x_assum (qspecl_then [`n`, `b`] strip_assume_tac) >>
+  rw[]);
 
 (* Theorem: x ** (y ** SUC n) = (x ** y) ** y ** n *)
 (* Proof:

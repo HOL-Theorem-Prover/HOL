@@ -2722,6 +2722,13 @@ Proof
   SRW_TAC[numSimps.ARITH_ss][LIST_EQ_REWRITE,EL_DROP]
 QED
 
+Theorem GENLIST_CONG:
+ (!m. m < n ==> f1 m = f2 m) ==> GENLIST f1 n = GENLIST f2 n
+Proof
+ map_every Q.ID_SPEC_TAC [`f1`, `f2`] >> Induct_on `n` >>
+ simp[GENLIST_CONS]
+QED
+
 Theorem LIST_REL_O:
   !R1 R2. LIST_REL (R1 O R2) = LIST_REL R1 O LIST_REL R2
 Proof

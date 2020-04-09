@@ -1,6 +1,7 @@
 \documentclass[a4paper,10pt]{article}
 
 \usepackage[T1]{fontenc}
+\usepackage{stmaryrd}
 \usepackage{upquote}
 \usepackage{alltt}
 \usepackage{url}
@@ -28,7 +29,6 @@
 \setlength{\itemsep}{-\parsep}
 }{\end{enumerate}}
 
-\renewcommand{\conj}{\(\begin{array}{c}\texttt{\bf\scriptsize/\textbackslash}\\[0.18em]\end{array}\)}
 \newcommand{\mysec}[1]{\section{\large #1}}
 \newcommand{\mysubsec}[1]{\subsection{\normalsize#1}}
 \newcommand{\sq}{\textasciigrave}
@@ -104,17 +104,14 @@ Most HOL4 proofs are constructed using an interactive \emph{goal
   stack} and then put together using tactic combinators
 (Section~\ref{prove1}, \ref{prove2}). To start the goal stack:
 \begin{enum}
-\item Write the outline of a theorem, in this case called {\tt less\_add\_1}:
+\item Write the outline of a theorem, in this case called {\tt less\_add\_1}. One can type $\forall$ by pressing the {\tt !} key. More key shortcuts will be explained below.
 \begin{code}
 Theorem less_add_1:
-  !n. n < n + 1
+  \(\forall\)n. n < n + 1
 Proof
 
 QED
 \end{code}
-  We can write $\forall$ as {\tt !}\ in HOL4. Alternatively, type {\tt C-shift-!}\ to input~$\forall$.
-  There are many abbreviations for common Unicode characters on \texttt{C-shift} modifiers.
-  For example, \texttt{C-shift-l} gives a $\lambda$ character.
 \item Move the cursor between the {\tt Theorem}-line and {\tt Proof}-line.
 \item Press {\tt M-h~g} to push the goal onto the goal stack.
 \end{enum}
@@ -122,6 +119,104 @@ The HOL4 window should look something like this:
 \begin{code}
 >>- g `!n. n < n + 1`
 \end{code}
+
+\paragraph{Typing Special Symbols in Emacs}
+As above, we can write $\forall$ as {\tt !}\ in HOL4.
+Indeed, with the special HOL-input map turned on in Emacs (which happens by default, and is indicated by the presence of a $\Pi$ on the left of the modeline), typing \texttt{!} will produce a $\forall$ character automatically.
+A number of other connectives are handled in similar ways.
+There are also many abbreviations for even more common Unicode characters on \texttt{Control}-\texttt{Shift} modifiers (i.e., keys that are pressed at the same time as the Control and Shift modifier keys are held down).
+For example, \texttt{C-S-l} gives a $\lambda$ character.
+Finally, there are yet more options when a leading backslash is typed.
+For example \texttt{\textbackslash{}a} will generate an $\alpha$ character (as will typing out \texttt{\textbackslash{}alpha} in full).
+In some situations, the machinery is even more sophisticated.
+If one types \texttt{\textbackslash{}l}, this will generate a listing of many different left arrow options in the mini-buffer.
+If a space character is entered, the currently highlighted option will be selected.
+Alternatively, pick a number or move the cursor with left and right arrow keys to choose that option (which will become the default option for next time).
+See Table~\ref{tab:unicode-input} for more information.
+
+\begin{table}[t]
+
+\newcommand{\itemz}[2]{\texttt{#1}\; &-\;\; \textrm{#2}}
+\newcommand{\itemy}[2]{#1&\quad\quad&#2\\}
+
+\begin{displaymath}
+\begin{array}{lllll}
+\itemy{\itemz{\rule{0em}{1.5em}M-h H}{start HOL}}{\itemz{M-h g}{push goal onto goal stack}}
+\itemy{\itemz{M-h M-r}{copy region into HOL}}{\itemz{M-h e}{apply tactic to goal}}
+\itemy{\itemz{M-h C-t}{display types on/off}}{\itemz{M-h b}{move back in proof}}
+\itemy{\itemz{M-h C-c}{interrupt HOL}}{\itemz{M-h p}{print current goal}}
+\itemy{\itemz{`}{writes \lsquo{}\rsquo{}}}{\itemz{M-h d}{drop current goal}}
+\itemy{\itemz{`{`}}{writes \ldquo{}\rdquo{}}}{\itemz{M-h M-s}{start subgoal proof for {\tt by}}}
+\end{array}
+\end{displaymath}
+\caption{Most important key bindings in the emacs HOL4 mode.
+Note that all of these actions are also available in the HOL menu within Emacs.}
+
+\end{table}
+
+
+\begin{table}
+\begin{center}
+\begin{tabular}{ccc}
+Symbol & Control-Shift keybinding & ``Quail'' binding(s)\\
+\hline
+$\forall$ & \texttt{C-S-!} & \texttt{!}\quad\texttt{\textbackslash{}all} \\
+$\exists$ & \texttt{C-S-?} & \texttt{?}\quad\texttt{\textbackslash{}exists} \\
+$\land$ & \texttt{C-S-\&} & \texttt{/\textbackslash}\quad\texttt{\textbackslash{}and} \\
+$\lor$ & \texttt{C-S-|} & \texttt{\textbackslash/}\quad\texttt{\textbackslash{}or} \\
+$\neg$ & \texttt{C-S-\~} & \texttt{\textbackslash{}neg}\\
+$\iff$ & \texttt{C-S-=} & \texttt{\textbackslash{}lr=} \texttt{\textbackslash{}iff}$^\dagger$\\
+$\neq$ & \texttt{C-M-S-\textbackslash{}~=} & \texttt{<>}\quad\texttt{\textbackslash{}neq}\\
+$\Rightarrow$ & \texttt{C-M-S-$>$} & \texttt{==$>$}\quad\texttt{\textbackslash{}r=}$^\dagger$\\[2mm]
+%
+% Greek letters
+%
+$\alpha$ & \texttt{C-S-a} & \texttt{\textbackslash{}a}\quad\texttt{\textbackslash{}alpha}\\
+$\beta$ & \texttt{C-S-b} &
+  \texttt{\textbackslash{}b}\quad\texttt{\textbackslash{}beta}\\
+$\gamma$ & \texttt{C-S-g} &
+  \texttt{\textbackslash{}g}\quad\texttt{\textbackslash{}gamma}\\
+$\Gamma$ & \texttt{C-M-S-g} &
+  \texttt{\textbackslash{}GG}\quad\texttt{\textbackslash{}Gamma}\\
+$\delta$ & \texttt{C-S-d} &
+  \texttt{\textbackslash{}d}\quad\texttt{\textbackslash{}delta}\\
+$\Delta$ & \texttt{C-M-S-d} &
+  \texttt{\textbackslash{}GD}\quad\texttt{\textbackslash{}Delta}\\
+$\lambda$ & \texttt{C-S-l} & \texttt{\textbackslash{}lambda}\\
+$\Lambda$ & \texttt{C-M-S-l} & \texttt{\textbackslash{}GL}\quad\texttt{\textbackslash{}Lambda}\\
+\multicolumn{3}{c}{\dots}\\[2mm]
+%
+% set operators
+%
+$\cup$ & \texttt{C-S-u} &
+  \texttt{\textbackslash{}cup}\quad\texttt{\textbackslash{}union}$^\dagger$\\
+$\cap$ & \texttt{C-S-i} &
+  \texttt{\textbackslash{}cap}\quad\texttt{\textbackslash{}i}$^\dagger$\\
+$\in$ & \texttt{C-S-:} & \texttt{\textbackslash{}in}\\
+$\notin$ & \texttt{C-M-S-\textbackslash{} :} & \texttt{\textbackslash{}notin}\\
+$\emptyset$ & \texttt{C-M-S-\textbackslash{} 0} & \texttt{\textbackslash{}empty}\\
+$\subseteq$ & \texttt{C-S-c} & \texttt{\textbackslash{}subseteq}\\[2mm]
+
+$\llparenthesis$ & \texttt{C-M-S-( C-M-S-|} \\
+$\rrparenthesis$ & \texttt{C-M-S-) C-M-S-|} \\
+$\llbracket$ & \texttt{C-S-[} & \texttt{\textbackslash(}$^\dagger$\\
+$\rrbracket$ & \texttt{C-S-]} & \texttt{\textbackslash)}$^\dagger$\\
+$\langle$ & \texttt{C-M-S-( C-S-$<$} &
+  \texttt{\textbackslash{}langle}\quad\texttt{\textbackslash(}$^\dagger$\\
+$\rangle$ & \texttt{C-M-S-) C-S-$>$} &
+  \texttt{\textbackslash{}rangle}\quad\texttt{\textbackslash)}$^\dagger$
+\end{tabular}
+\end{center}
+\caption{Illustrative Input methods for various Unicode symbols.
+Multiple keys (separated by spaces) in the Control-Shift column indicate that a sequence of keys must be struck to achieve the desired character.
+(For example, the \texttt{C-M-S-\textbackslash} prefix is used to open up a set of bindings for characters with various forms of slash through them; following that with a colon puts a slash through the $\in$ symbol.)
+Quail bindings are enabled if there is a $\Pi$ character visible on the left of the current buffer's mode-line.
+Quail can be toggled on and off with the \texttt{C-\textbackslash} keybinding.
+Full details of the ``quail'' input map can be seen interactively by typing the command \texttt{M-x~hol-input-show-translations}.
+Quail bindings marked with daggers ($^\dagger$) are those that lead to multi-way selections that need to be made with numbers or left-right arrow keys.
+Finally note that it is always possible to enter characters without special processing by first typing a \texttt{C-q}.}
+\label{tab:unicode-input}
+\end{table}
 
 \mysubsec{Applying a tactic\label{apply}}
 
@@ -153,7 +248,7 @@ One can pop goals off the goal stack by pressing {\tt M-h d}, which gives:
 The tactic should be written between the {\tt Proof}-line and the {\tt QED}-line.
 \begin{code}
 Theorem less_add_1:
-  !n. n < n + 1
+  \(\forall\)n. n < n + 1
 Proof
   decide_tac
 QED
@@ -162,14 +257,19 @@ When the above lines are copied into HOL4 (using text-selection then
 {\tt M-h M-r}, as described in Section~\ref{copy}), HOL4 responds with:
 \begin{code}
 >>__ open arithmeticTheory
->>- val less_add_1 = prove(``!n. n < n + 1``,decide_tac);
+>>- Theorem less_add_1:
+      ∀n. n < n + 1
+    Proof
+      decide_tac
+    QED
 \end{code}
 
 \mysubsec{Saving proofs based on multiple tactics\label{prove2}}
 
-Suppose we have proved the goal {\tt !n{.}~n <= n * n} with the following tactics:
+Suppose we have proved the goal {\tt $\forall$n{.}~n <= n * n} with the following tactics.
+Note that {\tt \lsquo{}n\rsquo{}} (with the ``pretty'' single quotation marks) can be produced by typing {\tt \bq{}n\bq}.
 \begin{code}
-Induct_on `n`                   (* comment: induction on n  *)
+Induct_on \lsquo{}n\rsquo{}                    (* comment: induction on n  *)
 
   decide_tac                    (* comment: solve base case *)
 
@@ -180,40 +280,18 @@ Tactics can be composed together for {\tt Theorem} using \ml{\gt\gt} and \ml{\gt
 The \ml{\gt\gt} operator is an infix that composes two tactics into one.
 The \ml{\gt-} is used to prove subgoals: \ml{\gt-} \emph{tactic} proves the first subgoal using \emph{tactic}.
 
-\newpage
 \noindent Here is the entire proof when composed using \ml{\gt\gt} and \ml{\gt-}.
 \begin{code}
 Theorem less_eq_mult:
-  !n:num. n <= n * n
+  \(\forall\)n:num. n <= n * n
 Proof
-  Induct_on `n`
+  Induct_on \lsquo{}n\rsquo{}
   >- decide_tac
   >- (asm_simp_tac bool_ss [MULT]
-      \gt\gt decide_tac)
+      >>> decide_tac)
 QED
 \end{code}
 Copy the above into HOL4 using text-selection, and then {\tt M-h M-r}, as in Section~\ref{copy}.
-
-\newcommand{\itemz}[2]{\texttt{#1}\; &-\;\; \textrm{#2}}
-\newcommand{\itemy}[2]{#1&\quad\quad&#2\\}
-
-\begin{figure}[t]
-\hrule
-
-\begin{displaymath}
-\begin{array}{lllll}
-\itemy{\itemz{\rule{0em}{1.5em}M-h H}{start HOL}}{\itemz{M-h g}{push goal onto goal stack}}
-\itemy{\itemz{M-h M-r}{copy region into HOL}}{\itemz{M-h e}{apply tactic to goal}}
-\itemy{\itemz{M-h C-t}{display types on/off}}{\itemz{M-h b}{move back in proof}}
-\itemy{\itemz{M-h C-c}{interrupt HOL}}{\itemz{M-h p}{print current goal}}
-\itemy{&}{\itemz{M-h d}{drop current goal}}
-\end{array}
-\end{displaymath}
-\caption{Most important key bindings in the emacs HOL4 mode.
-Note that all of these actions are also available in the HOL menu within Emacs.}
-
-\rule{0em}{1.5em}\hrule
-\end{figure}
 
 \mysubsec{Displaying types in HOL4}
 
@@ -238,25 +316,25 @@ End
 Data-types are defined using {\tt Datatype ...\ End}, \eg{} a binary tree
 which holds values of type {\tt 'a} (a type variable) at the leaves:
 \begin{code}
-Datatype:
-  TREE = LEAF 'a | BRANCH TREE TREE
-End
+##eval Datatype:
+         TREE = LEAF 'a | BRANCH TREE TREE
+       End
 \end{code}
 A valid tree is \eg{} {\tt BRANCH (LEAF 5) (BRANCH (LEAF 1) (LEAF 7))}
 with type {\tt num TREE}, where {\tt  num} is the type name for a natural
 number. We can define recursive functions, \eg{}
 \begin{code}
-Definition MAP_TREE_def:
-  (MAP_TREE f (LEAF n) = LEAF (f n)) \conj{}
-  (MAP_TREE f (BRANCH u v) = BRANCH (MAP_TREE f u) (MAP_TREE f v))
-End
+##eval Definition MAP_TREE_def:
+        (MAP_TREE f (LEAF n) = LEAF (f n)) ∧
+        (MAP_TREE f (BRANCH u v) = BRANCH (MAP_TREE f u) (MAP_TREE f v))
+       End
 \end{code}
 {\tt  SQUARE\_def} and {\tt  MAP\_TREE\_def} are theorems containing the
 above definitions. Theorems describing {\tt  TREE} can be retrieved by copying
 the following into HOL4 by pressing {\tt C-space} then {\tt M-h M-r}, as described in Section~\ref{copy}.
 \begin{code}
-val TREE_11 = fetch "-" "TREE_11";
-val TREE_distinct = fetch "-" "TREE_distinct";
+##eval val TREE_11 = fetch "-" "TREE_11";
+##eval val TREE_distinct = fetch "-" "TREE_distinct";
 \end{code}
 
 \mysubsec{Making a theory}
@@ -280,7 +358,7 @@ open HolKernel boolLib bossLib Parse
 val _ = new_theory "less_lemma";
 
 Theorem less_add_1:
-  !n. n < n + 1
+  \(\forall\)n. n < n + 1
 Proof
   decide_tac
 QED
@@ -308,9 +386,9 @@ HOL4 has a large collection of library theories. The most commonly used are:
 \end{displaymath}
 Other standard theories include:
 \begin{code}
-arithmeticTheory  bagTheory  boolTheory  combinTheory  fcpTheory
-finite_mapTheory  fixedPointTheory  floatTheory  integerTheory
-limTheory  optionTheory  probTheory  ratTheory  realTheory
+bagTheory  boolTheory  combinTheory  fcpTheory  finite_mapTheory
+fixedPointTheory  floatTheory  integerTheory  limTheory
+optionTheory  probTheory  ratTheory  realTheory
 relationTheory  rich_listTheory  ringTheory  seqTheory
 sortingTheory  state_transformerTheory  stringTheory  sumTheory
 topologyTheory  transcTheory  whileTheory
@@ -322,9 +400,10 @@ Replace {\tt <path>} with the path to your HOL4 installation.
 \end{code}
 
 Once theories has been opened (see Section~\ref{copy}), one can search for theorems in the current
-context using {\tt print\_match}, \eg{} with {\tt arithmeticTheory} opened,
+context using {\tt print\_match}. For example, with {\tt arithmeticTheory} opened, doing {\tt M-h~M-r}
+with the following selected,
 \begin{code}
-print_match [] {`}`n DIV m <= k{`}`
+print_match [] \ldquo{}n DIV m <= k\rdquo{}
 \end{code}
 prints a list of theorems containing $n\; \texttt{\small DIV} \;m \leq k$ for some $n,m,k$:\vspace{-1.5em}
 \begin{code}
@@ -349,51 +428,51 @@ basic use of the most important proof tactics.  Press {\tt\small
 
 Simple goals can often be proved automatically by {\tt\small
   metis\_tac}, {\tt\small decide\_tac} or {\tt\small EVAL\_TAC}.
-{\tt\small metis\_tac} is first-order prover which is good at general
+Of these, {\tt\small metis\_tac} is first-order prover which is good at general
 problems, but requires the user to supply a list of relevant theorems,
 \eg{} the following goal is proved by {\tt\small metis\_tac
   [MOD\_TIMES2,MOD\_MOD,MOD\_PLUS]}.
 \begin{code}
-!k. 0 < k ==> !m p n. (m MOD k * p + n) MOD k = (m * p + n) MOD k
+\(\forall\)k. 0 < k ==> \(\forall\)m p n. (m MOD k * p + n) MOD k = (m * p + n) MOD k
 \end{code}
 
 \noindent
 {\tt\small decide\_tac} handles linear arithmetic over natural
 numbers, \eg{} {\tt\small decide\_tac} solves:
 \begin{code}
-!m n k. m < n \conj{} n < m+k \conj{} k <= 3 \conj{} ~(n = m+1) ==> (n = m+2)
+\(\forall\)m n k. m < n \(\land\) n < m+k \(\land\) k <= 3 \(\land\) ~(n = m+1) ==> (n = m+2)
 \end{code}
 {\tt\small EVAL\_TAC} is good at fully instantiated goals, \eg{} {\tt\small EVAL\_TAC} solves:
 \begin{code}
-0 < 5 \conj{} (HD [4;5;6;7] + 2**32 = 3500 DIV 7 + 4294966800)
+0 < 5 \(\land\) (HD [4;5;6;7] + 2**32 = 3500 DIV 7 + 4294966800)
 \end{code}
 
 \mysubsec{Proof set-up}
 
-Goals that contain top-level universal quantifiers ({\tt !x.}),
-implication ({\tt ==>}) or conjunction ({\tt \conj{}}) are often
+Goals that contain top-level universal quantifiers ({\tt $\forall$x.}),
+implication ({\tt ==>}) or conjunction ({\tt \(\land\)}) are often
 taken apart using {\tt\small rpt strip\_tac} or just {\tt\small
-  strip\_tac}, \eg{} the goal {\tt\small \sq !x{.}~(!z{.}~x < h z) ==> ?y{.}~f x = y\sq}
+  strip\_tac}, \eg{} the goal {\tt\small $\forall$x{.}~($\forall$z{.}~x < h z) ==> $\exists$y{.}~f x = y}
 becomes the following. (Assumptions are written under the line.)
 \begin{code}
-    ?y. f x = y
+    \(\exists\)y. f x = y
     ------------------------------------
-      !z. x < h z
+      \(\forall\)z. x < h z
 \end{code}
 
 \mysubsec{Existential quantifiers}
 
 Goals that have a top-level existential quantifier can be given a
 witness using {\tt \small qexists\_tac}, \eg{} {\tt \small
-  qexists\_tac \sq 1\sq} applied to goal {\tt \small ?n{.}~!k{.}~n * k = k}
-produces goal {\tt \small !k{.}~1 * k = k}.
+  qexists\_tac \lsquo{}1\rsquo{}} applied to goal {\tt \small $\exists$n{.}~$\forall$k{.}~n * k = k}
+produces goal {\tt \small $\forall$k{.}~1 * k = k}.
 
 \mysubsec{Rewrites}
 
 Most HOL4 proofs are based on rewriting using equality theorems, \eg{}
 \begin{code}
-ADD_0:            |- !n. n + 0 = n
-LESS_MOD:         |- !n k. k < n ==> (k MOD n = k)
+ADD_0:            |- \(\forall\)n. n + 0 = n
+LESS_MOD:         |- \(\forall\)n k. k < n ==> (k MOD n = k)
 \end{code} {\tt \small asm\_simp\_tac} and {\tt \small full\_simp\_tac} are two
 commonly used rewriting tactics, \eg{} suppose the goal is the following:
 \begin{code}
@@ -429,29 +508,29 @@ and {\tt\small srw\_tac}.
 
 \mysubsec{Induction}
 
-Use the tactic {\tt\small Induct\_on \sq x\sq} to start an induction on {\tt\small x}.
+Use the tactic {\tt\small Induct\_on \lsquo{}x\rsquo{}} to start an induction on {\tt\small x}.
 Here {\tt x} can be any variable with a recursively defined type,
 \eg{} a natural number, a list or a {\tt\small TREE} as defined in
 Section~\ref{definition}.  One can start a complete (or strong)
 induction over the natural number {\tt\small n} using {\tt\small
-  completeInduct\_on \sq n\sq}.
-As with \texttt{Cases\_on} one can also induct on terms (\eg, \texttt{\small Induct\_on~\sq hi~-~lo\sq}), though these proofs can be harder to carry out.
+  completeInduct\_on \lsquo{}n\rsquo{}}.
+As with \texttt{Cases\_on} one can also induct on terms (\eg, \texttt{\small Induct\_on~\lsquo{}hi~-~lo\rsquo{}}), though these proofs can be harder to carry out.
 
 \mysubsec{Case splits}
 
-A goal can be split into cases using {\tt\small Cases\_on \sq x\sq}. The
+A goal can be split into cases using {\tt\small Cases\_on \lsquo{}x\rsquo{}}. The
 goal is split according to the constructors of the type of {\tt\small
   x}, \eg{} for the following goal
 \begin{code}
-    !x. ~(x = []) ==> (x = HD x::TL x)
+    \(\forall\)x. ~(x = []) ==> (x = HD x::TL x)
 \end{code}
-{\tt\small Cases\_on \sq x\sq} splits the goal into two:
+{\tt\small Cases\_on \lsquo{}x\rsquo{}} splits the goal into two:
 \begin{code}
     ~(h::t = []) ==> (h::t = HD (h::t)::TL (h::t))
 
     ~([] = []) ==> ([] = HD []::TL [])
 \end{code}
-Case splits on boolean expressions are also useful, \eg{} {\tt\small Cases\_on \sq n < 5\sq}.
+Case splits on boolean expressions are also useful, \eg{} {\tt\small Cases\_on \lsquo{}n < 5\rsquo{}}.
 
 \mysubsec{Subproofs}
 
@@ -463,7 +542,7 @@ It is often useful to start a mini-proof inside a larger proof, \eg{} for the go
 \end{code}
 we might want to prove {\tt\small h n = g n} assuming {\tt\small 0 <
   n}.
-We can start such a subproof by typing {\tt\small sg \sq h n = g n\sq}.%
+We can start such a subproof by typing {\tt\small sg \lsquo{}h n = g n\rsquo{}}.%
 \footnote{You can also use the emacs binding {\tt\small M-h M-s}
 with the cursor inside the sub-goal.} The new goal stack:
 \begin{code}
@@ -476,11 +555,11 @@ with the cursor inside the sub-goal.} The new goal stack:
     ------------------------------------
       0 < n
 \end{code}
-If {\tt\small \sq h n = g n\sq} can be proved in one step, \eg{} using {\tt\small metis\_tac [MY\_LEMMA]}, then
-apply {\tt\small \sq h n = g n\sq \ by metis\_tac [MY\_LEMMA]} instead of
-{\tt\small sg \sq h n = g n\sq}.  If the sub-goal requires
+If {\tt\small h n = g n} can be proved in one step, \eg{} using {\tt\small metis\_tac [MY\_LEMMA]}, then
+apply {\tt\small \lsquo{}h n = g n\rsquo{} by metis\_tac [MY\_LEMMA]} instead of
+{\tt\small sg \lsquo{}h n = g n\rsquo{}}.  If the sub-goal requires
 multiple steps the tactic after the \texttt{by} will need to be
-parenthesised: {\tt\small\sq\textit{goal}\sq \ by ($\mathit{tac}_1$ \ml{\gt\gt}
+parenthesised: {\tt\small\lsquo{}\textit{goal}\rsquo{} by ($\mathit{tac}_1$ \ml{\gt\gt}
   $\mathit{tac}_2$ ...)}
 
 \mysubsec{Proof by contradiction}
@@ -505,6 +584,7 @@ The interested reader may want to look up the following:
 CONV_TAC  disj1_tac  disj2_tac  match_mp_tac  mp_tac  pat_assum  Q
 \end{code}
 
+\newpage
 \mysec{Further reading and general advice\label{reading}}
 
 General advice on using HOL4:
@@ -530,3 +610,6 @@ Section~\ref{search}) and the HTML reference (mentioned in
 Section~\ref{html}) most helpful.
 
 \end{document}
+%%% Local Variables:
+%%% mode: latex
+%%% End:
