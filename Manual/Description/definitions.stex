@@ -2124,7 +2124,8 @@ Each is also stored in the current theory segment.
 \item $\mathit{rules}$ is a conjunction of implications
 that will be the same as the input term quotation; the theorem is
 saved under the name \ml{<stem>\_rules}, where \ml{<stem>} is the name of the
-first relation defined by the function (if using \ml{Hol\_reln}), or as provided by the user, when using the \ml{Inductive} syntax.
+first relation defined by the function (if using \ml{Hol\_coreln}), or
+as provided by the user, when using the \ml{CoInductive} syntax.
 \item $\mathit{coind}$ is the coinduction principle for the relations,
 saved under the name \ml{<stem>\_coind}.
 \item $\mathit{cases}$ is the so-called `cases' or `inversion' theorem

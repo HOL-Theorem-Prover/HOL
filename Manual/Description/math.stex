@@ -98,8 +98,8 @@ of a sum is the sum of the derivatives:
 \label{sec:integration}
 
 The version of integral calculus formalized in HOL is a
-generalized Riemann integration called \emph{Henstock-Kurzweil Integral},
-or \emph{gauge integral}~\cite{Bartle:2001um}. Many functions which
+generalized Riemann integration called \emph{Henstock-Kurzweil Integration},
+or \emph{gauge integration}~\cite{Bartle:2001um}. Many functions which
 are not Riemann integrable can be shown to be Henstock-Kurzweil
 integrable. (In particular, a function is Lebesgue integrable if and
 only if the function and its absolute value are Henstock-Kurzweil
@@ -125,7 +125,7 @@ Riemann integral) is expressed below:
 
 The above theorem requires that the function $f$ must be everywhere
 differentiable (i.e. has derivative) in the closed interval
-$[a,b]$. In fact, Henstock-Kurzweil Integral permits a
+$[a,b]$. In fact, Henstock-Kurzweil Integration permits a
 countable number of exceptional points. This yields a significant
 improvement, as shown in the following strong version of the
  fundamental theorem of calculus:
@@ -157,7 +157,7 @@ theory, a measure is a set function of the type
 $(\alpha \to \konst{bool}) \to \konst{extreal}$.\footnote{The legacy
   \theoryimp{real_measure} theory, where the type of measure is
   $(\alpha \to \konst{bool}) \to \konst{real}$, is still available.}
-(See Section~\ref{sec:extreals} for more details of extended real numbers.)
+(See Section~\ref{sec:extreal} for more details of extended real numbers.)
 This allows us to express, for example, the ``length'' of the entire
 real line $\mathbb{R}$, i.e.~\holtxt{PosInf}.
 
@@ -443,7 +443,7 @@ that \holtxt{lambda} is an abbreviation of \holtxt{measure lborel}):
 \end{alltt}
 \end{hol}
 
-\subsection{Lebesgue Intergration Theory}
+\subsection{Lebesgue Integration Theory}
 \label{sec:lebesgue}
 \index{lebesgue, the HOL theory of@lebesgue, the \HOL{} theory of}
 
@@ -916,7 +916,7 @@ probability distributions rather summarily by a few `typical
 values.' ... Among the typical values the \emph{(mathematical) expectation},
 or \emph{mean}, is by far the most important.
 It lends itself best to analytical manipulations, and it is
-preferred by statiscians because of a property known as sampling stability.''~\cite[p.~221]{Feller:2004vv}
+preferred by statisticians because of a property known as sampling stability.''~\cite[p.~221]{Feller:2004vv}
 Formally, expectation is nothing but a synonym of (Lebesgue) integration:
 \begin{hol}
 \begin{alltt}
@@ -1021,7 +1021,7 @@ or formally
 \item The sequence $\{X_n\}$
 is said to converge \emph{in probability (pr.)} to $Y$ iff for every $\epsilon > 0$ we have
 \begin{equation*}
-\lim_{n\rightarrow\infty} \mathscr{P}\{|X_n - X| > \epsilon \} = 0.
+\lim_{n\rightarrow\infty} \mathscr{P}\{|X_n - Y| > \epsilon \} = 0.
 \end{equation*}
 or formally
 \begin{hol}
@@ -1036,7 +1036,7 @@ or formally
 \item The sequence $\{X_n\}$ is said to converge in $L^p$ to $Y$ iff
   $X_n \in L^p$, $Y \in L^p$ and
 \begin{equation*}
-\lim_{n\rightarrow\infty} \mathscr{E}(|X_n - X|^p) = 0.
+\lim_{n\rightarrow\infty} \mathscr{E}(|X_n - Y|^p) = 0.
 \end{equation*}
 or formally
 \begin{hol}
@@ -1159,9 +1159,9 @@ and statements with their extreal-based companies, to ease the
 difficulities when porting proofs to the new measure and probability theories.
 
 In \ml{\$(HOLDIR)/examples/miller}, done by Hurd~\cite{hurd-thesis},
-first a type of boolean sequences is defined
+first a type of Boolean sequences is defined
 to model an infinite sequence of coin flips. Next a probability
-function is formalized which takes as input a set of boolean
+function is formalized which takes as input a set of Boolean
 sequences, and returns a real number between 0 and 1.
 Building on this foundation, the probability theory is used to define
 a sampling function that takes an infinite sequence of coin flips and
