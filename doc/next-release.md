@@ -54,8 +54,8 @@ Bugs fixed:
     mixing of `PosInf` and `NegInf` in the sum elements.
     A bug in `ext_suminf` with non-positive functions is also fixed.
 
-    There is a major backwards-incompatibility: the above changes may
-    lead to more complicated proofs when using extreals, while better 
+    There is a minor backwards-incompatibility: the above changes may
+    lead to more complicated proofs when using extreals, while better
     alignments with textbook proofs are achieved, on the other hand.
 
 New theories:
@@ -63,37 +63,43 @@ New theories:
 
 *  `derivativeTheory` and `integrationTheory`: univariate
     differential and integral calculus (based on Henstock-Kurzweil
-    integral, or generalized Riemann integral, or gauge integral),
-    ported by Muhammad Qasim, Osman Hasan et al. from HOL Light (up to 2015).
+    Integral, or gauge integral), ported by Muhammad Qasim and Osman
+    Hasan from HOL Light (up to 2015).
 
-*  `measureTheory`, `lebesgueTheory`, `martingaleTheory` and `probabilityTheory`:
-    the type of measure/probability has been upgraded
-    from `('a set) -> real` to `('a set) -> extreal`, better aligned with
-    modern textbooks. Many new theorems were added.
+*   HOL now provides measure and probability theories based on extended real
+    numbers, i.e. the type of measure (probability) is `('a set) -> extreal`.
+    The following new (or updated) theories are provided:
 
-    There is a major backwards-incompatibility: old proof scripts
-    using real-valued measure and probability theory should now
-    instead open `sigma_algebraTheory`, `real_measureTheory`,
-    `real_borelTheory`, `real_lebesgueTheory` and `real_probabilityTheory`.
+        sigma_algebraTheory      * Sigma-algebra and other system of sets
+        measureTheory            * Measure Theory defined on extended reals
+        real_borelTheory         * Borel-measurable sets generated from reals
+        borelTheory              * Borel sets (extreal) and Borel measurable functions
+        lebesgueTheory           * Lebesgue integration theory
+        martingaleTheory         * Martingales based on sigma-finite filtered measure space
+        probabilityTheory        * Probability Theory based on extended reals
 
-*  `sigma_algebraTheory`: the pure set-theoretic theory of sigma-algebra
-    has been moved from `measureTheory` into a dedicated `sigma_algebraTheory`,
-    adding also some other system of sets (ring, semiring, and dynkin system).
-    This theory is now shared by both `measureTheory` and `real_measureTheory`.
+    Notable theorems include: Caratheory's Extension Theorem (for semiring),
+    the construction of 1-dimensional Borel and Lebesgue measure spaces,
+    Radon-Nikodym theorem, Bayes' Rule (Conditional Probability),
+    Kolmogorov 0-1 Law, Borel-Cantelli Lemma, Markov/Chebyshev's inequalities,
+    convergence concepts of random sequences and the Law(s) of Large Numbers.
 
-*  `borelTheory`: the extreal-based Borel space and Borel-measurable
-    sets is now moved from `measureTheory` into `borelTheory` with
-    many new theorems added.
+    There is a major backwards-incompatibility: old proof scripts based on
+    real-valued measure and probability theories should now open the following
+    legacy theories instead: `sigma_algebraTheory`, `real_measureTheory`,
+   `real_borelTheory`, `real_lebesgueTheory` and `real_probabilityTheory`.
+    These legacy theories are stil maintained to support __examples/miller__ and
+    __examples/diningcryptos__, etc.
 
-    There is a minor backwards-incompatibility: some old proof scripts using
-   `measureTheory` should now also open `sigma_algebraTheory` and `borelTheory`.
+    Thanks to Muhammad Qasim, Osman Hasan, Liya Liu and Waqar Ahmad et al. for
+    the original work, and Chun Tian for the integration and further extension.
 
 New tools:
 ----------
 
-*  `holwrap.py`: a simple python script that 'wraps' hol in a similar fashion 
+*  `holwrap.py`: a simple python script that 'wraps' hol in a similar fashion
     to rlwrap. Features include multiline input, history and basic StandardML
-    syntax highlighting. 
+    syntax highlighting.
     See the comments at the head of the script for usage instructions.
 
 New examples:

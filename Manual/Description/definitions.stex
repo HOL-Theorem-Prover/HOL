@@ -2108,6 +2108,36 @@ Thus, one can write invocations such as
 \end{verbatim}
 \index{inductive relations|)}
 
+\subsection{Coinductive Relations}
+\label{sec:coinductive}
+\index{coinductive relations|(}
+
+\index{Hol_coreln, defining coinductive relations@\ml{Hol\_coreln}, defining coinductive relations}
+\index{coinductive relations!Hol_coreln (ML function)@\ml{Hol\_coreln} (ML function)}
+
+\HOL{} supports coinductive relational definitions by the function
+\ml{Hol\_coreln} in the \ml{bossLib} structure (or the new \ml{CoInductive} syntax).
+\ml{Hol\_coreln} shares the same input syntax with \ml{Hol\_reln}.
+A successful invocation of this definitional principle returns three important theorems $\mathit{rules}$, $\mathit{coind}$ and $\mathit{cases})$.
+Each is also stored in the current theory segment.
+\begin{itemize}
+\item $\mathit{rules}$ is a conjunction of implications
+that will be the same as the input term quotation; the theorem is
+saved under the name \ml{<stem>\_rules}, where \ml{<stem>} is the name of the
+first relation defined by the function (if using \ml{Hol\_reln}), or as provided by the user, when using the \ml{Inductive} syntax.
+\item $\mathit{coind}$ is the coinduction principle for the relations,
+saved under the name \ml{<stem>\_coind}.
+\item $\mathit{cases}$ is the so-called `cases' or `inversion' theorem
+  for the relations, saved under the name \ml{<stem>\_cases},
+  and is used to decompose an element in the relation into the
+possible ways of obtaining it by the rules.
+\end{itemize}
+Note that, ``schematic variables'' are also supported by \ml{Hol\_coreln},
+while there is no concept of ``strong coinduction principles''
+here. \HOL{}'s core coalgebra types (\theoryimp{llist}, \theoryimp{path}
+and  \theoryimp{lbtree}) are all based on coinductive relations. See
+Section~\ref{bisimulation} for a sample usage of coinductive relations
+on bisimulation.
 
 %%% Local Variables:
 %%% mode: latex

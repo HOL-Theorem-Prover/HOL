@@ -9,7 +9,7 @@
 (* NOTE: this script is loaded after "integerTheory", before "realTheory", only
    general topology theorems without using real numbers should be put here.
 
-   c.f. "rich_topologyTheory" for Elementary topology in Euclidean space.
+   see real_topologyTheory for elementary topology in Euclidean space.
  *)
 
 open HolKernel Parse bossLib boolLib BasicProvers boolSimps simpLib mesonLib
@@ -24,23 +24,9 @@ fun K_TAC _ = ALL_TAC;
 val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
 
-fun SET_TAC L =
-    POP_ASSUM_LIST(K ALL_TAC) THEN REPEAT COND_CASES_TAC THEN
-    REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
-    SING_DEF] L) THEN
-    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
-      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
-      GSPECIFICATION, IN_DEF, EXISTS_PROD] THEN METIS_TAC [];
-
-fun SET_RULE tm = prove(tm,SET_TAC []);
-
 (*---------------------------------------------------------------------------*)
 (* Minimal amount of set notation is convenient                              *)
 (*---------------------------------------------------------------------------*)
-
-val re_intersect = prove (
-   “!P Q. P INTER Q = \x:'a. P x /\ Q x”,
-    PROVE_TAC [INTER_applied, IN_DEF]);
 
 val COMPL_MEM = prove (
   ``!P:'a->bool. !x. P x = ~(COMPL P x)``,
@@ -52,11 +38,12 @@ val COMPL_MEM = prove (
 (*---------------------------------------------------------------------------*)
 
 (* localized notion of open sets (one set being open in another) *)
-val istopology = new_definition("istopology",
-  ``!L. istopology L <=>
-             {} IN L /\
-             (!s t. s IN L /\ t IN L ==> (s INTER t) IN L) /\
-             (!k. k SUBSET L ==> (BIGUNION k) IN L)``);
+Definition istopology :
+    istopology L =
+      ({} IN L /\
+       (!s t. s IN L /\ t IN L ==> (s INTER t) IN L) /\
+       (!k. k SUBSET L ==> (BIGUNION k) IN L))
+End
 
 val EXISTS_istopology = prove (``?t. istopology t``,
     EXISTS_TAC ``univ(:'a set)``
@@ -556,5 +543,163 @@ val HULL_P_AND_Q = store_thm ("HULL_P_AND_Q",
   REPEAT STRIP_TAC THEN
   MATCH_MP_TAC HULL_UNIQUE THEN ASM_SIMP_TAC std_ss [HULL_INC, SUBSET_HULL] THEN
   ASM_MESON_TAC[P_HULL, HULL_SUBSET, SUBSET_TRANS]);
+
+(* ------------------------------------------------------------------------- *)
+(* Subspace topology (from real_topologyTheory)                              *)
+(* ------------------------------------------------------------------------- *)
+
+Definition subtopology :
+    subtopology top u = topology {s INTER u | open_in top s}
+End
+
+Theorem ISTOPOLOGY_SUBTOPOLOGY :
+    !top u:'a->bool. istopology {s INTER u | open_in top s}
+Proof
+  REWRITE_TAC[istopology, SET_RULE
+   ``{s INTER u | open_in top s} =
+    IMAGE (\s. s INTER u) {s | open_in top s}``] THEN
+  SIMP_TAC std_ss [GSYM AND_IMP_INTRO, FORALL_IN_IMAGE, RIGHT_FORALL_IMP_THM] THEN
+  SIMP_TAC std_ss [SUBSET_IMAGE, IN_IMAGE, GSPECIFICATION, SUBSET_DEF] THEN
+  REPEAT GEN_TAC THEN REPEAT CONJ_TAC THENL
+   [EXISTS_TAC ``{}:'a->bool`` THEN REWRITE_TAC[OPEN_IN_EMPTY, INTER_EMPTY],
+    SIMP_TAC std_ss [SET_RULE ``(s INTER u) INTER (t INTER u) = (s INTER t) INTER u``] THEN
+    ASM_MESON_TAC[OPEN_IN_INTER],
+    X_GEN_TAC ``f:('a->bool)->bool`` THEN DISCH_THEN (X_CHOOSE_TAC ``g:('a->bool)->bool``) THEN
+    EXISTS_TAC ``BIGUNION g :'a->bool`` THEN
+    ASM_SIMP_TAC std_ss [OPEN_IN_BIGUNION, INTER_BIGUNION] THEN SET_TAC[]]
+QED
+
+Theorem OPEN_IN_SUBTOPOLOGY :
+    !top u s. open_in (subtopology top u) s <=>
+              ?t. open_in top t /\ (s = t INTER u)
+Proof
+  REWRITE_TAC[subtopology] THEN
+  SIMP_TAC std_ss [REWRITE_RULE[CONJUNCT2 topology_tybij] ISTOPOLOGY_SUBTOPOLOGY] THEN
+  GEN_REWR_TAC (QUANT_CONV o QUANT_CONV o QUANT_CONV o LAND_CONV) [GSYM SPECIFICATION] THEN
+  SIMP_TAC std_ss [EXTENSION, GSPECIFICATION] THEN METIS_TAC []
+QED
+
+Theorem TOPSPACE_SUBTOPOLOGY :
+    !top u. topspace(subtopology top u) = topspace top INTER u
+Proof
+  REWRITE_TAC[topspace, OPEN_IN_SUBTOPOLOGY, INTER_BIGUNION] THEN
+  REPEAT STRIP_TAC THEN AP_TERM_TAC THEN GEN_REWR_TAC I [EXTENSION] THEN
+  SIMP_TAC std_ss [GSPECIFICATION] THEN METIS_TAC []
+QED
+
+Theorem CLOSED_IN_SUBTOPOLOGY :
+    !top u s. closed_in (subtopology top u) s <=>
+              ?t:'a->bool. closed_in top t /\ (s = t INTER u)
+Proof
+  REWRITE_TAC[closed_in, TOPSPACE_SUBTOPOLOGY] THEN
+  SIMP_TAC std_ss [SUBSET_INTER, OPEN_IN_SUBTOPOLOGY, GSYM RIGHT_EXISTS_AND_THM] THEN
+  REPEAT STRIP_TAC THEN EQ_TAC THEN
+  DISCH_THEN(X_CHOOSE_THEN ``t:'a->bool`` STRIP_ASSUME_TAC) THEN
+  EXISTS_TAC ``topspace top DIFF t :'a->bool`` THEN
+  ASM_SIMP_TAC std_ss [CLOSED_IN_TOPSPACE, OPEN_IN_DIFF, CLOSED_IN_DIFF,
+               OPEN_IN_TOPSPACE] THEN
+  REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]
+QED
+
+Theorem OPEN_IN_SUBTOPOLOGY_EMPTY :
+    !top s. open_in (subtopology top {}) s <=> (s = {})
+Proof
+  REWRITE_TAC[OPEN_IN_SUBTOPOLOGY, INTER_EMPTY] THEN
+  MESON_TAC[OPEN_IN_EMPTY]
+QED
+
+Theorem CLOSED_IN_SUBTOPOLOGY_EMPTY :
+    !top s. closed_in (subtopology top {}) s <=> (s = {})
+Proof
+  REWRITE_TAC[CLOSED_IN_SUBTOPOLOGY, INTER_EMPTY] THEN
+  MESON_TAC[CLOSED_IN_EMPTY]
+QED
+
+Theorem OPEN_IN_SUBTOPOLOGY_REFL :
+    !top u:'a->bool. open_in (subtopology top u) u <=> u SUBSET topspace top
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN EQ_TAC THENL
+   [REPEAT STRIP_TAC THEN ONCE_ASM_REWRITE_TAC[] THEN
+    MATCH_MP_TAC(SET_RULE ``s SUBSET u ==> s INTER t SUBSET u``) THEN
+    ASM_SIMP_TAC std_ss [OPEN_IN_SUBSET],
+    DISCH_TAC THEN EXISTS_TAC ``topspace top:'a->bool`` THEN
+    REWRITE_TAC[OPEN_IN_TOPSPACE] THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]]
+QED
+
+Theorem CLOSED_IN_SUBTOPOLOGY_REFL :
+    !top u:'a->bool. closed_in (subtopology top u) u <=> u SUBSET topspace top
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[CLOSED_IN_SUBTOPOLOGY] THEN EQ_TAC THENL
+   [REPEAT STRIP_TAC THEN ONCE_ASM_REWRITE_TAC[] THEN
+    MATCH_MP_TAC(SET_RULE ``s SUBSET u ==> s INTER t SUBSET u``) THEN
+    ASM_SIMP_TAC std_ss [CLOSED_IN_SUBSET],
+    DISCH_TAC THEN EXISTS_TAC ``topspace top:'a->bool`` THEN
+    REWRITE_TAC[CLOSED_IN_TOPSPACE] THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]]
+QED
+
+Theorem SUBTOPOLOGY_SUPERSET :
+    !top s:'a->bool. topspace top SUBSET s ==> (subtopology top s = top)
+Proof
+  REPEAT GEN_TAC THEN SIMP_TAC std_ss [TOPOLOGY_EQ, OPEN_IN_SUBTOPOLOGY] THEN
+  DISCH_TAC THEN X_GEN_TAC ``u:'a->bool`` THEN EQ_TAC THENL
+   [DISCH_THEN(CHOOSE_THEN(CONJUNCTS_THEN2 MP_TAC SUBST1_TAC)) THEN
+    DISCH_THEN(fn th => MP_TAC th THEN
+      ASSUME_TAC(MATCH_MP OPEN_IN_SUBSET th)) THEN
+    MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN REPEAT (POP_ASSUM MP_TAC) THEN
+    SET_TAC[],
+    DISCH_TAC THEN EXISTS_TAC ``u:'a->bool`` THEN
+    FIRST_ASSUM(MP_TAC o MATCH_MP OPEN_IN_SUBSET) THEN
+    REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]]
+QED
+
+Theorem SUBTOPOLOGY_TOPSPACE :
+    !top. subtopology top (topspace top) = top
+Proof
+  SIMP_TAC std_ss [SUBTOPOLOGY_SUPERSET, SUBSET_REFL]
+QED
+
+Theorem SUBTOPOLOGY_UNIV :
+    !top. subtopology top UNIV = top
+Proof
+  SIMP_TAC std_ss [SUBTOPOLOGY_SUPERSET, SUBSET_UNIV]
+QED
+
+Theorem OPEN_IN_IMP_SUBSET :
+    !top s t. open_in (subtopology top s) t ==> t SUBSET s
+Proof
+  REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN SET_TAC[]
+QED
+
+Theorem CLOSED_IN_IMP_SUBSET :
+    !top s t. closed_in (subtopology top s) t ==> t SUBSET s
+Proof
+  REWRITE_TAC[closed_in, TOPSPACE_SUBTOPOLOGY] THEN SET_TAC[]
+QED
+
+Theorem OPEN_IN_SUBTOPOLOGY_UNION :
+   !top s t u:'a->bool.
+        open_in (subtopology top t) s /\ open_in (subtopology top u) s
+        ==> open_in (subtopology top (t UNION u)) s
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN
+  DISCH_THEN(CONJUNCTS_THEN2
+   (X_CHOOSE_THEN ``s':'a->bool`` STRIP_ASSUME_TAC)
+   (X_CHOOSE_THEN ``t':'a->bool`` STRIP_ASSUME_TAC)) THEN
+  EXISTS_TAC ``s' INTER t':'a->bool`` THEN ASM_SIMP_TAC std_ss [OPEN_IN_INTER] THEN
+  REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]
+QED
+
+Theorem CLOSED_IN_SUBTOPOLOGY_UNION :
+    !top s t u:'a->bool.
+        closed_in (subtopology top t) s /\ closed_in (subtopology top u) s
+        ==> closed_in (subtopology top (t UNION u)) s
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[CLOSED_IN_SUBTOPOLOGY] THEN
+  DISCH_THEN(CONJUNCTS_THEN2
+   (X_CHOOSE_THEN ``s':'a->bool`` STRIP_ASSUME_TAC)
+   (X_CHOOSE_THEN ``t':'a->bool`` STRIP_ASSUME_TAC)) THEN
+  EXISTS_TAC ``s' INTER t':'a->bool`` THEN ASM_SIMP_TAC std_ss [CLOSED_IN_INTER] THEN
+  REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]
+QED
 
 val _ = export_theory();

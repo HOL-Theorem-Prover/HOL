@@ -1737,14 +1737,12 @@ val IMAGE_IMAGE = store_thm
    RW_TAC std_ss [EXTENSION, IN_IMAGE, o_THM]
    >> PROVE_TAC []);
 
-(* from probability/iterateTheory *)
-val FORALL_IN_IMAGE = store_thm
+val FORALL_IN_IMAGE = store_thm (* from iterateTheory *)
   ("FORALL_IN_IMAGE",
   ``!P f s. (!y. y IN IMAGE f s ==> P y) <=> (!x. x IN s ==> P(f x))``,
     REWRITE_TAC [IN_IMAGE] THEN PROVE_TAC []);
 
-(* from probability/rich_topologyTheory *)
-val EXISTS_IN_IMAGE = store_thm
+val EXISTS_IN_IMAGE = store_thm (* from real_topologyTheory *)
   ("EXISTS_IN_IMAGE",
   ``!P f s. (?y. y IN IMAGE f s /\ P y) <=> ?x. x IN s /\ P(f x)``,
     REWRITE_TAC [IN_IMAGE] THEN PROVE_TAC []);
@@ -1753,6 +1751,16 @@ val IMAGE_SING = store_thm (* from measureTheory *)
   ("IMAGE_SING", ``!f x. IMAGE f {x} = {f x}``,
     RW_TAC std_ss [EXTENSION,IN_SING,IN_IMAGE] >> METIS_TAC []);
 val _ = export_rewrites ["IMAGE_SING"];
+
+Theorem SUBSET_IMAGE : (* from topologyTheory *)
+    !f:'a->'b s t. s SUBSET (IMAGE f t) <=> ?u. u SUBSET t /\ (s = IMAGE f u)
+Proof
+  REPEAT GEN_TAC THEN EQ_TAC THENL [ALL_TAC, MESON_TAC[IMAGE_SUBSET]] THEN
+  DISCH_TAC THEN EXISTS_TAC ``{x | x IN t /\ (f:'a->'b) x IN s}`` THEN
+  POP_ASSUM MP_TAC THEN
+  SIMP_TAC std_ss [EXTENSION, SUBSET_DEF, IN_IMAGE, GSPECIFICATION] THEN
+  MESON_TAC[]
+QED
 
 (* ===================================================================== *)
 (* Injective functions on a set.                                         *)
@@ -3923,11 +3931,29 @@ val DISJOINT_COUNT = store_thm (* from util_prob *)
    >> Know `~(x':num = n)` >- DECIDE_TAC
    >> PROVE_TAC []);
 
-(* from probability/iterateTheory *)
-val FORALL_IN_BIGUNION = store_thm
-  ("FORALL_IN_BIGUNION",
-  ``!P s. (!x. x IN BIGUNION s ==> P x) <=> !t x. t IN s /\ x IN t ==> P x``,
-    REWRITE_TAC [IN_BIGUNION] THEN PROVE_TAC []);
+Theorem FORALL_IN_BIGUNION : (* from iterateTheory *)
+    !P s. (!x. x IN BIGUNION s ==> P x) <=> !t x. t IN s /\ x IN t ==> P x
+Proof
+    REWRITE_TAC [IN_BIGUNION] >> PROVE_TAC []
+QED
+
+Theorem INTER_BIGUNION : (* from probabilityTheory *)
+    (!s t. BIGUNION s INTER t = BIGUNION {x INTER t | x IN s}) /\
+    (!s t. t INTER BIGUNION s = BIGUNION {t INTER x | x IN s})
+Proof
+    ONCE_REWRITE_TAC [EXTENSION]
+ >> SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION, IN_INTER]
+ >> MESON_TAC [IN_INTER]
+QED
+
+Theorem SUBSET_BIGUNION : (* from real_topologyTheory *)
+    !f g. f SUBSET g ==> BIGUNION f SUBSET BIGUNION g
+Proof
+    RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION]
+ >> Q.EXISTS_TAC `s` >> ASM_REWRITE_TAC []
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> ASM_REWRITE_TAC []
+QED
 
 (* ----------------------------------------------------------------------
     BIGINTER (intersection of a set of sets)
@@ -4423,8 +4449,10 @@ val SUM_IMAGE_DEF = new_definition(
   "SUM_IMAGE_DEF",
   ``SUM_IMAGE f s = ITSET (\e acc. f e + acc) s 0``);
 
-val _ = overload_on ("SIGMA", ``SUM_IMAGE``)
-val _ = Unicode.unicode_version {u = UTF8.chr 0x2211, tmnm = "SIGMA"}
+val _ = overload_on ("SIGMA", ``SUM_IMAGE``);
+val _ = Unicode.unicode_version {u = UTF8.chr 0x2211, tmnm = "SIGMA"};
+val _ = TeX_notation {hol = UTF8.chr 0x2211, TeX = ("\\HOLTokenSum{}", 1)};
+val _ = TeX_notation {hol = "SIGMA",         TeX = ("\\HOLTokenSum{}", 1)};
 
 val SUM_IMAGE_THM = store_thm(
   "SUM_IMAGE_THM",
