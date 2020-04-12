@@ -142,6 +142,9 @@ New examples:
 Incompatibilities:
 ------------------
 
+*    The theorem `rich_listTheory.REVERSE` (alias of `listTheory.REVERSE_SNOC_DEF`)
+     has been removed because `REVERSE` is also a tactical (`Tactical.REVERSE`).
+
 * * * * *
 
 <div class="footer">
