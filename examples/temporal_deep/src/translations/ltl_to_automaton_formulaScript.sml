@@ -8,11 +8,11 @@ open HolKernel Parse boolLib bossLib;
 
 open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
      prop_logicTheory infinite_pathTheory tuerk_tacticsLib pairTheory numLib
-     symbolic_semi_automatonTheory listTheory pred_setTheory
+     symbolic_semi_automatonTheory listTheory pred_setTheory combinTheory
      pred_setTheory rich_listTheory set_lemmataTheory temporal_deep_mixedTheory
      symbolic_kripke_structureTheory;
 
-open Sanity;
+open hurdUtils Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -3858,5 +3858,160 @@ Proof
                           UNION_SUBSET, IN_SING]
  >> METIS_TAC [LTL_TO_GEN_BUECHI_DS___BINDING_RUN_EQUIV]
 QED
+
+(******************************************************************************)
+(*   Additional theorems for ltl_to_automaton_formulaTheory (by Chun Tian)    *)
+(******************************************************************************)
+
+local
+ val t0 = (* for LTL_PROP *)
+     ONCE_REWRITE_TAC [LTL_TO_GEN_BUECHI___EXTEND_def] \\
+     rw [EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS___REWRITES];
+
+ val t1 = (* for unary temporal operators except LTL_NOT *)
+     ONCE_REWRITE_TAC [LTL_TO_GEN_BUECHI___EXTEND_def] >> simp [] \\
+     Q.ABBREV_TAC `pf3 = FST (LTL_TO_GEN_BUECHI___EXTEND l T F DS1)` \\
+     Q.ABBREV_TAC `DS3 = SND (LTL_TO_GEN_BUECHI___EXTEND l T F DS1)` \\
+     Q.ABBREV_TAC `pf4 = FST (LTL_TO_GEN_BUECHI___EXTEND l F T DS2)` \\
+     Q.ABBREV_TAC `DS4 = SND (LTL_TO_GEN_BUECHI___EXTEND l F T DS2)` \\
+    `LTL_TO_GEN_BUECHI___EXTEND l T F DS1 = (pf3,DS3)` by METIS_TAC [PAIR] >> POP_ORW \\
+    `LTL_TO_GEN_BUECHI___EXTEND l F T DS2 = (pf4,DS4)` by METIS_TAC [PAIR] >> POP_ORW \\
+     simp [EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS_def, EXTEND_LTL_TO_GEN_BUECHI_DS_def] \\
+     qunabbrevl_tac [`DS3`, `DS4`] \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [];
+
+ val t1' = (* for LTL_NOT *)
+     ONCE_REWRITE_TAC [LTL_TO_GEN_BUECHI___EXTEND_def] >> simp [] \\
+     Q.ABBREV_TAC `pf3 = FST (LTL_TO_GEN_BUECHI___EXTEND l F T DS1)` \\
+     Q.ABBREV_TAC `DS3 = SND (LTL_TO_GEN_BUECHI___EXTEND l F T DS1)` \\
+     Q.ABBREV_TAC `pf4 = FST (LTL_TO_GEN_BUECHI___EXTEND l T F DS2)` \\
+     Q.ABBREV_TAC `DS4 = SND (LTL_TO_GEN_BUECHI___EXTEND l T F DS2)` \\
+    `LTL_TO_GEN_BUECHI___EXTEND l F T DS1 = (pf3,DS3)` by METIS_TAC [PAIR] >> POP_ORW \\
+    `LTL_TO_GEN_BUECHI___EXTEND l T F DS2 = (pf4,DS4)` by METIS_TAC [PAIR] >> POP_ORW \\
+     simp [EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS_def, EXTEND_LTL_TO_GEN_BUECHI_DS_def] \\
+     qunabbrevl_tac [`DS3`, `DS4`] \\
+     ONCE_REWRITE_TAC [EQ_SYM_EQ] (* the only extra step w.r.t. t1 *) \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [];
+
+ val t2 = (* for binary temporal operators *)
+     ONCE_REWRITE_TAC [LTL_TO_GEN_BUECHI___EXTEND_def] >> simp [] \\
+     Q.ABBREV_TAC `pf3 = FST (LTL_TO_GEN_BUECHI___EXTEND l T F DS1)` \\
+     Q.ABBREV_TAC `DS3 = SND (LTL_TO_GEN_BUECHI___EXTEND l T F DS1)` \\
+     Q.ABBREV_TAC `pf4 = FST (LTL_TO_GEN_BUECHI___EXTEND l F T DS2)` \\
+     Q.ABBREV_TAC `DS4 = SND (LTL_TO_GEN_BUECHI___EXTEND l F T DS2)` \\
+    `LTL_TO_GEN_BUECHI___EXTEND l T F DS1 = (pf3,DS3)` by METIS_TAC [PAIR] >> POP_ORW \\
+    `LTL_TO_GEN_BUECHI___EXTEND l F T DS2 = (pf4,DS4)` by METIS_TAC [PAIR] >> POP_ORW \\
+     simp [EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS_def, EXTEND_LTL_TO_GEN_BUECHI_DS_def] \\
+     Q.ABBREV_TAC `pf5 = FST (LTL_TO_GEN_BUECHI___EXTEND l' T F DS3)` \\
+     Q.ABBREV_TAC `DS5 = SND (LTL_TO_GEN_BUECHI___EXTEND l' T F DS3)` \\
+     Q.ABBREV_TAC `pf6 = FST (LTL_TO_GEN_BUECHI___EXTEND l' F T DS4)` \\
+     Q.ABBREV_TAC `DS6 = SND (LTL_TO_GEN_BUECHI___EXTEND l' F T DS4)` \\
+    `LTL_TO_GEN_BUECHI___EXTEND l' T F DS3 = (pf5,DS5)` by METIS_TAC [PAIR] >> POP_ORW \\
+    `LTL_TO_GEN_BUECHI___EXTEND l' F T DS4 = (pf6,DS6)` by METIS_TAC [PAIR] >> POP_ORW \\
+     simp [] \\
+     qunabbrevl_tac [`DS5`, `DS6`] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     qunabbrevl_tac [`DS3`, `DS4`] \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [];
+
+ val tactics = (* shared for both theorems *)
+     HO_MATCH_MP_TAC ltl_induct
+  >> RW_TAC std_ss [] (* 7 subgoals *)
+  >| [ t0  (* LTL_PROP *),
+       t1' (* LTL_NOT *),
+       t2  (* LTL_AND *),
+       t1  (* LTL_NEXT *),
+       t2  (* LTL_SUNTIL *),
+       t1  (* LTL_PREV *),
+       t2  (* LTL_SINCE *) ];
+ val LTL_TO_GEN_BUECHI___EXTEND_SN_SYM = Q.prove (
+    `!l DS1 DS2. (DS1.SN = DS2.SN) ==>
+                ((SND (LTL_TO_GEN_BUECHI___EXTEND l T F DS1)).SN =
+                 (SND (LTL_TO_GEN_BUECHI___EXTEND l F T DS2)).SN)`, tactics);
+ val LTL_TO_GEN_BUECHI___EXTEND_IV_SYM = Q.prove (
+    `!l DS1 DS2. (DS1.IV = DS2.IV) ==>
+                ((SND (LTL_TO_GEN_BUECHI___EXTEND l T F DS1)).IV =
+                 (SND (LTL_TO_GEN_BUECHI___EXTEND l F T DS2)).IV)`, tactics);
+in
+(* The number of state variables are the same between T/F and F/T *)
+Theorem LTL_TO_GEN_BUECHI_SN_SYM :
+    !l. (SND (LTL_TO_GEN_BUECHI l T F)).SN = (SND (LTL_TO_GEN_BUECHI l F T)).SN
+Proof
+    GEN_TAC >> REWRITE_TAC [LTL_TO_GEN_BUECHI_def]
+ >> MATCH_MP_TAC LTL_TO_GEN_BUECHI___EXTEND_SN_SYM
+ >> REWRITE_TAC []
+QED
+
+(* The set of input variables are also the same between T/F and F/T *)
+Theorem LTL_TO_GEN_BUECHI_IV_SYM :
+    !l. (SND (LTL_TO_GEN_BUECHI l T F)).IV = (SND (LTL_TO_GEN_BUECHI l F T)).IV
+Proof
+    GEN_TAC >> REWRITE_TAC [LTL_TO_GEN_BUECHI_def]
+ >> MATCH_MP_TAC LTL_TO_GEN_BUECHI___EXTEND_IV_SYM
+ >> REWRITE_TAC []
+QED
+end (* local *)
+
+local
+ val t0 = (* for LTL_PROP *)
+     simp [LTL_TO_GEN_BUECHI___EXTEND_def] \\
+     rw [EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS___REWRITES,
+         LTL_TO_GEN_BUECHI___EXTEND_def, o_DEF];
+
+ val t1 = (* for unary operators (LTL_NOT, LTL_NEXT, LTL_PREV) *)
+     simp [LTL_TO_GEN_BUECHI___EXTEND_def] \\
+     Q.ABBREV_TAC `pf3 = FST (LTL_TO_GEN_BUECHI___EXTEND l T T EMPTY_LTL_TO_GEN_BUECHI_DS)` \\
+     Q.ABBREV_TAC `DS3 = SND (LTL_TO_GEN_BUECHI___EXTEND l T T EMPTY_LTL_TO_GEN_BUECHI_DS)` \\
+    `LTL_TO_GEN_BUECHI___EXTEND l T T EMPTY_LTL_TO_GEN_BUECHI_DS = (pf3,DS3)`
+       by METIS_TAC [PAIR] >> POP_ORW \\
+     simp [EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS_def,
+           EXTEND_LTL_TO_GEN_BUECHI_DS_def, o_DEF, FUN_EQ_THM];
+
+ val t2 = (* for binary operators (LTL_SUNTIL, LTL_SINCE) *)
+     simp [LTL_TO_GEN_BUECHI___EXTEND_def] \\
+     Q.ABBREV_TAC `pf3 = FST (LTL_TO_GEN_BUECHI___EXTEND l T T EMPTY_LTL_TO_GEN_BUECHI_DS)` \\
+     Q.ABBREV_TAC `DS3 = SND (LTL_TO_GEN_BUECHI___EXTEND l T T EMPTY_LTL_TO_GEN_BUECHI_DS)` \\
+    `LTL_TO_GEN_BUECHI___EXTEND l T T EMPTY_LTL_TO_GEN_BUECHI_DS = (pf3,DS3)`
+       by METIS_TAC [PAIR] >> POP_ORW \\
+     simp [EXTEND_IV_BINDING_LTL_TO_GEN_BUECHI_DS_def, EXTEND_LTL_TO_GEN_BUECHI_DS_def] \\
+     Q.ABBREV_TAC `pf5 = FST (LTL_TO_GEN_BUECHI___EXTEND l' T T DS3)` \\
+     Q.ABBREV_TAC `DS5 = SND (LTL_TO_GEN_BUECHI___EXTEND l' T T DS3)` \\
+    `LTL_TO_GEN_BUECHI___EXTEND l' T T DS3 = (pf5,DS5)` by METIS_TAC [PAIR] >> POP_ORW \\
+     simp [o_DEF, FUN_EQ_THM];
+
+ val tactics = (* shared for all three theorems *)
+     REWRITE_TAC [LTL_TO_GEN_BUECHI_def]
+  >> HO_MATCH_MP_TAC ltl_induct
+  >> RW_TAC std_ss [] (* 7 subgoals *)
+  >| [ t0 (* LTL_PROP *),
+       t1 (* LTL_NOT *),
+       t2 (* LTL_AND *),
+       t1 (* LTL_NEXT *),
+       t2 (* LTL_SUNTIL *),
+       t1 (* LTL_PREV *),
+       t2 (* LTL_SINCE *) ];
+in
+
+(* LTL_NOT can be moved out of pf (propositional formula) as P_NOT *)
+Theorem LTL_TO_GEN_BUECHI_PF_REDUCE :
+    !l. FST (LTL_TO_GEN_BUECHI (LTL_NOT l) T T) = P_NOT o (FST (LTL_TO_GEN_BUECHI l T T))
+Proof
+    tactics
+QED
+
+(* The number of state variables are the same between (LTL_NOT l) and l *)
+Theorem LTL_TO_GEN_BUECHI_SN_REDUCE :
+    !l. (SND (LTL_TO_GEN_BUECHI (LTL_NOT l) T T)).SN = (SND (LTL_TO_GEN_BUECHI l T T)).SN
+Proof
+    tactics
+QED
+
+(* The set of input variables are also the same between (LTL_NOT l) and l *)
+Theorem LTL_TO_GEN_BUECHI_IV_REDUCE :
+    !l. (SND (LTL_TO_GEN_BUECHI (LTL_NOT l) T T)).IV = (SND (LTL_TO_GEN_BUECHI l T T)).IV
+Proof
+    tactics
+QED
+end (* local *)
 
 val _ = export_theory();
