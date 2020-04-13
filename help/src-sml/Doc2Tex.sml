@@ -171,13 +171,34 @@ end
 
 val verbose = ref false
 
+(* break all docs into \section{}s by initial letters: A B C ... Z,
+   MUST: make sure all involved sections (except the last) exist.
+ *)
+val sections = [#"a", #"b", #"c", #"d", #"e", #"f", #"g", #"h",
+                #"i",       #"k", #"l", #"m", #"n", #"o", #"p",
+                #"q", #"r", #"s", #"t", #"u", #"v", #"w", #"x",
+                            #"a"]; (* last letter is a loopback *)
+
+val current_section = ref 0; (* starting from A *)
+
 fun do_the_work dir dset outstr = let
   fun appthis dnm = let
     val _ = if !verbose then warn ("Processing "^dnm) else ()
     val cname = core_dname dnm
     val file = parse_file (OS.Path.concat(dir,dnm ^ ".doc"))
                handle ParseError msg => die ("Parse error in "^dnm^": "^msg)
+
+    val current_char = String.sub (cname,0)
+    val section_char = List.nth (sections,!current_section)
   in
+    (* wait for the first occurrence of section_char, then print it
+       as a LaTeX \section{} and search for the next one. *)
+    if current_char = section_char then
+        (out(outstr, "\\section{"
+                     ^ String.str (Char.toUpper section_char) ^ "}\n\n");
+         current_section := !current_section + 1)
+    else {};
+
     print_docpart(file, outstr);
     app (fn s => print_section (s,outstr)) file;
     out(outstr, "\\ENDDOC\n\n")
@@ -186,7 +207,6 @@ fun do_the_work dir dset outstr = let
 in
   Binaryset.app appthis dset
 end
-
 
 fun main () = let
   fun handle_args (docdir, texfile) = let
