@@ -1434,7 +1434,7 @@ val subspt_eq = Define `
      (spt_center t = SOME x) /\
      subspt t1 (spt_left t) /\ subspt t2 (spt_right t))`
 
-val _ = save_thm("subspt_eq[compute]",subspt_eq);
+val _ = save_thm("subspt_eq",subspt_eq);
 
 val subspt_lookup_lemma = Q.prove(
   `(!x y. ((if x = 0:num then SOME a else f x) = SOME y) ==> p x y)
