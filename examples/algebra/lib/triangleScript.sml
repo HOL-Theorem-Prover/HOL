@@ -4701,23 +4701,23 @@ val lcm_run_odd_lower = store_thm(
    Since k * 4 ** k <= lcm_run (2 * (k + 1))  by lcm_run_lower_even
    The result follows.
 *)
-val lcm_run_even_lower = store_thm(
-  "lcm_run_even_lower",
-  ``!n. EVEN n ==> HALF (n - 2) * HALF (HALF (2 ** n)) <= lcm_run n``,
+Theorem lcm_run_even_lower:
+  !n. EVEN n ==> HALF (n - 2) * HALF (HALF (2 ** n)) <= lcm_run n
+Proof
   rpt strip_tac >>
-  Cases_on `n = 0` >-
-  rw[] >>
+  Cases_on `n = 0` >- rw[] >>
   qabbrev_tac `h = HALF n` >>
   `n = 2 * h` by rw[EVEN_HALF, Abbr`h`] >>
   `h <> 0` by rw[Abbr`h`] >>
   `?k. h = k + 1` by metis_tac[num_CASES, ADD1] >>
-  `HALF (HALF (2 ** n)) = HALF (HALF (2 ** SUC (SUC (2 * k))))` by rw[ADD1] >>
+  `HALF (HALF (2 ** n)) = HALF (HALF (2 ** SUC (SUC (2 * k))))` by simp[ADD1] >>
   `_ = HALF (HALF (2 * (2 * 2 ** (2 * k))))` by rw[EXP] >>
   `_ = 2 ** (2 * k)` by rw[HALF_TWICE] >>
   `_ = 4 ** k` by rw[EXP_EXP_MULT] >>
   `n - 2 = 2 * k` by decide_tac >>
   `HALF (n - 2) = k` by rw[HALF_TWICE] >>
-  metis_tac[lcm_run_lower_even]);
+  metis_tac[lcm_run_lower_even]
+QED
 
 (* Theorem: ODD n /\ 5 <= n ==> 2 ** n <= lcm_run n *)
 (* Proof:

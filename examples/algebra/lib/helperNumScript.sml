@@ -3525,9 +3525,10 @@ val prime_divides_self_power = store_thm(
         But p ** d <> 1                     by EXP_EQ_1, 0 < d
        This contradicts p ** d = 1.
 *)
-val power_eq_prime_power = store_thm(
-  "power_eq_prime_power",
-  ``!p. prime p ==> !b n m. 0 < m /\ (b ** n = p ** m) ==> ?k. (b = p ** k) /\ (k * n = m)``,
+Theorem power_eq_prime_power:
+  !p. prime p ==>
+      !b n m. 0 < m /\ (b ** n = p ** m) ==> ?k. (b = p ** k) /\ (k * n = m)
+Proof
   rpt strip_tac >>
   `1 < p` by rw[ONE_LT_PRIME] >>
   `m <> 0 /\ 0 < p /\ p <> 0 /\ p <> 1` by decide_tac >>
@@ -3547,10 +3548,10 @@ val power_eq_prime_power = store_thm(
   `q ** n * p ** (u * n) = p ** m` by metis_tac[EXP_BASE_MULT, EXP_EXP_MULT] >>
   qabbrev_tac `v = u * n` >>
   Cases_on `v = m` >| [
-    `p ** m = 1 * p ** m` by rw[] >>
+    `p ** m = 1 * p ** m` by simp[] >>
     `q ** n = 1` by metis_tac[EQ_MULT_RCANCEL] >>
     `q = 1` by metis_tac[EXP_EQ_1] >>
-    `b = p ** u` by rw[] >>
+    `b = p ** u` by simp[] >>
     metis_tac[],
     Cases_on `v < m` >| [
       `?d. d = m - v` by rw[] >>
@@ -3570,7 +3571,8 @@ val power_eq_prime_power = store_thm(
       `(q ** n = 1) /\ (p ** d = 1)` by metis_tac[MULT_EQ_1] >>
       metis_tac[EXP_EQ_1]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < n ==> !m. (n ** m = n) <=> (m = 1) *)
 (* Proof:

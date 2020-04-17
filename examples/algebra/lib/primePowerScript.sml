@@ -609,9 +609,10 @@ val prime_power_eqn = store_thm(
      Thus p ** k divides p ** m               by divides_def
       ==> p ** k divides n                    by DIVIDES_TRANS
 *)
-val prime_power_divisibility = store_thm(
-  "prime_power_divisibility",
-  ``!n p. 0 < n /\ prime p ==> !k. (p ** k) divides n <=> k <= (ppidx n)``,
+
+Theorem prime_power_divisibility:
+  !n p. 0 < n /\ prime p ==> !k. (p ** k) divides n <=> k <= (ppidx n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = ppidx n` >>
   `p ** m divides n` by rw[prime_power_factor_divides, Abbr`m`] >>
@@ -628,14 +629,15 @@ val prime_power_divisibility = store_thm(
     `p ** m <> 0` by decide_tac >>
     `q = p ** d * t` by metis_tac[MULT_LEFT_CANCEL, MULT_ASSOC] >>
     `p divides p ** d` by rw[prime_divides_self_power] >>
-    `p divides q` by rw[DIVIDES_MULT] >>
+    `p divides q` by simp[DIVIDES_MULTIPLE] >>
     `gcd p q = p` by rw[GSYM divides_iff_gcd_fix] >>
     `coprime p q` by rw[GSYM prime_power_cofactor_coprime, Abbr`m`, Abbr`q`] >>
     metis_tac[NOT_PRIME_1],
     `p ** m = p ** (m - k) * p ** k` by rw[EXP_BY_ADD_SUB_LE, MULT_COMM] >>
     `p ** k divides p ** m` by metis_tac[divides_def] >>
     metis_tac[DIVIDES_TRANS]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < n /\ prime p ==> !k. k > ppidx n ==> ~(p ** k divides n) *)
 (* Proof: by prime_power_divisibility *)
@@ -2622,11 +2624,12 @@ val park_on_off_common_image_partition = store_thm(
         b = PROD_SET (IMAGE (\p. p ** ppidx n) (park_off m n)) /\
         gcd m n = a * b /\ coprime a b      by above
 *)
-val gcd_park_decomposition = store_thm(
-  "gcd_park_decomposition",
-  ``!m n. 0 < m /\ 0 < n ==> let a = park m n in let b = gcd m n DIV a in
-         (b = PROD_SET (IMAGE (\p. p ** ppidx n) (park_off m n))) /\
-         (gcd m n = a * b) /\ coprime a b``,
+
+Theorem gcd_park_decomposition:
+  !m n. 0 < m /\ 0 < n ==> let a = park m n in let b = gcd m n DIV a in
+        b = PROD_SET (IMAGE (\p. p ** ppidx n) (park_off m n)) /\
+        gcd m n = a * b /\ coprime a b
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = IMAGE (\p. p ** MIN (ppidx m) (ppidx n)) (common_prime_divisors m n)` >>
   qabbrev_tac `u = IMAGE (\p. p ** ppidx m) (park_on m n)` >>
@@ -2637,8 +2640,12 @@ val gcd_park_decomposition = store_thm(
   qabbrev_tac `c = PROD_SET s` >>
   `FINITE s` by rw[common_prime_divisors_finite, Abbr`s`] >>
   `PAIRWISE_COPRIME s` by metis_tac[common_prime_divisors_min_image_pairwise_coprime] >>
-  `(c = a * b) /\ coprime a b` by rw[pairwise_coprime_prod_set_partition, Abbr`a`, Abbr`b`, Abbr`c`] >>
-  metis_tac[gcd_prime_factorisation, GCD_EQ_0, MULT_EQ_0, DIV_SOLVE_COMM, NOT_ZERO_LT_ZERO]);
+  `(c = a * b) /\ coprime a b`
+    by (simp[Abbr`a`, Abbr`b`, Abbr`c`] >>
+        metis_tac[pairwise_coprime_prod_set_partition]) >>
+  metis_tac[gcd_prime_factorisation, GCD_EQ_0, MULT_EQ_0, DIV_SOLVE_COMM,
+            NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: 0 < m /\ 0 < n ==> let a = park m n in let b = gcd m n DIV a in
             (gcd m n = a * b) /\ coprime a b *)
@@ -2947,64 +2954,78 @@ val park_on_off_total_image_partition = store_thm(
         (lcm m n = p * q) /\ coprime p q /\ (gcd m n = a * b) /\
         (m = a * p) /\ (n = b * q)       by MULT_COMM
 *)
-val lcm_park_decomposition = store_thm(
-  "lcm_park_decomposition",
-  ``!m n. 0 < m /\ 0 < n ==>
-        let a = park m n in let b = gcd m n DIV a in
-        let p = m DIV a in let q = (a * n) DIV (gcd m n) in
-         (b = PROD_SET (IMAGE (\p. p ** ppidx n) (park_off m n))) /\
-         (p = PROD_SET (IMAGE (\p. p ** ppidx m) ((prime_divisors m) DIFF (park_on m n)))) /\
-         (q = PROD_SET (IMAGE (\p. p ** ppidx n) ((prime_divisors n) DIFF (park_off m n)))) /\
-         (lcm m n = p * q) /\ coprime p q /\ (gcd m n = a * b) /\ (m = a * p) /\ (n = b * q)``,
+
+Theorem lcm_park_decomposition:
+  !m n.
+    0 < m /\ 0 < n ==>
+    let a = park m n ; b = gcd m n DIV a ;
+        p = m DIV a  ; q = (a * n) DIV (gcd m n)
+    in
+        b = PROD_SET (IMAGE (\p. p ** ppidx n) (park_off m n)) /\
+        p = PROD_SET (IMAGE (\p. p ** ppidx m)
+                      ((prime_divisors m) DIFF (park_on m n))) /\
+        q = PROD_SET (IMAGE (\p. p ** ppidx n)
+                      ((prime_divisors n) DIFF (park_off m n))) /\
+        lcm m n = p * q /\ coprime p q /\ gcd m n = a * b /\ m = a * p /\
+        n = b * q
+Proof
   rpt strip_tac >>
-  qabbrev_tac `s = IMAGE (\p. p ** MAX (ppidx m) (ppidx n)) (total_prime_divisors m n)` >>
-  qabbrev_tac `u = IMAGE (\p. p ** ppidx m) (park_on m n)` >>
-  qabbrev_tac `v = IMAGE (\p. p ** ppidx n) (park_off m n)` >>
-  qabbrev_tac `h = IMAGE (\p. p ** ppidx m) ((prime_divisors m) DIFF (park_on m n))` >>
-  qabbrev_tac `k = IMAGE (\p. p ** ppidx n) ((prime_divisors n) DIFF (park_off m n))` >>
-  qabbrev_tac `a = PROD_SET u` >>
-  qabbrev_tac `b = PROD_SET v` >>
-  qabbrev_tac `c = PROD_SET s` >>
-  qabbrev_tac `p = PROD_SET h` >>
-  qabbrev_tac `q = PROD_SET k` >>
-  qabbrev_tac `x = IMAGE (\p. p ** ppidx m) (prime_divisors m)` >>
-  qabbrev_tac `y = IMAGE (\p. p ** ppidx n) (prime_divisors n)` >>
-  qabbrev_tac `g = gcd m n` >>
-  `a = park m n` by rw[Abbr`a`] >>
-  `g = a * b` by metis_tac[gcd_park_decomposition] >>
-  `c = lcm m n` by rw[lcm_prime_factorisation, Abbr`c`, Abbr`s`] >>
-  `s =|= h # k` by metis_tac[park_on_off_total_image_partition] >>
-  `FINITE s` by rw[total_prime_divisors_finite, Abbr`s`] >>
-  `PAIRWISE_COPRIME s` by metis_tac[total_prime_divisors_max_image_pairwise_coprime] >>
-  `(c = p * q) /\ coprime p q` by rw[pairwise_coprime_prod_set_partition, Abbr`p`, Abbr`q`, Abbr`c`] >>
-  `m = PROD_SET x` by rw[basic_prime_factorisation, Abbr`x`] >>
-  `n = PROD_SET y` by rw[basic_prime_factorisation, Abbr`y`] >>
-  `m = a * p` by
-  (`h = x DIFF u` by
-    (`park_on m n SUBSET prime_divisors m` by metis_tac[park_on_element, prime_divisors_element, SUBSET_DEF] >>
-  (`INJ (\p. p ** ppidx m) (prime_divisors m) UNIV` by (rw[INJ_DEF] >> metis_tac[prime_divisors_element, prime_power_index_pos, prime_powers_eq])) >>
-  metis_tac[IMAGE_INJ_SUBSET_DIFF]) >>
-  `FINITE x` by rw[prime_divisors_finite, Abbr`x`] >>
-  `u SUBSET x` by rw[SUBSET_DEF, Abbr`u`, Abbr`x`] >>
-  `x =|= u # h` by metis_tac[partition_by_subset] >>
-  rw[PROD_SET_PRODUCT_BY_PARTITION, Abbr`a`, Abbr`p`]) >>
-  `n = b * q` by
-    (`m * n = g * c` by metis_tac[GCD_LCM] >>
-  `_ = (a * p) * (b * q)` by rw[] >>
-  `_ = m * (b * q)` by rw[] >>
-  metis_tac[MULT_LEFT_CANCEL, NOT_ZERO_LT_ZERO]) >>
-  `m <> 0 /\ n <> 0` by decide_tac >>
-  `g <> 0 /\ c <> 0` by metis_tac[GCD_EQ_0, LCM_EQ_0] >>
-  `p <> 0 /\ a <> 0` by metis_tac[MULT_EQ_0] >>
-  `b = g DIV a` by metis_tac[DIV_SOLVE_COMM, NOT_ZERO_LT_ZERO] >>
-  `p = m DIV a` by metis_tac[DIV_SOLVE_COMM, NOT_ZERO_LT_ZERO] >>
-  `q = c DIV p` by metis_tac[DIV_SOLVE_COMM, NOT_ZERO_LT_ZERO] >>
-  `g divides a * n` by metis_tac[divides_def, MULT_ASSOC, MULT_COMM] >>
-  `c = (m * n) DIV g` by metis_tac[lcm_def] >>
-  `q = (m * n) DIV (g * p)` by metis_tac[DIV_DIV_DIV_MULT, NOT_ZERO_LT_ZERO] >>
-  `_ = (p * (a * n)) DIV (p * g)` by metis_tac[MULT_COMM, MULT_ASSOC] >>
-  `_ = (a * n) DIV g` by metis_tac[DIV_COMMON_FACTOR, NOT_ZERO_LT_ZERO] >>
-  metis_tac[]);
+  qabbrev_tac ‘s = IMAGE (\p. p ** MAX (ppidx m) (ppidx n)) (total_prime_divisors m n)’ >>
+  qabbrev_tac ‘u = IMAGE (\p. p ** ppidx m) (park_on m n)’ >>
+  qabbrev_tac ‘v = IMAGE (\p. p ** ppidx n) (park_off m n)’ >>
+  qabbrev_tac ‘h = IMAGE (\p. p ** ppidx m) ((prime_divisors m) DIFF (park_on m n))’ >>
+  qabbrev_tac ‘k = IMAGE (\p. p ** ppidx n) ((prime_divisors n) DIFF (park_off m n))’ >>
+  qabbrev_tac ‘a = PROD_SET u’ >>
+  qabbrev_tac ‘b = PROD_SET v’ >>
+  qabbrev_tac ‘c = PROD_SET s’ >>
+  qabbrev_tac ‘p = PROD_SET h’ >>
+  qabbrev_tac ‘q = PROD_SET k’ >>
+  qabbrev_tac ‘x = IMAGE (\p. p ** ppidx m) (prime_divisors m)’ >>
+  qabbrev_tac ‘y = IMAGE (\p. p ** ppidx n) (prime_divisors n)’ >>
+  qabbrev_tac ‘g = gcd m n’ >>
+  ‘a = park m n’ by rw[Abbr‘a’] >>
+  ‘g = a * b’ by metis_tac[gcd_park_decomposition] >>
+  ‘c = lcm m n’ by rw[lcm_prime_factorisation, Abbr‘c’, Abbr‘s’] >>
+  ‘s =|= h # k’ by metis_tac[park_on_off_total_image_partition] >>
+  ‘FINITE s’ by rw[total_prime_divisors_finite, Abbr‘s’] >>
+  ‘PAIRWISE_COPRIME s’
+    by metis_tac[total_prime_divisors_max_image_pairwise_coprime] >>
+  ‘(c = p * q) /\ coprime p q’
+    by (simp[Abbr‘p’, Abbr‘q’, Abbr‘c’] >>
+        metis_tac[pairwise_coprime_prod_set_partition]) >>
+  ‘m = PROD_SET x’ by rw[basic_prime_factorisation, Abbr‘x’] >>
+  ‘n = PROD_SET y’ by rw[basic_prime_factorisation, Abbr‘y’] >>
+  ‘m = a * p’
+    by (‘h = x DIFF u’
+         by (‘park_on m n SUBSET prime_divisors m’
+              by metis_tac[park_on_element,prime_divisors_element,SUBSET_DEF] >>
+             ‘INJ (\p. p ** ppidx m) (prime_divisors m) UNIV’
+               by (rw[INJ_DEF] >>
+                   metis_tac[prime_divisors_element, prime_power_index_pos,
+                             prime_powers_eq]) >>
+             metis_tac[IMAGE_INJ_SUBSET_DIFF]) >>
+        ‘FINITE x’ by rw[prime_divisors_finite, Abbr‘x’] >>
+        ‘u SUBSET x’ by rw[SUBSET_DEF, Abbr‘u’, Abbr‘x’] >>
+        ‘x =|= u # h’ by metis_tac[partition_by_subset] >>
+        metis_tac[PROD_SET_PRODUCT_BY_PARTITION]) >>
+  ‘n = b * q’
+    by (‘m * n = g * c’ by metis_tac[GCD_LCM] >>
+        ‘_ = (a * p) * (b * q)’ by rw[] >>
+        ‘_ = m * (b * q)’ by rw[] >>
+        metis_tac[MULT_LEFT_CANCEL, NOT_ZERO_LT_ZERO]) >>
+  ‘m <> 0 /\ n <> 0’ by decide_tac >>
+  ‘g <> 0 /\ c <> 0’ by metis_tac[GCD_EQ_0, LCM_EQ_0] >>
+  ‘p <> 0 /\ a <> 0’ by metis_tac[MULT_EQ_0] >>
+  ‘b = g DIV a’ by metis_tac[DIV_SOLVE_COMM, NOT_ZERO_LT_ZERO] >>
+  ‘p = m DIV a’ by metis_tac[DIV_SOLVE_COMM, NOT_ZERO_LT_ZERO] >>
+  ‘q = c DIV p’ by metis_tac[DIV_SOLVE_COMM, NOT_ZERO_LT_ZERO] >>
+  ‘g divides a * n’ by metis_tac[divides_def, MULT_ASSOC, MULT_COMM] >>
+  ‘c = (m * n) DIV g’ by metis_tac[lcm_def] >>
+  ‘q = (m * n) DIV (g * p)’ by metis_tac[DIV_DIV_DIV_MULT, NOT_ZERO_LT_ZERO] >>
+  ‘_ = (p * (a * n)) DIV (p * g)’ by metis_tac[MULT_COMM, MULT_ASSOC] >>
+  ‘_ = (a * n) DIV g’ by metis_tac[DIV_COMMON_FACTOR, NOT_ZERO_LT_ZERO] >>
+  metis_tac[]
+QED
 
 (* Theorem: 0 < m /\ 0 < n ==> let a = park m n in let p = m DIV a in let q = (a * n) DIV (gcd m n) in
             (lcm m n = p * q) /\ coprime p q *)
@@ -3554,9 +3575,11 @@ val list_lcm_by_last_prime_power = store_thm(
        = lcm z m                 by list_lcm_suc
        = m                       by divides_iff_lcm_fix
 *)
-val list_lcm_by_last_non_prime_power = store_thm(
-  "list_lcm_by_last_non_prime_power",
-  ``!n. ~ SING (prime_divisors (n + 1)) ==> (list_lcm [1 .. (n + 1)] = list_lcm [1 .. n])``,
+
+Theorem list_lcm_by_last_non_prime_power:
+  !n. ~ SING (prime_divisors (n + 1)) ==>
+      list_lcm [1 .. (n + 1)] = list_lcm [1 .. n]
+Proof
   rpt strip_tac >>
   qabbrev_tac `z = n + 1` >>
   Cases_on `z = 1` >| [
@@ -3567,7 +3590,8 @@ val list_lcm_by_last_non_prime_power = store_thm(
     `?p. prime p /\ p divides z` by rw[PRIME_FACTOR] >>
     `0 < ppidx z` by rw[prime_power_index_pos] >>
     qabbrev_tac `t = p ** ppidx z` >>
-    `?q. (z = t * q) /\ coprime p q /\ coprime t q` by metis_tac[prime_power_index_eqn, coprime_exp] >>
+    `?q. (z = t * q) /\ coprime p q /\ coprime t q`
+      by metis_tac[prime_power_index_eqn, coprime_exp] >>
     `t <> 0 /\ q <> 0` by metis_tac[MULT_EQ_0] >>
     `q <> 1` by metis_tac[prime_divisors_sing, MULT_RIGHT_1] >>
     `t <> 1` by metis_tac[EXP_EQ_1, NOT_PRIME_1, NOT_ZERO_LT_ZERO] >>
@@ -3576,12 +3600,15 @@ val list_lcm_by_last_non_prime_power = store_thm(
     qabbrev_tac `l = [1 .. n]` >>
     qabbrev_tac `m = list_lcm l` >>
     `MEM q l /\ MEM t l` by rw[Abbr`l`] >>
-    `q divides m /\ t divides m` by rw[list_lcm_is_common_multiple, Abbr`m`] >>
-    `z divides m` by rw[coprime_product_divides] >>
+    `q divides m /\ t divides m`
+      by simp[list_lcm_is_common_multiple, Abbr`m`] >>
+    `z divides m`
+      by (simp[] >> metis_tac[coprime_sym, coprime_product_divides]) >>
     `list_lcm [1 .. z] = lcm z m` by rw[list_lcm_suc, Abbr`z`, Abbr`m`] >>
     `_ = m` by rw[GSYM divides_iff_lcm_fix] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: list_lcm [1 .. (n + 1)] = let s = prime_divisors (n + 1) in
             if SING s then CHOICE s * list_lcm [1 .. n] else list_lcm [1 .. n] *)
@@ -3891,28 +3918,31 @@ val lcm_run_eq_prod_set_prime_powers = store_thm(
    Thus CARD (IMAGE f s) = CARD s  by INJ_CARD_IMAGE, Claim
      or PROD_SET t <= n ** CARD s  by above
 *)
-val prime_powers_upto_prod_set_le = store_thm(
-  "prime_powers_upto_prod_set_le",
-  ``!n. PROD_SET (prime_powers_upto n) <= n ** (primes_count n)``,
+
+Theorem prime_powers_upto_prod_set_le:
+  !n. PROD_SET (prime_powers_upto n) <= n ** (primes_count n)
+Proof
   rpt strip_tac >>
-  qabbrev_tac `s = (primes_upto n)` >>
-  qabbrev_tac `f = \p. p ** LOG p n` >>
-  qabbrev_tac `t = prime_powers_upto n` >>
-  `IMAGE f s = t` by rw[prime_powers_upto_def, Abbr`f`, Abbr`s`, Abbr`t`] >>
-  `FINITE s` by rw[primes_upto_finite, Abbr`s`] >>
-  `FINITE t` by rw[] >>
-  `!x. x IN t ==> x <= n` by
-  (rw[prime_powers_upto_element, Abbr`t`, Abbr`f`] >>
-  `1 < p` by rw[ONE_LT_PRIME] >>
-  rw[LOG]) >>
-  `PROD_SET t <= n ** CARD t` by rw[PROD_SET_LE_CONSTANT] >>
-  `INJ f s t` by
-    (rw[prime_powers_upto_element_alt, primes_upto_element, INJ_DEF, Abbr`f`, Abbr`s`, Abbr`t`] >>
-  `1 < p` by rw[ONE_LT_PRIME] >>
-  `0 < n` by decide_tac >>
-  `LOG p n <> 0` by rw[LOG_EQ_0] >>
-  metis_tac[prime_powers_eq, NOT_ZERO_LT_ZERO]) >>
-  metis_tac[INJ_CARD_IMAGE]);
+  qabbrev_tac ‘s = (primes_upto n)’ >>
+  qabbrev_tac ‘f = \p. p ** LOG p n’ >>
+  qabbrev_tac ‘t = prime_powers_upto n’ >>
+  ‘IMAGE f s = t’ by simp[prime_powers_upto_def, Abbr‘f’, Abbr‘s’, Abbr‘t’] >>
+  ‘FINITE s’ by rw[primes_upto_finite, Abbr‘s’] >>
+  ‘FINITE t’ by metis_tac[IMAGE_FINITE] >>
+  ‘!x. x IN t ==> x <= n’
+    by (rw[prime_powers_upto_element, Abbr‘t’, Abbr‘f’] >>
+        ‘1 < p’ by rw[ONE_LT_PRIME] >>
+        rw[LOG]) >>
+  ‘PROD_SET t <= n ** CARD t’ by rw[PROD_SET_LE_CONSTANT] >>
+  ‘INJ f s t’
+    by (rw[prime_powers_upto_element_alt, primes_upto_element, INJ_DEF, Abbr‘f’,
+           Abbr‘s’, Abbr‘t’] >>
+        ‘1 < p’ by rw[ONE_LT_PRIME] >>
+        ‘0 < n’ by decide_tac >>
+        ‘LOG p n <> 0’ by rw[LOG_EQ_0] >>
+        metis_tac[prime_powers_eq, NOT_ZERO_LT_ZERO]) >>
+  metis_tac[INJ_CARD_IMAGE]
+QED
 
 (* Theorem: lcm_run n <= n ** (primes_count n) *)
 (* Proof:
@@ -4036,26 +4066,28 @@ val lcm_run_lower_by_primes_product = store_thm(
                                                      by PROD_SET_PRODUCT_GE_CONSTANT
       or  n ** CARD s <= PROD_SET s * PROD_SET t     by above
 *)
-val prime_powers_upto_prod_set_mix_ge = store_thm(
-  "prime_powers_upto_prod_set_mix_ge",
-  ``!n. n ** primes_count n <= PROD_SET (primes_upto n) * (PROD_SET (prime_powers_upto n))``,
+
+Theorem prime_powers_upto_prod_set_mix_ge:
+  !n. n ** primes_count n <=
+        PROD_SET (primes_upto n) * (PROD_SET (prime_powers_upto n))
+Proof
   rpt strip_tac >>
-  qabbrev_tac `s = (primes_upto n)` >>
-  qabbrev_tac `f = \p. p ** LOG p n` >>
-  qabbrev_tac `t = prime_powers_upto n` >>
-  `IMAGE f s = t` by rw[prime_powers_upto_def, Abbr`f`, Abbr`s`, Abbr`t`] >>
-  `FINITE s` by rw[primes_upto_finite, Abbr`s`] >>
-  `FINITE t` by rw[] >>
-  `!p. p IN s ==> n <= I p * f p` by
-  (rw[primes_upto_element, Abbr`s`, Abbr`f`] >>
-  `1 < p` by rw[ONE_LT_PRIME] >>
+  qabbrev_tac ‘s = (primes_upto n)’ >>
+  qabbrev_tac ‘f = \p. p ** LOG p n’ >>
+  qabbrev_tac ‘t = prime_powers_upto n’ >>
+  ‘IMAGE f s = t’ by rw[prime_powers_upto_def, Abbr‘f’, Abbr‘s’, Abbr‘t’] >>
+  ‘FINITE s’ by rw[primes_upto_finite, Abbr‘s’] >>
+  ‘FINITE t’ by rw[] >>
+  ‘!p. p IN s ==> n <= I p * f p’ by
+  (rw[primes_upto_element, Abbr‘s’, Abbr‘f’] >>
+  ‘1 < p’ by rw[ONE_LT_PRIME] >>
   rw[LOG, GSYM EXP, LESS_IMP_LESS_OR_EQ]) >>
-  `INJ I s univ(:num)` by rw[primes_upto_element, INJ_DEF, Abbr`s`] >>
-  `IMAGE I s = s` by rw[] >>
-  `INJ f s univ(:num)` by
-    (rw[primes_upto_element, INJ_DEF, Abbr`f`, Abbr`s`] >>
-  `1 < p` by rw[ONE_LT_PRIME] >>
-  `LOG p n <> 0` by rw[LOG_EQ_0] >>
+  ‘INJ I s univ(:num)’ by rw[primes_upto_element, INJ_DEF, Abbr‘s’] >>
+  ‘IMAGE I s = s’ by rw[] >>
+  ‘INJ f s univ(:num)’ by
+    (rw[primes_upto_element, INJ_DEF, Abbr‘f’, Abbr‘s’] >>
+  ‘1 < p’ by rw[ONE_LT_PRIME] >>
+  ‘LOG p n <> 0’ by rw[LOG_EQ_0] >>
   metis_tac[prime_powers_eq, NOT_ZERO_LT_ZERO]) >>
   metis_tac[PROD_SET_PRODUCT_GE_CONSTANT]);
 

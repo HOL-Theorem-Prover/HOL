@@ -6553,15 +6553,16 @@ val DILATE_0_LENGTH_UPPER = store_thm(
            = EL (k - m) (DILATE e 0 n l)             by EL_APPEND, n <= k
            = e                                       by induction hypothesis, (k - m) MOD n <> 0
 *)
-val DILATE_0_EL = store_thm(
-  "DILATE_0_EL",
-  ``!l e n k. k < LENGTH (DILATE e 0 n l) ==>
-     (EL k (DILATE e 0 n l) = if k MOD (SUC n) = 0 then EL (k DIV (SUC n)) l else e)``,
+Theorem DILATE_0_EL:
+  !l e n k.
+     k < LENGTH (DILATE e 0 n l) ==>
+     EL k (DILATE e 0 n l) = if k MOD (SUC n) = 0 then EL (k DIV (SUC n)) l
+                             else e
+Proof
   ntac 3 strip_tac >>
   `0 < SUC n` by decide_tac >>
   qabbrev_tac `m = SUC n` >>
-  Induct_on `l` >-
-  rw[] >>
+  Induct_on `l` >- rw[] >>
   rpt strip_tac >>
   `LENGTH (DILATE e 0 n [h]) = 1` by rw[DILATE_SING] >>
   `LENGTH (DILATE e 0 n (h::l)) = SUC (m * LENGTH l)` by rw[DILATE_0_LENGTH, Abbr`m`] >>
@@ -6586,21 +6587,25 @@ val DILATE_0_EL = store_thm(
         rw[]
       ],
       `m <= k` by decide_tac >>
-      `EL k (t ++ DILATE e 0 n l) = EL (k - m) (DILATE e 0 n l)` by rw[EL_APPEND] >>
-      `k - m < LENGTH (DILATE e 0 n l)` by rw[DILATE_0_LENGTH] >>
-      `(k - m) MOD m = k MOD m` by rw[SUB_MOD] >>
-      `(k - m) DIV m = k DIV m - 1` by rw[SUB_DIV] >>
+      `EL k (t ++ DILATE e 0 n l) = EL (k - m) (DILATE e 0 n l)`
+        by simp[EL_APPEND] >>
+      `k - m < LENGTH (DILATE e 0 n l)`
+        by (trace ("BasicProvers.var_eq_old", 1)(rw[DILATE_0_LENGTH])) >>
+      `(k - m) MOD m = k MOD m` by simp[SUB_MOD] >>
+      `(k - m) DIV m = k DIV m - 1` by simp[SUB_DIV] >>
       Cases_on `k MOD m = 0` >| [
         `0 < k DIV m` by rw[DIVIDES_MOD_0, DIV_POS] >>
         `EL (k - m) (DILATE e 0 n l) = EL (k DIV m - 1) l` by rw[] >>
         `_ = EL (PRE (k DIV m)) l` by rw[PRE_SUB1] >>
         `_ = EL (k DIV m) (h::l)` by rw[EL_CONS] >>
         rw[],
-        `EL (k - m) (DILATE e 0 n l)  = e` by rw[] >>
+        `EL (k - m) (DILATE e 0 n l)  = e`
+          by trace ("BasicProvers.var_eq_old", 1)(rw[]) >>
         rw[]
       ]
     ]
-  ]);
+  ]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -6678,7 +6683,8 @@ val DILATE_0_LAST = store_thm(
   `k = m * PRE (LENGTH l)` by rw[DILATE_0_LENGTH, Abbr`k`, Abbr`m`] >>
   `k MOD m = 0` by metis_tac[MOD_EQ_0, MULT_COMM] >>
   `k DIV m = PRE (LENGTH l)` by metis_tac[MULT_DIV, MULT_COMM] >>
-  `k < LENGTH (DILATE e 0 n l)` by rw[Abbr`k`] >>
+  `k < LENGTH (DILATE e 0 n l)` by simp[Abbr`k`] >>
+  Q.RM_ABBREV_TAC ‘k’ >>
   rw[DILATE_0_EL]);
 
 (* ------------------------------------------------------------------------- *)
