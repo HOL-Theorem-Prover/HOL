@@ -1147,13 +1147,13 @@ val DROP_LENGTH_NIL = store_thm(
                       <> []          by induction hypothesis, n-1 < LENGTH l
 *)
 (* Proof:
-   Note !ls n. (DROP n ls = []) <=> n >= LENGTH ls    by DROP_NIL
+   Note !ls n. (DROP n ls = []) <=> LENGTH ls <= n    by DROP_EQ_NIL
      so n < LENGTH ls ==> DROP n ls <> []             by NOT_LESS_EQUAL
 *)
 val DROP_NON_NIL = store_thm(
   "DROP_NON_NIL",
   ``!n l. n < LENGTH l ==> DROP n l <> []``,
-  metis_tac[DROP_NIL, DECIDE ``x >= y <=> ~(x < y)``]);
+  metis_tac[DROP_EQ_NIL, DECIDE ``x >= y <=> ~(x < y)``]);
 
 (* Theorem: n < LENGTH ls ==> (HD (DROP n ls) = EL n ls) *)
 (* Proof:
