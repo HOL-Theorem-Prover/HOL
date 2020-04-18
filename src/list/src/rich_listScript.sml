@@ -1435,45 +1435,6 @@ val BUTLASTN_MAP = Q.store_thm ("BUTLASTN_MAP",
    THEN RES_TAC
    THEN ASM_REWRITE_TAC []);
 
-val EVERY_LASTN = Q.store_thm ("EVERY_LASTN",
-   `!P l. EVERY P l ==> !m. m <= LENGTH l ==> EVERY P (LASTN m l)`,
-   GEN_TAC
-   THEN SNOC_INDUCT_TAC
-   THEN REWRITE_TAC [EVERY_DEF, LENGTH]
-   THEN GEN_TAC
-   THENL [
-      REWRITE_TAC [LESS_OR_EQ, NOT_LESS_0]
-      THEN DISCH_THEN SUBST1_TAC THEN REWRITE_TAC [EVERY_DEF, LASTN],
-      REWRITE_TAC [EVERY_SNOC, LENGTH_SNOC]
-      THEN STRIP_TAC
-      THEN INDUCT_TAC
-      THEN1 REWRITE_TAC [EVERY_DEF, LASTN]
-      THEN REWRITE_TAC [EVERY_SNOC, LASTN, LESS_EQ_MONO]
-      THEN DISCH_TAC
-      THEN RES_TAC
-      THEN ASM_REWRITE_TAC []]);
-
-val EVERY_BUTLASTN = Q.store_thm ("EVERY_BUTLASTN",
-   `!P l. EVERY P l ==> !m. m <= LENGTH l ==> EVERY P (BUTLASTN m l)`,
-   GEN_TAC
-   THEN SNOC_INDUCT_TAC
-   THEN REWRITE_TAC [EVERY_DEF, LENGTH]
-   THEN GEN_TAC
-   THENL [
-      REWRITE_TAC [LESS_OR_EQ, NOT_LESS_0]
-      THEN DISCH_THEN SUBST1_TAC
-      THEN REWRITE_TAC [EVERY_DEF, BUTLASTN],
-      REWRITE_TAC [EVERY_SNOC, LENGTH_SNOC]
-      THEN STRIP_TAC
-      THEN INDUCT_TAC
-      THENL [
-         DISCH_TAC
-         THEN ASM_REWRITE_TAC [EVERY_SNOC, BUTLASTN],
-         REWRITE_TAC [EVERY_SNOC, BUTLASTN, LESS_EQ_MONO]
-         THEN DISCH_TAC
-         THEN RES_TAC
-         THEN ASM_REWRITE_TAC []]]);
-
 val TAKE_TAKE_T = Q.store_thm ("TAKE_TAKE_T",
    `!m l n. n <= m ==> (TAKE n (TAKE m l) = TAKE n l)`,
   Induct THEN1 SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]
@@ -2103,14 +2064,6 @@ val FLAT_FLAT = Q.store_thm ("FLAT_FLAT",
    `!l. FLAT (FLAT l) = FLAT (MAP FLAT l)`,
    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [FLAT, listTheory.FLAT_APPEND, MAP]);
 
-val EVERY_REVERSE = Q.store_thm ("EVERY_REVERSE",
-   `!P l. EVERY P (REVERSE l) = EVERY P l`,
-   GEN_TAC
-   THEN LIST_INDUCT_TAC
-   THEN ASM_REWRITE_TAC [EVERY_DEF, REVERSE, EVERY_SNOC]
-   THEN GEN_TAC
-   THEN MATCH_ACCEPT_TAC CONJ_SYM);
-
 val EXISTS_REVERSE = Q.store_thm ("EXISTS_REVERSE",
    `!P l. EXISTS P (REVERSE l) = EXISTS P l`,
    GEN_TAC
@@ -2137,20 +2090,49 @@ val EVERY_SEG = Q.store_thm ("EVERY_SEG",
       THEN DISCH_TAC
       THEN RES_TAC]);
 
-val EVERY_TAKE = Q.store_thm ("EVERY_TAKE",
-   `!P l. EVERY P l ==> !m. m <= LENGTH l ==> EVERY P (TAKE m l)`,
-   REPEAT STRIP_TAC
-   THEN IMP_RES_THEN SUBST1_TAC TAKE_SEG
-   THEN IMP_RES_THEN MATCH_MP_TAC EVERY_SEG
-   THEN ASM_REWRITE_TAC [ADD_0]);
+val MEM_TAKE_IMP = Q.store_thm ("MEM_TAKE_IMP",
+   `!l m x.  MEM x (TAKE m l) ==> MEM x l`,
+   EVERY [Induct, ASM_SIMP_TAC list_ss [listTheory.TAKE_def],
+     REPEAT GEN_TAC, COND_CASES_TAC,
+     ASM_SIMP_TAC list_ss [], PROVE_TAC [] ]) ;
 
-val EVERY_DROP = Q.store_thm ("EVERY_DROP",
-   `!P l. EVERY P l ==> !m. m <= LENGTH l ==> EVERY P (DROP m l)`,
-   REPEAT STRIP_TAC
-   THEN IMP_RES_THEN SUBST1_TAC DROP_SEG
-   THEN IMP_RES_THEN MATCH_MP_TAC EVERY_SEG
-   THEN IMP_RES_THEN SUBST1_TAC SUB_ADD
-   THEN MATCH_ACCEPT_TAC LESS_EQ_REFL);
+Theorem EVERY_TAKE:
+ !P l m. EVERY P l ==> EVERY P (TAKE m l)
+Proof
+ metis_tac [listTheory.EVERY_MEM, MEM_TAKE_IMP]
+QED
+
+Theorem MEM_DROP_IMP:
+  !l m x.  MEM x (DROP m l) ==> MEM x l
+Proof
+  metis_tac[MEM_DROP, MEM_EL]
+QED
+
+Theorem EVERY_DROP:
+ !P l m. EVERY P l ==> EVERY P (DROP m l)
+Proof
+ metis_tac [listTheory.EVERY_MEM, MEM_DROP_IMP]
+QED
+
+val EVERY_REVERSE = Q.store_thm ("EVERY_REVERSE",
+   `!P l. EVERY P (REVERSE l) = EVERY P l`,
+   GEN_TAC
+   THEN LIST_INDUCT_TAC
+   THEN ASM_REWRITE_TAC [EVERY_DEF, REVERSE, EVERY_SNOC]
+   THEN GEN_TAC
+   THEN MATCH_ACCEPT_TAC CONJ_SYM);
+
+Theorem EVERY_LASTN:
+ !P l m. EVERY P l ==> EVERY P (LASTN m l)
+Proof
+ simp [LASTN_def, EVERY_REVERSE, EVERY_TAKE]
+QED
+
+Theorem EVERY_BUTLASTN:
+ !P l m. EVERY P l ==> EVERY P (BUTLASTN m l)
+Proof
+ simp [BUTLASTN_def, EVERY_REVERSE, EVERY_DROP]
+QED
 
 val EXISTS_SEG = Q.store_thm ("EXISTS_SEG",
    `!m k (l:'a list). (m + k) <= (LENGTH l) ==>
@@ -2237,18 +2219,6 @@ val MEM_SEG = Q.store_thm ("MEM_SEG",
         THEN REPEAT STRIP_TAC
         THEN DISJ2_TAC
         THEN RES_TAC]);
-
-val MEM_TAKE_IMP = Q.store_thm ("MEM_TAKE_IMP",
-   `!l m x.  MEM x (TAKE m l) ==> MEM x l`,
-   EVERY [Induct, ASM_SIMP_TAC list_ss [listTheory.TAKE_def],
-     REPEAT GEN_TAC, COND_CASES_TAC,
-     ASM_SIMP_TAC list_ss [], PROVE_TAC [] ]) ;
-
-Theorem MEM_DROP_IMP:
-  !l m x.  MEM x (DROP m l) ==> MEM x l
-Proof
-  metis_tac[MEM_DROP, MEM_EL]
-QED
 
 val MEM_TAKE = Q.store_thm ("MEM_TAKE",
    `!m l. m <= LENGTH l ==> !x.  MEM x (TAKE m l) ==> MEM x l`,
