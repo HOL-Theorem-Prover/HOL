@@ -1868,10 +1868,11 @@ Proof
     [GSYM arithmeticTheory.ADD1, ADD_CLAUSES]
 QED
 
-val DROP_NIL = store_thm(
-"DROP_NIL",
-“!ls n. (DROP n ls = []) = (n >= LENGTH ls)”,
-Induct THEN SRW_TAC[] [DROP_def] THEN numLib.DECIDE_TAC)
+Theorem DROP_EQ_NIL:
+ !ls n. (DROP n ls = []) = (LENGTH ls <= n)
+Proof
+ Induct THEN SRW_TAC[] [DROP_def] THEN numLib.DECIDE_TAC
+QED
 
 val LT_SUC = Q.prove(
   ‘x < SUC y <=> (x = 0) \/ ?x0. (x = SUC x0) /\ x0 < y’,
