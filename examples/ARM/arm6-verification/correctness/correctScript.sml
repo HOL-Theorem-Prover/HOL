@@ -20,7 +20,7 @@ open multTheory blockTheory interruptsTheory;
 
 val _ = new_theory "correct";
 val _ = ParseExtras.temp_loose_equality()
-val _ = diminish_srw_ss ["ABBREV_CONG"]
+val _ = diminish_srw_ss ["ABBREV"]
 val _ = set_trace "BasicProvers.var_eq_old" 1
 (* ------------------------------------------------------------------------- *)
 

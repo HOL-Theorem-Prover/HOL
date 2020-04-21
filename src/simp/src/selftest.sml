@@ -365,9 +365,9 @@ val _ = let
 in
   List.app (ignore o test) [
     ("Abbrev var not rewritten",
-     rev_full_simp_tac (bool_ss ++ ABBREV_CONG_ss) [],
-     ([“Abbrev (v = q:bool)”, “v = F”], “P (v:bool):bool”),
-     [([“Abbrev (v = q:bool)”, “~v”], “P F:bool”)])
+     rev_full_simp_tac (bool_ss ++ ABBREV_ss) [],
+     ([“Abbrev (v <=> q /\ r)”, “v = F”], “P (v:bool):bool”),
+     [([“Abbrev (v <=> q /\ r)”, “~v”], “P F:bool”)])
   ]
 end
 

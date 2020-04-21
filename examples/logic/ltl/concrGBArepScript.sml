@@ -5,7 +5,7 @@ open sptreeTheory ltlTheory generalHelpersTheory concrRepTheory concrltl2waaTheo
 val _ = new_theory "concrGBArep"
 
 val _ = set_trace "BasicProvers.var_eq_old" 1
-val _ = diminish_srw_ss ["ABBREV_CONG"]
+val _ = diminish_srw_ss ["ABBREV"]
 val _ = monadsyntax.temp_add_monadsyntax();
 val _ = overload_on("monad_bind",``OPTION_BIND``);
 

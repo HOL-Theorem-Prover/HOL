@@ -7,8 +7,9 @@ sig
                                            beta conversion *)
      val CONG_ss : simpLib.ssfrag       (* congruence rules for ==> and
                                            if-then-else *)
-     val ABBREV_CONG_ss : simpLib.ssfrag(* congruence rule for Abbrev,
-                                           preventing rewrites in var pos'n *)
+     val ABBREV_ss : simpLib.ssfrag     (* congruence rule for Abbrev,
+                                           preventing rewrites in var pos'n,
+                                           and Abbrev tidying conversion *)
      val CONJ_ss : simpLib.ssfrag       (* congruence rules for /\; not
                                            included in bool_ss, but
                                            occasionally useful *)

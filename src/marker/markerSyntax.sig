@@ -11,6 +11,7 @@ sig
   val mk_abbrev   : string * term -> term
   val dest_abbrev : term -> string * term
   val is_abbrev   : term -> bool
+  val is_malformed_abbrev : term -> bool
   val compare_abbrev : term -> term -> bool
 
   val Abbr        : term frag list -> thm

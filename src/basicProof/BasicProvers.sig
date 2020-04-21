@@ -34,9 +34,10 @@ sig
   val temp_delsimps   : string list -> unit
   val thy_ssfrag      : string -> simpLib.ssfrag
 
-  (* LET manoeuvres *)
+  (* LET and Abbrev manoeuvres *)
   val LET_ELIM_TAC    : tactic
   val new_let_thms    : thm list -> unit
+  val TIDY_ABBREVS    : tactic
 
   (* Compound automated reasoners. *)
 

@@ -783,6 +783,7 @@ fun orient th =
          end
  end;
 
+val TIDY_ABBREVS = markerLib.TIDY_ABBREVS
 fun eliminable_eqvar t =
     if is_bool_atom t then
       if is_neg t then SOME (dest_neg t) else SOME t
@@ -792,13 +793,10 @@ fun eliminable_eqvar t =
            else if is_var l then SOME l else SOME r
          end
 
-fun VSUBST_TAC abbrset tm =
+fun VSUBST_TAC tm =
     case eliminable_eqvar tm of
         NONE => UNDISCH_THEN tm (K ALL_TAC)
-      | SOME v => if HOLset.member(abbrset, v) then
-                    markerLib.UNABBREV_TAC (#1 (dest_var v))
-                  else
-                    UNDISCH_THEN tm (SUBST_ALL_TAC o orient)
+      | SOME v => UNDISCH_THEN tm (SUBST_ALL_TAC o orient)
 
 fun var_eq tm =
     let val (lhs,rhs) = dest_eq tm
@@ -816,18 +814,15 @@ fun grab P f v =
 
 fun ASSUM_TAC f P = W (fn (asl,_) => grab P f NO_TAC asl)
 val old_behaviour = ref false
-val _ =
-  Feedback.register_btrace("BasicProvers.var_eq_old", old_behaviour)
+val tracename = "BasicProvers.var_eq_old"
+val _ = Feedback.register_btrace(tracename, old_behaviour)
+val behaviour_value = get_tracefn tracename
 fun VAR_EQ_TAC (g as (asl,_)) =
     let
-      fun foldthis (a, acc) =
-          case total markerSyntax.dest_abbrev a of
-              NONE => acc
-            | SOME (s, r) => HOLset.add(acc, mk_var(s, type_of r))
-      val abbrev_set = if !old_behaviour then empty_tmset
-                       else List.foldl foldthis empty_tmset asl
+      val tidy = if behaviour_value() = 1 then ALL_TAC
+                 else TIDY_ABBREVS
     in
-      ASSUM_TAC (VSUBST_TAC abbrev_set) var_eq g
+      (ASSUM_TAC VSUBST_TAC var_eq THEN tidy) g
     end
 val var_eq_tac = VAR_EQ_TAC
 
@@ -886,24 +881,6 @@ in
 end
 
 val IMP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] (SPEC_ALL IMP_CONG)
-
-fun ABBREV_CONV tm = let
-  val t = rand tm
-  val (l,r) = dest_eq t
-in
-  if not (is_var l) orelse is_var r then
-    REWR_CONV markerTheory.Abbrev_def THENC
-    REWR_CONV EQ_SYM_EQ
-  else ALL_CONV
-end tm
-
-val ABBREV_ss =
-    simpLib.SSFRAG {name=SOME"ABBREV",
-                    ac = [], congs = [],
-                      convs = [{conv = K (K ABBREV_CONV),
-                                key = SOME ([], ``marker$Abbrev x``),
-                                trace = 2, name = "ABBREV_CONV"}],
-                      dprocs = [], filter = NONE, rewrs = []}
 
 (*---------------------------------------------------------------------------*)
 (* The staging of first two successive calls to SIMP_CONV ensure that the    *)
@@ -1116,7 +1093,7 @@ val bool_ss = boolSimps.bool_ss;
 
 val (srw_ss : simpset ref) = ref (bool_ss ++ combinSimps.COMBIN_ss
                                           ++ boolSimps.NORMEQ_ss
-                                          ++ boolSimps.ABBREV_CONG_ss);
+                                          ++ boolSimps.ABBREV_ss);
 
 val srw_ss_initialised = ref false;
 

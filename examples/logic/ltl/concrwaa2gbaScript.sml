@@ -37,7 +37,7 @@ val GET_ACC_SET_LEMM = store_thm
    >> fs[MEM_EQUAL_SET] >> rw[]
   );
 
-val _ = diminish_srw_ss ["ABBREV_CONG"]
+val _ = diminish_srw_ss ["ABBREV"]
 val valid_acc_def = Define`
   valid_acc aP g_AA acc =
     ((!f f_trns. MEM (f,f_trns) acc ==>
