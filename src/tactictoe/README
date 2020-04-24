@@ -2,30 +2,24 @@ TacticToe is a tactic-based prover.
 
 It searches for a proof by repeatedly applying suitable tactics for each goal state that it produces. 
 
-WARNING: Recording has been tested on core theories. 
-  Recording of latter theories might fail.
-
-RECORDING:
+RECORDING (all ancestry theories not recorded yet):
   load "tttUnfold"; open tttUnfold;
   load "fooTheory";
   ttt_record ();
 
 RECORDING (only one theory):
   load "tttUnfold"; open tttUnfold;
-  ttt_rewrite_thy "foo";
   ttt_record_thy "foo";
 
 USAGE: (after RECORDING) 
   load "tacticToe"; open tacticToe;
   ttt ([],``1+1=2``);
 
-CLEANING: 
-  - TacticToe calls depends on the data stored in 
-    src/tactictoe/ttt_tacdata.
-  - TacticToe recording and evaluation depends on data stored in
-    src/AI/sml_inspection/open
-  After updating HOL, it is usually necessary to 
-  remove these directories and start afresh.
+CLEANING:
+  TacticToe depends on data stored in src/tactictoe/ttt_tacdata and 
+  src/AI/sml_inspection/open. 
+  It is usually necessary to remove these directories before recording.
+  This can be done by calling tttUnfold.ttt_clean_record ().
 
 EXAMPLE: see examples in src/tactictoe/examples.
 
@@ -41,3 +35,6 @@ NOTES FOR DEVELOPERS:
      for further inspection.
   3) The src/tactictoe/debug directory will contain debug information if
      the flag aiLib.debug_flag is set to true before recording.
+
+WARNING: Recording has been tested on core theories. 
+  Recording of latter theories might fail.

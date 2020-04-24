@@ -74,6 +74,8 @@ fun run_cmd cmd = ignore (OS.Process.system cmd)
 
 (* TODO: Use OS to change dir? *)
 fun cmd_in_dir dir cmd = run_cmd ("cd " ^ dir ^ "; " ^ cmd)
+fun clean_dir dir = run_cmd ("rm " ^ dir ^ "/*") 
+fun clean_rec_dir dir = run_cmd ("rm -r " ^ dir ^ "/*") 
 
 (* -------------------------------------------------------------------------
    Comparisons

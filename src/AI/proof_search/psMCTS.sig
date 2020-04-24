@@ -9,7 +9,8 @@ sig
   val is_win : status -> bool
   val is_lose : status -> bool
   val string_of_status : status -> string
-
+  datatype search_status = Success | Saturated | Timeout
+  
   (* search tree: 'a is a board position, 'b is a move *)
   type id = int list
   val id_compare : id * id -> order
@@ -65,7 +66,7 @@ sig
   val starttree_of : ('a,'b) mctsobj -> 'a ->
     (('a,'b) tree * ('a,id) Redblackmap.dict)
   val mcts : ('a,'b) mctsobj -> (('a,'b) tree * ('a,id) Redblackmap.dict) ->
-    (('a,'b) tree * ('a,id) Redblackmap.dict)
+    (search_status * (('a,'b) tree * ('a,id) Redblackmap.dict))
 
   (* statistics *)
   val mostexplored_path : ('a,'b) tree -> id -> id list

@@ -15,6 +15,8 @@ open HolKernel boolLib aiLib
 
 val ERR = mk_HOL_ERR "tttRecord"
 fun debug s = debug_in_dir ttt_debugdir "tttRecord" s
+val ttt_expdir = HOLDIR ^ "/src/tactictoe/experiment"
+fun log s = debug_in_dir ttt_expdir "log" s
 
 (* -------------------------------------------------------------------------
    Globals
@@ -96,7 +98,9 @@ fun tactic_err msg stac g =
   (tactic_msg msg stac g; raise ERR "record_tactic" "")
 
 fun record_tactic (tac,stac) g =
-  let val ((gl,v),t) = add_time tac g in
+  let 
+    val ((gl,v),t) = add_time tac g 
+  in
     incr n_tactic_replayed;
     goalstep_glob := ((stac,t,g,gl),v) :: !goalstep_glob;
     (gl,v)
@@ -185,10 +189,10 @@ fun start_record_proof name =
 
 fun end_record_proof name g =
   let
-    val (thmdata,tacdata) = (create_thmdata (), !tacdata_glob)
     val l1 = map fst (rev (!goalstep_glob))
-    fun f lbl = orthogonalize (thmdata,tacdata) lbl
-    val l2 = map f l1
+    val _ = if !thmlintac_flag then app save_thmlintac l1 else ()
+    val (thmdata,tacdata) = (create_thmdata (), !tacdata_glob)
+    val l2 = map (orthogonalize (thmdata,tacdata)) l1
     val newtacdata = foldl ttt_update_tacdata tacdata l2
   in
     debug ("Saving " ^ int_to_string (length l2) ^ " labels");
@@ -229,16 +233,22 @@ fun record_proof name lflag tac1 tac2 g =
    Theory hooks
    ---------------------------------------------------------------------- *)
 
-fun start_record_thy thy = ()
+fun start_record_thy thy = 
+  (
+  print_endline "Importing tactic data";
+  tacdata_glob := ttt_create_tacdata ()
+  )
 
 fun end_record_thy thy =
   (
   print_endline "Recording successful";
-  print_endline "Exporting tactic data";
   write_info thy;
+  if !ttt_ttteval_flag orelse !ttt_hheval_flag then () else 
+  (
+  print_endline "Exporting tactic data";
   ttt_export_tacdata thy (!tacdata_glob);
-  print_endline "Export successful";
-  debug "\nrecording successful"
+  print_endline "Export successful"
+  )
   )
 
 end (* struct *)

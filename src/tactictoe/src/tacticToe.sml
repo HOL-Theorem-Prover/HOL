@@ -12,7 +12,7 @@ open HolKernel Abbrev boolLib aiLib
   smlLexer smlExecute smlRedirect smlInfix
   mlFeature mlThmData mlTacticData mlNearestNeighbor
   psMinimize
-  tttSetup tttSearch
+  tttSetup tttLearn tttSearch
 
 val ERR = mk_HOL_ERR "tacticToe"
 val tactictoe_dir = HOLDIR ^ "/src/tactictoe"
@@ -58,6 +58,18 @@ fun select_tacfea tacdata goalf =
    Main function
    ------------------------------------------------------------------------- *)
 
+fun to_gsymtac stac = 
+  let 
+    fun f x =  if x = thmlarg_placeholder 
+               then thmlarg_placeholder_gsym 
+               else x
+  in
+    String.concatWith " " (map f (smlLexer.partial_sml_lexer stac))
+  end
+
+fun add_gsymtac stac = 
+  if is_thmlarg_stac stac then [stac, to_gsymtac stac] else [stac]
+
 fun main_tactictoe (thmdata,tacdata) goal =
   let
     (* preselection *)
@@ -78,8 +90,13 @@ fun main_tactictoe (thmdata,tacdata) goal =
       let
         val l = feahash_of_goal g
         val stacl = stacknn_uniq (tacsymweight,tacfea) (!ttt_presel_radius) l
+        val _ = print_endline ("length stacl: " ^ its (length stacl))
+        val stacl'  = if !ttt_gsym_flag 
+                      then List.concat (map add_gsymtac stacl)
+                      else stacl
+        val _ = print_endline ("length stacl': " ^ its (length stacl'))
       in
-        tac_cache := dadd g stacl (!tac_cache); stacl
+        tac_cache := dadd g stacl' (!tac_cache); stacl'
       end
   in
     search thmpred tacpred goal
@@ -154,11 +171,12 @@ fun tactictoe term =
    Warning : ttt_record should be run on all theories before evaluation
    ------------------------------------------------------------------------- *)
 
-val ttt_eval_dir = tactictoe_dir ^ "/eval"
 fun log_eval s =
-  let val file = ttt_eval_dir ^ "/" ^ current_theory () in
+  let val file = (!ttt_eval_dir) ^ "/" ^ current_theory () in
     print_endline s;
-    mkDir_err ttt_eval_dir; append_endline file s
+    mkDir_err (ttt_eval_updir);
+    mkDir_err (!ttt_eval_dir); 
+    append_endline file s
   end
 
 fun log_status tptpname r = case r of
@@ -186,9 +204,10 @@ fun ttt_eval (thmdata,tacdata) (thy,name) goal =
    Usage:
      load "tttUnfold"; open tttUnfold; open tttSetup;
      ttt_ttteval_flag := true;
-     ttt_rewrite_thy "ConseqConv"; ttt_record_thy "ConseqConv";
+     mlThmData.thmlintac_flag := true;
+     ttt_record_thy "arithmetic";
      ttt_ttteval_flag := false;
-   Results can be found in HOLDIR/src/tactictoe/eval.
+   Results can be found in HOLDIR/src/tactictoe/eval/default.
   ------------------------------------------------------------------------- *)
 
 

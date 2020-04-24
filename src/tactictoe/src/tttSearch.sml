@@ -16,6 +16,12 @@ open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "tttSearch"
 fun debug s = debug_in_dir ttt_debugdir "tttSearch" s
+fun debugp s = 
+  (
+  if aiLib.debug_flag then print_endline s else ();
+  debug_in_dir ttt_debugdir "tttSearch" s
+  )
+
 fun debug_err s = (debug ("Error: " ^ s); raise ERR s "")
 
 (* -------------------------------------------------------------------------
@@ -105,8 +111,7 @@ fun add_metis pred = metis_spec :: pred
    MCTS: Priors
    ------------------------------------------------------------------------- *)
 
-fun array_to_list a =
-  let fun f (a,l) = a :: l in rev (Array.foldl f [] a) end
+fun array_to_list a = let fun f (a,l) = a :: l in rev (Array.foldl f [] a) end
 
 fun init_eval pripol pid =
   let
@@ -163,9 +168,9 @@ fun backup_success cid =
     if parid = NONE then () else backup_loop 1.0 (valOf parid)
   end
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Node creation and deletion
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 val max_depth_mem = ref 0
 val pid_counter = ref 0
@@ -466,9 +471,9 @@ fun try_mc_find () =
       else (debug ("Find " ^ int_to_string pid); (pid,pripol))
     end
 
-(* ---------------------------------------------------------------------------
+(* --------------------------------------------------------------------------
    Closing proofs (should not need that with a proper search mechanism)
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 fun children_of pid =
   let val prec = dfind pid (!proofdict) in !(#children prec) end
@@ -509,9 +514,9 @@ fun close_proof cid pid =
     else ()
   end
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Creating new nodes
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 fun node_create_gl pripol tactime gl pid =
   let
@@ -565,9 +570,9 @@ fun close_proof_wrap staco tactime pid =
     close_proof cid pid
   end
 
-(* ---------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Search function. Modifies the proof state.
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 fun init_search thmpred tacpred g =
   (
@@ -620,7 +625,6 @@ fun node_find () =
   in
     try_mc_find ()
   end
-
 
 fun search_step () =
   let
@@ -687,17 +691,17 @@ fun proofl_of pid =
 
 fun end_search () =
   (
-  debug ("Statistics");
-  debug ("  infstep : " ^ int_to_string (!stac_counter));
-  debug ("  nodes   : " ^ int_to_string (!pid_counter));
-  debug ("  maxdepth: " ^ int_to_string (!max_depth_mem));
-  debug ("Time: " ^ Real.toString (!tot_time));
-  debug ("  inferstep: " ^ Real.toString (!infstep_time));
-  debug ("  node_find: " ^ Real.toString (!node_find_time));
-  debug ("  node_crea: " ^ Real.toString (!node_create_time));
-  debug ("  thminst  : " ^ Real.toString (!inst_time));
-  debug ("  tacpred  : " ^ Real.toString (!tactime));
-  debug ("  thmpred  : " ^ Real.toString (!thmtime));
+  debugp ("Statistics");
+  debugp ("  infstep : " ^ int_to_string (!stac_counter));
+  debugp ("  nodes   : " ^ int_to_string (!pid_counter));
+  debugp ("  maxdepth: " ^ int_to_string (!max_depth_mem));
+  debugp ("Time: " ^ Real.toString (!tot_time));
+  debugp ("  inferstep: " ^ Real.toString (!infstep_time));
+  debugp ("  node_find: " ^ Real.toString (!node_find_time));
+  debugp ("  node_crea: " ^ Real.toString (!node_create_time));
+  debugp ("  thminst  : " ^ Real.toString (!inst_time));
+  debugp ("  tacpred  : " ^ Real.toString (!tactime));
+  debugp ("  thmpred  : " ^ Real.toString (!thmtime));
   proofdict      := dempty Int.compare;
   tac_dict       := dempty String.compare;
   inst_dict      := dempty (cpl_compare String.compare goal_compare);

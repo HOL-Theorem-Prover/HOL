@@ -48,6 +48,8 @@ sig
   val cmd_in_dir : string -> string -> unit
   val exists_file : string -> bool
   val remove_file : string -> unit
+  val clean_dir : string -> unit
+  val clean_rec_dir : string -> unit
 
   (* dictionnary *)
   val dfind  : 'a -> ('a, 'b) Redblackmap.dict -> 'b

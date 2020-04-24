@@ -297,7 +297,8 @@ val rlparam =
    ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
-  {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer}
+  {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer,
+   infobs = fn _ => ()}
 
 val extsearch = mk_extsearch "mleCombinSynt.extsearch" rlobj
 
@@ -305,6 +306,7 @@ val extsearch = mk_extsearch "mleCombinSynt.extsearch" rlobj
    Final test
    ------------------------------------------------------------------------- *)
 
+(*
 val ft_extsearch_uniform =
   ft_mk_extsearch "mleCombinSynt.ft_extsearch_uniform" rlobj
     (uniform_player game)
@@ -314,6 +316,7 @@ val fttnn_extsearch =
 
 val fttnnbs_extsearch =
   fttnnbs_mk_extsearch "mleCombinSynt.fttnnbs_extsearch" rlobj
+*)
 
 (*
 load "aiLib"; open aiLib;
@@ -355,7 +358,8 @@ val mctsparam =
   noise_coeff = 0.25,
   noise_gen = random_real,
   noconfl = false,
-  avoidlose = false
+  avoidlose = false,
+  evalwin = false
   };
 
 val game = #game rlobj;
@@ -365,7 +369,7 @@ val mctsobj = {game = game, mctsparam = mctsparam,
 val headnf = A(V2,(list_mk_A[V1,V2,V3]));
 val target = (V1,headnf,100);
 val tree = psMCTS.starttree_of mctsobj target;
-val (newtree,_) = mcts mctsobj tree;
+val (_,(newtree,_)) = mcts mctsobj tree;
 val nodel = trace_win (#status_of game) newtree [];
 *)
 

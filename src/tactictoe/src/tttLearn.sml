@@ -15,6 +15,9 @@ open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "tttLearn"
 fun debug s = debug_in_dir ttt_debugdir "tttLearn" s
+val ttt_expdir = HOLDIR ^ "/src/tactictoe/experiment"
+fun log s = (mkDir_err ttt_expdir; 
+             append_endline (ttt_expdir  ^ "/log") s)
 
 (* -------------------------------------------------------------------------
    Abstracting theorem list in tactics
@@ -48,12 +51,15 @@ fun abstract_thmlarg_loop thmlacc l = case l of
   | a :: m => a :: abstract_thmlarg_loop thmlacc m
 
 fun abstract_thmlarg stac =
-  if is_thmlarg_stac stac then stac else
+  if is_thmlarg_stac stac then NONE else
   let
     val sl1 = partial_sml_lexer stac
-    val sl2 = abstract_thmlarg_loop (ref []) sl1
+    val thmllref = ref []
+    val sl2 = abstract_thmlarg_loop thmllref sl1
   in
-    if sl2 = sl1 then stac else String.concatWith " " sl2
+    if null (!thmllref) 
+    then NONE 
+    else SOME (String.concatWith " " sl2, !thmllref)
   end
 
 (* -------------------------------------------------------------------------
@@ -76,18 +82,16 @@ fun inst_thmlarg thmls stac =
    Combining abstractions and instantiations
    ------------------------------------------------------------------------- *)
 
-fun abstract_stac stac =
-  let val absstac = abstract_thmlarg stac in
-    if absstac <> stac then SOME absstac else NONE
-  end
-
+fun abstract_stac stac = Option.map fst (abstract_thmlarg stac)
 fun prefix_absstac stac = [abstract_stac stac, SOME stac]
 
-fun concat_absstacl ostac stacl =
+fun concat_absstacl gfea ostac stacl =
   let
-    val l = List.concat (map prefix_absstac stacl) @ [abstract_stac ostac]
+    val l1 = case abstract_thmlarg ostac of NONE => []
+      | SOME (aostac, thmsll) => [SOME aostac]
+    val l2 = List.concat (map prefix_absstac stacl) @ l1
   in
-    mk_sameorder_set String.compare (List.mapPartial I l)
+    mk_sameorder_set String.compare (List.mapPartial I l2)
   end
 
 fun inst_stac thmidl stac =
@@ -106,7 +110,10 @@ fun pred_stac tacdata ostac gfea =
     val tacfea = dlist (#tacfea tacdata)
     val symweight = learn_tfidf tacfea
     val stacl = stacknn_uniq (symweight,tacfea) (!ttt_ortho_radius) gfea
+    val no = List.find (fn x => fst x = ostac) (number_snd 0 stacl) 
+    val ns = case no of NONE => "none" | SOME (_,i) => its i
   in
+    log (ostac ^ ": " ^ ns);
     filter (fn x => not (x = ostac)) stacl
   end
 
@@ -143,6 +150,18 @@ val ortho_predstac_time = ref 0.0
 val ortho_predthm_time = ref 0.0
 val ortho_teststac_time = ref 0.0
 
+fun save_thmlintac (lbl as (ostac,t,g,gl)) =
+  let val gfea = feahash_of_goal g in
+    case abstract_thmlarg ostac of NONE => ()
+    | SOME (_, thmsll) =>
+      let 
+        val thmsl = List.concat thmsll 
+        val l = map (fn x => (thmlintac_tag ^ "Theory." ^ x, gfea)) thmsl
+      in  
+        thmlintac_cthy := l @ !thmlintac_cthy
+      end
+  end
+
 fun orthogonalize (thmdata,tacdata) (lbl as (ostac,t,g,gl)) =
   let
     val gfea = feahash_of_goal g
@@ -152,7 +171,7 @@ fun orthogonalize (thmdata,tacdata) (lbl as (ostac,t,g,gl)) =
     val _ = debug "order tactics"
     val stacl2 = order_stac tacdata ostac stacl1
     val _ = debug "concat abstract tactics"
-    val stacl3 = concat_absstacl ostac stacl2
+    val stacl3 = concat_absstacl gfea ostac stacl2
     val _ = debug "predict theorems"
     val thml = total_time ortho_predthm_time
       (thmknn thmdata (!ttt_thmlarg_radius)) gfea
@@ -162,7 +181,8 @@ fun orthogonalize (thmdata,tacdata) (lbl as (ostac,t,g,gl)) =
     val testo = total_time ortho_teststac_time
       (findSome (test_stac g gl)) stacl4
   in
-    case testo of NONE => lbl | SOME newlbl => newlbl
+    case testo of NONE => (log "  not covered"; lbl) 
+      | SOME newlbl => (log ("  covered by: " ^ #1 newlbl); newlbl)
   end
 
 

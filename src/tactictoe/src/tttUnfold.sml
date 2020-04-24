@@ -917,8 +917,16 @@ fun output_header oc cthy =
   output_flag oc "tttSetup.ttt_recprove_flag" ttt_recprove_flag;
   output_flag oc "tttSetup.ttt_reclet_flag" ttt_reclet_flag;
   (* evaluation *)
-  if !ttt_ttteval_flag then osn oc
-    "val _ = tttSetup.ttt_evalfun_glob := Option.SOME tacticToe.ttt_eval"
+  output_flag oc "tttSetup.ttt_gsym_flag" ttt_gsym_flag;
+  output_flag oc "mlThmData.thmlintac_flag" mlThmData.thmlintac_flag;
+  if !ttt_ttteval_flag then 
+     (
+     osn oc "val _ = metisTools.METIS_TAC;";
+     osn oc
+     "val _ = tttSetup.ttt_evalfun_glob := Option.SOME tacticToe.ttt_eval";
+     osn oc
+     ("val _ = tttSetup.ttt_eval_dir := " ^ quote (!ttt_eval_dir))
+     )
   else if !ttt_hheval_flag then osn oc
     "val _ = tttSetup.ttt_evalfun_glob := Option.SOME holyHammer.hh_eval"
   else osn oc  "val _ = tttSetup.ttt_evalfun_glob := Option.NONE"
@@ -1051,17 +1059,6 @@ fun ttt_rewrite_thy thy =
     rewrite_script thy scriptorg
   end
 
-fun ttt_rewrite () =
-  let
-    val thyl0 = ancestry (current_theory ())
-    val thyl1 = sort_thyl thyl0
-    val thyl2 = filter (fn x => not (mem x ["min","bool"])) thyl1
-    val thyl3 = filter (not o exists_tacdata_thy) thyl2
-  in
-    app ttt_rewrite_thy thyl3;
-    thyl3
-  end
-
 (* ------------------------------------------------------------------------
    Extra safety during recording (if export_theory is not catched)
    ------------------------------------------------------------------------ *)
@@ -1087,38 +1084,49 @@ fun save_scripts script = app save_file (script :: theory_files script)
 fun restore_scripts script = app restore_file (script :: theory_files script)
 
 (* -------------------------------------------------------------------------
-   Recording
+   Recording (includes rewriting)
    ------------------------------------------------------------------------ *)
 
 fun ttt_record_thy thy =
   if mem thy ["bool","min"] then () else
-  let val scriptorg = find_script thy in
-    let
-      val _ = save_scripts scriptorg
-      val _ = print_endline ("TacticToe: ttt_record_thy: " ^ thy ^
+  let 
+    val _ = ttt_rewrite_thy thy
+    val scriptorg = find_script thy 
+    val _ = save_scripts scriptorg
+    val _ = print_endline ("TacticToe: ttt_record_thy: " ^ thy ^
         "\n  " ^ scriptorg)
-    in
-      run_rm_script (mem thy core_theories) (tttsml_of scriptorg);
-      restore_scripts scriptorg
-    end
+  in
+    run_rm_script (mem thy core_theories) (tttsml_of scriptorg);
+    restore_scripts scriptorg
   end
-
-fun ttt_record_thyl thyl = app ttt_record_thy thyl
 
 fun ttt_record () =
-  let val thyl = ttt_rewrite () in ttt_record_thyl thyl end
+  let
+    val thyl0 = ancestry (current_theory ())
+    val thyl1 = sort_thyl thyl0
+    val thyl2 = filter (fn x => not (mem x ["min","bool"])) thyl1
+    val thyl3 = filter (not o exists_tacdata_thy) thyl2
+  in
+    app ttt_record_thy thyl3
+  end
+
+fun ttt_clean_record () =
+  (
+  clean_rec_dir (HOLDIR ^ "/src/AI/sml_inspection/open");
+  clean_dir (HOLDIR ^ "/src/tactictoe/ttt_tacdata")
+  )
 
 (* ------------------------------------------------------------------------
-   Evaluation (warning: only call this function after recording the theories)
+   Evaluation 
    ------------------------------------------------------------------------ *)
 
+(* Warning: only call this function after recording the theories *)
 fun ttt_parallel_eval ncore thyl =
-  let
-    val _ = ttt_ttteval_flag := true
-    fun f thy = (ttt_rewrite_thy thy; ttt_record_thy thy)
-  in
-    parapp_queue ncore f thyl; ttt_ttteval_flag := false
-  end
+  (
+  ttt_ttteval_flag := true;
+  parapp_queue ncore ttt_record_thy thyl; 
+  ttt_ttteval_flag := false
+  )
 
 (* -------------------------------------------------------------------------
    Usage:
@@ -1158,6 +1166,36 @@ fun load_sigobj () =
   in
     app load l1
   end
+
+(* ------------------------------------------------------------------------
+   Evaluation of the library
+   ------------------------------------------------------------------------ *)
+
+fun evaluate_loaded expname ncore =
+  ( 
+  ttt_clean_record (); 
+  ttt_record ();
+  let 
+    val _ = ttt_eval_dir := ttt_eval_updir ^ "/" ^ expname  
+    val thyl = ancestry (current_theory ()) 
+  in
+    ttt_parallel_eval ncore thyl
+  end
+  )
+
+fun evaluate_full expname ncore =
+  (load_sigobj (); evaluate_loaded expname ncore)
+
+(* -------------------------------------------------------------------------
+   Usage:
+      load "tttSetup"; open tttSetup;
+      load "tttUnfold"; open tttUnfold;
+      ttt_search_time := 15.0;
+      val ncore = 20;
+      val expname = "my_experiment";
+      val _ = evaluate_loaded expname ncore;
+   Results can be found in HOLDIR/src/tactictoe/eval.
+  ------------------------------------------------------------------------- *)
 
 
 end (* struct *)

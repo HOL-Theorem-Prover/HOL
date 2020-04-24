@@ -11,9 +11,15 @@ struct
 open HolKernel Abbrev boolLib aiLib smlExecute smlRedirect
   mlThmData mlTacticData
 
+(* -------------------------------------------------------------------------
+   Directories
+   ------------------------------------------------------------------------- *)
+
 val infix_file = HOLDIR ^ "/src/AI/sml_inspection/infix_file.sml"
 val tactictoe_dir = HOLDIR ^ "/src/tactictoe"
 val ttt_debugdir = tactictoe_dir ^ "/debug"
+val ttt_eval_updir = tactictoe_dir ^ "/eval"
+val ttt_eval_dir = ref (ttt_eval_updir ^ "/default")
 
 (* -------------------------------------------------------------------------
    Nearest neighbor parameters

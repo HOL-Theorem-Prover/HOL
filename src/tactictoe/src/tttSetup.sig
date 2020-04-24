@@ -7,6 +7,8 @@ sig
   val infix_file : string
   val tactictoe_dir : string
   val ttt_debugdir : string
+  val ttt_eval_updir : string 
+  val ttt_eval_dir : string ref
 
   (* nearest neighbor *)
   val ttt_thmlarg_radius : int ref
@@ -39,7 +41,8 @@ sig
     taccov : (string, int) Redblackmap.dict,
     tacdep : (goal, lbl list) Redblackmap.dict
     }
-  (* global carrying the evaluation function (instantiated in tttUnfold) *)
+  
+  (* globals carrying the evaluation functions (instantiated in tttUnfold) *)
   val ttt_evalfun_glob :
     (thmdata * tacdata -> string * string -> goal -> unit) option ref
   val ttt_hheval_flag : bool ref
