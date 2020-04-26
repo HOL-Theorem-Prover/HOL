@@ -18,7 +18,7 @@ val ERR = mk_HOL_ERR "tttSearch"
 fun debug s = debug_in_dir ttt_debugdir "tttSearch" s
 fun debugp s = 
   (
-  if aiLib.debug_flag then print_endline s else ();
+  if !debug_flag then print_endline s else ();
   debug_in_dir ttt_debugdir "tttSearch" s
   )
 
@@ -434,8 +434,7 @@ fun mc_node_find pid =
       val pdenom = Math.sqrt pvisit
       (* try new tactic on the node itself *)
       val n = length (!children)
-      val self_pripol =
-        Math.pow (1.0 - !ttt_policy_coeff, Real.fromInt n) * !ttt_policy_coeff
+      val self_pripol = Math.pow (!ttt_policy_coeff, Real.fromInt (n + 1))
       val self_curpol = 1.0 / pdenom
       val self_selsc = (pid, 2.0 * self_pripol / self_curpol)
       (* or explore deeper existing partial proofs *)
@@ -717,7 +716,7 @@ fun search thmpred tacpred goal =
   init_search thmpred tacpred goal;
   total_timer (node_create_timer root_create_wrap) goal;
   let
-    val r = total_timer search_loop ()
+    val r = smlRedirect.hide_out (total_timer search_loop) ()
     val _ = debug "End search loop"
     val proof_status = case r of
       Proof _  =>
@@ -725,8 +724,8 @@ fun search thmpred tacpred goal =
         val proofl = proofl_of 0
           handle Interrupt => raise Interrupt | _ => debug_err "SNH0"
         val proof0 = hd proofl handle Empty => debug_err "SNH1"
-        val proof1 = minimize_proof proof0
-        val sproof = reconstruct goal proof1
+        val proof1 = smlRedirect.hide_out minimize_proof proof0
+        val sproof = smlRedirect.hide_out (reconstruct goal) proof1
       in
         Proof sproof
       end
@@ -736,5 +735,126 @@ fun search thmpred tacpred goal =
     proof_status
   end
   )
+
+(* -------------------------------------------------------------------------
+   Specification of TacticToe search based on psMCTS
+   ------------------------------------------------------------------------- *)
+
+type move = string
+
+type board = goal list * move list *
+fun string_of_board (gl,_,_) = 
+  String.concatWith " " (map string_of_goal gl)
+val failboard = ([([],F):goal], [], [])
+fun mk_board thmpred tacpred gl = 
+  let 
+    val thmidl = thmpred (!ttt_thmlarg_radius) (hd gl)
+    val stacl = tacpred (!ttt_presel_radius) (hd gl)
+  in
+    (gl, stacl, thmidl)
+  end
+
+fun status_of (gl:board,_) = 
+  if null gl then Win
+  else if term_eq (snd x) F (hd gl) then Lose
+  else Undecided;
+
+fun available_movel (_,x,_) = ["dummy"]
+
+fun apply_move (stac:move) (gl:board, stacl, thmidl) =
+  let 
+    val g = hd gl
+    val newstac = inst_stac thmidl stac
+    val tac = tactic_of_sml newstac handle HOL_ERR => NO_TAC
+  in
+    case timeout_tactic 0.1 tac g of
+      NONE => failboard
+    | SOME newgl => mk_board thmpred tacpred (newgl @ tl gl)
+  end;
+
+
+   
+    val newtac = tactic_of_sml newstac
+      handle HOL_ERR _ => raise Interrupt | _ =>
+        debug_err ("stac_to_tac: " ^ newstac)
+
+val game : (board,move) psMCTS.game =
+  {
+  status_of = status_of,
+  apply_move = apply_move,
+  available_movel = available_movel,
+  string_of_board = string_of_board,
+  string_of_move = I,
+  board_compare = triple_compare (list_compare goal_compare) 
+                                 (list_compare String.compare)
+                                 (list_compare String.compare),
+  move_compare = String.compare,
+  movel = movel
+  };
+
+val player 
+
+val mctsparam =
+  {
+  timer = SOME 5.0,
+  nsim = (NONE : int option),
+  stopatwin_flag = true,
+  decay = 1.0,
+  explo_coeff = 2.0,
+  noise_all = false,
+  noise_root = false,
+  noise_coeff = 0.25,
+  noise_gen = random_real,
+  noconfl = false,
+  avoidlose = true,
+  evalwin = false
+  };
+
+val mctsobj : (board,move) mctsobj =
+  {
+  mctsparam = mctsparam,
+  game = game,
+  player = uniform_player game
+  };
+
+
+(* -------------------------------------------------------------------------
+   TacticToe search based on psMCTS
+   ------------------------------------------------------------------------- *)
+
+fun string_of_pstatus pstatus = case pstatus of
+    Success => "Success"
+  | Timeout => "Timeout"
+  | Saturated => "Saturated"
+
+
+
+fun alt_search thmpred tacpred goal =
+  let
+    val starttree = starttree_of mctsobj [goal]
+    val (pstatus,(tree,cache)) = mcts mctsobj starttree
+  in
+    raise ERR "alt_search" (string_of_pstatus pstatus)
+  end 
+
+(*
+load "smlExecute"; open smlExecute;
+load "aiLib"; open aiLib;
+load "smlTimeout"; open smlTimeout;
+load "psMCTS"; open psMCTS;
+
+*)
+
+(*
+load "aiLib"; open aiLib;
+load "psMCTS"; open psMCTS;
+
+
+
+val starttree = starttree_of mctsobj (0,10,100);
+val ((sstatus,(tree,_)),t) = add_time (mcts mctsobj) starttree; 
+dlength tree;
+val root = dfind [] tree;
+val nodel = trace_win tree [];
 
 end (* struct *)

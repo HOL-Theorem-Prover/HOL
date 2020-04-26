@@ -3,6 +3,8 @@ sig
 
   include Abbrev
 
+  val alt_search_flag : bool ref
+
   (* directories *)
   val infix_file : string
   val tactictoe_dir : string

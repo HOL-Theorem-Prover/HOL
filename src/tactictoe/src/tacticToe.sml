@@ -58,18 +58,6 @@ fun select_tacfea tacdata goalf =
    Main function
    ------------------------------------------------------------------------- *)
 
-fun to_gsymtac stac = 
-  let 
-    fun f x =  if x = thmlarg_placeholder 
-               then thmlarg_placeholder_gsym 
-               else x
-  in
-    String.concatWith " " (map f (smlLexer.partial_sml_lexer stac))
-  end
-
-fun add_gsymtac stac = 
-  if is_thmlarg_stac stac then [stac, to_gsymtac stac] else [stac]
-
 fun main_tactictoe (thmdata,tacdata) goal =
   let
     (* preselection *)
@@ -90,13 +78,8 @@ fun main_tactictoe (thmdata,tacdata) goal =
       let
         val l = feahash_of_goal g
         val stacl = stacknn_uniq (tacsymweight,tacfea) (!ttt_presel_radius) l
-        val _ = print_endline ("length stacl: " ^ its (length stacl))
-        val stacl'  = if !ttt_gsym_flag 
-                      then List.concat (map add_gsymtac stacl)
-                      else stacl
-        val _ = print_endline ("length stacl': " ^ its (length stacl'))
       in
-        tac_cache := dadd g stacl' (!tac_cache); stacl'
+        tac_cache := dadd g stacl (!tac_cache); stacl
       end
   in
     search thmpred tacpred goal
@@ -153,7 +136,7 @@ fun tactictoe_aux goal =
         ttt_tacdata_cache := dadd cthyl tacdata_aux (!ttt_tacdata_cache);
         tacdata_aux
       end
-    val proofstatus = hide_out (main_tactictoe (thmdata,tacdata)) goal
+    val proofstatus = main_tactictoe (thmdata,tacdata) goal
     val (staco,tac) = read_status proofstatus
     val _ = case staco of NONE => () | SOME stac =>
       ttt_goaltac_cache := dadd goal (stac,tac) (!ttt_goaltac_cache)
