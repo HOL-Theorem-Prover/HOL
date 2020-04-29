@@ -490,4 +490,18 @@ fun ttt_export_tptpexl thy exl =
     app (export_tptpex termndict thy) tptpl3
   end
 
+(* 
+load "aiLib"; open aiLib;
+load "mlTacticData"; open mlTacticData;
+
+fun f thy = ttt_export_tptpexl thy (ttt_import_exl thy)
+   handle _ => print_endline thy;
+app f thyl;
+
+val thyl = ancestry (current_theory ());
+fun f thy = ttt_import_exl thy handle _ => (print_endline thy; []);
+val exl = List.concat (map f thyl);
+
+
+*)
 end (* struct *)

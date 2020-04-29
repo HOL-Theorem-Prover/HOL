@@ -37,4 +37,6 @@ sig
   val ttt_import_exl : string -> ex list
   val ttt_export_tptpexl : string -> ex list -> unit
    
+  val prepare_exl : ex list -> (term * real list) list list
+
 end
