@@ -475,7 +475,7 @@ fun export_tptpex termndict thy (cj,axl) =
       end
     fun g cj = "fof(" ^ cjname ^ ",conjecture," ^ tptp_of_term cj ^ ")." 
   in
-    writel file (map f axl @ [g cj])
+    writel file (g cj :: map f axl)
   end
 
 fun ttt_export_tptpexl thy exl =
