@@ -15,9 +15,6 @@ open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "tttLearn"
 fun debug s = debug_in_dir ttt_debugdir "tttLearn" s
-val ttt_expdir = HOLDIR ^ "/src/tactictoe/experiment"
-fun log s = (mkDir_err ttt_expdir; 
-             append_endline (ttt_expdir  ^ "/log") s)
 
 (* -------------------------------------------------------------------------
    Abstracting theorem list in tactics
@@ -113,7 +110,6 @@ fun pred_stac tacdata ostac gfea =
     val no = List.find (fn x => fst x = ostac) (number_snd 0 stacl) 
     val ns = case no of NONE => "none" | SOME (_,i) => its i
   in
-    log (ostac ^ ": " ^ ns);
     filter (fn x => not (x = ostac)) stacl
   end
 
@@ -181,8 +177,7 @@ fun orthogonalize (thmdata,tacdata) (lbl as (ostac,t,g,gl)) =
     val testo = total_time ortho_teststac_time
       (findSome (test_stac g gl)) stacl4
   in
-    case testo of NONE => (log "  not covered"; lbl) 
-      | SOME newlbl => (log ("  covered by: " ^ #1 newlbl); newlbl)
+    case testo of NONE => lbl | SOME newlbl => newlbl
   end
 
 

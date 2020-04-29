@@ -1168,7 +1168,7 @@ fun load_sigobj () =
   end
 
 (* ------------------------------------------------------------------------
-   Evaluation of the library (requires a call to
+   Evaluation of the library
    ------------------------------------------------------------------------ *)
 
 fun evaluate_loaded expname ncore =
@@ -1188,7 +1188,7 @@ fun evaluate_full expname ncore =
       load "tttUnfold"; open tttUnfold;
       ttt_search_time := 15.0;
       val ncore = 20;
-      val expname = "my_experiment";
+      val expname = "new_mcts_3";
       val _ = evaluate_loaded expname ncore;
    Results can be found in HOLDIR/src/tactictoe/eval.
   ------------------------------------------------------------------------- *)

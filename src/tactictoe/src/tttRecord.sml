@@ -255,6 +255,7 @@ fun end_record_thy thy =
   print_endline "Exporting positive and negative examples";
   ttt_export_exl_human thy (!exl_glob);
   ttt_export_exl thy (!exl_glob);
+  ttt_export_tptpexl thy (!exl_glob);
   print_endline "Export successful"
   )
   else ()

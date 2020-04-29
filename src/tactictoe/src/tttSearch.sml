@@ -949,118 +949,14 @@ load "aiLib"; open aiLib;
 load "mlTacticData"; open mlTacticData;
 load "hhExportLib";
 val exl1 = ttt_import_exl "ConseqConv";
-fun mk_cat3 x = 
-  list_mk_comb (mk_var ("cat3",``:bool -> bool -> bool -> bool``),x);
-
-fun simplify_ex (ginit,_:string,(gcur,ogl),pgl) = 
-  mk_cat3 [list_mk_imp ginit, list_mk_imp gcur, 
-    if null ogl then T else list_mk_conj (map list_mk_imp ogl)];
-
-val exl2 = map_fst simplify_ex exl1;
-
-fun lambda_term fullty (v,bod) = 
-  let 
-    val ty1 = type_of v
-    val ty2 = type_of bod
-    val ty3 = mk_type ("fun",[ty1, mk_type ("fun", [ty2,fullty])])
-  in
-    list_mk_comb (mk_var ("ttt_lambda",ty3), [v,bod])
-  end;
-
-fun add_lambda tm = case dest_term tm of
-    COMB(Rator,Rand) => mk_comb (add_lambda Rator, add_lambda Rand)
-  | LAMB(Var,Bod) => lambda_term (type_of tm) (Var, add_lambda Bod)
-  | _ => tm;
-
-fun add_arity tm = 
-  let 
-    val (oper,argl) = strip_comb tm 
-    val a = length argl
-    val newname = if is_var oper 
-      then ((if null argl then "V" else "v") ^ 
-           escape (hhExportLib.namea_v (oper,a)))
-      else hhExportLib.namea_c (oper,a)
-    val newoper = mk_var (newname, type_of oper)
-  in
-    list_mk_comb (newoper, map add_arity argl)
-  end;
-
-val exl3 = map_fst (add_arity o add_lambda) exl2;
-val exl4 = map_snd (fn x => if x then [1.0] else [0.0]) exl3;
-val vhead = mk_var ("head_", ``:bool -> bool``);
-val exl5 = map (fn (a,b) => [(mk_comb (vhead,a),b)]) exl4;
 
 
-(* TNN *)
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-fun operl_of_term tm = 
-  let 
-    val (oper,argl) = strip_comb tm 
-    val arity = length argl
-  in
-    (oper,arity) :: List.concat (map operl_of_term argl)
-  end;
-val oper_compare = cpl_compare Term.compare Int.compare;
-val operl = mk_fast_set oper_compare 
-  (List.concat (map operl_of_term (map fst (List.concat exl5))));
 
-val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl;
-val randtnn = random_tnn operdiml;
-
-val trainparam =
-  {ncore = 1, verbose = true,
-   learning_rate = 0.02, batch_size = 2, nepoch = 1000};
-val schedule = [trainparam];
-val tnn = train_tnn schedule randtnn (exl5,[]);
 
 (* TPTP *)
-fun mk_cat2 x = 
-  list_mk_comb (mk_var ("cat2",``:bool -> bool -> bool``),x);
 
-fun simp_tptp ((ginit,_:string,(gcur,ogl),pgl),b) = 
-  let val f = (add_arity o add_lambda) in
-    (f (list_mk_imp ginit), (f (mk_cat2 [list_mk_imp gcur, 
-    if null ogl then T else list_mk_conj (map list_mk_imp ogl)]),b))
-  end;
 
-fun is_singleton x = case x of [a] => true | _ => false;
-
-val tptpl1 = map simp_tptp exl1; 
-val tptpl2 = dlist (dregroup Term.compare tptpl1);
-val tptpl3 = filter (not o is_singleton o snd) tptpl2;
-
-val terml1 = List.concat (map (fn (t1,t2l) => t1 :: map fst t2l) tptpl3);
-val terml2 = mk_term_set terml1;
-val termndict = dnew Term.compare (number_snd 0 terml2);
-
-fun tptp_of_term tm =
-  let 
-    val (oper,argl) = strip_comb tm
-    val name = fst (dest_var oper)
-  in
-    if null argl then name else
-    name ^ "(" ^ String.concatWith ", " (map tptp_of_term argl) ^ ")"
-  end
-
-fun output_tptp thy (cj,axl) = 
-  let 
-    val dir = HOLDIR ^ "/src/tactictoe/mltptp"
-    val _ = mkDir_err dir
-    val cjname = thy ^ its (dfind cj termndict)
-    val file = dir ^ "/" ^ cjname
-    fun f (ax,b) = 
-      let 
-        val axname = thy ^ its (dfind ax termndict)
-        val role = if b then "axiom_useful" else "axiom_redundant"
-      in
-        "fof(" ^ axname ^ "," ^ role ^ "," ^ tptp_of_term ax ^ ")."
-      end
-    fun g cj = "fof(" ^ cjname ^ ",conjecture," ^ tptp_of_term cj ^ ")." 
-  in
-    writel file (map f axl @ [g cj])
-  end
-
-val _ = app (output_tptp "ConseqConv") tptpl3;
+val _ = app (ttt_export_tptpex "ConseqConv") tptpl3;
 
 
 

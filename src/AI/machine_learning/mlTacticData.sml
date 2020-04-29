@@ -276,7 +276,7 @@ fun string_of_ex ((ginit, stac, (gcur, ogl), pgl), b) =
 
 fun ttt_export_exl_human thy exl = 
   let 
-    val dir = HOLDIR ^ "/src/tactictoe/ttt_enigma_human"
+    val dir = HOLDIR ^ "/src/tactictoe/exhuman"
     val _ = mkDir_err dir 
     val file = dir ^ "/" ^ thy
   in
@@ -347,7 +347,7 @@ fun uptodate_ex ((ginit, _, (gcur, ogl), pgl), _) =
 
 fun ttt_export_exl thy exl1 =
   let
-    val dir = HOLDIR ^ "/src/tactictoe/ttt_enigma"
+    val dir = HOLDIR ^ "/src/tactictoe/exhol"
     val _ = mkDir_err dir 
     val file = dir ^ "/" ^ thy
     val ostrm = Portable.open_out file
@@ -360,11 +360,128 @@ fun ttt_export_exl thy exl1 =
 
 fun ttt_import_exl thy = 
   let     
-    val dir = HOLDIR ^ "/src/tactictoe/ttt_enigma"
+    val dir = HOLDIR ^ "/src/tactictoe/exhol"
     val file = dir ^ "/" ^ thy
   in
     valOf (dec_exl (HOLsexp.fromFile file))
   end
 
+(* ------------------------------------------------------------------------
+   Preparing search examples for learning with TNN
+   ------------------------------------------------------------------------ *)
+
+fun mk_cat3 x = 
+  list_mk_comb (mk_var ("cat3",``:bool -> bool -> bool -> bool``),x)
+
+fun simplify_ex (ginit,_:string,(gcur,ogl),pgl) = 
+  mk_cat3 [list_mk_imp ginit, list_mk_imp gcur, 
+    if null ogl then T else list_mk_conj (map list_mk_imp ogl)]
+
+fun lambda_term fullty (v,bod) = 
+  let 
+    val ty1 = type_of v
+    val ty2 = type_of bod
+    val ty3 = mk_type ("fun",[ty1, mk_type ("fun", [ty2,fullty])])
+  in
+    list_mk_comb (mk_var ("ttt_lambda",ty3), [v,bod])
+  end
+
+fun add_lambda tm = case dest_term tm of
+    COMB(Rator,Rand) => mk_comb (add_lambda Rator, add_lambda Rand)
+  | LAMB(Var,Bod) => lambda_term (type_of tm) (Var, add_lambda Bod)
+  | _ => tm
+
+fun add_arity tm = 
+  let 
+    val (oper,argl) = strip_comb tm 
+    val a = length argl
+    val newname = if is_var oper 
+      then ((if null argl then "V" else "v") ^ 
+           escape (hhExportLib.namea_v (oper,a)))
+      else hhExportLib.namea_c (oper,a)
+    val newoper = mk_var (newname, type_of oper)
+  in
+    list_mk_comb (newoper, map add_arity argl)
+  end
+
+fun prepare_exl exl1 = 
+  let 
+    val exl2 = map_fst simplify_ex exl1;
+    val exl3 = map_fst (add_arity o add_lambda) exl2;
+    val exl4 = map_snd (fn x => if x then [1.0] else [0.0]) exl3;
+    val vhead = mk_var ("head_", ``:bool -> bool``);
+    val exl5 = map (fn (a,b) => [(mk_comb (vhead,a),b)]) exl4;
+  in
+    exl5
+  end
+
+(*
+(* TNN *)
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+val operl = mk_fast_set oper_compare 
+  (List.concat (map operl_of_term (map fst (List.concat exl5))));
+val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl;
+val randtnn = random_tnn operdiml;
+
+val trainparam =
+  {ncore = 1, verbose = true,
+   learning_rate = 0.02, batch_size = 2, nepoch = 1000};
+val schedule = [trainparam];
+val tnn = train_tnn schedule randtnn (exl5,[]);
+*)
+
+(* ------------------------------------------------------------------------
+   Exporting examples to TPTP
+   ------------------------------------------------------------------------ *)
+
+fun is_singleton x = case x of [a] => true | _ => false
+
+fun mk_cat2 x = 
+  list_mk_comb (mk_var ("cat2",``:bool -> bool -> bool``),x)
+
+fun simp_tptp ((ginit,_:string,(gcur,ogl),pgl),b) = 
+  let val f = (add_arity o add_lambda) in
+    (f (list_mk_imp ginit), (f (mk_cat2 [list_mk_imp gcur, 
+    if null ogl then T else list_mk_conj (map list_mk_imp ogl)]),b))
+  end
+
+fun tptp_of_term tm =
+  let 
+    val (oper,argl) = strip_comb tm
+    val name = fst (dest_var oper)
+  in
+    if null argl then name else
+    name ^ "(" ^ String.concatWith ", " (map tptp_of_term argl) ^ ")"
+  end
+
+fun export_tptpex termndict thy (cj,axl) = 
+  let 
+    val dir = HOLDIR ^ "/src/tactictoe/extptp"
+    val _ = mkDir_err dir
+    val cjname = thy ^ its (dfind cj termndict)
+    val file = dir ^ "/" ^ cjname
+    fun f (ax,b) = 
+      let 
+        val axname = thy ^ its (dfind ax termndict)
+        val role = if b then "axiom_useful" else "axiom_redundant"
+      in
+        "fof(" ^ axname ^ "," ^ role ^ "," ^ tptp_of_term ax ^ ")."
+      end
+    fun g cj = "fof(" ^ cjname ^ ",conjecture," ^ tptp_of_term cj ^ ")." 
+  in
+    writel file (map f axl @ [g cj])
+  end
+
+fun ttt_export_tptpexl thy exl =
+  let
+    val tptpl1 = map simp_tptp exl
+    val tptpl2 = dlist (dregroup Term.compare tptpl1)
+    val tptpl3 = filter (not o is_singleton o snd) tptpl2
+    val terml1 = List.concat (map (fn (t1,t2l) => t1 :: map fst t2l) tptpl3)
+    val terml2 = mk_term_set terml1
+    val termndict = dnew Term.compare (number_snd 0 terml2)
+  in
+    app (export_tptpex termndict thy) tptpl3
+  end
 
 end (* struct *)

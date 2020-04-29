@@ -16,6 +16,20 @@ fun msg param s = if #verbose param then print_endline s else ()
 fun msg_err fs es = (print_endline (fs ^ ": " ^ es); raise ERR fs es)
 
 (* -------------------------------------------------------------------------
+   TNN operators (variable/constant + arity)
+   ------------------------------------------------------------------------- *)
+
+fun operl_of_term tm = 
+  let 
+    val (oper,argl) = strip_comb tm 
+    val arity = length argl
+  in
+    (oper,arity) :: List.concat (map operl_of_term argl)
+  end;
+
+val oper_compare = cpl_compare Term.compare Int.compare;
+
+(* -------------------------------------------------------------------------
    Random TNN
    ------------------------------------------------------------------------- *)
 

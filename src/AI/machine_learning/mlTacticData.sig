@@ -35,5 +35,6 @@ sig
   val ttt_export_exl_human : string -> ex list -> unit
   val ttt_export_exl : string -> ex list -> unit
   val ttt_import_exl : string -> ex list
-
+  val ttt_export_tptpexl : string -> ex list -> unit
+   
 end
