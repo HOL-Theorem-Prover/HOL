@@ -373,9 +373,10 @@ fun ttt_import_exl thy =
 fun mk_cat3 x = 
   list_mk_comb (mk_var ("cat3",``:bool -> bool -> bool -> bool``),x)
 
-fun simplify_ex (ginit,_:string,(gcur,ogl),pgl) = 
+fun simplify_ex (ginit,_:string,(gcur,ogl),pgl) = list_mk_imp (hd ogl) 
+  (*
   mk_cat3 [list_mk_imp ginit, list_mk_imp gcur, 
-    if null ogl then T else list_mk_conj (map list_mk_imp ogl)]
+    if null ogl then T else list_mk_conj (map list_mk_imp ogl)] *)
 
 fun lambda_term fullty (v,bod) = 
   let 
@@ -421,21 +422,6 @@ fun prepare_exl exl1 =
     exl5
   end
 
-(*
-(* TNN *)
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-val operl = mk_fast_set oper_compare 
-  (List.concat (map operl_of_term (map fst (List.concat exl5))));
-val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl;
-val randtnn = random_tnn operdiml;
-
-val trainparam =
-  {ncore = 1, verbose = true,
-   learning_rate = 0.02, batch_size = 2, nepoch = 1000};
-val schedule = [trainparam];
-val tnn = train_tnn schedule randtnn (exl5,[]);
-*)
-
 (* ------------------------------------------------------------------------
    Exporting examples to TPTP
    ------------------------------------------------------------------------ *)
@@ -447,8 +433,7 @@ fun mk_cat2 x =
 
 fun simp_tptp ((ginit,_:string,(gcur,ogl),pgl),b) = 
   let val f = (add_arity o add_lambda) in
-    (f (list_mk_imp ginit), (f (mk_cat2 [list_mk_imp gcur, 
-    if null ogl then T else list_mk_conj (map list_mk_imp ogl)]),b))
+    (f (list_mk_imp ginit),((f (list_mk_imp (hd ogl))),b))
   end
 
 fun tptp_of_term tm =
@@ -493,15 +478,31 @@ fun ttt_export_tptpexl thy exl =
 (* 
 load "aiLib"; open aiLib;
 load "mlTacticData"; open mlTacticData;
-
+val thyl = ancestry (current_theory ());
 fun f thy = ttt_export_tptpexl thy (ttt_import_exl thy)
    handle _ => print_endline thy;
 app f thyl;
 
-val thyl = ancestry (current_theory ());
+
 fun f thy = ttt_import_exl thy handle _ => (print_endline thy; []);
 val exl = List.concat (map f thyl);
+val exl2 = prepare_exl exl;
+val (train,test) = swap (part_n 1000 (shuffle exl2));
 
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+val operl = mk_fast_set oper_compare 
+  (List.concat (map operl_of_term (map fst (List.concat exl2))));
+val operdiml = map (fn x => (fst x, dim_std_arity (1,12) x)) operl;
+val randtnn = random_tnn operdiml;
+
+val trainparam =
+  {ncore = 8, verbose = true,
+   learning_rate = 0.04, batch_size = 16, nepoch = 100};
+val schedule = [trainparam];
+val tnn = train_tnn schedule randtnn (train,test);
+
+val acctrain = tnn_accuracy tnn train;
+val acctest = tnn_accuracy tnn test;
 
 *)
 end (* struct *)
