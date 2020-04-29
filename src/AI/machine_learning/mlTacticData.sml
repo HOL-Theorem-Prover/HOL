@@ -370,13 +370,17 @@ fun ttt_import_exl thy =
    Preparing search examples for learning with TNN
    ------------------------------------------------------------------------ *)
 
+fun mk_cat2 x = 
+  list_mk_comb (mk_var ("cat2",``:bool -> bool -> bool``), x)
+
 fun mk_cat3 x = 
   list_mk_comb (mk_var ("cat3",``:bool -> bool -> bool -> bool``),x)
 
 fun simplify_ex (ginit,_:string,(gcur,ogl),pgl) = 
-  if null ogl 
-  then (list_mk_imp (hd pgl)) 
-  else (list_mk_imp (hd ogl))
+  mk_cat2 [list_mk_imp ginit,
+    if null ogl 
+    then (list_mk_imp (hd pgl)) 
+    else (list_mk_imp (hd ogl))]
   (*
   mk_cat3 [list_mk_imp ginit, list_mk_imp gcur, 
     if null ogl then T else list_mk_conj (map list_mk_imp ogl)] *)
@@ -435,9 +439,6 @@ fun prepare_exl exl1 =
 
 fun is_singleton x = case x of [a] => true | _ => false
 
-fun mk_cat2 x = 
-  list_mk_comb (mk_var ("cat2",``:bool -> bool -> bool``), x)
-
 fun simp_tptp ((ginit,_:string,(gcur,ogl),pgl),b) = 
   let 
     val f = (add_arity o add_lambda) 
@@ -491,10 +492,11 @@ fun ttt_export_tptpexl thy exl =
 load "aiLib"; open aiLib;
 load "mlTacticData"; open mlTacticData;
 val thyl = ancestry (current_theory ());
-fun f thy = ttt_export_tptpexl thy (ttt_import_exl thy)
+(* 
+fun g thy = ttt_export_tptpexl thy (ttt_import_exl thy)
    handle _ => print_endline thy;
-app f thyl;
-
+app g thyl; 
+*)
 
 fun f thy = ttt_import_exl thy handle _ => (print_endline thy; []);
 val exl = List.concat (map f thyl);
@@ -515,6 +517,7 @@ val tnn = train_tnn schedule randtnn (train,test);
 
 val acctrain = tnn_accuracy tnn train;
 val acctest = tnn_accuracy tnn test;
+val _ = write_tnn "tnn_hd" tnn;
 
 *)
 end (* struct *)
