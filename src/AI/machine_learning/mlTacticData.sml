@@ -395,10 +395,16 @@ fun add_arity tm =
   let 
     val (oper,argl) = strip_comb tm 
     val a = length argl
-    val newname = if is_var oper 
-      then ((if null argl then "V" else "v") ^ 
-           escape (hhExportLib.namea_v (oper,a)))
-      else hhExportLib.namea_c (oper,a)
+    val newname = 
+      if is_var oper 
+      then 
+        let val prefix = if null argl then "V" else "v" in 
+          escape (prefix ^ fst (dest_var oper) ^ "." ^ its a)
+        end
+      else 
+        let val {Thy,Name,Ty} = dest_thy_const oper in
+          escape ("c" ^ Thy ^ "." ^ Name ^ "." ^ its a)
+        end
     val newoper = mk_var (newname, type_of oper)
   in
     list_mk_comb (newoper, map add_arity argl)
