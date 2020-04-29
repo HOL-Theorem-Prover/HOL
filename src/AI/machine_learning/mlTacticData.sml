@@ -16,7 +16,7 @@ val ERR = mk_HOL_ERR "mlTacticData"
 fun err_msg s l = raise ERR s (String.concatWith " " (first_n 10 l))
 
 (* -------------------------------------------------------------------------
-   Tactic data type
+   Tactictoe database data type
    ------------------------------------------------------------------------- *)
 
 type tacdata =
@@ -41,7 +41,6 @@ val empty_tacdata : tacdata =
 
 fun uptodate_goal (asl,w) = all uptodate_term (w :: asl)
 fun uptodate_feav ((_,_,g,gl),_) = all uptodate_goal (g :: gl)
-
 
 (* -------------------------------------------------------------------------
    Exporting terms
@@ -76,9 +75,9 @@ fun export_terml file tml =
 open HOLsexp
 fun enc_goal enc_tm (asl,w) = list_encode enc_tm (w::asl)
 fun dec_goal dec_tm =
-    Option.map (fn (w,asl) => (asl,w)) o
-    Option.mapPartial List.getItem o
-    list_decode dec_tm
+  Option.map (fn (w,asl) => (asl,w)) o
+  Option.mapPartial List.getItem o
+  list_decode dec_tm
 
 fun enc_goal_list enc_tm = list_encode (enc_goal enc_tm)
 fun dec_goal_list dec_tm = list_decode (dec_goal dec_tm)
@@ -110,21 +109,9 @@ fun dec_feav dec_tm =
       )
     )
 
-fun compare_exact (t1,t2) = case (dest_term t1, dest_term t2) of
-     (VAR _, VAR _) => Term.compare (t1,t2)
-   | (VAR _, _) => LESS
-   | (_, VAR _) => GREATER
-   | (CONST _, CONST _) => Term.compare (t1,t2)
-   | (CONST _, _) => LESS
-   | (_, CONST _) => GREATER
-   | (COMB p1, COMB p2) => cpl_compare compare_exact compare_exact (p1,p2)
-   | (COMB _, _) => LESS
-   | (_, COMB _) => GREATER
-   | (LAMB p1, LAMB p2) => cpl_compare compare_exact compare_exact (p1,p2)
-
 fun enc_feavl feavl =
   let
-    val empty_exact = HOLset.empty compare_exact
+    val empty_exact = HOLset.empty term_compare_exact
     fun goal_terms ((asl,w),A) = HOLset.addList(A, w::asl)
     fun feav_terms (((stac,t,g,gl), fea), A) =
         List.foldl goal_terms A (g::gl)
@@ -180,9 +167,6 @@ fun import_terml file =
    Importing tactic data
    ------------------------------------------------------------------------- *)
 
-(* Feature vector *)
-(*  val file = ttt_tacfea_dir ^ "/" ^ thy *)
-
 fun import_tacfea file =
     let
       val t = HOLsexp.fromFile file
@@ -190,15 +174,6 @@ fun import_tacfea file =
     in
       dnew lbl_compare feavl
     end
-
-(*
-fun read_tacfea_thy thy =
-  if mem thy ["min","bool"] then [] else read_feavdatal thy
-*)
-
-(* -------------------------------------------------------------------------
-   Tactic data is recovered from tacfea
-   ------------------------------------------------------------------------- *)
 
 fun init_taccov tacfea =
   count_dict (dempty String.compare) (map (#1 o fst) (dlist tacfea))
@@ -277,6 +252,119 @@ fun ttt_export_tacdata thy tacdata =
     export_tacfea file (#tacfea tacdata)
   end
 
+(* ------------------------------------------------------------------------
+   Exporting search examples
+   ------------------------------------------------------------------------ *)
+
+type ex = (goal * string * (goal * goal list) * goal list) * bool
+
+val exl_glob = ref []
+
+(* human readable *)
+fun string_of_ex ((ginit, stac, (gcur, ogl), pgl), b) = 
+  String.concatWith "\n" [
+    "####", 
+    "inital goal: " ^ string_of_goal ginit,
+    "tactic: " ^ stac,
+    "input goal: " ^ string_of_goal gcur,
+    "output goals: " ^  
+    String.concatWith " **** " (map string_of_goal ogl),
+    "pending goals: " ^ 
+    String.concatWith " **** " (map string_of_goal pgl),
+    "positive: " ^ bts b
+    ]
+
+fun ttt_export_exl_human thy exl = 
+  let 
+    val dir = HOLDIR ^ "/src/tactictoe/ttt_enigma_human"
+    val _ = mkDir_err dir 
+    val file = dir ^ "/" ^ thy
+  in
+    writel file (map string_of_ex exl)   
+  end
+
+(* S-expression *)
+val enc_bool = String o bts
+val dec_bool = Option.map string_to_bool o string_decode
+
+fun enc_ex enc_tm (* ((ginit, stac, (gcur, ogl), pgl), b) *) =
+  tagged_encode "ex" (
+    pair_encode(
+      pair4_encode(
+        enc_goal enc_tm,
+        String,
+        pair_encode (enc_goal enc_tm, enc_goal_list enc_tm),
+        enc_goal_list enc_tm
+      ),
+      enc_bool
+    )
+  )
+
+fun dec_ex dec_tm =
+  tagged_decode "ex" (
+    pair_decode(
+      pair4_decode (
+        dec_goal dec_tm,
+        string_decode,
+        pair_decode (dec_goal dec_tm, dec_goal_list dec_tm),
+        dec_goal_list dec_tm
+      ),
+      dec_bool
+    )
+  )
+
+fun enc_exl exl =
+  let
+    val empty_exact = HOLset.empty term_compare_exact
+    fun goal_terms ((asl,w),A) = HOLset.addList(A, w::asl)
+    fun ex_terms (((ginit, stac, (gcur, ogl), pgl), b), A) =
+        List.foldl goal_terms A (ginit :: gcur :: (ogl @ pgl))
+    val all_terms = List.foldl ex_terms empty_exact exl |> 
+      HOLset.listItems
+    val ed = {named_terms = [], unnamed_terms = [], named_types = [],
+              unnamed_types = [], theorems = []}
+    val sdi = build_sharing_data ed
+    val sdi = add_terms all_terms sdi
+    fun write_term_aux sdi t = write_term sdi t
+      handle NotFound => raise ERR "write_term" (term_to_string t)
+    val enc_exldata = list_encode (enc_ex (String o write_term_aux sdi))
+  in
+    tagged_encode "exl" (pair_encode (enc_sdata, enc_exldata)) (sdi,exl)
+  end
+
+fun dec_exl t =
+    let
+      val a = {with_strings = fn _ => (), with_stridty = fn _ => ()}
+      val (sdo, ex_data) =
+          valOf (tagged_decode "exl" (pair_decode(dec_sdata a, SOME)) t)
+      val dec_tm = Option.map (read_term sdo) o string_decode
+    in
+      list_decode (dec_ex dec_tm) ex_data
+    end
+
+fun uptodate_ex ((ginit, _, (gcur, ogl), pgl), _) = 
+  all uptodate_goal (ginit :: gcur :: (ogl @ pgl))
+
+fun ttt_export_exl thy exl1 =
+  let
+    val dir = HOLDIR ^ "/src/tactictoe/ttt_enigma"
+    val _ = mkDir_err dir 
+    val file = dir ^ "/" ^ thy
+    val ostrm = Portable.open_out file
+    val exl2 = filter uptodate_ex exl1
+  in
+    PP.prettyPrint (curry TextIO.output ostrm, 75)
+                   (HOLsexp.printer (enc_exl exl2));
+    TextIO.closeOut ostrm
+  end
+
+fun ttt_import_exl thy = 
+  let     
+    val dir = HOLDIR ^ "/src/tactictoe/ttt_enigma"
+    val file = dir ^ "/" ^ thy
+  in
+    valOf (dec_exl (HOLsexp.fromFile file))
+  end
 
 
 end (* struct *)

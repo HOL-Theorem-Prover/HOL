@@ -916,9 +916,10 @@ fun output_header oc cthy =
   (* recording *)
   output_flag oc "tttSetup.ttt_recprove_flag" ttt_recprove_flag;
   output_flag oc "tttSetup.ttt_reclet_flag" ttt_reclet_flag;
+  output_flag oc "tttSetup.ttt_ex_flag" ttt_ex_flag;
   (* evaluation *)
-  output_flag oc "tttSetup.ttt_gsym_flag" ttt_gsym_flag;
   output_flag oc "mlThmData.thmlintac_flag" mlThmData.thmlintac_flag;
+  output_flag oc "tttSetup.alt_search_flag" tttSetup.alt_search_flag;
   if !ttt_ttteval_flag then 
      (
      osn oc "val _ = metisTools.METIS_TAC;";

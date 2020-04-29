@@ -11,7 +11,7 @@ struct
 open HolKernel Abbrev boolLib aiLib
   smlTimeout smlLexer smlExecute
   mlFeature mlThmData mlTacticData mlNearestNeighbor
-  psMinimize
+  psMCTS psMinimize
   tttSetup tttLearn
 
 val ERR = mk_HOL_ERR "tttSearch"
@@ -721,9 +721,7 @@ fun search thmpred tacpred goal =
     val proof_status = case r of
       Proof _  =>
       let
-        val proofl = proofl_of 0
-          handle Interrupt => raise Interrupt | _ => debug_err "SNH0"
-        val proof0 = hd proofl handle Empty => debug_err "SNH1"
+        val proof0 = singleton_of_list (proofl_of 0)
         val proof1 = smlRedirect.hide_out minimize_proof proof0
         val sproof = smlRedirect.hide_out (reconstruct goal) proof1
       in
@@ -742,57 +740,69 @@ fun search thmpred tacpred goal =
 
 type move = string
 
-type board = goal list * move list *
-fun string_of_board (gl,_,_) = 
-  String.concatWith " " (map string_of_goal gl)
-val failboard = ([([],F):goal], [], [])
+type board = goal list * move list
+fun string_of_board (gl,_) = String.concatWith " " (map string_of_goal gl)
+
+val winboard = ([],[])
+val loseboard = ([([],F):goal],[])
+
 fun mk_board thmpred tacpred gl = 
   let 
     val thmidl = thmpred (!ttt_thmlarg_radius) (hd gl)
-    val stacl = tacpred (!ttt_presel_radius) (hd gl)
+    val metis = "metisTools.METIS_TAC [ " ^ thmlarg_placeholder ^ " ]"
+    val stacl = mk_sameorder_set String.compare (metis :: tacpred (hd gl))
+    val stacl' = map (inst_stac thmidl) stacl 
   in
-    (gl, stacl, thmidl)
+    (gl, stacl')
   end
 
-fun status_of (gl:board,_) = 
+fun status_of (gl,_) = 
   if null gl then Win
-  else if term_eq (snd x) F (hd gl) then Lose
-  else Undecided;
+  else if term_eq (snd (hd gl)) F then Lose
+  else Undecided
 
-fun available_movel (_,x,_) = ["dummy"]
+fun available_movel (_,x) = x
 
-fun apply_move (stac:move) (gl:board, stacl, thmidl) =
+fun apply_move thmpred tacpred (stac:move) (gl,stacl) =
   let 
     val g = hd gl
-    val newstac = inst_stac thmidl stac
-    val tac = tactic_of_sml newstac handle HOL_ERR => NO_TAC
+    val tac = smlRedirect.hide_out tactic_of_sml stac 
+      handle HOL_ERR _ => NO_TAC
   in
-    case timeout_tactic 0.1 tac g of
-      NONE => failboard
-    | SOME newgl => mk_board thmpred tacpred (newgl @ tl gl)
-  end;
+    case smlRedirect.hide_out (timeout_tactic 0.04 tac) g of
+      NONE => loseboard
+    | SOME newgl => 
+      if null (newgl @ tl gl)
+      then winboard 
+      else mk_board thmpred tacpred (newgl @ tl gl)
+  end
 
+fun fst_compare cmp ((a,_),(b,_)) = cmp (a,b)
 
-   
-    val newtac = tactic_of_sml newstac
-      handle HOL_ERR _ => raise Interrupt | _ =>
-        debug_err ("stac_to_tac: " ^ newstac)
-
-val game : (board,move) psMCTS.game =
+fun mk_game thmpred tacpred =
   {
   status_of = status_of,
-  apply_move = apply_move,
+  apply_move = apply_move thmpred tacpred,
   available_movel = available_movel,
   string_of_board = string_of_board,
   string_of_move = I,
-  board_compare = triple_compare (list_compare goal_compare) 
-                                 (list_compare String.compare)
-                                 (list_compare String.compare),
+  board_compare = fst_compare (list_compare goal_compare),
+  (* does not fix all looping 
+     such as addition of goals but keeping existing one *)
   move_compare = String.compare,
-  movel = movel
-  };
+  movel = ["dummy"]
+  }
 
-val player 
+fun exp_decr_aux curcoeff coeff sl = case sl of
+    [] => []
+  | a :: m => (a,curcoeff) :: exp_decr_aux (curcoeff * coeff) coeff m
+
+fun exp_decr coeff sl = exp_decr_aux 1.0 coeff sl
+
+fun player tnno ((gl,stacl): board) =
+  (if isSome tnno
+   then 0.0 (* mlTreeNeuralNetwork.infer_tnn (valOf tnno) (hd gl) *)
+   else 0.0, exp_decr 0.75 stacl)
 
 val mctsparam =
   {
@@ -805,56 +815,260 @@ val mctsparam =
   noise_root = false,
   noise_coeff = 0.25,
   noise_gen = random_real,
-  noconfl = false,
+  noconfl = true,
   avoidlose = true,
   evalwin = false
   };
 
-val mctsobj : (board,move) mctsobj =
+fun mk_mctsobj thmpred tacpred =
   {
-  mctsparam = mctsparam,
-  game = game,
-  player = uniform_player game
-  };
+  mctsparam = mctsparam, 
+  game = mk_game thmpred tacpred,
+  player = player NONE
+  }
 
+(* -------------------------------------------------------------------------
+   MCTS tools
+   ------------------------------------------------------------------------- *)
+
+fun print_tree (tree : (board,move) psMCTS.tree) (stac,id) = 
+  let
+    val node = dfind id tree 
+    val _ = print_endline (String.concatWith " " (map its (rev id))) 
+    val _ = print_endline (implode (first_n 80 (explode stac))) 
+  in
+    if psMCTS.is_win (#stati node) then print_endline "win" else
+    let
+      val goal = hd (fst (#board node)) 
+      val _ = print_endline (string_of_goal goal);
+      fun test (_,cid) = dmem cid tree
+      val l = map_fst fst (filter test (#pol node))
+    in
+      app (print_tree tree) l
+    end
+  end
+
+fun extract_ex (tree : (board,move) psMCTS.tree) id =
+  let
+    val node = dfind id tree 
+    val _ = print_endline (String.concatWith " " (map its (rev id))) 
+    val gl = fst (#board node)
+  in
+    if null gl then [] else
+    let
+      fun test (_,cid) = dmem cid tree
+      val pol = filter test (map_fst fst (#pol node))
+      fun is_pos (_,cid) = psMCTS.is_win (#status (dfind cid tree))
+      val (posl,negl) = partition is_pos pol
+      fun mk_ex b (stac,cid) = 
+        let 
+          val ginit = (singleton_of_list o fst o #board o dfind []) tree
+          val cnode = dfind cid tree
+          val newgl = fst (#board cnode) 
+          val n = length newgl - length gl + 1 
+          val (ogl,pgl) = part_n n newgl
+        in
+          if psMCTS.is_lose (#stati cnode) 
+          then NONE 
+          else SOME ((ginit, stac, (hd gl, ogl), pgl), b)
+        end
+      val posex = List.mapPartial (mk_ex true) posl
+      val negex = List.mapPartial (mk_ex false) negl
+    in
+      (posex @ negex) @ List.concat (map (extract_ex tree) (map snd pol))
+    end
+  end
 
 (* -------------------------------------------------------------------------
    TacticToe search based on psMCTS
    ------------------------------------------------------------------------- *)
 
-fun string_of_pstatus pstatus = case pstatus of
-    Success => "Success"
-  | Timeout => "Timeout"
-  | Saturated => "Saturated"
+fun pstatus_of_sstatus sstatus = case sstatus of
+    Success => Proof "__"
+  | Timeout => ProofTimeOut
+  | Saturated => ProofSaturated
 
-
+fun extract_proofl boardmovel = case boardmovel of
+    [] => raise ERR "mk_proof_tree" "empty proof"
+  | [(gl,stac)] => [Tactic (stac, (singleton_of_list gl))]
+  | (gl1,stac1) :: (gl2,stac2) :: m => 
+    let 
+      val n = length gl2 - length gl1 + 1 
+      val _ = print_endline stac1
+      val _ = print_endline (its n)
+      val proofl = extract_proofl ((gl2,stac2) :: m)
+      val (proofl1, proofl2) = part_n n proofl
+      val tac = Tactic (stac1, hd gl1)
+    in
+      (if null proofl1 then tac else Thenl (tac, proofl1)) :: proofl2
+    end
+    
+val tree_glob = ref []
 
 fun alt_search thmpred tacpred goal =
   let
-    val starttree = starttree_of mctsobj [goal]
-    val (pstatus,(tree,cache)) = mcts mctsobj starttree
+    val mctsobj = mk_mctsobj thmpred tacpred
+    val startboard = mk_board thmpred tacpred [goal]
+    val starttree = starttree_of mctsobj startboard
+    val (sstatus,(tree,cache)) = mcts mctsobj starttree
+    val _ = print_endline ("infstep: " ^ its (dlength tree))
+    val _ = tree_glob := [tree]  
   in
-    raise ERR "alt_search" (string_of_pstatus pstatus)
+    if sstatus = Success then 
+      let 
+        val _ = if !ttt_ex_flag 
+                then exl_glob := (extract_ex tree []) @ (!exl_glob)  
+                else ()
+        val boardmovel1 = trace_win_movel tree []
+        val boardmovel2 = map (fn (a,b) => (fst a,b)) boardmovel1
+        val proofl = extract_proofl boardmovel2
+        val proof0 = singleton_of_list proofl
+        val proof1 = (* smlRedirect.hide_out minimize_proof *) proof0
+        val sproof = smlRedirect.hide_out (reconstruct goal) proof1
+      in
+        Proof sproof
+      end
+    else pstatus_of_sstatus sstatus
   end 
 
 (*
-load "smlExecute"; open smlExecute;
 load "aiLib"; open aiLib;
-load "smlTimeout"; open smlTimeout;
-load "psMCTS"; open psMCTS;
+load "tttSearch"; open tttSearch;
+load "tacticToe"; open tacticToe;
+aiLib.debug_flag := true;
+tttSetup.alt_search_flag := true;
+tactictoe ``x = 1 ==> x + 2 = 3``;
 
+val tree = hd (!tttSearch.tree_glob);
+val _ = print_tree tree ("start",[]);
+val ex = extract_ex tree []; 
 *)
 
 (*
 load "aiLib"; open aiLib;
-load "psMCTS"; open psMCTS;
+load "mlTacticData"; open mlTacticData;
+load "hhExportLib";
+val exl1 = ttt_import_exl "ConseqConv";
+fun mk_cat3 x = 
+  list_mk_comb (mk_var ("cat3",``:bool -> bool -> bool -> bool``),x);
+
+fun simplify_ex (ginit,_:string,(gcur,ogl),pgl) = 
+  mk_cat3 [list_mk_imp ginit, list_mk_imp gcur, 
+    if null ogl then T else list_mk_conj (map list_mk_imp ogl)];
+
+val exl2 = map_fst simplify_ex exl1;
+
+fun lambda_term fullty (v,bod) = 
+  let 
+    val ty1 = type_of v
+    val ty2 = type_of bod
+    val ty3 = mk_type ("fun",[ty1, mk_type ("fun", [ty2,fullty])])
+  in
+    list_mk_comb (mk_var ("ttt_lambda",ty3), [v,bod])
+  end;
+
+fun add_lambda tm = case dest_term tm of
+    COMB(Rator,Rand) => mk_comb (add_lambda Rator, add_lambda Rand)
+  | LAMB(Var,Bod) => lambda_term (type_of tm) (Var, add_lambda Bod)
+  | _ => tm;
+
+fun add_arity tm = 
+  let 
+    val (oper,argl) = strip_comb tm 
+    val a = length argl
+    val newname = if is_var oper 
+      then ((if null argl then "V" else "v") ^ 
+           escape (hhExportLib.namea_v (oper,a)))
+      else hhExportLib.namea_c (oper,a)
+    val newoper = mk_var (newname, type_of oper)
+  in
+    list_mk_comb (newoper, map add_arity argl)
+  end;
+
+val exl3 = map_fst (add_arity o add_lambda) exl2;
+val exl4 = map_snd (fn x => if x then [1.0] else [0.0]) exl3;
+val vhead = mk_var ("head_", ``:bool -> bool``);
+val exl5 = map (fn (a,b) => [(mk_comb (vhead,a),b)]) exl4;
+
+
+(* TNN *)
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+fun operl_of_term tm = 
+  let 
+    val (oper,argl) = strip_comb tm 
+    val arity = length argl
+  in
+    (oper,arity) :: List.concat (map operl_of_term argl)
+  end;
+val oper_compare = cpl_compare Term.compare Int.compare;
+val operl = mk_fast_set oper_compare 
+  (List.concat (map operl_of_term (map fst (List.concat exl5))));
+
+val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl;
+val randtnn = random_tnn operdiml;
+
+val trainparam =
+  {ncore = 1, verbose = true,
+   learning_rate = 0.02, batch_size = 2, nepoch = 1000};
+val schedule = [trainparam];
+val tnn = train_tnn schedule randtnn (exl5,[]);
+
+(* TPTP *)
+fun mk_cat2 x = 
+  list_mk_comb (mk_var ("cat2",``:bool -> bool -> bool``),x);
+
+fun simp_tptp ((ginit,_:string,(gcur,ogl),pgl),b) = 
+  let val f = (add_arity o add_lambda) in
+    (f (list_mk_imp ginit), (f (mk_cat2 [list_mk_imp gcur, 
+    if null ogl then T else list_mk_conj (map list_mk_imp ogl)]),b))
+  end;
+
+fun is_singleton x = case x of [a] => true | _ => false;
+
+val tptpl1 = map simp_tptp exl1; 
+val tptpl2 = dlist (dregroup Term.compare tptpl1);
+val tptpl3 = filter (not o is_singleton o snd) tptpl2;
+
+val terml1 = List.concat (map (fn (t1,t2l) => t1 :: map fst t2l) tptpl3);
+val terml2 = mk_term_set terml1;
+val termndict = dnew Term.compare (number_snd 0 terml2);
+
+fun tptp_of_term tm =
+  let 
+    val (oper,argl) = strip_comb tm
+    val name = fst (dest_var oper)
+  in
+    if null argl then name else
+    name ^ "(" ^ String.concatWith ", " (map tptp_of_term argl) ^ ")"
+  end
+
+fun output_tptp thy (cj,axl) = 
+  let 
+    val dir = HOLDIR ^ "/src/tactictoe/mltptp"
+    val _ = mkDir_err dir
+    val cjname = thy ^ its (dfind cj termndict)
+    val file = dir ^ "/" ^ cjname
+    fun f (ax,b) = 
+      let 
+        val axname = thy ^ its (dfind ax termndict)
+        val role = if b then "axiom_useful" else "axiom_redundant"
+      in
+        "fof(" ^ axname ^ "," ^ role ^ "," ^ tptp_of_term ax ^ ")."
+      end
+    fun g cj = "fof(" ^ cjname ^ ",conjecture," ^ tptp_of_term cj ^ ")." 
+  in
+    writel file (map f axl @ [g cj])
+  end
+
+val _ = app (output_tptp "ConseqConv") tptpl3;
 
 
 
-val starttree = starttree_of mctsobj (0,10,100);
-val ((sstatus,(tree,_)),t) = add_time (mcts mctsobj) starttree; 
-dlength tree;
-val root = dfind [] tree;
-val nodel = trace_win tree [];
+
+  
+
+  
+
+*)
 
 end (* struct *)

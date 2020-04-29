@@ -24,6 +24,7 @@ sig
     ('e * 'f -> order) ->
     ('a * 'c * 'e) * ('b * 'd * 'f) -> order
 
+  val term_compare_exact : term * term -> order
   val goal_compare : goal * goal -> order
   val lbl_compare : lbl * lbl -> order
   val compare_rmin : (('a * real) * ('a * real)) -> order
@@ -236,10 +237,5 @@ sig
 
   (* thread *)
   val interruptkill : Thread.thread -> unit
-
-  (* neural network units *)
-  val oper_compare : (term * int) * (term * int) -> order
-  val operl_of : term -> (term * int) list
-
 
 end

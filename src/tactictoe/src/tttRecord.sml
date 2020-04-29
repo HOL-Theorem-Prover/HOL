@@ -249,6 +249,15 @@ fun end_record_thy thy =
   ttt_export_tacdata thy (!tacdata_glob);
   print_endline "Export successful"
   )
+  ;
+  if !ttt_ex_flag then
+  (
+  print_endline "Exporting positive and negative examples";
+  ttt_export_exl_human thy (!exl_glob);
+  ttt_export_exl thy (!exl_glob);
+  print_endline "Export successful"
+  )
+  else ()
   )
 
 end (* struct *)

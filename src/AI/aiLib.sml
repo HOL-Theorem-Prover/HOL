@@ -77,17 +77,31 @@ fun cmd_in_dir dir cmd = run_cmd ("cd " ^ dir ^ "; " ^ cmd)
 fun clean_dir dir = run_cmd ("rm " ^ dir ^ "/*") 
 fun clean_rec_dir dir = run_cmd ("rm -r " ^ dir ^ "/*") 
 
-(* -------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Comparisons
-   ------------------------------------------------------------------------- *)
-
-fun goal_compare ((asm1,w1), (asm2,w2)) =
-  list_compare Term.compare (w1 :: asm1, w2 :: asm2)
+   ------------------------------------------------------------------------ *)
 
 fun cpl_compare cmp1 cmp2 ((a1,a2),(b1,b2)) =
   let val r = cmp1 (a1,b1) in
     if r = EQUAL then cmp2 (a2,b2) else r
   end
+
+fun term_compare_exact (t1,t2) = case (dest_term t1, dest_term t2) of
+     (VAR _, VAR _) => Term.compare (t1,t2)
+   | (VAR _, _) => LESS
+   | (_, VAR _) => GREATER
+   | (CONST _, CONST _) => Term.compare (t1,t2)
+   | (CONST _, _) => LESS
+   | (_, CONST _) => GREATER
+   | (COMB p1, COMB p2) => 
+     cpl_compare term_compare_exact term_compare_exact (p1,p2)
+   | (COMB _, _) => LESS
+   | (_, COMB _) => GREATER
+   | (LAMB p1, LAMB p2) => 
+     cpl_compare term_compare_exact term_compare_exact (p1,p2)
+
+fun goal_compare ((asm1,w1), (asm2,w2)) =
+  list_compare Term.compare (w1 :: asm1, w2 :: asm2)
 
 fun triple_compare cmp1 cmp2 cmp3 ((a1,a2,a3),(b1,b2,b3)) =
   cpl_compare (cpl_compare cmp1 cmp2) cmp3 (((a1,a2),a3),((b1,b2),b3))
@@ -167,16 +181,16 @@ fun count_dict startdict l =
     foldl f startdict l
   end
 
-(* -------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    References
-   ------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun incr x = x := (!x) + 1
 fun decr x = x := (!x) - 1
 
-(* -------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    List
-   ------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun one_in_n n start l = case l of
     [] => []
@@ -304,7 +318,6 @@ fun all_subterms tm =
   in
     traverse tm; !r
   end
-
 
 fun fold_left f l orig = case l of
     [] => orig
@@ -1045,9 +1058,9 @@ fun normalize_distrib dis =
     else map_snd (fn x => x / sum) dis
   end
 
-(* -------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Parallelism (currently slowing functions inside threads)
-   ------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 (* small overhead due to waiting safely for the thread to close *)
 fun interruptkill worker =
@@ -1062,24 +1075,5 @@ fun interruptkill worker =
      in
        loop 10
      end
-
-(* -------------------------------------------------------------------------
-   Neural network units
-   ------------------------------------------------------------------------- *)
-
-val oper_compare = cpl_compare Term.compare Int.compare
-
-fun all_fosubtm tm =
-  let val (oper,argl) = strip_comb tm in
-    tm :: List.concat (map all_fosubtm argl)
-  end
-
-fun operl_of tm =
-  let
-    val tml = mk_fast_set Term.compare (all_fosubtm tm)
-    fun f x = let val (oper,argl) = strip_comb x in (oper, length argl) end
-  in
-    mk_fast_set oper_compare (map f tml)
-  end
 
 end (* struct *)

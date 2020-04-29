@@ -82,7 +82,9 @@ fun main_tactictoe (thmdata,tacdata) goal =
         tac_cache := dadd g stacl (!tac_cache); stacl
       end
   in
-    search thmpred tacpred goal
+    if !alt_search_flag 
+    then alt_search thmpred tacpred goal 
+    else search thmpred tacpred goal
   end
 
 (* -------------------------------------------------------------------------
@@ -187,9 +189,9 @@ fun ttt_eval (thmdata,tacdata) (thy,name) goal =
    Usage:
      load "tttUnfold"; open tttUnfold; open tttSetup;
      ttt_ttteval_flag := true;
-     mlThmData.thmlintac_flag := true;
-     ttt_record_thy "arithmetic";
-     ttt_ttteval_flag := false;
+     ttt_ex_flag := true;
+     ttt_search_time := 5.0;
+     ttt_record_thy "ConseqConv";
    Results can be found in HOLDIR/src/tactictoe/eval/default.
   ------------------------------------------------------------------------- *)
 

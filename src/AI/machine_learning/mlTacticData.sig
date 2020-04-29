@@ -29,7 +29,11 @@ sig
   val ttt_create_tacdata : unit -> tacdata
   val ttt_update_tacdata : (lbl * tacdata) -> tacdata
   val ttt_export_tacdata : string -> tacdata -> unit
-
-
+  
+  type ex = (goal * string * (goal * goal list) * goal list) * bool
+  val exl_glob : ex list ref
+  val ttt_export_exl_human : string -> ex list -> unit
+  val ttt_export_exl : string -> ex list -> unit
+  val ttt_import_exl : string -> ex list
 
 end

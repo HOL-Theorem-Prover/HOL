@@ -11,6 +11,7 @@ include Abbrev
 
   val random_tnn : (term * int list) list -> tnn
   val dim_std : int * int -> term -> int list
+  val dim_std_arity : int * int -> (term * int) -> int list
   val random_tnn_std : (int * int) -> term list -> tnn
   val mk_embedding_var : (real vector * hol_type) -> term
 
@@ -37,6 +38,6 @@ include Abbrev
   val traintnn_extspec :
     (unit, (tnnex * schedule * tnnparam), tnn) smlParallel.extspec
 
-   val train_tnn_automl : mlNeuralNetwork.trainparam -> tnn -> tnnex -> tnn
+  val train_tnn_automl : mlNeuralNetwork.trainparam -> tnn -> tnnex -> tnn
 
 end

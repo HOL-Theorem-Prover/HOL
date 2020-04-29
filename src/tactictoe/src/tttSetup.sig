@@ -29,6 +29,7 @@ sig
   val ttt_metis_time : real ref
   val ttt_metis_radius : int ref
   val ttt_policy_coeff : real ref
+  val ttt_ex_flag : bool ref
 
   (* evaluation *)
   type lbl = (string * real * goal * goal list)

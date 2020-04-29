@@ -72,6 +72,7 @@ sig
   val mostexplored_path : ('a,'b) tree -> id -> id list
   val max_depth : ('a,'b) tree -> id -> int
   val trace_win : ('a,'b) tree -> id -> ('a,'b) node list
+  val trace_win_movel : ('a,'b) tree -> id -> ('a * 'b) list
 
   (* toy example *)
   type toy_board = (int * int * int)

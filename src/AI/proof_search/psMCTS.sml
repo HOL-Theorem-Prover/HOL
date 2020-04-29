@@ -391,6 +391,28 @@ fun trace_win tree id =
     node :: trace_win tree (hd l)
   end
 
+(* does not record last state *)
+fun trace_win_movel tree id =
+  let
+    val _ = if not (dmem id tree)
+            then raise ERR "trace_win" "id is not a node"
+            else ()
+    val node = dfind id tree
+  in
+    if is_win (#stati node) then [] else
+    let
+      fun loc_is_win tree (_,x) = 
+         (is_win (#status (dfind x tree))
+          handle NotFound => false)
+      val l = filter (loc_is_win tree) (#pol node)
+    in
+      if null l then raise ERR "trace_win" "no winning path" else
+      let val ((move,_),cid) = hd l in
+        (#board node, move) :: trace_win_movel tree cid
+      end
+    end
+  end
+
 (* -------------------------------------------------------------------------
    Toy example: the goal of this task is to reach a positive number starting
    from zero by incrementing or decrementing.
