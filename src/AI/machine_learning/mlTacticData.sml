@@ -373,7 +373,10 @@ fun ttt_import_exl thy =
 fun mk_cat3 x = 
   list_mk_comb (mk_var ("cat3",``:bool -> bool -> bool -> bool``),x)
 
-fun simplify_ex (ginit,_:string,(gcur,ogl),pgl) = list_mk_imp (hd ogl) 
+fun simplify_ex (ginit,_:string,(gcur,ogl),pgl) = 
+  if null ogl 
+  then (list_mk_imp (hd pgl)) 
+  else (list_mk_imp (hd ogl))
   (*
   mk_cat3 [list_mk_imp ginit, list_mk_imp gcur, 
     if null ogl then T else list_mk_conj (map list_mk_imp ogl)] *)
@@ -411,13 +414,17 @@ fun add_arity tm =
     list_mk_comb (newoper, map add_arity argl)
   end
 
+fun not_null ((ginit,_:string,(gcur,ogl),pgl), _) = 
+  not (null ogl) orelse not (null pgl)
+
 fun prepare_exl exl1 = 
   let 
-    val exl2 = map_fst simplify_ex exl1;
-    val exl3 = map_fst (add_arity o add_lambda) exl2;
-    val exl4 = map_snd (fn x => if x then [1.0] else [0.0]) exl3;
-    val vhead = mk_var ("head_", ``:bool -> bool``);
-    val exl5 = map (fn (a,b) => [(mk_comb (vhead,a),b)]) exl4;
+    val exl1' = filter not_null exl1
+    val exl2 = map (fn (a,b) => (simplify_ex a, b)) exl1'
+    val exl3 = map_fst (add_arity o add_lambda) exl2
+    val exl4 = map_snd (fn x => if x then [1.0] else [0.0]) exl3
+    val vhead = mk_var ("head_", ``:bool -> bool``)
+    val exl5 = map (fn (a,b) => [(mk_comb (vhead,a),b)]) exl4
   in
     exl5
   end
@@ -429,11 +436,15 @@ fun prepare_exl exl1 =
 fun is_singleton x = case x of [a] => true | _ => false
 
 fun mk_cat2 x = 
-  list_mk_comb (mk_var ("cat2",``:bool -> bool -> bool``),x)
+  list_mk_comb (mk_var ("cat2",``:bool -> bool -> bool``), x)
 
 fun simp_tptp ((ginit,_:string,(gcur,ogl),pgl),b) = 
-  let val f = (add_arity o add_lambda) in
-    (f (list_mk_imp ginit),((f (list_mk_imp (hd ogl))),b))
+  let 
+    val f = (add_arity o add_lambda) 
+    val tm = if null ogl then (list_mk_imp (hd pgl)) 
+                         else (list_mk_imp (hd ogl))
+  in
+    (f (list_mk_imp ginit),(f tm,b))
   end
 
 fun tptp_of_term tm =
@@ -465,7 +476,8 @@ fun export_tptpex termndict thy (cj,axl) =
 
 fun ttt_export_tptpexl thy exl =
   let
-    val tptpl1 = map simp_tptp exl
+    val exl' = filter not_null exl
+    val tptpl1 = map simp_tptp exl'
     val tptpl2 = dlist (dregroup Term.compare tptpl1)
     val tptpl3 = filter (not o is_singleton o snd) tptpl2
     val terml1 = List.concat (map (fn (t1,t2l) => t1 :: map fst t2l) tptpl3)
