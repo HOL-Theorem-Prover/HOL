@@ -922,7 +922,6 @@ fun output_header oc cthy =
   output_flag oc "tttSetup.alt_search_flag" tttSetup.alt_search_flag;
   if !ttt_ttteval_flag then 
      (
-     osn oc "val _ = metisTools.METIS_TAC;";
      osn oc
      "val _ = tttSetup.ttt_evalfun_glob := Option.SOME tacticToe.ttt_eval";
      osn oc
@@ -1118,10 +1117,10 @@ fun ttt_clean_record () =
   )
 
 (* ------------------------------------------------------------------------
-   Evaluation 
+   Evaluation: 
+   Warning: only call the evaluation functions after recording the theories
    ------------------------------------------------------------------------ *)
 
-(* Warning: only call this function after recording the theories *)
 fun ttt_parallel_eval ncore thyl =
   (
   ttt_ttteval_flag := true;
@@ -1169,20 +1168,16 @@ fun load_sigobj () =
   end
 
 (* ------------------------------------------------------------------------
-   Evaluation of the library
+   Evaluation of the library (requires a call to
    ------------------------------------------------------------------------ *)
 
 fun evaluate_loaded expname ncore =
-  ( 
-  ttt_clean_record (); 
-  ttt_record ();
   let 
     val _ = ttt_eval_dir := ttt_eval_updir ^ "/" ^ expname  
     val thyl = ancestry (current_theory ()) 
   in
     ttt_parallel_eval ncore thyl
   end
-  )
 
 fun evaluate_full expname ncore =
   (load_sigobj (); evaluate_loaded expname ncore)
