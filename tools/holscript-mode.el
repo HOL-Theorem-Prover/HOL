@@ -1,6 +1,8 @@
 (provide 'holscript-mode)
 
 ;; font-locking and syntax
+
+
 (defconst holscript-font-lock-keywords
   (list '("^\\(Theorem\\|Triviality\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[ :]"
           (1 'holscript-theorem-syntax) (2 'holscript-thmname-syntax))
@@ -37,12 +39,9 @@
     ;; confused by script files that contain escaped quotation
     ;; characters. This despite the fact that it does cause pain in
     ;; terms such as \(x,y). x + y
-    (mapc (lambda (c) (modify-syntax-entry c "_" st)) ".")
     (mapc (lambda (c) (modify-syntax-entry c "w" st)) "_'")
-    (mapc (lambda (c) (modify-syntax-entry c "." st)) ",;")
-    ;; `!' is not really a prefix-char, oh well!
-    (mapc (lambda (c) (modify-syntax-entry c "'"  st)) "~#!")
-    (mapc (lambda (c) (modify-syntax-entry c "."  st)) "%&$+-/:<=>?@`^|")
+    ;(mapc (lambda (c) (modify-syntax-entry c "." st)) ",;")
+    (mapc (lambda (c) (modify-syntax-entry c "."  st)) ".%&$+-/:<=>?@`^|!~#,;")
     st)
   "The syntax table used in `holscript-mode'.")
 
@@ -676,7 +675,22 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
       (theorem-contents (id-quoted "Proof" tactic))
       (definition-contents (id-quoted "Termination" tactic) (id-quoted))
       (id-quoted (id ":" quotedmaterial))
-      (quotedmaterial)
+      (quotedmaterial
+        ("QFIER." quotedmaterial "ENDQ." quotedmaterial)
+        (quotedmaterial "/\\" quotedmaterial)
+        (quotedmaterial "∧" quotedmaterial)
+        (quotedmaterial "\\/" quotedmaterial)
+        (quotedmaterial "∨" quotedmaterial)
+        (quotedmaterial "<=>" quotedmaterial)
+        (quotedmaterial "⇔" quotedmaterial)
+        (quotedmaterial "==>" quotedmaterial)
+        (quotedmaterial "⇒" quotedmaterial)
+        (quotedmaterial "=" quotedmaterial)
+        (quotedmaterial "<" quotedmaterial)
+        (quotedmaterial "≤" quotedmaterial)
+        (quotedmaterial "<=" quotedmaterial)
+        (quotedmaterial "+" quotedmaterial)
+        (quotedmaterial "*" quotedmaterial))
       (quotation ("‘" quotedmaterial "’"))
       (termtype ("“" quotedmaterial "”"))
       (tactic (tactic ">>" tactic)
@@ -692,38 +706,95 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
       (tactics (tactic) (tactics "," tactics)))
     '((assoc ","))
     '((assoc ">>" "\\\\" ">-"  ">|" "THEN" "THEN1" "THENL")
-      (assoc "by" "suffices_by")))))
+      (assoc "by" "suffices_by"))
+    '((assoc "ENDQ." "QFIER.")
+      (assoc "<=>" "⇔")
+      (assoc "==>" "⇒") (assoc "\\/" "∨") (assoc "/\\" "∧")
+      (assoc "=" "<" "≤" "<=") (assoc "+") (assoc "*")))))
 
 (defvar holscript-smie-keywords-regexp
   (regexp-opt '("Definition" "Theorem" "Proof" "QED" ">>" ">-" "\\\\"
-                ">|" "Termination" ":")))
+                ">|" "Termination" ":" "/\\" "\\/")))
+(defconst holscript-quoteddeclaration-begin
+  (concat
+   "^\\(Theorem\\|Triviality\\|Definition\\|Inductive\\|CoInductive\\)"
+   "[[:space:]]+\\([A-Za-z0-9'_]+\\)[[:space:]]*" ; name
+   "\\(\\[[A-Za-z0-9'_,]+\\]\\)?[[:space:]]*:"; optional annotations)
+  "Regular expression marking the beginning of the special syntax that marks
+a store_thm equivalent."))
+
+(defconst holscript-quoteddeclaration-end
+  (regexp-opt (list "End" "Proof" "Termination")))
+
 (defvar holscript-quotedmaterial-delimiter-regexp
-  (regexp-opt '("“" "”" "‘" "’")))
+  (regexp-opt (list "“" "”" "‘" "’" holscript-quoteddeclaration-begin)))
+
+(defvar holscript-boolean-quantifiers '("?" "!" "?!" "∀" "∃" "∃!"))
+
+(defvar holscript-quantifier-regexp
+  (regexp-opt (append holscript-boolean-quantifiers '("λ" "some" "LEAST" "@")))
+  "List of strings that can begin \"quantifier blocks\".")
+
+
+(defun holscript-can-find-earlier-quantifier (pp)
+  (let* ((pstk (nth 9 pp))
+         (limit (car (last pstk))))
+    (save-mark-and-excursion
+      (catch 'found-one
+        (while (re-search-backward
+                (concat "\\(" holscript-quoteddeclaration-begin "\\)" "\\|"
+                        "\\(" holscript-quoteddeclaration-end "\\)" "\\|"
+                        holscript-quotedmaterial-delimiter-regexp "\\|"
+                        holscript-quantifier-regexp "\\|\\.")
+                limit
+                t)
+          (let ((pp1 (syntax-ppss)))
+            (if (or (nth 3 pp1) (nth 4 pp1))
+                (goto-char (nth 8 pp1))
+              (if (equal (car (last (nth 9 pp1))) limit)
+                  (if (looking-at holscript-quantifier-regexp)
+                      (throw 'found-one (point))
+                    (throw 'found-one nil))))))))))
+
 (defun holscript-smie-forward-token ()
   (forward-comment (point-max))
-  (cond
-   ((looking-at holscript-smie-keywords-regexp)
-    (goto-char (match-end 0))
-    (let ((ms (match-string-no-properties 0)))
-      (if (or (string=  ms "Theorem") (string= ms "Triviality"))
-          (let ((eolpoint (save-excursion (end-of-line) (point))))
-            (save-excursion
-              (if (re-search-forward ":" eolpoint t) ms (concat ms "="))))
-        ms)))
-   ((looking-at holscript-quotedmaterial-delimiter-regexp)
-    (goto-char (match-end 0))
-    (match-string-no-properties 0))
-   ((equal 1 (syntax-class (syntax-after (point))))
-    (buffer-substring-no-properties
-     (point)
-     (progn (skip-syntax-forward ".") (point))))
-    (t (buffer-substring-no-properties
+  (let ((pp (syntax-ppss)))
+    (cond
+     ((looking-at holscript-smie-keywords-regexp)
+      (goto-char (match-end 0))
+      (let ((ms (match-string-no-properties 0)))
+        (if (or (string=  ms "Theorem") (string= ms "Triviality"))
+            (let ((eolpoint (save-excursion (end-of-line) (point))))
+              (save-excursion
+                (if (re-search-forward ":" eolpoint t) ms (concat ms "="))))
+          ms)))
+     ((looking-at holscript-quotedmaterial-delimiter-regexp)
+      (goto-char (match-end 0))
+      (match-string-no-properties 0))
+     ((looking-at "\\.")
+      (if (or (nth 3 pp) (nth 4 pp))
+          (progn (forward-char 1) ".")
+        (let ((tok
+               (if (holscript-can-find-earlier-quantifier pp) "ENDQ." ".")))
+          (forward-char 1) tok)))
+     ((looking-at holscript-quantifier-regexp)
+      (goto-char (match-end 0)) "QFIER.")
+     ((equal 1 (syntax-class (syntax-after (point))))
+      (buffer-substring-no-properties
        (point)
-       (progn (skip-syntax-forward "w_")
-              (point))))))
+       (progn (skip-syntax-forward ".") (point))))
+     (t (buffer-substring-no-properties
+         (point)
+         (progn (skip-syntax-forward "w_") (point)))))))
 
 (defun holscript-smie-backward-token ()
-  (forward-comment (- (point)))
+  (let ((cp (point)))
+    (forward-comment (- (point)))
+    (skip-syntax-backward " ")
+    (while (not (equal cp (point)))
+      (setq cp (point))
+      (forward-comment (- (point)))
+      (skip-syntax-backward " ")))
   (cond
    (; am I just after a keyword?
     (looking-back holscript-smie-keywords-regexp (- (point) 15) t)
@@ -738,6 +809,16 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
     (looking-back holscript-quotedmaterial-delimiter-regexp (- (point) 1) t)
     (goto-char (match-beginning 0))
     (match-string-no-properties 0))
+   (; am I just after a quantifier
+    (looking-back holscript-quantifier-regexp (- (point) 3) t)
+    (goto-char (match-beginning 0))
+    "QFIER.")
+   (; am I sitting on a full-stop that might end a quantifier block
+    (let ((c (char-before))) (and c (char-equal c ?.)))
+    (forward-char -1)
+    (let* ((pp (syntax-ppss)))
+      (if (or (nth 3 pp) (nth 4 pp)) "."
+        (if (holscript-can-find-earlier-quantifier pp) "ENDQ." "."))))
    (; am I sitting after "punctuation"
     (equal 1 (syntax-class (syntax-after (1- (point)))))
     (buffer-substring-no-properties
@@ -745,7 +826,7 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
      (progn (skip-syntax-backward ".") (point))))
    (t (buffer-substring-no-properties
        (point)
-       (progn (skip-syntax-backward "w_.")
+       (progn (skip-syntax-backward "w_")
               (point))))))
 
 (defvar holscript-indent-level 0 "Default indentation level")
@@ -759,8 +840,12 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
     (`(:list-intro . "")
      (message "In (:list-intro \"\"))") holscript-indent-level)
     (`(:after . ":") 2)
+    (`(:before . "ENDQ.") 0)
+    (`(:after . "ENDQ.") 2)
     (`(:before . ":") holscript-indent-level)
     (`(:before . "by") 2)
+    (`(:before . "==>") 2)
+    (`(:before . "⇒") 2)
     (`(:before . "suffices_by") 2)
     (`(:after . "Proof") 2)
     (`(:before . "Proof") 0)
