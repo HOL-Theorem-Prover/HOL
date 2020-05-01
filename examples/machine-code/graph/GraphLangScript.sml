@@ -2297,7 +2297,7 @@ val SKIP_TAG_IMP_CALL_RISCV = store_thm("SKIP_TAG_IMP_CALL_RISCV",
             ("mem",var_acc "mem"); ("dom",var_acc "dom");
             ("stack",var_acc "stack");
             ("dom_stack",var_acc "dom_stack");
-            ("clock",var_acc "clock"); ("ret_addr_input",var_acc "r1")]
+            ("clock",var_acc "clock"); ("ret_addr_input",var_acc "r10")]
           name (Jump exit)))``,
   fs [IMPL_INST_def,next_ok_def,check_ret_def,exec_next_def,
       check_jump_def,get_assert_def,LET_THM]
