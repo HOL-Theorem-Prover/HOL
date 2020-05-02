@@ -243,12 +243,13 @@ fun end_record_thy thy =
   (
   print_endline "Recording successful";
   write_info thy;
-  if !ttt_ttteval_flag orelse !ttt_hheval_flag then () else 
+  if not (!ttt_ttteval_flag orelse !ttt_hheval_flag) then 
   (
   print_endline "Exporting tactic data";
   ttt_export_tacdata thy (!tacdata_glob);
   print_endline "Export successful"
   )
+  else ()
   ;
   if !ttt_ex_flag then
   (

@@ -198,8 +198,15 @@ fun init_tacdata tacfea =
   }
 
 fun import_tacdata filel =
-  let val tacfea = union_dict lbl_compare (map import_tacfea filel) in
-    init_tacdata tacfea
+  let 
+    val (l,t1) = add_time (map import_tacfea) filel
+    val (tacfea,t2) = add_time (union_dict lbl_compare) l
+    val (tacdata,t3) = add_time init_tacdata tacfea
+  in
+    print_endline ("import_tacfea time: " ^ rts t1);
+    print_endline ("union_dict time: " ^ rts t2);
+    print_endline ("init_tacdata time: " ^ rts t3);
+    tacdata
   end
 
 (* -------------------------------------------------------------------------
@@ -249,7 +256,7 @@ fun ttt_export_tacdata thy tacdata =
     val file = ttt_tacdata_dir ^ "/" ^ thy
   in
     print_endline file;
-    export_tacfea file (#tacfea tacdata)
+    export_tacfea file (#tacfea_cthy tacdata)
   end
 
 (* ------------------------------------------------------------------------
@@ -372,7 +379,6 @@ fun ttt_import_exl thy =
 
 fun mk_cat2 x = 
   list_mk_comb (mk_var ("cat2",``:bool -> bool -> bool``), x)
-
 fun mk_cat3 x = 
   list_mk_comb (mk_var ("cat3",``:bool -> bool -> bool -> bool``),x)
 

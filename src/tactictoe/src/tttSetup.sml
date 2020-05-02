@@ -11,7 +11,7 @@ struct
 open HolKernel Abbrev boolLib aiLib smlExecute smlRedirect
   mlThmData mlTacticData
 
-val alt_search_flag = ref true
+val alt_search_flag = ref false
 
 (* -------------------------------------------------------------------------
    Directories
