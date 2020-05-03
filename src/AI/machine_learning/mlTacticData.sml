@@ -203,9 +203,6 @@ fun import_tacdata filel =
     val (tacfea,t2) = add_time (union_dict lbl_compare) l
     val (tacdata,t3) = add_time init_tacdata tacfea
   in
-    print_endline ("import_tacfea time: " ^ rts t1);
-    print_endline ("union_dict time: " ^ rts t2);
-    print_endline ("init_tacdata time: " ^ rts t3);
     tacdata
   end
 

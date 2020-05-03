@@ -23,6 +23,8 @@ sig
     ('c * 'd -> order) ->
     ('e * 'f -> order) ->
     ('a * 'c * 'e) * ('b * 'd * 'f) -> order
+  val fst_compare : ('a * 'b -> 'c) -> ('a * 'd) * ('b * 'e) -> 'c
+  val snd_compare : ('a * 'b -> 'c) -> ('d * 'a) * ('e * 'b) -> 'c
 
   val term_compare_exact : term * term -> order
   val goal_compare : goal * goal -> order

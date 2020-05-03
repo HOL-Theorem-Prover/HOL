@@ -106,6 +106,9 @@ fun goal_compare ((asm1,w1), (asm2,w2)) =
 fun triple_compare cmp1 cmp2 cmp3 ((a1,a2,a3),(b1,b2,b3)) =
   cpl_compare (cpl_compare cmp1 cmp2) cmp3 (((a1,a2),a3),((b1,b2),b3))
 
+fun fst_compare cmp ((a,_),(b,_)) = cmp (a,b)
+fun snd_compare cmp ((_,a),(_,b)) = cmp (a,b)
+
 fun lbl_compare ((stac1,_,g1,_),(stac2,_,g2,_)) =
   cpl_compare String.compare goal_compare ((stac1,g1),(stac2,g2))
 

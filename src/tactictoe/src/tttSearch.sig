@@ -10,7 +10,10 @@ sig
     goal -> proof_status
 
   type move = string
-  type board = goal list * move list
+  type board = 
+    (goal * (goal,unit) Redblackmap.dict) list *
+    (goal list, unit) Redblackmap.dict ref
+
   val mk_game : (int -> goal -> string list) -> (goal -> string list) ->
      (board,move) psMCTS.game
   val alt_search : (int -> goal -> string list) -> (goal -> string list) ->
@@ -18,9 +21,12 @@ sig
 
   val tree_glob : (board,move) psMCTS.tree list ref
   val print_tree : (board, string) psMCTS.tree -> string * psMCTS.id -> unit
+ 
+(*
   val extract_ex : 
     (board, string) psMCTS.tree ->
     psMCTS.id ->
     ((goal * string * (goal * goal list) * goal list) * bool) list
+*)
 
 end

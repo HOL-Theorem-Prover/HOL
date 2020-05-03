@@ -311,9 +311,7 @@ fun cache_thminst stac g =
     val _ = debug ("instantiating: " ^ stac)
     val thmidl = cache_thmpred (!ttt_thmlarg_radius) g
     val newstac = inst_stac thmidl stac
-    val newtac = tactic_of_sml newstac
-      handle Interrupt => raise Interrupt | _ =>
-        debug_err ("stac_to_tac: " ^ newstac)
+    val newtac = tactic_of_sml newstac handle _ => NO_TAC
     val r = (newstac, newtac, !ttt_tactic_time)
   in
     debug ("to: " ^ newstac);
@@ -326,9 +324,7 @@ fun cache_metisinst stac g =
   let
     val thmidl = cache_thmpred (!ttt_metis_radius) g
     val newstac = mk_metis_call thmidl
-    val newtac = tactic_of_sml newstac
-      handle Interrupt => raise Interrupt | _ =>
-        debug_err ("stac_to_tac: " ^ newstac)
+    val newtac = tactic_of_sml newstac handle _ => NO_TAC
   in
     inst_dict := dadd (stac,g) (newstac,newtac,!ttt_metis_time) (!inst_dict);
     debug ("to: " ^ newstac);
@@ -337,7 +333,7 @@ fun cache_metisinst stac g =
 
 fun cache_stac stac =
   dfind stac (!tac_dict) handle NotFound =>
-  let val tac = tactic_of_sml stac in
+  let val tac = tactic_of_sml stac handle _ => NO_TAC in
     tac_dict := dadd stac tac (!tac_dict);
     tac
   end
@@ -347,16 +343,11 @@ fun cache_stac stac =
    ------------------------------------------------------------------------- *)
 
 fun stac_to_tac stac g =
-  (
   if is_thmlarg_stac stac
     then cache_thminst stac g
   else if stac = metis_spec
     then cache_metisinst stac g
   else (stac, cache_stac stac, !ttt_tactic_time)
-  )
-  handle Interrupt => raise Interrupt | _ =>
-    (debug ("stac_to_tac: " ^ stac);
-     ("Tactical.NO_TAC", NO_TAC, !ttt_tactic_time))
 
 (* -------------------------------------------------------------------------
    Application of a tactic.
@@ -738,46 +729,74 @@ fun search thmpred tacpred goal =
    Specification of TacticToe search based on psMCTS
    ------------------------------------------------------------------------- *)
 
+val stacpred_cache = ref (dempty goal_compare)
+val stacread_cache = ref (dempty String.compare)
+
+fun cache_stacpred thmpred tacpred g = 
+  dfind g (!stacpred_cache) handle NotFound => 
+  let 
+    val thmidl = thmpred (!ttt_thmlarg_radius) g
+    val metis = "metisTools.METIS_TAC [ " ^ thmlarg_placeholder ^ " ]"
+    val stacl = mk_sameorder_set String.compare (metis :: tacpred g)
+    val stacl' = map (inst_stac thmidl) stacl
+    val stacl'' = mk_sameorder_set String.compare stacl'
+  in
+    stacpred_cache := dadd g stacl'' (!stacpred_cache); stacl''
+  end
+
 type move = string
 
-type board = goal list * move list
-fun string_of_board (gl,_) = String.concatWith " " (map string_of_goal gl)
+type board = 
+  (goal * (goal,unit) Redblackmap.dict) list *
+  (goal list, unit) Redblackmap.dict ref
 
-val winboard = ([],[])
-val loseboard = ([([],F):goal],[])
+fun string_of_board (ghl, trydict) = 
+  String.concatWith " " (map string_of_goal (map fst ghl))
 
-fun mk_board thmpred tacpred gl = 
-  let 
-    val thmidl = thmpred (!ttt_thmlarg_radius) (hd gl)
-    val metis = "metisTools.METIS_TAC [ " ^ thmlarg_placeholder ^ " ]"
-    val stacl = mk_sameorder_set String.compare (metis :: tacpred (hd gl))
-    val stacl' = map (inst_stac thmidl) stacl 
-  in
-    (gl, stacl')
-  end
+fun board_compare ((ghl1,_),(ghl2,_)) = 
+  list_compare goal_compare (map fst ghl1, map fst ghl2) 
 
-fun status_of (gl,_) = 
-  if null gl then Win
-  else if term_eq (snd (hd gl)) F then Lose
+val winboard = ([],ref (dempty (list_compare goal_compare)))
+val loseboard = 
+  (
+  [(([],F):goal, dempty goal_compare)], 
+  ref (dempty (list_compare goal_compare))
+  )
+
+fun status_of (ghl,_) = 
+  if null (map fst ghl) then Win
+  else if term_eq (snd (fst (hd ghl))) F then Lose
   else Undecided
 
-fun available_movel (_,x) = x
+fun available_movel _ = ["dummy"]
 
-fun apply_move thmpred tacpred (stac:move) (gl,stacl) =
+fun is_loop_gl h gl = exists (fn x => dmem x h) gl
+fun is_parallel_gl try gl = dmem gl try
+
+fun apply_move thmpred tacpred stac (ghl,trydict) =
   let 
-    val g = hd gl
-    val tac = smlRedirect.hide_out tactic_of_sml stac 
-      handle HOL_ERR _ => NO_TAC
+    val (g,h) = hd ghl
+    val tac = smlRedirect.hide_out tactic_of_sml stac handle _ => NO_TAC
+    val tim = if hd (partial_sml_lexer stac) = "metisTools.METIS_TAC" 
+              then 0.1 
+              else 0.04
+    val newh = dadd g () h
   in
-    case smlRedirect.hide_out (timeout_tactic 0.04 tac) g of
+    case smlRedirect.hide_out (timeout_tactic tim tac) g of
       NONE => loseboard
     | SOME newgl => 
-      if null (newgl @ tl gl)
-      then winboard 
-      else mk_board thmpred tacpred (newgl @ tl gl)
+      if is_loop_gl newh newgl orelse is_parallel_gl (!trydict) newgl
+      then loseboard
+      else
+      let     
+        val _ = trydict := dadd newgl () (!trydict)
+        val newghl = map (fn x => (x,newh)) newgl
+      in
+        if null (newghl @ tl ghl)
+        then winboard 
+        else (newghl @ tl ghl, ref (dempty (list_compare goal_compare)))
+      end
   end
-
-fun fst_compare cmp ((a,_),(b,_)) = cmp (a,b)
 
 fun mk_game thmpred tacpred =
   {
@@ -786,9 +805,7 @@ fun mk_game thmpred tacpred =
   available_movel = available_movel,
   string_of_board = string_of_board,
   string_of_move = I,
-  board_compare = fst_compare (list_compare goal_compare),
-  (* does not fix all looping 
-     such as addition of goals but keeping existing one *)
+  board_compare = board_compare,
   move_compare = String.compare,
   movel = ["dummy"]
   }
@@ -799,14 +816,18 @@ fun exp_decr_aux curcoeff coeff sl = case sl of
 
 fun exp_decr coeff sl = exp_decr_aux 1.0 coeff sl
 
-fun player tnno ((gl,stacl): board) =
-  (if isSome tnno
-   then 0.0 (* mlTreeNeuralNetwork.infer_tnn (valOf tnno) (hd gl) *)
-   else 0.0, exp_decr 0.75 stacl)
+fun player thmpred tacpred (ghl,_) = 
+  let 
+    val g = fst (hd ghl)
+    val stacl = cache_stacpred thmpred tacpred g
+  in
+    (0.0, exp_decr 0.75 stacl)
+  end
 
-val mctsparam =
+
+fun mk_mctsparam tim =
   {
-  timer = SOME 5.0,
+  timer = SOME tim,
   nsim = (NONE : int option),
   stopatwin_flag = true,
   decay = 1.0,
@@ -820,11 +841,11 @@ val mctsparam =
   evalwin = false
   };
 
-fun mk_mctsobj thmpred tacpred =
+fun mk_mctsobj thmpred tacpred tim =
   {
-  mctsparam = mctsparam, 
+  mctsparam = mk_mctsparam tim, 
   game = mk_game thmpred tacpred,
-  player = player NONE
+  player = player thmpred tacpred
   }
 
 (* -------------------------------------------------------------------------
@@ -839,7 +860,7 @@ fun print_tree (tree : (board,move) psMCTS.tree) (stac,id) =
   in
     if psMCTS.is_win (#stati node) then print_endline "win" else
     let
-      val goal = hd (fst (#board node)) 
+      val (goal,_) = hd (fst (#board node)) 
       val _ = print_endline (string_of_goal goal);
       fun test (_,cid) = dmem cid tree
       val l = map_fst fst (filter test (#pol node))
@@ -848,11 +869,12 @@ fun print_tree (tree : (board,move) psMCTS.tree) (stac,id) =
     end
   end
 
+(*
 fun extract_ex (tree : (board,move) psMCTS.tree) id =
   let
     val node = dfind id tree 
     val _ = print_endline (String.concatWith " " (map its (rev id))) 
-    val gl = fst (#board node)
+    val gl = map fst (fst (#board node))
   in
     if null gl then [] else
     let
@@ -862,7 +884,7 @@ fun extract_ex (tree : (board,move) psMCTS.tree) id =
       val (posl,negl) = partition is_pos pol
       fun mk_ex b (stac,cid) = 
         let 
-          val ginit = (singleton_of_list o fst o #board o dfind []) tree
+          val ginit = (fst o singleton_of_list o fst o #board o dfind []) tree
           val cnode = dfind cid tree
           val newgl = fst (#board cnode) 
           val n = length newgl - length gl + 1 
@@ -878,6 +900,7 @@ fun extract_ex (tree : (board,move) psMCTS.tree) id =
       (posex @ negex) @ List.concat (map (extract_ex tree) (map snd pol))
     end
   end
+*)
 
 (* -------------------------------------------------------------------------
    TacticToe search based on psMCTS
@@ -893,9 +916,7 @@ fun extract_proofl boardmovel = case boardmovel of
   | [(gl,stac)] => [Tactic (stac, (singleton_of_list gl))]
   | (gl1,stac1) :: (gl2,stac2) :: m => 
     let 
-      val n = length gl2 - length gl1 + 1 
-      val _ = print_endline stac1
-      val _ = print_endline (its n)
+      val n = length gl2 - length gl1 + 1
       val proofl = extract_proofl ((gl2,stac2) :: m)
       val (proofl1, proofl2) = part_n n proofl
       val tac = Tactic (stac1, hd gl1)
@@ -905,26 +926,36 @@ fun extract_proofl boardmovel = case boardmovel of
     
 val tree_glob = ref []
 
+fun clean_globals () = 
+  (
+  stacpred_cache := dempty goal_compare;
+  stacread_cache := dempty String.compare
+  )
+
 fun alt_search thmpred tacpred goal =
   let
-    val mctsobj = mk_mctsobj thmpred tacpred
-    val startboard = mk_board thmpred tacpred [goal]
-    val starttree = starttree_of mctsobj startboard
+    val _ = clean_globals ()
+    val mctsobj = mk_mctsobj thmpred tacpred (!ttt_search_time)
+    val startboard : board = 
+      ([(goal,dempty goal_compare)], 
+       ref (dempty (list_compare goal_compare)))
+    val starttree = starttree_of mctsobj (startboard : board)
     val (sstatus,(tree,cache)) = mcts mctsobj starttree
-    val _ = print_endline ("infstep: " ^ its (dlength tree))
-    val _ = tree_glob := [tree]  
+    val _ = print_endline ("tactic applications: " ^ its (dlength tree))
+    val _ = tree_glob := [tree]
   in
-    if sstatus = Success then 
+    if sstatus = Success then
       let 
-        val _ = if !ttt_ex_flag 
+        (* val _ = if !ttt_ex_flag 
                 then exl_glob := (extract_ex tree []) @ (!exl_glob)  
-                else ()
+                else () *)
         val boardmovel1 = trace_win_movel tree []
-        val boardmovel2 = map (fn (a,b) => (fst a,b)) boardmovel1
+        val boardmovel2 = map (fn (a,b) => (map fst (fst a),b)) boardmovel1
         val proofl = extract_proofl boardmovel2
         val proof0 = singleton_of_list proofl
-        val proof1 = (* smlRedirect.hide_out minimize_proof *) proof0
+        val proof1 = smlRedirect.hide_out minimize_proof proof0
         val sproof = smlRedirect.hide_out (reconstruct goal) proof1
+        val _ = clean_globals ()
       in
         Proof sproof
       end
@@ -938,33 +969,9 @@ load "tacticToe"; open tacticToe;
 aiLib.debug_flag := true;
 tttSetup.alt_search_flag := true;
 tactictoe ``x = 1 ==> x + 2 = 3``;
-
 val tree = hd (!tttSearch.tree_glob);
 val _ = print_tree tree ("start",[]);
-val ex = extract_ex tree []; 
-*)
-
-(*
-load "aiLib"; open aiLib;
-load "mlTacticData"; open mlTacticData;
-load "hhExportLib";
-val exl1 = ttt_import_exl "ConseqConv";
-
-
-
-
-(* TPTP *)
-
-
-val _ = app (ttt_export_tptpex "ConseqConv") tptpl3;
-
-
-
-
-  
-
-  
-
+val ex = extract_ex tree [];
 *)
 
 end (* struct *)
