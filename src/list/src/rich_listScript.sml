@@ -2072,6 +2072,76 @@ val EXISTS_REVERSE = Q.store_thm ("EXISTS_REVERSE",
    THEN GEN_TAC
    THEN MATCH_ACCEPT_TAC DISJ_SYM);
 
+val EXISTS_SEG = Q.store_thm ("EXISTS_SEG",
+   `!m k (l:'a list). (m + k) <= (LENGTH l) ==>
+     !P. EXISTS P (SEG m k l) ==> EXISTS P l`,
+   REPEAT INDUCT_TAC
+   THEN LIST_INDUCT_TAC
+   THEN REWRITE_TAC [EXISTS_DEF, SEG, LENGTH, ADD, ADD_0, NOT_SUC_LESS_EQ_0]
+   THEN GEN_TAC
+   THEN REWRITE_TAC [LESS_EQ_MONO]
+   THENL [
+      FIRST_ASSUM (ASSUME_TAC o (REWRITE_RULE [ADD_0]) o (SPEC``0``))
+      THEN REPEAT STRIP_TAC
+      THENL [
+        DISJ1_TAC THEN FIRST_ASSUM ACCEPT_TAC,
+        DISJ2_TAC THEN RES_TAC],
+        SUBST1_TAC (numLib.DECIDE ``m + SUC k = SUC m + k``)
+        THEN REPEAT STRIP_TAC THEN DISJ2_TAC THEN RES_TAC]);
+
+val EXISTS_TAKE = Q.store_thm ("EXISTS_TAKE",
+   `!l m P. EXISTS P (TAKE m l) ==> EXISTS P l`,
+   Induct \\ rw [listTheory.TAKE_def] \\ simp [] \\ first_x_assum drule \\ simp []);
+
+val EXISTS_DROP = Q.store_thm ("EXISTS_DROP",
+   `!l m P. EXISTS P (DROP m l) ==> EXISTS P l`,
+   Induct \\ rw [listTheory.DROP_def] \\ first_x_assum drule \\ simp []);
+
+val EXISTS_LASTN = Q.store_thm ("EXISTS_LASTN",
+   `!l m P. EXISTS P (LASTN m l) ==> EXISTS P l`,
+   rw [LASTN_def, EXISTS_REVERSE] \\ drule EXISTS_TAKE \\ simp [EXISTS_REVERSE]);
+
+val EXISTS_BUTLASTN = Q.store_thm ("EXISTS_BUTLASTN",
+   `!l m P. EXISTS P (BUTLASTN m l) ==> EXISTS P l`,
+   rw [BUTLASTN_def, EXISTS_REVERSE] \\ drule EXISTS_DROP \\ simp [EXISTS_REVERSE]);
+
+val MEM_SEG = Q.store_thm ("MEM_SEG",
+   `!n m l. n + m <= LENGTH l ==> !x. MEM x (SEG n m l) ==> MEM x l`,
+   REPEAT INDUCT_TAC
+   THEN LIST_INDUCT_TAC
+   THEN REWRITE_TAC
+          [ADD, ADD_0, NOT_SUC_LESS_EQ_0, LENGTH, MEM, SEG, LESS_EQ_MONO]
+   THEN GEN_TAC
+   THENL [
+        DISCH_TAC
+        THEN FIRST_ASSUM (IMP_RES_TAC o REWRITE_RULE [ADD_0] o SPEC ``0``)
+        THEN GEN_TAC
+        THEN DISCH_THEN (DISJ_CASES_THEN2
+               (fn t => DISJ1_TAC THEN ACCEPT_TAC t)
+               (fn t => DISJ2_TAC THEN ASSUME_TAC t THEN RES_TAC)),
+        PURE_ONCE_REWRITE_TAC [numLib.DECIDE ``!n m. m + SUC n = SUC m + n``]
+        THEN REPEAT STRIP_TAC
+        THEN DISJ2_TAC
+        THEN RES_TAC]);
+
+val MEM_TAKE = Q.store_thm ("MEM_TAKE",
+   `!l m x. MEM x (TAKE m l) ==> MEM x l`,
+   rw [MEM_EXISTS] \\ drule EXISTS_TAKE \\ simp []);
+
+Theorem MEM_DROP_IMP:
+  !l m x. MEM x (DROP m l) ==> MEM x l
+Proof
+  rw [MEM_EXISTS] \\ drule EXISTS_DROP \\ simp []
+QED
+
+val MEM_BUTLASTN = Q.store_thm ("MEM_BUTLASTN",
+   `!l m x. MEM x (BUTLASTN m l) ==> MEM x l`,
+   rw [MEM_EXISTS] \\ drule EXISTS_BUTLASTN \\ simp []);
+
+val MEM_LASTN = Q.store_thm ("MEM_LASTN",
+   `!m l x. MEM x (LASTN m l) ==> MEM x l`,
+   rw [MEM_EXISTS] \\ drule EXISTS_LASTN \\ simp []);
+
 val EVERY_SEG = Q.store_thm ("EVERY_SEG",
    `!P l. EVERY P l ==> !m k. m + k <= LENGTH l ==> EVERY P (SEG m k l)`,
    GEN_TAC
@@ -2090,22 +2160,10 @@ val EVERY_SEG = Q.store_thm ("EVERY_SEG",
       THEN DISCH_TAC
       THEN RES_TAC]);
 
-val MEM_TAKE_IMP = Q.store_thm ("MEM_TAKE_IMP",
-   `!l m x.  MEM x (TAKE m l) ==> MEM x l`,
-   EVERY [Induct, ASM_SIMP_TAC list_ss [listTheory.TAKE_def],
-     REPEAT GEN_TAC, COND_CASES_TAC,
-     ASM_SIMP_TAC list_ss [], PROVE_TAC [] ]) ;
-
 Theorem EVERY_TAKE:
  !P l m. EVERY P l ==> EVERY P (TAKE m l)
 Proof
- metis_tac [listTheory.EVERY_MEM, MEM_TAKE_IMP]
-QED
-
-Theorem MEM_DROP_IMP:
-  !l m x.  MEM x (DROP m l) ==> MEM x l
-Proof
-  metis_tac[MEM_DROP, MEM_EL]
+ metis_tac [listTheory.EVERY_MEM, MEM_TAKE]
 QED
 
 Theorem EVERY_DROP:
@@ -2133,110 +2191,6 @@ Theorem EVERY_BUTLASTN:
 Proof
  simp [BUTLASTN_def, EVERY_REVERSE, EVERY_DROP]
 QED
-
-val EXISTS_SEG = Q.store_thm ("EXISTS_SEG",
-   `!m k (l:'a list). (m + k) <= (LENGTH l) ==>
-     !P. EXISTS P (SEG m k l) ==> EXISTS P l`,
-   REPEAT INDUCT_TAC
-   THEN LIST_INDUCT_TAC
-   THEN REWRITE_TAC [EXISTS_DEF, SEG, LENGTH, ADD, ADD_0, NOT_SUC_LESS_EQ_0]
-   THEN GEN_TAC
-   THEN REWRITE_TAC [LESS_EQ_MONO]
-   THENL [
-      FIRST_ASSUM (ASSUME_TAC o (REWRITE_RULE [ADD_0]) o (SPEC``0``))
-      THEN REPEAT STRIP_TAC
-      THENL [
-        DISJ1_TAC THEN FIRST_ASSUM ACCEPT_TAC,
-        DISJ2_TAC THEN RES_TAC],
-        SUBST1_TAC (numLib.DECIDE ``m + SUC k = SUC m + k``)
-        THEN REPEAT STRIP_TAC THEN DISJ2_TAC THEN RES_TAC]);
-
-val EXISTS_TAKE_IMP = Q.store_thm ("EXISTS_TAKE_IMP",
-   `!l m P. EXISTS P (TAKE m l) ==> EXISTS P l`,
-   EVERY [Induct, ASM_SIMP_TAC list_ss [listTheory.TAKE_def],
-     REPEAT GEN_TAC, COND_CASES_TAC,
-     ASM_SIMP_TAC list_ss [EXISTS_DEF],
-     PROVE_TAC [EXISTS_DEF] ]) ;
-
-val EXISTS_DROP_IMP = Q.store_thm ("EXISTS_DROP_IMP",
-   `!l m P. EXISTS P (DROP m l) ==> EXISTS P l`,
-   EVERY [Induct, ASM_SIMP_TAC list_ss [listTheory.DROP_def],
-     REPEAT GEN_TAC, COND_CASES_TAC,
-     ASM_SIMP_TAC list_ss [EXISTS_DEF],
-     PROVE_TAC [EXISTS_DEF] ]) ;
-
-val EXISTS_TAKE = Q.store_thm ("EXISTS_TAKE",
-   `!m l. m <= LENGTH l ==> !P. EXISTS P (TAKE m l) ==> EXISTS P l`,
-   REPEAT GEN_TAC
-   THEN DISCH_TAC
-   THEN IMP_RES_THEN SUBST1_TAC TAKE_SEG
-   THEN MATCH_MP_TAC EXISTS_SEG
-   THEN ASM_REWRITE_TAC [ADD_0]);
-
-val EXISTS_DROP = Q.store_thm ("EXISTS_DROP",
-   `!m l. m <= LENGTH l ==> !P. EXISTS P (DROP m l) ==> EXISTS P l`,
-   REPEAT GEN_TAC
-   THEN DISCH_TAC
-   THEN IMP_RES_THEN SUBST1_TAC DROP_SEG
-   THEN MATCH_MP_TAC EXISTS_SEG
-   THEN IMP_RES_THEN SUBST1_TAC SUB_ADD
-   THEN MATCH_ACCEPT_TAC LESS_EQ_REFL);
-
-val EXISTS_LASTN = Q.store_thm ("EXISTS_LASTN",
-   `!m l. m <= LENGTH l ==> !P. EXISTS P (LASTN m l) ==> EXISTS P l`,
-   REPEAT GEN_TAC
-   THEN DISCH_TAC
-   THEN IMP_RES_THEN SUBST1_TAC LASTN_SEG
-   THEN MATCH_MP_TAC EXISTS_SEG
-   THEN PURE_ONCE_REWRITE_TAC [ADD_SYM]
-   THEN IMP_RES_THEN SUBST1_TAC SUB_ADD
-   THEN MATCH_ACCEPT_TAC LESS_EQ_REFL);
-
-val EXISTS_BUTLASTN = Q.store_thm ("EXISTS_BUTLASTN",
-   `!m l. m <= LENGTH l ==> !P. EXISTS P (BUTLASTN m l) ==> EXISTS P l`,
-   REPEAT GEN_TAC
-   THEN DISCH_TAC
-   THEN IMP_RES_THEN SUBST1_TAC BUTLASTN_SEG
-   THEN MATCH_MP_TAC EXISTS_SEG
-   THEN PURE_ONCE_REWRITE_TAC [ADD_0]
-   THEN MATCH_ACCEPT_TAC SUB_LESS_EQ);
-
-val MEM_SEG = Q.store_thm ("MEM_SEG",
-   `!n m l. n + m <= LENGTH l ==> !x. MEM x (SEG n m l) ==> MEM x l`,
-   REPEAT INDUCT_TAC
-   THEN LIST_INDUCT_TAC
-   THEN REWRITE_TAC
-          [ADD, ADD_0, NOT_SUC_LESS_EQ_0, LENGTH, MEM, SEG, LESS_EQ_MONO]
-   THEN GEN_TAC
-   THENL [
-        DISCH_TAC
-        THEN FIRST_ASSUM (IMP_RES_TAC o REWRITE_RULE [ADD_0] o SPEC ``0``)
-        THEN GEN_TAC
-        THEN DISCH_THEN (DISJ_CASES_THEN2
-               (fn t => DISJ1_TAC THEN ACCEPT_TAC t)
-               (fn t => DISJ2_TAC THEN ASSUME_TAC t THEN RES_TAC)),
-        PURE_ONCE_REWRITE_TAC [numLib.DECIDE ``!n m. m + SUC n = SUC m + n``]
-        THEN REPEAT STRIP_TAC
-        THEN DISJ2_TAC
-        THEN RES_TAC]);
-
-val MEM_TAKE = Q.store_thm ("MEM_TAKE",
-   `!m l. m <= LENGTH l ==> !x.  MEM x (TAKE m l) ==> MEM x l`,
-   PURE_ONCE_REWRITE_TAC [MEM_EXISTS]
-   THEN REPEAT STRIP_TAC
-   THEN IMP_RES_TAC EXISTS_TAKE);
-
-val MEM_BUTLASTN = Q.store_thm ("MEM_BUTLASTN",
-   `!m l. m <= LENGTH l ==> !x. MEM x (BUTLASTN m l) ==> MEM x l`,
-   PURE_ONCE_REWRITE_TAC [MEM_EXISTS]
-   THEN REPEAT STRIP_TAC
-   THEN IMP_RES_TAC EXISTS_BUTLASTN);
-
-val MEM_LASTN = Q.store_thm ("MEM_LASTN",
-   `!m l. m <= LENGTH l ==> !x. MEM x (LASTN m l) ==> MEM x l`,
-   PURE_ONCE_REWRITE_TAC [MEM_EXISTS]
-   THEN REPEAT STRIP_TAC
-   THEN IMP_RES_TAC EXISTS_LASTN);
 
 val ZIP_SNOC = Q.store_thm ("ZIP_SNOC",
    `!l1 l2.
