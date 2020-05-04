@@ -44,11 +44,11 @@ sig
     taccov : (string, int) Redblackmap.dict,
     tacdep : (goal, lbl list) Redblackmap.dict
     }
-  
   (* globals carrying the evaluation functions (instantiated in tttUnfold) *)
   val ttt_evalfun_glob :
     (thmdata * tacdata -> string * string -> goal -> unit) option ref
   val ttt_hheval_flag : bool ref
   val ttt_ttteval_flag : bool ref
+  val log_eval : string -> unit
 
 end

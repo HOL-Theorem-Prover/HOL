@@ -30,7 +30,7 @@ sig
   type ('a,'b) game =
     {
     status_of : 'a -> status,
-    apply_move : 'b -> 'a -> 'a,
+    apply_move : ('a,'b) tree * id -> 'b -> 'a -> ('a * ('a,'b) tree),
     available_movel : 'a -> 'b list,
     string_of_board : 'a -> string,
     string_of_move : 'b -> string,

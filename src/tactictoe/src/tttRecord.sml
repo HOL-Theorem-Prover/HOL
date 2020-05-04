@@ -211,7 +211,11 @@ fun record_proof name lflag tac1 tac2 g =
       if b2 orelse b3 then (incr n_proof_ignored; tac2 g) else
         let
           val _ = if eval_ignore then () else
-            let val (thmdata,tacdata) = (create_thmdata (), !tacdata_glob) in
+            let 
+              val tptpname = escape ("thm." ^ current_theory () ^ "." ^ name)
+              val _ = log_eval ("Alt-Theorem: " ^ tptpname)
+              val (thmdata,tacdata) = (create_thmdata (), !tacdata_glob) 
+            in
               (valOf (!ttt_evalfun_glob)) (thmdata,tacdata)
               (current_theory (), name) g
             end

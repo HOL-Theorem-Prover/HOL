@@ -52,7 +52,7 @@ type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
 type ('a,'b) game =
   {
   status_of : 'a -> status,
-  apply_move : 'b -> 'a -> 'a,
+  apply_move : ('a,'b) tree * id -> 'b -> 'a -> ('a * ('a,'b) tree),
   available_movel : 'a -> 'b list,
   string_of_board : 'a -> string,
   string_of_move : 'b -> string,
@@ -298,7 +298,7 @@ fun expand obj (tree,cache) (id,cid) =
     val node = dfind id tree
     val board1 = #board node
     val move = find_move (#pol node) cid
-    val board2 = (#apply_move (#game obj)) move board1
+    val (board2,newtree) = (#apply_move (#game obj)) (tree,id) move board1
   in
     node_create_backup obj (tree,cache) (cid,board2)
   end
@@ -430,9 +430,9 @@ val toy_movel = [Incr,Decr]
 fun toy_available_movel board = [Incr,Decr]
 fun toy_string_of_move x = case x of Incr => "Incr" | Decr => "Decr"
 
-fun toy_apply_move m (start,finish,timer) = case m of
-   Incr => (start+1,finish,timer-1)
- | Decr => (start-1,finish,timer-1)
+fun toy_apply_move (tree,id) move (start,finish,timer) = case move of
+   Incr => ((start+1,finish,timer-1), tree)
+ | Decr => ((start-1,finish,timer-1), tree)
 
 val toy_game =
   {

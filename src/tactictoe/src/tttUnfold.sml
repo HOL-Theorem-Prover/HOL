@@ -1186,12 +1186,12 @@ fun evaluate_full expname ncore =
    Usage:
       load "tttSetup"; open tttSetup;
       load "tttUnfold"; open tttUnfold;
-      (* ttt_record (); *)
+      (* ttt_clean_record (); ttt_record (); *)
       ttt_ex_flag := false;
-      alt_search_flag := true;
+      alt_search_flag := false;
       ttt_search_time := 10.0;
       val ncore = 20;
-      val expname = "new_mcts_7";
+      val expname = "old_mcts_7";
       val _ = evaluate_loaded expname ncore;
    Results can be found in HOLDIR/src/tactictoe/eval.
   ------------------------------------------------------------------------- *)

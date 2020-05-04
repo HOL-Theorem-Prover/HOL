@@ -156,14 +156,6 @@ fun tactictoe term =
    Warning : ttt_record should be run on all theories before evaluation
    ------------------------------------------------------------------------- *)
 
-fun log_eval s =
-  let val file = (!ttt_eval_dir) ^ "/" ^ current_theory () in
-    print_endline s;
-    mkDir_err (ttt_eval_updir);
-    mkDir_err (!ttt_eval_dir); 
-    append_endline file s
-  end
-
 fun log_status tptpname r = case r of
    ProofError     => log_eval "  tactictoe: error"
  | ProofSaturated => log_eval "  tactictoe: saturated"

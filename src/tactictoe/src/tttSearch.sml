@@ -773,28 +773,45 @@ fun available_movel _ = ["dummy"]
 fun is_loop_gl h gl = exists (fn x => dmem x h) gl
 fun is_parallel_gl try gl = dmem gl try
 
-fun apply_move thmpred tacpred stac (ghl,trydict) =
+fun apply_move thmpred tacpred (tree,id) stac (ghl,trydict) =
   let 
     val (g,h) = hd ghl
     val tac = smlRedirect.hide_out tactic_of_sml stac handle _ => NO_TAC
     val tim = if hd (partial_sml_lexer stac) = "metisTools.METIS_TAC" 
-              then 0.1 
-              else 0.04
+              then !ttt_metis_time
+              else !ttt_tactic_time
     val newh = dadd g () h
+    fun update_pol () = 
+      let 
+        val {board, pol, value, stati, sum, vis, status} = dfind id tree
+        val flag = ref false 
+        fun f ((move,r),cid) = 
+          if move = stac 
+            then (flag := true; ((move,r),cid))
+          else if not (!flag) 
+            then ((move,0.0),cid) 
+          else ((move, r / (!ttt_policy_coeff)),cid)
+        val newpol = map f pol
+        val newnode = 
+          {board=board, pol=newpol, value=value, stati=stati,
+           sum=sum, vis=vis, status=status}
+      in
+        dadd id newnode tree
+      end
   in
     case smlRedirect.hide_out (timeout_tactic tim tac) g of
-      NONE => loseboard
+      NONE => (loseboard, update_pol ())
     | SOME newgl => 
       if is_loop_gl newh newgl orelse is_parallel_gl (!trydict) newgl
-      then loseboard
+      then (loseboard, update_pol ())
       else
       let     
         val _ = trydict := dadd newgl () (!trydict)
         val newghl = map (fn x => (x,newh)) newgl
       in
         if null (newghl @ tl ghl)
-        then winboard 
-        else (newghl @ tl ghl, ref (dempty (list_compare goal_compare)))
+        then (winboard,tree) 
+        else ((newghl @ tl ghl, ref (dempty (list_compare goal_compare))),tree)
       end
   end
 
@@ -821,7 +838,7 @@ fun player thmpred tacpred (ghl,_) =
     val g = fst (hd ghl)
     val stacl = cache_stacpred thmpred tacpred g
   in
-    (0.0, exp_decr 0.75 stacl)
+    (0.0, exp_decr 0.5 stacl)
   end
 
 
