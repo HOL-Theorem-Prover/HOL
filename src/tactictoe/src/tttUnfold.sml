@@ -330,8 +330,6 @@ val watch_dict = dnew String.compare (map (fn x => (x,())) watch_list_init)
    Extract calls
    ------------------------------------------------------------------------ *)
 
-val let_flag = ref false
-
 fun split_codelevel_aux i s pl program = case program of
     []     => raise ERR "split_codelevel_aux"
       (s ^ " : " ^ (String.concatWith " " (original_program program)))
@@ -343,10 +341,10 @@ fun split_codelevel_aux i s pl program = case program of
     else if mem a ["end",")","]","}"]
       then split_codelevel_aux (i - 1) s (Code (a,tag) :: pl) m
     else split_codelevel_aux i s (Code (a,tag) :: pl) m
-  | x :: m => (let_flag := true; split_codelevel_aux i s (x :: pl) m)
+  | x :: m => (split_codelevel_aux i s (x :: pl) m)
 
 fun split_codelevel s sl =
-  (let_flag := false; split_codelevel_aux 0 s [] sl)
+  split_codelevel_aux 0 s [] sl
   handle HOL_ERR _ =>
    raise ERR "split_codelevel"
       (s ^ " : " ^ (String.concatWith " " (original_program sl)))
@@ -363,13 +361,12 @@ fun original_code x = case x of
 fun extract_store_thm sl =
   let
     val (body,cont) = split_codelevel ")" sl
-    val lflag = !let_flag
     val (namel,l0)  = split_codelevel "," body
     val (term,qtac) = split_codelevel "," l0
     val name = original_code (last namel)
   in
     if is_quoted name
-    then SOME (rm_bbra_str (rm_squote name), namel, term, qtac, lflag, cont)
+    then SOME (rm_bbra_str (rm_squote name), namel, term, qtac, cont)
     else NONE
   end
   handle HOL_ERR _ =>
@@ -382,10 +379,9 @@ fun extract_store_thm sl =
 fun extract_prove sl =
   let
     val (body,cont) = split_codelevel ")" sl
-    val lflag = !let_flag
     val (term,qtac) = split_codelevel "," body
   in
-    SOME (term,qtac,lflag,cont)
+    SOME (term,qtac,cont)
   end
 
 fun extract_thmname sl =
@@ -605,12 +601,13 @@ fun modified_program (h,d) p =
       then
       case extract_store_thm (tl m) of
         NONE => a :: continue m
-      | SOME (name,namel,term,qtac,lflag,cont) =>
+      | SOME (name,namel,term,qtac,cont) =>
         let
           val _ = is_thm_flag := true
           val _ = incr n_store_thm
-          val lflag_name = if lflag then "true" else "false"
           val tac1 = original_program qtac
+          val lflag = mem "let" tac1
+          val lflag_name = if lflag then "true" else "false"
           val tac2 = ppstring_stac qtac
         in
           [a,"("] @ original_program namel @ [","] @ original_program term @
@@ -627,13 +624,14 @@ fun modified_program (h,d) p =
       then
       case extract_prove (tl m) of
         NONE => a :: continue m
-      | SOME (term,qtac,lflag,cont) =>
+      | SOME (term,qtac,cont) =>
         let
           val _ = is_thm_flag := true
           val name = "tactictoe_prove_" ^ (int_to_string (!n_store_thm))
           val _ = incr n_store_thm
-          val lflag_name = if lflag then "true" else "false"
           val tac1 = original_program qtac
+          val lflag = mem "let" tac1
+          val lflag_name = if lflag then "true" else "false"
           val tac2 = ppstring_stac qtac
         in
           [a,"("] @ original_program term @
@@ -1187,13 +1185,14 @@ fun evaluate_full expname ncore =
       load "tttSetup"; open tttSetup;
       load "tttUnfold"; open tttUnfold;
       (* ttt_clean_record (); ttt_record (); *)
-      ttt_search_time := 10.0;
-      val ncore = 20;
+      ttt_search_time := 5.0;
+      val ncore = 30;
+      aiLib.debug_flag := true;
       alt_search_flag := false;
-      val expname = "old_mcts_8";
+      val expname = "old_mcts_11";
       val _ = evaluate_loaded expname ncore;
       alt_search_flag := true;
-      val expname = "new_mcts_8";
+      val expname = "new_mcts_9";
       val _ = evaluate_loaded expname ncore;
    Results can be found in HOLDIR/src/tactictoe/eval.
   ------------------------------------------------------------------------- *)
