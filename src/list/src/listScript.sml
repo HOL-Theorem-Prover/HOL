@@ -502,6 +502,12 @@ val MAP_TL = Q.store_thm("MAP_TL",
   ‘!l f. MAP f (TL l) = TL (MAP f l)’,
   Induct THEN REWRITE_TAC [TL_DEF, MAP]);
 
+Theorem MEM_TL:
+ !l x. MEM x (TL l) ==> MEM x l
+Proof
+ Induct \\ simp [TL]
+QED
+
 val EVERY_EL = store_thm ("EVERY_EL",
  “!(l:'a list) P. EVERY P l = !n. n < LENGTH l ==> P (EL n l)”,
       LIST_INDUCT_TAC THEN
