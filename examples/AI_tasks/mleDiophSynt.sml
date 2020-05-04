@@ -67,7 +67,8 @@ fun apply_move_poly move poly =
              then raise ERR "apply_move_poly" "non-increasing"
              else butlast poly @ [last poly @ [c]]
 
-fun apply_move move (poly,graph,n) = (apply_move_poly move poly, graph, n-1)
+fun apply_move (tree,id) move (poly,graph,n) =
+  ((apply_move_poly move poly, graph, n-1), tree)
 
 fun available_movel_poly poly =
   filter (fn x => can (apply_move_poly x) poly) movel

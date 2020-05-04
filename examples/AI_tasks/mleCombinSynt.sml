@@ -94,14 +94,16 @@ fun replace_metavar move c = case c of
 
 exception Break;
 
-fun apply_move move (c1,c2,n) =
+fun apply_move_aux move (c1,c2,n) =
   (let val c1new = valOf (replace_metavar move c1) in
-     if no_metavar c1new then raise Break else c1new
-   end,
-   c2, n-1)
+    if no_metavar c1new then raise Break else c1new
+  end, c2, n-1)
+
+fun apply_move (tree,id) move (c1,c2,n) =
+  (apply_move_aux move (c1,c2,n), tree)
 
 fun available_movel board =
-  ((ignore ((apply_move S0) board); movel) handle Break => [S1,S2,K1])
+  ((ignore ((apply_move_aux S0) board); movel) handle Break => [S1,S2,K1])
 
 (* -------------------------------------------------------------------------
    Game
