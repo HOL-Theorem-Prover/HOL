@@ -499,8 +499,8 @@ val EL_APPEND_EQN = store_thm(
   asm_simp_tac (srw_ss()) [EL])
 
 val MAP_TL = Q.store_thm("MAP_TL",
-  ‘!l f. ~NULL l ==> (MAP f (TL l) = TL (MAP f l))’,
-  Induct THEN REWRITE_TAC [NULL_DEF, TL, MAP]);
+  ‘!l f. MAP f (TL l) = TL (MAP f l)’,
+  Induct THEN REWRITE_TAC [TL_DEF, MAP]);
 
 val EVERY_EL = store_thm ("EVERY_EL",
  “!(l:'a list) P. EVERY P l = !n. n < LENGTH l ==> P (EL n l)”,
