@@ -201,6 +201,8 @@ fun end_record_proof name g =
 
 fun record_proof name lflag tac1 tac2 g =
   let
+    val tptpname = escape ("thm." ^ current_theory () ^ "." ^ name)
+    val _ = log_eval ("record_proof: " ^ tptpname)
     val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name
     val b2 = (not (!ttt_recprove_flag) andalso pflag)
@@ -208,12 +210,16 @@ fun record_proof name lflag tac1 tac2 g =
     val eval_ignore = pflag orelse lflag orelse
                       not (isSome (!ttt_evalfun_glob))
     val result =
-      if b2 orelse b3 then (incr n_proof_ignored; tac2 g) else
+      if b2 orelse b3 then (
+        log_eval ("proof ignored: " ^ tptpname);
+        incr n_proof_ignored; tac2 g
+        ) 
+      else
         let
-          val _ = if eval_ignore then () else
-            let 
-              val tptpname = escape ("thm." ^ current_theory () ^ "." ^ name)
-              val _ = log_eval ("Alt-Theorem: " ^ tptpname)
+          val _ = if eval_ignore then 
+            log_eval ("evaluation ignored:" ^ tptpname) else
+            let
+              val _ = log_eval ("create_thmdata: " ^ tptpname)
               val (thmdata,tacdata) = (create_thmdata (), !tacdata_glob) 
             in
               (valOf (!ttt_evalfun_glob)) (thmdata,tacdata)
@@ -221,14 +227,13 @@ fun record_proof name lflag tac1 tac2 g =
             end
           val (r,t) = add_time tac1 g
           val _ = record_time := !record_time + t;
-          val _ = debug ("Record time: " ^ Real.toString t)
+          val _ = log_eval ("record time: " ^ Real.toString t)
           val _ = total_time learn_time (end_record_proof name) g
         in
           if null (fst r) then r
-          else (debug "record_proof: not null"; tac2 g)
+          else (log_eval "record_proof_error: not null"; tac2 g)
         end
-        handle _ =>
-          (debug "record_proof: exception"; tac2 g)
+        handle _ => (log_eval "record_proof_error: exception"; tac2 g)
   in
     result
   end
