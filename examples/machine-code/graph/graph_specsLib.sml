@@ -256,8 +256,10 @@ local
     val supdate = dest_supdate tm
     val r0 = ``"r0"``
     val r1 = ``"r1"``
+    val r10 = ``"r10"``
     val r14 = ``"r14"``
     val ret_reg_name = (if !arch_name = RISCV then r1 else r14)
+    val ret_addr_reg_name = (if !arch_name = RISCV then r10 else r0)
     val ret_str = ``"ret"``
     val ret_addr_input_str = ``"ret_addr_input"``
     val (is_tail_call,ret) = let
@@ -273,8 +275,8 @@ local
     val var_acc = mk_const ("var_acc",var_acc_ty)
     fun get_assign tm =
       if aconv tm ret_addr_input_str then let
-        val var_acc_r0 = mk_comb(var_acc,r0)
-        in pairSyntax.mk_pair(ret_addr_input_str,var_acc_r0) end
+        val var_acc_ret = mk_comb(var_acc,ret_addr_reg_name)
+        in pairSyntax.mk_pair(ret_addr_input_str,var_acc_ret) end
       else let
         val tm2 = if is_tail_call then tm else
                   if aconv tm ret_str then ret_reg_name else tm
