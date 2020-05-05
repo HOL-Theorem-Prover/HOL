@@ -3075,6 +3075,12 @@ val LUPDATE_MAP = store_thm("LUPDATE_MAP",
  Induct_on ‘l’ THEN SRW_TAC [] [LUPDATE_def] THEN Cases_on ‘n’ THEN
  FULL_SIMP_TAC (srw_ss()) [LUPDATE_def]);
 
+Theorem LUPDATE_GENLIST:
+ !m n e f. LUPDATE e n (GENLIST f m) = GENLIST ((n =+ e) f) m
+Proof
+ BasicProvers.Induct \\ simp [GENLIST_CONS] \\ Cases \\ simp [LUPDATE_def, combinTheory.APPLY_UPDATE_THM, GENLIST_FUN_EQ]
+QED
+
 val EVERYi_def = Define‘
   (EVERYi P [] <=> T) /\
   (EVERYi P (h::t) <=> P 0 h /\ EVERYi (P o SUC) t)
