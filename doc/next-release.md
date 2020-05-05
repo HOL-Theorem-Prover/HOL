@@ -136,6 +136,15 @@ New examples:
 Incompatibilities:
 ------------------
 
+*  `listTheory` and `rich_listTheory`: Some theorems have been generalized.
+
+	For example, `EVERY_{TAKE, DROP, BUTLASTN, LASTN}` had unnecessary preconditions.
+	As a result of some theorems being generalized, some `_IMP` versions of the same
+	theorems have been dropped, as they are now special cases of the non-`_IMP` versions.
+
+	Also, `DROP_NIL` has been renamed to `DROP_EQ_NIL`, to avoid having both `DROP_nil`
+	and `DROP_NIL` around. Furthermore, `>=` in the theorem statement has been replaced with `<=`.
+
 * * * * *
 
 <div class="footer">
