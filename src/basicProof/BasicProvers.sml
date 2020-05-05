@@ -1092,7 +1092,8 @@ val bool_ss = boolSimps.bool_ss;
  ---------------------------------------------------------------------------*)
 
 val (srw_ss : simpset ref) = ref (bool_ss ++ combinSimps.COMBIN_ss
-                          ++ boolSimps.NORMEQ_ss);
+                                          ++ boolSimps.NORMEQ_ss
+                                          ++ boolSimps.LABEL_CONG_ss);
 
 val srw_ss_initialised = ref false;
 
