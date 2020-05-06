@@ -7,8 +7,10 @@ include Abbrev
      fooScript.sml *)
 
   (* Globalizing tactic tokens *)
-  val fetch : string -> string -> string
+  val tacdata_glob : mlTacticData.tacdata ref
+  val thmdata_glob : mlThmData.thmdata ref
 
+  val fetch : string -> string -> string
   (* Wrapping tactics *)
   val local_tag : 'a -> 'a
   val wrap_tactics_in : string -> string -> tactic

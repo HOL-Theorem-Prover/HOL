@@ -61,6 +61,7 @@ fun select_tacfea tacdata goalf =
 fun main_tactictoe (thmdata,tacdata) goal =
   let
     (* preselection *)
+    val _ = print_endline "preselection"
     val goalf = feahash_of_goal goal
     val (thmsymweight,thmfeadict) = select_thmfea thmdata goalf
     val (tacsymweight,tacfea) = select_tacfea tacdata goalf
@@ -81,6 +82,7 @@ fun main_tactictoe (thmdata,tacdata) goal =
       in
         tac_cache := dadd g stacl (!tac_cache); stacl
       end
+    val _ = print_endline "search"
   in
     if !alt_search_flag 
     then alt_search thmpred tacpred goal 
@@ -157,24 +159,25 @@ fun tactictoe term =
    ------------------------------------------------------------------------- *)
 
 fun log_status tptpname r = case r of
-   ProofError     => log_eval "  tactictoe: error"
- | ProofSaturated => log_eval "  tactictoe: saturated"
- | ProofTimeOut   => log_eval "  tactictoe: time out"
+   ProofError     => print_endline "  tactictoe: error"
+ | ProofSaturated => print_endline "  tactictoe: saturated"
+ | ProofTimeOut   => print_endline "  tactictoe: time out"
  | Proof s        =>
    (
-   log_eval ("  tactictoe found a proof:\n  " ^ s);
-   log_eval ("Proven: " ^ tptpname)
+   print_endline ("  tactictoe found a proof:\n  " ^ s);
+   print_endline ("Proven: " ^ tptpname)
    )
 
 fun ttt_eval (thmdata,tacdata) (thy,name) goal =
   let
     val tptpname = escape ("thm." ^ thy ^ "." ^ name)
-    val _ = log_eval ("Theorem: " ^ tptpname)
-    val _ = log_eval ("Goal: " ^ string_of_goal goal)
+    val _ = print_endline tptpname
+    val _ = print_endline ("Theorem: " ^ tptpname)
+    val _ = print_endline ("Goal: " ^ string_of_goal goal)
     val (status,t) = add_time (main_tactictoe (thmdata,tacdata)) goal
   in
     log_status tptpname status;
-    log_eval ("  time: " ^ Real.toString t ^ "\n")
+    print_endline ("  time: " ^ Real.toString t ^ "\n")
   end
 
 (* -------------------------------------------------------------------------

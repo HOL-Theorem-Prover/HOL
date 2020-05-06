@@ -43,7 +43,7 @@ val ttt_recproof_time   = ref 20.0
    Search
    ------------------------------------------------------------------------- *)
 
-fun init_metis () = hide_out metistac_of_sml ()
+fun init_metis () = metistac_of_sml ()
   handle Interrupt => raise Interrupt | _ => ()
 
 val ttt_metis_time   = ref 0.1

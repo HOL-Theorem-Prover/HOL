@@ -15,14 +15,9 @@ open HolKernel Abbrev boolLib aiLib
   tttSetup tttLearn
 
 val ERR = mk_HOL_ERR "tttSearch"
-fun debug s = debug_in_dir ttt_debugdir "tttSearch" s
-fun debugp s = 
-  (
-  if !debug_flag then print_endline s else ();
-  debug_in_dir ttt_debugdir "tttSearch" s
-  )
-
-fun debug_err s = (debug ("Error: " ^ s); raise ERR s "")
+fun debug s = print_endline s
+fun debugp s = print_endline s
+fun debug_err s = (print_endline ("Error: " ^ s); raise ERR s "")
 
 (* -------------------------------------------------------------------------
    Exceptions
@@ -117,6 +112,7 @@ fun init_eval pripol pid =
   let
     val _ = debug "mcts evaluation"
     val prec = dfind pid (!proofdict)
+    val _ = debug "looking up proofdict"
     val {visit,pending,goalarr,prioreval,cureval,priorpolicy,...} = prec
     val eval = 1.0
   in
@@ -707,14 +703,16 @@ fun search thmpred tacpred goal =
   init_search thmpred tacpred goal;
   total_timer (node_create_timer root_create_wrap) goal;
   let
-    val r = smlRedirect.hide_out (total_timer search_loop) ()
+    val r = total_timer search_loop ()
     val _ = debug "End search loop"
     val proof_status = case r of
       Proof _  =>
       let
         val proof0 = singleton_of_list (proofl_of 0)
-        val proof1 = smlRedirect.hide_out minimize_proof proof0
-        val sproof = smlRedirect.hide_out (reconstruct goal) proof1
+        val _ = debug "minimization"
+        val proof1 = minimize_proof proof0
+        val _ = debug "reconstruction"
+        val sproof = reconstruct goal proof1
       in
         Proof sproof
       end
@@ -726,7 +724,8 @@ fun search thmpred tacpred goal =
   )
 
 (* -------------------------------------------------------------------------
-   Specification of TacticToe search based on psMCTS
+   Specification of TactPolyML.SaveState.loadState
+  (HOLDIR ^ "/src/tactictoe/savestate/14_thm_2EConseqConv_2EASM__MARKER__THM");icToe search based on psMCTS
    ------------------------------------------------------------------------- *)
 
 val stacpred_cache = ref (dempty goal_compare)
@@ -776,7 +775,7 @@ fun is_parallel_gl try gl = dmem gl try
 fun apply_move thmpred tacpred (tree,id) stac (ghl,trydict) =
   let 
     val (g,h) = hd ghl
-    val tac = smlRedirect.hide_out tactic_of_sml stac handle _ => NO_TAC
+    val tac = tactic_of_sml stac handle _ => NO_TAC
     val tim = if hd (partial_sml_lexer stac) = "metisTools.METIS_TAC" 
               then !ttt_metis_time
               else !ttt_tactic_time
@@ -799,7 +798,7 @@ fun apply_move thmpred tacpred (tree,id) stac (ghl,trydict) =
         dadd id newnode tree
       end
   in
-    case smlRedirect.hide_out (timeout_tactic tim tac) g of
+    case timeout_tactic tim tac g of
       NONE => (loseboard, update_pol ())
     | SOME newgl => 
       if is_loop_gl newh newgl orelse is_parallel_gl (!trydict) newgl

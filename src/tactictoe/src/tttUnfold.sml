@@ -588,8 +588,10 @@ fun modified_program (h,d) p =
       val _ = if d = 0 then is_thm_flag := false else ()
       val head' = modified_program (true, d+1) head
       val body' = modified_program ((s <> "val") orelse h, d+1) body
-      val semicolon =
-        if d = 0 andalso !is_thm_flag then [";"] else []
+      val semicolon = 
+        if d = 0 andalso !is_thm_flag then 
+       ["; val _ = tttRecord.thmdata_glob := mlThmData.create_thmdata () ;"] 
+        else []
     in
       semicolon @ [s] @ head' @ [sep] @ body' @ continue m
     end
@@ -899,6 +901,9 @@ fun string_of_bool flag = if flag then "true" else "false"
 fun output_flag oc s x =
   osn oc ("val _ = " ^ s ^ " := " ^ string_of_bool (!x));
 
+val metis_theories = 
+  ["sat", "marker", "combin", "min", "bool", "normalForms"]
+
 fun output_header oc cthy =
   (
   app (osn oc)
@@ -918,6 +923,11 @@ fun output_header oc cthy =
   (* evaluation *)
   output_flag oc "mlThmData.thmlintac_flag" mlThmData.thmlintac_flag;
   output_flag oc "tttSetup.alt_search_flag" tttSetup.alt_search_flag;
+  (* if not (mem cthy metis_theories) 
+  then osn oc "val _ = metisTools.METIS_TAC"
+  else (); *)
+  osn oc "val _ = tacticToe.ttt";
+  osn oc "val _ = smlExecute.exec_sml";
   if !ttt_ttteval_flag then 
      (
      osn oc
@@ -1111,7 +1121,8 @@ fun ttt_record () =
 fun ttt_clean_record () =
   (
   clean_rec_dir (HOLDIR ^ "/src/AI/sml_inspection/open");
-  clean_dir (HOLDIR ^ "/src/tactictoe/ttt_tacdata")
+  clean_dir (tactictoe_dir ^ "/ttt_tacdata");
+  clean_dir (tactictoe_dir ^ "/savestate")
   )
 
 (* ------------------------------------------------------------------------
@@ -1184,12 +1195,12 @@ fun evaluate_full expname ncore =
    Usage:
       load "tttSetup"; open tttSetup;
       load "tttUnfold"; open tttUnfold;
-      (* ttt_clean_record (); ttt_record (); *)
+      ttt_clean_record (); ttt_record ();
       ttt_search_time := 5.0;
       val ncore = 30;
-      aiLib.debug_flag := true;
+      aiLib.debug_flag := false;
       alt_search_flag := false;
-      val expname = "old_mcts_12";
+      val expname = "old_mcts_13_noortho";
       val _ = evaluate_loaded expname ncore;
       alt_search_flag := true;
       val expname = "new_mcts_9";

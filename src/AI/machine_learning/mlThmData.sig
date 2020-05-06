@@ -6,6 +6,8 @@ sig
   type thmdata = (int, real) Redblackmap.dict *
     (string, int list) Redblackmap.dict
 
+  val empty_thmdata : thmdata
+
   (* additional set of dependencies retrieved from tactic calls *)
   val thmlintac_tag : string
   val thmlintac_cthy : (string * int list) list ref

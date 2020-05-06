@@ -91,6 +91,26 @@ fun run_buildheap dir core_flag file =
   handle Interrupt => raise Interrupt
     | _ => raise ERR "run_buildheap" file
 
+fun run_buildheap_nodep dir core_flag file =
+  let
+    val _ = mkDir_err dir
+    val buildheap_bin = HOLDIR ^ "/bin/buildheap"
+    val fileout = dir ^ "/buildheap_" ^ bare file
+    val state =
+      if core_flag
+      then HOLDIR ^ "/bin/hol.state0"
+      else find_heapname dir file
+    val cmd = String.concatWith " "
+        ([buildheap_bin,"--holstate=" ^ state,"--gcthreads=1"] @
+          [] @ [OS.Path.file file]
+        @ [">",fileout])
+  in
+    cmd_in_dir (OS.Path.dir file) cmd
+  end
+  handle Interrupt => raise Interrupt
+    | _ => raise ERR "run_buildheap" file
+
+
 fun remove_err s = FileSys.remove s handle SysErr _ => ()
 
 fun run_rm_script core_flag file =

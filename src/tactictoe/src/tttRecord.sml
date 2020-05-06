@@ -26,6 +26,7 @@ val goalstep_glob = ref []
 fun local_tag x = x
 fun add_local_tag s = "( tttRecord.local_tag " ^ s ^ ")"
 val tacdata_glob = ref empty_tacdata
+val thmdata_glob = ref empty_thmdata
 
 (* -------------------------------------------------------------------------
    Messages and profiling
@@ -199,9 +200,20 @@ fun end_record_proof name g =
     tacdata_glob := newtacdata
   end
 
-fun record_proof name lflag tac1 tac2 g =
+val savestate_level = ref 0
+
+fun record_proof name lflag tac1 tac2 (g:goal) =
   let
     val tptpname = escape ("thm." ^ current_theory () ^ "." ^ name)
+    val savestate_dir = tactictoe_dir ^ "/savestate"
+    val _ = mkDir_err savestate_dir
+    val savestate_file = savestate_dir ^ "/" ^ 
+      its (!savestate_level) ^ "_" ^ tptpname
+    val goal_file = savestate_dir ^ "/" ^ 
+      its (!savestate_level) ^ "_goal_" ^ tptpname
+    val _ = PolyML.SaveState.saveChild (savestate_file,!savestate_level)
+    val _ = export_terml goal_file ((fn (a,b) => b :: a) g)
+    val _ = incr savestate_level
     val _ = log_eval ("record_proof: " ^ tptpname)
     val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name

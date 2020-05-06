@@ -18,6 +18,8 @@ type thmdata =
 val thmlintac_cthy = ref []
 val thmlintac_flag = ref false
 
+val empty_thmdata = (dempty Int.compare, dempty String.compare)
+
 (* -------------------------------------------------------------------------
    Artificial theory name for theorems from the namespace.
    Warning: conflict if a theory is named namespace_tag.
@@ -152,9 +154,9 @@ fun create_thmdata () =
       if !thmlintac_flag 
       then daddl (!thmlintac_cthy) thmfeadict
       else thmfeadict
-    val n1 = int_to_string (dlength thmfeadict')
+    val n = int_to_string (dlength thmfeadict')
   in
-    print_endline ("Loading " ^ n1 ^ " theorems");
+    print_endline ("Loading " ^ n ^ " theorems");
     (learn_tfidf (dlist thmfeadict'), thmfeadict')
   end
 
