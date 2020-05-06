@@ -139,9 +139,7 @@ fun thmfea_from_thyl thyl =
   foldl add_thmfea_from_thy (dempty String.compare, dempty goal_compare) thyl
 
 fun add_namespacethm (thmfeadict,nodupl) =
-  let  
-    val l = hide_out unsafe_namespace_thms () 
-  in
+  let val l = unsafe_namespace_thms () in
     foldl (add_thmfea namespace_tag) (thmfeadict,nodupl) l
   end
 

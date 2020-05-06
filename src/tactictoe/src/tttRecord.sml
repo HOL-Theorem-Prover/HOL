@@ -141,7 +141,7 @@ fun wrap_tactics_in name qtac goal =
       handle Interrupt => raise Interrupt
            | _ => parse_err name qtac (!final_stac_ref)
     val (final_stac, final_tac)  =
-      total_time parse_time (hide_out mk_alttac) qtac
+      total_time parse_time mk_alttac qtac
   in
     incr n_proof_parsed;
     (
@@ -165,7 +165,7 @@ fun wrap_tactics_in name qtac goal =
   ---------------------------------------------------------------------------*)
 
 fun fetch s reps =
-  let val sthmo = hide_out thm_of_sml s in
+  let val sthmo = thm_of_sml s in
     case sthmo of
       NONE =>
         (if reps = ""

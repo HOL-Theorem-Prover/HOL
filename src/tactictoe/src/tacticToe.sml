@@ -105,7 +105,7 @@ fun read_status r = case r of
     (NONE, FAIL_TAC "tactictoe: time out"))
  | Proof s        =>
    (print_endline ("tactictoe found a proof:\n  " ^ s);
-    (SOME s, hide_out tactic_of_sml s))
+    (SOME s, tactic_of_sml s))
 
 (* -------------------------------------------------------------------------
    Interface
@@ -130,7 +130,7 @@ fun tactictoe_aux goal =
   end
   handle NotFound =>
   let
-    val _ = hide_out QUse.use infix_file
+    val _ = QUse.use infix_file
     val cthyl = current_theory () :: ancestry (current_theory ())
     val _ = init_metis ()
     val thmdata = create_thmdata ()
