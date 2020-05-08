@@ -66,9 +66,6 @@ sig
     val prefer_word         : unit -> unit
     val deprecate_word      : unit -> unit
 
-    val word_pp_mode        : int ref
-    val output_words_as     : (int * Arbnum.num -> string) -> unit
-
     val output_words_as_bin : unit -> unit
     val output_words_as_oct : unit -> unit
     val output_words_as_hex : unit -> unit

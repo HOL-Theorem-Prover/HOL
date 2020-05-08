@@ -50,6 +50,10 @@ val w2n_def = zDefine`
 val n2w_def = zDefine`
   (n2w:num->'a word) n = FCP i. BIT i n`
 
+local open wordspp in end
+val _ = add_ML_dependency "wordspp"
+val _ = Parse.add_user_printer ("wordspp.words_printer", ``words$n2w x : 'a word``)
+
 val w2w_def = zDefine`
   (w2w:'a word -> 'b word) w = n2w (w2n w)`
 
