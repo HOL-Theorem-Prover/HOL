@@ -922,7 +922,6 @@ fun output_header oc cthy =
   output_flag oc "tttSetup.ttt_ex_flag" ttt_ex_flag;
   (* evaluation *)
   output_flag oc "mlThmData.thmlintac_flag" mlThmData.thmlintac_flag;
-  output_flag oc "tttSetup.alt_search_flag" tttSetup.alt_search_flag;
   (* if not (mem cthy metis_theories) 
   then osn oc "val _ = metisTools.METIS_TAC"
   else (); *)
@@ -1198,12 +1197,7 @@ fun evaluate_full expname ncore =
       ttt_clean_record (); ttt_record ();
       ttt_search_time := 5.0;
       val ncore = 30;
-      aiLib.debug_flag := false;
-      alt_search_flag := false;
       val expname = "old_mcts_13_noortho";
-      val _ = evaluate_loaded expname ncore;
-      alt_search_flag := true;
-      val expname = "new_mcts_9";
       val _ = evaluate_loaded expname ncore;
    Results can be found in HOLDIR/src/tactictoe/eval.
   ------------------------------------------------------------------------- *)

@@ -153,22 +153,6 @@ fun is_stype s =
     List.find test (explode (rm_comment (rm_squote s))) = SOME #":"
   end
 
-(* -------------------------------------------------------------------------
-   Import metis from the future
-   ------------------------------------------------------------------------- *)
-
-val metistac_glob: (thm list -> tactic) option ref = ref NONE
-
-fun metistac_of_sml () =
-  let
-    val b = exec_sml "update_metis_tac"
-      (String.concatWith "\n"
-      ["load \"metisTools\";",
-       "val _ = smlExecute.metis_tac_glob := SOME metisTools.METIS_TAC;"])
-  in
-    if b then () else raise ERR "metistac_of_sml" ""
-  end
-
 (* ------------------------------------------------------------------------
    Read goal
    ------------------------------------------------------------------------ *)

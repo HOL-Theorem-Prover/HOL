@@ -174,7 +174,7 @@ fun thm_of_name s =
       SOME (s, DB.fetch a b)
     end
 
-fun thml_of_namel sl = hide_out (List.mapPartial thm_of_name) sl
+fun thml_of_namel sl = List.mapPartial thm_of_name sl
 
 (* -------------------------------------------------------------------------
    Convert a theorem value to sml code.

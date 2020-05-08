@@ -311,12 +311,12 @@ fun starttree_of obj board =
   node_create_backup obj
     (dempty id_compare, dempty (#board_compare (#game obj))) ([],board)
 
-fun is_timeout loc_timer tree param =
+fun is_timeout timer tree param =
   (isSome (#nsim param) andalso
    #vis (dfind [] tree) > Real.fromInt (valOf (#nsim param)) + 0.5)
   orelse
   (isSome (#timer param) andalso
-   Timer.checkRealTimer loc_timer > Time.fromReal (valOf (#timer param)))  
+   Timer.checkRealTimer timer > Time.fromReal (valOf (#timer param)))  
   orelse
   (#stopatwin_flag param andalso is_win (#status (dfind [] tree)))
 
@@ -325,10 +325,10 @@ fun check_success tree =
 
 fun mcts obj (starttree,startcache) =
   let
-    val loc_timer = Timer.startRealTimer ()
+    val timer = Timer.startRealTimer ()
     val param = #mctsparam obj
     fun loop (tree,cache) =
-      if is_timeout loc_timer tree param 
+      if is_timeout timer tree param 
       then (check_success tree, (tree,cache)) 
       else
         case select_child obj tree [] of

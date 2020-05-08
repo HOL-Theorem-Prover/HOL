@@ -3,8 +3,6 @@ sig
 
   include Abbrev
 
-  val alt_search_flag : bool ref
-
   (* directories *)
   val infix_file : string
   val tactictoe_dir : string
@@ -25,7 +23,6 @@ sig
   (* search *)
   val ttt_search_time : real ref
   val ttt_tactic_time : real ref
-  val init_metis : unit -> unit
   val ttt_metis_time : real ref
   val ttt_metis_radius : int ref
   val ttt_policy_coeff : real ref

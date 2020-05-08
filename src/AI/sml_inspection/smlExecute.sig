@@ -14,7 +14,6 @@ sig
   val sml_goal_glob     : goal ref
   val sml_thm_glob      : thm ref
   val sml_thml_glob     : thm list ref
-  val metistac_glob     : (thm list -> tactic) option ref
 
   (* tests *)
   val is_thm_value     :
@@ -31,7 +30,6 @@ sig
   val tactic_of_sml    : string -> tactic
   val string_of_sml    : string -> string
   val goal_of_sml      : string -> goal
-  val metistac_of_sml  : unit -> unit
 
   (* applying a tactic string *)
   val app_stac   : real -> string -> goal -> goal list option

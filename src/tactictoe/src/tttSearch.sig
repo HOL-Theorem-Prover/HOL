@@ -3,30 +3,37 @@ sig
 
   include Abbrev
 
-  datatype proof_status =
-    ProofError | ProofSaturated | ProofTimeOut | Proof of string
+  type id = (int * int) list
+  
+  datatype stacstatus = 
+    StacProved | 
+    StacSaturated | 
+    StacUndecided of goal list | 
+    StacFail | StacLoop | StacPara | 
+    StacFresh
+  datatype goalstatus = GoalProved | GoalSaturated | GoalUndecided
+  datatype nodestatus = NodeProved | NodeSaturated | NodeUndecided
+  datatype searchstatus = SearchProved | SearchSaturated | SearchTimeout
+  datatype proofstatus =  Proof of string | ProofSaturated | ProofTimeout
+  
 
-  val search : (int -> goal -> string list) -> (goal -> string list) ->
-    goal -> proof_status
 
-  type move = string
-  type board = 
-    (goal * (goal,unit) Redblackmap.dict) list *
-    (goal list, unit) Redblackmap.dict ref
+  type stac_record =
+    {stac : string, svis : real, ssum : real, stacstatus : stacstatus}
+  type goal_record = 
+    {
+    goal : goal, gvis : real, gsum  : real, goalstatus : goalstatus,
+    stacv : stac_record vector,
+    siblingd : (goal list, unit) Redblackmap.dict
+    }
+  type node = 
+    {
+    nvis : real, nsum : real, nodestatus : nodestatus,
+    goalv : goal_record vector,
+    parentd : (goal, unit) Redblackmap.dict
+    }
+  type tree = ((int * int) list, node) Redblackmap.dict
 
-  val mk_game : (int -> goal -> string list) -> (goal -> string list) ->
-     (board,move) psMCTS.game
-  val alt_search : (int -> goal -> string list) -> (goal -> string list) ->
-    goal -> proof_status
-
-  val tree_glob : (board,move) psMCTS.tree list ref
-  val print_tree : (board, string) psMCTS.tree -> string * psMCTS.id -> unit
- 
-(*
-  val extract_ex : 
-    (board, string) psMCTS.tree ->
-    psMCTS.id ->
-    ((goal * string * (goal * goal list) * goal list) * bool) list
-*)
+  val search : (goal -> string list) -> goal -> proofstatus
 
 end

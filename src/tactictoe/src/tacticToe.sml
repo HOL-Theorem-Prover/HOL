@@ -69,24 +69,24 @@ fun main_tactictoe (thmdata,tacdata) goal =
     val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
     val tac_cache = ref (dempty goal_compare)
     (* predictors *)
-    fun thmpred n g =
+    fun sthmpred n g =
       dfind (g,n) (!thm_cache) handle NotFound =>
       let val r = thmknn (thmsymweight,thmfeadict) n (feahash_of_goal g) in
         thm_cache := dadd (g,n) r (!thm_cache); r
       end
-    fun tacpred g =
+    fun stacpred g =
       dfind g (!tac_cache) handle NotFound =>
       let
+        val thmidl = sthmpred 16 g
         val l = feahash_of_goal g
         val stacl = stacknn_uniq (tacsymweight,tacfea) (!ttt_presel_radius) l
+        val istacl = map (inst_stac thmidl) stacl 
       in
-        tac_cache := dadd g stacl (!tac_cache); stacl
+        tac_cache := dadd g istacl (!tac_cache); istacl
       end
     val _ = print_endline "search"
   in
-    if !alt_search_flag 
-    then alt_search thmpred tacpred goal 
-    else search thmpred tacpred goal
+    search stacpred goal
   end
 
 (* -------------------------------------------------------------------------
@@ -94,13 +94,10 @@ fun main_tactictoe (thmdata,tacdata) goal =
    ------------------------------------------------------------------------- *)
 
 fun read_status r = case r of
-   ProofError     =>
-   (print_endline "tactictoe: error";
-    (NONE, FAIL_TAC "tactictoe: error"))
- | ProofSaturated =>
+   ProofSaturated =>
    (print_endline "tactictoe: saturated";
     (NONE, FAIL_TAC "tactictoe: saturated"))
- | ProofTimeOut   =>
+ | ProofTimeout   =>
    (print_endline "tactictoe: time out";
     (NONE, FAIL_TAC "tactictoe: time out"))
  | Proof s        =>
@@ -132,7 +129,6 @@ fun tactictoe_aux goal =
   let
     val _ = QUse.use infix_file
     val cthyl = current_theory () :: ancestry (current_theory ())
-    val _ = init_metis ()
     val thmdata = create_thmdata ()
     val tacdata =
       dfind cthyl (!ttt_tacdata_cache) handle NotFound =>
@@ -159,9 +155,8 @@ fun tactictoe term =
    ------------------------------------------------------------------------- *)
 
 fun log_status tptpname r = case r of
-   ProofError     => print_endline "  tactictoe: error"
- | ProofSaturated => print_endline "  tactictoe: saturated"
- | ProofTimeOut   => print_endline "  tactictoe: time out"
+   ProofSaturated => print_endline "  tactictoe: saturated"
+ | ProofTimeout   => print_endline "  tactictoe: time out"
  | Proof s        =>
    (
    print_endline ("  tactictoe found a proof:\n  " ^ s);
