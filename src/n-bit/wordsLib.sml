@@ -342,8 +342,10 @@ local
 
   val bit_update_compute =
      BIT_UPDATE |> REWRITE_RULE [FUN_EQ_THM]
-                |> (fn th => CONJ (Q.SPECL [`^Na`, `F`, `^n2w n`] th)
-                                  (Q.SPECL [`^Na`, `T`, `^n2w n`] th))
+                |> (fn th => LIST_CONJ [Q.SPECL [`0`, `F`, `^n2w n`] th,
+                                        Q.SPECL [`0`, `T`, `^n2w n`] th,
+                                        Q.SPECL [`^Na`, `F`, `^n2w n`] th,
+                                        Q.SPECL [`^Na`, `T`, `^n2w n`] th])
 
   val thms =
      [numLib.SUC_RULE sum_numTheory.SUM_def, bit_update_compute,

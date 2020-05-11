@@ -3385,7 +3385,7 @@ val poly_multM_steps_body_upper = store_thm(
 
    Note Weak (ZN n) p1                 by weak_turn_exp
     and Weak (ZN n) q1                 by weak_drop
-   Also q1 <> []                       by DROP_NON_NIL, j < k = LENGTH q
+   Also q1 <> []                       by DROP_EQ_NIL, j < k = LENGTH q
     and LENGTH p1 = k                  by turn_exp_length
    The result follows                  by poly_multM_steps_body_upper
 *)
@@ -3402,7 +3402,7 @@ val poly_multM_steps_body_cover = store_thm(
   qabbrev_tac `q1 = DROP j q` >>
   `Weak (ZN n) p1` by rw[weak_turn_exp, Abbr`p1`] >>
   `Weak (ZN n) q1` by rw[weak_drop, Abbr`q1`] >>
-  `q1 <> []` by rw[DROP_NON_NIL, Abbr`q1`] >>
+  `q1 <> []` by rw[DROP_EQ_NIL, Abbr`q1`] >>
   `LENGTH p1 = k` by rw[turn_exp_length, Abbr`p1`] >>
   metis_tac[poly_multM_steps_body_upper]);
 

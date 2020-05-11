@@ -52,6 +52,7 @@ sig
   val safe_inst_cmp       : {redex:term,residue:term} Lib.cmp
   val safe_inst_sort      : (term,term) subst -> (term,term) subst
 
+  val L                : string -> thm
   val MK_LABEL         : string * thm -> thm
   val DEST_LABEL       : thm -> thm
   val DEST_LABELS      : thm -> thm

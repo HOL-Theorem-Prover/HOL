@@ -499,8 +499,14 @@ val EL_APPEND_EQN = store_thm(
   asm_simp_tac (srw_ss()) [EL])
 
 val MAP_TL = Q.store_thm("MAP_TL",
-  ‘!l f. ~NULL l ==> (MAP f (TL l) = TL (MAP f l))’,
-  Induct THEN REWRITE_TAC [NULL_DEF, TL, MAP]);
+  ‘!l f. MAP f (TL l) = TL (MAP f l)’,
+  Induct THEN REWRITE_TAC [TL_DEF, MAP]);
+
+Theorem MEM_TL:
+ !l x. MEM x (TL l) ==> MEM x l
+Proof
+ Induct \\ simp [TL]
+QED
 
 val EVERY_EL = store_thm ("EVERY_EL",
  “!(l:'a list) P. EVERY P l = !n. n < LENGTH l ==> P (EL n l)”,
@@ -1868,10 +1874,11 @@ Proof
     [GSYM arithmeticTheory.ADD1, ADD_CLAUSES]
 QED
 
-val DROP_NIL = store_thm(
-"DROP_NIL",
-“!ls n. (DROP n ls = []) = (n >= LENGTH ls)”,
-Induct THEN SRW_TAC[] [DROP_def] THEN numLib.DECIDE_TAC)
+Theorem DROP_EQ_NIL:
+ !ls n. (DROP n ls = []) = (LENGTH ls <= n)
+Proof
+ Induct THEN SRW_TAC[] [DROP_def] THEN numLib.DECIDE_TAC
+QED
 
 val LT_SUC = Q.prove(
   ‘x < SUC y <=> (x = 0) \/ ?x0. (x = SUC x0) /\ x0 < y’,
@@ -3067,6 +3074,12 @@ val LUPDATE_MAP = store_thm("LUPDATE_MAP",
 “!x n l f. MAP f (LUPDATE x n l) = LUPDATE (f x) n (MAP f l)”,
  Induct_on ‘l’ THEN SRW_TAC [] [LUPDATE_def] THEN Cases_on ‘n’ THEN
  FULL_SIMP_TAC (srw_ss()) [LUPDATE_def]);
+
+Theorem LUPDATE_GENLIST:
+ !m n e f. LUPDATE e n (GENLIST f m) = GENLIST ((n =+ e) f) m
+Proof
+ BasicProvers.Induct \\ simp [GENLIST_CONS] \\ Cases \\ simp [LUPDATE_def, combinTheory.APPLY_UPDATE_THM, GENLIST_FUN_EQ]
+QED
 
 val EVERYi_def = Define‘
   (EVERYi P [] <=> T) /\

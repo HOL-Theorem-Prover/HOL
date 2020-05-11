@@ -346,6 +346,16 @@ val NORMEQ_ss = simpLib.SSFRAG {
   filter = NONE,
   name = SOME "NORMEQ_ss", rewrs = []}
 
+val LABEL_CONG = REFL “l1 :- t”
+val LABEL_CONG_ss = simpLib.SSFRAG {
+      ac = [],
+      congs = [LABEL_CONG],
+      convs = [],
+      dprocs = [],
+      filter = NONE,
+      name = SOME "NORMEQ_ss", rewrs = []}
+
+
 (* ----------------------------------------------------------------------
     Congruence rules for rewriting on one side or the other of a goal's
     central binary operator

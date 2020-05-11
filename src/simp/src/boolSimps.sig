@@ -67,6 +67,9 @@ sig
        (* flips equalities that have a ground term on the left and a
           non-ground term on the right *)
 
+     val LABEL_CONG_ss : simpLib.ssfrag
+       (* stops the simplifier from changing labelled terms *)
+
      val SimpLHS : thm
      val SimpRHS : thm
      val SimpL   : term -> thm
