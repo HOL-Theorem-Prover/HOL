@@ -1,12 +1,9 @@
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-
 ifdef POLY
 HOLHEAP = ../../num/termination/numheap
 endif
 
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
-all: $(ARTFILES)
+all: $(ARTFILES) $(DEFAULT_TARGETS)
 
 endif
