@@ -682,8 +682,8 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
             ("open" id)
             ("datatype" id)
             ("structure" id))
-      (theorem-contents (id-quoted "Proof" tactic))
-      (definition-contents (id-quoted "Termination" tactic) (id-quoted))
+      (theorem-contents (id-quoted "^Proof" tactic))
+      (definition-contents (id-quoted "^Termination" tactic) (id-quoted))
       (id-quoted (id ":" quotedmaterial))
       (quotedmaterial
         ("QFIER." quotedmaterial "ENDQ." quotedmaterial)
@@ -766,9 +766,13 @@ a store_thm equivalent."))
                     (throw 'found-one nil))))))))))
 
 (defconst holscript-column0-keywords-regexp
-  (concat "^"
-          (regexp-opt '("Definition" "Datatype" "Theorem" "Triviality" "Type" "Proof"
-                        "Termination" "End" "QED" "Inductive" "CoInductive" "Overload"))))
+  (regexp-opt '("Definition" "Datatype" "Theorem" "Triviality" "Type"
+                "Proof"
+                "Termination" "End" "QED" "Inductive" "CoInductive"
+                "Overload")))
+(defconst holscript-column0-declbegin-keyword
+  (regexp-opt '("Definition" "Datatype" "Theorem" "Triviality"
+                "Type" "Inductive" "CoInductive" "Overload")))
 
 (defconst holscript-sml-declaration-keyword
   (regexp-opt '("open" "val" "datatype" "local" "fun" "infix" "infixl" "infixr"
@@ -778,12 +782,13 @@ a store_thm equivalent."))
   (let ((p0 (point)))
     (forward-comment (point-max))
     (if (and (not (= p0 (point)))
-             (or (looking-at holscript-column0-keywords-regexp)
+             (or (looking-at holscript-column0-declbegin-keyword)
                  (looking-at (concat "^" holscript-sml-declaration-keyword))))
         ";"
       (let ((pp (syntax-ppss)))
         (cond
-         ((looking-at holscript-column0-keywords-regexp)
+         ((and (looking-at holscript-column0-keywords-regexp)
+               (save-excursion (skip-chars-backward " \t") (bolp)))
           (goto-char (match-end 0))
           (let ((ms (match-string-no-properties 0)))
             (if (or (string= ms "Theorem") (string= ms "Triviality"))
@@ -795,6 +800,8 @@ a store_thm equivalent."))
          ((looking-at holscript-quotedmaterial-delimiter-regexp)
           (goto-char (match-end 0))
           (match-string-no-properties 0))
+         ((looking-at "\\\\/") (goto-char (match-end 0)) "\\/")
+         ((looking-at "/\\\\") (goto-char (match-end 0)) "/\\")
          ((looking-at "\\.")
           (if (or (nth 3 pp) (nth 4 pp))
               (progn (forward-char 1) ".")
@@ -813,7 +820,7 @@ a store_thm equivalent."))
              (progn (skip-syntax-forward "w_") (point)))))))))
 
 (defun holscript-smie-backward-token ()
-  (if (or (looking-at holscript-column0-keywords-regexp)
+  (if (or (looking-at holscript-column0-declbegin-keyword)
           (looking-at (concat "^" holscript-sml-declaration-keyword)))
       (if (= (point) (point-min)) ""
         (backward-char 1)
@@ -827,7 +834,11 @@ a store_thm equivalent."))
         (skip-syntax-backward " ")))
     (cond
      (; am I just after a keyword?
-      (looking-back holscript-column0-keywords-regexp (- (point) 15) t)
+      (and (looking-back holscript-column0-keywords-regexp (- (point) 15) t)
+           (save-excursion
+             (goto-char (match-beginning 0))
+             (skip-chars-backward " \t")
+             (bolp)))
       (goto-char (match-beginning 0))
       (let ((ms (match-string-no-properties 0)))
         (if (or (string=  ms "Theorem") (string= ms "Triviality"))
@@ -850,6 +861,10 @@ a store_thm equivalent."))
       (let* ((pp (syntax-ppss)))
         (if (or (nth 3 pp) (nth 4 pp)) "."
           (if (holscript-can-find-earlier-quantifier pp) "ENDQ." "."))))
+     ((looking-back "\\\\/" (- (point) 3))
+      (goto-char (match-beginning 0)) "\\/")
+     ((looking-back "/\\\\" (- (point) 3))
+      (goto-char (match-beginning 0)) "/\\")
      (; am I sitting after "punctuation"
       (equal 1 (syntax-class (syntax-after (1- (point)))))
       (buffer-substring-no-properties
