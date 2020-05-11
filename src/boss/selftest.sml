@@ -208,6 +208,12 @@ val _ = tprint "Simp Excl list.APPEND_ASSOC leaves list unchanged"
 val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
                     (QCONV (SIMP_CONV (srw_ss()) [Excl "list.APPEND_ASSOC"]))
                     appr_t
+val _ = shouldfail {
+      checkexn = (fn UNCHANGED => true | _ => false),
+      printarg = fn _ => "simp Excl on arith d.p. leaves input unchanged",
+      printresult = thm_to_string,
+      testfn = SIMP_CONV (srw_ss() ++ ARITH_ss) [Excl "ARITH_REDUCER"]
+    } “0 < x ==> 0 < 2 * x”
 end
 
 val _ = tprint "find num->num includes SUC"
