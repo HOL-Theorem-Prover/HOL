@@ -53,7 +53,11 @@ fun drop_struct long =
     val l = String.tokens (fn x => x = #".") long
     val short = last l
   in
-    if length l = 1 orelse not (is_pointer_eq long short) then long else short
+    if length l = 1 orelse 
+       not (is_local_value short) orelse
+       not (is_pointer_eq long short) 
+    then long 
+    else short
   end
 
 fun elim_struct sl = map drop_struct sl

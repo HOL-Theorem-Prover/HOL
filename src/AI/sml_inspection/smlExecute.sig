@@ -18,6 +18,8 @@ sig
   (* tests *)
   val is_thm_value     :
     (string * PolyML.NameSpace.Values.value) list -> string -> bool
+  val is_local_value   : string -> bool
+
   val is_thm           : string -> bool
   val is_tactic        : string -> bool
   val is_string        : string -> bool

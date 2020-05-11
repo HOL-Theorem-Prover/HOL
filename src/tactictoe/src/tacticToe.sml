@@ -15,8 +15,7 @@ open HolKernel Abbrev boolLib aiLib
   tttSetup tttLearn tttSearch
 
 val ERR = mk_HOL_ERR "tacticToe"
-val tactictoe_dir = HOLDIR ^ "/src/tactictoe"
-fun debug s = debug_in_dir ttt_debugdir "tacticToe" s
+val debug = print_endline
 
 (* -------------------------------------------------------------------------
    Time limit
@@ -61,7 +60,7 @@ fun select_tacfea tacdata goalf =
 fun main_tactictoe (thmdata,tacdata) goal =
   let
     (* preselection *)
-    val _ = print_endline "preselection"
+    val _ = debug "preselection"
     val goalf = feahash_of_goal goal
     val (thmsymweight,thmfeadict) = select_thmfea thmdata goalf
     val (tacsymweight,tacfea) = select_tacfea tacdata goalf
@@ -84,7 +83,7 @@ fun main_tactictoe (thmdata,tacdata) goal =
       in
         tac_cache := dadd g istacl (!tac_cache); istacl
       end
-    val _ = print_endline "search"
+    val _ = debug "search"
   in
     search stacpred goal
   end
@@ -95,13 +94,13 @@ fun main_tactictoe (thmdata,tacdata) goal =
 
 fun read_status r = case r of
    ProofSaturated =>
-   (print_endline "tactictoe: saturated";
+   (debug "tactictoe: saturated";
     (NONE, FAIL_TAC "tactictoe: saturated"))
  | ProofTimeout   =>
-   (print_endline "tactictoe: time out";
+   (debug "tactictoe: time out";
     (NONE, FAIL_TAC "tactictoe: time out"))
  | Proof s        =>
-   (print_endline ("tactictoe found a proof:\n  " ^ s);
+   (debug ("tactictoe found a proof:\n  " ^ s);
     (SOME s, tactic_of_sml s))
 
 (* -------------------------------------------------------------------------
@@ -123,7 +122,7 @@ fun tactictoe_aux goal =
   then raise ERR "tactictoe" "a term is not of type bool"
   else
   let val (stac,tac) = dfind goal (!ttt_goaltac_cache) in
-    print_endline ("goal already solved by:\n  " ^ stac); tac
+    debug ("goal already solved by:\n  " ^ stac); tac
   end
   handle NotFound =>
   let
@@ -151,34 +150,34 @@ fun tactictoe term =
 
 (* -------------------------------------------------------------------------
    Evaluation
-   Warning : ttt_record should be run on all theories before evaluation
+   Warning : ttt_record () should be run before evaluation
    ------------------------------------------------------------------------- *)
 
 fun log_status tptpname r = case r of
-   ProofSaturated => print_endline "  tactictoe: saturated"
- | ProofTimeout   => print_endline "  tactictoe: time out"
+   ProofSaturated => debug "  tactictoe: saturated"
+ | ProofTimeout   => debug "  tactictoe: time out"
  | Proof s        =>
    (
-   print_endline ("  tactictoe found a proof:\n  " ^ s);
-   print_endline ("Proven: " ^ tptpname)
+   debug ("  tactictoe found a proof:\n  " ^ s);
+   debug ("Proven: " ^ tptpname)
    )
 
 fun ttt_eval (thmdata,tacdata) (thy,name) goal =
   let
+    val _ = debug "ttt_eval: hello"
     val tptpname = escape ("thm." ^ thy ^ "." ^ name)
-    val _ = print_endline tptpname
-    val _ = print_endline ("Theorem: " ^ tptpname)
-    val _ = print_endline ("Goal: " ^ string_of_goal goal)
+    val _ = debug tptpname
+    val _ = debug ("Theorem: " ^ tptpname)
+    val _ = debug ("Goal: " ^ string_of_goal goal)
     val (status,t) = add_time (main_tactictoe (thmdata,tacdata)) goal
   in
     log_status tptpname status;
-    print_endline ("  time: " ^ Real.toString t ^ "\n")
+    debug ("  time: " ^ Real.toString t ^ "\n")
   end
 
 (* -------------------------------------------------------------------------
    Usage:
      load "tttUnfold"; open tttUnfold; open tttSetup;
-     ttt_ttteval_flag := true;
      ttt_ex_flag := true;
      ttt_search_time := 5.0;
      ttt_record_thy "ConseqConv";

@@ -14,11 +14,4 @@ sig
   val ttt_record : unit -> unit
   val ttt_clean_record : unit -> unit
 
-  (* evaluation *)
-  val ttt_parallel_eval : int -> string list -> unit 
-    (* to be called only after recording the evaluated theories *)
-  val evaluate_loaded : string -> int -> unit
-  val evaluate_full : string -> int -> unit
-
-
 end

@@ -65,6 +65,10 @@ fun smltype_of_value l s =
     string_of_pretty p
   end
 
+fun is_local_value s =
+  mem s (map fst (#allVal (PolyML.globalNameSpace) ()))
+   
+
 fun is_thm_value l s =
   let
     val s1 = smltype_of_value l s
@@ -91,9 +95,11 @@ fun is_thm s =
   end
 
 fun thm_of_sml s =
-  let val b = exec_sml "thm_of_sml" ("smlExecute.sml_thm_glob := " ^ s) in
-    if b then SOME (s, !sml_thm_glob) else NONE
-  end
+  if is_thm s then
+    let val b = exec_sml "thm_of_sml" ("smlExecute.sml_thm_glob := " ^ s) in
+      if b then SOME (s, !sml_thm_glob) else NONE
+    end
+  else NONE
 
 fun thml_of_sml sl =
   let

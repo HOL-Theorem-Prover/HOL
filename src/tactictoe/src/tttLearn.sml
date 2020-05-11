@@ -14,7 +14,7 @@ open HolKernel Abbrev boolLib aiLib
   psMinimize tttSetup
 
 val ERR = mk_HOL_ERR "tttLearn"
-fun debug s = debug_in_dir ttt_debugdir "tttLearn" s
+fun debug s = print_endline s
 
 (* -------------------------------------------------------------------------
    Abstracting theorem list in tactics
@@ -178,18 +178,12 @@ fun orthogonalize (thmdata,tacdata) (lbl as (ostac,t,g,gl)) =
     val _ = debug "instantiate arguments"
     val stacl4 = inst_stacl thml stacl3
     val _ = debug "test tactics"
-    val testo = total_time ortho_teststac_time
-      (findSome (test_stac g gl)) stacl4
+    val (testo,r) = add_time (findSome (test_stac g gl)) stacl4
+    val _ = debug ("test time: " ^ rts r)
+    val _ = ortho_teststac_time := !ortho_teststac_time + r
   in
     case testo of NONE => lbl | SOME newlbl => newlbl
   end
-
+ 
 
 end (* struct *)
-
-(* test
-load "tttLearn"; open tttLearn;
-val s0 = "METIS_TAC [arithmeticTheory.LESS_EQ]";
-val s1 = abstract_stac s0;
-val s2 = inst_stac "foo" (valOf s1);
-*)

@@ -48,21 +48,4 @@ val ttt_search_time  = ref 10.0
 val ttt_policy_coeff = ref 0.5
 val ttt_ex_flag = ref false
 
-(* -------------------------------------------------------------------------
-   Evaluation. The function being evaluated should produced its own log.
-   ------------------------------------------------------------------------- *)
-
-val ttt_evalfun_glob = ref NONE
-val ttt_hheval_flag  = ref false
-val ttt_ttteval_flag = ref false
-
-fun log_eval s =
-  let val file = (!ttt_eval_dir) ^ "/" ^ current_theory () in
-    print_endline s;
-    mkDir_err (ttt_eval_updir);
-    mkDir_err (!ttt_eval_dir); 
-    append_endline file s
-  end
-
-
 end (* struct *)

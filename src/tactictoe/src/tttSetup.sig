@@ -28,24 +28,4 @@ sig
   val ttt_policy_coeff : real ref
   val ttt_ex_flag : bool ref
 
-  (* evaluation *)
-  type lbl = (string * real * goal * goal list)
-  type fea = int list
-  type thmdata =
-    (int, real) Redblackmap.dict *
-    (string, int list) Redblackmap.dict
-  type tacdata =
-    {
-    tacfea : (lbl,fea) Redblackmap.dict,
-    tacfea_cthy : (lbl,fea) Redblackmap.dict,
-    taccov : (string, int) Redblackmap.dict,
-    tacdep : (goal, lbl list) Redblackmap.dict
-    }
-  (* globals carrying the evaluation functions (instantiated in tttUnfold) *)
-  val ttt_evalfun_glob :
-    (thmdata * tacdata -> string * string -> goal -> unit) option ref
-  val ttt_hheval_flag : bool ref
-  val ttt_ttteval_flag : bool ref
-  val log_eval : string -> unit
-
 end

@@ -449,7 +449,8 @@ fun sketch sl = case sl of
   | "fun" :: m    => (bval := false; bfun := true; sketch_pattern "fun" "=" m)
   | "and" :: m    => if !bval
                      then sketch_pattern "val" "=" m
-                     else sketch_pattern "fun" "=" m (* todo *)
+                     else sketch_pattern "fun" "=" m 
+    (* todo: support for mutually recursive functions *)
   | "fn"  :: m    => (bfun := false; sketch_pattern "fn" "=>" m)
   | "|"   :: m    => sketch_pattern "|" (if !bfun then "=" else "=>") m
   | "of"  :: m    => (bfun := false; sketch_pattern "of" "=>" m)
@@ -615,7 +616,7 @@ fun modified_program (h,d) p =
           [a,"("] @ original_program namel @ [","] @ original_program term @
           [","] @
             ["let","val","tactictoe_tac1","="] @ tac1 @
-            ["val","tactictoe_tac2","=","tttRecord.wrap_tactics_in",
+            ["val","tactictoe_tac2","=","tttRecord.app_wrap_proof",
              mlquote name,"\n",tac2] @
             ["in","tttRecord.record_proof",
              mlquote name,lflag_name,"tactictoe_tac2","tactictoe_tac1","end"] @
@@ -639,7 +640,7 @@ fun modified_program (h,d) p =
           [a,"("] @ original_program term @
           [","] @
             ["let","val","tactictoe_tac1","="] @ tac1 @
-            ["val","tactictoe_tac2","=","tttRecord.wrap_tactics_in",
+            ["val","tactictoe_tac2","=","tttRecord.app_wrap_proof",
              mlquote name,"\n",tac2] @
             ["in","tttRecord.record_proof",
              mlquote name,lflag_name,"tactictoe_tac2","tactictoe_tac1","end"] @
@@ -901,6 +902,9 @@ fun string_of_bool flag = if flag then "true" else "false"
 fun output_flag oc s x =
   osn oc ("val _ = " ^ s ^ " := " ^ string_of_bool (!x));
 
+fun output_time oc s x =
+  osn oc ("val _ = " ^ s ^ " := " ^ Real.toString (!x));
+
 val metis_theories = 
   ["sat", "marker", "combin", "min", "bool", "normalForms"]
 
@@ -922,27 +926,10 @@ fun output_header oc cthy =
   output_flag oc "tttSetup.ttt_ex_flag" ttt_ex_flag;
   (* evaluation *)
   output_flag oc "mlThmData.thmlintac_flag" mlThmData.thmlintac_flag;
-  (* if not (mem cthy metis_theories) 
-  then osn oc "val _ = metisTools.METIS_TAC"
-  else (); *)
-  osn oc "val _ = tacticToe.ttt";
   osn oc "val _ = smlExecute.exec_sml";
-  if !ttt_ttteval_flag then 
-     (
-     osn oc
-     "val _ = tttSetup.ttt_evalfun_glob := Option.SOME tacticToe.ttt_eval";
-     osn oc
-     ("val _ = tttSetup.ttt_eval_dir := " ^ quote (!ttt_eval_dir))
-     )
-  else if !ttt_hheval_flag then osn oc
-    "val _ = tttSetup.ttt_evalfun_glob := Option.SOME holyHammer.hh_eval"
-  else osn oc  "val _ = tttSetup.ttt_evalfun_glob := Option.NONE"
-  ;
   (* global references *)
-  osn oc ("val _ = tttSetup.ttt_search_time := " ^
-    Real.toString (!ttt_search_time));
-  osn oc ("val _ = tttSetup.ttt_tactic_time := " ^
-    Real.toString (!ttt_tactic_time));
+  output_time oc "tttSetup.ttt_search_time" ttt_search_time;
+  output_time oc "tttSetup.ttt_tactic_time" ttt_tactic_time;
   (* hook *)
   osn oc ("val _ = tttRecord.start_record_thy " ^ mlquote cthy)
   )
@@ -1125,31 +1112,6 @@ fun ttt_clean_record () =
   )
 
 (* ------------------------------------------------------------------------
-   Evaluation: 
-   Warning: only call the evaluation functions after recording the theories
-   ------------------------------------------------------------------------ *)
-
-fun ttt_parallel_eval ncore thyl =
-  (
-  ttt_ttteval_flag := true;
-  parapp_queue ncore ttt_record_thy thyl; 
-  ttt_ttteval_flag := false
-  )
-
-(* -------------------------------------------------------------------------
-   Usage:
-      load "tttSetup"; open tttSetup;
-      load "tttUnfold"; open tttUnfold;
-      load_sigobj ();
-      ttt_record (); (* only if not already called previously *)
-      val thyl = ancestry (current_theory ());
-      ttt_search_time := 15.0;
-      val ncore = 20;
-      ttt_parallel_eval ncore thyl;
-   Results can be found in HOLDIR/src/tactictoe/eval.
-  ------------------------------------------------------------------------- *)
-
-(* ------------------------------------------------------------------------
    Theories of the standard library
    ------------------------------------------------------------------------ *)
 
@@ -1174,33 +1136,5 @@ fun load_sigobj () =
   in
     app load l1
   end
-
-(* ------------------------------------------------------------------------
-   Evaluation of the library
-   ------------------------------------------------------------------------ *)
-
-fun evaluate_loaded expname ncore =
-  let 
-    val _ = ttt_eval_dir := ttt_eval_updir ^ "/" ^ expname  
-    val thyl = ancestry (current_theory ()) 
-  in
-    ttt_parallel_eval ncore thyl
-  end
-
-fun evaluate_full expname ncore =
-  (load_sigobj (); evaluate_loaded expname ncore)
-
-(* -------------------------------------------------------------------------
-   Usage:
-      load "tttSetup"; open tttSetup;
-      load "tttUnfold"; open tttUnfold;
-      ttt_clean_record (); ttt_record ();
-      ttt_search_time := 5.0;
-      val ncore = 30;
-      val expname = "old_mcts_13_noortho";
-      val _ = evaluate_loaded expname ncore;
-   Results can be found in HOLDIR/src/tactictoe/eval.
-  ------------------------------------------------------------------------- *)
-
 
 end (* struct *)

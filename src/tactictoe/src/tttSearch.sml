@@ -38,7 +38,7 @@ datatype stacstatus =
 datatype goalstatus = GoalProved | GoalSaturated | GoalUndecided
 datatype nodestatus = NodeProved | NodeSaturated | NodeUndecided
 datatype searchstatus = SearchProved | SearchSaturated | SearchTimeout
-datatype proofstatus =  Proof of string | ProofSaturated | ProofTimeout
+datatype proofstatus = Proof of string | ProofSaturated | ProofTimeout
 
 fun string_of_searchstatus x = case x of
     SearchProved => "SearchProved"
@@ -298,7 +298,7 @@ fun reward_of stacstatus = case stacstatus of
   | StacPara => 0.0
   | StacProved => 1.0
   | StacUndecided gl => 1.0
-  | _ => raise ERR "apply_stac_pid" "unexpected"
+  | _ => raise ERR "reward_of" "unexpected"
 
 fun apply_stac_pid (tree,stacpred) pid = 
   let 
@@ -311,13 +311,9 @@ fun apply_stac_pid (tree,stacpred) pid =
     val reward = reward_of stacstatus
   in
     case stacstatus of
-      StacFail => node_backup (tree:tree) (reward,stacstatus) pidx
-    | StacLoop => node_backup tree (reward,stacstatus) pidx
-    | StacPara => node_backup tree (reward,stacstatus) pidx
-    | StacProved => node_backup tree (reward,stacstatus) pidx
-    | StacUndecided gl =>
+      StacUndecided gl =>
       node_create_backup (tree,stacpred) (reward,gl) pidx
-    | _ => raise ERR "apply_stac_pid" "unexpected"
+    | _ => node_backup tree (reward,stacstatus) pidx
   end
 
 (* -------------------------------------------------------------------------
@@ -383,6 +379,7 @@ fun search stacpred g =
   let
     val starttree = starttree_of stacpred g
     val (searchstatus,tree) = search_loop (starttree,stacpred)
+    val _ = print_endline "reconstruction"
   in
     reconstruct_proofstatus (searchstatus,tree) g
   end
