@@ -203,8 +203,7 @@ fun holyhammer tm = hide TAC_PROOF (([],tm), hh_goal ([],tm));
 
 (* -------------------------------------------------------------------------
    HolyHammer evaluation without premise selection:
-   trying to re-prove theorems from their dependencies 
-   (limited by npremises_of).
+   trying to re-prove theorems from their dependencies
    ------------------------------------------------------------------------- *)
 
 fun hh_pb_eval_thm atpl (s,thm) =

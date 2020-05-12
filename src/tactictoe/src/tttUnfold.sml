@@ -1151,6 +1151,8 @@ fun write_evalscript file =
     ["PolyML.SaveState.loadState " ^ file1 ^ ";",
      "val tactictoe_goal = mlTacticData.import_goal " ^ file2 ^ ";",
      "load " ^ mlquote "tacticToe" ^ ";",
+     "val _ = tttSetup.ttt_search_time := " ^ 
+        Real.toString (!ttt_search_time) ^ ";",
      "tacticToe.ttt_eval " ^ 
      "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^ 
      "tactictoe_goal;"]
@@ -1164,17 +1166,24 @@ fun run_evalscript file =
   run_buildheap_nodep (OS.Path.dir file) (file ^ "_eval.sml")
   )
 
-fun run_evalscript_thy thy =
+fun run_evalscript_thyl ncore thyl =
   let
-    val file = tactictoe_dir ^ "/savestate/" ^ thy ^ "_pbl"
-    val filel = readl file 
+    val thyl' = filter (fn x => mem x ["min","bool"]) thyl
+    val filel = map (fn x => tactictoe_dir ^ "/savestate/" ^ x ^ "_pbl") thyl'
+    fun f x = (readl x handle HOL_ERR _ => (print_endline x; []))
+    val filell = List.concat (map f filel)
   in
-    app run_evalscript filel
-  end      
+    parapp_queue ncore run_evalscript filell
+  end     
 
 (*
 load "tttUnfold"; open tttUnfold;
-run_evalscript_thy "arithmetic";
+tttSetup.ttt_savestate_flag := true;
+ttt_clean_record (); ttt_record ();
+ttt_search_time := 5.0;
+val thyl = ancestry (current_theory ());
+val ncore = 30;
+run_evalscript_thyl ncore thyl;
 *)
 
 

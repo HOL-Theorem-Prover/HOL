@@ -165,14 +165,4 @@ fun ttt_eval (thmdata,tacdata) goal =
     hide_flag := b
   end
 
-(* -------------------------------------------------------------------------
-   Usage:
-     load "tttUnfold"; open tttUnfold; open tttSetup;
-     ttt_ex_flag := true;
-     ttt_search_time := 5.0;
-     ttt_record_thy "ConseqConv";
-   Results can be found in HOLDIR/src/tactictoe/eval/default.
-  ------------------------------------------------------------------------- *)
-
-
 end (* struct *)

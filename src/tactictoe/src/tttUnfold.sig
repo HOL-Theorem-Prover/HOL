@@ -17,6 +17,6 @@ sig
   (* evaluation *)
   val write_evalscript : string -> unit 
   val run_evalscript : string -> unit
-  val run_evalscript_thy : string -> unit
+  val run_evalscript_thyl : int -> string list -> unit
 
 end
