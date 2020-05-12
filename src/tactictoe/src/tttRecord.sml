@@ -228,7 +228,7 @@ fun end_record_thy thy =
   ttt_export_tacdata thy (!tacdata_glob);
   if !ttt_savestate_flag 
   then 
-    (mkDir_err tactictoe_dir ^ "/savestate";
+    (mkDir_err (tactictoe_dir ^ "/savestate");
      writel (tactictoe_dir ^ "/savestate/" ^ thy ^ "_pbl") (rev (!pbl_glob)))
   else ();
   debug "Export successful";
