@@ -24,6 +24,7 @@ val timeout_glob = ref 10
 fun set_timeout n = timeout_glob := n
 val hide_flag = ref true
 fun hide f x = if !hide_flag then hide_out f x else f x
+val dep_flag = ref false
 
 (* -------------------------------------------------------------------------
    ATPs
@@ -35,7 +36,9 @@ fun name_of atp = case atp of
   | Z3 => "z3"
   | Vampire => "vampire"
 
-fun npremises_of atp = case atp of
+fun npremises_of atp = 
+  if !dep_flag then 100000 else
+  case atp of
     Eprover => 128
   | Z3 => 32
   | Vampire => 96
@@ -55,7 +58,6 @@ fun pathl sl = case sl of
   | a :: m => OS.Path.concat (a, pathl m)
 
 val hh_dir         = pathl [HOLDIR,"src","holyhammer"];
-
 val provbin_dir    = pathl [hh_dir,"provers"];
 fun provdir_of atp = pathl [provbin_dir,
   name_of atp ^ "_files" ^ (!parallel_tag)]
@@ -66,7 +68,7 @@ fun status_of atp  = pathl [provdir_of atp,"status"]
    Evaluation log
    ------------------------------------------------------------------------- *)
 
-val hh_eval_dir    = pathl [hh_dir,"eval"];
+val hh_eval_dir = pathl [hh_dir,"eval"];
 val eval_flag = ref false
 val eval_thy = ref "scratch"
 fun log_eval s =
@@ -136,7 +138,6 @@ fun launch_atp dir atp t =
    HolyHammer
    ------------------------------------------------------------------------- *)
 
-(* Warning: limits the number of selected premises (even in hh_pb) *)
 fun export_to_atp premises cj atp =
   let
     val new_premises = first_n (npremises_of atp) premises
@@ -191,7 +192,6 @@ fun main_hh thmdata goal =
 fun has_boolty x = type_of x = bool
 fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
 
-
 fun hh_goal goal =
   if not (has_boolty_goal goal)
   then raise ERR "hh_goal" "a term is not of type bool"
@@ -199,11 +199,12 @@ fun hh_goal goal =
 
 fun hh_fork goal = Thread.fork (fn () => ignore (hh_goal goal), attrib)
 fun hh goal = let val tac = hh_goal goal in hide tac goal end
-fun holyhammer tm = TAC_PROOF (([],tm), hh_goal ([],tm));
+fun holyhammer tm = hide TAC_PROOF (([],tm), hh_goal ([],tm));
 
 (* -------------------------------------------------------------------------
    HolyHammer evaluation without premise selection:
-   trying to re-prove theorems from their dependencies.
+   trying to re-prove theorems from their dependencies 
+   (limited by npremises_of).
    ------------------------------------------------------------------------- *)
 
 fun hh_pb_eval_thm atpl (s,thm) =
@@ -225,11 +226,11 @@ fun hh_pb_eval_thm atpl (s,thm) =
 
 fun hh_pb_eval_thy atpl thy =
   (
-  eval_flag := true; eval_thy := thy;
+  dep_flag := true; eval_flag := true; eval_thy := thy;
   mkDir_err hh_eval_dir;
   remove_file (hh_eval_dir ^ "/" ^ thy);
   app (hh_pb_eval_thm atpl) (DB.theorems thy);
-  eval_flag := false; eval_thy := "scratch"
+  dep_flag := false; eval_flag := false; eval_thy := "scratch"
   )
 
 (* -------------------------------------------------------------------------
