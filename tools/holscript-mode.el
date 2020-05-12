@@ -776,18 +776,20 @@ a store_thm equivalent."))
 
 (defconst holscript-sml-declaration-keyword
   (regexp-opt '("open" "val" "datatype" "local" "fun" "infix" "infixl" "infixr"
-                "structure" "signature" "functor")))
+                "structure" "signature" "functor") 'words))
 
 (defun holscript-smie-forward-token ()
   (let ((p0 (point)))
     (forward-comment (point-max))
     (if (and (not (= p0 (point)))
-             (or (looking-at holscript-column0-declbegin-keyword)
+             (or (looking-at
+                  (concat holscript-column0-declbegin-keyword "[[:space:]]"))
                  (looking-at (concat "^" holscript-sml-declaration-keyword))))
         ";"
       (let ((pp (syntax-ppss)))
         (cond
-         ((and (looking-at holscript-column0-keywords-regexp)
+         ((and (looking-at (concat holscript-column0-keywords-regexp
+                                   "[[:space:]]"))
                (save-excursion (skip-chars-backward " \t") (bolp)))
           (goto-char (match-end 0))
           (let ((ms (match-string-no-properties 0)))
@@ -820,7 +822,8 @@ a store_thm equivalent."))
              (progn (skip-syntax-forward "w_") (point)))))))))
 
 (defun holscript-smie-backward-token ()
-  (if (or (looking-at holscript-column0-declbegin-keyword)
+  (if (or (looking-at
+           (concat holscript-column0-declbegin-keyword "[[:space:]]"))
           (looking-at (concat "^" holscript-sml-declaration-keyword)))
       (if (= (point) (point-min)) ""
         (backward-char 1)
@@ -835,6 +838,7 @@ a store_thm equivalent."))
     (cond
      (; am I just after a keyword?
       (and (looking-back holscript-column0-keywords-regexp (- (point) 15) t)
+           (= 0 (car (syntax-after (point)))) ; next char is whitespace
            (save-excursion
              (goto-char (match-beginning 0))
              (skip-chars-backward " \t")
