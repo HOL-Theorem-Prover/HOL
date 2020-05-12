@@ -192,7 +192,7 @@ fun dbfetch_of_depid thm =
       then
         let val name = dfind goal thmdict in
           SOME (String.concatWith " "
-            ["(","DB.fetch",mlquote thy,mlquote name,")"])
+            ["(","DB.fetch", mlquote thy, mlquote name,")"])
         end
       else NONE
     end

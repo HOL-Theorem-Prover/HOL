@@ -1180,7 +1180,7 @@ fun run_evalscript_thyl ncore thyl =
 (*
 load "tttUnfold"; open tttUnfold;
 tttSetup.ttt_savestate_flag := true;
-ttt_clean_record (); ttt_record_thy "ConseqConv";
+ttt_clean_record (); ttt_record_thy "arithmetic";
 tttSetup.ttt_search_time := 5.0;
 run_evalscript_thyl 3 ["ConseqConv"];
 *)
