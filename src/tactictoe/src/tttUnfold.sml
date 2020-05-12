@@ -1140,7 +1140,7 @@ fun load_sigobj () =
    Evaluation: requires recorded savestates. 
    The recorded savestates can be produced by setting ttt_savestate_flag
    before calling ttt_clean_record () and ttt_record ().
-   Warning: requires ~50 GB of hard disk space
+   Warning: requires ~50 GB of hard disk space. Possibly avoid using MLTON?
    ------------------------------------------------------------------------ *)
 
 fun write_evalscript file =
@@ -1168,17 +1168,22 @@ fun run_evalscript file =
 
 fun run_evalscript_thyl ncore thyl =
   let
-    val thyl' = filter (fn x => mem x ["min","bool"]) thyl
+    val thyl' = filter (fn x => not (mem x ["min","bool"])) thyl
     val filel = map (fn x => tactictoe_dir ^ "/savestate/" ^ x ^ "_pbl") thyl'
     fun f x = (readl x handle HOL_ERR _ => (print_endline x; []))
     val filell = List.concat (map f filel)
   in
+    print_endline ("evaluate " ^ its (length filell) ^ " problems");
     parapp_queue ncore run_evalscript filell
   end     
 
 (*
 load "tttUnfold"; open tttUnfold;
 tttSetup.ttt_savestate_flag := true;
+ttt_clean_record (); ttt_record_thy "ConseqConv";
+tttSetup.ttt_search_time := 5.0;
+run_evalscript_thyl 3 ["ConseqConv"];
+
 ttt_clean_record (); ttt_record ();
 ttt_search_time := 5.0;
 val thyl = ancestry (current_theory ());
