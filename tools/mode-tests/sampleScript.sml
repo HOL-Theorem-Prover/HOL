@@ -1,0 +1,30 @@
+open foobar
+
+val _ = new_theory "foobar";
+
+Theorem foo0 = TRUTH
+Theorem foo = TRUTH
+
+Theorem bar: x = x
+Proof simp[]
+QED
+
+Type x = “:bool”
+
+Definition foo:
+  foo x = x + 2
+End
+
+Theorem foo:
+  x = x
+Proof
+  all_tac
+QED
+
+Definition bar:
+  bar x y ⇔
+  ∀z.
+    x + z < y + z
+End
+
+val _ = export_theory();
