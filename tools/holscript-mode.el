@@ -792,11 +792,11 @@ a store_thm equivalent."))
         ";"
       (let ((pp (syntax-ppss)))
         (cond
-         ((and (looking-at (concat holscript-column0-keywords-regexp
-                                   "[[:space:]]"))
+         ((and (looking-at (concat "\\(" holscript-column0-keywords-regexp
+                                   "\\)" "[[:space:]]"))
                (save-excursion (skip-chars-backward " \t") (bolp)))
-          (goto-char (match-end 0))
-          (let ((ms (match-string-no-properties 0)))
+          (goto-char (match-end 1))
+          (let ((ms (match-string-no-properties 1)))
             (if (or (string= ms "Theorem") (string= ms "Triviality"))
                 (let ((eolpoint (save-excursion (end-of-line) (point))))
                   (save-excursion
@@ -826,11 +826,12 @@ a store_thm equivalent."))
              (progn (skip-syntax-forward "w_") (point)))))))))
 
 (defun holscript-smie-backward-token ()
-  (if (or (looking-at
-           (concat holscript-column0-declbegin-keyword "[[:space:]]"))
+  (if (or (and (looking-at
+                (concat holscript-column0-declbegin-keyword "[[:space:]]"))
+               (save-excursion (skip-chars-backward " \t") (bolp)))
           (looking-at (concat "^" holscript-sml-declaration-keyword)))
       (if (= (point) (point-min)) ""
-        (backward-char 1)
+        (skip-syntax-backward " ")
         ";")
     (let ((cp (point)))
       (forward-comment (- (point)))
@@ -842,7 +843,8 @@ a store_thm equivalent."))
     (cond
      (; am I just after a keyword?
       (and (looking-back holscript-column0-keywords-regexp (- (point) 15) t)
-           (= 0 (car (syntax-after (point)))) ; next char is whitespace
+           (let ((syn (syntax-after (point))))
+             (or (null syn) (= 0 (car syn)))) ; next char is whitespace
            (save-excursion
              (goto-char (match-beginning 0))
              (skip-chars-backward " \t")
@@ -894,6 +896,14 @@ a store_thm equivalent."))
     (`(:list-intro . "")
      (message "In (:list-intro \"\"))") holscript-indent-level)
     (`(:after . ":") 2)
+    (`(:before . "^Definition") 0)
+    (`(:before . "^Theorem") 0)
+    (`(:before . "^Theorem=") 0)
+    (`(:before . "^Inductive") 0)
+    (`(:before . "^CoInductive") 0)
+    (`(:before . "val") 0)
+    (`(:before . "fun") 0)
+    (`(:before . "open") 0)
     (`(:before . "ENDQ.") 0)
     (`(:after . "ENDQ.") 2)
     (`(:after . ";") 0)
