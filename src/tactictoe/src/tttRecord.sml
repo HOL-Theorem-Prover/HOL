@@ -158,7 +158,9 @@ fun end_record_proof name g =
     val l1 = map fst (rev (!goalstep_glob))
     val _ = if !thmlintac_flag then app save_thmlintac l1 else ()
     val (thmdata,tacdata) = (!thmdata_glob, !tacdata_glob)
-    val l2 = map (orthogonalize (thmdata,tacdata)) l1
+    val l2 = if !ttt_ortho_flag 
+      then map (orthogonalize (thmdata,tacdata)) l1
+      else l1
     val newtacdata = foldl ttt_update_tacdata tacdata l2
   in
     debug ("Saving " ^ int_to_string (length l2) ^ " labels");
@@ -176,7 +178,8 @@ fun save_state g =
     val _ = pbl_glob := prefix :: (!pbl_glob)
     val savestate_file =  prefix ^ "_savestate"
     val goal_file = prefix ^ "_goal"
-    val _ = PolyML.SaveState.saveChild (savestate_file,!savestate_level)
+    val _ = PolyML.SaveState.saveChild 
+      (savestate_file, (!savestate_level) mod 25)
     val _ = export_goal goal_file g
   in
     incr savestate_level

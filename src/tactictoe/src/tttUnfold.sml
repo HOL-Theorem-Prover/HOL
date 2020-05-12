@@ -1183,9 +1183,13 @@ tttSetup.ttt_savestate_flag := true;
 ttt_clean_record (); ttt_record_thy "ConseqConv";
 tttSetup.ttt_search_time := 5.0;
 run_evalscript_thyl 3 ["ConseqConv"];
+*)
 
+(*
+load "tttUnfold"; open tttUnfold;
+tttSetup.ttt_savestate_flag := true;
 ttt_clean_record (); ttt_record ();
-ttt_search_time := 5.0;
+tttSetup.ttt_search_time := 5.0;
 val thyl = ancestry (current_theory ());
 val ncore = 30;
 run_evalscript_thyl ncore thyl;
