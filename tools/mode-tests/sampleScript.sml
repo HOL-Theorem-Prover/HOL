@@ -24,7 +24,10 @@ QED
 Definition bar:
   bar x y ⇔
   ∀z.
-    x + z < y + z
+    x + z < y + z ∧ let a = 2 * x ;
+                        b = 3 * z
+                    in
+                      a * b ≤ x
 End
 
 val _ = export_theory();
