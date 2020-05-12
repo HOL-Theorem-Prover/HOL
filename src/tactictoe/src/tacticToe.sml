@@ -16,6 +16,8 @@ open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "tacticToe"
 val debug = print_endline
+val hide_flag = ref true
+fun hide f x = if !hide_flag then hide_out f x else f x
 
 (* -------------------------------------------------------------------------
    Time limit
@@ -57,6 +59,8 @@ fun select_tacfea tacdata goalf =
    Main function
    ------------------------------------------------------------------------- *)
 
+fun constant_space s = String.concatWith " " (partial_sml_lexer s)
+
 fun main_tactictoe (thmdata,tacdata) goal =
   let
     (* preselection *)
@@ -78,7 +82,11 @@ fun main_tactictoe (thmdata,tacdata) goal =
       let
         val thmidl = sthmpred 16 g
         val l = feahash_of_goal g
-        val stacl = stacknn_uniq (tacsymweight,tacfea) (!ttt_presel_radius) l
+        val metis_stac = constant_space  
+          ("metisTools.METIS_TAC [ " ^ thmlarg_placeholder ^ "]")
+        val stacl = 
+          mk_sameorder_set String.compare (metis_stac ::  
+            stacknn_uniq (tacsymweight,tacfea) (!ttt_presel_radius) l)
         val istacl = map (inst_stac thmidl) stacl 
       in
         tac_cache := dadd g istacl (!tac_cache); istacl
@@ -94,14 +102,11 @@ fun main_tactictoe (thmdata,tacdata) goal =
 
 fun read_status r = case r of
    ProofSaturated =>
-   (debug "tactictoe: saturated";
-    (NONE, FAIL_TAC "tactictoe: saturated"))
+   (debug "Saturated"; (NONE, FAIL_TAC "tactictoe: saturated"))
  | ProofTimeout   =>
-   (debug "tactictoe: time out";
-    (NONE, FAIL_TAC "tactictoe: time out"))
+   (debug "Timeout"; (NONE, FAIL_TAC "tactictoe: timeout"))
  | Proof s        =>
-   (debug ("tactictoe found a proof:\n  " ^ s);
-    (SOME s, tactic_of_sml s))
+   (debug ("  " ^ s); (SOME s, hide tactic_of_sml s))
 
 (* -------------------------------------------------------------------------
    Interface
@@ -111,34 +116,25 @@ val ttt_tacdata_cache = ref (dempty (list_compare String.compare))
 fun clean_ttt_tacdata_cache () =
   ttt_tacdata_cache := dempty (list_compare String.compare)
 
-val ttt_goaltac_cache = ref (dempty goal_compare)
-fun clean_ttt_goaltac_cache () = ttt_goaltac_cache := dempty goal_compare
-
 fun has_boolty x = type_of x = bool
 fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
 
 fun tactictoe_aux goal =
   if not (has_boolty_goal goal)
-  then raise ERR "tactictoe" "a term is not of type bool"
+  then raise ERR "tactictoe" "type bool expected"
   else
-  let val (stac,tac) = dfind goal (!ttt_goaltac_cache) in
-    debug ("goal already solved by:\n  " ^ stac); tac
-  end
-  handle NotFound =>
   let
-    val _ = QUse.use infix_file
+    val _ = hide QUse.use infix_file
     val cthyl = current_theory () :: ancestry (current_theory ())
-    val thmdata = create_thmdata ()
+    val thmdata = hide create_thmdata ()
     val tacdata =
       dfind cthyl (!ttt_tacdata_cache) handle NotFound =>
       let val tacdata_aux = ttt_create_tacdata () in
         ttt_tacdata_cache := dadd cthyl tacdata_aux (!ttt_tacdata_cache);
         tacdata_aux
       end
-    val proofstatus = main_tactictoe (thmdata,tacdata) goal
+    val proofstatus = hide (main_tactictoe (thmdata,tacdata)) goal
     val (staco,tac) = read_status proofstatus
-    val _ = case staco of NONE => () | SOME stac =>
-      ttt_goaltac_cache := dadd goal (stac,tac) (!ttt_goaltac_cache)
   in
     tac
   end
@@ -149,30 +145,24 @@ fun tactictoe term =
   let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux goal) end
 
 (* -------------------------------------------------------------------------
-   Evaluation
-   Warning : ttt_record () should be run before evaluation
+   Evaluation function called by tttUnfold.run_evalscript_thy
    ------------------------------------------------------------------------- *)
 
-fun log_status tptpname r = case r of
-   ProofSaturated => debug "  tactictoe: saturated"
- | ProofTimeout   => debug "  tactictoe: time out"
- | Proof s        =>
-   (
-   debug ("  tactictoe found a proof:\n  " ^ s);
-   debug ("Proven: " ^ tptpname)
-   )
+fun log_status r = case r of
+   ProofSaturated => debug "tactictoe: saturated"
+ | ProofTimeout   => debug "tactictoe: timeout"
+ | Proof s        => debug ("tactictoe: proven\n  " ^ s)
 
-fun ttt_eval (thmdata,tacdata) (thy,name) goal =
+fun ttt_eval (thmdata,tacdata) goal =
   let
-    val _ = debug "ttt_eval: hello"
-    val tptpname = escape ("thm." ^ thy ^ "." ^ name)
-    val _ = debug tptpname
-    val _ = debug ("Theorem: " ^ tptpname)
+    val b = !hide_flag
+    val _ = hide_flag := false
     val _ = debug ("Goal: " ^ string_of_goal goal)
     val (status,t) = add_time (main_tactictoe (thmdata,tacdata)) goal
   in
-    log_status tptpname status;
-    debug ("  time: " ^ Real.toString t ^ "\n")
+    log_status status;
+    debug ("ttt_eval time: " ^ Real.toString t ^ "\n");
+    hide_flag := b
   end
 
 (* -------------------------------------------------------------------------

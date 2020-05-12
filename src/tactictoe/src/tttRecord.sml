@@ -26,6 +26,7 @@ fun local_tag x = x
 fun add_local_tag s = "( tttRecord.local_tag " ^ s ^ ")"
 val tacdata_glob = ref empty_tacdata
 val thmdata_glob = ref empty_thmdata
+val pbl_glob = ref []
 
 (* -------------------------------------------------------------------------
    Messages and profiling
@@ -47,14 +48,14 @@ val learn_time = ref 0.0
 fun info_thy thy =
   [
    "  " ^ its (!n_proof) ^ " proofs recognized " ^
-   "(" ^ its (!n_proof_ignored) ^ " ignored (contains let))",
+   "(" ^ its (!n_proof_ignored) ^ " ignored",
    "    parsed: " ^ its (!n_proof_parsed) ^ " proofs " ^
    its (!n_tactic_parsed) ^ " tactics," ^
    " replayed: " ^ its (!n_proof_replayed) ^ " proofs " ^
    its (!n_tactic_replayed) ^ " tactics",
    "  Record time: " ^ rts_round 6 (!record_time) ^
    " (parse: " ^ rts_round 6 (!parse_time) ^
-   ", replayextract_smlexp sproof;: " ^ rts_round 6 (!replay_time) ^ ")",
+   ", replay: " ^ rts_round 6 (!replay_time) ^ ")",
    "  Learn time: " ^ rts_round 6 (!learn_time) ^
    " (tactic pred: " ^ rts_round 6 (!ortho_predstac_time) ^ "," ^
    " thm pred: " ^ rts_round 6 (!ortho_predthm_time) ^ "," ^
@@ -90,7 +91,9 @@ fun wrap_stac stac = String.concatWith " "
   ["( tttRecord.record_tactic","(",stac,",",mlquote stac,")",")"]
 
 fun wrap_tacexp e = case e of
-    SmlTactic stac => SmlTactic (wrap_stac stac)
+    SmlTactic stac => if is_tactic stac 
+                      then SmlTactic (wrap_stac stac)
+                      else SmlTactic stac
   | SmlTactical _ => e
   | SmlInfix (s,(e1,e2)) => SmlInfix (s,(wrap_tacexp e1, wrap_tacexp e2))
 
@@ -122,9 +125,9 @@ fun app_wrap_proof name ostac goal =
     end
   end
 
-(*---------------------------------------------------------------------------
-  Globalizing theorems and create a new theorem if the value does not exists.
-  ---------------------------------------------------------------------------*)
+(* --------------------------------------------------------------------------
+   Globalizing sml values (with special case for theorems)
+   --------------------------------------------------------------------------*)
 
 fun fetch s reps =
   let val sthmo = thm_of_sml s in
@@ -164,19 +167,26 @@ fun end_record_proof name g =
 
 val savestate_level = ref 0
 
+fun save_state g = 
+  let
+    val savestate_dir = tactictoe_dir ^ "/savestate"
+    val _ = mkDir_err savestate_dir
+    val prefix = savestate_dir ^ "/" ^ current_theory () ^ 
+      its (!savestate_level) 
+    val _ = pbl_glob := prefix :: (!pbl_glob)
+    val savestate_file =  prefix ^ "_savestate"
+    val goal_file = prefix ^ "_goal"
+    val _ = PolyML.SaveState.saveChild (savestate_file,!savestate_level)
+    val _ = export_goal goal_file g
+  in
+    incr savestate_level
+  end
+
 fun record_proof name lflag tac1 tac2 (g:goal) =
   let
     val tptpname = escape ("thm." ^ current_theory () ^ "." ^ name)
     val _ = debug ("\nrecord_proof: " ^ tptpname)
-    val savestate_dir = tactictoe_dir ^ "/savestate"
-    val _ = mkDir_err savestate_dir
-    val savestate_file = savestate_dir ^ "/" ^ 
-      its (!savestate_level) ^ "_" ^ tptpname
-    val goal_file = savestate_dir ^ "/" ^ 
-      its (!savestate_level) ^ "_goal_" ^ tptpname
-    (* val _ = PolyML.SaveState.saveChild (savestate_file,!savestate_level) *)
-    val _ = export_terml goal_file ((fn (a,b) => b :: a) g)
-    val _ = incr savestate_level
+    val _ = if !ttt_savestate_flag then save_state g else ()
     val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name
     val b2 = (not (!ttt_recprove_flag) andalso pflag)
@@ -212,10 +222,15 @@ fun start_record_thy thy =
 
 fun end_record_thy thy =
   (
-  debug "Recording successful";
+  debug "Recording successful"; 
   write_info thy;
-  debug "Exporting tactic data";
+  debug "Exporting tactic data"; 
   ttt_export_tacdata thy (!tacdata_glob);
+  if !ttt_savestate_flag 
+  then 
+    (mkDir_err tactictoe_dir ^ "/savestate";
+     writel (tactictoe_dir ^ "/savestate/" ^ thy ^ "_pbl") (rev (!pbl_glob)))
+  else ();
   debug "Export successful";
   if !ttt_ex_flag then
   (

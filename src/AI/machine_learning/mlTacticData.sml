@@ -68,6 +68,8 @@ fun export_terml file tml =
      TextIO.closeOut ostrm)
   end
 
+fun export_goal file (goal as (asl,w)) = export_terml file (w :: asl)  
+
 (* -------------------------------------------------------------------------
    Exporting tactic data
    ------------------------------------------------------------------------- *)
@@ -162,6 +164,8 @@ fun import_terml file =
   in
     #unnamed_terms (export_from_sharing_data sdo)
   end
+
+fun import_goal file = let val l = import_terml file in (tl l, hd l) end
 
 (* -------------------------------------------------------------------------
    Importing tactic data

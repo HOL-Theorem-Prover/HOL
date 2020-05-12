@@ -16,6 +16,7 @@ sig
   val ttt_presel_radius  : int ref
 
   (* recording *)
+  val ttt_savestate_flag : bool ref
   val ttt_recprove_flag : bool ref
   val ttt_reclet_flag   : bool ref
   val ttt_recproof_time : real ref

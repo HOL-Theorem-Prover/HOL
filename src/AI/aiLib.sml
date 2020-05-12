@@ -743,6 +743,7 @@ fun readl path =
   in
     (TextIO.closeIn file; l3)
   end
+  handle SysErr _ => raise ERR "readl" path
 
 fun readl_empty path =
   let
@@ -756,7 +757,6 @@ fun readl_empty path =
   in
     (TextIO.closeIn file; l2)
   end
-
 
 fun write_file file s =
   let val oc = TextIO.openOut file in

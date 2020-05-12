@@ -21,7 +21,7 @@ include Abbrev
   val record_tactic : (tactic * string) -> tactic
   val record_proof : string -> bool -> tactic -> tactic -> tactic
   
-  (* Theory hooks importing and exporting the tactic database *)
+  (* Theory hooks: importing and exporting the tactic database *)
   val start_record_thy : string -> unit
   val end_record_thy : string -> unit
 

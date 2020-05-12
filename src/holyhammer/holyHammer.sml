@@ -22,6 +22,8 @@ fun debug s = debug_in_dir debugdir "holyHammer" s
 
 val timeout_glob = ref 10
 fun set_timeout n = timeout_glob := n
+val hide_flag = ref true
+fun hide f x = if !hide_flag then hide_out f x else f x
 
 (* -------------------------------------------------------------------------
    ATPs
@@ -134,10 +136,6 @@ fun launch_atp dir atp t =
    HolyHammer
    ------------------------------------------------------------------------- *)
 
-val hh_goaltac_cache = ref (dempty goal_compare)
-
-fun clean_hh_goaltac_cache () = hh_goaltac_cache := dempty goal_compare
-
 (* Warning: limits the number of selected premises (even in hh_pb) *)
 fun export_to_atp premises cj atp =
   let
@@ -173,11 +171,10 @@ fun hh_pb wanted_atpl premises goal =
         raise ERR "hh_pb" "ATPs could not find a proof")
     | SOME lemmas =>
       let
-        val (stac,tac) = hh_reconstruct lemmas goal
+        val (stac,tac) = hide (hh_reconstruct lemmas) goal
       in
         print_endline ("minimized proof:  \n  " ^ stac);
         log_eval ("  minimized proof:  \n    " ^ stac);
-        hh_goaltac_cache := dadd goal (stac,tac) (!hh_goaltac_cache);
         tac
       end
   end
@@ -198,15 +195,10 @@ fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
 fun hh_goal goal =
   if not (has_boolty_goal goal)
   then raise ERR "hh_goal" "a term is not of type bool"
-  else
-    let val (stac,tac) = dfind goal (!hh_goaltac_cache) in
-      print_endline ("goal already solved by:\n  " ^ stac);
-      tac
-    end
-    handle NotFound => main_hh (create_thmdata ()) goal
+  else main_hh (hide create_thmdata ()) goal
 
 fun hh_fork goal = Thread.fork (fn () => ignore (hh_goal goal), attrib)
-fun hh goal = (hh_goal goal) goal
+fun hh goal = let val tac = hh_goal goal in hide tac goal end
 fun holyhammer tm = TAC_PROOF (([],tm), hh_goal ([],tm));
 
 (* -------------------------------------------------------------------------
@@ -244,25 +236,16 @@ fun hh_pb_eval_thy atpl thy =
    Function called by the tactictoe evaluation framework
    ------------------------------------------------------------------------- *)
 
-fun hh_eval (thmdata,tacdata) (thy,name) goal =
-  let val tptpname = escape ("thm." ^ thy ^ "." ^ name) in
-    eval_flag := true;
+fun hh_eval (thmdata,tacdata) goal =
+  let val b = !hide_flag in
+    hide_flag := false; eval_flag := true;
     eval_thy := current_theory ();
     mkDir_err hh_eval_dir;
-    log_eval ("Theorem: " ^ tptpname);
     log_eval ("Goal: " ^ string_of_goal goal);
     ignore (main_hh thmdata goal);
-    eval_flag := false; eval_thy := "scratch"
+    eval_flag := false; hide_flag := b;
+    eval_thy := "scratch"
   end
-
-(* -------------------------------------------------------------------------
-   Usage:
-     load "tttUnfold"; open tttUnfold; open tttSetup;
-     ttt_hheval_flag := true;
-     ttt_rewrite_thy "ConseqConv"; ttt_record_thy "ConseqConv";
-     ttt_hheval_flag := false;
-   Results can be found in HOLDIR/src/holyhammer/eval.
-  ------------------------------------------------------------------------- *)
 
 
 end (* struct *)

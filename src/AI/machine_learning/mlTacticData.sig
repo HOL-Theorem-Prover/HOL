@@ -6,6 +6,8 @@ sig
   (* term data (can be useful for other purposes) *)
   val export_terml : string -> term list -> unit
   val import_terml : string -> term list
+  val export_goal : string -> goal -> unit
+  val import_goal : string -> goal
 
   (* tactic data *)
   type lbl = (string * real * goal * goal list)

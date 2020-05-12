@@ -284,9 +284,11 @@ fun status_of_stac parentd goalrec glo = case glo of
     else StacUndecided gl
     )
 
+fun is_metis_stac s = hd (partial_sml_lexer s) = "metisTools.METIS_TAC"
+
 fun apply_stac parentd goalrec stac =
   let
-    val tim = 0.04 (* if is_metis_stac stac then 0.1 else *) 
+    val tim = if is_metis_stac stac then 0.1 else 0.04 
     val glo = app_stac tim stac (#goal goalrec)
   in
     status_of_stac parentd goalrec glo

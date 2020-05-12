@@ -323,7 +323,6 @@ val watch_list_init =
    "define_quotient_types_std_rule","define_equivalence_type",
    "define_subset_types","define_subset_types_rule"]
 
-
 val watch_dict = dnew String.compare (map (fn x => (x,())) watch_list_init)
 
 (* ------------------------------------------------------------------------
@@ -649,9 +648,8 @@ fun modified_program (h,d) p =
         end
     else a :: continue m
     )
-
-
   end
+
 (* ------------------------------------------------------------------------
    Stack continued
    ------------------------------------------------------------------------ *)
@@ -754,9 +752,9 @@ fun replace_fetch l = case l of
     )
   | a :: m => a :: replace_fetch m
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Unfold the program.
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun protect_infix infixity l =
   let val (s1,s2) = infix_pair infixity in
@@ -863,9 +861,9 @@ fun unfold in_flag stack program = case program of
     end
   | x :: m => x :: unfold in_flag stack m
 
-(* ---------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Main call
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun extract_thy file =
   let
@@ -899,10 +897,10 @@ fun write_sl file sl =
 
 fun string_of_bool flag = if flag then "true" else "false"
 
-fun output_flag oc s x =
+fun reflect_flag oc s x =
   osn oc ("val _ = " ^ s ^ " := " ^ string_of_bool (!x));
 
-fun output_time oc s x =
+fun reflect_time oc s x =
   osn oc ("val _ = " ^ s ^ " := " ^ Real.toString (!x));
 
 val metis_theories = 
@@ -919,17 +917,18 @@ fun output_header oc cthy =
   (* infix operators *)
   app (os oc) (bare_readl infix_file);
   (* debugging *)
-  output_flag oc "aiLib.debug_flag" debug_flag;
+  reflect_flag oc "aiLib.debug_flag" debug_flag;
   (* recording *)
-  output_flag oc "tttSetup.ttt_recprove_flag" ttt_recprove_flag;
-  output_flag oc "tttSetup.ttt_reclet_flag" ttt_reclet_flag;
-  output_flag oc "tttSetup.ttt_ex_flag" ttt_ex_flag;
+  reflect_flag oc "tttSetup.ttt_recprove_flag" ttt_recprove_flag;
+  reflect_flag oc "tttSetup.ttt_reclet_flag" ttt_reclet_flag;
+  reflect_flag oc "tttSetup.ttt_ex_flag" ttt_ex_flag;
+  reflect_flag oc "tttSetup.ttt_savestate_flag" ttt_savestate_flag;
   (* evaluation *)
-  output_flag oc "mlThmData.thmlintac_flag" mlThmData.thmlintac_flag;
+  reflect_flag oc "mlThmData.thmlintac_flag" mlThmData.thmlintac_flag;
   osn oc "val _ = smlExecute.exec_sml";
   (* global references *)
-  output_time oc "tttSetup.ttt_search_time" ttt_search_time;
-  output_time oc "tttSetup.ttt_tactic_time" ttt_tactic_time;
+  reflect_time oc "tttSetup.ttt_search_time" ttt_search_time;
+  reflect_time oc "tttSetup.ttt_tactic_time" ttt_tactic_time;
   (* hook *)
   osn oc ("val _ = tttRecord.start_record_thy " ^ mlquote cthy)
   )
@@ -1136,5 +1135,47 @@ fun load_sigobj () =
   in
     app load l1
   end
+
+(* ------------------------------------------------------------------------
+   Evaluation: requires recorded savestates. 
+   The recorded savestates can be produced by setting ttt_savestate_flag
+   before calling ttt_clean_record () and ttt_record ().
+   Warning: requires ~50 GB of hard disk space
+   ------------------------------------------------------------------------ *)
+
+fun write_evalscript file =
+  let 
+    val file1 = mlquote (file ^ "_savestate")
+    val file2 = mlquote (file ^ "_goal")
+    val sl =
+    ["PolyML.SaveState.loadState " ^ file1 ^ ";",
+     "val tactictoe_goal = mlTacticData.import_goal " ^ file2 ^ ";",
+     "load " ^ mlquote "tacticToe" ^ ";",
+     "tacticToe.ttt_eval " ^ 
+     "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^ 
+     "tactictoe_goal;"]
+  in
+    writel (file ^ "_eval.sml") sl
+  end
+
+fun run_evalscript file =
+  (
+  write_evalscript file;
+  run_buildheap_nodep (OS.Path.dir file) (file ^ "_eval.sml")
+  )
+
+fun run_evalscript_thy thy =
+  let
+    val file = tactictoe_dir ^ "/savestate/" ^ thy ^ "_pbl"
+    val filel = readl file 
+  in
+    app run_evalscript filel
+  end      
+
+(*
+load "tttUnfold"; open tttUnfold;
+run_evalscript_thy "arithmetic";
+*)
+
 
 end (* struct *)
