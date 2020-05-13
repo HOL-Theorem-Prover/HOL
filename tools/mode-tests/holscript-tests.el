@@ -1,3 +1,6 @@
+;;; run with something like
+;;;  HOLDIR=<dir> emacs -batch -l ert -l holscript-tests.el -f ert-run-tests-batch-and-exit
+
 (load (concat (file-name-as-directory (getenv "HOLDIR")) "tools/hol-mode"))
 
 (defun holscript-fixture-in (file body)
