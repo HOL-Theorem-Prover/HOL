@@ -30,4 +30,13 @@ Definition bar:
                       a * b ≤ x
 End
 
-val _ = export_theory();
+Theorem baz:
+  x ∧ let
+    a = b;
+    c = d;
+  in
+    x ⇒ a ∧
+        c
+Proof
+  some_tactic
+QED
