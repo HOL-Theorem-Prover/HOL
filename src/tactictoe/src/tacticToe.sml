@@ -64,10 +64,14 @@ fun constant_space s = String.concatWith " " (partial_sml_lexer s)
 fun main_tactictoe (thmdata,tacdata) goal =
   let
     (* preselection *)
-    val _ = debug "preselection"
     val goalf = feahash_of_goal goal
-    val (thmsymweight,thmfeadict) = select_thmfea thmdata goalf
-    val (tacsymweight,tacfea) = select_tacfea tacdata goalf
+    val _ = debug "preselection of theorems"
+    val ((thmsymweight,thmfeadict),t1) = 
+      add_time (select_thmfea thmdata) goalf
+    val _ = debug ("preselection of theorems time: " ^ rts_round 6 t1) 
+    val _ = debug "preselection of tactics"
+    val ((tacsymweight,tacfea),t2) = add_time (select_tacfea tacdata) goalf
+    val _ = debug ("preselection of tactics time: " ^ rts_round 6 t2) 
     (* caches *)
     val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
     val tac_cache = ref (dempty goal_compare)
@@ -157,11 +161,11 @@ fun ttt_eval (thmdata,tacdata) goal =
   let
     val b = !hide_flag
     val _ = hide_flag := false
-    val _ = debug ("Goal: " ^ string_of_goal goal)
+    val _ = debug ("ttt_eval: " ^ string_of_goal goal)
     val (status,t) = add_time (main_tactictoe (thmdata,tacdata)) goal
   in
     log_status status;
-    debug ("ttt_eval time: " ^ Real.toString t ^ "\n");
+    debug ("ttt_eval time: " ^ rts_round 6 t ^ "\n");
     hide_flag := b
   end
 

@@ -180,7 +180,8 @@ fun save_state g =
     val goal_file = prefix ^ "_goal"
     val _ = if !savestate_level = 0 
             then PolyML.SaveState.saveState savestate_file
-            else PolyML.SaveState.saveChild (savestate_file,1)
+            else PolyML.SaveState.saveChild (savestate_file,
+                 (!savestate_level) div 100 + 1)
     val _ = export_goal goal_file g
   in
     incr savestate_level

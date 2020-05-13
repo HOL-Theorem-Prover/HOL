@@ -21,10 +21,16 @@ fun debug s = print_endline s
    Types
    ------------------------------------------------------------------------- *)
 
+(* list reversed compared to natural order internally *)
 type id = (int * int) list
 
 fun string_of_id id = 
-  String.concatWith "_" (map (fn (a,b) => its a ^ "." ^ its b) id)
+  let 
+    fun f (gn,sn) = "g" ^ its gn ^ "t" ^ its sn
+    val sl = map f (rev id)
+  in 
+    String.concatWith " " sl
+  end
 
 val id_compare = list_compare (cpl_compare Int.compare Int.compare)
 
@@ -187,10 +193,10 @@ fun node_create_backup (tree,stacpred) (reward,gl) (pid,(gn,stacn)) =
       }
     val newtree = dadd cid node tree
   in
-    debug ("Node: " ^ string_of_id cid);
-    debug ("Goal: " ^ string_of_goal pgoal);
-    debug ("Tactic: " ^ pstac); 
-    debug ("Goals: " ^ String.concatWith "," (map string_of_goal gl) ^ "\n");
+    debug ("node: " ^ string_of_id cid);
+    debug ("goal: " ^ string_of_goal pgoal);
+    debug ("tactic: " ^ pstac); 
+    debug ("goals: " ^ String.concatWith "," (map string_of_goal gl) ^ "\n");
     node_backup newtree (reward, backstatus_node node) (pid,(gn,stacn))
   end
 
@@ -205,7 +211,7 @@ fun starttree_of stacpred goal =
       parentd = dempty goal_compare
       }
   in
-    debug ("Root: " ^ string_of_goal goal);
+    debug ("root: " ^ string_of_goal goal);
     dadd [] root (dempty id_compare)
   end
 
@@ -302,6 +308,15 @@ fun reward_of stacstatus = case stacstatus of
   | StacUndecided gl => 1.0
   | _ => raise ERR "reward_of" "unexpected"
 
+fun string_of_stacstatus x = case x of
+    StacFail => "StacFail"
+  | StacLoop => "StacLoop"
+  | StacPara => "StacPara"
+  | StacProved => "StacProved"
+  | StacUndecided gl => "StacUndecided"
+  | _ => raise ERR "string_of_stacstatus" "unexpected"
+
+
 fun apply_stac_pid (tree,stacpred) pid = 
   let 
     val node = dfind pid tree
@@ -311,11 +326,14 @@ fun apply_stac_pid (tree,stacpred) pid =
     val stacstatus = 
       apply_stac (#parentd node) goalundec (#stac stacfresh)
     val reward = reward_of stacstatus
+    val msg = "node: " ^ string_of_id ((gn,stacn) :: pid) ^ "\n" ^
+              "tactic: " ^ (#stac stacfresh) ^ "\n" ^
+              "status: " ^ string_of_stacstatus stacstatus ^ "\n"
   in
     case stacstatus of
       StacUndecided gl =>
       node_create_backup (tree,stacpred) (reward,gl) pidx
-    | _ => node_backup tree (reward,stacstatus) pidx
+    | _ => (debug msg; node_backup tree (reward,stacstatus) pidx)
   end
 
 (* -------------------------------------------------------------------------
@@ -370,9 +388,16 @@ fun reconstruct_proofstatus (searchstatus,tree) g =
   | SearchTimeout => ProofTimeout
   | SearchProved => 
     let 
-      val proof1 = singleton_of_list (extract_proofl tree []) 
-      val proof2 = minimize_proof proof1
-      val sproof = reconstruct g proof2
+      val _ = debug "extraction"
+      fun f tree = singleton_of_list (extract_proofl tree [])
+      val (proof1,t1) = add_time f tree 
+      val _ = debug ("extraction time: " ^ rts_round 6 t1)
+      val _ = debug "minimization"
+      val (proof2,t2) = add_time minimize_proof proof1
+      val _ = debug ("minimization time: " ^ rts_round 6 t2)
+      val _ = debug "reconstruction"
+      val (sproof,t3) = add_time (reconstruct g) proof2
+      val _ = debug ("reconstruction time: " ^ rts_round 6 t3)
     in
       Proof sproof
     end 
@@ -380,17 +405,10 @@ fun reconstruct_proofstatus (searchstatus,tree) g =
 fun search stacpred g =
   let
     val starttree = starttree_of stacpred g
-    val (searchstatus,tree) = search_loop (starttree,stacpred)
-    val _ = print_endline "reconstruction"
+    val ((searchstatus,tree),t) = add_time search_loop (starttree,stacpred)
+    val _ = debug ("search time: " ^ rts_round 6 t)
   in
     reconstruct_proofstatus (searchstatus,tree) g
   end
-
-(* 
-load "tttSearch"; open tttSearch;
-fun stacpred _ = []
-val r = time (search stacpred) ([],T);
-*)
-
 
 end (* struct *)

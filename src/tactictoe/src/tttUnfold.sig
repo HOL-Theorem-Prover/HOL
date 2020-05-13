@@ -15,8 +15,8 @@ sig
   val ttt_clean_record : unit -> unit
 
   (* evaluation *)
-  val write_evalscript : string -> unit 
-  val run_evalscript : string -> unit
-  val run_evalscript_thyl : int -> string list -> unit
+  val write_evalscript : string -> string -> unit 
+  val run_evalscript : string -> string -> unit
+  val run_evalscript_thyl : string -> bool -> int -> string list -> unit
 
 end

@@ -14,6 +14,7 @@ val ERR = mk_HOL_ERR "smlExec"
 
 val sml_dir = HOLDIR ^ "/src/AI/sml_inspection"
 val sml_code_dir = sml_dir ^ "/code"
+val execprefix_glob = ref "noprefix"
 
 (* -------------------------------------------------------------------------
    Global references
@@ -36,7 +37,7 @@ val sml_thml_glob = ref []
 fun exec_sml file s =
   let
     val _    = mkDir_err sml_code_dir
-    val path = sml_code_dir ^ "/" ^ current_theory () ^ "_" ^ file
+    val path = sml_code_dir ^ "/" ^ !execprefix_glob ^ "_" ^ file
     val oc   = TextIO.openOut path
     fun os s = TextIO.output (oc,s)
   in
@@ -59,7 +60,7 @@ fun string_of_pretty p =
 fun smltype_of_value l s =
   let
     val v = assoc s l handle HOL_ERR _ => raise ERR "type_of_value" s
-    val t = PolyML.NameSpace.Values.typeof v;
+    val t = PolyML.NameSpace.Values.typeof v
     val p = PolyML.NameSpace.Values.printType (t,0,NONE)
   in
     string_of_pretty p
@@ -67,7 +68,6 @@ fun smltype_of_value l s =
 
 fun is_local_value s =
   mem s (map fst (#allVal (PolyML.globalNameSpace) ()))
-   
 
 fun is_thm_value l s =
   let

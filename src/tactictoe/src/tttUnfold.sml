@@ -10,7 +10,7 @@ structure tttUnfold :> tttUnfold =
 struct
 
 open HolKernel Abbrev boolLib aiLib
-  smlLexer smlInfix smlOpen smlParallel
+  smlLexer smlInfix smlOpen smlExecute smlParallel
   mlTacticData
   tttSetup
 
@@ -1046,8 +1046,7 @@ fun ttt_rewrite_thy thy =
   let
     val scriptorg = find_script thy
     val dirorg = OS.Path.dir scriptorg
-    val _ = print_endline ("TacticToe: ttt_rewrite_thy: " ^ thy ^
-      "\n  " ^ scriptorg)
+    val _ = print_endline ("ttt_rewrite_thy: " ^ thy ^ "\n  " ^ scriptorg)
   in
     rewrite_script thy scriptorg
   end
@@ -1086,8 +1085,7 @@ fun ttt_record_thy thy =
     val _ = ttt_rewrite_thy thy
     val scriptorg = find_script thy 
     val _ = save_scripts scriptorg
-    val _ = print_endline ("TacticToe: ttt_record_thy: " ^ thy ^
-        "\n  " ^ scriptorg)
+    val _ = print_endline ("ttt_record_thy: " ^ thy ^ "\n  " ^ scriptorg)
   in
     run_rm_script (mem thy core_theories) (tttsml_of scriptorg);
     restore_scripts scriptorg
@@ -1140,10 +1138,10 @@ fun load_sigobj () =
    Evaluation: requires recorded savestates. 
    The recorded savestates can be produced by setting ttt_savestate_flag
    before calling ttt_clean_record () and ttt_record ().
-   Warning: requires ~50 GB of hard disk space. Possibly avoid using MLTON?
+   Warning: requires ~100 GB of hard disk space. Possibly avoid using MLTON?
    ------------------------------------------------------------------------ *)
 
-fun write_evalscript file =
+fun write_evalscript prefix file =
   let 
     val file1 = mlquote (file ^ "_savestate")
     val file2 = mlquote (file ^ "_goal")
@@ -1153,6 +1151,7 @@ fun write_evalscript file =
      "load " ^ mlquote "tacticToe" ^ ";",
      "val _ = tttSetup.ttt_search_time := " ^ 
         Real.toString (!ttt_search_time) ^ ";",
+     "val _ = smlExecute.execprefix_glob := " ^ mlquote prefix ^ ";",
      "tacticToe.ttt_eval " ^ 
      "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^ 
      "tactictoe_goal;"]
@@ -1160,29 +1159,45 @@ fun write_evalscript file =
     writel (file ^ "_eval.sml") sl
   end
 
-fun run_evalscript file =
+fun bare file = OS.Path.base (OS.Path.file file)
+
+fun run_evalscript dir file =
   (
-  write_evalscript file;
-  run_buildheap_nodep (OS.Path.dir file) (file ^ "_eval.sml")
+  write_evalscript (bare file) file;
+  run_buildheap_nodep dir (file ^ "_eval.sml")
   )
 
-fun run_evalscript_thyl ncore thyl =
+fun run_evalscript_thyl expname b ncore thyl =
   let
+    val dir = ttt_eval_dir ^ "/" ^ expname ^ "_" ^ 
+      (if b then "full" else "tenth")
+    val _ = (mkDir_err ttt_eval_dir; mkDir_err dir)
     val thyl' = filter (fn x => not (mem x ["min","bool"])) thyl
-    val filel = map (fn x => tactictoe_dir ^ "/savestate/" ^ x ^ "_pbl") thyl'
-    fun f x = (readl x handle HOL_ERR _ => (print_endline x; []))
-    val filell = List.concat (map f filel)
+    val pbl = map (fn x => tactictoe_dir ^ "/savestate/" ^ x ^ "_pbl") thyl'
+    fun f x = (readl x handle SysErr _ => (print_endline x; []))
+    val filel1 = List.concat (map f pbl)
+    val filel2 = if b then filel1 else one_in_n 10 0 filel1
+    val _ = print_endline ("evaluation: " ^ its (length filel2) ^ " problems")
+    val (_,t) = add_time (parapp_queue ncore (run_evalscript dir)) filel2
   in
-    print_endline ("evaluate " ^ its (length filell) ^ " problems");
-    parapp_queue ncore run_evalscript filell
+    print_endline ("evaluation time: " ^ rts_round 6 t)
   end     
+
 
 (*
 load "tttUnfold"; open tttUnfold;
+
 tttSetup.ttt_savestate_flag := true;
 ttt_clean_record (); ttt_record_thy "arithmetic";
+
 tttSetup.ttt_search_time := 5.0;
-run_evalscript_thyl 3 ["ConseqConv"];
+run_evalscript_thyl "test2" false 3 ["arithmetic"];
+*)
+
+(* 
+load "tttUnfold"; open tttUnfold;
+tttSetup.ttt_search_time := 5.0;
+run_evalscript (tttSetup.tactictoe_dir ^ "/savestate/arithmetic170");
 *)
 
 (*
@@ -1190,9 +1205,11 @@ load "tttUnfold"; open tttUnfold;
 tttSetup.ttt_savestate_flag := true;
 ttt_clean_record (); ttt_record ();
 tttSetup.ttt_search_time := 5.0;
-val thyl = ancestry (current_theory ());
+val thyl = sort_thyl (ancestry (current_theory ()));
 val ncore = 30;
 run_evalscript_thyl ncore thyl;
+
+tactic_of_sml; (does not work in parallel)
 *)
 
 

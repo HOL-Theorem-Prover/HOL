@@ -4,6 +4,7 @@ sig
   include Abbrev
 
   (* execution function *)
+  val execprefix_glob  : string ref
   val exec_sml         : string -> string -> bool
 
   (* global references *)

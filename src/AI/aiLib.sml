@@ -743,7 +743,7 @@ fun readl path =
   in
     (TextIO.closeIn file; l3)
   end
-  handle SysErr _ => raise ERR "readl" path
+  
 
 fun readl_empty path =
   let
