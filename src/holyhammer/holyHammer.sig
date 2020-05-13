@@ -5,7 +5,6 @@ sig
   datatype prover = Eprover | Z3 | Vampire
 
   val set_timeout : int -> unit
-  val hide_flag : bool ref
 
   val holyhammer  : term -> thm
   val hh          : tactic

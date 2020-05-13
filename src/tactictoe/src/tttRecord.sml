@@ -14,8 +14,6 @@ open HolKernel boolLib aiLib
   tttSetup tttLearn
 
 val ERR = mk_HOL_ERR "tttRecord"
-val debug = print_endline
-fun debug_err s = (debug s; raise ERR "debug_err" s)
 
 (* -------------------------------------------------------------------------
    Globals
@@ -121,7 +119,7 @@ fun app_wrap_proof name ostac goal =
     in
       if null gl
       then (incr n_proof_replayed; (gl,v))
-      else debug_err "opened goals"
+      else (debug "open goals"; raise ERR "app_wrap_proof" "open goals")
     end
   end
 

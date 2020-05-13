@@ -805,11 +805,8 @@ fun append_file file s =
 fun append_endline file s = append_file file (s ^ "\n")
 
 val debug_flag = ref false
-fun debug_in_dir dir file s =
-  if !debug_flag
-  then (mkDir_err dir;
-        append_endline (dir ^ "/" ^ current_theory () ^ "___" ^ file) s)
-  else ()
+fun debug s = if !debug_flag then print_endline s else ()  
+fun debugf s f x = if !debug_flag then print_endline (s ^ (f x)) else ()
 
 fun write_texgraph file (s1,s2) l =
   writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => its a ^ " " ^ its b) l);

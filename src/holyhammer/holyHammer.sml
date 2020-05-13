@@ -13,8 +13,6 @@ open HolKernel boolLib Thread aiLib smlExecute smlRedirect smlParallel
   hhExportFof hhReconstruct hhTranslate hhTptp
 
 val ERR = mk_HOL_ERR "holyHammer"
-val debugdir = HOLDIR ^ "/src/holyhammer/debug"
-fun debug s = debug_in_dir debugdir "holyHammer" s
 
 (* -------------------------------------------------------------------------
    Settings
@@ -22,8 +20,7 @@ fun debug s = debug_in_dir debugdir "holyHammer" s
 
 val timeout_glob = ref 10
 fun set_timeout n = timeout_glob := n
-val hide_flag = ref true
-fun hide f x = if !hide_flag then hide_out f x else f x
+
 val dep_flag = ref false
 
 (* -------------------------------------------------------------------------
@@ -141,7 +138,7 @@ fun launch_atp dir atp t =
 fun export_to_atp premises cj atp =
   let
     val new_premises = first_n (npremises_of atp) premises
-    val namethml = hide thml_of_namel new_premises
+    val namethml = hidef thml_of_namel new_premises
   in
     fof_export_pb (provdir_of atp) (cj,namethml)
   end
@@ -172,7 +169,7 @@ fun hh_pb wanted_atpl premises goal =
         raise ERR "hh_pb" "ATPs could not find a proof")
     | SOME lemmas =>
       let
-        val (stac,tac) = hide (hh_reconstruct lemmas) goal
+        val (stac,tac) = hidef (hh_reconstruct lemmas) goal
       in
         print_endline ("minimized proof:  \n  " ^ stac);
         log_eval ("  minimized proof:  \n    " ^ stac);
@@ -196,13 +193,13 @@ fun hh_goal goal =
   if not (has_boolty_goal goal)
   then raise ERR "hh_goal" "a term is not of type bool"
   else 
-    let val thmdata = hide create_thmdata () in
+    let val thmdata = hidef create_thmdata () in
       main_hh thmdata goal
     end
 
 fun hh_fork goal = Thread.fork (fn () => ignore (hh_goal goal), attrib)
-fun hh goal = let val tac = hh_goal goal in hide tac goal end
-fun holyhammer tm = hide TAC_PROOF (([],tm), hh_goal ([],tm));
+fun hh goal = let val tac = hh_goal goal in hidef tac goal end
+fun holyhammer tm = hidef TAC_PROOF (([],tm), hh_goal ([],tm));
 
 (* -------------------------------------------------------------------------
    HolyHammer evaluation without premise selection:

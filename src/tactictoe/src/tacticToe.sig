@@ -7,10 +7,7 @@ sig
   val ttt : tactic
   val tactictoe : term -> thm
 
-  (* hide messages from search and reconstruction (on by default) *)
-  val hide_flag : bool ref  
-
-  (* contains recorded data from the ancestries of the current theory *)
+  (* recorded data from ancestries of the current theory *)
   val clean_ttt_tacdata_cache : unit -> unit
 
   (* evaluation *)

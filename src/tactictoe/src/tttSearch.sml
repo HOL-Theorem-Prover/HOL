@@ -15,7 +15,6 @@ open HolKernel Abbrev boolLib aiLib
   tttSetup tttLearn
 
 val ERR = mk_HOL_ERR "tttSearch"
-fun debug s = print_endline s
 
 (* -------------------------------------------------------------------------
    Types
@@ -174,6 +173,8 @@ fun node_backup (tree:tree) (reward,stacstatus) (id,(gn,stacn)) =
       node_backup newtree (reward,newstacstatus) (tl id, hd id)
   end
 
+fun string_of_goall gl = String.concatWith "," (map string_of_goal gl)
+
 fun node_create_backup (tree,stacpred) (reward,gl) (pid,(gn,stacn)) =
   let
     val node = dfind pid tree
@@ -193,10 +194,11 @@ fun node_create_backup (tree,stacpred) (reward,gl) (pid,(gn,stacn)) =
       }
     val newtree = dadd cid node tree
   in
-    debug ("node: " ^ string_of_id cid);
-    debug ("goal: " ^ string_of_goal pgoal);
+    debugf "node: " string_of_id cid;
+    debugf "goal: " string_of_goal pgoal;
     debug ("tactic: " ^ pstac); 
-    debug ("goals: " ^ String.concatWith "," (map string_of_goal gl) ^ "\n");
+    debugf "goals: " string_of_goall gl;
+    debug ("\n");
     node_backup newtree (reward, backstatus_node node) (pid,(gn,stacn))
   end
 
@@ -211,7 +213,7 @@ fun starttree_of stacpred goal =
       parentd = dempty goal_compare
       }
   in
-    debug ("root: " ^ string_of_goal goal);
+    debugf "root: " string_of_goal goal;
     dadd [] root (dempty id_compare)
   end
 
@@ -323,17 +325,20 @@ fun apply_stac_pid (tree,stacpred) pid =
     val (gn,goalundec) = first_goalundec (#goalv node)
     val (stacn,stacfresh) = valOf (first_stacfresh (#stacv goalundec))
     val pidx = (pid,(gn,stacn))
+    val cid = (gn,stacn) :: pid
     val stacstatus = 
       apply_stac (#parentd node) goalundec (#stac stacfresh)
     val reward = reward_of stacstatus
-    val msg = "node: " ^ string_of_id ((gn,stacn) :: pid) ^ "\n" ^
-              "tactic: " ^ (#stac stacfresh) ^ "\n" ^
-              "status: " ^ string_of_stacstatus stacstatus ^ "\n"
+    fun msg (a,b,c) = 
+      "node: " ^ string_of_id a ^ "\n" ^
+      "tactic: " ^ #stac b ^ "\n" ^
+      "status: " ^ string_of_stacstatus c ^ "\n"
   in
     case stacstatus of
       StacUndecided gl =>
       node_create_backup (tree,stacpred) (reward,gl) pidx
-    | _ => (debug msg; node_backup tree (reward,stacstatus) pidx)
+    | _ => (debugf "" msg (cid,stacfresh,stacstatus); 
+      node_backup tree (reward,stacstatus) pidx)
   end
 
 (* -------------------------------------------------------------------------

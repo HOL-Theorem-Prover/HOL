@@ -12,10 +12,9 @@ open HolKernel Abbrev boolLib aiLib
   smlExecute smlLexer smlTimeout smlPrettify
 
 val ERR = mk_HOL_ERR "psMinimize"
-fun debug s = print_endline s
 
 val proof_time = 30.0
-val tactic_time = 0.2
+val tactic_time = 0.12
 
 (* -------------------------------------------------------------------------
    Tests
@@ -226,7 +225,7 @@ fun reconstruct_aux g proof sproof =
       snd (add_time (timeout proof_time Tactical.TAC_PROOF) (g,tac))
       handle Interrupt => raise Interrupt | _ => proof_time
   in
-    debug ("proof length: " ^ int_to_string (proof_length proof));
+    debugf "proof length: " int_to_string (proof_length proof);
     debug ("proof time: " ^ Real.toString new_tim);
     sproof
   end

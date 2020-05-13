@@ -14,7 +14,6 @@ open HolKernel Abbrev boolLib aiLib
   psMinimize tttSetup
 
 val ERR = mk_HOL_ERR "tttLearn"
-fun debug s = print_endline s
 
 (* -------------------------------------------------------------------------
    Abstracting theorem list in tactics

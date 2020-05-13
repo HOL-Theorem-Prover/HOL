@@ -15,7 +15,6 @@ open HolKernel Abbrev boolLib aiLib
   tttSetup
 
 val ERR = mk_HOL_ERR "tttUnfold"
-fun debug s = debug_in_dir ttt_debugdir "tttUnfold" s
 
 (* -----------------------------------------------------------------------
    Program representation and stack
@@ -1158,8 +1157,8 @@ fun write_evalscript prefix file =
     ["PolyML.SaveState.loadState " ^ file1 ^ ";",
      "val tactictoe_goal = mlTacticData.import_goal " ^ file2 ^ ";",
      "load " ^ mlquote "tacticToe" ^ ";",
-     "val _ = tttSetup.ttt_search_time := " ^ 
-        Real.toString (!ttt_search_time) ^ ";",
+     "val _ = tttSetup.ttt_search_time := " ^ rts (!ttt_search_time) ^ ";",
+     "val _ = aiLib.debug_flag := " ^ bts (!debug_flag) ^ ";",
      "val _ = smlExecute.execprefix_glob := " ^ mlquote prefix ^ ";",
      "tacticToe.ttt_eval " ^ 
      "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^ 

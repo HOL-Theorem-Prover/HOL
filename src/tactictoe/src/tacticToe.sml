@@ -15,9 +15,6 @@ open HolKernel Abbrev boolLib aiLib
   tttSetup tttLearn tttSearch
 
 val ERR = mk_HOL_ERR "tacticToe"
-val debug = print_endline
-val hide_flag = ref true
-fun hide f x = if !hide_flag then hide_out f x else f x
 
 (* -------------------------------------------------------------------------
    Time limit
@@ -106,11 +103,11 @@ fun main_tactictoe (thmdata,tacdata) goal =
 
 fun read_status r = case r of
    ProofSaturated =>
-   (debug "Saturated"; (NONE, FAIL_TAC "tactictoe: saturated"))
+   (print_endline "saturated"; (NONE, FAIL_TAC "tactictoe: saturated"))
  | ProofTimeout   =>
-   (debug "Timeout"; (NONE, FAIL_TAC "tactictoe: timeout"))
+   (print_endline "timeout"; (NONE, FAIL_TAC "tactictoe: timeout"))
  | Proof s        =>
-   (debug ("  " ^ s); (SOME s, hide tactic_of_sml s))
+   (print_endline ("  " ^ s); (SOME s, hidef tactic_of_sml s))
 
 (* -------------------------------------------------------------------------
    Interface
@@ -128,16 +125,16 @@ fun tactictoe_aux goal =
   then raise ERR "tactictoe" "type bool expected"
   else
   let
-    val _ = hide QUse.use infix_file
+    val _ = hidef QUse.use infix_file
     val cthyl = current_theory () :: ancestry (current_theory ())
-    val thmdata = hide create_thmdata ()
+    val thmdata = hidef create_thmdata ()
     val tacdata =
       dfind cthyl (!ttt_tacdata_cache) handle NotFound =>
       let val tacdata_aux = ttt_create_tacdata () in
         ttt_tacdata_cache := dadd cthyl tacdata_aux (!ttt_tacdata_cache);
         tacdata_aux
       end
-    val proofstatus = hide (main_tactictoe (thmdata,tacdata)) goal
+    val proofstatus = hidef (main_tactictoe (thmdata,tacdata)) goal
     val (staco,tac) = read_status proofstatus
   in
     tac
@@ -153,19 +150,19 @@ fun tactictoe term =
    ------------------------------------------------------------------------- *)
 
 fun log_status r = case r of
-   ProofSaturated => debug "tactictoe: saturated"
- | ProofTimeout   => debug "tactictoe: timeout"
- | Proof s        => debug ("tactictoe: proven\n  " ^ s)
+   ProofSaturated => print_endline "tactictoe: saturated"
+ | ProofTimeout   => print_endline "tactictoe: timeout"
+ | Proof s        => print_endline ("tactictoe: proven\n  " ^ s)
 
 fun ttt_eval (thmdata,tacdata) goal =
   let
     val b = !hide_flag
     val _ = hide_flag := false
-    val _ = debug ("ttt_eval: " ^ string_of_goal goal)
+    val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val (status,t) = add_time (main_tactictoe (thmdata,tacdata)) goal
   in
     log_status status;
-    debug ("ttt_eval time: " ^ rts_round 6 t ^ "\n");
+    print_endline ("ttt_eval time: " ^ rts_round 6 t ^ "\n");
     hide_flag := b
   end
 

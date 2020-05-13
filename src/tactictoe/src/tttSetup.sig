@@ -6,7 +6,6 @@ sig
   (* directories *)
   val infix_file : string
   val tactictoe_dir : string
-  val ttt_debugdir : string 
   val ttt_eval_dir : string
 
   (* nearest neighbor *)
