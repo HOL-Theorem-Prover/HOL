@@ -1169,8 +1169,7 @@ fun run_evalscript dir file =
 
 fun run_evalscript_thyl expname b ncore thyl =
   let
-    val dir = ttt_eval_dir ^ "/" ^ expname ^ "_" ^ 
-      (if b then "full" else "tenth")
+    val dir = ttt_eval_dir ^ "/" ^ expname ^ (if b then "" else "_tenth")
     val _ = (mkDir_err ttt_eval_dir; mkDir_err dir)
     val thyl' = filter (fn x => not (mem x ["min","bool"])) thyl
     val pbl = map (fn x => tactictoe_dir ^ "/savestate/" ^ x ^ "_pbl") thyl'
@@ -1205,11 +1204,8 @@ load "tttUnfold"; open tttUnfold;
 tttSetup.ttt_savestate_flag := true;
 ttt_clean_record (); ttt_record ();
 tttSetup.ttt_search_time := 5.0;
-val thyl = sort_thyl (ancestry (current_theory ()));
-val ncore = 30;
-run_evalscript_thyl ncore thyl;
-
-tactic_of_sml; (does not work in parallel)
+val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
+val _ = run_evalscript_thyl "core_theories" true 30 thyl;
 *)
 
 

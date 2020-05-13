@@ -169,6 +169,10 @@ fun end_record_proof name g =
 
 val savestate_level = ref 0
 
+(* The value of 50 is a compromise between fast saveState/saveChild 
+   and fast loadState. Probably loading 
+   becomes too slow above 50 * 50 = 2500 savestates
+   per theory. *)
 fun save_state g = 
   let
     val savestate_dir = tactictoe_dir ^ "/savestate"
@@ -181,7 +185,7 @@ fun save_state g =
     val _ = if !savestate_level = 0 
             then PolyML.SaveState.saveState savestate_file
             else PolyML.SaveState.saveChild (savestate_file,
-                 (!savestate_level) div 100 + 1)
+                 (!savestate_level) div 50 + 1)
     val _ = export_goal goal_file g
   in
     incr savestate_level
