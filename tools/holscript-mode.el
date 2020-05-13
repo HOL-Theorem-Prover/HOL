@@ -745,7 +745,7 @@ a store_thm equivalent."))
 (defvar holscript-boolean-quantifiers '("?" "!" "?!" "∀" "∃" "∃!"))
 
 (defvar holscript-quantifier-regexp
-  (regexp-opt (append holscript-boolean-quantifiers '("λ" "some" "LEAST" "@")))
+  (regexp-opt (append holscript-boolean-quantifiers '("λ" "\\<some\\>" "\\<LEAST\\>" "\\_<@\\_>")))
   "List of strings that can begin \"quantifier blocks\".")
 
 

@@ -40,3 +40,5 @@ Theorem baz:
 Proof
   some_tactic
 QED
+
+val _ = export_theory()

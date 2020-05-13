@@ -6,6 +6,7 @@
 (defun holscript-fixture-in (file body)
   (with-temp-buffer
     (insert-file-contents-literally (concat holdir "tools/mode-tests/" file))
+    (decode-coding-region (point-min) (point-max) 'utf-8-unix)
     (holscript-mode)
     (set-buffer-modified-p nil)
     (funcall body)))
@@ -69,3 +70,27 @@
      (beginning-of-line)
      (should (= (point) 215))
      (should (looking-at "  >-")))))
+
+(defun move-check (posns mover)
+  (goto-char (car posns))
+  (let ((ps (cdr posns)))
+    (catch 'exit
+      (while (not (null ps))
+        (funcall mover)
+        (if (not (= (point) (car ps)))
+            (progn
+              (message "At %d, wanted to be at %d" (point) (car ps))
+              (throw 'exit nil)))
+        (setq ps (cdr ps)))
+      t)))
+
+
+(ert-deftest holscript-sexp-forward1 ()
+  "sexp-forward moves correctly"
+  (holscript-fixture-in
+   "sampleScript.sml"
+   (lambda()
+     (should (save-excursion
+               (move-check '(1 12 41 42 64 84 121 139
+                               176 218 382 479)
+                           'forward-sexp))))))
