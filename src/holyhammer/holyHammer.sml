@@ -141,7 +141,7 @@ fun launch_atp dir atp t =
 fun export_to_atp premises cj atp =
   let
     val new_premises = first_n (npremises_of atp) premises
-    val namethml = thml_of_namel new_premises
+    val namethml = hide thml_of_namel new_premises
   in
     fof_export_pb (provdir_of atp) (cj,namethml)
   end
@@ -195,7 +195,10 @@ fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
 fun hh_goal goal =
   if not (has_boolty_goal goal)
   then raise ERR "hh_goal" "a term is not of type bool"
-  else main_hh (hide create_thmdata ()) goal
+  else 
+    let val thmdata = hide create_thmdata () in
+      main_hh thmdata goal
+    end
 
 fun hh_fork goal = Thread.fork (fn () => ignore (hh_goal goal), attrib)
 fun hh goal = let val tac = hh_goal goal in hide tac goal end

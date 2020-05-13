@@ -1047,8 +1047,9 @@ fun ttt_rewrite_thy thy =
     val scriptorg = find_script thy
     val dirorg = OS.Path.dir scriptorg
     val _ = print_endline ("ttt_rewrite_thy: " ^ thy ^ "\n  " ^ scriptorg)
+    val (_,t) = add_time (rewrite_script thy) scriptorg
   in
-    rewrite_script thy scriptorg
+    print_endline ("ttt_rewrite_thy time: " ^ rts_round 4 t)
   end
 
 (* ------------------------------------------------------------------------
@@ -1079,26 +1080,34 @@ fun restore_scripts script = app restore_file (script :: theory_files script)
    Recording (includes rewriting)
    ------------------------------------------------------------------------ *)
 
+fun ttt_ancestry thy =
+  filter (fn x => not (mem x ["min","bool"])) (sort_thyl (ancestry thy))
+
 fun ttt_record_thy thy =
-  if mem thy ["bool","min"] then () else
+  if mem thy ["min","bool"] then () else
   let 
     val _ = ttt_rewrite_thy thy
     val scriptorg = find_script thy 
     val _ = save_scripts scriptorg
     val _ = print_endline ("ttt_record_thy: " ^ thy ^ "\n  " ^ scriptorg)
+    val (_,t) = add_time
+      (run_rm_script (mem thy core_theories)) (tttsml_of scriptorg)
   in
-    run_rm_script (mem thy core_theories) (tttsml_of scriptorg);
+    print_endline ("ttt_record_thy time: " ^ rts_round 4 t);
     restore_scripts scriptorg
   end
 
+fun exists_tacdata_ancestry thy =
+  exists_tacdata_thy thy andalso 
+  all exists_tacdata_thy (ttt_ancestry thy)
+
 fun ttt_record () =
   let
-    val thyl0 = ancestry (current_theory ())
-    val thyl1 = sort_thyl thyl0
-    val thyl2 = filter (fn x => not (mem x ["min","bool"])) thyl1
-    val thyl3 = filter (not o exists_tacdata_thy) thyl2
+    val thyl1 = ttt_ancestry (current_theory ())
+    val thyl2 = filter (not o exists_tacdata_ancestry) thyl1
+    val ((),t) = add_time (app ttt_record_thy) thyl2
   in
-    app ttt_record_thy thyl3
+    print_endline ("ttt_record time: " ^ rts_round 4 t)
   end
 
 fun ttt_clean_record () =
