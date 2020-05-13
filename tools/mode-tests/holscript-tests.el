@@ -13,9 +13,9 @@
 
 
 (defun holscript-unchanged-at1 ()
-  (let ((p (point)))
-    (indent-for-tab-command)
-    (not (buffer-modified-p))))
+  (message "Testing indent on line %d" (line-number-at-pos))
+  (indent-for-tab-command)
+  (not (buffer-modified-p)))
 
 (defun holscript-unchanged-at (posns)
   (save-excursion
@@ -30,7 +30,7 @@
   (save-excursion
     (goto-char (point-min))
     (while (and (holscript-unchanged-at1) (= 0 (forward-line))))
-    (not (= (forward-line) 0))))
+    (should (= (point) (point-max)))))
 
 (ert-deftest holscript-indent1 ()
   "Tests Theorem: syntax after Theorem=; no need for change"
