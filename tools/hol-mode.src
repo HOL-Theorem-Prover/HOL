@@ -505,7 +505,7 @@ starts >%s%s<"
                           (error "Unbalanced “ in region")))
                      ((and (or (string-prefix-p "Theorem" ms)
                                (string-prefix-p "Triviality" ms))
-                           (char= (char-before) ?:))
+                           (char-equal (char-before) ?:))
                       (if (not (re-search-forward "^Proof" nil t))
                           (error "Unbalanced `Theorem/Triviality' in region")))
                      ((and (string-prefix-p "Definition" ms)
