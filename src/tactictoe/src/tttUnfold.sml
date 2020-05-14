@@ -1190,28 +1190,27 @@ fun run_evalscript_thyl expname b ncore thyl =
     print_endline ("evaluation time: " ^ rts_round 6 t)
   end     
 
-
-(*
-load "tttUnfold"; open tttUnfold;
-
-tttSetup.ttt_savestate_flag := true;
-ttt_clean_record (); ttt_record_thy "arithmetic";
-
-tttSetup.ttt_search_time := 5.0;
-run_evalscript_thyl "test2" false 3 ["arithmetic"];
-*)
-
-(* 
+(* One example
 load "tttUnfold"; open tttUnfold;
 tttSetup.ttt_search_time := 5.0;
 run_evalscript (tttSetup.tactictoe_dir ^ "/savestate/arithmetic170");
 *)
 
-(*
+(* One theory
 load "tttUnfold"; open tttUnfold;
 tttSetup.ttt_savestate_flag := true;
-ttt_clean_record (); ttt_record ();
+ttt_clean_record (); ttt_record_thy "arithmetic";
 tttSetup.ttt_search_time := 5.0;
+run_evalscript_thyl "test2" false 3 ["arithmetic"];
+*)
+
+(* Core theories
+load "tttUnfold"; open tttUnfold;
+tttSetup.ttt_savestate_flag := true;
+aiLib.debug_flag := true;
+ttt_clean_record (); ttt_record ();
+tttSetup.ttt_search_time := 60.0;
+aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val _ = run_evalscript_thyl "core_theories" true 30 thyl;
 *)

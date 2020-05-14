@@ -101,7 +101,6 @@ fun inst_stacl thmidl stacl = map_assoc (inst_stac thmidl) stacl
    Orthogonalization
    ------------------------------------------------------------------------- *)
 
-(* 
 fun pred_stac tacdata ostac gfea =
   let
     val tacfea = dlist (#tacfea tacdata)
@@ -122,7 +121,6 @@ fun order_stac tacdata ostac stacl =
    in
      dict_sort covcmp stacl'
    end
-*)
 
 fun op_subset eqf l1 l2 = null (op_set_diff eqf l1 l2)
 fun test_stac g gl (stac, istac) =
@@ -161,16 +159,14 @@ fun save_thmlintac (lbl as (ostac,t,g,gl)) =
 
 fun orthogonalize (thmdata,tacdata) (lbl as (ostac,t,g,gl)) =
   let
-    val gfea = feahash_of_goal g
-    (* 
+    val gfea = feahash_of_goal g 
     val _ = debug "predict tactics"
     val stacl1 = total_time ortho_predstac_time
       (pred_stac tacdata ostac) gfea
     val _ = debug "order tactics"
     val stacl2 = order_stac tacdata ostac stacl1
     val _ = debug "concat abstract tactics"
-    *)
-    val stacl3 = concat_absstacl gfea ostac [] (* stacl2 *)
+    val stacl3 = concat_absstacl gfea ostac stacl2
     val _ = debug "predict theorems"
     val thml = total_time ortho_predthm_time
       (thmknn thmdata (!ttt_thmlarg_radius)) gfea
