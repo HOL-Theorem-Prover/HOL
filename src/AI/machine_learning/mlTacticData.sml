@@ -230,11 +230,16 @@ fun ttt_create_tacdata () =
     val thyl1 = map OS.Path.file filel
     val thyl2 = list_diff thyl thyl1
     val thyl3 = filter (fn x => not (mem x ["bool","min"])) thyl2
-    val _ = if null thyl3 then () else print_endline
-      ("Missing tactic data for theories: " ^  String.concatWith " " thyl3)
+    val _ = if null thyl3 then () else 
+      (
+      print_endline ("Missing tactic data: " ^  String.concatWith " " thyl3);
+      print_endline "Run tttUnfold.ttt_record ()"
+      )
+    val _ = print_endline 
     val tacdata = import_tacdata filel
   in
-    print_endline ("Loading " ^ its (dlength (#tacfea tacdata)) ^ " tactics");
+    print_endline ("Loading " ^ its (dlength (#tacfea tacdata)) ^ 
+      " tactic calls");
     tacdata
   end
 

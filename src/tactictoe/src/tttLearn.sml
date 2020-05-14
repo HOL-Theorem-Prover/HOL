@@ -124,16 +124,9 @@ fun order_stac tacdata ostac stacl =
 
 fun op_subset eqf l1 l2 = null (op_set_diff eqf l1 l2)
 fun test_stac g gl (stac, istac) =
-  let val glo =
-    (
-    debug ("test_stac " ^ stac ^ "\n" ^ istac);
-    let val tac = tactic_of_sml istac
-      handle Interrupt => raise Interrupt
-      | _ => (debug ("Warning: tactic_of_sml: " ^ istac); NO_TAC)
-    in
-      timeout_tactic (!ttt_tactic_time) tac g
-    end
-    )
+  let 
+    val _ = debug ("test_stac " ^ stac ^ "\n" ^ istac)
+    val glo = app_stac 0.02 istac g
   in
     case glo of NONE => NONE | SOME newgl =>
       (if op_subset goal_eq newgl gl then

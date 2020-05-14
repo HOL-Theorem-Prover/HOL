@@ -97,14 +97,14 @@ fun wrap_tacexp e = case e of
 
 fun wrap_proof ostac = 
   let
-    val _ = print_endline ("original proof: " ^ ostac)
+    (* val _ =  debug ("original proof: " ^ ostac) *)
     val tacexp = extract_tacexp ostac
     val ntac = size_of_tacexp tacexp
     val _  = debug ("#tactics (proof): " ^ its ntac)
     val _  = n_tactic_parsed := (!n_tactic_parsed) + ntac
     val _  = debug ("#tactics (total): " ^ its (!n_tactic_parsed))
     val wstac = string_of_tacexp (wrap_tacexp tacexp)
-    val _ = print_endline ("wrapped proof: " ^ wstac)
+    (* val _ = debug ("wrapped proof: " ^ wstac) *)
   in
     (wstac, tactic_of_sml wstac)
   end
@@ -161,7 +161,7 @@ fun end_record_proof name g =
       else l1
     val newtacdata = foldl ttt_update_tacdata tacdata l2
   in
-    debug ("Saving " ^ int_to_string (length l2) ^ " labels");
+    debug ("saving " ^ int_to_string (length l2) ^ " labels");
     tacdata_glob := newtacdata
   end
 
@@ -223,29 +223,29 @@ fun record_proof name lflag tac1 tac2 (g:goal) =
 
 fun start_record_thy thy = 
   (
-  debug "Importing tactic data";
+  print_endline "importing tactic data";
   tacdata_glob := ttt_create_tacdata ()
   )
 
 fun end_record_thy thy =
   (
-  debug "Recording successful"; 
+  print_endline "recording successful"; 
   write_info thy;
-  debug "Exporting tactic data"; 
+  print_endline "exporting tactic data"; 
   ttt_export_tacdata thy (!tacdata_glob);
   if !ttt_savestate_flag 
   then 
     (mkDir_err (tactictoe_dir ^ "/savestate");
      writel (tactictoe_dir ^ "/savestate/" ^ thy ^ "_pbl") (rev (!pbl_glob)))
   else ();
-  debug "Export successful";
+  print_endline "export successful";
   if !ttt_ex_flag then
   (
-  debug "Exporting positive and negative examples";
+  debug "exporting positive and negative examples";
   ttt_export_exl_human thy (!exl_glob);
   ttt_export_exl thy (!exl_glob);
   ttt_export_tptpexl thy (!exl_glob);
-  debug "Export successful"
+  debug "export successful"
   )
   else ()
   )

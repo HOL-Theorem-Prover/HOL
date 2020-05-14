@@ -1181,7 +1181,7 @@ fun run_evalscript_thyl expname b ncore thyl =
     val _ = (mkDir_err ttt_eval_dir; mkDir_err dir)
     val thyl' = filter (fn x => not (mem x ["min","bool"])) thyl
     val pbl = map (fn x => tactictoe_dir ^ "/savestate/" ^ x ^ "_pbl") thyl'
-    fun f x = (readl x handle SysErr _ => (print_endline x; []))
+    fun f x = (readl x handle _ => (print_endline x; []))
     val filel1 = List.concat (map f pbl)
     val filel2 = if b then filel1 else one_in_n 10 0 filel1
     val _ = print_endline ("evaluation: " ^ its (length filel2) ^ " problems")
@@ -1209,7 +1209,7 @@ load "tttUnfold"; open tttUnfold;
 tttSetup.ttt_savestate_flag := true;
 aiLib.debug_flag := true;
 ttt_clean_record (); ttt_record ();
-tttSetup.ttt_search_time := 60.0;
+tttSetup.ttt_search_time := 5.0;
 aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val _ = run_evalscript_thyl "core_theories" true 30 thyl;
