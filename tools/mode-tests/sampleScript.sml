@@ -41,4 +41,23 @@ Proof
   some_tactic
 QED
 
+Theorem ifindent1:
+  p = if x = 3 then
+        10
+      else
+        14
+Proof
+  another_tactic ‘quotation arg’
+QED
+
+Theorem ifindent2:
+  p = if x = 3 then
+        10
+      else if x = 10 then
+        14
+      else 16
+Proof
+  another_tactic ‘quotation arg’
+QED
+
 val _ = export_theory()
