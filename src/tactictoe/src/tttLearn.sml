@@ -125,12 +125,12 @@ fun order_stac tacdata ostac stacl =
 fun op_subset eqf l1 l2 = null (op_set_diff eqf l1 l2)
 fun test_stac g gl (stac, istac) =
   let 
-    val _ = debug ("test_stac " ^ stac ^ "\n" ^ istac)
-    val glo = app_stac 0.02 istac g
+    val _ = debug ("test_stac " ^ istac)
+    val (glo,t) = add_time (app_stac 0.02 istac) g
   in
     case glo of NONE => NONE | SOME newgl =>
-      (if op_subset goal_eq newgl gl then
-         SOME (stac,0.0,g,newgl)
+      (if op_subset goal_eq newgl gl 
+       then SOME (stac,t,g,newgl)
        else NONE)
   end
 
