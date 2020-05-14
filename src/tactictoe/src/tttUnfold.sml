@@ -447,7 +447,7 @@ fun sketch sl = case sl of
   | "fun" :: m    => (bval := false; bfun := true; sketch_pattern "fun" "=" m)
   | "and" :: m    => if !bval
                      then sketch_pattern "val" "=" m
-                     else sketch_pattern "fun" "=" m 
+                     else sketch_pattern "fun" "=" m
     (* todo: support for mutually recursive functions *)
   | "fn"  :: m    => (bfun := false; sketch_pattern "fn" "=>" m)
   | "|"   :: m    => sketch_pattern "|" (if !bfun then "=" else "=>") m
@@ -587,10 +587,10 @@ fun modified_program (h,d) p =
       val _ = if d = 0 then is_thm_flag := false else ()
       val head' = modified_program (true, d+1) head
       val body' = modified_program ((s <> "val") orelse h, d+1) body
-      val semicolon = 
-        if d = 0 andalso !is_thm_flag then 
+      val semicolon =
+        if d = 0 andalso !is_thm_flag then
        ["; val _ = tttRecord.thmdata_glob := mlThmData.create_thmdata () ;",
-        " val _ = tttRecord.ttt_save_state () ;"] 
+        " val _ = tttRecord.ttt_save_state () ;"]
         else []
     in
       semicolon @ [s] @ head' @ [sep] @ body' @ continue m
@@ -903,7 +903,7 @@ fun reflect_flag oc s x =
 fun reflect_time oc s x =
   osn oc ("val _ = " ^ s ^ " := " ^ Real.toString (!x));
 
-val metis_theories = 
+val metis_theories =
   ["sat", "marker", "combin", "min", "bool", "normalForms"]
 
 fun output_header oc cthy =
@@ -1084,26 +1084,26 @@ fun ttt_ancestry thy =
   filter (fn x => not (mem x ["min","bool"])) (sort_thyl (ancestry thy))
 
 fun exists_tacdata_ancestry thy =
-  exists_tacdata_thy thy andalso 
+  exists_tacdata_thy thy andalso
   all exists_tacdata_thy (ttt_ancestry thy)
 
 fun ttt_record_thy thy =
   if mem thy ["min","bool"] then () else
-  let 
+  let
     val _ = ttt_rewrite_thy thy
-    val scriptorg = find_script thy 
+    val scriptorg = find_script thy
     val _ = save_scripts scriptorg
     val _ = print_endline ("ttt_record_thy: " ^ thy ^ "\n  " ^ scriptorg)
     val (_,t) = add_time
       (run_rm_script (mem thy core_theories)) (tttsml_of scriptorg)
   in
     print_endline ("ttt_record_thy time: " ^ rts_round 4 t);
-    if not (exists_tacdata_thy thy) 
+    if not (exists_tacdata_thy thy)
     then (
-         print_endline "ttt_record_thy: failed"; 
+         print_endline "ttt_record_thy: failed";
          raise ERR "ttt_record_thy" thy
          )
-    else () 
+    else ()
     ;
     restore_scripts scriptorg
   end
@@ -1124,7 +1124,8 @@ fun ttt_clean_record () =
   clean_rec_dir (HOLDIR ^ "/src/AI/sml_inspection/open");
   clean_dir (HOLDIR ^ "/src/AI/sml_inspection/buildheap");
   clean_dir (tactictoe_dir ^ "/ttt_tacdata");
-  clean_dir (tactictoe_dir ^ "/savestate")
+  clean_dir (tactictoe_dir ^ "/savestate");
+  clean_dir (tactictoe_dir ^ "/info")
   )
 
 (* ------------------------------------------------------------------------
@@ -1154,14 +1155,14 @@ fun load_sigobj () =
   end
 
 (* ------------------------------------------------------------------------
-   Evaluation: requires recorded savestates. 
+   Evaluation: requires recorded savestates.
    The recorded savestates can be produced by setting ttt_savestate_flag
    before calling ttt_clean_record () and ttt_record ().
    Warning: requires ~100 GB of hard disk space. Possibly avoid using MLTON?
    ------------------------------------------------------------------------ *)
 
 fun write_evalscript prefix file =
-  let 
+  let
     val file1 = mlquote (file ^ "_savestate")
     val file2 = mlquote (file ^ "_goal")
     val sl =
@@ -1171,8 +1172,8 @@ fun write_evalscript prefix file =
      "val _ = tttSetup.ttt_search_time := " ^ rts (!ttt_search_time) ^ ";",
      "val _ = aiLib.debug_flag := " ^ bts (!debug_flag) ^ ";",
      "val _ = smlExecute.execprefix_glob := " ^ mlquote prefix ^ ";",
-     "tacticToe.ttt_eval " ^ 
-     "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^ 
+     "tacticToe.ttt_eval " ^
+     "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^
      "tactictoe_goal;"]
   in
     writel (file ^ "_eval.sml") sl
@@ -1199,7 +1200,7 @@ fun run_evalscript_thyl expname b ncore thyl =
     val (_,t) = add_time (parapp_queue ncore (run_evalscript dir)) filel2
   in
     print_endline ("evaluation time: " ^ rts_round 6 t)
-  end     
+  end
 
 (* One example
 load "tttUnfold"; open tttUnfold;

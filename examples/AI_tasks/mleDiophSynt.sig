@@ -22,7 +22,7 @@ sig
   val solve_target : (bool * real * tnn) -> board -> (board,move) psMCTS.tree
   val solve_diophset : (bool * real * tnn) -> int list -> unit
 
-  (* final testing 
+  (* final testing
   val ft_extsearch_uniform : board mlReinforce.ftes
   val ft_extsearch_distance : board mlReinforce.ftes
   val fttnn_extsearch : board mlReinforce.fttnnes

@@ -85,17 +85,17 @@ fun record_tactic (tac,stac) g =
    Replaying a proof
    ------------------------------------------------------------------------- *)
 
-fun wrap_stac stac = String.concatWith " " 
+fun wrap_stac stac = String.concatWith " "
   ["( tttRecord.record_tactic","(",stac,",",mlquote stac,")",")"]
 
 fun wrap_tacexp e = case e of
-    SmlTactic stac => if is_tactic stac 
+    SmlTactic stac => if is_tactic stac
                       then SmlTactic (wrap_stac stac)
                       else SmlTactic stac
   | SmlTactical _ => e
   | SmlInfix (s,(e1,e2)) => SmlInfix (s,(wrap_tacexp e1, wrap_tacexp e2))
 
-fun wrap_proof ostac = 
+fun wrap_proof ostac =
   let
     (* val _ =  debug ("original proof: " ^ ostac) *)
     val tacexp = extract_tacexp ostac
@@ -114,7 +114,7 @@ fun app_wrap_proof name ostac goal =
     val (wstac,wtac) = total_time parse_time wrap_proof ostac
     val _  = incr n_proof_parsed
   in
-    let val (gl,v) = total_time replay_time 
+    let val (gl,v) = total_time replay_time
       (timeout (!ttt_recproof_time) wtac) goal
     in
       if null gl
@@ -149,7 +149,7 @@ fun fetch s reps =
 val savestate_level = ref 0
 
 fun start_record_proof name =
-  let val outname = "Name: " ^ int_to_string (!savestate_level) ^ " " ^ name in
+  let val outname = "Name: " ^ its ((!savestate_level) - 1) ^ " " ^ name in
     debug outname; incr n_proof; goalstep_glob := []
   end
 
@@ -158,7 +158,7 @@ fun end_record_proof name g =
     val l1 = map fst (rev (!goalstep_glob))
     val _ = if !thmlintac_flag then app save_thmlintac l1 else ()
     val (thmdata,tacdata) = (!thmdata_glob, !tacdata_glob)
-    val l2 = if !ttt_ortho_flag 
+    val l2 = if !ttt_ortho_flag
       then map (orthogonalize (thmdata,tacdata)) l1
       else l1
     val newtacdata = foldl ttt_update_tacdata tacdata l2
@@ -167,22 +167,22 @@ fun end_record_proof name g =
     tacdata_glob := newtacdata
   end
 
-(* The value of 50 is a compromise between fast saveState/saveChild 
-   and fast loadState. Probably loading 
+(* The value of 50 is a compromise between fast saveState/saveChild
+   and fast loadState. Probably loading
    becomes too slow above 50 * 50 = 2500 savestates
    per theory. *)
-fun ttt_save_state () = 
+fun ttt_save_state () =
   (
   if !ttt_savestate_flag then
   let
     val savestate_dir = tactictoe_dir ^ "/savestate"
     val _ = mkDir_err savestate_dir
-    val prefix = savestate_dir ^ "/" ^ current_theory () ^ 
+    val prefix = savestate_dir ^ "/" ^ current_theory () ^
       its (!savestate_level)
     val savestate_file = prefix ^ "_savestate"
     val _ = debug ("saving state to " ^ savestate_file)
   in
-    if !savestate_level = 0 
+    if !savestate_level = 0
     then PolyML.SaveState.saveState savestate_file
     else PolyML.SaveState.saveChild (savestate_file,
                  ((!savestate_level) div 50) + 1)
@@ -195,7 +195,7 @@ fun save_goal g =
   let
     val savestate_dir = tactictoe_dir ^ "/savestate"
     val _ = mkDir_err savestate_dir
-    val prefix = savestate_dir ^ "/" ^ current_theory () ^ 
+    val prefix = savestate_dir ^ "/" ^ current_theory () ^
       its ((!savestate_level) - 1)
     val _ = pbl_glob := prefix :: (!pbl_glob)
     val goal_file = prefix ^ "_goal"
@@ -215,7 +215,7 @@ fun record_proof name lflag tac1 tac2 (g:goal) =
     val b3 = (not (!ttt_reclet_flag) andalso lflag)
     val result =
       if b2 orelse b3 then
-        (debug "record proof: ignored"; incr n_proof_ignored; tac2 g) 
+        (debug "record proof: ignored"; incr n_proof_ignored; tac2 g)
       else
         let
           val (r,t) = add_time tac1 g
@@ -236,7 +236,7 @@ fun record_proof name lflag tac1 tac2 (g:goal) =
    Theory hooks
    ---------------------------------------------------------------------- *)
 
-fun start_record_thy thy = 
+fun start_record_thy thy =
   (
   print_endline "importing tactic data";
   tacdata_glob := ttt_create_tacdata ()
@@ -244,12 +244,12 @@ fun start_record_thy thy =
 
 fun end_record_thy thy =
   (
-  print_endline "recording successful"; 
+  print_endline "recording successful";
   write_info thy;
-  print_endline "exporting tactic data"; 
+  print_endline "exporting tactic data";
   ttt_export_tacdata thy (!tacdata_glob);
-  if !ttt_savestate_flag 
-  then 
+  if !ttt_savestate_flag
+  then
     (mkDir_err (tactictoe_dir ^ "/savestate");
      writel (tactictoe_dir ^ "/savestate/" ^ thy ^ "_pbl") (rev (!pbl_glob)))
   else ();

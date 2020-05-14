@@ -22,12 +22,12 @@ fun elim_par sl = case sl of
     [] => []
   | ["(",a,")"] => if is_par a then sl else [a]
   | ["(","(",a,")",")"] => if is_par a then sl else [a]
-  | "(" :: a :: ")" :: m => 
-    if is_par a 
+  | "(" :: a :: ")" :: m =>
+    if is_par a
     then "(" :: a :: ")" :: elim_par m
     else a :: elim_par m
-  | "(" :: "(" :: a :: ")" :: ")" :: m => 
-    if is_par a 
+  | "(" :: "(" :: a :: ")" :: ")" :: m =>
+    if is_par a
     then "(" :: "(" :: a :: ")" :: ")" :: elim_par m
     else a :: elim_par m
   | a :: m => a :: elim_par m
@@ -61,10 +61,10 @@ fun drop_struct long =
     val l = String.tokens (fn x => x = #".") long
     val short = last l
   in
-    if length l = 1 orelse 
+    if length l = 1 orelse
        not (is_local_value short) orelse
-       not (is_pointer_eq long short) 
-    then long 
+       not (is_pointer_eq long short)
+    then long
     else short
   end
 

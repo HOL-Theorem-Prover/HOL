@@ -98,7 +98,7 @@ fun run_buildheap_nodep dir file =
     val fileout = dir ^ "/buildheap_" ^ bare file
     val state = HOLDIR ^ "/bin/hol.state0"
     val cmd = String.concatWith " "
-      ([buildheap_bin,"--holstate=" ^ state,"--gcthreads=1"] 
+      ([buildheap_bin,"--holstate=" ^ state,"--gcthreads=1"]
       @ [OS.Path.file file]
       @ [">",fileout])
   in

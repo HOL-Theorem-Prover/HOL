@@ -11,7 +11,7 @@ sig
   (* additional set of dependencies retrieved from tactic calls *)
   val thmlintac_tag : string
   val thmlintac_cthy : (string * int list) list ref
-  val thmlintac_flag : bool ref  
+  val thmlintac_flag : bool ref
 
   (* theorems from the global namespace *)
   val namespace_tag : string

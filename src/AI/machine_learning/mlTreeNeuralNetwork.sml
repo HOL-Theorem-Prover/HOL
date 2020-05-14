@@ -19,9 +19,9 @@ fun msg_err fs es = (print_endline (fs ^ ": " ^ es); raise ERR fs es)
    TNN operators (variable/constant + arity)
    ------------------------------------------------------------------------- *)
 
-fun operl_of_term tm = 
-  let 
-    val (oper,argl) = strip_comb tm 
+fun operl_of_term tm =
+  let
+    val (oper,argl) = strip_comb tm
     val arity = length argl
   in
     (oper,arity) :: List.concat (map operl_of_term argl)

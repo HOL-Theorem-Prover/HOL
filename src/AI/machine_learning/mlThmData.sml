@@ -102,7 +102,7 @@ fun intactdep_of_thm thm =
 
 fun validdep_of_thmid thmid =
   let val (a,b) = split_string "Theory." thmid in
-    if mem a [namespace_tag, thmlintac_tag] 
+    if mem a [namespace_tag, thmlintac_tag]
     then []
     else List.mapPartial thmid_of_depid (depidl_of_thm (DB.fetch a b))
   end
@@ -122,8 +122,8 @@ fun fea_of_goal_cached g =
   end
 
 fun add_thmfea thy ((name,thm),(thmfeadict,nodupl)) =
-  let 
-    val g = dest_thm thm 
+  let
+    val g = dest_thm thm
     val thmid = thy ^ "Theory." ^ name
     val newnodupl = dappend (g,thmid) nodupl
   in
@@ -148,8 +148,8 @@ fun create_thmdata () =
     val thyl = current_theory () :: ancestry (current_theory ())
     val (d,nodupl) = thmfea_from_thyl thyl
     val (thmfeadict,newnodupl) = add_namespacethm (d,nodupl)
-    val thmfeadict' = 
-      if !thmlintac_flag 
+    val thmfeadict' =
+      if !thmlintac_flag
       then daddl (!thmlintac_cthy) thmfeadict
       else thmfeadict
     val n = int_to_string (dlength thmfeadict')

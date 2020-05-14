@@ -156,7 +156,7 @@ fun rm_biais v = Vector.fromList (tl (vector_to_list v))
   Forward propagation (fp) with memory of the steps
   -------------------------------------------------------------------------- *)
 
-fun mat_dims m = 
+fun mat_dims m =
   let val (a,b) = mat_dim m in "(" ^ its a ^ "," ^ its b ^ ")" end
 fun vect_dims v = its (Vector.length v + 1)
 
@@ -168,9 +168,9 @@ fun fp_layer (layer : layer) inv =
   in
     {layer = layer, inv = new_inv, outv = outv, outnv = outnv}
   end
-  handle Subscript => 
-    raise ERR "fp_layer" ("dimension: mat-" ^ 
-                          mat_dims (#w layer) ^ " vect-" ^ vect_dims inv) 
+  handle Subscript =>
+    raise ERR "fp_layer" ("dimension: mat-" ^
+                          mat_dims (#w layer) ^ " vect-" ^ vect_dims inv)
 
 fun fp_nn nn v = case nn of
     [] => []

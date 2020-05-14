@@ -68,7 +68,7 @@ fun export_terml file tml =
      TextIO.closeOut ostrm)
   end
 
-fun export_goal file (goal as (asl,w)) = export_terml file (w :: asl)  
+fun export_goal file (goal as (asl,w)) = export_terml file (w :: asl)
 
 (* -------------------------------------------------------------------------
    Exporting tactic data
@@ -202,7 +202,7 @@ fun init_tacdata tacfea =
   }
 
 fun import_tacdata filel =
-  let 
+  let
     val (l,t1) = add_time (map import_tacfea) filel
     val (tacfea,t2) = add_time (union_dict lbl_compare) l
     val (tacdata,t3) = add_time init_tacdata tacfea
@@ -230,15 +230,15 @@ fun ttt_create_tacdata () =
     val thyl1 = map OS.Path.file filel
     val thyl2 = list_diff thyl thyl1
     val thyl3 = filter (fn x => not (mem x ["bool","min"])) thyl2
-    val _ = if null thyl3 then () else 
+    val _ = if null thyl3 then () else
       (
       print_endline ("Missing tactic data: " ^  String.concatWith " " thyl3);
       print_endline "Run tttUnfold.ttt_record ()"
       )
-    val _ = print_endline 
+    val _ = print_endline
     val tacdata = import_tacdata filel
   in
-    print_endline ("Loading " ^ its (dlength (#tacfea tacdata)) ^ 
+    print_endline ("Loading " ^ its (dlength (#tacfea tacdata)) ^
       " tactic calls");
     tacdata
   end
@@ -274,26 +274,26 @@ type ex = (goal * string * (goal * goal list) * goal list) * bool
 val exl_glob = ref []
 
 (* human readable *)
-fun string_of_ex ((ginit, stac, (gcur, ogl), pgl), b) = 
+fun string_of_ex ((ginit, stac, (gcur, ogl), pgl), b) =
   String.concatWith "\n" [
-    "####", 
+    "####",
     "inital goal: " ^ string_of_goal ginit,
     "tactic: " ^ stac,
     "input goal: " ^ string_of_goal gcur,
-    "output goals: " ^  
+    "output goals: " ^
     String.concatWith " **** " (map string_of_goal ogl),
-    "pending goals: " ^ 
+    "pending goals: " ^
     String.concatWith " **** " (map string_of_goal pgl),
     "positive: " ^ bts b
     ]
 
-fun ttt_export_exl_human thy exl = 
-  let 
+fun ttt_export_exl_human thy exl =
+  let
     val dir = HOLDIR ^ "/src/tactictoe/exhuman"
-    val _ = mkDir_err dir 
+    val _ = mkDir_err dir
     val file = dir ^ "/" ^ thy
   in
-    writel file (map string_of_ex exl)   
+    writel file (map string_of_ex exl)
   end
 
 (* S-expression *)
@@ -332,7 +332,7 @@ fun enc_exl exl =
     fun goal_terms ((asl,w),A) = HOLset.addList(A, w::asl)
     fun ex_terms (((ginit, stac, (gcur, ogl), pgl), b), A) =
         List.foldl goal_terms A (ginit :: gcur :: (ogl @ pgl))
-    val all_terms = List.foldl ex_terms empty_exact exl |> 
+    val all_terms = List.foldl ex_terms empty_exact exl |>
       HOLset.listItems
     val ed = {named_terms = [], unnamed_terms = [], named_types = [],
               unnamed_types = [], theorems = []}
@@ -355,13 +355,13 @@ fun dec_exl t =
       list_decode (dec_ex dec_tm) ex_data
     end
 
-fun uptodate_ex ((ginit, _, (gcur, ogl), pgl), _) = 
+fun uptodate_ex ((ginit, _, (gcur, ogl), pgl), _) =
   all uptodate_goal (ginit :: gcur :: (ogl @ pgl))
 
 fun ttt_export_exl thy exl1 =
   let
     val dir = HOLDIR ^ "/src/tactictoe/exhol"
-    val _ = mkDir_err dir 
+    val _ = mkDir_err dir
     val file = dir ^ "/" ^ thy
     val ostrm = Portable.open_out file
     val exl2 = filter uptodate_ex exl1
@@ -371,8 +371,8 @@ fun ttt_export_exl thy exl1 =
     TextIO.closeOut ostrm
   end
 
-fun ttt_import_exl thy = 
-  let     
+fun ttt_import_exl thy =
+  let
     val dir = HOLDIR ^ "/src/tactictoe/exhol"
     val file = dir ^ "/" ^ thy
   in
@@ -383,22 +383,22 @@ fun ttt_import_exl thy =
    Preparing search examples for learning with TNN
    ------------------------------------------------------------------------ *)
 
-fun mk_cat2 x = 
+fun mk_cat2 x =
   list_mk_comb (mk_var ("cat2",``:bool -> bool -> bool``), x)
-fun mk_cat3 x = 
+fun mk_cat3 x =
   list_mk_comb (mk_var ("cat3",``:bool -> bool -> bool -> bool``),x)
 
-fun simplify_ex (ginit,_:string,(gcur,ogl),pgl) = 
+fun simplify_ex (ginit,_:string,(gcur,ogl),pgl) =
   mk_cat2 [list_mk_imp ginit,
-    if null ogl 
-    then (list_mk_imp (hd pgl)) 
+    if null ogl
+    then (list_mk_imp (hd pgl))
     else (list_mk_imp (hd ogl))]
   (*
-  mk_cat3 [list_mk_imp ginit, list_mk_imp gcur, 
+  mk_cat3 [list_mk_imp ginit, list_mk_imp gcur,
     if null ogl then T else list_mk_conj (map list_mk_imp ogl)] *)
 
-fun lambda_term fullty (v,bod) = 
-  let 
+fun lambda_term fullty (v,bod) =
+  let
     val ty1 = type_of v
     val ty2 = type_of bod
     val ty3 = mk_type ("fun",[ty1, mk_type ("fun", [ty2,fullty])])
@@ -411,17 +411,17 @@ fun add_lambda tm = case dest_term tm of
   | LAMB(Var,Bod) => lambda_term (type_of tm) (Var, add_lambda Bod)
   | _ => tm
 
-fun add_arity tm = 
-  let 
-    val (oper,argl) = strip_comb tm 
+fun add_arity tm =
+  let
+    val (oper,argl) = strip_comb tm
     val a = length argl
-    val newname = 
-      if is_var oper 
-      then 
-        let val prefix = if null argl then "V" else "v" in 
+    val newname =
+      if is_var oper
+      then
+        let val prefix = if null argl then "V" else "v" in
           escape (prefix ^ fst (dest_var oper) ^ "." ^ its a)
         end
-      else 
+      else
         let val {Thy,Name,Ty} = dest_thy_const oper in
           escape ("c" ^ Thy ^ "." ^ Name ^ "." ^ its a)
         end
@@ -430,11 +430,11 @@ fun add_arity tm =
     list_mk_comb (newoper, map add_arity argl)
   end
 
-fun not_null ((ginit,_:string,(gcur,ogl),pgl), _) = 
+fun not_null ((ginit,_:string,(gcur,ogl),pgl), _) =
   not (null ogl) orelse not (null pgl)
 
-fun prepare_exl exl1 = 
-  let 
+fun prepare_exl exl1 =
+  let
     val exl1' = filter not_null exl1
     val exl2 = map (fn (a,b) => (simplify_ex a, b)) exl1'
     val exl3 = map_fst (add_arity o add_lambda) exl2
@@ -451,17 +451,17 @@ fun prepare_exl exl1 =
 
 fun is_singleton x = case x of [a] => true | _ => false
 
-fun simp_tptp ((ginit,_:string,(gcur,ogl),pgl),b) = 
-  let 
-    val f = (add_arity o add_lambda) 
-    val tm = if null ogl then (list_mk_imp (hd pgl)) 
+fun simp_tptp ((ginit,_:string,(gcur,ogl),pgl),b) =
+  let
+    val f = (add_arity o add_lambda)
+    val tm = if null ogl then (list_mk_imp (hd pgl))
                          else (list_mk_imp (hd ogl))
   in
     (f (list_mk_imp ginit),(f tm,b))
   end
 
 fun tptp_of_term tm =
-  let 
+  let
     val (oper,argl) = strip_comb tm
     val name = fst (dest_var oper)
   in
@@ -469,20 +469,20 @@ fun tptp_of_term tm =
     name ^ "(" ^ String.concatWith ", " (map tptp_of_term argl) ^ ")"
   end
 
-fun export_tptpex termndict thy (cj,axl) = 
-  let 
+fun export_tptpex termndict thy (cj,axl) =
+  let
     val dir = HOLDIR ^ "/src/tactictoe/extptp"
     val _ = mkDir_err dir
     val cjname = thy ^ its (dfind cj termndict)
     val file = dir ^ "/" ^ cjname
-    fun f (ax,b) = 
-      let 
+    fun f (ax,b) =
+      let
         val axname = thy ^ its (dfind ax termndict)
         val role = if b then "axiom_useful" else "axiom_redundant"
       in
         "fof(" ^ axname ^ "," ^ role ^ "," ^ tptp_of_term ax ^ ")."
       end
-    fun g cj = "fof(" ^ cjname ^ ",conjecture," ^ tptp_of_term cj ^ ")." 
+    fun g cj = "fof(" ^ cjname ^ ",conjecture," ^ tptp_of_term cj ^ ")."
   in
     writel file (g cj :: map f axl)
   end
@@ -500,14 +500,14 @@ fun ttt_export_tptpexl thy exl =
     app (export_tptpex termndict thy) tptpl3
   end
 
-(* 
+(*
 load "aiLib"; open aiLib;
 load "mlTacticData"; open mlTacticData;
 val thyl = ancestry (current_theory ());
-(* 
+(*
 fun g thy = ttt_export_tptpexl thy (ttt_import_exl thy)
    handle _ => print_endline thy;
-app g thyl; 
+app g thyl;
 *)
 
 fun f thy = ttt_import_exl thy handle _ => (print_endline thy; []);
@@ -516,7 +516,7 @@ val exl2 = prepare_exl exl;
 val (train,test) = swap (part_n 1000 (shuffle exl2));
 
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-val operl = mk_fast_set oper_compare 
+val operl = mk_fast_set oper_compare
   (List.concat (map operl_of_term (map fst (List.concat exl2))));
 val operdiml = map (fn x => (fst x, dim_std_arity (1,12) x)) operl;
 val randtnn = random_tnn operdiml;

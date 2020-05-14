@@ -74,8 +74,8 @@ fun run_cmd cmd = ignore (OS.Process.system cmd)
 
 (* TODO: Use OS to change dir? *)
 fun cmd_in_dir dir cmd = run_cmd ("cd " ^ dir ^ "; " ^ cmd)
-fun clean_dir dir = run_cmd ("rm " ^ dir ^ "/*") 
-fun clean_rec_dir dir = run_cmd ("rm -r " ^ dir ^ "/*") 
+fun clean_dir dir = run_cmd ("rm " ^ dir ^ "/*")
+fun clean_rec_dir dir = run_cmd ("rm -r " ^ dir ^ "/*")
 
 (* ------------------------------------------------------------------------
    Comparisons
@@ -93,11 +93,11 @@ fun term_compare_exact (t1,t2) = case (dest_term t1, dest_term t2) of
    | (CONST _, CONST _) => Term.compare (t1,t2)
    | (CONST _, _) => LESS
    | (_, CONST _) => GREATER
-   | (COMB p1, COMB p2) => 
+   | (COMB p1, COMB p2) =>
      cpl_compare term_compare_exact term_compare_exact (p1,p2)
    | (COMB _, _) => LESS
    | (_, COMB _) => GREATER
-   | (LAMB p1, LAMB p2) => 
+   | (LAMB p1, LAMB p2) =>
      cpl_compare term_compare_exact term_compare_exact (p1,p2)
 
 fun goal_compare ((asm1,w1), (asm2,w2)) =
@@ -743,7 +743,7 @@ fun readl path =
   in
     (TextIO.closeIn file; l3)
   end
-  
+
 
 fun readl_empty path =
   let
@@ -805,7 +805,7 @@ fun append_file file s =
 fun append_endline file s = append_file file (s ^ "\n")
 
 val debug_flag = ref false
-fun debug s = if !debug_flag then print_endline s else ()  
+fun debug s = if !debug_flag then print_endline s else ()
 fun debugf s f x = if !debug_flag then print_endline (s ^ (f x)) else ()
 
 fun write_texgraph file (s1,s2) l =

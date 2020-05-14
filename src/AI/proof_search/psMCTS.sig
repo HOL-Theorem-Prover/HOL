@@ -10,7 +10,7 @@ sig
   val is_lose : status -> bool
   val string_of_status : status -> string
   datatype search_status = Success | Saturated | Timeout
-  
+
   (* search tree: 'a is a board position, 'b is a move *)
   type id = int list
   val id_compare : id * id -> order

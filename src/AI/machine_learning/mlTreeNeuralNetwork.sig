@@ -10,7 +10,7 @@ include Abbrev
   type tnnbatch = (term list * (term * mlMatrix.vect) list) list
 
   val operl_of_term : term -> (term * int) list
-  val oper_compare : (term * int) * (term * int) -> order 
+  val oper_compare : (term * int) * (term * int) -> order
   val random_tnn : (term * int list) list -> tnn
   val dim_std : int * int -> term -> int list
   val dim_std_arity : int * int -> (term * int) -> int list

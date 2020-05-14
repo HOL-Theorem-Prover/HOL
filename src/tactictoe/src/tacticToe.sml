@@ -63,12 +63,12 @@ fun main_tactictoe (thmdata,tacdata) goal =
     (* preselection *)
     val goalf = feahash_of_goal goal
     val _ = debug "preselection of theorems"
-    val ((thmsymweight,thmfeadict),t1) = 
+    val ((thmsymweight,thmfeadict),t1) =
       add_time (select_thmfea thmdata) goalf
-    val _ = debug ("preselection of theorems time: " ^ rts_round 6 t1) 
+    val _ = debug ("preselection of theorems time: " ^ rts_round 6 t1)
     val _ = debug "preselection of tactics"
     val ((tacsymweight,tacfea),t2) = add_time (select_tacfea tacdata) goalf
-    val _ = debug ("preselection of tactics time: " ^ rts_round 6 t2) 
+    val _ = debug ("preselection of tactics time: " ^ rts_round 6 t2)
     (* caches *)
     val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
     val tac_cache = ref (dempty goal_compare)
@@ -83,12 +83,12 @@ fun main_tactictoe (thmdata,tacdata) goal =
       let
         val thmidl = sthmpred 16 g
         val l = feahash_of_goal g
-        val metis_stac = constant_space  
+        val metis_stac = constant_space
           ("metisTools.METIS_TAC [ " ^ thmlarg_placeholder ^ "]")
-        val stacl = 
-          mk_sameorder_set String.compare (metis_stac ::  
+        val stacl =
+          mk_sameorder_set String.compare (metis_stac ::
             stacknn_uniq (tacsymweight,tacfea) (!ttt_presel_radius) l)
-        val istacl = map (inst_stac thmidl) stacl 
+        val istacl = map (inst_stac thmidl) stacl
       in
         tac_cache := dadd g istacl (!tac_cache); istacl
       end

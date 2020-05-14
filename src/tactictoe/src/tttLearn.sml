@@ -53,8 +53,8 @@ fun abstract_thmlarg stac =
     val thmllref = ref []
     val sl2 = abstract_thmlarg_loop thmllref sl1
   in
-    if null (!thmllref) 
-    then NONE 
+    if null (!thmllref)
+    then NONE
     else SOME (String.concatWith " " sl2, !thmllref)
   end
 
@@ -106,7 +106,7 @@ fun pred_stac tacdata ostac gfea =
     val tacfea = dlist (#tacfea tacdata)
     val symweight = learn_tfidf tacfea
     val stacl = stacknn_uniq (symweight,tacfea) (!ttt_ortho_radius) gfea
-    val no = List.find (fn x => fst x = ostac) (number_snd 0 stacl) 
+    val no = List.find (fn x => fst x = ostac) (number_snd 0 stacl)
     val ns = case no of NONE => "none" | SOME (_,i) => its i
   in
     filter (fn x => not (x = ostac)) stacl
@@ -124,12 +124,12 @@ fun order_stac tacdata ostac stacl =
 
 fun op_subset eqf l1 l2 = null (op_set_diff eqf l1 l2)
 fun test_stac g gl (stac, istac) =
-  let 
+  let
     val _ = debug ("test_stac " ^ istac)
     val (glo,t) = add_time (app_stac 0.02 istac) g
   in
     case glo of NONE => NONE | SOME newgl =>
-      (if op_subset goal_eq newgl gl 
+      (if op_subset goal_eq newgl gl
        then SOME (stac,t,g,newgl)
        else NONE)
   end
@@ -142,17 +142,17 @@ fun save_thmlintac (lbl as (ostac,t,g,gl)) =
   let val gfea = feahash_of_goal g in
     case abstract_thmlarg ostac of NONE => ()
     | SOME (_, thmsll) =>
-      let 
-        val thmsl = List.concat thmsll 
+      let
+        val thmsl = List.concat thmsll
         val l = map (fn x => (thmlintac_tag ^ "Theory." ^ x, gfea)) thmsl
-      in  
+      in
         thmlintac_cthy := l @ !thmlintac_cthy
       end
   end
 
 fun orthogonalize (thmdata,tacdata) (lbl as (ostac,t,g,gl)) =
   let
-    val gfea = feahash_of_goal g 
+    val gfea = feahash_of_goal g
     val _ = debug "predict tactics"
     val stacl1 = total_time ortho_predstac_time
       (pred_stac tacdata ostac) gfea
@@ -172,6 +172,6 @@ fun orthogonalize (thmdata,tacdata) (lbl as (ostac,t,g,gl)) =
   in
     case testo of NONE => lbl | SOME newlbl => newlbl
   end
- 
+
 
 end (* struct *)

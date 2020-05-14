@@ -219,7 +219,7 @@ fun proof_length proof = case proof of
 
 fun reconstruct_aux g proof sproof =
   let
-    val tac = tactic_of_sml sproof 
+    val tac = tactic_of_sml sproof
       handle Interrupt => raise Interrupt | _ => NO_TAC
     val new_tim =
       snd (add_time (timeout proof_time Tactical.TAC_PROOF) (g,tac))

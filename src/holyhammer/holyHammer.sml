@@ -33,7 +33,7 @@ fun name_of atp = case atp of
   | Z3 => "z3"
   | Vampire => "vampire"
 
-fun npremises_of atp = 
+fun npremises_of atp =
   if !dep_flag then 100000 else
   case atp of
     Eprover => 128
@@ -192,7 +192,7 @@ fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
 fun hh_goal goal =
   if not (has_boolty_goal goal)
   then raise ERR "hh_goal" "a term is not of type bool"
-  else 
+  else
     let val thmdata = hidef create_thmdata () in
       main_hh thmdata goal
     end

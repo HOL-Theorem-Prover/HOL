@@ -185,29 +185,29 @@ datatype tacexp =
   | SmlTactical of string
   | SmlTactic of string
 
-fun size_of_tacexp tacexp = case tacexp of 
+fun size_of_tacexp tacexp = case tacexp of
     SmlInfix (_,(e1,e2)) => size_of_tacexp e1 + size_of_tacexp e2
   | SmlTactical _ => 0
   | SmlTactic _ => 1
-  
-fun is_infixr s = 
+
+fun is_infixr s =
   let val sl = partial_sml_lexer s in
     String.isPrefix "sml_infixr" (singleton_of_list sl)
   end
 
-fun is_infixl s = 
+fun is_infixl s =
   let val sl = partial_sml_lexer s in
     String.isPrefix "sml_infixl" (singleton_of_list sl)
   end
 
-fun is_infix s = 
+fun is_infix s =
   let val sl = partial_sml_lexer s in
     String.isPrefix "sml_infix" (singleton_of_list sl)
   end
 
 fun dest_infix e = case e of
     SmlExp (_, el) =>
-    if not (length el = 3 andalso is_infix 
+    if not (length el = 3 andalso is_infix
       (string_of_smlexp (List.nth (el,1))))
     then raise ERR "dest_infix" "unexpected"
     else triple_of_list el
@@ -216,33 +216,33 @@ fun dest_infix e = case e of
 fun extract_tacexp_aux smlexp = case smlexp of
     SmlExp (SOME s, el) =>
     (
-    if length el = 3 andalso is_infixl (string_of_smlexp (List.nth (el,1))) 
-    then 
-    let 
+    if length el = 3 andalso is_infixl (string_of_smlexp (List.nth (el,1)))
+    then
+    let
       val (a,inf,b) = triple_of_list el
       val (a0,ainf,a1) = dest_infix (List.nth (el,0))
       val infs = string_of_smlexp inf
       val ainfs = string_of_smlexp ainf
       val a1s = string_of_smlexp a1
     in
-      SmlInfix (infs,  
+      SmlInfix (infs,
         (
         SmlInfix (ainfs, (extract_tacexp_aux a0, SmlTactical a1s)),
         extract_tacexp_aux b
         )
       )
     end
-    else if length el = 3 andalso 
-      is_infixr (string_of_smlexp (List.nth (el,1))) 
-    then 
-       let 
+    else if length el = 3 andalso
+      is_infixr (string_of_smlexp (List.nth (el,1)))
+    then
+       let
          val (a,inf,b) = triple_of_list el
          val (b0,binf,b1) = dest_infix (List.nth (el,2))
          val infs = string_of_smlexp inf
          val binfs = string_of_smlexp binf
          val b0s = string_of_smlexp b0
        in
-         SmlInfix (infs,  
+         SmlInfix (infs,
            (
            extract_tacexp_aux a,
            SmlInfix (binfs, (SmlTactical b0s, extract_tacexp_aux b1))
@@ -256,7 +256,7 @@ fun extract_tacexp_aux smlexp = case smlexp of
 
 fun extract_tacexp s =
   if not (is_tactic s) then raise ERR "extract_tacexp" "not a tactic" else
-  let 
+  let
     val e1 = (singleton_of_list o extract_smlexp) s
     val e2 = (singleton_of_list o snd o dest_smlexp) e1
   in
@@ -264,9 +264,9 @@ fun extract_tacexp s =
   end
 
 fun string_of_tacexp e = case e of
-    SmlInfix (s,(e1,e2)) => 
+    SmlInfix (s,(e1,e2)) =>
     "( " ^ string_of_tacexp e1 ^ " " ^ s ^ " " ^ string_of_tacexp e2 ^ " )"
   | SmlTactic s => s
-  | SmlTactical s => s 
+  | SmlTactical s => s
 
 end (* struct *)
