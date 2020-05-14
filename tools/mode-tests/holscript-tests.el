@@ -33,7 +33,7 @@
     (should (= (point) (point-max)))))
 
 (ert-deftest holscript-indent1 ()
-  "Tests Theorem: syntax after Theorem=; no need for change"
+  "Tests every line in sampleScript is already indented correctly"
   (holscript-fixture-in "sampleScript.sml" 'holscript-eachline-unchanged))
 
 (ert-deftest holscript-indent2 ()
