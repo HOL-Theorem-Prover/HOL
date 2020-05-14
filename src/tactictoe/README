@@ -7,10 +7,6 @@ RECORDING (all ancestry theories not recorded yet):
   load "fooTheory";
   ttt_record ();
 
-RECORDING (only one theory):
-  load "tttUnfold"; open tttUnfold;
-  ttt_record_thy "foo";
-
 USAGE: (after RECORDING) 
   load "tacticToe"; open tacticToe;
   ttt ([],``1+1=2``);
@@ -18,7 +14,7 @@ USAGE: (after RECORDING)
 CLEANING:
   TacticToe depends on data stored in src/tactictoe/ttt_tacdata and 
   src/AI/sml_inspection/open. 
-  It is usually necessary to remove these directories before recording.
+  It is usually necessary to remove these directories before re-recording.
   This can be done by calling tttUnfold.ttt_clean_record ().
 
 EXAMPLE: see examples in src/tactictoe/examples.
@@ -30,11 +26,10 @@ NOTES FOR DEVELOPERS:
   3) polyml values in src/tactictoe/src/tttUnfold.sml.
   Debugging directories:
   1) Output of the modified theory foo is can be found in 
-     src/AI/sml_inspection/buildheap/build_fooScript_ttt
+     src/AI/sml_inspection/buildheap/buildheap_fooScript_ttt.
+     Set aiLib.debug_flag to true for more output.
   2) A copy of the modified theory is saved under src/tactictoe/scripts
      for further inspection.
-  3) The src/tactictoe/debug directory will contain debug information if
-     the flag aiLib.debug_flag is set to true before recording.
 
-WARNING: Recording has been tested on core theories. 
-  Recording of latter theories might fail.
+WARNING: Recording has been tested only on core theories. 
+
