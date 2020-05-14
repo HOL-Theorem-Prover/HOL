@@ -71,6 +71,9 @@ end
 
 val label_ty = fst(dom_rng(type_of label_tm))
 
+fun mk_label_var s = mk_var(s, label_ty);
+fun L s = REFL (mk_label_var s)
+
 fun mk_label (s, t) =
     if type_of t <> bool then
       raise ERR "mk_label" "First argument not boolean"

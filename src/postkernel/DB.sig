@@ -5,6 +5,7 @@ sig
  type thm = Thm.thm
  datatype theory = datatype DB_dtype.theory
  datatype class = datatype DB_dtype.class
+ datatype selector = datatype DB_dtype.selector
  type data = DB_dtype.data
 
 
@@ -27,6 +28,7 @@ sig
   val matches     : term -> thm -> bool
   val apropos     : term -> data list
   val apropos_in  : term -> data list -> data list
+  val selectDB    : selector list -> data list
   val listDB      : unit -> data list
 
 

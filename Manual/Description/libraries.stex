@@ -2236,6 +2236,7 @@ fragment that just includes a list of rewrites:
 \end{hol}
 
 \subsubsection{Removing rewrites and conversions from \simpset{}s}
+\label{sec:removing-rewrites-from-simpsets}
 \index{simplification!removing rewrites|(}
 The \ml{-*} (infix) function can be used to remove elements from \simpset{}s.
 This can be done to temporarily affect the simplifier when it is applied to a particular goal.
@@ -2247,9 +2248,9 @@ For example:
 >>+ SIMP_CONV (srw_ss() -* ["APPEND_ASSOC"]) [] “x ++ (y ++ z)”;
 \end{alltt}
 \end{session}
-The second argument to \ml{-*} is a list of strings, naming rewrite theorems or conversions.
+The second argument to \ml{-*} is a list of strings, naming rewrite theorems, conversions or decision procedures.
 The names to use are visible if \simpset{} values are printed out in the interactive session.
-The example below demonstrates removing the beta-conversion:
+The example below demonstrates removing beta-conversion:
 \begin{session}
 \begin{alltt}
 ##assert Exn.capture (SIMP_CONV (bool_ss -* ["BETA_CONV"]) []) “(\x. x + 3) 10” |> Exn.get_exn |> isSome
@@ -2274,12 +2275,12 @@ Specific sub-rewrites can be removed from a \simpset{} without affecting  others
 \end{session}
 
 If using a ``power tactic'' such as \ml{simp}, there is no \simpset{} value visible to modify with \ml{-*}.
+\index{Excl (simplification theorem modifier)@\ml{Excl} (simplification theorem modifier)}
 Instead, one must use a special theorem form (see Section~\ref{sec:simp-special-rewrite-forms} below), \ml{Excl} to exclude a rewrite.
 For example, sometimes the associativity of list-append can be annoying (here it masks the rewrite defining list-append):
 \begin{session}
 \begin{alltt}
->>__ proofManagerLib.dropn (case proofManagerLib.status() of
-           Manager.PRFS l => List.length l)
+>>__ proofManagerLib.drop_all();
 >>_ g `f (x ++ (h::t ++ y)) = f (x ++ h::(t ++ y))`;
 >> e (simp[]);
 \end{alltt}
@@ -2805,15 +2806,17 @@ The \ml{dprocs} field requires lists of values of the type
 \ml{Traverse.reducer}.  These values are constructed with the
 constructor \ml{REDUCER}:
 \begin{hol}
-\begin{verbatim}
-   REDUCER : {initial : context,
-              addcontext : context * thm list -> context,
-              apply : {solver : term list -> term -> thm,
-                       conv : term list -> term -> thm,
-                       context : context,
-                       stack : term list} -> term -> thm}
-          -> reducer
-\end{verbatim}
+\begin{alltt}
+>>__ val SOME trav_str = #lookupStruct PolyML.globalNameSpace "Traverse";
+>>__ val travns = PolyML.NameSpace.Structures.contents trav_str
+>>__ val SOME redval = #lookupVal travns "REDUCER"
+>>__ val pp = PolyML.NameSpace.Values.printWithType (redval,300,NONE)
+>>__ val safeprint =
+        TextIO.print o
+        String.translate
+          (fn #"{" => "\\{" | #"}" => "\\}" | c => str c)
+>>__ val _ = PP.prettyPrint(safeprint, 70) pp
+\end{alltt}
 \end{hol}
 The \ml{context} type is an alias for the built-in \ML{} type
 \ml{exn}, that of exceptions.  The exceptions here are used as a
@@ -2941,6 +2944,29 @@ The \ml{ReqD} modifier requires that the redex count should have decreased.
 This is implicitly a check on the original goal as well: it must have a non-zero count of redexes itself.
 
 Both \ml{Req0} and \ml{ReqD} can be combined with \ml{Once} and \ml{Ntimes}.
+
+\paragraph{Excluding rewrites}
+\index{Excl (simplification theorem modifier)@\ml{Excl} (simplification theorem modifier)}
+\index{simplification!removing rewrites}
+As also described above in Section~\ref{sec:removing-rewrites-from-simpsets}, various built-in (named) components can be removed from invocations of the simplifier through the use of the \ml{Excl} form.
+This function is of type \ml{string~->~thm}, so takes a string naming the rewrite or other component that is to be removed.
+For example, the standard stateful simpset includes the theorem stating that $x < x + y \Leftrightarrow 0 < y$, with name \ml{X\_LT\_X\_PLUS}:
+\begin{session}
+\begin{alltt}
+>> simp[] ([], “x < x + 2 * y”);
+
+>> simp[Excl "X_LT_X_PLUS"] ([], “x < x + 2 * y”);
+\end{alltt}
+\end{session}
+In addition to rewrites, conversions and decision procedures can also be temporarily excluded in this way:
+\begin{session}
+\begin{alltt}
+>> simp[Excl "BETA_CONV"] ([], “(λx. x + 10) (6 * z)”);
+
+>> simp[] ([], “1 < x ==> 1 < 2 * x”);
+>> simp[Excl "ARITH_REDUCER"] ([], “1 < x ==> 1 < 2 * x”);
+\end{alltt}
+\end{session}
 
 \paragraph{Simplifying at particular sub-terms}
 \index{simplification!at particular sub-terms}

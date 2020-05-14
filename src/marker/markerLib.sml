@@ -328,10 +328,8 @@ val DEST_LABELS = CONV_RULE DEST_LABELS_CONV
 
 val DEST_LABELS_TAC = CONV_TAC DEST_LABELS_CONV THEN RULE_ASSUM_TAC DEST_LABELS
 
-fun lb s = mk_var(s, label_ty);
-fun LB s = REFL (lb s)
 
-fun MK_LABEL(s, th) = EQ_MP (SYM (SPECL [lb s, concl th] label_def)) th
+fun MK_LABEL(s, th) = EQ_MP (SYM (SPECL [mk_label_var s, concl th] label_def)) th
 
 fun ASSUME_NAMED_TAC s bth : tactic = ASSUME_TAC (MK_LABEL(s, bth))
 
@@ -352,7 +350,7 @@ in
 end;
 
 fun LABEL_ASSUM s ttac (asl, w) =
-   ttac (find_labelled_assumption (LB s) asl) (asl, w)
+   ttac (find_labelled_assumption (L s) asl) (asl, w)
 
 (*---------------------------------------------------------------------------*)
 (* LABEL_X_ASSUM is almost identical to LABEL_ASSUM. But it is not applied   *)

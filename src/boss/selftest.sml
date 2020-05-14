@@ -208,6 +208,12 @@ val _ = tprint "Simp Excl list.APPEND_ASSOC leaves list unchanged"
 val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
                     (QCONV (SIMP_CONV (srw_ss()) [Excl "list.APPEND_ASSOC"]))
                     appr_t
+val _ = shouldfail {
+      checkexn = (fn UNCHANGED => true | _ => false),
+      printarg = fn _ => "simp Excl on arith d.p. leaves input unchanged",
+      printresult = thm_to_string,
+      testfn = SIMP_CONV (srw_ss() ++ ARITH_ss) [Excl "ARITH_REDUCER"]
+    } “0 < x ==> 0 < 2 * x”
 end
 
 val _ = tprint "find num->num includes SUC"
@@ -273,4 +279,32 @@ local
 in
 val _ = tprint "TFL nested recursion + Unicode parameter name"
 val _ = require_msg (check_result check_defs) prdefpair test quotation
+end
+
+val _ = let
+  val _ = tprint "tmCases_on (.doc file example)"
+  val g = ([], “MAP (f:num -> num) l = []”)
+  val expected = [([] : term list, “MAP (f:num -> num) [] = []”),
+                  ([] : term list , “MAP (f:num -> num) (e::es) = []”)]
+  val pp = HOLPP.block HOLPP.CONSISTENT 0 o
+           HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
+in
+  require_msg (check_result (list_eq goal_eq expected))
+              (HOLPP.pp_to_string 75 pp)
+              (fst o tmCases_on (mk_var("l", alpha)) ["", "e es"])
+              g
+end
+
+val _ = let
+  val _ = tprint "tmCases_on (bound l)"
+  val g = ([], “!l. MAP (f:num -> num) l = []”)
+  val expected = [([] : term list, “MAP (f:num -> num) [] = []”),
+                  ([] : term list , “MAP (f:num -> num) (e::es) = []”)]
+  val pp = HOLPP.block HOLPP.CONSISTENT 0 o
+           HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
+in
+  require_msg (check_result (list_eq goal_eq expected))
+              (HOLPP.pp_to_string 75 pp)
+              (fst o tmCases_on (mk_var("l", alpha)) ["", "e es"])
+              g
 end

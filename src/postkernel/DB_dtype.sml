@@ -11,6 +11,8 @@ struct
                  definitions : (string * Thm.thm) list,
                  theorems    : (string * Thm.thm) list}
 
+ datatype selector = SelTM of Term.term | SelNM of string | SelTHY of string
+
  type data = (string * string) * (Thm.thm * class)
 
 
