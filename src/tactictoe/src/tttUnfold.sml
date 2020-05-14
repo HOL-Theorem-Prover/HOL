@@ -589,7 +589,8 @@ fun modified_program (h,d) p =
       val body' = modified_program ((s <> "val") orelse h, d+1) body
       val semicolon = 
         if d = 0 andalso !is_thm_flag then 
-       ["; val _ = tttRecord.thmdata_glob := mlThmData.create_thmdata () ;"] 
+       ["; val _ = tttRecord.thmdata_glob := mlThmData.create_thmdata () ;",
+        " val _ = tttRecord.ttt_save_state () ;"] 
         else []
     in
       semicolon @ [s] @ head' @ [sep] @ body' @ continue m
@@ -1082,6 +1083,10 @@ fun restore_scripts script = app restore_file (script :: theory_files script)
 fun ttt_ancestry thy =
   filter (fn x => not (mem x ["min","bool"])) (sort_thyl (ancestry thy))
 
+fun exists_tacdata_ancestry thy =
+  exists_tacdata_thy thy andalso 
+  all exists_tacdata_thy (ttt_ancestry thy)
+
 fun ttt_record_thy thy =
   if mem thy ["min","bool"] then () else
   let 
@@ -1093,12 +1098,17 @@ fun ttt_record_thy thy =
       (run_rm_script (mem thy core_theories)) (tttsml_of scriptorg)
   in
     print_endline ("ttt_record_thy time: " ^ rts_round 4 t);
+    if not (exists_tacdata_thy thy) 
+    then (
+         print_endline "ttt_record_thy: failed"; 
+         raise ERR "ttt_record_thy" thy
+         )
+    else () 
+    ;
     restore_scripts scriptorg
   end
 
-fun exists_tacdata_ancestry thy =
-  exists_tacdata_thy thy andalso 
-  all exists_tacdata_thy (ttt_ancestry thy)
+
 
 fun ttt_record () =
   let
@@ -1112,6 +1122,7 @@ fun ttt_record () =
 fun ttt_clean_record () =
   (
   clean_rec_dir (HOLDIR ^ "/src/AI/sml_inspection/open");
+  clean_dir (HOLDIR ^ "/src/AI/sml_inspection/buildheap");
   clean_dir (tactictoe_dir ^ "/ttt_tacdata");
   clean_dir (tactictoe_dir ^ "/savestate")
   )
@@ -1199,9 +1210,10 @@ run_evalscript (tttSetup.tactictoe_dir ^ "/savestate/arithmetic170");
 (* One theory
 load "tttUnfold"; open tttUnfold;
 tttSetup.ttt_savestate_flag := true;
-ttt_clean_record (); ttt_record_thy "arithmetic";
+aiLib.debug_flag := true;
+ttt_clean_record (); ttt_record_thy "relation";
 tttSetup.ttt_search_time := 5.0;
-run_evalscript_thyl "test2" false 3 ["arithmetic"];
+run_evalscript_thyl "test2" false 3 ["relation"];
 *)
 
 (* Core theories
@@ -1212,7 +1224,7 @@ ttt_clean_record (); ttt_record ();
 tttSetup.ttt_search_time := 5.0;
 aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val _ = run_evalscript_thyl "core_theories" true 30 thyl;
+val _ = run_evalscript_thyl "may14" true 30 thyl;
 *)
 
 

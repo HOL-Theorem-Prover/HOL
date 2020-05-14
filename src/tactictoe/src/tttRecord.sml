@@ -146,8 +146,10 @@ fun fetch s reps =
    Proof recording
    ---------------------------------------------------------------------- *)
 
+val savestate_level = ref 0
+
 fun start_record_proof name =
-  let val outname = "Name: " ^ int_to_string (!n_proof) ^ " " ^ name in
+  let val outname = "Name: " ^ int_to_string (!savestate_level) ^ " " ^ name in
     debug outname; incr n_proof; goalstep_glob := []
   end
 
@@ -165,35 +167,48 @@ fun end_record_proof name g =
     tacdata_glob := newtacdata
   end
 
-val savestate_level = ref 0
-
 (* The value of 50 is a compromise between fast saveState/saveChild 
    and fast loadState. Probably loading 
    becomes too slow above 50 * 50 = 2500 savestates
    per theory. *)
-fun save_state g = 
+fun ttt_save_state () = 
+  (
+  if !ttt_savestate_flag then
   let
     val savestate_dir = tactictoe_dir ^ "/savestate"
     val _ = mkDir_err savestate_dir
     val prefix = savestate_dir ^ "/" ^ current_theory () ^ 
-      its (!savestate_level) 
-    val _ = pbl_glob := prefix :: (!pbl_glob)
-    val savestate_file =  prefix ^ "_savestate"
-    val goal_file = prefix ^ "_goal"
-    val _ = if !savestate_level = 0 
-            then PolyML.SaveState.saveState savestate_file
-            else PolyML.SaveState.saveChild (savestate_file,
-                 (!savestate_level) div 50 + 1)
-    val _ = export_goal goal_file g
+      its (!savestate_level)
+    val savestate_file = prefix ^ "_savestate"
+    val _ = debug ("saving state to " ^ savestate_file)
   in
-    incr savestate_level
+    if !savestate_level = 0 
+    then PolyML.SaveState.saveState savestate_file
+    else PolyML.SaveState.saveChild (savestate_file,
+                 ((!savestate_level) div 50) + 1)
+  end
+  else ();
+  incr savestate_level
+  )
+
+fun save_goal g =
+  let
+    val savestate_dir = tactictoe_dir ^ "/savestate"
+    val _ = mkDir_err savestate_dir
+    val prefix = savestate_dir ^ "/" ^ current_theory () ^ 
+      its ((!savestate_level) - 1)
+    val _ = pbl_glob := prefix :: (!pbl_glob)
+    val goal_file = prefix ^ "_goal"
+    val _ = debug ("export goal to " ^ goal_file)
+  in
+    export_goal goal_file g
   end
 
 fun record_proof name lflag tac1 tac2 (g:goal) =
   let
+    val _ = save_goal g
     val tptpname = escape ("thm." ^ current_theory () ^ "." ^ name)
     val _ = debug ("\nrecord_proof: " ^ tptpname)
-    val _ = if !ttt_savestate_flag then save_state g else ()
     val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name
     val b2 = (not (!ttt_recprove_flag) andalso pflag)

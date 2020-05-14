@@ -25,4 +25,7 @@ include Abbrev
   val start_record_thy : string -> unit
   val end_record_thy : string -> unit
 
+  (* Save state *)
+  val ttt_save_state : unit -> unit
+
 end
