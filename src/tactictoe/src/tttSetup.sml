@@ -32,7 +32,7 @@ val ttt_presel_radius  = ref 500
    ------------------------------------------------------------------------- *)
 
 val ttt_savestate_flag  = ref false
-val ttt_ortho_flag      = ref true
+val ttt_ortho_flag      = ref false
 val ttt_recprove_flag   = ref true
 val ttt_reclet_flag     = ref false
 val ttt_recproof_time   = ref 20.0

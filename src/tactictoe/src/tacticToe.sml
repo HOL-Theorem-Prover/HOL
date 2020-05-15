@@ -57,6 +57,7 @@ fun select_tacfea tacdata goalf =
    ------------------------------------------------------------------------- *)
 
 fun constant_space s = String.concatWith " " (partial_sml_lexer s)
+fun prefix_absstac stac = [abstract_stac stac, SOME stac]
 
 fun main_tactictoe (thmdata,tacdata) goal =
   let
@@ -85,10 +86,13 @@ fun main_tactictoe (thmdata,tacdata) goal =
         val l = feahash_of_goal g
         val metis_stac = constant_space
           ("metisTools.METIS_TAC [ " ^ thmlarg_placeholder ^ "]")
-        val stacl =
-          mk_sameorder_set String.compare (metis_stac ::
-            stacknn_uniq (tacsymweight,tacfea) (!ttt_presel_radius) l)
-        val istacl = map (inst_stac thmidl) stacl
+        val stacl1 = stacknn_uniq (tacsymweight,tacfea) (!ttt_presel_radius) l
+        val stacl2 = 
+          if not (!ttt_ortho_flag) 
+          then List.mapPartial I (List.concat (map prefix_absstac stacl1))
+          else stacl1
+        val stacl3 = mk_sameorder_set String.compare (metis_stac :: stacl2)
+        val istacl = map (inst_stac thmidl) stacl3
       in
         tac_cache := dadd g istacl (!tac_cache); istacl
       end
