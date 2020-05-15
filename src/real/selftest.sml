@@ -147,6 +147,7 @@ val _ = List.app nftest [
        “x <> 0 /\ x < 0 ==> x < 1”),
       ("MULRELNORM14", simp, “x <> 0 /\ 0 < x ==> inv x < 1r”,
        “x <> 0 /\ 0 < x ==> 1 < x”),
+      ("MULRELNORM15", simp, “2r * x = 1/2 * z”, “4 * x = z”),
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]

@@ -1004,7 +1004,7 @@ fun mulrelnorm0 R Rthms solver0 stk t =
               val rd = denom (r_t, er)
               val mt = Arbint.*(ld,rd) |> term_of_int
               val sidecond1 = mk_less(zero_tm, mt) |> REAL_REDUCE
-              val sidecond2 = mk_neg(mk_eq(mt,zero_tm)) |> REAL_REDUCE
+              val sidecond2 = mk_eq(mt,zero_tm) |> REAL_REDUCE
               val th = hd Rthms |> #1 |> SPEC mt
                                 |> REWRITE_RULE [sidecond1,sidecond2]
                                 |> GSYM
@@ -1097,7 +1097,8 @@ fun mulrelnorm0 R Rthms solver0 stk t =
     end
 
 fun mulrelnorm R Rthms solver stk =
-    BINOP_CONV REALMULCANON THENC mulrelnorm0 R Rthms solver stk
+    BINOP_CONV REALMULCANON THENC mulrelnorm0 R Rthms solver stk THENC
+    TRY_CONV (BINOP_CONV REALMULCANON)
 (*
 
 val lenorm = mulrelnorm “$<= : real -> real -> bool”
