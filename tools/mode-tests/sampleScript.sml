@@ -60,4 +60,33 @@ Proof
   another_tactic ‘quotation arg’
 QED
 
+Theorem caseindent1:
+  p ⇒ case x of
+      | y =>
+          z + y + long expression
+      | a => something
+Proof
+  tactic
+QED
+
+Theorem caseindent2:
+  p ⇒ case x of
+        y =>
+          z + y + long expression
+      | a => something
+      | b => last thing ∧
+             something
+Proof
+  tactic
+QED
+
+Theorem doindent1:
+  do
+    x <- e1;
+    y <- e2;
+  od
+Proof
+  foo
+QED
+
 val _ = export_theory()
