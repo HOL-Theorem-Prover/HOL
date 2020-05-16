@@ -133,7 +133,7 @@ fun tactic_of_sml s =
     val tactic = mk_valid s
     val program =
       "let fun f () = smlExecute.sml_tactic_glob := (" ^ tactic ^ ") in " ^
-      "smlTimeout.timeout 1.0 f () end"
+      "smlTimeout.timeout 0.01 f () end"
     val b = exec_sml "tactic_of_sml" program
   in
     if b then !sml_tactic_glob else raise ERR "tactic_of_sml" s

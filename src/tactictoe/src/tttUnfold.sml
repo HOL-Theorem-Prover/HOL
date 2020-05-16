@@ -1225,7 +1225,7 @@ ttt_clean_record (); ttt_record ();
 tttSetup.ttt_search_time := 10.0;
 aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val _ = run_evalscript_thyl "may15-noortho-10sec" true 30 thyl;
+val _ = run_evalscript_thyl "may15-10sec" true 30 thyl;
 *)
 
 

@@ -43,7 +43,7 @@ val ttt_recproof_time   = ref 20.0
 
 val ttt_metis_time   = ref 0.1
 val ttt_metis_radius = ref 16
-val ttt_tactic_time  = ref 0.04 (* also used in tttLearn *)
+val ttt_tactic_time  = ref 0.04
 val ttt_search_time  = ref 10.0
 val ttt_policy_coeff = ref 0.5
 val ttt_ex_flag = ref false
