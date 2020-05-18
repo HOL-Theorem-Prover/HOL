@@ -925,6 +925,7 @@ fun output_header oc cthy =
   reflect_flag oc "tttSetup.ttt_savestate_flag" ttt_savestate_flag;
   (* evaluation *)
   reflect_flag oc "mlThmData.thmlintac_flag" mlThmData.thmlintac_flag;
+  reflect_flag oc "tttSetup.ttt_thmlext_flag" ttt_thmlext_flag;
   osn oc "val _ = smlExecute.exec_sml";
   (* global references *)
   reflect_time oc "tttSetup.ttt_search_time" ttt_search_time;

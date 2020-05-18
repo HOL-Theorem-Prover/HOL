@@ -20,8 +20,7 @@ val ERR = mk_HOL_ERR "tttSearch"
    Types
    ------------------------------------------------------------------------- *)
 
-(* list reversed compared to natural order internally *)
-type id = (int * int) list
+type id = (int * int) list (* reverse of natural order *)
 
 fun string_of_id id =
   let
