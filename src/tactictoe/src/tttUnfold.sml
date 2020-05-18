@@ -1172,6 +1172,7 @@ fun write_evalscript prefix file =
      "load " ^ mlquote "tacticToe" ^ ";",
      "val _ = tttSetup.ttt_search_time := " ^ rts (!ttt_search_time) ^ ";",
      "val _ = aiLib.debug_flag := " ^ bts (!debug_flag) ^ ";",
+     "val _ = tttSetup.ttt_thmlext_flag := " ^ bts (!ttt_thmlext_flag) ^ ";",
      "val _ = smlExecute.execprefix_glob := " ^ mlquote prefix ^ ";",
      "tacticToe.ttt_eval " ^
      "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^
