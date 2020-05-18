@@ -1224,11 +1224,10 @@ aiLib.debug_flag := true;
 ttt_clean_record (); ttt_record ();
 
 load "tttUnfold"; open tttUnfold;
-tttSetup.ttt_search_time := 10.0;
+tttSetup.ttt_search_time := 120.0;
 aiLib.debug_flag := false;
-tttSetup.ttt_thmlext_flag := true;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val _ = run_evalscript_thyl "may18-ext" true 30 thyl;
+val _ = run_evalscript_thyl "may18-e3" false 30 thyl;
 *)
 
 
