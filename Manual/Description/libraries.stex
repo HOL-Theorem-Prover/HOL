@@ -2964,7 +2964,9 @@ In addition to rewrites, conversions and decision procedures can also be tempora
 >> simp[Excl "BETA_CONV"] ([], “(λx. x + 10) (6 * z)”);
 
 >> simp[] ([], “1 < x ==> 1 < 2 * x”);
->> simp[Excl "ARITH_REDUCER"] ([], “1 < x ==> 1 < 2 * x”);
+>>__ null (#1 it) orelse raise Fail "Bad Excl. behaviour"
+>> simp[Excl "NUM_ARITH_DP"] ([], “1 < x ==> 1 < 2 * x”);
+>>__ length (#1 it) = 1 orelse raise Fail "Bad Excl. behaviour"
 \end{alltt}
 \end{session}
 

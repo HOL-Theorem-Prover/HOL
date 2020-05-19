@@ -212,7 +212,7 @@ val _ = shouldfail {
       checkexn = (fn UNCHANGED => true | _ => false),
       printarg = fn _ => "simp Excl on arith d.p. leaves input unchanged",
       printresult = thm_to_string,
-      testfn = SIMP_CONV (srw_ss() ++ ARITH_ss) [Excl "ARITH_REDUCER"]
+      testfn = SIMP_CONV (srw_ss() ++ ARITH_ss) [Excl "NUM_ARITH_DP"]
     } “4 < x ==> 2 < x”
 end
 

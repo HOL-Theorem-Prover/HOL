@@ -1,5 +1,6 @@
 open HolKernel boolLib simpLib Parse realSimps
 
+open bossLib
 open testutils
 
 val s = SIMP_CONV (bossLib.std_ss ++ REAL_REDUCE_ss) []
@@ -151,5 +152,34 @@ val _ = List.app nftest [
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]
+
+val simpc = SIMP_CONV (srw_ss() ++ ARITH_ss ++ REAL_ARITH_ss)
+val _ = shouldfail {
+      checkexn = (fn UNCHANGED => true | _ => false),
+      printarg =
+      fn _ => "simp w/o nat d.p. but with real d.p. leaves input unchanged",
+      printresult = thm_to_string,
+      testfn = simpc [Excl "NUM_ARITH_DP"]
+    } “4n < x ==> 2 < x”
+val _ = shouldfail {
+      checkexn = (fn UNCHANGED => true | _ => false),
+      printarg =
+      fn _ => "simp with nat d.p. but w/o real d.p. leaves input unchanged",
+      printresult = thm_to_string,
+      testfn = simpc [Excl "REAL_ARITH_DP"]
+    } “4r < x ==> 2 < x”
+
+val _ = tprint "Removing nat d.p. still lets real d.p. work"
+val _ = require_msg (check_result (aconv “bool$T”))
+                    term_to_string
+                    (rhs o concl o simpc [Excl "NUM_ARITH_DP"])
+                    “4r < x ==> 2 < x”
+val _ = tprint "Removing real d.p. still lets nat d.p. work"
+val _ = require_msg (check_result (aconv “bool$T”))
+                    term_to_string
+                    (rhs o concl o simpc [Excl "REAL_ARITH_DP"])
+                    “4n < x ==> 2 < x”
+
+
 
 val _ = Process.exit Process.success

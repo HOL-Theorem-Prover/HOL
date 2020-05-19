@@ -587,7 +587,7 @@ val ARITH_REDUCER = let
     CTXT (addthese @ get_ctxt ctxt)
   end
 in
-  REDUCER {name = SOME"ARITH_REDUCER",
+  REDUCER {name = SOME"REAL_ARITH_DP",
            addcontext = add_ctxt,
            apply = fn args => CACHED_ARITH (get_ctxt (#context args)),
            initial = CTXT []}
