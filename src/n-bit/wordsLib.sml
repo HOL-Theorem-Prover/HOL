@@ -1018,12 +1018,13 @@ local
                      | GREATER => true
              end
 in
-   fun WORD_CANCEL_CONV tm =
+   fun WORD_CANCEL_CONV0 tm =
    let
       val (l, r) = boolSyntax.dest_eq tm
       val _ = wordsSyntax.is_word_type (Term.type_of l)
-              andalso not (wordsSyntax.is_word_sub l)
-              orelse raise ERR "WORD_CANCEL_CONV" "Is subraction"
+              orelse raise ERR "WORD_CANCEL_CONV" "Is not a word equality"
+      val _ = not (wordsSyntax.is_word_sub l)
+              orelse raise ERR "WORD_CANCEL_CONV" "Is subtraction"
       val l = if is_zero l then [] else get_coeff_terms [] l
       val r = if is_zero r then [] else get_coeff_terms [] r
    in
@@ -1096,6 +1097,15 @@ val WORD_ARITH_EQ_ss =
          name = "WORD_ARITH_EQ_CONV",
          pats = [``w = y :'a word``]}]
 
+val WORD_MULT_RID = el 4 (WORD_MULT_CLAUSES |> SPEC_ALL |> CONJUNCTS)
+fun normsubs t =
+    (REWR_CONV word_sub_def THENC
+     RAND_CONV (REWR_CONV WORD_NEG_LMUL THENC
+                PURE_REWRITE_CONV [WORD_MULT_RID, WORD_NEG_NEG]) THENC
+     TRY_CONV (LAND_CONV normsubs)) t
+val WORD_CANCEL_CONV =
+    WORD_CANCEL_CONV0 THENC
+    BINOP_CONV (TRY_CONV (normsubs THENC WORD_ADD_CANON_CONV))
 val WORD_CANCEL_ss =
    simpLib.named_merge_ss "word cancel"
      [simpLib.rewrites

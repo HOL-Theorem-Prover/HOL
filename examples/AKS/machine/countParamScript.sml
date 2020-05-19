@@ -814,82 +814,89 @@ val param_seekM_steps_bound = store_thm(
        = 19 * size n + (1 + 28 + 16875) * size n ** 2 + 1348963434 * size n ** 20
        = 19 * size n + 16904 * size n ** 2 + 1348963434 * size n ** 20
 *)
-val paramM_steps_upper = store_thm(
-  "paramM_steps_upper",
-  ``!n. stepsOf (paramM n) <=
-       19 * size n + 16904 * size n ** 2 + 1348963434 * size n ** 20``,
+Theorem paramM_steps_upper:
+  !n. stepsOf (paramM n) <=
+      19 * size n + 16904 * size n ** 2 + 1348963434 * size n ** 20
+Proof
   rpt strip_tac >>
   assume_tac paramM_steps_thm >>
-  last_x_assum (qspec_then `n` strip_assume_tac) >>
-  qabbrev_tac `h = HALF (ulog n ** 5)` >>
-  qabbrev_tac `x = stepsOf (ulogM n)` >>
-  qabbrev_tac `y = stepsOf (expM (ulog n) 5)` >>
-  qabbrev_tac `z = stepsOf (param_seekM (SQ (ulog n)) (2 + h) n 2)` >>
-  qabbrev_tac `b = size (ulog n)` >>
-  qabbrev_tac `u = b ** 2` >>
-  qabbrev_tac `v = size (ulog n ** 5)` >>
-  qabbrev_tac `w = size (MAX h 2)` >>
-  `stepsOf (paramM n) <= x + 2 * b + u + 2 * v + w + y + z` by fs[] >>
-  qabbrev_tac `c = ulog n ** 5` >>
-  qabbrev_tac `k = size n ** 5` >>
-  `ulog n <= size n` by rw[size_ulog] >>
-  `ulog n <= n` by rw[ulog_le_self] >>
-  `b <= size n` by rw[size_monotone_le, Abbr`b`] >>
-  `size c <= 5 * b` by rw[size_exp_upper_alt, Abbr`b`, Abbr`c`] >>
-  `size c <= 5 * size n` by decide_tac >>
-  `h <= c` by rw[HALF_LE, Abbr`h`] >>
-  `c <= k` by rw[Abbr`c`, Abbr`k`] >>
-  `h <= k` by decide_tac >>
-  `0 < k` by rw[Abbr`k`] >>
-  `2 + h <= 3 * k` by decide_tac >>
-  `size (2 + h) <= 7 * size n` by
-  (`size (2 + h) <= size (3 * k)` by rw[size_monotone_le] >>
-  `size (3 * k) <= size 3 + size k` by rw[size_mult_upper] >>
-  `size 3 = 2` by EVAL_TAC >>
-  `size k <= 5 * size (size n)` by rw[size_exp_upper_alt, Abbr`k`] >>
-  `size (size n) <= size n` by rw[size_size_le] >>
-  `0 < size n` by rw[] >>
-  decide_tac) >>
-  `u <= size n ** 2` by rw[Abbr`u`] >>
-  `v <= 5 * size n` by rw[Abbr`v`] >>
-  `w <= 7 * size n` by
-    (`MAX h 2 <= 2 + h` by rw[MAX_LE_SUM] >>
-  `w <= size (2 + h)` by rw[size_monotone_le, Abbr`w`] >>
-  decide_tac) >>
-  `x <= 28 * size n ** 2` by rw[ulogM_steps_bound, Abbr`x`] >>
-  `y <= 16875 * size n ** 2` by
-      (`y <= 15 * MAX 1 5 ** 3 * size (ulog n) ** 2 * (size 5) ** 2` by rw[expM_steps_bound, Abbr`y`] >>
-  `MAX 1 5 = 5` by rw[] >>
-  `size 5 = 3` by EVAL_TAC >>
-  `15 * MAX 1 5 ** 3 * size (ulog n) ** 2 * (size 5) ** 2 = 15 * 125 * 9 * size (ulog n) ** 2` by rw[] >>
-  `size (ulog n) ** 2 <= size n ** 2` by rw[] >>
-  decide_tac) >>
-  `z <= 1348963434 * size n ** 20` by
-        (`z <= 39 * MAX 1 (2 + h - 2) * (MAX 1 (2 + h)) * size (MAX (2 + h) 2) * size (SQ (ulog n)) * size n * size (2 + h) ** 7` by rw[param_seekM_steps_bound, Abbr`z`, Abbr`h`] >>
-  `2 + h - 2 = h` by decide_tac >>
-  `MAX 1 h <= MAX 1 k` by rw[] >>
-  `MAX 1 k = k` by rw[MAX_DEF, Abbr`k`] >>
-  `MAX 1 (2 + h - 2) <= size n ** 5` by metis_tac[] >>
-  `MAX 1 (2 + h) = 2 + h` by rw[MAX_DEF] >>
-  `MAX 1 (2 + h) <= 3 * size n ** 5` by metis_tac[] >>
-  `size (MAX (2 + h) 2) = size (2 + h)` by rw[MAX_DEF] >>
-  `size (MAX (2 + h) 2) <= 7 * size n` by decide_tac >>
-  `size (SQ (ulog n)) <= size (size n ** 2)` by rw[size_monotone_le] >>
-  `size (size n ** 2) <= 2 * size (size n)` by rw[size_exp_upper_alt] >>
-  `size (size n) <= size n` by rw[size_size_le] >>
-  `size (SQ (ulog n)) <= 2 * size n` by decide_tac >>
-  `size (2 + h) ** 7 <= (7 * size n) ** 7` by rw[] >>
-  `(7 * size n) ** 7 = 7 ** 7 * size n ** 7` by rw[EXP_BASE_MULT] >>
-  `size (2 + h) ** 7 <= 7 ** 7 * size n ** 7` by decide_tac >>
-  `39 * MAX 1 (2 + h - 2) * MAX 1 (2 + h) * size (MAX (2 + h) 2) * size (SQ (ulog n)) * size n * size (2 + h) ** 7 <=
-    39 * size n ** 5 * (3 * size n ** 5) * (7 * size n) * (2 * size n) * size n * (7 ** 7 * size n ** 7)` by rw[LE_MONO_MULT2] >>
-  `z <= 39 * 3 * 7 * 2 * 7 ** 7 * (size n ** 5 * size n ** 5 * size n * size n * size n * size n ** 7)` by decide_tac >>
-  `SQ (size n ** 5) * size n * size n * size n * size n ** 7 =
-    SQ (size n ** 5) * size n ** 1 * size n ** 1 * size n ** 1 * size n ** 7` by rw[] >>
-  `_ = size n ** 20` by rw[] >>
-  `39 * 3 * 7 * 2 * 7 ** 7 = 1348963434` by EVAL_TAC >>
-  metis_tac[]) >>
-  decide_tac);
+  last_x_assum (qspec_then ‘n’ strip_assume_tac) >>
+  qabbrev_tac ‘h = HALF (ulog n ** 5)’ >>
+  qabbrev_tac ‘x = stepsOf (ulogM n)’ >>
+  qabbrev_tac ‘y = stepsOf (expM (ulog n) 5)’ >>
+  qabbrev_tac ‘z = stepsOf (param_seekM (SQ (ulog n)) (2 + h) n 2)’ >>
+  qabbrev_tac ‘b = size (ulog n)’ >>
+  qabbrev_tac ‘u = b ** 2’ >>
+  qabbrev_tac ‘v = size (ulog n ** 5)’ >>
+  qabbrev_tac ‘w = size (MAX h 2)’ >>
+  ‘stepsOf (paramM n) <= x + 2 * b + u + 2 * v + w + y + z’ by fs[] >>
+  qabbrev_tac ‘c = ulog n ** 5’ >>
+  qabbrev_tac ‘k = size n ** 5’ >>
+  ‘ulog n <= size n’ by rw[size_ulog] >>
+  ‘ulog n <= n’ by rw[ulog_le_self] >>
+  ‘b <= size n’ by rw[size_monotone_le, Abbr‘b’] >>
+  ‘size c <= 5 * b’ by rw[size_exp_upper_alt, Abbr‘b’, Abbr‘c’] >>
+  ‘size c <= 5 * size n’ by decide_tac >>
+  ‘h <= c’ by rw[HALF_LE, Abbr‘h’] >>
+  ‘c <= k’ by rw[Abbr‘c’, Abbr‘k’] >>
+  ‘h <= k’ by decide_tac >>
+  ‘0 < k’ by rw[Abbr‘k’] >>
+  ‘2 + h <= 3 * k’ by decide_tac >>
+  ‘size (2 + h) <= 7 * size n’
+    by (‘size (2 + h) <= size (3 * k)’ by rw[size_monotone_le] >>
+        ‘size (3 * k) <= size 3 + size k’ by rw[size_mult_upper] >>
+        ‘size 3 = 2’ by EVAL_TAC >>
+        ‘size k <= 5 * size (size n)’ by rw[size_exp_upper_alt, Abbr‘k’] >>
+        ‘size (size n) <= size n’ by rw[size_size_le] >>
+        ‘0 < size n’ by rw[] >>
+        decide_tac) >>
+  ‘u <= size n ** 2’ by rw[Abbr‘u’] >>
+  ‘v <= 5 * size n’ by rw[Abbr‘v’] >>
+  ‘w <= 7 * size n’ by
+    (‘MAX h 2 <= 2 + h’ by rw[MAX_LE_SUM] >>
+     ‘w <= size (2 + h)’ by rw[size_monotone_le, Abbr‘w’] >>
+     decide_tac) >>
+  ‘x <= 28 * size n ** 2’ by rw[ulogM_steps_bound, Abbr‘x’] >>
+  ‘y <= 16875 * size n ** 2’
+    by (‘y <= 15 * MAX 1 5 ** 3 * size (ulog n) ** 2 * (size 5) ** 2’
+         by rw[expM_steps_bound, Abbr‘y’] >>
+        ‘MAX 1 5 = 5’ by rw[] >>
+        ‘size 5 = 3’ by EVAL_TAC >>
+        ‘15 * MAX 1 5 ** 3 * size (ulog n) ** 2 * (size 5) ** 2 =
+         15 * 125 * 9 * size (ulog n) ** 2’ by rw[] >>
+        ‘size (ulog n) ** 2 <= size n ** 2’ by rw[] >>
+        decide_tac) >>
+  ‘z <= 1348963434 * size n ** 20’
+    by (‘z <= 39 * MAX 1 (2 + h - 2) * (MAX 1 (2 + h)) * size (MAX (2 + h) 2) *
+              size (SQ (ulog n)) * size n * size (2 + h) ** 7’
+         by rw[param_seekM_steps_bound, Abbr‘z’, Abbr‘h’] >>
+        ‘2 + h - 2 = h’ by decide_tac >>
+        ‘MAX 1 h <= MAX 1 k’ by rw[] >>
+        ‘MAX 1 k = k’
+          by (rw[MAX_DEF, Abbr‘k’] >> ‘size n ≤ 1’ by simp[] >>
+              ‘size n ≠ 0’ by (strip_tac >> fs[]) >> simp[]) >>
+        ‘MAX 1 (2 + h - 2) <= size n ** 5’ by metis_tac[] >>
+        ‘MAX 1 (2 + h) = 2 + h’ by rw[MAX_DEF] >>
+        ‘MAX 1 (2 + h) <= 3 * size n ** 5’ by metis_tac[] >>
+        ‘size (MAX (2 + h) 2) = size (2 + h)’ by rw[MAX_DEF] >>
+        ‘size (MAX (2 + h) 2) <= 7 * size n’ by decide_tac >>
+        ‘size (SQ (ulog n)) <= size (size n ** 2)’ by rw[size_monotone_le] >>
+        ‘size (size n ** 2) <= 2 * size (size n)’ by rw[size_exp_upper_alt] >>
+        ‘size (size n) <= size n’ by rw[size_size_le] >>
+        ‘size (SQ (ulog n)) <= 2 * size n’ by decide_tac >>
+        ‘size (2 + h) ** 7 <= (7 * size n) ** 7’ by rw[] >>
+        ‘(7 * size n) ** 7 = 7 ** 7 * size n ** 7’ by rw[EXP_BASE_MULT] >>
+        ‘size (2 + h) ** 7 <= 7 ** 7 * size n ** 7’ by decide_tac >>
+        ‘39 * MAX 1 (2 + h - 2) * MAX 1 (2 + h) * size (MAX (2 + h) 2) * size (SQ (ulog n)) * size n * size (2 + h) ** 7 <=
+         39 * size n ** 5 * (3 * size n ** 5) * (7 * size n) * (2 * size n) * size n * (7 ** 7 * size n ** 7)’ by rw[LE_MONO_MULT2] >>
+        ‘z <= 39 * 3 * 7 * 2 * 7 ** 7 * (size n ** 5 * size n ** 5 * size n * size n * size n * size n ** 7)’ by decide_tac >>
+        ‘SQ (size n ** 5) * size n * size n * size n * size n ** 7 =
+         SQ (size n ** 5) * size n ** 1 * size n ** 1 * size n ** 1 * size n ** 7’ by rw[] >>
+        ‘_ = size n ** 20’ by rw[] >>
+        ‘39 * 3 * 7 * 2 * 7 ** 7 = 1348963434’ by EVAL_TAC >>
+        metis_tac[]) >>
+  decide_tac
+QED
 
 (* Theorem: stepsOf (paramM n) <= 1348980357 * size n ** 20 *)
 (* Proof:

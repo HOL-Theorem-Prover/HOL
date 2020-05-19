@@ -1120,7 +1120,8 @@ val residue_common_multiple_nonzero = store_thm(
   ``!n. 0 NOTIN residue_common_multiple n``,
   rw[residue_common_multiple_def]);
 
-(* Theorem: m IN residue_common_multiple n ==> !k. 0 < k ==> k * m IN residue_common_multiple n *)
+(* Theorem: m IN residue_common_multiple n ==>
+            !k. 0 < k ==> k * m IN residue_common_multiple n *)
 (* Proof:
    By residue_common_multiple_def, this is to show:
    (1) 0 < m /\ 0 < k ==> 0 < k * m
@@ -1128,12 +1129,12 @@ val residue_common_multiple_nonzero = store_thm(
    (2) j IN residue n /\ (!j. j IN residue n ==> j divides m) ==> j divides (k * m)
        Condition implies j divides m, hence true by DIVIDES_MULTIPLE.
 *)
-val residue_common_multiple_has_multiple = store_thm(
-  "residue_common_multiple_has_multiple",
-  ``!n m. m IN residue_common_multiple n ==> !k. 0 < k ==> k * m IN residue_common_multiple n``,
-  rw[residue_common_multiple_def] >-
-  rw[ZERO_LESS_MULT] >>
-  rw[DIVIDES_MULTIPLE]);
+Theorem residue_common_multiple_has_multiple:
+  !n m. m IN residue_common_multiple n ==>
+        !k. 0 < k ==> k * m IN residue_common_multiple n
+Proof
+  rw[residue_common_multiple_def, DIVIDES_MULTIPLE]
+QED
 
 (* Theorem: b < a /\ a IN residue_common_multiple n /\ b IN residue_common_multiple n ==>
            (a - b) IN residue_common_multiple n *)
