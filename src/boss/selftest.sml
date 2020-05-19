@@ -213,7 +213,7 @@ val _ = shouldfail {
       printarg = fn _ => "simp Excl on arith d.p. leaves input unchanged",
       printresult = thm_to_string,
       testfn = SIMP_CONV (srw_ss() ++ ARITH_ss) [Excl "ARITH_REDUCER"]
-    } “0 < x ==> 0 < 2 * x”
+    } “4 < x ==> 2 < x”
 end
 
 val _ = tprint "find num->num includes SUC"
