@@ -129,13 +129,14 @@ Proof
   finisher
 QED
 
-Theorem alpha_qfier:
+Theorem alpha_qfier_and_blashthen:
   (LEAST n. p ∧ q n ⇒
             r n)
   =
   10
 Proof
-  tac
+  tac \\
+  tac2
 QED
 
 (* escaped_alpha_qfier *)
