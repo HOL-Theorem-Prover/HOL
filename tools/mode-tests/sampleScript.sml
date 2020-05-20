@@ -129,6 +129,21 @@ Proof
   finisher
 QED
 
+Theorem alpha_qfier:
+  (LEAST n. p ∧ q n ⇒
+            r n)
+  =
+  10
+Proof
+  tac
+QED
 
+(* escaped_alpha_qfier *)
+val t =  “P $some ∧ x < y ∧
+          Q”;
+
+(* escaped symbol qfier *)
+val t = “P $@ ∧
+         q”
 
 val _ = export_theory()

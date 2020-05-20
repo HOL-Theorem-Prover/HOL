@@ -40,8 +40,8 @@
     ;; characters. This despite the fact that it does cause pain in
     ;; terms such as \(x,y). x + y
     (mapc (lambda (c) (modify-syntax-entry c "w" st)) "_'")
-    ;(mapc (lambda (c) (modify-syntax-entry c "." st)) ",;")
-    (mapc (lambda (c) (modify-syntax-entry c "."  st)) ".%&$+-/:<=>?@`^|!~#,;")
+    (mapc (lambda (c) (modify-syntax-entry c "_" st)) "$")
+    (mapc (lambda (c) (modify-syntax-entry c "."  st)) ".%&+-/:<=>?@`^|!~#,;")
     st)
   "The syntax table used in `holscript-mode'.")
 
@@ -753,7 +753,8 @@ a store_thm equivalent."))
 (defvar holscript-boolean-quantifiers '("?" "!" "?!" "∀" "∃" "∃!"))
 
 (defvar holscript-quantifier-regexp
-  (regexp-opt (append holscript-boolean-quantifiers '("λ" "\\<some\\>" "\\<LEAST\\>" "\\_<@\\_>")))
+  (concat (regexp-opt holscript-boolean-quantifiers) "\\|"
+          (regexp-opt '("some" "LEAST") 'words) "\\|[@λ]")
   "List of strings that can begin \"quantifier blocks\".")
 
 
@@ -789,6 +790,29 @@ a store_thm equivalent."))
 (defconst holscript-sml-declaration-keyword
   (regexp-opt '("open" "val" "datatype" "local" "fun" "infix" "infixl" "infixr"
                 "structure" "signature" "functor") 'words))
+
+(defun holscript-simple-token-forward ()
+  (let* ((p (point))
+         (sc (syntax-class (syntax-after p))))
+    (cond
+     ((or (equal 1 sc) (equal 9 sc)); punctuation
+      (skip-syntax-forward ".\\")
+      (buffer-substring-no-properties p (point)))
+     ((equal 2 sc) ; word
+      (skip-syntax-forward "w")
+      (buffer-substring-no-properties p (point))))))
+
+(defun holscript-simple-token-backward ()
+  (let* ((p (point))
+         (sc (syntax-class (syntax-after (1- p)))))
+    (cond
+     ((or (equal 1 sc) (equal 9 sc)); punctuation
+      (skip-syntax-backward ".\\")
+      (buffer-substring-no-properties (point) p))
+     ((equal 2 sc) ; word
+      (skip-syntax-backward "w")
+      (buffer-substring-no-properties (point) p)))))
+
 
 (defun holscript-smie-forward-token ()
   (let ((p0 (point)))
@@ -829,9 +853,27 @@ a store_thm equivalent."))
           (buffer-substring-no-properties
            (point)
            (progn (skip-syntax-forward ".") (point))))
-         (t (buffer-substring-no-properties
-             (point)
-             (progn (skip-syntax-forward "w_") (point)))))))))
+         ((looking-at "\\$")
+          (let ((p (point)))
+            (if (> (skip-chars-forward "$") 1)
+                (buffer-substring-no-properties p (point))
+              (let ((simple-tok (holscript-simple-token-forward)))
+                (if (null simple-tok)
+                    "$"
+                  (if (= 1  ; punctuation, so don't look for more
+                         (syntax-class
+                          (aref (syntax-table) (aref simple-tok 0))))
+                      (buffer-substring-no-properties p (point))
+                    (if (looking-at "\\$")
+                        (progn (forward-char 1)
+                               (holscript-simple-token-forward)))
+                    (buffer-substring-no-properties p (point))))))))
+         (t (let ((p (point)))
+              (skip-syntax-forward "w")
+              (if (looking-at "\\$")
+                  (progn (forward-char 1)
+                         (holscript-simple-token-forward)))
+              (buffer-substring-no-properties p (point)))))))))
 
 (defun holscript-smie-backward-token ()
   (if (or (and (looking-at
@@ -870,9 +912,12 @@ a store_thm equivalent."))
       (goto-char (match-beginning 0))
       (match-string-no-properties 0))
      (; am I just after a quantifier
-      (looking-back holscript-quantifier-regexp (- (point) 3) t)
+      (looking-back holscript-quantifier-regexp (- (point) 10) t)
       (goto-char (match-beginning 0))
-      "QFIER.")
+      (let ((c (char-before)))
+        (if (and c (char-equal c ?$))
+            (progn (backward-char) (concat "$" (match-string-no-properties 0)))
+          "QFIER.")))
      (; am I sitting on a full-stop that might end a quantifier block
       (let ((c (char-before))) (and c (char-equal c ?.)))
       (forward-char -1)
