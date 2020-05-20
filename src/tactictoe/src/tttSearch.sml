@@ -90,7 +90,6 @@ fun dest_stacundec x = case x of
 fun is_goalwin x = (x = GoalProved)
 fun is_goallose x = (x = GoalSaturated)
 
-
 fun backstatus_stacv stacv =
   let val v = Vector.map #stacstatus stacv in
     if Vector.exists is_stacwin v then GoalProved

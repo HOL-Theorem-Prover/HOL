@@ -30,7 +30,7 @@ sig
   (* readers *)
   val thm_of_sml       : string -> (string * thm) option
   val thml_of_sml      : string list -> (string * thm) list option
-  val tactic_of_sml    : string -> tactic
+  val tactic_of_sml    : real -> string -> tactic
   val string_of_sml    : string -> string
   val goal_of_sml      : string -> goal
 

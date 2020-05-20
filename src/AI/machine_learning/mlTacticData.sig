@@ -40,5 +40,6 @@ sig
   val ttt_export_tptpexl : string -> ex list -> unit
 
   val prepare_exl : ex list -> (term * real list) list list
+  val nntm_of_goal : goal -> term  
 
 end

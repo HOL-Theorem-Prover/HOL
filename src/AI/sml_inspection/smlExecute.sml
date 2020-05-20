@@ -128,12 +128,12 @@ fun is_pointer_eq s1 s2 =
 
 fun mk_valid s = "Tactical.VALID (" ^ s ^ ")"
 
-fun tactic_of_sml s =
+fun tactic_of_sml tim s =
   let
     val tactic = mk_valid s
     val program =
       "let fun f () = smlExecute.sml_tactic_glob := (" ^ tactic ^ ") in " ^
-      "smlTimeout.timeout 0.01 f () end"
+      "smlTimeout.timeout " ^ rts tim ^ " f () end"
     val b = exec_sml "tactic_of_sml" program
   in
     if b then !sml_tactic_glob else raise ERR "tactic_of_sml" s
@@ -178,7 +178,7 @@ fun goal_of_sml s =
 val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
 fun app_stac tim stac g =
-  let val tac = tactic_of_sml stac in
+  let val tac = tactic_of_sml tim stac in
     SOME (fst (timeout tim (TC_OFF tac) g))
   end
   handle Interrupt => raise Interrupt | _ => NONE

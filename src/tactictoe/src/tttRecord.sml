@@ -25,6 +25,8 @@ fun add_local_tag s = "( tttRecord.local_tag " ^ s ^ ")"
 val tacdata_glob = ref empty_tacdata
 val thmdata_glob = ref empty_thmdata
 val pbl_glob = ref []
+val record_tactic_time = ref 2.0
+val record_proof_time = ref 20.0
 
 (* -------------------------------------------------------------------------
    Messages and profiling
@@ -75,11 +77,14 @@ fun write_info thy =
    ------------------------------------------------------------------------- *)
 
 fun record_tactic (tac,stac) g =
-  let val ((gl,v),t) = add_time tac g in
+  let val ((gl,v),t) = add_time (timeout (!record_tactic_time) tac) g in
     incr n_tactic_replayed;
     goalstep_glob := ((stac,t,g,gl),v) :: !goalstep_glob;
     (gl,v)
   end
+  handle Interrupt => raise Interrupt 
+    |  _ => (debug ("Error recording tactic: " ^ stac); 
+             raise ERR "record_tactic" stac)
 
 (* -------------------------------------------------------------------------
    Replaying a proof
@@ -106,7 +111,7 @@ fun wrap_proof ostac =
     val wstac = string_of_tacexp (wrap_tacexp tacexp)
     (* val _ = debug ("wrapped proof: " ^ wstac) *)
   in
-    (wstac, tactic_of_sml wstac)
+    (wstac, tactic_of_sml (!record_proof_time) wstac)
   end
 
 fun app_wrap_proof name ostac goal =
@@ -115,7 +120,7 @@ fun app_wrap_proof name ostac goal =
     val _  = incr n_proof_parsed
   in
     let val (gl,v) = total_time replay_time
-      (timeout (!ttt_recproof_time) wtac) goal
+      (timeout (!record_proof_time) wtac) goal
     in
       if null gl
       then (incr n_proof_replayed; (gl,v))

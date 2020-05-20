@@ -35,7 +35,9 @@ val ttt_savestate_flag  = ref false
 val ttt_ortho_flag      = ref true
 val ttt_recprove_flag   = ref true
 val ttt_reclet_flag     = ref false
-val ttt_recproof_time   = ref 20.0
+val record_tactic_time  = ref 2.0
+val record_proof_time = ref 2.0
+
 
 (* -------------------------------------------------------------------------
    Search

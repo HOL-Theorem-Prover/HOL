@@ -383,6 +383,17 @@ fun ttt_import_exl thy =
    Preparing search examples for learning with TNN
    ------------------------------------------------------------------------ *)
 
+val asmcat = mk_var ("asmcat",``:bool -> bool -> bool``)
+
+fun goal_cat (a,b) =
+  let 
+    val gcat = mk_var ("gcat",``:bool -> bool -> bool``) 
+  in
+    if null a 
+    then b
+    else list_mk_comb (gcat,[list_mk_binop asmcat a,b])
+  end
+
 fun mk_cat2 x =
   list_mk_comb (mk_var ("cat2",``:bool -> bool -> bool``), x)
 fun mk_cat3 x =
@@ -433,16 +444,22 @@ fun add_arity tm =
 fun not_null ((ginit,_:string,(gcur,ogl),pgl), _) =
   not (null ogl) orelse not (null pgl)
 
+val vhead = mk_var ("head_goal", ``:bool -> bool``);
+
 fun prepare_exl exl1 =
   let
     val exl1' = filter not_null exl1
     val exl2 = map (fn (a,b) => (simplify_ex a, b)) exl1'
     val exl3 = map_fst (add_arity o add_lambda) exl2
     val exl4 = map_snd (fn x => if x then [1.0] else [0.0]) exl3
-    val vhead = mk_var ("head_", ``:bool -> bool``)
     val exl5 = map (fn (a,b) => [(mk_comb (vhead,a),b)]) exl4
   in
     exl5
+  end
+
+fun nntm_of_goal g =
+  let val tm = (add_arity o add_lambda o goal_cat) g in
+    mk_comb (vhead,tm)
   end
 
 (* ------------------------------------------------------------------------

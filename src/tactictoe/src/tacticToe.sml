@@ -109,13 +109,14 @@ fun main_tactictoe (thmdata,tacdata) goal =
    Return values
    ------------------------------------------------------------------------- *)
 
-fun read_status r = case r of
+fun read_status status = case status of
    ProofSaturated =>
    (print_endline "saturated"; (NONE, FAIL_TAC "tactictoe: saturated"))
  | ProofTimeout   =>
    (print_endline "timeout"; (NONE, FAIL_TAC "tactictoe: timeout"))
  | Proof s        =>
-   (print_endline ("  " ^ s); (SOME s, hidef tactic_of_sml s))
+   (print_endline ("  " ^ s); 
+    (SOME s, hidef (tactic_of_sml (!ttt_search_time)) s))
 
 (* -------------------------------------------------------------------------
    Interface
@@ -157,7 +158,7 @@ fun tactictoe term =
    Evaluation function called by tttUnfold.run_evalscript_thy
    ------------------------------------------------------------------------- *)
 
-fun log_status r = case r of
+fun print_status r = case r of
    ProofSaturated => print_endline "tactictoe: saturated"
  | ProofTimeout   => print_endline "tactictoe: timeout"
  | Proof s        => print_endline ("tactictoe: proven\n  " ^ s)
@@ -169,7 +170,7 @@ fun ttt_eval (thmdata,tacdata) goal =
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val (status,t) = add_time (main_tactictoe (thmdata,tacdata)) goal
   in
-    log_status status;
+    print_status status;
     print_endline ("ttt_eval time: " ^ rts_round 6 t ^ "\n");
     hide_flag := b
   end

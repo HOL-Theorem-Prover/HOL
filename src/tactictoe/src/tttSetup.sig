@@ -8,7 +8,7 @@ sig
   val tactictoe_dir : string
   val ttt_eval_dir : string
 
-  (* nearest neighbor *)
+  (* nearest neighbor predictor *)
   val ttt_thmlarg_radius : int ref
   val ttt_ortho_radius   : int ref
   val ttt_presel_radius  : int ref
@@ -18,7 +18,8 @@ sig
   val ttt_savestate_flag : bool ref
   val ttt_recprove_flag : bool ref
   val ttt_reclet_flag   : bool ref
-  val ttt_recproof_time : real ref
+  val record_tactic_time : real ref
+  val record_proof_time : real ref
 
   (* search *)
   val ttt_search_time : real ref
