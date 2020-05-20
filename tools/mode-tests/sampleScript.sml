@@ -89,4 +89,46 @@ Proof
   foo
 QED
 
+Theorem first_suffices_by_indent:
+  some_asm ∧ p ⇒
+  some_goal
+Proof
+  ‘a long ∧ statement of a ∧ simple subgoal’
+    suffices_by atactic >>
+  finishing_tactic
+QED
+
+Theorem first_by_indent:
+  some_goal
+Proof
+  ‘some other goal’
+    by atactic >>
+  finishing_tactic
+QED
+
+Theorem later_suffices_by_by_indent:
+  some_goal
+Proof
+  tac1 >>
+  ‘goal’
+    suffices_by foo >>
+  ‘goal2’ suffices_by
+    bar >>
+  ‘goal3’
+    by foo >>
+  ‘goal4’ by
+    foo >>
+  finisher
+  >> ‘goal4’
+    by foobar >>
+  ‘goal5’
+    by (‘subgoal1’
+          suffices_by tac >>
+        ‘subgoal2’
+          by another_tac) >>
+  finisher
+QED
+
+
+
 val _ = export_theory()
