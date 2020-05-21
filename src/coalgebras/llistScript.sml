@@ -2803,22 +2803,23 @@ QED
    ---------------------------------------------------------------------- *)
 
 Definition fromSeq_def:
-  fromSeq f = LUNFOLD (\x. SOME(SUC x, f x)) 0
+  fromSeq f = LUNFOLD (\x. SOME (SUC x, f x)) 0
 End
 
-Theorem fromSeq_LCONS_thm:
-  fromSeq f = LCONS (f 0) (fromSeq(f o SUC))
+Theorem fromSeq_LCONS:
+  fromSeq f = LCONS (f 0) (fromSeq (f o SUC))
 Proof
   PURE_REWRITE_TAC[fromSeq_def,Once LUNFOLD] >>
   simp[] >>
   PURE_REWRITE_TAC[Once LLIST_BISIMULATION] >>
-  qexists_tac ‘\x y. ?n. x = LUNFOLD (\x. SOME(SUC x, f x)) (SUC n) /\ y = LUNFOLD (\x. SOME(SUC x, f(SUC x))) n’ >>
+  qexists_tac ‘\x y. ?n. x = LUNFOLD (\x. SOME(SUC x, f x)) (SUC n) /\
+                         y = LUNFOLD (\x. SOME(SUC x, f(SUC x))) n’ >>
   rw[Once LUNFOLD] >-
     (qexists_tac ‘0’ >> simp[]) >-
     (qexists_tac ‘SUC n’ >> simp[])
 QED
 
-Theorem llist_is_stream_or_list:
+Theorem fromList_fromSeq:
   !ll. (?l. ll = fromList l) \/ (?f. ll = fromSeq f)
 Proof
   strip_tac >>
@@ -2835,10 +2836,142 @@ Proof
   last_x_assum kall_tac >>
   rename1 ‘ll = [||]’ >>
   disj2_tac >>
-  simp[Once fromSeq_LCONS_thm] >>
+  simp[Once fromSeq_LCONS] >>
   Cases_on ‘ll’ >>
   FULL_SIMP_TAC std_ss [LFINITE_THM,LNTH_THM,LHD_THM,LTL_THM] >>
-  simp[Once fromSeq_LCONS_thm,combinTheory.o_DEF]
+  simp[Once fromSeq_LCONS,combinTheory.o_DEF]
+QED
+
+Theorem llist_forall_split:
+  !P. (!ll. P ll) <=> (!l. P (fromList l)) /\ (!f. P (fromSeq f))
+Proof
+  gen_tac \\ eq_tac \\ rpt strip_tac
+  \\ asm_rewrite_tac []
+  \\ qspec_then ‘ll’ mp_tac fromList_fromSeq
+  \\ strip_tac \\ asm_rewrite_tac []
+QED
+
+Theorem LHD_fromSeq[simp]:
+  !f. LHD (fromSeq f) = SOME (f 0)
+Proof
+  rw [Once fromSeq_LCONS]
+QED
+
+Theorem LTL_fromSeq[simp]:
+  !f. LTL (fromSeq f) = SOME (fromSeq (f o SUC))
+Proof
+  rw [Once fromSeq_LCONS]
+QED
+
+Theorem LNTH_fromSeq[simp]:
+  !n f. LNTH n (fromSeq f) = SOME (f n)
+Proof
+  Induct \\ rw [LNTH]
+QED
+
+Theorem LTAKE_fromSeq[simp]:
+  !n f. LTAKE n (fromSeq f) = SOME (GENLIST f n)
+Proof
+  Induct \\ rw []
+  \\ rw [Once fromSeq_LCONS, GSYM listTheory.GENLIST_CONS]
+QED
+
+Theorem LDROP_fromSeq[simp]:
+  !n f. LDROP n (fromSeq f) = SOME (fromSeq (f o ((+) n)))
+Proof
+  Induct \\ rw []
+  THEN1 (AP_TERM_TAC \\ rw [FUN_EQ_THM,ADD1])
+  \\ rw [Once fromSeq_LCONS]
+  \\ AP_TERM_TAC \\ rw [FUN_EQ_THM,ADD1]
+QED
+
+Theorem LFINITE_fromSeq[simp]:
+  !f. ~LFINITE (fromSeq f)
+Proof
+  rw [LFINITE]
+QED
+
+Theorem LLENGTH_fromSeq[simp]:
+  !f. LLENGTH (fromSeq f) = NONE
+Proof
+  rw [LLENGTH]
+QED
+
+Theorem LGENLIST_EQ_fromSeq:
+  !f. LGENLIST f NONE = fromSeq f
+Proof
+  rewrite_tac [LGENLIST_def,fromSeq_def,ADD1]
+QED
+
+Theorem LGENLIST_EQ_fromList:
+  !f k. LGENLIST f (SOME k) = fromList (GENLIST f k)
+Proof
+  Induct_on ‘k’ \\ fs [listTheory.GENLIST_CONS]
+QED
+
+Theorem LAPPEND_fromSeq[simp]:
+  (!f ll. LAPPEND (fromSeq f) ll = fromSeq f) /\
+  (!l f.  LAPPEND (fromList l) (fromSeq f) =
+          fromSeq (\n. if n < LENGTH l then EL n l else f (n - LENGTH l)))
+Proof
+  conj_tac
+  THEN1 (gen_tac \\ match_mp_tac NOT_LFINITE_APPEND \\ rw [])
+  \\ Induct
+  THEN1 (rw [LAPPEND] \\ AP_TERM_TAC \\ rw [FUN_EQ_THM])
+  \\ rw [LAPPEND] \\ once_rewrite_tac [EQ_SYM_EQ]
+  \\ rw [Once fromSeq_LCONS]
+  \\ AP_TERM_TAC \\ rw [FUN_EQ_THM]
+QED
+
+Theorem LMAP_fromSeq[simp]:
+  !f g. LMAP f (fromSeq g) = fromSeq (f o g)
+Proof
+  rewrite_tac [GSYM LGENLIST_EQ_fromSeq,LMAP_LGENLIST]
+QED
+
+Theorem exists_fromSeq[simp]:
+  !p f. exists p (fromSeq f) = ?i. p (f i)
+Proof
+  rw [] \\ reverse eq_tac
+  THEN1
+   (fs [PULL_EXISTS]
+    \\ qid_spec_tac ‘f’
+    \\ Induct_on ‘i’ \\ rw []
+    \\ rw [Once fromSeq_LCONS])
+  \\ qsuff_tac ‘!ll. exists p ll ==> !f. ll = fromSeq f ==> ?i. p (f i)’
+  THEN1 rw []
+  \\ ho_match_mp_tac exists_ind \\ rw []
+  \\ pop_assum mp_tac
+  \\ rw [Once fromSeq_LCONS]
+  THEN1 (qexists_tac ‘0’ \\ fs [])
+  \\ first_x_assum (qspec_then ‘f o SUC’ mp_tac)
+  \\ rw [] \\ qexists_tac ‘SUC i’ \\ fs []
+QED
+
+Theorem every_fromSeq[simp]:
+  !p f. every p (fromSeq f) = !i. p (f i)
+Proof
+  rewrite_tac [every_def] \\ rw []
+QED
+
+Theorem LFILTER_fromList[simp]:
+  !p l. LFILTER p (fromList l) = fromList (FILTER p l)
+Proof
+  Induct_on ‘l’ \\ rw [Once LFILTER]
+  \\ pop_assum mp_tac
+  \\ qid_spec_tac ‘l’ \\ Induct \\ rw []
+QED
+
+Theorem LFILTER_fromSeq:
+  !p f.
+    LFILTER p (fromSeq f) =
+      if !i. ~p (f i) then LNIL else
+      if p (f 0) then LCONS (f 0) (LFILTER p (fromSeq (f o SUC)))
+                 else LFILTER p (fromSeq (f o SUC))
+Proof
+  gen_tac \\ gen_tac \\ IF_CASES_TAC
+  THEN1 fs [LFILTER_EQ_NIL,AllCaseEqs(),some_def]
+  \\ rw [Once fromSeq_LCONS]
 QED
 
 val _ = export_theory();
