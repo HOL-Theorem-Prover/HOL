@@ -147,4 +147,12 @@ val t =  “P $some ∧ x < y ∧
 val t = “P $@ ∧
          q”
 
+Theorem eval_op_later:
+  eval_op f vs s = (res,t) ⇒ s ≤ t
+Proof
+  fs [eval_op_def, AllCaseEqs(),fail_def,return_def] \\ rw[]
+  \\ fs[later_refl] \\ fs{later_def]
+  \\ Cases_on ‘s.input’ \\ fs[forward_def,greater_def]
+QED
+
 val _ = export_theory()
