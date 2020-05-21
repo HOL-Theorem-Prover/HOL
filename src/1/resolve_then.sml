@@ -154,7 +154,7 @@ fun resolve_then mpos ttac th1 th2 (g as (asl,w)) =
           let
             open TermParse
             val pats =
-                prim_ctxt_termS Parse.Absyn (term_grammar())
+                prim_ctxt_termS Parse.Absyn (Parse.term_grammar())
                                 (HOLset.listItems (FVL (w::asl) empty_tmset))
                                 q
             fun doit ps n =
