@@ -726,7 +726,7 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
       (tactics (tactic) (tactics "," tactics)))
     '((assoc ",")) '((assoc ";"))
     '((assoc "^Proof")
-      (assoc ">>" "\\\\" ">-"  ">|" "THEN" "THEN1" "THENL")
+      (left ">>" "\\\\" ">-"  ">|" "THEN" "THEN1" "THENL")
       (assoc "by" "suffices_by"))
     '((assoc "ENDQ." "QFIER." "in" "of")
       (assoc "|")
@@ -754,7 +754,7 @@ a store_thm equivalent."))
 
 (defvar holscript-quantifier-regexp
   (concat (regexp-opt holscript-boolean-quantifiers) "\\|"
-          (regexp-opt '("some" "LEAST") 'words) "\\|[@λ]")
+          (regexp-opt '("some" "LEAST") 'words) "\\|\\_<[@λ]\\_>")
   "List of strings that can begin \"quantifier blocks\".")
 
 

@@ -91,6 +91,8 @@
    "sampleScript.sml"
    (lambda()
      (should (save-excursion
-               (move-check '(1 12 41 42 64 84 121 139
-                               176 218 382 479)
-                           'forward-sexp))))))
+               (and
+                (move-check '(1 12 41 42 64 84 121 139
+                                176 218 382 479)
+                            'forward-sexp)
+                (move-check '(2185 2466) 'forward-sexp)))))))

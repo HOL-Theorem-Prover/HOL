@@ -155,4 +155,15 @@ Proof
   \\ Cases_on ‘s.input’ \\ fs[forward_def,greater_def]
 QED
 
+Theorem ceqnat_behaviour[betasimp]:
+  ceqnat @@ church n @@ church m -n->* cB (n = m)
+Proof
+  SIMP_TAC (bsrw_ss()) [ceqnat_def] THEN
+  Q.ID_SPEC_TAC ‘m’ THEN Induct_on ‘n’ THEN1
+   SIMP_TAC (bsrw_ss()) [] THEN
+  ASM_SIMP_TAC (bsrw_ss()) [] THEN
+  Cases_on ‘m’ THEN SRW_TAC [][]
+QED
+
+
 val _ = export_theory()
