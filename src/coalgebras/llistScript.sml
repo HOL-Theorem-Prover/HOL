@@ -2973,4 +2973,48 @@ Proof
   \\ rw [LFILTER_EQ_NIL,Once fromSeq_LCONS]
 QED
 
+(* more theorems about fromList and fromSeq *)
+
+Theorem fromList_11[simp]:
+  !xs ys. fromList xs = fromList ys <=> xs = ys
+Proof
+  Induct \\ Cases_on ‘ys’ \\ fs []
+QED
+
+Theorem fromSeq_11[simp]:
+  !f g. fromSeq f = fromSeq g <=> f = g
+Proof
+  rw [] \\ eq_tac \\ rw [] \\ fs [FUN_EQ_THM]
+  \\ gen_tac \\ rename [‘f n = g n’]
+  \\ pop_assum mp_tac
+  \\ qid_spec_tac ‘f’
+  \\ qid_spec_tac ‘g’
+  \\ Induct_on ‘n’ \\ fs []
+  \\ once_rewrite_tac [fromSeq_LCONS] \\ fs []
+  \\ rw [] \\ res_tac \\ fs []
+QED
+
+Theorem fromList_NEQ_fromSeq[simp]:
+  !l f. fromList l <> fromSeq f
+Proof
+  CCONTR_TAC \\ fs []
+  \\ qspec_then ‘l’ mp_tac LFINITE_fromList
+  \\ qspec_then ‘f’ mp_tac LFINITE_fromSeq
+  \\ fs []
+QED
+
+Theorem LFINITE_IMP_fromList:
+  !ll. LFINITE ll ==> ?l. ll = fromList l
+Proof
+  rw [] \\ qspec_then ‘ll’ mp_tac fromList_fromSeq
+  \\ rw [] \\ fs []
+QED
+
+Theorem NOT_LFINITE_IMP_fromSeq:
+  !ll. ~LFINITE ll ==> ?f. ll = fromSeq f
+Proof
+  rw [] \\ qspec_then ‘ll’ mp_tac fromList_fromSeq
+  \\ rw [] \\ fs [LFINITE_fromList]
+QED
+
 val _ = export_theory();
