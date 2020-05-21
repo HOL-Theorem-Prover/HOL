@@ -3017,4 +3017,67 @@ Proof
   \\ rw [] \\ fs [LFINITE_fromList]
 QED
 
+(* suffix over lazy lists *)
+
+Definition LSUFFIX_def:
+  LSUFFIX xs zs <=> ?ys. xs = LAPPEND (fromList ys) zs \/ zs = LNIL
+End
+
+Theorem LSUFFIX:
+  LSUFFIX l LNIL = T /\
+  LSUFFIX LNIL (LCONS y ys) = F /\
+  LSUFFIX (LCONS x xs) l = (LCONS x xs = l \/ LSUFFIX xs l)
+Proof
+  fs [LSUFFIX_def] \\ rw [] \\ eq_tac \\ rw []
+  THEN1 (rename [‘fromList zs’] \\ Cases_on ‘zs’ \\ fs []
+         \\ disj2_tac \\ qexists_tac ‘t’ \\ fs [])
+  THEN1 (qexists_tac ‘[]’ \\ fs [])
+  THEN1 (qexists_tac ‘x::ys’ \\ fs [])
+QED
+
+Theorem LSUFFIX_fromList:
+  !xs ys. LSUFFIX (fromList xs) (fromList ys) <=> IS_SUFFIX xs ys
+Proof
+  rpt gen_tac \\ fs [LSUFFIX_def,LAPPEND_fromList]
+  \\ qid_spec_tac ‘ys’
+  \\ qid_spec_tac ‘xs’
+  \\ ho_match_mp_tac rich_listTheory.SNOC_INDUCT \\ rw []
+  THEN1
+   (qspec_then ‘ys’ mp_tac rich_listTheory.SNOC_CASES \\ rpt strip_tac
+    \\ asm_rewrite_tac [rich_listTheory.IS_SUFFIX] \\ fs [])
+  \\ rewrite_tac [GSYM rich_listTheory.SNOC_APPEND]
+  \\ qspec_then ‘ys’ mp_tac rich_listTheory.SNOC_CASES \\ rpt strip_tac
+  \\ asm_rewrite_tac [rich_listTheory.IS_SUFFIX]
+  \\ fs [GSYM PULL_EXISTS]
+  \\ Cases_on ‘l = []’ \\ fs []
+  \\ asm_rewrite_tac [rich_listTheory.IS_SUFFIX]
+  \\ first_x_assum (qspec_then ‘l’ mp_tac)
+  \\ asm_simp_tac std_ss []
+  \\ rw [] \\ eq_tac \\ rw []
+QED
+
+Theorem LSUFFIX_REFL[simp]:
+  !s. LSUFFIX s s
+Proof
+  rw [LSUFFIX_def] \\ qexists_tac ‘[]’ \\ fs []
+QED
+
+Theorem LSUFFIX_TRANS:
+  !x y z. LSUFFIX x y /\ LSUFFIX y z ==> LSUFFIX x z
+Proof
+  rw [LSUFFIX_def]
+  \\ fs [LAPPEND_EQ_LNIL]
+  \\ rename [‘LAPPEND (fromList zs1) (LAPPEND (fromList zs2) _)’]
+  \\ qexists_tac ‘zs1 ++ zs2’
+  \\ rewrite_tac [GSYM LAPPEND_ASSOC,LAPPEND_fromList]
+QED
+
+Theorem LSUFFIX_ANTISYM:
+  !x y. LSUFFIX x y /\ LSUFFIX y x /\ LFINITE x ==> x = y
+Proof
+  rw [LSUFFIX_def,LAPPEND_EQ_LNIL]
+  \\ imp_res_tac LFINITE_IMP_fromList \\ rw []
+  \\ fs [LAPPEND_fromList]
+QED
+
 val _ = export_theory();
