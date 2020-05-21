@@ -2970,8 +2970,7 @@ Theorem LFILTER_fromSeq:
                  else LFILTER p (fromSeq (f o SUC))
 Proof
   gen_tac \\ gen_tac \\ IF_CASES_TAC
-  THEN1 fs [LFILTER_EQ_NIL,AllCaseEqs(),some_def]
-  \\ rw [Once fromSeq_LCONS]
+  \\ rw [LFILTER_EQ_NIL,Once fromSeq_LCONS]
 QED
 
 val _ = export_theory();
