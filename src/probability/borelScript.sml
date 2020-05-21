@@ -3808,7 +3808,6 @@ Proof
  >> Cases_on `!k. k < n ==> f k = {}`
  >- (Suff `BIGUNION (IMAGE f (count n)) = {}`
      >- (Rewr' >> fs [positive_def, measurable_sets_def, measure_def] \\
-         MATCH_MP_TAC EQ_SYM \\
          MATCH_MP_TAC EXTREAL_SUM_IMAGE_0 \\
          rw [FINITE_COUNT, IN_COUNT, o_DEF]) \\
      RW_TAC std_ss [Once EXTENSION, IN_BIGUNION_IMAGE, IN_COUNT, NOT_IN_EMPTY] \\

@@ -5,7 +5,7 @@ open BasicProvers boolSimps markerLib optionTheory ;
 
 val _ = new_theory "llist";
 
-val _ = delsimps ["NORMEQ_CONV"]
+val _ = temp_delsimps ["NORMEQ_CONV"]
 
 val NOT_SUC = numTheory.NOT_SUC ;
 val SUC_SUB1 = arithmeticTheory.SUC_SUB1 ;

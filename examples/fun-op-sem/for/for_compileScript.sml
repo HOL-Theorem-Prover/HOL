@@ -969,10 +969,12 @@ val phase1_correct_div = store_thm("phase1_correct_div",
 ``∀s t. simple_sem_t_div s t ⇒ simple_sem_t_div s (phase1 t)``,
   metis_tac[phase1_correct_div_lemma])
 
-val phase1_pres_rel = Q.store_thm("phase1_pres_rel",`
-  ∀t. rel_semantics t ≠ Crash ⇒ rel_semantics (phase1 t) = rel_semantics t`,
-  strip_tac>>fs[rel_semantics_def,EQ_SYM_EQ]>>
-  metis_tac[phase1_correct_reln,simple_sem_t_reln_not_div,phase1_correct_div])
+Theorem phase1_pres_rel:
+  ∀t. rel_semantics t ≠ Crash ⇒ rel_semantics (phase1 t) = rel_semantics t
+Proof
+  strip_tac>>fs[rel_semantics_def]>>
+  metis_tac[phase1_correct_reln,simple_sem_t_reln_not_div,phase1_correct_div]
+QED
 
 (* End verification for relational semantics -- 43 lines *)
 
