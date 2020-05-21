@@ -2797,4 +2797,48 @@ Proof
   ho_match_mp_tac always_coind >> Cases >> simp[]
 QED
 *)
+
+(* ----------------------------------------------------------------------
+    Discriminating finite and infinite lists
+   ---------------------------------------------------------------------- *)
+
+Definition fromSeq_def:
+  fromSeq f = LUNFOLD (\x. SOME(SUC x, f x)) 0
+End
+
+Theorem fromSeq_LCONS_thm:
+  fromSeq f = LCONS (f 0) (fromSeq(f o SUC))
+Proof
+  PURE_REWRITE_TAC[fromSeq_def,Once LUNFOLD] >>
+  simp[] >>
+  PURE_REWRITE_TAC[Once LLIST_BISIMULATION] >>
+  qexists_tac ‘\x y. ?n. x = LUNFOLD (\x. SOME(SUC x, f x)) (SUC n) /\ y = LUNFOLD (\x. SOME(SUC x, f(SUC x))) n’ >>
+  rw[Once LUNFOLD] >-
+    (qexists_tac ‘0’ >> simp[]) >-
+    (qexists_tac ‘SUC n’ >> simp[])
+QED
+
+Theorem llist_is_stream_or_list:
+  !ll. (?l. ll = fromList l) \/ (?f. ll = fromSeq f)
+Proof
+  strip_tac >>
+  Cases_on ‘LFINITE ll’ >-
+   (drule_then strip_assume_tac LFINITE_toList >>
+    disj1_tac >>
+    qexists_tac ‘THE(toList ll)’ >>
+    drule_then MATCH_ACCEPT_TAC (GSYM to_fromList)) >>
+  disj2_tac >>
+  qexists_tac ‘\n. THE(LNTH n ll)’ >>
+  PURE_REWRITE_TAC[Once LLIST_BISIMULATION] >>
+  qexists_tac ‘\x y. (~LFINITE x /\ (?n. y = (fromSeq (λn. THE (LNTH n x)))))’ >>
+  rw[] >>
+  last_x_assum kall_tac >>
+  rename1 ‘ll = [||]’ >>
+  disj2_tac >>
+  simp[Once fromSeq_LCONS_thm] >>
+  Cases_on ‘ll’ >>
+  FULL_SIMP_TAC std_ss [LFINITE_THM,LNTH_THM,LHD_THM,LTL_THM] >>
+  simp[Once fromSeq_LCONS_thm,combinTheory.o_DEF]
+QED
+
 val _ = export_theory();
