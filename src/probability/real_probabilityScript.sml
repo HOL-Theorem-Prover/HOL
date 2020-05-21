@@ -23,8 +23,6 @@ open arithmeticTheory prim_recTheory seqTheory res_quanTheory res_quanTools
 
 open util_probTheory sigma_algebraTheory real_measureTheory real_lebesgueTheory;
 
-val COUNTABLE_IMAGE = image_countable;
-val FINITE_COUNTABLE = finite_countable;
 val set_ss = std_ss ++ PRED_SET_ss;
 
 val _ = new_theory "real_probability";
@@ -1557,17 +1555,11 @@ val COND_PROB_UNION = prove
         by (RW_TAC std_ss [EXTENSION, IN_INTER, IN_DIFF, IN_UNION] THEN PROVE_TAC [])
  >> RW_TAC std_ss []);
 
-val INSERT_THM1 = prove (``!(x:'a) s. x IN (x INSERT s)``,
-    RW_TAC std_ss [IN_INSERT]);
-
-val INSERT_THM2 = prove (``!(x:'a) y s. x IN s ==> x IN (y INSERT s)``,
-    RW_TAC std_ss [IN_INSERT]);
-
-val PROB_FINITE_ADDITIVE = store_thm
-  ("PROB_FINITE_ADDITIVE",
-  ``!p s f t. prob_space p /\ FINITE s /\ (!x. x IN s ==> f x IN events p) /\
+Theorem PROB_FINITE_ADDITIVE :
+    !p s f t. prob_space p /\ FINITE s /\ (!x. x IN s ==> f x IN events p) /\
        (!a b. (a:'b) IN s /\ b IN s /\ ~(a = b) ==> DISJOINT (f a) (f b)) /\
-       (t = BIGUNION (IMAGE f s)) ==> (prob p t = SIGMA (prob p o f) s)``,
+       (t = BIGUNION (IMAGE f s)) ==> (prob p t = SIGMA (prob p o f) s)
+Proof
     Suff `!s. FINITE (s:'b -> bool) ==>
         ((\s. !p f t. prob_space p  /\ (!x. x IN s ==> f x IN events p) /\
         (!a b. a IN s /\ b IN s /\ a <> b ==> DISJOINT (f a) (f b)) /\
@@ -1580,28 +1572,19 @@ val PROB_FINITE_ADDITIVE = store_thm
  >> RW_TAC std_ss [IMAGE_INSERT, BIGUNION_INSERT]
  >> Know `DISJOINT (f e) (BIGUNION (IMAGE f s))`
  >- (RW_TAC set_ss [DISJOINT_BIGUNION, IN_IMAGE] \\
-    `e IN e INSERT s` by FULL_SIMP_TAC std_ss [INSERT_THM1] \\
-    `x IN e INSERT s` by FULL_SIMP_TAC std_ss [INSERT_THM2] \\
+    `e IN e INSERT s` by PROVE_TAC [IN_INSERT] \\
+    `x IN e INSERT s` by PROVE_TAC [IN_INSERT] \\
     `e <> x` by METIS_TAC [] \\
      FULL_SIMP_TAC std_ss []) >> DISCH_TAC
- >> `(f e) IN events p` by FULL_SIMP_TAC std_ss [IN_FUNSET, INSERT_THM1]
+ >> `(f e) IN events p` by PROVE_TAC [IN_FUNSET, IN_INSERT]
  >> `BIGUNION (IMAGE f s) IN events p`
         by (MATCH_MP_TAC EVENTS_COUNTABLE_UNION >> RW_TAC std_ss []
            >- (RW_TAC std_ss [SUBSET_DEF,IN_IMAGE] THEN METIS_TAC [IN_INSERT])
-           >> MATCH_MP_TAC COUNTABLE_IMAGE >> RW_TAC std_ss [FINITE_COUNTABLE])
+           >> MATCH_MP_TAC image_countable >> RW_TAC std_ss [finite_countable])
  >> `(prob p (f e UNION BIGUNION (IMAGE f s))) = prob p (f e) + prob p (BIGUNION (IMAGE f s))`
         by (MATCH_MP_TAC PROB_ADDITIVE >> FULL_SIMP_TAC std_ss [])
- >> RW_TAC std_ss [INSERT_THM1, INSERT_THM2]);
-
-val INTER_BIGUNION = prove (
- ``(!s t. BIGUNION s INTER t = BIGUNION {x INTER t | x IN s}) /\
-   (!s t. t INTER BIGUNION s = BIGUNION {t INTER x | x IN s})``,
-  ONCE_REWRITE_TAC[EXTENSION] THEN
-  SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION, IN_INTER] THEN
-  MESON_TAC[IN_INTER]);
-
-val THREE_SETS_INTER = Q.prove (
-   `!A B C. A INTER B INTER (C INTER B) = A INTER C INTER B`, SET_TAC []);
+ >> fs [IN_INSERT]
+QED
 
 val COND_PROB_FINITE_ADDITIVE = store_thm
   ("COND_PROB_FINITE_ADDITIVE",
@@ -1642,8 +1625,11 @@ val COND_PROB_FINITE_ADDITIVE = store_thm
  >> RW_TAC std_ss [GSYM REAL_SUM_IMAGE_EQ_sum]
  >> `!(x:real) y. (x = y) = (y = x)` by RW_TAC std_ss [EQ_SYM_EQ] >> POP_ORW
  >> MATCH_MP_TAC PROB_FINITELY_ADDITIVE
- >> FULL_SIMP_TAC std_ss [DISJOINT_DEF, IN_FUNSET, IN_COUNT, EVENTS_INTER,
-                          THREE_SETS_INTER, INTER_EMPTY]);
+ >> FULL_SIMP_TAC std_ss [IN_FUNSET, IN_COUNT, EVENTS_INTER, INTER_EMPTY]
+ >> rpt STRIP_TAC
+ >> MATCH_MP_TAC DISJOINT_RESTRICT_L
+ >> FIRST_ASSUM MATCH_MP_TAC >> art []
+QED
 
 val BAYES_RULE = store_thm
   ("BAYES_RULE",

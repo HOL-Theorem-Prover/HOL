@@ -170,15 +170,19 @@ val _ = add_rule {fixity = Suffix 2100,
                   term_name = UnicodeChars.sup_2,
                   block_style = (AroundEachPhrase,(PP.CONSISTENT, 0)),
                   paren_style = OnlyIfNecessary,
-                  pp_elements = [TOK UnicodeChars.sup_2]}
-val _ = overload_on (UnicodeChars.sup_2, “\x. x ** 2”)
+                  pp_elements = [TOK UnicodeChars.sup_2]};
+
+val _ = overload_on (UnicodeChars.sup_2, “\x. x ** 2”);
+val _ = TeX_notation {hol = UnicodeChars.sup_2, TeX = ("\\HOLTokenSupTwo{}", 1)};
 
 val _ = add_rule {fixity = Suffix 2100,
                   term_name = UnicodeChars.sup_3,
                   block_style = (AroundEachPhrase,(PP.CONSISTENT, 0)),
                   paren_style = OnlyIfNecessary,
-                  pp_elements = [TOK UnicodeChars.sup_3]}
-val _ = overload_on (UnicodeChars.sup_3, “\x. x ** 3”)
+                  pp_elements = [TOK UnicodeChars.sup_3]};
+
+val _ = overload_on (UnicodeChars.sup_3, “\x. x ** 3”);
+val _ = TeX_notation {hol = UnicodeChars.sup_3, TeX = ("\\HOLTokenSupThree{}", 1)};
 
 val GREATER_DEF = new_definition("GREATER_DEF", “$> m n <=> n < m”)
 val _ = set_fixity ">" (Infix(NONASSOC, 450))
