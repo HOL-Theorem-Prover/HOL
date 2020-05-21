@@ -6,7 +6,7 @@
 %\usepackage{amsmath}
 \usepackage{alltt}
 \usepackage{../LaTeX/layout}
-\usepackage{makeidx}
+\usepackage{imakeidx}
 \usepackage{alltt}
 \usepackage{fancyvrb}
 \usepackage{graphicx}
@@ -17,12 +17,16 @@
 \input{../LaTeX/commands}
 \input{../LaTeX/ref-macros}
 
+\usepackage[hidelinks,hypertexnames=false,pdftitle={The HOL System REFERENCE}]{hyperref}
+\usepackage{breakurl} % it depends on hyperref
+
 %\includeonly{title,contents,preface,tactics,index}
 
 \verbosereftrue                           % verbose typesetting
 %\includeonly{theorems}
 %\includeonly{rules}
 
+\indexsetup{level=\chapter}
 \makeindex
 
 \begin{document}
@@ -57,8 +61,7 @@
 
    {\def\#{\char'043}                    % \tt style `#' character
     \cleardoublepage
-    \printindex}
+    \printindex
+  }
 
 \end{document}
-
-

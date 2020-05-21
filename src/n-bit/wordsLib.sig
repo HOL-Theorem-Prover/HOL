@@ -27,6 +27,7 @@ sig
     val BIT_SET_CONV        : conv
     val BITS_INTRO_CONV     : conv
     val WORD_ARITH_CONV     : conv
+    val WORD_ADD_CANON_CONV : conv
     val WORD_CANCEL_CONV    : conv
     val WORD_LOGIC_CONV     : conv
     val WORD_SUB_CONV       : conv

@@ -13,7 +13,7 @@ open HolKernel Abbrev boolLib aiLib
 val ERR = mk_HOL_ERR "psMCTS"
 
 (* -------------------------------------------------------------------------
-   Status
+   Status of the nodes and of the full search
    ------------------------------------------------------------------------- *)
 
 datatype status = Undecided | Win | Lose
@@ -28,6 +28,8 @@ fun string_of_status status = case status of
     Win => "win"
   | Lose => "lose"
   | Undecided => "undecided"
+
+datatype search_status = Success | Saturated | Timeout
 
 (* -------------------------------------------------------------------------
    Search tree
@@ -50,7 +52,7 @@ type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
 type ('a,'b) game =
   {
   status_of : 'a -> status,
-  apply_move : 'b -> 'a -> 'a,
+  apply_move : ('a,'b) tree * id -> 'b -> 'a -> ('a * ('a,'b) tree),
   available_movel : 'a -> 'b list,
   string_of_board : 'a -> string,
   string_of_move : 'b -> string,
@@ -241,7 +243,10 @@ fun puct_choice param tree vtot ((move,polv),cid) =
    Selection of a node to extend by traversing the tree.
    ------------------------------------------------------------------------- *)
 
-datatype ('a,'b) select = Backup of (id * real) | NodeExtension of (id * id)
+datatype ('a,'b) select =
+   Backup of (id * real) |
+   NodeExtension of (id * id) |
+   NoSelection
 
 fun lead_lose tree ((move,polv),cid) =
   (is_lose (#status (dfind cid tree)) handle NotFound => false)
@@ -260,19 +265,21 @@ fun select_child obj tree id =
     else if #avoidlose param andalso is_lose status
       then Backup (id, score_status status)
     else
-    let
-      val l0 =
-        if #avoidlose param
-        then filter (not o lead_lose tree) (#pol node)
-        else #pol node
-      val _ = if null l0 then raise ERR "select_child" "" else ()
-      val l1 = map_assoc (puct_choice param tree (#vis node)) l0
-      val l2 = dict_sort compare_rmax l1
-      val cid  = snd (fst (hd l2))
+    let val l0 =
+      if #avoidlose param
+      then filter (not o lead_lose tree) (#pol node)
+      else #pol node
     in
-      if not (dmem cid tree)
-      then NodeExtension (id,cid)
-      else select_child obj tree cid
+      if null l0 then NoSelection else
+      let
+        val l1 = map_assoc (puct_choice param tree (#vis node)) l0
+        val l2 = dict_sort compare_rmax l1
+        val cid  = snd (fst (hd l2))
+      in
+        if not (dmem cid tree)
+        then NodeExtension (id,cid)
+        else select_child obj tree cid
+      end
     end
   end
 
@@ -291,7 +298,7 @@ fun expand obj (tree,cache) (id,cid) =
     val node = dfind id tree
     val board1 = #board node
     val move = find_move (#pol node) cid
-    val board2 = (#apply_move (#game obj)) move board1
+    val (board2,newtree) = (#apply_move (#game obj)) (tree,id) move board1
   in
     node_create_backup obj (tree,cache) (cid,board2)
   end
@@ -304,26 +311,30 @@ fun starttree_of obj board =
   node_create_backup obj
     (dempty id_compare, dempty (#board_compare (#game obj))) ([],board)
 
+fun is_timeout timer tree param =
+  (isSome (#nsim param) andalso
+   #vis (dfind [] tree) > Real.fromInt (valOf (#nsim param)) + 0.5)
+  orelse
+  (isSome (#timer param) andalso
+   Timer.checkRealTimer timer > Time.fromReal (valOf (#timer param)))
+  orelse
+  (#stopatwin_flag param andalso is_win (#status (dfind [] tree)))
+
+fun check_success tree =
+  if is_win (#status (dfind [] tree)) then Success else Timeout
+
 fun mcts obj (starttree,startcache) =
   let
-    val loc_timer = Timer.startRealTimer ()
+    val timer = Timer.startRealTimer ()
     val param = #mctsparam obj
     fun loop (tree,cache) =
-      if (isSome (#nsim param) andalso
-          #vis (dfind [] tree) > Real.fromInt (valOf (#nsim param)) + 0.5)
-         orelse
-         (#stopatwin_flag param andalso is_win (#status (dfind [] tree)))
-         orelse
-         (isSome (#timer param) andalso
-          Timer.checkRealTimer loc_timer >
-            Time.fromReal (valOf (#timer param)))
-      then (tree,cache) else
-        let val (newtree,newcache) = case select_child obj tree [] of
-            Backup (id,sc) => (backup (#decay param) tree (id,sc), cache)
-          | NodeExtension (id,cid) => expand obj (tree,cache) (id,cid)
-        in
-          loop (newtree,newcache)
-        end
+      if is_timeout timer tree param
+      then (check_success tree, (tree,cache))
+      else
+        case select_child obj tree [] of
+            Backup (id,sc) => loop (backup (#decay param) tree (id,sc), cache)
+          | NodeExtension (id,cid) => loop (expand obj (tree,cache) (id,cid))
+          | NoSelection => (Saturated, (tree, cache))
   in
     loop (starttree,startcache)
   end
@@ -380,6 +391,28 @@ fun trace_win tree id =
     node :: trace_win tree (hd l)
   end
 
+(* does not record last state *)
+fun trace_win_movel tree id =
+  let
+    val _ = if not (dmem id tree)
+            then raise ERR "trace_win" "id is not a node"
+            else ()
+    val node = dfind id tree
+  in
+    if is_win (#stati node) then [] else
+    let
+      fun loc_is_win tree (_,x) =
+         (is_win (#status (dfind x tree))
+          handle NotFound => false)
+      val l = filter (loc_is_win tree) (#pol node)
+    in
+      if null l then raise ERR "trace_win" "no winning path" else
+      let val ((move,_),cid) = hd l in
+        (#board node, move) :: trace_win_movel tree cid
+      end
+    end
+  end
+
 (* -------------------------------------------------------------------------
    Toy example: the goal of this task is to reach a positive number starting
    from zero by incrementing or decrementing.
@@ -397,9 +430,9 @@ val toy_movel = [Incr,Decr]
 fun toy_available_movel board = [Incr,Decr]
 fun toy_string_of_move x = case x of Incr => "Incr" | Decr => "Decr"
 
-fun toy_apply_move m (start,finish,timer) = case m of
-   Incr => (start+1,finish,timer-1)
- | Decr => (start-1,finish,timer-1)
+fun toy_apply_move (tree,id) move (start,finish,timer) = case move of
+   Incr => ((start+1,finish,timer-1), tree)
+ | Decr => ((start-1,finish,timer-1), tree)
 
 val toy_game =
   {
@@ -443,8 +476,8 @@ val mctsobj : (toy_board,toy_move) mctsobj =
   };
 
 val starttree = starttree_of mctsobj (0,10,100);
-val ((tree,_),t) = add_time (mcts mctsobj) starttree; dlength tree;
-val status = #status (dfind [] tree);
+val ((sstatus,(tree,_)),t) = add_time (mcts mctsobj) starttree;
+dlength tree;
 val root = dfind [] tree;
 val nodel = trace_win tree [];
 *)

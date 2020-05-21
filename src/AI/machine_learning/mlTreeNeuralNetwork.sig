@@ -9,8 +9,11 @@ include Abbrev
   type schedule = mlNeuralNetwork.schedule
   type tnnbatch = (term list * (term * mlMatrix.vect) list) list
 
+  val operl_of_term : term -> (term * int) list
+  val oper_compare : (term * int) * (term * int) -> order
   val random_tnn : (term * int list) list -> tnn
   val dim_std : int * int -> term -> int list
+  val dim_std_arity : int * int -> (term * int) -> int list
   val random_tnn_std : (int * int) -> term list -> tnn
   val mk_embedding_var : (real vector * hol_type) -> term
 
@@ -28,15 +31,11 @@ include Abbrev
     mlNeuralNetwork.trainparam -> real list -> tnn -> tnnbatch list ->
     tnn * real
   val stats_tnnex : tnnex -> string
-
   val train_tnn : schedule -> tnn -> tnnex * tnnex -> tnn
-
   val is_accurate : tnn -> (term * real list) list -> bool
   val tnn_accuracy : tnn -> tnnex -> real
-
   val traintnn_extspec :
     (unit, (tnnex * schedule * tnnparam), tnn) smlParallel.extspec
-
-   val train_tnn_automl : mlNeuralNetwork.trainparam -> tnn -> tnnex -> tnn
+  val train_tnn_automl : mlNeuralNetwork.trainparam -> tnn -> tnnex -> tnn
 
 end

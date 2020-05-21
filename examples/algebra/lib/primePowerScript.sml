@@ -3494,27 +3494,30 @@ val prime_power_index_suc_property = store_thm(
       = lcm z m                         by list_lcm_suc
       = p * m                           by lcm_special_for_prime_power
 *)
-val list_lcm_by_last_prime_power = store_thm(
-  "list_lcm_by_last_prime_power",
-  ``!n. SING (prime_divisors (n + 1)) ==>
-       (list_lcm [1 .. (n + 1)] = CHOICE (prime_divisors (n + 1)) * list_lcm [1 .. n])``,
+Theorem list_lcm_by_last_prime_power:
+  !n.
+    SING (prime_divisors (n + 1)) ==>
+    list_lcm [1 .. (n + 1)] =
+    CHOICE (prime_divisors (n + 1)) * list_lcm [1 .. n]
+Proof
   rpt strip_tac >>
-  qabbrev_tac `z = n + 1` >>
-  `?p. prime_divisors z = {p}` by rw[GSYM SING_DEF] >>
+  qabbrev_tac ‘z = n + 1’ >>
+  ‘?p. prime_divisors z = {p}’ by rw[GSYM SING_DEF] >>
   rw[] >>
-  `prime p /\ (z = p ** ppidx z)` by metis_tac[prime_divisors_sing_property, CHOICE_SING] >>
-  `z <> 1 /\ n <> 0` by metis_tac[prime_divisors_1, NOT_SING_EMPTY, ADD] >>
-  `?h. ppidx z = SUC h` by metis_tac[EXP_EQ_1, num_CASES] >>
-  qabbrev_tac `m = list_lcm [1 .. n]` >>
-  qabbrev_tac `j = ppidx m` >>
-  `0 < m` by rw[list_lcm_pos, EVERY_MEM, Abbr`m`] >>
-  `?q. (m = p ** j * q) /\ coprime p q` by metis_tac[prime_power_index_eqn] >>
-  `0 < n` by decide_tac >>
-  `SUC h = SUC j` by metis_tac[prime_power_index_suc_special, ADD1] >>
-  `h = j` by decide_tac >>
-  `list_lcm [1 .. z] = lcm z m` by rw[list_lcm_suc, Abbr`z`, Abbr`m`] >>
-  `_ = p * m` by fs[lcm_special_for_prime_power] >>
-  rw[]);
+  ‘prime p /\ (z = p ** ppidx z)’ by metis_tac[prime_divisors_sing_property, CHOICE_SING] >>
+  ‘z <> 1 /\ n <> 0’ by metis_tac[prime_divisors_1, NOT_SING_EMPTY, ADD] >>
+  ‘?h. ppidx z = SUC h’ by metis_tac[EXP_EQ_1, num_CASES] >>
+  qabbrev_tac ‘m = list_lcm [1 .. n]’ >>
+  qabbrev_tac ‘j = ppidx m’ >>
+  ‘0 < m’ by rw[list_lcm_pos, EVERY_MEM, Abbr‘m’] >>
+  ‘?q. (m = p ** j * q) /\ coprime p q’ by metis_tac[prime_power_index_eqn] >>
+  ‘0 < n’ by decide_tac >>
+  ‘SUC h = SUC j’ by metis_tac[prime_power_index_suc_special, ADD1] >>
+  ‘h = j’ by decide_tac >>
+  ‘list_lcm [1 .. z] = lcm z m’ by rw[list_lcm_suc, Abbr‘z’, Abbr‘m’] >>
+  ‘_ = p * m’ by metis_tac[lcm_special_for_prime_power] >>
+  rw[]
+QED
 
 (* Theorem: ~ SING (prime_divisors (n + 1)) ==> (list_lcm [1 .. (n + 1)] = list_lcm [1 .. n]) *)
 (* Proof:

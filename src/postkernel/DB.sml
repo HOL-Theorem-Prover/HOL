@@ -33,7 +33,9 @@ fun indef_class2string Thm = "a theorem"
 
 type data    = (string * string) * (thm * class)
 
-fun dataNameEq s ((_, nm), _) = nm = s
+fun dataName (((_, nm), _) : data) = nm
+fun dataThy (((thy, _), _) : data) = thy
+fun dataNameEq s d = dataName d = s
 
 
 (*---------------------------------------------------------------------------
@@ -185,11 +187,20 @@ fun thy s =
         | SOME m => Map.foldl (fn (lcnm, datas, A) => datas @ A) [] m
     end
 
+fun findpred pat s =
+    let
+      val pat = toLower pat and s = toLower s
+      val orparts = String.tokens (equal #"|") pat
+      val subparts = map (String.tokens (equal #"~")) orparts
+      val subpred = List.all (C occurs s)
+    in
+      List.exists subpred subparts
+    end
+
 fun find s =
     let
       val DB{namemap,...} = CT()
-      val s = toLower s
-      fun subfold (k, v, acc) = if occurs s k then v @ acc else acc
+      fun subfold (k, v, acc) = if findpred s k then v @ acc else acc
       fun fold (thy, m, acc) = Map.foldr subfold acc m
     in
       Map.foldr fold [] namemap
@@ -234,11 +245,7 @@ fun matches pat th =
 fun apropos_in pat dbdata =
   List.filter (fn (_, (th, _)) => matches pat th) dbdata ;
 
-fun find_in s =
-  let val lows = toLower s ;
-    fun finds dbdata =
-      List.filter (fn ((_, name), _) => occurs lows (toLower name)) dbdata ;
-  in finds end ;
+fun find_in s = List.filter (findpred s o dataName)
 
 fun listDB () =
     let fun subfold (k,v,acc) = v @ acc
@@ -246,6 +253,20 @@ fun listDB () =
     in
       Map.foldr fold [] (namemap (CT()))
     end
+
+fun selectDB sels =
+    let
+      fun selfn (SelTM pat) = apropos_in pat
+        | selfn (SelNM s) = find_in s
+        | selfn (SelTHY s) = List.filter (equal (norm_thyname s) o dataThy)
+      fun recurse sels d =
+          case sels of
+              [] => d
+            | s::rest => recurse rest (selfn s d)
+    in
+      recurse sels (listDB())
+    end
+
 
 (*---------------------------------------------------------------------------
       Some other lookup functions

@@ -142,6 +142,7 @@ val Induct    = BasicProvers.Induct
 val recInduct = Induction.recInduct
 
 val Cases_on          = BasicProvers.Cases_on
+val tmCases_on        = BasicProvers.tmCases_on
 val namedCases_on     = BasicProvers.namedCases_on
 val Induct_on         = BasicProvers.Induct_on
 val PairCases_on      = pairLib.PairCases_on;

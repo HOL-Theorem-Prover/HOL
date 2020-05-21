@@ -14,6 +14,7 @@ val ERR = mk_HOL_ERR "smlExec"
 
 val sml_dir = HOLDIR ^ "/src/AI/sml_inspection"
 val sml_code_dir = sml_dir ^ "/code"
+val execprefix_glob = ref "noprefix"
 
 (* -------------------------------------------------------------------------
    Global references
@@ -36,7 +37,7 @@ val sml_thml_glob = ref []
 fun exec_sml file s =
   let
     val _    = mkDir_err sml_code_dir
-    val path = sml_code_dir ^ "/" ^ current_theory () ^ "_" ^ file
+    val path = sml_code_dir ^ "/" ^ !execprefix_glob ^ "_" ^ file
     val oc   = TextIO.openOut path
     fun os s = TextIO.output (oc,s)
   in
@@ -59,11 +60,14 @@ fun string_of_pretty p =
 fun smltype_of_value l s =
   let
     val v = assoc s l handle HOL_ERR _ => raise ERR "type_of_value" s
-    val t = PolyML.NameSpace.Values.typeof v;
+    val t = PolyML.NameSpace.Values.typeof v
     val p = PolyML.NameSpace.Values.printType (t,0,NONE)
   in
     string_of_pretty p
   end
+
+fun is_local_value s =
+  mem s (map fst (#allVal (PolyML.globalNameSpace) ()))
 
 fun is_thm_value l s =
   let
@@ -91,9 +95,11 @@ fun is_thm s =
   end
 
 fun thm_of_sml s =
-  let val b = exec_sml "thm_of_sml" ("smlExecute.sml_thm_glob := " ^ s) in
-    if b then SOME (s, !sml_thm_glob) else NONE
-  end
+  if is_thm s then
+    let val b = exec_sml "thm_of_sml" ("smlExecute.sml_thm_glob := " ^ s) in
+      if b then SOME (s, !sml_thm_glob) else NONE
+    end
+  else NONE
 
 fun thml_of_sml sl =
   let
@@ -151,22 +157,6 @@ fun is_stype s =
     fun test c = not_in [#"\t",#"\n",#" ",#"\""] c
   in
     List.find test (explode (rm_comment (rm_squote s))) = SOME #":"
-  end
-
-(* -------------------------------------------------------------------------
-   Import metis from the future
-   ------------------------------------------------------------------------- *)
-
-val metistac_glob: (thm list -> tactic) option ref = ref NONE
-
-fun metistac_of_sml () =
-  let
-    val b = exec_sml "update_metis_tac"
-      (String.concatWith "\n"
-      ["load \"metisTools\";",
-       "val _ = smlExecute.metis_tac_glob := SOME metisTools.METIS_TAC;"])
-  in
-    if b then () else raise ERR "metistac_of_sml" ""
   end
 
 (* ------------------------------------------------------------------------

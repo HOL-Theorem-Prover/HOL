@@ -266,13 +266,17 @@ fun filter_net_by_names nms net =
       Ho_Net.vfilter (fn nd => not (name_match nd munged_pats)) net
     end
 
+fun dphas_name_from nms (REDUCER {name = SOME n,...}) = Lib.mem n nms
+  | dphas_name_from _ _ = false
+fun filter_dprocs_by_names nms = List.filter (not o dphas_name_from nms)
+
 fun (ss as SS{mk_rewrs,history,initial_net,dprocs,travrules,limit}) -* nms =
     if null nms then ss
     else
       SS{initial_net = filter_net_by_names nms initial_net,
          history = DELETE_EVENT nms :: history, (* stored in reverse order *)
          mk_rewrs = mk_rewrs,
-         dprocs = dprocs,
+         dprocs = filter_dprocs_by_names nms dprocs,
          travrules = travrules,
          limit = limit}
 

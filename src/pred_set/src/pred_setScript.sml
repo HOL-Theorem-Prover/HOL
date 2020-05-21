@@ -15,11 +15,6 @@ struct
 (* structure declaration is necessary so that Moscow ML does not get
    confused by the rebinding of structure Q below *)
 
-(* interactive use
-app load ["pairLib", "numLib", "PGspec", "PSet_ind", "Q",
-          "Defn", "TotalDefn", "metisLib", "OpenTheoryMap",
-          "numpairTheory"];
-*)
 open HolKernel Parse boolLib Prim_rec pairLib numLib
      pairTheory numTheory prim_recTheory arithmeticTheory whileTheory
      BasicProvers metisLib mesonLib simpLib boolSimps;
@@ -3274,6 +3269,59 @@ val INJ_CARD_IMAGE_EQ = Q.store_thm ("INJ_CARD_IMAGE_EQ",
   `INJ f s t ==> FINITE s ==> (CARD (IMAGE f s) = CARD s)`,
   REPEAT STRIP_TAC THEN IMP_RES_TAC INJ_CARD_IMAGE) ;
 
+(* ------------------------------------------------------------------------- *)
+(* Relational form of CARD (from cardinalTheory)                             *)
+(* ------------------------------------------------------------------------- *)
+
+val _ = set_fixity "HAS_SIZE" (Infix(NONASSOC, 450));
+
+val HAS_SIZE = new_definition ("HAS_SIZE",
+   “s HAS_SIZE n <=> FINITE s /\ (CARD s = n)”);
+
+Theorem HAS_SIZE_CARD :
+    !s n. s HAS_SIZE n ==> (CARD s = n)
+Proof
+    SIMP_TAC std_ss [HAS_SIZE]
+QED
+
+Theorem HAS_SIZE_0:
+   !(s:'a->bool). s HAS_SIZE 0:num <=> (s = {})
+Proof
+    simp [HAS_SIZE, EQ_IMP_THM]
+ >> ‘!s. FINITE s ==> (CARD s = 0 ==> s = {})’ suffices_by (METIS_TAC [])
+ >> Induct_on ‘FINITE’ >> simp []
+QED
+
+Theorem HAS_SIZE_SUC :
+    !(s:'a->bool) n. s HAS_SIZE (SUC n) <=>
+                     s <> {} /\ !a. a IN s ==> (s DELETE a) HAS_SIZE n
+Proof
+    rpt GEN_TAC THEN REWRITE_TAC[HAS_SIZE]
+ >> ASM_CASES_TAC ``s:'a->bool = {}``
+ >> ASM_REWRITE_TAC [CARD_DEF, FINITE_EMPTY, FINITE_INSERT,
+                     NOT_IN_EMPTY, SUC_NOT]
+ >> REWRITE_TAC [FINITE_DELETE]
+ >> ASM_CASES_TAC ``FINITE(s:'a->bool)``
+ >> RW_TAC std_ss [NOT_FORALL_THM, MEMBER_NOT_EMPTY]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >| [ ASM_SIMP_TAC std_ss [CARD_DELETE],
+      KNOW_TAC ``?x. x IN s`` THENL
+      [ FULL_SIMP_TAC std_ss [MEMBER_NOT_EMPTY], ALL_TAC] \\
+      DISCH_THEN (X_CHOOSE_TAC ``a:'a``) \\
+      ASSUME_TAC CARD_INSERT \\
+      POP_ASSUM (MP_TAC o Q.SPEC `s DELETE a`) \\
+      FULL_SIMP_TAC std_ss [FINITE_DELETE] >> STRIP_TAC \\
+      POP_ASSUM (MP_TAC o Q.SPEC `a`) \\
+      FULL_SIMP_TAC std_ss [INSERT_DELETE] \\
+      ASM_REWRITE_TAC [IN_DELETE] ]
+QED
+
+Theorem FINITE_HAS_SIZE :
+    !s. FINITE s <=> s HAS_SIZE CARD s
+Proof
+    REWRITE_TAC [HAS_SIZE]
+QED
+
 (* ====================================================================== *)
 (* Sets of size n.                                                        *)
 (* ====================================================================== *)
@@ -3755,6 +3803,12 @@ val BIGUNION = Q.new_definition
   `BIGUNION P = { x | ?s. s IN P /\ x IN s}`);
 val _ = ot0 "BIGUNION" "bigUnion"
 
+(* N-ARY UNION (it's not any bigger but a different symbol)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x22C3, tmnm = "BIGUNION"};
+val _ = TeX_notation {hol = UTF8.chr 0x22C3, TeX = ("\\HOLTokenBigUnion{}", 1)};
+ *)
+val _ = TeX_notation {hol = "BIGUNION",      TeX = ("\\HOLTokenBigUnion{}", 1)};
+
 Theorem IN_BIGUNION[simp]:
   !x sos. x IN BIGUNION sos <=> ?s. x IN s /\ s IN sos
 Proof
@@ -3963,6 +4017,12 @@ val BIGINTER = Q.new_definition
 ("BIGINTER",
  `BIGINTER P = { x | !s. s IN P ==> x IN s}`);
 val _ = ot0 "BIGINTER" "bigIntersect"
+
+(* N-ARY INTERSECTION (it's not any bigger but a different symbol)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x22C2, tmnm = "BIGINTER"};
+val _ = TeX_notation {hol = UTF8.chr 0x22C2, TeX = ("\\HOLTokenBigInter{}", 1)};
+ *)
+val _ = TeX_notation {hol = "BIGINTER",      TeX = ("\\HOLTokenBigInter{}", 1)};
 
 Theorem IN_BIGINTER[simp]:
    x IN BIGINTER B <=> !P. P IN B ==> x IN P
@@ -4232,6 +4292,37 @@ Theorem INFINITE_PAIR_UNIV[simp]:
   FINITE univ(:'a # 'b) <=> FINITE univ(:'a) /\ FINITE univ(:'b)
 Proof
   FULL_SIMP_TAC (srw_ss()) [CROSS_UNIV]
+QED
+
+Theorem INTER_CROSS :
+    !A B C D. (A CROSS B) INTER (C CROSS D) = (A INTER C) CROSS (B INTER D)
+Proof
+    RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_CROSS]
+ >> PROVE_TAC []
+QED
+
+Theorem BIGUNION_CROSS :
+    !f s t. (BIGUNION (IMAGE f s)) CROSS t = BIGUNION (IMAGE (\n. f n CROSS t) s)
+Proof
+    RW_TAC std_ss [EXTENSION, IN_BIGUNION_IMAGE, IN_CROSS]
+ >> EQ_TAC >> RW_TAC std_ss []
+ >- (Q.EXISTS_TAC ‘n’ >> ASM_REWRITE_TAC [])
+ >> ASM_REWRITE_TAC []
+QED
+
+Theorem CROSS_BIGUNION :
+    !f s t. s CROSS (BIGUNION (IMAGE f t)) = BIGUNION (IMAGE (\n. s CROSS f n) t)
+Proof
+    RW_TAC std_ss [EXTENSION, IN_BIGUNION_IMAGE, IN_CROSS]
+ >> EQ_TAC >> RW_TAC std_ss []
+ >- ASM_REWRITE_TAC []
+ >> Q.EXISTS_TAC ‘n’ >> ASM_REWRITE_TAC []
+QED
+
+Theorem SUBSET_CROSS :
+    !a b c d. a SUBSET b /\ c SUBSET d ==> (a CROSS c) SUBSET (b CROSS d)
+Proof
+    RW_TAC std_ss [SUBSET_DEF, IN_CROSS]
 QED
 
 (* sums *)

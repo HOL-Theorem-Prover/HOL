@@ -310,6 +310,13 @@ fun primCases_on names st (g as (_,w)) =
 fun Cases_on qtm g = primCases_on [] (find_subterm qtm g) g
   handle e => raise wrap_exn "BasicProvers" "Cases_on" e;
 
+fun tmCases_on tm names (g as (asl,w)) =
+    let
+      val fvs = FVL (w::asl) empty_tmset |> HOLset.listItems
+    in
+      primCases_on names (prim_find_subterm fvs tm g) g
+    end handle e => raise wrap_exn "BasicProvers" "tmCases_on" e;
+
 fun namedCases_on qtm names g =
   primCases_on names (find_subterm qtm g) g
   handle e => raise wrap_exn "BasicProvers" "namedCases_on" e;
@@ -1084,13 +1091,14 @@ val bool_ss = boolSimps.bool_ss;
        just when a datatype is declared.
  ---------------------------------------------------------------------------*)
 
-val (srw_ss : simpset ref) = ref (bool_ss ++ combinSimps.COMBIN_ss
-                          ++ boolSimps.NORMEQ_ss);
+val (srw_ss : simpset ref) = ref bool_ss
 
 val srw_ss_initialised = ref false;
 
 datatype update = ADD_SSFRAG of simpLib.ssfrag | REMOVE_RWT of string
-val pending_updates = ref ([]: update list);
+val pending_updates = ref (map ADD_SSFRAG [combinSimps.COMBIN_ss,
+                                           boolSimps.NORMEQ_ss,
+                                           boolSimps.LABEL_CONG_ss]);
 
 fun apply_update (ADD_SSFRAG ssf, ss) = ss ++ ssf
   | apply_update (REMOVE_RWT n, ss) = ss -* [n]

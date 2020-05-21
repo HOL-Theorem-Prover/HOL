@@ -432,6 +432,7 @@ fun fst_eq eq (x1,y1) (x2,y2) = eq x1 x2
 fun option_eq eq NONE NONE = true
   | option_eq eq (SOME x) (SOME y) = eq x y
   | option_eq _ _ _ = false
+fun inv_img_eq f (eq:'b eqf) a1 a2 = eq (f a1) (f a2)
 fun list_eq eq l1 l2 = ListPair.allEq (fn (x,y) => eq x y) (l1, l2)
 fun redres_eq eq1 eq2 {residue=res1,redex=red1} {residue=res2,redex=red2} =
   eq1 red1 red2 andalso eq2 res1 res2

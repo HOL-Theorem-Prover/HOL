@@ -65,12 +65,10 @@ fun hh_reconstruct lemmas g =
       val stac = mk_metis_call lemmas
       val t1 = !minimization_timeout
       val t2 = !reconstruction_timeout
-      val newstac = hide_out (psMinimize.minimize_stac t1 stac g) []
-        handle Interrupt => raise Interrupt
-             | _ => raise ERR "hh_reconstruct" "minimization failed"
-      val tac = hide_out tactic_of_sml newstac
+      val newstac = psMinimize.minimize_stac t1 stac g []
+      val tac = tactic_of_sml newstac
     in
-      case hide_out (timeout_tactic t2 tac) g of
+      case timeout_tactic t2 tac g of
         SOME _ => (newstac,tac)
       | NONE   => raise ERR "hh_reconstruct" "reconstruction failed"
     end

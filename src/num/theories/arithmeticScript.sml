@@ -1265,7 +1265,7 @@ val LESS_MULT2 = store_thm ("LESS_MULT2",
   REPEAT GEN_TAC THEN CONV_TAC CONTRAPOS_CONV THEN
   REWRITE_TAC[NOT_LESS, LESS_EQ_0, DE_MORGAN_THM, MULT_EQ_0]);
 
-Theorem ZERO_LESS_MULT:
+Theorem ZERO_LESS_MULT[simp]:
   !m n. 0 < m * n <=> 0 < m /\ 0 < n
 Proof
   REPEAT GEN_TAC THEN
@@ -3588,17 +3588,21 @@ val MOD_ELIM = Q.store_thm ("MOD_ELIM",
     THEN METIS_TAC [SUB_ADD,GREATER_OR_EQ,GREATER_DEF,LESS_OR_EQ,ADD_MODULUS],
     METIS_TAC [LESS_MOD,NOT_LESS,LESS_OR_EQ,GREATER_OR_EQ, GREATER_DEF]]);
 
-val DOUBLE_LT = store_thm ("DOUBLE_LT",
-   “!p q. 2 * p + 1 < 2 * q <=> 2 * p < 2 * q”,
-   REPEAT GEN_TAC
-   THEN (EQ_TAC THEN1 PROVE_TAC [ADD1, prim_recTheory.SUC_LESS])
-   THEN STRIP_TAC
-   THEN SIMP_TAC boolSimps.bool_ss [GSYM ADD1]
-   THEN MATCH_MP_TAC LESS_NOT_SUC
-   THEN ASM_REWRITE_TAC []
-   THEN PROVE_TAC [EVEN_ODD, EVEN_DOUBLE, ODD_DOUBLE]);
+Theorem DOUBLE_LT[simp]:
+  !p q. 2 * p + 1 < 2 * q <=> p < q
+Proof
+  ‘!p q. 2 * p + 1 < 2 * q <=> 2 * p < 2 * q’
+    suffices_by (STRIP_TAC THEN ASM_REWRITE_TAC[LT_MULT_LCANCEL, TWO, LESS_0])
+  THEN REPEAT GEN_TAC
+  THEN EQ_TAC THEN1 PROVE_TAC [ADD1, prim_recTheory.SUC_LESS]
+  THEN STRIP_TAC
+  THEN SIMP_TAC boolSimps.bool_ss [GSYM ADD1]
+  THEN MATCH_MP_TAC LESS_NOT_SUC
+  THEN ASM_REWRITE_TAC []
+  THEN PROVE_TAC [EVEN_ODD, EVEN_DOUBLE, ODD_DOUBLE]
+QED
 
-Theorem EXP2_LT:
+Theorem EXP2_LT[simp]:
    !m n. n DIV 2 < 2 ** m <=> n < 2 ** SUC m
 Proof
    REPEAT GEN_TAC
@@ -3653,11 +3657,13 @@ val ONE_LT_MULT = Q.store_thm ("ONE_LT_MULT",
            LESS_MONO_EQ,ZERO_LESS_ADD,LESS_0] THEN
    METIS_TAC [ZERO_LESS_MULT]]);
 
-val ONE_LT_EXP = Q.store_thm ("ONE_LT_EXP",
- `!x y. 1 < x ** y <=> 1 < x /\ 0 < y`,
+Theorem ONE_LT_EXP[simp]:
+   !x y. 1 < x ** y <=> 1 < x /\ 0 < y
+Proof
  GEN_TAC THEN INDUCT_TAC THEN
  RW_TAC bool_ss [EXP,ONE_LT_MULT,LESS_REFL,LESS_0,ZERO_LT_EXP] THEN
- METIS_TAC [SUC_LESS, ONE]);
+ METIS_TAC [SUC_LESS, ONE]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Calculating DIV and MOD by repeated subtraction. We define a              *)

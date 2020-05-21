@@ -1488,7 +1488,7 @@ val subspt_domain = Q.store_thm("subspt_domain",
      subspt t1 t2 <=> domain t1 SUBSET domain t2`,
   fs [subspt_lookup,domain_lookup,SUBSET_DEF]);
 
-val subspt_def = Q.store_thm("subspt_def[compute]",
+val subspt_def = Q.store_thm("subspt_def",
   `!sp1 sp2.
      subspt sp1 sp2 <=>
      !k. k IN domain sp1 ==> k IN domain sp2 /\

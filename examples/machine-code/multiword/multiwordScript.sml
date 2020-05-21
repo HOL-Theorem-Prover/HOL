@@ -3482,9 +3482,12 @@ val LESS_2_EXP = store_thm("LESS_2_EXP[simp]",
   ``!n. n < 2 ** n``,
   Induct \\ fs [EXP]);
 
-val single_div_full_thm = store_thm("single_div_full_thm",
-  ``mw2n [x2;x1] < mw2n [0w;y] ==>
-    (single_div_full x1 x2 y = single_div x1 x2 y)``,
+val _ = delsimps ["ZERO_LESS_MULT"]
+
+Theorem single_div_full_thm:
+  mw2n [x2;x1] < mw2n [0w;y] ==>
+    (single_div_full x1 x2 y = single_div x1 x2 y)
+Proof
   fs [single_div_full_def]
   \\ Cases_on `single_div_loop (n2w (dimindex (:'a)),[0w; y],0w,[x2; x1])`
   \\ fs [] \\ strip_tac
@@ -3505,6 +3508,7 @@ val single_div_full_thm = store_thm("single_div_full_thm",
   \\ fs [DIV_LT_X] \\ fs [dimword_def]
   \\ match_mp_tac LESS_TRANS
   \\ rename1 `k < 2 ** dimindex (:'a)`
-  \\ qexists_tac `k` \\ fs []);
+  \\ qexists_tac `k` \\ fs []
+QED
 
 val _ = export_theory();
