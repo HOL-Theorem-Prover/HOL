@@ -219,14 +219,12 @@ fun starttree_of stacpred goal =
    Searching for a node to explore
    ---------------------------------------------------------------------- *)
 
-val explo_coeff = 2.0
-
 fun puct gvis ((sum,vis),polv) =
   let
     val exploitation = sum / (vis + 1.0)
     val exploration  = (polv * Math.sqrt gvis) / (vis + 1.0)
   in
-    exploitation + explo_coeff * exploration
+    exploitation + (!ttt_explo_coeff) * exploration
   end
 
 fun expo_polv_aux ci (c:real) l = case l of
@@ -251,8 +249,6 @@ fun first_stacfresh stacv =
     stacvo
   end
 
-val policoeff = 0.5
-
 fun mcts_select tree pid =
   let
     val {goalv,...} = dfind pid tree
@@ -265,7 +261,7 @@ fun mcts_select tree pid =
     val fresho = first_stacfresh stacv
     val l0 = stacundecl @ (if isSome fresho then [valOf fresho] else [])
     val _ = if null l0 then raise ERR "mcts_select" "sat" else ()
-    val l1 = map add_puct (expo_polv policoeff l0)
+    val l1 = map add_puct (expo_polv (!ttt_policy_coeff) l0)
     val l2 = dict_sort compare_rmax l1
     val (stacbestn,_) = hd l2
   in

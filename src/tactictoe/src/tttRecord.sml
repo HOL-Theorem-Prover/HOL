@@ -163,7 +163,7 @@ fun end_record_proof name g =
     val l1 = map fst (rev (!goalstep_glob))
     val _ = if !thmlintac_flag then app save_thmlintac l1 else ()
     val (thmdata,tacdata) = (!thmdata_glob, !tacdata_glob)
-    val l2 = if !ttt_ortho_flag
+    val l2 = if !record_ortho_flag
       then map (orthogonalize (thmdata,tacdata)) l1
       else l1
     val newtacdata = foldl ttt_update_tacdata tacdata l2
@@ -178,7 +178,7 @@ fun end_record_proof name g =
    per theory. *)
 fun ttt_save_state () =
   (
-  if !ttt_savestate_flag then
+  if !record_savestate_flag then
   let
     val savestate_dir = tactictoe_dir ^ "/savestate"
     val _ = mkDir_err savestate_dir
@@ -216,8 +216,8 @@ fun record_proof name lflag tac1 tac2 (g:goal) =
     val _ = debug ("\nrecord_proof: " ^ tptpname)
     val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name
-    val b2 = (not (!ttt_recprove_flag) andalso pflag)
-    val b3 = (not (!ttt_reclet_flag) andalso lflag)
+    val b2 = (not (!record_prove_flag) andalso pflag)
+    val b3 = (not (!record_let_flag) andalso lflag)
     val result =
       if b2 orelse b3 then
         (debug "record proof: ignored"; incr n_proof_ignored; tac2 g)
@@ -253,7 +253,7 @@ fun end_record_thy thy =
   write_info thy;
   print_endline "exporting tactic data";
   ttt_export_tacdata thy (!tacdata_glob);
-  if !ttt_savestate_flag
+  if !record_savestate_flag
   then
     (mkDir_err (tactictoe_dir ^ "/savestate");
      writel (tactictoe_dir ^ "/savestate/" ^ thy ^ "_pbl") (rev (!pbl_glob)))

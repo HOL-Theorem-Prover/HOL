@@ -919,10 +919,12 @@ fun output_header oc cthy =
   (* debugging *)
   reflect_flag oc "aiLib.debug_flag" debug_flag;
   (* recording *)
-  reflect_flag oc "tttSetup.ttt_recprove_flag" ttt_recprove_flag;
-  reflect_flag oc "tttSetup.ttt_reclet_flag" ttt_reclet_flag;
+  reflect_flag oc "tttSetup.record_prove_flag" record_prove_flag;
+  reflect_flag oc "tttSetup.record_let_flag" record_let_flag;
   reflect_flag oc "tttSetup.ttt_ex_flag" ttt_ex_flag;
-  reflect_flag oc "tttSetup.ttt_savestate_flag" ttt_savestate_flag;
+  reflect_flag oc "tttSetup.record_savestate_flag" record_savestate_flag;
+  reflect_time oc "tttSetup.record_tactic_time" record_tactic_time;
+  reflect_time oc "tttSetup.record_proof_time" record_proof_time;
   (* evaluation *)
   reflect_flag oc "mlThmData.thmlintac_flag" mlThmData.thmlintac_flag;
   osn oc "val _ = smlExecute.exec_sml";
@@ -1108,8 +1110,6 @@ fun ttt_record_thy thy =
     restore_scripts scriptorg
   end
 
-
-
 fun ttt_record () =
   let
     val thyl1 = ttt_ancestry (current_theory ())
@@ -1161,6 +1161,8 @@ fun load_sigobj () =
    Warning: requires ~100 GB of hard disk space. Possibly avoid using MLTON?
    ------------------------------------------------------------------------ *)
 
+fun sreflect_real s r = ("val _ = " ^ s ^ " := " ^ rts (!r) ^ ";")
+
 fun write_evalscript prefix file =
   let
     val file1 = mlquote (file ^ "_savestate")
@@ -1169,7 +1171,9 @@ fun write_evalscript prefix file =
     ["PolyML.SaveState.loadState " ^ file1 ^ ";",
      "val tactictoe_goal = mlTacticData.import_goal " ^ file2 ^ ";",
      "load " ^ mlquote "tacticToe" ^ ";",
-     "val _ = tttSetup.ttt_search_time := " ^ rts (!ttt_search_time) ^ ";",
+     sreflect_real "tttSetup.ttt_search_time" ttt_search_time,
+     sreflect_real "tttSetup.ttt_policy_coeff" ttt_policy_coeff,
+     sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
      "val _ = aiLib.debug_flag := " ^ bts (!debug_flag) ^ ";",
      "val _ = smlExecute.execprefix_glob := " ^ mlquote prefix ^ ";",
      "tacticToe.ttt_eval " ^

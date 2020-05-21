@@ -126,7 +126,7 @@ fun op_subset eqf l1 l2 = null (op_set_diff eqf l1 l2)
 fun test_stac g gl (stac, istac) =
   let
     val _ = debug ("test_stac " ^ istac)
-    val (glo,t) = add_time (app_stac 0.02 istac) g
+    val (glo,t) = add_time (app_stac (!learn_tactic_time) istac) g
   in
     case glo of NONE => NONE | SOME newgl =>
       (if op_subset goal_eq newgl gl
@@ -158,7 +158,7 @@ fun orthogonalize (thmdata,tacdata) (lbl as (ostac,t,g,gl)) =
       (pred_stac tacdata ostac) gfea
     val _ = debug "order tactics"
     val stacl2 = order_stac tacdata ostac stacl1
-    val _ = debug "concat abstract tactics"
+    val _ = debug "abstract tactics"
     val stacl3 = concat_absstacl gfea ostac stacl2
     val _ = debug "predict theorems"
     val thml = total_time ortho_predthm_time
