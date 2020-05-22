@@ -3077,4 +3077,60 @@ Proof
   \\ fs [LAPPEND_fromList]
 QED
 
+(* ----------------------------------------------------------------------
+    Lazy list bisimulation up-to context, = and transitivity
+   ---------------------------------------------------------------------- *)
+
+Inductive llist_upto:
+  (llist_upto R x x) /\
+  (R x y ==> llist_upto R x y) /\
+  (llist_upto R x y /\ llist_upto R y z ==> llist_upto R x z) /\
+  (llist_upto R x y ==> llist_upto R (LAPPEND z x) (LAPPEND z y))
+End
+
+val [llist_upto_eq,llist_upto_rel,llist_upto_trans,llist_upto_context] =
+  llist_upto_rules |> SPEC_ALL |> CONJUNCTS |> map GEN_ALL
+  |> curry (ListPair.map save_thm)
+    ["llist_upto_eq","llist_upto_rel",
+     "llist_upto_trans","llist_upto_context"]
+
+Theorem LLIST_BISIM_UPTO:
+  ∀ll1 ll2 R.
+    R ll1 ll2 ∧
+    (∀ll3 ll4.
+      R ll3 ll4 ⇒
+      ll3 = [||] ∧ ll4 = [||] ∨
+      LHD ll3 = LHD ll4 ∧
+      llist_upto R (THE (LTL ll3)) (THE (LTL ll4)))
+  ==> ll1 = ll2
+Proof
+  rpt strip_tac
+  >> PURE_ONCE_REWRITE_TAC[LLIST_BISIMULATION]
+  >> qexists_tac `llist_upto R`
+  >> conj_tac >- rw[llist_upto_rules]
+  >> ho_match_mp_tac llist_upto_ind
+  >> rpt conj_tac
+  >- rw[llist_upto_rules]
+  >- first_x_assum ACCEPT_TAC
+  >- (rw[]
+      >> match_mp_tac OR_INTRO_THM2
+      >> conj_tac >- simp[]
+      >> metis_tac[llist_upto_rules])
+  >- (rw[llist_upto_rules]
+      >> Cases_on `ll3 = [||]`
+      >- (Cases_on `ll4` >> fs[llist_upto_rules])
+      >> match_mp_tac OR_INTRO_THM2
+      >> conj_tac
+      >- (Cases_on `z` >> simp[])
+      >> Cases_on `z` >- simp[]
+      >> simp[]
+      >> Cases_on `ll3` >> Cases_on `ll4`
+      >> fs[] >> rpt VAR_EQ_TAC
+      >> CONV_TAC(RAND_CONV(RAND_CONV(RAND_CONV(PURE_ONCE_REWRITE_CONV [GSYM(CONJUNCT1 LAPPEND)]))))
+      >> CONV_TAC(RATOR_CONV(RAND_CONV(RAND_CONV(RAND_CONV(PURE_ONCE_REWRITE_CONV [GSYM(CONJUNCT1 LAPPEND)])))))
+      >> PURE_ONCE_REWRITE_TAC[GSYM(CONJUNCT2 LAPPEND)]
+      >> simp[GSYM LAPPEND_ASSOC]
+      >> metis_tac[llist_upto_rules])
+QED
+
 val _ = export_theory();
