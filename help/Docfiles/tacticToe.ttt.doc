@@ -3,22 +3,25 @@
 \TYPE {ttt : tactic}
 
 \SYNOPSIS
-General purpose tactic relying on a automatic selection of tactics extracted from
+General purpose tactic relying on a automatic selection of tactics extracted 
 from human-written proof scripts. 
 It returns an automatically generated proof script that solves the goal. 
-A good practice is to replace the call of {tacticToe.ttt} by the generated proof script.
+A good practice is to replace the call of {tacticToe.ttt} by the generated 
+proof script.
 
 \DESCRIBE
-Select relevant tactics and theorems for proving a goal using the k-nearest neighbor 
-premise selection algorithm and relies on Monte Carlo tree search to expand multiple proof trees. In 
-practice, this means that the intermediate goals created by better ranked tactics are explored more 
-deeply.
+Select relevant tactics and theorems for proving a goal 
+using the k-nearest neighbor premise selection algorithm and 
+relies on Monte Carlo tree search to expand multiple proof trees. In 
+practice, this means that the intermediate goals created by better ranked 
+tactics are explored more deeply.
 
 \FAILURE
 Fails if the supplied goal does not contain boolean terms only. 
-Or if the search saturates, it often happens 
+Or if the search saturates, this typically happens 
 when there is not enough recorded tactics. 
-Or if the search times out. This timeout can be modifed by {tacticToe.set_timeout}. Or if the proof fails to reconstruct.
+Or if the search times out. This timeout can be modifed by 
+{tacticToe.set_timeout}. Or if the proof fails to reconstruct.
 
 \EXAMPLE
 {
@@ -26,7 +29,7 @@ Or if the search times out. This timeout can be modifed by {tacticToe.set_timeou
 (* output omitted *)
 > val it = () : unit
 
-- tttUnfold.ttt_record (); (* takes between 1 and 10 hours the first time it is called *)
+- tttUnfold.ttt_record (); (* takes multiple hours the first time it is called *)
 (* output omitted *)
 > val it = (): unit
 
