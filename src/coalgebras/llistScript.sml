@@ -2811,12 +2811,9 @@ Theorem fromSeq_LCONS:
 Proof
   PURE_REWRITE_TAC[fromSeq_def,Once LUNFOLD] >>
   simp[] >>
-  PURE_REWRITE_TAC[Once LLIST_BISIMULATION] >>
-  qexists_tac ‘\x y. ?n. x = LUNFOLD (\x. SOME(SUC x, f x)) (SUC n) /\
-                         y = LUNFOLD (\x. SOME(SUC x, f(SUC x))) n’ >>
-  rw[Once LUNFOLD] >-
-    (qexists_tac ‘0’ >> simp[]) >-
-    (qexists_tac ‘SUC n’ >> simp[])
+  PURE_REWRITE_TAC[Once LUNFOLD_BISIMULATION] >>
+  qexists_tac ‘\x y. x = SUC y’ >>
+  rw[Once LUNFOLD]
 QED
 
 Theorem fromList_fromSeq:
@@ -2831,7 +2828,7 @@ Proof
   disj2_tac >>
   qexists_tac ‘\n. THE(LNTH n ll)’ >>
   PURE_REWRITE_TAC[Once LLIST_BISIMULATION] >>
-  qexists_tac ‘\x y. (~LFINITE x /\ (?n. y = (fromSeq (λn. THE (LNTH n x)))))’ >>
+  qexists_tac ‘\x y. (~LFINITE x /\ (?n. y = (fromSeq (\n. THE (LNTH n x)))))’ >>
   rw[] >>
   last_x_assum kall_tac >>
   rename1 ‘ll = [||]’ >>
