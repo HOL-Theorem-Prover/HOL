@@ -2685,8 +2685,7 @@ fun output_words_as_padded_hex () = set_trace "word printing" 6
 fun output_words_as_oct () =
    (base_tokens.allow_octal_input := true; set_trace "word printing" 2)
 
-fun remove_word_printer () =
-   General.ignore (Parse.remove_user_printer "wordsLib.print_word")
+fun remove_word_printer () = set_trace "word printing" 0;
 
 fun add_word_cast_printer () =
    ( set_trace "word cast printing" 1
