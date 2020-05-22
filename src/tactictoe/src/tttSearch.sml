@@ -117,8 +117,8 @@ fun backstatus_node node = case #nodestatus node of
 fun stac_create stac =
   {stac = stac, svis = 0.0, ssum = 0.0, stacstatus = StacFresh}
 
-fun goal_create stacpred g =
-  let val stacv = Vector.fromList (map stac_create (stacpred g)) in
+fun goal_create tacpred g =
+  let val stacv = Vector.fromList (map stac_create (tacpred g)) in
     {
     goal = g, gvis = 0.0, gsum = 0.0,
     goalstatus = backstatus_stacv stacv,
@@ -173,7 +173,7 @@ fun node_backup (tree:tree) (reward,stacstatus) (id,(gn,stacn)) =
 
 fun string_of_goall gl = String.concatWith "," (map string_of_goal gl)
 
-fun node_create_backup (tree,stacpred) (reward,gl) (pid,(gn,stacn)) =
+fun node_create_backup (tree,tacpred) (reward,gl) (pid,(gn,stacn)) =
   let
     val node = dfind pid tree
     val pgoalv = #goalv node
@@ -181,7 +181,7 @@ fun node_create_backup (tree,stacpred) (reward,gl) (pid,(gn,stacn)) =
     val pstacrec = Vector.sub (#stacv pgoalrec,stacn)
     val pgoal = #goal pgoalrec
     val pstac = #stac pstacrec
-    val cgoalv = Vector.fromList (map (goal_create stacpred) gl)
+    val cgoalv = Vector.fromList (map (goal_create tacpred) gl)
     val cid = (gn,stacn) :: pid
     val node =
       {
@@ -200,9 +200,9 @@ fun node_create_backup (tree,stacpred) (reward,gl) (pid,(gn,stacn)) =
     node_backup newtree (reward, backstatus_node node) (pid,(gn,stacn))
   end
 
-fun starttree_of stacpred goal =
+fun starttree_of tacpred goal =
   let
-    val goalv = Vector.fromList [goal_create stacpred goal]
+    val goalv = Vector.fromList [goal_create tacpred goal]
     val root =
       {
       nvis = 1.0, nsum = 0.0,
@@ -313,7 +313,7 @@ fun string_of_stacstatus x = case x of
   | _ => raise ERR "string_of_stacstatus" "unexpected"
 
 
-fun apply_stac_pid (tree,stacpred) pid =
+fun apply_stac_pid (tree,tacpred) pid =
   let
     val node = dfind pid tree
     val (gn,goalundec) = first_goalundec (#goalv node)
@@ -330,7 +330,7 @@ fun apply_stac_pid (tree,stacpred) pid =
   in
     case stacstatus of
       StacUndecided gl =>
-      node_create_backup (tree,stacpred) (reward,gl) pidx
+      node_create_backup (tree,tacpred) (reward,gl) pidx
     | _ => (debugf "" msg (cid,stacfresh,stacstatus);
       node_backup tree (reward,stacstatus) pidx)
   end
@@ -339,7 +339,7 @@ fun apply_stac_pid (tree,stacpred) pid =
    Main search function
    ------------------------------------------------------------------------- *)
 
-fun search_loop (starttree,stacpred) =
+fun search_loop (starttree,tacpred) =
   let
     val timer = Timer.startRealTimer ()
     fun loop (tree,pred) =
@@ -357,7 +357,7 @@ fun search_loop (starttree,stacpred) =
           loop (newtree,pred)
         end
   in
-    loop (starttree,stacpred)
+    loop (starttree,tacpred)
   end
 
 fun extract_proofl tree id =
@@ -401,10 +401,10 @@ fun reconstruct_proofstatus (searchstatus,tree) g =
       Proof sproof
     end
 
-fun search stacpred g =
+fun search tacpred g =
   let
-    val starttree = starttree_of stacpred g
-    val ((searchstatus,tree),t) = add_time search_loop (starttree,stacpred)
+    val starttree = starttree_of tacpred g
+    val ((searchstatus,tree),t) = add_time search_loop (starttree,tacpred)
     val _ = print_endline ("search time: " ^ rts_round 6 t)
   in
     reconstruct_proofstatus (searchstatus,tree) g

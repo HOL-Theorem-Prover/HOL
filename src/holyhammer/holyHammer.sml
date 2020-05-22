@@ -40,7 +40,7 @@ fun npremises_of atp =
   | Z3 => 32
   | Vampire => 96
 
-(* atps called by holyhammer if their binary exists *)
+(* ATPs called by holyhammer if their binary exists *)
 val all_atps = ref [Eprover,Z3,Vampire]
 
 (* -------------------------------------------------------------------------

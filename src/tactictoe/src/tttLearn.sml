@@ -104,7 +104,7 @@ fun inst_stacl thmidl stacl = map_assoc (inst_stac thmidl) stacl
 
 fun pred_stac tacdata ostac gfea =
   let
-    val tacfea = map (fn x => (#stac x,#fea x)) (#calls tacdata)
+    val tacfea = map (fn x => (#ortho x,#fea x)) (#calls tacdata)
     val symweight = learn_tfidf tacfea
     val stacl = tacknn (symweight,tacfea) (!ttt_ortho_radius) gfea
     val no = List.find (fn x => fst x = ostac) (number_snd 0 stacl)
