@@ -393,10 +393,10 @@ fun reconstruct_proofstatus (searchstatus,tree) g =
       val _ = debug ("extraction time: " ^ rts_round 6 t1)
       val _ = debug "minimization"
       val (proof2,t2) = add_time minimize_proof proof1
-      val _ = debug ("minimization time: " ^ rts_round 6 t2)
+      val _ = print_endline ("minimization time: " ^ rts_round 6 t2)
       val _ = debug "reconstruction"
       val (sproof,t3) = add_time (reconstruct g) proof2
-      val _ = debug ("reconstruction time: " ^ rts_round 6 t3)
+      val _ = print_endline ("reconstruction time: " ^ rts_round 6 t3)
     in
       Proof sproof
     end
@@ -405,7 +405,7 @@ fun search stacpred g =
   let
     val starttree = starttree_of stacpred g
     val ((searchstatus,tree),t) = add_time search_loop (starttree,stacpred)
-    val _ = debug ("search time: " ^ rts_round 6 t)
+    val _ = print_endline ("search time: " ^ rts_round 6 t)
   in
     reconstruct_proofstatus (searchstatus,tree) g
   end

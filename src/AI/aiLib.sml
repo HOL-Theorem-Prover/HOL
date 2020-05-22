@@ -16,9 +16,6 @@ val ERR = mk_HOL_ERR "aiLib"
    Misc
    ------------------------------------------------------------------------ *)
 
-type fea = int list
-type lbl = (string * real * goal * goal list)
-
 fun vector_to_list v = Vector.foldr (op ::) [] v
 
 fun number_fst start l = case l of
@@ -108,9 +105,6 @@ fun triple_compare cmp1 cmp2 cmp3 ((a1,a2,a3),(b1,b2,b3)) =
 
 fun fst_compare cmp ((a,_),(b,_)) = cmp (a,b)
 fun snd_compare cmp ((_,a),(_,b)) = cmp (a,b)
-
-fun lbl_compare ((stac1,_,g1,_),(stac2,_,g2,_)) =
-  cpl_compare String.compare goal_compare ((stac1,g1),(stac2,g2))
 
 fun compare_imax ((_,r2),(_,r1)) = Int.compare (r1,r2)
 fun compare_imin ((_,r1),(_,r2)) = Int.compare (r1,r2)

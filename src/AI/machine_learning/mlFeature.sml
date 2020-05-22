@@ -12,6 +12,8 @@ open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "mlFeature"
 
+type fea = int list
+
 (* -------------------------------------------------------------------------
    Constants, variables and types
    ------------------------------------------------------------------------- *)
@@ -106,6 +108,16 @@ fun feahash_of_term_mod x tm =
 
 fun feahash_of_goal g =
   mk_fast_set Int.compare (map hash_string (fea_of_goal g))
+
+val goalfea_cache = ref (dempty goal_compare)
+
+fun clean_goalfea_cache () = goalfea_cache := dempty goal_compare
+
+fun fea_of_goal_cached g =
+  dfind g (!goalfea_cache) handle NotFound =>
+  let val fea = feahash_of_goal g in
+    goalfea_cache := dadd g fea (!goalfea_cache); fea
+  end
 
 (* ------------------------------------------------------------------------
    TFIDF: weight of symbols (power of 6 comes from the neareset neighbor

@@ -26,30 +26,29 @@ fun set_timeout r = (ttt_search_time := r)
    Preselection of theorems
    ------------------------------------------------------------------------- *)
 
-fun select_thmfea (symweight,thmfeadict) gfea =
+fun select_thmfea (symweight,thmfea) gfea =
   let
-    val l0 = thmknn_wdep (symweight,thmfeadict) (!ttt_presel_radius) gfea
+    val l0 = thmknn_wdep (symweight,thmfea) (!ttt_presel_radius) gfea
     val d = dset String.compare l0
-    val l1 = filter (fn (k,v) => dmem k d) (dlist thmfeadict)
+    val l1 = filter (fn (k,v) => dmem k d) thmfea
   in
-    (symweight, dnew String.compare l1)
+    (symweight, l1)
   end
 
 (* -------------------------------------------------------------------------
    Preselection of tactics
    ------------------------------------------------------------------------- *)
 
-fun select_tacfea tacdata goalf =
+fun select_tacfea tacdata gfea =
   let
-    val tacfea = dlist (#tacfea tacdata)
-    val tacsymweight = learn_tfidf tacfea
-    val l0 =
-      stacknn_preselect (tacsymweight,tacfea) (!ttt_presel_radius) goalf
-    val l1 = add_stacdep (#tacdep tacdata) (!ttt_presel_radius) (map fst l0)
-    fun f x = (x, dfind x (#tacfea tacdata))
-    val l2 = map f l1
+    val calls = #calls tacdata
+    val callfea = map_assoc #fea calls
+    val symweight = learn_tfidf callfea
+    val sel1 = callknn (symweight,callfea) (!ttt_presel_radius) gfea
+    val sel2 = add_calldep (#calldep tacdata) (!ttt_presel_radius) sel1
+    val tacfea = map (fn x => (#ortho x, #fea x)) sel2
   in
-    (tacsymweight, l2)
+    (symweight,tacfea)
   end
 
 (* -------------------------------------------------------------------------
@@ -74,19 +73,19 @@ fun main_tactictoe (thmdata,tacdata) goal =
     val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
     val tac_cache = ref (dempty goal_compare)
     (* predictors *)
-    fun sthmpred n g =
+    fun thmpred n g =
       dfind (g,n) (!thm_cache) handle NotFound =>
       let val r = thmknn (thmsymweight,thmfeadict) n (feahash_of_goal g) in
         thm_cache := dadd (g,n) r (!thm_cache); r
       end
-    fun stacpred g =
+    fun tacpred g =
       dfind g (!tac_cache) handle NotFound =>
       let
-        val thmidl = if false then sthmpred 32 g else sthmpred 16 g
+        val thmidl = if false then thmpred 32 g else thmpred 16 g
         val l = feahash_of_goal g
         val metis_stac = constant_space
           ("metisTools.METIS_TAC [ " ^ thmlarg_placeholder ^ "]")
-        val stacl1 = stacknn_uniq (tacsymweight,tacfea) (!ttt_presel_radius) l
+        val stacl1 = tacknn (tacsymweight,tacfea) (!ttt_presel_radius) l
         val stacl2 = mk_sameorder_set String.compare (metis_stac :: stacl1)
         val istacl = 
           if false then
@@ -102,7 +101,7 @@ fun main_tactictoe (thmdata,tacdata) goal =
       end
     val _ = debug "search"
   in
-    search stacpred goal
+    search tacpred goal
   end
 
 (* -------------------------------------------------------------------------
@@ -139,7 +138,7 @@ fun tactictoe_aux goal =
     val thmdata = hidef create_thmdata ()
     val tacdata =
       dfind cthyl (!ttt_tacdata_cache) handle NotFound =>
-      let val tacdata_aux = ttt_create_tacdata () in
+      let val tacdata_aux = ttt_import_tacdata () in
         ttt_tacdata_cache := dadd cthyl tacdata_aux (!ttt_tacdata_cache);
         tacdata_aux
       end

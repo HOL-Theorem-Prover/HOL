@@ -4,8 +4,6 @@ sig
   include Abbrev
 
   (* misc *)
-  type fea = int list
-  type lbl = (string * real * goal * goal list)
   val number_fst : int -> 'a list -> (int * 'a) list
   val number_snd : int -> 'a list -> ('a * int) list
   val print_endline : string -> unit
@@ -28,7 +26,6 @@ sig
 
   val term_compare_exact : term * term -> order
   val goal_compare : goal * goal -> order
-  val lbl_compare : lbl * lbl -> order
   val compare_rmin : (('a * real) * ('a * real)) -> order
   val compare_rmax : (('a * real) * ('a * real)) -> order
   val compare_imin : (('a * int) * ('a * int)) -> order
@@ -128,7 +125,6 @@ sig
   val number_partition : int -> int -> int list list
   val duplicate : int -> 'a list -> 'a list
   val indent: int -> string
-  (* todo check if list_combine and transpose_ll do the same thing *)
   val list_combine : 'a list list -> 'a list list
   val combine_triple : 'a list * 'b list * 'c list -> ('a * 'b * 'c) list
   val split_triple : ('a * 'b * 'c) list -> 'a list * 'b list * 'c list

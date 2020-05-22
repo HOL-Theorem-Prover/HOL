@@ -8,9 +8,12 @@
 structure mlNearestNeighbor :> mlNearestNeighbor =
 struct
 
-open HolKernel Abbrev aiLib mlFeature mlThmData
+open HolKernel Abbrev aiLib mlFeature mlThmData mlTacticData
 
 val ERR = mk_HOL_ERR "mlNearestNeighbor"
+
+type symweight = (int, real) Redblackmap.dict  
+type 'a afea = ('a * fea) list
 
 (* ------------------------------------------------------------------------
    Distance
@@ -41,9 +44,9 @@ fun knn_sort (symweight,feav) feao =
    Term predictions
    ------------------------------------------------------------------------ *)
 
-fun termknn (symweight,feavdict) n fea =
+fun termknn (symweight,termfea) n fea =
   let
-    val l1 = map (fst o fst) (knn_sort (symweight, dlist feavdict) fea)
+    val l1 = map (fst o fst) (knn_sort (symweight,termfea) fea)
     val l2 = mk_sameorder_set Term.compare l1
   in
     first_n n l2
@@ -53,9 +56,9 @@ fun termknn (symweight,feavdict) n fea =
    Theorem predictions
    ------------------------------------------------------------------------ *)
 
-fun thmknn (symweight,feavdict) n fea =
+fun thmknn (symweight,thmfea) n fea =
   let
-    val l1 = map (fst o fst) (knn_sort (symweight, dlist feavdict) fea)
+    val l1 = map (fst o fst) (knn_sort (symweight,thmfea) fea)
     val l2 = mk_sameorder_set String.compare l1
   in
     first_n n l2
@@ -81,84 +84,87 @@ fun thmknn_wdep (symweight,feavdict) n fea =
    Tactic predictions
    ------------------------------------------------------------------------ *)
 
-fun stacknn_preselect (symweight,feav) n feao =
-  let val l = map fst (knn_sort (symweight,feav) feao) in
-    first_n n l
+fun tacknn (symweight,tacfea) n feao =
+  let 
+    val l1 = map (fst o fst) (knn_sort (symweight,tacfea) feao) 
+    val l2 = mk_sameorder_set String.compare l1
+  in
+    first_n n l2 
   end
 
-fun stacknn_uniq (symweight,feav) n feao =
-  let val l = stacknn_preselect (symweight,feav) n feao in
-    mk_sameorder_set String.compare (map (#1 o fst) l)
-  end
-
-(* ----------------------------------------------------------------------
-   Adding tactic dependencies (self-including)
-   --------------------------------------------------------------------- *)
-
-fun desc_lbl_aux rlist rdict ddict (lbl as (stac,_,_,gl)) =
-  (
-  rlist := lbl :: (!rlist);
-  if dmem lbl rdict then () else (* rdict detects loops *)
-    let
-      val new_rdict = dadd lbl () rdict
-      fun f g =
-        let val lbls = dfind g ddict handle _ => [] in
-          app (desc_lbl_aux rlist new_rdict ddict) lbls
-        end
-    in
-      app f gl
-    end
-  )
-
-fun desc_lbl ddict lbl =
-  let val rlist = ref [] in
-    desc_lbl_aux rlist (dempty lbl_compare) ddict lbl;
-    !rlist
-  end
-
-fun add_stacdep ddict n l =
-  let
-    val l1 = List.concat (map (desc_lbl ddict) l)
-    val l2 = mk_sameorder_set lbl_compare l1
+fun callknn (symweight,callfea) n feao =
+  let 
+    val l1 = map (fst o fst) (knn_sort (symweight,callfea) feao) 
+    val l2 = mk_sameorder_set call_compare l1
   in
     first_n n l2
   end
 
 (* ----------------------------------------------------------------------
-   Training from a dataset of pair (term,value)
+   Adding tactic dependencies
    --------------------------------------------------------------------- *)
 
-type knninfo =
-  (int, real) Redblackmap.dict * (term, int list) Redblackmap.dict
+fun dep_call_g rl loopd calldep g =
+  if dmem g loopd then () else
+  let 
+    val newloopd = dadd g () loopd
+    val calls = dfind g calldep handle _ => [] 
+    val _ = rl := calls @ (!rl)
+    val newgl = mk_fast_set goal_compare (List.concat (map #ogl calls))
+  in
+    app (dep_call_g rl newloopd calldep) newgl
+  end
+
+fun dep_call calldep call =
+  let 
+    val rl = ref []
+    val gl = #ogl call
+    val loopd = dempty goal_compare
+  in
+    app (dep_call_g rl loopd calldep) gl;
+    (rev (!rl))
+  end
+
+fun add_calldep calldep n calls =
+  let
+    val l1 = List.concat (map (fn x => x :: dep_call calldep x) calls)
+    val l2 = mk_sameorder_set call_compare l1
+  in
+    first_n n l2
+  end
+
+(* ----------------------------------------------------------------------
+   Training from a dataset of term-value pairs for comparison with
+   tree neural networks.
+   --------------------------------------------------------------------- *)
+
+type 'a knnpred = (symweight * term afea) * (term, 'a) Redblackmap.dict
 
 fun train_knn trainset =
   let
-    val trainfea = map_assoc feahash_of_term (map fst trainset);
-    val trainfead = dnew Term.compare trainfea;
-    val symweight = learn_tfidf trainfea;
+    val termfea = map_assoc feahash_of_term (map fst trainset);
+    val symweight = learn_tfidf termfea;
   in
-    (* rev for newest first since it might not be a set *)
-    ((symweight,trainfead), dnew Term.compare (rev trainset))
+    ((symweight,termfea), dnew Term.compare trainset)
   end
 
-fun infer_knn (knninfo,trainsetd) tm =
-  let val neartm = hd (termknn knninfo 1 (feahash_of_term tm)) in
-    dfind neartm trainsetd (* predicting from the trainset *)
+fun infer_knn ((symweight,termfea),d) tm =
+  let val neartm = hd (termknn (symweight,termfea) 1 (feahash_of_term tm)) in
+    dfind neartm d
   end
 
-fun is_accurate_knn knn i (tm,rl) =
+fun is_accurate_knn knnpred (tm,rlo) =
   let
-    val _ = if i mod 10 = 0 then print_endline (its i) else ()
-    val rl1 = infer_knn knn tm
-    val rl2 = combine (rl,rl1)
+    val rl1 = infer_knn knnpred tm
+    val rl2 = combine (rl1, rlo)
     fun test (x,y) = Real.abs (x - y) < 0.5
   in
     if all test rl2 then true else false
   end
 
-fun knn_accuracy knn set =
-  let val correct = filter I (mapi (is_accurate_knn knn) set) in
-    Real.fromInt (length correct) / Real.fromInt (length set)
+fun knn_accuracy knnpred exset =
+  let val correct = filter I (map (is_accurate_knn knnpred) exset) in
+    Real.fromInt (length correct) / Real.fromInt (length exset)
   end
 
 

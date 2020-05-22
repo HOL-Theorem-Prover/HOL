@@ -40,8 +40,7 @@ fun abstract_thmlarg_loop thmlacc l = case l of
       | SOME x =>
         (
         thmlacc := map (String.concatWith " ") thml :: !thmlacc;
-        ["[",thmlarg_placeholder,"]"] @
-          abstract_thmlarg_loop thmlacc cont
+        thmlarg_placeholder :: abstract_thmlarg_loop thmlacc cont
         )
     end
   | a :: m => a :: abstract_thmlarg_loop thmlacc m
@@ -91,7 +90,9 @@ fun concat_absstacl gfea ostac stacl =
   end
 
 fun inst_stac thmidl stac =
-  let val thmls = String.concatWith " , " (map dbfetch_of_thmid thmidl) in
+  let val thmls = 
+    "[" ^ String.concatWith " , " (map dbfetch_of_thmid thmidl) ^ "]"
+  in
     inst_thmlarg thmls stac
   end
 
@@ -103,9 +104,9 @@ fun inst_stacl thmidl stacl = map_assoc (inst_stac thmidl) stacl
 
 fun pred_stac tacdata ostac gfea =
   let
-    val tacfea = dlist (#tacfea tacdata)
+    val tacfea = map (fn x => (#stac x,#fea x)) (#calls tacdata)
     val symweight = learn_tfidf tacfea
-    val stacl = stacknn_uniq (symweight,tacfea) (!ttt_ortho_radius) gfea
+    val stacl = tacknn (symweight,tacfea) (!ttt_ortho_radius) gfea
     val no = List.find (fn x => fst x = ostac) (number_snd 0 stacl)
     val ns = case no of NONE => "none" | SOME (_,i) => its i
   in
@@ -125,12 +126,12 @@ fun order_stac tacdata ostac stacl =
 fun op_subset eqf l1 l2 = null (op_set_diff eqf l1 l2)
 fun test_stac g gl (stac, istac) =
   let
-    val _ = debug ("test_stac " ^ istac)
+    val _ = debug "test_stac"
     val (glo,t) = add_time (app_stac (!learn_tactic_time) istac) g
   in
     case glo of NONE => NONE | SOME newgl =>
       (if op_subset goal_eq newgl gl
-       then SOME (stac,t,g,newgl)
+       then SOME stac
        else NONE)
   end
 
@@ -138,39 +139,31 @@ val ortho_predstac_time = ref 0.0
 val ortho_predthm_time = ref 0.0
 val ortho_teststac_time = ref 0.0
 
-fun save_thmlintac (lbl as (ostac,t,g,gl)) =
-  let val gfea = feahash_of_goal g in
-    case abstract_thmlarg ostac of NONE => ()
-    | SOME (_, thmsll) =>
-      let
-        val thmsl = List.concat thmsll
-        val l = map (fn x => (thmlintac_tag ^ "Theory." ^ x, gfea)) thmsl
-      in
-        thmlintac_cthy := l @ !thmlintac_cthy
-      end
-  end
-
-fun orthogonalize (thmdata,tacdata) (lbl as (ostac,t,g,gl)) =
+fun orthogonalize (thmdata,tacdata) 
+  (call as {stac,ortho,time,ig,ogl,loc,fea}) =
   let
-    val gfea = feahash_of_goal g
     val _ = debug "predict tactics"
-    val stacl1 = total_time ortho_predstac_time
-      (pred_stac tacdata ostac) gfea
+    val stacl1 = total_time ortho_predstac_time 
+      (pred_stac tacdata stac) fea
     val _ = debug "order tactics"
-    val stacl2 = order_stac tacdata ostac stacl1
+    val stacl2 = order_stac tacdata stac stacl1
     val _ = debug "abstract tactics"
-    val stacl3 = concat_absstacl gfea ostac stacl2
+    val stacl3 = concat_absstacl fea stac stacl2
     val _ = debug "predict theorems"
-    val thml = total_time ortho_predthm_time
-      (thmknn thmdata (!ttt_thmlarg_radius)) gfea
+    val thml = total_time ortho_predthm_time 
+      (thmknn thmdata (!ttt_thmlarg_radius)) fea
     val _ = debug "instantiate arguments"
     val stacl4 = inst_stacl thml stacl3
     val _ = debug "test tactics"
-    val (testo,r) = add_time (findSome (test_stac g gl)) stacl4
-    val _ = debug ("test time: " ^ rts r)
-    val _ = ortho_teststac_time := !ortho_teststac_time + r
+    val (neworthoo,t) = add_time (findSome (test_stac ig ogl)) stacl4
+    val _ = debug ("test time: " ^ rts t)
+    val _ = ortho_teststac_time := !ortho_teststac_time + t
   in
-    case testo of NONE => lbl | SOME newlbl => newlbl
+    case neworthoo of NONE => call | SOME newortho =>
+      {stac = stac, ortho = newortho, 
+       time = time, 
+       ig = ig, ogl = ogl,
+       loc = loc, fea = fea}
   end
 
 

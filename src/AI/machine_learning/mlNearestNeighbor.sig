@@ -3,48 +3,26 @@ sig
 
   include Abbrev
 
-  type lbl = (string * real * goal * goal list)
-  type fea = int list
+  type fea = mlFeature.fea
+  type thmid = mlThmData.thmid
+  type stac = mlTacticData.stac
+  type call = mlTacticData.call
+  type symweight = (int, real) Redblackmap.dict  
+  type 'a afea = ('a * fea) list
+  
+  (* nearest neighbor predictors *)
+  val termknn: symweight * term afea -> int -> fea -> term list
+  val thmknn:  symweight * thmid afea -> int -> fea -> thmid list
+  val thmknn_wdep: symweight * thmid afea -> int -> fea -> thmid list
+  val tacknn: symweight * stac afea -> int -> fea -> stac list
+  val callknn: symweight * call afea -> int -> fea -> call list
+  val add_calldep:
+    (goal, call list) Redblackmap.dict -> int -> call list -> call list
 
-  (* termknn *)
-  val termknn:
-    (int, real) Redblackmap.dict * (term, fea) Redblackmap.dict -> int ->
-    fea -> term list
-
-  (* theorem *)
-  val thmknn:
-    (int, real) Redblackmap.dict * (string, fea) Redblackmap.dict -> int ->
-    fea -> string list
-
-  val thmknn_wdep:
-    (int, real) Redblackmap.dict * (string, fea) Redblackmap.dict -> int ->
-    fea -> string list
-
-  (* tactic *)
-  val stacknn_preselect:
-    (int, real) Redblackmap.dict * (lbl * fea) list -> int ->
-    fea -> (lbl * fea) list
-
-  val stacknn_uniq:
-    (int, real) Redblackmap.dict * (lbl * fea) list -> int ->
-    fea -> string list
-
-  val add_stacdep:
-    (goal, lbl list) Redblackmap.dict -> int -> lbl list -> lbl list
-
-  (* training *)
-  val train_knn :
-    (term * 'a) list ->
-    ((int, real) Redblackmap.dict * (term, int list) Redblackmap.dict) *
-    (term, 'a) Redblackmap.dict
-
-  val infer_knn :
-    ((int, real) Redblackmap.dict * (term, int list) Redblackmap.dict) *
-    (term, 'a) Redblackmap.dict -> term -> 'a
-
-  val knn_accuracy :
-    ((int, real) Redblackmap.dict * (term, int list) Redblackmap.dict) *
-    (term, real list) Redblackmap.dict ->
-    (term * real list) list -> real
+  (* for comparison with tree neural networks *)
+  type 'a knnpred = (symweight * term afea) * (term, 'a) Redblackmap.dict
+  val train_knn: (term * 'a) list -> 'a knnpred
+  val infer_knn : 'a knnpred -> term -> 'a
+  val knn_accuracy: (real list) knnpred -> (term * real list) list -> real
 
 end

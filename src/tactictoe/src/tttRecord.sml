@@ -19,7 +19,8 @@ val ERR = mk_HOL_ERR "tttRecord"
    Globals
    ------------------------------------------------------------------------- *)
 
-val goalstep_glob = ref []
+val savestate_level = ref 0
+val calls_glob = ref []
 fun local_tag x = x
 fun add_local_tag s = "( tttRecord.local_tag " ^ s ^ ")"
 val tacdata_glob = ref empty_tacdata
@@ -79,7 +80,14 @@ fun write_info thy =
 fun record_tactic (tac,stac) g =
   let val ((gl,v),t) = add_time (timeout (!record_tactic_time) tac) g in
     incr n_tactic_replayed;
-    goalstep_glob := ((stac,t,g,gl),v) :: !goalstep_glob;
+    calls_glob := 
+      {
+      stac = stac, ortho = stac, time = t,
+      ig = g, ogl = gl, 
+      loc = (current_theory (), (!savestate_level) - 1),
+      fea = fea_of_goal_cached g
+      }
+      :: !calls_glob;
     (gl,v)
   end
   handle Interrupt => raise Interrupt 
@@ -151,19 +159,17 @@ fun fetch s reps =
    Proof recording
    ---------------------------------------------------------------------- *)
 
-val savestate_level = ref 0
-
 fun start_record_proof name =
   let val outname = "Name: " ^ its ((!savestate_level) - 1) ^ " " ^ name in
-    debug outname; incr n_proof; goalstep_glob := []
+    debug outname; incr n_proof; calls_glob := []
   end
 
 fun end_record_proof name g =
   let
-    val l1 = map fst (rev (!goalstep_glob))
-    val _ = if !thmlintac_flag then app save_thmlintac l1 else ()
+    val l1 = (rev (!calls_glob))
     val (thmdata,tacdata) = (!thmdata_glob, !tacdata_glob)
-    val l2 = if !record_ortho_flag
+    val l2 = 
+      if !record_ortho_flag
       then map (orthogonalize (thmdata,tacdata)) l1
       else l1
     val newtacdata = foldl ttt_update_tacdata tacdata l2
@@ -244,7 +250,7 @@ fun record_proof name lflag tac1 tac2 (g:goal) =
 fun start_record_thy thy =
   (
   print_endline "importing tactic data";
-  tacdata_glob := ttt_create_tacdata ()
+  tacdata_glob := ttt_import_tacdata ()
   )
 
 fun end_record_thy thy =
@@ -258,16 +264,7 @@ fun end_record_thy thy =
     (mkDir_err (tactictoe_dir ^ "/savestate");
      writel (tactictoe_dir ^ "/savestate/" ^ thy ^ "_pbl") (rev (!pbl_glob)))
   else ();
-  print_endline "export successful";
-  if !ttt_ex_flag then
-  (
-  debug "exporting positive and negative examples";
-  ttt_export_exl_human thy (!exl_glob);
-  ttt_export_exl thy (!exl_glob);
-  ttt_export_tptpexl thy (!exl_glob);
-  debug "export successful"
-  )
-  else ()
+  print_endline "export successful"
   )
 
 end (* struct *)

@@ -12,13 +12,9 @@ open HolKernel boolLib aiLib smlLexer smlExecute smlRedirect mlFeature
 
 val ERR = mk_HOL_ERR "mlThmData"
 
-type thmdata =
-  (int, real) Redblackmap.dict * (string, fea) Redblackmap.dict
-
-val thmlintac_cthy = ref []
-val thmlintac_flag = ref false
-
-val empty_thmdata = (dempty Int.compare, dempty String.compare)
+type thmid = string
+type thmdata = (int, real) Redblackmap.dict * (thmid * fea) list
+val empty_thmdata = (dempty Int.compare,[])
 
 (* -------------------------------------------------------------------------
    Artificial theory name for theorems from the namespace.
@@ -26,7 +22,6 @@ val empty_thmdata = (dempty Int.compare, dempty String.compare)
    ------------------------------------------------------------------------- *)
 
 val namespace_tag = "namespace_tag"
-val thmlintac_tag = "thmlintac_tag"
 
 (* -------------------------------------------------------------------------
    Namespace theorems
@@ -59,7 +54,7 @@ fun dbfetch_of_thmid s =
     if a = current_theory ()
       then String.concatWith " " ["DB.fetch", mlquote a, mlquote b]
     else
-      if mem a [namespace_tag,thmlintac_tag] then b else s
+      if mem a [namespace_tag] then b else s
   end
 
 fun mk_metis_call sl =
@@ -102,7 +97,7 @@ fun intactdep_of_thm thm =
 
 fun validdep_of_thmid thmid =
   let val (a,b) = split_string "Theory." thmid in
-    if mem a [namespace_tag, thmlintac_tag]
+    if mem a [namespace_tag]
     then []
     else List.mapPartial thmid_of_depid (depidl_of_thm (DB.fetch a b))
   end
@@ -111,51 +106,37 @@ fun validdep_of_thmid thmid =
    Theorem features
    ------------------------------------------------------------------------- *)
 
-val goalfea_cache = ref (dempty goal_compare)
-
-fun clean_goalfea_cache () = goalfea_cache := dempty goal_compare
-
-fun fea_of_goal_cached g =
-  dfind g (!goalfea_cache) handle NotFound =>
-  let val fea = feahash_of_goal g in
-    goalfea_cache := dadd g fea (!goalfea_cache); fea
-  end
-
-fun add_thmfea thy ((name,thm),(thmfeadict,nodupl)) =
+fun add_thmfea thy ((name,thm),(thmfea,nodupl)) =
   let
     val g = dest_thm thm
     val thmid = thy ^ "Theory." ^ name
     val newnodupl = dappend (g,thmid) nodupl
   in
     if not (dmem g nodupl) andalso uptodate_thm thm
-    then (dadd thmid (fea_of_goal_cached g) thmfeadict, newnodupl)
-    else (thmfeadict, newnodupl)
+    then ((thmid, fea_of_goal_cached g) :: thmfea, newnodupl)
+    else (thmfea, newnodupl)
   end
 
-fun add_thmfea_from_thy (thy,(thmfeadict,nodupl)) =
-  foldl (add_thmfea thy) (thmfeadict,nodupl) (DB.thms thy)
+fun add_thmfea_from_thy (thy,(thmfea,nodupl)) =
+  foldl (add_thmfea thy) (thmfea,nodupl) (DB.thms thy)
 
 fun thmfea_from_thyl thyl =
-  foldl add_thmfea_from_thy (dempty String.compare, dempty goal_compare) thyl
+  foldl add_thmfea_from_thy ([], dempty goal_compare) thyl
 
-fun add_namespacethm (thmfeadict,nodupl) =
+fun add_namespacethm (thmfea,nodupl) =
   let val l = unsafe_namespace_thms () in
-    foldl (add_thmfea namespace_tag) (thmfeadict,nodupl) l
+    foldl (add_thmfea namespace_tag) (thmfea,nodupl) l
   end
 
 fun create_thmdata () =
   let
     val thyl = current_theory () :: ancestry (current_theory ())
-    val (d,nodupl) = thmfea_from_thyl thyl
-    val (thmfeadict,newnodupl) = add_namespacethm (d,nodupl)
-    val thmfeadict' =
-      if !thmlintac_flag
-      then daddl (!thmlintac_cthy) thmfeadict
-      else thmfeadict
-    val n = int_to_string (dlength thmfeadict')
+    val (thmfea1,nodupl1) = thmfea_from_thyl thyl
+    val (thmfea2,nodupl2) = add_namespacethm (thmfea1,nodupl1)
+    val n = int_to_string (length thmfea2)
   in
     print_endline ("Loading " ^ n ^ " theorems");
-    (learn_tfidf (dlist thmfeadict'), thmfeadict')
+    (learn_tfidf thmfea2, thmfea2)
   end
 
 (* -------------------------------------------------------------------------

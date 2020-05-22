@@ -925,9 +925,6 @@ fun output_header oc cthy =
   reflect_flag oc "tttSetup.record_savestate_flag" record_savestate_flag;
   reflect_time oc "tttSetup.record_tactic_time" record_tactic_time;
   reflect_time oc "tttSetup.record_proof_time" record_proof_time;
-  (* evaluation *)
-  reflect_flag oc "mlThmData.thmlintac_flag" mlThmData.thmlintac_flag;
-  osn oc "val _ = smlExecute.exec_sml";
   (* search *)
   reflect_time oc "tttSetup.ttt_search_time" ttt_search_time;
   reflect_time oc "tttSetup.ttt_tactic_time" ttt_tactic_time;
