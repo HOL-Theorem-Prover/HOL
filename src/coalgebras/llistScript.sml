@@ -3190,12 +3190,12 @@ val [llist_upto_eq,llist_upto_rel,llist_upto_trans,llist_upto_context] =
      "llist_upto_trans","llist_upto_context"]
 
 Theorem LLIST_BISIM_UPTO:
-  ∀ll1 ll2 R.
-    R ll1 ll2 ∧
-    (∀ll3 ll4.
+  !ll1 ll2 R.
+    R ll1 ll2 /\
+    (!ll3 ll4.
       R ll3 ll4 ⇒
-      ll3 = [||] ∧ ll4 = [||] ∨
-      LHD ll3 = LHD ll4 ∧
+      ll3 = [||] /\ ll4 = [||] \/
+      LHD ll3 = LHD ll4 /\
       llist_upto R (THE (LTL ll3)) (THE (LTL ll4)))
   ==> ll1 = ll2
 Proof
