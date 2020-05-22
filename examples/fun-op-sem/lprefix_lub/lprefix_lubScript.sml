@@ -461,4 +461,42 @@ val build_prefix_lub_intro = Q.store_thm("build_prefix_lub_intro",
    (lprefix_lub ls lub ⇔ (lub = build_lprefix_lub ls))`,
   metis_tac[build_lprefix_lub_thm,unique_lprefix_lub])
 
+Definition lprefix_rel_def:
+  lprefix_rel s1 s2 ⇔ ∀l1. l1 IN s1 ⇒ ∃l2. l2 IN s2 ∧ LPREFIX l1 l2
+End
+
+Theorem lprefix_rel_lnth:
+  lprefix_rel ls1 ls2 ⇒
+  (∀ll1 n x. ll1 ∈ ls1 ∧ LNTH n ll1 = SOME x ⇒
+             ∃ll2. ll2 ∈ ls2 ∧ LNTH n ll2 = SOME x)
+Proof
+  rw [lprefix_rel_def]
+  \\ first_x_assum drule \\ strip_tac
+  \\ goal_assum (first_x_assum o mp_then.mp_then mp_then.Any mp_tac)
+  \\ fs [LPREFIX_APPEND] \\ rw []
+  \\ fs [LNTH_LAPPEND]
+  \\ imp_res_tac lnth_some_length
+  \\ every_case_tac \\ fs [less_opt_def]
+QED
+
+Theorem IMP_equiv_lprefix_chain:
+  lprefix_chain ls1 ∧ lprefix_chain ls2 ∧
+  lprefix_rel ls1 ls2 ∧ lprefix_rel ls2 ls1 ⇒
+  equiv_lprefix_chain ls1 ls2
+Proof
+  rw [] \\ imp_res_tac lprefix_rel_lnth
+  \\ fs [equiv_lprefix_chain_thm]
+  \\ metis_tac []
+QED
+
+Theorem IMP_build_lprefix_lub_EQ:
+  lprefix_chain ls1 ∧ lprefix_chain ls2 ∧
+  lprefix_rel ls1 ls2 ∧ lprefix_rel ls2 ls1 ⇒
+  build_lprefix_lub ls1 = build_lprefix_lub ls2
+Proof
+  rw [] \\ mp_tac IMP_equiv_lprefix_chain \\ rw []
+  \\ imp_res_tac build_lprefix_lub_thm
+  \\ imp_res_tac lprefix_lub_equiv_chain2
+QED
+
 val _ = export_theory ();
