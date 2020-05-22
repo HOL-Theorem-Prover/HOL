@@ -2598,6 +2598,12 @@ val LNTH_LMAP = Q.store_thm(
   Induct >> simp[LNTH] >> rpt gen_tac >>
   Q.SPEC_THEN `l` STRUCT_CASES_TAC llist_CASES >> simp[])
 
+Theorem LNTH_fromList:
+  !n xs. LNTH n (fromList xs) = if n < LENGTH xs then SOME (EL n xs) else NONE
+Proof
+  Induct \\ Cases_on ‘xs’ \\ fs [LNTH]
+QED
+
 val LLENGTH_LGENLIST = Q.store_thm(
   "LLENGTH_LGENLIST[simp,compute]",
   `!f. LLENGTH (LGENLIST f limopt) = limopt`,
