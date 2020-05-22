@@ -32,11 +32,11 @@ End
 
 Theorem baz:
   x ∧ let
-    a = b;
-    c = d;
-  in
-    x ⇒ a ∧
-        c
+        a = b;
+        c = d;
+      in
+        x ⇒ a ∧
+            c
 Proof
   some_tactic
 QED
@@ -163,6 +163,17 @@ Proof
    SIMP_TAC (bsrw_ss()) [] THEN
   ASM_SIMP_TAC (bsrw_ss()) [] THEN
   Cases_on ‘m’ THEN SRW_TAC [][]
+QED
+
+Theorem testTHENL:
+  foo
+Proof
+  tact1 THENL [
+    tac1 >-
+     foo,
+    tac2
+  ] >>
+  foo
 QED
 
 

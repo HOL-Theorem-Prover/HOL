@@ -13,7 +13,6 @@
 
 
 (defun holscript-unchanged-at1 ()
-  (message "Testing indent on line %d" (line-number-at-pos))
   (indent-for-tab-command)
   (not (buffer-modified-p)))
 
@@ -93,6 +92,6 @@
      (should (save-excursion
                (and
                 (move-check '(1 12 41 42 64 84 121 139
-                                176 218 382 479)
+                                176 218 382 499)
                             'forward-sexp)
-                (move-check '(2185 2466) 'forward-sexp)))))))
+                (move-check '(2205 2486) 'forward-sexp)))))))
