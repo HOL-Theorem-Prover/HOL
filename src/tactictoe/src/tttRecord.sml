@@ -128,7 +128,7 @@ fun app_wrap_proof name ostac goal =
     val (wstac,wtac) = total_time parse_time wrap_proof ostac
     val _  = incr n_proof_parsed
   in
-    let val (gcallsl,v) = total_time replay_time
+    let val (gl,v) = total_time replay_time
       (timeout (!record_proof_time) wtac) goal
     in
       if null gl
