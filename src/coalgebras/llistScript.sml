@@ -692,7 +692,6 @@ val LTAKE_EQ_SOME_CONS = store_thm(
   REPEAT STRIP_TAC THEN FIRST_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `h`) THEN
   ASM_SIMP_TAC (srw_ss()) []);
 
-
 (* ----------------------------------------------------------------------
     Finality allows us to  define MAP
    ---------------------------------------------------------------------- *)
@@ -822,6 +821,16 @@ val LTAKE_LAPPEND1 = Q.store_thm("LTAKE_LAPPEND1",
   Induct >> rw[LTAKE_THM] >>
   qspec_then`l1`FULL_STRUCT_CASES_TAC llist_CASES >> fs[] >>
   Cases_on`LTAKE n t`>>fs[])
+
+Theorem LTAKE_LMAP:
+  !n f ll. LTAKE n (LMAP f ll) =
+   OPTION_MAP (MAP f) (LTAKE n ll)
+Proof
+  Induct_on `n` >> rw[] >>
+  qspec_then ‘ll’ strip_assume_tac llist_CASES >>
+  pop_assum SUBST_ALL_TAC >>
+  fs[OPTION_MAP_COMPOSE,combinTheory.o_DEF]
+QED
 
 (* ----------------------------------------------------------------------
     finiteness and list length
@@ -1435,6 +1444,25 @@ val every_strong_coind = save_thm(
                                        FORALL_AND_THM]
               |> Q.GEN `Q` |> Q.GEN `P`);
 
+Theorem every_LNTH:
+  !P ll. every P ll <=> !n e. LNTH n ll = SOME e ==> P e
+Proof
+  fs [every_def,exists_LNTH] \\
+  CONV_TAC(STRIP_QUANT_CONV(LAND_CONV(PURE_ONCE_REWRITE_CONV[EQ_SYM_EQ]))) \\
+  simp[IMP_DISJ_THM]
+QED
+
+Theorem every_LDROP:
+  !f i ll1 ll2.
+  every f ll1 /\
+  LDROP i ll1 = SOME ll2
+  ==> every f ll2
+Proof
+  Induct_on ‘i’ >> rpt GEN_TAC >>
+  qspec_then ‘ll1’ strip_assume_tac llist_CASES >> pop_assum SUBST_ALL_TAC >>
+  rw[] >> rw[] >> res_tac
+QED
+
 (*
   could alternatively take contrapositives of the exists induction principle:
 
@@ -1706,6 +1734,30 @@ val LFLATTEN_SINGLETON = store_thm(
   STRUCT_CASES_TAC (Q.SPEC `ll4` llist_CASES) THEN
   SIMP_TAC (srw_ss()) [LFLATTEN_THM, LHD_THM, LTL_THM]);
 
+Theorem LFINITE_LFLATTEN:
+  !lll:'a llist llist.
+    every (\ll. LFINITE ll /\ ll <> LNIL) lll ==>
+    LFINITE (LFLATTEN lll) = LFINITE lll
+Proof
+  `!lll.
+      LFINITE lll ==> llist$every (\ll. LFINITE ll /\ ll <> LNIL) lll ==>
+      LFINITE (LFLATTEN lll)` by (ho_match_mp_tac LFINITE_ind \\ fs [LFINITE_APPEND])
+  \\ qsuff_tac `!x.
+      LFINITE x ==>
+      !lll. x = LFLATTEN lll /\ llist$every (\ll. LFINITE ll /\ ll <> LNIL) lll ==>
+      LFINITE lll` THEN1 (metis_tac [])
+  \\ ho_match_mp_tac LFINITE_ind
+  \\ fs [PULL_FORALL] \\ rw []
+  THEN1 (qspec_then`lll`FULL_STRUCT_CASES_TAC llist_CASES \\ fs [])
+  \\ rename [`_ = LFLATTEN lll2`]
+  \\ qspec_then`lll2`FULL_STRUCT_CASES_TAC llist_CASES \\ fs []
+  \\ rename [`h2 <> _`]
+  \\ qspec_then`h2`FULL_STRUCT_CASES_TAC llist_CASES \\ fs [] \\ rw []
+  \\ rename [`LAPPEND t2`]
+  \\ qspec_then`t2`FULL_STRUCT_CASES_TAC llist_CASES \\ fs []
+  \\ rename [`LAPPEND t1`]
+  \\ first_x_assum (qspec_then `(h:::t1) ::: t` mp_tac) \\ fs []
+QED
 
 (*---------------------------------------------------------------------------*)
 (* ZIP two streams together, returning LNIL as soon as possible.             *)
@@ -1867,6 +1919,12 @@ val LAPPEND_fromList = Q.store_thm
  `!l1 l2. LAPPEND (fromList l1) (fromList l2) = fromList (l1 ++ l2)`,
  Induct THEN
  SRW_TAC [] []);
+
+Theorem LFLATTEN_fromList: !l.
+  LFLATTEN(fromList(MAP fromList l)) = fromList(FLAT l)
+Proof
+  Induct >> rw[LAPPEND_fromList]
+QED
 
 val LTAKE_LENGTH = Q.store_thm ("LTAKE_LENGTH",
 `!n ll l. (LTAKE n ll = SOME l) ==> (n = LENGTH l)`,
@@ -2926,6 +2984,12 @@ Proof
   rewrite_tac [GSYM LGENLIST_EQ_fromSeq,LMAP_LGENLIST]
 QED
 
+Theorem LMAP_fromList:
+  LMAP f (fromList l) = fromList(MAP f l)
+Proof
+  Induct_on `l` >> fs[]
+QED
+
 Theorem exists_fromSeq[simp]:
   !p f. exists p (fromSeq f) = ?i. p (f i)
 Proof
@@ -2954,9 +3018,7 @@ QED
 Theorem LFILTER_fromList[simp]:
   !p l. LFILTER p (fromList l) = fromList (FILTER p l)
 Proof
-  Induct_on ‘l’ \\ rw [Once LFILTER]
-  \\ pop_assum mp_tac
-  \\ qid_spec_tac ‘l’ \\ Induct \\ rw []
+  Induct_on ‘l’ \\ rw[]
 QED
 
 Theorem LFILTER_fromSeq:
@@ -3075,6 +3137,39 @@ Proof
   rw [LSUFFIX_def,LAPPEND_EQ_LNIL]
   \\ imp_res_tac LFINITE_IMP_fromList \\ rw []
   \\ fs [LAPPEND_fromList]
+QED
+
+Theorem LTAKE_LAPPEND_fromList:
+  !ll l n.
+    LTAKE (n + LENGTH l) (LAPPEND (fromList l) ll) =
+      OPTION_MAP (APPEND l) (LTAKE n ll)
+Proof
+  rw [] \\ Cases_on `LTAKE n ll` \\ fs []
+  THEN1 (
+    `LFINITE ll` by (fs [LFINITE] \\ goal_assum drule)
+    \\ drule LFINITE_HAS_LENGTH \\ strip_tac \\ rename1 `SOME m`
+    \\ irule LTAKE_LLENGTH_NONE
+    \\ qexists_tac `m + LENGTH l` \\ rw []
+    THEN1 (
+      drule LTAKE_LLENGTH_SOME \\ strip_tac
+      \\ Cases_on `n ≤ m` \\ fs []
+      \\ drule (GEN_ALL LTAKE_TAKE_LESS)
+      \\ disch_then drule \\ fs [])
+    \\ fs [LLENGTH_APPEND, LFINITE_fromList])
+  \\ Induct_on `l` \\ rw []
+  \\ fs [LTAKE_CONS_EQ_SOME]
+  \\ goal_assum(drule o PURE_ONCE_REWRITE_RULE[CONJ_SYM])
+  \\ simp[]
+QED
+
+Theorem LTAKE_LPREFIX:
+  !x ll.
+   ~LFINITE ll ==>
+   ?l. LTAKE x ll = SOME l /\ LPREFIX (fromList l) ll
+Proof
+  rpt strip_tac >>
+  imp_res_tac NOT_LFINITE_IMP_fromSeq >> VAR_EQ_TAC >>
+  simp[LPREFIX_fromList,LFINITE_toList_SOME,LPREFIX_fromList,toList]
 QED
 
 (* ----------------------------------------------------------------------
