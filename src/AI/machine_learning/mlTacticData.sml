@@ -180,8 +180,8 @@ fun export_calls file calls =
     val ostrm = Portable.open_out file
     val calls1 = filter uptodate_call calls
     fun is_local stac = mem "tttRecord.local_tag" (partial_sml_lexer stac)
-    fun is_global call = not (is_local (#ortho call))
-    val calls2 = filter is_global calls1
+    fun test call = not (is_local (#ortho call))
+    val calls2 = filter test calls1
     val calls3 = mk_sameorder_set call_compare (rev calls2)
     val calls4 = map call_to_tuple calls3
   in
@@ -189,6 +189,8 @@ fun export_calls file calls =
                    (HOLsexp.printer (enc_calls calls4));
     TextIO.closeOut ostrm
   end
+
+
 
 (* -------------------------------------------------------------------------
    Importing terms

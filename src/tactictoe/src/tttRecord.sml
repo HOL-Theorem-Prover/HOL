@@ -80,6 +80,7 @@ fun write_info thy =
 fun record_tactic (tac,stac) g =
   let val ((gl,v),t) = add_time (timeout (!record_tactic_time) tac) g in
     incr n_tactic_replayed;
+    (if op_mem goal_eq g gl then () else
     calls_glob := 
       {
       stac = stac, ortho = stac, time = t,
@@ -87,7 +88,7 @@ fun record_tactic (tac,stac) g =
       loc = (current_theory (), (!savestate_level) - 1),
       fea = fea_of_goal_cached g
       }
-      :: !calls_glob;
+      :: !calls_glob);
     (gl,v)
   end
   handle Interrupt => raise Interrupt 
@@ -127,7 +128,7 @@ fun app_wrap_proof name ostac goal =
     val (wstac,wtac) = total_time parse_time wrap_proof ostac
     val _  = incr n_proof_parsed
   in
-    let val (gl,v) = total_time replay_time
+    let val (gcallsl,v) = total_time replay_time
       (timeout (!record_proof_time) wtac) goal
     in
       if null gl
