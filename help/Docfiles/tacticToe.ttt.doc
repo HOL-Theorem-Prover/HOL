@@ -16,9 +16,9 @@ deeply.
 
 \FAILURE
 Fails if the supplied goal does not contain boolean terms only. 
-Or if the proof search saturates, it often happens 
+Or if the search saturates, it often happens 
 when there is not enough recorded tactics. 
-Or if no proof is found in less than a 15 seconds (default). This timeout can be modifed by {tacticToe.set_timeout}. Or if the proof fails to reconstruct.
+Or if the search times out. This timeout can be modifed by {tacticToe.set_timeout}. Or if the proof fails to reconstruct.
 
 \EXAMPLE
 {
