@@ -743,6 +743,12 @@ val LAPPEND = new_specification
 val _ = export_rewrites ["LAPPEND"]
 val _ = computeLib.add_persistent_funs ["LAPPEND"]
 
+Theorem LCONS_LAPPEND:
+  !x ll. x:::ll = LAPPEND [|x|] ll
+Proof
+  fs[LAPPEND]
+QED
+
 (* properties of map and append *)
 
 val LMAP_APPEND = store_thm(
@@ -1395,6 +1401,33 @@ val exists_LDROP = store_thm(
     FULL_SIMP_TAC (srw_ss()) [LDROP]
   ]);
 
+Theorem exists_thm_strong:
+  exists P ll <=> ?n a t l. LDROP n ll = SOME (a:::t) /\ P a /\
+                           LTAKE n ll = SOME l /\ EVERY ($~ o P) l
+Proof
+  simp[exists_LDROP,EQ_IMP_THM] >>
+  reverse conj_tac >- metis_tac[] >>
+  disch_then (strip_assume_tac o Ho_Rewrite.PURE_ONCE_REWRITE_RULE[whileTheory.LEAST_EXISTS]) >>
+  goal_assum drule >>
+  rw[] >>
+  rpt(pop_assum mp_tac) >>
+  rename1`LDROP n ll = SOME (a:::t)`>>
+  MAP_EVERY qid_spec_tac [`a`,`t`,`ll`,`n`] >>
+  Induct >- rw[] >>
+  gen_tac >>
+  qspec_then`ll`FULL_STRUCT_CASES_TAC llist_CASES>>
+  rw[] >>
+  rename1`LDROP _ (h:::_)`>>
+  `~P h`
+    by(first_x_assum(qspec_then `0` mp_tac) >>
+       impl_tac >- simp[] >>
+       rename1`h:::t`>>
+       disch_then(qspecl_then [`h`,`t`] mp_tac) >> simp[]) >>
+  first_x_assum (drule_then drule) >>
+  impl_tac >- (rw[] >> rename1`n' < n` >> first_x_assum(qspec_then `SUC n'` mp_tac) >> rw[]) >>
+  rw[PULL_EXISTS]
+QED
+
 (* ----------------------------------------------------------------------
     companion LL_ALL/every (has a coinduction principle)
    ---------------------------------------------------------------------- *)
@@ -1582,6 +1615,94 @@ val LFILTER_APPEND = store_thm(
   HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
   SIMP_TAC (srw_ss()) [] THEN REPEAT STRIP_TAC THEN
   COND_CASES_TAC THEN ASM_SIMP_TAC (srw_ss()) []);
+
+val LFILTER_fromList = Q.prove(`
+  !l. LFILTER f (fromList l) = fromList(FILTER f l)`,
+  Induct >> rw[]);
+
+Theorem LFILTER_EQ_CONS:
+  LFILTER P ll = h:::t
+  ==> ?l ll'. ll = LAPPEND (fromList l) (h:::ll') /\
+              EVERY ($~ o P) l /\ P h /\
+              LFILTER P ll' = t
+Proof
+  strip_tac >>
+  rename1`LFILTER P ll`>>
+  `exists P ll` by(fs[Once LFILTER,CaseEq "bool"]) >>
+  fs[exists_thm_strong] >>
+  rename1`LDROP n ll = SOME (a:::t')`>>
+  rename1`LTAKE n ll = SOME l`>>
+  `ll = LAPPEND (fromList l) (a:::t')`
+    by(reverse(Cases_on `LFINITE ll`)
+       >- (drule_then (qspec_then `n` (fn thm => PURE_ONCE_REWRITE_TAC[GSYM thm])) (CONJUNCT1 LTAKE_DROP) >>
+           simp[]) >>
+       `n <= THE(LLENGTH ll)` by(fs[LFINITE_LLENGTH] >> metis_tac[LDROP_SOME_LLENGTH]) >>
+       drule_all_then (fn thm => PURE_ONCE_REWRITE_TAC[GSYM thm]) (CONJUNCT2 LTAKE_DROP) >>
+       simp[]) >>
+  BasicProvers.VAR_EQ_TAC >>
+  fs[LFINITE_fromList,LFILTER_APPEND,LFILTER_fromList] >>
+  `FILTER P l = []` by(fs[listTheory.FILTER_EQ_NIL,combinTheory.o_DEF]) >>
+  fs[] >> rpt(BasicProvers.VAR_EQ_TAC) >>
+  metis_tac[]
+QED
+
+Theorem every_LFILTER:
+  !ll P. every P (LFILTER P ll)
+Proof
+  rpt strip_tac >>
+  rename1`every P (LFILTER P ll)`>>
+  `!ll. (?ll'. ll = LFILTER P ll') ==> every P ll
+  ` by(ho_match_mp_tac every_coind >>
+       rw[] >> first_x_assum(ASSUME_TAC o GSYM) >>
+       drule_then strip_assume_tac LFILTER_EQ_CONS >>
+       fs[] >> metis_tac[]) >>
+  metis_tac[]
+QED
+
+Theorem every_LAPPEND1:
+  !P ll1 ll2. every P (LAPPEND ll1 ll2) ==> every P ll1
+Proof
+  strip_tac
+  >> fs[Once (GSYM PULL_EXISTS)]
+  >> ho_match_mp_tac every_coind
+  >> rw[PULL_EXISTS]
+  >> goal_assum drule
+QED
+
+Theorem every_fromList_EVERY:
+  !l P. every P (fromList l) ==> EVERY P l
+Proof
+  Induct >> rw[]
+QED
+
+Theorem every_LAPPEND2_LFINITE:
+  !l P ll. LFINITE l /\ every P (LAPPEND l ll) ==> every P ll
+Proof
+  Ho_Rewrite.REWRITE_TAC[GSYM PULL_FORALL,GSYM AND_IMP_INTRO]
+  >> ho_match_mp_tac LFINITE_ind
+  >> fs[]
+QED
+
+Theorem every_LFILTER_imp:
+  !Q P ll. every Q ll ==> every Q (LFILTER P ll)
+Proof
+  rpt strip_tac >>
+  rename1`every Q (LFILTER P ll)`
+  >> `!ll. (?ll'. ll = LFILTER P ll' /\ every Q ll') ==> every Q ll` by (
+    ho_match_mp_tac every_coind
+    >> rw[] >> qpat_x_assum `_:::_ = _`(ASSUME_TAC o GSYM)
+    >> drule_then strip_assume_tac LFILTER_EQ_CONS
+    >> BasicProvers.VAR_EQ_TAC
+    >> rename1 `LAPPEND (fromList l) (h:::llll)`
+    >> qspec_then `l` assume_tac LFINITE_fromList
+    >> BasicProvers.VAR_EQ_TAC
+    >> drule_all every_LAPPEND2_LFINITE
+    >> rw[every_thm,AC CONJ_ASSOC CONJ_COMM]
+    >> goal_assum drule
+    >> REFL_TAC
+  )
+  >> metis_tac[]
+QED
 
 val LFLATTEN = new_specification
  ("LFLATTEN", ["LFLATTEN"],
