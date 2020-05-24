@@ -176,5 +176,10 @@ Proof
   foo
 QED
 
+Theorem morelet_indent:
+  let x = 2 in p x ∧ y
+Proof
+  tac
+QED
 
 val _ = export_theory()
