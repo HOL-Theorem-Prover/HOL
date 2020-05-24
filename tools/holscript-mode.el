@@ -945,7 +945,7 @@ a store_thm equivalent."))
 (defvar holscript-debugging-messages-p nil
   "Whether or not to emit debugging messages")
 (defun holscript-message (s &rest rest)
-  (if holscript-debugging-messages-p (message s rest)))
+  (if holscript-debugging-messages-p (apply 'message s rest)))
 (defun holscript-smie-rules (kind token)
   (holscript-message "in smie rules, %d looking at (%s,>%s<)"
                      (point) kind token)
