@@ -1219,7 +1219,8 @@ The theory \ml{one} is typically used in constructing more elaborate types.
 
 \subsubsection{The itself type}
 \index{itself, the HOL type operator@\holtxt{itself}, the \HOL{} type operator}%
-The unary \holtxt{itself} type operator provides a family of singleton types akin to \holtxt{one}.
+The unary \holtxt{itself} type operator (in \theoryimp{boolTheory})
+provides a family of singleton types akin to \holtxt{one}.
 Thus, for every type $\alpha$, \holtxt{$\alpha$~itself} is a type containing just one value.
 This value's name is \holtxt{the\_value}, but the parser and pretty-printer are set up so that for the type \holtxt{$\alpha$~itself}, \holtxt{the\_value} can be written as \holtxt{(:$\alpha$)} (the syntax includes the parentheses).
 For example, \holtxt{(:num)} is the single value inhabiting the type \holtxt{num~itself}.
@@ -1309,7 +1310,8 @@ value to that constructor's argument, and is unspecified on
 \section{Numbers}
 
 The natural numbers, integers, and real numbers are provided in a
-series of theories. Also available are theories of $n$-bit words
+series of theories. Also available are theories of extended real numbers,
+$n$-bit words
 (numbers modulo $2^n$), floating point and fixed point numbers.
 
 \subsection{Natural numbers}
@@ -1322,7 +1324,7 @@ defined from the Axiom of Infinity, and Peano's axioms are derived. In
 \theoryimp{prim\_rec} the Primitive Recursion theorem is proved. Based
 on that, a large theory treating the standard arithmetic operations is
 developed in \theoryimp{arithmetic}. Lastly, a theory of numerals is
-developed.
+developed in \theoryimp{numeral}.
 
 \subsubsection{The theory \theoryimp{num}}
 
@@ -2023,27 +2025,26 @@ Constant & Overloaded symbol & Strength & Associativity \\ \hline
 {\small\verb+real_mul+} &{\small\verb%*%} & 600 & left \\
 {\small\verb+real_div+} & {\small\verb%/%} & 600 & left \\
 {\small\verb+pow+} & &700 & right \\
+{\small\verb+rpow+} & &700 & right \\
 {\small\verb+real_of_num+} &{\small\verb%&%} & 900 & prefix \\
 {\small\verb+real_neg+} &{\small\verb%~%} & 900 & prefix \\
 \end{tabular}}
 \end{center}
 
-On the basis of {\small\verb+realTheory+}, the following  sequence of
+On the basis of {\small\verb+realTheory+}, the following sequence of
 theories is constructed:
 
 \begin{description}
-\item [topology] Topologies and metric spaces, including metric on
-the real line.
+\item [topology] General topology (ported from HOL Light).
+\item [metric] Metric spaces, including metric on the real line.
 \item [nets] Moore-Smith convergence nets, and special cases like
 sequences.
 \item [seq] Sequences and series of real numbers.
 \item [lim] Limits, continuity and differentiation.
 \item [powser] Power series.
 \item [transc] Transcendental functions, e.g., exp, sin,
-cos, ln, root, sqrt, pi, tan, asn, acs, atn. Also the Kurzweil-Henstock
-gauge integral the fundamental theorem of calculus, and McLaurin's
-theorem.
-
+cos, ln, root, sqrt, pi, tan, asn, acs, atn.
+\item [real_sigma] Summation of real numbers (the $\Sigma$ operator).
 \end{description}
 \index{real numbers, the HOL theory of@real numbers, the \HOL{} theory of|)}
 
@@ -2054,25 +2055,208 @@ The $\sqrt{-1}$ value is the \HOL{} constant \holtxt{i}.
 Numerals are supported (with the suffix \holtxt{c} available to force numerals to be parsed as complex numbers).
 The standard arithmetic operations are defined, with the appropriate theorems proved about them.
 
-\subsection{Probability theory}\label{prob}
-\index{probability, the HOL theory of@probability, the \HOL{} theory of}
+\subsection{Extended real numbers}
+\label{sec:extreal}
+\index{extended real numbers, the HOL theory of@extreal numbers, the \HOL{} theory of|(}
 
-A foundational construction of probability theory developed by Joe
-Hurd~\cite{hurd-thesis}. First a type of boolean sequences is defined
-to model an infinite sequence of coin flips. Next a probability
-function is formalized which takes as input a set of boolean
-sequences, and returns a real number between 0 and 1. Unfortunately
-not all sets can be assigned a probability (the Banach-Tarski
-paradox), rather the sets that can be assigned a probability are
-called \emph{measurable sets}, and this is also formalized in the
-HOL theory.
+The \HOL{} provides an extensive theory of extended real numbers
+(\theoryimp{extreal}), originally developed by T. Mhamdi, O. Hasan, and S. Tahar~\cite{Mhamdi:2011dd}.
+With extended reals, the limit of a
+monotonic sequence is always defined, infinite when the sequence is divergent,
+but still defined and properties can be proven on it.
 
-Building on this foundation, the probability theory is used to define
-a sampling function that takes an infinite sequence of coin flips and
-a positive integer $N$, and returns an integer $n$ in the range $0\le
-n < N$, picked uniformly at random from the available choices. This
-sampling function for the uniform distribution is later used to verify
-the Miller-Rabin primality test.
+It is often helpful to use the values $+\infty$ and $-\infty$ in
+calculations. To do this properly, we have to consider the
+\emph{extended real line} $\overline{\mathbb{R}} := [-\infty,
++\infty]$. If we agree that $-\infty < x$ and $y < +\infty$ for all
+$x,y\in\mathbb{R}$, then $\overline{\mathbb{R}}$ inherits the ordering
+from $\mathbb{R}$ as well as the usual rules of addition, subtraction,
+multiplication and division of elements from $\mathbb{R}$. The latter needs to be
+augmented as shown in Table~\ref{tab:extrealAdd}~\cite[p.~61]{Schilling:2017}:
+
+\begin{table}[ht]
+\begin{center}
+{\small
+\begin{tabular}{@{}c|cccc}    
+$+$ & 0 & $y$ & $+\infty$ & $-\infty$ \\ \hline
+  0 & 0 & $y$ & $+\infty$ & $-\infty$ \\
+  $x$ & $x$ & $x + y$ & $+\infty$ & $-\infty$ \\
+  $+\infty$ & $+\infty$ & $+\infty$ & $+\infty$ & $\nexists$ \\
+  $-\infty$ & $-\infty$ & $-\infty$ & $\nexists$ & $-\infty$ \\
+\end{tabular}
+\qquad
+\begin{tabular}{@{}c|cccc}    
+$-$ & 0 & $y$ & $+\infty$ & $-\infty$ \\ \hline
+  0 & 0 & $-y$ & $-\infty$ & $+\infty$ \\
+  $x$ & $x$ & $x - y$ & $-\infty$ & $+\infty$ \\
+  $+\infty$ & $+\infty$ & $+\infty$ & $\nexists$ & $+\infty$ \\
+  $-\infty$ & $-\infty$ & $-\infty$ & $-\infty$ & $\nexists$ \\
+\end{tabular}
+
+\vspace{1em}
+
+\begin{tabular}{@{}c|cccc}    
+$\cdot$ & 0 & $\pm b$ & $+\infty$ & $-\infty$ \\ \hline
+  0 & 0 & 0 & 0 & 0 \\
+  $\pm a$ & 0 & $a\cdot b$ & $\pm\infty$ & $\mp\infty$ \\
+  $+\infty$ & 0 & $\pm\infty$ & $+\infty$ & $-\infty$ \\
+  $-\infty$ & 0 & $\mp\infty$ & $-\infty$ & $+\infty$ \\
+\end{tabular}
+\qquad
+\begin{tabular}{@{}c|cccc}    
+$/$ & 0 & $\pm b$ & $+\infty$ & $-\infty$ \\ \hline
+  0 & $\nexists$ & 0 & 0 & 0 \\
+  $\pm a$ & $\nexists$ & $a / b$ & 0 & 0 \\
+  $+\infty$ & $\nexists$ & $\pm\infty$ & $\nexists$ & $\nexists$ \\
+  $-\infty$ & $\nexists$ & $\mp\infty$ & $\nexists$ & $\nexists$ \\
+\end{tabular}}
+\end{center}
+\caption{$+$, $-$, $\cdot$ and $/$ in $\overline{\mathbb{R}}$, where
+  $x, y\in\mathbb{R}$ and $a,b\in(0, \infty)$}
+\label{tab:extrealAdd}
+\end{table}
+
+In \HOL{}, the type of extended real numbers (\emph{extreals} hereafter)
+is constructed by an algebraic datatype \ty{extreal} (see Section~\ref{sec:datatype}):
+\begin{hol}
+\begin{verbatim}
+  Datatype `extreal = NegInf | PosInf | Normal real`
+\end{verbatim}
+\end{hol}
+Thus \holtxt{Normal r} denotes the extreal corresponding
+to the real number \holtxt{r}, while \holtxt{PosInf} and
+\holtxt{NegInf} denote $+\infty$ and $-\infty$, respectively.
+ In order to precisely specify extreals corresponding to natural
+ numbers, the user can use the single character suffix `\ml{x}':
+\begin{session}
+\begin{alltt}
+>>__ load "extrealTheory";
+>>__ open extrealTheory;
+>> type_of ``0x``;
+\end{alltt}
+\end{session}
+The function \holtxt{real} can be used to convert extreals back to the
+corresponding reals ($+\infty$ and $-\infty$ are mapped to \holtxt{0x}).
+%
+A standard collection of arithmetic operators%
+\footnote{Note that, unlike the case of real numbers in \HOL{}, $0 / 0
+  = 0$ (or ``division by zero'' in general) does not hold on
+  extreals. This particular design choice sometimes makes proofs of
+  extreal-related theorems a bit harder (but more aligned with their
+  textbook proofs), as whenever terms like
+  \holtxt{inv x} or \holtxt{1 / x} are involved, \holtxt{x <> 0} must
+  be proved to proceed.}
+and elementary functions
+on the extreals are defined and overloaded on the
+corresponding operators of real numbers, show in Table~\ref{tab:extrealOp}.
+
+\begin{table}[ht]
+\centering
+{\small
+\begin{tabular}{@{}cccc}
+Constant & Overloaded symbol & Strength & Associativity \\ \hline
+{\small\verb+extreal_le+} &{\small\verb+<=+} & 450 & non \\
+{\small\verb+extreal_lt+} &{\small\verb+<+}  & 450 & non \\
+{\small\verb+extreal_add+} &{\small\verb%+%} & 500 & left \\
+{\small\verb+extreal_sub+} &{\small\verb%-%} & 500 & left \\
+{\small\verb+extreal_mul+} &{\small\verb%*%} & 600 & left \\
+{\small\verb+extreal_div+} & {\small\verb%/%} & 600 & left \\
+{\small\verb+extreal_of_num+} &{\small\verb%&%} & 900 & prefix \\
+{\small\verb+extreal_ainv+} &{\small\verb%~%} and {\small\verb%-%} & 900 & prefix \\
+{\small\verb+extreal_inv+} &{\small\verb+inv+} & & prefix \\
+{\small\verb+extreal_abs+} &{\small\verb+abs+} & & prefix \\
+{\small\verb+extreal_pow+} & {\small\verb+pow+} & 700 & right \\
+{\small\verb+extreal_powr+} & {\small\verb+powr+} & 700 & right \\
+{\small\verb+extreal_exp+} &{\small\verb+exp+} & & prefix \\
+{\small\verb+extreal_sqrt+} &{\small\verb%sqrt%} & & prefix \\
+{\small\verb+extreal_logr+} &{\small\verb+logr+} & & prefix \\
+{\small\verb+extreal_lg+} &{\small\verb+lg+} & & prefix \\
+{\small\verb+extreal_ln+} &{\small\verb+ln+} & & prefix \\
+\end{tabular}}
+\caption{Arithmetic operators and transcendental functions for extreals}
+\label{tab:extrealOp}
+\end{table}
+
+The addition of extreals is not associative and commutative in general, because
+\holtxt{PosInf + NegInf} and \holtxt{NegInf + PosInf} are not defined (see
+Table~\ref{tab:extrealAdd}). To swap the elements of additions, the
+user must avoid mixing of PosInf and NegInf in
+the involved elements (e.g., by letting one of them be normal):
+\begin{hol}
+\begin{alltt}
+##thm add_comm
+##thm add_comm_normal 
+##thm add_assoc
+\end{alltt}
+\end{hol}
+On the other hand, the set of extreals is a totally ordered set such that for all
+$a \in \overline{\mathbb{R}}$, $-\infty \leq a \leq +\infty$.
+With this order, $\overline{\mathbb{R}}$ is a complete lattice where every
+subset has a supremum (\holtxt{extreal_sup} or \holtxt{sup}) and an
+infimum (\holtxt{extreal_inf} or \holtxt{inf}). In particular, for
+empty sets (of extreals) we have:
+\begin{hol}
+\begin{alltt}
+##thm sup_empty
+##thm inf_empty
+\end{alltt}
+\end{hol}
+
+\paragraph{Finite and infinite sum of extreals}
+
+The sum of extreals over a finite set
+(\holtxt{EXTREAL_SUM_IMAGE}, overloaded on \holtxt{SIGMA}), $\sum_{i\in s} f(i)$, is defined
+by \holtxt{pred_set.ITSET} (see Section~\ref{sec:theory-of-sets}):
+\begin{hol}
+\begin{alltt}
+##thm EXTREAL_SUM_IMAGE_DEF
+\end{alltt}
+\end{hol}
+To actually work with \holtxt{EXTREAL_SUM_IMAGE},
+beside that $s$ must be a
+finite set, there must be no mixing of
+\holtxt{PosInf} and \holtxt{NegInf} in the values of \holtxt{f},
+i.e.~either all $f(i)$ are not $+\infty$ or they are not $-\infty$ ($i \in s$).
+The following theorem fully captures the properties of
+\holtxt{EXTREAL_SUM_IMAGE}:
+\begin{hol}
+\begin{alltt}
+>>__ val oldwidth = !Globals.linewidth;
+     val _ = Globals.linewidth := oldwidth - 10;
+##thm EXTREAL_SUM_IMAGE_THM
+>>__ val _ = Globals.linewidth := oldwidth;
+\end{alltt}
+\end{hol}
+
+The (countably) infinite sum of extreals (\holtxt{ext_suminf},
+overloaded on \holtxt{suminf}), $\sum_{i\in \mathbb{N}}
+f(i)$, is only defined on non-negative function $f$ as the supremum
+of the $n$th partial sum:
+\begin{hol}
+\begin{alltt}
+##thm ext_suminf_def
+\end{alltt}
+\end{hol}
+Thus mathematically \holtxt{ext_suminf} represents \emph{positive
+  series}, which always has a unique nonnegative value: \holtxt{PosInf} if the
+positive series is \emph{divergent}, other normal extreals (i.e.~\holtxt{< PosInf}) if the
+positive series is \emph{convergent} (on that normal extreal). A
+fundamental result for positive series says that it converges if and
+only if its $n$th partial sums are bounded:
+\begin{hol}
+\begin{alltt}
+##thm pos_summable
+\end{alltt}
+\end{hol}
+Finally, 2-dimensional (positive) infinite sums
+$\sum_{i,j\in\mathbb{N}} f(i,j)$ can be reduced to iterated sums
+$\sum_{i\in\mathbb{N}} \sum_{j\in\mathbb{N}} f(i,j)$ given an arbitrary bijection between
+$\mathbb{N}$ and $\mathbb{N}\times\mathbb{N}$:
+\begin{hol}
+\begin{alltt}
+##thm ext_suminf_2d_full 
+\end{alltt}
+\end{hol}
 
 \subsection{Bit vectors}
 \label{sec:bit-vectors}
@@ -3862,6 +4046,37 @@ is set to \ml{1}.
 \index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!set comprehensions}
 \index{sets, the HOL theory of@sets, the \HOL{} theory of|)}
 
+\subsubsection{Decision procedure for set-theoretic theorems}
+\index{set theory decision procedure}
+\label{sec:set-decision}
+
+\HOL{} provides some tools (in \texttt{bossLib}) to automate the proof of some routine
+\theoryimp{pred_set} theorems by a reduction to first-order
+logic, ported from HOL Light. They are based on \texttt{metisLib} (see
+Section~\ref{sec:metisLib}). Below are the entry-points: (see
+\REFERENCE{} for more details.)
+\begin{hol}
+\begin{verbatim}
+   SET_TAC     : thm list -> tactic
+   ASM_SET_TAC : thm list -> tactic
+   SET_RULE    : term -> thm
+\end{verbatim}
+\end{hol}
+
+The difference between \ml{SET\_TAC} and \ml{ASM\_SET\_TAC} is that
+the latter one also makes use of assumptions. With them, many simple
+set-theoretic results can be directly proved without finding needed
+lemmas in \theoryimp{pred_setTheory}. For instance, a simple lemma
+from \theoryimp{util_probTheory}:
+\begin{hol}
+\begin{verbatim}
+Theorem DISJOINT_RESTRICT_L :
+  !s t c. DISJOINT s t ==> DISJOINT (s INTER c) (t INTER c)
+Proof SET_TAC []
+QED
+\end{verbatim}
+\end{hol}
+
 \subsection{Multisets (\theoryimp{bag})}\label{multiset}
 
 Multisets, also known as \emph{bags}, are similar to sets, except that
@@ -4366,6 +4581,131 @@ From those, Newman's Lemma is proved.
 \end{alltt}
 \end{hol}
 
+\subsection{Bisimulation for labelled transition systems (\theoryimp{bisimulation})}
+\label{bisimulation}
+
+\HOL{} provides a minimal theory (\theoryimp{bisimulation}) for
+generating bisimulation and bisimulation
+relations~\cite{Mil89}
+from any labelled transition relation of the type $\alpha\to\beta\to\alpha\to\konst{bool}$.
+Suppose there is a user-defined labelled transition system (LTS) and
+\holtxt{ts} is the transition relation in it, then \holtxt{ts p l
+  q} denotes a transition from $p$ to $q$ by an action $l$, i.e.~$p \overset{l}{\longrightarrow} q$.
+A binary relation $R$ is called a \emph{bisimulation} if \holtxt{BISIM
+  ts R} holds under the following definition:
+\begin{hol}
+\begin{alltt}
+>>__ load "bisimulationTheory";
+>>__ open bisimulationTheory;
+##thm BISIM_def
+\end{alltt}
+\end{hol}
+Furthermore, the bisimulation relation (or bisimilarity, usually
+denoted by $\sim$),
+\holtxt{BISIM_REL ts}, is the \emph{union} (in the sense of
+\holtxt{RUNION}) of all bisimulations in this LTS, and it can be proven
+to be equivalence relation: (the \emph{original}
+definition hereafter)
+\begin{hol}
+\begin{alltt}
+##thm BISIM_REL_def
+##thm BISIM_REL_IS_EQUIV_REL
+\end{alltt}
+\end{hol}
+
+Bisimulation is a special case of coinduction, by far the most studied
+coinductive concept~\cite{Sangiorgi2012}. In practice it is hard to
+directly work with the above definition of \holtxt{BISIM_REL}. In fact, \holtxt{BISIM_REL}
+is defined by the coinductive relational package (see
+Section~\ref{sec:coinductive}):
+\begin{hol}
+\begin{verbatim}
+CoInductive BISIM_REL :
+    !p q. (!l.
+            (!p'. ts p l p' ==> ?q'. ts q l q' /\ (BISIM_REL ts) p' q') /\
+            (!q'. ts q l q' ==> ?p'. ts p l p' /\ (BISIM_REL ts) p' q'))
+      ==> (BISIM_REL ts) p q
+End
+\end{verbatim}
+\end{hol}
+which automatically generates the following coinduction principle:
+\begin{hol}
+\begin{alltt}
+##thm BISIM_REL_coind
+\end{alltt}
+\end{hol}
+A simple rewrite by \holtxt{BISIM_def} shows that \holtxt{BISIM_REL}
+defined in this way is actually equivalent with the original
+definition (which now becomes a theorem):\footnote{On the other hand, starting from the
+original definition it is not that easy to derive out the coinduction
+principle, which is very useful in practice.}
+\begin{session}
+\begin{alltt}
+>> Q.SPECL [`ts`, `R`]
+           (REWRITE_RULE [GSYM BISIM_def, GSYM RSUBSET] BISIM_REL_coind);
+\end{alltt}
+\end{session}
+
+The bisimulation and bisimulation relation considered so far are
+the \emph{strong} ones, in the sense that all involved transitions are
+\emph{one-step} transitions. To define \emph{weak} bisimulation (and the corresponding
+weak bisimulation relation), beside the transition relation,
+the user must also designate a special unique
+action to be \emph{invisible} (usually denoted by $\tau$).
+An \emph{empty} transition (\holtxt{ETS}) is the
+reflexive-transitive closure (\holtxt{RTC}) of (one-step) invisible transitions:
+\begin{hol}
+\begin{alltt}
+##thm ETS_def
+\end{alltt}
+\end{hol}
+Then a \emph{weak} transition (\holtxt{WTS}) is a one-step transition
+(the action may be invisible) concatenated with two empty transitions:
+\begin{hol}
+\begin{alltt}
+##thm WTS_def
+\end{alltt}
+\end{hol}
+An empty transition \holtxt{ETS ts tau p q} is usually denoted by
+$p\overset{\epsilon}{\Longrightarrow} q$ (assuming \holtxt{ts} and
+\holtxt{tau} is clear from the context), and a weak transition
+\holtxt{WTS ts tau p l q} is denoted by $p\overset{l}{\Longrightarrow}q$.
+Note that a weak transition must have at least one transition (even it
+is $\tau$), while an empty transition may have no actual transition at all.
+To simplify the informal definitions, we denote by
+$p\overset{\hat{a}}{\Longrightarrow}q$ the special notion of weak
+transitions such that, whenever the action $a$ is invisible, it is the
+same as $p\overset{\epsilon}{\Longrightarrow} q$.
+
+A binary relation $R$ is a weak bisimulation if, whenever $p\ R\ q$,
+\begin{itemize}
+\item $p \overset{a}{\longrightarrow} p'$ implies that there is $q'$ such that
+  $q\overset{\hat{a}}{\Longrightarrow} q'$ and $p'\ R\ q'$;
+\item $q \overset{a}{\longrightarrow} q'$ implies that there is $p'$ such that
+  $p\overset{\hat{a}}{\Longrightarrow} p'$ and $p'\ R\ q'$.
+\end{itemize}
+ $p$ and $p$ are \emph{weakly bisimilar}, written as $p \approx q$, if $p\ R\ q$ for some bisimulation $R$.
+
+Following the same manner as the strong case (including the use of \ml{CoInductive} command),
+below are the definition of weak
+bisimulation (\holtxt{WBISIM}),
+the equivalent definition of weak bisimulation relation
+(\holtxt{WBISIM_REL}) and the theorem saying \holtxt{WBISIM_REL ts
+  tau} is indeed an equivalence relation (in the LTS given by
+\holtxt{ts} and \holtxt{tau}):
+\begin{hol}
+\begin{alltt}
+##thm WBISIM_def
+##thm WBISIM_REL_def
+##thm WBISIM_REL_IS_EQUIV_REL
+\end{alltt}
+\end{hol}
+
+In \ml{\$(HOLDIR)/examples/CCS} there is a comprehensive
+formalization of Milner's Calculus of Communicating Systems (CCS)~\cite{Mil89},
+where the definitions of strong and weak bisimulations are based on
+the present \theoryimp{bisimulation} theory.
+
 \subsection{Finite maps (\theoryimp{finite\_map})}
 \label{sec:finite-map}
 
@@ -4842,39 +5182,6 @@ See Figure~\ref{fig:bind-defns} for the bind definitions for a number of differe
 \end{figure}
 
 \index{monads|)}
-\section{Further Theories}
-Other theories of interest in \HOL{} are listed and briefly described
-in Figure~\ref{fig:further-hol-theories}.
-
-\begin{figure}[hbtp]
-\renewcommand{\arraystretch}{1.5}
-\begin{tabular}{|p{0.2\textwidth}p{0.7\textwidth}|}
-  \hline
-  \theoryimp{poset} & Partial Orders, Knaster-Tarski theorem
-  \\
-  \theoryimp{divides}, \theoryimp{gcd} &
-  Divisibility and the greatest common divisor.
-  \\
-  \theoryimp{poly} &
-  A theory of polynomials over $\mathbb{R}$, providing
-  a collection of operations on polynomials, and theorems about them.
-  \\
-  \theoryimp{Temporal\_Logic},\newline \theoryimp{Omega\_Automata}
-  &
-  Klaus Schneider's development of temporal logic and\newline $\omega$-automata.
-  \\
-  \theoryimp{ctl}, \theoryimp{mu}
-  &
-  Computation Tree Logic and the $\mu$-calculus. See Hasan Amjad's
-  thesis. \\
-  \theoryimp{lbtree} & Possibly infinitely deep (\ie, co-algebraic) binary trees.\\
-  \theoryimp{inftree} & Possibly infinitely branching, algebraic trees\\
-  \hline
-\end{tabular}
-\caption{A selection of \HOL{} theories}
-\label{fig:further-hol-theories}
-\end{figure}
-
 
 %%% Local Variables:
 %%% mode: latex

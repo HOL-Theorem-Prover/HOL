@@ -351,11 +351,7 @@ val _ = add_rule {fixity = Suffix 2100,
                   pp_elements = [TOK UnicodeChars.sup_4]};
 
 val _ = overload_on (UnicodeChars.sup_4, ``\x :extreal. x pow 4``);
-
-(* TeX notations (not fully working) *)
-val _ = TeX_notation {hol = UnicodeChars.sup_2, TeX = ("\\ensuremath{^2}", 1)};
-val _ = TeX_notation {hol = UnicodeChars.sup_3, TeX = ("\\ensuremath{^3}", 1)};
-val _ = TeX_notation {hol = UnicodeChars.sup_4, TeX = ("\\ensuremath{^4}", 1)};
+val _ = TeX_notation {hol = UnicodeChars.sup_4, TeX = ("\\HOLTokenSupFour{}", 1)};
 
 (* ********************************************* *)
 (*     Properties of Arithmetic Operations       *)
@@ -1205,6 +1201,15 @@ Proof
                    REAL_SUB_0]
 QED
 
+Theorem sub_eq_0 :
+    !x y. x <> PosInf /\ x <> NegInf /\ (x = y) ==> (x - y = 0)
+Proof
+    RW_TAC std_ss []
+ >> `?a. x = Normal a` by METIS_TAC [extreal_cases]
+ >> ASM_SIMP_TAC std_ss [extreal_of_num_def, extreal_sub_def,
+                         extreal_11, REAL_SUB_REFL]
+QED
+
 Theorem neg_neg[simp] :
     !x. --x = x
 Proof
@@ -1769,6 +1774,14 @@ Proof
     rpt STRIP_TAC
  >> MP_TAC (REWRITE_RULE [mul_lzero] (Q.SPECL [`0`, `y`, `z`] lt_rdiv))
  >> RW_TAC std_ss []
+QED
+
+Theorem le_div : (* cf. REAL_LE_DIV *)
+    !y z. 0 <= y /\ 0 < z ==> 0 <= y / Normal z
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (GSYM (Q.SPECL [`z`, `0`, `y`] le_rdiv))
+ >> RW_TAC std_ss [mul_lzero]
 QED
 
 val lt_ldiv = store_thm
@@ -7182,7 +7195,8 @@ val EXTREAL_PROD_IMAGE_DEF = new_definition
 
 val _ = overload_on ("PI", ``EXTREAL_PROD_IMAGE``);
 val _ = Unicode.unicode_version {u = UTF8.chr 0x220F, tmnm = "PI"};
-val _ = TeX_notation {hol = UTF8.chr 0x220F, TeX = ("\\ensuremath{\\prod}", 1)};
+val _ = TeX_notation {hol = UTF8.chr 0x220F, TeX = ("\\HOLTokenPI{}", 1)};
+val _ = TeX_notation {hol = "PI"           , TeX = ("\\HOLTokenPI{}", 1)};
 
 val EXTREAL_PROD_IMAGE_THM = store_thm
   ("EXTREAL_PROD_IMAGE_THM",

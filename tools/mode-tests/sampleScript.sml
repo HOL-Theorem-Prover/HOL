@@ -32,11 +32,11 @@ End
 
 Theorem baz:
   x ∧ let
-    a = b;
-    c = d;
-  in
-    x ⇒ a ∧
-        c
+        a = b;
+        c = d;
+      in
+        x ⇒ a ∧
+            c
 Proof
   some_tactic
 QED
@@ -146,5 +146,40 @@ val t =  “P $some ∧ x < y ∧
 (* escaped symbol qfier *)
 val t = “P $@ ∧
          q”
+
+Theorem eval_op_later:
+  eval_op f vs s = (res,t) ⇒ s ≤ t
+Proof
+  fs [eval_op_def, AllCaseEqs(),fail_def,return_def] \\ rw[]
+  \\ fs[later_refl] \\ fs{later_def]
+  \\ Cases_on ‘s.input’ \\ fs[forward_def,greater_def]
+QED
+
+Theorem ceqnat_behaviour[betasimp]:
+  ceqnat @@ church n @@ church m -n->* cB (n = m)
+Proof
+  SIMP_TAC (bsrw_ss()) [ceqnat_def] THEN
+  Q.ID_SPEC_TAC ‘m’ THEN Induct_on ‘n’ THEN1
+   SIMP_TAC (bsrw_ss()) [] THEN
+  ASM_SIMP_TAC (bsrw_ss()) [] THEN
+  Cases_on ‘m’ THEN SRW_TAC [][]
+QED
+
+Theorem testTHENL:
+  foo
+Proof
+  tact1 THENL [
+    tac1 >-
+     foo,
+    tac2
+  ] >>
+  foo
+QED
+
+Theorem morelet_indent:
+  let x = 2 in p x ∧ y
+Proof
+  tac
+QED
 
 val _ = export_theory()

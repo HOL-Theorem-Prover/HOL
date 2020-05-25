@@ -3623,7 +3623,9 @@ local
        ("NULL", "NULL"),
        ("NULL_DEF", "NULL_DEF"),
        ("NULL_EQ_NIL", "NULL_EQ"),
+    (* removed due to conflicts with Tactical.REVERSE:
        ("REVERSE", "REVERSE_SNOC_DEF"),
+     *)
        ("REVERSE_APPEND", "REVERSE_APPEND"),
        ("REVERSE_EQ_NIL", "REVERSE_EQ_NIL"),
        ("REVERSE_REVERSE", "REVERSE_REVERSE"),

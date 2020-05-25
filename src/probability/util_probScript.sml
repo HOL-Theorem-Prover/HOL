@@ -32,6 +32,11 @@ val _ = Unicode.unicode_version {u = UTF8.chr 0x2192, tmnm = "->"};
 (* LONG RIGHTWARDS ARROW *)
 val _ = Unicode.unicode_version {u = UTF8.chr 0x27F6, tmnm = "-->"};
 
+val _ = TeX_notation {hol = "->",            TeX = ("\\HOLTokenMap{}", 1)};
+val _ = TeX_notation {hol = UTF8.chr 0x2192, TeX = ("\\HOLTokenMap{}", 1)};
+val _ = TeX_notation {hol = "-->",           TeX = ("\\HOLTokenLongmap{}", 1)};
+val _ = TeX_notation {hol = UTF8.chr 0x27F6, TeX = ("\\HOLTokenLongmap{}", 1)};
+
 val pair_def = Define
    `pair (X :'a -> bool) (Y :'b -> bool) = \(x, y). x IN X /\ y IN Y`;
 

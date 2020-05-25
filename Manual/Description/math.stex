@@ -1,0 +1,1226 @@
+%%% -*- Mode: LaTeX; -*-
+
+\section{Higher Mathematics}
+\label{sec:mathematics}
+
+\subsection{Elementary topology of one-dimensional Euclidean space}
+\label{sec:topology}
+\index{real\_topology, the HOL theory of@real\_topology, the \HOL{} theory of}
+
+The theory \theoryimp{real_topology} provides some deeper analytical
+properties for real numbers and real sets (one-dimensional Euclidean space).
+It was ported from HOL Light by Muhammad Qasim and Osman Hasan et al.
+In particular, \theoryimp{real_topology} contains more general and
+advanced concepts and theorems then those provided by \theoryimp{lim}
+and \theoryimp{seq} (Section~\ref{reals}).
+
+% Below is a list of major features found in \theoryimp{real_topology}:
+% \begin{itemize}
+% \item Metric functions (\holtxt{dist}, distance of real numbers);
+% \item Linear (\holtxt{linear}) and bilinear (\holtxt{bilinear}) functions;
+% \item A bit of linear algebra (\holtxt{subspace} and \holtxt{span}) and their closure properties;
+% \item Equality in Cauchy-Schwarz and triangle inequalities;
+% \item Collinearity (\holtxt{collinear});
+% \item Between-ness (\holtxt{between}) and midpoint (\holtxt{midpoint}) between two points;
+% \item Open and closed sets;
+% \item Open and closed balls;
+% \item Open and closed line segments, with open/closed overloading of `(a,b)` and `[a,b]`;
+% \item Connectedness (\holtxt{connected});
+% \item Limit points (\holtxt{limit_point_of});
+% \item Interior of a set (\holtxt{interior});
+% \item Closure of a set (\holtxt{closure});
+% \item Frontier (aka boundary) (\holtxt{frontier});
+% \item ...
+% \end{itemize}
+
+There are more than 60 concepts and 1600 theorems in
+\theoryimp{real_topology}, including properties of continuous
+functions and the completeness of real numbers,
+which is the foundation of other higher mathematics
+theories, such as differential and integral calculus, measure and probability
+theories. For instance, the following version of the \emph{Heine-Borel
+  theorem} (and the fact that a real set is compact iff it is bounded and
+closed) plays an essential role in the construction of
+Borel-measurable spaces in measure theory:
+\begin{hol}
+\begin{alltt}
+>>__ load "real_topologyTheory";
+>>__ open real_topologyTheory;
+##thm COMPACT_EQ_HEINE_BOREL
+
+##thm COMPACT_EQ_BOUNDED_CLOSED
+\end{alltt}
+\end{hol}
+
+\subsection{Univariate differential and integral calculus}
+\label{sec:calculus}
+\index{calculus, the HOL theory of@calculus, the \HOL{} theory of}
+
+An extensive development of (univariate) differential and integral
+calculus, ported from HOL Light, is available in the theory \theoryimp{derivative} and
+\theoryimp{integration}.
+
+\subsubsection{Derivative}
+
+A quintessentially analytic property is the derivative of a function. One might
+expect to find a higher-order `derivative' function \texttt{deriv}
+$\colon
+(\mathbb{R}\rightarrow\mathbb{R})\rightarrow(\mathbb{R}\rightarrow\mathbb{R})$
+mapping a function $f$ to its derivative $f'$. Actually, no such thing
+is defined in HOL, but rather a ternary operator
+\holtxt{has_derivative} where \holtxt{(f has_derivative f') (at x)}
+means `the function $f$ has a derivative $f'$ at the point $x$', or
+\holtxt{(f has_derivative f') (at x within s)} means `the function $f$
+has a derivative $f'$ at the point $x$ within the set $s$'.
+Expanding out the definition, we see that
+the definition is much as an analyst might expect:
+
+\begin{hol}
+\begin{alltt}
+>>__ load "derivativeTheory";
+>>__ open derivativeTheory;
+##thm has_derivative_at
+##thm has_derivative_within
+\end{alltt}
+\end{hol}
+
+Similarily, \holtxt{(f has_vector_derivative f') (at x)} means that \emph{the function $f$
+has a derivative with value $f'$ at the point $x$}.
+The usual kinds of combining theorems are proved. For example, the derivative
+of a sum is the sum of the derivatives:
+\begin{hol}
+\begin{alltt}
+##thm HAS_DERIVATIVE_ADD
+\end{alltt}
+\end{hol}
+
+\subsubsection{Integration}
+\label{sec:integration}
+
+The version of integral calculus formalized in HOL is a
+generalized Riemann integration called \emph{Henstock-Kurzweil Integration},
+or \emph{gauge integration}~\cite{Bartle:2001um}. Many functions which
+are not Riemann integrable can be shown to be Henstock-Kurzweil
+integrable. (In particular, a function is Lebesgue integrable if and
+only if the function and its absolute value are Henstock-Kurzweil
+integrable.)
+
+\holtxt{f integrable_on s} means that \emph{the function $f$ is integrable on a
+real set $s$}, while \holtxt{f absolutely_integrable_on s} denotes absolute integrability.
+Assuming $f$ is integrable, the usual integration of $f$ on a
+(closed) interval $[a,b]$, i.e.~$\displaystyle\int_a^b f \mathrm{d}x$,
+is expressed as \holtxt{integral (interval [a,b]) f} in HOL. (In
+general, the integration of $f$ on a set $s$ of real numbers is
+\holtxt{integral s f}.)
+
+The fundamental theorem of calculus (in the equivalent forms of
+Riemann integral) is expressed below:
+\begin{hol}
+\begin{alltt}
+>>__ load "integrationTheory";
+>>__ open integrationTheory;
+##thm FUNDAMENTAL_THEOREM_OF_CALCULUS
+\end{alltt}
+\end{hol}
+
+The above theorem requires that the function $f$ must be everywhere
+differentiable (i.e. has derivative) in the closed interval
+$[a,b]$. In fact, Henstock-Kurzweil Integration permits a
+countable number of exceptional points. This yields a significant
+improvement, as shown in the following strong version of the
+ fundamental theorem of calculus:
+\begin{hol}
+\begin{alltt}
+##thm FUNDAMENTAL_THEOREM_OF_CALCULUS_STRONG
+\end{alltt}
+\end{hol}
+
+% \begin{hol}
+% \begin{alltt}
+% ##thm integral
+% \end{alltt}
+% \end{hol}
+
+\subsection{Measure Theory}
+\label{sec:measure}
+\index{measure, the HOL theory of@measure, the \HOL{} theory of}
+\index{sigma_algebra, the HOL theory of@sigma_algebra, the \HOL{} theory of}
+
+The theme of measure theory implemented in \theoryimp{sigma_algebra}
+and \theoryimp{measure} theories is the problem of how to assign a size, a
+content, a probability, etc.~to certain sets.
+The most common examples of \emph{measure} is the length
+(in one dimension), area (in two dimensions) and
+volume (in three dimensions) in Euclidean spaces.
+In \HOL{}'s \theoryimp{measure}
+theory, a measure is a set function of the type
+$(\alpha \to \konst{bool}) \to \konst{extreal}$.\footnote{The legacy
+  \theoryimp{real_measure} theory, where the type of measure is
+  $(\alpha \to \konst{bool}) \to \konst{real}$, is still available.}
+(See Section~\ref{sec:extreal} for more details of extended real numbers.)
+This allows us to express, for example, the ``length'' of the entire
+real line $\mathbb{R}$, i.e.~\holtxt{PosInf}.
+
+A reasonable measure should be able to deal with disjoint countable
+partitions of sets. Therefore a measure function must be defined on a
+system of sets which is stable whenever we repeat any of the basic set
+operations--$\cup$, $\cap$, ${}^{\mathrm{c}}$--countably many times, i.e.~$\sigma$-algebra.
+In \HOL{}, a system of sets is a pair \holtxt{(sp,sts)}
+of the type $(\alpha \to \konst{bool}) \ \#\  ((\alpha \to \konst{bool}) \to
+\konst{bool})$ satisfying \holtxt{subset_class sp sts}:
+\begin{hol}
+\begin{alltt}
+>>__ load "sigma_algebraTheory";
+>>__ open sigma_algebraTheory;
+##thm subset_class_def
+\end{alltt}
+\end{hol}
+Given any system of sets \holtxt{a = (sp,sts)}, the two functions \holtxt{space}
+and \holtxt{subsets} can be used to access \holtxt{sp} and
+\holtxt{sts}, respectively.
+%
+Then algebra and $\sigma$-algebra\footnote{Previously these definitions
+  were part of \theoryimp{measure} theory. Now they are moved into
+  the shared \theoryimp{sigma_algebra} theory for both
+  \theoryimp{measure} and \theoryimp{real_measure} theories.} are
+defined below:
+\begin{hol}
+\begin{alltt}
+##thm algebra_def
+##thm sigma_algebra_def
+\end{alltt}
+\end{hol}
+
+Any measure (function) must be defined with respect to a \emph{measure space}.
+In \HOL{}, a measure space is represented by a tuple \holtxt{(sp,sts,mu)}, where \holtxt{sp} and
+\holtxt{sts} forms a $\sigma$-algebra\footnote{Some textbooks call
+  \holtxt{sts} itself a $\sigma$-algebra, while \holtxt{(sp,sts)} a \emph{measurable
+  space}.}, and \holtxt{mu} is the measure function. If \holtxt{m = (sp,sts,mu)} is a
+measure space, the functions \holtxt{m_space},
+\holtxt{measurable_sets} and \holtxt{measure} can be used to access
+\holtxt{sp}, \holtxt{sts} and \holtxt{mu}, respectively. Any
+measure space must be both \holtxt{positive} and \holtxt{countably_additive}:
+\begin{hol}
+\begin{alltt}
+>>__ load "measureTheory";
+>>__ open measureTheory;
+##thm measure_space_def
+##thm positive_def
+##thm countably_additive_def
+\end{alltt}
+\end{hol}
+
+In particular, if \holtxt{(sp,sts,mu)} is \holtxt{positive} and
+\holtxt{countably_additive} but \holtxt{(sp,sts)} is not (yet) a
+$\sigma$-algebra, it is called a \emph{premeasure} (space):
+\begin{hol}
+\begin{alltt}
+##thm premeasure_def
+\end{alltt}
+\end{hol}
+
+The reason of introducing premeasure is that it is not a trivial task to assign
+\emph{explicitly} a value to \emph{every} set from a $\sigma$-algebra.
+Rather than doing this it is often more natural to assign values to
+sets from some generators. To get such an automatic
+extension the following (technically motivated) class of generators is
+useful. A \emph{semiring} (usually denoted by $\mathscr{S}$) is a
+family with the following properties:
+\begin{hol}
+\begin{alltt}
+##thm semiring_def
+\end{alltt}
+\end{hol}
+Any ($\sigma$-)algebra is also a semiring but not vice versa. For
+instance, the set of all right open intervals $\big\{ [a,b) \colon
+a,b\in\mathbb{R} \big\}$ is a semiring (because the set difference of any
+two right open intervals is at most two new right open intervals).
+Furthermore, for any system of sets \holtxt{(sp sts)} there exists a smallest
+$\sigma$-algebra containing it (also called the $\sigma$-algebra
+\emph{generated} from it), denoted by $\sigma(\cdot)$:
+\begin{hol}
+\begin{alltt}
+##thm sigma_def
+##thm SIGMA_ALGEBRA_SIGMA
+##thm SIGMA_SUBSET_SUBSETS
+\end{alltt}
+\end{hol}
+
+The following deep extension theorem for measures goes back to
+Carath\'{e}odory~\cite{Schilling:2017}:
+\begin{hol}
+\begin{alltt}
+##thm CARATHEODORY_SEMIRING
+\end{alltt}
+\end{hol}
+
+In addition, the uniqueness of measures extended from generators is
+guaranteed by the following theorem, given that the involved
+generators are stable under $\cap$ and $\sigma$-finite:
+\begin{hol}
+\begin{alltt}
+##thm sigma_finite_def
+##thm UNIQUENESS_OF_MEASURE
+\end{alltt}
+\end{hol}
+
+\subsection{Borel Theory}
+\label{sec:borel}
+\index{borel, the HOL theory of@borel, the \HOL{} theory of}
+\index{real_borel, the HOL theory of@real_borel, the \HOL{} theory of}
+
+The theory \theoryimp{real_borel} provides Borel sets and Borel measurable
+functions based on reals, in addition the theory \theoryimp{borel} provides
+the same things based on extreals, plus the constructions of Borel and
+Lebesgue measure spaces.
+
+In \HOL{}, the real-valued Borel sets \holtxt{borel}
+($\mathscr{B}(\mathbb{R})$) is the $\sigma$-algebra generated by
+open sets (of the type $\konst{real} \to \konst{bool}$). It can also
+be generated by half spaces, open or closed intervals:
+\begin{hol}
+\begin{alltt}
+>>__ load "real_borelTheory";
+>>__ open real_borelTheory;
+##thm borel
+##thm borel_eq_le
+##thm borel_eq_gr
+##thm borel_eq_gr_less
+##thm borel_eq_ge_le
+\end{alltt}
+\end{hol}
+
+The extreal-valued Borel sets \holtxt{Borel} ($\mathscr{B}(\mathbb{\overline{R}})$)
+is the $\sigma$-algebra generated by
+half spaces of the type $\konst{extreal} \to \konst{bool}$:
+\begin{hol}
+\begin{alltt}
+>>__ load "borelTheory";
+>>__ open borelTheory;
+##thm Borel_def
+\end{alltt}
+\end{hol}
+
+Let \holtxt{a} and \holtxt{b} be two measurable spaces
+($\sigma$-algebras). A map $f \colon \konst{space}\ a \to \konst{space}\ b$
+is called \emph{$a/b$-measurable} (or \emph{measurable} unless this is too ambiguous) if the
+pre-image of every measurable set is a measurable set: (the definition
+is in \theoryimp{sigma_algebra} theory)
+\begin{hol}
+\begin{alltt}
+##thm measurable_def
+\end{alltt}
+\end{hol}
+A function is called \emph{Borel-measurable} if it is a measurable map from
+any measurable space to \holtxt{borel} or \holtxt{Borel}:
+\begin{hol}
+\begin{verbatim}
+val _ = overload_on ("borel_measurable", ``\a. measurable a borel``);
+val _ = overload_on ("Borel_measurable", ``\a. measurable a Borel``);
+\end{verbatim}
+\end{hol}
+For instance, a random variable is nothing but a measurable map from
+a probability space (which is also a measure space, see
+Section~\ref{sec:prob}) to \holtxt{Borel}.
+Thus in \HOL{} there are actually two different types of Borel-measurable
+functions, real-valued or extreal-valued, each with a large set of
+theorems for proving the Borel-measurabilities,
+in \theoryimp{real_borel} and \theoryimp{borel} theories,
+respectively. Furthermore, if a real-valued function is Borel-measurable,
+so is its extreal-valued version:
+\begin{hol}
+\begin{alltt}
+##thm IN_MEASURABLE_BOREL_IMP_BOREL
+\end{alltt}
+\end{hol}
+
+\paragraph{Construction of Borel measure space (\holtxt{lborel})}
+
+The Borel measure space \holtxt{lborel} (of the type
+$(\konst{real} \to \konst{bool}) \ \#\  ((\konst{real} \to \konst{bool}) \to
+\konst{bool}) \ \#\ ((\konst{real} \to \konst{bool}) \to \konst{extreal})$)
+is the \emph{household} measure space
+defined on the real-valued Borel sets (\holtxt{borel}) such that any
+interval with end points $a,b \in \mathbb{R}$ ($a \leqslant b$) has the
+extreal-valued measure of $b - a \in \mathbb{\overline{R}}$. The
+construction of \holtxt{lborel} is done by extending a premeasure in the following steps:
+\begin{enumerate}
+\item Define the system of all \emph{right-open intervals} and a
+  ``premeasure'' \holtxt{lambda0} on it:
+\begin{hol}
+\begin{alltt}
+##thm right_open_interval
+##thm right_open_intervals
+##thm lambda0_def
+\end{alltt}
+\end{hol}
+\item Prove that the set of all right open intervals is a semiring and
+  the $\sigma$-algebra generated from it is nothing but \holtxt{borel}:
+\begin{hol}
+\begin{alltt}
+##thm right_open_intervals_semiring
+
+##thm right_open_intervals_sigma_borel
+\end{alltt}
+\end{hol}
+\item Prove \holtxt{(space right_open_intervals,subsets right_open_intervals,lambda0)}
+(abbreviated as \holtxt{lborel0}) is \holtxt{additive}, \holtxt{finite_additive} and
+eventually a \holtxt{premeasure} (\holtxt{positive} and \holtxt{countably_additive}):
+\begin{hol}
+\begin{alltt}
+##thm lborel0_additive
+##thm lborel0_finite_additive
+##thm lborel0_premeasure
+\end{alltt}
+\end{hol}
+(The proof of \ml{lborel0_premeasure} depends on \theoryimp{real_topology} theory,
+especially the Heine-Borel Theorem. See Section~\ref{sec:topology}.)
+
+\item By Carath\'{e}odory Extension Theorem
+  (\ml{CARATHEODORY_SEMIRING}, see Section~\ref{sec:measure}), there exists an extension
+  of \holtxt{lborel0}, denoted by \holtxt{lborel}, which is now a measure space:
+\begin{hol}
+\begin{alltt}
+>>__ val oldwidth = !Globals.linewidth;
+     val _ = Globals.linewidth := oldwidth - 10;
+##thm lborel_def
+>>__ val _ = Globals.linewidth := oldwidth;
+\end{alltt}
+\end{hol}
+\end{enumerate}
+Let \holtxt{lambda = measure lborel}, the measure of the following
+typical Borel sets are proven:
+\begin{hol}
+\begin{alltt}
+##thm lambda_prop
+##thm lambda_sing
+##thm lambda_open_interval
+##thm lambda_closed_interval
+\end{alltt}
+\end{hol}
+
+\paragraph{Construction of Lebesgue measure space (\holtxt{lebesgue})}
+It is well known that \holtxt{lborel} is not \emph{complete}, in the
+sense that if for
+non-empty set \holtxt{s} we have \holtxt{lambda s = 0}, it's not true
+that all subsets of s has also the measure 0, as some of them
+may not be Borel sets at all. The completion of \holtxt{lborel} is called
+\emph{Lebesgue measure space}, denoted by \holtxt{lebesgue}.
+In \HOL{}, it is defined directly by Henstock-Kurzweil integration
+(see Section~\ref{sec:integration}):
+\begin{hol}
+\begin{alltt}
+##thm lebesgue_def
+##thm line
+\end{alltt}
+\end{hol}
+The above definition indeed defines a $\sigma$-algebra and measure
+space. The Lebesgue measure of closed intervals is also proven
+(directly by \theoryimp{integration} theory):
+\begin{hol}
+\begin{alltt}
+##thm sigma_algebra_lebesgue
+##thm measure_space_lebesgue
+##thm lebesgue_closed_interval
+\end{alltt}
+\end{hol}
+
+Now comes the relationship between \holtxt{lborel} and \holtxt{lebesgue}, which have two
+very different definitions. In fact, all Borel-measurable sets are
+also Lebesgue-measurable sets:
+\begin{hol}
+\begin{alltt}
+##thm borel_imp_lebesgue_sets
+\end{alltt}
+\end{hol}
+
+Finally, by uniqueness of measure, the two measure spaces
+\holtxt{lborel} and \holtxt{lebesgue} coincide on Borel sets (recall
+that \holtxt{lambda} is an abbreviation of \holtxt{measure lborel}):
+\begin{hol}
+\begin{alltt}
+##thm lebesgue_eq_lambda
+\end{alltt}
+\end{hol}
+
+\subsection{Lebesgue Integration Theory}
+\label{sec:lebesgue}
+\index{lebesgue, the HOL theory of@lebesgue, the \HOL{} theory of}
+
+The fundamental idea of \emph{integration} is to measure the area between the graph
+of a function and the abscissa (i.e.~$x$-axis).
+Riemann's approach partitions the domain of the function without
+taking into account the shape of the function,
+thus slicing up the area under the function \emph{vertically}. Lebesgue’s approach is
+exactly the opposite: the domain is partitioned according to the values of the
+function at hand, leading to a \emph{horizontal} decomposition of the area.
+
+In case the values of the function $f$ is finite, its domain can also be
+decomposed into the same number of disjoint sets (but each of them may
+not be a continuous interval). If the function is also nonnegative,
+i.e.~$\forall x.\,0 \leqslant f(x)$, this function is called a
+\emph{positive simple function} which can be also represented by a
+finite sum:
+\begin{equation}
+  \label{eq:posSimpleFn}
+  f = \sum_{j=0}^M y_j \mathbbm{1}_{A_j},\quad\text{where $\forall
+    x\in A_j.\,f(x) = y_j$}.
+\end{equation}
+And the ``integration'' of $f$ is simply $\sum_{j=0}^M y_j\mu(A_j)$,
+where $\mu$ is the measure function of a measure space,
+e.g.~\holtxt{lborel} and \holtxt{lebesgue} constructed in Section~\ref{sec:borel}.
+Note that the representations of positive simple functions are not
+unique, but each representation can be uniquely determined by an index
+set $J$, a disjoint set of sets $A_j, j \in J$ and the set of values $y_j$
+corresponding to each $A_j$. In \HOL{}, the connection between
+positive simple functions (extreal-valued) and their representations
+(\ref{eq:posSimpleFn}) is captured by \holtxt{pos_simple_fn}, while
+the integration of positive simple functions is defined by
+\holtxt{pos_simple_fn_integral}:
+\begin{hol}
+\begin{alltt}
+>>__ load "lebesgueTheory";
+>>__ open lebesgueTheory;
+##thm pos_simple_fn_def
+##thm pos_simple_fn_integral_def
+\end{alltt}
+\end{hol}
+
+Since the representations of a positive simple function are not unique,
+for each positive simple function there exists a set of
+representations (\holtxt{psfs}), and a set of integrations
+(\holtxt{psfis}) (although it can be proved that all these integrations are the
+same). The \emph{integration} of an arbitrary positive function $f$ is defined
+as the supremum of all positive simple functions $g$ which is pointwise smaller than $f$:
+\begin{hol}
+\begin{alltt}
+##thm pos_fn_integral_def
+##thm psfs_def
+##thm psfis_def
+\end{alltt}
+\end{hol}
+
+For any positive function $f$, it is
+possible to construct a pointwise increasing sequence of positive simple functions $f_i$
+which is always pointwise smaller than $f$. In another words, each
+$f(x)$ is the limit of $f_i(x)$ which is mono-increasing with $i$.
+Then the following monotone convergence theorem (actually due to Beppo
+Levi, see~\cite[p. 75]{Schilling:2017}) reduces the integration of $f$
+to the limit of integrations of $f_i$:
+\begin{hol}
+\begin{alltt}
+##thm lebesgue_monotone_convergence
+\end{alltt}
+\end{hol}
+
+Finally, the (Lebesgue) integration of an arbitrary function $f$ is defined
+by the subtraction of integrations of its positive and negative parts:
+\begin{hol}
+\begin{alltt}
+##thm integral_def
+##thm fn_plus_def
+##thm fn_minus_def
+\end{alltt}
+\end{hol}
+Note that it is possible that the two integrations in the above
+definition both results to \holtxt{PosInf}, the entire integration is not
+specified (see Section~{sec:extreal} for more details on extreal arithmetics).
+A function $f$ is \emph{(Lebesgue) integrable} if it is
+Borel-measurable and the integrations of its positive and negative
+parts are both finite (i.e.~not $+\infty$):
+\begin{hol}
+\begin{alltt}
+##thm integrable_def
+\end{alltt}
+\end{hol}
+
+A large set of theorems are provided in \theoryimp{lebegue} theory on
+the properties of integrable functions and their
+integrations, including the following famous \emph{Markov's inequality}:
+\begin{hol}
+\begin{alltt}
+##thm markov_inequality
+\end{alltt}
+\end{hol}
+
+\paragraph{Null sets and `almost everywhere'}
+A measurable set is called \emph{null set} (with respect to its
+measure space) if its measure is zero:
+\begin{hol}
+\begin{alltt}
+##thm null_set_def
+\end{alltt}
+\end{hol}
+
+A property $P(x)$ holds \emph{almost everywhere} (AE) in a measure
+space $m$, denoted by ``\holtxt{AE x::m. P x}'' in
+\HOL{}\footnote{\holtxt{AE} is defined as a \emph{restricted quantifier (binder)}. See
+\ml{associate_restriction} in \REFERENCE.}, if $P(x)$ holds
+for every $x$ excluding a null set:
+\begin{hol}
+\begin{alltt}
+##thm AE_THM
+##thm almost_everywhere_def
+\end{alltt}
+\end{hol}
+
+`Almost everywhere' is the basis of AE convergence in probability
+theory (see the next section). The following two theorems about the
+integration on null sets are very useful (Theorem 11.2 of~\cite[p.~89-90]{Schilling:2017}):
+\begin{hol}
+\begin{alltt}
+>>__ val oldwidth = !Globals.linewidth;
+     val _ = Globals.linewidth := oldwidth - 10;
+##thm integral_abs_eq_0
+##thm integral_null_set
+>>__ val _ = Globals.linewidth := oldwidth;
+\end{alltt}
+\end{hol}
+
+\paragraph{Radon-Nikod\'{y}m Theorem}
+
+So far there is no concept ``derivative''
+being discussed. In Lebesgue integration, \emph{Radon-Nikod\'{y}m (RN) Theorem}
+(see, e.g.~\cite[p.~230]{Schilling:2017} or
+\cite[p.~382]{Fitzpatrick:2010vd}) has the position of "Fundamental
+Theorem of Calculus" as in Riemann Integration.
+Recall in Lebesgue's theory one starts directly from the
+concept ``integration'' without defining ``derivative'' first. It is RN
+theorem which introduces the concept of ``derivative'' for Lebesgue
+integration and asserts its existence. The theorem says that for any
+$\sigma$-finite measure space $m$, if there is another measure $v$ absolutely
+continuous with respect to $m$, i.e.~whenever any set $s$ has zero measure
+in measure space $m$ it also has same zero measure in $v$:
+\begin{hol}
+\begin{alltt}
+##thm measure_absolutely_continuous_def
+\end{alltt}
+\end{hol}
+Then there exists a nonnegative Borel-measurable function $f$ such that
+the (positive) integral of $f$ on any measurable set $s$ is exactly $v(s)$:
+\begin{hol}
+\begin{alltt}
+##thm Radon_Nikodym
+##thm density_measure_def
+\end{alltt}
+\end{hol}
+
+Given two such measures $m$ and $v$, The function $f$ asserted by RN theorem is called
+\emph{Radon-Nikod\'{y}m derivative} (denoted by
+$\displaystyle\frac{\mathrm{d}v}{\mathrm{d}m}$ in textbooks but
+overloaded on division in \HOL{}):
+\begin{hol}
+\begin{alltt}
+##thm RN_deriv_def
+\end{alltt}
+\end{hol}
+The overloading of \holtxt{*} (\holtxt{density_measure}) and
+\holtxt{/} (\holtxt{RN_deriv}) with the particular argument order is to
+syntactically have \holtxt{f * m / m = v / m = f}.
+
+\subsection{Probability Theory}
+\label{sec:prob}
+\index{probability, the HOL theory of@probability, the \HOL{} theory of}
+
+\HOL{} provides a comprehensive formalization of \theoryimp{probability}
+theory based on the thesis work of
+Joe Hurd~\cite{hurd-thesis} (2002),
+Aaron R.~Coble~\cite{coble-thesis} (2010),
+Osman Hasan~\cite{hasan-thesis} (2008),
+Tarek Mhamdi~\cite{mhamdi-thesis} (2012) and
+Muhammad Qasim~\cite{qasim-thesis} (2016). % this last one is not fully ported yet
+In \HOL{}, the \theoryimp{probability} theory is based on
+\theoryimp{pred_set}, \theoryimp{measure}, \theoryimp{borel} and \theoryimp{lebesgue}
+theories, etc.
+
+\paragraph{Probability space}
+
+Probability theory enables us to give a probabilistic–statistical
+description of experiments with a finite or infinite number of
+outcomes. Based on Kolmogorov's axiomatization~\cite{Kolmogorov:1950},
+a \emph{probabilistic model} (of an experiment) or a
+\emph{probability space} (\holtxt{prob_space}) is an ordered triple
+$(\Omega,\mathscr{F},\mathscr{P})$ where,
+\begin{itemize}
+\item $\Omega$ is a set of points $\omega$, also called a \emph{sample
+    space} (of ``elementary events'' or outcomes);
+\item $\mathscr{F}$ is a $\sigma$-algebra of subsets of $\Omega$;
+\item $\mathscr{P}$ is a probability measure on $\mathscr{F}$
+  ($\mathscr{P}\{\cdot\} \in [0,1]$).
+\end{itemize}
+
+Let \holtxt{p} be a probability space, i.e.~\holtxt{prob_space p},
+the functions \holtxt{p_space}, \holtxt{events} and \holtxt{prob} can be used to access
+each components of the triple. Thus a probability space is nothing but
+a measure space where the measure of the sample space is one:
+\begin{hol}
+\begin{alltt}
+>>__ load "probabilityTheory";
+>>__ open probabilityTheory;
+##thm prob_space_def
+##thm p_space_def
+##thm events_def
+##thm prob_def
+\end{alltt}
+\end{hol}
+If \holtxt{E} is an event, the statement that ``the probability of $E$ is
+$r$'' ($\mathscr{P}\{E\} = r$) is denoted by ``\holtxt{prob p e = r}'' in \HOL{}.
+As probability theory is based on set theory, it is useful to have a table
+(see Table~\ref{tab:probability}) displaying the ways in which various
+concepts are interpreted in the two theories.
+
+\begin{figure}[ht]
+\centering
+%\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|p{0.12\textwidth}|p{0.38\textwidth}|p{0.42\textwidth}|}
+\hline
+Notation & Set-theoretic interpretation & Interpretation in probability theory \\
+\hline
+$\omega$ & Element or point & Outcome, sample point, elementary event \\
+$\Omega$ & Set of points & Sample space; certain event \\
+$\mathscr{F}$ & $\sigma$-algebra of subsets & $\sigma$-algebra of events \\
+$A \in \mathscr{F}$ & Set of points & Event (if $\omega\in A$, we say that event $A$ occurs) \\
+$\overline{A}\in\Omega\setminus A$ & Complement of $A$, i.e., the set of
+points $\omega$ that are not in $A$ & Event that $A$ does not occur \\
+$A\cup B$ & Union of $A$ and $B$, i.e., the set of
+points $\omega$ belonging either to $A$ or to
+$B$ (or to both) & Event that either $A$ or $B$ (or both) occurs \\
+$A\cap B$ & Intersection of $A$ and $B$, i.e., the set
+of points $\omega$ belonging to both $A$ and $B$ &
+Event that both $A$ and $B$ occur \\
+$\emptyset$ & Empty set & Impossible event \\
+$A\cap B =\emptyset$ & $A$ and $B$ are disjoint & Events $A$ and $B$ are mutually exclusive,
+i.e., cannot occur simultaneously \\
+$A\setminus B$ & Difference of $A$ and $B$, i.e., the set
+of points that belong to $A$ but not to $B$ & Event that A occurs and B does not \\
+\hline
+\end{tabular}
+\caption{Various concepts in set theory and probability theory}
+\label{tab:probability}
+\end{figure}
+
+Many properties of probability and events are migrated directly from
+\theoryimp{measure} theory. For instance, the following theorems states
+that probability is increasing, additive and countably additive, respectively:
+\begin{hol}
+\begin{alltt}
+##thm PROB_INCREASING
+##thm PROB_ADDITIVE
+##thm PROB_COUNTABLY_ADDITIVE
+\end{alltt}
+\end{hol}
+Also note that, the type of probabilities is $\konst{extreal}$ in
+\HOL{}\footnote{The legacy \theoryimp{real_probability}, where all
+  probabilities are real-valued, is still available.}, even the actual
+probability values are always between 0 and 1. The following
+simple theorem which states that the probability of any event cannot
+be infinite, is useful in many proofs (when dealing with extreal arithmetics):
+\begin{hol}
+\begin{alltt}
+##thm PROB_FINITE
+\end{alltt}
+\end{hol}
+
+\paragraph{Conditional probability}
+
+\HOL{} provides a formalization of elementary ``conditional
+probability''~\cite[p.~21]{Shiryaev:2016vm}, originally developed by Liya Liu in 2012, in both
+\theoryimp{probability} and \theoryimp{real_probability} theories. The
+probability that $e_1$ occurs assuming $e_2$ occurs, i.e.~$\mathscr{P}\{e_1
+\mid e_2\}$, is denoted by ``\holtxt{cond_prob p e1 e2}'' in \HOL{}:
+\begin{hol}
+\begin{alltt}
+##thm cond_prob_def
+\end{alltt}
+\end{hol}
+
+Among other common properties, the \emph{Total Probability Formula}
+and the famous \emph{Bayes' Rule} (specific and general
+versions)~\cite[Chapter V]{Feller:2004vv} are provided:
+\begin{hol}
+\begin{alltt}
+##thm TOTAL_PROB_SIGMA
+
+##thm BAYES_RULE
+
+##thm BAYES_RULE_GENERAL_SIGMA
+\end{alltt}
+\end{hol}
+
+\paragraph{Random variable}
+
+The concept ``random variable'' (r.v.) serves to
+define quantities describing the results of ``measurements'' in random
+experiments. A random variable is a measurable function from
+a probability space $p$ to a $\sigma$-algebra (measurable space) $s$,
+denoted by \holtxt{random_variable X p s} in \HOL{}.
+However, many theorems in \theoryimp{probability} focus on extreal-
+and finite-valued r.v.'s from probability spaces to \holtxt{Borel} sets.
+They are called \holtxt{real_random_variable}:
+\begin{hol}
+\begin{alltt}
+##thm random_variable_def
+##thm real_random_variable_def
+\end{alltt}
+\end{hol}
+
+Let the probability space be $(\Omega,\mathscr{F},\mathscr{P})$, a
+(probability) \emph{distribution} is a probability measure
+on $(\Omega,\mathscr{F})$, while a \emph{distribution function}
+is a special distribution defined on half spaces $(-\infty,x]$:
+\begin{hol}
+\begin{alltt}
+##thm distribution_def
+##thm distribution_function
+\end{alltt}
+\end{hol}
+
+Note that the distribution (measure) of any random variable also forms a
+probability space with its target measurable space:
+\begin{hol}
+\begin{alltt}
+##thm distribution_prob_space
+\end{alltt}
+\end{hol}
+
+\paragraph{Independence}
+
+``The concept of mutual independence of two or more experiments holds,
+in a certain sense, a central position in the theory of
+probability.''~\cite[p.~8]{Kolmogorov:1950}
+Informally, events or random variables are independent if they do not
+affect each other's probabilities. Thus, two events $A$ and $B$ are independent
+if $\mathscr{P}\{A \cap B\} = \mathscr{P}\{A\}\mathscr{P}\{B\}$. Moreover, a finite
+collection of events is said to be \emph{pairwise independent} if each
+two of them are independent:
+\begin{hol}
+\begin{alltt}
+##thm indep_def
+##thm pairwise_indep_events_def
+\end{alltt}
+\end{hol}
+More generally, a possibly infinite sequence of events
+$\{E_\alpha\}_{\alpha\in J}$ is said to be (totally) independent if for each
+$j\in\mathbb{N}$ and distinct \emph{finite} choice
+$\alpha_1,\alpha_2,\ldots,\alpha_j \in J$, we have
+\begin{equation*}
+  \mathscr{P}\{E_{\alpha_1} \cap E_{\alpha_2} \cap \cdots \cap E_{\alpha_j}\} =
+  \mathscr{P}\{E_{\alpha_1}\} \,\mathscr{P}\{E_{\alpha_2}\} \,\cdots\, \mathscr{P}\{E_{\alpha_j}\}
+\end{equation*}
+or formally
+\begin{hol}
+\begin{alltt}
+##thm indep_events_def
+\end{alltt}
+\end{hol}
+
+We shall on occasion also talk about independence of
+\emph{collections} (sets) of events:
+\begin{hol}
+\begin{alltt}
+##thm indep_families_def
+\end{alltt}
+\end{hol}
+
+We shall also talk about independence of r.v.'s. Random
+variables $X$ and $Y$ are independent if for all Borel sets $a$ and $b$, the
+events $X^{-1}(a)$ and $Y^{-1}(b)$ are independent:
+\begin{hol}
+\begin{alltt}
+##thm indep_rv_def
+\end{alltt}
+\end{hol}
+
+For sequences of events and r.v.'s there are also
+\emph{pairwise} (\holtxt{pairwise_indep_sets} and
+\holtxt{pairwise_indep_vars}) and \emph{total} (\holtxt{indep_sets},
+\holtxt{indep_vars}) independences with similar definitions as
+\holtxt{pairwise_indep_events} and \holtxt{indep_events},
+respectively. Note that total independence always implies pairwise independence:
+\begin{hol}
+\begin{alltt}
+##thm total_imp_pairwise_indep_events
+
+##thm total_imp_pairwise_indep_sets
+
+##thm total_imp_pairwise_indep_vars
+\end{alltt}
+\end{hol}
+
+\paragraph{Limit events}
+
+An important concept in set theory is that of the ``$\limsup$'' and
+``$\liminf$'' of a sequence of sets. These notions can be defined for
+subsets of an arbitrary sample space. Let $E_n$ be any sequence of
+events, we define the following two ``limit events'':
+\begin{equation*}
+  \limsup_n E_n = \bigcap_{m=1}^{\infty} \bigcup_{n=m}^{\infty} E_n,\qquad
+  \liminf_n E_n = \bigcup_{m=1}^{\infty} \bigcap_{n=m}^{\infty} E_n\enspace.
+\end{equation*}
+or formally
+\begin{hol}
+\begin{alltt}
+##thm set_limsup_def
+##thm set_liminf_def
+
+##thm EVENTS_LIMSUP
+##thm EVENTS_LIMINF
+\end{alltt}
+\end{hol}
+
+Intuitively, a point belongs to $\limsup_n E_n$ if and only if it belongs to \emph{infinitely
+many} terms of the sequence $\{E_n\}$. A point belongs to $\liminf_n E_n$ if
+and only if it belongs to all terms of the sequence from a certain
+term on (i.e.~\emph{almost always}). The following two deep results, together referred to as
+\emph{the Borel-Cantelli lemma}~\cite[p.~80]{Chung:2001}, are useful
+in proving other deep results in probability theory:
+\begin{hol}
+\begin{alltt}
+##thm Borel_Cantelli_Lemma1
+
+##thm Borel_Cantelli_Lemma2p
+\end{alltt}
+\end{hol}
+
+\paragraph{Tail algebra and tail events}
+
+Given a sequence of events $E_1, E_2, \ldots$, we define their
+\emph{tail algebra} (or \emph{tail field}) by
+\begin{equation*}
+  \tau = \bigcap_{n=1}^\infty \sigma(E_n, E_{n+1}, E_{n+2}, \ldots)
+\end{equation*}
+or formally
+\begin{hol}
+\begin{alltt}
+##thm tail_algebra_def
+\end{alltt}
+\end{hol}
+
+In words, an event $E \in \tau$ must have the property that for any $n$, it depends
+only on the events $E_n, E_{n+1}, \ldots$; in particular, it does not care about any
+finite number of the events $E_n$. Events that belongs to tail
+algebras is called \emph{tail events} (or \emph{remote events}). A surprising theorem is the
+following \emph{Kolmogorov Zero-One Law}~\cite[p.~37]{Rosenthal:2007vn} which states that,
+if the tail algebra is generated from independent events), the
+probability of remote events can only be zero or one:
+\begin{hol}
+\begin{alltt}
+##thm Kolmogorov_0_1_Law
+\end{alltt}
+\end{hol}
+
+\paragraph{Mathematical Expectation}
+
+``To achieve reasonable simplicity it is often necessary to describe
+probability distributions rather summarily by a few `typical
+values.' ... Among the typical values the \emph{(mathematical) expectation},
+or \emph{mean}, is by far the most important.
+It lends itself best to analytical manipulations, and it is
+preferred by statisticians because of a property known as sampling stability.''~\cite[p.~221]{Feller:2004vv}
+Formally, expectation is nothing but a synonym of (Lebesgue) integration:
+\begin{hol}
+\begin{alltt}
+##thm expectation_def
+\end{alltt}
+\end{hol}
+Thus most properties of expectation in \theoryimp{probability} theory
+are migrated from properties of Lebesgue integration. For instance,
+the following theorem is the probability version of the \emph{Markov's inequality}:
+\begin{hol}
+\begin{alltt}
+##thm prob_markov_ineq
+\end{alltt}
+\end{hol}
+
+In particular, for any random variable $X$ the value
+\holtxt{expectation p X} (usually
+denoted by $\mathscr{E}(X)$ in textbooks) exists if and only if the
+random variable as a measurable function is integrable,
+i.e.~\holtxt{integrable p X}.
+
+\paragraph{Second moments and variance}
+
+Let $a$ be extreal, $r$ positive, then $\mathscr{E}(|X - a|^r)$ is
+called the \emph{absolute moment}
+of $X$ of order $r$, about $a$. It may be $+\infty$; otherwise, and if $r$ is an integer,
+$\mathscr{E}((X - a)^r)$ is the corresponding \emph{moment}:
+\begin{hol}
+\begin{alltt}
+##thm absolute_moment_def
+##thm moment_def
+\end{alltt}
+\end{hol}
+
+For $r = 1$, $a = 0$, this reduces to $\mathscr{E}(X)$ (expectation or mean).
+The moments about the mean are called \emph{central moments}. That of order 2 is
+particularly important and is called the \emph{variance}, usually
+denoted by $\sigma^2(X)$ or $\mathrm{var}(X)$:
+\begin{hol}
+\begin{alltt}
+##thm central_moment_def
+##thm variance_def
+##thm variance_alt
+\end{alltt}
+\end{hol}
+
+The formula $\sigma^2(X) = \mathscr{E}(X^2) - \mathscr{E}(X)^2$ is well known in elementary
+probability, so is Chebyshev's inequality:
+\begin{hol}
+\begin{alltt}
+##thm variance_eq
+##thm chebyshev_ineq_variance
+\end{alltt}
+\end{hol}
+
+Note that, for the above formulae to hold, the r.v.~$X$ must have
+\emph{finite second moments}, which has several equivalent definitions:
+\begin{hol}
+\begin{alltt}
+##thm finite_second_moments_def
+
+##thm finite_second_moments_literally
+##thm finite_second_moments_eq_integrable_square
+##thm finite_second_moments_eq_finite_variance
+\end{alltt}
+\end{hol}
+
+Finally, for \emph{uncorrelated} r.v.'s (i.e.~$\mathscr{E}(XY) =
+\mathscr{E}(X)\mathscr{E}(Y)$), the following ``additivity of the variance'' holds:
+\begin{hol}
+\begin{alltt}
+##thm uncorrelated_def
+##thm uncorrelated_vars_def
+
+##thm variance_sum
+\end{alltt}
+\end{hol}
+
+\paragraph{Convergence of random sequences}
+
+Given a (countable) sequence of finite r.v.'s $X_n$ and another finite
+r.v. $Y$, the following three concepts of convergence (from $X_n$ to $Y$)
+are defined in \HOL{} (assuming all involved r.v.'s satisfy \holtxt{real_random_variable}):
+\begin{enumerate}
+\item The sequence of
+r.v.~$\{X_n\}$ is said to converge \emph{almost everywhere (a.e.)} (to the
+r.v.~$Y$) iff there exists a null set $\mathbf{N}$ such that
+\begin{equation*}
+  \forall \omega\in\Omega\setminus\mathbf{N}.\, \lim_{n\rightarrow\infty}
+  X_n(\omega) = Y(\omega)\;\text{finite.}
+\end{equation*}
+or formally
+\begin{hol}
+\begin{alltt}
+>>__ val oldwidth = !Globals.linewidth;
+     val _ = Globals.linewidth := oldwidth - 10;
+##thm converge_AE_def
+>>__ val _ = Globals.linewidth := oldwidth;
+\end{alltt}
+\end{hol}
+
+\item The sequence $\{X_n\}$
+is said to converge \emph{in probability (pr.)} to $Y$ iff for every $\epsilon > 0$ we have
+\begin{equation*}
+\lim_{n\rightarrow\infty} \mathscr{P}\{|X_n - Y| > \epsilon \} = 0.
+\end{equation*}
+or formally
+\begin{hol}
+\begin{alltt}
+>>__ val oldwidth = !Globals.linewidth;
+     val _ = Globals.linewidth := oldwidth - 10;
+##thm converge_PR_def
+>>__ val _ = Globals.linewidth := oldwidth;
+\end{alltt}
+\end{hol}
+
+\item The sequence $\{X_n\}$ is said to converge in $L^p$ to $Y$ iff
+  $X_n \in L^p$, $Y \in L^p$ and
+\begin{equation*}
+\lim_{n\rightarrow\infty} \mathscr{E}(|X_n - Y|^p) = 0.
+\end{equation*}
+or formally
+\begin{hol}
+\begin{alltt}
+>>__ val oldwidth = !Globals.linewidth;
+     val _ = Globals.linewidth := oldwidth - 10;
+##thm converge_LP_def
+>>__ val _ = Globals.linewidth := oldwidth;
+\end{alltt}
+\end{hol}
+\end{enumerate}
+
+The above three definitions all look very different with each
+other. And it is actually very hard to work directly with \holtxt{converge_AE},
+which says that, except for a null set, for all other
+point $\omega$ in the sample space, the limit of $X_n(\omega)$ is
+$Y(\omega)$.
+However, several equivalent theorems can be used to convert that "limit" to
+something else, namely $\sup$, $\inf$, $\limsup$ and $\liminf$. The most important
+one is the following:
+\begin{hol}
+\begin{alltt}
+##thm converge_AE_alt_limsup
+\end{alltt}
+\end{hol}
+
+Recall that $\limsup_n E_n$ means ``$E_n$ occurs infinitely often'' (cf. Borel-Cantelli
+Lemma). Now it should be clear why ``convergence a.e.'' implies
+``convergence in pr.'': the former says that it is impossible (zero
+probability) that $|X_n(\omega) - Y(\omega)| > e$ holds "infinitely often" when $n$
+increases. In another words, after certain $N$, for all $n > N$,
+$\mathscr{P}(|X_n(\omega) - Y(\omega)| > e)$ is exactly zero. Of course this
+implies ``in pr.'' which only requires this probability be ``close to
+zero''. The converse does not hold, simply because a probability very
+small and close to zero is still not zero, thus it is not a null set,
+and cannot fit with the definition of ``convergence a.e.''. Indeed, we
+can prove that ``a.e.'' implies ``in pr.'':
+\begin{hol}
+\begin{alltt}
+##thm converge_AE_imp_PR
+
+##thm converge_AE_imp_PR'
+\end{alltt}
+\end{hol}
+
+Note that in all above concepts the convergence ``from $X$ to $Y$'' and ``from
+$X - Y$ to 0'' are equivalent, for instance:
+\begin{hol}
+\begin{alltt}
+##thm converge_AE_to_zero
+
+##thm converge_PR_to_zero
+\end{alltt}
+\end{hol}
+
+On the other hand, $L^p$ convergence implies ``in pr.'', but so far
+only a special version (converge to zero, with integer-valued power)
+is provided:
+\begin{hol}
+\begin{alltt}
+##thm converge_LP_imp_PR'
+\end{alltt}
+\end{hol}
+
+\paragraph{Limit theorems and the laws of large numbers}
+
+``In the formal construction of a course in the theory of probability, limit theorems appear
+as a kind of superstructure over elementary chapters, in which all problems have finite,
+purely arithmetical character. In reality, however, the epistemological value of the theory
+of probability is revealed only by limit theorems. Moreover, without limit theorems it is
+impossible to understand the real content of the primary concept of all our sciences – the
+concept of probability.''~\cite[p.~1]{Gnedenko:1954vf}
+
+It is sometimes convenient to think of probabilities intuitively as
+limits of observable \emph{frequencies} in repeated experiments. This
+would lead to the following intuitive interpretation of the
+expectation. Let an experiment be repeated $n$ times `under identical
+conditions,' and denote by $X_1,\ldots, X_n$ the values of $X$ that
+were actually observed. For large $n$ the average $(X_1 + \cdots +
+X_n)/n$ should be close to $\mathscr{E}(X)$. The laws of large numbers
+give substance and precision to this vague intuitive description~\cite[p.~221]{Feller:2004vv}.
+%
+More generally, the so-called ``Law of Large Numbers'' deals with the
+partial sums of an infinite sequence of random variables
+$S_n = \sum_{j=1}^n X_j$. Under certain conditions
+$(S_n - \mathscr{E}(S_n))/n$ converges to 0, in probability
+(weak law) or almost everywhere (strong law).
+
+For uncorrelated r.v.'s with a common bound of variance, the proof is
+simple and based on Markov and Chebeshev's inequalities. The centered
+average actually converges to 0 in $L^2$, thus also in
+probability~\cite[108]{Chung:2001}.
+Under the same hypotheses it also converges to 0 almost everywhere:
+\begin{hol}
+\begin{alltt}
+##thm WLLN_uncorrelated'
+
+##thm SLLN_uncorrelated'
+\end{alltt}
+\end{hol}
+
+\subsection{Probability theory (legacy)}
+
+The legacy probability theory based on real numbers (and all dependent
+theories) is still available from \theoryimp{real_probability}
+theory, to support legacy user code and two official examples
+(\ml{miller} and \ml{diningcryptos}). The whole theory consists of
+\begin{description}
+\item [real_measure] The $[0,+\infty)$-measure theory (based on real numbers).
+\item [real_borel] The theory of Borel sets and Borel measurable
+  functions based on real numbers.\footnote{\theoryimp{real_borel} is shared with extreal-based
+  \theoryimp{measure} and \theoryimp{probability} theories. Also
+  \theoryimp{sigma_algebra} is shared by both probability theories.}
+\item [real_lebesgue] The theory of Lebesgue integration based on real numbers.
+\item [real_probability] Probability theory based on real numbers.
+\end{description}
+
+Most theorems in the above theories have the same (or similar) name
+and statements with their extreal-based companies, to ease the
+difficulities when porting proofs to the new measure and probability theories.
+
+In \ml{\$(HOLDIR)/examples/miller}, done by Hurd~\cite{hurd-thesis},
+first a type of Boolean sequences is defined
+to model an infinite sequence of coin flips. Next a probability
+function is formalized which takes as input a set of Boolean
+sequences, and returns a real number between 0 and 1.
+Building on this foundation, the probability theory is used to define
+a sampling function that takes an infinite sequence of coin flips and
+a positive integer $N$, and returns an integer $n$ in the range $0\le
+n < N$, picked uniformly at random from the available choices. This
+sampling function for the uniform distribution is later used to verify
+the Miller-Rabin primality test.
+
+\subsection{Further theories of higher mathematics}
+
+In \ml{\$(HOLDIR)/examples/algebra} there is an abstract algebra
+library for HOL4. The algebraic types
+are generic, so the library is useful in general.
+The algebraic structures consist of
+\begin{description}
+\item [monoidTheory] for monoids with identity,
+\item [groupTheory] for groups,
+\item [ringTheory] for commutative rings (not to be confused with
+the other \theoryimp{ring} theory in core library),
+\item [fieldTheory] for fields,
+\item [polynomialTheory] for polynomials with coefficients from rings or fields,
+\item [linearTheory] for vector spaces, including linear independence, and
+\item [finitefieldTheory] for finite fields, including existence and uniqueness.
+\end{description}
+
+\section{Further Theories}
+Other theories of interest in \HOL{} are listed and briefly described
+in Figure~\ref{fig:further-hol-theories}.
+
+\begin{figure}[hbtp]
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{|p{0.2\textwidth}p{0.7\textwidth}|}
+  \hline
+  \theoryimp{poset} & Partial Orders, Knaster-Tarski theorem
+  \\
+  \theoryimp{divides}, \theoryimp{gcd} &
+  Divisibility and the greatest common divisor.
+  \\
+  \theoryimp{poly} &
+  A theory of polynomials over $\mathbb{R}$, providing
+  a collection of operations on polynomials, and theorems about them.
+  \\
+  \theoryimp{Temporal\_Logic},\newline \theoryimp{Omega\_Automata}
+  &
+  Klaus Schneider's development of temporal logic and\newline $\omega$-automata.
+  \\
+  \theoryimp{ctl}, \theoryimp{mu}
+  &
+  Computation Tree Logic and the $\mu$-calculus. See Hasan Amjad's
+  thesis. \\
+  \theoryimp{lbtree} & Possibly infinitely deep (\ie, co-algebraic) binary trees.\\
+  \theoryimp{inftree} & Possibly infinitely branching, algebraic trees\\
+  \hline
+\end{tabular}
+\caption{A selection of \HOL{} theories}
+\label{fig:further-hol-theories}
+\end{figure}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:

@@ -11,9 +11,9 @@ val _ = new_theory "bisimulation";
 (*  (Strong) bisimulation                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val BISIM_def = new_definition("BISIM_def",
-  ``BISIM ts R = !p q l.
-                    R p q ==>
+val BISIM_def = new_definition ("BISIM_def",
+  ``BISIM ts R = !p q.
+                    R p q ==> !l.
                     (!p'. ts p l p' ==> ?q'. ts q l q' /\ R p' q') /\
                     (!q'. ts q l q' ==> ?p'. ts p l p' /\ R p' q')``);
 

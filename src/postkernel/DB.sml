@@ -68,12 +68,19 @@ val empty_sdata_map = Map.mkDict String.compare
 (* the dbmap contains:
     - a map from theory-name to a submap (as above)
 *)
-datatype dbmap = DB of { namemap : (string, submap) Map.dict }
+datatype dbmap = DB of { namemap : (string, submap) Map.dict,
+                         revmap : KernelSig.kernelname list Termtab.table
+                       }
 
 fun namemap (DB{namemap,...}) = namemap
-fun updnamemap f (DB{namemap}) = DB {namemap = f namemap}
+fun revmap (DB{revmap,...}) = revmap
+fun updnamemap f (DB{namemap,revmap}) =
+    DB {namemap = f namemap, revmap = revmap}
+fun updrevmap f (DB{namemap,revmap}) =
+    DB {namemap = namemap, revmap = f revmap}
 
-val empty_dbmap = DB {namemap = Map.mkDict String.compare}
+val empty_dbmap = DB {namemap = Map.mkDict String.compare,
+                      revmap = Termtab.empty}
 
 local val DBref = ref empty_dbmap
       fun lemmas() = !DBref
@@ -86,7 +93,7 @@ local val DBref = ref empty_dbmap
             Map.insert(m, s2key,
                        newdata :: List.filter (not o dataNameEq s2) oldvalue)
           end
-      fun functional_bindl (DB {namemap,...}) thy blist =
+      fun functional_bindl_names thy blist namemap =
           (* used when a theory is loaded from disk *)
           let val submap =
                   case Map.peek(namemap, thy) of
@@ -95,8 +102,16 @@ local val DBref = ref empty_dbmap
               fun foldthis ((n,th,cl), m) = add_to_submap m ((thy,n), (th,cl))
               val submap' = List.foldl foldthis submap blist
           in
-            DB {namemap = Map.insert(namemap, thy, submap')}
+            Map.insert(namemap, thy, submap')
           end
+      fun functional_bindl_revmap thy blist revmap =
+          List.foldl (fn ((n,th,cl), A) =>
+                         Termtab.cons_list(concl th,{Thy = thy,Name = n}) A)
+                     revmap
+                     blist
+      fun functional_bindl db thy blist =
+          db |> updnamemap (functional_bindl_names thy blist)
+             |> updrevmap (functional_bindl_revmap thy blist)
 
       fun purge_stale_bindings() =
           let
@@ -108,11 +123,20 @@ local val DBref = ref empty_dbmap
                 in
                   insert(m,n,data')
                 end
+            fun purge_stale ttab =
+                let open Termtab
+                in
+                  fold (fn (t,d) => fn A =>
+                           if uptodate_term t then update (t,d) A else A)
+                       ttab
+                       empty
+                end
             val ct = current_theory()
           in
-            DBref := updnamemap
-                       (updexisting ct (foldl foldthis empty_sdata_map))
-                       (!DBref)
+            DBref := ((!DBref)
+                       |> updnamemap
+                            (updexisting ct (foldl foldthis empty_sdata_map))
+                       |> updrevmap purge_stale)
           end
 
       fun delete_binding bnm =
@@ -153,7 +177,7 @@ local val DBref = ref empty_dbmap
       val _ = Theory.register_hook("DB", hook)
 in
 fun bindl thy blist = DBref := functional_bindl (lemmas()) thy blist
-
+fun revlookup th = Termtab.lookup_list (revmap (!DBref)) (concl th)
 (*---------------------------------------------------------------------------
     To the database representing all ancestor theories, add the
     entries in the current theory segment.

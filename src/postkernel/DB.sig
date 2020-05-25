@@ -30,6 +30,7 @@ sig
   val apropos_in  : term -> data list -> data list
   val selectDB    : selector list -> data list
   val listDB      : unit -> data list
+  val revlookup   : thm -> KernelSig.kernelname list
 
 
   val dest_theory  : string -> theory
