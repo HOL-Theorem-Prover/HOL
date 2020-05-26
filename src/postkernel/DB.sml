@@ -69,18 +69,22 @@ val empty_sdata_map = Map.mkDict String.compare
     - a map from theory-name to a submap (as above)
 *)
 datatype dbmap = DB of { namemap : (string, submap) Map.dict,
-                         revmap : KernelSig.kernelname list Termtab.table
+                         revmap : location list Termtab.table,
+                         localmap : thm Symtab.table
                        }
 
 fun namemap (DB{namemap,...}) = namemap
 fun revmap (DB{revmap,...}) = revmap
-fun updnamemap f (DB{namemap,revmap}) =
-    DB {namemap = f namemap, revmap = revmap}
-fun updrevmap f (DB{namemap,revmap}) =
-    DB {namemap = namemap, revmap = f revmap}
+fun localmap (DB{localmap,...}) = localmap
+fun updnamemap f (DB{namemap,revmap,localmap}) =
+    DB {namemap = f namemap, revmap = revmap, localmap = localmap}
+fun updrevmap f (DB{namemap,revmap,localmap}) =
+    DB {namemap = namemap, revmap = f revmap, localmap=localmap}
+fun updlocalmap f (DB{namemap,revmap,localmap}) =
+    DB {namemap = namemap, revmap = revmap, localmap = f localmap}
 
 val empty_dbmap = DB {namemap = Map.mkDict String.compare,
-                      revmap = Termtab.empty}
+                      localmap = Symtab.empty, revmap = Termtab.empty}
 
 local val DBref = ref empty_dbmap
       fun lemmas() = !DBref
@@ -105,10 +109,11 @@ local val DBref = ref empty_dbmap
             Map.insert(namemap, thy, submap')
           end
       fun functional_bindl_revmap thy blist revmap =
-          List.foldl (fn ((n,th,cl), A) =>
-                         Termtab.cons_list(concl th,{Thy = thy,Name = n}) A)
-                     revmap
-                     blist
+          List.foldl
+            (fn ((n,th,cl), A) =>
+                Termtab.cons_list(concl th,Stored {Thy = thy,Name = n}) A)
+            revmap
+            blist
       fun functional_bindl db thy blist =
           db |> updnamemap (functional_bindl_names thy blist)
              |> updrevmap (functional_bindl_revmap thy blist)
@@ -182,9 +187,15 @@ fun revlookup th = Termtab.lookup_list (revmap (!DBref)) (concl th)
     To the database representing all ancestor theories, add the
     entries in the current theory segment.
  ---------------------------------------------------------------------------*)
-
 fun CT() = !DBref
+
+fun store_local s th =
+    DBref := (!DBref |> updlocalmap (Symtab.update(s,th))
+                     |> updrevmap (Termtab.cons_list(concl th, Local s)))
+fun local_thm s = Symtab.lookup (localmap (!DBref)) s
+
 end (* local *)
+
 
 
 (*---------------------------------------------------------------------------

@@ -112,9 +112,11 @@ val def_suffix = ref "_def"
 local
 open Feedback Theory
 fun prove_local (n,th) =
-    if not (!Globals.interactive) then
-      (print ("Proved triviality _ \"" ^ String.toString n ^ "\"\n"); th)
-    else th
+   (if not (!Globals.interactive) then
+      print ("Proved triviality _ \"" ^ String.toString n ^ "\"\n")
+    else ();
+    DB.store_local n th;
+    th)
 in
 fun save_thm_attrs fname (n, attrs, th) = let
   val (save, attrf, attrs) = let
