@@ -26,4 +26,10 @@ sig
   val dest_label_ref : thm -> string
   val is_label_ref   : thm -> bool
 
+  val using_t : term
+  val mk_using : DB.location -> term
+  val MK_USING : DB.location -> thm
+  val is_using : term -> bool
+  val dest_using : term -> DB.location
+
 end

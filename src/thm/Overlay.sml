@@ -11,6 +11,7 @@ infix ++ && |-> THEN THEN1 THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC
 infixr ## $ ?
 infixr 3 -->;
 infix 8 via by suffices_by
+infix 9 using
 
 (* infixes for THEN shorthands *)
 infix >> >- >| \\ >>> >>- ??

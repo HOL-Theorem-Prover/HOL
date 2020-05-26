@@ -64,6 +64,9 @@ sig
   val LABEL_X_ASSUM    : string -> thm_tactic -> tactic
   val LLABEL_RESOLVE   : thm list -> term list -> thm list
 
+  val using            : tactic * thm -> tactic
+  val maybe_using      : (unit -> thm list) -> thm_tactic -> tactic
+
 end
 
 (*

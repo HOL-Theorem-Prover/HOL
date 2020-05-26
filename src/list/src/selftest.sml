@@ -136,3 +136,40 @@ val _ = List.app ct [
   ("SHORTLEX(3)", “SHORTLEX (<) [1;1;4] [1;1]”, “F”),
   ("LLEX(1)", “LLEX (<) [1;1;1] [1;2]”, “T”)
 ]
+
+val _ = let
+  open BasicProvers listTheory
+  val op using = markerLib.using
+  val g = “0 < LENGTH (l:num list)”
+  val expected = [“0 < LENGTH ([]:num list)”, “0 < LENGTH (SNOC (x:num) l')”]
+  val expected2 =
+      [“0 < LENGTH ([]:num list)”, “∀x. 0 < LENGTH (SNOC (x:num) l)”]
+  val expected2a = [[], [“0 < LENGTH (l:num list)”]]
+  infix AND
+  fun (f AND g) x = f x andalso g x
+  fun check1 (sgs, vf) = list_eq aconv expected (map snd sgs)
+  fun check1a (sgs, vf) = List.all null (map fst sgs : term list list)
+  fun check2 sgs = list_eq (list_eq aconv) expected2a (map fst sgs)
+  val ppgs = trace ("types", 1) (
+        HOLPP.block HOLPP.CONSISTENT 4 o
+        HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
+      )
+  val rtcg = “!y:num x:num. RTC R x (f y) ==> Q x y”
+  val rtc_expected = [“(!m:num n:num. f n = m ==> Q m n) /\
+                       !a b c. (!d. f d = b ==> Q a d) /\ R b c ==>
+                               !d. f d = c ==> Q a d”]
+in
+  tprint "Cases_on ‘l’ using SNOC_CASES";
+  require_msg (check_result (check1 AND check1a))
+              (HOLPP.pp_to_string 65 ppgs o fst)
+              (Cases_on ‘l’ using SNOC_CASES) ([], g);
+  tprint "Induct_on ‘l’ using SNOC_INDUCT";
+  require_msg (check_result ((list_eq aconv expected2 o map snd) AND check2))
+              (HOLPP.pp_to_string 65 ppgs)
+              (fst o (Induct_on ‘l’ using SNOC_INDUCT)) ([], g);
+  tprint "Induct_on ‘RTC’ using RTC_INDUCT_RIGHT1";
+  require_msg (check_result ((list_eq aconv rtc_expected o map snd)))
+              (HOLPP.pp_to_string 65 ppgs)
+              (fst o (Induct_on ‘RTC’ using relationTheory.RTC_INDUCT_RIGHT1))
+              ([], rtcg)
+end

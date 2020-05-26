@@ -128,4 +128,13 @@ val label_def = new_definition(
   "label_def",
   ``((lab:label) :- (argument:bool)) = argument``);
 
+(* ----------------------------------------------------------------------
+    The 'using' label
+   ---------------------------------------------------------------------- *)
+
+val using_def = new_definition("using_def", “using (x:label) = T”);
+
+val _ = remove_ovl_mapping  "using" {Name = "using", Thy = "marker"}
+
+
 val _ = export_theory();

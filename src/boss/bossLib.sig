@@ -44,6 +44,7 @@ sig
 
   val measureInduct_on  : term quotation -> tactic
   val completeInduct_on : term quotation -> tactic
+  val using             : tactic * thm -> tactic (* infix *)
 
   val pairarg_tac       : tactic
   val split_pair_case_tac : tactic

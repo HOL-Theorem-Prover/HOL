@@ -393,4 +393,54 @@ end
 
 fun LABEL_RESOLVE th (asl, w) = hd (LLABEL_RESOLVE [th] asl)
 
+(* ----------------------------------------------------------------------
+    using : thm -> tactic -> tactic
+
+    using th tac stashes theorem th in the goal so that tactic tac can
+    use it if desired. If the tactic terminates, the stashed theorem
+    is removed.
+
+    Stashing is done by adding an assumption encoding the name of the
+    theorem to the assumption list. This will cause mess-ups if you
+    attempt something like
+
+       pop_assum foo using bar
+
+    so, don't do that.
+
+    This can be nested, with multiple theorems stashed at once; the
+    cleanup looks for the exact using theorem that it stashed when it
+    removes it and does so with UNDISCH_THEN. So, if there are
+    multiples of the same name, the most recent will be taken.
+
+   ---------------------------------------------------------------------- *)
+
+fun tac using th =
+    let
+      val loc = case DB.revlookup th of
+                  [] => raise ERR "using" "No name for that theorem"
+                | loc::_ => loc
+      val th = MK_USING loc
+    in
+      ASSUME_TAC th >>
+      tac >>
+      UNDISCH_THEN (concl th) (K ALL_TAC)
+    end
+
+fun loc2thm loc =
+    case loc of
+        DB.Local s => (valOf (DB.local_thm s)
+                       handle Option => raise ERR "loc2thm" "No such theorem")
+      | DB.Stored {Name,Thy} =>
+        DB.fetch Thy Name
+        handle HOL_ERR _ => raise ERR "loc2thm" "No such theorem"
+
+
+fun maybe_using gen ttac (g as (asl,w)) =
+    case asl of
+        h::_ => if is_using h then
+                  ttac (loc2thm (dest_using h)) g
+                else MAP_FIRST ttac (gen()) g
+      | _ => MAP_FIRST ttac (gen()) g
+
 end

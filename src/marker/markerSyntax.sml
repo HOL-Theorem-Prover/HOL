@@ -99,4 +99,39 @@ end
 
 val is_label_ref = can dest_label_ref
 
+val using_t = prim_mk_const {Thy = "marker", Name = "using"}
+
+fun using_encode (DB.Local s) = "$" ^ s
+  | using_encode (DB.Stored{Thy,Name}) = Thy ^ "$" ^ Name
+fun using_decode s =
+    if s = "" then NONE
+    else if String.sub(s,0) = #"$" then
+      SOME (DB.Local (String.extract(s,1,NONE)))
+    else
+      case String.fields (equal #"$") s of
+          thy ::rest => SOME
+                          (DB.Stored{Thy = thy,
+                                     Name = String.concatWith "$" rest})
+        | _ => NONE
+
+fun using_var loc = mk_var(using_encode loc, Type.ind)
+fun mk_using loc = mk_comb(using_t, using_var loc)
+
+fun MK_USING loc = using_def |> SPEC (using_var loc) |> EQT_ELIM
+fun is_using t = same_const (rator t) using_t handle HOL_ERR _ => false
+fun dest_using t =
+    let val (f,x) = dest_comb t
+        val _ = same_const f using_t orelse
+                raise ERR "dest_using" "Not a using term"
+        val (n, _) = dest_var x
+                     handle HOL_ERR _ => raise ERR "dest_using"
+                                               "Rand not a variable"
+    in
+      case using_decode n of
+          NONE => raise ERR "dest_using" "Badly encoded theorem name"
+        | SOME l => l
+    end
+
+
+
 end
