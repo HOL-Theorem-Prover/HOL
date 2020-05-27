@@ -154,6 +154,10 @@ Incompatibilities:
 	Also, `DROP_NIL` has been renamed to `DROP_EQ_NIL`, to avoid having both `DROP_nil`
 	and `DROP_NIL` around. Furthermore, `>=` in the theorem statement has been replaced with `<=`.
 
+* The theorem `SORTED_APPEND_trans_IFF` has been moved from `alist_treeTheory` into `sortingTheory`.
+  The moved theorem is now available as `SORTED_APPEND`, and the old `SORTED_APPEND` is now available as `SORTED_APPEND_IMP`.
+  To avoid confusion, as `SORTED_APPEND` is now an (conditional) equality, `SORTED_APPEND_IFF` has been renamed to `SORTED_APPEND_GEN`.
+
 
 * * * * *
 

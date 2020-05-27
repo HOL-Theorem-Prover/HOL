@@ -2247,7 +2247,7 @@ Proof
   \\ drule spt_centers_ord
   \\ rw []
   \\ rfs [combine_rle_props]
-  \\ irule sortingTheory.SORTED_APPEND
+  \\ irule sortingTheory.SORTED_APPEND_IMP
   \\ fs [combine_rle_props, expand_rle_combine_rle]
   \\ last_x_assum (qspec_then `n + LENGTH (expand_rle xs)` mp_tac)
   \\ fs [EVERY_MEM, MEM_MAP, PULL_EXISTS, pairTheory.FORALL_PROD]
