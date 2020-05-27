@@ -31,73 +31,8 @@ Proof
   simp[relationTheory.RSUBSET, FUN_REL_def]>>metis_tac[]
 QED
 
-val GG = GEN_TYVARIFY o GEN_ALL
-
-(* a little like strip_tac on a theorem, or more accurately
-     GEN_TAC ORELSE DISCH_THEN (REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC)
-   either removing a universal quantification (with SPEC), or moving
-   implications into the assumptions and stripping apart conjunctions as it
-   does so.
-*)
-fun UDISCH' th =
-    let
-      val (l,r) = dest_imp (concl th)
-      fun buildcth t =
-          case Lib.total dest_conj t of
-              SOME (l,r) => CONJ (buildcth l) (buildcth r)
-            | NONE => ASSUME t
-    in
-      PROVE_HYP (buildcth l) (UNDISCH th)
-    end handle HOL_ERR _ => let
-      val (bv,_) = dest_forall (concl th)
-    in
-      SPEC bv th
-    end
-
-(* moves a bunch of hypotheses from a theorem into an implication, conjoining
-   them all rather than creating iterated implications *)
-fun DISCHl tms th =
-    let
-      val cjt = list_mk_conj tms
-    in
-      List.foldl (fn (cth, th) => PROVE_HYP cth th) th (CONJUNCTS (ASSUME cjt))
-                 |> DISCH cjt
-    end
-
-fun Uchain th1 hypth =
-    let
-      val fixed_tmvs =
-          FVL [concl th1, concl hypth]
-              (HOLset.union(hyp_frees th1, hyp_frees hypth))
-      val fixed_tyvs =
-          HOLset.foldl (fn (t, A) => HOLset.addList(A, type_vars_in_term t))
-                       (HOLset.union(hyp_tyvars th1, hyp_tyvars hypth))
-                       fixed_tmvs |> HOLset.listItems
-      val fixed_tmvs_l = HOLset.listItems fixed_tmvs
-      val th1' = repeat UDISCH' th1
-      val hypth' = repeat UDISCH' hypth
-      open optmonad
-      fun INSTT (tyi,tmi) th = th |> INST_TYPE tyi |> INST tmi
-      fun elimhyp h =
-          case FullUnify.Env.fromEmpty
-                 (FullUnify.unify fixed_tyvs fixed_tmvs_l (h, concl th1') >>
-                  FullUnify.collapse)
-           of
-              NONE => NONE
-            | SOME sigma =>
-              SOME (PROVE_HYP (INSTT sigma th1') (INSTT sigma hypth'))
-    in
-      case Portable.first_opt (fn _ => elimhyp) (hyp hypth') of
-          NONE => raise mk_HOL_ERR "transferLib" "Uchain" "No unifier found"
-        | SOME newth =>
-          let
-            val dhyps = HOLset.difference(hypset newth, hypset hypth)
-          in
-            newth |> DISCHl (HOLset.listItems dhyps) |> GEN_ALL
-          end
-    end
-
-fun INTRO th = goal_assum (mp_tac o Uchain (GG th))
+fun INTRO th =
+    goal_assum (resolve_then.resolve_then resolve_then.Any mp_tac th)
 
 Definition fsequiv_def:
   fsequiv l1 l2 <=> set l1 = set l2
@@ -275,16 +210,10 @@ Proof
   reverse conj_tac >- simp[] >> irule RSUBSET_I >>
   qexists_tac ‘$= O AB |==> ((FSET0 |==> (=)) O (LIST_REL AB |==> (=)))’ >>
   reverse conj_tac >- (irule FUN_REL_RSUBSET >> simp[FUN_REL_O]) >>
-  irule RSUBSET_I >> goal_assum (mp_tac o Uchain (GG FUN_REL_O)) >>
-  simp[relationTheory.O_DEF] >>
-  goal_assum (mp_tac o Uchain (GG MEM_transfers)) >> simp[] >>
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fIN_def)) >>
-  goal_assum (mp_tac o Uchain (GG funQ)) >>
-  goal_assum (mp_tac o Uchain (GG funQ)) >>
-  goal_assum (mp_tac o Uchain (GG fset0Q)) >>
-  goal_assum (mp_tac o Uchain (GG idQ)) >>
-  goal_assum (mp_tac o Uchain (GG idQ)) >>
+  irule RSUBSET_I >> INTRO FUN_REL_O >>
+  simp[relationTheory.O_DEF] >> INTRO MEM_transfers >> simp[] >>
+  irule HK_thm2 >> INTRO fIN_def >> INTRO funQ >> INTRO funQ >>
+  INTRO fset0Q >> INTRO idQ >> INTRO idQ >>
   simp[FUN_REL_def, fsequiv_def]
 QED
 
@@ -295,10 +224,7 @@ End
 Theorem fUNION_relates[transfer_rule]:
   (FSET0 |==> FSET0 |==> FSET0) APPEND fUNION
 Proof
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fUNION_def)) >>
-  ntac 2 (goal_assum (mp_tac o Uchain (GG funQ))) >>
-  ntac 2 (goal_assum (mp_tac o Uchain (GG fset0Q))) >>
+  map_every INTRO [HK_thm2, fUNION_def, funQ, funQ, fset0Q, fset0Q, fset0Q] >>
   (* respectfulness *)
   simp[FUN_REL_def, fsequiv_def]
 QED
@@ -316,9 +242,7 @@ End
 Theorem fEMPTY_relates[transfer_rule]:
   FSET0 [] fEMPTY
 Proof
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fEMPTY_def)) >>
-  goal_assum (mp_tac o Uchain (GG fset0Q)) >>
+  map_every INTRO [HK_thm2, fEMPTY_def, fset0Q] (* INTRO fsequiv_refl *) >>
   simp[]
 QED
 
@@ -329,11 +253,7 @@ End
 Theorem fINSERT_relates[transfer_rule]:
   ((=) |==> FSET0 |==> FSET0) CONS fINSERT
 Proof
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fINSERT_def)) >>
-  ntac 2 (goal_assum (mp_tac o Uchain (GG funQ))) >>
-  ntac 2 (goal_assum (mp_tac o Uchain (GG fset0Q))) >>
-  goal_assum (mp_tac o Uchain (GG idQ)) >>
+  map_every INTRO [HK_thm2, fINSERT_def, funQ, funQ, fset0Q, fset0Q, idQ] >>
   simp[FUN_REL_def, fsequiv_def] (* respectfulness *)
 QED
 
@@ -400,11 +320,7 @@ End
 Theorem fDELETE_relates[transfer_rule]:
   ((=) |==> FSET0 |==> FSET0) (\e. FILTER ($~ o $= e)) fDELETE
 Proof
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fDELETE_def)) >>
-  ntac 2 (goal_assum (mp_tac o Uchain (GG funQ))) >>
-  ntac 2 (goal_assum (mp_tac o Uchain (GG fset0Q))) >>
-  goal_assum (mp_tac o Uchain (GG idQ)) >>
+  map_every INTRO [HK_thm2, fDELETE_def, funQ, funQ, fset0Q, fset0Q, idQ] >>
   (* respectfulness *)
   simp[FUN_REL_def, fsequiv_def, LIST_TO_SET_FILTER]
 QED
@@ -416,7 +332,7 @@ End
 Theorem fCARD_relates[transfer_rule]:
   (FSET0 |==> $=) (LENGTH o nub) fCARD
 Proof
-  irule HK_thm2 >> INTRO fCARD_def >> INTRO funQ >> INTRO idQ >> INTRO fset0Q >>
+  map_every INTRO [HK_thm2, fCARD_def, funQ, idQ, fset0Q] >>
   simp[fsequiv_def, FUN_REL_def] >>
   (* respectfulness *)
   Induct>> rw[nub_def]
@@ -509,12 +425,7 @@ End
 Theorem fINTER_relates[transfer_rule]:
   (FSET0 |==> FSET0 |==> FSET0) (FILTER o combin$C MEM) fINTER
 Proof
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fINTER_def)) >>
-  rpt (goal_assum (mp_tac o Uchain (GG funQ))) >>
-  rpt (goal_assum (mp_tac o Uchain (GG idQ))) >>
-  rpt (goal_assum (mp_tac o Uchain (GG fset0Q))) >>
-  simp[] >>
+  map_every INTRO [HK_thm2, fINTER_def, funQ, funQ, fset0Q, fset0Q, fset0Q] >>
   simp[FUN_REL_def, fsequiv_def, LIST_TO_SET_FILTER]
 QED
 
@@ -532,12 +443,8 @@ End
 Theorem fDIFF_relates[transfer_rule]:
   (FSET0 |==> FSET0 |==> FSET0) (\l1 l2. FILTER (\x. ~MEM x l2) l1) fDIFF
 Proof
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fDIFF_def)) >>
-  rpt (goal_assum (mp_tac o Uchain (GG funQ))) >>
-  rpt (goal_assum (mp_tac o Uchain (GG idQ))) >>
-  rpt (goal_assum (mp_tac o Uchain (GG fset0Q))) >>
-  simp[] >>
+  map_every INTRO [HK_thm2, fDIFF_def, funQ, funQ] >>
+  rpt (INTRO fset0Q) >>
   simp[FUN_REL_def, fsequiv_def, LIST_TO_SET_FILTER]
 QED
 
@@ -628,11 +535,8 @@ Proof
   >- (simp[relationTheory.RSUBSET, relationTheory.O_DEF, FUN_REL_def] >>
       metis_tac[]) >>
   simp[relationTheory.O_DEF] >>
-  goal_assum (mp_tac o Uchain (GG LIST_TO_SET_transfer)) >>
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG funQ)) >>
-  goal_assum (mp_tac o Uchain (GG fset0Q)) >>
-  goal_assum (mp_tac o Uchain (GG idQ)) >> simp[] >> rw[]
+  map_every INTRO [LIST_TO_SET_transfer, HK_thm2, funQ, fset0Q, idQ] >>
+  rw[]
   >- (simp[Once FUN_EQ_THM, toSet_def] >>
       simp[pred_setTheory.EXTENSION, fIN_def]) >>
   simp[FUN_REL_def, fsequiv_def]
@@ -647,18 +551,14 @@ Proof
   qexists_tac ‘(FSET0 O LIST_REL AB) |==>
                (((=) |==> (=)) O (AB |==> (=)))’ >> reverse conj_tac
   >- simp[relationTheory.O_DEF, relationTheory.RSUBSET] >>
-  irule RSUBSET_I >>
-  goal_assum (mp_tac o Uchain (GG FUN_REL_O)) >>
+  irule RSUBSET_I >> INTRO FUN_REL_O >>
   simp[relationTheory.O_DEF] >>
   qexists_tac ‘set’ >>
   conj_tac
   >- (simp[FUN_REL_def, LIST_REL_EL_EQN] >>
       metis_tac[IN_DEF, MEM_EL, bi_unique_def, left_unique_def,
                 right_unique_def]) >>
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG funQ)) >>
-  goal_assum (mp_tac o Uchain (GG idQ)) >>
-  goal_assum (mp_tac o Uchain (GG fset0Q)) >> conj_tac
+  map_every INTRO [HK_thm2, funQ, idQ, fset0Q] >> conj_tac
   >- simp[toSet_def, FUN_EQ_THM, fIN_def, IN_DEF] >>
   simp[FUN_REL_def, fsequiv_def]
 QED
@@ -714,18 +614,10 @@ Proof
   simp[Once FSET_AB_eqn, SimpL “FUN_REL”, SimpR “$O”] >>
   simp[LIST_REL_O] >>
   simp[Once FSET_AB_eqn, SimpR “FUN_REL”] >>
-  simp[relationTheory.O_ASSOC] >> irule RSUBSET_I >>
-  goal_assum (mp_tac o Uchain (GG FUN_REL_O)) >>
+  simp[relationTheory.O_ASSOC] >> irule RSUBSET_I >> INTRO FUN_REL_O >>
   simp[relationTheory.O_DEF] >>
-  goal_assum (mp_tac o Uchain (GG FLAT_relates)) >>
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fBIGUNION_def)) >>
-  goal_assum (mp_tac o Uchain (GG funQ)) >>
-  goal_assum (mp_tac o Uchain (GG fset0Q)) >>
-  goal_assum (mp_tac o Uchain (GG Qt_composes)) >>
-  goal_assum (mp_tac o Uchain (GG fset0Q)) >>
-  goal_assum (mp_tac o Uchain (GG listQ)) >>
-  goal_assum (mp_tac o Uchain (GG fset0Q)) >>
+  map_every INTRO [FLAT_relates, HK_thm2, fBIGUNION_def, funQ, fset0Q,
+                   Qt_composes, fset0Q, listQ, fset0Q] >>
   rw[FUN_REL_def, relationTheory.O_DEF, relationTheory.inv_DEF,PULL_EXISTS]>>
   rename [‘fsequiv (FLAT l1) (FLAT l2)’, ‘LIST_REL _ l1 fsl1’,
           ‘LIST_REL _ l2 fsl2’] >>
