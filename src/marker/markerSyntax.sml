@@ -100,6 +100,7 @@ end
 val is_label_ref = can dest_label_ref
 
 val using_t = prim_mk_const {Thy = "marker", Name = "using"}
+val usingThm_t = prim_mk_const {Thy = "marker", Name = "usingThm"}
 
 fun using_encode (DB.Local s) = "$" ^ s
   | using_encode (DB.Stored{Thy,Name}) = Thy ^ "$" ^ Name
@@ -115,23 +116,50 @@ fun using_decode s =
         | _ => NONE
 
 fun using_var loc = mk_var(using_encode loc, Type.ind)
-fun mk_using loc = mk_comb(using_t, using_var loc)
+fun mk_usingl loc = using_def |> SPEC (using_var loc) |> EQT_ELIM
 
-fun MK_USING loc = using_def |> SPEC (using_var loc) |> EQT_ELIM
-fun is_using t = same_const (rator t) using_t handle HOL_ERR _ => false
-fun dest_using t =
-    let val (f,x) = dest_comb t
-        val _ = same_const f using_t orelse
-                raise ERR "dest_using" "Not a using term"
-        val (n, _) = dest_var x
-                     handle HOL_ERR _ => raise ERR "dest_using"
-                                               "Rand not a variable"
+fun mk_usingth th =
+    SPEC (concl th) usingThm_def |> SYM |> C EQ_MP th
+
+fun MK_USING th =
+    if null (hyp th) andalso not (null (type_vars_in_term (concl th))) then
+      case DB.revlookup th of
+          [] => raise ERR "mk_using" "Polymorphic theorem has no name in DB"
+        | l::_ => mk_usingl l
+    else
+      mk_usingth th
+
+val mk_using = concl o MK_USING
+fun is_using t =
+    case Lib.total dest_comb t of
+        SOME (f,x) => same_const f using_t orelse same_const f usingThm_t
+      | NONE => false
+
+fun DEST_USING th =
+    let val (f,x) = dest_comb (concl th)
+          handle HOL_ERR _ => raise ERR "DEST_USING" "Not a using theorem"
     in
-      case using_decode n of
-          NONE => raise ERR "dest_using" "Badly encoded theorem name"
-        | SOME l => l
+      if same_const f using_t then
+        let
+          val (n, _) = dest_var x
+                       handle HOL_ERR _ => raise ERR "DEST_USING"
+                                                 "Rand not a variable"
+        in
+          case using_decode n of
+              NONE => raise ERR "DEST_USING" "Badly encoded theorem name"
+            | SOME (DB.Stored {Name,Thy}) =>
+              (DB.fetch Thy Name
+               handle HOL_ERR _ =>
+                      raise ERR "DEST_USING"
+                            ("Theorem "^Thy^"$"^Name^" doesn't exist"))
+            | SOME (Local n) => valOf (DB.local_thm n)
+                                handle Option =>
+                                       raise ERR "DEST_USING"
+                                             "Local theorem doesn't exist"
+        end
+      else if same_const f usingThm_t then
+        EQ_MP (SPEC x usingThm_def) th
+      else raise ERR "DEST_USING" "Not a using theorem"
     end
 
-
-
-end
+end (* struct *)

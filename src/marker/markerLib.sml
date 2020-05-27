@@ -394,7 +394,7 @@ end
 fun LABEL_RESOLVE th (asl, w) = hd (LLABEL_RESOLVE [th] asl)
 
 (* ----------------------------------------------------------------------
-    using : thm -> tactic -> tactic
+    using : tactic * thm -> tactic
 
     using th tac stashes theorem th in the goal so that tactic tac can
     use it if desired. If the tactic terminates, the stashed theorem
@@ -417,15 +417,14 @@ fun LABEL_RESOLVE th (asl, w) = hd (LLABEL_RESOLVE [th] asl)
 
 fun tac using th =
     let
-      val loc = case DB.revlookup th of
-                  [] => raise ERR "using" "No name for that theorem"
-                | loc::_ => loc
-      val th = MK_USING loc
+      val uth = MK_USING th
     in
-      ASSUME_TAC th >>
+      ASSUME_TAC uth >>
       tac >>
-      UNDISCH_THEN (concl th) (K ALL_TAC)
+      UNDISCH_THEN (concl uth) (K ALL_TAC)
     end
+
+fun usingA tac th = tac using th
 
 fun loc2thm loc =
     case loc of
@@ -438,8 +437,7 @@ fun loc2thm loc =
 
 fun maybe_using gen ttac (g as (asl,w)) =
     case asl of
-        h::_ => if is_using h then
-                  ttac (loc2thm (dest_using h)) g
+        h::_ => if is_using h then ttac (DEST_USING (ASSUME h)) g
                 else MAP_FIRST ttac (gen()) g
       | _ => MAP_FIRST ttac (gen()) g
 

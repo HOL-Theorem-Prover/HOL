@@ -140,6 +140,7 @@ val _ = List.app ct [
 val _ = let
   open BasicProvers listTheory
   val op using = markerLib.using
+  val usingA = markerLib.usingA
   val g = “0 < LENGTH (l:num list)”
   val expected = [“0 < LENGTH ([]:num list)”, “0 < LENGTH (SNOC (x:num) l')”]
   val expected2 =
@@ -147,8 +148,8 @@ val _ = let
   val expected2a = [[], [“0 < LENGTH (l:num list)”]]
   infix AND
   fun (f AND g) x = f x andalso g x
-  fun check1 (sgs, vf) = list_eq aconv expected (map snd sgs)
-  fun check1a (sgs, vf) = List.all null (map fst sgs : term list list)
+  fun check1 sgs = list_eq aconv expected (map snd sgs)
+  fun check1a sgs = List.all null (map fst sgs : term list list)
   fun check2 sgs = list_eq (list_eq aconv) expected2a (map fst sgs)
   val ppgs = trace ("types", 1) (
         HOLPP.block HOLPP.CONSISTENT 4 o
@@ -158,18 +159,41 @@ val _ = let
   val rtc_expected = [“(!m:num n:num. f n = m ==> Q m n) /\
                        !a b c. (!d. f d = b ==> Q a d) /\ R b c ==>
                                !d. f d = c ==> Q a d”]
+  val bit_cases = hd (Prim_rec.prove_cases_thm numeralTheory.bit_induction)
+  fun TAC t g = fst (VALID t g)
 in
+  tprint "Cases_on ‘m’ using bit_cases";
+  require_msg (check_result (
+                  (list_eq aconv [“0 < ZERO”, “0 < BIT1 n”, “0 < BIT2 n”] o
+                   map snd) AND
+                  (List.all null o map fst)
+              ))
+              (HOLPP.pp_to_string 65 ppgs)
+              (TAC $ Cases_on ‘m’ using bit_cases) ([], “0 < m”);
+  tprint "Cases_on ‘m’ using EVEN_OR_ODD";
+  require_msg (check_result ((list_eq aconv [“0 < m”, “0 < m”] o map snd) AND
+                             (list_eq (list_eq aconv) [[“EVEN m”], [“ODD m”]] o
+                              map fst)))
+              (HOLPP.pp_to_string 65 ppgs)
+              (TAC $ Cases_on ‘m’ using arithmeticTheory.EVEN_OR_ODD)
+              ([], “0 < m”);
+  tprint "Cases_on ‘m’ using assumption";
+  require_msg (check_result ((list_eq aconv [“0 < 2”, “0 < 4”] o map snd) AND
+                             (List.all null o map fst)))
+              (HOLPP.pp_to_string 65 ppgs)
+              (TAC $ pop_assum $ usingA $ Cases_on ‘m’)
+              ([“!a. a = 2 \/ a = 4”], “0 < m”);
   tprint "Cases_on ‘l’ using SNOC_CASES";
   require_msg (check_result (check1 AND check1a))
-              (HOLPP.pp_to_string 65 ppgs o fst)
-              (Cases_on ‘l’ using SNOC_CASES) ([], g);
+              (HOLPP.pp_to_string 65 ppgs)
+              (TAC $ Cases_on ‘l’ using SNOC_CASES) ([], g);
   tprint "Induct_on ‘l’ using SNOC_INDUCT";
   require_msg (check_result ((list_eq aconv expected2 o map snd) AND check2))
               (HOLPP.pp_to_string 65 ppgs)
-              (fst o (Induct_on ‘l’ using SNOC_INDUCT)) ([], g);
+              (TAC (Induct_on ‘l’ using SNOC_INDUCT)) ([], g);
   tprint "Induct_on ‘RTC’ using RTC_INDUCT_RIGHT1";
   require_msg (check_result ((list_eq aconv rtc_expected o map snd)))
               (HOLPP.pp_to_string 65 ppgs)
-              (fst o (Induct_on ‘RTC’ using relationTheory.RTC_INDUCT_RIGHT1))
+              (TAC $ Induct_on ‘RTC’ using relationTheory.RTC_INDUCT_RIGHT1)
               ([], rtcg)
 end
