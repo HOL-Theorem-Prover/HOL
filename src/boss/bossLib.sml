@@ -155,6 +155,7 @@ val AllCaseEqs        = TypeBase.AllCaseEqs
 
 val completeInduct_on = numLib.completeInduct_on
 val measureInduct_on  = numLib.measureInduct_on;
+val op using          = markerLib.using
 
 val SPOSE_NOT_THEN    = BasicProvers.SPOSE_NOT_THEN
 val spose_not_then    = BasicProvers.SPOSE_NOT_THEN
