@@ -157,6 +157,10 @@ Incompatibilities:
 *   Renamed theorems in `pred_setTheory`: `SUBSET_SUBSET_EQ` -> `SUBSET_ANTISYM_EQ`
     (compatible with HOL Light).
 
+* The theorem `SORTED_APPEND_trans_IFF` has been moved from `alist_treeTheory` into `sortingTheory`.
+  The moved theorem is now available as `SORTED_APPEND`, and the old `SORTED_APPEND` is now available as `SORTED_APPEND_IMP`.
+  To avoid confusion, as `SORTED_APPEND` is now an (conditional) equality, `SORTED_APPEND_IFF` has been renamed to `SORTED_APPEND_GEN`.
+
 
 * * * * *
 
