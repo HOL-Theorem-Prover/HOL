@@ -98,6 +98,7 @@ val lastminute_fixes =
     String.translate (fn #"#" => "\\#"
                        | #"&" => "\\&"
                        | #"_" => "\\_"
+                       | #"$" => "\\$"
                        | c => str c)
 
 fun print_markup(m, ostr) =
