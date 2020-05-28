@@ -221,7 +221,7 @@ Proof
 QED
 
 Theorem npair_EQ_0[simp]:
-  (npair x y = 0) <=> (x = 0) /\ (y = 0)
+  !x y. (npair x y = 0) <=> (x = 0) /\ (y = 0)
 Proof
   METIS_TAC[npair00,npair_11]
 QED
@@ -239,23 +239,26 @@ Proof
 QED
 
 Theorem nfst_le_npair[simp]:
-  n <= npair n m
+  !m n. n <= npair n m
 Proof
+  rpt gen_tac \\
   `n = nfst (npair n m)` by simp[GSYM nfst_npair] >>
   `nfst (npair n m) <= npair n m` by simp[nfst_le] >> fs[]
 QED
 
 Theorem nsnd_le_npair[simp]:
-  m <= npair n m
+  !m n. m <= npair n m
 Proof
+  rpt gen_tac \\
   `m = nsnd (npair n m)` by simp[GSYM nsnd_npair] >>
   `nsnd (npair n m) <= npair n m` by simp[nsnd_le] >> fs[]
 QED
 
 Theorem npair2_lt_E:
-  npair n n1 < npair n n2 ==> n1 < n2
+  !n n1 n2. npair n n1 < npair n n2 ==> n1 < n2
 Proof
-  simp[npair_def] >> strip_tac >> SPOSE_NOT_THEN ASSUME_TAC
+  rpt gen_tac
+  >> simp[npair_def] >> strip_tac >> SPOSE_NOT_THEN ASSUME_TAC
   >> `n1 >= n2` by simp[]
   >> `n + n1 >= n + n2` by simp[]
   >> `n + n2 <= n + n1` by simp[]
@@ -265,9 +268,8 @@ Proof
   >> fs[]
 QED
 
-
 Theorem npair2_lt_I:
-  n1 < n2 ==> npair n n1 < npair n n2
+  !n n1 n2. n1 < n2 ==> npair n n1 < npair n n2
 Proof
   rpt strip_tac >> simp[npair_def] >>
   `n + n1 < n + n2` by simp[] >>
@@ -275,9 +277,27 @@ Proof
 QED
 
 Theorem npair2_lt[simp]:
-  npair n n1 < npair n n2 <=> n1 < n2
+  !n n1 n2. npair n n1 < npair n n2 <=> n1 < n2
 Proof
   metis_tac[npair2_lt_E, npair2_lt_I]
+QED
+
+(* slightly more general than npair2_lt_I *)
+Theorem npairs_lt_I :
+  !a b c d. a <= b /\ c < d ==> npair a c < npair b d
+Proof
+    rpt STRIP_TAC
+ >> `(a = b) \/ a < b` by SRW_TAC [ARITH_ss] []
+ >- (ASM_REWRITE_TAC [] \\
+     MATCH_MP_TAC npair2_lt_I >> simp [])
+ >> MATCH_MP_TAC LESS_TRANS
+ >> Q.EXISTS_TAC ‘npair a d’
+ >> CONJ_TAC >- (MATCH_MP_TAC npair2_lt_I >> ASM_REWRITE_TAC [])
+ >> REWRITE_TAC [npair_def]
+ >> Q_TAC SUFF_TAC `tri (a + d) < tri (b + d)`
+ >- SRW_TAC [ARITH_ss] []
+ >> MATCH_MP_TAC tri_LT_I
+ >> SRW_TAC [ARITH_ss] []
 QED
 
 val _ = export_theory()

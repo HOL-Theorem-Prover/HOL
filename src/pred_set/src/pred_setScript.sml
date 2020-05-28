@@ -464,12 +464,15 @@ val EQ_SUBSET_SUBSET = store_thm (* from util_prob *)
    ``!(s :'a -> bool) t. (s = t) ==> s SUBSET t /\ t SUBSET s``,
    RW_TAC std_ss [SUBSET_DEF, EXTENSION]);
 
-val SUBSET_SUBSET_EQ = store_thm (* from topology, was: SUBSET_ANTISYM_EQ *)
-  ("SUBSET_SUBSET_EQ",
-   “!(s:'a set) t. (s SUBSET t) /\ (t SUBSET s) <=> (s = t)”,
+Theorem SUBSET_ANTISYM_EQ : (* from HOL Light *)
+    !(s:'a set) t. (s SUBSET t) /\ (t SUBSET s) <=> (s = t)
+Proof
    REPEAT GEN_TAC THEN EQ_TAC THENL
   [REWRITE_TAC [SUBSET_ANTISYM],
-   REWRITE_TAC [EQ_SUBSET_SUBSET]]);
+   REWRITE_TAC [EQ_SUBSET_SUBSET]]
+QED
+
+Theorem SET_EQ_SUBSET = GSYM SUBSET_ANTISYM_EQ;
 
 val SUBSET_ADD = store_thm (* from util_prob *)
   ("SUBSET_ADD",
@@ -5494,13 +5497,6 @@ val KoenigsLemma_WF = store_thm(
              prim_recTheory.wellfounded_def,
              relationTheory.inv_DEF] THEN
   METIS_TAC [KoenigsLemma]);
-
-
-Theorem SET_EQ_SUBSET:
-  !s1 s2. (s1 = s2) <=> s1 SUBSET s2 /\ s2 SUBSET s1
-Proof
- REPEAT (GEN_TAC ORELSE EQ_TAC) THEN RW_TAC set_ss [SUBSET_DEF,SUBSET_ANTISYM]
-QED
 
 Theorem PSUBSET_EQN:
   !s1 s2. s1 PSUBSET s2 <=> s1 SUBSET s2 /\ ~(s2 SUBSET s1)

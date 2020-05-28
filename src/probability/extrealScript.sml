@@ -1047,6 +1047,14 @@ val lt_sub_imp = store_thm
  >> RW_TAC std_ss [extreal_lt_def, extreal_le_def, extreal_add_def, extreal_sub_def]
  >> METIS_TAC [real_lt, REAL_LT_ADD_SUB]);
 
+Theorem lt_sub_imp' :
+    !x y z. x <> PosInf /\ y <> PosInf /\ y + x < z ==> y < z - x
+Proof
+    rpt Cases
+ >> RW_TAC std_ss [extreal_lt_def, extreal_le_def, extreal_add_def, extreal_sub_def]
+ >> METIS_TAC [real_lt, REAL_LT_ADD_SUB]
+QED
+
 val lt_sub_imp2 = store_thm (* new *)
   ("lt_sub_imp2", ``!x y z. x <> NegInf /\ x <> PosInf /\ y + x < z ==> y < z - x``,
     rpt Cases
@@ -1162,6 +1170,16 @@ val lt_sub = store_thm
  >> RW_TAC std_ss [extreal_lt_def, extreal_le_def, extreal_add_def,
                    extreal_sub_def, le_infty]
  >> METIS_TAC [REAL_LE_SUB_RADD]);
+
+Theorem lt_sub' :
+    !x y z. x <> PosInf /\ y <> PosInf /\ z <> NegInf /\ z <> PosInf ==>
+           (y + x < z <=> y < z - x)
+Proof
+    rpt Cases
+ >> RW_TAC std_ss [extreal_lt_def, extreal_le_def, extreal_add_def,
+                   extreal_sub_def, le_infty]
+ >> METIS_TAC [REAL_LE_SUB_RADD]
+QED
 
 val sub_add2 = store_thm
   ("sub_add2", ``!x y. x <> NegInf /\ x <> PosInf ==> (x + (y - x) = y)``,
@@ -5538,18 +5556,13 @@ Proof
  >> Q.EXISTS_TAC `n` >> REWRITE_TAC []
 QED
 
+(* removed ‘!n. 0 <= f n’ from antecedents *)
 Theorem ext_suminf_eq :
-    !f g. (!n. 0 <= f n) /\ (!n. f n = g n) ==> (ext_suminf f = ext_suminf g)
+    !f g. (!n. f n = g n) ==> (ext_suminf f = ext_suminf g)
 Proof
     rpt STRIP_TAC
- >> `!n. 0 <= g n` by PROVE_TAC []
- >> RW_TAC std_ss [ext_suminf_def, GSYM le_antisym] (* 2 subgoals, same tacticals *)
- >> (MATCH_MP_TAC sup_mono \\
-     GEN_TAC >> BETA_TAC >> irule EXTREAL_SUM_IMAGE_MONO \\
-     REWRITE_TAC [IN_COUNT, FINITE_COUNT] \\
-     CONJ_TAC >- PROVE_TAC [le_refl] \\
-     DISJ1_TAC >> NTAC 2 STRIP_TAC \\
-     CONJ_TAC >> MATCH_MP_TAC pos_not_neginf >> art [])
+ >> Suff ‘f = g’ >- rw []
+ >> rw [FUN_EQ_THM]
 QED
 
 Theorem ext_suminf_sub :
@@ -7470,13 +7483,14 @@ val max_fn_seq_mono = store_thm
 val EXTREAL_SUP_FUN_SEQ_MONO_IMAGE = store_thm
   ("EXTREAL_SUP_FUN_SEQ_MONO_IMAGE",
   ``!f (P:extreal->bool) (P':('a->extreal)->bool).
-                (?x. P x) /\ (?z. z <> PosInf /\ !x. P x ==> x <= z) /\ (P = IMAGE f P') /\
-                (!g1 g2. (g1 IN P' /\ g2 IN P' /\ (!x. g1 x <= g2 x))  ==> f g1 <= f g2) /\
-                (!g1 g2. g1 IN P' /\ g2 IN P' ==> (\x. max (g1 x) (g2 x)) IN P')
-          ==> ?g. (!n. g n IN P') /\
-                  (!x n. g n x <= g (SUC n) x) /\
-                  (sup (IMAGE (\n. f (g n)) UNIV) = sup P)``,
-  rpt STRIP_TAC
+       (?x. P x) /\ (?z. z <> PosInf /\ !x. P x ==> x <= z) /\ (P = IMAGE f P') /\
+       (!g1 g2. (g1 IN P' /\ g2 IN P' /\ (!x. g1 x <= g2 x))  ==> f g1 <= f g2) /\
+       (!g1 g2. g1 IN P' /\ g2 IN P' ==> (\x. max (g1 x) (g2 x)) IN P')
+      ==>
+       ?g. (!n. g n IN P') /\
+           (!x n. g n x <= g (SUC n) x) /\
+           (sup (IMAGE (\n. f (g n)) UNIV) = sup P)``,
+    rpt STRIP_TAC
   >> `?g. (!n:num. g n IN P') /\ (sup (IMAGE (\n. f (g n)) UNIV) = sup P)`
       by METIS_TAC [EXTREAL_SUP_FUN_SEQ_IMAGE]
   >> Q.EXISTS_TAC `max_fn_seq g`
