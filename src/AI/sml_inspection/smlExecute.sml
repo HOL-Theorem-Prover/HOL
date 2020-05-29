@@ -14,7 +14,7 @@ val ERR = mk_HOL_ERR "smlExec"
 
 val sml_dir = HOLDIR ^ "/src/AI/sml_inspection"
 val sml_code_dir = sml_dir ^ "/code"
-val execprefix_glob = ref "noprefix"
+val execprefix_glob = ref ""
 
 (* -------------------------------------------------------------------------
    Global references
@@ -43,6 +43,26 @@ fun exec_sml file s =
   in
     os s; TextIO.closeOut oc; can QUse.use path
   end
+
+fun exec_poly file s =
+  let
+    val _    = mkDir_err sml_code_dir
+    val path = sml_code_dir ^ "/" ^ !execprefix_glob ^ "_" ^ file
+    val oc   = TextIO.openOut path
+    fun os s = TextIO.output (oc,s)
+  in
+    os s; TextIO.closeOut oc; can PolyML.use path
+  end
+
+
+fun use_string s =
+  let
+    val stream = TextIO.openString s
+    fun infn () = TextIO.input1 stream
+  in
+    PolyML.compiler (infn, []) ()
+  end
+
 
 (* -------------------------------------------------------------------------
    Tests
@@ -79,20 +99,13 @@ fun is_thm_value l s =
     | _   => false
   end
 
-fun is_thm s =
-  let
-    val sval = "tactictoe_untyped_value"
-    val b = exec_sml "is_thm"
-      (
-      "val " ^ sval ^ " = (" ^ s ^ ");" ^
-      "\nval _ = smlExecute.sml_bool_glob := " ^
-      "smlExecute.is_thm_value (#allVal (PolyML.globalNameSpace) ()) " ^
-      quote sval ^ ";" ^
-      "\nval _ = PolyML.Compiler.forgetValue " ^ quote sval ^ ";"
-      )
-  in
-    b andalso (!sml_bool_glob)
-  end
+fun is_thm s = exec_sml "is_thm" ("val _ : Thm.thm = (" ^ s ^ ")")
+fun is_tactic s = exec_sml "is_tactic" ("val _ : Tactic.tactic = (" ^ s ^ ")")
+fun is_string s = exec_sml "is_string" ("val _ : String.string = (" ^ s ^ ")")
+fun is_simpset s = 
+  exec_sml "is_simpset" ("val _ : simpLib.simpset = (" ^ s ^ ")")
+fun is_thml s = exec_sml "is_thm" ("val _ : Thm.thm List.list = (" ^ s ^ ")")
+
 
 fun thm_of_sml s =
   if is_thm s then
@@ -109,9 +122,7 @@ fun thml_of_sml sl =
     if b then SOME (combine (sl, !sml_thml_glob)) else NONE
   end
 
-fun is_tactic s = exec_sml "is_tactic" ("val _ = Tactical.VALID (" ^ s ^ ")")
 
-fun is_string s = exec_sml "is_string" ("val _ = String.isPrefix (" ^ s ^ ")")
 
 fun is_pointer_eq s1 s2 =
   let

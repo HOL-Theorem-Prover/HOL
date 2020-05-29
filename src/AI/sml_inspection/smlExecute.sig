@@ -6,6 +6,8 @@ sig
   (* execution function *)
   val execprefix_glob  : string ref
   val exec_sml         : string -> string -> bool
+  val exec_poly        : string -> string -> bool
+  val use_string       : string -> unit  
 
   (* global references *)
   val sml_bool_glob     : bool ref
@@ -22,8 +24,10 @@ sig
   val is_local_value   : string -> bool
 
   val is_thm           : string -> bool
+  val is_thml          : string -> bool
   val is_tactic        : string -> bool
   val is_string        : string -> bool
+  val is_simpset       : string -> bool
   val is_pointer_eq    : string -> string -> bool
   val is_stype         : string -> bool
 

@@ -102,22 +102,22 @@ fun record_tactic (tac,stac) g =
 fun wrap_stac stac = String.concatWith " "
   ["( tttRecord.record_tactic","(",stac,",",mlquote stac,")",")"]
 
-fun wrap_tacexp e = case e of
-    SmlTactic stac => if is_tactic stac
-                      then SmlTactic (wrap_stac stac)
-                      else SmlTactic stac
-  | SmlTactical _ => e
-  | SmlInfix (s,(e1,e2)) => SmlInfix (s,(wrap_tacexp e1, wrap_tacexp e2))
+fun wrap_proofexp e = case e of
+    ProofTactic stac => ProofTactic (wrap_stac stac)
+  | ProofOther _ => e
+  | ProofTactical _ => e
+  | ProofInfix (s,(e1,e2)) => 
+    ProofInfix (s,(wrap_proofexp e1, wrap_proofexp e2))
 
 fun wrap_proof ostac =
   let
     (* val _ =  debug ("original proof: " ^ ostac) *)
-    val tacexp = extract_tacexp ostac
-    val ntac = size_of_tacexp tacexp
+    val proofexp = extract_proofexp ostac
+    val ntac = size_of_proofexp proofexp
     val _  = debug ("#tactics (proof): " ^ its ntac)
     val _  = n_tactic_parsed := (!n_tactic_parsed) + ntac
     val _  = debug ("#tactics (total): " ^ its (!n_tactic_parsed))
-    val wstac = string_of_tacexp (wrap_tacexp tacexp)
+    val wstac = string_of_proofexp (wrap_proofexp proofexp)
     (* val _ = debug ("wrapped proof: " ^ wstac) *)
   in
     (wstac, tactic_of_sml (!record_proof_time) wstac)

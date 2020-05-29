@@ -137,7 +137,7 @@ fun replace_code2 st = case st of
                        )
   | _               => raise ERR "replace_code2" ""
 
-(* forget "op" in a body that does not contains definitions *)
+(* forget "op" in a body that does not contain definitions *)
 fun replace_program f g p = case p of
     [] => []
   | Code ("op",Protect) :: Code (_,SReplace sl) :: m =>

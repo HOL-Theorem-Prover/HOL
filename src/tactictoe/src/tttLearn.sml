@@ -57,6 +57,26 @@ fun abstract_thmlarg stac =
     else SOME (String.concatWith " " sl2, !thmllref)
   end
 
+(* type of construction in tactics 
+   of X => 
+   | X => 
+   handle X =>
+   fun X = 
+   val X =
+   and X =
+   fn X =>
+   
+   let in local end if then else case
+   not supported (open struct)
+
+When some of the keyword disappear in the subexpressions 
+ignoring parentheses
+
+Do not want to abstract in the X part.
+*)
+
+   
+
 (* -------------------------------------------------------------------------
    Instantiating abstracted tactic with a list of theorems
    ------------------------------------------------------------------------- *)
