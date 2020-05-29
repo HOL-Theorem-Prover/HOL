@@ -754,7 +754,7 @@ a store_thm equivalent."))
 
 (defvar holscript-quantifier-regexp
   (concat (regexp-opt holscript-boolean-quantifiers) "\\|"
-          (regexp-opt '("some" "LEAST") 'words) "\\|\\_<[@λ]\\_>")
+          (regexp-opt '("some" "LEAST") 'symbols) "\\|\\_<[@λ]\\_>")
   "List of strings that can begin \"quantifier blocks\".")
 
 
@@ -870,7 +870,7 @@ a store_thm equivalent."))
                                (holscript-simple-token-forward)))
                     (buffer-substring-no-properties p (point))))))))
          (t (let ((p (point)))
-              (skip-syntax-forward "w")
+              (skip-syntax-forward "w_")
               (if (looking-at "\\$")
                   (progn (forward-char 1)
                          (holscript-simple-token-forward)))
