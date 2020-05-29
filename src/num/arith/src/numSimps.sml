@@ -299,7 +299,7 @@ and
         (type_of (bvar (rand tm)) = num_ty andalso is_arith (body (rand tm)))
    else if (is_abs tm) then false
    else if (is_geq tm) orelse (is_less tm) orelse
-           (is_leq tm) orelse (is_great tm) then  true
+           (is_leq tm) orelse (is_greater tm) then  true
    else if (is_conj tm) orelse (is_disj tm) orelse (is_imp tm)
      orelse (is_eq tm andalso type_of (rhs tm) = Type.bool) then
      is_arith (lhand tm) andalso is_arith (rand tm)

@@ -15,15 +15,15 @@ sig
   val is_mult : term -> bool
   val mk_less : term * term -> term
   val mk_leq : term * term -> term
-  val mk_great : term * term -> term
+  val mk_greater : term * term -> term
   val mk_geq : term * term -> term
   val dest_less : term -> term * term
   val dest_leq : term -> term * term
-  val dest_great : term -> term * term
+  val dest_greater : term -> term * term
   val dest_geq : term -> term * term
   val is_less : term -> bool
   val is_leq : term -> bool
-  val is_great : term -> bool
+  val is_greater : term -> bool
   val is_geq : term -> bool
   val is_num_reln : term -> bool
   val mk_suc : term -> term

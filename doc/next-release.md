@@ -193,6 +193,11 @@ Incompatibilities:
     To restore the old behaviour it is necessary to exclude `SORTED_DEF` (use `temp_delsimps`), and reinstate `SORTED_NIL` and `SORTED_SING` (use `augment_srw_ss [rewrites [thmnames]]`).
 
 
+* The syntax for *greater than* in `intSyntax` and `realSyntax` is consistently
+  named as in `numSyntax`: The functions `great_tm`,`dest_great` and `mk_great`
+  become `greater_tm`, `dest_greater` and `mk_greater`, respectively.
+  Additionally, `int_arithTheory.add_to_great` is renamed to
+  `int_arithTheory.add_to_greater`.
 
 * * * * *
 
