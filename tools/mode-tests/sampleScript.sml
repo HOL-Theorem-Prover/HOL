@@ -182,4 +182,15 @@ Proof
   tac
 QED
 
+Theorem eliot_let_indent:
+  foo x =
+  let
+    a = b
+  in
+    z
+Proof
+  tac
+QED
+
+
 val _ = export_theory()
