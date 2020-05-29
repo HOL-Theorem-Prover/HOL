@@ -154,6 +154,11 @@ Incompatibilities:
 	Also, `DROP_NIL` has been renamed to `DROP_EQ_NIL`, to avoid having both `DROP_nil`
 	and `DROP_NIL` around. Furthermore, `>=` in the theorem statement has been replaced with `<=`.
 
+* The syntax for *greater than* in `intSyntax` and `realSyntax` is consistently
+  named as in `numSyntax`: The functions `great_tm`,`dest_great` and `mk_great`
+  become `greater_tm`, `dest_greater` and `mk_greater`, respectively.
+  Additionally, `int_arithTheory.add_to_great` is renamed to
+  `int_arithTheory.add_to_greater`.
 
 * * * * *
 

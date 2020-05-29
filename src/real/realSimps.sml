@@ -420,7 +420,7 @@ fun non_presburger_subterms tm =
    (if (is_conj tm) orelse (is_disj tm) orelse (is_imp tm) orelse
        (is_eq tm) orelse
        (is_less tm) orelse (is_leq tm) orelse
-       (is_great tm) orelse (is_geq tm) orelse
+       (is_greater tm) orelse (is_geq tm) orelse
        (is_plus tm) orelse (is_minus tm) orelse
        (is_linear_mult tm handle _ => false)
     then tunion (non_presburger_subterms (arg1 tm))

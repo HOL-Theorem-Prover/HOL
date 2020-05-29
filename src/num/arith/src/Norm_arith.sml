@@ -79,7 +79,7 @@ fun NUM_RELN_NORM_CONV arith_conv leq_conv tm =
                   leq_conv)
               else if (is_less tm') then
                  (NOT_LESS_NORM_CONV THENC leq_conv)
-              else if (is_great tm') then
+              else if (is_greater tm') then
                  (NOT_GREAT_NORM_CONV THENC leq_conv)
               else if (is_geq tm') then
                  (NOT_GEQ_NORM_CONV THENC
@@ -95,7 +95,7 @@ fun NUM_RELN_NORM_CONV arith_conv leq_conv tm =
             (LESS_NORM_CONV THENC
               (RATOR_CONV
                 (RAND_CONV (TRY_CONV COLLECT_NUM_CONSTS_CONV))) THENC leq_conv)
-         else if (is_great tm) then
+         else if (is_greater tm) then
             (GREAT_NORM_CONV THENC
              (RATOR_CONV
                (RAND_CONV (TRY_CONV COLLECT_NUM_CONSTS_CONV))) THENC
