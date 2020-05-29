@@ -942,8 +942,9 @@ a store_thm equivalent."))
                 (point)))))))
 
 (defvar holscript-indent-level 0 "Default indentation level")
-(defvar holscript-debugging-messages-p nil
-  "Whether or not to emit debugging messages")
+(defcustom holscript-debugging-messages-p nil
+  "Whether or not to emit debugging messages"
+  :type 'boolean)
 (defun holscript-message (s &rest rest)
   (if holscript-debugging-messages-p (apply 'message s rest)))
 (defun holscript-smie-rules (kind token)
