@@ -17,12 +17,12 @@ sig
   val sml_goal_glob     : goal ref
   val sml_thm_glob      : thm ref
   val sml_thml_glob     : thm list ref
+  val sml_termtactic_glob : (string -> tactic) ref
 
   (* tests *)
   val is_thm_value     :
     (string * PolyML.NameSpace.Values.value) list -> string -> bool
   val is_local_value   : string -> bool
-
   val is_thm           : string -> bool
   val is_thml          : string -> bool
   val is_tactic        : string -> bool
@@ -35,6 +35,7 @@ sig
   val thm_of_sml       : string -> (string * thm) option
   val thml_of_sml      : string list -> (string * thm) list option
   val tactic_of_sml    : real -> string -> tactic
+  val termtactic_of_sml    : real -> string -> (string -> tactic)
   val string_of_sml    : string -> string
   val goal_of_sml      : string -> goal
 

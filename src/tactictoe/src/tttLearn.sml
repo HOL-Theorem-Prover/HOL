@@ -57,26 +57,6 @@ fun abstract_thmlarg stac =
     else SOME (String.concatWith " " sl2, !thmllref)
   end
 
-(* type of construction in tactics 
-   of X => 
-   | X => 
-   handle X =>
-   fun X = 
-   val X =
-   and X =
-   fn X =>
-   
-   let in local end if then else case
-   not supported (open struct)
-
-When some of the keyword disappear in the subexpressions 
-ignoring parentheses
-
-Do not want to abstract in the X part.
-*)
-
-   
-
 (* -------------------------------------------------------------------------
    Instantiating abstracted tactic with a list of theorems
    ------------------------------------------------------------------------- *)
@@ -92,6 +72,109 @@ fun inst_thmlarg thmls stac =
     then String.concatWith " " (inst_thmlarg_loop thmls sl)
     else stac
   end
+
+(* -------------------------------------------------------------------------
+   Abstracting first found term in tactics
+   ------------------------------------------------------------------------- *)
+
+val termarg_placeholder = "tactictoe_termarg"
+
+fun is_termarg_stac stac =
+  mem termarg_placeholder (partial_sml_lexer stac)
+
+fun is_quoted s = 
+  let val n = String.size s in
+    String.sub (s,0) = #"\"" andalso String.sub (s, n - 1) = #"\""
+  end
+
+fun abstract_termarg_loop termref l = case l of
+    [] => []
+  | "[" :: a :: b :: "]" :: m => 
+    if drop_sig a = "QUOTE" andalso is_quoted b 
+      then 
+        (
+        termref := SOME b;  
+        "[" :: a :: termarg_placeholder :: "]" ::  m
+        )
+      else hd l :: abstract_termarg_loop termref (tl l) 
+  | a :: m => a :: abstract_termarg_loop termref m 
+
+fun abstract_termarg stac =
+  if is_termarg_stac stac then NONE else
+  let
+    val sl1 = partial_sml_lexer stac
+    val termref = ref NONE
+    val sl2 = abstract_termarg_loop termref sl1
+  in
+    if isSome (!termref)
+    then SOME (String.concatWith " " sl2, valOf (!termref))
+    else NONE
+  end
+
+fun inst_termarg_loop s l =
+  let fun f x = if x = termarg_placeholder then s else x in map f l end
+
+fun inst_termarg s stac = 
+  let val sl = partial_sml_lexer stac in
+    if mem termarg_placeholder sl
+    then String.concatWith " " (inst_termarg_loop (mlquote s) sl)
+    else stac
+  end
+
+fun fn_termarg stac = 
+  let 
+    val stac' = 
+      "fn " ^ termarg_placeholder ^ " => (Tactical.VALID ( " ^ stac ^ " ))" 
+  in
+    termtactic_of_sml (!learn_tactic_time) stac'
+  end
+
+fun apply_termarg_stac_aux stac g sl = 
+  let 
+    val tac = fn_termarg stac
+    fun f s = ((tac s) g, inst_termarg s stac)
+  in
+    tryfind f sl  
+  end
+
+(* -------------------------------------------------------------------------
+   Predict subterms
+   ------------------------------------------------------------------------- *)
+
+fun pred_ssubterm (asl,w) stm =
+  let 
+    val tm = Term [QUOTE stm]
+    val mem = !show_types
+    val tmll = map (find_terms (fn _ => true)) (w :: asl)
+    val tml1 = mk_term_set (List.concat tmll)
+    val tmfea = map_assoc (fn x => 
+      (if is_var x then ~1 else if is_const x then ~2 else ~3) :: 
+       feahash_of_term x) tml1
+    val symweight = learn_tfidf tml2
+    val tml2 = termknn (symweight, tmfea) 1 (feahash_of_term tm)   
+    val r = (show_types := true; term_to_string (hd tml2))
+  in
+    show_types := mem; r
+  end
+
+fun apply_termarg_stac stac g =
+  apply_termarg_stac_aux stac g (pred_ssubterm (asl,w) stm)
+
+fun abs_app_stac stac tim g =
+  if is_termarg_stac 
+  then 
+
+(* 
+load "tttUnfold"; open tttUnfold;
+load "tttLearn"; open tttLearn;
+val stac = "EXISTS_TAC ``1:num``";
+val stac' = unquote_string stac;
+val (astac,sterm) = valOf (abstract_termarg stac');
+val (asl,w) :goal = ([],``?x.x>0``);
+val sl = ["0","3","2","1"];
+val ((gl,_),s) = apply_termarg_stac_aux astac g sl;
+val sl = pred_ssubterm (asl,w) "y:num";
+*)
 
 (* -------------------------------------------------------------------------
    Combining abstractions and instantiations

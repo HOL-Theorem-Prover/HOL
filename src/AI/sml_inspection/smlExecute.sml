@@ -22,6 +22,7 @@ val execprefix_glob = ref ""
 
 val sml_bool_glob = ref false
 val sml_tactic_glob = ref (FAIL_TAC "smlExecute")
+val sml_termtactic_glob = ref (fn (_:string) => FAIL_TAC "smlExecute")
 val sml_tacticl_glob = ref []
 val sml_string_glob = ref ""
 val sml_goal_glob = ref ([],F)
@@ -54,7 +55,6 @@ fun exec_poly file s =
     os s; TextIO.closeOut oc; can PolyML.use path
   end
 
-
 fun use_string s =
   let
     val stream = TextIO.openString s
@@ -62,7 +62,6 @@ fun use_string s =
   in
     PolyML.compiler (infn, []) ()
   end
-
 
 (* -------------------------------------------------------------------------
    Tests
@@ -122,8 +121,6 @@ fun thml_of_sml sl =
     if b then SOME (combine (sl, !sml_thml_glob)) else NONE
   end
 
-
-
 fun is_pointer_eq s1 s2 =
   let
     val b = exec_sml "is_pointer_eq"
@@ -148,6 +145,20 @@ fun tactic_of_sml tim s =
     val b = exec_sml "tactic_of_sml" program
   in
     if b then !sml_tactic_glob else raise ERR "tactic_of_sml" s
+  end
+
+(* -------------------------------------------------------------------------
+   Read term tactics (already wrapped with VALID in tttLearn.sml)
+   ------------------------------------------------------------------------- *)
+
+fun termtactic_of_sml tim s =
+  let
+    val program =
+      "let fun f () = smlExecute.sml_termtactic_glob := (" ^ s ^ ") in " ^
+      "smlTimeout.timeout " ^ rts tim ^ " f () end"
+    val b = exec_sml "tactic_of_sml" program
+  in
+    if b then !sml_termtactic_glob else raise ERR "termtactic_of_sml" s
   end
 
 (* -------------------------------------------------------------------------

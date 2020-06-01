@@ -363,13 +363,13 @@ fun chainy_dep thyorder thy namethml =
     val thyl = before_elem thy thyorder
     fun f (name,thm) =
       let
-        val namethml1 = filter (older_than thm) namethml
+        val namethml1 = filter (older_than thm) (DB.thms thy)
         val thmidl2 = map (fn (name,_) => (thy,name)) namethml1
       in
         ((thy,name), (thyl,thmidl2))
       end
   in
-    map f namethml
+    map f (DB.theorems thy)
   end
 
 end (* struct *)

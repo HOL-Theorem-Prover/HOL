@@ -961,13 +961,26 @@ fun end_unfold_thy () =
     f "Replace id" replace_id_time
   end
 
-fun unquoteString thy file =
+fun unquote_script thy file =
   let
     val dir = tactictoe_dir ^ "/code"
     val _ = mkDir_err dir
     val fout = dir ^ "/unquote_" ^ thy
     val cmd = HOLDIR ^ "/bin/unquote" ^ " -i " ^ file ^ " " ^ fout
   in
+    ignore (OS.Process.system cmd);
+    String.concatWith " " (readl fout)
+  end
+
+fun unquote_string s =
+  let
+    val dir = tactictoe_dir ^ "/code"
+    val _ = mkDir_err dir
+    val fin = dir ^ "/unquote_string_in"
+    val fout = dir ^ "/unquote_string_out"
+    val cmd = HOLDIR ^ "/bin/unquote" ^ " -i " ^ fin ^ " " ^ fout
+  in
+    writel fin [s];
     ignore (OS.Process.system cmd);
     String.concatWith " " (readl fout)
   end
@@ -979,7 +992,7 @@ fun rm_spaces s =
 
 fun sketch_wrap thy file =
   let
-    val s1 = unquoteString thy file
+    val s1 = unquote_script thy file
     val s3 = rm_spaces (rm_comment s1)
     val sl = partial_sml_lexer s3
     val _ = write_sl (tactictoe_dir ^ "/code/before_sketch_" ^ thy) sl
