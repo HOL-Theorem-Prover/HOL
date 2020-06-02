@@ -57,10 +57,6 @@ fun abstract_thmlarg stac =
     else SOME (String.concatWith " " sl2, !thmllref)
   end
 
-(* -------------------------------------------------------------------------
-   Instantiating abstracted tactic with a list of theorems
-   ------------------------------------------------------------------------- *)
-
 fun inst_thmlarg_loop thmls l =
   let fun f x = if x = thmlarg_placeholder then thmls else x in
     map f l
@@ -74,7 +70,7 @@ fun inst_thmlarg thmls stac =
   end
 
 (* -------------------------------------------------------------------------
-   Abstracting first found term in tactics
+   Abstracting first term in tactics
    ------------------------------------------------------------------------- *)
 
 val termarg_placeholder = "tactictoe_termarg"
@@ -94,7 +90,7 @@ fun abstract_termarg_loop termref l = case l of
       then 
         (
         termref := SOME b;  
-        "[" :: a :: termarg_placeholder :: "]" ::  m
+        "[" :: a :: "(" :: termarg_placeholder :: b :: ")" :: "]" ::  m
         )
       else hd l :: abstract_termarg_loop termref (tl l) 
   | a :: m => a :: abstract_termarg_loop termref m 
@@ -111,58 +107,32 @@ fun abstract_termarg stac =
     else NONE
   end
 
-fun inst_termarg_loop s l =
-  let fun f x = if x = termarg_placeholder then s else x in map f l end
-
-fun inst_termarg s stac = 
-  let val sl = partial_sml_lexer stac in
-    if mem termarg_placeholder sl
-    then String.concatWith " " (inst_termarg_loop (mlquote s) sl)
-    else stac
-  end
-
-fun fn_termarg stac = 
-  let 
-    val stac' = 
-      "fn " ^ termarg_placeholder ^ " => (Tactical.VALID ( " ^ stac ^ " ))" 
-  in
-    termtactic_of_sml (!learn_tactic_time) stac'
-  end
-
-fun apply_termarg_stac_aux stac g sl = 
-  let 
-    val tac = fn_termarg stac
-    fun f s = ((tac s) g, inst_termarg s stac)
-  in
-    tryfind f sl  
-  end
-
-(* -------------------------------------------------------------------------
-   Predict subterms
-   ------------------------------------------------------------------------- *)
-
 fun pred_ssubterm (asl,w) stm =
   let 
-    val tm = Term [QUOTE stm]
+    val tm = Parse.Term [QUOTE stm]
     val mem = !show_types
     val tmll = map (find_terms (fn _ => true)) (w :: asl)
     val tml1 = mk_term_set (List.concat tmll)
-    val tmfea = map_assoc (fn x => 
-      (if is_var x then ~1 else if is_const x then ~2 else ~3) :: 
-       feahash_of_term x) tml1
-    val symweight = learn_tfidf tml2
-    val tml2 = termknn (symweight, tmfea) 1 (feahash_of_term tm)   
+    val tmfea = map_assoc (fn x => ~ (length tml1) :: feahash_of_term x) tml1
+    val symweight = learn_tfidf tmfea
+    val tml2 = termknn (symweight,tmfea) 1 (feahash_of_term tm)   
     val r = (show_types := true; term_to_string (hd tml2))
   in
     show_types := mem; r
   end
 
-fun apply_termarg_stac stac g =
-  apply_termarg_stac_aux stac g (pred_ssubterm (asl,w) stm)
+fun inst_termarg_loop g l = case l of
+      [] => []
+  | "[" :: a :: "(" :: termarg_placeholder :: b :: ")" :: "]" ::  m => 
+    "[" :: a :: mlquote (pred_ssubterm g b) :: "]" :: m 
+  | a :: m => a :: inst_termarg_loop g m
 
-fun abs_app_stac stac tim g =
-  if is_termarg_stac 
-  then 
+fun inst_termarg g stac = 
+  let val sl = partial_sml_lexer stac in
+    if mem termarg_placeholder sl
+    then String.concatWith " " (inst_termarg_loop g sl)
+    else stac
+  end
 
 (* 
 load "tttUnfold"; open tttUnfold;
@@ -177,10 +147,21 @@ val sl = pred_ssubterm (asl,w) "y:num";
 *)
 
 (* -------------------------------------------------------------------------
-   Combining abstractions and instantiations
+   Combining abstractions
    ------------------------------------------------------------------------- *)
 
-fun abstract_stac stac = Option.map fst (abstract_thmlarg stac)
+fun abstract_stac stac = 
+  let val a1 = abstract_thmlarg stac in
+    if not (!learn_abstract_term) then Option.map fst a1 else
+    let
+      val a2 = abstract_termarg (if isSome a1 then fst (valOf a1) else stac)
+    in
+      if isSome a1 orelse isSome a2 
+      then Option.map fst a2
+      else NONE
+    end
+  end
+
 fun prefix_absstac stac = [abstract_stac stac, SOME stac]
 
 fun concat_absstacl gfea ostac stacl =
@@ -192,14 +173,20 @@ fun concat_absstacl gfea ostac stacl =
     mk_sameorder_set String.compare (List.mapPartial I l2)
   end
 
-fun inst_stac thmidl stac =
-  let val thmls = 
-    "[" ^ String.concatWith " , " (map dbfetch_of_thmid thmidl) ^ "]"
+fun inst_stac (thmls,g) stac =
+  let 
+    val stac1 = inst_thmlarg thmls stac
+    val stac2 = inst_termarg g stac1
   in
-    inst_thmlarg thmls stac
+    stac2
   end
 
-fun inst_stacl thmidl stacl = map_assoc (inst_stac thmidl) stacl
+fun inst_stacl (thmidl,g) stacl = 
+  let val thmls = 
+    "[ " ^ String.concatWith " , " (map dbfetch_of_thmid thmidl) ^ " ]"
+  in
+    map (inst_stac (thmls,g)) stacl
+  end
 
 (* -------------------------------------------------------------------------
    Orthogonalization
@@ -233,9 +220,7 @@ fun test_stac g gl (stac, istac) =
     val (glo,t) = add_time (app_stac (!learn_tactic_time) istac) g
   in
     case glo of NONE => NONE | SOME newgl =>
-      (if op_subset goal_eq newgl gl
-       then SOME stac
-       else NONE)
+      (if op_subset goal_eq newgl gl then SOME stac else NONE)
   end
 
 val ortho_predstac_time = ref 0.0
@@ -253,10 +238,10 @@ fun orthogonalize (thmdata,tacdata)
     val _ = debug "abstract tactics"
     val stacl3 = concat_absstacl fea stac stacl2
     val _ = debug "predict theorems"
-    val thml = total_time ortho_predthm_time 
+    val thmidl = total_time ortho_predthm_time 
       (thmknn thmdata (!ttt_thmlarg_radius)) fea
     val _ = debug "instantiate arguments"
-    val stacl4 = inst_stacl thml stacl3
+    val stacl4 = combine (stacl3, inst_stacl (thmidl,ig) stacl3)
     val _ = debug "test tactics"
     val (neworthoo,t) = add_time (findSome (test_stac ig ogl)) stacl4
     val _ = debug ("test time: " ^ rts t)

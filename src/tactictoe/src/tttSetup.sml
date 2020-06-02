@@ -8,8 +8,8 @@
 structure tttSetup :> tttSetup =
 struct
 
-open HolKernel Abbrev boolLib aiLib smlExecute smlRedirect
-  mlThmData mlTacticData
+open HolKernel Abbrev boolLib aiLib 
+  smlExecute smlRedirect mlThmData mlTacticData
 
 (* -------------------------------------------------------------------------
    Directories
@@ -38,6 +38,7 @@ val record_let_flag     = ref false
 val record_tactic_time  = ref 2.0
 val record_proof_time = ref 2.0
 val learn_tactic_time = ref 0.04
+val learn_abstract_term = ref true
 
 (* -------------------------------------------------------------------------
    Search

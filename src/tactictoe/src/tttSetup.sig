@@ -21,6 +21,7 @@ sig
   val record_tactic_time : real ref
   val record_proof_time : real ref
   val learn_tactic_time : real ref  
+  val learn_abstract_term : bool ref
 
   (* search *)
   val ttt_search_time : real ref
