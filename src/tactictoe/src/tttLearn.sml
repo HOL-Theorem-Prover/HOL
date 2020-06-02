@@ -170,15 +170,12 @@ fun abstract_stac stac =
     end
   end
 
-fun prefix_absstac stac = [abstract_stac stac, SOME stac]
-
-fun concat_absstacl gfea ostac stacl =
+fun concat_absstacl gfea stac stacl =
   let
-    val l1 = case abstract_thmlarg ostac of NONE => []
-      | SOME (aostac, thmsll) => [SOME aostac]
-    val l2 = List.concat (map prefix_absstac stacl) @ l1
+    fun f x = [abstract_stac x, SOME x]
+    val l = List.concat (map f stacl) @ [abstract_stac stac]
   in
-    mk_sameorder_set String.compare (List.mapPartial I l2)
+    mk_sameorder_set String.compare (List.mapPartial I l)
   end
 
 fun inst_stac (thmls,g) stac =
