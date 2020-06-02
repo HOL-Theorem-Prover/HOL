@@ -5,9 +5,8 @@ sig
 
   (* execution function *)
   val execprefix_glob  : string ref
-  val exec_sml         : string -> string -> bool
-  val exec_poly        : string -> string -> bool
-  val use_string       : string -> unit  
+  val quse_string : string -> string -> bool
+  val use_string : string -> bool
 
   (* global references *)
   val sml_bool_glob     : bool ref
@@ -17,7 +16,6 @@ sig
   val sml_goal_glob     : goal ref
   val sml_thm_glob      : thm ref
   val sml_thml_glob     : thm list ref
-  val sml_termtactic_glob : (string -> tactic) ref
 
   (* tests *)
   val is_thm_value     :
@@ -32,12 +30,11 @@ sig
   val is_stype         : string -> bool
 
   (* readers *)
-  val thm_of_sml       : string -> (string * thm) option
-  val thml_of_sml      : string list -> (string * thm) list option
-  val tactic_of_sml    : real -> string -> tactic
-  val termtactic_of_sml    : real -> string -> (string -> tactic)
-  val string_of_sml    : string -> string
-  val goal_of_sml      : string -> goal
+  val thm_of_sml        : string -> (string * thm) option
+  val thml_of_sml       : string list -> (string * thm) list option
+  val tactic_of_sml     : real -> string -> tactic
+  val string_of_sml     : string -> string
+  val goal_of_sml       : string -> goal
 
   (* applying a tactic string *)
   val app_stac   : real -> string -> goal -> goal list option

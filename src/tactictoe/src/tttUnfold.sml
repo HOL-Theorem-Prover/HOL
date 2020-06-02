@@ -973,12 +973,12 @@ fun unquote_script thy file =
     String.concatWith " " (readl fout)
   end
 
-fun unquote_string s =
+fun unquote_sml s =
   let
     val dir = tactictoe_dir ^ "/code"
     val _ = mkDir_err dir
-    val fin = dir ^ "/unquote_string_in"
-    val fout = dir ^ "/unquote_string_out"
+    val fin = dir ^ "/unquote_sml_in"
+    val fout = dir ^ "/unquote_sml_out"
     val cmd = HOLDIR ^ "/bin/unquote" ^ " -i " ^ fin ^ " " ^ fout
   in
     writel fin [s];
@@ -1225,16 +1225,17 @@ run_evalscript (tttSetup.tactictoe_dir ^ "/savestate/arithmetic170");
 
 (* One theory
 load "tttUnfold"; open tttUnfold;
-tttSetup.ttt_savestate_flag := true;
+tttSetup.record_savestate_flag := true;
 aiLib.debug_flag := true;
-ttt_clean_record (); ttt_record_thy "relation";
-tttSetup.ttt_search_time := 5.0;
-run_evalscript_thyl "test2" false 3 ["relation"];
+ttt_clean_record (); ttt_record_thy "arithmetic";
+tttSetup.ttt_search_time := 10.0;
+run_evalscript_thyl "test_arithmetic-e1" false 1 ["arithmetic"];
 *)
 
 (* Core theories
 load "tttUnfold"; open tttUnfold;
-tttSetup.ttt_savestate_flag := true;
+tttSetup.record_savestate_flag := true;
+tttSetup.learn_abstract_term := true;
 aiLib.debug_flag := true;
 ttt_clean_record (); ttt_record ();
 
@@ -1242,7 +1243,7 @@ load "tttUnfold"; open tttUnfold;
 tttSetup.ttt_search_time := 10.0;
 aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val _ = run_evalscript_thyl "may18-e6" true 30 thyl;
+val _ = run_evalscript_thyl "june2-e1" true 30 thyl;
 *)
 
 

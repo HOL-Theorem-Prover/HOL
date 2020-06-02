@@ -14,6 +14,7 @@ open HolKernel Abbrev boolLib aiLib
   psMinimize tttSetup
 
 val ERR = mk_HOL_ERR "tttLearn"
+fun debug_err s1 s2 = (debug (s1 ^ " : " ^ s2); raise ERR s1 s2)
 
 (* -------------------------------------------------------------------------
    Abstracting theorem list in tactics
@@ -106,10 +107,15 @@ fun abstract_termarg stac =
     then SOME (String.concatWith " " sl2, valOf (!termref))
     else NONE
   end
+  handle Interrupt => raise Interrupt | _ => 
+    debug_err "Error: abstract_termarg" stac
 
 fun pred_ssubterm (asl,w) stm =
   let 
-    val tm = Parse.Term [QUOTE stm]
+    val tm = Parse.Term [QUOTE 
+      (valOf (String.fromString (aiLib.unquote_string stm)))]
+      handle Interrupt => raise Interrupt | _ => 
+        debug_err "Error: pred_ssubterm" stm
     val mem = !show_types
     val tmll = map (find_terms (fn _ => true)) (w :: asl)
     val tml1 = mk_term_set (List.concat tmll)
@@ -120,9 +126,11 @@ fun pred_ssubterm (asl,w) stm =
   in
     show_types := mem; r
   end
+  handle Interrupt => raise Interrupt | _ => 
+    debug_err "Error: pred_ssubterm" "unexpected"
 
 fun inst_termarg_loop g l = case l of
-      [] => []
+    [] => []
   | "[" :: a :: "(" :: termarg_placeholder :: b :: ")" :: "]" ::  m => 
     "[" :: a :: mlquote (pred_ssubterm g b) :: "]" :: m 
   | a :: m => a :: inst_termarg_loop g m
@@ -178,14 +186,16 @@ fun inst_stac (thmls,g) stac =
     val stac1 = inst_thmlarg thmls stac
     val stac2 = inst_termarg g stac1
   in
-    stac2
+    (stac,stac2)
   end
+  handle Interrupt => raise Interrupt | _ =>
+    debug_err "Error: inst_stac" stac
 
 fun inst_stacl (thmidl,g) stacl = 
   let val thmls = 
     "[ " ^ String.concatWith " , " (map dbfetch_of_thmid thmidl) ^ " ]"
   in
-    map (inst_stac (thmls,g)) stacl
+    mapfilter (inst_stac (thmls,g)) stacl
   end
 
 (* -------------------------------------------------------------------------
@@ -241,7 +251,7 @@ fun orthogonalize (thmdata,tacdata)
     val thmidl = total_time ortho_predthm_time 
       (thmknn thmdata (!ttt_thmlarg_radius)) fea
     val _ = debug "instantiate arguments"
-    val stacl4 = combine (stacl3, inst_stacl (thmidl,ig) stacl3)
+    val stacl4 = inst_stacl (thmidl,ig) stacl3
     val _ = debug "test tactics"
     val (neworthoo,t) = add_time (findSome (test_stac ig ogl)) stacl4
     val _ = debug ("test time: " ^ rts t)

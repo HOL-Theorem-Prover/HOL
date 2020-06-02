@@ -86,7 +86,7 @@ fun main_tactictoe (thmdata,tacdata) goal =
         val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
         val stacl1 = tacknn (tacsymweight,tacfea) (!ttt_presel_radius) l
         val stacl2 = mk_sameorder_set String.compare (metis_stac :: stacl1)
-        val istacl = inst_stacl (thmidl,g) stacl2     
+        val istacl = map snd (inst_stacl (thmidl,g) stacl2)     
       in
         tac_cache := dadd g istacl (!tac_cache); istacl
       end
