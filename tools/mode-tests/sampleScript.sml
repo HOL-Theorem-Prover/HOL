@@ -192,5 +192,11 @@ Proof
   tac
 QED
 
+Definition foo:
+  foo x =
+  case x of
+    NONE => 3
+  | SOME z => 4
+End
 
 val _ = export_theory()
