@@ -39,8 +39,8 @@
     ;; confused by script files that contain escaped quotation
     ;; characters. This despite the fact that it does cause pain in
     ;; terms such as \(x,y). x + y
-    (mapc (lambda (c) (modify-syntax-entry c "w" st)) "_'")
-    (mapc (lambda (c) (modify-syntax-entry c "_" st)) "$")
+    (mapc (lambda (c) (modify-syntax-entry c "w" st)) "'")
+    (mapc (lambda (c) (modify-syntax-entry c "_" st)) "$_")
     (mapc (lambda (c) (modify-syntax-entry c "."  st)) ".%&+-/:<=>?@`^|!~#,;")
     st)
   "The syntax table used in `holscript-mode'.")
