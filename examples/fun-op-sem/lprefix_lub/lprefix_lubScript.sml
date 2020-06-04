@@ -499,4 +499,6 @@ Proof
   \\ imp_res_tac lprefix_lub_equiv_chain2
 QED
 
+Overload LUB = “build_lprefix_lub”;
+
 val _ = export_theory ();
