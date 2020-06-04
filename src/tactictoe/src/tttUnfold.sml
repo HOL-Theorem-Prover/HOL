@@ -1165,7 +1165,6 @@ fun write_evalscript prefix file =
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
      sreflect_flag "tttSetup.thml_explo_flag" thml_explo_flag,
      sreflect_flag "aiLib.debug_flag" debug_flag,
-     "val _ = smlExecute.execprefix_glob := " ^ mlquote prefix ^ ";",
      "tacticToe.ttt_eval " ^
      "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^
      "tactictoe_goal;"]
@@ -1224,13 +1223,13 @@ ttt_clean_record (); ttt_record ();
 
 load "tttUnfold"; open tttUnfold;
 tttSetup.ttt_search_time := 30.0;
-tttSetup.aiLib.debug_flag := false;
+aiLib.debug_flag := false;
 tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val _ = run_evalscript_thyl "june4-e1" true 30 thyl;
 
 tttSetup.ttt_search_time := 30.0;
-tttSetup.aiLib.debug_flag := false;
+aiLib.debug_flag := false;
 tttSetup.thml_explo_flag := true;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val _ = run_evalscript_thyl "june4-e2" true 30 thyl;
