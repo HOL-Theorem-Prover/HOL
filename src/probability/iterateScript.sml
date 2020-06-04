@@ -340,8 +340,6 @@ val FUN_IN_IMAGE = store_thm ("FUN_IN_IMAGE",
  ``!f s x. x IN s ==> f(x) IN IMAGE f s``,
   SET_TAC[]);
 
-Theorem SUBSET_ANTISYM_EQ = SUBSET_SUBSET_EQ;
-
 val DIFF_BIGINTER = store_thm ("DIFF_BIGINTER",
  ``!u s. u DIFF BIGINTER s = BIGUNION {u DIFF t | t IN s}``,
   SIMP_TAC std_ss [BIGUNION_GSPEC] THEN SET_TAC[]);

@@ -49,10 +49,15 @@ Definition borel :
     borel = sigma univ(:real) {s | open s}
 End
 
+val _ = overload_on ("borel_measurable", ``\a. measurable a borel``);
+
 val indicator_fn_def = Define
    `indicator_fn s = \x. if x IN s then (1:real) else (0:real)`;
 
-val _ = overload_on ("borel_measurable", ``\a. measurable a borel``);
+(* MATHEMATICAL DOUBLE-STRUCK DIGIT ONE *)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x1D7D9, tmnm = "indicator_fn"};
+val _ = TeX_notation {hol = UTF8.chr 0x1D7D9, TeX = ("\\HOLTokenOne{}", 1)};
+val _ = TeX_notation {hol = "indicator_fn",   TeX = ("\\HOLTokenOne{}", 1)};
 
 (* ************************************************************************* *)
 (* Proofs                                                                    *)

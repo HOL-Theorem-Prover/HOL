@@ -182,4 +182,21 @@ Proof
   tac
 QED
 
+Theorem eliot_let_indent:
+  foo x =
+  let
+    a = b
+  in
+    z
+Proof
+  tac
+QED
+
+Definition foo:
+  foo x =
+  case x of
+    NONE => 3
+  | SOME z => 4
+End
+
 val _ = export_theory()

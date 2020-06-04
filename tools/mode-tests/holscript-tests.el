@@ -3,16 +3,22 @@
 
 (load (concat (file-name-as-directory (getenv "HOLDIR")) "tools/hol-mode"))
 
-(defun holscript-fixture-in (file body)
+(defun holscript-fixture-in (file sword-arg body)
   (with-temp-buffer
     (insert-file-contents-literally (concat holdir "tools/mode-tests/" file))
     (decode-coding-region (point-min) (point-max) 'utf-8-unix)
     (holscript-mode)
     (set-buffer-modified-p nil)
+    (superword-mode sword-arg)
     (funcall body)))
+
+(defun holscript-fixture-both (file body)
+  (holscript-fixture-in file 0 body)
+  (holscript-fixture-in file 1 body))
 
 
 (defun holscript-unchanged-at1 ()
+  ; (message "Testing unchanged at %d" (line-number-at-pos))
   (indent-for-tab-command)
   (not (buffer-modified-p)))
 
@@ -33,42 +39,42 @@
 
 (ert-deftest holscript-indent1 ()
   "Tests every line in sampleScript is already indented correctly"
-  (holscript-fixture-in "sampleScript.sml" 'holscript-eachline-unchanged))
+  (holscript-fixture-both "sampleScript.sml" 'holscript-eachline-unchanged))
+
+(defun holscript-indent2-test ()
+  (goto-char 86)
+  (insert " \t  ")
+  (indent-for-tab-command)
+  (should (= (point) 86))
+  (should (looking-at "^Theorem.bar:")))
 
 (ert-deftest holscript-indent2 ()
-  "Tests Theorem: syntax after Theorem=; space insert fixed"
-  (holscript-fixture-in "sampleScript.sml"
-                        (lambda ()
-                          (goto-char 86)
-                          (insert " \t  ")
-                          (indent-for-tab-command)
-                          (should (= (point) 86))
-                          (should (looking-at "^Theorem.bar:")))))
+  "Tests Theorem: syntax after Theorem="
+  (holscript-fixture-both "sampleScript.sml" 'holscript-indent2-test))
 
+(defun holscript-indent3-test ()
+  (goto-char 111)
+  (insert "\n")
+  (indent-for-tab-command)
+  (should (= (point) 114))
+  (beginning-of-line)
+  (should (= (point) 112))
+  (should (looking-at "  simp\\[]")))
 (ert-deftest holscript-indent3 ()
-  "Tactic indents 2 when moved under proof keyword"
-  (holscript-fixture-in
-   "sampleScript.sml"
-   (lambda ()
-     (goto-char 111)
-     (insert "\n")
-     (indent-for-tab-command)
-     (should (= (point) 114))
-     (beginning-of-line)
-     (should (= (point) 112))
-     (should (looking-at "  simp\\[]")))))
+  "Tactic indents 2 when moved under proof keyword (_)"
+  (holscript-fixture-both "sampleScript.sml" 'holscript-indent3-test))
 
+
+(defun holscript-indent4-test ()
+  (goto-char 214)
+  (insert "\n>-")
+  (indent-for-tab-command)
+  (beginning-of-line)
+  (should (= (point) 215))
+  (should (looking-at "  >-")))
 (ert-deftest holscript-indent4 ()
-  "Tactic indents to parent level 2, after >-"
-  (holscript-fixture-in
-   "sampleScript.sml"
-   (lambda()
-     (goto-char 214)
-     (insert "\n>-")
-     (indent-for-tab-command)
-     (beginning-of-line)
-     (should (= (point) 215))
-     (should (looking-at "  >-")))))
+  "Tactic indents to parent level 2, after >- (w)"
+  (holscript-fixture-both "sampleScript.sml" 'holscript-indent4-test))
 
 (defun move-check (posns mover)
   (goto-char (car posns))
@@ -84,14 +90,13 @@
       t)))
 
 
+(defun holscript-sexp-forward-test ()
+  (should (save-excursion
+            (and
+             (move-check '(1 12 41 42 64 84 121 139
+                             176 218 382 499)
+                         'forward-sexp)
+             (move-check '(2205 2486) 'forward-sexp)))))
 (ert-deftest holscript-sexp-forward1 ()
   "sexp-forward moves correctly"
-  (holscript-fixture-in
-   "sampleScript.sml"
-   (lambda()
-     (should (save-excursion
-               (and
-                (move-check '(1 12 41 42 64 84 121 139
-                                176 218 382 499)
-                            'forward-sexp)
-                (move-check '(2205 2486) 'forward-sexp)))))))
+  (holscript-fixture-both "sampleScript.sml" 'holscript-sexp-forward-test))

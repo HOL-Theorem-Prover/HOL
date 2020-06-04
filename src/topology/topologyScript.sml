@@ -176,13 +176,12 @@ val OPEN_OWN_NEIGH = store_thm("OPEN_OWN_NEIGH",
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[neigh] THEN
   EXISTS_TAC “S':'a->bool” THEN ASM_REWRITE_TAC[SUBSET_REFL]);
 
-val OPEN_UNOPEN = store_thm(
-  "OPEN_UNOPEN",
-  ``!S' top.
-       open_in(top) S' <=>
-       (BIGUNION { P | open_in(top) P /\ P SUBSET S' } = S')``,
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [DISCH_TAC THEN ONCE_REWRITE_TAC[GSYM SUBSET_SUBSET_EQ] THEN
+Theorem OPEN_UNOPEN :
+    !S' top. open_in(top) S' <=>
+             (BIGUNION {P | open_in(top) P /\ P SUBSET S'} = S')
+Proof
+    rpt GEN_TAC >> EQ_TAC >|
+  [ DISCH_TAC THEN ONCE_REWRITE_TAC[SET_EQ_SUBSET] THEN
     ASM_SIMP_TAC (srw_ss()) [BIGUNION_applied, SUBSET_applied] THEN
     CONJ_TAC THEN GEN_TAC THENL [
       DISCH_THEN(Q.X_CHOOSE_THEN `s` STRIP_ASSUME_TAC) THEN
@@ -193,8 +192,8 @@ val OPEN_UNOPEN = store_thm(
     ],
     DISCH_THEN(SUBST1_TAC o SYM) THEN
     MATCH_MP_TAC OPEN_IN_BIGUNION THEN
-    SIMP_TAC (srw_ss()) []
-  ]);
+    SIMP_TAC (srw_ss()) [] ]
+QED
 
 val OPEN_SUBOPEN = store_thm("OPEN_SUBOPEN",
   ``!S' top. open_in(top) S' <=>
@@ -204,7 +203,7 @@ val OPEN_SUBOPEN = store_thm("OPEN_SUBOPEN",
     EXISTS_TAC “S':'a->bool” THEN ASM_REWRITE_TAC[SUBSET_REFL],
     DISCH_TAC THEN C SUBGOAL_THEN SUBST1_TAC
      ``S' = BIGUNION { P | open_in(top) P /\ P SUBSET S'}`` THENL
-     [ONCE_REWRITE_TAC[GSYM SUBSET_SUBSET_EQ] THEN CONJ_TAC THENL
+     [ONCE_REWRITE_TAC[SET_EQ_SUBSET] THEN CONJ_TAC THENL
        [ONCE_REWRITE_TAC[SUBSET_applied] THEN
         ASM_SIMP_TAC (srw_ss()) [] THEN
         ASM_SIMP_TAC (srw_ss()) [IN_DEF],

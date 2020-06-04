@@ -1,0 +1,5 @@
+all: $(DEFAULT_TARGETS)
+.PHONY: all
+
+Termtab.uo Termtab.ui: Termtab.sml $(dprot $(SIGOBJ)/Table.ui)
+	$(HOLMOSMLC) Overlay.ui Table.ui -c $<

@@ -13,7 +13,6 @@
 (* Author: Chun Tian <binghe.lisp@gmail.com> (2020)                          *)
 (* Fondazione Bruno Kessler and University of Trento, Italy                  *)
 (* ========================================================================= *)
-(*                                                                           *)
 (*                 Probability Density Function (PDF) [11]                   *)
 (*                                                                           *)
 (*        (c) Copyright 2015,                                                *)
@@ -1803,10 +1802,10 @@ QED
 
    `integrable p X` is not needed due to "integrable_from_square"
  *)
-val variance_eq = store_thm
-  ("variance_eq",
-  ``!p X. prob_space p /\ real_random_variable X p /\ integrable p (\x. X x pow 2) ==>
-         (variance p X = expectation p (\x. X x pow 2) - expectation p X pow 2)``,
+Theorem variance_eq :
+    !p X. prob_space p /\ real_random_variable X p /\ integrable p (\x. X x pow 2) ==>
+         (variance p X = expectation p (\x. X x pow 2) - expectation p X pow 2)
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC integrable_from_square
  >> REWRITE_TAC [variance_def, central_moment_def, moment_def, expectation_def]
@@ -1832,7 +1831,7 @@ val variance_eq = store_thm
  (* preparing for applying "integral_add" *)
  >> Know `integral p (\x. (\x. (X x) pow 2 + EX pow 2) x + (\x. Normal (2 * -r) * X x) x) =
           integral p (\x. (X x) pow 2 + EX pow 2) + integral p (\x. Normal (2 * -r) * X x)`
- >- (MATCH_MP_TAC integral_add >> art [] >> BETA_TAC \\
+ >- (MATCH_MP_TAC integral_add >> simp [] \\
      CONJ_TAC
      >- (Suff `integrable p (\x. (\x. (X x) pow 2) x + (\x. (Normal r) pow 2) x)`
          >- METIS_TAC [] \\
@@ -1840,6 +1839,7 @@ val variance_eq = store_thm
          REWRITE_TAC [pow_2, extreal_mul_def] \\
          MATCH_MP_TAC integrable_const >> art [extreal_of_num_def, lt_infty]) \\
      CONJ_TAC >- (MATCH_MP_TAC integrable_cmul >> art []) \\
+     GEN_TAC >> DISCH_TAC >> DISJ1_TAC \\
      RW_TAC std_ss [pow_2, extreal_mul_def] >| (* 2 subgoals *)
      [ `?c. X x = Normal c` by PROVE_TAC [extreal_cases] >> POP_ORW \\
        REWRITE_TAC [extreal_mul_def, extreal_add_def, extreal_not_infty],
@@ -1848,9 +1848,10 @@ val variance_eq = store_thm
  >> BETA_TAC >> Rewr'
  >> Know `integral p (\x. (\x. (X x) pow 2) x + (\x. EX pow 2) x) =
           integral p (\x. (X x) pow 2) + integral p (\x. EX pow 2)`
- >- (MATCH_MP_TAC integral_add >> BETA_TAC >> art [pow_2, extreal_mul_def, extreal_not_infty] \\
+ >- (MATCH_MP_TAC integral_add >> simp [pow_2, extreal_mul_def, extreal_not_infty] \\
      CONJ_TAC >- (MATCH_MP_TAC integrable_const >> art [extreal_of_num_def, lt_infty]) \\
-     GEN_TAC >> `?c. X x = Normal c` by PROVE_TAC [extreal_cases] >> POP_ORW \\
+     GEN_TAC >> DISCH_TAC >> DISJ1_TAC \\
+    `?c. X x = Normal c` by PROVE_TAC [extreal_cases] >> POP_ORW \\
      REWRITE_TAC [extreal_mul_def, extreal_not_infty])
  >> BETA_TAC >> Rewr'
  >> Know `integral p (\x. EX pow 2) = EX pow 2 * measure p (m_space p)`
@@ -1887,7 +1888,8 @@ val variance_eq = store_thm
  >> MATCH_MP_TAC extreal_sub_add
  >> DISJ1_TAC >> art []
  >> `?r. integral p (\x. (X x) pow 2) = Normal r` by PROVE_TAC [integrable_normal_integral]
- >> POP_ORW >> REWRITE_TAC [extreal_not_infty]);
+ >> POP_ORW >> REWRITE_TAC [extreal_not_infty]
+QED
 
 (* A corollary: Var(X) is always less or equal than E[X^2] *)
 val variance_le = store_thm
@@ -1937,10 +1939,10 @@ val expectation_posinf = store_thm
  >> MATCH_MP_TAC integral_posinf >> art [lt_01]);
 
 (* a deep lemma: all second moments are finite iff one of them is finite *)
-val finite_second_moments_all = store_thm (* new *)
-  ("finite_second_moments_all",
-  ``!p X. prob_space p /\ real_random_variable X p ==>
-         (finite_second_moments p X <=> !r. second_moment p X (Normal r) < PosInf)``,
+Theorem finite_second_moments_all :
+    !p X. prob_space p /\ real_random_variable X p ==>
+         (finite_second_moments p X <=> !r. second_moment p X (Normal r) < PosInf)
+Proof
     RW_TAC std_ss [finite_second_moments_def, second_moment_def, moment_def]
  >> reverse EQ_TAC >> rpt STRIP_TAC
  >- (POP_ASSUM (STRIP_ASSUME_TAC o (Q.SPEC `0`)) \\
@@ -2010,6 +2012,7 @@ val finite_second_moments_all = store_thm (* new *)
        by METIS_TAC [] >> POP_ORW \\
      MATCH_MP_TAC integrable_add >> art [] \\
      CONJ_TAC >- (MATCH_MP_TAC integrable_const >> art [extreal_of_num_def, lt_infty]) \\
+     GEN_TAC >> DISCH_TAC >> DISJ1_TAC \\
      RW_TAC std_ss [extreal_not_infty] \\
     `?r. X x = Normal r` by PROVE_TAC [extreal_cases] >> POP_ORW \\
      REWRITE_TAC [extreal_sub_def, extreal_not_infty])
@@ -2029,7 +2032,8 @@ val finite_second_moments_all = store_thm (* new *)
      REAL_ARITH_TAC) >> Rewr'
  >> MATCH_MP_TAC integrable_add >> fs []
  >> reverse CONJ_TAC
- >- (RW_TAC std_ss [pow_2] >| (* 2 subgoals *)
+ >- (GEN_TAC >> DISCH_TAC >> DISJ1_TAC \\
+     RW_TAC std_ss [pow_2] >| (* 2 subgoals *)
      [ (* goal 1 (of 2) *)
       `?y. X x = Normal y` by PROVE_TAC [extreal_cases] >> POP_ORW \\
        REWRITE_TAC [extreal_sub_def, extreal_mul_def, extreal_not_infty],
@@ -2045,8 +2049,10 @@ val finite_second_moments_all = store_thm (* new *)
       (* goal 2 (of 3) *)
       MATCH_MP_TAC integrable_const >> art [extreal_of_num_def, lt_infty],
       (* goal 3 (of 3) *)
+      DISJ1_TAC \\
      `?y. X x = Normal y` by PROVE_TAC [extreal_cases] >> POP_ORW \\
-      REWRITE_TAC [extreal_mul_def, extreal_not_infty] ]);
+      REWRITE_TAC [extreal_mul_def, extreal_not_infty] ]
+QED
 
 val finite_second_moments_eq_finite_variance = store_thm
   ("finite_second_moments_eq_finite_variance",
@@ -3259,11 +3265,11 @@ val covariance_self = store_thm
     RW_TAC std_ss [variance_alt, covariance_def, pow_2]);
 
 (* i.e. `covariance p X Y` is zero if X and Y are uncorelated *)
-val uncorrelated_thm = store_thm
-  ("uncorrelated_thm",
-  ``!p X Y. prob_space p /\ real_random_variable X p /\ real_random_variable Y p /\
-            uncorrelated p X Y
-       ==> (expectation p (\s. (X s - expectation p X) * (Y s - expectation p Y)) = 0)``,
+Theorem uncorrelated_thm :
+    !p X Y. prob_space p /\ real_random_variable X p /\ real_random_variable Y p /\
+            uncorrelated p X Y ==>
+           (expectation p (\s. (X s - expectation p X) * (Y s - expectation p Y)) = 0)
+Proof
     RW_TAC std_ss [uncorrelated_def] (* 2 subgoals *)
  >> `expectation p X <> PosInf /\ expectation p X <> NegInf /\
      expectation p Y <> PosInf /\ expectation p Y <> NegInf`
@@ -3293,14 +3299,15 @@ val uncorrelated_thm = store_thm
        MATCH_MP_TAC integrable_cmul >> art [] \\
       `(\x. (X x) pow 2 + (Y x) pow 2) = (\x. (\x. (X x) pow 2) x + (\x. (Y x) pow 2) x)`
          by METIS_TAC [] >> POP_ORW \\
-       MATCH_MP_TAC integrable_add >> RW_TAC std_ss [pow_2] >| (* 2 subgoals *)
+       MATCH_MP_TAC integrable_add >> RW_TAC std_ss [pow_2] \\
+       DISJ1_TAC >> CONJ_TAC >| (* 2 subgoals *)
        [ `?r. X x = Normal r` by PROVE_TAC [extreal_cases] >> POP_ORW \\
          REWRITE_TAC [extreal_mul_def, extreal_not_infty],
          `?r. Y x = Normal r` by PROVE_TAC [extreal_cases] >> POP_ORW \\
          REWRITE_TAC [extreal_mul_def, extreal_not_infty] ],
        (* goal 2 (of 3) *)
        MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL \\
-       Q.EXISTS_TAC `X` >> Q.EXISTS_TAC `Y` >> fs [measure_space_def],
+       qexistsl_tac [‘X’, ‘Y’] >> fs [measure_space_def],
        (* goal 3 (of 3) *)
        REWRITE_TAC [abs_le_half_pow2] ]) >> DISCH_TAC
  >> `integrable p X /\ integrable p Y` by METIS_TAC [integrable_from_square]
@@ -3311,8 +3318,8 @@ val uncorrelated_thm = store_thm
           integral p (\x. X x * Y x) +
           integral p (\x. Normal c * Normal d - Normal c * Y x - Normal d * X x)`
  >- (MATCH_MP_TAC integral_add \\
-     RW_TAC std_ss [extreal_mul_def, extreal_not_infty] >| (* 3 subgoals *)
-     [ (* goal 1 (of 3) *)
+     RW_TAC std_ss [extreal_mul_def, extreal_not_infty] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
       `(\x. Normal (c * d) - Normal c * Y x - Normal d * X x) =
        (\x. (\x. Normal (c * d) - Normal c * Y x) x - (\x. Normal d * X x) x)`
         by METIS_TAC [] >> POP_ORW \\
@@ -3332,14 +3339,16 @@ val uncorrelated_thm = store_thm
          (* goal 1.3 (of 3) *)
         `?r. X x = Normal r` by PROVE_TAC [extreal_cases] >> POP_ORW \\
          REWRITE_TAC [extreal_mul_def, extreal_not_infty] ],
-       (* goal 2 (of 3) *)
-      `?a. X x = Normal a` by PROVE_TAC [extreal_cases] >> POP_ORW \\
-      `?b. Y x = Normal b` by PROVE_TAC [extreal_cases] >> POP_ORW \\
-       REWRITE_TAC [extreal_mul_def, extreal_not_infty],
-       (* goal 3 (of 3) *)
-      `?a. X x = Normal a` by PROVE_TAC [extreal_cases] >> POP_ORW \\
-      `?b. Y x = Normal b` by PROVE_TAC [extreal_cases] >> POP_ORW \\
-       REWRITE_TAC [extreal_mul_def, extreal_sub_def, extreal_not_infty] ]) >> Rewr'
+       (* goal 2 (of 2) *)
+       DISJ1_TAC >> CONJ_TAC >| (* 2 subgoals *)
+       [ (* goal 2.1 (of 2) *)
+        `?a. X x = Normal a` by PROVE_TAC [extreal_cases] >> POP_ORW \\
+        `?b. Y x = Normal b` by PROVE_TAC [extreal_cases] >> POP_ORW \\
+         REWRITE_TAC [extreal_mul_def, extreal_not_infty],
+         (* goal 2.2 (of 2) *)
+        `?a. X x = Normal a` by PROVE_TAC [extreal_cases] >> POP_ORW \\
+        `?b. Y x = Normal b` by PROVE_TAC [extreal_cases] >> POP_ORW \\
+         REWRITE_TAC [extreal_mul_def, extreal_sub_def, extreal_not_infty] ] ]) >> Rewr'
  >> Know `(\x. Normal c * Normal d - Normal c * Y x - Normal d * X x) =
           (\x. (\x. Normal c * Normal d) x + (\x. (- Normal c) * Y x + (- Normal d) * X x) x)`
  >- (FUN_EQ_TAC >> GEN_TAC >> BETA_TAC \\
@@ -3358,7 +3367,8 @@ val uncorrelated_thm = store_thm
       `(\x. Normal (-c) * Y x + Normal (-d) * X x) =
        (\x. (\x. Normal (-c) * Y x) x + (\x. Normal (-d) * X x) x)`
          by METIS_TAC [] >> POP_ORW \\
-       MATCH_MP_TAC integrable_add >> RW_TAC std_ss [integrable_cmul] >| (* 2 subgoals *)
+       MATCH_MP_TAC integrable_add >> RW_TAC std_ss [integrable_cmul] \\
+       DISJ1_TAC >> CONJ_TAC >| (* 2 subgoals *)
        [ (* goal 2.1 (of 2) *)
         `?r. Y x = Normal r` by PROVE_TAC [extreal_cases] >> POP_ORW \\
           REWRITE_TAC [extreal_mul_def, extreal_not_infty],
@@ -3366,6 +3376,7 @@ val uncorrelated_thm = store_thm
         `?r. X x = Normal r` by PROVE_TAC [extreal_cases] >> POP_ORW \\
           REWRITE_TAC [extreal_mul_def, extreal_not_infty] ],
        (* goal 3 (of 3) *)
+       DISJ1_TAC \\
       `?a. X x = Normal a` by PROVE_TAC [extreal_cases] >> POP_ORW \\
       `?b. Y x = Normal b` by PROVE_TAC [extreal_cases] >> POP_ORW \\
        RW_TAC std_ss [extreal_add_def, extreal_mul_def, extreal_not_infty] ]) >> Rewr'
@@ -3377,7 +3388,8 @@ val uncorrelated_thm = store_thm
  >> Know `integral p (\x. (\x. -Normal c * Y x) x + (\x. -Normal d * X x) x) =
           integral p (\x. -Normal c * Y x) + integral p (\x. -Normal d * X x)`
  >- (MATCH_MP_TAC integral_add >> art [extreal_ainv_def] \\
-     RW_TAC std_ss [integrable_cmul] >| (* 2 subgoals *)
+     RW_TAC std_ss [integrable_cmul] \\
+     DISJ1_TAC >> CONJ_TAC >| (* 2 subgoals *)
      [ (* goal 1 (of 2) *)
       `?r. Y x = Normal r` by PROVE_TAC [extreal_cases] >> POP_ORW \\
        REWRITE_TAC [extreal_mul_def, extreal_not_infty],
@@ -3391,7 +3403,8 @@ val uncorrelated_thm = store_thm
  >- (REWRITE_TAC [extreal_ainv_def] \\
      MATCH_MP_TAC integral_cmul >> art []) >> Rewr'
  >> art [extreal_ainv_def, extreal_mul_def, extreal_add_def, extreal_11, extreal_of_num_def]
- >> REAL_ARITH_TAC);
+ >> REAL_ARITH_TAC
+QED
 
 val uncorrelated_covariance = store_thm
   ("uncorrelated_covariance",
@@ -3409,11 +3422,11 @@ Proof
 QED
 
 (* Fundamental relation of uncorrelated r.v.'s [2, p.108] *)
-val variance_sum = store_thm
-  ("variance_sum",
-  ``!p X J. prob_space p /\ FINITE J /\ (!i. i IN J ==> real_random_variable (X i) p) /\
+Theorem variance_sum :
+    !p X J. prob_space p /\ FINITE J /\ (!i. i IN J ==> real_random_variable (X i) p) /\
             uncorrelated_vars p X J ==>
-           (variance p (\x. SIGMA (\n. X n x) J) = SIGMA (\n. variance p (X n)) J)``,
+           (variance p (\x. SIGMA (\n. X n x) J) = SIGMA (\n. variance p (X n)) J)
+Proof
     RW_TAC std_ss [uncorrelated_vars_def, variance_alt]
  >> Cases_on `J = {}`
  >- (Know `expectation p (\x. 0) = 0`
@@ -3523,7 +3536,8 @@ val variance_sum = store_thm
  >> SIMP_TAC std_ss [o_DEF, GSYM pow_2]
  (* an important shared result *)
  >> Know `!q r. q IN J /\ r IN J ==>
-                integrable p (\x. (X q x - expectation p (X q)) * (X r x - expectation p (X r)))`
+                integrable p (\x. (X q x - expectation p (X q)) *
+                                  (X r x - expectation p (X r)))`
  >- (rpt STRIP_TAC \\
      Q.ABBREV_TAC `E1 = expectation p (X q)` \\
      Q.ABBREV_TAC `E2 = expectation p (X r)` \\
@@ -3539,12 +3553,13 @@ val variance_sum = store_thm
         `!x. (X q x - E1) pow 2 + (X r x - E2) pow 2 =
              (\x. (X q x - E1) pow 2) x + (\x. (X r x - E2) pow 2) x`
            by METIS_TAC [] >> POP_ORW \\
-         MATCH_MP_TAC integrable_add >> CONJ_TAC >- fs [prob_space_def] \\
+         MATCH_MP_TAC integrable_add \\
+         CONJ_TAC >- fs [prob_space_def] \\
         `?e1. E1 = Normal e1` by PROVE_TAC [extreal_cases] >> POP_ORW \\
         `?e2. E2 = Normal e2` by PROVE_TAC [extreal_cases] >> POP_ORW \\
          REWRITE_TAC [CONJ_ASSOC] \\
          CONJ_TAC >- METIS_TAC [finite_second_moments_eq_integrable_squares] \\
-         GEN_TAC >> SIMP_TAC std_ss [] >> DISCH_TAC \\
+         GEN_TAC >> DISCH_TAC >> DISJ1_TAC >> BETA_TAC \\
          CONJ_TAC >> MATCH_MP_TAC pos_not_neginf >> REWRITE_TAC [le_pow2]) \\
      CONJ_TAC
      >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL \\
@@ -3553,9 +3568,11 @@ val variance_sum = store_thm
          CONJ_TAC
          >- (`!x. X q x - E1 = X q x - (\x. E1) x` by METIS_TAC [] >> POP_ORW \\
              MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
-             Q.EXISTS_TAC `X q` >> Q.EXISTS_TAC `\x. E1` \\
+             qexistsl_tac [`X q`, `\x. E1`] \\
              fs [real_random_variable, space_def, p_space_def, events_def] \\
-             reverse CONJ_TAC >- (Q.UNABBREV_TAC `E1` >> METIS_TAC []) \\
+             reverse CONJ_TAC
+             >- (GEN_TAC >> DISCH_TAC >> DISJ1_TAC \\
+                 Q.UNABBREV_TAC `E1` >> METIS_TAC []) \\
              MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST >> Q.EXISTS_TAC `E1` >> fs [space_def]) \\
          reverse CONJ_TAC
          >- (`!x. X r x - E2 = X r x - (\x. E2) x` by METIS_TAC [] >> POP_ORW \\
@@ -3582,7 +3599,11 @@ val variance_sum = store_thm
  >- (REWRITE_TAC [expectation_def] >> MATCH_MP_TAC integral_add \\
      CONJ_TAC >- fs [prob_space_def] \\
      REWRITE_TAC [CONJ_ASSOC] >> reverse CONJ_TAC (* easy goals first *)
-     >- (GEN_TAC >> BETA_TAC \\
+     >- (GEN_TAC >> BETA_TAC >> DISCH_TAC >> DISJ1_TAC \\
+         CONJ_TAC
+         >- (MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF >> RW_TAC std_ss [lt_infty] \\
+             MATCH_MP_TAC lte_trans >> Q.EXISTS_TAC `0` \\
+             REWRITE_TAC [le_pow2] >> REWRITE_TAC [lt_infty, extreal_of_num_def]) \\
          MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF \\
         `B SUBSET (J CROSS J)` by ASM_SET_TAC [] \\
         `FINITE (J CROSS J)` by PROVE_TAC [FINITE_CROSS] \\
@@ -3597,11 +3618,6 @@ val variance_sum = store_thm
         `?c. expectation p (X q) = Normal c` by PROVE_TAC [extreal_cases] >> POP_ORW \\
         `?d. expectation p (X r) = Normal d` by PROVE_TAC [extreal_cases] >> POP_ORW \\
          REWRITE_TAC [extreal_sub_def, extreal_mul_def, extreal_not_infty]) \\
-     reverse CONJ_TAC
-     >- (GEN_TAC >> BETA_TAC \\
-         MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF >> RW_TAC std_ss [lt_infty] \\
-         MATCH_MP_TAC lte_trans >> Q.EXISTS_TAC `0` \\
-         REWRITE_TAC [le_pow2] >> REWRITE_TAC [lt_infty, extreal_of_num_def]) \\
   (* integrable p (\x. SIGMA (\x'. (X x' x - integral p (X x')) pow 2) J) *)
      CONJ_TAC
      >- (`!x x'. (X x' x - integral p (X x')) pow 2 =
@@ -3645,7 +3661,8 @@ val variance_sum = store_thm
      >- (CONJ_TAC >> `(q,r) IN (J CROSS J)` by PROVE_TAC [SUBSET_DEF] \\
          POP_ASSUM MP_TAC >> SIMP_TAC std_ss [IN_CROSS]) >> STRIP_TAC \\
      REWRITE_TAC [GSYM expectation_def] \\
-     FIRST_X_ASSUM MATCH_MP_TAC >> art []) >> BETA_TAC >> Rewr'
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> BETA_TAC >> Rewr'
  (* LHS: applying integral_sum *)
  >> Know `expectation p (\x. SIGMA (\x'. (\i x. (X i x - expectation p (X i)) pow 2) x' x) J) =
           SIGMA (\n. expectation p ((\i x. (X i x - expectation p (X i)) pow 2) n)) J`
@@ -3715,7 +3732,8 @@ val variance_sum = store_thm
  >> Q.X_GEN_TAC `n` >> Cases_on `n`
  >> Q.UNABBREV_TAC `B` >> RW_TAC std_ss [GSPECIFICATION]
  >> Cases_on `x` >> FULL_SIMP_TAC std_ss []
- >> MATCH_MP_TAC uncorrelated_thm >> PROVE_TAC []);
+ >> MATCH_MP_TAC uncorrelated_thm >> PROVE_TAC []
+QED
 
 (******************************************************************************)
 (*  Almost sure convergence; Borel-Cantelli Lemma [2, p.75]                   *)
@@ -3988,7 +4006,7 @@ Proof
      Know `integral p (\s. SIGMA (\i. (indicator_fn o E) i s) (count n)) =
     pos_fn_integral p (\s. SIGMA (\i. (indicator_fn o E) i s) (count n))`
      >- (MATCH_MP_TAC integral_pos_fn >> fs [o_DEF, prob_space_def] \\
-         GEN_TAC >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_POS \\
+         rpt STRIP_TAC >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_POS \\
          RW_TAC std_ss [FINITE_COUNT, INDICATOR_FN_POS]) >> Rewr' \\
      Know `(prob p o E) = \x. expectation p ((indicator_fn o E) x)`
      >- RW_TAC std_ss [o_DEF, FUN_EQ_THM] >> Rewr' \\
@@ -5101,7 +5119,7 @@ Proof
  >> Know `!n. 0 <= integral p (\x. abs (X n x) pow k)`
  >- (GEN_TAC >> MATCH_MP_TAC integral_pos \\
      fs [prob_space_def] \\
-     GEN_TAC >> MATCH_MP_TAC pow_pos_le >> REWRITE_TAC [abs_pos])
+     rpt STRIP_TAC >> MATCH_MP_TAC pow_pos_le >> REWRITE_TAC [abs_pos])
  >> DISCH_TAC
  >> `!n. integral p (\x. abs (X n x) pow k) <> NegInf`
        by METIS_TAC [pos_not_neginf]
@@ -5114,7 +5132,8 @@ Proof
  >> Know `!n. integrable p (\x. abs (X n x) pow k)`
  >- (GEN_TAC \\
      fs [prob_space_def, random_variable_def, p_space_def, events_def] \\
-     Know `measure_space p /\ (!x. 0 <= (\x. abs (X n x) pow k) x)`
+     Know `measure_space p /\
+           (!x. x IN m_space p ==> 0 <= (\x. abs (X n x) pow k) x)`
      >- (RW_TAC std_ss [] \\
          MATCH_MP_TAC pow_pos_le >> REWRITE_TAC [abs_pos]) \\
      DISCH_THEN (REWRITE_TAC o wrap o (MATCH_MP integrable_pos)) \\
@@ -5341,7 +5360,8 @@ Proof
      SIMP_TAC std_ss [pow_mul, extreal_pow_def, expectation_def] \\
      HO_MATCH_MP_TAC integral_cmul \\
      CONJ_TAC >- fs [prob_space_def] \\
-     Know `measure_space p /\ (!x. 0 <= (\x. (S (SUC n) x - M (SUC n)) pow 2) x)`
+     Know `measure_space p /\
+           (!x. x IN m_space p ==> 0 <= (\x. (S (SUC n) x - M (SUC n)) pow 2) x)`
      >- (fs [prob_space_def, le_pow2]) \\
      DISCH_THEN (ONCE_REWRITE_TAC o wrap o (MATCH_MP integrable_pos)) \\
      CONJ_TAC (* Boreal_measurable *)
@@ -7080,10 +7100,10 @@ Proof
  >> ASSUME_TAC measure_space_lborel
  >> MP_TAC (ISPECL [(* m *) ``lborel``,
                     (* v *) ``distribution (p :'a m_space) (X :'a -> real)``]
-                   Radon_Nikodym)
- >> RW_TAC std_ss [m_space_lborel, sets_lborel]
- >> SIMP_TAC std_ss [PDF_def, RN_deriv_def, m_space_def, measurable_sets_def,
-                     m_space_lborel, sets_lborel]
+                   Radon_Nikodym')
+ >> RW_TAC std_ss [m_space_lborel, sets_lborel, space_borel, IN_UNIV]
+ >> fs [PDF_def, RN_deriv_def, m_space_def, measurable_sets_def,
+        m_space_lborel, sets_lborel, space_borel]
  >> SELECT_ELIM_TAC >> METIS_TAC []
 QED
 
@@ -7101,10 +7121,11 @@ Proof
  >> ASSUME_TAC measure_space_lborel
  >> MP_TAC (ISPECL [(* m *) ``lborel``,
                     (* v *) ``distribution (p :'a m_space) (X :'a -> real)``]
-                   Radon_Nikodym)
- >> RW_TAC std_ss [m_space_lborel, sets_lborel, m_space_def, measure_def]
- >> SIMP_TAC std_ss [PDF_def, RN_deriv_def, m_space_def, measurable_sets_def,
-                     m_space_lborel, sets_lborel]
+                   Radon_Nikodym')
+ >> RW_TAC std_ss [m_space_lborel, sets_lborel, m_space_def, measure_def,
+                   space_borel, IN_UNIV]
+ >> fs [PDF_def, RN_deriv_def, m_space_def, measurable_sets_def,
+        m_space_lborel, sets_lborel, space_borel]
  >> SELECT_ELIM_TAC
  >> CONJ_TAC >- METIS_TAC []
  >> Q.X_GEN_TAC `g`
@@ -7120,7 +7141,9 @@ Proof
           pos_fn_integral lborel (\x. g x * indicator_fn (space borel) x)`
  >- (MATCH_MP_TAC pos_fn_integral_cong \\
      RW_TAC std_ss [m_space_lborel, indicator_fn_def, mul_rone, mul_rzero, le_refl])
- >> Rewr' >> art []
+ >> Rewr'
+ >> POP_ORW
+ >> rw [space_borel]
 QED
 
 (* ========================================================================= *)
