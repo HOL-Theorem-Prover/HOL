@@ -92,7 +92,7 @@ fun record_tactic (tac,stac) g =
     (gl,v)
   end
   handle Interrupt => raise Interrupt 
-    |  _ => (debug ("Error recording tactic: " ^ stac); 
+    |  _ => (debug ("error: recording tactic: " ^ stac); 
              raise ERR "record_tactic" stac)
 
 (* -------------------------------------------------------------------------
@@ -236,10 +236,10 @@ fun record_proof name lflag tac1 tac2 (g:goal) =
           val _ = total_time learn_time (end_record_proof name) g
         in
           if null (fst r) then r
-          else (debug "record_proof: error not null"; tac2 g)
+          else (debug "error: record_proof: not null"; tac2 g)
         end
         handle Interrupt => raise Interrupt
-          | _ => (debug "record_proof: error exception"; tac2 g)
+          | _ => (debug "error: record_proof: exception"; tac2 g)
   in
     result
   end

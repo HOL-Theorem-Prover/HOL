@@ -178,19 +178,19 @@ fun dec_calls t =
 fun export_calls file calls =
   let
     val ostrm = Portable.open_out file
+    val _ = debug ("export_calls: " ^ its (length calls) ^ " calls")
     val calls1 = filter uptodate_call calls
     fun is_local stac = mem "tttRecord.local_tag" (partial_sml_lexer stac)
     fun test call = not (is_local (#ortho call))
     val calls2 = filter test calls1
     val calls3 = mk_sameorder_set call_compare (rev calls2)
     val calls4 = map call_to_tuple calls3
+    val _ = debug ("export_calls: " ^ its (length calls3) ^ " filtered calls")
   in
     PP.prettyPrint (curry TextIO.output ostrm, 75)
                    (HOLsexp.printer (enc_calls calls4));
     TextIO.closeOut ostrm
   end
-
-
 
 (* -------------------------------------------------------------------------
    Importing terms

@@ -281,8 +281,8 @@ fun extract_infix inf_constr l =
 (* ------------------------------------------------------------------------
    Watching and replacing some special values:
    functions calling save_thm
-   functions making a definitions
-   functions with side effects (export_rewrites) which can be unfolded.
+   functions making definitions
+   functions affecting the proof state (i.e. export_rewrites)
    ----------------------------------------------------------------------- *)
 
 val store_thm_list =
@@ -571,6 +571,7 @@ fun ppstring_stac qtac =
    Final modifications of the scripts
    ------------------------------------------------------------------------ *)
 
+(* todo: remove this flag at a minor computation cost *)
 val is_thm_flag = ref false
 
 fun modified_program (h,d) p =
@@ -962,30 +963,6 @@ fun end_unfold_thy () =
     f "Replace id" replace_id_time
   end
 
-fun unquote_script thy file =
-  let
-    val dir = tactictoe_dir ^ "/code"
-    val _ = mkDir_err dir
-    val fout = dir ^ "/unquote_" ^ thy
-    val cmd = HOLDIR ^ "/bin/unquote" ^ " -i " ^ file ^ " " ^ fout
-  in
-    ignore (OS.Process.system cmd);
-    String.concatWith " " (readl fout)
-  end
-
-fun unquote_sml s =
-  let
-    val dir = tactictoe_dir ^ "/code"
-    val _ = mkDir_err dir
-    val fin = dir ^ "/unquote_sml_in"
-    val fout = dir ^ "/unquote_sml_out"
-    val cmd = HOLDIR ^ "/bin/unquote" ^ " -i " ^ fin ^ " " ^ fout
-  in
-    writel fin [s];
-    ignore (OS.Process.system cmd);
-    String.concatWith " " (readl fout)
-  end
-
 fun rm_spaces s =
   let fun f c = if mem c [#"\n",#"\t",#"\r"] then #" " else c in
     implode (map f (explode s))
@@ -993,9 +970,9 @@ fun rm_spaces s =
 
 fun sketch_wrap thy file =
   let
-    val s1 = unquote_script thy file
-    val s3 = rm_spaces (rm_comment s1)
-    val sl = partial_sml_lexer s3
+    val s1 = QFRead.inputFile file
+    val s2 = rm_spaces (rm_comment s1)
+    val sl = partial_sml_lexer s2
     val _ = write_sl (tactictoe_dir ^ "/code/before_sketch_" ^ thy) sl
   in
     sketch sl
@@ -1173,6 +1150,7 @@ fun load_sigobj () =
    ------------------------------------------------------------------------ *)
 
 fun sreflect_real s r = ("val _ = " ^ s ^ " := " ^ rts (!r) ^ ";")
+fun sreflect_flag s flag = ("val _ = " ^ s ^ " := " ^ bts (!flag) ^ ";")
 
 fun write_evalscript prefix file =
   let
@@ -1185,7 +1163,8 @@ fun write_evalscript prefix file =
      sreflect_real "tttSetup.ttt_search_time" ttt_search_time,
      sreflect_real "tttSetup.ttt_policy_coeff" ttt_policy_coeff,
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
-     "val _ = aiLib.debug_flag := " ^ bts (!debug_flag) ^ ";",
+     sreflect_flag "tttSetup.thml_explo_flag" thml_explo_flag,
+     sreflect_flag "aiLib.debug_flag" debug_flag,
      "val _ = smlExecute.execprefix_glob := " ^ mlquote prefix ^ ";",
      "tacticToe.ttt_eval " ^
      "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^
@@ -1208,7 +1187,8 @@ fun run_evalscript_thyl expname b ncore thyl =
     val _ = (mkDir_err ttt_eval_dir; mkDir_err dir)
     val thyl' = filter (fn x => not (mem x ["min","bool"])) thyl
     val pbl = map (fn x => tactictoe_dir ^ "/savestate/" ^ x ^ "_pbl") thyl'
-    fun f x = (readl x handle _ => (print_endline x; []))
+    fun f x = (readl x handle Interrupt => raise Interrupt 
+      | _ => (print_endline x; []))
     val filel1 = List.concat (map f pbl)
     val filel2 = if b then filel1 else one_in_n 10 0 filel1
     val _ = print_endline ("evaluation: " ^ its (length filel2) ^ " problems")
@@ -1226,8 +1206,11 @@ run_evalscript (tttSetup.tactictoe_dir ^ "/savestate/arithmetic170");
 (* One theory
 load "tttUnfold"; open tttUnfold;
 tttSetup.record_savestate_flag := true;
+tttSetup.learn_abstract_term := true;
 aiLib.debug_flag := true;
 ttt_clean_record (); ttt_record_thy "arithmetic";
+load "tacticToe"; open tacticToe; tactictoe ``1+1=2``;
+
 tttSetup.ttt_search_time := 10.0;
 run_evalscript_thyl "test_arithmetic-e1" false 1 ["arithmetic"];
 *)
@@ -1235,15 +1218,22 @@ run_evalscript_thyl "test_arithmetic-e1" false 1 ["arithmetic"];
 (* Core theories
 load "tttUnfold"; open tttUnfold;
 tttSetup.record_savestate_flag := true;
-tttSetup.learn_abstract_term := true;
+tttSetup.learn_abstract_term := false;
 aiLib.debug_flag := true;
 ttt_clean_record (); ttt_record ();
 
 load "tttUnfold"; open tttUnfold;
-tttSetup.ttt_search_time := 10.0;
-aiLib.debug_flag := false;
+tttSetup.ttt_search_time := 30.0;
+tttSetup.aiLib.debug_flag := false;
+tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val _ = run_evalscript_thyl "june2-e2" true 30 thyl;
+val _ = run_evalscript_thyl "june4-e1" true 30 thyl;
+
+tttSetup.ttt_search_time := 30.0;
+tttSetup.aiLib.debug_flag := false;
+tttSetup.thml_explo_flag := true;
+val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
+val _ = run_evalscript_thyl "june4-e2" true 30 thyl;
 *)
 
 

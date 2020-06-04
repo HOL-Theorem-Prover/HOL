@@ -108,14 +108,14 @@ fun abstract_termarg stac =
     else NONE
   end
   handle Interrupt => raise Interrupt | _ => 
-    debug_err "Error: abstract_termarg" stac
+    (debug ("error: abstract_termarg: " ^ stac); NONE)
 
 fun pred_ssubterm (asl,w) stm =
   let 
     val tm = Parse.Term [QUOTE 
       (valOf (String.fromString (aiLib.unquote_string stm)))]
       handle Interrupt => raise Interrupt | _ => 
-        debug_err "Error: pred_ssubterm" stm
+        debug_err "error: pred_ssubterm" stm
     val mem = !show_types
     val tmll = map (find_terms (fn _ => true)) (w :: asl)
     val tml1 = mk_term_set (List.concat tmll)
@@ -127,7 +127,7 @@ fun pred_ssubterm (asl,w) stm =
     show_types := mem; r
   end
   handle Interrupt => raise Interrupt | _ => 
-    debug_err "Error: pred_ssubterm" "unexpected"
+    debug_err "error: pred_ssubterm" "unexpected"
 
 fun inst_termarg_loop g l = case l of
     [] => []
@@ -141,17 +141,17 @@ fun inst_termarg g stac =
     then String.concatWith " " (inst_termarg_loop g sl)
     else stac
   end
+  handle Interrupt => raise Interrupt | _ => 
+    debug_err "inst_termarg " stac
 
 (* 
 load "tttUnfold"; open tttUnfold;
 load "tttLearn"; open tttLearn;
 val stac = "EXISTS_TAC ``1:num``";
-val stac' = unquote_string stac;
+val stac' = QFRead.fromString false stac;
 val (astac,sterm) = valOf (abstract_termarg stac');
 val (asl,w) :goal = ([],``?x.x>0``);
 val sl = ["0","3","2","1"];
-val ((gl,_),s) = apply_termarg_stac_aux astac g sl;
-val sl = pred_ssubterm (asl,w) "y:num";
 *)
 
 (* -------------------------------------------------------------------------
@@ -169,6 +169,8 @@ fun abstract_stac stac =
       else NONE
     end
   end
+  handle Interrupt => raise Interrupt | _ => 
+    (debug ("error: abstract_stac: " ^ stac); NONE)
 
 fun concat_absstacl gfea stac stacl =
   let
@@ -183,16 +185,17 @@ fun inst_stac (thmls,g) stac =
     val stac1 = inst_thmlarg thmls stac
     val stac2 = inst_termarg g stac1
   in
-    (stac,stac2)
+    SOME (stac,stac2)
   end
-  handle Interrupt => raise Interrupt | _ =>
-    debug_err "Error: inst_stac" stac
+  handle Interrupt => raise Interrupt | _ => 
+    (debug ("error: inst_stac: " ^ stac); NONE)
+
+fun thmls_of_thmidl thmidl = 
+  "[ " ^ String.concatWith " , " (map dbfetch_of_thmid thmidl) ^ " ]"
 
 fun inst_stacl (thmidl,g) stacl = 
-  let val thmls = 
-    "[ " ^ String.concatWith " , " (map dbfetch_of_thmid thmidl) ^ " ]"
-  in
-    mapfilter (inst_stac (thmls,g)) stacl
+  let val thmls = thmls_of_thmidl thmidl in
+    List.mapPartial (inst_stac (thmls,g)) stacl
   end
 
 (* -------------------------------------------------------------------------
@@ -260,6 +263,8 @@ fun orthogonalize (thmdata,tacdata)
        ig = ig, ogl = ogl,
        loc = loc, fea = fea}
   end
+  handle Interrupt => raise Interrupt | _ =>  
+    (debug "error: orthogonalize"; call)
 
 
 end (* struct *)

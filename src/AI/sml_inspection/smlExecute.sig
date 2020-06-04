@@ -4,9 +4,7 @@ sig
   include Abbrev
 
   (* execution function *)
-  val execprefix_glob  : string ref
-  val quse_string : string -> string -> bool
-  val use_string : string -> bool
+  val quse_string : string -> bool
 
   (* global references *)
   val sml_bool_glob     : bool ref

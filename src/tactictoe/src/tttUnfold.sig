@@ -4,9 +4,7 @@ sig
   include Abbrev
 
   (* tools *)
-  val unquote_sml : string -> string
   val find_script : string -> string
-  val unquote_script : string -> string -> string
   val load_sigobj : unit -> unit
   val ttt_rewrite_thy : string -> unit
 

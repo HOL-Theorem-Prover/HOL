@@ -31,6 +31,6 @@ sig
   val ttt_policy_coeff : real ref
   val ttt_explo_coeff : real ref
   val ttt_ex_flag : bool ref
-  
+  val thml_explo_flag : bool ref
 
 end

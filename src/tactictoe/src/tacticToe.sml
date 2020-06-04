@@ -55,9 +55,6 @@ fun select_tacfea tacdata gfea =
    Main function
    ------------------------------------------------------------------------- *)
 
-fun constant_space s = String.concatWith " " (partial_sml_lexer s)
-fun prefix_absstac stac = [abstract_stac stac, SOME stac]
-
 fun main_tactictoe (thmdata,tacdata) goal =
   let
     (* preselection *)
@@ -80,16 +77,36 @@ fun main_tactictoe (thmdata,tacdata) goal =
       end
     fun tacpred g =
       dfind g (!tac_cache) handle NotFound =>
-      let
-        val thmidl = thmpred (!ttt_thmlarg_radius) g
-        val l = feahash_of_goal g
-        val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
-        val stacl1 = tacknn (tacsymweight,tacfea) (!ttt_presel_radius) l
-        val stacl2 = mk_sameorder_set String.compare (metis_stac :: stacl1)
-        val istacl = map snd (inst_stacl (thmidl,g) stacl2)     
-      in
-        tac_cache := dadd g istacl (!tac_cache); istacl
-      end
+      if !thml_explo_flag then
+        let
+          val thmidl = thmpred (2 * !ttt_thmlarg_radius) g
+          val (thmidl1,thmidl2) = part_n (!ttt_thmlarg_radius) thmidl
+          val thmls2 = thmls_of_thmidl thmidl2
+          val l = feahash_of_goal g
+          val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
+          val stacl1 = tacknn (tacsymweight,tacfea) (!ttt_presel_radius) l
+          val stacl2 = mk_sameorder_set String.compare (metis_stac :: stacl1)
+          val oistacl = inst_stacl (thmidl1,g) stacl2 
+          fun f (stac,istac) = 
+            if not (is_thmlarg_stac stac)
+            then (SOME istac, NONE)
+            else (SOME istac, Option.map fst (inst_stac (thmls2,g) stac))
+          val (stacl3,stacl4) = split (map f oistacl)
+          val istacl = List.mapPartial I (interleave 2 stacl3 stacl4)
+        in
+          tac_cache := dadd g istacl (!tac_cache); istacl
+        end
+      else
+        let
+          val thmidl = thmpred (!ttt_thmlarg_radius) g
+          val l = feahash_of_goal g
+          val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
+          val stacl1 = tacknn (tacsymweight,tacfea) (!ttt_presel_radius) l
+          val stacl2 = mk_sameorder_set String.compare (metis_stac :: stacl1)
+          val istacl = map snd (inst_stacl (thmidl,g) stacl2)     
+        in
+          tac_cache := dadd g istacl (!tac_cache); istacl
+        end
     val _ = debug "search"
   in
     search tacpred goal

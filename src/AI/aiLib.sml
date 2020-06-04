@@ -349,6 +349,14 @@ fun topo_sort cmp graph =
 fun sort_thyl thyl =
     topo_sort String.compare (map (fn x => (x, ancestry x)) thyl)
 
+fun interleave offset l1 l2 =
+  let 
+    val l1' = map_snd (fn x => 2 * x) (number_snd 1 l1)
+    val l2' = map_snd (fn x => offset * 2 * x + 1) (number_snd 1 l2)
+  in
+    map fst (dict_sort compare_imin (l1' @ l2'))
+  end
+
 (* ------------------------------------------------------------------------
    The functions from this section affects other in subtle ways.
    Please be careful to keep their "weird" semantics.
