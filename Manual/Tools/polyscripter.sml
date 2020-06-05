@@ -215,12 +215,30 @@ fun removeCruft s =
 
 fun addIndent ws = String.translate(fn #"\n" => "\n"^ws | c => str c)
 
+val linelen_limit = ref (NONE : int option)
+
+fun trunc lim s =
+    if UTF8.size s <= lim then s
+    else if lim > 3 then UTF8.substring(s,0, lim - 3) ^ "..."
+    else UTF8.substring(s,0,lim)
+
+fun impose_linelen_limit s =
+    case !linelen_limit of
+        NONE => s
+      | SOME lim =>
+        let
+          val lines = String.fields (fn c => c = #"\n") s
+        in
+          String.concatWith "\n" (map (trunc lim) lines)
+        end
+
 fun transformOutput umap ws s =
   s |> umunge umap
     |> removeCruft
     |> addIndent ws
     |> deleteTrailingWhiteSpace
     |> (fn s => ws ^ s)
+    |> impose_linelen_limit
 
 fun spaceNotNL c = Char.isSpace c andalso c <> #"\n"
 
@@ -404,6 +422,18 @@ in
     in
       ("", "")
     end
+  else if String.isPrefix "##linelen_limit " line then
+    case Int.fromString (String.extract(line, 16, NONE)) of
+        NONE => lnumdie (linenum lbuf) "Mal-formed ##linelen_limit directive"
+                        (Fail "")
+      | SOME i => if i >= 10 then
+                    (advance lbuf; linelen_limit := SOME i; ("", ""))
+                  else
+                    lnumdie (linenum lbuf)
+                            "Unreasonable (<10) ##linelen_limit directive"
+                            (Fail "")
+  else if String.isPrefix "##nolinelen_limit" line then
+    (advance lbuf; linelen_limit := NONE; ("", ""))
   else if String.isPrefix ">>-" line then
     let
       val (firstline,d) = poss_space_extract 3 line
