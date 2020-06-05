@@ -10,7 +10,7 @@ sig
   val run_evalscript_thyl : string -> bool -> int -> string list -> unit
 
   (* statistics *)
-  val cumul_graph : string -> unit
+  val cumul_graph : real -> string -> unit
 
 
 end

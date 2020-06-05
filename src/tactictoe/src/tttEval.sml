@@ -171,7 +171,7 @@ fun extract_info dir file =
 fun write_graph file (s1,s2) l =
   writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => rts a ^ " " ^ its b) l)
 
-fun cumul_graph exp =
+fun cumul_graph timelimit exp =
   let 
     val dir = ttt_eval_dir ^ "/" ^ exp
     val filel = filter (String.isPrefix "buildheap_") (listDir dir)
@@ -181,7 +181,7 @@ fun cumul_graph exp =
     val proofl = filter (fn (_,(x,_)) => is_proof x) l
     val timl = map (fn (_,(_,t)) => t) proofl
     fun f bound = length (filter (fn x => x <= bound) timl)
-    val graph = map_assoc f (interval 0.01 (0.0,10.0))
+    val graph = map_assoc f (interval 0.1 (0.02,timelimit))
     val graph_out = ttt_eval_dir ^ "/graph/" ^ exp ^ "_graph"
     val _ = mkDir_err (ttt_eval_dir ^ "/graph")
   in
@@ -196,13 +196,13 @@ fun cumul_graph exp =
 (*
 load "tttEval"; open tttEval;
 val expl = ["june4-e1","june4-e2","june2-e1","june2-e3","june2-e4"];
-app cumul_graph exp;
-val exp = "june4-e2";
-cumul_graph exp;
-
+app (cumul_graph 30.0) expl;
 (* quit *)
-gnuplot -p -e "plot 'graph/june4-e1_graph' using 1:2 with lines,\
-                    'graph/june4-e2_graph' using 1:2 with lines"
+gnuplot -p -e "plot 'eval/graph/june4-e1_graph' using 1:2 with lines,\
+                    'eval/graph/june4-e2_graph' using 1:2 with lines,\
+                    'eval/graph/june2-e1_graph' using 1:2 with lines,\
+                    'eval/graph/june2-e3_graph' using 1:2 with lines,\
+                    'eval/graph/june2-e4_graph' using 1:2 with lines"
 *)
 
 
