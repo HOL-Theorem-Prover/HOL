@@ -1078,4 +1078,30 @@ fun interruptkill worker =
        loop 10
      end
 
+(* ------------------------------------------------------------------------
+   Theories of the standard library
+   ------------------------------------------------------------------------ *)
+
+fun sigobj_theories () =
+  let
+    val ttt_code_dir = tactictoe_dir ^ "/code"
+    val _    = mkDir_err ttt_code_dir
+    val file = ttt_code_dir ^ "/theory_list"
+    val sigdir = HOLDIR ^ "/sigobj"
+    val cmd0 = "cd " ^ sigdir
+    val cmd1 = "readlink -f $(find -regex \".*[^/]Theory.sig\") > " ^ file
+  in
+    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1 ^ "; "));
+    readl file
+  end
+
+fun load_sigobj () =
+  let
+    fun barefile file = OS.Path.base (OS.Path.file file)
+    val l0 = sigobj_theories ()
+    val l1 = map barefile l0
+  in
+    app load l1
+  end
+
 end (* struct *)

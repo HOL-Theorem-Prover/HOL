@@ -238,4 +238,8 @@ sig
   (* thread *)
   val interruptkill : Thread.thread -> unit
 
+  (* theories *)
+  val sigobj_theories : unit -> string list
+  val load_sigobj : unit -> unit
+
 end

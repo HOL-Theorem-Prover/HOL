@@ -1098,15 +1098,6 @@ fun ttt_record_thy thy =
     restore_scripts scriptorg
   end
 
-fun ttt_record () =
-  let
-    val thyl1 = ttt_ancestry (current_theory ())
-    val thyl2 = filter (not o exists_tacdata_ancestry) thyl1
-    val ((),t) = add_time (app ttt_record_thy) thyl2
-  in
-    print_endline ("ttt_record time: " ^ rts_round 4 t)
-  end
-
 fun ttt_clean_record () =
   (
   clean_rec_dir (HOLDIR ^ "/src/AI/sml_inspection/open");
@@ -1116,124 +1107,13 @@ fun ttt_clean_record () =
   clean_dir (tactictoe_dir ^ "/info")
   )
 
-(* ------------------------------------------------------------------------
-   Theories of the standard library
-   ------------------------------------------------------------------------ *)
-
-fun sigobj_theories () =
+fun ttt_record () =
   let
-    val ttt_code_dir = tactictoe_dir ^ "/code"
-    val _    = mkDir_err ttt_code_dir
-    val file = ttt_code_dir ^ "/theory_list"
-    val sigdir = HOLDIR ^ "/sigobj"
-    val cmd0 = "cd " ^ sigdir
-    val cmd1 = "readlink -f $(find -regex \".*[^/]Theory.sig\") > " ^ file
+    val thyl1 = ttt_ancestry (current_theory ())
+    val thyl2 = filter (not o exists_tacdata_ancestry) thyl1
+    val ((),t) = add_time (app ttt_record_thy) thyl2
   in
-    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1 ^ "; "));
-    readl file
+    print_endline ("ttt_record time: " ^ rts_round 4 t)
   end
-
-fun load_sigobj () =
-  let
-    fun barefile file = OS.Path.base (OS.Path.file file)
-    val l0 = sigobj_theories ()
-    val l1 = map barefile l0
-  in
-    app load l1
-  end
-
-(* ------------------------------------------------------------------------
-   Evaluation: requires recorded savestates.
-   The recorded savestates can be produced by setting ttt_savestate_flag
-   before calling ttt_clean_record () and ttt_record ().
-   Warning: requires ~100 GB of hard disk space. Possibly avoid using MLTON?
-   ------------------------------------------------------------------------ *)
-
-fun sreflect_real s r = ("val _ = " ^ s ^ " := " ^ rts (!r) ^ ";")
-fun sreflect_flag s flag = ("val _ = " ^ s ^ " := " ^ bts (!flag) ^ ";")
-
-fun write_evalscript prefix file =
-  let
-    val file1 = mlquote (file ^ "_savestate")
-    val file2 = mlquote (file ^ "_goal")
-    val sl =
-    ["PolyML.SaveState.loadState " ^ file1 ^ ";",
-     "val tactictoe_goal = mlTacticData.import_goal " ^ file2 ^ ";",
-     "load " ^ mlquote "tacticToe" ^ ";",
-     sreflect_real "tttSetup.ttt_search_time" ttt_search_time,
-     sreflect_real "tttSetup.ttt_policy_coeff" ttt_policy_coeff,
-     sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
-     sreflect_flag "tttSetup.thml_explo_flag" thml_explo_flag,
-     sreflect_flag "aiLib.debug_flag" debug_flag,
-     "tacticToe.ttt_eval " ^
-     "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^
-     "tactictoe_goal;"]
-  in
-    writel (file ^ "_eval.sml") sl
-  end
-
-fun bare file = OS.Path.base (OS.Path.file file)
-
-fun run_evalscript dir file =
-  (
-  write_evalscript (bare file) file;
-  run_buildheap_nodep dir (file ^ "_eval.sml")
-  )
-
-fun run_evalscript_thyl expname b ncore thyl =
-  let
-    val dir = ttt_eval_dir ^ "/" ^ expname ^ (if b then "" else "_tenth")
-    val _ = (mkDir_err ttt_eval_dir; mkDir_err dir)
-    val thyl' = filter (fn x => not (mem x ["min","bool"])) thyl
-    val pbl = map (fn x => tactictoe_dir ^ "/savestate/" ^ x ^ "_pbl") thyl'
-    fun f x = (readl x handle Interrupt => raise Interrupt 
-      | _ => (print_endline x; []))
-    val filel1 = List.concat (map f pbl)
-    val filel2 = if b then filel1 else one_in_n 10 0 filel1
-    val _ = print_endline ("evaluation: " ^ its (length filel2) ^ " problems")
-    val (_,t) = add_time (parapp_queue ncore (run_evalscript dir)) filel2
-  in
-    print_endline ("evaluation time: " ^ rts_round 6 t)
-  end
-
-(* One example
-load "tttUnfold"; open tttUnfold;
-tttSetup.ttt_search_time := 5.0;
-run_evalscript (tttSetup.tactictoe_dir ^ "/savestate/arithmetic170");
-*)
-
-(* One theory
-load "tttUnfold"; open tttUnfold;
-tttSetup.record_savestate_flag := true;
-tttSetup.learn_abstract_term := true;
-aiLib.debug_flag := true;
-ttt_clean_record (); ttt_record_thy "arithmetic";
-load "tacticToe"; open tacticToe; tactictoe ``1+1=2``;
-
-tttSetup.ttt_search_time := 10.0;
-run_evalscript_thyl "test_arithmetic-e1" false 1 ["arithmetic"];
-*)
-
-(* Core theories
-load "tttUnfold"; open tttUnfold;
-tttSetup.record_savestate_flag := true;
-tttSetup.learn_abstract_term := false;
-aiLib.debug_flag := true;
-ttt_clean_record (); ttt_record ();
-
-load "tttUnfold"; open tttUnfold;
-tttSetup.ttt_search_time := 30.0;
-aiLib.debug_flag := false;
-tttSetup.thml_explo_flag := false;
-val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val _ = run_evalscript_thyl "june4-e1" true 30 thyl;
-
-tttSetup.ttt_search_time := 30.0;
-aiLib.debug_flag := false;
-tttSetup.thml_explo_flag := true;
-val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val _ = run_evalscript_thyl "june4-e2" true 30 thyl;
-*)
-
 
 end (* struct *)
