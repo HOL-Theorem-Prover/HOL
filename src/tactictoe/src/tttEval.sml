@@ -1,19 +1,20 @@
 (* ========================================================================= *)
-(* FILE          : tacticToe.sml                                             *)
-(* DESCRIPTION   : Automated theorem prover based on tactic selection        *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
-(* DATE          : 2017                                                      *)
+(* FILE          : tttEval.sml                                               *)
+(* DESCRIPTION   : Evaluation framework for TacticToe                        *)
+(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
+(* DATE          : 2020                                                      *)
 (* ========================================================================= *)
 
 structure tttEval :> tttEval =
 struct
 
-open HolKernel Abbrev boolLib aiLib tttSetup tacticToe
+open HolKernel Abbrev boolLib aiLib 
+  smlRedirect smlParallel smlOpen tttSetup tttSearch tacticToe
 
-val ERR = mk_HOL_ERR "tacticToe"
+val ERR = mk_HOL_ERR "tttEval"
 
 (* -------------------------------------------------------------------------
-   Evaluation function called by tttUnfold.run_evalscript_thy
+   Evaluation function
    ------------------------------------------------------------------------- *)
 
 fun print_status r = case r of
@@ -36,8 +37,10 @@ fun ttt_eval (thmdata,tacdata) goal =
 (* ------------------------------------------------------------------------
    Evaluation: requires recorded savestates.
    The recorded savestates can be produced by setting ttt_savestate_flag
-   before calling ttt_clean_record () and ttt_record ().
-   Warning: requires ~100 GB of hard disk space. Possibly avoid using MLTON?
+   before calling tttUnfold.ttt_clean_record () and tttUnfold.ttt_record ().
+   Warnings: 
+   - requires ~10-100 GB of hard disk space. 
+   - possibly avoid using MLTON during configuration.
    ------------------------------------------------------------------------ *)
 
 fun sreflect_real s r = ("val _ = " ^ s ^ " := " ^ rts (!r) ^ ";")
@@ -87,6 +90,10 @@ fun run_evalscript_thyl expname b ncore thyl =
     print_endline ("evaluation time: " ^ rts_round 6 t)
   end
 
+(* ------------------------------------------------------------------------
+   Evaluation example runs
+   ------------------------------------------------------------------------ *)
+
 (* One example
 load "tttUnfold"; open tttUnfold;
 tttSetup.ttt_search_time := 5.0;
@@ -126,10 +133,72 @@ val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 val _ = run_evalscript_thyl "june4-e2" true 30 thyl;
 *)
 
+(* ------------------------------------------------------------------------
+   Statistics: processing the output file
+   ------------------------------------------------------------------------ *)
 
+fun listDir dirName = 
+  let 
+    val dir = OS.FileSys.openDir dirName
+    fun read files = case OS.FileSys.readDir dir of
+        NONE => rev files
+      | SOME file => read (file :: files)
+    val r = read []
+  in
+    OS.FileSys.closeDir dir; r
+  end
+ 
+fun is_proof x = (case x of Proof _ => true | _ => false)
 
+fun extract_info dir file =
+  let 
+    val sl = readl (dir ^ "/" ^ file) 
+    val status = 
+      if exists (String.isPrefix "tactictoe: saturated") sl 
+        then ProofSaturated 
+      else if exists (String.isPrefix "tactictoe: timeout") sl
+        then ProofTimeout
+      else if exists (String.isPrefix "tactictoe: proven") sl
+        then Proof "todo"
+      else raise ERR "extract_info" "no status"
+    val stim1 = valOf (List.find (String.isPrefix "search time:") sl)   
+    val stim2 = snd (split_string "search time: " stim1)
+    val t = valOf (Real.fromString stim2)
+  in
+    (snd (split_string "buildheap_" file), (status,t))
+  end
 
+fun write_graph file (s1,s2) l =
+  writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => rts a ^ " " ^ its b) l)
 
+fun cumul_graph exp =
+  let 
+    val dir = ttt_eval_dir ^ "/" ^ exp
+    val filel = filter (String.isPrefix "buildheap_") (listDir dir)
+    val l = map (extract_info dir) filel
+    val satl = filter (fn (_,(x,_)) => x = ProofSaturated) l
+    val timeoutl = filter (fn (_,(x,_)) => x = ProofSaturated) l
+    val proofl = filter (fn (_,(x,_)) => is_proof x) l
+    val timl = map (fn (_,(_,t)) => t) proofl
+    fun f bound = length (filter (fn x => x <= bound) timl)
+    val graph = map_assoc f (interval 0.01 (0.0,10.0))
+    val graph_out = ttt_eval_dir ^ "/" ^ exp ^ "_graph"
+  in
+    print_endline 
+      ("total: " ^ its (length l) ^ ", " ^
+       "proof: " ^ its (length proofl) ^ ", " ^
+       "timeout: " ^ its (length timeoutl) ^ ", " ^
+       "saturated: " ^ its (length satl));
+    write_graph graph_out ("time","proofs") graph
+  end
+
+(*
+load "tttEval"; open tttEval;
+val exp = "test_arithmetic-e1_tenth";
+cumul_graph exp;
+(* quit *)
+gnuplot -p -e "plot 'eval/test_arithmetic-e1_tenth_graph' using 1:2 with lines;"
+*)
 
 
 

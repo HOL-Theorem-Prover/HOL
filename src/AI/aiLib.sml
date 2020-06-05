@@ -572,6 +572,9 @@ fun rts r = Real.toString r
 fun rts_round n r = rts (approx n r)
 fun pretty_real r = pad 8 "0" (rts_round 6 r)
 
+fun interval (step:real) (a,b) =
+  if a + (step / 2.0) > b then [b] else a :: interval step (a + step,b)
+
 (* ------------------------------------------------------------------------
    Terms
    ------------------------------------------------------------------------ *)
@@ -1079,12 +1082,12 @@ fun interruptkill worker =
      end
 
 (* ------------------------------------------------------------------------
-   Theories of the standard library
+   Theories of the standard library (sigobj)
    ------------------------------------------------------------------------ *)
 
 fun sigobj_theories () =
   let
-    val ttt_code_dir = tactictoe_dir ^ "/code"
+    val ttt_code_dir = HOLDIR ^ "/src/tactictoe/code"
     val _    = mkDir_err ttt_code_dir
     val file = ttt_code_dir ^ "/theory_list"
     val sigdir = HOLDIR ^ "/sigobj"
@@ -1103,5 +1106,17 @@ fun load_sigobj () =
   in
     app load l1
   end
+
+fun link_sigobj file =
+  let 
+    val base = OS.Path.base file
+    val link = HOLDIR ^ "/sigobj"
+    fun f ext = "ln -sf " ^ base ^ "." ^ ext ^ " " ^ link ^ "." ^ ext ^ ";"
+    val l = map f ["sig","uo","ui"]
+    val cmd = String.concatWith " " l
+  in
+    ignore (OS.Process.system cmd)
+  end
+
 
 end (* struct *)

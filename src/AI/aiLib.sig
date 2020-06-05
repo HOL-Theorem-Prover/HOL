@@ -222,6 +222,7 @@ sig
   val rts_round : int -> real -> string
   val pretty_real : real -> string
   val epsilon : real
+  val interval : real -> real * real -> real list  
 
   (* term *)
   val rename_bvarl : (string -> string) -> term -> term
@@ -238,8 +239,9 @@ sig
   (* thread *)
   val interruptkill : Thread.thread -> unit
 
-  (* theories *)
+  (* sigobj *)
   val sigobj_theories : unit -> string list
   val load_sigobj : unit -> unit
-
+  val link_sigobj : string -> unit  
+ 
 end
