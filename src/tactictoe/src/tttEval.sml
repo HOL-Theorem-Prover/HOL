@@ -182,7 +182,8 @@ fun cumul_graph exp =
     val timl = map (fn (_,(_,t)) => t) proofl
     fun f bound = length (filter (fn x => x <= bound) timl)
     val graph = map_assoc f (interval 0.01 (0.0,10.0))
-    val graph_out = ttt_eval_dir ^ "/" ^ exp ^ "_graph"
+    val graph_out = ttt_eval_dir ^ "/graph/" ^ exp ^ "_graph"
+    val _ = mkDir_err (ttt_eval_dir ^ "/graph")
   in
     print_endline 
       ("total: " ^ its (length l) ^ ", " ^
@@ -194,10 +195,14 @@ fun cumul_graph exp =
 
 (*
 load "tttEval"; open tttEval;
-val exp = "test_arithmetic-e1_tenth";
+val expl = ["june4-e1","june4-e2","june2-e1","june2-e3","june2-e4"];
+app cumul_graph exp;
+val exp = "june4-e2";
 cumul_graph exp;
+
 (* quit *)
-gnuplot -p -e "plot 'eval/test_arithmetic-e1_tenth_graph' using 1:2 with lines;"
+gnuplot -p -e "plot 'graph/june4-e1_graph' using 1:2 with lines,\
+                    'graph/june4-e2_graph' using 1:2 with lines"
 *)
 
 

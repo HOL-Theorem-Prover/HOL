@@ -1110,7 +1110,7 @@ fun load_sigobj () =
 fun link_sigobj file =
   let 
     val base = OS.Path.base file
-    val link = HOLDIR ^ "/sigobj"
+    val link = HOLDIR ^ "/sigobj/" ^ OS.Path.base (OS.Path.file file) 
     fun f ext = "ln -sf " ^ base ^ "." ^ ext ^ " " ^ link ^ "." ^ ext ^ ";"
     val l = map f ["sig","uo","ui"]
     val cmd = String.concatWith " " l
