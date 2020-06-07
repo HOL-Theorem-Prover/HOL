@@ -54,7 +54,7 @@ fun write_evalscript prefix file =
     val sl =
     ["PolyML.SaveState.loadState " ^ file1 ^ ";",
      "val tactictoe_goal = mlTacticData.import_goal " ^ file2 ^ ";",
-     "load " ^ mlquote "tacticToe" ^ ";",
+     "load " ^ mlquote "tttEval" ^ ";",
      sreflect_real "tttSetup.ttt_search_time" ttt_search_time,
      sreflect_real "tttSetup.ttt_policy_coeff" ttt_policy_coeff,
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
@@ -120,12 +120,12 @@ tttSetup.learn_abstract_term := false;
 aiLib.debug_flag := true;
 ttt_clean_record (); ttt_record ();
 
-load "tttUnfold"; open tttUnfold;
+load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
 tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val _ = run_evalscript_thyl "june4-e1" true 30 thyl;
+val _ = run_evalscript_thyl "june5-16-32thms" true 30 thyl;
 
 tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
