@@ -27,6 +27,7 @@ fun ttt_eval (thmdata,tacdata) goal =
     val b = !hide_flag
     val _ = hide_flag := false
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
+    val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
     val (status,t) = add_time (main_tactictoe (thmdata,tacdata)) goal
   in
     print_status status;
@@ -134,7 +135,7 @@ val _ = run_evalscript_thyl "june4-e2" true 30 thyl;
 *)
 
 (* ------------------------------------------------------------------------
-   Statistics: processing the output file
+   Statistics
    ------------------------------------------------------------------------ *)
 
 fun listDir dirName = 
@@ -204,8 +205,5 @@ gnuplot -p -e "plot 'eval/graph/june4-e1_graph' using 1:2 with lines,\
                     'eval/graph/june2-e3_graph' using 1:2 with lines,\
                     'eval/graph/june2-e4_graph' using 1:2 with lines"
 *)
-
-
-
 
 end (* struct *)

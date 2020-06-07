@@ -81,7 +81,7 @@ fun main_tactictoe (thmdata,tacdata) goal =
         let
           val thmidl = thmpred (2 * !ttt_thmlarg_radius) g
           val (thmidl1,thmidl2) = part_n (!ttt_thmlarg_radius) thmidl
-          val thmls2 = thmls_of_thmidl thmidl2
+          val thmls2 = thmls_of_thmidl thmidl
           val l = feahash_of_goal g
           val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
           val stacl1 = tacknn (tacsymweight,tacfea) (!ttt_presel_radius) l
