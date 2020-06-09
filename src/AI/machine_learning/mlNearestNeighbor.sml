@@ -14,18 +14,22 @@ val ERR = mk_HOL_ERR "mlNearestNeighbor"
 
 type symweight = (int, real) Redblackmap.dict  
 type 'a afea = ('a * fea) list
+val inter_time = ref 0.0
+val dfind_time = ref 0.0
+val sum_time = ref 0.0
 
 (* ------------------------------------------------------------------------
    Distance
    ------------------------------------------------------------------------ *)
 
-fun knn_dist symweight dicto feap =
+fun knn_dist symweight feao feap =
   let
-    val feai    = filter (fn x => dmem x dicto) feap
-    fun wf n    = dfind n symweight handle NotFound => raise ERR "knn_dist" ""
-    val weightl = map wf feai
+    val feai = total_time inter_time inter_increasing feao feap
+    fun wf n = dfind n symweight 
+      handle NotFound => raise ERR "knn_dist" ""
+    val weightl = total_time dfind_time (map wf) feai
   in
-    sum_real weightl
+    total_time sum_time sum_real weightl
   end
 
 (* ------------------------------------------------------------------------
@@ -33,10 +37,7 @@ fun knn_dist symweight dicto feap =
    ------------------------------------------------------------------------ *)
 
 fun knn_sort (symweight,feav) feao =
-  let
-    val dicto = dset Int.compare feao
-    fun f (x,feap) = ((x,feap), knn_dist symweight dicto feap)
-  in
+  let fun f (x,feap) = ((x,feap), knn_dist symweight feao feap) in
     dict_sort compare_rmax (map f feav)
   end
 
@@ -142,14 +143,14 @@ type 'a knnpred = (symweight * term afea) * (term, 'a) Redblackmap.dict
 
 fun train_knn trainset =
   let
-    val termfea = map_assoc feahash_of_term (map fst trainset);
+    val termfea = map_assoc (fea_of_term true) (map fst trainset);
     val symweight = learn_tfidf termfea;
   in
     ((symweight,termfea), dnew Term.compare trainset)
   end
 
 fun infer_knn ((symweight,termfea),d) tm =
-  let val neartm = hd (termknn (symweight,termfea) 1 (feahash_of_term tm)) in
+  let val neartm = hd (termknn (symweight,termfea) 1 (fea_of_term true tm)) in
     dfind neartm d
   end
 

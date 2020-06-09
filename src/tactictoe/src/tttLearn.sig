@@ -6,7 +6,8 @@ sig
   type thmdata = mlThmData.thmdata
   type call = mlTacticData.call
   type tacdata = mlTacticData.tacdata
-  
+  type symweight = mlFeature.symweight
+ 
   (* abstraction of theorem list arguments and first term in tactics *)
   val thmlarg_placeholder : string
   val is_thmlarg_stac : string -> bool 
@@ -26,6 +27,8 @@ sig
   val ortho_predstac_time : real ref
   val ortho_predthm_time : real ref
   val ortho_teststac_time : real ref
-  val orthogonalize : (thmdata * tacdata) -> call -> call
+  val orthogonalize : (thmdata * tacdata * 
+    (symweight * (string * mlFeature.fea) list)) ->
+    call -> call
 
 end

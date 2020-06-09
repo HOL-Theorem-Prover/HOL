@@ -10,7 +10,7 @@ struct
 
 open HolKernel boolLib aiLib
   smlLexer smlTimeout smlExecute smlParser smlRedirect
-  mlFeature mlThmData mlTacticData
+  mlFeature mlThmData mlTacticData mlNearestNeighbor
   tttSetup tttLearn
 
 val ERR = mk_HOL_ERR "tttRecord"
@@ -45,6 +45,7 @@ val record_time = ref 0.0
 val parse_time = ref 0.0
 val replay_time = ref 0.0
 val learn_time = ref 0.0
+val tacfea_tfidf_time = ref 0.0
 
 fun info_thy thy =
   [
@@ -59,7 +60,11 @@ fun info_thy thy =
    ", replay: " ^ rts_round 6 (!replay_time) ^ ")",
    "  Learn time: " ^ rts_round 6 (!learn_time) ^
    " (tactic pred: " ^ rts_round 6 (!ortho_predstac_time) ^ "," ^
+   " tactic tfidf: " ^ rts_round 6 (!tacfea_tfidf_time) ^ "," ^
    " thm pred: " ^ rts_round 6 (!ortho_predthm_time) ^ "," ^
+   " inter: " ^ rts_round 6 (!inter_time) ^ "," ^
+   " dfind: " ^ rts_round 6 (!dfind_time) ^ "," ^
+   " sum: " ^ rts_round 6 (!sum_time) ^ "," ^
    " tactic test: " ^ rts_round 6 (!ortho_teststac_time) ^ ")"
   ]
 
@@ -86,7 +91,7 @@ fun record_tactic (tac,stac) g =
       stac = stac, ortho = stac, time = t,
       ig = g, ogl = gl, 
       loc = (current_theory (), (!savestate_level) - 1),
-      fea = fea_of_goal_cached g
+      fea = fea_of_goal_cached true g
       }
       :: !calls_glob);
     (gl,v)
@@ -111,14 +116,12 @@ fun wrap_proofexp e = case e of
 
 fun wrap_proof ostac =
   let
-    (* val _ =  debug ("original proof: " ^ ostac) *)
     val proofexp = extract_proofexp ostac
     val ntac = size_of_proofexp proofexp
     val _  = debug ("#tactics (proof): " ^ its ntac)
     val _  = n_tactic_parsed := (!n_tactic_parsed) + ntac
     val _  = debug ("#tactics (total): " ^ its (!n_tactic_parsed))
     val wstac = string_of_proofexp (wrap_proofexp proofexp)
-    (* val _ = debug ("wrapped proof: " ^ wstac) *)
   in
     (wstac, tactic_of_sml (!record_proof_time) wstac)
   end
@@ -169,9 +172,11 @@ fun end_record_proof name g =
   let
     val l1 = (rev (!calls_glob))
     val (thmdata,tacdata) = (!thmdata_glob, !tacdata_glob)
+    val tacfea = map (fn x => (#ortho x,#fea x)) (#calls tacdata)
+    val tacsymweight = total_time tacfea_tfidf_time learn_tfidf tacfea
     val l2 = 
       if !record_ortho_flag
-      then map (orthogonalize (thmdata,tacdata)) l1
+      then map (orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))) l1
       else l1
     val newtacdata = foldl ttt_update_tacdata tacdata l2
   in

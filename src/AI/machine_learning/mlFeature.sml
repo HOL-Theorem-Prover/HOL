@@ -13,6 +13,7 @@ open HolKernel Abbrev boolLib aiLib
 val ERR = mk_HOL_ERR "mlFeature"
 
 type fea = int list
+type symweight = (int, real) Redblackmap.dict
 
 (* -------------------------------------------------------------------------
    Constants, variables and types
@@ -70,7 +71,7 @@ fun zeroed_term tm =
     end
   else raise ERR "zeroed_term" ""
 
-fun subtermfea_of tm =
+fun subfea_of tm =
   let
     val atoml = atoms_of tm
     val subterml = List.concat (map (find_terms (fn _ => true)) atoml)
@@ -82,16 +83,16 @@ fun subtermfea_of tm =
    All features
    ------------------------------------------------------------------------- *)
 
-fun fea_of_term tm =
-  if term_size tm > 2000
+fun sfea_of_term b tm =
+  if (not b) orelse term_size tm > 2000
   then constfea_of tm
-  else subtermfea_of tm @ constfea_of tm @ varfea_of tm @ typefea_of tm
+  else subfea_of tm @ constfea_of tm @ varfea_of tm @ typefea_of tm
 
-fun fea_of_goal (asl,w) =
+fun sfea_of_goal b (asl,w) =
   let
-    val asl_sl1 = List.concat (map fea_of_term asl)
+    val asl_sl1 = List.concat (map (sfea_of_term b) asl)
     val asl_sl2 = map (fn x => x ^ ".h") asl_sl1
-    val w_sl   = map (fn x => x ^ ".w") (fea_of_term w)
+    val w_sl = map (fn x => x ^ ".w") (sfea_of_term b w)
   in
     mk_string_set (w_sl @ asl_sl2)
   end
@@ -100,24 +101,33 @@ fun fea_of_goal (asl,w) =
    Hashing features
    ------------------------------------------------------------------------- *)
 
-fun feahash_of_term tm =
-  mk_fast_set Int.compare (map hash_string (fea_of_term tm))
+fun fea_of_term b tm =
+  mk_fast_set Int.compare (map hash_string (sfea_of_term b tm))
 
-fun feahash_of_term_mod x tm =
-  mk_fast_set Int.compare (map (hash_string_mod x) (fea_of_term tm))
+fun fea_of_term_mod x b tm =
+  mk_fast_set Int.compare (map (hash_string_mod x) (sfea_of_term b tm))
 
-fun feahash_of_goal g =
-  mk_fast_set Int.compare (map hash_string (fea_of_goal g))
+fun fea_of_goal b g =
+  mk_fast_set Int.compare (map hash_string (sfea_of_goal b g))
 
-val goalfea_cache = ref (dempty goal_compare)
-
-fun clean_goalfea_cache () = goalfea_cache := dempty goal_compare
-
-fun fea_of_goal_cached g =
-  dfind g (!goalfea_cache) handle NotFound =>
-  let val fea = feahash_of_goal g in
-    goalfea_cache := dadd g fea (!goalfea_cache); fea
+val goalsubfea_cache = ref (dempty goal_compare)
+val goalcfea_cache = ref (dempty goal_compare)
+fun clean_goalsubfea_cache () = goalsubfea_cache := dempty goal_compare
+fun clean_goalcfea_cache () = goalcfea_cache := dempty goal_compare
+fun subfea_of_goal_cached g =
+  dfind g (!goalsubfea_cache) handle NotFound =>
+  let val fea = fea_of_goal true g in
+    goalsubfea_cache := dadd g fea (!goalsubfea_cache); fea
   end
+fun cfea_of_goal_cached g =
+  dfind g (!goalcfea_cache) handle NotFound =>
+  let val fea = fea_of_goal false g in
+    goalcfea_cache := dadd g fea (!goalcfea_cache); fea
+  end
+
+fun fea_of_goal_cached b g = 
+  if b then subfea_of_goal_cached g else cfea_of_goal_cached g
+
 
 (* ------------------------------------------------------------------------
    TFIDF: weight of symbols (power of 6 comes from the neareset neighbor
@@ -128,9 +138,8 @@ fun weight_tfidf symsl =
   let
     val syms      = List.concat symsl
     val dict      = count_dict (dempty Int.compare) syms
-    val n         = length symsl
-    fun f (fea,freq) =
-      Math.pow (Math.ln (Real.fromInt n) - Math.ln (Real.fromInt freq), 6.0)
+    val n         = Real.fromInt (length symsl)
+    fun f (fea,freq) = Math.pow (Math.ln n - Math.ln (Real.fromInt freq), 6.0)
   in
     Redblackmap.map f dict
   end

@@ -7,9 +7,13 @@ sig
   type thmid = mlThmData.thmid
   type stac = mlTacticData.stac
   type call = mlTacticData.call
-  type symweight = (int, real) Redblackmap.dict  
+  type symweight = mlFeature.symweight
   type 'a afea = ('a * fea) list
   
+  val inter_time : real ref
+  val dfind_time : real ref
+  val sum_time : real ref
+
   (* nearest neighbor predictors *)
   val termknn: symweight * term afea -> int -> fea -> term list
   val thmknn:  symweight * thmid afea -> int -> fea -> thmid list

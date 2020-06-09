@@ -130,6 +130,7 @@ sig
   val split_triple : ('a * 'b * 'c) list -> 'a list * 'b list * 'c list
   val quintuple_of_list : 'a list -> 'a * 'a * 'a * 'a * 'a
   val interleave : int -> 'a list -> 'a list -> 'a list  
+  val inter_increasing : int list -> int list -> int list
 
   (* randomness, probability and distributions *)
   val random_real : unit -> real

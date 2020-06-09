@@ -119,9 +119,9 @@ fun pred_ssubterm (asl,w) stm =
     val mem = !show_types
     val tmll = map (find_terms (fn _ => true)) (w :: asl)
     val tml1 = mk_term_set (List.concat tmll)
-    val tmfea = map_assoc (fn x => ~ (length tml1) :: feahash_of_term x) tml1
+    val tmfea = map_assoc (fn x => ~ (length tml1) :: fea_of_term true x) tml1
     val symweight = learn_tfidf tmfea
-    val tml2 = termknn (symweight,tmfea) 1 (feahash_of_term tm)   
+    val tml2 = termknn (symweight,tmfea) 1 (fea_of_term true tm)   
     val r = (show_types := true; term_to_string (hd tml2))
   in
     show_types := mem; r
@@ -202,16 +202,13 @@ fun inst_stacl (thmidl,g) stacl =
    Orthogonalization
    ------------------------------------------------------------------------- *)
 
-fun pred_stac tacdata ostac gfea =
-  let
-    val tacfea = map (fn x => (#ortho x,#fea x)) (#calls tacdata)
-    val symweight = learn_tfidf tacfea
-    val stacl = tacknn (symweight,tacfea) (!ttt_ortho_radius) gfea
-    val no = List.find (fn x => fst x = ostac) (number_snd 0 stacl)
-    val ns = case no of NONE => "none" | SOME (_,i) => its i
-  in
+fun pred_stac (tacsymweight,tacfea) ostac fea =
+  let val stacl = tacknn (tacsymweight,tacfea) (!ttt_ortho_radius) fea in
     filter (fn x => not (x = ostac)) stacl
   end
+
+fun pred_thmid thmdata fea =
+  thmknn thmdata (!ttt_thmlarg_radius) fea
 
 fun order_stac tacdata ostac stacl =
    let
@@ -227,7 +224,7 @@ fun op_subset eqf l1 l2 = null (op_set_diff eqf l1 l2)
 fun test_stac g gl (stac, istac) =
   let
     val _ = debug "test_stac"
-    val (glo,t) = add_time (app_stac (!learn_tactic_time) istac) g
+    val glo = app_stac (!learn_tactic_time) istac g
   in
     case glo of NONE => NONE | SOME newgl =>
       (if op_subset goal_eq newgl gl then SOME stac else NONE)
@@ -237,19 +234,18 @@ val ortho_predstac_time = ref 0.0
 val ortho_predthm_time = ref 0.0
 val ortho_teststac_time = ref 0.0
 
-fun orthogonalize (thmdata,tacdata) 
+fun orthogonalize (thmdata,tacdata,(tacsymweight,tacfea)) 
   (call as {stac,ortho,time,ig,ogl,loc,fea}) =
   let
     val _ = debug "predict tactics"
     val stacl1 = total_time ortho_predstac_time 
-      (pred_stac tacdata stac) fea
+      (pred_stac (tacsymweight,tacfea) stac) fea
     val _ = debug "order tactics"
     val stacl2 = order_stac tacdata stac stacl1
     val _ = debug "abstract tactics"
     val stacl3 = concat_absstacl fea stac stacl2
     val _ = debug "predict theorems"
-    val thmidl = total_time ortho_predthm_time 
-      (thmknn thmdata (!ttt_thmlarg_radius)) fea
+    val thmidl = total_time ortho_predthm_time (pred_thmid thmdata) fea 
     val _ = debug "instantiate arguments"
     val stacl4 = inst_stacl (thmidl,ig) stacl3
     val _ = debug "test tactics"

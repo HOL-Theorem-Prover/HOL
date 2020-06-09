@@ -181,7 +181,7 @@ fun main_hh thmdata goal =
   let
     val atpl = filter exists_atp (!all_atps)
     val n = list_imax (map npremises_of atpl)
-    val premises = thmknn_wdep thmdata n (feahash_of_goal goal)
+    val premises = thmknn_wdep thmdata n (fea_of_goal true goal)
   in
     hh_pb atpl premises goal
   end

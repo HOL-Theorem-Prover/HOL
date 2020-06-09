@@ -113,7 +113,7 @@ fun add_thmfea thy ((name,thm),(thmfea,nodupl)) =
     val newnodupl = dappend (g,thmid) nodupl
   in
     if not (dmem g nodupl) andalso uptodate_thm thm
-    then ((thmid, fea_of_goal_cached g) :: thmfea, newnodupl)
+    then ((thmid, fea_of_goal_cached true g) :: thmfea, newnodupl)
     else (thmfea, newnodupl)
   end
 

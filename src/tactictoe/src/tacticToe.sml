@@ -58,7 +58,7 @@ fun select_tacfea tacdata gfea =
 fun main_tactictoe (thmdata,tacdata) goal =
   let
     (* preselection *)
-    val goalf = feahash_of_goal goal
+    val goalf = fea_of_goal true goal
     val _ = debug "preselection of theorems"
     val ((thmsymweight,thmfeadict),t1) =
       add_time (select_thmfea thmdata) goalf
@@ -72,7 +72,7 @@ fun main_tactictoe (thmdata,tacdata) goal =
     (* predictors *)
     fun thmpred n g =
       dfind (g,n) (!thm_cache) handle NotFound =>
-      let val r = thmknn (thmsymweight,thmfeadict) n (feahash_of_goal g) in
+      let val r = thmknn (thmsymweight,thmfeadict) n (fea_of_goal true g) in
         thm_cache := dadd (g,n) r (!thm_cache); r
       end
     fun tacpred g =
@@ -82,7 +82,7 @@ fun main_tactictoe (thmdata,tacdata) goal =
           val thmidl = thmpred (2 * !ttt_thmlarg_radius) g
           val (thmidl1,thmidl2) = part_n (!ttt_thmlarg_radius) thmidl
           val thmls2 = thmls_of_thmidl thmidl
-          val l = feahash_of_goal g
+          val l = fea_of_goal true g
           val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
           val stacl1 = tacknn (tacsymweight,tacfea) (!ttt_presel_radius) l
           val stacl2 = mk_sameorder_set String.compare (metis_stac :: stacl1)
@@ -99,7 +99,7 @@ fun main_tactictoe (thmdata,tacdata) goal =
       else
         let
           val thmidl = thmpred (!ttt_thmlarg_radius) g
-          val l = feahash_of_goal g
+          val l = fea_of_goal true g
           val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
           val stacl1 = tacknn (tacsymweight,tacfea) (!ttt_presel_radius) l
           val stacl2 = mk_sameorder_set String.compare (metis_stac :: stacl1)

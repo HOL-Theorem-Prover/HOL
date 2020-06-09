@@ -28,32 +28,27 @@ fun number_snd start l = case l of
 
 fun print_endline s = print (s ^ "\n")
 
-val hash_modulo =
-  if valOf (Int.maxInt) > 2147483647
-  then 79260655 * 10000000 + 5396977 (* assumes 64 bit *)
-  else 1002487 (* assumes 32 bit *)
+fun hash_string_mod modulo s =
+  let
+    fun hsh (i, A) s =
+       hsh (i + 1, (A * 263 + Char.ord (String.sub (s, i))) mod modulo) s
+       handle Subscript => A
+  in
+    hsh (0,0) s
+  end
+val hash_modulo = 1002487
+val hash_string = hash_string_mod hash_modulo
 
-local open Char String in
-  fun hash_string s =
-    let
-      fun hsh (i, A) s =
-         hsh (i + 1, (A * 263 + ord (sub (s, i))) mod hash_modulo) s
-         handle Subscript => A
-    in
-      hsh (0,0) s
-    end
-end
-
-local open Char String in
-  fun hash_string_mod modulo s =
-    let
-      fun hsh (i, A) s =
-         hsh (i + 1, (A * 263 + ord (sub (s, i))) mod modulo) s
-         handle Subscript => A
-    in
-      hsh (0,0) s
-    end
-end
+fun inter_increasing l1 l2 = case (l1,l2) of
+    ([],_) => []
+  | (_,[]) => []
+  | (a1 :: m1, a2 :: m2) => 
+    (
+    case Int.compare (a1,a2) of
+      LESS => inter_increasing m1 l2
+    | GREATER => inter_increasing l1 m2
+    | EQUAL => a1 :: inter_increasing m1 m2 
+    )
 
 (* ------------------------------------------------------------------------
    Commands
