@@ -742,12 +742,6 @@ val LAPPEND = new_specification
 val _ = export_rewrites ["LAPPEND"]
 val _ = computeLib.add_persistent_funs ["LAPPEND"]
 
-Theorem LCONS_LAPPEND:
-  !x ll. x:::ll = LAPPEND [|x|] ll
-Proof
-  fs[LAPPEND]
-QED
-
 (* properties of map and append *)
 
 val LMAP_APPEND = store_thm(
@@ -1644,9 +1638,11 @@ val LFILTER_APPEND = store_thm(
   SIMP_TAC (srw_ss()) [] THEN REPEAT STRIP_TAC THEN
   COND_CASES_TAC THEN ASM_SIMP_TAC (srw_ss()) []);
 
-val LFILTER_fromList = Q.prove(`
-  !l. LFILTER f (fromList l) = fromList(FILTER f l)`,
-  Induct >> rw[]);
+Theorem LFILTER_fromList[simp]:
+  !p l. LFILTER p (fromList l) = fromList (FILTER p l)
+Proof
+  Induct_on ‘l’ \\ rw[]
+QED
 
 Theorem LFILTER_EQ_CONS:
   LFILTER P ll = h:::t
@@ -1698,7 +1694,7 @@ Proof
 QED
 
 Theorem every_fromList_EVERY:
-  !l P. every P (fromList l) ==> EVERY P l
+  !l P. every P (fromList l) = EVERY P l
 Proof
   Induct >> rw[]
 QED
@@ -3140,12 +3136,6 @@ Theorem every_fromSeq[simp]:
   !p f. every p (fromSeq f) = !i. p (f i)
 Proof
   rewrite_tac [every_def] \\ rw []
-QED
-
-Theorem LFILTER_fromList[simp]:
-  !p l. LFILTER p (fromList l) = fromList (FILTER p l)
-Proof
-  Induct_on ‘l’ \\ rw[]
 QED
 
 Theorem LFILTER_fromSeq:
