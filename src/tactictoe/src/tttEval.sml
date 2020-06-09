@@ -104,7 +104,7 @@ run_evalscript (tttSetup.tactictoe_dir ^ "/savestate/arithmetic170");
 (* One theory
 load "tttUnfold"; open tttUnfold;
 tttSetup.record_savestate_flag := true;
-tttSetup.learn_abstract_term := true;
+tttSetup.learn_abstract_term := false;
 aiLib.debug_flag := true;
 ttt_clean_record (); ttt_record_thy "arithmetic";
 load "tacticToe"; open tacticToe; tactictoe ``1+1=2``;

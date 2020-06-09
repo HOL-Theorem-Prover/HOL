@@ -146,5 +146,19 @@ fun weight_tfidf symsl =
 
 fun learn_tfidf feavl = weight_tfidf (map snd feavl)
 
+fun weight_tfidf_res fead symsl =
+  let
+    val syms = List.concat symsl
+    val d1 = count_dict (dempty Int.compare) syms (* could be precomputed *)
+    fun g (fea,_) = dfind fea d1 handle NotFound => 0
+    val d2 = Redblackmap.map g fead     
+    val n = Real.fromInt (length symsl)
+    fun f (fea,freq) = Math.pow (Math.ln n - Math.ln (Real.fromInt freq), 6.0)
+  in
+    Redblackmap.map f d2
+  end
+
+fun learn_tfidf_res fead feavl = weight_tfidf_res fead (map snd feavl)
+
 
 end (* struct *)

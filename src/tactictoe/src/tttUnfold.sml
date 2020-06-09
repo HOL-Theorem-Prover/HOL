@@ -590,8 +590,12 @@ fun modified_program (h,d) p =
       val body' = modified_program ((s <> "val") orelse h, d+1) body
       val semicolon =
         if d = 0 andalso !is_thm_flag then
-       ["; val _ = tttRecord.thmdata_glob := mlThmData.create_thmdata () ;",
-        " val _ = tttRecord.ttt_save_state () ;"]
+       ["; val _ = tttRecord.thmdata_glob :=" ^ 
+         " aiLib.total_time mlThmData.create_thmdata_time" ^  
+         " mlThmData.create_thmdata ();",
+        " val _ =" ^
+        " aiLib.total_time tttRecord.ttt_save_state_time " ^      
+        " tttRecord.ttt_save_state ();"]
         else []
     in
       semicolon @ [s] @ head' @ [sep] @ body' @ continue m

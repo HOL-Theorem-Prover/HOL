@@ -18,6 +18,7 @@ sig
   val mk_metis_call : string list -> string
 
   (* data for the nearest neighbor predictor *)
+  val create_thmdata_time : real ref
   val create_thmdata : unit -> thmdata
 
   (* dependencies of a top-level theorem *)

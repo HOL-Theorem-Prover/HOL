@@ -45,7 +45,9 @@ val record_time = ref 0.0
 val parse_time = ref 0.0
 val replay_time = ref 0.0
 val learn_time = ref 0.0
+val tacfea_time = ref 0.0
 val tacfea_tfidf_time = ref 0.0
+val ttt_save_state_time = ref 0.0
 
 fun info_thy thy =
   [
@@ -60,12 +62,16 @@ fun info_thy thy =
    ", replay: " ^ rts_round 6 (!replay_time) ^ ")",
    "  Learn time: " ^ rts_round 6 (!learn_time) ^
    " (tactic pred: " ^ rts_round 6 (!ortho_predstac_time) ^ "," ^
-   " tactic tfidf: " ^ rts_round 6 (!tacfea_tfidf_time) ^ "," ^
    " thm pred: " ^ rts_round 6 (!ortho_predthm_time) ^ "," ^
    " inter: " ^ rts_round 6 (!inter_time) ^ "," ^
    " dfind: " ^ rts_round 6 (!dfind_time) ^ "," ^
    " sum: " ^ rts_round 6 (!sum_time) ^ "," ^
-   " tactic test: " ^ rts_round 6 (!ortho_teststac_time) ^ ")"
+   " tactic test: " ^ rts_round 6 (!ortho_teststac_time) ^ ")",
+   "  Others: " ^  
+   "(tactic data: " ^ rts_round 6 (!tacfea_time) ^ " " ^ 
+   rts_round 6 (!tacfea_tfidf_time) ^ "," ^
+   " thm data : " ^ rts_round 6 (!create_thmdata_time) ^ "," ^
+   " savestate : " ^ rts_round 6 (!ttt_save_state_time) ^ ")"
   ]
 
 fun write_info thy =
@@ -171,9 +177,13 @@ fun start_record_proof name =
 fun end_record_proof name g =
   let
     val l1 = (rev (!calls_glob))
+    val feal = List.concat (map #fea l1)
+    val fead = dset Int.compare feal
     val (thmdata,tacdata) = (!thmdata_glob, !tacdata_glob)
-    val tacfea = map (fn x => (#ortho x,#fea x)) (#calls tacdata)
-    val tacsymweight = total_time tacfea_tfidf_time learn_tfidf tacfea
+    val tacfea = total_time tacfea_time 
+      (map (fn x => (#ortho x,#fea x))) (#calls tacdata)
+    val tacsymweight = 
+      total_time tacfea_tfidf_time (learn_tfidf_res fead) tacfea
     val l2 = 
       if !record_ortho_flag
       then map (orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))) l1
@@ -184,10 +194,7 @@ fun end_record_proof name g =
     tacdata_glob := newtacdata
   end
 
-(* The value of 50 is a compromise between fast saveState/saveChild
-   and fast loadState. Probably loading
-   becomes too slow above 50 * 50 = 2500 savestates
-   per theory. *)
+(* 50 is a compromise between fast saveState and fast loadState *) 
 fun ttt_save_state () =
   (
   if !record_savestate_flag then

@@ -128,6 +128,8 @@ fun add_namespacethm (thmfea,nodupl) =
     foldl (add_thmfea namespace_tag) (thmfea,nodupl) l
   end
 
+val create_thmdata_time = ref 0.0
+
 fun create_thmdata () =
   let
     val thyl = current_theory () :: ancestry (current_theory ())
