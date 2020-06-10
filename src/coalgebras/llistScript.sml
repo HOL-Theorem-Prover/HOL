@@ -3269,7 +3269,7 @@ Proof
     \\ qexists_tac `m + LENGTH l` \\ rw []
     THEN1 (
       drule LTAKE_LLENGTH_SOME \\ strip_tac
-      \\ Cases_on `n ≤ m` \\ fs []
+      \\ Cases_on `n <= m` \\ fs []
       \\ drule (GEN_ALL LTAKE_TAKE_LESS)
       \\ disch_then drule \\ fs [])
     \\ fs [LLENGTH_APPEND, LFINITE_fromList])
@@ -3310,7 +3310,7 @@ Theorem LLIST_BISIM_UPTO:
   !ll1 ll2 R.
     R ll1 ll2 /\
     (!ll3 ll4.
-      R ll3 ll4 ⇒
+      R ll3 ll4 ==>
       ll3 = [||] /\ ll4 = [||] \/
       LHD ll3 = LHD ll4 /\
       llist_upto R (THE (LTL ll3)) (THE (LTL ll4)))
