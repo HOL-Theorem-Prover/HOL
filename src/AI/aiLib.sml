@@ -405,11 +405,12 @@ fun best_n cmp k l =
   let 
     val arr = Array.fromList l 
     val n = Array.length arr
+    val k' = Int.min (k,n)
     val _ = build_maxheap cmp arr
     fun f i = 
       let val r = Array.sub (arr,0) in delete_root cmp (n-i) arr; r end
   in
-    List.tabulate (k,f)
+    List.tabulate (k',f)
   end
 
 fun best_n_rmaxu cmp k l =
@@ -418,7 +419,7 @@ fun best_n_rmaxu cmp k l =
     val n = Array.length arr
     val _ = build_maxheap compare_rmax arr
     fun loop i (d,l) = 
-      if dlength d >= k then rev l else
+      if dlength d >= k orelse n-i <= 0 then rev l else
       let val r = fst (Array.sub (arr,0)) in 
         delete_root compare_rmax (n-i) arr; 
         loop (i+1) (if dmem r d then (d,l) else (dadd r () d, r :: l))
