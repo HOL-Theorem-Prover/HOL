@@ -46,7 +46,7 @@ val parse_time = ref 0.0
 val replay_time = ref 0.0
 val learn_time = ref 0.0
 val tacfea_time = ref 0.0
-val tacfea_tfidf_time = ref 0.0
+val learn_tfidf_time = ref 0.0
 val ttt_save_state_time = ref 0.0
 
 fun info_thy thy =
@@ -69,7 +69,7 @@ fun info_thy thy =
    " tactic test: " ^ rts_round 6 (!ortho_teststac_time) ^ ")",
    "  Others: " ^  
    "(tactic data: " ^ rts_round 6 (!tacfea_time) ^ " " ^ 
-   rts_round 6 (!tacfea_tfidf_time) ^ "," ^
+   rts_round 6 (!learn_tfidf_time) ^ "," ^
    " thm data : " ^ rts_round 6 (!create_thmdata_time) ^ "," ^
    " savestate : " ^ rts_round 6 (!ttt_save_state_time) ^ ")"
   ]
@@ -177,13 +177,14 @@ fun start_record_proof name =
 fun end_record_proof name g =
   let
     val l1 = (rev (!calls_glob))
-    val feal = List.concat (map #fea l1)
-    val fead = dset Int.compare feal
+    val feal1 = List.concat (map #fea l1)
+    val feal2 = mk_fast_set Int.compare feal1
     val (thmdata,tacdata) = (!thmdata_glob, !tacdata_glob)
     val tacfea = total_time tacfea_time 
       (map (fn x => (#ortho x,#fea x))) (#calls tacdata)
     val tacsymweight = 
-      total_time tacfea_tfidf_time (learn_tfidf_res fead) tacfea
+      total_time learn_tfidf_time 
+        (learn_tfidf_symfreq (length tacfea) feal2) (#symfreq tacdata)
     val l2 = 
       if !record_ortho_flag
       then map (orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))) l1

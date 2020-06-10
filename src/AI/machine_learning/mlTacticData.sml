@@ -48,7 +48,8 @@ type tacdata =
   calls : call list,
   calls_cthy : call list,
   taccov : (stac, int) Redblackmap.dict,
-  calldep : (goal, call list) Redblackmap.dict
+  calldep : (goal, call list) Redblackmap.dict,
+  symfreq : (int, int) Redblackmap.dict
   }
 
 val empty_tacdata : tacdata =
@@ -56,7 +57,8 @@ val empty_tacdata : tacdata =
   calls = [],
   calls_cthy = [],
   taccov = dempty String.compare,
-  calldep = dempty goal_compare
+  calldep = dempty goal_compare,
+  symfreq = dempty Int.compare
   }
 
 (* -------------------------------------------------------------------------
@@ -217,6 +219,9 @@ fun import_calls file =
 fun init_taccov calls =
   count_dict (dempty String.compare) (map #ortho calls)
 
+fun init_symfreq calls =
+  count_dict (dempty Int.compare) (List.concat (map #fea calls))
+
 fun update_calldep (call,calldep) =
   let
     val oldl = dfind (#ig call) calldep handle NotFound => []
@@ -233,7 +238,8 @@ fun init_tacdata calls =
   calls      = calls,
   calls_cthy = [],
   calldep    = init_calldep calls,
-  taccov     = init_taccov calls
+  taccov     = init_taccov calls,
+  symfreq    = init_symfreq calls
   }
 
 fun import_tacdata filel =
@@ -280,12 +286,13 @@ fun ttt_import_tacdata () =
     tacdata
   end
 
-fun ttt_update_tacdata (call, {calls, calls_cthy, taccov, calldep}) =
+fun ttt_update_tacdata (call, {calls,calls_cthy,taccov,calldep,symfreq}) =
   {
   calls      = call :: calls,
   calls_cthy = call :: calls_cthy,
   calldep    = update_calldep (call,calldep),
-  taccov     = count_dict taccov [#ortho call]
+  taccov     = count_dict taccov [#ortho call],
+  symfreq    = count_dict symfreq (#fea call)
   }
 
 fun ttt_export_tacdata thy tacdata =

@@ -20,7 +20,7 @@ sig
   
   (* tfidf *)
   val learn_tfidf : ('a * fea) list -> symweight
-  val learn_tfidf_res : (int, unit) Redblackmap.dict -> 
-    ('a * fea) list -> symweight  
+  val learn_tfidf_symfreq :int -> 
+    int list -> (int, int) Redblackmap.dict -> symweight
 
 end

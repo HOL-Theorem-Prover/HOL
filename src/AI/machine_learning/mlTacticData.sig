@@ -25,7 +25,8 @@ sig
     calls : call list,
     calls_cthy : call list,
     taccov : (stac, int) Redblackmap.dict,
-    calldep : (goal, call list) Redblackmap.dict
+    calldep : (goal, call list) Redblackmap.dict,
+    symfreq : (int, int) Redblackmap.dict
     }
   val empty_tacdata : tacdata
   val export_calls : string -> call list -> unit
