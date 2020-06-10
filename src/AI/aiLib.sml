@@ -17,6 +17,7 @@ val ERR = mk_HOL_ERR "aiLib"
    ------------------------------------------------------------------------ *)
 
 fun vector_to_list v = Vector.foldr (op ::) [] v
+fun array_to_list v = Array.foldr (op ::) [] v
 
 fun number_fst start l = case l of
   []      => []
@@ -350,6 +351,80 @@ fun interleave offset l1 l2 =
     val l2' = map_snd (fn x => offset * 2 * x + 1) (number_snd 1 l2)
   in
     map fst (dict_sort compare_imin (l1' @ l2'))
+  end
+
+(* ------------------------------------------------------------------------
+   Efficient algorithm for finding the k largest values in a list.
+   ------------------------------------------------------------------------ *)
+
+fun swap_value (arr,a,b) =
+  let 
+    val av = Array.sub (arr,a)
+    val bv = Array.sub (arr,b)
+  in
+    Array.update (arr,a,bv);
+    Array.update (arr,b,av)
+  end
+
+fun heapify cmp arr n i = 
+  let
+    val largest = ref i
+    val left = 2 * i + 1
+    val right = 2 * i + 2
+  in
+    if left < n andalso 
+       cmp (Array.sub (arr,left),Array.sub (arr,!largest)) = LESS
+    then largest := left 
+    else ();
+    if right < n andalso 
+       cmp (Array.sub (arr,right),Array.sub (arr,!largest)) = LESS 
+    then largest := right 
+    else ();
+    if !largest <> i 
+    then (swap_value (arr,i,!largest); heapify cmp arr n (!largest)) 
+    else ()
+  end
+
+fun build_maxheap cmp arr =
+  let
+    val n = Array.length arr
+    val i = n div 2 - 1
+  in
+    ignore (List.tabulate (i + 1, fn x => heapify cmp arr n (i - x)))    
+  end
+
+fun delete_root cmp n arr =
+  let
+    val lastElement = Array.sub (arr,n-1) 
+  in
+    Array.update (arr,0,lastElement); 
+    heapify cmp arr (n-1) 0
+  end
+
+fun best_n cmp k l = 
+  let 
+    val arr = Array.fromList l 
+    val n = Array.length arr
+    val _ = build_maxheap cmp arr
+    fun f i = 
+      let val r = Array.sub (arr,0) in delete_root cmp (n-i) arr; r end
+  in
+    List.tabulate (k,f)
+  end
+
+fun best_n_rmaxu cmp k l =
+  let 
+    val arr = Array.fromList l 
+    val n = Array.length arr
+    val _ = build_maxheap compare_rmax arr
+    fun loop i (d,l) = 
+      if dlength d >= k then rev l else
+      let val r = fst (Array.sub (arr,0)) in 
+        delete_root compare_rmax (n-i) arr; 
+        loop (i+1) (if dmem r d then (d,l) else (dadd r () d, r :: l))
+      end
+  in
+    loop 0 (dempty cmp, [])
   end
 
 (* ------------------------------------------------------------------------

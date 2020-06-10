@@ -25,8 +25,7 @@ val sum_time = ref 0.0
 fun knn_dist symweight feao feap =
   let
     val feai = total_time inter_time inter_increasing feao feap
-    fun wf n = dfind n symweight 
-      handle NotFound => raise ERR "knn_dist" ""
+    fun wf n = dfind n symweight handle NotFound => raise ERR "knn_dist" ""
     val weightl = total_time dfind_time (map wf) feai
   in
     total_time sum_time sum_real weightl
@@ -36,9 +35,13 @@ fun knn_dist symweight feao feap =
    Sorting feature vectors according to the distance
    ------------------------------------------------------------------------ *)
 
-fun knn_sort (symweight,feav) feao =
-  let fun f (x,feap) = ((x,feap), knn_dist symweight feao feap) in
-    dict_sort compare_rmax (map f feav)
+fun knn_sortu cmp n (symweight,feav) feao =
+  let 
+    fun g x = SOME (x, dfind x symweight) handle NotFound => NONE
+    val feaosymweight = dnew Int.compare (List.mapPartial g feao)
+    fun f (x,feap) = (x, knn_dist feaosymweight feao feap) 
+  in
+    best_n_rmaxu cmp n (map f feav)
   end
 
 (* ------------------------------------------------------------------------
@@ -46,24 +49,14 @@ fun knn_sort (symweight,feav) feao =
    ------------------------------------------------------------------------ *)
 
 fun termknn (symweight,termfea) n fea =
-  let
-    val l1 = map (fst o fst) (knn_sort (symweight,termfea) fea)
-    val l2 = mk_sameorder_set Term.compare l1
-  in
-    first_n n l2
-  end
+  knn_sortu Term.compare n (symweight,termfea) fea
 
 (* ------------------------------------------------------------------------
    Theorem predictions
    ------------------------------------------------------------------------ *)
 
 fun thmknn (symweight,thmfea) n fea =
-  let
-    val l1 = map (fst o fst) (knn_sort (symweight,thmfea) fea)
-    val l2 = mk_sameorder_set String.compare l1
-  in
-    first_n n l2
-  end
+  knn_sortu String.compare n (symweight,thmfea) fea
 
 (* ----------------------------------------------------------------------
    Adding theorem dependencies
@@ -85,21 +78,11 @@ fun thmknn_wdep (symweight,feavdict) n fea =
    Tactic predictions
    ------------------------------------------------------------------------ *)
 
-fun tacknn (symweight,tacfea) n feao =
-  let 
-    val l1 = map (fst o fst) (knn_sort (symweight,tacfea) feao) 
-    val l2 = mk_sameorder_set String.compare l1
-  in
-    first_n n l2 
-  end
+fun tacknn (symweight,tacfea) n fea =
+  knn_sortu String.compare n (symweight,tacfea) fea
 
-fun callknn (symweight,callfea) n feao =
-  let 
-    val l1 = map (fst o fst) (knn_sort (symweight,callfea) feao) 
-    val l2 = mk_sameorder_set call_compare l1
-  in
-    first_n n l2
-  end
+fun callknn (symweight,callfea) n fea =
+  knn_sortu call_compare n (symweight,callfea) fea
 
 (* ----------------------------------------------------------------------
    Adding tactic dependencies

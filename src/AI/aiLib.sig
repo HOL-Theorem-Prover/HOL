@@ -131,6 +131,8 @@ sig
   val quintuple_of_list : 'a list -> 'a * 'a * 'a * 'a * 'a
   val interleave : int -> 'a list -> 'a list -> 'a list  
   val inter_increasing : int list -> int list -> int list
+  val best_n : ('a * 'a -> order) -> int -> 'a list -> 'a list
+  val best_n_rmaxu : ('a * 'a -> order) -> int -> ('a * real) list -> 'a list
 
   (* randomness, probability and distributions *)
   val random_real : unit -> real
