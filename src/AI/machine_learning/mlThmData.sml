@@ -106,39 +106,63 @@ fun validdep_of_thmid thmid =
    Theorem features
    ------------------------------------------------------------------------- *)
 
-fun add_thmfea thy ((name,thm),(thmfea,nodupl)) =
+fun add_thmfea thy ((name,thm),(thmfea,symfreq,nodupl)) =
   let
     val g = dest_thm thm
     val thmid = thy ^ "Theory." ^ name
-    val newnodupl = dappend (g,thmid) nodupl
+    val newnodupl = dadd g () nodupl
   in
     if not (dmem g nodupl) andalso uptodate_thm thm
-    then ((thmid, fea_of_goal_cached true g) :: thmfea, newnodupl)
-    else (thmfea, newnodupl)
+    then 
+      let 
+        val fea = fea_of_goal_cached true g
+        val newthmfea = (thmid,fea) :: thmfea
+        val newsymfreq = count_dict symfreq fea
+      in
+        (newthmfea,newsymfreq,newnodupl)
+      end
+    else (thmfea,symfreq,newnodupl)
   end
 
-fun add_thmfea_from_thy (thy,(thmfea,nodupl)) =
-  foldl (add_thmfea thy) (thmfea,nodupl) (DB.thms thy)
+fun add_thmfea_from_thy (thy,acc) =
+  foldl (add_thmfea thy) acc (DB.thms thy)
 
 fun thmfea_from_thyl thyl =
-  foldl add_thmfea_from_thy ([], dempty goal_compare) thyl
+  foldl add_thmfea_from_thy ([], dempty Int.compare, dempty goal_compare) thyl
 
-fun add_namespacethm (thmfea,nodupl) =
+fun add_namespacethm acc =
   let val l = unsafe_namespace_thms () in
-    foldl (add_thmfea namespace_tag) (thmfea,nodupl) l
+    foldl (add_thmfea namespace_tag) acc l
   end
 
 val create_thmdata_time = ref 0.0
 
+val create_thmdata_cache = ref (dempty (list_compare String.compare))
+
+fun clean_create_thmdata_cache () =  
+  create_thmdata_cache := dempty (list_compare String.compare)
+
+val add_cthy_time = ref 0.0
+val add_namespace_time = ref 0.0
+val thmdata_tfidf_time = ref 0.0
+
 fun create_thmdata () =
   let
-    val thyl = current_theory () :: ancestry (current_theory ())
-    val (thmfea1,nodupl1) = thmfea_from_thyl thyl
-    val (thmfea2,nodupl2) = add_namespacethm (thmfea1,nodupl1)
-    val n = int_to_string (length thmfea2)
+    val thy = current_theory ()
+    val thyl = ancestry thy
+    val acc1 = 
+      dfind thyl (!create_thmdata_cache) handle NotFound =>
+      let val r = thmfea_from_thyl thyl in
+        create_thmdata_cache := dadd thyl r (!create_thmdata_cache); r
+      end
+    val acc2 = total_time add_cthy_time add_thmfea_from_thy (thy,acc1)
+    val (thmfea3,symfreq3,_) = total_time add_namespace_time 
+      add_namespacethm acc2
+    val n = int_to_string (length thmfea3)
   in
     print_endline ("Loading " ^ n ^ " theorems");
-    (learn_tfidf thmfea2, thmfea2)
+    (total_time thmdata_tfidf_time 
+     (learn_tfidf_symfreq_nofilter (length thmfea3)) symfreq3, thmfea3)
   end
 
 (* -------------------------------------------------------------------------

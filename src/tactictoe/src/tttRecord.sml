@@ -70,7 +70,10 @@ fun info_thy thy =
    "  Others: " ^  
    "(tactic data: " ^ rts_round 6 (!tacfea_time) ^ " " ^ 
    rts_round 6 (!learn_tfidf_time) ^ "," ^
-   " thm data : " ^ rts_round 6 (!create_thmdata_time) ^ "," ^
+   " thm data : " ^ rts_round 6 (!create_thmdata_time) ^ " " ^
+   rts_round 6 (!add_cthy_time) ^ " " ^
+   rts_round 6 (!add_namespace_time) ^ " " ^
+   rts_round 6 (!thmdata_tfidf_time) ^ "," ^
    " savestate : " ^ rts_round 6 (!ttt_save_state_time) ^ ")"
   ]
 

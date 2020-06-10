@@ -13,6 +13,7 @@ open HolKernel Abbrev boolLib aiLib
 val ERR = mk_HOL_ERR "mlFeature"
 
 type fea = int list
+type symfreq = (int, int) Redblackmap.dict
 type symweight = (int, real) Redblackmap.dict
 
 (* -------------------------------------------------------------------------
@@ -141,7 +142,7 @@ fun weight_tfidf symsl =
     val n         = Real.fromInt (length symsl)
     fun f (fea,freq) = Math.pow (Math.ln n - Math.ln (Real.fromInt freq), 6.0)
   in
-    Redblackmap.map f dict
+    dmap f dict
   end
 
 fun learn_tfidf feavl = weight_tfidf (map snd feavl)
@@ -155,6 +156,17 @@ fun learn_tfidf_symfreq n symres symfreq =
   in
     dnew Int.compare (map_snd f symresfreq)
   end
+
+fun learn_tfidf_symfreq_nofilter n symfreq =
+  let
+    fun g x = dfind x symfreq handle NotFound => 0
+    val nr = Real.fromInt n
+    fun f (_,freq) = Math.pow (Math.ln nr - Math.ln (Real.fromInt freq), 6.0)
+  in
+    dmap f symfreq
+  end
+
+
 
 
 end (* struct *)
