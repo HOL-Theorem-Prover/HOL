@@ -28,6 +28,7 @@ val thmdata_glob = ref empty_thmdata
 val pbl_glob = ref []
 val record_tactic_time = ref 2.0
 val record_proof_time = ref 20.0
+val name_glob = ref ""
 
 (* -------------------------------------------------------------------------
    Messages and profiling
@@ -99,8 +100,8 @@ fun record_tactic (tac,stac) g =
       {
       stac = stac, ortho = stac, time = t,
       ig = g, ogl = gl, 
-      loc = (current_theory (), (!savestate_level) - 1),
-      fea = fea_of_goal_cached true g
+      loc = ((current_theory (), (!savestate_level) - 1), !name_glob),
+      fea = fea_of_goal true g
       }
       :: !calls_glob);
     (gl,v)
@@ -173,9 +174,12 @@ fun fetch s reps =
    ---------------------------------------------------------------------- *)
 
 fun start_record_proof name =
-  let val outname = "Name: " ^ its ((!savestate_level) - 1) ^ " " ^ name in
-    debug outname; incr n_proof; calls_glob := []
-  end
+  (
+  incr n_proof;
+  calls_glob := [];
+  name_glob := name;
+  debug ("Name: " ^ its ((!savestate_level) - 1) ^ " " ^ name)
+  )
 
 fun end_record_proof name g =
   let
@@ -235,8 +239,6 @@ fun save_goal g =
 fun record_proof name lflag tac1 tac2 (g:goal) =
   let
     val _ = save_goal g
-    val tptpname = escape ("thm." ^ current_theory () ^ "." ^ name)
-    val _ = debug ("\nrecord_proof: " ^ tptpname)
     val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name
     val b2 = (not (!record_prove_flag) andalso pflag)

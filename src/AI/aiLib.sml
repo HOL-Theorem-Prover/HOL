@@ -37,7 +37,12 @@ fun hash_string_mod modulo s =
   in
     hsh (0,0) s
   end
-val hash_modulo = 1002487
+
+val hash_modulo =
+  if valOf (Int.maxInt) > 2147483647
+  then 79260655 * 10000000 + 5396977 (* assumes 64 bit *)
+  else 1002487 (* assumes 32 bit *)
+
 val hash_string = hash_string_mod hash_modulo
 
 fun inter_increasing l1 l2 = case (l1,l2) of

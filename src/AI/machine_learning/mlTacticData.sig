@@ -16,7 +16,8 @@ sig
     stac : stac, ortho : stac, 
     time : real,
     ig : goal, ogl : goal list,
-    loc : string * int, fea : mlFeature.fea
+    loc : (string * int) * string, 
+    fea : mlFeature.fea
     }
   val call_compare : call * call -> order
 

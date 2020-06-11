@@ -12,6 +12,10 @@ sig
   | ProofTactic of string
   | ProofOther of string
 
+  datatype applyexp =
+    ApplyExp of applyexp * applyexp
+  | ApplyUnit of (string * string option)
+
   (* parse tree *)
   val parse : string -> PolyML.ptProperties list
   val string_of_propl : PolyML.ptProperties list -> string option
@@ -22,4 +26,6 @@ sig
   val size_of_proofexp : proofexp -> int
   val string_of_proofexp : proofexp -> string
 
+  (* apply expression *)
+  val mk_applyexp : smlexp -> applyexp
 end

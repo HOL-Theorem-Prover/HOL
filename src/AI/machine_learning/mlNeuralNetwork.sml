@@ -334,6 +334,7 @@ fun train_nn param nn exl =
 
 fun infer_nn nn l = (descale_out o #outnv o last o (fp_nn nn) o scale_in) l
 
+
 end (* struct *)
 
 (* -------------------------------------------------------------------------

@@ -516,6 +516,62 @@ fun train_tnn_automl {ncore,verbose,learning_rate,batch_size,nepoch}
   end
 
 (* -------------------------------------------------------------------------
+   Converting a goal into an essentially first-order term which can 
+   be used as input to a tree neural network. 
+   ------------------------------------------------------------------------- *)
+
+val asm_cat = mk_var ("asm_cat",``:bool -> bool -> bool``)
+
+fun goal_cat (a,b) =
+  let 
+    val gcat = mk_var ("goal_cat",``:bool -> bool -> bool``) 
+  in
+    if null a 
+    then b
+    else list_mk_comb (gcat,[list_mk_binop asm_cat a,b])
+  end
+
+fun lambda_term fullty (v,bod) =
+  let
+    val ty1 = type_of v
+    val ty2 = type_of bod
+    val ty3 = mk_type ("fun",[ty1, mk_type ("fun", [ty2,fullty])])
+  in
+    list_mk_comb (mk_var ("lambda",ty3), [v,bod])
+  end
+
+fun add_lambda tm = case dest_term tm of
+    COMB(Rator,Rand) => mk_comb (add_lambda Rator, add_lambda Rand)
+  | LAMB(Var,Bod) => lambda_term (type_of tm) (Var, add_lambda Bod)
+  | _ => tm
+
+fun add_arity tm =
+  let
+    val (oper,argl) = strip_comb tm
+    val a = length argl
+    val newname =
+      if is_var oper
+      then
+        let val prefix = if null argl then "V" else "v" in
+          escape (prefix ^ fst (dest_var oper) ^ "." ^ its a)
+        end
+      else
+        let val {Thy,Name,Ty} = dest_thy_const oper in
+          escape ("c" ^ Thy ^ "." ^ Name ^ "." ^ its a)
+        end
+    val newoper = mk_var (newname, type_of oper)
+  in
+    list_mk_comb (newoper, map add_arity argl)
+  end
+
+val vhead = mk_var ("head_goal", ``:bool -> bool``);
+
+fun nntm_of_goal g =
+  let val tm = (add_arity o add_lambda o goal_cat) g in
+    mk_comb (vhead,tm)
+  end
+
+(* -------------------------------------------------------------------------
    Toy example: learning to guess if a term contains the variable "x"
    ------------------------------------------------------------------------- *)
 
@@ -526,7 +582,7 @@ load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 
 (* terms *)
 val vx = mk_var ("x",alpha);
-val vy = mk_var ("y",alpha);load "aiLib"; open aiLib;
+val vy = mk_var ("y",alpha);
 val vz = mk_var ("z",alpha);
 val vf = ``f:'a->'a->'a``;
 val vg = ``g:'a -> 'a``;
@@ -560,12 +616,6 @@ val trainparam =
    learning_rate = 0.02, batch_size = 16, nepoch = 20};
 val schedule = [trainparam];
 val tnn = train_tnn schedule randtnn (trainex,testex);
-
-(* training automl *)
-val trainparam =
-  {ncore = 1, verbose = true,
-   learning_rate = 0.02, batch_size = 16, nepoch = 20};
-val tnn = train_tnn_automl trainparam randtnn trainex;
 
 (* testing *)
 val acc = tnn_accuracy tnn testex;

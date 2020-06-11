@@ -23,7 +23,7 @@ type call =
   stac : stac, ortho : stac, 
   time : real,
   ig : goal, ogl : goal list,
-  loc : string * int, 
+  loc : ((string * int) * string), 
   fea : fea
   }
 
@@ -132,7 +132,7 @@ fun enc_call enc_tm =
       String o Real.toString,
       enc_goal enc_tm,
       enc_goal_list enc_tm,
-      pair_encode (String, Integer),
+      pair_encode (pair_encode (String, Integer), String),
       list_encode enc_fea
     )
   )
@@ -145,7 +145,7 @@ fun dec_call dec_tm =
       Option.mapPartial Real.fromString o string_decode,
       dec_goal dec_tm,
       dec_goal_list dec_tm,
-      pair_decode (string_decode,int_decode),
+      pair_decode (pair_decode (string_decode,int_decode), string_decode),
       list_decode dec_fea
     )
   )

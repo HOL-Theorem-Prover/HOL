@@ -243,8 +243,37 @@ fun string_of_proofexp e = case e of
   | ProofTactical s => safe_par s
 
 (* -------------------------------------------------------------------------
-   Tactic abstraction (in development)
+   Tactic sketch. Break a sml expression into applications.
    ------------------------------------------------------------------------- *)
+
+fun drop_all_sig stac = 
+  String.concatWith " " (map drop_sig (partial_sml_lexer stac));
+
+datatype applyexp =
+    ApplyExp of applyexp * applyexp
+  | ApplyUnit of (string * string option)
+
+fun is_app s (s1,s2) = 
+  let 
+    val s1par = "( " ^ s1 ^ " )"  
+    val s2par = "( " ^ s2 ^ " )"
+    val s1parpar = "( " ^ s1par ^ " )"  
+    val s2parpar = "( " ^ s2par ^ " )"
+
+    val l = cartesian_product [s1,s1par,s1parpar] [s2,s2par,s2parpar]
+    fun f (a,b) = a ^ " " ^ b
+  in
+    mem s (map f l)
+  end
+
+fun mk_applyexp smlexp = case smlexp of
+    SmlExp ((SOME a, SOME b),[e1,e2]) =>
+      if is_app a (string_of_smlexp e1, string_of_smlexp e2)
+      then ApplyExp (mk_applyexp e1, mk_applyexp e2)
+      else ApplyUnit (a, SOME (drop_all_sig b))
+  | SmlExp ((SOME a, b), _) => ApplyUnit (a, Option.map drop_all_sig b)
+  | SmlUnit (SOME a, b) => ApplyUnit (a, Option.map drop_all_sig b)
+  | _ => raise ERR "mk_applyexp" ""
 
 (*
 load "smlParser"; open smlParser;
@@ -254,111 +283,33 @@ load "mlTacticData"; open mlTacticData;
 load "smlLexer"; open smlLexer;
 load "tttSetup"; open tttSetup;
 val calls = import_calls (tactictoe_dir ^ "/ttt_tacdata/arithmetic");
-val stacl = map #stac calls;
+val stacl = map (fn x => (#ig x, #stac x)) calls;
 
-val sl = map (hd o partial_sml_lexer) stacl;
-val sl2 = mk_string_set sl;
+val smlexp = extract_smlexp stac;
+val applyexp = mk_applyexp smlexp;
 
-fun constant_type stac = 
-  String.concatWith " " (map drop_sig (partial_sml_lexer stac));
+fun fst_app applyexp = case applyexp of
+    ApplyExp (a,b) => fst_app a
+  | ApplyUnit (s,_) => s
+;
 
-val ERR = mk_HOL_ERR "test";
-fun dest_tyexp e = case e of
-    TyExp (a,b) => (a,b)
-  | _ => raise ERR "dest_tyexp" "";
+fun all_x x applyexp = case applyexp of
+    ApplyExp (a,b) => all_x x a @ all_x x b
+  | ApplyUnit (s,sty) => if isSome sty andalso valOf sty = x then [s] else [] 
+;
 
-fun typeo_of e = case e of
-    TyExp ((_,b),_) => b
-  | TyUnit (_,b) => b;
-fun has_type e = isSome (typeo_of e);
+val (l,t) = add_time (map (mk_applyexp o extract_smlexp)) stacl;
+val l1 = map fst_app l;
+val d = dregroup (option_compare String.compare) (map swap l1);
+fun f x = 
+  dict_sort compare_imax (dlist (count_dict (dempty String.compare) x));
+val l2 = 
+  dict_sort compare_imax (map (fn (a,b) => ((a,f b),length b)) (dlist d));
+val rl = f (List.concat (map (all_x "thm list -> tactic") l));
+val rl = f (map fst_app l);
 
-fun term_of e = case e of
-    TyExp ((SOME a,_),_) => a
-  | TyUnit (SOME a,_) => a
-  | _ => raise ERR "term_of" "";
-
-datatype e =
-    App of e * e
-  | Unit of (string * string)
-
-fun is_app s (s1,s2) = 
-  let 
-    val s1org = constant_space s1
-    val s1par = constant_space  ("(" ^ s1 ^ ")")  
-    val s2org = constant_space s2
-    val s2par = constant_space ("(" ^ s2 ^ ")")
-    val l = cartesian_product [s1org,s1par] [s2org,s2par]
-    fun f (a,b) = a ^ " " ^ b
-  in
-    mem s (map f l)
-  end
-
-fun tagty e = case e of
-    TyExp ((SOME a, SOME b),[e1,e2]) => 
-    if mem (constant_type b) ["term"] 
-    then Unit (a,b)
-    else 
-      if is_app a (term_of e1, term_of e2)
-      then App (tagty e1, tagty e2)
-      else Unit (constant_space a, constant_type b)
-  | TyExp ((SOME a , SOME b), _) => Unit (constant_space a, constant_type b)
-  | TyExp ((SOME a , NONE), el) => Unit (constant_space a,"unknown_type")
-  | TyUnit (SOME a, SOME b) => Unit (constant_space a, constant_type b)
-  | _ => raise ERR "tagty" "" ;
-
-val stac = hd (aiLib.shuffle stacl);
-fun tagty2 stac =
-  let
-    val e1 = singleton_of_list (extract_tyexp stac)
-    val e2 = (singleton_of_list o snd o dest_tyexp) e1
-  in
-    tagty e2
-  end;
-
-fun abs_term stac = 
-  let 
-    val exp = tagty2 stac
-    val instl = ref [] 
-    fun sty_of b e = case e of
-      App (e1,e2) => 
-        if b 
-        then  "(" ^ sty_of false e1 ^ " " ^ sty_of true e2 ^ ")"
-        else sty_of false e1 ^ " " ^ sty_of true e2
-    | Unit (s1,s2) => 
-      let val sl = partial_sml_lexer s1 in
-        if s2 = "term" then (instl := s1 :: !instl; "term") else 
-        if b andalso length sl > 1 andalso not (mem (hd sl) 
-          ["(","[","{","let"])
-        then "(" ^ s1 ^ ")" else s1
-      end
-  in
-    (sty_of true exp, !instl)
-  end;
-
-1) list_all_vars 
-   list_all_subterms
-
-val stacl = map #stac calls;
-val stacl1 = 
-filter (fn x => mem "HolKernel.QUOTE" (partial_sml_lexer x)) stacl;
-
-val absl = map abs_term stacl;
-val absl2 = filter (not o null o snd) absl;
-
-val goal = ``!x . x + y = y + x``;
-val tml = find_terms (fn _ => true) goal;
-val tms = map term_to_string tml;
-
-val stacset = mk_string_set stacl;
-val el = map f stacl;
-val tyl = map (sty_of false) el;
-
-val tyset = dlist (count_dict (dempty String.compare) tyl);
-val tyset2 = dict_sort compare_imax tyset;
-
-fun test x = mem "thml" (partial_sml_lexer x);
-val (al,bl) = partition (test o fst)  tyset2;
 *)
+
 
 
 end (* struct *)

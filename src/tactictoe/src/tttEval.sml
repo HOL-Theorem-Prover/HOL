@@ -123,15 +123,9 @@ ttt_clean_record (); ttt_record ();
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
-tttSetup.thml_explo_flag := true;
+tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val _ = run_evalscript_thyl "june6-16-32thms" true 30 thyl;
-
-tttSetup.ttt_search_time := 30.0;
-aiLib.debug_flag := false;
-tttSetup.thml_explo_flag := true;
-val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val _ = run_evalscript_thyl "june4-e2" true 30 thyl;
+val _ = run_evalscript_thyl "june10" true 30 thyl;
 *)
 
 (* ------------------------------------------------------------------------
