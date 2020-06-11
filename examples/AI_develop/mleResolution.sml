@@ -418,15 +418,15 @@ val pair_cat = mk_var ("pair_cat", ``:bool -> bool -> bool``)
 fun mk_bvar i = mk_var ("V" ^ its i, bool)
 val operl = List.tabulate (5, mk_bvar) @
   [empty_list_var, pair_cat, ``$~``,``$/\``,``$\/``,head_eval]
-val tnnparam = map_assoc (dim_std (2,12)) operl;
+val tnndim = map_assoc (dim_std (2,12)) operl;
 
-(* val tnnparam = #tnnparam (#dplayer rlobj); *)
+(* val tnndim = #tnndim (#dplayer rlobj); *)
 val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 200}];
 
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-val tnn = train_tnn schedule (random_tnn tnnparam) (exl4,[]);
+val tnn = train_tnn schedule (random_tnn tnndim) (exl4,[]);
 
 val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
@@ -493,12 +493,12 @@ val operl = List.tabulate (5, mk_bvar) @
   [empty_list_var, cat_move,
    pair_cat, ``$~``,``$/\``,``$\/``,head_eval]
 
-val tnnparam = map_assoc (dim_std (1,12)) operl @ [(head_poli,[12,2])]
+val tnndim = map_assoc (dim_std (1,12)) operl @ [(head_poli,[12,2])]
 
 fun pretob _ board =
   let val tm = term_of_board board in [tag_heval tm, tag_hpoli tm] end
 
-val dplayer = {pretob = pretob, tnnparam = tnnparam, schedule = schedule}
+val dplayer = {pretob = pretob, tnndim = tnndim, schedule = schedule}
 
 (* -------------------------------------------------------------------------
    Interface

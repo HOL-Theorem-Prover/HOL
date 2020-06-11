@@ -32,7 +32,7 @@ fun prepare_ex exl = map (fn (a,b) => [(mk_head a, bin_rep 4 b)]) exl
    Training
    ------------------------------------------------------------------------- *)
 
-val tnnparam = map_assoc (dim_std (2,12)) operl @ [(head_bin4,[12,12,4])]
+val tnndim = map_assoc (dim_std (2,12)) operl @ [(head_bin4,[12,12,4])]
 val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
     batch_size = 8, nepoch = 50}] @
@@ -46,7 +46,7 @@ val schedule =
 fun train_fixed () =
   let
     val exl = prepare_ex (import_arithdata "train")
-    val tnn = train_tnn schedule (random_tnn tnnparam) (exl,[])
+    val tnn = train_tnn schedule (random_tnn tnndim) (exl,[])
   in
     write_tnn (arithdir ^ "/tnn") tnn; tnn
   end
@@ -57,7 +57,7 @@ val trainparam = {ncore = 1, verbose = true, learning_rate = 0.02,
 fun train_automl_fixed () =
   let
     val exl = prepare_ex (import_arithdata "train")
-    val tnn = train_tnn_automl trainparam (random_tnn tnnparam) exl
+    val tnn = train_tnn_automl trainparam (random_tnn tnndim) exl
   in
     write_tnn (arithdir ^ "/tnn_automl") tnn; tnn
   end

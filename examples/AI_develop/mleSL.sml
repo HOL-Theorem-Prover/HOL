@@ -11,7 +11,6 @@ struct
 open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlNeuralNetwork mlTreeNeuralNetwork
 
-
 val selfdir = HOLDIR ^ "/examples/AI_develop"
 
 load "aiLib"; open aiLib;
@@ -32,8 +31,7 @@ fun eval_ground ba prop = case prop of
   | Imp (p1,p2) => not (eval_ground ba p1) orelse eval_ground ba p2
   | Or (p1,p2) => eval_ground ba p1 orelse eval_ground ba p2
   | And (p1,p2) => eval_ground ba p1 andalso eval_ground ba p2
-  | Var n => Vector.sub (ba,n)
-;
+  | Var n => Vector.sub (ba,n);
 
 fun prop_to_term prop = case prop of
     False => F
@@ -42,8 +40,7 @@ fun prop_to_term prop = case prop of
   | Imp (p1,p2) => mk_imp (prop_to_term p1, prop_to_term p2)
   | Or (p1,p2) => mk_disj (prop_to_term p1, prop_to_term p2)
   | And (p1,p2) => mk_conj (prop_to_term p1, prop_to_term p2)
-  | Var n => mk_var ("v" ^ its n,bool)
-;
+  | Var n => mk_var ("v" ^ its n,bool);
 
 fun eval_forall prop =
   let
@@ -52,10 +49,6 @@ fun eval_forall prop =
   in
     all (fn x => eval_ground x prop) vl
   end;
-
-
-
-
 
 
 (* -------------------------------------------------------------------------
@@ -70,7 +63,7 @@ val s0 = mk_var ("s0",``:'a -> 'a``);
 val s1 = mk_var ("s1",``:'a -> 'a``);
 val head_ = mk_var ("head_",``:'a -> 'a -> 'a -> 'a``);
 
-val tnnparam =
+val tnndim =
   [
   (start, [0,12]),
   (s0, [12,12,12]),
@@ -126,10 +119,10 @@ val schedule2 =
 
 fun loop n =
   let
-    val tnn1 = if null (!ex1) then random_tnn tnnparam else
-    train_tnn schedule1 (random_tnn tnnparam) (map single (!ex1),[]);
-    val tnn2 = if null (!ex2) then random_tnn tnnparam else
-    train_tnn schedule2 (random_tnn tnnparam) (map single (!ex2),[]);
+    val tnn1 = if null (!ex1) then random_tnn tnndim else
+    train_tnn schedule1 (random_tnn tnndim) (map single (!ex1),[]);
+    val tnn2 = if null (!ex2) then random_tnn tnndim else
+    train_tnn schedule2 (random_tnn tnndim) (map single (!ex2),[]);
     val (game1,game2) =
        funpow 32 (play_simul (ex1,ex2) (tnn1,tnn2)) (start,start);
   in
@@ -288,7 +281,7 @@ fun dim_operh dim oper =
     (oper,[dim,dimout])
   end
 
-val tnnparam = map (dim_opern 12) operln @ map (dim_operh 12) operlh;
+val tnndim = map (dim_opern 12) operln @ map (dim_operh 12) operlh;
 
 (* -------------------------------------------------------------------------
    Training
@@ -296,7 +289,7 @@ val tnnparam = map (dim_opern 12) operln @ map (dim_operh 12) operlh;
 
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 
-val randtnn = random_tnn tnnparam;
+val randtnn = random_tnn tnndim;
 val schedule =
   [{ncore = 1, verbose = true, learning_rate = 0.02,
     batch_size = 2, nepoch = 10}] @

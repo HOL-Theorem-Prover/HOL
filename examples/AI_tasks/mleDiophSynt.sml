@@ -202,9 +202,9 @@ val dioph_operl =
 val dim = 16
 fun dim_head_poli n = [dim,n]
 
-val tnnparam = map_assoc (dim_std (1,dim)) dioph_operl @
+val tnndim = map_assoc (dim_std (1,dim)) dioph_operl @
   [(head_eval,[dim,dim,1]),(head_poli,[dim,dim,length movel])]
-val dplayer = {pretob = pretob, tnnparam = tnnparam, schedule = schedule}
+val dplayer = {pretob = pretob, tnndim = tnndim, schedule = schedule}
 
 (* -------------------------------------------------------------------------
    Interface

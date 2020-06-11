@@ -16,8 +16,10 @@ fun msg param s = if #verbose param then print_endline s else ()
 fun msg_err fs es = (print_endline (fs ^ ": " ^ es); raise ERR fs es)
 
 (* -------------------------------------------------------------------------
-   TNN operators (variable/constant + arity)
+   Tools for computing the dimensions of neural network operators
    ------------------------------------------------------------------------- *)
+
+type tnndim = (term * int list) list
 
 fun operl_of_term tm =
   let
@@ -28,22 +30,6 @@ fun operl_of_term tm =
   end;
 
 val oper_compare = cpl_compare Term.compare Int.compare;
-
-(* -------------------------------------------------------------------------
-   Random TNN
-   ------------------------------------------------------------------------- *)
-
-type tnnparam = (term * int list) list
-type tnn = (term,nn) Redblackmap.dict
-
-fun oper_nn diml = case diml of
-    [] => raise ERR "oper_nn" ""
-  | a :: m =>
-    if a = 0
-    then random_nn (idactiv,didactiv) [0,last m]
-    else random_nn (tanh,dtanh) diml
-
-fun random_tnn tnnparam = dnew Term.compare (map_snd oper_nn tnnparam)
 
 fun dim_std_arity (nlayer,dim) (oper,a) =
   let
@@ -58,6 +44,21 @@ fun dim_std_arity (nlayer,dim) (oper,a) =
 
 fun dim_std (nlayer,dim) oper =
   dim_std_arity (nlayer,dim) (oper,arity_of oper)
+
+(* -------------------------------------------------------------------------
+   Random TNN
+   ------------------------------------------------------------------------- *)
+
+type tnn = (term,nn) Redblackmap.dict
+
+fun oper_nn diml = case diml of
+    [] => raise ERR "oper_nn" ""
+  | a :: m =>
+    if a = 0
+    then random_nn (idactiv,didactiv) [0,last m]
+    else random_nn (tanh,dtanh) diml
+
+fun random_tnn tnndim = dnew Term.compare (map_snd oper_nn tnndim)
 
 fun random_tnn_std (nlayer,dim) operl =
   random_tnn (map_assoc (dim_std (nlayer,dim)) operl)
@@ -81,16 +82,16 @@ fun read_tnn file =
     dnew Term.compare (combine (l1,l2))
   end
 
-fun write_tnnparam file tnnparam =
+fun write_tnndim file tnndim =
   let
     fun ilts x = String.concatWith " " (map its x)
-    val (l1,l2) = split tnnparam
+    val (l1,l2) = split tnndim
   in
     export_terml (file ^ "_oper") l1;
     writel (file ^ "_diml") (map ilts l2)
   end
 
-fun read_tnnparam file =
+fun read_tnndim file =
   let
     val l1 = import_terml (file ^ "_oper")
     fun stil s = map string_to_int (String.tokens Char.isSpace s)
@@ -420,9 +421,9 @@ fun tnn_accuracy tnn set =
    Object for training different TNN in parallel
    ------------------------------------------------------------------------- *)
 
-fun train_tnn_fun () (ex,schedule,tnnparam) =
+fun train_tnn_fun () (ex,schedule,tnndim) =
   let
-    val randtnn = random_tnn tnnparam
+    val randtnn = random_tnn tnndim
     val (tnn,t) = add_time (train_tnn schedule randtnn) (ex,[])
   in
     print_endline ("Training time : " ^ rts t); tnn
@@ -431,19 +432,19 @@ fun train_tnn_fun () (ex,schedule,tnnparam) =
 fun write_noparam file (_:unit) = ()
 fun read_noparam file = ()
 
-fun write_tnnarg file (ex,schedule,tnnparam) =
+fun write_tnnarg file (ex,schedule,tnndim) =
   (
   write_tnnex (file ^ "_tnnex") ex;
   write_schedule (file ^ "_schedule") schedule;
-  write_tnnparam (file ^ "_tnnparam") tnnparam
+  write_tnndim (file ^ "_tnndim") tnndim
   )
 fun read_tnnarg file =
   let
     val ex = read_tnnex (file ^ "_tnnex")
     val schedule = read_schedule (file ^ "_schedule")
-    val tnnparam = read_tnnparam (file ^ "_tnnparam")
+    val tnndim = read_tnndim (file ^ "_tnndim")
   in
-    (ex,schedule,tnnparam)
+    (ex,schedule,tnndim)
   end
 
 val traintnn_extspec =
