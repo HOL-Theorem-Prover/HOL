@@ -17,8 +17,9 @@ Fails if the list of dimensions is empty.
 
 \EXAMPLE
 {
-- random_tnn [(``h: bool -> bool``, [4,10,1]),(``$~``,[4,8,4]),(F,[0,4])];
-> val it = <Redblackmap(3)>: tnn
+- val tnn = 
+    random_tnn [(``h: bool -> bool``,[4,10,1]),(``$~``,[4,8,4]),(F,[0,4])];
+> val tnn = <Redblackmap(3)>: tnn
 }
 
 \COMMENTS
