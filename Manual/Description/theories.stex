@@ -2077,7 +2077,7 @@ augmented as shown in Table~\ref{tab:extrealAdd}~\cite[p.~61]{Schilling:2017}:
 \begin{table}[ht]
 \begin{center}
 {\small
-\begin{tabular}{@{}c|cccc}    
+\begin{tabular}{@{}c|cccc}
 $+$ & 0 & $y$ & $+\infty$ & $-\infty$ \\ \hline
   0 & 0 & $y$ & $+\infty$ & $-\infty$ \\
   $x$ & $x$ & $x + y$ & $+\infty$ & $-\infty$ \\
@@ -2085,7 +2085,7 @@ $+$ & 0 & $y$ & $+\infty$ & $-\infty$ \\ \hline
   $-\infty$ & $-\infty$ & $-\infty$ & $\nexists$ & $-\infty$ \\
 \end{tabular}
 \qquad
-\begin{tabular}{@{}c|cccc}    
+\begin{tabular}{@{}c|cccc}
 $-$ & 0 & $y$ & $+\infty$ & $-\infty$ \\ \hline
   0 & 0 & $-y$ & $-\infty$ & $+\infty$ \\
   $x$ & $x$ & $x - y$ & $-\infty$ & $+\infty$ \\
@@ -2095,7 +2095,7 @@ $-$ & 0 & $y$ & $+\infty$ & $-\infty$ \\ \hline
 
 \vspace{1em}
 
-\begin{tabular}{@{}c|cccc}    
+\begin{tabular}{@{}c|cccc}
 $\cdot$ & 0 & $\pm b$ & $+\infty$ & $-\infty$ \\ \hline
   0 & 0 & 0 & 0 & 0 \\
   $\pm a$ & 0 & $a\cdot b$ & $\pm\infty$ & $\mp\infty$ \\
@@ -2103,7 +2103,7 @@ $\cdot$ & 0 & $\pm b$ & $+\infty$ & $-\infty$ \\ \hline
   $-\infty$ & 0 & $\mp\infty$ & $-\infty$ & $+\infty$ \\
 \end{tabular}
 \qquad
-\begin{tabular}{@{}c|cccc}    
+\begin{tabular}{@{}c|cccc}
 $/$ & 0 & $\pm b$ & $+\infty$ & $-\infty$ \\ \hline
   0 & $\nexists$ & 0 & 0 & 0 \\
   $\pm a$ & $\nexists$ & $a / b$ & 0 & 0 \\
@@ -2185,7 +2185,7 @@ the involved elements (e.g., by letting one of them be normal):
 \begin{hol}
 \begin{alltt}
 ##thm add_comm
-##thm add_comm_normal 
+##thm add_comm_normal
 ##thm add_assoc
 \end{alltt}
 \end{hol}
@@ -2254,7 +2254,7 @@ $\sum_{i\in\mathbb{N}} \sum_{j\in\mathbb{N}} f(i,j)$ given an arbitrary bijectio
 $\mathbb{N}$ and $\mathbb{N}\times\mathbb{N}$:
 \begin{hol}
 \begin{alltt}
-##thm ext_suminf_2d_full 
+##thm ext_suminf_2d_full
 \end{alltt}
 \end{hol}
 
