@@ -42,6 +42,34 @@ New features:
 
     Thanks to Magnus Myreen for the feature suggestion.
 
+*   It is now possible to write `let`-expressions more smoothly inside monadic `do`-`od` blocks.
+    Rather than have to write something like
+
+           do
+             x <- M1;
+             let y = E
+             in
+               do
+                 z <- M2 x y;
+                 return (f z);
+               od
+           od
+
+    one can replace the `let`-bindings with uses of the `<<-` arrow:
+
+           do
+             x <- M1;
+             y <<- E;
+             z <- M2 x y;
+             return (f z)
+           od
+
+    (The `<<-` line above is semantically identical to writing `y <- return E`, but is nonetheless syntactic sugar for a `let`-expression.)
+
+    The pretty-printer reverses this transformation.
+
+    Thanks to Hrutvik Kanabar for the implementation of this feature.
+
 Bugs fixed:
 -----------
 
