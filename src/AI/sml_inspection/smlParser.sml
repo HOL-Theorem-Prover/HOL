@@ -282,11 +282,9 @@ load "aiLib"; open aiLib;
 load "mlTacticData"; open mlTacticData;
 load "smlLexer"; open smlLexer;
 load "tttSetup"; open tttSetup;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 val calls = import_calls (tactictoe_dir ^ "/ttt_tacdata/arithmetic");
-val stacl = map (fn x => (#ig x, #stac x)) calls;
-
-val smlexp = extract_smlexp stac;
-val applyexp = mk_applyexp smlexp;
+val gstacl = map (fn x => (#ig x, #stac x)) calls;
 
 fun fst_app applyexp = case applyexp of
     ApplyExp (a,b) => fst_app a
@@ -298,15 +296,55 @@ fun all_x x applyexp = case applyexp of
   | ApplyUnit (s,sty) => if isSome sty andalso valOf sty = x then [s] else [] 
 ;
 
-val (l,t) = add_time (map (mk_applyexp o extract_smlexp)) stacl;
-val l1 = map fst_app l;
-val d = dregroup (option_compare String.compare) (map swap l1);
-fun f x = 
+val (l,t) = add_time (map_snd (mk_applyexp o extract_smlexp)) gstacl;
+val lapp = map_snd fst_app l;
+
+fun count_string x = 
   dict_sort compare_imax (dlist (count_dict (dempty String.compare) x));
+fun count_int x = 
+  dict_sort compare_imax (dlist (count_dict (dempty Int.compare) x));
+
+
+val testedl = map fst (first_n 10 (count_string (map snd lapp)));
+
+val oh = List.tabulate (10, 
+  fn i => List.tabulate (10, fn j => if i = j then 1.0 else 0.0));
+
+val assocl = combine (testedl,oh);
+val data1 = mapfilter (fn (a,b) => (a, assoc b assocl)) lapp;
+val data2 = map_fst nntm_of_goal data1;
+val data3 = map single data2;
+val (train,test) = part_pct 0.9 data3;
+
+val operl = mk_fast_set oper_compare
+  (List.concat (map operl_of_term (map fst data2)));
+val operdiml = map (fn x => (fst x, dim_std_arity (1,4) x)) operl;
+val operdiml2 = 
+  map (fn (a,b) => 
+   if term_eq a ``head_goal:bool -> bool`` then (a,[4,10]) else (a,b)) operdiml;
+
+val randtnn = random_tnn operdiml2;
+
+val trainparam =
+  {ncore = 1, verbose = true,
+   learning_rate = 0.04, batch_size = 16, nepoch = 100};
+val schedule = [trainparam];
+val tnn = train_tnn schedule randtnn (train,test);
+
 val l2 = 
   dict_sort compare_imax (map (fn (a,b) => ((a,f b),length b)) (dlist d));
 val rl = f (List.concat (map (all_x "thm list -> tactic") l));
 val rl = f (map fst_app l);
+
+(* 
+todo implement graph neural network with matching links? 
+*)
+
+(* 
+1) do the value experiment with pairs
+2) do extended theorem selection for ever 
+*)
+
 
 *)
 

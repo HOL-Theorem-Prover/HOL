@@ -16,7 +16,6 @@ include Abbrev
   val dim_std : int * int -> term -> int list
   
   (* initial tnn *)
-    (* todo: documentation *)
   val random_tnn : (term * int list) list -> tnn 
   val random_tnn_std : (int * int) -> term list -> tnn
   
@@ -41,7 +40,6 @@ include Abbrev
   val infer_tnn : tnn -> term list -> (term * real list) list 
  
   (* training *)
-    (* todo: documentation *)
   val train_tnn : schedule -> tnn -> tnnex * tnnex -> tnn 
   
   (* testing *)

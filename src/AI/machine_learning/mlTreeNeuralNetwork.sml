@@ -362,30 +362,32 @@ fun train_tnn_schedule schedule tnn (train,test) =
 
 fun stats_head (oper,rll) =
   let
-    val s1 = "\n  length: " ^ its (length rll)
+    val s0 = "  objective: " ^ tts oper
+    val s1 = "length: " ^ its (length rll)
     val rll' = list_combine rll
-    val s2 = "\n  means: " ^
+    val s2 = "means: " ^
       String.concatWith " " (map (pretty_real o average_real) rll')
-    val s3 = "\n  standard deviations: " ^
+    val s3 = "standard deviations: " ^
       String.concatWith " " (map (pretty_real o standard_deviation) rll')
   in
-    tts oper ^ s1 ^ s2 ^ s3
+    String.concatWith "\n  " [s0,s1,s2,s3]
   end
 
 fun stats_tnnex ex =
   if null ex then " empty" else
   let
-    fun oper_of tm = fst (strip_comb tm)
-    val d = dregroup Term.compare (map_fst oper_of (List.concat ex))
+    fun head_of tm = fst (strip_comb tm)
+    val d = dregroup Term.compare (map_fst head_of (List.concat ex))
   in
-    "total length: " ^ its (length ex) ^ "\n\n" ^
-    String.concatWith "\n\n" (map stats_head (dlist d))
+    its (length ex) ^ " examples\n" ^
+    String.concatWith "\n" (map stats_head (dlist d))
   end
 
 fun train_tnn schedule randtnn (trainex,testex) =
   let
-    val _ = print_endline ("training set statistics:\n" ^ stats_tnnex trainex)
-    val _ = print_endline ("testing set statistics:\n" ^ stats_tnnex testex)
+    val _ = print_endline ("\ntraining set: " ^ stats_tnnex trainex)
+    val _ = print_endline ("testing set: " ^ stats_tnnex testex)
+    val _ = print_endline ""
     val (tnn,t) = add_time (train_tnn_schedule schedule randtnn)
       (prepare_tnnex trainex, prepare_tnnex testex)
   in
