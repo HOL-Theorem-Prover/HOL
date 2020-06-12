@@ -5098,9 +5098,6 @@ The first step is to enable the generic monad syntax, by calling
    monadsyntax.enable_monadsyntax : unit -> unit
 \end{alltt}
 After this, one can write \holtxt{do}\dots\holtxt{od} blocks, even though without any specific instances enabled the output will be unhelpful (the \holtxt{monad\_bind} printed in the session below is actually a variable):
-% works badly - polyscripter puts stderr output before invocation, and
-%               exception prints off edge of page
-% >>+ “do x <- M1; M2 od”;
 \begin{session}
 \begin{alltt}
 >>__ monadsyntax.disable_monadsyntax();
