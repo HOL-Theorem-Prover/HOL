@@ -795,9 +795,10 @@ probability space with its target measurable space:
 
 \paragraph{Independence}
 
-``The concept of mutual independence of two or more experiments holds,
+\begin{quote}\textit{The concept of mutual independence of two or more experiments holds,
 in a certain sense, a central position in the theory of
-probability.''~\cite[p.~8]{Kolmogorov:1950}
+probability.}\\\hfill{}Kolmogorov~\cite[p.~8]{Kolmogorov:1950}
+\end{quote}
 Informally, events or random variables are independent if they do not
 affect each other's probabilities. Thus, two events $A$ and $B$ are independent
 if $\mathscr{P}\{A \cap B\} = \mathscr{P}\{A\}\mathscr{P}\{B\}$. Moreover, a finite
@@ -920,13 +921,14 @@ probability of remote events can only be zero or one:
 \end{hol}
 
 \paragraph{Mathematical Expectation}
-
-``To achieve reasonable simplicity it is often necessary to describe
+\begin{quote}\textit{
+To achieve reasonable simplicity it is often necessary to describe
 probability distributions rather summarily by a few `typical
 values.' ... Among the typical values the \emph{(mathematical) expectation},
 or \emph{mean}, is by far the most important.
 It lends itself best to analytical manipulations, and it is
-preferred by statisticians because of a property known as sampling stability.''~\cite[p.~221]{Feller:2004vv}
+preferred by statisticians because of a property known as sampling stability.}\hfill{}Feller~\cite[p.~221]{Feller:2004vv}
+\end{quote}
 Formally, expectation is nothing but a synonym of (Lebesgue) integration:
 \begin{hol}
 \begin{alltt}
@@ -1111,12 +1113,12 @@ is provided:
 
 \paragraph{Limit theorems and the laws of large numbers}
 
-``In the formal construction of a course in the theory of probability, limit theorems appear
-as a kind of superstructure over elementary chapters, in which all problems have finite,
-purely arithmetical character. In reality, however, the epistemological value of the theory
-of probability is revealed only by limit theorems. Moreover, without limit theorems it is
-impossible to understand the real content of the primary concept of all our sciences – the
-concept of probability.''~\cite[p.~1]{Gnedenko:1954vf}
+\begin{quote}
+\textit{
+In the formal construction of a course in the theory of probability, limit theorems appear as a kind of superstructure over elementary chapters, in which all problems have finite, purely arithmetical character.
+In reality, however, the epistemological value of the theory of probability is revealed only by limit theorems.
+Moreover, without limit theorems it is impossible to understand the real content of the primary concept of all our sciences---the concept of probability.}\\\hfill\mbox{Gnedenko~\cite[p.~1]{Gnedenko:1954vf}}
+\end{quote}
 
 It is sometimes convenient to think of probabilities intuitively as
 limits of observable \emph{frequencies} in repeated experiments. This
