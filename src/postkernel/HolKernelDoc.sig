@@ -42,7 +42,8 @@ sig
   val sdest_binop: string * string -> exn -> term -> term * term
   val sdest_monop: string * string -> exn -> term -> term
   val spine_binop: ('a -> ('a * 'a) option) -> 'a -> 'a list
-  val strip_binop: ('a -> ('a * 'a) option) -> 'a -> 'a list
+  val strip_binop_opt: ('a -> ('a * 'a) option) -> 'a -> 'a list
+  val strip_binop: ('a -> 'a * 'a) -> 'a -> 'a list
   val strip_comb: term -> term * term list
   val strip_fun: hol_type -> hol_type list * hol_type
   val strip_gen_right_opt: ('a -> ('a * 'b) option) -> 'a -> 'a * 'b list
