@@ -1134,7 +1134,7 @@ $(S_n - \mathscr{E}(S_n))/n$ converges to 0, in probability
 (weak law) or almost everywhere (strong law).
 
 For uncorrelated r.v.'s with a common bound of variance, the proof is
-simple and based on Markov and Chebeshev's inequalities. The centered
+simple and based on Markov's and Chebyshev's inequalities. The centered
 average actually converges to 0 in $L^2$, thus also in
 probability~\cite[108]{Chung:2001}.
 Under the same hypotheses it also converges to 0 almost everywhere:
