@@ -372,7 +372,7 @@ val IS_SOME_MAP = Q.store_thm ("IS_SOME_MAP",
   REWRITE_TAC [IS_SOME_DEF, OPTION_MAP_DEF]) ;
 
 Theorem OPTION_MAP_id[simp]:
-  OPTION_MAP I (x:'a option) = x ∧ OPTION_MAP (\x. x) x = x
+  OPTION_MAP I (x:'a option) = x /\ OPTION_MAP (\x. x) x = x
 Proof
   OPTION_CASES_TAC “x:'a option” THEN SRW_TAC[][]
 QED

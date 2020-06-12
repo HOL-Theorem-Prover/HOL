@@ -438,7 +438,7 @@ val merge_tail_correct2 = Q.store_thm ("merge_tail_correct2",
  srw_tac[][merge_tail_def, merge_def, REV_REVERSE_LEM, merge_empty] >>
  fs [] >>
  `SORTED R (REVERSE l1) /\ SORTED R (REVERSE l2)`
-        by metis_tac [SORTED_APPEND_IFF] >>
+        by metis_tac [SORTED_APPEND_GEN] >>
  fs []
  >- (match_mp_tac (GSYM merge_last_lem1) >>
      srw_tac[][] >>
