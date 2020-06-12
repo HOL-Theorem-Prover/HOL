@@ -139,7 +139,7 @@ local
       THENC PURE_REWRITE_CONV [boolTheory.IMP_CLAUSES]
    val list_mk_union =
       HolKernel.list_mk_lbinop (Lib.curry pred_setSyntax.mk_union)
-   val strip_union = HolKernel.strip_binop (Lib.total pred_setSyntax.dest_union)
+   val strip_union = HolKernel.strip_binop pred_setSyntax.dest_union
    val get_model_name =
       helperLib.to_lower o fst o Term.dest_const o tripleSyntax.dest_model o
       Thm.concl
