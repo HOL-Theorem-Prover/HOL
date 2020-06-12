@@ -462,7 +462,7 @@ The fundamental idea of \emph{integration} is to measure the area between the gr
 of a function and the abscissa (i.e.~$x$-axis).
 Riemann's approach partitions the domain of the function without
 taking into account the shape of the function,
-thus slicing up the area under the function \emph{vertically}. Lebesgue’s approach is
+thus slicing up the area under the function \emph{vertically}. Lebesgue's approach is
 exactly the opposite: the domain is partitioned according to the values of the
 function at hand, leading to a \emph{horizontal} decomposition of the area.
 
@@ -645,7 +645,7 @@ theories, etc.
 
 \paragraph{Probability space}
 
-Probability theory enables us to give a probabilistic–statistical
+Probability theory enables us to give a probabilistic-statistical
 description of experiments with a finite or infinite number of
 outcomes. Based on Kolmogorov's axiomatization~\cite{Kolmogorov:1950},
 a \emph{probabilistic model} (of an experiment) or a
