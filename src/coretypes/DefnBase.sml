@@ -559,4 +559,69 @@ fun one_line_ify heuristic def =
         attack_top_case stoppers finisher neweqn
     end handle FastExit th => th
 
+
+(* ----------------------------------------------------------------------
+   ind_for : (* definition *) thm -> (* induction *) thm
+   ---------------------------------------------------------------------- *)
+
+fun ind_for def = let
+  fun mk_arg_vars xs = let
+    fun aux [] = []
+      | aux (x::xs) =
+          mk_var("v" ^ (int_to_string (length xs + 1)),type_of x) :: aux xs
+    in (rev o aux o rev) xs end
+  fun f tm = let
+    val (lhs,rhs) = dest_eq tm
+    val (const,args) = strip_comb lhs
+    val vargs = mk_arg_vars args
+    val args = pairSyntax.list_mk_pair args
+    in (const,vargs,args,rhs) end
+  val cs = def |> CONJUNCTS |> map (f o concl o SPEC_ALL)
+  val cnames = map (fn (x,_,_,_) => x) cs |> op_mk_set aconv
+  val cs = map (fn c => (c, map (fn (x,y,z,q) => (y,z,q))
+                              (filter (fn (x,_,_,_) => aconv c x) cs))) cnames
+           |> map (fn (c,x) => (c,hd (map (fn (x,y,z) => x) x),
+                                map (fn (x,y,z) => (y,z)) x))
+  fun split_at P [] = fail()
+    | split_at P (x::xs) = if P x then ([],x,xs) else let
+        val (x1,y1,z1) = split_at P xs
+        in (x::x1,y1,z1) end
+  fun find_pat_match (_,args,pats) = let
+    val pat = hd pats |> fst
+    val vs = pairSyntax.list_mk_pair args
+    val ss = fst (match_term vs pat)
+    val xs = map (subst ss) args
+    in (split_at (not o is_var) xs) end
+  val xs = map find_pat_match cs
+  val ty = map (fn (_,x,_) => type_of x) xs |> hd
+  val raw_ind = TypeBase.induction_of ty
+  fun my_mk_var ty = mk_var("pat_var", ty)
+  fun list_mk_fun_type [] = hd []
+    | list_mk_fun_type [ty] = ty
+    | list_mk_fun_type (t::ts) = mk_type("fun",[t,list_mk_fun_type ts])
+  fun goal_step index [] = []
+    | goal_step index ((xs,t,ys)::rest) = let
+    val v = my_mk_var (type_of t)
+    val args = xs @ [v] @ ys
+    val P = mk_var("P" ^ (int_to_string index) ,
+              list_mk_fun_type ((map type_of args) @ [bool]))
+    val prop = list_mk_comb(P,args)
+    val goal = list_mk_forall(args,prop)
+    val step = mk_abs(v,list_mk_forall(xs @ ys,prop))
+    in (P,(goal,step)) :: goal_step (index+1) rest end
+  val res = goal_step 0 xs
+  fun ISPEC_LIST [] th = th
+    | ISPEC_LIST (x::xs) th = ISPEC_LIST xs (ISPEC x th)
+  val ind = ISPEC_LIST (map (snd o snd) res) raw_ind
+            |> CONV_RULE (DEPTH_CONV BETA_CONV)
+  val goal1 = ind |> concl |> dest_imp |> snd
+  val goal2 = list_mk_conj (map (fst o snd) res)
+  val goal = mk_imp(goal1,goal2)
+  val lemma = snd ((Tactical.THEN (Tactical.REPEAT Tactic.STRIP_TAC,
+                                   Rewrite.ASM_REWRITE_TAC [])) ([],goal)) []
+  val ind = MP lemma (ind |> UNDISCH_ALL) |> DISCH_ALL |> GENL (map fst res)
+  in ind end handle HOL_ERR _ =>
+  raise (ERR "ind_for" "Unable to construct induction theorem based on TypeBase info.")
+
+
 end
