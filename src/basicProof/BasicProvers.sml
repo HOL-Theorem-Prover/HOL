@@ -156,7 +156,7 @@ val strip_prod =
       SOME{Tyop = "prod", Thy = "pair", Args = [ty1, ty2]} => (ty1, ty2)
     | other => raise ERR "dest_prod" "not a product type"
  in
-    strip_binop (total dest_prod)
+    strip_binop dest_prod
  end
 
 fun mk_prod(ty1,ty2) = mk_thy_type{Thy="pair",Tyop="prod",Args=[ty1,ty2]}
