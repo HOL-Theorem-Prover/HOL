@@ -42,6 +42,34 @@ New features:
 
     Thanks to Magnus Myreen for the feature suggestion.
 
+*   It is now possible to write `let`-expressions more smoothly inside monadic `do`-`od` blocks.
+    Rather than have to write something like
+
+           do
+             x <- M1;
+             let y = E
+             in
+               do
+                 z <- M2 x y;
+                 return (f z);
+               od
+           od
+
+    one can replace the `let`-bindings with uses of the `<<-` arrow:
+
+           do
+             x <- M1;
+             y <<- E;
+             z <- M2 x y;
+             return (f z)
+           od
+
+    (The `<<-` line above is semantically identical to writing `y <- return E`, but is nonetheless syntactic sugar for a `let`-expression.)
+
+    The pretty-printer reverses this transformation.
+
+    Thanks to Hrutvik Kanabar for the implementation of this feature.
+
 Bugs fixed:
 -----------
 
@@ -156,6 +184,10 @@ Incompatibilities:
 
 *   Renamed theorems in `pred_setTheory`: `SUBSET_SUBSET_EQ` -> `SUBSET_ANTISYM_EQ`
     (compatible with HOL Light).
+
+* The theorem `SORTED_APPEND_trans_IFF` has been moved from `alist_treeTheory` into `sortingTheory`.
+  The moved theorem is now available as `SORTED_APPEND`, and the old `SORTED_APPEND` is now available as `SORTED_APPEND_IMP`.
+  To avoid confusion, as `SORTED_APPEND` is now an (conditional) equality, `SORTED_APPEND_IFF` has been renamed to `SORTED_APPEND_GEN`.
 
 
 * * * * *

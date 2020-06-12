@@ -16,7 +16,9 @@
         '("\\S.\\(>[->|]\\|\\\\\\\\\\)\\S." 1 'holscript-then-syntax)
         "^Type\\>"
         "^Overload\\>"
-        (list (regexp-opt '("let" "local" "in" "end" "fun" "val" "open") 'words)
+        (list (regexp-opt
+               '("let" "local" "in" "end" "fun" "val" "open")
+               'symbols)
               'quote
               'holscript-smlsyntax)
         '("\\<cheat\\>" . 'holscript-cheat-face)

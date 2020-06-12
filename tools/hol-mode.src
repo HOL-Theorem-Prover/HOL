@@ -483,7 +483,7 @@ starts >%s%s<"
                          hol-quoted-theorem-proof-re-begin "\\|"
                          hol-quoted-definition-re-begin "\\|"
                          "\\(" sml-struct-id-regexp "\\)\\.\\w+" "\\|"
-                         "\\<open\\>")))
+                         "\\_<open\\_>")))
             (while (re-search-forward regexp (point-max) t)
               (let ((pp (syntax-ppss))
                     (ms (match-string-no-properties 0)))
