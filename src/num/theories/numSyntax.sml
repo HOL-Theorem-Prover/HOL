@@ -231,8 +231,8 @@ struct
   fun list_mk_mult (h::t) = rev_itlist (C (curry mk_mult)) t h
     | list_mk_mult [] = raise ERR "list_mk_mult" "empty list";
 
-  val strip_plus = strip_binop (total dest_plus)
-  val strip_mult = strip_binop (total dest_mult)
+  val strip_plus = strip_binop dest_plus
+  val strip_mult = strip_binop dest_mult
 
 (*---------------------------------------------------------------------------
      Lifting ML Arbnums to HOL nums

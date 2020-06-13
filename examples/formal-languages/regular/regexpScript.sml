@@ -1849,7 +1849,7 @@ Proof
  `EVERY is_charset (h::rs1)` by rw [] >>
  imp_res_tac (SIMP_RULE (srw_ss()) [] merge_charsets_append) >>
  full_simp_tac std_ss [] >>
- `SORTED regexp_leq rs2` by metis_tac [SORTED_APPEND_IFF] >>
+ `SORTED regexp_leq rs2` by metis_tac [SORTED_APPEND_GEN] >>
  rw [] >>
  fs [] >>
  assume_tac regexp_leq_transitive >>
