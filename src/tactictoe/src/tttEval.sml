@@ -45,9 +45,10 @@ fun ttt_eval (thmdata,tacdata) goal =
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
     val ((status,tree),t) = add_time (main_tactictoe (thmdata,tacdata)) goal
-    val exl = extract_exl tree
-    val _ = ttt_export_exl thmid exl
-  in
+    val _ = case status of Proof _ => 
+        ttt_export_exl thmid (extract_exl tree)
+      | _ => ()
+  in   
     print_status status;
     print_endline ("ttt_eval time: " ^ rts_round 6 t ^ "\n");
     hide_flag := b
@@ -143,7 +144,7 @@ tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
 tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val _ = run_evalscript_thyl "june10" true 30 thyl;
+val _ = run_evalscript_thyl "june13" true 30 thyl;
 *)
 
 (* ------------------------------------------------------------------------
