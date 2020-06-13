@@ -407,7 +407,7 @@ fun search tacpred g =
     val ((searchstatus,tree),t) = add_time search_loop (starttree,tacpred)
     val _ = print_endline ("search time: " ^ rts_round 6 t)
   in
-    reconstruct_proofstatus (searchstatus,tree) g
+    (reconstruct_proofstatus (searchstatus,tree) g, tree)
   end
 
 end (* struct *)

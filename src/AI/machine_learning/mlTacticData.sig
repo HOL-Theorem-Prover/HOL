@@ -38,8 +38,12 @@ sig
   (* tactictoe database *)
   val ttt_tacdata_dir : string
   val exists_tacdata_thy : string -> bool
-  val ttt_import_tacdata : unit -> tacdata
+  val create_tacdata : unit -> tacdata
   val ttt_update_tacdata : (call * tacdata) -> tacdata
   val ttt_export_tacdata : string -> tacdata -> unit
+
+  (* value example *)
+  val ttt_export_exl : string -> (goal list * bool) list -> unit
+  val ttt_import_exl : string -> (goal list * bool) list
 
 end

@@ -209,7 +209,7 @@ fun ttt_save_state () =
   let
     val savestate_dir = tactictoe_dir ^ "/savestate"
     val _ = mkDir_err savestate_dir
-    val prefix = savestate_dir ^ "/" ^ current_theory () ^
+    val prefix = savestate_dir ^ "/" ^ current_theory () ^ "_" ^
       its (!savestate_level)
     val savestate_file = prefix ^ "_savestate"
     val _ = debug ("saving state to " ^ savestate_file)
@@ -227,7 +227,7 @@ fun save_goal g =
   let
     val savestate_dir = tactictoe_dir ^ "/savestate"
     val _ = mkDir_err savestate_dir
-    val prefix = savestate_dir ^ "/" ^ current_theory () ^
+    val prefix = savestate_dir ^ "/" ^ current_theory () ^ "_" ^
       its ((!savestate_level) - 1)
     val _ = pbl_glob := prefix :: (!pbl_glob)
     val goal_file = prefix ^ "_goal"
@@ -269,7 +269,7 @@ fun record_proof name lflag tac1 tac2 (g:goal) =
 fun start_record_thy thy =
   (
   print_endline "importing tactic data";
-  tacdata_glob := ttt_import_tacdata ()
+  tacdata_glob := create_tacdata ()
   )
 
 fun end_record_thy thy =

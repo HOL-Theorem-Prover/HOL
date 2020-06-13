@@ -9,9 +9,24 @@ structure tttEval :> tttEval =
 struct
 
 open HolKernel Abbrev boolLib aiLib 
-  smlRedirect smlParallel smlOpen tttSetup tttSearch tacticToe
+  smlRedirect smlParallel smlOpen 
+  mlTacticData
+  tttSetup tttSearch tttRecord tacticToe
 
 val ERR = mk_HOL_ERR "tttEval"
+
+(* -------------------------------------------------------------------------
+   Extracting examples from search tree
+   ------------------------------------------------------------------------- *)
+
+fun extract_exl tree =
+  let 
+    val nodel = map snd (dlist tree)
+    fun get_gl node = (vector_to_list o Vector.map #goal o #goalv) node
+    fun is_win node = #nodestatus node = NodeProved
+  in
+    map (fn x => (get_gl x, is_win x)) nodel
+  end
 
 (* -------------------------------------------------------------------------
    Evaluation function
@@ -24,11 +39,14 @@ fun print_status r = case r of
 
 fun ttt_eval (thmdata,tacdata) goal =
   let
+    val thmid = current_theory () ^ "_" ^ its (!savestate_level - 1)
     val b = !hide_flag
     val _ = hide_flag := false
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
-    val (status,t) = add_time (main_tactictoe (thmdata,tacdata)) goal
+    val ((status,tree),t) = add_time (main_tactictoe (thmdata,tacdata)) goal
+    val exl = extract_exl tree
+    val _ = ttt_export_exl thmid exl
   in
     print_status status;
     print_endline ("ttt_eval time: " ^ rts_round 6 t ^ "\n");
@@ -41,7 +59,7 @@ fun ttt_eval (thmdata,tacdata) goal =
    before calling tttUnfold.ttt_clean_record () and tttUnfold.ttt_record ().
    Warnings: 
    - requires ~10-100 GB of hard disk space. 
-   - possibly avoid using MLTON during configuration.
+   - avoid using MLTON during configuration?
    ------------------------------------------------------------------------ *)
 
 fun sreflect_real s r = ("val _ = " ^ s ^ " := " ^ rts (!r) ^ ";")

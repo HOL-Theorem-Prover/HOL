@@ -264,7 +264,7 @@ fun exists_tacdata_thy thy =
     exists_file file andalso (not o null o readl) file
   end
 
-fun ttt_import_tacdata () =
+fun create_tacdata () =
   let
     fun test file = exists_file file andalso (not o null o readl) file
     val thyl = ancestry (current_theory ())
@@ -302,6 +302,70 @@ fun ttt_export_tacdata thy tacdata =
   in
     export_tacdata file tacdata
   end
+
+(* ------------------------------------------------------------------------
+   Exporting search examples
+   ------------------------------------------------------------------------ *)
+
+val enc_bool = String o bts
+val dec_bool = Option.map string_to_bool o string_decode
+
+fun enc_ex enc_tm = pair_encode (enc_goal_list enc_tm, enc_bool)
+fun dec_ex dec_tm = pair_decode (dec_goal_list dec_tm, dec_bool)
+
+fun enc_exl exl =
+  let
+    val empty_exact = HOLset.empty term_compare_exact
+    fun goal_terms ((asl,w),A) = HOLset.addList(A, w::asl)
+    fun ex_terms ((gl,_), A) = List.foldl goal_terms A gl
+    val all_terms = List.foldl ex_terms empty_exact exl |> HOLset.listItems
+    val ed = {named_terms = [], unnamed_terms = [], named_types = [],
+              unnamed_types = [], theorems = []}
+    val sdi = build_sharing_data ed
+    val sdi = add_terms all_terms sdi
+    fun write_term_aux sdi t = write_term sdi t
+      handle NotFound => raise ERR "write_term" (term_to_string t)
+    val enc_exldata = list_encode (enc_ex (String o write_term_aux sdi))
+  in
+    tagged_encode "exl" (pair_encode (enc_sdata, enc_exldata)) (sdi,exl)
+  end
+
+fun dec_exl t =
+    let
+      val a = {with_strings = fn _ => (), with_stridty = fn _ => ()}
+      val (sdo, ex_data) =
+          valOf (tagged_decode "exl" (pair_decode(dec_sdata a, SOME)) t)
+      val dec_tm = Option.map (read_term sdo) o string_decode
+    in
+      list_decode (dec_ex dec_tm) ex_data
+    end
+
+fun uptodate_ex (gl, _) = all uptodate_goal gl
+
+fun ttt_export_exl thmid exl1 =
+  let
+    val dir = HOLDIR ^ "/src/tactictoe/gl_value"
+    val _ = mkDir_err dir
+    val file = dir ^ "/" ^ thmid
+    val ostrm = Portable.open_out file
+    val exl2 = filter uptodate_ex exl1
+    val _ = if length exl1 <> length exl2 
+            then print_endline "some goals were not up-to-date"
+            else ()
+  in
+    PP.prettyPrint (curry TextIO.output ostrm, 75)
+                   (HOLsexp.printer (enc_exl exl2));
+    TextIO.closeOut ostrm
+  end
+
+fun ttt_import_exl thmid =
+  let
+    val dir = HOLDIR ^ "/src/tactictoe/gl_value"
+    val file = dir ^ "/" ^ thmid
+  in
+    valOf (dec_exl (HOLsexp.fromFile file))
+  end
+
 
 
 end (* struct *)

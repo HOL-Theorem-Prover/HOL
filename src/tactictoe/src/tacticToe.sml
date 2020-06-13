@@ -57,6 +57,7 @@ fun select_tacfea tacdata gfea =
 
 fun main_tactictoe (thmdata,tacdata) goal =
   let
+    val _ = hidef QUse.use infix_file
     (* preselection *)
     val goalf = fea_of_goal true goal
     val _ = debug "preselection of theorems"
@@ -141,16 +142,15 @@ fun tactictoe_aux goal =
   then raise ERR "tactictoe" "type bool expected"
   else
   let
-    val _ = hidef QUse.use infix_file
     val cthyl = current_theory () :: ancestry (current_theory ())
     val thmdata = hidef create_thmdata ()
     val tacdata =
       dfind cthyl (!ttt_tacdata_cache) handle NotFound =>
-      let val tacdata_aux = ttt_import_tacdata () in
+      let val tacdata_aux = create_tacdata () in
         ttt_tacdata_cache := dadd cthyl tacdata_aux (!ttt_tacdata_cache);
         tacdata_aux
       end
-    val proofstatus = hidef (main_tactictoe (thmdata,tacdata)) goal
+    val (proofstatus,_) = hidef (main_tactictoe (thmdata,tacdata)) goal
     val (staco,tac) = read_status proofstatus
   in
     tac
@@ -161,25 +161,5 @@ fun ttt goal = (tactictoe_aux goal) goal
 fun tactictoe term =
   let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux goal) end
 
-(* -------------------------------------------------------------------------
-   Evaluation function called by tttUnfold.run_evalscript_thy
-   ------------------------------------------------------------------------- *)
-
-fun print_status r = case r of
-   ProofSaturated => print_endline "tactictoe: saturated"
- | ProofTimeout   => print_endline "tactictoe: timeout"
- | Proof s        => print_endline ("tactictoe: proven\n  " ^ s)
-
-fun ttt_eval (thmdata,tacdata) goal =
-  let
-    val b = !hide_flag
-    val _ = hide_flag := false
-    val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
-    val (status,t) = add_time (main_tactictoe (thmdata,tacdata)) goal
-  in
-    print_status status;
-    print_endline ("ttt_eval time: " ^ rts_round 6 t ^ "\n");
-    hide_flag := b
-  end
 
 end (* struct *)
