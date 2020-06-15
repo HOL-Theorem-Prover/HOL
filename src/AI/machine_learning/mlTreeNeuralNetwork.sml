@@ -472,11 +472,11 @@ val asm_cat = mk_var ("asm_cat", rpt_fun_type 3 alpha)
 val hyp_cat = mk_var ("hyp_cat", rpt_fun_type 3 alpha)
 val goal_cat = mk_var ("goal_cat", rpt_fun_type 3 alpha)
 
-fun flatten_goal (a,b) =
-  if null a 
-  then b
-  else (list_mk_comb (hyp_cat,[list_mk_binop asm_cat a,b])
-       handle HOL_ERR _ => raise ERR "flatten_goal" (string_of_goal (a,b))) 
+fun flatten_goal (asm,w) =
+  if null asm 
+  then w
+  else (list_mk_comb (hyp_cat,[list_mk_binop asm_cat asm,w])
+       handle HOL_ERR _ => raise ERR "flatten_goal" (string_of_goal (asm,w))) 
   
 fun lambda_term fullty (v,bod) =
   let
@@ -515,7 +515,9 @@ fun add_arity tm =
 val vhead = mk_var ("head_", rpt_fun_type 2 alpha);
 
 fun nntm_of_gl gl =
-  let val f =  add_arity o add_lambda o flatten_goal in
+  let fun f (asm,w) = flatten_goal 
+    (map (add_arity o add_lambda) asm, add_arity (add_lambda w))
+  in
     mk_comb (vhead, (list_mk_binop goal_cat (map f gl)))
   end
 
