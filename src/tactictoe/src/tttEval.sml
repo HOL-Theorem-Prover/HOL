@@ -73,17 +73,23 @@ fun write_evalscript tnno file =
   let
     val file1 = mlquote (file ^ "_savestate")
     val file2 = mlquote (file ^ "_goal")
+    val tnndir = HOLDIR ^ "/src/tactictoe/tnn"
+    val file3o = Option.map (fn x => tnndir ^ "/" ^ x) tnno
     val sl =
     ["PolyML.SaveState.loadState " ^ file1 ^ ";",
      "val tactictoe_goal = mlTacticData.import_goal " ^ file2 ^ ";",
      "load " ^ mlquote "tttEval" ^ ";",
+     if isSome tnno 
+     then "val tactictoe_tnno = SOME (mlTreeNeuralNetwork.read_tnn " ^ 
+       mlquote (valOf file3o) ^ ");"
+     else "val tactictoe_tnno = NONE : mlTreeNeuralNetwork.tnn option ;",
      sreflect_real "tttSetup.ttt_search_time" ttt_search_time,
      sreflect_real "tttSetup.ttt_policy_coeff" ttt_policy_coeff,
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
      sreflect_flag "tttSetup.thml_explo_flag" thml_explo_flag,
      sreflect_flag "aiLib.debug_flag" debug_flag,
      "tttEval.ttt_eval " ^
-     "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^
+     "((!tttRecord.thmdata_glob, !tttRecord.tacdata_glob), tactictoe_tnno) " ^
      "tactictoe_goal;"]
   in
     writel (file ^ "_eval.sml") sl
@@ -147,7 +153,10 @@ tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
 tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val _ = run_evalscript_thyl "june13" true 30 thyl;
+
+val _ = run_evalscript_thyl "june15" (true,NONE,30) thyl;
+val tnn = train_value 0.95 "value";
+val _ = run_evalscript_thyl "june15_tnn" (true,SOME "value",30) thyl;
 *)
 
 (* ------------------------------------------------------------------------
@@ -222,56 +231,40 @@ gnuplot -p -e "plot 'eval/graph/june4-e1_graph' using 1:2 with lines,\
                     'eval/graph/june2-e4_graph' using 1:2 with lines"
 *)
 
-(*
-load "tttEval"; open tttEval;
-load "aiLib"; open aiLib;
-fun listDir dirName = 
-  let 
-    val dir = OS.FileSys.openDir dirName
-    fun read files = case OS.FileSys.readDir dir of
-        NONE => rev files
-      | SOME file => read (file :: files)
-    val r = read []
+(* ------------------------------------------------------------------------
+   Training
+   ------------------------------------------------------------------------ *)
+
+fun train_value pct file =
+  let
+    val filel = listDir (HOLDIR ^ "/src/tactictoe/gl_value")
+    val exll = map (fn x => ttt_import_exl x handle Interrupt => raise 
+      Interrupt | _ => (print_endline x; [])) filel;
+    fun f (gl,b) = (nntm_of_gl gl, if b then [1.0] else [0.0])
+    val exl = map (single o f) (List.concat exll)
+    val (train,test) = part_pct pct (shuffle exl)
+    val operl = mk_fast_set oper_compare
+      (List.concat (map operl_of_term (map fst (List.concat exl))))
+    val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl
+    val randtnn = random_tnn operdiml
+    val schedule =
+      [{ncore = 4, verbose = true,
+       learning_rate = 0.02, batch_size = 16, nepoch = 100}];
+    val tnn = train_tnn schedule randtnn (train,test)
+    val tnndir = HOLDIR ^ "/src/tactictoe/tnn"
+    val acctrain = tnn_accuracy tnn train
+    val acctest = tnn_accuracy tnn test 
   in
-    OS.FileSys.closeDir dir; r
+    print_endline ("train accuracy: " ^ rts_round 6 acctrain ^ 
+      ", test accuracy: " ^ rts_round 6 acctest);
+    mkDir_err tnndir;
+    write_tnn (tnndir ^ "/" ^ file) tnn;
+    tnn
   end
 
-val filel = listDir (HOLDIR ^ "/src/tactictoe/gl_value");
-load "mlTacticData"; open mlTacticData;
-
-load "mlTacticData; open mlTacticData;
-val exll = map (fn x => ttt_import_exl x handle _ => 
-  (print_endline x; [])) filel;
-
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-val head_goal = (``head_goal : bool -> bool``);
-
-val goalcat = (``goalcat : bool -> bool -> bool``); 
-
-val exl = List.concat exll;
-fun nntm_of_gl gl = mk_comb (head_goal,
-  list_mk_binop goalcat (map (rand o nntm_of_goal) gl)
-  );
-val exl1 = map (fn (gl,b) => (nntm_of_gl gl, if b then [1.0] else [0.0])) exl;
-val exl2 = map single exl1;
-val (train,test) = part_pct 0.95 (shuffle exl2);
-
-val operl = mk_fast_set oper_compare
-  (List.concat (map operl_of_term (map fst (List.concat exl2))));
-val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl;
-val randtnn = random_tnn operdiml;
-
-val trainparam =
-  {ncore = 4, verbose = true,
-   learning_rate = 0.02, batch_size = 16, nepoch = 100};
-val schedule = [trainparam];
-val tnn = train_tnn schedule randtnn (train,test);
-
-val acctrain = tnn_accuracy tnn train;
-val acctest = tnn_accuracy tnn test;
-val _ = write_tnn "tnn_hd" tnn;
-
+(*
+load "tttEval"; open tttEval;
+val tnn = train_value "value";
 *)
-
 
 end (* struct *)

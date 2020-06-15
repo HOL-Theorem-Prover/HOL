@@ -23,7 +23,6 @@ sig
     ('a * 'c * 'e) * ('b * 'd * 'f) -> order
   val fst_compare : ('a * 'b -> 'c) -> ('a * 'd) * ('b * 'e) -> 'c
   val snd_compare : ('a * 'b -> 'c) -> ('d * 'a) * ('e * 'b) -> 'c
-
   val term_compare_exact : term * term -> order
   val goal_compare : goal * goal -> order
   val compare_rmin : (('a * real) * ('a * real)) -> order
@@ -176,7 +175,8 @@ sig
     string -> string * string -> (int * int) list -> unit
   val readl_rm : string -> string list
   val writel_atomic : string -> string list -> unit
-
+  val listDir : string -> string list
+ 
   (* parse *)
   val hd_string : string -> char
   val tl_string : string -> string

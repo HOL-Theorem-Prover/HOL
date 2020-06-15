@@ -579,7 +579,6 @@ val tnn = train_tnn schedule randtnn (trainex,testex);
 
 (* testing *)
 val acc = tnn_accuracy tnn testex;
-
 *)
 
 end (* struct *)

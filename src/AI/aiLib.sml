@@ -899,6 +899,17 @@ fun writel_atomic file sl =
 fun readl_rm file =
   let val sl = readl file in OS.FileSys.remove file; sl end
 
+fun listDir dirName = 
+  let 
+    val dir = OS.FileSys.openDir dirName
+    fun read files = case OS.FileSys.readDir dir of
+        NONE => rev files
+      | SOME file => read (file :: files)
+    val r = read []
+  in
+    OS.FileSys.closeDir dir; r
+  end
+
 (* ------------------------------------------------------------------------
    Profiling
    ------------------------------------------------------------------------ *)
