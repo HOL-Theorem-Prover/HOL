@@ -475,8 +475,9 @@ val goal_cat = mk_var ("goal_cat", rpt_fun_type 3 alpha)
 fun flatten_goal (a,b) =
   if null a 
   then b
-  else list_mk_comb (hyp_cat,[list_mk_binop asm_cat a,b])
-
+  else (list_mk_comb (hyp_cat,[list_mk_binop asm_cat a,b])
+       handle HOL_ERR _ => raise ERR "flatten_goal" (string_of_goal (a,b))) 
+  
 fun lambda_term fullty (v,bod) =
   let
     val ty1 = type_of v
@@ -485,6 +486,7 @@ fun lambda_term fullty (v,bod) =
   in
     list_mk_comb (mk_var ("lambda",ty3), [v,bod])
   end
+  handle HOL_ERR _ => raise ERR "lambda_term" (term_to_string bod) 
 
 fun add_lambda tm = case dest_term tm of
     COMB(Rator,Rand) => mk_comb (add_lambda Rator, add_lambda Rand)
@@ -522,7 +524,8 @@ fun mask_unknown (tnn,dim) tm =
     val (oper,argl) = strip_comb tm
   in
     if dmem oper tnn 
-    then list_mk_comb (oper, map (mask_unknown (tnn,dim)) argl)
+    then (list_mk_comb (oper, map (mask_unknown (tnn,dim)) argl)
+          handle HOL_ERR _ => raise ERR "mask_unknown" (term_to_string tm))
     else mk_embedding_var (Vector.fromList 
       (List.tabulate (dim,fn _ => 0.0)), alpha)
   end
