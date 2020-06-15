@@ -4238,6 +4238,49 @@ val oEL_LUPDATE = Q.store_thm(
   fs[numLib.DECIDE “!x. SUC (x - 1) <> x <=> (x = 0)”,
      numLib.DECIDE “!x. 1 + x = SUC x”]);
 
+(* ----------------------------------------------------------------------
+    adjacent : 'a list -> 'a -> 'a -> bool
+
+    adjacent L a b is true if b immediately follows a somewhere in list L
+   ---------------------------------------------------------------------- *)
+
+Inductive adjacent:
+  (!a b t. adjacent (a::b::t) a b) /\
+  (!a b h t. adjacent t a b ==> adjacent (h::t) a b)
+End
+
+Theorem adjacent_thm[simp]:
+  adjacent [] a b = F /\
+  adjacent [e] a b = F /\
+  adjacent (a::b::t) a b = T
+Proof
+  rpt conj_tac >> simp[Once adjacent_cases] >> Induct_on ‘adjacent’ >>
+  simp[]
+QED
+
+Theorem adjacent_iff:
+  adjacent (h1::h2::t) a b <=> h1 = a /\ h2 = b \/ adjacent (h2::t) a b
+Proof
+  simp[EQ_IMP_THM, DISJ_IMP_THM, adjacent_rules] >>
+  map_every Q.ID_SPEC_TAC [‘a’, ‘b’, ‘h1’, ‘h2’, ‘t’] >>
+  Induct_on ‘adjacent’ >> simp[]
+QED
+
+Theorem adjacent_EL:
+  adjacent L a b <=> ?i. i + 1 < LENGTH L /\ a = EL i L /\ b = EL (i + 1) L
+Proof
+  eq_tac
+  >- (Induct_on ‘adjacent’ >> simp[PULL_EXISTS] >> rw[]
+      >- (Q.EXISTS_TAC ‘0’ >> simp[]) >>
+      Q.RENAME_TAC [‘i + 1 < LENGTH L’] >> Q.EXISTS_TAC ‘SUC i’ >>
+      simp[ADD_CLAUSES]) >>
+  simp[PULL_EXISTS] >> Q.ID_SPEC_TAC ‘L’ >> Induct_on ‘i’ >>
+  Cases >> simp[]
+  >- (Q.RENAME_TAC [‘1 < SUC (LENGTH L)’] >> Cases_on ‘L’ >> simp[]) >>
+  simp[ADD_CLAUSES, adjacent_rules]
+QED
+
+
 (* ---------------------------------------------------------------------- *)
 
 val _ = app DefnBase.export_cong ["EXISTS_CONG", "EVERY_CONG", "MAP_CONG",

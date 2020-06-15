@@ -418,7 +418,7 @@ QED
  * all adjacent elements of the list.                                        *
  *---------------------------------------------------------------------------*)
 
-Definition SORTED_DEF:
+Definition SORTED_DEF[simp]:
    (SORTED R [] = T) /\
    (SORTED R [x] = T) /\
    (SORTED R (x::y::rst) <=> R x y /\ SORTED R (y::rst))
@@ -427,6 +427,15 @@ End
 Definition SORTS_DEF:
   SORTS f R <=> !l. PERM l (f R l) /\ SORTED R (f R l)
 End
+
+Theorem SORTED_adjacent:
+  SORTED R L <=> adjacent L RSUBSET R
+Proof
+  Induct_on ‘L’ >> simp[relationTheory.RSUBSET] >>
+  rename [‘SORTED R L’] >> Cases_on ‘L’ >>
+  simp[adjacent_iff, DISJ_IMP_THM, FORALL_AND_THM,
+       relationTheory.RSUBSET]
+QED
 
 
 (*---------------------------------------------------------------------------*
@@ -453,7 +462,7 @@ Theorem SORTED_APPEND:
  (SORTED R (L1 ++ L2) <=> SORTED R L1 /\ SORTED R L2 /\
                           (!x y. MEM x L1 ==> MEM y L2 ==> R x y))
 Proof
- Induct_on `L1` \\ fs [SORTED_EQ, SORTED_DEF] \\ metis_tac []
+ Induct_on `L1` \\ fs [SORTED_EQ] \\ metis_tac []
 QED
 
 Theorem SORTED_APPEND_IMP:
@@ -920,17 +929,13 @@ SRW_TAC [][] THEN
 METIS_TAC [ADD_SYM,MULT_SYM,DIV_MULT,MOD_MULT])
 end
 
-val SORTED_NIL = store_thm(
-"SORTED_NIL",
-``!R. SORTED R []``,
-SRW_TAC[][SORTED_DEF])
-val _ = export_rewrites["SORTED_NIL"]
+Theorem SORTED_NIL:     !R. SORTED R []
+Proof SRW_TAC[][]
+QED
 
-val SORTED_SING = store_thm(
-"SORTED_SING",
-``!R x. SORTED R [x]``,
-SRW_TAC[][SORTED_DEF])
-val _ = export_rewrites["SORTED_SING"]
+Theorem SORTED_SING:    !R x. SORTED R [x]
+Proof SRW_TAC[][]
+QED
 
 val SORTED_TL = store_thm ("SORTED_TL",
   ``SORTED R (x :: xs) ==> SORTED R xs``,
@@ -1002,12 +1007,11 @@ val QSORT_eq_if_PERM = store_thm(
   !l1 l2. (QSORT R l1 = QSORT R l2) = PERM l1 l2``,
 PROVE_TAC[QSORT_PERM,QSORT_SORTED,SORTED_PERM_EQ,PERM_TRANS,PERM_SYM])
 
-val SORTED_FILTER = store_thm("SORTED_FILTER",
-  ``!R ls P. transitive R /\ SORTED R ls ==> SORTED R (FILTER P ls)``,
-  ho_match_mp_tac SORTED_IND >>
-  rw[] >> rw[] >> rfs[SORTED_EQ] >> fs[SORTED_EQ] >>
-  first_x_assum(qspec_then`P`mp_tac) >> rw[] >>
-  rfs[SORTED_EQ] >> fs[MEM_FILTER])
+Theorem SORTED_FILTER:
+  !R ls P. transitive R /\ SORTED R ls ==> SORTED R (FILTER P ls)
+Proof
+  Induct_on ‘ls’ >> csimp[SORTED_EQ] >> rw[SORTED_EQ] >> fs[MEM_FILTER]
+QED
 
 val ALL_DISTINCT_SORTED_WEAKEN = Q.store_thm("ALL_DISTINCT_SORTED_WEAKEN",
   `!R R' ls. (!x y. MEM x ls /\ MEM y ls /\ x <> y ==> (R x y <=> R' x y)) /\
