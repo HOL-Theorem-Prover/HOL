@@ -14,7 +14,8 @@ sig
 
   (* statistics *)
   val cumul_graph : real -> string -> unit
-  
+  val compare_stats : string list -> string -> unit
+
   (* training *)
   val train_value : real -> string -> tnn
 

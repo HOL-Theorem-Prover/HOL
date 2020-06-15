@@ -142,10 +142,10 @@ run_evalscript_thyl "test_arithmetic-e1" false 1 ["arithmetic"];
 *)
 
 (* Core theories
-load "tttUnfold"; open tttUnfold;
+sshload "tttUnfold"; open tttUnfold;
 tttSetup.record_savestate_flag := true;
 tttSetup.learn_abstract_term := false;
-aiLib.debug_flag := true;
+aiLib.debug_flag := false;
 ttt_clean_record (); ttt_record ();
 
 load "tttEval"; open tttEval;
@@ -197,14 +197,21 @@ fun extract_info dir file =
 fun write_graph file (s1,s2) l =
   writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => rts a ^ " " ^ its b) l)
 
-fun cumul_graph timelimit exp =
-  let 
+fun stats_exp exp =
+  let   
     val dir = ttt_eval_dir ^ "/" ^ exp
     val filel = filter (String.isPrefix "buildheap_") (listDir dir)
-    val l = map (extract_info dir) filel
-    val satl = filter (fn (_,(x,_)) => x = ProofSaturated) l
-    val timeoutl = filter (fn (_,(x,_)) => x = ProofSaturated) l
-    val proofl = filter (fn (_,(x,_)) => is_proof x) l
+    val totl = map (extract_info dir) filel
+    val satl = filter (fn (_,(x,_)) => x = ProofSaturated) totl
+    val timeoutl = filter (fn (_,(x,_)) => x = ProofSaturated) totl
+    val proofl = filter (fn (_,(x,_)) => is_proof x) totl
+  in
+    (totl,satl,timeoutl,proofl)
+  end
+
+fun cumul_graph timelimit exp =
+  let 
+    val (l,satl,timeoutl,proofl) = stats_exp exp
     val timl = map (fn (_,(_,t)) => t) proofl
     fun f bound = length (filter (fn x => x <= bound) timl)
     val graph = map_assoc f (interval 0.1 (0.02,timelimit))
@@ -217,6 +224,33 @@ fun cumul_graph timelimit exp =
        "timeout: " ^ its (length timeoutl) ^ ", " ^
        "saturated: " ^ its (length satl));
     write_graph graph_out ("time","proofs") graph
+  end
+
+fun compare_stats expl exp = 
+  let 
+    val dproven = ref (HOLset.empty String.compare)
+    val dtot = ref (HOLset.empty String.compare)
+    fun f (totl,_,_,proofl) = 
+      let 
+        val sl1 = map fst proofl 
+        val sl2 = map fst totl
+      in
+        dproven := HOLset.addList (!dproven,sl1);
+        dtot := HOLset.addList (!dtot,sl2)
+      end
+    val _ = app f (map stats_exp expl)
+    val lproven1 = (!dproven)
+    val ltot1 = (!dtot)
+    val _ = f (stats_exp exp)
+    val lproven2 = (!dproven)
+    val ltot2 = (!dtot)
+    val uniq = HOLset.difference (lproven2,lproven1)
+    fun g (name,set) = print_endline (name ^ ": " ^ its (HOLset.numItems set))
+  in
+    app g [("total (old)",ltot1),("proven (old)",lproven1),
+           ("total (new)",ltot2),("proven (new)",lproven2),
+           ("unique: ", uniq)];
+    print_endline ("\n  " ^ String.concatWith "\n  " (HOLset.listItems uniq))
   end
 
 (*

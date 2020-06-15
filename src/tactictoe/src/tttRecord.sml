@@ -226,7 +226,6 @@ fun ttt_save_state () =
 
 fun ttt_after_save_state () = incr savestate_level
 
-
 fun save_goal g =
   let
     val savestate_dir = tactictoe_dir ^ "/savestate"
