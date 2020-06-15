@@ -142,7 +142,7 @@ run_evalscript_thyl "test_arithmetic-e1" false 1 ["arithmetic"];
 *)
 
 (* Core theories
-sshload "tttUnfold"; open tttUnfold;
+load "tttUnfold"; open tttUnfold;
 tttSetup.record_savestate_flag := true;
 tttSetup.learn_abstract_term := false;
 aiLib.debug_flag := false;

@@ -504,10 +504,11 @@ fun add_arity tm =
         let val {Thy,Name,Ty} = dest_thy_const oper in
           escape ("c" ^ Thy ^ "." ^ Name ^ "." ^ its a)
         end
-    val newoper = mk_var (newname, rpt_fun_type (a+1) alpha) (* type erasure *)
+    val newoper = mk_var (newname, rpt_fun_type (a+1) alpha)
   in
     list_mk_comb (newoper, map add_arity argl)
   end
+  handle HOL_ERR _ => raise ERR "add_arity" (term_to_string tm) 
 
 val vhead = mk_var ("head_", rpt_fun_type 2 alpha);
 
