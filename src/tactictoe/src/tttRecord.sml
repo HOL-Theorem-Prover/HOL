@@ -202,7 +202,9 @@ fun end_record_proof name g =
     tacdata_glob := newtacdata
   end
 
-(* 50 is a compromise between fast saveState and fast loadState *) 
+fun ttt_before_save_state () = 
+  thmdata_glob := total_time create_thmdata_time create_thmdata ()
+
 fun ttt_save_state () =
   (
   if !record_savestate_flag then
@@ -219,9 +221,11 @@ fun ttt_save_state () =
     else PolyML.SaveState.saveChild (savestate_file,
                  ((!savestate_level) div 50) + 1)
   end
-  else ();
-  incr savestate_level
+  else ()
   )
+
+fun ttt_after_save_state () = incr savestate_level
+
 
 fun save_goal g =
   let

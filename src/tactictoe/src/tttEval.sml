@@ -10,7 +10,7 @@ struct
 
 open HolKernel Abbrev boolLib aiLib 
   smlRedirect smlParallel smlOpen 
-  mlTacticData
+  mlTacticData mlTreeNeuralNetwork
   tttSetup tttSearch tttRecord tacticToe
 
 val ERR = mk_HOL_ERR "tttEval"
@@ -37,17 +37,20 @@ fun print_status r = case r of
  | ProofTimeout   => print_endline "tactictoe: timeout"
  | Proof s        => print_endline ("tactictoe: proven\n  " ^ s)
 
-fun ttt_eval (thmdata,tacdata) goal =
+fun ttt_eval ((thmdata,tacdata),tnno) goal =
   let
     val thmid = current_theory () ^ "_" ^ its (!savestate_level - 1)
     val b = !hide_flag
     val _ = hide_flag := false
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
-    val ((status,tree),t) = add_time (main_tactictoe (thmdata,tacdata)) goal
-    val _ = case status of Proof _ => 
+    val ((status,tree),t) = add_time 
+      (main_tactictoe ((thmdata,tacdata),tnno)) goal
+    val _ = if not (isSome tnno) then (* only one loop for now *)
+      (case status of Proof _ => 
         ttt_export_exl thmid (extract_exl tree)
-      | _ => ()
+      | _ => ())
+      else ()
   in   
     print_status status;
     print_endline ("ttt_eval time: " ^ rts_round 6 t ^ "\n");
@@ -66,7 +69,7 @@ fun ttt_eval (thmdata,tacdata) goal =
 fun sreflect_real s r = ("val _ = " ^ s ^ " := " ^ rts (!r) ^ ";")
 fun sreflect_flag s flag = ("val _ = " ^ s ^ " := " ^ bts (!flag) ^ ";")
 
-fun write_evalscript prefix file =
+fun write_evalscript tnno file =
   let
     val file1 = mlquote (file ^ "_savestate")
     val file2 = mlquote (file ^ "_goal")
@@ -88,13 +91,13 @@ fun write_evalscript prefix file =
 
 fun bare file = OS.Path.base (OS.Path.file file)
 
-fun run_evalscript dir file =
+fun run_evalscript dir tnno file =
   (
-  write_evalscript (bare file) file;
+  write_evalscript tnno file;
   run_buildheap_nodep dir (file ^ "_eval.sml")
   )
 
-fun run_evalscript_thyl expname b ncore thyl =
+fun run_evalscript_thyl expname (b,tnno,ncore) thyl =
   let
     val dir = ttt_eval_dir ^ "/" ^ expname ^ (if b then "" else "_tenth")
     val _ = (mkDir_err ttt_eval_dir; mkDir_err dir)
@@ -105,7 +108,7 @@ fun run_evalscript_thyl expname b ncore thyl =
     val filel1 = List.concat (map f pbl)
     val filel2 = if b then filel1 else one_in_n 10 0 filel1
     val _ = print_endline ("evaluation: " ^ its (length filel2) ^ " problems")
-    val (_,t) = add_time (parapp_queue ncore (run_evalscript dir)) filel2
+    val (_,t) = add_time (parapp_queue ncore (run_evalscript dir tnno)) filel2
   in
     print_endline ("evaluation time: " ^ rts_round 6 t)
   end
@@ -218,5 +221,57 @@ gnuplot -p -e "plot 'eval/graph/june4-e1_graph' using 1:2 with lines,\
                     'eval/graph/june2-e3_graph' using 1:2 with lines,\
                     'eval/graph/june2-e4_graph' using 1:2 with lines"
 *)
+
+(*
+load "tttEval"; open tttEval;
+load "aiLib"; open aiLib;
+fun listDir dirName = 
+  let 
+    val dir = OS.FileSys.openDir dirName
+    fun read files = case OS.FileSys.readDir dir of
+        NONE => rev files
+      | SOME file => read (file :: files)
+    val r = read []
+  in
+    OS.FileSys.closeDir dir; r
+  end
+
+val filel = listDir (HOLDIR ^ "/src/tactictoe/gl_value");
+load "mlTacticData"; open mlTacticData;
+
+load "mlTacticData; open mlTacticData;
+val exll = map (fn x => ttt_import_exl x handle _ => 
+  (print_endline x; [])) filel;
+
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+val head_goal = (``head_goal : bool -> bool``);
+
+val goalcat = (``goalcat : bool -> bool -> bool``); 
+
+val exl = List.concat exll;
+fun nntm_of_gl gl = mk_comb (head_goal,
+  list_mk_binop goalcat (map (rand o nntm_of_goal) gl)
+  );
+val exl1 = map (fn (gl,b) => (nntm_of_gl gl, if b then [1.0] else [0.0])) exl;
+val exl2 = map single exl1;
+val (train,test) = part_pct 0.95 (shuffle exl2);
+
+val operl = mk_fast_set oper_compare
+  (List.concat (map operl_of_term (map fst (List.concat exl2))));
+val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl;
+val randtnn = random_tnn operdiml;
+
+val trainparam =
+  {ncore = 4, verbose = true,
+   learning_rate = 0.02, batch_size = 16, nepoch = 100};
+val schedule = [trainparam];
+val tnn = train_tnn schedule randtnn (train,test);
+
+val acctrain = tnn_accuracy tnn train;
+val acctest = tnn_accuracy tnn test;
+val _ = write_tnn "tnn_hd" tnn;
+
+*)
+
 
 end (* struct *)

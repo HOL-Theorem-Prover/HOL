@@ -464,20 +464,18 @@ val traintnn_extspec =
   }
 
 (* -------------------------------------------------------------------------
-   Converting a goal into an essentially first-order term which can 
+   Converting a list of goals into an essentially first-order term which can 
    be used as input to a tree neural network. 
    ------------------------------------------------------------------------- *)
 
-val asm_cat = mk_var ("asm_cat",``:bool -> bool -> bool``)
+val asm_cat = mk_var ("asm_cat", rpt_fun_type 3 alpha)
+val hyp_cat = mk_var ("hyp_cat", rpt_fun_type 3 alpha)
+val goal_cat = mk_var ("goal_cat", rpt_fun_type 3 alpha)
 
-fun goal_cat (a,b) =
-  let 
-    val gcat = mk_var ("goal_cat",``:bool -> bool -> bool``) 
-  in
-    if null a 
-    then b
-    else list_mk_comb (gcat,[list_mk_binop asm_cat a,b])
-  end
+fun flatten_goal (a,b) =
+  if null a 
+  then b
+  else list_mk_comb (hyp_cat,[list_mk_binop asm_cat a,b])
 
 fun lambda_term fullty (v,bod) =
   let
@@ -498,8 +496,7 @@ fun add_arity tm =
     val (oper,argl) = strip_comb tm
     val a = length argl
     val newname =
-      if is_var oper
-      then
+      if is_var oper then
         let val prefix = if null argl then "V" else "v" in
           escape (prefix ^ fst (dest_var oper) ^ "." ^ its a)
         end
@@ -507,16 +504,31 @@ fun add_arity tm =
         let val {Thy,Name,Ty} = dest_thy_const oper in
           escape ("c" ^ Thy ^ "." ^ Name ^ "." ^ its a)
         end
-    val newoper = mk_var (newname, type_of oper)
+    val newoper = mk_var (newname, rpt_fun_type (a+1) alpha) (* type erasure *)
   in
     list_mk_comb (newoper, map add_arity argl)
   end
 
-val vhead = mk_var ("head_goal", ``:bool -> bool``);
+val vhead = mk_var ("head_", rpt_fun_type 2 alpha);
 
-fun nntm_of_goal g =
-  let val tm = (add_arity o add_lambda o goal_cat) g in
-    mk_comb (vhead,tm)
+fun nntm_of_gl gl =
+  let val f =  add_arity o add_lambda o flatten_goal in
+    mk_comb (vhead, (list_mk_binop goal_cat (map f gl)))
+  end
+
+fun mask_unknown (tnn,dim) tm =
+  let
+    val (oper,argl) = strip_comb tm
+  in
+    if dmem oper tnn 
+    then list_mk_comb (oper, map (mask_unknown (tnn,dim)) argl)
+    else mk_embedding_var (Vector.fromList 
+      (List.tabulate (dim,fn _ => 0.0)), alpha)
+  end
+
+fun mask_unknown_inferdim tnn tm = 
+  let val dim = dimin_nn (dfind vhead tnn) in
+    mask_unknown (tnn,dim) tm 
   end
 
 (* -------------------------------------------------------------------------

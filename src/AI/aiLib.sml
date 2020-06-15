@@ -553,13 +553,13 @@ fun strip_lisp x = case x of
   | Lstring x              => (lisp_lower_case x ,[])
   | _                      => raise ERR "strip_lisp" "operator is a comb"
 
-fun rec_fun_type n ty =
-  if n <= 1 then ty else mk_type ("fun",[ty,rec_fun_type (n-1) ty])
+fun rpt_fun_type n ty =
+  if n <= 1 then ty else mk_type ("fun",[ty,rpt_fun_type (n-1) ty])
 
 fun term_of_lisp x =
   let
     val (oper,argl) = strip_lisp x
-    val opertm = mk_var (oper, rec_fun_type (length argl + 1) alpha)
+    val opertm = mk_var (oper, rpt_fun_type (length argl + 1) alpha)
   in
     list_mk_comb (opertm, map term_of_lisp argl)
   end

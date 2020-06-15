@@ -10,7 +10,7 @@ struct
 
 open HolKernel Abbrev boolLib aiLib
   smlLexer smlExecute smlRedirect smlInfix
-  mlFeature mlThmData mlTacticData mlNearestNeighbor
+  mlFeature mlThmData mlTacticData mlNearestNeighbor mlTreeNeuralNetwork
   psMinimize
   tttSetup tttLearn tttSearch
 
@@ -55,7 +55,7 @@ fun select_tacfea tacdata gfea =
    Main function
    ------------------------------------------------------------------------- *)
 
-fun main_tactictoe (thmdata,tacdata) goal =
+fun main_tactictoe ((thmdata,tacdata),tnno) goal =
   let
     val _ = hidef QUse.use infix_file
     (* preselection *)
@@ -110,7 +110,7 @@ fun main_tactictoe (thmdata,tacdata) goal =
         end
     val _ = debug "search"
   in
-    search tacpred goal
+    search (tacpred,tnno) goal
   end
 
 (* -------------------------------------------------------------------------
@@ -150,7 +150,7 @@ fun tactictoe_aux goal =
         ttt_tacdata_cache := dadd cthyl tacdata_aux (!ttt_tacdata_cache);
         tacdata_aux
       end
-    val (proofstatus,_) = hidef (main_tactictoe (thmdata,tacdata)) goal
+    val (proofstatus,_) = hidef (main_tactictoe ((thmdata,tacdata),NONE)) goal
     val (staco,tac) = read_status proofstatus
   in
     tac

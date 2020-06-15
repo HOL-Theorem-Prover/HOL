@@ -193,7 +193,6 @@ sig
   datatype lisp = Lterm of lisp list | Lstring of string
   val lisp_lexer : string -> string list
   val lisp_parser : string -> lisp list
-  val rec_fun_type : int -> hol_type -> hol_type
   val term_of_lisp : lisp -> term
 
   (* escape *)
@@ -233,6 +232,7 @@ sig
   val all_bvar : term -> term list
   val strip_type : hol_type -> (hol_type list * hol_type)
   val strip_type_n : int -> hol_type -> (hol_type list * hol_type)
+  val rpt_fun_type : int -> hol_type -> hol_type
   val has_boolty : term -> bool
   val only_concl : thm -> term
   val list_mk_binop : term -> term list -> term

@@ -181,7 +181,8 @@ val basis = String.tokens Char.isSpace
 "Size trunc ignore Empty Span :: Chr length LESS round vector EQUAL app " ^
 "~ Subscript NONE ceil getOpt str substring use o explode foldr foldl ^ " ^
 "exnMessage Option SOME tl Overflow null @ > = < ref Fail div nil before " ^
-"real print ord / - rev + * implode map ! size isSome Div mod GREATER Match " ^
+"real print ord / - rev + * implode map ! size isSome Div mod GREATER " ^
+"Match " ^
 "false abs <> exnName Domain Bind true >= valOf <= not := hd chr concat floor"
 );
 
@@ -590,12 +591,10 @@ fun modified_program (h,d) p =
       val body' = modified_program ((s <> "val") orelse h, d+1) body
       val semicolon =
         if d = 0 andalso !is_thm_flag then
-       ["; val _ = tttRecord.thmdata_glob :=" ^ 
-         " aiLib.total_time mlThmData.create_thmdata_time" ^  
-         " mlThmData.create_thmdata ();",
-        " val _ =" ^
-        " aiLib.total_time tttRecord.ttt_save_state_time " ^      
-        " tttRecord.ttt_save_state ();"]
+       ["; val _ = ttt_before_save_state ()",
+        "; val _ = aiLib.total_time tttRecord.ttt_save_state_time" ^      
+        " tttRecord.ttt_save_state ()",
+        "; val _ = tttRecord.ttt_after_save_state ();"]
         else []
     in
       semicolon @ [s] @ head' @ [sep] @ body' @ continue m

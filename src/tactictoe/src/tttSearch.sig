@@ -34,6 +34,7 @@ sig
     }
   type tree = ((int * int) list, node) Redblackmap.dict
 
-  val search : (goal -> string list) -> goal -> (proofstatus * tree)
+  val search : (goal -> string list) * mlTreeNeuralNetwork.tnn option -> 
+     goal -> proofstatus * tree
 
 end

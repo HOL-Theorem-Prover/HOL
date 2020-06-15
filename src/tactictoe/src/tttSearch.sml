@@ -10,7 +10,7 @@ struct
 
 open HolKernel Abbrev boolLib aiLib
   smlTimeout smlLexer smlExecute
-  mlFeature mlThmData mlTacticData mlNearestNeighbor
+  mlFeature mlThmData mlTacticData mlNearestNeighbor mlTreeNeuralNetwork
   psMinimize
   tttSetup tttLearn
 
@@ -200,12 +200,13 @@ fun node_create_backup (tree,tacpred) (reward,gl) (pid,(gn,stacn)) =
     node_backup newtree (reward, backstatus_node node) (pid,(gn,stacn))
   end
 
-fun starttree_of tacpred goal =
+fun starttree_of (tacpred,tnno) goal =
   let
     val goalv = Vector.fromList [goal_create tacpred goal]
     val root =
       {
-      nvis = 1.0, nsum = 0.0,
+      nvis = 1.0, 
+      nsum = 0.0,
       nodestatus = backstatus_goalv goalv,
       goalv = goalv,
       parentd = dempty goal_compare
@@ -296,12 +297,22 @@ fun apply_stac parentd goalrec stac =
     status_of_stac parentd goalrec glo
   end
 
-fun reward_of stacstatus = case stacstatus of
+fun reward_of tnno stacstatus = case stacstatus of
     StacFail => 0.0
   | StacLoop => 0.0
   | StacPara => 0.0
   | StacProved => 1.0
-  | StacUndecided gl => 1.0
+  | StacUndecided gl => 
+    (
+    if isSome tnno then
+      let 
+        val tnn = valOf tnno
+        val nntm = mask_unknown_inferdim tnn (nntm_of_gl gl) 
+      in
+        singleton_of_list (snd (singleton_of_list (infer_tnn tnn [nntm])))
+      end
+    else 1.0
+    )
   | _ => raise ERR "reward_of" "unexpected"
 
 fun string_of_stacstatus x = case x of
@@ -313,7 +324,7 @@ fun string_of_stacstatus x = case x of
   | _ => raise ERR "string_of_stacstatus" "unexpected"
 
 
-fun apply_stac_pid (tree,tacpred) pid =
+fun apply_stac_pid (tree,(tacpred,tnno)) pid =
   let
     val node = dfind pid tree
     val (gn,goalundec) = first_goalundec (#goalv node)
@@ -322,7 +333,7 @@ fun apply_stac_pid (tree,tacpred) pid =
     val cid = (gn,stacn) :: pid
     val stacstatus =
       apply_stac (#parentd node) goalundec (#stac stacfresh)
-    val reward = reward_of stacstatus
+    val reward = reward_of tnno stacstatus
     fun msg (a,b,c) =
       "node: " ^ string_of_id a ^ "\n" ^
       "tactic: " ^ #stac b ^ "\n" ^
@@ -339,10 +350,10 @@ fun apply_stac_pid (tree,tacpred) pid =
    Main search function
    ------------------------------------------------------------------------- *)
 
-fun search_loop (starttree,tacpred) =
+fun search_loop (tacpred,tnno) starttree =
   let
     val timer = Timer.startRealTimer ()
-    fun loop (tree,pred) =
+    fun loop pred tree =
       if Timer.checkRealTimer timer > Time.fromReal (!ttt_search_time)
         then (SearchTimeout,tree)
       else if #nodestatus (dfind [] tree) = NodeSaturated
@@ -354,10 +365,10 @@ fun search_loop (starttree,tacpred) =
           val pid = mcts_select tree []
           val newtree = apply_stac_pid (tree,pred) pid
         in
-          loop (newtree,pred)
+          loop pred newtree
         end
   in
-    loop (starttree,tacpred)
+    loop (tacpred,tnno) starttree
   end
 
 fun extract_proofl tree id =
@@ -401,10 +412,11 @@ fun reconstruct_proofstatus (searchstatus,tree) g =
       Proof sproof
     end
 
-fun search tacpred g =
+fun search (tacpred,tnno) g =
   let
-    val starttree = starttree_of tacpred g
-    val ((searchstatus,tree),t) = add_time search_loop (starttree,tacpred)
+    val starttree = starttree_of (tacpred,tnno) g
+    val ((searchstatus,tree),t) = add_time 
+      (search_loop (tacpred,tnno)) starttree
     val _ = print_endline ("search time: " ^ rts_round 6 t)
   in
     (reconstruct_proofstatus (searchstatus,tree) g, tree)

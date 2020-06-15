@@ -19,11 +19,13 @@ include Abbrev
   val random_tnn : (term * int list) list -> tnn 
   val random_tnn_std : (int * int) -> term list -> tnn
   
-  (* input term *)
+  (* input term modifications *)
   val mk_embedding_var : (real vector * hol_type) -> term
   val precomp_embed : tnn -> term -> term  
-  val nntm_of_goal : goal -> term
-  
+  val nntm_of_gl : goal list -> term
+  val mask_unknown : tnn * int -> term -> term
+  val mask_unknown_inferdim : tnn -> term -> term
+
   (* examples *)
   val stats_tnnex : tnnex -> string
   val prepare_tnnex : tnnex -> tnnbatch
@@ -49,6 +51,8 @@ include Abbrev
   (* object for training multiple instance in parallel *)
   val traintnn_extspec :
     (unit, (tnnex * schedule * tnndim), tnn) smlParallel.extspec
+
+
 
 
 end
