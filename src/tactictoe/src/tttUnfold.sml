@@ -591,7 +591,7 @@ fun modified_program (h,d) p =
       val body' = modified_program ((s <> "val") orelse h, d+1) body
       val semicolon =
         if d = 0 andalso !is_thm_flag then
-       ["; val _ = ttt_before_save_state ()",
+       ["; val _ = tttRecord.ttt_before_save_state ()",
         "; val _ = aiLib.total_time tttRecord.ttt_save_state_time" ^      
         " tttRecord.ttt_save_state ()",
         "; val _ = tttRecord.ttt_after_save_state ();"]
