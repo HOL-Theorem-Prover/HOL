@@ -165,7 +165,7 @@ Proof
   PROVE_TAC [RTC_RULES]
 QED
 
-Theorem RTC_STRONG_INDUCT:
+Theorem RTC_STRONG_INDUCT[rule_induction]:
   !R P. (!x. P x x) /\ (!x y z. R x y /\ RTC R y z /\ P y z ==> P x z) ==>
         (!x (y:'a). RTC R x y ==> P x y)
 Proof
@@ -379,12 +379,12 @@ val TC_STRONG_INDUCT0 = prove(
   REPEAT GEN_TAC THEN STRIP_TAC THEN TC_INDUCT_TAC THEN
   ASM_MESON_TAC [TC_RULES]);
 
-val TC_STRONG_INDUCT = store_thm(
-  "TC_STRONG_INDUCT",
-  ``!R P. (!x y. R x y ==> P x y) /\
-          (!x y z. P x y /\ P y z /\ TC R x y /\ TC R y z ==> P x z) ==>
-          (!u v. TC R u v ==> P u v)``,
-  REPEAT STRIP_TAC THEN IMP_RES_TAC TC_STRONG_INDUCT0);
+Theorem TC_STRONG_INDUCT[rule_induction]:
+  !R P. (!x y. R x y ==> P x y) /\
+        (!x y z. P x y /\ P y z /\ TC R x y /\ TC R y z ==> P x z) ==>
+        (!u v. TC R u v ==> P u v)
+Proof REPEAT STRIP_TAC THEN IMP_RES_TAC TC_STRONG_INDUCT0
+QED
 
 val TC_STRONG_INDUCT_LEFT1_0 = prove(
   ``!R P. (!x y. R x y ==> P x y) /\
@@ -778,39 +778,40 @@ val reflexive_EQC = Q.store_thm(
 `reflexive (EQC R)`,
 PROVE_TAC [reflexive_def,EQC_REFL]);
 
-val EQC_MOVES_IN = Q.store_thm(
-"EQC_MOVES_IN",
-`!R. (EQC (RC R) = EQC R) /\ (EQC (SC R) = EQC R) /\ (EQC (TC R) = EQC R)`,
-SRW_TAC [][EQC_DEF,RC_MOVES_OUT,SC_IDEM] THEN
-AP_TERM_TAC THEN
-SRW_TAC [][FUN_EQ_THM] THEN
-REVERSE EQ_TAC THEN
-MAP_EVERY Q.ID_SPEC_TAC [`x'`,`x`] THEN
-HO_MATCH_MP_TAC TC_INDUCT THEN1 (
+Theorem EQC_MOVES_IN[simp]:
+  !R. (EQC (RC R) = EQC R) /\ (EQC (SC R) = EQC R) /\ (EQC (TC R) = EQC R)
+Proof
+  SRW_TAC [][EQC_DEF,RC_MOVES_OUT,SC_IDEM] THEN
+  AP_TERM_TAC THEN
+  SRW_TAC [][FUN_EQ_THM] THEN
+  REVERSE EQ_TAC THEN
+  MAP_EVERY Q.ID_SPEC_TAC [`x'`,`x`] THEN
+  HO_MATCH_MP_TAC TC_INDUCT THEN1 (SRW_TAC [][SC_DEF] THEN
+                                   PROVE_TAC [TC_RULES,SC_DEF]) THEN
+  REVERSE (SRW_TAC [][SC_DEF]) THEN1
+   PROVE_TAC [TC_RULES,SC_DEF] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `R^+ a b` THEN
+  POP_ASSUM MP_TAC THEN
+  MAP_EVERY Q.ID_SPEC_TAC [`b`,`a`] THEN
+  HO_MATCH_MP_TAC TC_INDUCT THEN
   SRW_TAC [][SC_DEF] THEN
-  PROVE_TAC [TC_RULES,SC_DEF] ) THEN
-REVERSE (SRW_TAC [][SC_DEF]) THEN1
-  PROVE_TAC [TC_RULES,SC_DEF] THEN
-Q.MATCH_ASSUM_RENAME_TAC `R^+ a b` THEN
-POP_ASSUM MP_TAC THEN
-MAP_EVERY Q.ID_SPEC_TAC [`b`,`a`] THEN
-HO_MATCH_MP_TAC TC_INDUCT THEN
-SRW_TAC [][SC_DEF] THEN
-PROVE_TAC [TC_RULES,SC_DEF]);
-val _ = export_rewrites ["EQC_MOVES_IN"]
+  PROVE_TAC [TC_RULES,SC_DEF]
+QED
 
-val STRONG_EQC_INDUCTION = store_thm(
-  "STRONG_EQC_INDUCTION",
-  ``!R P. (!x y. R x y ==> P x y) /\
-          (!x. P x x) /\
-          (!x y. EQC R x y /\ P x y ==> P y x) /\
-          (!x y z. P x y /\ P y z /\ EQC R x y /\ EQC R y z ==> P x z) ==>
-          !x y. EQC R x y ==> P x y``,
+Theorem STRONG_EQC_INDUCTION[rule_induction]:
+  !R P. (!x y. R x y ==> P x y) /\
+        (!x. P x x) /\
+        (!x y. EQC R x y /\ P x y ==> P y x) /\
+        (!x y z. P x y /\ P y z /\ EQC R x y /\ EQC R y z ==> P x z)
+      ==>
+        !x y. EQC R x y ==> P x y
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!x y. EQC R x y ==> EQC R x y /\ P x y`
-        THEN1 PROVE_TAC [] THEN
+   THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC EQC_INDUCTION THEN
-  PROVE_TAC [EQC_R, EQC_REFL, EQC_SYM, EQC_TRANS]);
+  PROVE_TAC [EQC_R, EQC_REFL, EQC_SYM, EQC_TRANS]
+QED
 
 val ALT_equivalence = store_thm(
   "ALT_equivalence",
