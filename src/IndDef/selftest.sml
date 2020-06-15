@@ -172,6 +172,10 @@ val _ = List.app itf_test [
    “∀comm' t0' t1. EVAL comm' t0' t1 ⇒
                    ∀t0 b comm. WHILE b comm = comm' ∧ f t0 = t0' ⇒
                                ∀n. csize comm = n ⇒ P t1”),
+  ("rmeq1+bareneg/spec", 0, “EVAL c s0 s1”,
+   “~EVAL Skip x y”, “∀c x y. EVAL c x y ==> Skip = c ==> F”),
+  ("rmeq1+neg/spec", 0, “EVAL c s0 s1”,
+   “P x ==> ~EVAL Skip x y”, “∀c x y. EVAL c x y ==> Skip = c ==> ~P x”),
   ("conc-schematic", 1, “EVAL c s0 s1”,
    “∀t0 t1. EVAL (WHILE b comm) t0 t1 ⇒ P t0 t1”,
    “∀t0 t1. EVAL (WHILE b comm) t0 t1 ⇒ P t0 t1”)
