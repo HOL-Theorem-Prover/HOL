@@ -37,6 +37,9 @@ fun print_status r = case r of
  | ProofTimeout   => print_endline "tactictoe: timeout"
  | Proof s        => print_endline ("tactictoe: proven\n  " ^ s)
 
+fun print_time (name,t) =
+  print_endline (name ^ " time: " ^ rts_round 6 t ^ "\n");
+
 fun ttt_eval ((thmdata,tacdata),tnno) goal =
   let
     val thmid = current_theory () ^ "_" ^ its (!savestate_level - 1)
@@ -53,7 +56,9 @@ fun ttt_eval ((thmdata,tacdata),tnno) goal =
       else ()
   in   
     print_status status;
-    print_endline ("ttt_eval time: " ^ rts_round 6 t ^ "\n");
+    print_time ("ttt_eval",t);
+    print_time ("tnn value",!reward_time);
+    print_time ("tactic pred",!tacpred_time);
     hide_flag := b
   end
 
@@ -273,7 +278,7 @@ fun train_value pct file =
   let
     val filel = listDir (HOLDIR ^ "/src/tactictoe/gl_value")
     val exll = map (fn x => ttt_import_exl x handle Interrupt => raise 
-      Interrupt | _ => (print_endline x; [])) filel;
+      Interrupt | _ => (print_endline x; [])) filel
     fun f (gl,b) = (nntm_of_gl gl, if b then [1.0] else [0.0])
     val exl = map (single o f) (List.concat exll)
     val (train,test) = part_pct pct (shuffle exl)

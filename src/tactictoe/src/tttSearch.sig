@@ -5,6 +5,9 @@ sig
 
   type id = (int * int) list
 
+  val tacpred_time : real ref
+  val reward_time : real ref
+
   datatype stacstatus =
     StacProved |
     StacSaturated |
@@ -15,8 +18,6 @@ sig
   datatype nodestatus = NodeProved | NodeSaturated | NodeUndecided
   datatype searchstatus = SearchProved | SearchSaturated | SearchTimeout
   datatype proofstatus =  Proof of string | ProofSaturated | ProofTimeout
-
-
 
   type stac_record =
     {stac : string, svis : real, ssum : real, stacstatus : stacstatus}

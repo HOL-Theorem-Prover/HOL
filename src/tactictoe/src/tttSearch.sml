@@ -15,6 +15,8 @@ open HolKernel Abbrev boolLib aiLib
   tttSetup tttLearn
 
 val ERR = mk_HOL_ERR "tttSearch"
+val tacpred_time = ref 0.0
+val reward_time = ref 0.0
 
 (* -------------------------------------------------------------------------
    Types
@@ -333,7 +335,7 @@ fun apply_stac_pid (tree,(tacpred,tnno)) pid =
     val cid = (gn,stacn) :: pid
     val stacstatus =
       apply_stac (#parentd node) goalundec (#stac stacfresh)
-    val reward = reward_of tnno stacstatus
+    val reward = total_time reward_time (reward_of tnno) stacstatus
     fun msg (a,b,c) =
       "node: " ^ string_of_id a ^ "\n" ^
       "tactic: " ^ #stac b ^ "\n" ^
@@ -414,9 +416,10 @@ fun reconstruct_proofstatus (searchstatus,tree) g =
 
 fun search (tacpred,tnno) g =
   let
+    val _ = (tacpred_time := 0.0; reward_time := 0.0)
     val starttree = starttree_of (tacpred,tnno) g
     val ((searchstatus,tree),t) = add_time 
-      (search_loop (tacpred,tnno)) starttree
+      (search_loop (total_time tacpred_time tacpred, tnno)) starttree
     val _ = print_endline ("search time: " ^ rts_round 6 t)
   in
     (reconstruct_proofstatus (searchstatus,tree) g, tree)
