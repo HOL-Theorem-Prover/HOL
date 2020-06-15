@@ -4290,21 +4290,6 @@ val _ = export_rewrites
            "FOLDL", "FOLDR", "LENGTH_LUPDATE",
            "LUPDATE_LENGTH"];
 
-val nil_tm = Term.prim_mk_const{Name="NIL",Thy="list"};
-val cons_tm = Term.prim_mk_const{Name="CONS",Thy="list"};
-
-fun dest_cons M =
-  case strip_comb M
-   of (c,[p,q]) => if Term.same_const c cons_tm then (p,q)
-                   else raise ERR "listScript" "dest_cons"
-    | otherwise => raise ERR "listScript" "dest_cons" ;
-
-fun dest_list M =
-   case total dest_cons M
-    of NONE => if same_const nil_tm M then []
-               else raise ERR "dest_list" "not terminated with nil"
-     | SOME(h,t) => h::dest_list t
-
 val _ =
     monadsyntax.declare_monad (
       "list",
