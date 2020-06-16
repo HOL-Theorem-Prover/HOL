@@ -189,6 +189,10 @@ Incompatibilities:
   The moved theorem is now available as `SORTED_APPEND`, and the old `SORTED_APPEND` is now available as `SORTED_APPEND_IMP`.
   To avoid confusion, as `SORTED_APPEND` is now an (conditional) equality, `SORTED_APPEND_IFF` has been renamed to `SORTED_APPEND_GEN`.
 
+*   The definition `SORTED_DEF` is now an automatic rewrite, meaning that terms of the form `SORTED R (h1::h2::t)` will now rewrite to `R h1 h2 /\ SORTED (h2::t)` (in addition to the existing automatic rewrites for `SORTED R []` and `SORTED R [x]`).
+    To restore the old behaviour it is necessary to exclude `SORTED_DEF` (use `temp_delsimps`), and reinstate `SORTED_NIL` and `SORTED_SING` (use `augment_srw_ss [rewrites [thmnames]]`).
+
+
 
 * * * * *
 

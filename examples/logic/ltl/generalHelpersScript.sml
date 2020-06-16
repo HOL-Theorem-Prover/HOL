@@ -878,77 +878,77 @@ val rel_corr_def = Define `
   rel_corr R P =
    !x y. R x y = (P x y ∧ P y x)`;
 
-val REL_CORR_GROUP_BY = store_thm
-  ("REL_CORR_GROUP_BY",
-   ``!R P. rel_corr R P
-             ∧ equivalence R ∧ transitive P
-             ==> !k_hd k_tl l.
-             (GROUP_BY R l = (k_hd::k_tl))
-                ∧ (SORTED P l)
-                ==> (!x y k. (MEM x k_hd)
-                           ∧ (MEM k k_tl)
-                           ∧ (MEM y k)
-                              ==> ~R x y)``,
-    gen_tac >> gen_tac >> strip_tac >> Induct_on `l` >> fs[GROUP_BY_def,SPAN_def]
-    >> (rpt strip_tac >> rename[`SORTED P (H::l)`]
-        >> Cases_on `SPAN (R H) l`
-        >> Cases_on `l`
-        >- (fs[GROUP_BY_def,SPAN_def] >> rw[] >> fs[GROUP_BY_def])
-        >- (fs[GROUP_BY_def,SPAN_def] >> rename[`SORTED P (H::h2::t1)`]
-            >> Cases_on `R H h2` >> fs[]
-            >- (first_x_assum (qspec_then `q` mp_tac)
-                >> rpt strip_tac
-                >> first_x_assum (qspec_then `GROUP_BY R r` mp_tac)
-                >> simp[GROUP_BY_def] >> fs[SORTED_DEF]
-                >> strip_tac
-                >> `SPAN (R h2) t1 = SPAN (R H) t1`
-                        by metis_tac[SPAN_EQ]
-                >> rw[] >> Cases_on `SPAN (R H) t1` >> fs[]
-                >- (rw[] >> metis_tac[equivalence_def,
-                                      relationTheory.symmetric_def,relationTheory.transitive_def])
-                >- (rw[] >> qexists_tac `x` >> simp[] >> fs[] >> rw[]
-                    >> metis_tac[equivalence_def,relationTheory.symmetric_def,
-                                 relationTheory.transitive_def]
-                   )
-               )
-            >- (rw[] >> Cases_on `GROUP_BY R (h2::t1)` >> fs[]
-                >> rw[] >> fs[SORTED_DEF]
-                >> rename[`GROUP_BY R (h3::t2) = h4::t3`]
-                >- (`R h3 y` by (
-                        fs[GROUP_BY_def,SPAN_def]
-                        >> Cases_on `SPAN (R h3) t2` >> fs[]
-                        >> `!x. MEM x (FST (q,r)) ==> (R h3 x)`
-                                 by metis_tac[SPAN_FST_LEMM]
-                        >> Cases_on `y = h3` >> fs[]
-                        >> `MEM y q` by (rw[] >> fs[])
-                        >> metis_tac[]
-                    )
-                    >> metis_tac[equivalence_def,relationTheory.symmetric_def,relationTheory.transitive_def]
-                   )
-                >- (`P h3 H` by (
-                     Cases_on `y = h3` >> rw[]
-                     >- metis_tac[equivalence_def, relationTheory.reflexive_def]
-                     >- (
-                      `MEM y t2` by (
-                         `FLAT (GROUP_BY R (h3::t2)) = h3::t2`
-                             by metis_tac[GROUP_BY_FLAT]
-                          >> `MEM y (FLAT (GROUP_BY R (h3::t2)))` by (
-                             simp[MEM_FLAT] >> metis_tac[]
-                          )
-                          >> `MEM y (h3::t2)` by metis_tac[]
-                          >> fs[] >> metis_tac[]
-                      )
-                      >> `P h3 y` by metis_tac[SORTED_EQ]
-                      >> fs[rel_corr_def]
-                      >> metis_tac[equivalence_def,relationTheory.symmetric_def,relationTheory.transitive_def]
+Theorem REL_CORR_GROUP_BY:
+  !R P. rel_corr R P ∧ equivalence R ∧ transitive P
+        ==>
+        !k_hd k_tl l.
+          (GROUP_BY R l = (k_hd::k_tl)) ∧ SORTED P l
+          ==> !x y k. MEM x k_hd ∧ MEM k k_tl ∧ MEM y k ==> ~R x y
+Proof
+  gen_tac >> gen_tac >> strip_tac >> Induct_on `l` >>
+  fs[GROUP_BY_def,SPAN_def] >>
+  rpt strip_tac >> rename[`SORTED P (H::l)`]
+  >> Cases_on `SPAN (R H) l`
+  >> Cases_on `l`
+  >- (fs[GROUP_BY_def,SPAN_def] >> rw[] >> fs[GROUP_BY_def])
+  >- (fs[GROUP_BY_def,SPAN_def] >>
+      rename[‘SORTED P (h2::t1)’, ‘P H h2’]
+      >> Cases_on `R H h2` >> fs[]
+      >- (first_x_assum (qspec_then `q` mp_tac)
+          >> rpt strip_tac
+          >> first_x_assum (qspec_then `GROUP_BY R r` mp_tac)
+          >> simp[GROUP_BY_def] >> fs[SORTED_DEF]
+          >> strip_tac
+          >> `SPAN (R h2) t1 = SPAN (R H) t1`
+            by metis_tac[SPAN_EQ]
+          >> rw[] >> Cases_on `SPAN (R H) t1` >> fs[]
+          >- (rw[] >>
+              metis_tac[equivalence_def, relationTheory.symmetric_def,
+                        relationTheory.transitive_def])
+          >- (rw[] >> qexists_tac `x` >> simp[] >> fs[] >> rw[]
+              >> metis_tac[equivalence_def,relationTheory.symmetric_def,
+                           relationTheory.transitive_def]
+             )
+         )
+      >- (rw[] >> Cases_on `GROUP_BY R (h2::t1)` >> fs[]
+          >> rw[] >> fs[SORTED_DEF]
+          >> rename[`GROUP_BY R (h3::t2) = h4::t3`]
+          >- (`R h3 y` by
+                (fs[GROUP_BY_def,SPAN_def]
+                 >> Cases_on `SPAN (R h3) t2` >> fs[]
+                 >> ‘!x. MEM x (FST (q,r)) ==> (R h3 x)’
+                   by metis_tac[SPAN_FST_LEMM]
+                 >> Cases_on `y = h3` >> fs[]
+                 >> `MEM y q` by (rw[] >> fs[])
+                 >> metis_tac[]
+                )
+              >> metis_tac[equivalence_def,relationTheory.symmetric_def,
+                           relationTheory.transitive_def]
+             )
+          >- (`P h3 H` by (
+               Cases_on `y = h3` >> rw[]
+               >- metis_tac[equivalence_def, relationTheory.reflexive_def]
+               >- (
+                 `MEM y t2` by (
+                   `FLAT (GROUP_BY R (h3::t2)) = h3::t2`
+                      by metis_tac[GROUP_BY_FLAT]
+                   >> `MEM y (FLAT (GROUP_BY R (h3::t2)))` by (
+                     simp[MEM_FLAT] >> metis_tac[]
                      )
+                   >> `MEM y (h3::t2)` by metis_tac[]
+                   >> fs[] >> metis_tac[]
                    )
-                   >> metis_tac[rel_corr_def]
-                   )
+                 >> `P h3 y` by metis_tac[SORTED_EQ]
+                 >> fs[rel_corr_def]
+                 >> metis_tac[equivalence_def,relationTheory.symmetric_def,
+                              relationTheory.transitive_def]
+                 )
                )
-           )
-       )
-  );
+              >> metis_tac[rel_corr_def]
+             )
+         )
+     )
+QED
 
 val _ = Cond_rewr.stack_limit := 1
 
