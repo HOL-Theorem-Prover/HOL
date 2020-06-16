@@ -1209,8 +1209,6 @@ Definition flatten_or_def :
 End
 
 
-val flatten_or_ind = fetch"-" "flatten_or_ind";
-
 Definition remove_dups_def : (* requires sorted input *)
   (remove_dups [] = []) /\
   (remove_dups [r] = [r]) /\
@@ -1220,9 +1218,6 @@ Definition remove_dups_def : (* requires sorted input *)
     else
       r1::remove_dups (r2::rs))
 End
-
-
-val remove_dups_ind = fetch"-" "remove_dups_ind";
 
 Definition build_or_def :
    build_or rs =
