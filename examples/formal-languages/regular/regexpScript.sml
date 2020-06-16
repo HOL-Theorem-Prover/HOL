@@ -932,6 +932,8 @@ Proof
   metis_tac [regexp_compare_antisym, cpn_distinct,regexp_compare_eq]
 QED
 
+Theorem regexp_leq_antisym' = REWRITE_RULE [antisymmetric_def] regexp_leq_antisym
+
 Theorem regexp_compare_id :
  !r. regexp_compare r r = Equal
 Proof
@@ -1923,21 +1925,9 @@ Theorem remove_dups_no_dups :
 Proof
  ho_match_mp_tac remove_dups_ind >>
  rw [remove_dups_def, regexp_compare_eq] >>
- assume_tac regexp_leq_transitive
- >- (first_x_assum match_mp_tac >>
-     imp_res_tac SORTED_EQ)
- >- (rw [remove_dups_mem] >>
-     fs [SORTED_DEF] >>
-     `!r. MEM r rs ==> regexp_leq r2 r` by metis_tac [SORTED_EQ] >>
-     CCONTR_TAC >>
-     fs [] >>
-     fs [] >>
-     res_tac >>
-     fs [regexp_leq_def] >>
-     every_case_tac >>
-     fs [regexp_compare_antisym, regexp_compare_eq] >>
-     metis_tac [regexp_compare_trans,regexp_compare_eq, cpn_distinct])
- >- (first_x_assum match_mp_tac >> imp_res_tac SORTED_EQ)
+ assume_tac regexp_leq_transitive >>
+ fs[SORTED_EQ, remove_dups_mem] >>
+ metis_tac[regexp_leq_antisym']
 QED
 
 Theorem norm_or :
