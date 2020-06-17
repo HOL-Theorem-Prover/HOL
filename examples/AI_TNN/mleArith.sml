@@ -32,11 +32,11 @@ fun prepare_ex exl = map (fn (a,b) => [(mk_head a, bin_rep 4 b)]) exl
    Training
    ------------------------------------------------------------------------- *)
 
-val tnndim = map_assoc (dim_std (2,12)) operl @ [(head_bin4,[12,12,4])]
+val tnndim = map_assoc (dim_std (2,14)) operl @ [(head_bin4,[14,4])]
 val schedule =
-  [{ncore = 4, verbose = true, learning_rate = 0.02,
+  [{ncore = 1, verbose = true, learning_rate = 0.02,
     batch_size = 8, nepoch = 50}] @
-  [{ncore = 4, verbose = true, learning_rate = 0.02,
+  [{ncore = 1, verbose = true, learning_rate = 0.02,
     batch_size = 16, nepoch = 50}]  @
   [{ncore = 1, verbose = true, learning_rate = 0.02,
     batch_size = 32, nepoch = 50}] @
@@ -49,17 +49,6 @@ fun train_fixed () =
     val tnn = train_tnn schedule (random_tnn tnndim) (exl,[])
   in
     write_tnn (arithdir ^ "/tnn") tnn; tnn
-  end
-
-val trainparam = {ncore = 1, verbose = true, learning_rate = 0.02,
-    batch_size = 1, nepoch = 200}
-
-fun train_automl_fixed () =
-  let
-    val exl = prepare_ex (import_arithdata "train")
-    val tnn = train_tnn_automl trainparam (random_tnn tnndim) exl
-  in
-    write_tnn (arithdir ^ "/tnn_automl") tnn; tnn
   end
 
 (* ------------------------------------------------------------------------
@@ -75,9 +64,6 @@ fun test_fixed tnn =
 load "mleArith"; open mleArith;
 val tnn = train_fixed ();
 val r = test_fixed tnn;
-
-val tnn_automl = train_automl_fixed ();
-val r = test_fixed tnn_automl;
 *)
 
 end (* struct *)

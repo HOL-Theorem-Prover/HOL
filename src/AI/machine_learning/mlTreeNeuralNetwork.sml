@@ -224,12 +224,12 @@ fun bp_tnn_aux doutnvdict fpdict bpdict revtml = case revtml of
         in
           (map #dw bpdatal, combine (argl,dinvl))
         end
-      val rl            = map f doutnvl
-      val operdwll      = map fst rl
-      val operdwl       = sum_dwll operdwll
-      val tmdinvl       = List.concat (map snd rl)
+      (* val rl = map f doutnvl
+      val operdwl = sum_dwll (map fst rl)
+      val tmdinvl = List.concat (map snd rl) *)
+      val (operdwl,tmdinvl) = f (add_vectl doutnvl)   
       val newdoutnvdict = dappendl tmdinvl doutnvdict
-      val newbpdict     = dappend (oper,operdwl) bpdict
+      val newbpdict = dappend (oper,operdwl) bpdict
     in
       bp_tnn_aux newdoutnvdict fpdict newbpdict m
     end

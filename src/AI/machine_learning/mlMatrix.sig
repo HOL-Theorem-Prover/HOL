@@ -12,6 +12,7 @@ sig
   val mult_rvect     : vect -> vect -> vect
   val scalar_product : vect -> vect -> real
   val scalar_mult    : real -> vect -> vect
+  val add_vectl      : vect list -> vect 
   (* matrix *)
   val mat_mult     : mat -> vect -> vect
   val mat_smult    : real -> mat -> mat
