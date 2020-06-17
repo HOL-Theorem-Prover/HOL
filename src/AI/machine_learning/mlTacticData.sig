@@ -42,8 +42,11 @@ sig
   val ttt_update_tacdata : (call * tacdata) -> tacdata
   val ttt_export_tacdata : string -> tacdata -> unit
 
-  (* value example *)
-  val ttt_export_exl : string -> (goal list * bool) list -> unit
-  val ttt_import_exl : string -> (goal list * bool) list
+  (* examples extracted from proof found *)
+  val ttt_export_value : string -> (goal list * bool) list -> unit
+  val ttt_import_value : string -> (goal list * bool) list
+  val ttt_export_policy : string -> (stac * bool) list -> unit
+  val ttt_import_policy : string -> (stac * bool) list
+
 
 end

@@ -305,7 +305,7 @@ fun ttt_export_tacdata thy tacdata =
   end
 
 (* ------------------------------------------------------------------------
-   Exporting search examples
+   Export value examples
    ------------------------------------------------------------------------ *)
 
 val enc_bool = String o bts
@@ -344,9 +344,9 @@ fun dec_exl t =
 
 fun uptodate_ex (gl, _) = all uptodate_goal gl
 
-fun ttt_export_exl thmid exl1 =
+fun ttt_export_value thmid exl1 =
   let
-    val dir = HOLDIR ^ "/src/tactictoe/gl_value"
+    val dir = HOLDIR ^ "/src/tactictoe/value"
     val _ = mkDir_err dir
     val file = dir ^ "/" ^ thmid
     val ostrm = Portable.open_out file
@@ -360,14 +360,36 @@ fun ttt_export_exl thmid exl1 =
     TextIO.closeOut ostrm
   end
 
-fun ttt_import_exl thmid =
+fun ttt_import_value thmid =
   let
-    val dir = HOLDIR ^ "/src/tactictoe/gl_value"
+    val dir = HOLDIR ^ "/src/tactictoe/value"
     val file = dir ^ "/" ^ thmid
   in
     valOf (dec_exl (HOLsexp.fromFile file))
   end
 
+(* ------------------------------------------------------------------------
+   Export policy
+   ------------------------------------------------------------------------ *)
+
+fun ttt_export_policy thmid policy = 
+  let
+    val dir = HOLDIR ^ "/src/tactictoe/policy"
+    val _ = mkDir_err dir
+    val file = dir ^ "/" ^ thmid
+    fun enc_policy (stac,b) = stac ^ "\n" ^ bts b 
+  in
+    writel file (map enc_policy policy)
+  end
+
+fun ttt_import_policy thmid =
+  let
+    val dir = HOLDIR ^ "/src/tactictoe/policy"
+    val file = dir ^ "/" ^ thmid
+    fun dec_policy (a,b) = (a, string_to_bool b)
+  in
+    map dec_policy (map pair_of_list (mk_batch 2 (readl file)))
+  end
 
 
 end (* struct *)

@@ -38,6 +38,12 @@ fun scalar_product v1 v2 = sum_rvect (mult_rvect v1 v2)
 
 fun scalar_mult k v = Vector.map (fn x => k * x) v
 
+fun add_vectl vl =
+  let fun f i = sum_real (map (fn x => Vector.sub (x,i)) vl) in
+    Vector.tabulate (Vector.length (hd vl), f)
+  end
+
+
 (* -------------------------------------------------------------------------
    Matrix
    ------------------------------------------------------------------------- *)
