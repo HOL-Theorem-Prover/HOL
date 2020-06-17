@@ -37,8 +37,7 @@ fun print_status r = case r of
  | ProofTimeout   => print_endline "tactictoe: timeout"
  | Proof s        => print_endline ("tactictoe: proven\n  " ^ s)
 
-fun print_time (name,t) =
-  print_endline (name ^ " time: " ^ rts_round 6 t ^ "\n");
+fun print_time (name,t) = print_endline (name ^ " time: " ^ rts_round 6 t)
 
 fun ttt_eval ((thmdata,tacdata),tnno) goal =
   let
@@ -50,9 +49,11 @@ fun ttt_eval ((thmdata,tacdata),tnno) goal =
     val ((status,tree),t) = add_time 
       (main_tactictoe ((thmdata,tacdata),tnno)) goal
     val _ = if not (isSome tnno) then (* only one loop for now *)
-      (case status of Proof _ => 
+      ((case status of Proof _ => 
         ttt_export_exl thmid (extract_exl tree)
       | _ => ())
+      handle HOL_ERR _ => (print_endline "ttt_export_exl: error"; ()) 
+      ) 
       else ()
   in   
     print_status status;
@@ -231,6 +232,18 @@ fun cumul_graph timelimit exp =
     write_graph graph_out ("time","proofs") graph
   end
 
+(*
+load "tttEval"; open tttEval;
+val expl = ["june4-e1","june4-e2","june2-e1","june2-e3","june2-e4"];
+app (cumul_graph 30.0) expl;
+(* quit *)
+gnuplot -p -e "plot 'eval/graph/june4-e1_graph' using 1:2 with lines,\
+                    'eval/graph/june4-e2_graph' using 1:2 with lines,\
+                    'eval/graph/june2-e1_graph' using 1:2 with lines,\
+                    'eval/graph/june2-e3_graph' using 1:2 with lines,\
+                    'eval/graph/june2-e4_graph' using 1:2 with lines"
+*)
+
 fun compare_stats expl exp = 
   let 
     val dproven = ref (HOLset.empty String.compare)
@@ -260,14 +273,7 @@ fun compare_stats expl exp =
 
 (*
 load "tttEval"; open tttEval;
-val expl = ["june4-e1","june4-e2","june2-e1","june2-e3","june2-e4"];
-app (cumul_graph 30.0) expl;
-(* quit *)
-gnuplot -p -e "plot 'eval/graph/june4-e1_graph' using 1:2 with lines,\
-                    'eval/graph/june4-e2_graph' using 1:2 with lines,\
-                    'eval/graph/june2-e1_graph' using 1:2 with lines,\
-                    'eval/graph/june2-e3_graph' using 1:2 with lines,\
-                    'eval/graph/june2-e4_graph' using 1:2 with lines"
+compare_stats ["june15"] "june15_tnn";
 *)
 
 (* ------------------------------------------------------------------------
@@ -300,10 +306,5 @@ fun train_value pct file =
     write_tnn (tnndir ^ "/" ^ file) tnn;
     tnn
   end
-
-(*
-load "tttEval"; open tttEval;
-val tnn = train_value "value";
-*)
 
 end (* struct *)

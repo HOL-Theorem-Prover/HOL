@@ -84,20 +84,6 @@ fun cpl_compare cmp1 cmp2 ((a1,a2),(b1,b2)) =
     if r = EQUAL then cmp2 (a2,b2) else r
   end
 
-fun term_compare_exact (t1,t2) = case (dest_term t1, dest_term t2) of
-     (VAR _, VAR _) => Term.compare (t1,t2)
-   | (VAR _, _) => LESS
-   | (_, VAR _) => GREATER
-   | (CONST _, CONST _) => Term.compare (t1,t2)
-   | (CONST _, _) => LESS
-   | (_, CONST _) => GREATER
-   | (COMB p1, COMB p2) =>
-     cpl_compare term_compare_exact term_compare_exact (p1,p2)
-   | (COMB _, _) => LESS
-   | (_, COMB _) => GREATER
-   | (LAMB p1, LAMB p2) =>
-     cpl_compare term_compare_exact term_compare_exact (p1,p2)
-
 fun goal_compare ((asm1,w1), (asm2,w2)) =
   list_compare Term.compare (w1 :: asm1, w2 :: asm2)
 

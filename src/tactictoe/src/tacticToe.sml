@@ -78,6 +78,7 @@ fun main_tactictoe ((thmdata,tacdata),tnno) goal =
       end
     fun tacpred g =
       dfind g (!tac_cache) handle NotFound =>
+      (* 
       if !thml_explo_flag then
         let
           val thmidl = thmpred (2 * !ttt_thmlarg_radius) g
@@ -98,13 +99,14 @@ fun main_tactictoe ((thmdata,tacdata),tnno) goal =
           tac_cache := dadd g istacl (!tac_cache); istacl
         end
       else
+      *)
         let
           val thmidl = thmpred (!ttt_thmlarg_radius) g
           val l = fea_of_goal true g
           val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
           val stacl1 = tacknn (tacsymweight,tacfea) (!ttt_presel_radius) l
           val stacl2 = mk_sameorder_set String.compare (metis_stac :: stacl1)
-          val istacl = map snd (inst_stacl (thmidl,g) stacl2)     
+          val istacl = inst_stacl (thmidl,g) stacl2    
         in
           tac_cache := dadd g istacl (!tac_cache); istacl
         end

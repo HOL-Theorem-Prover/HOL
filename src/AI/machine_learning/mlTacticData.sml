@@ -152,16 +152,17 @@ fun dec_call dec_tm =
 
 fun enc_calls calls =
   let
-    val empty_exact = HOLset.empty term_compare_exact
-    fun goal_terms ((asl,w),A) = HOLset.addList(A, w::asl)
+    fun goal_terms ((asl,w),A) = (w::asl) @ A
     fun call_terms (call,A) = List.foldl goal_terms A (#4 call :: #5 call)
-    val all_terms = List.foldl call_terms empty_exact calls |> HOLset.listItems
+    val all_terms = List.foldl call_terms [] calls
     val ed = {named_terms = [], unnamed_terms = [], named_types = [],
               unnamed_types = [], theorems = []}
     val sdi = build_sharing_data ed
     val sdi = add_terms all_terms sdi
     fun write_term_aux sdi t = write_term sdi t
-      handle NotFound => raise ERR "write_term" (term_to_string t)
+      handle NotFound => 
+      (print_endline ("write_term: " ^ term_to_string t); 
+       raise ERR "write_term" (term_to_string t))
     val enc_callsdata = list_encode (enc_call (String o write_term_aux sdi))
   in
     tagged_encode "calls" (pair_encode (enc_sdata, enc_callsdata)) (sdi,calls)
@@ -315,16 +316,17 @@ fun dec_ex dec_tm = pair_decode (dec_goal_list dec_tm, dec_bool)
 
 fun enc_exl exl =
   let
-    val empty_exact = HOLset.empty term_compare_exact
-    fun goal_terms ((asl,w),A) = HOLset.addList(A, w::asl)
-    fun ex_terms ((gl,_), A) = List.foldl goal_terms A gl
-    val all_terms = List.foldl ex_terms empty_exact exl |> HOLset.listItems
+    fun goal_terms ((asl,w),A) = (w::asl) @ A
+    fun ex_terms ((gl,_),A) = List.foldl goal_terms A gl
+    val all_terms = List.foldl ex_terms [] exl
     val ed = {named_terms = [], unnamed_terms = [], named_types = [],
               unnamed_types = [], theorems = []}
     val sdi = build_sharing_data ed
     val sdi = add_terms all_terms sdi
     fun write_term_aux sdi t = write_term sdi t
-      handle NotFound => raise ERR "write_term" (term_to_string t)
+      handle NotFound => 
+      (print_endline ("write_term: " ^ term_to_string t); 
+       raise ERR "write_term" (term_to_string t))
     val enc_exldata = list_encode (enc_ex (String o write_term_aux sdi))
   in
     tagged_encode "exl" (pair_encode (enc_sdata, enc_exldata)) (sdi,exl)

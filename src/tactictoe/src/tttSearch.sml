@@ -56,7 +56,9 @@ fun string_of_searchstatus x = case x of
    ------------------------------------------------------------------------- *)
 
 type stac_record =
-  {stac : string, svis : real, ssum : real, stacstatus : stacstatus}
+  {stac : string, astac : string, 
+   svis : real, ssum : real, 
+   stacstatus : stacstatus}
 
 type goal_record =
   {
@@ -116,8 +118,8 @@ fun backstatus_node node = case #nodestatus node of
    Node creation and backup
    ------------------------------------------------------------------------- *)
 
-fun stac_create stac =
-  {stac = stac, svis = 0.0, ssum = 0.0, stacstatus = StacFresh}
+fun stac_create (astac,stac) =
+  {stac = stac, astac = astac, svis = 0.0, ssum = 0.0, stacstatus = StacFresh}
 
 fun goal_create tacpred g =
   let val stacv = Vector.fromList (map stac_create (tacpred g)) in
@@ -133,10 +135,11 @@ fun node_update tree (reward,stacstatus) (id,(gn,stacn)) =
   let
     val {nvis,nsum,goalv,parentd,...} = dfind id tree
     val {goal,gvis,gsum,stacv,siblingd,...} = Vector.sub (goalv,gn)
-    val {stac,svis,ssum,...} = Vector.sub (stacv,stacn)
+    val {stac,astac,svis,ssum,...} = Vector.sub (stacv,stacn)
     (* update stacv *)
     val newstacrec =
       {stac = stac,
+       astac = astac,
        svis = svis + 1.0, ssum = ssum + reward,
        stacstatus = stacstatus}
     val newstacv = Vector.update (stacv,stacn,newstacrec)

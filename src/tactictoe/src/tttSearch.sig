@@ -20,7 +20,9 @@ sig
   datatype proofstatus =  Proof of string | ProofSaturated | ProofTimeout
 
   type stac_record =
-    {stac : string, svis : real, ssum : real, stacstatus : stacstatus}
+    {stac : string, astac : string,
+     svis : real, ssum : real, 
+     stacstatus : stacstatus}
   type goal_record =
     {
     goal : goal, gvis : real, gsum  : real, goalstatus : goalstatus,
@@ -35,7 +37,8 @@ sig
     }
   type tree = ((int * int) list, node) Redblackmap.dict
 
-  val search : (goal -> string list) * mlTreeNeuralNetwork.tnn option -> 
-     goal -> proofstatus * tree
+  val search : (goal -> (string * string) list) * 
+    mlTreeNeuralNetwork.tnn option -> 
+    goal -> proofstatus * tree
 
 end
