@@ -180,7 +180,7 @@ aiLib.debug_flag := false;
 tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
-val _ = run_evalscript_thyl "june18" (true,NONE,30) thyl;
+val _ = run_evalscript_thyl "june18-3" (true,NONE,30) thyl;
 val tnn_value = train_value 0.95 "value";
 load "smlInfix"; open smlInfix; QUse.use tttSetup.infix_file;
 val tactictoe_thmlarg = ([] : thm list);
@@ -335,11 +335,16 @@ fun train_policy pct file =
     val filel = listDir (HOLDIR ^ "/src/tactictoe/policy")
     val exll = map (fn x => ttt_import_policy x handle Interrupt => raise 
       Interrupt | _ => (print_endline x; [])) filel 
-    fun fpre stac = (print_endline stac; 
-                     mk_applyexp (extract_smlexp stac))
-    fun f ((g,stac),b) = (nntm_of_gexp (g,fpre stac), 
+    val preexl = List.concat exll
+    val _ = print_endline (its (length preexl) ^ " policy examples")
+    val stacl1 = map (snd o fst) preexl
+    val stacl2 = mk_string_set stacl1
+    val _ = print_endline (its (length stacl2) ^ " unique tactics") 
+    val stacl3 = map_assoc (mk_applyexp o extract_smlexp) stacl2
+    val dparse = dnew String.compare stacl3    
+    fun f ((g,stac),b) = (nntm_of_gexp (g, dfind stac dparse), 
                           if b then [1.0] else [0.0])
-    val exl = map (single o f) (List.concat exll)
+    val exl = map (single o f) preexl
     val _ = print_endline "split train/test"
     val (train,test) = part_pct pct (shuffle exl)
     val operl = mk_fast_set oper_compare
