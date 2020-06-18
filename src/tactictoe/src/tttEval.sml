@@ -332,10 +332,12 @@ fun train_policy pct file =
     val filel = listDir (HOLDIR ^ "/src/tactictoe/policy")
     val exll = map (fn x => ttt_import_policy x handle Interrupt => raise 
       Interrupt | _ => (print_endline x; [])) filel 
-    fun fpre stac = mk_applyexp (extract_smlexp stac)
+    fun fpre stac = (print_endline stac; 
+                     mk_applyexp (extract_smlexp stac))
     fun f ((g,stac),b) = (nntm_of_gexp (g,fpre stac), 
                           if b then [1.0] else [0.0])
     val exl = map (single o f) (List.concat exll)
+    val _ = print_endline "split train/test"
     val (train,test) = part_pct pct (shuffle exl)
     val operl = mk_fast_set oper_compare
       (List.concat (map operl_of_term (map fst (List.concat exl))))
