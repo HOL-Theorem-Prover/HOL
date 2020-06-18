@@ -23,8 +23,7 @@ fun extract_value tree =
   let 
     val nodel = map snd (dlist tree)
     fun get_gl node = (vector_to_list o Vector.map #goal o #goalv) node
-    fun is_win node = 
-      case #nodestatus node of NodeProved => true | _ => false
+    fun is_win node = case #nodestatus node of NodeProved => true | _ => false
   in
     map (fn x => (get_gl x, is_win x)) nodel
   end
