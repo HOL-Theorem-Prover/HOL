@@ -36,11 +36,14 @@ fun extract_policy tree =
   let 
     val nodel = map snd (dlist tree)
     val goalrecl = List.concat (map (vector_to_list o #goalv) nodel)
-    fun f x = distrib [(#goal x, vector_to_list (#stacv x))]
+    fun f x = distrib [(#goal x, number_snd 0 (vector_to_list (#stacv x)))]
     fun is_win x = case #stacstatus x of StacProved => true | _ => false
-    fun g (goal,x) = ((goal,#astac x), is_win x)
+    fun g (goal,(stacv,stacn)) = 
+      if is_win stacv orelse stacn < 10 
+      then SOME ((goal,#astac stacv), is_win stacv)
+      else NONE
   in
-    map g (List.concat (map f goalrecl))
+    List.mapPartial g (List.concat (map f goalrecl))
   end
 
 (* -------------------------------------------------------------------------
