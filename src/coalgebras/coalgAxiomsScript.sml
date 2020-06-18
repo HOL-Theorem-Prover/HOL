@@ -54,6 +54,47 @@ Definition span_def[simp]:
   span A f g b d <=> ?a. a IN A /\ b = f a /\ d = g a
 End
 
+Definition kernel_def[simp]:
+  kernel A f x y <=> x IN A /\ y IN A /\ f x = f y
+End
+
+Theorem kernel_graph:
+  kernel A f = inv (Gr f A) O Gr f A
+Proof
+  simp[FUN_EQ_THM, O_DEF]
+QED
+
+
+Definition RIMAGE_def:
+  RIMAGE f A R x y <=>
+  ?x0 y0. x = f x0 /\ y = f y0 /\ R x0 y0 /\ x0 IN A /\ y0 IN A
+End
+
+Definition RINV_IMAGE_def:
+  RINV_IMAGE f A R x y <=> x IN A /\ y IN A /\ R (f x) (f y)
+End
+
+Theorem RIMAGE_Gr:
+  RIMAGE f A R = Gr f A O R O inv (Gr f A)
+Proof
+  dsimp[FUN_EQ_THM, O_DEF, IN_DEF, PULL_EXISTS, RIMAGE_def] >>
+  metis_tac[]
+QED
+
+Theorem Delta_IMAGE:
+  Delta (IMAGE f A) = RIMAGE f A (Delta A)
+Proof
+  simp[FUN_EQ_THM, PULL_EXISTS, RIMAGE_def] >> metis_tac[]
+QED
+
+Theorem RINV_IMAGE_Gr:
+  RINV_IMAGE f A R = inv (Gr f A) O R O Gr f A
+Proof
+  dsimp[FUN_EQ_THM, O_DEF, RINV_IMAGE_def] >> metis_tac[]
+QED
+
+val IRULE = goal_assum o resolve_then.resolve_then resolve_then.Any mp_tac
+
 val _ = new_type("F", 1)
 val _ = new_constant("mapF", “:('a -> 'b) -> 'a F -> 'b F”)
 val _ = new_constant("setF", “:'a F -> 'a set”)
@@ -70,6 +111,10 @@ val map_CONG = new_axiom (
 val _ = add_rule{block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  fixity = Suffix 2100, paren_style = OnlyIfNecessary,
                  pp_elements = [TOK "ᴾ"], term_name = "UNCURRY"}       (* UOK *)
+
+val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                 fixity = Suffix 2100, paren_style = OnlyIfNecessary,
+                 pp_elements = [TOK "⟨",TM,TOK"⟩"], term_name = "restr"}(* UOK*)
 
 Definition relF_def:
   relF R x y <=> ?z. setF z SUBSET UNCURRY R /\ mapF FST z = x /\ mapF SND z = y
@@ -189,19 +234,51 @@ Definition bisim_def:
   !a b. R a b ==> a IN A /\ b IN B /\ relF R (af a) (bf b)
 End
 
-(* Rutten, Thm 5.4 *)
-Theorem bisimulations_compose:
-  bisim R (A,af) (B,bf) /\ bisim Q (B,bf) (C,cf) ==>
-  bisim (Q O R) (A,af) (C,cf)
+Theorem bisim_system:
+  bisim R As Bs ==> system As /\ system Bs
 Proof
-  rw[bisim_def] >> fs[O_DEF, GSYM relO_EQ] >> metis_tac[]
+  map_every Cases_on [‘As’, ‘Bs’] >> simp[bisim_def]
 QED
-
-Theorem thm5_4 = bisimulations_compose
 
 Definition bisimilar_def:
   bisimilar As Bs <=> ?R. bisim R As Bs
 End
+
+Inductive genS:
+  (!a0. a0 IN FST As ==> genS As a0 a0) /\
+  (!a0 a1 a. genS As a0 a1 /\ a IN setF (SND As a1) ==> genS As a0 a)
+End
+
+Definition genU_def:
+  genU ((A,af):'a system) : ('a # 'a) system =
+    (BIGUNION $ IMAGE (\a. IMAGE ((,) a) (genS (A,af) a)) A,
+     (\ (a0,a). if a0 IN A /\ genS (A,af) a0 a then mapF ((,) a0) (af a)
+                else ARB))
+End
+
+Theorem genS_system:
+  genS (A,af) a0 a ==> system (A,af) ==> a IN A
+Proof
+  Induct_on ‘genS’ >> rw[] >> fs[] >> metis_tac[system_members]
+QED
+
+Theorem IN_genS[simp]:
+  x IN genS A x0 <=> genS A x0 x
+Proof
+  simp[IN_DEF]
+QED
+
+Theorem genU_system:
+  system (A,af) ==> system (genU (A, af))
+Proof
+  strip_tac >>
+  simp[system_def, genU_def, Fset_def, SUBSET_DEF, FORALL_PROD,
+       PULL_EXISTS] >> rw[]
+  >- (rename [‘a0 IN A’, ‘genS (A,af) a0 a’, ‘(a1,a2) IN setF _’] >>
+      fs[set_map'] >> metis_tac[genS_rules, SND])
+  >- fs[set_map']
+QED
+
 
 Theorem sbisimulation_projns_homo:
   bisim R (A,af) (B,bf) <=>
@@ -288,6 +365,131 @@ Proof
   map_every PairCases_on [‘As’, ‘Bs’] >> simp[bisim_def] >> metis_tac[]
 QED
 
+Theorem lemma5_3:
+  hom f (A,af) (B,bf) /\ hom g (A,af) (C,cf) ==>
+  bisim (span A f g) (B,bf) (C,cf)
+Proof
+  csimp[hom_def, bisim_def, PULL_EXISTS] >>
+  rw[relF_def, SUBSET_DEF, FORALL_PROD] >>
+  rename [‘a IN A’, ‘mapF FST _ = mapF f (af a)’] >>
+  qexists_tac ‘mapF (\a. (f a, g a)) (af a)’>>
+  simp[mapO', set_map', PULL_EXISTS, o_ABS_R] >>
+  simp_tac (bool_ss ++ boolSimps.ETA_ss) [] >>
+  metis_tac[system_members]
+QED
+
+(* Rutten, Thm 5.4 *)
+Theorem bisimulations_compose:
+  bisim R (A,af) (B,bf) /\ bisim Q (B,bf) (C,cf) ==>
+  bisim (Q O R) (A,af) (C,cf)
+Proof
+  rw[bisim_def] >> fs[O_DEF, GSYM relO_EQ] >> metis_tac[]
+QED
+
+Theorem thm5_4 = bisimulations_compose
+
+Theorem thm5_5:
+  (!R. R IN Rs ==> bisim R As Bs) /\
+  system (As:'a system) /\ system (Bs:'b system) ==>
+  bisim (\a b. ?R. R IN Rs /\ R a b) As Bs
+Proof
+  tmCases_on “As : 'a system” ["A af"] >>
+  tmCases_on “Bs : 'b system” ["B bf"] >>
+  rw[bisim_def] >- metis_tac[] >- metis_tac[] >>
+  ntac 2 (first_x_assum $ drule_then strip_assume_tac) >>
+  irule rel_monotone >> simp[] >> metis_tac[]
+QED
+
+Theorem bisim_RUNION:
+  bisim R1 As Bs /\ bisim R2 As Bs ==> bisim (R1 RUNION R2) As Bs
+Proof
+  strip_tac >>
+  ‘R1 RUNION R2 = (\a b. ?R. R IN {R1;R2} /\ R a b)’
+    by dsimp[Ntimes FUN_EQ_THM 2, RUNION] >>
+  pop_assum SUBST1_TAC >> irule thm5_5 >> simp[DISJ_IMP_THM] >>
+  drule bisim_system >> simp[]
+QED
+
+Theorem prop5_7:
+  hom f (A,af) (B,bf) ==>
+  bisim (kernel A f) (A,af) (A,af) /\ kernel A f equiv_on A
+Proof
+  rpt strip_tac
+  >- (simp[kernel_graph]>> irule bisimulations_compose >>
+      simp[] >> metis_tac[thm2_5]) >>
+  simp[equiv_on_def] >> metis_tac[]
+QED
+
+
+Theorem prop5_9_1:
+  hom f (A,af) (B,bf) /\ bisim R (A,af) (A,af) ==>
+  bisim (RIMAGE f A R) (B,bf) (B,bf)
+Proof
+  simp[RIMAGE_Gr] >> strip_tac >> IRULE bisimulations_compose >>
+  IRULE bisimulations_compose >>
+  simp[] >> goal_assum drule >> fs[thm2_5]
+QED
+
+Theorem prop5_9_2:
+  hom f (A,af) (B,bf) /\ bisim Q (B,bf) (B,bf) ==>
+  bisim (RINV_IMAGE f A Q) (A,af) (A,af)
+Proof
+  simp[RINV_IMAGE_Gr] >> strip_tac >> IRULE bisimulations_compose >>
+  IRULE bisimulations_compose >> simp[] >> first_assum IRULE >>
+  fs[thm2_5]
+QED
+
+Definition subsystem_def:
+  subsystem V (A,af) <=>
+  system (A,af) /\ V SUBSET A /\ ?vf. hom (restr (\x.x) V) (V,vf) (A,af)
+End
+
+Theorem prop6_1:
+  V SUBSET A /\ hom (restr (\x.x) V) (V,kf) (A,af) /\
+  hom (restr (\x.x) V) (V,lf) (A,af) ==>
+  kf = lf
+Proof
+  simp[hom_def, restr_def] >> rw[] >> simp[FUN_EQ_THM] >> qx_gen_tac ‘v’ >>
+  reverse (Cases_on ‘v IN V’) >- fs[system_def] >>
+  ‘(!a. a IN V ==>
+        mapF (\x. if x IN V then x else ARB) (kf a) = mapF (\x. x) (kf a)) /\
+   !a. a IN V ==>
+       mapF (\x. if x IN V then x else ARB) (lf a) = mapF (\x. x) (lf a)’
+    by (rw[] >> irule map_CONG >> simp[] >> metis_tac[system_members]) >>
+  fs[mapID]
+QED
+
+Theorem prop6_2:
+  system (A,af) ==>
+  (subsystem V (A,af) <=> V SUBSET A /\ bisim (Delta V) (A,af) (A,af))
+Proof
+  simp[subsystem_def] >> strip_tac >> eq_tac
+  >- (csimp[PULL_EXISTS] >> rpt strip_tac >>
+      ‘hom (restr (\x.x) V) (V,restr af V) (A,af)’
+        by (fs[hom_def, restr_def] >> fs[system_def, Fset_def, SUBSET_DEF] >>
+            rw[] >- (fs[set_map'] >> metis_tac[]) >>
+            simp[mapO', o_ABS_R] >> irule map_CONG >> simp[] >> rw[]>> fs[]) >>
+      ‘vf = restr af V’ by metis_tac[prop6_1] >>
+      qpat_x_assum ‘hom _ _ _ ’ mp_tac >>
+      csimp[bisim_def, thm2_5, restr_def]) >>
+  csimp[bisim_def, SUBSET_DEF] >> strip_tac >>
+  qexists_tac ‘restr af V’ >>
+  simp[hom_def, restr_applies] >>
+  conj_asm1_tac
+  >- (fs[system_def, Fset_def, relF_def, SUBSET_DEF, FORALL_PROD, restr_def] >>
+      rw[] >>
+      first_x_assum $ drule_then strip_assume_tac >>
+      rename [‘mapF FST z = af a’]>>
+      ‘setF (mapF FST z) = setF (af a)’ by simp[] >>
+      pop_assum mp_tac >> REWRITE_TAC [EXTENSION, set_map'] >>
+      simp[EXISTS_PROD]) >>
+  reverse conj_tac >- simp[restr_def] >>
+  qx_gen_tac ‘a’ >> strip_tac >>
+  ‘mapF (restr (\x. x) V) (af a) = mapF (\x. x) (af a)’
+    suffices_by simp[mapID] >>
+  irule map_CONG >> drule system_members >> csimp[restr_def] >> metis_tac[]
+QED
+
 Theorem bisimilar_equivalence:
   bisimilar equiv_on system
 Proof
@@ -336,19 +538,6 @@ Proof
   rw[] >> qexists_tac ‘R’>> simp[bisim_def] >> metis_tac[]
 QED
 
-Theorem lemma5_3:
-  hom f (A,af) (B,bf) /\ hom g (A,af) (C,cf) ==>
-  bisim (span A f g) (B,bf) (C,cf)
-Proof
-  csimp[hom_def, bisim_def, PULL_EXISTS] >>
-  rw[relF_def, SUBSET_DEF, FORALL_PROD] >>
-  rename [‘a IN A’, ‘mapF FST _ = mapF f (af a)’] >>
-  qexists_tac ‘mapF (\a. (f a, g a)) (af a)’>>
-  simp[mapO', set_map', PULL_EXISTS, o_ABS_R] >>
-  simp_tac (bool_ss ++ boolSimps.ETA_ss) [] >>
-  metis_tac[system_members]
-QED
-
 Definition simple_def:
   simple (A : 'a system) <=>
   !R. bisim R A A ==> !x y. R x y ==> x = y
@@ -379,6 +568,7 @@ Proof
   first_x_assum drule >> simp[gbisim_equivalence] >>
   simp[FUN_EQ_THM, gbisim_def] >> metis_tac[]
 QED
+
 
 
 
