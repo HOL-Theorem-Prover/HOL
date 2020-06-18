@@ -177,8 +177,11 @@ aiLib.debug_flag := false;
 tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
-val _ = run_evalscript_thyl "june15" (true,NONE,30) thyl;
-val tnn = train_value 0.95 "value";
+val _ = run_evalscript_thyl "june18" (true,NONE,30) thyl;
+val tnn_value = train_value 0.95 "value";
+load "smlInfix"; open smlInfix; QUse.use tttSetup.infix_file;
+val tactictoe_thmlarg = ([] : thm list);
+val tnn_policy = train_policy 0.95 "policy";
 val _ = run_evalscript_thyl "june15_tnn" (true,SOME "value",30) thyl;
 *)
 
@@ -352,16 +355,5 @@ fun train_policy pct file =
     write_tnn (tnndir ^ "/" ^ file) tnn;
     tnn
   end
-
-(*
-load "tttEval"; open tttEval;
-tttSetup.ttt_search_time := 30.0;
-aiLib.debug_flag := false;
-tttSetup.thml_explo_flag := false;
-val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-load "tttEval"; open tttEval;
-val _ = run_evalscript_thyl "june18" (true,NONE,30) thyl;
-val tnn = train_policy 0.95 "policy";
-*)
 
 end (* struct *)

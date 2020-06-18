@@ -18,5 +18,6 @@ sig
 
   (* training *)
   val train_value : real -> string -> tnn
+  val train_policy : real -> string -> tnn
 
 end
