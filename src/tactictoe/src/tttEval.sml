@@ -9,7 +9,7 @@ structure tttEval :> tttEval =
 struct
 
 open HolKernel Abbrev boolLib aiLib 
-  smlRedirect smlParallel smlOpen 
+  smlRedirect smlParallel smlOpen smlParser 
   mlTacticData mlTreeNeuralNetwork
   tttSetup tttSearch tttRecord tacticToe
 
@@ -37,11 +37,11 @@ fun extract_policy tree =
   let 
     val nodel = map snd (dlist tree)
     val goalrecl = List.concat (map (vector_to_list o #goalv) nodel)
-    val stacrecl = List.concat (map (vector_to_list o #stacv) goalrecl)
-    fun is_win stacrec = 
-      case #stacstatus stacrec of StacProved => true | _ => false
+    fun f x = distrib [(#goal x, vector_to_list (#stacv x))]
+    fun is_win x = case #stacstatus x of StacProved => true | _ => false
+    fun g (goal,x) = ((goal,#astac x), is_win x)
   in
-    map (fn x => (#astac x, is_win x)) stacrecl
+    map g (List.concat (map f goalrecl))
   end
 
 (* -------------------------------------------------------------------------
@@ -325,14 +325,15 @@ fun train_value pct file =
     tnn
   end
 
-fun nntm_of_stac _ = T
-
+(* needs the right context *)
 fun train_policy pct file =
   let
     val filel = listDir (HOLDIR ^ "/src/tactictoe/policy")
     val exll = map (fn x => ttt_import_policy x handle Interrupt => raise 
-      Interrupt | _ => (print_endline x; [])) filel
-    fun f (stac,b) = (nntm_of_stac stac, if b then [1.0] else [0.0])
+      Interrupt | _ => (print_endline x; [])) filel 
+    fun fpre stac = mk_applyexp (extract_smlexp stac)
+    fun f ((g,stac),b) = (nntm_of_gexp (g,fpre stac), 
+                          if b then [1.0] else [0.0])
     val exl = map (single o f) (List.concat exll)
     val (train,test) = part_pct pct (shuffle exl)
     val operl = mk_fast_set oper_compare
@@ -353,6 +354,19 @@ fun train_policy pct file =
     write_tnn (tnndir ^ "/" ^ file) tnn;
     tnn
   end
+
+(*
+load "tttEval"; open tttEval;
+tttSetup.ttt_search_time := 30.0;
+aiLib.debug_flag := false;
+tttSetup.thml_explo_flag := false;
+val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
+
+load "tttEval"; open tttEval;
+val _ = run_evalscript_thyl "june18" (true,NONE,30) thyl;
+val tnn = train_policy 0.95 "policy";
+*)
+
 
 
 end (* struct *)

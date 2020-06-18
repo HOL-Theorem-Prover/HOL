@@ -25,6 +25,7 @@ include Abbrev
   val nntm_of_gl : goal list -> term
   val mask_unknown : tnn * int -> term -> term
   val mask_unknown_inferdim : tnn -> term -> term
+  val nntm_of_gexp : (term list * term) * smlParser.applyexp -> term
 
   (* examples *)
   val stats_tnnex : tnnex -> string

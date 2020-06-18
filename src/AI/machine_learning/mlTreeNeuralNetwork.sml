@@ -9,7 +9,7 @@ structure mlTreeNeuralNetwork :> mlTreeNeuralNetwork =
 struct
 
 open HolKernel boolLib Abbrev aiLib mlMatrix mlNeuralNetwork smlParallel
-smlParallel mlTacticData
+smlParallel smlParser mlTacticData
 
 val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
 fun msg param s = if #verbose param then print_endline s else ()
@@ -512,14 +512,13 @@ fun add_arity tm =
   end
   handle HOL_ERR _ => raise ERR "add_arity" (term_to_string tm) 
 
-val vhead = mk_var ("head_", rpt_fun_type 2 alpha);
+val vhead = mk_var ("head_value", rpt_fun_type 2 alpha);
+
+fun nntm_of_goal (asm,w) = flatten_goal 
+  (map (add_arity o add_lambda) asm, add_arity (add_lambda w))
 
 fun nntm_of_gl gl =
-  let fun f (asm,w) = flatten_goal 
-    (map (add_arity o add_lambda) asm, add_arity (add_lambda w))
-  in
-    mk_comb (vhead, (list_mk_binop goal_cat (map f gl)))
-  end
+  mk_comb (vhead, (list_mk_binop goal_cat (map nntm_of_goal gl)))
 
 fun mask_unknown (tnn,dim) tm =
   let
@@ -536,6 +535,28 @@ fun mask_unknown_inferdim tnn tm =
   let val dim = dimin_nn (dfind vhead tnn) in
     mask_unknown (tnn,dim) tm 
   end
+
+(* -------------------------------------------------------------------------
+   Transform a tactic to a neural network term.
+   ------------------------------------------------------------------------- *)
+
+val apply_cat = mk_var ("apply_cat", rpt_fun_type 3 alpha);
+val gexp_cat = mk_var ("gexp_cat", rpt_fun_type 3 alpha);
+
+fun nntm_of_applyexp e = case e of
+    ApplyExp (e1,e2) => 
+      mk_binop apply_cat (nntm_of_applyexp e1, nntm_of_applyexp e2)
+  | ApplyUnit (s,_) => 
+    (
+    if mem #" " (explode s) 
+    then mk_var (escape ("sml." ^ its (hash_string s)), alpha)
+    else mk_var (escape ("sml." ^ s), alpha)
+    )
+
+val phead = mk_var ("head_policy", rpt_fun_type 2 alpha)
+
+fun nntm_of_gexp (g,e) =
+  mk_comb (phead, mk_binop gexp_cat (nntm_of_goal g, nntm_of_applyexp e))
 
 (* -------------------------------------------------------------------------
    Toy example: learning to guess if a term contains the variable "x"

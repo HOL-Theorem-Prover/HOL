@@ -311,14 +311,14 @@ fun ttt_export_tacdata thy tacdata =
 val enc_bool = String o bts
 val dec_bool = Option.map string_to_bool o string_decode
 
-fun enc_ex enc_tm = pair_encode (enc_goal_list enc_tm, enc_bool)
-fun dec_ex dec_tm = pair_decode (dec_goal_list dec_tm, dec_bool)
+fun enc_value enc_tm = pair_encode (enc_goal_list enc_tm, enc_bool)
+fun dec_value dec_tm = pair_decode (dec_goal_list dec_tm, dec_bool)
 
-fun enc_exl exl =
+fun enc_valuel valuel =
   let
     fun goal_terms ((asl,w),A) = (w::asl) @ A
-    fun ex_terms ((gl,_),A) = List.foldl goal_terms A gl
-    val all_terms = List.foldl ex_terms [] exl
+    fun value_terms ((gl,_),A) = List.foldl goal_terms A gl
+    val all_terms = List.foldl value_terms [] valuel
     val ed = {named_terms = [], unnamed_terms = [], named_types = [],
               unnamed_types = [], theorems = []}
     val sdi = build_sharing_data ed
@@ -327,36 +327,37 @@ fun enc_exl exl =
       handle NotFound => 
       (print_endline ("write_term: " ^ term_to_string t); 
        raise ERR "write_term" (term_to_string t))
-    val enc_exldata = list_encode (enc_ex (String o write_term_aux sdi))
+    val enc_valueldata = list_encode (enc_value (String o write_term_aux sdi))
   in
-    tagged_encode "exl" (pair_encode (enc_sdata, enc_exldata)) (sdi,exl)
+    tagged_encode "valuel" (pair_encode (enc_sdata, enc_valueldata))
+      (sdi,valuel)
   end
 
-fun dec_exl t =
+fun dec_valuel t =
     let
       val a = {with_strings = fn _ => (), with_stridty = fn _ => ()}
-      val (sdo, ex_data) =
-          valOf (tagged_decode "exl" (pair_decode(dec_sdata a, SOME)) t)
+      val (sdo, value_data) =
+          valOf (tagged_decode "valuel" (pair_decode(dec_sdata a, SOME)) t)
       val dec_tm = Option.map (read_term sdo) o string_decode
     in
-      list_decode (dec_ex dec_tm) ex_data
+      list_decode (dec_value dec_tm) value_data
     end
 
-fun uptodate_ex (gl, _) = all uptodate_goal gl
+fun uptodate_value (gl, _) = all uptodate_goal gl
 
-fun ttt_export_value thmid exl1 =
+fun ttt_export_value thmid valuel1 =
   let
     val dir = HOLDIR ^ "/src/tactictoe/value"
     val _ = mkDir_err dir
     val file = dir ^ "/" ^ thmid
     val ostrm = Portable.open_out file
-    val exl2 = filter uptodate_ex exl1
-    val _ = if length exl1 <> length exl2 
-            then print_endline "some goals were not up-to-date"
+    val valuel2 = filter uptodate_value valuel1
+    val _ = if length valuel1 <> length valuel2 
+            then print_endline "warning: some goals were not up-to-date"
             else ()
   in
     PP.prettyPrint (curry TextIO.output ostrm, 75)
-                   (HOLsexp.printer (enc_exl exl2));
+                   (HOLsexp.printer (enc_valuel valuel2));
     TextIO.closeOut ostrm
   end
 
@@ -365,30 +366,71 @@ fun ttt_import_value thmid =
     val dir = HOLDIR ^ "/src/tactictoe/value"
     val file = dir ^ "/" ^ thmid
   in
-    valOf (dec_exl (HOLsexp.fromFile file))
+    valOf (dec_valuel (HOLsexp.fromFile file))
   end
 
 (* ------------------------------------------------------------------------
    Export policy
    ------------------------------------------------------------------------ *)
 
-fun ttt_export_policy thmid policy = 
+fun enc_policy enc_tm = 
+  pair_encode (pair_encode (enc_goal enc_tm, String), enc_bool)
+fun dec_policy dec_tm = 
+  pair_decode (pair_decode (dec_goal dec_tm, string_decode), dec_bool)
+
+fun enc_policyl policyl =
+  let
+    fun policy_terms ((((asl,w),_),_),A) = (w::asl) @ A
+    val all_terms = List.foldl policy_terms [] policyl
+    val ed = {named_terms = [], unnamed_terms = [], named_types = [],
+              unnamed_types = [], theorems = []}
+    val sdi = build_sharing_data ed
+    val sdi = add_terms all_terms sdi
+    fun write_term_aux sdi t = write_term sdi t
+      handle NotFound => 
+      (print_endline ("write_term: " ^ term_to_string t); 
+       raise ERR "write_term" (term_to_string t))
+    val enc_policyldata = list_encode 
+      (enc_policy (String o write_term_aux sdi))
+  in
+    tagged_encode "policyl" (pair_encode (enc_sdata, enc_policyldata))
+      (sdi,policyl)
+  end
+
+fun dec_policyl t =
+    let
+      val a = {with_strings = fn _ => (), with_stridty = fn _ => ()}
+      val (sdo, policy_data) =
+          valOf (tagged_decode "policyl" (pair_decode (dec_sdata a, SOME)) t)
+      val dec_tm = Option.map (read_term sdo) o string_decode
+    in
+      list_decode (dec_policy dec_tm) policy_data
+    end
+
+fun uptodate_policy ((g,stac), _) = uptodate_goal g
+
+fun ttt_export_policy thmid policyl1 =
   let
     val dir = HOLDIR ^ "/src/tactictoe/policy"
     val _ = mkDir_err dir
     val file = dir ^ "/" ^ thmid
-    fun enc_policy (stac,b) = stac ^ "\n" ^ bts b 
+    val ostrm = Portable.open_out file
+    val policyl2 = filter uptodate_policy policyl1
+    val _ = if length policyl1 <> length policyl2 
+            then print_endline "warning: some goals were not up-to-date"
+            else ()
   in
-    writel file (map enc_policy policy)
+    PP.prettyPrint (curry TextIO.output ostrm, 75)
+                   (HOLsexp.printer (enc_policyl policyl2));
+    TextIO.closeOut ostrm
   end
 
 fun ttt_import_policy thmid =
   let
     val dir = HOLDIR ^ "/src/tactictoe/policy"
     val file = dir ^ "/" ^ thmid
-    fun dec_policy (a,b) = (a, string_to_bool b)
   in
-    map dec_policy (map pair_of_list (mk_batch 2 (readl file)))
+    valOf (dec_policyl (HOLsexp.fromFile file))
   end
 
 

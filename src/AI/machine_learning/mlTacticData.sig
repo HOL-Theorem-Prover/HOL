@@ -45,8 +45,8 @@ sig
   (* examples extracted from proof found *)
   val ttt_export_value : string -> (goal list * bool) list -> unit
   val ttt_import_value : string -> (goal list * bool) list
-  val ttt_export_policy : string -> (stac * bool) list -> unit
-  val ttt_import_policy : string -> (stac * bool) list
+  val ttt_export_policy : string -> ((goal * stac) * bool) list -> unit
+  val ttt_import_policy : string -> ((goal * stac) * bool) list
 
 
 end

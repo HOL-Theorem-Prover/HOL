@@ -276,15 +276,10 @@ fun mk_applyexp smlexp = case smlexp of
   | _ => raise ERR "mk_applyexp" ""
 
 (*
-load "smlParser"; open smlParser;
-load "smlExecute"; open smlExecute;
-load "aiLib"; open aiLib;
+
 load "mlTacticData"; open mlTacticData;
 load "smlLexer"; open smlLexer;
 load "tttSetup"; open tttSetup;
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-val calls = import_calls (tactictoe_dir ^ "/ttt_tacdata/arithmetic");
-val gstacl = map (fn x => (#ig x, #stac x)) calls;
 
 fun fst_app applyexp = case applyexp of
     ApplyExp (a,b) => fst_app a
@@ -335,15 +330,6 @@ val l2 =
   dict_sort compare_imax (map (fn (a,b) => ((a,f b),length b)) (dlist d));
 val rl = f (List.concat (map (all_x "thm list -> tactic") l));
 val rl = f (map fst_app l);
-
-(* 
-todo implement graph neural network with matching links? 
-*)
-
-(* 
-1) do the value experiment with pairs
-2) do extended theorem selection for ever 
-*)
 
 
 *)
