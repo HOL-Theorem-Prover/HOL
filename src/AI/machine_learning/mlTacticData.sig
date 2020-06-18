@@ -48,5 +48,4 @@ sig
   val ttt_export_policy : string -> ((goal * stac) * bool) list -> unit
   val ttt_import_policy : string -> ((goal * stac) * bool) list
 
-
 end

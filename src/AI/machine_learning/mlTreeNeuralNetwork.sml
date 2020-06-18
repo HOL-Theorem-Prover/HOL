@@ -215,6 +215,7 @@ fun bp_tnn_aux doutnvdict fpdict bpdict revtml = case revtml of
       val (oper,argl) = strip_comb tm
       val diml = map (dimout_tm fpdict) argl
       val doutnvl = dfind tm doutnvdict
+      val doutnvsum = add_vectl doutnvl
       fun f doutnv =
         let
           val fpdatal = dfind tm fpdict

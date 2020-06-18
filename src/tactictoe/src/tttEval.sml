@@ -324,7 +324,6 @@ fun train_value pct file =
     tnn
   end
 
-(* needs the right context *)
 fun train_policy pct file =
   let
     val filel = listDir (HOLDIR ^ "/src/tactictoe/policy")
@@ -360,12 +359,9 @@ tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
 tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-
 load "tttEval"; open tttEval;
 val _ = run_evalscript_thyl "june18" (true,NONE,30) thyl;
 val tnn = train_policy 0.95 "policy";
 *)
-
-
 
 end (* struct *)
