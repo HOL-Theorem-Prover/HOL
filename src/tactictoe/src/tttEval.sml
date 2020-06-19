@@ -35,15 +35,18 @@ fun extract_value tree =
 fun extract_policy tree =
   let 
     val nodel = map snd (dlist tree)
-    val goalrecl = List.concat (map (vector_to_list o #goalv) nodel)
+    val goalrecl1 = List.concat (map (vector_to_list o #goalv) nodel)
+    val goalrecl2 = filter (fn x => #goalstatus x = GoalProved) goalrecl1
     fun f x = distrib [(#goal x, number_snd 0 (vector_to_list (#stacv x)))]
+    val stacrecl = List.concat (map f goalrecl2)
     fun is_win x = case #stacstatus x of StacProved => true | _ => false
+    fun not_fresh x = case #stacstatus x of StacFresh => false | _ => true
     fun g (goal,(stacv,stacn)) = 
-      if is_win stacv orelse stacn < 10 
+      if is_win stacv orelse (stacn < 10 andalso not_fresh stacv)
       then SOME ((goal,#astac stacv), is_win stacv)
       else NONE
   in
-    List.mapPartial g (List.concat (map f goalrecl))
+    List.mapPartial g stacrecl
   end
 
 (* -------------------------------------------------------------------------
@@ -182,6 +185,7 @@ val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
 val _ = run_evalscript_thyl "june18-3" (true,NONE,30) thyl;
 val tnn_value = train_value 0.95 "value";
+
 load "smlInfix"; open smlInfix; QUse.use tttSetup.infix_file;
 val tactictoe_thmlarg = ([] : thm list);
 val tnn_policy = train_policy 0.95 "policy";
