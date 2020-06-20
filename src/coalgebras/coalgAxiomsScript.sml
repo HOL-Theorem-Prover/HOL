@@ -557,7 +557,7 @@ Proof
 QED
 
 Theorem simple_eq3:
-  simple As <=> ∀R. bisim R As As /\ R equiv_on (FST As) ⇒ R = Delta (FST As)
+  simple As <=> !R. bisim R As As /\ R equiv_on (FST As) ==> R = Delta (FST As)
 Proof
   tmCases_on “As : 'a system” ["A af"] >>
   simp[simple_def] >> eq_tac >> rw[]
