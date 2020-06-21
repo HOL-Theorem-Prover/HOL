@@ -68,6 +68,7 @@ tmux \
     -s "$(basename "$VIMHOL_FIFO")" \
     "env VIMHOL_FIFO='$VIMHOL_FIFO' $EDITOR -c 'source $VIMOPT' $*" \; \
   split-window -h "cd '$WD'; env HOME='$HOLDIR/tools/vim/' VIMHOL_FIFO='$VIMHOL_FIFO' $RLWRAP $HOLDIR/bin/hol" \; \
+  select-pane -t :.- \; \
   bind-key C-q confirm-before -p "kill-session #S? (y/n)" \
     "run-shell 'rm -f $VIMHOL_FIFO'; kill-session" \; \
   run-shell "tmux set-hook -t '#S' -g session-closed 'run-shell \"rm -f $VIMHOL_FIFO\"'" \; \
