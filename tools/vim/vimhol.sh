@@ -6,11 +6,11 @@
 # first argument file's, and defaults to the current working directory.
 #
 # usage:
-#     vimhol [files...]
+#     ./vimhol.sh [files...]
 #
 # It should not be necessary to set the $HOLDIR environment variable as this
 # script is ensured to work even when sym-linked, for example by
-#     ln -s $HOLDIR/tools/vim/vimhol /usr/local/bin
+#     ln -s $HOLDIR/tools/vim/vimhol.sh /usr/local/bin/vimhol
 #
 
 # locate HOLDIR
