@@ -2,8 +2,8 @@
 # Wraps an interactive hol session and $EDITOR (of vim flavour) side-by-side in
 # a tmux session. HOL and $EDITOR are connected by a fresh VIMHOL_FIFO pipe,
 # which is erased when quitting the tmux session. Any given argument files are
-# opened in the $EDITOR. The working directory of HOL and $EDITOR is set to the
-# first argument file's, and defaults to the current working directory.
+# opened in the $EDITOR. The working directory of HOL is set to the first
+# argument file's, and defaults to the current working directory.
 #
 # usage:
 #     ./vimhol.sh [files...]
@@ -66,7 +66,7 @@ test -p "$VIMHOL_FIFO" || mkfifo "$VIMHOL_FIFO"
 tmux \
   new-session \
     -s "$(basename "$VIMHOL_FIFO")" \
-    "cd '$WD'; env VIMHOL_FIFO='$VIMHOL_FIFO' $EDITOR -c 'source $VIMOPT' $*" \; \
+    "env VIMHOL_FIFO='$VIMHOL_FIFO' $EDITOR -c 'source $VIMOPT' $*" \; \
   split-window -h "cd '$WD'; env HOME='$HOLDIR/tools/vim/' VIMHOL_FIFO='$VIMHOL_FIFO' $RLWRAP $HOLDIR/bin/hol" \; \
   bind-key C-q confirm-before -p "kill-session #S? (y/n)" \
     "run-shell 'rm -f $VIMHOL_FIFO'; kill-session" \; \
