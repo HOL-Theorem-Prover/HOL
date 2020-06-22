@@ -73,7 +73,7 @@ val mapM_def = TotalDefn.Define`
 open simpLib BasicProvers boolSimps metisLib
 
 Definition mwhile_step_def:
-  mwhile_step P g x 0 s = BIND (P x) (\b. UNIT (b,x)) s ∧
+  mwhile_step P g x 0 s = BIND (P x) (\b. UNIT (b,x)) s /\
   mwhile_step P g x (SUC n) s = BIND (P x)
     (\b. if b then BIND (g x) (\gx. mwhile_step P g gx n) else UNIT (b,x)) s
 End
@@ -109,7 +109,7 @@ Proof
   SELECT_ELIM_TAC >> conj_tac
   >- (
     completeInduct_on `n` >> strip_tac >>
-    Cases_on `∀m. m < n ⇒ ∃y t. mwhile_step P g x m s = SOME ((T,y), t)` >>
+    Cases_on `!m. m < n ==> ?y t. mwhile_step P g x m s = SOME ((T,y), t)` >>
     fs[BIND_DEF, mwhile_step_def] >- (qexists_tac `n` >> fs[]) >>
     first_x_assum irule >> goal_assum drule >>
     asm_rewrite_tac []
@@ -134,7 +134,7 @@ Proof
     ntac 4 (last_x_assum kall_tac) >>
     pop_assum (qx_choose_then `n` assume_tac) >>
     completeInduct_on `n` >> strip_tac >>
-    Cases_on `∀m. m < n ⇒ ∃y t. mwhile_step P g z0 m z1 = SOME ((T,y),t)`
+    Cases_on `!m. m < n ==> ?y t. mwhile_step P g z0 m z1 = SOME ((T,y),t)`
     >- (goal_assum drule >> fs[]) >>
     pop_assum mp_tac >> simp[]
     ) >>
@@ -152,7 +152,7 @@ val MWHILE_DEF = new_specification(
   mwhile_exists |> SIMP_RULE bool_ss [SKOLEM_THM]);
 
 Definition mwhile_unit_step_def:
-  mwhile_unit_step P g 0 s = P s ∧
+  mwhile_unit_step P g 0 s = P s /\
   mwhile_unit_step P g (SUC n) s = BIND P
     (\b. if b then IGNORE_BIND g (mwhile_unit_step P g n) else UNIT b) s
 End
@@ -187,7 +187,7 @@ Proof
   SELECT_ELIM_TAC >> conj_tac
   >- (
     completeInduct_on `n` >> strip_tac >>
-    Cases_on `∀m. m < n ⇒ ∃t. mwhile_unit_step P g m s = SOME (T, t)` >>
+    Cases_on `!m. m < n ==> ?t. mwhile_unit_step P g m s = SOME (T, t)` >>
     fs[BIND_DEF, mwhile_unit_step_def] >- (qexists_tac `n` >> fs[]) >>
     first_x_assum irule >> goal_assum drule >>
     asm_rewrite_tac []
@@ -213,7 +213,7 @@ Proof
     ntac 4 (last_x_assum kall_tac) >>
     pop_assum (qx_choose_then `n` assume_tac) >>
     completeInduct_on `n` >> strip_tac >>
-    Cases_on `!m. m < n ⇒ ?t. mwhile_unit_step P g m z1 = SOME (T,t)`
+    Cases_on `!m. m < n ==> ?t. mwhile_unit_step P g m z1 = SOME (T,t)`
     >- (goal_assum drule >> fs[]) >>
     pop_assum mp_tac >> simp[]
     ) >>
