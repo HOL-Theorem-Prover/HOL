@@ -18,7 +18,7 @@ open mp_then
 
 val _ = new_theory "coalgAxioms";
 
-val _ = hide "S"
+val _ = app (ignore o hide) ["S", "W"]
 
 Definition restr_def:
   restr f s = \x. if x IN s then f x else ARB
@@ -44,11 +44,17 @@ Definition Gr_def[simp]:
 End
 
 Theorem Gr_Id[simp]:
-  Gr (\x. x) A = Delta A /\
-  Gr (restr (\x. x) A) A = Delta A
+  Gr (\x. x) A = Delta A
 Proof
-  csimp[FUN_EQ_THM, restr_applies] >> metis_tac[]
+  csimp[FUN_EQ_THM] >> metis_tac[]
 QED
+
+Theorem Gr_restr[simp]:
+  Gr (restr f A) A = Gr f A
+Proof
+  csimp[FUN_EQ_THM, restr_def]
+QED
+
 
 Definition span_def[simp]:
   span A f g b d <=> ?a. a IN A /\ b = f a /\ d = g a
@@ -244,42 +250,6 @@ Definition bisimilar_def:
   bisimilar As Bs <=> ?R. bisim R As Bs
 End
 
-Inductive genS:
-  (!a0. a0 IN FST As ==> genS As a0 a0) /\
-  (!a0 a1 a. genS As a0 a1 /\ a IN setF (SND As a1) ==> genS As a0 a)
-End
-
-Definition genU_def:
-  genU ((A,af):'a system) : ('a # 'a) system =
-    (BIGUNION $ IMAGE (\a. IMAGE ((,) a) (genS (A,af) a)) A,
-     (\ (a0,a). if a0 IN A /\ genS (A,af) a0 a then mapF ((,) a0) (af a)
-                else ARB))
-End
-
-Theorem genS_system:
-  genS (A,af) a0 a ==> system (A,af) ==> a IN A
-Proof
-  Induct_on ‘genS’ >> rw[] >> fs[] >> metis_tac[system_members]
-QED
-
-Theorem IN_genS[simp]:
-  x IN genS A x0 <=> genS A x0 x
-Proof
-  simp[IN_DEF]
-QED
-
-Theorem genU_system:
-  system (A,af) ==> system (genU (A, af))
-Proof
-  strip_tac >>
-  simp[system_def, genU_def, Fset_def, SUBSET_DEF, FORALL_PROD,
-       PULL_EXISTS] >> rw[]
-  >- (rename [‘a0 IN A’, ‘genS (A,af) a0 a’, ‘(a1,a2) IN setF _’] >>
-      fs[set_map'] >> metis_tac[genS_rules, SND])
-  >- fs[set_map']
-QED
-
-
 Theorem sbisimulation_projns_homo:
   bisim R (A,af) (B,bf) <=>
   ?Rf.
@@ -422,7 +392,7 @@ QED
 
 
 Theorem prop5_9_1:
-  hom f (A,af) (B,bf) /\ bisim R (A,af) (A,af) ==>
+  hom (restr f A) (A,af) (B,bf) /\ bisim R (A,af) (A,af) ==>
   bisim (RIMAGE f A R) (B,bf) (B,bf)
 Proof
   simp[RIMAGE_Gr] >> strip_tac >> IRULE bisimulations_compose >>
@@ -431,7 +401,7 @@ Proof
 QED
 
 Theorem prop5_9_2:
-  hom f (A,af) (B,bf) /\ bisim Q (B,bf) (B,bf) ==>
+  hom (restr f A) (A,af) (B,bf) /\ bisim Q (B,bf) (B,bf) ==>
   bisim (RINV_IMAGE f A Q) (A,af) (A,af)
 Proof
   simp[RINV_IMAGE_Gr] >> strip_tac >> IRULE bisimulations_compose >>
@@ -443,6 +413,12 @@ Definition subsystem_def:
   subsystem V (A,af) <=>
   system (A,af) /\ V SUBSET A /\ ?vf. hom (restr (\x.x) V) (V,vf) (A,af)
 End
+
+Theorem subsystem_refl[simp]:
+  system (A,af) ==> subsystem A (A,af)
+Proof
+  simp[subsystem_def] >> strip_tac >> IRULE hom_ID >> simp[]
+QED
 
 Theorem prop6_1:
   V SUBSET A /\ hom (restr (\x.x) V) (V,kf) (A,af) /\
@@ -489,6 +465,137 @@ Proof
     suffices_by simp[mapID] >>
   irule map_CONG >> drule system_members >> csimp[restr_def] >> metis_tac[]
 QED
+
+Theorem subsystem_system:
+  subsystem V (A,af) ==> system (V, restr af V)
+Proof
+  strip_tac >> ‘system (A,af)’ by fs[subsystem_def] >>
+  fs[prop6_2, bisim_def] >>
+  fs[system_def, SUBSET_DEF, Fset_def, restr_def] >>
+  rpt strip_tac >> first_x_assum drule >>
+  csimp[relF_def, PULL_EXISTS, SUBSET_DEF, FORALL_PROD] >> rw[] >>
+  rename [‘mapF FST rr = af a’] >>
+  ‘setF (mapF FST rr) = setF (af a)’ by simp[] >> pop_assum mp_tac >>
+  simp[EXTENSION, set_map', EXISTS_PROD] >> rename [‘x IN setF (af a)’] >>
+  disch_then (qspec_then ‘x’ mp_tac) >> simp[] >> metis_tac[]
+QED
+
+Theorem thm6_3_1:
+  hom f (A,af) (B,bf) /\ subsystem V (A,af) ==>
+  subsystem (IMAGE f V) (B, bf)
+Proof
+  strip_tac >>
+  ‘system (A, af) /\ system (B,bf)’ by fs[hom_def] >>
+  ‘system (V, restr af V)’ by metis_tac[subsystem_system] >>
+  simp[prop6_2, Delta_IMAGE] >> conj_tac
+  >- fs[hom_def, subsystem_def, SUBSET_DEF, PULL_EXISTS] >>
+  irule prop5_9_1 >> qexists_tac ‘restr af V’ >> fs[prop6_2] >>
+  conj_tac >- (fs[bisim_def] >> simp[restr_def]) >>
+  fs[hom_def] >> simp[restr_def] >> fs[SUBSET_DEF] >>
+  rpt strip_tac >> irule map_CONG >> simp[] >>
+  metis_tac[system_members, restr_def]
+QED
+
+Theorem Delta_INTER:
+  Delta (s INTER t) = Delta s RINTER Delta t
+Proof
+  simp[FUN_EQ_THM, RINTER] >> metis_tac[]
+QED
+
+Theorem thm6_3_2:
+  hom f (A,af) (B,bf) /\ subsystem W (B,bf) ==>
+  subsystem (PREIMAGE f W INTER A) (A, af)
+Proof
+  strip_tac >>
+  ‘system (A, af) /\ system (B, bf) /\ system (W,restr bf W)’
+    by metis_tac[hom_def, subsystem_system] >>
+  simp[prop6_2, Delta_INTER] >>
+  csimp[bisim_def, RINTER, relF_def, SUBSET_DEF, FORALL_PROD] >>
+  qx_gen_tac ‘a0’ >> strip_tac >>
+  qexists_tac ‘mapF (\a. (a,a)) (af a0)’  >>
+  simp[mapO', o_ABS_R, mapID, set_map'] >>
+  qx_gen_tac ‘a'’ >> strip_tac >> reverse conj_tac
+  >- metis_tac[system_members] >>
+  fs[hom_def] >>
+  ‘bf (f a0) = mapF f (af a0)’ by metis_tac[] >>
+  ‘restr bf W (f a0) = mapF f (af a0)’ by simp[restr_def] >>
+  pop_assum (mp_tac o Q.AP_TERM ‘setF’) >>
+  simp[EXTENSION, set_map'] >>
+  ‘setF (restr bf W (f a0)) SUBSET W’
+    by (simp[SUBSET_DEF] >> metis_tac[system_members]) >>
+  strip_tac >>
+  ‘f a' IN setF (restr bf W (f a0))’ suffices_by metis_tac[SUBSET_DEF] >>
+  simp[] >> metis_tac[]
+QED
+
+Theorem subsystem_UNION:
+  system (A,af) /\ (!V. V IN VS ==> subsystem V (A,af)) ==>
+  subsystem (BIGUNION VS) (A, af)
+Proof
+  csimp[prop6_2, BIGUNION_SUBSET] >> strip_tac >>
+  ‘Delta (BIGUNION VS) = (\a b. ?V. V IN (IMAGE Delta VS) /\ V a b)’
+    by (simp[Ntimes FUN_EQ_THM 2, PULL_EXISTS] >> metis_tac[]) >>
+  pop_assum SUBST1_TAC >> irule thm5_5 >> simp[PULL_EXISTS]
+QED
+
+Theorem subsystem_ALT:
+  subsystem V (A,af) <=>
+  V SUBSET A /\ system(A,af) /\ hom (restr (\x.x) V) (V, restr af V) (A,af)
+Proof
+  eq_tac
+  >- (strip_tac >> drule_then assume_tac subsystem_system >>
+      ‘system (A,af) /\ V SUBSET A’ by fs[subsystem_def] >> simp[] >>
+      simp[hom_def] >> reverse conj_tac >- simp[restr_def] >>
+      simp[restr_applies] >>
+      ‘!a. a IN V ==> mapF (restr (\x.x) V) (af a) = mapF (\x.x) (af a)’
+        suffices_by (simp[mapID] >> fs[subsystem_def, SUBSET_DEF]) >>
+      rw[] >> irule map_CONG >> simp[restr_def] >>
+      metis_tac[system_members, restr_def]) >>
+  simp[subsystem_def] >> metis_tac[]
+QED
+
+Theorem subsystem_INTER:
+  system (A,af) /\ (!V. V IN VS ==> subsystem V (A,af)) /\ VS <> {} ==>
+  subsystem (BIGINTER VS) (A, af)
+Proof
+  strip_tac >> simp[subsystem_ALT] >> rw[]
+  >- fs[BIGINTER_SUBSET, subsystem_def] >>
+  rw[hom_def, restr_applies]
+  >- (simp[system_def, PULL_EXISTS, restr_def, Fset_def, SUBSET_DEF,
+           AllCaseEqs()] >> rw[]
+      >- (rename [‘V IN VS’, ‘v IN V’, ‘v IN setF (af v0)’] >>
+          ‘system (V,restr af V)’ by metis_tac[subsystem_system] >>
+          metis_tac[system_members, restr_def]) >>
+      metis_tac[])
+  >- metis_tac [MEMBER_NOT_EMPTY, subsystem_def, SUBSET_DEF]
+  >- (‘mapF (restr (\x.x) (BIGINTER VS)) (af a) = mapF (\x.x) (af a)’
+        suffices_by simp[mapID] >>
+      irule map_CONG >>
+      ‘!x. x IN setF (af a) ==> x IN BIGINTER VS’
+        suffices_by simp[restr_applies] >> rw[] >>
+      rename [‘V IN VS’, ‘v IN V’, ‘v IN setF (af v0)’] >>
+      ‘v0 IN V’ by simp[] >>
+      metis_tac[system_members, restr_def, subsystem_system]) >>
+  simp[restr_def] >> metis_tac[]
+QED
+
+Definition genS_def:
+  genS As X = BIGINTER { V | subsystem V As /\ X SUBSET V }
+End
+
+Theorem genS_correct:
+  system (A,af) /\ X SUBSET A ==> subsystem (genS (A,af) X) (A,af)
+Proof
+  simp[genS_def] >> strip_tac >>
+  irule subsystem_INTER >> simp[EXTENSION] >> IRULE subsystem_refl >>
+  simp[]
+QED
+
+Definition bounded_def:
+  bounded (:'a) (:'b) =
+   !a A af. system ((A,af):'a system) /\ a IN A ==>
+            ?f V:'b set. INJ f (genS (A,af) {a}) V
+End
 
 Theorem bisimilar_equivalence:
   bisimilar equiv_on system
