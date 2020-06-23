@@ -234,6 +234,53 @@ Proof
   drule map_CONG >> simp[mapID]
 QED
 
+Definition iso_def:
+  iso (A,af) (B,bf) <=>
+     ?f g. hom f (A,af) (B,bf) /\ hom g (B,bf) (A,af) /\
+           (!a. a IN A ==> g (f a) = a) /\
+           (!b. b IN B ==> f (g b) = b)
+End
+
+Theorem INJ_homs_mono:
+  hom f (A,af) (B,bf) /\ INJ f A B ==>
+  !C cf g h.
+    hom g (C,cf) (A,af) /\ hom h (C,cf) (A,af) /\
+    f o g = f o h ==> g = h
+Proof
+  simp[INJ_IFF, hom_def] >> rw[FUN_EQ_THM] >> metis_tac[]
+QED
+
+Theorem SURJ_homs_epi:
+  hom f (A,af) (B,bf) /\ SURJ f A B ==>
+  !C cf g h.
+    hom g (B,bf) (C,cf) /\ hom h (B,bf) (C,cf) /\
+    restr (g o f) A = restr (h o f) A ==>
+    g = h
+Proof
+  simp[SURJ_DEF, hom_def, FUN_EQ_THM] >> rw[] >>
+  Cases_on ‘x IN B’ >> simp[] >>
+  ‘?a. a IN A /\ f a = x’ by metis_tac[] >>
+  fs[restr_def] >> metis_tac[]
+QED
+
+Theorem BIJ_homs_iso:
+  hom f (A,af) (B,bf) /\ BIJ f A B ==>
+  iso (A,af) (B,bf)
+Proof
+  simp[hom_def, iso_def, BIJ_IFF_INV] >> rw[] >>
+  qexistsl_tac [‘f’, ‘restr g B’] >> simp[restr_applies] >>
+  reverse conj_tac >- simp[restr_def] >>
+  qx_gen_tac ‘b’ >> strip_tac >>
+  ‘bf b = bf (f (g b))’ by metis_tac[] >> pop_assum SUBST1_TAC >>
+  simp[mapO'] >>
+  ‘mapF (restr g B o f) (af (g b)) = mapF (\x. x) (af (g b))’
+    suffices_by simp[mapID] >>
+  irule map_CONG >> simp[restr_def] >> ‘g b IN A’ by simp[] >>
+  metis_tac[system_members]
+QED
+
+
+
 Definition bisim_def:
   bisim R (A,af) (B,bf) <=>
   system (A,af) /\ system (B,bf) /\
@@ -391,6 +438,62 @@ Proof
 QED
 
 
+Definition eps_def:
+  eps R A a = if a IN A then {b | R a b /\ b IN A} else ARB
+End
+
+Theorem eps_partition:
+  a IN A ==> eps R A a IN partition R A
+Proof
+  simp[eps_def, partition_def] >> strip_tac >>
+  qexists_tac ‘a’ >> simp[EXTENSION] >> metis_tac[]
+QED
+
+Definition bquot_def:
+  bquot ((A,af):'a system) R : 'a set system =
+     (partition R A,
+      restr (\ap. mapF (eps R A) (af (CHOICE ap))) (partition R A))
+End
+
+Theorem CHOICE_INTRO:
+  (?x. x IN s) /\ (!x. x IN s ==> P x) ==> P (CHOICE s)
+Proof
+  rpt strip_tac >> first_x_assum irule >>
+  metis_tac[CHOICE_DEF, MEMBER_NOT_EMPTY]
+QED
+
+Theorem bquot_correct:
+  system (A,af) /\ bisim R (A,af) (A,af) /\ R equiv_on A ==>
+  system (bquot (A,af) R) /\ hom (eps R A) (A,af) (bquot (A,af) R)
+Proof
+  csimp[hom_def, bquot_def, restr_applies] >> rw[eps_partition]
+  >- (simp[system_def, Fset_def, SUBSET_DEF, restr_applies, set_map',
+           PULL_EXISTS] >>reverse conj_tac
+      >- simp[restr_def] >>
+      qx_gen_tac ‘ap’ >> strip_tac >> qx_gen_tac ‘a’ >>
+      DEEP_INTRO_TAC CHOICE_INTRO >> conj_tac
+      >- metis_tac[EMPTY_NOT_IN_partition, MEMBER_NOT_EMPTY] >>
+      qx_gen_tac ‘a0’ >> rpt strip_tac >> irule eps_partition >>
+      metis_tac[system_members, partition_SUBSET, SUBSET_DEF])
+  >- (DEEP_INTRO_TAC CHOICE_INTRO >> conj_tac
+      >- metis_tac[eps_partition, EMPTY_NOT_IN_partition, MEMBER_NOT_EMPTY] >>
+      qx_gen_tac ‘a'’ >> simp[eps_def] >> strip_tac >>
+      fs[sbisimulation_projns_homo] >> rpt (qpat_x_assum ‘hom _ _ _ ’ mp_tac) >>
+      simp[hom_def, FORALL_PROD, restr_applies] >> rw[] >>
+      ‘af a = mapF (restr FST (UNCURRY R)) (Rf (a, a')) /\
+       af a' = mapF (restr SND (UNCURRY R)) (Rf (a, a'))’ by simp[] >>
+      simp[mapO'] >> irule map_CONG >> simp[FORALL_PROD] >>
+      qx_genl_tac [‘a1’, ‘a2’] >> strip_tac >> ‘(a,a') IN UNCURRY R’ by simp[]>>
+      ‘(a1,a2) IN UNCURRY R’ by metis_tac[system_members] >>
+      pop_assum mp_tac >> simp[restr_applies, eps_def] >>
+      strip_tac >> ‘a1 IN A /\ a2 IN A’ by metis_tac[] >>
+      simp[EXTENSION] >> qx_gen_tac ‘aa’ >> Cases_on ‘aa IN A’ >> simp[] >>
+      prove_tac[equiv_on_def]) >>
+  simp[eps_def]
+QED
+
+Theorem prop5_8 = bquot_correct
+
 Theorem prop5_9_1:
   hom (restr f A) (A,af) (B,bf) /\ bisim R (A,af) (A,af) ==>
   bisim (RIMAGE f A R) (B,bf) (B,bf)
@@ -408,6 +511,8 @@ Proof
   IRULE bisimulations_compose >> simp[] >> first_assum IRULE >>
   fs[thm2_5]
 QED
+
+(* Section 6: Subsystems *)
 
 Definition subsystem_def:
   subsystem V (A,af) <=>
@@ -596,6 +701,57 @@ Definition bounded_def:
    !a A af. system ((A,af):'a system) /\ a IN A ==>
             ?f V:'b set. INJ f (genS (A,af) {a}) V
 End
+
+
+(* Section 7 *)
+(*
+Theorem thm7_1:
+  hom f (A,af) (B,bf) ==>
+  hom f (A,af) (IMAGE f A,restr bf (IMAGE f A)) /\
+  (!g h C cf. hom g (IMAGE f A,restr bf (IMAGE f A)) (C,cf) /\
+              hom h (IMAGE f A,restr bf (IMAGE f A)) (C,cf) /\
+              restr (h o f) A = restr (g o f) A ==> h = g) /\
+  hom (eps (kernel A f) A) (A,af) (bquot (A,af) (kernel A f)) /\
+  hom (restr (\x.x) (IMAGE f A))
+      (IMAGE f A, restr bf (IMAGE f A))
+      (B,bf) /\
+  iso (IMAGE f A, restr bf (IMAGE f A))
+      (bquot (A,af) (kernel A f)) /\
+  ?mu. hom mu (bquot (A,af) (kernel A f)) (B,bf) /\
+       INJ mu (FST (bquot (A,af) (kernel A f))) B
+Proof
+  strip_tac >> ‘system (A,af) /\ system (B,bf)’ by fs[hom_def] >>
+  drule_then (qspec_then ‘A’ mp_tac) thm6_3_1 >> simp[] >>
+  simp[subsystem_ALT] >> strip_tac >>
+  conj_asm1_tac
+  >- (irule lemma2_4_2 >> rw[] >- fs[hom_def] >>
+      qexistsl_tac [‘B’, ‘bf’, ‘restr (\x.x) (IMAGE f A)’] >>
+      qabbrev_tac ‘ss = IMAGE f A’ >>
+      ‘!a. a IN A ==> f a IN ss’ by metis_tac[IN_IMAGE] >>
+      rw[]
+      >- (simp[INJ_IFF, PULL_EXISTS, restr_def] >> fs[SUBSET_DEF])
+      >- (simp[hom_def, restr_def] >> reverse conj_tac >- fs[hom_def] >>
+          fs[hom_def] >> rw[] >> irule map_CONG >> simp[] >> rw[] >>
+          metis_tac[system_members, IN_IMAGE])) >>
+  conj_asm1_tac
+  >- (‘SURJ f A (IMAGE f A)’ suffices_by metis_tac[SURJ_homs_epi] >>
+     simp[SURJ_DEF]) >>
+  conj_asm1_tac >- metis_tac[bquot_correct, prop5_7] >>
+  conj_asm1_tac
+  >- (simp[bquot_def] >> irule BIJ_homs_iso >>
+      qexists_tac ‘\b. PREIMAGE f {b} INTER A’ >> conj_tac
+      >- (simp[BIJ_DEF, PULL_EXISTS] >> conj_tac
+          >- (simp[INJ_IFF, PULL_EXISTS] >> rw[partition_def]
+              >- (csimp[PREIMAGE_def, EXTENSION]>> metis_tac[]) >>
+              simp[EXTENSION] >> metis_tac[]) >>
+          simp[SURJ_DEF, PULL_EXISTS] >> rw[partition_def] >>
+          csimp[EXTENSION] >> metis_tac[]) >>
+
+
+*)
+
+
+
 
 Theorem bisimilar_equivalence:
   bisimilar equiv_on system
