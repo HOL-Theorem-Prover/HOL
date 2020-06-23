@@ -122,7 +122,7 @@ fun backstatus_node node = case #nodestatus node of
 fun reorder_stacl g pnn stacl =
   let 
     fun f x = mask_unknown_policy pnn (nntm_of_gstactm (g,x))
-    val l = map_assoc (infer_tnn_basic pnn o f pnn o #stactm) stacl 
+    val l = map_assoc (infer_tnn_basic pnn o f o #stactm) stacl 
   in
     map fst (dict_sort compare_rmax l)
   end
