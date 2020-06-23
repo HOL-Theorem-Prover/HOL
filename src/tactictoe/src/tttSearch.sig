@@ -4,9 +4,10 @@ sig
   include Abbrev
 
   type id = (int * int) list
-
+  type tnn = mlTreeNeuralNetwork.tnn
   val tacpred_time : real ref
   val reward_time : real ref
+  val reorder_time : real ref
 
   datatype stacstatus =
     StacProved |
@@ -20,9 +21,8 @@ sig
   datatype proofstatus =  Proof of string | ProofSaturated | ProofTimeout
 
   type stac_record =
-    {stac : string, astac : string,
-     svis : real, ssum : real, 
-     stacstatus : stacstatus}
+    {stac : string, astac : string, stactm : term,
+     svis : real, ssum : real, stacstatus : stacstatus}
   type goal_record =
     {
     goal : goal, gvis : real, gsum  : real, goalstatus : goalstatus,
@@ -37,8 +37,8 @@ sig
     }
   type tree = ((int * int) list, node) Redblackmap.dict
 
-  val search : (goal -> (string * string) list) * 
-    mlTreeNeuralNetwork.tnn option -> 
+  val search : (goal -> ((string * string) * term) list) * 
+    (tnn option * tnn option) -> 
     goal -> proofstatus * tree
 
 end

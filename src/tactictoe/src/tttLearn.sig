@@ -9,6 +9,7 @@ sig
   type symweight = mlFeature.symweight
  
   (* abstraction of theorem list arguments and first term in tactics *)
+  val tactictoe_thmlarg : thm list
   val thmlarg_placeholder : string
   val is_thmlarg_stac : string -> bool 
   val abstract_thmlarg : string -> (string * string list list) option
@@ -22,6 +23,8 @@ sig
   val abstract_stac : string -> string option
   val inst_stac : (string * goal) -> string -> (string * string) option
   val inst_stacl : (string list * goal) -> string list -> (string * string) list
+  val inst_stacnnl : (string list * goal) -> 
+    (string * term) list -> ((string * string) * term) list 
 
   (* competition between different tactics over a goal *)
   val ortho_predstac_time : real ref
@@ -30,5 +33,8 @@ sig
   val orthogonalize : (thmdata * tacdata * 
     (symweight * (string * mlFeature.fea) list)) ->
     call -> call
+
+  (* transforming the orthogonalized tactic into a NN term *)
+  val update_nntm : call -> call  
 
 end

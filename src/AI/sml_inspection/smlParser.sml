@@ -188,7 +188,7 @@ fun dest_infix e = case e of
     else (a,b,c)
    | _ => raise ERR "dest_infix" "unexpected"
 
-fun extract_proofexp_aux smlexp = case smlexp of
+fun extract_proofexp smlexp = case smlexp of
     SmlExp ((SOME s,_),[a,inf,b]) =>
     if is_infixl (string_of_smlexp inf) then
     let
@@ -199,8 +199,8 @@ fun extract_proofexp_aux smlexp = case smlexp of
     in
       ProofInfix (infs,
         (
-        ProofInfix (ainfs, (extract_proofexp_aux a0, ProofTactical a1s)),
-        extract_proofexp_aux b
+        ProofInfix (ainfs, (extract_proofexp a0, ProofTactical a1s)),
+        extract_proofexp b
         )
       )
     end
@@ -213,8 +213,8 @@ fun extract_proofexp_aux smlexp = case smlexp of
        in
          ProofInfix (infs,
            (
-           extract_proofexp_aux a,
-           ProofInfix (binfs, (ProofTactical b0s, extract_proofexp_aux b1))
+           extract_proofexp a,
+           ProofInfix (binfs, (ProofTactical b0s, extract_proofexp b1))
            )
          )
        end
@@ -224,11 +224,6 @@ fun extract_proofexp_aux smlexp = case smlexp of
   | SmlUnit (SOME s,_) =>  
     if is_tactic s then ProofTactic s else ProofOther s
   | _ => raise ERR "extract_tacticl_aux" "option"
-
-fun extract_proofexp s =
-  if not (is_tactic s) 
-  then raise ERR "extract_proofexp" "not a tactic" 
-  else extract_proofexp_aux (extract_smlexp s)
 
 fun safe_par s = 
   if mem #" " (explode s) 
@@ -266,74 +261,13 @@ fun is_app s (s1,s2) =
     mem s (map f l)
   end
 
-fun mk_applyexp smlexp = case smlexp of
+fun extract_applyexp smlexp = case smlexp of
     SmlExp ((SOME a, SOME b),[e1,e2]) =>
       if is_app a (string_of_smlexp e1, string_of_smlexp e2)
-      then ApplyExp (mk_applyexp e1, mk_applyexp e2)
+      then ApplyExp (extract_applyexp e1, extract_applyexp e2)
       else ApplyUnit (a, SOME (drop_all_sig b))
   | SmlExp ((SOME a, b), _) => ApplyUnit (a, Option.map drop_all_sig b)
   | SmlUnit (SOME a, b) => ApplyUnit (a, Option.map drop_all_sig b)
-  | _ => raise ERR "mk_applyexp" ""
-
-(*
-
-load "mlTacticData"; open mlTacticData;
-load "smlLexer"; open smlLexer;
-load "tttSetup"; open tttSetup;
-
-fun fst_app applyexp = case applyexp of
-    ApplyExp (a,b) => fst_app a
-  | ApplyUnit (s,_) => s
-;
-
-fun all_x x applyexp = case applyexp of
-    ApplyExp (a,b) => all_x x a @ all_x x b
-  | ApplyUnit (s,sty) => if isSome sty andalso valOf sty = x then [s] else [] 
-;
-
-val (l,t) = add_time (map_snd (mk_applyexp o extract_smlexp)) gstacl;
-val lapp = map_snd fst_app l;
-
-fun count_string x = 
-  dict_sort compare_imax (dlist (count_dict (dempty String.compare) x));
-fun count_int x = 
-  dict_sort compare_imax (dlist (count_dict (dempty Int.compare) x));
-
-
-val testedl = map fst (first_n 10 (count_string (map snd lapp)));
-
-val oh = List.tabulate (10, 
-  fn i => List.tabulate (10, fn j => if i = j then 1.0 else 0.0));
-
-val assocl = combine (testedl,oh);
-val data1 = mapfilter (fn (a,b) => (a, assoc b assocl)) lapp;
-val data2 = map_fst nntm_of_goal data1;
-val data3 = map single data2;
-val (train,test) = part_pct 0.9 data3;
-
-val operl = mk_fast_set oper_compare
-  (List.concat (map operl_of_term (map fst data2)));
-val operdiml = map (fn x => (fst x, dim_std_arity (1,4) x)) operl;
-val operdiml2 = 
-  map (fn (a,b) => 
-   if term_eq a ``head_goal:bool -> bool`` then (a,[4,10]) else (a,b)) operdiml;
-
-val randtnn = random_tnn operdiml2;
-
-val trainparam =
-  {ncore = 1, verbose = true,
-   learning_rate = 0.04, batch_size = 16, nepoch = 100};
-val schedule = [trainparam];
-val tnn = train_tnn schedule randtnn (train,test);
-
-val l2 = 
-  dict_sort compare_imax (map (fn (a,b) => ((a,f b),length b)) (dlist d));
-val rl = f (List.concat (map (all_x "thm list -> tactic") l));
-val rl = f (map fst_app l);
-
-
-*)
-
-
+  | _ => raise ERR "extract_applyexp" ""
 
 end (* struct *)

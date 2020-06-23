@@ -13,8 +13,7 @@ sig
   type stac = string
   type call = 
     {
-    stac : stac, ortho : stac, 
-    time : real,
+    stac : stac, ortho : stac, nntm : term, time : real,
     ig : goal, ogl : goal list,
     loc : (string * int) * string, 
     fea : mlFeature.fea
@@ -45,7 +44,7 @@ sig
   (* examples extracted from proof found *)
   val ttt_export_value : string -> (goal list * bool) list -> unit
   val ttt_import_value : string -> (goal list * bool) list
-  val ttt_export_policy : string -> ((goal * stac) * bool) list -> unit
-  val ttt_import_policy : string -> ((goal * stac) * bool) list
+  val ttt_export_policy : string -> ((goal * term) * bool) list -> unit
+  val ttt_import_policy : string -> ((goal * term) * bool) list
 
 end

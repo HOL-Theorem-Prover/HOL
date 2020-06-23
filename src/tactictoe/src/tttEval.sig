@@ -4,7 +4,8 @@ sig
   include Abbrev
   type tnn =  mlTreeNeuralNetwork.tnn
 
-  val ttt_eval : (mlThmData.thmdata * mlTacticData.tacdata) * tnn option -> 
+  val ttt_eval : (mlThmData.thmdata * mlTacticData.tacdata) ->
+    tnn option * tnn option -> 
     goal -> unit  
 
   val write_evalscript : string option -> string -> unit

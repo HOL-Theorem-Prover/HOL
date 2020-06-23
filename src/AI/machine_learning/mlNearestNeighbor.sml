@@ -84,6 +84,9 @@ fun tacknn (symweight,tacfea) n fea =
 fun callknn (symweight,callfea) n fea =
   knn_sortu call_compare n (symweight,callfea) fea
 
+fun tacnnknn (symweight,tacnnfea) n fea =
+  knn_sortu (fst_compare String.compare) n (symweight,tacnnfea) fea
+
 (* ----------------------------------------------------------------------
    Adding tactic dependencies
    --------------------------------------------------------------------- *)

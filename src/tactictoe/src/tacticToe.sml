@@ -9,7 +9,7 @@ structure tacticToe :> tacticToe =
 struct
 
 open HolKernel Abbrev boolLib aiLib
-  smlLexer smlExecute smlRedirect smlInfix
+  smlLexer smlParser smlExecute smlRedirect smlInfix
   mlFeature mlThmData mlTacticData mlNearestNeighbor mlTreeNeuralNetwork
   psMinimize
   tttSetup tttLearn tttSearch
@@ -46,16 +46,16 @@ fun select_tacfea tacdata gfea =
     val symweight = learn_tfidf callfea
     val sel1 = callknn (symweight,callfea) (!ttt_presel_radius) gfea
     val sel2 = add_calldep (#calldep tacdata) (!ttt_presel_radius) sel1
-    val tacfea = map (fn x => (#ortho x, #fea x)) sel2
+    val tacnnfea = map (fn x => ((#ortho x, #nntm x), #fea x)) sel2
   in
-    (symweight,tacfea)
+    (symweight,tacnnfea)
   end
 
 (* -------------------------------------------------------------------------
    Main function
    ------------------------------------------------------------------------- *)
 
-fun main_tactictoe ((thmdata,tacdata),tnno) goal =
+fun main_tactictoe (thmdata,tacdata) tnno goal =
   let
     val _ = hidef QUse.use infix_file
     (* preselection *)
@@ -76,37 +76,25 @@ fun main_tactictoe ((thmdata,tacdata),tnno) goal =
       let val r = thmknn (thmsymweight,thmfeadict) n (fea_of_goal true g) in
         thm_cache := dadd (g,n) r (!thm_cache); r
       end
+    val metis_flag = is_tactic "metisTools.METIS_TAC []"
+    val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
+    val metis_nntm = 
+      if metis_flag 
+      then nntm_of_applyexp (extract_applyexp (extract_smlexp metis_stac))
+      else T
+      handle Interrupt => raise Interrupt | _ => T
     fun tacpred g =
       dfind g (!tac_cache) handle NotFound =>
-      (* 
-      if !thml_explo_flag then
-        let
-          val thmidl = thmpred (2 * !ttt_thmlarg_radius) g
-          val (thmidl1,thmidl2) = part_n (!ttt_thmlarg_radius) thmidl
-          val thmls2 = thmls_of_thmidl thmidl
-          val l = fea_of_goal true g
-          val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
-          val stacl1 = tacknn (tacsymweight,tacfea) (!ttt_presel_radius) l
-          val stacl2 = mk_sameorder_set String.compare (metis_stac :: stacl1)
-          val oistacl = inst_stacl (thmidl1,g) stacl2 
-          fun f (stac,istac) = 
-            if not (is_thmlarg_stac stac)
-            then (SOME istac, NONE)
-            else (SOME istac, Option.map fst (inst_stac (thmls2,g) stac))
-          val (stacl3,stacl4) = split (map f oistacl)
-          val istacl = List.mapPartial I (interleave 2 stacl3 stacl4)
-        in
-          tac_cache := dadd g istacl (!tac_cache); istacl
-        end
-      else
-      *)
         let
           val thmidl = thmpred (!ttt_thmlarg_radius) g
           val l = fea_of_goal true g
-          val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
-          val stacl1 = tacknn (tacsymweight,tacfea) (!ttt_presel_radius) l
-          val stacl2 = mk_sameorder_set String.compare (metis_stac :: stacl1)
-          val istacl = inst_stacl (thmidl,g) stacl2    
+          val stacnnl1 = tacnnknn (tacsymweight,tacfea) (!ttt_presel_radius) l
+          val stacnnl2 = 
+            if metis_flag then 
+              mk_sameorder_set (fst_compare String.compare) 
+                ((metis_stac, metis_nntm) :: stacnnl1)
+            else stacnnl1
+          val istacl = inst_stacnnl (thmidl,g) stacnnl2 
         in
           tac_cache := dadd g istacl (!tac_cache); istacl
         end
@@ -152,7 +140,8 @@ fun tactictoe_aux goal =
         ttt_tacdata_cache := dadd cthyl tacdata_aux (!ttt_tacdata_cache);
         tacdata_aux
       end
-    val (proofstatus,_) = hidef (main_tactictoe ((thmdata,tacdata),NONE)) goal
+    val (proofstatus,_) = hidef 
+      (main_tactictoe (thmdata,tacdata) (NONE,NONE)) goal
     val (staco,tac) = read_status proofstatus
   in
     tac

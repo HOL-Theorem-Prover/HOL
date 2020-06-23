@@ -24,8 +24,10 @@ include Abbrev
   val precomp_embed : tnn -> term -> term  
   val nntm_of_gl : goal list -> term
   val mask_unknown : tnn * int -> term -> term
-  val mask_unknown_inferdim : tnn -> term -> term
-  val nntm_of_gexp : (term list * term) * smlParser.applyexp -> term
+  val mask_unknown_value : tnn -> term -> term
+  val mask_unknown_policy : tnn -> term -> term
+  val nntm_of_applyexp : smlParser.applyexp -> term
+  val nntm_of_gstactm : (term list * term) * term -> term
 
   (* examples *)
   val stats_tnnex : tnnex -> string
@@ -41,7 +43,8 @@ include Abbrev
 
   (* inference *)
   val infer_tnn : tnn -> term list -> (term * real list) list 
- 
+  val infer_tnn_basic : tnn -> term -> real 
+
   (* training *)
   val train_tnn : schedule -> tnn -> tnnex * tnnex -> tnn 
   

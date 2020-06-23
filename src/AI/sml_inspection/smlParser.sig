@@ -22,10 +22,13 @@ sig
 
   (* sub expression *)
   val extract_smlexp : string -> smlexp
-  val extract_proofexp : string -> proofexp
+  
+  (* proof expression *)
+  val extract_proofexp : smlexp -> proofexp
   val size_of_proofexp : proofexp -> int
   val string_of_proofexp : proofexp -> string
 
   (* apply expression *)
-  val mk_applyexp : smlexp -> applyexp
+  val extract_applyexp : smlexp -> applyexp
+
 end

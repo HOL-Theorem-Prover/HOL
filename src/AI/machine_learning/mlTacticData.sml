@@ -20,8 +20,7 @@ type stac = string
 
 type call = 
   {
-  stac : stac, ortho : stac, 
-  time : real,
+  stac : stac, ortho : stac, nntm : term, time : real,
   ig : goal, ogl : goal list,
   loc : ((string * int) * string), 
   fea : fea
@@ -31,13 +30,12 @@ fun call_compare (c1,c2) =
   cpl_compare String.compare goal_compare 
     ((#ortho c1,#ig c1),(#ortho c2,#ig c2))
 
-fun call_to_tuple {stac,ortho,time,ig,ogl,loc,fea} =
-  (stac,ortho,time,ig,ogl,loc,fea)
+fun call_to_tuple {stac,ortho,nntm,time,ig,ogl,loc,fea} =
+  ((stac,ortho,nntm,time),(ig,ogl),loc,fea)
 
-fun tuple_to_call (stac,ortho,time,ig,ogl,loc,fea) =
+fun tuple_to_call ((stac,ortho,nntm,time),(ig,ogl),loc,fea) =
   {
-  stac = stac, ortho = ortho,
-  time = time,
+  stac = stac, ortho = ortho, nntm = nntm, time = time,
   ig = ig, ogl = ogl,
   loc = loc, 
   fea = fea
@@ -102,17 +100,6 @@ fun export_goal file (goal as (asl,w)) = export_terml file (w :: asl)
 
 open HOLsexp
 
-fun pair7_encode (a,b,c,d,e,f,g) =
-    pair_encode(a,pair_encode(b,pair_encode(c,
-      pair_encode(d,pair_encode(e,pair_encode(f,g)))))) o
-    (fn (u1,u2,u3,u4,u5,u6,u7) => (u1,(u2,(u3,(u4,(u5,(u6,u7)))))))
-
-fun pair7_decode (a,b,c,d,e,f,g) =
-    Option.map (fn (u1,(u2,(u3,(u4,(u5,(u6,u7)))))) => 
-       (u1,u2,u3,u4,u5,u6,u7)) o
-    pair_decode(a,pair_decode(b,pair_decode(c,
-      pair_decode(d,pair_decode(e,pair_decode(f,g))))))
-
 fun enc_goal enc_tm (asl,w) = list_encode enc_tm (w::asl)
 fun dec_goal dec_tm =
   Option.map (fn (w,asl) => (asl,w)) o
@@ -126,12 +113,9 @@ val dec_fea = int_decode
 
 fun enc_call enc_tm =
   tagged_encode "call" (
-    pair7_encode (
-      String,
-      String,
-      String o Real.toString,
-      enc_goal enc_tm,
-      enc_goal_list enc_tm,
+    pair4_encode (
+      pair4_encode (String, String, enc_tm, String o Real.toString),
+      pair_encode (enc_goal enc_tm, enc_goal_list enc_tm),
       pair_encode (pair_encode (String, Integer), String),
       list_encode enc_fea
     )
@@ -139,13 +123,11 @@ fun enc_call enc_tm =
 
 fun dec_call dec_tm =
   tagged_decode "call" (
-    pair7_decode (
-      string_decode,
-      string_decode,
-      Option.mapPartial Real.fromString o string_decode,
-      dec_goal dec_tm,
-      dec_goal_list dec_tm,
-      pair_decode (pair_decode (string_decode,int_decode), string_decode),
+    pair4_decode (
+      pair4_decode (string_decode, string_decode, dec_tm,
+                    Option.mapPartial Real.fromString o string_decode),
+      pair_decode (dec_goal dec_tm, dec_goal_list dec_tm),
+      pair_decode (pair_decode (string_decode, int_decode), string_decode),
       list_decode dec_fea
     )
   )
@@ -153,7 +135,10 @@ fun dec_call dec_tm =
 fun enc_calls calls =
   let
     fun goal_terms ((asl,w),A) = (w::asl) @ A
-    fun call_terms (call,A) = List.foldl goal_terms A (#4 call :: #5 call)
+    fun call_terms (call,A) = 
+      List.foldl goal_terms A (
+        ([],#3 (#1 call)) :: fst (#2 call) :: snd (#2 call)
+      )
     val all_terms = List.foldl call_terms [] calls
     val ed = {named_terms = [], unnamed_terms = [], named_types = [],
               unnamed_types = [], theorems = []}
@@ -172,7 +157,7 @@ fun dec_calls t =
   let
     val a = {with_strings = fn _ => (), with_stridty = fn _ => ()}
     val (sdo, calls) =
-        valOf (tagged_decode "calls" (pair_decode(dec_sdata a, SOME)) t)
+      valOf (tagged_decode "calls" (pair_decode (dec_sdata a, SOME)) t)
     val dec_tm = Option.map (read_term sdo) o string_decode
   in
     list_decode (dec_call dec_tm) calls
@@ -374,13 +359,13 @@ fun ttt_import_value thmid =
    ------------------------------------------------------------------------ *)
 
 fun enc_policy enc_tm = 
-  pair_encode (pair_encode (enc_goal enc_tm, String), enc_bool)
+  pair_encode (pair_encode (enc_goal enc_tm, enc_tm), enc_bool)
 fun dec_policy dec_tm = 
-  pair_decode (pair_decode (dec_goal dec_tm, string_decode), dec_bool)
+  pair_decode (pair_decode (dec_goal dec_tm, dec_tm), dec_bool)
 
 fun enc_policyl policyl =
   let
-    fun policy_terms ((((asl,w),_),_),A) = (w::asl) @ A
+    fun policy_terms ((((asl,w),tm),_),A) = (tm :: w :: asl) @ A
     val all_terms = List.foldl policy_terms [] policyl
     val ed = {named_terms = [], unnamed_terms = [], named_types = [],
               unnamed_types = [], theorems = []}
@@ -401,7 +386,7 @@ fun dec_policyl t =
     let
       val a = {with_strings = fn _ => (), with_stridty = fn _ => ()}
       val (sdo, policy_data) =
-          valOf (tagged_decode "policyl" (pair_decode (dec_sdata a, SOME)) t)
+        valOf (tagged_decode "policyl" (pair_decode (dec_sdata a, SOME)) t)
       val dec_tm = Option.map (read_term sdo) o string_decode
     in
       list_decode (dec_policy dec_tm) policy_data

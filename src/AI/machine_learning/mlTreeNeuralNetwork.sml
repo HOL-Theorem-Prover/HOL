@@ -261,6 +261,9 @@ fun infer_tnn tnn tml =
     map_assoc f tml
   end
 
+fun infer_tnn_basic tnn tm =
+  singleton_of_list (snd (singleton_of_list (infer_tnn tnn [tm])))
+
 fun precomp_embed tnn tm =
   let
     val fpdict = fp_tnn tnn (order_subtm [tm])
@@ -532,8 +535,15 @@ fun mask_unknown (tnn,dim) tm =
       (List.tabulate (dim,fn _ => 0.0)), alpha)
   end
 
-fun mask_unknown_inferdim tnn tm = 
+fun mask_unknown_value tnn tm = 
   let val dim = dimin_nn (dfind vhead tnn) in
+    mask_unknown (tnn,dim) tm 
+  end
+
+val phead = mk_var ("head_policy", rpt_fun_type 2 alpha)
+
+fun mask_unknown_policy tnn tm = 
+  let val dim = dimin_nn (dfind phead tnn) in
     mask_unknown (tnn,dim) tm 
   end
 
@@ -542,7 +552,7 @@ fun mask_unknown_inferdim tnn tm =
    ------------------------------------------------------------------------- *)
 
 val apply_cat = mk_var ("apply_cat", rpt_fun_type 3 alpha);
-val gexp_cat = mk_var ("gexp_cat", rpt_fun_type 3 alpha);
+val gstactm_cat = mk_var ("gstactm_cat", rpt_fun_type 3 alpha);
 
 fun nntm_of_applyexp e = case e of
     ApplyExp (e1,e2) => 
@@ -554,10 +564,8 @@ fun nntm_of_applyexp e = case e of
     else mk_var (escape ("sml." ^ s), alpha)
     )
 
-val phead = mk_var ("head_policy", rpt_fun_type 2 alpha)
-
-fun nntm_of_gexp (g,e) =
-  mk_comb (phead, mk_binop gexp_cat (nntm_of_goal g, nntm_of_applyexp e))
+fun nntm_of_gstactm (g,stactm) =
+  mk_comb (phead, mk_binop gstactm_cat (nntm_of_goal g, stactm))
 
 (* -------------------------------------------------------------------------
    Toy example: learning to guess if a term contains the variable "x"

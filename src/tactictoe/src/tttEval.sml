@@ -43,7 +43,7 @@ fun extract_policy tree =
     fun not_fresh x = case #stacstatus x of StacFresh => false | _ => true
     fun g (goal,(stacv,stacn)) = 
       if is_win stacv orelse (stacn < 10 andalso not_fresh stacv)
-      then SOME ((goal,#astac stacv), is_win stacv)
+      then SOME ((goal, #stactm stacv), is_win stacv)
       else NONE
   in
     List.mapPartial g stacrecl
@@ -60,7 +60,7 @@ fun print_status r = case r of
 
 fun print_time (name,t) = print_endline (name ^ " time: " ^ rts_round 6 t)
 
-fun ttt_eval ((thmdata,tacdata),tnno) goal =
+fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
   let
     val thmid = current_theory () ^ "_" ^ its (!savestate_level - 1)
     val b = !hide_flag
@@ -68,8 +68,9 @@ fun ttt_eval ((thmdata,tacdata),tnno) goal =
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
     val ((status,tree),t) = add_time 
-      (main_tactictoe ((thmdata,tacdata),tnno)) goal
-    val _ = if not (isSome tnno) then (* only one loop for now *)
+      (main_tactictoe (thmdata,tacdata) (vnno,pnno)) goal
+    val _ = if not (isSome vnno) andalso not (isSome pnno) 
+      then
       (case status of Proof _ => 
         (
         ttt_export_value thmid (extract_value tree)
@@ -82,6 +83,7 @@ fun ttt_eval ((thmdata,tacdata),tnno) goal =
     print_status status;
     print_time ("ttt_eval",t);
     print_time ("tnn value",!reward_time);
+    print_time ("tnn policy",!reorder_time);
     print_time ("tactic pred",!tacpred_time);
     hide_flag := b
   end
@@ -183,12 +185,12 @@ aiLib.debug_flag := false;
 tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
-val _ = run_evalscript_thyl "june18-3" (true,NONE,30) thyl;
-val tnn_value = train_value 0.95 "value";
-
+val _ = run_evalscript_thyl "june19" (true,NONE,30) thyl;
 load "smlInfix"; open smlInfix; QUse.use tttSetup.infix_file;
 val tactictoe_thmlarg = ([] : thm list);
 val tnn_policy = train_policy 0.95 "policy";
+
+val tnn_value = train_value 0.95 "value";
 val _ = run_evalscript_thyl "june15_tnn" (true,SOME "value",30) thyl;
 *)
 
@@ -341,13 +343,8 @@ fun train_policy pct file =
       Interrupt | _ => (print_endline x; [])) filel 
     val preexl = List.concat exll
     val _ = print_endline (its (length preexl) ^ " policy examples")
-    val stacl1 = map (snd o fst) preexl
-    val stacl2 = mk_string_set stacl1
-    val _ = print_endline (its (length stacl2) ^ " unique tactics") 
-    val stacl3 = map_assoc (mk_applyexp o extract_smlexp) stacl2
-    val dparse = dnew String.compare stacl3    
-    fun f ((g,stac),b) = (nntm_of_gexp (g, dfind stac dparse), 
-                          if b then [1.0] else [0.0])
+    fun f ((g,stactm),b) = 
+      (nntm_of_gstactm (g,stactm), if b then [1.0] else [0.0])
     val exl = map (single o f) preexl
     val _ = print_endline "split train/test"
     val (train,test) = part_pct pct (shuffle exl)

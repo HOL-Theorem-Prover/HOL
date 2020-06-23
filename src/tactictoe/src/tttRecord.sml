@@ -95,10 +95,14 @@ fun write_info thy =
 fun record_tactic (tac,stac) g =
   let val ((gl,v),t) = add_time (timeout (!record_tactic_time) tac) g in
     incr n_tactic_replayed;
-    (if op_mem goal_eq g gl then () else
+    ( 
+    if op_mem goal_eq g gl then () else
     calls_glob := 
       {
-      stac = stac, ortho = stac, time = t,
+      stac = stac, 
+      ortho = stac,
+      nntm = T,
+      time = t,
       ig = g, ogl = gl, 
       loc = ((current_theory (), (!savestate_level) - 1), !name_glob),
       fea = fea_of_goal true g
@@ -126,7 +130,9 @@ fun wrap_proofexp e = case e of
 
 fun wrap_proof ostac =
   let
-    val proofexp = extract_proofexp ostac
+    val _ = if not (is_tactic ostac) then raise ERR "wrap_proof" "" else ()
+    val smlexp = extract_smlexp ostac
+    val proofexp = extract_proofexp smlexp
     val ntac = size_of_proofexp proofexp
     val _  = debug ("#tactics (proof): " ^ its ntac)
     val _  = n_tactic_parsed := (!n_tactic_parsed) + ntac
@@ -196,7 +202,8 @@ fun end_record_proof name g =
       if !record_ortho_flag
       then map (orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))) l1
       else l1
-    val newtacdata = foldl ttt_update_tacdata tacdata l2
+    val l3 = map update_nntm l2
+    val newtacdata = foldl ttt_update_tacdata tacdata l3
   in
     debug ("saving " ^ int_to_string (length l2) ^ " labels");
     tacdata_glob := newtacdata
