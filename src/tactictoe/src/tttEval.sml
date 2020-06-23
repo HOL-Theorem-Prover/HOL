@@ -15,6 +15,8 @@ open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "tttEval"
 
+type pvfiles = string option * string option
+val tnndir = HOLDIR ^ "/src/tactictoe/tnn"
 (* -------------------------------------------------------------------------
    Value examples
    ------------------------------------------------------------------------- *)
@@ -100,27 +102,32 @@ fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
 fun sreflect_real s r = ("val _ = " ^ s ^ " := " ^ rts (!r) ^ ";")
 fun sreflect_flag s flag = ("val _ = " ^ s ^ " := " ^ bts (!flag) ^ ";")
 
-fun write_evalscript tnno file =
+fun write_evalscript (vnno,pnno) file =
   let
     val file1 = mlquote (file ^ "_savestate")
     val file2 = mlquote (file ^ "_goal")
-    val tnndir = HOLDIR ^ "/src/tactictoe/tnn"
-    val file3o = Option.map (fn x => tnndir ^ "/" ^ x) tnno
+    val filevo = Option.map (fn x => tnndir ^ "/" ^ x) vnno
+    val filepo = Option.map (fn x => tnndir ^ "/" ^ x) pnno
     val sl =
     ["PolyML.SaveState.loadState " ^ file1 ^ ";",
      "val tactictoe_goal = mlTacticData.import_goal " ^ file2 ^ ";",
      "load " ^ mlquote "tttEval" ^ ";",
-     if isSome tnno 
-     then "val tactictoe_tnno = SOME (mlTreeNeuralNetwork.read_tnn " ^ 
-       mlquote (valOf file3o) ^ ");"
-     else "val tactictoe_tnno = NONE : mlTreeNeuralNetwork.tnn option ;",
+     if isSome filevo
+     then "val tactictoe_vnno = SOME (mlTreeNeuralNetwork.read_tnn " ^ 
+       mlquote (valOf filevo) ^ ");"
+     else "val tactictoe_vnno = NONE : mlTreeNeuralNetwork.tnn option ;",
+     if isSome filepo
+     then "val tactictoe_pnno = SOME (mlTreeNeuralNetwork.read_tnn " ^ 
+       mlquote (valOf filepo) ^ ");"
+     else "val tactictoe_pnno = NONE : mlTreeNeuralNetwork.tnn option ;",
      sreflect_real "tttSetup.ttt_search_time" ttt_search_time,
      sreflect_real "tttSetup.ttt_policy_coeff" ttt_policy_coeff,
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
      sreflect_flag "tttSetup.thml_explo_flag" thml_explo_flag,
      sreflect_flag "aiLib.debug_flag" debug_flag,
      "tttEval.ttt_eval " ^
-     "((!tttRecord.thmdata_glob, !tttRecord.tacdata_glob), tactictoe_tnno) " ^
+     "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^
+     "(tactictoe_vnno, tactictoe_pnno) " ^
      "tactictoe_goal;"]
   in
     writel (file ^ "_eval.sml") sl
@@ -134,9 +141,10 @@ fun run_evalscript dir tnno file =
   run_buildheap_nodep dir (file ^ "_eval.sml")
   )
 
-fun run_evalscript_thyl expname (b,tnno,ncore) thyl =
+fun run_evalscript_thyl expname (b,ncore) tnno thyl =
   let
-    val dir = ttt_eval_dir ^ "/" ^ expname ^ (if b then "" else "_tenth")
+    val dir = ttt_eval_dir ^ "/" ^ expname ^ 
+      (if b then "" else "_tenth")
     val _ = (mkDir_err ttt_eval_dir; mkDir_err dir)
     val thyl' = filter (fn x => not (mem x ["min","bool"])) thyl
     val pbl = map (fn x => tactictoe_dir ^ "/savestate/" ^ x ^ "_pbl") thyl'
@@ -145,7 +153,8 @@ fun run_evalscript_thyl expname (b,tnno,ncore) thyl =
     val filel1 = List.concat (map f pbl)
     val filel2 = if b then filel1 else one_in_n 10 0 filel1
     val _ = print_endline ("evaluation: " ^ its (length filel2) ^ " problems")
-    val (_,t) = add_time (parapp_queue ncore (run_evalscript dir tnno)) filel2
+    val (_,t) = add_time 
+      (parapp_queue ncore (run_evalscript dir tnno)) filel2
   in
     print_endline ("evaluation time: " ^ rts_round 6 t)
   end
@@ -185,13 +194,10 @@ aiLib.debug_flag := false;
 tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
-val _ = run_evalscript_thyl "june19" (true,NONE,30) thyl;
-load "smlInfix"; open smlInfix; QUse.use tttSetup.infix_file;
-val tactictoe_thmlarg = ([] : thm list);
-val tnn_policy = train_policy 0.95 "policy";
-
+val _ = run_evalscript_thyl "june23" (true,30) (NONE,NONE) thyl;
 val tnn_value = train_value 0.95 "value";
-val _ = run_evalscript_thyl "june15_tnn" (true,SOME "value",30) thyl;
+val tnn_policy = train_policy 0.95 "policy";
+val _ = run_evalscript_thyl "june23_tnn" (true,30) (SOME "value", SOME "policy") thyl;
 *)
 
 (* ------------------------------------------------------------------------
@@ -325,7 +331,6 @@ fun train_value pct file =
       [{ncore = 4, verbose = true,
        learning_rate = 0.02, batch_size = 16, nepoch = 100}];
     val tnn = train_tnn schedule randtnn (train,test)
-    val tnndir = HOLDIR ^ "/src/tactictoe/tnn"
     val acctrain = tnn_accuracy tnn train
     val acctest = tnn_accuracy tnn test 
   in
@@ -356,7 +361,6 @@ fun train_policy pct file =
       [{ncore = 4, verbose = true,
        learning_rate = 0.02, batch_size = 16, nepoch = 100}];
     val tnn = train_tnn schedule randtnn (train,test)
-    val tnndir = HOLDIR ^ "/src/tactictoe/tnn"
     val acctrain = tnn_accuracy tnn train
     val acctest = tnn_accuracy tnn test 
   in
