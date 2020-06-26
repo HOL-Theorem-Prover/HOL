@@ -4351,6 +4351,42 @@ val INJ_INR = store_thm(
   ``(!x. x IN s ==> INR x IN t) ==> INJ INR s t``,
   SIMP_TAC (srw_ss()) [INJ_DEF])
 
+val disjUNION_def = new_definition(
+  "disjUNION_def",
+  “disjUNION A B = {INL a | a IN A} UNION {INR b | b IN B}”);
+
+val _ = set_mapped_fixity {fixity = Infixl 500,
+                           term_name = "disjUNION",
+                           tok = "<+>"}
+val _ = set_mapped_fixity {fixity = Infixl 500,
+                           term_name = "disjUNION",
+                           tok = UTF8.chr 0x2294}
+
+Theorem disjUNION_UNIV:
+  univ(:'a + 'b) = UNIV <+> UNIV
+Proof
+  simp[EXTENSION, disjUNION_def] >> METIS_TAC[sumTheory.sum_CASES]
+QED
+
+Theorem IN_disjUNION[simp]:
+  (INL a IN A <+> B <=> a IN A) /\ (INR b IN A <+> B <=> b IN B)
+Proof
+  simp[disjUNION_def]
+QED
+
+Theorem CARD_disjUNION[simp]:
+  FINITE (s:'a set) /\ FINITE (t:'b set) ==>
+  CARD (s <+> t) = CARD s + CARD t
+Proof
+  simp[disjUNION_def] >> strip_tac >>
+  Q.MATCH_ABBREV_TAC ‘CARD (X UNION Y) = _’ >>
+  ‘X = IMAGE INL s /\ Y = IMAGE INR t’ by simp[Abbr‘X’, Abbr‘Y’, EXTENSION] >>
+  simp[CARD_UNION_EQN, CARD_INJ_IMAGE] >>
+  ‘X INTER Y = {}’ suffices_by simp[Abbr‘X’, Abbr‘Y’] >>
+  simp[EXTENSION, sumTheory.FORALL_SUM]
+QED
+
+
 (* ====================================================================== *)
 (* Set complements.                                                       *)
 (* ====================================================================== *)
