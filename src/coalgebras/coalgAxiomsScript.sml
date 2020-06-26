@@ -20,6 +20,7 @@ val _ = new_theory "coalgAxioms";
 
 val _ = app (ignore o hide) ["S", "W"]
 
+
 Definition restr_def:
   restr f s = \x. if x IN s then f x else ARB
 End
@@ -201,6 +202,12 @@ Definition system_def:
   (!a. a IN A ==> af a IN Fset A) /\ !a. a NOTIN A ==> af a = ARB
 End
 
+Theorem UNIV_system[simp]:
+  system (UNIV,af)
+Proof
+  simp[system_def, Fset_def]
+QED
+
 Theorem system_members:
   system (A,af) ==> !a b. a IN A /\ b IN setF (af a) ==> b IN A
 Proof
@@ -234,6 +241,13 @@ Proof
   drule map_CONG >> simp[mapID]
 QED
 
+Definition epi_def:
+  epi f ((A,af):'a system) ((B,bf):'b system) (:'c) <=>
+  hom f (A,af) (B,bf) /\
+  !C cf g h. hom g (B,bf) ((C,cf):'c system) /\ hom h (B,bf) (C,cf) /\
+             restr (g o f) A = restr (h o f) A ==> g = h
+End
+
 Definition iso_def:
   iso (A,af) (B,bf) <=>
      ?f g. hom f (A,af) (B,bf) /\ hom g (B,bf) (A,af) /\
@@ -251,21 +265,240 @@ Proof
 QED
 
 Theorem SURJ_homs_epi:
-  hom f (A,af) (B,bf) /\ SURJ f A B ==>
-  !C cf g h.
-    hom g (B,bf) (C,cf) /\ hom h (B,bf) (C,cf) /\
-    restr (g o f) A = restr (h o f) A ==>
-    g = h
+  hom f ((A,af):'a system) ((B,bf):'b system) /\ SURJ f A B ==>
+  epi f (A,af) (B,bf) (:'c)
 Proof
-  simp[SURJ_DEF, hom_def, FUN_EQ_THM] >> rw[] >>
+  simp[SURJ_DEF, hom_def, FUN_EQ_THM, epi_def] >> rw[] >>
   Cases_on ‘x IN B’ >> simp[] >>
   ‘?a. a IN A /\ f a = x’ by metis_tac[] >>
   fs[restr_def] >> metis_tac[]
 QED
 
+Definition Fpushout_def:
+  Fpushout ((A,af):'a system) ((B,bf):'b system) ((C,cf):'c system) f g
+           ((P,pf):'p system,i1,i2) (:'d)
+  <=>
+  hom f (A,af) (B,bf) /\ hom g (A,af) (C,cf) /\ hom i1 (B,bf) (P,pf) /\
+  hom i2 (C,cf) (P,pf) /\ restr (i1 o f) A = restr (i2 o g) A  /\
+  !Q qf j1 j2.
+    hom j1 (B,bf) ((Q,qf):'d system) /\ hom j2 (C,cf) (Q,qf) /\
+    restr (j1 o f) A = restr (j2 o g) A ==>
+    ?!u. hom u (P,pf) (Q,qf) /\
+         restr (u o i1) B = j1 /\
+         restr (u o i2) C = j2
+End
+
+Theorem restr_restr_o[simp]:
+  restr (f o restr g A) A = restr (f o g) A
+Proof
+  simp[restr_def, FUN_EQ_THM]
+QED
+
+Theorem oID[simp]:
+  f o (\x.x) = f /\ (\x.x) o f = f
+Proof
+  simp[FUN_EQ_THM]
+QED
+
+Theorem hom_implies_restr:
+  hom f (A,af) Bs ==> restr f A = f
+Proof
+  Cases_on ‘Bs’ >> simp[hom_def, restr_def, FUN_EQ_THM] >> metis_tac[]
+QED
+
+Theorem epi_Fpushout:
+  epi f (A,af) (B,bf) (:'c) <=>
+  Fpushout (A,af) (B,bf) (B,bf) f f ((B,bf),restr (\x.x) B,restr (\x.x) B) (:'c)
+Proof
+  simp[epi_def, Fpushout_def] >> Cases_on ‘hom f (A,af) (B,bf)’ >>
+  simp[] >> ‘system (A,af) /\ system (B,bf)’ by fs[hom_def] >> simp[hom_ID] >>
+  simp_tac (srw_ss() ++ boolSimps.CONJ_ss ++ SatisfySimps.SATISFY_ss)
+           [hom_implies_restr] >>
+  simp[EXISTS_UNIQUE_THM] >> metis_tac[]
+QED
+
+Definition shom_def:
+  shom f A B <=> (!a. a IN A ==> f a IN B) /\ !a. a NOTIN A ==> f a = ARB
+End
+
+Theorem hom_shom:
+  hom f (A,af) (B,bf) ==> shom f A B
+Proof
+  simp[hom_def, shom_def]
+QED
+
+Definition Spushout_def:
+  Spushout (A:'a set) (B:'b set) (C:'c set) f g (P:'p set,i1,i2) (:'d) <=>
+  shom f A B /\ shom g A C /\ shom i1 B P /\ shom i2 C P /\
+  restr (i1 o f) A = restr (i2 o g) A /\
+  !(Q:'d set) j1 j2.
+    shom j1 B Q /\ shom j2 C Q /\ restr (j1 o f) A = restr (j2 o g) A ==>
+    ?!u. shom u P Q /\ restr (u o i1) B = j1 /\ restr (u o i2) C = j2
+End
+
+Definition SPO_pimg_def[simp]:
+  SPO_pimg A f g (INL x) = PREIMAGE f {x} INTER A /\
+  SPO_pimg A f g (INR y) = PREIMAGE g {y} INTER A
+End
+
+Definition SPOr_def:
+  SPOr A f g = EQC (\x y. (?a. a IN A /\ x = INL (f a) /\ y = INR (g a)) \/
+                          x = y)
+End
+
+Definition SPO_def:
+  SPO A B C f g =
+    (partition (SPOr A f g) (B <+> C),
+     restr (\b. { a | a IN B <+> C /\ SPOr A f g (INL b) a }) B,
+     restr (\c. { a | a IN B <+> C /\ SPOr A f g (INR c) a }) C)
+End
+
+Theorem restr_cases:
+  restr f A x = g x <=> x IN A /\ f x = g x \/  x NOTIN A /\ g x = ARB
+Proof
+  simp[restr_def] >> metis_tac[]
+QED
+
+Theorem symmetric_SPOr[simp]:
+  symmetric (SPOr A f g)
+Proof
+  rw[SPOr_def, symmetric_EQC]
+QED
+
+Theorem transitive_SPOr[simp]:
+  transitive (SPOr A f g)
+Proof
+  simp[SPOr_def, transitive_EQC]
+QED
+
+Theorem SPOr_lemma0[local]:
+  restr (j1 o f) A = restr (j2 o g) A ==>
+  !s1 s2. SPOr A f g s1 s2 ==>
+          (!b1 b2. s1 = INL b1 /\ s2 = INL b2 ==> j1 b1 = j1 b2) /\
+          (!b c. s1 = INL b /\ s2 = INR c ==> j1 b = j2 c) /\
+          (!b c. s1 = INR c /\ s2 = INL b ==> j1 b = j2 c) /\
+          (!c1 c2. s1 = INR c1 /\ s2 = INR c2 ==> j2 c1 = j2 c2)
+Proof
+  strip_tac >> simp[SPOr_def] >> Induct_on ‘EQC’ >> rw[]
+  >- (fs[restr_def, FUN_EQ_THM] >> metis_tac[])
+  >- (rename [‘EQC _ (INL b1) s’, ‘EQC _ s (INL b2)’] >>
+      Cases_on ‘s’ >> fs[])
+  >- (rename [‘EQC _ (INL b) s’, ‘EQC _ s (INR c)’] >>
+      Cases_on ‘s’ >> fs[])
+  >- (rename [‘EQC _ (INR c) s’, ‘EQC _ s (INL b)’] >>
+      Cases_on ‘s’ >> fs[])
+  >- (rename [‘EQC _ (INR c1) s’, ‘EQC _ s (INR c2)’] >>
+      Cases_on ‘s’ >> fs[])
+QED
+
+Theorem SPOr_lemma =
+  SPOr_lemma0 |> UNDISCH
+              |> SIMP_RULE (srw_ss()) [IMP_CONJ_THM, PULL_FORALL]
+              |> SIMP_RULE (srw_ss()) [FORALL_AND_THM]
+              |> DISCH_ALL
+
+Theorem SPOr_REFL[simp]:
+  SPOr A f g x x
+Proof
+  simp[SPOr_def]
+QED
+
+Theorem Spushout_quotient:
+  shom f A B ∧ shom g A C ==>
+  Spushout (A:'a set) (B:'b set) (C:'c set) f g (SPO A B C f g) (:'d)
+Proof
+  simp[Spushout_def, SPO_def] >> rw[]
+  >- (simp[shom_def] >> reverse conj_tac >- simp[restr_def] >>
+      dsimp[restr_applies, partition_def] >> csimp[] >>
+      qx_gen_tac ‘b’ >> strip_tac >> qexists_tac ‘INL b’ >> simp[] >>
+      simp[EXTENSION] >>
+      ‘symmetric (SPOr A f g)’ suffices_by metis_tac[symmetric_def] >>
+      simp[])
+  >- (simp[shom_def] >> reverse conj_tac >- simp[restr_def] >>
+      dsimp[restr_applies, partition_def] >> csimp[] >>
+      qx_gen_tac ‘c’ >> strip_tac >>
+      qexists_tac ‘INR c’ >> simp[EXTENSION] >>
+      ‘symmetric (SPOr A f g)’ suffices_by metis_tac[symmetric_def] >>
+      simp[])
+  >- (simp[Once FUN_EQ_THM, restr_def] >> qx_gen_tac ‘a’ >> rw[]
+      >- (simp[Once EXTENSION] >> qx_gen_tac ‘s’ >>
+          ‘SPOr A f g (INL (f a)) (INR (g a)) /\ symmetric (SPOr A f g) /\
+           transitive (SPOr A f g)’
+            suffices_by metis_tac[symmetric_def, transitive_def] >>
+          simp[] >> simp[SPOr_def] >> irule EQC_R >> simp[] >> metis_tac[]) >>
+      metis_tac[shom_def]) >>
+  ONCE_REWRITE_TAC[FUN_EQ_THM] >>
+  simp[o_ABS_R] >> simp[EXISTS_UNIQUE_ALT] >>
+  qexists_tac ‘restr (\p. case some a. INL a IN p of
+                            SOME a => j1 a
+                          | NONE => j2 (CHOICE {b | INR b IN p}))
+               (partition (SPOr A f g) (B <+> C))’ >>
+  qx_gen_tac ‘u’ >>
+  reverse (Cases_on ‘shom u (partition (SPOr A f g) (B <+> C)) Q’)
+  >- (simp[] >> pop_assum mp_tac >> simp[shom_def] >> strip_tac
+      >- (ONCE_REWRITE_TAC [FUN_EQ_THM] >> simp[] >>
+          rename [‘a IN partition _ _’, ‘u a NOTIN Q’] >>
+          qexists_tac ‘a’ >> simp[restr_applies] >>
+          disch_then (assume_tac o SYM) >> fs[] >>
+          qpat_x_assum ‘_ NOTIN Q’ mp_tac >> simp[] >>
+          DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+          qpat_x_assum ‘_ IN partition _ _’ mp_tac >>
+          simp[partition_def, sumTheory.EXISTS_SUM] >> strip_tac >> rw[]
+          >- metis_tac[shom_def]
+          >- metis_tac[SPOr_REFL]
+          >- metis_tac[shom_def] >>
+          DEEP_INTRO_TAC CHOICE_INTRO >> simp[] >> conj_tac
+          >- metis_tac[SPOr_REFL] >>
+          metis_tac[shom_def]) >>
+      ONCE_REWRITE_TAC [FUN_EQ_THM] >> simp[]>> rename [‘u a ≠ ARB’] >>
+      qexists_tac ‘a’ >> simp[restr_def]) >>
+  ONCE_REWRITE_TAC [FUN_EQ_THM] >> simp[restr_cases] >>
+  ‘(!b. b NOTIN B ==> j1 b = ARB) /\ (!c. c NOTIN C ==> j2 c = ARB) /\
+   (!p. p NOTIN partition (SPOr A f g) (B <+> C) ==> u p = ARB)’
+    by metis_tac[shom_def] >> csimp[] >>
+  simp[DECIDE “p /\ q \/ ~p <=> q \/ ~p”] >>
+  simp[DECIDE “p \/ ~q <=> q ==> p”] >> eq_tac
+  >- (simp[partition_def, PULL_EXISTS, sumTheory.FORALL_SUM] >>
+      strip_tac >> qx_gen_tac ‘p’ >> conj_tac
+      >- (qx_gen_tac ‘b’>> rw[] >>
+          DEEP_INTRO_TAC optionTheory.some_intro >> reverse (rw[])
+          >- metis_tac[SPOr_REFL] >>
+          rename [‘SPOr _ _ _ (INL b1) (INL b2)’] >> Cases_on ‘b1 = b2’ >>
+          simp[] >> metis_tac[SPOr_lemma]) >>
+      qx_gen_tac ‘c’ >> rw[] >> DEEP_INTRO_TAC optionTheory.some_intro >> rw[]
+      >- metis_tac[SPOr_lemma] >>
+      DEEP_INTRO_TAC CHOICE_INTRO >> simp[] >>
+      metis_tac[SPOr_REFL, SPOr_lemma]) >>
+  simp[partition_def, PULL_EXISTS, sumTheory.FORALL_SUM, FORALL_AND_THM] >>
+  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) >> simp[] >>
+  disch_then (K ALL_TAC) >> rw[]
+  >- (DEEP_INTRO_TAC optionTheory.some_intro >> reverse (rw[])
+      >- metis_tac[SPOr_REFL] >> metis_tac[SPOr_lemma]) >>
+  DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >> conj_tac
+  >- metis_tac[SPOr_lemma] >> strip_tac >>
+  DEEP_INTRO_TAC CHOICE_INTRO >> simp[] >> metis_tac[SPOr_REFL, SPOr_lemma]
+QED
+
+(* Theorem Spushout_Fpushout_IMP:
+  hom f (A,af) (B,bf) /\ hom g (A,af) (C,cf) /\
+  Spushout A B C f g (P,i1,i2) (:'d) ==>
+  ?pf. Fpushout (A,af) (B,bf) (C,cf) f g ((P,pf),i1,i2) (:'d)
+Proof
+  simp[Fpushout_def, Spushout_def] >> rpt strip_tac >>
+  ‘shom f A B /\ shom g A C /\ shom i1 B P /\ shom i2 C P’
+    by metis_tac[hom_shom] >> simp[] >>
+  Cases_on ‘restr (i1 o f) A = restr (i2 o g) A’ >> simp[] >> reverse eq_tac
+  >- (rw[] >>
+      ‘shom j1 B Q /\ shom j2 C Q’ by metis_tac[hom_shom] >>
+      first_x_assum drule_all >>
+      CONV_TAC (LAND_CONV (SIMP_CONV (srw_ss()) [EXISTS_UNIQUE_THM])) >>
+      rw[]
+  reverse (Cases_on ‘hom f (A,af) (B,bf)’) >> simp[]
+  >- (Cases_on ‘shom f A B’ >> simp[] >>
+*)
+
 Theorem BIJ_homs_iso:
-  hom f (A,af) (B,bf) /\ BIJ f A B ==>
-  iso (A,af) (B,bf)
+  hom f (A,af) (B,bf) /\ BIJ f A B ==> iso (A,af) (B,bf)
 Proof
   simp[hom_def, iso_def, BIJ_IFF_INV] >> rw[] >>
   qexistsl_tac [‘f’, ‘restr g B’] >> simp[restr_applies] >>
@@ -455,12 +688,6 @@ Definition bquot_def:
       restr (\ap. mapF (eps R A) (af (CHOICE ap))) (partition R A))
 End
 
-Theorem CHOICE_INTRO:
-  (?x. x IN s) /\ (!x. x IN s ==> P x) ==> P (CHOICE s)
-Proof
-  rpt strip_tac >> first_x_assum irule >>
-  metis_tac[CHOICE_DEF, MEMBER_NOT_EMPTY]
-QED
 
 Theorem bquot_correct:
   system (A,af) /\ bisim R (A,af) (A,af) /\ R equiv_on A ==>
