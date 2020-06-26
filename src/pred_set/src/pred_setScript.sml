@@ -1397,6 +1397,13 @@ val CHOICE_EXISTS =
 val CHOICE_DEF = new_specification("CHOICE_DEF",["CHOICE"],CHOICE_EXISTS);
 val _ = ot0 "CHOICE" "choice"
 
+Theorem CHOICE_INTRO:
+  (?x. x IN s) /\ (!x. x IN s ==> P x) ==> P (CHOICE s)
+Proof
+  rpt strip_tac >> first_x_assum irule >>
+  METIS_TAC[CHOICE_DEF, MEMBER_NOT_EMPTY]
+QED
+
 (* ===================================================================== *)
 (* The REST of a set after removing a chosen element.                    *)
 (* ===================================================================== *)
