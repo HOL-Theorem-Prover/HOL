@@ -404,7 +404,7 @@ Proof
 QED
 
 Theorem Spushout_quotient:
-  shom f A B ∧ shom g A C ==>
+  shom f A B /\ shom g A C ==>
   Spushout (A:'a set) (B:'b set) (C:'c set) f g (SPO A B C f g) (:'d)
 Proof
   simp[Spushout_def, SPO_def] >> rw[]
@@ -450,7 +450,7 @@ Proof
           DEEP_INTRO_TAC CHOICE_INTRO >> simp[] >> conj_tac
           >- metis_tac[SPOr_REFL] >>
           metis_tac[shom_def]) >>
-      ONCE_REWRITE_TAC [FUN_EQ_THM] >> simp[]>> rename [‘u a ≠ ARB’] >>
+      ONCE_REWRITE_TAC [FUN_EQ_THM] >> simp[]>> rename [‘u a <> ARB’] >>
       qexists_tac ‘a’ >> simp[restr_def]) >>
   ONCE_REWRITE_TAC [FUN_EQ_THM] >> simp[restr_cases] >>
   ‘(!b. b NOTIN B ==> j1 b = ARB) /\ (!c. c NOTIN C ==> j2 c = ARB) /\
