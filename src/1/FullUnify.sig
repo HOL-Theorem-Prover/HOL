@@ -1,8 +1,9 @@
 signature FullUnify =
 sig
 
-
-  include Abbrev
+  type hol_type = Type.hol_type
+  type term = Term.term
+  type ('a,'b) subst = ('a,'b)Lib.subst
   structure Env : sig
      type t
      type 'a EM = (t,'a) optmonad.optmonad

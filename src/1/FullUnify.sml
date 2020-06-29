@@ -1,7 +1,7 @@
 structure FullUnify :> FullUnify =
 struct
 
-open HolKernel boolLib
+open HolKernel boolSyntax
 structure Env =
 struct
 
