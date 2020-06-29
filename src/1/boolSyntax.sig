@@ -3,6 +3,7 @@ sig
   type thm      = Thm.thm
   type term     = Term.term
   type hol_type = Type.hol_type
+  type goal     = term list * term
 
 
   (* Constants *)
@@ -184,6 +185,18 @@ sig
   val FVs : term -> term HOLset.set
   val FVLset : term list -> term HOLset.set
   val ES : term HOLset.set
+  val Teq : term -> bool  (* equals the T constant *)
+  val Feq : term -> bool  (* equals the F constant *)
+  val tml_eq : term list -> term list -> bool
+  val tmp_eq : term * term -> term * term -> bool
+  val goal_eq : goal -> goal -> bool
+  val goals_eq : goal list -> goal list -> bool
+  val tmem : term -> term list -> bool
+  val memt : term list -> term -> bool  (* flip of above *)
+  val tunion : term list -> term list -> term list
+  val tassoc : term -> (term * 'a) list -> 'a
+  val tmx_eq : term * ''a -> term * ''a -> bool
+  val xtm_eq : ''a * term -> ''a * term -> bool
 
   (* (Type) unification *)
   val gen_tyvar_sigma : hol_type list -> (hol_type,hol_type) Lib.subst
@@ -191,5 +204,7 @@ sig
   val type_unify : hol_type -> hol_type -> (hol_type, hol_type) Lib.subst
   val sep_type_unify : hol_type -> hol_type ->
               (hol_type, hol_type) Lib.subst * (hol_type, hol_type) Lib.subst
+
+
 
 end
