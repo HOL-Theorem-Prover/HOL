@@ -63,6 +63,7 @@ fun mktheta (com,argl,argr) =
         ("\226\135\146", math "Rightarrow"),
         ("\226\135\148", math "Leftrightarrow"),
         ("\226\136\128", math "forall"),
+        ("\226\136\131", math "exists"),
         ("\226\136\167", math "land" ),
         ("\226\136\168", math "lor"),
         ("\226\138\162", math "vdash"),
