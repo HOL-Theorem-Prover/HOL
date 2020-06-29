@@ -1104,4 +1104,6 @@ val dxrule_all = dall_prim mp_tac first_x_assum
 fun drule_all_then k = dall_prim k first_assum
 fun dxrule_all_then k = dall_prim k first_x_assum
 
-end (* Tactic *)
+open resolve_then
+
+end (* structure Tactic *)
