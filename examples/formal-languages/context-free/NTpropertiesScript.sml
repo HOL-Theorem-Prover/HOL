@@ -657,16 +657,50 @@ Proof
   metis_tac[APPEND_NIL, nullable_def, derives_common_prefix]
 QED
 
+Theorem derives_starting_NIL[simp]:
+  ∀x. derives G [] x ⇔ x = []
+Proof
+  simp[EQ_IMP_THM] >> Induct_on ‘RTC’
+
+Theorem follow_right_nullable:
+  ∀N0 N1 p0 p1 t. follow G N0 t ∧ derives G (p0 ++ [NT N0]) (p1 ++ [NT N1]) ⇒
+                  follow G N1 t
+Proof
+  Induct_on ‘RTC’ >> simp[APPEND_EQ_CONS] >> rw[] >>
+  fs[APPEND_EQ_APPEND, LEFT_AND_OVER_OR, DISJ_IMP_THM, FORALL_AND_THM] >>
+  rename [‘derive _ _ sf’] >>
+  ‘∃p' N'. sf = p' ++ [NT N']’
+    by (Cases_on ‘sf’ >> fs[]
+
+  simp[derive_def, APPEND_EQ_APPEND, APPEND_EQ_CONS] >> dsimp[] >> rw[]
+
+
 (* needs "right" induction principle for RTC *)
 Theorem followSet_follow:
   ∀a N. a ∈ followSet G (NT N) ⇒ follow G N a
 Proof
-  simp[followSet_def, PULL_EXISTS] >> Induct_on ‘RTC’ >> rw[]
+  simp[followSet_def, PULL_EXISTS] >>
+  Induct_on ‘RTC’ using relationTheory.RTC_STRONG_INDUCT_RIGHT1 >> rw[]
   >- (irule (CONJUNCT1 (SPEC_ALL follow_rules)) >>
       rename [‘N0 ∈ FDOM G.rules’, ‘pfx ++ [NT N1;TOK t] ++ sfx’] >>
       qexistsl_tac [‘N0’, ‘pfx’, ‘TOK t :: sfx’] >> simp[] >>
       full_simp_tac bool_ss [GSYM APPEND_ASSOC, APPEND]) >>
-  rename [‘sf1 ∈ᶠ G.rules ' N1’, ‘follow G N2 t’, ‘derive G sf1 sf2’] >>
+  fs[derive_def] >> rw[] >> qpat_x_assum ‘_ ++ _ = _ ++ _’ mp_tac >>
+  simp[APPEND_EQ_APPEND, APPEND_EQ_CONS, PULL_EXISTS] >> rw[] >> fs[] >> rw[] >>
+  fs[APPEND_EQ_CONS] >> rw[] >> fs[]
+  >- (rename [‘_ = p0 ++ [NT N0] ++ p1 ++ [NT N1; TOK t] ++ s’] >>
+      first_x_assum (
+        qspecl_then [‘t’, ‘N1’, ‘p0 ++ [NT N0] ++ p1’, ‘s’] mp_tac
+        )>> simp[] >> metis_tac[])
+  >- (rename [‘_ = p0 ++ [NT N0; NT N1; TOK t] ++ s’] >>
+      first_x_assum (qspecl_then [‘t’, ‘N1’, ‘p0 ++ [NT N0]’, ‘s’] mp_tac) >>
+      simp[] >> metis_tac[])
+  >- (rename [‘_ = p ++ [NT N1; TOK t] ++ s’, ‘[NT N2] ∈ᶠ G.rules ' N1’] >>
+      ‘follow G N1 t’ by metis_tac[] >>
+      qspecl_then [‘G’, ‘[]’, ‘N2’, ‘[]’, ‘N1’, ‘t’] mp_tac
+                  (follow_rules |> SPEC_ALL |> CONJUNCT2 |> Q.GEN ‘G’) >>
+      simp[])
+  >- follow_rules
 
 
 
