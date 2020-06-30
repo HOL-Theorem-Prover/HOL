@@ -468,11 +468,8 @@ End
 Theorem fFILTER_relates[transfer_rule]:
   (((=) |==> (=)) |==> FSET0 |==> FSET0) FILTER fFILTER
 Proof
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fFILTER_def)) >>
-  rpt (goal_assum (mp_tac o Uchain (GG funQ))) >>
-  rpt (goal_assum (mp_tac o Uchain (GG idQ))) >>
-  rpt (goal_assum (mp_tac o Uchain (GG fset0Q))) >>
+  INTRO HK_thm2 >> INTRO fFILTER_def >> rpt (INTRO funQ) >> rpt (INTRO idQ) >>
+  rpt (INTRO fset0Q) >>
   simp[FUN_REL_def, fsequiv_def, LIST_TO_SET_FILTER]
 QED
 
