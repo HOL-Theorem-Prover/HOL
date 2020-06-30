@@ -658,12 +658,20 @@ Proof
   metis_tac[APPEND_NIL, nullable_def, derives_common_prefix]
 QED
 
+(* needs "right" induction principle for RTC *)
 Theorem followSet_follow:
-  a ∈ followSet G (NT N) ⇒ follow G N a
+  ∀a N. a ∈ followSet G (NT N) ⇒ follow G N a
 Proof
-  simp[followSet_def, PULL_EXISTS] >> Induct_on ‘RTC’ >> rw[] >> cheat
-QED
+  simp[followSet_def, PULL_EXISTS] >> Induct_on ‘RTC’ >> rw[]
+  >- (irule (CONJUNCT1 (SPEC_ALL follow_rules)) >>
+      rename [‘N0 ∈ FDOM G.rules’, ‘pfx ++ [NT N1;TOK t] ++ sfx’] >>
+      qexistsl_tac [‘N0’, ‘pfx’, ‘TOK t :: sfx’] >> simp[] >>
+      full_simp_tac bool_ss [GSYM APPEND_ASSOC, APPEND]) >>
+  rename [‘sf1 ∈ᶠ G.rules ' N1’, ‘follow G N2 t’, ‘derive G sf1 sf2’] >>
 
+
+
+QED
 Definition augment_def:
   augment k v fm =
     case FLOOKUP fm k of
