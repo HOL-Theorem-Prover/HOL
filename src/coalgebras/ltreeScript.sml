@@ -1,7 +1,7 @@
 (*
   This file defines a rose tree data structure as a co-inductive
   datatype called 'a ltree, which is short for lazy tree. This
-  co-datatype has one constructor, called Branch, which has type:
+  co-datatype has one constructor, called Branch that has type:
 
       Branch : 'a -> 'a ltree llist -> 'a ltree
 
@@ -42,7 +42,7 @@ val repabs_fns = define_new_type_bijections
     tyax = ltree_tydef};
 
 
-(* prove basic theorems about rep and abs fucntions *)
+(* prove basic theorems about rep and abs functions *)
 
 val ltree_absrep = CONJUNCT1 repabs_fns
 val ltree_repabs = CONJUNCT2 repabs_fns
@@ -99,7 +99,7 @@ Proof
 QED
 
 
-(* define constructor and lemmas about it *)
+(* define the only constructor: Branch *)
 
 Definition Branch_rep_def:
   Branch_rep (x:'a) (xs:('a ltree_rep) llist) =
@@ -218,7 +218,7 @@ Proof
 QED
 
 
-(* ltree_CASE constant *)
+(* define ltree_CASE constant *)
 
 Definition dest_Branch_rep_def:
   dest_Branch_rep (l:'a ltree_rep) =
@@ -383,27 +383,7 @@ Proof
 QED
 
 
-(* misc *)
-
-Definition ltree_lookup_def:
-  ltree_lookup t [] = SOME t /\
-  ltree_lookup t (n::ns) =
-    ltree_CASE t (\a ts.
-       case LNTH n ts of
-       | NONE => NONE
-       | SOME t => ltree_lookup t ns)
-End
-
-Theorem ltree_lookup_def:
-  ltree_lookup t [] = SOME t /\
-  ltree_lookup (Branch a ts) (n::ns) =
-    case LNTH n ts of
-    | NONE => NONE
-    | SOME t => ltree_lookup t ns
-Proof
-  qspec_then `t` strip_assume_tac ltree_cases
-  \\ fs [ltree_lookup_def,ltree_CASE]
-QED
+(* lemmas for proving equivalences *)
 
 Definition ltree_el_def:
   ltree_el t [] =
@@ -424,6 +404,129 @@ Theorem ltree_el_def:
 Proof
   qspec_then `t` strip_assume_tac ltree_cases
   \\ fs [ltree_el_def,ltree_CASE]
+QED
+
+
+Theorem ltree_el_eqv:
+  !t1 t2. t1 = t2 <=> !path. ltree_el t1 path = ltree_el t2 path
+Proof
+  rw [] \\ eq_tac \\ rw []
+  \\ fs [GSYM ltree_rep_11,FUN_EQ_THM] \\ rw []
+  \\ pop_assum mp_tac
+  \\ qid_spec_tac `t1` \\ qid_spec_tac `t2`
+  \\ Induct_on `x` \\ rw []
+  \\ `ltree_rep_ok (ltree_rep t1) /\ ltree_rep_ok (ltree_rep t2)`
+        by fs [ltree_rep_ok_ltree_rep]
+  \\ qspec_then `t1` strip_assume_tac ltree_cases
+  \\ qspec_then `t2` strip_assume_tac ltree_cases
+  \\ rpt BasicProvers.var_eq_tac \\ simp [Branch]
+  \\ `ltree_rep_ok (Branch_rep a (LMAP ltree_rep ts)) /\
+      ltree_rep_ok (Branch_rep a' (LMAP ltree_rep ts'))` by
+   (rw [ltree_rep_ok_Branch_rep_every]
+    \\ rename [`LMAP _ ts2`]
+    \\ qspec_then `ts2` strip_assume_tac fromList_fromSeq \\ fs []
+    \\ fs [LMAP_fromList,every_fromList_EVERY,EVERY_MEM]
+    \\ fs [MEM_MAP,PULL_EXISTS])
+  \\ fs [ltree_repabs]
+  \\ simp [Branch_rep_def,LLENGTH_MAP]
+  \\ last_assum (qspec_then `[]` mp_tac)
+  \\ rewrite_tac [ltree_el_def] \\ fs [] \\ rw []
+  \\ Cases_on `LNTH h ts` \\ Cases_on `LNTH h ts'` \\ fs []
+  THEN1 (qspec_then `ts` strip_assume_tac fromList_fromSeq
+         \\ qspec_then `ts'` strip_assume_tac fromList_fromSeq
+         \\ rw [] \\ fs [LNTH_fromList])
+  THEN1 (qspec_then `ts` strip_assume_tac fromList_fromSeq
+         \\ qspec_then `ts'` strip_assume_tac fromList_fromSeq
+         \\ rw [] \\ fs [LNTH_fromList])
+  \\ last_x_assum match_mp_tac \\ rw []
+  \\ last_x_assum (qspec_then `h::path` mp_tac)
+  \\ fs [ltree_el_def]
+QED
+
+Definition ltree_rel_def:
+  ltree_rel R x y <=>
+    !path.
+      OPTREL (\x y. R (FST x) (FST y) /\ SND x = SND y)
+        (ltree_el x path) (ltree_el y path)
+End
+
+Theorem ltree_rel:
+  ltree_rel R (Branch a ts) (Branch b us) <=>
+  R a b /\ llist_rel (ltree_rel R) ts us
+Proof
+  fs [ltree_rel_def,llist_rel_def] \\ rw [] \\ eq_tac \\ rw []
+  THEN1 (first_x_assum (qspec_then `[]` mp_tac) \\ fs [ltree_el_def])
+  THEN1 (first_x_assum (qspec_then `[]` mp_tac) \\ fs [ltree_el_def])
+  THEN1 (first_x_assum (qspec_then `i::path` mp_tac) \\ fs [ltree_el_def])
+  \\ Cases_on `path` \\ fs [ltree_el_def]
+  \\ Cases_on `LNTH h ts` \\ fs []
+  \\ Cases_on `LNTH h us` \\ fs []
+  \\ qspec_then `ts` strip_assume_tac fromList_fromSeq
+  \\ qspec_then `us` strip_assume_tac fromList_fromSeq
+  \\ rw [] \\ fs [LNTH_fromList] \\ metis_tac []
+QED
+
+Theorem ltree_rel_eq:
+  ltree_rel (=) x y <=> x = y
+Proof
+  fs [ltree_rel_def,ltree_el_eqv] \\ eq_tac \\ rw []
+  \\ first_x_assum (qspec_then `path` mp_tac)
+  \\ Cases_on `ltree_el x path` \\ Cases_on `ltree_el y path` \\ fs []
+  \\ fs [UNCURRY]
+  \\ rename [`FST y = FST z`]
+  \\ Cases_on `y` \\ Cases_on `z` \\ fs []
+QED
+
+Theorem ltree_bisimulation:
+  !t1 t2.
+    t1 = t2 <=>
+    ?R. R t1 t2 /\
+        !a ts a' ts'.
+          R (Branch a ts) (Branch a' ts') ==>
+          a = a' /\ llist_rel R ts ts'
+Proof
+  rw [] \\ eq_tac \\ rw []
+  THEN1 (qexists_tac `(=)` \\ fs [Branch_11,llist_rel_def] \\ rw [] \\ fs [])
+  \\ simp [ltree_el_eqv]
+  \\ strip_tac
+  \\ last_x_assum mp_tac \\ qid_spec_tac `t1` \\ qid_spec_tac `t2`
+  \\ Induct_on `path` \\ rw []
+  \\ qspec_then `t1` strip_assume_tac ltree_cases
+  \\ qspec_then `t2` strip_assume_tac ltree_cases
+  \\ fs []
+  THEN1 (fs [ltree_el_def] \\ res_tac \\ fs [llist_rel_def])
+  \\ rw [] \\ fs [ltree_el_def]
+  \\ res_tac \\ rw []
+  \\ fs [llist_rel_def]
+  \\ pop_assum (qspec_then `h` mp_tac)
+  \\ Cases_on `LNTH h ts` \\ fs []
+  \\ Cases_on `LNTH h ts'` \\ fs []
+  \\ qspec_then `ts` strip_assume_tac fromList_fromSeq
+  \\ qspec_then `ts'` strip_assume_tac fromList_fromSeq
+  \\ rw [] \\ fs [LNTH_fromList]
+QED
+
+
+(* misc *)
+
+Definition ltree_lookup_def:
+  ltree_lookup t [] = SOME t /\
+  ltree_lookup t (n::ns) =
+    ltree_CASE t (\a ts.
+       case LNTH n ts of
+       | NONE => NONE
+       | SOME t => ltree_lookup t ns)
+End
+
+Theorem ltree_lookup_def:
+  ltree_lookup t [] = SOME t /\
+  ltree_lookup (Branch a ts) (n::ns) =
+    case LNTH n ts of
+    | NONE => NONE
+    | SOME t => ltree_lookup t ns
+Proof
+  qspec_then `t` strip_assume_tac ltree_cases
+  \\ fs [ltree_lookup_def,ltree_CASE]
 QED
 
 Definition subtrees_def:
@@ -466,105 +569,6 @@ Theorem ltree_map:
   ltree_map f (Branch a xs) = Branch (f a) (LMAP (ltree_map f) xs)
 Proof
   fs [ltree_map_def,ltree_unfold,ltree_CASE]
-QED
-
-Definition ltree_rel_def:
-  ltree_rel R x y <=>
-    !path.
-      OPTREL (\x y. R (FST x) (FST y) /\ SND x = SND y)
-        (ltree_el x path) (ltree_el y path)
-End
-
-Theorem ltree_rel:
-  ltree_rel R (Branch a ts) (Branch b us) <=>
-  R a b /\ llist_rel (ltree_rel R) ts us
-Proof
-  fs [ltree_rel_def,llist_rel_def] \\ rw [] \\ eq_tac \\ rw []
-  THEN1 (first_x_assum (qspec_then `[]` mp_tac) \\ fs [ltree_el_def])
-  THEN1 (first_x_assum (qspec_then `[]` mp_tac) \\ fs [ltree_el_def])
-  THEN1 (first_x_assum (qspec_then `i::path` mp_tac) \\ fs [ltree_el_def])
-  \\ Cases_on `path` \\ fs [ltree_el_def]
-  \\ Cases_on `LNTH h ts` \\ fs []
-  \\ Cases_on `LNTH h us` \\ fs []
-  \\ qspec_then `ts` strip_assume_tac fromList_fromSeq
-  \\ qspec_then `us` strip_assume_tac fromList_fromSeq
-  \\ rw [] \\ fs [LNTH_fromList] \\ metis_tac []
-QED
-
-Theorem ltree_el_eqv:
-  !t1 t2. t1 = t2 <=> !path. ltree_el t1 path = ltree_el t2 path
-Proof
-  rw [] \\ eq_tac \\ rw []
-  \\ fs [GSYM ltree_rep_11,FUN_EQ_THM] \\ rw []
-  \\ pop_assum mp_tac
-  \\ qid_spec_tac `t1` \\ qid_spec_tac `t2`
-  \\ Induct_on `x` \\ rw []
-  \\ `ltree_rep_ok (ltree_rep t1) /\ ltree_rep_ok (ltree_rep t2)`
-        by fs [ltree_rep_ok_ltree_rep]
-  \\ qspec_then `t1` strip_assume_tac ltree_cases
-  \\ qspec_then `t2` strip_assume_tac ltree_cases
-  \\ rpt BasicProvers.var_eq_tac \\ simp [Branch]
-  \\ `ltree_rep_ok (Branch_rep a (LMAP ltree_rep ts)) /\
-      ltree_rep_ok (Branch_rep a' (LMAP ltree_rep ts'))` by
-   (rw [ltree_rep_ok_Branch_rep_every]
-    \\ rename [`LMAP _ ts2`]
-    \\ qspec_then `ts2` strip_assume_tac fromList_fromSeq \\ fs []
-    \\ fs [LMAP_fromList,every_fromList_EVERY,EVERY_MEM]
-    \\ fs [MEM_MAP,PULL_EXISTS])
-  \\ fs [ltree_repabs]
-  \\ simp [Branch_rep_def,LLENGTH_MAP]
-  \\ last_assum (qspec_then `[]` mp_tac)
-  \\ rewrite_tac [ltree_el_def] \\ fs [] \\ rw []
-  \\ Cases_on `LNTH h ts` \\ Cases_on `LNTH h ts'` \\ fs []
-  THEN1 (qspec_then `ts` strip_assume_tac fromList_fromSeq
-         \\ qspec_then `ts'` strip_assume_tac fromList_fromSeq
-         \\ rw [] \\ fs [LNTH_fromList])
-  THEN1 (qspec_then `ts` strip_assume_tac fromList_fromSeq
-         \\ qspec_then `ts'` strip_assume_tac fromList_fromSeq
-         \\ rw [] \\ fs [LNTH_fromList])
-  \\ last_x_assum match_mp_tac \\ rw []
-  \\ last_x_assum (qspec_then `h::path` mp_tac)
-  \\ fs [ltree_el_def]
-QED
-
-Theorem ltree_rel_eq:
-  ltree_rel (=) x y <=> x = y
-Proof
-  fs [ltree_rel_def,ltree_el_eqv] \\ eq_tac \\ rw []
-  \\ first_x_assum (qspec_then `path` mp_tac)
-  \\ Cases_on `ltree_el x path` \\ Cases_on `ltree_el y path` \\ fs []
-  \\ fs [UNCURRY]
-  \\ rename [`FST y = FST z`]
-  \\ Cases_on `y` \\ Cases_on `z` \\ fs []
-QED
-
-Theorem ltree_bisimulation:
-  !t1 t2.
-    t1 = t2 <=>
-    ?R. R t1 t2 /\
-        !a ts a' ts'.
-          R (Branch a ts) (Branch a' ts') ==>
-          a = a' /\ llist_rel R ts ts'
-Proof
-  rw [] \\ eq_tac \\ rw []
-  THEN1 (qexists_tac `(=)` \\ fs [Branch_11,llist_rel_def] \\ rw [] \\ fs [])
-  \\ simp [ltree_el_eqv]
-  \\ strip_tac
-  \\ last_x_assum mp_tac \\ qid_spec_tac `t1` \\ qid_spec_tac `t2`
-  \\ Induct_on `path` \\ rw []
-  \\ qspec_then `t1` strip_assume_tac ltree_cases
-  \\ qspec_then `t2` strip_assume_tac ltree_cases
-  \\ fs []
-  THEN1 (fs [ltree_el_def] \\ res_tac \\ fs [llist_rel_def])
-  \\ rw [] \\ fs [ltree_el_def]
-  \\ res_tac \\ rw []
-  \\ fs [llist_rel_def]
-  \\ pop_assum (qspec_then `h` mp_tac)
-  \\ Cases_on `LNTH h ts` \\ fs []
-  \\ Cases_on `LNTH h ts'` \\ fs []
-  \\ qspec_then `ts` strip_assume_tac fromList_fromSeq
-  \\ qspec_then `ts'` strip_assume_tac fromList_fromSeq
-  \\ rw [] \\ fs [LNTH_fromList]
 QED
 
 Theorem ltree_map_id:
@@ -618,7 +622,7 @@ Proof
 QED
 
 
-(* register with TypeBase *)
+(* update TypeBase *)
 
 Theorem ltree_CASE_cong:
   !M M' f f'.
