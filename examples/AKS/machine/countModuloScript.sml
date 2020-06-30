@@ -13,8 +13,6 @@ val _ = new_theory "countModulo";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -71,29 +69,25 @@ val _ = monadsyntax.enable_monad "Count";
    Modular Arithmetic Operations:
    maddM_def           |- !m x y. maddM m x y = do z <- addM x y; modM z m od
 #  maddM_value         |- !m x y. valueOf (maddM m x y) = (x + y) MOD m
-#  maddM_steps         |- !m x y. stepsOf (maddM m x y) =
-                                  size (MAX x y) + if m = 0 then 0 else size (x + y) * size m
+#  maddM_steps         |- !m x y. stepsOf (maddM m x y) = size (MAX x y) + size (x + y) * size m
    maddM_steps_upper   |- !m x y. stepsOf (maddM m x y) <= size m + (1 + size m) * size (MAX x y)
    maddM_steps_bound   |- !m x y. stepsOf (maddM m x y) <= 3 * size m * size (MAX x y)
 
    msubM_def           |- !m x y. msubM m x y = do z <- subM x y; modM z m od
 #  msubM_value         |- !m x y. valueOf (msubM m x y) = (x - y) MOD m
-#  msubM_steps         |- !m x y. stepsOf (msubM m x y) =
-                                  size (MAX x y) + if m = 0 then 0 else size (x - y) * size m
+#  msubM_steps         |- !m x y. stepsOf (msubM m x y) = size (MAX x y) + size (x - y) * size m
    msubM_steps_upper   |- !m x y. stepsOf (msubM m x y) <= size m * size x + size (MAX x y)
    msubM_steps_bound   |- !m x y. stepsOf (msubM m x y) <= TWICE (size m) * size (MAX x y)
 
    mmulM_def           |- !m x y. mmulM m x y = do z <- mulM x y; modM z m od
 #  mmulM_value         |- !m x y. valueOf (mmulM m x y) = (x * y) MOD m
-#  mmulM_steps         |- !m x y. stepsOf (mmulM m x y) =
-                                  size x * size y + if m = 0 then 0 else size (x * y) * size m
+#  mmulM_steps         |- !m x y. stepsOf (mmulM m x y) = size x * size y + size (x * y) * size m
    mmulM_steps_upper   |- !m x y. stepsOf (mmulM m x y) <= size m * (size x + size y) + size x * size y
    mmulM_steps_bound   |- !m x y. stepsOf (mmulM m x y) <= 3 * size m * size x * size y
 
    msqM_def            |- !m x. msqM m x = mmulM m x x
 #  msqM_value          |- !m x. valueOf (msqM m x) = SQ x MOD m
-#  msqM_steps          |- !m x. stepsOf (msqM m x) =
-                                SQ (size x) + if m = 0 then 0 else size (SQ x) * size m
+#  msqM_steps          |- !m x. stepsOf (msqM m x) = SQ (size x) + size (SQ x) * size m
    msqM_steps_upper    |- !m x. stepsOf (msqM m x) <= TWICE (size m * size x) + size x ** 2
    msqM_steps_bound    |- !m x. stepsOf (msqM m x) <= 3 * (size m * size x ** 2)
 
@@ -110,7 +104,7 @@ val _ = monadsyntax.enable_monad "Count";
                                         b' <- msqM m b;
                                         n' <- halfM n;
                                         r <- mexpM m b' n';
-                                        ifM (evenM n) (idM r) (mmulM m b r)
+                                        ifM (evenM n) (return r) (mmulM m b r)
                                       od
                                   od
 #  mexpM_value         |- !m b n. valueOf (mexpM m b n) = b ** n MOD m
@@ -192,28 +186,24 @@ val maddM_value = store_thm(
   ``!m x y. valueOf(maddM m x y) = (x + y) MOD m``,
   simp[maddM_def]);
 
-(* Theorem: stepsOf(maddM m x y) =
-            size (MAX x y) + (if m = 0 then 0 else size (x + y) * size m) *)
+(* Theorem: stepsOf(maddM m x y) = size (MAX x y) + size (x + y) * size m *)
 (* Proof:
      stepsOf(maddM m x y)
-   = stepsOf(addM x y) + stepsOf(modM (x + y) m)                    by maddM_def
-   = size (MAX x y) + (if m = 0 then 0 else size (x + y) * size m)  by size_max
+   = stepsOf(addM x y) + stepsOf(modM (x + y) m)     by maddM_def
+   = size (MAX x y) + (size (x + y) * size m)        by size_max, modM_steps
 *)
 val maddM_steps = store_thm(
   "maddM_steps[simp]",
-  ``!m x y. stepsOf(maddM m x y) =
-           size (MAX x y) + (if m = 0 then 0 else size (x + y) * size m)``,
+  ``!m x y. stepsOf(maddM m x y) = size (MAX x y) + size (x + y) * size m``,
   simp[maddM_def, size_max]);
 
 (* Theorem: stepsOf(maddM m x y) <= size m + (1 + size m) * size (MAX x y) *)
 (* Proof:
       stepsOf(maddM m x y)
-    = size (MAX x y) + (if m = 0 then 0 else size (x + y) * size m)
-                                                         by maddM_steps
-   <= size (MAX x y) + size (x + y) * size m             by arithmetic
+    = size (MAX x y) + size (x + y) * size m             by maddM_steps
    <= size (MAX x y) + (1 + size (MAX x y)) * size m     by size_add_upper
-    = k + (1 + k) * size m        where k = size (MAX x y)
-    = size m + (1 + size m) * k
+    = t + (1 + t) * size m        where t = size (MAX x y)
+    = size m + (1 + size m) * t                          by arithmetic
 *)
 val maddM_steps_upper = store_thm(
   "maddM_steps_upper",
@@ -222,13 +212,10 @@ val maddM_steps_upper = store_thm(
   assume_tac maddM_steps >>
   first_x_assum (qspecl_then [`m`, `x`, `y`] strip_assume_tac) >>
   qabbrev_tac `t = size (MAX x y)` >>
-  `(t + if m = 0 then 0 else size (x + y) * size m) <= size m + (1 + size m) * t` by
-  ((Cases_on `m = 0` >> simp[]) >>
   `size (x + y) <= 1 + t` by rw[size_add_upper, Abbr`t`] >>
   `t + size m * size (x + y) <= t + size m * (1 + t)` by rw[] >>
   `t + size m * (1 + t) = t + size m + t * size m` by rw[] >>
   `t + size m + t * size m = size m + (1 + size m) * t` by rw[] >>
-  decide_tac) >>
   decide_tac);
 
 (* Theorem: stepsOf(maddM m x y) <= 3 * size m * size (MAX x y) *)
@@ -275,25 +262,21 @@ val msubM_value = store_thm(
   ``!m x y. valueOf(msubM m x y) = (x - y) MOD m``,
   simp[msubM_def]);
 
-(* Theorem: stepsOf(msubM m x y) =
-            size (MAX x y) + (if m = 0 then 0 else size (x - y) * size m) *)
+(* Theorem: stepsOf(msubM m x y) = size (MAX x y) + size (x - y) * size m *)
 (* Proof:
      stepsOf(msubM m x y)
-   = stepsOf(subM x y) + stepsOf(modM (x - y) m)                     by msubM_def
-   = size (MAX x y) + (if m = 0 then 0 else size (x - y) * size m)   by size_max
+   = stepsOf(subM x y) + stepsOf(modM (x - y) m) by msubM_def
+   = size (MAX x y) + size (x - y) * size m      by size_max, modM_steps
 *)
 val msubM_steps = store_thm(
   "msubM_steps[simp]",
-  ``!m x y. stepsOf(msubM m x y) =
-           size (MAX x y) + (if m = 0 then 0 else size (x - y) * size m)``,
+  ``!m x y. stepsOf(msubM m x y) = size (MAX x y) + size (x - y) * size m``,
   simp[msubM_def, size_max]);
 
 (* Theorem: stepsOf(msubM m x y) <= size m * size x + size (MAX x y) *)
 (* Proof:
       stepsOf(msubM m x y)
-    = size (MAX x y) + (if m = 0 then 0 else size (x - y) * size m)
-                                                  by msubM_steps
-   <= size (MAX x y) + size (x - y) * size m      by arithmetic
+    = size (MAX x y) + size (x - y) * size m      by msubM_steps
    <= size (MAX x y) + size x * size m            by size_monotone_le
 *)
 val msubM_steps_upper = store_thm(
@@ -303,10 +286,7 @@ val msubM_steps_upper = store_thm(
   assume_tac msubM_steps >>
   last_x_assum (qspecl_then [`m`, `x`, `y`] strip_assume_tac) >>
   qabbrev_tac `t = size (MAX x y)` >>
-  `(t + if m = 0 then 0 else size (x - y) * size m) <= size m * size x + t` by
-  ((Cases_on `m = 0` >> simp[]) >>
-  rw[size_monotone_le]) >>
-  decide_tac);
+  rw[size_monotone_le]);
 
 (* Theorem: stepsOf(msubM m x y) <= 2 * size m * size (MAX x y) *)
 (* Proof:
@@ -351,25 +331,21 @@ val mmulM_value = store_thm(
   ``!m x y. valueOf(mmulM m x y) = (x * y) MOD m``,
   simp[mmulM_def]);
 
-(* Theorem: stepsOf(mmulM m x y) =
-            (size x) * (size y) + (if m = 0 then 0 else size (x * y) * size m) *)
+(* Theorem: stepsOf(mmulM m x y) = (size x) * (size y) + size (x * y) * size m *)
 (* Proof:
      stepsOf(mmulM m x y)
    = stepsOf(mulM x y) + stepsOf(modM (x * y) m)   by mmulM_def
-   = (size x) * (size y) + (if m = 0 then 0 else size (x * y) * size m)
+   = (size x) * (size y) + size (x * y) * size m      by multM_steps, modM_steps
 *)
 val mmulM_steps = store_thm(
   "mmulM_steps[simp]",
-  ``!m x y. stepsOf(mmulM m x y) =
-           (size x) * (size y) + (if m = 0 then 0 else size (x * y) * size m)``,
+  ``!m x y. stepsOf(mmulM m x y) = (size x) * (size y) + size (x * y) * size m``,
   simp[mmulM_def]);
 
 (* Theorem: stepsOf(mmulM m x y) <= size m * size x + size (MAX x y) *)
 (* Proof:
       stepsOf(mmulM m x y)
-    = (size x) * (size y) + (if m = 0 then 0 else size (x * y) * size m)
-                                                        by mmulM_steps
-   <= (size x) (size y) + size (x * y) * size m         by arithmetic
+   <= (size x) (size y) + size (x * y) * size m         by mmulM_steps
    <= (size x) (size y) + (size x + size y) * size m    by size_mult_upper
 *)
 val mmulM_steps_upper = store_thm(
@@ -381,10 +357,7 @@ val mmulM_steps_upper = store_thm(
   qabbrev_tac `sx = size x` >>
   qabbrev_tac `sy = size y` >>
   qabbrev_tac `sm = size m` >>
-  `(sx * sy + if m = 0 then 0 else size (x * y) * sm) <= sm * (sx + sy) + sx * sy` by
-  ((Cases_on `m = 0` >> simp[]) >>
-  rw[size_mult_upper, Abbr`sx`, Abbr`sy`]) >>
-  decide_tac);
+  rw[size_mult_upper, Abbr`sx`, Abbr`sy`]);
 
 (* Theorem: stepsOf(mmulM m x y) <= 3 * size m * size x * size y *)
 (* Proof:
@@ -431,9 +404,7 @@ val msqM_value = save_thm("msqM_value[simp]",
 val msqM_steps = save_thm("msqM_steps[simp]",
     mmulM_steps |> SPEC ``m:num`` |> SPEC ``x:num`` |> SPEC ``x:num``
                 |> REWRITE_RULE [GSYM msqM_def] |> GEN ``x:num`` |> GEN ``m:num``);
-(* val msqM_steps = |- !m x. stepsOf (msqM m x) =
-       SQ (size x) + if m = 0 then 0 else size (SQ x) * size m: thm
-*)
+(* val msqM_steps = |- !m x. stepsOf (msqM m x) = SQ (size x) + size (SQ x) * size m: thm *)
 
 val msqM_steps_upper = save_thm("msqM_steps_upper",
     mmulM_steps_upper |> SPEC ``m:num`` |> SPEC ``x:num`` |> SPEC ``x:num``
@@ -494,7 +465,7 @@ val mexpM_def = tDefine "mexpM" `
                  b' <- msqM m b;
                  n' <- halfM n;
                  r  <- mexpM m b' n';
-                 ifM (evenM n) (idM r) (mmulM m b r);
+                 ifM (evenM n) (return r) (mmulM m b r);
               od
       od
 `(WF_REL_TAC `measure (\(m,b,n). n)` >> simp[]);
@@ -532,7 +503,7 @@ val mexpM_value = store_thm(
           stepsOf (halfM n) +
           stepsOf (mexpM m ((b * b) MOD m) (HALF n)) +
           stepsOf (evenM n) +
-          if EVEN n then stepsOf (idM ((b * b) ** (HALF n) MOD m))
+          if EVEN n then stepsOf (return ((b * b) ** (HALF n) MOD m))
                     else stepsOf (mmulM m b ((b * b) ** (HALF n) MOD m))
    = 2 * size m + size n + if m <= 1 \/ n = 0 then 0
      else (size b) ** 2 + size (b * b) * size m +

@@ -7,7 +7,7 @@ open intrealTheory realLib wordsLib
 
 val () = new_theory "binary_ieee"
 val _ = ParseExtras.temp_loose_equality()
-val _ = diminish_srw_ss ["RMULCANON_ss","RMULRELNORM_ss"]
+val _ = diminish_srw_ss ["RMULCANON_ss","RMULRELNORM_ss","NORMEQ_ss"]
 
 local
    open String
@@ -3417,13 +3417,15 @@ val largest_is_top = Q.store_thm("largest_is_top",
         REAL_ARITH ``a * b + b = (a + 1r) * b``, realTheory.REAL_DOUBLE]
   )
 
-val largest_lt_threshold = Q.store_thm("largest_lt_threshold",
-  `largest (:'t # 'w) < threshold (:'t # 'w)`,
+Theorem largest_lt_threshold:
+  largest (:'t # 'w) < threshold (:'t # 'w)
+Proof
   rw [largest, threshold, realTheory.REAL_LT_RDIV, realTheory.REAL_LT_LMUL,
       realLib.REAL_ARITH ``a - b < a - c = c < b : real``,
       realTheory.REAL_LT_RDIV_EQ, realTheory.REAL_LT_LDIV_EQ,
-      realTheory.mult_ratl]
-  )
+      realTheory.mult_ratl] >>
+  fs[wordsTheory.dimword_def]
+QED
 
 val float_tests = Q.store_thm("float_tests",
    `(!s e f.

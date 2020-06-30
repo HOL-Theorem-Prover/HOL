@@ -1,7 +1,6 @@
 open HolKernel boolLib Parse bossLib
 
 open vbgsetTheory vbgnatsTheory
-open lcsymtacs
 open boolSimps
 
 val _ = new_theory "ordinal"

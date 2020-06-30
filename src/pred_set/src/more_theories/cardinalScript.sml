@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib mesonLib
 
-open boolSimps pred_setTheory set_relationTheory lcsymtacs jrhUtils tautLib
+open boolSimps pred_setTheory set_relationTheory jrhUtils tautLib
 
 open prim_recTheory arithmeticTheory numTheory numLib pairTheory quotientTheory;
 open sumTheory ind_typeTheory wellorderTheory;
@@ -18,17 +18,7 @@ fun METIS ths tm = prove(tm,METIS_TAC ths);
 val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
 
-fun SET_TAC L =
-    POP_ASSUM_LIST(K ALL_TAC) THEN REPEAT COND_CASES_TAC THEN
-    REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
-    SING_DEF] L) THEN
-    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
-      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
-      GSPECIFICATION, IN_DEF, EXISTS_PROD] THEN METIS_TAC [];
-
 fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
-fun SET_RULE tm = prove(tm,SET_TAC []);
-fun ASM_SET_TAC L = REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC L;
 
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 
@@ -1522,13 +1512,17 @@ val FINITE_FINITE_BIGUNIONS = store_thm ("FINITE_FINITE_BIGUNIONS",
   SIMP_TAC std_ss [FINITE_UNION, FINITE_EMPTY, FINITE_INSERT] THEN MESON_TAC[]);
 
 (* old name IMP_CONJ seems to be a conv function *)
-val CONJ_EQ_IMP = store_thm ("CONJ_EQ_IMP",
-  ``!p q. p /\ q ==> r <=> p ==> q ==> r``,
-  REWRITE_TAC [AND_IMP_INTRO]);
+Theorem CONJ_EQ_IMP :
+    !p q r. p /\ q ==> r <=> p ==> q ==> r
+Proof
+    REWRITE_TAC [AND_IMP_INTRO]
+QED
 
-val IMP_CONJ_ALT = store_thm ("IMP_CONJ_ALT",
-  ``!p q. p /\ q ==> r <=> q ==> p ==> r``,
-  METIS_TAC [AND_IMP_INTRO]);
+Theorem IMP_CONJ_ALT :
+    !p q r. p /\ q ==> r <=> q ==> p ==> r
+Proof
+    METIS_TAC [AND_IMP_INTRO]
+QED
 
 val LT_SUC_LE = store_thm ("LT_SUC_LE",
  ``!m n. (m < SUC n) <=> (m <= n)``,
@@ -1839,50 +1833,6 @@ val num_FINITE_AVOID = store_thm ("num_FINITE_AVOID",
 val num_INFINITE = store_thm ("num_INFINITE",
  ``INFINITE univ(:num)``,
   MESON_TAC[num_FINITE_AVOID, IN_UNIV]);
-
-(* ------------------------------------------------------------------------- *)
-(* Relational form is often more useful.                                     *)
-(* ------------------------------------------------------------------------- *)
-
-val _ = set_fixity "HAS_SIZE" (Infix(NONASSOC, 450));
-
-val HAS_SIZE = new_definition ("HAS_SIZE",
- ``s HAS_SIZE n <=> FINITE s /\ (CARD s = n)``);
-
-val HAS_SIZE_CARD = store_thm ("HAS_SIZE_CARD",
-``!s n. s HAS_SIZE n ==> (CARD s = n)``,
-  SIMP_TAC std_ss [HAS_SIZE]);
-
-Theorem HAS_SIZE_0:
-   !(s:'a->bool). s HAS_SIZE 0:num <=> (s = {})
-Proof
-  simp[HAS_SIZE, EQ_IMP_THM] THEN
-  ‘!s. FINITE s ==> (CARD s = 0 ==> s = {})’ suffices_by metis_tac[] >>
-  Induct_on ‘FINITE’ >> simp[]
-QED
-
-val HAS_SIZE_SUC = store_thm ("HAS_SIZE_SUC",
- ``!(s:'a->bool) n. s HAS_SIZE (SUC n) <=>
-   ~(s = {}) /\ !a. a IN s ==> (s DELETE a) HAS_SIZE n``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[HAS_SIZE] THEN
-  ASM_CASES_TAC ``s:'a->bool = {}`` THEN
-  ASM_REWRITE_TAC[CARD_DEF, FINITE_EMPTY, FINITE_INSERT,
-  NOT_IN_EMPTY, SUC_NOT] THEN REWRITE_TAC[FINITE_DELETE] THEN
-  ASM_CASES_TAC ``FINITE(s:'a->bool)`` THEN
-  RW_TAC std_ss[NOT_FORALL_THM, MEMBER_NOT_EMPTY] THEN
-  EQ_TAC THEN REPEAT STRIP_TAC THENL
-  [ASM_SIMP_TAC std_ss [CARD_DELETE],
-  KNOW_TAC ``?x. x IN s`` THENL
-  [FULL_SIMP_TAC std_ss [MEMBER_NOT_EMPTY], ALL_TAC] THEN
-  DISCH_THEN(X_CHOOSE_TAC ``a:'a``) THEN ASSUME_TAC CARD_INSERT THEN
-  POP_ASSUM (MP_TAC o Q.SPEC `s DELETE a`) THEN
-  FULL_SIMP_TAC std_ss [FINITE_DELETE] THEN STRIP_TAC THEN
-  POP_ASSUM (MP_TAC o Q.SPEC `a`) THEN
-  FULL_SIMP_TAC std_ss [INSERT_DELETE] THEN ASM_REWRITE_TAC[IN_DELETE]]);
-
-val FINITE_HAS_SIZE = store_thm ("FINITE_HAS_SIZE",
- ``!s. FINITE s <=> s HAS_SIZE CARD s``,
-  REWRITE_TAC[HAS_SIZE]);
 
 (* ------------------------------------------------------------------------- *)
 (* This is often more useful as a rewrite.                                   *)

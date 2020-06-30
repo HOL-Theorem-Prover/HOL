@@ -23,7 +23,10 @@ sig
     ('c * 'd -> order) ->
     ('e * 'f -> order) ->
     ('a * 'c * 'e) * ('b * 'd * 'f) -> order
+  val fst_compare : ('a * 'b -> 'c) -> ('a * 'd) * ('b * 'e) -> 'c
+  val snd_compare : ('a * 'b -> 'c) -> ('d * 'a) * ('e * 'b) -> 'c
 
+  val term_compare_exact : term * term -> order
   val goal_compare : goal * goal -> order
   val lbl_compare : lbl * lbl -> order
   val compare_rmin : (('a * real) * ('a * real)) -> order
@@ -48,6 +51,8 @@ sig
   val cmd_in_dir : string -> string -> unit
   val exists_file : string -> bool
   val remove_file : string -> unit
+  val clean_dir : string -> unit
+  val clean_rec_dir : string -> unit
 
   (* dictionnary *)
   val dfind  : 'a -> ('a, 'b) Redblackmap.dict -> 'b
@@ -163,7 +168,8 @@ sig
   val writel : string -> string list -> unit
   val writel_path : string -> string -> string list -> unit
   val debug_flag  : bool ref
-  val debug_in_dir : string -> string -> string -> unit
+  val debug : string -> unit
+  val debugf : string -> ('a -> string) -> 'a -> unit
   val stream_to_string :
     string -> (TextIO.outstream -> unit) -> string list
   val write_texgraph :
@@ -225,6 +231,7 @@ sig
   val rename_allvar : term -> term
   val all_bvar : term -> term list
   val strip_type : hol_type -> (hol_type list * hol_type)
+  val strip_type_n : int -> hol_type -> (hol_type list * hol_type)
   val has_boolty : term -> bool
   val only_concl : thm -> term
   val list_mk_binop : term -> term list -> term
@@ -233,10 +240,5 @@ sig
 
   (* thread *)
   val interruptkill : Thread.thread -> unit
-
-  (* neural network units *)
-  val oper_compare : (term * int) * (term * int) -> order
-  val operl_of : term -> (term * int) list
-
 
 end

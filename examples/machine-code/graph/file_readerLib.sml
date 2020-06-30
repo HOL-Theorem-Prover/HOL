@@ -85,6 +85,7 @@ fun format_line sec_name = let
     not (String.isPrefix "addi" s3) andalso
     not (String.isPrefix "sd" s3) andalso
     not (String.isPrefix "sw" s3) andalso
+    not (String.isPrefix "lw" s3) andalso
     not (String.isPrefix "ld" s3) andalso
     not (String.isPrefix "lbu" s3) andalso
     ((String.isPrefix "bl" s3 andalso not (String.isPrefix "bls" s3)

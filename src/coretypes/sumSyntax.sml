@@ -15,7 +15,7 @@ fun dest_sum ty =
       SOME {Tyop = "sum", Thy = "sum", Args = [ty1, ty2]} => (ty1, ty2)
     | other => raise ERR "dest_sum" "not a sum type"
 
-val strip_sum = strip_binop (total dest_sum)
+val strip_sum = strip_binop dest_sum
 val spine_sum = spine_binop (total dest_sum)
 val list_mk_sum = end_itlist (curry mk_sum)
 

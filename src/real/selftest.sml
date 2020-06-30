@@ -1,5 +1,6 @@
 open HolKernel boolLib simpLib Parse realSimps
 
+open bossLib
 open testutils
 
 val s = SIMP_CONV (bossLib.std_ss ++ REAL_REDUCE_ss) []
@@ -75,7 +76,8 @@ fun nftest (r as (n,c,t1,t2)) =
       tprint (n ^ ": " ^ term_to_string t1);
       require_msg (check t2) (pr t2) test (t1,t2)
     end
-val simp = SIMP_CONV (BasicProvers.srw_ss()) []
+fun simpl ths = SIMP_CONV (BasicProvers.srw_ss()) ths
+val simp = simpl []
 val _ = List.app nftest [
       ("MULCANON01", REALMULCANON, “x:real * y * x”, “x pow 2 * y”),
       ("MULCANON02", REALMULCANON, “x:real * y * x * 2”, “2 * (x pow 2 * y)”),
@@ -102,7 +104,20 @@ val _ = List.app nftest [
       ("MULCANON15", REALMULCANON, “inv (2 pow x) * z * 3 * 2 pow x”,
        “3 * z:real”),
       ("MULCANON16", REALMULCANON, “inv (2 pow x) * z * 3”,
-       “3 * (z * inv 2 pow x)”),
+       “3 * (z * inv (2 pow x))”),
+      ("MULCANON17", REALMULCANON, “4 * (inv 2 * z)”, “2r * z”),
+      ("MULCANON18", REALMULCANON,
+       “2 * (inv 3 * z * 2 * inv 10)”, “(2r/15) * z”),
+      ("MULCANON19", REALMULCANON, “2 * (inv 3 * z * 6 * inv 4)”, “z:real”),
+      ("MULCANON21", REALMULCANON, “-z * x: real”, “-(x * z:real)”),
+      ("MULCANON22", REALMULCANON, “2 * (-inv 3 * z * 6 * inv 4)”, “-z:real”),
+      ("MULCANON23", REALMULCANON,
+       “(2/3) * (z * y:real)”, “(2/3) * (y * z:real)”),
+      ("MULCANON24", REALMULCANON,
+       “2 pow x * y pow 2 * 2 pow x * inv y”, “y * (2 pow x) pow 2”),
+      ("MULCANON25", REALMULCANON,
+       “x * y * (2 pow b) pow 2 * inv 2 pow b”, “x * y * 2 pow b”),
+      ("MULCANON26", REALMULCANON, “2 * x * inv 2 pow 2”, “1/2 * x:real”),
       ("MULRELNORM01", simp,
        “z <> 0 ⇒ 2r * z pow 2 * inv yy = 5 * z pow 2 * inv y * a”,
        “z <> 0 ⇒ 2 * inv yy = 5 * (a * inv y)”),
@@ -121,8 +136,50 @@ val _ = List.app nftest [
        “0 < x ==> 3 * x pow 2 <= x”, “0 < x ==> 3 * x <= 1r”),
       ("MULRELNORM07", simp,
        “0 < x ==> 3 * x pow 2 <= inv x”, “0 < x ==> 3 * x pow 3 <= 1r”),
+      ("MULRELNORM08", simp, “2 * x <= inv 2 * y * z”, “4r * x <= y * z”),
+      ("MULRELNORM09", simp, “2 * x <= 1/2 * (y * z:real)”, “4r * x <= y * z”),
+      ("MULRELNORM10", simp,
+       “3/4 * x <= 5/6 * (y * z:real)”, “9r * x <= 10 * (y * z)”),
+      ("MULRELNORM11", simp, “0r < x ==> x <= x * y”, “0r < x ==> 1 <= y”),
+      ("MULRELNORM12", simpl [ASSUME “x <> 0r”, ASSUME “x < 0r”,
+                              ASSUME “x < 1r”],
+       “inv x < 1r”, “T”),
+      ("MULRELNORM13", simp, “x <> 0 /\ x < 0 ==> inv x < 1r”,
+       “x <> 0 /\ x < 0 ==> x < 1”),
+      ("MULRELNORM14", simp, “x <> 0 /\ 0 < x ==> inv x < 1r”,
+       “x <> 0 /\ 0 < x ==> 1 < x”),
+      ("MULRELNORM15", simp, “2r * x = 1/2 * z”, “4 * x = z”),
       ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
        “3 * x + x * y + 16”)
     ]
+
+val simpc = SIMP_CONV (srw_ss() ++ ARITH_ss ++ REAL_ARITH_ss)
+val _ = shouldfail {
+      checkexn = (fn UNCHANGED => true | _ => false),
+      printarg =
+      fn _ => "simp w/o nat d.p. but with real d.p. leaves input unchanged",
+      printresult = thm_to_string,
+      testfn = simpc [Excl "NUM_ARITH_DP"]
+    } “4n < x ==> 2 < x”
+val _ = shouldfail {
+      checkexn = (fn UNCHANGED => true | _ => false),
+      printarg =
+      fn _ => "simp with nat d.p. but w/o real d.p. leaves input unchanged",
+      printresult = thm_to_string,
+      testfn = simpc [Excl "REAL_ARITH_DP"]
+    } “4r < x ==> 2 < x”
+
+val _ = tprint "Removing nat d.p. still lets real d.p. work"
+val _ = require_msg (check_result (aconv “bool$T”))
+                    term_to_string
+                    (rhs o concl o simpc [Excl "NUM_ARITH_DP"])
+                    “4r < x ==> 2 < x”
+val _ = tprint "Removing real d.p. still lets nat d.p. work"
+val _ = require_msg (check_result (aconv “bool$T”))
+                    term_to_string
+                    (rhs o concl o simpc [Excl "REAL_ARITH_DP"])
+                    “4n < x ==> 2 < x”
+
+
 
 val _ = Process.exit Process.success

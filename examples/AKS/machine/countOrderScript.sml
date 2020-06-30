@@ -13,8 +13,6 @@ val _ = new_theory "countOrder";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -93,50 +91,56 @@ val _ = monadsyntax.enable_monad "Count";
                                 else if m1 then 1c
                                 else do n' <- modM n m; ordz_seekM m n' m 1 od
                               od
-#  ordz_seekM_value  |- !m n c j. valueOf (ordz_seekM m n c j) = ordz_seek m n c j
+#  ordz_seekM_value  |- !m n c j. 0 < m ==> valueOf (ordz_seekM m n c j) = ordz_seek m n c j
 #  ordzM_value       |- !m n. valueOf (ordzM m n) = ordz m n
 
    ordz_seekM_steps_thm
-                     |- !m n c j. stepsOf (ordz_seekM m n c j) = size m + if m = 0 then 0
-                                  else size (MAX c j) + size (c - j) + if c <= j then 0
+                     |- !m n c j. stepsOf (ordz_seekM m n c j) =
+                                  size (MAX c j) + size (c - j) +
+                                  if c <= j then 0
                                   else stepsOf (mexpM m n j) + size (n ** j MOD m) +
                                        if n ** j MOD m = 1 then 0
                                        else size j + stepsOf (ordz_seekM m n c (j + 1))
    ordz_seekM_steps_base
-                     |- !m n c j. stepsOf (ordz_seekM 0 n c j) = 1 /\
-                                  (1 < m ==> stepsOf (ordz_seekM m n c 0) =
-                                   if c = 0 then 2 + size m else 2 + TWICE (size c) + 3 * size m)
+                     |- !m n c. 1 < m ==> stepsOf (ordz_seekM m n c 0) =
+                                if c = 0 then 2 else 2 + TWICE (size c) + TWICE (size m)
    ordzM_steps_thm   |- !m n. stepsOf (ordzM m n) = TWICE (size m) + if m <= 1 then 0
                               else size n * size m + stepsOf (ordz_seekM m (n MOD m) m 1)
    ordz_seekM_steps_by_inc_loop
-                     |- !m n c. (let body j = if m = 0 then 1
-                                       else size m + size c + size (c - j) + stepsOf (mexpM m n j) +
-                                       size (n ** j MOD m) + if n ** j MOD m = 1 then 0 else size j
-                                  in !j. stepsOf (ordz_seekM m n c j) =
-                                         if c <= j then if m = 0 then 1 else 1 + size m + size j
-                                         else body j + if m = 0 \/ eq j then 0
-                                         else stepsOf (ordz_seekM m n c (j + 1)))
+                     |- !m n c. (let body j = size c + size (c - j) +
+                                              stepsOf (mexpM m n j) +
+                                              size (n ** j MOD m) + if n ** j MOD m = 1 then 0 else size j
+                                  in 0 < m ==>
+                                     !j. stepsOf (ordz_seekM m n c j) =
+                                         if c <= j then 1 + size j
+                                         else body j +
+                                              if n ** j MOD m = 1 then 0
+                                              else stepsOf (ordz_seekM m n c (j + 1)))
    ordz_seekM_body_upper
-                     |- !m n c. (let body j = if m = 0 then 1
-                                       else size m + size c + size (c - j) + stepsOf (mexpM m n j) +
-                                       size (n ** j MOD m) + if n ** j MOD m = 1 then 0 else size j
-                                  in !j. body j <= size j + TWICE (size m) + TWICE (size c) +
-                                                   17 * size j ** 2 * size m ** 2 * size (MAX n m) ** 2)
+                     |- !m n c. (let body j =
+                                     size c + size (c - j) + stepsOf (mexpM m n j) +
+                                     size (n ** j MOD m) + if n ** j MOD m = 1 then 0 else size j
+                                  in 0 < m ==>
+                                     !j. body j <= size j + size m + TWICE (size c) +
+                                                  17 * size j ** 2 * size m ** 2 * size (MAX n m) ** 2)
    ordz_seekM_body_bound
                      |- !m n c. (let body j = if m = 0 then 1
                                        else size m + size c + size (c - j) + stepsOf (mexpM m n j) +
                                        size (n ** j MOD m) + if n ** j MOD m = 1 then 0 else size j
-                                  in !j. body j <= 23 * size c * size j ** 2 *
+                                  in 0 < m ==>
+                                     !j. body j <= 22 * size c * size j ** 2 *
                                                    size m ** 2 * size (MAX n m) ** 2)
-   ordz_seekM_steps_upper  |- !m n c j. stepsOf (ordz_seekM m n c j) <=
-                                        1 + size m + size (MAX j c) +
-                                        23 * c * size c ** 3 * size m ** 2 * size (MAX n m) ** 2
-   ordz_seekM_steps_bound  |- !m n c j. stepsOf (ordz_seekM m n c j) <=
-                                        26 * MAX 1 c * size (MAX j c) * size m ** 2 *
+   ordz_seekM_steps_upper
+                     |- !m n c j. 0 < m ==> stepsOf (ordz_seekM m n c j) <=
+                                  1 + size (MAX j c) +
+                                  22 * c * size c ** 3 * size m ** 2 * size (MAX n m) ** 2
+   ordz_seekM_steps_bound
+                     |- !m n c j. 0 < m ==> stepsOf (ordz_seekM m n c j) <=
+                                        24 * MAX 1 c * size (MAX j c) * size m ** 2 *
                                              size (MAX n m) ** 2 * size c ** 3
    ordzM_steps_upper       |- !m n. stepsOf (ordzM m n) <=
-                                    1 + 4 * size m + size n * size m + 23 * m * size m ** 7
-   ordzM_steps_bound       |- !m n. stepsOf (ordzM m n) <= 29 * MAX 1 m * size n * size m ** 7
+                                    1 + 3 * size m + size n * size m + 22 * m * size m ** 7
+   ordzM_steps_bound       |- !m n. stepsOf (ordzM m n) <= 27 * MAX 1 m * size n * size m ** 7
    ordzM_steps_O_poly      |- !m. stepsOf o ordzM m IN O_poly 1
    ordzM_steps_big_O       |- !m. stepsOf o ordzM m IN big_O (\n. ulog n)
    ordzM_steps_O_swap      |- !n. stepsOf o combin$C ordzM n IN
@@ -204,7 +208,7 @@ To compute the ordz m n:
 > ordz_seek_def;
 val it = |- !n m j c.
           ordz_seek m n c j =
-          if m = 0 \/ c <= j then 0
+          if c <= j then 0
           else if n ** j MOD m = 1 then j
           else ordz_seek m n c (SUC j): thm
 *)
@@ -212,38 +216,34 @@ val it = |- !n m j c.
 (* Search for least index *)
 val ordz_seekM_def = tDefine "ordz_seekM" `
   ordz_seekM m n c j =
-       do
-         m0 <- zeroM m;
-         if m0 then return 0
+      do
+         b0 <- leqM c j;
+         if b0 then return 0
          else do
-                 b0 <- leqM c j;
-                 if b0 then return 0
-                 else do
-                        x <- mexpM m n j;
-                        x1 <- oneM x;
-                        if x1 then return j
-                        else do
-                               k <- incM j;
-                               ordz_seekM m n c k;
-                             od
-                      od
+                x <- mexpM m n j;
+                x1 <- oneM x;
+                if x1 then return j
+                else do
+                       k <- incM j;
+                       ordz_seekM m n c k;
+                     od
               od
-       od
+      od
 `(WF_REL_TAC `measure (\(m,n,c,j). c - j)` >> simp[]);
 
 (*
 > EVAL ``MAP (\n. ordz_seekM 7 n 7 1) [1 .. 6]``;  =
-      [(1,Count 37); (3,Count 264); (6,Count 682); (3,Count 271); (6,Count 763); (2,Count 152)]: thm
+      [(1,Count 34); (3,Count 255); (6,Count 664); (3,Count 262); (6,Count 745); (2,Count 146)]: thm
 > EVAL ``MAP (ordz 7) [1 .. 6]``; = [1; 3; 6; 3; 6; 2]: thm
 
 > EVAL ``MAP (\n. ordz_seekM 6 n 6 1) [1 .. 6]``; =
-      [(1,Count 37); (0,Count 579); (0,Count 524); (0,Count 653); (2,Count 146); (0,Count 470)]: thm
+      [(1,Count 34); (0,Count 561); (0,Count 506); (0,Count 635); (2,Count 140); (0,Count 452)]: thm
 > EVAL ``MAP (ordz 6) [1 .. 6]``; = [1; 0; 0; 0; 2; 0]: thm
 *)
 
 (*
 > ordz_seek_thm;
-val it = |- !m n. ordz_seek m n m 1 = if m <= 1 then 0 else ordz m n: thm
+val it = |- !m n. 1 < m ==> ordz_seek m n m 1 = ordz m n: thm
 
 when m = 0, ordz 0 n is undefined.
 when m = 1, ordz 1 n = 1 by ZN_order_mod_1, but ordz_seek 1 n c j = 0 by ordz_seek_1_n.
@@ -296,12 +296,11 @@ val ordzM_def = Define`
 > EVAL ``MAP (ordz 7) [1 .. 10]``;  = [1; 3; 6; 3; 6; 2; 0; 1; 3; 6]: thm
 *)
 
-(* Theorem: valueOf (ordz_seekM m n c j) = ordz_seek m n c j *)
+(* Theorem: 0 < m ==> (valueOf (ordz_seekM m n c j) = ordz_seek m n c j) *)
 (* Proof:
    By induction from ordz_seekM_def, this is to show:
-   (1) 0 = ordz_seek 0 n c j, true              by ordz_seek_0_n
-   (2) c <= j ==> 0 = ordz_seek m n c j, true   by ordz_seek_over
-   (3) m <> 0 /\ ~(c <= j) ==>
+   (1) c <= j ==> 0 = ordz_seek m n c j, true   by ordz_seek_over
+   (2) 0 < m /\ ~(c <= j) ==>
        valueOf (if n ** j MOD m = 1 then unit j
                 else do k <- incM j; ordz_seekM m n c k od) = ordz_seek m n c j
        If n ** j MOD m = 1, to show:
@@ -315,13 +314,11 @@ val ordzM_def = Define`
 *)
 val ordz_seekM_value = store_thm(
   "ordz_seekM_value[simp]",
-  ``!m n c j. valueOf (ordz_seekM m n c j) = ordz_seek m n c j``,
+  ``!m n c j. 0 < m ==> (valueOf (ordz_seekM m n c j) = ordz_seek m n c j)``,
   ho_match_mp_tac (theorem "ordz_seekM_ind") >>
   (rw[] >> rw[Once ordz_seekM_def]) >-
-  simp[ordz_seek_0_n] >>
-  (Cases_on `c <= j` >> simp[]) >-
   simp[ordz_seek_over] >>
-  `0 < m /\ j < c` by decide_tac >>
+  `j < c` by decide_tac >>
   (Cases_on `n ** j MOD m = 1` >> simp[]) >-
   metis_tac[ordz_seek_exit] >>
   metis_tac[ordz_seek_next, ADD1]);
@@ -352,61 +349,50 @@ val ordzM_value = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Theorem: stepsOf (ordz_seekM m n c j) =
-      size m + if m = 0 then 0
-     else size (MAX c j) + size (c - j) + if c <= j then 0
-     else stepsOf (mexpM m n j) + size (n ** j MOD m) +
-          if (n ** j MOD m = 1) then 0 else size j + stepsOf (ordz_seekM m n c (j + 1)) *)
+            size (MAX c j) + size (c - j) + if c <= j then 0
+            else stepsOf (mexpM m n j) + size (n ** j MOD m) +
+                 if (n ** j MOD m = 1) then 0 else size j + stepsOf (ordz_seekM m n c (j + 1)) *)
 (* Proof:
      stepsOf (ordz_seekM m n c j)
-   = stepsOf (zeroM m) + if m = 0 then 0
-     else stepsOf (leqM c j) + if c <= j then 0
+   = stepsOf (leqM c j) + if c <= j then 0
           else stepsOf (mexpM m n j) +
                stepsOf (oneM (n ** j MOD m)) + if (n ** j MOD m = 1) then 0
           else stepsOf (incM j) +
                stepsOf (ordz_seekM m n c (j + 1))    by ordz_seekM_def
-   = size m + if m = 0 then 0
-     else size (MAX c j) + size (c - j) + if c <= j then 0     by size_max
+   = size (MAX c j) + size (c - j) + if c <= j then 0     by size_max
      else stepsOf (mexpM m n j) + size (n ** j MOD m) +
           if (n ** j MOD m = 1) then 0 else size j + stepsOf (ordz_seekM m n c (j + 1))
 *)
 val ordz_seekM_steps_thm = store_thm(
   "ordz_seekM_steps_thm",
   ``!m n c j. stepsOf (ordz_seekM m n c j) =
-      size m + if m = 0 then 0
-     else size (MAX c j) + size (c - j) + if c <= j then 0
+     size (MAX c j) + size (c - j) + if c <= j then 0
      else stepsOf (mexpM m n j) + size (n ** j MOD m) +
           if (n ** j MOD m = 1) then 0 else size j + stepsOf (ordz_seekM m n c (j + 1))``,
   rw[Once ordz_seekM_def, size_max]);
 
-(* Theorem: (stepsOf (ordz_seekM 0 n c j) = 1) /\
-             (1 < m ==> stepsOf (ordz_seekM m n c 0) =
-               if c = 0 then 2 + size m else 2 + 2 * size c + 3 * size m) *)
+(* Theorem: 1 < m ==>
+            (stepsOf (ordz_seekM m n c 0) =
+                if c = 0 then 2 else 2 + 2 * size c + 2 * size m) *)
 (* Proof:
-   By ordz_seekM_steps_thm.
-   For the first one with m = 0,
-       stepsOf (ordz_seekM 0 n c j)
-     = size 0                          by ordz_seekM_steps_thm
-     = 1                               by size_0
-   For the one with j = 0,
    Note if 1 < m, n ** 0 MOD m = 1     by EXP_0, ONE_MOD
-       stepsOf (ordz_seekM m n c j)
-     = size m + size (MAX c 0) + size (c - 0) + if c <= 0 then 0
+       stepsOf (ordz_seekM m n c 0)
+     = size (MAX c 0) + size (c - 0) + if c <= 0 then 0
        else stepsOf (mexpM m n 0) + size (n ** 0 MOD m) + 0
                                        by ordz_seekM_steps_thm
      If c = 0, this is
-     = size m + size (MAX 0 0) + size (0 - 0) = 2 + size m  by size_0
+     = size (MAX 0 0) + size (0 - 0) = 2   by size_0
      If c <> 0, this is
-     = size m + size c + size c + stepsOf (mexpM m n 0) + size 1   by MAX_DEF, 0 < c
-     = size m + 2 * size c + (1 + 2 * size m) + 1                  by mexpM_steps_base
-     = 2 + 2 * size c + 3 * size m
+     = size c + size c + stepsOf (mexpM m n 0) + size 1   by MAX_DEF, 0 < c
+     = 2 * size c + (1 + 2 * size m) + 1                  by mexpM_steps_base
+     = 2 + 2 * size c + 2 * size m
 *)
 val ordz_seekM_steps_base = store_thm(
   "ordz_seekM_steps_base",
-  ``!m n c j. (stepsOf (ordz_seekM 0 n c j) = 1) /\
-             (1 < m ==> stepsOf (ordz_seekM m n c 0) =
-               if c = 0 then 2 + size m else 2 + 2 * size c + 3 * size m)``,
-  rpt strip_tac >-
-  rw[Once ordz_seekM_steps_thm] >>
+  ``!m n c. 1 < m ==>
+           (stepsOf (ordz_seekM m n c 0) =
+               if c = 0 then 2 else 2 + 2 * size c + 2 * size m)``,
+  rpt strip_tac >>
   (Cases_on `c = 0` >> simp[]) >-
   rw[Once ordz_seekM_steps_thm] >>
   `MAX c 0 = c` by rw[] >>
@@ -431,43 +417,39 @@ val ordzM_steps_thm = store_thm(
          2 * size m + if m <= 1 then 0 else size n * size m + stepsOf (ordz_seekM m (n MOD m) m 1)``,
   rw[ordzM_def]);
 
-(* Theorem: let body j = if m = 0 then 1 else size m + size c + size (c - j) +
+(* Theorem: let body j = size c + size (c - j) +
                 stepsOf (mexpM m n j) + size (n ** j MOD m) + if n ** j MOD m = 1 then 0 else size j
-            in !j. stepsOf (ordz_seekM m n c j) =
-                   if c <= j then (if m = 0 then 1 else 1 + size m + size j) else body j +
-                   if (m = 0 \/ n ** j MOD m = 1) then 0 else stepsOf (ordz_seekM m n c (j + 1)) *)
+             in 0 < m ==>
+               !j. stepsOf (ordz_seekM m n c j) =
+                   if c <= j then (1 + size j) else body j +
+                   if (n ** j MOD m = 1) then 0 else stepsOf (ordz_seekM m n c (j + 1)) *)
 (* Proof:
      stepsOf (ordz_seekM m n c j)
-   = size m + if m = 0 then 0
-     else size (MAX c j) + size (c - j) + if c <= j then 0
+   = size (MAX c j) + size (c - j) + if c <= j then 0
      else stepsOf (mexpM m n j) + size (n ** j MOD m) + if n ** j MOD m = 1 then 0
      else size j + stepsOf (ordz_seekM m n c (j + 1))    by ordz_seekM_steps_thm
-   = if m = 0 then size 0
-     else size m + size (MAX c j) + size (c - j) + if c <= j then 0
-     else stepsOf (mexpM m n j) + size (n ** j MOD m) + if n ** j MOD m = 1 then 0
-     else size j + stepsOf (ordz_seekM m n c (j + 1))
-   = if c <= j then (if m = 0 then 1 else size m + size (MAX c j) + size (c - j))
-     else (if m = 0 then 1 else size m + size (MAX c j) + size (c - j) +
+   = if c <= j then (size (MAX c j) + size (c - j))
+     else (size (MAX c j) + size (c - j) +
            stepsOf (mexpM m n j) + size (n ** j MOD m) + if n ** j MOD m = 1 then 0 else size j)
-      + if (m = 0 \/ n ** j MOD m = 1) then 0 else stepsOf (ordz_seekM m n c (j + 1))
-   = if c <= j then (if m = 0 then 1 else size m + size j + size 0)    by MAX_DEF
-     else (if m = 0 then 1 else size m + size c + size (c - j) +       by MAX_DEF
+      + if (n ** j MOD m = 1) then 0 else stepsOf (ordz_seekM m n c (j + 1))
+   = if c <= j then (size j + size 0)    by MAX_DEF
+     else (size c + size (c - j) +       by MAX_DEF
            stepsOf (mexpM m n j) + size (n ** j MOD m) + if n ** j MOD m = 1 then 0 else size j)
-      + if (m = 0 \/ n ** j MOD m = 1) then 0 else stepsOf (ordz_seekM m n c (j + 1))
-   = if c <= j then (if m = 0 then 1 else 1 + size m + size j)
-     else (if m = 0 then 1 else size m + size c + size (c - j) +
+      + if (n ** j MOD m = 1) then 0 else stepsOf (ordz_seekM m n c (j + 1))
+   = if c <= j then (1 + size j)
+     else (size c + size (c - j) +
            stepsOf (mexpM m n j) + size (n ** j MOD m) + if n ** j MOD m = 1 then 0 else size j)
-      + if (m = 0 \/ n ** j MOD m = 1) then 0 else stepsOf (ordz_seekM m n c (j + 1))
+      + if (n ** j MOD m = 1) then 0 else stepsOf (ordz_seekM m n c (j + 1))
 *)
 val ordz_seekM_steps_by_inc_loop = store_thm(
   "ordz_seekM_steps_by_inc_loop",
-  ``!m n c. let body j = if m = 0 then 1 else size m + size c + size (c - j) +
+  ``!m n c. let body j = size c + size (c - j) +
                stepsOf (mexpM m n j) + size (n ** j MOD m) + if n ** j MOD m = 1 then 0 else size j
-            in !j. stepsOf (ordz_seekM m n c j) =
-                   if c <= j then (if m = 0 then 1 else 1 + size m + size j) else body j +
-                   if (m = 0 \/ n ** j MOD m = 1) then 0 else stepsOf (ordz_seekM m n c (j + 1))``,
+            in 0 < m ==>
+               !j. stepsOf (ordz_seekM m n c j) =
+                   if c <= j then (1 + size j) else body j +
+                   if (n ** j MOD m = 1) then 0 else stepsOf (ordz_seekM m n c (j + 1))``,
   rw[Once ordz_seekM_steps_thm] >>
-  (Cases_on `m = 0` >> simp[]) >>
   (Cases_on `c <= j` >> simp[]) >| [
     `MAX c j = j` by rw[MAX_DEF] >>
     `c - j = 0` by decide_tac >>
@@ -485,74 +467,74 @@ suitable for: loop_inc_count_cover_exit_le
 
 (* First, work out a cover for the complex body. *)
 
-(* Theorem: let body j = if m = 0 then 1 else size m + size c + size (c - j) +
+(* Theorem: let body j = size c + size (c - j) +
                 stepsOf (mexpM m n j) + size (n ** j MOD m) + if n ** j MOD m = 1 then 0 else size j
-            in !j. body j <= size j + 2 * size m + 2 * size c +
+            in 0 < m ==>
+               !j. body j <= size j + size m + 2 * size c +
                              17 * size j ** 2 * size m ** 2 * size (MAX n m) ** 2 *)
 (* Proof:
+   Let eq = (\j. n ** j MOD m = 1).
      body j
-   = if m = 0 then 1 else size m + size c + size (c - j) +
-               stepsOf (mexpM m n j) + size (n ** j MOD m) + if eq j then 0 else size j
-  <= size m + size c + size (c - j) + stepsOf (mexpM m n j) + size (n ** j MOD m) + size j
-  <= size m + size c + size (c - j) + (17 * size j ** 2 * size m ** 2 * size (MAX n m) ** 2) +
+   = size c + size (c - j) +
+        stepsOf (mexpM m n j) + size (n ** j MOD m) + if eq j then 0 else size j
+  <= size c + size (c - j) + stepsOf (mexpM m n j) + size (n ** j MOD m) + size j
+  <= size c + size (c - j) + (17 * size j ** 2 * size m ** 2 * size (MAX n m) ** 2) +
      size k + size j                                 by mexpM_steps_bound
      where k = n ** j MOD m.
      Note c - j <= c, so size (c - j) <= size c      by size_monotone_le
       and k < m, so size k <= size m                 by MOD_LESS, 0 < m, size_monotone_lt
-  <= sm + sc + sc + 17 * sj ** 2 * sm ** 2 * size (MAX n m) ** 2 + sm + sj
-   = sj + 2 * sm + 2 * sc + 17 * sj ** 2 * sm ** 2 * size (MAX n m) ** 2
+  <= sc + sc + 17 * sj ** 2 * sm ** 2 * size (MAX n m) ** 2 + sm + sj
+   = sj + sm + 2 * sc + 17 * sj ** 2 * sm ** 2 * size (MAX n m) ** 2
 *)
 val ordz_seekM_body_upper = store_thm(
   "ordz_seekM_body_upper",
-  ``!m n c. let body j = if m = 0 then 1 else size m + size c + size (c - j) +
+  ``!m n c. let body j = size c + size (c - j) +
                stepsOf (mexpM m n j) + size (n ** j MOD m) + if n ** j MOD m = 1 then 0 else size j
-            in !j. body j <= size j + 2 * size m + 2 * size c +
+            in 0 < m ==>
+               !j. body j <= size j + size m + 2 * size c +
                              17 * size j ** 2 * size m ** 2 * size (MAX n m) ** 2``,
   rw_tac std_ss[] >>
-  Cases_on `m = 0` >| [
-    `body j = 1` by rw[Abbr`body`] >>
-    `1 <= size j` by rw[one_le_size] >>
-    decide_tac,
-    `body j <= size j + size m + size c + size (c - j) + size (n ** j MOD m) + stepsOf (mexpM m n j)` by rw[Abbr`body`] >>
-    qabbrev_tac `k = n ** j MOD m` >>
-    `k < m` by rw[MOD_LESS, Abbr`k`] >>
-    `size k <= size m` by rw[size_monotone_lt] >>
-    `size (c - j) <= size c` by rw[size_monotone_le] >>
-    `stepsOf (mexpM m n j) <= 17 * size j ** 2 * size m ** 2 * size (MAX n m) ** 2` by rw[mexpM_steps_bound] >>
-    decide_tac
-  ]);
+  `body j <= size j + size c + size (c - j) + size (n ** j MOD m) + stepsOf (mexpM m n j)` by rw[Abbr`body`] >>
+  qabbrev_tac `k = n ** j MOD m` >>
+  `k < m` by rw[MOD_LESS, Abbr`k`] >>
+  `size k <= size m` by rw[size_monotone_lt] >>
+  `size (c - j) <= size c` by rw[size_monotone_le] >>
+  `stepsOf (mexpM m n j) <= 17 * size j ** 2 * size m ** 2 * size (MAX n m) ** 2` by rw[mexpM_steps_bound] >>
+  decide_tac);
 
-(* Theorem: let body j = if m = 0 then 1 else size m + size c + size (c - j) +
-               stepsOf (mexpM m n j) + size (n ** j MOD m) + if n ** j MOD m = 1 then 0 else size j
-            in !j. body j <= 23 * size c * (size j) ** 2 * size m ** 2 * size (MAX n m) ** 2 *)
+(* Theorem: let body j = size c + size (c - j) +
+                stepsOf (mexpM m n j) + size (n ** j MOD m) + if n ** j MOD m = 1 then 0 else size j
+             in 0 < m ==>
+                !j. body j <= 22 * size c * (size j) ** 2 * size m ** 2 * size (MAX n m) ** 2 *)
 (* Proof:
       body j
-   <= size j + 2 * size m + 2 * size c + 17 * size j ** 2 * size m ** 2 * size (MAX n m) ** 2
+   <= size j + size m + 2 * size c + 17 * size j ** 2 * size m ** 2 * size (MAX n m) ** 2
                                                                  by ordz_seekM_body_upper
-   <= (1 + 2 + 2 + 1 + 17) * size c * (size j) ** 2 * size m ** 2 * size (MAX n m) ** 2
+   <= (1 + 1 + 2 + 1 + 17) * size c * (size j) ** 2 * size m ** 2 * size (MAX n m) ** 2
                                                                  by dominant term
-    = 23 * size c * (size j) ** 2 * size m ** 2 * size (MAX n m) ** 2
+    = 22 * size c * (size j) ** 2 * size m ** 2 * size (MAX n m) ** 2
 *)
 val ordz_seekM_body_bound = store_thm(
   "ordz_seekM_body_bound",
-  ``!m n c. let body j = if m = 0 then 1 else size m + size c + size (c - j) +
+  ``!m n c. let body j = size c + size (c - j) +
                stepsOf (mexpM m n j) + size (n ** j MOD m) + if n ** j MOD m = 1 then 0 else size j
-            in !j. body j <= 23 * size c * (size j) ** 2 * size m ** 2 * size (MAX n m) ** 2``,
+            in 0 < m ==>
+               !j. body j <= 22 * size c * (size j) ** 2 * size m ** 2 * size (MAX n m) ** 2``,
   rpt strip_tac >>
   assume_tac ordz_seekM_body_upper >>
   last_x_assum (qspecl_then [`m`, `n`, `c`] strip_assume_tac) >>
   qabbrev_tac `eq = \j. n ** j MOD m = 1` >>
-  qabbrev_tac `body = \j. if m = 0 then 1 else size m + size c + size (c - j) +
+  qabbrev_tac `body = \j. size c + size (c - j) +
                stepsOf (mexpM m n j) + size (n ** j MOD m) + if eq j then 0 else size j` >>
-  `!j. body j <= 23 * size c * size j ** 2 * size m ** 2 * size (MAX n m) ** 2` suffices_by fs[] >>
+  `!j. 0 < m ==> body j <= 22 * size c * size j ** 2 * size m ** 2 * size (MAX n m) ** 2` suffices_by fs[] >>
   rpt strip_tac >>
-  `body j <= size j + TWICE (size m) + TWICE (size c) + 17 * size j ** 2 * size m ** 2 * size (MAX n m) ** 2` by fs[] >>
+  `body j <= size j + size m + TWICE (size c) + 17 * size j ** 2 * size m ** 2 * size (MAX n m) ** 2` by fs[] >>
   qabbrev_tac `sc = size c` >>
   qabbrev_tac `sj = size j` >>
   qabbrev_tac `sm = size m` >>
   qabbrev_tac `sn = size (MAX n m)` >>
   qabbrev_tac `t = sc * sj ** 2 * sm ** 2 * sn ** 2` >>
-  `body j <= 23 * t` suffices_by rw[] >>
+  `body j <= 22 * t` suffices_by rw[] >>
   `0 < t` by rw[MULT_POS, Abbr`sc`, Abbr`sj`, Abbr`sm`, Abbr`sn`, Abbr`t`] >>
   `sj <= t` by
   (`sj <= sj * (sc * sj * sm ** 2 * sn ** 2)` by rw[MULT_POS, Abbr`sc`, Abbr`sj`, Abbr`sm`, Abbr`sn`] >>
@@ -572,15 +554,15 @@ val ordz_seekM_body_bound = store_thm(
   decide_tac) >>
   decide_tac);
 
-(* Theorem: stepsOf (ordz_seekM m n c j) <=
-            1 + size m + size (MAX j c) + 23 * c * (size c) ** 3 * size m ** 2 * size (MAX n m) ** 2 *)
+(* Theorem: 0 < m ==> stepsOf (ordz_seekM m n c j) <=
+            1 + size (MAX j c) + 22 * c * (size c) ** 3 * size m ** 2 * size (MAX n m) ** 2 *)
 (* Proof:
    Let eq = (\j. n ** j MOD m = 1)
-       body = (\j. if m = 0 then 1 else size m + size c + size (c - j) +
+       body = (\j. size c + size (c - j) +
                stepsOf (mexpM m n j) + size (n ** j MOD m) + if eq j then 0 else size j),
-       cover = (\j. 23 * size c * (size j) ** 2 * size m ** 2 * size (MAX n m) ** 2),
-       quit = (\j. if m = 0 then 1 else 1 + size m + size j),
-       exit = (\j. m = 0 \/ eq j)
+       cover = (\j. 22 * size c * (size j) ** 2 * size m ** 2 * size (MAX n m) ** 2),
+       quit = (\j. 1 + size j),
+       exit = (\j. eq j)
        loop = (\j. stepsOf (ordz_seekM m n c j)).
 
    Then !j. loop j = if c <= j then quit j else body j + if exit j then 0 else loop (j + 1)
@@ -597,76 +579,70 @@ val ordz_seekM_body_bound = store_thm(
    If c <= j,
        Then n = 0, z = j.
         loop j <= quit j + 0                   In fact, loop j = quit j by given
-                = if m = 0 then 1 else 1 + size m + size j
-               <= 1 + size m + size j.
+                = 1 + size j
    Otherwise, j < c.
        Then n = c - j <= c
         and z = c
    Thus loop j
      <= quit c + c * cover c         by (c - j) < c
-     <= 1 + size m + size c + c * 23 * size c * (size c) ** 2 * size m ** 2 * size (MAX n m) ** 2
-     <= 1 + size m + size c + 23 * c * (size c) ** 3 * size m ** 2 * size (MAX n m) ** 2
+     <= 1 + size c + c * 22 * size c * (size c) ** 2 * size m ** 2 * size (MAX n m) ** 2
+     <= 1 + size c + 22 * c * (size c) ** 3 * size m ** 2 * size (MAX n m) ** 2
    To cater for both cases, replace + size c by + size (MAX j c).
 *)
 val ordz_seekM_steps_upper = store_thm(
   "ordz_seekM_steps_upper",
-  ``!m n c j. stepsOf (ordz_seekM m n c j) <=
-             1 + size m + size (MAX j c) + 23 * c * (size c) ** 3 * size m ** 2 * size (MAX n m) ** 2``,
+  ``!m n c j. 0 < m ==> stepsOf (ordz_seekM m n c j) <=
+             1 + size (MAX j c) + 22 * c * (size c) ** 3 * size m ** 2 * size (MAX n m) ** 2``,
   rpt strip_tac >>
   assume_tac ordz_seekM_steps_by_inc_loop >>
   first_x_assum (qspecl_then [`m`, `n`, `c`] strip_assume_tac) >>
   assume_tac ordz_seekM_body_bound >>
   first_x_assum (qspecl_then [`m`, `n`, `c`] strip_assume_tac) >>
-  qabbrev_tac `body = \j. if m = 0 then 1 else size m + size c + size (c - j) +
+  qabbrev_tac `body = \j. size c + size (c - j) +
                stepsOf (mexpM m n j) + size (n ** j MOD m) + if n ** j MOD m = 1 then 0 else size j` >>
-  qabbrev_tac `cover = \j. 23 * size c * (size j) ** 2 * size m ** 2 * size (MAX n m) ** 2` >>
-  qabbrev_tac `exit = \j. m = 0 \/ n ** j MOD m = 1` >>
-  qabbrev_tac `quit = \j. if m = 0 then 1 else 1 + size m + size j` >>
+  qabbrev_tac `cover = \j. 22 * size c * (size j) ** 2 * size m ** 2 * size (MAX n m) ** 2` >>
+  qabbrev_tac `exit = \j. n ** j MOD m = 1` >>
+  qabbrev_tac `quit = \j. 1 + size j` >>
   qabbrev_tac `loop = \j. stepsOf (ordz_seekM m n c j)` >>
-  `loop j <= quit (MAX j c) + 23 * c * size c ** 3 * size m ** 2 * size (MAX n m) ** 2` suffices_by rw[Abbr`loop`, Abbr`quit`] >>
-  `!j. loop j = if c <= j then quit j else body j + if exit j then 0 else loop (j + 1)` by fs[] >>
+  `loop j <= quit (MAX j c) + 22 * c * size c ** 3 * size m ** 2 * size (MAX n m) ** 2` suffices_by rw[Abbr`loop`, Abbr`quit`] >>
+  `!j. loop j = if c <= j then quit j else body j + if exit j then 0 else loop (j + 1)` by metis_tac[] >>
   `!j. body j <= cover j` by metis_tac[] >>
   `MONO cover` by rw[size_monotone_le, Abbr`cover`] >>
   `0 < 1` by decide_tac >>
-  imp_res_tac loop_inc_count_cover_exit_le >>
-  first_x_assum (qspec_then `j` strip_assume_tac) >>
+  assume_tac loop_inc_count_cover_exit_le >>
+  first_x_assum (qspecl_then [`loop`, `body`, `quit`, `cover`, `exit`, `1`, `c`] strip_assume_tac) >>
   qabbrev_tac `foo = !j. loop j = if c <= j then quit j else body j + if exit j then 0 else loop (j + 1)` >>
   fs[bop_1_m_c] >>
+  `loop j <= quit (j + (c - j)) + cover (j + (c - j)) * (c - j)` by fs[] >>
   Cases_on `c <= j` >| [
     `c - j = 0` by decide_tac >>
     `quit (j + (c - j)) + cover (j + (c - j)) * (c - j) = quit j` by rw[] >>
-    `quit j <= quit (MAX j c)` by
-  (rw[Abbr`quit`] >>
-    `size j <= size (MAX j c)` by rw[size_monotone_le] >>
-    decide_tac) >>
+    `quit j <= quit (MAX j c)` by rw[size_monotone_le, Abbr`quit`] >>
     decide_tac,
     `j < c` by decide_tac >>
     `quit (j + (c - j)) + cover (j + (c - j)) * (c - j) = quit c + (c - j) * cover c` by rw[] >>
-    `quit c <= quit (MAX j c)` by
-  (rw[Abbr`quit`] >>
-    `size c <= size (MAX j c)` by rw[size_monotone_le] >>
-    decide_tac) >>
+    `quit c <= quit (MAX j c)` by rw[size_monotone_le, Abbr`quit`] >>
     `(c - j) * cover c <= c * cover c` by rw[] >>
     `loop j <= quit (MAX j c) + c * cover c` by decide_tac >>
-    `c * cover c = 23 * (c * size c ** 3 * size m ** 2 * size (MAX n m) ** 2)` by rw[Abbr`cover`] >>
+    `c * cover c = 22 * (c * size c ** 3 * size m ** 2 * size (MAX n m) ** 2)` by rw[Abbr`cover`] >>
     decide_tac
   ]);
 
-(* Theorem: stepsOf (ordz_seekM m n c j) <=
-            26 * (MAX 1 c) * size (MAX j c) * size m ** 2 * size (MAX n m) ** 2 * size c ** 3 *)
+(* Theorem: 0 < m ==> stepsOf (ordz_seekM m n c j) <=
+            24 * (MAX 1 c) * size (MAX j c) * size m ** 2 * size (MAX n m) ** 2 * size c ** 3 *)
 (* Proof:
       stepsOf (ordz_seekM m n c j)
-   <= 1 + size m + size (MAX j c) + 23 * c * size c ** 3 * size m ** 2 * size (MAX n m) ** 2
+   <= 1 + size (MAX j c) + 22 * c * size c ** 3 * size m ** 2 * size (MAX n m) ** 2
                                                         by ordz_seekM_steps_upper
-   <= (1 + 1 + 1 + 23) * c * size (MAX j c) * size m ** 2 * size (MAX n m) ** 2 * size c ** 3
+   <= (1 + 1 + 22) * c * size (MAX j c) * size m ** 2 * size (MAX n m) ** 2 * size c ** 3
                                                         by dominant term
-    = 26 * c * size (MAX j c) * size m ** 2 * size (MAX n m) ** 2 * size c ** 3
+    = 24 * c * size (MAX j c) * size m ** 2 * size (MAX n m) ** 2 * size c ** 3
    Use (MAX 1 c) to cater for c = 0.
 *)
 val ordz_seekM_steps_bound = store_thm(
   "ordz_seekM_steps_bound",
-  ``!m n c j. stepsOf (ordz_seekM m n c j) <=
-             26 * (MAX 1 c) * size (MAX j c) * size m ** 2 * size (MAX n m) ** 2 * size c ** 3``,
+  ``!m n c j. 0 > m ==> stepsOf (ordz_seekM m n c j) <=
+             24 * (MAX 1 c) * size (MAX j c) * size m ** 2 * size (MAX n m) ** 2 * size c ** 3``,
   rpt strip_tac >>
   assume_tac ordz_seekM_steps_upper >>
   last_x_assum (qspecl_then [`m`, `n`, `c`, `j`] strip_assume_tac) >>
@@ -674,7 +650,7 @@ val ordz_seekM_steps_bound = store_thm(
   qabbrev_tac `m2 = MAX j c` >>
   qabbrev_tac `m3 = MAX n m` >>
   qabbrev_tac `t = m1 * size m2 * size m ** 2 * size m3 ** 2 * size c ** 3` >>
-  `stepsOf (ordz_seekM m n c j) <= 26 * t` suffices_by rw[Abbr`t`] >>
+  `stepsOf (ordz_seekM m n c j) <= 24 * t` suffices_by rw[Abbr`t`] >>
   `1 <= m1 /\ c <= m1` by rw[Abbr`m1`] >>
   `0 < t` by rw[MULT_POS, Abbr`t`] >>
   `1 <= t` by decide_tac >>
@@ -693,7 +669,7 @@ val ordz_seekM_steps_bound = store_thm(
   decide_tac) >>
   decide_tac);
 
-(* Theorem: stepsOf (ordzM m n) <= 1 + 4 * size m + size n * size m + 23 * m * (size m) ** 7 *)
+(* Theorem: stepsOf (ordzM m n) <= 1 + 3 * size m + size n * size m + 22 * m * (size m) ** 7 *)
 (* Proof:
       stepsOf (ordzM m n)
     = 2 * size m + if m <= 1 then 0 else size n * size m + stepsOf (ordz_seekM m (n MOD m) m 1)
@@ -702,17 +678,17 @@ val ordz_seekM_steps_bound = store_thm(
    Otherwise,
    <= 2 * size m + size n * size m + stepsOf (ordz_seekM m (n MOD m) m 1)
    <= 2 * size m + size n * size m +
-      1 + size m + size (MAX 1 m) + 23 * m * size m ** 3 * size m ** 2 * size (MAX (n MOD m) m) ** 2
+      1 + size (MAX 1 m) + 22 * m * size m ** 3 * size m ** 2 * size (MAX (n MOD m) m) ** 2
                                                           by ordz_seekM_steps_upper
     = 2 * size m + size n * size m +
-      1 + size m + size m + 23 * m * size m ** 3 * size m ** 2 * size m ** 2
+      1 + size m + 22 * m * size m ** 3 * size m ** 2 * size m ** 2
                                                           by MAX_IDEM, MOD_LESS: n MOD m < m, 0 < m.
-    = 1 + 4 * size m + size n * size m + 23 * m * (size m) ** 7
+    = 1 + 3 * size m + size n * size m + 22 * m * (size m) ** 7
                                                           by EXP_BASE_MULT, EXP_EXP_MULT
 *)
 val ordzM_steps_upper = store_thm(
   "ordzM_steps_upper",
-  ``!m n. stepsOf (ordzM m n) <= 1 + 4 * size m + size n * size m + 23 * m * (size m) ** 7``,
+  ``!m n. stepsOf (ordzM m n) <= 1 + 3 * size m + size n * size m + 22 * m * (size m) ** 7``,
   rpt strip_tac >>
   assume_tac ordzM_steps_thm >>
   last_x_assum (qspecl_then [`m`, `n`] strip_assume_tac) >>
@@ -725,27 +701,27 @@ val ordzM_steps_upper = store_thm(
   `size (MAX (n MOD m) m) = size m` by rw[MAX_DEF] >>
   `size (MAX 1 m) = size m` by rw[MAX_DEF] >>
   `stepsOf (ordzM m n) <= 2 * size m + size n * size m + stepsOf (ordz_seekM m (n MOD m) m 1)` by fs[] >>
-  `stepsOf (ordz_seekM m (n MOD m) m 1) <= 1 + size m + size m + 23 * m * size m ** 3 * size m ** 2 * size m ** 2` by fs[] >>
+  `stepsOf (ordz_seekM m (n MOD m) m 1) <= 1 + size m + 22 * m * size m ** 3 * size m ** 2 * size m ** 2` by fs[] >>
   `m * size m ** 3 * size m ** 2 * size m ** 2 = m * (size m) ** 7` by rw[GSYM EXP_EXP_MULT] >>
   decide_tac);
 
-(* Theorem: stepsOf (ordzM m n) <= 29 * (MAX 1 m) * size n * size m ** 7 *)
+(* Theorem: stepsOf (ordzM m n) <= 27 * (MAX 1 m) * size n * size m ** 7 *)
 (* Proof:
       stepsOf (ordzM m n)
-   <= 1 + 4 * size m + size n * size m + 23 * m * size m ** 7   by ordzM_steps_upper
-   <= (1 + 4 + 1 + 23) * m * size n * size m ** 7               by dominant term
-    = 29 * m * size n * size m ** 7                             by arithmetic
+   <= 1 + 3 * size m + size n * size m + 22 * m * size m ** 7   by ordzM_steps_upper
+   <= (1 + 3 + 1 + 22) * m * size n * size m ** 7               by dominant term
+    = 27 * m * size n * size m ** 7                             by arithmetic
    Use (MAX 1 m) to cater for m = 0.
 *)
 val ordzM_steps_bound = store_thm(
   "ordzM_steps_bound",
-  ``!m n. stepsOf (ordzM m n) <= 29 * (MAX 1 m) * size n * size m ** 7``,
+  ``!m n. stepsOf (ordzM m n) <= 27 * (MAX 1 m) * size n * size m ** 7``,
   rpt strip_tac >>
   assume_tac ordzM_steps_upper >>
   last_x_assum (qspecl_then [`m`, `n`] strip_assume_tac) >>
   qabbrev_tac `k = MAX 1 m` >>
   qabbrev_tac `t = k * size n * size m ** 7` >>
-  `stepsOf (ordzM m n) <= 29 * t` suffices_by rw[Abbr`t`] >>
+  `stepsOf (ordzM m n) <= 27 * t` suffices_by rw[Abbr`t`] >>
   `1 <= k /\ m <= k` by rw[Abbr`k`] >>
   `0 < t` by rw[MULT_POS, Abbr`t`] >>
   `1 <= t` by decide_tac >>
@@ -769,15 +745,15 @@ val ordzM_steps_bound = store_thm(
    By O_poly_thm, this is to show:
       ?h k. !n. h < n ==> stepsOf (ordzM m n) <= k * size n
    Note stepsOf (ordzM m n)
-     <= 29 * (MAX 1 m) * size n * size m ** 7    by ordzM_steps_bound
-   Take any h, k = 29 * MAX 1 m * size m ** 7, the result follows.
+     <= 27 * (MAX 1 m) * size n * size m ** 7    by ordzM_steps_bound
+   Take any h, k = 27 * MAX 1 m * size m ** 7, the result follows.
 *)
 val ordzM_steps_O_poly = store_thm(
   "ordzM_steps_O_poly",
   ``!m. stepsOf o (ordzM m) IN O_poly 1``,
   rw[O_poly_thm] >>
   qexists_tac `0` >>
-  qexists_tac `29 * MAX 1 m * size m ** 7` >>
+  qexists_tac `27 * MAX 1 m * size m ** 7` >>
   rpt strip_tac >>
   assume_tac ordzM_steps_bound >>
   last_x_assum (qspecl_then [`m`, `n`] strip_assume_tac) >>
@@ -806,15 +782,15 @@ val ordzM_steps_big_O = store_thm(
    By big_O_def, POLY_def, this is to show;
       ?k c. !m. k < m ==> stepsOf (ordzM m n) <= c * size m ** 7 * MAX 1 m
    Note stepsOf (ordzM m n)
-     <= 29 * (MAX 1 m) * size n * size m ** 7    by ordzM_steps_bound
-   Take any k, c = 29 * size n, the result follows.
+     <= 27 * (MAX 1 m) * size n * size m ** 7    by ordzM_steps_bound
+   Take any k, c = 27 * size n, the result follows.
 *)
 val ordzM_steps_O_swap = store_thm(
   "ordzM_steps_O_swap",
   ``!n. stepsOf o (combin$C ordzM n) IN big_O (POLY 1 o (\m. (MAX 1 m) * size m ** 7))``,
   rw[big_O_def, POLY_def] >>
   qexists_tac `0` >>
-  qexists_tac `29 * size n` >>
+  qexists_tac `27 * size n` >>
   rpt strip_tac >>
   assume_tac ordzM_steps_bound >>
   last_x_assum (qspecl_then [`n'`, `n`] strip_assume_tac) >>

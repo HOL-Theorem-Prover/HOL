@@ -35,8 +35,6 @@ val _ = new_theory "monoidOrder";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -74,7 +72,7 @@ open primePowerTheory;
    period_def      |- !g x k. period g x k <=> 0 < k /\ (x ** k = #e)
    order_def       |- !g x. ord x = case OLEAST k. period g x k of NONE => 0 | SOME k => k
    order_property  |- !g x. x ** ord x = #e
-   order_period    |- !g x. 0 < ord x ==> period g x (ord x
+   order_period    |- !g x. 0 < ord x ==> period g x (ord x)
    order_minimal   |- !g x n. 0 < n /\ n < ord x ==> x ** n <> #e
    order_eq_0      |- !g x. (ord x = 0) <=> !n. 0 < n ==> x ** n <> #e
    order_alt       |- !g x n. 0 < n ==>

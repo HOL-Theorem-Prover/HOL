@@ -1,68 +1,34 @@
 structure translationsLib :> translationsLib =
 struct
 
-(*
-quietdec := true;
+open HolKernel Parse boolLib bossLib;
 
-val hol_dir = concat Globals.HOLDIR "/";
-val home_dir = (concat hol_dir "examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/translations") ::
-            (concat home_dir "src/tools") ::
-            (concat hol_dir "examples/PSL/path") ::
-            (concat hol_dir "examples/PSL/1.1/official-semantics") :: !loadPath;
-
-map load
- ["full_ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
-  "infinite_pathTheory", "tuerk_tacticsLib", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory", "pred_setSyntax",
-  "temporal_deep_mixedTheory", "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "pairTheory",
-  "ltl_to_automaton_formulaTheory", "rltl_to_ltlTheory",
-  "numLib", "listLib", "translationsLibTheory", "rltlTheory", "computeLib",
-  "congLib", "temporal_deep_simplificationsLib", "Trace",
-  "symbolic_kripke_structureTheory", "pred_setLib", "Varmap", "HOLset", "ListConv1",
-  "psl_lemmataTheory", "ProjectionTheory", "psl_to_rltlTheory"];
-*)
-
-open HolKernel boolLib bossLib
-     full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
+open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
      temporal_deep_mixedTheory pred_setTheory rich_listTheory set_lemmataTheory
-     pairTheory pred_setSyntax
-     ltl_to_automaton_formulaTheory numLib listLib translationsLibTheory
+     pairTheory pred_setSyntax ltl_to_automaton_formulaTheory numLib listLib translationsLibTheory
      rltl_to_ltlTheory rltlTheory computeLib congLib temporal_deep_simplificationsLib
      Trace symbolic_kripke_structureTheory psl_lemmataTheory ProjectionTheory psl_to_rltlTheory;
 
-(*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
-quietdec := false;
-*)
-
-
 exception NoLTLTerm;
 
+(* This function is recursive thus cannot be defined as a value *)
 fun SETIFY_CONV tm =
-    (SUB_CONV (SETIFY_CONV) THENC TRY_CONV (pred_setLib.INSERT_CONV NO_CONV)) tm
+   (SUB_CONV (SETIFY_CONV) THENC TRY_CONV (pred_setLib.INSERT_CONV NO_CONV)) tm;
 
-
-(*the translation of ltl to gen. Buechi using just rewrite
-  rules *)
-fun ltl2omega_rewrite t l =
-  let
+(* The translation of LTL to GEN_BUECHI using just rewrite rules *)
+fun ltl2omega_rewrite t l = let
     val (typeString, ltl_type) = (dest_type (type_of l));
     val _ = if (typeString = "ltl") then T else raise NoLTLTerm;
     val ltl_type = hd (ltl_type);
-    val thm = if t then LTL_TO_GEN_BUECHI___TRANSLATION_THM___MAX else
-                LTL_TO_GEN_BUECHI___TRANSLATION_THM___MIN;
+    val thm = if t then LTL_TO_GEN_BUECHI___TRANSLATION_THM___MAX
+              else LTL_TO_GEN_BUECHI___TRANSLATION_THM___MIN;
     val thm = INST_TYPE [alpha |-> ltl_type] thm;
     val thm = SPECL [``F:bool``, l] thm;
     val thm = SIMP_RULE list_ss [LTL_TO_GEN_BUECHI_def,
                   LTL_ALWAYS_def, LTL_EVENTUAL_def,
                   LTL_TO_GEN_BUECHI_DS___A_NDET_def,
                   LTL_TO_GEN_BUECHI_DS___A_UNIV_def,
-                  LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def,
                   LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def,
                   LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def,
                   LTL_TO_GEN_BUECHI_DS___INITIAL_STATES_def,
@@ -84,16 +50,13 @@ fun ltl2omega_rewrite t l =
     thm
   end;
 
+(******************************************************************************)
+(* A more sophistacted translations, that is able to exploit term-sharing     *)
+(******************************************************************************)
 
-(*A more sophistacted translations, that is able to
-  exploit term-sharing*)
-
-(*some general helpers*)
-fun boolToHOL b =
-  if b then ``T:bool`` else ``F:bool``;
-
-fun HOLToBool b = (b = ``T:bool``);
-
+(* some general helpers *)
+fun boolToHOL b = if b then T else F;
+fun HOLToBool b = (b ~~ T);
 
 fun dsExtractFromThm dsThm =
   hd (snd (strip_comb(concl (dsThm))));
@@ -107,20 +70,19 @@ fun dsBindingsExtractFromThm dsThm =
   end;
 
 fun getBindingFor b1 b2 l [] = (false, false, ``dummy:num``)
-    | getBindingFor b1 b2 l (h::l1) =
+  | getBindingFor b1 b2 l (h::l1) =
       let
         val hList = strip_pair h;
         val (l', a1, a2, pf) = (el 1 hList, HOLToBool(el 2 hList), HOLToBool(el 3 hList), el 4 hList);
       in
-        if ((l' = l) andalso ((not b1) orelse a1) andalso ((not b2) orelse a2)) then
+        if ((l' ~~ l) andalso ((not b1) orelse a1) andalso ((not b2) orelse a2)) then
           (a1, a2, pf)
         else
           getBindingFor b1 b2 l l1
       end;
 
-
 exception T_IMP_Error;
-val t_imp_elim_rwt = prove (``!x. (T ==> x) = x``, REWRITE_TAC[])
+val t_imp_elim_rwt = prove (``!x. (T ==> x) = x``, REWRITE_TAC[]);
 
 fun T_IMP_ELIM_RULE thm =
   (CONV_RULE (REWR_CONV t_imp_elim_rwt) thm) handle _ => (
@@ -130,8 +92,7 @@ fun T_IMP_ELIM_RULE thm =
     in
       raise T_IMP_Error
     end
-  )
-
+  );
 
 local
   val bindings_compset = new_compset [IN_SING, IN_INSERT, OR_CLAUSES, AND_CLAUSES]
@@ -146,15 +107,12 @@ in
     end;
 end;
 
-
-
-(*ltl_to_omega_internal and ltl_to_omega*)
+(* ltl_to_omega_internal and ltl_to_omega *)
 local
   exception UnsupportedLTLTerm;
   exception UnsupportedTerm;
   exception NotYetImplemented;
   exception ImplementionError;
-
 
   val SIMP_DS___BASIC =
     let
@@ -163,7 +121,6 @@ local
     in
       CONV_RULE (CBV_CONV compset)
     end;
-
 
   val SIMP_DS___USED_VARS =
     let
@@ -174,10 +131,8 @@ local
       CONV_RULE (RAND_CONV (RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV (conv))))))
     end;
 
-
   val SIMP_DS___USED_VARS___DUPLICATES =
       CONV_RULE (RAND_CONV (RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV (SETIFY_CONV))))))
-
 
   val SIMP_DS___USED_STATE_VARS =
     let
@@ -185,8 +140,6 @@ local
     in
       CONV_RULE (RAND_CONV (RATOR_CONV (RATOR_CONV (RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV (conv))))))))
     end;
-
-
 
   val SIMP_DS___FAIRNESS_CONSTRAINT =
     let
@@ -196,14 +149,11 @@ local
       CONV_RULE (RAND_CONV (RATOR_CONV (RAND_CONV (conv))))
     end;
 
-
-
   fun BUILD_LIST_FIRST_CONV term conv =
     if (is_comb term) then
       BUILD_LIST_FIRST_CONV (rator term) (RATOR_CONV conv)
     else
       (term, conv);
-
 
   val compset = new_compset [XP_CURRENT_def, XP_NEXT_def]
   fun SIMP_DS___FIRST_TRANSITION thm =
@@ -216,7 +166,6 @@ local
       CONV_RULE conv thm
     end;
 
-
   fun SIMP_DS___BODY thm =
     let
       val thm = SIMP_DS___USED_VARS thm
@@ -225,7 +174,6 @@ local
     in
       thm
     end;
-
 
   fun ltl2omega_internal2 b1 b2 l dsThm TSPECL =
       let
@@ -469,7 +417,6 @@ local
         )
       end;
 
-
   fun dsSingBindingExtractFromThm dsThm =
     let
       val ds = dsExtractFromThm dsThm;
@@ -480,7 +427,6 @@ local
     in
       (ds, l, b1, b2, pf)
     end;
-
 
   local
     val compset = new_compset [MAP, APPEND_NIL,
@@ -590,8 +536,6 @@ local
         thm
       end;
 
-
-
   val ltl_ss = std_ss ++ rewrites [LTL_ALWAYS_PALWAYS_ALTERNATIVE_DEFS,
         LTL_IMPL_def,
         LTL_COND_def,
@@ -608,18 +552,19 @@ local
         LTL_INIT_def];
 
   val emptyDSThm = SIMP_RULE std_ss [EMPTY_LTL_TO_GEN_BUECHI_DS_def]
-        EMPTY_LTL_TO_GEN_BUECHI_DS___SEM;
+                             EMPTY_LTL_TO_GEN_BUECHI_DS___SEM;
 
+  val basic_compset = new_compset [ltl_to_gen_buechi_ds_REWRITES,
+                                   LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR_def]
 
-  val basic_compset = new_compset [ltl_to_gen_buechi_ds_REWRITES, LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR_def]
   val final_compset = new_compset [LTL_TO_GEN_BUECHI_DS___A_NDET_def,
-                    LTL_TO_GEN_BUECHI_DS___A_UNIV_def,
-                    ltl_to_gen_buechi_ds_REWRITES,
-                    LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def,
-                    LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def,
-                    LTL_TO_GEN_BUECHI_DS___INITIAL_STATES_def,
-                    LTL_TO_GEN_BUECHI_DS___FAIRNESS_CONSTRAINTS_def,
-                    MAP]
+                                   LTL_TO_GEN_BUECHI_DS___A_UNIV_def,
+                                   ltl_to_gen_buechi_ds_REWRITES,
+                                   LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def,
+                                   LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def,
+                                   LTL_TO_GEN_BUECHI_DS___INITIAL_STATES_def,
+                                   LTL_TO_GEN_BUECHI_DS___FAIRNESS_CONSTRAINTS_def,
+                                   MAP]
 
 in
 
@@ -649,7 +594,6 @@ in
       (l, equivTHM, thm, ds, pf, b1', b2')
     end;
 
-
     fun ltl2omega fast neg l =
       let
         val (typeString, ltl_type) = (dest_type (type_of l));
@@ -674,8 +618,7 @@ in
       end;
 end;
 
-
-(*ltl_to_ks functions*)
+(* ltl_to_ks functions *)
 local
   val final_compset_ks = new_compset [LTL_TO_GEN_BUECHI_DS___A_NDET_def,
                     LTL_TO_GEN_BUECHI_DS___A_UNIV_def,
@@ -684,21 +627,21 @@ local
                     LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def,
                     LTL_TO_GEN_BUECHI_DS___INITIAL_STATES_def,
                     LTL_TO_GEN_BUECHI_DS___FAIRNESS_CONSTRAINTS_def,
-                    MAP, XP_NEXT_THM, XP_CURRENT_THM, P_BIGAND_def, XP_BIGAND_def]
-
+                    MAP, XP_NEXT_THM, XP_CURRENT_THM, P_BIGAND_def, XP_BIGAND_def];
 
   val final_compset_ks___product = new_compset [SYMBOLIC_KRIPKE_STRUCTURE_PRODUCT_def,
     symbolic_kripke_structure_REWRITES, SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def,
     UNION_EMPTY, P_USED_VARS_EVAL, XP_USED_VARS_EVAL, UNION_SING,
-    INSERT_UNION_EQ, INSERT_INSERT]
+    INSERT_UNION_EQ, INSERT_INSERT];
 
   val special_CS = CSFRAG {rewrs  = [],
       relations = [],
       dprocs = [],
       congs  = [IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_cong]};
 
+  val basic_compset = new_compset [ltl_to_gen_buechi_ds_REWRITES,
+                                   LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR_def];
 
-  val basic_compset = new_compset [ltl_to_gen_buechi_ds_REWRITES, LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR_def]
   val final_cs = mk_congset [prop_logic_CS, xprop_logic_CS, special_CS];
 
 in
@@ -722,7 +665,6 @@ in
       thm
     end;
 
-
   fun ltl_equivalent2ks_fair_emptyness fast l1 l2 =
     let
       val contr_thm = ISPECL [l1, l2] LTL_EQUIVALENT___TO___CONTRADICTION;
@@ -733,7 +675,6 @@ in
       thm
     end;
 
-
   fun ltl_equivalent_initial2ks_fair_emptyness fast l1 l2 =
     let
       val contr_thm = ISPECL [l1, l2] LTL_EQUIVALENT_INITIAL___TO___CONTRADICTION;
@@ -743,7 +684,6 @@ in
     in
       thm
     end;
-
 
   fun ltl_ks_sem2ks_fair_emptyness___no_ks fast l =
     let
@@ -765,7 +705,6 @@ in
       thm
     end;
 
-
   fun ltl_ks_sem2ks_fair_emptyness fast l M =
     let
       val thm = ltl_ks_sem2ks_fair_emptyness___no_ks fast l;
@@ -777,9 +716,7 @@ in
     end;
 end;
 
-
-
-(*ltl_to_ks num functions*)
+(* ltl_to_ks num functions *)
 local
   val used_vars_compset =
     new_compset [LTL_USED_VARS_EVAL,
@@ -929,7 +866,7 @@ fun ks_fair_emptyness___num___impl thm ltl_type used_vars_num =
       the theorem is of the form X ==> X and will be simplified to T*)
     val lhs = rand (rator (concl imp_thm))
     val rhs = rand (concl imp_thm)
-    val imp_thm = if (lhs = rhs) then imp_thm else REDUCE_RULE imp_thm
+    val imp_thm = if (lhs ~~ rhs) then imp_thm else REDUCE_RULE imp_thm
 
     val thm = SPEC_ALL thm
     val thm = UNDISCH thm
@@ -1042,7 +979,7 @@ in
       val eval_thm = EVAL_CONV t
       val cs_free_term = liteLib.mk_icomb (``F_CLOCK_SERE_FREE:'a fl->bool``, t);
       val cs_free_thm = ((REWRITE_CONV [eval_thm]) THENC (REWRITE_CONV [ F_CLOCK_SERE_FREE_def, F_CLOCK_FREE_def, F_SERE_FREE_def])) cs_free_term;
-      val _ = if ((rhs (concl cs_free_thm)) = T) then true else (
+      val _ = if ((rhs (concl cs_free_thm)) ~~ T) then true else (
         let
           val _ = print "! ERROR: Could not prove that\n! ";
           val _ = print_term t;
@@ -1065,7 +1002,6 @@ in
 
 end;
 
-
 fun psl_contradiction2ks_fair_emptyness fast f =
     let
       val (eval_thm, cs_free_thm, ltl_thm, l) = prepare_psl_term f;
@@ -1077,7 +1013,6 @@ fun psl_contradiction2ks_fair_emptyness fast f =
     in
       thm
     end
-
 
 fun psl_contradiction2ks_fair_emptyness___num mode fast f =
     let
@@ -1091,7 +1026,6 @@ fun psl_contradiction2ks_fair_emptyness___num mode fast f =
       (thm, uv)
     end
 
-
 fun psl_ks_sem2ks_fair_emptyness___no_ks fast f =
     let
       val (eval_thm, cs_free_thm, ltl_thm, l) = prepare_psl_term f;
@@ -1099,13 +1033,11 @@ fun psl_ks_sem2ks_fair_emptyness___no_ks fast f =
       val to_ltl_thm = ISPEC f to_ltl_thm;
       val to_ltl_thm = MP to_ltl_thm cs_free_thm
 
-
       val thm = ltl_ks_sem2ks_fair_emptyness___no_ks fast l
       val thm = REWRITE_RULE [GSYM ltl_thm, GSYM to_ltl_thm] thm
     in
       thm
     end
-
 
 fun psl_ks_sem2ks_fair_emptyness fast f M =
     let
@@ -1119,8 +1051,6 @@ fun psl_ks_sem2ks_fair_emptyness fast f M =
       thm
     end
 
-
-
 fun psl_ks_sem2ks_fair_emptyness___num mode fast f M =
     let
       val (eval_thm, cs_free_thm, ltl_thm, l) = prepare_psl_term f;
@@ -1132,7 +1062,6 @@ fun psl_ks_sem2ks_fair_emptyness___num mode fast f M =
     in
       (thm, uv)
     end
-
 
 fun psl_equivalent2ks_fair_emptyness fast f1 f2 =
   let
@@ -1151,9 +1080,6 @@ fun psl_equivalent2ks_fair_emptyness fast f1 f2 =
   in
     thm
   end;
-
-
-
 
 fun psl_equivalent2ks_fair_emptyness___num mode fast f1 f2 =
   let

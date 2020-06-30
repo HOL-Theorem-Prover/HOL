@@ -308,7 +308,7 @@ Theorem CCS_SUBST_elim' :
     !E fm. DISJOINT (FV E) (FDOM fm) ==> (CCS_SUBST fm E = E)
 Proof
     Induct_on `E` (* 8 subgoals *)
- >> Reverse (RW_TAC lset_ss [Once CCS_SUBST_def, BV_def, FV_def])
+ >> reverse (RW_TAC lset_ss [Once CCS_SUBST_def, BV_def, FV_def])
  >- (`DISJOINT (FV E) (FDOM fm)` by ASM_SET_TAC [] \\
      METIS_TAC [])
  >> FIRST_X_ASSUM MATCH_MP_TAC >> fs []
@@ -1817,7 +1817,7 @@ Proof
                          (?G. context Xs G /\ (FV G) SUBSET (set Xs) /\
                               (x = CCS_SUBST (fromList Xs Ps) G) /\
                               (y = CCS_SUBST (fromList Xs Qs) G)))`
- >> BETA_TAC >> Reverse CONJ_TAC
+ >> BETA_TAC >> reverse CONJ_TAC
  >- (Know `IS_PROC P /\ IS_PROC Q` >- METIS_TAC [IS_PROC_EL] \\
      Know `DISJOINT (BV P) (set Xs) /\ DISJOINT (BV Q) (set Xs)`
      >- (fs [EVERY_MEM, MEM_EL] >> METIS_TAC []) >> rw [] \\
@@ -1863,7 +1863,7 @@ Proof
  >- RW_TAC std_ss [CCS_SUBST_def, FV_def, NIL_NO_TRANS]
  (* Case 1: E = var Y *)
  >- (Q.X_GEN_TAC `Y` >> NTAC 6 STRIP_TAC \\
-     Reverse (Cases_on `Y IN set Xs`)
+     reverse (Cases_on `Y IN set Xs`)
      >- (`DISJOINT (FV (var Y)) (set Xs)` by ASM_SET_TAC [FV_def] \\
          `DISJOINT (BV (var Y)) (set Xs)` by ASM_SET_TAC [BV_def] \\
          `(CCS_SUBST (fromList Xs Ps) (var Y) = var Y) /\
@@ -2105,7 +2105,7 @@ Proof
             `STRONG_EQUIV E1' E2` by PROVE_TAC [STRONG_EQUIV_TRANS] \\
           (* stage work *)
              Q.EXISTS_TAC `y || G'Q` \\
-             Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_R >> art []) \\
+             reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_R >> art []) \\
              Q.EXISTS_TAC `y || G'P` \\
              CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_R >> art []) \\
              ASM_SIMP_TAC std_ss [IS_PROC_par, BV_def, DISJOINT_UNION] \\
@@ -2124,7 +2124,7 @@ Proof
          CONJ_TAC >- (MATCH_MP_TAC PAR1 >> art []) \\
          SIMP_TAC std_ss [O_DEF] \\
          Q.EXISTS_TAC `y || G'Q` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_R >> art []) \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_R >> art []) \\
          rename1 `STRONG_EQUIV E1' x'` \\
          Q.EXISTS_TAC `x' || G'P` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_R >> art []) \\
@@ -2150,7 +2150,7 @@ Proof
             `STRONG_EQUIV E1' E2` by PROVE_TAC [STRONG_EQUIV_TRANS] \\
           (* stage work *)
              Q.EXISTS_TAC `GQ || y` \\
-             Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_L >> art []) \\
+             reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_L >> art []) \\
              Q.EXISTS_TAC `GP || y` \\
              CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_L >> art []) \\
              ASM_SIMP_TAC std_ss [IS_PROC_par, BV_def, DISJOINT_UNION] \\
@@ -2169,7 +2169,7 @@ Proof
          CONJ_TAC >- (MATCH_MP_TAC PAR2 >> art []) \\
          SIMP_TAC std_ss [O_DEF] \\
          Q.EXISTS_TAC `GQ || y` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_L >> art []) \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_L >> art []) \\
          rename1 `STRONG_EQUIV E1' x'` \\
          Q.EXISTS_TAC `GP || x'` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_L >> art []) \\
@@ -2201,7 +2201,7 @@ Proof
            rename1 `STRONG_EQUIV y E2'` \\
            rename1 `STRONG_EQUIV E2 x` \\
            Q.EXISTS_TAC `y || x` \\
-           Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
+           reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
            Q.EXISTS_TAC `y || x` \\
            CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
            fs [IS_PROC_par, BV_def, DISJOINT_UNION],
@@ -2211,7 +2211,7 @@ Proof
            SIMP_TAC std_ss [O_DEF] \\
            rename1 `STRONG_EQUIV E2 y` \\
            Q.EXISTS_TAC `(CCS_SUBST (fromList Xs Qs) G'') || y` \\
-           Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
+           reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
            Q.EXISTS_TAC `(CCS_SUBST (fromList Xs Ps) G'') || y` \\
            CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
            fs [IS_PROC_par, BV_def, DISJOINT_UNION] \\
@@ -2231,7 +2231,7 @@ Proof
            SIMP_TAC std_ss [O_DEF] \\
            rename1 `STRONG_EQUIV y E2'` \\
            Q.EXISTS_TAC `y || (CCS_SUBST (fromList Xs Qs) G'')` \\
-           Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
+           reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
            Q.EXISTS_TAC `y || (CCS_SUBST (fromList Xs Ps) G'')` \\
            CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
            fs [IS_PROC_par, BV_def, DISJOINT_UNION] \\
@@ -2251,7 +2251,7 @@ Proof
            SIMP_TAC std_ss [O_DEF] \\
            Q.EXISTS_TAC `par (CCS_SUBST (fromList Xs Qs) G''')
                              (CCS_SUBST (fromList Xs Qs) G'')` \\
-           Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
+           reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
            Q.EXISTS_TAC `par (CCS_SUBST (fromList Xs Ps) G''')
                              (CCS_SUBST (fromList Xs Ps) G'')` \\
            CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
@@ -2284,7 +2284,7 @@ Proof
             `STRONG_EQUIV E1' E1` by PROVE_TAC [STRONG_EQUIV_TRANS] \\
           (* stage work *)
              Q.EXISTS_TAC `y || G'Q` \\
-             Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_R >> art []) \\
+             reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_R >> art []) \\
              Q.EXISTS_TAC `y || G'P` \\
              CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_R >> art []) \\
              ASM_SIMP_TAC std_ss [IS_PROC_par, BV_def, DISJOINT_UNION] \\
@@ -2303,7 +2303,7 @@ Proof
          CONJ_TAC >- (MATCH_MP_TAC PAR1 >> art []) \\
          SIMP_TAC std_ss [O_DEF] \\
          Q.EXISTS_TAC `y || G'Q` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_R >> art []) \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_R >> art []) \\
          rename1 `STRONG_EQUIV E1' x'` \\
          Q.EXISTS_TAC `x' || G'P` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_R >> art []) \\
@@ -2328,7 +2328,7 @@ Proof
              SIMP_TAC std_ss [O_DEF] \\
           (* stage work *)
              Q.EXISTS_TAC `GQ || y` \\
-             Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_L >> art []) \\
+             reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_L >> art []) \\
              Q.EXISTS_TAC `GP || y` \\
              CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_L >> art []) \\
              ASM_SIMP_TAC std_ss [IS_PROC_par, BV_def, DISJOINT_UNION] \\
@@ -2346,7 +2346,7 @@ Proof
          Q.EXISTS_TAC `GP || E1'` >> CONJ_TAC >- (MATCH_MP_TAC PAR2 >> art []) \\
          SIMP_TAC std_ss [O_DEF] \\
          Q.EXISTS_TAC `GQ || y` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_L >> art []) \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_L >> art []) \\
          rename1 `STRONG_EQUIV E1' x'` \\
          Q.EXISTS_TAC `GP || x'` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_PAR_L >> art []) \\
@@ -2378,7 +2378,7 @@ Proof
            rename1 `STRONG_EQUIV y E2'` \\
            rename1 `STRONG_EQUIV E1' x` \\
            Q.EXISTS_TAC `x || y` \\
-           Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
+           reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
            Q.EXISTS_TAC `x || y` \\
            CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
            fs [IS_PROC_par, BV_def, DISJOINT_UNION],
@@ -2388,7 +2388,7 @@ Proof
            SIMP_TAC std_ss [O_DEF] \\
            rename1 `STRONG_EQUIV E1'' y` \\
            Q.EXISTS_TAC `(CCS_SUBST (fromList Xs Qs) G'') || y` \\
-           Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
+           reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
            Q.EXISTS_TAC `(CCS_SUBST (fromList Xs Ps) G'') || y` \\
            CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
            fs [IS_PROC_par, BV_def, DISJOINT_UNION] \\
@@ -2408,7 +2408,7 @@ Proof
            SIMP_TAC std_ss [O_DEF] \\
            rename1 `STRONG_EQUIV y E1` \\
            Q.EXISTS_TAC `y || (CCS_SUBST (fromList Xs Qs) G'')` \\
-           Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
+           reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
            Q.EXISTS_TAC `y || (CCS_SUBST (fromList Xs Ps) G'')` \\
            CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
            fs [IS_PROC_par, BV_def, DISJOINT_UNION] \\
@@ -2428,7 +2428,7 @@ Proof
            SIMP_TAC std_ss [O_DEF] \\
            Q.EXISTS_TAC `par (CCS_SUBST (fromList Xs Qs) G''')
                              (CCS_SUBST (fromList Xs Qs) G'')` \\
-           Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
+           reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
            Q.EXISTS_TAC `par (CCS_SUBST (fromList Xs Ps) G''')
                              (CCS_SUBST (fromList Xs Ps) G'')` \\
            CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
@@ -2966,7 +2966,7 @@ Proof
  >> Know `DISJOINT (BV C') (set Xs)`
  >- (MATCH_MP_TAC DISJOINT_SUBSET' \\
      Q.EXISTS_TAC `BV C UNION (BIGUNION (IMAGE BV (set Es)))` \\
-     Reverse CONJ_TAC
+     reverse CONJ_TAC
      >- (Q.UNABBREV_TAC `C'` >> MATCH_MP_TAC BV_SUBSET_BIGUNION >> art []) \\
      RW_TAC std_ss [DISJOINT_UNION, DISJOINT_BIGUNION, IN_IMAGE] \\
      fs [EVERY_MEM])
@@ -3048,7 +3048,7 @@ Proof
     `MEM E Es` by PROVE_TAC [MEM_EL] \\
      MATCH_MP_TAC DISJOINT_SUBSET' \\
      Q.EXISTS_TAC `BV E UNION (BIGUNION (IMAGE BV (set Ps)))` \\
-     Reverse CONJ_TAC
+     reverse CONJ_TAC
      >- (MATCH_MP_TAC BV_SUBSET_BIGUNION >> art [] \\
          PROVE_TAC []) \\
      RW_TAC std_ss [DISJOINT_UNION, DISJOINT_BIGUNION, IN_IMAGE] \\
@@ -3075,7 +3075,7 @@ Proof
      CONJ_TAC (* DISJOINT ... *)
      >- (MATCH_MP_TAC DISJOINT_SUBSET' \\
          Q.EXISTS_TAC `BV C'' UNION (BIGUNION (IMAGE BV (set Es)))` \\
-         Reverse CONJ_TAC
+         reverse CONJ_TAC
          >- (MATCH_MP_TAC BV_SUBSET_BIGUNION >> art []) \\
          RW_TAC std_ss [DISJOINT_UNION, DISJOINT_BIGUNION, IN_IMAGE] \\
          fs [CCS_equation_def, EVERY_MEM]) \\
@@ -3252,7 +3252,7 @@ val shared_lemma = Q.prove (
       RW_TAC std_ss [] \\
       Q.EXISTS_TAC `E1'` >> art [] \\
       Q.EXISTS_TAC `C'` >> art [] \\
-      Reverse CONJ_TAC >- PROVE_TAC [WEAK_EQUIV_TRANS] \\
+      reverse CONJ_TAC >- PROVE_TAC [WEAK_EQUIV_TRANS] \\
       IMP_RES_TAC contracts_IMP_WEAK_EQUIV \\
       PROVE_TAC [WEAK_EQUIV_TRANS],
       (* goal 2 (of 4) *)
@@ -3293,7 +3293,7 @@ val shared_lemma = Q.prove (
       RW_TAC std_ss [] \\
       Q.EXISTS_TAC `E1'` >> art [] \\
       Q.EXISTS_TAC `C'` >> art [] \\
-      Reverse CONJ_TAC >- PROVE_TAC [WEAK_EQUIV_TRANS] \\
+      reverse CONJ_TAC >- PROVE_TAC [WEAK_EQUIV_TRANS] \\
       IMP_RES_TAC contracts_IMP_WEAK_EQUIV \\
       PROVE_TAC [WEAK_EQUIV_TRANS],
       (* goal 4 (of 4) *)

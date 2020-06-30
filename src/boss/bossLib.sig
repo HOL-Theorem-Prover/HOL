@@ -32,16 +32,20 @@ sig
   (* Case-splitting and induction operations *)
 
   val Cases             : tactic
-  val namedCases        : string list -> tactic
+  val Cases_on          : term quotation -> tactic
+  val tmCases_on        : term -> string list -> tactic
+  val PairCases         : tactic
+  val PairCases_on      : term quotation -> tactic
   val Induct            : tactic
-  val recInduct         : thm -> tactic
   val Induct_on         : term quotation -> tactic
+  val recInduct         : thm -> tactic
+  val namedCases        : string list -> tactic
+  val namedCases_on     : term quotation -> string list -> tactic
+
   val measureInduct_on  : term quotation -> tactic
   val completeInduct_on : term quotation -> tactic
-
-  val Cases_on          : term quotation -> tactic
-  val namedCases_on     : term quotation -> string list -> tactic
-  val PairCases_on      : term quotation -> tactic
+  val using             : tactic * thm -> tactic (* infix *)
+  val usingA            : tactic -> thm -> tactic (* curry of above *)
 
   val pairarg_tac       : tactic
   val split_pair_case_tac : tactic
@@ -85,6 +89,7 @@ sig
   val diminish_srw_ss : string list -> ssfrag list
   val export_rewrites : string list -> unit
   val delsimps        : string list -> unit
+  val temp_delsimps   : string list -> unit
   val limit           : int -> simpset -> simpset
 
   (* use these in simplifier's argument list *)

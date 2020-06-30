@@ -328,10 +328,8 @@ val DEST_LABELS = CONV_RULE DEST_LABELS_CONV
 
 val DEST_LABELS_TAC = CONV_TAC DEST_LABELS_CONV THEN RULE_ASSUM_TAC DEST_LABELS
 
-fun lb s = mk_var(s, label_ty);
-fun LB s = REFL (lb s)
 
-fun MK_LABEL(s, th) = EQ_MP (SYM (SPECL [lb s, concl th] label_def)) th
+fun MK_LABEL(s, th) = EQ_MP (SYM (SPECL [mk_label_var s, concl th] label_def)) th
 
 fun ASSUME_NAMED_TAC s bth : tactic = ASSUME_TAC (MK_LABEL(s, bth))
 
@@ -352,7 +350,7 @@ in
 end;
 
 fun LABEL_ASSUM s ttac (asl, w) =
-   ttac (find_labelled_assumption (LB s) asl) (asl, w)
+   ttac (find_labelled_assumption (L s) asl) (asl, w)
 
 (*---------------------------------------------------------------------------*)
 (* LABEL_X_ASSUM is almost identical to LABEL_ASSUM. But it is not applied   *)
@@ -394,5 +392,53 @@ in
 end
 
 fun LABEL_RESOLVE th (asl, w) = hd (LLABEL_RESOLVE [th] asl)
+
+(* ----------------------------------------------------------------------
+    using : tactic * thm -> tactic
+
+    using th tac stashes theorem th in the goal so that tactic tac can
+    use it if desired. If the tactic terminates, the stashed theorem
+    is removed.
+
+    Stashing is done by adding an assumption encoding the name of the
+    theorem to the assumption list. This will cause mess-ups if you
+    attempt something like
+
+       pop_assum foo using bar
+
+    so, don't do that.
+
+    This can be nested, with multiple theorems stashed at once; the
+    cleanup looks for the exact using theorem that it stashed when it
+    removes it and does so with UNDISCH_THEN. So, if there are
+    multiples of the same name, the most recent will be taken.
+
+   ---------------------------------------------------------------------- *)
+
+fun tac using th =
+    let
+      val uth = MK_USING th
+    in
+      ASSUME_TAC uth >>
+      tac >>
+      UNDISCH_THEN (concl uth) (K ALL_TAC)
+    end
+
+fun usingA tac th = tac using th
+
+fun loc2thm loc =
+    case loc of
+        DB.Local s => (valOf (DB.local_thm s)
+                       handle Option => raise ERR "loc2thm" "No such theorem")
+      | DB.Stored {Name,Thy} =>
+        DB.fetch Thy Name
+        handle HOL_ERR _ => raise ERR "loc2thm" "No such theorem"
+
+
+fun maybe_using gen ttac (g as (asl,w)) =
+    case asl of
+        h::_ => if is_using h then ttac (DEST_USING (ASSUME h)) g
+                else MAP_FIRST ttac (gen()) g
+      | _ => MAP_FIRST ttac (gen()) g
 
 end

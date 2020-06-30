@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib lcsymtacs pairTheory pred_setTheory SatisfySimps boolSimps;
+open HolKernel Parse boolLib bossLib pairTheory pred_setTheory SatisfySimps boolSimps;
 
 val _ = new_theory "category";
 

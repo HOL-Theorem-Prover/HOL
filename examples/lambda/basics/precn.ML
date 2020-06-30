@@ -4,7 +4,6 @@ open binderLib
 
 val _ = new_theory "precn" (* "parameter recursion" *)
 
-open lcsymtacs
 val lemma1 = prove(
   ``tpm [(x,y)] (if s1:string = s2 then t1 else t2) =
     if s1 = s2 then tpm [(x,y)] t1 else tpm [(x,y)] t2``,

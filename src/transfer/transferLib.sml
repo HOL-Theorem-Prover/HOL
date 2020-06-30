@@ -3,7 +3,6 @@ struct
 
 open HolKernel boolLib
 open transferTheory FullUnify
-val PART_MATCH' = mp_then.PART_MATCH'
 val op $ = Portable.$
 
 val SIMP_CONV = simpLib.SIMP_CONV
@@ -21,18 +20,6 @@ fun relconstraint_tm t =
 fun is_relconstraint t =
     relconstraint_tm (rator t)
 
-fun gen_tyvar_sigma (tys : hol_type list) =
-    map (fn ty => {redex = ty, residue = gen_tyvar()}) tys
-
-fun gen_tyvarify tm =
-    Term.inst (gen_tyvar_sigma (type_vars_in_term tm)) tm
-
-fun GEN_TYVARIFY th =
-    let
-      val tyvs = HOLset.addList(hyp_tyvars th, type_vars_in_term (concl th))
-    in
-      INST_TYPE (gen_tyvar_sigma (HOLset.listItems tyvs)) th
-    end
 
 fun pmk_const c =
     case Preterm.term_to_preterm [] c (Pretype.Env.empty) of
@@ -230,7 +217,7 @@ fun eliminate_with_unifier ctys th1 h th2 =
      *)
     let
       open optmonad
-      val rule = GEN_TYVARIFY th1
+      val rule = FULL_GEN_TYVARIFY th1
       val cr_t = concl rule
     in
       case Env.fromEmpty (unify ctys [] (cr_t, h) >> collapse) of
@@ -368,7 +355,7 @@ fun eliminate_booleans_and_equalities cleftp th =
               let
                 val eq = equalityp_applied
                            |> INST [A |-> genvar eqty, x |-> genvar alpha]
-                           |> GEN_TYVARIFY |> UNDISCH
+                           |> FULL_GEN_TYVARIFY |> UNDISCH
               in
                 case eliminate_with_unifier ctys eq h th of
                     NONE => bh_recurse rest th

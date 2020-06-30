@@ -1,4 +1,29 @@
-INCLUDES=../tools ../deep_embeddings ../translations ../model_check ${HOLDIR}/examples/PSL/path ${HOLDIR}/examples/PSL/1.1/official-semantics/
+INCLUDES = ../tools ../deep_embeddings ../translations ../model_check \
+	${HOLDIR}/examples/PSL/path \
+	${HOLDIR}/examples/PSL/1.1/official-semantics
+#	${HOLDIR}/examples/logic/ltl-transformations
 
+OPTIONS = QUIT_ON_FAILURE
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+EXTRA_CLEANS = heap selftest.exe
 
+ifdef POLY
+HOLHEAP = heap
+OBJNAMES = pred_setTheory
+LOCAL_OBJNAMES = ../translations/translationsLib
+OBJS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES)) \
+	../translations/translationsLib.uo
 
+all: $(HOLHEAP)
+
+$(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state)
+	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES) $(LOCAL_OBJNAMES)
+endif
+
+all: $(TARGETS) selftest.exe
+
+selftest.exe: selftest.uo ltl2omega.uo
+	$(HOLMOSMLC) -o $@ $<
+
+.PHOHY: all

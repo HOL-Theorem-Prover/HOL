@@ -67,7 +67,8 @@ fun apply_move_poly move poly =
              then raise ERR "apply_move_poly" "non-increasing"
              else butlast poly @ [last poly @ [c]]
 
-fun apply_move move (poly,graph,n) = (apply_move_poly move poly, graph, n-1)
+fun apply_move (tree,id) move (poly,graph,n) =
+  ((apply_move_poly move poly, graph, n-1), tree)
 
 fun available_movel_poly poly =
   filter (fn x => can (apply_move_poly x) poly) movel
@@ -214,7 +215,8 @@ val rlparam =
    ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
-  {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer}
+  {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer,
+   infobs = fn _ => ()}
 
 val extsearch = mk_extsearch "mleDiophSynt.extsearch" rlobj
 
@@ -222,6 +224,7 @@ val extsearch = mk_extsearch "mleDiophSynt.extsearch" rlobj
    Final test
    ------------------------------------------------------------------------- *)
 
+(*
 val ft_extsearch_uniform =
   ft_mk_extsearch "mleDiophSynt.ft_extsearch_uniform" rlobj
     (uniform_player game)
@@ -251,6 +254,7 @@ val fttnn_extsearch =
 
 val fttnnbs_extsearch =
   fttnnbs_mk_extsearch "mleDiophSynt.fttnnbs_extsearch" rlobj
+*)
 
 (*
 load "aiLib"; open aiLib;
@@ -286,7 +290,8 @@ fun solve_target (unib,tim,tnn) target =
     noise_coeff = 0.25,
     noise_gen = random_real,
     noconfl = false,
-    avoidlose = false
+    avoidlose = false,
+    evalwin = false
     }
   val pretob = (#pretob (#dplayer rlobj));
   fun preplayer target =
@@ -297,7 +302,7 @@ fun solve_target (unib,tim,tnn) target =
     {mctsparam = mctsparam, game = #game rlobj,
      player = if unib then uniform_player (#game rlobj) else preplayer target}
   in
-    fst (mcts mctsobj (starttree_of mctsobj target))
+    (fst o snd) (mcts mctsobj (starttree_of mctsobj target))
   end
 
 fun solve_diophset (unib,tim,tnn) diophset =
@@ -319,9 +324,8 @@ fun solve_diophset (unib,tim,tnn) diophset =
 load "aiLib"; open aiLib;
 load "mleDiophSynt"; open mleDiophSynt;
 val tnn = mlReinforce.retrieve_tnn rlobj 197;
-val diophset = [1,3];
-solve_diophset_uniform diophset;
-solve_diophset diophset;
+val diophset = [0,1,2,4,8];
+solve_diophset (false,60.0,tnn) diophset;
 *)
 
 (* -------------------------------------------------------------------------
@@ -392,17 +396,96 @@ val _ = mkDir_err dir2; app (store_result dir2) (number_snd 0 l3);
 
 (*
 load "aiLib"; open aiLib;
-load "smlParallel"; open smlParallel;
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "mleDiophLib"; open mleDiophLib;
 load "mleDiophSynt"; open mleDiophSynt;
+
+val dir2 = HOLDIR ^ "/examples/AI_tasks/dioph_results/test_tnn_nolimit";
+fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
+val l1 = List.tabulate (200,g);
+val dir2 = HOLDIR ^ "/examples/AI_tasks/dioph_results/train_tnn";
+fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
+val l2 = List.tabulate (2000,g);
+
+val (l3,l3') = partition #1 (l1 @ l2);
+val nsim_tnn = average_int (map #2 l3');
+val l4 = map (valOf o #3) l3;
+val l5 = map (fn (a,b,c) => veri_of_poly a) l4;
+val l6 = map (fn (a,b,c) => ((graph_to_il b, veri_of_poly a), poly_size a))
+l4;
+val l7 = dict_sort compare_imax l6;
+hd l7;
+val d = dnew (list_compare Int.compare) l6;
+
+val l6 = map (fn (a,b,c) => (graph_to_il b, veri_of_poly a, c)) l4;
+
+val longest =
+  let fun cmp (a,b) = Int.compare (#2 b, #2 a) in
+    dict_sort cmp l3
+  end;
+
+val (a,b,c) = valOf (#3 (hd longest));
+veri_of_poly a;
+graph_to_il b;
+
+
+val monol = List.concat (map numSyntax.strip_plus l5);
+val monofreq = dlist (count_dict (dempty Term.compare) monol);
+val monostats = dict_sort compare_imax monofreq;
+
+mleDiophLib.dioph_set (fst (hd l4));
+
 
 val dir2 = HOLDIR ^ "/examples/AI_tasks/dioph_results/test_uniform";
 fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
-val l1 = List.tabulate (10,g);
-val l2 = filter #1 l1;
-val l3 = map (valOf o #3) l2;
-val l4 = map (fn (a,b,c) => (a,b)) l3;
-mleDiophLib.dioph_set (fst (hd l4));
+val l1 = List.tabulate (200,g);
+val dir2 = HOLDIR ^ "/examples/AI_tasks/dioph_results/train_uniform";
+fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
+val l2 = List.tabulate (2000,g);
+
+val (l3,l3') = partition #1 (l1 @ l2);
+val nsim_uniform = average_int (map #2 l3');
+
+val dir2 = HOLDIR ^ "/examples/AI_tasks/dioph_results/test_distance";
+fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
+val l1 = List.tabulate (200,g);
+val dir2 = HOLDIR ^ "/examples/AI_tasks/dioph_results/train_distance";
+fun g i = #read_result ft_extsearch_uniform (dir2 ^ "/" ^ its i);
+val l2 = List.tabulate (2000,g);
+
+val (l3,l3') = partition #1 (l1 @ l2);
+val nsim_distance = average_int (map #2 l3');
+
+*)
+
+(* -------------------------------------------------------------------------
+   Training graph
+   ------------------------------------------------------------------------- *)
+
+(*
+load "aiLib"; open aiLib;
+load "mleDiophLib"; open mleDiophLib;
+load "mleDiophSynt"; open mleDiophSynt;
+
+val targetdl = List.tabulate (230,
+  fn x => mlReinforce.retrieve_targetd rlobj (x+1));
+val l1 = map dlist targetdl;
+val l2 = map (map (snd o snd)) l1;
+
+fun btr b = if b then 1.0 else 0.0
+
+fun expectancy_one bl =
+  if null bl then 0.0 else average_real (map btr (first_n 5 bl))
+fun expectancy bll = sum_real (map expectancy_one bll);
+val expectl = map expectancy l2;
+
+fun exists_one bl = btr (exists I bl);
+fun existssol bll = sum_real (map exists_one bll);
+val esoll = map existssol l2;
+
+val graph = number_fst 0 (combine (expectl,esoll));
+fun graph_to_string (i,(r1,r2)) = its i ^ " " ^ rts r1 ^ " " ^ rts r2;
+writel "dioph_graph" ("gen exp sol" :: map graph_to_string graph);
+
 *)
 
 end (* struct *)

@@ -354,6 +354,21 @@ app (export_goal "combin_test") (number_snd 0 gl);
 val data = import_data "train_export";
 val gl = map (goal_of_headnf o fst) data;
 app (export_goal "combin_train") (number_snd 0 gl);
+
+val data = import_data "test_export" @ import_data "train_export";
+val l1 = map (combin_size o snd) data;
+val l2 = dlist (count_dict (dempty Int.compare) l1);
+
+
+load "psTermGen"; open psTermGen;
+val s2 = mk_var ("s2", ``:'a -> 'a -> 'a``)
+val s1 = mk_var ("s1", ``:'a -> 'a``)
+val s0 = mk_var ("s0", alpha)
+val k1 = mk_var ("k1", ``:'a -> 'a``)
+val k0 = mk_var ("k0", alpha)
+fun f n = nterm [s0,s1,k0,k1,s2] (n,alpha);
+sum_real (List.tabulate (21,f));
+
 *)
 
 

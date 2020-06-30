@@ -17,11 +17,10 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open numLib unwindLib tautLib Arith prim_recTheory
-combinTheory quotientTheory arithmeticTheory realTheory
-realLib jrhUtils pairTheory seqTheory limTheory transcTheory listTheory mesonLib
-boolTheory topologyTheory pred_setTheory optionTheory numTheory RealArith
-pred_setLib cardinalTheory;
+open numTheory numLib unwindLib tautLib Arith prim_recTheory pairTheory
+     combinTheory quotientTheory arithmeticTheory pred_setTheory realTheory
+     realLib jrhUtils seqTheory limTheory transcTheory listTheory mesonLib
+     topologyTheory optionTheory RealArith pred_setLib cardinalTheory;
 
 open hurdUtils iterateTheory productTheory real_topologyTheory derivativeTheory;
 
@@ -4609,7 +4608,7 @@ Proof
   FIRST_X_ASSUM(ASSUME_TAC o REWRITE_RULE [INTERVAL_NE_EMPTY]) THEN
   ASM_SIMP_TAC std_ss [INTERVAL_LOWERBOUND, INTERVAL_UPPERBOUND, REAL_LT_IMP_LE] THEN
   MATCH_MP_TAC REAL_LET_TRANS THEN EXISTS_TAC ``&2 * d:real`` THEN
-  Reverse CONJ_TAC
+  reverse CONJ_TAC
   >- (MATCH_MP_TAC(REAL_ARITH ``&0 < d /\ &3 * d <= x ==> &2 * d < x:real``) THEN
       ASM_REWRITE_TAC[] THEN
       FULL_SIMP_TAC std_ss [REAL_EQ_LDIV_EQ, REAL_ARITH ``0 < 3:real``] THEN
@@ -9559,7 +9558,7 @@ Proof
    [``{interval[c:real,d]}``, ``interval[c:real,d]``])
  >> ASM_SIMP_TAC std_ss [DIVISION_OF_SELF, SUM_SING, max_def]
  >> DISCH_TAC
- >> Reverse (Cases_on `abs B <= abs (f {})`) >> fs []
+ >> reverse (Cases_on `abs B <= abs (f {})`) >> fs []
  >- (MATCH_MP_TAC REAL_LE_TRANS \\
      Q.EXISTS_TAC `B` >> art [ABS_LE])
  >> MATCH_MP_TAC REAL_LE_TRANS

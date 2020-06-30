@@ -111,7 +111,7 @@ end
 
 (* Breaks term down until binop no longer occurs at top level in result list *)
 
-fun strip_binop dest =
+fun strip_binop_opt dest =
    let
       fun strip A [] = rev A
         | strip A (h :: t) =
@@ -121,6 +121,8 @@ fun strip_binop dest =
    in
       strip [] o Lib.list_of_singleton
    end
+
+fun strip_binop dest = strip_binop_opt (total dest);
 
 (* For right-associative binary operators,
   or such as dest_abs, SPEC_VAR, dom_rng, dest_imp. Tail recursive. *)

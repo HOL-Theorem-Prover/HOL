@@ -13,8 +13,6 @@ val _ = new_theory "logPower";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -1460,23 +1458,27 @@ val LOG2_BY_HALF = store_thm(
           = SUC m                         by SUC_ONE_ADD
        Thus RHS = LOG2 n - SUC m = 0 = LHS.
 *)
-val LOG2_DIV_EXP = store_thm(
-  "LOG2_DIV_EXP",
-  ``!n m. 2 ** m < n ==> (LOG2 (n DIV 2 ** m) = (LOG2 n) - m)``,
-  Induct_on `m` >-
-  rw[] >>
+
+Theorem LOG2_DIV_EXP:
+  !n m. 2 ** m < n ==> LOG2 (n DIV 2 ** m) = LOG2 n - m
+Proof
+  Induct_on ‘m’ >- rw[] >>
   rpt strip_tac >>
-  `1 < 2 ** SUC m` by rw[ONE_LT_EXP] >>
-  `1 < n` by decide_tac >>
+  ‘1 < 2 ** SUC m’ by rw[ONE_LT_EXP] >>
+  ‘1 < n’ by decide_tac >>
   fs[EXP] >>
-  `2 ** m <= HALF n` by metis_tac[DIV_LE_MONOTONE, HALF_TWICE, LESS_IMP_LESS_OR_EQ, DECIDE``0 < 2``] >>
-  `LOG2 (n DIV (TWICE (2 ** m))) = LOG2 ((HALF n) DIV 2 ** m)` by rw[DIV_DIV_DIV_MULT] >>
-  fs[LESS_OR_EQ] >-
-  rw[LOG2_HALF] >>
-  `LOG2 n = 1 + LOG2 (HALF n)`  by rw[LOG_DIV] >>
-  `_ = 1 + m` by metis_tac[LOG2_2_EXP] >>
-  `_ = SUC m` by rw[] >>
-  rw[]);
+  ‘2 ** m <= HALF n’
+    by metis_tac[DIV_LE_MONOTONE, HALF_TWICE, LESS_IMP_LESS_OR_EQ,
+                 DECIDE “0 < 2”] >>
+  ‘LOG2 (n DIV (TWICE (2 ** m))) = LOG2 ((HALF n) DIV 2 ** m)’
+    by rw[DIV_DIV_DIV_MULT] >>
+  fs[LESS_OR_EQ] >- rw[LOG2_HALF] >>
+  ‘LOG2 n = 1 + LOG2 (HALF n)’  by rw[LOG_DIV] >>
+  ‘_ = 1 + m’ by metis_tac[LOG2_2_EXP] >>
+  ‘_ = SUC m’ by rw[] >>
+  ‘0 < HALF n’ suffices_by rw[] >>
+  metis_tac[DECIDE “0 < 2”, ZERO_LT_EXP]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* LOG2 Computation                                                          *)

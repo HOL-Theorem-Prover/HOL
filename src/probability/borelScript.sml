@@ -27,7 +27,7 @@ open HolKernel Parse boolLib bossLib;
 open arithmeticTheory prim_recTheory numLib combinTheory optionTheory
      res_quanTheory res_quanTools pairTheory jrhUtils mesonLib
      pred_setTheory pred_setLib listTheory quotientTheory relationTheory
-     rich_listTheory sortingTheory;
+     rich_listTheory sortingTheory fcpTheory;
 
 open realTheory realLib seqTheory transcTheory real_sigmaTheory RealArith;
 
@@ -46,15 +46,18 @@ val set_ss = std_ss ++ PRED_SET_ss;
 (*  Indicator functions                                                      *)
 (* ------------------------------------------------------------------------- *)
 
-(* This overrides real_borelTheory.indicator_fn_def *)
-val _ = hide "indicator_fn";
-
 (* `indicator_fn s` maps x to 0 or 1 when x IN or NOTIN s *)
-val indicator_fn_def = Define
-   `indicator_fn s = \x. if x IN s then (1 :extreal) else (0 :extreal)`;
+Definition indicator_fn_def :
+    ext_indicator_fn s = \x. if x IN s then (1 :extreal) else (0 :extreal)
+End
 
-(* MATHEMATICAL DOUBLE-STRUCK DIGIT ONE *)
+val _ = overload_on ("indicator_fn", “ext_indicator_fn”);
 val _ = Unicode.unicode_version {u = UTF8.chr 0x1D7D9, tmnm = "indicator_fn"};
+val _ = TeX_notation {hol = UTF8.chr 0x1D7D9, TeX = ("\\HOLTokenOne{}", 1)};
+val _ = TeX_notation {hol = "indicator_fn",   TeX = ("\\HOLTokenOne{}", 1)};
+
+val _ = TeX_notation {hol = "indicator_fn",   TeX = ("\\HOLTokenOne{}", 1)};
+val _ = TeX_notation {hol = UTF8.chr 0x1D7D9, TeX = ("\\HOLTokenOne{}", 1)};
 
 val INDICATOR_FN_POS = store_thm
   ("INDICATOR_FN_POS", ``!s x. 0 <= indicator_fn s x``,
@@ -74,6 +77,18 @@ val INDICATOR_FN_NOT_INFTY = store_thm (* new *)
  >> Cases_on `x IN s`
  >> ASM_SIMP_TAC std_ss [indicator_fn_def, extreal_of_num_def, extreal_not_infty]);
 
+(* "advanced" lemmas/theorems should have lower-case names *)
+Theorem indicator_fn_normal :
+    !s x. ?r. (indicator_fn s x = Normal r) /\ 0 <= r /\ r <= 1
+Proof
+    rpt STRIP_TAC
+ >> `?r. indicator_fn s x = Normal r`
+       by METIS_TAC [extreal_cases, INDICATOR_FN_NOT_INFTY]
+ >> Q.EXISTS_TAC `r` >> art []
+ >> METIS_TAC [INDICATOR_FN_POS, INDICATOR_FN_LE_1, extreal_le_eq,
+               extreal_of_num_def]
+QED
+
 val INDICATOR_FN_SING_1 = store_thm
   ("INDICATOR_FN_SING_1", ``!x y. (x = y) ==> (indicator_fn {x} y = 1)``,
     RW_TAC std_ss [indicator_fn_def, IN_SING]);
@@ -81,6 +96,12 @@ val INDICATOR_FN_SING_1 = store_thm
 val INDICATOR_FN_SING_0 = store_thm
   ("INDICATOR_FN_SING_0", ``!x y. x <> y ==> (indicator_fn {x} y = 0)``,
     RW_TAC std_ss [indicator_fn_def, IN_SING]);
+
+Theorem INDICATOR_FN_EMPTY[simp] :
+    !x. indicator_fn {} x = 0
+Proof
+    RW_TAC std_ss [indicator_fn_def, NOT_IN_EMPTY]
+QED
 
 (* Properties of the indicator function [1, p.14] *)
 val INDICATOR_FN_INTER = store_thm (* new *)
@@ -170,6 +191,47 @@ val INDICATOR_FN_UNION = store_thm (* new *)
  >> Cases_on `t IN A` >> Cases_on `t IN B` >> fs [add_lzero, add_rzero, mul_rzero, sub_rzero]
  >> fs [extreal_add_def, extreal_sub_def, extreal_of_num_def]);
 
+Theorem INDICATOR_FN_MONO :
+    !s t x. s SUBSET t ==> indicator_fn s x <= indicator_fn t x
+Proof
+    rpt STRIP_TAC
+ >> Cases_on ‘x IN s’
+ >- (‘x IN t’ by PROVE_TAC [SUBSET_DEF] \\
+     rw [indicator_fn_def, le_refl])
+ >> ‘indicator_fn s x = 0’ by METIS_TAC [indicator_fn_def] >> POP_ORW
+ >> REWRITE_TAC [INDICATOR_FN_POS]
+QED
+
+Theorem INDICATOR_FN_CROSS :
+    !s t x y. indicator_fn (s CROSS t) (x,y) = indicator_fn s x *
+                                               indicator_fn t y
+Proof
+    rw [indicator_fn_def]
+ >> PROVE_TAC []
+QED
+
+Theorem INDICATOR_FN_FCP_CROSS :
+    !(s :'a['b] set) (t :'a['c] set) x y.
+        FINITE univ(:'b) /\ FINITE univ(:'c) ==>
+       (indicator_fn (fcp_cross s t) (FCP_CONCAT x y) =
+        indicator_fn s x * indicator_fn t y)
+Proof
+    rpt STRIP_TAC
+ >> rw [IN_FCP_CROSS, indicator_fn_def] (* 4 subgoals *)
+ >> METIS_TAC [FCP_CONCAT_11]
+QED
+
+Theorem indicator_fn_general_cross :
+    !(cons :'a -> 'b -> 'c) car cdr (s :'a set) (t :'b set) x y.
+        pair_operation cons car cdr ==>
+       (indicator_fn (general_cross cons s t) (cons x y) =
+        indicator_fn s x * indicator_fn t y)
+Proof
+    rpt STRIP_TAC
+ >> rw [IN_general_cross, indicator_fn_def] (* 4 subgoals *)
+ >> METIS_TAC [pair_operation_def]
+QED
+
 val indicator_fn_split = store_thm
   ("indicator_fn_split",
   ``!(r:num->bool) s (b:num->('a->bool)).
@@ -255,7 +317,7 @@ Proof
      >- (FULL_SIMP_TAC std_ss [IN_BIGUNION_IMAGE, IN_UNIV] \\
          RW_TAC std_ss [indicator_fn_def, EXTREAL_SUM_IMAGE_ZERO, FINITE_COUNT, le_refl, le_01]) \\
      FULL_SIMP_TAC std_ss [IN_BIGUNION_IMAGE, IN_UNIV, indicator_fn_def] \\
-     Reverse (RW_TAC std_ss []) >- METIS_TAC [] \\
+     reverse (RW_TAC std_ss []) >- METIS_TAC [] \\
     `!n. n <> x' ==> ~(x IN a n)` by METIS_TAC [DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY] \\
      Cases_on `~(x' IN count n)`
      >- (`SIGMA (\i. if x IN a i then 1 else 0) (count n) = 0`
@@ -278,7 +340,7 @@ Proof
  >> Know `!n. SIGMA (\i. indicator_fn (a i) x) (count n) <= y`
  >- (RW_TAC std_ss [] >> POP_ASSUM MATCH_MP_TAC \\
      Q.EXISTS_TAC `n` >> REWRITE_TAC []) >> DISCH_TAC
- >> Reverse (RW_TAC std_ss [indicator_fn_def, IN_BIGUNION_IMAGE, IN_UNIV])
+ >> reverse (RW_TAC std_ss [indicator_fn_def, IN_BIGUNION_IMAGE, IN_UNIV])
  >- (`0 <= SIGMA (\i. indicator_fn (a i) x) (count 0)`
         by RW_TAC std_ss [COUNT_ZERO, EXTREAL_SUM_IMAGE_EMPTY, le_refl] \\
      METIS_TAC [le_trans])
@@ -330,6 +392,7 @@ val _ = add_rule { fixity = Suffix 2100,
                    paren_style = OnlyIfNecessary,
                    pp_elements = [TOK "^-"],
                    term_name = "fn_minus"};
+
 val _ = Unicode.unicode_version {u = Unicode.UChar.sup_minus, tmnm = "fn_minus"};
 val _ = TeX_notation {hol = Unicode.UChar.sup_minus,
                       TeX = ("\\HOLTokenSupMinus{}", 1)};
@@ -432,6 +495,38 @@ val FN_PLUS_POS_ID = store_thm
   >> Cases_on `g x = 0` >- METIS_TAC []
   >> METIS_TAC [le_lt]);
 
+Theorem FN_PLUS_REDUCE[simp] :
+    !f x. 0 <= f x ==> (fn_plus f x = f x)
+Proof
+    RW_TAC std_ss [fn_plus_def]
+ >> METIS_TAC [le_lt]
+QED
+
+Theorem FN_MINUS_REDUCE[simp] :
+    !f x. 0 <= f x ==> (fn_minus f x = 0)
+Proof
+    RW_TAC std_ss [fn_minus_def]
+ >> PROVE_TAC [let_antisym]
+QED
+
+(* don't put it into simp sets, ‘o’ may be eliminated *)
+Theorem FN_PLUS_ABS_SELF :
+    !f. fn_plus (abs o f) = abs o f
+Proof
+    RW_TAC bool_ss [FUN_EQ_THM]
+ >> MATCH_MP_TAC FN_PLUS_REDUCE
+ >> RW_TAC std_ss [o_DEF, abs_pos]
+QED
+
+(* don't put it into simp sets, ‘o’ may be eliminated *)
+Theorem FN_MINUS_ABS_ZERO :
+    !f. fn_minus (abs o f) = \x. 0
+Proof
+    RW_TAC bool_ss [FUN_EQ_THM]
+ >> MATCH_MP_TAC FN_MINUS_REDUCE
+ >> RW_TAC std_ss [o_DEF, abs_pos]
+QED
+
 val FN_PLUS_NEG_ZERO = store_thm
   ("FN_PLUS_NEG_ZERO",
   ``!g. (!x. g x <= 0) ==> (fn_plus g = (\x. 0))``,
@@ -446,6 +541,20 @@ val FN_MINUS_POS_ZERO = store_thm
  >> Cases_on `g x = 0` >- METIS_TAC [neg_0]
  >> `0 < g x` by METIS_TAC [lt_le]
  >> METIS_TAC [extreal_lt_def]);
+
+Theorem FN_PLUS_ZERO[simp] :
+    fn_plus (\x. 0) = (\x. 0)
+Proof
+    MATCH_MP_TAC FN_PLUS_NEG_ZERO
+ >> RW_TAC std_ss [le_refl]
+QED
+
+Theorem FN_MINUS_ZERO[simp] :
+    fn_minus (\x. 0) = (\x. 0)
+Proof
+    MATCH_MP_TAC FN_MINUS_POS_ZERO
+ >> RW_TAC std_ss [le_refl]
+QED
 
 val FN_MINUS_TO_PLUS = store_thm
   ("FN_MINUS_TO_PLUS", ``!f. fn_minus (\x. -(f x)) = fn_plus f``,
@@ -465,12 +574,29 @@ val FN_PLUS_NOT_INFTY = store_thm
  >> Cases_on `0 < f x` >- PROVE_TAC []
  >> PROVE_TAC [extreal_not_infty, extreal_of_num_def]);
 
+Theorem FN_PLUS_NOT_INFTY' :
+    !f x. f x <> PosInf ==> fn_plus f x <> PosInf
+Proof
+    RW_TAC std_ss [fn_plus_def]
+ >> Cases_on `0 < f x` >- PROVE_TAC []
+ >> PROVE_TAC [extreal_not_infty, extreal_of_num_def]
+QED
+
 val FN_MINUS_NOT_INFTY = store_thm
   ("FN_MINUS_NOT_INFTY", ``!f. (!x. f x <> NegInf) ==> !x. fn_minus f x <> PosInf``,
     RW_TAC std_ss [fn_minus_def]
  >> Cases_on `f x < 0`
  >- PROVE_TAC [extreal_ainv_def, neg_neg]
  >> PROVE_TAC [extreal_not_infty, extreal_of_num_def]);
+
+Theorem FN_MINUS_NOT_INFTY' :
+    !f x. f x <> NegInf ==> fn_minus f x <> PosInf
+Proof
+    RW_TAC std_ss [fn_minus_def]
+ >> Cases_on `f x < 0`
+ >- PROVE_TAC [extreal_ainv_def, neg_neg]
+ >> PROVE_TAC [extreal_not_infty, extreal_of_num_def]
+QED
 
 val FN_PLUS_CMUL = store_thm
   ("FN_PLUS_CMUL",
@@ -656,6 +782,38 @@ Proof
         (Q.SPECL [`0`, `fn_plus f x`, `fn_minus f x`, `fn_minus f x`])) le_add2)
 QED
 
+(* A balance between fn_plus and fn_minus *)
+Theorem FN_PLUS_INFTY_IMP :
+    !f x. (fn_plus f x = PosInf) ==> (fn_minus f x = 0)
+Proof
+    rpt STRIP_TAC
+ >> Suff ‘f x = PosInf’
+ >- (DISCH_TAC >> MATCH_MP_TAC FN_MINUS_REDUCE \\
+     POP_ORW >> REWRITE_TAC [extreal_of_num_def, extreal_le_def])
+ >> CCONTR_TAC
+ >> Suff ‘fn_plus f x <> PosInf’ >- PROVE_TAC []
+ >> Q.PAT_X_ASSUM ‘fn_plus f x = PosInf’ K_TAC
+ >> RW_TAC std_ss [fn_plus_def]
+ >> PROVE_TAC [extreal_not_infty, extreal_of_num_def]
+QED
+
+Theorem FN_MINUS_INFTY_IMP :
+    !f x. (fn_minus f x = PosInf) ==> (fn_plus f x = 0)
+Proof
+    rpt STRIP_TAC
+ >> Suff ‘f x = NegInf’
+ >- (DISCH_TAC \\
+     RW_TAC std_ss [fn_plus_def, FUN_EQ_THM] \\
+     fs [lt_infty, extreal_of_num_def])
+ >> CCONTR_TAC
+ >> Suff ‘fn_minus f x <> PosInf’ >- PROVE_TAC []
+ >> Q.PAT_X_ASSUM ‘fn_minus f x = PosInf’ K_TAC
+ >> reverse (RW_TAC std_ss [fn_minus_def])
+ >- PROVE_TAC [extreal_not_infty, extreal_of_num_def]
+ >> CCONTR_TAC >> fs []
+ >> METIS_TAC [neg_neg, extreal_ainv_def]
+QED
+
 (* ******************************************* *)
 (*   Non-negative functions                    *)
 (* ******************************************* *)
@@ -683,7 +841,6 @@ val nonneg_fn_minus = store_thm
     RW_TAC std_ss [nonneg_def, fn_minus_def]
  >> FUN_EQ_TAC
  >> RW_TAC std_ss [extreal_lt_def]);
-
 
 (* ******************************************* *)
 (*    Borel Space and Measurable functions     *)
@@ -1709,28 +1866,34 @@ val IN_MEASURABLE_BOREL_LT = store_thm
   >> `?c. r = Normal c` by METIS_TAC [rat_not_infty, extreal_cases]
   >> METIS_TAC [IN_MEASURABLE_BOREL_ALL]);
 
-val IN_MEASURABLE_BOREL_LE = store_thm
-  ("IN_MEASURABLE_BOREL_LE",
-  ``!f g a. f IN measurable a Borel /\ g IN measurable a Borel ==>
-            ({x | f x <= g x} INTER space a) IN subsets a``,
-  RW_TAC std_ss []
-  >> `{x | f x <= g x} INTER space a = space a DIFF ({x | g x < f x} INTER space a)`
-      by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER, IN_DIFF]
-          >> METIS_TAC [extreal_lt_def])
-  >> `{x | g x < f x} INTER space a IN subsets a` by RW_TAC std_ss [IN_MEASURABLE_BOREL_LT]
-  >> METIS_TAC [algebra_def, IN_MEASURABLE_BOREL, sigma_algebra_def]);
+(* changed quantifier orders (was: f g a) *)
+Theorem IN_MEASURABLE_BOREL_LE :
+    !a f g. f IN measurable a Borel /\ g IN measurable a Borel ==>
+            ({x | f x <= g x} INTER space a) IN subsets a
+Proof
+    RW_TAC std_ss []
+ >> `{x | f x <= g x} INTER space a = space a DIFF ({x | g x < f x} INTER space a)`
+      by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER, IN_DIFF] \\
+          METIS_TAC [extreal_lt_def])
+ >> `{x | g x < f x} INTER space a IN subsets a` by RW_TAC std_ss [IN_MEASURABLE_BOREL_LT]
+ >> METIS_TAC [algebra_def, IN_MEASURABLE_BOREL, sigma_algebra_def]
+QED
 
-val IN_MEASURABLE_BOREL_EQ = store_thm
-  ("IN_MEASURABLE_BOREL_EQ",
- ``!f g M. (!x. x IN m_space M ==> (f x = g x)) /\
-      g IN measurable (m_space M,measurable_sets M) Borel ==>
-      f IN measurable (m_space M,measurable_sets M) Borel``,
-  RW_TAC std_ss [] THEN FULL_SIMP_TAC std_ss [IN_MEASURABLE_BOREL] THEN
-  CONJ_TAC THENL
-  [EVAL_TAC THEN SRW_TAC[] [IN_DEF, space_def, IN_FUNSET], ALL_TAC] THEN
-  GEN_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `c`) THEN
-  MATCH_MP_TAC EQ_IMPLIES THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-  ASM_SET_TAC [space_def]);
+(* changed quantifier orders (was: f g m) for applications in martingaleTheory *)
+Theorem IN_MEASURABLE_BOREL_EQ :
+    !m f g. (!x. x IN m_space m ==> (f x = g x)) /\
+            g IN measurable (m_space m,measurable_sets m) Borel ==>
+            f IN measurable (m_space m,measurable_sets m) Borel
+Proof
+    RW_TAC std_ss []
+ >> FULL_SIMP_TAC std_ss [IN_MEASURABLE_BOREL]
+ >> CONJ_TAC
+ >- (EVAL_TAC THEN SRW_TAC[] [IN_DEF, space_def, IN_FUNSET])
+ >> GEN_TAC
+ >> POP_ASSUM (MP_TAC o Q.SPEC `c`)
+ >> MATCH_MP_TAC EQ_IMPLIES >> AP_THM_TAC >> AP_TERM_TAC
+ >> ASM_SET_TAC [space_def]
+QED
 
 (*****************************************************)
 
@@ -2382,6 +2545,17 @@ val IN_MEASURABLE_BOREL_CMUL = store_thm
           METIS_TAC [lt_rdiv_neg, mul_comm])
  >> METIS_TAC [IN_MEASURABLE_BOREL_ALL, extreal_div_eq, REAL_LT_IMP_NE]);
 
+Theorem IN_MEASURABLE_BOREL_MINUS :
+    !a f g. sigma_algebra a /\ f IN measurable a Borel /\
+           (!x. x IN space a ==> (g x = -f x)) ==> g IN measurable a Borel
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL
+ >> qexistsl_tac [`f`, `-1`]
+ >> RW_TAC std_ss [Once neg_minus1]
+ >> REWRITE_TAC [extreal_of_num_def, extreal_ainv_def]
+QED
+
 val IN_MEASURABLE_BOREL_ABS = store_thm
   ("IN_MEASURABLE_BOREL_ABS",
   ``!a f g. sigma_algebra a /\ f IN measurable a Borel /\
@@ -2477,24 +2651,38 @@ val IN_MEASURABLE_BOREL_SQR = store_thm
             >> METIS_TAC [])
   >> METIS_TAC [sigma_algebra_def,ALGEBRA_INTER,extreal_sqrt_def,extreal_ainv_def]);
 
-val IN_MEASURABLE_BOREL_ADD = store_thm
-  ("IN_MEASURABLE_BOREL_ADD",
-  ``!a f g h. sigma_algebra a /\ f IN measurable a Borel /\
-              g IN measurable a Borel /\
-              (!x. x IN space a ==> f x <> NegInf /\ g x <> NegInf) /\
+(* enhanced with more general antecedents, old:
+
+      (!x. x IN space a ==> (f x <> NegInf /\ g x <> NegInf))
+
+   new:
+
+      (!x. x IN space a ==> (f x <> NegInf /\ g x <> NegInf) \/
+                            (f x <> PosInf /\ g x <> PosInf))
+ *)
+Theorem IN_MEASURABLE_BOREL_ADD :
+    !a f g h. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel /\
+              (!x. x IN space a ==> (f x <> NegInf /\ g x <> NegInf) \/
+                                    (f x <> PosInf /\ g x <> PosInf)) /\
               (!x. x IN space a ==> (h x = f x + g x))
-          ==> h IN measurable a Borel``,
+          ==> h IN measurable a Borel
+Proof
     rpt STRIP_TAC
  >> RW_TAC std_ss [IN_MEASURABLE_BOREL] >- RW_TAC std_ss [IN_FUNSET, IN_UNIV]
- >> `!c. {x | h x < Normal c} INTER (space a) =
-         BIGUNION (IMAGE (\r. {x | f x < r /\ r < Normal c - g x} INTER space a) Q_set)`
-     by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION_IMAGE, IN_UNIV,IN_INTER]
-            >> EQ_TAC
-            >- (RW_TAC std_ss []
-                >> METIS_TAC [lt_sub_imp,Q_DENSE_IN_R])
-            >> RW_TAC std_ss []
-            >- METIS_TAC [lt_sub,lt_trans,extreal_not_infty]
-            >> METIS_TAC [])
+ >> Know `!c. {x | h x < Normal c} INTER (space a) =
+              BIGUNION (IMAGE (\r. {x | f x < r /\ r < Normal c - g x} INTER space a) Q_set)`
+ >- (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION_IMAGE, IN_UNIV, IN_INTER] \\
+     EQ_TAC >- (RW_TAC std_ss [] \\
+                MATCH_MP_TAC Q_DENSE_IN_R \\
+                METIS_TAC [lt_sub_imp, lt_sub_imp']) \\
+     reverse (RW_TAC std_ss []) >- art [] \\
+    ‘h x = f x + g x’ by PROVE_TAC [] >> POP_ORW \\
+    ‘f x < Normal c - g x’ by PROVE_TAC [lt_trans] \\
+     Q.PAT_X_ASSUM ‘!x. x IN space a ==> P \/ Q’ (MP_TAC o (Q.SPEC ‘x’)) \\
+     RW_TAC std_ss [] >| (* 2 subgoals *)
+     [ METIS_TAC [lt_sub , extreal_not_infty],
+       METIS_TAC [lt_sub', extreal_not_infty] ])
+ >> DISCH_TAC
  >> FULL_SIMP_TAC std_ss []
  >> MATCH_MP_TAC BIGUNION_IMAGE_Q
  >> RW_TAC std_ss [IN_FUNSET]
@@ -2503,31 +2691,42 @@ val IN_MEASURABLE_BOREL_ADD = store_thm
      {x | f x < Normal y} INTER {x | Normal y < Normal c - g x}`
      by RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER]
  >> `({x | f x < Normal y} INTER space a) IN subsets a` by RW_TAC std_ss [IN_MEASURABLE_BOREL_ALL]
- >> `!x. x IN space a ==> ((Normal y < Normal c - g x) = (g x < Normal c - Normal y))`
-     by METIS_TAC [lt_sub, extreal_not_infty, add_comm]
+ >> Know `!x. x IN space a ==> (Normal y < Normal c - g x <=> g x < Normal c - Normal y)`
+ >- (rpt STRIP_TAC \\
+     Q.PAT_X_ASSUM ‘!x. x IN space a ==> P \/ Q’ (MP_TAC o (Q.SPEC ‘x’)) \\
+     RW_TAC std_ss [] >| (* 2 subgoals *)
+     [ METIS_TAC [lt_sub , extreal_not_infty, add_comm],
+       METIS_TAC [lt_sub', extreal_not_infty, add_comm] ])
+ >> DISCH_TAC
  >> `{x | Normal y < Normal c - g x} INTER space a = {x | g x < Normal c - Normal y} INTER space a`
      by (RW_TAC std_ss [IN_INTER, EXTENSION, GSPECIFICATION] >> METIS_TAC [])
  >> `({x | Normal y < Normal c - g x} INTER space a) IN subsets a`
      by METIS_TAC [IN_MEASURABLE_BOREL_ALL, extreal_sub_def]
-  >> `({x | f x < Normal y} INTER space a) INTER ({x | Normal y < Normal c - g x} INTER space a) =
-      ({x | f x < Normal y} INTER {x | Normal y < Normal c - g x} INTER space a)`
-        by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER]
-            >> EQ_TAC >- RW_TAC std_ss []
-            >> RW_TAC std_ss [])
-  >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER]);
+ >> `({x | f x < Normal y} INTER space a) INTER ({x | Normal y < Normal c - g x} INTER space a) =
+     ({x | f x < Normal y} INTER {x | Normal y < Normal c - g x} INTER space a)`
+     by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] \\
+         EQ_TAC >> RW_TAC std_ss [])
+ >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER]
+QED
 
-val IN_MEASURABLE_BOREL_SUB = store_thm
-  ("IN_MEASURABLE_BOREL_SUB",
-  ``!a f g h. sigma_algebra a /\
-              f IN measurable a Borel /\
-              g IN measurable a Borel /\
-             (!x. x IN space a ==> f x <> NegInf /\ g x <> PosInf) /\
+(* enhanced with more general antecedents, old:
+
+             (!x. x IN space a ==> (f x <> NegInf /\ g x <> PosInf))
+
+   new:
+             (!x. x IN space a ==> (f x <> NegInf /\ g x <> PosInf) \/
+                                   (f x <> PosInf /\ g x <> NegInf))
+ *)
+Theorem IN_MEASURABLE_BOREL_SUB :
+    !a f g h. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel /\
+             (!x. x IN space a ==> (f x <> NegInf /\ g x <> PosInf) \/
+                                   (f x <> PosInf /\ g x <> NegInf)) /\
              (!x. x IN space a ==> (h x = f x - g x))
-          ==> h IN measurable a Borel``,
+          ==> h IN measurable a Borel
+Proof
     RW_TAC std_ss []
  >> MATCH_MP_TAC IN_MEASURABLE_BOREL_ADD
- >> Q.EXISTS_TAC `f`
- >> Q.EXISTS_TAC `(\x. - g x)`
+ >> qexistsl_tac [`f`, `\x. - g x`]
  >> RW_TAC std_ss []
  >| [ (* goal 1 (of 3) *)
       MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL \\
@@ -2538,16 +2737,17 @@ val IN_MEASURABLE_BOREL_SUB = store_thm
       METIS_TAC [extreal_ainv_def, neg_neg],
       (* goal 3 (of 3) *)
       Cases_on `f x` >> Cases_on `g x` \\
-      METIS_TAC [le_infty, extreal_ainv_def, extreal_sub_def, extreal_add_def, real_sub] ]);
+      METIS_TAC [le_infty, extreal_ainv_def, extreal_sub_def, extreal_add_def, real_sub] ]
+QED
 
-(* cf. IN_MEASURABLE_BOREL_TIMES (lebesgueTheory) for a more general version *)
-val IN_MEASURABLE_BOREL_MUL = store_thm
-  ("IN_MEASURABLE_BOREL_MUL",
-  ``!a f g h. sigma_algebra a /\ f IN measurable a Borel  /\
+(* cf. lebesgueTheory.IN_MEASURABLE_BOREL_TIMES for a more general version *)
+Theorem IN_MEASURABLE_BOREL_MUL :
+    !a f g h. sigma_algebra a /\ f IN measurable a Borel  /\
              (!x. x IN space a ==> f x <> NegInf /\ f x <> PosInf /\
                                    g x <> NegInf /\ g x <> PosInf) /\
               g IN measurable a Borel /\ (!x. x IN space a ==> (h x = f x * g x))
-          ==> h IN measurable a Borel``,
+          ==> h IN measurable a Borel
+Proof
     RW_TAC std_ss []
  >> `!x. x IN space a ==> (f x * g x = 1 / 2 * ((f x + g x) pow 2 - f x pow 2 - g x pow 2))`
  by (RW_TAC std_ss [] \\
@@ -2562,32 +2762,33 @@ val IN_MEASURABLE_BOREL_MUL = store_thm
  >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL
  >> Q.EXISTS_TAC `(\x. (f x + g x) pow 2 - f x pow 2 - g x pow 2)`
  >> Q.EXISTS_TAC `1 / 2`
- >> RW_TAC real_ss [extreal_of_num_def,extreal_div_eq]
+ >> RW_TAC real_ss [extreal_of_num_def, extreal_div_eq]
  >> MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB
  >> Q.EXISTS_TAC `(\x. (f x + g x) pow 2 - f x pow 2)`
  >> Q.EXISTS_TAC `(\x. g x pow 2)`
  >> RW_TAC std_ss []
- >| [ (* goal 1 (of 4) *)
+ >| [ (* goal 1 (of 3) *)
       MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
       Q.EXISTS_TAC `(\x. (f x + g x) pow 2)` \\
       Q.EXISTS_TAC `(\x. f x pow 2)` \\
-      RW_TAC std_ss [] >|
-      [ MATCH_MP_TAC IN_MEASURABLE_BOREL_SQR
-        >> Q.EXISTS_TAC `(\x. (f x + g x))`
-        >> RW_TAC std_ss []
-        >> MATCH_MP_TAC IN_MEASURABLE_BOREL_ADD
-        >> qexistsl_tac [`f`, `g`]
-        >> RW_TAC std_ss [],
-        MATCH_MP_TAC IN_MEASURABLE_BOREL_SQR
-        >> METIS_TAC [],
-        METIS_TAC [add_not_infty,pow_not_infty],
-        METIS_TAC [pow_not_infty] ],
-      (* goal 2 (of 4) *)
+      RW_TAC std_ss [] >| (* 3 subgoals *)
+      [ (* goal 1.1 (of 3) *)
+        MATCH_MP_TAC IN_MEASURABLE_BOREL_SQR \\
+        Q.EXISTS_TAC `(\x. (f x + g x))` \\
+        RW_TAC std_ss [] \\
+        MATCH_MP_TAC IN_MEASURABLE_BOREL_ADD \\
+        qexistsl_tac [`f`, `g`] \\
+        RW_TAC std_ss [],
+        (* goal 1.2 (of 3) *)
+        MATCH_MP_TAC IN_MEASURABLE_BOREL_SQR >> METIS_TAC [],
+        (* goal 1.3 (of 3) *)
+        METIS_TAC [add_not_infty,pow_not_infty] ],
+      (* goal 2 (of 3) *)
       MATCH_MP_TAC IN_MEASURABLE_BOREL_SQR >> METIS_TAC [],
-      (* goal 3 (of 4) *)
-      METIS_TAC [add_not_infty, pow_not_infty, sub_not_infty],
-      (* goal 4 (of 4) *)
-      METIS_TAC [pow_not_infty] ]);
+      (* goal 3 (of 3) *)
+      DISJ1_TAC \\
+      METIS_TAC [add_not_infty, pow_not_infty, sub_not_infty] ]
+QED
 
 val IN_MEASURABLE_BOREL_SUM = store_thm
   ("IN_MEASURABLE_BOREL_SUM",
@@ -2646,7 +2847,7 @@ val IN_MEASURABLE_BOREL_MUL_INDICATOR = store_thm
              RW_TAC std_ss [mul_rone, mul_rzero]) >> POP_ORW \\
      MATCH_MP_TAC ALGEBRA_UNION \\
      CONJ_TAC >- FULL_SIMP_TAC std_ss [sigma_algebra_def] \\
-     Reverse CONJ_TAC >- FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def] \\
+     reverse CONJ_TAC >- FULL_SIMP_TAC std_ss [sigma_algebra_def, algebra_def] \\
      MATCH_MP_TAC ALGEBRA_INTER \\
      FULL_SIMP_TAC std_ss [sigma_algebra_def])
  >> `{x | f x * indicator_fn s x <= Normal c} INTER space a =
@@ -2656,6 +2857,16 @@ val IN_MEASURABLE_BOREL_MUL_INDICATOR = store_thm
              RW_TAC std_ss [mul_rone, mul_rzero]) >> POP_ORW
  >> MATCH_MP_TAC ALGEBRA_INTER
  >> FULL_SIMP_TAC std_ss [sigma_algebra_def]);
+
+Theorem IN_MEASURABLE_BOREL_CMUL_INDICATOR' :
+    !a c s. sigma_algebra a /\ s IN subsets a ==>
+            (\x. c * indicator_fn s x) IN measurable a Borel
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘a’, ‘\x. c’, ‘s’] IN_MEASURABLE_BOREL_MUL_INDICATOR) >> rw []
+ >> POP_ASSUM MATCH_MP_TAC
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST' >> art []
+QED
 
 val IN_MEASURABLE_BOREL_MUL_INDICATOR_EQ = store_thm
   ("IN_MEASURABLE_BOREL_MUL_INDICATOR_EQ",
@@ -2747,6 +2958,82 @@ val IN_MEASURABLE_BOREL_MONO_SUP = store_thm
           RW_TAC std_ss [IN_FUNSET, IN_UNIV, space_def, subsets_def, SPACE])
  >> METIS_TAC []);
 
+(* a generalized version of IN_MEASURABLE_BOREL_MAX, cf. sup_maximal *)
+Theorem IN_MEASURABLE_BOREL_MAXIMAL :
+    !N. FINITE (N :'b set) ==>
+        !g f a. sigma_algebra a /\ (!n. g n IN measurable a Borel) /\
+               (!x. f x = sup (IMAGE (\n. g n x) N)) ==> f IN measurable a Borel
+Proof
+    HO_MATCH_MP_TAC FINITE_INDUCT
+ >> RW_TAC std_ss [sup_empty, IMAGE_EMPTY, IMAGE_INSERT]
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST \\
+     Q.EXISTS_TAC `NegInf` >> art [])
+ >> Cases_on `N = {}`
+ >- (fs [IMAGE_EMPTY, sup_sing] >> METIS_TAC [])
+ >> Know `!x. sup (g e x INSERT (IMAGE (\n. g n x) N)) =
+              max (g e x) (sup (IMAGE (\n. g n x) N))`
+ >- (RW_TAC std_ss [sup_eq'] >| (* 2 subgoals *)
+    [ (* goal 1 (of 2) *)
+      fs [IN_INSERT, le_max] >> DISJ2_TAC \\
+      MATCH_MP_TAC le_sup_imp' >> rw [IN_IMAGE] \\
+      Q.EXISTS_TAC `n` >> art [],
+      (* goal 2 (of 2) *)
+      POP_ASSUM MATCH_MP_TAC \\
+      fs [IN_INSERT, extreal_max_def] \\
+      Cases_on `g e x <= sup (IMAGE (\n. g n x) N)` >> fs [] \\
+      DISJ2_TAC \\
+     `FINITE (IMAGE (\n. g n x) N)` by METIS_TAC [IMAGE_FINITE] \\
+      Know `IMAGE (\n. g n x) N <> {}`
+      >- (RW_TAC set_ss [NOT_IN_EMPTY, Once EXTENSION]) >> DISCH_TAC \\
+     `sup (IMAGE (\n. g n x) N) IN (IMAGE (\n. g n x) N)` by METIS_TAC [sup_maximal] \\
+      fs [IN_IMAGE] >> Q.EXISTS_TAC `n` >> art [] ])
+ >> DISCH_THEN (fs o wrap)
+ >> Q.PAT_X_ASSUM `!g f a. P => f IN Borel_measurable a`
+      (MP_TAC o (Q.SPECL [`g`, `\x. sup (IMAGE (\n. g n x) N)`, `a`]))
+ >> rw []
+ >> `f = \x. max (g e x) ((\x. sup (IMAGE (\n. g n x) N)) x)` by METIS_TAC []
+ >> POP_ORW
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_MAX >> art []
+QED
+
+(* a generalized version of IN_MEASURABLE_BOREL_MIN, cf. inf_minimal *)
+Theorem IN_MEASURABLE_BOREL_MINIMAL :
+    !N. FINITE (N :'b set) ==>
+        !g f a. sigma_algebra a /\ (!n. g n IN measurable a Borel) /\
+               (!x. f x = inf (IMAGE (\n. g n x) N)) ==> f IN measurable a Borel
+Proof
+    HO_MATCH_MP_TAC FINITE_INDUCT
+ >> RW_TAC std_ss [inf_empty, IMAGE_EMPTY, IMAGE_INSERT]
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST \\
+     Q.EXISTS_TAC `PosInf` >> art [])
+ >> Cases_on `N = {}`
+ >- (fs [IMAGE_EMPTY, inf_sing] >> METIS_TAC [])
+ >> Know `!x. inf (g e x INSERT (IMAGE (\n. g n x) N)) =
+              min (g e x) (inf (IMAGE (\n. g n x) N))`
+ >- (RW_TAC std_ss [inf_eq'] >| (* 2 subgoals *)
+    [ (* goal 1 (of 2) *)
+      fs [IN_INSERT, min_le] >> DISJ2_TAC \\
+      MATCH_MP_TAC inf_le_imp' >> rw [IN_IMAGE] \\
+      Q.EXISTS_TAC `n` >> art [],
+      (* goal 2 (of 2) *)
+      POP_ASSUM MATCH_MP_TAC \\
+      fs [IN_INSERT, extreal_min_def] \\
+      Cases_on `g e x <= inf (IMAGE (\n. g n x) N)` >> fs [] \\
+      DISJ2_TAC \\
+     `FINITE (IMAGE (\n. g n x) N)` by METIS_TAC [IMAGE_FINITE] \\
+      Know `IMAGE (\n. g n x) N <> {}`
+      >- (RW_TAC set_ss [NOT_IN_EMPTY, Once EXTENSION]) >> DISCH_TAC \\
+     `inf (IMAGE (\n. g n x) N) IN (IMAGE (\n. g n x) N)` by METIS_TAC [inf_minimal] \\
+      fs [IN_IMAGE] >> Q.EXISTS_TAC `n` >> art [] ])
+ >> DISCH_THEN (fs o wrap)
+ >> Q.PAT_X_ASSUM `!g f a. P => f IN Borel_measurable a`
+      (MP_TAC o (Q.SPECL [`g`, `\x. inf (IMAGE (\n. g n x) N)`, `a`]))
+ >> rw []
+ >> `f = \x. min (g e x) ((\x. inf (IMAGE (\n. g n x) N)) x)` by METIS_TAC []
+ >> POP_ORW
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_MIN >> art []
+QED
+
 Theorem IN_MEASURABLE_BOREL_SUMINF :
     !fn f a. sigma_algebra a /\ (!n:num. fn n IN measurable a Borel) /\
             (!i x. x IN space a ==> 0 <= fn i x) /\
@@ -2814,32 +3101,40 @@ val IN_MEASURABLE_BOREL_FN_MINUS = store_thm
             METIS_TAC [real_lte, extreal_lt_eq, extreal_of_num_def, extreal_ainv_def])
  >> METIS_TAC [IN_MEASURABLE_BOREL_ALL]);
 
-(* NOTE: added `!x. f x <> NegInf` due to the changes in IN_MEASURABLE_BOREL_SUB.
-   As `f = fn_plus f - fn_minus f`, to prevent `PosInf - PosInf` fn_minus must not
-   take PosInf at any point, thus f must not take NegInf at any point.
- *)
-val IN_MEASURABLE_BOREL_PLUS_MINUS = store_thm
-  ("IN_MEASURABLE_BOREL_PLUS_MINUS",
-  ``!a f. (!x. f x <> NegInf) ==>
-          (f IN measurable a Borel <=>
-           fn_plus f IN measurable a Borel /\ fn_minus f IN measurable a Borel)``,
-    RW_TAC std_ss []
- >> EQ_TAC >- RW_TAC std_ss [IN_MEASURABLE_BOREL_FN_PLUS, IN_MEASURABLE_BOREL_FN_MINUS]
- >> RW_TAC std_ss []
+(* used in martingaleTheory.FUBINI *)
+Theorem IN_MEASURABLE_BOREL_PLUS_MINUS :
+    !a f. f IN measurable a Borel <=>
+          fn_plus f IN measurable a Borel /\ fn_minus f IN measurable a Borel
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC
+ >- RW_TAC std_ss [IN_MEASURABLE_BOREL_FN_PLUS, IN_MEASURABLE_BOREL_FN_MINUS]
+ >> rpt STRIP_TAC
  >> MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB
- >> Q.EXISTS_TAC `fn_plus f`
- >> Q.EXISTS_TAC `fn_minus f`
- >> RW_TAC std_ss [fn_plus_def, fn_minus_def, sub_rzero,lt_antisym, sub_rzero, add_lzero]
- >| [ METIS_TAC [IN_MEASURABLE_BOREL],
+ >> qexistsl_tac [`fn_plus f`, `fn_minus f`]
+ >> RW_TAC std_ss [fn_plus_def, fn_minus_def, sub_rzero, lt_antisym, sub_rzero, add_lzero]
+ >| [ (* goal 1 (of 8) *)
+      METIS_TAC [IN_MEASURABLE_BOREL],
+      (* goal 2 (of 8) *)
       METIS_TAC [lt_antisym],
+      (* goal 3 (of 8) *)
+      DISJ1_TAC >> REWRITE_TAC [extreal_not_infty, extreal_of_num_def] \\
+      MATCH_MP_TAC pos_not_neginf \\
+      MATCH_MP_TAC lt_imp_le >> art [],
+      (* goal 4 (of 8) *)
+      DISJ2_TAC >> REWRITE_TAC [extreal_not_infty, extreal_of_num_def] \\
+      MATCH_MP_TAC pos_not_neginf \\
+      Suff ‘f x <= 0’ >- METIS_TAC [neg_neg, le_neg, neg_0] \\
+      MATCH_MP_TAC lt_imp_le >> art [],
+      (* goal 5 (of 8) *)
       METIS_TAC [extreal_not_infty, extreal_of_num_def],
-      METIS_TAC [extreal_not_infty, extreal_of_num_def],
-      METIS_TAC [neg_neg, extreal_ainv_def],
-      METIS_TAC [extreal_not_infty, extreal_of_num_def],
-      METIS_TAC [extreal_not_infty, extreal_of_num_def],
+      (* goal 6 (of 8) *)
       METIS_TAC [lt_antisym],
+      (* goal 7 (of 8) *)
       METIS_TAC [sub_rneg, add_lzero, extreal_of_num_def],
-      METIS_TAC [le_antisym, extreal_lt_def] ]);
+      (* goal 8 (of 8) *)
+      METIS_TAC [le_antisym, extreal_lt_def] ]
+QED
 
 val measurable_If = MEASURABLE_IF;
 
@@ -3507,7 +3802,7 @@ Theorem right_open_interval_between_bounds :
             x < interval_upperbound (right_open_interval a b)
 Proof
     rpt GEN_TAC
- >> Reverse (Cases_on `a < b`)
+ >> reverse (Cases_on `a < b`)
  >- (FULL_SIMP_TAC std_ss [GSYM right_open_interval_empty] \\
      rw [NOT_IN_EMPTY, INTERVAL_BOUNDS_EMPTY] \\
      REAL_ARITH_TAC)
@@ -3692,7 +3987,6 @@ Proof
  >> Cases_on `!k. k < n ==> f k = {}`
  >- (Suff `BIGUNION (IMAGE f (count n)) = {}`
      >- (Rewr' >> fs [positive_def, measurable_sets_def, measure_def] \\
-         MATCH_MP_TAC EQ_SYM \\
          MATCH_MP_TAC EXTREAL_SUM_IMAGE_0 \\
          rw [FINITE_COUNT, IN_COUNT, o_DEF]) \\
      RW_TAC std_ss [Once EXTENSION, IN_BIGUNION_IMAGE, IN_COUNT, NOT_IN_EMPTY] \\
@@ -3760,7 +4054,7 @@ Proof
  >- (Suff `ALL_DISTINCT (MAP f filtered)`
      >- METIS_TAC [ALL_DISTINCT_PERM] \\
      MATCH_MP_TAC ALL_DISTINCT_MAP_INJ \\
-     Reverse CONJ_TAC
+     reverse CONJ_TAC
      >- (Q.UNABBREV_TAC `filtered` \\
          MATCH_MP_TAC FILTER_ALL_DISTINCT \\
          RW_TAC std_ss [COUNT_LIST_GENLIST, ALL_DISTINCT_GENLIST]) \\
@@ -3778,7 +4072,7 @@ Proof
           SIGMA lambda0 (IMAGE f (set filtered))`
  >- (MATCH_MP_TAC EQ_SYM >> irule EXTREAL_SUM_IMAGE_IMAGE \\
      SIMP_TAC std_ss [FINITE_LIST_TO_SET, IN_IMAGE, IN_COUNT] \\
-     Reverse CONJ_TAC
+     reverse CONJ_TAC
      >- (MATCH_MP_TAC INJ_IMAGE \\
          Q.EXISTS_TAC `set (MAP f filtered)` \\
          SIMP_TAC std_ss [INJ_DEF, MEM_MAP] \\
@@ -4167,7 +4461,7 @@ Proof
      subadditive lborel1 /\ finite_subadditive lborel1`
        by METIS_TAC [RING_ADDITIVE_EVERYTHING]
  >> Q.ABBREV_TAC `lambda1 = measure lborel1`
- >> Reverse (rw [GSYM le_antisym])
+ >> reverse (rw [GSYM le_antisym])
  (* easy part: suminf (lambda0 o f) <= lambda0 (BIGUNION (IMAGE f univ(:num))) *)
  >- (rw [ext_suminf_def, sup_le', GSPECIFICATION] \\
     `lambda0 (BIGUNION (IMAGE f univ(:num))) =
@@ -4273,7 +4567,7 @@ Proof
        MATCH_MP_TAC le_trans \\
        Q.ABBREV_TAC `m = SUC (MAX_SET (IMAGE g (count n)))` \\
        Q.EXISTS_TAC `SIGMA l (count m)` \\
-       Reverse CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC \\
+       reverse CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC \\
                             Q.EXISTS_TAC `m` >> art []) \\
        Q.UNABBREV_TAC `m` \\
        MATCH_MP_TAC EXTREAL_SUM_IMAGE_MONO_SET \\
@@ -4297,7 +4591,7 @@ Proof
        IMP_RES_TAC BIJ_INV >> fs [IN_UNIV, o_DEF] \\
        Q.ABBREV_TAC `m = SUC (MAX_SET (IMAGE g' (count n INTER P)))` \\
        Q.EXISTS_TAC `SIGMA l (IMAGE g (count m))` \\
-       Reverse CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC \\
+       reverse CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC \\
                             Q.EXISTS_TAC `m` >> art []) \\
        Q.UNABBREV_TAC `m` \\
        Know `SIGMA l (count n) = SIGMA l (count n INTER P)`
@@ -4341,7 +4635,7 @@ Proof
  >> `a < b` by PROVE_TAC [right_open_interval_empty]
  (* stage work *)
  >> MATCH_MP_TAC le_epsilon >> rpt STRIP_TAC
- >> Reverse (Cases_on `e < Normal (b - a)`)
+ >> reverse (Cases_on `e < Normal (b - a)`)
  >- (POP_ASSUM (ASSUME_TAC o (REWRITE_RULE [extreal_lt_def])) \\
      IMP_RES_TAC REAL_LT_IMP_LE >> rw [lambda0_def] \\
      MATCH_MP_TAC le_trans >> Q.EXISTS_TAC `e` >> rw [] \\
@@ -4470,7 +4764,7 @@ Proof
  >> rpt STRIP_TAC
  >> MATCH_MP_TAC le_trans
  >> Q.EXISTS_TAC `SIGMA (lambda0 o h) (count N)`
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (POP_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC `N` >> art [])
   (* now there's no infinity anywhere *)
  >> ASSUME_TAC lborel0_additive
@@ -4484,7 +4778,7 @@ Proof
      >- (ASM_REWRITE_TAC [REAL_LT_SUB_RADD, REAL_LT_ADDR] \\
         `a < b - r <=> r < b - a` by REAL_ARITH_TAC >> POP_ORW \\
          MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `d` \\
-         Reverse CONJ_TAC >- fs [extreal_lt_eq] \\
+         reverse CONJ_TAC >- fs [extreal_lt_eq] \\
          Q.UNABBREV_TAC `r` \\
          MATCH_MP_TAC REAL_LE_LDIV >> RW_TAC real_ss [] \\
          MATCH_MP_TAC (SIMP_RULE real_ss []
@@ -4615,7 +4909,7 @@ Proof
      DISJ1_TAC (* this one is easier *) \\
      Q.X_GEN_TAC `n` >> Q.UNABBREV_TAC `D` >> SIMP_TAC std_ss [o_DEF] \\
      DISCH_TAC \\
-     Reverse CONJ_TAC >- (Q.PAT_X_ASSUM `!n. lambda0 _ = Normal _`
+     reverse CONJ_TAC >- (Q.PAT_X_ASSUM `!n. lambda0 _ = Normal _`
                             (ONCE_REWRITE_TAC o wrap) \\
                           REWRITE_TAC [extreal_not_infty]) \\
      MATCH_MP_TAC pos_not_neginf \\
@@ -4678,7 +4972,7 @@ Proof
      MATCH_MP_TAC REAL_LT_IMP_LE \\
     `a < b - r <=> r < b - a` by REAL_ARITH_TAC >> POP_ORW \\
      MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `d` \\
-     Reverse CONJ_TAC >- fs [extreal_lt_eq] \\
+     reverse CONJ_TAC >- fs [extreal_lt_eq] \\
      Q.UNABBREV_TAC `r` \\
      MATCH_MP_TAC REAL_LE_LDIV >> RW_TAC real_ss [] \\
      MATCH_MP_TAC (SIMP_RULE real_ss []
@@ -4899,7 +5193,7 @@ Proof
  >- REWRITE_TAC [right_open_interval, borel_measurable_sets] >> DISCH_TAC
  >> STRONG_CONJ_TAC
  >- REWRITE_TAC [borel_measurable_sets] >> DISCH_TAC
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (MATCH_MP_TAC ALGEBRA_UNION >> art [] \\
      REWRITE_TAC [REWRITE_RULE [sigma_algebra_def] sigma_algebra_borel])
  >> ONCE_REWRITE_TAC [DISJOINT_SYM]
@@ -5041,9 +5335,6 @@ Definition lebesgue_def :
               {A | !n. (indicator A) integrable_on (line n)},
               (\A. sup {Normal (integral (line n) (indicator A)) | n IN UNIV}))
 End
-
-(* MATHEMATICAL BOLD SCRIPT CAPITAL L, for its special position in AE *)
-val _ = Unicode.unicode_version {u = UTF8.chr 0x1D4DB, tmnm = "lebesgue"};
 
 Theorem space_lebesgue :
     m_space lebesgue = univ(:real)
@@ -5290,7 +5581,7 @@ Proof
   Q.EXISTS_TAC `x''''` THEN RW_TAC std_ss [REAL_LT_SUB_RADD] THENL
   [MATCH_MP_TAC REAL_LET_TRANS THEN Q.EXISTS_TAC `f x'''' + e / 2` THEN
    RW_TAC std_ss [] THEN MATCH_MP_TAC REAL_LET_TRANS THEN
-   Q.EXISTS_TAC `(f:num->real) n + e / 2` THEN Reverse CONJ_TAC THENL
+   Q.EXISTS_TAC `(f:num->real) n + e / 2` THEN reverse CONJ_TAC THENL
    [METIS_TAC [REAL_LET_ADD2,REAL_LT_HALF2,REAL_LE_REFL], ALL_TAC] THEN
    RW_TAC std_ss [REAL_LE_RADD] THEN
    METIS_TAC [mono_increasing_def], ALL_TAC] THEN
@@ -6029,11 +6320,11 @@ val measure_limsup_finite = store_thm
  >| [ (* goal 1 (of 2) *)
       REWRITE_TAC [lt_infty] \\
       MATCH_MP_TAC let_trans >> Q.EXISTS_TAC `measure p (m_space p)` \\
-      Reverse CONJ_TAC >- art [] \\
+      reverse CONJ_TAC >- art [] \\
       MATCH_MP_TAC INCREASING >> art [] \\
       CONJ_TAC >- PROVE_TAC [MEASURE_SPACE_INCREASING] \\
       fs [measure_space_def, sigma_algebra_def, space_def, subsets_def] \\
-      Reverse CONJ_TAC >- PROVE_TAC [ALGEBRA_SPACE, space_def, subsets_def] \\
+      reverse CONJ_TAC >- PROVE_TAC [ALGEBRA_SPACE, space_def, subsets_def] \\
       METIS_TAC [algebra_def, subset_class_def, space_def, subsets_def],
       (* goal 2 (of 2) *)
       RW_TAC arith_ss [SUBSET_DEF, IN_BIGUNION, GSPECIFICATION] \\

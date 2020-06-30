@@ -1280,7 +1280,7 @@ val SG_SEQ_strong_induction = store_thm (
         (ASSUME_TAC o BETA_RULE o (Q.SPEC `nil`) o (REWRITE_RULE [FUN_EQ_THM])) \\
       PROVE_TAC [CCS_distinct'],
       (* goal 2 (of 3) *)
-      Reverse (Cases_on `a`) >| (* 2 sub-goals here *)
+      reverse (Cases_on `a`) >| (* 2 sub-goals here *)
       [ (* goal 2.1 (of 2) *)
         qpat_x_assum `!l e. SEQ e ==> P` MATCH_MP_TAC \\
         ASM_REWRITE_TAC [],
@@ -1328,7 +1328,7 @@ val SG_GSEQ_strong_induction = store_thm (
         (ASSUME_TAC o BETA_RULE o (Q.SPEC `nil`) o (REWRITE_RULE [FUN_EQ_THM])) \\
       PROVE_TAC [CCS_distinct'],
       (* goal 2 (of 3) *)
-      Reverse (Cases_on `a`) >| (* 2 sub-goals here *)
+      reverse (Cases_on `a`) >| (* 2 sub-goals here *)
       [ (* goal 2.1 (of 2) *)
         qpat_x_assum `!l e. GSEQ e ==> P` MATCH_MP_TAC \\
         ASM_REWRITE_TAC [],

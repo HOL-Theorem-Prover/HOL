@@ -243,65 +243,23 @@ load "aiLib"; open aiLib;
 load "mleDiophLib"; open mleDiophLib;
 val train = import_data "train_export";
 val test = import_data "test_export";
-export_data (train,test);
-*)
+val l1 = map (poly_size o snd) (train @ test);
+val l2 = dlist (count_dict (dempty Int.compare) l1);
 
-(* -------------------------------------------------------------------------
-   Producing figures from the log. (works for combin and dioph)
-   ------------------------------------------------------------------------- *)
+fun real_product l =
+  case l of [] => 1.0 | a :: m => (a:real) * real_product m
 
-(*
-load "aiLib"; open aiLib;
-val ERR = mk_HOL_ERR "test";
-val sl1 = readl "combin_log";
-val sl2 = filter (fn x => String.isPrefix "Generation" x orelse
-                         String.isPrefix "  pos:" x orelse
-                         (String.isPrefix "Exploration:" x
-                          andalso String.isSuffix "once" x)) sl1;
-
-fun process acc sl = case sl of
-    [] => acc
-  | s :: m =>
-    if null acc andalso not (String.isPrefix "Generation" s)
-      then process acc m
-    else if String.isPrefix "Generation" s
-    then process ([s] :: acc) m
-    else process ((s :: hd acc) :: tl acc) m
-
-val sll3 = map rev (rev (process [] sl2));
-
-fun elim_dupl l = case l of
-    [] => []
-  | [a] => [a]
-  | a :: b :: m =>
-    (if hd a = hd b
-    then elim_dupl (b :: m)
-    else a :: elim_dupl (b :: m))
-
-val sll4 = elim_dupl sll3;
-
-fun extract_num l =
-  let
-    val (s1,s2,s3) = triple_of_list l
-      handle HOL_ERR _ => raise ERR "extract_num" (String.concatWith " " l)
-    fun f x = List.nth (String.tokens Char.isSpace x, 1)
+fun freqmono i = Real.fromInt (16 * int_pow 5 (i - 1));
+fun freqpoly partl = real_product (map freqmono partl);
+fun freqpoly_n n =
+  let val partll =
+    List.concat (List.tabulate (6, fn i => (number_partition (i+1) n
+    handle HOL_ERR _ => [])))
   in
-    (
-    (string_to_int o f) s1,
-    (string_to_int o f) s2,
-    (string_to_int o snd o split_string "-" o f) s3
-    )
+    sum_real (map freqpoly partll)
   end;
 
-(* remove the last generation *)
-val il5 = map extract_num (butlast sll4);
-
-fun f_one (a,b,c) = String.concatWith " " (map its [a,b,c]);
-val headers = String.concatWith " " ["gen","once","last"];
-writel "combin_data" (headers :: map f_one il5);
 *)
-
-
 
 end (* struct *)
 

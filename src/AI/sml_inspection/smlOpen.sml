@@ -23,6 +23,7 @@ fun bare file = OS.Path.base (OS.Path.file file)
    Running buildheap
    ------------------------------------------------------------------------- *)
 
+(* ancestry "scratch"; *)
 val core_theories =
   ["ConseqConv", "quantHeuristics", "patternMatches", "ind_type", "while",
    "one", "sum", "option", "pair", "combin", "sat", "normalForms",
@@ -89,6 +90,22 @@ fun run_buildheap dir core_flag file =
   end
   handle Interrupt => raise Interrupt
     | _ => raise ERR "run_buildheap" file
+
+fun run_buildheap_nodep dir file =
+  let
+    val _ = mkDir_err dir
+    val buildheap_bin = HOLDIR ^ "/bin/buildheap"
+    val fileout = dir ^ "/buildheap_" ^ bare file
+    val state = HOLDIR ^ "/bin/hol.state0"
+    val cmd = String.concatWith " "
+      ([buildheap_bin,"--holstate=" ^ state,"--gcthreads=1"]
+      @ [OS.Path.file file]
+      @ [">",fileout])
+  in
+    cmd_in_dir (OS.Path.dir file) cmd
+  end
+  (* handle Interrupt => raise Interrupt
+    | _ => raise ERR "run_buildheap_nodep" file *)
 
 fun remove_err s = FileSys.remove s handle SysErr _ => ()
 

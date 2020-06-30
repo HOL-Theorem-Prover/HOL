@@ -1,0 +1,34 @@
+\DOC
+
+\TYPE {PART_MATCH' : (term -> term) -> thm -> term -> thm}
+
+\SYNOPSIS
+Version of {PART_MATCH} that only specialises necessary variables in input
+
+\KEYWORDS
+matching
+
+\DESCRIBE
+{PART_MATCH' selfn th tm} behaves similarly to {PART_MATCH selfn th tm},
+except that outermost, universally quantified variables in {th}
+are retained in the result unless they are part of the matching.
+
+\FAILURE
+Fails when {PART_MATCH} would fail.
+
+\EXAMPLE
+{
+> IMP_DISJ_THM;
+val it = ⊢ ∀A B. A ⇒ B ⇔ ¬A ∨ B: thm
+
+> PART_MATCH (rand o lhs) IMP_DISJ_THM “p /\ A”;
+val it = ⊢ A ⇒ p ∧ A ⇔ ¬A ∨ p ∧ A: thm
+
+> PART_MATCH' (rand o lhs) IMP_DISJ_THM “p /\ A”;
+val it = ⊢ ∀A'. A' ⇒ p ∧ A ⇔ ¬A' ∨ p ∧ A: thm
+}
+
+\SEEALSO
+Drule.PART_MATCH.
+
+\ENDDOC

@@ -77,7 +77,9 @@ fun hide_out f x =
   hide_in_file (sml_hide_dir ^ "/" ^ current_theory ()) f x
   )
 
+val hide_flag = ref true
 
+fun hidef f x = if !hide_flag then hide_out f x else f x
 
 
 

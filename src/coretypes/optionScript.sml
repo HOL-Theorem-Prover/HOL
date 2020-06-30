@@ -371,6 +371,12 @@ val IS_SOME_MAP = Q.store_thm ("IS_SOME_MAP",
   OPTION_CASES_TAC “x:'a option” THEN
   REWRITE_TAC [IS_SOME_DEF, OPTION_MAP_DEF]) ;
 
+Theorem OPTION_MAP_id[simp]:
+  OPTION_MAP I (x:'a option) = x /\ OPTION_MAP (\x. x) x = x
+Proof
+  OPTION_CASES_TAC “x:'a option” THEN SRW_TAC[][]
+QED
+
 (* and one about OPTION_JOIN *)
 
 val OPTION_JOIN_EQ_SOME = Q.store_thm(
@@ -667,6 +673,15 @@ Theorem OPTREL_O:
   !R1 R2. OPTREL (R1 O R2) = OPTREL R1 O OPTREL R2
 Proof
   SRW_TAC[][FUN_EQ_THM,OPTREL_O_lemma,relationTheory.O_DEF]
+QED
+
+Theorem OPTREL_THM[simp]:
+  (OPTREL R (SOME x) NONE = F) /\
+  (OPTREL R NONE (SOME y) = F) /\
+  (OPTREL R NONE NONE     = T) /\
+  (OPTREL R (SOME x) (SOME y) = R x y)
+Proof
+  SRW_TAC[][OPTREL_def]
 QED
 
 (* ----------------------------------------------------------------------

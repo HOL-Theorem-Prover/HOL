@@ -145,7 +145,6 @@ fun STATE_INTRO_RULE th = let
   val conv = PURE_REWRITE_CONV [state_thm,emp_STAR] THENC
              BINOP_CONV STAR_AC_CONV THENC REWRITE_CONV []
   val lemma = auto_conv_prove "STATE_INTRO_RULE - 1" goal conv
-
   val th = th |> CONV_RULE (PRE_CONV (REWR_CONV lemma))
   (* make post into just state *)
   val th = PURE_REWRITE_RULE [STAR_IF] th
@@ -256,11 +255,15 @@ local
     val tm = post |> rator |> rand |> rand |> rator |> rand
     val supdate = dest_supdate tm
     val r0 = ``"r0"``
+    val r1 = ``"r1"``
+    val r10 = ``"r10"``
     val r14 = ``"r14"``
+    val ret_reg_name = (if !arch_name = RISCV then r1 else r14)
+    val ret_addr_reg_name = (if !arch_name = RISCV then r10 else r0)
     val ret_str = ``"ret"``
     val ret_addr_input_str = ``"ret_addr_input"``
     val (is_tail_call,ret) = let
-      val u = first (fn (t,x) => aconv t r14) supdate |> snd
+      val u = first (fn (t,x) => aconv t ret_reg_name) supdate |> snd
       val res = EVAL ``(^u s = VarWord (^pc1+4w)) \/ (^u s = VarWord (^pc1+2w))``
         |> concl |> rand
       in if aconv res T then
@@ -272,11 +275,11 @@ local
     val var_acc = mk_const ("var_acc",var_acc_ty)
     fun get_assign tm =
       if aconv tm ret_addr_input_str then let
-        val var_acc_r0 = mk_comb(var_acc,r0)
-        in pairSyntax.mk_pair(ret_addr_input_str,var_acc_r0) end
+        val var_acc_ret = mk_comb(var_acc,ret_addr_reg_name)
+        in pairSyntax.mk_pair(ret_addr_input_str,var_acc_ret) end
       else let
         val tm2 = if is_tail_call then tm else
-                  if aconv tm ret_str then r14 else tm
+                  if aconv tm ret_str then ret_reg_name else tm
         val rhs = first (fn (t,x) => (aconv t tm2)) supdate |> snd
                   handle HOL_ERR _ => mk_comb(var_acc,tm)
         in pairSyntax.mk_pair(tm,rhs) end
@@ -434,8 +437,12 @@ in
          then make_ASM th else make_SWITCH th)
     | make_INST (i,(th1',l',j'),SOME (th2',l:int,j:int option)) = let
         val th1 = make_INST (i,(th1',l',j'),NONE)
-        val th2 = th2' |> make_ASM
+        val th2 = th2' |> DISCH_ALL
+                       |> REWRITE_RULE [CALL_TAG_def] |> UNDISCH_ALL |> make_ASM
         val not_guard = th2 |> concl |> find_term (can (match_term ``ASM (SOME k)``))
+                            |> rand |> rand |> dest_abs |> snd
+                        handle HOL_ERR _ =>
+                        th2 |> concl |> find_term (can (match_term ``CALL (SOME k)``))
                             |> rand |> rand |> dest_abs |> snd
         val guard = dest_neg not_guard handle HOL_ERR _ => mk_neg not_guard
         val c = (RAND_CONV o RATOR_CONV o RAND_CONV) (SIMP_CONV std_ss [])

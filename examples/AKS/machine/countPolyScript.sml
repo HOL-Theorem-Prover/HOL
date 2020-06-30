@@ -13,8 +13,6 @@ val _ = new_theory "countPoly";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -124,8 +122,7 @@ val _ = monadsyntax.enable_monad "Count";
    poly_oneM_steps_eqn
                |- !n k. stepsOf (poly_oneM n k) =
                         if k = 0 then 1
-                        else 1 + SUM (MAP (\j. 1 + TWICE (size j)) [1 .. k]) +
-                                 if n = 0 then 0 else size n
+                        else 1 + SUM (MAP (\j. 1 + TWICE (size j)) [1 .. k]) + size n
    poly_oneM_steps_upper
                |- !n k. stepsOf (poly_oneM n k) <= 1 + k + TWICE (size k) + TWICE k * size k + size n
    poly_oneM_steps_bound
@@ -150,8 +147,7 @@ val _ = monadsyntax.enable_monad "Count";
 #  poly_constM_length    |- !n k c. LENGTH (valueOf (poly_constM n k c)) = k
    poly_constM_steps_eqn |- !n k c. stepsOf (poly_constM n k c) =
                                     if k = 0 then 1
-                                    else 1 + SUM (MAP (\j. 1 + TWICE (size j)) [1 .. k]) +
-                                         if n = 0 then 0 else size c * size n
+                                    else 1 + SUM (MAP (\j. 1 + TWICE (size j)) [1 .. k]) + size c * size n
    poly_constM_steps_upper
                          |- !n k c. stepsOf (poly_constM n k c) <=
                                     1 + k + TWICE (size k) + TWICE k * size k + size c * size n
@@ -188,12 +184,12 @@ val _ = monadsyntax.enable_monad "Count";
 #  poly_X_expM_length    |- !n k m. LENGTH (valueOf (poly_X_expM n k m)) = k
    poly_X_expM_steps_eqn |- !n k m. stepsOf (poly_X_expM n k m) =
                                     if k = 0 then 1
-                                    else (if n = 0 then 0 else size 1 * size n) + TWICE (size k) +
-                                          if k = 1 then 1
-                                          else (if k = 0 then 0 else size m * size k) + 1 +
-                                               size (MAX k (m MOD k)) + size (k - m MOD k) +
-                                               stepsOf (poly_zeroM n (k - m MOD k - 1)) +
-                                               stepsOf (poly_extendM
+                                    else size n + TWICE (size k) +
+                                         if k = 1 then 1
+                                         else (if k = 0 then 0 else size m * size k) + 1 +
+                                              size (MAX k (m MOD k)) + size (k - m MOD k) +
+                                              stepsOf (poly_zeroM n (k - m MOD k - 1)) +
+                                              stepsOf (poly_extendM
                                                  (1 MOD n::unity_mod_zero (ZN n) (k - m MOD k - 1)) (m MOD k))
    poly_X_expM_steps_upper
                          |- !n k m. stepsOf (poly_X_expM n k m) <=
@@ -222,25 +218,25 @@ val _ = monadsyntax.enable_monad "Count";
 #  poly_eqM_value  |- !p q. valueOf (poly_eqM p q) <=> p = q
    poly_eqM_steps_thm
                    |- !p q. stepsOf (poly_eqM p q) =
-                            2 + if p = [] \/ q = [] then 0
+                            2 + if (p = []) \/ (q = []) then 0
                                 else 4 + size (MAX (HD p) (HD q)) +
                                     if HD p <> HD q then 0 else stepsOf (poly_eqM (TL p) (TL q))
    poly_eqM_steps_by_list_loop
                    |- !p q. stepsOf (poly_eqM p q) =
-                            if p = [] \/ q = [] then 2
+                            if (p = []) \/ (q = []) then 2
                             else 6 + size (MAX (HD p) (HD q)) +
                                  if HD p <> HD q then 0 else stepsOf (poly_eqM (TL p) (TL q))
    poly_eqM_steps_by_sum_le
-                   |- !p q k. LENGTH p = k /\ LENGTH q = k ==>
+                   |- !p q k. (LENGTH p = k) /\ (LENGTH q = k) ==>
                               stepsOf (poly_eqM p q) <=
                               2 + SUM (GENLIST (\j. 6 + size (MAX (EL j p) (EL j q))) k)
    poly_eqM_steps_upper
-                   |- !p q k n. LENGTH p = k /\ LENGTH q = k /\
-                                Weak (ZN n) p /\ Weak (ZN n) q ==>
+                   |- !p q k n. Weak (ZN n) p /\ Weak (ZN n) q  /\
+                                (LENGTH p = k) /\ (LENGTH q = k) ==>
                                 stepsOf (poly_eqM p q) <= 2 + 6 * k + k * size n
    poly_eqM_steps_bound
-                   |- !p q k n. LENGTH p = k /\ LENGTH q = k /\
-                                Weak (ZN n) p /\ Weak (ZN n) q ==>
+                   |- !p q k n. Weak (ZN n) p /\ Weak (ZN n) q /\
+                                (LENGTH p = k) /\ (LENGTH q = k) ==>
                                 stepsOf (poly_eqM p q) <= 9 * MAX 1 k * size n
 
 
@@ -258,28 +254,29 @@ val _ = monadsyntax.enable_monad "Count";
                                         od
                                     od
 #  poly_cmultM_value     |- !n c p. valueOf (poly_cmultM n c p) = weak_cmult (ZN n) c p
-   poly_cmultM_value_alt |- !n c p. zweak p /\ c < n ==> valueOf (poly_cmultM n c p) = c oz p
+   poly_cmultM_value_alt |- !n c p. Weak (ZN n) p ==> valueOf (poly_cmultM n c p) = c oz p
    poly_cmultM_element   |- !n c p j. j < LENGTH p ==> EL j (valueOf (poly_cmultM n c p)) = (c * EL j p) MOD n
    poly_cmultM_weak      |- !n c p. 0 < n ==> Weak (ZN n) (valueOf (poly_cmultM n c p))
 #  poly_cmultM_length    |- !n c p. LENGTH (valueOf (poly_cmultM n c p)) = LENGTH p
    poly_cmultM_steps_thm |- !n c p. stepsOf (poly_cmultM n c p) =
-                                    if p = [] then 1
+                                    if (p = []) then 1
                                     else 4 + size c * size (HD p) +
-                                         (if n = 0 then 0 else size (c * HD p) * size n) +
+                                         size (c * HD p) * size n +
                                          stepsOf (poly_cmultM n c (TL p))
    poly_cmultM_steps_by_list_loop
                          |- !n c p. stepsOf (poly_cmultM n c p) =
-                                    if p = [] then 1
+                                    if (p = []) then 1
                                     else 4 + size c * size (HD p) +
-                                         (if n = 0 then 0 else size (c * HD p) * size n) +
+                                         size (c * HD p) * size n +
                                          stepsOf (poly_cmultM n c (TL p))
    poly_cmultM_steps_eqn |- !n c p. stepsOf (poly_cmultM n c p) =
-                                    1 + SUM (GENLIST (\j. 4 + size c * size (EL j p) +
-                                        if n = 0 then 0 else size (c * EL j p) * size n) (LENGTH p))
-   poly_cmultM_steps_upper   |- !n c p k. LENGTH p = k /\ Weak (ZN n) p ==>
+                                       1 + SUM (GENLIST
+                                                  (\j. 4 + size c * size (EL j p) + size (c * (EL j p)) * size n)
+                                                  (LENGTH p))
+   poly_cmultM_steps_upper   |- !n c p k. Weak (ZN n) p /\ (LENGTH p = k) ==>
                                           stepsOf (poly_cmultM n c p) <=
                                           1 + 4 * k + TWICE k * size c * size n + k * size n ** 2
-   poly_cmultM_steps_bound   |- !n c p k. LENGTH p = k /\ Weak (ZN n) p ==>
+   poly_cmultM_steps_bound   |- !n c p k. Weak (ZN n) p /\ (LENGTH p = k) ==>
                                           stepsOf (poly_cmultM n c p) <=
                                           8 * MAX 1 k * size (MAX c n) * size n
 
@@ -302,34 +299,34 @@ val _ = monadsyntax.enable_monad "Count";
                                         od
                                     od
 #  poly_addM_value       |- !n p q. valueOf (poly_addM n p q) = weak_add (ZN n) p q
-   poly_addM_value_alt   |- !n p q. zweak p /\ zweak q /\ (LENGTH p = LENGTH q) ==>
+   poly_addM_value_alt   |- !n p q. Weak (ZN n) p /\ Weak (ZN n) q /\ (LENGTH p = LENGTH q) ==>
                                     valueOf (poly_addM n p q) = p +z q
    poly_addM_element     |- !n p q j. j < LENGTH p /\ j < LENGTH q ==>
                                       EL j (valueOf (poly_addM n p q)) = (EL j p + EL j q) MOD n
-   poly_addM_weak        |- !n p q. 0 < n /\ LENGTH p = LENGTH q ==>
+   poly_addM_weak        |- !n p q. 0 < n /\ (LENGTH p = LENGTH q) ==>
                                     Weak (ZN n) (valueOf (poly_addM n p q))
 #  poly_addM_length      |- !n p q. LENGTH (valueOf (poly_addM n p q)) = MAX (LENGTH p) (LENGTH q)
    poly_addM_steps_thm   |- !n p q. stepsOf (poly_addM n p q) =
-                                    if p = [] \/ q = [] then 2
+                                    if (p = []) \/ (q = []) then 2
                                     else 7 + size (MAX (HD p) (HD q)) +
-                                         (if n = 0 then 0 else size (HD p + HD q) * size n) +
+                                         size (HD p + HD q) * size n +
                                          stepsOf (poly_addM n (TL p) (TL q))
    poly_addM_steps_by_list_loop
                          |- !n p q. stepsOf (poly_addM n p q) =
-                                    if p = [] \/ q = [] then 2
+                                    if (p = []) \/ (q = []) then 2
                                     else 7 + size (MAX (HD p) (HD q)) +
-                                         (if n = 0 then 0 else size (HD p + HD q) * size n) +
+                                         size (HD p + HD q) * size n +
                                          stepsOf (poly_addM n (TL p) (TL q))
-   poly_addM_steps_eqn   |- !n p q k. LENGTH p = k /\ LENGTH q = k ==>
+   poly_addM_steps_eqn   |- !n p q k. (LENGTH p = k) /\ (LENGTH q = k) ==>
                                       stepsOf (poly_addM n p q) =
                                       2 + SUM (GENLIST (\j. 7 + size (MAX (EL j p) (EL j q)) +
-                                          if n = 0 then 0 else size (EL j p + EL j q) * size n) k)
-   poly_addM_steps_upper |- !n p q k. LENGTH p = k /\ LENGTH q = k /\
-                                      Weak (ZN n) p /\ Weak (ZN n) q ==>
+                                                            size (EL j p + EL j q) * size n) k
+   poly_addM_steps_upper |- !n p q k. Weak (ZN n) p /\ Weak (ZN n) q /\
+                                      (LENGTH p = k) /\ (LENGTH q = k) ==>
                                       stepsOf (poly_addM n p q) <=
                                       2 + 7 * k + TWICE k * size n + k * size n ** 2
-   poly_addM_steps_bound |- !n p q k. LENGTH p = k /\ LENGTH q = k /\
-                                      Weak (ZN n) p /\ Weak (ZN n) q ==>
+   poly_addM_steps_bound |- !n p q k. Weak (ZN n) p /\ Weak (ZN n) q /\
+                                      (LENGTH p = k) /\ (LENGTH q = k) ==>
                                       stepsOf (poly_addM n p q) <= 12 * MAX 1 k * size n ** 2
 
    Polynomial multiplication by X:
@@ -367,30 +364,34 @@ val _ = monadsyntax.enable_monad "Count";
    poly_frontM_value     |- !p. valueOf (poly_frontM p) = FRONT p
    poly_turnM_value      |- !p. valueOf (poly_turnM p) = turn p
    poly_lastM_steps_thm  |- !p. stepsOf (poly_lastM p) =
-                                if p = [] then 1
-                                else 4 + if TL p = [] then 0 else stepsOf (poly_lastM (TL p))
+                                if (p = []) then 1
+                                else 4 + if (TL p = []) then 0 else stepsOf (poly_lastM (TL p))
    poly_lastM_steps_by_list_loop
                          |- !p. stepsOf (poly_lastM p) =
-                                if p = [] then 1
-                                else 4 + if TL p = [] then 0 else stepsOf (poly_lastM (TL p))
+                                if (p = []) then 1
+                                else 4 + if (TL p = []) then 0 else stepsOf (poly_lastM (TL p))
    poly_lastM_steps_upper|- !p. stepsOf (poly_lastM p) <= 1 + 4 * LENGTH p
    poly_frontM_steps_thm |- !p. stepsOf (poly_frontM p) =
-                                if p = [] then 1
-                                else 4 + (if TL p = [] then 0 else 1) +
-                                     if TL p = [] then 0 else stepsOf (poly_frontM (TL p))
+                                if (p = []) then 1
+                                else 4 + (if (TL p = []) then 0 else 1) +
+                                     if (TL p = []) then 0 else stepsOf (poly_frontM (TL p))
    poly_frontM_steps_by_list_loop
                          |- !p. stepsOf (poly_frontM p) =
-                                if p = [] then 1
-                                else 4 + (if TL p = [] then 0 else 1) +
-                                     if TL p = [] then 0 else stepsOf (poly_frontM (TL p))
+                                if (p = []) then 1
+                                else 4 + (if (TL p = []) then 0 else 1) +
+                                     if (TL p = []) then 0 else stepsOf (poly_frontM (TL p))
    poly_frontM_steps_upper |- !p. stepsOf (poly_frontM p) <= 1 + 5 * LENGTH p
    poly_turnM_steps_thm    |- !p. stepsOf (poly_turnM p) =
-                                  if p = [] then 1
+                                  if (p = []) then 1
                                   else 2 + stepsOf (poly_lastM p) + stepsOf (poly_frontM p)
    poly_turnM_weak         |- !n p. Weak (ZN n) p ==> Weak (ZN n) (valueOf (poly_turnM p))
    poly_turnM_length       |- !p. LENGTH (valueOf (poly_turnM p)) = LENGTH p
    poly_turnM_steps_upper  |- !p. stepsOf (poly_turnM p) <= 4 + 9 * LENGTH p
    poly_turnM_steps_bound  |- !p k. (LENGTH p = k) ==> stepsOf (poly_turnM p) <= 13 * MAX 1 k
+
+   poly_lastM_steps_eqn  |- !p. stepsOf (poly_lastM p) = if (p = []) then 1 else 4 * LENGTH p
+   poly_frontM_steps_eqn |- !p. stepsOf (poly_frontM p) = if (p = []) then 1 else 5 * LENGTH p - 1
+   poly_turnM_steps_eqn  |- !p. stepsOf (poly_turnM p) = if (p = []) then 1 else 1 + 9 * LENGTH p
 
    poly_multM_def        |- !q p n. poly_multM n p q =
                                     do
@@ -409,7 +410,10 @@ val _ = monadsyntax.enable_monad "Count";
                                     od
 #  poly_multM_value      |- !n p q. 0 < n /\ Weak (ZN n) p /\ Weak (ZN n) q ==>
                                     valueOf (poly_multM n p q) = unity_mod_mult (ZN n) p q
-   poly_multM_value_alt  |- !n p q k. 0 < n /\ zweak p /\ zweak q /\ q <> [] /\ (LENGTH p = k) ==>
+   poly_multM_value_thm  |- !n p q k. 0 < n /\ Weak (ZN n) p /\ Weak (ZN n) q /\ q <> [] /\ (LENGTH p = k) ==>
+                                      valueOf (poly_multM n p q) = p *z q
+   poly_multM_value_alt  |- !n p q k. 0 < n /\ 0 < k /\ Weak (ZN n) p /\ Weak (ZN n) q /\
+                                      (LENGTH p = k) /\ (LENGTH q = k) ==>
                                       valueOf (poly_multM n p q) = p *z q
    poly_multM_weak       |- !n p q. 0 < n /\ Weak (ZN n) p /\ Weak (ZN n) q ==>
                                     Weak (ZN n) (valueOf (poly_multM n p q))
@@ -431,11 +435,11 @@ val _ = monadsyntax.enable_monad "Count";
                                     stepsOf (poly_multM n p [c]) =
                                     6 + stepsOf (poly_turnM p) + stepsOf (poly_cmultM n c p)
    poly_multM_steps_sing_upper
-                         |- !n p c k. 0 < n /\ Weak (ZN n) p /\ LENGTH p = k ==>
+                         |- !n p c k. 0 < n /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
                                       stepsOf (poly_multM n p [c]) <=
                                       10 + 9 * k + 8 * MAX 1 k * size (MAX c n) * size n
    poly_multM_steps_sing_bound
-                         |- !n p c k. 0 < n /\ Weak (ZN n) p /\ LENGTH p = k ==>
+                         |- !n p c k. 0 < n /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
                                       stepsOf (poly_multM n p [c]) <=
                                       27 * MAX 1 k * size (MAX c n) * size n
    poly_multM_steps_by_list_loop
@@ -458,24 +462,30 @@ val _ = monadsyntax.enable_monad "Count";
                                      stepsOf (poly_cmultM n (HD q) p) +
                                      stepsOf (poly_addM n (weak_cmult (ZN n) (HD q) p)
                                                 (valueOf (poly_multM n (turn p) (TL q))))
-                                  in !p q k. 0 < n /\ LENGTH p = k /\ LENGTH q = k /\
+                                  in !p q k. 0 < n /\ (LENGTH p = k) /\ (LENGTH q = k) /\
                                              Weak (ZN n) p /\ Weak (ZN n) q ==>
                                      !j. j < k ==> body (turn_exp p j) (DROP j q) <=
                                                    10 + k * (20 + TWICE (size n) + 4 * size n ** 2))
-   poly_multM_steps_upper|- !n p q k. 0 < n /\ LENGTH p = k /\ LENGTH q = k /\
-                                      Weak (ZN n) p /\ Weak (ZN n) q ==>
+   poly_multM_steps_upper|- !n p q k. 0 < n /\ Weak (ZN n) p /\ Weak (ZN n) q /\
+                                      (LENGTH p = k) /\ (LENGTH q = k) ==>
                                       stepsOf (poly_multM n p q) <=
                                       1 + 10 * k + 20 * k ** 2 +
                                           TWICE (k ** 2) * size n + 4 * k ** 2 * size n ** 2
-   poly_multM_steps_bound|- !n p q k. 0 < n /\ LENGTH p = k /\ LENGTH q = k /\
-                                      Weak (ZN n) p /\ Weak (ZN n) q ==>
+   poly_multM_steps_bound|- !n p q k. 0 < n /\ Weak (ZN n) p /\ Weak (ZN n) q /\
+                                      (LENGTH p = k) /\ (LENGTH q = k) ==>
                                       stepsOf (poly_multM n p q) <= 37 * MAX 1 k ** 2 * size n ** 2
+   poly_multM_steps_bound_alt
+                         |- !n p q k. 0 < n /\ 0 < k /\ Weak (ZN n) p /\ Weak (ZN n) q /\
+                                      (LENGTH p = k) /\ (LENGTH q = k) ==>
+                                      stepsOf (poly_multM n p q) <= 37 * k ** 2 * size n ** 2
 
    poly_sqM_def          |- !n p. poly_sqM n p = poly_multM n p p
 #  poly_sqM_value        |- !n p. 0 < n /\ Weak (ZN n) p ==>
                                   valueOf (poly_sqM n p) = unity_mod_sq (ZN n) p
-   poly_sqM_value_alt    |- !n p k. 0 < n /\ zweak p /\ p <> [] /\ (LENGTH p = k) ==>
-                                    valueOf (poly_sqM n p) = sqz p
+   poly_sqM_value_thm    |- !n p k. 0 < n /\ Weak (ZN n) p /\ p <> [] /\ (LENGTH p = k) ==>
+                                    (valueOf (poly_sqM n p) = sqz p)
+   poly_sqM_value_alt    |- !n p k. 0 < n /\ 0 < k /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
+                                    (valueOf (poly_sqM n p) = sqz p)
    poly_sqM_weak         |- !n p. 0 < n /\ Weak (ZN n) p ==> Weak (ZN n) (valueOf (poly_sqM n p))
    poly_sqM_length       |- !n p. 0 < n /\ Weak (ZN n) p ==>
                                   LENGTH (valueOf (poly_sqM n p)) = LENGTH p
@@ -487,18 +497,21 @@ val _ = monadsyntax.enable_monad "Count";
                             !k. LENGTH (FUNPOW (\p. valueOf (poly_sqM n p)) k p) = LENGTH p
    poly_sqM_steps_thm    |- !n p. 0 < n /\ Weak (ZN n) p ==>
                                   stepsOf (poly_sqM n p) =
-                                  if p = [] then 1
+                                  if (p = []) then 1
                                   else 3 + stepsOf (poly_turnM p) +
                                        stepsOf (poly_cmultM n (HD p) p) +
                                        stepsOf (poly_addM n (weak_cmult (ZN n) (HD p) p)
                                                   (unity_mod_mult (ZN n) (turn p) (TL p))) +
                                        stepsOf (poly_multM n (turn p) (TL p))
-   poly_sqM_steps_upper  |- !n p k. 0 < n /\ LENGTH p = k /\ Weak (ZN n) p ==>
+   poly_sqM_steps_upper  |- !n p k. 0 < n /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
                                     stepsOf (poly_sqM n p) <=
                                     1 + 10 * k + 20 * k ** 2 +
                                         TWICE (k ** 2) * size n + 4 * k ** 2 * size n ** 2
-   poly_sqM_steps_bound  |- !n p k. 0 < n /\ LENGTH p = k /\ Weak (ZN n) p ==>
+   poly_sqM_steps_bound  |- !n p k. 0 < n /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
                                     stepsOf (poly_sqM n p) <= 37 * MAX 1 k ** 2 * size n ** 2
+   poly_sqM_steps_bound_alt
+                         |- !n p k. 0 < n /\ 0 < k /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
+                                    stepsOf (poly_sqM n p) <= 37 * k ** 2 * size n ** 2
 
    poly_expM_def         |- !p n j. poly_expM n p j =
                                     do
@@ -510,13 +523,15 @@ val _ = monadsyntax.enable_monad "Count";
                                           p1 <- poly_sqM n p;
                                           h <- halfM j;
                                           q <- poly_expM n p1 h;
-                                          ifM (evenM j) (idM q) (poly_multM n p q)
+                                          ifM (evenM j) (return q) (poly_multM n p q)
                                         od
                                     od
 #  poly_expM_value       |- !n p j. 0 < n /\ Weak (ZN n) p /\ Weak (ZN n) q ==>
                                     valueOf (poly_expM n p j) = unity_mod_exp (ZN n) p j
-   poly_expM_value_alt   |- !n p j k. 1 < n /\ zweak p /\ p <> [] /\ (LENGTH p = k) ==>
-                                      valueOf (poly_expM n p j) = p **z j
+   poly_expM_value_thm   |- !n p j k. 1 < n /\ Weak (ZN n) p /\ p <> [] /\ (LENGTH p = k) ==>
+                                         (valueOf (poly_expM n p j) = p **z j)
+   poly_expM_value_alt   |- !n p j k. 1 < n /\ 0 < k /\ zweak p /\ (LENGTH p = k) ==>
+                                         (valueOf (poly_expM n p j) = p **z j)
    poly_expM_weak        |- !n p j. 0 < n /\ Weak (ZN n) p ==> Weak (ZN n) (valueOf (poly_expM n p j))
    poly_expM_length      |- !n p j. 0 < n /\ Weak (ZN n) p ==>
                                     LENGTH (valueOf (poly_expM n p j)) =
@@ -547,7 +562,7 @@ val _ = monadsyntax.enable_monad "Count";
                                        else stepsOf (poly_multM n p
                                                       (valueOf (poly_expM n
                                                                  (valueOf (poly_sqM n p)) (HALF j))))
-                                  in !p j k. 0 < n /\ Weak (ZN n) p /\ LENGTH p = k ==>
+                                  in !p j k. 0 < n /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
                                              body p j <=
                                              1 + 5 * size j + 74 * MAX 1 k ** 2 * size n ** 2)
    poly_expM_body_bound  |- !n. (let body p j = 1 + 5 * size j + stepsOf (poly_sqM n p) +
@@ -555,14 +570,18 @@ val _ = monadsyntax.enable_monad "Count";
                                        else stepsOf (poly_multM n p
                                                       (valueOf (poly_expM n
                                                                  (valueOf (poly_sqM n p)) (HALF j))))
-                                  in !p j k. 0 < n /\ Weak (ZN n) p /\ LENGTH p = k ==>
+                                  in !p j k. 0 < n /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
                                              body p j <= 80 * size j * MAX 1 k ** 2 * size n ** 2)
-   poly_expM_steps_upper |- !p n j k. 0 < n /\ Weak (ZN n) p /\ LENGTH p = k ==>
+   poly_expM_steps_upper |- !p n j k. 0 < n /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
                                       stepsOf (poly_expM n p j) <=
                                       2 + size n + 80 * MAX 1 k ** 2 * size j ** 2 * size n ** 2
-   poly_expM_steps_bound |- !p n j k. 0 < n /\ Weak (ZN n) p /\ LENGTH p = k ==>
+   poly_expM_steps_bound |- !p n j k. 0 < n /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
                                       stepsOf (poly_expM n p j) <=
                                       83 * MAX 1 k ** 2 * size j ** 2 * size n ** 2
+   poly_expM_steps_bound_alt
+                         |- !p n j k. 1 < n /\ 0 < k /\ zweak p /\ (LENGTH p = k) ==>
+                                      stepsOf (poly_expM n p j) <=
+                                      83 * k ** 2 * size j ** 2 * size n ** 2
 
    poly_get_coeffM_def   |- !p j. poly_get_coeffM p j =
                                   do
@@ -1014,7 +1033,7 @@ val poly_zeroM_steps_bound = store_thm(
 
 (* Theorem: stepsOf (poly_oneM n k) =
             if k = 0 then 1
-            else 1 + SUM (MAP (\j. 1 + 2 * size j) [1 .. k]) + (if n = 0 then 0 else size n) *)
+            else 1 + SUM (MAP (\j. 1 + 2 * size j) [1 .. k]) + size n *)
 (* Proof:
     stepsOf (poly_oneM n k)
   = stepsOf (zeroM k) + if k = 0 then 0
@@ -1024,19 +1043,19 @@ val poly_zeroM_steps_bound = store_thm(
          stepsOf (consM (1 MOD n) (unity_mod_zero (ZN n) k))  by poly_oneM_def
   = size k + if k = 0 then 0
     else size k + (1 + SUM (MAP (\j. 1 + 2 * size j) [1 .. (k - 1)])) +
-         (if n = 0 then 0 else size 1 * size n) + 1           by poly_zeroM_steps_eqn
+         (size 1 * size n) + 1           by poly_zeroM_steps_eqn
   = if k = 0 then 1
-    else 1 + (1 + 2 * size k) + SUM (MAP (\j. 1 + 2 * size j) [1 .. k]) + (if n = 0 then 0 else size n)
+    else 1 + (1 + 2 * size k) + SUM (MAP (\j. 1 + 2 * size j) [1 .. k]) + size n
                                                               by size_0, moving last 1 to front
   = if k = 0 then 1
-    else 1 + SUM (MAP (\j. 1 + 2 * size j) [1 .. k]) + (if n = 0 then 0 else size n)
+    else 1 + SUM (MAP (\j. 1 + 2 * size j) [1 .. k]) + size n
                                                               by listRangeINC_SUM_MAP
 *)
 val poly_oneM_steps_eqn = store_thm(
   "poly_oneM_steps_eqn",
   ``!n k. stepsOf (poly_oneM n k) =
-          if k = 0 then 1
-          else 1 + SUM (MAP (\j. 1 + 2 * size j) [1 .. k]) + (if n = 0 then 0 else size n)``,
+         if k = 0 then 1
+         else 1 + SUM (MAP (\j. 1 + 2 * size j) [1 .. k]) + size n``,
   rpt strip_tac >>
   (Cases_on `k = 0` >> simp[]) >-
   rw[poly_oneM_def] >>
@@ -1057,8 +1076,7 @@ val poly_oneM_steps_eqn = store_thm(
           stepsOf (consM (1 MOD n) (unity_mod_zero (ZN n) k))  by poly_oneM_def
   <= size k + if k = 0 then 0
      else size k + (1 + (k - 1) + 2 * (k - 1) * size (k - 1)) +
-                   (if n = 0 then 0 else size 1 * size n) + 1
-                                                               by poly_zeroM_steps_upper
+                   (size 1 * size n) + 1                       by poly_zeroM_steps_upper
   <= size k + size k + k + 2 * k * size k + size n + 1         by size_1, size_monotone_lt
    = 1 + k + 2 * size k + 2 * k * size k + size n
 *)
@@ -1234,7 +1252,7 @@ val poly_constM_length = store_thm(
 
 (* Theorem: stepsOf (poly_constM n k c) =
             if k = 0 then 1
-            else 1 + SUM (MAP (\j. 1 + 2 * size j) [1 .. k]) + (if n = 0 then 0 else size c * size n) *)
+            else 1 + SUM (MAP (\j. 1 + 2 * size j) [1 .. k]) + size c * size n *)
 (* Proof:
      stepsOf (poly_constM n k c)
    = stepsOf (zeroM k) + if k = 0 then 0
@@ -1245,15 +1263,15 @@ val poly_constM_length = store_thm(
                                           by poly_constM_def
    = size k + if k = 0 then 0
      else size k + (1 + SUM (MAP (\j. 1 + 2 * size j) [1 .. (k - 1)])) +
-          (if n = 0 then 0 else size c * size n) + 1      by poly_zeroM_steps_eqn
+          (size c * size n) + 1      by poly_zeroM_steps_eqn
    = if k = 0 then 1
-     else 1 + SUM (MAP (\j. 1 + 2 * size j) [1 .. k]) + (if n = 0 then 0 else size c * size n)
+     else 1 + SUM (MAP (\j. 1 + 2 * size j) [1 .. k]) + size c * size n
 *)
 val poly_constM_steps_eqn = store_thm(
   "poly_constM_steps_eqn",
   ``!n k c. stepsOf (poly_constM n k c) =
-            if k = 0 then 1
-            else 1 + SUM (MAP (\j. 1 + 2 * size j) [1 .. k]) + (if n = 0 then 0 else size c * size n)``,
+           if k = 0 then 1
+           else 1 + SUM (MAP (\j. 1 + 2 * size j) [1 .. k]) + size c * size n``,
   rpt strip_tac >>
   (Cases_on `k = 0` >> simp[]) >-
   rw[poly_constM_def] >>
@@ -1275,7 +1293,7 @@ val poly_constM_steps_eqn = store_thm(
                                           by poly_constM_def
    <= size k + if k = 0 then 0
       else size k + (1 + (k - 1) + 2 * (k - 1) * size (k - 1)) +
-           (if n = 0 then 0 else size c * size n) + 1             by poly_zeroM_steps_upper
+           (size c * size n) + 1          by poly_zeroM_steps_upper
    = size k + size k + k + 2 * k * size k + size c * size n + 1   by size_monotone_lt
    = 1 + k + 2 * size k + 2 * k * size k + size c * size n
 *)
@@ -1598,7 +1616,7 @@ val poly_X_expM_length = store_thm(
 
 (* Theorem: stepsOf (poly_X_expM n k m) =
       if k = 0 then 1
-      else (if n = 0 then 0 else size 1 * size n) + 2 * size k + if k = 1 then 1
+      else size n + 2 * size k + if k = 1 then 1
       else (if k = 0 then 0 else size m * size k) + 1 + size (MAX k (m MOD k)) + size (k - (m MOD k)) +
             stepsOf (poly_zeroM n (k - (m MOD k) - 1)) +
             stepsOf (poly_extendM ((1 MOD n)::unity_mod_zero (ZN n) (k - (m MOD k) - 1)) (m MOD k)) *)
@@ -1611,28 +1629,28 @@ val poly_X_expM_length = store_thm(
            stepsOf (poly_zeroM n (k - (m MOD k) - 1)) + stepsOf (consM (1 MOD n) p) +
            stepsOf (poly_extendM q (m MOD k))        by poly_X_expM_def
    = size k + if k = 0 then 0
-     else (if n = 0 then 0 else size 1 * size n) + size k + if k = 1 then 1
+     else (size 1 * size n) + size k + if k = 1 then 1
      else (if k = 0 then 0 else size m * size k) +
           size (MAX k (m MOD k)) + size (k - (m MOD k)) +
            stepsOf (poly_zeroM n (k - (m MOD k) - 1)) + 1 + stepsOf (poly_extendM q (m MOD k))
    = size k + if k = 0 then 0
-     else (if n = 0 then 0 else size 1 * size n) + size k + if k = 1 then 1
+     else size n + size k + if k = 1 then 1
      else (if k = 0 then 0 else size m * size k) + 1 +
           size (MAX k (m MOD k)) + size (k - (m MOD k)) +
            stepsOf (poly_zeroM n (k - (m MOD k) - 1)) + stepsOf (poly_extendM q (m MOD k))
    = if k = 0 then 1
-     else (if n = 0 then 0 else size 1 * size n) + 2 * size k + if k = 1 then 1
+     else size n + 2 * size k + if k = 1 then 1
      else (if k = 0 then 0 else size m * size k) + 1 + size (MAX k (m MOD k)) + size (k - (m MOD k)) +
            stepsOf (poly_zeroM n (k - (m MOD k) - 1)) + stepsOf (poly_extendM q (m MOD k))
 *)
 val poly_X_expM_steps_eqn = store_thm(
   "poly_X_expM_steps_eqn",
   ``!n k m. stepsOf (poly_X_expM n k m) =
-            if k = 0 then 1
-            else (if n = 0 then 0 else size 1 * size n) + 2 * size k + if k = 1 then 1
-            else (if k = 0 then 0 else size m * size k) + 1 + size (MAX k (m MOD k)) + size (k - (m MOD k)) +
-                  stepsOf (poly_zeroM n (k - (m MOD k) - 1)) +
-                  stepsOf (poly_extendM ((1 MOD n)::unity_mod_zero (ZN n) (k - (m MOD k) - 1)) (m MOD k))``,
+           if k = 0 then 1
+           else size n + 2 * size k + if k = 1 then 1
+           else (if k = 0 then 0 else size m * size k) + 1 + size (MAX k (m MOD k)) + size (k - (m MOD k)) +
+                 stepsOf (poly_zeroM n (k - (m MOD k) - 1)) +
+                 stepsOf (poly_extendM ((1 MOD n)::unity_mod_zero (ZN n) (k - (m MOD k) - 1)) (m MOD k))``,
   rw[poly_X_expM_def, size_max]);
 
 (* Theorem: stepsOf (poly_X_expM n k m) <=
@@ -1640,11 +1658,11 @@ val poly_X_expM_steps_eqn = store_thm(
 (* Proof:
       stepsOf (poly_X_expM n k m)
     = if k = 0 then 1
-      else (if n = 0 then 0 else size 1 * size n) + 2 * size k + if k = 1 then 1
+      else size n + 2 * size k + if k = 1 then 1
       else (if k = 0 then 0 else size m * size k) + 1 + size (MAX k (m MOD k)) + size (k - (m MOD k)) +
             stepsOf (poly_zeroM n (k - (m MOD k) - 1)) +
             stepsOf (poly_extendM ((1 MOD n)::unity_mod_zero (ZN n) (k - (m MOD k) - 1)) (m MOD k))
-                                           by poly_X_expM_steps_eqn
+                                             by poly_X_expM_steps_eqn
    <= size 1 * size n + 2 * size k +
       size m * size k + 1 + size (MAX k (m MOD k)) + size (k - (m MOD k)) +
       (1 + p + 2 * p * size p) +     by poly_zeroM_steps_upper, p = k - (m MOD k) - 1
@@ -1671,8 +1689,7 @@ val poly_X_expM_steps_upper = store_thm(
   qabbrev_tac `h = m MOD k` >>
   qabbrev_tac `ls = 1 MOD n::unity_mod_zero (ZN n) (k - h - 1)` >>
   qabbrev_tac `j = k - h - 1` >>
-  qabbrev_tac `t = if n = 0 then 0 else size 1 * size n` >>
-  `t <= size n` by rw[Abbr`t`] >>
+  qabbrev_tac `t = size n` >>
   Cases_on `k = 0` >-
   rw[] >>
   Cases_on `k = 1` >-
@@ -1794,17 +1811,16 @@ EVAL ``poly_eqM [1;1;0;1;0;0;1] [1;1;0;0;1;0;1]``; = (F,Count 28): thm
      else (HD p = HD q) /\ (TL p = TL q)         by induction hypothesis
    = (p = q)                                     by LIST_EQ_HEAD_TAIL
 *)
-val poly_eqM_value = store_thm(
-  "poly_eqM_value[simp]",
-  ``!p q. valueOf (poly_eqM p q) = (p = q)``,
+Theorem poly_eqM_value[simp]:
+  !p q. valueOf (poly_eqM p q) = (p = q)
+Proof
   ho_match_mp_tac (theorem "poly_eqM_ind") >>
   rw[] >>
-  rw[Once poly_eqM_def] >-
-  metis_tac[] >>
-  rw[LIST_EQ_HEAD_TAIL]);
+  rw[Once poly_eqM_def] >> rw[LIST_EQ_HEAD_TAIL]
+QED
 
 (* Theorem: stepsOf (poly_eqM p q) =
-            2 + if (p = [] \/ q = []) then 0
+            2 + if ((p = []) \/ (q = [])) then 0
                 else 4 + size (MAX (HD p) (HD q)) +
                      if (HD p <> HD q) then 0 else stepsOf (poly_eqM (TL p) (TL q)) *)
 (* Proof:
@@ -1815,16 +1831,16 @@ val poly_eqM_value = store_thm(
           stepsOf (headM q) + stepsOf (tailM q) +
           stepsOf (eqM (HD p) (HD q)) +
           if (HD p = HD q) then stepsOf (poly_eqM (TL p) (TL q)) else 0    by poly_eqM_def
-   = 1 + 1 + if (p = [] \/ q = []) then 0
+   = 1 + 1 + if ((p = []) \/ (q = [])) then 0
      else 1 + 1 + 1 + 1 + size (MAX (HD p) (HD q)) +
      if (HD p <> HD q) then 0 else stepsOf (poly_eqM (TL p) (TL q))        by size_max
-   = 2 + if (p = [] \/ q = []) then 0
+   = 2 + if ((p = []) \/ (q = [])) then 0
      else 4 + size (MAX (HD p) (HD q)) + if (HD p <> HD q) then 0 else stepsOf (poly_eqM (TL p) (TL q))
 *)
 val poly_eqM_steps_thm = store_thm(
   "poly_eqM_steps_thm",
   ``!p q. stepsOf (poly_eqM p q) =
-          2 + if (p = [] \/ q = []) then 0
+          2 + if ((p = []) \/ (q = [])) then 0
               else 4 + size (MAX (HD p) (HD q)) +
                    if (HD p <> HD q) then 0 else stepsOf (poly_eqM (TL p) (TL q))``,
   ho_match_mp_tac (theorem "poly_eqM_ind") >>
@@ -1833,22 +1849,22 @@ val poly_eqM_steps_thm = store_thm(
   rw[Once poly_eqM_def]);
 
 (* Theorem: stepsOf (poly_eqM p q) =
-         if (p = [] \/ q = []) then 2
+         if ((p = []) \/ (q = [])) then 2
          else 6 + size (MAX (HD p) (HD q)) +
               if (HD p <> HD q) then 0 else stepsOf (poly_eqM (TL p) (TL q)) *)
 (* Proof:
      stepsOf (poly_eqM p q)
-   = 2 + if (p = [] \/ q = []) then 0
+   = 2 + if ((p = []) \/ (q = [])) then 0
      else 4 + size (MAX (HD p) (HD q)) +
           if (HD p <> HD q) then 0 else stepsOf (poly_eqM (TL p) (TL q))  by poly_eqM_steps_thm
-   = if (p = [] \/ q = []) then 2
+   = if ((p = []) \/ (q = [])) then 2
      else 6 + size (MAX (HD p) (HD q)) +
           if (HD p <> HD q) then 0 else stepsOf (poly_eqM (TL p) (TL q))
 *)
 val poly_eqM_steps_by_list_loop = store_thm(
   "poly_eqM_steps_by_list_loop",
   ``!p q. stepsOf (poly_eqM p q) =
-         if (p = [] \/ q = []) then 2
+         if ((p = []) \/ (q = [])) then 2
          else 6 + size (MAX (HD p) (HD q)) +
               if (HD p <> HD q) then 0 else stepsOf (poly_eqM (TL p) (TL q))``,
   rw[Once poly_eqM_steps_thm]);
@@ -1857,7 +1873,7 @@ val poly_eqM_steps_by_list_loop = store_thm(
 (*
 This puts poly_eqM_steps in the category: list loop with body on head and tail transform with exit.
    mexpM_steps_by_sqmod_div_loop:
-        !p q. loop p q = if p = [] \/ q = [] then 2 else body p q +
+        !p q. loop p q = if (p = []) \/ (q = []) then 2 else body p q +
               if exit p q then 0 else loop (TL p) (TL q)
 suitable for: loop2_list_tail_head_count_exit_sum_le
 and also for: loop2_list_tail_head_upper_count_exit_le
@@ -1871,9 +1887,9 @@ and also for: loop2_list_tail_head_upper_count_exit_le
        body = (\p q. f (HD p) (HD q)),
        exit = (\p q. HD p <> HD q),
        loop = (\p q. stepsOf (poly_eqM p q)).
-   Then !p q. loop p q = if p = [] \/ q = [] then quit p q else body p q +
+   Then !p q. loop p q = if (p = []) \/ (q = []) then quit p q else body p q +
               if exit p q then 0 else loop (TL p) (TL q)   by poly_eqM_steps_by_list_loop
-   Given LENGTH p = k and LENGTH q = k,
+   Given (LENGTH p = k) and LENGTH q = k,
    Thus loop p q
      <= quit [] [] +
         SUM (GENLIST (\j. f (EL j p) (EL j q)) k)    by loop2_list_tail_head_count_exit_sum_le
@@ -1890,12 +1906,12 @@ val poly_eqM_steps_by_sum_le = store_thm(
   qabbrev_tac `exit = \p q:num list. HD p <> HD q` >>
   qabbrev_tac `loop = \p q. stepsOf (poly_eqM p q)` >>
   `loop p q <= 2 + SUM (GENLIST (\j. f (EL j p) (EL j q)) k)` suffices_by rw[Abbr`loop`] >>
-  `!p q. loop p q = if p = [] \/ q = [] then quit p q else body p q + if exit p q then 0 else loop (TL p) (TL q)` by metis_tac[poly_eqM_steps_by_list_loop] >>
+  `!p q. loop p q = if (p = []) \/ (q = []) then quit p q else body p q + if exit p q then 0 else loop (TL p) (TL q)` by metis_tac[poly_eqM_steps_by_list_loop] >>
   `body = (\p q. f (HD p) (HD q))` by metis_tac[] >>
   imp_res_tac loop2_list_tail_head_count_exit_sum_le >>
   metis_tac[]);
 
-(* Theorem: (LENGTH p = k) /\ (LENGTH q = k) /\ Weak (ZN n) p /\ Weak (ZN n) q ==>
+(* Theorem: Weak (ZN n) p /\ Weak (ZN n) q /\ (LENGTH p = k) /\ (LENGTH q = k) ==>
             stepsOf (poly_eqM p q) <= 2 + 6 * k + k * size n *)
 (* Proof:
    Let quit = (\p q. 2),
@@ -1903,9 +1919,9 @@ val poly_eqM_steps_by_sum_le = store_thm(
        body = (\p q. f (HD p) (HD q)),
        exit = (\p q. HD p <> HD q),
        loop = (\p q. stepsOf (poly_eqM p q)).
-   Then !p q. loop p q = if p = [] \/ q = [] then quit p q else body p q +
+   Then !p q. loop p q = if (p = []) \/ (q = []) then quit p q else body p q +
               if exit p q then 0 else loop (TL p) (TL q)   by poly_eqM_steps_by_list_loop
-   Given LENGTH p = k and LENGTH q = k,
+   Given (LENGTH p = k) and LENGTH q = k,
      and EVERY (\j. j <= n) p         by ZN_weak
      and EVERY (\j. j <= n) q         by ZN_weak
      and MONO2 f                      by MAX_DEF, size_monotone_le
@@ -1917,7 +1933,7 @@ val poly_eqM_steps_by_sum_le = store_thm(
 *)
 val poly_eqM_steps_upper = store_thm(
   "poly_eqM_steps_upper",
-  ``!p q k n. (LENGTH p = k) /\ (LENGTH q = k) /\ Weak (ZN n) p /\ Weak (ZN n) q ==>
+  ``!p q k n. Weak (ZN n) p /\ Weak (ZN n) q /\ (LENGTH p = k) /\ (LENGTH q = k) ==>
              stepsOf (poly_eqM p q) <= 2 + 6 * k + k * size n``,
   rpt strip_tac >>
   qabbrev_tac `quit = \p:num list q:num list. 2` >>
@@ -1926,7 +1942,7 @@ val poly_eqM_steps_upper = store_thm(
   qabbrev_tac `exit = \p q:num list. HD p <> HD q` >>
   qabbrev_tac `loop = \p q. stepsOf (poly_eqM p q)` >>
   `loop p q <= 2 + 6 * k + k * size n` suffices_by rw[Abbr`loop`] >>
-  `!p q. loop p q = if p = [] \/ q = [] then quit p q else body p q + if exit p q then 0 else loop (TL p) (TL q)` by metis_tac[poly_eqM_steps_by_list_loop] >>
+  `!p q. loop p q = if (p = []) \/ (q = []) then quit p q else body p q + if exit p q then 0 else loop (TL p) (TL q)` by metis_tac[poly_eqM_steps_by_list_loop] >>
   `MONO2 f` by
   (rw[Abbr`f`] >>
   `MAX x1 y1 <= MAX x2 y2` by rw[] >>
@@ -1934,9 +1950,9 @@ val poly_eqM_steps_upper = store_thm(
   `body = (\p q. f (HD p) (HD q))` by metis_tac[] >>
   assume_tac (loop2_list_tail_head_upper_count_exit_le |> ISPEC ``loop: num list -> num list -> num``) >>
   first_x_assum (qspecl_then [`body`, `quit`, `exit`, `f`] strip_assume_tac) >>
-  qabbrev_tac `foo = !p q. loop p q = if p = [] \/ q = [] then quit p q
+  qabbrev_tac `foo = !p q. loop p q = if (p = []) \/ (q = []) then quit p q
                 else body p q + if exit p q then 0 else loop (TL p) (TL q)` >>
-  `!x y k n. LENGTH x = k /\ LENGTH y = k /\ EVERY (\j. j < n) x /\ EVERY (\j. j < n) y ==>
+  `!x y k n. (LENGTH x = k) /\ (LENGTH y = k) /\ EVERY (\j. j < n) x /\ EVERY (\j. j < n) y ==>
               loop x y <= quit [] [] + k * f n n` by metis_tac[] >>
   first_x_assum (qspecl_then [`p`, `q`, `k`, `n`] strip_assume_tac) >>
   `loop p q <= 2 + k * f n n` by metis_tac[ZN_weak] >>
@@ -1946,7 +1962,7 @@ val poly_eqM_steps_upper = store_thm(
 
 (* This is the result I like! *)
 
-(* Theorem: LENGTH p = k /\ LENGTH q = k /\ Weak (ZN n) p /\ Weak (ZN n) q ==>
+(* Theorem: Weak (ZN n) p /\ Weak (ZN n) q /\ (LENGTH p = k) /\ (LENGTH q = k) ==>
             stepsOf (poly_eqM p q) <= 9 * (MAX 1 k) * size n *)
 (* Proof:
       stepsOf (poly_eqM p q)
@@ -1957,7 +1973,7 @@ val poly_eqM_steps_upper = store_thm(
 *)
 val poly_eqM_steps_bound = store_thm(
   "poly_eqM_steps_bound",
-  ``!p q k n. LENGTH p = k /\ LENGTH q = k /\ Weak (ZN n) p /\ Weak (ZN n) q ==>
+  ``!p q k n. Weak (ZN n) p /\ Weak (ZN n) q /\ (LENGTH p = k) /\ (LENGTH q = k) ==>
              stepsOf (poly_eqM p q) <= 9 * (MAX 1 k) * size n``,
   rpt strip_tac >>
   `stepsOf (poly_eqM p q) <= 2 + 6 * k + k * size n` by rw[poly_eqM_steps_upper] >>
@@ -1989,10 +2005,10 @@ val poly_eqM_steps_bound = store_thm(
 (* Pseudocode:
    Given modulus n, a scalar c and polynomial p, compute (c o p) (mod n).
    list_cmult c p:
-      if p = [], return []        // c o [] = []
-      h <- c * (head p) MOD n     // c multiply with head
-      t <- list_cmult c (tail p)  // recursive call with tail: c o (tail p)
-      return h::t                 // combine to result
+      if p = [], return []         // c o [] = []
+      h <- c * (head p) MOD n      // c multiply with head
+      t <- list_cmult c (tail p)   // recursive call with tail: c o (tail p)
+      return h::t                  // combine to give result
 *)
 
 val poly_cmultM_def = tDefine "poly_cmultM" `
@@ -2038,11 +2054,11 @@ val poly_cmultM_value = store_thm(
   rw[Once poly_cmultM_def] >>
   (Cases_on `p` >> fs[ZN_property]));
 
-(* Theorem: zweak p /\ c < n ==> (valueOf (poly_cmultM n c p) = c oz p) *)
+(* Theorem: Weak (ZN n) p ==> (valueOf (poly_cmultM n c p) = c oz p) *)
 (* Proof: by poly_cmultM_value, ZN_poly_cmult_alt *)
 val poly_cmultM_value_alt = store_thm(
   "poly_cmultM_value_alt",
-  ``!n c p. zweak p /\ c < n ==> (valueOf (poly_cmultM n c p) = c oz p)``,
+  ``!n c p. Weak (ZN n) p ==> (valueOf (poly_cmultM n c p) = c oz p)``,
   rw[ZN_poly_cmult_alt]);
 
 (*
@@ -2094,30 +2110,30 @@ val poly_cmultM_length = store_thm(
   rw[weak_cmult_length]);
 
 (* Theorem: stepsOf (poly_cmultM n c p) =
-            if p = [] then 1
-            else 4 + size c * size (HD p) + (if n = 0 then 0 else size (c * HD p) * size n) +
+            if (p = []) then 1
+            else 4 + size c * size (HD p) + size (c * HD p) * size n +
                  stepsOf (poly_cmultM n c (TL p)) *)
 (* Proof:
      stepsOf (poly_cmultM n c p)
-   = stepsOf (nullM p) + if p = [] then 0
+   = stepsOf (nullM p) + if (p = []) then 0
      else stepsOf (headM p) + stepsOf (tailM p) +
           stepsOf (mmulM n c (HD p)) +
           stepsOf (poly_cmultM n c (TL p)) +
           stepsOf (consM ((c * HD p) MOD n) (valueOf (poly_cmultM n c (TL p))))
                                  by poly_cmultM_def
-   = 1  + if p = [] then 0
-     else 1 + 1 + (size c * size (HD p) + if n = 0 then 0 else size (c * HD p) * size n) +
-     stepsOf (poly_cmultM n c (TL p)) + 1
-   = if p = [] then 1
-     else 4 + size c * size (HD p) + (if n = 0 then 0 else size (c * HD p) * size n) +
-          stepsOf (poly_cmultM n c (TL p))
+   = 1  + if (p = []) then 0
+     else 1 + 1 + (size c * size (HD p) + size (c * HD p) * size n +
+     stepsOf (poly_cmultM n c (TL p)) + 1      by mmulM_steps
+   = if (p = []) then 1
+     else 4 + size c * size (HD p) + size (c * HD p) * size n +
+          stepsOf (poly_cmultM n c (TL p))     by arithmetic
 *)
 val poly_cmultM_steps_thm = store_thm(
   "poly_cmultM_steps_thm",
   ``!n c p. stepsOf (poly_cmultM n c p) =
-            if p = [] then 1
-            else 4 + size c * size (HD p) + (if n = 0 then 0 else size (c * HD p) * size n) +
-                 stepsOf (poly_cmultM n c (TL p))``,
+           if (p = []) then 1
+           else 4 + size c * size (HD p) + size (c * HD p) * size n +
+                stepsOf (poly_cmultM n c (TL p))``,
   ho_match_mp_tac (theorem "poly_cmultM_ind") >>
   rpt strip_tac >>
   (Cases_on `p` >> simp[Once poly_cmultM_def]));
@@ -2128,64 +2144,63 @@ val poly_cmultM_steps_by_list_loop = save_thm("poly_cmultM_steps_by_list_loop", 
 (*
 This puts poly_cmultM_steps in the category: list loop with body on head.
    poly_cmultM_steps_by_list_loop:
-        !p. loop p = if p = [] then c else body p + loop (TL p)
+        !p. loop p = if (p = []) then c else body p + loop (TL p)
 suitable for: loop_list_head_count_eqn
 and also for: loop_list_head_upper_count_le
 *)
 
 (* Theorem: stepsOf (poly_cmultM n c p) =
-           1 + SUM (GENLIST (\j. 4 + size c * size (EL j p) +
-                    (if n = 0 then 0 else size (c * (EL j p)) * size n)) (LENGTH p)) *)
+            1 + SUM (GENLIST (\j. 4 + size c * size (EL j p) +
+                     size (c * (EL j p)) * size n) (LENGTH p)) *)
 (* Proof:
-   Let f = (\j. 4 + size c * size j + (if n = 0 then 0 else size (c * j) * size n)),
+   Let f = (\j. 4 + size c * size j + size (c * j) * size n),
        body = (\p. f (HD p)),
        loop = (\p. stepsOf (poly_cmultM n c p))
-   Then loop p = if p = [] then 1 else body p + loop (TL p)    by poly_cmultM_steps_thm
+   Then loop p = if (p = []) then 1 else body p + loop (TL p)    by poly_cmultM_steps_thm
    Thus loop p = 1 + SUM (GENLIST (\j. f (EL j p)) (LENGTH p)) by loop_list_head_count_eqn
 *)
 val poly_cmultM_steps_eqn = store_thm(
   "poly_cmultM_steps_eqn",
   ``!n c p. stepsOf (poly_cmultM n c p) =
-           1 + SUM (GENLIST (\j. 4 + size c * size (EL j p) +
-                    (if n = 0 then 0 else size (c * (EL j p)) * size n)) (LENGTH p))``,
+           1 + SUM (GENLIST (\j. 4 + size c * size (EL j p) + size (c * (EL j p)) * size n)
+                            (LENGTH p))``,
   rpt strip_tac >>
-  qabbrev_tac `f = \j. 4 + size c * size j + (if n = 0 then 0 else size (c * j) * size n)` >>
+  qabbrev_tac `f = \j. 4 + size c * size j + size (c * j) * size n` >>
   qabbrev_tac `body = \p. f (HD p)` >>
   qabbrev_tac `loop = \p. stepsOf (poly_cmultM n c p)` >>
   `loop p = 1 + SUM (GENLIST (\j. f (EL j p)) (LENGTH p))` suffices_by rw[] >>
-  `!p. loop p = if p = [] then 1 else body p + loop (TL p)` by metis_tac[poly_cmultM_steps_thm] >>
+  `!p. loop p = if (p = []) then 1 else body p + loop (TL p)` by metis_tac[poly_cmultM_steps_thm] >>
   `body = (\x. f (HD x))` by metis_tac[] >>
   imp_res_tac loop_list_head_count_eqn >>
   first_x_assum (qspec_then `p` strip_assume_tac));
 
-(* Theorem: (LENGTH p = k) /\ Weak (ZN n) p ==>
+(* Theorem: Weak (ZN n) p  /\ (LENGTH p = k) ==>
        stepsOf (poly_cmultM n c p) <=
-       1 + 4 * k + k * size c * size n + if n = 0 then 0 else k * size (c * n) * size n *)
+       1 + 4 * k + 2 * k * size c * size n + k * (size n) ** 2 *)
 (* Proof:
-   Let f = (\j. 4 + size c * size j + (if n = 0 then 0 else size (c * j) * size n)),
+   Let f = (\j. 4 + size c * size j + size (c * j) * size n),
        body = (\p. f (HD p)),
        loop = (stepsOf o poly_cmultM n c)
-   Then loop p = if p = [] then 1 else body p + loop (TL p)    by poly_cmultM_steps_thm
+   Then loop p = if (p = []) then 1 else body p + loop (TL p)    by poly_cmultM_steps_thm
     Now Weak (ZN n) p <=> EVERY (\j.j < n) p                   by ZN_weak
     and MONO f                         by size_monotone_le
    Thus loop p
      <= 1 + k * f n                    by loop_list_head_upper_count_le
-      = 1 + k * (4 + size c * size n + (if n = 0 then 0 else size (c * n) * size n))
+      = 1 + k * (4 + size c * size n + size (c * n) * size n)
      <= 1 + 4 * k + k * size c * size n + k * size (c * n) * size n
      <= 1 + 4 * k + k * size c * size n + k * (size c + size n) * size n    by size_mult_upper
       = 1 + 4 * k + 2 * k * size c * size n + k * size n ** 2
 *)
 val poly_cmultM_steps_upper = store_thm(
   "poly_cmultM_steps_upper",
-  ``!n c p k. (LENGTH p = k) /\ Weak (ZN n) p ==>
-       stepsOf (poly_cmultM n c p) <=
-       1 + 4 * k + 2 * k * size c * size n + k * (size n) ** 2``,
+  ``!n c p k. Weak (ZN n) p /\ (LENGTH p = k) ==>
+       stepsOf (poly_cmultM n c p) <= 1 + 4 * k + 2 * k * size c * size n + k * (size n) ** 2``,
   rpt strip_tac >>
-  qabbrev_tac  `f = \j. 4 + size c * size j + (if n = 0 then 0 else size (c * j) * size n)` >>
+  qabbrev_tac `f = \j. 4 + size c * size j + size (c * j) * size n` >>
   qabbrev_tac `body = \p. f (HD p)` >>
   qabbrev_tac `loop = (stepsOf o poly_cmultM n c)` >>
   `loop p <= 1 + 4 * k + 2 * k * size c * size n + k * (size n) ** 2` suffices_by rw[Abbr`loop`, Abbr`f`] >>
-  `!p. loop p = if p = [] then 1 else body p + loop (TL p)` by metis_tac[poly_cmultM_steps_thm, combinTheory.o_THM] >>
+  `!p. loop p = if (p = []) then 1 else body p + loop (TL p)` by metis_tac[poly_cmultM_steps_thm, combinTheory.o_THM] >>
   `MONO f` by
   (rw[size_monotone_le, Abbr`f`] >>
   `c * x <= c * y` by rw[] >>
@@ -2204,7 +2219,7 @@ val poly_cmultM_steps_upper = store_thm(
   decide_tac) >>
   decide_tac);
 
-(* Theorem: (LENGTH p = k) /\ Weak (ZN n) p ==>
+(* Theorem: Weak (ZN n) p /\ (LENGTH p = k) ==>
             stepsOf (poly_cmultM n c p) <= 8 * (MAX 1 k) * size (MAX c n) * size n *)
 (* Proof:
       stepsOf (poly_cmultM n c p)
@@ -2216,7 +2231,7 @@ val poly_cmultM_steps_upper = store_thm(
 *)
 val poly_cmultM_steps_bound = store_thm(
   "poly_cmultM_steps_bound",
-  ``!n c p k. (LENGTH p = k) /\ Weak (ZN n) p ==>
+  ``!n c p k. Weak (ZN n) p /\ (LENGTH p = k) ==>
        stepsOf (poly_cmultM n c p) <= 8 * (MAX 1 k) * size (MAX c n) * size n``,
   rpt strip_tac >>
   `stepsOf (poly_cmultM n c p) <=
@@ -2257,11 +2272,11 @@ val poly_cmultM_steps_bound = store_thm(
 (* Pseudocode:
    Given modulus n, and polynomials p and q, compute p || q (mod n).
    list_add p q:
-      if p = [], return q               // [] || q = q
-      if q = [], return p               // p || [] = p
-      h <- (head p) + (head q) MOD n    // pair-wise add of heads
-      t <- list_add (tail p) (tail q)   // recursive call with tails: (tail p) || (tail q)
-      return h::t                       // combine to result
+      if p = [], return q              // [] || q = q
+      if q = [], return p              // p || [] = p
+      h <- (head p) + (head q) MOD n   // pair-wise add of heads
+      t <- list_add (tail p) (tail q)  // recursive call with tails: (tail p) || (tail q)
+      return h::t                      // combine to give result
 *)
 val poly_addM_def = tDefine "poly_addM" `
   poly_addM n p q =
@@ -2311,12 +2326,12 @@ val poly_addM_value = store_thm(
   rw[Once poly_addM_def] >>
   (Cases_on `p` >> Cases_on `q` >> fs[ZN_property]));
 
-(* Theorem: zweak p /\ zweak q /\ (LENGTH p = LENGTH q) ==>
+(* Theorem: Weak (ZN n) p /\ Weak (ZN n) q /\ (LENGTH p = LENGTH q) ==>
           (valueOf (poly_addM n p q) = p +z q) *)
 (* Proof: by poly_addM_value, ZN_poly_add_alt *)
 val poly_addM_value_alt = store_thm(
   "poly_addM_value_alt",
-  ``!n p q. zweak p /\ zweak q /\ (LENGTH p = LENGTH q) ==>
+  ``!n p q. Weak (ZN n) p /\ Weak (ZN n) q /\ (LENGTH p = LENGTH q) ==>
           (valueOf (poly_addM n p q) = p +z q)``,
   rw[ZN_poly_add_alt]);
 
@@ -2368,29 +2383,29 @@ val poly_addM_length = store_thm(
   rw[weak_add_length]);
 
 (* Theorem: stepsOf (poly_addM n p q) =
-            if p = [] \/ q = [] then 2
-            else 7 + size (MAX (HD p) (HD q)) + (if n = 0 then 0 else size (HD p + HD q) * size n) +
+            if (p = []) \/ (q = []) then 2
+            else 7 + size (MAX (HD p) (HD q)) + size (HD p + HD q) * size n +
                  stepsOf (poly_addM n (TL p) (TL q)) *)
 (* Proof:
      stepsOf (poly_addM n p q)
-   = stepsOf (nullM p) + stepsOf (nullM q) + if p = [] then 0 else if q = [] then 0
+   = stepsOf (nullM p) + stepsOf (nullM q) + if (p = []) then 0 else if q = [] then 0
      else stepsOf (headM p) + stepsOf (headM q) + stepsOf (tailM p) + stepsOf (tailM q) +
           stepsOf (maddM n (HD p) (HD q)) + stepsOf (poly_addM n (TL p) (TL q)) +
           stepsOf (consM ((HD p + HD q) MOD n) r)      by poly_addM_def
-   = 1 + 1 + if p = [] then 0 else if q = [] then 0
+   = 1 + 1 + if (p = []) then 0 else if q = [] then 0
      else 1 + 1 + 1 + 1 +
-     size (MAX (HD p) (HD q)) + (if n = 0 then 0 else size (HD p + HD q) * size n) +
+     size (MAX (HD p) (HD q)) + size (HD p + HD q) * size n +
      stepsOf (poly_addM n (TL p) (TL q)) + 1           by size_max
-   = if p = [] \/ q = [] then 2
-     else 7 + size (MAX (HD p) (HD q)) + (if n = 0 then 0 else size (HD p + HD q) * size n) +
+   = if (p = []) \/ (q = []) then 2
+     else 7 + size (MAX (HD p) (HD q)) + size (HD p + HD q) * size n +
           stepsOf (poly_addM n (TL p) (TL q))
 *)
 val poly_addM_steps_thm = store_thm(
   "poly_addM_steps_thm",
   ``!n p q. stepsOf (poly_addM n p q) =
-            if p = [] \/ q = [] then 2
-            else 7 + size (MAX (HD p) (HD q)) + (if n = 0 then 0 else size (HD p + HD q) * size n) +
-                 stepsOf (poly_addM n (TL p) (TL q))``,
+           if (p = []) \/ (q = []) then 2
+           else 7 + size (MAX (HD p) (HD q)) + size (HD p + HD q) * size n +
+                stepsOf (poly_addM n (TL p) (TL q))``,
   (rw[Once poly_addM_def, size_max] >> fs[]));
 
 (* Theorem alias *)
@@ -2399,7 +2414,7 @@ val poly_addM_steps_by_list_loop = save_thm("poly_addM_steps_by_list_loop", poly
 (*
 This puts poly_addM_steps in the category: list loop with body on head and transform on head.
    poly_addM_steps_by_list_loop:
-        !p q. loop p q = if p = [] \/ q = [] then c else body p q + loop (TL p) (TL q)
+        !p q. loop p q = if (p = []) \/ (q = []) then c else body p q + loop (TL p) (TL q)
 suitable for: loop2_list_tail_head_count_eqn
 and also for: loop2_list_tail_head_upper_count_le
 *)
@@ -2407,13 +2422,13 @@ and also for: loop2_list_tail_head_upper_count_le
 (* Theorem: (LENGTH p = k) /\ (LENGTH q = k) ==>
             (stepsOf (poly_addM n p q) =
                2 + SUM (GENLIST (\j. 7 + size (MAX (EL j p) (EL j q)) +
-                   (if n = 0 then 0 else size (EL j p + EL j q) * size n)) k)) *)
+                                     size (EL j p + EL j q) * size n) k)) *)
 (* Proof:
    Let quit = (\p q. 2),
-       f = (\i j. 7 + size (MAX i j) + (if n = 0 then 0 else size (i + j) * size n)),
+       f = (\i j. 7 + size (MAX i j) + size (i + j) * size n),
        body = (\p q. f (HD p) (HD q)),
        loop = (\p q. stepsOf (poly_addM n p q)).
-   Then loop p q = if p = [] \/ q = [] then quit p q else body p q + loop (TL p) (TL q)
+   Then loop p q = if (p = []) \/ (q = []) then quit p q else body p q + loop (TL p) (TL q)
                                                      by poly_addM_steps_thm
    Thus loop p q
       = quit [][] + SUM (GENLIST (\j. f (EL j p) (EL j q)) k) by loop2_list_tail_head_count_eqn
@@ -2424,51 +2439,51 @@ val poly_addM_steps_eqn = store_thm(
   ``!n p q k. (LENGTH p = k) /\ (LENGTH q = k) ==>
       (stepsOf (poly_addM n p q) =
        2 + SUM (GENLIST (\j. 7 + size (MAX (EL j p) (EL j q)) +
-                (if n = 0 then 0 else size (EL j p + EL j q) * size n)) k))``,
+                             size (EL j p + EL j q) * size n) k))``,
   rpt strip_tac >>
   qabbrev_tac `quit = \p:num list q:num list. 2` >>
-  qabbrev_tac `f = \i j. 7 + size (MAX i j) + (if n = 0 then 0 else size (i + j) * size n)` >>
+  qabbrev_tac `f = \i j. 7 + size (MAX i j) + size (i + j) * size n` >>
   qabbrev_tac `body = \p q. f (HD p) (HD q)` >>
   qabbrev_tac `loop = \p q. stepsOf (poly_addM n p q)` >>
-  qabbrev_tac `g = \j. 7 + size (MAX (EL j p) (EL j q)) + if n = 0 then 0 else size (EL j p + EL j q) * size n` >>
+  qabbrev_tac `g = \j. 7 + size (MAX (EL j p) (EL j q)) + size (EL j p + EL j q) * size n` >>
   `loop p q = 2 + SUM (GENLIST g k)` suffices_by rw[] >>
   `g = \j. f (EL j p) (EL j q)` by rw[Abbr`g`, Abbr`f`] >>
   `SUM (GENLIST g k) = SUM (GENLIST (\j. f (EL j p) (EL j q)) k)` by rw[] >>
-  `!p q. loop p q = if p = [] \/ q = [] then quit p q else body p q + loop (TL p) (TL q)` by metis_tac[poly_addM_steps_thm] >>
+  `!p q. loop p q = if (p = []) \/ (q = []) then quit p q else body p q + loop (TL p) (TL q)` by metis_tac[poly_addM_steps_thm] >>
   `body = (\p q. f (HD p) (HD q))` by metis_tac[] >>
   imp_res_tac loop2_list_tail_head_count_eqn >>
   metis_tac[]);
 
-(* Theorem: (LENGTH p = k) /\ (LENGTH q = k) /\ Weak (ZN n) p /\ Weak (ZN n) q ==>
+(* Theorem: Weak (ZN n) p /\ Weak (ZN n) q /\ (LENGTH p = k) /\ (LENGTH q = k) ==>
             stepsOf (poly_addM n p q) <= 2 + 7 * k + 2 * k * size n + k * size n ** 2 *)
 (* Proof:
    Let quit = (\p q. 2),
-       f = (\i j. 7 + size (MAX i j) + (if n = 0 then 0 else size (i + j) * size n)),
+       f = (\i j. 7 + size (MAX i j) + size (i + j) * size n),
        body = (\p q. f (HD p) (HD q)),
        loop = (\p q. stepsOf (poly_addM n p q)).
-   Then loop p q = if p = [] \/ q = [] then quit p q else body p q + loop (TL p) (TL q)
+   Then loop p q = if (p = []) \/ (q = []) then quit p q else body p q + loop (TL p) (TL q)
                                                      by poly_addM_steps_thm
     Now MONO2 f                                      by size_monotone_le
    Thus loop p q
      <= quit [][] + k * f n n                        by loop2_list_tail_head_upper_count_le
-      = 2 + k * (7 + size (MAX n n) + (if n = 0 then 0 else size (n + n) * size n))  by function application
-      = 2 + k * (7 + size n + if n = 0 then 0 else size (2 * n) * size n)            by MAX_IDEM
-      = 2 + k * (7 + size n + if n = 0 then 0 else (size n + if n = 0 then 0 else 1) * size n)  by size_twice
+      = 2 + k * (7 + size (MAX n n) + size (n + n) * size n)  by function application
+      = 2 + k * (7 + size n + size (2 * n) * size n)    by MAX_IDEM
+      = 2 + k * (7 + size n + (size n + if n = 0 then 0 else 1) * size n)  by size_twice
      <= 2 + k * (7 + size n + (size n + 1) * size n)    by inequality
       = 2 + k * (7 + size n + size n ** 2 + size n)
       = 2 + 7 * k + 2 * k * size n + k * size n ** 2
 *)
 val poly_addM_steps_upper = store_thm(
   "poly_addM_steps_upper",
-  ``!n p q k. (LENGTH p = k) /\ (LENGTH q = k) /\ Weak (ZN n) p /\ Weak (ZN n) q ==>
+  ``!n p q k. Weak (ZN n) p /\ Weak (ZN n) q /\ (LENGTH p = k) /\ (LENGTH q = k) ==>
       stepsOf (poly_addM n p q) <= 2 + 7 * k + 2 * k * size n + k * size n ** 2``,
   rpt strip_tac >>
   qabbrev_tac `quit = \p:num list q:num list. 2` >>
-  qabbrev_tac `f = \i j. 7 + size (MAX i j) + (if n = 0 then 0 else size (i + j) * size n)` >>
+  qabbrev_tac `f = \i j. 7 + size (MAX i j) + size (i + j) * size n` >>
   qabbrev_tac `body = \p q. f (HD p) (HD q)` >>
   qabbrev_tac `loop = \p q. stepsOf (poly_addM n p q)` >>
   `loop p q <= 2 + 7 * k + 2 * k * size n + k * size n ** 2` suffices_by rw[] >>
-  `!p q. loop p q = if p = [] \/ q = [] then quit p q else body p q + loop (TL p) (TL q)` by metis_tac[poly_addM_steps_thm] >>
+  `!p q. loop p q = if (p = []) \/ (q = []) then quit p q else body p q + loop (TL p) (TL q)` by metis_tac[poly_addM_steps_thm] >>
   `EVERY (\j. j < n) p /\ EVERY (\j. j < n) q` by rw[GSYM ZN_weak] >>
   `MONO2 f` by
   (rw[size_monotone_le, Abbr`f`] >>
@@ -2492,7 +2507,7 @@ val poly_addM_steps_upper = store_thm(
   decide_tac) >>
   decide_tac);
 
-(* Theorem: (LENGTH p = k) /\ (LENGTH q = k) /\ Weak (ZN n) p /\ Weak (ZN n) q ==>
+(* Theorem: Weak (ZN n) p /\ Weak (ZN n) q /\ (LENGTH p = k) /\ (LENGTH q = k) ==>
             stepsOf (poly_addM n p q) <= 12 * (MAX 1 k) * size n ** 2 *)
 (* Proof:
       stepsOf (poly_addM n p q)
@@ -2503,7 +2518,7 @@ val poly_addM_steps_upper = store_thm(
 *)
 val poly_addM_steps_bound = store_thm(
   "poly_addM_steps_bound",
-  ``!n p q k. (LENGTH p = k) /\ (LENGTH q = k) /\ Weak (ZN n) p /\ Weak (ZN n) q ==>
+  ``!n p q k. Weak (ZN n) p /\ Weak (ZN n) q /\ (LENGTH p = k) /\ (LENGTH q = k) ==>
       stepsOf (poly_addM n p q) <= 12 * (MAX 1 k) * size n ** 2``,
   rpt strip_tac >>
   `stepsOf (poly_addM n p q) <= 2 + 7 * k + 2 * k * size n + k * size n ** 2` by rw[poly_addM_steps_upper] >>
@@ -2568,12 +2583,12 @@ val it = |- !h t. FRONT (h::t) = if t = [] then [] else h::FRONT t: thm
 (* Pseudocode:
    Given a polynomial p, compute (FRONT p).
    list_front p:
-      if p = [], return (FRONT [])      // undefined
-      h <- head p                       // get head
-      t <- tail p                       // examine tail
-      if t = [] return []               // no tail, FRONT = empty tail
-      q <- list_front t                 // get (FRONT tail)
-      return h::q                       // combine to result
+      if p = [], return (FRONT []) // undefined
+      h <- head p                  // get head
+      t <- tail p                  // examine tail
+      if t = [] return []          // no tail, FRONT = empty tail
+      q <- list_front t            // get (FRONT tail)
+      return h::q                  // combine to give result
 *)
 
 val poly_frontM_def = tDefine "poly_frontM" `
@@ -2597,10 +2612,10 @@ val poly_frontM_def = tDefine "poly_frontM" `
 (* Pseudocode:
    Given a polynomial p, compute p * X (mod unity k), where k = LENGTH p.
    list_turn p:
-      if p = [], return []               // [] * X = []
-      h <- LAST p                        // get (LAST p)
-      t <- FRONT p                       // get (FRONT p)
-      return h::t                        // combine to result
+      if p = [], return []     // [] * X = []
+      h <- LAST p              // get (LAST p)
+      t <- FRONT p             // get (FRONT p)
+      return h::t              // combine to give result
 *)
 
 (* Multiply a polynomial p by X, in (mod unity k). *)
@@ -2678,22 +2693,22 @@ val poly_turnM_value = store_thm(
   rw[poly_turnM_def, turn_def]);
 
 (* Theorem: stepsOf (poly_lastM p) =
-            if p = [] then 1 else 4 + if TL p = [] then 0 else stepsOf (poly_lastM (TL p)) *)
+            if (p = []) then 1 else 4 + if (TL p = []) then 0 else stepsOf (poly_lastM (TL p)) *)
 (* Proof:
      stepsOf (poly_lastM p)
-   = stepsOf (nullM p) + if p = [] then 0
+   = stepsOf (nullM p) + if (p = []) then 0
      else stepsOf (headM p) + stepsOf (tailM p) +
           stepsOf (nullM t) + if (TL p = []) then 0
           else stepsOf (poly_lastM (TL p))         by poly_lastM_def
-   = 1 + if p = [] then 0
+   = 1 + if (p = []) then 0
      else 1 + 1 + 1 + if (TL p = []) then 0 else stepsOf (poly_lastM (TL p))
-   = 1 + if p = [] then 0 else 3 + if (TL p = []) then 0 else stepsOf (poly_lastM (TL p))
-   = if p = [] then 1 else 4 + if TL p = [] then 0 else stepsOf (poly_lastM (TL p))
+   = 1 + if (p = []) then 0 else 3 + if (TL p = []) then 0 else stepsOf (poly_lastM (TL p))
+   = if (p = []) then 1 else 4 + if (TL p = []) then 0 else stepsOf (poly_lastM (TL p))
 *)
 val poly_lastM_steps_thm = store_thm(
   "poly_lastM_steps_thm",
   ``!p. stepsOf (poly_lastM p) =
-        if p = [] then 1 else 4 + if TL p = [] then 0 else stepsOf (poly_lastM (TL p))``,
+        if (p = []) then 1 else 4 + if (TL p = []) then 0 else stepsOf (poly_lastM (TL p))``,
   ho_match_mp_tac (theorem "poly_lastM_ind") >>
   (rw[] >> rw[Once poly_lastM_def]));
 
@@ -2703,7 +2718,7 @@ val poly_lastM_steps_by_list_loop = save_thm("poly_lastM_steps_by_list_loop", po
 (*
 This puts poly_lastM_steps in the category: list loop with body and exit.
    poly_lastM_steps_by_list_loop:
-        !p. loop p = if p = [] then c else body p + if exit p then 0 else loop (TL p)
+        !p. loop p = if (p = []) then c else body p + if exit p then 0 else loop (TL p)
 suitable for: loop_list_count_exit_le
 *)
 
@@ -2732,28 +2747,28 @@ val poly_lastM_steps_upper = store_thm(
   metis_tac[]);
 
 (* Theorem: stepsOf (poly_frontM p) =
-            if p = [] then 1
-            else (4 + if TL p = [] then 0 else 1) +
-                 (if TL p = [] then 0 else stepsOf (poly_frontM (TL p))) *)
+            if (p = []) then 1
+            else (4 + if (TL p = []) then 0 else 1) +
+                 (if (TL p = []) then 0 else stepsOf (poly_frontM (TL p))) *)
 (* Proof:
      stepsOf (poly_frontM p)
-   = stepsOf (nullM p) + if p = [] then 0
+   = stepsOf (nullM p) + if (p = []) then 0
      else stepsOf (headM p) + stepsOf (tailM p) +
           stepsOf (nullM t) + if (TL p = []) then 0
           else stepsOf (poly_frontM (TL p)) + stepsOf (consM (HD p) (FRONT (TL p)))
                                                   by poly_frontM_def
-   = 1 + if p = [] then 0
+   = 1 + if (p = []) then 0
      else 1 + 1 + 1 + if (TL p = []) then 0 else stepsOf (poly_frontM (TL p)) + 1
-   = 1 + if p = [] then 0 else 3 + if (TL p = []) then 0 else (1 + stepsOf (poly_frontM (TL p)))
-   = if p = [] then 1 else 4 + if (TL p = []) then 0 else (1 + stepsOf (poly_frontM (TL p)))
-   = if p = [] then 1 else (4 + if TL p = [] then 0 else 1) + (if TL p = [] then 0 else stepsOf (poly_frontM (TL p)))
+   = 1 + if (p = []) then 0 else 3 + if (TL p = []) then 0 else (1 + stepsOf (poly_frontM (TL p)))
+   = if (p = []) then 1 else 4 + if (TL p = []) then 0 else (1 + stepsOf (poly_frontM (TL p)))
+   = if (p = []) then 1 else (4 + if (TL p = []) then 0 else 1) + (if (TL p = []) then 0 else stepsOf (poly_frontM (TL p)))
 *)
 val poly_frontM_steps_thm = store_thm(
   "poly_frontM_steps_thm",
   ``!p. stepsOf (poly_frontM p) =
-        if p = [] then 1
-        else (4 + if TL p = [] then 0 else 1) +
-             (if TL p = [] then 0 else stepsOf (poly_frontM (TL p)))``,
+        if (p = []) then 1
+        else (4 + if (TL p = []) then 0 else 1) +
+             (if (TL p = []) then 0 else stepsOf (poly_frontM (TL p)))``,
   ho_match_mp_tac (theorem "poly_frontM_ind") >>
   (rw[] >> rw[Once poly_frontM_def]));
 
@@ -2763,17 +2778,17 @@ val poly_frontM_steps_by_list_loop = save_thm("poly_frontM_steps_by_list_loop", 
 (*
 This puts poly_frontM_steps in the category: list loop with body cover and exit.
    poly_frontM_steps_by_list_loop:
-        !p. loop p = if p = [] then c else body p + if exit p then 0 else loop (TL p)
+        !p. loop p = if (p = []) then c else body p + if exit p then 0 else loop (TL p)
 suitable for: loop_list_count_cover_exit_le
 *)
 
 (* Theorem: stepsOf (poly_frontM p) <= 1 + 5 * LENGTH p *)
 (* Proof:
-   Let body = (\p. 4 + if TL p = [] then 0 else 1),
+   Let body = (\p. 4 + if (TL p = []) then 0 else 1),
        cover = (\p. 5),
        exit = (\p. TL p = []),
        loop = (\p. stepsOf (poly_frontM p)).
-   Then !p. loop p = if p = [] then 1 else body p + if exit p then 0 else loop (TL p)
+   Then !p. loop p = if (p = []) then 1 else body p + if exit p then 0 else loop (TL p)
                                                 by poly_frontM_steps_thm
     Now !x. body x <= cover x                   by cases on TL p,
     and !x y. x <= y ==> cover x <= cover y     by cover being a constant
@@ -2784,7 +2799,7 @@ val poly_frontM_steps_upper = store_thm(
   "poly_frontM_steps_upper",
   ``!p. stepsOf (poly_frontM p) <= 1 + 5 * LENGTH p``,
   rpt strip_tac >>
-  qabbrev_tac `body = \p. 4 + if TL p = [] then 0 else 1` >>
+  qabbrev_tac `body = \p. 4 + if (TL p = []) then 0 else 1` >>
   qabbrev_tac `cover = \p:'a list. 5` >>
   qabbrev_tac `exit = \p. TL p = []` >>
   qabbrev_tac `loop = \p. stepsOf (poly_frontM p)` >>
@@ -2799,10 +2814,10 @@ val poly_frontM_steps_upper = store_thm(
 
 (* Theorem: stepsOf (poly_frontM p) <= 1 + 5 * LENGTH p *)
 (* Proof:
-   Let body = (\p. 4 + if TL p = [] then 0 else 1),
+   Let body = (\p. 4 + if (TL p = []) then 0 else 1),
        exit = (\p. TL p = []),
        loop = (\p. stepsOf (poly_frontM p)).
-   Then !p. loop p = if p = [] then 1 else body p + if exit p then 0 else loop (TL p)
+   Then !p. loop p = if (p = []) then 1 else body p + if exit p then 0 else loop (TL p)
                                                 by poly_frontM_steps_thm
     Now !x. body x <= 5                         by cases on TL p,
    Thus loop p <= 1 + 5 * LENGTH p              by loop_list_count_constant_cover_exit_le
@@ -2812,28 +2827,28 @@ val poly_frontM_steps_upper = store_thm(
   ``!p. stepsOf (poly_frontM p) <= 1 + 5 * LENGTH p``,
   ho_match_mp_tac loop_list_count_constant_cover_exit_le >>
   qexists_tac `\p. TL p = []` >>
-  qexists_tac `\p. 4 + if TL p = [] then 0 else 1` >>
+  qexists_tac `\p. 4 + if (TL p = []) then 0 else 1` >>
   rw[Once poly_frontM_steps_thm]);
 
 (* Theorem: stepsOf (poly_turnM p) =
-            if p = [] then 1 else 2 + stepsOf (poly_lastM p) + stepsOf(poly_frontM p) *)
+            if (p = []) then 1 else 2 + stepsOf (poly_lastM p) + stepsOf(poly_frontM p) *)
 (* Proof:
      stepsOf (poly_turnM p)
-   = stepsOf (nullM p) + if p = [] then 0
+   = stepsOf (nullM p) + if (p = []) then 0
      else stepsOf (poly_lastM p) + stepsOf(poly_frontM p) + stepsOf (consM h q)   by poly_turnM_def
-   = 1 + if p = [] then 0 else  1 + stepsOf (poly_lastM p) + stepsOf(poly_frontM p)
-   = if p = [] then 1 else 2 + stepsOf (poly_lastM p) + stepsOf(poly_frontM p)
+   = 1 + if (p = []) then 0 else  1 + stepsOf (poly_lastM p) + stepsOf(poly_frontM p)
+   = if (p = []) then 1 else 2 + stepsOf (poly_lastM p) + stepsOf(poly_frontM p)
 *)
 val poly_turnM_steps_thm = store_thm(
   "poly_turnM_steps_thm",
   ``!p. stepsOf (poly_turnM p) =
-        if p = [] then 1 else 2 + stepsOf (poly_lastM p) + stepsOf(poly_frontM p)``,
+        if (p = []) then 1 else 2 + stepsOf (poly_lastM p) + stepsOf(poly_frontM p)``,
   rw[poly_turnM_def]);
 
 (* Theorem: stepsOf (poly_turnM p) <= 4 + 9 * LENGTH p *)
 (* Proof:
       stepsOf (poly_turnM p)
-    = if p = [] then 1 else 2 + stepsOf (poly_lastM p) + stepsOf(poly_frontM p)
+    = if (p = []) then 1 else 2 + stepsOf (poly_lastM p) + stepsOf(poly_frontM p)
                                                      by poly_turnM_steps_thm
    <= 2 + stepsOf (poly_lastM p) + stepsOf(poly_frontM p)
    <= 2 + (1 + 4 * LENGTH p) + (1 + 5 * LENGTH p)    by poly_lastM_steps_upper, poly_frontM_steps_upper
@@ -2887,6 +2902,94 @@ val poly_turnM_length = store_thm(
   "poly_turnM_length",
   ``!p. LENGTH (valueOf (poly_turnM p)) = LENGTH p``,
   rw[turn_length]);
+
+(* ------------------------------------------------------------------------- *)
+(* Exact number of steps                                                     *)
+(* ------------------------------------------------------------------------- *)
+
+(*
+EVAL ``MAP (\n. stepsOf (poly_lastM [1 .. n])) [0 .. 10]``;
+= [1; 4; 8; 12; 16; 20; 24; 28; 32; 36; 40]
+EVAL ``MAP (\n. stepsOf (poly_frontM [1 .. n])) [0 .. 10]``;
+= [1; 4; 9; 14; 19; 24; 29; 34; 39; 44; 49]
+*)
+
+(* Theorem: stepsOf (poly_lastM p) = if (p = []) then 1 else 4 * LENGTH p *)
+(* Proof:
+   By induction on p.
+   Base: stepsOf (poly_lastM []) = if [] = [] then 1 else 4 * LENGTH []
+         LHS = stepsOf (poly_lastM []) = 1    by poly_lastM_steps_thm
+             = RHS
+   Step: stepsOf (poly_lastM p) = if (p = []) then 1 else 4 * LENGTH p ==>
+         !h. stepsOf (poly_lastM (h::p)) = if h::(p = []) then 1 else 4 * LENGTH (h::p)
+         Note h::(p = []) is false.
+           stepsOf (poly_lastM (h::p))
+         = 4 + if TL (h::p) = [] then 0 else stepsOf (poly_lastM (TL (h::p)))
+                                             by poly_lastM_steps_thm
+         = 4 + if (p = []) then 0 else stepsOf (poly_lastM p)
+         = 4 + if (p = []) then 0 else 4 * LENGTH p
+                                             by induction hypothesis
+         = 4 + if (p = []) then 4 * LENGTH p else 4 * LENGTH p
+                                             by LENGTH_NIL
+         = 4 + 4 * LENGTH p
+         = 4 * LENGTH (h::p)                 by LENGTH
+*)
+val poly_lastM_steps_eqn = store_thm(
+  "poly_lastM_steps_eqn",
+  ``!p. stepsOf (poly_lastM p) = if (p = []) then 1 else 4 * LENGTH p``,
+  (Induct >> rw[Once poly_lastM_steps_thm]));
+
+(* Theorem: stepsOf (poly_frontM p) = if (p = []) then 1 else (5 * LENGTH p - 1) *)
+(* Proof:
+   By induction on p.
+   Base: stepsOf (poly_frontM []) = if [] = [] then 1 else 5 * LENGTH [] - 1
+         LHS = stepsOf (poly_frontM []) = 1    by poly_frontM_steps_thm
+             = RHS
+   Step: stepsOf (poly_frontM p) = if (p = []) then 1 else 5 * LENGTH p - 1 ==>
+         !h. stepsOf (poly_frontM (h::p)) = if h::(p = []) then 1 else 5 * LENGTH (h::p) - 1
+         Note h::(p = []) is false.
+           stepsOf (poly_frontM (h::p))
+         = 4 + (if TL (h::p) = [] then 0 else 1) +
+                if TL (h::p) = [] then 0 else stepsOf (poly_frontM (TL (h::p)))
+                                             by poly_frontM_steps_thm
+         = 4 + (if (p = []) then 0 else 1) +
+                if (p = []) then 0 else stepsOf (poly_frontM p)
+         = 4 + (if (p = []) then 0 else 1) +
+                if (p = []) then 0 else (5 * LENGTH p - 1)
+                                             by induction hypothesis
+         = 4 + (if (p = []) then 5 * LENGTH p else 1) +
+                if (p = []) then 5 * LENGTH p else (5 * LENGTH p - 1)
+                                             by LENGTH_NIL
+         = 4 + if (p = []) then 5 * LENGTH p else 5 * LENGTH p
+         = 4 + 5 * LENGTH p
+         = 5 * LENGTH (h::p) - 1             by LENGTH
+*)
+val poly_frontM_steps_eqn = store_thm(
+  "poly_frontM_steps_eqn",
+  ``!p. stepsOf (poly_frontM p) = if (p = []) then 1 else (5 * LENGTH p - 1)``,
+  Induct >-
+  rw[Once poly_frontM_steps_thm] >>
+  rw[Once poly_frontM_steps_thm] >>
+  `LENGTH p <> 0` by rw[LENGTH_NIL] >>
+  decide_tac);
+
+(* Theorem: stepsOf (poly_turnM p) = if (p = []) then 1 else (1 + 9 * LENGTH p) *)
+(* Proof:
+     stepsOf (poly_turnM p)
+   = if (p = []) then 1 else 2 + stepsOf (poly_lastM p) + stepsOf (poly_frontM p)
+                                                by poly_turnM_steps_thm
+   = if (p = []) then 1 else 2 +
+     (if (p = []) then 1 else 4 * LENGTH p) +     by poly_lastM_steps_eqn
+     (if (p = []) then 1 else 5 * LENGTH p - 1)   by poly_frontM_steps_eqn
+   = if (p = []) then 1 else (2 + 4 * LENGTH p + 5 * LENGTH p - 1)
+   = if (p = []) then 1 else (1 + 9 * LENGTH p)
+*)
+val poly_turnM_steps_eqn = store_thm(
+  "poly_turnM_steps_eqn",
+  ``!p. stepsOf (poly_turnM p) = if (p = []) then 1 else (1 + 9 * LENGTH p)``,
+  rw[poly_turnM_steps_thm, poly_lastM_steps_eqn, poly_frontM_steps_eqn] >>
+  `LENGTH p <> 0` by rw[LENGTH_NIL] >>
+  decide_tac);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -2984,14 +3087,25 @@ val poly_multM_value = store_thm(
   `Weak (ZN n) t` by metis_tac[weak_cons] >>
   rw[unity_mod_mult_cons, weak_turn]);
 
-(* Theorem: 0 < n /\ zweak p /\ zweak q /\ q <> [] /\ (LENGTH p = k) ==>
+(* Theorem: 0 < n /\ Weak (ZN n) p /\ Weak (ZN n) q /\ q <> [] /\ (LENGTH p = k) ==>
        (valueOf (poly_multM n p q) = p *z q) *)
 (* Proof: by poly_multM_value, ZN_poly_mult_alt *)
-val poly_multM_value_alt = store_thm(
-  "poly_multM_value_alt",
-  ``!n p q k. 0 < n /\ zweak p /\ zweak q /\ q <> [] /\ (LENGTH p = k) ==>
+val poly_multM_value_thm = store_thm(
+  "poly_multM_value_thm",
+  ``!n p q k. 0 < n /\ Weak (ZN n) p /\ Weak (ZN n) q /\ q <> [] /\ (LENGTH p = k) ==>
        (valueOf (poly_multM n p q) = p *z q)``,
   metis_tac[ZN_poly_mult_alt, poly_multM_value]);
+
+(* Above q <> [] is the minimal requirement. Next with 0 < k is symmetric. *)
+
+(* Theorem: 0 < n /\ 0 < k /\ Weak (ZN n) p /\ Weak (ZN n) q /\
+            (LENGTH p = k) /\ (LENGTH q = k) ==> (valueOf (poly_multM n p q) = p *z q) *)
+(* Proof: by poly_multM_value_thm, LENGTH_NIL *)
+val poly_multM_value_alt = store_thm(
+  "poly_multM_value_alt",
+  ``!n p q k. 0 < n /\ 0 < k /\ Weak (ZN n) p /\ Weak (ZN n) q /\
+             (LENGTH p = k) /\ (LENGTH q = k) ==> (valueOf (poly_multM n p q) = p *z q)``,
+  metis_tac[poly_multM_value_thm, LENGTH_NIL, NOT_ZERO]);
 
 (* Theorem: 0 < n /\ Weak (ZN n) p /\ Weak (ZN n) q ==>
            Weak (ZN n) (valueOf (poly_multM n p q)) *)
@@ -3269,7 +3383,7 @@ val poly_multM_steps_body_upper = store_thm(
 
    Note Weak (ZN n) p1                 by weak_turn_exp
     and Weak (ZN n) q1                 by weak_drop
-   Also q1 <> []                       by DROP_NON_NIL, j < k = LENGTH q
+   Also q1 <> []                       by DROP_EQ_NIL, j < k = LENGTH q
     and LENGTH p1 = k                  by turn_exp_length
    The result follows                  by poly_multM_steps_body_upper
 *)
@@ -3286,11 +3400,11 @@ val poly_multM_steps_body_cover = store_thm(
   qabbrev_tac `q1 = DROP j q` >>
   `Weak (ZN n) p1` by rw[weak_turn_exp, Abbr`p1`] >>
   `Weak (ZN n) q1` by rw[weak_drop, Abbr`q1`] >>
-  `q1 <> []` by rw[DROP_NON_NIL, Abbr`q1`] >>
+  `q1 <> []` by rw[DROP_EQ_NIL, Abbr`q1`] >>
   `LENGTH p1 = k` by rw[turn_exp_length, Abbr`p1`] >>
   metis_tac[poly_multM_steps_body_upper]);
 
-(* Theorem: 0 < n /\ (LENGTH p = k) /\ (LENGTH q = k) /\ Weak (ZN n) p /\ Weak (ZN n) q ==>
+(* Theorem: 0 < n /\ Weak (ZN n) p /\ Weak (ZN n) q /\ (LENGTH p = k) /\ (LENGTH q = k) ==>
             stepsOf (poly_multM n p q) <=
             1 + 10 * k + 20 * k ** 2 + 2 * k ** 2 * size n + 4 * k ** 2 * size n ** 2 *)
 (* Proof:
@@ -3298,7 +3412,7 @@ val poly_multM_steps_body_cover = store_thm(
        body = (\p q. 3 + stepsOf (poly_turnM p) + stepsOf (poly_cmultM n (HD q) p) +
               stepsOf (poly_addM n (weak_cmult (ZN n) (HD q) p) (valueOf (poly_multM n (turn p) (TL q))))),
        loop = (\p q. stepsOf (poly_multM n p q)).
-   Then !p q. loop p q = if q = [] then quit p else body p q + loop (turn p) (TL q)
+   Then !p q. loop p q = if (q = []) then quit p else body p q + loop (turn p) (TL q)
                                         by poly_multM_steps_thm
    Let c = 10 + k * (20 + 2 * (size n) + 4 * size n ** 2.
    Then !j. j < k ==> body (turn_exp p j) (DROP j q) <= (K c) j
@@ -3313,7 +3427,7 @@ val poly_multM_steps_body_cover = store_thm(
 *)
 val poly_multM_steps_upper = store_thm(
   "poly_multM_steps_upper",
-  ``!n p q k. 0 < n /\ (LENGTH p = k) /\ (LENGTH q = k) /\ Weak (ZN n) p /\ Weak (ZN n) q ==>
+  ``!n p q k. 0 < n /\ Weak (ZN n) p /\ Weak (ZN n) q /\ (LENGTH p = k) /\ (LENGTH q = k) ==>
              stepsOf (poly_multM n p q) <=
              1 + 10 * k + 20 * k ** 2 + 2 * k ** 2 * size n + 4 * k ** 2 * size n ** 2``,
   rpt strip_tac >>
@@ -3322,7 +3436,7 @@ val poly_multM_steps_upper = store_thm(
               stepsOf (poly_addM n (weak_cmult (ZN n) (HD q) p) (valueOf (poly_multM n (turn p) (TL q))))` >>
   qabbrev_tac `loop = \p q. stepsOf (poly_multM n p q)` >>
   `loop p q <= 1 + 10 * k + 20 * k ** 2 + 2 * k ** 2 * size n + 4 * k ** 2 * size n ** 2` suffices_by rw[Abbr`loop`] >>
-  `!x y. loop x y = if y = [] then quit x else body x y + loop (turn x) (TL y)` by metis_tac[poly_multM_steps_thm] >>
+  `!x y. loop x y = if (y = []) then quit x else body x y + loop (turn x) (TL y)` by metis_tac[poly_multM_steps_thm] >>
   qabbrev_tac `c = 10 + k * (20 + 2 * (size n) + 4 * size n ** 2)` >>
   `!j. j < k ==> body (turn_exp p j) (DROP j q) <= (K c) j` by metis_tac[poly_multM_steps_body_cover, combinTheory.K_THM] >>
   `MONO (K c)` by rw[] >>
@@ -3334,7 +3448,7 @@ val poly_multM_steps_upper = store_thm(
   `_ = 10 * k + 20 * (k ** 2) + 2 * (k ** 2) * size n + 4 * (k ** 2) * size n ** 2` by rw[] >>
   decide_tac);
 
-(* Theorem: 0 < n /\ (LENGTH p = k) /\ (LENGTH q = k) /\ Weak (ZN n) p /\ Weak (ZN n) q ==>
+(* Theorem: 0 < n /\ Weak (ZN n) p /\ Weak (ZN n) q /\ (LENGTH p = k) /\ (LENGTH q = k) ==>
             stepsOf (poly_multM n p q) <= 37 * (MAX 1 k) ** 2 * size n ** 2 *)
 (* Proof:
       stepsOf (poly_multM n p q)
@@ -3346,7 +3460,7 @@ val poly_multM_steps_upper = store_thm(
 *)
 val poly_multM_steps_bound = store_thm(
   "poly_multM_steps_bound",
-  ``!n p q k. 0 < n /\ (LENGTH p = k) /\ (LENGTH q = k) /\ Weak (ZN n) p /\ Weak (ZN n) q ==>
+  ``!n p q k. 0 < n /\ Weak (ZN n) p /\ Weak (ZN n) q /\ (LENGTH p = k) /\ (LENGTH q = k) ==>
              stepsOf (poly_multM n p q) <= 37 * (MAX 1 k) ** 2 * size n ** 2``,
   rpt strip_tac >>
   `stepsOf (poly_multM n p q) <=
@@ -3377,6 +3491,17 @@ val poly_multM_steps_bound = store_thm(
   decide_tac) >>
   decide_tac);
 
+(* Theorem: 0 < n /\ 0 < k /\ Weak (ZN n) p /\ Weak (ZN n) q /\
+            (LENGTH p = k) /\ (LENGTH q = k) ==>
+            stepsOf (poly_multM n p q) <= 37 * k ** 2 * size n ** 2 *)
+(* Proof: by poly_multM_steps_bound, MAX_1_POS *)
+val poly_multM_steps_bound_alt = store_thm(
+  "poly_multM_steps_bound_alt",
+  ``!n p q k. 0 < n /\ 0 < k /\ Weak (ZN n) p /\ Weak (ZN n) q /\
+             (LENGTH p = k) /\ (LENGTH q = k) ==>
+             stepsOf (poly_multM n p q) <= 37 * k ** 2 * size n ** 2``,
+  metis_tac[poly_multM_steps_bound, MAX_1_POS]);
+
 (* ------------------------------------------------------------------------- *)
 (* Squaring of polynomial                                                    *)
 (* ------------------------------------------------------------------------- *)
@@ -3406,15 +3531,25 @@ val poly_sqM_value = store_thm(
          (valueOf (poly_sqM n p) = unity_mod_sq (ZN n) p)``,
   rw[poly_sqM_def, unity_mod_sq_def]);
 
-(* Theorem: 0 < n /\ zweak p /\ p <> [] /\ (LENGTH p = k) ==>
+(* Theorem: 0 < n /\ Weak (ZN n) p /\ p <> [] /\ (LENGTH p = k) ==>
             (valueOf (poly_sqM n p) = sqz p) *)
 (* Proof: by poly_sqM_value, ZN_poly_sq_alt *)
-val poly_sqM_value_alt = store_thm(
-  "poly_sqM_value_alt",
-  ``!n p k. 0 < n /\ zweak p /\ p <> [] /\ (LENGTH p = k) ==>
+val poly_sqM_value_thm = store_thm(
+  "poly_sqM_value_thm",
+  ``!n p k. 0 < n /\ Weak (ZN n) p /\ p <> [] /\ (LENGTH p = k) ==>
            (valueOf (poly_sqM n p) = sqz p)``,
   metis_tac[poly_sqM_value, ZN_poly_sq_alt]);
 
+(* Above p <> [] is the minimal requirement. Next with 0 < k is symmetric. *)
+
+(* Theorem: 0 < n /\ 0 < k /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
+           (valueOf (poly_sqM n p) = sqz p) *)
+(* Proof: by poly_sqM_value_thm, LENGTH_NIL *)
+val poly_sqM_value_alt = store_thm(
+  "poly_sqM_value_alt",
+  ``!n p k. 0 < n /\ 0 < k /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
+           (valueOf (poly_sqM n p) = sqz p)``,
+  metis_tac[poly_sqM_value_thm, LENGTH_NIL, NOT_ZERO]);
 
 (* Theorem: 0 < n /\ Weak (ZN n) p ==> Weak (ZN n) (valueOf (poly_sqM n p)) *)
 (* Proof:
@@ -3485,7 +3620,7 @@ val poly_sqM_iterating_length = store_thm(
 
 (* Theorem: 0 < n /\ Weak (ZN n) p ==>
          stepsOf (poly_sqM n p) =
-         if p = [] then 1
+         if (p = []) then 1
          else 3 + stepsOf (poly_turnM p) +
               stepsOf (poly_cmultM n (HD p) p) +
               stepsOf (poly_addM n (weak_cmult (ZN n) (HD p) p)
@@ -3494,12 +3629,12 @@ val poly_sqM_iterating_length = store_thm(
 (* Proof:
      stepsOf (poly_sqM n p)
    = stepsOf (poly_multM n p p)    by poly_sqM_def
-   = if p = [] then 1
+   = if (p = []) then 1
      else 3 + stepsOf (poly_turnM p) + stepsOf (poly_cmultM n (HD p) p) +
               stepsOf (poly_addM n (weak_cmult (ZN n) (HD p) p)
                                    (valueOf (poly_multM n (turn p) (TL p)))) +
               stepsOf (poly_multM n (turn p) (TL p))   by poly_multM_steps_thm
-   = if p = [] then 1
+   = if (p = []) then 1
      else 3 + stepsOf (poly_turnM p) + stepsOf (poly_cmultM n (HD p) p) +
               stepsOf (poly_addM n (weak_cmult (ZN n) (HD p) p)
                                    (unity_mod_mult (ZN n) (turn p) (TL p))) +
@@ -3509,7 +3644,7 @@ val poly_sqM_steps_thm = store_thm(
   "poly_sqM_steps_thm",
   ``!n p. 0 < n /\ Weak (ZN n) p ==>
          stepsOf (poly_sqM n p) =
-         if p = [] then 1
+         if (p = []) then 1
          else 3 + stepsOf (poly_turnM p) +
               stepsOf (poly_cmultM n (HD p) p) +
               stepsOf (poly_addM n (weak_cmult (ZN n) (HD p) p)
@@ -3518,7 +3653,7 @@ val poly_sqM_steps_thm = store_thm(
   rw[poly_sqM_def, Once poly_multM_steps_thm] >>
   rw[poly_multM_value, weak_turn, weak_tail]);
 
-(* Theorem: 0 < n /\ LENGTH p = k /\ Weak (ZN n) p ==>
+(* Theorem: 0 < n /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
       stepsOf (poly_sqM n p) <=
       1 + 10 * k + 20 * k ** 2 + 2 * (k ** 2) * size n + 4 * k ** 2 * size n ** 2 *)
 (* Proof:
@@ -3529,12 +3664,12 @@ val poly_sqM_steps_thm = store_thm(
 *)
 val poly_sqM_steps_upper = store_thm(
   "poly_sqM_steps_upper",
-  ``!n p k. 0 < n /\ LENGTH p = k /\ Weak (ZN n) p ==>
+  ``!n p k. 0 < n /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
       stepsOf (poly_sqM n p) <=
       1 + 10 * k + 20 * k ** 2 + 2 * (k ** 2) * size n + 4 * k ** 2 * size n ** 2``,
   metis_tac[poly_sqM_def, poly_multM_steps_upper]);
 
-(* Theorem: 0 < n /\ LENGTH p = k /\ Weak (ZN n) p ==>
+(* Theorem: 0 < n /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
             stepsOf (poly_sqM n p) <= 37 * MAX 1 k ** 2 * size n ** 2 *)
 (* Proof:
       stepsOf (poly_sqM n p)
@@ -3543,9 +3678,18 @@ val poly_sqM_steps_upper = store_thm(
 *)
 val poly_sqM_steps_bound = store_thm(
   "poly_sqM_steps_bound",
-  ``!n p k. 0 < n /\ LENGTH p = k /\ Weak (ZN n) p ==>
+  ``!n p k. 0 < n /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
       stepsOf (poly_sqM n p) <= 37 * MAX 1 k ** 2 * size n ** 2``,
   metis_tac[poly_sqM_def, poly_multM_steps_bound]);
+
+(* Theorem: 0 < n /\ 0 < k /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
+            stepsOf (poly_sqM n p) <= 37 * k ** 2 * size n ** 2 *)
+(* Proof: by poly_sqM_steps_bound, MAX_1_POS *)
+val poly_sqM_steps_bound_alt = store_thm(
+  "poly_sqM_steps_bound_alt",
+  ``!n p k. 0 < n /\ 0 < k /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
+      stepsOf (poly_sqM n p) <= 37 * k ** 2 * size n ** 2``,
+  metis_tac[poly_sqM_steps_bound, MAX_1_POS]);
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Exponential in (mod n, unity k)                                *)
@@ -3576,7 +3720,7 @@ val poly_expM_def = tDefine "poly_expM" `
                  p1 <- poly_sqM n p;
                  h <- halfM j;
                  q <- poly_expM n p1 h;
-                 ifM (evenM j) (idM q) (poly_multM n p q)
+                 ifM (evenM j) (return q) (poly_multM n p q)
               od
       od
 `(WF_REL_TAC `measure (\(n,p,j). j)` >> simp[]);
@@ -3596,7 +3740,7 @@ val poly_expM_def = tDefine "poly_expM" `
                  p1 <- poly_sqM n p;
                  h <- halfM j;
                  q <- poly_expM n p1 h;
-                 ifM (evenM j) (idM q) (poly_multM n p q)
+                 ifM (evenM j) (return q) (poly_multM n p q)
               od
       od
 `(WF_REL_TAC `measure (\(n,p,j). j)` >> simp[]);
@@ -3673,14 +3817,23 @@ val poly_expM_value = store_thm(
     rw[]
   ]);
 
-(* Theorem: 1 < n /\ zweak p /\ p <> [] /\ (LENGTH p = k) ==>
-             valueOf (poly_expM n p j) = unity_mod_exp (ZN n) p j *)
+(* Theorem: 1 < n /\ Weak (ZN n) p /\ p <> [] /\ (LENGTH p = k) ==>
+            (valueOf (poly_expM n p j) = p **z j) *)
 (* Proof: by poly_expM_value, ZN_poly_exp_alt. *)
+val poly_expM_value_thm = store_thm(
+  "poly_expM_value_thm",
+  ``!n p j k. 1 < n /\ Weak (ZN n) p /\ p <> [] /\ (LENGTH p = k) ==>
+             (valueOf (poly_expM n p j) = p **z j)``,
+  metis_tac[poly_expM_value, ZN_poly_exp_alt, ONE_LT_POS]);
+
+(* Theorem: 1 < n /\ 0 < k /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
+            (valueOf (poly_expM n p j) = p **z j) *)
+(* Proof: by poly_expM_value_thm, LENGTH_NIL. *)
 val poly_expM_value_alt = store_thm(
   "poly_expM_value_alt",
-  ``!n p j k. 1 < n /\ zweak p /\ p <> [] /\ (LENGTH p = k) ==>
-             valueOf (poly_expM n p j) = p **z j``,
-  metis_tac[poly_expM_value, ZN_poly_exp_alt, ONE_LT_POS]);
+  ``!n p j k. 1 < n /\ 0 < k /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
+             (valueOf (poly_expM n p j) = p **z j)``,
+  metis_tac[poly_expM_value_thm, LENGTH_NIL, NOT_ZERO]);
 
 (* Theorem: 0 < n /\ Weak (ZN n) p ==> Weak (ZN n) (valueOf (poly_expM n p j)) *)
 (* Proof:
@@ -3747,7 +3900,7 @@ val poly_expM_trivial = store_thm(
      if j = 0 then (stepsOf (oneM n) + if n = 1 then 0 else stepsOf (consM 1 []))
      else stepsOf (poly_sqM n p) + stepsOf (halfM j) +
           stepsOf (poly_expM n (unity_mod_sq n p) (HALF j)) + stepsOf (evenM j) +
-          if EVEN j then stepsOf (idM q) else stepsOf (poly_multM n p q)
+          if EVEN j then stepsOf (return q) else stepsOf (poly_multM n p q)
               where q = unity_mod_exp n (unity_mod_sq n p) (HALF j)    by poly_expM_def
    = size j + if j = 0 then (size n + if n = 1 then 0 else 1)
      else stepsOf (poly_sqM n p) + 2 * size j +
@@ -3839,7 +3992,7 @@ Actually a conditional cover, so needs to fall back to: loop2_div_count_eqn
          = 27 * (MAX 1 k) * size n * size n          by MAX_DEF, 0 < n
          = 27 * (MAX 1 k) * size n ** 2
    Otherwise,
-      LENGTH q = k                                 by poly_expM_length, poly_sqM_length
+      (LENGTH q = k)                                 by poly_expM_length, poly_sqM_length
       so stepsOf (poly_multM n p q)
       <= 37 * (MAX 1 k) ** 2 * size n ** 2         by poly_multM_steps_bound, LENGTHs match
    Overall,
@@ -3902,7 +4055,7 @@ val poly_expM_body_bound = store_thm(
   first_x_assum (qspec_then `n` strip_assume_tac) >>
   qabbrev_tac `body = \p j. 1 + 5 * size j + stepsOf (poly_sqM n p) +
        if EVEN j then 0 else stepsOf (poly_multM n p (valueOf (poly_expM n (valueOf (poly_sqM n p)) (HALF j))))` >>
-  `!p j k. 0 < n /\ Weak (ZN n) p /\ LENGTH p = k ==> body p j <= 80 * size j * MAX 1 k ** 2 * size n ** 2` suffices_by fs[] >>
+  `!p j k. 0 < n /\ Weak (ZN n) p /\ (LENGTH p = k) ==> body p j <= 80 * size j * MAX 1 k ** 2 * size n ** 2` suffices_by fs[] >>
   rpt strip_tac >>
   `body p j <= 1 + 5 * size j + 74 * (MAX 1 k) ** 2 * size n ** 2` by metis_tac[] >>
   qabbrev_tac `m = MAX 1 k` >>
@@ -4029,6 +4182,17 @@ val poly_expM_steps_bound = store_thm(
   `size n <= size n * (MAX 1 k ** 2 * size j ** 2 * size n)` by rw[MULT_POS] >>
   `size n * (MAX 1 k ** 2 * size j ** 2 * size n) = MAX 1 k ** 2 * size j ** 2 * size n ** 2` by rw[] >>
   decide_tac);
+
+(* The following is just to match conditions in poly_expM_value_alt *)
+
+(* Theorem: 1 < n /\ 0 < k /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
+            stepsOf (poly_expM n p j) <= 83 * k ** 2 * size j ** 2 * size n ** 2 *)
+(* Proof: by poly_expM_steps_bound, MAX_1_POS *)
+val poly_expM_steps_bound_alt = store_thm(
+  "poly_expM_steps_bound_alt",
+  ``!p n j k. 1 < n /\ 0 < k /\ Weak (ZN n) p /\ (LENGTH p = k) ==>
+             stepsOf (poly_expM n p j) <= 83 * k ** 2 * size j ** 2 * size n ** 2``,
+  metis_tac[poly_expM_steps_bound, MAX_1_POS, DECIDE``1 < n ==> 0 < n``]);
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Coefficients                                                   *)

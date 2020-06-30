@@ -1,11 +1,3 @@
-(*
-load "abs_tools";
-load "semi_ringTheory";
-load "quoteTheory";
-load "prelimTheory";
-load "BasicProvers";
-load "Datatype";
-*)
 open HolKernel Parse boolLib;
 open BasicProvers Datatype;
 open abs_tools;

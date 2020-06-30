@@ -23,9 +23,10 @@ val dis_set_eq_perms = Q.store_thm(
 SRW_TAC [][dis_set_def,EXTENSION] THEN
 METIS_TAC [pmact_permeq])
 
-val pnomsl_def = RWDefine`
+Definition pnomsl_def[simp]:
   (pnomsl [] = []) ∧
-  (pnomsl ((a1,a2)::t) = a1::a2::pnomsl t)`;
+  (pnomsl ((a1,a2)::t) = a1::a2::pnomsl t)
+End
 
 val set_pnomsl_EQ_patoms = Q.store_thm(
 "set_pnomsl_EQ_patoms",
@@ -38,9 +39,10 @@ val pnomsl_APPEND = Q.store_thm(
 `pnomsl (l1 ++ l2) = pnomsl l1 ++ pnomsl l2`,
 Induct_on `l1` THEN ASM_SIMP_TAC (srw_ss()) [FORALL_PROD]);
 
-val DISTINCT_def = RWDefine`
+Definition DISTINCT_def[simp]:
   (DISTINCT [] = []) ∧
-  (DISTINCT (h::t) = if MEM h t then DISTINCT t else (h::DISTINCT t))`;
+  (DISTINCT (h::t) = if MEM h t then DISTINCT t else (h::DISTINCT t))
+End
 
 val MEM_DISTINCT = Q.store_thm(
 "MEM_DISTINCT",

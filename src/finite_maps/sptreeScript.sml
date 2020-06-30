@@ -1488,7 +1488,7 @@ val subspt_domain = Q.store_thm("subspt_domain",
      subspt t1 t2 <=> domain t1 SUBSET domain t2`,
   fs [subspt_lookup,domain_lookup,SUBSET_DEF]);
 
-val subspt_def = Q.store_thm("subspt_def[compute]",
+val subspt_def = Q.store_thm("subspt_def",
   `!sp1 sp2.
      subspt sp1 sp2 <=>
      !k. k IN domain sp1 ==> k IN domain sp2 /\
@@ -2247,7 +2247,7 @@ Proof
   \\ drule spt_centers_ord
   \\ rw []
   \\ rfs [combine_rle_props]
-  \\ irule sortingTheory.SORTED_APPEND
+  \\ irule sortingTheory.SORTED_APPEND_IMP
   \\ fs [combine_rle_props, expand_rle_combine_rle]
   \\ last_x_assum (qspec_then `n + LENGTH (expand_rle xs)` mp_tac)
   \\ fs [EVERY_MEM, MEM_MAP, PULL_EXISTS, pairTheory.FORALL_PROD]

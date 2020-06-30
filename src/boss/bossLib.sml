@@ -78,6 +78,7 @@ val augment_srw_ss  = BasicProvers.augment_srw_ss
 val diminish_srw_ss = BasicProvers.diminish_srw_ss
 val export_rewrites = BasicProvers.export_rewrites
 val delsimps        = BasicProvers.delsimps
+val temp_delsimps   = BasicProvers.temp_delsimps
 
 val EVAL           = computeLib.EVAL_CONV;
 val EVAL_RULE      = computeLib.EVAL_RULE
@@ -142,6 +143,7 @@ val Induct    = BasicProvers.Induct
 val recInduct = Induction.recInduct
 
 val Cases_on          = BasicProvers.Cases_on
+val tmCases_on        = BasicProvers.tmCases_on
 val namedCases_on     = BasicProvers.namedCases_on
 val Induct_on         = BasicProvers.Induct_on
 val PairCases_on      = pairLib.PairCases_on;
@@ -153,6 +155,8 @@ val AllCaseEqs        = TypeBase.AllCaseEqs
 
 val completeInduct_on = numLib.completeInduct_on
 val measureInduct_on  = numLib.measureInduct_on;
+val op using          = markerLib.using
+val usingA            = markerLib.usingA
 
 val SPOSE_NOT_THEN    = BasicProvers.SPOSE_NOT_THEN
 val spose_not_then    = BasicProvers.SPOSE_NOT_THEN

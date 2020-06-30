@@ -19,7 +19,7 @@ This file defines:
 *)
 
 open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
-open integerTheory lcsymtacs;
+open integerTheory;
 
 val _ = temp_tight_equality ();
 
@@ -1346,10 +1346,11 @@ val _ = set_trace "Goalstack.print_goal_at_top" 0;
 val pbrsem_tac = simp[Once pb_sem_t_size_reln_cases]
 
 (* Connect pretty-big-step to relational semantics *)
-val reln_to_pb_reln = prove(``
+Triviality reln_to_pb_reln:
   ∀s t r.
-  simple_sem_t_reln s t r ⇒
-  ∃h. pb_sem_t_size_reln h s (Trm t) (Ter r)``,
+    simple_sem_t_reln s t r ⇒
+    ∃h. pb_sem_t_size_reln h s (Trm t) (Ter r)
+Proof
   ho_match_mp_tac simple_sem_t_reln_ind>>
   rw[]>>TRY(pbrsem_tac>>metis_tac[abort_def])
   (*FOR equivalence*)
@@ -1368,19 +1369,23 @@ val reln_to_pb_reln = prove(``
     (pbrsem_tac>>metis_tac[pb_sem_t_size_reln_cases])
   >-
     (pbrsem_tac>>
-    qexists_tac`h+2`>>
-    qexists_tac`Rval n1,s'`>>pbrsem_tac>>
-    qexists_tac`h`>>qexists_tac`1`>>simp[]>>
-    qexists_tac`Ter(Rval n2,s2)`>>pbrsem_tac>>
-    qexists_tac`0`>>qexists_tac`r,s3`>>pbrsem_tac>>
-    metis_tac[abort_def])
+     qexists_tac`h+2`>>
+     qexists_tac`Rval n1,s'`>>pbrsem_tac>>
+     qexists_tac`h`>>qexists_tac`1`>>simp[]>>
+     qexists_tac`Ter(Rval n2,s2)`>>pbrsem_tac>>
+     qexists_tac`(r,s3)`>>pbrsem_tac>>
+     metis_tac[abort_def])
   >-
     (pbrsem_tac>>
-    qexists_tac`h+1`>>
-    HINT_EXISTS_TAC>>pbrsem_tac>>
-    qexists_tac`h`>>qexists_tac`0`>>simp[]>>
-    HINT_EXISTS_TAC>>pbrsem_tac>>
-    metis_tac[abort_def]))
+     qexists_tac`h+1`>>
+     goal_assum drule >>
+     pbrsem_tac>>
+     first_assum (goal_assum o
+                  resolve_then.resolve_then (resolve_then.Pos (el 2)) mp_tac) >>
+     simp[integerTheory.EQ_ADDL] >>
+     pbrsem_tac>>
+     metis_tac[abort_def])
+QED
 
 local val fs = fsrw_tac[] in
 val pb_reln_to_reln = prove(``

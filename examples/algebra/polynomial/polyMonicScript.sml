@@ -13,8 +13,6 @@ val _ = new_theory "polyMonic";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -181,6 +179,8 @@ open dividesTheory gcdTheory;
    poly_deg_X_exp_n_add_c    |- !r. Ring r /\ #1 <> #0 ==> !c n. deg (X ** n + |c|) = n
    poly_lead_X_exp_n_add_c   |- !r. Ring r ==> !c n. 0 < n ==> (lead (X ** n + |c|) = #1)
    poly_monic_X_exp_n_add_c  |- !r. Ring r ==> !c n. 0 < n ==> monic (X ** n + |c|)
+   poly_eval_X_exp_n_add_c   |- !r. Ring r ==>
+                                !x. x IN R ==> !c n. eval (X ** n + |c|) x = x ** n + ##c
    poly_X_exp_n_add_c_alt    |- !r. Ring r /\ #1 <> #0 ==> !n. 0 < n ==> !c. X ** n + |c| = ##c::PAD_LEFT #0 n [#1]
    poly_coeff_X_exp_n_add_c_alt
                              |- !r. Ring r /\ #1 <> #0 ==> !n k c. 0 < k /\ k < n ==> ((X ** n + |c|) ' k = #0)
@@ -194,8 +194,6 @@ open dividesTheory gcdTheory;
                                 !x. x IN R ==> !c n. eval (X ** n - |c|) x = x ** n - ##c
    poly_mod_X_exp_n_sub_c    |- !r. Ring r /\ #1 <> #0 ==>
                                 !c n. 0 < n ==> (X ** n == |c|) (pm (X ** n - |c|))
-
-   More Monic Polynomials:
 
    Pseudo-monic Polynomials:
    poly_pmonic_X_add_c        |- !r. Ring r /\ #1 <> #0 ==> !c. pmonic (X + |c|)
@@ -1674,6 +1672,19 @@ val poly_monic_X_exp_n_add_c = store_thm(
   ``!r:'a ring. Ring r ==> !c:num n. 0 < n ==> monic (X ** n + |c|)``,
   rw[poly_monic_def, poly_X_exp_n_add_c_poly, poly_lead_X_exp_n_add_c]);
 
+(* Theorem: eval (X ** n + |c|) x = x ** n + ##c *)
+(* Proof:
+     eval (X ** n + |c|) x
+   = eval (X ** n) x + eval |c| x     by poly_eval_add
+   = (eval X x) ** n + eval |c| x     by poly_eval_exp
+   = x ** n + eval |c| x              by poly_eval_X
+   = x ** n + ##c                     by poly_eval_const
+*)
+val poly_eval_X_exp_n_add_c = store_thm(
+  "poly_eval_X_exp_n_add_c",
+  ``!r:'a ring. Ring r ==> !x. x IN R ==> !c:num n. eval (X ** n + |c|) x = x ** n + ##c``,
+  rw[poly_eval_add, poly_eval_exp, poly_eval_one_sum_n]);
+
 (* Theorem: Ring r /\ #1 <> #0 ==> !n. 0 < n ==>
             !c:num. X ** n + |c| = ##c :: PAD_LEFT #0 n [#1] *)
 (* Proof:
@@ -1876,10 +1887,6 @@ val poly_mod_X_exp_n_sub_c = store_thm(
   `X ** n % (X ** n - |c|) = |c|` by metis_tac[poly_div_mod_eqn, ring_unit_one] >>
   `|c| % (X ** n - |c|) = |c|` by rw[poly_mod_less] >>
   rw[pmod_def_alt]);
-
-(* ------------------------------------------------------------------------- *)
-(* More Monic Polynomials.                                                   *)
-(* ------------------------------------------------------------------------- *)
 
 (* ------------------------------------------------------------------------- *)
 (* Pseudo-monic Polynomials                                                  *)

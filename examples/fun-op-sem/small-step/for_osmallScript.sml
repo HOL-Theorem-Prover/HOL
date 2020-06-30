@@ -1,7 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
 open integerTheory listTheory optionTheory rich_listTheory;
-open lcsymtacs BasicProvers;
+open BasicProvers;
 open for_ndTheory for_nd_semTheory oracleSemTheory simple_traceTheory;
 open relationTheory;
 

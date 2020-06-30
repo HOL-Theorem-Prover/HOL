@@ -6,6 +6,8 @@ open relationTheory set_relationTheory pred_setTheory pairTheory
 
 val _ = new_theory "wellorder"
 
+val _ = temp_delsimps ["NORMEQ_CONV"]
+
 fun K_TAC _ = ALL_TAC;
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);

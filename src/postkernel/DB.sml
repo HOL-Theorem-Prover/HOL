@@ -33,7 +33,9 @@ fun indef_class2string Thm = "a theorem"
 
 type data    = (string * string) * (thm * class)
 
-fun dataNameEq s ((_, nm), _) = nm = s
+fun dataName (((_, nm), _) : data) = nm
+fun dataThy (((thy, _), _) : data) = thy
+fun dataNameEq s d = dataName d = s
 
 
 (*---------------------------------------------------------------------------
@@ -66,12 +68,23 @@ val empty_sdata_map = Map.mkDict String.compare
 (* the dbmap contains:
     - a map from theory-name to a submap (as above)
 *)
-datatype dbmap = DB of { namemap : (string, submap) Map.dict }
+datatype dbmap = DB of { namemap : (string, submap) Map.dict,
+                         revmap : location list Termtab.table,
+                         localmap : thm Symtab.table
+                       }
 
 fun namemap (DB{namemap,...}) = namemap
-fun updnamemap f (DB{namemap}) = DB {namemap = f namemap}
+fun revmap (DB{revmap,...}) = revmap
+fun localmap (DB{localmap,...}) = localmap
+fun updnamemap f (DB{namemap,revmap,localmap}) =
+    DB {namemap = f namemap, revmap = revmap, localmap = localmap}
+fun updrevmap f (DB{namemap,revmap,localmap}) =
+    DB {namemap = namemap, revmap = f revmap, localmap=localmap}
+fun updlocalmap f (DB{namemap,revmap,localmap}) =
+    DB {namemap = namemap, revmap = revmap, localmap = f localmap}
 
-val empty_dbmap = DB {namemap = Map.mkDict String.compare}
+val empty_dbmap = DB {namemap = Map.mkDict String.compare,
+                      localmap = Symtab.empty, revmap = Termtab.empty}
 
 local val DBref = ref empty_dbmap
       fun lemmas() = !DBref
@@ -84,7 +97,7 @@ local val DBref = ref empty_dbmap
             Map.insert(m, s2key,
                        newdata :: List.filter (not o dataNameEq s2) oldvalue)
           end
-      fun functional_bindl (DB {namemap,...}) thy blist =
+      fun functional_bindl_names thy blist namemap =
           (* used when a theory is loaded from disk *)
           let val submap =
                   case Map.peek(namemap, thy) of
@@ -93,8 +106,17 @@ local val DBref = ref empty_dbmap
               fun foldthis ((n,th,cl), m) = add_to_submap m ((thy,n), (th,cl))
               val submap' = List.foldl foldthis submap blist
           in
-            DB {namemap = Map.insert(namemap, thy, submap')}
+            Map.insert(namemap, thy, submap')
           end
+      fun functional_bindl_revmap thy blist revmap =
+          List.foldl
+            (fn ((n,th,cl), A) =>
+                Termtab.cons_list(concl th,Stored {Thy = thy,Name = n}) A)
+            revmap
+            blist
+      fun functional_bindl db thy blist =
+          db |> updnamemap (functional_bindl_names thy blist)
+             |> updrevmap (functional_bindl_revmap thy blist)
 
       fun purge_stale_bindings() =
           let
@@ -106,11 +128,20 @@ local val DBref = ref empty_dbmap
                 in
                   insert(m,n,data')
                 end
+            fun purge_stale ttab =
+                let open Termtab
+                in
+                  fold (fn (t,d) => fn A =>
+                           if uptodate_term t then update (t,d) A else A)
+                       ttab
+                       empty
+                end
             val ct = current_theory()
           in
-            DBref := updnamemap
-                       (updexisting ct (foldl foldthis empty_sdata_map))
-                       (!DBref)
+            DBref := ((!DBref)
+                       |> updnamemap
+                            (updexisting ct (foldl foldthis empty_sdata_map))
+                       |> updrevmap purge_stale)
           end
 
       fun delete_binding bnm =
@@ -151,14 +182,20 @@ local val DBref = ref empty_dbmap
       val _ = Theory.register_hook("DB", hook)
 in
 fun bindl thy blist = DBref := functional_bindl (lemmas()) thy blist
-
+fun revlookup th = Termtab.lookup_list (revmap (!DBref)) (concl th)
 (*---------------------------------------------------------------------------
     To the database representing all ancestor theories, add the
     entries in the current theory segment.
  ---------------------------------------------------------------------------*)
-
 fun CT() = !DBref
+
+fun store_local s th =
+    DBref := (!DBref |> updlocalmap (Symtab.update(s,th))
+                     |> updrevmap (Termtab.cons_list(concl th, Local s)))
+fun local_thm s = Symtab.lookup (localmap (!DBref)) s
+
 end (* local *)
+
 
 
 (*---------------------------------------------------------------------------
@@ -185,11 +222,20 @@ fun thy s =
         | SOME m => Map.foldl (fn (lcnm, datas, A) => datas @ A) [] m
     end
 
+fun findpred pat s =
+    let
+      val pat = toLower pat and s = toLower s
+      val orparts = String.tokens (equal #"|") pat
+      val subparts = map (String.tokens (equal #"~")) orparts
+      val subpred = List.all (C occurs s)
+    in
+      List.exists subpred subparts
+    end
+
 fun find s =
     let
       val DB{namemap,...} = CT()
-      val s = toLower s
-      fun subfold (k, v, acc) = if occurs s k then v @ acc else acc
+      fun subfold (k, v, acc) = if findpred s k then v @ acc else acc
       fun fold (thy, m, acc) = Map.foldr subfold acc m
     in
       Map.foldr fold [] namemap
@@ -234,11 +280,7 @@ fun matches pat th =
 fun apropos_in pat dbdata =
   List.filter (fn (_, (th, _)) => matches pat th) dbdata ;
 
-fun find_in s =
-  let val lows = toLower s ;
-    fun finds dbdata =
-      List.filter (fn ((_, name), _) => occurs lows (toLower name)) dbdata ;
-  in finds end ;
+fun find_in s = List.filter (findpred s o dataName)
 
 fun listDB () =
     let fun subfold (k,v,acc) = v @ acc
@@ -246,6 +288,20 @@ fun listDB () =
     in
       Map.foldr fold [] (namemap (CT()))
     end
+
+fun selectDB sels =
+    let
+      fun selfn (SelTM pat) = apropos_in pat
+        | selfn (SelNM s) = find_in s
+        | selfn (SelTHY s) = List.filter (equal (norm_thyname s) o dataThy)
+      fun recurse sels d =
+          case sels of
+              [] => d
+            | s::rest => recurse rest (selfn s d)
+    in
+      recurse sels (listDB())
+    end
+
 
 (*---------------------------------------------------------------------------
       Some other lookup functions

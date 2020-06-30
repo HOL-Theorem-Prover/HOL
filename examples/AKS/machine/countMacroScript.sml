@@ -13,8 +13,6 @@ val _ = new_theory "countMacro";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -114,10 +112,8 @@ val _ = monadsyntax.enable_monad "Count";
    addM_def      |- !x y. addM x y = do tick (MAX (size x) (size y)); unit (x + y) od
    subM_def      |- !x y. subM x y = do tick (MAX (size x) (size y)); unit (x - y) od
    mulM_def      |- !x y. mulM x y = do tick (size x * size y); unit (x * y) od
-   divM_def      |- !x y. divM x y = if y = 0 then unit (x DIV 0)
-                                     else do tick (size x * size y); unit (x DIV y) od
-   modM_def      |- !x y. modM x y = if y = 0 then unit (x MOD 0)
-                                     else do tick (size x * size y); unit (x MOD y) od
+   divM_def      |- !x y. divM x y = do tick (size x * size y); unit (x DIV y) od
+   modM_def      |- !x y. modM x y = do tick (size x * size y); unit (x MOD y) od
 
 #  addM_value    |- !x y. valueOf (addM x y) = x + y
 #  subM_value    |- !x y. valueOf (subM x y) = x - y
@@ -127,9 +123,9 @@ val _ = monadsyntax.enable_monad "Count";
 
 #  addM_steps    |- !x y. stepsOf (addM x y) = MAX (size x) (size y)
 #  subM_steps    |- !x y. stepsOf (subM x y) = MAX (size x) (size y)
-#  mulM_steps    |- !x y. stepsOf (mulM x y) = size x * size y:
-#  divM_steps    |- !x y. stepsOf (divM x y) = if y = 0 then 0 else size x * size y
-#  modM_steps    |- !x y. stepsOf (modM x y) = if y = 0 then 0 else size x * size y
+#  mulM_steps    |- !x y. stepsOf (mulM x y) = size x * size y
+#  divM_steps    |- !x y. stepsOf (divM x y) = size x * size y
+#  modM_steps    |- !x y. stepsOf (modM x y) = size x * size y
 
    Basic List:
    nullM_def     |- !ls. nullM ls = do tick 1; unit (ls = []) od
@@ -392,15 +388,13 @@ val _ = overload_on ("mul_", ``app2 mulM``);
 
 (* DIV monad *)
 val divM_def = Define`
-  divM x y = if y = 0 then return (x DIV 0) else
-                do tick (size x * size y); return (x DIV y); od
+  divM x y = do tick (size x * size y); return (x DIV y); od
 `;
 val _ = overload_on ("div_", ``app2 divM``);
 
 (* MOD monad *)
 val modM_def = Define`
-  modM x y = if y = 0 then return (x MOD 0) else
-        do tick (size x * size y);  return (x MOD y); od
+  modM x y = do tick (size x * size y);  return (x MOD y); od
 `;
 val _ = overload_on ("mod_", ``app2 modM``);
 
@@ -420,10 +414,8 @@ val modM_value = store_thm("modM_value[simp]", ``!x y. valueOf (modM x y) = x MO
 val addM_steps = store_thm("addM_steps[simp]", ``!x y. stepsOf (addM x y) = MAX (size x) (size y)``, rw[addM_def]);
 val subM_steps = store_thm("subM_steps[simp]", ``!x y. stepsOf (subM x y) = MAX (size x) (size y)``, rw[subM_def]);
 val mulM_steps = store_thm("mulM_steps[simp]", ``!x y. stepsOf (mulM x y) = (size x) * (size y)``, rw[mulM_def]);
-val divM_steps = store_thm("divM_steps[simp]", ``!x y. stepsOf (divM x y) = if y = 0 then 0 else (size x) * (size y)``, rw[divM_def]);
-val modM_steps = store_thm("modM_steps[simp]", ``!x y. stepsOf (modM x y) = if y = 0 then 0 else (size x) * (size y)``, rw[modM_def]);
-
-(* Complexity Class of basic arithmetic *)
+val divM_steps = store_thm("divM_steps[simp]", ``!x y. stepsOf (divM x y) = (size x) * (size y)``, rw[divM_def]);
+val modM_steps = store_thm("modM_steps[simp]", ``!x y. stepsOf (modM x y) = (size x) * (size y)``, rw[modM_def]);
 
 (* ------------------------------------------------------------------------- *)
 (* Basic List                                                                *)

@@ -726,7 +726,7 @@ val FINITE_SUBSET_COUNT = store_thm
   ("FINITE_SUBSET_COUNT",
    ``!s. FINITE s = ?n. s SUBSET count n``,
    STRIP_TAC
-   >> Reverse EQ_TAC >- PROVE_TAC [FINITE_COUNT, SUBSET_FINITE]
+   >> reverse EQ_TAC >- PROVE_TAC [FINITE_COUNT, SUBSET_FINITE]
    >> REWRITE_TAC [FINITE_DEF]
    >> DISCH_THEN (MP_TAC o Q.SPEC `\s. ?N. !n. n IN s ==> n <= N`)
    >> RW_TAC std_ss [SUBSET_DEF, IN_COUNT]
@@ -745,7 +745,7 @@ val INFINITE_DIFF_FINITE_EQ = store_thm
   ("INFINITE_DIFF_FINITE_EQ",
    ``!s t. FINITE t ==> (INFINITE (s DIFF t) <=> INFINITE s)``,
    RW_TAC std_ss []
-   >> Reverse EQ_TAC >- PROVE_TAC [SUBSET_FINITE, DIFF_SUBSET]
+   >> reverse EQ_TAC >- PROVE_TAC [SUBSET_FINITE, DIFF_SUBSET]
    >> Suff `s SUBSET (t UNION (s DIFF t))`
    >- PROVE_TAC [FINITE_UNION, SUBSET_FINITE]
    >> RW_TAC std_ss [SUBSET_DEF, IN_UNION, IN_DIFF]);
@@ -772,7 +772,7 @@ val FINITE_TL = store_thm
   ("FINITE_TL",
    ``!s : bool list -> bool. FINITE (IMAGE TL s) <=> FINITE s``,
    RW_TAC std_ss []
-   >> Reverse EQ_TAC >- PROVE_TAC [IMAGE_FINITE]
+   >> reverse EQ_TAC >- PROVE_TAC [IMAGE_FINITE]
    >> RW_TAC std_ss []
    >> Know `FINITE (IMAGE (\l. {T::l; F::l; []}) (IMAGE TL s))`
    >- PROVE_TAC [IMAGE_FINITE]

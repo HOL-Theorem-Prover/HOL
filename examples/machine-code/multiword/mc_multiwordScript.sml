@@ -6,6 +6,7 @@ local open tailrecLib blastLib intLib in end
 
 val _ = new_theory "mc_multiword";
 val _ = ParseExtras.temp_loose_equality()
+val _ = temp_delsimps ["NORMEQ_CONV"]
 
 val REV = Tactical.REVERSE;
 
@@ -1568,7 +1569,7 @@ val mc_simple_div_thm = prove(
   HO_MATCH_MP_TAC SNOC_INDUCT \\ STRIP_TAC THEN1
    (REPEAT STRIP_TAC \\ POP_ASSUM MP_TAC
     \\ FULL_SIMP_TAC std_ss [LENGTH,Once mc_simple_div_pre_def,
-         Once mc_simple_div_def,REVERSE,mw_simple_div_def]
+         Once mc_simple_div_def,REVERSE_SNOC_DEF,mw_simple_div_def]
     \\ Q.SPEC_TAC (`qs`,`qs`)
     \\ Cases_on `zs` \\ FULL_SIMP_TAC (srw_ss()) [LENGTH,ADD1])
   \\ NTAC 12 STRIP_TAC
@@ -1577,7 +1578,7 @@ val mc_simple_div_thm = prove(
   THEN1 (FULL_SIMP_TAC (srw_ss()) [LENGTH])
   \\ FULL_SIMP_TAC std_ss [LENGTH_SNOC]
   \\ SIMP_TAC std_ss [LENGTH,Once mc_simple_div_pre_def,
-         Once mc_simple_div_def,REVERSE,mw_simple_div_def]
+         Once mc_simple_div_def,REVERSE_SNOC_DEF,mw_simple_div_def]
   \\ FULL_SIMP_TAC (srw_ss()) [n2w_11,LET_DEF]
   \\ FULL_SIMP_TAC std_ss [ADD1,GSYM word_add_n2w,GSYM word_sub_def,WORD_ADD_SUB]
   \\ IMP_RES_TAC (DECIDE ``n+1<k ==> n<k:num``)
@@ -1593,7 +1594,8 @@ val mc_simple_div_thm = prove(
   \\ `LENGTH zs2 ≤ l - 1 /\ (LENGTH zs2 = LENGTH zs2)` by fs []
   \\ res_tac \\ fs []
   \\ Q.PAT_X_ASSUM `q1::qs2 = qs` (ASSUME_TAC o GSYM)
-  \\ FULL_SIMP_TAC std_ss [REVERSE,SNOC_APPEND,GSYM APPEND_ASSOC,APPEND]);
+  \\ FULL_SIMP_TAC std_ss [REVERSE_SNOC_DEF,SNOC_APPEND,GSYM APPEND_ASSOC,
+                           APPEND]);
 
 val mc_simple_div1_thm = prove(
   ``!(zs:'a word list) zs1 r2 r9 qs r l.
@@ -1605,13 +1607,13 @@ val mc_simple_div1_thm = prove(
   HO_MATCH_MP_TAC SNOC_INDUCT \\ STRIP_TAC THEN1
    (REPEAT STRIP_TAC \\ POP_ASSUM MP_TAC
     \\ FULL_SIMP_TAC std_ss [LENGTH,Once mc_simple_div1_pre_def,
-         Once mc_simple_div1_def,REVERSE,mw_simple_div_def]
+         Once mc_simple_div1_def,REVERSE_SNOC_DEF,mw_simple_div_def]
     \\ Q.SPEC_TAC (`qs`,`qs`) \\ FULL_SIMP_TAC (srw_ss()) [LENGTH,ADD1])
   \\ NTAC 10 STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [REVERSE_SNOC,mw_simple_div_def,LET_DEF]
   \\ FULL_SIMP_TAC std_ss [LENGTH_SNOC]
   \\ SIMP_TAC std_ss [LENGTH,Once mc_simple_div1_pre_def,
-         Once mc_simple_div1_def,REVERSE,mw_simple_div_def]
+         Once mc_simple_div1_def,REVERSE_SNOC_DEF,mw_simple_div_def]
   \\ FULL_SIMP_TAC (srw_ss()) [n2w_11,LET_DEF]
   \\ FULL_SIMP_TAC std_ss [ADD1,GSYM word_add_n2w,GSYM word_sub_def,WORD_ADD_SUB]
   \\ IMP_RES_TAC (DECIDE ``n+1<k ==> n<k:num``)
@@ -1625,7 +1627,8 @@ val mc_simple_div1_thm = prove(
   \\ `LENGTH zs ≤ l - 1` by fs []
   \\ res_tac \\ fs []
   \\ Q.PAT_X_ASSUM `q1::qs2 = qs` (ASSUME_TAC o GSYM)
-  \\ FULL_SIMP_TAC std_ss [REVERSE,SNOC_APPEND,GSYM APPEND_ASSOC,APPEND]);
+  \\ FULL_SIMP_TAC std_ss [REVERSE_SNOC_DEF,SNOC_APPEND,GSYM APPEND_ASSOC,
+                           APPEND]);
 
 (* mw_div -- calc_d *)
 

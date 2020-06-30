@@ -321,8 +321,8 @@ val subtract_to_small = store_thm(
               INT_LT_SUB_RADD] THEN
   PROVE_TAC [INT_ADD_COMM, INT_LT_LADD]);
 
-val add_to_great = store_thm(
-  "add_to_great",
+val add_to_greater = store_thm(
+  "add_to_greater",
   Term`!x d:int. 0 < d ==> ?k. 0 < x + k * d /\ x + k * d <= d`,
   REPEAT STRIP_TAC THEN
   Q.SPECL_THEN [`x`, `d`] MP_TAC subtract_to_small THEN

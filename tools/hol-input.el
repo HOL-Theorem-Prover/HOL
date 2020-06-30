@@ -552,8 +552,8 @@ order for the change to take effect."
 
   ;; Parentheses.
 
-  ("(" . ,(hol-input-to-string-list "([{⁅⁽₍〈⎴⟅⟦⟨⟪⦃〈《‹«「『【〔〖〚︵︷︹︻︽︿﹁﹃﹙﹛﹝（［｛｢"))
-  (")" . ,(hol-input-to-string-list ")]}⁆⁾₎〉⎵⟆⟧⟩⟫⦄〉》›»」』】〕〗〛︶︸︺︼︾﹀﹂﹄﹚﹜﹞）］｝｣"))
+  ("(" . ,(hol-input-to-string-list "([{⦇⁅⁽₍〈⎴⟅⟦⟨⟪⦃〈《‹«「『【〔〖〚︵︷︹︻︽︿﹁﹃﹙﹛﹝（［｛｢"))
+  (")" . ,(hol-input-to-string-list ")]}⦈⁆⁾₎〉⎵⟆⟧⟩⟫⦄〉》›»」』】〕〗〛︶︸︺︼︾﹀﹂﹄﹚﹜﹞）］｝｣"))
 
   ("[[" . ("⟦"))
   ("]]" . ("⟧"))
@@ -1139,6 +1139,8 @@ Suitable for use in the :set field of `defcustom'."
 (quail-defrule "!" "∀" "Hol")
 (quail-defrule "?" "∃" "Hol")
 (quail-defrule "?!" ["∃!"] "Hol")
+(quail-defrule "!!" "!" "Hol")
+(quail-defrule "??" "?" "Hol")
 (quail-defrule "<=>" "⇔" "Hol")
 (quail-defrule "<>" "≠" "Hol")
 (quail-defrule "<=" "≤" "Hol")

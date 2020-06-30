@@ -16,6 +16,20 @@ fun msg param s = if #verbose param then print_endline s else ()
 fun msg_err fs es = (print_endline (fs ^ ": " ^ es); raise ERR fs es)
 
 (* -------------------------------------------------------------------------
+   TNN operators (variable/constant + arity)
+   ------------------------------------------------------------------------- *)
+
+fun operl_of_term tm =
+  let
+    val (oper,argl) = strip_comb tm
+    val arity = length argl
+  in
+    (oper,arity) :: List.concat (map operl_of_term argl)
+  end;
+
+val oper_compare = cpl_compare Term.compare Int.compare;
+
+(* -------------------------------------------------------------------------
    Random TNN
    ------------------------------------------------------------------------- *)
 
@@ -31,9 +45,8 @@ fun oper_nn diml = case diml of
 
 fun random_tnn tnnparam = dnew Term.compare (map_snd oper_nn tnnparam)
 
-fun dim_std (nlayer,dim) oper =
+fun dim_std_arity (nlayer,dim) (oper,a) =
   let
-    val a = arity_of oper
     val dim_alt =
       if is_var oper andalso String.isPrefix "head_" (fst (dest_var oper))
       then 1
@@ -42,6 +55,9 @@ fun dim_std (nlayer,dim) oper =
     (if a = 0 then [0] else List.tabulate (nlayer, fn _ => a * dim)) @
     [dim_alt]
   end
+
+fun dim_std (nlayer,dim) oper =
+  dim_std_arity (nlayer,dim) (oper,arity_of oper)
 
 fun random_tnn_std (nlayer,dim) operl =
   random_tnn (map_assoc (dim_std (nlayer,dim)) operl)
@@ -88,6 +104,7 @@ fun read_tnnparam file =
    ------------------------------------------------------------------------- *)
 
 type tnnex = ((term * real list) list) list
+type tnnbatch = (term list * (term * mlMatrix.vect) list) list
 
 fun write_tnnex file ex =
   let val (tml,rll) = split (List.concat ex) in
@@ -308,6 +325,13 @@ fun train_tnn_epoch param pf lossl tnn batchl = case batchl of
       train_tnn_epoch param pf (loss :: lossl) newtnn m
     end
 
+fun train_tnn_epoch_nopar param lossl tnn batchl = case batchl of
+    [] => (tnn, average_real lossl)
+  | batch :: m =>
+    let val (newtnn,loss) = train_tnn_batch param map tnn batch in
+      train_tnn_epoch_nopar param (loss :: lossl) newtnn m
+    end
+
 fun train_tnn_nepoch param pf i tnn (train,test) =
   if i >= #nepoch param then tnn else
   let
@@ -347,7 +371,7 @@ fun stats_head (oper,rll) =
     tts oper ^ s1 ^ s2 ^ s3
   end
 
-fun output_info ex =
+fun stats_tnnex ex =
   if null ex then " empty" else
   let
     fun oper_of tm = fst (strip_comb tm)
@@ -359,8 +383,8 @@ fun output_info ex =
 
 fun train_tnn schedule randtnn (trainex,testex) =
   let
-    val _ = print_endline ("training set statistics:\n" ^ output_info trainex)
-    val _ = print_endline ("testing set statistics:\n" ^ output_info testex)
+    val _ = print_endline ("training set statistics:\n" ^ stats_tnnex trainex)
+    val _ = print_endline ("testing set statistics:\n" ^ stats_tnnex testex)
     val (tnn,t) = add_time (train_tnn_schedule schedule randtnn)
       (prepare_tnnex trainex, prepare_tnnex testex)
   in
@@ -437,6 +461,61 @@ val traintnn_extspec =
   }
 
 (* -------------------------------------------------------------------------
+   AutoML: automatic tuning of hyperparameters (in development)
+   ------------------------------------------------------------------------- *)
+
+fun neighb_bsize bsize =
+  [8,16,32,64]
+
+fun neighb_lrate lrate =
+  [
+  let val r = lrate * 1.1 in if r > 10.0 then 10.0 else r end,
+  let val r = lrate / 1.1 in if r < 0.0001 then 0.0001 else r end,
+  lrate
+  ]
+
+fun lookahead_one tnn prebatch (lrate,bsize)  =
+  let
+    val trainparam =
+      {ncore = 1, verbose = true,
+       learning_rate = lrate, batch_size = bsize, nepoch = 1}
+    fun loop (loctnn,loss) n =
+      if n <= 0 then (loctnn,loss) else
+      let
+        val batchl = mk_batch bsize (shuffle prebatch)
+        val (newtnn,newloss) = train_tnn_epoch_nopar trainparam [] tnn batchl
+      in
+        loop (newtnn,newloss) (n-1)
+      end
+  in
+    loop (tnn,0.0) 1
+  end
+
+fun lookahead_all prebatch (tnn,(lrate,bsize)) =
+  let
+    val paraml = cartesian_product [lrate] (neighb_bsize bsize)
+    val rl = map_assoc (lookahead_one tnn prebatch) paraml
+    fun cmp ((_,(_,a)),(_,(_,b))) = Real.compare (a,b)
+    val ((newlrate,newbsize),(newtnn,loss)) = hd (dict_sort cmp rl)
+    val _ = print_endline (pretty_real loss ^ ": " ^
+      pretty_real newlrate ^ "," ^ its newbsize)
+  in
+    (newtnn,(newlrate,newbsize))
+  end
+
+fun train_tnn_automl {ncore,verbose,learning_rate,batch_size,nepoch}
+  randtnn trainex =
+  let
+    val _ = print_endline ("training set statistics:\n" ^ stats_tnnex trainex)
+    val prebatch = prepare_tnnex trainex
+    val start = (randtnn,(learning_rate,batch_size))
+    val ((tnn,_),t) =
+      add_time (funpow nepoch (lookahead_all prebatch)) start
+  in
+    print_endline ("Tree neural network training time: " ^ rts t); tnn
+  end
+
+(* -------------------------------------------------------------------------
    Toy example: learning to guess if a term contains the variable "x"
    ------------------------------------------------------------------------- *)
 
@@ -467,7 +546,7 @@ val (l1,l2) = split (List.tabulate (20, fn n => mk_dataset (n + 1)));
 val (l1',l2') = (List.concat l1, List.concat l2);
 val (pos,neg) = (map_assoc (fn x => [1.0]) l1', map_assoc (fn x => [0.0]) l2');
 val ex0 = shuffle (pos @ neg);
-val ex1 = map (fn (a,b) => single (mk_comb (vhead,a),b)) ex0;
+val ex1 = map (fn (a,b) => [(mk_comb (vhead,a),b)]) ex0;
 val (trainex,testex) = part_pct 0.9 ex1;
 
 (* TNN *)
@@ -482,8 +561,15 @@ val trainparam =
 val schedule = [trainparam];
 val tnn = train_tnn schedule randtnn (trainex,testex);
 
+(* training automl *)
+val trainparam =
+  {ncore = 1, verbose = true,
+   learning_rate = 0.02, batch_size = 16, nepoch = 20};
+val tnn = train_tnn_automl trainparam randtnn trainex;
+
 (* testing *)
 val acc = tnn_accuracy tnn testex;
+
 *)
 
 end (* struct *)

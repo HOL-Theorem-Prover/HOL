@@ -13,8 +13,6 @@ val _ = new_theory "countPrime";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -71,7 +69,7 @@ val _ = monadsyntax.enable_monad "Count";
                                     if b0 then unit n
                                     else
                                       do
-                                        b1 <- ifM (leqM q 1) (idM F) do r <- modM n q; zeroM r od;
+                                        b1 <- ifM (leqM q 1) (return F) do r <- modM n q; zeroM r od;
                                         if b1 then unit q else do p <- incM q; factor_seekM n c p od
                                       od
                                   od
@@ -185,7 +183,7 @@ val factor_seekM_def = tDefine "factor_seekM" `
       b0 <- leqM c q;
       if b0 then return n
       else do
-             b1 <- ifM (leqM q 1) (idM F) (do r <- modM n q; r0 <- zeroM r od);
+             b1 <- ifM (leqM q 1) (return F) (do r <- modM n q; r0 <- zeroM r od);
              if b1 then return q
              else do
                     p <- incM q;

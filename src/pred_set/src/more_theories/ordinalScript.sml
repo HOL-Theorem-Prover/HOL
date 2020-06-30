@@ -1,5 +1,4 @@
 open HolKernel Parse boolLib bossLib
-open lcsymtacs
 open boolSimps
 
 open set_relationTheory pred_setTheory cardinalTheory

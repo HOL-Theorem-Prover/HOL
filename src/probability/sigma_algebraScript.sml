@@ -40,20 +40,24 @@ val space_def = Define
 val subsets_def = Define
    `subsets (x :'a set, y :('a set) set) = y`;
 
+val _ = export_rewrites ["space_def", "subsets_def"];
+
 val subset_class_def = Define
    `subset_class sp sts = !x. x IN sts ==> x SUBSET sp`;
 
-val algebra_def = Define
-   `algebra a <=>
-     subset_class (space a) (subsets a) /\
+Definition algebra_def :
+  algebra a =
+    (subset_class (space a) (subsets a) /\
      {} IN subsets a /\
      (!s. s IN subsets a ==> space a DIFF s IN subsets a) /\
-     (!s t. s IN subsets a /\ t IN subsets a ==> s UNION t IN subsets a)`;
+     (!s t. s IN subsets a /\ t IN subsets a ==> s UNION t IN subsets a))
+End
 
-val sigma_algebra_def = Define
-   `sigma_algebra a <=>
-     algebra a /\
-     !c. countable c /\ c SUBSET (subsets a) ==> BIGUNION c IN (subsets a)`;
+Definition sigma_algebra_def :
+  sigma_algebra a =
+    (algebra a /\
+     !c. countable c /\ c SUBSET (subsets a) ==> BIGUNION c IN (subsets a))
+End
 
 (* The set of measurable mappings, each (f :'a -> 'b) is called A/B-measurable *)
 val measurable_def = Define
@@ -66,34 +70,38 @@ val measurable_def = Define
 val sigma_def = Define
    `sigma sp sts = (sp, BIGINTER {s | sts SUBSET s /\ sigma_algebra (sp, s)})`;
 
-val semiring_def = Define (* see [1] (p.37) *)
-   `semiring r <=>
-     subset_class (space r) (subsets r) /\
+Definition semiring_def : (* [7, p.39] *)
+  semiring r =
+    (subset_class (space r) (subsets r) /\
      {} IN (subsets r) /\
      (!s t. s IN (subsets r) /\ t IN (subsets r) ==> s INTER t IN (subsets r)) /\
      (!s t. s IN (subsets r) /\ t IN (subsets r) ==>
-            ?c. c SUBSET (subsets r) /\ FINITE c /\ disjoint c /\ (s DIFF t = BIGUNION c))`;
+            ?c. c SUBSET (subsets r) /\ FINITE c /\ disjoint c /\
+               (s DIFF t = BIGUNION c)))
+End
 
-val ring_def = Define (* see [4] *)
-   `ring r <=>
-     subset_class (space r) (subsets r) /\
+Definition ring_def : (* see [4] *)
+  ring r =
+    (subset_class (space r) (subsets r) /\
      {} IN (subsets r) /\
      (!s t. s IN (subsets r) /\ t IN (subsets r) ==> s UNION t IN (subsets r)) /\
-     (!s t. s IN (subsets r) /\ t IN (subsets r) ==> s DIFF t IN (subsets r))`;
+     (!s t. s IN (subsets r) /\ t IN (subsets r) ==> s DIFF t IN (subsets r)))
+End
 
 (* the smallest ring generated from a set of sets (usually a semiring) *)
 val smallest_ring_def = Define
    `smallest_ring sp sts = (sp, BIGINTER {s | sts SUBSET s /\ ring (sp, s)})`;
 
 (* named after Eugene B. Dynkin (1924-2014), a Soviet and American mathematician [5] *)
-val dynkin_system_def = Define
-   `dynkin_system d <=>
-     subset_class (space d) (subsets d) /\
+Definition dynkin_system_def :
+  dynkin_system d =
+    (subset_class (space d) (subsets d) /\
      (space d) IN (subsets d) /\
      (!s. s IN (subsets d) ==> (space d DIFF s) IN (subsets d)) /\
      (!f :num -> 'a set.
         f IN (UNIV -> (subsets d)) /\ (!i j. i <> j ==> DISJOINT (f i) (f j))
-        ==> BIGUNION (IMAGE f UNIV) IN (subsets d))`;
+        ==> BIGUNION (IMAGE f UNIV) IN (subsets d)))
+End
 
 (* the smallest dynkin system generated from a set of sets, cf. "sigma_def" *)
 val dynkin_def = Define
@@ -103,10 +111,11 @@ val dynkin_def = Define
 (*  Basic theorems                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val SPACE = store_thm
-  ("SPACE", ``!a. (space a, subsets a) = a``,
-    STRIP_TAC >> MP_TAC (ISPEC ``a :'a algebra`` pair_CASES)
- >> RW_TAC std_ss [space_def, subsets_def]);
+Theorem SPACE[simp] :
+    !a. (space a, subsets a) = a
+Proof
+    GEN_TAC >> Cases_on ‘a’ >> rw []
+QED
 
 val ALGEBRA_ALT_INTER = store_thm
   ("ALGEBRA_ALT_INTER",
@@ -168,6 +177,48 @@ val ALGEBRA_DIFF = store_thm
        >> PROVE_TAC [])
    >> RW_TAC std_ss [ALGEBRA_INTER, ALGEBRA_COMPL]);
 
+fun shared_tactics tm =
+    rpt STRIP_TAC >> MATCH_MP_TAC tm >> fs [sigma_algebra_def];
+
+Theorem SIGMA_ALGEBRA_EMPTY :
+    !a. sigma_algebra a ==> {} IN (subsets a)
+Proof
+    shared_tactics ALGEBRA_EMPTY
+QED
+
+Theorem SIGMA_ALGEBRA_SPACE :
+    !a. sigma_algebra a ==> (space a) IN (subsets a)
+Proof
+    shared_tactics ALGEBRA_SPACE
+QED
+
+Theorem SIGMA_ALGEBRA_COMPL :
+    !a s. sigma_algebra a /\ s IN (subsets a) ==> (space a DIFF s) IN (subsets a)
+Proof
+    shared_tactics ALGEBRA_COMPL
+QED
+
+Theorem SIGMA_ALGEBRA_UNION :
+    !a s t. sigma_algebra a /\ s IN (subsets a) /\ t IN (subsets a) ==>
+            s UNION t IN (subsets a)
+Proof
+    shared_tactics ALGEBRA_UNION
+QED
+
+Theorem SIGMA_ALGEBRA_INTER :
+    !a s t. sigma_algebra a /\ s IN (subsets a) /\ t IN (subsets a) ==>
+            s INTER t IN (subsets a)
+Proof
+    shared_tactics ALGEBRA_INTER
+QED
+
+Theorem SIGMA_ALGEBRA_DIFF :
+   !a s t. sigma_algebra a /\ s IN (subsets a) /\ t IN (subsets a) ==>
+           s DIFF t IN (subsets a)
+Proof
+    shared_tactics ALGEBRA_DIFF
+QED
+
 val ALGEBRA_FINITE_UNION = store_thm
   ("ALGEBRA_FINITE_UNION",
    ``!a c. algebra a /\ FINITE c /\ c SUBSET (subsets a) ==> BIGUNION c IN (subsets a)``,
@@ -194,7 +245,7 @@ val SIGMA_ALGEBRA_ALT = store_thm
    >> EQ_TAC
    >- (RW_TAC std_ss [COUNTABLE_ALT, IN_FUNSET, IN_UNIV]
        >> Q.PAT_X_ASSUM `!c. P c ==> Q c` MATCH_MP_TAC
-       >> Reverse (RW_TAC std_ss [IN_IMAGE, SUBSET_DEF, IN_UNIV])
+       >> reverse (RW_TAC std_ss [IN_IMAGE, SUBSET_DEF, IN_UNIV])
        >- PROVE_TAC []
        >> Q.EXISTS_TAC `f`
        >> RW_TAC std_ss []
@@ -246,7 +297,7 @@ val SIGMA_ALGEBRA_ALT_MONO = store_thm
        >> PROVE_TAC [])
    >> DISCH_THEN (REWRITE_TAC o wrap)
    >> POP_ASSUM MATCH_MP_TAC
-   >> Reverse (RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_COUNT, IN_IMAGE,
+   >> reverse (RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_COUNT, IN_IMAGE,
                               COUNT_ZERO, IMAGE_EMPTY, BIGUNION_EMPTY])
    >- (Q.EXISTS_TAC `f x'`
        >> RW_TAC std_ss []
@@ -254,7 +305,7 @@ val SIGMA_ALGEBRA_ALT_MONO = store_thm
        >> DECIDE_TAC)
    >> MATCH_MP_TAC ALGEBRA_FINITE_UNION
    >> POP_ASSUM MP_TAC
-   >> Reverse (RW_TAC std_ss [IN_FUNSET, IN_UNIV, SUBSET_DEF, IN_IMAGE])
+   >> reverse (RW_TAC std_ss [IN_FUNSET, IN_UNIV, SUBSET_DEF, IN_IMAGE])
    >- PROVE_TAC []
    >> MATCH_MP_TAC IMAGE_FINITE
    >> RW_TAC std_ss [FINITE_COUNT]);
@@ -278,7 +329,7 @@ val SIGMA_ALGEBRA_ALT_DISJOINT = store_thm
    >- (POP_ASSUM K_TAC
        >> ONCE_REWRITE_TAC [EXTENSION]
        >> RW_TAC std_ss [IN_BIGUNION, IN_IMAGE, IN_UNIV, IN_DIFF]
-       >> Reverse EQ_TAC
+       >> reverse EQ_TAC
        >- (RW_TAC std_ss []
            >> POP_ASSUM MP_TAC
            >> RW_TAC std_ss [IN_DIFF]
@@ -308,6 +359,46 @@ val SIGMA_ALGEBRA_ALT_DISJOINT = store_thm
    >> MATCH_MP_TAC SUBSET_TRANS
    >> Q.EXISTS_TAC `f (SUC m + n')`
    >> PROVE_TAC [ADD_CLAUSES]);
+
+(* Definition 3.1 of [1, p.16] *)
+Theorem SIGMA_ALGEBRA_ALT_SPACE :
+    !a. sigma_algebra a <=>
+        subset_class (space a) (subsets a) /\
+        space a IN subsets a /\
+        (!s. s IN subsets a ==> space a DIFF s IN subsets a) /\
+        (!f :num -> 'a -> bool.
+          f IN (UNIV -> (subsets a)) ==> BIGUNION (IMAGE f UNIV) IN (subsets a))
+Proof
+    RW_TAC std_ss [SIGMA_ALGEBRA_ALT]
+ >> EQ_TAC >> RW_TAC std_ss [] (* 4 subgoals *)
+ >- fs [algebra_def]
+ >- (MATCH_MP_TAC ALGEBRA_SPACE >> art [])
+ >- (MATCH_MP_TAC ALGEBRA_DIFF >> art [] \\
+     MATCH_MP_TAC ALGEBRA_SPACE >> art [])
+ >> RW_TAC std_ss [algebra_def]
+ >- (‘{} = space a DIFF space a’ by SET_TAC [] >> POP_ORW \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> Q.PAT_X_ASSUM ‘!f. P ==> BIGUNION (IMAGE f univ(:num)) IN subsets a’
+      (MP_TAC o (Q.SPEC ‘\n. if n = 0 then s else if n = 1 then t else {}’))
+ >> simp [IN_FUNSET, IN_UNIV]
+ >> Know ‘!n :num. (if n = 0 then s else if n = 1 then t else {}) IN subsets a’
+ >- (GEN_TAC \\
+     Cases_on ‘n = 0’ >- rw [] \\
+     Cases_on ‘n = 1’ >- rw [] \\
+     rw [] >> ‘{} = space a DIFF space a’ by SET_TAC [] >> POP_ORW \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> RW_TAC std_ss []
+ >> Suff ‘s UNION t =
+          BIGUNION (IMAGE (\n. if n = 0 then s else if n = 1 then t else {})
+                          univ(:num))’ >- rw []
+ >> RW_TAC std_ss [Once EXTENSION, IN_UNION, IN_BIGUNION_IMAGE, IN_UNIV]
+ >> EQ_TAC >> RW_TAC std_ss [NOT_IN_EMPTY] (* 3 subgoals *)
+ >- (Q.EXISTS_TAC ‘0’ >> rw [])
+ >- (Q.EXISTS_TAC ‘1’ >> rw [])
+ >> Cases_on ‘n = 0’ >- (DISJ1_TAC >> fs [])
+ >> Cases_on ‘n = 1’ >- (DISJ2_TAC >> fs [])
+ >> fs [NOT_IN_EMPTY]
+QED
 
 val SIGMA_ALGEBRA_ALGEBRA = store_thm
   ("SIGMA_ALGEBRA_ALGEBRA",
@@ -380,23 +471,37 @@ val IN_SIGMA = store_thm
    MP_TAC SIGMA_SUBSET_SUBSETS
    >> RW_TAC std_ss [SUBSET_DEF]);
 
-(* the proof is fully syntactic, `subset_class sp a` (or b) is not needed *)
+(* the proof is fully syntactical, `subset_class sp a` (or b) is not needed *)
 val SIGMA_MONOTONE = store_thm
   ("SIGMA_MONOTONE",
   ``!sp a b. a SUBSET b ==> (subsets (sigma sp a)) SUBSET (subsets (sigma sp b))``,
     RW_TAC std_ss [sigma_def, SUBSET_DEF, IN_BIGINTER, GSPECIFICATION, subsets_def]);
 
-val SIGMA_OF_SIGMA_ALGEBRA_LEMMA = store_thm
-  ("SIGMA_OF_SIGMA_ALGEBRA_LEMMA",
+(* the sigma of sigma-algebra is itself (stable) *)
+val SIGMA_STABLE_LEMMA = store_thm
+  ("SIGMA_STABLE_LEMMA",
    ``!sp sts. sigma_algebra (sp,sts) ==> (sigma sp sts = (sp,sts))``,
     RW_TAC std_ss [sigma_def, GSPECIFICATION, space_def, subsets_def]
  >> ASM_SET_TAC []);
 
 (* |- !a. sigma_algebra a ==> (sigma (space a) (subsets a) = a) *)
-val SIGMA_OF_SIGMA_ALGEBRA = save_thm
-  ("SIGMA_OF_SIGMA_ALGEBRA",
+val SIGMA_STABLE = save_thm
+  ("SIGMA_STABLE",
     GEN_ALL (REWRITE_RULE [SPACE]
-                (Q.SPECL [`space a`, `subsets a`] SIGMA_OF_SIGMA_ALGEBRA_LEMMA)));
+                (Q.SPECL [`space a`, `subsets a`] SIGMA_STABLE_LEMMA)));
+
+(* This is why ‘sigma sp sts’ is "smallest": any sigma-algebra in the middle
+   coincides with it. *)
+Theorem SIGMA_SMALLEST :
+    !sp sts A. sts SUBSET A /\ A SUBSET subsets (sigma sp sts) /\
+               sigma_algebra (sp,A) ==> (A = subsets (sigma sp sts))
+Proof
+    RW_TAC std_ss [SET_EQ_SUBSET]
+ >> IMP_RES_TAC SIGMA_STABLE_LEMMA
+ >> ‘A = subsets (sigma sp A)’ by PROVE_TAC [subsets_def]
+ >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_MONOTONE >> art []
+QED
 
 val SIGMA_ALGEBRA = store_thm
   ("SIGMA_ALGEBRA",
@@ -531,14 +636,14 @@ val PREIMAGE_SIGMA_ALGEBRA = store_thm (* [1, p.16] *)
       (* goal 3 (of 5) *)
       fs [IN_IMAGE, IN_FUNSET] \\
       Q.EXISTS_TAC `space A DIFF s'` \\
-      Reverse CONJ_TAC
+      reverse CONJ_TAC
       >- (MATCH_MP_TAC ALGEBRA_COMPL >> fs [sigma_algebra_def]) \\
       RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_DIFF, IN_INTER] \\
       EQ_TAC >> RW_TAC std_ss [],
       (* goal 4 (of 5) *)
       fs [IN_IMAGE, IN_FUNSET] \\
       Q.EXISTS_TAC `s' UNION s''` \\
-      Reverse CONJ_TAC
+      reverse CONJ_TAC
       >- (MATCH_MP_TAC ALGEBRA_UNION >> fs [sigma_algebra_def]) \\
       RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_UNION, IN_INTER] \\
       EQ_TAC >> RW_TAC std_ss [] >> art [],
@@ -547,7 +652,7 @@ val PREIMAGE_SIGMA_ALGEBRA = store_thm (* [1, p.16] *)
      `f' = \x. PREIMAGE f (f'' x) INTER sp` by PROVE_TAC [] >> POP_ORW \\
      `!x. f'' x IN subsets A` by PROVE_TAC [] \\
       Q.EXISTS_TAC `BIGUNION (IMAGE f'' UNIV)` \\
-      Reverse CONJ_TAC
+      reverse CONJ_TAC
       >- (fs [SIGMA_ALGEBRA_FN] \\
           FIRST_X_ASSUM MATCH_MP_TAC >> art [IN_FUNSET, IN_UNIV]) \\
       RW_TAC std_ss [EXTENSION, IN_BIGUNION_IMAGE, IN_PREIMAGE, IN_UNIV, IN_INTER] \\
@@ -802,7 +907,7 @@ Theorem SMALLEST_RING_OF_SEMIRING :
 Proof
     RW_TAC std_ss [smallest_ring_def, subsets_def]
  >> RW_TAC std_ss [Once EXTENSION, GSPECIFICATION, IN_BIGINTER]
- >> Reverse EQ_TAC >> RW_TAC std_ss []
+ >> reverse EQ_TAC >> RW_TAC std_ss []
  >- (MATCH_MP_TAC (REWRITE_RULE [subsets_def]
                                 (Q.SPEC `(sp,P)` RING_FINITE_UNION)) >> art [] \\
      MATCH_MP_TAC SUBSET_TRANS \\
@@ -884,7 +989,7 @@ Proof
      ASM_REWRITE_TAC [BIGUNION_IMAGE_OVER_INTER_L] \\
      REWRITE_TAC [BIGUNION_IMAGE_OVER_INTER_R] \\
      FIRST_ASSUM MATCH_MP_TAC \\
-     Reverse CONJ_TAC (* some easy goals *)
+     reverse CONJ_TAC (* some easy goals *)
      >- (CONJ_TAC >- (MATCH_MP_TAC IMAGE_FINITE >> REWRITE_TAC [FINITE_COUNT]) \\
          MATCH_MP_TAC disjointI \\
          NTAC 2 GEN_TAC >> SIMP_TAC std_ss [IN_IMAGE, IN_COUNT] \\
@@ -903,7 +1008,7 @@ Proof
   (* IMAGE (\i. BIGUNION (IMAGE (\i'. f i INTER f' i') (count n'))) (count n) SUBSET S *)
      RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_COUNT] \\
      FIRST_ASSUM MATCH_MP_TAC \\
-     Reverse CONJ_TAC (* some easy goals *)
+     reverse CONJ_TAC (* some easy goals *)
      >- (CONJ_TAC >- (MATCH_MP_TAC IMAGE_FINITE >> REWRITE_TAC [FINITE_COUNT]) \\
          MATCH_MP_TAC disjointI \\
          NTAC 2 GEN_TAC >> SIMP_TAC std_ss [IN_IMAGE, IN_COUNT] \\
@@ -1003,7 +1108,7 @@ Proof
      REWRITE_TAC [BIGUNION_IMAGE_OVER_INTER_L] \\
      REWRITE_TAC [MATCH_MP BIGINTER_IMAGE_OVER_INTER_R (ASSUME ``0:num < n'``)] \\
      BETA_TAC >> FIRST_ASSUM MATCH_MP_TAC \\
-     Reverse CONJ_TAC (* some easy goals *)
+     reverse CONJ_TAC (* some easy goals *)
      >- (CONJ_TAC >- (MATCH_MP_TAC IMAGE_FINITE >> REWRITE_TAC [FINITE_COUNT]) \\
          MATCH_MP_TAC disjointI \\
          NTAC 2 GEN_TAC >> SIMP_TAC std_ss [IN_IMAGE, IN_COUNT] \\
@@ -1153,7 +1258,7 @@ val DYNKIN_SYSTEM_ALT_MONO = store_thm
         >- (POP_ASSUM K_TAC
             >> ONCE_REWRITE_TAC [EXTENSION]
             >> RW_TAC std_ss [IN_BIGUNION, IN_IMAGE, IN_UNIV, IN_DIFF]
-            >> Reverse EQ_TAC
+            >> reverse EQ_TAC
             >- (RW_TAC std_ss []
                 >> POP_ASSUM MP_TAC
                 >> RW_TAC std_ss [IN_DIFF]
@@ -1234,7 +1339,7 @@ val DYNKIN_SYSTEM_ALT_MONO = store_thm
       POP_ASSUM MATCH_MP_TAC \\
       SIMP_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_COUNT, IN_IMAGE,
                        COUNT_ZERO, IMAGE_EMPTY, BIGUNION_EMPTY] \\
-      Reverse CONJ_TAC
+      reverse CONJ_TAC
       >- (RW_TAC std_ss [] \\
           Q.EXISTS_TAC `f x'` >> RW_TAC std_ss [] \\
           Q.EXISTS_TAC `x'` >> DECIDE_TAC) \\
@@ -1258,7 +1363,7 @@ val DYNKIN_SYSTEM_ALT_MONO = store_thm
       DISCH_THEN (ONCE_REWRITE_TAC o wrap) \\
       Q.PAT_ASSUM `!s t. X ==> t DIFF s IN subsets d` MATCH_MP_TAC \\
       ASM_REWRITE_TAC [DIFF_SUBSET] \\
-      Reverse CONJ_TAC >- ASM_SET_TAC [] \\
+      reverse CONJ_TAC >- ASM_SET_TAC [] \\
       Q.PAT_ASSUM `!s t. X ==> t DIFF s IN subsets d` MATCH_MP_TAC >> art [] \\
       CONJ_TAC (* 2 subgoals *)
       >- (Q.PAT_ASSUM `!s t. X ==> t DIFF s IN subsets d` MATCH_MP_TAC >> art []) \\
@@ -1295,7 +1400,7 @@ val DYNKIN_SYSTEM_ALT = store_thm
         >- (POP_ASSUM K_TAC
             >> ONCE_REWRITE_TAC [EXTENSION]
             >> RW_TAC std_ss [IN_BIGUNION, IN_IMAGE, IN_UNIV, IN_DIFF]
-            >> Reverse EQ_TAC
+            >> reverse EQ_TAC
             >- (RW_TAC std_ss []
                 >> POP_ASSUM MP_TAC
                 >> RW_TAC std_ss [IN_DIFF]
@@ -1380,16 +1485,28 @@ val DYNKIN_MONOTONE = store_thm
   ``!sp a b. a SUBSET b ==> (subsets (dynkin sp a)) SUBSET (subsets (dynkin sp b))``,
     RW_TAC std_ss [dynkin_def, SUBSET_DEF, IN_BIGINTER, GSPECIFICATION, subsets_def]);
 
-val lemma = Q.prove (
-   `!sp sts. dynkin_system (sp,sts) ==> (dynkin sp sts = (sp,sts))`,
+Theorem DYNKIN_STABLE_LEMMA :
+    !sp sts. dynkin_system (sp,sts) ==> (dynkin sp sts = (sp,sts))
+Proof
     RW_TAC std_ss [dynkin_def, GSPECIFICATION, space_def, subsets_def]
- >> ASM_SET_TAC []);
+ >> ASM_SET_TAC []
+QED
 
 (* |- !d. dynkin_system d ==> (dynkin (space d) (subsets d) = d) *)
-val DYNKIN_OF_DYNKIN_SYSTEM = save_thm
-  ("DYNKIN_OF_DYNKIN_SYSTEM",
+Theorem DYNKIN_STABLE =
     GEN_ALL (REWRITE_RULE [SPACE]
-                          (Q.SPECL [`space d`, `subsets d`] lemma)));
+                          (Q.SPECL [`space d`, `subsets d`] DYNKIN_STABLE_LEMMA));
+
+Theorem DYNKIN_SMALLEST :
+    !sp sts D. sts SUBSET D /\ D SUBSET subsets (dynkin sp sts) /\
+               dynkin_system (sp,D) ==> (D = subsets (dynkin sp sts))
+Proof
+    RW_TAC std_ss [SET_EQ_SUBSET]
+ >> IMP_RES_TAC DYNKIN_STABLE_LEMMA
+ >> ‘D = subsets (dynkin sp D)’ by PROVE_TAC [subsets_def]
+ >> POP_ORW
+ >> MATCH_MP_TAC DYNKIN_MONOTONE >> art []
+QED
 
 val DYNKIN = store_thm
   ("DYNKIN",
@@ -1597,7 +1714,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA = store_thm
    RW_TAC std_ss []
    >> MATCH_MP_TAC SUBSET_TRANS
    >> Q.EXISTS_TAC `subsets (dynkin sp a)`
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (RW_TAC std_ss [SUBSET_DEF, dynkin_def, IN_BIGINTER,
                       GSPECIFICATION, subsets_def, space_def]
        >> PROVE_TAC [SUBSET_DEF])
@@ -1701,7 +1818,7 @@ val DYNKIN_LEMMA = store_thm
   ("DYNKIN_LEMMA",
   ``!d. dynkin_system d /\ (!s t. s IN subsets d /\ t IN subsets d ==> s INTER t IN subsets d)
         <=> sigma_algebra d``,
-    GEN_TAC >> Reverse EQ_TAC
+    GEN_TAC >> reverse EQ_TAC
  >- (rpt STRIP_TAC >- IMP_RES_TAC SIGMA_ALGEBRA_IMP_DYNKIN_SYSTEM \\
      MATCH_MP_TAC ALGEBRA_INTER >> PROVE_TAC [sigma_algebra_def])
  >> rpt STRIP_TAC
@@ -1742,7 +1859,7 @@ val DYNKIN_SUBSET_SIGMA = store_thm
  >- PROVE_TAC []
  >> IMP_RES_TAC SIGMA_ALGEBRA_SIGMA
  >> IMP_RES_TAC SIGMA_ALGEBRA_IMP_DYNKIN_SYSTEM
- >> POP_ASSUM (MP_TAC o (MATCH_MP DYNKIN_OF_DYNKIN_SYSTEM))
+ >> POP_ASSUM (MP_TAC o (MATCH_MP DYNKIN_STABLE))
  >> REWRITE_TAC [SPACE_SIGMA]
  >> DISCH_THEN (ASM_REWRITE_TAC o wrap));
 
@@ -1756,14 +1873,14 @@ val DYNKIN_THM = store_thm
                       SYM (Q.SPEC `sigma sp sts` SPACE)]
  >> REWRITE_TAC [SPACE_DYNKIN, SPACE_SIGMA]
  >> SIMP_TAC std_ss []
- >> REWRITE_TAC [GSYM SUBSET_SUBSET_EQ]
+ >> REWRITE_TAC [SET_EQ_SUBSET]
  >> CONJ_TAC >- IMP_RES_TAC DYNKIN_SUBSET_SIGMA
  (* goal: subsets (sigma sp sts) SUBSET subsets (dynkin sp sts) *)
  >> Suff `sigma_algebra (dynkin sp sts)`
  >- (DISCH_TAC \\
      ASSUME_TAC (Q.SPECL [`sp`, `sts`] DYNKIN_SUBSET_SUBSETS) \\
      POP_ASSUM (ASSUME_TAC o (Q.SPEC `sp`) o (MATCH_MP SIGMA_MONOTONE)) \\
-     IMP_RES_TAC SIGMA_OF_SIGMA_ALGEBRA \\
+     IMP_RES_TAC SIGMA_STABLE \\
      fs [SPACE_DYNKIN])
  (* goal: sigma_algebra (dynkin sp sts) *)
  >> REWRITE_TAC [GSYM DYNKIN_LEMMA]
@@ -1784,7 +1901,7 @@ val DYNKIN_THM = store_thm
          `sts SUBSET subsets (D g)` by PROVE_TAC [] \\
          POP_ASSUM (MP_TAC o (Q.SPEC `sp`) o (MATCH_MP DYNKIN_MONOTONE)) \\
          `dynkin_system (D g)` by PROVE_TAC [SUBSET_DEF] \\
-         POP_ASSUM (MP_TAC o (MATCH_MP DYNKIN_OF_DYNKIN_SYSTEM)) \\
+         POP_ASSUM (MP_TAC o (MATCH_MP DYNKIN_STABLE)) \\
          `space (D g) = sp` by METIS_TAC [space_def] \\
          POP_ASSUM (REWRITE_TAC o wrap) \\
          DISCH_THEN (ASM_REWRITE_TAC o wrap)) >> DISCH_TAC \\
@@ -1807,7 +1924,7 @@ val DYNKIN_THM = store_thm
          `sts SUBSET subsets (D d)` by PROVE_TAC [] \\
          POP_ASSUM (MP_TAC o (Q.SPEC `sp`) o (MATCH_MP DYNKIN_MONOTONE)) \\
          `dynkin_system (D d)` by PROVE_TAC [SUBSET_DEF] \\
-         POP_ASSUM (MP_TAC o (MATCH_MP DYNKIN_OF_DYNKIN_SYSTEM)) \\
+         POP_ASSUM (MP_TAC o (MATCH_MP DYNKIN_STABLE)) \\
          `space (D d) = sp` by METIS_TAC [space_def] \\
          POP_ASSUM (REWRITE_TAC o wrap) \\
          DISCH_THEN (ASM_REWRITE_TAC o wrap)) >> DISCH_TAC \\
@@ -2624,7 +2741,7 @@ val MEASUBABLE_BIGUNION_LEMMA = store_thm
                 BIGUNION c IN IMAGE (PREIMAGE f) (subsets b))``,
    RW_TAC std_ss [SIGMA_ALGEBRA, IN_FUNSET, IN_IMAGE]
    >> Q.EXISTS_TAC `BIGUNION (IMAGE (\x. @x'. x' IN subsets b /\ (PREIMAGE f x' = x)) c)`
-   >> Reverse CONJ_TAC
+   >> reverse CONJ_TAC
    >- (Q.PAT_X_ASSUM `!c. countable c /\ c SUBSET subsets b ==> BIGUNION c IN subsets b`
            MATCH_MP_TAC
        >> RW_TAC std_ss [image_countable, SUBSET_DEF, IN_IMAGE]
@@ -2853,30 +2970,33 @@ val MEASURABLE_UP_SIGMA = store_thm
    >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA])
    >> PROVE_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF]);
 
-val MEASURABLE_PROD_SIGMA = store_thm
-  ("MEASURABLE_PROD_SIGMA",
-   ``!a a1 a2 f.
+(* NOTE: see martingaleTheory for more theorems on ‘prod_sets’ *)
+Theorem MEASURABLE_PROD_SIGMA :
+    !a a1 a2 f.
        sigma_algebra a /\
        (FST o f) IN measurable a a1 /\
        (SND o f) IN measurable a a2 ==>
        f IN measurable a (sigma ((space a1) CROSS (space a2))
-                                (prod_sets (subsets a1) (subsets a2)))``,
-   rpt STRIP_TAC
-   >> MATCH_MP_TAC MEASURABLE_SIGMA
-   >> FULL_SIMP_TAC std_ss [IN_MEASURABLE]
-   >> CONJ_TAC
-   >- (RW_TAC std_ss [subset_class_def, subsets_def, space_def, IN_PROD_SETS]
-      >> PROVE_TAC [SIGMA_ALGEBRA, CROSS_SUBSET, SUBSET_DEF, subset_class_def, subsets_def,
-                    space_def])
-   >> CONJ_TAC
-   >- (RW_TAC std_ss [IN_FUNSET, SPACE_SIGMA, IN_CROSS]
-       >> FULL_SIMP_TAC std_ss [IN_FUNSET, o_DEF])
-   >> RW_TAC std_ss [IN_PROD_SETS]
-   >> RW_TAC std_ss [PREIMAGE_CROSS]
-   >> `PREIMAGE (FST o f) t INTER PREIMAGE (SND o f) u INTER space a =
-       (PREIMAGE (FST o f) t INTER space a) INTER (PREIMAGE (SND o f) u INTER space a)`
-        by (RW_TAC std_ss [Once EXTENSION, IN_INTER] >> DECIDE_TAC)
-   >> PROVE_TAC [sigma_algebra_def, ALGEBRA_INTER]);
+                                (prod_sets (subsets a1) (subsets a2)))
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC MEASURABLE_SIGMA
+ >> FULL_SIMP_TAC std_ss [IN_MEASURABLE]
+ >> CONJ_TAC
+ >- (RW_TAC std_ss [subset_class_def, subsets_def, space_def, IN_PROD_SETS] \\
+     PROVE_TAC [SIGMA_ALGEBRA, CROSS_SUBSET, SUBSET_DEF, subset_class_def,
+                subsets_def, space_def])
+ >> CONJ_TAC
+ >- (RW_TAC std_ss [IN_FUNSET, SPACE_SIGMA, IN_CROSS] \\
+     FULL_SIMP_TAC std_ss [IN_FUNSET, o_DEF])
+ >> RW_TAC std_ss [IN_PROD_SETS]
+ >> RW_TAC std_ss [PREIMAGE_CROSS]
+ >> `PREIMAGE (FST o f) t INTER PREIMAGE (SND o f) u INTER space a =
+      (PREIMAGE (FST o f) t INTER space a) INTER
+      (PREIMAGE (SND o f) u INTER space a)`
+       by (RW_TAC std_ss [Once EXTENSION, IN_INTER] >> DECIDE_TAC)
+ >> PROVE_TAC [sigma_algebra_def, ALGEBRA_INTER]
+QED
 
 val _ = export_theory ();
 
@@ -2889,4 +3009,6 @@ val _ = export_theory ();
   [4] Wikipedia: https://en.wikipedia.org/wiki/Ring_of_sets
   [5] Wikipedia: https://en.wikipedia.org/wiki/Eugene_Dynkin
   [6] Wikipedia: https://en.wikipedia.org/wiki/Dynkin_system
+  [7] Schilling, R.L.: Measures, Integrals and Martingales (Second Edition).
+      Cambridge University Press (2017).
  *)

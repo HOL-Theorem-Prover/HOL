@@ -74,21 +74,40 @@ fun run_cmd cmd = ignore (OS.Process.system cmd)
 
 (* TODO: Use OS to change dir? *)
 fun cmd_in_dir dir cmd = run_cmd ("cd " ^ dir ^ "; " ^ cmd)
+fun clean_dir dir = run_cmd ("rm " ^ dir ^ "/*")
+fun clean_rec_dir dir = run_cmd ("rm -r " ^ dir ^ "/*")
 
-(* -------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Comparisons
-   ------------------------------------------------------------------------- *)
-
-fun goal_compare ((asm1,w1), (asm2,w2)) =
-  list_compare Term.compare (w1 :: asm1, w2 :: asm2)
+   ------------------------------------------------------------------------ *)
 
 fun cpl_compare cmp1 cmp2 ((a1,a2),(b1,b2)) =
   let val r = cmp1 (a1,b1) in
     if r = EQUAL then cmp2 (a2,b2) else r
   end
 
+fun term_compare_exact (t1,t2) = case (dest_term t1, dest_term t2) of
+     (VAR _, VAR _) => Term.compare (t1,t2)
+   | (VAR _, _) => LESS
+   | (_, VAR _) => GREATER
+   | (CONST _, CONST _) => Term.compare (t1,t2)
+   | (CONST _, _) => LESS
+   | (_, CONST _) => GREATER
+   | (COMB p1, COMB p2) =>
+     cpl_compare term_compare_exact term_compare_exact (p1,p2)
+   | (COMB _, _) => LESS
+   | (_, COMB _) => GREATER
+   | (LAMB p1, LAMB p2) =>
+     cpl_compare term_compare_exact term_compare_exact (p1,p2)
+
+fun goal_compare ((asm1,w1), (asm2,w2)) =
+  list_compare Term.compare (w1 :: asm1, w2 :: asm2)
+
 fun triple_compare cmp1 cmp2 cmp3 ((a1,a2,a3),(b1,b2,b3)) =
   cpl_compare (cpl_compare cmp1 cmp2) cmp3 (((a1,a2),a3),((b1,b2),b3))
+
+fun fst_compare cmp ((a,_),(b,_)) = cmp (a,b)
+fun snd_compare cmp ((_,a),(_,b)) = cmp (a,b)
 
 fun lbl_compare ((stac1,_,g1,_),(stac2,_,g2,_)) =
   cpl_compare String.compare goal_compare ((stac1,g1),(stac2,g2))
@@ -165,16 +184,16 @@ fun count_dict startdict l =
     foldl f startdict l
   end
 
-(* -------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    References
-   ------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun incr x = x := (!x) + 1
 fun decr x = x := (!x) - 1
 
-(* -------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    List
-   ------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun one_in_n n start l = case l of
     [] => []
@@ -302,7 +321,6 @@ fun all_subterms tm =
   in
     traverse tm; !r
   end
-
 
 fun fold_left f l orig = case l of
     [] => orig
@@ -597,6 +615,15 @@ fun strip_type ty =
       end
     | _             => ([],ty)
 
+fun strip_type_n n ty =
+  if is_vartype ty orelse n = 0 then ([],ty) else
+    case dest_type ty of
+      ("fun",[a,b]) =>
+      let val (tyl,im) = strip_type_n (n-1) b in
+        (a :: tyl, im)
+      end
+    | _             => raise ERR "strip_type_n" ""
+
 fun has_boolty x = type_of x = bool
 
 fun only_concl x =
@@ -717,6 +744,7 @@ fun readl path =
     (TextIO.closeIn file; l3)
   end
 
+
 fun readl_empty path =
   let
     val file = TextIO.openIn path
@@ -729,7 +757,6 @@ fun readl_empty path =
   in
     (TextIO.closeIn file; l2)
   end
-
 
 fun write_file file s =
   let val oc = TextIO.openOut file in
@@ -778,11 +805,8 @@ fun append_file file s =
 fun append_endline file s = append_file file (s ^ "\n")
 
 val debug_flag = ref false
-fun debug_in_dir dir file s =
-  if !debug_flag
-  then (mkDir_err dir;
-        append_endline (dir ^ "/" ^ current_theory () ^ "___" ^ file) s)
-  else ()
+fun debug s = if !debug_flag then print_endline s else ()
+fun debugf s f x = if !debug_flag then print_endline (s ^ (f x)) else ()
 
 fun write_texgraph file (s1,s2) l =
   writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => its a ^ " " ^ its b) l);
@@ -1034,9 +1058,9 @@ fun normalize_distrib dis =
     else map_snd (fn x => x / sum) dis
   end
 
-(* -------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Parallelism (currently slowing functions inside threads)
-   ------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 (* small overhead due to waiting safely for the thread to close *)
 fun interruptkill worker =
@@ -1051,24 +1075,5 @@ fun interruptkill worker =
      in
        loop 10
      end
-
-(* -------------------------------------------------------------------------
-   Neural network units
-   ------------------------------------------------------------------------- *)
-
-val oper_compare = cpl_compare Term.compare Int.compare
-
-fun all_fosubtm tm =
-  let val (oper,argl) = strip_comb tm in
-    tm :: List.concat (map all_fosubtm argl)
-  end
-
-fun operl_of tm =
-  let
-    val tml = mk_fast_set Term.compare (all_fosubtm tm)
-    fun f x = let val (oper,argl) = strip_comb x in (oper, length argl) end
-  in
-    mk_fast_set oper_compare (map f tml)
-  end
 
 end (* struct *)

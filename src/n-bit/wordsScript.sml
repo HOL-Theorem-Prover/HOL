@@ -50,6 +50,10 @@ val w2n_def = zDefine`
 val n2w_def = zDefine`
   (n2w:num->'a word) n = FCP i. BIT i n`
 
+local open wordspp in end
+val _ = add_ML_dependency "wordspp"
+val _ = Parse.add_user_printer ("wordspp.words_printer", ``words$n2w x : 'a word``)
+
 val w2w_def = zDefine`
   (w2w:'a word -> 'b word) w = n2w (w2n w)`
 
@@ -2523,14 +2527,18 @@ val WORD_EQ_SUB_ZERO = save_thm("WORD_EQ_SUB_ZERO",
   (GEN_ALL o REWRITE_RULE [WORD_ADD_0] o
    Q.SPECL [`v`,`w`,`0w`]) WORD_EQ_SUB_RADD)
 
-val WORD_LCANCEL_SUB = Q.store_thm("WORD_LCANCEL_SUB",
-  `!v:'a word w x. (v - w = x - w) = (v = x)`,
-  REWRITE_TAC [word_sub_def,WORD_EQ_ADD_RCANCEL])
+Theorem WORD_LCANCEL_SUB[simp]:
+  !v:'a word w x. (v - w = x - w) = (v = x)
+Proof
+  REWRITE_TAC [word_sub_def,WORD_EQ_ADD_RCANCEL]
+QED
 
-val WORD_RCANCEL_SUB = Q.store_thm("WORD_RCANCEL_SUB",
-  `!v:'a word w x. (v - w = v - x) = (w = x)`,
+Theorem WORD_RCANCEL_SUB[simp]:
+  !v:'a word w x. (v - w = v - x) = (w = x)
+Proof
   REWRITE_TAC [word_sub_def,WORD_EQ_ADD_LCANCEL]
-    \\ METIS_TAC [WORD_NEG_NEG])
+    \\ METIS_TAC [WORD_NEG_NEG]
+QED
 
 val WORD_SUB_PLUS = Q.store_thm("WORD_SUB_PLUS",
   `!v:'a word w x. v - (w + x) = v - w - x`,
@@ -2540,17 +2548,17 @@ val WORD_SUB_LZERO = Q.store_thm("WORD_SUB_LZERO",
   `!w:'a word. 0w - w = - w`,
   REWRITE_TAC [word_sub_def,WORD_ADD_0])
 
-val WORD_SUB_RZERO = Q.store_thm("WORD_SUB_RZERO",
-  `!w:'a word. w - 0w = w`,
-  REWRITE_TAC [word_sub_def,WORD_ADD_0,WORD_NEG_0])
+Theorem WORD_SUB_RZERO[simp]: !w:'a word. w - 0w = w
+Proof REWRITE_TAC [word_sub_def,WORD_ADD_0,WORD_NEG_0]
+QED
 
-val WORD_ADD_LID_UNIQ = save_thm("WORD_ADD_LID_UNIQ",
+Theorem WORD_ADD_LID_UNIQ[simp] =
   (Q.GEN `v` o Q.GEN `w` o REWRITE_RULE [WORD_SUB_REFL] o
-    Q.SPECL [`v`,`w`,`w`]) WORD_ADD_EQ_SUB)
+    Q.SPECL [`v`,`w`,`w`]) WORD_ADD_EQ_SUB;
 
-val WORD_ADD_RID_UNIQ = save_thm("WORD_ADD_RID_UNIQ",
+Theorem WORD_ADD_RID_UNIQ[simp] =
   (Q.GEN `v` o Q.GEN `w` o ONCE_REWRITE_RULE [WORD_ADD_COMM] o
-   Q.SPECL [`w`,`v`]) WORD_ADD_LID_UNIQ)
+   Q.SPECL [`w`,`v`]) WORD_ADD_LID_UNIQ;
 
 val WORD_SUM_ZERO = Q.store_thm("WORD_SUM_ZERO",
   `!a b. (a + b = 0w) = (a = -b)`,
@@ -2567,15 +2575,17 @@ val WORD_SUB_SUB3 = save_thm("WORD_SUB_SUB3",
   (GEN_ALL o REWRITE_RULE [WORD_ADD_SUB3] o ONCE_REWRITE_RULE [WORD_ADD_COMM] o
    Q.SPECL [`v`,`w`,`v`] o GSYM) WORD_SUB_PLUS)
 
-val WORD_EQ_NEG = Q.store_thm("WORD_EQ_NEG",
-  `!v:'a word w. (- v = - w) = (v = w)`,
-  REWRITE_TAC [GSYM WORD_SUB_LZERO,WORD_RCANCEL_SUB])
+Theorem WORD_EQ_NEG[simp]:
+  !v:'a word w. (- v = - w) = (v = w)
+Proof
+  REWRITE_TAC [GSYM WORD_SUB_LZERO,WORD_RCANCEL_SUB]
+QED
 
 val WORD_NEG_EQ = save_thm("WORD_NEG_EQ",
   (GEN_ALL o REWRITE_RULE [WORD_NEG_NEG] o Q.SPECL [`v`,`- w`]) WORD_EQ_NEG)
 
-val WORD_NEG_EQ_0 = save_thm("WORD_NEG_EQ_0[simp]",
-  (REWRITE_RULE [WORD_NEG_0] o Q.SPECL [`v`,`0w`]) WORD_EQ_NEG)
+Theorem WORD_NEG_EQ_0[simp] =
+  (REWRITE_RULE [WORD_NEG_0] o Q.SPECL [`v`,`0w`]) WORD_EQ_NEG;
 
 val WORD_SUB = save_thm("WORD_SUB",
   (ONCE_REWRITE_RULE [WORD_ADD_COMM] o GSYM) word_sub_def)
@@ -2620,6 +2630,15 @@ val WORD_NEG_RMUL = save_thm("WORD_NEG_RMUL",
 val WORD_NEG_MUL = Q.store_thm("WORD_NEG_MUL",
   `!w. - w = - 1w * w`,
   SRW_TAC [] [WORD_NEG_EQ, WORD_NEG_LMUL, WORD_NEG_NEG, WORD_MULT_CLAUSES])
+
+(* |- -1w * x = -1w * y <=> x = y *)
+Theorem WORD_NEG1_MUL_LCANCEL[simp] =
+  ONCE_REWRITE_RULE [WORD_NEG_MUL] WORD_EQ_NEG
+
+(* arguably unnecessary as the simplifier normalises constant coefficients
+   to the front of multiplicative terms *)
+Theorem WORD_NEG1_MUL_RCANCEL[simp] =
+  ONCE_REWRITE_RULE [WORD_MULT_COMM] WORD_NEG1_MUL_LCANCEL
 
 val sw2sw_w2w_add = Q.store_thm("sw2sw_w2w_add",
   `!w : 'a word.
@@ -3823,9 +3842,9 @@ val WORD_LESS_EQ_ANTISYM = Q.store_thm("WORD_LESS_EQ_ANTISYM",
   `!a:'a word b. ~(a < b /\ b <= a)`,
   PROVE_TAC [WORD_NOT_LESS])
 
-val WORD_LESS_EQ_REFL = Q.store_thm("WORD_LESS_EQ_REFL",
-  `!a:'a word. a <= a`,
-  REWRITE_TAC [WORD_LESS_OR_EQ])
+Theorem WORD_LESS_EQ_REFL[simp]:    !a:'a word. a <= a
+Proof REWRITE_TAC [WORD_LESS_OR_EQ]
+QED
 
 val WORD_LESS_EQUAL_ANTISYM = Q.store_thm("WORD_LESS_EQUAL_ANTISYM",
   `!a:'a word b. a <= b /\ b <= a ==> (a = b)`,
@@ -3835,9 +3854,9 @@ val WORD_LESS_IMP_LESS_OR_EQ = Q.store_thm("WORD_LESS_IMP_LESS_OR_EQ",
   `!a:'a word b. a < b ==> a <= b`,
   PROVE_TAC [WORD_LESS_OR_EQ])
 
-val WORD_LESS_REFL = Q.store_thm("WORD_LESS_REFL",
-  `!a:'a word. ~(a < a)`,
-  RW_TAC bool_ss [WORD_NOT_LESS,WORD_LESS_OR_EQ])
+Theorem WORD_LESS_REFL[simp]:       !a:'a word. ~(a < a)
+Proof RW_TAC bool_ss [WORD_NOT_LESS,WORD_LESS_OR_EQ]
+QED
 
 val WORD_LESS_LESS_CASES = Q.store_thm("WORD_LESS_LESS_CASES",
   `!a:'a word b. (a = b) \/ a < b \/ b < a`,
@@ -3915,9 +3934,11 @@ val WORD_LOWER_EQ_ANTISYM = Q.store_thm("WORD_LOWER_EQ_ANTISYM",
   `!a b. ~(a <+ b /\ b <=+ a)`,
   PROVE_TAC [WORD_NOT_LOWER])
 
-val WORD_LOWER_EQ_REFL = Q.store_thm("WORD_LOWER_EQ_REFL",
-  `!a. a <=+ a`,
-  REWRITE_TAC [WORD_LOWER_OR_EQ])
+Theorem WORD_LOWER_EQ_REFL[simp]:
+  !a. a <=+ a
+Proof
+  REWRITE_TAC [WORD_LOWER_OR_EQ]
+QED
 
 val WORD_LOWER_EQUAL_ANTISYM = Q.store_thm("WORD_LOWER_EQUAL_ANTISYM",
   `!a b. a <=+ b /\ b <=+ a ==> (a = b)`,
@@ -3927,9 +3948,11 @@ val WORD_LOWER_IMP_LOWER_OR_EQ = Q.store_thm("WORD_LOWER_IMP_LOWER_OR_EQ",
   `!a b. a <+ b ==> a <=+ b`,
   PROVE_TAC [WORD_LOWER_OR_EQ])
 
-val WORD_LOWER_REFL = Q.store_thm("WORD_LOWER_REFL",
-  `!a. ~(a <+ a)`,
-  RW_TAC bool_ss [WORD_NOT_LOWER,WORD_LOWER_OR_EQ])
+Theorem WORD_LOWER_REFL[simp]:
+  !a. ~(a <+ a)
+Proof
+  RW_TAC bool_ss [WORD_NOT_LOWER,WORD_LOWER_OR_EQ]
+QED
 
 val WORD_LOWER_LOWER_CASES = Q.store_thm("WORD_LOWER_LOWER_CASES",
   `!a b. (a = b) \/ a <+ b \/ b <+ a`,
@@ -4116,7 +4139,7 @@ Proof
     \\ FULL_SIMP_TAC std_ss [dimword_def, bitTheory.NOT_BIT_GT_TWOEXP]
 QED
 
-Theorem WORD_LS_word_0:        !n. n <=+ 0w <=> (n = 0w)
+Theorem WORD_LS_word_0[simp]:        !n. n <=+ 0w <=> (n = 0w)
 Proof REWRITE_TAC [WORD_LOWER_OR_EQ, GSYM WORD_NOT_LOWER_EQUAL, WORD_0_LS]
 QED
 
@@ -4126,6 +4149,8 @@ Proof
   REWRITE_TAC [WORD_NOT_LOWER, WORD_0_LS]
     \\ REWRITE_TAC [GSYM WORD_NOT_LOWER_EQUAL, WORD_LS_word_0]
 QED
+
+Theorem WORD_LO_word_0R[simp] = CONJUNCT2 WORD_LO_word_0
 
 val WORD_ADD_LEFT_LO2 = save_thm("WORD_ADD_LEFT_LO2",
   (GEN_ALL o SIMP_RULE (arith_ss++boolSimps.CONJ_ss++boolSimps.LET_ss)
@@ -4616,7 +4641,7 @@ val word_T_not_zero = Q.store_thm("word_T_not_zero",
   `~(- 1w = 0w)`,
   SRW_TAC [fcpLib.FCP_ss] [REWRITE_RULE [SYM WORD_NEG_1] word_T, word_0])
 
-Theorem WORD_LS_word_T:
+Theorem WORD_LS_word_T[simp]:
   (!n. - 1w <=+ n <=> (n = - 1w)) /\ (!n. n <=+ - 1w)
 Proof
   REWRITE_TAC [WORD_NEG_1, WORD_LS_T]
@@ -4633,9 +4658,16 @@ Proof
          GSYM WORD_NEG_1, WORD_LS_word_T]
 QED
 
-val WORD_LESS_0_word_T = Q.store_thm("WORD_LESS_0_word_T",
-  `~(0w < - 1w) /\ ~(0w <= - 1w) /\ - 1w < 0w /\ - 1w <= 0w`,
-  REWRITE_TAC [WORD_LT, WORD_LE, word_msb_word_T, WORD_0_POS])
+Theorem WORD_LO_word_T_L[simp] = CONJUNCT1 WORD_LO_word_T
+Theorem WORD_LO_word_T_R[simp] =
+  WORD_LO_word_T |> CONJUNCT2 |> SPEC_ALL |> AP_TERM boolSyntax.negation
+  |> PURE_REWRITE_RULE [satTheory.NOT_NOT] |> Q.GEN ‘n’;
+
+Theorem WORD_LESS_0_word_T[simp]:
+  ~(0w < - 1w) /\ ~(0w <= - 1w) /\ - 1w < 0w /\ - 1w <= 0w
+Proof
+  REWRITE_TAC [WORD_LT, WORD_LE, word_msb_word_T, WORD_0_POS]
+QED
 
 (* word_reverse *)
 

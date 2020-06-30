@@ -1,4 +1,4 @@
-open HolKernel bossLib boolLib countableLib lcsymtacs
+open HolKernel bossLib boolLib countableLib
 val _ = new_theory "countable"
 
 val [count_bool_aux_inj_rwt] = mk_count_aux_inj_rwt [``:bool``]

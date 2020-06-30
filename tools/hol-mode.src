@@ -115,8 +115,9 @@ evaluations.")
 (put 'hol-term 'end-op
      (function
       (lambda ()
-        (let ((pthm-point (save-excursion
-                            (re-search-forward "^Proof\\|^Theorem" nil t))))
+        (let ((pthm-point
+               (save-excursion
+                 (re-search-forward "^Proof\\|^Theorem\\|^Triviality" nil t))))
           (if (and pthm-point (equal (match-string 0) "Proof"))
               (progn (goto-char (match-beginning 0))
                      (setq hol-term-end-delim "Proof"))
@@ -482,7 +483,7 @@ starts >%s%s<"
                          hol-quoted-theorem-proof-re-begin "\\|"
                          hol-quoted-definition-re-begin "\\|"
                          "\\(" sml-struct-id-regexp "\\)\\.\\w+" "\\|"
-                         "\\<open\\>")))
+                         "\\_<open\\_>")))
             (while (re-search-forward regexp (point-max) t)
               (let ((pp (syntax-ppss))
                     (ms (match-string-no-properties 0)))
@@ -502,18 +503,19 @@ starts >%s%s<"
                      ((string= ms "‘")
                       (if (not (re-search-forward "’" nil t))
                           (error "Unbalanced “ in region")))
-                     ((string-prefix-p "Theorem" ms)
+                     ((and (or (string-prefix-p "Theorem" ms)
+                               (string-prefix-p "Triviality" ms))
+                           (char-equal (char-before) ?:))
                       (if (not (re-search-forward "^Proof" nil t))
-                          (error "Unbalanced `Theorem' in region")))
-                     ((string-prefix-p "Triviality" ms)
-                      (if (not (re-search-forward "^Proof" nil t))
-                          (error "Unbalanced `Theorem' in region")))
-                     ((string-prefix-p "Definition" ms)
+                          (error "Unbalanced `Theorem/Triviality' in region")))
+                     ((and (string-prefix-p "Definition" ms)
+                           (char-equal (char-before) ?:))
                       (if (not
                            (re-search-forward "^Termination\\|^End" nil t))
                           (error "Unbalanced `Definition' in region")))
-                     ((or (string-prefix-p "Inductive" ms)
-                          (string-prefix-p "CoInductive" ms))
+                     ((and (or (string-prefix-p "Inductive" ms)
+                               (string-prefix-p "CoInductive" ms))
+                           (char-equal (char-before) ?:))
                       (if (not (re-search-forward "^End" nil t))
                           (error "Unbalanced [Co]Inductive in region")))
                      ((string= ms "open")
@@ -526,14 +528,26 @@ starts >%s%s<"
                             (start (point))
                             (end
                              (save-excursion
-                               (let ((case-fold-search nil))
-                                 (if (re-search-forward
-                                      hol-open-terminator-regexp
-                                      nil t)
+                               (let ((case-fold-search nil)
+                                     (foundp nil)
+                                     (abortedp nil))
+                                 ;; complicated loop required to avoid being
+                                 ;; confused by input such as
+                                 ;; open listSyntax (* ; *) integerTheory;
+                                 (while (and (not foundp) (not abortedp))
+                                   (if (re-search-forward
+                                        hol-open-terminator-regexp
+                                        nil t)
+                                       (setq foundp
+                                             (let ((pp (syntax-ppss)))
+                                               (and (not (nth 3 pp))
+                                                    (not (nth 4 pp)))))
+                                     (setq abortedp t)))
+                                 (if foundp
                                      (- (point) (length (match-string 0)))
                                    (point-max)))))
                             (endm (make-marker)))
-                        (message "Handling an open")
+                        ; (message "Handling an open")
                         (if hol-auto-load-p
                             (hol-load-modules-in-region start end))
                         (if leave-loud-opens nil
@@ -1167,6 +1181,43 @@ printed out.  (That's assuming that quietdec is false to start with.)"
   (send-raw-string-to-hol (format "Hol_pp.print_match [] (Term`%s`)" tm)
                           hol-echo-commands-p t))
 
+(defun hol-check-dbselector (s)
+  (if (string-prefix-p "'" s) (string-suffix-p "'" s)
+    (if (string-prefix-p "\"" s) (string-suffix-p "\"" s)
+      t)))
+
+(defun hol-make-db-select-string (args)
+  (let ((sels (mapconcat (lambda (s) (if (string-prefix-p "'" s)
+                                      (concat "DB.SelTHY \""
+                                              (substring s 1 -1) "\"")
+                                    (if (string-prefix-p "\"" s)
+                                        (concat "DB.SelNM \""
+                                                (substring s 1 -1) "\"")
+                                      (concat "DB.SelTM “" s "”"))))
+                         args ", ")))
+    (concat "DB.selectDB [" sels "]")))
+
+(defconst hol-db-select-info "('thy'; \"name\"; term pattern)" "")
+(defun hol-db-select (arg1)
+  "Calls DB.selectDB on the sequence of `selectors' provided.
+A selector is a string (as per DB.find) that matches against the name of
+the theorem, given in double quotes; a theory name, given in single quotes,
+or a term pattern, given without delimiters."
+  (interactive "sFirst selector pattern('thy'; \"name\"; term pattern): ")
+  (or (string-equal arg1 "")
+      (and (not (hol-check-dbselector arg1))
+           (error "Malformed DB selector: %s" arg1))
+      (let ((args (list arg1)) next-arg)
+        (while (and (setq next-arg
+                          (read-string (concat "Next DB selector"
+                                               hol-db-select-info
+                                               ": ")))
+                    (not (string-equal next-arg "")))
+          (if (hol-check-dbselector next-arg)
+              (setq args (cons next-arg args))
+            (error "Malformed DB selector: %s" next-arg)))
+        (send-string-to-hol (hol-make-db-select-string args)))))
+
 (defun hol-db-find (tm)
   "Does a DB.find on the given string and formats the result nicely."
   (interactive "sTheorem name part: ")
@@ -1468,7 +1519,7 @@ second is to show the new term.
 
 (add-hook 'sml-mode-hook
           (lambda ()
-            (local-set-key "`" 'holscript-backquote-map)
+            (local-set-key "`" 'holscript-dbl-backquote)
             (message "Running HOL SML hook")
 ))
 
@@ -1635,6 +1686,7 @@ second is to show the new term.
 (define-key hol-map "4"    'hol-display)
 (define-key hol-map "l"    'hol-load-file)
 (define-key hol-map "m"    'hol-db-match)
+(define-key hol-map "M"    'hol-db-select)
 (define-key hol-map "f"    'hol-db-find)
 (define-key hol-map "c" 'hol-db-find-consts)
 (define-key hol-map "n"    'hol-name-top-theorem)

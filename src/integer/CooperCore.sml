@@ -1034,7 +1034,7 @@ fun phase4_CONV tm = let
       else
         (MP (SPECL [F, delta_tm, x0] bot_and_greaters)
          (CONJ fx_goes_downward Fx0_thm), can_get_big,
-         add_to_great)
+         add_to_greater)
     (* this looks like: .. |- !c. 0 < c ==> F (x0 - c * d) *)
     (* further have lemma:
                            |- ?y. !x. x < y ==> (F x = neginf x)

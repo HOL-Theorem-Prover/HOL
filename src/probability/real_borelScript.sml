@@ -49,10 +49,15 @@ Definition borel :
     borel = sigma univ(:real) {s | open s}
 End
 
+val _ = overload_on ("borel_measurable", ``\a. measurable a borel``);
+
 val indicator_fn_def = Define
    `indicator_fn s = \x. if x IN s then (1:real) else (0:real)`;
 
-val _ = overload_on ("borel_measurable", ``\a. measurable a borel``);
+(* MATHEMATICAL DOUBLE-STRUCK DIGIT ONE *)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x1D7D9, tmnm = "indicator_fn"};
+val _ = TeX_notation {hol = UTF8.chr 0x1D7D9, TeX = ("\\HOLTokenOne{}", 1)};
+val _ = TeX_notation {hol = "indicator_fn",   TeX = ("\\HOLTokenOne{}", 1)};
 
 (* ************************************************************************* *)
 (* Proofs                                                                    *)
@@ -267,7 +272,7 @@ val NON_NEG_REAL_RAT_DENSE = store_thm
    >> FULL_SIMP_TAC std_ss [GSYM real_div]
    >> `minimal (\a. y <= & a / & n) = SUC m`
         by (MATCH_MP_TAC (GSYM MINIMAL_SUC_IMP)
-            >> Reverse CONJ_TAC
+            >> reverse CONJ_TAC
             >- (RW_TAC real_ss [o_DEF,GSYM real_lt] >> METIS_TAC [REAL_LET_TRANS])
             >> Suff `(\a. y <= & (SUC a) / & n) m` >- RW_TAC std_ss []
             >> Q.UNABBREV_TAC `m`
@@ -685,7 +690,7 @@ Theorem borel_eq_box :
 Proof
     SIMP_TAC std_ss [box] THEN MATCH_MP_TAC borel_eq_sigmaI1
  >> Q.EXISTS_TAC `{s | open s}` >> SIMP_TAC std_ss [borel]
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (FULL_SIMP_TAC std_ss [sigma_def, subsets_def] \\
      FULL_SIMP_TAC std_ss [IN_BIGINTER, GSPECIFICATION] \\
      RW_TAC std_ss [] \\
@@ -721,7 +726,7 @@ Proof
  (* COUNTABLE {f | box (FST f) (SND f) SUBSET x} *)
  >> MATCH_MP_TAC COUNTABLE_SUBSET
  >> EXISTS_TAC ``{f | (?q r. (f = (q,r)) /\ q IN q_set /\ r IN q_set)}``
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (ONCE_REWRITE_TAC [SET_RULE ``{f | ?q r. (f = (q,r)) /\ q IN q_set /\ r IN q_set} =
                                   {f | FST f IN q_set /\ SND f IN q_set}``] THEN
      SIMP_TAC std_ss [GSYM CROSS_DEF] THEN
@@ -1502,7 +1507,7 @@ Theorem right_open_interval_11 :
               (a = c) /\ (b = d))
 Proof
     rpt STRIP_TAC
- >> Reverse EQ_TAC >- RW_TAC std_ss []
+ >> reverse EQ_TAC >- RW_TAC std_ss []
  >> RW_TAC std_ss [right_open_interval, GSPECIFICATION, Once EXTENSION]
  >| [ (* goal 1 (of 2) *)
      `c <= a /\ a < d` by PROVE_TAC [REAL_LE_REFL] \\

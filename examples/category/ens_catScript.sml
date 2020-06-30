@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib boolSimps bossLib SatisfySimps categoryTheory functorTheory pred_setTheory limitTheory lcsymtacs;
+open HolKernel Parse boolLib boolSimps bossLib SatisfySimps categoryTheory functorTheory pred_setTheory limitTheory;
 
 val _ = new_theory "ens_cat";
 val _ = ParseExtras.temp_loose_equality()
