@@ -479,11 +479,49 @@ Proof
   DEEP_INTRO_TAC CHOICE_INTRO >> simp[] >> metis_tac[SPOr_REFL, SPOr_lemma]
 QED
 
-(* Theorem Spushout_Fpushout_IMP:
+(* pushouts in Set into universe delta are pushouts into universe epsilon if
+   epsilon is no bigger than delta *)
+Theorem Spushout_transfer:
+  Spushout A B C f g (P,i1,i2) (:'d) /\ INJ h univ(:'e) univ(:'d) ==>
+  Spushout A B C f g (P,i1,i2) (:'e)
+Proof
+  rw[Spushout_def] >>
+  first_x_assum $ qspecl_then [‘IMAGE h Q’, ‘restr (h o j1) B’,
+                               ‘restr (h o j2) C’] mp_tac >>
+  impl_tac
+  >- (fs[shom_def, restr_def, FUN_EQ_THM] >> metis_tac[INJ_IFF, IN_UNIV]) >>
+  simp[EXISTS_UNIQUE_THM] >> rw[]
+  >- (drule_then assume_tac LINV_DEF >> fs[] >>
+      qexists_tac ‘restr (LINV h univ(:'e) o u) P’>>
+      first_x_assum $ qspecl_then [‘ARB’, ‘ARB’] (K ALL_TAC) >>
+      fs[shom_def, FUN_EQ_THM, restr_def] >> rw[] >> metis_tac[]) >>
+  Q.MATCH_RENAME_TAC ‘u1 = u2’ >>
+  first_x_assum $ qspecl_then [‘restr (h o u1) P’, ‘restr (h o u2) P’] mp_tac >>
+  impl_tac
+  >- (fs[shom_def, FUN_EQ_THM, restr_def] >> rw[] >> metis_tac[]) >>
+  rw[FUN_EQ_THM, restr_def] >> metis_tac[shom_def, INJ_IFF, IN_UNIV]
+QED
+
+(*
+Theorem Spushouts_iso_lemma[local]:
+  Spushout (A:'a set) (B:'b set) (C:'c set) f g (P : 'e set,i1,i2) (:'d) /\
+  Spushout A B C f g (Q : 'f set,j1,j2) (:'d) /\
+  INJ h univ(:'e) univ (:'f) ==>
+  ?H. BIJ H P Q
+Proof
+QED
+
+
+Theorem Spushout_Fpushout_IMP:
   hom f (A,af) (B,bf) /\ hom g (A,af) (C,cf) /\
   Spushout A B C f g (P,i1,i2) (:'d) ==>
   ?pf. Fpushout (A,af) (B,bf) (C,cf) f g ((P,pf),i1,i2) (:'d)
 Proof
+  rpt strip_tac >>
+  ‘Spushout A B C f g (SPO A B C f g) (:'d)’ by metis_tac[hom_shom,Spushout_quotient] >>
+  fs[SPO_def] >> pop_assum mp_tac >>
+  qmatch_abbrev_tac ‘Spushout _ _ _ _ _ (SPOq, SPOi1, SPOi2) _ ==> _’ >> strip_tac >>
+
   simp[Fpushout_def, Spushout_def] >> rpt strip_tac >>
   ‘shom f A B /\ shom g A C /\ shom i1 B P /\ shom i2 C P’
     by metis_tac[hom_shom] >> simp[] >>
