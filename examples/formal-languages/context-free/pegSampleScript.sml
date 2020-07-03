@@ -56,7 +56,6 @@ val G = ``<| start := nt (INL "expr") I; rules := ^rules |>``
 
 val testexp = ``[Number 3; Plus; Number 4; Times; Number 5]``
 
-open lcsymtacs
 val _ = let
   open computeLib
 in

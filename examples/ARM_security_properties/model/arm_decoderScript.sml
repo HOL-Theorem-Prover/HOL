@@ -14,6 +14,7 @@ open arithmeticTheory bitTheory;
 open arm_astTheory;
 
 val _ = new_theory "arm_decoder";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------ *)
 

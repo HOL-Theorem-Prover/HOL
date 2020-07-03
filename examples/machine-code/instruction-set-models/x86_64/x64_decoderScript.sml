@@ -6,6 +6,7 @@ open decoderTheory bit_listTheory opmonTheory;
 open x64_astTheory x64_coretypesTheory;
 
 val _ = new_theory "x64_decoder";
+val _ = ParseExtras.temp_loose_equality()
 
 
 (* ---------------------------------------------------------------------------------- *>

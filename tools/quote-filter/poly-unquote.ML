@@ -2,6 +2,8 @@ val _ = PolyML.Compiler.prompt1:="";
 val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
 
+use "../Holmake/Systeml.sig";
+use "../../tools-poly/Holmake/Systeml.sml";
 use "../Holmake/QuoteFilter.sml";
 open OS.Process
 
@@ -21,13 +23,13 @@ fun open_files b infn outfn =
                          | NONE => ();
                        exit failure)
       in
-        (is, os, b)
+        (is, os, b, false)
     end
 
 fun usage status =
     (TextIO.output(TextIO.stdErr,
                    "Usage:\n  " ^ CommandLine.name() ^
-                   " [[-i] <inputfile> <outputfile>] | -h | -n\n");
+                   " [[-i] <inputfile> <outputfile>] | -h | -n | --quotefix\n");
      exit status)
 
 
@@ -37,20 +39,21 @@ fun main() = let
      linked executable as Interrupt exceptions *)
   val _ = Signal.signal(2, Signal.SIG_HANDLE
                                (fn _ => Thread.Thread.broadcastInterrupt()))
-  val (instream, outstream, intp) =
+  val (instream, outstream, intp, qfixp) =
     case CommandLine.arguments() of
-        [] => (TextIO.stdIn, TextIO.stdOut, true)
+        [] => (TextIO.stdIn, TextIO.stdOut, true, false)
       | ["-h"] => usage success
-      | ["-n"] => (TextIO.stdIn, TextIO.stdOut, false)
+      | ["-n"] => (TextIO.stdIn, TextIO.stdOut, false, false)
       | [ifile, ofile] => open_files false ifile ofile
       | ["-i", ifile, ofile] => open_files true ifile ofile
+      | ["--quotefix"] => (TextIO.stdIn, TextIO.stdOut, false, true)
       | _ => usage failure
 
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
    Kenn Heinrich who helped me see the light with respect to this code *)
 
   open QuoteFilter.UserDeclarations
-  val state as QFS args = newstate intp
+  val state as QFS args = newstate {inscriptp = intp, quotefixp = qfixp}
 
   fun loop() =
     let

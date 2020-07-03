@@ -1,5 +1,11 @@
 CLINE_OPTIONS = --no_overlay
 
+MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
+MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
+
+EXTRA_CLEANS = HOLsexp.grm-sig.sml HOLsexp.grm.sml HOLsexp.lex.sml
+
+
 UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
 
 all: $(UOFILES) selftest.exe
@@ -24,3 +30,29 @@ Symreltab.uo: Symreltab.sml Table.ui
 
 Int_Graph.uo: Int_Graph.sml Graph.ui
 	$(MOSMLC) -c Graph.ui $<
+
+ifndef POLY # i.e., Moscow ML
+holmake_holpathdb.uo holmake_holpathdb.ui: holmake_holpathdb.sml
+	$(HOLMOSMLC) -c $< -I $(protect $(HOLDIR)/tools/Holmake)
+
+endif
+
+HOLsexp.grm.sml HOLsexp.grm-sig.sml: HOLsexp.grm
+	$(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $<
+	$(MV) HOLsexp.grm.sig HOLsexp.grm-sig.sml
+
+HOLsexp.grm-sig.uo: HOLsexp.grm-sig.sml
+	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) $<
+
+HOLsexp.grm.uo HOLsexp.grm.ui: HOLsexp.grm.sml HOLsexp.grm-sig.uo HOLsexp_dtype.uo
+	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) HOLsexp.grm-sig.ui $<
+
+HOLsexp.lex.sml: HOLsexp.lex
+	$(protect $(HOLDIR)/tools/mllex/mllex.exe) $<
+
+HOLsexp.lex.uo: HOLsexp.lex.sml
+	$(HOLMOSMLC) -toplevel -c HOLsexp.grm-sig.ui $<
+
+HOLsexp_parser.uo: HOLsexp_parser.sml HOLsexp_parser.ui \
+                   HOLsexp.grm.uo HOLsexp.lex.uo HOLsexp_dtype.uo
+	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) HOLsexp.grm.ui HOLsexp.lex.ui $<

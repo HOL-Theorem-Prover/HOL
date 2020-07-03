@@ -1,4 +1,7 @@
-open HolKernel boolLib bossLib Parse finite_mapTheory relationTheory termTheory substTheory alistTheory arithmeticTheory pred_setTheory rich_listTheory listTheory ramanaLib
+open HolKernel boolLib bossLib Parse
+
+open finite_mapTheory relationTheory termTheory substTheory alistTheory
+     arithmeticTheory pred_setTheory rich_listTheory listTheory ramanaLib
 
 val _ = new_theory "walk"
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 1 }
@@ -12,7 +15,7 @@ let val th =
 in
   foldl (fn (h,th) => PROVE_HYP h th) th
     (map
-      (UNDISCH o (fn t => prove (``wfs s ==> ^t``, SRW_TAC [] [wfs_def,vR_def])))
+      (UNDISCH o (fn t => prove (“wfs s ==> ^t”, SRW_TAC [] [wfs_def,vR_def])))
       (hyp th))
 end
 
@@ -48,7 +51,7 @@ val vwalk_to_var = Q.store_thm(
     (REPEAT (POP_ASSUM MP_TAC) THEN
      REPEAT (SRW_TAC [][Once vwalk_def, FLOOKUP_DEF])) THEN
   `?w.x = Var w`
-     by (Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [Once (UNDISCH vwalk_def)]) THEN
+     by (Cases_on `x` >> FULL_SIMP_TAC (srw_ss()) [Once (UNDISCH vwalk_def)]) >>
   FIRST_X_ASSUM (Q.SPEC_THEN `w` MP_TAC) THEN SRW_TAC [][] THEN
   `vwalk s w = Var u` by (REPEAT (POP_ASSUM MP_TAC) THEN
                           SRW_TAC [] [Once vwalk_def] THEN
@@ -235,8 +238,6 @@ val _ = store_term_thm("vwalk_rhs_defn_print", Term vwalk_rhs_q);
 
 val vwalk_rhs_ind = theorem "vwalk_rhs_ind";
 
-open lcsymtacs
-
 val example1 = Q.prove(
 `(y ≠ x) ⇒ (vwalk_al [(y,Var x);(x,Const c)] x = Const c)`,
 strip_tac >>
@@ -259,9 +260,10 @@ Q.MATCH_ABBREV_TAC `vwalk_al s x = Const c` >>
 srw_tac [][Once vwalk_al_thm] >>
 srw_tac [][Abbr`s`])
 
-val example2 = Q.prove(
-`(y ≠ x) ⇒ (vwalk_rhs [(y,Var x);(x,Const c)] [(y,Var x);(x,Const c)] x = Var x)`,
-srw_tac [][Once vwalk_rhs_def])
+Theorem example2[local]:
+  y ≠ x ⇒ vwalk_rhs [(y,Var x);(x,Const c)] [(y,Var x);(x,Const c)] x = Var x
+Proof srw_tac [][Once vwalk_rhs_def]
+QED
 
 val vwalk_rhs_ALOOKUP_NONE = Q.store_thm(
 "vwalk_rhs_ALOOKUP_NONE",
@@ -271,7 +273,8 @@ ho_match_mp_tac vwalk_rhs_ind >> srw_tac [][vwalk_rhs_def])
 (*
 val vwalk_rhs_ALOOKUP_SOME_nonvar = Q.store_thm(
 "vwalk_rhs_ALOOKUP_SOME_nonvar",
-`∀al a0 v t. (ALOOKUP al v = SOME t) ∧ (∀u. t ≠ Var u) ⇒ (vwalk_rhs a0 al v = t)`,
+`∀al a0 v t. (ALOOKUP al v = SOME t) ∧ (∀u. t ≠ Var u) ⇒
+             (vwalk_rhs a0 al v = t)`,
 Induct >> srw_tac [][] >>
 Cases_on `h` >> Cases_on `r` >> srw_tac [][vwalk_rhs_def]
 ho_match_mp_tac vwalk_rhs_ind >>
@@ -287,7 +290,8 @@ val submaps_def = RWDefine`
 
 val submaps_thm = Q.store_thm(
 "submaps_thm",
-`submaps al ⇔ ∀l1 l2. (al = l1 ++ l2) ⇒ (alist_to_fmap l2) SUBMAP (alist_to_fmap al)`,
+`submaps al ⇔
+ ∀l1 l2. (al = l1 ++ l2) ⇒ (alist_to_fmap l2) SUBMAP (alist_to_fmap al)`,
 Induct_on `al` >> srw_tac [][] >>
 Cases_on `h` >> Cases_on `r` >> srw_tac [][] >- (
   srw_tac [][EQ_IMP_THM] >- (

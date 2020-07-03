@@ -5,8 +5,9 @@ sig
  type thm = Thm.thm
  datatype theory = datatype DB_dtype.theory
  datatype class = datatype DB_dtype.class
+ datatype selector = datatype DB_dtype.selector
  type data = DB_dtype.data
-
+ datatype location = datatype DB_dtype.location
 
   val thy         : string -> data list
   val fetch       : string -> string -> thm
@@ -27,8 +28,12 @@ sig
   val matches     : term -> thm -> bool
   val apropos     : term -> data list
   val apropos_in  : term -> data list -> data list
+  val selectDB    : selector list -> data list
   val listDB      : unit -> data list
+  val revlookup   : thm -> location list
 
+  val store_local : string -> thm -> unit
+  val local_thm   : string -> thm option
 
   val dest_theory  : string -> theory
   val bindl : string -> (string * thm * class) list -> unit

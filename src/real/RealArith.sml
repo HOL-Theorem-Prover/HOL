@@ -35,8 +35,14 @@ open HolKernel Parse boolLib pairLib hol88Lib numLib reduceLib tautLib
 (* Establish the required grammar(s) for executing this file                 *)
 (*---------------------------------------------------------------------------*)
 
-val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars realTheory.real_grammars;
+structure Parse = struct
+  open Parse
+  val (Type,Term) =
+      parse_from_grammars
+        (apsnd ParseExtras.grammar_loose_equality real_grammars)
+end
+
+open Parse
 
 (*----------------------------------------------------------------------- *)
 (* The trace system.                                                      *)
@@ -223,14 +229,14 @@ val ETA_THM = boolTheory.ETA_THM;
 
 
 val EXISTS_UNIQUE_THM = prove
- (Term`!P. (?!x:'a. P x) = (?x. P x) /\ (!x x'. P x /\ P x' ==> (x = x'))`,
+ (Term`!P. (?!x:'a. P x) <=> (?x. P x) /\ (!x x'. P x /\ P x' ==> (x = x'))`,
   GEN_TAC THEN REWRITE_TAC [EXISTS_UNIQUE_DEF]
    THEN BETA_TAC THEN BETA_TAC THEN REFL_TAC);
 
 val (NNF_CONV,NNFC_CONV) =
   let
     val NOT_EXISTS_UNIQUE_THM = prove
-      (Term`~(?!x:'a. P x) = (!x. ~P x) \/ ?x x'. P x /\ P x' /\ ~(x = x')`,
+      (Term`~(?!x:'a. P x) <=> (!x. ~P x) \/ ?x x'. P x /\ P x' /\ ~(x = x')`,
        REWRITE_TAC[EXISTS_UNIQUE_THM, DE_MORGAN_THM, NOT_EXISTS_THM] THEN
        REWRITE_TAC[NOT_FORALL_THM, NOT_IMP, CONJ_ASSOC])
     val common_tauts =
@@ -1281,7 +1287,8 @@ val TRANSLATE_PROOF =
     fn refutation =>
       let
         val _ = trace "TRANSLATE_PROOF"
-        val cache = ref []
+        val cache = Uref.new []
+        open Uref
         fun translate refut =
           snd (op_assoc (curry injust_eq) refut (!cache))
           handle HOL_ERR _
@@ -1649,11 +1656,5 @@ REAL_ARITH (Term`&0 < x /\ &0 < y ==> x + y < &1
                ==> &144 * x + &100 * y < &144`);
 REAL_ARITH (Term`!x y. x <= ~y = x + y <= &0`);
 *)
-
-(*---------------------------------------------------------------------------*)
-(* Restore the ambient grammar in force when this file started executing.    *)
-(*---------------------------------------------------------------------------*)
-
-val _ = Parse.temp_set_grammars ambient_grammars;
 
 end;

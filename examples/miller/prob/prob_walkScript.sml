@@ -1,27 +1,15 @@
-(* interactive mode
-loadPath := ["../ho_prover","../subtypes","../formalize"] @ !loadPath;
-app load
-  ["bossLib","realLib","ho_proverTools","extra_pred_setTools",
-   "sequenceTools","prob_canonTools","prob_algebraTheory","probTheory"];
-quietdec := true;
-*)
-
 open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
      listTheory sequenceTheory state_transformerTheory
-     HurdUseful extra_numTheory combinTheory
+     hurdUtils extra_numTheory combinTheory
      pairTheory realTheory realLib extra_boolTheory
-     extra_pred_setTheory
-     extra_realTheory extra_pred_setTools  numTheory
+     extra_pred_setTheory extra_realTheory extra_pred_setTools numTheory
      simpLib seqTheory sequenceTools subtypeTheory res_quanTheory;
 
-open measureTheory probabilityTheory;
+open real_measureTheory real_probabilityTheory;
 open prob_algebraTheory probTheory;
 
-(* interactive mode
-quietdec := false;
-*)
-
 val _ = new_theory "prob_walk";
+val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 val std_ss' = std_ss ++ boolSimps.ETA_ss;

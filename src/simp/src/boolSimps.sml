@@ -47,10 +47,13 @@ val literal_I_thm = prove(
   REWRITE_TAC [combinTheory.I_THM, literal_case_THM]);
 
 val literal_case_ss =
-    simpLib.SSFRAG
-    {name = SOME"literal_case",
-     ac = [], congs = [literal_cong], convs = [], filter = NONE,
-     dprocs = [], rewrs = [(SOME "literal_I_thm", literal_I_thm)]}
+    simpLib.SSFRAG {
+      name = SOME"literal_case",
+      ac = [], congs = [literal_cong], convs = [], filter = NONE,
+      dprocs = [], rewrs = [
+        (SOME {Thy = "", Name = "literal_I_thm"}, literal_I_thm)
+      ]
+    }
 
 (* ----------------------------------------------------------------------
     BOOL_ss
@@ -84,21 +87,21 @@ val BOOL_ss = SSFRAG
            trace=2,
            key=SOME ([],``(\x:'a. y:'b) z``),
            conv=K (K BETA_CONV)}],
-   rewrs= map (fn s => (SOME s, DB.fetch "bool" s)) [
+   rewrs= map (fn s => (SOME{Thy = "bool",Name = s}, DB.fetch "bool" s)) [
      "REFL_CLAUSE", "EQ_CLAUSES", "NOT_CLAUSES",  "AND_CLAUSES",
      "OR_CLAUSES", "IMP_CLAUSES", "COND_CLAUSES", "FORALL_SIMP",
      "EXISTS_SIMP",  "COND_ID", "EXISTS_REFL", "EXISTS_UNIQUE_REFL",
      "EXCLUDED_MIDDLE", "bool_case_thm", "NOT_AND",
      "SELECT_REFL", "SELECT_REFL_2", "RES_FORALL_TRUE",
      "RES_EXISTS_FALSE"
-   ] @ [
-     (SOME "EXISTS_REFL'", GSYM EXISTS_REFL),
-     (SOME "EXISTS_UNIQUE_REFL'", GSYM EXISTS_UNIQUE_REFL),
-     (SOME "EXCLUDED_MIDDLE'", ONCE_REWRITE_RULE [DISJ_COMM] EXCLUDED_MIDDLE),
-     (SOME "literal_I_thm", literal_I_thm),
-     (SOME "COND_BOOL_CLAUSES", COND_BOOL_CLAUSES),
-     (SOME "lift_disj_eq", lift_disj_eq),
-     (SOME "lift_imp_disj", lift_imp_disj)
+   ] @ map (fn (s,th) => (SOME {Thy = "", Name = s}, th)) [
+     ("EXISTS_REFL'", GSYM EXISTS_REFL),
+     ("EXISTS_UNIQUE_REFL'", GSYM EXISTS_UNIQUE_REFL),
+     ("EXCLUDED_MIDDLE'", ONCE_REWRITE_RULE [DISJ_COMM] EXCLUDED_MIDDLE),
+     ("literal_I_thm", literal_I_thm),
+     ("COND_BOOL_CLAUSES", COND_BOOL_CLAUSES),
+     ("lift_disj_eq", lift_disj_eq),
+     ("lift_imp_disj", lift_imp_disj)
    ],
    congs = [literal_cong], filter = NONE, ac = [], dprocs = []};
 
@@ -173,7 +176,8 @@ val let_I_thm = prove(
 val LET_ss =
     simpLib.SSFRAG {name = SOME"LET",
                     ac = [], congs = [let_cong], convs = [], filter = NONE,
-                    dprocs = [], rewrs = [(SOME "let_I_thm", let_I_thm)]}
+                    dprocs = [],
+                    rewrs = [(SOME {Thy = "", Name = "let_I_thm"}, let_I_thm)]}
 
 (* ----------------------------------------------------------------------
     bool_ss
@@ -264,21 +268,23 @@ end handle HOL_ERR _ => failwith "COND_ABS_CONV";
 
 
 val COND_elim_ss =
-  simpLib.SSFRAG {name = SOME"COND_elim",
-                  ac = [], congs = [],
-                  convs = [{conv = K (K celim_rand_CONV),
-                             name = "conditional lifting at rand",
-                             key = SOME([], Term`(f:'a -> 'b) (COND P Q R)`),
-                             trace = 2},
-                            {conv = K (K COND_ABS_CONV),
-                             name = "conditional lifting under abstractions",
-                             key = SOME([],
-                                        Term`\x:'a. COND p (q x:'b) (r x)`),
-                             trace = 2}],
-                  dprocs = [], filter = NONE,
-                  rewrs = [(SOME "COND_RATOR", boolTheory.COND_RATOR),
-                           (SOME "COND_EXPAND", boolTheory.COND_EXPAND),
-                           (SOME "NESTED_COND", NESTED_COND)]}
+  simpLib.SSFRAG {
+    name = SOME"COND_elim",
+    ac = [], congs = [],
+    convs = [
+      {conv = K (K celim_rand_CONV),
+       name = "conditional lifting at rand",
+       key = SOME([], Term‘(f:'a -> 'b) (COND P Q R)’),
+       trace = 2},
+      {conv = K (K COND_ABS_CONV),
+       name = "conditional lifting under abstractions",
+       key = SOME([], “\x:'a. COND p (q x:'b) (r x)”),
+       trace = 2}
+    ],
+    dprocs = [], filter = NONE,
+    rewrs = [(SOME {Thy = "bool",Name = "COND_RATOR"}, boolTheory.COND_RATOR),
+             (SOME {Thy = "bool",Name = "COND_EXPAND"},boolTheory.COND_EXPAND),
+             (SOME {Thy = "", Name = "NESTED_COND"}, NESTED_COND)]}
 
 val LIFT_COND_ss = simpLib.SSFRAG
   {name=SOME"LIFT_COND",
@@ -292,8 +298,9 @@ val LIFT_COND_ss = simpLib.SSFRAG
              key = SOME([], Term`\x:'a. COND p (q x:'b) (r x)`),
              trace = 2}],
    dprocs = [], filter = NONE,
-   rewrs = [(SOME "COND_RATOR", boolTheory.COND_RATOR),
-            (SOME "NESTED_COND", NESTED_COND)]}
+   rewrs = [(SOME {Thy = "bool", Name =  "COND_RATOR"}, boolTheory.COND_RATOR),
+            (SOME {Thy = "", Name = "NESTED_COND"}, NESTED_COND)]
+  }
 
 
 (* ----------------------------------------------------------------------
@@ -349,6 +356,16 @@ val NORMEQ_ss = simpLib.SSFRAG {
   dprocs = [],
   filter = NONE,
   name = SOME "NORMEQ_ss", rewrs = []}
+
+val LABEL_CONG = REFL “l1 :- t”
+val LABEL_CONG_ss = simpLib.SSFRAG {
+      ac = [],
+      congs = [LABEL_CONG],
+      convs = [],
+      dprocs = [],
+      filter = NONE,
+      name = SOME "NORMEQ_ss", rewrs = []}
+
 
 (* ----------------------------------------------------------------------
     Congruence rules for rewriting on one side or the other of a goal's

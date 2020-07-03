@@ -3,7 +3,7 @@
 <!-- search and replace ?????? strings corresponding to release name -->
 <!-- indent code within bulleted lists to column 11 -->
 
-(Released: ???)
+(Released: )
 
 We are pleased to announce the ?????? release of HOL 4.
 
@@ -20,195 +20,190 @@ Contents
 New features:
 -------------
 
-*   We have implemented new syntaxes for `store_thm` and `save_thm`, which better satisfy the recommendation that `name1` and `name2` below should be the same:
+*   The special `Type` syntax for making type abbreviations can now map to `temp_type_abbrev` (or `temp_type_abbrev_pp`) by adding the `local` attribute to the name of the abbreviation.
 
-           val name1 = store_thm("name2", tm, tac);
+    For example
 
-    Now we can remove the “code smell” by writing either
+           Type foo[local] = “:num -> bool # num”
 
-           Theorem name tm-quotation tac
+    or
 
-    which will typically look like
-
-           Theorem name
-             ‘∀x. P x ⇒ Q x’
-             (rpt strip_tac >> ...);
-
-    or by writing with the general pattern
-
-           Theorem name: term-syntax
-           Proof tac
-           QED
-
-    which might look like
-
-           Theorem name:
-             ∀x. P x ⇒ Q x
-           Proof
-             rpt strip_tac >> ...
-           QED
-
-    This latter form must have the `Proof` and `QED` keywords in column 0 in order for the lexing machinery to detect the end of the term and tactic respectively.
-    Both forms map to applications of `Q.store_thm` underneath, with an ML binding also made to the appropriate name.
-    Both forms allow for theorem attributes to be associated with the name, so that one can write
-
-           Theorem ADD0[simp]: ∀x. x + 0 = x
-           Proof tactic
-           QED
-
-    Finally, to replace
-
-           val nm = save_thm(“nm”, thm_expr);
-
-    one can now write
-
-           Theorem nm = thm_expr
-
-    These names can also be given attributes in the same way.
-
--   Holmake now understands targets whose suffixes are the string `Theory` to be instructions to build all of the files associated with a theory.
-    Previously, to specifically get `fooTheory` built, it was necessary to write
-
-           Holmake fooTheory.uo
-
-    which is not particularly intuitive.
+           Type foo[local,pp] = “:num -> bool # num”
 
     Thanks to Magnus Myreen for the feature suggestion.
 
--   Users can now remove rewrites from simpsets, adjusting the behaviour of the simplifier.
-    This can be done with the `-*` operator
+*   We have added a special syntactic form `Overload` to replace various flavours of `overload_on` calls.
+    The core syntax is exemplified by
 
-           SIMP_TAC (bool_ss -* [“APPEND_ASSOC”]) [] >> ...
+           Overload foo = “myterm”
 
-    or with the `Excl` form in a theorem list:
+    Attributes can be added after the name.
+    Possible attributes are `local` (for overloads that won’t be exported) and `inferior` to cause a call `inferior_overload_on` (which makes the overload the pretty-printer’s last choice).
 
-           simp[Excl “APPEND_ASSOC”] >> ...
+    Thanks to Magnus Myreen for the feature suggestion.
 
-    The stateful simpset (which is behind `srw_ss()` and tactics such as `simp`, `rw` and `fs`) can also be affected more permanently by making calls to `delsimps`:
+*   It is now possible to write `let`-expressions more smoothly inside monadic `do`-`od` blocks.
+    Rather than have to write something like
 
-           val _ = delsimps [“APPEND_ASSOC”]
+           do
+             x <- M1;
+             let y = E
+             in
+               do
+                 z <- M2 x y;
+                 return (f z);
+               od
+           od
 
-    Such a call will affect the stateful simpset for the rest of the containing script-file and in all scripts that inherit this theory.
-    As is typical, there is a `temp_delsimps` that removes the rewrite for the containing script-file only.
+    one can replace the `let`-bindings with uses of the `<<-` arrow:
 
--   Users can now require that a simplification tactic use particular rewrites.
-    This is done with the `Req0` and `ReqD` special forms.
-    The `Req0` form requires that the goalstate(s) pertaining after the application of the tactic have no sub-terms that match the pattern of the theorems’ left-hand sides.
-    The `ReqD` form requires that the number of matching sub-terms should have decreased.
-    (This latter is implicitly a requirement that the original goal *did* have some matching sub-terms.)
-    We hope that both forms will be useful in creating maintainable tactics.
-    See the DESCRIPTION manual for more details.
+           do
+             x <- M1;
+             y <<- E;
+             z <- M2 x y;
+             return (f z)
+           od
 
-    Thanks to Magnus Myreen for this feature suggestion ([Github issue](https://github.com/HOL-Theorem-Prover/HOL/issues/680)).
+    (The `<<-` line above is semantically identical to writing `y <- return E`, but is nonetheless syntactic sugar for a `let`-expression.)
+
+    The pretty-printer reverses this transformation.
+
+    Thanks to Hrutvik Kanabar for the implementation of this feature.
 
 Bugs fixed:
 -----------
 
+*  `extrealTheory`: the old definition of `extreal_add` wrongly allows
+   `PosInf + NegInf = PosInf`, while the definition of `extreal_sub` wrongly
+    allows `PosInf - PosInf = PosInf` and `NegInf - NegInf = PosInf`. Now
+    these cases are unspecified, so is division-by-zero (which is indeed
+    allowed for reals in `realTheory`). As a consequence, now all
+   `EXTREAL_SUM_IAMGE`-related theorems require that there must be no
+    mixing of `PosInf` and `NegInf` in the sum elements.
+    A bug in `ext_suminf` with non-positive functions is also fixed.
+
+    There is a minor backwards-incompatibility: the above changes may
+    lead to more complicated proofs when using extreals, while better
+    alignments with textbook proofs are achieved, on the other hand.
+
 New theories:
 -------------
 
-*   `real_topologyTheory`: a rather complete theory of Elementary
-    Topology in Euclidean Space, ported by Muhammad Qasim and Osman
-    Hasan from HOL-light (up to 2015). The part of General Topology
-    (independent of `realTheory`) is now available at
-    `topologyTheory`; the old `topologyTheory` is renamed to
-    `metricTheory`.
+*  `derivativeTheory` and `integrationTheory`: univariate
+    differential and integral calculus (based on Henstock-Kurzweil
+    Integral, or gauge integral), ported by Muhammad Qasim and Osman
+    Hasan from HOL Light (up to 2015).
 
-    There is a minor backwards-incompatibility: old proof scripts using
-    the metric-related results in previous `topologyTheory` should now
-    open `metricTheory` instead. (Thanks to Chun Tian for this work.)
+*   HOL now provides measure and probability theories based on extended real
+    numbers, i.e. the type of measure (probability) is `('a set) -> extreal`.
+    The following new (or updated) theories are provided:
 
-*   Holmakefiles can now refer to the new variable `DEFAULT_TARGETS` in order to generate a list of the targets in the current directory that Holmake would attempt to build by default.
-    This provides an easier way to adjust makefiles than that suggested in the [release notes for Kananaskis-10](http://hol-theorem-prover.org/kananaskis-10.release.html).
+        sigma_algebraTheory      * Sigma-algebra and other system of sets
+        measureTheory            * Measure Theory defined on extended reals
+        real_borelTheory         * Borel-measurable sets generated from reals
+        borelTheory              * Borel sets (extreal) and Borel measurable functions
+        lebesgueTheory           * Lebesgue integration theory
+        martingaleTheory         * Martingales based on sigma-finite filtered measure space
+        probabilityTheory        * Probability Theory based on extended reals
+
+    Notable theorems include: Caratheory's Extension Theorem (for semiring),
+    the construction of 1-dimensional Borel and Lebesgue measure spaces,
+    Radon-Nikodym theorem, Bayes' Rule (Conditional Probability),
+    Kolmogorov 0-1 Law, Borel-Cantelli Lemma, Markov/Chebyshev's inequalities,
+    convergence concepts of random sequences and the Law(s) of Large Numbers.
+
+    There is a major backwards-incompatibility: old proof scripts based on
+    real-valued measure and probability theories should now open the following
+    legacy theories instead: `sigma_algebraTheory`, `real_measureTheory`,
+   `real_borelTheory`, `real_lebesgueTheory` and `real_probabilityTheory`.
+    These legacy theories are stil maintained to support __examples/miller__ and
+    __examples/diningcryptos__, etc.
+
+    Thanks to Muhammad Qasim, Osman Hasan, Liya Liu and Waqar Ahmad et al. for
+    the original work, and Chun Tian for the integration and further extension.
 
 New tools:
 ----------
 
+*  `holwrap.py`: a simple python script that 'wraps' hol in a similar fashion
+    to rlwrap. Features include multiline input, history and basic StandardML
+    syntax highlighting.
+    See the comments at the head of the script for usage instructions.
+
 New examples:
----------
+-------------
+
+*  __algebra__: an abstract algebra library for HOL4. The algebraic types
+    are generic, so the library is useful in general.
+    The algebraic structures consist of
+    `monoidTheory` for monoids with identity, `groupTheory` for groups,
+    `ringTheory` for commutative rings, `fieldTheory` for fields,
+    `polynomialTheory` for polynomials with coefficients from rings or fields,
+    `linearTheory` for vector spaces, including linear independence, and
+    `finitefieldTheory` for finite fields, including existence and uniqueness.
+
+*  __simple_complexity__: a simple theory of recurrence loops to assist the
+    computational complexity analysis of algorithms. The ingredients are
+    `bitsizeTheory` for the complexity measure using binary bits,
+    `complexityTheory` for the big-O complexity class,
+    and `loopTheory` for various recurrence loop patterns of iteration steps.
+
+*  __AKS__: the mechanisation of the AKS algorithm, contributed by Hing Lun Chan
+    from his PhD work.
+
+    The theory behind the AKS algorithm is delivered in __AKS/theories__,
+    starting with `AKSintroTheory`, the introspective relation,
+    culminating in `AKSimprovedTheory`, proving that the AKS algorithm is a primality test.
+    The underlying theories are based on finite fields, hence making use of
+    `finitefieldTheory` in __algebra__.
+
+    An implementation of the AKS algorithm is shown to execute in polynomial-time:
+    the pseudo-codes of subroutines are given in __AKS/compute__, and the corresponding
+    implementations in monadic style are given in __AKS/machine__, which includes a
+    simple machine model outlined in `countMonadTheory` and `countMacroTheory`.
+    Run-time analysis of subroutines is based on `loopTheory` in __simple_complexity__.
+
+    The AKS main theorems and proofs have been cleaned up in `AKScleanTheory`.
+    For details, please refer to his [PhD thesis](http://hdl.handle.net/1885/177195).
+
 
 Incompatibilities:
 ------------------
 
-*   The `term` type is now declared so that it is no longer what SML refers to as an “equality type”.
-    This means that SML code that attempts to use `=` or `<>` on types that include terms will now fail to compile.
-    Unlike in Haskell, we cannot redefine the behaviour of equality and must accept the SML implementation’s best guess as to what equality is.
-    Unfortunately, the SML equality on terms is *not* correct.
-    As has long been appreciated, it distinguishes `“λx.x”` and `“λy.y”`, which is bad enough.
-    However, in the standard kernel, where explicit substitutions may be present in a term representation, it can also distinguish terms that are not only semantically identical, but also even print the same.
+*   The theorem `rich_listTheory.REVERSE` (alias of `listTheory.REVERSE_SNOC_DEF`)
+    has been removed because `REVERSE` is also a tactical (`Tactical.REVERSE`).
 
-    This incompatibility will mostly affect people writing SML code.
-    If broken code is directly calling `=` on terms, the `~~` infix operator can be used instead (this is the tupled version of `aconv`).
-    Similarly, `<>` can be replaced by `!~`.
-    If broken code includes something like `expr <> NONE` and `expr` has type `term option`, then combinators from `Portable` for building equality tests should be used.
-    In particular, the above could be rewritten to
+*  `listTheory` and `rich_listTheory`: Some theorems have been generalized.
 
-           not (option_eq aconv expr NONE)
+    For example, `EVERY_{TAKE, DROP, BUTLASTN, LASTN}` had unnecessary preconditions.
+    As a result of some theorems being generalized, some `_IMP` versions of the same
+    theorems have been dropped, as they are now special cases of the non-`_IMP` versions.
 
-    It is possible that a tool will want to compare terms for exact syntactic equality up to choice of bound names.
-    The `identical` function can be used for this.
-    Note that we strongly believe that uses of this function will only occur in very niche cases.
-    For example, it is used just twice in the distribution as of February 2019.
+    Also, `DROP_NIL` has been renamed to `DROP_EQ_NIL`, to avoid having both `DROP_nil`
+    and `DROP_NIL` around. Furthermore, `>=` in the theorem statement has been replaced with `<=`.
 
-    There are a number of term-specific helper functions defined in `boolLib` to help in writing specific cases.
-    For example
+*   Renamed theorems in `pred_setTheory`: `SUBSET_SUBSET_EQ` -> `SUBSET_ANTISYM_EQ`
+    (compatible with HOL Light).
 
-           val memt : term list -> term -> bool
-           val goal_eq : (term list * term) -> (term list * term) -> bool
-           val tassoc : term -> (term * ‘a) list -> ‘a
-           val xtm_eq : (‘’a * term) -> (‘’a * term) -> bool
+* The theorem `SORTED_APPEND_trans_IFF` has been moved from `alist_treeTheory` into `sortingTheory`.
+  The moved theorem is now available as `SORTED_APPEND`, and the old `SORTED_APPEND` is now available as `SORTED_APPEND_IMP`.
+  To avoid confusion, as `SORTED_APPEND` is now an (conditional) equality, `SORTED_APPEND_IFF` has been renamed to `SORTED_APPEND_GEN`.
 
-*   The `Holmake` tool now behaves with the `--qof` behaviour enabled by default.
-    This means that script files which have a tactic failure occur will cause the building of the corresponding theory to fail, rather than having the build continue with the theorem “cheated”.
-    We think this will be less confusing for new users.
-    Experts who *do* want to have script files continue past such errors can use the `--noqof` option to enable the old behaviour.
+*   The definition `SORTED_DEF` is now an automatic rewrite, meaning that terms of the form `SORTED R (h1::h2::t)` will now rewrite to `R h1 h2 /\ SORTED (h2::t)` (in addition to the existing automatic rewrites for `SORTED R []` and `SORTED R [x]`).
+    To restore the old behaviour it is necessary to exclude `SORTED_DEF` (use `temp_delsimps`), and reinstate `SORTED_NIL` and `SORTED_SING` (use `augment_srw_ss [rewrites [thmnames]]`).
 
-*   When running with Poly/ML, we now require at least version 5.7.0.
 
-*   The `type_abbrev` function now affects only the type parser.
-    The pretty-printer will not use the new abbreviation when printing types.
-    If the old behaviour of printing the abbreviations as well as parsing them is desired, the new entrypoint `type_abbrev_pp` should be used.
-
-*   The `Globals.priming` reference variable has been removed.
-    All priming done by the kernel is now by appending extra prime (apostrophe) characters to the names of variables.
-    This also means that this is the only form of variation introduced by the `variant` function.
-    However, there is also a new `numvariant` function, which makes the varying function behave as if the old `Globals.priming` was set to `SOME ""` (introduces and increments a numeric suffix).
-
-*   By default, goals are now printed with the trace variable `"Goalstack.print_goal_at_top"` set to false.
-    This means goals now print like
-
-            0.  p
-            1.  q
-           ------------------------------------
-                r
-
-    The motivation is that when goal-states are very large, the conclusion (which we assume is the most important part of the state) runs no risk of disappearing off the top of the screen.
-    We also believe that having the conclusion and most recent assumption at the bottom of the screen is easier for human eyes to track.
-    The trace variable can be changed back to the old behaviour with:
-
-           val _ = set_trace "Goalstack.print_goal_at_top" 1;
-
-    This instruction can be put into script files, or (better) put into your `~/.hol-config.sml` file so that all interactive sessions are automatically adjusted.
-
-*   This is arguably also a bug-fix: it is now impossible to rebind a theorem to a name that was associated with a definition, and have the new theorem silently be added to the `EVAL` compset for future theories’ benefit.
-    In other words, it was previously possible to do
-
-           val _ = Define`foo x = x + 1`;
-           EVAL “foo 6”;     (* returns ⊢ foo 6 = 7 *)
-
-           val _ = Q.save_thm (“foo_def”, thm);
-
-    and have the effect be that `thm` goes into `EVAL`’s compset in descendent theories.
-
-    Now, when this happens, the change to the persistent compset is dropped.
-    If the user wants the new `foo_def` to appear in the `EVAL`-compset in future theories, they must change the call to `save_thm` to use the name `"foo_def[compute]"`.
-    Now, as before, the old `foo_def` cannot be seen by future theories at all, and so certainly will not be in the `EVAL`-compset.
+* The syntax for *greater than* in `intSyntax` and `realSyntax` is consistently
+  named as in `numSyntax`: The functions `great_tm`,`dest_great` and `mk_great`
+  become `greater_tm`, `dest_greater` and `mk_greater`, respectively.
+  Additionally, `int_arithTheory.add_to_great` is renamed to
+  `int_arithTheory.add_to_greater`.
 
 * * * * *
 
 <div class="footer">
 *[HOL4, ??????](http://hol-theorem-prover.org)*
 
-[Release notes for the previous version](kananaskis-12.release.html)
+[Release notes for the previous version](kananaskis-13.release.html)
 
 </div>

@@ -18,6 +18,9 @@ type data_entry =
     latex         : string option,
     pages         : string Redblackset.set}
 
+type data_entry_transform = data_entry -> data_entry
+
+
 val default_data_entry =
   ({label         = NONE,
     in_index      = false,
@@ -250,7 +253,8 @@ fun data_entry_is_used
    (in_index orelse isSome pos_opt);
 
 
-val new_data_substore = (Redblackmap.mkDict scomp):(string, data_entry) Redblackmap.dict
+val new_data_substore =
+    (Redblackmap.mkDict scomp):(string, data_entry) Redblackmap.dict
 
 val new_data_store  =  (*Thms, Terms, Types*)
    (new_data_substore, new_data_substore, new_data_substore);
@@ -261,15 +265,17 @@ val new_data_store  =  (*Thms, Terms, Types*)
    val key2 = "Term_ID_1"
    fun upf e = data_entry___add_page e "1";
 *)
-type data_store_ty = ((string, data_entry) Redblackmap.dict * (string, data_entry) Redblackmap.dict * (string, data_entry) Redblackmap.dict);
+type data_store_ty = (string, data_entry) Redblackmap.dict *
+                     (string, data_entry) Redblackmap.dict *
+                     (string, data_entry) Redblackmap.dict
 
 local
    fun update_data_substore (allow_new,error_fun) sds (key:string) upf =
    let
       open Redblackmap
-      val (ent,ok) = (find (sds, key),true) handle NotFound => (default_data_entry, allow_new);
-      val sds' = if ok then (insert(sds,key,upf ent)) else
-            (error_fun key;sds)
+      val (ent,ok) = (find (sds, key),true)
+          handle NotFound => (default_data_entry, allow_new);
+      val sds' = if ok then (insert(sds,key,upf ent)) else (error_fun key;sds)
    in
       sds'
    end;
@@ -278,29 +284,29 @@ local
        error_fun ("Undefined "^type_def^" '"^s^"'!");
 in
 
-fun update_data_store (allow_new,error_fun) (sds_thm,sds_term,sds_type) "Thm" key upf =
-   (update_data_substore (true, unknown_def ("Thm", error_fun)) sds_thm key upf,sds_term,sds_type)
-| update_data_store (allow_new,error_fun) (sds_thm,sds_term,sds_type) "Term" key upf =
-   (sds_thm, update_data_substore
-        (allow_new, unknown_def ("Term", error_fun)) sds_term key upf,sds_type)
-| update_data_store (allow_new,error_fun) (sds_thm,sds_term,sds_type) "Type" key upf =
-   (sds_thm, sds_term, update_data_substore
-       (allow_new, unknown_def ("Type", error_fun)) sds_type key upf)
-| update_data_store _ _ ty _ _ =
-   Feedback.failwith ("Unkwown entry_type '"^ty^"'!")
+fun update_data_store p t tyname key upf =
+    let
+      val (allow_new,error_fun) = p
+      val (sds_thm,sds_term,sds_type) = t
+    in
+      case tyname of
+          "Thm" =>
+            (update_data_substore
+               (true, unknown_def ("Thm", error_fun)) sds_thm key upf,
+             sds_term,sds_type)
+        | "Term" =>
+            (sds_thm,
+             update_data_substore
+               (allow_new, unknown_def ("Term", error_fun)) sds_term key upf,
+             sds_type)
+        | "Type" =>
+            (sds_thm, sds_term,
+             update_data_substore
+               (allow_new, unknown_def ("Type", error_fun)) sds_type key upf)
+        | _ => Feedback.failwith ("Unkwown entry_type '"^tyname^"'!")
+    end
 
 end;
-
-
-
-
-
-
-
-
-
-
-
 
 type parse_entry =
    {id          : (string * string),

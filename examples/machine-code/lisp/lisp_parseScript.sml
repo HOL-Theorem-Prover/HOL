@@ -1,4 +1,5 @@
 open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_parse";
+val _ = ParseExtras.temp_loose_equality()
 
 open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
 open combinTheory finite_mapTheory addressTheory stringTheory helperLib;
@@ -1202,7 +1203,9 @@ val sexp_inject_def = Define `
 
 val parse_tac =
   REPEAT STRIP_TAC
-  \\ SIMP_TAC std_ss [sexp2tokens_def,rich_listTheory.REVERSE,rich_listTheory.SNOC_APPEND,APPEND,REVERSE_APPEND,GSYM APPEND_ASSOC]
+  \\ SIMP_TAC std_ss [sexp2tokens_def,listTheory.REVERSE_SNOC_DEF,
+                      rich_listTheory.SNOC_APPEND,APPEND,REVERSE_APPEND,
+                      GSYM APPEND_ASSOC]
   \\ ASM_SIMP_TAC std_ss [sexp_parse_def] \\ CONV_TAC (DEPTH_CONV stringLib.string_EQ_CONV)
   \\ SIMP_TAC std_ss [NOT_CONS_NIL,HD,TL,CAR_def]
 
@@ -1238,18 +1241,21 @@ val sexp_parse_lemma = prove(
   completeInduct_on `LSIZE exp` \\ REVERSE Cases
   THEN1
    (REPEAT STRIP_TAC \\ IMP_RES_TAC sexp_ok_Sym
-    \\ SIMP_TAC std_ss [sexp2tokens_def,rich_listTheory.REVERSE,rich_listTheory.SNOC_APPEND,APPEND]
+    \\ SIMP_TAC std_ss [sexp2tokens_def,listTheory.REVERSE_SNOC_DEF,
+                        rich_listTheory.SNOC_APPEND,APPEND]
     \\ Cases_on `b` \\ ASM_SIMP_TAC std_ss [sexp_parse_def] \\ SIMP_TAC std_ss [sexp_inject_def])
   THEN1
    (REPEAT STRIP_TAC \\ IMP_RES_TAC sexp_ok_Val \\ IMP_RES_TAC is_number_string_IMP
-    \\ SIMP_TAC std_ss [sexp2tokens_def,rich_listTheory.REVERSE,rich_listTheory.SNOC_APPEND,APPEND]
+    \\ SIMP_TAC std_ss [sexp2tokens_def,listTheory.REVERSE_SNOC_DEF,
+                        rich_listTheory.SNOC_APPEND,APPEND]
     \\ Cases_on `b` \\ ASM_SIMP_TAC std_ss [sexp_parse_def,str2num_num2str,sexp_inject_def])
   \\ Q.ABBREV_TAC `exp = S'` \\ Q.ABBREV_TAC `exp' = S0`
   \\ REPEAT (Q.PAT_X_ASSUM `Abbrev bbb` (K ALL_TAC))
   \\ NTAC 2 STRIP_TAC
   \\ REWRITE_TAC [sexp2tokens_def]
   \\ Cases_on `isQuote (Dot exp exp') /\ b` \\ ASM_SIMP_TAC std_ss [] THEN1
-   (REWRITE_TAC [REVERSE_APPEND,rich_listTheory.REVERSE,rich_listTheory.SNOC_APPEND,APPEND,GSYM APPEND_ASSOC]
+   (REWRITE_TAC [REVERSE_APPEND,listTheory.REVERSE_SNOC_DEF,
+                 rich_listTheory.SNOC_APPEND,APPEND,GSYM APPEND_ASSOC]
     \\ FULL_SIMP_TAC std_ss [isQuote_thm,SExp_11,CAR_def,sexp_ok_def]
     \\ REPEAT STRIP_TAC
     \\ `LSIZE y < LSIZE (Dot (Sym "quote") (Dot y (Sym "nil")))` by

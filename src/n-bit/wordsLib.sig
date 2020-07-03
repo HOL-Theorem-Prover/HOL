@@ -27,6 +27,7 @@ sig
     val BIT_SET_CONV        : conv
     val BITS_INTRO_CONV     : conv
     val WORD_ARITH_CONV     : conv
+    val WORD_ADD_CANON_CONV : conv
     val WORD_CANCEL_CONV    : conv
     val WORD_LOGIC_CONV     : conv
     val WORD_SUB_CONV       : conv
@@ -64,9 +65,6 @@ sig
 
     val prefer_word         : unit -> unit
     val deprecate_word      : unit -> unit
-
-    val word_pp_mode        : int ref
-    val output_words_as     : (int * Arbnum.num -> string) -> unit
 
     val output_words_as_bin : unit -> unit
     val output_words_as_oct : unit -> unit

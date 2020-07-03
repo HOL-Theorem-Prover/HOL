@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* FILE          : psTermGen.sml                                             *)
-(* DESCRIPTION   : Synthesis of terms for conjecturing lemmas                *)
+(* DESCRIPTION   : Term generation algorithms                                *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2018                                                      *)
 (* ========================================================================= *)
@@ -12,63 +12,103 @@ open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "psTermGen"
 
+fun product_real rl = case rl of
+    [] => 1.0
+  | a :: m => a * product_real m
+
+fun sum_real rl = case rl of
+    [] => 0.0
+  | a :: m => a + sum_real m
+
+fun im_ty oper = snd (strip_type (type_of oper))
+
 (* -------------------------------------------------------------------------
-   Random terms for a fixed size (top-down).
+   Number of terms of each type and size.
    ------------------------------------------------------------------------- *)
 
-fun random_term tycdict (size,ty) =
-  if size <= 0 then raise ERR "random_term" "<= 0" else
-  if size = 1 then hd (shuffle (dfind ty tycdict)) else
-  let
-    fun f x =
-      let val (tyargl,im) = strip_type x in
-        im = ty andalso length tyargl <= size - 1 andalso length tyargl > 0
-      end
-    val tyl  = filter f (dkeys tycdict)
-    val tml  = List.concat (map (fn x => dfind x tycdict) tyl)
-    val oper =
-      if null tml then raise ERR "random_term" "" else hd (shuffle tml)
-    val (tyargl,_) = strip_type (type_of oper)
-    val sizel = hd (shuffle (number_partition (length tyargl) (size - 1)))
-    val argl = map (random_term tycdict) (combine (sizel,tyargl))
-  in
-    list_mk_comb (oper,argl)
+fun ntermc cache operl (size,ty) =
+  if size <= 0 then 0.0 else
+  dfind (size,ty) (!cache) handle NotFound =>
+  let val n = sum_real (map (ntermc_oper cache operl (size,ty)) operl) in
+    cache := dadd (size,ty) n (!cache); n
   end
-
-fun n_random_term n cset (size,ty) =
-  let val tycdict = dregroup Type.compare (map (fn x => (type_of x, x)) cset)
-  in
-    map (random_term tycdict) (List.tabulate (n,fn _ => (size,ty)))
-  end
-
-fun uniform_term n cset (size,ty) =
-  let
-    val cjl0 = mapfilter (n_random_term (n * 10) cset)
-      (List.tabulate (size + 1,fn x => (x,ty)))
-    val cjl1 = map (first_n n o shuffle o mk_fast_set Term.compare) cjl0
-  in
-    List.concat cjl1
+and ntermc_oper cache operl (size,ty) oper =
+  let val (tyargl,im) = strip_type (type_of oper) in
+    if ty <> im orelse size <= 0 then 0.0 else
+    if null tyargl andalso size <> 1 then 0.0 else (* first-order *)
+    if null tyargl andalso size = 1 then 1.0 else
+    let
+      val nll = number_partition (length tyargl) (size - 1)
+                handle HOL_ERR _ => []
+      fun f nl = product_real (map (ntermc cache operl) (combine (nl,tyargl)))
+    in
+      sum_real (map f nll)
+    end
   end
 
 (* -------------------------------------------------------------------------
-   Random terms of a fixed size (bottom-up)
+   Random terms. Generate with respect to uniform probability over
+   all possible terms of certain size and type.
+   ------------------------------------------------------------------------- *)
+
+fun random_termc cache operl (size,ty) =
+  if ntermc cache operl (size,ty) < epsilon
+    then raise ERR "random_term" "" else
+  let
+    val freql1 = map_assoc (ntermc_oper cache operl (size,ty)) operl
+    val freql2 = filter (fn x => snd x > epsilon) freql1
+  in
+    random_termc_oper cache operl (size,ty) (select_in_distrib freql2)
+  end
+and random_termc_oper cache operl (size,ty) oper =
+  let val (tyargl,im) = strip_type (type_of oper) in
+    if ntermc_oper cache operl (size,ty) oper <= epsilon
+      then raise ERR "random_term_oper" "" else
+    if null tyargl then oper else
+    let
+      val nll = number_partition (length tyargl) (size - 1)
+                handle HOL_ERR _ => raise ERR "random_term_oper" ""
+      fun f nl =
+        (product_real (map (ntermc cache operl) (combine (nl,tyargl))))
+      val freql1 = map_assoc f nll
+      val freql2 = filter (fn x => snd x > epsilon) freql1
+      val nl_chosen = select_in_distrib freql2
+      val argl = map (random_termc cache operl) (combine (nl_chosen,tyargl))
+    in
+      list_mk_comb (oper,argl)
+    end
+  end
+
+(* -------------------------------------------------------------------------
+   Functions with no cache
+   ------------------------------------------------------------------------- *)
+
+fun nterm operl (size,ty) =
+  let val cache = ref (dempty (cpl_compare Int.compare Type.compare)) in
+    ntermc cache operl (size,ty)
+  end
+
+fun random_term operl (size,ty) =
+  let val cache = ref (dempty (cpl_compare Int.compare Type.compare)) in
+    random_termc cache operl (size,ty)
+  end
+
+fun random_terml operl (size,ty) n =
+  let val cache = ref (dempty (cpl_compare Int.compare Type.compare)) in
+    List.tabulate (n, fn _ => random_termc cache operl (size,ty))
+  end
+
+(* -------------------------------------------------------------------------
+   All terms up to a fixed size with a certain type
    ------------------------------------------------------------------------- *)
 
 fun is_applicable (ty1,ty2) =
-  let fun apply ty1 ty2 =
-    mk_comb (mk_var ("x",ty1), mk_var ("y",ty2))
-  in
+  let fun apply ty1 ty2 = mk_comb (mk_var ("x",ty1), mk_var ("y",ty2)) in
     can (apply ty1) ty2
   end
 
 fun all_mk_comb d1 d2 (ty1,ty2) =
-  let
-    val tml1 = dfind ty1 d1
-    val tml2 = dfind ty2 d2
-    val l = cartesian_product tml1 tml2
-  in
-    map mk_comb l
-  end
+  map mk_comb (cartesian_product (dfind ty1 d1) (dfind ty2 d2))
 
 fun gen_size cache n =
   (if n <= 0 then dempty Type.compare else dfind n (!cache))
@@ -91,55 +131,14 @@ fun gen_size cache n =
     cache := dadd n d3 (!cache); d3
   end
 
-fun gen_term_size size (ty,cset) =
+fun gen_term operl (size,ty) =
   let
-    val tycset = map (fn x => (type_of x, x)) cset
+    val tycset = map (fn x => (type_of x, x)) operl
     val d = dregroup Type.compare tycset
     val cache = ref (dnew Int.compare [(1,d)])
-    fun g n = dfind ty (gen_size cache n) handle NotFound => []
+    fun g n = dfind ty (gen_size cache (n+1)) handle NotFound => []
   in
     List.concat (List.tabulate (size, g))
   end
-
-fun gen_term_nmax nmax (ty,cset) =
-  let
-    val tycset = map (fn x => (type_of x, x)) cset
-    val d = dregroup Type.compare tycset
-    val cache = ref (dnew Int.compare [(1,d)])
-    fun f acc size =
-      if length acc >= nmax then first_n nmax acc else
-      let
-        val tml = dfind ty (gen_size cache size) handle NotFound => []
-        val newacc = acc @ tml
-      in
-        f newacc (size + 1)
-      end
-  in
-    f [] 1
-  end
-
-(* -------------------------------------------------------------------------
-   Mini-game 1 problem of Deciding if something is true or not.
-   Pick for itself what it thinks it would train it better.
-   Improve upon Mini-Game 2. Faster training by online training.
-   ------------------------------------------------------------------------- *)
-
-(*
-val tml = gen_term_nmax 100000 (bool,
-[``0``,``SUC``,``$+``,``$*``,
- ``$= :num -> num -> bool``]);
-
-fun f tm =
-  let
-    val d = count_dict (dempty Term.compare) (find_terms is_var tm)
-    fun test (_,b) = b >= 2
-  in
-    all test (dlist d) andalso dlength d > 1
-  end
-
-val tml' = filter f tml;
-
-val thml = mapfilter DECIDE tml';
-*)
 
 end (* struct *)

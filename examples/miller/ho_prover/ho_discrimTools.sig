@@ -2,20 +2,20 @@ signature ho_discrimTools =
 sig
 
   (* Types *)
-  type 'a thunk = 'a HurdUseful.thunk
-  type term = HurdUseful.term
-  type thm = HurdUseful.thm
-  type conv = HurdUseful.conv
-  type rule = HurdUseful.rule
-  type tactic = HurdUseful.tactic
-  type thm_tactic = HurdUseful.thm_tactic
-  type thm_tactical = HurdUseful.thm_tactical
-  type vars = HurdUseful.vars
-  type vterm = HurdUseful.vterm
-  type substitution = HurdUseful.substitution
-  type raw_substitution = HurdUseful.raw_substitution
-  type ho_substitution = HurdUseful.ho_substitution
-  type ho_raw_substitution = HurdUseful.ho_raw_substitution
+  type 'a thunk = 'a hurdUtils.thunk
+  type term = hurdUtils.term
+  type thm = hurdUtils.thm
+  type conv = hurdUtils.conv
+  type rule = hurdUtils.rule
+  type tactic = hurdUtils.tactic
+  type thm_tactic = hurdUtils.thm_tactic
+  type thm_tactical = hurdUtils.thm_tactical
+  type vars = hurdUtils.vars
+  type vterm = hurdUtils.vterm
+  type substitution = hurdUtils.substitution
+  type raw_substitution = hurdUtils.raw_substitution
+  type ho_substitution = hurdUtils.ho_substitution
+  type ho_raw_substitution = hurdUtils.ho_raw_substitution
 
   (* term discriminators *)
   type 'a discrim

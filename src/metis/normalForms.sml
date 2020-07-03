@@ -83,7 +83,7 @@ fun AVOID_SPEC_TAC (tm, v) =
 
 local
   open tautLib;
-  val th = prove (``(a = b) /\ (c = d) ==> (a /\ c = b /\ d)``, TAUT_TAC);
+  val th = prove (``(a <=> b) /\ (c <=> d) ==> (a /\ c <=> b /\ d)``, TAUT_TAC);
   val (a, b, c, d) = (``a:bool``, ``b:bool``, ``c:bool``, ``d:bool``);
 in
   fun MK_CONJ_EQ th1 th2 =
@@ -96,7 +96,7 @@ in
 end;
 
 local
-  val th = prove (``(a /\ b) /\ c = b /\ (a /\ c)``, tautLib.TAUT_TAC);
+  val th = prove (``(a /\ b) /\ c <=> b /\ (a /\ c)``, tautLib.TAUT_TAC);
   val (a, b, c) = (``a:bool``, ``b:bool``, ``c:bool``);
 in
   fun CONJ_RASSOC_CONV tm =
@@ -109,7 +109,7 @@ in
 end;
 
 local
-  val th = prove (``(a \/ b) \/ c = b \/ (a \/ c)``, tautLib.TAUT_TAC);
+  val th = prove (``(a \/ b) \/ c <=> b \/ (a \/ c)``, tautLib.TAUT_TAC);
   val (a, b, c) = (``a:bool``, ``b:bool``, ``c:bool``);
 in
   fun DISJ_RASSOC_CONV tm =
@@ -250,7 +250,10 @@ val MK_o = prove
 val SKICo_SS =
   simpLib.SSFRAG
   {name=SOME"SKICo",
-   convs = [], rewrs = [(SOME "I_o_ID", combinTheory.I_o_ID)], congs = [],
+   convs = [],
+   rewrs = [
+     (SOME{Thy = "combin", Name = "I_o_ID"}, combinTheory.I_o_ID)
+   ], congs = [],
    filter = NONE, ac = [], dprocs = []};
 
 val SKICo_ss = simpLib.++ (SKI_ss, SKICo_SS);
@@ -301,39 +304,39 @@ val NOT_TRUE = prove (``~T = F``, tautLib.TAUT_TAC);
 val NOT_FALSE = prove (``~F = T``, tautLib.TAUT_TAC);
 
 val IMP_DISJ_THM' = prove
-  (``!x y. x ==> y = y \/ ~x``,
+  (``!x y. x ==> y <=> y \/ ~x``,
    tautLib.TAUT_TAC);
 
 val NIMP_CONJ_THM = prove
-  (``!x y. ~(x ==> y) = x /\ ~y``,
+  (``!x y. ~(x ==> y) <=> x /\ ~y``,
    tautLib.TAUT_TAC);
 
 val EQ_EXPAND' = prove
-  (``!x y. (x = y) = (x \/ ~y) /\ (~x \/ y)``,
+  (``!x y. (x <=> y) <=> (x \/ ~y) /\ (~x \/ y)``,
    tautLib.TAUT_TAC);
 
 val NEQ_EXPAND = prove
-  (``!x y. ~(x = y) = (x \/ y) /\ (~x \/ ~y)``,
+  (``!x y. ~(x <=> y) <=> (x \/ y) /\ (~x \/ ~y)``,
    tautLib.TAUT_TAC);
 
 val COND_EXPAND' = prove
-  (``!c a b. (if c then a else b) = ((~c \/ a) /\ (c \/ b))``,
+  (``!c a b. (if c then a else b) <=> ((~c \/ a) /\ (c \/ b))``,
    tautLib.TAUT_TAC);
 
 val NCOND_EXPAND = prove
-  (``!c a b. ~(if c then a else b) = ((~c \/ ~a) /\ (c \/ ~b))``,
+  (``!c a b. ~(if c then a else b) <=> ((~c \/ ~a) /\ (c \/ ~b))``,
    tautLib.TAUT_TAC);
 
 val DE_MORGAN_THM1 = prove
-  (``!x y. ~(x /\ y) = (~x \/ ~y)``,
+  (``!x y. ~(x /\ y) <=> (~x \/ ~y)``,
    tautLib.TAUT_TAC);
 
 val DE_MORGAN_THM2 = prove
-  (``!x y. ~(x \/ y) = (~x /\ ~y)``,
+  (``!x y. ~(x \/ y) <=> (~x /\ ~y)``,
    tautLib.TAUT_TAC);
 
 val NNF_EXISTS_UNIQUE = prove
-  (``!p. $?! p = ((?(x : 'a). p x) /\ !x y. p x /\ p y ==> (x = y))``,
+  (``!p. $?! p <=> ((?(x : 'a). p x) /\ !x y. p x /\ p y ==> (x = y))``,
    GEN_TAC THEN
    (KNOW_TAC ``$?! p = ?!(x : 'a). p x`` THEN1
     (CONV_TAC (DEPTH_CONV (ETA_CONV)) THEN REWRITE_TAC [])) THEN
@@ -341,7 +344,7 @@ val NNF_EXISTS_UNIQUE = prove
    REWRITE_TAC [EXISTS_UNIQUE_THM]);
 
 val NOT_EXISTS_UNIQUE = prove
-  (``!p. ~($?! p) = ((!(x : 'a). ~p x) \/ ?x y. p x /\ p y /\ ~(x = y))``,
+  (``!p. ~($?! p) <=> ((!(x : 'a). ~p x) \/ ?x y. p x /\ p y /\ ~(x = y))``,
    REWRITE_TAC [NNF_EXISTS_UNIQUE, DE_MORGAN_THM1] THEN
    CONV_TAC (TOP_DEPTH_CONV (NOT_EXISTS_CONV ORELSEC NOT_FORALL_CONV)) THEN
    REWRITE_TAC [NOT_IMP, CONJ_ASSOC]);
@@ -451,8 +454,8 @@ end;
 (* A basic tautology prover and simplifier for clauses                       *)
 (*                                                                           *)
 (* Examples:                                                                 *)
-(*   TAUTOLOGY_CONV:   p \/ r \/ ~p \/ ~q   =  T                             *)
-(*   CONTRACT_CONV:    (p \/ r) \/ p \/ ~q  =  p \/ r \/ ~q                  *)
+(*   TAUTOLOGY_CONV:   p \/ r \/ ~p \/ ~q  <=> T                             *)
+(*   CONTRACT_CONV:    (p \/ r) \/ p \/ ~q <=> p \/ r \/ ~q                  *)
 (* ------------------------------------------------------------------------- *)
 
 val BOOL_CASES = prove
@@ -460,31 +463,31 @@ val BOOL_CASES = prove
    tautLib.TAUT_TAC);
 
 val T_OR = prove
-  (``!t. T \/ t = T``,
+  (``!t. T \/ t <=> T``,
    tautLib.TAUT_TAC);
 
 val OR_T = prove
-  (``!t. t \/ T = T``,
+  (``!t. t \/ T <=> T``,
    tautLib.TAUT_TAC);
 
 val T_AND = prove
-  (``!t. T /\ t = t``,
+  (``!t. T /\ t <=> t``,
    tautLib.TAUT_TAC);
 
 val AND_T = prove
-  (``!t. t /\ T = t``,
+  (``!t. t /\ T <=> t``,
    tautLib.TAUT_TAC);
 
 val OR_F = prove
-  (``!t. t \/ F = t``,
+  (``!t. t \/ F <=> t``,
    tautLib.TAUT_TAC);
 
 val CONTRACT_DISJ = prove
-  (``!a b b'. (~a ==> (b = b')) ==> (~a ==> (a \/ b = b'))``,
+  (``!a b b'. (~a ==> (b <=> b')) ==> (~a ==> (a \/ b <=> b'))``,
    tautLib.TAUT_TAC);
 
 val DISJ_CONGRUENCE = prove
-  (``!a b b'. (~a ==> (b = b')) ==> (a \/ b = a \/ b')``,
+  (``!a b b'. (~a ==> (b <=> b')) ==> (a \/ b <=> a \/ b')``,
    tautLib.TAUT_TAC);
 
 local
@@ -631,7 +634,7 @@ val DNF_CONV = DNF_CONV' NO_CONV;
 (* ------------------------------------------------------------------------- *)
 
 val NEG_EQ = prove
-  (``!a b. ~(a = b) = (a = ~b)``,
+  (``!a b. ~(a <=> b) <=> (a <=> ~b)``,
    tautLib.TAUT_TAC);
 
 fun DEF_NNF_SUB_CONV c tm =
@@ -716,16 +719,16 @@ fun ATOM_CONV c tm = (if is_neg tm then RAND_CONV c else c) tm;
 
 val EQ_DEFCNF = prove
   (``!x y z.
-       (x = (y = z)) =
+       (x <=> (y <=> z)) <=>
        (z \/ ~y \/ ~x) /\ (y \/ ~z \/ ~x) /\ (x \/ ~y \/ ~z) /\ (x \/ y \/ z)``,
    CONV_TAC CNF_CONV);
 
 val AND_DEFCNF = prove
-  (``!x y z. (x = (y /\ z)) = (y \/ ~x) /\ (z \/ ~x) /\ (x \/ ~y \/ ~z)``,
+  (``!x y z. (x <=> (y /\ z)) <=> (y \/ ~x) /\ (z \/ ~x) /\ (x \/ ~y \/ ~z)``,
    CONV_TAC CNF_CONV);
 
 val OR_DEFCNF = prove
-  (``!x y z. (x = (y \/ z)) = (y \/ z \/ ~x) /\ (x \/ ~y) /\ (x \/ ~z)``,
+  (``!x y z. (x <=> (y \/ z)) <=> (y \/ z \/ ~x) /\ (x \/ ~y) /\ (x \/ ~z)``,
    CONV_TAC CNF_CONV);
 
 fun sub_cnf f con defs (a, b) =
@@ -1034,7 +1037,7 @@ val cond_lift_SS =
    [{name = "conditional lifting at rand", trace = 2,
      key = SOME([], Term`(f:'a -> 'b) (COND P Q R)`),
      conv = K (K cond_lift_rand_CONV)}],
-   rewrs = [(SOME "COND_RATOR", boolTheory.COND_RATOR)],
+   rewrs = [(SOME {Thy = "bool", Name = "COND_RATOR"}, boolTheory.COND_RATOR)],
    congs = [],
    filter = NONE,
    ac = [],
@@ -1045,7 +1048,7 @@ val cond_lift_ss = simpLib.++ (pureSimps.pure_ss, cond_lift_SS);
 (* ------------------------------------------------------------------------- *)
 (* Converting boolean connectives to conditionals.                           *)
 (*                                                                           *)
-(* Example:  x /\ ~(y ==> ~z)  =  (if x then (if y then z else F) else F)    *)
+(* Example:  x /\ ~(y ==> ~z) <=> (if x then (if y then z else F) else F)    *)
 (* ------------------------------------------------------------------------- *)
 
 val COND_SIMP = prove
@@ -1053,23 +1056,23 @@ val COND_SIMP = prove
    SIMP_TAC boolSimps.bool_ss []);
 
 val COND_NOT = prove
-  (``!a. ~a = if a then F else T``,
+  (``!a. ~a <=> if a then F else T``,
    SIMP_TAC boolSimps.bool_ss []);
 
 val COND_AND = prove
-  (``!a b. a /\ b = (if a then b else F)``,
+  (``!a b. a /\ b <=> (if a then b else F)``,
    SIMP_TAC boolSimps.bool_ss []);
 
 val COND_OR = prove
-  (``!a b. a \/ b = if a then T else b``,
+  (``!a b. a \/ b <=> if a then T else b``,
    SIMP_TAC boolSimps.bool_ss []);
 
 val COND_IMP = prove
-  (``!a b. a ==> b = if a then b else T``,
+  (``!a b. a ==> b <=> if a then b else T``,
    SIMP_TAC boolSimps.bool_ss []);
 
 val COND_EQ = prove
-  (``!a b. (a = b) = if a then b else ~b``,
+  (``!a b. (a <=> b) <=> if a then b else ~b``,
    SIMP_TAC boolSimps.bool_ss [EQ_IMP_THM, COND_EXPAND]
    THEN tautLib.TAUT_TAC);
 
@@ -1388,49 +1391,16 @@ val Type = Parse.Type;
 Globals.guessing_tyvars := true; (* OK *)
 app load ["numLib", "arithmeticTheory", "pred_setTheory", "bossLib"];
 open numLib arithmeticTheory pred_setTheory bossLib;
-Parse.reveal "C";
 
-(*
-PRETTIFY_VARS_CONV (rhs (concl (DEF_CNF_CONV ``~(p = q) ==> q /\ r``)));
-
-try SKI_CONV ``?f. !y. f y = y + 1``;
-try SKI_CONV ``\x. f x o g``;
-SKI_CONV ``\x y. f x y``;
-SKI_CONV ``$? = \P. P ($@ P)``;
-SKI_CONV ``$==> = \a b. ~a \/ b``;
-SKI_CONV ``$! = \P. K T = P``;
-SKI_CONV ``!x y. P x y``;
-SKI_CONV ``!x y. P y x``;
-SKI_CONV ``(P = Q) = (!x. P x = Q x)``;
-
-try SKICo_CONV ``?f. !y. f y = y + 1``;
-try SKICo_CONV ``\x. f x o g``;
-SKICo_CONV ``\x y. f x y``;
-SKICo_CONV ``$? = \P. P ($@ P)``;
-SKICo_CONV ``$==> = \a b. ~a \/ b``;
-SKICo_CONV ``$! = \P. K T = P``;
-SKICo_CONV ``!x y. P x y``;
-SKICo_CONV ``!x y. P y x``;
-SKICo_CONV ``(P = Q) = (!x. P x = Q x)``;
-
-SIMPLIFY_CONV ``(!x y. P x \/ (P y /\ F)) ==> ?z. P z``;
-
-try NNF_CONV ``(!x. P(x)) ==> ((?y. Q(y)) = (?z. P(z) /\ Q(z)))``;
-NNF_CONV ``~(~(x = y) = z) = ~(x = ~(y = z))``;
 val tm = ``~(0 <= m ==>
              0 <= n ==>
              0 < m /\ 0 < n ==>
              ((~(n <= 1) \/ (m = 1)) /\
               (n <= 1 \/ (m + 1 = 1 + n) \/ m <= 0 /\ 1 + n <= 1) \/
-              m <= 1 /\ n <= 1 + 0 =
+              m <= 1 /\ n <= 1 + 0 <=>
               (m = n)))``;
 PARTIAL_NNF_CONV (REWR_CONV NOT_NUM_EQ) tm;
 PURE_NNF_CONV' (REWR_CONV NOT_NUM_EQ) tm;
-
-SKOLEMIZE_CONV ``!x. (?y. Q y \/ !z. ~P z \/ ~Q z) \/ ~P x``;
-
-TAUTOLOGY_CONV ``p \/ r \/ ~p \/ ~q``;
-CONTRACT_CONV ``(p \/ r) \/ p \/ ~q``;
 
 CNF_CONV ``(p /\ (q \/ r /\ s)) /\ (~p \/ ~q \/ ~s)``;
 CNF_CONV ``(p /\ (q \/ r /\ s)) /\ (~p \/ ~q \/ ~s) /\ (p \/ ~p)``;
@@ -1488,7 +1458,6 @@ drop ();
 try (SIMP_CONV cond_lift_ss []) ``f (if x then 7 else 1)``;
 
 try (SIMP_CONV condify_ss []) ``x /\ ~(y ==> ~z)``;
-*)
 
 (MIN_CNF o map ASSUME)
 [``!b. ~(p (c:bool) (b:bool))``];
@@ -1511,6 +1480,7 @@ val p34 = mk_neg
 
 CNF_CONV p34;
 MIN_CNF [ASSUME p34];
+*)
 
 (* Expensive tests
 val p28 =
@@ -1568,7 +1538,5 @@ val _ = use "../metis/data/large-problem.sml";
 val large_problem = time Term large_problem_frag;
 time CNF_CONV (mk_neg large_problem);
 *)
-*)
-
 
 end

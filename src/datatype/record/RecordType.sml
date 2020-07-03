@@ -574,23 +574,22 @@ fun prove_recordtype_thms (tyinfo, fields) = let
       fupdcanon_thm :: fupdcanon_comp_thm :: new_simpls0
     else new_simpls0
   end
+  val finfos = map (fn (ty,a,u) => {ty = ty, accessor = a, fupd = #2 u})
+                   (Portable.zip3 (types, accfn_terms, fupdfn_terms))
   val new_tyinfo =
-       update_tyinfo (SOME (zip fields types,access_defns,fupdfn_thms))
+       update_tyinfo (SOME (zip fields finfos,access_defns,fupdfn_thms))
                      new_simpls tyinfo
 
   (* set up parsing for the record type *)
-  val brss = GrammarSpecials.bigrec_subdivider_string
   val _ =
-      if List.exists (is_substring brss) (typename :: fields) then
-        ()
-      else let
-          fun do_fupdfn (name0, (_, tm)) =
+      let
+        fun do_fupdfn (name0, (_, tm)) =
             let val name = name0 ^ "_fupd"
             in
               Parse.overload_on(name, tm)
             end
-        in
-          ListPair.app add_record_field (fields, accfn_terms);
+      in
+        ListPair.app add_record_field (fields, accfn_terms);
           (* overload strings of the form fld_fupd to refer to the
              real fupdate functions, which have names of the form
              type_fld_fupd.  Make sure that this overloading is
@@ -599,11 +598,11 @@ fun prove_recordtype_thms (tyinfo, fields) = let
              "artificial" constant for special printing of record
              syntax, and we want this to be preferred where
              possible. *)
-          ListPair.app do_fupdfn (fields, fupdfn_terms);
-          ListPair.app (fn (n,(_,t)) => add_record_fupdate(n,t))
-                       (fields, fupdfn_terms);
-          Parse.overload_on(typename, constructor)
-        end
+        ListPair.app do_fupdfn (fields, fupdfn_terms);
+        ListPair.app (fn (n,(_,t)) => add_record_fupdate(n,t))
+                     (fields, fupdfn_terms);
+        Parse.overload_on(typename, constructor)
+      end
 in
   new_tyinfo
 end

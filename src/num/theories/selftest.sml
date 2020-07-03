@@ -38,7 +38,7 @@ in
     "(case x of 0 => (\\x. x) | SUC n => (\\m. m + n)) y",
     "!a b c d e f g.\n\
     \    foo' a b /\\ bar a c /\\ baz a c d /\\ qux f g /\\ foo' f g ==>\n\
-    \    (a + b * c = 10 * d + e + f + g)"
+    \    a + b * c = 10 * d + e + f + g"
   ] ;
   trace ("PP.print_firstcasebar", 1) tpp "case e of | 0 => 1 | SUC n => n + 2";
   trace ("PP.print_firstcasebar", 1) tpp
@@ -109,13 +109,12 @@ val ge = List.foldl (fn (th,ge) => add_rwt th ge) ge0
 
 fun dot t = reduction ge (vTreeOf ge t) t (Conv (fn x => x));
 fun testdot t expected = let
-  val result = dot t
+  val _ = tprint ("dot test: "^term_to_string t)
+  fun check result =
+      aconv (result_term result) expected andalso
+      result_tree result = KnownValue
 in
-    aconv (result_term (dot t)) expected andalso
-    result_tree result = KnownValue
-  orelse
-    die ("Reduction of " ^ term_to_string t ^ " didn't give back " ^
-         term_to_string expected)
+  require (check_result check) dot t
 end;
 
 val _ = testdot ``1 + 1`` ``2``;

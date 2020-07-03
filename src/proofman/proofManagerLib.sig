@@ -21,6 +21,7 @@ sig
     val b             : unit -> proof
     val drop          : unit -> proofs
     val dropn         : int -> proofs
+    val drop_all      : unit -> proofs
     val restart       : unit -> proof
     val backup        : unit -> proof
     val restore       : unit -> proof

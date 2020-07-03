@@ -9,7 +9,9 @@ open helperLib progSyntax temporalSyntax temporal_stateSyntax
 structure Parse = struct
   open Parse
   val (Type, Term) =
-     parse_from_grammars temporal_stateTheory.temporal_state_grammars
+      temporal_stateTheory.temporal_state_grammars
+        |> apsnd ParseExtras.grammar_loose_equality
+        |> parse_from_grammars
 end
 open Parse
 
@@ -42,8 +44,8 @@ val MOVE_COND_CONV =
    ORELSEC Conv.REWR_CONV (GSYM temporal_stateTheory.TEMPORAL_NEXT_MOVE_COND)
 
 local
-   val cond_T = Q.prove (
-      `!p : 'a set set. (set_sep$cond T * p = p) /\ (p * set_sep$cond T = p)`,
+   val cond_T = prove (
+      “!p : 'a set set. (set_sep$cond T * p = p) /\ (p * set_sep$cond T = p)”,
       REWRITE_TAC [set_sepTheory.SEP_CLAUSES])
    val rule1 =
       helperLib.PRE_POST_RULE (REWRITE_CONV [cond_T]) o
@@ -178,7 +180,7 @@ local
          val t = tac THEN FULL_SIMP_TAC (srw_ss()) [thm]
       in
          Drule.GEN_ALL
-           (Q.prove (`!y s. FRAME_STATE ^p y ^u = FRAME_STATE ^p y s`, t))
+           (prove (“!y s. FRAME_STATE ^p y ^u = FRAME_STATE ^p y s”, t))
       end
 in
    fun update_hidden_frame_state_thm proj_def =
@@ -203,17 +205,17 @@ end
    ------------------------------------------------------------------------ *)
 
 local
-   val EXPAND_lem = Q.prove(
-      `!x:'a # 'b y m s:'c c:'d.
+   val EXPAND_lem = prove(
+      “!x:'a # 'b y m s:'c c:'d.
           (!c d. (c, d) IN set (x :: y) ==> (m s c = d)) =
           (!c d. ((c, d) = x) ==> (m s c = d)) /\
-          (!c d. ((c, d) IN set y) ==> (m s c = d))`,
+          (!c d. ((c, d) IN set y) ==> (m s c = d))”,
       SRW_TAC [] [] \\ utilsLib.qm_tac [])
-   val EXPAND_lem2 = Q.prove(
-      `!x:'a # 'b y m s:'c c:'d.
+   val EXPAND_lem2 = prove(
+      “!x:'a # 'b y m s:'c c:'d.
           (!c d. (c, d) IN x INSERT y ==> (m s c = d)) =
           (!c d. ((c, d) = x) ==> (m s c = d)) /\
-          (!c d. ((c, d) IN y) ==> (m s c = d))`,
+          (!c d. ((c, d) IN y) ==> (m s c = d))”,
       SRW_TAC [] [] \\ utilsLib.qm_tac [])
    val emp_thm =
       set_sepTheory.SEP_CLAUSES
@@ -299,7 +301,7 @@ local
                      List.filter (Lib.equal (SOME n) o Lib.total List.hd)
                   val (nd, dn) =
                      List.foldl
-                        (fn ((x as ((n, t), f)), (nd, dn)) =>
+                        (fn ((x as ((n, {ty = t, ...}), f)), (nd, dn)) =>
                            let
                               val hs' = process n hs
                               val es' = process n es

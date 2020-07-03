@@ -4,7 +4,7 @@ local open stringTheory in end;
 
 open pred_setTheory
 
-open basic_swapTheory NEWLib lcsymtacs
+open basic_swapTheory NEWLib
 
 val _ = new_theory "nomset";
 
@@ -171,7 +171,7 @@ val _ = overload_on ("⁻¹", ``REVERSE : pm -> pm``)
 val _ = TeX_notation {hol="⁻¹", TeX= ("\\ensuremath{\\sp{-1}}", 1)}
 
 val is_pmact_def = Define`
-  is_pmact (f:pm -> 'a -> 'a) =
+  is_pmact (f:pm -> 'a -> 'a) <=>
       (!x. f [] x = x) /\
       (!p1 p2 x. f (p1 ++ p2) x = f p1 (f p2 x)) /\
       (!p1 p2. (p1 == p2) ==> (f p1 = f p2))`;
@@ -358,13 +358,14 @@ foldr (uncurry Q.GEN) (SUBS [GSYM fnpm_raw] (SPEC_ALL raw_fnpm_def))
 val _ = overload_on ("set_pmact", ``λpm. mk_pmact (fnpm pm discrete_pmact) : α set pmact``);
 val _ = overload_on ("setpm", ``λpm. pmact (set_pmact pm)``);
 
-val pmact_IN = Store_thm(
-  "pmact_IN",
-  ``(x IN (setpm pm π s) = pmact pm π⁻¹ x IN s)``,
+Theorem pmact_IN[simp]:
+  (x IN (setpm pm π s) ⇔ pmact pm π⁻¹ x IN s)
+Proof
   SRW_TAC [][fnpm_raw, SPECIFICATION] THEN
   let open combinTheory in
     METIS_TAC [pmact_bijections, K_THM, I_THM, discrete_is_pmact]
-  end);
+  end
+QED
 
 val pmact_UNIV = Store_thm(
   "pmact_UNIV",
@@ -1001,7 +1002,7 @@ val _ = overload_on("fm_pmact",``λdpm rpm. mk_pmact (raw_fmpm dpm rpm)``);
 val _ = overload_on("fmpm",``λdpm rpm. pmact (fm_pmact dpm rpm)``);
 
 val lemma0 = prove(
-  ``(pmact pm pi x ∈ X = x ∈ setpm pm (REVERSE pi) X)``,
+  ``(pmact pm pi x ∈ X ⇔ x ∈ setpm pm (REVERSE pi) X)``,
   SRW_TAC [][pmact_IN])
 val lemma1 = prove(``{x | x ∈ X} = X``, SRW_TAC [][pred_setTheory.EXTENSION])
 val lemma = prove(
@@ -1036,10 +1037,11 @@ val fmpm_applied = store_thm(
     (fmpm dpm rpm pi fm ' x = pmact rpm pi (fm ' (pmact dpm (REVERSE pi) x)))``,
   SRW_TAC [][fmpm_def, FAPPLY_f_o, FDOM_f_o, lemma, o_f_FAPPLY]);
 
-val fmpm_FDOM = store_thm(
-  "fmpm_FDOM",
-  ``x IN FDOM (fmpm dpm rpm pi fmap) = pmact dpm (REVERSE pi) x IN FDOM fmap``,
-  SRW_TAC [][fmpm_def, lemma, FDOM_f_o])
+Theorem fmpm_FDOM:
+  x IN FDOM (fmpm dpm rpm pi fmap) ⇔ pmact dpm (REVERSE pi) x IN FDOM fmap
+Proof
+  SRW_TAC [][fmpm_def, lemma, FDOM_f_o]
+QED
 
 val supp_setpm = store_thm(
   "supp_setpm",
@@ -1185,8 +1187,9 @@ val fmpm_DOMSUB = store_thm(
 val _ = export_rewrites ["fmpm_DOMSUB"];
 
 val fcond_def = Define`
-  fcond pm f = FINITE (supp (fn_pmact string_pmact pm) f) ∧
-               (∃a. a ∉ supp (fn_pmact string_pmact pm) f /\ a ∉ supp pm (f a))
+  fcond pm f ⇔
+     FINITE (supp (fn_pmact string_pmact pm) f) ∧
+     (∃a. a ∉ supp (fn_pmact string_pmact pm) f /\ a ∉ supp pm (f a))
 `;
 
 val fcond_equivariant = Store_thm(
@@ -1197,9 +1200,11 @@ val fcond_equivariant = Store_thm(
   METIS_TAC [pmact_inverse]);
 
 
-val fresh_def = Define`fresh apm f = let z = NEW (supp (fn_pmact string_pmact apm) f)
-                                     in
-                                       f z`
+val fresh_def = Define`
+  fresh apm f = let z = NEW (supp (fn_pmact string_pmact apm) f)
+                in
+                  f z
+`;
 
 val fresh_thm = store_thm(
   "fresh_thm",

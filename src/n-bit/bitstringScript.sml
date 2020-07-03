@@ -11,6 +11,8 @@ open numposrepTheory
 
 val _ = new_theory "bitstring"
 
+val _ = diminish_srw_ss ["NORMEQ_ss"]
+
 (* ------------------------------------------------------------------------- *)
 
 (* MSB is head of list, e.g. [T, F] represents 2 *)
@@ -184,11 +186,11 @@ val length_pad_right = Q.store_thm("length_pad_right",
    lrw [listTheory.PAD_RIGHT])
 
 val length_zero_extend = Q.store_thm("length_zero_extend",
-  `!n v. LENGTH v < n ==> (LENGTH (zero_extend n v) = n)`,
+  `!n v. LENGTH v <= n ==> (LENGTH (zero_extend n v) = n)`,
   lrw [zero_extend_def, length_pad_left])
 
 val length_sign_extend = Q.store_thm("length_sign_extend",
-  `!n v. LENGTH v < n ==> (LENGTH (sign_extend n v) = n)`,
+  `!n v. LENGTH v <= n ==> (LENGTH (sign_extend n v) = n)`,
   lrw [sign_extend_def, length_pad_left])
 
 val length_fixwidth = Q.store_thm("length_fixwidth",
@@ -240,12 +242,14 @@ val el_bitify = Q.prove(
    lrw [bitify_def, bitify_reverse_map, rich_listTheory.EL_APPEND1,
         listTheory.EL_REVERSE, listTheory.EL_MAP, arithmeticTheory.PRE_SUB1])
 
-val el_zero_extend = Q.store_thm("el_zero_extend",
-  `!n i v. EL i (zero_extend n v) =
-           n - LENGTH v <= i /\ EL (i - (n - LENGTH v)) v`,
+Theorem el_zero_extend:
+  !n i v. EL i (zero_extend n v) <=>
+           n - LENGTH v <= i /\ EL (i - (n - LENGTH v)) v
+Proof
   lrw [zero_extend_def, listTheory.PAD_LEFT]
   \\ Cases_on `i < n - LENGTH v`
-  \\ lrw [rich_listTheory.EL_APPEND1, rich_listTheory.EL_APPEND2])
+  \\ lrw [rich_listTheory.EL_APPEND1, rich_listTheory.EL_APPEND2]
+QED
 
 val el_sign_extend = Q.store_thm("el_sign_extend",
   `!n i v. EL i (sign_extend n v) =
@@ -265,14 +269,16 @@ val el_fixwidth = Q.store_thm("el_fixwidth",
                  EL (i + (LENGTH w - n)) w)`,
   lrw [fixwidth_def, el_zero_extend, rich_listTheory.EL_DROP])
 
-val el_field = Q.store_thm("el_field",
-  `!v h l i. i < SUC h - l ==>
-             (EL i (field h l v) =
-              SUC h <= i + LENGTH v /\ EL (i + LENGTH v - SUC h) v)`,
+Theorem el_field:
+  !v h l i. i < SUC h - l ==>
+             (EL i (field h l v) <=>
+              SUC h <= i + LENGTH v /\ EL (i + LENGTH v - SUC h) v)
+Proof
   lrw [field_def, shiftr_def, el_fixwidth, rich_listTheory.EL_TAKE]
   \\ Cases_on `l < LENGTH v` \\ lrw []
   \\ `LENGTH v - SUC h < LENGTH v - l` by decide_tac
-  \\ lrw [rich_listTheory.EL_TAKE])
+  \\ lrw [rich_listTheory.EL_TAKE]
+QED
 
 val shiftr_field = Q.prove(
    `!n l v. LENGTH l <> 0 ==> (shiftr l n = field (LENGTH l - 1) n l)`,
@@ -286,14 +292,16 @@ val el_w2v = Q.store_thm("el_w2v",
       n < dimindex (:'a) ==> (EL n (w2v w) = w ' (dimindex (:'a) - 1 - n))`,
       lrw [w2v_def])
 
-val el_shiftr = Q.store_thm("el_shiftr",
-  `!i v n d.
+Theorem el_shiftr:
+  !i v n d.
        n < d /\ i < d - n /\ 0 < d ==>
-       (EL i (shiftr (fixwidth d v) n) =
-       d <= i + LENGTH v /\ EL (i + LENGTH v - d) v)`,
+       (EL i (shiftr (fixwidth d v) n) <=>
+        d <= i + LENGTH v /\ EL (i + LENGTH v - d) v)
+Proof
   simp_tac(std_ss++ARITH_ss)
     [shiftr_field, length_fixwidth, el_field, el_fixwidth,
-     arithmeticTheory.ADD1] \\ rw[])
+     arithmeticTheory.ADD1] \\ rw[]
+QED
 
 val shiftr_0 = Q.store_thm("shiftr_0", `!v. shiftr v 0 = v`, lrw [shiftr_def])
 
@@ -321,14 +329,16 @@ val testbit_el = Q.store_thm("testbit_el",
    `!v i. i < LENGTH v ==> (testbit i v = EL (LENGTH v - 1 - i) v)`,
    simp [testbit, LET_THM])
 
-val bit_v2w = Q.store_thm("bit_v2w",
-  `!n v. word_bit n (v2w v : 'a word) = n < dimindex(:'a) /\ testbit n v`,
+Theorem bit_v2w:
+  !n v. word_bit n (v2w v : 'a word) <=> n < dimindex(:'a) /\ testbit n v
+Proof
   rw [v2w_def, wordsTheory.word_bit_def]
   \\ Cases_on `n < dimindex(:'a)`
   \\ wrw []
   \\ assume_tac wordsTheory.DIMINDEX_GT_0
   \\ `~(n <= dimindex(:'a) - 1)` by decide_tac
-  \\ asm_rewrite_tac [])
+  \\ asm_rewrite_tac []
+QED
 
 val word_index_v2w = Q.store_thm("word_index_v2w",
   `!v i. (v2w v : 'a word) ' i =
@@ -385,10 +395,10 @@ val ranged_bitstring_nchotomy = Q.store_thm("ranged_bitstring_nchotomy",
   strip_tac
   \\ qspec_then `w` STRUCT_CASES_TAC bitstring_nchotomy
   \\ qexists_tac `fixwidth (dimindex(:'a)) v`
-  \\ rw [markerTheory.Abbrev_def, length_fixwidth, v2w_fixwidth])
+  \\ rw [markerTheory.Abbrev_def, length_fixwidth, v2w_fixwidth]);
 
 val BACKWARD_LIST_EQ_REWRITE = Q.prove(
-  `!l1 l2. (l1 = l2) =
+  `!l1 l2. (l1 = l2) <=>
            (LENGTH l1 = LENGTH l2) /\
            !x. x < LENGTH l1 ==>
                (EL (LENGTH l1 - 1 - x) l1 = EL (LENGTH l1 - 1 - x) l2)`,
@@ -397,14 +407,16 @@ val BACKWARD_LIST_EQ_REWRITE = Q.prove(
   \\ `LENGTH l1 - 1 - x < LENGTH l1` by decide_tac
   \\ res_tac
   \\ `x < LENGTH l1` by decide_tac
-  \\ lfs [])
+  \\ lfs []);
 
-val fixwidth_eq = Q.store_thm("fixwidth_eq",
-  `!n v w. (fixwidth n v = fixwidth n w) =
-           (!i. i < n ==> (testbit i v = testbit i w))`,
+Theorem fixwidth_eq:
+  !n v w. (fixwidth n v = fixwidth n w) =
+           (!i. i < n ==> (testbit i v = testbit i w))
+Proof
   lrw [el_fixwidth, testbit, length_fixwidth, BACKWARD_LIST_EQ_REWRITE]
   \\ rpt BasicProvers.FULL_CASE_TAC
-  \\ lfs [DECIDE ``v < n ==> (n <= n + v - (i + 1) = i < v)``])
+  \\ lfs [DECIDE ``v < n ==> (n <= n + v - (i + 1) <=> i < v)``]
+QED
 
 val v2w_11 = Q.store_thm("v2w_11",
   `!v w. (v2w v = v2w w : 'a word) =
@@ -447,34 +459,38 @@ val shiftl_replicate_F = Q.store_thm("shiftl_replicate_F",
 
 (* ------------------------------------------------------------------------- *)
 
-val word_lsb_v2w = Q.store_thm("word_lsb_v2w",
-  `!v. word_lsb (v2w v) = v <> [] /\ LAST v`,
+Theorem word_lsb_v2w:
+  !v. word_lsb (v2w v) <=> v <> [] /\ LAST v
+Proof
   lrw [wordsTheory.word_lsb_def, wordsTheory.word_bit, bit_v2w, testbit,
        rich_listTheory.LENGTH_NOT_NULL, rich_listTheory.NULL_EQ_NIL]
   \\ Cases_on `v = []`
-  \\ rw [GSYM rich_listTheory.EL_PRE_LENGTH, arithmeticTheory.PRE_SUB1])
+  \\ rw [GSYM rich_listTheory.EL_PRE_LENGTH, arithmeticTheory.PRE_SUB1]
+QED
 
 val word_msb_v2w = Q.store_thm("word_msb_v2w",
   `!v. word_msb (v2w v : 'a word) = testbit (dimindex(:'a) - 1) v`,
-  lrw [wordsTheory.word_msb_def, wordsTheory.word_bit, bit_v2w])
+  lrw [wordsTheory.word_msb_def, wordsTheory.word_bit, bit_v2w]);
 
-val w2w_v2w = Q.store_thm("w2w_v2w",
-  `!v. w2w (v2w v : 'a word) : 'b word =
+Theorem w2w_v2w:
+  !v. w2w (v2w v : 'a word) : 'b word =
        v2w (fixwidth (if dimindex(:'b) < dimindex(:'a) then
                          dimindex(:'b)
                       else
-                         dimindex(:'a)) v)`,
+                         dimindex(:'a)) v)
+Proof
   wrw [wordsTheory.w2w]
   \\ Cases_on `i < dimindex(:'a)`
   \\ lrw [wordsTheory.word_bit, el_fixwidth, bit_v2w, testbit,
           length_fixwidth]
   \\ lfs [arithmeticTheory.NOT_LESS_EQUAL]
   >| [
-    `dimindex (:'b) <= LENGTH v + dimindex (:'b) - (i + 1) = i < LENGTH v`
+    `dimindex (:'b) <= LENGTH v + dimindex (:'b) - (i + 1) <=> i < LENGTH v`
     by decide_tac,
-    `dimindex (:'a) <= LENGTH v + dimindex (:'a) - (i + 1) = i < LENGTH v`
+    `dimindex (:'a) <= LENGTH v + dimindex (:'a) - (i + 1) <=> i < LENGTH v`
     by decide_tac]
-  THEN simp [])
+  THEN simp []
+QED
 
 val sw2sw_v2w = Q.store_thm("sw2sw_v2w",
   `!v. sw2sw (v2w v : 'a word) : 'b word =
@@ -601,22 +617,22 @@ val bitwise_tac =
         wordsTheory.word_xnor_def, wordsTheory.word_nand_def,
         wordsTheory.word_nor_def,
         listTheory.LENGTH_ZIP, listTheory.EL_MAP, listTheory.EL_ZIP]
-  \\ lrw [el_fixwidth, DECIDE ``0 < d ==> (d <= v + d - (i + 1) = i < v)``]
+  \\ lrw [el_fixwidth, DECIDE ``0 < d ==> (d <= v + d - (i + 1) <=> i < v)``];
 
 val word_nand_v2w = Q.store_thm("word_nand_v2w",
   `!v w. v2w v ~&& (v2w w) : 'a word =
          v2w (bnand (fixwidth (dimindex(:'a)) v)
-                    (fixwidth (dimindex(:'a)) w))`, bitwise_tac)
+                    (fixwidth (dimindex(:'a)) w))`, bitwise_tac);
 
 val word_nor_v2w = Q.store_thm("word_nor_v2w",
   `!v w. v2w v ~|| (v2w w) : 'a word =
          v2w (bnor (fixwidth (dimindex(:'a)) v)
-                   (fixwidth (dimindex(:'a)) w))`, bitwise_tac)
+                   (fixwidth (dimindex(:'a)) w))`, bitwise_tac);
 
 val word_xnor_v2w = Q.store_thm("word_xnor_v2w",
   `!v w. v2w v ~?? (v2w w) : 'a word =
          v2w (bxnor (fixwidth (dimindex(:'a)) v)
-                    (fixwidth (dimindex(:'a)) w))`, bitwise_tac)
+                    (fixwidth (dimindex(:'a)) w))`, bitwise_tac);
 
 val word_1comp_v2w = Q.store_thm("word_1comp_v2w",
   `!v. word_1comp (v2w v : 'a word) = v2w (bnot (fixwidth (dimindex(:'a)) v))`,
@@ -635,18 +651,21 @@ val word_lsl_v2w = Q.store_thm("word_lsl_v2w",
   >- (Cases_on `LENGTH v = 0` \\ lrw [rich_listTheory.EL_APPEND1])
   \\ lrw [rich_listTheory.EL_APPEND2])
 
-val word_lsr_v2w = Q.store_thm("word_lsr_v2w",
-  `!n v. word_lsr (v2w v : 'a word) n =
-         v2w (shiftr (fixwidth (dimindex(:'a)) v) n)`,
+Theorem word_lsr_v2w:
+  !n v. word_lsr (v2w v : 'a word) n =
+         v2w (shiftr (fixwidth (dimindex(:'a)) v) n)
+Proof
   wrw [wordsTheory.word_lsr_def, shiftr_def]
   \\ Cases_on `i + n < dimindex(:'a)`
   \\ lrw [wordsTheory.word_bit, bit_v2w, testbit, length_fixwidth,
           rich_listTheory.EL_TAKE, el_fixwidth,
-          DECIDE ``0 < d ==> (d <= v + d - (i + (n + 1)) = i + n < v)``])
+          DECIDE ``0 < d ==> (d <= v + d - (i + (n + 1)) <=> i + n < v)``]
+QED
 
-val word_modify_v2w = Q.store_thm("word_modify_v2w",
-  `!f v. word_modify f (v2w v : 'a word) =
-         v2w (modify f (fixwidth (dimindex(:'a)) v))`,
+Theorem word_modify_v2w:
+  !f v. word_modify f (v2w v : 'a word) =
+         v2w (modify f (fixwidth (dimindex(:'a)) v))
+Proof
   wrw [wordsTheory.word_modify_def]
   \\ lrw [modify_def, wordsTheory.word_bit, bit_v2w, testbit]
   \\ `LENGTH (rev_count_list (LENGTH (fixwidth (dimindex (:'a)) v))) =
@@ -661,17 +680,20 @@ val word_modify_v2w = Q.store_thm("word_modify_v2w",
   by lrw [length_rev_count_list, length_fixwidth]
   \\ lrw [listTheory.EL_MAP, listTheory.EL_ZIP, el_rev_count_list,
           length_fixwidth, el_fixwidth,
-          DECIDE ``0 < d ==> (d <= v + d - (i + 1) = i < v)``])
+          DECIDE ``0 < d ==> (d <= v + d - (i + 1) <=> i < v)``]
+QED
 
-val word_bits_v2w = Q.store_thm("word_bits_v2w",
-  `!h l v. word_bits h l (v2w v : 'a word) =
-           v2w (field h l (fixwidth (dimindex(:'a)) v))`,
+Theorem word_bits_v2w:
+  !h l v. word_bits h l (v2w v : 'a word) =
+           v2w (field h l (fixwidth (dimindex(:'a)) v))
+Proof
   wrw [wordsTheory.word_bits_def]
   \\ Cases_on `i + l < dimindex(:'a)`
   \\ lrw [wordsTheory.word_bit, bit_v2w, length_field, testbit]
   \\ Cases_on `i < SUC h - l`
   \\ lrw [el_field, length_fixwidth, el_fixwidth,
-          DECIDE ``0 < d ==> (d <= v + d - (i + (l + 1)) = i + l < v)``])
+          DECIDE ``0 < d ==> (d <= v + d - (i + (l + 1)) <=> i + l < v)``]
+QED
 
 val word_extract_v2w = Q.store_thm("word_extract_v2w",
   `!h l v. word_extract h l (v2w v : 'a word) =
@@ -705,11 +727,12 @@ val hd_shiftr =
     |> Q.SPEC `0`
     |> SIMP_RULE (arith_ss++boolSimps.CONJ_ss) [listTheory.EL]
 
-val word_asr_v2w = Q.store_thm("word_asr_v2w",
-  `!n v. word_asr (v2w v : 'a word) n =
+Theorem word_asr_v2w:
+  !n v. word_asr (v2w v : 'a word) n =
          let l = fixwidth (dimindex(:'a)) v in
             v2w (sign_extend (dimindex(:'a))
-                (if dimindex(:'a) <= n then [HD l] else shiftr l n))`,
+                (if dimindex(:'a) <= n then [HD l] else shiftr l n))
+Proof
   lrw [wordsTheory.ASR_LIMIT, word_msb_v2w]
   >| [
     simp_tac (arith_ss++boolSimps.LET_ss)
@@ -717,7 +740,7 @@ val word_asr_v2w = Q.store_thm("word_asr_v2w",
           wordsTheory.DIMINDEX_GT_0, testbit, sign_extend_def]
     \\ Cases_on `LENGTH v = 0`
     \\ simp [pad_left_T_or_F]
-    \\ rw [pad_left_T_or_F, DECIDE ``~(v < d) = d < v + 1``,
+    \\ rw [pad_left_T_or_F, DECIDE ``~(v < d) <=> d < v + 1``,
            DECIDE ``0 < d ==> (v - 1 - (d - 1) = v - d)``],
     simp [wordsTheory.word_asr, word_msb_v2w, word_lsr_v2w, testbit]
     \\ Cases_on `LENGTH v = 0`
@@ -732,11 +755,13 @@ val word_asr_v2w = Q.store_thm("word_asr_v2w",
             SIMP_RULE std_ss [wordsTheory.word_bit] WORD_NEG_1_T]
     \\ Cases_on `dimindex (:'a) - (i + 1) < n`
     \\ lrw [rich_listTheory.EL_APPEND1, rich_listTheory.EL_APPEND2, el_shiftr]
-  ])
+  ]
+QED
 
-val word_ror_v2w = Q.store_thm("word_ror_v2w",
-  `!n v. word_ror (v2w v : 'a word) n =
-         v2w (rotate (fixwidth (dimindex(:'a)) v) n)`,
+Theorem word_ror_v2w:
+  !n v. word_ror (v2w v : 'a word) n =
+         v2w (rotate (fixwidth (dimindex(:'a)) v) n)
+Proof
   wrw [wordsTheory.word_ror, word_or_def, word_lsl_def, word_bits_def,
        rotate_def, length_fixwidth, v2w_fixwidth]
   \\ `?p. dimindex(:'a) = i + p + 1`
@@ -748,7 +773,7 @@ val word_ror_v2w = Q.store_thm("word_ror_v2w",
       by rw [length_field]
       \\ lrw [wordsTheory.word_bit, bit_v2w, testbit, el_field, length_fixwidth,
               el_fixwidth, rich_listTheory.EL_APPEND2, arithmeticTheory.ADD1,
-              DECIDE ``i + (p + 1) <= p + v = i < v``])
+              DECIDE ``i + (p + 1) <= p + v <=> i < v``])
   \\ qabbrev_tac `q = n MOD (i + (p + 1))`
   \\ `q < i + p + 1` by lrw [Abbr `q`, arithmeticTheory.MOD_LESS]
   \\ lrw [wordsTheory.word_bit, bit_v2w, testbit]
@@ -756,33 +781,37 @@ val word_ror_v2w = Q.store_thm("word_ror_v2w",
   \\ lrw [rich_listTheory.EL_APPEND1, rich_listTheory.EL_APPEND2, length_field]
   >- (lrw [el_field, length_fixwidth, arithmeticTheory.ADD1, el_fixwidth]
       \\ Cases_on `LENGTH v = 0`
-      \\ lrw [DECIDE ``i + (p + 1) <= i + (2 * p + (v + 1)) - q  =
+      \\ lrw [DECIDE ``i + (p + 1) <= i + (2 * p + (v + 1)) - q  <=>
                        i < i + (p + (v + 1)) - q``])
   \\ Cases_on `i + q < dimdinex(:'a)`
   \\ lrw [wordsTheory.word_bit, bit_v2w, testbit, el_field, length_fixwidth,
           arithmeticTheory.ADD1, el_fixwidth,
-          DECIDE ``i + (p + 1) <= p + v - q = i + q < v``]
-  )
+          DECIDE ``i + (p + 1) <= p + v - q <=> i + q < v``]
+QED
 
-val word_reverse_v2w = Q.store_thm("word_reverse_v2w",
-  `!v. word_reverse (v2w v : 'a word) =
-       v2w (REVERSE (fixwidth (dimindex(:'a)) v))`,
+Theorem word_reverse_v2w:
+  !v. word_reverse (v2w v : 'a word) =
+       v2w (REVERSE (fixwidth (dimindex(:'a)) v))
+Proof
   wrw [wordsTheory.word_reverse_def]
   \\ lrw [wordsTheory.word_bit, bit_v2w, testbit, length_fixwidth,
           listTheory.EL_REVERSE, DECIDE ``PRE (i + 1) = i``]
-  \\ lrw [el_fixwidth, DECIDE ``0 < d ==> (d <= i + v = d < i + (v + 1))``]
+  \\ lrw [el_fixwidth, DECIDE ``0 < d ==> (d <= i + v <=> d < i + (v + 1))``]
   \\ Cases_on `LENGTH v = 0`
-  \\ lrw [])
+  \\ lrw []
+QED
 
-val word_join_v2w = Q.store_thm("word_join_v2w",
-  `!v1 v2. FINITE univ(:'a) /\ FINITE univ(:'b) ==>
+Theorem word_join_v2w:
+   !v1 v2. FINITE univ(:'a) /\ FINITE univ(:'b) ==>
            (word_join (v2w v1 : 'a word) (v2w v2 : 'b word) =
-            v2w (v1 ++ fixwidth (dimindex(:'b)) v2))`,
+            v2w (v1 ++ fixwidth (dimindex(:'b)) v2))
+Proof
   wrw [wordsTheory.word_join_index, fcpTheory.index_sum]
   \\ wrw [wordsTheory.word_bit, bit_v2w, testbit, length_fixwidth,
           rich_listTheory.EL_APPEND2, fcpTheory.index_sum]
-  \\ lrw [el_fixwidth, DECIDE ``0 < d ==> (d <= v + d - (i + 1) = i < v)``]
-  \\ Cases_on `LENGTH v1 = 0` \\ lrw [rich_listTheory.EL_APPEND1])
+  \\ lrw [el_fixwidth, DECIDE ``0 < d ==> (d <= v + d - (i + 1) <=> i < v)``]
+  \\ Cases_on `LENGTH v1 = 0` \\ lrw [rich_listTheory.EL_APPEND1]
+QED
 
 val word_concat_v2w = Q.store_thm("word_concat_v2w",
   `!v1 v2. FINITE univ(:'a) /\ FINITE univ(:'b) ==>
@@ -810,7 +839,7 @@ val word_concat_v2w_rwt = Q.store_thm("word_concat_v2w_rwt",
         else
            FAIL $word_concat ^(Term.mk_var("bad domain", Type.bool))
              (v2w v1 : 'a word) (v2w v2 : 'b word)`,
-  rw [word_concat_v2w, combinTheory.FAIL_THM])
+  rw [word_concat_v2w, combinTheory.FAIL_THM]);
 
 val genlist_fixwidth = Q.prove(
    `!d v. 0 < d ==>
@@ -819,7 +848,7 @@ val genlist_fixwidth = Q.prove(
           fixwidth d v)`,
    lrw [listTheory.LIST_EQ_REWRITE, length_fixwidth, el_fixwidth]
    \\ Cases_on `LENGTH v = 0`
-   \\ lrw [DECIDE ``0 < d ==> (d <= x + v = d < x + (v + 1))``])
+   \\ lrw [DECIDE ``0 < d ==> (d <= x + v <=> d < x + (v + 1))``]);
 
 val word_reduce_v2w = Q.store_thm("word_reduce_v2w",
   `!f v. word_reduce f (v2w v : 'a word) =

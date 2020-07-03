@@ -2,6 +2,7 @@ signature TotalDefn =
 sig
 
   include Abbrev
+  type defn = DefnBase.defn
 
    (* Support for automated termination proofs *)
 
@@ -33,6 +34,7 @@ sig
    val xDefine     : string -> term quotation -> thm
    val Define      : term quotation -> thm
    val multiDefine : term quotation -> thm list
+   val qDefine     : string -> term quotation -> tactic option -> thm
    datatype phase
         = PARSE of term quotation
         | BUILD of term

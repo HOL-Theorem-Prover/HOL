@@ -57,24 +57,25 @@ val pcons_def =
     Define`pcons x r p : ('a,'b) path =
                       toPath (x, LCONS (r, first p) (SND (fromPath p)))`;
 
-val stopped_at_11 = store_thm(
-  "stopped_at_11",
-  ``!x y. (stopped_at x = stopped_at y : ('a,'b) path) = (x = y)``,
-  SRW_TAC [][stopped_at_def]);
-val pcons_11 = store_thm(
-  "pcons_11",
-  ``!x r p y s q.
-       (pcons x r p = pcons y s q) = (x = y) /\ (r = s) /\ (p = q)``,
+Theorem stopped_at_11[simp]:
+  !x y. (stopped_at x = stopped_at y : ('a,'b) path) = (x = y)
+Proof
+  SRW_TAC [][stopped_at_def]
+QED
+
+Theorem pcons_11[simp]:
+  !x r p y s q.
+       (pcons x r p = pcons y s q) <=> (x = y) /\ (r = s) /\ (p = q)
+Proof
   SRW_TAC [][pcons_def, first_def] THEN
-  REWRITE_TAC [path_eq_fromPath, pairTheory.PAIR_FST_SND_EQ, CONJ_ASSOC]);
+  REWRITE_TAC [path_eq_fromPath, pairTheory.PAIR_FST_SND_EQ, CONJ_ASSOC]
+QED
 
-val stopped_at_not_pcons = store_thm(
-  "stopped_at_not_pcons",
-  ``!x y r p. ~(stopped_at x = pcons y r p) /\ ~(pcons y r p = stopped_at x)``,
-  SRW_TAC [][stopped_at_def, pcons_def]);
-
-val _ = export_rewrites
-           ["stopped_at_11", "pcons_11", "stopped_at_not_pcons"]
+Theorem stopped_at_not_pcons[simp]:
+  !x y r p. ~(stopped_at x = pcons y r p) /\ ~(pcons y r p = stopped_at x)
+Proof
+  SRW_TAC [][stopped_at_def, pcons_def]
+QED
 
 val path_cases = store_thm(
   "path_cases",
@@ -84,18 +85,20 @@ val path_cases = store_thm(
                        pairTheory.FORALL_PROD] THEN
   PROVE_TAC [pairTheory.ABS_PAIR_THM, llistTheory.llist_CASES]);
 
-val FORALL_path = store_thm(
-  "FORALL_path",
-  ``!P. (!p. P p) = (!x. P (stopped_at x)) /\ (!x r p. P (pcons x r p))``,
+Theorem FORALL_path:
+  !P. (!p. P p) <=> (!x. P (stopped_at x)) /\ (!x r p. P (pcons x r p))
+Proof
   GEN_TAC THEN EQ_TAC THEN SRW_TAC [][] THEN
-  Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN SRW_TAC [][]);
+  Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN SRW_TAC [][]
+QED
 
-val EXISTS_path = store_thm(
-  "EXISTS_path",
-  ``!P. (?p. P p) = (?x. P (stopped_at x)) \/ (?x r p. P (pcons x r p))``,
+Theorem EXISTS_path:
+  !P. (?p. P p) <=> (?x. P (stopped_at x)) \/ (?x r p. P (pcons x r p))
+Proof
   SRW_TAC [][EQ_IMP_THM] THEN1
     (Q.SPEC_THEN `p` FULL_STRUCT_CASES_TAC path_cases THEN METIS_TAC []) THEN
-  METIS_TAC []);
+  METIS_TAC []
+QED
 
 val first_thm = store_thm(
   "first_thm",
@@ -433,23 +436,23 @@ val pconcat_eq_stopped = store_thm(
   Q.ISPEC_THEN `p1` STRUCT_CASES_TAC path_cases THEN
   SRW_TAC [][pconcat_thm]);
 
-val pconcat_eq_pcons = store_thm(
-  "pconcat_eq_pcons",
-  ``!x r p p1 lab p2. ((pconcat p1 lab p2 = pcons x r p) =
-                       (lab = r) /\ (p1 = stopped_at x) /\ (p = p2) \/
-                       (?p1'. (p1 = pcons x r p1') /\
-                              (p = pconcat p1' lab p2))) /\
-                      ((pcons x r p = pconcat p1 lab p2) =
-                       (lab = r) /\ (p1 = stopped_at x) /\ (p = p2) \/
-                       (?p1'. (p1 = pcons x r p1') /\
-                              (p = pconcat p1' lab p2)))``,
+Theorem pconcat_eq_pcons:
+  !x r p p1 lab p2.
+      ((pconcat p1 lab p2 = pcons x r p) <=>
+       (lab = r) /\ (p1 = stopped_at x) /\ (p = p2) \/
+       (?p1'. (p1 = pcons x r p1') /\ (p = pconcat p1' lab p2))) /\
+      ((pcons x r p = pconcat p1 lab p2) <=>
+       (lab = r) /\ (p1 = stopped_at x) /\ (p = p2) \/
+       (?p1'. (p1 = pcons x r p1') /\ (p = pconcat p1' lab p2)))
+Proof
   REPEAT GEN_TAC THEN
   Q.ISPEC_THEN `p1` STRUCT_CASES_TAC path_cases THEN
-  SRW_TAC [][pconcat_thm] THEN PROVE_TAC []);
+  SRW_TAC [][pconcat_thm] THEN PROVE_TAC []
+QED
 
-val finite_pconcat = store_thm(
-  "finite_pconcat",
-  ``!p1 lab p2. finite (pconcat p1 lab p2) = finite p1 /\ finite p2``,
+Theorem finite_pconcat:
+  !p1 lab p2. finite (pconcat p1 lab p2) <=> finite p1 /\ finite p2
+Proof
   Q_TAC SUFF_TAC
         `(!p1 : ('a,'b) path.
               finite p1 ==>
@@ -461,7 +464,8 @@ val finite_pconcat = store_thm(
   CONJ_TAC THEN HO_MATCH_MP_TAC finite_path_ind THEN
   SRW_TAC [][pconcat_thm, pconcat_eq_stopped,
              pconcat_eq_pcons] THEN
-  SRW_TAC [][] THEN PROVE_TAC []);
+  SRW_TAC [][] THEN PROVE_TAC []
+QED
 
 (* ----------------------------------------------------------------------
     PL : ('a,'b) path -> num set
@@ -537,18 +541,18 @@ val _ = export_rewrites ["nth_label_pmap"]
 
 (* ---------------------------------------------------------------------- *)
 
-val firstP_at_def =
-    Define`firstP_at P p i = i IN PL p /\ P (el i p) /\
-                             !j. j < i ==> ~P(el j p)`;
+val firstP_at_def = Define`
+  firstP_at P p i <=> i IN PL p /\ P (el i p) /\ !j. j < i ==> ~P(el j p)
+`;
 
 val firstP_at_stopped = prove(
-  ``!P x n. firstP_at P (stopped_at x) n = (n = 0) /\ P x``,
+  ``!P x n. firstP_at P (stopped_at x) n <=> (n = 0) /\ P x``,
   SIMP_TAC (srw_ss() ++ ARITH_ss) [firstP_at_def, EQ_IMP_THM,
                                    FORALL_AND_THM]);
 
 val firstP_at_pcons = prove(
   ``!P n x r p.
-       firstP_at P (pcons x r p) n =
+       firstP_at P (pcons x r p) n <=>
           (n = 0) /\ P x \/ 0 < n /\ ~P x /\ firstP_at P p (n - 1)``,
  REPEAT GEN_TAC THEN Cases_on `n` THENL [
    SRW_TAC [ARITH_ss][firstP_at_def, PL_pcons],
@@ -577,24 +581,23 @@ val firstP_at_zero = store_thm(
 val exists_def = Define`exists P p = ?i. firstP_at P p i`
 val every_def = Define`every P p = ~exists ($~ o P) p`
 
-val exists_thm = store_thm(
-  "exists_thm",
-  ``!P. (!x. exists P (stopped_at x) = P x) /\
-        (!x r p. exists P (pcons x r p) = P x \/ exists P p)``,
+Theorem exists_thm[simp]:
+  !P. (!x. exists P (stopped_at x) = P x) /\
+      (!x r p. exists P (pcons x r p) <=> P x \/ exists P p)
+Proof
   SRW_TAC [][exists_def, firstP_at_thm, EQ_IMP_THM, EXISTS_OR_THM] THEN
   SRW_TAC [][] THENL [
     PROVE_TAC [],
     Cases_on `P x` THEN SRW_TAC [][] THEN
     Q.EXISTS_TAC `SUC i` THEN SRW_TAC [ARITH_ss][]
-  ]);
+  ]
+QED
 
-val every_thm = store_thm(
-  "every_thm",
-  ``!P. (!x. every P (stopped_at x) = P x) /\
-        (!x r p. every P (pcons x r p) = P x /\ every P p)``,
-  SRW_TAC [][every_def, exists_thm]);
-
-val _ = export_rewrites ["exists_thm", "every_thm"]
+Theorem every_thm[simp]:
+  !P. (!x. every P (stopped_at x) = P x) /\
+      (!x r p. every P (pcons x r p) <=> P x /\ every P p)
+Proof SRW_TAC [][every_def, exists_thm]
+QED
 
 val not_every = store_thm(
   "not_every",
@@ -651,13 +654,13 @@ val exists_induction = save_thm(
 
 val mem_def = Define`mem s p = ?i. i IN PL p /\ (s = el i p)`;
 
-val mem_thm = store_thm(
-  "mem_thm",
-  ``(!x s. mem s (stopped_at x) = (s = x)) /\
-    (!x r p s. mem s (pcons x r p) = (s = x) \/ mem s p)``,
+Theorem mem_thm[simp]:
+  (!x s. mem s (stopped_at x) = (s = x)) /\
+  (!x r p s. mem s (pcons x r p) <=> (s = x) \/ mem s p)
+Proof
   SRW_TAC [][mem_def, RIGHT_AND_OVER_OR,
-             EXISTS_OR_THM, GSYM LEFT_EXISTS_AND_THM]);
-val _ = export_rewrites ["mem_thm"]
+             EXISTS_OR_THM, GSYM LEFT_EXISTS_AND_THM]
+QED
 
 (* ----------------------------------------------------------------------
     drop n p
@@ -714,15 +717,15 @@ val PL_drop = store_thm(
     ]
   ]);
 
-val IN_PL_drop = store_thm(
-  "IN_PL_drop",
-  ``!i j p. i IN PL p ==> (j IN PL (drop i p) = i + j IN PL p)``,
+Theorem IN_PL_drop[simp]:
+  !i j p. i IN PL p ==> (j IN PL (drop i p) <=> i + j IN PL p)
+Proof
   SRW_TAC [][PL_drop, EQ_IMP_THM] THENL [
     `(i + (n - i) = n) \/ (i + (n - i) = i)` by DECIDE_TAC THEN
     SRW_TAC [][],
     Q.EXISTS_TAC `i + j` THEN SRW_TAC [numSimps.ARITH_ss][]
-  ]);
-val _ = export_rewrites ["IN_PL_drop"]
+  ]
+QED
 
 val first_drop = store_thm(
   "first_drop",
@@ -998,7 +1001,7 @@ val filter_def =
                       `!m. firstP_at P p m = (m = i)`
                           by PROVE_TAC [firstP_at_unique] THEN
                       FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [
-                        DECIDE ``0 < n /\ (n - 1 = m) = (n = m + 1)``]) THEN
+                        DECIDE ``0 < n /\ (n - 1 = m) <=> (n = m + 1)``]) THEN
                 ASM_SIMP_TAC (srw_ss())[drop_def]
               ]
             ]));
@@ -1067,12 +1070,13 @@ val nth_label_pgenerate = store_thm(
   ``!n f g. nth_label n (pgenerate f g) = g n``,
   Induct THEN ONCE_REWRITE_TAC [pgenerate_def] THEN SRW_TAC [][nth_label_def]);
 
-val pgenerate_11 = store_thm(
-  "pgenerate_11",
-  ``!f1 g1 f2 g2. (pgenerate f1 g1 = pgenerate f2 g2) =
-                  (f1 = f2) /\ (g1 = g2)``,
+Theorem pgenerate_11:
+  !f1 g1 f2 g2. (pgenerate f1 g1 = pgenerate f2 g2) <=>
+                (f1 = f2) /\ (g1 = g2)
+Proof
   SIMP_TAC (srw_ss()) [FORALL_AND_THM, EQ_IMP_THM] THEN
-  SRW_TAC [][FUN_EQ_THM] THEN PROVE_TAC [el_pgenerate, nth_label_pgenerate]);
+  SRW_TAC [][FUN_EQ_THM] THEN PROVE_TAC [el_pgenerate, nth_label_pgenerate]
+QED
 
 
 val pgenerate_onto = store_thm(
@@ -1125,26 +1129,23 @@ val okpath_co_ind = save_thm(
                           (LAND_CONV (RENAME_VARS_CONV ["x", "r", "p"]) THENC
                            RAND_CONV (RENAME_VARS_CONV ["p"]))))
 
-val okpath_cases = save_thm(
-  "okpath_cases",
-  (GEN_ALL o
-   SIMP_RULE (srw_ss()) [pred_setTheory.SPECIFICATION] o
-   SIMP_RULE (srw_ss()) [pred_setTheory.EXTENSION,
-                         okpath_f_def, GSYM okpath_def] o
-   CONJUNCT1)
-    (MATCH_MP fixedPointTheory.gfp_greatest_fixedpoint
-              (SPEC_ALL okpath_monotone)))
+Theorem okpath_cases =
+  MATCH_MP fixedPointTheory.gfp_greatest_fixedpoint (SPEC_ALL okpath_monotone)
+    |> CONJUNCT1 |> SYM
+    |> SIMP_RULE (srw_ss()) [pred_setTheory.EXTENSION,
+                             okpath_f_def, GSYM okpath_def]
+    |> SIMP_RULE (srw_ss()) [IN_DEF]
+    |> GEN_ALL
 
-val okpath_thm = store_thm(
-  "okpath_thm",
-  ``!R. (!x. okpath R (stopped_at x)) /\
-        (!x r p. okpath R (pcons x r p) = R x r (first p) /\ okpath R p)``,
+Theorem okpath_thm[simp]:
+  !R. (!x. okpath R (stopped_at x)) /\
+      (!x r p. okpath R (pcons x r p) <=> R x r (first p) /\ okpath R p)
+Proof
   REPEAT STRIP_TAC THENL [
     ONCE_REWRITE_TAC [okpath_cases] THEN SRW_TAC [][],
     CONV_TAC (LAND_CONV (REWR_CONV okpath_cases)) THEN SRW_TAC [][]
-  ]);
-
-val _ = export_rewrites ["okpath_thm"]
+  ]
+QED
 
 val finite_okpath_ind = store_thm(
   "finite_okpath_ind",
@@ -1213,9 +1214,9 @@ val plink_def = new_specification(
 val _ = export_rewrites ["plink_def"]
 
 
-val finite_plink = store_thm(
-  "finite_plink",
-  ``!p1 p2. finite (plink p1 p2) = finite p1 /\ finite p2``,
+Theorem finite_plink[simp]:
+  !p1 p2. finite (plink p1 p2) <=> finite p1 /\ finite p2
+Proof
   Q_TAC SUFF_TAC
      `(!p1:('a,'b)path. finite p1 ==>
                         !p2. finite p2 ==> finite (plink p1 p2)) /\
@@ -1225,9 +1226,8 @@ val finite_plink = store_thm(
   HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][] THEN
   Q.SPEC_THEN `p1` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) path_cases THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
-  SRW_TAC [][] THEN PROVE_TAC []);
-val _ = export_rewrites ["finite_plink"]
-
+  SRW_TAC [][] THEN PROVE_TAC []
+QED
 
 val first_plink = store_thm(
   "first_plink",
@@ -1248,18 +1248,18 @@ val last_plink = store_thm(
 val _ = export_rewrites ["last_plink"]
 
 
-val okpath_plink = store_thm(
-  "okpath_plink",
-  ``!R p1 p2. finite p1 /\ (last p1 = first p2) ==>
-              (okpath R (plink p1 p2) = okpath R p1 /\ okpath R p2)``,
+Theorem okpath_plink[simp]:
+  !R p1 p2. finite p1 /\ (last p1 = first p2) ==>
+            (okpath R (plink p1 p2) <=> okpath R p1 /\ okpath R p2)
+Proof
   GEN_TAC THEN
   Q_TAC SUFF_TAC
         `!p1. finite p1 ==>
               !p2. (last p1 = first p2) ==>
-                   (okpath R (plink p1 p2) = okpath R p1 /\ okpath R p2)`
+                   (okpath R (plink p1 p2) <=> okpath R p1 /\ okpath R p2)`
         THEN1 PROVE_TAC [] THEN
-  HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][] THEN PROVE_TAC []);
-val _ = export_rewrites ["okpath_plink"]
+  HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][] THEN PROVE_TAC []
+QED
 
 val okpath_take = store_thm(
   "okpath_take",
@@ -1458,7 +1458,7 @@ val okpath_unfold = Q.store_thm
   METIS_TAC []]);
 
 val trace_machine_def =
-  Define `trace_machine P s l s' = (P (s++[l])) /\ (s' = s++[l])`;
+  Define `trace_machine P s l s' <=> (P (s++[l])) /\ (s' = s++[l])`;
 
 local
 
@@ -1548,7 +1548,7 @@ val trace_machine_thm2 = Q.store_thm
 local
 
 val lemma = Q.prove (
-`!n p. (LTAKE n (labels p) = NONE) = n NOTIN PL p`,
+`!n p. (LTAKE n (labels p) = NONE) <=> n NOTIN PL p`,
  Induct THEN
  SRW_TAC [] [] THEN
  `(?x. p = stopped_at x) \/ (?h l t. p = pcons h l t)`
@@ -1557,12 +1557,12 @@ val lemma = Q.prove (
 
 in
 
-val LTAKE_labels = Q.store_thm
-("LTAKE_labels",
- `!n p l.
+Theorem LTAKE_labels:
+  !n p l.
     (LTAKE n (labels p) = SOME l)
-    =
-    n IN PL p /\ (toList (labels (take n p)) = SOME l)`,
+    <=>
+    n IN PL p /\ (toList (labels (take n p)) = SOME l)
+Proof
  Induct THEN
  SRW_TAC [] [toList_THM, LTAKE] THEN
  `(?x. p = stopped_at x) \/ (?h l t. p = pcons h l t)`
@@ -1572,7 +1572,8 @@ val LTAKE_labels = Q.store_thm
  Cases_on `LTAKE n (labels t)` THEN
  FULL_SIMP_TAC (srw_ss()) [] THENL
  [METIS_TAC [lemma],
-  METIS_TAC [optionTheory.SOME_11]]);
+  METIS_TAC [optionTheory.SOME_11]]
+QED
 
 end;
 
@@ -1591,15 +1592,15 @@ val drop_eq_pcons = Q.store_thm
  DECIDE_TAC);
 
 val parallel_comp_def =
-  Define `parallel_comp m1 m2 (s1,s2) l (s1',s2') =
+  Define `parallel_comp m1 m2 (s1,s2) l (s1',s2') <=>
             m1 s1 l s1' /\ m2 s2 l s2'`;
 
-val okpath_parallel_comp = Q.store_thm
-("okpath_parallel_comp",
-  `!p m1 m2.
+Theorem okpath_parallel_comp:
+  !p m1 m2.
      okpath (parallel_comp m1 m2) p
-     =
-     okpath m1 (pmap FST (\x.x) p) /\ okpath m2 (pmap SND (\x.x) p)`,
+     <=>
+     okpath m1 (pmap FST (\x.x) p) /\ okpath m2 (pmap SND (\x.x) p)
+Proof
  SRW_TAC [] [] THEN
  EQ_TAC THEN
  SRW_TAC [] [] THEN
@@ -1664,7 +1665,8 @@ val okpath_parallel_comp = Q.store_thm
            SRW_TAC [] [] THEN
            METIS_TAC [tail_drop, tail_def],
        Q.EXISTS_TAC `0` THEN
-           SRW_TAC [] []]]);
+           SRW_TAC [] []]]
+QED
 
 val build_pcomp_trace = Q.store_thm
 ("build_pcomp_trace",

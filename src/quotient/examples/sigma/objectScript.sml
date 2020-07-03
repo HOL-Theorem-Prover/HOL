@@ -10,6 +10,7 @@ infixr -->;
 
 
 val _ = new_theory "object";
+val _ = ParseExtras.temp_loose_equality()
 
 
 (* In interactive sessions, do:

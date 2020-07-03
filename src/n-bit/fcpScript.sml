@@ -31,16 +31,12 @@ val LT_REFL = prim_recTheory.LESS_REFL
 
 (* ------------------------------------------------------------------------- *)
 
-val () = Parse.set_fixity "HAS_SIZE" (Infix (NONASSOC, 450))
-
-val HAS_SIZE = Define `(s HAS_SIZE n) = FINITE s /\ (CARD s = n)`
-
 val CARD_IMAGE_INJ = Q.prove(
    `!(f:'a->'b) s.
        (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) /\
        FINITE s ==> (CARD (IMAGE f s) = CARD s)`,
    GEN_TAC
-   THEN REWRITE_TAC [DECIDE ``a /\ b ==> c = b ==> a ==> c``]
+   THEN REWRITE_TAC [DECIDE ``a /\ b ==> c <=> b ==> a ==> c``]
    THEN Q.SPEC_THEN
            `\s. (!x y. (f x = f y) ==> y IN s ==> x IN s ==> (x = y)) ==>
                 (CARD (IMAGE f s) = CARD s)`
@@ -57,59 +53,6 @@ val HAS_SIZE_IMAGE_INJ = Q.prove(
         (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) /\
         (s HAS_SIZE n) ==> ((IMAGE f s) HAS_SIZE n)`,
    SIMP_TAC std_ss [HAS_SIZE, IMAGE_FINITE] THEN PROVE_TAC[CARD_IMAGE_INJ])
-
-val HAS_SIZE_0 = Q.prove(
-   `!(s:'a->bool) n. (s HAS_SIZE 0) = (s = {})`,
-   REPEAT GEN_TAC
-   THEN REWRITE_TAC [HAS_SIZE]
-   THEN EQ_TAC
-   THEN DISCH_TAC
-   THEN ASM_REWRITE_TAC [FINITE_RULES, CARD_CLAUSES]
-   THEN FIRST_ASSUM (MP_TAC o CONJUNCT2)
-   THEN FIRST_ASSUM (MP_TAC o CONJUNCT1)
-   THEN Q.SPEC_TAC (`s:'a->bool`,`s:'a->bool`)
-   THEN Q.SPEC_THEN `\s. (CARD s = 0) ==> (s = {})`
-                    (MATCH_MP_TAC o BETA_RULE) FINITE_INDUCT
-   THEN REWRITE_TAC [NOT_INSERT_EMPTY]
-   THEN REPEAT GEN_TAC
-   THEN STRIP_TAC
-   THEN ASM_SIMP_TAC arith_ss [CARD_INSERT]
-   )
-
-val HAS_SIZE_SUC = Q.prove(
-   `!(s:'a->bool) n.
-        (s HAS_SIZE (SUC n)) =
-        ~(s = {}) /\ !a. a IN s ==> ((s DELETE a) HAS_SIZE n)`,
-   REPEAT GEN_TAC
-   THEN REWRITE_TAC [HAS_SIZE]
-   THEN Q.ASM_CASES_TAC `s:'a->bool = {}`
-   THEN ASM_REWRITE_TAC [CARD_CLAUSES, FINITE_RULES, NOT_IN_EMPTY, GSYM NOT_SUC]
-   THEN REWRITE_TAC [FINITE_DELETE]
-   THEN Q.ASM_CASES_TAC `FINITE(s:'a->bool)`
-   THEN ASM_SIMP_TAC std_ss [NOT_FORALL_THM, MEMBER_NOT_EMPTY]
-   THEN EQ_TAC
-   THEN REPEAT STRIP_TAC
-   THENL [
-      MP_TAC (Q.ISPECL [`a:'a`, `s DELETE a:'a`] (CONJUNCT2 CARD_CLAUSES))
-      THEN ASM_REWRITE_TAC [FINITE_DELETE, IN_DELETE]
-      THEN Q.SUBGOAL_THEN `a INSERT (s DELETE a:'a) = s` SUBST1_TAC
-      THENL [
-         Q.UNDISCH_TAC `a:'a IN s`
-         THEN PROVE_TAC [INSERT_DELETE],
-         ASM_REWRITE_TAC [SUC_INJ]
-         THEN PROVE_TAC []
-      ],
-      FIRST_ASSUM
-         (MP_TAC o GEN_REWRITE_RULE I empty_rewrites [GSYM MEMBER_NOT_EMPTY])
-      THEN DISCH_THEN (Q.X_CHOOSE_TAC `a:'a`)
-      THEN MP_TAC (Q.ISPECL [`a:'a`, `s DELETE a:'a`] (CONJUNCT2 CARD_CLAUSES))
-      THEN ASM_REWRITE_TAC [FINITE_DELETE, IN_DELETE]
-      THEN Q.SUBGOAL_THEN `a INSERT (s DELETE a:'a) = s` SUBST1_TAC
-      THENL [
-         Q.UNDISCH_TAC `a:'a IN s` THEN PROVE_TAC[INSERT_DELETE],
-         PROVE_TAC[]
-      ]
-   ])
 
 val HAS_SIZE_INDEX = Q.prove(
    `!s n.
@@ -183,8 +126,7 @@ val dimindex_def = zDefine`
 
 val NOT_FINITE_IMP_dimindex_1 = Q.store_thm("NOT_FINITE_IMP_dimindex_1",
    `~FINITE univ(:'a) ==> (dimindex(:'a) = 1)`,
-   METIS_TAC [dimindex_def]
-   )
+   METIS_TAC [dimindex_def])
 
 val HAS_SIZE_FINITE_IMAGE = Q.prove(
    `(UNIV:'a finite_image->bool) HAS_SIZE dimindex(:'a)`,
@@ -197,8 +139,7 @@ val HAS_SIZE_FINITE_IMAGE = Q.prove(
    THEN ASM_REWRITE_TAC [HAS_SIZE, IN_UNIV, IN_SING]
    THEN SIMP_TAC arith_ss [CARD_EMPTY, CARD_SING, CARD_INSERT, FINITE_SING,
                            FINITE_INSERT, NOT_IN_EMPTY]
-   THEN PROVE_TAC[]
-   )
+   THEN PROVE_TAC[])
 
 val CARD_FINITE_IMAGE =
    PROVE [HAS_SIZE_FINITE_IMAGE, HAS_SIZE]
@@ -214,7 +155,7 @@ val DIMINDEX_NONZERO =
 
 val DIMINDEX_GE_1 = Q.store_thm("DIMINDEX_GE_1",
    `1 <= dimindex(:'a)`,
-   REWRITE_TAC [DECIDE ``1 <= x = ~(x = 0)``, DIMINDEX_NONZERO]
+   REWRITE_TAC [DECIDE ``1 <= x <=> ~(x = 0)``, DIMINDEX_NONZERO]
    )
 
 val DIMINDEX_GT_0 =
@@ -257,7 +198,7 @@ val FINITE_INDEX_INJ = Q.prove(
       FIRST_ASSUM (MP_TAC o MATCH_MP FINITE_INDEX_WORKS_FINITE)
       THEN ASM_REWRITE_TAC [dimindex_def]
       THEN PROVE_TAC [],
-      PROVE_TAC [DECIDE ``!a. a < 1 = (a = 0)``]
+      PROVE_TAC [DECIDE ``!a. a < 1 <=> (a = 0)``]
    ])
 
 val FORALL_FINITE_INDEX =
@@ -475,7 +416,7 @@ val index_sum = Q.store_thm("index_sum",
    )
 
 val finite_sum = Q.store_thm("finite_sum",
-   `FINITE (UNIV:('a+'b)->bool) =
+   `FINITE (UNIV:('a+'b)->bool) <=>
     FINITE (UNIV:'a->bool) /\ FINITE (UNIV:'b->bool)`,
    SIMP_TAC std_ss [FINITE_UNION, sum_union, isl_isr_finite])
 
@@ -834,6 +775,12 @@ val FCP_CONCAT_def = Define`
            else
               a ' (i - dimindex(:'c))): 'a ** ('b + 'c)`
 
+val FCP_FST_def = Define
+   ‘FCP_FST (a :'a['b + 'c]) = (FCP(i :num). a ' ((i + dimindex (:'c)) :num)) :'a['b]’;
+
+val FCP_SND_def = Define
+   ‘FCP_SND (b :'a['b + 'c]) = (FCP(i :num). b ' i) :'a['c]’;
+
 val FCP_ZIP_def = Define`
    FCP_ZIP (a:'a ** 'b) (b:'c ** 'b) = (FCP i. (a ' i, b ' i)): ('a # 'c) ** 'b`
 
@@ -922,6 +869,29 @@ val fcp_subst_comp = Q.store_thm("fcp_subst_comp",
   srw_tac [FCP_ss] [FCP_UPDATE_def])
 
 val () = computeLib.add_persistent_funs ["FCP_EXISTS", "FCP_EVERY"]
+
+(* connections to FCP_FST and FCP_SND, added by Chun Tian *)
+Theorem FCP_CONCAT_THM :
+    !(a :'a['b]) (b :'a['c]).
+        FINITE univ(:'b) /\ FINITE univ(:'c) ==>
+       (FCP_FST (FCP_CONCAT a b) = a) /\ (FCP_SND (FCP_CONCAT a b) = b)
+Proof
+    RW_TAC std_ss [FCP_FST_def, FCP_SND_def]
+ >| [ (* goal 1 (of 2) *)
+      RW_TAC std_ss [CART_EQ, FCP_BETA] \\
+      REWRITE_TAC [FCP_CONCAT_def, index_comp] >> simp [index_sum],
+      (* goal 2 (of 2) *)
+      RW_TAC std_ss [CART_EQ, FCP_BETA] \\
+      REWRITE_TAC [FCP_CONCAT_def, index_comp] >> simp [index_sum] ]
+QED
+
+Theorem FCP_CONCAT_11 : (* added by Chun Tian *)
+    !(a :'a['b]) (b :'a['c]) c d.
+        FINITE univ(:'b) /\ FINITE univ(:'c) /\
+       (FCP_CONCAT a b = FCP_CONCAT c d) ==> (a = c) /\ (b = d)
+Proof
+    METIS_TAC [FCP_CONCAT_THM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 

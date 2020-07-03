@@ -8,8 +8,6 @@ open BasicProvers
 open quotientLib
 open boolSimps
 
-open lcsymtacs
-
 fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before export_rewrites [s])
 fun Save_Thm(s, th) = (save_thm(s, th) before export_rewrites [s])
 
@@ -278,11 +276,11 @@ val aeq_lam_inversion = store_thm(
         aeql unbndts unbndts'``,
   srw_tac [][Once aeq_cases, SimpLHS] >> metis_tac []);
 
-val aeq_ptm_11 = store_thm(
-  "aeq_ptm_11",
-  ``(aeq (var s1 vv1) (var s2 vv2) = (s1 = s2) ∧ (vv1 = vv2)) /\
-    (aeq (lam v bv1 bndts1 unbndts1) (lam v bv2 bndts2 unbndts2) =
-      (bv1 = bv2) ∧ aeql bndts1 bndts2 ∧ aeql unbndts1 unbndts2)``,
+Theorem aeq_ptm_11:
+    (aeq (var s1 vv1) (var s2 vv2) ⇔ (s1 = s2) ∧ (vv1 = vv2)) /\
+    (aeq (lam v bv1 bndts1 unbndts1) (lam v bv2 bndts2 unbndts2) ⇔
+      (bv1 = bv2) ∧ aeql bndts1 bndts2 ∧ aeql unbndts1 unbndts2)
+Proof
   SRW_TAC [][aeq_lam_inversion, aeq_ptpm_eqn, aeq_var_inversion, EQ_IMP_THM]
   THENL [
     full_simp_tac (srw_ss() ++ ETA_ss)
@@ -291,7 +289,8 @@ val aeq_ptm_11 = store_thm(
     Q_TAC (NEW_TAC "z") `v INSERT allatomsl bndts1 ∪ allatomsl bndts2` THEN
     Q.EXISTS_TAC `z` >>
     srw_tac [ETA_ss][aeql_ptpm_eqn]
-  ]);
+  ]
+QED
 
 val ptpml_fresh =
   allatoms_supports |> CONJUNCT2 |>
@@ -402,12 +401,12 @@ val fresh_swap = store_thm(
     SRW_TAC [][swapstr_def, aeql_ptpm_eqn, pmact_sing_inv]
   ]);
 
-val lam_aeq_thm = store_thm(
-  "lam_aeq_thm",
-  ``aeq (lam v1 bv1 t1 u1) (lam v2 bv2 t2 u2) =
+Theorem lam_aeq_thm:
+    aeq (lam v1 bv1 t1 u1) (lam v2 bv2 t2 u2) ⇔
        (v1 = v2) ∧ (bv1 = bv2) ∧ aeql t1 t2 ∧ aeql u1 u2 ∨
        v1 ≠ v2 ∧ (bv1 = bv2) ∧ v1 ∉ fvl t2 ∧ aeql t1 (ptpml [(v1,v2)] t2) ∧
-       aeql u1 u2``,
+       aeql u1 u2
+Proof
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, DISJ_IMP_THM] THEN REPEAT CONJ_TAC THENL [
     srw_tac [][aeq_lam_inversion] >>
     `z ∉ fvl t1 ∧ z ∉ fvl t2`
@@ -437,7 +436,8 @@ val lam_aeq_thm = store_thm(
     match_mp_tac (MP_CANON (CONJUNCT2 aeq_trans)) >>
     qexists_tac `ptpml [(v1,v2)] t2` >>
     srw_tac [][aeql_ptpm_eqn, fresh_swap, pmact_sing_inv, pmact_flip_args]
-  ]);
+  ]
+QED
 
 val aeql_LIST_REL = prove(
   ``aeql l1 l2 ⇔ LIST_REL aeq l1 l2``,
@@ -822,11 +822,12 @@ val gterm_cases = store_thm(
 ho_match_mp_tac simple_induction >>
 srw_tac [][] >> metis_tac []);
 
-val FORALL_gterm = store_thm(
-"FORALL_gterm",
-``(∀t. P t) = (∀s v. P (GVAR s v)) ∧ (∀s bv ts us. P (GLAM s bv ts us))``,
-EQ_TAC >> srw_tac [][] >>
-qspec_then `t` STRUCT_CASES_TAC gterm_cases >> srw_tac [][]);
+Theorem FORALL_gterm:
+  (∀t. P t) ⇔ (∀s v. P (GVAR s v)) ∧ (∀s bv ts us. P (GLAM s bv ts us))
+Proof
+  EQ_TAC >> srw_tac [][] >>
+  qspec_then `t` STRUCT_CASES_TAC gterm_cases >> srw_tac [][]
+QED
 
 val some_4_F = prove(
   ``(some (w,x,y,z). F) = NONE``,
@@ -881,7 +882,7 @@ val relsupp_def = Define`
 `;
 
 val sidecond_def = Define`
-  sidecond dpm ppm A ^vp ^lp ^vf ^lf =
+  sidecond dpm ppm A ^vp ^lp ^vf ^lf ⇔
   FINITE A ∧ (∀p. FINITE (supp ppm p)) ∧
     (∀x y s vv n p.
        x ∉ A ∧ y ∉ A ∧ genind vp lp n (GVAR s vv) ⇒
@@ -902,7 +903,7 @@ val sidecond_def = Define`
             (pmact ppm [(x,y)] p)))`
 
 val FCB_def = Define`
-  FCB dpm ppm A ^vp ^lp ^lf =
+  FCB dpm ppm A ^vp ^lp ^lf ⇔
   ∀a n v bv r1 r2 ts us p.
              a ∉ A ∧ a ∉ GFVl us ∧ a ∉ supp ppm p ∧
              LIST_REL (relsupp A dpm ppm) ts r1 ∧

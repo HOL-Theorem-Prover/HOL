@@ -9,7 +9,7 @@ selftest.exe: selftest.uo quotient.uo
 
 ifeq ($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
-all: $(ARTFILES)
+all: $(ARTFILES) hol4-quotient-unint.art
 
 hol4-quotient-unint.art: hol4-quotient-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<

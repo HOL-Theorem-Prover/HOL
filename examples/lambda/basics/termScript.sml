@@ -4,7 +4,6 @@ open boolSimps
 
 open nomsetTheory
 open pred_setTheory
-open lcsymtacs
 open binderLib
 open nomdatatype
 val _ = new_theory "term";
@@ -463,71 +462,78 @@ val SUB_VAR = save_thm("SUB_VAR", hd (CONJUNCTS SUB_DEF))
     Results about substitution
    ---------------------------------------------------------------------- *)
 
-val fresh_tpm_subst = store_thm(
-  "fresh_tpm_subst",
-  ``!t. ~(u IN FV t) ==> (tpm [(u,v)] t = [VAR u/v] t)``,
+Theorem fresh_tpm_subst:
+  !t. ~(u IN FV t) ==> (tpm [(u,v)] t = [VAR u/v] t)
+Proof
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
-  SRW_TAC [][SUB_THM, SUB_VAR]);
+  SRW_TAC [][SUB_THM, SUB_VAR]
+QED
 
-val tpm_subst = store_thm(
-  "tpm_subst",
-  ``!N. tpm pi ([M/v] N) = [tpm pi M/lswapstr pi v] (tpm pi N)``,
+Theorem tpm_subst:
+  !N. tpm pi ([M/v] N) = [tpm pi M/lswapstr pi v] (tpm pi N)
+Proof
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN
   Q.EXISTS_TAC `v INSERT FV M` THEN
   SRW_TAC [][SUB_THM, SUB_VAR] THEN
   MATCH_MP_TAC (SUB_THM |> CONJUNCTS |> C (curry List.nth) 3 |> GSYM) THEN
-  SRW_TAC [][stringpm_raw]);
+  SRW_TAC [][stringpm_raw]
+QED
 
-val tpm_subst_out = store_thm(
-  "tpm_subst_out",
-  ``[M/v] (tpm pi N) =
-       tpm pi ([tpm (REVERSE pi) M/lswapstr (REVERSE pi) v] N)``,
-  SRW_TAC [][tpm_subst])
+Theorem tpm_subst_out:
+  [M/v] (tpm pi N) = tpm pi ([tpm (REVERSE pi) M/lswapstr (REVERSE pi) v] N)
+Proof SRW_TAC [][tpm_subst]
+QED
 
-val lemma14a = Store_thm(
-  "lemma14a",
-  ``!t. [VAR v/v] t = t``,
+Theorem lemma14a[simp]:
+  !t. [VAR v/v] t = t
+Proof
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{v}` THEN
-  SRW_TAC [][SUB_THM, SUB_VAR])
-val lemma14b = store_thm(
-  "lemma14b",
-  ``!M. ~(v IN FV M) ==> ([N/v] M = M)``,
+  SRW_TAC [][SUB_THM, SUB_VAR]
+QED
+
+Theorem lemma14b:
+  !M. ~(v IN FV M) ==> ([N/v] M = M)
+Proof
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `v INSERT FV N` THEN
-  SRW_TAC [][SUB_THM, SUB_VAR]);
-val lemma14c = store_thm(
-  "lemma14c",
-  ``!t x u. x IN FV u ==> (FV ([t/x]u) = FV t UNION (FV u DELETE x))``,
+  SRW_TAC [][SUB_THM, SUB_VAR]
+QED
+
+Theorem lemma14c:
+  !t x u. x IN FV u ==> (FV ([t/x]u) = FV t UNION (FV u DELETE x))
+Proof
   NTAC 2 GEN_TAC THEN HO_MATCH_MP_TAC nc_INDUCTION2 THEN
   Q.EXISTS_TAC `x INSERT FV t` THEN
   SRW_TAC [][SUB_THM, SUB_VAR, EXTENSION] THEN
-  METIS_TAC [lemma14b]);
+  METIS_TAC [lemma14b]
+QED
 
-val FV_SUB = store_thm(
-  "FV_SUB",
-  ``!t u v. FV ([t/v] u) = if v IN FV u then FV t UNION (FV u DELETE v)
-                           else FV u``,
-  PROVE_TAC [lemma14b, lemma14c]);
+Theorem FV_SUB:
+  !t u v. FV ([t/v] u) = if v ∈ FV u then FV t ∪ (FV u DELETE v) else FV u
+Proof PROVE_TAC [lemma14b, lemma14c]
+QED
 
-val lemma15a = store_thm(
-  "lemma15a",
-  ``!M. ~(v IN FV M) ==> ([N/v]([VAR v/x]M) = [N/x]M)``,
+Theorem lemma15a:
+  !M. v ∉ FV M ==> [N/v]([VAR v/x]M) = [N/x]M
+Proof
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{x;v} UNION FV N` THEN
-  SRW_TAC [][SUB_THM, SUB_VAR]);
+  SRW_TAC [][SUB_THM, SUB_VAR]
+QED
 
-val lemma15b = store_thm(
-  "lemma15b",
-  ``~(v IN FV M) ==> ([VAR u/v]([VAR v/u] M) = M)``,
-  SRW_TAC [][lemma15a]);
+Theorem lemma15b:
+  v ∉ FV M ==> [VAR u/v]([VAR v/u] M) = M
+Proof SRW_TAC [][lemma15a]
+QED
 
 (* ----------------------------------------------------------------------
     alpha-convertibility results
    ---------------------------------------------------------------------- *)
 
-val SIMPLE_ALPHA = store_thm(
-  "SIMPLE_ALPHA",
-  ``~(y IN FV u) ==> !x. LAM x u = LAM y ([VAR y/x] u)``,
+Theorem SIMPLE_ALPHA:
+  y ∉ FV u ==> !x. LAM x u = LAM y ([VAR y/x] u)
+Proof
   SRW_TAC [][GSYM fresh_tpm_subst] THEN
-  SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, pmact_flip_args]);
+  SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, pmact_flip_args]
+QED
 
 
 (* ----------------------------------------------------------------------
@@ -544,18 +550,18 @@ val size_exists =
         |> SIMP_RULE (srw_ss()) []
 
 val size_def = new_specification("size_thm", ["size"], size_exists)
-val size_thm = Save_thm("size_thm", CONJUNCT1 size_def)
+Theorem size_thm[simp] = CONJUNCT1 size_def
 
-val size_tpm = Save_thm("size_tpm", GSYM (CONJUNCT2 size_def));
+Theorem size_tpm[simp] = GSYM (CONJUNCT2 size_def)
 
 (* ----------------------------------------------------------------------
     iterated substitutions (ugh)
    ---------------------------------------------------------------------- *)
 
-val ISUB_def =
- Define
-     `($ISUB t [] = t)
-  /\  ($ISUB t ((s,x)::rst) = $ISUB ([s/x]t) rst)`;
+Definition ISUB_def:
+     ($ISUB t [] = t)
+  /\ ($ISUB t ((s,x)::rst) = $ISUB ([s/x]t) rst)
+End
 
 val _ = set_fixity "ISUB" (Infixr 501);
 

@@ -5,7 +5,6 @@ val () = PolyML.print_depth 0;
 open HolKernel Parse boolLib proofManagerLib
 
 (* Install pretty-printers *)
-
 val _ = let
   fun pp2polypp (ppfn: 'b -> HOLPP.pretty) =
     let
@@ -77,8 +76,11 @@ val _ = let
       Inttab.pp (fn a => printArgTypes(a,d-1)) t
   fun pp_knametab d printArgTypes (t : 'a KNametab.table) =
       KNametab.pp (fn a => printArgTypes(a,d-1)) t
+  fun pp_termtab d printArgTypes (t : 'a Termtab.table) =
+      Termtab.pp (fn a => printArgTypes(a,d-1)) t
   fun pp_seq _ _ (s:'a seq.seq) = HOLPP.add_string "<seq>"
   fun pp_typebase _ _ (tb:TypeBasePure.typeBase) = HOLPP.add_string "<typeBase>"
+  fun pp_sexp _ _ (s : HOLsexp.t) = HOLsexp.printer s
 in
   (* would like to put these all in a list and List.app over them, but
      unfortunately, they all have different types; can't bind addPrettyPrinter to
@@ -90,7 +92,9 @@ in
   PolyML.addPrettyPrinter pp_frag;
   PolyML.addPrettyPrinter pp_inttab;
   PolyML.addPrettyPrinter pp_knametab;
+  PolyML.addPrettyPrinter pp_termtab;
   PolyML.addPrettyPrinter pp_seq;
+  PolyML.addPrettyPrinter pp_sexp;
   PolyML.addPrettyPrinter pp_symtab;
   PolyML.addPrettyPrinter pp_typebase;
   PolyML.addPrettyPrinter pp_verdict;
@@ -100,7 +104,6 @@ in
   PolyML.addPrettyPrinter (pp2polypp Arbint.pp_int);
   PolyML.addPrettyPrinter (pp2polypp Arbnum.pp_num);
   PolyML.addPrettyPrinter (pp2polypp Arbrat.pp_rat);
-  PolyML.addPrettyPrinter (pp2polypp DefnBase.pp_defn);
   PolyML.addPrettyPrinter (pp2polypp HOLPP.pp_pretty);
   PolyML.addPrettyPrinter (pp2polypp Hol_pp.pp_theory);
   PolyML.addPrettyPrinter (pp2polypp Hol_pp.pp_thm);
@@ -139,10 +142,16 @@ local
     end
 in
   val _ = HOL_Interactive.print_banner()
+  val lpsize0 = length (!loadPath)
   val () =
     ( hol_use ("help" ++ "src-sml") "Database"
     ; hol_use ("tools-poly" ++ "poly") "Help"
-    ; ReadHMF.extend_path_with_includes {verbosity = 1, lpref = loadPath}
+    ; ReadHMF.extend_path_with_includes {verbosity = 0, lpref = loadPath}
+    ; if length (!loadPath) <> lpsize0 then
+        print ("** Load path (see loadPath variable) now contains " ^
+               Int.toString (length (!loadPath)) ^
+               " entries\n** after consulting Holmakefiles\n\n")
+      else ()
     ; List.app Meta.fakeload ["PP", "PolyML", "Posix"]
     ; Globals.interactive := true
     ; Parse.current_backend := Parse.interactive_ppbackend ()

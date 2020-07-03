@@ -1,11 +1,14 @@
 open HolKernel Parse boolLib;
-val _ = new_theory "group";
 
-open bossLib listTheory HurdUseful subtypeTools res_quanTools
+val _ = ParseExtras.temp_loose_equality()
+
+open bossLib listTheory hurdUtils subtypeTools res_quanTools
      res_quanTheory pred_setTheory extra_pred_setTheory arithContext
      relationTheory ho_proverTools extra_listTheory
      listContext arithmeticTheory subtypeTheory extra_numTheory
      pred_setContext;
+
+val _ = new_theory "group";
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 

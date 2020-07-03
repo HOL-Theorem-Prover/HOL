@@ -37,6 +37,7 @@ datatype buf = B of { lnum : int,
                       curr : (int * string) option }
 
 fun init_buf fname = let
+  val fname = OS.Path.mkAbsolute {path=fname, relativeTo=OS.FileSys.getDir()}
   val istrm = TextIO.openIn fname
 in
   B { lnum = 1, strm = istrm, curr = readline 1 istrm, name = fname }
@@ -307,8 +308,26 @@ fun read fname env =
 fun readlist e vref =
   map dequote (tokenize (perform_substitution e [VREF vref]))
 
-fun find_includes dirname =
+fun memoise f =
+    let
+      val stash = ref (Binarymap.mkDict String.compare)
+      fun lookup s =
+          case Binarymap.peek(!stash, s) of
+              NONE =>
+              let
+                val actual = f s
+              in
+                stash := Binarymap.insert(!stash, s, actual);
+                actual
+              end
+            | SOME r => r
+    in
+      lookup
+    end
+
+fun find_includes0 dirname =
   let
+    fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
     val hm_fname = OS.Path.concat(dirname, "Holmakefile")
   in
     if OS.FileSys.access(hm_fname, [OS.FileSys.A_READ]) then
@@ -318,9 +337,14 @@ fun find_includes dirname =
       in
         map (fn p => OS.Path.mkAbsolute {path = p, relativeTo = dirname})
             raw_incs
-      end
+      end handle e => (warn ("Bogus Holmakefile in " ^ dirname ^
+                             " - ignoring it");
+                       [])
+
     else []
   end
+
+val find_includes = memoise find_includes0
 
 infix ++
 val op ++ = OS.Path.concat

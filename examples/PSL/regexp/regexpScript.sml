@@ -13,6 +13,7 @@ open bossLib metisLib pairTheory combinTheory listTheory rich_listTheory
      arithmeticTheory;
 
 val () = new_theory "regexp";
+val _ = ParseExtras.temp_loose_equality()
 
 
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]

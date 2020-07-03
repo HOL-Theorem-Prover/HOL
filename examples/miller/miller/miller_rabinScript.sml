@@ -1,41 +1,20 @@
-(* interactive mode
-show_assums := true;
-loadPath := ["../ho_prover","../subtypes","../RSA","../formalize",
-             "../prob","../groups"] @ !loadPath;
-app load
-  ["bossLib", "listTheory", "subtypeTools", "res_quanTools",
-   "pred_setTheory", "extra_pred_setTheory", "arithContext",
-   "ho_proverTools", "extra_listTheory", "subtypeTheory",
-   "listContext", "arithmeticTheory", "groupTheory", "groupContext",
-   "extra_numTheory", "gcdTheory", "dividesTheory",
-   "extra_arithTheory", "finite_groupTheory", "finite_groupContext",
-   "abelian_groupTheory", "num_polyTheory", "extra_binomialTheory",
-   "binomialTheory", "summationTheory",
-   "pred_setContext","mult_groupTheory","probTheory","prob_uniformTheory",
-   "extra_realTheory","realLib","probabilityTheory"];
-quietdec := true;
-*)
-
 open HolKernel Parse boolLib bossLib;
 
 open listTheory subtypeTools
      res_quanTools res_quanTheory pred_setTheory extra_pred_setTheory
      arithContext ho_proverTools extra_listTheory subtypeTheory
-     listContext arithmeticTheory groupTheory HurdUseful
+     listContext arithmeticTheory groupTheory hurdUtils
      groupContext extra_numTheory gcdTheory dividesTheory
      extra_arithTheory finite_groupTheory finite_groupContext
      abelian_groupTheory num_polyTheory extra_binomialTheory
      binomialTheory summationTheory pred_setContext mult_groupTheory
-     extra_realTheory realTheory realLib
+     extra_realTheory realTheory realLib seqTheory
      state_transformerTheory combinTheory;
 
-open util_probTheory probabilityTheory probTheory prob_uniformTheory;
-
-(* interactive mode
-quietdec := false;
-*)
+open util_probTheory real_probabilityTheory probTheory prob_uniformTheory;
 
 val _ = new_theory "miller_rabin";
+val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 val REVERSE = Tactical.REVERSE;
@@ -55,17 +34,6 @@ val (G_TAC, AG_TAC, G_TAC', AG_TAC') = SIMPLIFY_TACS finite_group_c;
 
 val Strip = S_TAC;
 val Simplify = R_TAC;
-val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val STRONG_DISJ_TAC = CONV_TAC (REWR_CONV (GSYM IMP_DISJ_THM)) >> STRIP_TAC;
-val Cond =
-  DISCH_THEN
-  (fn mp_th =>
-   let
-     val cond = fst (dest_imp (concl mp_th))
-   in
-     KNOW_TAC cond >| [ALL_TAC, DISCH_THEN (MP_TAC o MP mp_th)]
-   end);
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)

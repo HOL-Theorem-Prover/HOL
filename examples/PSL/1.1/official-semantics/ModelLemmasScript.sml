@@ -60,6 +60,7 @@ val _ = intLib.deprecate_int();
 * Start a new theory called Lemmas
 ******************************************************************************)
 val _ = new_theory "ModelLemmas";
+val _ = ParseExtras.temp_loose_equality()
 
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]

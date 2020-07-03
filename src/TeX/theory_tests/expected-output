@@ -56,8 +56,8 @@
 |- (\HOLSymConst{\HOLTokenForall{}}\HOLBoundVar{f}. \HOLConst{MAP} \HOLBoundVar{f} [] \HOLSymConst{=} []) \HOLSymConst{\HOLTokenConj{}}
    \HOLSymConst{\HOLTokenForall{}}\HOLBoundVar{f} \HOLBoundVar{h} \HOLBoundVar{t}. \HOLConst{MAP} \HOLBoundVar{f} (\HOLBoundVar{h}\HOLSymConst{::}\HOLBoundVar{t}) \HOLSymConst{=} \HOLBoundVar{f} \HOLBoundVar{h}\HOLSymConst{::}\HOLConst{MAP} \HOLBoundVar{f} \HOLBoundVar{t}
 
-\HOLConst{FACT} \HOLNumLit{0} \HOLSymConst{\HOLTokenDefEquality{}} \HOLNumLit{1}
+\HOLConst{FACT} \HOLNumLit{0} \HOLTokenDefEquality{} \HOLNumLit{1}
 \HOLConst{FACT} \HOLNumLit{0} \HOLSymConst{=} \HOLNumLit{1}
 
-\HOLConst{EVEN} \HOLNumLit{0} \HOLSymConst{\HOLTokenDefEquality{}} \HOLConst{T}
+\HOLConst{EVEN} \HOLNumLit{0} \HOLTokenDefEquality{} \HOLConst{T}
 \HOLConst{EVEN} \HOLNumLit{0} \HOLSymConst{\HOLTokenEquiv{}} \HOLConst{T}

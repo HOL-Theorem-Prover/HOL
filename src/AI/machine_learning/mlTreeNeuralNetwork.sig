@@ -3,57 +3,39 @@ sig
 
 include Abbrev
 
-  type vect = real vector
-  type mat = real vector vector
-  type layer = {a  : real -> real, da : real -> real, w : mat}
-  type nn = layer list
-  type fpdata = {layer : layer, inv : vect, outv : vect, outnv : vect}
-  type bpdata = {doutnv : vect, doutv  : vect, dinv : vect, dw : mat}
-  type opdict = ((term * int),nn) Redblackmap.dict
-  type tnn = {opdict: opdict, headnn: nn, dimin: int, dimout: int}
-  type dhtnn =
-    {opdict: opdict, headeval: nn, headpoli: nn, dimin: int, dimout: int}
+  type tnn = (term, mlNeuralNetwork.nn) Redblackmap.dict
+  type tnnex = ((term * real list) list) list
+  type tnnparam = (term * int list) list
+  type schedule = mlNeuralNetwork.schedule
+  type tnnbatch = (term list * (term * mlMatrix.vect) list) list
 
+  val operl_of_term : term -> (term * int) list
   val oper_compare : (term * int) * (term * int) -> order
+  val random_tnn : (term * int list) list -> tnn
+  val dim_std : int * int -> term -> int list
+  val dim_std_arity : int * int -> (term * int) -> int list
+  val random_tnn_std : (int * int) -> term list -> tnn
+  val mk_embedding_var : (real vector * hol_type) -> term
 
-  (* random generation *)
-  val random_headnn : (int * int) -> nn
-  val random_opdict : int -> (term * int) list -> opdict
-  val random_tnn : (int * int) -> (term * int) list -> tnn
-  val random_dhtnn  : (int * int) -> (term * int) list -> dhtnn
+  val write_tnn : string -> tnn -> unit
+  val read_tnn : string -> tnn
+  val write_tnnex : string -> tnnex -> unit
+  val read_tnnex : string -> tnnex
+  val write_tnnparam : string -> tnnparam -> unit
+  val read_tnnparam : string -> tnnparam
 
-  (* printing *)
-  val string_of_tnn : tnn -> string
-  val string_of_trainset : (term * real list) list -> string
-
-  (* inference *)
-  val infer_tnn : tnn -> term -> real list
-
-  (* training *)
-  val adaptive_flag : bool ref
-
-  val train_tnn_schedule :
-    tnn ->
-    int -> (term list * vect) list * (term list * vect) list ->
-    (int * real) list ->
-    tnn
-
-  val train_dhtnn_schedule :
-    dhtnn ->
-    int -> (term list * vect) list * (term list * vect) list ->
-    (int * real) list ->
-    dhtnn
-
-  (* prepare the dataset before training *)
-  val trainset_info : (term * real list) list -> string
-
-  val prepare_trainset : (term * real list) list -> (term list * vect) list
-
-  val prepare_train_tnn :
-    tnn ->
-    int -> (term * real list) list * (term * real list) list ->
-    (int * real) list ->
-    tnn
-
+  val infer_tnn : tnn -> term list -> (term * real list) list
+  val precomp_embed : tnn -> term -> term
+  val prepare_tnnex : tnnex -> tnnbatch
+  val train_tnn_epoch_nopar :
+    mlNeuralNetwork.trainparam -> real list -> tnn -> tnnbatch list ->
+    tnn * real
+  val stats_tnnex : tnnex -> string
+  val train_tnn : schedule -> tnn -> tnnex * tnnex -> tnn
+  val is_accurate : tnn -> (term * real list) list -> bool
+  val tnn_accuracy : tnn -> tnnex -> real
+  val traintnn_extspec :
+    (unit, (tnnex * schedule * tnnparam), tnn) smlParallel.extspec
+  val train_tnn_automl : mlNeuralNetwork.trainparam -> tnn -> tnnex -> tnn
 
 end

@@ -60,11 +60,11 @@ val enc2dec_none = store_thm
    RW_TAC std_ss [enc2dec_def] >>
    PROVE_TAC []);
 
-val enc2dec_some = store_thm
-  ("enc2dec_some",
-   ``!p e l x t.
+Theorem enc2dec_some:
+   !p e l x t.
        wf_encoder p e ==>
-       ((enc2dec p e l = SOME (x, t)) = p x /\ (l = APPEND (e x) t))``,
+       ((enc2dec p e l = SOME (x, t)) <=> p x /\ (l = APPEND (e x) t))
+Proof
    REPEAT STRIP_TAC THEN SRW_TAC [][enc2dec_def] THEN
    Cases_on `?y tt. p y /\ (l = e y ++ tt)` THENL [
      SRW_TAC [][ELIM_UNCURRY] THEN SELECT_ELIM_TAC THEN
@@ -78,13 +78,14 @@ val enc2dec_some = store_thm
      METIS_TAC [IS_PREFIX_APPEND1, IS_PREFIX_APPEND2, IS_PREFIX_REFL],
 
      ASM_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []
-   ]);
+   ]
+QED
 
 val enc2dec_some_alt = store_thm
   ("enc2dec_some_alt",
    ``!p e l x.
        wf_encoder p e ==>
-       ((enc2dec p e l = SOME x) =
+       ((enc2dec p e l = SOME x) <=>
         p (FST x) /\ (l = APPEND (e (FST x)) (SND x)))``,
    RW_TAC std_ss []
    >> Cases_on `x`
@@ -97,11 +98,11 @@ val wf_enc2dec = store_thm
    RW_TAC std_ss [wf_decoder_def, enc2dec_some] >>
    PROVE_TAC [APPEND_NIL]);
 
-val dec2enc_some = store_thm
-  ("dec2enc_some",
-   ``!p d x l.
+Theorem dec2enc_some:
+   !p d x l.
        wf_decoder p d ==>
-       ((dec2enc d x = l) /\ p x = (d l = SOME (x, [])))``,
+       ((dec2enc d x = l) /\ p x <=> (d l = SOME (x, [])))
+Proof
    RW_TAC std_ss [dec2enc_def] >>
    SELECT_TAC >>
    RW_TAC std_ss [] >>
@@ -120,7 +121,8 @@ val dec2enc_some = store_thm
    REVERSE (Cases_on `p x`) >- PROVE_TAC [] >>
    ASM_REWRITE_TAC [] >>
    DISCH_THEN (CHOOSE_THEN MP_TAC) >>
-   RW_TAC std_ss []);
+   RW_TAC std_ss []
+QED
 
 val decode_dec2enc = store_thm
   ("decode_dec2enc",

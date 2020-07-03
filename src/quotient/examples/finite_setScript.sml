@@ -389,11 +389,10 @@ val list_EXTENSION1 = store_thm
       ]
    );
 
-val list_EXTENSION = store_thm
-   ("list_EXTENSION",
-    ``!A B. A == B = (!a:'a. MEM a A = MEM a B)``,
-    PROVE_TAC[MEM_RSP,list_EXTENSION1]
-   );
+Theorem list_EXTENSION:
+  !A B. A == B <=> (!a:'a. MEM a A = MEM a B)
+Proof PROVE_TAC[MEM_RSP,list_EXTENSION1]
+QED
 
 val Delete1_RSP = store_thm
    ("Delete1_RSP",
@@ -421,14 +420,14 @@ val Inter1_def = Define
 
 val _ = add_infix ("Inter1", 600, HOLgrammars.LEFT);
 
-val MEM_Inter1 = store_thm
-   ("MEM_Inter1",
-    ``!A B (x:'a).
-           MEM x (A Inter1 B) = MEM x A /\ MEM x B``,
+Theorem MEM_Inter1:
+  !A B (x:'a).
+           MEM x (A Inter1 B) <=> MEM x A /\ MEM x B
+Proof
     Induct
     THEN RW_TAC list_ss [Inter1_def]
     THEN PROVE_TAC []
-   );
+QED
 
 val Inter1_RSP = store_thm
    ("Inter1_RSP",

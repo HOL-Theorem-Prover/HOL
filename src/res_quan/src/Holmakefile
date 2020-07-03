@@ -1,3 +1,9 @@
 ifdef POLY
 HOLHEAP = ../../num/termination/numheap
 endif
+
+ifeq ($(KERNELID),otknl)
+ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+all: $(ARTFILES) $(DEFAULT_TARGETS)
+
+endif

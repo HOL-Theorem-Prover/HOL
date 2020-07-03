@@ -504,8 +504,11 @@ fun BETAS fnn body =
 fun GTAC y (A,g) =
    let val (Bvar,Body) = dest_forall g
        and y' = Term.variant (free_varsl (g::A)) y
-   in ([(A, subst[Bvar |-> y'] Body)],
-       fn [th] => GEN Bvar (INST [y' |-> Bvar] th) | _ => raise Match)
+   in
+     if type_of Bvar = type_of y' then
+       ([(A, subst[Bvar |-> y'] Body)],
+        fn [th] => GEN Bvar (INST [y' |-> Bvar] th) | _ => raise Match)
+     else GEN_TAC (A,g)
    end;
 
 (* ---------------------------------------------------------------------*)
@@ -609,16 +612,20 @@ fun GOALS A [] tm = raise ERR "GOALS" "empty list"
 (* GALPH "!x1 ... xn. A ==> B":   alpha-converts the x's to genvars.    *)
 (* --------------------------------------------------------------------- *)
 
-local fun rule v =
-       let val gv = genvar(type_of v)
-       in fn eq => let val th = FORALL_EQ v eq
-                   in TRANS th (GEN_ALPHA_CONV gv (rhs(concl th)))
-                   end
-       end
+local
+  fun rule vty v =
+      if type_of v = vty then
+        let
+          val gv = genvar(type_of v)
+        in fn eq => let val th = FORALL_EQ v eq
+                    in TRANS th (GEN_ALPHA_CONV gv (rhs(concl th)))
+                    end
+        end
+      else I
 in
-fun GALPH tm =
+fun GALPH vty tm =
    let val (vs,hy) = strip_forall tm
-   in if (is_imp hy) then Lib.itlist rule vs (REFL hy) else REFL tm
+   in if (is_imp hy) then Lib.itlist (rule vty) vs (REFL hy) else REFL tm
    end
 end;
 
@@ -628,11 +635,13 @@ end;
 (* Applies the conversion GALPH to each conjunct in a sequence.         *)
 (* ---------------------------------------------------------------------*)
 
-fun f (conj1,conj2) = (GALPH conj1, GALPHA conj2)
-and GALPHA tm =
-   let val (c,cs) = f(dest_conj tm)
-   in MK_COMB(AP_TERM boolSyntax.conjunction c, cs)
-   end handle HOL_ERR _ => GALPH tm
+fun GALPHA vty tm =
+   let
+     fun f (conj1,conj2) = (GALPH vty conj1, GALPHA vty conj2)
+     val (c,cs) = f(dest_conj tm)
+   in
+     MK_COMB(AP_TERM boolSyntax.conjunction c, cs)
+   end handle HOL_ERR _ => GALPH vty tm
 
 (* --------------------------------------------------------------------- *)
 (* INDUCT_THEN : general induction tactic for concrete recursive types.  *)
@@ -642,6 +651,7 @@ local val boolvar = genvar Type.bool
 in
 fun INDUCT_THEN th =
  let val (Bvar,Body) = dest_forall(concl th)
+     val ty = Bvar |> type_of |> dom_rng |> #1
      val (hy,_) = dest_imp Body
      val bconv = BETAS Bvar hy
      val tacsf = TACS hy
@@ -650,7 +660,7 @@ fun INDUCT_THEN th =
      val (asm,con) = case dest_thm eta_th
                      of ([asm],con) => (asm,con)
                       | _ => raise Match
-     val ind = GEN v (SUBST [boolvar |-> GALPHA asm]
+     val ind = GEN v (SUBST [boolvar |-> GALPHA ty asm]
                             (mk_imp(boolvar, con))
                             (DISCH asm eta_th))
  in fn ttac => fn (A,t) =>

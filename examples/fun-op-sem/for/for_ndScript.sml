@@ -18,7 +18,6 @@ A simpler version of this language can be found in forScript.sml.
 *)
 
 open pred_setTheory optionTheory stringTheory llistTheory integerTheory;
-open lcsymtacs;
 
 val _ = temp_tight_equality ();
 val ect = BasicProvers.EVERY_CASE_TAC;

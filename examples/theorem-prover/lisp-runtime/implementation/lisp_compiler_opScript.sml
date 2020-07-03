@@ -1,5 +1,6 @@
 
 open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_compiler_op";
+val _ = ParseExtras.temp_loose_equality()
 
 open compilerLib decompilerLib codegenLib;
 
@@ -4474,6 +4475,7 @@ val mc_only_compile_thm = prove(
   \\ IMP_RES_TAC BC_ev_fun_CONSTS
   \\ IMP_RES_TAC bc_inv_WRITE_BYTECODE
   \\ FULL_SIMP_TAC (srw_ss()) [WRITE_BYTECODE_code_end]
+  \\ REV_FULL_SIMP_TAC bool_ss []
   \\ MATCH_MP_TAC WRITE_BYTECODE_code \\ ASM_SIMP_TAC std_ss [])
   |> SIMP_RULE std_ss [LET_DEF];
 

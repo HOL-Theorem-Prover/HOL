@@ -15,18 +15,19 @@ val _ = Hol_datatype`
         | CnPair of Cterm => Cterm
         | CnConst of 'a`;
 
-val Ctermeq_def = RWDefine`
+Definition Ctermeq_def[simp]:
   (Ctermeq (CNom a1) (CNom a2) = (a1 = a2)) ∧
-  (Ctermeq (CSus p1 v1) (CSus p2 v2) = (p1 == p2) ∧ (v1 = v2)) ∧
-  (Ctermeq (CTie a1 t1) (CTie a2 t2) = (a1 = a2) ∧ Ctermeq t1 t2) ∧
-  (Ctermeq (CnPair t1a t1d) (CnPair t2a t2d) = Ctermeq t1a t2a ∧ Ctermeq t1d t2d) ∧
+  (Ctermeq (CSus p1 v1) (CSus p2 v2) <=> (p1 == p2) ∧ (v1 = v2)) ∧
+  (Ctermeq (CTie a1 t1) (CTie a2 t2) <=> (a1 = a2) ∧ Ctermeq t1 t2) ∧
+  (Ctermeq (CnPair t1a t1d) (CnPair t2a t2d) <=>
+     Ctermeq t1a t2a ∧ Ctermeq t1d t2d) ∧
   (Ctermeq (CnConst c1) (CnConst c2) = (c1 = c2)) ∧
-  (Ctermeq t1 t2 = F)`;
+  (Ctermeq t1 t2 = F)
+End
 
-val Ctermeq_refl = RWstore_thm(
-"Ctermeq_refl",
-`∀t. Ctermeq t t`,
-Induct THEN SRW_TAC [][permeq_refl]);
+Theorem Ctermeq_refl[simp]: ∀t. Ctermeq t t
+Proof Induct THEN SRW_TAC [][permeq_refl]
+QED
 
 val Ctermeq_sym = Q.store_thm(
 "Ctermeq_sym",
@@ -313,31 +314,31 @@ val Sus_eq_perms = Q.store_thm(
 `p1 == p2 ⇒ (Sus p1 v = Sus p2 v)`,
 SRW_TAC [][])
 
-val nvars_def = RWDefine`
+Definition nvars_def[simp]:
   (nvars (Sus p v) = {v}) ∧
   (nvars (Tie a t) = nvars t) ∧
   (nvars (nPair t1 t2) = nvars t1 ∪ nvars t2) ∧
-  (nvars _ = {})`
+  (nvars _ = {})
+End
 
-val FINITE_nvars = RWstore_thm(
-"FINITE_nvars",
-`FINITE (nvars t)`,
-Induct_on `t` THEN SRW_TAC [][])
+Theorem FINITE_nvars[simp]: FINITE (nvars t)
+Proof Induct_on `t` THEN SRW_TAC [][]
+QED
 
-val nvarb_def = RWDefine`
+Definition nvarb_def[simp]:
   (nvarb (Sus p v) = {|v|}) ∧
   (nvarb (Tie a t) = nvarb t) ∧
   (nvarb (nPair t1 t2) = nvarb t1 + nvarb t2) ∧
-  (nvarb _ = {||})`
+  (nvarb _ = {||})
+End
 
-val FINITE_nvarb = RWstore_thm(
-  "FINITE_nvarb",
-  `∀t. FINITE_BAG (nvarb t)`,
-  Induct THEN SRW_TAC [][]);
+Theorem FINITE_nvarb[simp]: ∀t. FINITE_BAG (nvarb t)
+Proof Induct THEN SRW_TAC [][]
+QED
 
-val IN_nvarb_nvars = RWstore_thm(
-  "IN_nvarb_nvars",
-  `∀t. BAG_IN e (nvarb t) <=> e IN nvars t`,
-  Induct THEN SRW_TAC [][]);
+Theorem IN_nvarb_nvars[simp]:
+  ∀t. BAG_IN e (nvarb t) <=> e IN nvars t
+Proof Induct THEN SRW_TAC [][]
+QED
 
 val _ = export_theory ();

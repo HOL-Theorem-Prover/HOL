@@ -15,6 +15,7 @@ open Q arithmeticTheory bitTheory wordsTheory wordsLib;
 open updateTheory armTheory systemTheory arm_evalTheory;
 
 val _ = new_theory "arm_rules";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 

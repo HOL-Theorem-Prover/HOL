@@ -22,8 +22,12 @@ sig
   val abstract_stac : string -> string option
   val inst_stac : string list -> string -> string
   val is_thmlarg_stac : string -> bool
+  val save_thmlintac : lbl -> unit
 
   (* competition between different tactics over a goal *)
+  val ortho_predstac_time : real ref
+  val ortho_predthm_time : real ref
+  val ortho_teststac_time : real ref
   val orthogonalize : (thmdata * tacdata) -> lbl -> lbl
 
 end

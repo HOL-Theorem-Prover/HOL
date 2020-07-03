@@ -15,6 +15,7 @@ open totoTheory bossLib listTheory enumeralTheory;
 
 val _ = new_theory "fmapal";
 
+val _ = ParseExtras.temp_loose_equality()
 val cpn_case_def = TypeBase.case_def_of ``:ordering``
 val cpn_distinct = TypeBase.distinct_of ``:ordering``
 val cpn_nchotomy = TypeBase.nchotomy_of ``:ordering``

@@ -1,4 +1,4 @@
-open HolKernel boolLib bossLib OpenTheoryMap OpenTheoryFunctionTheory lcsymtacs
+open HolKernel boolLib bossLib OpenTheoryMap OpenTheoryFunctionTheory
 
 val Thy = "HOL4combin"
 val _ = new_theory Thy

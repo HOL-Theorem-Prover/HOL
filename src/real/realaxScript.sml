@@ -21,6 +21,7 @@ open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
 infix THEN THENL ORELSE ORELSEC ##;
 
 val _ = new_theory "realax";
+val _ = ParseExtras.temp_loose_equality()
 
 (*---------------------------------------------------------------------------*)
 (* Required lemmas about the halfreals - mostly to drive CANCEL_TAC          *)
@@ -563,8 +564,13 @@ val _ =
               fixity = Suffix 2100,
               paren_style = OnlyIfNecessary,
               pp_elements = [TOK (UnicodeChars.sup_minus ^ UnicodeChars.sup_1)],
-              term_name = "realinv"}
+              term_name = "realinv"};
+
 val _ = overload_on("realinv", ``inv``);
+
+val _ = TeX_notation {hol = "realinv", TeX = ("\\HOLTokenInverse{}", 1)};
+val _ = TeX_notation {hol = (UnicodeChars.sup_minus ^ UnicodeChars.sup_1),
+                      TeX = ("\\HOLTokenInverse{}", 1)};
 
 (*---------------------------------------------------------------------------
        Overload arithmetic operations.

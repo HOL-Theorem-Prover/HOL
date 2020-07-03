@@ -11,7 +11,7 @@ val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val () = Parse.temp_type_abbrev ("M",``:'state -> 'a # 'state``)
+Type M[local] = “:'state -> 'a # 'state”
 
 (* identity of the Kleisli category *)
 val UNIT_DEF = DEF `UNIT (x:'b) = \(s:'a). (x, s)`;
@@ -93,7 +93,7 @@ val mwhile_exists = prove(
     numLib.LEAST_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC[] THEN
     Q.X_GEN_TAC `n` THEN SIMP_TAC (srw_ss()) [] THEN STRIP_TAC THEN
     SIMP_TAC (srw_ss()) [BIND_DEF] THEN
-    Q.ISPEC_THEN `g s` (Q.X_CHOOSE_THEN `gv1`
+    Q.SPEC_THEN `g s` (Q.X_CHOOSE_THEN `gv1`
                                        (Q.X_CHOOSE_THEN `s1` ASSUME_TAC))
                 pairTheory.pair_CASES THEN
     ASM_SIMP_TAC (srw_ss()) [] THEN REVERSE (Cases_on `gv1`)
@@ -104,8 +104,8 @@ val mwhile_exists = prove(
                  SRW_TAC [][]) THEN
            SRW_TAC [][UNIT_DEF]) THEN
     ASM_SIMP_TAC (srw_ss()) [IGNORE_BIND_DEF, BIND_DEF] THEN
-    Q.ISPEC_THEN `b s1` (Q.X_CHOOSE_THEN `bv1`
-                                       (Q.X_CHOOSE_THEN `s2` ASSUME_TAC))
+    Q.SPEC_THEN `b s1` (Q.X_CHOOSE_THEN `bv1`
+                                        (Q.X_CHOOSE_THEN `s2` ASSUME_TAC))
                 pairTheory.pair_CASES THEN
     ASM_SIMP_TAC (srw_ss()) [] THEN
     `?m. n = SUC m`
@@ -132,14 +132,14 @@ val mwhile_exists = prove(
       SRW_TAC [][]
     ],
     FULL_SIMP_TAC (srw_ss()) [BIND_DEF] THEN
-    Q.ISPEC_THEN `g s` (Q.X_CHOOSE_THEN `gv1`
+    Q.SPEC_THEN `g s` (Q.X_CHOOSE_THEN `gv1`
                                        (Q.X_CHOOSE_THEN `s1` ASSUME_TAC))
                 pairTheory.pair_CASES THEN
     REVERSE (SRW_TAC [][])
       THEN1(FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) THEN SRW_TAC [][]) THEN
     SRW_TAC [][IGNORE_BIND_DEF, BIND_DEF] THEN
-    Q.ISPEC_THEN `b s1` (Q.X_CHOOSE_THEN `bv1`
-                                       (Q.X_CHOOSE_THEN `s2` ASSUME_TAC))
+    Q.SPEC_THEN `b s1` (Q.X_CHOOSE_THEN `bv1`
+                                        (Q.X_CHOOSE_THEN `s2` ASSUME_TAC))
                 pairTheory.pair_CASES THEN
     SRW_TAC [][] THEN
     FIRST_X_ASSUM (Q.SPEC_THEN `SUC m` (MP_TAC o Q.GEN `m`)) THEN

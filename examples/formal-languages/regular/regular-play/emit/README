@@ -1,0 +1,7 @@
+This directory is the destination for EmitML calls made by
+
+  ../src/emit_regexScript.sml
+
+This file ensures that the directory is created on a fresh git
+checkout, meaning that Holmake doesn't get upset by its absence when
+it does its first build.

@@ -4,6 +4,7 @@ sig
 datatype t =
          Int of int
        | String of string
+       | SharedString of string
        | List of t list
        | Term of Term.term
        | Type of Type.hol_type

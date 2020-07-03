@@ -1,6 +1,7 @@
 (*
  * Copyright 1991-1995  University of Cambridge (Author: Monica Nesi)
  * Copyright 2016-2017  University of Bologna   (Author: Chun Tian)
+ * Copyright 2019  Fondazione Bruno Kessler, Italy (Author: Chun Tian)
  *)
 
 structure CCSLib :> CCSLib =
@@ -10,31 +11,13 @@ open HolKernel Parse boolLib bossLib;
 
 (******************************************************************************)
 (*                                                                            *)
-(*      Backward compatibility and utility tactic/tacticals (17 oct 2017)     *)
+(*      Backward compatibility and utility tactic/tacticals (2019)            *)
 (*                                                                            *)
 (******************************************************************************)
 
-(* from Brian Campbell. No uses of (Q.)PAT_ASSUM !! *)
-local
-    val PAT_X_ASSUM = PAT_ASSUM;
-    open Tactical
-in
-    val PAT_X_ASSUM = PAT_X_ASSUM;
-end;
-
-local
-    val PAT_X_ASSUM = Q.PAT_ASSUM;
-    open Q;
-in
-    val qpat_x_assum = PAT_X_ASSUM;
-end;
-
-(** Q.GENL generalises in wrong order #428, fixed on June 27, 2017 *)
-fun Q_GENL qs th = List.foldr (fn (q, th) => Q.GEN q th) th qs;
-
 (* Tacticals for better expressivity *)
 fun fix   ts = MAP_EVERY Q.X_GEN_TAC ts;        (* from HOL Light *)
-fun set   ts = MAP_EVERY Q.ABBREV_TAC ts;       (* from HOL mizar mode *)
+fun unset ts = MAP_EVERY Q.UNABBREV_TAC ts;     (* from HOL mizar mode *)
 fun take  ts = MAP_EVERY Q.EXISTS_TAC ts;       (* from HOL mizar mode *)
 val Know     = Q_TAC KNOW_TAC;                  (* from util_prob *)
 val Suff     = Q_TAC SUFF_TAC;                  (* from util_prob *)
@@ -44,8 +27,7 @@ fun wrap   a = [a];                             (* from util_prob *)
 val art      = ASM_REWRITE_TAC;
 val Rewr     = DISCH_THEN (REWRITE_TAC o wrap); (* from util_prob *)
 val Rewr'    = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val Rev      = Tactical.REVERSE;                (* REVERSE has different meaning
-                                                   in rich_listTheory *)
+val POP_ORW  = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 
 fun PRINT_TAC s gl =                            (* from cardinalTheory *)
   (print ("** " ^ s ^ "\n"); ALL_TAC gl);
@@ -61,33 +43,7 @@ in
   val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
 end;
 
-(* directly remove an assumption by its index *)
-fun X_TAC n = (NTAC n (POP_ASSUM MP_TAC)) \\    (* n = last - target *)
-              POP_ASSUM K_TAC >> (NTAC n DISCH_TAC);
-
-(* signatures:
-
-  val PAT_X_ASSUM               : term -> thm_tactic -> tactic
-  val qpat_x_assum              : Q.tmquote -> thm_tactic -> tactic
-  val Q_GENL                    : Q.tmquote list -> thm -> thm
-  val fix                       : Q.tmquote list -> tactic
-  val set                       : Q.tmquote list -> tactic
-  val take                      : Q.tmquote list -> tactic
-  val Know                      : Q.tmquote -> tactic
-  val Suff                      : Q.tmquote -> tactic
-  val K_TAC                     : 'a -> tactic
-  val KILL_TAC                  : tactic
-  val wrap                      : 'a -> 'a list
-  val art                       : thm list -> tactic
-  val Rewr                      : tactic
-  val Rewr'                     : tactic
-  val Rev                       : tactic -> tactic
-  val PRINT_TAC                 : string -> tactic
-  val COUNT_TAC                 : tactic -> tactic
-  val STRONG_CONJ_TAC           : tactic
-  val X_TAC                     : int -> tactic
-
-   end of signatures *)
+fun NDISJ_TAC n = (NTAC n DISJ2_TAC) >> TRY DISJ1_TAC;
 
 (******************************************************************************)
 (*                                                                            *)
@@ -216,6 +172,4 @@ fun list_apply_tac _ [] = []
   | list_apply_tac (f: 'a -> tactic) (actl : 'a list) : tactic list =
     (f (hd actl)) :: (list_apply_tac f (tl actl));
 
-end (* struct *)
-
-(* last updated: May 7, 2017 *)
+end (* of struct *)

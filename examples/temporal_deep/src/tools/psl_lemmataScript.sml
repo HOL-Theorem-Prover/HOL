@@ -39,6 +39,7 @@ val _ = new_theory "psl_lemmata";
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
+val _ = ParseExtras.temp_loose_equality()
 
 
 val IS_INFINITE_PROPER_PATH_def =

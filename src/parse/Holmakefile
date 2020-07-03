@@ -13,6 +13,8 @@ all: base_lexer.sml selftest.exe $(UOFILES)
 base_lexer.sml: base_lexer
 	$(protect $(HOLDIR)/tools/mllex/mllex.exe) base_lexer
 
+base_lexer.uo: base_tokens.uo MLstring.uo
+
 LVTermNetFunctor.ui LVTermNetFunctor.uo: LVTermNetFunctor.sml $(dprot $(SIGOBJ)/HolKernel.ui)
 	$(HOLMOSMLC) $(protect $(SIGOBJ)/Overlay.ui) -toplevel -c $<
 

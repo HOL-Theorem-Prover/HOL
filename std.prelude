@@ -75,7 +75,6 @@ in
   val _ = installPP (mosmlpp proofManagerLib.pp_proofs)
   val _ = installPP (mosmlpp Rewrite.pp_rewrites)
   val _ = installPP (mosmlpp TypeBasePure.pp_tyinfo)
-  val _ = installPP (mosmlpp DefnBase.pp_defn)
   val _ = installPP (mosmlpp Arbnum.pp_num)
   val _ = installPP (mosmlpp Arbint.pp_int)
   val _ = installPP (mosmlpp Arbrat.pp_rat)
@@ -187,7 +186,16 @@ in
   val _ = loadPath := tl (!loadPath)
 end;
 
-val _ = ReadHMF.extend_path_with_includes {verbosity = 1, lpref = loadPath};
+val _ = let
+  val lpsize0 = length (!loadPath)
+in
+  ReadHMF.extend_path_with_includes {verbosity = 0, lpref = loadPath};
+  if length (!loadPath) <> lpsize0 then
+    print ("** Load path (see loadPath variable) now contains " ^
+           Int.toString (length (!loadPath)) ^
+           " entries\n** after consulting Holmakefiles\n\n")
+  else ()
+end;
 
 use (Path.concat(Globals.HOLDIR, "tools/check-intconfig.sml"));
 

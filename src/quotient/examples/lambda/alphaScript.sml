@@ -634,7 +634,7 @@ val ALPHA1_EXTRANEOUS_CONTEXT = store_thm
 val ALPHA1_subst =
     new_definition
     ("ALPHA1_subst",
-     “ALPHA1_subst xs ys xs' ys' t1 t2 s1 (s2:^subs) =
+     “ALPHA1_subst xs ys xs' ys' t1 t2 s1 (s2:^subs) <=>
         (LENGTH xs' = LENGTH ys') /\
         (!x y. (x IN t1) /\ (y IN t2) /\
                alpha_match xs ys x y ==>
@@ -1395,7 +1395,7 @@ val ALPHA_term_pos = store_thm
         (!x y.
           ALPHA (Var1 x:'a term1) (Var1 y) = (x = y)) /\
         (!t1 t2 u1 u2.
-          ALPHA (App1 t1 u1:'a term1) (App1 t2 u2) =
+          ALPHA (App1 t1 u1:'a term1) (App1 t2 u2) <=>
           ALPHA t1 t2 /\ ALPHA u1 u2) (* /\
         (!x1 x2 u1 u2.
           ALPHA (Lam1 x1 u1:'a term1) (Lam1 x2 u2) =

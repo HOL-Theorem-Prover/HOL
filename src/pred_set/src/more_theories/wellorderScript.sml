@@ -6,6 +6,8 @@ open relationTheory set_relationTheory pred_setTheory pairTheory
 
 val _ = new_theory "wellorder"
 
+val _ = temp_delsimps ["NORMEQ_CONV"]
+
 fun K_TAC _ = ALL_TAC;
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
@@ -115,7 +117,7 @@ val WIN_trichotomy = store_thm(
 
 val WIN_REFL = store_thm(
   "WIN_REFL",
-  ``(x,x) WIN w = F``,
+  ``(x,x) WIN w <=> F``,
   `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
   fs[wellorder_def, strict_def]);
 val _ = export_rewrites ["WIN_REFL"]

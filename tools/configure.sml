@@ -49,7 +49,7 @@ val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 12
+val version_number = 13
 val release_string = "Kananaskis"
 
 
@@ -341,6 +341,8 @@ val _ =
     FileSys.chDir "mosml";
     compile ["-I", ".."] "HM_Cline.sig";
     compile ["-I", ".."] "HM_Cline.sml";
+    compile ["-I", ".."] "GraphExtra.sig";
+    compile ["-I", ".."] "GraphExtra.sml";
     compile ["-I", ".."] "HM_BaseEnv.sig";
     compile ["-I", ".."] "HM_BaseEnv.sml";
     FileSys.chDir "..";
@@ -428,7 +430,7 @@ end;
 
 val _ =
  let open TextIO
-     val _ = echo "Making hol-mode.el (for Emacs/XEmacs)"
+     val _ = echo "Making hol-mode.el (for Emacs)"
      val src = fullPath [holdir, "tools/hol-mode.src"]
     val target = fullPath [holdir, "tools/hol-mode.el"]
  in
@@ -500,10 +502,13 @@ in
       BinIO.closeOut ostrm;
       mk_xable tgt;
       print "Quote-filter built\n"
-    end handle e => print "0.Quote-filter build failed (continuing anyway)\n"
-  else              print "1.Quote-filter build failed (continuing anyway)\n"
-  ;
-  FileSys.chDir cwd
+    end handle e =>
+               (print ("Quote-filter build failed: " ^ General.exnMessage e);
+                OS.Process.exit OS.Process.failure)
+  else (
+    print "Quote-filter build failed\n";
+    OS.Process.exit OS.Process.failure
+  )
 end
 
 (*---------------------------------------------------------------------------

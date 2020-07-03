@@ -1,5 +1,5 @@
 open HolKernel boolLib bossLib Parse; val _ = new_theory "improved_gc";
-
+val _ = ParseExtras.temp_loose_equality()
 open pred_setTheory arithmeticTheory pairTheory listTheory combinTheory;
 open finite_mapTheory sumTheory relationTheory;
 

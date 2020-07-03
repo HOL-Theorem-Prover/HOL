@@ -16,6 +16,8 @@ open HolKernel Parse boolLib bossLib Q
 val _ = new_theory "patricia";
 
 val _ = wordsLib.deprecate_word();
+val _ = ParseExtras.temp_loose_equality()
+val _ = diminish_srw_ss ["NORMEQ_ss"]
 
 (* ------------------------------------------------------------------------- *)
 
@@ -262,18 +264,23 @@ val BRANCHING_BIT_ZERO = store_thm("BRANCHING_BIT_ZERO",
   `!a b. (BRANCHING_BIT a b = 0) = (ODD a = EVEN b) \/ (a = b)`,
   SRW_TAC [ARITH_ss] [Once BRANCHING_BIT_def]);
 
-val BRANCHING_BIT_SYM = store_thm("BRANCHING_BIT_SYM",
-  `!a b. BRANCHING_BIT a b = BRANCHING_BIT b a`,
-  Induct_on `BRANCHING_BIT a b` \\ SRW_TAC [] []
-    >- METIS_TAC [BRANCHING_BIT_ZERO,
-         ONCE_REWRITE_RULE [METIS_PROVE [ODD_EVEN]
-            ``(ODD a = EVEN b) = (ODD b = EVEN a)``] BRANCHING_BIT_ZERO]
-    \\ ONCE_REWRITE_TAC [BRANCHING_BIT_def]
-    \\ SRW_TAC [] [GSYM BIT_DIV2, DIV2_def]
-    >| [METIS_TAC [EVEN_ODD], METIS_TAC [EVEN_ODD],
-        RULE_ASSUM_TAC (REWRITE_RULE [Once BRANCHING_BIT_def])
-          \\ FULL_SIMP_TAC (srw_ss()) []
-          \\ METIS_TAC [DIV2_def]]);
+Theorem BRANCHING_BIT_SYM:
+  !a b. BRANCHING_BIT a b = BRANCHING_BIT b a
+Proof
+  Induct_on ‘BRANCHING_BIT a b’ \\ SRW_TAC [] []
+  >- METIS_TAC [BRANCHING_BIT_ZERO,
+                ONCE_REWRITE_RULE [METIS_PROVE [ODD_EVEN]
+                                   “(ODD a = EVEN b) = (ODD b = EVEN a)”]
+                                  BRANCHING_BIT_ZERO]
+  \\ ONCE_REWRITE_TAC [BRANCHING_BIT_def]
+  \\ SRW_TAC [] [GSYM BIT_DIV2, DIV2_def] >| [
+    METIS_TAC [EVEN_ODD], METIS_TAC [EVEN_ODD],
+    qpat_x_assum ‘SUC _ = BRANCHING_BIT _ _’
+                 (mp_tac o REWRITE_RULE [Once BRANCHING_BIT_def])
+    \\ FULL_SIMP_TAC (srw_ss()) []
+    \\ METIS_TAC [DIV2_def]
+  ]
+QED
 
 val EVERY_LEAF_ADD = store_thm("EVERY_LEAF_ADD",
   `!P t k d. P k d /\ EVERY_LEAF P t ==> EVERY_LEAF P (ADD t (k,d))`,

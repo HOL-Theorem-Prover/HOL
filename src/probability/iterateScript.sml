@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (*                                                                           *)
-(*                    Theory of Iteration over Sets                          *)
+(*    Generic iterated operations and special cases of sums over N and R     *)
 (*                                                                           *)
 (*        (c) Copyright 2014,                                                *)
 (*                       Muhammad Qasim,                                     *)
@@ -11,18 +11,21 @@
 (*            Contact:  <m_qasi@ece.concordia.ca>                            *)
 (*                                                                           *)
 (*                                                                           *)
-(* Note: This theory has been ported from hol light                          *)
+(*    Note: This theory was ported from HOL Light                            *)
 (*                                                                           *)
+(*              (c) Copyright, John Harrison 1998-2007                       *)
+(*              (c) Copyright, Lars Schewe 2007                              *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib bossLib numLib unwindLib tautLib Arith
-prim_recTheory combinTheory quotientTheory arithmeticTheory hrealTheory
+open HolKernel Parse boolLib bossLib;
+
+open numLib unwindLib tautLib Arith
+prim_recTheory combinTheory quotientTheory arithmeticTheory
 realaxTheory realTheory realLib jrhUtils pairTheory seqTheory limTheory
 transcTheory listTheory mesonLib boolTheory pred_setTheory
-util_probTheory optionTheory numTheory sumTheory InductiveDefinition
-ind_typeTheory;
+optionTheory numTheory sumTheory InductiveDefinition ind_typeTheory;
 
-open wellorderTheory cardinalTheory;
+open wellorderTheory cardinalTheory hurdUtils;
 
 val _ = new_theory "iterate";
 
@@ -30,27 +33,21 @@ val _ = new_theory "iterate";
 (* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)
 (* ------------------------------------------------------------------------- *)
 
-fun K_TAC _ = ALL_TAC;
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
 val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
 
-fun SET_TAC L =
-    POP_ASSUM_LIST(K ALL_TAC) THEN REPEAT COND_CASES_TAC THEN
-    REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
-    SING_DEF] L) THEN
-    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
-      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
-      GSPECIFICATION, IN_DEF, EXISTS_PROD] THEN METIS_TAC [];
-
 fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
-fun SET_RULE tm = prove(tm,SET_TAC []);
-fun ASM_SET_TAC L = REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC L;
 
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 val ASM_REAL_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC;
+
+(* Minimal hol-light compatibility layer *)
+val IMP_CONJ      = CONJ_EQ_IMP;     (* cardinalTheory *)
+val FINITE_SUBSET = SUBSET_FINITE_I; (* pred_setTheory *)
+val LE_0          = ZERO_LESS_EQ;    (* arithmeticTheory *)
 
 (* ------------------------------------------------------------------------- *)
 (* misc.                                                                     *)
@@ -62,17 +59,6 @@ val REAL_LT_BETWEEN = store_thm ("REAL_LT_BETWEEN",
   DISCH_TAC THEN EXISTS_TAC ``(a + b) / &2:real`` THEN
   SIMP_TAC arith_ss [REAL_LT_RDIV_EQ, REAL_LT_LDIV_EQ, REAL_ARITH ``0 < 2:real``, REAL_LT] THEN
   POP_ASSUM MP_TAC THEN REAL_ARITH_TAC);
-
-val SIMP_REAL_ARCH = store_thm
-  ("SIMP_REAL_ARCH",
-  ``!x:real. ?n. x <= &n``,
-        REWRITE_TAC [REAL_LE_LT] THEN
-        FULL_SIMP_TAC std_ss [EXISTS_OR_THM] THEN
-        RW_TAC std_ss [] THEN
-        DISJ1_TAC THEN
-        MP_TAC (Q.SPEC `1` REAL_ARCH) THEN
-        REWRITE_TAC [REAL_LT_01, REAL_MUL_RID] THEN
-        RW_TAC std_ss []);
 
 val LOWER_BOUND_FINITE_SET_REAL = store_thm ("LOWER_BOUND_FINITE_SET_REAL",
  ``!f:('a->real) s. FINITE(s) ==> ?a. !x. x IN s ==> a <= f(x)``,
@@ -91,6 +77,325 @@ val UPPER_BOUND_FINITE_SET_REAL = store_thm ("UPPER_BOUND_FINITE_SET_REAL",
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
   REWRITE_TAC[IN_INSERT, NOT_IN_EMPTY] THEN
   METIS_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]);
+
+val REAL_LE_SQUARE_ABS = store_thm ("REAL_LE_SQUARE_ABS",
+ ``!x y:real. abs(x) <= abs(y) <=> x pow 2 <= y pow 2``,
+  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_POW2_ABS] THEN
+  EQ_TAC THEN DISCH_TAC THENL
+  [MATCH_MP_TAC POW_LE THEN ASM_REAL_ARITH_TAC,
+   CCONTR_TAC THEN UNDISCH_TAC ``abs (x:real) pow 2 <= abs y pow 2`` THEN
+   REWRITE_TAC [TWO, REAL_NOT_LE] THEN MATCH_MP_TAC POW_LT THEN
+   ASM_REAL_ARITH_TAC]);
+
+val REAL_EQ_SQUARE_ABS = store_thm ("REAL_EQ_SQUARE_ABS",
+ ``!x y:real. (abs x = abs y) <=> (x pow 2 = y pow 2)``,
+  REWRITE_TAC[GSYM REAL_LE_ANTISYM, REAL_LE_SQUARE_ABS]);
+
+val REAL_HALF = store_thm ("REAL_HALF",
+ ``(!e:real. &0 < e / &2 <=> &0 < e) /\
+   (!e:real. e / &2 + e / &2 = e) /\
+   (!e:real. &2 * (e / &2) = e)``,
+  SIMP_TAC std_ss [REAL_LT_HALF1, REAL_HALF_DOUBLE, REAL_DIV_LMUL,
+  REAL_ARITH ``2 <> 0:real``]);
+
+val FINITE_SUBSET_IMAGE = store_thm ("FINITE_SUBSET_IMAGE",
+ ``!f:'a->'b s t.
+        FINITE(t) /\ t SUBSET (IMAGE f s) <=>
+        ?s'. FINITE s' /\ s' SUBSET s /\ (t = IMAGE f s')``,
+  REPEAT GEN_TAC THEN EQ_TAC THENL
+   [ALL_TAC, ASM_MESON_TAC[IMAGE_FINITE, IMAGE_SUBSET]] THEN
+  STRIP_TAC THEN
+  EXISTS_TAC ``IMAGE (\y. @x. x IN s /\ ((f:'a->'b)(x) = y)) t`` THEN
+  ASM_SIMP_TAC std_ss [IMAGE_FINITE] THEN
+  SIMP_TAC std_ss [EXTENSION, SUBSET_DEF, FORALL_IN_IMAGE] THEN CONJ_TAC THENL
+   [METIS_TAC[SUBSET_DEF, IN_IMAGE], ALL_TAC] THEN
+  REWRITE_TAC[IN_IMAGE] THEN X_GEN_TAC ``y:'b`` THEN
+  SIMP_TAC std_ss [GSYM RIGHT_EXISTS_AND_THM] THEN
+  ONCE_REWRITE_TAC[CONJ_SYM] THEN
+  REWRITE_TAC[UNWIND_THM2, GSYM CONJ_ASSOC] THEN
+  METIS_TAC [SUBSET_DEF, IN_IMAGE]);
+
+val EXISTS_FINITE_SUBSET_IMAGE = store_thm ("EXISTS_FINITE_SUBSET_IMAGE",
+ ``!P f s.
+    (?t. FINITE t /\ t SUBSET IMAGE f s /\ P t) <=>
+    (?t. FINITE t /\ t SUBSET s /\ P (IMAGE f t))``,
+  REWRITE_TAC[FINITE_SUBSET_IMAGE, CONJ_ASSOC] THEN MESON_TAC[]);
+
+val FORALL_FINITE_SUBSET_IMAGE = store_thm ("FORALL_FINITE_SUBSET_IMAGE",
+ ``!P f s. (!t. FINITE t /\ t SUBSET IMAGE f s ==> P t) <=>
+           (!t. FINITE t /\ t SUBSET s ==> P(IMAGE f t))``,
+   REPEAT GEN_TAC THEN
+   ONCE_REWRITE_TAC [METIS [] ``(FINITE t /\ t SUBSET IMAGE f s ==> P t) =
+                            (\t. FINITE t /\ t SUBSET IMAGE f s ==> P t) t``] THEN
+   ONCE_REWRITE_TAC [METIS [] ``(FINITE t /\ t SUBSET s ==> P (IMAGE f t)) =
+                            (\t. FINITE t /\ t SUBSET s ==> P (IMAGE f t)) t``] THEN
+   ONCE_REWRITE_TAC [MESON[] ``(!x. P x) <=> ~(?x. ~P x)``] THEN
+   SIMP_TAC std_ss [NOT_IMP, GSYM CONJ_ASSOC, EXISTS_FINITE_SUBSET_IMAGE]);
+
+val FORALL_IN_GSPEC = store_thm ("FORALL_IN_GSPEC",
+ ``(!P f. (!z. z IN {f x | P x} ==> Q z) <=> (!x. P x ==> Q(f x))) /\
+   (!P f. (!z. z IN {f x y | P x y} ==> Q z) <=>
+          (!x y. P x y ==> Q(f x y))) /\
+   (!P f. (!z. z IN {f w x y | P w x y} ==> Q z) <=>
+          (!w x y. P w x y ==> Q(f w x y)))``,
+   SRW_TAC [][] THEN SET_TAC []);
+
+val EXISTS_IN_GSPEC = store_thm ("EXISTS_IN_GSPEC",
+ ``(!P f. (?z. z IN {f x | P x} /\ Q z) <=> (?x. P x /\ Q(f x))) /\
+   (!P f. (?z. z IN {f x y | P x y} /\ Q z) <=>
+          (?x y. P x y /\ Q(f x y))) /\
+   (!P f. (?z. z IN {f w x y | P w x y} /\ Q z) <=>
+          (?w x y. P w x y /\ Q(f w x y)))``,
+  SRW_TAC [][] THEN SET_TAC[]);
+
+val EMPTY_BIGUNION = store_thm ("EMPTY_BIGUNION",
+ ``!s. (BIGUNION s = {}) <=> !t. t IN s ==> (t = {})``,
+  SET_TAC[]);
+
+val UPPER_BOUND_FINITE_SET = store_thm ("UPPER_BOUND_FINITE_SET",
+ ``!f:('a->num) s. FINITE(s) ==> ?a. !x. x IN s ==> f(x) <= a``,
+  GEN_TAC THEN
+  KNOW_TAC ``!s. (?a. !x. x IN s ==> (f:('a->num))(x) <= a) =
+             (\s. ?a. !x. x IN s ==> f(x) <= a) s`` THENL
+  [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISC_RW_KILL THEN
+  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
+  REWRITE_TAC[IN_INSERT, NOT_IN_EMPTY] THEN
+  MESON_TAC[LESS_EQ_CASES, LESS_EQ_REFL, LESS_EQ_TRANS]);
+
+val REAL_BOUNDS_LT = store_thm ("REAL_BOUNDS_LT",
+ ``!x k:real. -k < x /\ x < k <=> abs(x) < k``,
+  REAL_ARITH_TAC);
+
+val BIGUNION_IMAGE = store_thm ("BIGUNION_IMAGE",
+ ``!f s. BIGUNION (IMAGE f s) = {y | ?x. x IN s /\ y IN f x}``,
+  REPEAT GEN_TAC THEN  GEN_REWR_TAC I [EXTENSION] THEN
+  SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE, GSPECIFICATION] THEN MESON_TAC[]);
+
+val BIGINTER_IMAGE = store_thm ("BIGINTER_IMAGE",
+ ``!f s. BIGINTER (IMAGE f s) = {y | !x. x IN s ==> y IN f x}``,
+  REPEAT GEN_TAC THEN  GEN_REWR_TAC I [EXTENSION] THEN
+  SIMP_TAC std_ss [IN_BIGINTER, IN_IMAGE, GSPECIFICATION] THEN MESON_TAC[]);
+
+val REAL_LE_LMUL1 = store_thm ("REAL_LE_LMUL1",
+ ``!x y z:real. &0 <= x /\ y <= z ==> x * y <= x * z``,
+  METIS_TAC [REAL_LE_LMUL, REAL_MUL_LZERO, REAL_LE_LT]);
+
+val LE_EXISTS = store_thm ("LE_EXISTS",
+ ``!m n:num. (m <= n) <=> (?d. n = m + d)``,
+  GEN_TAC THEN INDUCT_TAC THEN ASM_REWRITE_TAC[LE] THENL
+   [REWRITE_TAC[CONV_RULE(LAND_CONV SYM_CONV) (SPEC_ALL ADD_EQ_0)] THEN
+    SIMP_TAC std_ss [RIGHT_EXISTS_AND_THM, EXISTS_REFL],
+    EQ_TAC THENL
+     [DISCH_THEN(DISJ_CASES_THEN2 SUBST1_TAC MP_TAC) THENL
+       [EXISTS_TAC ``0:num`` THEN REWRITE_TAC[ADD_CLAUSES],
+        DISCH_THEN(X_CHOOSE_THEN ``d:num`` SUBST1_TAC) THEN
+        EXISTS_TAC ``SUC d`` THEN REWRITE_TAC[ADD_CLAUSES]],
+      SIMP_TAC std_ss [LEFT_IMP_EXISTS_THM] THEN
+      INDUCT_TAC THEN REWRITE_TAC[ADD_CLAUSES, INV_SUC_EQ] THEN
+      DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[] THEN DISJ2_TAC THEN
+      EXISTS_TAC ``d:num`` THEN SIMP_TAC std_ss []]]);
+
+val LT_EXISTS = store_thm ("LT_EXISTS",
+ ``!m n. (m < n) <=> (?d. n = m + SUC d)``,
+  GEN_TAC THEN INDUCT_TAC THEN REWRITE_TAC[LT, ADD_CLAUSES, SUC_NOT] THEN
+  ASM_REWRITE_TAC[INV_SUC_EQ] THEN EQ_TAC THENL
+   [DISCH_THEN(DISJ_CASES_THEN2 SUBST1_TAC MP_TAC) THENL
+     [EXISTS_TAC ``0:num`` THEN REWRITE_TAC[ADD_CLAUSES],
+      DISCH_THEN(X_CHOOSE_THEN ``d:num`` SUBST1_TAC) THEN
+      EXISTS_TAC ``SUC d`` THEN REWRITE_TAC[ADD_CLAUSES]],
+    SIMP_TAC std_ss [LEFT_IMP_EXISTS_THM] THEN
+    INDUCT_TAC THEN REWRITE_TAC[ADD_CLAUSES, INV_SUC_EQ] THEN
+    DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[] THEN DISJ2_TAC THEN
+    EXISTS_TAC ``d:num`` THEN SIMP_TAC std_ss []]);
+
+val BOUNDS_LINEAR = store_thm ("BOUNDS_LINEAR",
+ ``!A B C. (!n:num. A * n <= B * n + C) <=> A <= B``,
+  REPEAT GEN_TAC THEN EQ_TAC THENL
+   [CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC[NOT_LESS_EQUAL] THEN
+    DISCH_THEN(CHOOSE_THEN SUBST1_TAC o REWRITE_RULE[LT_EXISTS]) THEN
+    REWRITE_TAC[RIGHT_ADD_DISTRIB, LE_ADD_LCANCEL] THEN
+    DISCH_THEN(MP_TAC o SPEC ``SUC C``) THEN
+    REWRITE_TAC[NOT_LESS_EQUAL, MULT_CLAUSES, ADD_CLAUSES, LT_SUC_LE] THEN
+    ARITH_TAC,
+    DISCH_THEN(CHOOSE_THEN SUBST1_TAC o REWRITE_RULE[LE_EXISTS]) THEN
+    ARITH_TAC]);
+
+val BOUNDS_LINEAR_0 = store_thm ("BOUNDS_LINEAR_0",
+ ``!A B. (!n:num. A * n <= B) <=> (A = 0)``,
+  REPEAT GEN_TAC THEN
+  MP_TAC (SPECL [``A:num``, ``0:num``, ``B:num``] BOUNDS_LINEAR) THEN
+  REWRITE_TAC[MULT_CLAUSES, ADD_CLAUSES, LE]);
+
+val REAL_LE_BETWEEN = store_thm ("REAL_LE_BETWEEN",
+ ``!a b. a <= b <=> ?x:real. a <= x /\ x <= b``,
+  MESON_TAC[REAL_LE_TRANS, REAL_LE_REFL]);
+
+val WLOG_LE = store_thm ("WLOG_LE",
+ ``(!m n:num. P m n <=> P n m) /\ (!m n:num. m <= n ==> P m n) ==>
+    !m n:num. P m n``,
+  METIS_TAC[LE_CASES]);
+
+val BIGUNION_GSPEC = store_thm ("BIGUNION_GSPEC",
+ ``(!P f. BIGUNION {f x | P x} = {a | ?x. P x /\ a IN (f x)}) /\
+   (!P f. BIGUNION {f x y | P x y} = {a | ?x y. P x y /\ a IN (f x y)}) /\
+   (!P f. BIGUNION {f x y z | P x y z} =
+            {a | ?x y z. P x y z /\ a IN (f x y z)})``,
+  REPEAT STRIP_TAC THEN GEN_REWR_TAC I [EXTENSION] THEN
+  SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION, EXISTS_PROD] THEN MESON_TAC[]);
+
+val BIGINTER_GSPEC = store_thm ("BIGINTER_GSPEC",
+ ``(!P f. BIGINTER {f x | P x} = {a | !x. P x ==> a IN (f x)}) /\
+   (!P f. BIGINTER {f x y | P x y} = {a | !x y. P x y ==> a IN (f x y)}) /\
+   (!P f. BIGINTER {f x y z | P x y z} =
+                {a | !x y z. P x y z ==> a IN (f x y z)})``,
+  REPEAT STRIP_TAC THEN GEN_REWR_TAC I [EXTENSION] THEN
+  SIMP_TAC std_ss [IN_BIGINTER, GSPECIFICATION, EXISTS_PROD] THEN MESON_TAC[]);
+
+val FINITE_POWERSET = store_thm ("FINITE_POWERSET",
+  ``!s. FINITE s ==> FINITE {t | t SUBSET s}``,
+    METIS_TAC [FINITE_POW, POW_DEF]);
+
+val LE_ADD = store_thm ("LE_ADD",
+ ``!m n:num. m <= m + n``,
+  GEN_TAC THEN INDUCT_TAC THEN
+  ASM_SIMP_TAC arith_ss [LE, ADD_CLAUSES, LESS_EQ_REFL]);
+
+val LE_ADDR = store_thm ("LE_ADDR",
+ ``!m n:num. n <= m + n``,
+  ONCE_REWRITE_TAC[ADD_SYM] THEN MATCH_ACCEPT_TAC LE_ADD);
+
+val ADD_SUB2 = store_thm ("ADD_SUB2",
+ ``!m n:num. (m + n) - m = n``,
+  ONCE_REWRITE_TAC[ADD_SYM] THEN MATCH_ACCEPT_TAC ADD_SUB);
+
+val ADD_SUBR2 = store_thm ("ADD_SUBR2",
+ ``!m n:num. m - (m + n) = 0``,
+  REWRITE_TAC[SUB_EQ_0, LESS_EQ_ADD]);
+
+val ADD_SUBR = store_thm ("ADD_SUBR",
+ ``!m n:num. n - (m + n) = 0``,
+  ONCE_REWRITE_TAC[ADD_SYM] THEN MATCH_ACCEPT_TAC ADD_SUBR2);
+
+val TRANSITIVE_STEPWISE_LE_EQ = store_thm ("TRANSITIVE_STEPWISE_LE_EQ",
+ ``!R. (!x. R x x) /\ (!x y z. R x y /\ R y z ==> R x z)
+       ==> ((!m n. m <= n ==> R m n) <=> (!n. R n (SUC n)))``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN ASM_SIMP_TAC std_ss [LE, LESS_EQ_REFL] THEN
+  DISCH_TAC THEN SIMP_TAC std_ss [LE_EXISTS, LEFT_IMP_EXISTS_THM] THEN
+  GEN_TAC THEN INDUCT_TAC THEN REWRITE_TAC[ADD_CLAUSES] THEN ASM_MESON_TAC[]);
+
+val TRANSITIVE_STEPWISE_LE = store_thm ("TRANSITIVE_STEPWISE_LE",
+ ``!R. (!x. R x x) /\ (!x y z. R x y /\ R y z ==> R x z) /\
+       (!n. R n (SUC n))
+       ==> !m n. m <= n ==> R m n``,
+  REPEAT GEN_TAC THEN MATCH_MP_TAC(TAUT
+   `(a /\ a' ==> (c <=> b)) ==> a /\ a' /\ b ==> c`) THEN
+  MATCH_ACCEPT_TAC TRANSITIVE_STEPWISE_LE_EQ);
+
+val LAMBDA_PAIR = store_thm ("LAMBDA_PAIR",
+ ``(\(x,y). P x y) = (\p. P (FST p) (SND p))``,
+  SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD] THEN
+  SIMP_TAC std_ss []);
+
+val NOT_EQ = store_thm ("NOT_EQ",
+ ``!a b. (a <> b) = ~(a = b)``, METIS_TAC []);
+
+val ABS_LE_0 = store_thm ("ABS_LE_0",
+ ``!x:real. abs x <= &0 <=> (x = 0)``,
+  MESON_TAC[REAL_LE_ANTISYM, ABS_ZERO, ABS_POS]);
+
+val REAL_OF_NUM_GE = store_thm ("REAL_OF_NUM_GE",
+ ``!m n. &m >= (&n:real) <=> m >= n``,
+  REWRITE_TAC[GE, real_ge, REAL_OF_NUM_LE]);
+
+val POWERSET_CLAUSES = store_thm ("POWERSET_CLAUSES",
+ ``({s | s SUBSET {}} = {{}}) /\
+   ((!a:'a t. {s | s SUBSET (a INSERT t)} =
+            {s | s SUBSET t} UNION IMAGE (\s. a INSERT s) {s | s SUBSET t}))``,
+  REWRITE_TAC[SUBSET_INSERT_DELETE, SUBSET_EMPTY, SET_RULE
+   ``(!a. {x | x = a} = {a}) /\ (!a. {x | a = x} = {a})``] THEN
+  MAP_EVERY X_GEN_TAC [``a:'a``, ``t:'a->bool``] THEN
+  MATCH_MP_TAC SUBSET_ANTISYM THEN REWRITE_TAC[UNION_SUBSET] THEN
+  ONCE_REWRITE_TAC[SUBSET_DEF] THEN
+  SIMP_TAC std_ss [FORALL_IN_IMAGE, FORALL_IN_GSPEC] THEN
+  SIMP_TAC std_ss [GSPECIFICATION, IN_UNION, IN_IMAGE] THEN
+  CONJ_TAC THENL [ALL_TAC, SET_TAC[]] THEN
+  X_GEN_TAC ``s:'a->bool`` THEN
+  ASM_CASES_TAC ``(a:'a) IN s`` THENL [ALL_TAC, ASM_SET_TAC[]] THEN
+  STRIP_TAC THEN DISJ2_TAC THEN EXISTS_TAC ``s DELETE (a:'a)`` THEN
+  ASM_SET_TAC[]);
+
+val REAL_LT_LCANCEL_IMP = store_thm ("REAL_LT_LCANCEL_IMP",
+ ``!x y z:real. &0 < x /\ x * y < x * z ==> y < z``,
+  METIS_TAC [REAL_LT_LMUL]);
+
+val SIMPLE_IMAGE_GEN = store_thm ("SIMPLE_IMAGE_GEN",
+ ``!f P. {f x | P x} = IMAGE f {x | P x}``,
+  SET_TAC[]);
+
+val REAL_LT_POW2 = store_thm ("REAL_LT_POW2",
+ ``!n:num. (&0:real) < &2 pow n``,
+  SIMP_TAC arith_ss [REAL_POW_LT, REAL_LT]);
+
+val FUN_IN_IMAGE = store_thm ("FUN_IN_IMAGE",
+ ``!f s x. x IN s ==> f(x) IN IMAGE f s``,
+  SET_TAC[]);
+
+val DIFF_BIGINTER = store_thm ("DIFF_BIGINTER",
+ ``!u s. u DIFF BIGINTER s = BIGUNION {u DIFF t | t IN s}``,
+  SIMP_TAC std_ss [BIGUNION_GSPEC] THEN SET_TAC[]);
+
+val BIGINTER_BIGUNION = store_thm ("BIGINTER_BIGUNION",
+ ``!s. BIGINTER s = UNIV DIFF (BIGUNION {UNIV DIFF t | t IN s})``,
+  REWRITE_TAC[GSYM DIFF_BIGINTER] THEN SET_TAC[]);
+
+val BIGUNION_BIGINTER = store_thm ("BIGUNION_BIGINTER",
+ ``!s. BIGUNION s = UNIV DIFF (BIGINTER {UNIV DIFF t | t IN s})``,
+  GEN_TAC THEN GEN_REWR_TAC I [EXTENSION] THEN
+  SIMP_TAC std_ss [IN_BIGUNION, IN_UNIV, IN_DIFF, BIGINTER_GSPEC,
+   GSPECIFICATION] THEN
+  MESON_TAC[]);
+
+val REAL_POW_1_LE = store_thm ("REAL_POW_1_LE",
+ ``!n x:real. &0 <= x /\ x <= &1 ==> x pow n <= &1``,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [``n:num``, ``x:real``, ``&1:real``] POW_LE) THEN
+  ASM_REWRITE_TAC[POW_ONE]);
+
+val REAL_POW_LE_1 = store_thm ("REAL_POW_LE_1",
+ ``!n x:real. &1 <= x ==> &1 <= x pow n``,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [``n:num``, ``&1:real``, ``x:real``] POW_LE) THEN
+  ASM_SIMP_TAC real_ss [POW_ONE, REAL_POS]);
+
+val REAL_LT_INV2 = store_thm ("REAL_LT_INV2",
+ ``!x y. &0:real < x /\ x < y ==> inv(y) < inv(x)``,
+  REPEAT STRIP_TAC THEN KNOW_TAC ``&0:real < x * y`` THENL
+  [MATCH_MP_TAC REAL_LT_MUL THEN
+   POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN REAL_ARITH_TAC, ALL_TAC] THEN
+  DISCH_TAC THEN KNOW_TAC ``inv y * (x * y) < inv x * (x * y:real)`` THENL
+  [ALL_TAC, FULL_SIMP_TAC std_ss [REAL_LT_RMUL]] THEN
+  SUBGOAL_THEN ``(inv x * x = &1:real) /\ (inv y * y = &1:real)`` ASSUME_TAC THENL
+  [CONJ_TAC THEN MATCH_MP_TAC REAL_MUL_LINV THEN
+   POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN REAL_ARITH_TAC,
+   ASM_REWRITE_TAC[REAL_MUL_ASSOC, REAL_MUL_LID] THEN
+   GEN_REWR_TAC (LAND_CONV o LAND_CONV) [REAL_MUL_SYM] THEN
+   ASM_REWRITE_TAC[GSYM REAL_MUL_ASSOC, REAL_MUL_RID]]);
+
+val REAL_LE_INV2 = store_thm ("REAL_LE_INV2",
+ ``!x y. &0:real < x /\ x <= y ==> inv(y) <= inv(x)``,
+  REPEAT GEN_TAC THEN REWRITE_TAC[REAL_LE_LT] THEN
+  ASM_CASES_TAC ``x:real = y`` THEN ASM_REWRITE_TAC[] THEN
+  STRIP_TAC THEN DISJ1_TAC THEN MATCH_MP_TAC REAL_LT_INV2 THEN
+  ASM_REWRITE_TAC[]);
+
+val REAL_INV_1_LE = store_thm ("REAL_INV_1_LE",
+ ``!x:real. &0 < x /\ x <= &1 ==> &1 <= inv(x)``,
+  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_INV1] THEN
+  MATCH_MP_TAC REAL_LE_INV2 THEN ASM_REWRITE_TAC[REAL_LT_01]);
+
+val REAL_WLOG_LE = store_thm ("REAL_WLOG_LE",
+ ``(!x y:real. P x y <=> P y x) /\ (!x y. x <= y ==> P x y) ==> !x y. P x y``,
+  METIS_TAC[REAL_LE_TOTAL]);
 
 val REAL_WLOG_LT = store_thm ("REAL_WLOG_LT",
  ``(!x. P x x) /\ (!x y. P x y <=> P y x) /\ (!x y. x < y ==> P x y)
@@ -241,21 +546,50 @@ val SET_RECURSION_LEMMA = store_thm ("SET_RECURSION_LEMMA",
       EVAL_TAC THEN FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT, SUBSET_REFL]]]);
 
 (* TODO: re-define it as theorem of "ITSET" in pred_setTheory *)
-val ITSET = Define
-   `ITSET f s b = (@g. (g {} = b) /\ !x s. FINITE s
-                  ==> (g (x INSERT s) = if x IN s then g s else f x (g s))) s`;
+Definition ITSET' :
+    ITSET' f s b =
+      (@g. (g {} = b) /\
+           !x s. FINITE s ==>
+                 (g (x INSERT s) = if x IN s then g s else f x (g s))) s
+End
 
-val FINITE_RECURSION = store_thm ("FINITE_RECURSION",
- ``!(f:'a->'b->'b) b.
+(* This lemma is only needed by ITERATE_CLAUSES_GEN *)
+Triviality FINITE_RECURSION' :
+    !(f:'a->'b->'b) b.
+        (!x y s. ~(x = y) ==> (f x (f y s) = f y (f x s)))
+        ==> (ITSET' f {} b = b) /\
+            !x s. FINITE s
+                  ==> (ITSET' f (x INSERT s) b =
+                       if x IN s then ITSET' f s b
+                                 else f x (ITSET' f s b))
+Proof
+  rpt GEN_TAC >> DISCH_TAC >> REWRITE_TAC [ITSET'] \\
+  CONV_TAC SELECT_CONV \\
+  MATCH_MP_TAC SET_RECURSION_LEMMA >> art []
+QED
+
+(* This proof is based on pred_set$ITSET (pred_setTheory.ITSET_def) *)
+Theorem FINITE_RECURSION :
+    !(f:'a->'b->'b) b.
         (!x y s. ~(x = y) ==> (f x (f y s) = f y (f x s)))
         ==> (ITSET f {} b = b) /\
             !x s. FINITE s
                   ==> (ITSET f (x INSERT s) b =
                        if x IN s then ITSET f s b
-                                 else f x (ITSET f s b))``,
-  REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[ITSET] THEN
-  CONV_TAC SELECT_CONV THEN MATCH_MP_TAC SET_RECURSION_LEMMA THEN
-  ASM_REWRITE_TAC[]);
+                                 else f x (ITSET f s b))
+Proof
+    RW_TAC std_ss [ITSET_EMPTY]
+ >> Cases_on `x IN s`
+ >- (`x INSERT s = s` by PROVE_TAC [ABSORPTION] >> art [])
+ >> ASM_SIMP_TAC std_ss []
+ >> Know `ITSET f s b = ITSET f (s DELETE x) b`
+ >- (`s DELETE x = s` by PROVE_TAC [DELETE_NON_ELEMENT] >> art [])
+ >> Rewr'
+ >> MATCH_MP_TAC COMMUTING_ITSET_RECURSES
+ >> rename1 `i IN s` >> RW_TAC std_ss []
+ >> Cases_on `x = y` >- art []
+ >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
+QED
 
 val CARD_UNION_EQ = store_thm ("CARD_UNION_EQ",
   ``!s t u.
@@ -439,7 +773,7 @@ val lemma3 = prove (
 val lemma4 = prove (
  ``!P:real->bool.
     ((?x. P x) /\ (?z. !x. P x ==> x < z) ==>
-     (?s. !y. (?x. P x /\ y < x) = y < s)) ==>
+     (?s. !y. (?x. P x /\ y < x) <=> y < s)) ==>
     ((?x. P x) /\ (?s. !x. P x ==> x <= s)
        ==> ?s. (!x. P x ==> x <= s) /\
                !M'. (!x. P x ==> x <= M') ==> s <= M')``,
@@ -460,9 +794,11 @@ val REAL_COMPLETE = store_thm ("REAL_COMPLETE",
 (* Supremum and infimum.                                                     *)
 (* ------------------------------------------------------------------------- *)
 
+(* The original definition is in HOL Light's "sets.ml",
+   HOL4's definition is in realTheory *)
 val sup_alt = store_thm ("sup_alt",
   ``sup s = @a:real. (!x. x IN s ==> x <= a) /\
-                    !b. (!x. x IN s ==> x <= b) ==> a <= b``,
+                     !b. (!x. x IN s ==> x <= b) ==> a <= b``,
   SIMP_TAC std_ss [sup] THEN AP_TERM_TAC THEN ABS_TAC THEN
   SIMP_TAC std_ss [SPECIFICATION, lemma1, lemma2, lemma3] THEN
   METIS_TAC []);
@@ -534,15 +870,15 @@ val REAL_SUP_UNIQUE = store_thm ("REAL_SUP_UNIQUE",
   ASM_MESON_TAC[REAL_NOT_LE, REAL_LE_ANTISYM]);
 
 (* there's another REAL_SUP_LE in HOL's realTheory *)
-val REAL_SUP_LE_S = store_thm
-  ("REAL_SUP_LE_S",
+val REAL_SUP_LE' = store_thm
+  ("REAL_SUP_LE'",
  ``!s b:real. ~(s = {}) /\ (!x. x IN s ==> x <= b) ==> sup s <= b``,
   METIS_TAC[SUP]);
 
 val REAL_SUP_LE_SUBSET = store_thm ("REAL_SUP_LE_SUBSET",
  ``!s t:real->bool. ~(s = {}) /\ s SUBSET t /\ (?b. !x. x IN t ==> x <= b)
          ==> sup s <= sup t``,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC REAL_SUP_LE_S THEN
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC REAL_SUP_LE' THEN
   MP_TAC(SPEC ``t:real->bool`` SUP) THEN ASM_SET_TAC[]);
 
 val REAL_LE_SUP = store_thm ("REAL_LE_SUP",
@@ -594,21 +930,72 @@ val SUP_UNION = store_thm ("SUP_UNION",
   REPEAT STRIP_TAC THEN MATCH_MP_TAC SUP_UNIQUE THEN
   SIMP_TAC real_ss [FORALL_IN_UNION, REAL_MAX_LE] THEN METIS_TAC[SUP, REAL_LE_TRANS]);
 
-val inf = new_definition ("inf",
-  ``inf s = @a:real. (!x. x IN s ==> a <= x) /\
-                    !b. (!x. x IN s ==> b <= x) ==> b <= a``);
+(* The original definition of "inf" in HOL Light (sets.ml) *)
+val inf_tm = ``@a:real. (!x. x IN s ==> a <= x) /\
+                        !b. (!x. x IN s ==> b <= x) ==> b <= a``;
 
-val INF_EQ = store_thm ("INF_EQ",
- ``!s t:real->bool. (!a. (!x. x IN s ==> a <= x) <=> (!x. x IN t ==> a <= x))
-         ==> (inf s = inf t)``,
-  SIMP_TAC std_ss [inf]);
+(* `inf s` exists iff s is non-empty and has a lower bound b *)
+val inf_criteria = ``s <> {} /\ (?b. !x. x IN s ==> b <= x)``;
+
+(* alternative definition of `inf` *)
+Theorem inf_alt :
+    !s. ^inf_criteria ==> (inf s = ^inf_tm)
+Proof
+    RW_TAC std_ss []
+ >> Suff `(\f. inf s = f) (^inf_tm)` >- METIS_TAC []
+ >> MATCH_MP_TAC SELECT_ELIM_THM
+ >> RW_TAC std_ss []
+ >- (Q.EXISTS_TAC `inf s` >> CONJ_TAC
+     >- (Know `(?y. s y) /\ (?y. !z. s z ==> y <= z)`
+         >- (STRONG_CONJ_TAC >- METIS_TAC [MEMBER_NOT_EMPTY, IN_APP] \\
+             STRIP_TAC >> `y IN s` by fs [IN_APP] >> RES_TAC \\
+             Q.EXISTS_TAC `b` >> rpt STRIP_TAC \\
+             FIRST_X_ASSUM MATCH_MP_TAC >> PROVE_TAC [IN_APP]) \\
+         DISCH_THEN (MP_TAC o (MATCH_MP REAL_INF_LE)) >> Rewr \\
+         Q.X_GEN_TAC `z` >> rpt STRIP_TAC \\
+         FIRST_X_ASSUM MATCH_MP_TAC >> fs [IN_APP]) \\
+     rpt STRIP_TAC >> MATCH_MP_TAC REAL_IMP_LE_INF \\
+     CONJ_TAC >- METIS_TAC [MEMBER_NOT_EMPTY, IN_APP] \\
+     fs [IN_APP])
+ >> RW_TAC std_ss [GSYM REAL_LE_ANTISYM]
+ >- (Know `(?y. s y) /\ (?y. !z. s z ==> y <= z)`
+     >- (STRONG_CONJ_TAC >- METIS_TAC [MEMBER_NOT_EMPTY, IN_APP] \\
+         STRIP_TAC >> `y IN s` by fs [IN_APP] >> RES_TAC \\
+         Q.EXISTS_TAC `b` >> rpt STRIP_TAC \\
+         FIRST_X_ASSUM MATCH_MP_TAC >> PROVE_TAC [IN_APP]) \\
+     DISCH_THEN (MP_TAC o (MATCH_MP REAL_INF_LE)) >> Rewr \\
+     rpt STRIP_TAC \\
+     Q.PAT_X_ASSUM `!b. (!x. x IN s ==> b <= x) ==> b <= x`
+       MATCH_MP_TAC >> fs [IN_APP])
+ >> MATCH_MP_TAC REAL_IMP_LE_INF
+ >> CONJ_TAC >- METIS_TAC [MEMBER_NOT_EMPTY, IN_APP]
+ >> fs [IN_APP]
+QED
+
+(* added `s <> EMPTY /\ (?b. !x. x IN s ==> b <= x) /\
+          t <> EMPTY /\ (?b. !x. x IN t ==> b <= x)`
+   to make sure that both `inf s` and `inf t` exist. *)
+Theorem INF_EQ :
+    !s t:real->bool. s <> EMPTY /\ (?b. !x. x IN s ==> b <= x) /\
+                     t <> EMPTY /\ (?b. !x. x IN t ==> b <= x) /\
+                    (!a. (!x. x IN s ==> a <= x) <=> (!x. x IN t ==> a <= x))
+                ==> (inf s = inf t)
+Proof
+    rpt STRIP_TAC
+ >> Know `(inf s = ^inf_tm) /\
+          (inf t = @a:real. (!x. x IN t ==> a <= x) /\
+                        !b. (!x. x IN t ==> b <= x) ==> b <= a)`
+ >- (CONJ_TAC >> MATCH_MP_TAC inf_alt >> PROVE_TAC [])
+ >> ASM_SIMP_TAC std_ss []
+QED
 
 val INF = store_thm ("INF",
  ``!s:real->bool. ~(s = {}) /\ (?b. !x. x IN s ==> b <= x)
        ==> (!x. x IN s ==> inf s <= x) /\
            !b. (!x. x IN s ==> b <= x) ==> b <= inf s``,
-  GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[inf] THEN
-  CONV_TAC(ONCE_DEPTH_CONV SELECT_CONV) THEN
+  GEN_TAC THEN STRIP_TAC THEN
+  Know `inf s = ^inf_tm` >- (MATCH_MP_TAC inf_alt >> PROVE_TAC []) >> Rewr'
+  THEN CONV_TAC(ONCE_DEPTH_CONV SELECT_CONV) THEN
   ONCE_REWRITE_TAC[GSYM REAL_LE_NEG2] THEN
   EXISTS_TAC ``-(sup (IMAGE (\x:real. -x) s))`` THEN
   MP_TAC(SPEC ``IMAGE (\x. -x) (s:real->bool)`` SUP) THEN
@@ -653,11 +1040,19 @@ val REAL_INF_UNIQUE = store_thm ("REAL_INF_UNIQUE",
  ``!s b:real. (!x. x IN s ==> b <= x) /\
          (!b'. b < b' ==> ?x. x IN s /\ x < b')
          ==> (inf s = b)``,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[inf] THEN MATCH_MP_TAC SELECT_UNIQUE THEN
+  rpt STRIP_TAC THEN
+  Know `s <> EMPTY`
+  >- (REWRITE_TAC [GSYM MEMBER_NOT_EMPTY] \\
+      POP_ASSUM (MP_TAC o (Q.SPEC `b + 1`)) \\
+      RW_TAC real_ss [REAL_LT_ADDR, REAL_LT_01] \\
+      Q.EXISTS_TAC `x` >> ASM_REWRITE_TAC []) >> DISCH_TAC \\
+  Know `inf s = ^inf_tm`
+  >- (MATCH_MP_TAC inf_alt >> PROVE_TAC []) >> Rewr' \\
+  MATCH_MP_TAC SELECT_UNIQUE THEN
   METIS_TAC[REAL_NOT_LE, REAL_LE_ANTISYM]);
 
 val REAL_LE_INF = store_thm ("REAL_LE_INF",
- ``!b:real. ~(s = {}) /\ (!x. x IN s ==> b <= x) ==> b <= inf s``,
+ ``!s b:real. ~(s = {}) /\ (!x. x IN s ==> b <= x) ==> b <= inf s``,
   MESON_TAC[INF]);
 
 val REAL_LE_INF_SUBSET = store_thm ("REAL_LE_INF_SUBSET",
@@ -688,14 +1083,14 @@ val REAL_INF_ASCLOSE = store_thm ("REAL_INF_ASCLOSE",
   METIS_TAC[REAL_INF_BOUNDS]);
 
 val SUP_UNIQUE_FINITE = store_thm ("SUP_UNIQUE_FINITE",
- ``!s:real->bool. FINITE s /\ ~(s = {})
+ ``!s:real->bool a. FINITE s /\ ~(s = {})
        ==> ((sup s = a) <=> a IN s /\ !y. y IN s ==> y <= a)``,
    ASM_SIMP_TAC std_ss [GSYM REAL_LE_ANTISYM, REAL_LE_SUP_FINITE, REAL_SUP_LE_FINITE,
                NOT_INSERT_EMPTY, FINITE_INSERT, FINITE_EMPTY] THEN
    METIS_TAC[REAL_LE_REFL, REAL_LE_TRANS, REAL_LE_ANTISYM]);
 
 val INF_UNIQUE_FINITE = store_thm ("INF_UNIQUE_FINITE",
- ``!s. FINITE s /\ ~(s = {})
+ ``!s a. FINITE s /\ ~(s = {})
        ==> ((inf s = a) <=> a IN s /\ !y. y IN s ==> a <= y)``,
    ASM_SIMP_TAC std_ss [GSYM REAL_LE_ANTISYM, REAL_LE_INF_FINITE, REAL_INF_LE_FINITE,
                NOT_INSERT_EMPTY, FINITE_INSERT, FINITE_EMPTY] THEN
@@ -740,10 +1135,12 @@ val INF_SING = store_thm ("INF_SING",
 (* A natural notation for segments of the naturals.                          *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = set_fixity ".." (Infix(NONASSOC, 450));
+(* Fixes for tight_equality(): make sure the priority is slightly higher than
+   "=" (450) and "IN" (425). -- Chun Tian, Mar 20, 2019 *)
+val _ = set_fixity ".." (Infix(NONASSOC, 470));
 
 val numseg = new_definition ("numseg",
-  ``m..n = {x:num | m <= x /\ x <= n}``);
+  ``(..) m n = {x:num | m <= x /\ x <= n}``);
 
 val FINITE_NUMSEG = store_thm ("FINITE_NUMSEG",
   ``!m n. FINITE (m..n)``,
@@ -980,11 +1377,10 @@ val MONOIDAL_AC = store_thm("MONOIDAL_AC",
 val support = new_definition ("support",
   ``support op (f:'a->'b) s = {x | x IN s /\ ~(f x = neutral op)}``);
 
-(* it is based on ITSET?! *)
 val iterate = new_definition ("iterate",
   ``iterate op (s:'a->bool) f =
          if FINITE(support op f s)
-         then ITSET (\x a. op (f x) a) (support op f s) (neutral op)
+         then ITSET' (\x a. op (f x) a) (support op f s) (neutral op)
          else neutral op``);
 
 val IN_SUPPORT = store_thm  ("IN_SUPPORT",
@@ -1060,7 +1456,7 @@ val ITERATE_CLAUSES_GEN = store_thm ("ITERATE_CLAUSES_GEN",
                                 else op (f x) (iterate op s f)))``,
   GEN_TAC THEN STRIP_TAC THEN CONV_TAC AND_FORALL_CONV THEN
   GEN_TAC THEN MP_TAC(ISPECL [``\x a. (op:'b->'b->'b) ((f:'a->'b)(x)) a``,
-                              ``neutral op :'b``] FINITE_RECURSION) THEN
+                              ``neutral op :'b``] FINITE_RECURSION') THEN
   KNOW_TAC ``(!(x :'a) (y :'a) (s :'b). x <> y ==>
         ((\(x :'a) (a :'b). (op :'b -> 'b -> 'b) ((f :'a -> 'b) x) a) x
         ((\(x :'a) (a :'b). op (f x) a) y s) = (\(x :'a) (a :'b). op (f x) a) y
@@ -1216,7 +1612,7 @@ val ITERATE_RELATED = store_thm ("ITERATE_RELATED",
   GEN_TAC THEN DISCH_TAC THEN GEN_TAC THEN STRIP_TAC THEN GEN_TAC THEN
   GEN_TAC THEN REWRITE_TAC[GSYM AND_IMP_INTRO] THEN GEN_TAC THEN
   KNOW_TAC ``(!x. x IN s ==> R (f x) (g x)) ==>
-    R (iterate op s f) (iterate op s g) = (\s. (!x. x IN s ==> R (f x) (g x)) ==>
+    R (iterate op s f) (iterate op s g) <=> (\s. (!x. x IN s ==> R (f x) (g x)) ==>
     R (iterate op s f) (iterate op s g)) s`` THENL [FULL_SIMP_TAC std_ss [],
    DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
@@ -1351,7 +1747,7 @@ val ITERATE_EQ = store_thm("ITERATE_EQ",
     (!x. x IN (support op f s) ==> (f x = g x))``
   MP_TAC THENL [ASM_MESON_TAC[IN_SUPPORT], REWRITE_TAC[GSYM AND_IMP_INTRO] THEN
   SPEC_TAC(``support op (f:'a->'b) s``,``t:'a->bool``) THEN GEN_TAC THEN
-  KNOW_TAC ``(!x. x IN t ==> (f x = g x)) ==> (iterate op t f = iterate op t g) =
+  KNOW_TAC ``(!x. x IN t ==> (f x = g x)) ==> (iterate op t f = iterate op t g) <=>
         (\t. (!x. x IN t ==> (f x = g x)) ==> (iterate op t f = iterate op t g)) t``
   THENL [FULL_SIMP_TAC std_ss [], DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN ASM_SIMP_TAC std_ss [ITERATE_CLAUSES] THEN
@@ -2144,15 +2540,17 @@ val MOD_NSUM_MOD_NUMSEG = store_thm ("MOD_NSUM_MOD_NUMSEG",
         ==> ((nsum(a..b) f) MOD n = nsum(a..b) (\i. f i MOD n) MOD n)``,
   METIS_TAC[MOD_NSUM_MOD, FINITE_NUMSEG]);
 
-val TH = store_thm ("TH",
- ``(!f g s.   (!x. x IN s ==> (f(x) = g(x)))
-              ==> (nsum s (\i. f(i)) = nsum s g)) /\
-   (!f g a b. (!i. a <= i /\ i <= b ==> (f(i) = g(i)))
-              ==> (nsum(a..b) (\i. f(i)) = nsum(a..b) g)) /\
-   (!f g p.   (!x. p x ==> (f x = g x))
-              ==> (nsum {y | p y} (\i. f(i)) = nsum {y | p y} g))``,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC NSUM_EQ THEN
-  ASM_SIMP_TAC std_ss [GSPECIFICATION,  IN_NUMSEG]);
+val NSUM_CONG = store_thm
+  ("NSUM_CONG",
+  ``(!f g s.   (!x. x IN s ==> (f(x) = g(x)))
+           ==> (nsum s (\i. f(i)) = nsum s g)) /\
+    (!f g a b. (!i. a <= i /\ i <= b ==> (f(i) = g(i)))
+           ==> (nsum(a..b) (\i. f(i)) = nsum(a..b) g)) /\
+    (!f g p.   (!x. p x ==> (f x = g x))
+           ==> (nsum {y | p y} (\i. f(i)) = nsum {y | p y} g))``,
+    REPEAT STRIP_TAC
+ >> MATCH_MP_TAC NSUM_EQ
+ >> ASM_SIMP_TAC std_ss [GSPECIFICATION, IN_NUMSEG]);
 
 (* ------------------------------------------------------------------------- *)
 (* Thanks to finite sums, we can express cardinality of finite union.        *)
@@ -2914,6 +3312,16 @@ val REAL_OF_NUM_SUM_NUMSEG = store_thm ("REAL_OF_NUM_SUM_NUMSEG",
  ``!f m n. (&(nsum(m..n) f) = sum (m..n) (\i. &(f i)))``,
   SIMP_TAC std_ss [REAL_OF_NUM_SUM, FINITE_NUMSEG]);
 
+(* connection to realTheory.sum *)
+Theorem sum_real :
+    !f n. sum(0..n) f = real$sum(0,SUC n) f
+Proof
+    GEN_TAC
+ >> Induct_on `n`
+ >- (SIMP_TAC real_ss [sum, SUM_CLAUSES_RIGHT, SUM_SING_NUMSEG])
+ >> ASM_SIMP_TAC real_ss [sum, SUM_CLAUSES_RIGHT]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Partial summation and other theorems specific to number segments.         *)
 (* ------------------------------------------------------------------------- *)
@@ -2975,18 +3383,59 @@ val SUM_COMBINE_L = store_thm ("SUM_COMBINE_L",
   REWRITE_TAC[FINITE_NUMSEG, EXTENSION, IN_INTER, IN_UNION, NOT_IN_EMPTY,
               IN_NUMSEG] THEN RW_TAC arith_ss []);
 
+val SUM_GP_BASIC = store_thm ("SUM_GP_BASIC",
+ ``!x:real n:num. (&1 - x) * sum((0:num)..n) (\i. x pow i) = &1 - x pow (SUC n)``,
+  GEN_TAC THEN INDUCT_TAC THEN SIMP_TAC std_ss [SUM_CLAUSES_NUMSEG] THEN
+  SIMP_TAC std_ss [pow, REAL_MUL_RID, ZERO_LESS_EQ, POW_1] THEN
+  ASM_REWRITE_TAC[REAL_ADD_LDISTRIB, pow] THEN REAL_ARITH_TAC);
+
+val SUM_GP_MULTIPLIED = store_thm ("SUM_GP_MULTIPLIED",
+ ``!x m n. m <= n
+           ==> ((&1 - x) * sum(m..n) (\i. x pow i) = x pow m - x pow (SUC n))``,
+  REPEAT STRIP_TAC THEN
+  KNOW_TAC ``((1 :real) - (x :real)) *
+    sum ((0 :num) .. (n :num - m)) (\i. (\(i :num). x pow i) (i + m)) =
+    x pow m - x pow SUC n`` THENL [ALL_TAC, METIS_TAC [SUM_OFFSET_0]] THEN
+  ASM_SIMP_TAC std_ss
+   [REAL_POW_ADD, REAL_MUL_ASSOC, SUM_GP_BASIC, SUM_RMUL] THEN
+  SIMP_TAC std_ss [REAL_SUB_RDISTRIB, GSYM REAL_POW_ADD, REAL_MUL_LID] THEN
+  ASM_SIMP_TAC std_ss [ARITH_PROVE ``m <= n ==> (SUC(n - m) + m = SUC n)``]);
+
+val SUM_GP = store_thm ("SUM_GP",
+ ``!x m n.
+        sum(m..n) (\i. x pow i) =
+                if n < m then &0
+                else if x = &1 then &((n + 1) - m)
+                else (x pow m - x pow (SUC n)) / (&1 - x)``,
+  REPEAT GEN_TAC THEN
+  DISJ_CASES_TAC(ARITH_PROVE ``n < m \/ ~(n < m) /\ m <= n:num``) THEN
+  ASM_SIMP_TAC std_ss [SUM_TRIV_NUMSEG] THEN COND_CASES_TAC THENL
+   [ASM_REWRITE_TAC[POW_ONE, SUM_CONST_NUMSEG, REAL_MUL_RID], ALL_TAC] THEN
+  MATCH_MP_TAC REAL_EQ_LMUL_IMP THEN EXISTS_TAC ``&1 - x:real`` THEN
+  ASM_SIMP_TAC std_ss [REAL_DIV_LMUL, REAL_SUB_0, SUM_GP_MULTIPLIED]);
+
+val SUMS_SYM = store_thm ("SUMS_SYM",
+ ``!s t:real->bool. {x + y | x IN s /\ y IN t} = {y + x | y IN t /\ x IN s}``,
+ SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, EXISTS_PROD] THEN
+ MESON_TAC[REAL_ADD_SYM]);
+
+val SUM_ABS_TRIANGLE = store_thm ("SUM_ABS_TRIANGLE",
+ ``!s f b. FINITE s /\ sum s (\a. abs(f a)) <= b ==> abs(sum s f) <= b``,
+  METIS_TAC[SUM_ABS, REAL_LE_TRANS]);
+
 (* ------------------------------------------------------------------------- *)
 (* Extend congruences to deal with sum. Note that we must have the eta       *)
 (* redex or we'll get a loop since f(x) will lambda-reduce recursively.      *)
 (* ------------------------------------------------------------------------- *)
 
-val TH = store_thm ("TH",
- ``(!f g s.   (!x. x IN s ==> (f(x) = g(x)))
-              ==> (sum s (\i. f(i)) = sum s g)) /\
-   (!f g a b. (!i. a <= i /\ i <= b ==> (f(i) = g(i)))
-              ==> (sum(a..b) (\i. f(i)) = sum(a..b) g)) /\
-   (!f g p.   (!x. p x ==> (f x = g x))
-              ==> (sum {y | p y} (\i. f(i)) = sum {y | p y} g))``,
+val SUM_CONG = store_thm
+  ("SUM_CONG",
+  ``(!f g s.   (!x. x IN s ==> (f(x) = g(x)))
+           ==> (sum s (\i. f(i)) = sum s g)) /\
+    (!f g a b. (!i. a <= i /\ i <= b ==> (f(i) = g(i)))
+           ==> (sum(a..b) (\i. f(i)) = sum(a..b) g)) /\
+    (!f g p.   (!x. p x ==> (f x = g x))
+           ==> (sum {y | p y} (\i. f(i)) = sum {y | p y} g))``,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC SUM_EQ THEN
   ASM_SIMP_TAC std_ss [GSPECIFICATION,  IN_NUMSEG]);
 

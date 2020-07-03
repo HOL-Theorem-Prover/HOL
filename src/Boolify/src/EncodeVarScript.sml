@@ -7,6 +7,7 @@ open HolKernel boolLib Parse bossLib simpLib listTheory
      EncodeTheory DecodeTheory CoderTheory;
 
 val _ = new_theory "EncodeVar";
+val _ = ParseExtras.temp_loose_equality()
 
 val Suff = Q_TAC SUFF_TAC;
 val Know = Q_TAC KNOW_TAC;

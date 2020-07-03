@@ -16,6 +16,7 @@ open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
 infix THEN THENL ORELSE ORELSEC ##;
 
 val _ = new_theory "lim";
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = Parse.reveal "B";
 

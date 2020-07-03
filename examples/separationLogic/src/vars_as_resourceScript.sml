@@ -23,6 +23,7 @@ open Sanity
 *)
 
 val _ = new_theory "vars_as_resource";
+val _ = ParseExtras.temp_loose_equality()
 
 val IS_PERMISSION_STRUCTURE_def = Define `
    IS_PERMISSION_STRUCTURE (f:'a option -> 'a option -> 'a option, total_perm:'a) =
@@ -12618,8 +12619,8 @@ CONJ_TAC THEN1 (
 ) THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 GEN_TAC THEN STRIP_TAC THEN
-lcsymtacs.rename1 `asla_report _ n x = SOME s1` THEN
-lcsymtacs.rename1 `yy IN s1` THEN
+rename1 `asla_report _ n x = SOME s1` THEN
+rename1 `yy IN s1` THEN
 `yy IN P /\ VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST x) (FST yy)`
   by METIS_TAC[] THEN
 Q.PAT_X_ASSUM `!x. x IN P ==> X x` (MP_TAC o Q.SPEC `yy`) THEN
@@ -13210,7 +13211,7 @@ EQ_TAC THENL [
 
 
    REPEAT (GEN_TAC ORELSE DISCH_TAC) THEN
-   lcsymtacs.rename1
+   rename1
      `VAR_RES_COMBINATOR f (SOME ss1) (SOME ss2) = SOME xx` THEN
    `MAP (\e. e (FST xx)) el =
                       MAP (\e. e (FST ss1)) el` suffices_by (STRIP_TAC THEN

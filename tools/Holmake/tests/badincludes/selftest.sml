@@ -23,7 +23,7 @@ fun pResult (Mosml.Success s) = "Succeeded with: \"" ^ String.toString s ^ "\""
 
 fun t msg args = (
   tprint msg;
-  require_msg (check_result (okres "../dir2")) pResult (Mosml.run hm args) ""
+  require_msg (check_result (okres "dir2")) pResult (Mosml.run hm args) ""
 )
 
 val _ = inDir "dir1" (t "Bad INCLUDES line in a Holmakefile") []

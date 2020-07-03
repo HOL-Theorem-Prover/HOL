@@ -8,6 +8,7 @@ open abs_tools;  (* Rebinds Term and Define *)
 val APP_DIFF = REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC);
 
 val _ = new_theory "semi_ring";
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = Hol_datatype
           `semi_ring = <| SR0 : 'a;

@@ -6,6 +6,7 @@ infix 8 by
 open Datatype integerTheory bossLib int_arithTheory simpLib pred_setTheory
 
 val _ = new_theory "DeepSyntax";
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = Hol_datatype `deep_form = Conjn of deep_form => deep_form
                                 | Disjn of deep_form => deep_form

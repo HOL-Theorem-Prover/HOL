@@ -5,7 +5,7 @@ open nomsetTheory binderLib
 
 val _ = new_theory "head_reduction"
 
-val _ = temp_set_fixity "=" (Infix(NONASSOC, 100))
+val _ = ParseExtras.temp_loose_equality()
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
@@ -316,7 +316,6 @@ val has_whnf_def = Define`
   has_whnf M = ∃N. M -w->* N ∧ whnf N
 `;
 
-open lcsymtacs
 val has_whnf_APP_E = store_thm(
   "has_whnf_APP_E",
   ``has_whnf (M @@ N) ⇒ has_whnf M``,

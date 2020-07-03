@@ -34,6 +34,7 @@ quietdec := false;
 
 val _ = new_theory "ctl_star";
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val _ = ParseExtras.temp_loose_equality()
 
 
 val ctl_star_def =

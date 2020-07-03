@@ -1,2 +1,2 @@
-INCLUDES = ../ho_prover ../subtypes ../../RSA ../useful
+INCLUDES = ../ho_prover ../subtypes
 OPTIONS = QUIT_ON_FAILURE

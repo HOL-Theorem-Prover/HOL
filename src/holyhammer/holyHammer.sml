@@ -8,13 +8,11 @@
 structure holyHammer :> holyHammer =
 struct
 
-open HolKernel boolLib Thread aiLib smlExecute smlRedirect
+open HolKernel boolLib Thread aiLib smlExecute smlRedirect smlParallel
   mlFeature mlThmData mlTacticData mlNearestNeighbor
   hhExportFof hhReconstruct hhTranslate hhTptp
 
 val ERR = mk_HOL_ERR "holyHammer"
-val debugdir = HOLDIR ^ "/src/holyhammer/debug"
-fun debug s = debug_in_dir debugdir "holyHammer" s
 
 (* -------------------------------------------------------------------------
    Settings
@@ -22,6 +20,8 @@ fun debug s = debug_in_dir debugdir "holyHammer" s
 
 val timeout_glob = ref 10
 fun set_timeout n = timeout_glob := n
+
+val dep_flag = ref false
 
 (* -------------------------------------------------------------------------
    ATPs
@@ -33,7 +33,9 @@ fun name_of atp = case atp of
   | Z3 => "z3"
   | Vampire => "vampire"
 
-fun npremises_of atp = case atp of
+fun npremises_of atp =
+  if !dep_flag then 100000 else
+  case atp of
     Eprover => 128
   | Z3 => 32
   | Vampire => 96
@@ -45,27 +47,25 @@ val all_atps = ref [Eprover,Z3,Vampire]
    Directories
    ------------------------------------------------------------------------- *)
 
+val parallel_tag = ref ""
+
 fun pathl sl = case sl of
     []  => raise ERR "pathl" "empty"
   | [a] => a
   | a :: m => OS.Path.concat (a, pathl m)
 
 val hh_dir         = pathl [HOLDIR,"src","holyhammer"];
-
 val provbin_dir    = pathl [hh_dir,"provers"];
-fun provdir_of atp = pathl [provbin_dir, name_of atp ^ "_files"]
-val parallel_dir   = pathl [provbin_dir,"eprover_parallel"];
-
+fun provdir_of atp = pathl [provbin_dir,
+  name_of atp ^ "_files" ^ (!parallel_tag)]
 fun out_of atp     = pathl [provdir_of atp,"out"]
 fun status_of atp  = pathl [provdir_of atp,"status"]
-fun out_dir dir    = pathl [dir,"out"]
-fun status_dir dir = pathl [dir,"status"]
 
 (* -------------------------------------------------------------------------
    Evaluation log
    ------------------------------------------------------------------------- *)
 
-val hh_eval_dir    = pathl [hh_dir,"eval"];
+val hh_eval_dir = pathl [hh_dir,"eval"];
 val eval_flag = ref false
 val eval_thy = ref "scratch"
 fun log_eval s =
@@ -135,15 +135,10 @@ fun launch_atp dir atp t =
    HolyHammer
    ------------------------------------------------------------------------- *)
 
-val hh_goaltac_cache = ref (dempty goal_compare)
-
-fun clean_hh_goaltac_cache () = hh_goaltac_cache := dempty goal_compare
-
-(* Warning: limits the number of selected premises (even in hh_pb) *)
 fun export_to_atp premises cj atp =
   let
     val new_premises = first_n (npremises_of atp) premises
-    val namethml = thml_of_namel new_premises
+    val namethml = hidef thml_of_namel new_premises
   in
     fof_export_pb (provdir_of atp) (cj,namethml)
   end
@@ -159,6 +154,7 @@ fun exists_atp_err atp =
 
 fun hh_pb wanted_atpl premises goal =
   let
+    val _ = app (mkDir_err o provdir_of) wanted_atpl
     val atpl = filter exists_atp_err wanted_atpl
     val cj = list_mk_imp goal
     val _  = app (export_to_atp premises cj) atpl
@@ -173,11 +169,10 @@ fun hh_pb wanted_atpl premises goal =
         raise ERR "hh_pb" "ATPs could not find a proof")
     | SOME lemmas =>
       let
-        val (stac,tac) = hh_reconstruct lemmas goal
+        val (stac,tac) = hidef (hh_reconstruct lemmas) goal
       in
         print_endline ("minimized proof:  \n  " ^ stac);
         log_eval ("  minimized proof:  \n    " ^ stac);
-        hh_goaltac_cache := dadd goal (stac,tac) (!hh_goaltac_cache);
         tac
       end
   end
@@ -191,20 +186,24 @@ fun main_hh thmdata goal =
     hh_pb atpl premises goal
   end
 
+fun has_boolty x = type_of x = bool
+fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
+
 fun hh_goal goal =
-  let val (stac,tac) = dfind goal (!hh_goaltac_cache) in
-    print_endline ("goal already solved by:\n  " ^ stac);
-    tac
-  end
-  handle NotFound => main_hh (create_thmdata ()) goal
+  if not (has_boolty_goal goal)
+  then raise ERR "hh_goal" "a term is not of type bool"
+  else
+    let val thmdata = hidef create_thmdata () in
+      main_hh thmdata goal
+    end
 
 fun hh_fork goal = Thread.fork (fn () => ignore (hh_goal goal), attrib)
-fun hh goal = (hh_goal goal) goal
-fun holyhammer tm = TAC_PROOF (([],tm), hh_goal ([],tm));
+fun hh goal = let val tac = hh_goal goal in hidef tac goal end
+fun holyhammer tm = hidef TAC_PROOF (([],tm), hh_goal ([],tm));
 
 (* -------------------------------------------------------------------------
    HolyHammer evaluation without premise selection:
-   trying to re-prove theorems from their dependencies.
+   trying to re-prove theorems from their dependencies
    ------------------------------------------------------------------------- *)
 
 fun hh_pb_eval_thm atpl (s,thm) =
@@ -226,44 +225,27 @@ fun hh_pb_eval_thm atpl (s,thm) =
 
 fun hh_pb_eval_thy atpl thy =
   (
-  eval_flag := true; eval_thy := thy;
+  dep_flag := true; eval_flag := true; eval_thy := thy;
   mkDir_err hh_eval_dir;
   remove_file (hh_eval_dir ^ "/" ^ thy);
   app (hh_pb_eval_thm atpl) (DB.theorems thy);
-  eval_flag := false; eval_thy := "scratch"
+  dep_flag := false; eval_flag := false; eval_thy := "scratch"
   )
-
-(* -------------------------------------------------------------------------
-   Usage:
-     load "holyHammer"; load "gcdTheory"; open holyHammer;
-     set_timeout 5;
-     hh_pb_eval_thy [Eprover] "gcd";
-   Results can be found in HOLDIR/src/holyhammer/eval.
-  ------------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------------
    Function called by the tactictoe evaluation framework
    ------------------------------------------------------------------------- *)
 
-fun hh_eval (thmdata,tacdata) (thy,name) goal =
-  let val tptpname = escape ("thm." ^ thy ^ "." ^ name) in
-    eval_flag := true;
+fun hh_eval (thmdata,tacdata) goal =
+  let val b = !hide_flag in
+    hide_flag := false; eval_flag := true;
     eval_thy := current_theory ();
     mkDir_err hh_eval_dir;
-    log_eval ("Theorem: " ^ tptpname);
     log_eval ("Goal: " ^ string_of_goal goal);
     ignore (main_hh thmdata goal);
-    eval_flag := false; eval_thy := "scratch"
+    eval_flag := false; hide_flag := b;
+    eval_thy := "scratch"
   end
-
-(* -------------------------------------------------------------------------
-   Usage:
-     load "tttUnfold"; open tttUnfold; open tttSetup;
-     ttt_hheval_flag := true;
-     ttt_rewrite_thy "ConseqConv"; ttt_record_thy "ConseqConv";
-     ttt_hheval_flag := false;
-   Results can be found in HOLDIR/src/holyhammer/eval.
-  ------------------------------------------------------------------------- *)
 
 
 end (* struct *)

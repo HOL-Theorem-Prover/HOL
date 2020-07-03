@@ -6,6 +6,8 @@ open HolKernel boolLib bossLib
 open binary_ieeeTheory realTheory wordsLib realLib
 
 val () = new_theory "lift_ieee"
+val _ = ParseExtras.temp_loose_equality()
+val _ = diminish_srw_ss ["RMULCANON_ss","RMULRELNORM_ss"]
 
 val () =  Parse.temp_overload_on ("bias", ``words$INT_MAX``)
 

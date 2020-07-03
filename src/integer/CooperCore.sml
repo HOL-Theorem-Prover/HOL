@@ -35,7 +35,7 @@ val mem_singP = prove(
   ``!P y. (?x:'a. MEM x [y] /\ P x) = P y``,
   simpLib.SIMP_TAC boolSimps.bool_ss [listTheory.MEM]);
 val mem_consP = prove(
-  ``!P h t. (?x:'a. MEM x (h :: t) /\ P x) = P h \/ (?x. MEM x t /\ P x)``,
+  ``!P h t. (?x:'a. MEM x (h :: t) /\ P x) <=> P h \/ (?x. MEM x t /\ P x)``,
   simpLib.SIMP_TAC boolSimps.bool_ss [listTheory.MEM, RIGHT_AND_OVER_OR,
                                       EXISTS_OR_THM]);
 end
@@ -1034,7 +1034,7 @@ fun phase4_CONV tm = let
       else
         (MP (SPECL [F, delta_tm, x0] bot_and_greaters)
          (CONJ fx_goes_downward Fx0_thm), can_get_big,
-         add_to_great)
+         add_to_greater)
     (* this looks like: .. |- !c. 0 < c ==> F (x0 - c * d) *)
     (* further have lemma:
                            |- ?y. !x. x < y ==> (F x = neginf x)

@@ -100,14 +100,14 @@ val VAR_EQ_IMP = store_thm
     THEN RW_TAC std_ss [Base_def,Index_def]
    );
 
-val VAR_EQ = store_thm
-   ("VAR_EQ",
-    “!x y. (x = y) = (Base x = Base y) /\ (Index x = Index y)”,
+Theorem VAR_EQ:
+   !x y. (x = y) <=> (Base x = Base y) /\ (Index x = Index y)
+Proof
     GEN_TAC THEN GEN_TAC  THEN
     EQ_TAC  THENL
     [ DISCH_THEN REWRITE_THM,
       REWRITE_TAC[VAR_EQ_IMP] ]
-   );
+QED
 
 
 (* =============================================================== *)
@@ -198,9 +198,9 @@ val is_variant_TRANS = store_thm
     RW_TAC arith_ss [is_variant]
    );
 
-val is_variant_SOME_mk_variant = store_thm
-   ("is_variant_SOME_mk_variant",
-    “!x y. y is_variant x = (?k. y = mk_variant x k)”,
+Theorem is_variant_SOME_mk_variant :
+   !x y. y is_variant x <=> (?k. y = mk_variant x k)
+Proof
     Induct
     THEN GEN_TAC THEN GEN_TAC
     THEN Induct
@@ -214,7 +214,7 @@ val is_variant_SOME_mk_variant = store_thm
          STRIP_TAC
          THEN RW_TAC arith_ss []
       ]
-   );
+QED
 
 Theorem is_variant_NOT_EQ:
    !x y. (y is_variant x) /\ ~(x = y) ==> (y is_variant mk_variant x 1)

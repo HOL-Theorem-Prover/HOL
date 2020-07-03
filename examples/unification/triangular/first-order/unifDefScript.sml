@@ -1,6 +1,11 @@
-open HolKernel boolLib bossLib ramanaLib Parse stringTheory arithmeticTheory finite_mapTheory pred_setTheory bagTheory relationTheory prim_recTheory pairTheory termTheory substTheory walkTheory walkstarTheory
+open HolKernel boolLib bossLib ramanaLib Parse
+
+open stringTheory arithmeticTheory finite_mapTheory pred_setTheory bagTheory
+     relationTheory prim_recTheory pairTheory termTheory substTheory walkTheory
+     walkstarTheory
 
 val _ = new_theory "unifDef";
+val _ = delsimps ["NORMEQ_CONV"]
 val _ = monadsyntax.temp_add_monadsyntax()
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 };
 val _ = overload_on("monad_bind",``OPTION_BIND``);
@@ -98,10 +103,10 @@ val allvars_sym = Q.store_thm(
 SRW_TAC [][allvars_def,UNION_COMM]);
 
 val uR_def = Define`
-uR (sx,c1,c2) (s,t1,t2) =
-wfs sx ∧ s SUBMAP sx
-∧ allvars sx c1 c2 SUBSET allvars s t1 t2
-∧ measure (pair_count o (walkstar sx)) c1 t1`
+uR (sx,c1,c2) (s,t1,t2) <=>
+  wfs sx ∧ s SUBMAP sx
+  ∧ allvars sx c1 c2 SUBSET allvars s t1 t2
+  ∧ measure (pair_count o (walkstar sx)) c1 t1`;
 
 val FDOM_allvars = prove(
   ``FDOM s ⊆ allvars s t1 t2``,
@@ -117,11 +122,12 @@ in
         SIMP_TAC (srw_ss()) [FUN_EQ_THM, FORALL_PROD, uR_def])
 end
 
-val uR_lex_def = Define`
-  uR_lex = inv_image ((λs1 s2. s2 SUBMAP s1 ∧ s2 ≠ s1) LEX (λs1 s2. s1 PSUBSET s2 ∧ FINITE s2) LEX (measure pair_count))
-           (λ(s,t1,t2). (s,allvars s t1 t2,walk* s t1))`
-
-open lcsymtacs
+Definition uR_lex_def:
+  uR_lex =
+    inv_image ((λs1 s2. s2 SUBMAP s1 ∧ s2 ≠ s1) LEX
+               (λs1 s2. s1 ⊂ s2 ∧ FINITE s2) LEX (measure pair_count))
+              (λ(s,t1,t2). (s,allvars s t1 t2,walk* s t1))
+End
 
 val uR_RSUBSET_uR_lex = Q.store_thm(
 "uR_RSUBSET_uR_lex",
@@ -129,7 +135,7 @@ val uR_RSUBSET_uR_lex = Q.store_thm(
 srw_tac [][RSUBSET] >>
 PairCases_on`x` >> PairCases_on`y` >>
 Q.MATCH_RENAME_TAC `uR_lex (sx,c1,c2) (s,t1,t2)` >>
-FULL_SIMP_TAC (srw_ss()) [uR_def,uR_lex_def,measure_thm,inv_image_def,LEX_DEF] >>
+fs[uR_def,uR_lex_def,measure_thm,inv_image_def,LEX_DEF] >>
 Cases_on `sx = s` >> srw_tac [][PSUBSET_DEF])
 
 val WF_FINITE_PSUBSET = Q.store_thm(
@@ -262,7 +268,8 @@ val allvars_SUBSET = Q.store_thm(
 SRW_TAC [][walk_def,allvars_def] THEN
 Cases_on `t1` THEN Cases_on `t2` THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
-METIS_TAC [vwalk_to_Pair_SUBSET_rangevars,substvars_def,SUBSET_TRANS,SUBSET_UNION]);
+METIS_TAC [vwalk_to_Pair_SUBSET_rangevars,substvars_def,SUBSET_TRANS,
+           SUBSET_UNION]);
 
 val walkstar_subterm_smaller = Q.store_thm(
 "walkstar_subterm_smaller",
@@ -389,11 +396,13 @@ STRIP_TAC THEN
 METIS_TAC [walkstar_subterm_FUPDATE])
 );
 
-val uR_ind = save_thm("uR_ind",WF_INDUCTION_THM |> Q.ISPEC `uR` |> SIMP_RULE (srw_ss()) [WF_uR]
-|> Q.SPEC `\(a,b,c).P a b c` |> SIMP_RULE std_ss [FORALL_PROD] |> Q.GEN`P`);
+Theorem uR_ind =
+  WF_INDUCTION_THM |> Q.ISPEC `uR` |> SIMP_RULE (srw_ss()) [WF_uR]
+                   |> Q.SPEC `λ(a,b,c).P a b c`
+                   |> SIMP_RULE std_ss [FORALL_PROD] |> Q.GEN`P`
 
 val uP_def = Define`
-uP sx s t1 t2 = wfs sx /\ s SUBMAP sx /\ substvars sx SUBSET allvars s t1 t2`;
+  uP sx s t1 t2 <=> wfs sx ∧ s SUBMAP sx ∧ substvars sx ⊆ allvars s t1 t2`;
 
 val uP_sym = Q.store_thm(
 "uP_sym",
@@ -574,8 +583,9 @@ SRW_TAC [][] THEN
 Cases_on `tunify s t t'` THEN SRW_TAC [][]
 )
 
-val ext_s_check_def = RWDefine`
-ext_s_check s v t = if oc s t v then NONE else SOME (s |+ (v,t))`
+Definition ext_s_check_def[simp]:
+  ext_s_check s v t = if oc s t v then NONE else SOME (s |+ (v,t))
+End
 
 val unify_exists = prove(
 ``?unify.!s t1 t2.wfs s ==> (unify s t1 t2 =

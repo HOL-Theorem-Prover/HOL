@@ -357,6 +357,8 @@ val is_list = fn G => fn (r as {nilstr,cons}) => fn tm =>
 
 fun str_unicode_ok s = CharVector.all Char.isPrint s
 
+fun overloads_to_string_form G = term_grammar.strlit_map G
+
 fun oi_strip_comb' oinfo t =
     if current_trace "PP.avoid_unicode" = 0 then Overload.oi_strip_comb oinfo t
     else Overload.oi_strip_combP oinfo str_unicode_ok t
@@ -416,45 +418,11 @@ fun nthy_compare ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
     EQUAL => String.compare(thy1, thy2)
   | x => x
 
-val prettyprint_bigrecs = ref true;
-val _ = register_btrace ("pp_bigrecs", prettyprint_bigrecs)
-
 val pp_print_firstcasebar = ref false
 val _ = register_btrace ("PP.print_firstcasebar", pp_print_firstcasebar)
 
 val unfakeconst = Option.map #fake o GrammarSpecials.dest_fakeconst_name
 
-fun badpc_encode s =
-    let val sz = String.size s
-        fun recurse seendigit i =
-            if i <= 0 then false
-            else
-              let val c = String.sub(s,i)
-              in
-                if Char.isDigit c then recurse true (i - 1)
-                else c = #"'" andalso seendigit
-              end
-    in
-      sz >= 4 andalso String.sub(s, sz - 1) = #"'" andalso
-      recurse false (sz - 2)
-    end
-
-fun is_identish_var s =
-    (let val v0 = #1 (valOf (UTF8.firstChar s))
-     in
-       UnicodeChars.isAlpha v0 orelse v0 = "_"
-     end) andalso
-    UTF8.all UnicodeChars.isMLIdent s andalso
-    not (badpc_encode s)
-
-fun is_symbolish_var s =
-    UTF8.all UnicodeChars.isSymbolic s andalso
-    not (String.isSubstring "(*" s) andalso
-    not (String.isSubstring "*)" s)
-
-fun is_safe_varname s =
-    s <> "" andalso (is_identish_var s orelse is_symbolish_var s)
-    handle UTF8.BadUTF8 _ => false
 fun unsafe_style s =
     let
       open UTF8
@@ -502,7 +470,7 @@ fun prettynumbers false i = Int.toString i
     end
 
 fun vname_styling unicode s =
-    if not (is_safe_varname s) then unsafe_style s
+    if not (Lexis.is_clean_varname s) then unsafe_style s
     else
       let val (s0,n) = Lib.extract_pc s
       in
@@ -1031,26 +999,6 @@ fun pp_term (G : grammar) TyG backend = let
           if isSome recsel_info then
             if isPrefix recsel_special s then
               SOME (String.extract(s, size recsel_special, NONE), t2)
-            else if is_substring bigrec_subdivider_string s andalso
-                    !prettyprint_bigrecs
-            then let
-                open Overload
-                val brss = bigrec_subdivider_string
-                val (f, x) = dest_comb t2
-                val _ = is_const f orelse raise NotReallyARecord
-                val fname = valOf (overloading_of_term overload_info f)
-                val _ = is_substring (brss ^ "sf") fname orelse
-                        raise NotReallyARecord
-                open Substring
-                val (_, brsssguff) = position brss (full s)
-                val dropguff = slice(brsssguff, String.size brss, NONE)
-                val dropdigits = dropl Char.isDigit dropguff
-                val fldname = string(slice(dropdigits, 1, NONE))
-              in
-                SOME (fldname, x)
-              end handle HOL_ERR _ => NONE
-                       | NotReallyARecord => NONE
-                       | Option => NONE
             else NONE
           else NONE
     in
@@ -1111,10 +1059,7 @@ fun pp_term (G : grammar) TyG backend = let
             fun is_record_update wholetm_opt t =
                 if is_comb t andalso is_const (rator t) then
                   case fupdstr wholetm_opt (rator t) of
-                      SOME s =>
-                      (!prettyprint_bigrecs andalso isSuffix "_fupd" s andalso
-                       is_substring (bigrec_subdivider_string ^ "sf") s) orelse
-                      isPrefix recfupd_special s
+                      SOME s => isPrefix recfupd_special s
                     | NONE => false
                 else false
             (* descend the rands of a term until one that is not a record
@@ -1125,63 +1070,8 @@ fun pp_term (G : grammar) TyG backend = let
                   find_first_non_update ((rator t)::acc) (rand t)
                 else
                   (List.rev acc, t)
-            fun categorise_bigrec_updates v = let
-              fun bigrec_update t =
-                  if is_comb t then
-                    case fupdstr NONE (rator t) of
-                      SOME s => if is_substring bigrec_subdivider_string s then
-                                  SOME (s, rand t)
-                                else NONE
-                    | NONE => NONE
-                  else NONE
-              fun strip_o acc tlist =
-                  case tlist of
-                    [] => acc
-                  | t::ts => let
-                      val (f, args) = strip_comb t
-                      val {Name,Thy,...} = dest_thy_const f
-                    in
-                      if Name = "o" andalso Thy = "combin" then
-                        strip_o acc (hd (tl args) :: hd args :: ts)
-                      else strip_o (t::acc) ts
-                    end handle HOL_ERR _ => strip_o (t::acc) ts
-              fun strip_bigrec_updates t = let
-                val internal_upds = strip_o [] [t]
-              in
-                List.mapPartial bigrec_update internal_upds
-              end
-            fun categorise_bigrec_update (s, value) = let
-              (* first strip suffix, and decide if a normal update *)
-              val sz = size s
-              val (s, value, value_upd) = let
-                (* suffix will be "_fupd" *)
-                val (f, x) = dest_comb value
-                val {Thy, Name, ...} = dest_thy_const f
-              in
-                if Thy = "combin" andalso Name = "K" then
-                  (String.extract(s, 0, SOME (sz - 5)), x, true)
-                else
-                  (String.extract(s, 0, SOME (sz - 5)), value, false)
-              end handle HOL_ERR _ =>
-                         (String.extract(s,0,SOME (sz - 5)), value, false)
-
-              val ss = Substring.full s
-              val (_, ss) = (* drop initial typename *)
-                  Substring.position bigrec_subdivider_string ss
-              val ss = (* drop bigrec_subdivider_string *)
-                  Substring.slice(ss, size bigrec_subdivider_string, NONE)
-              val ss = (* drop subrecord number *)
-                  Substring.dropl Char.isDigit ss
-              val ss = (* drop underscore before field name *)
-                  Substring.slice(ss, 1, NONE)
-            in
-              (Substring.string ss, value, value_upd)
-            end handle Subscript => raise NotReallyARecord
-          in
-            map categorise_bigrec_update (strip_bigrec_updates v)
-          end
           fun categorise_update t = let
-            (* t is an update, possibly a bigrec monster.  Here we generate
+            (* t is an update. Here we generate
                a list of real updates (i.e., the terms corresponding to the
                new value in the update), each with an accompanying field
                string, and a boolean, which is true iff the update is a value
@@ -1189,19 +1079,18 @@ fun pp_term (G : grammar) TyG backend = let
             val (fld, value) = dest_comb t
             val rname = valOf (fupdstr NONE fld)
           in
-            if isPrefix recfupd_special rname then let
-                val (f, x) = dest_comb value
-                val {Thy, Name,...} = dest_thy_const f
-                val fldname = String.extract(rname,size recfupd_special, NONE)
-              in
-                if Thy = "combin" andalso Name = "K" then [(fldname, x, true)]
-                else [(fldname, value, false)]
-              end handle HOL_ERR _ =>
-                         [(String.extract(rname,size recfupd_special, NONE),
-                           value, false)]
-            else (* is a big record - examine value *)
-              assert (not o null) (categorise_bigrec_updates value)
-              handle HOL_ERR _ => raise NotReallyARecord
+            assert (isPrefix recfupd_special) rname
+              handle HOL_ERR _ => raise NotReallyARecord;
+            let
+              val (f, x) = dest_comb value
+              val {Thy, Name,...} = dest_thy_const f
+              val fldname = String.extract(rname,size recfupd_special, NONE)
+            in
+              if Thy = "combin" andalso Name = "K" then [(fldname, x, true)]
+              else [(fldname, value, false)]
+            end handle HOL_ERR _ =>
+                       [(String.extract(rname,size recfupd_special, NONE),
+                         value, false)]
           end
         in
           if is_record_update (SOME wholetm) t1 then let
@@ -1234,10 +1123,11 @@ fun pp_term (G : grammar) TyG backend = let
                                 recurse (decdepth depth) us)
               val ldelim_size = ellist_size ldelim
             in
-              print_ellist NONE (Top,Top,Top) (ldelim, []) >>
-              block INCONSISTENT ldelim_size (recurse depth updates) >>
-              print_ellist NONE (Top,Top,Top) (rdelim, []) >>
-              nothing
+              block INCONSISTENT ldelim_size (
+                print_ellist NONE (Top,Top,Top) (ldelim, []) >>
+                recurse depth updates >>
+                print_ellist NONE (Top,Top,Top) (rdelim, [])
+              )
             end
           in
             if is_const base andalso fst (dest_const base) = "ARB" then
@@ -1837,8 +1727,23 @@ fun pp_term (G : grammar) TyG backend = let
           (case total Literal.dest_string_lit tm of
              NONE => fail
            | SOME s =>
-             add_ann_string (Literal.string_literalpp s,
-                             PPBackEnd.Literal PPBackEnd.StringLit)) |||
+             add_ann_string
+               (Literal.string_literalpp {ldelim="\"", rdelim = "\""} s,
+                PPBackEnd.Literal PPBackEnd.StringLit)) |||
+
+          (* overloaded strings - with special designated rator to a rand
+             which is in turn a string literal *)
+          (fn _ => case total Literal.dest_string_lit (rand tm) of
+                       SOME s =>
+                       (case overloads_to_string_form G {tmnm=atom_name f} of
+                            NONE => fail
+                          | SOME ldelim =>
+                            add_ann_string
+                              (Literal.string_literalpp
+                                 (Literal.delim_pair {ldelim=ldelim})
+                                 s,
+                               PPBackEnd.Literal PPBackEnd.StringLit))
+                     | NONE => fail) |||
 
           (* characters *)
           (fn _ => case total Literal.dest_char_lit tm of
@@ -1882,18 +1787,23 @@ fun pp_term (G : grammar) TyG backend = let
                      fun p body =
                          get_gspec >-
                          (fn b => if b orelse parens then
-                                    add_string "(" >> block PP.CONSISTENT 1 body >> add_string ")"
+                                    block PP.CONSISTENT 1 (
+                                      add_string "(" >>  body >> add_string ")"
+                                    )
                                   else
                                     block PP.CONSISTENT 0 body)
-                     val casebar = add_break(1,0) >> add_string "|" >> hardspace 1
+                     val casebar =
+                         add_break(1,0) >> add_string "|" >> hardspace 1
                      fun do_split rprec (l,r) =
                          record_bvars
                              (free_vars l)
-                             (block PP.CONSISTENT 0
-                                    (pr_term l Top Top Top (decdepth depth) >>
-                                     hardspace 1 >>
-                                     add_string "=>" >> add_break(1,2) >>
-                                     block PP.CONSISTENT 0 (pr_term r Top Top rprec (decdepth depth))))
+                             (block PP.CONSISTENT 0 (
+                                 pr_term l Top Top Top (decdepth depth) >>
+                                 hardspace 1 >>
+                                 add_string "=>" >> add_break(1,2) >>
+                                 block PP.CONSISTENT 0
+                                   (pr_term r Top Top rprec (decdepth depth)))
+                             )
                    in
                      p (block PP.CONSISTENT 0
                             (add_string (prettyprint_cases_name ()) >>

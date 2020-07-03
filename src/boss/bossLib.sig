@@ -16,7 +16,7 @@ sig
   val xDefine      : string -> term quotation -> thm
   val tDefine      : string -> term quotation -> tactic -> thm
   val WF_REL_TAC   : term quotation -> tactic
-  val Hol_defn     : string -> term quotation -> defn
+  val Hol_defn     : string -> term quotation -> DefnBase.defn
 
   (* new (inductive) relations *)
   val Hol_reln     : term quotation -> thm * thm * thm
@@ -32,16 +32,25 @@ sig
   (* Case-splitting and induction operations *)
 
   val Cases             : tactic
-  val Induct            : tactic
-  val recInduct         : thm -> tactic
   val Cases_on          : term quotation -> tactic
-  val Induct_on         : term quotation -> tactic
+  val tmCases_on        : term -> string list -> tactic
+  val PairCases         : tactic
   val PairCases_on      : term quotation -> tactic
+  val Induct            : tactic
+  val Induct_on         : term quotation -> tactic
+  val recInduct         : thm -> tactic
+  val namedCases        : string list -> tactic
+  val namedCases_on     : term quotation -> string list -> tactic
+
   val measureInduct_on  : term quotation -> tactic
   val completeInduct_on : term quotation -> tactic
-  val CASE_TAC          : tactic
+  val using             : tactic * thm -> tactic (* infix *)
+  val usingA            : tactic -> thm -> tactic (* curry of above *)
+
   val pairarg_tac       : tactic
   val split_pair_case_tac : tactic
+
+  val CASE_TAC          : tactic
   val CaseEq            : string -> thm
   val CaseEqs           : string list -> thm
   val AllCaseEqs        : unit -> thm
@@ -81,6 +90,7 @@ sig
   val export_rewrites : string list -> unit
   val temp_delsimps   : string list -> unit
   val delsimps        : string list -> unit
+  val temp_delsimps   : string list -> unit
   val limit           : int -> simpset -> simpset
 
   (* use these in simplifier's argument list *)
@@ -122,6 +132,11 @@ sig
   val EVAL_RULE      : thm -> thm
   val EVAL_TAC       : tactic
 
+  (* Automate some routine set theory by reduction to FOL *)
+  val SET_TAC        : thm list -> tactic
+  val ASM_SET_TAC    : thm list -> tactic
+  val SET_RULE       : term -> thm
+
   (* Miscellaneous *)
 
   val ZAP_TAC        : simpset -> thm list -> tactic
@@ -160,8 +175,11 @@ sig
 
   (* useful quotation-based tactics (from Q) *)
   val qx_gen_tac : term quotation -> tactic
+  val qx_genl_tac : term quotation list -> tactic
   val qx_choose_then : term quotation -> thm_tactic -> thm_tactic
+  val qx_choosel_then : term quotation list -> thm_tactic -> thm_tactic
   val qexists_tac : term quotation -> tactic
+  val qexistsl_tac : term quotation list -> tactic
   val qsuff_tac : term quotation -> tactic
   val qid_spec_tac : term quotation -> tactic
   val qspec_tac : term quotation * term quotation -> tactic
@@ -185,8 +203,10 @@ sig
   val rename : term quotation list -> tactic
   val qabbrev_tac : term quotation -> tactic
   val qunabbrev_tac : term quotation -> tactic
+  val qunabbrevl_tac : term quotation list -> tactic
   val unabbrev_all_tac : tactic
-  val qx_genl_tac : term quotation list -> tactic
-  val qx_choosel_then : term quotation list -> thm_tactic -> thm_tactic
 
+  (* Derived search functions *)
+  val find_consts_thy : string list -> hol_type -> term list
+  val find_consts : hol_type -> term list
 end

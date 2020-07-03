@@ -5,6 +5,9 @@ val _ = temp_remove_absyn_postprocessor "monadsyntax.transform_absyn"
 val _ = temp_remove_user_printer "monadsyntax.print_monads"
 
 val _ = set_trace "Unicode" 0
+(* interactive only:
+val _ = diemode := FailException
+*)
 
 fun udie () = die "FAILED!"
 
@@ -95,18 +98,100 @@ val _ = unicode_off (raw_backend (trace ("types", 1) testutils.tpp))
 val _ = tprint "Testing monadsyntax parse of OPTION_BIND"
 val t = ``do x <- opt ; SOME (x + 1) od``
 val (f, args) = strip_comb t
-val _ = same_const f ``option$OPTION_BIND`` andalso
-        hd args ~~ mk_var("opt", ``:num option``) andalso
-        hd (tl args) ~~ ``\x:num. SOME (x + 1)`` andalso
-        (OK(); true) orelse udie ()
+val _ = if same_const f ``option$OPTION_BIND`` andalso
+           hd args ~~ mk_var("opt", ``:num option``) andalso
+           hd (tl args) ~~ ``\x:num. SOME (x + 1)``
+        then OK() else udie ()
 
 val _ = tprint "Testing monadsyntax parse of OPTION_IGNORE_BIND"
 val t = ``do SOME 3 ; SOME 4 od``
 val (f, args) = strip_comb t
-val _ = same_const f ``option$OPTION_IGNORE_BIND`` andalso
-        hd args ~~ ``SOME 3`` andalso
-        hd (tl args) ~~ ``SOME 4`` andalso
-        (OK(); true) orelse udie()
+val _ = if same_const f ``option$OPTION_IGNORE_BIND`` andalso
+           hd args ~~ ``SOME 3`` andalso
+           hd (tl args) ~~ ``SOME 4``
+        then OK() else udie()
+
+val _ = tprint "Testing monadsyntax parse of mlet in option monad"
+val t = ``do mlet x <- y; SOME (x + 1) od``
+val (f, args) = strip_comb t
+val _ = if same_const f boolSyntax.let_tm andalso
+           hd args ~~ ``\x. SOME (x + 1)`` andalso
+           hd (tl args) ~~ ``y : num``
+        then OK() else udie()
+
+val t = ``do y <- z; mlet x <- y; SOME (x + 1) od``
+val (f, args) = strip_comb t
+val _ = if same_const f ``option$OPTION_BIND`` andalso
+           hd args ~~ ``z : num option`` andalso
+           hd (tl args) ~~ ``\y. let x = y in SOME (x + 1)``
+        then OK() else udie()
+
+val _ = tprint "Testing monadsyntax parse of mlet arrow in option monad"
+val t = ``do x <<- y; SOME (x + 1) od``
+val (f, args) = strip_comb t
+val _ = if same_const f boolSyntax.let_tm andalso
+           hd args ~~ ``\x. SOME (x + 1)`` andalso
+           hd (tl args) ~~ ``y : num``
+        then OK() else udie()
+
+val t = ``do y <- z; x <<- y; SOME (x + 1) od``
+val (f, args) = strip_comb t
+val _ = if same_const f ``option$OPTION_BIND`` andalso
+           hd args ~~ ``z : num option`` andalso
+           hd (tl args) ~~ ``\y. let x = y in SOME (x + 1)``
+        then OK() else udie()
+
+val mlettpp_test1 =
+    ("do mlet (x:α) <- f (x:α); g x; od",
+     String.concat [
+       "let ", bx, " = ", free "f", " ", free "x", " in ",
+       free "g", " ", bx
+     ])
+
+val mlettpp_test2 =
+    ("do (x:α) <<- f (x:α); g x; od",
+     String.concat [
+       "let ", bx, " = ", free "f", " ", free "x", " in ",
+       free "g", " ", bx
+     ])
+
+val mlettpp_test3 =
+    ("do a <- b; (x:α) <<- f (x:α); g x; od",
+     String.concat [
+       "do ", bound "a", " <- ", free "b", "; ",
+       bound "x", " <<- ", free "f", " ", free "x", "; ",
+       free "g", " ", bx, " od"
+     ])
+
+val mlettpp_test4 =
+    ("do a <- b; let x = f x in g x; od",
+     String.concat [
+       "do ", bound "a", " <- ", free "b", "; ",
+       bound "x", " <<- ", free "f", " ", free "x", "; ",
+       free "g", " ", bx, " od"
+     ])
+
+val _ = app tpp' [mlettpp_test1, mlettpp_test2, mlettpp_test3, mlettpp_test4]
+
+val _ = monadsyntax.print_explicit_monadic_lets true;
+
+val mlettpp_test5 =
+    ("do a <- b; (x:α) <<- f (x:α); g x; od",
+     String.concat [
+       "do ", bound "a", " <- ", free "b", "; ",
+       "mlet ", bound "x", " <- ", free "f", " ", free "x", "; ",
+       free "g", " ", bx, " od"
+     ])
+
+val mlettpp_test6 =
+    ("do a <- b; let x = f x in g x; od",
+     String.concat [
+       "do ", bound "a", " <- ", free "b", "; ",
+       "mlet ", bound "x", " <- ", free "f", " ", free "x", "; ",
+       free "g", " ", bx, " od"
+     ])
+
+val _ = app tpp' [mlettpp_test5, mlettpp_test6];
 
 val _ = disable_monad "option"
 val _ = declare_monad ("option",
@@ -119,10 +204,10 @@ val _ = enable_monad "option"
 val _ = tprint "Testing monadsyntax parse of OPTION_BIND (ignoring)"
 val t = ``do SOME 3 ; SOME 4 od``
 val (f, args) = strip_comb t
-val _ = same_const f ``option$OPTION_BIND`` andalso
-        hd args ~~ ``SOME 3`` andalso
-        hd (tl args) ~~ ``K (SOME 4) : num -> num option`` andalso
-        (OK(); true) orelse udie()
+val _ = if same_const f ``option$OPTION_BIND`` andalso
+           hd args ~~ ``SOME 3`` andalso
+           hd (tl args) ~~ ``K (SOME 4) : num -> num option`` then
+          OK() else udie()
 
 val _ = app tpp' [monadtpp_test1, monadtpp_test2, monadtpp_test3,
                   monadtpp_test4]

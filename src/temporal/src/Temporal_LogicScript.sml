@@ -7,6 +7,7 @@ open HolKernel Parse boolLib numLib pairLib
      Rsyntax schneiderUtils;
 
 val _ = new_theory "Temporal_Logic";
+val _ = ParseExtras.temp_loose_equality()
 
 fun TAC_PROOF(g,t) = Tactical.TAC_PROOF(g,t) handle e => Raise e;
 
@@ -103,14 +104,15 @@ val WELL_ORDER_UNIQUE = TAC_PROOF(
 
 
 
-val DELTA_CASES = TAC_PROOF(
-  ([],“(?d. (!t. t<d ==> ~b(t+t0)) /\ b(d+t0)) \/ !d. ~b(d+t0)”),
+Theorem DELTA_CASES:
+  (?d. (!t. t<d ==> ~b(t+t0)) /\ b(d+t0)) \/ !d. ~b(d+t0)
+Proof
   SUBST1_TAC (SYM(NOT_EXISTS_CONV “~?d.b(d+t0)”))
   THEN ONCE_REWRITE_TAC[BETA_RULE(SPEC “\t.b(t+t0):bool” (GEN_ALL WELL_ORDER))]
   THEN RIGHT_DISJ_TAC
-  THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“a/\b = b/\a”),
-                  BOOL_CASES_TAC “a:bool” THEN REWRITE_TAC[])]
-  THEN ASM_REWRITE_TAC[])
+  THEN ONCE_REWRITE_TAC[CONJ_COMM]
+  THEN ASM_REWRITE_TAC[]
+QED
 
 
 
@@ -253,11 +255,12 @@ val EVENTUAL_SIGNAL = TAC_PROOF(
 
 
 
-val WATCH_SIGNAL = TAC_PROOF(
-        ([],“(q WATCH b) t0 =
+Theorem WATCH_SIGNAL:
+   (q WATCH b) t0 <=>
                 ((!t. ~b(t+t0)) ==> (!t. ~q(t+t0))) /\
                 (!d. b(d+t0) /\ (!t. t<d ==> ~b(t+t0)) ==>
-                        (!t. t<=d ==> ~q(t+t0)) /\ (!t. q(SUC(t+(d+t0)))))”),
+                        (!t. t<=d ==> ~q(t+t0)) /\ (!t. q(SUC(t+(d+t0)))))
+Proof
         PURE_REWRITE_TAC[WATCH]
         THEN RIGHT_LEMMA_DISJ_CASES_TAC DELTA_CASES THEN ASM_REWRITE_TAC[]
         THENL[ALL_TAC,
@@ -407,10 +410,6 @@ val BEFORE_SIGNAL = TAC_PROOF(
           DISCH_TAC]
       THEN POP_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]);
 
-
-
-
-
 val SWHEN_SIGNAL = TAC_PROOF(
   ([],“(a SWHEN b) t0 =
           ?delta. (!t. t<delta ==> ~b(t+t0)) /\ b(delta+t0) /\ a(delta+t0)”),
@@ -445,9 +444,10 @@ val SWHEN_SIGNAL = TAC_PROOF(
 
 
 
-val SUNTIL_SIGNAL = TAC_PROOF(
-  ([],“(a SUNTIL b) t0 =
-          ?delta. (!t. t<delta ==> a(t+t0) /\~b(t+t0)) /\ b(delta+t0)”),
+Theorem SUNTIL_SIGNAL:
+  (a SUNTIL b) t0 =
+          ?delta. (!t. t<delta ==> a(t+t0) /\~b(t+t0)) /\ b(delta+t0)
+Proof
   REWRITE_TAC[SUNTIL] >> EQ_TAC >> STRIP_TAC
   THENL[
       RULE_ASSUM_TAC(REWRITE_RULE[WATCH_SIGNAL])
@@ -464,8 +464,7 @@ val SUNTIL_SIGNAL = TAC_PROOF(
       >> EXISTS_TAC “q:num->bool” >> ASM_REWRITE_TAC[]
       >> CONJ_TAC
       THENL[ALL_TAC, EXISTS_TAC“delta:num” >> ASM_REWRITE_TAC[]]
-      >> UNDISCH_NO_TAC 2 >> REWRITE_TAC[
-          TAC_PROOF(([],“(a==> b /\ c) = (a==> b) /\ (a==> c)”),PROP_TAC)]
+      >> UNDISCH_NO_TAC 2 >> REWRITE_TAC[IMP_CONJ_THM]
       >> CONV_TAC(DEPTH_CONV FORALL_AND_CONV) >> STRIP_TAC
       >> RULE_ASSUM_TAC(REWRITE_RULE[WATCH_SIGNAL])
       >> UNDISCH_NO_TAC 2 >> STRIP_TAC
@@ -477,10 +476,8 @@ val SUNTIL_SIGNAL = TAC_PROOF(
       THENL[ALL_TAC,POP_ASSUM(SUBST1_TAC o SYM) >> ASM_REWRITE_TAC[]]
       >> IMP_RES_TAC LESS_ADD_1 >> POP_ASSUM SUBST1_TAC >> DISJ1_TAC
       >> SUBST1_TAC(EQT_ELIM(ARITH_CONV“(delta+(p+1))+t0 = SUC(p+(delta+t0))”))
-      >> ASM_REWRITE_TAC[]])
-
-
-
+      >> ASM_REWRITE_TAC[]]
+QED
 
 val SBEFORE_SIGNAL = TAC_PROOF(
         ([],“(a SBEFORE b) t0
@@ -584,13 +581,15 @@ val UNTIL_AS_WHEN = TAC_PROOF(
 
 
 
-val BEFORE_AS_WHEN = TAC_PROOF(
-        ([],“a BEFORE b = (\t. ~b t) WHEN (\t.a t \/ b t)”),
+Theorem BEFORE_AS_WHEN:
+    a BEFORE b = (\t. ~b t) WHEN (\t.a t \/ b t)
+Proof
         CONV_TAC(X_FUN_EQ_CONV “t0:num”) THEN GEN_TAC
         THEN REWRITE_TAC[BEFORE_SIGNAL,WHEN_SIGNAL] THEN BETA_TAC
         THEN MY_MP_TAC “!delta.
                            (!t. t<delta ==> ~a(t+t0) /\ ~b(t+t0))
-                        =  (!t. t<delta ==> ~a(t+t0)) /\
+                        <=>
+                           (!t. t<delta ==> ~a(t+t0)) /\
                            (!t. t<delta ==> ~b(t+t0))”
         THENL[GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN RES_TAC,
               DISCH_TAC]
@@ -600,7 +599,7 @@ val BEFORE_AS_WHEN = TAC_PROOF(
             LEFT_NO_FORALL_TAC 4 “delta:num”
             THEN UNDISCH_HD_TAC THEN ASM_REWRITE_TAC[]
             THEN CONV_TAC NOT_EXISTS_CONV THEN GEN_TAC
-            THEN REWRITE_TAC[TAC_PROOF(([],“~(a/\b) = a==>~b”),PROP_TAC)]
+            THEN REWRITE_TAC[DECIDE “~(a/\b) <=> a==>~b”]
             THEN DISCH_TAC THEN RES_TAC,
             LEFT_NO_FORALL_TAC 3 “delta:num”
             THEN UNDISCH_HD_TAC THEN ASM_REWRITE_TAC[]
@@ -608,7 +607,8 @@ val BEFORE_AS_WHEN = TAC_PROOF(
             LEFT_NO_FORALL_TAC 2 “delta:num”
             THEN UNDISCH_HD_TAC THEN ASM_REWRITE_TAC[]
             THEN CONV_TAC(DEPTH_CONV NOT_FORALL_CONV)
-            THEN REWRITE_TAC[TAC_PROOF(([],“~(a==>b) = a/\~b”),PROP_TAC)]])
+            THEN REWRITE_TAC[DECIDE “~(a==>b) <=> a/\~b”]]
+QED
 
 
 
@@ -2833,7 +2833,6 @@ val NEXT_LINORD = TAC_PROOF(
 val _ = save_thm("WATCH_EXISTS",WATCH_EXISTS);
 val _ = save_thm("WELL_ORDER",WELL_ORDER);
 val _ = save_thm("WELL_ORDER_UNIQUE",WELL_ORDER_UNIQUE);
-val _ = save_thm("DELTA_CASES",DELTA_CASES);
 
 (* ----------------- from file hw_imp.sml ------------------    *)
 val _ = save_thm("WHEN_IMP",WHEN_IMP);
@@ -2846,12 +2845,10 @@ val _ = save_thm("SBEFORE_IMP",SBEFORE_IMP);
 (* ----------------- from file signal.sml ------------------    *)
 val _ = save_thm("ALWAYS_SIGNAL",ALWAYS_SIGNAL);
 val _ = save_thm("EVENTUAL_SIGNAL",EVENTUAL_SIGNAL);
-val _ = save_thm("WATCH_SIGNAL",WATCH_SIGNAL);
 val _ = save_thm("WHEN_SIGNAL",WHEN_SIGNAL);
 val _ = save_thm("UNTIL_SIGNAL",UNTIL_SIGNAL);
 val _ = save_thm("BEFORE_SIGNAL",BEFORE_SIGNAL);
 val _ = save_thm("SWHEN_SIGNAL",SWHEN_SIGNAL);
-val _ = save_thm("SUNTIL_SIGNAL",SUNTIL_SIGNAL);
 val _ = save_thm("SBEFORE_SIGNAL",SBEFORE_SIGNAL);
 
 (* ----------------- from file temp2linord.sml ---------------- *)
@@ -2869,7 +2866,6 @@ val _ = save_thm("WHEN_LINORD",WHEN_LINORD);
 val _ = save_thm("ALWAYS_AS_WHEN",ALWAYS_AS_WHEN);
 val _ = save_thm("EVENTUAL_AS_WHEN",EVENTUAL_AS_WHEN);
 val _ = save_thm("UNTIL_AS_WHEN",UNTIL_AS_WHEN);
-val _ = save_thm("BEFORE_AS_WHEN",BEFORE_AS_WHEN);
 val _ = save_thm("SWHEN_AS_WHEN",SWHEN_AS_WHEN);
 val _ = save_thm("SWHEN_AS_NOT_WHEN",SWHEN_AS_NOT_WHEN);
 val _ = save_thm("SUNTIL_AS_WHEN",SUNTIL_AS_WHEN);

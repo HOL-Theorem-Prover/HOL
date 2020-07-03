@@ -74,7 +74,7 @@ val is_lbtree_rules = prove(
   ]);
 
 val is_lbtree_cases = prove(
-  ``is_lbtree t =
+  ``is_lbtree t <=>
        (t = Lfrep) \/
        ?a t1 t2. (t = Ndrep a t1 t2) /\ is_lbtree t1 /\ is_lbtree t2``,
   SIMP_TAC (srw_ss() ++ DNF_ss) [EQ_IMP_THM, is_lbtree_rules] THEN
@@ -88,7 +88,7 @@ val forall_lbtree = prove(
   SRW_TAC [][]);
 
 val Ndrep_11 = prove(
-  ``(Ndrep a1 t1 u1 = Ndrep a2 t2 u2) = (a1 = a2) /\ (t1 = t2) /\ (u1 = u2)``,
+  ``(Ndrep a1 t1 u1 = Ndrep a2 t2 u2) <=> (a1 = a2) /\ (t1 = t2) /\ (u1 = u2)``,
   SRW_TAC [][Ndrep_def, EQ_IMP_THM, FUN_EQ_THM] THENL [
     POP_ASSUM (Q.SPEC_THEN `[]` MP_TAC) THEN SRW_TAC [][],
     POP_ASSUM (Q.SPEC_THEN `T::x` MP_TAC) THEN SRW_TAC [][],
@@ -159,11 +159,11 @@ val Lf_NOT_Nd = store_thm(
   Q.EXISTS_TAC `[]` THEN SRW_TAC [][]);
 val _ = export_rewrites ["Lf_NOT_Nd"]
 
-val Nd_11 = store_thm(
-  "Nd_11",
-  ``(Nd a1 t1 u1 = Nd a2 t2 u2) = (a1 = a2) /\ (t1 = t2) /\ (u1 = u2)``,
-  SRW_TAC [][Nd_def, lbtree_abs_11, is_lbtree_rules, Ndrep_11]);
-val _ = export_rewrites ["Nd_11"]
+Theorem Nd_11[simp]:
+  (Nd a1 t1 u1 = Nd a2 t2 u2) <=> (a1 = a2) /\ (t1 = t2) /\ (u1 = u2)
+Proof
+  SRW_TAC [][Nd_def, lbtree_abs_11, is_lbtree_rules, Ndrep_11]
+QED
 
 (* ----------------------------------------------------------------------
     co-recursion/finality axiom
@@ -348,13 +348,13 @@ val (mem_rules, mem_ind, mem_cases) = Hol_reln`
   (!a b t1 t2. mem a t2 ==> mem a (Nd b t1 t2))
 `;
 
-val mem_thm = store_thm(
-  "mem_thm",
-  ``(mem a Lf = F) /\
-    (mem a (Nd b t1 t2) = (a = b) \/ mem a t1 \/ mem a t2)``,
+Theorem mem_thm[simp]:
+   (mem a Lf = F) /\
+   (mem a (Nd b t1 t2) <=> (a = b) \/ mem a t1 \/ mem a t2)
+Proof
   CONJ_TAC THEN CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [mem_cases])) THEN
-  SRW_TAC [][] THEN METIS_TAC []);
-val _ = export_rewrites ["mem_thm"]
+  SRW_TAC [][] THEN METIS_TAC []
+QED
 
 
 (* ----------------------------------------------------------------------
@@ -405,14 +405,14 @@ val (finite_rules, finite_ind, finite_cases) = Hol_reln`
   !a t1 t2. finite t1 /\ finite t2 ==> finite (Nd a t1 t2)
 `;
 
-val finite_thm = store_thm(
-  "finite_thm",
-  ``(finite Lf = T) /\
-    (finite (Nd a t1 t2) = finite t1 /\ finite t2)``,
+Theorem finite_thm[simp]:
+    (finite Lf = T) /\
+    (finite (Nd a t1 t2) <=> finite t1 /\ finite t2)
+Proof
   CONJ_TAC THEN
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [finite_cases])) THEN
-  SRW_TAC [][]);
-val _ = export_rewrites ["finite_thm"]
+  SRW_TAC [][]
+QED
 
 
 val finite_map = store_thm(
@@ -498,45 +498,48 @@ val EXISTS_FIRST = store_thm(
     ]
   ]);
 
-val exists_bf_flatten = store_thm(
-  "exists_bf_flatten",
-  ``exists ((=)x) (bf_flatten tlist) ==> EXISTS (mem x) tlist``,
-  Q_TAC SUFF_TAC `!l. exists ((=)x) l ==>
-                      !tlist. (l = bf_flatten tlist) ==>
-                              EXISTS (mem x) tlist`
-        THEN1 METIS_TAC [] THEN
+Theorem exists_bf_flatten:
+  exists ((=)x) (bf_flatten tlist) ==> EXISTS (mem x) tlist
+Proof
+  ‘!l. exists ((=)x) l ==>
+       !tlist. (l = bf_flatten tlist) ==>
+               EXISTS (mem x) tlist’ suffices_by metis_tac[] >>
   HO_MATCH_MP_TAC exists_ind THEN SRW_TAC [][] THENL [
-    `~EVERY ($= Lf) tlist`
+    ‘~EVERY ($= Lf) tlist’
        by METIS_TAC [LCONS_NOT_NIL, bf_flatten_eq_lnil] THEN
-    `EXISTS ($~ o $= Lf) tlist`
+    ‘EXISTS ($~ o $= Lf) tlist’
        by FULL_SIMP_TAC (srw_ss()) [listTheory.NOT_EVERY] THEN
-    `?l1 x l2. EVERY ($~ o $~ o $= Lf) l1 /\ ($~ o $= Lf) x /\
-               (tlist = l1 ++ (x :: l2))`
+    ‘?l1 x l2. EVERY ($~ o $~ o $= Lf) l1 /\ ($~ o $= Lf) x /\
+               (tlist = l1 ++ (x :: l2))’
        by METIS_TAC [EXISTS_FIRST] THEN
-    `EVERY ((=) Lf) l1`
-       by FULL_SIMP_TAC (srw_ss() ++ ETA_ss) [combinTheory.o_DEF] THEN
-    `~(Lf = x)` by FULL_SIMP_TAC (srw_ss()) [] THEN
-    `?a t1 t2. x = Nd a t1 t2` by METIS_TAC [lbtree_cases] THEN
+    ‘EVERY ((=) Lf) l1’
+       by FULL_SIMP_TAC (srw_ss() ++ ETA_ss)
+                        [combinTheory.o_DEF, Excl "NORMEQ_CONV"] THEN
+    ‘Lf <> x’ by FULL_SIMP_TAC (srw_ss()) [] THEN
+    ‘?a t1 t2. x = Nd a t1 t2’ by METIS_TAC [lbtree_cases] THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN
-    (bf_flatten_append |> Q.SPEC `l1` |> Q.INST [`l2`|->`[Nd a t1 t2] ++ l2`] |> MP_TAC) THEN
+    (bf_flatten_append |> Q.SPEC ‘l1’ |> Q.INST [‘l2’|->‘[Nd a t1 t2] ++ l2’] |> MP_TAC) THEN
     SRW_TAC [][bf_flatten_def] THEN FULL_SIMP_TAC (srw_ss()) [],
-    `~EVERY ($= Lf) tlist`
+    ‘~EVERY ($= Lf) tlist’
        by METIS_TAC [LCONS_NOT_NIL, bf_flatten_eq_lnil] THEN
-    `EXISTS ($~ o $= Lf) tlist`
+    ‘EXISTS ($~ o $= Lf) tlist’
        by FULL_SIMP_TAC (srw_ss()) [listTheory.NOT_EVERY] THEN
-    `?l1 y l2. EVERY ($~ o $~ o $= Lf) l1 /\ ($~ o $= Lf) y /\
-               (tlist = l1 ++ (y :: l2))`
+    ‘?l1 y l2. EVERY ($~ o $~ o $= Lf) l1 /\ ($~ o $= Lf) y /\
+               (tlist = l1 ++ (y :: l2))’
        by METIS_TAC [EXISTS_FIRST] THEN
-    `EVERY ((=) Lf) l1`
-       by FULL_SIMP_TAC (srw_ss() ++ ETA_ss) [combinTheory.o_DEF] THEN
-    `~(Lf = y)` by FULL_SIMP_TAC (srw_ss()) [] THEN
-    `?a t1 t2. y = Nd a t1 t2` by METIS_TAC [lbtree_cases] THEN
+    ‘EVERY ((=) Lf) l1’
+       by FULL_SIMP_TAC (srw_ss() ++ ETA_ss)
+                        [combinTheory.o_DEF, Excl "NORMEQ_CONV"] THEN
+    ‘~(Lf = y)’ by FULL_SIMP_TAC (srw_ss()) [] THEN
+    ‘?a t1 t2. y = Nd a t1 t2’ by METIS_TAC [lbtree_cases] THEN
     FULL_SIMP_TAC (srw_ss()) [bf_flatten_def, bf_flatten_append] THEN
-    FIRST_X_ASSUM (Q.SPEC_THEN `l2 ++ [t1;t2]` MP_TAC) THEN
+    FIRST_X_ASSUM (Q.SPEC_THEN ‘l2 ++ [t1;t2]’ MP_TAC) THEN
     SRW_TAC [][] THEN SRW_TAC [][] THEN
-    (bf_flatten_append |> Q.SPEC `l1` |> Q.INST [`l2`|->`[Nd a t1 t2] ++ l2`] |> MP_TAC) THEN
-    SRW_TAC [][bf_flatten_def] THEN FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []
-  ]);
+    (bf_flatten_append |> Q.SPEC ‘l1’ |> Q.INST [‘l2’|->‘[Nd a t1 t2] ++ l2’] |> MP_TAC) THEN
+    SRW_TAC [][bf_flatten_def] THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+    METIS_TAC []
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     Now it starts to get HIDEOUS.
@@ -619,22 +622,22 @@ val min_tac =
          by (SPOSE_NOT_THEN ASSUME_TAC THEN
              `m < t1d \/ t1d < m` by DECIDE_TAC THENL [
                 METIS_TAC [],
-                METIS_TAC [DECIDE ``SUC x < SUC y = x < y``,
+                METIS_TAC [DECIDE ``SUC x < SUC y <=> x < y``,
                            depth_rules]
              ]) THEN
       SRW_TAC [][arithmeticTheory.MIN_DEF] THEN
       SPOSE_NOT_THEN ASSUME_TAC THEN
       `t2d < m` by DECIDE_TAC THEN
-      METIS_TAC [DECIDE ``SUC x < SUC y = x < y``, depth_rules],
+      METIS_TAC [DECIDE ``SUC x < SUC y <=> x < y``, depth_rules],
       `m = t2d`
          by (SPOSE_NOT_THEN ASSUME_TAC THEN
              `m < t2d \/ t2d < m` by DECIDE_TAC THENL [
                 METIS_TAC [],
-                METIS_TAC [DECIDE ``SUC x < SUC y = x < y``,
+                METIS_TAC [DECIDE ``SUC x < SUC y <=> x < y``,
                            depth_rules]
              ]) THEN
       SRW_TAC [][arithmeticTheory.MIN_DEF] THEN
-      METIS_TAC [DECIDE ``SUC x < SUC y = x < y``, depth_rules]
+      METIS_TAC [DECIDE ``SUC x < SUC y <=> x < y``, depth_rules]
     ]
 
 (* a minimum function lifted to option type: NONEs are treated as if they
@@ -669,7 +672,7 @@ val mindepth_thm = store_thm(
     `!n. ~depth x t2 n` by METIS_TAC [depth_mem] THEN
     ONCE_REWRITE_TAC [depth_cases] THEN SRW_TAC [][] THEN
     Q_TAC SUFF_TAC `~(m < n) /\ ~(n < m)` THEN1 DECIDE_TAC THEN
-    REPEAT STRIP_TAC THEN METIS_TAC [DECIDE ``SUC x < SUC y = x < y``,
+    REPEAT STRIP_TAC THEN METIS_TAC [DECIDE ``SUC x < SUC y <=> x < y``,
                                      depth_rules],
 
     SRW_TAC [ETA_ss][] THEN
@@ -680,7 +683,7 @@ val mindepth_thm = store_thm(
     `!n. ~depth x t1 n` by METIS_TAC [depth_mem] THEN
     ONCE_REWRITE_TAC [depth_cases] THEN SRW_TAC [][] THEN
     Q_TAC SUFF_TAC `~(m < n) /\ ~(n < m)` THEN1 DECIDE_TAC THEN
-    REPEAT STRIP_TAC THEN METIS_TAC [DECIDE ``SUC x < SUC y = x < y``,
+    REPEAT STRIP_TAC THEN METIS_TAC [DECIDE ``SUC x < SUC y <=> x < y``,
                                      depth_rules]
   ]);
 
@@ -703,7 +706,7 @@ val mindepth_depth = store_thm(
    to prove correct.  Its option return type also makes the ultimate proof
    ugly --- I decided it was a mistake bothering with it. *)
 val is_mmindex_def = Define`
-  is_mmindex f l n d =
+  is_mmindex f l n d <=>
     n < LENGTH l /\
     (f (EL n l) = SOME d) /\
     !i. i < LENGTH l ==>
@@ -739,16 +742,16 @@ val mmindex_EXISTS = store_thm(
       `P x` by (SRW_TAC [][Abbr`P`] THEN METIS_TAC []) THEN
       Q.UNABBREV_TAC `min_d` THEN LEAST_ELIM_TAC THEN
       SRW_TAC [][] THEN1 METIS_TAC [] THEN
-      METIS_TAC [DECIDE ``x <= y = ~(y < x)``],
+      METIS_TAC [DECIDE ``x <= y <=> ~(y < x)``],
       `P x` by (SRW_TAC [][Abbr`P`] THEN METIS_TAC []) THEN
       Q.UNABBREV_TAC `min_d` THEN LEAST_ELIM_TAC THEN
       CONJ_TAC THEN1 METIS_TAC [] THEN
       Q.X_GEN_TAC `m` THEN STRIP_TAC THEN
       `(LEAST x. P x) = m`
          by (LEAST_ELIM_TAC THEN SRW_TAC [][] THEN1 METIS_TAC [] THEN
-             METIS_TAC [DECIDE ``(x = y) = ~(x < y) /\ ~(y < x)``]) THEN
+             METIS_TAC [DECIDE ``(x = y) <=> ~(x < y) /\ ~(y < x)``]) THEN
       POP_ASSUM SUBST_ALL_TAC THEN
-      `m <= x` by METIS_TAC [DECIDE ``~(x < y) = y <= x``] THEN
+      `m <= x` by METIS_TAC [DECIDE ``~(x < y) <=> y <= x``] THEN
       Q_TAC SUFF_TAC `~(m = x)` THEN1 DECIDE_TAC THEN
       METIS_TAC []
     ]
@@ -756,7 +759,7 @@ val mmindex_EXISTS = store_thm(
 
 val mmindex_unique = store_thm(
   "mmindex_unique",
-  ``is_mmindex f l i m ==> !j n. is_mmindex f l j n = (j = i) /\ (n = m)``,
+  ``is_mmindex f l i m ==> !j n. is_mmindex f l j n <=> (j = i) /\ (n = m)``,
   SIMP_TAC (srw_ss()) [EQ_IMP_THM] THEN
   SIMP_TAC (srw_ss()) [is_mmindex_def] THEN
   STRIP_TAC THEN REPEAT GEN_TAC THEN STRIP_TAC THEN
@@ -796,7 +799,7 @@ val EL_APPEND = prove(
   ]);
 
 val optmin_EQ_NONE = prove(
-  ``(optmin n m = NONE) = (n = NONE) /\ (m = NONE)``,
+  ``(optmin n m = NONE) <=> (n = NONE) /\ (m = NONE)``,
   Cases_on `n` THEN Cases_on `m` THEN SRW_TAC [][optmin_def]);
 
 val mem_bf_flatten = store_thm(
@@ -820,7 +823,7 @@ val mem_bf_flatten = store_thm(
           METIS_TAC [mem_mindepth]) THEN
    `?i d. is_mmindex (mindepth x) tlist i d`
       by METIS_TAC [mmindex_EXISTS] THEN
-   `!j n. is_mmindex (mindepth x) tlist j n = (j = i) /\ (n = d)`
+   `!j n. is_mmindex (mindepth x) tlist j n <=> (j = i) /\ (n = d)`
       by METIS_TAC [mmindex_unique] THEN
    FULL_SIMP_TAC (srw_ss()) [] THEN
    `mindepth x (EL i tlist) = SOME d` by METIS_TAC [is_mmindex_def] THEN
@@ -834,7 +837,7 @@ val mem_bf_flatten = store_thm(
       `is_mmindex (mindepth x) (Lf::t) (SUC i0) d` by SRW_TAC [][] THEN
       `is_mmindex (mindepth x) t i0 d`
           by METIS_TAC [mmindex_bump, mindepth_thm] THEN
-      `!j n. is_mmindex (mindepth x) t j n = (j = i0) /\ (n = d)`
+      `!j n. is_mmindex (mindepth x) t j n <=> (j = i0) /\ (n = d)`
           by METIS_TAC [mmindex_unique] THEN
       FULL_SIMP_TAC (srw_ss()) [] THEN
       FIRST_X_ASSUM (MP_TAC o SPECL [``t : 'a lbtree list``, ``x:'a``]) THEN
@@ -988,7 +991,7 @@ val mem_bf_flatten = store_thm(
                      FIRST_X_ASSUM MATCH_MP_TAC THEN
                      `n < LENGTH t`
                        by METIS_TAC [is_mmindex_def, listTheory.LENGTH,
-                                     DECIDE ``SUC x < SUC y = x < y``] THEN
+                                     DECIDE ``SUC x < SUC y <=> x < y``] THEN
                      FULL_SIMP_TAC (srw_ss() ++ ARITH_ss)
                                    [mindepth_thm, EL_APPEND]) THEN
         `is_mmindex (mindepth x) (Nd a t1 t2::t) (SUC n) d`

@@ -112,5 +112,8 @@ sig
   val dxrule_all       : thm_tactic
   val drule_all_then   : thm_tactic -> thm_tactic
   val dxrule_all_then  : thm_tactic -> thm_tactic
+  datatype match_position = datatype thmpos_dtype.match_position
+  val mp_then      : match_position -> thm_tactic -> thm -> thm -> tactic
+  val resolve_then : match_position -> thm_tactic -> thm -> thm -> tactic
 
 end

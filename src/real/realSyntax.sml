@@ -31,7 +31,7 @@ struct
   val real_eq_tm = mk_thy_const { Thy = "min", Name = "=", Ty = rel_ty}
   val less_tm = mk_raconst("real_lt", rel_ty)
   val leq_tm = mk_rconst("real_lte", rel_ty)
-  val great_tm = mk_rconst("real_gt", rel_ty)
+  val greater_tm = mk_rconst("real_gt", rel_ty)
   val geq_tm = mk_rconst("real_ge", rel_ty)
 
   val min_tm = mk_rconst("min", bop_ty)
@@ -146,9 +146,9 @@ in
   val is_leq = can dest_leq
   fun mk_leq(t1, t2) = list_mk_comb(leq_tm, [t1, t2])
 
-  val dest_great = dest2 great_tm "dest_great" "greater-than term"
-  val is_great = can dest_great
-  fun mk_great(t1, t2) = list_mk_comb(great_tm, [t1, t2])
+  val dest_greater = dest2 greater_tm "dest_greater" "greater-than term"
+  val is_greater = can dest_greater
+  fun mk_greater(t1, t2) = list_mk_comb(greater_tm, [t1, t2])
 
   val dest_geq = dest2 geq_tm "dest_geq" "greater-than-or-equal term"
   val is_geq = can dest_geq
@@ -177,6 +177,6 @@ in
     else Arbint.~(Arbint.fromNat n)
   end
 
-
+  val (inv_tm,mk_inv,dest_inv,is_inv) = syntax_fns1 "realax" "inv"
 
 end ;

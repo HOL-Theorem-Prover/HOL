@@ -120,6 +120,19 @@ fun gen_mk_numeral {mk_comb, ZERO, ALT_ZERO, NUMERAL, BIT1, BIT2} n =
    if n=zero then ZERO else mk_comb(NUMERAL,positive n)
  end;
 
+fun mk_numerallit_term n =
+    let
+      val num_ty = mk_thy_type{Thy = "num", Tyop = "num", Args = []}
+      val ALT_ZERO =
+          mk_thy_const{Thy = "arithmetic", Name = "ZERO", Ty = num_ty}
+      val ZERO = mk_thy_const{Thy = "num", Name = "0", Ty = num_ty}
+      fun mkf s =
+          mk_thy_const{Thy = "arithmetic", Name = s, Ty = num_ty --> num_ty}
+    in
+      gen_mk_numeral{mk_comb=mk_comb,ZERO = ZERO, ALT_ZERO= ALT_ZERO,
+                     NUMERAL = mkf "NUMERAL", BIT1 = mkf "BIT1",
+                     BIT2 = mkf "BIT2"} n
+    end
 
 (*---------------------------------------------------------------------------
                   STRINGS
@@ -152,7 +165,7 @@ fun is_emptystring tm =
 fun dest_string_lit tm =
     if is_emptystring tm then ""
     else let
-        val (front,e) = Lib.front_last (strip_binop (total dest_string) tm)
+        val (front,e) = Lib.front_last (strip_binop dest_string tm)
       in
         if is_emptystring e then
           String.implode (itlist (cons o fromHOLchar) front [])
@@ -164,8 +177,9 @@ val is_string_lit = can dest_string_lit
 val paranoid_stringlitpp = ref false
 val _ = Feedback.register_btrace
             ("paranoid string literal printing", paranoid_stringlitpp)
-fun string_literalpp s =
-    if not (!paranoid_stringlitpp) then Lib.mlquote s
+fun string_literalpp {ldelim,rdelim} s =
+    if not (!paranoid_stringlitpp) then
+      ldelim ^ String.toString s ^ rdelim
     else let
         val limit = size s
         fun sub i = String.sub(s,i)
@@ -173,25 +187,33 @@ fun string_literalpp s =
         val concat = String.concat
         val toString = String.toString
         fun recurse A lastc start i =
-            if i >= limit then concat (List.rev("\"" :: extract(start,NONE)::A))
+            if i >= limit then
+              concat (List.rev(rdelim :: toString (extract(start,NONE))::A))
             else
               case (lastc, sub i) of
                 (#"(", #"*") => let
-                  val p = toString (extract(start,SOME (i - start - 1))) ^ "(\\042"
+                  val p =
+                      toString (extract(start,SOME (i - start - 1))) ^ "(\\042"
                 in
                   recurse (p::A) #" " (i + 1) (i + 1)
                 end
               | (#"*", #")") => let
-                  val p = toString (extract(start,SOME(i - start - 1))) ^ "\\042)"
+                  val p =
+                      toString (extract(start,SOME(i - start - 1))) ^ "\\042)"
                 in
                   recurse (p::A) #" " (i + 1) (i + 1)
                 end
               | (_, c) => recurse A c start (i + 1)
       in
-        recurse ["\""] #" " 0 0
+        recurse [ldelim] #" " 0 0
       end
 
-
+fun delim_pair {ldelim} =
+    case ldelim of
+        "\"" => {ldelim = "\"", rdelim = "\""}
+      | "\194\171" => {ldelim = ldelim, rdelim = "\194\187"}
+      | "\226\128\185" => {ldelim = ldelim, rdelim = "\226\128\186"}
+      | _ => raise Fail ("delim_pair: bad left delim: "^ldelim)
 
 (*---------------------------------------------------------------------------*)
 (* Redefine dest_string_lit to handle cases where c in CHR (c) is either a   *)
@@ -204,7 +226,7 @@ in
 fun relaxed_dest_string_lit tm =
     if is_emptystring tm then ""
     else let
-        val (front,e) = Lib.front_last (strip_binop (total dest_string) tm)
+        val (front,e) = Lib.front_last (strip_binop dest_string tm)
       in
         if is_emptystring e then
           String.implode (itlist (cons o fromHOLchar) front [])
@@ -224,6 +246,36 @@ fun mk_string_lit {mk_string,fromMLchar,emptystring} s = let
 in
   recurse (emptystring, String.size s - 1)
 end
+
+fun mk_charlit_term c =
+    let
+      val char_ty = mk_thy_type{Args = [], Thy = "string", Tyop = "char"}
+      val num_ty = mk_thy_type{Args = [], Thy = "num", Tyop = "num"}
+      val CHR_t =
+          mk_thy_const{Name = "CHR", Thy = "string", Ty = num_ty --> char_ty}
+    in
+      c |> Char.ord |> Arbnum.fromInt |> mk_numerallit_term
+        |> curry mk_comb CHR_t
+    end handle HOL_ERR _ =>
+               raise ERR "mk_charlit_term"
+                     "Can't build character values in this theory context"
+
+fun mk_stringlit_term s =
+    let
+      val char_ty = mk_thy_type{Args = [], Thy = "string", Tyop = "char"}
+      val string_ty = mk_thy_type{Args = [char_ty], Thy = "list", Tyop = "list"}
+      val cons_t = mk_thy_const{Name = "CONS", Thy = "list",
+                                Ty = char_ty --> (string_ty --> string_ty)}
+      fun mks (t1, t2) = list_mk_comb(cons_t, [t1,t2])
+    in
+      mk_string_lit {mk_string = mks, fromMLchar = mk_charlit_term,
+                     emptystring = mk_thy_const{Name = "NIL", Thy = "list",
+                                                Ty = string_ty}}
+                    s
+    end handle HOL_ERR _ =>
+               raise ERR "mk_stringlit_term"
+                     "Can't build string values in this theory context"
+
 
 (*---------------------------------------------------------------------------*)
 (* There are other possible literals, e.g. for word[n]. This ref cell is     *)

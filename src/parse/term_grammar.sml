@@ -119,6 +119,7 @@ datatype grammar = GCONS of
   {rules : (int option * grammar_rule) list,
    specials : special_info,
    numeral_info : (char * string option) list,
+   strlit_map : string Symtab.table,
    overload_info : overload_info,
    user_printers : (type_grammar.grammar * grammar, grammar) printer_info,
    absyn_postprocessors : (string * postprocessor) list,
@@ -158,27 +159,29 @@ fun preterm_processor (GCONS g) k =
 
 (* fupdates *)
 open FunctionalRecordUpdate
-fun gcons_mkUp z = makeUpdate8 z
+fun gcons_mkUp z = makeUpdate9 z
 fun update_G z = let
   fun from rules specials numeral_info overload_info user_printers
-           absyn_postprocessors preterm_processors next_timestamp =
+           absyn_postprocessors preterm_processors next_timestamp
+           strlit_map =
     {rules = rules, specials = specials, numeral_info = numeral_info,
      overload_info = overload_info, user_printers = user_printers,
-     absyn_postprocessors = absyn_postprocessors,
+     absyn_postprocessors = absyn_postprocessors, strlit_map = strlit_map,
      preterm_processors = preterm_processors, next_timestamp = next_timestamp}
   (* fields in reverse order to above *)
-  fun from' next_timestamp preterm_processors absyn_postprocessors user_printers
+  fun from' strlit_map next_timestamp preterm_processors absyn_postprocessors
+            user_printers
             overload_info numeral_info specials rules =
     {rules = rules, specials = specials, numeral_info = numeral_info,
      overload_info = overload_info, user_printers = user_printers,
-     absyn_postprocessors = absyn_postprocessors,
+     absyn_postprocessors = absyn_postprocessors, strlit_map = strlit_map,
      preterm_processors = preterm_processors, next_timestamp = next_timestamp }
   (* first order *)
   fun to f {rules, specials, numeral_info,
             overload_info, user_printers, absyn_postprocessors,
-            preterm_processors, next_timestamp} =
+            preterm_processors, next_timestamp, strlit_map} =
     f rules specials numeral_info overload_info user_printers
-      absyn_postprocessors preterm_processors next_timestamp
+      absyn_postprocessors preterm_processors next_timestamp strlit_map
 in
   gcons_mkUp (from, from', to)
 end z
@@ -189,6 +192,8 @@ fun fupdate_specials f (GCONS g) =
   GCONS (update_G g (U #specials (f (#specials g))) $$)
 fun fupdate_numinfo f (GCONS g) =
   GCONS (update_G g (U #numeral_info (f (#numeral_info g))) $$)
+fun fupdate_strlit_map f (GCONS g) =
+  GCONS (update_G g (U #strlit_map (f (#strlit_map g))) $$)
 
 fun mfupdate_overload_info f (GCONS g) = let
   val (new_oinfo,result) = f (#overload_info g)
@@ -415,16 +420,16 @@ val stdhol : grammar =
   {rules = [(SOME 0, PREFIX (BINDER [LAMBDA])),
             (SOME 4, INFIX RESQUAN_OP),
             (SOME 5, INFIX VSCONS),
-            (SOME 60,
+            (SOME 460,
              INFIX (STD_infix([{term_name = fnapp_special,
                                 elements = [RE (TOK "$")],
                                 timestamp = 0,
                                 (* pp info irrelevant as will never print *)
                                 block_style =
                                   (AroundEachPhrase, (PP.CONSISTENT, 0)),
-                                paren_style = OnlyIfNecessary}], RIGHT))),
-            (SOME 460,
-             INFIX (STD_infix([{term_name = recwith_special,
+                                paren_style = OnlyIfNecessary},
+
+                               {term_name = recwith_special,
                                 elements = [RE (TOK "with")],
                                 timestamp = 0,
                                 block_style = (AroundEachPhrase,
@@ -476,6 +481,7 @@ val stdhol : grammar =
    specials = {lambda = ["\\"], type_intro = ":", endbinding = ".",
                restr_binders = [], res_quanop = "::"},
    numeral_info = [],
+   strlit_map = Symtab.empty,
    overload_info = Overload.null_oinfo,
    user_printers = (FCNet.empty, Binaryset.empty String.compare),
    absyn_postprocessors = [],
@@ -1014,6 +1020,11 @@ fun check c =
 
 fun add_numeral_form G (c, stropt) =
   fupdate_numinfo (update_assoc (check c, stropt)) G
+fun strlit_map (GCONS g) {tmnm} = Symtab.lookup (#strlit_map g) tmnm
+fun add_strlit_injector {tmnm,ldelim} =
+    fupdate_strlit_map (Symtab.update(tmnm,ldelim))
+fun remove_strlit_injector {tmnm} =
+    fupdate_strlit_map (Symtab.delete_safe tmnm)
 
 structure userSyntaxFns = struct
   type 'a getter = string -> 'a
@@ -1078,6 +1089,8 @@ fun add_delta ud G =
       in
         new_absyn_postprocessor (codename, code) G
       end
+    | ADD_STRLIT r => add_strlit_injector r G
+    | RM_STRLIT r => remove_strlit_injector r G
 
 fun add_deltas uds G = List.foldl (uncurry add_delta) G uds
 
@@ -1164,7 +1177,10 @@ in
                                             (absyn_postprocessors0 G2),
          preterm_processors =
            bmap_merge (#preterm_processors g1) (#preterm_processors g2),
-         next_timestamp = Int.max(#next_timestamp g1, #next_timestamp g2)}
+         next_timestamp = Int.max(#next_timestamp g1, #next_timestamp g2),
+         strlit_map = Symtab.join (fn _ => fn (_,v2) => v2)
+                                  (#strlit_map g1, #strlit_map g2)
+        }
 end
 
 (* ----------------------------------------------------------------------
@@ -1400,7 +1416,7 @@ in
                       paren_style = OnlyIfNecessary}
          |> add_rule {term_name   = "=",
                       block_style = (AroundSamePrec, (CONSISTENT, 0)),
-                      fixity = Infix(NONASSOC, 100),
+                      fixity = Infix(NONASSOC, 450),
                       pp_elements = [HardSpace 1, RE (TOK "="),
                                      BreakSpace(1,0)],
                       paren_style = OnlyIfNecessary}
@@ -1612,6 +1628,8 @@ fun user_delta_encode write_tm ud =
       ADD_ABSYN_POSTP {codename} => "AAPP" ^ StringData.encode codename
     | ADD_NUMFORM (c,s) =>
         "AN" ^ CharData.encode c ^ OptionData.encode StringData.encode s
+    | ADD_STRLIT {tmnm,ldelim} =>
+        "AS" ^ StringData.encode tmnm ^ StringData.encode ldelim
     | ADD_UPRINTER{codename=s,pattern=tm} =>
         "AUP" ^ StringData.encode s ^ StringData.encode (write_tm tm)
     | ASSOC_RESTR {binder,resbinder} =>
@@ -1632,6 +1650,7 @@ fun user_delta_encode write_tm ud =
     | RMTMTOK {term_name,tok} =>
         "RK" ^ StringData.encode term_name ^ StringData.encode tok
     | RMTOK s => "RMT" ^ StringData.encode s
+    | RM_STRLIT {tmnm} => "RMS" ^ StringData.encode tmnm
 
 
 fun user_delta_reader read_tm = let
@@ -1644,6 +1663,9 @@ in
   (literal "AR" >>
    Coding.map (fn (b,rb) => ASSOC_RESTR {binder = b, resbinder = rb})
               (OptionData.reader StringData.reader >* StringData.reader)) ||
+  (literal "AS" >>
+   Coding.map (fn (tmnm,ldelim) => ADD_STRLIT{tmnm=tmnm,ldelim=ldelim})
+              (StringData.reader >* StringData.reader)) ||
   (literal "AUP" >>
    Coding.map (fn (s,p) => ADD_UPRINTER {codename = s, pattern = p})
               (StringData.reader >* Coding.map read_tm StringData.reader)) ||
@@ -1665,6 +1687,7 @@ in
    Coding.map GRMOVMAP
               (StringData.reader >* Coding.map read_tm StringData.reader)) ||
   (literal "RMO" >> Coding.map RMOVMAP skid_reader) ||
+  (literal "RMS" >> Coding.map (fn s => RM_STRLIT{tmnm=s}) StringData.reader) ||
   (literal "RMT" >> Coding.map RMTOK StringData.reader) ||
   (literal "RN" >> Coding.map RMTMNM StringData.reader)
 end

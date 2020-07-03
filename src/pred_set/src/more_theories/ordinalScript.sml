@@ -1,15 +1,10 @@
 open HolKernel Parse boolLib bossLib
-open lcsymtacs
 open boolSimps
 
 open set_relationTheory pred_setTheory cardinalTheory
 open wellorderTheory
 
 val _ = new_theory "ordinal"
-
-val _ = ParseExtras.tight_equality()
-
-fun dsimp thl = asm_simp_tac (srw_ss() ++ DNF_ss) thl
 
 (* perform quotient, creating a type of "ordinals". *)
 fun mk_def(s,t) =

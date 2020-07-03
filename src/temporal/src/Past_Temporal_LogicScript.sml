@@ -16,6 +16,7 @@ val ZERO_LEMMA = ARITH_PROVE“~(x<x) /\ (0<SUC x) /\ ~(SUC x=0)”;
 
 
 val _ = new_theory "Past_Temporal_Logic";
+val _ = ParseExtras.temp_loose_equality()
 
 
 (*---------------------------------------------------------------------------
@@ -77,15 +78,6 @@ val PBEFORE = new_infixr_definition("PBEFORE",
                         delta<=t0 /\
                         a delta /\
                         !t. delta<=t /\ t<=t0 ==> ~b t”,200);
-
-(*---------------------------------------------------------------------------
-       Some aliases of Past Temporal Operators (borrowed from NuSMV)
- ---------------------------------------------------------------------------*)
-
-val _ = overload_on ("PREV",    ``PNEXT``);
-val _ = overload_on ("ONCE",    ``PEVENTUAL``);
-val _ = overload_on ("SINCE",   ``$PUNTIL``);
-val _ = set_fixity   "SINCE"     (Infixr 200);
 
 (*---------------------------------------------------------------------------
        Initialization

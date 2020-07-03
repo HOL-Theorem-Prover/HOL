@@ -29,6 +29,7 @@ infixr -->;
 (* Create the theory.                                                    *)
 (* --------------------------------------------------------------------- *)
 val _ = new_theory "variable";
+val _ = ParseExtras.temp_loose_equality()
 
 
 (*

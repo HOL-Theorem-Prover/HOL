@@ -146,33 +146,198 @@ fun find_subterm qtm (g as (asl,w)) =
     prim_find_subterm FVs tm g
   end;
 
+(*---------------------------------------------------------------------------*)
+(* Support for pairs copied from coretypes/pairSyntax to be self-contained.  *)
+(*---------------------------------------------------------------------------*)
 
-fun primCases_on st (g as (_,w)) =
- let val ty = type_of (dest_tmkind st)
-     val {Thy,Tyop,...} = dest_thy_type ty
- in case TypeBase.fetch ty
-     of SOME facts =>
-        let val thm = TypeBasePure.nchotomy_of facts
-        in case st
-           of Free M =>
-               if (is_var M) then VAR_INTRO_TAC (ISPEC M thm) else
-               if ty=bool then ASM_CASES_TAC M
-               else TERM_INTRO_TAC (ISPEC M thm)
-            | Bound(V,M) => let val (tac,M') = FREEUP V M g
-                            in (tac THEN VAR_INTRO_TAC (ISPEC M' thm)) end
-            | Alien M    => if ty=bool then ASM_CASES_TAC M
-                            else TERM_INTRO_TAC (ISPEC M thm)
-        end
-      | NONE => raise ERR "primCases_on"
-                ("No cases theorem found for type: "^Lib.quote (Thy^"$"^Tyop))
- end g;
+val strip_prod =
+ let fun dest_prod ty =
+   case total dest_thy_type ty of
+      SOME{Tyop = "prod", Thy = "pair", Args = [ty1, ty2]} => (ty1, ty2)
+    | other => raise ERR "dest_prod" "not a product type"
+ in
+    strip_binop dest_prod
+ end
 
-fun Cases_on qtm g = primCases_on (find_subterm qtm g) g
+fun mk_prod(ty1,ty2) = mk_thy_type{Thy="pair",Tyop="prod",Args=[ty1,ty2]}
+
+fun mk_pair (t1,t2) =
+ let val pair_const = prim_mk_const {Name=",",Thy="pair"}
+     val pair_const' = inst [alpha |-> type_of t1, beta |-> type_of t2] pair_const
+ in list_mk_comb(pair_const',[t1,t2])
+ end
+
+(*---------------------------------------------------------------------------*)
+(*                                                                           *)
+(*      Gamma, (x = pat[v1,...,vn]) |- M[x]                                  *)
+(*    ------------------------------------------------------------------     *)
+(*      Gamma, ?v1 ... vn. (x = pat[v1,...,vn]) |- M[x]                      *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
+fun CHOOSER v (tm,thm) =
+ let val ex_tm = mk_exists(v,tm)
+ in (ex_tm, CHOOSE(v, ASSUME ex_tm) thm)
+ end;
+
+fun LEFT_EXISTS_INTRO veq thm =
+  let val (_,pat) = dest_eq veq
+  in snd (itlist CHOOSER (free_vars_lr pat) (veq,thm))
+  end;
+
+fun listpair [a,b] = (a,b)
+  | listpair l = raise ERR "listpair"
+                       ("List of wrong length (" ^Int.toString (length l) ^ ")")
+
+(*---------------------------------------------------------------------------*)
+(* Prove a theorem for "deep" case analysis on a term with an (iterated)     *)
+(* product type.                                                             *)
+(*                                                                           *)
+(*   tupleCases ["a", "b", "c"] (v : ty1 # ty2 # ty3) =                      *)
+(*      |- !v. ?a b c. v = (a,b,c)                                           *)
+(*---------------------------------------------------------------------------*)
+
+
+val rename =   (* create names for underscored inputs *)
+  let val prefix = "_gv"
+     fun num2name i = prefix^Int.toString i
+  in fn slist =>
+       let val num_stream = Portable.make_counter{init=0,inc=1}
+           fun gname() = num2name(num_stream())
+           fun transform s = if mem s ["_","-"] then gname() else s
+       in map transform slist
+       end
+  end
+
+fun tupleCases names0 v =
+ let val pthm = TypeBasePure.nchotomy_of
+                  (Option.valOf (TypeBase.read{Thy="pair",Tyop="prod"}))
+     val names = rename names0
+     val (vname,vty) = dest_var v
+     val tys = strip_prod vty
+     val vars = Lib.map2 (curry mk_var) names tys
+     fun tmpvar_types 0 ty = [ty]
+       | tmpvar_types n ty =
+          case dest_thy_type ty
+           of {Thy="pair",Tyop="prod",Args=[ty1,ty2]} => ty::tmpvar_types (n-1) ty2
+            | otherwise => [ty]
+     val tmp_vars = map genvar (tl (tmpvar_types (length tys - 2) vty))
+     val left_vars = List.take (vars,length vars - 2)
+     val last2_vars = listpair(List.drop (vars,length vars - 2))
+     val rpairs = zip left_vars tmp_vars @ [last2_vars]
+     val rpair_tms = map mk_pair rpairs
+     val eqns = map2 (curry mk_eq) (v::tmp_vars) rpair_tms
+     val thlist = map ASSUME eqns
+     val thm = REWRITE_RULE (tl thlist) (hd thlist)
+     fun step eqn th =
+      let val th1 = LEFT_EXISTS_INTRO eqn th
+          val V = free_vars_lr (rhs eqn)
+          val th2 = DISCH (list_mk_exists(V,eqn)) th1
+          val th3 = ISPEC (lhs eqn) pthm
+      in MP th2 th3
+      end
+ in
+    GEN v (itlist step eqns (itlist SIMPLE_EXISTS vars thm))
+ end
+ handle e => raise wrap_exn "BasicProvers" "primCases_on (tupleCases)" e
+
+
+(*---------------------------------------------------------------------------*)
+(* Set specified existentially quantified names in nchotomy thm. The input   *)
+(* thm0 is direct from the TypeBase and therefore not instantiated to the    *)
+(* full type being case-split on. This matters for iterated pair case        *)
+(* analysis.                                                                 *)
+(*---------------------------------------------------------------------------*)
+
+fun envar s v = if mem s ["_","-"] then v else mk_var(s,snd(dest_var v));
+
+fun set_names names ty thm0 =
+ let val vty0 = type_of (fst(dest_forall(concl thm0)))
+     val thm = INST_TYPE (match_type vty0 ty) thm0
+     val tm = concl thm
+     val (v,body) = dest_forall (concl thm)
+     val vty = type_of v
+     val namelists = List.map (String.tokens Char.isSpace) names
+ in
+ if null names then thm
+ else
+  case dest_thy_type vty
+   of {Thy="pair",Tyop="prod",...} => tupleCases (hd namelists) v
+    | otherwise =>
+     let val clauses = zip namelists (strip_disj body)
+         fun rename (slist,clause) =
+          let val (bvs,M) = strip_exists clause
+          in if length bvs <> length slist then
+                clause (* fail in such a way that tactic can still be applied. *)
+             else
+             let val vlist = map2 envar slist bvs
+                 val theta = map2 (curry (op |->)) bvs vlist
+                 val M' = subst theta M
+             in list_mk_exists(vlist,M')
+             end
+          end
+         val tm' = mk_forall(v,list_mk_disj(map rename clauses))
+     in
+       EQ_MP (Thm.ALPHA tm tm') thm
+     end
+ end
+ handle e => raise wrap_exn "BasicProvers" "primCases_on (set_names)" e
+;
+
+fun primCases_on names st (g as (_,w)) =
+    let
+      val ty = type_of (dest_tmkind st)
+      fun gen() =
+          case TypeBase.fetch ty of
+              SOME facts => [TypeBasePure.nchotomy_of facts]
+            | NONE => let val {Thy,Tyop,...} = dest_thy_type ty
+                      in
+                        raise ERR "primCases_on"
+                              ("No cases theorem found for type: "^
+                               Lib.quote (Thy^"$"^Tyop))
+                      end
+      fun ttac thm =
+          let
+            val thm' = set_names names ty thm
+          in
+            case st of
+                Free M =>
+                if is_var M then VAR_INTRO_TAC (ISPEC M thm') else
+                if ty=bool then ASM_CASES_TAC M
+                else TERM_INTRO_TAC (ISPEC M thm')
+              | Bound(V,M) => let val (tac,M') = FREEUP V M g
+                                  in (tac THEN VAR_INTRO_TAC (ISPEC M' thm'))
+                              end
+              | Alien M    => if ty=bool then ASM_CASES_TAC M
+                              else TERM_INTRO_TAC (ISPEC M thm')
+          end
+    in
+      markerLib.maybe_using gen ttac g
+    end
+
+fun Cases_on qtm g = primCases_on [] (find_subterm qtm g) g
   handle e => raise wrap_exn "BasicProvers" "Cases_on" e;
+
+fun tmCases_on tm names (g as (asl,w)) =
+    let
+      val fvs = FVL (w::asl) empty_tmset |> HOLset.listItems
+    in
+      primCases_on names (prim_find_subterm fvs tm g) g
+    end handle e => raise wrap_exn "BasicProvers" "tmCases_on" e;
+
+fun namedCases_on qtm names g =
+  primCases_on names (find_subterm qtm g) g
+  handle e => raise wrap_exn "BasicProvers" "namedCases_on" e;
 
 fun Cases (g as (_,w)) =
   let val (Bvar,_) = with_exn dest_forall w (ERR "Cases" "not a forall")
-  in primCases_on (Bound([Bvar],Bvar)) g
+  in primCases_on [] (Bound([Bvar],Bvar)) g
+  end
+  handle e => raise wrap_exn "BasicProvers" "Cases" e;
+
+fun namedCases names (g as (_,w)) =
+  let val (Bvar,_) = with_exn dest_forall w (ERR "namedCases" "not a forall")
+  in primCases_on names (Bound([Bvar],Bvar)) g
   end
   handle e => raise wrap_exn "BasicProvers" "Cases" e;
 
@@ -230,25 +395,53 @@ fun primInduct st ind_tac (g as (asl,c)) =
 (*---------------------------------------------------------------------------*)
 
 fun induct_on_type st ty g =
- case TypeBase.fetch ty
-  of SOME facts =>
-     let val is_mutind_thm = is_conj o snd o strip_imp o snd o strip_forall o concl
-     in
-      case total TypeBasePure.induction_of facts
-       of NONE => raise ERR "induct_on_type"
-                   (String.concat ["Type :",Hol_pp.type_to_string ty,
-                    " is registed in the types database, ",
-                    "but there is no associated induction theorem"])
-        | SOME thm => (* now select induction tactic *)
-           if null (TypeBasePure.constructors_of facts) (* not a datatype *)
-             then primInduct st (HO_MATCH_MP_TAC thm) else
-           if is_mutind_thm thm
-               then Mutual.MUTUAL_INDUCT_TAC thm
-           else primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC)
-     end g
-  | NONE => raise ERR "induct_on_type"
-            (String.concat ["Type: ",Hol_pp.type_to_string ty,
-             " is not registered in the types database"]);
+    let
+      val is_mutind_thm = is_conj o snd o strip_imp o snd o
+                          strip_forall o concl
+      val facts_opt = TypeBase.fetch ty
+      fun gen() =
+          case facts_opt of
+              SOME facts =>
+              let
+              in
+                case total TypeBasePure.induction_of facts of
+                    NONE =>
+                    raise ERR "induct_on_type"
+                          (String.concat ["Type :",Hol_pp.type_to_string ty,
+                                          " is registered in the types \
+                                          \database, but there is no associated\
+                                          \induction theorem"])
+                  | SOME thm => (* now select induction tactic *) [thm]
+              end
+            | NONE =>
+              raise ERR "induct_on_type"
+                    (String.concat ["Type: ",Hol_pp.type_to_string ty,
+                                    " is not registered in the types database"])
+      fun ttac thm =
+          case Option.map TypeBasePure.constructors_of facts_opt of
+              SOME [] => (* not a datatype*) primInduct st (HO_MATCH_MP_TAC thm)
+            | _ => if is_mutind_thm thm then
+                     Mutual.MUTUAL_INDUCT_TAC thm
+                   else
+                     primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC) ORELSE
+                     (primInduct st (HO_MATCH_MP_TAC thm) THEN REPEAT CONJ_TAC)
+    in
+      maybe_using gen ttac g
+    end
+
+fun checkind th =
+    (* if the purported theorem fails to pass muster according to this
+       check, we can still let it pass through to the HO_MATCH_MP_TAC, but
+       we won't attempt to be clever with it and call isolate_to_front. *)
+    let
+      val (_, bod) = strip_forall (concl th)
+      val (_, what_matches_a_goal) = dest_imp bod
+      val (gvs, gimp) = strip_forall what_matches_a_goal
+      val (indR, con) = dest_imp gimp
+    in
+      if List.all is_var (#2 (strip_comb indR)) then ALL_TAC
+      else NO_TAC
+    end
 
 fun Induct_on qtm g =
  let val st = find_subterm qtm g
@@ -257,17 +450,38 @@ fun Induct_on qtm g =
      val (_, rngty) = strip_fun ty
  in
   if rngty = Type.bool then (* inductive relation *)
-   let val (c, _) = strip_comb tm
-   in case Lib.total dest_thy_const c
-       of SOME {Thy,Name,...} =>
-           let val indth = Binarymap.find
-                            (IndDefLib.rule_induction_map(),
-                             {Thy=Thy,Name=Name}) handle NotFound => []
-           in
-             MAP_FIRST HO_MATCH_MP_TAC indth ORELSE
-             induct_on_type st ty
-           end g
-       | NONE => induct_on_type st ty g
+    let
+      val (c, _) = strip_comb tm
+      fun mkpat t =
+          let val (d,_) = dom_rng (type_of t)
+          in
+            mkpat (mk_comb(t, genvar d))
+          end handle HOL_ERR _ => t
+      val pat = mkpat tm
+      open IndDefLib
+    in
+      case Lib.total dest_thy_const c of
+          SOME {Thy,Name,...} =>
+          let
+            fun indths() =
+                Binarymap.find (rule_induction_map(), {Thy=Thy,Name=Name})
+                handle NotFound => []
+            fun numSchematics th =
+                let
+                  val (_,base) = th |> concl |> strip_forall |> #2 |> dest_imp
+                  val (vs, c) = strip_forall base
+                  val (l, _) = dest_imp c
+                  val numargs = l |> strip_comb |> #2 |> length
+                in
+                  numargs - length vs
+                end
+            fun tryind th =
+                TRY (checkind th >> isolate_to_front (numSchematics th) pat) >>
+                HO_MATCH_MP_TAC th
+          in
+            markerLib.maybe_using indths tryind ORELSE induct_on_type st ty
+          end g
+        | NONE => induct_on_type st ty g
    end
   else
     induct_on_type st ty g
@@ -473,7 +687,8 @@ fun case_rwlist () =
 (* Add the rewrites into a simpset to avoid re-processing them when
  * (PURE_CASE_SIMP_CONV rws) is called multiple times by EVERY_CASE_TAC.  This
  * has an order of magnitude speedup on developments with large datatypes *)
-fun PURE_CASE_SIMP_CONV rws = simpLib.SIMP_CONV (boolSimps.bool_ss++simpLib.rewrites rws) []
+fun PURE_CASE_SIMP_CONV rws =
+    simpLib.SIMP_CONV (boolSimps.bool_ss++simpLib.rewrites rws) []
 
 fun CASE_SIMP_CONV tm = PURE_CASE_SIMP_CONV (case_rwlist()) tm
 end;
@@ -890,12 +1105,14 @@ val bool_ss = boolSimps.bool_ss;
        just when a datatype is declared.
  ---------------------------------------------------------------------------*)
 
-val (srw_ss : simpset ref) = ref (bool_ss ++ combinSimps.COMBIN_ss);
+val (srw_ss : simpset ref) = ref bool_ss
 
 val srw_ss_initialised = ref false;
 
 datatype update = ADD_SSFRAG of simpLib.ssfrag | REMOVE_RWT of string
-val pending_updates = ref ([]: update list);
+val pending_updates = ref (map ADD_SSFRAG [combinSimps.COMBIN_ss,
+                                           boolSimps.NORMEQ_ss,
+                                           boolSimps.LABEL_CONG_ss]);
 
 fun apply_update (ADD_SSFRAG ssf, ss) = ss ++ ssf
   | apply_update (REMOVE_RWT n, ss) = ss -* [n]
@@ -978,7 +1195,7 @@ open LoadableThyData
 val thy_ssfrags = ref (Binarymap.mkDict String.compare)
 fun thy_ssfrag s = Binarymap.find(!thy_ssfrags, s)
 
-fun add_rewrites thyname (thms : (string * thm) list) = let
+fun add_rewrites thyname (thms : (KernelSig.kernelname * thm) list) = let
   val ssfrag = simpLib.named_rewrites_with_names thyname thms
   open Binarymap
 in

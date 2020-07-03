@@ -4,6 +4,7 @@ struct
 open Lib Feedback
 
 datatype testresult = datatype Exn.result
+datatype die_mode = ProcessExit | FailException | Remember of int ref
 
 val linewidth = ref 80
 val output_linewidth = Holmake_tools.getWidth()
@@ -82,16 +83,26 @@ val dim = checkterm "\027[2m"
 val clear = checkterm "\027[0m"
 
 val FAILEDstr = "\027[2CFAILED!"
-val really_die = ref true;
+val diemode = ref ProcessExit
 fun die s =
-  (tadd (boldred FAILEDstr ^ "\n" ^ s);
-   if (!really_die) then OS.Process.exit OS.Process.failure
-   else raise (Fail ("DIE:" ^ s)))
+  (tadd (boldred FAILEDstr ^ "\n" ^ s ^ "\n");
+   case (!diemode) of
+       ProcessExit => OS.Process.exit OS.Process.failure
+     | FailException => raise (Fail ("DIE:" ^ s))
+     | Remember iref => (iref := !iref + 1))
 fun OK () = print (boldgreen "OK" ^ "\n")
+fun exit_count0 iref =
+    OS.Process.exit
+      (if !iref = 0 then OS.Process.success
+       else
+         (print ("Failure count = " ^ Int.toString (!iref) ^ "\n");
+          OS.Process.failure))
 
 fun unicode_off f = Feedback.trace ("Unicode", 0) f
 fun raw_backend f =
     Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal) f
+
+fun quietly f = Feedback.quiet_messages (Feedback.quiet_warnings f)
 
 local
   val pfxsize = size "Testing printing of ..." + 3
@@ -114,16 +125,19 @@ in
 end
 end (* local *)
 
+exception InternalDie of string
 fun tppw width {input=s,output,testf} = let
   val _ = tprint (testf s)
   val t = Parse.Term [QUOTE s]
+          handle HOL_ERR _ => raise InternalDie "Parse failed!"
   val res = HOLPP.pp_to_string width Parse.pp_term t
-  fun f s = String.translate (fn #" " => UTF8.chr 0x2423 | c => str c) s
+  fun f s = String.translate
+              (fn #" " => UTF8.chr 0x2423 | #"\n" => "\n      " | c => str c) s
 in
   if res = output then OK() else
   die ("  Saw:\n    >|" ^ clear (f res) ^
        boldred "|<\n  rather than \n    >|" ^ clear (f output) ^ boldred "|<\n")
-end
+end handle InternalDie s => die s
 fun tpp s = tppw (!linewidth) {input=s,output=s,testf=standard_tpp_message}
 
 fun tpp_expected r = tppw (!linewidth) r
@@ -132,9 +146,12 @@ fun timed f check x =
   let
     val cputimer = Timer.startCPUTimer()
     val res = Res (f x) handle e => Exn e
-    val {nongc = {usr,...}, ...} = Timer.checkCPUTimes cputimer
+    val {nongc = {usr,...}, gc = {usr = gc,...}} = Timer.checkCPUTimes cputimer
     val usr_s = "(" ^ Time.toString usr ^"s)      "
-    val _ = tadd usr_s
+    val gc_s = if Time.toReal gc / Time.toReal usr > 0.20 then
+                 boldred ("[GC = " ^ Time.toString gc ^ "] ")
+               else ""
+    val _ = tadd (gc_s ^ usr_s)
   in
     check res
   end
@@ -156,16 +173,18 @@ fun convtest (nm,conv,tm,expected) =
             in
               (l,r)
             end handle e =>
-              die ("Didn't get equality; rather exn "^ General.exnMessage e)
+              raise InternalDie
+                    ("Didn't get equality; rather exn "^ General.exnMessage e)
       in
         if aconv l tm then
           if aconv r expected then OK()
-          else die ("\n  Got: " ^ Parse.term_to_string r)
-        else die ("\n  Conv result LHS = " ^ Parse.term_to_string l)
+          else raise InternalDie ("\n  Got: " ^ Parse.term_to_string r)
+        else
+          raise InternalDie ("\n  Conv result LHS = " ^ Parse.term_to_string l)
       end
   in
     timed conv (exncheck c) tm
-  end
+  end handle InternalDie s => die s
 
 fun check_HOL_ERRexn P e =
     case e of
@@ -182,18 +201,21 @@ fun check_result P (Res r) = P r
 
 
 
-fun require_msg P pr f x =
+fun require_msgk P pr f k x =
     let
+      fun idie s = raise InternalDie s
       fun check res =
           if P res then (OK(); res)
           else
             case res of
-                Exn e => die ("  Unexpected exception:\n    " ^
-                              General.exnMessage e)
-              | Res y => die ("  Unexpected result:\n    " ^ pr y)
+                Exn e => idie ("  Unexpected exception:\n    " ^
+                               General.exnMessage e)
+              | Res y => idie ("  Unexpected result:\n    " ^ pr y)
+      val result = timed f check x
     in
-      timed f check x
-    end
+      k result
+    end handle InternalDie s => die s
+fun require_msg P pr f x = require_msgk P pr f (fn _ => ()) x
 fun require P f x = require_msg P (fn _ => "") f x
 
 fun shouldfail {printarg,testfn,printresult,checkexn} arg =

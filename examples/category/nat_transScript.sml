@@ -1,6 +1,7 @@
-open HolKernel Parse boolLib bossLib lcsymtacs categoryTheory functorTheory;
+open HolKernel Parse boolLib bossLib categoryTheory functorTheory;
 
 val _ = new_theory "nat_trans";
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = type_abbrev("nat_trans",
 ``:((α,β,γ,δ) functor,(α,β,γ,δ) functor,

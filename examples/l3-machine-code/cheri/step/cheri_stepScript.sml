@@ -9,7 +9,7 @@ open wordsLib blastLib alignmentTheory
 open updateTheory cheriTheory
 
 val _ = new_theory "cheri_step"
-
+val _ = ParseExtras.temp_loose_equality()
 val _ = List.app (fn f => f ())
    [numLib.prefer_num, wordsLib.prefer_word, wordsLib.guess_lengths]
 
@@ -213,7 +213,7 @@ val extract_conv = simpLib.SIMP_CONV (srw_ss()++wordsLib.WORD_EXTRACT_ss) []
 local
   val datatype_thms =
     utilsLib.datatype_rewrites true "cheri"
-      ["cheri_state", "cheri_state_brss__0", "cheri_state_brss__1",
+      ["cheri_state",
        "procState", "DataType", "CP0", "CapCause", "StatusRegister",
        "ExceptionType"]
   val datatype_conv = SIMP_CONV std_ss datatype_thms
@@ -222,14 +222,12 @@ local
     datatype_thms @
      List.map datatype_rule
       (utilsLib.mk_cond_update_thms
-         [``:cheri_state``, ``:cheri_state_brss__0``, ``:cheri_state_brss__1``,
+         [``:cheri_state``,
           ``:procState``, ``:CP0``] @
        [state_id, updateTheory.APPLY_UPDATE_ID, CP0_def,
         BETA_RULE (utilsLib.mk_cond_rand_thms [``\f. f (w2n a)``]),
         utilsLib.mk_cond_rand_thms
-           [``cheri$cheri_state_brss__sf0``,
-            ``cheri$cheri_state_brss__sf1``,
-            ``cheri$CP0_Status``,
+           [``cheri$CP0_Status``,
             pairSyntax.fst_tm, pairSyntax.snd_tm,
             optionSyntax.is_some_tm,
             wordsSyntax.sw2sw_tm, wordsSyntax.w2w_tm,
@@ -373,7 +371,7 @@ local
     in
       if is_SignalException t orelse is_SignalException e
         then b
-      else raise ERR "" ""
+      else raise mk_HOL_ERR "cheri_stepScript" "" ""
     end
 in
   fun split_exception th =

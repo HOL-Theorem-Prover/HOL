@@ -793,9 +793,8 @@ val expandGraph_def = tDefine "expandGraph"
       )
   );
 
-val EXP_GRAPH_AP = store_thm
-  ("EXP_GRAPH_AP",
-   ``!aP g fs g2.
+Theorem EXP_GRAPH_AP:
+   !aP g fs g2.
         (wfg g)
       ∧ (!f. MEM f fs ==> (props f ⊆ set aP))
       ∧ (expandGraph g fs = SOME g2)
@@ -821,7 +820,8 @@ val EXP_GRAPH_AP = store_thm
              ==> (!e. MEM e nL.true_labels
                        ==> MEM_SUBSET e.pos_lab aP ∧ MEM_SUBSET e.neg_lab aP
                  )
-        )``,
+        )
+Proof
    gen_tac
    >> Q.HO_MATCH_ABBREV_TAC `
        !g fs g2.
@@ -1035,35 +1035,14 @@ val EXP_GRAPH_AP = store_thm
                        >> metis_tac[FIND_LEMM2,MEM_toAList,domain_lookup]
                    )
                    >> `?G_next2. addEdge q (eL,suc) G_next = SOME G_next2` by (
-                       simp[addEdge_def] >> metis_tac[wfg_def,domain_lookup]
+                       simp[addEdge_def] >>
+                       fs[DISJ_IMP_THM, FORALL_AND_THM] >> dsimp[] >>
+                       metis_tac[wfg_def,domain_lookup]
                    )
+                   >> ‘wfg G_next2’ by metis_tac[addEdge_preserves_wfg]
                    >> fs[addEdge_def]
                    >> `G_next2.nodeInfo = x.nodeInfo`
                       by fs[gfg_component_equality]
-                   >> `wfg G_next2` by (
-                       fs[wfg_def,gfg_component_equality,wfAdjacency_def]
-                       >> Q.HO_MATCH_ABBREV_TAC `A ∧ B ∧ H`
-                       >> `A ∧ (A ==> B) ∧ H` suffices_by fs[]
-                       >> qunabbrev_tac `A` >> qunabbrev_tac `B`
-                       >> qunabbrev_tac `H` >> rpt strip_tac
-                       >- (`q INSERT (domain G_next.followers) =
-                               domain x.nodeInfo`
-                             suffices_by metis_tac[domain_insert]
-                           >> fs[INSERT_DEF] >> simp[SET_EQ_SUBSET,SUBSET_DEF]
-                           >> metis_tac[]
-                          )
-                       >- (Cases_on `q = k` >> fs[] >> rw[]
-                         >- (`nl = ((eL,suc)::followers_old)`
-                              by (metis_tac[lookup_insert,SOME_11])
-                             >> fs[] >> metis_tac[]
-                            )
-                         >- (`lookup k G_next.followers = SOME nl`
-                               by metis_tac[lookup_insert,SOME_11]
-                             >> metis_tac[]
-                            )
-                          )
-                       >- metis_tac[]
-                   )
                  >> fs[]
                  >> qunabbrev_tac `P` >> fs[] >> rpt gen_tac >> strip_tac
                  >> strip_tac >> strip_tac
@@ -1134,7 +1113,7 @@ val EXP_GRAPH_AP = store_thm
        >> `f' ∈ subForms f` by metis_tac[TSF_def,IN_DEF,TSF_IMPL_SF]
        >> fs[props_def,subForms_def,SUBSET_DEF] >> rpt strip_tac
        >> metis_tac[SUBFORMS_TRANS]
-  );
+QED
 
 (* val EXP_GRAPH_FRMLS_AD = store_thm *)
 (*   ("EXP_GRAPH_FRMLS_AD", *)

@@ -85,5 +85,5 @@ For substituting at selected occurrences. Often useful for writing
 special purpose derived inference rules.
 
 \SEEALSO
-Drule.SUBS, Drule.SUBST_CONV, Lib.|->.
+Thm.INST, Drule.SUBS, Drule.SUBST_CONV, Lib.|->.
 \ENDDOC

@@ -16,6 +16,7 @@ val ZERO_LEMMA = ARITH_PROVE“~(x<x) /\ (0<SUC x) /\ ~(SUC x=0)”;
 
 
 val _ = new_theory "Omega_Automata";
+val _ = ParseExtras.temp_loose_equality()
 
 
 

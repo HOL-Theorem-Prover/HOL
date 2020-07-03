@@ -1,4 +1,4 @@
-open HolKernel boolLib bossLib lcsymtacs Parse;
+open HolKernel boolLib bossLib Parse;
 open integerTheory stringTheory alistTheory listTheory rich_listTheory llistTheory pred_setTheory relationTheory;
 open pairTheory optionTheory finite_mapTheory arithmeticTheory pathTheory;
 open path_auxTheory simple_traceTheory lprefix_lubTheory;
@@ -122,7 +122,7 @@ val small_chain_thm = Q.prove (
    `check_trace sem_s.step tr''` by metis_tac [check_trace_drop] >>
    `LAST tr' = LAST tr''` by metis_tac [last_drop] >>
    rw [] >>
-   `tr'' ≠ []` by (unabbrev_all_tac >> fs [DROP_NIL] >> decide_tac) >>
+   `tr'' ≠ []` by (unabbrev_all_tac >> fs [DROP_EQ_NIL] >> decide_tac) >>
    `(λs1 s2. sem_s.step s1 = SOME s2)^* (HD tr'') (LAST tr'')` by metis_tac [check_trace_thm] >>
    metis_tac [is_prefix_pres])
  >- (
@@ -132,7 +132,7 @@ val small_chain_thm = Q.prove (
    `check_trace sem_s.step tr''` by metis_tac [check_trace_drop] >>
    `LAST tr = LAST tr''` by metis_tac [last_drop] >>
    rw [] >>
-   `tr'' ≠ []` by (unabbrev_all_tac >> fs [DROP_NIL] >> decide_tac) >>
+   `tr'' ≠ []` by (unabbrev_all_tac >> fs [DROP_EQ_NIL] >> decide_tac) >>
    `(λs1 s2. sem_s.step s1 = SOME s2)^* (HD tr'') (LAST tr'')` by metis_tac [check_trace_thm] >>
    metis_tac [is_prefix_pres]));
 
@@ -203,7 +203,7 @@ val osmall_fbs_equiv_lem = Q.prove (
    `LENGTH tr - 1 < LENGTH tr' ∧ LENGTH tr - 1 ≤ LENGTH tr'` by (simp [] >> Cases_on `tr` >> fs []) >>
    `check_trace sem_s.step tr''` by metis_tac [check_trace_drop] >>
    `LAST tr' = LAST tr''` by metis_tac [last_drop] >>
-   `tr'' ≠ []` by (unabbrev_all_tac >> fs [DROP_NIL] >> decide_tac) >>
+   `tr'' ≠ []` by (unabbrev_all_tac >> fs [DROP_EQ_NIL] >> decide_tac) >>
    `(λs1 s2. sem_s.step s1 = SOME s2)^* (HD tr'') (LAST tr'')` by metis_tac [check_trace_thm] >>
    imp_res_tac is_prefix_pres >>
    fs [] >>

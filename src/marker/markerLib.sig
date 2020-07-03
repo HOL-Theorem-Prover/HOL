@@ -49,6 +49,7 @@ sig
   val safe_inst_cmp       : {redex:term,residue:term} Lib.cmp
   val safe_inst_sort      : (term,term) subst -> (term,term) subst
 
+  val L                : string -> thm
   val MK_LABEL         : string * thm -> thm
   val DEST_LABEL       : thm -> thm
   val DEST_LABELS      : thm -> thm
@@ -62,6 +63,10 @@ sig
   val LABEL_ASSUM      : string -> thm_tactic -> tactic
   val LABEL_X_ASSUM    : string -> thm_tactic -> tactic
   val LLABEL_RESOLVE   : thm list -> term list -> thm list
+
+  val using            : tactic * thm -> tactic
+  val usingA           : tactic -> thm_tactic  (* curry of above *)
+  val maybe_using      : (unit -> thm list) -> thm_tactic -> tactic
 
 end
 

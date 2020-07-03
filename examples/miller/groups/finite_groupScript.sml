@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 
-open listTheory HurdUseful subtypeTools res_quanTools
+open listTheory hurdUtils subtypeTools res_quanTools
      res_quanTheory pred_setTheory extra_pred_setTheory arithContext
      relationTheory ho_proverTools extra_listTheory listContext
      arithmeticTheory groupTheory pred_setContext groupContext
@@ -10,6 +10,7 @@ open listTheory HurdUseful subtypeTools res_quanTools
 open util_probTheory; (* needs only the minimal_def *)
 
 val _ = new_theory "finite_group";
+val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 

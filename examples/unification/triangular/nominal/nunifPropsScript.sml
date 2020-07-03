@@ -6,11 +6,11 @@ val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 val _ = export_permweakening "dis_set.dis_set_eq_perms"
 
 val fresh_q = `
-  (fresh fe a (Nom b) = a ≠ b) ∧
-  (fresh fe a (Sus pi v) = (lswapstr (REVERSE pi) a, v) ∈ fe) ∧
-  (fresh fe a (Tie b t) = (a = b) ∨ a ≠ b ∧ fresh fe a t) ∧
-  (fresh fe a (nPair t1 t2) = fresh fe a t1 ∧ fresh fe a t2) ∧
-  (fresh fe a (nConst c) = T)`;
+  (fresh fe a (Nom b) <=> a ≠ b) ∧
+  (fresh fe a (Sus pi v) <=> (lswapstr (REVERSE pi) a, v) ∈ fe) ∧
+  (fresh fe a (Tie b t) <=> (a = b) ∨ a ≠ b ∧ fresh fe a t) ∧
+  (fresh fe a (nPair t1 t2) <=> fresh fe a t1 ∧ fresh fe a t2) ∧
+  (fresh fe a (nConst c) <=> T)`;
 val def_suffix = !Defn.def_suffix;
 val _ = Defn.def_suffix := "_def_with_choice";
 val fresh_def_with_choice = Define fresh_q;
@@ -1636,11 +1636,13 @@ THEN1 (
 val _ = set_fixity "COMPAT" (Infix(NONASSOC,450))
 
 val COMPAT_def = Define`
-(sx,fex) COMPAT (s,fe) =
-nwfs s ∧ nwfs sx ∧ FINITE fe ∧ FINITE fex ∧
-∃ve vex. (verify_fcs fe s = SOME ve) ∧
-         (verify_fcs fex sx = SOME vex) ∧
-!t1 t2. equiv ve (nwalk* s t1) (nwalk* s t2) ⇒ equiv vex (nwalk* sx t1) (nwalk* sx t2)`
+  (sx,fex) COMPAT (s,fe) <=>
+     nwfs s ∧ nwfs sx ∧ FINITE fe ∧ FINITE fex ∧
+     ∃ve vex. (verify_fcs fe s = SOME ve) ∧
+              (verify_fcs fex sx = SOME vex) ∧
+     ∀t1 t2. equiv ve (nwalk* s t1) (nwalk* s t2) ⇒
+             equiv vex (nwalk* sx t1) (nwalk* sx t2)
+`;
 
 val COMPAT_REFL = Q.store_thm(
 "COMPAT_REFL",
@@ -2301,13 +2303,16 @@ val equiv_fcs_q = `
   (equiv_fcs (Sus p1 v1) (Sus p2 v2) =
    if v1 = v2 then SOME {(a,v1) | a ∈ dis_set p1 p2} else NONE) ∧
   (equiv_fcs (Tie a1 t1) (Tie a2 t2) =
-   if a1 = a2 then equiv_fcs t1 t2
-   else OPTION_MAP2 $UNION (term_fcs a1 t2) (equiv_fcs t1 (apply_pi [(a1,a2)] t2))) ∧
-  (equiv_fcs (nPair t1a t1d) (nPair t2a t2d) = OPTION_MAP2 $UNION (equiv_fcs t1a t2a) (equiv_fcs t1d t2d)) ∧
+     if a1 = a2 then equiv_fcs t1 t2
+     else OPTION_MAP2 $UNION (term_fcs a1 t2)
+                             (equiv_fcs t1 (apply_pi [(a1,a2)] t2))) ∧
+  (equiv_fcs (nPair t1a t1d) (nPair t2a t2d) =
+     OPTION_MAP2 $UNION (equiv_fcs t1a t2a) (equiv_fcs t1d t2d)) ∧
   (equiv_fcs (nConst c1) (nConst c2) = if c1 = c2 then SOME {} else NONE) ∧
   (equiv_fcs t1 t2 = NONE)`
 
-val equiv_fcs_def = RWDefine equiv_fcs_q;
+val equiv_fcs_def = Define equiv_fcs_q;
+val _ = export_rewrites ["equiv_fcs_def"]
 val _ = store_term_thm("equiv_fcs_def_print",TermWithCase equiv_fcs_q);
 
 val equiv_fcs_minimal = Q.store_thm(

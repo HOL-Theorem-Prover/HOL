@@ -245,4 +245,85 @@ val num_hex_string = Q.store_thm("num_hex_string",
 
 (* ------------------------------------------------------------------------- *)
 
+fun nil_tac n =
+  rw[num_to_bin_string_def,
+     num_to_oct_string_def,
+     num_to_dec_string_def,
+     num_to_hex_string_def]
+  \\ rw[n2s_def]
+  \\ qspecl_then[n,`n`]mp_tac LENGTH_n2l
+  \\ rw[] \\ CCONTR_TAC \\ fs[];
+
+Theorem num_to_bin_string_nil[simp]:
+  ~(num_to_bin_string n = [])
+Proof nil_tac `2`
+QED
+
+Theorem num_to_oct_string_nil[simp]:
+  ~(num_to_oct_string n = [])
+Proof nil_tac `8`
+QED
+
+Theorem num_to_dec_string_nil[simp]:
+  ~(num_to_dec_string n = [])
+Proof nil_tac `10`
+QED
+
+Theorem num_to_hex_string_nil[simp]:
+  ~(num_to_hex_string n = [])
+Proof nil_tac `16`
+QED
+
+
+Theorem isDigit_HEX:
+  !n. n < 10 ==> isDigit (HEX n)
+Proof
+  REWRITE_TAC[GSYM MEM_COUNT_LIST]
+  \\ gen_tac
+  \\ CONV_TAC(LAND_CONV EVAL)
+  \\ simp[]
+  \\ strip_tac \\ BasicProvers.VAR_EQ_TAC
+  \\ EVAL_TAC
+QED
+
+Theorem isHexDigit_HEX:
+  !n. n < 16 ==> isHexDigit (HEX n) /\
+                 (isAlpha (HEX n) ==> isUpper (HEX n))
+Proof
+  REWRITE_TAC[GSYM MEM_COUNT_LIST]
+  \\ gen_tac
+  \\ CONV_TAC(LAND_CONV EVAL)
+  \\ strip_tac \\ BasicProvers.VAR_EQ_TAC
+  \\ EVAL_TAC
+QED
+
+Theorem EVERY_isDigit_num_to_dec_string:
+  !n. EVERY isDigit (num_to_dec_string n)
+Proof
+  rw[num_to_dec_string_def,n2s_def]
+  \\ rw[EVERY_REVERSE,EVERY_MAP]
+  \\ simp[EVERY_MEM]
+  \\ gen_tac\\ strip_tac
+  \\ match_mp_tac isDigit_HEX
+  \\ qspecl_then[`10`,`n`]mp_tac n2l_BOUND
+  \\ rw[EVERY_MEM]
+  \\ res_tac
+  \\ decide_tac
+QED
+
+Theorem EVERY_isHexDigit_num_to_hex_string:
+  !n. EVERY (\c. isHexDigit c /\ (isAlpha c ==> isUpper c))
+            (num_to_hex_string n)
+Proof
+  rw[num_to_hex_string_def,n2s_def]
+  \\ rw[EVERY_REVERSE,EVERY_MAP]
+  \\ simp[EVERY_MEM]
+  \\ gen_tac\\ strip_tac
+  \\ match_mp_tac isHexDigit_HEX
+  \\ qspecl_then[`16`,`n`]mp_tac n2l_BOUND
+  \\ rw[EVERY_MEM]
+  \\ res_tac
+  \\ decide_tac
+QED
+
 val _ = export_theory ();

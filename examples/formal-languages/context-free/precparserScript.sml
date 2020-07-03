@@ -2,8 +2,6 @@ open HolKernel Parse boolLib bossLib;
 
 open optionTheory listTheory
 
-open lcsymtacs
-
 (* simple (infixes + function application via juxtaposition) precedence
    parser
 

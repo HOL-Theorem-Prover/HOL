@@ -30,6 +30,7 @@ quietdec := false;
 
 
 val _ = new_theory "kripke_structure";
+val _ = ParseExtras.temp_loose_equality()
 
 
 val kripke_structure_def =

@@ -55,39 +55,40 @@ sort3 R x y z =
   else
     [z;y;x]`;
 
-val merge_def = Define `
-(merge R [] [] = []) /\
-(merge R l [] = l) /\
-(merge R [] l = l) /\
-(merge R (x::l1) (y::l2) =
-  if R x y then
-    x::merge R l1 (y::l2)
-  else
-    y::merge R (x::l1) l2)`;
+Definition merge_def:
+  (merge R [] [] = []) /\
+  (merge R l [] = l) /\
+  (merge R [] l = l) /\
+  (merge R (x::l1) (y::l2) =
+    if R x y then
+      x::merge R l1 (y::l2)
+    else
+      y::merge R (x::l1) l2)
+End
 
-val merge_ind = fetch "-" "merge_ind";
-
-val mergesortN_def = tDefine "mergesortN" `
-(mergesortN R 0 l = []) /\
-(mergesortN R 1 (x::l) = [x]) /\
-(mergesortN R 1 [] = []) /\
-(mergesortN R 2 (x::y::l) = sort2 R x y) /\
-(mergesortN R 2 [x] = [x]) /\
-(mergesortN R 2 [] = []) /\
-(mergesortN R 3 (x::y::z::l) = sort3 R x y z) /\
-(mergesortN R 3 [x;y] = sort2 R x y) /\
-(mergesortN R 3 [x] = [x]) /\
-(mergesortN R 3 [] = []) /\
-(mergesortN R n l =
-  let len1 = DIV2 n in
-    merge R (mergesortN R (DIV2 n) l) (mergesortN R (n - len1) (DROP len1 l)))`
- (WF_REL_TAC `measure (\(R,n,l). n)` >>
+Definition mergesortN_def:
+  (mergesortN R 0 l = []) /\
+  (mergesortN R 1 (x::l) = [x]) /\
+  (mergesortN R 1 [] = []) /\
+  (mergesortN R 2 (x::y::l) = sort2 R x y) /\
+  (mergesortN R 2 [x] = [x]) /\
+  (mergesortN R 2 [] = []) /\
+  (mergesortN R 3 (x::y::z::l) = sort3 R x y z) /\
+  (mergesortN R 3 [x;y] = sort2 R x y) /\
+  (mergesortN R 3 [x] = [x]) /\
+  (mergesortN R 3 [] = []) /\
+  (mergesortN R n l =
+    let len1 = DIV2 n in
+      merge R
+            (mergesortN R (DIV2 n) l)
+            (mergesortN R (n - len1) (DROP len1 l)))
+Termination
+  WF_REL_TAC `measure (\(R,n,l). n)` >>
   srw_tac[][DIV2_def, X_LT_DIV]
   >- (match_mp_tac DIV_LESS >>
       decide_tac) >>
-  decide_tac);
-
-val mergesortN_ind = fetch "-" "mergesortN_ind";
+  decide_tac
+End
 
 val mergesort_def = Define `
 mergesort R l = mergesortN R (LENGTH l) l`;
@@ -120,43 +121,41 @@ sort3_tail (neg:bool) R x y z =
   else
     [z;y;x]`;
 
-val merge_tail_def = Define `
-(merge_tail (negate:bool) R [] [] acc = acc) /\
-(merge_tail negate R l [] acc = REV l acc) /\
-(merge_tail negate R [] l acc = REV l acc) /\
-(merge_tail negate R (x::l1) (y::l2) acc =
-  if R x y <> negate then
-    merge_tail negate R l1 (y::l2) (x::acc)
-  else
-    merge_tail negate R (x::l1) l2 (y::acc))`;
+Definition merge_tail_def:
+  (merge_tail (negate:bool) R [] [] acc = acc) /\
+  (merge_tail negate R l [] acc = REV l acc) /\
+  (merge_tail negate R [] l acc = REV l acc) /\
+  (merge_tail negate R (x::l1) (y::l2) acc =
+    if R x y <> negate then
+      merge_tail negate R l1 (y::l2) (x::acc)
+    else
+      merge_tail negate R (x::l1) l2 (y::acc))
+End
 
-val merge_tail_ind = fetch "-" "merge_tail_ind";
-
-val mergesortN_tail_def = tDefine "mergesortN_tail" `
-(mergesortN_tail (negate :bool) R 0 l = []) /\
-(mergesortN_tail negate R 1 (x::l) = [x]) /\
-(mergesortN_tail negate R 1 [] = []) /\
-(mergesortN_tail negate R 2 (x::y::l) = sort2_tail negate R x y) /\
-(mergesortN_tail negate R 2 [x] = [x]) /\
-(mergesortN_tail negate R 2 [] = []) /\
-(mergesortN_tail negate R 3 (x::y::z::l) = sort3_tail negate R x y z) /\
-(mergesortN_tail negate R 3 [x;y] = sort2_tail negate R x y) /\
-(mergesortN_tail negate R 3 [x] = [x]) /\
-(mergesortN_tail negate R 3 [] = []) /\
-(mergesortN_tail negate R n l =
-  let len1 = DIV2 n in
-  let neg = ~negate in
-    merge_tail neg R (mergesortN_tail neg R (DIV2 n) l)
-                     (mergesortN_tail neg R (n - len1) (DROP len1 l))
-                     [])`
- (WF_REL_TAC `measure (\(neg,R,n,l). n)` >>
+Definition mergesortN_tail_def:
+  (mergesortN_tail (negate :bool) R 0 l = []) /\
+  (mergesortN_tail negate R 1 (x::l) = [x]) /\
+  (mergesortN_tail negate R 1 [] = []) /\
+  (mergesortN_tail negate R 2 (x::y::l) = sort2_tail negate R x y) /\
+  (mergesortN_tail negate R 2 [x] = [x]) /\
+  (mergesortN_tail negate R 2 [] = []) /\
+  (mergesortN_tail negate R 3 (x::y::z::l) = sort3_tail negate R x y z) /\
+  (mergesortN_tail negate R 3 [x;y] = sort2_tail negate R x y) /\
+  (mergesortN_tail negate R 3 [x] = [x]) /\
+  (mergesortN_tail negate R 3 [] = []) /\
+  (mergesortN_tail negate R n l =
+    let len1 = DIV2 n in
+    let neg = ~negate in
+      merge_tail neg R (mergesortN_tail neg R (DIV2 n) l)
+                       (mergesortN_tail neg R (n - len1) (DROP len1 l))
+                       [])
+Termination
+  WF_REL_TAC `measure (\(neg,R,n,l). n)` >>
   srw_tac[][DIV2_def] >>
   srw_tac[][DIV2_def, X_LT_DIV]
-  >- (match_mp_tac DIV_LESS >>
-      decide_tac) >>
-  decide_tac);
-
-val mergesortN_tail_ind = fetch "-" "mergesortN_tail_ind";
+  >- (match_mp_tac DIV_LESS >> decide_tac) >>
+  decide_tac
+End
 
 val mergesort_tail_def = Define `
 mergesort_tail R l = mergesortN_tail F R (LENGTH l) l`;
@@ -439,7 +438,7 @@ val merge_tail_correct2 = Q.store_thm ("merge_tail_correct2",
  srw_tac[][merge_tail_def, merge_def, REV_REVERSE_LEM, merge_empty] >>
  fs [] >>
  `SORTED R (REVERSE l1) /\ SORTED R (REVERSE l2)`
-        by metis_tac [SORTED_APPEND_IFF] >>
+        by metis_tac [SORTED_APPEND_GEN] >>
  fs []
  >- (match_mp_tac (GSYM merge_last_lem1) >>
      srw_tac[][] >>

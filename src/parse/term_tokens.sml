@@ -11,6 +11,7 @@ struct
   | Numeral of (Arbnum.num * char option)
   | Fraction of {wholepart : Arbnum.num, fracpart : Arbnum.num,
                  places : int}
+  | StrLit of {ldelim : string, contents : string}
   | QIdent of (string * string)
 
 
@@ -29,7 +30,7 @@ fun repc i c = CharVector.tabulate(i, fn _ => c)
 val non_aggregating_chars =
     foldl (fn (c, cs) => HOLset.add(cs,c))
           (HOLset.empty Int.compare)
-          (UTF8.explodei "()[]{}~.,;-¬") (* UOK *)
+          (UTF8.explodei "()[]{}~.,;-¬⟨⟩⦇⦈⟦⟧⦃⦄") (* UOK *)
 fun cpt_is_nonagg_char i = HOLset.member(non_aggregating_chars, i)
 val cpts_have_nonagg_char = List.exists cpt_is_nonagg_char
 
@@ -518,6 +519,39 @@ fn qb => let
          in
            SOME (tok,locn')
          end
+       | BT_StrLit {ldelim,contents} =>
+         if size ldelim = 0 then
+           raise LEX_ERR ("Bad string literal - empty left delimiter", locn)
+         else if size ldelim > 1 andalso String.isSuffix "\"" ldelim then
+           let
+             val qbfns = {advance = (fn () => ()),
+                          replace_current = (fn p => replace_current p qb)}
+             val (ldelim',n) = if String.isSuffix "#\"" ldelim then ("#\"",2)
+                               else ("\"", 1)
+           in
+             if n < size ldelim then
+               let
+                 val (tok,locn') =
+                     split (String.substring(ldelim,0,size ldelim - n)) locn
+                           qbfns
+                 fun patch s l =
+                     replace_current
+                       (BT_StrLit{ldelim = s ^ ldelim', contents = contents}, l)
+                       qb
+               in
+                 case current qb of
+                     (BT_Ident s, locn'') => patch s locn''
+                   | (BT_StrLit _, _) => patch "" locn'
+                   | (bt,_) => raise Fail ("Don't understand how I'm seeing a "^
+                                           base_tokens.toString bt) ;
+                 SOME (tok,locn')
+               end
+             else (
+               advance qb;
+               SOME (StrLit{ldelim=ldelim,contents=contents},locn)
+             )
+           end
+         else (advance qb; SOME (StrLit{ldelim=ldelim,contents=contents}, locn))
    end
 end
 
@@ -543,6 +577,8 @@ in
 end
 
 fun token_string (Ident s) = s
+  | token_string (StrLit{ldelim,contents}) =
+      ldelim ^ String.toString contents ^ "\""
   | token_string _ = raise Fail "token_string of something with no string"
 fun dest_aq (Antiquote x) = x
   | dest_aq _ = raise Fail "dest_aq of non antiquote token"
@@ -572,6 +608,9 @@ fun toString aqp t =
       | Fraction{wholepart,fracpart,places} =>
           "Fraction{w=" ^ Arbnum.toString wholepart ^", f=" ^
           Arbnum.toString fracpart ^ ", p=" ^ Int.toString places ^ "}"
+      | StrLit{ldelim,contents} =>
+          "StrLit{ldelim=\"" ^ String.toString ldelim ^ "\",contents=\"" ^
+          String.toString contents ^ "\"}"
       | QIdent(s1,s2) => s1 ^ "$" ^ s2
 
 end (* struct *)

@@ -14,12 +14,6 @@ open cbvTheory;
 
 open RW;
 
-(* Change some HOL defaults to the style we often use in CakeML.
- * Print the goal on the bottom and assumptions on top and
- * make equality parse tightly instead of very loosely *)
-val _ = set_trace "Goalstack.print_goal_at_top" 0;
-val _ = ParseExtras.temp_tight_equality();
-
 (* Name the theory types *)
 val _ = new_theory "types";
 
@@ -103,41 +97,33 @@ ho_match_mp_tac type_ind >> rw []
  >> (rw [sem_def]
      >- metis_tac [LIST_REL_LENGTH]
      >- metis_tac [LIST_REL_EL_EQN]))
->- (rw [sn_e_def, sn_v_def]
-
+>- (
+  rw [sn_e_def, sn_v_def]
  >> qpat_assum `_ _ (Arrow t t') _`
       (fn t => assume_tac (RW_RULE [sn_e_def, sn_v_def] t))
  >> first_x_assum (qspecl_then [`s`, `env`] assume_tac) >> rfs []
-
+ >> rename1 `sem _ _ _ = (_, s')`
  >> Cases_on `v` >> fs [sn_v_def]
-
  >> qpat_assum `sn_e _ _ _`
     (fn t => assume_tac (RW_RULE [sn_e_def, sn_v_def] t))
  >> first_x_assum (qspecl_then [`s'`, `env`] assume_tac) >> rfs []
-
-
  >> first_x_assum (qspecl_then [`v`, `s''`] assume_tac) >> rfs []
-
-
  >> qexists_tac `ck + ck' + ck'' + 1`
  >> qexists_tac `v'`
  >> qexists_tac `s''' with clock := s'.clock + (s''.clock + s'''.clock)`
-
  >> qspecl_then [`env`, `s`, `e`, `Clos l e''`, `s'`, `ck`, `ck' + ck'' + 1`] assume_tac sem_clock_add
  >> rfs []
  >> simp [sem_def]
-
  >> qspecl_then [`env`, `s'`, `e'`, `v`, `s''`, `ck'`, `ck'' + s'.clock + 1`] assume_tac sem_clock_add
  >> rfs []
  >> simp [sem_def, dec_clock_def]
-
-
  >> qspecl_then [`v::l`, `s''`, `e''`, `v'`, `s'''`, `ck''`, `s'.clock + s''.clock`] assume_tac sem_clock_add
  >> rfs [])
 
 >- fs [sn_e_def, sn_v_def, sem_def]
 >- (first_x_assum mp_tac >> rw [sn_e_def, sn_v_def]
  >> res_tac
+ >> rename1 `sem _ (s with clock := ck) _ = (_, s')`
  >> qexists_tac `ck + 1`
  >> qexists_tac `v`
  >> qexists_tac `s'`

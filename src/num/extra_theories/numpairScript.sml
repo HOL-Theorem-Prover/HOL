@@ -4,6 +4,9 @@ open arithmeticTheory BasicProvers TotalDefn
      numSimps numLib simpLib metisLib
 
 fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
+fun fs ths = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) ths
+fun simp ths = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) ths
+val metis_tac = METIS_TAC
 
 val _ = new_theory "numpair"
 
@@ -11,10 +14,10 @@ val _ = new_theory "numpair"
     Triangular numbers
    ---------------------------------------------------------------------- *)
 
-val tri_def = Define`
+Definition tri_def[nocompute,simp]:
   (tri 0 = 0) /\
   (tri (SUC n) = SUC n + tri n)
-`;
+End
 
 val twotri_formula = store_thm(
   "twotri_formula",
@@ -22,11 +25,12 @@ val twotri_formula = store_thm(
   Induct_on `n` THEN
   SRW_TAC [ARITH_ss][tri_def, MULT_CLAUSES, LEFT_ADD_DISTRIB]);
 
-val tri_formula = store_thm(
-  "tri_formula",
-  ``tri n = (n * (n + 1)) DIV 2``,
+Theorem tri_formula[compute]:
+  tri n = (n * (n + 1)) DIV 2
+Proof
   ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN MATCH_MP_TAC DIV_UNIQUE THEN
-  Q.EXISTS_TAC `0` THEN SRW_TAC [ARITH_ss][twotri_formula]);
+  Q.EXISTS_TAC `0` THEN SRW_TAC [ARITH_ss][twotri_formula]
+QED
 
 val tri_eq_0 = Store_thm(
   "tri_eq_0",
@@ -210,94 +214,90 @@ val nfst_le = store_thm(
   DECIDE_TAC);
 val nsnd_le = store_thm("nsnd_le", ``nsnd n <= n``, SRW_TAC [][nsnd_def]);
 
-(* ----------------------------------------------------------------------
-    lists of naturals encoded as naturals
-   ---------------------------------------------------------------------- *)
+Theorem npair00[simp]:
+  npair 0 0 = 0
+Proof
+  SIMP_TAC (srw_ss()) [npair_def]
+QED
 
-val _ = overload_on ("nnil", ``0``);
-val _ = overload_on ("0", ``0``);
+Theorem npair_EQ_0[simp]:
+  !x y. (npair x y = 0) <=> (x = 0) /\ (y = 0)
+Proof
+  METIS_TAC[npair00,npair_11]
+QED
 
-val ncons_def = Define`
-  ncons h t = h *, t + 1
-`;
+Theorem nfst0[simp]:
+  nfst 0 = 0
+Proof
+  METIS_TAC[nfst_npair, npair00, npair_11]
+QED
 
-val ncons_11 = Store_thm(
-  "ncons_11",
-  ``(ncons x y = ncons h t) <=> (x = h) /\ (y = t)``,
-  SRW_TAC [][ncons_def]);
-val ncons_not_nnil = Store_thm(
-  "ncons_not_nnil",
-  ``ncons x y <> nnil``,
-  SRW_TAC [ARITH_ss][ncons_def]);
+Theorem nsnd0[simp]:
+  nsnd 0 = 0
+Proof
+  METIS_TAC[nsnd_npair, npair00, npair_11]
+QED
 
-val nlistrec_def = tDefine "nlistrec" `
-  nlistrec n f l = if l = 0 then n
-                   else f (nfst (l - 1)) (nsnd (l - 1))
-                          (nlistrec n f (nsnd (l - 1)))
-` (WF_REL_TAC `measure (SND o SND)` THEN
-   STRIP_TAC THEN ASSUME_TAC (Q.INST [`n` |-> `l - 1`] nsnd_le) THEN
-   DECIDE_TAC);
-val nlistrec_ind = theorem "nlistrec_ind"
+Theorem nfst_le_npair[simp]:
+  !m n. n <= npair n m
+Proof
+  rpt gen_tac \\
+  `n = nfst (npair n m)` by simp[GSYM nfst_npair] >>
+  `nfst (npair n m) <= npair n m` by simp[nfst_le] >> fs[]
+QED
 
-val nlistrec_thm = Store_thm(
-  "nlistrec_thm",
-  ``(nlistrec n f nnil = n) /\
-    (nlistrec n f (ncons h t) = f h t (nlistrec n f t))``,
-  CONJ_TAC THEN1 SRW_TAC [][Once nlistrec_def] THEN
-  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [nlistrec_def])) THEN
-  SRW_TAC [ARITH_ss][ncons_def]);
+Theorem nsnd_le_npair[simp]:
+  !m n. m <= npair n m
+Proof
+  rpt gen_tac \\
+  `m = nsnd (npair n m)` by simp[GSYM nsnd_npair] >>
+  `nsnd (npair n m) <= npair n m` by simp[nsnd_le] >> fs[]
+QED
 
-val nlist_ind = store_thm(
-  "nlist_ind",
-  ``!P. P 0 /\ (!h t. P t ==> P (ncons h t)) ==> !n. P n``,
-  GEN_TAC THEN STRIP_TAC THEN
-  Q_TAC SUFF_TAC `!(n:'a) (f:num -> num -> 'a -> 'a) l. P l`
-    THEN1 METIS_TAC [] THEN
-  HO_MATCH_MP_TAC nlistrec_ind THEN REPEAT STRIP_TAC THEN
-  Cases_on `l` THEN SRW_TAC [][] THEN
-  `SUC n = ncons (nfst n) (nsnd n)` by SRW_TAC [][ncons_def, ADD1] THEN
-  SRW_TAC [][]);
+Theorem npair2_lt_E:
+  !n n1 n2. npair n n1 < npair n n2 ==> n1 < n2
+Proof
+  rpt gen_tac
+  >> simp[npair_def] >> strip_tac >> SPOSE_NOT_THEN ASSUME_TAC
+  >> `n1 >= n2` by simp[]
+  >> `n + n1 >= n + n2` by simp[]
+  >> `n + n2 <= n + n1` by simp[]
+  >> `tri (n + n2) <= tri (n + n1)` by metis_tac[tri_LE]
+  >> `n2 <= n1` by simp[]
+  >> `n2 + tri (n + n2) <= n1 + tri (n + n1)` by simp[]
+  >> fs[]
+QED
 
-val nlen_def = Define`nlen = nlistrec 0 (\n t r. r + 1)`
+Theorem npair2_lt_I:
+  !n n1 n2. n1 < n2 ==> npair n n1 < npair n n2
+Proof
+  rpt strip_tac >> simp[npair_def] >>
+  `n + n1 < n + n2` by simp[] >>
+  `tri (n + n1) < tri (n + n2)` by simp[tri_LT] >> simp[]
+QED
 
-val nlen_thm = Store_thm(
-  "nlen_thm",
-  ``(nlen nnil = 0) /\ (nlen (ncons h t) = nlen t + 1)``,
-  SRW_TAC [][nlen_def]);
+Theorem npair2_lt[simp]:
+  !n n1 n2. npair n n1 < npair n n2 <=> n1 < n2
+Proof
+  metis_tac[npair2_lt_E, npair2_lt_I]
+QED
 
-val nmap_def = Define`nmap f = nlistrec 0 (\n t r. ncons (f n) r)`
-val nmap_thm = Store_thm(
-  "nmap_thm",
-  ``(nmap f nnil = nnil) /\
-    (nmap f (ncons h t) = ncons (f h) (nmap f t))``,
-  SRW_TAC [][nmap_def]);
-
-val nfoldl_def = Define`
-  nfoldl f a l = nlistrec (\a. a) (\n t r a. r (f n a)) l a
-`;
-val nfoldl_thm = Store_thm(
-  "nfoldl_thm",
-  ``(nfoldl f a nnil = a) /\ (nfoldl f a (ncons h t) = nfoldl f (f h a) t)``,
-  SRW_TAC [][nfoldl_def]);
-
-(* nappend *)
-val napp_def = Define`
-  napp l1 l2 = nlistrec l2 (\n t r. ncons n r) l1
-`;
-
-val napp_thm = Store_thm(
-  "napp_thm",
-  ``(napp 0 nlist = nlist) /\
-    (napp (ncons h t) nlist = ncons h (napp t nlist))``,
-  SRW_TAC [][napp_def]);
-
-(* cases theorem *)
-val nlist_cases = store_thm(
-  "nlist_cases",
-  ``!n. (n = nnil) \/ ?h t. n = ncons h t``,
-  Cases_on `n` THEN SRW_TAC [][ncons_def, GSYM ADD1] THEN
-  Q.MATCH_ABBREV_TAC `?h t. n = h *, t` THEN
-  MAP_EVERY Q.EXISTS_TAC [`nfst n`, `nsnd n`] THEN SRW_TAC [][]);
-
+(* slightly more general than npair2_lt_I *)
+Theorem npairs_lt_I :
+  !a b c d. a <= b /\ c < d ==> npair a c < npair b d
+Proof
+    rpt STRIP_TAC
+ >> `(a = b) \/ a < b` by SRW_TAC [ARITH_ss] []
+ >- (ASM_REWRITE_TAC [] \\
+     MATCH_MP_TAC npair2_lt_I >> simp [])
+ >> MATCH_MP_TAC LESS_TRANS
+ >> Q.EXISTS_TAC ‘npair a d’
+ >> CONJ_TAC >- (MATCH_MP_TAC npair2_lt_I >> ASM_REWRITE_TAC [])
+ >> REWRITE_TAC [npair_def]
+ >> Q_TAC SUFF_TAC `tri (a + d) < tri (b + d)`
+ >- SRW_TAC [ARITH_ss] []
+ >> MATCH_MP_TAC tri_LT_I
+ >> SRW_TAC [ARITH_ss] []
+QED
 
 val _ = export_theory()

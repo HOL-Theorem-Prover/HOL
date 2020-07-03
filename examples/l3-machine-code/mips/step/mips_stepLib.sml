@@ -13,10 +13,11 @@ local open mips in end
 structure Parse =
 struct
    open Parse
-   val (tyg, (tmg, _)) =
-      (I ## term_grammar.mfupdate_overload_info
-               (Overload.remove_overloaded_form "add"))
+   val (tyg, tmg) =
       mipsTheory.mips_grammars
+        |> apsnd (#1 o term_grammar.mfupdate_overload_info
+                         (Overload.remove_overloaded_form "add"))
+        |> apsnd ParseExtras.grammar_loose_equality
    val (Type, Term) = parse_from_grammars (tyg, tmg)
 end
 open Parse
@@ -31,9 +32,9 @@ val rhsc = utilsLib.rhsc
 val st = ``s: mips_state``
 fun mapl x = utilsLib.augment x [[]]
 
-val cond_thms = Q.prove(
-   `(!b c. (if b then T else c) = b \/ c) /\
-    (!b c. (if b then F else c) = ~b /\ c)`,
+val cond_thms = prove(
+   “(!b c. (if b then T else c) = b \/ c) /\
+    (!b c. (if b then F else c) = ~b /\ c)”,
    rw []
    )
 

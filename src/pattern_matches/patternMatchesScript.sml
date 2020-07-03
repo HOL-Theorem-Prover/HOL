@@ -11,6 +11,9 @@ val std_ss = numLib.std_ss
 val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
 val zDefine    = Lib.with_flag (computeLib.auto_import_definitions,false) Define
 
+val _ = ParseExtras.temp_loose_equality()
+
+
 (***************************************************)
 (* Auxiliary stuff                                 *)
 (***************************************************)

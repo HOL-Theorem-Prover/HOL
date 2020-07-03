@@ -138,10 +138,13 @@ val cheat:tactic = fn g => ([], fn _ => Thm.mk_oracle_thm "cheat" g)
 
 
 val Cases     = BasicProvers.Cases
+val namedCases = BasicProvers.namedCases
 val Induct    = BasicProvers.Induct
 val recInduct = Induction.recInduct
 
 val Cases_on          = BasicProvers.Cases_on
+val tmCases_on        = BasicProvers.tmCases_on
+val namedCases_on     = BasicProvers.namedCases_on
 val Induct_on         = BasicProvers.Induct_on
 val PairCases_on      = pairLib.PairCases_on;
 val pairarg_tac       = pairLib.pairarg_tac
@@ -152,6 +155,8 @@ val AllCaseEqs        = TypeBase.AllCaseEqs
 
 val completeInduct_on = numLib.completeInduct_on
 val measureInduct_on  = numLib.measureInduct_on;
+val op using          = markerLib.using
+val usingA            = markerLib.usingA
 
 val SPOSE_NOT_THEN    = BasicProvers.SPOSE_NOT_THEN
 val spose_not_then    = BasicProvers.SPOSE_NOT_THEN
@@ -207,8 +212,10 @@ val wlog_then = wlog_then
 
   (* useful quotation-based tactics (from Q) *)
   val qx_gen_tac : term quotation -> tactic = Q.X_GEN_TAC
+  val qx_genl_tac = map_every qx_gen_tac
   val qx_choose_then = Q.X_CHOOSE_THEN
   val qexists_tac : term quotation -> tactic = Q.EXISTS_TAC
+  val qexistsl_tac = map_every qexists_tac
   val qsuff_tac : term quotation -> tactic = Q_TAC SUFF_TAC
   val qspec_tac = Q.SPEC_TAC
   val qid_spec_tac : term quotation -> tactic = Q.ID_SPEC_TAC
@@ -237,11 +244,41 @@ val wlog_then = wlog_then
 
   val qabbrev_tac : term quotation -> tactic = Q.ABBREV_TAC
   val qunabbrev_tac : term quotation -> tactic = Q.UNABBREV_TAC
+  val qunabbrevl_tac = map_every qunabbrev_tac
   val unabbrev_all_tac : tactic = markerLib.UNABBREV_ALL_TAC
 
-  val qx_genl_tac = map_every qx_gen_tac
   fun qx_choosel_then [] ttac = ttac
     | qx_choosel_then (q::qs) ttac = qx_choose_then q (qx_choosel_then qs ttac)
 
+(* Derived search functions *)
+fun find_consts_thy thl t =
+  let
+    val theConsts = List.concat (List.map constants thl)
+  in
+    List.filter (can (match_type t) o type_of) theConsts
+end
+
+val find_consts = find_consts_thy ("-" :: ancestry "-")
+
+(*---------------------------------------------------------------------------*)
+(* Tactic to automate some routine set theory by reduction to FOL            *)
+(* (Ported from HOL Light)                                                   *)
+(*---------------------------------------------------------------------------*)
+
+local open pairTheory pred_setTheory in
+fun SET_TAC L =
+    POP_ASSUM_LIST (K ALL_TAC) \\
+    rpt COND_CASES_TAC \\
+    REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
+                         SING_DEF] L) \\
+    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
+      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
+      GSPECIFICATION, IN_DEF, EXISTS_PROD] \\
+    METIS_TAC [];
+
+fun ASM_SET_TAC L = rpt (POP_ASSUM MP_TAC) >> SET_TAC L;
+
+fun SET_RULE tm = prove (tm, SET_TAC []);
+end (* local *)
 
 end

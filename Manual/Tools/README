@@ -28,6 +28,8 @@ All of the following inline commands must be the first non-whitespace on the lin
         ##assert (equal n) 7;
 
     will print `3 + 4` in the document and also silently check that it really does evaluate to 7.
+-   The `##linelen_limit` command takes a number as argument and forces truncation of all output lines whose length is larger than the provided limit.
+-   The `##nolinelen_limit` turns off output line truncation
 -   The `##parsetm` and `##parsety` commands get the compiler to parse the (multi-line) argument as a HOL term or type and print it back to the output.
     The invocation is done by wrapping the input in ` `` ` delimiters and adding a colon in the case of `##parsety`.
     These directives make it easy to include HOL terms and types in the input while also having them checked for syntactic validity.
@@ -42,6 +44,9 @@ All of the following inline commands must be the first non-whitespace on the lin
 
         TRUTH
           ⊢ T
+
+    You can add digits immediately after the `##thm` to change the linewidth into which the theorem will be pretty-printed.
+    For example, `##thm68 pred_setTheory.SURJ_DEF`.
 
 If the first non-whitespace characters are `>>>` or `###` then the first of these characters is dropped, and the rest of the line is passed unchanged.
 This allows for a form of escaping, just in case the input naturally wants to include `>>` or `##` at the start of a line.

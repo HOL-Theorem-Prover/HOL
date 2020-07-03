@@ -1,18 +1,13 @@
 open HolKernel Parse boolTheory boolLib
 
+open testutils
 val _ = set_trace "Unicode" 0
 
-val tprint = testutils.tprint
-val OK = testutils.OK
-val die = testutils.die
-
 val _ = tprint "Preterm free variables 1"
-val fvs = Preterm.ptfvs (Parse.Preterm`\x. x`)
-val _ = if null fvs then OK() else die ""
+val _ = require (check_result null) (Preterm.ptfvs o Parse.Preterm) ‘\x. x’
 
 val _ = tprint "Preterm free variables 2"
-val fvs = Preterm.ptfvs (Parse.Preterm`\x:bool. x`)
-val _ = if null fvs then OK() else die ""
+val _ = require (check_result null) (Preterm.ptfvs o Parse.Preterm) ‘\x:bool. x’
 
 fun substtest (M, x, N, result) = let
   open testutils
@@ -20,7 +15,7 @@ in
   tprint("Testing ["^term_to_string M^"/"^term_to_string x^"] ("^
          term_to_string N^") = "^term_to_string result);
   require (check_result (aconv result)) (Term.subst[x |-> M]) N
-end
+end;
 
 val x = mk_var("x", Type.alpha)
 val xfun = mk_var("x", Type.alpha --> Type.alpha)
@@ -87,7 +82,7 @@ val inst_type_test = let
 in
   if same_const (concl final_th) (mk_const("F", bool)) then die ""
   else OK()
-end
+end;
 
 (* Test for the experimental kernel's INST_TYPE bug (discovered by Peter
    Homeier in June 2009). *)
@@ -111,17 +106,18 @@ val _ = let
   val Falsity = EQ_MP (INST [x bool |-> T, y bool |-> F] bad2) TRUTH
 in
   if aconv (concl Falsity) F then die "" else die "Huh???"
-end handle ExitOK => OK()
+end handle ExitOK => OK();
 
-val _ = Process.atExit (fn () => let
-                             fun rm s = FileSys.remove ("scratchTheory." ^ s)
-                                        handle _ => ()
-                           in
-                             app rm ["sml", "sig", "dat"]
-                           end)
+fun cleanup() = let
+  fun rm s = FileSys.remove ("scratchTheory." ^ s)
+      handle _ => ()
+in
+  app rm ["sml", "sig", "dat"]
+end
 
-fun test f x = f x orelse die ""
-val oldconstants_test = let
+exception InternalDie
+fun test f x = f x orelse raise InternalDie
+fun oldconstants_test() = let
   val _ = tprint "Identity of old constants test"
   val defn1_t = mk_eq(mk_var("foo", bool), boolSyntax.T)
   val defn2_t = mk_eq(mk_var("foo", bool), boolSyntax.F)
@@ -137,8 +133,6 @@ val oldconstants_test = let
   val _ = test (not o uncurry aconv) (c2, c3)
   val _ = test (String.isPrefix "old" o #Name o dest_thy_const) c1
   val _ = test (String.isPrefix "old" o #Name o dest_thy_const) c2
-  val _ = Feedback.emit_MESG := false
-  val _ = Feedback.emit_WARNING := false
   val _ = new_theory "foo"
   val defn1 = new_definition("c", mk_eq(mk_var("c", bool), boolSyntax.T))
   val _ = new_theory "foo"
@@ -148,39 +142,40 @@ val oldconstants_test = let
   val _ = test (fn (c1, c2) => Term.compare(c1,c2) <> EQUAL) (c1, c2)
   val _ = test (not o uncurry aconv) (c1, c2)
 in
-  OK()
-end
+  OK();
+  cleanup()
+end handle e => (cleanup(); raise e)
+
+val _ = testutils.quietly oldconstants_test ()
+    handle InternalDie => die "Internal test failed";
 
 val _ = tprint "Testing functional-pretype 1 (pattern)"
-val t = Parse.Term `x <> y ==> x <> y` handle HOL_ERR _ => die ""
-val _ = OK()
+val _ = require (check_result (fn _ => true)) Parse.Term `x <> y ==> x <> y`
 
 val _ = tprint "Testing functional-pretype 2 (simple case)"
-val t = Parse.Term `case x of T => F` handle HOL_ERR _ => die ""
-val _ = OK()
+val _ = require (check_result (fn _ => true)) (quietly Parse.Term)
+                `case x of T => F`
 
 val _ = tprint "Testing functional-pretype 3 (ignored constraint)"
-val quiet_parse = trace ("show_typecheck_errors", 0) Parse.Term
-val _ = case Lib.total quiet_parse `(\x.x) : 'a -> 'b` of
-            NONE => OK()
-          | SOME _ => die "(\\x.x):'a->'b checked"
+val quiet_parse = quietly (trace ("show_typecheck_errors", 0) Parse.Term)
+val _ = shouldfail {testfn = quiet_parse, printresult = term_to_string,
+                    printarg = (fn _ => ""),
+                    checkexn = is_struct_HOL_ERR "Preterm"}
+                   ‘(\x.x) : 'a -> 'b’;
 
 val _ = tprint "Testing parsing of case expressions with function type"
-val t = Parse.Term `(case T of T => (\x. x) | F => (~)) y`
-val _ = case Lib.total (find_term (same_const boolSyntax.bool_case)) t of
-          NONE => die ""
-        | SOME _ => OK()
+val _ = require_msg
+          (check_result (Lib.can (find_term (same_const boolSyntax.bool_case))))
+          term_to_string
+          Parse.Term
+          ‘(case T of T => (\x. x) | F => (~)) y’;
 
 val _ = tprint "Testing parsing of case expressions with leading bar"
-val t_opt = SOME (trace ("syntax_error", 0) Parse.Term
-                        `case T of | T => F | F => T`)
-    handle HOL_ERR _ => NONE
-val _ = case t_opt of
-          SOME t =>
-            if Lib.can (find_term (same_const boolSyntax.bool_case)) t then
-              OK()
-            else die ""
-        | NONE => die ""
+val _ = require_msg
+          (check_result (Lib.can (find_term (same_const boolSyntax.bool_case))))
+          term_to_string
+          (trace ("syntax_error", 0) Parse.Term)
+          ‘case T of | T => F | F => T’;
 
 val _ = tprint "Testing parsing of _ variables (1)"
 val t = case Lib.total Parse.Term `case b of T => F | _ => T` of
@@ -293,7 +288,7 @@ val _ = checkparse ()
 val _ = tprint "Testing stale type abbreviations bug"
 val _ = new_type ("foo", 1)
 val _ = type_abbrev("bar", ``:bool foo``)
-val _ = new_type ("foo", 0)
+val _ = quietly new_type ("foo", 0)
 val _ = type_abbrev("baz", ``:foo``) handle _ => die ""
 val _ = OK()
 
@@ -359,7 +354,7 @@ val _ = tpp "RM* p q"
 val _ = clear_overloads_on "RM*"
 
 val _ = add_rule {term_name = "=",
-                  fixity = Infix(NONASSOC, 100),
+                  fixity = Infix(NONASSOC, 450),
                   block_style = (AroundSamePrec, (PP.CONSISTENT,0)),
                   paren_style = OnlyIfNecessary,
                   pp_elements = [HardSpace 1, TOK "=", BreakSpace(1,2)]}
@@ -402,7 +397,7 @@ val _ = set_trace "pp_dollar_escapes" 0
 val _ = app tpp ["(/\\)", "(if)"]
 val _ = set_trace "pp_dollar_escapes" 1
 
-val _ = new_type ("foo", 2)
+val _ = quietly new_type ("foo", 2)
 val _ = new_constant ("con", ``:'a -> ('a,'b)foo``)
 val _ = set_trace "types" 1
 val _ = print "** Tests with 'types' trace on.\n"
@@ -437,8 +432,8 @@ val _ = app tpp [
   ("!x. x /\\ y", concat ["!", bx, ". ", bx, " /\\ ", fy]),
   ("let x = p in x /\\ y",
    concat ["let ",bx, " = ", fp, " in ", bx, " /\\ ", fy]),
-  ("let f x = x /\\ p in f x /\\ y",
-   concat ["let ",bound "f", " ", bx, " = ", bx, " /\\ ", fp, " in ",
+  ("let f x = (x /\\ p) in f x /\\ y",
+   concat ["let ",bound "f", " ", bx, " = (", bx, " /\\ ", fp, ") in ",
            bound "f", " ", fx, " /\\ ", fy]),
   ("!(x:'a)::p (x:'a). q x",
    concat ["!",bx,"::",fp, " ", fx,". ",free "q"," ",bx]),
@@ -457,29 +452,29 @@ val condprinter_tests =
     [
       {input = "if oless e1 e2 /\\ oless x y /\\ foobabbbbbbb\n\
                \then p /\\ q /\\ r /\\ ppppp xxxx yyyyy\n\
-               \else if (e1 = e2) /\\ k1 <> k2\n\
-               \then T else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2\n\
+               \else if (e1:'a) = e2 /\\ (k1:'a) <> k2\n\
+               \then T else if e1 = e2 /\\ k1 = k2 /\\ oless t1 t2\n\
                \then T else F",
        testf = K ("Large COND 1"),
        output = "if oless e1 e2 /\\ oless x y /\\ foobabbbbbbb then\n\
                 \  p /\\ q /\\ r /\\ ppppp xxxx yyyyy\n\
-                \else if (e1 = e2) /\\ k1 <> k2 then T\n\
-                \else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2 then T\n\
+                \else if e1 = e2 /\\ k1 <> k2 then T\n\
+                \else if e1 = e2 /\\ k1 = k2 /\\ oless t1 t2 then T\n\
                 \else F"},
       {input = "if oless e1 e2 /\\ oless x y /\\ foobabb\n\
                \then p /\\ q /\\ r /\\ ppppp xxxx\n\
-               \else if (e1 = e2) /\\ k1 <> k2\n\
-               \then T else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2\n\
+               \else if e1 = e2 /\\ k1 <> k2\n\
+               \then T else if e1 = e2 /\\ k1 = k2 /\\ oless t1 t2\n\
                \then T else F",
        testf = K ("Large COND 2"),
        output = "if oless e1 e2 /\\ oless x y /\\ foobabb then\
                 \ p /\\ q /\\ r /\\ ppppp xxxx\n\
-                \else if (e1 = e2) /\\ k1 <> k2 then T\n\
-                \else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2 then T\n\
+                \else if e1 = e2 /\\ k1 <> k2 then T\n\
+                \else if e1 = e2 /\\ k1 = k2 /\\ oless t1 t2 then T\n\
                 \else F"},
       {input = "if really quite a long guard when looked at closely then\n\
-               \  let quite_a_long_variable_name = another_long_name \\/ x ;\n\
-               \      another_longish_name = y \\/ z\n\
+               \  let quite_a_long_variable_name = (another_long_name \\/ x);\n\
+               \      another_longish_name = (y \\/ z)\n\
                \  in\n\
                \      f x\n\
                \else\n\
@@ -487,8 +482,8 @@ val condprinter_tests =
        testf = K "Large then-branch",
        output = "if really quite a long guard when looked at closely then\n\
                 \  (let\n\
-                \     quite_a_long_variable_name = another_long_name \\/ x ;\n\
-                \     another_longish_name = y \\/ z\n\
+                \     quite_a_long_variable_name = (another_long_name \\/ x) ;\
+              \\n     another_longish_name = (y \\/ z)\n\
                 \   in\n\
                 \     f x)\n\
                 \else g y"},
@@ -548,7 +543,7 @@ val _ = test {
       input = "\\x:'a. T",
       testf = (K "Constant T with type :'a -> bool w/special user printer"),
       output = "\\x. T"
-    }
+    };
 
 
 
@@ -561,15 +556,16 @@ val _ = let
   val readresult = DiskThms.read_file filename
   val ((nm1,th1), (nm2, th2)) =
       case readresult of
-        [x,y] => (x,y)
-      | _ => die ""
+          [x,y] => (x,y)
+        | _ => raise InternalDie
 in
-  nm1 = "AND_CLAUSES" andalso nm2 = "OR_CLAUSES" andalso
-  aconv (th1 |> concl) (concl boolTheory.AND_CLAUSES) andalso
-  aconv (th2 |> concl) (concl boolTheory.OR_CLAUSES) andalso
-  (OK(); true) orelse
-  die ""
-end
+  if nm1 = "AND_CLAUSES" andalso nm2 = "OR_CLAUSES" andalso
+     aconv (th1 |> concl) (concl boolTheory.AND_CLAUSES) andalso
+     aconv (th2 |> concl) (concl boolTheory.OR_CLAUSES)
+  then
+    OK()
+  else die ""
+end handle InternalDie => die ""
 
 val _ = let
   val _ = tprint "REWRITE with T (if this appears to hang it has failed)"
@@ -578,7 +574,7 @@ val _ = let
 in
   if null sgs andalso aconv (concl (vfn [])) t then OK()
   else die ""
-end
+end;
 
 val _ = let
   val _ = tprint "EVERY_CONJ_CONV"
@@ -595,7 +591,7 @@ val _ = let
 in
   if aconv (rhs (concl result)) expected then OK()
   else die ""
-end
+end;
 
 val _ = let
   fun B i = mk_var("x" ^ Int.toString i, bool)
@@ -628,9 +624,8 @@ end
 
 
 val _ = tprint "Testing (foo THENL [...]) when foo solves"
-val _ = (ACCEPT_TAC TRUTH THENL [ACCEPT_TAC TRUTH]) ([], ``T``)
-        handle HOL_ERR _ => die ""
-val _ = OK()
+val _ = require (check_result (fn _ => true))
+                (ACCEPT_TAC TRUTH THENL [ACCEPT_TAC TRUTH]) ([], ``T``)
 
 val _ = tprint "Testing save_thm rejecting names"
 val badnames = ["::", "nil", "true", "false", "ref", "="]
@@ -712,17 +707,17 @@ end handle _ => die ""
 
 val _ = let
   val _ = tprint "Removing type abbreviation"
-  val _ = temp_type_abbrev_pp ("foo", ``:'a -> bool``)
+  val _ = quietly temp_type_abbrev_pp ("foo", ``:'a -> bool``)
   val s1 = type_to_string ``:bool -> bool``
-  val _ = s1 = ":bool foo" orelse die ""
+  val _ = s1 = ":bool foo" orelse raise InternalDie
   val _ = temp_remove_type_abbrev "foo"
   val s2 = type_to_string ``:bool -> bool``
 in
   if s2 = ":bool -> bool" then OK() else die ""
-end
+end handle InternalDie => die ""
 
 fun nc (s,ty) =
-  (new_constant(s,ty); prim_mk_const{Name = s, Thy = current_theory()})
+  (quietly new_constant(s,ty); prim_mk_const{Name = s, Thy = current_theory()})
 
 val _ = let
   val _ = tprint "irule 1 (basic match-mp)"
@@ -765,13 +760,13 @@ val _ = let
   val (sgs, vf) = POP_ASSUM irule g
   val rth = vf (map mk_thm sgs)
   val _ = aconv (concl rth) (#2 g) andalso length (hyp rth) = 1 andalso
-          aconv (hd (hyp rth)) (hd (#1 g)) orelse die ""
+          aconv (hd (hyp rth)) (hd (#1 g)) orelse raise InternalDie
 in
   case sgs of
       [([], sg)] => if aconv sg ``^P (b:'a)`` then OK()
                     else die ""
     | _ => die ""
-end
+end handle InternalDie => die ""
 
 val _ = let
   val _ = tprint "irule 4 (thm from goal, extra vars)"
@@ -822,6 +817,47 @@ val _ = let
   val r_thm = vf (map mk_thm sgs)
 in
   if aconv (concl r_thm) g then OK() else die ""
+end
+
+fun checktactic sgsP rP tac_result =
+    case tac_result of
+        Exn.Res (sgs, vf) => sgsP sgs andalso
+                             (case total vf (map mk_thm sgs) of
+                                  NONE => false
+                                | SOME th => rP th)
+      | Exn.Exn e => false
+
+fun pp_goal (asl,w) =
+    let open HOLPP
+    in
+      HOLPP.block CONSISTENT 2 [
+        HOLPP.block INCONSISTENT 0 (
+          pr_list pp_term [add_string ",", add_break(1,0)] asl
+        ),
+        add_string " ?-",
+        add_break(1,0),
+        pp_term w
+      ]
+    end
+
+fun pp_sgs gl =
+    let open HOLPP in block CONSISTENT 0 (pr_list pp_goal [NL, NL] gl)
+    end
+
+
+fun print_tacresult (sgs, _) =
+    PP.pp_to_string 70 pp_sgs sgs
+
+val _ = let
+  val _ = tprint "irule - negated conclusion"
+  val tm = “!x:bool y:bool. P x /\ ~R x y ==> ~Q x”
+  val thm = ASSUME tm
+  val g = “~Q (z:bool): bool”
+in
+  require_msg (checktactic (fn _ => true) (fn th => concl th ~~ g))
+              print_tacresult
+              (irule thm)
+              ([], g)
 end
 
 val _ = hide "Q"
@@ -998,10 +1034,10 @@ end;
 val _ = let
   open mp_then
   val _ = tprint "mp_then (pat) 3"
-  val _ = new_type("list", 1)
-  val _ = new_type("ti", 0)
+  val _ = quietly new_type("list", 1)
+  val _ = quietly new_type("ti", 0)
   val _ = hide "foo"
-  val _ = new_constant("EVERY", ``:('a -> bool) -> 'a list -> bool``)
+  val _ = nc("EVERY", ``:('a -> bool) -> 'a list -> bool``)
   val asl = [``EVERY (x:'a -> bool) ls``,
              ``!x:ti y. foo x y /\ EVERY y (ls:'a list) ==> gg x``,
              ``foo (a:ti) (x:'a -> bool):bool``, ``bar (x:'a -> bool):bool``]

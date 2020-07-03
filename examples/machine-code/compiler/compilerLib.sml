@@ -11,6 +11,12 @@ open prog_armLib prog_ppcLib prog_x86Lib prog_x64Lib;
 open wordsTheory wordsLib addressTheory;
 open helperLib;
 open tailrecLib;
+structure Parse = struct
+  open Parse
+  val (Type,Term) =
+      wordsTheory.words_grammars |> parse_from_grammars
+end
+open Parse
 
 
 fun AUTO_ALPHA_CONV () = let
@@ -27,7 +33,7 @@ fun AUTO_ALPHA_CONV () = let
   in doit end
 
 val COMPILER_TAC_LEMMA = prove(
-  ``!a b:bool. (a /\ a /\ b = a /\ b) /\ (a \/ a \/ b = a \/ b)``,
+  ``!a b:bool. (a /\ a /\ b <=> a /\ b) /\ (a \/ a \/ b <=> a \/ b)``,
   REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_SIMP_TAC std_ss []);
 
 val COMPILER_TAC =

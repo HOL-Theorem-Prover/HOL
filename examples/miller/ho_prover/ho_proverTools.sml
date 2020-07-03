@@ -4,6 +4,16 @@ structure ho_proverTools :> ho_proverTools =
 struct
 open HolKernel Parse boolLib BasicProvers;
 
+structure Parse = struct
+  open Parse
+  val (Type,Term) =
+      pred_setTheory.pred_set_grammars
+        |> apsnd ParseExtras.grammar_loose_equality
+        |> parse_from_grammars
+end
+open Parse
+
+
 (* interactive mode
 val () = loadPath := union ["..", "../finished"] (!loadPath);
 val () = app load
@@ -14,7 +24,7 @@ val () = app load
 val () = show_assums := true;
 *)
 
-open Susp combinTheory HurdUseful skiTools;
+open Susp combinTheory hurdUtils skiTools;
 
 infixr 0 oo ## ++ << || THENC ORELSEC THENR ORELSER -->;
 infix 1 >> |->;
@@ -489,21 +499,19 @@ val once_rewrite_frule =
 
 (* First, the basic rewrites *)
 
-val _ = Parse.reveal "C";
-
 val basic_rewrites =
   map (prove o (I ## (fn ths => !! FUN_EQ_TAC ++ RW_TAC bool_ss ths)))
   [(``!x y z. S x y z = (x z) (y z)``, [S_DEF]),
-   (``!x y z. C x y z = x z y``, [C_DEF]),
+   (``!x y z. combin$C x y z = x z y``, [C_DEF]),
    (``!x y z. (x o y) z = x (y z)``, [o_DEF]),
    (``!x y. K x y = x``, [K_DEF]),
    (``!x. I x = x``, [I_THM]),
    (``!x y. S (K x) (K y) = K (x y)``, [S_DEF, K_DEF]),
    (``!x. S (K x) = $o x``, [S_DEF, K_DEF, o_DEF]),
    (``S o K = $o``, [S_DEF, K_DEF, o_DEF]),
-   (``!x y. S x (K y) = C x y``, [S_DEF, K_DEF, C_DEF]),
+   (``!x y. S x (K y) = combin$C x y``, [S_DEF, K_DEF, C_DEF]),
    (``!x y. x o (K y) = K (x y)``, [K_DEF, o_DEF]),
-   (``!x y. C (K x) y = K (x y)``, [K_DEF, C_DEF]),
+   (``!x y. combin$C (K x) y = K (x y)``, [K_DEF, C_DEF]),
    (``!x y. K x o y = K x``, [K_DEF, o_DEF]),
    (``!x. x o I = x``, [I_THM, o_DEF]),
    (``$o I = I``, [I_THM, o_DEF]),

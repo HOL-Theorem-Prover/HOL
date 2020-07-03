@@ -15,7 +15,8 @@ selftest.exe: selftest.uo $(dprot $(SIGOBJ)/term_pp.uo) state_transformerTheory.
 
 ifeq($(KERNELID),otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
-all: $(ARTFILES)
+all: $(ARTFILES) hol4-monad-unint.art
+
 hol4-monad-unint.art: hol4-monad-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<
 endif

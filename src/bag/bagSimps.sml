@@ -82,7 +82,7 @@ val BAG_ss = SSFRAG
                               (SUB_BAG_tm, "SUB_BAG"),
                               (BAG_EQ_tm, "=")],
    filter = NONE, dprocs = [],
-   rewrs = map (fn s => (SOME s, DB.fetch "bag" s)) [
+   rewrs = map (fn s => (SOME{Thy = "bag", Name = s}, DB.fetch "bag" s)) [
      "BAG_UNION_EMPTY", "BAG_DIFF_EMPTY", "SUB_BAG_REFL",
      "SUB_BAG_EMPTY","FINITE_EMPTY_BAG",
      "NOT_IN_EMPTY_BAG"

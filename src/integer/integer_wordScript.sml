@@ -7,6 +7,7 @@ open wordsLib stringLib intLib arithmeticTheory
 open bitTheory wordsTheory integerTheory
 
 val _ = new_theory "integer_word"
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 
@@ -213,10 +214,11 @@ val word_msb_i2w = store_thm(
     ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [word_msb_n2w_numeric, INT_MOD]
   ])
 
-val w2i_11 = store_thm("w2i_11[simp]",
-  ``!v w. (w2i v = w2i w) = (v = w)``,
-  NTAC 2 STRIP_TAC THEN EQ_TAC
-    THEN SRW_TAC [] [SIMP_RULE (srw_ss()) [] WORD_EQ_NEG, w2i_def])
+Theorem w2i_11[simp]:
+  !v w. (w2i v = w2i w) <=> (v = w)
+Proof
+  rpt strip_tac >> eq_tac >> rw[w2i_def]
+QED
 
 val int_word_nchotomy = Q.store_thm("int_word_nchotomy",
   `!w. ?i. w = i2w i`, PROVE_TAC [i2w_w2i])

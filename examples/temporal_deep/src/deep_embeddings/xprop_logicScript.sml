@@ -1,94 +1,59 @@
 open HolKernel Parse boolLib bossLib;
 
-(*
-quietdec := true;
-
-val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/tools") :: !loadPath;
-
-map load
- ["pred_setTheory", "listTheory", "pairTheory", "prop_logicTheory", "containerTheory", "tuerk_tacticsLib", "set_lemmataTheory",
-  "temporal_deep_mixedTheory"];
-*)
-
 open pred_setTheory listTheory pairTheory prop_logicTheory containerTheory
      tuerk_tacticsLib set_lemmataTheory temporal_deep_mixedTheory;
+
 open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
 
-(*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
-quietdec := false;
-*)
-
-
 val _ = new_theory "xprop_logic";
+val _ = ParseExtras.temp_loose_equality()
 
+Datatype :
+  xprop_logic = XP_PROP 'a                         (* atomic proposition *)
+              | XP_NEXT_PROP 'a                    (* X atomic proposition *)
+              | XP_TRUE                            (* true *)
+              | XP_NOT  xprop_logic                (* negation *)
+              | XP_AND (xprop_logic # xprop_logic) (* conjunction *)
+End
 
-val xprop_logic =
- Hol_datatype
-  `xprop_logic = XP_PROP of 'a                          (* atomic proposition       *)
-          | XP_NEXT_PROP of 'a                            (* X atomic proposition     *)
-        | XP_TRUE                                       (* true                     *)
-        | XP_NOT of xprop_logic                         (* negation                 *)
-        | XP_AND of xprop_logic # xprop_logic`;         (* conjunction              *)
-
-
-val xprop_logic_induct =
- save_thm
-  ("xprop_logic_induct",
-   Q.GEN
-    `P`
-    (MATCH_MP
+Theorem xprop_logic_induct = Q.GEN `P`
+   (MATCH_MP
      (DECIDE ``(A ==> (B1 /\ B2)) ==> (A ==> B1)``)
-     (SIMP_RULE
-       std_ss
+     (SIMP_RULE std_ss
        [pairTheory.FORALL_PROD,
         PROVE[]``(!x y. P x ==> Q(x,y)) = !x. P x ==> !y. Q(x,y)``,
         PROVE[]``(!x y. P y ==> Q(x,y)) = !y. P y ==> !x. Q(x,y)``]
        (Q.SPECL
          [`P`,`\(f1,f2). P f1 /\ P f2`]
-         (TypeBase.induction_of ``:'a xprop_logic``)))));
+         (TypeBase.induction_of ``:'a xprop_logic``))));
 
+val XP_USED_CURRENT_VARS_def = Define
+  `(XP_USED_CURRENT_VARS (XP_TRUE) = EMPTY) /\
+   (XP_USED_CURRENT_VARS (XP_PROP p) = {p}) /\
+   (XP_USED_CURRENT_VARS (XP_NEXT_PROP p) = EMPTY) /\
+   (XP_USED_CURRENT_VARS (XP_NOT b) = XP_USED_CURRENT_VARS b) /\
+   (XP_USED_CURRENT_VARS (XP_AND(b1,b2)) =
+      (XP_USED_CURRENT_VARS b1) UNION (XP_USED_CURRENT_VARS b2))`;
 
-val XP_USED_CURRENT_VARS_def=
- Define
-   `(XP_USED_CURRENT_VARS (XP_TRUE) = EMPTY) /\
-    (XP_USED_CURRENT_VARS (XP_PROP p) = {p}) /\
-    (XP_USED_CURRENT_VARS (XP_NEXT_PROP p) = EMPTY) /\
-    (XP_USED_CURRENT_VARS (XP_NOT b) = XP_USED_CURRENT_VARS b) /\
-    (XP_USED_CURRENT_VARS (XP_AND(b1,b2)) = ((XP_USED_CURRENT_VARS b1) UNION (XP_USED_CURRENT_VARS b2)))`;
+val XP_USED_X_VARS_def = Define
+  `(XP_USED_X_VARS (XP_TRUE) = EMPTY) /\
+   (XP_USED_X_VARS (XP_PROP p) = EMPTY) /\
+   (XP_USED_X_VARS (XP_NEXT_PROP p) = {p}) /\
+   (XP_USED_X_VARS (XP_NOT b) = XP_USED_X_VARS b) /\
+   (XP_USED_X_VARS (XP_AND(b1,b2)) = (XP_USED_X_VARS b1) UNION (XP_USED_X_VARS b2))`;
 
+val XP_USED_VARS_def = Define
+   `XP_USED_VARS b = (XP_USED_CURRENT_VARS b) UNION (XP_USED_X_VARS b)`;
 
-val XP_USED_X_VARS_def=
- Define
-   `(XP_USED_X_VARS (XP_TRUE) = EMPTY) /\
-    (XP_USED_X_VARS (XP_PROP p) = EMPTY) /\
-    (XP_USED_X_VARS (XP_NEXT_PROP p) = {p}) /\
-    (XP_USED_X_VARS (XP_NOT b) = XP_USED_X_VARS b) /\
-    (XP_USED_X_VARS (XP_AND(b1,b2)) = ((XP_USED_X_VARS b1) UNION (XP_USED_X_VARS b2)))`;
-
-
-val XP_USED_VARS_def =
- Define
-   `XP_USED_VARS b = ((XP_USED_CURRENT_VARS b) UNION (XP_USED_X_VARS b))`;
-
-
-
-val XP_VAR_RENAMING_def =
- Define
-   `(XP_VAR_RENAMING (f:'a->'b) (XP_TRUE) = XP_TRUE) /\
-    (XP_VAR_RENAMING f (XP_PROP p) = (XP_PROP (f p))) /\
-    (XP_VAR_RENAMING f (XP_NEXT_PROP p) = (XP_NEXT_PROP (f p))) /\
-    (XP_VAR_RENAMING f (XP_NOT b) = XP_NOT (XP_VAR_RENAMING f b)) /\
-    (XP_VAR_RENAMING f (XP_AND(b1,b2)) = (XP_AND(XP_VAR_RENAMING f b1, XP_VAR_RENAMING f b2)))`;
-
+val XP_VAR_RENAMING_def = Define
+  `(XP_VAR_RENAMING (f:'a->'b) (XP_TRUE) = XP_TRUE) /\
+   (XP_VAR_RENAMING f (XP_PROP p) = (XP_PROP (f p))) /\
+   (XP_VAR_RENAMING f (XP_NEXT_PROP p) = (XP_NEXT_PROP (f p))) /\
+   (XP_VAR_RENAMING f (XP_NOT b) = XP_NOT (XP_VAR_RENAMING f b)) /\
+   (XP_VAR_RENAMING f (XP_AND(b1,b2)) = XP_AND(XP_VAR_RENAMING f b1, XP_VAR_RENAMING f b2))`;
 
 (*=============================================================================
 = Semantic
@@ -109,66 +74,49 @@ val XP_SEM_def =
 (******************************************************************************
 * Propositional logic with X
 ******************************************************************************)
-val XP_FALSE_def =
- Define
+val XP_FALSE_def = Define
    `XP_FALSE = XP_NOT(XP_TRUE)`;
 
-
-val XP_OR_def =
- Define
+val XP_OR_def = Define
    `XP_OR(b1, b2) = XP_NOT(XP_AND(XP_NOT b1, XP_NOT b2))`;
 
-
-val XP_IMPL_def =
- Define
+val XP_IMPL_def = Define
    `XP_IMPL(b1, b2) = XP_OR(XP_NOT b1, b2)`;
 
-val XP_COND_def =
- Define
+val XP_COND_def = Define
    `XP_COND(c, f1, f2) = XP_AND(XP_IMPL(c, f1), XP_IMPL(XP_NOT c, f2))`;
 
-
-val XP_EQUIV_def =
- Define
+val XP_EQUIV_def = Define
    `XP_EQUIV(b1, b2) = XP_AND(XP_IMPL(b1, b2),XP_IMPL(b2, b1))`;
 
+val XPROP_LOGIC_EQUIVALENT_def = Define
+   `XPROP_LOGIC_EQUIVALENT b1 b2 = !s1 s2. (XP_SEM b1 (s1, s2)) = (XP_SEM b2 (s1, s2))`;
 
-val XPROP_LOGIC_EQUIVALENT_def =
- Define
-   `(XPROP_LOGIC_EQUIVALENT b1 b2) = (!s1 s2. (XP_SEM b1 (s1, s2)) = (XP_SEM b2 (s1, s2)))`;
+(* conversion from prop_logic to xprop_logic (next version) *)
+val XP_NEXT_def = Define
+  `(XP_NEXT (P_TRUE) = XP_TRUE) /\
+   (XP_NEXT (P_PROP p) = XP_NEXT_PROP p) /\
+   (XP_NEXT (P_NOT b) = XP_NOT (XP_NEXT b)) /\
+   (XP_NEXT (P_AND(b1,b2)) = (XP_AND((XP_NEXT b1),(XP_NEXT b2))))`;
 
-val XP_NEXT_def=
- Define
-   `(XP_NEXT (P_TRUE) = XP_TRUE) /\
-    (XP_NEXT (P_PROP p) = XP_NEXT_PROP p) /\
-    (XP_NEXT (P_NOT b) = XP_NOT (XP_NEXT b)) /\
-    (XP_NEXT (P_AND(b1,b2)) = (XP_AND((XP_NEXT b1),(XP_NEXT b2))))`;
+(* conversion from prop_logic to xprop_logic (current version) *)
+val XP_CURRENT_def = Define
+  `(XP_CURRENT (P_TRUE) = XP_TRUE) /\
+   (XP_CURRENT (P_PROP p) = XP_PROP p) /\
+   (XP_CURRENT (P_NOT b) = XP_NOT (XP_CURRENT b)) /\
+   (XP_CURRENT (P_AND(b1,b2)) = (XP_AND((XP_CURRENT b1),(XP_CURRENT b2))))`;
 
+val XP_BIGOR_def = Define
+  `(XP_BIGOR [] = XP_FALSE) /\
+   (XP_BIGOR (s::S) = XP_OR (s, XP_BIGOR S))`;
 
-val XP_CURRENT_def=
- Define
-   `(XP_CURRENT (P_TRUE) = XP_TRUE) /\
-    (XP_CURRENT (P_PROP p) = XP_PROP p) /\
-    (XP_CURRENT (P_NOT b) = XP_NOT (XP_CURRENT b)) /\
-    (XP_CURRENT (P_AND(b1,b2)) = (XP_AND((XP_CURRENT b1),(XP_CURRENT b2))))`;
+val XP_BIGAND_def = Define
+  `(XP_BIGAND [] = XP_TRUE) /\
+   (XP_BIGAND (s::l) = XP_AND (s, XP_BIGAND l))`;
 
-
-val XP_BIGOR_def =
-Define
-`(XP_BIGOR [] = XP_FALSE) /\
-  (XP_BIGOR (s::S) = XP_OR (s, XP_BIGOR S))`;
-
-
-val XP_BIGAND_def =
-Define
-`(XP_BIGAND [] = XP_TRUE) /\
-  (XP_BIGAND (s::l) = XP_AND (s, XP_BIGAND l))`;
-
-val XP_BIGCOND_def =
-Define
-`(XP_BIGCOND [] = XP_FALSE) /\
- (XP_BIGCOND ((c,b)::l) = XP_COND (c, b, XP_BIGCOND l))`;
-
+val XP_BIGCOND_def = Define
+  `(XP_BIGCOND [] = XP_FALSE) /\
+   (XP_BIGCOND ((c,b)::l) = XP_COND (c, b, XP_BIGCOND l))`;
 
 val XP_PROP_SET_MODEL_def = Define
   `XP_PROP_SET_MODEL S1 S2 S' =

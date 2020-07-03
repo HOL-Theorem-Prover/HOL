@@ -16,8 +16,6 @@ val monitoring = ref false;
 (* Interactively:
   val const_eq_ref = ref (!Defn.const_eq_ref);
 *)
-val const_eq_ref = ref Conv.NO_CONV;
-
 (*---------------------------------------------------------------------------
       Miscellaneous support
  ---------------------------------------------------------------------------*)
@@ -80,7 +78,6 @@ fun extract_info constset db =
 val ind_suffix = ref "_ind";
 val def_suffix = boolLib.def_suffix
 
-fun indSuffix s     = (s ^ !ind_suffix);
 fun defSuffix s     = (s ^ !def_suffix);
 fun defPrim s       = defSuffix(s^"_primitive");
 fun defExtract(s,n) = defSuffix(s^"_extract"^Lib.int_to_string n);
@@ -406,6 +403,10 @@ local fun is_suc tm =
        case total dest_thy_const tm
         of NONE => false
          | SOME{Name,Thy,...} => Name="SUC" andalso Thy="num"
+      fun undef s =
+          if String.isSuffix "_DEF" s orelse String.isSuffix "_def" s then
+            String.substring(s,0,size s - 4)
+          else s
 in
 val SUC_TO_NUMERAL_DEFN_CONV_hook =
       ref (fn _ => raise ERR "SUC_TO_NUMERAL_DEFN_CONV_hook" "not initialized")
@@ -417,7 +418,7 @@ fun add_persistent_funs l =
       fun f (s, th) =
         [s] @
         (if has_lhs_SUC th then let
-            val name = s^"_compute"
+            val name = undef s^"_compute"
             val name = let
               val used = Lib.C Lib.mem (#1 (Lib.unzip (current_theorems())))
               fun loop n = let val x = (name^(Int.toString n))
@@ -447,6 +448,29 @@ fun been_stored (s,thm) =
               "Saved definition __ ") ^Lib.quote s^"\n")
    else ()
    )
+
+
+(* can fiddle with indSuffix to get "neat" effects; if it is a string
+   starting with a space, then that the string without the space is the name
+   of the induction theorem exactly. If the string is "", then the
+   process looks for a trailing _def in the name of the definition and replaces
+   it with _ind (preserving case)
+ *)
+fun indSuffix stem =
+    let
+      fun munge s =
+        if String.isSuffix "_def" s then
+          String.extract(s,0,SOME(size s - 4)) ^ "_ind"
+        else if String.isSuffix "_DEF" s then
+          String.extract(s,0,SOME(size s - 4)) ^ "_IND"
+        else s ^ "_ind"
+    in
+      case !ind_suffix of
+          "" => munge stem
+        | s => if String.sub(s,0) = #" " then String.extract(s,1,NONE)
+               else stem ^ s
+    end
+
 
 fun store(stem,eqs,ind) =
   let val eqs_bind = defSuffix stem
@@ -560,26 +584,6 @@ fun protect eqns = list_mk_conj (map protect_rhs (strip_conj eqns));
 
 val unprotect_term = rhs o concl o PURE_REWRITE_CONV [combinTheory.I_THM];
 val unprotect_thm  = PURE_REWRITE_RULE [combinTheory.I_THM];
-
-(*---------------------------------------------------------------------------*)
-(* Once patterns are instantiated and the clauses are simplified, there can  *)
-(* still remain right-hand sides with occurrences of fully concrete tests on *)
-(* literals. Here we simplify those away.                                    *)
-(*                                                                           *)
-(* const_eq_ref is a reference cell that decides equality of literals such   *)
-(* as 23, "foo", #"G", 6w, 0b1000w. It gets updated in reduceLib, stringLib  *)
-(* and wordsLib.                                                             *)
-(*---------------------------------------------------------------------------*)
-
-fun elim_triv_literal_CONV tm =
-   let
-      val const_eq_conv = !const_eq_ref
-      val cnv = TRY_CONV (REWR_CONV literal_case_THM THENC BETA_CONV) THENC
-                RATOR_CONV (RATOR_CONV (RAND_CONV const_eq_conv)) THENC
-                PURE_ONCE_REWRITE_CONV [COND_CLAUSES]
-   in
-       cnv tm
-   end
 
 fun checkSV pats SV =
  let fun get_pat (GIVEN(p,_)) = p
@@ -1305,13 +1309,6 @@ fun prim_mk_defn stem eqns =
      | (_::_::_) => (* mutrec defns being made *)
         mutrec_defn (facts, stem, eqns)
  end
- handle e as HOL_ERR {origin_structure = "Defn", message = message, ...} =>
-       if not (String.isPrefix "at Induction.mk_induction" message) orelse
-          PmatchHeuristics.is_classic ()
-          then raise wrap_exn "Defn" "prim_mk_defn" e
-       else ( Feedback.HOL_MESG "Trying classic cases heuristic..."
-            ; PmatchHeuristics.with_classic_heuristic (prim_mk_defn stem) eqns)
-      | e => raise wrap_exn "Defn" "prim_mk_defn" e
 
 (*---------------------------------------------------------------------------*)
 (* Version of mk_defn that restores the term signature and grammar if it     *)

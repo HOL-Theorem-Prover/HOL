@@ -15,10 +15,12 @@ let
   val _ = print s;
 
   val _ = print_with_style [Bold] "Modes:\n";
-  val s =   "  -q      quiet mode, verify specifications automatically and just print end results\n";
+  val s =   "  -q      quiet mode, verify specifications automatically and\n\
+            \          just print end results\n";
   val s = s^"  -i      interactive mode, verify specifications step by step\n";
   val s = s^(if full then
-            "  -f      file mode, load files with interactive proofs\n\n" else "\n");
+            "  -f      file mode, load files with interactive proofs\n\n"
+             else "\n");
   val _ = print s;
   val _ = print_with_style [Bold] "Printing switches:\n";
   val s =   "  -nu     turn unicode off\n";
@@ -156,13 +158,17 @@ fun web_interface_print_goals gL =
       val nthmL = map (fn g => ("", mk_thm (valOf g))) (filter isSome gL);
       val _ = DiskThms.write_stream Portable.std_out nthmL;
       val _ = Portable.output (Portable.std_out, ("\n\n"));
-      fun print_goal (SOME g) =
-          (Portable.output (Portable.std_out, ("*************************************\n"));
-           Portable.flush_out Portable.std_out;
-           pprint goalStack.pp_goal g)
-        | print_goal NONE =
-          (Portable.output (Portable.std_out, ("*SOLVED******************************\n"));
-           Portable.flush_out Portable.std_out)
+      fun print_goal (SOME g) = (
+           TextIO.output (TextIO.stdOut,
+                          "*************************************\n");
+           TextIO.flushOut TextIO.stdOut;
+           pprint goalStack.pp_goal g
+        )
+        | print_goal NONE = (
+           TextIO.output (TextIO.stdOut,
+                          "*SOLVED******************************\n");
+           TextIO.flushOut TextIO.stdOut
+        )
 
       val _ = map print_goal gL;
    in
@@ -228,7 +234,9 @@ fun holfoot_run (full, filemode_command) = let
    fun pluck_num_arg a =
       let fun pl _ [] = raise ERR "pluck" "predicate not satisfied"
           | pl _ [h] = raise ERR "pluck" "predicate not satisfied"
-          | pl A (h::n::t) = if (h = a) then (valOf (Int.fromString n), List.revAppend(A,t)) else pl (h::A) (n::t)
+          | pl A (h::n::t) = if (h = a) then
+                               (valOf (Int.fromString n), List.revAppend(A,t))
+                             else pl (h::A) (n::t)
       in pl []
    end;
 
@@ -247,8 +255,9 @@ fun holfoot_run (full, filemode_command) = let
       handle _ => (false, args);
    val (raw_output, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-r") args))
       handle _ => (false, args);
-   val (html_output, args) = (true, Lib.snd (Lib.pluck (fn x => x = "--html") args))
-      handle _ => (false, args);
+   val (html_output, args) =
+       (true, Lib.snd (Lib.pluck (fn x => x = "--html") args))
+       handle _ => (false, args);
    val (do_profile, args) = (true, Lib.snd (Lib.pluck (fn x => x = "-p") args))
       handle _ => (false, args);
    fun print_profile () = if not do_profile then () else
@@ -257,10 +266,13 @@ fun holfoot_run (full, filemode_command) = let
    val (vl, args) = pluck_num_arg "-v" args handle _ => (0, args);
    val (vlt, args) = pluck_num_arg "-vt" args handle _ => (0, args);
 
-   val _ = Parse.current_backend := (if (raw_output) then PPBackEnd.raw_terminal else
-                                    (if (html_output) then PPBackEnd.html_terminal else PPBackEnd.vt100_terminal));
+   val _ = Parse.current_backend :=
+       (if raw_output then PPBackEnd.raw_terminal
+        else if html_output then PPBackEnd.html_terminal
+        else PPBackEnd.vt100_terminal);
    val _ = Feedback.set_trace "Unicode" (if unicode then 1 else 0)
-   val _ = Feedback.set_trace "holfoot print file" (if html_output then 0 else 1);
+   val _ = Feedback.set_trace "holfoot print file"
+                              (if html_output then 0 else 1);
    val _ = Feedback.set_trace "holfoot use Yices" (if yices then 1 else 0)
    val _ = Feedback.set_trace "holfoot verbose level" vl;
    val _ = Feedback.set_trace "holfoot verbose level try" vlt;
@@ -270,16 +282,27 @@ fun holfoot_run (full, filemode_command) = let
    val args = ((Lib.pluck (fn x => x = "-hi") args);print_interactive_help();[])
       handle _ => args;
 
-   fun prover file = if file_mode then filemode_command file else
-                     ((if intera then interactive_verify file else
-                       ((holfootLib.holfoot_interactive_verify_spec (not quiet) (not quiet) file (SOME [generate_vcs]) []);()));
-                     (if quiet then () else (print "\n\n\n"; ())));
+   fun prover file =
+       if file_mode then filemode_command file
+       else (
+         if intera then interactive_verify file
+         else (
+           holfootLib.holfoot_interactive_verify_spec
+             (not quiet) (not quiet) file (SOME [generate_vcs]) [];
+           ()
+         );
+         if quiet then () else print "\n\n\n"
+       )
+
 
    fun check_file file =
       (prover file) handle
-         _ => Parse.print_with_style [PPBackEnd.FG PPBackEnd.OrangeRed] "\nException raised!!!\n\n\n"
-   val _ = Profile.reset_all ();
-   val _ = if orgargs = [] then print_help full else ();
+         _ => Parse.print_with_style [PPBackEnd.FG PPBackEnd.OrangeRed]
+                                     "\nException raised!!!\n\n\n"
+
+   val _ = Profile.reset_all ()
+   val _ = if orgargs = [] then print_help full else ()
 in
-   ((map check_file args);print_profile())
+   map check_file args;
+   print_profile()
 end

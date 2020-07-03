@@ -12,6 +12,7 @@ struct
 end
 open Parse
 
+val prove = Tactical.default_prover
 val ERR = Feedback.mk_HOL_ERR "helperLib"
 
 val RW = REWRITE_RULE;
@@ -389,8 +390,8 @@ fun PRE_POST_CONV c = PRE_CONV c THENC POST_CONV c
 val PRE_POST_RULE = CONV_RULE o PRE_POST_CONV
 
 local
-   val cond_T = Q.prove (
-      `!p : 'a set set. (set_sep$cond T * p = p) /\ (p * set_sep$cond T = p)`,
+   val cond_T = prove (
+      “!p : 'a set set. (set_sep$cond T * p = p) /\ (p * set_sep$cond T = p)”,
       REWRITE_TAC [set_sepTheory.SEP_CLAUSES])
    val rule1 =
       PRE_POST_RULE (REWRITE_CONV [cond_T]) o

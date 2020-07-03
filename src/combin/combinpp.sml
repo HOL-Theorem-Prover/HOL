@@ -120,6 +120,9 @@ fun upd_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
                             else (fn p => p)
             | _ => fn p => p
       val arrow_grav = Prec(100, mapsto_special)
+      val mygrav = case Parse.fixity ld_s of
+                       SOME (term_grammar.Suffix i) => Prec(i, ld_s)
+                     | _ => raise UserPP_Failed
       fun prkv (k,v) =
           block PP.INCONSISTENT 2 (
             printer {gravs = (arrow_grav,Top,arrow_grav),
@@ -131,13 +134,13 @@ fun upd_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
     in
       paren (
         block PP.CONSISTENT 0 (
-          printer {gravs = (pgr,lgr,Top), depth = decdepth depth,
+          printer {gravs = (pgr,lgr,mygrav), depth = decdepth depth,
                    binderp = false} f >>
-          block PP.INCONSISTENT (UTF8.size ld_s) (
-            add_string ld_s >>
-            pr_list prkv (add_string ";" >> add_break(1,0)) kvs >>
-            add_string rd_s
-          )
+          add_string ld_s >> add_break(0,2) >>
+          block PP.INCONSISTENT 0 (
+            pr_list prkv (add_string ";" >> add_break(1,0)) kvs
+          ) >> add_break (0,0) >>
+          add_string rd_s
         )
       )
     end

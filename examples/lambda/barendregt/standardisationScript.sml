@@ -31,7 +31,7 @@ val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 structure NewQ = Q
 structure Q = struct open Q open OldAbbrevTactics end
 
-val _ = set_fixity "=" (Infix(NONASSOC, 100))
+val _ = ParseExtras.temp_loose_equality()
 
 
 val RUNION_def = relationTheory.RUNION

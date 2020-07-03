@@ -1,50 +1,8 @@
-(* non-interactive mode
-*)
-open HolKernel Parse boolLib;
+open HolKernel Parse bossLib boolLib;
+
+open combinTheory;
+
 val _ = new_theory "extra_bool";
-
-(* interactive mode
-show_assums := true;
-loadPath := union ["../finished"] (!loadPath);
-app load
-  ["bossLib", "arithmeticTheory", "dividesTheory", "gcdTheory",
-   "primeTheory", "res_quan2Theory", "pred_setTheory", "subtypeTheory",
-   "res_quanTools", "subtypeTools", "ho_proverTools", "numContext",
-   "millerTools", "extra_numTheory", "ho_basicTools",
-   "prob_extraTheory"];
-installPP subtypeTools.pp_precontext;
-installPP subtypeTools.pp_context;
-*)
-
-open bossLib res_quanTheory pred_setTheory subtypeTheory
-     res_quanTools subtypeTools ho_proverTools HurdUseful
-     ho_basicTools boolContext combinTheory;
-
-infixr 0 ++ << || THENC ORELSEC ORELSER ##;
-infix 1 >>;
-
-val !! = REPEAT;
-val op++ = op THEN;
-val op<< = op THENL;
-val op|| = op ORELSE;
-val op>> = op THEN1;
-
-(* ------------------------------------------------------------------------- *)
-(* Tools.                                                                    *)
-(* ------------------------------------------------------------------------- *)
-
-val S_TAC = !! (POP_ASSUM MP_TAC) ++ !! RESQ_STRIP_TAC;
-
-val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS bool_c;
-
-val Strip = S_TAC;
-val Simplify = R_TAC;
-val Suff = SUFF_TAC;
-val Know = KNOW_TAC;
-
-(* ------------------------------------------------------------------------- *)
-(* Definitions.                                                              *)
-(* ------------------------------------------------------------------------- *)
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
@@ -67,9 +25,57 @@ val SELECT_EXISTS_UNIQUE = store_thm
 
 val CONJ_EQ_IMP = store_thm
   ("CONJ_EQ_IMP",
-   ``!a b c. (a ==> (b = c)) ==> (a /\ b = a /\ c)``,
+   ``!a b c. (a ==> (b <=> c)) ==> (a /\ b <=> a /\ c)``,
    PROVE_TAC []);
 
-(* non-interactive mode
-*)
+(* ------------------------------------------------------------------------- *)
+
+val xor_def = Define `xor (x:bool) y = ~(x = y)`;
+val _ = set_fixity "xor" (Infixr 750);
+
+val xor_comm = store_thm
+  ("xor_comm",
+   ``!x y. x xor y <=> y xor x``,
+   RW_TAC bool_ss [xor_def] THEN DECIDE_TAC);
+
+val xor_assoc = store_thm
+  ("xor_assoc",
+   ``!x y z. (x xor y) xor z <=> x xor (y xor z)``,
+   RW_TAC bool_ss [xor_def] THEN DECIDE_TAC);
+
+val xor_F = store_thm
+  ("xor_F",
+   ``!x. x xor F <=> x``,
+   RW_TAC bool_ss [xor_def]);
+
+val xor_F = store_thm
+  ("xor_F",
+   ``!x. F xor x <=> x``,
+   RW_TAC bool_ss [xor_def]);
+
+val xor_T = store_thm
+  ("xor_T",
+   ``!x. x xor T <=> ~x``,
+   RW_TAC bool_ss [xor_def]);
+
+val T_xor = store_thm
+  ("T_xor",
+   ``!x. T xor x <=> ~x``,
+   RW_TAC bool_ss [xor_def]);
+
+val xor_refl = store_thm
+  ("xor_refl",
+   ``!x. ~(x xor x)``,
+   RW_TAC bool_ss [xor_def]);
+
+val xor_inv = store_thm
+  ("xor_inv",
+   ``!x. x xor ~x``,
+   RW_TAC bool_ss [xor_def] THEN DECIDE_TAC);
+
+val inv_xor = store_thm
+  ("inv_xor",
+   ``!x. ~x xor x``,
+   RW_TAC bool_ss [xor_def] THEN DECIDE_TAC);
+
 val _ = export_theory ();

@@ -1,6 +1,7 @@
-open HolKernel Parse bossLib boolLib boolSimps categoryTheory functorTheory nat_transTheory pairTheory lcsymtacs SatisfySimps;
+open HolKernel Parse bossLib boolLib boolSimps categoryTheory functorTheory nat_transTheory pairTheory SatisfySimps;
 
 val _ = new_theory "limit";
+val _ = ParseExtras.temp_loose_equality()
 
 val is_terminal_def = Define`
   is_terminal c y = y ∈ c.obj ∧ ∀x. x ∈ c.obj ⇒ ∃!f. f :- x → y-:c`;

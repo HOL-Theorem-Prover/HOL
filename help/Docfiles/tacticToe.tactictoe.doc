@@ -1,0 +1,11 @@
+\DOC tactictoe
+
+\TYPE {tactictoe : term -> thm}
+
+\SYNOPSIS
+A call to the rule {tacticToe.tactictoe} on a term {tm} is equivalent to 
+a call to the tactic {tacticToe.ttt} on the goal {([],tm)}.
+
+\SEEALSO
+tacticToe.ttt
+\ENDDOC

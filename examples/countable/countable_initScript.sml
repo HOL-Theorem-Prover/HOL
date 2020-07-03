@@ -1,4 +1,4 @@
-open HolKernel bossLib boolLib pred_setTheory lcsymtacs
+open HolKernel bossLib boolLib pred_setTheory
 
 val _ = new_theory "countable_init"
 

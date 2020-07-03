@@ -146,6 +146,10 @@ fun foldr2' _ [] [] z = z
   | foldr2' f (x::xs) (y::ys) z = f x y (foldr2' f xs ys z)
   | foldr2' _ _ _ _ = raise ListPair.UnequalLengths
 
+fun zip3 ([], [], []) = []
+  | zip3 (h1::t1, h2::t2, h3::t3) = (h1,h2,h3) :: zip3 (t1,t2,t3)
+  | zip3 _ = raise ListPair.UnequalLengths
+
 (* separate s [x1, x2, ..., xn] ===> [x1, s, x2, s, ..., s, xn] *)
 
 fun separate s (x :: (xs as _ :: _)) = x :: s :: separate s xs
@@ -172,6 +176,16 @@ val split = unzip
 fun mapfilter f = List.mapPartial (total f)
 
 val flatten = List.concat
+fun front_last l =
+  let
+     fun fl _ [] = raise List.Empty
+       | fl acc [x] = (List.rev acc, x)
+       | fl acc (h :: t) = fl (h :: acc) t
+  in
+     fl [] l
+  end
+
+
 
 fun trypluck' f list =
    let
@@ -414,9 +428,11 @@ fun set_eq S1 S2 = set_diff S1 S2 = [] andalso set_diff S2 S1 = []
 (* functions for lifting equality functions over standard type operators *)
 type 'a eqf = 'a -> 'a -> bool
 fun pair_eq eq1 eq2 (x1,y1) (x2,y2) = eq1 x1 x2 andalso eq2 y1 y2
+fun fst_eq eq (x1,y1) (x2,y2) = eq x1 x2
 fun option_eq eq NONE NONE = true
   | option_eq eq (SOME x) (SOME y) = eq x y
   | option_eq _ _ _ = false
+fun inv_img_eq f (eq:'b eqf) a1 a2 = eq (f a1) (f a2)
 fun list_eq eq l1 l2 = ListPair.allEq (fn (x,y) => eq x y) (l1, l2)
 fun redres_eq eq1 eq2 {residue=res1,redex=red1} {residue=res2,redex=red2} =
   eq1 red1 red2 andalso eq2 res1 res2

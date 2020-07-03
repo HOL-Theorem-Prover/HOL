@@ -48,7 +48,7 @@ bar
 ##eval Term`p /\ q ==>
             r`;
 
-   ##eval 3 + 4;
+##eval 3 + 4;
 
 >>__ g `!n. 0 < n ==> 0 < n * n`;
 >> e Induct;
@@ -67,3 +67,12 @@ bar
 ##parsetm :'a list
 >>__ load "root2Theory"
 >> root2Theory.SQRT_2_IRRATIONAL
+
+##thm AND_CLAUSES
+
+##thm50 AND_CLAUSES
+
+>>- Theorem foo:
+      x < x + 1n
+    Proof simp[]
+    QED

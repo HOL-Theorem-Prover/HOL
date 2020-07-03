@@ -23,8 +23,8 @@ A call to {output_words_as_dec} will make word literals output in decimal format
 
 \SEEALSO
 
-wordsLib.output_words_as, wordsLib.remove_word_printer,
-wordsLib.output_words_as_dec, wordsLib.output_words_as_bin,
+wordsLib.remove_word_printer,
+wordsLib.output_words_as_hex, wordsLib.output_words_as_bin,
 wordsLib.output_words_as_oct
 
 \ENDDOC

@@ -15,7 +15,7 @@ quietdec := true;
 open HolKernel Parse boolLib;
 open bossLib arithmeticTheory dividesTheory gcdTheory
      res_quanTheory pred_setTheory subtypeTheory
-     res_quanTools subtypeTools ho_proverTools numContext HurdUseful
+     res_quanTools subtypeTools ho_proverTools numContext hurdUtils
      extra_numTheory ho_basicTools util_probTheory;
 
 (* interactive mode
@@ -23,6 +23,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "extra_arith";
+val _ = ParseExtras.temp_loose_equality()
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
 infix 1 >>;

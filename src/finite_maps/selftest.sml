@@ -5,25 +5,22 @@ open alist_treeLib
 fun testeval (s, t, expected) =
   let
     val _ = tprint s
-    val th = EVAL t
-         handle _ => die "FAILED - exception raised"
-    val r = rhs (concl th) handle HOL_ERR _ => die "FAILED - no RHS"
   in
-    if aconv r expected then OK()
-    else die ("FAILED\n  Got >|" ^ term_to_string r ^"|<")
+    require_msg (check_result (aconv expected)) term_to_string
+                (rhs o concl o EVAL) t
   end
 
 val _ = tprint "sptreeSyntax.fromList"
 val tm1 =
     fromList (List.tabulate (100, fn i => numSyntax.term_of_int (2 * i)))
-             handle HOL_ERR _ => die "FAILED"
+             handle HOL_ERR _ => (die "FAILED"; boolSyntax.T)
 val _ = OK()
 val _ = tprint "sptreeSytax.fromAList"
 val tm2 =
     fromAList
       (List.tabulate
          (100, fn i => (Arbnum.fromInt (2 * i), numSyntax.term_of_int i)))
-      handle HOL_ERR _ => die "FAILED"
+      handle HOL_ERR _ => (die "FAILED"; boolSyntax.T)
 val _ = OK()
 
 

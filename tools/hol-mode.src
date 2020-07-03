@@ -18,9 +18,8 @@
 
 (define-prefix-command 'hol-map)
 (define-prefix-command 'hol-d-map)
+(define-prefix-command 'hol-movement-map)
 (make-variable-buffer-local 'hol-buffer-name)
-(make-variable-buffer-local 'hol-buffer-ready)
-(set-default 'hol-buffer-ready nil)
 (set-default 'hol-buffer-name "*HOL*")
 
 (set-default 'hol-default-buffer nil)
@@ -34,6 +33,12 @@
   "Path-name for the Holmake executable."
   :group 'hol
   :type '(file :must-match t))
+
+(defconst holdir
+  (file-name-directory
+   (directory-file-name (file-name-directory hol-executable))))
+(setq load-path (cons (concat holdir "tools/") load-path))
+(require 'holscript-mode)
 
 (defcustom hol-new-buffer-style-default 'new-frame
   "Default style for creating new HOL buffers. Possible values are
@@ -108,13 +113,24 @@ evaluations.")
 
 (defvar-local hol-term-end-delim nil)
 (put 'hol-term 'end-op
-     (function (lambda ()
-                 (re-search-forward "[`’]\\|^Proof" nil t)
-                 (setq hol-term-end-delim (match-string 0))
-                 (goto-char (match-beginning 0)))))
+     (function
+      (lambda ()
+        (let ((pthm-point
+               (save-excursion
+                 (re-search-forward "^Proof\\|^Theorem\\|^Triviality" nil t))))
+          (if (and pthm-point (equal (match-string 0) "Proof"))
+              (progn (goto-char (match-beginning 0))
+                     (setq hol-term-end-delim "Proof"))
+            (re-search-forward "[`’”]\\|^End\\|^Termination" nil t)
+            (setq hol-term-end-delim (match-string 0))
+            (goto-char (match-beginning 0)))))))
 (defvar hol-beg-pos nil) ; ugh, global, but easiest this way
+(defvar hol-name-attrs-colon-re
+  "[[:space:]]+[A-Za-z0-9'_]+\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
 (defvar hol-quoted-theorem-proof-re-begin
-  "Theorem[[:space:]]+[A-Za-z0-9'_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
+  (concat "\\(Theorem\\|Triviality\\)" hol-name-attrs-colon-re))
+(defvar hol-quoted-definition-re-begin
+  (concat "\\(Definition\\|\\(Co\\)?Inductive\\)" hol-name-attrs-colon-re))
 (put 'hol-term 'beginning-op
      (function
       (lambda ()
@@ -122,8 +138,12 @@ evaluations.")
                (cond
                 ((equal hol-term-end-delim "`") "`")
                 ((equal hol-term-end-delim "’") "‘")
+                ((equal hol-term-end-delim "”") "“")
                 ((equal hol-term-end-delim "Proof")
-                 hol-quoted-theorem-proof-re-begin))))
+                 hol-quoted-theorem-proof-re-begin)
+                ((or (equal hol-term-end-delim "End")
+                     (equal hol-term-end-delim "Termination"))
+                 hol-quoted-definition-re-begin))))
           (re-search-backward beg nil t)
           (goto-char (match-end 0))
           (setq hol-beg-pos (point))))))
@@ -131,14 +151,6 @@ evaluations.")
 (defun hol-term-at-point ()
   (let ((s (thing-at-point 'hol-term)))
     (with-hol-locpragma hol-beg-pos s)))
-
-;;; makes buffer hol aware.  Currently this consists of no more than
-;;; altering the syntax table if its major is sml-mode.
-(defun make-buffer-hol-ready ()
-  (if (eq major-mode 'sml-mode)
-      (progn
-        (modify-syntax-entry ?` "$")
-        (modify-syntax-entry ?\\ "\\"))))
 
 (defun hol-buffer-ok (string)
   "Checks a string to see if it is the name of a good HOL buffer.
@@ -151,8 +163,6 @@ process in it."
 
 (defun ensure-hol-buffer-ok ()
   "Ensures by prompting that a HOL buffer name is OK, and returns it."
-  (if (not hol-buffer-ready)
-      (progn (make-buffer-hol-ready) (setq hol-buffer-ready t)))
   (if (hol-buffer-ok hol-buffer-name) hol-buffer-name
     (message
      (cond (hol-buffer-name (concat hol-buffer-name " not valid anymore."))
@@ -169,252 +179,6 @@ process in it."
     hol-buffer-name))
 
 
-(defun forward-smlsymbol (n)
-  (interactive "p")
-  (cond ((> n 0)
-         (while (> n 0)
-           (skip-syntax-forward "^.")
-           (skip-syntax-forward ".")
-           (setq n (- n 1))))
-        ((< n 0)
-         (setq n (- n))
-         (setq n (- n (if (equal (skip-syntax-backward ".") 0) 0 1))))
-         (while (> n 0)
-           (skip-syntax-backward "^.")
-           (skip-syntax-backward ".")
-           (setq n (- n 1)))))
-
-(defun is-a-then (s)
-  (and s (or (string-equal s "THEN")
-             (string-equal s "THENL")
-             (string-equal s "val")
-             (string-equal s ">-")
-             (string-equal s ">>")
-             (string-equal s ">|")
-             (string-equal s "\\\\"))))
-
-(defun next-hol-lexeme-terminates-tactic ()
-  (skip-syntax-forward " ")
-  (or (eobp)
-      (char-equal (following-char) ?,)
-      (char-equal (following-char) ?\))
-      ;; (char-equal (following-char) ?=)
-      (char-equal (following-char) ?\;)
-      (is-a-then (word-at-point))
-      (is-a-then (thing-at-point 'smlsymbol t))
-      (string= (word-at-point) "val")))
-
-(defun previous-hol-lexeme-terminates-tactic ()
-  (save-excursion
-    (skip-chars-backward " \n\t\r")
-    (or (bobp)
-        (char-equal (preceding-char) ?,)
-        (char-equal (preceding-char) ?=)
-        (char-equal (preceding-char) ?\;)
-        (char-equal (preceding-char) ?\))
-        (and (condition-case nil
-                 (progn (backward-char 1) t)
-                 (error nil))
-             (or (is-a-then (word-at-point))
-                 (is-a-then (thing-at-point 'smlsymbol t))
-                 (string= (word-at-point) "val"))))))
-
-(defun looking-at-tactic-terminator ()
-  "Returns a cons-pair (x . y), with x the distance to end, and y the
-   size of the terminator, or nil if there isn't one there. The x value may
-   be zero, if point is immediately after the terminator."
-  (interactive)
-  (let ((c (following-char))
-        (pc (preceding-char)))
-    (cond ((char-equal c ?,) '(1 . 1))
-          ((char-equal pc ?,) '(0 . 1))
-          ((char-equal c ?\)) '(1 . 1))
-          ((char-equal pc ?\)) '(0 . 1))
-          ((char-equal c ?\]) '(1 . 1))
-          ((char-equal pc ?\]) '(0 . 1))
-          ((char-equal c ?\;) '(1 . 1))
-          ((char-equal pc ?\;) '(0 . 1))
-          ((let ((w (word-at-point)))
-             (if (is-a-then w)
-                 (cons
-                  (- (cdr (bounds-of-thing-at-point 'word)) (point))
-                  (length w))
-               (let ((w (thing-at-point 'smlsymbol t)))
-                 (if (is-a-then w)
-                     (cons
-                      (- (cdr (bounds-of-thing-at-point 'smlsymbol)) (point))
-                      (length w))
-                   nil))))))))
-
-(defun looking-at-tactic-starter ()
-  "Returns a cons-pair (x . y), with x the distance to end, and y the
-   size of the terminator, or nil if there isn't one there. The x value may
-   be zero, if point is immediately after the terminator."
-  (interactive)
-  (let ((c (following-char))
-        (pc (preceding-char)))
-    (cond ((char-equal c ?,) '(1 . 1))
-          ((char-equal pc ?,) '(0 . 1))
-          ((char-equal c ?\() '(1 . 1))
-          ((char-equal pc ?\() '(0 . 1))
-          ((char-equal c ?\[) '(1 . 1))
-          ((char-equal pc ?\[) '(0 . 1))
-          ((char-equal c ?\;) '(1 . 1))
-          ((char-equal pc ?\;) '(0 . 1))
-          ((let ((w (word-at-point)))
-             (if (is-a-then w)
-                 (cons
-                  (- (cdr (bounds-of-thing-at-point 'word)) (point))
-                  (length w))
-               (let ((w (thing-at-point 'smlsymbol t)))
-                 (if (is-a-then w)
-                     (cons
-                      (- (cdr (bounds-of-thing-at-point 'smlsymbol)) (point))
-                      (length w))
-                   nil))))))))
-
-
-(defun forward-tactic-terminator (n)
-  (interactive "^p")
-  (cond ((> n 0)
-         (let (c)
-           (while (> n 0)
-             (skip-syntax-forward " ")
-             (setq c (looking-at-tactic-terminator))
-             (while (or (not c) (equal (car c) 0))
-               (forward-sexp)
-               (skip-syntax-forward " ")
-               (setq c (looking-at-tactic-terminator)))
-             (forward-char (car c))
-             (setq n (- n 1)))))
-        ((< n 0)
-         (setq n (- n))
-         (let (c)
-           (while (> n 0)
-             (skip-syntax-backward " ")
-             (setq c (looking-at-tactic-terminator))
-             (while (or (not c) (equal (car c) (cdr c)))
-               (condition-case nil
-                   (backward-sexp)
-                 (error (backward-char)))
-               (skip-syntax-backward " ")
-               (setq c (looking-at-tactic-terminator)))
-             (backward-char (- (cdr c) (car c)))
-             (setq n (- n 1)))))))
-
-(defun forward-tactic-starter (n)
-  (interactive "^p")
-  (cond ((> n 0)
-         (let (c)
-           (while (> n 0)
-             (skip-syntax-forward " ")
-             (setq c (looking-at-tactic-starter))
-             (while (or (not c) (equal (car c) 0))
-               (forward-sexp)
-               (skip-syntax-forward " ")
-               (setq c (looking-at-tactic-starter)))
-             (forward-char (car c))
-             (setq n (- n 1)))))
-        ((< n 0)
-         (setq n (- n))
-         (let (c)
-           (while (> n 0)
-             (skip-syntax-backward " ")
-             (setq c (looking-at-tactic-starter))
-             (while (or (not c) (equal (car c) (cdr c)))
-               (condition-case nil
-                   (backward-sexp)
-                 (error (backward-char)))
-               (skip-syntax-backward " ")
-               (setq c (looking-at-tactic-starter)))
-             (backward-char (- (cdr c) (car c)))
-             (setq n (- n 1)))))))
-
-(defun preceded-by-starter ()
-  (save-excursion
-    (backward-char)
-    (thing-at-point 'tactic-starter)))
-(defun forward-hol-tactic (n)
-  (interactive "^p")
-  (cond ((> n 0)
-         (while (> n 0)
-           (skip-syntax-forward " ")
-           (while (thing-at-point 'tactic-terminator)
-             (forward-tactic-terminator 1)
-             (skip-syntax-forward " "))
-           (while (not (thing-at-point 'tactic-terminator))
-             (forward-sexp 1)
-             (skip-syntax-forward " "))
-           (skip-syntax-backward " ")
-           (setq n (- n 1))))
-        ((< n 0)
-         (setq n (- n))
-         (while (> n 0)
-           (skip-syntax-backward " ")
-           (while (preceded-by-starter)
-             (forward-tactic-starter -1)
-             (skip-syntax-backward " "))
-           (while (not (preceded-by-starter))
-             (forward-sexp -1)
-             (skip-syntax-backward " "))
-           (skip-syntax-forward " ")
-           (setq n (- n 1))))))
-
-;;; returns true and moves forward a sexp if this is possible, returns nil
-;;; and stays where it is otherwise
-(defun my-forward-sexp ()
-  (condition-case nil
-      (progn (forward-sexp 1) t)
-    (error nil)))
-(defun my-backward-sexp()
-  (condition-case nil
-      (progn (backward-sexp 1) t)
-    (error nil)))
-
-(defun word-before-point ()
-  (save-excursion
-    (condition-case nil
-        (progn (backward-char 1) (word-at-point))
-      (error nil))))
-
-(defun backward-hol-tactic (n)
-  (interactive "p")
-  (forward-hol-tactic (if n (- n) -1)))
-
-(defun prim-mark-hol-tactic ()
-  (let ((bounds (bounds-of-thing-at-point 'hol-tactic)))
-    (if bounds
-        (progn
-          (goto-char (cdr bounds))
-          (push-mark (car bounds) t t)
-          (set-region-active))
-      (error "No tactic at point"))))
-
-(defun mark-hol-tactic ()
-  (interactive)
-  (let ((initial-point (point)))
-    (condition-case nil
-        (prim-mark-hol-tactic)
-      (error
-       ;; otherwise, skip white-space forward to see if this would move us
-       ;; onto a tactic.  If so, great, otherwise, go backwards and look for
-       ;; one there.  Only if all this fails signal an error.
-       (condition-case nil
-           (progn
-             (skip-chars-forward " \n\t\r")
-             (prim-mark-hol-tactic))
-         (error
-          (condition-case e
-              (progn
-                (if (skip-chars-backward " \n\t\r")
-                    (progn
-                      (backward-char 1)
-                      (prim-mark-hol-tactic))
-                  (prim-mark-hol-tactic)))
-            (error
-             (goto-char initial-point)
-             (signal (car e) (cdr e))))))))))
-
 
 (defun with-hol-locpragma (pos s)
   (if hol-generate-locpragma-p
@@ -430,15 +194,15 @@ process in it."
                       (if (= rowstart pos) 1 0)))
            (col      (+ (current-column) 1)))
       (goto-char initial-point)
-      (format " (*#loc %d %d *)" row col))))
+      (format " (*#loc %d %d *)\n" (- row 1) col))))
 
-(defun send-timed-string-to-hol (string echo-p)
+(defun send-timed-string-to-hol (string echo-p &optional loud-opens)
   "Send STRING to HOL (with send-string-to-hol), and emit information about
 how long this took."
   (interactive)
   (send-raw-string-to-hol
    "val hol_mode_time0 = #usr (Timer.checkCPUTimer Globals.hol_clock);" nil nil)
-  (send-string-to-hol string echo-p)
+  (send-string-to-hol string echo-p loud-opens)
   (send-raw-string-to-hol
        "val _ = let val t = #usr (Timer.checkCPUTimer Globals.hol_clock)
                       val elapsed = Time.-(t, hol_mode_time0)
@@ -530,16 +294,33 @@ With a prefix ARG, uses `expandf' rather than `e'."
     (send-raw-string-to-hol goal-string hol-echo-commands-p t)
     (send-raw-string-to-hol "proofManagerLib.set_backup 100;" nil nil)))
 
+(defun count-text-match (regex string)
+  (let ((case-fold-search nil)
+        (i 0)
+        (c 0))
+    (while (string-match regex string i)
+      (progn (setq i (match-end 0))
+             (setq c (+ c 1))))
+    c))
+
+(defun hol-string-contains-term-delimiters-p (s)
+  (< 0 (count-text-match
+        (concat "^Theorem\\|^Definition\\|^Proof\\|^\\(Co\\)?Inductive\\|"
+                "^Termination\\|^End\\|[“”‘’`]\\|^Triviality")
+        s)))
+
+
 (defun hol-do-goal (arg)
   "Send term around point to HOL process as goal.
 If prefix ARG is true, or if in transient mark mode, region is active and
-the region contains no backquotes, then send region instead."
+the region contains no term-delimiters, then send region instead."
   (interactive "P")
   (let ((txt (condition-case nil
                  (with-hol-locpragma (region-beginning)
                     (buffer-substring (region-beginning) (region-end)))
                (error nil))))
-    (if (or (and (is-region-active) (= (count ?\` txt) 0))
+    (if (or (and (is-region-active)
+                 (not (hol-string-contains-term-delimiters-p txt)))
             arg)
       (send-string-as-hol-goal txt)
     (send-string-as-hol-goal (hol-term-at-point)))))
@@ -566,12 +347,12 @@ the region contains no backquotes, then send region instead."
       (send-string-as-hol-goaltree txt)
     (send-string-as-hol-goaltree (hol-term-at-point)))))
 
-(defun copy-region-as-hol-definition (start end arg)
+(defun copy-region-as-hol-definition (start end arg &optional loud-opens0)
   "Send selected region to HOL process as definition/expression.  With a
 prefix arg of 4 (hit control-u once), wrap what is sent so that it becomes
 ( .. ) handle e => Raise e, allowing HOL_ERRs to be displayed cleanly.
-With a prefix arg of 16 (hit control-u twice), toggle Moscow ML's quiet-dec
-variable before and after the region is sent."
+With a prefix arg of 16 (hit control-u twice), toggle `quiet-declarations'
+before and after the region is sent."
   (interactive "r\np")
   (let* ((buffer-string
             (with-hol-locpragma start (buffer-substring start end)))
@@ -579,22 +360,26 @@ variable before and after the region is sent."
           (if (= arg 4)
               (concat "(" buffer-string ") handle e => Raise e")
             buffer-string))
+         (loud-opens (if (= arg 16) t loud-opens0))
          (sender (if hol-emit-time-elapsed-p
                      'send-timed-string-to-hol
                    'send-string-to-hol)))
     (if (= arg 16) (hol-toggle-quietdec))
-    (funcall sender send-string hol-echo-commands-p)
-    (if (> (length send-string) 300)
-        (send-string-to-hol
-         "val _ = print \"\\n*** Emacs/HOL command completed ***\\n\\n\""))
-    (if (= (prefix-numeric-value arg) 16) (hol-toggle-quietdec))))
+    (unwind-protect
+        (progn
+          (funcall sender send-string hol-echo-commands-p loud-opens)
+          (if (> (length send-string) 300)
+              (send-string-to-hol
+               (concat "val _ = print \"\\n*** Emacs/HOL command completed "
+                       "***\\n\\n\""))))
+      (if (= (prefix-numeric-value arg) 16) (hol-toggle-quietdec)))))
 
 
 
 (defun copy-region-as-hol-definition-quietly (start end)
    (interactive "r")
    (hol-toggle-quiet-quietdec)
-   (copy-region-as-hol-definition start end 0)
+   (copy-region-as-hol-definition start end 0 t)
    (hol-toggle-quiet-quietdec))
 
 
@@ -611,13 +396,14 @@ With prefix argument, drop the goal afterwards."
 (defun hol-start-termination-proof (arg)
   "Send definition around point to HOL process as Defn.tgoal.
 If prefix ARG is true, or if in transient mark mode, region is active and
-the region contains no backquotes, then send region instead."
+the region contains no term delimiters, then send region instead."
   (interactive "P")
   (let ((txt (condition-case nil
                  (with-hol-locpragma (region-beginning)
                     (buffer-substring (region-beginning) (region-end)))
                (error nil))))
-    (if (or (and (is-region-active) (= (count ?\` txt) 0))
+    (if (or (and (is-region-active)
+                 (not (hol-string-contains-term-delimiters-p txt)))
             arg)
       (hol-send-string-as-termination-proof txt)
     (hol-send-string-as-termination-proof (hol-term-at-point)))))
@@ -639,11 +425,12 @@ the region contains no backquotes, then send region instead."
       (if (not done) (message "Incomplete comment in region given"))
       done))
 
-(defun remove-quoted-hol-term (bq eq end-marker)
+(defun remove-quoted-hol-term (bq eq end-marker &optional extra)
   (let ((start (point))
-        (bqsize (length bq)))
+        (bqsize (length bq))
+        (i (if extra extra 0)))
     (if (re-search-forward eq end-marker t)
-        (delete-region (- start bqsize) (point))
+        (delete-region (- start (- bqsize i)) (point))
       (error
        (format "Incomplete (%s...%s-quoted) HOL term in region given; \
 starts >%s%s<"
@@ -659,116 +446,130 @@ starts >%s%s<"
           (delete-region (- start 1) (point))))))
 
 
-(defun remove-sml-junk (start end)
-  "Removes all sml comments, HOL terms and strings in the given region."
-  (interactive "r")
-  (let ((m (make-marker))
-        (regexp
-         (concat "(\\*\\|`\\|\"\\|“\\|‘\\|" hol-quoted-theorem-proof-re-begin)))
-    (set-marker m end)
-    (save-excursion
-      (goto-char start)
-      (while (re-search-forward regexp m t)
-        (let ((ms (match-string 0)))
-          (cond ((string= ms "(*") (remove-sml-comments m))
-                ((string= ms "\"") (remove-hol-string m))
-                ((string= ms "“") (remove-quoted-hol-term "“" "”" m))
-                ((string= ms "‘") (remove-quoted-hol-term "‘" "’" m))
-                ((string-prefix-p "Theorem" ms)
-                 (remove-quoted-hol-term ms "^Proof" m))
-                (t ; must be a back-tick
-                 (if (not (looking-at "`"))
-                     (remove-quoted-hol-term "`" "`" m)
-                   (forward-char 1)
-                   (remove-quoted-hol-term "``" "``" m))))))
-      (set-marker m nil))))
-
-(defun remove-sml-lets-locals
-  (start end &optional looking-for-end &optional recursing)
-  "Removes all local-in-ends and let-in-ends from a region.  We assume
-that the buffer has already had HOL terms, comments and strings removed."
-  (interactive "r")
-  (let ((m (if (not recursing) (set-marker (make-marker) end) end))
-        retval)
-    (if (not recursing) (goto-char start))
-    (if (re-search-forward "\\blet\\b\\|\\blocal\\b\\|\\bend\\b" m t)
-        (let ((declstring (match-string 0)))
-          (if (or (string= declstring "let") (string= declstring "local"))
-              (and
-               (remove-sml-lets-locals (- (point) (length declstring)) m t t)
-               (remove-sml-lets-locals start m looking-for-end t)
-               (setq retval t))
-            ;; found an "end"
-            (if (not looking-for-end)
-                (message "End without corresponding let/local")
-              (delete-region start (point))
-              (setq retval t))))
-      ;; didn't find anything
-      (if looking-for-end
-          (message "Let/local without corresponding end")
-        (setq retval t)))
-    (if (not recursing) (set-marker m nil))
-    retval))
-
 (defun word-list-to-regexp (words)
-  (mapconcat (lambda (s) (concat "\\b" s "\\b")) words "\\|"))
+  (mapconcat (lambda (s) (concat "\\<" s "\\>")) words "\\|"))
 
 (setq hol-open-terminator-regexp
-      (concat ";\\|"
-              (word-list-to-regexp
-               '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
-                 "datatype" "nonfix" "exception" "end" "structure"
-                 "Theorem"))))
+      (concat
+       (mapconcat (lambda (s) (concat "^" s "\\>"))
+                  '("Theorem" "Definition" "Inductive" "CoInductive"
+                    "Triviality" "Datatype" "Type" "Overload")
+                  "\\|")
+       "\\|"
+       (word-list-to-regexp
+        '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
+          "datatype" "nonfix" "exception" "end" "structure"))))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
-(defun send-string-to-hol (string &optional echoit)
+(defun send-string-to-hol (string &optional echoit leave-loud-opens)
   "Send a string to HOL process."
   (let ((buf (ensure-hol-buffer-ok))
-        (hol-ok hol-buffer-ready)
         (tmpbuf (generate-new-buffer "*HOL temporary*"))
         (old-mark-active (is-region-active)))
     (unwind-protect
         (save-excursion
           (set-buffer tmpbuf)
-          (modify-syntax-entry ?_ "w")
+          (holscript-mode)
           (setq hol-buffer-name buf) ; version of this variable in tmpbuf
-          (setq hol-buffer-ready hol-ok) ; version of this variable in tmpbuf
           (setq case-fold-search nil) ; buffer-local version
           (insert string)
-          (goto-char (point-min))
-          (remove-sml-junk (point-min) (point-max))
           (goto-char (point-min))
           ;; first thing to do is to search through buffer looking for
           ;; identifiers of form id.id.  When spotted such identifiers need
           ;; to have the first component of the name loaded.
-          (if hol-auto-load-p
-             (while (re-search-forward (concat "\\(" sml-struct-id-regexp
-                                            "\\)\\.\\w+")
-                                       (point-max) t)
-               (hol-load-string (match-string 1)))
-             t)
-          ;; next thing to do is to look for open declarations
-          (goto-char (point-min))
-          ;; search through buffer for open declarations
-          (while (re-search-forward "\\s-open\\s-" (point-max) t)
-            ;; point now after an open, now search forward to end of
-            ;; buffer or a semi-colon, or an infix declaration or a
-            ;; val or a fun or another open  (as per the regexp defined just
-            ;; before this function definition
-            (let ((start (point))
-                  (end
-                   (save-excursion
-                     (if (re-search-forward hol-open-terminator-regexp
-                                            (point-max) t)
-                         (- (point) (length (match-string 0)))
-                       (point-max)))))
-              (hol-load-modules-in-region start end)))
+          (let ((regexp
+                 (concat "`\\|“\\|‘\\|"
+                         hol-quoted-theorem-proof-re-begin "\\|"
+                         hol-quoted-definition-re-begin "\\|"
+                         "\\(" sml-struct-id-regexp "\\)\\.\\w+" "\\|"
+                         "\\_<open\\_>")))
+            (while (re-search-forward regexp (point-max) t)
+              (let ((pp (syntax-ppss))
+                    (ms (match-string-no-properties 0)))
+                (if (and (not (nth 3 pp)) (not (nth 4 pp)))
+                    ;; maybe looking at termish thing that needs dodging
+                    (cond
+                     ((string= ms "`")
+                      (let ((term
+                             (if (looking-at "`") ; double backtick
+                                 (progn (forward-char 1) "``") "`")))
+                        (if (not (re-search-forward term nil t))
+                            (error
+                             (concat "Unbalanced " term " in region")))))
+                     ((string= ms "“")
+                      (if (not (re-search-forward "”" nil t))
+                          (error "Unbalanced “ in region")))
+                     ((string= ms "‘")
+                      (if (not (re-search-forward "’" nil t))
+                          (error "Unbalanced “ in region")))
+                     ((and (or (string-prefix-p "Theorem" ms)
+                               (string-prefix-p "Triviality" ms))
+                           (char-equal (char-before) ?:))
+                      (if (not (re-search-forward "^Proof" nil t))
+                          (error "Unbalanced `Theorem/Triviality' in region")))
+                     ((and (string-prefix-p "Definition" ms)
+                           (char-equal (char-before) ?:))
+                      (if (not
+                           (re-search-forward "^Termination\\|^End" nil t))
+                          (error "Unbalanced `Definition' in region")))
+                     ((and (or (string-prefix-p "Inductive" ms)
+                               (string-prefix-p "CoInductive" ms))
+                           (char-equal (char-before) ?:))
+                      (if (not (re-search-forward "^End" nil t))
+                          (error "Unbalanced [Co]Inductive in region")))
+                     ((string= ms "open")
+                      ;; point now after an open, now search forward
+                      ;; to end of buffer or a semi-colon, or an infix
+                      ;; declaration or a val or a fun or another open
+                      ;; or whatever, (as per the regexp defined just
+                      ;; before this function definition)
+                      (let ((open-start (match-beginning 0))
+                            (start (point))
+                            (end
+                             (save-excursion
+                               (let ((case-fold-search nil)
+                                     (foundp nil)
+                                     (abortedp nil))
+                                 ;; complicated loop required to avoid being
+                                 ;; confused by input such as
+                                 ;; open listSyntax (* ; *) integerTheory;
+                                 (while (and (not foundp) (not abortedp))
+                                   (if (re-search-forward
+                                        hol-open-terminator-regexp
+                                        nil t)
+                                       (setq foundp
+                                             (let ((pp (syntax-ppss)))
+                                               (and (not (nth 3 pp))
+                                                    (not (nth 4 pp)))))
+                                     (setq abortedp t)))
+                                 (if foundp
+                                     (- (point) (length (match-string 0)))
+                                   (point-max)))))
+                            (endm (make-marker)))
+                        ; (message "Handling an open")
+                        (if hol-auto-load-p
+                            (hol-load-modules-in-region start end))
+                        (if leave-loud-opens nil
+                            ;; now bracket the open decl with quietdec toggles
+                          (set-marker endm end)
+                          (goto-char end)
+                          (insert
+                           ";val _ = HOL_Interactive.toggle_quietdec();\n")
+                          (goto-char open-start)
+                          (insert
+                           "val _ = HOL_Interactive.toggle_quietdec();\n")
+                          (goto-char endm) (set-marker endm nil))))
+                     (t
+                      ; (message "Saw \"%s\"; position = %d; loading: %s"
+                      ;           ms (point) (match-string 6))
+                      (if hol-auto-load-p
+                          (hol-load-string (match-string 6))))))))
           ;; send the string
-          (delete-region (point-min) (point-max))
-          (insert string)
-          (send-buffer-to-hol-maybe-via-file echoit))
-      (kill-buffer tmpbuf)) ; kill buffer always
+          (goto-char (point-min))
+            (send-buffer-to-hol-maybe-via-file echoit)))
+      (kill-buffer tmpbuf) ; kill buffer always (inside unwind-protect)
+      )
     ;; deactivate-mark will have likely been set by all the editting actions
     ;; in the temporary buffer.  We fix this here, thereby keeping the mark
     ;; active, if it is active.
@@ -956,7 +757,9 @@ file to \"use\" first."
   (save-excursion
     (goto-char start)
     (while (re-search-forward (concat "\\b" sml-struct-id-regexp "\\b") end t)
-      (hol-load-string (match-string 0)))))
+      (let ((ppss (syntax-ppss)))
+        (if (and (not (nth 4 ppss)) (not (nth 3 ppss)))
+            (hol-load-string (match-string 0)))))))
 
 (defun hol-load-file (arg)
   "Gets HOL session to \"load\" the file at point.
@@ -1101,6 +904,7 @@ region instead. With prefix ARG prompt for a file-name to load."
   (concat "using " (hol-executable-with-bare)))
 
 (defun hol-display ()
+   "Attempts to bring the HOL buffer to the fore (calling `display-buffer')."
    (interactive)
    (display-buffer hol-buffer-name))
 
@@ -1112,11 +916,12 @@ region instead. With prefix ARG prompt for a file-name to load."
 (defun hol-horizontal ()
   "Runs a HOL session after splitting the window"
   (interactive)
-  (hol '((lambda (b al)
+  (hol '(display-buffer-reuse-window
+         (lambda (b al)
            (let ((split-height-threshold nil)
-                 (split-width-threshold 1))
+                 (split-width-threshold 0))
              (display-buffer-pop-up-window b al))))
-       '((window-width . 80))))
+       '((window-width . 83) (reusable-frames . nil))))
 
 (defvar hol-new-buffer-style hol-new-buffer-style-default)
 
@@ -1376,6 +1181,43 @@ printed out.  (That's assuming that quietdec is false to start with.)"
   (send-raw-string-to-hol (format "Hol_pp.print_match [] (Term`%s`)" tm)
                           hol-echo-commands-p t))
 
+(defun hol-check-dbselector (s)
+  (if (string-prefix-p "'" s) (string-suffix-p "'" s)
+    (if (string-prefix-p "\"" s) (string-suffix-p "\"" s)
+      t)))
+
+(defun hol-make-db-select-string (args)
+  (let ((sels (mapconcat (lambda (s) (if (string-prefix-p "'" s)
+                                      (concat "DB.SelTHY \""
+                                              (substring s 1 -1) "\"")
+                                    (if (string-prefix-p "\"" s)
+                                        (concat "DB.SelNM \""
+                                                (substring s 1 -1) "\"")
+                                      (concat "DB.SelTM “" s "”"))))
+                         args ", ")))
+    (concat "DB.selectDB [" sels "]")))
+
+(defconst hol-db-select-info "('thy'; \"name\"; term pattern)" "")
+(defun hol-db-select (arg1)
+  "Calls DB.selectDB on the sequence of `selectors' provided.
+A selector is a string (as per DB.find) that matches against the name of
+the theorem, given in double quotes; a theory name, given in single quotes,
+or a term pattern, given without delimiters."
+  (interactive "sFirst selector pattern('thy'; \"name\"; term pattern): ")
+  (or (string-equal arg1 "")
+      (and (not (hol-check-dbselector arg1))
+           (error "Malformed DB selector: %s" arg1))
+      (let ((args (list arg1)) next-arg)
+        (while (and (setq next-arg
+                          (read-string (concat "Next DB selector"
+                                               hol-db-select-info
+                                               ": ")))
+                    (not (string-equal next-arg "")))
+          (if (hol-check-dbselector next-arg)
+              (setq args (cons next-arg args))
+            (error "Malformed DB selector: %s" next-arg)))
+        (send-string-to-hol (hol-make-db-select-string args)))))
+
 (defun hol-db-find (tm)
   "Does a DB.find on the given string and formats the result nicely."
   (interactive "sTheorem name part: ")
@@ -1394,12 +1236,16 @@ printed out.  (That's assuming that quietdec is false to start with.)"
   (send-raw-string-to-hol "Sanity.sanity_check()"
                           hol-echo-commands-p t))
 
+(defun hol-db-find-consts (ty)
+  "Does bossLib.find_consts on a given type and prints the result."
+  (interactive "sType of constant: ")
+  (send-raw-string-to-hol (format "bossLib.find_consts ``%s``" ty)
+                          hol-echo-commands-p t))
+
 (defun hol-drop-all-goals ()
   "Drops all HOL goals from the current proofs object."
   (interactive)
-  (send-raw-string-to-hol
-   (concat "proofManagerLib.dropn (case proofManagerLib.status() of "
-           "Manager.PRFS l => List.length l)") nil t))
+  (send-raw-string-to-hol "proofManagerLib.drop_all()" hol-echo-commands-p t))
 
 (defun hol-subgoal-tactic (p)
   "Without a prefix argument, sends term at point (delimited by backquote
@@ -1445,250 +1291,10 @@ second is to show the new term.
 
 ;; (define-key comint-mode-map "\r" 'hol-return-key)
 
-
-
-;;templates
-(defun hol-extract-script-name (arg)
-  "Return the name of the theory associated with the given filename"
-(let* (
-   (pos (string-match "[^/]*Script\.sml" arg)))
-   (cond (pos (substring arg pos -10))
-         (t "<insert theory name here>"))))
-
-(defun hol-template-new-script-file ()
-  "Inserts standard template for a HOL theory"
-   (interactive)
-   (insert "open HolKernel Parse boolLib bossLib;\n\nval _ = new_theory \"")
-   (insert (hol-extract-script-name buffer-file-name))
-   (insert "\";\n\n\n\n\nval _ = export_theory();\n\n"))
-
-(defun hol-template-comment-star ()
-   (interactive)
-   (insert "\n\n")
-   (insert "(******************************************************************************)\n")
-   (insert "(*                                                                            *)\n")
-   (insert "(*                                                                            *)\n")
-   (insert "(*                                                                            *)\n")
-   (insert "(******************************************************************************)\n"))
-
-(defun hol-template-comment-minus ()
-   (interactive)
-   (insert "\n\n")
-   (insert "(* -------------------------------------------------------------------------- *)\n")
-   (insert "(*                                                                            *)\n")
-   (insert "(*                                                                            *)\n")
-   (insert "(*                                                                            *)\n")
-   (insert "(* -------------------------------------------------------------------------- *)\n"))
-
-(defun hol-template-comment-equal ()
-   (interactive)
-   (insert "\n\n")
-   (insert "(* ========================================================================== *)\n")
-   (insert "(*                                                                            *)\n")
-   (insert "(*                                                                            *)\n")
-   (insert "(*                                                                            *)\n")
-   (insert "(* ========================================================================== *)\n"))
-
-(defun hol-template-define (name)
-   (interactive "sNew name: ")
-   (insert "val ")
-   (insert name)
-   (insert "_def = Define `")
-   (insert name)
-   (insert " = `;\n"))
-
-(defun hol-template-store-thm (name)
-   (interactive "sTheorem name: ")
-   (insert "val ")
-   (insert name)
-   (insert " = store_thm(")
-   (cond ((> (length name) 30) (insert "\n  "))
-          (t t))
-   (insert "\"")
-   (insert name)
-   (insert "\",\n  ``  ``,\n"))
-
-(defun hol-template-new-datatype ()
-   (interactive)
-   (insert "val _ = Datatype `TREE = LEAF ('a -> num) | BRANCH TREE TREE`;\n"))
-
-;;checking for trouble with names in store_thm, save_thm, Define
-(setq store-thm-regexp
-   "val[ \t\n]*\\([^ \t\n]*\\)[ \t\n]*=[ \t\n]*store_thm[ \t\n]*([ \t\n]*\"\\([^\"]*\\)\"")
-(setq save-thm-regexp
-   "val[ \t\n]*\\([^ \t\n]*\\)[ \t\n]*=[ \t\n]*save_thm[ \t\n]*([ \t\n]*\"\\([^\"]*\\)\"")
-(setq define-thm-regexp
-   "val[ \t\n]*\\([^ \t\n]*\\)_def[ \t\n]*=[ \t\n]*Define[ \t\n]*`[ \t\n(]*\$?\\([^ \t\n([!?:]*\\)")
-
-(setq statement-eq-regexp-list (list store-thm-regexp save-thm-regexp define-thm-regexp))
-
-(defun hol-correct-eqstring (s1 p1 s2 p2)
-  (interactive)
-  (let (choice)
-    (setq choice 0)
-    (while (eq choice 0)
-      (message
-       (concat
-	"Different names used. Please choose one:\n(0) "
-	s1 "\n(1) " s2 "\n(i) ignore"))
-      (setq choice (if (fboundp 'read-char-exclusive)
-		       (read-char-exclusive)
-		     (read-char)))
-      (cond ((= choice ?0) t)
-	    ((= choice ?1) t)
-	    ((= choice ?i) t)
-	    (t (progn (setq choice 0) (ding))))
-      )
-    (if (= choice ?i) t
-    (let (so sr pr)
-      (cond ((= choice ?0) (setq so s1 sr s2 pr p2))
-	    (t             (setq so s2 sr s1 pr p1)))
-      (delete-region pr (+ pr (length sr)))
-      (goto-char pr)
-      (insert so)
-      ))))
-
-
-(defun hol-check-statement-eq-string ()
-  (interactive)
-  (save-excursion
-  (dolist (current-regexp statement-eq-regexp-list t)
-  (goto-char 0)
-  (let (no-error-found s1 p1 s2 p2)
-    (while (re-search-forward current-regexp nil t)
-      (progn (setq s1 (match-string-no-properties 1))
-             (setq s2 (match-string-no-properties 2))
-             (setq p1 (match-beginning 1))
-             (setq p2 (match-beginning 2))
-             (setq no-error-found (string= s1 s2))
-             (if no-error-found t (hol-correct-eqstring s1 p1 s2 p2)))))
-  (message "checking for problematic names done"))))
-
-
-;;indentation and other cleanups
-(defun hol-replace-tabs-with-spaces ()
-   (save-excursion
-      (goto-char (point-min))
-      (while (search-forward "\t" nil t)
-         (delete-region (- (point) 1) (point))
-         (let* ((count (- tab-width (mod (current-column) tab-width))))
-           (dotimes (i count) (insert " "))))))
-
-(defun hol-remove-tailing-whitespaces ()
-   (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward " +$" nil t)
-         (delete-region (match-beginning 0) (match-end 0)))))
-
-
-(defun hol-remove-tailing-empty-lines ()
-   (save-excursion
-      (goto-char (point-max))
-      (while (bolp) (delete-char -1))
-      (insert "\n")))
-
-(defun hol-cleanup-buffer ()
-   (interactive)
-   (hol-replace-tabs-with-spaces)
-   (hol-remove-tailing-whitespaces)
-   (hol-remove-tailing-empty-lines)
-   (message "Buffer cleaned up!"))
-
-;;replace common unicode chars with ascii version
-(setq hol-unicode-replacements '(
-  (nil "¬" "~")
-  (nil "∧" "/\\\\")
-  (nil "∨" "\\\\/")
-  (nil "⇒" "==>")
-  (nil "⇔" "<=>")
-  (nil "⇎" "<=/=>")
-  (nil "≠" "<>")
-  (nil "∃" "?")
-  (nil "∀" "!")
-  (nil "λ" "\\\\")
-  (nil "“" "``")
-  (nil "”" "``")
-  (nil "‘" "`")
-  (nil "’" "`")
-  (t "∈" "IN")
-  (t "∉" "NOTIN")
-  (nil "α" "'a")
-  (nil "β" "'b")
-  (nil "γ" "'c")
-  (nil "δ" "'d")
-  (nil "ε" "'e")
-  (nil "ζ" "'f")
-  (nil "η" "'g")
-  (nil "θ" "'h")
-  (nil "ι" "'i")
-  (nil "κ" "'j")
-  (nil "μ" "'l")
-  (nil "ν" "'m")
-  (nil "ξ" "'n")
-  (nil "ο" "'o")
-  (nil "π" "'p")
-  (nil "ρ" "'q")
-  (nil "ς" "'r")
-  (nil "σ" "'s")
-  (nil "τ" "'t")
-  (nil "υ" "'u")
-  (nil "φ" "'v")
-  (nil "χ" "'w")
-  (nil "ψ" "'x")
-  (nil "ω" "'y")
-  (t "≤₊" "<=+")
-  (t ">₊" ">+")
-  (t "<₊" "<+")
-  (t "≥₊" ">=+")
-  (t "≤" "<=")
-  (t "≥" ">=")
-  (nil "⁺" "^+")
-  (t "∅ᵣ" "EMPTY_REL")
-  (t "𝕌ᵣ" "RUNIV")
-  (t "⊆ᵣ" "RSUBSET")
-  (t "∪ᵣ" "RUNION")
-  (t "∩ᵣ" "RINTER")
-  (t "∅" "{}")
-  (nil "𝕌" "univ")
-  (t "⊆" "SUBSET")
-  (t "∪" "UNION")
-  (t "∩" "INTER")
-  (t "⊕" "??")
-  (t "‖" "||")
-  (t "≪" "<<")
-  (t "≫" ">>")
-  (t "⋙" ">>>")
-  (t "⇄" "#>>")
-  (t "⇆" "#<<")
-  (t "∘" "o")
-  (t "∘ᵣ" "O")
-  (t "−" "-")
-))
-
-
-(defun replace-string-in-buffer (s_old s_new)
-   (save-excursion
-      (goto-char (point-min))
-      (while (search-forward s_old nil t)
-         (replace-match s_new))))
-
-(defun replace-string-in-buffer_ensure_ws (s_old s_new)
-  (replace-string-in-buffer (concat " " s_old " ") (concat " " s_new " "))
-  (replace-string-in-buffer (concat s_old " ") (concat " " s_new " "))
-  (replace-string-in-buffer (concat " " s_old) (concat " " s_new " "))
-  (replace-string-in-buffer s_old (concat " " s_new " "))
-)
-
-(defun hol-remove-unicode ()
-  (interactive)
-  (save-excursion
-    (save-restriction
-      (if (use-region-p) (narrow-to-region (region-beginning) (region-end)))
-      (dolist (elt hol-unicode-replacements)
-        (if (nth 0 elt)
-          (replace-string-in-buffer_ensure_ws (nth 1 elt) (nth 2 elt))
-          (replace-string-in-buffer (nth 1 elt) (nth 2 elt))
-          )))))
+(defun hol-overload-info-for (term-name)
+  "Get HOL to print overload information for term-name"
+  (interactive "sOverloaded name: ")
+  (send-string-to-hol (format "overload_info_for \"%s\"" term-name)))
 
 
 ;;load-path
@@ -1911,7 +1517,49 @@ second is to show the new term.
                 (buffer-substring (point-min) (point-max))
               (delete-region (point-min) (point-max))))))))
 
-(font-lock-add-keywords 'sml-mode '("\\<Theorem\\>" "^Proof\\>" "^QED\\>"))
+(add-hook 'sml-mode-hook
+          (lambda ()
+            (local-set-key "`" 'holscript-dbl-backquote)
+            (message "Running HOL SML hook")
+))
+
+(defun hol-find-quoted-material (limit)
+  (let ((beginmatch (re-search-forward hol-term-begin-re limit t))
+        (ppss (syntax-ppss)))
+    (while (and beginmatch (or (nth 3 ppss) (nth 4 ppss)))
+      (setq beginmatch (re-search-forward hol-term-begin-re limit t))
+      (setq ppss (syntax-ppss)))
+    (if (not beginmatch) nil
+      (let* ((start-delim (match-string-no-properties 0))
+             (begin-marker
+              (if (= (length start-delim) 1)
+                  (set-marker (make-marker) (1- (point)))
+                (point-marker)))
+             (endre (hol-term-matching-delim start-delim))
+             (endmatch (if endre (re-search-forward endre limit t)
+                         (message (format "No end-delim for %s" start-delim))
+                         nil)))
+        (if (not endmatch) nil
+          (if (= (length start-delim) 1) nil (goto-char (match-beginning 0)))
+          (set-match-data (list begin-marker (point-marker)))
+          t)))))
+;  (re-search-forward "^Theorem[[:space:]]+[A-Za-z0-9'_]+\\(?:\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:\\(\\(?:\n  \\|.\\)+\\)\nProof" limit t))
+
+(defun hol-thm-prefix (s)
+  (or (string-prefix-p "Theorem" s) (string-prefix-p "Triviality" s)))
+(defun hol-defn-prefix (s) (string-prefix-p "Definition" s))
+(defun hol-indn-prefix (s)
+  (or (string-prefix-p "Inductive" s) (string-prefix-p "CoInductive" s)))
+
+(defun hol-term-matching-delim (start-delim)
+  (pcase start-delim
+    ("“" "”")
+    ("‘" "’")
+    ("Datatype:" "^End\\>")
+    ((pred hol-thm-prefix) "^Proof\\>")
+    ((pred hol-indn-prefix) "^End\\>")
+    ((pred hol-defn-prefix) "^Termination\\>\\|^End\\>")))
+
 
 (defgroup hol-faces nil "Faces used in pretty-printing HOL values"
   :group 'faces
@@ -1966,8 +1614,45 @@ second is to show the new term.
     (shell-command (concat "ps2pdf " temp-ps-file " " filename))
     (delete-file temp-ps-file)))
 
+(setq hol-term-beginend-re
+      (concat
+       (regexp-opt
+        '("Theorem" "End" "Definition" "Inductive" "Termination" "Proof"
+          "CoInductive" "Datatype" "Triviality") "^\\(")
+       "\\|"
+       (regexp-opt '("“" "‘" "”" "’"))))
+(defvar hol-term-end-re (regexp-opt '("End" "Termination" "Proof" "”" "’")))
+(defvar hol-term-begin-re
+  (concat
+   (regexp-opt '("“" "‘")) "\\|"
+   hol-quoted-theorem-proof-re-begin "\\|"
+   hol-quoted-definition-re-begin "\\|"
+   "Datatype[[:space:]]*:"))
+
+(defun hol-fl-term-bump-backwards (pos)
+  (save-excursion
+    (goto-char pos)
+    (let ((match (re-search-backward hol-term-beginend-re nil t)))
+      (if (not match) pos
+        (if (looking-at hol-term-end-re) pos
+          (if (looking-at hol-term-begin-re) (match-beginning 0) pos))))))
+
+(defun hol-fl-term-bump-forwards (pos)
+  (save-excursion
+    (goto-char pos)
+    (let ((match (re-search-forward hol-term-beginend-re nil t)))
+      (if (not match) pos
+        (goto-char (match-beginning 0))
+        (if (looking-at hol-term-begin-re) pos
+          (if (looking-at hol-term-end-re) (match-end 0) pos))))))
+
+
+
+
+
 ;;The key combinations
 (define-key global-map "\M-h" 'hol-map)
+(define-key global-map (kbd "C-M-h") 'hol-movement-map)
 (define-prefix-command 'holpp-map)
 (define-key hol-map "\M-p" 'holpp-map)
 
@@ -1977,8 +1662,6 @@ second is to show the new term.
 (define-key hol-map "\C-q" 'hol-toggle-quietdec)
 (define-key hol-map "\C-s" 'hol-toggle-simplifier-trace)
 (define-key hol-map "\C-v" 'hol-scroll-up)
-(define-key hol-map "\M-f" 'forward-hol-tactic)
-(define-key hol-map "\M-b" 'backward-hol-tactic)
 (define-key hol-map "\M-r" 'copy-region-as-hol-definition)
 (define-key hol-map "\C-r" 'copy-region-as-hol-definition-quietly)
 (define-key hol-map "\M-q" 'copy-region-as-hol-definition-real-quietly)
@@ -1998,14 +1681,17 @@ second is to show the new term.
 (define-key hol-map "h"    'hol)
 (define-key hol-map "H"    'hol-with-region)
 (define-key hol-map "\M-m" 'holmake)
-(define-key hol-map "4"    'hol-display)
-(define-key hol-map "3"    'hol-horizontal)
 (define-key hol-map "2"    'hol-vertical)
+(define-key hol-map "3"    'hol-horizontal)
+(define-key hol-map "4"    'hol-display)
 (define-key hol-map "l"    'hol-load-file)
 (define-key hol-map "m"    'hol-db-match)
+(define-key hol-map "M"    'hol-db-select)
 (define-key hol-map "f"    'hol-db-find)
+(define-key hol-map "c" 'hol-db-find-consts)
 (define-key hol-map "n"    'hol-name-top-theorem)
 (define-key hol-map "o"    'hol-open-string)
+(define-key hol-map "O"    'hol-overload-info-for)
 (define-key hol-map "p"    'hol-print-goal)
 (define-key hol-map "P"    'hol-print-all-goals)
 (define-key hol-map "r"    'hol-rotate)
@@ -2015,12 +1701,14 @@ second is to show the new term.
 (define-key hol-map "i"    'hol-type-info)
 (define-key hol-map "s"    'interactive-send-string-to-hol)
 (define-key hol-map "u"    'hol-use-file)
-(define-key hol-map "c"    'hol-db-check-current)
+(define-key hol-map "C"    'hol-db-check-current)
 (define-key hol-map "a"    'hol-remove-unicode)
 (define-key hol-map "*"    'hol-template-comment-star)
 (define-key hol-map "-"    'hol-template-comment-minus)
 (define-key hol-map "="    'hol-template-comment-equal)
+(define-key hol-map "\M-c" 'hol-template-hol-coreln)
 (define-key hol-map "\M-d" 'hol-template-define)
+(define-key hol-map "\M-i" 'hol-template-hol-reln)
 (define-key hol-map "\M-x" 'hol-template-store-thm)
 
 
@@ -2044,6 +1732,11 @@ second is to show the new term.
 (define-key holpp-map "t"    'hol-toggle-pp-annotations)
 (define-key holpp-map "s"    'hol-toggle-pp-styles)
 (define-key holpp-map "c"    'hol-toggle-pp-cases)
+
+(define-key hol-movement-map "u" 'hol-movement-backward-up-list)
+
+
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2121,6 +1814,9 @@ second is to show the new term.
 (define-key global-map [menu-bar hol-menu hol-misc sep1]
    '(menu-item "--"))
 
+(define-key global-map [menu-bar hol-menu hol-misc hol-overload-info-for]
+  '("Overload info for string" . hol-overload-info-for))
+
 (define-key global-map [menu-bar hol-menu hol-misc hol-type-info]
    '("Type info of marked term" . hol-type-info))
 
@@ -2146,6 +1842,12 @@ second is to show the new term.
 
 (define-key global-map [menu-bar hol-menu hol-template new-datatype]
    '("New datatype" . hol-template-new-datatype))
+
+(define-key global-map [menu-bar hol-menu hol-template hol-coreln]
+   '("Coinductive definition" . hol-template-hol-coreln))
+
+(define-key global-map [menu-bar hol-menu hol-template hol-reln]
+   '("Inductive definition" . hol-template-hol-reln))
 
 (define-key global-map [menu-bar hol-menu hol-template define]
    '("New definition" . hol-template-define))

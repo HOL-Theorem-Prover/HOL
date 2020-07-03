@@ -1,8 +1,9 @@
 open HolKernel Parse boolLib bossLib
 
-open boolSimps lcsymtacs
+open boolSimps
 
 open listTheory pred_setTheory finite_mapTheory locationTheory
+open relationTheory
 
 val FLAT_APPEND = rich_listTheory.FLAT_APPEND
 val rveq = rpt BasicProvers.VAR_EQ_TAC
@@ -10,103 +11,105 @@ fun asm_match q = Q.MATCH_ASSUM_RENAME_TAC q
 
 val _ = new_theory "grammar"
 
-val _ = ParseExtras.tight_equality()
-
 val _ = type_abbrev("inf", ``:'a + num``)
-val _ = Datatype `symbol = TOK 'a | NT ('b inf)`;
+Datatype: symbol = TOK 'a | NT ('b inf)
+End
 
-val isTOK_def = Define`(isTOK (TOK tok) = T) ∧ (isTOK (NT n) = F)`
-val _ = export_rewrites ["isTOK_def"]
+Definition isTOK_def[simp]:
+  (isTOK (TOK tok) = T) ∧ (isTOK (NT n) = F)
+End
 
-val destTOK_def = Define`
+Definition destTOK_def[simp]:
   (destTOK (TOK tk, _) = SOME tk) ∧
   (destTOK _ = NONE)
-`;
-val _ = export_rewrites ["destTOK_def"]
+End
 
-val _ = Datatype`
+Datatype:
   grammar = <|
    start : 'b inf;
    rules : 'b inf |-> ('a,'b)symbol list set
-|> `;
+  |>
+End
 
-val _ = Datatype`
+Datatype:
   parsetree = Lf (('a,'b) symbol # 'locs)
             | Nd ('b inf # 'locs) (parsetree list)
-`;
+End
 
-val ptree_loc_def = Define`
-  (ptree_loc (Lf(_,l)) = l)/\
-  (ptree_loc (Nd(_,l) _) = l)`
+Definition ptree_loc_def:
+  ptree_loc (Lf(_,l)) = l ∧
+  ptree_loc (Nd(_,l) _) = l
+End
 
-val ptree_list_loc = Define`
-  ptree_list_loc l = merge_list_locs (MAP ptree_loc l)`
+Definition ptree_list_loc_def:
+  ptree_list_loc l = merge_list_locs (MAP ptree_loc l)
+End
 
 
-val ptree_size_def = tDefine "ptree_size" `
+Definition ptree_size_def:
   (ptree_size (Lf _) = 1) ∧
   (ptree_size (Nd nt children) = 1 + SUM (MAP ptree_size children))
-`
-(WF_REL_TAC `measure (parsetree_size (K 1) (K 1) (K 1))` >>
+Termination
+   WF_REL_TAC `measure (parsetree_size (K 1) (K 1) (K 1))` >>
    Induct_on `children` >>
    rw[definition "parsetree_size_def"] >- decide_tac >>
    res_tac >> pop_assum (qspecl_then [`p_2`, `p_1`] mp_tac) >>
-   simp_tac (srw_ss()) [] >> decide_tac)
+   simp_tac (srw_ss()) [] >> decide_tac
+End
 
 Theorem ptree_size_def[simp,compute] =
    CONV_RULE (DEPTH_CONV ETA_CONV) ptree_size_def;
 
-val ptree_head_def = Define`
+Definition ptree_head_def[simp]:
   (ptree_head (Lf (tok,l)) = tok) ∧
   (ptree_head (Nd (nt,l) children) = NT nt)
-`;
-val _ = export_rewrites ["ptree_head_def"]
+End
 
-val noneval = Lib.with_flag (computeLib.auto_import_definitions,false)
-fun tzDefine nm q tac = noneval (tDefine nm q) tac
-val valid_ptree_def = tzDefine "valid_ptree" `
+Definition valid_ptree_def[simp,nocompute]:
   (valid_ptree G (Lf _) ⇔ T) ∧
   (valid_ptree G (Nd (nt,l) children) ⇔
     nt ∈ FDOM G.rules ∧ MAP ptree_head children ∈ G.rules ' nt ∧
-    ∀pt. pt ∈ set children ⇒ valid_ptree G pt)`
-  (WF_REL_TAC `measure (ptree_size o SND)` THEN
+    ∀pt. pt ∈ set children ⇒ valid_ptree G pt)
+Termination
+   WF_REL_TAC `measure (ptree_size o SND)` THEN
    Induct_on `children` THEN SRW_TAC [][] THEN1 DECIDE_TAC THEN
-   RES_TAC THEN FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [])
-val _ = export_rewrites ["valid_ptree_def"]
+   RES_TAC THEN FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []
+End
 
-val ptree_fringe_def = tDefine "ptree_fringe" `
+Definition ptree_fringe_def:
   (ptree_fringe (Lf (t,_)) = [t]) ∧
   (ptree_fringe (Nd _ children) = FLAT (MAP ptree_fringe children))
-` (WF_REL_TAC `measure ptree_size` THEN Induct_on `children` THEN
+Termination
+   WF_REL_TAC `measure ptree_size` THEN Induct_on `children` THEN
    SRW_TAC [][ptree_size_def] THEN1 DECIDE_TAC THEN
    FULL_SIMP_TAC (srw_ss() ++ ETA_ss) [ptree_size_def] THEN
-   RES_TAC THEN DECIDE_TAC)
+   RES_TAC THEN DECIDE_TAC
+End
 
 Theorem ptree_fringe_def[simp,compute] =
   CONV_RULE (DEPTH_CONV ETA_CONV) ptree_fringe_def
 
-val complete_ptree_def = Define`
+Definition complete_ptree_def:
   complete_ptree G pt ⇔
     valid_ptree G pt ∧ ptree_head pt = NT G.start ∧
-    ∀t. t ∈ set (ptree_fringe pt) ⇒ isTOK t`
+    ∀t. t ∈ set (ptree_fringe pt) ⇒ isTOK t
+End
 
 (* loc-free parse tree *)
-val _ = type_abbrev("lfptree", ``:(α,β,one) parsetree``)
+Type lfptree = “:(α,β,one) parsetree”
 
-val real_fringe_def = tDefine "real_fringe" `
+Definition real_fringe_def[simp]:
   (real_fringe (Lf t) = [t]) ∧
   (real_fringe (Nd n ptl) = FLAT (MAP real_fringe ptl))
-` (WF_REL_TAC `measure ptree_size` >> Induct_on `ptl` >> dsimp[] >>
-   fs[] >> rpt strip_tac >> res_tac >> simp[]);
-val _ = export_rewrites ["real_fringe_def"]
+Termination WF_REL_TAC `measure ptree_size` >> Induct_on `ptl` >> dsimp[] >>
+            fs[] >> rpt strip_tac >> res_tac >> simp[]
+End
 
-val MAP_TKI_11 = Q.store_thm(
-  "MAP_TKI_11[simp]",
-  ‘(MAP (TOK ## I) l1 = MAP (TOK ## I) l2) ⇔ (l1 = l2)’,
-  simp[listTheory.INJ_MAP_EQ_IFF,
-       pred_setTheory.INJ_DEF, pairTheory.FORALL_PROD]);
+Theorem MAP_TKI_11[simp]:
+  (MAP (TOK ## I) l1 = MAP (TOK ## I) l2) ⇔ (l1 = l2)
+Proof simp[listTheory.INJ_MAP_EQ_IFF, pred_setTheory.INJ_DEF, pairTheory.FORALL_PROD]
+QED
 
-val real_fringe_ind = theorem "real_fringe_ind"
 val ptree_fringe_real_fringe = Q.store_thm(
   "ptree_fringe_real_fringe",
   ‘∀pt. ptree_fringe pt = MAP FST (real_fringe pt)’,
@@ -128,40 +131,42 @@ val real_fringe_CONS_ptree_fringe = Q.prove(
              ∃rest'. ptree_fringe pt = TOK t :: rest'`,
   simp[ptree_fringe_real_fringe]);
 
-val valid_locs_def = tDefine "valid_locs" ‘
+Definition valid_locs_def[simp]:
   (valid_locs (Lf _) ⇔ T) ∧
   (valid_locs (Nd (_, l) children) ⇔
      l = merge_list_locs (MAP ptree_loc children) ∧
-     ∀pt. MEM pt children ⇒ valid_locs pt)’
+     ∀pt. MEM pt children ⇒ valid_locs pt)
+Termination
   (WF_REL_TAC ‘measure ptree_size’ >> simp[] >> Induct >> dsimp[] >>
-   rpt strip_tac >> res_tac >> simp[]);
-val _ = export_rewrites ["valid_locs_def"]
+   rpt strip_tac >> res_tac >> simp[])
+End
 
-val valid_lptree_def = Define `
+Definition valid_lptree_def:
   valid_lptree G pt ⇔ valid_locs pt ∧ valid_ptree G pt
-`;
+End
 
-val valid_lptree_thm = Q.store_thm(
-  "valid_lptree_thm[simp]",
-  ‘(valid_lptree G (Lf p) ⇔ T) ∧
-   (valid_lptree G (Nd (n, l) children) ⇔
+Theorem valid_lptree_thm[simp]:
+  (valid_lptree G (Lf p) ⇔ T) ∧
+  (valid_lptree G (Nd (n, l) children) ⇔
       l = merge_list_locs (MAP ptree_loc children) ∧
       n ∈ FDOM G.rules ∧ MAP ptree_head children ∈ G.rules ' n ∧
-      ∀pt. MEM pt children ⇒ valid_lptree G pt)’,
-  simp[valid_lptree_def] >> metis_tac[]);
+      ∀pt. MEM pt children ⇒ valid_lptree G pt)
+Proof simp[valid_lptree_def] >> metis_tac[]
+QED
 
-val language_def = Define`
+Definition language_def:
   language G =
    { ts |
-     ∃pt:(α,β)lfptree. complete_ptree G pt ∧ ptree_fringe pt = MAP TOK ts }`
+     ∃pt:(α,β)lfptree. complete_ptree G pt ∧ ptree_fringe pt = MAP TOK ts }
+End
 
-val derive_def = Define`
+Definition derive_def:
   derive G sf1 sf2 ⇔
     ∃p sym rhs s. sf1 = p ++ [NT sym] ++ s ∧ sf2 = p ++ rhs ++ s ∧
                   sym ∈ FDOM G.rules ∧ rhs ∈ G.rules ' sym
-`;
+End
 
-val RTC1 = relationTheory.RTC_RULES |> Q.SPEC `R` |> CONJUNCT2
+val RTC1 = RTC_RULES |> Q.SPEC `R` |> CONJUNCT2
                                     |> Q.GEN `R`
 val qxch = Q.X_CHOOSE_THEN
 fun qxchl [] ttac = ttac
@@ -176,65 +181,62 @@ val derive_common_suffix = store_thm(
   ``derive G sf1 sf2 ⇒ derive G (sf1 ++ s) (sf2 ++ s)``,
   rw[derive_def] >> metis_tac [APPEND_ASSOC]);
 
-val _ = overload_on ("derives", ``λG. RTC (derive G)``)
-val derive_paste_horizontally = store_thm(
-  "derive_paste_horizontally",
-  ``derive G sf11 sf12 ∧ derive G sf21 sf22 ⇒
-    derives G (sf11 ++ sf21) (sf12 ++ sf22)``,
-  metis_tac [derive_common_prefix, derive_common_suffix,
-             relationTheory.RTC_RULES])
+Overload derives = “λG. RTC (derive G)”
+Theorem derive_paste_horizontally:
+  derive G sf11 sf12 ∧ derive G sf21 sf22 ⇒ derives G (sf11 ++ sf21) (sf12 ++ sf22)
+Proof metis_tac [derive_common_prefix, derive_common_suffix,
+                 RTC_RULES]
+QED
 
-val derive_1NT = store_thm(
-  "derive_1NT",
-  ``derive G [NT s] l ⇔ s ∈ FDOM G.rules ∧ l ∈ G.rules ' s``,
-  rw[derive_def, APPEND_EQ_CONS]);
-val _ = export_rewrites ["derive_1NT"]
+Theorem derive_1NT[simp]: derive G [NT s] l ⇔ s ∈ FDOM G.rules ∧ l ∈ G.rules ' s
+Proof rw[derive_def, APPEND_EQ_CONS]
+QED
 
-val derives_common_prefix = store_thm(
-  "derives_common_prefix",
-  ``∀sf1 sf2 p. derives G sf1 sf2 ⇒ derives G (p ++ sf1) (p ++ sf2)``,
+Theorem derives_common_prefix:
+  ∀sf1 sf2 p. derives G sf1 sf2 ⇒ derives G (p ++ sf1) (p ++ sf2)
+Proof
   simp[GSYM PULL_FORALL] >>
-  ho_match_mp_tac relationTheory.RTC_INDUCT >> rw[] >>
-  metis_tac [relationTheory.RTC_RULES, derive_common_prefix]);
-val derives_common_suffix = store_thm(
-  "derives_common_suffix",
-  ``∀sf1 sf2 s. derives G sf1 sf2 ⇒ derives G (sf1 ++ s) (sf2 ++ s)``,
+  ho_match_mp_tac RTC_INDUCT >> rw[] >>
+  metis_tac [RTC_RULES, derive_common_prefix]
+QED
+Theorem derives_common_suffix:
+  ∀sf1 sf2 s. derives G sf1 sf2 ⇒ derives G (sf1 ++ s) (sf2 ++ s)
+Proof
   simp[GSYM PULL_FORALL] >>
-  ho_match_mp_tac relationTheory.RTC_INDUCT >> rw[] >>
-  metis_tac [relationTheory.RTC_RULES, derive_common_suffix]);
+  ho_match_mp_tac RTC_INDUCT >> rw[] >>
+  metis_tac [RTC_RULES, derive_common_suffix]
+QED
 
-val derives_paste_horizontally = store_thm(
-  "derives_paste_horizontally",
-  ``derives G sf11 sf12 ∧ derives G sf21 sf22 ⇒
-    derives G (sf11 ++ sf21) (sf12 ++ sf22)``,
-  metis_tac [relationTheory.RTC_CASES_RTC_TWICE,
-             derives_common_suffix, derives_common_prefix])
+Theorem derives_paste_horizontally:
+  derives G sf11 sf12 ∧ derives G sf21 sf22 ⇒ derives G (sf11 ++ sf21) (sf12 ++ sf22)
+Proof metis_tac [RTC_CASES_RTC_TWICE, derives_common_suffix, derives_common_prefix]
+QED
 
-val ptree_ind = save_thm(
-  "ptree_ind",
+Theorem ptree_ind =
   TypeBase.induction_of ``:('a,'b,'l)parsetree``
      |> Q.SPECL [`P`, `λl. ∀pt. MEM pt l ⇒ P pt`]
      |> SIMP_RULE (srw_ss() ++ CONJ_ss) []
      |> SIMP_RULE (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM]
-     |> Q.GEN `P`);
+     |> Q.GEN `P`;
 
-val valid_ptree_derive = store_thm(
-  "valid_ptree_derive",
-  ``∀pt. valid_ptree G pt ⇒ derives G [ptree_head pt] (ptree_fringe pt)``,
+Theorem valid_ptree_derive:
+  ∀pt. valid_ptree G pt ⇒ derives G [ptree_head pt] (ptree_fringe pt)
+Proof
   ho_match_mp_tac ptree_ind >> rw[] >> Cases_on`pt` >> fs[] >>
   match_mp_tac RTC1 >> qexists_tac `MAP ptree_head l` >> rw[] >>
   qpat_x_assum `SS ∈ G.rules ' s` (K ALL_TAC) >> Induct_on `l` >> rw[] >>
   fs[DISJ_IMP_THM, FORALL_AND_THM] >>
-  metis_tac [derives_paste_horizontally, APPEND]);
+  metis_tac [derives_paste_horizontally, APPEND]
+QED
 
-val FLAT_EQ_APPEND = store_thm(
-  "FLAT_EQ_APPEND",
-  ``FLAT l = x ++ y ⇔
+Theorem FLAT_EQ_APPEND:
+  FLAT l = x ++ y ⇔
     (∃p s. l = p ++ s ∧ x = FLAT p ∧ y = FLAT s) ∨
     (∃p s ip is.
        l = p ++ [ip ++ is] ++ s ∧ ip ≠ [] ∧ is ≠ [] ∧
        x = FLAT p ++ ip ∧
-       y = is ++ FLAT s)``,
+       y = is ++ FLAT s)
+Proof
   reverse eq_tac >- (rw[] >> rw[rich_listTheory.FLAT_APPEND]) >>
   map_every qid_spec_tac [`y`,`x`,`l`] >> Induct_on `l` >- simp[] >>
   simp[] >> map_every qx_gen_tac [`h`, `x`, `y`] >>
@@ -252,19 +254,20 @@ val FLAT_EQ_APPEND = store_thm(
        l = p ++ [ip ++ is] ++ s ∧ m = FLAT p ++ ip ∧ ip ≠ [] ∧ is ≠ [] ∧
        y = is ++ FLAT s)` by metis_tac[]
   >- (disj1_tac >> map_every qexists_tac [`h::p`, `s`] >> simp[]) >>
-  disj2_tac >> map_every qexists_tac [`h::p`, `s`] >> simp[])
+  disj2_tac >> map_every qexists_tac [`h::p`, `s`] >> simp[]
+QED
 
-val FLAT_EQ_NIL = store_thm(
-  "FLAT_EQ_NIL",
-  ``FLAT l = [] ⇔ ∀e. MEM e l ⇒ e = []``,
-  Induct_on `l` >> simp[DISJ_IMP_THM, FORALL_AND_THM]);
+Theorem FLAT_EQ_NIL: FLAT l = [] ⇔ ∀e. MEM e l ⇒ e = []
+Proof simp[listTheory.FLAT_EQ_NIL, EVERY_MEM] >> metis_tac[]
+QED
 
-val FLAT_EQ_SING = store_thm(
-  "FLAT_EQ_SING",
-  ``FLAT l = [x] ⇔
-    ∃p s. l = p ++ [[x]] ++ s ∧ FLAT p = [] ∧ FLAT s = []``,
+Theorem FLAT_EQ_SING:
+  FLAT l = [x] ⇔
+    ∃p s. l = p ++ [[x]] ++ s ∧ FLAT p = [] ∧ FLAT s = []
+Proof
   Induct_on `l` >> simp[] >> simp[APPEND_EQ_CONS] >>
-  simp_tac (srw_ss() ++ DNF_ss) [] >> metis_tac[]);
+  simp_tac (srw_ss() ++ DNF_ss) [] >> metis_tac[]
+QED
 
 val fringe_element = store_thm(
   "fringe_element",
@@ -403,7 +406,7 @@ val ptrees_derive_extensible = store_thm(
              valid_ptree G pt' ∧ ptree_head pt' = ptree_head pt ∧
              ptree_fringe pt' = sf2`
     >- metis_tac[] >>
-  ho_match_mp_tac relationTheory.RTC_STRONG_INDUCT >> rw[] >>
+  ho_match_mp_tac RTC_STRONG_INDUCT >> rw[] >>
   metis_tac [derive_fringe])
 
 val singleton_derives_ptree = store_thm(
@@ -432,7 +435,7 @@ val derives_leading_nonNT_E = store_thm(
          ∀N rest. N ∉ FDOM G.rules ∧ X = NT N :: rest ⇒
                   ∃rest'. Y = NT N :: rest' ∧ derives G rest rest'`
     suffices_by metis_tac[] >>
-  ho_match_mp_tac relationTheory.RTC_INDUCT >> simp[] >> rw[] >>
+  ho_match_mp_tac RTC_INDUCT >> simp[] >> rw[] >>
   fs[derive_def, Once APPEND_EQ_CONS] >>
   fs[APPEND_EQ_CONS] >> rw[] >> fs[] >>
   match_mp_tac RTC1 >> metis_tac [derive_def]);
@@ -445,9 +448,9 @@ val derives_leading_nonNT = store_thm(
   strip_tac >> eq_tac >- metis_tac [derives_leading_nonNT_E] >>
   rw[] >>
   metis_tac [APPEND, derives_paste_horizontally,
-             relationTheory.RTC_REFL]);
+             RTC_REFL]);
 
-val RTC_R_I = relationTheory.RTC_RULES |> SPEC_ALL |> CONJUNCT2 |> GEN_ALL
+val RTC_R_I = RTC_RULES |> SPEC_ALL |> CONJUNCT2 |> GEN_ALL
 val derives_split_horizontally = store_thm(
   "derives_split_horizontally",
   ``∀p s sf. derives G (p ++ s) sf ⇔
@@ -459,8 +462,8 @@ val derives_split_horizontally = store_thm(
                 (fn th2 => mp_tac th >> map_every qid_spec_tac [`s`, `p`] >>
                            mp_tac th2)) >>
   map_every qid_spec_tac [`sf`, `sf0`] >>
-  ho_match_mp_tac relationTheory.RTC_INDUCT >> simp[] >> conj_tac
-  >- metis_tac[relationTheory.RTC_REFL] >>
+  ho_match_mp_tac RTC_INDUCT >> simp[] >> conj_tac
+  >- metis_tac[RTC_REFL] >>
   map_every qx_gen_tac [`sf0`, `sf'`, `sf`] >> simp[derive_def] >>
   disch_then (CONJUNCTS_THEN2
                (qxchl [`pfx`, `N`, `r`, `sfx`] strip_assume_tac)

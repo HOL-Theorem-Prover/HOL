@@ -1,21 +1,11 @@
-(* interactive mode
-loadPath := ["../ho_prover","../subtypes","../formalize"] @ !loadPath;
-app load
-  ["bossLib", "pred_setTheory", "listTheory", "rich_listTheory",
-   "pairTheory", "realLib", "HurdUseful", "extra_listTheory",
-   "measureTheory","probabilityTheory",
-   "sequenceTools","extra_pred_setTools","prob_canonTools"];
-quietdec := true;
-*)
-
 open HolKernel Parse boolLib bossLib;
 
 open arithmeticTheory pred_setTheory listTheory rich_listTheory pairTheory
      combinTheory numSyntax extra_pred_setTools
-     extra_listTheory HurdUseful realTheory extra_realTheory realLib
+     extra_listTheory hurdUtils realTheory extra_realTheory realLib
      extra_numTheory seqTheory simpLib;
 
-open util_probTheory measureTheory probabilityTheory;
+open util_probTheory sigma_algebraTheory real_measureTheory real_probabilityTheory;
 open subtypeTheory extra_pred_setTheory;
 open sequenceTheory sequenceTools;
 open prob_canonTheory prob_canonTools;
@@ -25,8 +15,8 @@ quietdec := false;
 *)
 
 val _ = new_theory "prob_algebra";
+val _ = ParseExtras.temp_loose_equality()
 
-val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 val std_ss' = std_ss ++ boolSimps.ETA_ss;
 
 (* ------------------------------------------------------------------------- *)
@@ -184,7 +174,7 @@ val PROB_PRESERVING_LIFT = store_thm (
        f IN prob_preserving p1 (p_space p2, a, prob p2) ==>
        f IN prob_preserving p1 p2``,
    RW_TAC std_ss []
-   >> REVERSE (Cases_on `algebra (p_space p2, a)`)
+   >> reverse (Cases_on `algebra (p_space p2, a)`)
    >- ( Q.PAT_X_ASSUM `f IN P`
           (ASSUME_TAC o (REWRITE_RULE [IN_PROB_PRESERVING, events_def, p_space_def, m_space_def,
                                        measurable_sets_def, prob_def, measure_def])) \\
@@ -450,9 +440,9 @@ val PREFIX_SET_PREFIX_SUBSET = store_thm
    >- PSET_TAC [prefix_set_def, IS_PREFIX_NIL, GSYM PREFIX_SET_NIL, EXTENSION]
    >> PSET_TAC [prefix_set_def, IS_PREFIX, IN_HALFSPACE, EXTENSION]
    >> Q.PAT_X_ASSUM `!c. P c = Q c` (fn th => REWRITE_TAC [SYM (Q.SPEC `t` th)])
-   >> REVERSE EQ_TAC >- RW_TAC std_ss []
+   >> reverse EQ_TAC >- RW_TAC std_ss []
    >> STRIP_TAC
-   >> REVERSE STRONG_CONJ_TAC
+   >> reverse STRONG_CONJ_TAC
    >- (RW_TAC std_ss []
        >> Q.PAT_X_ASSUM `!x. P x ==> Q x` (MP_TAC o Q.SPEC `scons h x`)
        >> RW_TAC std_ss [SHD_SCONS, STL_SCONS])
@@ -654,11 +644,11 @@ val PROB_CANON_REP = store_thm
    >> HO_MATCH_MP_TAC PROB_CANONICAL_CASES
    >> CONJ_TAC
    >- (PSET_TAC [PROB_EMBED_NIL, PROB_EMBED_CONS, FOLDR, EXTENSION]
-       >> REVERSE (Cases_on `b`)
+       >> reverse (Cases_on `b`)
        >- (PSET_TAC [PROB_EMBED_NIL, FOLDR, APPEND, MAP, PROB_EMBED_CONS,
                      EXTENSION]
            >> PROVE_TAC [PREFIX_SET_POPULATED])
-       >> REVERSE (Cases_on `b'`)
+       >> reverse (Cases_on `b'`)
        >- (PSET_TAC [PROB_EMBED_NIL, FOLDR, APPEND, MAP, PROB_EMBED_CONS,
                      EXTENSION]
            >> PROVE_TAC [PREFIX_SET_POPULATED])
@@ -684,7 +674,7 @@ val PROB_CANONICAL_EMBED_EMPTY = store_thm
   ("PROB_CANONICAL_EMBED_EMPTY",
    ``!l. prob_canonical l ==> ((prob_embed l = {}) = (l = []))``,
    RW_TAC std_ss []
-   >> REVERSE EQ_TAC >- PSET_TAC [PROB_EMBED_BASIC, EXTENSION]
+   >> reverse EQ_TAC >- PSET_TAC [PROB_EMBED_BASIC, EXTENSION]
    >> RW_TAC std_ss []
    >> Suff `prob_canon l = prob_canon []`
    >- PROVE_TAC [prob_canonical_def, PROB_CANON_BASIC]
@@ -694,7 +684,7 @@ val PROB_CANONICAL_EMBED_UNIV = store_thm
   ("PROB_CANONICAL_EMBED_UNIV",
    ``!l. prob_canonical l ==> ((prob_embed l = UNIV) = (l = [[]]))``,
    RW_TAC std_ss []
-   >> REVERSE EQ_TAC >- PSET_TAC [PROB_EMBED_BASIC, EXTENSION]
+   >> reverse EQ_TAC >- PSET_TAC [PROB_EMBED_BASIC, EXTENSION]
    >> RW_TAC std_ss []
    >> Suff `prob_canon l = prob_canon [[]]`
    >- PROVE_TAC [prob_canonical_def, PROB_CANON_BASIC]
@@ -802,7 +792,7 @@ val PROB_ALGEBRA_STL = store_thm
   ("PROB_ALGEBRA_STL",
    ``!p. (p o stl) IN (subsets prob_algebra) = p IN (subsets prob_algebra)``,
    RW_TAC std_ss [IN_PROB_ALGEBRA]
-   >> REVERSE EQ_TAC
+   >> reverse EQ_TAC
    >- (PSET_TAC [o_DEF, EXTENSION]
        >> Q.EXISTS_TAC `APPEND (MAP (CONS T) b) (MAP (CONS F) b)`
        >> PSET_TAC [PROB_EMBED_APPEND, EXTENSION]
@@ -850,7 +840,7 @@ val PROB_ALGEBRA_INTER_HALVES = store_thm
        (halfspace F INTER p) IN (subsets prob_algebra) =
        p IN (subsets prob_algebra)``,
    STRIP_TAC
-   >> REVERSE EQ_TAC >- PROVE_TAC [PROB_ALGEBRA_INTER, PROB_ALGEBRA_HALFSPACE]
+   >> reverse EQ_TAC >- PROVE_TAC [PROB_ALGEBRA_INTER, PROB_ALGEBRA_HALFSPACE]
    >> REPEAT STRIP_TAC
    >> Suff `(halfspace T INTER p) UNION (halfspace F INTER p) = p`
    >- PROVE_TAC [PROB_ALGEBRA_UNION]
@@ -865,7 +855,7 @@ val PROB_ALGEBRA_HALVES = store_thm
        (halfspace T INTER p) IN (subsets prob_algebra) /\
        (halfspace F INTER q) IN (subsets prob_algebra)``,
    REPEAT STRIP_TAC
-   >> REVERSE EQ_TAC >- PROVE_TAC [PROB_ALGEBRA_UNION]
+   >> reverse EQ_TAC >- PROVE_TAC [PROB_ALGEBRA_UNION]
    >> REPEAT STRIP_TAC >|
    [Suff
     `halfspace T INTER p =
@@ -886,7 +876,7 @@ val PROB_ALGEBRA_INTER_SHD = store_thm
   ("PROB_ALGEBRA_INTER_SHD",
    ``!b p. (halfspace b INTER p o stl) IN (subsets prob_algebra) = p IN (subsets prob_algebra)``,
    RW_TAC std_ss []
-   >> REVERSE EQ_TAC
+   >> reverse EQ_TAC
    >- PROVE_TAC [PROB_ALGEBRA_STL, PROB_ALGEBRA_HALFSPACE, PROB_ALGEBRA_INTER]
    >> PSET_TAC [IN_PROB_ALGEBRA, IN_HALFSPACE, EXTENSION]
    >> POP_ASSUM MP_TAC
@@ -963,7 +953,7 @@ val PROB_CANON_PREFS_MONO = store_thm
    ``!l b. prob_premeasure (prob_canon_prefs l b) <= prob_premeasure (l :: b)``,
    STRIP_TAC
    >> Induct >- RW_TAC list_ss [prob_canon_prefs_def, REAL_LE_REFL]
-   >> REVERSE (RW_TAC list_ss [prob_canon_prefs_def])
+   >> reverse (RW_TAC list_ss [prob_canon_prefs_def])
    >- PROVE_TAC [REAL_LE_REFL]
    >> Suff `prob_premeasure (l::b) <= prob_premeasure (l::h::b)`
    >- PROVE_TAC [REAL_LE_TRANS]
@@ -1336,7 +1326,7 @@ val PREFIX_SET_UNION_UNIV = store_thm
    >> Q.PAT_X_ASSUM `!s. P s ==> Q s`
       (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO])
    >> REWRITE_TAC [GSYM CONJ_ASSOC]
-   >> REVERSE (PSET_TAC [EXTENSION])
+   >> reverse (PSET_TAC [EXTENSION])
    >- (Q.EXISTS_TAC `sel s :: l`
        >> RW_TAC std_ss [TL, HD])
    >> Know `~([] IN s)`
@@ -1358,7 +1348,7 @@ val IN_PROB_ALGEBRA_CANONICAL = store_thm
   ("IN_PROB_ALGEBRA_CANONICAL",
    ``!x. x IN (subsets prob_algebra) = ?b. prob_canonical b /\ (x = prob_embed b)``,
    RW_TAC std_ss [IN_PROB_ALGEBRA]
-   >> REVERSE EQ_TAC >- PROVE_TAC []
+   >> reverse EQ_TAC >- PROVE_TAC []
    >> RW_TAC std_ss []
    >> Q.EXISTS_TAC `prob_canon b`
    >> RW_TAC std_ss [prob_canonical_def, PROB_CANON_IDEMPOT, PROB_CANON_EMBED]);
@@ -1398,7 +1388,7 @@ val ALGEBRA_COUNTABLE_UNION_UNIV = store_thm
        >> RW_TAC std_ss [PROB_EMBED_CONS, IN_UNION]
        >> PROVE_TAC [PREFIX_SET_POPULATED])
    >> MATCH_MP_TAC PREFIX_SET_UNION_UNIV
-   >> REVERSE CONJ_TAC
+   >> reverse CONJ_TAC
    >- (Q.PAT_X_ASSUM `x = UNIV` (ONCE_REWRITE_TAC o wrap o GSYM)
        >> POP_ASSUM MP_TAC
        >> KILL_TAC
@@ -1425,7 +1415,7 @@ val ALGEBRA_COUNTABLE_UNION_UNIV = store_thm
        >> PROVE_TAC [])
    >> REPEAT STRIP_TAC
    >> Q.PAT_X_ASSUM `!m n. P m n` (MP_TAC o Q.SPECL [`n`, `n'`])
-   >> REVERSE (RW_TAC std_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER])
+   >> reverse (RW_TAC std_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER])
    >- PROVE_TAC []
    >> STRIP_TAC
    >> RW_TAC std_ss []
@@ -1498,7 +1488,7 @@ val ALGEBRA_COUNTABLE_UNION = store_thm
            >> Q.EXISTS_TAC `[]`
            >> Q.EXISTS_TAC `[]`
            >> RW_TAC prob_canon_ss [])
-       >> REVERSE CONJ_TAC
+       >> reverse CONJ_TAC
        >- (RW_TAC std_ss []
            >> PROVE_TAC [])
        >> RW_TAC std_ss [PROB_EMBED_BASIC]
@@ -1794,7 +1784,7 @@ val PROB_ALGEBRA_MIRROR = store_thm
   ``!p. p o mirror IN (subsets prob_algebra) = p IN (subsets prob_algebra)``,
     MP_TAC PREMEASURABLE_PROB_ALGEBRA_MIRROR
  >> RW_TAC std_ss [IN_PREMEASURABLE, PREIMAGE_ALT, INTER_UNIV, SPACE_PROB_ALGEBRA]
- >> REVERSE EQ_TAC >- PROVE_TAC []
+ >> reverse EQ_TAC >- PROVE_TAC []
  >> POP_ASSUM (MP_TAC o Q.SPEC `p o mirror`)
  >> RW_TAC std_ss [GSYM o_ASSOC, MIRROR_o_MIRROR, I_o_ID]);
 
@@ -1980,7 +1970,7 @@ val PREFIX_SET_INJ = store_thm
    >> RW_TAC std_ss []
    >> Cases_on `h = h'`
    >- (RW_TAC std_ss []
-       >> REVERSE EQ_TAC >- RW_TAC std_ss []
+       >> reverse EQ_TAC >- RW_TAC std_ss []
        >> SET_EQ_TAC
        >> RW_TAC std_ss []
        >> Q.PAT_X_ASSUM `!b. (P b = Q b) = R b` (REWRITE_TAC o wrap o GSYM)

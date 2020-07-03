@@ -3,6 +3,10 @@ open testutils
 
 val _ = print "\n"
 
+fun listprint pr xs =
+    "[" ^ String.concatWith "," (map pr xs) ^ "]"
+
+
 fun test_CONV (c,nm) (t, expected) = let
   val _ = tprint (nm^" on `"^term_to_string t^"`")
   val th = Conv.QCONV c t
@@ -28,15 +32,15 @@ val tydef_th = prove(
   EXISTS_TAC ``(T,T)`` THEN REWRITE_TAC []);
 
 val _ = tprint "new_type_definition error message"
-val failing_tydef =
-    new_type_definition("mytydef", tydef_th)
+val _ =
+    ignore (new_type_definition("mytydef", tydef_th))
     handle HOL_ERR {origin_function, message, origin_structure} =>
            if origin_function <> "new_type_definition" orelse
               origin_structure <> "Theory.Definition" orelse
               message <> "at Thm.prim_type_definition:\nexpected a theorem of the form \"?x. P x\""
            then
              die "FAILED"
-           else (OK(); TRUTH)
+           else OK()
 
 val _ = tprint "Q.MATCH_ABBREV_TAC with underscores"
 val goal = ([] : term list, ``(n + 10) * y <= 42315 /\ !x y:'a. x < f y``)
@@ -204,4 +208,103 @@ val _ = tprint "Simp Excl list.APPEND_ASSOC leaves list unchanged"
 val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
                     (QCONV (SIMP_CONV (srw_ss()) [Excl "list.APPEND_ASSOC"]))
                     appr_t
+val _ = shouldfail {
+      checkexn = (fn UNCHANGED => true | _ => false),
+      printarg = fn _ => "simp Excl on arith d.p. leaves input unchanged",
+      printresult = thm_to_string,
+      testfn = SIMP_CONV (srw_ss() ++ ARITH_ss) [Excl "NUM_ARITH_DP"]
+    } “4 < x ==> 2 < x”
+end
+
+val _ = tprint "find num->num includes SUC"
+val _ = require_msg (check_result (tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:num->num”
+val _ = tprint "find 'a includes SUC"
+val _ = require_msg (check_result (tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:'a”
+val _ = tprint "find 'a->'a includes SUC"
+val _ = require_msg (check_result (tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:'a->'a”
+val _ = tprint "find 'b->'b includes SUC"
+val _ = require_msg (check_result (tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:'b->'b”
+val _ = tprint "find 'a -> 'b -> 'c doesn't include SUC"
+val _ = require_msg (check_result (not o tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:'a->'b->'c”
+val _ = tprint "find_thy [bool,relation] 'a -> 'a doesn't include SUC"
+val _ = require_msg (check_result (not o tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    (find_consts_thy ["bool", "relation"]) “:'a->'a”
+val _ = tprint "find_thy [bool,relation] 'a -> 'a includes RTC"
+val _ = require_msg (check_result (tmem “relation$RTC”))
+                    (listprint term_to_string)
+                    (find_consts_thy ["bool", "relation"]) “:'a->'a”
+val _ = tprint "find_thy [bool,relation] num -> num doesn't include RTC"
+val _ = require_msg (check_result (not o tmem “relation$RTC”))
+                    (listprint term_to_string)
+                    (find_consts_thy ["bool", "relation"]) “:num->num”
+
+val _ = new_constant("foo", “:'a -> num”)
+
+val _ = tprint "find 'a finds new constant"
+val _ = require_msg (check_result (tmem “foo”)) (listprint term_to_string)
+                    find_consts “:'a”
+
+
+val _ = new_constant ("split", ``:num list -> (num list # num list) ``)
+local
+  val quotation = `
+  bar Γ =
+    case split Γ of
+        (Γ1, Γ2) => if EVEN (bar Γ1) then 2 else bar Γ2`
+
+  val mkdef = quietly (Defn.mk_defn "bar")
+  fun test q =
+      let
+        val (tm,_) = Defn.parse_absyn (Parse.Absyn q)
+      in
+        (mkdef tm, mkdef tm)
+      end
+  fun is_nested (DefnBase.NESTREC _ ) = true | is_nested _ = false
+  fun check_defs (d1,d2) =
+      is_nested d1 andalso is_nested d2 andalso
+      length (Defn.tcs_of d1) = length (Defn.tcs_of d2)
+  val ppd = PP.pp_to_string 65 DefnBase.pp_defn
+  fun prdefpair (d1,d2) = ppd d1 ^ "\n   vs\n" ^ ppd d2
+in
+val _ = tprint "TFL nested recursion + Unicode parameter name"
+val _ = require_msg (check_result check_defs) prdefpair test quotation
+end
+
+val _ = let
+  val _ = tprint "tmCases_on (.doc file example)"
+  val g = ([], “MAP (f:num -> num) l = []”)
+  val expected = [([] : term list, “MAP (f:num -> num) [] = []”),
+                  ([] : term list , “MAP (f:num -> num) (e::es) = []”)]
+  val pp = HOLPP.block HOLPP.CONSISTENT 0 o
+           HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
+in
+  require_msg (check_result (list_eq goal_eq expected))
+              (HOLPP.pp_to_string 75 pp)
+              (fst o tmCases_on (mk_var("l", alpha)) ["", "e es"])
+              g
+end
+
+val _ = let
+  val _ = tprint "tmCases_on (bound l)"
+  val g = ([], “!l. MAP (f:num -> num) l = []”)
+  val expected = [([] : term list, “MAP (f:num -> num) [] = []”),
+                  ([] : term list , “MAP (f:num -> num) (e::es) = []”)]
+  val pp = HOLPP.block HOLPP.CONSISTENT 0 o
+           HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
+in
+  require_msg (check_result (list_eq goal_eq expected))
+              (HOLPP.pp_to_string 75 pp)
+              (fst o tmCases_on (mk_var("l", alpha)) ["", "e es"])
+              g
 end

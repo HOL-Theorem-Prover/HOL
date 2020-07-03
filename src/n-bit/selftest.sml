@@ -11,6 +11,25 @@ val _ = set_trace "bit blast" 0
 
 val ERR = mk_HOL_ERR "selftest"
 
+fun parse_n_eval s expected =
+    let
+      fun checkconv th =
+          aconv (rhs (concl th)) expected handle HOL_ERR _ => false
+      fun kont (Exn.Res t) =
+          (tprint "EVAL result of parse";
+           require_msg (check_result checkconv) thm_to_string
+                                         EVAL
+                                         t)
+        | kont _ = raise Fail "Can't happen"
+      val _ = tprint ("Parse \"" ^ s ^ "\"")
+    in
+      require_msgk is_result (K "") (fn s => Parse.Term [QUOTE s]) kont s
+    end
+
+val _ = parse_n_eval "~2w : word4" “13w : word4”
+val _ = parse_n_eval "¬2w : word4" “13w : word4”
+val _ = parse_n_eval "(2w : word4) + 11w" “13w : word4”
+
 val prs = StringCvt.padRight #" "
 fun trunc w t = let
   val s = Lib.with_flag (Globals.linewidth, 10000) term_to_string t
@@ -46,33 +65,22 @@ val _ = tprint "Printing abbreviated word types"
 val _ = if type_to_string u8 = ":u8" then OK() else die "FAILED!"
 
 val _ = tprint "Parsing Datatype with bool-array type"
-val _ = (Datatype`mytype = mytype_con (bool[3])`; OK()) handle HOL_ERR _ => die "FAILED"
+val _ = require is_result (quietly Datatype) `mytype = mytype_con (bool[3])`;
 
-fun test (c:conv) tm = let
-  val rt = Timer.startRealTimer ()
-  val res = Lib.total c tm
-  val elapsed = Timer.checkRealTimer rt
-in
-  TextIO.print (trunc 65 tm ^ Time.toString elapsed);
-  case res of
-      NONE => die "FAILED!"
-    | _ => print "\n"
-end
+fun test (c:conv) tm =
+    (tprint (trunc 65 tm); testutils.require testutils.is_result c tm)
 
-fun test_fail orig (c:conv) tm = let
-  val res = (c tm; SOME "should fail!")
-              handle HolSatLib.SAT_cex _ => SOME "unexpected counterexample!"
-                   | HOL_ERR {origin_function,...} =>
-                       if origin_function = orig then
-                         NONE
-                       else
-                         SOME ("unexpected exception from " ^ origin_function)
-in
-  tprint ("Expecting failure: " ^ trunc 46 tm);
-  case res of
-      NONE => OK()
-    | SOME s => die s
-end
+fun test_fail orig (c:conv) tm =
+    let
+      open testutils
+      fun printarg t = "Expecting failure: " ^ trunc 46 tm
+    in
+      shouldfail {checkexn = check_HOL_ERRexn (fn (_, f, _) => f = orig),
+                  printarg = printarg,
+                  printresult = thm_to_string,
+                  testfn = c}
+                 tm
+    end
 
 fun test_counter (c:conv) tm = let
   val res = (c tm; SOME "should fail!")
@@ -91,19 +99,13 @@ in
 end
 
 local
-  fun test_conv (conv: conv) tm =
+  exception InternalDie of string
+  fun idie s = raise InternalDie s
+  fun test_conv nm (conv: conv) tm =
     let
       val (t, expected) = boolSyntax.dest_eq tm
-      val s = fst (boolSyntax.dest_strip_comb t)
-      val s = case String.tokens (Lib.equal #"$") s of
-                 [_, s] => s
-               | _ => die "FAILED\n  Couldn't get name."
-      val _ = tprint s
-      val th = conv t handle _ => die "FAILED - exception raised"
-      val r = rhs (concl th) handle HOL_ERR _ => die "FAILED - no RHS"
     in
-      if aconv r expected then OK()
-      else die ("FAILED\n  Got ``" ^ term_to_string r ^ "``")
+      testutils.convtest (nm ^ ": " ^ term_to_string tm, conv, t, expected)
     end
   fun getlocpragma s =
       let
@@ -124,11 +126,20 @@ local
          if CharVector.all Char.isSpace s then (r+1, ts)
          else (r+1, Parse.Term [QUOTE (mkpragma(r,1) ^ s)] :: ts)
    in
-     #2 (List.foldl foldthis (r,[]) lines)
+     #2 (List.foldl foldthis (r,[]) lines) |> List.rev
    end
 in
-  fun qtest_conv conv q = List.app (test_conv conv) (quote_to_term_list q)
+  fun qtest_conv nm conv q = List.app (test_conv nm conv) (quote_to_term_list q)
 end
+
+val c = SIMP_CONV (srw_ss() ++ wordsLib.WORD_CANCEL_ss) []
+val _ = qtest_conv "simp+WORD_CANCEL" c
+  ‘(x + y + f z:'a word = a + b + y) <=> (x + f z = a + b)
+   (x + -1w * y = e) <=> (e + y = x)
+   (a + b + c + d:'a word = x + b + y + d + e) <=> (e + x + y = a + c)
+   ((rm:word32) << 2 = 4294967288w) <=> (rm << 2 + 8w = 0w)
+   (a + 4w:word32 = b + -2w) <=> (a + 6w = b)
+  ’
 
 val blast_true = test blastLib.BBLAST_PROVE
 val blast_fail = test_fail "BBLAST_PROVE" blastLib.BBLAST_PROVE
@@ -146,6 +157,7 @@ val _ = blast_fail ``?x: word8. 3w > 4w : word4``
 val _ = blast_fail ``x + x = x :'a word``
 
 (* Fail, can't solve *)
+val _ = ParseExtras.temp_loose_equality()
 val _ = blast_fail ``?x. !y. x <=+ y : word8``
 val _ = blast_fail ``!y. ?x. x <=+ y : word8``
 val _ = blast_fail ``?x. x <=+ y : word8``
@@ -529,9 +541,7 @@ val _ = srw_true
 val _ = srw_true
   ``15w && a || (a ?? -1w) = word_T: word4``
 
-val () = print "\nWORD_GROUND_CONV tests\n\n"
-
-val () = qtest_conv wordsLib.WORD_GROUND_CONV
+val () = qtest_conv "WORD_GROUND_CONV" wordsLib.WORD_GROUND_CONV
  `BIT_SET 2 5 = {2; 4}
   add_with_carry (12w:word8, 11w, T) = (24w,F,F)
   bit_count (0b101101w: word8) = 4
@@ -630,8 +640,12 @@ val () = qtest_conv wordsLib.WORD_GROUND_CONV
   word_xor 3w 5w : word8 = 6w
   `
 
+
+
 val elapsed = Timer.checkRealTimer tt
 
 val _ = print ("\nTotal time: " ^ Lib.time_to_string elapsed ^ "\n");
+
+
 
 val _ = OS.Process.exit OS.Process.success

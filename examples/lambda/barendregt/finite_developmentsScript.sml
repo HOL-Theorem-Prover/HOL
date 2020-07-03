@@ -1602,7 +1602,7 @@ val development0_cases = save_thm(
   (GEN_ALL o CONV_RULE (RENAME_VARS_CONV ["sigma", "ps"]) o
    SIMP_RULE (srw_ss()) [pairTheory.FORALL_PROD,
                          development_f_def, GSYM development0_def] o
-   CONV_RULE (REWR_CONV EXTENSION) o
+   CONV_RULE (REWR_CONV EXTENSION) o SYM o
    CONJUNCT1)
     (MATCH_MP fixedPointTheory.gfp_greatest_fixedpoint
               (SPEC_ALL development_f_monotone)));
@@ -1614,20 +1614,21 @@ val term_posset_development_def = Define`
 
 val _ = overload_on ("development", ``term_posset_development``);
 
-val development_thm = store_thm(
-  "development_thm",
-  ``(stopped_at x IN development M ps <=> (M = x) /\ ps SUBSET M) /\
-    (pcons x r p IN development M ps  <=>
-             (M = x) /\ ps SUBSET M /\
-             labelled_redn beta x r (first p) /\ r IN ps /\
-             p IN development (first p) (residual1 x r (first p) ps))``,
+Theorem development_thm:
+  (stopped_at x IN development M ps <=> (M = x) /\ ps SUBSET M) /\
+  (pcons x r p IN development M ps  <=>
+           (M = x) /\ ps SUBSET M /\
+           labelled_redn beta x r (first p) /\ r IN ps /\
+           p IN development (first p) (residual1 x r (first p) ps))
+Proof
   REPEAT STRIP_TAC THEN
   `!sigma M ps. sigma IN development M ps <=> development M ps sigma`
      by SRW_TAC [][SPECIFICATION] THEN
   SRW_TAC [][term_posset_development_def] THEN
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [development0_cases])) THEN
   SRW_TAC [][EQ_IMP_THM, redexes_all_occur_def, IN_term_IN_redex_posns] THEN
-  PROVE_TAC [residual1_SUBSET, SUBSET_DEF]);
+  PROVE_TAC [residual1_SUBSET, SUBSET_DEF]
+QED
 
 val development_cases = store_thm(
   "development_cases",
@@ -2150,18 +2151,21 @@ val weight_at_var_posn = store_thm(
              var_posns_SUBSET_valid_posns] THEN
   SRW_TAC [][var_posns_SUBSET_valid_posns, weight_at_thm, term_weight_thm]);
 
-val decreasing_weights_exist = store_thm(
-  "decreasing_weights_exist",
-  ``!t. ?w. nonzero t w /\ decreasing t w``,
+Theorem decreasing_weights_exist:
+  ∀t. ∃w. nonzero t w ∧ decreasing t w
+Proof
   HO_MATCH_MP_TAC simple_lterm_induction THEN
   SIMP_TAC (srw_ss())[decreasing_thm, nonzero_thm] THEN REPEAT CONJ_TAC THENL [
     Q.EXISTS_TAC `\p. 1` THEN SRW_TAC [][],
+
     REPEAT STRIP_TAC THEN
     Q.EXISTS_TAC `\p. if HD p = Lt then w (TL p) else w' (TL p)` THEN
     SRW_TAC [ETA_ss][],
+
     REPEAT STRIP_TAC THEN
     Q.EXISTS_TAC `w o TL` THEN
     SRW_TAC [ETA_ss][combinTheory.o_THM],
+
     Q_TAC SUFF_TAC
       `∀v t1 t2.
           (∃w. nonzero t1 w ∧ decreasing t1 w) ∧
@@ -2181,12 +2185,15 @@ val decreasing_weights_exist = store_thm(
                         (lterm_weight t2 w2 + 1) * w1 (TL (TL p))
                       else w2 (TL p)` THEN
     SRW_TAC [ETA_ss][nonzero_def] THENL [
-      `0 < w1 p` by PROVE_TAC [nonzero_def] THEN
+      (* 1 *) `0 < w1 p` by PROVE_TAC [nonzero_def] THEN
       ASM_SIMP_TAC (srw_ss() ++ ARITH_ss)
                    [nonzero_def, arithmeticTheory.RIGHT_ADD_DISTRIB],
-      PROVE_TAC [nonzero_def],
+      (* 2 *) PROVE_TAC [nonzero_def],
+      (* 3 *) PROVE_TAC [nonzero_def],
+      (* 4 *)
       ASM_SIMP_TAC (srw_ss() ++ ARITH_ss)
                    [decreasing_times_constant, GSYM combinTheory.o_DEF],
+      (* 5 *)
       `p IN valid_posns (strip_label t1)`
          by PROVE_TAC [lv_posns_def, v_posns_SUBSET_var_posns,
                        var_posns_SUBSET_valid_posns] THEN
@@ -2202,7 +2209,8 @@ val decreasing_weights_exist = store_thm(
       ASM_SIMP_TAC (srw_ss()) [] THEN
       Induct THEN SRW_TAC [ARITH_ss][arithmeticTheory.MULT_CLAUSES]
     ]
-  ]);
+  ]
+QED
 
 val weighted_reduction_def = Define`
   weighted_reduction (M', w0) r (N', w) <=>

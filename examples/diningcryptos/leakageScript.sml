@@ -2,34 +2,19 @@
 (* Create "leakageTheory" setting up the theory of information leakage       *)
 (* ========================================================================= *)
 
-(* ------------------------------------------------------------------------- *)
-(* Load and open relevant theories                                           *)
-(* (Comment out "load" and "loadPath"s for compilation)                      *)
-(* ------------------------------------------------------------------------- *)
-(*
+open HolKernel Parse boolLib bossLib;
 
-app load ["bossLib", "metisLib", "arithmeticTheory", "pred_setTheory",
-          "listTheory", "state_transformerTheory", "probabilityTheory",
-          "formalizeUseful", "combinTheory", "pairTheory", "realTheory",
-          "realLib", "extra_boolTheory", "jrhUtils", "extra_pred_setTheory", "extra_listTheory",
-          "realSimps", "extra_realTheory", "measureTheory", "numTheory",
-          "simpLib", "seqTheory", "subtypeTheory", "transcTheory",
-          "limTheory", "stringTheory", "rich_listTheory", "stringSimps",
-          "listSimps", "lebesgueTheory", "informationTheory",
-          "extra_stringTheory", "extra_stringLib"];
-
-*)
-
-open HolKernel Parse boolLib bossLib metisLib arithmeticTheory pred_setTheory
-     listTheory state_transformerTheory
-     probabilityTheory formalizeUseful extra_numTheory combinTheory
-     pairTheory realTheory realLib extra_boolTheory jrhUtils
-     extra_pred_setTheory realSimps extra_realTheory measureTheory numTheory
-     simpLib seqTheory subtypeTheory extra_listTheory
+open metisLib arithmeticTheory pred_setTheory
+     listTheory state_transformerTheory combinTheory pairTheory realTheory
+     realLib jrhUtils realSimps numTheory simpLib seqTheory subtypeTheory
      transcTheory limTheory stringTheory rich_listTheory stringSimps listSimps
-     lebesgueTheory informationTheory extra_stringTheory extra_stringLib;
+     informationTheory real_sigmaTheory;
 
-open real_sigmaTheory;
+open extra_boolTheory extra_numTheory extra_pred_setTheory extra_realTheory
+     extra_listTheory extra_stringTheory extra_stringLib;
+
+open hurdUtils util_probTheory sigma_algebraTheory
+     real_measureTheory real_lebesgueTheory real_probabilityTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "information"                                   *)
@@ -37,31 +22,8 @@ open real_sigmaTheory;
 
 val _ = new_theory "leakage";
 
-(* ------------------------------------------------------------------------- *)
-(* Helpful proof tools                                                       *)
-(* ------------------------------------------------------------------------- *)
-
-val REVERSE = Tactical.REVERSE;
-val Simplify = RW_TAC arith_ss;
-val Suff = PARSE_TAC SUFF_TAC;
-val Know = PARSE_TAC KNOW_TAC;
-val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
-val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
-val Cond =
-  DISCH_THEN
-  (fn mp_th =>
-   let
-     val cond = fst (dest_imp (concl mp_th))
-   in
-     KNOW_TAC cond >| [ALL_TAC, DISCH_THEN (MP_TAC o MP mp_th)]
-   end);
-
-val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
-
-(* ************************************************************************* *)
 (* ************************************************************************* *)
 (* Basic Definitions                                                         *)
-(* ************************************************************************* *)
 (* ************************************************************************* *)
 
 val () = type_abbrev ("state", Type `:string -> 'a`);
@@ -105,7 +67,6 @@ val visible_leakage_def = Define
 (*      sets of possible initial input states                                *)
 (* ************************************************************************* *)
 
-
 val unif_prog_dist_def = Define
    `unif_prog_dist high low random =
         (\s. if s IN (high CROSS low) CROSS random then
@@ -118,18 +79,9 @@ val unif_prog_space_def = Define
          POW ((high CROSS low) CROSS random),
          (\s. SIGMA (unif_prog_dist high low random) s))`;
 
-
-(* ************************************************************************* *)
-
-
-
-
-(* ************************************************************************* *)
 (* ************************************************************************* *)
 (* Proofs                                                                    *)
 (* ************************************************************************* *)
-(* ************************************************************************* *)
-
 
 val prob_space_unif_prog_space = store_thm
   ("prob_space_unif_prog_space",
@@ -588,7 +540,7 @@ val unif_prog_space_leakage_reduce = store_thm
                ((f :('a, 'b, 'c, 'd) prog) s,FST s))
             ((high :'a state -> bool) CROSS
              (low :'b state -> bool) CROSS (random :'c state -> bool)))`) REAL_SUM_IMAGE_IN_IF]
-   >> `(\x. (if x IN IMAGE (\s. (f s,FST s)) (high CROSS low CROSS random) then
+   >> Know `(\x. (if x IN IMAGE (\s. (f s,FST s)) (high CROSS low CROSS random) then
             (\(x,y,z). joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(x,y,z)} *
            lg (joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(x,y,z)} /
                distribution (unif_prog_space high low random) (\x. (H x,L x)) {(y,z)})) x else 0)) =
@@ -596,10 +548,12 @@ val unif_prog_space_leakage_reduce = store_thm
             (\(x,y,z). joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(x,y,z)} *
            lg (joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(x,y,z)} *
                (&((CARD high)*(CARD low))))) x else 0))`
-         by (RW_TAC std_ss [FUN_EQ_THM, IN_IMAGE, IN_CROSS] >> RW_TAC std_ss []
-             >> `FST s' = (FST (FST s'), SND (FST s'))` by RW_TAC std_ss [PAIR] >> POP_ORW
-             >> RW_TAC std_ss [unif_prog_space_highlow_distribution, GSYM REAL_INV_1OVER, real_div, REAL_INV_INV])
-   >> POP_ORW
+   >- (RW_TAC std_ss [FUN_EQ_THM, IN_IMAGE, IN_CROSS] >> RW_TAC std_ss []
+       >> rename1 `FST (FST s') IN high`
+       >> `FST s' = (FST (FST s'), SND (FST s'))` by RW_TAC std_ss [PAIR] >> POP_ORW
+       >> RW_TAC std_ss [unif_prog_space_highlow_distribution,
+                         GSYM REAL_INV_1OVER, real_div, REAL_INV_INV])
+   >> Rewr'
    >> ASM_SIMP_TAC std_ss [GSYM REAL_SUM_IMAGE_IN_IF]
    >> ONCE_REWRITE_TAC [REAL_ADD_COMM] >> RW_TAC std_ss [GSYM real_sub]
    >> Q.UNABBREV_TAC `foo` >> RW_TAC std_ss []);
@@ -898,7 +852,6 @@ SIGMA
    >> ONCE_REWRITE_TAC [REAL_ADD_COMM] >> RW_TAC std_ss [GSYM real_sub]
    >> Q.UNABBREV_TAC `foo` >> RW_TAC std_ss []);
 
-
 val unif_prog_space_leakage_lemma1 = store_thm
   ("unif_prog_space_leakage_lemma1",
    ``!high low random (f :('a, 'b, 'c, 'd) prog). FINITE high /\ FINITE low /\ FINITE random /\
@@ -940,7 +893,8 @@ val unif_prog_space_leakage_lemma1 = store_thm
                        & (CARD low))) x) x else 0))`
    >- RW_TAC std_ss []
    >> ONCE_REWRITE_TAC [FUN_EQ_THM] >> RW_TAC std_ss [IN_IMAGE, IN_CROSS]
-   >> RW_TAC std_ss [] >> RW_TAC std_ss []
+   >> RW_TAC std_ss []
+   >> rename1 `FST (FST s') IN high`
    >> Q.ABBREV_TAC `j = joint_distribution (unif_prog_space high low random) f L {(f s',SND (FST s'))}`
    >> Q.ABBREV_TAC `s = 1 / & (CARD high * CARD low * CARD random) *
                                  SIGMA (\(h,r). (if f ((h,SND (FST s')),r) = f s' then 1 else 0))
@@ -1044,7 +998,6 @@ val unif_prog_space_leakage_lemma1 = store_thm
    >> Q.UNABBREV_TAC `c`
    >> RW_TAC std_ss [REAL_SUM_IMAGE_EQ_CARD]);
 
-
 val unif_prog_space_visible_leakage_lemma1 = store_thm
   ("unif_prog_space_visible_leakage_lemma1",
    ``!high low random (f :('a, 'b, 'c, 'd) prog). FINITE high /\ FINITE low /\ FINITE random /\
@@ -1084,7 +1037,8 @@ val unif_prog_space_visible_leakage_lemma1 = store_thm
                        & (CARD low * CARD random))) x) x else 0))`
    >- RW_TAC std_ss []
    >> ONCE_REWRITE_TAC [FUN_EQ_THM] >> RW_TAC std_ss [IN_IMAGE, IN_CROSS]
-   >> RW_TAC std_ss [] >> RW_TAC std_ss []
+   >> RW_TAC std_ss []
+   >> rename1 `FST (FST s') IN high`
    >> Q.ABBREV_TAC `j = joint_distribution (unif_prog_space high low random) f (\s. (L s,R s)) {(f s',(SND (FST s'),SND s'))}`
    >> Q.ABBREV_TAC `s = 1 / & (CARD high * CARD low * CARD random) *
                                  SIGMA (\h. (if f ((h,SND (FST s')),SND s') = f s' then 1 else 0)) high`
@@ -1189,7 +1143,6 @@ val unif_prog_space_visible_leakage_lemma1 = store_thm
    >> Q.UNABBREV_TAC `c`
    >> RW_TAC std_ss [REAL_SUM_IMAGE_EQ_CARD]);
 
-
 val unif_prog_space_leakage_lemma2 = store_thm
   ("unif_prog_space_leakage_lemma2",
    ``!high low random (f :('a, 'b, 'c, 'd) prog). FINITE high /\ FINITE low /\ FINITE random /\
@@ -1231,7 +1184,8 @@ val unif_prog_space_leakage_lemma2 = store_thm
                    random * & (CARD high * CARD low))) x) x else 0))`
    >- RW_TAC std_ss []
    >> ONCE_REWRITE_TAC [FUN_EQ_THM] >> RW_TAC std_ss [IN_IMAGE, IN_CROSS]
-   >> RW_TAC std_ss [] >> `FST s' = (FST(FST s'),SND(FST s'))` by RW_TAC std_ss [PAIR]
+   >> rename1 `FST (FST s') IN high`
+   >> `FST s' = (FST(FST s'),SND(FST s'))` by RW_TAC std_ss [PAIR]
    >> POP_ORW >> RW_TAC std_ss []
    >> Q.ABBREV_TAC `j = joint_distribution (unif_prog_space high low random) f (\x. (H x,L x)) {(f s',FST s')}`
    >> Q.ABBREV_TAC `s = 1 / & (CARD high * CARD low * CARD random) *
@@ -1381,7 +1335,6 @@ val unif_prog_space_leakage_lemma2 = store_thm
    >> Q.UNABBREV_TAC `c`
    >> RW_TAC std_ss [REAL_SUM_IMAGE_EQ_CARD]);
 
-
 val unif_prog_space_visible_leakage_lemma2 = store_thm
   ("unif_prog_space_visible_leakage_lemma2",
    ``!high low random (f :('a, 'b, 'c, 'd) prog). FINITE high /\ FINITE low /\ FINITE random /\
@@ -1423,7 +1376,9 @@ val unif_prog_space_visible_leakage_lemma2 = store_thm
                     (if f ((h,l),r) = out then 1 else 0) * & (CARD high * CARD low * CARD random))) x) x else 0))`
    >- RW_TAC std_ss []
    >> ONCE_REWRITE_TAC [FUN_EQ_THM] >> RW_TAC std_ss [IN_IMAGE, IN_CROSS]
-   >> RW_TAC std_ss [] >> `FST s' = (FST(FST s'),SND(FST s'))` by RW_TAC std_ss [PAIR]
+   >> RW_TAC std_ss []
+   >> rename1 `FST (FST s') IN high`
+   >> `FST s' = (FST(FST s'),SND(FST s'))` by RW_TAC std_ss [PAIR]
    >> POP_ORW >> RW_TAC real_ss []
    >> Suff `joint_distribution (unif_prog_space high low random) f (\s. (H s,L s,R s)) {(f s',FST (FST s'),SND (FST s'),SND s')} =
                 1 / & (CARD high * CARD low * CARD random)`
@@ -1462,7 +1417,6 @@ val unif_prog_space_visible_leakage_lemma2 = store_thm
                            low_state_def, random_state_def, IN_CROSS]
             >> METIS_TAC [PAIR, FST, SND])
    >> RW_TAC std_ss [REAL_SUM_IMAGE_SING, IN_CROSS]);
-
 
 val unif_prog_space_leakage_lemma3 = store_thm
   ("unif_prog_space_leakage_lemma3",
@@ -1557,7 +1511,6 @@ val unif_prog_space_leakage_lemma3 = store_thm
    >> RW_TAC real_ss [CARD_EQ_0]
    >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
    >> FULL_SIMP_TAC std_ss [CROSS_EMPTY]);
-
 
 val unif_prog_space_visible_leakage_lemma3 = store_thm
   ("unif_prog_space_visible_leakage_lemma3",
@@ -1662,7 +1615,6 @@ val unif_prog_space_visible_leakage_lemma3 = store_thm
    >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
    >> FULL_SIMP_TAC std_ss [CROSS_EMPTY]);
 
-
 val unif_prog_space_leakage_lemma4 = store_thm
   ("unif_prog_space_leakage_lemma4",
    ``!high low random (f :('a, 'b, 'c, 'd) prog). FINITE high /\ FINITE low /\ FINITE random /\
@@ -1743,7 +1695,6 @@ val unif_prog_space_leakage_lemma4 = store_thm
    >> RW_TAC real_ss [CARD_EQ_0]
    >> SPOSE_NOT_THEN STRIP_ASSUME_TAC
    >> FULL_SIMP_TAC std_ss [CROSS_EMPTY]);
-
 
 val unif_prog_space_visible_leakage_lemma4 = store_thm
   ("unif_prog_space_visible_leakage_lemma4",

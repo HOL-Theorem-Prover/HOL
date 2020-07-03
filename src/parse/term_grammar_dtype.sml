@@ -67,6 +67,8 @@ datatype user_delta =
        | GRMOVMAP of string * Term.term
        | MOVE_OVLPOSN of {frontp : bool, skid : skid}
        | ADD_NUMFORM of char * string option
+       | ADD_STRLIT of {ldelim : string, tmnm : string}
+       | RM_STRLIT of {tmnm:string}
        | ADD_UPRINTER of {codename: string, pattern : Term.term}
        | ADD_ABSYN_POSTP of {codename: string}
 

@@ -2,8 +2,8 @@ open HolKernel Parse boolLib bossLib
 open progTheory pairTheory set_sepTheory arithmeticTheory;
 
 val _ = new_theory "temporal"
+val _ = ParseExtras.temp_loose_equality()
 
-infix \\ val op \\ = op THEN;
 
 (* --- definitions --- *)
 

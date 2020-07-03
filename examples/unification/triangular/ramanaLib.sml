@@ -1,12 +1,13 @@
 structure ramanaLib =
 struct
 
-open HolKernel boolLib bossLib Parse lcsymtacs pairLib
+open HolKernel boolLib bossLib Parse pairLib
 
 val ERR = mk_HOL_ERR "ramanaLib"
 
 fun store_term_thm (s,t) =
-  store_thm(s,mk_comb(inst[``:'a``|->type_of t]``K:bool-> 'a -> bool T``,t),SIMP_TAC std_ss [])
+  store_thm(s,mk_comb(inst[``:'a``|->type_of t]``K:bool-> 'a -> bool T``,t),
+            SIMP_TAC std_ss [])
 
 fun store_type_thm (s,t) =
   store_thm(s,inst[``:'a``|->t]``K T (x:'a)``,SIMP_TAC std_ss [])
@@ -30,11 +31,8 @@ end
 
 fun RWstore_thm (s,q,t) = Q.store_thm(s,q,t) before export_rewrites [s]
 fun RWsave_thm (s,t) = save_thm(s,t) before export_rewrites [s]
-fun RWDefine q =
-  case q |> Absyn |> Defn.parse_absyn of
-    (_,[name]) => Define q before export_rewrites[name^"_def"]
-  | _ => raise ERR "RWDefine" "Multiple definitions"
-fun RWnew_specification (s,l,t) = new_specification (s,l,t) before export_rewrites [s]
+fun RWnew_specification (s,l,t) =
+    new_specification (s,l,t) before export_rewrites [s]
 fun RWtDefine s q t = tDefine s q t before export_rewrites [s^"_def"]
 
 val CONJ1_TAC = conj_asm1_tac

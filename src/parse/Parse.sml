@@ -745,6 +745,46 @@ fun add_bare_numeral_form0 x = [ADD_NUMFORM x]
 val temp_add_bare_numeral_form = mk_temp add_bare_numeral_form0
 val add_bare_numeral_form = mk_perm add_bare_numeral_form0
 
+fun add_strliteral_form0 {ldelim,inj} =
+    let
+      val (nm, _) = dest_const inj
+                    handle HOL_ERR _ => raise ERROR "add_strliteral_form"
+                                              "Injector must be constant"
+      val _ = Literal.delim_pair{ldelim=ldelim} (* checks it's legit *)
+              handle Fail s => raise ERROR "add_strliteral_form" s
+      val injname = GrammarSpecials.mk_stringinjn_name ldelim
+    in
+      [IOVERLOAD_ON(injname,inj),
+       ADD_STRLIT{ldelim=ldelim,tmnm=nm}]
+    end
+val temp_add_strliteral_form = mk_temp add_strliteral_form0
+val add_strliteral_form = mk_perm add_strliteral_form0
+
+fun remove_strliteral_form0 (r as {tmnm : string}) =
+    case strlit_map (term_grammar()) r of
+        NONE => raise ERROR "remove_strliteral_form"
+                      "No such term as string literal injector"
+      | SOME ldelim =>
+        let
+          open Overload
+          val injname = GrammarSpecials.mk_stringinjn_name ldelim
+          val oinfo = overload_info (term_grammar())
+          fun find_term ({actual_ops,...} : overloaded_op_info) =
+              List.find (fn t => #1 (dest_const t) = tmnm
+                                 handle HOL_ERR _ => false)
+                        actual_ops
+        in
+          case Option.mapPartial find_term (info_for_name oinfo injname) of
+              NONE => raise ERROR "remove_strliteral_form"
+                            "No constant with that name in overloading info"
+            | SOME t => [
+                RM_STRLIT r,
+                RMOVMAP(injname, {Name = tmnm, Thy = #Thy (dest_thy_const t)})
+              ]
+        end
+val temp_remove_strliteral_form = mk_temp remove_strliteral_form0
+val remove_strliteral_form = mk_perm remove_strliteral_form0
+
 fun temp_give_num_priority c = let open term_grammar in
     the_term_grammar := give_num_priority (term_grammar()) c;
     term_grammar_changed := true

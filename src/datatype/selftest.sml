@@ -137,7 +137,6 @@ val _ =
 
 val _ = Hol_datatype`K = <| F : 'a -> bool; S : num |>`
 
-val _ = Datatype.big_record_size := 10;
 val _ = Hol_datatype`
   big_record = <| fld3 : num ; fld4: bool ; fld5 : num -> num;
                   fld6 : bool -> bool ; fld7 : 'a -> num ;
@@ -247,14 +246,15 @@ val _ = set_trace "Unicode" 0
 fun pptest (nm, t, expected) = let
   val _ = tprint ("Pretty-printing of "^nm)
   val s = Parse.term_to_string t
+  fun f s = String.translate (fn #" " => UTF8.chr 0x2423 | c => str c) s
 in
   if s = expected then OK()
-  else die ("FAILED!\n  Expected \""^expected^"\"; got \""^s^"\"")
+  else die ("FAILED!\n  Expected \""^expected^"\"; got \""^f s^"\"")
 end
 
 fun s t = let open HolKernel boolLib
           in
-            rhs (concl (simpLib.SIMP_CONV (BasicProvers.srw_ss()) [] t))
+            rhs (concl (QCONV (simpLib.SIMP_CONV (BasicProvers.srw_ss()) []) t))
           end
 
 val _ = Hol_datatype`ovlrcd = <| id : num ; opn : num -> num |>`
@@ -331,6 +331,36 @@ val _ = with_flag (Globals.linewidth, 40) pptest
                   "<|fld3 := a very long expression indeed;\n\
                   \  fld4 := also a long expression|>")
 
+val _ = with_flag (Globals.linewidth, 40) pptest
+                  ("multiline record 3",
+                   “f x =  <|fld3 := a very long expression indeed ;
+                             fld4 := also a long expression|>”,
+                   "f x =\n\
+                   \<|fld3 := a very long expression indeed;\n\
+                   \  fld4 := also a long expression|>")
+
+val _ = with_flag (Globals.linewidth, 40) pptest
+                  ("multiline record 4",
+                   “let x = <|fld3 := a very long expression indeed ;
+                             fld4 := also a long expression|> in f x”,
+                   "let\n\
+                   \  x =\n\
+                   \    <|fld3 :=\n\
+                   \        a very long expression indeed;\n\
+                   \      fld4 := also a long expression|>\n\
+                   \in\n\
+                   \  f x")
+
+val _ = with_flag (Globals.linewidth, 40) pptest
+                  ("multiline record 5",
+                   “R P (f x)
+                      <|fld3 := a very long expression indeed ;
+                             fld4 := also a long expression|>”,
+                   "R P (f x)\n\
+                   \  <|fld3 :=\n\
+                   \      a very long expression indeed;\n\
+                   \    fld4 := also a long expression|>")
+
 val _ = app convtest [
       ("EVAL field K-composition", computeLib.CBV_CONV computeLib.the_compset,
        ``<| fld1 updated_by K t1 o K t2 |>``,
@@ -344,21 +374,20 @@ val _ = Feedback.emit_MESG := false
 (* mutrec defs with sums *)
 val _ = tprint "Mutrec defn with sums"
 val _ = Hol_datatype `foo2 = F1 of unit | F2 of foo2 + num`
-val _ = Defn.Hol_defn "foo"`
+val _ = require (check_result (K true)) (Defn.Hol_defn "foo") `
 (foo1 (F1 ()) = F1 ()) /\
 (foo1 (F2 sf) = F2 (foo2 sf)) /\
 (foo2 (INR n) = INL (F1 ())) /\
-(foo2 (INL f) = INL (foo1 f))` handle HOL_ERR _ => die "FAILED!"
-val _ = OK()
+(foo2 (INL f) = INL (foo1 f))`
 
 val _ = tprint "Non-recursive num"
 val _ = Datatype.Datatype `num = C10 num$num | C11 num | C12 scratch$num`;
 val (d,r) = dom_rng (type_of ``C10``)
-val _ = Type.compare(d, numSyntax.num) = EQUAL orelse die "FAILED!"
+val _ = if Type.compare(d, numSyntax.num) = EQUAL then () else die "FAILED!"
 val (d,r) = dom_rng (type_of ``C11``)
-val _ = Type.compare(d, numSyntax.num) <> EQUAL orelse die "FAILED!"
+val _ = if Type.compare(d, numSyntax.num) <> EQUAL then () else die "FAILED!"
 val (d,r) = dom_rng (type_of ``C12``)
-val _ = Type.compare(d, numSyntax.num) <> EQUAL orelse die "FAILED!"
+val _ = if Type.compare(d, numSyntax.num) <> EQUAL then () else die "FAILED!"
 val _ = OK()
 
 val _ = tprint "Datatype and antiquote (should be quick)"
@@ -366,24 +395,19 @@ val num = numSyntax.num
 val _ = Datatype.Datatype `dtypeAQ = C13 ^num bool | C14 (^num -> bool)`
 val _ = OK()
 
+fun doesnt_fail f x = require (check_result (K true)) f x
 val _ = tprint "Records with polymorphic fields 1"
-val _ = (``polyrcd_pfld1_fupd :
-             ('c ms -> 'e ms) -> ('c,'d) polyrcd -> ('e,'d)polyrcd``;
-         OK(); true)
-        orelse die "FAILED!"
+val _ = doesnt_fail Parse.Term ‘polyrcd_pfld1_fupd :
+             ('c ms -> 'e ms) -> ('c,'d) polyrcd -> ('e,'d)polyrcd’
 
 val _ = tprint "Records with polymorphic fields 2"
-val _ = (``polyrcd2_p2fld1_fupd :
-             ('a ms -> 'a ms) -> ('a,'b) polyrcd2 -> ('a,'b)polyrcd2``;
-         OK(); true)
-        orelse die "FAILED!"
+val _ = doesnt_fail Parse.Term `polyrcd2_p2fld1_fupd :
+             ('a ms -> 'a ms) -> ('a,'b) polyrcd2 -> ('a,'b)polyrcd2`
 
 val _ = tprint "Records with polymorphic fields 3"
-val _ = (``polyrcd2_p2fld2_fupd :
+val _ = doesnt_fail Parse.Term `polyrcd2_p2fld2_fupd :
              (('a # 'b -> bool) -> ('a # 'c -> bool)) ->
-             ('a,'b) polyrcd2 -> ('a,'c)polyrcd2``;
-         OK(); true)
-        orelse die "FAILED!"
+             ('a,'b) polyrcd2 -> ('a,'c)polyrcd2`
 
 val _ = tprint "Records with polymorphic fields 4"
 val _ =

@@ -1,4 +1,4 @@
-open HolKernel boolLib bossLib lcsymtacs Parse
+open HolKernel boolLib bossLib Parse BasicProvers
      integerTheory stringTheory alistTheory listTheory pred_setTheory
      pairTheory optionTheory finite_mapTheory arithmeticTheory
 
@@ -18,7 +18,6 @@ semantics.
 *)
 
 (* TODO: from CakeML's miscLib.sml *)
-val _ = set_trace"Goalstack.print_goal_at_top"0
 val SWAP_IMP = PROVE[]``(P ==> Q ==> R) ==> (Q ==> P ==> R)``
 val IMP_IMP = METIS_PROVE[]``(P /\ (Q ==> R)) ==> ((P ==> Q) ==> R)``
 val discharge_hyps = match_mp_tac IMP_IMP >> conj_tac
@@ -33,7 +32,7 @@ fun match_exists_tac tm (g as (_,w)) =
         val (tms,_) = match_term c tm
         val xs = map #redex tms
         val ys = map #residue tms
-        fun sorter ls = xs@(List.filter(not o Lib.C Lib.mem xs)ls)
+        fun sorter ls = xs@(List.filter(not o Lib.C tmem xs)ls)
       in
         CONV_TAC(RESORT_EXISTS_CONV sorter) >>
         map_every exists_tac ys
@@ -58,8 +57,6 @@ val FLOOKUP_f_o_f = store_thm("FLOOKUP_f_o_f",
   simp[FLOOKUP_DEF] >>
   simp[f_o_f_DEF] >> rw[] >> fs[])
 (* -- *)
-
-val _ = ParseExtras.temp_tight_equality()
 
 (* Syntax *)
 
@@ -455,34 +452,41 @@ val sem_imp_eval = Q.store_thm("sem_imp_eval",
   >- rw[Once eval_cases]
   >- (
     rw[Once eval_cases] >>
-    every_case_tac >> fs[] )
+    every_case_tac >> fs[]
+    )
   >- (
     every_case_tac >> fs[] >> rw[] >> rfs[] >>
     rw[Once eval_cases] >>
-    metis_tac[dest_closure_def] )
+    metis_tac[dest_closure_def]
+    )
   >- (
     every_case_tac >> fs[] >> rw[] >>
     rw[Once eval_cases] >>
-    metis_tac[] )
+    metis_tac[]
+    )
   >- rw[Once eval_cases]
   >- rw[Once eval_cases]
   >- (
     every_case_tac >> fs[] >> rw[] >>
     rw[Once eval_cases] >>
-    metis_tac[] )
+    metis_tac[]
+    )
   >- (
     every_case_tac >> fs[] >> rw[] >>
     rw[Once eval_cases] >>
-    metis_tac[v_distinct])
+    metis_tac[v_distinct]
+    )
   >- (
     every_case_tac >> fs[] >> rw[] >> rfs[] >>
     rw[Once eval_cases] >>
-    metis_tac[v_distinct,FST,r_distinct,v_11] )
+    metis_tac[v_distinct,FST,r_distinct,v_11]
+    )
   >- rw[Once eval_cases]
   >- (
     every_case_tac >> fs[] >> rw[] >>
     rw[Once eval_cases] >>
-    metis_tac[v_distinct,FST,r_distinct] )
+    metis_tac[v_distinct,FST,r_distinct]
+    )
   >- (
     BasicProvers.CASE_TAC >> fs[] >>
     BasicProvers.CASE_TAC >> fs[] >>
@@ -493,7 +497,9 @@ val sem_imp_eval = Q.store_thm("sem_imp_eval",
     BasicProvers.CASE_TAC >> fs[] >>
     rw[Once eval_cases] >>
     every_case_tac >> fs[] >>
-    metis_tac[is_closure_def,dest_closure_def,v_distinct,v_nchotomy]));
+    metis_tac[is_closure_def,dest_closure_def,v_distinct,v_nchotomy]
+    )
+  );
 
 val dest_closure_SOME_is_closure = Q.prove(
   `dest_closure x y = SOME z ⇒ is_closure y`,
@@ -1754,7 +1760,9 @@ val type_soundness = Q.store_thm("type_soundness",
     simp[rich_listTheory.LUPDATE_APPEND1,rich_listTheory.LUPDATE_APPEND2] >>
     simp[LUPDATE_ID] >> rw[] >>
     qpat_assum`type_v A X Y Z`mp_tac >>
-    simp[rich_listTheory.EL_APPEND2]) >>
+    fs[arithmeticTheory.NOT_LESS] >>
+    fs[rich_listTheory.EL_APPEND2]
+    ) >>
   (* Letexn *)
   conj_tac >- (
     rw[type_e_clauses,sem_def] >>
@@ -2026,7 +2034,8 @@ val eval_type_soundness = Q.store_thm("eval_type_soundness",
     simp[rich_listTheory.LUPDATE_APPEND1,rich_listTheory.LUPDATE_APPEND2] >>
     simp[LUPDATE_ID] >> rw[] >>
     qpat_assum`type_v A X Y Z`mp_tac >>
-    simp[rich_listTheory.EL_APPEND2]) >>
+    fs[arithmeticTheory.NOT_LESS] >>
+    fs[rich_listTheory.EL_APPEND2]) >>
   conj_tac >- (
     rw[type_e_clauses] >>
     spose_not_then strip_assume_tac >>

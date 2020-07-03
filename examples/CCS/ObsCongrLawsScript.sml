@@ -193,7 +193,7 @@ val OBS_RESTR_PREFIX_TAU = save_thm (
  *)
 val OBS_RESTR_PR_LAB_NIL = save_thm (
    "OBS_RESTR_PR_LAB_NIL",
-   ((Q_GENL [`l`, `L`]) o
+   ((Q.GENL [`l`, `L`]) o
     (DISCH ``(l :'b Label) IN L \/ (COMPL l) IN L``) o
     (Q.GEN `E`) o
     UNDISCH)
@@ -212,7 +212,7 @@ val OBS_RESTR_PR_LAB_NIL = save_thm (
  *)
 val OBS_RESTR_PREFIX_LABEL = save_thm (
    "OBS_RESTR_PREFIX_LABEL",
-  ((Q_GENL [`l`, `L`]) o
+  ((Q.GENL [`l`, `L`]) o
    (DISCH ``~((l :'b Label) IN L) /\ ~((COMPL l) IN L)``) o
    (Q.GEN `E`) o
    UNDISCH)

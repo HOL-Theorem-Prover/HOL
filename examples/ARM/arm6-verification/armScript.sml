@@ -71,7 +71,7 @@ val _ = Hol_datatype`
 
 val Rg = inst [alpha |-> ``:32``, beta |-> ``:4``] word_extract_tm;
 
-val USER_def = Define `USER mode = (mode = usr) \/ (mode = safe)`;
+val USER_def = Define `USER mode <=> (mode = usr) \/ (mode = safe)`;
 
 val mode_reg2num_def = Define`
   mode_reg2num m (w:word4) = let n = w2n w in
@@ -187,7 +187,7 @@ val exception2mode_def = Define`
 val EXCEPTION_def = Define`
   EXCEPTION (ARM reg psr) type =
     let cpsr = CPSR_READ psr in
-    let fiq' = ((type = reset) \/ (type = fast)) \/ cpsr %% 6
+    let fiq' = (((type = reset) \/ (type = fast)) \/ cpsr %% 6)
     and mode' = exception2mode type
     and pc = n2w (4 * exception2num type):word32 in
     let reg' = REG_WRITE reg mode' 14w (FETCH_PC reg + 4w) in
@@ -330,7 +330,7 @@ val ALU_def = Define`
 (* ......................................................................... *)
 
 val ARITHMETIC_def = Define`
-  ARITHMETIC (opcode:word4) =
+  ARITHMETIC (opcode:word4) <=>
     (opcode %% 2 \/ opcode %% 1) /\ (~(opcode %% 3) \/ ~(opcode %% 2))`;
 
 val TEST_OR_COMP_def = Define`
@@ -398,7 +398,7 @@ val MSR_def = Define`
 (* ------------------------------------------------------------------------- *)
 
 val BORROW2_def = Define`
-  BORROW2 (rs:word32) n = ~(n = 0) /\ rs %% (2 * n - 1)`;
+  BORROW2 (rs:word32) n <=> ~(n = 0) /\ rs %% (2 * n - 1)`;
 
 val MSHIFT2_def = Define`
   MSHIFT2 borrow (mul:word2) (shift:word4) =
@@ -409,7 +409,7 @@ val MSHIFT2_def = Define`
         0w`;
 
 val MLA_MUL_DONE_def = Define`
-  MLA_MUL_DONE rs n =
+  MLA_MUL_DONE rs n <=>
     ~(n = 0) /\ ((31 -- (2 * n)) rs = 0w) /\ ~BORROW2 rs n \/ ~(2 * n < 32)`;
 
 val MLA_MUL_DUR_def = Define `MLA_MUL_DUR rs = LEAST n. MLA_MUL_DONE rs n`;
@@ -756,9 +756,9 @@ val PROJ_Reset_def  = Define `PROJ_Reset  (SOME (Reset x))  = x`;
 val interrupt2exception_def = Define`
   interrupt2exception (ARM_EX (ARM reg psr) ireg exc) (i',f') irpt =
     let (flags,i,f,m) = DECODE_PSR (CPSR_READ psr) in
-    let pass = (exc = software) /\ CONDITION_PASSED flags ireg
+    let pass = (exc = software /\ CONDITION_PASSED flags ireg)
     and ic = DECODE_INST ireg in
-    let old_flags = pass /\ (ic = mrs_msr) in
+    let old_flags = (pass /\ (ic = mrs_msr)) in
     (case irpt of
        NONE            => software
      | SOME (Reset x)  => reset

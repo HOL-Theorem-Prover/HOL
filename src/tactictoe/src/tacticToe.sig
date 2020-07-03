@@ -7,10 +7,8 @@ sig
   val ttt : tactic
   val tactictoe : term -> thm
 
-  (* contains recorded data from the ancestries of the current theory *)
+  (* recorded data from ancestries of the current theory *)
   val clean_ttt_tacdata_cache : unit -> unit
-  (* remembers the goal proven by tactictoe *)
-  val clean_ttt_goaltac_cache : unit -> unit
 
   (* evaluation *)
   type lbl = (string * real * goal * goal list)
@@ -25,6 +23,6 @@ sig
     taccov : (string, int) Redblackmap.dict,
     tacdep : (goal, lbl list) Redblackmap.dict
     }
-  val ttt_eval : thmdata * tacdata -> string * string -> goal -> unit
+  val ttt_eval : thmdata * tacdata -> goal -> unit
 
 end

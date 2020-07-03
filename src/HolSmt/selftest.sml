@@ -167,7 +167,7 @@ in
       [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``(p ==> q) /\ (q ==> p) ==> (p = q)``,
       [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``(p ==> q) /\ (q ==> p) = (p = q)``,
+    (``(p ==> q) /\ (q ==> p) <=> (p = q)``,
       [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``p \/ q ==> p /\ q``, [sat_YO, sat_Z3, sat_Z3p]),
     (``if p then (q ==> p) else (p ==> q)``,
@@ -231,7 +231,7 @@ in
     (``0 + (x:num) = x``, [thm_AUTO, thm_YO]),
     (``(x:num) + y = y + x``, [thm_AUTO, thm_YO]),
     (``(x:num) + (y + z) = (x + y) + z``, [thm_AUTO, thm_YO]),
-    (``((x:num) + y = 0) = (x = 0) /\ (y = 0)``, [thm_AUTO, thm_YO]),
+    (``((x:num) + y = 0) <=> (x = 0) /\ (y = 0)``, [thm_AUTO, thm_YO]),
 
     (``(x:num) - 0 = x``, [thm_AUTO, thm_YO]),
     (``(x:num) - y = y - x``, [sat_YO, sat_Z3, sat_Z3p]),
@@ -385,7 +385,7 @@ in
     (``(x:int) % ~1 = 0``, [thm_AUTO, thm_YO]),
     (``(x:int) % 42 < 42``, [thm_AUTO, thm_YO]),
     (``((x:int) % 42 = x) = (x < 42)``, [sat_YO, sat_Z3, sat_Z3p]),
-    (``((x:int) % 42 = x) = (0 <= x) /\ (x < 42)``, [thm_AUTO, thm_YO]),
+    (``((x:int) % 42 = x) <=> (0 <= x) /\ (x < 42)``, [thm_AUTO, thm_YO]),
     (``(x:int) % 0 = x``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x:int) % 0 = 0``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(0:int) % 0 = 0``, [sat_YO, sat_Z3, sat_Z3p]),
@@ -602,9 +602,9 @@ in
 
     (* let binders *)
 
-    (``let x = y in let x = x /\ z in x = y /\ z``,
+    (``let x = y in let x = (x /\ z) in x <=> y /\ z``,
       [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``let x = u in let x = x in let y = v in x /\ y = u /\ v``,
+    (``let x = u in let x = x in let y = v in x /\ y <=> u /\ v``,
       [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (* lambda abstractions *)
@@ -635,14 +635,14 @@ in
     (``(x, y) = (z, y)``, [sat_YO, sat_Z3, sat_Z3p]),
     (``(x, y) = (y, x)``, [sat_YO, sat_Z3, sat_Z3p]),
     (``((x, y) = (y, x)) = (x = y)``, [(*thm_AUTO,*) thm_YO]),
-    (``((x, y, z) = (y, z, x)) = (x = y) /\ (y = z)``,
+    (``((x, y, z) = (y, z, x)) <=> (x = y) /\ (y = z)``,
       [(*thm_AUTO,*) thm_YO]),
-    (``((x, y) = (u, v)) = (x = u) /\ (y = v)``, [thm_AUTO, thm_YO]),
+    (``((x, y) = (u, v)) <=> (x = u) /\ (y = v)``, [thm_AUTO, thm_YO]),
 
     (``y = FST (x, y)``, [sat_YO, sat_Z3, sat_Z3p]),
     (``x = FST (x, y)``, [thm_AUTO, thm_YO]),
     (``(FST (x, y, z) = FST (u, v, w)) = (x = u)``, [thm_AUTO, thm_YO]),
-    (``(FST (x, y, z) = FST (u, v, w)) = (x = u) /\ (y = w)``,
+    (``(FST (x, y, z) = FST (u, v, w)) <=> (x = u) /\ (y = w)``,
       [sat_YO, sat_Z3, sat_Z3p]),
 
     (``y = SND (x, y)``, [thm_AUTO, thm_YO]),
@@ -651,7 +651,7 @@ in
        [sat_YO, sat_Z3, sat_Z3p]),
     (``(SND (x, y, z) = SND (u, v, w)) = (z = w)``,
        [sat_YO, sat_Z3, sat_Z3p]),
-    (``(SND (x, y, z) = SND (u, v, w)) = (y = v) /\ (z = w)``,
+    (``(SND (x, y, z) = SND (u, v, w)) <=> (y = v) /\ (z = w)``,
       [thm_AUTO, thm_YO]),
 
     (``(FST (x, y) = SND (x, y)) = (x = y)``, [thm_AUTO, thm_YO]),
@@ -841,7 +841,7 @@ in
     (``(0 >< 1) (x:word32) = 0w:word32``,
       [thm_AUTO, thm_YO(*, thm_Z3, thm_Z3p*)]),
 
-    (``(x:word2 = y) = (x ' 0 = y ' 0) /\ (x ' 1 = y ' 1)``,
+    (``(x:word2 = y) <=> (x ' 0 = y ' 0) /\ (x ' 1 = y ' 1)``,
       [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
 
     (``0w:word32 = w2w (0w:word16)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
@@ -885,21 +885,21 @@ in
     (``~ 0w < 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (``0w <= 1w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``x <= y:word32 = x < y \/ (x = y)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``x <= y:word32 <=> x < y \/ (x = y)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``~ 0w <= 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (``1w > 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``0w > ~ 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (``1w >= 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``x >= y:word32 = x > y \/ (x = y)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
+    (``x >= y:word32 <=> x > y \/ (x = y)``, [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``0w >= ~ 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (``0w <+ 1w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``0w <+ ~ 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (``0w <=+ 1w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``x <=+ y:word32 = x <+ y \/ (x = y)``,
+    (``x <=+ y:word32 <=> x <+ y \/ (x = y)``,
       [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``0w <=+ ~ 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
@@ -907,7 +907,7 @@ in
     (``~ 0w >+ 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (``1w >=+ 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``x >=+ y:word32 = x >+ y \/ (x = y)``,
+    (``x >=+ y:word32 <=> x >+ y \/ (x = y)``,
       [thm_AUTO, thm_YO, thm_Z3(*, thm_Z3p*)]),
     (``~ 0w >=+ 0w:word32``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
@@ -989,7 +989,7 @@ in
     (``bar <> baz``, [thm_AUTO, thm_YO]),
     (``[] <> x::xs``, [thm_AUTO, thm_YO]),
     (``xs <> x::xs``, [thm_AUTO, thm_YO]),
-    (``(x::xs = y::ys) = (x = y) /\ (xs = ys)``, [thm_AUTO, thm_YO]),
+    (``(x::xs = y::ys) <=> (x = y) /\ (xs = ys)``, [thm_AUTO, thm_YO]),
 
     (* data types: case constants *)
 
@@ -1002,7 +1002,7 @@ in
 
     (* records: field selectors *)
 
-    (``(x = y) = (x.employed = y.employed) /\ (x.age = y.age)``,
+    (``(x = y) <=> (x.employed = y.employed) /\ (x.age = y.age)``,
       [(*thm_AUTO,*) thm_YO]),
 
     (* records: field updates *)
@@ -1015,30 +1015,30 @@ in
     (* records: literals *)
 
     (``(<| employed := e1; age := a1 |> = <| employed := e2; age := a2 |>)
-     = (e1 = e2) /\ (a1 = a2)``, [thm_AUTO, thm_YO]),
+     <=> (e1 = e2) /\ (a1 = a2)``, [thm_AUTO, thm_YO]),
 
     (* sets (as predicates -- every set expression must be applied to an
        argument!) *)
 
-    (``x IN P = P x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x IN P <=> P x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
-    (``x IN {x | P x} = P x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x IN {x | P x} <=> P x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
     (``x NOTIN {}``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x IN UNIV``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
-    (``x IN P UNION Q = P x \/ Q x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``x IN P UNION {} = x IN P``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x IN P UNION Q <=> P x \/ Q x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x IN P UNION {} <=> x IN P``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x IN P UNION UNIV``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``x IN P UNION Q = x IN Q UNION P``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``x IN P UNION (Q UNION R) = x IN (P UNION Q) UNION R``,
+    (``x IN P UNION Q <=> x IN Q UNION P``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x IN P UNION (Q UNION R) <=> x IN (P UNION Q) UNION R``,
       [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
 
-    (``x IN P INTER Q = P x /\ Q x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x IN P INTER Q <=> P x /\ Q x``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
     (``x NOTIN P INTER {}``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``x IN P INTER UNIV = x IN P``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``x IN P INTER Q = x IN Q INTER P``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
-    (``x IN P INTER (Q INTER R) = x IN (P INTER Q) INTER R``,
+    (``x IN P INTER UNIV <=> x IN P``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x IN P INTER Q <=> x IN Q INTER P``, [thm_AUTO, thm_YO, thm_Z3, thm_Z3p]),
+    (``x IN P INTER (Q INTER R) <=> x IN (P INTER Q) INTER R``,
       [thm_AUTO, thm_YO, thm_Z3, thm_Z3p])
 
   ]  (* tests *)

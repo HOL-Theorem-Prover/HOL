@@ -6,7 +6,7 @@ open rich_listTheory arithmeticTheory
 
 open reductionEval churchnumTheory churchboolTheory normal_orderTheory
      dnoreductTheory stepsTheory recursivefnsTheory recfunsTheory
-     churchlistTheory churchDBTheory
+     churchlistTheory churchDBTheory nlistTheory
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
@@ -276,18 +276,21 @@ val prtermrec1_correct = store_thm(
   Q_TAC SUFF_TAC
     `∀n p. f [n; p] = nlist_of (GENLIST (λi. prtermrec v c a [i; p])
                                         (n + 1))`
-    THEN1 SRW_TAC [][nel_nlist_of] THEN
+    THEN1 SRW_TAC [][GSYM nel_correct] THEN
   Induct THEN1
     (SRW_TAC [][Abbr`f`, Once prtermrec_def]) THEN
-  SRW_TAC [][Abbr`f`, LET_THM, ADD_CLAUSES, GENLIST, SNOC_APPEND,
-             nlist_of_append]
+  SRW_TAC [][Abbr`f`, LET_THM, ADD_CLAUSES, GENLIST, SNOC_APPEND]
   THENL [
     SRW_TAC [ARITH_ss][Once prtermrec_def, SimpRHS, LET_THM],
     SRW_TAC [ARITH_ss][Once prtermrec_def, SimpRHS, LET_THM, DIV_LESS] THEN
-    SRW_TAC [ARITH_ss][nel_nlist_of, EL_GENLIST, LENGTH_GENLIST],
+    SRW_TAC [ARITH_ss][GSYM nel_correct, EL_GENLIST,
+                       LENGTH_GENLIST],
     SRW_TAC [ARITH_ss][Once prtermrec_def, SimpRHS, LET_THM] THEN
-    SRW_TAC [ARITH_ss][nel_nlist_of, DIV_LESS, LENGTH_GENLIST, EL_GENLIST]
+    SRW_TAC [ARITH_ss][GSYM nel_correct, DIV_LESS, LENGTH_GENLIST,
+                       EL_GENLIST]
   ]);
+
+val _ = overload_on ("nsnoc", “λn e. nlist_of (listOfN n ++ [e])”)
 
 val primrec_termrec = Store_thm(
   "primrec_prtermrec",
@@ -300,22 +303,20 @@ val primrec_termrec = Store_thm(
   SRW_TAC [][LET_THM] THEN1
     SRW_TAC [][prCn2, i2 `ncons`] THEN
   intro prCOND THEN SRW_TAC [][prpred, combinTheory.o_ABS_R] THENL [
-    intro2 `napp` THEN SRW_TAC [ARITH_ss][] THEN
-    intro2 `ncons` THEN SRW_TAC [ARITH_ss][] THEN
+    ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN
+    SRW_TAC [ARITH_ss][] THEN
     intro prCn2 THEN SRW_TAC [][] THEN
     SRW_TAC [][prDIV, i2 `$+`],
 
     intro prCOND THEN
     SRW_TAC [][prpred, combinTheory.o_ABS_R] THENL [
-      intro2 `napp` THEN SRW_TAC [][] THEN
-      intro2 `ncons` THEN SRW_TAC [][prK] THEN
+      ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN SRW_TAC [][] THEN
       intro prCn5 THEN SRW_TAC [][] THEN
       SRW_TAC [][i1 `nfst`, prDIV, i2 `$+`, i1 `nsnd`] THEN
       intro2 `nel` THEN
       SRW_TAC [][i1 `nfst`, prDIV, i2 `$+`, i1 `nsnd`],
 
-      intro2 `napp` THEN SRW_TAC [][] THEN
-      intro2 `ncons` THEN SRW_TAC [][] THEN
+      ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN SRW_TAC [][] THEN
       intro prCn3 THEN
       SRW_TAC [][i2 `nel`, i2 `$+`, prDIV],
 
@@ -324,6 +325,10 @@ val primrec_termrec = Store_thm(
 
     SRW_TAC [][pr_eq, prMOD, i2 `$+`]
   ]);
+
+val nel_nlist_of = prove(
+  “i < LENGTH l ⇒ (nel i (nlist_of l) = EL i l)”,
+  simp[GSYM nel_correct]);
 
 val MOD3_thm = prove(
   ``((3 * n) MOD 3 = 0) ∧
@@ -555,7 +560,7 @@ val pr_lift_correct = Store_thm(
   Q.X_GEN_TAC `dd` THEN Induct_on `dd` THEN SRW_TAC [][] THENL [
     SRW_TAC [][Abbr`v`, NOT_LESS_EQUAL] THEN
     REPEAT (FIRST_X_ASSUM (K ALL_TAC)) THEN Induct_on `mx` THEN
-    SRW_TAC [][dBnum_def, ADD_CLAUSES, GENLIST, SNOC_APPEND, nlist_of_append],
+    SRW_TAC [][dBnum_def, ADD_CLAUSES, GENLIST, SNOC_APPEND],
 
     FULL_SIMP_TAC (srw_ss()) [] THEN Q.UNABBREV_TAC `c` THEN
     REPEAT (FIRST_X_ASSUM (K ALL_TAC)) THEN
@@ -576,7 +581,7 @@ val pr_lift_correct = Store_thm(
       FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
       SRW_TAC [ARITH_ss]
               [Abbr`sf`, Abbr`gf`, Abbr`gf'`, Abbr`gfr`, ADD_CLAUSES,
-               GENLIST, SNOC_APPEND, nlist_of_append, nel_nlist_of,
+               GENLIST, SNOC_APPEND, nel_nlist_of,
                LENGTH_GENLIST, EL_GENLIST, dBnum_def]
     ],
 
@@ -597,8 +602,7 @@ val pr_lift_correct = Store_thm(
       SRW_TAC [][dBnum_def],
 
       SRW_TAC [ARITH_ss][GENLIST, ADD_CLAUSES, dBnum_def, SNOC_APPEND,
-                         nel_nlist_of, LENGTH_GENLIST, EL_GENLIST,
-                         nlist_of_append]
+                         nel_nlist_of, LENGTH_GENLIST, EL_GENLIST]
     ]
   ]);
 
@@ -631,10 +635,11 @@ val primrec_pr_lift = Store_thm(
       MATCH_MP_TAC alt_Pr_rule THEN
       SRW_TAC [][i2 `ncons`, i2 `$+`, i2 `$*`] THEN
       intro prCOND THEN
-      SRW_TAC [][combinTheory.o_ABS_R, i2 `napp`, i2 `$*`, i2 `ncons`, prpred]
+      SRW_TAC [][combinTheory.o_ABS_R, i2 `nsnoc` |> BETA_RULE, i2 `$*`,
+                 i2 `ncons`, prpred]
       THENL [
-        intro2 `napp` THEN
-        SRW_TAC [][i2 `ncons`, i2 `$+`, i2 `$*`],
+        ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN
+        SRW_TAC [][i2 `$+`, i2 `$*`],
         SRW_TAC [][i2 `$+`]
       ],
 
@@ -643,8 +648,7 @@ val primrec_pr_lift = Store_thm(
           intro2 `ncons` THEN SRW_TAC [][prK] THEN
           intro2 `$+` THEN
           SRW_TAC [][i2 `$+`, i2 `$*`, i2 `npair`, i2 `nel`],
-          intro2 `napp` THEN SRW_TAC [][] THEN
-          intro2 `ncons` THEN SRW_TAC [][] THEN
+          ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN SRW_TAC [][] THEN
           intro2 `$+` THEN SRW_TAC [][] THEN
           intro2 `$*` THEN SRW_TAC [][] THEN
           SRW_TAC [][i2 `$+`, i2 `$*`, i2 `npair`, i2 `nel`]
@@ -659,8 +663,7 @@ val primrec_pr_lift = Store_thm(
       MATCH_MP_TAC alt_Pr_rule THEN SRW_TAC [][] THENL [
         intro2 `ncons` THEN
         SRW_TAC [][i2 `nel`, i2 `$*`, i2 `$+`],
-        intro2 `napp` THEN SRW_TAC [][] THEN
-        intro2 `ncons` THEN SRW_TAC [][] THEN
+        ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN SRW_TAC [][] THEN
         intro2 `$+` THEN SRW_TAC [][] THEN
         SRW_TAC [][i2 `nel`, i2 `$+`, i2 `$*`]
       ]
@@ -918,8 +921,7 @@ val pr_nsub_correct = Store_thm(
     SRW_TAC [][] THEN
     Q.MATCH_ABBREV_TAC
         `Pr zf sf [gmx; n; s⊗k] = nlist_of (GENLIST gf gmx)` THEN
-    Induct_on `gmx` THEN SRW_TAC [][GENLIST, SNOC_APPEND, nlist_of_append,
-                                    Abbr`zf`] THEN
+    Induct_on `gmx` THEN SRW_TAC [][GENLIST, SNOC_APPEND, Abbr`zf`] THEN
     SRW_TAC [ARITH_ss][Abbr`sf`, Abbr`gf`, dBnum_def],
 
     MAP_EVERY Q.RM_ABBREV_TAC [`v`, `a`] THEN
@@ -937,7 +939,7 @@ val pr_nsub_correct = Store_thm(
     FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
     Q.PAT_X_ASSUM `Pr ZZ FF LL = RR` (K ALL_TAC) THEN
     SRW_TAC [ARITH_ss][GENLIST, ADD_CLAUSES, nel_nlist_of,
-                       SNOC_APPEND, nlist_of_append, dBnum_def],
+                       SNOC_APPEND, dBnum_def],
 
     MAP_EVERY Q.RM_ABBREV_TAC [`v`, `c`] THEN
     FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
@@ -954,7 +956,7 @@ val pr_nsub_correct = Store_thm(
     SRW_TAC [][Abbr`zf`, Abbr`gf`, Abbr`gfr`, Abbr`sf`] THEN
     FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
     Q.PAT_X_ASSUM `Pr ZZ SS LL = RR` (K ALL_TAC) THEN
-    SRW_TAC [ARITH_ss][GENLIST, SNOC_APPEND, nlist_of_append, nel_nlist_of] THEN
+    SRW_TAC [ARITH_ss][GENLIST, SNOC_APPEND, nel_nlist_of] THEN
     SRW_TAC [][GSYM ADD1, FUNPOW_SUC, dBnum_def]
   ]);
 
@@ -966,7 +968,7 @@ val primrec_pr_nsub = Store_thm(
   intro primrec_termrec THEN SRW_TAC [][] THENL [
     intro prCn3 THEN SRW_TAC [][i1 `nfst`, i1 `nsnd`] THEN
     intro alt_Pr_rule THEN SRW_TAC [][] THEN
-    MAP_EVERY (fn q => intro2 q THEN SRW_TAC [][]) [`napp`, `ncons`] THEN
+    ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN SRW_TAC[][] THEN
     intro prCOND THEN
     SRW_TAC [][combinTheory.o_ABS_R, prpred, pr_eq, i1`nsnd`, i2 `$+`] THENL [
       intro primrec_FUNPOW THEN SRW_TAC [][i1 `nfst`] THEN
@@ -978,16 +980,16 @@ val primrec_pr_nsub = Store_thm(
     ],
 
     intro prCn3 THEN SRW_TAC [][] THENL [
-      MAP_EVERY (fn th => intro th THEN SRW_TAC [][])
-                [alt_Pr_rule, i2 `napp`, i2 `ncons`] THEN
+      intro alt_Pr_rule THEN SRW_TAC[][] THEN
+      ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN SRW_TAC[][] THEN
       intro2 `$+` THEN
       SRW_TAC [][i2 `$*`, i2 `nel`, i2 `npair`],
       SRW_TAC [][i2 `$-`, i2 `MAX`, prmxabs, i1 `nsnd`]
     ],
 
     intro prCn2 THEN SRW_TAC [][] THENL [
-      MAP_EVERY (fn th => intro th THEN SRW_TAC [][])
-                [alt_Pr_rule, i2 `napp`, i2 `ncons`] THEN
+      intro alt_Pr_rule THEN SRW_TAC[][] THEN
+      ho_match_mp_tac (i2 `nsnoc` |> BETA_RULE) THEN SRW_TAC[][] THEN
       intro2 `$+` THEN
       SRW_TAC [][i2 `$*`, i2 `$+`, i2 `nel`],
 
@@ -1442,8 +1444,6 @@ val cnel_def = Define`
 `;
 
 val cnel_equiv = brackabs.brackabs_equiv [] cnel_def
-val ndrop_0 = prove(``ndrop n 0 = 0``,
-                    Induct_on `n` THEN SRW_TAC [][ndrop_def, ntl_def]);
 
 val cnel_behaviour = store_thm(
   "cnel_behaviour",
@@ -1451,17 +1451,17 @@ val cnel_behaviour = store_thm(
   SIMP_TAC (bsrw_ss()) [cnel_equiv] THEN
   Q.ID_SPEC_TAC `n` THEN Induct_on `i` THEN
   ASM_SIMP_TAC (bsrw_ss()) [natrec_behaviour, cis_zero_behaviour] THENL [
-    Q.X_GEN_TAC `n` THEN Q.SPEC_THEN `n` STRUCT_CASES_TAC nlist_cases THENL [
-      SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN
-      SRW_TAC [][nel_def, ndrop_def, nhd_def],
+    Q.X_GEN_TAC `n` THEN
+    Q.SPEC_THEN `n` STRUCT_CASES_TAC nlist_cases THENL [
+      SIMP_TAC (bsrw_ss()) [cB_behaviour] ,
       SIMP_TAC (bsrw_ss()) [cB_behaviour, cminus_behaviour,
                             cnfst_behaviour] THEN
       SIMP_TAC (srw_ss() ++ ARITH_ss) [ncons_def]
     ],
 
-    Q.X_GEN_TAC `n` THEN Q.SPEC_THEN `n` STRUCT_CASES_TAC nlist_cases THENL [
-      SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN
-      SRW_TAC [][nel_def, ndrop_def, nhd_def, ndrop_0, ntl_def],
+    Q.X_GEN_TAC `n` THEN
+    Q.SPEC_THEN `n` STRUCT_CASES_TAC nlist_cases THENL [
+      SIMP_TAC (bsrw_ss()) [cB_behaviour],
 
       ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour, cminus_behaviour,
                                 cnsnd_behaviour] THEN
@@ -1472,11 +1472,9 @@ val nel_proj = prove(
   ``nel i (nlist_of l) = proj i l``,
   SRW_TAC [ARITH_ss][proj_def, nel_nlist_of] THEN
   POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `l` THEN Induct_on `i` THEN
-  SRW_TAC [][] THENL [
-    FULL_SIMP_TAC (srw_ss()) [nel_def, ndrop_def, nhd_def],
-    Cases_on `l` THEN1 SRW_TAC [][nel_def, ndrop_0, nhd_def] THEN
-    SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
-  ]);
+  SRW_TAC [][] THEN
+  Cases_on `l` THEN1 SRW_TAC [][nel_def, nhd_def] THEN
+  SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []);
 
 val cnlist_of_def = Define`
   cnlist_of =
@@ -1498,8 +1496,8 @@ val cnlist_of_behaviour = store_thm(
   SIMP_TAC (bsrw_ss()) [cnlist_of_equiv] THEN Induct_on `ns` THEN1
     SIMP_TAC (bsrw_ss()) [cnil_def] THEN
   ASM_SIMP_TAC (bsrw_ss()) [wh_cvcons, cnpair_behaviour, csuc_behaviour,
-                            numpairTheory.ncons_def,
-                            arithmeticTheory.ADD1]);
+                            ncons_def, arithmeticTheory.ADD1]);
+
 
 val crecCn_def = Define`
   crecCn =
@@ -1508,7 +1506,7 @@ val crecCn_def = Define`
         @@ (LAM "k" (cbnf_ofk
                        @@ cforce_num
                        @@ (cdAPP @@ (cnumdB @@ VAR "f")
-                                 @@ (cchurch @@ (cnlist_of @@ VAR "k")))))
+                                 @@ (cchurch @@ (cfold @@ VAR "k")))))
         @@ (LAM "h" (LAM "tr" (LAM "k1" (
               (cbnf_ofk
                  @@ (LAM "k2" (VAR "tr" @@ (cappend
@@ -1567,13 +1565,13 @@ val crecCn_succeeds1 = store_thm(
           @@ cforce_num
           @@ (cdAPP @@ (cnumdB @@ f)
                     @@ (cchurch
-                          @@ (cnlist_of
+                          @@ (cfold
                                 @@ cvlist
                                      (MAP church
                                           (MAP (λg. THE (Phi g x))
                                                gs)))))))``,
   SIMP_TAC (bsrw_ss()) [crecCn_equiv, cchurch_behaviour,
-                        cnlist_of_behaviour] THEN
+                        cfold_correct] THEN
   Q.HO_MATCH_ABBREV_TAC `
     ∀f gs x.
       PRECOND gs x ⇒
@@ -1586,13 +1584,13 @@ val crecCn_succeeds1 = store_thm(
                  @@ cforce_num
                  @@ (cdAPP @@ (cnumdB @@ f)
                            @@ (cDB (fromTerm (church
-                                  (nlist_of (ks ++
-                                             MAP (λg. THE (Phi g x)) gs))))))))
+                                  (fold (ks ++
+                                         MAP (λg. THE (Phi g x)) gs))))))))
   ` THEN1 (Q.UNABBREV_TAC `RHS` THEN BETA_TAC THEN REPEAT STRIP_TAC THEN
            FIRST_X_ASSUM (Q.SPECL_THEN [`f`, `gs`, `x`, `[]`] MP_TAC) THEN
            SRW_TAC [][Abbr`LL`]) THEN
   markerLib.UNABBREV_ALL_TAC THEN BETA_TAC THEN Induct_on `gs` THEN1
-    SIMP_TAC (bsrw_ss()) [cnil_def, cnlist_of_behaviour, cchurch_behaviour] THEN
+    SIMP_TAC (bsrw_ss()) [cnil_def, cfold_correct, cchurch_behaviour] THEN
   SRW_TAC [][] THEN
   SIMP_TAC (bsrw_ss()) [wh_cvcons] THEN
   `∃j. Phi h x = SOME j` by METIS_TAC [] THEN
@@ -1686,9 +1684,9 @@ val PrSstep_def = Define`
              @@ (cdAPP
                    @@ VAR "sdb"
                    @@ (cchurch
-                         @@ (cncons
+                         @@ (cnpair
                                @@ VAR "number"
-                               @@ (cncons @@ VAR "n" @@ VAR "t")))))))))
+                               @@ (cnpair @@ VAR "n" @@ VAR "t")))))))))
 `;
 
 val PrSstep_eval = brackabs.brackabs_equiv [] PrSstep_def
@@ -1700,24 +1698,21 @@ val FV_PrSstep = Store_thm(
 val crecPr_def = Define`
   crecPr =
   LAM "b" (LAM "s" (LAM "ns" (
-    cis_zero @@ VAR "ns"
-             @@ (cbnf_ofk @@ cforce_num @@ (cdAPP @@ (cnumdB @@ VAR "b")
-                                                  @@ (cchurch @@ VAR "ns")))
-             @@ (natrec
+             natrec
                    @@ (LAM "k" (
                          cbnf_ofk
                            @@ (B @@ VAR "k" @@ cforce_num)
                            @@ (cdAPP @@ (cnumdB @@ VAR "b")
-                                     @@ (cchurch @@ (cntl @@ VAR "ns")))))
+                                     @@ (cchurch @@ (cnsnd @@ VAR "ns")))))
                    @@ (LAM "n" (LAM "r" (LAM "k" (
                         VAR "r" @@
                             (PrSstep
                                @@ (cnumdB @@ VAR "s")
-                               @@ (cntl @@ VAR "ns")
+                               @@ (cnsnd @@ VAR "ns")
                                @@ VAR "n"
                                @@ VAR "k")))))
-                   @@ (cnhd @@ VAR "ns")
-                   @@ I))))
+                   @@ (cnfst @@ VAR "ns")
+                   @@ I)))
 `;
 
 val FV_crecPr = Store_thm(
@@ -1725,13 +1720,6 @@ val FV_crecPr = Store_thm(
   ``FV crecPr = {}``,
   SRW_TAC [][pred_setTheory.EXTENSION, crecPr_def] );
 val crecPr_equiv = brackabs.brackabs_equiv [] crecPr_def
-
-val crecPr_nil = store_thm(
-  "crecPr_nil",
-  ``crecPr @@ b @@ s @@ church 0 ==
-    cbnf_ofk @@ cforce_num @@ (cdAPP @@ (cnumdB @@ b)
-                                     @@ cDB (fromTerm (church 0)))``,
-  SIMP_TAC(bsrw_ss()) [crecPr_equiv, cchurch_behaviour]);
 
 val BIforcenum = bstore_thm(
   "BIforcenum",
@@ -1744,23 +1732,22 @@ val BIforcenum = bstore_thm(
 
 val crecPr_cons0 = store_thm(
   "crecPr_cons0",
-  ``crecPr @@ b @@ s @@ church (nlist_of (0::t)) ==
+  ``crecPr @@ b @@ s @@ church (0 ⊗ t) ==
     cbnf_ofk @@ cforce_num @@ (cdAPP @@ (cnumdB @@ b)
-                                     @@ cDB (fromTerm (church (nlist_of t))))``,
+                                     @@ cDB (fromTerm (church t)))``,
   SIMP_TAC (bsrw_ss()) [crecPr_equiv,
                         cnhd_behaviour, cntl_behaviour, natrec_behaviour,
                         cchurch_behaviour]);
 
 val crecPr_consSUC = store_thm(
   "crecPr_consSUC",
-  ``bnf_of (crecPr @@ church b @@ church s @@ church (nlist_of (SUC n::t))) =
+  ``bnf_of (crecPr @@ church b @@ church s @@ church (SUC n ⊗ t)) =
       case bnf_of (crecPr
                      @@ church b
                      @@ church s
-                     @@ church (nlist_of (n::t))) of
+                     @@ church (n ⊗ t)) of
         NONE => NONE
-      | SOME tm => OPTION_MAP church
-                               (Phi s (nlist_of (n :: force_num tm :: t)))``,
+      | SOME tm => OPTION_MAP church (Phi s (n ⊗ force_num tm ⊗ t))``,
   SIMP_TAC (bsrw_ss()) [crecPr_equiv, cis_zero_behaviour, cB_behaviour,
                         cntl_behaviour, cnhd_behaviour] THEN
   Q.HO_MATCH_ABBREV_TAC `
@@ -1772,7 +1759,7 @@ val crecPr_consSUC = store_thm(
   `∀M R kk. SS @@ church M @@ R @@ kk ==
             R @@ (PrSstep
                     @@ cDB (numdB s)
-                    @@ church (nlist_of t)
+                    @@ church t
                     @@ church M
                     @@ kk)`
     by asm_simp_tac (bsrw_ss()) [Abbr`SS`] >>
@@ -1784,14 +1771,14 @@ val crecPr_consSUC = store_thm(
     by (Induct >-
           (Q.UNABBREV_TAC `ZZ` THEN
            ASM_SIMP_TAC (bsrw_ss()) [] THEN
-           Cases_on `Phi b (nlist_of t)` >-
+           Cases_on `Phi b t` >-
              asm_simp_tac (srw_ss()) [PhiNONE_cbnf_ofk] >>
            imp_res_tac PhiSOME_cbnf_ofk >>
            asm_simp_tac (bsrw_ss()) [bnf_bnf_of]) >>
         asm_simp_tac (bsrw_ss()) [] >>
         MAP_EVERY Q.X_GEN_TAC [`kk`, `tt`] >> strip_tac >>
         FIRST_ASSUM
-          (Q.SPECL_THEN [`PrSstep @@ cDB (numdB s) @@ church (nlist_of t)
+          (Q.SPECL_THEN [`PrSstep @@ cDB (numdB s) @@ church t
                                   @@ church N @@ kk`, `tt`] MP_TAC) >>
         disch_then (fn imp => FIRST_ASSUM (fn th => STRIP_ASSUME_TAC
                                                       (MATCH_MP imp th))) >>
@@ -1800,8 +1787,8 @@ val crecPr_consSUC = store_thm(
         full_simp_tac (bsrw_ss()) [] >>
         Q.PAT_X_ASSUM `bnf_of (PrSstep @@ _ @@ _ @@ _ @@ _ @@ _) = SOME _`
           MP_TAC >>
-        asm_simp_tac (bsrw_ss()) [PrSstep_eval, cncons_behaviour] >>
-        Cases_on `Phi s (ncons N (ncons m (nlist_of t)))` >-
+        asm_simp_tac (bsrw_ss()) [PrSstep_eval] >>
+        Cases_on `Phi s (N ⊗ m ⊗ t)` >-
           asm_simp_tac (bsrw_ss()) [PhiNONE_cbnf_ofk] >>
         IMP_RES_TAC PhiSOME_cbnf_ofk >>
         asm_simp_tac (bsrw_ss()) [bnf_bnf_of]) >>
@@ -1817,8 +1804,8 @@ val crecPr_consSUC = store_thm(
   Q.UNABBREV_TAC `result_of` >>
   full_simp_tac (srw_ss()) [] >>
   srw_tac [][] >>
-  simp_tac (bsrw_ss()) [Abbr`k`, PrSstep_eval, cncons_behaviour] >>
-  Cases_on `Phi s (ncons n (ncons m (nlist_of t)))` >-
+  simp_tac (bsrw_ss()) [Abbr`k`, PrSstep_eval] >>
+  Cases_on `Phi s (n ⊗ m ⊗ t)` >-
     asm_simp_tac (bsrw_ss()) [PhiNONE_cbnf_ofk] >>
   imp_res_tac PhiSOME_cbnf_ofk >>
   asm_simp_tac (bsrw_ss()) [bnf_bnf_of]);
@@ -1832,22 +1819,22 @@ val cminimise_def = Define`
               @@ (LAM "k" (
                     cis_zero @@ (cforce_num @@ VAR "k") @@ VAR "t" @@ VAR "f"))
               @@ (cdAPP @@ (cnumdB @@ VAR "i")
-                        @@ (cchurch @@ (cncons @@ VAR "n" @@ VAR "x")))))))
+                        @@ (cchurch @@ (cnpair @@ VAR "n" @@ VAR "x")))))))
       @@ I))
 `;
 
-val FV_cminimise = Store_thm(
-  "FV_cminimise",
-  ``FV cminimise = {}``,
-  SRW_TAC [][cminimise_def, pred_setTheory.EXTENSION]);
+Theorem FV_cminimise[simp]:
+  FV cminimise = {}
+Proof SRW_TAC [][cminimise_def, pred_setTheory.EXTENSION]
+QED
 
 val cminimise_equiv = brackabs.brackabs_equiv [] cminimise_def
 
 val cminimise_fail1 = store_thm(
   "cminimise_fail1",
-  ``(Phi i (nlist_of (n::l)) = NONE) ∧
-    (∀m j. m < n ∧ (Phi i (nlist_of (m::l)) = SOME j) ⇒ 0 < j) ⇒
-    (bnf_of (cminimise @@ church i @@ church (nlist_of l)) = NONE)``,
+  ``(Phi i (n ⊗ l) = NONE) ∧
+    (∀m j. m < n ∧ (Phi i (m ⊗ l) = SOME j) ⇒ 0 < j) ⇒
+    (bnf_of (cminimise @@ church i @@ church l) = NONE)``,
   simp_tac (bsrw_ss()) [cminimise_equiv, cfindleast_behaviour] >>
   strip_tac >>
   Q.MATCH_ABBREV_TAC `bnf_of (cfindbody P (church 0) I) = NONE` >>
@@ -1857,8 +1844,7 @@ val cminimise_fail1 = store_thm(
   Induct_on `n - N`
    >- (rpt strip_tac >> `N = n` by DECIDE_TAC >>
        asm_simp_tac (bsrw_ss()) [Once cfindbody_thm] >>
-       asm_simp_tac (bsrw_ss()) [Abbr`P`, cncons_behaviour,
-                                 PhiNONE_cbnf_ofk]) >>
+       asm_simp_tac (bsrw_ss()) [Abbr`P`, PhiNONE_cbnf_ofk]) >>
   rpt strip_tac >>
   asm_simp_tac (bsrw_ss()) [Once cfindbody_thm] >>
   `∀mm res k.
@@ -1867,11 +1853,11 @@ val cminimise_fail1 = store_thm(
         @@ (C @@ (C @@ (B @@ cis_zero @@ (B @@ cforce_num @@ I))
                     @@ res)
               @@ k)
-        @@ cDB (dAPP (numdB i) (fromTerm (church (ncons mm (nlist_of l)))))`
-    by simp_tac (bsrw_ss()) [Abbr`P`, cncons_behaviour] >>
+        @@ cDB (dAPP (numdB i) (fromTerm (church (mm ⊗ l))))`
+    by simp_tac (bsrw_ss()) [Abbr`P`] >>
   Q.RM_ABBREV_TAC `P` >>
   asm_simp_tac (bsrw_ss()) [] >>
-  Cases_on `Phi i (ncons N (nlist_of l))`
+  Cases_on `Phi i (N ⊗ l)`
    >- asm_simp_tac (bsrw_ss()) [PhiNONE_cbnf_ofk] >>
   imp_res_tac PhiSOME_cbnf_ofk >>
   asm_simp_tac (bsrw_ss()) [] >>
@@ -1895,10 +1881,10 @@ val S' = prove(
 
 val cminimise_fail2 = store_thm(
   "cminimise_fail2",
-  ``(∀n j. (Phi i (nlist_of (n::l)) = SOME j) ⇒ 0 < j) ⇒
-    (bnf_of (cminimise @@ church i @@ church (nlist_of l)) = NONE)``,
+  ``(∀n j. (Phi i (n ⊗ l) = SOME j) ⇒ 0 < j) ⇒
+    (bnf_of (cminimise @@ church i @@ church l) = NONE)``,
   strip_tac >>
-  Cases_on `∃n. Phi i (nlist_of (n::l)) = NONE`
+  Cases_on `∃n. Phi i (n ⊗ l) = NONE`
    >- (MATCH_MP_TAC (GEN_ALL cminimise_fail1) >> metis_tac []) >>
   full_simp_tac (srw_ss()) [] >>
   simp_tac (bsrw_ss()) [cminimise_equiv] >>
@@ -1911,10 +1897,11 @@ val cminimise_fail2 = store_thm(
          simp_tac (bsrw_ss()) [chap2Theory.S_def, termTheory.lemma15a] >>
          simp_tac (srw_ss()) [Cong appcongl, chap2Theory.C_def,
                               chap2Theory.S_def] >>
-         simp_tac (bsrw_ss()) [S', cncons_behaviour] >>
-         Cases_on `Phi i (ncons n (nlist_of l))` >- metis_tac [] >>
+         simp_tac (bsrw_ss()) [S'] >>
+         Cases_on `Phi i (n ⊗ l)` >- metis_tac [] >>
          imp_res_tac PhiSOME_cbnf_ofk >>
-         `0 < x'` by metis_tac [] >>
+         rename [‘Phi i (n ⊗ l) = SOME k’, ‘k = force_num _’] >>
+         `0 < k` by metis_tac [] >>
          asm_simp_tac (bsrw_ss()) [] >> srw_tac [ARITH_ss][] >>
          simp_tac (bsrw_ss()) [] >>
          simp_tac (bsrw_ss()) [cB_def] >>
@@ -1930,9 +1917,9 @@ val cminimise_fail2 = store_thm(
 
 val cminimise_succeeds = store_thm(
   "cminimise_succeeds",
-  ``(Phi i (ncons j (nlist_of l)) = SOME 0) ∧
-    (∀k. k < j ⇒ ∃r. (Phi i (ncons k (nlist_of l)) = SOME r) ∧ 0 < r) ⇒
-    (bnf_of (cminimise @@ church i @@ church (nlist_of l)) = SOME (church j))``,
+  ``(Phi i (j ⊗ l) = SOME 0) ∧
+    (∀k. k < j ⇒ ∃r. (Phi i (k ⊗ l) = SOME r) ∧ 0 < r) ⇒
+    (bnf_of (cminimise @@ church i @@ church l) = SOME (church j))``,
   strip_tac >>
   simp_tac (bsrw_ss()) [cminimise_equiv, cfindleast_behaviour] >>
   Q.MATCH_ABBREV_TAC `bnf_of (cfindbody P (church 0) I) = SOME (church j)` >>
@@ -1954,7 +1941,7 @@ val cminimise_succeeds = store_thm(
         @@ (C @@ (C @@ (B @@ cis_zero @@ (B @@ cforce_num @@ I))
                     @@ res)
               @@ k)
-        @@ cDB (dAPP (numdB i) (fromTerm (church (ncons mm (nlist_of l)))))`
+        @@ cDB (dAPP (numdB i) (fromTerm (church (mm ⊗ l))))`
     by simp_tac (bsrw_ss()) [Abbr`P`, cncons_behaviour] >>
   Q.RM_ABBREV_TAC `P` >>
   asm_simp_tac (bsrw_ss()) [Once cfindbody_thm] >> srw_tac [ARITH_ss][] >>
@@ -1963,30 +1950,26 @@ val cminimise_succeeds = store_thm(
   FIRST_X_ASSUM MATCH_MP_TAC >>
   asm_simp_tac (srw_ss() ++ ARITH_ss) []);
 
-val recfns_in_Phi = store_thm(
-  "recfns_in_Phi",
-  ``∀f n. recfn f n ⇒ ∃i. ∀l. Phi i (nlist_of l) = f l``,
-  HO_MATCH_MP_TAC recfn_ind THEN SRW_TAC [][]  THENL [
+Theorem recfns_in_Phi:
+  ∀f n. recfn f n ⇒ ∃i. ∀l. LENGTH l = n ⇒ Phi i (fold l) = f l
+Proof
+  Induct_on ‘recfn’ >> SRW_TAC [][] THENL [
     Q.EXISTS_TAC `dBnum (fromTerm (LAM "x" (church 0)))` THEN
     SRW_TAC [][Phi_def] THEN
     SIMP_TAC (bsrw_ss()) [bnf_bnf_of],
 
-    Q.EXISTS_TAC `
-      dBnum (fromTerm (LAM "ns"
-                       (cis_zero @@ VAR "ns"
-                                 @@ church 1
-                                 @@ (csuc @@ (cnfst @@ (cminus @@ VAR "ns"
-                                                               @@ church 1))))))
-    ` THEN SRW_TAC [][Phi_def] THEN
-    SIMP_TAC (bsrw_ss()) [] THEN
-    Cases_on `l` THEN
-    SIMP_TAC (bsrw_ss() ++ ARITH_ss) [bnf_bnf_of, ncons_def, cnfst_behaviour],
+    Q.EXISTS_TAC ‘dBnum (fromTerm csuc) ’ >>
+    rw[Phi_def] >> simp_tac (bsrw_ss()) [] >> Cases_on `l` >> fs[] >>
+    SIMP_TAC (bsrw_ss() ++ ARITH_ss) [bnf_bnf_of],
 
-    Q.EXISTS_TAC `dBnum (fromTerm (cnel @@ church i))` THEN
+    qexists_tac
+      ‘dBnum (fromTerm (B @@ (cel @@ church i) @@ (cunfold @@ church n)))’ >>
     SRW_TAC [][Phi_def] THEN
-    SIMP_TAC (bsrw_ss()) [cnel_behaviour, bnf_bnf_of, nel_proj],
+    asm_simp_tac (bsrw_ss())
+      [bnf_bnf_of, cunfold_correct, cel_correct, EL_MAP] >>
+    simp[proj_def],
 
-    FULL_SIMP_TAC (srw_ss()) [listTheory.EVERY_MEM,
+    FULL_SIMP_TAC (srw_ss()) [listTheory.EVERY_MEM, PULL_EXISTS,
                               GSYM RIGHT_EXISTS_IMP_THM] THEN
     POP_ASSUM (STRIP_ASSUME_TAC o CONV_RULE (SKOLEM_CONV THENC
                                              RENAME_VARS_CONV ["gf"])) THEN
@@ -1999,14 +1982,15 @@ val recfns_in_Phi = store_thm(
          by SIMP_TAC (srw_ss()) [optionTheory.FORALL_OPTION] THEN
       FULL_SIMP_TAC (srw_ss()) [listTheory.EVERY_MAP] THEN
       FULL_SIMP_TAC (srw_ss()) [listTheory.EVERY_MEM] THEN
-      `∀i. MEM i (MAP gf gs) ⇒ ∃j. Phi i (nlist_of l) = SOME j`
+      `∀i. MEM i (MAP gf gs) ⇒ ∃j. Phi i (fold l) = SOME j`
          by (SRW_TAC [][listTheory.MEM_MAP] THEN METIS_TAC []) THEN
       POP_ASSUM (ASSUME_TAC o MATCH_MP crecCn_succeeds1) THEN
       POP_ASSUM (fn th => SIMP_TAC (srw_ss())[th]) THEN
-      SIMP_TAC (bsrw_ss()) [cnlist_of_behaviour, cchurch_behaviour] THEN
+      SIMP_TAC (bsrw_ss()) [cfold_correct, cchurch_behaviour] THEN
       SRW_TAC [][MAP_MAP_o, combinTheory.o_DEF, Cong MAP_CONG'] THEN
       Q.ABBREV_TAC `result = MAP (λx. THE (x l)) gs` THEN
-      Cases_on `Phi i (nlist_of result)` THENL [
+      ‘LENGTH result = LENGTH gs’ by simp[Abbr‘result’] >>
+      Cases_on `Phi i (fold result)` THENL [
         SRW_TAC [][PhiNONE_cbnf_ofk] THEN METIS_TAC [],
         IMP_RES_TAC PhiSOME_cbnf_ofk THEN
         ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of] THEN
@@ -2014,25 +1998,24 @@ val recfns_in_Phi = store_thm(
       ],
 
       FULL_SIMP_TAC (srw_ss()) [listTheory.EXISTS_MEM, listTheory.MEM_MAP] THEN
-      `Phi (gf g) (nlist_of l) = NONE` by METIS_TAC [] THEN
+      `Phi (gf g) (fold l) = NONE` by METIS_TAC [] THEN
       `MEM (gf g) (MAP gf gs)` by METIS_TAC [listTheory.MEM_MAP] THEN
       METIS_TAC [crecCn_fails]
     ],
 
+    rename [‘recPr b s _’, ‘Phi i (fold _) = b _’, ‘Phi i' _ = s _’] >>
+    ‘0 < n - 1’ by metis_tac[recfn_nzero] >> ‘2 ≤ n’ by simp[] >>
     Q.EXISTS_TAC `
       dBnum (fromTerm (crecPr @@ church i @@ church i'))
     ` THEN
     SRW_TAC [][Phi_def] THEN
-    Cases_on `l` THEN1
-      (SIMP_TAC (bsrw_ss()) [recPr_def, crecPr_nil] THEN
-       Cases_on `Phi i 0` THEN1
-         (SRW_TAC [][PhiNONE_cbnf_ofk] THEN METIS_TAC [nlist_of_def]) THEN
-       IMP_RES_TAC PhiSOME_cbnf_ofk THEN
-       ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of] THEN
-       METIS_TAC [nlist_of_def]) THEN
+    Cases_on `l` >> fs[] >>
+    rename [‘fold (h::t)’] >>
+    ‘fold (h::t) = h ⊗ fold t’ by (Cases_on ‘t’ >> fs[]) >> simp[] >>
+    pop_assum kall_tac >>
     Induct_on `h` >-
       (SIMP_TAC (bsrw_ss()) [recPr_def, SIMP_RULE (srw_ss()) [] crecPr_cons0] >>
-       Cases_on `Phi i (nlist_of t)` >-
+       Cases_on `Phi i (fold t)` >-
          (asm_simp_tac (bsrw_ss()) [PhiNONE_cbnf_ofk] >> metis_tac []) >>
        imp_res_tac PhiSOME_cbnf_ofk >>
        asm_simp_tac (bsrw_ss()) [bnf_bnf_of] >> metis_tac []) >>
@@ -2040,7 +2023,7 @@ val recfns_in_Phi = store_thm(
                           SIMP_RULE (srw_ss()) [] crecPr_consSUC] >>
     full_simp_tac (srw_ss()) [] >>
     Cases_on `bnf_of (crecPr @@ church i @@ church i'
-                             @@ church (ncons h (nlist_of t)))`
+                             @@ church (h ⊗ fold t))`
     >- (full_simp_tac (srw_ss()) [] >>
         Q.PAT_X_ASSUM `NONE = FOO` (MP_TAC o SYM) >>
         simp_tac (srw_ss()) []) >>
@@ -2048,7 +2031,12 @@ val recfns_in_Phi = store_thm(
     Q.PAT_X_ASSUM `SOME (force_num XX) = YY` (MP_TAC o SYM) >>
     simp_tac (srw_ss()) [optionTheory.OPTION_MAP_COMPOSE] >>
     Q_TAC SUFF_TAC `∀nopt:num option. OPTION_MAP I nopt = nopt`
-    >- (srw_tac [][] >> metis_tac [nlist_of_def]) >>
+    >- (srw_tac [][] >>
+        rename [‘h ⊗ force_num recr ⊗ fold t’] >>
+        ‘h ⊗ force_num recr ⊗ fold t = fold (h :: force_num recr :: t)’
+           suffices_by
+             (disch_then SUBST1_TAC >> first_x_assum irule >> simp[]) >>
+        Cases_on ‘t’ >> fs[]) >>
     Cases_on `nopt` >> srw_tac [][],
 
     Q.EXISTS_TAC `dBnum (fromTerm (cminimise @@ church i))` >>
@@ -2059,51 +2047,58 @@ val recfns_in_Phi = store_thm(
           srw_tac [][] >>
           Q.EXISTS_TAC `church m` >>
           conj_tac
-            >- (MATCH_MP_TAC cminimise_succeeds >> metis_tac []) >>
+            >- (MATCH_MP_TAC cminimise_succeeds >>
+                rfs[] >>
+                ‘∀k. fold (k::l) = k ⊗ fold l’ by (Cases_on ‘l’ >> fs[]) >>
+                fs[] >> metis_tac[]) >>
           SELECT_ELIM_TAC >> srw_tac [][] >- metis_tac [] >>
           `m < x ∨ (x = m) ∨ x < m` by DECIDE_TAC >>
           res_tac >> full_simp_tac (srw_ss() ++ ARITH_ss) []) >>
     full_simp_tac (srw_ss()) [DECIDE ``¬(0 < j) ⇔ (j = 0)``] >>
-    qpat_x_assum `0 < n` (K ALL_TAC) >>
-    `∀n. (Phi i (ncons n (nlist_of l)) = SOME 0) ⇒
-         ∃m. m < n ∧ (Phi i (ncons m (nlist_of l)) = NONE) ∧
-             ∀p. p < m ⇒ ∃r. (Phi i (ncons p (nlist_of l)) = SOME r) ∧ 0 < r`
-      by (completeInduct_on `n` >> strip_tac >>
-          `∃j. j < n ∧ ∀m. (Phi i (ncons j (nlist_of l)) = SOME m) ⇒ (m = 0)`
+    (* qpat_x_assum `0 < n` (K ALL_TAC) >> *)
+    strip_tac >> rw[] >>
+    `∀q. Phi i (q ⊗ fold l) = SOME 0 ⇒
+         ∃m. m < q ∧ Phi i (m ⊗ fold l) = NONE ∧
+             ∀p. p < m ⇒ ∃r. Phi i (p ⊗ fold l) = SOME r ∧ 0 < r`
+      by (completeInduct_on `q` >> strip_tac >>
+          ‘∀N. N ⊗ fold l = fold (N::l)’ by (Cases_on ‘l’ >> fs[]) >> fs[] >>
+          ‘∀N. f (N::l) = Phi i (fold (N::l))’ by simp[] >>
+          `∃j. j < q ∧ ∀m. Phi i (j ⊗ fold l) = SOME m ⇒ (m = 0)`
              by metis_tac [] >>
-          Cases_on `Phi i (ncons j (nlist_of l))`
+          Cases_on `Phi i (j ⊗ fold l)`
             >- (Q.ABBREV_TAC
-                  `JJ = LEAST j. Phi i (ncons j (nlist_of l)) = NONE` >>
+                  `JJ = LEAST j. Phi i (j ⊗ fold l) = NONE` >>
                 `JJ ≤ j` by (Q.UNABBREV_TAC `JJ` >> numLib.LEAST_ELIM_TAC >>
                              metis_tac [DECIDE ``¬(x:num ≤ y) ⇔ y < x``]) >>
                 Cases_on
                   `∀p. p < JJ ⇒
-                       ∃r. (Phi i (ncons p (nlist_of l)) = SOME r) ∧ 0 < r`
+                       ∃r. (Phi i (p ⊗ fold l) = SOME r) ∧ 0 < r`
                   >- (Q_TAC SUFF_TAC
-                            `(Phi i (ncons JJ (nlist_of l)) = NONE) ∧ JJ < n`
+                            `(Phi i (JJ ⊗ fold l) = NONE) ∧ JJ < q`
                             >- metis_tac [] >>
                       conj_tac >-
                         (Q.UNABBREV_TAC `JJ` >> numLib.LEAST_ELIM_TAC >>
                          metis_tac []) >> DECIDE_TAC) >>
                 full_simp_tac (srw_ss()) [DECIDE ``¬(0 < j) ⇔ (j = 0)``] >>
-                Cases_on `Phi i (ncons p (nlist_of l))`
+                Cases_on `Phi i (p ⊗ fold l)`
                   >- (Q_TAC SUFF_TAC `F` >- metis_tac [] >>
                       Q.PAT_X_ASSUM `p < JJ` MP_TAC >>
                       POP_ASSUM MP_TAC >> Q.UNABBREV_TAC `JJ` >>
                       numLib.LEAST_ELIM_TAC >> metis_tac []) >>
-                `Phi i (ncons p (nlist_of l)) = SOME 0`
+                `Phi i (p ⊗ fold l) = SOME 0`
                    by full_simp_tac (srw_ss()) [] >>
-                `p < n` by DECIDE_TAC >>
-                `∃M. M < p ∧ (Phi i (ncons M (nlist_of l)) = NONE) ∧
-                     ∀p. p < M ⇒ ∃r. (Phi i (ncons p (nlist_of l)) = SOME r) ∧
+                `p < q` by DECIDE_TAC >>
+                `∃M. M < p ∧ (Phi i (M ⊗ fold l) = NONE) ∧
+                     ∀p. p < M ⇒ ∃r. (Phi i (p ⊗ fold l) = SOME r) ∧
                                       0 < r` by metis_tac [] >>
-                Q.EXISTS_TAC `M` >> srw_tac [ARITH_ss][]) >>
+                Q.EXISTS_TAC `M` >> srw_tac [ARITH_ss][] >> metis_tac[]) >>
+          rename [‘Phi i (j ⊗ fold l) = SOME x’] >>
           `x = 0` by srw_tac[][] >> srw_tac[][] >>
-          `∃M. M < j ∧ (Phi i (ncons M (nlist_of l)) = NONE) ∧
-               ∀p. p < M ⇒ ∃r. (Phi i (ncons p (nlist_of l)) = SOME r) ∧ 0 < r`
+          `∃M. M < j ∧ Phi i (M ⊗ fold l) = NONE ∧
+               ∀p. p < M ⇒ ∃r. Phi i (p ⊗ fold l) = SOME r ∧ 0 < r`
              by metis_tac [] >>
-          Q.EXISTS_TAC `M` >> srw_tac [ARITH_ss][]) >>
-    Cases_on `∃n. Phi i (ncons n (nlist_of l)) = SOME 0`
+          Q.EXISTS_TAC `M` >> srw_tac [ARITH_ss][] >> metis_tac[]) >>
+    Cases_on `∃n. Phi i (n ⊗ fold l) = SOME 0`
       >- (POP_ASSUM STRIP_ASSUME_TAC >> res_tac >>
           MATCH_MP_TAC (GEN_ALL cminimise_fail1) >>
           Q.EXISTS_TAC `m` >> srw_tac [][] >>
@@ -2111,15 +2106,15 @@ val recfns_in_Phi = store_thm(
     full_simp_tac (srw_ss()) [] >>
     MATCH_MP_TAC (GEN_ALL cminimise_fail2) >> srw_tac [][] >>
     first_x_assum (Q.SPEC_THEN `n` MP_TAC) >> srw_tac [ARITH_ss][]
-  ]);
+  ]
+QED
 
 (* "universal machine index" *)
 val UMi_def = new_specification(
   "UMi_def", ["UMi"],
   MATCH_MP recfns_in_Phi recfn_recPhi |> SIMP_RULE (srw_ss()) [])
 
-val UMi_works = save_thm(
-  "UMi_works",
-  UMi_def |> Q.SPEC `[m;n]` |> SIMP_RULE (srw_ss()) [SimpRHS]);
+Theorem UMi_works =
+  UMi_def |> Q.SPEC `[m;n]` |> SIMP_RULE (srw_ss()) []
 
 val _ = export_theory()

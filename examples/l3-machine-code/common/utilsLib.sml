@@ -522,7 +522,7 @@ fun accessor_update_fns ty =
     val {Thy, Tyop, ...} = Type.dest_thy_type ty
   in
     List.map
-      (fn (s, fld_ty) =>
+      (fn (s, {ty = fld_ty, ...}) =>
          let
            val v = Term.mk_var ("v", fld_ty)
            val kv = Term.inst [Type.beta |-> fld_ty]

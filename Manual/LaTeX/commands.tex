@@ -28,8 +28,14 @@
 \newcommand{\bq}{\texttt{\char'140}}
 % double back quotes ``
 \newcommand{\dq}{\bq\bq}
+% "fancy" versions of the same
+\newcommand{\fldq}{\mbox{\textrm{\textquotedblleft}}}
+\newcommand{\frdq}{\mbox{\textrm{\textquotedblright}}}
+\newcommand{\fholquote}[1]{\fldq#1\frdq}
 \newcommand{\ldquo}{\mbox{\textrm{``}}}
 \newcommand{\rdquo}{\mbox{\textrm{''}}}
+\newcommand{\lsquo}{\mbox{\textrm{`}}}
+\newcommand{\rsquo}{\mbox{\textrm{'}}}
 
 %These macros were included by slind:
 
@@ -41,8 +47,8 @@
                  % macro names is a bit of a pain; deciding to do away
                  % with hol98 nomenclature means that we just want to
                  % write HOL for hol98.
-\def\holnversion{Kananaskis-12}
-\def\holnsversion{Kananaskis~12} % version with space rather than hyphen
+\def\holnversion{Kananaskis-13}
+\def\holnsversion{Kananaskis~13} % version with space rather than hyphen
 \def\LCF{{\small LCF}}
 \def\LCFLSM{{\small LCF{\kern-.2em}{\normalsize\_}{\kern0.1em}LSM}}
 \def\PPL{{\small PP}{\kern-.095em}$\lambda$}

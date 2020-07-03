@@ -8,6 +8,8 @@ val _ = new_theory "quantHeuristics";
 quietdec := false;
 *)
 
+val _ = ParseExtras.temp_loose_equality()
+
 val list_ss  = arith_ss ++ listSimps.LIST_ss
 
 val GUESS_EXISTS_def = Define `

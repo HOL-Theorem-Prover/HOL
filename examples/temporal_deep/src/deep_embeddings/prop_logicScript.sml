@@ -1,51 +1,27 @@
 open HolKernel Parse boolLib bossLib;
 
-(*
-quietdec := true;
-
-val home_dir = (Globals.HOLDIR ^ "/examples/temporal_deep/");
-loadPath := (home_dir ^ "src/deep_embeddings") ::
-            (home_dir ^ "src/tools") :: !loadPath;
-
-map load
- ["pred_setTheory", "pairTheory", "arithmeticTheory", "tuerk_tacticsLib",
-  "containerTheory", "listTheory", "temporal_deep_mixedTheory", "set_lemmataTheory"];
-*)
-
 open pred_setTheory pairTheory arithmeticTheory tuerk_tacticsLib
      containerTheory listTheory temporal_deep_mixedTheory set_lemmataTheory;
+
 open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
 
-(*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
-quietdec := false;
-*)
-
 val _ = new_theory "prop_logic";
+val _ = ParseExtras.temp_loose_equality();
 
-
-val prop_logic =
- Hol_datatype
-  `prop_logic = P_PROP   of 'a                         (* atomic proposition       *)
-        | P_TRUE                                       (* true                     *)
-        | P_NOT of prop_logic                          (* negation                 *)
-        | P_AND of prop_logic # prop_logic`;           (* conjunction              *)
+val _ = Datatype `
+    prop_logic = P_PROP 'a                       (* atomic proposition *)
+               | P_TRUE                          (* true               *)
+               | P_NOT  prop_logic               (* negation           *)
+               | P_AND (prop_logic # prop_logic) (* conjunction        *)
+`;
 
 val prop_logic_11 = DB.fetch "-" "prop_logic_11";
 
-
-val prop_logic_induct =
- save_thm
-  ("prop_logic_induct",
-   Q.GEN
-    `P`
-    (MATCH_MP
+Theorem prop_logic_induct = Q.GEN `P`
+   (MATCH_MP
      (DECIDE ``(A ==> (B1 /\ B2)) ==> (A ==> B1)``)
      (SIMP_RULE
        std_ss
@@ -54,232 +30,163 @@ val prop_logic_induct =
         PROVE[]``(!x y. P y ==> Q(x,y)) = !y. P y ==> !x. Q(x,y)``]
        (Q.SPECL
          [`P`,`\(f1,f2). P f1 /\ P f2`]
-         (TypeBase.induction_of ``:'a prop_logic``)))));
+         (TypeBase.induction_of ``:'a prop_logic``))));
 
-
-val P_SEM_def =
- Define
-   `(P_SEM s (P_TRUE) = T) /\
-    (P_SEM s (P_PROP p) = p IN s) /\
-    (P_SEM s (P_NOT b) = ~(P_SEM s b)) /\
-    (P_SEM s (P_AND(b1,b2)) = (P_SEM s b1 /\ P_SEM s b2))`;
-
-
+val P_SEM_def = Define
+  `(P_SEM s (P_TRUE) = T) /\
+   (P_SEM s (P_PROP p) = p IN s) /\
+   (P_SEM s (P_NOT b) = ~(P_SEM s b)) /\
+   (P_SEM s (P_AND(b1,b2)) = (P_SEM s b1 /\ P_SEM s b2))`;
 
 (******************************************************************************
 * Syntactic Sugar for Propositional logic
 ******************************************************************************)
 
-val P_FALSE_def =
- Define
-   `P_FALSE = P_NOT(P_TRUE)`;
+val P_FALSE_def = Define
+   `P_FALSE = P_NOT (P_TRUE)`;
 
+val P_OR_def = Define
+   `P_OR (b1, b2) = P_NOT (P_AND (P_NOT b1, P_NOT b2))`;
 
-val P_OR_def =
- Define
-   `P_OR(b1, b2) = P_NOT(P_AND(P_NOT b1, P_NOT b2))`;
+val P_IMPL_def = Define
+   `P_IMPL (b1, b2) = P_OR (P_NOT b1, b2)`;
 
+val P_COND_def = Define
+   `P_COND (c, b1, b2) = P_AND (P_IMPL (c, b1), P_IMPL (P_NOT c, b2))`;
 
-val P_IMPL_def =
- Define
-   `P_IMPL(b1, b2) = P_OR(P_NOT b1, b2)`;
+val P_EQUIV_def = Define
+   `P_EQUIV (b1, b2) = P_AND (P_IMPL (b1, b2), P_IMPL (b2, b1))`;
 
-val P_COND_def =
- Define
-   `P_COND(c, b1, b2) = P_AND(P_IMPL(c, b1), P_IMPL(P_NOT c, b2))`;
+val PROP_LOGIC_EQUIVALENT_def = Define
+   `PROP_LOGIC_EQUIVALENT b1 b2 = (!s. (P_SEM s b1) = (P_SEM s b2))`;
 
+val P_USED_VARS_def = Define
+  `(P_USED_VARS (P_TRUE) = EMPTY) /\
+   (P_USED_VARS (P_PROP p) = {p}) /\
+   (P_USED_VARS (P_NOT b) = P_USED_VARS b) /\
+   (P_USED_VARS (P_AND(b1,b2)) = ((P_USED_VARS b1) UNION (P_USED_VARS b2)))`;
 
-val P_EQUIV_def =
- Define
-   `P_EQUIV(b1, b2) = P_AND(P_IMPL(b1, b2),P_IMPL(b2, b1))`;
-
-
-val PROP_LOGIC_EQUIVALENT_def =
- Define
-   `(PROP_LOGIC_EQUIVALENT b1 b2) = (!s. (P_SEM s b1) = (P_SEM s b2))`;
-
-
-val P_USED_VARS_def=
- Define
-   `(P_USED_VARS (P_TRUE) = EMPTY) /\
-    (P_USED_VARS (P_PROP p) = {p}) /\
-    (P_USED_VARS (P_NOT b) = P_USED_VARS b) /\
-    (P_USED_VARS (P_AND(b1,b2)) = ((P_USED_VARS b1) UNION (P_USED_VARS b2)))`;
-
-
-val IS_POSITIVE_NEGATIVE_PROP_FORMULA_SUBSET_def =
-Define
-`(IS_POSITIVE_PROP_FORMULA_SUBSET S P_TRUE = T) /\
-  (IS_POSITIVE_PROP_FORMULA_SUBSET S (P_PROP a) = T) /\
-  (IS_POSITIVE_PROP_FORMULA_SUBSET S (P_NOT p') = IS_NEGATIVE_PROP_FORMULA_SUBSET S p') /\
-  (IS_POSITIVE_PROP_FORMULA_SUBSET S (P_AND(p', p'')) = (
+val IS_POSITIVE_NEGATIVE_PROP_FORMULA_SUBSET_def = Define
+  `(IS_POSITIVE_PROP_FORMULA_SUBSET S P_TRUE = T) /\
+   (IS_POSITIVE_PROP_FORMULA_SUBSET S (P_PROP a) = T) /\
+   (IS_POSITIVE_PROP_FORMULA_SUBSET S (P_NOT p') = IS_NEGATIVE_PROP_FORMULA_SUBSET S p') /\
+   (IS_POSITIVE_PROP_FORMULA_SUBSET S (P_AND(p', p'')) = (
     IS_POSITIVE_PROP_FORMULA_SUBSET S p' /\
     IS_POSITIVE_PROP_FORMULA_SUBSET S p'')) /\
-  (IS_NEGATIVE_PROP_FORMULA_SUBSET S P_TRUE = T) /\
-  (IS_NEGATIVE_PROP_FORMULA_SUBSET S (P_PROP a) = (~(a IN S))) /\
-  (IS_NEGATIVE_PROP_FORMULA_SUBSET S (P_NOT p') = IS_POSITIVE_PROP_FORMULA_SUBSET S p') /\
-  (IS_NEGATIVE_PROP_FORMULA_SUBSET S (P_AND(p', p'')) = (
+   (IS_NEGATIVE_PROP_FORMULA_SUBSET S P_TRUE = T) /\
+   (IS_NEGATIVE_PROP_FORMULA_SUBSET S (P_PROP a) = (~(a IN S))) /\
+   (IS_NEGATIVE_PROP_FORMULA_SUBSET S (P_NOT p') = IS_POSITIVE_PROP_FORMULA_SUBSET S p') /\
+   (IS_NEGATIVE_PROP_FORMULA_SUBSET S (P_AND(p', p'')) = (
     IS_NEGATIVE_PROP_FORMULA_SUBSET S p' /\
     IS_NEGATIVE_PROP_FORMULA_SUBSET S p''))`;
 
+val IS_POSITIVE_PROP_FORMULA_def = Define
+   `IS_POSITIVE_PROP_FORMULA p = IS_POSITIVE_PROP_FORMULA_SUBSET UNIV p`;
 
-val IS_POSITIVE_PROP_FORMULA_def =
-Define
-`IS_POSITIVE_PROP_FORMULA p =
-  IS_POSITIVE_PROP_FORMULA_SUBSET UNIV p`;
+val IS_NEGATIVE_PROP_FORMULA_def = Define
+   `IS_NEGATIVE_PROP_FORMULA p = IS_NEGATIVE_PROP_FORMULA_SUBSET UNIV p`;
 
+val P_BIGOR_def = Define
+  `(P_BIGOR [] = P_FALSE) /\
+   (P_BIGOR (s::S) = P_OR (s, P_BIGOR S))`;
 
-val IS_NEGATIVE_PROP_FORMULA_def =
-Define
-`IS_NEGATIVE_PROP_FORMULA p =
-  IS_NEGATIVE_PROP_FORMULA_SUBSET UNIV p`;
+val P_BIGAND_def = Define
+  `(P_BIGAND [] = P_TRUE) /\
+   (P_BIGAND (s::S) = P_AND (s, P_BIGAND S))`;
 
+val P_BIGCOND_def = Define
+  `(P_BIGCOND [] = P_FALSE) /\
+   (P_BIGCOND ((c,b)::l) = P_COND (c, b, P_BIGCOND l))`;
 
-val P_BIGOR_def =
-Define
-`(P_BIGOR [] = P_FALSE) /\
-  (P_BIGOR (s::S) = P_OR (s, P_BIGOR S))`;
+val P_SEM_MIN_def = Define
+   `P_SEM_MIN S p = (P_SEM S p /\ !S'. (S' PSUBSET S) ==> ~(P_SEM S' p))`;
 
+val P_PROP_DISJUNCTION_def = Define
+  `(P_PROP_DISJUNCTION [] = P_FALSE) /\
+   (P_PROP_DISJUNCTION (s::S) = P_OR (P_PROP s, P_PROP_DISJUNCTION S))`;
 
-val P_BIGAND_def =
-Define
-`(P_BIGAND [] = P_TRUE) /\
-  (P_BIGAND (s::S) = P_AND (s, P_BIGAND S))`;
+val P_PROP_CONJUNCTION_def = Define
+  `(P_PROP_CONJUNCTION [] = P_TRUE) /\
+   (P_PROP_CONJUNCTION (s::S) = P_AND (P_PROP s, P_PROP_CONJUNCTION S))`;
 
-val P_BIGCOND_def =
-Define
-`(P_BIGCOND [] = P_FALSE) /\
- (P_BIGCOND ((c,b)::l) = P_COND (c, b, P_BIGCOND l))`;
+val IS_PROP_DISJUNCTION_def = Define
+  `(IS_PROP_DISJUNCTION p = (?S. p = P_PROP_DISJUNCTION S))`;
 
-val P_SEM_MIN_def =
-Define
-`P_SEM_MIN S p = (P_SEM S p /\ !S'. (S' PSUBSET S) ==> ~(P_SEM S' p))`;
+val IS_PROP_CONJUNCTION_def = Define
+  `(IS_PROP_CONJUNCTION p = (?S. p = P_PROP_CONJUNCTION S))`;
 
+val P_MODEL_DISJUNCTION_def = Define
+   `P_MODEL_DISJUNCTION S p =
+    P_PROP_DISJUNCTION (SET_TO_LIST ({S' | P_SEM S' p} INTER (POW S)))`;
 
-val P_PROP_DISJUNCTION_def =
-Define
-`(P_PROP_DISJUNCTION [] = P_FALSE) /\
-  (P_PROP_DISJUNCTION (s::S) = P_OR (P_PROP s, P_PROP_DISJUNCTION S))`;
-
-
-val P_PROP_CONJUNCTION_def =
-Define
-`(P_PROP_CONJUNCTION [] = P_TRUE) /\
-  (P_PROP_CONJUNCTION (s::S) = P_AND (P_PROP s, P_PROP_CONJUNCTION S))`;
-
-
-val IS_PROP_DISJUNCTION_def =
-Define
-`(IS_PROP_DISJUNCTION p = (?S. p = P_PROP_DISJUNCTION S))`;
-
-
-val IS_PROP_CONJUNCTION_def =
-Define
-`(IS_PROP_CONJUNCTION p = (?S. p = P_PROP_CONJUNCTION S))`;
-
-
-val P_MODEL_DISJUNCTION_def =
-Define
-    `P_MODEL_DISJUNCTION S p =
-      P_PROP_DISJUNCTION (SET_TO_LIST ({S' | P_SEM S' p} INTER (POW S)))`;
-
-
-val P_MIN_MODEL_DISJUNCTION_def =
-Define
-    `P_MIN_MODEL_DISJUNCTION S p =
+val P_MIN_MODEL_DISJUNCTION_def = Define
+   `P_MIN_MODEL_DISJUNCTION S p =
     P_PROP_DISJUNCTION (SET_TO_LIST ({S' | P_SEM_MIN S' p} INTER (POW S)))`;
-
 
 val P_PROP_SET_MODEL_def = Define
   `(P_PROP_SET_MODEL S S' =
-        P_AND(P_PROP_CONJUNCTION (SET_TO_LIST (S INTER S')), P_NOT(
-        P_PROP_DISJUNCTION (SET_TO_LIST (S' DIFF S)))))`;
+      P_AND (P_PROP_CONJUNCTION (SET_TO_LIST (S INTER S')),
+             P_NOT (P_PROP_DISJUNCTION (SET_TO_LIST (S' DIFF S)))))`;
 
+val P_NEGATE_VARS_def = Define
+  `(P_NEGATE_VARS (P_TRUE) = P_TRUE) /\
+   (P_NEGATE_VARS (P_PROP p) = (P_NOT (P_PROP p))) /\
+   (P_NEGATE_VARS (P_NOT b) = (P_NOT(P_NEGATE_VARS b))) /\
+   (P_NEGATE_VARS (P_AND(b1,b2)) = P_AND(P_NEGATE_VARS b1, P_NEGATE_VARS b2))`;
 
-val P_NEGATE_VARS_def =
- Define
-   `(P_NEGATE_VARS (P_TRUE) = P_TRUE) /\
-    (P_NEGATE_VARS (P_PROP p) = (P_NOT (P_PROP p))) /\
-    (P_NEGATE_VARS (P_NOT b) = (P_NOT(P_NEGATE_VARS b))) /\
-    (P_NEGATE_VARS (P_AND(b1,b2)) = P_AND(P_NEGATE_VARS b1, P_NEGATE_VARS b2))`;
-
-val P_NEGATE_VARS_SEM =
- store_thm
-  ("P_NEGATE_VARS_SEM",
-    ``!p s. (P_SEM s (P_NEGATE_VARS p)) = (P_SEM (UNIV DIFF s) p)``,
-
+Theorem P_NEGATE_VARS_SEM :
+    !p s. (P_SEM s (P_NEGATE_VARS p)) = (P_SEM (UNIV DIFF s) p)
+Proof
     INDUCT_THEN prop_logic_induct ASSUME_TAC THEN
-    ASM_SIMP_TAC std_ss [P_SEM_def, P_NEGATE_VARS_def, IN_DIFF, IN_UNIV]);
+    ASM_SIMP_TAC std_ss [P_SEM_def, P_NEGATE_VARS_def, IN_DIFF, IN_UNIV]
+QED
 
-
-val P_DUAL_def =
- Define
+val P_DUAL_def = Define
    `P_DUAL p = P_NOT (P_NEGATE_VARS p)`;
 
-
-val P_IS_CONTRADICTION_def =
- Define
+val P_IS_CONTRADICTION_def = Define
    `P_IS_CONTRADICTION p = (!P. ~(P_SEM P p))`;
 
-val P_IS_TAUTOLOGY_def =
- Define
+val P_IS_TAUTOLOGY_def = Define
    `P_IS_TAUTOLOGY p = (!P. P_SEM P p)`;
 
+val P_ASSIGN_TRUE_def = Define
+  `(P_ASSIGN_TRUE V (P_PROP p) = (if p IN V then P_TRUE else P_PROP p)) /\
+   (P_ASSIGN_TRUE V P_TRUE = P_TRUE) /\
+   (P_ASSIGN_TRUE V (P_NOT b) = P_NOT(P_ASSIGN_TRUE V b)) /\
+   (P_ASSIGN_TRUE V (P_AND(b1,b2)) =
+      P_AND (P_ASSIGN_TRUE V b1, P_ASSIGN_TRUE V b2))`;
 
+val P_ASSIGN_FALSE_def = Define
+  `(P_ASSIGN_FALSE V (P_PROP p) = (if p IN V then P_FALSE else P_PROP p)) /\
+   (P_ASSIGN_FALSE V P_TRUE = P_TRUE) /\
+   (P_ASSIGN_FALSE V (P_NOT b) = P_NOT(P_ASSIGN_FALSE V b)) /\
+   (P_ASSIGN_FALSE V (P_AND(b1,b2)) =
+      P_AND (P_ASSIGN_FALSE V b1, P_ASSIGN_FALSE V b2))`;
 
-val P_ASSIGN_TRUE_def =
-Define
-`(P_ASSIGN_TRUE V (P_PROP p) = (if p IN V then P_TRUE else P_PROP p)) /\
-  (P_ASSIGN_TRUE V P_TRUE = P_TRUE) /\
-  (P_ASSIGN_TRUE V (P_NOT b) = P_NOT(P_ASSIGN_TRUE V b)) /\
-  (P_ASSIGN_TRUE V (P_AND(b1,b2)) = P_AND (
-        P_ASSIGN_TRUE V b1,
-        P_ASSIGN_TRUE V b2))`;
+val P_SUBSTITUTION_def = Define
+  `(P_SUBSTITUTION f (P_PROP p) = f p) /\
+   (P_SUBSTITUTION f P_TRUE = P_TRUE) /\
+   (P_SUBSTITUTION f (P_NOT b) = P_NOT(P_SUBSTITUTION f b)) /\
+   (P_SUBSTITUTION f (P_AND(b1,b2)) =
+      P_AND (P_SUBSTITUTION f b1, P_SUBSTITUTION f b2))`;
 
+val P_EXISTS_def = Define
+  `(P_EXISTS [] p = p) /\
+   (P_EXISTS (v::l) p = P_EXISTS l (P_OR(P_ASSIGN_TRUE {v} p, P_ASSIGN_FALSE {v} p)))`;
 
-val P_ASSIGN_FALSE_def =
-Define
-`(P_ASSIGN_FALSE V (P_PROP p) = (if p IN V then P_FALSE else P_PROP p)) /\
-  (P_ASSIGN_FALSE V P_TRUE = P_TRUE) /\
-  (P_ASSIGN_FALSE V (P_NOT b) = P_NOT(P_ASSIGN_FALSE V b)) /\
-  (P_ASSIGN_FALSE V (P_AND(b1,b2)) = P_AND (
-        P_ASSIGN_FALSE V b1,
-        P_ASSIGN_FALSE V b2))`;
+val P_FORALL_def = Define
+  `(P_FORALL l p = P_NOT (P_EXISTS l (P_NOT p)))`;
 
-
-val P_SUBSTITUTION_def =
-Define
-`(P_SUBSTITUTION f (P_PROP p) = f p) /\
- (P_SUBSTITUTION f P_TRUE = P_TRUE) /\
- (P_SUBSTITUTION f (P_NOT b) = P_NOT(P_SUBSTITUTION f b)) /\
- (P_SUBSTITUTION f (P_AND(b1,b2)) = P_AND (
-        P_SUBSTITUTION f b1,
-        P_SUBSTITUTION f b2))`;
-
-
-val P_EXISTS_def =
-Define
-`(P_EXISTS [] p = p) /\
-  (P_EXISTS (v::l) p = P_EXISTS l (P_OR(P_ASSIGN_TRUE {v} p, P_ASSIGN_FALSE {v} p)))`;
-
-
-val P_FORALL_def =
-Define
-`(P_FORALL l p = P_NOT (P_EXISTS l (P_NOT p)))`;
-
-
-val VAR_RENAMING_HASHTABLE_def =
-Define
-`(VAR_RENAMING_HASHTABLE S f =
-   P_BIGOR (SET_TO_LIST (IMAGE (\s. P_AND(P_PROP_SET_MODEL s S, P_PROP(f s))) (POW S))))`;
-
+val VAR_RENAMING_HASHTABLE_def = Define
+  `(VAR_RENAMING_HASHTABLE S f =
+    P_BIGOR (SET_TO_LIST (IMAGE (\s. P_AND(P_PROP_SET_MODEL s S, P_PROP(f s))) (POW S))))`;
 
 (******************************************************************************
 * Fundamental lemmata about prop logic
 ******************************************************************************)
 
-val P_SEM_THM =
- store_thm
+val P_SEM_THM = store_thm
   ("P_SEM_THM",
    ``!s b1 b2 c b p.
    ((P_SEM s (P_TRUE)) /\ ~(P_SEM s (P_FALSE)) /\

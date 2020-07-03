@@ -70,7 +70,7 @@ REPEAT STRIP_TAC THENL [
    FULL_SIMP_TAC std_ss [GSYM SWAP_ELEMENTS_def, GSYM EL] THEN
    NTAC 3 (POP_ASSUM (K ALL_TAC)) THEN
    REPEAT STRIP_TAC THENL [
-      MATCH_MP_TAC sortingTheory.SORTED_APPEND THEN
+      MATCH_MP_TAC sortingTheory.SORTED_APPEND_IMP THEN
       FULL_SIMP_TAC arith_ss [relationTheory.transitive_def, EL] THEN
       REPEAT STRIP_TAC THEN
       Tactical.REVERSE (`(x <= HD data') /\ (HD data' < y)` by ALL_TAC) THEN1 (
@@ -185,7 +185,7 @@ REPEAT STRIP_TAC THENL [
    FULL_SIMP_TAC list_ss [MIN_EQ] THEN
    HF_VC_TAC THEN
    REPEAT STRIP_TAC THENL [
-      MATCH_MP_TAC sortingTheory.SORTED_APPEND THEN
+      MATCH_MP_TAC sortingTheory.SORTED_APPEND_IMP THEN
       FULL_SIMP_TAC arith_ss [relationTheory.transitive_def, EL] THEN
       REPEAT STRIP_TAC THEN
       Tactical.REVERSE (`~(dh < x) /\ (dh < y)` by ALL_TAC) THEN1 DECIDE_TAC THEN

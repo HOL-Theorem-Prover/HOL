@@ -19,13 +19,12 @@ open Feedback Lib Term Tag Dep
 
 type 'a set = 'a HOLset.set;
 type depdisk = (string * int) * ((string * int list) list);
-type tag = Tag.tag
 
 val --> = Type.-->;
 infixr 3 -->;
 infix 5 |-> ;
 
-val kernelid = "logknl"
+val kernelid = "otknl"
 
 (*---------------------------------------------------------------------------
        Exception handling
@@ -52,6 +51,7 @@ val empty_tag = Tag.empty_tag
     The following are here because I didn't want to Thm to be dependent
     on some derived syntax (now in boolSyntax).
  ---------------------------------------------------------------------------*)
+structure Susp = Portable.HOLSusp
 
 val F = Susp.delay (fn () => mk_thy_const{Name="F", Thy="bool", Ty=bool});
 
@@ -219,8 +219,7 @@ fun ASSUME tm =
  *         |- M = M                                                          *
  *---------------------------------------------------------------------------*)
 
-val mk_eq_nocheck = Term.prim_mk_eq
-fun mk_imp_nocheck(t1,t2) = Term.prim_mk_imp t1 t2
+val mk_eq_nocheck = Term.prim_mk_eq;
 
 fun refl_nocheck ty tm =
   make_thm Count.Refl (empty_tag, empty_hyp, mk_eq_nocheck ty tm tm,REFL_prf tm);
@@ -333,8 +332,8 @@ fun DISCH w (th as THM(ocl,asl,c,_)) =
    make_thm Count.Disch
       (ocl,
        HOLset.delete(asl, w) handle HOLset.NotFound => asl,
-       mk_imp_nocheck(w, c),
-       DISCH_prf(w,th)))
+       Term.prim_mk_imp w c,
+       DISCH_prf(w,th)));
 
 
 (*---------------------------------------------------------------------------
@@ -552,8 +551,8 @@ fun EQ_IMP_RULE th =
      and A = hypset th
      and O = tag th
  in if ty = Type.bool
-    then (make_thm Count.EqImpRule(O,A, mk_imp_nocheck(lhs, rhs), EQ_IMP_RULE1_prf th),
-          make_thm Count.EqImpRule(O,A, mk_imp_nocheck(rhs, lhs), EQ_IMP_RULE2_prf th))
+    then (make_thm Count.EqImpRule(O,A, Term.prim_mk_imp lhs rhs, EQ_IMP_RULE1_prf th),
+          make_thm Count.EqImpRule(O,A, Term.prim_mk_imp rhs lhs, EQ_IMP_RULE2_prf th))
     else ERR "" ""
  end
  handle HOL_ERR _ => ERR "EQ_IMP_RULE" "";
@@ -944,7 +943,7 @@ fun NOT_ELIM th =
   case with_exn dest (concl th) (thm_err "NOT_ELIM" "")
    of ({Name="~", Thy="bool",...},Rand)
        => make_thm Count.NotElim
-             (tag th, hypset th, mk_imp_nocheck(Rand, Susp.force F), NOT_ELIM_prf th)
+             (tag th, hypset th, Term.prim_mk_imp Rand (Susp.force F), NOT_ELIM_prf th)
     | otherwise => ERR "NOT_ELIM" ""
 end;
 
@@ -993,7 +992,6 @@ fun INST [] th = th
       else
         raise ERR "INST" "can only instantiate variables"
 
-
 (*---------------------------------------------------------------------------*
  * Now some derived rules optimized for computations, avoiding most          *
  * of useless type-checking, using pointer equality and delayed              *
@@ -1015,6 +1013,7 @@ fun Beta th =
         (tag th, hypset th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs), Beta_prf th)
    end
    handle HOL_ERR _ => ERR "Beta" "";
+
 
 (*---------------------------------------------------------------------------*
  * This rule behaves like a tactic: given a goal (reducing the rhs of thm),  *
@@ -1043,9 +1042,9 @@ fun Mk_comb thm =
        val (Rator,Rand) = dest_comb rhs
        fun mkthm th1' th2' =
          let val (lhs1, rhs1, _) = Term.dest_eq_ty (concl th1')
-             val _ = Assert (EQ lhs1 Rator) "" ""
+             val _ = Assert (aconv lhs1 Rator) "" ""
              val (lhs2, rhs2, _) = Term.dest_eq_ty (concl th2')
-             val _ = Assert (EQ lhs2 Rand) "" ""
+             val _ = Assert (aconv lhs2 Rand) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1', th2']
          in make_thm Count.MkComb
            (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)), Mk_comb_prf (thm,th1',th2'))
@@ -1077,7 +1076,7 @@ fun Mk_abs thm =
        val (Bvar,Body) = dest_abs rhs
        fun mkthm th1' =
          let val (lhs1, rhs1, _) = Term.dest_eq_ty (concl th1')
-             val _ = Assert (EQ lhs1 Body) "" ""
+             val _ = Assert (aconv lhs1 Body) "" ""
              val _ = Assert (not (var_occursl Bvar (hypset th1'))) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1']
          in make_thm Count.Abs
@@ -1119,8 +1118,7 @@ val mk_thm = mk_proof_thm Axiom_prf
 fun add_tag (tag1, THM(tag2, h,c,p)) = THM(Tag.merge tag1 tag2, h, c,p)
 
 (*---------------------------------------------------------------------------*
- *    The following two are only used in Theory, and are not                 *
- *     externally available.                                                 *
+ *    The following two are only used internally
  *---------------------------------------------------------------------------*)
 
 fun mk_axiom_thm (r,c) =
@@ -1138,7 +1136,7 @@ fun mk_defn_thm (witness_tag, c, p) =
         in th end)
 
 (* ----------------------------------------------------------------------
-    Making definitional theorems
+    Primitive Definition Principles
    ---------------------------------------------------------------------- *)
 
 fun ERR f msg = HOL_ERR {origin_structure = "Thm",
@@ -1203,7 +1201,6 @@ fun check_tyvars body_tyvars ty f =
       raise f (String.concat
          ("Unbound type variable(s) in definition: "
            :: commafy (map (Lib.quote o Type.dest_vartype) extras)));
-
 
 fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val (bv,Body) = with_exn dest_exists (concl thm) TYDEF_FORM_ERR
@@ -1307,6 +1304,12 @@ fun gen_prim_specification thyname th = let
 in
   (cnames, mk_defn_thm (tag th, subst (List.map addc stys) body, prf))
 end
+
+
+
+
+
+
 
 (* ----------------------------------------------------------------------
     Creating a theorem from disk

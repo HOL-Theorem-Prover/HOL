@@ -1,2 +1,2 @@
-INCLUDES = ../subtypes ../ho_prover ../formalize ../../RSA ../useful
+INCLUDES = ../subtypes ../ho_prover ../formalize ${HOLDIR}/examples/RSA
 OPTIONS = QUIT_ON_FAILURE

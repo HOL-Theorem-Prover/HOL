@@ -14,6 +14,7 @@ open HolKernel boolLib Parse bossLib;
 open Q io_onestepTheory armTheory;
 
 val _ = new_theory "core";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 (* The State Space --------------------------------------------------------- *)

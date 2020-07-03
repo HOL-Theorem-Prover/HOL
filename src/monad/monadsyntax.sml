@@ -7,8 +7,11 @@ local open optionTheory in end
 val monadseq_special = "__monad_sequence"
 val monad_emptyseq_special = "__monad_emptyseq"
 val monadassign_special = "__monad_assign"
+val monadmlet_special = "__monad_mlet"
 val monad_unitbind = "monad_unitbind"
 val monad_bind = "monad_bind"
+val mlet = "mlet"
+val LET = "LET";
 
 fun ERR f msg = mk_HOL_ERR "monadsyntax" f msg
 
@@ -38,11 +41,12 @@ struct
           {bind = bind, ignorebind = determOpt ign_opt, unit = unit,
            fail = determOpt failopt, guard = determOpt guardopt,
            choice = determOpt choiceopt}
-      | _ => raise ERR "fromSexp" "bad format - not a list of 5 elements"
+      | _ => raise ERR "fromSexp"
+                   "bad format - not an appropriately shaped list of 6 elements"
 end
 
 val monadDB =
-    ref (Binarymap.mkDict String.compare : (string,MonadInfo.t) Binarymap.dict)
+    ref (Binarymap.mkDict String.compare : (string,MonadInfo.t) Binarymap.dict);
 
 fun write_keyval (nm, mi) =
   let
@@ -146,13 +150,17 @@ fun clean_action a = let
   open Absyn
 in
   case a of
-    APP(loc1, APP(loc2, IDENT(loc3, s), arg1), arg2) => let
-    in
+    APP(_, APP(_, IDENT(_, s), arg1), arg2) => (
       if s = monadassign_special then
-        (SOME (to_vstruct arg1), arg2)
-      else (NONE, a)
-    end
-  | _ => (NONE, a)
+        case arg1 of
+          APP (_, IDENT (_, s), arg3) =>
+            if s = mlet then (SOME (to_vstruct arg3), true, arg2)
+            else (SOME (to_vstruct arg1), false, arg2)
+        | _ => (SOME (to_vstruct arg1), false, arg2)
+      else if s = monadmlet_special then (SOME (to_vstruct arg1), true, arg2)
+      else (NONE, false, a)
+    )
+  | _ => (NONE, false, a)
 end
 
 fun cleanseq a = let
@@ -162,11 +170,13 @@ in
     APP(loc1, APP(loc2, IDENT(loc3, s), arg1), arg2) => let
     in
       if s = monadseq_special then let
-          val (bv, arg1') = clean_action (clean_do true arg1)
+          val (bv, letm, arg1') = clean_action (clean_do true arg1)
           val arg2' = clean_actions arg2
         in
           case arg2' of
-            NONE => SOME arg1'
+            NONE => if not letm then SOME arg1'
+                    else raise mk_HOL_ERRloc "monadsyntax" "clean_seq" loc3
+                              "Trailing mlet illegal"
           | SOME a => let
             in
               case bv of
@@ -175,11 +185,17 @@ in
                                       IDENT(loc3, monad_unitbind),
                                       arg1'),
                                   a))
-              | SOME b => SOME (APP(loc1,
+              | SOME b =>
+                  if not letm then SOME (APP(loc1,
                                     APP(loc2,
                                         IDENT(loc3, monad_bind),
                                         arg1'),
                                     LAM(locn_of_absyn a, b, a)))
+                  else SOME (APP(loc1,
+                                  APP(loc2,
+                                      IDENT(loc3, LET),
+                                      LAM(locn_of_absyn a, b, a)),
+                                      arg1'))
             end
         end
       else NONE
@@ -199,6 +215,9 @@ in
         if s = monadassign_special andalso not indo then
           raise mk_HOL_ERRloc "monadsyntax" "clean_do" l
                               "Bare monad assign arrow illegal"
+        else if s = mlet andalso not indo then
+          raise mk_HOL_ERRloc "monadsyntax" "clean_do" l
+                              "Bare mlet illegal"
         else APP(l,clean_do arg1,clean_do arg2)
       | APP(l,a1,a2) => APP(l,clean_do a1, clean_do a2)
       | LAM(l,v,a) => LAM(l,v,clean_do a)
@@ -244,12 +263,15 @@ fun dest_bind G t = let
              | Option => raise UserPP_Failed
   val _ = prname = monad_unitbind orelse
           (prname = monad_bind andalso pairSyntax.is_pabs y) orelse
+          (prname = LET andalso pairSyntax.is_pabs x) orelse
            raise UserPP_Failed
 in
-  SOME (prname, x, y)
+  if prname = LET then SOME (prname, y, x) else SOME (prname, x, y)
 end handle HOL_ERR _ => NONE
          | term_pp_types.UserPP_Failed =>  NONE
 
+
+val explicit_mlets = ref false;
 
 fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
   open term_pp_types term_grammar smpp term_pp_utils
@@ -261,10 +283,10 @@ fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
   val minprint = ppstring (#2 (print_from_grammars min_grammars))
   fun syspr bp gravs t =
     sysprinter {gravs = gravs, binderp = bp, depth = depth - 1} t
-  fun pr_action (v, action) =
-      case v of
-        NONE => syspr false (Top,Top,Top) action
-      | SOME v => let
+  fun pr_action (v, letm, action) =
+      case (v, letm) of
+        (NONE, _) => syspr false (Top,Top,Top) action
+      | (SOME v, false) => let
           val new_bvars = free_vars v
         in
           ublock PP.INCONSISTENT 0
@@ -274,17 +296,36 @@ fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
              syspr false (Top,Prec(100, "monad_assign"),Top) action) >>
           addbvs new_bvars
         end
+      | (SOME v, true) => let
+          val new_bvars = free_vars v
+        in
+          if !explicit_mlets then
+            ublock PP.INCONSISTENT 0
+              (strn mlet >>
+               record_bvars new_bvars
+                  (syspr true (Top,Top,Prec(100, "monad_assign")) v) >>
+               strn " " >> strn "<-" >> brk(1,2) >>
+               syspr false (Top,Prec(100, "monad_assign"),Top) action) >>
+            addbvs new_bvars
+          else
+            ublock PP.INCONSISTENT 0
+              (record_bvars new_bvars
+                  (syspr true (Top,Top,Prec(100, "monad_assign")) v) >>
+               strn " " >> strn "<<-" >> brk(1,2) >>
+               syspr false (Top,Prec(100, "monad_assign"),Top) action) >>
+            addbvs new_bvars
+        end
   fun brk_bind binder arg1 arg2 =
-      if binder = monad_bind then let
+      if binder = monad_bind orelse binder = LET then let
               val (v,body) = (SOME ## I) (pairSyntax.dest_pabs arg2)
                              handle HOL_ERR _ => (NONE, arg2)
         in
-          ((v, arg1), body)
+          ((v, binder = LET, arg1), body)
         end
-      else ((NONE, arg1), arg2)
+      else ((NONE, false, arg1), arg2)
   fun strip acc t =
       case dest_bind tmg t of
-        NONE => List.rev ((NONE, t) :: acc)
+        NONE => List.rev ((NONE, false, t) :: acc)
       | SOME (prname, arg1, arg2) => let
           val (arg1', arg2') = brk_bind prname arg1 arg2
         in
@@ -310,8 +351,8 @@ val _ = term_grammar.userSyntaxFns.register_absynPostProcessor {
           code = transform_absyn
     }
 
-fun syntax_actions al ar aup app =
-  (al {block_info = (PP.CONSISTENT,0),
+fun syntax_actions al ar aup app = (
+   al {block_info = (PP.CONSISTENT,0),
        cons = monadseq_special,
        nilstr = monad_emptyseq_special,
        leftdelim = [TOK "do", BreakSpace(1,2)],
@@ -322,8 +363,14 @@ fun syntax_actions al ar aup app =
        paren_style = OnlyIfNecessary,
        pp_elements = [BreakSpace(1,0), TOK "<-", HardSpace 1],
        term_name = monadassign_special};
-   aup ("monadsyntax.print_monads", ``x:'a``, print_monads);
-   app ("monadsyntax.transform_absyn", transform_absyn))
+   ar {block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
+       fixity = Infix(NONASSOC, 100),
+       paren_style = OnlyIfNecessary,
+       pp_elements = [BreakSpace(1,0), TOK "<<-", HardSpace 1],
+       term_name = monadmlet_special};
+   aup ("monadsyntax.print_monads", mk_var("x", alpha), print_monads);
+   app ("monadsyntax.transform_absyn", transform_absyn)
+   )
 
 fun temp_add_monadsyntax () =
     syntax_actions temp_add_listform temp_add_rule temp_add_user_printer
@@ -358,7 +405,7 @@ fun gen_enable_monad fname iovl ovl s =
   let
     val {bind,ignorebind,unit,fail,choice,guard} = getMI fname s
   in
-    ovl ("monad_bind", bind) ;
+    ovl ("monad_bind", bind);
     ovl ("monad_unitbind",
          case ignorebind of NONE => mk_unitbind bind | SOME ib => ib);
     iovl ("return", unit) ;
@@ -419,6 +466,7 @@ val temp_disable_monad =
 fun gen_disable_syntax rr rup rpp =
   (rr {term_name = monad_lform_name, tok = "do"};
    rr {term_name = monadassign_special, tok = "<-"};
+   rr {term_name = monadmlet_special, tok = "<<-"};
    rup "monadsyntax.print_monads";
    rpp "monadsyntax.transform_absyn")
 
@@ -437,6 +485,8 @@ fun add_monadsyntax () = syntax_actions add_listform add_rule aup aap
 
 val enable_monadsyntax = add_monadsyntax
 val temp_enable_monadsyntax = temp_add_monadsyntax
+
+fun print_explicit_monadic_lets b = (explicit_mlets := b);
 
 val _ = TexTokenMap.temp_TeX_notation
             {hol = "<-", TeX = ("\\HOLTokenLeftmap{}", 1)}

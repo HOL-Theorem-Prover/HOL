@@ -8,8 +8,11 @@ rule for $\beta$-conversion:
 \[\ml{(}\verb%\%x\ml{.}t_1\ml{)}t_2\quad\mapsto\quad
 \ml{|- (}\verb%\%x\ml{.}t_1\ml{)}t_2\;\; \ml{=}  \;\;t_1[t_2/x] \]
 
-\noindent Theorems\index{equational theorems, in HOL logic@equational theorems, in \HOL\ logic!produced by conversions}\index{conversions!purpose of} of this sort are used in
-\HOL\ in a variety of contexts, to justify the replacement of particular terms
+\noindent Theorems %
+\index{equational theorems, in HOL logic@equational theorems, in \HOL{} logic!produced by conversions}%
+\index{conversions!purpose of}%
+of this sort are used in
+\HOL{} in a variety of contexts, to justify the replacement of particular terms
 by semantically equivalent terms.
 
 The \ML\ type of conversions is \ml{conv}:
@@ -54,46 +57,36 @@ The notion of conversions is inherited from Cambridge
 \LCF;\index{LCF@\LCF!Cambridge} the underlying principles are
 described in \cite{lcp-rewrite,new-LCF-man}.
 
-Conversions such as \ml{BETA\_CONV}\index{beta-conversion, in HOL
-  logic@beta-conversion, in \HOL\ logic!not expressible as a
-  theorem}\index{theorems, in HOL logic@theorems, in \HOL\ logic!rules
-  inexpressible as}\index{conversions!as families of equations}
+Conversions such as \ml{BETA\_CONV} %
+\index{beta-conversion, in HOL logic@beta-conversion, in \HOL{} logic!not expressible as a theorem}%
+\index{theorems, in HOL logic@theorems, in \HOL{} logic!rules inexpressible as}%
+\index{conversions!as families of equations}%
 represent infinite families of equations\footnote{This was also
-  mentioned in Section~\ref{rules}.}. They are particularly
-useful in cases in which it is impossible to state, within the logic,
-a single axiom or theorem instantiable to every equation in a
-family\index{families of inferences, in HOL logic@families of
-  inferences, in \HOL\ logic}.\footnote{In the case of
-  $\beta$-conversion specifically, it is the substitution of one term
-  for another in a context that is inexpressible; but in general,
-  there is a variety of reasons that arise.} Instead, an \ML\
-procedure returns the instance of the desired theorem for any given
-term. This is also the reason that quite a few of the other rules in
-\HOL\ are not stated instead as axioms or theorems. As rules,
-conversions are distinguished with an \ML\ type abbreviation simply
-because there are relatively many of them with the same type, and
-because they return equational\index{theorems, in HOL logic@theorems,
-  in \HOL\ logic!equational}\index{equational theorems, in HOL
-  logic@equational theorems, in \HOL\ logic!produced by conversions}
-theorems that lend themselves directly to term rewriting.\footnote{In
-  fact, some ML functions have names with the suffix `{\tt \_CONV}'
-  but do not have the type {\tt conv}; {\tt SUBST\_CONV}, for example,
-  has type {\tt (thm \# term) list -> term -> conv}. Those that
-  eventually produce conversion are thought of as `conversion
-  schemas'.} In many \HOL\ applications, the main use of conversions
-is to produce these equational theorems.  A few examples of
-conversions are illustrated below.
+  mentioned in Section~\ref{rules}.}.
+They are particularly useful in cases in which it is impossible to state, within the logic, a single axiom or theorem instantiable to every equation in a family\index{families of inferences, in HOL logic@families of
+  inferences, in \HOL\ logic}.\footnote{%
+In the case of $\beta$-conversion specifically, it is the substitution of one term for another in a context that is inexpressible; but in general, there is a variety of reasons that arise.}
+Instead, an \ML\ procedure returns the instance of the desired theorem for any given term.
+This is also the reason that quite a few of the other rules in \HOL\ are not stated instead as axioms or theorems.
+As rules, conversions are distinguished with an \ML\ type abbreviation simply because there are relatively many of them with the same type, and because they return equational %
+\index{theorems, in HOL logic@theorems, in \HOL{} logic!equational}%
+\index{equational theorems, in HOL logic@equational theorems, in \HOL{} logic!produced by conversions}%
+theorems that lend themselves directly to term rewriting.\footnote{%
+In fact, some ML functions have names with the suffix `{\tt \_CONV}' but do not have the type {\tt conv}; {\tt SUBST\_CONV}, for example, has type {\tt (thm * term) list -> term -> conv}.
+Those that eventually produce a conversion are thought of as `conversion schemas'.}
+In many \HOL\ applications, the main use of conversions is to produce these equational theorems.
+A few examples of conversions are illustrated below.
 
 \setcounter{sessioncount}{1}
 \begin{session}
 \begin{alltt}
->> NOT_FORALL_CONV ``~!x. (f:'a->'a) x = g x``;
+>> NOT_FORALL_CONV “~!x. (f:'a->'a) x = g x”;
 
 >> CONTRAPOS_CONV ``(!x. f x = g x) ==> ((f:'a->'a) = g)``;
 
 >> SELECT_CONV ``(@f:'a->'a. f x = g x)x = g x``;
 
->> EXISTS_UNIQUE_CONV ``?!z. (f:'a->'a) z = g z``;
+>> EXISTS_UNIQUE_CONV “∃!z. (f:'a->'a) z = g z”;
 \end{alltt}
 \end{session}
 
@@ -103,11 +96,11 @@ conversions are illustrated below.
 \setcounter{sessioncount}{1}
 \begin{session}
 \begin{alltt}
->> numLib.num_CONV ``2``;
+>> numLib.num_CONV “2”;
 
->> numLib.num_CONV ``1``;
+>> numLib.num_CONV “1”;
 
->>+ numLib.num_CONV ``0`` handle e => Raise e;
+>>+ numLib.num_CONV “0” handle e => Raise e;
 \end{alltt}
 \end{session}
 
@@ -1085,7 +1078,7 @@ based on conversions similar to \ml{DEPTH\_CONV}.
 They have been optimized in various ways, so their
 implementation is in some cases rather complex and is not given here.
 The conversions, rules and tactics for rewriting all take a list of
-theorems\index{theorems, in HOL logic@theorems, in \HOL\ logic!as rewrite rules}
+theorems\index{theorems, in HOL logic@theorems, in \HOL{} logic!as rewrite rules}
 to be used as rewrites.
 The theorems in the list need not be in simple equational form
 (\eg\ a conjunction of equations is permissible); but are

@@ -68,7 +68,7 @@ fun liftstatus f x =
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 12
+val version_number = 13
 val release_string = "Kananaskis"
 
 (*
@@ -194,6 +194,9 @@ local
    val intOf = Option.valOf o Int.fromString
    val number = PolyML.Compiler.compilerVersionNumber
    val _ = number >= 570 orelse die "PolyML version must be at least 5.7.0"
+   val default =
+       ["-L" ^ polymllibdir, "-lpolymain", "-lpolyml", "-lpthread",
+        "-lm", "-ldl", "-lstdc++", "-lgcc_s", "-lgcc"]
 in
    val machine_flags =
        if sysname = "Darwin" (* Mac OS X *) then
@@ -209,9 +212,11 @@ in
        else if sysname = "Linux" then
          case pkgconfig_info of
              SOME list => list
-           | _ => ["-L" ^ polymllibdir, "-lpolymain", "-lpolyml", "-lpthread",
-                   "-lm", "-ldl", "-lstdc++", "-lgcc_s", "-lgcc"]
-       else []
+           | _ => default
+       else if String.isPrefix "CYGWIN_NT" sysname (* Cygwin! *) then
+         default
+       else
+         default
 end;
 
 
@@ -228,15 +233,22 @@ in
    "val POLYMLLIBDIR =" --> ("val POLYMLLIBDIR = "^quote polymllibdir^"\n"),
    "val POLY =" --> ("val POLY = "^quote poly^"\n"),
    "val POLYC =" --> ("val POLYC = "^quote polyc^"\n"),
-   "val POLY_LDFLAGS =" --> ("val POLY_LDFLAGS = ["^
-                             (String.concatWith
-                                  ", "
-                                  (map quote machine_flags)) ^ "]\n"),
-   "val POLY_LDFLAGS_STATIC =" --> ("val POLY_LDFLAGS_STATIC = ["^
-                             (String.concatWith
-                                  ", "
-                                  (quote "-static" ::
-                                   map quote machine_flags)) ^ "]\n"),
+   "val POLY_LDFLAGS =" -->
+      ("val POLY_LDFLAGS = [" ^
+       String.concatWith ", "
+                         (map quote
+                              (if null POLY_LDFLAGS then machine_flags
+                               else POLY_LDFLAGS)) ^
+       "]\n"),
+   "val POLY_LDFLAGS_STATIC =" -->
+      ("val POLY_LDFLAGS_STATIC = [" ^
+       String.concatWith ", "
+                         (map quote
+                              (if null POLY_LDFLAGS_STATIC then
+                                 ("-static" :: machine_flags)
+                               else
+                                 POLY_LDFLAGS_STATIC)) ^
+       "]\n"),
    "val CC =" --> ("val CC = "^quote CC^"\n"),
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
    "val DEPDIR ="   --> ("val DEPDIR = "^quote DEPDIR^"\n"),
@@ -455,7 +467,7 @@ end (* local *)
 
 val _ =
  let open TextIO
-     val _ = echo "Making hol-mode.el (for Emacs/XEmacs)"
+     val _ = echo "Making hol-mode.el (for Emacs)"
      val src = fullPath [holdir, "tools", "hol-mode.src"]
     val target = fullPath [holdir, "tools", "hol-mode.el"]
  in
