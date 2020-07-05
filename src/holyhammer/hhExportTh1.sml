@@ -288,7 +288,8 @@ fun th1_export_chainy dir thyl =
 (*
 load "hhExportTh1"; open hhExportTh1;
 load "tttUnfold"; tttUnfold.load_sigobj ();
-val thyl = ancestry (current_theory ());
+fun test x = x <> "basis_emit" andalso not (mem "basis_emit" (ancestry x));
+val thyl = filter test (ancestry (current_theory ()));
 val bushydir = HOLDIR ^ "/src/holyhammer/th1_bushy";
 th1_export_bushy bushydir thyl;
 val chainydir = HOLDIR ^ "/src/holyhammer/th1_chainy";

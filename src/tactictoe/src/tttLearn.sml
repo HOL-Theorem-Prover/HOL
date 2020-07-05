@@ -265,8 +265,7 @@ fun orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))
     val _ = ortho_teststac_time := !ortho_teststac_time + t
   in
     case neworthoo of NONE => call | SOME newortho =>
-      {stac = stac, ortho = newortho, nntm = nntm, 
-       time = time, 
+      {stac = stac, ortho = newortho, nntm = nntm, time = time, 
        ig = ig, ogl = ogl,
        loc = loc, fea = fea}
   end
@@ -274,7 +273,7 @@ fun orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))
     (debug "error: orthogonalize"; call)
 
 fun update_nntm (call as {stac,ortho,nntm,time,ig,ogl,loc,fea}) =
-  {stac = stac, 
+  {stac = stac,
    ortho = ortho, 
    nntm = nntm_of_applyexp (extract_applyexp (extract_smlexp ortho)),
    time = time, 

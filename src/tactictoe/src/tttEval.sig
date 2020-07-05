@@ -5,6 +5,7 @@ sig
   type tnn =  mlTreeNeuralNetwork.tnn
   type pvfiles = string option * string option  
 
+  val ttt_clean_eval : unit -> unit
   val ttt_eval : (mlThmData.thmdata * mlTacticData.tacdata) ->
     tnn option * tnn option -> 
     goal -> unit  

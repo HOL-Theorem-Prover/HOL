@@ -107,6 +107,8 @@ fun read_tnndim file =
 type tnnex = ((term * real list) list) list
 type tnnbatch = (term list * (term * mlMatrix.vect) list) list
 
+fun basicex_to_tnnex l = map (fn (tm,r) => [(tm,[r])]) l
+
 fun write_tnnex file ex =
   let val (tml,rll) = split (List.concat ex) in
     writel (file ^ "_group") (map (its o length) ex);

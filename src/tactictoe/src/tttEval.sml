@@ -17,6 +17,7 @@ val ERR = mk_HOL_ERR "tttEval"
 
 type pvfiles = string option * string option
 val tnndir = HOLDIR ^ "/src/tactictoe/tnn"
+
 (* -------------------------------------------------------------------------
    Value examples
    ------------------------------------------------------------------------- *)
@@ -24,15 +25,18 @@ val tnndir = HOLDIR ^ "/src/tactictoe/tnn"
 fun extract_value tree =
   let 
     val nodel = map snd (dlist tree)
-    fun get_gl node = (vector_to_list o Vector.map #goal o #goalv) node
-    fun is_win node = case #nodestatus node of NodeProved => true | _ => false
+    fun get_valuetm node = 
+      (nntm_of_gl o vector_to_list o Vector.map #goal o #goalv) node
+    fun is_win node = case #nodestatus node of NodeProved => 1.0 | _ => 0.0
   in
-    map (fn x => (get_gl x, is_win x)) nodel
+    basicex_to_tnnex (map (fn x => (get_valuetm x, is_win x)) nodel)
   end
 
 (* -------------------------------------------------------------------------
    Policy examples
    ------------------------------------------------------------------------- *)
+
+fun btr b = if b then 1.0 else 0.0
 
 fun extract_policy tree =
   let 
@@ -45,11 +49,56 @@ fun extract_policy tree =
     fun not_fresh x = case #stacstatus x of StacFresh => false | _ => true
     fun g (goal,(stacv,stacn)) = 
       if is_win stacv orelse (stacn < 10 andalso not_fresh stacv)
-      then SOME ((goal, #stactm stacv), is_win stacv)
+      then SOME (nntm_of_gstactm (goal, #stactm stacv), btr (is_win stacv))
       else NONE
   in
     List.mapPartial g stacrecl
   end
+
+(* -------------------------------------------------------------------------
+   Policy examples
+   ------------------------------------------------------------------------- *)
+
+fun extract_thmpol tree =
+  let 
+    val nodel = map snd (dlist tree)
+    val goalrecl1 = List.concat (map (vector_to_list o #goalv) nodel)
+    val goalrecl2 = filter (fn x => #goalstatus x = GoalProved) goalrecl1
+    fun f x = distrib [(#goal x, number_snd 0 (vector_to_list (#stacv x)))]
+    val stacrecl = List.concat (map f goalrecl2)
+    fun is_win x = case #stacstatus x of StacProved => true | _ => false
+    fun not_fresh x = case #stacstatus x of StacFresh => false | _ => true
+    fun g (goal,(stacv,stacn)) = 
+      if is_win stacv andalso is_thmlarg_stac (#astac stacv)
+      then SOME (nntm_of_gstactm (goal, #stactm stacv), btr (is_win stacv))
+      else NONE
+    val thml = 
+
+  in
+    List.mapPartial g stacrecl
+  end
+
+
+fun thml_of_sml sthml_of_thmidl
+
+fun minimize
+
+fun minimize astac sthml
+  let 
+    val x = drop_sig thmlarg_placeholder
+    val astac' = replace_string (thmlarg_placeholder) x astac
+    fun f = thmlstac_of_sml ("fn " ^ x ^ " => (" ^ astac ^ ")")     
+    val thml = combine (thml_of_sml sthml, sthml)
+      handle Interrupt => raise Interrupt | _ => 
+        (print_endline "error: minimize: parsing theorems"; [])
+  in
+    minimize f thml
+
+let val thml =
+  
+
+(* results should be (tm,1.0) or (tm,0.0) where tm in the encoding of
+a theorem *)
 
 (* -------------------------------------------------------------------------
    Evaluation function
@@ -62,22 +111,29 @@ fun print_status r = case r of
 
 fun print_time (name,t) = print_endline (name ^ " time: " ^ rts_round 6 t)
 
+fun ttt_clean_eval () = clean_rec_dir (tactictoe_dir ^ "/tnnex")
+
 fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
   let
     val thmid = current_theory () ^ "_" ^ its (!savestate_level - 1)
     val b = !hide_flag
     val _ = hide_flag := false
+    val tnnex_dir = tactictoe_dir ^ "/tnnex" 
+    val _ = mkDir_err tnnexdir
+    val value_dir = tnnex_dir ^ "/value"
+    val policy_dir = tnnex_dir ^ "/policy"
+    val thmpol_dir = tnnex_dir ^ "/thmpol"
+    val _ = app mkDir_err [value_dir,policy_dir,thmpol_dir];
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
     val ((status,tree),t) = add_time 
       (main_tactictoe (thmdata,tacdata) (vnno,pnno)) goal
-    val _ = if not (isSome vnno) andalso not (isSome pnno) 
-      then
+    val _ = if not (isSome vnno) andalso not (isSome pnno) then
       (case status of Proof _ => 
         (
-        ttt_export_value thmid (extract_value tree)
-        handle HOL_ERR _ => print_endline "error: ttt_export_value";
-        ttt_export_policy thmid (extract_policy tree)
+        write_tnnex (value_dir ^ "/" ^ thmid) (extract_value tree);
+        write_tnnex (policy_dir ^ "/" ^ thmid) (extract_policy tree);
+        write_tnnex (thmpol_dir ^ "/" ^ thmid) (extract_thmpol tree)
         )
       | _ => ())
       else ()
@@ -315,46 +371,14 @@ compare_stats ["june15"] "june15_tnn";
    Training
    ------------------------------------------------------------------------ *)
 
-fun train_value pct file =
-  let
-    val filel = listDir (HOLDIR ^ "/src/tactictoe/value")
-    val exll = map (fn x => ttt_import_value x handle Interrupt => raise 
-      Interrupt | _ => (print_endline x; [])) filel
-    fun f (gl,b) = (nntm_of_gl gl, if b then [1.0] else [0.0])
-    val exl = map (single o f) (List.concat exll)
-    val (train,test) = part_pct pct (shuffle exl)
-    val operl = mk_fast_set oper_compare
-      (List.concat (map operl_of_term (map fst (List.concat exl))))
-    val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl
-    val randtnn = random_tnn operdiml
-    val schedule =
-      [{ncore = 4, verbose = true,
-       learning_rate = 0.02, batch_size = 16, nepoch = 100}];
-    val tnn = train_tnn schedule randtnn (train,test)
-    val acctrain = tnn_accuracy tnn train
-    val acctest = tnn_accuracy tnn test 
-  in
-    print_endline ("train accuracy: " ^ rts_round 6 acctrain ^ 
-      ", test accuracy: " ^ rts_round 6 acctest);
-    mkDir_err tnndir;
-    write_tnn (tnndir ^ "/" ^ file) tnn;
-    tnn
-  end
+     (* (List.concat (map operl_of_term (map fst (List.concat exl)))) *)
 
-fun train_policy pct file =
+fun train_dir pct name =
   let
-    val filel = listDir (HOLDIR ^ "/src/tactictoe/policy")
-    val exll = map (fn x => ttt_import_policy x handle Interrupt => raise 
-      Interrupt | _ => (print_endline x; [])) filel 
-    val preexl = List.concat exll
-    val _ = print_endline (its (length preexl) ^ " policy examples")
-    fun f ((g,stactm),b) = 
-      (nntm_of_gstactm (g,stactm), if b then [1.0] else [0.0])
-    val exl = map (single o f) preexl
-    val _ = print_endline "split train/test"
+    val filel = listDir (tactictoe_dir ^ "/tnnex/" ^ name)
+    val exl = List.concat (map read_tnnex filel)
     val (train,test) = part_pct pct (shuffle exl)
-    val operl = mk_fast_set oper_compare
-      (List.concat (map operl_of_term (map fst (List.concat exl))))
+    val operl = operl_of_tnnex exl
     val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl
     val randtnn = random_tnn operdiml
     val schedule =
@@ -367,8 +391,13 @@ fun train_policy pct file =
     print_endline ("train accuracy: " ^ rts_round 6 acctrain ^ 
       ", test accuracy: " ^ rts_round 6 acctest);
     mkDir_err tnndir;
-    write_tnn (tnndir ^ "/" ^ file) tnn;
+    write_tnn (tnndir ^ "/" ^ name) tnn;
     tnn
   end
+ 
+fun train_value pct file = train_dir pct "value"
+fun train_policy pct file = train_dir pct "policy"
+fun train_thmpol pct file = train_dir pct "thmpol"
+
 
 end (* struct *)

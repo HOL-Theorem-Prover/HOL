@@ -40,6 +40,7 @@ include Abbrev
   val read_tnnex : string -> tnnex
   val write_tnndim : string -> tnndim -> unit
   val read_tnndim : string -> tnndim
+  val basicex_to_tnnex : (term * real) list -> tnnex  
 
   (* inference *)
   val infer_tnn : tnn -> term list -> (term * real list) list 
