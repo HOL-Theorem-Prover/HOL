@@ -265,10 +265,8 @@ fun sexpr_export thyl =
 
 (*
 load "hhExportSexpr"; open hhExportSexpr;
-load "tttUnfold"; open tttUnfold;
-load_sigobj ();
-fun test x = x <> "basis_emit" andalso not (mem "basis_emit" (ancestry x));
-val thyl = filter test (ancestry (current_theory ()));
+load "tttUnfold"; tttUnfold.load_sigobj ();
+val thyl = ancestry (current_theory ());
 sexport_export thyl;
 *)
 

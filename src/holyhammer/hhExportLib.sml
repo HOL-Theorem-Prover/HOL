@@ -323,8 +323,15 @@ fun older_than th1 (name,th2) =
   depnumber_of_thm th2 < depnumber_of_thm th1
 
 fun add_ancestry thy = thy :: ancestry thy
-fun sorted_ancestry thyl =
-  sort_thyl (mk_string_set (List.concat (map add_ancestry thyl)))
+
+(* avoid basis_emit as it contains inconsistent theorems *)
+fun sorted_ancestry thyl = 
+  let
+    fun test x = x <> "basis_emit" andalso not (mem "basis_emit" (ancestry x))
+    val l = sort_thyl (mk_string_set (List.concat (map add_ancestry thyl)))
+  in
+    filter test l
+  end
 
 fun depo_of_thm thm =
   let
