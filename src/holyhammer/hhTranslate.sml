@@ -132,13 +132,25 @@ fun FUN_EQ_CONVL vl eq = case vl of
     [] => REFL eq
   | a :: m => (STRIP_QUANT_CONV (X_FUN_EQ_CONV a) THENC FUN_EQ_CONVL m) eq
 
+fun mk_polyvar i polyty = mk_var ("P" ^ its i, polyty)
+
 fun LIFT_CONV iref tm =
   let
     fun test x = must_pred x orelse is_abs x
     val subtm = find_term test tm
       handle Interrupt => raise Interrupt
            | _ => raise ERR "LIFT_CONV" ""
-    val fvl = filter is_tptp_bv (free_vars_lr subtm)
+    (* fix missing type arguments *)
+    val tvl1 = dict_sort Type.compare 
+      (mk_fast_set Type.compare (type_vars_in_term subtm))
+    val fvl1 = filter is_tptp_bv (free_vars_lr subtm)
+    val tvl2 = dict_sort Type.compare 
+      (List.concat (map type_vars_in_term fvl1))
+    val tvld = dset Type.compare tvl2
+    val tvl3 = filter (fn x => not (dmem x tvld)) tvl1
+    val fvl2 = mapi mk_polyvar tvl3
+    val fvl = fvl2 @ fvl1
+    (* end fix *)
     val v = genvar_lifting iref (type_of (list_mk_abs (fvl,subtm)))
     val rep = list_mk_comb (v,fvl)
     val eq  = list_mk_forall (fvl, (mk_eq (subtm,rep)))
