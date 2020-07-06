@@ -288,7 +288,7 @@ Proof
   \\ fs [AllCaseEqs()] \\ fs []
   \\ CCONTR_TAC \\ fs [] \\ fs []
   \\ fs [path_ok_def] \\ rw []
-  \\ first_x_assum (qspecl_then [`xs`,`n`,`ys ⧺ pos::rest`] mp_tac)
+  \\ first_x_assum (qspecl_then [`xs`,`n`,`ys ++ pos::rest`] mp_tac)
   \\ fs []
 QED
 
