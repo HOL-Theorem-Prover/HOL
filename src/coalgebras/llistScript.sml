@@ -2872,6 +2872,27 @@ Proof
   rw[]
 QED
 
+Definition LSET_def:
+  LSET l x = ?n. LNTH n l = SOME x
+End
+
+Theorem LSET[simp]:
+  LSET LNIL = {} /\
+  LSET (x:::xs) = x INSERT LSET xs
+Proof
+  fs [EXTENSION] \\ fs [LSET_def,IN_DEF]
+  \\ rw [] \\ eq_tac \\ rw []
+  THEN1 (Cases_on `n` \\ fs [] \\ metis_tac [])
+  THEN1 (qexists_tac `0` \\ fs [])
+  THEN1 (qexists_tac `SUC n` \\ fs [])
+QED
+
+Definition llist_rel_def:
+  llist_rel R l1 l2 <=>
+    LLENGTH l1 = LLENGTH l2 /\
+    !i x y. LNTH i l1 = SOME x /\ LNTH i l2 = SOME y ==> R x y
+End
+
 (* --------------------------------------------------------------------------
    Update TypeBase
    -------------------------------------------------------------------------- *)
