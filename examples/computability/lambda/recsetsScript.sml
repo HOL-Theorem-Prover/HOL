@@ -275,11 +275,11 @@ val re_semidp = store_thm(
   ``re s ⇔ ∃N. ∀e. e ∈ s ⇔ ∃m. Phi N e = SOME m``,
   METIS_TAC [re_semirecursive1, re_semirecursive2]);
 
-val recursive_re = store_thm(
-  "recursive_re",
-  ``recursive s ⇒ re s``,
+Theorem recursive_re:
+  recursive s ⇒ re s
+Proof
   SRW_TAC [][recursive_def, re_semidp] THEN
-  Q.EXISTS_TAC `
+  Q.EXISTS_TAC ‘
     dBnum (fromTerm (
       LAM "e" (cbnf_ofk @@ (LAM "n" (ceqnat @@ church 0
                                             @@ (cforce_num @@ VAR "n")
@@ -287,19 +287,18 @@ val recursive_re = store_thm(
                                             @@ VAR "n"))
                         @@ (cdAPP @@ cDB (numdB M)
                                   @@ (cchurch @@ VAR "e")))))
-  ` THEN
+  ’ THEN
   FULL_SIMP_TAC (srw_ss()) [Phi_def] THEN
   SIMP_TAC (bsrw_ss()) [cdAPP_behaviour, cchurch_behaviour] THEN
   SRW_TAC [][EQ_IMP_THM] THENL [
-    FIRST_X_ASSUM (Q.SPEC_THEN `e` MP_TAC) THEN
+    FIRST_X_ASSUM (Q.SPEC_THEN ‘e’ MP_TAC) THEN
     SRW_TAC [][] THEN
     Q.HO_MATCH_ABBREV_TAC
-      `∃z. bnf_of (cbnf_ofk @@ KK @@ cDB TT) = SOME z` THEN
-    `cbnf_ofk @@ KK @@ cDB TT == KK @@ cDB (fromTerm z)`
+      ‘∃z. bnf_of (cbnf_ofk @@ KK @@ cDB TT) = SOME z’ THEN
+    ‘cbnf_ofk @@ KK @@ cDB TT == KK @@ cDB (fromTerm z)’
        by (MATCH_MP_TAC cbnf_of_works1' THEN
-           SRW_TAC [][Abbr`TT`]) THEN
-    ASM_SIMP_TAC (bsrw_ss()) [Abbr`KK`, cforce_num_behaviour] THEN
-    Q.PAT_X_ASSUM `1 = force_num z` (SUBST_ALL_TAC o SYM) THEN
+           SRW_TAC [][Abbr‘TT’]) THEN
+    ASM_SIMP_TAC (bsrw_ss()) [Abbr‘KK’, cforce_num_behaviour] THEN
     SIMP_TAC (bsrw_ss()) [bnf_bnf_of, ceqnat_behaviour,
                           cB_behaviour],
 
@@ -307,15 +306,17 @@ val recursive_re = store_thm(
     IMP_RES_THEN MP_TAC
                  (REWRITE_RULE [GSYM AND_IMP_INTRO] cbnf_ofk_works2) THEN
     ASM_SIMP_TAC (bsrw_ss()) [] THEN
-    FIRST_X_ASSUM (Q.SPEC_THEN `e` (Q.X_CHOOSE_THEN `zz` MP_TAC)) THEN
-    Cases_on `e ∈ s` THEN SRW_TAC [][] THEN
+    FIRST_X_ASSUM (Q.SPEC_THEN ‘e’ (Q.X_CHOOSE_THEN ‘zz’ MP_TAC)) THEN
+    Cases_on ‘e ∈ s’ THEN SRW_TAC [][] THEN
     SIMP_TAC (bsrw_ss()) [cforce_num_behaviour, ceqnat_behaviour,
                           cB_behaviour] THEN
     STRIP_TAC THEN
-    `Ω -β->* z` by METIS_TAC [chap3Theory.betastar_lameq_bnf] THEN
-    `z = Ω` by METIS_TAC [chap3Theory.Omega_starloops] THEN
+    REV_FULL_SIMP_TAC (bsrw_ss()) [] THEN
+    ‘Ω -β->* z’ by METIS_TAC [chap3Theory.betastar_lameq_bnf] THEN
+    ‘z = Ω’ by METIS_TAC [chap3Theory.Omega_starloops] THEN
     METIS_TAC [chap2Theory.bnf_Omega]
-  ]);
+  ]
+QED
 
 (* yet another K - this one is the set of machines that terminate when
    given their own index as input *)

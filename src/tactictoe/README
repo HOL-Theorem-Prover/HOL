@@ -2,31 +2,34 @@ TacticToe is a tactic-based prover.
 
 It searches for a proof by repeatedly applying suitable tactics for each goal state that it produces. 
 
-WARNING: Recording has been tested on core theories. 
-  Recording of latter theories might fail.
-
-RECORDING:
+RECORDING (all ancestry theories not recorded yet):
   load "tttUnfold"; open tttUnfold;
   load "fooTheory";
   ttt_record ();
-
-RECORDING (only one theory:
-  ttt_rewrite_thy "foo";
-  ttt_record_thy "foo";
 
 USAGE: (after RECORDING) 
   load "tacticToe"; open tacticToe;
   ttt ([],``1+1=2``);
 
-CLEANING: 
-  - TacticToe calls depends on the data stored in 
-    src/tactictoe/ttt_tacdata 
-  - TacticToe recording and evaluation depends on data stored in 
-    src/AI/sml_inspection/open
-  After updating HOL, it is usually necessary to 
-  remove these directories and start afresh 
+CLEANING:
+  TacticToe depends on data stored in src/tactictoe/ttt_tacdata and 
+  src/AI/sml_inspection/open. 
+  It is usually necessary to remove these directories before re-recording.
+  This can be done by calling tttUnfold.ttt_clean_record ().
 
 EXAMPLE: see examples in src/tactictoe/examples.
 
 NOTES FOR DEVELOPERS:
-  Keep up-to-date: infix tokens in tttInfix.sml, polyml values in tttUnfold.sml.
+  Keep up-to-date: 
+  1) core theories in src/AI/sml_inspection/smlOpen.sml
+  2) infix tokens in src/tactictoe/src/tttInfix.sml, 
+  3) polyml values in src/tactictoe/src/tttUnfold.sml.
+  Debugging directories:
+  1) Output of the modified theory foo is can be found in 
+     src/AI/sml_inspection/buildheap/buildheap_fooScript_ttt.
+     Set aiLib.debug_flag to true for more output.
+  2) A copy of the modified theory is saved under src/tactictoe/scripts
+     for further inspection.
+
+WARNING: Recording has been tested only on core theories. 
+

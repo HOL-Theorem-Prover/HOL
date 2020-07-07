@@ -239,3 +239,36 @@ in
                  [mk_var("  ", alpha), mk_var("x", beta)])
   ]
 end
+
+
+val goalprint =
+    HOLPP.pp_to_string 75(
+      HOLPP.block HOLPP.CONSISTENT 0 o
+      HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
+    )
+
+val _ = let
+  open boolLib
+  val _= tprint "term_tactic.fv_term"
+  val b = mk_var("b", bool) and c = mk_var("c", bool)
+  fun D p = ([] : term list, mk_disj p)
+  val goal = D(b,c)
+  val expected = [D(T,T), D(F,T), D(T,F), D(F,F)]
+  fun Cases t = STRUCT_CASES_TAC (SPEC t BOOL_CASES_AX)
+in
+  require_msg (check_result (list_eq goal_eq expected)) goalprint
+              (fst o REPEAT (fv_term Cases)) goal
+end
+
+val _ = let
+  open boolLib
+  val _= tprint "term_tactic.first_fv_term"
+  fun G t = ([] : term list, t)
+  val f = mk_var("f", bool --> alpha)
+  val goal = G “^f x = y”
+  val expected = [G “^f T = y”, G “^f F = y”]
+  fun Cases t g = STRUCT_CASES_TAC (SPEC t BOOL_CASES_AX) g
+in
+  require_msg (check_result (list_eq goal_eq expected)) goalprint
+              (fst o first_fv_term Cases) goal
+end

@@ -3,89 +3,67 @@ sig
 
   include Abbrev
 
-  type dhex = mlTreeNeuralNetwork.dhex
-  type dhtnn = mlTreeNeuralNetwork.dhtnn
+  type tnn = mlTreeNeuralNetwork.tnn
+  type tnnex = mlTreeNeuralNetwork.tnnex
+  type tnnparam = mlTreeNeuralNetwork.tnnparam
   type schedule = mlNeuralNetwork.schedule
-  type dhtnn_param = mlTreeNeuralNetwork.dhtnn_param
   type 'a rlex = 'a psBigSteps.rlex
+  type 'a targetd = ('a, bool list) Redblackmap.dict
+  (* I/O *)
+  type 'a gameio =
+    {write_boardl : string -> 'a list -> unit,
+     read_boardl : string -> 'a list}
+  val write_rlex : 'a gameio -> string -> 'a rlex -> unit
+  val read_rlex : 'a gameio -> string -> 'a rlex
 
   (* players *)
-  type splayer = (bool * dhtnn * bool * string * int)
-  type dplayer =
-    {playerid : string, dhtnn_param : dhtnn_param, schedule : schedule}
-  type rplayer = (dhtnn * string)
+  type splayer =
+    {unib : bool, tnn : tnn, noiseb : bool, nsim : int}
+  type 'a dplayer =
+    {pretob : ('a * tnn) option -> 'a -> term list,
+     schedule : schedule,
+     tnnparam : tnnparam}
+  val player_from_tnn :
+    tnn -> ('a -> term list) -> ('a,'b) psMCTS.game -> 'a ->
+    (real * ('b * real) list)
 
-  (* parallelization *)
-  type 'a pre_extsearch =
-    {
-    write_target : string -> 'a -> unit,
-    read_target : string -> 'a,
-    write_exl : string -> 'a rlex -> unit,
-    read_exl : string -> 'a rlex,
-    write_splayer : string -> splayer -> unit,
-    read_splayer : string -> splayer
-    }
-
-  type 'a extsearch = (splayer, 'a, bool * bool * 'a rlex) smlParallel.extspec
+  (* parallelization of the search *)
+  type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
 
   (* reinforcement learning parameters *)
-  type 'a level_param =
+  type rlparam =
+    {expname : string, exwindow : int, ncore : int,
+     ntarget : int, nsim : int, decay : real}
+  type ('a,'b) rlobj =
     {
-    ntarget_start: int, ntarget_compete : int, ntarget_explore : int,
-    level_start : int, level_threshold : real,
-    level_targetl : int -> int -> 'a list
-    }
-  type rl_param =
-    {
-    expname : string,
-    ex_window : int, ex_filter : int option,
-    skip_compete : bool,
-    ngen : int, ncore_search : int,
-    nsim_start : int , nsim_explore : int, nsim_compete : int,
-    decay : real
-    }
-  type ('a,'b,'c) rlpreobj =
-    {
-    rl_param : rl_param,
-    level_param : 'a level_param,
-    max_bigsteps : 'a -> int,
+    rlparam : rlparam,
     game : ('a,'b) psMCTS.game,
-    pre_extsearch : 'a pre_extsearch,
-    pretobdict : (string, ('a -> term) * ('c -> 'a -> term)) Redblackmap.dict,
-    precomp_dhtnn : dhtnn -> 'a -> 'c,
-    dplayerl : dplayer list
+    gameio : 'a gameio,
+    dplayer : 'a dplayer,
+    infobs : 'a list -> unit
     }
-  type 'a rlobj =
-    {
-    rl_param : rl_param,
-    level_param : 'a level_param,
-    extsearch : 'a extsearch,
-    tobdict : (string, 'a -> term) Redblackmap.dict,
-    dplayerl : dplayer list,
-    write_exl : string -> 'a rlex -> unit,
-    read_exl : string -> 'a rlex,
-    board_compare : 'a * 'a -> order
-    }
-  val mk_extsearch : string -> ('a,'b,'c) rlpreobj -> 'a extsearch
-  val mk_rlobj : ('a,'b,'c) rlpreobj -> 'a extsearch -> 'a rlobj
+  val mk_bsobj : ('a,'b) rlobj -> splayer -> ('a,'b) psBigSteps.bsobj
+  val mk_extsearch : string -> ('a,'b) rlobj -> 'a es
 
-  (* example filtering *)
-  val rl_filter_train :
-    'a rlobj -> rplayer -> int -> 'a rlex -> ('a rlex * rplayer) list
-  val rl_filter_compete :
-    'a rlobj -> int -> ('a rlex * rplayer) list -> 'a rlex
-  val rl_filter :
-    'a rlobj -> rplayer -> int -> int -> 'a rlex -> 'a rlex
+  (* storage *)
+  val log : ('a,'b) rlobj -> string -> unit
+  val store_rlex : ('a,'b) rlobj -> int -> 'a rlex -> unit
+  val retrieve_rlex : ('a,'b) rlobj -> int -> 'a rlex
+  val store_tnn : ('a,'b) rlobj -> int -> tnn -> unit
+  val retrieve_tnn : ('a,'b) rlobj -> int -> tnn
+  val store_targetd : ('a,'b) rlobj -> int -> 'a targetd -> unit
+  val retrieve_targetd : ('a,'b) rlobj -> int -> 'a targetd
 
-  (* phases *)
-  val rl_train : 'a rlobj -> 'a rlex -> rplayer list
-  val rl_compete : 'a rlobj -> int -> rplayer list -> (int * rplayer)
-  val loop_rl_explore : int -> 'a rlobj -> int -> bool -> rplayer ->
-    'a rlex -> ('a rlex * int)
+  (* main functions *)
+  val rl_start : ('a,'b) rlobj * 'a es -> 'a targetd -> unit
+  val rl_restart : int -> ('a,'b) rlobj * 'a es -> 'a targetd -> unit
 
-  (* main loop *)
-  val cont_rl_loop : 'a rlobj -> int ->
-     ('a rlex * rplayer option * int) ->  ('a rlex * rplayer option * int)
-  val start_rl_loop : 'a rlobj -> ('a rlex * rplayer option * int)
-
+  (* final testing
+  type 'a ftes = (unit, 'a, bool * int * 'a option) smlParallel.extspec
+  type 'a fttnnes = (tnn, 'a, bool * int * 'a option) smlParallel.extspec
+  val ft_mk_extsearch : string -> ('a,'b) rlobj ->
+    ('a,'b) psMCTS.player -> 'a ftes
+  val fttnn_mk_extsearch : string -> ('a,'b) rlobj -> 'a fttnnes
+  val fttnnbs_mk_extsearch : string -> ('a,'b) rlobj -> 'a fttnnes
+  *)
 end

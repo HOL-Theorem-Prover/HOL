@@ -1,4 +1,4 @@
-open HolKernel boolLib bossLib lcsymtacs
+open HolKernel boolLib bossLib
      listTheory rich_listTheory arithmeticTheory
 
 val _ = new_theory"balancedParens"

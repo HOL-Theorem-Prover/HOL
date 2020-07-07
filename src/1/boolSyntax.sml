@@ -15,6 +15,7 @@ struct
 open Feedback Lib HolKernel boolTheory;
 
 val ERR = mk_HOL_ERR "boolSyntax"
+type goal     = term list * term
 
 (*---------------------------------------------------------------------------
        Basic constants
@@ -204,8 +205,8 @@ val strip_comb     = HolKernel.strip_comb
 val strip_abs      = HolKernel.strip_abs
 val strip_forall   = HolKernel.strip_binder (SOME universal)
 val strip_exists   = HolKernel.strip_binder (SOME existential)
-val strip_conj     = strip_binop (total dest_conj)
-val strip_disj     = strip_binop (total dest_disj)
+val strip_conj     = strip_binop dest_conj
+val strip_disj     = strip_binop dest_disj
 
 fun dest_strip_comb t =
    let
@@ -486,20 +487,12 @@ local
       tyS' @
       (List.map (fn {redex, residue} => redex |-> type_subst tyS' residue) tyS)
 
-  fun zip_aux _ [] [] = []
-    | zip_aux f (x::xs) (y::ys) = f (x, y) (zip_aux f xs ys)
-    | zip_aux _ _ _ = raise UERR "zip - lists different lengths"
-  fun zipwith f xs ys = zip_aux (Lib.cons o (Lib.uncurry f)) xs ys
-
   fun type_new_vars vars =
     let
       val gvars = List.map (fn _ => gen_tyvar ()) vars
-      val old_to_new = zipwith (curry op|->) vars gvars
-      val new_to_old = zipwith (curry op|->) gvars vars
     in
-      (gvars, (old_to_new, new_to_old))
-    end;
-
+      (gvars, ListPair.map op|->(vars,gvars), ListPair.map op|->(gvars,vars))
+    end
   fun is_tyvar vars ty = is_vartype ty andalso Lib.mem ty vars
   fun find_redex r = Lib.first (fn rr as {redex, residue} => r = redex)
   fun clean_subst s = Lib.filter (fn {redex, residue} => redex <> residue) s
@@ -539,8 +532,8 @@ local
 
   fun sep_var_type_unify (vars1, ty1) (vars2, ty2) =
     let
-      val (gvars1, (old_to_new1, new_to_old1)) = type_new_vars vars1
-      val (gvars2, (old_to_new2, new_to_old2)) = type_new_vars vars2
+      val (gvars1, old_to_new1, new_to_old1) = type_new_vars vars1
+      val (gvars2, old_to_new2, new_to_old2) = type_new_vars vars2
       val ty1' = type_subst old_to_new1 ty1
       val ty2' = type_subst old_to_new2 ty2
       val sub = var_type_unify (gvars1 @ gvars2) ty1' ty2'
@@ -572,6 +565,39 @@ in
 
   fun list_mk_ucomb (f, args) = List.foldl (mk_ucomb o swap) f args
 
+  (* only generates one list *)
+  fun gen_tyvar_sigma (tys : hol_type list) =
+      map (fn ty => {redex = ty, residue = gen_tyvar()}) tys
+  fun gen_tyvarify tm =
+      Term.inst (gen_tyvar_sigma (type_vars_in_term tm)) tm
+
+
 end
+
+(* ----------------------------------------------------------------------
+    Utility functions to help with the fact that terms are not an
+    equality type
+   ---------------------------------------------------------------------- *)
+
+local
+open Portable
+val aconv = Term.aconv
+in
+
+fun Teq tm = Term.same_const T tm
+fun Feq tm = Term.same_const F tm
+val tml_eq = list_eq aconv
+val tmp_eq = pair_eq aconv aconv
+val goal_eq = pair_eq tml_eq aconv
+val goals_eq = list_eq goal_eq
+val tmem = Lib.op_mem Term.aconv
+fun memt tlist t = Lib.op_mem Term.aconv t tlist
+val tunion = Lib.op_union Term.aconv
+fun tassoc t l = Lib.op_assoc Term.aconv t l
+
+fun tmx_eq (tm1,x1) (tm2,x2) = x1 = x2 andalso Term.aconv tm1 tm2
+fun xtm_eq (x1,tm1) (x2,tm2) = x1 = x2 andalso Term.aconv tm1 tm2
+end
+
 
 end

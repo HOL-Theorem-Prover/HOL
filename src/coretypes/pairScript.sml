@@ -326,7 +326,7 @@ val FORALL_PROD = Q.store_thm("FORALL_PROD",
  THEN ASM_REWRITE_TAC[]);
 
 
-val pair_induction = save_thm("pair_induction", #2(EQ_IMP_RULE FORALL_PROD));
+Theorem pair_induction = #2(EQ_IMP_RULE FORALL_PROD) |> GEN_ALL
 
 (* ----------------------------------------------------------------------
     PROD_ALL
@@ -352,7 +352,7 @@ val PROD_ALL_MONO = store_thm(
 val _ = IndDefLib.export_mono "PROD_ALL_MONO"
 
 val PROD_ALL_CONG = store_thm(
-  "PROD_ALL_CONG[defncong]",
+  "PROD_ALL_CONG",
   ``!p p' P P' Q Q'.
       (p = p') /\ (!x:'a y:'b. (p' = (x,y)) ==> (P x <=> P' x)) /\
       (!x:'a y:'b. (p' = (x,y)) ==> (Q y <=> Q' y)) ==>
@@ -739,8 +739,6 @@ val LEX_CONG = Q.store_thm
    THEN NTAC 2 (REWRITE_TAC [UNCURRY_VAR,FST,SND] THEN BETA_TAC)
    THEN METIS_TAC[]);
 
-val _ = DefnBase.export_cong "LEX_CONG";
-
 (*---------------------------------------------------------------------------
     Generate some ML that gets evaluated at theory load time.
     It adds relevant rewrites into the global compset.
@@ -789,7 +787,7 @@ S "val comma_tm = prim_mk_const {Name=\",\", Thy=\"pair\"};", NL,
 S "val uncurry_tm = prim_mk_const {Name=\"UNCURRY\", Thy=\"pair\"};", NL,
 NL,
 S "val dest_pair = dest_binop comma_tm (ERR1 \"dest_pair\" \"not a pair\")", NL,
-S "val strip_pair = strip_binop (total dest_pair);", NL,
+S "val strip_pair = strip_binop dest_pair;", NL,
 S "val spine_pair = spine_binop (total dest_pair);", NL,
 NL,
 S "local fun check [] = true", NL,

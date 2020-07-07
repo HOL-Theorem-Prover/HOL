@@ -1,4 +1,4 @@
-open HolKernel bossLib boolLib Parse termTheory chap2Theory chap3Theory reductionEval binderLib relationTheory lcsymtacs
+open HolKernel bossLib boolLib Parse termTheory chap2Theory chap3Theory reductionEval binderLib relationTheory
 
 val _ = new_theory "abselim"
 

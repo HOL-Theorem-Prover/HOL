@@ -409,6 +409,7 @@ val FAIL_THM = Q.store_thm("FAIL_THM", `FAIL x y = x`,
     THEN CONV_TAC (DEPTH_CONV BETA_CONV)
     THEN REFL_TAC);
 
+Overload flip = “C”
 val _ = remove_ovl_mapping "C" {Name="C", Thy = "combin"}
 
 val _ = adjoin_to_theory

@@ -118,7 +118,7 @@ Proof
     rpt STRIP_TAC
  >> irule (REWRITE_RULE [RSUBSET] STRONG_BISIM_UPTO_THM)
  >> Q.EXISTS_TAC `\x y. (x = y) \/ (?G. CONTEXT G /\ (x = G P) /\ (y = G Q))`
- >> BETA_TAC >> Reverse CONJ_TAC
+ >> BETA_TAC >> reverse CONJ_TAC
  >- ( DISJ2_TAC >> Q.EXISTS_TAC `\x. x` >> BETA_TAC \\
       KILL_TAC >> RW_TAC std_ss [CONTEXT1] )
  >> REWRITE_TAC [STRONG_BISIM_UPTO]
@@ -224,7 +224,7 @@ Proof
        [ (* goal 1.1 (of 2) *)
          rename1 `STRONG_EQUIV E1' y` \\
          Q.EXISTS_TAC `y || G' Q` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
                               art [STRONG_EQUIV_REFL]) \\
          Q.EXISTS_TAC `y || G' P` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
@@ -236,7 +236,7 @@ Proof
          >- (MATCH_MP_TAC CONTEXT5 >> art []) >> rw [],
          (* goal 1.2 (of 2) *)
          Q.EXISTS_TAC `G'' Q || G' Q` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
                               art [STRONG_EQUIV_REFL]) \\
          Q.EXISTS_TAC `G'' P || G' P` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
@@ -251,7 +251,7 @@ Proof
        [ (* goal 2.1 (of 2) *)
          rename1 `STRONG_EQUIV E1' y` \\
          Q.EXISTS_TAC `G Q || y` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
                               art [STRONG_EQUIV_REFL]) \\
          Q.EXISTS_TAC `G P || y` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
@@ -263,7 +263,7 @@ Proof
          >- (MATCH_MP_TAC CONTEXT5 >> art []) >> rw [],
          (* goal 2.2 (of 2) *)
          Q.EXISTS_TAC `G Q || G'' Q` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
                               art [STRONG_EQUIV_REFL]) \\
          Q.EXISTS_TAC `G P || G'' P` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
@@ -281,14 +281,14 @@ Proof
          rename1 `STRONG_EQUIV E1' x` \\
          rename1 `STRONG_EQUIV E2 y` \\
          Q.EXISTS_TAC `x || y` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          Q.EXISTS_TAC `x || y` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          DISJ1_TAC >> REWRITE_TAC [],
          (* goal 3.2 (of 4) *)
          rename1 `STRONG_EQUIV E1' y` \\
          Q.EXISTS_TAC `y || G'' Q` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          Q.EXISTS_TAC `y || G'' P` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          DISJ2_TAC \\
@@ -299,7 +299,7 @@ Proof
          (* goal 3.3 (of 4) *)
          rename1 `STRONG_EQUIV E2 y` \\
          Q.EXISTS_TAC `G'' Q || y` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          Q.EXISTS_TAC `G'' P || y` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          DISJ2_TAC \\
@@ -310,7 +310,7 @@ Proof
          BETA_TAC >> REWRITE_TAC [],
          (* goal 3.4 (of 4) *)
          Q.EXISTS_TAC `G'' Q || G''' Q` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          Q.EXISTS_TAC `G'' P || G''' P` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          DISJ2_TAC \\
@@ -323,7 +323,7 @@ Proof
        [ (* goal 4.1 (of 2) *)
          rename1 `STRONG_EQUIV E1' y` \\
          Q.EXISTS_TAC `y || G' Q` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
                               art [STRONG_EQUIV_REFL]) \\
          Q.EXISTS_TAC `y || G' P` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
@@ -335,7 +335,7 @@ Proof
          >- (MATCH_MP_TAC CONTEXT5 >> art []) >> rw [],
          (* goal 4.2 (of 2) *)
          Q.EXISTS_TAC `G'' Q || G' Q` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
                               art [STRONG_EQUIV_REFL]) \\
          Q.EXISTS_TAC `G'' P || G' P` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
@@ -350,7 +350,7 @@ Proof
        [ (* goal 5.1 (of 2) *)
          rename1 `STRONG_EQUIV E1' y` \\
          Q.EXISTS_TAC `G Q || y` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
                               art [STRONG_EQUIV_REFL]) \\
          Q.EXISTS_TAC `G P || y` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
@@ -362,7 +362,7 @@ Proof
          >- (MATCH_MP_TAC CONTEXT5 >> art []) >> rw [],
          (* goal 5.2 (of 2) *)
          Q.EXISTS_TAC `G Q || G'' Q` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
                               art [STRONG_EQUIV_REFL]) \\
          Q.EXISTS_TAC `G P || G'' P` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR \\
@@ -380,14 +380,14 @@ Proof
          rename1 `STRONG_EQUIV E1' x` \\
          rename1 `STRONG_EQUIV y E1` \\
          Q.EXISTS_TAC `y || x` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          Q.EXISTS_TAC `y || x` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          DISJ1_TAC >> REWRITE_TAC [],
          (* goal 6.2 (of 4) *)
          rename1 `STRONG_EQUIV E1' y` \\
          Q.EXISTS_TAC `G'' Q || y` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          Q.EXISTS_TAC `G'' P || y` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          DISJ2_TAC \\
@@ -398,7 +398,7 @@ Proof
          (* goal 6.3 (of 4) *)
          rename1 `STRONG_EQUIV y E1` \\
          Q.EXISTS_TAC `y || G'' Q` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          Q.EXISTS_TAC `y || G'' P` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          DISJ2_TAC \\
@@ -408,7 +408,7 @@ Proof
          >- (MATCH_MP_TAC CONTEXT5 >> art []) >> rw [],
          (* goal 6.4 (of 4) *)
          Q.EXISTS_TAC `G''' Q || G'' Q` \\
-         Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
+         reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          Q.EXISTS_TAC `G''' P || G'' P` \\
          CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_PRESD_BY_PAR >> art []) \\
          DISJ2_TAC \\
@@ -423,13 +423,13 @@ Proof
       [ (* goal 1.1 (of 2) *)
         rename1 `STRONG_EQUIV y E2` \\
         Q.EXISTS_TAC `restr L y` \\
-        Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
+        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         Q.EXISTS_TAC `restr L y` \\
         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         DISJ1_TAC >> REWRITE_TAC [],
         (* goal 1.2 (of 2) *)
         Q.EXISTS_TAC `restr L (G' Q)` \\
-        Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
+        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         Q.EXISTS_TAC `restr L (G' P)` \\
         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         DISJ2_TAC \\
@@ -442,13 +442,13 @@ Proof
       [ (* goal 2.1 (of 2) *)
         rename1 `STRONG_EQUIV y E2` \\
         Q.EXISTS_TAC `restr L y` \\
-        Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
+        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         Q.EXISTS_TAC `restr L y` \\
         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         DISJ1_TAC >> REWRITE_TAC [],
         (* goal 11.2.2 (of 2) *)
         Q.EXISTS_TAC `restr L (G' Q)` \\
-        Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
+        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         Q.EXISTS_TAC `restr L (G' P)` \\
         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         DISJ2_TAC \\
@@ -461,13 +461,13 @@ Proof
       [ (* goal 3.1 (of 2) *)
         rename1 `STRONG_EQUIV E1 y` \\
         Q.EXISTS_TAC `restr L y` \\
-        Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
+        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         Q.EXISTS_TAC `restr L y` \\
         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         DISJ1_TAC >> REWRITE_TAC [],
         (* goal 3.2 (of 2) *)
         Q.EXISTS_TAC `restr L (G' Q)` \\
-        Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
+        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         Q.EXISTS_TAC `restr L (G' P)` \\
         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         DISJ2_TAC \\
@@ -480,13 +480,13 @@ Proof
       [ (* goal 4.1 (of 2) *)
         rename1 `STRONG_EQUIV E1 y` \\
         Q.EXISTS_TAC `restr L y` \\
-        Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
+        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         Q.EXISTS_TAC `restr L y` \\
         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         DISJ1_TAC >> REWRITE_TAC [],
         (* goal 4.2 (of 2) *)
         Q.EXISTS_TAC `restr L (G' Q)` \\
-        Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
+        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         Q.EXISTS_TAC `restr L (G' P)` \\
         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RESTR >> art []) \\
         DISJ2_TAC \\
@@ -502,13 +502,13 @@ Proof
       [ (* goal 13.1 (of 2) *)
         rename1 `STRONG_EQUIV y E2` \\
         Q.EXISTS_TAC `relab y rf` \\
-        Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art [] ) \\
+        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art [] ) \\
         Q.EXISTS_TAC `relab y rf` \\
         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
         DISJ1_TAC >> REWRITE_TAC [],
         (* goal 13.2 (of 2) *)
         Q.EXISTS_TAC `relab (G' Q) rf` \\
-        Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
+        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
         Q.EXISTS_TAC `relab (G' P) rf` \\
         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
         DISJ2_TAC \\
@@ -522,13 +522,13 @@ Proof
       [ (* goal 14.1 (of 2) *)
         rename1 `STRONG_EQUIV E1 y` \\
         Q.EXISTS_TAC `relab y rf` \\
-        Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
+        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
         Q.EXISTS_TAC `relab y rf` \\
         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
         DISJ1_TAC >> REWRITE_TAC [],
         (* goal 14.2 (of 2) *)
         Q.EXISTS_TAC `relab (G' Q) rf` \\
-        Reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
+        reverse CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
         Q.EXISTS_TAC `relab (G' P) rf` \\
         CONJ_TAC >- (MATCH_MP_TAC STRONG_EQUIV_SUBST_RELAB >> art []) \\
         DISJ2_TAC \\
@@ -720,7 +720,7 @@ Proof
  >> irule (REWRITE_RULE [RSUBSET] WEAK_BISIM_UPTO_ALT_THM)
  >> Q.EXISTS_TAC `\x y. ?H. GSEQ H /\ (x = H P) /\ (y = H Q)`
  >> BETA_TAC
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- (Q.EXISTS_TAC `\t. t` >> BETA_TAC >> REWRITE_TAC [GSEQ1])
  >> REWRITE_TAC [WEAK_BISIM_UPTO_ALT]
  >> fix [`P'`, `Q'`]
@@ -972,7 +972,7 @@ Proof
     rpt STRIP_TAC
  >> irule OBS_CONGR_BY_WEAK_BISIM
  >> Q.EXISTS_TAC `\x y. ?H. SEQ H /\ WEAK_EQUIV x (H P) /\ WEAK_EQUIV y (H Q)`
- >> Reverse CONJ_TAC (* 2 sub-goals here *)
+ >> reverse CONJ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       REWRITE_TAC [WEAK_BISIM] \\
       fix [`P'`, `Q'`] \\
@@ -1804,7 +1804,7 @@ Theorem OBS_unfolding_lemma2 :
 Proof
     HO_MATCH_MP_TAC WG_strongind
  >> BETA_TAC >> REWRITE_TAC [ETA_AX]
- >> Reverse (rpt STRIP_TAC
+ >> reverse (rpt STRIP_TAC
              >- (Q.EXISTS_TAC `\t. P'` >> art [CONTEXT2])
              >- (IMP_RES_TAC TRANS_PREFIX \\
                  Q.EXISTS_TAC `e` >> art [] \\
@@ -2046,7 +2046,7 @@ val shared_lemma = Q.prove (
       RW_TAC std_ss [] \\
       Q.EXISTS_TAC `E1'` >> art [] \\
       Q.EXISTS_TAC `C'` >> art [] \\
-      Reverse CONJ_TAC >- PROVE_TAC [WEAK_EQUIV_TRANS] \\
+      reverse CONJ_TAC >- PROVE_TAC [WEAK_EQUIV_TRANS] \\
       IMP_RES_TAC contracts_IMP_WEAK_EQUIV \\
       PROVE_TAC [WEAK_EQUIV_TRANS],
       (* goal 2 (of 4) *)
@@ -2086,7 +2086,7 @@ val shared_lemma = Q.prove (
       RW_TAC std_ss [] \\
       Q.EXISTS_TAC `E1'` >> art [] \\
       Q.EXISTS_TAC `C'` >> art [] \\
-      Reverse CONJ_TAC >- PROVE_TAC [WEAK_EQUIV_TRANS] \\
+      reverse CONJ_TAC >- PROVE_TAC [WEAK_EQUIV_TRANS] \\
       IMP_RES_TAC contracts_IMP_WEAK_EQUIV \\
       PROVE_TAC [WEAK_EQUIV_TRANS],
       (* goal 4 (of 4) *)

@@ -1,7 +1,8 @@
 structure jcLib :> jcLib =
 struct
 
-open HolKernel lcsymtacs boolLib
+open HolKernel boolLib Abbrev Tactic Tactical BasicProvers simpLib
+open Rewrite bossLib Thm_cont
 
 (* existing strip_tac looks like
 

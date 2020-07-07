@@ -1210,6 +1210,7 @@ specified by the original input.
 \end{hol}
 
 \paragraph{Termination}
+\index{termination!of recursively defined functions}
 
 When processing the specification of a recursive function, \ml{Definition}
 must perform a termination proof. It automatically constructs
@@ -1350,6 +1351,7 @@ It may also return theorems that do not look quite like what was originally inpu
 For more on this, see the discussion of case expressions (into which the clauses in a \ml{Definition} are converted internally) in Section~\ref{CaseExp}.
 
 \subsection{When termination is not automatically proved}
+\index{termination!of recursively defined functions}
 
 If the termination proof for a prospective definition fails, the invocation of the definitional machinery fails.
 In such situations, the user must supply a termination argument explicitly.
@@ -1411,8 +1413,10 @@ type \ml{defn}, it is more convenient to invoke
 \end{alltt}
 \end{session}
 %
+\index{wellfounded relations!as part of a termination argument}
 The goal is to find a wellfounded relation on the arguments to \holtxt{qsort}
 and show that the arguments to \holtxt{qsort} are in the relation.
+\index{WF_REL_TAC@\ml{WF\_REL\_TAC}}
 The function \ml{WF\_REL\_TAC} is almost invariably used at this point to
 initiate the termination proof. Clearly, \ml{qsort} terminates because the list
 argument gets shorter. Invoking \ml{WF\_REL\_TAC} with the appropriate
@@ -2104,6 +2108,37 @@ Thus, one can write invocations such as
 \end{verbatim}
 \index{inductive relations|)}
 
+\subsection{Coinductive Relations}
+\label{sec:coinductive}
+\index{coinductive relations|(}
+
+\index{Hol_coreln, defining coinductive relations@\ml{Hol\_coreln}, defining coinductive relations}
+\index{coinductive relations!Hol_coreln (ML function)@\ml{Hol\_coreln} (ML function)}
+
+\HOL{} supports coinductive relational definitions by the function
+\ml{Hol\_coreln} in the \ml{bossLib} structure (or the new \ml{CoInductive} syntax).
+\ml{Hol\_coreln} shares the same input syntax with \ml{Hol\_reln}.
+A successful invocation of this definitional principle returns three important theorems $\mathit{rules}$, $\mathit{coind}$ and $\mathit{cases})$.
+Each is also stored in the current theory segment.
+\begin{itemize}
+\item $\mathit{rules}$ is a conjunction of implications
+that will be the same as the input term quotation; the theorem is
+saved under the name \ml{<stem>\_rules}, where \ml{<stem>} is the name of the
+first relation defined by the function (if using \ml{Hol\_coreln}), or
+as provided by the user, when using the \ml{CoInductive} syntax.
+\item $\mathit{coind}$ is the coinduction principle for the relations,
+saved under the name \ml{<stem>\_coind}.
+\item $\mathit{cases}$ is the so-called `cases' or `inversion' theorem
+  for the relations, saved under the name \ml{<stem>\_cases},
+  and is used to decompose an element in the relation into the
+possible ways of obtaining it by the rules.
+\end{itemize}
+Note that, ``schematic variables'' are also supported by \ml{Hol\_coreln},
+while there is no concept of ``strong coinduction principles''
+here. \HOL{}'s core coalgebra types (\theoryimp{llist}, \theoryimp{path}
+and  \theoryimp{lbtree}) are all based on coinductive relations. See
+Section~\ref{bisimulation} for a sample usage of coinductive relations
+on bisimulation.
 
 %%% Local Variables:
 %%% mode: latex

@@ -195,7 +195,7 @@ local
        | (NONE, SOME _) => General.LESS
        | (NONE, NONE) => Term.compare (w1, w2)
    val register = fst o dest_arm8_REG
-   val address = HolKernel.strip_binop (Lib.total wordsSyntax.dest_word_add) o
+   val address = HolKernel.strip_binop wordsSyntax.dest_word_add o
                  fst o dest_arm8_MEM
 in
    fun psort p =

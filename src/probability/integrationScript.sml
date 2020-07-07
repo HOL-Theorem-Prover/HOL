@@ -17,11 +17,10 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open numLib unwindLib tautLib Arith prim_recTheory
-combinTheory quotientTheory arithmeticTheory realTheory
-realLib jrhUtils pairTheory seqTheory limTheory transcTheory listTheory mesonLib
-boolTheory topologyTheory pred_setTheory optionTheory numTheory RealArith
-pred_setLib cardinalTheory;
+open numTheory numLib unwindLib tautLib Arith prim_recTheory pairTheory
+     combinTheory quotientTheory arithmeticTheory pred_setTheory realTheory
+     realLib jrhUtils seqTheory limTheory transcTheory listTheory mesonLib
+     topologyTheory optionTheory RealArith pred_setLib cardinalTheory;
 
 open hurdUtils iterateTheory productTheory real_topologyTheory derivativeTheory;
 
@@ -267,15 +266,26 @@ Proof
  >> ASM_MESON_TAC [REAL_LE_REFL]
 QED
 
-val INTERVAL_LOWERBOUND_NONEMPTY = store_thm ("INTERVAL_LOWERBOUND_NONEMPTY",
- ``!a b:real. ~(interval[a,b] = {}) ==>
-               (interval_lowerbound(interval[a,b]) = a)``,
-  SIMP_TAC std_ss [INTERVAL_LOWERBOUND, INTERVAL_NE_EMPTY]);
+Theorem INTERVAL_LOWERBOUND_NONEMPTY :
+    !a b:real. ~(interval[a,b] = {}) ==>
+               (interval_lowerbound(interval[a,b]) = a)
+Proof
+    SIMP_TAC std_ss [INTERVAL_LOWERBOUND, INTERVAL_NE_EMPTY]
+QED
 
-val INTERVAL_UPPERBOUND_NONEMPTY = store_thm ("INTERVAL_UPPERBOUND_NONEMPTY",
- ``!a b:real. ~(interval[a,b] = {}) ==>
-               (interval_upperbound(interval[a,b]) = b)``,
-  SIMP_TAC std_ss [INTERVAL_UPPERBOUND, INTERVAL_NE_EMPTY]);
+Theorem INTERVAL_UPPERBOUND_NONEMPTY :
+    !a b:real. ~(interval[a,b] = {}) ==>
+               (interval_upperbound(interval[a,b]) = b)
+Proof
+    SIMP_TAC std_ss [INTERVAL_UPPERBOUND, INTERVAL_NE_EMPTY]
+QED
+
+Theorem INTERVAL_BOUNDS_EMPTY :
+    (interval_upperbound {} = 0) /\
+    (interval_lowerbound {} = 0)
+Proof
+    rw [interval_upperbound, interval_lowerbound]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Content (length) of an interval.                                          *)
@@ -1961,10 +1971,14 @@ val has_integral_alt = store_thm ("has_integral_alt",
 val integrable_on = new_definition ("integrable_on",
  ``f integrable_on i <=> ?y. (f has_integral y) i``);
 
-val integral = new_definition ("integral",
- ``Integral i f = @y. (f has_integral y) i``);
+(* renamed `integral` to `HK_integral` (Henstock-Kurzweil integral)
+   to prevent naming conflicts with lebesgueTheory. -- Chun Tian
+ *)
+Definition integral :
+    HK_integral i f = @y. (f has_integral y) i
+End
 
-val _ = overload_on ("integral", ``Integral``);
+val _ = overload_on ("integral", ``HK_integral``);
 
 val INTEGRABLE_INTEGRAL = store_thm ("INTEGRABLE_INTEGRAL",
  ``!f i. f integrable_on i ==> (f has_integral (integral i f)) i``,
@@ -4200,7 +4214,7 @@ val HAS_INTEGRAL_COMPONENT_LE = store_thm ("HAS_INTEGRAL_COMPONENT_LE",
     REAL_ARITH_TAC]);
 
 val INTEGRAL_COMPONENT_LE = store_thm ("INTEGRAL_COMPONENT_LE",
- ``!f:real->real g:real->real s k.
+ ``!f:real->real g:real->real s.
         f integrable_on s /\ g integrable_on s /\
         (!x. x IN s ==> (f x) <= (g x))
         ==> (integral s f) <= (integral s g)``,
@@ -4504,6 +4518,12 @@ Proof
     RW_TAC real_ss [DROP_INDICATOR]
 QED
 
+Theorem INDICATOR_EMPTY :
+    indicator {} = (\x. 0)
+Proof
+    SET_TAC [indicator]
+QED
+
 val negligible = new_definition ("negligible",
  ``negligible s <=> !a b. (indicator s has_integral (0)) (interval[a,b])``);
 
@@ -4588,7 +4608,7 @@ Proof
   FIRST_X_ASSUM(ASSUME_TAC o REWRITE_RULE [INTERVAL_NE_EMPTY]) THEN
   ASM_SIMP_TAC std_ss [INTERVAL_LOWERBOUND, INTERVAL_UPPERBOUND, REAL_LT_IMP_LE] THEN
   MATCH_MP_TAC REAL_LET_TRANS THEN EXISTS_TAC ``&2 * d:real`` THEN
-  Reverse CONJ_TAC
+  reverse CONJ_TAC
   >- (MATCH_MP_TAC(REAL_ARITH ``&0 < d /\ &3 * d <= x ==> &2 * d < x:real``) THEN
       ASM_REWRITE_TAC[] THEN
       FULL_SIMP_TAC std_ss [REAL_EQ_LDIV_EQ, REAL_ARITH ``0 < 3:real``] THEN
@@ -9538,7 +9558,7 @@ Proof
    [``{interval[c:real,d]}``, ``interval[c:real,d]``])
  >> ASM_SIMP_TAC std_ss [DIVISION_OF_SELF, SUM_SING, max_def]
  >> DISCH_TAC
- >> Reverse (Cases_on `abs B <= abs (f {})`) >> fs []
+ >> reverse (Cases_on `abs B <= abs (f {})`) >> fs []
  >- (MATCH_MP_TAC REAL_LE_TRANS \\
      Q.EXISTS_TAC `B` >> art [ABS_LE])
  >> MATCH_MP_TAC REAL_LE_TRANS
@@ -20566,5 +20586,19 @@ val HAS_BOUNDED_VARIATION_ON_INDEFINITE_INTEGRAL_LEFT = store_thm ("HAS_BOUNDED_
   FIRST_ASSUM(MP_TAC o MATCH_MP ABSOLUTELY_INTEGRABLE_IMP_INTEGRABLE) THEN
   MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INTEGRABLE_ON_SUBINTERVAL) THEN
   ASM_REWRITE_TAC[SUBSET_INTERVAL] THEN ASM_REAL_ARITH_TAC);
+
+(* TODO: hol-light's "Multivariate/integration.ml", starting from line 21056:
+
+   CONTINUOUS_BV_IMP_UNIFORMLY_CONTINUOUS
+   HAS_BOUNDED_VARIATION_ON_DARBOUX_IMP_CONTINUOUS
+   VECTOR_VARIATION_ON_INTERIOR
+   VECTOR_VARIATION_ON_CLOSURE
+   HAS_BOUNDED_VARIATION_IMP_BAIRE1
+   INCREASING_IMP_BAIRE1
+   DECREASING_IMP_BAIRE1
+   FACTOR_THROUGH_VARIATION
+   FACTOR_CONTINUOUS_THROUGH_VARIATION
+   ...
+ *)
 
 val _ = export_theory();

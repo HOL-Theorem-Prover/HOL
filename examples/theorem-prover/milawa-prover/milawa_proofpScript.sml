@@ -9,6 +9,7 @@ open pairTheory;
 
 infix \\
 val op \\ = op THEN;
+val _ = temp_delsimps ["NORMEQ_CONV"]
 
 
 val rw = ref (tl [TRUTH]);

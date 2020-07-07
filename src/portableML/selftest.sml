@@ -1,5 +1,5 @@
 
-val _ =print "\n"
+val _ =print "\n";
 
 fun die s = (print (s^"\n"); OS.Process.exit OS.Process.failure)
 
@@ -67,6 +67,28 @@ in
   else
     die ("\n Evaluation gave wrong result: [" ^
          String.concatWith ", " (map Int.toString res) ^ "]")
+end
+
+val _ = tprint "Checking HOLsexp-reading"
+val _ = let
+  open HOLsexp
+  val el1 = Cons(Symbol "bar", Symbol "baz")
+  val I = Integer
+  val el2 = List [Quote, List [I 1,I 2,I 3,String "\203a\"", String"foo\n",
+                               Symbol "1+", String "xy\028"]]
+  val t_out = List[Symbol "foo ", el1, el2]
+  val outstrm = TextIO.openOut "test.sexp"
+  val _ = TextIO.output(outstrm,
+                        ";; this is an automatically generated test file\n")
+  val _ = TextIO.output(outstrm, HOLPP.pp_to_string 70 printer t_out ^
+                                 "; another comment \n")
+  val _ = TextIO.closeOut outstrm
+  val t_in = HOLsexp_parser.raw_read_file "test.sexp"
+in
+  if t_in = t_out then print "OK\n"
+  else
+    die ("FAILED, read back:\n  "^
+         HOLPP.pp_to_string 70 printer t_in)
 end
 
 val _ = OS.Process.exit OS.Process.success

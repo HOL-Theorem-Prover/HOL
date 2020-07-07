@@ -276,7 +276,7 @@ local
          SOME i => mlibUseful.INL i
        | NONE => mlibUseful.INR tm
    val fp_register = fp_reg o fst o dest_arm_FP_REG
-   val address = HolKernel.strip_binop (Lib.total wordsSyntax.dest_word_add) o
+   val address = HolKernel.strip_binop wordsSyntax.dest_word_add o
                  fst o dest_arm_MEM
 in
    fun psort p =

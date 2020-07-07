@@ -17,7 +17,7 @@ The compiler consists of three phasees:
 *)
 
 open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
-open lcsymtacs for_ndTheory for_nd_semTheory listTheory arithmeticTheory;
+open for_ndTheory for_nd_semTheory listTheory arithmeticTheory;
 
 val _ = temp_tight_equality ();
 

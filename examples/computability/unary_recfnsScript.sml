@@ -419,7 +419,7 @@ Proof
       ‘MAP mk1 gs ≠ []’ by simp[] >>
       drule_all ofoldfs_EQ_SOME >>
       rw[MAP_MAP_o, combinTheory.o_ABS_L, unfold_fold_alt] >>
-      simp[Cong MAP_CONG'])
+      simp[Cong MAP_CONG'] >> fs[] >> metis_tac[])
   >- (rename [‘b1 _ = b (unfold (a-1) _)’, ‘s1 _ = s (unfold (a + 1) _)’] >>
       ‘0 < a-1’ by metis_tac[recfn_nzero] >>
       qexists_tac ‘recPr1 b1 s1’ >> simp[recfn1_rules] >>

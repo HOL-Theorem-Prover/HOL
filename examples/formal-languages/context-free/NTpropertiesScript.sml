@@ -2,7 +2,6 @@ open HolKernel Parse boolLib bossLib
 
 open listTheory
 open grammarTheory
-open lcsymtacs
 open pred_setTheory
 
 val rveq = rpt BasicProvers.VAR_EQ_TAC

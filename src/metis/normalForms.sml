@@ -250,7 +250,10 @@ val MK_o = prove
 val SKICo_SS =
   simpLib.SSFRAG
   {name=SOME"SKICo",
-   convs = [], rewrs = [(SOME "I_o_ID", combinTheory.I_o_ID)], congs = [],
+   convs = [],
+   rewrs = [
+     (SOME{Thy = "combin", Name = "I_o_ID"}, combinTheory.I_o_ID)
+   ], congs = [],
    filter = NONE, ac = [], dprocs = []};
 
 val SKICo_ss = simpLib.++ (SKI_ss, SKICo_SS);
@@ -1034,7 +1037,7 @@ val cond_lift_SS =
    [{name = "conditional lifting at rand", trace = 2,
      key = SOME([], Term`(f:'a -> 'b) (COND P Q R)`),
      conv = K (K cond_lift_rand_CONV)}],
-   rewrs = [(SOME "COND_RATOR", boolTheory.COND_RATOR)],
+   rewrs = [(SOME {Thy = "bool", Name = "COND_RATOR"}, boolTheory.COND_RATOR)],
    congs = [],
    filter = NONE,
    ac = [],

@@ -233,7 +233,7 @@ val LRTC_ONE = store_thm (
    "LRTC_ONE",
   ``!R x t y. LRTC R x [t] y = R x t y``,
     rpt GEN_TAC
- >> Reverse EQ_TAC
+ >> reverse EQ_TAC
  >- ( DISCH_TAC >> MATCH_MP_TAC LRTC_SINGLE >> ASM_REWRITE_TAC [] )
  >> ONCE_REWRITE_TAC [LRTC_CASES1]
  >> SIMP_TAC list_ss []
@@ -299,7 +299,7 @@ val LRTC_APPEND_CASES = store_thm (
    "LRTC_APPEND_CASES",
   ``!R l1 l2 (x :'a) y. LRTC R x (l1 ++ l2) y = ?u. LRTC R x l1 u /\ LRTC R u l2 y``,
     SIMP_TAC bool_ss [EQ_IMP_THM, FORALL_AND_THM]
- >> Reverse CONJ_TAC
+ >> reverse CONJ_TAC
  >- ( rpt STRIP_TAC >> Q.ABBREV_TAC `l = l1 ++ l2` \\
       ONCE_REWRITE_TAC [LRTC_CASES_LRTC_TWICE] \\
       take [`u`, `l1`, `l2`] >> Q.UNABBREV_TAC `l` >> ASM_REWRITE_TAC [] )

@@ -418,7 +418,7 @@ QED
  * all adjacent elements of the list.                                        *
  *---------------------------------------------------------------------------*)
 
-Definition SORTED_DEF:
+Definition SORTED_DEF[simp]:
    (SORTED R [] = T) /\
    (SORTED R [x] = T) /\
    (SORTED R (x::y::rst) <=> R x y /\ SORTED R (y::rst))
@@ -427,6 +427,15 @@ End
 Definition SORTS_DEF:
   SORTS f R <=> !l. PERM l (f R l) /\ SORTED R (f R l)
 End
+
+Theorem SORTED_adjacent:
+  SORTED R L <=> adjacent L RSUBSET R
+Proof
+  Induct_on ‘L’ >> simp[relationTheory.RSUBSET] >>
+  rename [‘SORTED R L’] >> Cases_on ‘L’ >>
+  simp[adjacent_iff, DISJ_IMP_THM, FORALL_AND_THM,
+       relationTheory.RSUBSET]
+QED
 
 
 (*---------------------------------------------------------------------------*
@@ -447,17 +456,42 @@ QED
  *       When appending sorted lists gives a sorted list.                    *
  *---------------------------------------------------------------------------*)
 
-val SORTED_APPEND = Q.store_thm("SORTED_APPEND",
-`!R L1 L2.
+Theorem SORTED_APPEND:
+ !R L1 L2.
+ transitive R ==>
+ (SORTED R (L1 ++ L2) <=> SORTED R L1 /\ SORTED R L2 /\
+                          (!x y. MEM x L1 ==> MEM y L2 ==> R x y))
+Proof
+ Induct_on `L1` \\ fs [SORTED_EQ] \\ metis_tac []
+QED
+
+Theorem SORTED_APPEND_IMP:
+ !R L1 L2.
      transitive R
  /\  SORTED R L1
  /\  SORTED R L2
  /\ (!x y. MEM x L1 /\ MEM y L2 ==> R x y)
   ==>
-    SORTED R (L1 ++ L2)`,
+    SORTED R (L1 ++ L2)
+Proof
 Induct_on `L1`
   THEN SRW_TAC [boolSimps.CONJ_ss][SORTED_EQ]
-  THEN PROVE_TAC []);
+  THEN PROVE_TAC []
+QED
+
+Theorem SORTED_APPEND_GEN:
+  !R L1 L2. SORTED R (L1 ++ L2) <=>
+              SORTED R L1 /\ SORTED R L2 /\
+                ((L1 = []) \/ (L2 = []) \/ (R (LAST L1) (HD L2)))
+Proof
+  REPEAT STRIP_TAC >> Induct_on `L1` >>
+    ASM_SIMP_TAC list_ss [SORTED_DEF] >> GEN_TAC >>
+    Cases_on `L1` >> Cases_on `L2` >>
+    FULL_SIMP_TAC list_ss [SORTED_DEF]
+  THENL [
+    SIMP_TAC bool_ss [CONJ_COMM],
+    SIMP_TAC bool_ss [CONJ_ASSOC] ]
+QED
 
 (*---------------------------------------------------------------------------
                  Partition a list by a predicate.
@@ -616,7 +650,7 @@ Proof
  recInduct QSORT_IND
   THEN RW_TAC bool_ss [QSORT_DEF, SORTED_DEF, PARTITION_DEF]
   THEN REWRITE_TAC [GSYM APPEND_ASSOC, APPEND]
-  THEN MATCH_MP_TAC SORTED_APPEND
+  THEN MATCH_MP_TAC SORTED_APPEND_IMP
   THEN POP_ASSUM (ASSUME_TAC o SYM)
   THEN IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th]) SORTED_EQ
   THEN RW_TAC list_ss [MEM_FILTER,MEM,QSORT_MEM]
@@ -895,17 +929,13 @@ SRW_TAC [][] THEN
 METIS_TAC [ADD_SYM,MULT_SYM,DIV_MULT,MOD_MULT])
 end
 
-val SORTED_NIL = store_thm(
-"SORTED_NIL",
-``!R. SORTED R []``,
-SRW_TAC[][SORTED_DEF])
-val _ = export_rewrites["SORTED_NIL"]
+Theorem SORTED_NIL:     !R. SORTED R []
+Proof SRW_TAC[][]
+QED
 
-val SORTED_SING = store_thm(
-"SORTED_SING",
-``!R x. SORTED R [x]``,
-SRW_TAC[][SORTED_DEF])
-val _ = export_rewrites["SORTED_SING"]
+Theorem SORTED_SING:    !R x. SORTED R [x]
+Proof SRW_TAC[][]
+QED
 
 val SORTED_TL = store_thm ("SORTED_TL",
   ``SORTED R (x :: xs) ==> SORTED R xs``,
@@ -947,20 +977,6 @@ FULL_SIMP_TAC (srw_ss()) [MEM_EL] THEN
 FIRST_X_ASSUM (Q.SPECL_THEN [`0`,`SUC n`] MP_TAC) THEN
 SRW_TAC [][])
 
-Theorem SORTED_APPEND_IFF:
-  !R L1 L2. SORTED R (L1 ++ L2) <=>
-              SORTED R L1 /\ SORTED R L2 /\
-                ((L1 = []) \/ (L2 = []) \/ (R (LAST L1) (HD L2)))
-Proof
-  REPEAT STRIP_TAC >> Induct_on `L1` >>
-    ASM_SIMP_TAC list_ss [SORTED_DEF] >> GEN_TAC >>
-    Cases_on `L1` >> Cases_on `L2` >>
-    FULL_SIMP_TAC list_ss [SORTED_DEF]
-  THENL [
-    SIMP_TAC bool_ss [CONJ_COMM],
-    SIMP_TAC bool_ss [CONJ_ASSOC] ]
-QED
-
 val MEM_PERM =
   store_thm(
     "MEM_PERM",
@@ -991,12 +1007,11 @@ val QSORT_eq_if_PERM = store_thm(
   !l1 l2. (QSORT R l1 = QSORT R l2) = PERM l1 l2``,
 PROVE_TAC[QSORT_PERM,QSORT_SORTED,SORTED_PERM_EQ,PERM_TRANS,PERM_SYM])
 
-val SORTED_FILTER = store_thm("SORTED_FILTER",
-  ``!R ls P. transitive R /\ SORTED R ls ==> SORTED R (FILTER P ls)``,
-  ho_match_mp_tac SORTED_IND >>
-  rw[] >> rw[] >> rfs[SORTED_EQ] >> fs[SORTED_EQ] >>
-  first_x_assum(qspec_then`P`mp_tac) >> rw[] >>
-  rfs[SORTED_EQ] >> fs[MEM_FILTER])
+Theorem SORTED_FILTER:
+  !R ls P. transitive R /\ SORTED R ls ==> SORTED R (FILTER P ls)
+Proof
+  Induct_on ‘ls’ >> csimp[SORTED_EQ] >> rw[SORTED_EQ] >> fs[MEM_FILTER]
+QED
 
 val ALL_DISTINCT_SORTED_WEAKEN = Q.store_thm("ALL_DISTINCT_SORTED_WEAKEN",
   `!R R' ls. (!x y. MEM x ls /\ MEM y ls /\ x <> y ==> (R x y <=> R' x y)) /\
@@ -1323,7 +1338,7 @@ val QSORT3_SORTS =
     completeInduct_on `LENGTH l` THEN
     Cases_on `l` THEN
     RW_TAC std_ss [QSORT3_DEF, SORTED_DEF, PART3_FILTER] THEN
-    REPEAT (MATCH_MP_TAC SORTED_APPEND THEN REPEAT CONJ_TAC) THEN
+    REPEAT (MATCH_MP_TAC SORTED_APPEND_IMP THEN REPEAT CONJ_TAC) THEN
     ASM_REWRITE_TAC [] THEN
     TRY IND_STEP_TAC THEN
     RW_TAC std_ss [length_lem, SORTED_EQ, MEM_FILTER, SORTED_EQ_PART, MEM, MEM_FILTER, MEM_APPEND] THEN
@@ -1419,7 +1434,7 @@ val sorted_count_list = Q.store_thm ("sorted_count_list",
  Induct_on `n`
  >- rw [COUNT_LIST_def] >>
  rw [COUNT_LIST_SNOC, SNOC_APPEND] >>
- match_mp_tac SORTED_APPEND >>
+ match_mp_tac SORTED_APPEND_IMP >>
  FULL_SIMP_TAC (srw_ss()++ARITH_ss) [transitive_def, MEM_COUNT_LIST] >>
  decide_tac);
 

@@ -335,7 +335,6 @@ sig
   val PURE_CONV_TAC : conv -> tactic
   val ASMLIST_CASES : tactic -> (term -> tactic) -> tactic
   val POP_ASSUM_TAC : tactic -> tactic
-  val Reverse : tactic -> tactic
   val TRUTH_TAC : tactic
   val S_TAC : tactic
   val Strip : tactic
@@ -355,7 +354,7 @@ sig
   val Cond : tactic
   val Rewr  : tactic
   val Rewr' : tactic
-  val art : thm list -> tactic
+  val art : thm list -> tactic (* ASM_REWRITE_TAC *)
 
   (* Simple CNF conversion *)
   val CNF_CONV : conv
@@ -367,10 +366,5 @@ sig
   val MATCH_MP_DEPTH : int -> thm list -> thm list -> thm list
   val ASM_MATCH_MP_TAC_N : int -> thm list -> tactic
   val ASM_MATCH_MP_TAC : thm list -> tactic
-
-  (* Tacticals for better expressivity, added by Chun Tian *)
-  val fix                       : Q.tmquote list -> tactic
-  val set                       : Q.tmquote list -> tactic
-  val take                      : Q.tmquote list -> tactic
 
 end

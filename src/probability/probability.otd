@@ -1,0 +1,11 @@
+skipthm convergence_mode_TY_DEF
+skipthm convergence_mode_case_def
+skipthm convergence_mode_size_def
+skipthm convergence_11
+skipthm convergence_Axiom
+skipthm convergence_case_cong
+skipthm convergence_case_eq
+skipthm convergence_distinct
+skipthm convergence_induction
+skipthm convergence_nchotomy
+skipthm datatype_convergence_mode

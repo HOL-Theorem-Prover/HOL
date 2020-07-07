@@ -4,7 +4,7 @@ struct
 
     open MuddyCore
 
-    open bdd fdd
+    open bdd fdd;
 
     prim_type bvec
     type const = int

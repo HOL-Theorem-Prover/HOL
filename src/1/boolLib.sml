@@ -8,19 +8,11 @@ struct
 
 open boolTheory boolSyntax Hol_pp ParseExtras
      Drule Tactical Tactic Thm_cont Conv Rewrite Prim_rec Abbrev DB
-     BoundedRewrites TexTokenMap
+     BoundedRewrites TexTokenMap term_tactic
 
-local open DefnBase TypeBase Ho_Rewrite Psyntax Rsyntax in end
+local open TypeBase Ho_Rewrite Psyntax Rsyntax in end
 
 val parse_from_grammars = Parse.parse_from_grammars;
-
-(* ----------------------------------------------------------------------
-    Update DefnBase with some extra congruence rules
-   ---------------------------------------------------------------------- *)
-
-val _ = DefnBase.write_congs (DefnBase.read_congs() @
-                              map (REWRITE_RULE [AND_IMP_INTRO])
-                                  [RES_FORALL_CONG, RES_EXISTS_CONG])
 
 (*---------------------------------------------------------------------------
       Stock the rewriter in Ho_Rewrite with some rules not yet
@@ -120,9 +112,11 @@ val def_suffix = ref "_def"
 local
 open Feedback Theory
 fun prove_local (n,th) =
-    if not (!Globals.interactive) then
-      (print ("Proved triviality _ \"" ^ String.toString n ^ "\"\n"); th)
-    else th
+   (if not (!Globals.interactive) then
+      print ("Proved triviality _ \"" ^ String.toString n ^ "\"\n")
+    else ();
+    DB.store_local n th;
+    th)
 in
 fun save_thm_attrs fname (n, attrs, th) = let
   val (save, attrf, attrs) = let
@@ -206,23 +200,5 @@ fun term_diff t1 t2 =
     recurse [] t1 t2
   end
 
-local
-open Portable
-val aconv = Term.aconv
-in
-fun Teq tm = Term.same_const boolSyntax.T tm
-fun Feq tm = Term.same_const boolSyntax.F tm
-val tml_eq = list_eq aconv
-val tmp_eq = pair_eq aconv aconv
-val goal_eq = pair_eq tml_eq aconv
-val goals_eq = list_eq goal_eq
-val tmem = Lib.op_mem Term.aconv
-fun memt tlist t = Lib.op_mem Term.aconv t tlist
-val tunion = Lib.op_union Term.aconv
-fun tassoc t l = Lib.op_assoc Term.aconv t l
-
-fun tmx_eq (tm1,x1) (tm2,x2) = x1 = x2 andalso Term.aconv tm1 tm2
-fun xtm_eq (x1,tm1) (x2,tm2) = x1 = x2 andalso Term.aconv tm1 tm2
-end
 
 end;

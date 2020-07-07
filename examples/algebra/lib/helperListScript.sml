@@ -13,8 +13,6 @@ val _ = new_theory "helperList";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -111,7 +109,6 @@ open rich_listTheory; (* for EVERY_REVERSE *)
 
    DROP and TAKE:
    DROP_LENGTH_NIL       |- !l. DROP (LENGTH l) l = []
-   DROP_NON_NIL          |- !n l. n < LENGTH l ==> DROP n l <> []
    HD_DROP               |- !ls n. n < LENGTH ls ==> HD (DROP n ls) = EL n ls
    TAKE_1_APPEND         |- !x y. x <> [] ==> (TAKE 1 (x ++ y) = TAKE 1 x)
    DROP_1_APPEND         |- !x y. x <> [] ==> (DROP 1 (x ++ y) = DROP 1 x ++ y)
@@ -292,6 +289,9 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    listRangeINC_MEM          |- !m n x. MEM x [m .. n] <=> m <= x /\ x <= n
    listRangeINC_EL           |- !m n i. m + i <= n ==> EL i [m .. n] = m + i
    listRangeINC_EVERY        |- !P m n. EVERY P [m .. n] <=> !x. m <= x /\ x <= n ==> P x
+   listRangeINC_EXISTS       |- !P m n. EXISTS P [m .. n] <=> ?x. m <= x /\ x <= n /\ P x
+   listRangeINC_EVERY_EXISTS |- !P m n. EVERY P [m .. n] <=> ~EXISTS ($~ o P) [m .. n]
+   listRangeINC_EXISTS_EVERY |- !P m n. EXISTS P [m .. n] <=> ~EVERY ($~ o P) [m .. n]
    listRangeINC_SNOC         |- !m n. m <= n + 1 ==> ([m .. n + 1] = SNOC (n + 1) [m .. n])
    listRangeINC_REVERSE      |- !m n. REVERSE [m .. n] = MAP (\x. n - x + m) [m .. n]
    listRangeINC_REVERSE_MAP  |- !f m n. REVERSE (MAP f [m .. n]) = MAP (f o (\x. n - x + m)) [m .. n]
@@ -439,6 +439,15 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    DILATE_0_EQ_NIL  |- !l e n. (DILATE e 0 n l = []) <=> (l = [])
    DILATE_0_LAST    |- !l e n. LAST (DILATE e 0 n l) = LAST l
 
+   Range Conjunction and Disjunction:
+   every_range_sing    |- !a j. a <= j /\ j <= a <=> (j = a)
+   every_range_cons    |- !f a b. a <= b ==>
+                                    ((!j. a <= j /\ j <= b ==> f j) <=>
+                                      f a /\ !j. a + 1 <= j /\ j <= b ==> f j)
+   exists_range_sing   |- !a. ?j. a <= j /\ j <= a <=> (j = a)
+   exists_range_cons   |- !f a b. a <= b ==>
+                                    ((?j. a <= j /\ j <= b /\ f j) <=>
+                                     f a \/ ?j. a + 1 <= j /\ j <= b /\ f j)
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -1134,15 +1143,6 @@ val DROP_LENGTH_NIL = store_thm(
         DROP n (h::l) = DROP (n-1) l by DROP_def
                       <> []          by induction hypothesis, n-1 < LENGTH l
 *)
-(* Proof:
-   Note !ls n. (DROP n ls = []) <=> n >= LENGTH ls    by DROP_NIL
-     so n < LENGTH ls ==> DROP n ls <> []             by NOT_LESS_EQUAL
-*)
-val DROP_NON_NIL = store_thm(
-  "DROP_NON_NIL",
-  ``!n l. n < LENGTH l ==> DROP n l <> []``,
-  metis_tac[DROP_NIL, DECIDE ``x >= y <=> ~(x < y)``]);
-
 (* Theorem: n < LENGTH ls ==> (HD (DROP n ls) = EL n ls) *)
 (* Proof:
      HD (DROP n ls)
@@ -1544,7 +1544,7 @@ val rotate_full = store_thm(
 (* Theorem: n < LENGTH l ==> rotate (SUC n) l = rotate 1 (rotate n l) *)
 (* Proof:
    Since n < LENGTH l, l <> [] by LENGTH_NIL.
-   Thus  DROP n l <> []  by DROP_NON_NIL  (need n < LENGTH l)
+   Thus  DROP n l <> []  by DROP_EQ_NIL  (need n < LENGTH l)
    Expand by rotate_def, this is to show:
    DROP (SUC n) l ++ TAKE (SUC n) l = DROP 1 (DROP n l ++ TAKE n l) ++ TAKE 1 (DROP n l ++ TAKE n l)
    LHS = DROP (SUC n) l ++ TAKE (SUC n) l
@@ -1560,7 +1560,7 @@ val rotate_suc = store_thm(
   rpt strip_tac >>
   `LENGTH l <> 0` by decide_tac >>
   `l <> []` by metis_tac[LENGTH_NIL] >>
-  `DROP n l <> []` by metis_tac[DROP_NON_NIL] >>
+  `DROP n l <> []` by simp[DROP_EQ_NIL] >>
   rw[rotate_def, DROP_1_APPEND, TAKE_1_APPEND, DROP_SUC, TAKE_SUC]);
 
 (* Theorem: Rotate keeps LENGTH (of necklace): LENGTH (rotate n l) = LENGTH l *)
@@ -2014,8 +2014,9 @@ val GENLIST_1 = store_thm(
   rw[]);
 
 (* Theorem alias *)
-val GENLIST_EQ = save_thm("GENLIST_EQ",
-   indexedListsTheory.GENLIST_CONG |> GEN ``n:num`` |> GEN ``f2:num -> 'a`` |> GEN ``f1:num -> 'a``);
+Theorem GENLIST_EQ =
+   listTheory.GENLIST_CONG |> GEN ``n:num`` |> GEN ``f2:num -> 'a``
+                           |> GEN ``f1:num -> 'a``;
 (*
 val GENLIST_EQ = |- !f1 f2 n. (!m. m < n ==> f1 m = f2 m) ==> GENLIST f1 n = GENLIST f2 n: thm
 *)
@@ -3856,13 +3857,48 @@ val listRangeINC_EL = store_thm(
 (* Theorem: EVERY P [m .. n] <=> !x. m <= x /\ x <= n ==> P x *)
 (* Proof:
        EVERY P [m .. n]
-   <=> !x. MEM x [m .. n] ==> P e      by EVERY_MEM
-   <=> !x. m <= x /\ x <= n ==> P e    by MEM_listRangeINC
+   <=> !x. MEM x [m .. n] ==> P x      by EVERY_MEM
+   <=> !x. m <= x /\ x <= n ==> P x    by MEM_listRangeINC
 *)
 val listRangeINC_EVERY = store_thm(
   "listRangeINC_EVERY",
   ``!P m n. EVERY P [m .. n] <=> !x. m <= x /\ x <= n ==> P x``,
   rw[EVERY_MEM, MEM_listRangeINC]);
+
+(* Theorem: EXISTS P [m .. n] <=> ?x. m <= x /\ x <= n /\ P x *)
+(* Proof:
+       EXISTS P [m .. n]
+   <=> ?x. MEM x [m .. n] /\ P x      by EXISTS_MEM
+   <=> ?x. m <= x /\ x <= n /\ P e    by MEM_listRangeINC
+*)
+val listRangeINC_EXISTS = store_thm(
+  "listRangeINC_EXISTS",
+  ``!P m n. EXISTS P [m .. n] <=> ?x. m <= x /\ x <= n /\ P x``,
+  metis_tac[EXISTS_MEM, MEM_listRangeINC]);
+
+(* Theorem: EVERY P [m .. n] <=> ~(EXISTS ($~ o P) [m .. n]) *)
+(* Proof:
+       EVERY P [m .. n]
+   <=> !x. m <= x /\ x <= n ==> P x        by listRangeINC_EVERY
+   <=> ~(?x. m <= x /\ x <= n /\ ~(P x))   by negation
+   <=> ~(EXISTS ($~ o P) [m .. m])         by listRangeINC_EXISTS
+*)
+val listRangeINC_EVERY_EXISTS = store_thm(
+  "listRangeINC_EVERY_EXISTS",
+  ``!P m n. EVERY P [m .. n] <=> ~(EXISTS ($~ o P) [m .. n])``,
+  rw[listRangeINC_EVERY, listRangeINC_EXISTS]);
+
+(* Theorem: EXISTS P [m .. n] <=> ~(EVERY ($~ o P) [m .. n]) *)
+(* Proof:
+       EXISTS P [m .. n]
+   <=> ?x. m <= x /\ x <= m /\ P x           by listRangeINC_EXISTS
+   <=> ~(!x. m <= x /\ x <= n ==> ~(P x))    by negation
+   <=> ~(EVERY ($~ o P) [m .. n])            by listRangeINC_EVERY
+*)
+val listRangeINC_EXISTS_EVERY = store_thm(
+  "listRangeINC_EXISTS_EVERY",
+  ``!P m n. EXISTS P [m .. n] <=> ~(EVERY ($~ o P) [m .. n])``,
+  rw[listRangeINC_EXISTS, listRangeINC_EVERY]);
 
 (* Theorem: m <= n + 1 ==> ([m .. (n + 1)] = SNOC (n + 1) [m .. n]) *)
 (* Proof:
@@ -6632,6 +6668,73 @@ val DILATE_0_LAST = store_thm(
   `k DIV m = PRE (LENGTH l)` by metis_tac[MULT_DIV, MULT_COMM] >>
   `k < LENGTH (DILATE e 0 n l)` by rw[Abbr`k`] >>
   rw[DILATE_0_EL]);
+
+(* ------------------------------------------------------------------------- *)
+(* Range Conjunction and Disjunction                                         *)
+(* ------------------------------------------------------------------------- *)
+
+(* Theorem: a <= j /\ j <= a <=> (j = a) *)
+(* Proof: trivial by arithmetic. *)
+val every_range_sing = store_thm(
+  "every_range_sing",
+  ``!a j. a <= j /\ j <= a <=> (j = a)``,
+  decide_tac);
+
+(* Theorem: a <= b ==>
+    ((!j. a <= j /\ j <= b ==> f j) <=> (f a /\ !j. a + 1 <= j /\ j <= b ==> f j)) *)
+(* Proof:
+   If part: !j. a <= j /\ j <= b ==> f j ==>
+              f a /\ !j. a + 1 <= j /\ j <= b ==> f j
+      This is trivial since a + 1 = SUC a.
+   Only-if part: f a /\ !j. a + 1 <= j /\ j <= b ==> f j ==>
+                 !j. a <= j /\ j <= b ==> f j
+      Note a <= j <=> a = j or a < j      by arithmetic
+      If a = j, this is trivial.
+      If a < j, then a + 1 <= j, also trivial.
+*)
+val every_range_cons = store_thm(
+  "every_range_cons",
+  ``!f a b. a <= b ==>
+    ((!j. a <= j /\ j <= b ==> f j) <=> (f a /\ !j. a + 1 <= j /\ j <= b ==> f j))``,
+  rw[EQ_IMP_THM] >>
+  `(a = j) \/ (a < j)` by decide_tac >-
+  fs[] >>
+  fs[]);
+
+(* Theorem: ?j. a <= j /\ j <= a <=> (j = a) *)
+(* Proof: trivial by arithmetic. *)
+val exists_range_sing = store_thm(
+  "exists_range_sing",
+  ``!a. ?j. a <= j /\ j <= a <=> (j = a)``,
+  metis_tac[LESS_EQ_REFL]);
+
+(* Theorem: a <= b ==>
+    ((?j. a <= j /\ j <= b /\ f j) <=> (f a \/ ?j. a + 1 <= j /\ j <= b /\ f j)) *)
+(* Proof:
+   If part: ?j. a <= j /\ j <= b /\ f j ==>
+              f a \/ ?j. a + 1 <= j /\ j <= b /\ f j
+      This is trivial since a + 1 = SUC a.
+   Only-if part: f a /\ ?j. a + 1 <= j /\ j <= b /\ f j ==>
+                 ?j. a <= j /\ j <= b /\ f j
+      Note a <= j <=> a = j or a < j      by arithmetic
+      If a = j, this is trivial.
+      If a < j, then a + 1 <= j, also trivial.
+*)
+val exists_range_cons = store_thm(
+  "exists_range_cons",
+  ``!f a b. a <= b ==>
+    ((?j. a <= j /\ j <= b /\ f j) <=> (f a \/ ?j. a + 1 <= j /\ j <= b /\ f j))``,
+  rw[EQ_IMP_THM] >| [
+    `(a = j) \/ (a < j)` by decide_tac >-
+    fs[] >>
+    `a + 1 <= j` by decide_tac >>
+    metis_tac[],
+    metis_tac[LESS_EQ_REFL],
+    `a <= j` by decide_tac >>
+    metis_tac[]
+  ]);
+
+
 
 (* ------------------------------------------------------------------------- *)
 

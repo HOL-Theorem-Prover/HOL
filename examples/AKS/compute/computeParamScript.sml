@@ -13,8 +13,6 @@ val _ = new_theory "computeParam";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -267,8 +265,7 @@ open triangleTheory; (* for list_lcm_pos *)
 
    AKS parameter search simplified:
    param_seek_def      |- !n m k c. param_seek m c n k =
-                                      if k = 0 then bad
-                                      else if c <= k then bad
+                                      if c <= k then bad
                                       else if n MOD k = 0 then nice k
                                       else if m <= ordz k n then good k
                                       else param_seek m c n (k + 1)
@@ -330,7 +327,7 @@ open triangleTheory; (* for list_lcm_pos *)
    Of course, being the smallest value, k must be prime.
 *)
 
-        (* Still More Theory:
+(* Still More Theory:
    When found, k divides (n ** j - 1)  with j > m.
    Say k = 13, the smallest value not a factor of P = PROD (0 < j <= m) (n ** j - 1)
    Since k is the smallest, this must be due to:
@@ -1121,7 +1118,8 @@ val residue_common_multiple_nonzero = store_thm(
   ``!n. 0 NOTIN residue_common_multiple n``,
   rw[residue_common_multiple_def]);
 
-(* Theorem: m IN residue_common_multiple n ==> !k. 0 < k ==> k * m IN residue_common_multiple n *)
+(* Theorem: m IN residue_common_multiple n ==>
+            !k. 0 < k ==> k * m IN residue_common_multiple n *)
 (* Proof:
    By residue_common_multiple_def, this is to show:
    (1) 0 < m /\ 0 < k ==> 0 < k * m
@@ -1129,12 +1127,12 @@ val residue_common_multiple_nonzero = store_thm(
    (2) j IN residue n /\ (!j. j IN residue n ==> j divides m) ==> j divides (k * m)
        Condition implies j divides m, hence true by DIVIDES_MULTIPLE.
 *)
-val residue_common_multiple_has_multiple = store_thm(
-  "residue_common_multiple_has_multiple",
-  ``!n m. m IN residue_common_multiple n ==> !k. 0 < k ==> k * m IN residue_common_multiple n``,
-  rw[residue_common_multiple_def] >-
-  rw[ZERO_LESS_MULT] >>
-  rw[DIVIDES_MULTIPLE]);
+Theorem residue_common_multiple_has_multiple:
+  !n m. m IN residue_common_multiple n ==>
+        !k. 0 < k ==> k * m IN residue_common_multiple n
+Proof
+  rw[residue_common_multiple_def, DIVIDES_MULTIPLE]
+QED
 
 (* Theorem: b < a /\ a IN residue_common_multiple n /\ b IN residue_common_multiple n ==>
            (a - b) IN residue_common_multiple n *)
@@ -2488,10 +2486,20 @@ val aks_param_def = Define `
    (3) Skip m <= k, which is an optimisation by ZN_order_le: ordz k n <= k when 0 < k.
 *)
 (* Define the parameter seek loop *)
+(*
 val param_seek_def = tDefine "param_seek" `
   param_seek m c n k =
        if k = 0 then bad
   else if c <= k then bad
+  else if n MOD k = 0 then nice k (* same as k divides n when k <> 0 *)
+  else if m <= ordz k n then good k
+  else param_seek m c n (k + 1)
+`(WF_REL_TAC `measure (\(m,c,n,k). c - k)`);
+*)
+(* Skip k = 0 check, as caller uses k = 2 *)
+val param_seek_def = tDefine "param_seek" `
+  param_seek m c n k =
+       if c <= k then bad
   else if n MOD k = 0 then nice k (* same as k divides n when k <> 0 *)
   else if m <= ordz k n then good k
   else param_seek m c n (k + 1)

@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib lcsymtacs;
+open HolKernel Parse boolLib bossLib;
 
 open simpleSexpTheory pegTheory pegLib
 

@@ -11,25 +11,25 @@ sig
   val didactiv : real -> real
   val tanh : real -> real
   val dtanh : real -> real
-  val relu : real -> real
-  val drelu : real -> real
-  val leakyrelu : real -> real
-  val dleakyrelu : real -> real
 
   (* neural network *)
   type layer = {a : real -> real, da : real -> real, w : mat}
   type nn = layer list
-  type train_param =
+  type trainparam =
     {ncore: int, verbose: bool,
      learning_rate: real, batch_size: int, nepoch: int}
-  val string_of_trainparam : train_param -> string
-  val trainparam_of_string : string -> train_param
-  type schedule = train_param list
+  val string_of_trainparam : trainparam -> string
+  val trainparam_of_string : string -> trainparam
+  type schedule = trainparam list
   val write_schedule : string -> schedule -> unit
   val read_schedule : string -> schedule
 
   type fpdata = {layer : layer, inv : vect, outv : vect, outnv : vect}
   type bpdata = {doutnv : vect, doutv : vect, dinv : vect, dw : mat}
+
+  (* dimension *)
+  val dimin_nn : nn -> int
+  val dimout_nn : nn -> int
 
   (* weights randomly initialized *)
   val random_nn : (real -> real) * (real -> real) -> int list -> nn
@@ -37,10 +37,10 @@ sig
   (* forward and backward pass *)
   val fp_nn        : nn -> vect -> fpdata list
   val bp_nn        : fpdata list -> vect -> bpdata list
-  val bp_nn_wocost : fpdata list -> vect -> bpdata list
+  val bp_nn_doutnv : fpdata list -> vect -> bpdata list
 
   (* weight updates *)
-  val update_nn         : train_param -> nn -> mat list -> nn
+  val update_nn         : trainparam -> nn -> mat list -> nn
   val smult_dwl         : real -> mat list -> mat list
   val sum_dwll          : mat list list -> mat list
   val mean_square_error : vect -> real
@@ -65,7 +65,7 @@ sig
   val descale_real : real -> real
   val descale_out : vect -> real list
   val infer_nn : nn -> real list -> real list
-  val train_nn : train_param -> nn -> (real list * real list) list -> nn
+  val train_nn : trainparam -> nn -> (real list * real list) list -> nn
 
 
 end

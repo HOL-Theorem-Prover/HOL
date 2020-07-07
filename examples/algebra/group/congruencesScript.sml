@@ -20,8 +20,6 @@ val _ = new_theory "congruences";
 *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;

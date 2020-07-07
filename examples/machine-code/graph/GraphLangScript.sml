@@ -1,5 +1,5 @@
 
-open HolKernel Parse boolLib bossLib;
+open HolKernel Parse boolLib bossLib BasicProvers;
 
 val _ = new_theory "GraphLang";
 val _ = ParseExtras.temp_loose_equality()
@@ -7,7 +7,7 @@ val _ = ParseExtras.temp_loose_equality()
 open wordsTheory wordsLib pairTheory listTheory relationTheory;
 open pred_setTheory arithmeticTheory combinTheory;
 open arm_decompTheory set_sepTheory progTheory addressTheory;
-open m0_decompTheory riscv_progTheory lcsymtacs;
+open m0_decompTheory riscv_progTheory;
 open arm_decompLib m0_decompLib;
 
 val op by = BasicProvers.byA
@@ -2297,7 +2297,7 @@ val SKIP_TAG_IMP_CALL_RISCV = store_thm("SKIP_TAG_IMP_CALL_RISCV",
             ("mem",var_acc "mem"); ("dom",var_acc "dom");
             ("stack",var_acc "stack");
             ("dom_stack",var_acc "dom_stack");
-            ("clock",var_acc "clock"); ("ret_addr_input",var_acc "r1")]
+            ("clock",var_acc "clock"); ("ret_addr_input",var_acc "r10")]
           name (Jump exit)))``,
   fs [IMPL_INST_def,next_ok_def,check_ret_def,exec_next_def,
       check_jump_def,get_assert_def,LET_THM]

@@ -1,5 +1,5 @@
 structure countableLib :> countableLib = struct
-open HolKernel bossLib Tactical Drule lcsymtacs
+open HolKernel bossLib Tactical Drule
 open pred_setTheory countable_initTheory
 open boolSyntax numSyntax pairSyntax pred_setSyntax
 

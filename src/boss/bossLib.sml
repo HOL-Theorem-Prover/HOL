@@ -78,6 +78,7 @@ val augment_srw_ss  = BasicProvers.augment_srw_ss
 val diminish_srw_ss = BasicProvers.diminish_srw_ss
 val export_rewrites = BasicProvers.export_rewrites
 val delsimps        = BasicProvers.delsimps
+val temp_delsimps   = BasicProvers.temp_delsimps
 
 val EVAL           = computeLib.EVAL_CONV;
 val EVAL_RULE      = computeLib.EVAL_RULE
@@ -137,10 +138,13 @@ val cheat:tactic = fn g => ([], fn _ => Thm.mk_oracle_thm "cheat" g)
 
 
 val Cases     = BasicProvers.Cases
+val namedCases = BasicProvers.namedCases
 val Induct    = BasicProvers.Induct
 val recInduct = Induction.recInduct
 
 val Cases_on          = BasicProvers.Cases_on
+val tmCases_on        = BasicProvers.tmCases_on
+val namedCases_on     = BasicProvers.namedCases_on
 val Induct_on         = BasicProvers.Induct_on
 val PairCases_on      = pairLib.PairCases_on;
 val pairarg_tac       = pairLib.pairarg_tac
@@ -151,6 +155,8 @@ val AllCaseEqs        = TypeBase.AllCaseEqs
 
 val completeInduct_on = numLib.completeInduct_on
 val measureInduct_on  = numLib.measureInduct_on;
+val op using          = markerLib.using
+val usingA            = markerLib.usingA
 
 val SPOSE_NOT_THEN    = BasicProvers.SPOSE_NOT_THEN
 val spose_not_then    = BasicProvers.SPOSE_NOT_THEN
@@ -206,8 +212,10 @@ val wlog_then = wlog_then
 
   (* useful quotation-based tactics (from Q) *)
   val qx_gen_tac : term quotation -> tactic = Q.X_GEN_TAC
+  val qx_genl_tac = map_every qx_gen_tac
   val qx_choose_then = Q.X_CHOOSE_THEN
   val qexists_tac : term quotation -> tactic = Q.EXISTS_TAC
+  val qexistsl_tac = map_every qexists_tac
   val qsuff_tac : term quotation -> tactic = Q_TAC SUFF_TAC
   val qspec_tac = Q.SPEC_TAC
   val qid_spec_tac : term quotation -> tactic = Q.ID_SPEC_TAC
@@ -236,9 +244,9 @@ val wlog_then = wlog_then
 
   val qabbrev_tac : term quotation -> tactic = Q.ABBREV_TAC
   val qunabbrev_tac : term quotation -> tactic = Q.UNABBREV_TAC
+  val qunabbrevl_tac = map_every qunabbrev_tac
   val unabbrev_all_tac : tactic = markerLib.UNABBREV_ALL_TAC
 
-  val qx_genl_tac = map_every qx_gen_tac
   fun qx_choosel_then [] ttac = ttac
     | qx_choosel_then (q::qs) ttac = qx_choose_then q (qx_choosel_then qs ttac)
 

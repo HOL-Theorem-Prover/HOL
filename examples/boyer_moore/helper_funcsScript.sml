@@ -390,7 +390,7 @@ val CHECK_PREFIX_RL_MATCH = store_thm(
                 by fs[Abbr `ps`, checkPrefixRL_def,
                       CHECK_PAIRS_BND, LESS_EQUAL_ANTISYM]
         >> `REVERSE pat = REVERSE (TAKE (LENGTH pat) search)`
-                suffices_by rw[REVERSE]
+                suffices_by rw[REVERSE_SNOC_DEF]
         >> `LENGTH (REVERSE pat) = LENGTH (REVERSE (TAKE (LENGTH pat) search))`
                 by rw[LENGTH_REVERSE,LENGTH_TAKE]
         >> `!i. i < LENGTH (REVERSE pat)
@@ -419,7 +419,7 @@ val CHECK_PREFIX_RL_MATCH = store_thm(
             >> `checkPairs ps <> LENGTH ps`
                     by rw[]
             >> `REVERSE pat = REVERSE (TAKE (LENGTH pat) search)`
-                    by rw[REVERSE]
+                    by rw[REVERSE_SNOC_DEF]
             >> `LENGTH (REVERSE pat)
                 = LENGTH (REVERSE (TAKE (LENGTH pat) search))`
                     by metis_tac[]

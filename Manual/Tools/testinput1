@@ -71,3 +71,8 @@ bar
 ##thm AND_CLAUSES
 
 ##thm50 AND_CLAUSES
+
+>>- Theorem foo:
+      x < x + 1n
+    Proof simp[]
+    QED

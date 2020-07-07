@@ -23,7 +23,7 @@ fun dest_prod ty =
     | other => raise ERR "dest_prod" "not a product type"
 
 val spine_prod = spine_binop (total dest_prod)
-val strip_prod = strip_binop (total dest_prod)
+val strip_prod = strip_binop dest_prod
 val list_mk_prod = end_itlist (curry mk_prod)
 
 (*---------------------------------------------------------------------------

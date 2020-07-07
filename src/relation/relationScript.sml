@@ -165,7 +165,7 @@ Proof
   PROVE_TAC [RTC_RULES]
 QED
 
-Theorem RTC_STRONG_INDUCT:
+Theorem RTC_STRONG_INDUCT[rule_induction]:
   !R P. (!x. P x x) /\ (!x y z. R x y /\ RTC R y z /\ P y z ==> P x z) ==>
         (!x (y:'a). RTC R x y ==> P x y)
 Proof
@@ -379,12 +379,12 @@ val TC_STRONG_INDUCT0 = prove(
   REPEAT GEN_TAC THEN STRIP_TAC THEN TC_INDUCT_TAC THEN
   ASM_MESON_TAC [TC_RULES]);
 
-val TC_STRONG_INDUCT = store_thm(
-  "TC_STRONG_INDUCT",
-  ``!R P. (!x y. R x y ==> P x y) /\
-          (!x y z. P x y /\ P y z /\ TC R x y /\ TC R y z ==> P x z) ==>
-          (!u v. TC R u v ==> P u v)``,
-  REPEAT STRIP_TAC THEN IMP_RES_TAC TC_STRONG_INDUCT0);
+Theorem TC_STRONG_INDUCT[rule_induction]:
+  !R P. (!x y. R x y ==> P x y) /\
+        (!x y z. P x y /\ P y z /\ TC R x y /\ TC R y z ==> P x z) ==>
+        (!u v. TC R u v ==> P u v)
+Proof REPEAT STRIP_TAC THEN IMP_RES_TAC TC_STRONG_INDUCT0
+QED
 
 val TC_STRONG_INDUCT_LEFT1_0 = prove(
   ``!R P. (!x y. R x y ==> P x y) /\
@@ -778,39 +778,40 @@ val reflexive_EQC = Q.store_thm(
 `reflexive (EQC R)`,
 PROVE_TAC [reflexive_def,EQC_REFL]);
 
-val EQC_MOVES_IN = Q.store_thm(
-"EQC_MOVES_IN",
-`!R. (EQC (RC R) = EQC R) /\ (EQC (SC R) = EQC R) /\ (EQC (TC R) = EQC R)`,
-SRW_TAC [][EQC_DEF,RC_MOVES_OUT,SC_IDEM] THEN
-AP_TERM_TAC THEN
-SRW_TAC [][FUN_EQ_THM] THEN
-REVERSE EQ_TAC THEN
-MAP_EVERY Q.ID_SPEC_TAC [`x'`,`x`] THEN
-HO_MATCH_MP_TAC TC_INDUCT THEN1 (
+Theorem EQC_MOVES_IN[simp]:
+  !R. (EQC (RC R) = EQC R) /\ (EQC (SC R) = EQC R) /\ (EQC (TC R) = EQC R)
+Proof
+  SRW_TAC [][EQC_DEF,RC_MOVES_OUT,SC_IDEM] THEN
+  AP_TERM_TAC THEN
+  SRW_TAC [][FUN_EQ_THM] THEN
+  REVERSE EQ_TAC THEN
+  MAP_EVERY Q.ID_SPEC_TAC [`x'`,`x`] THEN
+  HO_MATCH_MP_TAC TC_INDUCT THEN1 (SRW_TAC [][SC_DEF] THEN
+                                   PROVE_TAC [TC_RULES,SC_DEF]) THEN
+  REVERSE (SRW_TAC [][SC_DEF]) THEN1
+   PROVE_TAC [TC_RULES,SC_DEF] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `R^+ a b` THEN
+  POP_ASSUM MP_TAC THEN
+  MAP_EVERY Q.ID_SPEC_TAC [`b`,`a`] THEN
+  HO_MATCH_MP_TAC TC_INDUCT THEN
   SRW_TAC [][SC_DEF] THEN
-  PROVE_TAC [TC_RULES,SC_DEF] ) THEN
-REVERSE (SRW_TAC [][SC_DEF]) THEN1
-  PROVE_TAC [TC_RULES,SC_DEF] THEN
-Q.MATCH_ASSUM_RENAME_TAC `R^+ a b` THEN
-POP_ASSUM MP_TAC THEN
-MAP_EVERY Q.ID_SPEC_TAC [`b`,`a`] THEN
-HO_MATCH_MP_TAC TC_INDUCT THEN
-SRW_TAC [][SC_DEF] THEN
-PROVE_TAC [TC_RULES,SC_DEF]);
-val _ = export_rewrites ["EQC_MOVES_IN"]
+  PROVE_TAC [TC_RULES,SC_DEF]
+QED
 
-val STRONG_EQC_INDUCTION = store_thm(
-  "STRONG_EQC_INDUCTION",
-  ``!R P. (!x y. R x y ==> P x y) /\
-          (!x. P x x) /\
-          (!x y. EQC R x y /\ P x y ==> P y x) /\
-          (!x y z. P x y /\ P y z /\ EQC R x y /\ EQC R y z ==> P x z) ==>
-          !x y. EQC R x y ==> P x y``,
+Theorem STRONG_EQC_INDUCTION[rule_induction]:
+  !R P. (!x y. R x y ==> P x y) /\
+        (!x. P x x) /\
+        (!x y. EQC R x y /\ P x y ==> P y x) /\
+        (!x y z. P x y /\ P y z /\ EQC R x y /\ EQC R y z ==> P x z)
+      ==>
+        !x y. EQC R x y ==> P x y
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!x y. EQC R x y ==> EQC R x y /\ P x y`
-        THEN1 PROVE_TAC [] THEN
+   THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC EQC_INDUCTION THEN
-  PROVE_TAC [EQC_R, EQC_REFL, EQC_SYM, EQC_TRANS]);
+  PROVE_TAC [EQC_R, EQC_REFL, EQC_SYM, EQC_TRANS]
+QED
 
 val ALT_equivalence = store_thm(
   "ALT_equivalence",
@@ -1605,6 +1606,7 @@ end;
 val inv_DEF = new_definition(
   "inv_DEF",
   ``inv (R:'a->'b->bool) x y = R y x``);
+val _ = export_rewrites ["inv_DEF"]
 (* superscript suffix T, for "transpose" *)
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                    fixity = Suffix 2100,
@@ -1615,20 +1617,21 @@ Overload relinv = ``inv``
 val _ = TeX_notation { hol = (UTF8.chr 0x1D40),
                        TeX = ("\\HOLTokenRInverse{}", 1) }
 
-val inv_inv = store_thm(
-  "inv_inv",
-  ``!R. inv (inv R) = R``,
-  SIMP_TAC bool_ss [FUN_EQ_THM, inv_DEF]);
+Theorem inv_inv[simp]:
+  !R. inv (inv R) = R
+Proof SIMP_TAC bool_ss [FUN_EQ_THM, inv_DEF]
+QED
 
 val inv_RC = store_thm(
   "inv_RC",
   ``!R. inv (RC R) = RC (inv R)``,
   SIMP_TAC bool_ss [RC_DEF, inv_DEF, FUN_EQ_THM] THEN MESON_TAC []);
 
-val inv_SC = store_thm(
-  "inv_SC",
-  ``!R. (inv (SC R) = SC R) /\ (SC (inv R) = SC R)``,
-  SIMP_TAC bool_ss [inv_DEF, SC_DEF, FUN_EQ_THM] THEN MESON_TAC []);
+Theorem inv_SC[simp]:
+  !R. (inv (SC R) = SC R) /\ (SC (inv R) = SC R)
+Proof
+  SIMP_TAC bool_ss [inv_DEF, SC_DEF, FUN_EQ_THM] THEN MESON_TAC []
+QED
 
 val inv_TC = store_thm(
   "inv_TC",
@@ -1641,10 +1644,11 @@ val inv_TC = store_thm(
   ] THEN HO_MATCH_MP_TAC TC_INDUCT THEN
   MESON_TAC [inv_DEF, TC_RULES]);
 
-val inv_EQC = store_thm(
-  "inv_EQC",
-  ``!R. (inv (EQC R) = EQC R) /\ (EQC (inv R) = EQC R)``,
-  SIMP_TAC bool_ss [EQC_DEF, inv_TC, inv_SC, inv_RC]);
+Theorem inv_EQC[simp]:
+  !R. (inv (EQC R) = EQC R) /\ (EQC (inv R) = EQC R)
+Proof
+  SIMP_TAC bool_ss [EQC_DEF, inv_TC, inv_SC, inv_RC]
+QED
 
 val inv_MOVES_OUT = store_thm(
   "inv_MOVES_OUT",
@@ -1653,31 +1657,34 @@ val inv_MOVES_OUT = store_thm(
         (RTC (inv R) = inv (RTC R)) /\ (EQC (inv R) = EQC R)``,
   SIMP_TAC bool_ss [GSYM TC_RC_EQNS, EQC_DEF, inv_TC, inv_SC, inv_inv, inv_RC])
 
-val reflexive_inv = store_thm(
-  "reflexive_inv",
-  ``!R. reflexive (inv R) = reflexive R``,
-  SIMP_TAC bool_ss [inv_DEF, reflexive_def]);
-val _ = export_rewrites ["reflexive_inv"]
+Theorem reflexive_inv[simp]:
+  !R. reflexive (inv R) = reflexive R
+Proof SIMP_TAC bool_ss [inv_DEF, reflexive_def]
+QED
 
-val irreflexive_inv = store_thm(
-  "irreflexive_inv",
-  ``!R. irreflexive (inv R) = irreflexive R``,
-  SRW_TAC [][irreflexive_def, inv_DEF]);
+Theorem irreflexive_inv[simp]:
+  !R. irreflexive (inv R) = irreflexive R
+Proof
+  SRW_TAC [][irreflexive_def, inv_DEF]
+QED
 
-val symmetric_inv = store_thm(
-  "symmetric_inv",
-  ``!R. symmetric (inv R) = symmetric R``,
-  SIMP_TAC bool_ss [inv_DEF, symmetric_def] THEN MESON_TAC []);
+Theorem symmetric_inv[simp]:
+  !R. symmetric (inv R) = symmetric R
+Proof
+  SIMP_TAC bool_ss [inv_DEF, symmetric_def] THEN MESON_TAC []
+QED
 
-val antisymmetric_inv = store_thm(
-  "antisymmetric_inv",
-  ``!R. antisymmetric (inv R) = antisymmetric R``,
-  SRW_TAC [][antisymmetric_def, inv_DEF] THEN PROVE_TAC []);
+Theorem antisymmetric_inv[simp]:
+  !R. antisymmetric (inv R) = antisymmetric R
+Proof
+  SRW_TAC [][antisymmetric_def, inv_DEF] THEN PROVE_TAC []
+QED
 
-val transitive_inv = store_thm(
-  "transitive_inv",
-  ``!R. transitive (inv R) = transitive R``,
-  SIMP_TAC bool_ss [inv_DEF, transitive_def] THEN MESON_TAC []);
+Theorem transitive_inv[simp]:
+  !R. transitive (inv R) = transitive R
+Proof
+  SIMP_TAC bool_ss [inv_DEF, transitive_def] THEN MESON_TAC []
+QED
 
 val symmetric_inv_identity = store_thm(
   "symmetric_inv_identity",

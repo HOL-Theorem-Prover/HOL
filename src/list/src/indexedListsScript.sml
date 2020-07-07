@@ -103,12 +103,6 @@ val MAPi_GENLIST = store_thm(
   Induct >> simp[GENLIST_CONS] >> rpt gen_tac >>
   rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >> simp[FUN_EQ_THM]);
 
-val GENLIST_CONG = store_thm(
-  "GENLIST_CONG",
-  ``(!m. m < n ==> f1 m = f2 m) ==> GENLIST f1 n = GENLIST f2 n``,
-  map_every qid_spec_tac [`f1`, `f2`] >> Induct_on `n` >>
-  simp[GENLIST_CONS]);
-
 val FOLDRi_def = Define`
   (FOLDRi f a [] = a) /\
   (FOLDRi f a (h::t) = f 0 h (FOLDRi (f o SUC) a t))`

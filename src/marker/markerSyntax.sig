@@ -18,10 +18,19 @@ sig
   val dest_abbr   : thm -> string
 
   val label_ty    : hol_type
+  val mk_label_var: string -> term
+  val L           : string -> thm
   val mk_label    : string * term -> term
   val dest_label  : term -> string * term
   val is_label    : term -> bool
   val dest_label_ref : thm -> string
   val is_label_ref   : thm -> bool
+
+  val using_t : term
+  val usingThm_t : term
+  val mk_using : thm -> term
+  val MK_USING : thm -> thm
+  val is_using : term -> bool
+  val DEST_USING : thm -> thm
 
 end

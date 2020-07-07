@@ -6,7 +6,7 @@
 % -------------------------------------------------------
 
 \NeedsTeXFormat{LaTeX2e}
-\usepackage{amssymb, makeidx, underscore, fancyvrb, amsmath}
+\usepackage{amssymb, underscore, fancyvrb, amsmath}
 
 \fvset{commandchars=\\\{\},xleftmargin=1mm,framesep=1.2mm,fontsize=\small}
 
@@ -53,8 +53,10 @@
 \newcommand{\HOLTokenIn}{\ensuremath{\in}}
 \newcommand{\HOLTokenNotIn}{\ensuremath{\notin}}
 \newcommand{\HOLTokenUnion}{\ensuremath{\cup}}
+\newcommand{\HOLTokenBigUnion}{\ensuremath{\bigcup}}
 \newcommand{\HOLTokenRUnion}{\ensuremath{\cup_r}}
 \newcommand{\HOLTokenInter}{\ensuremath{\cap}}
+\newcommand{\HOLTokenBigInter}{\ensuremath{\bigcap}}
 \newcommand{\HOLTokenRInter}{\ensuremath{\cap_r}}
 \newcommand{\HOLTokenLeftbrace}{\ensuremath{\left\{\right.}}
 \newcommand{\HOLTokenRightbrace}{\ensuremath{\left.\right\}}}
@@ -95,11 +97,14 @@
 \newcommand{\HOLTokenRightrec}{\texttt{|>}}
 \newcommand{\HOLTokenRor}{\ensuremath{\rightleftarrows}}
 \newcommand{\HOLTokenRol}{\ensuremath{\leftrightarrows}}
-\newcommand{\HOLTokenAsr}{\texttt{>>}}
-\newcommand{\HOLTokenLsr}{\texttt{>>>}}
-\newcommand{\HOLTokenLsl}{\texttt{<<}}
+\newcommand{\HOLTokenAsr}{\ensuremath{\gg}} %{\texttt{>>}}
+\newcommand{\HOLTokenLsr}{\ensuremath{\ggg}} % {\texttt{>>>}}
+\newcommand{\HOLTokenLsl}{\ensuremath{\ll}} % {\texttt{<<}}
 \newcommand{\HOLTokenSupStar}{\ensuremath{{}^*}}
 \newcommand{\HOLTokenSupPlus}{\ensuremath{{}^+}}
+\newcommand{\HOLTokenSupTwo}{\ensuremath{{}^2}}
+\newcommand{\HOLTokenSupThree}{\ensuremath{{}^3}}
+\newcommand{\HOLTokenSupFour}{\ensuremath{{}^4}}
 \newcommand{\HOLTokenExtract}{\texttt{><}}
 \newcommand{\HOLTokenExp}{**}
 \newcommand{\HOLTokenLOpenTri}{\ensuremath{\lhd}}
@@ -120,3 +125,8 @@
 \newcommand{\HOLTokenLeftDenote}{\ensuremath{[\hspace{-1pt}|}}
 \newcommand{\HOLTokenRightDenote}{\ensuremath{|\hspace{-1pt}]}}
 \newcommand{\HOLTokenDefEquality}{\ensuremath{\mathrel{\overset{\makebox[0pt]{\mbox{\normalfont\tiny\sffamily def}}}{=}}}}
+\newcommand{\HOLTokenSum}{\ensuremath{\sum}}
+\newcommand{\HOLTokenPI}{\ensuremath{\prod}} % \HOLTokenProd is already defined
+\newcommand{\HOLTokenOne}{\ensuremath{\mathbbm{1}}}
+\newcommand{\HOLTokenIntegral}{\ensuremath{\int}}
+\newcommand{\HOLTokenIntegralPlus}{\ensuremath{\int^{+}}}

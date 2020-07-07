@@ -32,6 +32,8 @@ open jrhUtils quotient liteLib
 
 open bossLib
 
+val _ = temp_delsimps ["NORMEQ_CONV"]
+
 val int_ss = boolSimps.bool_ss ++ numSimps.old_ARITH_ss ++ pairSimps.PAIR_ss;
 
 (*---------------------------------------------------------------------------*)

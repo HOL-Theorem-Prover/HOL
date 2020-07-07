@@ -819,6 +819,47 @@ in
   if aconv (concl r_thm) g then OK() else die ""
 end
 
+fun checktactic sgsP rP tac_result =
+    case tac_result of
+        Exn.Res (sgs, vf) => sgsP sgs andalso
+                             (case total vf (map mk_thm sgs) of
+                                  NONE => false
+                                | SOME th => rP th)
+      | Exn.Exn e => false
+
+fun pp_goal (asl,w) =
+    let open HOLPP
+    in
+      HOLPP.block CONSISTENT 2 [
+        HOLPP.block INCONSISTENT 0 (
+          pr_list pp_term [add_string ",", add_break(1,0)] asl
+        ),
+        add_string " ?-",
+        add_break(1,0),
+        pp_term w
+      ]
+    end
+
+fun pp_sgs gl =
+    let open HOLPP in block CONSISTENT 0 (pr_list pp_goal [NL, NL] gl)
+    end
+
+
+fun print_tacresult (sgs, _) =
+    PP.pp_to_string 70 pp_sgs sgs
+
+val _ = let
+  val _ = tprint "irule - negated conclusion"
+  val tm = “!x:bool y:bool. P x /\ ~R x y ==> ~Q x”
+  val thm = ASSUME tm
+  val g = “~Q (z:bool): bool”
+in
+  require_msg (checktactic (fn _ => true) (fn th => concl th ~~ g))
+              print_tacresult
+              (irule thm)
+              ([], g)
+end
+
 val _ = hide "Q"
 val _ = hide "P"
 

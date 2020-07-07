@@ -13,8 +13,6 @@ val _ = new_theory "loopList";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -2267,7 +2265,7 @@ val loop2_list_count_exit_by_sum = store_thm(
   `!x y. ~guard x y ==> R (f x,TL y) (x,y)` by rw[LENGTH_TL_LT, Abbr`guard`, Abbr`R`] >>
   `!x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (f x) (TL y)` by metis_tac[] >>
   assume_tac (loop2_modify_count_exit_by_sum |> ISPEC ``loop:'a -> 'b list -> num``) >>
-  last_x_assum (qspecl_then [`body`, `c`, `exit`, `guard`, `TL`, `f`, `R`] strip_assume_tac) >>
+  last_x_assum (qspecl_then [`guard`, `body`, `c`, `exit`, `TL`, `f`, `R`] strip_assume_tac) >>
   `loop x y <= c + SUM (MAP (UNCURRY body) (loop2_arg guard TL f x y))` by metis_tac[] >>
   `MAP (UNCURRY body) (loop2_arg guard TL f x y) =
     MAP2 body (iterating f x (LENGTH y)) (diminishing y)` by rw[iterating_diminishing_eq_loop2_arg, Abbr`guard`] >>
@@ -2304,7 +2302,7 @@ val loop2_list_count_cover_exit_upper = store_thm(
   `!x1 x2 y1 y2. R (x1,y1) (x2,y2) ==> cover x1 y1 <= cover x2 y2` by rw[Abbr`R`] >>
   `!x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (f x) (TL y)` by metis_tac[] >>
   assume_tac (loop2_modify_count_bcover_exit_upper |> ISPEC ``loop:'a -> 'b list -> num``) >>
-  last_x_assum (qspecl_then [`body`, `c`, `exit`, `cover`, `guard`, `TL`, `f`, `R`] strip_assume_tac) >>
+  last_x_assum (qspecl_then [`guard`, `body`, `c`, `exit`, `cover`, `TL`, `f`, `R`] strip_assume_tac) >>
   `loop2_count guard TL f x y = LENGTH y` by rw[list_length_eq_loop2_count, Abbr`guard`] >>
   metis_tac[]);
 
@@ -2382,7 +2380,7 @@ val loop2_list_tail_count_by_sum = store_thm(
   `!x y. ~guard x y ==> R (TL x,TL y) (x,y)` by rw[LENGTH_TL_LT, Abbr`guard`, Abbr`R`] >>
   `!x y. loop x y = if guard x y then c else body x y + loop (TL x) (TL y)` by metis_tac[] >>
   assume_tac (loop2_modify_count_by_sum |> ISPEC ``loop:'a list -> 'b list -> num``) >>
-  last_x_assum (qspecl_then [`body`, `c`, `guard`, `TL`, `TL`, `R`] strip_assume_tac) >>
+  last_x_assum (qspecl_then [`guard`, `body`, `c`, `TL`, `TL`, `R`] strip_assume_tac) >>
   `loop x y = c + SUM (MAP (UNCURRY body) (loop2_arg guard TL TL x y))` by metis_tac[] >>
   `MAP (UNCURRY body) (loop2_arg guard TL TL x y) =
     MAP2 body (diminishing x) (diminishing y)` by rw[GSYM iterating_diminishing_both_eq_loop2_arg, Abbr`guard`] >>
@@ -2417,7 +2415,7 @@ val loop2_list_tail_count_exit_by_sum = store_thm(
   `!x y. ~guard x y ==> R (TL x,TL y) (x,y)` by rw[LENGTH_TL_LT, Abbr`guard`, Abbr`R`] >>
   `!x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (TL x) (TL y)` by metis_tac[] >>
   assume_tac (loop2_modify_count_exit_by_sum |> ISPEC ``loop:'a list -> 'b list -> num``) >>
-  last_x_assum (qspecl_then [`body`, `c`, `exit`, `guard`, `TL`, `TL`, `R`] strip_assume_tac) >>
+  last_x_assum (qspecl_then [`guard`, `body`, `c`, `exit`, `TL`, `TL`, `R`] strip_assume_tac) >>
   `loop x y <= c + SUM (MAP (UNCURRY body) (loop2_arg guard TL TL x y))` by metis_tac[] >>
   `MAP (UNCURRY body) (loop2_arg guard TL TL x y) =
     MAP2 body (diminishing x) (diminishing y)` by rw[GSYM iterating_diminishing_both_eq_loop2_arg, Abbr`guard`] >>

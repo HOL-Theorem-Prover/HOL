@@ -1,13 +1,14 @@
 signature smlParser =
 sig
 
-  datatype smlexpr =
-    SmlExpr of string option * (smlexpr list)
+  datatype smlexp =
+    SmlExp of string option * (smlexp list)
   | SmlUnit of string option
 
-  datatype proptree =
-    PropNode of PolyML.ptProperties list * (proptree list)
-  | PropLeaf of PolyML.ptProperties list
+  datatype tacexp =
+    SmlInfix of string * (tacexp * tacexp)
+  | SmlTactical of string
+  | SmlTactic of string
 
   (* parse tree *)
   val sml_propl_all_of : string -> PolyML.ptProperties list list
@@ -17,9 +18,9 @@ sig
   val reprint : string -> string option
 
   (* sub expression *)
-  val extract_proptree : string -> proptree list
-  val extract_subexpr : string -> smlexpr list
-  val extract_tacticl : string -> string list list
-
+  val extract_smlexp : string -> smlexp list
+  val extract_tacexp : string -> tacexp
+  val size_of_tacexp : tacexp -> int
+  val string_of_tacexp : tacexp -> string
 
 end

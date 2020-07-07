@@ -2,7 +2,7 @@
 (* Theory of regular expressions.                                            *)
 (*===========================================================================*)
 
-open HolKernel Parse boolLib bossLib lcsymtacs;
+open HolKernel Parse boolLib bossLib BasicProvers;
 open arithmeticTheory listTheory optionTheory rich_listTheory
      pairTheory relationTheory sortingTheory stringTheory
      comparisonTheory bagTheory containerTheory pred_setTheory
@@ -932,6 +932,8 @@ Proof
   metis_tac [regexp_compare_antisym, cpn_distinct,regexp_compare_eq]
 QED
 
+Theorem regexp_leq_antisym' = REWRITE_RULE [antisymmetric_def] regexp_leq_antisym
+
 Theorem regexp_compare_id :
  !r. regexp_compare r r = Equal
 Proof
@@ -1209,8 +1211,6 @@ Definition flatten_or_def :
 End
 
 
-val flatten_or_ind = fetch"-" "flatten_or_ind";
-
 Definition remove_dups_def : (* requires sorted input *)
   (remove_dups [] = []) /\
   (remove_dups [r] = [r]) /\
@@ -1220,9 +1220,6 @@ Definition remove_dups_def : (* requires sorted input *)
     else
       r1::remove_dups (r2::rs))
 End
-
-
-val remove_dups_ind = fetch"-" "remove_dups_ind";
 
 Definition build_or_def :
    build_or rs =
@@ -1849,7 +1846,7 @@ Proof
  `EVERY is_charset (h::rs1)` by rw [] >>
  imp_res_tac (SIMP_RULE (srw_ss()) [] merge_charsets_append) >>
  full_simp_tac std_ss [] >>
- `SORTED regexp_leq rs2` by metis_tac [SORTED_APPEND_IFF] >>
+ `SORTED regexp_leq rs2` by metis_tac [SORTED_APPEND_GEN] >>
  rw [] >>
  fs [] >>
  assume_tac regexp_leq_transitive >>
@@ -1928,21 +1925,9 @@ Theorem remove_dups_no_dups :
 Proof
  ho_match_mp_tac remove_dups_ind >>
  rw [remove_dups_def, regexp_compare_eq] >>
- assume_tac regexp_leq_transitive
- >- (first_x_assum match_mp_tac >>
-     imp_res_tac SORTED_EQ)
- >- (rw [remove_dups_mem] >>
-     fs [SORTED_DEF] >>
-     `!r. MEM r rs ==> regexp_leq r2 r` by metis_tac [SORTED_EQ] >>
-     CCONTR_TAC >>
-     fs [] >>
-     fs [] >>
-     res_tac >>
-     fs [regexp_leq_def] >>
-     every_case_tac >>
-     fs [regexp_compare_antisym, regexp_compare_eq] >>
-     metis_tac [regexp_compare_trans,regexp_compare_eq, cpn_distinct])
- >- (first_x_assum match_mp_tac >> imp_res_tac SORTED_EQ)
+ assume_tac regexp_leq_transitive >>
+ fs[SORTED_EQ, remove_dups_mem] >>
+ metis_tac[regexp_leq_antisym']
 QED
 
 Theorem norm_or :

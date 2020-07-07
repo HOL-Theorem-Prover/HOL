@@ -17,11 +17,10 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open numLib unwindLib tautLib Arith prim_recTheory
-combinTheory quotientTheory arithmeticTheory realTheory
-realLib jrhUtils pairTheory seqTheory limTheory transcTheory listTheory mesonLib
-boolTheory topologyTheory pred_setTheory optionTheory numTheory RealArith
-pred_setLib cardinalTheory;
+open numTheory numLib unwindLib tautLib Arith prim_recTheory pairTheory
+     combinTheory quotientTheory arithmeticTheory pred_setTheory realTheory
+     realLib jrhUtils seqTheory limTheory transcTheory listTheory mesonLib
+     topologyTheory optionTheory RealArith pred_setLib cardinalTheory;
 
 open hurdUtils iterateTheory productTheory real_topologyTheory;
 
@@ -1778,25 +1777,33 @@ val REAL_MUL_NZ = store_thm ("REAL_MUL_NZ",
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN
   SIMP_TAC real_ss [REAL_ENTIRE]);
 
+(* `sum (0, SUC n)` is defined by realTheory.sum
+   `sum (0 ..   n)` is defined by iterateTheory.sum_def
+
+   TODO: re-prove this lemma once `iterate` is re-defined by `pred_set$ITSET`
+ *)
 val lemma_sum_eq = prove (
-  ``!n x:real. sum (0, SUC n) (\n. ((\n. inv(&(FACT n)))) n * (x pow n)) =
-           sum ((0:num) .. n) (\n. ((\n. inv(&(FACT n)))) n * (x pow n))``,
-  GEN_TAC THEN GEN_TAC THEN
-  SIMP_TAC std_ss [sum_def, iterate, support] THEN
-  Q_TAC SUFF_TAC `FINITE {n' | n' IN 0 .. n /\ inv (&FACT n') * x pow n' <> neutral $+}` THENL
-  [DISCH_TAC,
-   MATCH_MP_TAC FINITE_SUBSET THEN Q.EXISTS_TAC `(0 .. n)` THEN
-   SIMP_TAC std_ss [FINITE_NUMSEG] THEN SET_TAC []] THEN
-  ASM_SIMP_TAC std_ss [] THEN
-  Q_TAC SUFF_TAC `neutral $+ = 0:real` THENL
-  [DISCH_TAC THEN ASM_REWRITE_TAC [],
-   SIMP_TAC std_ss [neutral] THEN MATCH_MP_TAC SELECT_UNIQUE THEN
-   RW_TAC real_ss [] THEN EQ_TAC THENL [ALL_TAC, REAL_ARITH_TAC] THEN
-   DISCH_THEN (MP_TAC o Q.SPEC `1`) THEN REAL_ARITH_TAC] THEN
-  SIMP_TAC std_ss [ITSET_def] THEN SELECT_ELIM_TAC THEN CONJ_TAC THENL
-  [Q.EXISTS_TAC `(\s. sum s (\n. ((\n. inv(&(FACT n)))) n * (x pow n)))` THEN
-   SIMP_TAC std_ss [SUM_CLAUSES], ALL_TAC] THEN
-  RW_TAC std_ss [] THEN ASM_CASES_TAC ``x = 0:real`` THENL
+  ``!n x:real. sum (0, SUC n) (\n. (\n. inv(&(FACT n))) n * (x pow n)) =
+               sum (0  ..  n) (\n. (\n. inv(&(FACT n))) n * (x pow n))``,
+    NTAC 2 GEN_TAC
+ >> SIMP_TAC std_ss [sum_def, iterate, support]
+ >> Know `FINITE {n' | n' IN 0 .. n /\ inv (&FACT n') * x pow n' <> neutral $+}`
+ >- (MATCH_MP_TAC FINITE_SUBSET \\
+     Q.EXISTS_TAC `(0 .. n)` \\
+     SIMP_TAC std_ss [FINITE_NUMSEG] >> SET_TAC [])
+ >> DISCH_TAC
+ >> ASM_SIMP_TAC std_ss []
+ >> Know `neutral $+ = 0:real`
+ >- (SIMP_TAC std_ss [neutral] >> MATCH_MP_TAC SELECT_UNIQUE \\
+     RW_TAC real_ss [] \\
+     reverse EQ_TAC >- REAL_ARITH_TAC \\
+     DISCH_THEN (MP_TAC o Q.SPEC `1`) >> REAL_ARITH_TAC)
+ >> DISCH_THEN ((FULL_SIMP_TAC std_ss) o wrap)
+ >> SIMP_TAC std_ss [ITSET'] >> SELECT_ELIM_TAC
+ >> CONJ_TAC
+ >- (Q.EXISTS_TAC `(\s. sum s (\n. (\n. inv(&(FACT n))) n * (x pow n)))` \\
+     SIMP_TAC std_ss [SUM_CLAUSES])
+ THEN RW_TAC std_ss [] THEN ASM_CASES_TAC ``x = 0:real`` THENL
   [ASM_SIMP_TAC real_ss [ADD1] THEN ONCE_REWRITE_TAC [ADD_COMM] THEN
    SIMP_TAC std_ss [GSYM SUM_TWO] THEN
    Q_TAC SUFF_TAC `{n' | n' IN 0 .. n /\ inv (&FACT n') * (0:real) pow n' <> 0} = {0}` THENL

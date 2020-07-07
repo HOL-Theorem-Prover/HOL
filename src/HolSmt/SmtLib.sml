@@ -96,7 +96,7 @@ local
     (intSyntax.leq_tm, apfst_K "<="),
     (intSyntax.less_tm, apfst_K "<"),
     (intSyntax.geq_tm, apfst_K ">="),
-    (intSyntax.great_tm, apfst_K ">"),
+    (intSyntax.greater_tm, apfst_K ">"),
     (* decimals (excluding 'realSyntax.negate_tm') *)
     (Term.mk_var ("x", realSyntax.real_ty), Lib.apfst (fn tm =>
       if realSyntax.is_real_literal tm andalso not (realSyntax.is_negated tm)
@@ -122,7 +122,7 @@ local
     (realSyntax.leq_tm, apfst_K "<="),
     (realSyntax.less_tm, apfst_K "<"),
     (realSyntax.geq_tm, apfst_K ">="),
-    (realSyntax.great_tm, apfst_K ">"),
+    (realSyntax.greater_tm, apfst_K ">"),
     (intrealSyntax.real_of_int_tm, apfst_K "to_real"),
     (intrealSyntax.INT_FLOOR_tm, apfst_K "to_int"),
     (intrealSyntax.is_int_tm, apfst_K "is_int"),

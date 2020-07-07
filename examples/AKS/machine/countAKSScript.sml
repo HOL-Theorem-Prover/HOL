@@ -13,8 +13,6 @@ val _ = new_theory "countAKS";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -179,6 +177,10 @@ val _ = monadsyntax.enable_monad "Count";
                          |- !n k c. 0 < n ==>
                                     stepsOf (poly_introM n k c) <=
                                     160 * MAX 1 k ** 2 * size k * size c * size n ** 4
+   poly_introM_steps_bound_alt
+                         |- !n k c. 1 < n /\ 1 < k ==>
+                                    stepsOf (poly_introM n k c) <=
+                                    160 * k ** 2 * size k * size c * size n ** 4
    poly_intro_rangeM_steps_thm
                          |- !n k c. stepsOf (poly_intro_rangeM n k c) =
                                     size c +
@@ -202,6 +204,10 @@ val _ = monadsyntax.enable_monad "Count";
                          |- !n k c. 0 < n ==>
                                     stepsOf (poly_intro_rangeM n k c) <=
                                     163 * MAX 1 c * MAX 1 k ** 2 * size k * size c * size n ** 4
+   poly_intro_rangeM_steps_bound_alt
+                         |- !n k c. 1 < n /\ 1 < k ==>
+                                    stepsOf (poly_intro_rangeM n k c) <=
+                                    163 * MAX 1 c * k ** 2 * size k * size c * size n ** 4
    poly_intro_rangeM_steps_bound_thm
                          |- !n k c. c <= k /\ k < n ==>
                                     stepsOf (poly_intro_rangeM n k c) <= 163 * MAX 1 k ** 3 * size n ** 6
@@ -232,9 +238,9 @@ val _ = monadsyntax.enable_monad "Count";
                             else 0
    aksM_steps_base   |- stepsOf (aksM 0) = 2 /\ stepsOf (aksM 1) = 12
    aksM_steps_upper  |- !n. stepsOf (aksM n) <=
-                                207 * size n ** 9 + 1418157969 * size n ** 20 +
+                                207 * size n ** 9 + 1348980357 * size n ** 20 +
                                 4075 * size n ** 21
-   aksM_steps_bound  |- !n. stepsOf (aksM n) <= 1418162251 * size n ** 21
+   aksM_steps_bound  |- !n. stepsOf (aksM n) <= 1348984639 * size n ** 21
    aksM_steps_O_poly |- stepsOf o aksM IN O_poly 21
    aksM_steps_big_O  |- stepsOf o aksM IN big_O (\n. ulog n ** 21)
    aksM_thm          |- !n. (valueOf (aksM n) <=> aks0 n) /\
@@ -774,7 +780,7 @@ val poly_introM_steps_thm = store_thm(
    <= 34 * MAX 1 k * size k * size c * size n ** 2 +              by poly_X_addM_steps_bound
       83 * MAX 1 k ** 2 * size n ** 2 * size n ** 2 +             by poly_expM_steps_bound
       34 * MAX 1 k * size k * size n * size c * size n ** 2 +     by poly_X_exp_addM_steps_bound
-      9 * MAX 1 k * size n                                        by poly_eqM_steps_bound, cases on n = 1
+      9 * MAX 1 k * size n                                        by poly_eqM_steps_thm, poly_eqM_steps_bound, cases on n = 1
    <= 9 * MAX 1 k * size n +
       34 * MAX 1 k * size k * size c * size n ** 2 +
       34 * MAX 1 k * size k * size c * size n ** 3 +
@@ -857,6 +863,17 @@ val poly_introM_steps_bound = store_thm(
   `h ** 2 * size n ** 4 * (size k * size c) = t` by rw[Abbr`t`] >>
   decide_tac) >>
   decide_tac);
+
+(* The following is just to match conditions in AKSclean.poly_introM_value_alt *)
+
+(* Theorem: 1 < n /\ 1 < k ==>
+           stepsOf (poly_introM n k c) <= 160 * k ** 2 * size k * size c * size n ** 4 *)
+(* Proof: poly_introM_steps_bound, MAX_1_POS *)
+val poly_introM_steps_bound_alt = store_thm(
+  "poly_introM_steps_bound_alt",
+  ``!n k c. 1 < n /\ 1 < k ==>
+           stepsOf (poly_introM n k c) <= 160 * k ** 2 * size k * size c * size n ** 4``,
+  metis_tac[poly_introM_steps_bound, MAX_1_POS, DECIDE``1 < n ==> 0 < n``]);
 
 (* Theorem: stepsOf (poly_intro_rangeM n k c) =
            size c +
@@ -1007,6 +1024,19 @@ val poly_intro_rangeM_steps_bound = store_thm(
   `d * h ** 2 * size k * size c * size n ** 4 = t` by rw[Abbr`t`] >>
   decide_tac) >>
   decide_tac);
+
+(* The following is just to match conditions in AKSclean.poly_intro_rangeM_value_alt *)
+
+(* Theorem: 1 < n /\ 1 < k ==>
+           stepsOf (poly_intro_rangeM n k c) <=
+           163 * MAX 1 c * k ** 2 * size k * size c * size n ** 4 *)
+(* Proof: poly_intro_rangeM_steps_bound, MAX_1_POS *)
+val poly_intro_rangeM_steps_bound_alt = store_thm(
+  "poly_intro_rangeM_steps_bound_alt",
+  ``!n k c. 1 < n /\ 1 < k ==>
+           stepsOf (poly_intro_rangeM n k c) <=
+           163 * MAX 1 c * k ** 2 * size k * size c * size n ** 4``,
+  metis_tac[poly_intro_rangeM_steps_bound, MAX_1_POS, DECIDE``1 < n ==> 0 < n``]);
 
 (* Theorem: c <= k /\ k < n ==>
            stepsOf (poly_intro_rangeM n k c) <= 163 * MAX 1 k ** 3 * size n ** 6 *)
@@ -1178,7 +1208,7 @@ val aksM_steps_base = store_thm(
     and stepsOf (power_freeM n)
      <= 207 * size n ** 9                by power_freeM_steps_bound
     and stepsOf (paramM n)
-     <= 1418157969 * size n ** 20        by paramM_steps_bound
+     <= 1348980357 * size n ** 20        by paramM_steps_bound
 
    Note 1 < n                            by power_free_gt_1
    If ~power_free n, true                by first and second term.
@@ -1233,16 +1263,16 @@ val aksM_steps_base = store_thm(
 
    Overall,
       stepsOf (aksM n)
-   <= 207 * size n ** 9 + 1418157969 * size n ** 20 + 4075 * size n ** 21
+   <= 207 * size n ** 9 + 1348980357 * size n ** 20 + 4075 * size n ** 21
 *)
 val aksM_steps_upper = store_thm(
   "aksM_steps_upper",
   ``!n. stepsOf (aksM n) <=
-       207 * size n ** 9 + 1418157969 * size n ** 20 + 4075 * size n ** 21``,
+       207 * size n ** 9 + 1348980357 * size n ** 20 + 4075 * size n ** 21``,
   rpt strip_tac >>
   qabbrev_tac `c = 1 + HALF (ulog n ** 5)` >>
   `stepsOf (power_freeM n) <= 207 * size n ** 9` by rw[power_freeM_steps_bound] >>
-  `stepsOf (paramM n) <= 1418157969 * size n ** 20` by rw[paramM_steps_bound] >>
+  `stepsOf (paramM n) <= 1348980357 * size n ** 20` by rw[paramM_steps_bound] >>
   rw[aksM_steps_thm] >>
   `1 < n` by rw[power_free_gt_1] >>
   `c <= size n ** 5` by
@@ -1295,17 +1325,17 @@ val aksM_steps_upper = store_thm(
     decide_tac
   ]);
 
-(* Theorem: stepsOf (aksM n) <= 1418162251 * size n ** 21 *)
+(* Theorem: stepsOf (aksM n) <= 1348984639 * size n ** 21 *)
 (* Proof:
      stepsOf (aksM n)
-   <= 207 * size n ** 9 + 1418157969 * size n ** 20 + 4075 * size n ** 21
+   <= 207 * size n ** 9 + 1348980357 * size n ** 20 + 4075 * size n ** 21
                                                       by aksM_steps_upper
-   <= (207 + 1418157969 + 4075) * size n ** 21        by dominant term
-    = 1418162251 * size n ** 21
+   <= (207 + 1348980357 + 4075) * size n ** 21        by dominant term
+    = 1348984639 * size n ** 21
 *)
 val aksM_steps_bound = store_thm(
   "aksM_steps_bound",
-  ``!n. stepsOf (aksM n) <= 1418162251 * size n ** 21``,
+  ``!n. stepsOf (aksM n) <= 1348984639 * size n ** 21``,
   rpt strip_tac >>
   assume_tac aksM_steps_upper >>
   first_x_assum (qspec_then `n` strip_assume_tac) >>
@@ -1320,8 +1350,8 @@ val aksM_steps_bound = store_thm(
 (* Proof:
    By O_poly_thm, this is to show:
       ?h k. !n. h < n ==> stepsOf (aksM n) <= k * size n ** 21
-   Note stepsOf (aksM n) <= 1418162251 * size n ** 21  by aksM_steps_bound
-   Take any h, put k = 1418162251, the result follows.
+   Note stepsOf (aksM n) <= 1348984639 * size n ** 21  by aksM_steps_bound
+   Take any h, put k = 1348984639, the result follows.
 *)
 val aksM_steps_O_poly = store_thm(
   "aksM_steps_O_poly",
@@ -1332,8 +1362,8 @@ val aksM_steps_O_poly = store_thm(
 (* Proof:
    Note (stepsOf o aksM) IN O_poly 21     by aksM_steps_O_poly
     and O_poly 21
-      = big_O (POLY 21 o ulog)                 by O_poly_eq_O_poly_ulog
-      = (\n. ulog n ** 21)                     by POLY_def, FUN_EQ_THM
+      = big_O (POLY 21 o ulog)            by O_poly_eq_O_poly_ulog
+      = (\n. ulog n ** 21)                by POLY_def, FUN_EQ_THM
    The result follows.
 *)
 val aksM_steps_big_O = store_thm(

@@ -357,14 +357,15 @@ val FV_ceqnat = Store_thm(
   ``FV ceqnat = {}``,
   SRW_TAC [][ceqnat_def, EXTENSION] THEN METIS_TAC []);
 
-val ceqnat_behaviour = bstore_thm(
-  "ceqnat_behaviour",
-  ``ceqnat @@ church n @@ church m -n->* cB (n = m)``,
+Theorem ceqnat_behaviour[betasimp]:
+  ceqnat @@ church n @@ church m -n->* cB (n = m)
+Proof
   SIMP_TAC (bsrw_ss()) [ceqnat_def] THEN
-  Q.ID_SPEC_TAC `m` THEN Induct_on `n` THEN1
-    SIMP_TAC (bsrw_ss()) [EQ_SYM_EQ] THEN
+  Q.ID_SPEC_TAC ‘m’ THEN Induct_on ‘n’ THEN1
+    SIMP_TAC (bsrw_ss()) [] THEN
   ASM_SIMP_TAC (bsrw_ss()) [] THEN
-  Cases_on `m` THEN SRW_TAC [][])
+  Cases_on ‘m’ THEN SRW_TAC [][]
+QED
 
 (* $< 0 = λn. not (is_zero n)
    $< (SUC m) = λn. not (is_zero n) ∧ $< m (PRE n)

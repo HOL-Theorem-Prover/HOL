@@ -125,6 +125,7 @@ sig
   type 'a eqf = 'a -> 'a -> bool
   val pair_eq : 'a eqf -> 'b eqf -> ('a * 'b) eqf
   val fst_eq : 'a eqf -> ('a * 'b) eqf
+  val inv_img_eq : ('a -> 'b) -> 'b eqf -> 'a eqf
   val option_eq : 'a eqf -> 'a option eqf
   val list_eq : 'a eqf -> 'a list eqf
   val redres_eq : 'a eqf -> 'b eqf -> {redex:'a,residue:'b} eqf

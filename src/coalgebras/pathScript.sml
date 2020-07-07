@@ -1129,15 +1129,13 @@ val okpath_co_ind = save_thm(
                           (LAND_CONV (RENAME_VARS_CONV ["x", "r", "p"]) THENC
                            RAND_CONV (RENAME_VARS_CONV ["p"]))))
 
-val okpath_cases = save_thm(
-  "okpath_cases",
-  (GEN_ALL o
-   SIMP_RULE (srw_ss()) [pred_setTheory.SPECIFICATION] o
-   SIMP_RULE (srw_ss()) [pred_setTheory.EXTENSION,
-                         okpath_f_def, GSYM okpath_def] o
-   CONJUNCT1)
-    (MATCH_MP fixedPointTheory.gfp_greatest_fixedpoint
-              (SPEC_ALL okpath_monotone)))
+Theorem okpath_cases =
+  MATCH_MP fixedPointTheory.gfp_greatest_fixedpoint (SPEC_ALL okpath_monotone)
+    |> CONJUNCT1 |> SYM
+    |> SIMP_RULE (srw_ss()) [pred_setTheory.EXTENSION,
+                             okpath_f_def, GSYM okpath_def]
+    |> SIMP_RULE (srw_ss()) [IN_DEF]
+    |> GEN_ALL
 
 Theorem okpath_thm[simp]:
   !R. (!x. okpath R (stopped_at x)) /\

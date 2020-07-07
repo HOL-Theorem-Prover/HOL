@@ -569,7 +569,9 @@ illustrated in the following session.
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
+##linelen_limit 75
 >>+ ``x = (x = 1)``;
+##nolinelen_limit
 \end{alltt}
 \end{session}
 

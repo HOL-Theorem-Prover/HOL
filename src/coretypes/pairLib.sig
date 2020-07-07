@@ -109,6 +109,7 @@ sig
 
  (* from pairTools *)
 
+ val PairCases        : tactic
  val PairCases_on     : term quotation -> tactic
  val PGEN             : term -> term -> thm -> thm
  val PGEN_TAC         : term -> tactic

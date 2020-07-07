@@ -4,9 +4,9 @@ INCLUDES = $(CMPDIR)
 
 .PHONY: all
 
-all: stringlit_output otherTheory.uo sampleTheory.uo
+all: stringlit_output $(DEFAULT_TARGETS)
 
-stringlit_output: stringlit_input munge.exe expected-stringlit
+stringlit_output: stringlit_input munge.exe expected-stringlit $(CMPDIR)/cmp.exe
 	./munge.exe < $< > $@
 	$(CMPDIR)/cmp.exe stringlit_output expected-stringlit
 

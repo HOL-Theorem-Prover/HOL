@@ -23,6 +23,7 @@ fun bare file = OS.Path.base (OS.Path.file file)
    Running buildheap
    ------------------------------------------------------------------------- *)
 
+(* ancestry "scratch"; *)
 val core_theories =
   ["ConseqConv", "quantHeuristics", "patternMatches", "ind_type", "while",
    "one", "sum", "option", "pair", "combin", "sat", "normalForms",
@@ -42,11 +43,11 @@ fun theory_files script =
     [theorysml,theorydat,theoryuo,theoryui]
   end
 
-fun find_heapname file =
+fun find_heapname dir file =
   let
-    val _ = mkDir_err sml_code_dir
+    val _ = mkDir_err dir
     val heapname_bin = HOLDIR ^ "/bin/heapname"
-    val fileout = sml_code_dir ^ "/find_heapname_" ^ bare file
+    val fileout = dir ^ "/heapname_" ^ bare file
     val cmd = String.concatWith " " [heapname_bin,">",fileout]
   in
     cmd_in_dir (OS.Path.dir file) cmd;
@@ -55,11 +56,11 @@ fun find_heapname file =
   handle Interrupt => raise Interrupt
     | _ => raise ERR "find_heapname" file
 
-fun find_genscriptdep file =
+fun find_genscriptdep dir file =
   let
-    val _ = mkDir_err sml_code_dir
+    val _ = mkDir_err dir
     val genscriptdep_bin = HOLDIR ^ "/bin/genscriptdep"
-    val fileout = sml_code_dir ^ "/sml_genscriptdep_" ^ bare file
+    val fileout = dir ^ "/genscriptdep_" ^ bare file
     val cmd = String.concatWith " "
       [genscriptdep_bin, OS.Path.file file, ">", fileout]
   in
@@ -69,32 +70,47 @@ fun find_genscriptdep file =
   handle Interrupt => raise Interrupt
     | _ => raise ERR "find_genscriptdep" file
 
-fun run_buildheap core_flag ofileo file =
+fun run_buildheap dir core_flag file =
   let
-    val _ = mkDir_err sml_buildheap_dir
+    val _ = mkDir_err dir
     val buildheap_bin = HOLDIR ^ "/bin/buildheap"
-    val filel = find_genscriptdep file
-    val ofile =
-      if isSome ofileo
-      then valOf ofileo
-      else sml_buildheap_dir ^ "/" ^ bare file
+    val filel = find_genscriptdep dir file
+    val fileout = dir ^ "/buildheap_" ^ bare file
     val state =
-      if core_flag then HOLDIR ^ "/bin/hol.state0" else find_heapname file
+      if core_flag
+      then HOLDIR ^ "/bin/hol.state0"
+      else find_heapname dir file
     val cmd =
       String.concatWith " "
         ([buildheap_bin,"--holstate=" ^ state,"--gcthreads=1"] @
           filel @ [OS.Path.file file]
-        @ [">",ofile])
+        @ [">",fileout])
   in
     cmd_in_dir (OS.Path.dir file) cmd
   end
   handle Interrupt => raise Interrupt
     | _ => raise ERR "run_buildheap" file
 
+fun run_buildheap_nodep dir file =
+  let
+    val _ = mkDir_err dir
+    val buildheap_bin = HOLDIR ^ "/bin/buildheap"
+    val fileout = dir ^ "/buildheap_" ^ bare file
+    val state = HOLDIR ^ "/bin/hol.state0"
+    val cmd = String.concatWith " "
+      ([buildheap_bin,"--holstate=" ^ state,"--gcthreads=1"]
+      @ [OS.Path.file file]
+      @ [">",fileout])
+  in
+    cmd_in_dir (OS.Path.dir file) cmd
+  end
+  (* handle Interrupt => raise Interrupt
+    | _ => raise ERR "run_buildheap_nodep" file *)
+
 fun remove_err s = FileSys.remove s handle SysErr _ => ()
 
 fun run_rm_script core_flag file =
-  (run_buildheap core_flag NONE file; remove_err file)
+  (run_buildheap sml_buildheap_dir core_flag file; remove_err file)
   handle Interrupt => (remove_err file; raise Interrupt)
 
 (* -------------------------------------------------------------------------

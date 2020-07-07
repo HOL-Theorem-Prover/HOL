@@ -13,17 +13,13 @@ open HolKernel Abbrev boolLib aiLib mlMatrix smlParallel
 val ERR = mk_HOL_ERR "mlNeuralNetwork"
 
 (* -------------------------------------------------------------------------
-   Activation and derivatives (with a trick)
+   Activation and derivatives (with an optimization)
    ------------------------------------------------------------------------- *)
 
 fun idactiv (x:real) = x:real
 fun didactiv (x:real) = 1.0
 fun tanh x = Math.tanh x
-fun dtanh x = 1.0 - (x:real) * x
-fun relu x  = if x > 0.0 then x else 0.0
-fun drelu x = if x < epsilon then 0.0 else 1.0
-fun leakyrelu x  = if x > 0.0 then x else 0.01 * x
-fun dleakyrelu x = if x < epsilon then 0.01 else 1.0
+fun dtanh fx = 1.0 - fx * fx
 
 (* -------------------------------------------------------------------------
    Types
@@ -31,7 +27,7 @@ fun dleakyrelu x = if x < epsilon then 0.01 else 1.0
 
 type layer = {a : real -> real, da : real -> real, w : real vector vector}
 type nn = layer list
-type train_param =
+type trainparam =
   {ncore: int, verbose: bool,
    learning_rate: real, batch_size: int, nepoch: int}
 
@@ -50,7 +46,7 @@ fun trainparam_of_string s =
     }
   end
 
-type schedule = train_param list
+type schedule = trainparam list
 
 fun write_schedule file schedule =
   writel file (map string_of_trainparam schedule)
@@ -73,6 +69,9 @@ fun diml_of sizel = case sizel of
     [] => []
   | a :: m => diml_aux a m
 
+fun dimin_nn nn = ((snd o mat_dim o #w o hd) nn) - 1
+fun dimout_nn nn = (fst o mat_dim o #w o last) nn
+
 fun random_nn (a,da) sizel =
   let
     val l = diml_of sizel
@@ -85,11 +84,6 @@ fun random_nn (a,da) sizel =
 (* -------------------------------------------------------------------------
    input/output
    ------------------------------------------------------------------------- *)
-
-fun reall_to_string rl = String.concatWith " " (map rts rl)
-
-fun string_to_reall rls =
-  map (valOf o Real.fromString) (String.tokens Char.isSpace rls)
 
 fun string_of_wl wl =
   let
@@ -130,13 +124,14 @@ fun read_wl_sl sl =
 fun read_nn_sl sl =
   let
     val nl = map fst (read_diml (hd sl))
-    val matsl = split_nl nl (tl sl)
+    val matsl = split_nl nl (tl sl) handle HOL_ERR _ =>
+      raise ERR "read_nn_sl" (String.concatWith " # " (tl sl))
     val matl =  map read_mat_sl matsl
     fun f m = {a = tanh, da = dtanh, w = m}
   in
     map f matl
   end
-  handle Empty => raise ERR "read_nn_sl" ""
+  handle Empty => raise ERR "read_nn_sl" "empty"
 
 fun read_nn file = read_nn_sl (readl file)
 
@@ -161,6 +156,10 @@ fun rm_biais v = Vector.fromList (tl (vector_to_list v))
   Forward propagation (fp) with memory of the steps
   -------------------------------------------------------------------------- *)
 
+fun mat_dims m =
+  let val (a,b) = mat_dim m in "(" ^ its a ^ "," ^ its b ^ ")" end
+fun vect_dims v = its (Vector.length v + 1)
+
 fun fp_layer (layer : layer) inv =
   let
     val new_inv = add_biais inv
@@ -169,7 +168,9 @@ fun fp_layer (layer : layer) inv =
   in
     {layer = layer, inv = new_inv, outv = outv, outnv = outnv}
   end
-  handle Subscript => raise ERR "fp_layer" ""
+  handle Subscript =>
+    raise ERR "fp_layer" ("dimension: mat-" ^
+                          mat_dims (#w layer) ^ " vect-" ^ vect_dims inv)
 
 fun fp_nn nn v = case nn of
     [] => []
@@ -208,7 +209,7 @@ fun bp_nn_aux rev_fpdatal doutnv =
       bpdata :: bp_nn_aux m (#dinv bpdata)
     end
 
-fun bp_nn_wocost fpdatal doutnv = rev (bp_nn_aux (rev fpdatal) doutnv)
+fun bp_nn_doutnv fpdatal doutnv = rev (bp_nn_aux (rev fpdatal) doutnv)
 
 fun bp_nn fpdatal expectv =
   let
@@ -354,7 +355,7 @@ val exl = List.tabulate (1000, fn _ => gen_idex dim);
 
 (* training *)
 val nn = random_nn (tanh,dtanh) [dim,4*dim,4*dim,dim];
-val param : train_param =
+val param : trainparam =
   {ncore = 1, verbose = true,
    learning_rate = 0.02, batch_size = 16, nepoch = 100}
 ;

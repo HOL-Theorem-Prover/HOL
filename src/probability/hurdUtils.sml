@@ -975,28 +975,6 @@ fun POP_ASSUM_TAC tac =
       >> tac
       >> TRY (DISCH_THEN (EVERY o map ASSUME_TAC o CONJUNCTS))));
 
-(*---------------------------------------------------------------------------
- * Reverse tac: A tactical that reverses the list of subgoals of tac.
- *              Intended for use with THEN1 to pick the `easy' subgoal, e.g.:
- *              - CONJ_TAC THEN1 SIMP_TAC
- *                  if the first conjunct is easily dispatched
- *              - Reverse CONJ_TAC THEN1 SIMP_TAC
- *                  if it is the second conjunct that yields.
- *
- * (the old name "REVERSE" has different meaning in rich_listTheory)
- *---------------------------------------------------------------------------*)
-
-val Reverse = Tactical.REVERSE;
-
-(* old definition:
-fun REVERSE tac g
-  = let val (gl, jf) = tac g
-    in (rev gl, jf o rev)
-    end
-    handle HOL_ERR{origin_structure,origin_function,message}
-    => raise ERR "Reverse" (origin_structure^"."^origin_function^": "^message);
- *)
-
 (* --------------------------------------------------------------------- *)
 (* Tactics.                                                              *)
 (* --------------------------------------------------------------------- *)
@@ -1248,10 +1226,4 @@ val ASM_MATCH_MP_TAC = ASM_MATCH_MP_TAC_N 10;
 
 val art = ASM_REWRITE_TAC;
 
-(* Tacticals for better expressivity, added by Chun Tian *)
-
-fun fix   ts = MAP_EVERY Q.X_GEN_TAC ts;        (* from HOL Light *)
-fun set   ts = MAP_EVERY Q.ABBREV_TAC ts;       (* from HOL mizar mode *)
-fun take  ts = MAP_EVERY Q.EXISTS_TAC ts;       (* from HOL mizar mode *)
-
-end; (* probTools *)
+end; (* hurdUtils *)

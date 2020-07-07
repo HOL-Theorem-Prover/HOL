@@ -160,6 +160,7 @@ For more information, see \ml{type\_abbrev}'s entry in \REFERENCE.
 \index{types, in HOL logic@types, in \HOL{} logic!parsing of|)}
 
 \index{special syntactic forms for scripts!Type@\ml{Type}}
+\index{Type (special syntactic form)@\ml{Type} (special syntactic form)}
 There are special syntactic forms available for both type abbreviation entry-points.
 Instead of
 \begin{hol}
@@ -1035,47 +1036,41 @@ print depth are printed as \holtxt{...}. For example:
 \index{quotation, in HOL logic@quotation, in \HOL{} logic!parser for}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax|(}
 Logic-related syntax in the HOL system is typically passed to the
-parser in special forms known as \emph{quotations}.  A basic quotation
-is delimited by single back-ticks (i.e., \ml{`}, ASCII character~96).  When
-quotation values are printed out by the ML interactive loop, they look
-rather ugly because of the special filtering that is done to these
-values before the ML interpreter even sees them:
+parser in special forms known as \emph{quotations}.
+A basic quotation is delimited by single quotation characters (`...', Unicode code-points U+2018 and U+2019), or single back-ticks (i.e., \ml{\`}, ASCII character~96).
+When quotation values are printed out by the ML interactive loop, they look rather ugly because of the special filtering that is done to these values before the ML interpreter even sees them:
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
->> val q = `f x = 3`;
+>> val q = ‘f x = 3’;
 \end{alltt}
 \end{session}
-Quotations (Moscow ML prints the type as \ml{'a frag list}) are the
-raw input form expected by the various HOL parsers.  They are also
-polymorphic (to be explained below).  Thus the function
-\ml{Parse.Term} takes a (term) quotation and returns a term,
-and is thus of type \[ \ml{term quotation -> term}
+Quotations (the ML environment prints the type as \ml{'a frag list}) are the raw input form expected by the various HOL parsers.
+They are also polymorphic (to be explained below).
+Thus the function \ml{Parse.Term} takes a (term) quotation and returns a term, and is of type
+\[
+  \ml{term quotation -> term}
 \]
 
 The term and type parsers can also be called implicitly by using
-double back-ticks as delimiters.  For the type parser, the first
-non-space character after the leading delimiter must also be a colon.
+double quotations (with ``\dots'', characters U+201C and U+201D), or doubled back-ticks as delimiters.
+For the type parser, the first non-space character after the leading delimiter must also be a colon.
 Thus:
 \begin{session}
 \begin{alltt}
->> val t = ``p /\ q``;
+>> val t1 = “\x:num. x + 3”;
+>> val t2 = ``p /\ q``;
 
->> val ty = ``:'a -> bool``;
+>> val ty = “:'a -> bool”;
 \end{alltt}
 \end{session}
-
-The expression bound to ML variable \ml{t} above is actually expanded
+The expression bound to ML variable \ml{t1} above is actually expanded
 to an application of the function \ml{Parse.Term} to the quotation
-argument \ml{`p /\bs{} q`}.  Similarly, the second expression expands
-into an application of \ml{Parse.Type} to the quotation \ml{`:'a -> bool`}.
+argument `\ml{p /\bs{} q}'.
+Similarly, the declaration of \ml{ty}'s expression expands into an application of \ml{Parse.Type} to the quotation `\ml{:'a -> bool}'.
 
-The significant advantage of quotations over normal \ML{} strings is
-that they can include new-line and backslash characters without
-requiring special quoting.  Newlines occur whenever terms get beyond
-the trivial in size, while backslashes occur in not just the
-representation of $\lambda$, but also the syntax for conjunction and
-disjunction.
+The significant advantage of quotations over normal \ML{} strings is that they can include new-line and backslash characters without requiring special quoting.
+Newlines occur whenever terms get beyond the trivial in size, while backslashes occur in not just the representation of $\lambda$, but also the syntax for conjunction and disjunction.
 
 If a quotation is to include a back-quote character, then this should be done by using the quotation syntax's own escape character, the caret (\ml{\^}, ASCII character~94).
 To get a bare caret, things are slightly more complicated.
@@ -1085,9 +1080,9 @@ Otherwise, one caret can be obtained by writing two in a row.
 Thus:
 \begin{session}
 \begin{alltt}
->> ``f ^` x ``;
+>> “f ^` x”;
 
->> ``f ^ x``;
+>> “f ^ x”;
 \end{alltt}
 \end{session}
 
@@ -1095,7 +1090,7 @@ Finally, if a single caret is followed by a ``symbol'' character, then the caret
 Thus the following example illustrates two different ways of writing the same thing (in the first input, two carets become one):
 \begin{session}
 \begin{alltt}
->> ``f ^^+ x``;
+>> “f ^^+ x”;
 
 >>+ ``f ^+ x``;
 \end{alltt}
@@ -1117,8 +1112,8 @@ of the form {\small\verb+^(+}$t${\small\verb+)+}
 \index{antiquotation, in HOL logic terms@antiquotation, in \HOL{} logic terms}%
 %
 An antiquotation \holtxt{\^{}($t$)} evaluates to the
-\ML{} value of $t$. For example,{\small\verb+``x \/ ^(mk_conj(``y:bool``, ``z:bool``))``+}
-evaluates to the same term as {\small\verb+``x \/ (y /\ z)``+}. The
+\ML{} value of $t$. For example, ``{\small\verb+x \/ ^(mk_conj(+``\verb+y:bool+''\verb+, +``\verb+z:bool+''\verb+))+}''
+evaluates to the same term as {\small``\verb+x \/ (y /\ z)+''}. The
 most common use of antiquotation is when the term $t$ is bound to an \ML\
 variable $x$. In this case {\small\verb+^(+}$x${\small\verb+)+} can be
 abbreviated by {\small\verb+^+}$x$.
@@ -1129,11 +1124,11 @@ The following session illustrates antiquotation.
 \begin{session}
 \begin{alltt}
 >>__ remove_ovl_mapping "+" {Name = "int_add", Thy = "integer"};
->> val y = ``x+1``;
+>> val y = “x+1”;
 
->> val z = ``y = ^y``;
+>> val z = “y = ^y”;
 
->> ``!x:num.?y:num.^z``;
+>> “!x:num.?y:num.^z”;
 \end{alltt}
 \end{session}
 
@@ -1141,9 +1136,9 @@ The following session illustrates antiquotation.
 
 \begin{session}
 \begin{alltt}
->> val pred = ``:'a -> bool``;
+>> val pred = “:'a -> bool”;
 
->> ``:^pred -> bool``;
+>> “:^pred -> bool”;
 \end{alltt}
 \end{session}
 
@@ -1157,9 +1152,9 @@ terms, antiquoting a type into a term quotation requires the use of
 
 \begin{session}
 \begin{alltt}
->>+ ``!P:^pred. P x ==> Q x``;
+>>+ “!P:^pred. P x ==> Q x”;
 
->> ``!P:^(ty_antiq pred). P x ==> Q x``;
+>> “!P:^(ty_antiq pred). P x ==> Q x”;
 \end{alltt}
 \end{session}
 %
@@ -2241,6 +2236,7 @@ fragment that just includes a list of rewrites:
 \end{hol}
 
 \subsubsection{Removing rewrites and conversions from \simpset{}s}
+\label{sec:removing-rewrites-from-simpsets}
 \index{simplification!removing rewrites|(}
 The \ml{-*} (infix) function can be used to remove elements from \simpset{}s.
 This can be done to temporarily affect the simplifier when it is applied to a particular goal.
@@ -2252,9 +2248,9 @@ For example:
 >>+ SIMP_CONV (srw_ss() -* ["APPEND_ASSOC"]) [] “x ++ (y ++ z)”;
 \end{alltt}
 \end{session}
-The second argument to \ml{-*} is a list of strings, naming rewrite theorems or conversions.
+The second argument to \ml{-*} is a list of strings, naming rewrite theorems, conversions or decision procedures.
 The names to use are visible if \simpset{} values are printed out in the interactive session.
-The example below demonstrates removing the beta-conversion:
+The example below demonstrates removing beta-conversion:
 \begin{session}
 \begin{alltt}
 ##assert Exn.capture (SIMP_CONV (bool_ss -* ["BETA_CONV"]) []) “(\x. x + 3) 10” |> Exn.get_exn |> isSome
@@ -2279,12 +2275,12 @@ Specific sub-rewrites can be removed from a \simpset{} without affecting  others
 \end{session}
 
 If using a ``power tactic'' such as \ml{simp}, there is no \simpset{} value visible to modify with \ml{-*}.
+\index{Excl (simplification theorem modifier)@\ml{Excl} (simplification theorem modifier)}
 Instead, one must use a special theorem form (see Section~\ref{sec:simp-special-rewrite-forms} below), \ml{Excl} to exclude a rewrite.
 For example, sometimes the associativity of list-append can be annoying (here it masks the rewrite defining list-append):
 \begin{session}
 \begin{alltt}
->>__ proofManagerLib.dropn (case proofManagerLib.status() of
-           Manager.PRFS l => List.length l)
+>>__ proofManagerLib.drop_all();
 >>_ g `f (x ++ (h::t ++ y)) = f (x ++ h::(t ++ y))`;
 >> e (simp[]);
 \end{alltt}
@@ -2810,15 +2806,17 @@ The \ml{dprocs} field requires lists of values of the type
 \ml{Traverse.reducer}.  These values are constructed with the
 constructor \ml{REDUCER}:
 \begin{hol}
-\begin{verbatim}
-   REDUCER : {initial : context,
-              addcontext : context * thm list -> context,
-              apply : {solver : term list -> term -> thm,
-                       conv : term list -> term -> thm,
-                       context : context,
-                       stack : term list} -> term -> thm}
-          -> reducer
-\end{verbatim}
+\begin{alltt}
+>>__ val SOME trav_str = #lookupStruct PolyML.globalNameSpace "Traverse";
+>>__ val travns = PolyML.NameSpace.Structures.contents trav_str
+>>__ val SOME redval = #lookupVal travns "REDUCER"
+>>__ val pp = PolyML.NameSpace.Values.printWithType (redval,300,NONE)
+>>__ val safeprint =
+        TextIO.print o
+        String.translate
+          (fn #"{" => "\\{" | #"}" => "\\}" | c => str c)
+>>__ val _ = PP.prettyPrint(safeprint, 70) pp
+\end{alltt}
 \end{hol}
 The \ml{context} type is an alias for the built-in \ML{} type
 \ml{exn}, that of exceptions.  The exceptions here are used as a
@@ -2946,6 +2944,31 @@ The \ml{ReqD} modifier requires that the redex count should have decreased.
 This is implicitly a check on the original goal as well: it must have a non-zero count of redexes itself.
 
 Both \ml{Req0} and \ml{ReqD} can be combined with \ml{Once} and \ml{Ntimes}.
+
+\paragraph{Excluding rewrites}
+\index{Excl (simplification theorem modifier)@\ml{Excl} (simplification theorem modifier)}
+\index{simplification!removing rewrites}
+As also described above in Section~\ref{sec:removing-rewrites-from-simpsets}, various built-in (named) components can be removed from invocations of the simplifier through the use of the \ml{Excl} form.
+This function is of type \ml{string~->~thm}, so takes a string naming the rewrite or other component that is to be removed.
+For example, the standard stateful simpset includes the theorem stating that $x < x + y \Leftrightarrow 0 < y$, with name \ml{X\_LT\_X\_PLUS}:
+\begin{session}
+\begin{alltt}
+>> simp[] ([], “x < x + 2 * y”);
+
+>> simp[Excl "X_LT_X_PLUS"] ([], “x < x + 2 * y”);
+\end{alltt}
+\end{session}
+In addition to rewrites, conversions and decision procedures can also be temporarily excluded in this way:
+\begin{session}
+\begin{alltt}
+>> simp[Excl "BETA_CONV"] ([], “(λx. x + 10) (6 * z)”);
+
+>> simp[] ([], “1 < x ==> 1 < 2 * x”);
+>>__ null (#1 it) orelse raise Fail "Bad Excl. behaviour"
+>> simp[Excl "NUM_ARITH_DP"] ([], “1 < x ==> 1 < 2 * x”);
+>>__ length (#1 it) = 1 orelse raise Fail "Bad Excl. behaviour"
+\end{alltt}
+\end{session}
 
 \paragraph{Simplifying at particular sub-terms}
 \index{simplification!at particular sub-terms}

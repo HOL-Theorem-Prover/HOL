@@ -5,6 +5,7 @@ open stringTheory arithmeticTheory finite_mapTheory pred_setTheory bagTheory
      walkstarTheory
 
 val _ = new_theory "unifDef";
+val _ = delsimps ["NORMEQ_CONV"]
 val _ = monadsyntax.temp_add_monadsyntax()
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 };
 val _ = overload_on("monad_bind",``OPTION_BIND``);
@@ -582,8 +583,9 @@ SRW_TAC [][] THEN
 Cases_on `tunify s t t'` THEN SRW_TAC [][]
 )
 
-val ext_s_check_def = RWDefine`
-ext_s_check s v t = if oc s t v then NONE else SOME (s |+ (v,t))`
+Definition ext_s_check_def[simp]:
+  ext_s_check s v t = if oc s t v then NONE else SOME (s |+ (v,t))
+End
 
 val unify_exists = prove(
 ``?unify.!s t1 t2.wfs s ==> (unify s t1 t2 =

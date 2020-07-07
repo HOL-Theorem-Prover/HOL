@@ -5,6 +5,8 @@ open BasicProvers boolSimps markerLib optionTheory ;
 
 val _ = new_theory "llist";
 
+val _ = temp_delsimps ["NORMEQ_CONV"]
+
 val NOT_SUC = numTheory.NOT_SUC ;
 val SUC_SUB1 = arithmeticTheory.SUC_SUB1 ;
 val FUNPOW = arithmeticTheory.FUNPOW ;
@@ -690,7 +692,6 @@ val LTAKE_EQ_SOME_CONS = store_thm(
   REPEAT STRIP_TAC THEN FIRST_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `h`) THEN
   ASM_SIMP_TAC (srw_ss()) []);
 
-
 (* ----------------------------------------------------------------------
     Finality allows us to  define MAP
    ---------------------------------------------------------------------- *)
@@ -820,6 +821,16 @@ val LTAKE_LAPPEND1 = Q.store_thm("LTAKE_LAPPEND1",
   Induct >> rw[LTAKE_THM] >>
   qspec_then`l1`FULL_STRUCT_CASES_TAC llist_CASES >> fs[] >>
   Cases_on`LTAKE n t`>>fs[])
+
+Theorem LTAKE_LMAP:
+  !n f ll. LTAKE n (LMAP f ll) =
+   OPTION_MAP (MAP f) (LTAKE n ll)
+Proof
+  Induct_on `n` >> rw[] >>
+  qspec_then ‘ll’ strip_assume_tac llist_CASES >>
+  pop_assum SUBST_ALL_TAC >>
+  fs[OPTION_MAP_COMPOSE,combinTheory.o_DEF]
+QED
 
 (* ----------------------------------------------------------------------
     finiteness and list length
@@ -1393,6 +1404,33 @@ val exists_LDROP = store_thm(
     FULL_SIMP_TAC (srw_ss()) [LDROP]
   ]);
 
+Theorem exists_thm_strong:
+  exists P ll <=> ?n a t l. LDROP n ll = SOME (a:::t) /\ P a /\
+                           LTAKE n ll = SOME l /\ EVERY ($~ o P) l
+Proof
+  simp[exists_LDROP,EQ_IMP_THM] >>
+  reverse conj_tac >- metis_tac[] >>
+  disch_then (strip_assume_tac o Ho_Rewrite.PURE_ONCE_REWRITE_RULE[whileTheory.LEAST_EXISTS]) >>
+  goal_assum drule >>
+  rw[] >>
+  rpt(pop_assum mp_tac) >>
+  rename1`LDROP n ll = SOME (a:::t)`>>
+  MAP_EVERY qid_spec_tac [`a`,`t`,`ll`,`n`] >>
+  Induct >- rw[] >>
+  gen_tac >>
+  qspec_then`ll`FULL_STRUCT_CASES_TAC llist_CASES>>
+  rw[] >>
+  rename1`LDROP _ (h:::_)`>>
+  `~P h`
+    by(first_x_assum(qspec_then `0` mp_tac) >>
+       impl_tac >- simp[] >>
+       rename1`h:::t`>>
+       disch_then(qspecl_then [`h`,`t`] mp_tac) >> simp[]) >>
+  first_x_assum (drule_then drule) >>
+  impl_tac >- (rw[] >> rename1`n' < n` >> first_x_assum(qspec_then `SUC n'` mp_tac) >> rw[]) >>
+  rw[PULL_EXISTS]
+QED
+
 (* ----------------------------------------------------------------------
     companion LL_ALL/every (has a coinduction principle)
    ---------------------------------------------------------------------- *)
@@ -1432,6 +1470,25 @@ val every_strong_coind = save_thm(
               |> SIMP_RULE (srw_ss()) [DISJ_IMP_THM, IMP_CONJ_THM,
                                        FORALL_AND_THM]
               |> Q.GEN `Q` |> Q.GEN `P`);
+
+Theorem every_LNTH:
+  !P ll. every P ll <=> !n e. LNTH n ll = SOME e ==> P e
+Proof
+  fs [every_def,exists_LNTH] \\
+  CONV_TAC(STRIP_QUANT_CONV(LAND_CONV(PURE_ONCE_REWRITE_CONV[EQ_SYM_EQ]))) \\
+  simp[IMP_DISJ_THM]
+QED
+
+Theorem every_LDROP:
+  !f i ll1 ll2.
+  every f ll1 /\
+  LDROP i ll1 = SOME ll2
+  ==> every f ll2
+Proof
+  Induct_on ‘i’ >> rpt GEN_TAC >>
+  qspec_then ‘ll1’ strip_assume_tac llist_CASES >> pop_assum SUBST_ALL_TAC >>
+  rw[] >> rw[] >> res_tac
+QED
 
 (*
   could alternatively take contrapositives of the exists induction principle:
@@ -1581,6 +1638,96 @@ val LFILTER_APPEND = store_thm(
   SIMP_TAC (srw_ss()) [] THEN REPEAT STRIP_TAC THEN
   COND_CASES_TAC THEN ASM_SIMP_TAC (srw_ss()) []);
 
+Theorem LFILTER_fromList[simp]:
+  !p l. LFILTER p (fromList l) = fromList (FILTER p l)
+Proof
+  Induct_on ‘l’ \\ rw[]
+QED
+
+Theorem LFILTER_EQ_CONS:
+  LFILTER P ll = h:::t
+  ==> ?l ll'. ll = LAPPEND (fromList l) (h:::ll') /\
+              EVERY ($~ o P) l /\ P h /\
+              LFILTER P ll' = t
+Proof
+  strip_tac >>
+  rename1`LFILTER P ll`>>
+  `exists P ll` by(fs[Once LFILTER,CaseEq "bool"]) >>
+  fs[exists_thm_strong] >>
+  rename1`LDROP n ll = SOME (a:::t')`>>
+  rename1`LTAKE n ll = SOME l`>>
+  `ll = LAPPEND (fromList l) (a:::t')`
+    by(reverse(Cases_on `LFINITE ll`)
+       >- (drule_then (qspec_then `n` (fn thm => PURE_ONCE_REWRITE_TAC[GSYM thm])) (CONJUNCT1 LTAKE_DROP) >>
+           simp[]) >>
+       `n <= THE(LLENGTH ll)` by(fs[LFINITE_LLENGTH] >> metis_tac[LDROP_SOME_LLENGTH]) >>
+       drule_all_then (fn thm => PURE_ONCE_REWRITE_TAC[GSYM thm]) (CONJUNCT2 LTAKE_DROP) >>
+       simp[]) >>
+  BasicProvers.VAR_EQ_TAC >>
+  fs[LFINITE_fromList,LFILTER_APPEND,LFILTER_fromList] >>
+  `FILTER P l = []` by(fs[listTheory.FILTER_EQ_NIL,combinTheory.o_DEF]) >>
+  fs[] >> rpt(BasicProvers.VAR_EQ_TAC) >>
+  metis_tac[]
+QED
+
+Theorem every_LFILTER:
+  !ll P. every P (LFILTER P ll)
+Proof
+  rpt strip_tac >>
+  rename1`every P (LFILTER P ll)`>>
+  `!ll. (?ll'. ll = LFILTER P ll') ==> every P ll
+  ` by(ho_match_mp_tac every_coind >>
+       rw[] >> first_x_assum(ASSUME_TAC o GSYM) >>
+       drule_then strip_assume_tac LFILTER_EQ_CONS >>
+       fs[] >> metis_tac[]) >>
+  metis_tac[]
+QED
+
+Theorem every_LAPPEND1:
+  !P ll1 ll2. every P (LAPPEND ll1 ll2) ==> every P ll1
+Proof
+  strip_tac
+  >> fs[Once (GSYM PULL_EXISTS)]
+  >> ho_match_mp_tac every_coind
+  >> rw[PULL_EXISTS]
+  >> goal_assum drule
+QED
+
+Theorem every_fromList_EVERY:
+  !l P. every P (fromList l) = EVERY P l
+Proof
+  Induct >> rw[]
+QED
+
+Theorem every_LAPPEND2_LFINITE:
+  !l P ll. LFINITE l /\ every P (LAPPEND l ll) ==> every P ll
+Proof
+  Ho_Rewrite.REWRITE_TAC[GSYM PULL_FORALL,GSYM AND_IMP_INTRO]
+  >> ho_match_mp_tac LFINITE_ind
+  >> fs[]
+QED
+
+Theorem every_LFILTER_imp:
+  !Q P ll. every Q ll ==> every Q (LFILTER P ll)
+Proof
+  rpt strip_tac >>
+  rename1`every Q (LFILTER P ll)`
+  >> `!ll. (?ll'. ll = LFILTER P ll' /\ every Q ll') ==> every Q ll` by (
+    ho_match_mp_tac every_coind
+    >> rw[] >> qpat_x_assum `_:::_ = _`(ASSUME_TAC o GSYM)
+    >> drule_then strip_assume_tac LFILTER_EQ_CONS
+    >> BasicProvers.VAR_EQ_TAC
+    >> rename1 `LAPPEND (fromList l) (h:::llll)`
+    >> qspec_then `l` assume_tac LFINITE_fromList
+    >> BasicProvers.VAR_EQ_TAC
+    >> drule_all every_LAPPEND2_LFINITE
+    >> rw[every_thm,AC CONJ_ASSOC CONJ_COMM]
+    >> goal_assum drule
+    >> REFL_TAC
+  )
+  >> metis_tac[]
+QED
+
 val LFLATTEN = new_specification
  ("LFLATTEN", ["LFLATTEN"],
   prove(
@@ -1704,6 +1851,30 @@ val LFLATTEN_SINGLETON = store_thm(
   STRUCT_CASES_TAC (Q.SPEC `ll4` llist_CASES) THEN
   SIMP_TAC (srw_ss()) [LFLATTEN_THM, LHD_THM, LTL_THM]);
 
+Theorem LFINITE_LFLATTEN:
+  !lll:'a llist llist.
+    every (\ll. LFINITE ll /\ ll <> LNIL) lll ==>
+    LFINITE (LFLATTEN lll) = LFINITE lll
+Proof
+  `!lll.
+      LFINITE lll ==> llist$every (\ll. LFINITE ll /\ ll <> LNIL) lll ==>
+      LFINITE (LFLATTEN lll)` by (ho_match_mp_tac LFINITE_ind \\ fs [LFINITE_APPEND])
+  \\ qsuff_tac `!x.
+      LFINITE x ==>
+      !lll. x = LFLATTEN lll /\ llist$every (\ll. LFINITE ll /\ ll <> LNIL) lll ==>
+      LFINITE lll` THEN1 (metis_tac [])
+  \\ ho_match_mp_tac LFINITE_ind
+  \\ fs [PULL_FORALL] \\ rw []
+  THEN1 (qspec_then`lll`FULL_STRUCT_CASES_TAC llist_CASES \\ fs [])
+  \\ rename [`_ = LFLATTEN lll2`]
+  \\ qspec_then`lll2`FULL_STRUCT_CASES_TAC llist_CASES \\ fs []
+  \\ rename [`h2 <> _`]
+  \\ qspec_then`h2`FULL_STRUCT_CASES_TAC llist_CASES \\ fs [] \\ rw []
+  \\ rename [`LAPPEND t2`]
+  \\ qspec_then`t2`FULL_STRUCT_CASES_TAC llist_CASES \\ fs []
+  \\ rename [`LAPPEND t1`]
+  \\ first_x_assum (qspec_then `(h:::t1) ::: t` mp_tac) \\ fs []
+QED
 
 (*---------------------------------------------------------------------------*)
 (* ZIP two streams together, returning LNIL as soon as possible.             *)
@@ -1865,6 +2036,12 @@ val LAPPEND_fromList = Q.store_thm
  `!l1 l2. LAPPEND (fromList l1) (fromList l2) = fromList (l1 ++ l2)`,
  Induct THEN
  SRW_TAC [] []);
+
+Theorem LFLATTEN_fromList: !l.
+  LFLATTEN(fromList(MAP fromList l)) = fromList(FLAT l)
+Proof
+  Induct >> rw[LAPPEND_fromList]
+QED
 
 val LTAKE_LENGTH = Q.store_thm ("LTAKE_LENGTH",
 `!n ll l. (LTAKE n ll = SOME l) ==> (n = LENGTH l)`,
@@ -2538,6 +2715,12 @@ val LNTH_LMAP = Q.store_thm(
   Induct >> simp[LNTH] >> rpt gen_tac >>
   Q.SPEC_THEN `l` STRUCT_CASES_TAC llist_CASES >> simp[])
 
+Theorem LNTH_fromList:
+  !n xs. LNTH n (fromList xs) = if n < LENGTH xs then SOME (EL n xs) else NONE
+Proof
+  Induct \\ Cases_on ‘xs’ \\ fs [LNTH]
+QED
+
 val LLENGTH_LGENLIST = Q.store_thm(
   "LLENGTH_LGENLIST[simp,compute]",
   `!f. LLENGTH (LGENLIST f limopt) = limopt`,
@@ -2689,6 +2872,27 @@ Proof
   rw[]
 QED
 
+Definition LSET_def:
+  LSET l x = ?n. LNTH n l = SOME x
+End
+
+Theorem LSET[simp]:
+  LSET LNIL = {} /\
+  LSET (x:::xs) = x INSERT LSET xs
+Proof
+  fs [EXTENSION] \\ fs [LSET_def,IN_DEF]
+  \\ rw [] \\ eq_tac \\ rw []
+  THEN1 (Cases_on `n` \\ fs [] \\ metis_tac [])
+  THEN1 (qexists_tac `0` \\ fs [])
+  THEN1 (qexists_tac `SUC n` \\ fs [])
+QED
+
+Definition llist_rel_def:
+  llist_rel R l1 l2 <=>
+    LLENGTH l1 = LLENGTH l2 /\
+    !i x y. LNTH i l1 = SOME x /\ LNTH i l2 = SOME y ==> R x y
+End
+
 (* --------------------------------------------------------------------------
    Update TypeBase
    -------------------------------------------------------------------------- *)
@@ -2795,4 +2999,371 @@ Proof
   ho_match_mp_tac always_coind >> Cases >> simp[]
 QED
 *)
+
+(* ----------------------------------------------------------------------
+    Discriminating finite and infinite lists
+   ---------------------------------------------------------------------- *)
+
+Definition fromSeq_def:
+  fromSeq f = LUNFOLD (\x. SOME (SUC x, f x)) 0
+End
+
+Theorem fromSeq_LCONS:
+  fromSeq f = LCONS (f 0) (fromSeq (f o SUC))
+Proof
+  PURE_REWRITE_TAC[fromSeq_def,Once LUNFOLD] >>
+  simp[] >>
+  PURE_REWRITE_TAC[Once LUNFOLD_BISIMULATION] >>
+  qexists_tac ‘\x y. x = SUC y’ >>
+  rw[Once LUNFOLD]
+QED
+
+Theorem fromList_fromSeq:
+  !ll. (?l. ll = fromList l) \/ (?f. ll = fromSeq f)
+Proof
+  strip_tac >>
+  Cases_on ‘LFINITE ll’ >-
+   (drule_then strip_assume_tac LFINITE_toList >>
+    disj1_tac >>
+    qexists_tac ‘THE(toList ll)’ >>
+    drule_then MATCH_ACCEPT_TAC (GSYM to_fromList)) >>
+  disj2_tac >>
+  qexists_tac ‘\n. THE(LNTH n ll)’ >>
+  PURE_REWRITE_TAC[Once LLIST_BISIMULATION] >>
+  qexists_tac ‘\x y. (~LFINITE x /\ (?n. y = (fromSeq (\n. THE (LNTH n x)))))’ >>
+  rw[] >>
+  last_x_assum kall_tac >>
+  rename1 ‘ll = [||]’ >>
+  disj2_tac >>
+  simp[Once fromSeq_LCONS] >>
+  Cases_on ‘ll’ >>
+  FULL_SIMP_TAC std_ss [LFINITE_THM,LNTH_THM,LHD_THM,LTL_THM] >>
+  simp[Once fromSeq_LCONS,combinTheory.o_DEF]
+QED
+
+Theorem llist_forall_split:
+  !P. (!ll. P ll) <=> (!l. P (fromList l)) /\ (!f. P (fromSeq f))
+Proof
+  gen_tac \\ eq_tac \\ rpt strip_tac
+  \\ asm_rewrite_tac []
+  \\ qspec_then ‘ll’ mp_tac fromList_fromSeq
+  \\ strip_tac \\ asm_rewrite_tac []
+QED
+
+Theorem LHD_fromSeq[simp]:
+  !f. LHD (fromSeq f) = SOME (f 0)
+Proof
+  rw [Once fromSeq_LCONS]
+QED
+
+Theorem LTL_fromSeq[simp]:
+  !f. LTL (fromSeq f) = SOME (fromSeq (f o SUC))
+Proof
+  rw [Once fromSeq_LCONS]
+QED
+
+Theorem LNTH_fromSeq[simp]:
+  !n f. LNTH n (fromSeq f) = SOME (f n)
+Proof
+  Induct \\ rw [LNTH]
+QED
+
+Theorem LTAKE_fromSeq[simp]:
+  !n f. LTAKE n (fromSeq f) = SOME (GENLIST f n)
+Proof
+  Induct \\ rw []
+  \\ rw [Once fromSeq_LCONS, GSYM listTheory.GENLIST_CONS]
+QED
+
+Theorem LDROP_fromSeq[simp]:
+  !n f. LDROP n (fromSeq f) = SOME (fromSeq (f o ((+) n)))
+Proof
+  Induct \\ rw []
+  THEN1 (AP_TERM_TAC \\ rw [FUN_EQ_THM,ADD1])
+  \\ rw [Once fromSeq_LCONS]
+  \\ AP_TERM_TAC \\ rw [FUN_EQ_THM,ADD1]
+QED
+
+Theorem LFINITE_fromSeq[simp]:
+  !f. ~LFINITE (fromSeq f)
+Proof
+  rw [LFINITE]
+QED
+
+Theorem LLENGTH_fromSeq[simp]:
+  !f. LLENGTH (fromSeq f) = NONE
+Proof
+  rw [LLENGTH]
+QED
+
+Theorem LGENLIST_EQ_fromSeq:
+  !f. LGENLIST f NONE = fromSeq f
+Proof
+  rewrite_tac [LGENLIST_def,fromSeq_def,ADD1]
+QED
+
+Theorem LGENLIST_EQ_fromList:
+  !f k. LGENLIST f (SOME k) = fromList (GENLIST f k)
+Proof
+  Induct_on ‘k’ \\ fs [listTheory.GENLIST_CONS]
+QED
+
+Theorem LAPPEND_fromSeq[simp]:
+  (!f ll. LAPPEND (fromSeq f) ll = fromSeq f) /\
+  (!l f.  LAPPEND (fromList l) (fromSeq f) =
+          fromSeq (\n. if n < LENGTH l then EL n l else f (n - LENGTH l)))
+Proof
+  conj_tac
+  THEN1 (gen_tac \\ match_mp_tac NOT_LFINITE_APPEND \\ rw [])
+  \\ Induct
+  THEN1 (rw [LAPPEND] \\ AP_TERM_TAC \\ rw [FUN_EQ_THM])
+  \\ rw [LAPPEND] \\ once_rewrite_tac [EQ_SYM_EQ]
+  \\ rw [Once fromSeq_LCONS]
+  \\ AP_TERM_TAC \\ rw [FUN_EQ_THM]
+QED
+
+Theorem LMAP_fromSeq[simp]:
+  !f g. LMAP f (fromSeq g) = fromSeq (f o g)
+Proof
+  rewrite_tac [GSYM LGENLIST_EQ_fromSeq,LMAP_LGENLIST]
+QED
+
+Theorem LMAP_fromList:
+  LMAP f (fromList l) = fromList(MAP f l)
+Proof
+  Induct_on `l` >> fs[]
+QED
+
+Theorem exists_fromSeq[simp]:
+  !p f. exists p (fromSeq f) = ?i. p (f i)
+Proof
+  rw [] \\ reverse eq_tac
+  THEN1
+   (fs [PULL_EXISTS]
+    \\ qid_spec_tac ‘f’
+    \\ Induct_on ‘i’ \\ rw []
+    \\ rw [Once fromSeq_LCONS])
+  \\ qsuff_tac ‘!ll. exists p ll ==> !f. ll = fromSeq f ==> ?i. p (f i)’
+  THEN1 rw []
+  \\ ho_match_mp_tac exists_ind \\ rw []
+  \\ pop_assum mp_tac
+  \\ rw [Once fromSeq_LCONS]
+  THEN1 (qexists_tac ‘0’ \\ fs [])
+  \\ first_x_assum (qspec_then ‘f o SUC’ mp_tac)
+  \\ rw [] \\ qexists_tac ‘SUC i’ \\ fs []
+QED
+
+Theorem every_fromSeq[simp]:
+  !p f. every p (fromSeq f) = !i. p (f i)
+Proof
+  rewrite_tac [every_def] \\ rw []
+QED
+
+Theorem LFILTER_fromSeq:
+  !p f.
+    LFILTER p (fromSeq f) =
+      if !i. ~p (f i) then LNIL else
+      if p (f 0) then LCONS (f 0) (LFILTER p (fromSeq (f o SUC)))
+                 else LFILTER p (fromSeq (f o SUC))
+Proof
+  gen_tac \\ gen_tac \\ IF_CASES_TAC
+  \\ rw [LFILTER_EQ_NIL,Once fromSeq_LCONS]
+QED
+
+(* more theorems about fromList and fromSeq *)
+
+Theorem fromList_11[simp]:
+  !xs ys. fromList xs = fromList ys <=> xs = ys
+Proof
+  Induct \\ Cases_on ‘ys’ \\ fs []
+QED
+
+Theorem fromSeq_11[simp]:
+  !f g. fromSeq f = fromSeq g <=> f = g
+Proof
+  rw [] \\ eq_tac \\ rw [] \\ fs [FUN_EQ_THM]
+  \\ gen_tac \\ rename [‘f n = g n’]
+  \\ pop_assum mp_tac
+  \\ qid_spec_tac ‘f’
+  \\ qid_spec_tac ‘g’
+  \\ Induct_on ‘n’ \\ fs []
+  \\ once_rewrite_tac [fromSeq_LCONS] \\ fs []
+  \\ rw [] \\ res_tac \\ fs []
+QED
+
+Theorem fromList_NEQ_fromSeq[simp]:
+  !l f. fromList l <> fromSeq f
+Proof
+  CCONTR_TAC \\ fs []
+  \\ qspec_then ‘l’ mp_tac LFINITE_fromList
+  \\ qspec_then ‘f’ mp_tac LFINITE_fromSeq
+  \\ fs []
+QED
+
+Theorem LFINITE_IMP_fromList:
+  !ll. LFINITE ll ==> ?l. ll = fromList l
+Proof
+  rw [] \\ qspec_then ‘ll’ mp_tac fromList_fromSeq
+  \\ rw [] \\ fs []
+QED
+
+Theorem NOT_LFINITE_IMP_fromSeq:
+  !ll. ~LFINITE ll ==> ?f. ll = fromSeq f
+Proof
+  rw [] \\ qspec_then ‘ll’ mp_tac fromList_fromSeq
+  \\ rw [] \\ fs [LFINITE_fromList]
+QED
+
+(* suffix over lazy lists *)
+
+Definition LSUFFIX_def:
+  LSUFFIX xs zs <=> ?ys. xs = LAPPEND (fromList ys) zs \/ zs = LNIL
+End
+
+Theorem LSUFFIX:
+  LSUFFIX l LNIL = T /\
+  LSUFFIX LNIL (LCONS y ys) = F /\
+  LSUFFIX (LCONS x xs) l = (LCONS x xs = l \/ LSUFFIX xs l)
+Proof
+  fs [LSUFFIX_def] \\ rw [] \\ eq_tac \\ rw []
+  THEN1 (rename [‘fromList zs’] \\ Cases_on ‘zs’ \\ fs []
+         \\ disj2_tac \\ qexists_tac ‘t’ \\ fs [])
+  THEN1 (qexists_tac ‘[]’ \\ fs [])
+  THEN1 (qexists_tac ‘x::ys’ \\ fs [])
+QED
+
+Theorem LSUFFIX_fromList:
+  !xs ys. LSUFFIX (fromList xs) (fromList ys) <=> IS_SUFFIX xs ys
+Proof
+  rpt gen_tac \\ fs [LSUFFIX_def,LAPPEND_fromList]
+  \\ qid_spec_tac ‘ys’
+  \\ qid_spec_tac ‘xs’
+  \\ ho_match_mp_tac rich_listTheory.SNOC_INDUCT \\ rw []
+  THEN1
+   (qspec_then ‘ys’ mp_tac rich_listTheory.SNOC_CASES \\ rpt strip_tac
+    \\ asm_rewrite_tac [rich_listTheory.IS_SUFFIX] \\ fs [])
+  \\ rewrite_tac [GSYM rich_listTheory.SNOC_APPEND]
+  \\ qspec_then ‘ys’ mp_tac rich_listTheory.SNOC_CASES \\ rpt strip_tac
+  \\ asm_rewrite_tac [rich_listTheory.IS_SUFFIX]
+  \\ fs [GSYM PULL_EXISTS]
+  \\ Cases_on ‘l = []’ \\ fs []
+  \\ asm_rewrite_tac [rich_listTheory.IS_SUFFIX]
+  \\ first_x_assum (qspec_then ‘l’ mp_tac)
+  \\ asm_simp_tac std_ss []
+  \\ rw [] \\ eq_tac \\ rw []
+QED
+
+Theorem LSUFFIX_REFL[simp]:
+  !s. LSUFFIX s s
+Proof
+  rw [LSUFFIX_def] \\ qexists_tac ‘[]’ \\ fs []
+QED
+
+Theorem LSUFFIX_TRANS:
+  !x y z. LSUFFIX x y /\ LSUFFIX y z ==> LSUFFIX x z
+Proof
+  rw [LSUFFIX_def]
+  \\ fs [LAPPEND_EQ_LNIL]
+  \\ rename [‘LAPPEND (fromList zs1) (LAPPEND (fromList zs2) _)’]
+  \\ qexists_tac ‘zs1 ++ zs2’
+  \\ rewrite_tac [GSYM LAPPEND_ASSOC,LAPPEND_fromList]
+QED
+
+Theorem LSUFFIX_ANTISYM:
+  !x y. LSUFFIX x y /\ LSUFFIX y x /\ LFINITE x ==> x = y
+Proof
+  rw [LSUFFIX_def,LAPPEND_EQ_LNIL]
+  \\ imp_res_tac LFINITE_IMP_fromList \\ rw []
+  \\ fs [LAPPEND_fromList]
+QED
+
+Theorem LTAKE_LAPPEND_fromList:
+  !ll l n.
+    LTAKE (n + LENGTH l) (LAPPEND (fromList l) ll) =
+      OPTION_MAP (APPEND l) (LTAKE n ll)
+Proof
+  rw [] \\ Cases_on `LTAKE n ll` \\ fs []
+  THEN1 (
+    `LFINITE ll` by (fs [LFINITE] \\ goal_assum drule)
+    \\ drule LFINITE_HAS_LENGTH \\ strip_tac \\ rename1 `SOME m`
+    \\ irule LTAKE_LLENGTH_NONE
+    \\ qexists_tac `m + LENGTH l` \\ rw []
+    THEN1 (
+      drule LTAKE_LLENGTH_SOME \\ strip_tac
+      \\ Cases_on `n <= m` \\ fs []
+      \\ drule (GEN_ALL LTAKE_TAKE_LESS)
+      \\ disch_then drule \\ fs [])
+    \\ fs [LLENGTH_APPEND, LFINITE_fromList])
+  \\ Induct_on `l` \\ rw []
+  \\ fs [LTAKE_CONS_EQ_SOME]
+  \\ goal_assum(drule o PURE_ONCE_REWRITE_RULE[CONJ_SYM])
+  \\ simp[]
+QED
+
+Theorem LTAKE_LPREFIX:
+  !x ll.
+   ~LFINITE ll ==>
+   ?l. LTAKE x ll = SOME l /\ LPREFIX (fromList l) ll
+Proof
+  rpt strip_tac >>
+  imp_res_tac NOT_LFINITE_IMP_fromSeq >> VAR_EQ_TAC >>
+  simp[LPREFIX_fromList,LFINITE_toList_SOME,LPREFIX_fromList,toList]
+QED
+
+(* ----------------------------------------------------------------------
+    Lazy list bisimulation up-to context, = and transitivity
+   ---------------------------------------------------------------------- *)
+
+Inductive llist_upto:
+  (llist_upto R x x) /\
+  (R x y ==> llist_upto R x y) /\
+  (llist_upto R x y /\ llist_upto R y z ==> llist_upto R x z) /\
+  (llist_upto R x y ==> llist_upto R (LAPPEND z x) (LAPPEND z y))
+End
+
+val [llist_upto_eq,llist_upto_rel,llist_upto_trans,llist_upto_context] =
+  llist_upto_rules |> SPEC_ALL |> CONJUNCTS |> map GEN_ALL
+  |> curry (ListPair.map save_thm)
+    ["llist_upto_eq","llist_upto_rel",
+     "llist_upto_trans","llist_upto_context"]
+
+Theorem LLIST_BISIM_UPTO:
+  !ll1 ll2 R.
+    R ll1 ll2 /\
+    (!ll3 ll4.
+      R ll3 ll4 ==>
+      ll3 = [||] /\ ll4 = [||] \/
+      LHD ll3 = LHD ll4 /\
+      llist_upto R (THE (LTL ll3)) (THE (LTL ll4)))
+  ==> ll1 = ll2
+Proof
+  rpt strip_tac
+  >> PURE_ONCE_REWRITE_TAC[LLIST_BISIMULATION]
+  >> qexists_tac `llist_upto R`
+  >> conj_tac >- rw[llist_upto_rules]
+  >> ho_match_mp_tac llist_upto_ind
+  >> rpt conj_tac
+  >- rw[llist_upto_rules]
+  >- first_x_assum ACCEPT_TAC
+  >- (rw[]
+      >> match_mp_tac OR_INTRO_THM2
+      >> conj_tac >- simp[]
+      >> metis_tac[llist_upto_rules])
+  >- (rw[llist_upto_rules]
+      >> Cases_on `ll3 = [||]`
+      >- (Cases_on `ll4` >> fs[llist_upto_rules])
+      >> match_mp_tac OR_INTRO_THM2
+      >> conj_tac
+      >- (Cases_on `z` >> simp[])
+      >> Cases_on `z` >- simp[]
+      >> simp[]
+      >> Cases_on `ll3` >> Cases_on `ll4`
+      >> fs[] >> rpt VAR_EQ_TAC
+      >> CONV_TAC(RAND_CONV(RAND_CONV(RAND_CONV(PURE_ONCE_REWRITE_CONV [GSYM(CONJUNCT1 LAPPEND)]))))
+      >> CONV_TAC(RATOR_CONV(RAND_CONV(RAND_CONV(RAND_CONV(PURE_ONCE_REWRITE_CONV [GSYM(CONJUNCT1 LAPPEND)])))))
+      >> PURE_ONCE_REWRITE_TAC[GSYM(CONJUNCT2 LAPPEND)]
+      >> simp[GSYM LAPPEND_ASSOC]
+      >> metis_tac[llist_upto_rules])
+QED
+
 val _ = export_theory();
