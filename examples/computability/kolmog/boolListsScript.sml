@@ -1113,12 +1113,11 @@ Theorem nblsnd_behav:
 Proof
   GEN_TAC >> strip_assume_tac bar_decomp >>
   rw[nblsnd_def,nblsnd0_Tpow,rich_listTheory.DROP_APPEND] >>
-  fs[nblsr_def, GSYM ADD1, nblsr_correct']
-  >- (‘n <= LENGTH x’ suffices_by simp[rich_listTheory.DROP_APPEND1] >>
-      CCONTR_TAC >> ‘LENGTH x < n’ by fs[] >>
-      ‘DROP n x = []’ by fs[DROP_NIL] >> ‘bar x' = []’ by fs[] >> fs[bar_def]) >>
-  ‘n2bl 0 = n2bl (bl2n (bar x))’ by fs[] >>
-  ‘[] = bar x’ by metis_tac[num_bool_inv,n2bl_zero] >> fs[bar_def]
+  fs[nblsr_def, GSYM ADD1, nblsr_correct'] >>
+  ‘n <= LENGTH x’ suffices_by simp[rich_listTheory.DROP_APPEND1] >>
+  CCONTR_TAC >> ‘LENGTH x < n’ by fs[] >>
+  ‘DROP n x = []’ by fs[DROP_LENGTH_TOO_LONG] >>
+  ‘bar x' = []’ by fs[] >> fs[bar_def]
 QED
 
 Definition nblTpow_def:
@@ -1237,10 +1236,8 @@ Proof
        rw[primrec_rules, primrec_pr_nblsnd0, primrec_ell])
 QED
 
-val checkpair_i_def = new_specification(
+Theorem checkpair_i_def[simp] = new_specification(
   "checkpair_i_def", ["checkpair_i"],
-  MATCH_MP unary_rec_fns_phi recfn_checkpair);
-val _ = export_rewrites ["checkpair_i_def"]
-
+  MATCH_MP unary_rec_fns_phi recfn_checkpair)
 
 val _ = export_theory();
