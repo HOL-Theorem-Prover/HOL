@@ -660,52 +660,219 @@ QED
 Theorem derives_starting_NIL[simp]:
   ∀x. derives G [] x ⇔ x = []
 Proof
-  simp[EQ_IMP_THM] >> Induct_on ‘RTC’
+  simp[EQ_IMP_THM] >> Induct_on ‘RTC’ >> rw[derive_def] >> fs[]
+QED
 
-Theorem follow_right_nullable:
-  ∀N0 N1 p0 p1 t. follow G N0 t ∧ derives G (p0 ++ [NT N0]) (p1 ++ [NT N1]) ⇒
-                  follow G N1 t
+Theorem derive_hits_NT_right:
+  derive G sf0 (p ++ [NT N]) ⇒ ∃p0 N0. sf0 = p0 ++ [NT N0]
 Proof
-  Induct_on ‘RTC’ >> simp[APPEND_EQ_CONS] >> rw[] >>
-  fs[APPEND_EQ_APPEND, LEFT_AND_OVER_OR, DISJ_IMP_THM, FORALL_AND_THM] >>
-  rename [‘derive _ _ sf’] >>
-  ‘∃p' N'. sf = p' ++ [NT N']’
-    by (Cases_on ‘sf’ >> fs[]
+  dsimp[derive_def, APPEND_EQ_APPEND, APPEND_EQ_CONS]
+QED
 
-  simp[derive_def, APPEND_EQ_APPEND, APPEND_EQ_CONS] >> dsimp[] >> rw[]
+Theorem derives_hits_NT_right:
+  derives G sf0 (p ++ [NT N]) ⇒ ∃p0 N0. sf0 = p0 ++ [NT N0]
+Proof
+  Induct_on ‘RTC’ >> rw[] >> metis_tac[derive_hits_NT_right]
+QED
 
+Theorem follow1 = follow_rules |> SPEC_ALL |> CONJUNCT1
+Theorem follow2 = follow_rules |> SPEC_ALL |> CONJUNCT2
+
+val IRULE = goal_assum o resolve_then Any mp_tac
+
+Theorem derive_2syms_cases:
+  derive G sf0 (p ++ [sym1; sym2] ++ s) ⇔
+  (∃N0 rhs p1 p2.
+     N0 ∈ FDOM G.rules ∧ rhs ∈ᶠ G.rules ' N0 ∧
+     sf0 = p1 ++ [NT N0] ++ p2 ++ [sym1;sym2] ++ s ∧
+     p = p1 ++ rhs ++ p2) ∨
+  (∃N0 rhs s1 s2.
+     N0 ∈ FDOM G.rules ∧ rhs ∈ᶠ G.rules ' N0 ∧
+     sf0 = p ++ [sym1;sym2] ++ s1 ++ [NT N0] ++ s2 ∧
+     s = s1 ++ rhs ++ s2) ∨
+  (∃N0 rhs p1.
+     N0 ∈ FDOM G.rules ∧ rhs ++ [sym1] ∈ᶠ G.rules ' N0 ∧
+     sf0 = p1 ++ [NT N0;sym2] ++ s ∧ p = p1 ++ rhs) ∨
+  (∃N0 rhs s1.
+     N0 ∈ FDOM G.rules ∧ sym2 :: rhs ∈ᶠ G.rules ' N0 ∧
+     sf0 = p ++ [sym1;NT N0] ++ s1 ∧ s = rhs ++ s1) ∨
+  (∃N0 p0 p1 s0 s1.
+     N0 ∈ FDOM G.rules ∧ p1 ++ [sym1; sym2] ++ s1 ∈ᶠ G.rules ' N0 ∧
+     sf0 = p0 ++ [NT N0] ++ s0 ∧ p = p0 ++ p1 ∧ s = s1 ++ s0) ∨
+  (∃N0.
+     N0 ∈ FDOM G.rules ∧ [] ∈ᶠ G.rules ' N0 ∧
+     sf0 = p ++ [sym1; NT N0; sym2] ++ s)
+
+Proof
+  dsimp[derive_def, APPEND_EQ_APPEND, APPEND_EQ_CONS] >> eq_tac >> rw[] >>
+  csimp[] >>
+  simp[APPEND_EQ_APPEND, APPEND_EQ_CONS] >> dsimp[]
+QED
+
+Theorem valid_ptree_derives_ptree_fringe:
+  ∀G pt. valid_ptree G pt ⇒ derives G [ptree_head pt] (ptree_fringe pt)
+Proof
+  ho_match_mp_tac valid_ptree_ind >> simp[pairTheory.FORALL_PROD] >> rw[] >>
+  irule (relationTheory.RTC_RULES |> SPEC_ALL |> CONJUNCT2) >>
+  qexists_tac ‘MAP ptree_head children’ >> conj_tac
+  >- simp[derive_def] >>
+  qpat_x_assum ‘MAP _ _ ∈ᶠ _’ (K ALL_TAC) >> fs[] >>
+  Induct_on ‘children’ >> simp[DISJ_IMP_THM, FORALL_AND_THM] >> rw[] >>
+  fs[] >> dxrule_all derives_paste_horizontally >> simp[]
+QED
+
+Theorem derives_ptree_E:
+  ∀sf0 sf. derives G sf0 sf ⇒
+           ∃ptl. (∀pt. MEM pt ptl ⇒ valid_ptree G pt) ∧
+                 MAP ptree_head ptl = sf0 ∧ FLAT (MAP ptree_fringe ptl) = sf
+Proof
+  Induct_on ‘RTC’ >> simp[] >> conj_tac
+  >- (qx_gen_tac ‘sf0’ >> qexists_tac‘MAP (λsym. Lf (sym, ARB)) sf0’ >>
+      simp[MAP_MAP_o, MEM_MAP, combinTheory.o_ABS_R, PULL_EXISTS] >>
+      simp[LIST_EQ_REWRITE, rich_listTheory.LENGTH_FLAT, MAP_MAP_o,
+           combinTheory.o_ABS_R] >> csimp[] >>
+      conj_tac >- (Induct_on ‘sf0’ >> simp[]) >>
+      Induct_on ‘sf0’ >>
+      simp[indexedListsTheory.LT_SUC, DISJ_IMP_THM, PULL_EXISTS]) >>
+  simp[derive_def, PULL_EXISTS]>> rw[] >>
+  fs[MAP_EQ_APPEND, PULL_EXISTS] >> rw[] >>
+  fs[DISJ_IMP_THM, FORALL_AND_THM] >>
+  rename [‘FLAT (MAP _ pxts) ++ FLAT (MAP _ midts) ++ FLAT (MAP _ sxts)’,
+         ‘MAP ptree_head midts ∈ᶠ _’ ] >>
+  qabbrev_tac ‘midpt = Nd (sym,ARB) midts’ >>
+  ‘valid_ptree G midpt’ by simp[Abbr‘midpt’] >>
+  first_assum IRULE >> simp[Abbr‘midpt’]>> metis_tac[]
+QED
+
+Theorem derives_ptree_IFF:
+  ∀sf0 sf. derives G sf0 sf ⇔
+           ∃ptl. (∀pt. MEM pt ptl ⇒ valid_ptree G pt) ∧
+                 MAP ptree_head ptl = sf0 ∧ FLAT (MAP ptree_fringe ptl) = sf
+Proof
+  simp[EQ_IMP_THM, FORALL_AND_THM] >> conj_tac >- metis_tac[derives_ptree_E] >>
+  simp[PULL_EXISTS] >> Induct >> simp[DISJ_IMP_THM, FORALL_AND_THM] >> rw[] >>
+  fs[] >>
+  ‘derives G [ptree_head h] (ptree_fringe h)’
+    by metis_tac[valid_ptree_derives_ptree_fringe] >>
+  dxrule_all derives_paste_horizontally >> simp[]
+QED
+
+
+Theorem followSet_alt:
+  followSet G sym = { tk |
+                      ∃pt px sx. valid_ptree G pt ∧
+                                 ptree_fringe pt = px ++ [sym; TOK tk] ++ sx }
+Proof
+  simp[followSet_def, EXTENSION, EQ_IMP_THM, PULL_EXISTS, FORALL_AND_THM] >>
+  rw[]
+  >- (drule_then (qx_choose_then ‘ptl’ strip_assume_tac) derives_ptree_E >>
+      qexists_tac ‘Nd (n,ARB) ptl’ >> simp[] >> metis_tac[]) >>
+  drule valid_ptree_derives_ptree_fringe >> simp[] >>
+  simp[SimpL “$==>”, Once relationTheory.RTC_CASES1] >> simp[APPEND_EQ_CONS] >>
+  simp[derive_def, PULL_EXISTS] >> simp[APPEND_EQ_CONS, PULL_EXISTS] >>
+  simp[GSYM APPEND_ASSOC, Excl "APPEND_ASSOC", Excl "LIST_EQ_SIMP_CONV"] >>
+  metis_tac[]
+QED
+
+Theorem FLAT_EQ_CONS:
+  ∀l h t.
+    FLAT l = h::t ⇔ ∃px e sx ep. l = px ++ [e] ++ sx ∧
+                                 FLAT px = [] ∧ e = h::ep ∧
+                                 t = ep ++ FLAT sx
+Proof
+  Induct >> simp[APPEND_EQ_CONS] >> dsimp[] >> rpt gen_tac >>
+  rename [‘h = []’, ‘h = eh :: _’] >> Cases_on ‘h’ >> simp[] >> metis_tac[]
+QED
+
+Theorem FLAT_EQ_SNOC:
+  ∀l h p.
+    FLAT l = p ++ [h] ⇔ ∃px e sx ep. l = px ++ [e] ++ sx ∧
+                                     FLAT sx = [] ∧ e = ep ++ [h] ∧
+                                     p = FLAT px ++ ep
+Proof
+  Induct using SNOC_INDUCT >>
+  simp[APPEND_EQ_CONS, SNOC_APPEND, APPEND_EQ_APPEND] >> dsimp[] >>
+  rpt gen_tac >> rename [‘l0 = [e]’, ‘l0 = []’] >>
+  Cases_on ‘l0’ using SNOC_CASES >> simp[]
+  >- (eq_tac >> rw[] >> metis_tac[APPEND_NIL, FLAT]) >>
+  eq_tac >> rw[] >> simp[]
+QED
+
+Theorem ptree_cases:
+  ∀pt. (∃s l. pt = Lf (s,l)) ∨ (∃s l ts. pt = Nd (s,l) ts)
+Proof
+  Cases >> simp[] >> metis_tac[pairTheory.pair_CASES]
+QED
+
+Theorem rightNTs_follow2:
+  ∀G pt pfx N0 N a.
+    valid_ptree G pt ∧ ptree_fringe pt = pfx ++ [NT N] ∧ ptree_head pt = NT N0 ∧
+    follow G N0 a ⇒ follow G N a
+Proof
+  ho_match_mp_tac valid_ptree_ind >> simp[pairTheory.FORALL_PROD] >> rw[] >>
+  fs[FLAT_EQ_SNOC] >> rw[] >> fs[MAP_EQ_APPEND] >> rw[] >>
+  fs[DISJ_IMP_THM, FORALL_AND_THM] >>
+  rename [‘syms ++ [NT N] = ptree_fringe midpt’] >>
+  qpat_x_assum ‘_ ++ _ = ptree_fringe midpt’ (assume_tac o SYM) >> fs[] >>
+  ‘∃Nsym. ptree_head midpt = NT Nsym’
+    by (Cases_on ‘midpt’ using ptree_cases >> fs[]) >>
+  fs[] >> ‘follow G Nsym a’ suffices_by simp[] >>
+  irule follow2 >> first_assum IRULE >> simp[] >> first_assum IRULE >>
+  simp[nullable_def] >> simp[derives_ptree_IFF] >> metis_tac[]
+QED
+
+Theorem ptrees_derive_2syms:
+  ∀pts px sym1 sym2 sx.
+    FLAT (MAP ptree_fringe pts) = px ++ [sym1; sym2] ++ sx ⇒
+    (∃pt px0 px1 sx0 sx1.
+       MEM pt pts ∧ ptree_fringe pt = px0 ++ [sym1; sym2] ++ sx0 ∧
+       px = px1 ++ px0 ∧ sx = sx0 ++ sx1) ∨
+    (∃tpx tsx pt1 pt2 tmids px0 px1 sx0 sx1.
+       pts = tpx ++ [pt1] ++ tmids ++ [pt2] ++ tsx ∧
+       ptree_fringe pt1 = px0 ++ [sym1] ∧ ptree_fringe pt2 = sym2 :: sx0 ∧
+       FLAT (MAP ptree_fringe tmids) = [] ∧
+       px = px1 ++ px0 ∧ sx = sx0 ++ sx1 ∧ FLAT (MAP ptree_fringe tpx) = px1 ∧
+       FLAT (MAP ptree_fringe tsx) = sx1)
+Proof
+  Induct_on ‘pts’ >> simp[] >> rpt gen_tac >>
+  simp[APPEND_EQ_APPEND, APPEND_EQ_CONS, PULL_EXISTS] >> dsimp[] >> rw[]
+  >- metis_tac[APPEND, APPEND_NIL]
+  >- (first_x_assum drule >> strip_tac >> rw[] >> metis_tac[APPEND_ASSOC])
+  >- (first_x_assum $ qspec_then ‘[]’ mp_tac >> simp[] >> rw[] >>
+      metis_tac[APPEND, APPEND_NIL])
+  >- (disj2_tac >> pop_assum mp_tac >>
+      simp[FLAT_EQ_CONS, MAP_EQ_APPEND, PULL_EXISTS] >> metis_tac[]) >>
+  metis_tac[APPEND, APPEND_NIL]
+QED
 
 (* needs "right" induction principle for RTC *)
+Theorem followSet_follow0:
+  ∀G pt a N px sx.
+     valid_ptree G pt ∧ ptree_fringe pt = px ++ [NT N; TOK a] ++ sx ⇒
+     follow G N a
+Proof
+  ho_match_mp_tac valid_ptree_ind >>
+  simp[pairTheory.FORALL_PROD, APPEND_EQ_CONS] >> rw[] >>
+  drule ptrees_derive_2syms >> strip_tac >- metis_tac[] >>
+  rw[] >> fs[DISJ_IMP_THM, FORALL_AND_THM] >> irule rightNTs_follow2 >>
+  first_assum IRULE >> simp[] >>
+  ‘∃N0. ptree_head pt1 = NT N0’ by (Cases_on ‘pt1’ using ptree_cases >> fs[]) >>
+  fs[] >> irule follow1 >> first_assum IRULE >>
+  rename [‘MAP ptree_head tpx ++ [NT N0] ++ MAP ptree_head tmids ++
+           [ptree_head pt2] ++ MAP ptree_head tsx ∈ᶠ _’] >>
+  qexists_tac ‘MAP ptree_head tmids ++ [ptree_head pt2] ++ MAP ptree_head tsx’>>
+  simp[] >> first_assum IRULE >> simp[firstSet_def] >>
+  simp[derives_ptree_IFF] >> CONV_TAC SWAP_EXISTS_CONV >>
+  qexists_tac ‘tmids ++ [pt2] ++ tsx’ >> simp[] >> metis_tac[]
+QED
+
+
 Theorem followSet_follow:
   ∀a N. a ∈ followSet G (NT N) ⇒ follow G N a
 Proof
-  simp[followSet_def, PULL_EXISTS] >>
-  Induct_on ‘RTC’ using relationTheory.RTC_STRONG_INDUCT_RIGHT1 >> rw[]
-  >- (irule (CONJUNCT1 (SPEC_ALL follow_rules)) >>
-      rename [‘N0 ∈ FDOM G.rules’, ‘pfx ++ [NT N1;TOK t] ++ sfx’] >>
-      qexistsl_tac [‘N0’, ‘pfx’, ‘TOK t :: sfx’] >> simp[] >>
-      full_simp_tac bool_ss [GSYM APPEND_ASSOC, APPEND]) >>
-  fs[derive_def] >> rw[] >> qpat_x_assum ‘_ ++ _ = _ ++ _’ mp_tac >>
-  simp[APPEND_EQ_APPEND, APPEND_EQ_CONS, PULL_EXISTS] >> rw[] >> fs[] >> rw[] >>
-  fs[APPEND_EQ_CONS] >> rw[] >> fs[]
-  >- (rename [‘_ = p0 ++ [NT N0] ++ p1 ++ [NT N1; TOK t] ++ s’] >>
-      first_x_assum (
-        qspecl_then [‘t’, ‘N1’, ‘p0 ++ [NT N0] ++ p1’, ‘s’] mp_tac
-        )>> simp[] >> metis_tac[])
-  >- (rename [‘_ = p0 ++ [NT N0; NT N1; TOK t] ++ s’] >>
-      first_x_assum (qspecl_then [‘t’, ‘N1’, ‘p0 ++ [NT N0]’, ‘s’] mp_tac) >>
-      simp[] >> metis_tac[])
-  >- (rename [‘_ = p ++ [NT N1; TOK t] ++ s’, ‘[NT N2] ∈ᶠ G.rules ' N1’] >>
-      ‘follow G N1 t’ by metis_tac[] >>
-      qspecl_then [‘G’, ‘[]’, ‘N2’, ‘[]’, ‘N1’, ‘t’] mp_tac
-                  (follow_rules |> SPEC_ALL |> CONJUNCT2 |> Q.GEN ‘G’) >>
-      simp[])
-  >- follow_rules
-
-
-
+  simp[followSet_alt, PULL_EXISTS] >> metis_tac[followSet_follow0]
 QED
-Definition augment_def:
+(* Definition augment_def:
   augment k v fm =
     case FLOOKUP fm k of
       NONE => fm |+ (k,v)
@@ -1331,5 +1498,5 @@ val _ =
 *)
 
 *)
-
+*)
 val _ = export_theory()
