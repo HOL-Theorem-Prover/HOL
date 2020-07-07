@@ -150,7 +150,7 @@ Termination
    RES_TAC THEN FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []
 End
 
-Definition ptree_fringe_def:
+Definition ptree_fringe_def[simp]:
   (ptree_fringe (Lf (t,_)) = [t]) ∧
   (ptree_fringe (Nd _ children) = FLAT (MAP ptree_fringe children))
 Termination
