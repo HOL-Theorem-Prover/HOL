@@ -3003,7 +3003,7 @@ Proof
          `count (4 ** n) DELETE 4 ** n = count (4 ** n)`
              by METIS_TAC [DELETE_NON_ELEMENT,IN_COUNT,LESS_EQ_REFL,NOT_LESS] \\
           RW_TAC std_ss [] \\
-          Q.PAT_X_ASSUM `SIGMA f s = Q` (K ALL_TAC) \\
+          Q.PAT_X_ASSUM `SIGMA _ _ = _` (K ALL_TAC) \\
           FULL_SIMP_TAC std_ss [GSYM IN_COUNT] \\
          `!i. Normal (&i / 2 pow n) = &i / 2 pow n` by METIS_TAC [] \\
           POP_ORW \\
@@ -3140,7 +3140,7 @@ Proof
   >> `count (4 ** n) DELETE 4 ** n = count (4 ** n)`
              by METIS_TAC [DELETE_NON_ELEMENT,IN_COUNT,LESS_EQ_REFL,NOT_LESS]
   >> RW_TAC std_ss []
-  >> Q.PAT_X_ASSUM `SIGMA f s = Q` (K ALL_TAC)
+  >> Q.PAT_X_ASSUM `SIGMA _ _ = _` (K ALL_TAC)
   >> FULL_SIMP_TAC std_ss [GSYM IN_COUNT]
   >> `!i. (\i. Normal (&i / 2 pow n) * measure m {x | x IN m_space m /\ Normal (&i / 2 pow n) <= f x /\ f x < (&i + 1) / 2 pow n}) i <> NegInf`
         by (RW_TAC std_ss []
