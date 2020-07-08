@@ -282,3 +282,16 @@ val _ = let
 in
   require_msg (check_result null) goalprint (fst o tac) G
 end
+
+val _ = let
+  open boolLib
+  val _ = tprint "PAT_ASSUM with type variables"
+  val asl = [“x:'a = y”, “u:'b = v”]
+  val p = mk_var("p", bool)
+  val G = (asl, p)
+  val tac = Tactical.PAT_ASSUM “_ = v:'b” MP_TAC
+  fun verdict [(asl',sg)] = tml_eq asl' asl andalso sg ~~ “(u:'b = v) ==> p”
+    | verdict _ = false
+in
+  require_msg (check_result verdict) goalprint (fst o tac) G
+end

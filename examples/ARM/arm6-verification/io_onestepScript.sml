@@ -1246,7 +1246,7 @@ val ONE_STEP_THM = store_thm("ONE_STEP_THM",
     \\ POP_ASSUM (fn th => FULL_SIMP_TAC std_ss [th])
     \\ IMP_RES_TAC IMAP_OUTPUT
     \\ POP_ASSUM (fn th => FULL_SIMP_TAC std_ss [th,Pstate_out_state])
-    \\ NTAC 2 (PAT_X_ASSUM `!x t. THE_PMAP init next out t x = z`
+    \\ NTAC 2 (PAT_X_ASSUM `!x t. THE_PMAP _ _ _ t x = _`
          (fn th => FULL_SIMP_TAC (srw_ss()) [th])));
 
 (*---------------------------------------------------------------------------

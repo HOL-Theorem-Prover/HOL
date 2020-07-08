@@ -632,9 +632,9 @@ end
  *---------------------------------------------------------------------------*)
 
 local
-  fun can_match_with_constants constants pat ob =
+  fun can_match_with_constants fixedtys constants pat ob =
     let
-      val (tm_inst, _) = ho_match_term [] empty_tmset pat ob
+      val (tm_inst, _) = ho_match_term fixedtys empty_tmset pat ob
       val bound_vars = map #redex tm_inst
     in
       null (op_intersect aconv constants bound_vars)
@@ -657,8 +657,11 @@ local
    fun gen tcl pat thfun (g as (asl,w)) =
      let
        val fvs = free_varsl (w::asl)
+       val patvars = free_vars pat
+       val in_both = op_intersect aconv fvs patvars
+       val fixedtys = itlist (union o type_vars_in_term) in_both []
      in
-       tcl (thfun o assert (can_match_with_constants fvs pat o concl))
+       tcl (thfun o assert (can_match_with_constants fixedtys fvs pat o concl))
      end g
 in
    val PAT_X_ASSUM = gen FIRST_X_ASSUM
