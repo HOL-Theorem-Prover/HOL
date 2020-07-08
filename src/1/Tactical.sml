@@ -706,7 +706,8 @@ local
    in
       (gl, (if is_neg w then NEG_DISCH ant else DISCH ant) o prf)
    end
-   handle HOL_ERR _ => raise ERR "DISCH_THEN" ""
+   handle HOL_ERR {message,origin_function, ...} =>
+          raise ERR "DISCH_THEN" (origin_function ^ ":" ^ message)
   val NOT_NOT_E = boolTheory.NOT_CLAUSES |> CONJUNCT1
   val NOT_NOT_I = NOT_NOT_E |> GSYM
   val NOT_IMP_F = IMP_ANTISYM_RULE (SPEC_ALL boolTheory.F_IMP)
