@@ -272,3 +272,13 @@ in
   require_msg (check_result (list_eq goal_eq expected)) goalprint
               (fst o first_fv_term Cases) goal
 end
+
+val _ = let
+  open boolLib
+  val _ = tprint "Trivial resolve_then"
+  val ith = AND_CLAUSES |> SPEC_ALL |> CONJUNCTS |> hd |> GEN “t:bool”
+  val G = ([] : term list, “T /\ p <=> p”)
+  val tac = VALID (goal_assum (resolve_then Any mp_tac ith))
+in
+  require_msg (check_result null) goalprint (fst o tac) G
+end
