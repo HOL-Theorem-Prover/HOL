@@ -430,7 +430,7 @@ Proof
                         ({x | &k / 2 pow N <= u x /\ u x < (&k + 1) / 2 pow N} INTER space B) (f x))’
      >- (GEN_TAC >> FIRST_X_ASSUM MATCH_MP_TAC \\
          METIS_TAC [IN_MEASURABLE_BOREL_ALL]) >> Rewr)
- (* core proof *) 
+ (* core proof *)
  >> rpt STRIP_TAC
  >> Know ‘pos_fn_integral (space B,subsets B,distr M f) (indicator_fn s) =
           measure (space B,subsets B,distr M f) s’

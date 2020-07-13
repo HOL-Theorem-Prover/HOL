@@ -2961,7 +2961,7 @@ QED
 (*******************************************************************************)
 
 Theorem lemma_fn_seq_measurable:
-    !m f n. measure_space m /\ (!x. x IN m_space m ==> 0 <= f x) /\ 
+    !m f n. measure_space m /\ (!x. x IN m_space m ==> 0 <= f x) /\
             f IN measurable (m_space m,measurable_sets m) Borel ==>
             fn_seq m f n IN measurable (m_space m,measurable_sets m) Borel
 Proof
@@ -7372,7 +7372,7 @@ Proof
           by METIS_TAC [] >> POP_ORW \\
        MATCH_MP_TAC IN_MEASURABLE_BOREL_MIN >> art [] \\
        CONJ_TAC >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS' >> art []) \\
-       MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST' >> art [],       
+       MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST' >> art [],
        (* goal 2 (of 2) *)
        RW_TAC std_ss [ext_mono_increasing_suc] \\
        reverse (Cases_on `x IN N`)

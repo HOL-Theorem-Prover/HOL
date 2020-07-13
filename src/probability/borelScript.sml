@@ -5415,7 +5415,7 @@ Proof
      Know `indicator (univ(:real) DIFF s) = (\x. 1 - indicator s x)`
      >- (SIMP_TAC std_ss [indicator] >> ABS_TAC \\
          SIMP_TAC std_ss [IN_DIFF, IN_UNIV] >> COND_CASES_TAC \\
-         FULL_SIMP_TAC real_ss []) >> Rewr' \\               
+         FULL_SIMP_TAC real_ss []) >> Rewr' \\
      ONCE_REWRITE_TAC [METIS [] ``(\x. 1 - indicator s x) =
                         (\x. (\x. 1) x - (\x. indicator s x) x)``] \\
      GEN_TAC >> MATCH_MP_TAC INTEGRABLE_SUB >> CONJ_TAC >|
@@ -6208,7 +6208,7 @@ Theorem AE_IMP_MEASURABLE_SETS :
 Proof
     RW_TAC std_ss [complete_measure_space_def]
  >> fs [AE_ALT]
- >> ‘{x | x ∈ m_space m ∧ P x} = m_space m DIFF {x | x ∈ m_space m ∧ ~P x}’
+ >> ‘{x | x IN m_space m /\ P x} = m_space m DIFF {x | x IN m_space m /\ ~P x}’
       by SET_TAC [] >> POP_ORW
  >> MATCH_MP_TAC MEASURE_SPACE_COMPL >> art []
  >> FIRST_X_ASSUM irule
