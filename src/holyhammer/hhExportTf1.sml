@@ -143,10 +143,10 @@ fun tf1_logicdef oc (thy,name) =
 fun tf1_quantdef oc (thy,name) =
   let
     val thm = assoc name [("!", FORALL_THM),("?", EXISTS_THM)]
-    val (tm,_) = translate_thm thm
+    val statement = translate_thm thm
   in
     os oc (tffpar ^ escape ("quantdef." ^ name) ^ ",axiom,");
-    tf1_formula oc tm; osn oc ")."
+    tf1_formula oc statement; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
@@ -174,17 +174,11 @@ fun tf1_cvdef oc (tm,a) =
 fun tf1_thmdef role oc (thy,name) =
   let
     val thm = DB.fetch thy name
-    val (cj,defl) = translate_thm thm
+    val statement = translate_thm thm
     val tf1name = name_thm (thy,name)
-    fun f i def =
-      (
-      os oc (tffpar ^ name_def i tf1name ^ ",axiom,");
-      tf1_formula oc def; osn oc ")."
-      )
   in
-    ignore (mapi f defl);
     os oc (tffpar ^ tf1name ^ "," ^ role ^ ",");
-    tf1_formula oc cj; osn oc ")."
+    tf1_formula oc statement; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
@@ -228,12 +222,9 @@ fun tf1_thmdef_boolext oc =
   end
 
 fun tf1_thmdef_caster oc (name,thm) =
-  let
-    val (cj,defl) = translate_thm thm
-    val _ = if null defl then () else raise ERR "tf1_thmdef_caster" ""
-  in
+  let val statement = translate_thm thm in
     os oc (tffpar ^ name_thm (hocaster_extra,name) ^ ",axiom,");
-    tf1_formula oc cj; osn oc ")."
+    tf1_formula oc statement; osn oc ")."
   end
 
 fun tf1_thmdef_combin oc (name,tm) =
@@ -254,7 +245,7 @@ fun tf1_thmdef_extra oc =
 val tyopl_extra = tyopset_of_tyl [``:bool -> bool``]
 
 val app_p_cval =
-  let val tml = map (fst o translate_thm o snd) (app_axioml @ p_axioml) in
+  let val tml = map (translate_thm o snd) (app_axioml @ p_axioml) in
     mk_fast_set tma_compare (List.concat (map collect_arity_noapp tml))
   end
 
@@ -284,8 +275,8 @@ fun tf1_arityeq oc (cv,a) =
 
 fun collect_tml thmidl =
   let fun f x =
-    let val (formula,defl) = translate_thm (uncurry DB.fetch x) in
-      mk_term_set (List.concat (map atoms (formula :: defl)))
+    let val statement = translate_thm (uncurry DB.fetch x) in
+      mk_term_set (atoms statement)
     end
   in
     mk_term_set (List.concat (map f thmidl))

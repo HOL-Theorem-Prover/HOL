@@ -224,8 +224,7 @@ val boolop_cval =
 fun mk_combin_thm thmname fvname =
   let
     val thm = DB.fetch "combin" thmname
-    val (tm0,defl) = translate_thm thm
-    val _ = if null defl then () else raise ERR "mk_combin_thm" ""
+    val tm0 = translate_thm thm
     val oper = (fst o strip_comb o lhs o snd o strip_forall) tm0
     val lhs_combin_conv = STRIP_QUANT_CONV (LHS_CONV APP_CONV_STRIPCOMB)
     val tm1 = (rhs o concl o lhs_combin_conv) tm0

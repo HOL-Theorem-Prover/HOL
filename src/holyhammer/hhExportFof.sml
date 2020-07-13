@@ -126,10 +126,10 @@ fun fof_logicdef oc (thy,name) =
 fun fof_quantdef oc (thy,name) =
   let
     val thm = assoc name [("!", FORALL_THM),("?", EXISTS_THM)]
-    val (tm,_) = translate_thm thm
+    val statement = translate_thm thm
   in
     os oc (fofpar ^ escape ("reserved.quant." ^ name) ^ ",axiom,");
-    fof_formula oc tm; osn oc ")."
+    fof_formula oc statement; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
@@ -139,21 +139,15 @@ fun fof_quantdef oc (thy,name) =
 fun fof_thmdef role oc (thy,name) =
   let
     val thm = DB.fetch thy name
-    val (statement,defl) = translate_thm thm
+    val statement = translate_thm thm
     val fofname = name_thm (thy,name)
-    fun f i def =
-      (
-      os oc (fofpar ^ name_def i fofname ^ ",axiom,");
-      fof_formula oc def; osn oc ")."
-      )
   in
-    ignore (mapi f defl);
     os oc (fofpar ^ fofname ^ "," ^ role ^ ",");
     fof_formula oc statement; osn oc ")."
   end
 
 val app_p_cval =
-  let val tml = map (fst o translate_thm o snd) (app_axioml @ p_axioml) in
+  let val tml = map (translate_thm o snd) (app_axioml @ p_axioml) in
     mk_fast_set tma_compare (List.concat (map collect_arity_noapp tml))
   end
 
@@ -184,10 +178,7 @@ fun fof_thmdef_boolext oc =
   end
 
 fun fof_thmdef_caster oc (name,thm) =
-  let
-    val (statement,defl) = translate_thm thm
-    val _ = if null defl then () else raise ERR "fof_thmdef_caster" ""
-  in
+  let val statement = translate_thm thm in
     os oc (fofpar ^ escape ("reserved.ho." ^ name) ^ ",axiom,");
     fof_formula oc statement; osn oc ")."
   end
@@ -227,8 +218,8 @@ fun fof_arityeq oc (cv,a) =
 
 fun collect_tml thmidl =
   let fun f x =
-    let val (formula,defl) = translate_thm (uncurry DB.fetch x) in
-      mk_term_set (List.concat (map atoms (formula :: defl)))
+    let val statement = translate_thm (uncurry DB.fetch x) in
+      mk_term_set (atoms statement)
     end
   in
     mk_term_set (List.concat (map f thmidl))
@@ -335,10 +326,10 @@ fof_export_chainy chainydir thyl;
 
 fun tml_of_pb (cj,namethml) =
   let
-    val tml_cj = (op ::) (translate cj)
-    val tmll_axl = map ((op ::) o translate_thm o snd) namethml
+    val cjfof = translate cj
+    val thmlfof = map (translate_thm o snd) namethml
   in
-    mk_term_set (tml_cj @ List.concat (tmll_axl))
+    mk_term_set (cjfof :: thmlfof)
   end
 
 fun collect_arity_pb (cj,namethml) =
@@ -348,26 +339,18 @@ fun collect_arity_pb (cj,namethml) =
 
 fun fof_cjdef oc cj =
   let
-    val (statement,defl) = translate cj
+    val statement = translate cj
     val fofname = "conjecture"
-    fun f i def =
-      (os oc (fofpar ^ name_def i fofname ^ ",axiom,");
-       fof_formula oc def; osn oc ").")
   in
-    ignore (mapi f defl);
     os oc (fofpar ^ fofname ^ ",conjecture,");
     fof_formula oc statement; osn oc ")."
   end
 
 fun fof_axdef oc (name,thm) =
   let
-    val (statement,defl) = translate_thm thm
+    val statement = translate_thm thm
     val fofname = escape ("thm." ^ name)
-    fun f i def =
-      (os oc (fofpar ^ name_def i fofname  ^ ",axiom,");
-       fof_formula oc def; osn oc ").")
   in
-    ignore (mapi f defl);
     os oc (fofpar ^ fofname ^ ",axiom,");
     fof_formula oc statement; osn oc ")."
   end

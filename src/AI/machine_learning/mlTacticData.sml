@@ -105,7 +105,6 @@ fun dec_goal dec_tm =
   Option.map (fn (w,asl) => (asl,w)) o
   Option.mapPartial List.getItem o
   list_decode dec_tm
-
 fun enc_goal_list enc_tm = list_encode (enc_goal enc_tm)
 fun dec_goal_list dec_tm = list_decode (dec_goal dec_tm)
 val enc_fea = Integer

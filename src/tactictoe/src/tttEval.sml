@@ -114,6 +114,7 @@ fun print_time (name,t) = print_endline (name ^ " time: " ^ rts_round 6 t)
 
 fun ttt_clean_eval () = clean_rec_dir (tactictoe_dir ^ "/tnnex")
 
+(* TODO: tnnex as S-expression *)
 fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
   let
     val thmid = current_theory () ^ "_" ^ its (!savestate_level - 1)
@@ -251,7 +252,7 @@ aiLib.debug_flag := false;
 tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
-val _ = run_evalscript_thyl "june23" (true,30) (NONE,NONE) thyl;
+val _ = run_evalscript_thyl "july13" (true,30) (NONE,NONE) thyl;
 val tnn_value = train_value 0.95 "value";
 val tnn_policy = train_policy 0.95 "policy";
 val _ = run_evalscript_thyl "june23_tnn" (true,30) (SOME "value", SOME "policy") thyl;

@@ -27,7 +27,7 @@ fun operl_of_term tm =
     val arity = length argl
   in
     (oper,arity) :: List.concat (map operl_of_term argl)
-  end;
+  end
 
 val oper_compare = cpl_compare Term.compare Int.compare;
 

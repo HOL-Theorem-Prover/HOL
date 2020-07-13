@@ -143,10 +143,10 @@ fun th1_logicdef oc (thy,name) =
 fun th1_quantdef oc (thy,name) =
   let
     val thm = assoc name [("!", FORALL_THM),("?", EXISTS_THM)]
-    val tm = th1_translate_thm thm
+    val statement = th1_translate_thm thm
   in
     os oc (thfpar ^ escape ("quantdef." ^ name) ^ ",axiom,");
-    th1_formula oc tm; osn oc ")."
+    th1_formula oc statement; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
@@ -171,10 +171,10 @@ fun th1_cvdef oc c =
 fun th1_thmdef role oc (thy,name) =
   let
     val thm = DB.fetch thy name
-    val tm = th1_translate_thm thm
+    val statement = th1_translate_thm thm
   in
     os oc (thfpar ^ (name_thm (thy,name)) ^ "," ^ role ^ ",");
-    th1_formula oc tm; osn oc ")."
+    th1_formula oc statement; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
