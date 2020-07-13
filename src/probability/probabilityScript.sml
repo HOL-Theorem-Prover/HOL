@@ -72,7 +72,7 @@ val events_def = Define `events = measurable_sets`;
 val prob_def = Define `prob = measure`;
 
 val prob_space_def = Define
-   `prob_space p <=> measure_space p /\ (measure p (p_space p) = 1)`;
+   `prob_space p <=> measure_space p /\ (measure p (m_space p) = 1)`;
 
 val probably_def = Define
    `probably p e <=> e IN events p /\ (prob p e = 1)`;
@@ -303,11 +303,11 @@ val PROB_FINITE = store_thm
     RW_TAC std_ss [prob_space_def, prob_def, events_def, positive_not_infty, MEASURE_SPACE_POSITIVE]
  >> RW_TAC std_ss [GSYM le_infty,GSYM extreal_lt_def]
  >> MATCH_MP_TAC let_trans
- >> Q.EXISTS_TAC `measure p (p_space p)`
+ >> Q.EXISTS_TAC `measure p (m_space p)`
  >> reverse (RW_TAC std_ss [])
  >- METIS_TAC [num_not_infty,lt_infty]
  >> METIS_TAC [MEASURE_SPACE_SUBSET_MSPACE, INCREASING, MEASURE_SPACE_INCREASING,
-               MEASURE_SPACE_MSPACE_MEASURABLE, p_space_def]);
+               MEASURE_SPACE_MSPACE_MEASURABLE]);
 
 val PROB_LT_POSINF = store_thm
   ("PROB_LT_POSINF",
@@ -1088,7 +1088,7 @@ val distribution_prob_space = store_thm
                     IN_PREIMAGE, IN_BIGUNION] \\
      METIS_TAC [IN_INTER, IN_PREIMAGE])
  >> Suff `PREIMAGE X (space s) INTER p_space p = p_space p`
- >- RW_TAC std_ss [prob_def]
+ >- RW_TAC std_ss [prob_def, p_space_def]
  >> FULL_SIMP_TAC std_ss [IN_FUNSET, EXTENSION, IN_PREIMAGE, IN_INTER]
  >> METIS_TAC []);
 
@@ -1100,7 +1100,7 @@ Theorem uniform_distribution_prob_space :
 Proof
     RW_TAC std_ss []
  >> `p_space p <> {}`
-      by METIS_TAC [MEASURE_EMPTY, EVAL ``0 <> 1:extreal``, prob_space_def]
+      by METIS_TAC [MEASURE_EMPTY, EVAL ``0 <> 1:extreal``, prob_space_def, p_space_def]
  >> `space s <> {}`
       by (FULL_SIMP_TAC std_ss [random_variable_def, IN_FUNSET,
                                 IN_MEASURABLE, space_def] \\
@@ -1111,7 +1111,7 @@ Proof
      CCONTR_TAC >> fs [extreal_11]) >> DISCH_TAC
  >> `&CARD (space s) <> PosInf /\ &CARD (space s) <> NegInf`
       by METIS_TAC [extreal_of_num_def, extreal_not_infty]
- >> reverse (RW_TAC std_ss [prob_space_def, measure_def, PSPACE])
+ >> reverse (RW_TAC std_ss [prob_space_def, measure_def, m_space_def, PSPACE])
  >- RW_TAC std_ss [uniform_distribution_def, div_refl]
  >> MATCH_MP_TAC finite_additivity_sufficient_for_finite_spaces
  >> CONJ_TAC >- FULL_SIMP_TAC std_ss [random_variable_def, IN_MEASURABLE]
@@ -7688,7 +7688,7 @@ QED
 Theorem expectation_distribution :
     !p X f. prob_space p /\ random_variable X p Borel /\ f IN measurable Borel Borel ==>
            (expectation p (f o X) =
-            expectation (space Borel,subsets Borel,distribution p X) f) /\
+            integral (space Borel,subsets Borel,distribution p X) f) /\
            (integrable p (f o X) <=>
             integrable (space Borel,subsets Borel,distribution p X) f)
 Proof
@@ -7743,8 +7743,8 @@ Proof
  >> MP_TAC (Q.SPECL [‘p’, ‘X (n :num)’, ‘\x. x’] expectation_distribution)
  >> RW_TAC std_ss [o_DEF]
  >> ‘!n. X n = (\x. X n x)’ by METIS_TAC [ETA_THM] >> POP_ORW
- >> Suff ‘expectation (space Borel,subsets Borel,distribution p (X 0)) (\x. x) =
-          expectation (space Borel,subsets Borel,distribution p (X n)) (\x. x)’
+ >> Suff ‘integral (space Borel,subsets Borel,distribution p (X 0)) (\x. x) =
+          integral (space Borel,subsets Borel,distribution p (X n)) (\x. x)’
  >- rw []
  (* applying integral_cong_measure *)
  >> ‘prob_space (space Borel,subsets Borel,distribution p (X 0)) /\
