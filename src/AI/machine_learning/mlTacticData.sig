@@ -13,7 +13,7 @@ sig
   type stac = string
   type call = 
     {
-    stac : stac, ortho : stac, nntm : term, time : real,
+    stac : stac, ortho : stac, time : real,
     ig : goal, ogl : goal list,
     loc : (string * int) * string, 
     fea : mlFeature.fea

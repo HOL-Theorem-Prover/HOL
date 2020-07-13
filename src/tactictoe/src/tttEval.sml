@@ -32,6 +32,7 @@ fun extract_value tree =
     basicex_to_tnnex (map (fn x => (get_valuetm x, is_win x)) nodel)
   end
 
+(*
 (* -------------------------------------------------------------------------
    Policy examples
    ------------------------------------------------------------------------- *)
@@ -99,7 +100,7 @@ let val thml =
 
 (* results should be (tm,1.0) or (tm,0.0) where tm in the encoding of
 a theorem *)
-
+*)
 (* -------------------------------------------------------------------------
    Evaluation function
    ------------------------------------------------------------------------- *)
@@ -119,7 +120,7 @@ fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
     val b = !hide_flag
     val _ = hide_flag := false
     val tnnex_dir = tactictoe_dir ^ "/tnnex" 
-    val _ = mkDir_err tnnexdir
+    val _ = mkDir_err tnnex_dir
     val value_dir = tnnex_dir ^ "/value"
     val policy_dir = tnnex_dir ^ "/policy"
     val thmpol_dir = tnnex_dir ^ "/thmpol"
@@ -131,9 +132,9 @@ fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
     val _ = if not (isSome vnno) andalso not (isSome pnno) then
       (case status of Proof _ => 
         (
-        write_tnnex (value_dir ^ "/" ^ thmid) (extract_value tree);
-        write_tnnex (policy_dir ^ "/" ^ thmid) (extract_policy tree);
-        write_tnnex (thmpol_dir ^ "/" ^ thmid) (extract_thmpol tree)
+        write_tnnex (value_dir ^ "/" ^ thmid) (extract_value tree)
+       (* write_tnnex (policy_dir ^ "/" ^ thmid) (extract_policy tree);
+        write_tnnex (thmpol_dir ^ "/" ^ thmid) (extract_thmpol tree) *)
         )
       | _ => ())
       else ()
@@ -371,7 +372,8 @@ compare_stats ["june15"] "june15_tnn";
    Training
    ------------------------------------------------------------------------ *)
 
-     (* (List.concat (map operl_of_term (map fst (List.concat exl)))) *)
+fun operl_of_tnnex exl =
+  List.concat (map operl_of_term (map fst (List.concat exl)))
 
 fun train_dir pct name =
   let

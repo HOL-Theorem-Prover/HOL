@@ -99,10 +99,7 @@ fun record_tactic (tac,stac) g =
     if op_mem goal_eq g gl then () else
     calls_glob := 
       {
-      stac = stac, 
-      ortho = stac,
-      nntm = T,
-      time = t,
+      stac = stac, ortho = stac, time = t,
       ig = g, ogl = gl, 
       loc = ((current_theory (), (!savestate_level) - 1), !name_glob),
       fea = fea_of_goal true g
@@ -202,8 +199,7 @@ fun end_record_proof name g =
       if !record_ortho_flag
       then map (orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))) l1
       else l1
-    val l3 = map update_nntm l2
-    val newtacdata = foldl ttt_update_tacdata tacdata l3
+    val newtacdata = foldl ttt_update_tacdata tacdata l2
   in
     debug ("saving " ^ int_to_string (length l2) ^ " labels");
     tacdata_glob := newtacdata

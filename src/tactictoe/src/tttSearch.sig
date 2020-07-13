@@ -21,7 +21,7 @@ sig
   datatype proofstatus =  Proof of string | ProofSaturated | ProofTimeout
 
   type stac_record =
-    {stac : string, astac : string, stactm : term,
+    {stac : string, astac : string,
      svis : real, ssum : real, stacstatus : stacstatus}
   type goal_record =
     {
@@ -37,7 +37,7 @@ sig
     }
   type tree = ((int * int) list, node) Redblackmap.dict
 
-  val search : (goal -> ((string * string) * term) list) * 
+  val search : (goal -> (string * string) list) * 
     (tnn option * tnn option) -> 
     goal -> proofstatus * tree
 

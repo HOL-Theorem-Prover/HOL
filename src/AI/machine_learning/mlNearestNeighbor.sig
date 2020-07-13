@@ -22,8 +22,6 @@ sig
   val callknn: symweight * call afea -> int -> fea -> call list
   val add_calldep:
     (goal, call list) Redblackmap.dict -> int -> call list -> call list
-  val tacnnknn : symweight * (stac * term) afea -> int -> fea -> 
-    (stac * term) list
 
   (* for comparison with tree neural networks *)
   type 'a knnpred = (symweight * term afea) * (term, 'a) Redblackmap.dict

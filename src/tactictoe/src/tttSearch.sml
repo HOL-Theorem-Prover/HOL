@@ -57,7 +57,7 @@ fun string_of_searchstatus x = case x of
    ------------------------------------------------------------------------- *)
 
 type stac_record =
-  {stac : string, astac : string, stactm : term,
+  {stac : string, astac : string,
    svis : real, ssum : real, stacstatus : stacstatus}
 
 type goal_record =
@@ -119,6 +119,7 @@ fun backstatus_node node = case #nodestatus node of
    Policy re-ordering using policy network
    ------------------------------------------------------------------------- *)
 
+(*
 fun reorder_stacl g pnn stacl =
   let 
     fun f x = mask_unknown_policy pnn (nntm_of_gstactm (g,x))
@@ -134,22 +135,22 @@ fun reorder_stacv g pnn stacv =
   in
     Vector.fromList (reorder_stacl g pnn stacl1 @ stacl2)
   end
+*)
 
 (* -------------------------------------------------------------------------
    Node creation and backup
    ------------------------------------------------------------------------- *)
 
-fun stac_create ((astac,stac),stactm) =
-  {stac = stac, astac = astac, stactm = stactm, 
-   svis = 0.0, ssum = 0.0, stacstatus = StacFresh}
+fun stac_create (astac,stac) =
+  {stac = stac, astac = astac, svis = 0.0, ssum = 0.0, stacstatus = StacFresh}
 
 fun goal_create (pred as (tacpred,(vnno,pnno))) g =
   let 
     val stacv1 = Vector.fromList (map stac_create (tacpred g)) 
     val stacv2 = 
-      if isSome pnno 
+      (* if isSome pnno 
       then total_time reorder_time (reorder_stacv g (valOf pnno)) stacv1
-      else stacv1
+      else *) stacv1
   in
     {
     goal = g, gvis = 0.0, gsum = 0.0,
@@ -163,10 +164,10 @@ fun node_update tree (reward,stacstatus) (id,(gn,stacn)) =
   let
     val {nvis,nsum,goalv,parentd,...} = dfind id tree
     val {goal,gvis,gsum,stacv,siblingd,...} = Vector.sub (goalv,gn)
-    val {stac,astac,stactm,svis,ssum,...} = Vector.sub (stacv,stacn)
+    val {stac,astac,svis,ssum,...} = Vector.sub (stacv,stacn)
     (* update stacv *)
     val newstacrec =
-      {stac = stac, astac = astac, stactm = stactm,
+      {stac = stac, astac = astac,
        svis = svis + 1.0, ssum = ssum + reward, stacstatus = stacstatus}
     val newstacv = Vector.update (stacv,stacn,newstacrec)
     (* update goalv *)

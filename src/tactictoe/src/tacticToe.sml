@@ -46,7 +46,7 @@ fun select_tacfea tacdata gfea =
     val symweight = learn_tfidf callfea
     val sel1 = callknn (symweight,callfea) (!ttt_presel_radius) gfea
     val sel2 = add_calldep (#calldep tacdata) (!ttt_presel_radius) sel1
-    val tacfea = map (fn x => ((#ortho x, #nntm x), #fea x)) sel2
+    val tacfea = map (fn x => (#ortho x, #fea x)) sel2
   in
     (symweight,tacfea)
   end
@@ -83,13 +83,12 @@ fun main_tactictoe (thmdata,tacdata) tnno goal =
         let
           val thmidl = thmpred (!ttt_thmlarg_radius) g
           val l = fea_of_goal true g
-          val stacnnl1 = tacnnknn (tacsymweight,tacfea) (!ttt_presel_radius) l
-          val stacnnl2 = 
-            if metis_flag then 
-              mk_sameorder_set (fst_compare String.compare) 
-                ((metis_stac, metis_nntm) :: stacnnl1)
-            else mk_sameorder_set (fst_compare String.compare) stacnnl1
-          val istacl = inst_stacnnl (thmidl,g) stacnnl2 
+          val stacl1 = tacknn (tacsymweight,tacfea) (!ttt_presel_radius) l
+          val stacl2 = 
+            if metis_flag 
+            then mk_sameorder_set String.compare (metis_stac :: stacl1)
+            else stacl1
+          val istacl = inst_stacl (thmidl,g) stacl2 
         in
           tac_cache := dadd g istacl (!tac_cache); istacl
         end

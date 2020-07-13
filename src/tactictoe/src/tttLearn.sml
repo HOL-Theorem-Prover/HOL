@@ -199,16 +199,6 @@ fun inst_stacl (thmidl,g) stacl =
     List.mapPartial (inst_stac (thmls,g)) stacl
   end
 
-fun inst_stacnnl (thmidl,g) stacnnl = 
-  let 
-    val thmls = thmls_of_thmidl thmidl
-    fun f (stac,nntm) = case inst_stac (thmls,g) stac of
-        NONE => NONE
-      | SOME r => SOME (r,nntm)
-  in
-    List.mapPartial f stacnnl
-  end
-
 (* -------------------------------------------------------------------------
    Orthogonalization
    ------------------------------------------------------------------------- *)
@@ -246,7 +236,7 @@ val ortho_predthm_time = ref 0.0
 val ortho_teststac_time = ref 0.0
 
 fun orthogonalize (thmdata,tacdata,(tacsymweight,tacfea)) 
-  (call as {stac,ortho,nntm,time,ig,ogl,loc,fea}) =
+  (call as {stac,ortho,time,ig,ogl,loc,fea}) =
   let
     val _ = debug "predict tactics"
     val stacl1 = total_time ortho_predstac_time 
@@ -265,24 +255,10 @@ fun orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))
     val _ = ortho_teststac_time := !ortho_teststac_time + t
   in
     case neworthoo of NONE => call | SOME newortho =>
-      {stac = stac, ortho = newortho, nntm = nntm, time = time, 
-       ig = ig, ogl = ogl,
-       loc = loc, fea = fea}
+      {stac = stac, ortho = newortho, time = time, 
+       ig = ig, ogl = ogl, loc = loc, fea = fea}
   end
   handle Interrupt => raise Interrupt | _ =>  
     (debug "error: orthogonalize"; call)
-
-fun update_nntm (call as {stac,ortho,nntm,time,ig,ogl,loc,fea}) =
-  {stac = stac,
-   ortho = ortho, 
-   nntm = nntm_of_applyexp (extract_applyexp (extract_smlexp ortho)),
-   time = time, 
-   ig = ig, ogl = ogl,
-   loc = loc, fea = fea}
-  handle Interrupt => raise Interrupt | _ => 
-    (debug "error: update_nntm"; call)
-
-
-
 
 end (* struct *)
