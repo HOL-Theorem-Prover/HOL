@@ -37,8 +37,8 @@ sig
     }
   type tree = ((int * int) list, node) Redblackmap.dict
 
-  val search : (goal -> (string * string) list) * 
-    (tnn option * tnn option) -> 
+  val search : (goal -> (string * string) list) *
+    (tnn option * tnn option) ->
     goal -> proofstatus * tree
 
 end

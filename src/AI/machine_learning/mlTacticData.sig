@@ -11,11 +11,11 @@ sig
 
   (* tactic data *)
   type stac = string
-  type call = 
+  type call =
     {
     stac : stac, ortho : stac, time : real,
     ig : goal, ogl : goal list,
-    loc : (string * int) * string, 
+    loc : (string * int) * string,
     fea : mlFeature.fea
     }
   val call_compare : call * call -> order
@@ -33,7 +33,7 @@ sig
   val import_calls : string -> call list
   val import_tacdata : string list -> tacdata
   val export_tacdata : string -> tacdata -> unit
- 
+
   (* tactictoe database *)
   val ttt_tacdata_dir : string
   val exists_tacdata_thy : string -> bool

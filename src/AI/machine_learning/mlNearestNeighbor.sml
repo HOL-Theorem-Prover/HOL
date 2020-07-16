@@ -12,7 +12,7 @@ open HolKernel Abbrev aiLib mlFeature mlThmData mlTacticData
 
 val ERR = mk_HOL_ERR "mlNearestNeighbor"
 
-type symweight = (int, real) Redblackmap.dict  
+type symweight = (int, real) Redblackmap.dict
 type 'a afea = ('a * fea) list
 val inter_time = ref 0.0
 val dfind_time = ref 0.0
@@ -36,10 +36,10 @@ fun knn_dist symweight feao feap =
    ------------------------------------------------------------------------ *)
 
 fun knn_sortu cmp n (symweight,feav) feao =
-  let 
+  let
     fun g x = SOME (x, dfind x symweight) handle NotFound => NONE
     val feaosymweight = dnew Int.compare (List.mapPartial g feao)
-    fun f (x,feap) = (x, knn_dist feaosymweight feao feap) 
+    fun f (x,feap) = (x, knn_dist feaosymweight feao feap)
   in
     best_n_rmaxu cmp n (map f feav)
   end
@@ -90,9 +90,9 @@ fun callknn (symweight,callfea) n fea =
 
 fun dep_call_g rl loopd calldep g =
   if dmem g loopd then () else
-  let 
+  let
     val newloopd = dadd g () loopd
-    val calls = dfind g calldep handle _ => [] 
+    val calls = dfind g calldep handle _ => []
     val _ = rl := calls @ (!rl)
     val newgl = mk_fast_set goal_compare (List.concat (map #ogl calls))
   in
@@ -100,7 +100,7 @@ fun dep_call_g rl loopd calldep g =
   end
 
 fun dep_call calldep call =
-  let 
+  let
     val rl = ref []
     val gl = #ogl call
     val loopd = dempty goal_compare

@@ -58,15 +58,15 @@ fun string_of_pretty pretty =
   in
     PolyML.prettyPrint (f,80) pretty;
     respace (String.concatWith " " (rev (!acc)))
-  end 
+  end
 
 fun string_of_print p = string_of_pretty ((dest_print p) 80)
 
 fun string_of_type ty =
   let
-    val pretty = PolyML.NameSpace.Values.printType 
+    val pretty = PolyML.NameSpace.Values.printType
       (ty, 80, SOME PolyML.globalNameSpace)
-  in 
+  in
     respace (string_of_pretty pretty)
   end
 
@@ -75,7 +75,7 @@ fun string_of_propl pl = case List.find is_print pl of
   | NONE   => NONE
 
 fun stype_of_propl pl = case List.find is_type pl of
-    SOME (PolyML.PTtype ty) => SOME (string_of_type ty) 
+    SOME (PolyML.PTtype ty) => SOME (string_of_type ty)
   | _ => NONE
 
 (* -------------------------------------------------------------------------
@@ -100,7 +100,7 @@ fun parse s =
          [PolyML.Compiler.CPCompilerResultFun compilerResultFun,
           PolyML.Compiler.CPNameSpace PolyML.globalNameSpace])
     in
-      dest_firstchild 
+      dest_firstchild
         (singleton_of_list (snd (singleton_of_list (!resultTrees))))
     end
 
@@ -122,7 +122,7 @@ fun string_of_smlexp e = case e of
  | _ => raise ERR "string_of_smlexp" ""
 
 fun extract_smlexp_aux propl =
-  let 
+  let
     val s = string_of_propl propl
     val sty = stype_of_propl propl
     val l1 = List.filter is_firstchild propl
@@ -219,19 +219,19 @@ fun extract_proofexp smlexp = case smlexp of
          )
        end
     else (if is_tactic s then ProofTactic s else ProofOther s)
-  | SmlExp ((SOME s,_),_) => 
+  | SmlExp ((SOME s,_),_) =>
     if is_tactic s then ProofTactic s else ProofOther s
-  | SmlUnit (SOME s,_) =>  
+  | SmlUnit (SOME s,_) =>
     if is_tactic s then ProofTactic s else ProofOther s
   | _ => raise ERR "extract_tacticl_aux" "option"
 
-fun safe_par s = 
-  if mem #" " (explode s) 
+fun safe_par s =
+  if mem #" " (explode s)
   then String.concatWith " " ["(",s,")"]
   else s
 
 fun string_of_proofexp e = case e of
-    ProofInfix (s,(e1,e2)) => String.concatWith " " 
+    ProofInfix (s,(e1,e2)) => String.concatWith " "
       ["(",string_of_proofexp e1,s,string_of_proofexp e2,")"]
   | ProofTactic s => safe_par s
   | ProofOther s => safe_par s
@@ -241,18 +241,18 @@ fun string_of_proofexp e = case e of
    Tactic sketch. Break a sml expression into applications.
    ------------------------------------------------------------------------- *)
 
-fun drop_all_sig stac = 
+fun drop_all_sig stac =
   String.concatWith " " (map drop_sig (partial_sml_lexer stac));
 
 datatype applyexp =
     ApplyExp of applyexp * applyexp
   | ApplyUnit of (string * string option)
 
-fun is_app s (s1,s2) = 
-  let 
-    val s1par = "( " ^ s1 ^ " )"  
+fun is_app s (s1,s2) =
+  let
+    val s1par = "( " ^ s1 ^ " )"
     val s2par = "( " ^ s2 ^ " )"
-    val s1parpar = "( " ^ s1par ^ " )"  
+    val s1parpar = "( " ^ s1par ^ " )"
     val s2parpar = "( " ^ s2par ^ " )"
 
     val l = cartesian_product [s1,s1par,s1parpar] [s2,s2par,s2parpar]

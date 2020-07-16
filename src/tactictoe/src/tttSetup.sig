@@ -20,7 +20,7 @@ sig
   val record_let_flag   : bool ref
   val record_tactic_time : real ref
   val record_proof_time : real ref
-  val learn_tactic_time : real ref  
+  val learn_tactic_time : real ref
   val learn_abstract_term : bool ref
 
   (* search *)

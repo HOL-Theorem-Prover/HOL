@@ -84,11 +84,11 @@ fun main_tactictoe (thmdata,tacdata) tnno goal =
           val thmidl = thmpred (!ttt_thmlarg_radius) g
           val l = fea_of_goal true g
           val stacl1 = tacknn (tacsymweight,tacfea) (!ttt_presel_radius) l
-          val stacl2 = 
-            if metis_flag 
+          val stacl2 =
+            if metis_flag
             then mk_sameorder_set String.compare (metis_stac :: stacl1)
             else stacl1
-          val istacl = inst_stacl (thmidl,g) stacl2 
+          val istacl = inst_stacl (thmidl,g) stacl2
         in
           tac_cache := dadd g istacl (!tac_cache); istacl
         end
@@ -107,7 +107,7 @@ fun read_status status = case status of
  | ProofTimeout   =>
    (print_endline "timeout"; (NONE, FAIL_TAC "tactictoe: timeout"))
  | Proof s        =>
-   (print_endline ("  " ^ s); 
+   (print_endline ("  " ^ s);
     (SOME s, hidef (tactic_of_sml (!ttt_search_time)) s))
 
 (* -------------------------------------------------------------------------
@@ -134,7 +134,7 @@ fun tactictoe_aux goal =
         ttt_tacdata_cache := dadd cthyl tacdata_aux (!ttt_tacdata_cache);
         tacdata_aux
       end
-    val (proofstatus,_) = hidef 
+    val (proofstatus,_) = hidef
       (main_tactictoe (thmdata,tacdata) (NONE,NONE)) goal
     val (staco,tac) = read_status proofstatus
   in

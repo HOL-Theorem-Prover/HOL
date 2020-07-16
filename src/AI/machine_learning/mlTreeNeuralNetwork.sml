@@ -68,8 +68,8 @@ fun random_tnn_std (nlayer,dim) operl =
    ------------------------------------------------------------------------- *)
 
 local open SharingTables HOLsexp in
-fun enc_opernn enc_tm = pair_encode (enc_tm, enc_nn) 
-fun enc_tnn enc_tm = list_encode (enc_opernn enc_tm) 
+fun enc_opernn enc_tm = pair_encode (enc_tm, enc_nn)
+fun enc_tnn enc_tm = list_encode (enc_opernn enc_tm)
 fun dec_opernn dec_tm = pair_decode (dec_tm, dec_nn)
 fun dec_tnn dec_tm = list_decode (dec_opernn dec_tm)
 end
@@ -78,8 +78,8 @@ fun write_tnn file tnn = write_tmdata (enc_tnn, map fst) file (dlist tnn)
 fun read_tnn file = dnew Term.compare (read_tmdata dec_tnn file)
 
 local open SharingTables HOLsexp in
-fun enc_tnndime enc_tm = pair_encode (enc_tm, list_encode Integer) 
-fun enc_tnndim enc_tm = list_encode (enc_tnndime enc_tm) 
+fun enc_tnndime enc_tm = pair_encode (enc_tm, list_encode Integer)
+fun enc_tnndim enc_tm = list_encode (enc_tnndime enc_tm)
 fun dec_tnndime dec_tm = pair_decode (dec_tm, list_decode int_decode)
 fun dec_tnndim dec_tm = list_decode (dec_tnndime dec_tm)
 end
@@ -99,16 +99,16 @@ fun basicex_to_tnnex ex = map (fn (tm,r) => [(tm,[r])]) ex
 local open SharingTables HOLsexp in
 val enc_real = String o Real.toString
 val dec_real = Option.mapPartial Real.fromString o string_decode
-fun enc_sample enc_tm = pair_encode (enc_tm, list_encode enc_real) 
+fun enc_sample enc_tm = pair_encode (enc_tm, list_encode enc_real)
 fun dec_sample dec_tm = pair_decode (dec_tm, list_decode dec_real)
 fun enc_tnnex enc_tm = list_encode (list_encode (enc_sample enc_tm))
 fun dec_tnnex dec_tm = list_decode (list_decode (dec_sample dec_tm))
 fun tml_of_tnnex l = map fst (List.concat l)
 end
 
-fun write_tnnex file ex = 
+fun write_tnnex file ex =
   write_tmdata (enc_tnnex, tml_of_tnnex) file ex
-fun read_tnnex file = 
+fun read_tnnex file =
   read_tmdata dec_tnnex file
 
 (* -------------------------------------------------------------------------
@@ -212,7 +212,7 @@ fun bp_tnn_aux doutnvdict fpdict bpdict revtml = case revtml of
         in
           (map #dw bpdatal, combine (argl,dinvl))
         end
-      val (operdwl,tmdinvl) = f (add_vectl doutnvl)   
+      val (operdwl,tmdinvl) = f (add_vectl doutnvl)
       val newdoutnvdict = dappendl tmdinvl doutnvdict
       val newbpdict = dappend (oper,operdwl) bpdict
     in
@@ -452,8 +452,8 @@ val traintnn_extspec =
   }
 
 (* -------------------------------------------------------------------------
-   Converting a list of goals into an essentially first-order term which can 
-   be used as input to a tree neural network. 
+   Converting a list of goals into an essentially first-order term which can
+   be used as input to a tree neural network.
    ------------------------------------------------------------------------- *)
 
 val asm_cat = mk_var ("asm_cat", rpt_fun_type 3 alpha)
@@ -461,11 +461,11 @@ val hyp_cat = mk_var ("hyp_cat", rpt_fun_type 3 alpha)
 val goal_cat = mk_var ("goal_cat", rpt_fun_type 3 alpha)
 
 fun flatten_goal (asm,w) =
-  if null asm 
+  if null asm
   then w
   else (list_mk_comb (hyp_cat,[list_mk_binop asm_cat asm,w])
-       handle HOL_ERR _ => raise ERR "flatten_goal" (string_of_goal (asm,w))) 
-  
+       handle HOL_ERR _ => raise ERR "flatten_goal" (string_of_goal (asm,w)))
+
 fun lambda_term fullty (v,bod) =
   let
     val ty1 = type_of v
@@ -474,7 +474,7 @@ fun lambda_term fullty (v,bod) =
   in
     list_mk_comb (mk_var ("lambda",ty3), [v,bod])
   end
-  handle HOL_ERR _ => raise ERR "lambda_term" (term_to_string bod) 
+  handle HOL_ERR _ => raise ERR "lambda_term" (term_to_string bod)
 
 fun add_lambda tm = case dest_term tm of
     COMB(Rator,Rand) => mk_comb (add_lambda Rator, add_lambda Rand)
@@ -498,11 +498,11 @@ fun add_arity tm =
   in
     list_mk_comb (newoper, map add_arity argl)
   end
-  handle HOL_ERR _ => raise ERR "add_arity" (term_to_string tm) 
+  handle HOL_ERR _ => raise ERR "add_arity" (term_to_string tm)
 
 val vhead = mk_var ("head_value", rpt_fun_type 2 alpha);
 
-fun nntm_of_goal (asm,w) = flatten_goal 
+fun nntm_of_goal (asm,w) = flatten_goal
   (map (add_arity o add_lambda) asm, add_arity (add_lambda w))
 
 fun nntm_of_gl gl =
@@ -512,23 +512,23 @@ fun mask_unknown (tnn,dim) tm =
   let
     val (oper,argl) = strip_comb tm
   in
-    if dmem oper tnn 
+    if dmem oper tnn
     then (list_mk_comb (oper, map (mask_unknown (tnn,dim)) argl)
           handle HOL_ERR _ => raise ERR "mask_unknown" (term_to_string tm))
-    else mk_embedding_var (Vector.fromList 
+    else mk_embedding_var (Vector.fromList
       (List.tabulate (dim,fn _ => 0.0)), alpha)
   end
 
-fun mask_unknown_value tnn tm = 
+fun mask_unknown_value tnn tm =
   let val dim = dimin_nn (dfind vhead tnn) in
-    mask_unknown (tnn,dim) tm 
+    mask_unknown (tnn,dim) tm
   end
 
 val phead = mk_var ("head_policy", rpt_fun_type 2 alpha)
 
-fun mask_unknown_policy tnn tm = 
+fun mask_unknown_policy tnn tm =
   let val dim = dimin_nn (dfind phead tnn) in
-    mask_unknown (tnn,dim) tm 
+    mask_unknown (tnn,dim) tm
   end
 
 (* -------------------------------------------------------------------------
@@ -539,11 +539,11 @@ val apply_cat = mk_var ("apply_cat", rpt_fun_type 3 alpha);
 val gstactm_cat = mk_var ("gstactm_cat", rpt_fun_type 3 alpha);
 
 fun nntm_of_applyexp e = case e of
-    ApplyExp (e1,e2) => 
+    ApplyExp (e1,e2) =>
       mk_binop apply_cat (nntm_of_applyexp e1, nntm_of_applyexp e2)
-  | ApplyUnit (s,_) => 
+  | ApplyUnit (s,_) =>
     (
-    if mem #" " (explode s) 
+    if mem #" " (explode s)
     then mk_var (escape ("sml." ^ its (hash_string s)), alpha)
     else mk_var (escape ("sml." ^ s), alpha)
     )

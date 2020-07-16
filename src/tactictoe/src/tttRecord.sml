@@ -68,8 +68,8 @@ fun info_thy thy =
    " dfind: " ^ rts_round 6 (!dfind_time) ^ "," ^
    " sum: " ^ rts_round 6 (!sum_time) ^ "," ^
    " tactic test: " ^ rts_round 6 (!ortho_teststac_time) ^ ")",
-   "  Others: " ^  
-   "(tactic data: " ^ rts_round 6 (!tacfea_time) ^ " " ^ 
+   "  Others: " ^
+   "(tactic data: " ^ rts_round 6 (!tacfea_time) ^ " " ^
    rts_round 6 (!learn_tfidf_time) ^ "," ^
    " thm data : " ^ rts_round 6 (!create_thmdata_time) ^ " " ^
    rts_round 6 (!add_cthy_time) ^ " " ^
@@ -95,20 +95,20 @@ fun write_info thy =
 fun record_tactic (tac,stac) g =
   let val ((gl,v),t) = add_time (timeout (!record_tactic_time) tac) g in
     incr n_tactic_replayed;
-    ( 
+    (
     if op_mem goal_eq g gl then () else
-    calls_glob := 
+    calls_glob :=
       {
       stac = stac, ortho = stac, time = t,
-      ig = g, ogl = gl, 
+      ig = g, ogl = gl,
       loc = ((current_theory (), (!savestate_level) - 1), !name_glob),
       fea = fea_of_goal true g
       }
       :: !calls_glob);
     (gl,v)
   end
-  handle Interrupt => raise Interrupt 
-    |  _ => (debug ("error: recording tactic: " ^ stac); 
+  handle Interrupt => raise Interrupt
+    |  _ => (debug ("error: recording tactic: " ^ stac);
              raise ERR "record_tactic" stac)
 
 (* -------------------------------------------------------------------------
@@ -122,7 +122,7 @@ fun wrap_proofexp e = case e of
     ProofTactic stac => ProofTactic (wrap_stac stac)
   | ProofOther _ => e
   | ProofTactical _ => e
-  | ProofInfix (s,(e1,e2)) => 
+  | ProofInfix (s,(e1,e2)) =>
     ProofInfix (s,(wrap_proofexp e1, wrap_proofexp e2))
 
 fun wrap_proof ostac =
@@ -190,12 +190,12 @@ fun end_record_proof name g =
     val feal1 = List.concat (map #fea l1)
     val feal2 = mk_fast_set Int.compare feal1
     val (thmdata,tacdata) = (!thmdata_glob, !tacdata_glob)
-    val tacfea = total_time tacfea_time 
+    val tacfea = total_time tacfea_time
       (map (fn x => (#ortho x,#fea x))) (#calls tacdata)
-    val tacsymweight = 
-      total_time learn_tfidf_time 
+    val tacsymweight =
+      total_time learn_tfidf_time
         (learn_tfidf_symfreq (length tacfea) feal2) (#symfreq tacdata)
-    val l2 = 
+    val l2 =
       if !record_ortho_flag
       then map (orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))) l1
       else l1
@@ -205,7 +205,7 @@ fun end_record_proof name g =
     tacdata_glob := newtacdata
   end
 
-fun ttt_before_save_state () = 
+fun ttt_before_save_state () =
   thmdata_glob := total_time create_thmdata_time create_thmdata ()
 
 fun ttt_save_state () =

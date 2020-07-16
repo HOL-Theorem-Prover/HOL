@@ -18,16 +18,16 @@ val ERR = mk_HOL_ERR "mlTacticData"
 
 type stac = string
 
-type call = 
+type call =
   {
   stac : stac, ortho : stac, time : real,
   ig : goal, ogl : goal list,
-  loc : ((string * int) * string), 
+  loc : ((string * int) * string),
   fea : fea
   }
 
-fun call_compare (c1,c2) = 
-  cpl_compare String.compare goal_compare 
+fun call_compare (c1,c2) =
+  cpl_compare String.compare goal_compare
     ((#ortho c1,#ig c1),(#ortho c2,#ig c2))
 
 fun call_to_tuple {stac,ortho,time,ig,ogl,loc,fea} =
@@ -37,7 +37,7 @@ fun tuple_to_call ((stac,ortho,time),(ig,ogl),loc,fea) =
   {
   stac = stac, ortho = ortho, time = time,
   ig = ig, ogl = ogl,
-  loc = loc, 
+  loc = loc,
   fea = fea
   }
 
@@ -130,10 +130,10 @@ fun dec_call dec_tm =
   )
 fun dec_calls dec_tm = list_decode (dec_call dec_tm)
 
-fun tml_of_calls calls = 
-  let 
+fun tml_of_calls calls =
+  let
     fun goal_terms ((asl,w),A) = (w::asl) @ A
-    fun call_terms (call,A) = 
+    fun call_terms (call,A) =
       List.foldl goal_terms A (fst (#2 call) :: snd (#2 call))
   in
     List.foldl call_terms [] calls
@@ -174,7 +174,7 @@ fun import_goal file = let val l = import_terml file in (tl l, hd l) end
    Importing tactic data
    ------------------------------------------------------------------------- *)
 
-fun import_calls file = 
+fun import_calls file =
   map tuple_to_call (read_tmdata dec_calls file)
 
 fun init_taccov calls =

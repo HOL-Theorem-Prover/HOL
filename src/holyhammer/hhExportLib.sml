@@ -324,7 +324,7 @@ fun older_than th1 (name,th2) =
 fun add_ancestry thy = thy :: ancestry thy
 
 (* avoid basis_emit as it contains inconsistent theorems *)
-fun sorted_ancestry thyl = 
+fun sorted_ancestry thyl =
   let
     fun test x = x <> "basis_emit" andalso not (mem "basis_emit" (ancestry x))
     val l = sort_thyl (mk_string_set (List.concat (map add_ancestry thyl)))

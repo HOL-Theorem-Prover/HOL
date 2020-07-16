@@ -9,7 +9,7 @@ sig
   type call = mlTacticData.call
   type symweight = mlFeature.symweight
   type 'a afea = ('a * fea) list
-  
+
   val inter_time : real ref
   val dfind_time : real ref
   val sum_time : real ref

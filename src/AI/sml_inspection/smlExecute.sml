@@ -97,8 +97,8 @@ fun thml_of_sml sl =
 
 fun is_pointer_eq s1 s2 =
   let
-    val b = quse_string 
-      ("val _ = smlExecute.sml_bool_glob := PolyML.pointerEq (" ^ 
+    val b = quse_string
+      ("val _ = smlExecute.sml_bool_glob := PolyML.pointerEq (" ^
          s1 ^ "," ^ s2 ^ ")")
   in
     b andalso (!sml_bool_glob)

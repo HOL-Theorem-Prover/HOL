@@ -164,7 +164,7 @@ fun mini_stac_aux tim g gl pl l = case l of
 fun mini_stac stac g =
   let
     val gl = fst (tactic_of_sml (!mini_tactic_time) stac g)
-      handle Interrupt => raise Interrupt 
+      handle Interrupt => raise Interrupt
       | _ => (debug "Error: minimize"; raise ERR "minimize" stac)
     val l = decompose (partial_sml_lexer stac)
   in
@@ -200,7 +200,7 @@ fun mini_proof proof = case proof of
 (* tactic (used by holyhammer) *)
 fun minimize_stac tim stac g gl =
   let val newstac =
-    mini_stac_aux tim g gl [] (decompose (partial_sml_lexer stac)) 
+    mini_stac_aux tim g gl [] (decompose (partial_sml_lexer stac))
   in
     unsafe_prettify_stac newstac
   end

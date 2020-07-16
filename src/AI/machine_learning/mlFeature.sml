@@ -126,7 +126,7 @@ fun cfea_of_goal_cached g =
     goalcfea_cache := dadd g fea (!goalcfea_cache); fea
   end
 
-fun fea_of_goal_cached b g = 
+fun fea_of_goal_cached b g =
   if b then subfea_of_goal_cached g else cfea_of_goal_cached g
 
 
@@ -150,7 +150,7 @@ fun learn_tfidf feavl = weight_tfidf (map snd feavl)
 fun learn_tfidf_symfreq n symres symfreq =
   let
     fun g x = dfind x symfreq handle NotFound => 0
-    val symresfreq = map_assoc g symres   
+    val symresfreq = map_assoc g symres
     val nr = Real.fromInt n
     fun f freq = Math.pow (Math.ln nr - Math.ln (Real.fromInt freq), 6.0)
   in

@@ -23,7 +23,7 @@ sig
   val add_namespace_time : real ref
   val thmdata_tfidf_time : real ref
   val create_thmdata : unit -> thmdata
-  val clean_create_thmdata_cache : unit -> unit  
+  val clean_create_thmdata_cache : unit -> unit
 
   (* dependencies of a top-level theorem *)
   val depnumber_of_thm : thm -> int

@@ -48,12 +48,12 @@ val hash_string = hash_string_mod hash_modulo
 fun inter_increasing l1 l2 = case (l1,l2) of
     ([],_) => []
   | (_,[]) => []
-  | (a1 :: m1, a2 :: m2) => 
+  | (a1 :: m1, a2 :: m2) =>
     (
     case Int.compare (a1,a2) of
       LESS => inter_increasing m1 l2
     | GREATER => inter_increasing l1 m2
-    | EQUAL => a1 :: inter_increasing m1 m2 
+    | EQUAL => a1 :: inter_increasing m1 m2
     )
 
 (* ------------------------------------------------------------------------
@@ -337,7 +337,7 @@ fun sort_thyl thyl =
     topo_sort String.compare (map (fn x => (x, ancestry x)) thyl)
 
 fun interleave offset l1 l2 =
-  let 
+  let
     val l1' = map_snd (fn x => 2 * x) (number_snd 1 l1)
     val l2' = map_snd (fn x => offset * 2 * x + 1) (number_snd 1 l2)
   in
@@ -349,7 +349,7 @@ fun interleave offset l1 l2 =
    ------------------------------------------------------------------------ *)
 
 fun swap_value (arr,a,b) =
-  let 
+  let
     val av = Array.sub (arr,a)
     val bv = Array.sub (arr,b)
   in
@@ -357,22 +357,22 @@ fun swap_value (arr,a,b) =
     Array.update (arr,b,av)
   end
 
-fun heapify cmp arr n i = 
+fun heapify cmp arr n i =
   let
     val largest = ref i
     val left = 2 * i + 1
     val right = 2 * i + 2
   in
-    if left < n andalso 
+    if left < n andalso
        cmp (Array.sub (arr,left),Array.sub (arr,!largest)) = LESS
-    then largest := left 
+    then largest := left
     else ();
-    if right < n andalso 
-       cmp (Array.sub (arr,right),Array.sub (arr,!largest)) = LESS 
-    then largest := right 
+    if right < n andalso
+       cmp (Array.sub (arr,right),Array.sub (arr,!largest)) = LESS
+    then largest := right
     else ();
-    if !largest <> i 
-    then (swap_value (arr,i,!largest); heapify cmp arr n (!largest)) 
+    if !largest <> i
+    then (swap_value (arr,i,!largest); heapify cmp arr n (!largest))
     else ()
   end
 
@@ -381,38 +381,38 @@ fun build_maxheap cmp arr =
     val n = Array.length arr
     val i = n div 2 - 1
   in
-    ignore (List.tabulate (i + 1, fn x => heapify cmp arr n (i - x)))    
+    ignore (List.tabulate (i + 1, fn x => heapify cmp arr n (i - x)))
   end
 
 fun delete_root cmp n arr =
   let
-    val lastElement = Array.sub (arr,n-1) 
+    val lastElement = Array.sub (arr,n-1)
   in
-    Array.update (arr,0,lastElement); 
+    Array.update (arr,0,lastElement);
     heapify cmp arr (n-1) 0
   end
 
-fun best_n cmp k l = 
-  let 
-    val arr = Array.fromList l 
+fun best_n cmp k l =
+  let
+    val arr = Array.fromList l
     val n = Array.length arr
     val k' = Int.min (k,n)
     val _ = build_maxheap cmp arr
-    fun f i = 
+    fun f i =
       let val r = Array.sub (arr,0) in delete_root cmp (n-i) arr; r end
   in
     List.tabulate (k',f)
   end
 
 fun best_n_rmaxu cmp k l =
-  let 
-    val arr = Array.fromList l 
+  let
+    val arr = Array.fromList l
     val n = Array.length arr
     val _ = build_maxheap compare_rmax arr
-    fun loop i (d,l) = 
+    fun loop i (d,l) =
       if dlength d >= k orelse n-i <= 0 then rev l else
-      let val r = fst (Array.sub (arr,0)) in 
-        delete_root compare_rmax (n-i) arr; 
+      let val r = fst (Array.sub (arr,0)) in
+        delete_root compare_rmax (n-i) arr;
         loop (i+1) (if dmem r d then (d,l) else (dadd r () d, r :: l))
       end
   in
@@ -769,19 +769,19 @@ fun sharing_terms tml =
               unnamed_types = [], theorems = []}
     val sdi1 = build_sharing_data ed
     val sdi2 = add_terms tml sdi1
-    fun f sdi t = write_term sdi t handle NotFound => 
-      (print_endline ("write_term: " ^ term_to_string t); 
-       raise ERR "write_term" (term_to_string t)) 
+    fun f sdi t = write_term sdi t handle NotFound =>
+      (print_endline ("write_term: " ^ term_to_string t);
+       raise ERR "write_term" (term_to_string t))
   in
     (String o f sdi2, sdi2)
   end
 
-fun enc_tmdata (encf,tmlf) tmdata = 
+fun enc_tmdata (encf,tmlf) tmdata =
   let val (enc_tm,sdi) = sharing_terms (tmlf tmdata) in
     pair_encode (enc_sdata, encf enc_tm) (sdi,tmdata)
   end
 
-fun dec_tmdata decf t = 
+fun dec_tmdata decf t =
   let
     val a = {with_strings = fn _ => (), with_stridty = fn _ => ()}
     val (sdo, tmdata) =
@@ -792,7 +792,7 @@ fun dec_tmdata decf t =
   end
 
 fun write_tmdata (encf,tmlf) file tmdata =
-  let 
+  let
     val ostrm = Portable.open_out file
     val sexp = enc_tmdata (encf,tmlf) tmdata
   in
@@ -800,12 +800,12 @@ fun write_tmdata (encf,tmlf) file tmdata =
     TextIO.closeOut ostrm
   end
 
-fun read_tmdata decf file = 
+fun read_tmdata decf file =
   valOf (dec_tmdata decf (HOLsexp.fromFile file))
 
 (* data without terms *)
 fun write_data encf file tmdata =
-  let 
+  let
     val ostrm = Portable.open_out file
     val sexp = encf tmdata
   in
@@ -950,8 +950,8 @@ fun writel_atomic file sl =
 fun readl_rm file =
   let val sl = readl file in OS.FileSys.remove file; sl end
 
-fun listDir dirName = 
-  let 
+fun listDir dirName =
+  let
     val dir = OS.FileSys.openDir dirName
     fun read files = case OS.FileSys.readDir dir of
         NONE => rev files
@@ -1246,9 +1246,9 @@ fun load_sigobj () =
   end
 
 fun link_sigobj file =
-  let 
+  let
     val base = OS.Path.base file
-    val link = HOLDIR ^ "/sigobj/" ^ OS.Path.base (OS.Path.file file) 
+    val link = HOLDIR ^ "/sigobj/" ^ OS.Path.base (OS.Path.file file)
     fun f ext = "ln -sf " ^ base ^ "." ^ ext ^ " " ^ link ^ "." ^ ext ^ ";"
     val l = map f ["sig","uo","ui"]
     val cmd = String.concatWith " " l

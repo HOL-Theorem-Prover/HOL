@@ -364,7 +364,7 @@ fun th0def_thm_caster oc (name,thm) =
     val statement = translate_thm thm
     val th0name = escape ("reserved.ho." ^ name)
   in
-    os oc (thfpar ^ th0name ^ ",axiom,"); 
+    os oc (thfpar ^ th0name ^ ",axiom,");
     th0_formula oc statement; osn oc ")."
   end
 

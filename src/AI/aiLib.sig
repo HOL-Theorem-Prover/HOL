@@ -127,7 +127,7 @@ sig
   val combine_triple : 'a list * 'b list * 'c list -> ('a * 'b * 'c) list
   val split_triple : ('a * 'b * 'c) list -> 'a list * 'b list * 'c list
   val quintuple_of_list : 'a list -> 'a * 'a * 'a * 'a * 'a
-  val interleave : int -> 'a list -> 'a list -> 'a list  
+  val interleave : int -> 'a list -> 'a list -> 'a list
   val inter_increasing : int list -> int list -> int list
   val best_n : ('a * 'a -> order) -> int -> 'a list -> 'a list
   val best_n_rmaxu : ('a * 'a -> order) -> int -> ('a * real) list -> 'a list
@@ -175,7 +175,7 @@ sig
   val readl_rm : string -> string list
   val writel_atomic : string -> string list -> unit
   val listDir : string -> string list
- 
+
   (* parse *)
   val hd_string : string -> char
   val tl_string : string -> string
@@ -223,7 +223,7 @@ sig
   val rts_round : int -> real -> string
   val pretty_real : real -> string
   val epsilon : real
-  val interval : real -> real * real -> real list  
+  val interval : real -> real * real -> real list
 
   (* term *)
   val rename_bvarl : (string -> string) -> term -> term
@@ -237,14 +237,14 @@ sig
   val list_mk_binop : term -> term list -> term
   val strip_binop : term -> term -> term list
   val arity_of : term -> int
-  
+
   (* S-expressions *)
   val enc_real : real -> HOLsexp_dtype.t
   val dec_real : HOLsexp_dtype.t -> real option
-  val write_tmdata : 
+  val write_tmdata :
     ((term -> HOLsexp_dtype.t) -> 'a HOLsexp.encoder) * ('a -> term list) ->
     string -> 'a -> unit
-  val read_tmdata : 
+  val read_tmdata :
     ((HOLsexp_dtype.t -> term option) -> HOLsexp_dtype.t -> 'a option) ->
     string -> 'a
   val write_data : ('a -> HOLsexp_dtype.t) -> string -> 'a -> unit
@@ -256,6 +256,6 @@ sig
   (* sigobj *)
   val sigobj_theories : unit -> string list
   val load_sigobj : unit -> unit
-  val link_sigobj : string -> unit  
- 
+  val link_sigobj : string -> unit
+
 end

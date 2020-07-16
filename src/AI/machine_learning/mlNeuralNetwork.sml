@@ -87,9 +87,9 @@ fun random_nn (a,da) sizel =
 
 local open HOLsexp in
 fun enc_nn nn = list_encode enc_mat (map #w nn)
-fun dec_nn sexp = 
-  let 
-    val matl = valOf (list_decode dec_mat sexp) 
+fun dec_nn sexp =
+  let
+    val matl = valOf (list_decode dec_mat sexp)
       handle Option => raise ERR "dec_nn" ""
     fun f m = {a = tanh, da = dtanh, w = m}
   in
@@ -145,7 +145,7 @@ fun fp_nn nn v = case nn of
 (* -------------------------------------------------------------------------
    Backward propagation (bp)
    Takes the data from the forward pass, computes the loss and weight updates
-   by gradient descent. 
+   by gradient descent.
    Input has size j. Output has size i. Matrix has i lines and j columns.
    ------------------------------------------------------------------------- *)
 

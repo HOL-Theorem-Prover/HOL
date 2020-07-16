@@ -8,7 +8,7 @@
 structure tttSetup :> tttSetup =
 struct
 
-open HolKernel Abbrev boolLib aiLib 
+open HolKernel Abbrev boolLib aiLib
   smlExecute smlRedirect mlThmData mlTacticData
 
 (* -------------------------------------------------------------------------

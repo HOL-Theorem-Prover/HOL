@@ -121,16 +121,16 @@ fun backstatus_node node = case #nodestatus node of
 
 (*
 fun reorder_stacl g pnn stacl =
-  let 
+  let
     fun f x = mask_unknown_policy pnn (nntm_of_gstactm (g,x))
-    val l = map_assoc (infer_tnn_basic pnn o f o #stactm) stacl 
+    val l = map_assoc (infer_tnn_basic pnn o f o #stactm) stacl
   in
     map fst (dict_sort compare_rmax l)
   end
 
 fun reorder_stacv g pnn stacv =
-  let 
-    val stacl = vector_to_list stacv 
+  let
+    val stacl = vector_to_list stacv
     val (stacl1,stacl2) = part_n 20 stacl
   in
     Vector.fromList (reorder_stacl g pnn stacl1 @ stacl2)
@@ -145,10 +145,10 @@ fun stac_create (astac,stac) =
   {stac = stac, astac = astac, svis = 0.0, ssum = 0.0, stacstatus = StacFresh}
 
 fun goal_create (pred as (tacpred,(vnno,pnno))) g =
-  let 
-    val stacv1 = Vector.fromList (map stac_create (tacpred g)) 
-    val stacv2 = 
-      (* if isSome pnno 
+  let
+    val stacv1 = Vector.fromList (map stac_create (tacpred g))
+    val stacv2 =
+      (* if isSome pnno
       then total_time reorder_time (reorder_stacv g (valOf pnno)) stacv1
       else *) stacv1
   in
@@ -237,7 +237,7 @@ fun starttree_of pred goal =
     val goalv = Vector.fromList [goal_create pred goal]
     val root =
       {
-      nvis = 1.0, 
+      nvis = 1.0,
       nsum = 0.0,
       nodestatus = backstatus_goalv goalv,
       goalv = goalv,
@@ -320,7 +320,7 @@ fun status_of_stac parentd goalrec glo = case glo of
 fun is_metis_stac s = hd (partial_sml_lexer s) = "metisTools.METIS_TAC"
 
 fun apply_stac parentd goalrec stac =
-  let    
+  let
     val tim = if is_metis_stac stac then 0.1 else 0.04
     val glo = app_stac tim stac (#goal goalrec)
   in
@@ -332,12 +332,12 @@ fun reward_of vnno stacstatus = case stacstatus of
   | StacLoop => 0.0
   | StacPara => 0.0
   | StacProved => 1.0
-  | StacUndecided gl => 
+  | StacUndecided gl =>
     (
     if isSome vnno then
-      let 
+      let
         val vnn = valOf vnno
-        val nntm = mask_unknown_value vnn (nntm_of_gl gl) 
+        val nntm = mask_unknown_value vnn (nntm_of_gl gl)
       in
         infer_tnn_basic vnn nntm
       end
@@ -445,7 +445,7 @@ fun search (tacpred,tnno) g =
   let
     val _ = (tacpred_time := 0.0; reward_time := 0.0; reorder_time := 0.0)
     val starttree = starttree_of (tacpred,tnno) g
-    val ((searchstatus,tree),t) = add_time 
+    val ((searchstatus,tree),t) = add_time
       (search_loop (total_time tacpred_time tacpred, tnno)) starttree
     val _ = print_endline ("search time: " ^ rts_round 6 t)
   in

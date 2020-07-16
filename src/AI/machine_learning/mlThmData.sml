@@ -113,8 +113,8 @@ fun add_thmfea thy ((name,thm),(thmfea,symfreq,nodupl)) =
     val newnodupl = dadd g () nodupl
   in
     if not (dmem g nodupl) andalso uptodate_thm thm
-    then 
-      let 
+    then
+      let
         val fea = fea_of_goal_cached true g
         val newthmfea = (thmid,fea) :: thmfea
         val newsymfreq = count_dict symfreq fea
@@ -139,7 +139,7 @@ val create_thmdata_time = ref 0.0
 
 val create_thmdata_cache = ref (dempty (list_compare String.compare))
 
-fun clean_create_thmdata_cache () =  
+fun clean_create_thmdata_cache () =
   create_thmdata_cache := dempty (list_compare String.compare)
 
 val add_cthy_time = ref 0.0
@@ -150,18 +150,18 @@ fun create_thmdata () =
   let
     val thy = current_theory ()
     val thyl = ancestry thy
-    val acc1 = 
+    val acc1 =
       dfind thyl (!create_thmdata_cache) handle NotFound =>
       let val r = thmfea_from_thyl thyl in
         create_thmdata_cache := dadd thyl r (!create_thmdata_cache); r
       end
     val acc2 = total_time add_cthy_time add_thmfea_from_thy (thy,acc1)
-    val (thmfea3,symfreq3,_) = total_time add_namespace_time 
+    val (thmfea3,symfreq3,_) = total_time add_namespace_time
       add_namespacethm acc2
     val n = int_to_string (length thmfea3)
   in
     print_endline ("Loading " ^ n ^ " theorems");
-    (total_time thmdata_tfidf_time 
+    (total_time thmdata_tfidf_time
      (learn_tfidf_symfreq_nofilter (length thmfea3)) symfreq3, thmfea3)
   end
 
