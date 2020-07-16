@@ -98,7 +98,7 @@ fun export_goal file (goal as (asl,w)) = export_terml file (w :: asl)
    Exporting tactic data
    ------------------------------------------------------------------------- *)
 
-open HOLsexp
+local open HOLsexp in
 
 fun enc_goal enc_tm (asl,w) = list_encode enc_tm (w::asl)
 fun dec_goal dec_tm =
@@ -109,9 +109,6 @@ fun enc_goal_list enc_tm = list_encode (enc_goal enc_tm)
 fun dec_goal_list dec_tm = list_decode (dec_goal dec_tm)
 val enc_fea = Integer
 val dec_fea = int_decode
-val enc_real = String o Real.toString
-val dec_real = Option.mapPartial Real.fromString o string_decode
-
 fun enc_call enc_tm =
   tagged_encode "call" (
     pair4_encode (
@@ -121,7 +118,7 @@ fun enc_call enc_tm =
       list_encode enc_fea
     )
   )
-
+fun enc_calls enc_tm = list_encode (enc_call enc_tm)
 fun dec_call dec_tm =
   tagged_decode "call" (
     pair4_decode (
@@ -131,39 +128,19 @@ fun dec_call dec_tm =
       list_decode dec_fea
     )
   )
+fun dec_calls dec_tm = list_decode (dec_call dec_tm)
 
-fun enc_calls calls =
-  let
+fun tml_of_calls calls = 
+  let 
     fun goal_terms ((asl,w),A) = (w::asl) @ A
     fun call_terms (call,A) = 
       List.foldl goal_terms A (fst (#2 call) :: snd (#2 call))
-    val all_terms = List.foldl call_terms [] calls
-    val ed = {named_terms = [], unnamed_terms = [], named_types = [],
-              unnamed_types = [], theorems = []}
-    val sdi = build_sharing_data ed
-    val sdi = add_terms all_terms sdi
-    fun write_term_aux sdi t = write_term sdi t
-      handle NotFound => 
-      (print_endline ("write_term: " ^ term_to_string t); 
-       raise ERR "write_term" (term_to_string t))
-    val enc_callsdata = list_encode (enc_call (String o write_term_aux sdi))
   in
-    tagged_encode "calls" (pair_encode (enc_sdata, enc_callsdata)) (sdi,calls)
-  end
-
-fun dec_calls t =
-  let
-    val a = {with_strings = fn _ => (), with_stridty = fn _ => ()}
-    val (sdo, calls) =
-      valOf (tagged_decode "calls" (pair_decode (dec_sdata a, SOME)) t)
-    val dec_tm = Option.map (read_term sdo) o string_decode
-  in
-    list_decode (dec_call dec_tm) calls
+    List.foldl call_terms [] calls
   end
 
 fun export_calls file calls =
   let
-    val ostrm = Portable.open_out file
     val _ = debug ("export_calls: " ^ its (length calls) ^ " calls")
     val calls1 = filter uptodate_call calls
     fun is_local stac = mem "tttRecord.local_tag" (partial_sml_lexer stac)
@@ -173,10 +150,10 @@ fun export_calls file calls =
     val calls4 = map call_to_tuple calls3
     val _ = debug ("export_calls: " ^ its (length calls3) ^ " filtered calls")
   in
-    PP.prettyPrint (curry TextIO.output ostrm, 75)
-                   (HOLsexp.printer (enc_calls calls4));
-    TextIO.closeOut ostrm
+    write_tmdata (enc_calls, tml_of_calls) file calls4
   end
+
+end (* local *)
 
 (* -------------------------------------------------------------------------
    Importing terms
@@ -198,7 +175,7 @@ fun import_goal file = let val l = import_terml file in (tl l, hd l) end
    ------------------------------------------------------------------------- *)
 
 fun import_calls file = 
-  map tuple_to_call (valOf (dec_calls (HOLsexp.fromFile file)))
+  map tuple_to_call (read_tmdata dec_calls file)
 
 fun init_taccov calls =
   count_dict (dempty String.compare) (map #ortho calls)

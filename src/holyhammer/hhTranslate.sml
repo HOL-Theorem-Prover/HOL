@@ -120,8 +120,6 @@ fun FUN_EQ_CONVL vl eq = case vl of
     [] => REFL eq
   | a :: m => (STRIP_QUANT_CONV (X_FUN_EQ_CONV a) THENC FUN_EQ_CONVL m) eq
 
-fun mk_polyvar i polyty = mk_var ("P" ^ its i, polyty)
-
 fun LIFT_CONV iref tm =
   let
     fun test x = must_pred x orelse is_abs x
@@ -267,8 +265,6 @@ fun translate_thm thm =
 
 (* -------------------------------------------------------------------------
    Arity equations for constants and free variables.
-   Naming is important here as we do not want free variables to have the same
-   name across statements unless their definition are alpha equivalent.
    ------------------------------------------------------------------------- *)
 
 fun mk_arity_eq (f,n) =

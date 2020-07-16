@@ -727,7 +727,6 @@ fun string_of_goal_noquote (asm,w) =
     s1
   end
 
-
 fun trace_tacl tacl g = case tacl of
     tac :: m =>
     (print_endline (string_of_goal g); trace_tacl m (hd (fst (tac g))))
@@ -751,6 +750,72 @@ fun strip_binop binop tm = case strip_comb tm of
     then a :: strip_binop binop b
     else [tm]
   | _ => [tm]
+
+(* ------------------------------------------------------------------------
+   S-expressions
+   ------------------------------------------------------------------------ *)
+
+local open HOLsexp SharingTables in
+
+(* basic encoding *)
+
+val enc_real = String o Real.toString
+val dec_real = Option.mapPartial Real.fromString o string_decode
+
+(* data with terms *)
+fun sharing_terms tml =
+  let
+    val ed = {named_terms = [], unnamed_terms = [], named_types = [],
+              unnamed_types = [], theorems = []}
+    val sdi1 = build_sharing_data ed
+    val sdi2 = add_terms tml sdi1
+    fun f sdi t = write_term sdi t handle NotFound => 
+      (print_endline ("write_term: " ^ term_to_string t); 
+       raise ERR "write_term" (term_to_string t)) 
+  in
+    (String o f sdi2, sdi2)
+  end
+
+fun enc_tmdata (encf,tmlf) tmdata = 
+  let val (enc_tm,sdi) = sharing_terms (tmlf tmdata) in
+    pair_encode (enc_sdata, encf enc_tm) (sdi,tmdata)
+  end
+
+fun dec_tmdata decf t = 
+  let
+    val a = {with_strings = fn _ => (), with_stridty = fn _ => ()}
+    val (sdo, tmdata) =
+      valOf (pair_decode (dec_sdata a, SOME) t)
+    val dec_tm = Option.map (read_term sdo) o string_decode
+  in
+    decf dec_tm tmdata
+  end
+
+fun write_tmdata (encf,tmlf) file tmdata =
+  let 
+    val ostrm = Portable.open_out file
+    val sexp = enc_tmdata (encf,tmlf) tmdata
+  in
+    PP.prettyPrint (curry TextIO.output ostrm, 75) (HOLsexp.printer sexp);
+    TextIO.closeOut ostrm
+  end
+
+fun read_tmdata decf file = 
+  valOf (dec_tmdata decf (HOLsexp.fromFile file))
+
+(* data without terms *)
+fun write_data encf file tmdata =
+  let 
+    val ostrm = Portable.open_out file
+    val sexp = encf tmdata
+  in
+    PP.prettyPrint (curry TextIO.output ostrm, 75) (HOLsexp.printer sexp);
+    TextIO.closeOut ostrm
+  end
+
+fun read_data decf file = valOf (decf (HOLsexp.fromFile file))
+
+end (* local *)
 
 (* ------------------------------------------------------------------------
    I/O

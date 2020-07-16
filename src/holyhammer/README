@@ -32,3 +32,22 @@ Questions:
   If you have any question, you can send an email to 
   email@thibaultgauthier.fr
 
+Commands for exporting standard library to TPTP formats:
+  
+  load "tttUnfold"; tttUnfold.load_sigobj ();
+  val thyl = ancestry (current_theory ());
+  load "hhExportTh1"; open hhExportTh1;
+  th1_export_bushy (HOLDIR ^ "/src/holyhammer/th1_bushy") thyl;
+  th1_export_chainy (HOLDIR ^ "/src/holyhammer/th1_chainy") thyl;
+  load "hhExportTf1"; open hhExportTf1;
+  tf1_export_bushy (HOLDIR ^ "/src/holyhammer/tf1_bushy") thyl;
+  tf1_export_chainy (HOLDIR ^ "/src/holyhammer/tf1_chainy") thyl;
+  load "hhExportFof"; open hhExportFof;
+  fof_export_bushy (HOLDIR ^ "/src/holyhammer/fof_bushy") thyl;
+  fof_export_chainy (HOLDIR ^ "/src/holyhammer/fof_chainy") thyl;
+  load "hhExportTf0"; open hhExportTf0;
+  tf0_export_bushy (HOLDIR ^ "/src/holyhammer/tf0_bushy") thyl;
+  tf0_export_chainy (HOLDIR ^ "/src/holyhammer/tf0_chainy") thyl;
+  val thyl = ancestry (current_theory ());
+  th0_export_bushy (HOLDIR ^ "/src/holyhammer/th0_bushy") thyl;
+  th0_export_chainy (HOLDIR ^ "/src/holyhammer/th0_chainy") thyl;

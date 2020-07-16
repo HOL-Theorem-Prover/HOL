@@ -43,7 +43,6 @@ fun add_vectl vl =
     Vector.tabulate (Vector.length (hd vl), f)
   end
 
-
 (* -------------------------------------------------------------------------
    Matrix
    ------------------------------------------------------------------------- *)
@@ -94,31 +93,21 @@ fun mat_random (dim as (a,b)) =
     mat_tabulate f dim
   end
 
+(* -------------------------------------------------------------------------
+   Input/output
+   ------------------------------------------------------------------------- *)
+
 fun string_of_vect v =
   String.concatWith " " (map Real.toString (vector_to_list v))
-
 fun string_of_mat m =
   String.concatWith "\n" (map string_of_vect (vector_to_list m))
 
-fun read_mat_sl sl =
-  let
-    val l2 = map (String.tokens Char.isSpace) sl
-    val l3 = map (map (valOf o Real.fromString)) l2
-  in
-    Vector.fromList (map Vector.fromList l3)
-  end
-
-fun read_mat file = read_mat_sl (readl file)
-
-fun is_comma c = c = #","
-
-fun read_diml s =
-  let
-    val l1 = String.tokens Char.isSpace s
-    val l2 = map (map string_to_int o String.tokens is_comma) l1
-  in
-    map pair_of_list l2
-  end
+local open HOLsexp in
+fun enc_vect v = list_encode enc_real (vector_to_list v)
+fun dec_vect t = Option.map Vector.fromList (list_decode dec_real t)
+fun enc_mat m = list_encode enc_vect (vector_to_list m)
+fun dec_mat t = Option.map Vector.fromList (list_decode dec_vect t)
+end
 
 
 end (* struct *)

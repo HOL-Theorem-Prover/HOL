@@ -199,8 +199,8 @@ sig
   val unescape : string -> string
 
   (* statistics *)
-  val incr   : int ref -> unit
-  val decr   : int ref -> unit
+  val incr : int ref -> unit
+  val decr : int ref -> unit
   val sum_real : real list -> real
   val average_real : real list -> real
   val average_int: int list -> real
@@ -237,6 +237,18 @@ sig
   val list_mk_binop : term -> term list -> term
   val strip_binop : term -> term -> term list
   val arity_of : term -> int
+  
+  (* S-expressions *)
+  val enc_real : real -> HOLsexp_dtype.t
+  val dec_real : HOLsexp_dtype.t -> real option
+  val write_tmdata : 
+    ((term -> HOLsexp_dtype.t) -> 'a HOLsexp.encoder) * ('a -> term list) ->
+    string -> 'a -> unit
+  val read_tmdata : 
+    ((HOLsexp_dtype.t -> term option) -> HOLsexp_dtype.t -> 'a option) ->
+    string -> 'a
+  val write_data : ('a -> HOLsexp_dtype.t) -> string -> 'a -> unit
+  val read_data : (HOLsexp_dtype.t -> 'a option) -> string -> 'a
 
   (* thread *)
   val interruptkill : Thread.thread -> unit

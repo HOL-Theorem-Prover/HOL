@@ -82,66 +82,31 @@ fun random_nn (a,da) sizel =
   end
 
 (* -------------------------------------------------------------------------
-   input/output
+   I/O (assumes tanh activation functions)
    ------------------------------------------------------------------------- *)
 
-fun string_of_wl wl =
-  let
-    val diml = map (mat_dim) wl
-    fun f (a,b) = its a ^ "," ^ its b
-  in
-    String.concatWith " " (map f diml) ^ "\n" ^
-    String.concatWith "\n\n" (map string_of_mat wl)
-  end
-
-fun string_of_nn nn =
-  let
-    val diml = map (mat_dim o #w) nn
-    fun f (a,b) = its a ^ "," ^ its b
-  in
-    String.concatWith " " (map f diml) ^ "\n" ^
-    String.concatWith "\n\n" (map (string_of_mat o #w) nn)
-  end
-
-fun write_nn file nn = writel file [string_of_nn nn]
-
-fun split_nl nl l = case nl of
-    [] => raise ERR "split_nl" ""
-  | [a] => if length l = a then [l] else raise ERR "split_nl" ""
-  | a :: m =>
-    let val (l1,l2) = part_n a l in
-      l1 :: split_nl m l2
-    end
-
-fun read_wl_sl sl =
-  let
-    val nl = map fst (read_diml (hd sl))
-    val matsl = split_nl nl (tl sl)
-  in
-    map read_mat_sl matsl
-  end
-
-fun read_nn_sl sl =
-  let
-    val nl = map fst (read_diml (hd sl))
-    val matsl = split_nl nl (tl sl) handle HOL_ERR _ =>
-      raise ERR "read_nn_sl" (String.concatWith " # " (tl sl))
-    val matl =  map read_mat_sl matsl
+local open HOLsexp in
+fun enc_nn nn = list_encode enc_mat (map #w nn)
+fun dec_nn sexp = 
+  let 
+    val matl = valOf (list_decode dec_mat sexp) 
+      handle Option => raise ERR "dec_nn" ""
     fun f m = {a = tanh, da = dtanh, w = m}
   in
-    map f matl
+    SOME (map f matl)
   end
-  handle Empty => raise ERR "read_nn_sl" "empty"
+end
 
-fun read_nn file = read_nn_sl (readl file)
+fun write_nn file nn = write_data enc_nn file nn
+fun read_nn file = read_data dec_nn file
 
 fun string_of_ex (l1,l2) = reall_to_string l1 ^ "," ^ reall_to_string l2
-fun write_exl file exl = writel file (map string_of_ex exl)
-
 fun ex_of_string s =
   let val (a,b) = pair_of_list (String.tokens (fn x => x = #",") s) in
     (string_to_reall a, string_to_reall b)
   end
+
+fun write_exl file exl = writel file (map string_of_ex exl)
 fun read_exl file = map ex_of_string (readl file)
 
 (* -------------------------------------------------------------------------
@@ -180,7 +145,8 @@ fun fp_nn nn v = case nn of
 (* -------------------------------------------------------------------------
    Backward propagation (bp)
    Takes the data from the forward pass, computes the loss and weight updates
-   by gradient descent. Input is j. Output is i. Matrix is Mij.
+   by gradient descent. 
+   Input has size j. Output has size i. Matrix has i lines and j columns.
    ------------------------------------------------------------------------- *)
 
 fun bp_layer (fpdata:fpdata) doutnv =
@@ -195,10 +161,7 @@ fun bp_layer (fpdata:fpdata) doutnv =
     val dw       = mat_tabulate dw_f (mat_dim w)
     val dinv     = rm_biais (mat_mult (mat_transpose w) doutv)
   in
-   {doutnv = doutnv,
-    doutv = doutv,
-    dinv = dinv,
-    dw = dw}
+   {doutnv = doutnv, doutv = doutv, dinv = dinv, dw = dw}
   end
 
 fun bp_nn_aux rev_fpdatal doutnv =

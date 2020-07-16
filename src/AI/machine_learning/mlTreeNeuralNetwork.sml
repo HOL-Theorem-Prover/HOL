@@ -67,38 +67,25 @@ fun random_tnn_std (nlayer,dim) operl =
    TNN I/O
    ------------------------------------------------------------------------- *)
 
-fun write_tnn file tnn =
-  let val (l1,l2) = split (dlist tnn) in
-    export_terml (file ^ "_oper") l1;
-    writel (file ^ "_nn")
-      [String.concatWith "\n\nnnstop\n\n" (map string_of_nn l2)]
-  end
+local open SharingTables HOLsexp in
+fun enc_opernn enc_tm = pair_encode (enc_tm, enc_nn) 
+fun enc_tnn enc_tm = list_encode (enc_opernn enc_tm) 
+fun dec_opernn dec_tm = pair_decode (dec_tm, dec_nn)
+fun dec_tnn dec_tm = list_decode (dec_opernn dec_tm)
+end
 
-fun read_tnn file =
-  let
-    val l1 = import_terml (file ^ "_oper")
-    val l2 = map read_nn_sl (rpt_split_sl "nnstop" (readl (file ^ "_nn")))
-  in
-    dnew Term.compare (combine (l1,l2))
-  end
+fun write_tnn file tnn = write_tmdata (enc_tnn, map fst) file (dlist tnn)
+fun read_tnn file = dnew Term.compare (read_tmdata dec_tnn file)
 
-fun write_tnndim file tnndim =
-  let
-    fun ilts x = String.concatWith " " (map its x)
-    val (l1,l2) = split tnndim
-  in
-    export_terml (file ^ "_oper") l1;
-    writel (file ^ "_diml") (map ilts l2)
-  end
+local open SharingTables HOLsexp in
+fun enc_tnndime enc_tm = pair_encode (enc_tm, list_encode Integer) 
+fun enc_tnndim enc_tm = list_encode (enc_tnndime enc_tm) 
+fun dec_tnndime dec_tm = pair_decode (dec_tm, list_decode int_decode)
+fun dec_tnndim dec_tm = list_decode (dec_tnndime dec_tm)
+end
 
-fun read_tnndim file =
-  let
-    val l1 = import_terml (file ^ "_oper")
-    fun stil s = map string_to_int (String.tokens Char.isSpace s)
-    val l2 = map stil (readl (file ^ "_diml"))
-  in
-    combine (l1,l2)
-  end
+fun write_tnndim file tnndim = write_tmdata (enc_tnndim, map fst) file tnndim
+fun read_tnndim file = read_tmdata dec_tnndim file
 
 (* -------------------------------------------------------------------------
    TNN Examples: I/O
@@ -107,24 +94,22 @@ fun read_tnndim file =
 type tnnex = ((term * real list) list) list
 type tnnbatch = (term list * (term * mlMatrix.vect) list) list
 
-fun basicex_to_tnnex l = map (fn (tm,r) => [(tm,[r])]) l
+fun basicex_to_tnnex ex = map (fn (tm,r) => [(tm,[r])]) ex
 
-fun write_tnnex file ex =
-  let val (tml,rll) = split (List.concat ex) in
-    writel (file ^ "_group") (map (its o length) ex);
-    export_terml (file ^ "_term") tml;
-    writel (file ^ "_reall") (map reall_to_string rll)
-  end
+local open SharingTables HOLsexp in
+val enc_real = String o Real.toString
+val dec_real = Option.mapPartial Real.fromString o string_decode
+fun enc_sample enc_tm = pair_encode (enc_tm, list_encode enc_real) 
+fun dec_sample dec_tm = pair_decode (dec_tm, list_decode dec_real)
+fun enc_tnnex enc_tm = list_encode (list_encode (enc_sample enc_tm))
+fun dec_tnnex dec_tm = list_decode (list_decode (dec_sample dec_tm))
+fun tml_of_tnnex l = map fst (List.concat l)
+end
 
-fun read_tnnex file =
-  let
-    val tml = import_terml (file ^ "_term")
-    val rll = map string_to_reall (readl (file ^ "_reall"))
-    val ex = combine (tml,rll)
-    val groupl = map string_to_int (readl (file ^ "_group"))
-  in
-    part_group groupl ex
-  end
+fun write_tnnex file ex = 
+  write_tmdata (enc_tnnex, tml_of_tnnex) file ex
+fun read_tnnex file = 
+  read_tmdata dec_tnnex file
 
 (* -------------------------------------------------------------------------
    TNN Examples: ordering subterms and scaling output values
@@ -222,14 +207,11 @@ fun bp_tnn_aux doutnvdict fpdict bpdict revtml = case revtml of
         let
           val fpdatal = dfind tm fpdict
           val bpdatal = bp_nn_doutnv fpdatal doutnv
-          val dinv    = vector_to_list (#dinv (hd bpdatal))
+          val dinv = vector_to_list (#dinv (hd bpdatal))
           val dinvl = map Vector.fromList (part_group diml dinv)
         in
           (map #dw bpdatal, combine (argl,dinvl))
         end
-      (* val rl = map f doutnvl
-      val operdwl = sum_dwll (map fst rl)
-      val tmdinvl = List.concat (map snd rl) *)
       val (operdwl,tmdinvl) = f (add_vectl doutnvl)   
       val newdoutnvdict = dappendl tmdinvl doutnvdict
       val newbpdict = dappend (oper,operdwl) bpdict

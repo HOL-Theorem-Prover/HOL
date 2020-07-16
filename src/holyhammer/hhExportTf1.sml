@@ -372,13 +372,11 @@ fun tf1_export_chainy dir thyl =
    ------------------------------------------------------------------------- *)
 
 (*
-load "hhExportTf1"; open hhExportTf1;
 load "tttUnfold"; tttUnfold.load_sigobj ();
 val thyl = ancestry (current_theory ());
-val bushydir = HOLDIR ^ "/src/holyhammer/tf1_bushy";
-tf1_export_bushy bushydir thyl;
-val chainydir =  HOLDIR ^ "/src/holyhammer/tf1_chainy";
-tf1_export_chainy chainydir thyl;
+load "hhExportTf1"; open hhExportTf1;
+tf1_export_bushy (HOLDIR ^ "/src/holyhammer/tf1_bushy") thyl;
+tf1_export_chainy (HOLDIR ^ "/src/holyhammer/tf1_chainy") thyl;
 *)
 
 end (* struct *)

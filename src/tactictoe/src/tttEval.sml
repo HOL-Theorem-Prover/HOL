@@ -16,7 +16,8 @@ open HolKernel Abbrev boolLib aiLib
 val ERR = mk_HOL_ERR "tttEval"
 
 type pvfiles = string option * string option
-val tnndir = HOLDIR ^ "/src/tactictoe/tnn"
+val tnnex_dir = tactictoe_dir ^ "/tnnex" 
+val tnn_dir = tactictoe_dir ^ "/tnn" 
 
 (* -------------------------------------------------------------------------
    Value examples
@@ -120,7 +121,7 @@ fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
     val thmid = current_theory () ^ "_" ^ its (!savestate_level - 1)
     val b = !hide_flag
     val _ = hide_flag := false
-    val tnnex_dir = tactictoe_dir ^ "/tnnex" 
+    
     val _ = mkDir_err tnnex_dir
     val value_dir = tnnex_dir ^ "/value"
     val policy_dir = tnnex_dir ^ "/policy"
@@ -164,8 +165,8 @@ fun write_evalscript (vnno,pnno) file =
   let
     val file1 = mlquote (file ^ "_savestate")
     val file2 = mlquote (file ^ "_goal")
-    val filevo = Option.map (fn x => tnndir ^ "/" ^ x) vnno
-    val filepo = Option.map (fn x => tnndir ^ "/" ^ x) pnno
+    val filevo = Option.map (fn x => tnn_dir ^ "/" ^ x) vnno
+    val filepo = Option.map (fn x => tnn_dir ^ "/" ^ x) pnno
     val sl =
     ["PolyML.SaveState.loadState " ^ file1 ^ ";",
      "val tactictoe_goal = mlTacticData.import_goal " ^ file2 ^ ";",
@@ -252,6 +253,7 @@ aiLib.debug_flag := false;
 tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
+val _ = ttt_clean_eval ();
 val _ = run_evalscript_thyl "july13" (true,30) (NONE,NONE) thyl;
 val tnn_value = train_value 0.95 "value";
 val tnn_policy = train_policy 0.95 "policy";
@@ -393,8 +395,8 @@ fun train_dir pct name =
   in
     print_endline ("train accuracy: " ^ rts_round 6 acctrain ^ 
       ", test accuracy: " ^ rts_round 6 acctest);
-    mkDir_err tnndir;
-    write_tnn (tnndir ^ "/" ^ name) tnn;
+    mkDir_err tnn_dir;
+    write_tnn (tnn_dir ^ "/" ^ name) tnn;
     tnn
   end
  
