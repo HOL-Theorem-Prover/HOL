@@ -23,7 +23,7 @@ val ERR = mk_HOL_ERR "tacticToe"
 fun set_timeout r = (ttt_search_time := r)
 
 (* -------------------------------------------------------------------------
-   Preselection of theorems
+   Preselection of theorems and tactics
    ------------------------------------------------------------------------- *)
 
 fun select_thmfea (symweight,thmfea) gfea =
@@ -34,10 +34,6 @@ fun select_thmfea (symweight,thmfea) gfea =
   in
     (symweight, l1)
   end
-
-(* -------------------------------------------------------------------------
-   Preselection of tactics
-   ------------------------------------------------------------------------- *)
 
 fun select_tacfea tacdata gfea =
   let
@@ -50,6 +46,27 @@ fun select_tacfea tacdata gfea =
   in
     (symweight,tacfea)
   end
+
+(* -------------------------------------------------------------------------
+   Parsing theorems and tactics
+   ------------------------------------------------------------------------- *)
+
+fun parse_thmidl thmidl = 
+  valOf (thml_of_sml (map dbfetch_of_thmid thmidl))
+
+(* 
+load "tacticToe"; open tacticToe;
+val thmidl = ["namespace_tagTheory.TRUTH","boolTheory.TRUTH"];
+val thml = parse_thmidl thmidl;
+*)
+
+(*
+fun parse_stacl stacl =
+  let 
+    val sthmtacl = 
+    val thmtacl = thmtac_of_sml (map fn_of_stacl stacl)
+  in
+*)
 
 (* -------------------------------------------------------------------------
    Main function

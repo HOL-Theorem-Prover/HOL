@@ -35,9 +35,14 @@ fun quse_string s =
     val stream = TextIO.openString (QFRead.fromString false s)
     fun infn () = TextIO.input1 stream
   in
-    (PolyML.compiler (infn, []) (); true)
+    (
+    while not (TextIO.endOfStream stream) do PolyML.compiler (infn, []) ();
+    TextIO.closeIn stream;
+    true
+    )
+    handle Interrupt => (TextIO.closeIn stream; raise Interrupt) 
+        | _ => (TextIO.closeIn stream; false)
   end
-  handle Interrupt => raise Interrupt | _ => false
 
 (* -------------------------------------------------------------------------
    Tests

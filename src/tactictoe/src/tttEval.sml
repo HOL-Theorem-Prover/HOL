@@ -75,7 +75,6 @@ fun extract_thmpol tree =
       then SOME (nntm_of_gstactm (goal, #stactm stacv), btr (is_win stacv))
       else NONE
     val thml =
-
   in
     List.mapPartial g stacrecl
   end
@@ -115,7 +114,6 @@ fun print_time (name,t) = print_endline (name ^ " time: " ^ rts_round 6 t)
 
 fun ttt_clean_eval () = clean_rec_dir (tactictoe_dir ^ "/tnnex")
 
-(* TODO: tnnex as S-expression *)
 fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
   let
     val thmid = current_theory () ^ "_" ^ its (!savestate_level - 1)
