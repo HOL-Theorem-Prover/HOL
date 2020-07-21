@@ -208,7 +208,7 @@ fun name_arityeq (cv,a) =
 local open boolSyntax in
 
 val logic_l1 = map cid_of 
-  [conjunction, disjunction, negation, implication, equivalence]
+  [conjunction, disjunction, negation, implication, equality]
 val quant_l2 = map cid_of [universal, existential]
 
 val boolop_cval =
