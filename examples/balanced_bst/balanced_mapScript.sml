@@ -2,7 +2,6 @@ open HolKernel boolLib bossLib BasicProvers;
 open optionTheory pairTheory stringTheory;
 open arithmeticTheory pred_setTheory listTheory finite_mapTheory alistTheory sortingTheory;
 open comparisonTheory;
-open lcsymtacs;
 
 val _ = new_theory "balanced_map";
 

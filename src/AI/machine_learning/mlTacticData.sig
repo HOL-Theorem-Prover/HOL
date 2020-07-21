@@ -6,6 +6,8 @@ sig
   (* term data (can be useful for other purposes) *)
   val export_terml : string -> term list -> unit
   val import_terml : string -> term list
+  val export_goal : string -> goal -> unit
+  val import_goal : string -> goal
 
   (* tactic data *)
   type lbl = (string * real * goal * goal list)
@@ -30,6 +32,13 @@ sig
   val ttt_update_tacdata : (lbl * tacdata) -> tacdata
   val ttt_export_tacdata : string -> tacdata -> unit
 
+  type ex = (goal * string * (goal * goal list) * goal list) * bool
+  val exl_glob : ex list ref
+  val ttt_export_exl_human : string -> ex list -> unit
+  val ttt_export_exl : string -> ex list -> unit
+  val ttt_import_exl : string -> ex list
+  val ttt_export_tptpexl : string -> ex list -> unit
 
+  val prepare_exl : ex list -> (term * real list) list list
 
 end

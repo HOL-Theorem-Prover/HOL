@@ -373,7 +373,7 @@ fun introduce_vars ns t =
           else
             let val newvar =
                     case free_vars a of
-                        [] => mk_var("x", type_of a)
+                        [] => variant avoids (mk_var("x", type_of a))
                       | v::_ => variant avoids
                                         (mk_var(#1 (dest_var v), type_of a))
             in
@@ -415,13 +415,15 @@ fun push_old_vars t =
     end
 
 
-
+val NEG_EQ_IMP = IMP_CLAUSES |> SPEC_ALL |> CONJUNCTS |> last |> SYM
 fun weight pat t =
     if pat ~~ t then 2 else if can (match_term pat) t then 1 else 0
 fun isolate_to_front numSchematics Rt (G as (_, gt)) =
     let
       val (_, c, vs, _) = find_best (weight Rt) gt
-      val conv1 = c THENC introduce_vars numSchematics THENC push_old_vars THENC
+      val fix_neg = TRY_CONV (REWR_CONV NOT_EQ_IMPF)
+      val conv1 = c THENC fix_neg THENC introduce_vars numSchematics THENC
+                  push_old_vars THENC
                   TRY_CONV (STRIP_QUANT_CONV (REWR_CONV NOT_EQ_IMPF))
       fun pull_to_front v t =
           let

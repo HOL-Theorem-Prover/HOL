@@ -8,6 +8,7 @@ sig
    type ('a, 'b) istream
    type ('a, 'b) subst = {redex: 'a, residue: 'b} list
    type 'a set = 'a HOLset.set
+   val $  : ('a -> 'b) * 'a -> 'b
    val ## : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
    val ?> : ('a, 'c)verdict * ('a -> ('b, 'c)verdict) -> ('b, 'c)verdict
    val |-> : ('a * 'b) -> {redex: 'a, residue: 'b}

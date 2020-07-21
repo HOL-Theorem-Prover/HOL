@@ -122,7 +122,7 @@ in
         ("<=", chainable (realSyntax.mk_leq o one_int_to_real)),
         ("<", chainable (realSyntax.mk_less o one_int_to_real)),
         (">=", chainable (realSyntax.mk_geq o one_int_to_real)),
-        (">", chainable (realSyntax.mk_great o one_int_to_real))
+        (">", chainable (realSyntax.mk_greater o one_int_to_real))
       ]]
   end
 

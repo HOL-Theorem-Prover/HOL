@@ -1,6 +1,6 @@
 open HolKernel boolLib Parse bossLib
 
-open binderLib nomdatatype nomsetTheory lcsymtacs boolSimps
+open binderLib nomdatatype nomsetTheory boolSimps
      pred_setTheory listTheory quotientLib
 
 val _ = new_theory "foltypes"

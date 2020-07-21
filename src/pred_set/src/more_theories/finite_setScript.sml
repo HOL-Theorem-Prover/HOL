@@ -5,6 +5,7 @@ open listTheory liftingTheory transferTheory transferLib
 
 val _ = new_theory "finite_set";
 
+Theorem psEXTENSION[local] = pred_setTheory.EXTENSION
 
 Theorem RSUBSET_I:
   R1 RSUBSET R2 ==> R1 x y ==> R2 x y
@@ -31,73 +32,8 @@ Proof
   simp[relationTheory.RSUBSET, FUN_REL_def]>>metis_tac[]
 QED
 
-val GG = GEN_TYVARIFY o GEN_ALL
-
-(* a little like strip_tac on a theorem, or more accurately
-     GEN_TAC ORELSE DISCH_THEN (REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC)
-   either removing a universal quantification (with SPEC), or moving
-   implications into the assumptions and stripping apart conjunctions as it
-   does so.
-*)
-fun UDISCH' th =
-    let
-      val (l,r) = dest_imp (concl th)
-      fun buildcth t =
-          case Lib.total dest_conj t of
-              SOME (l,r) => CONJ (buildcth l) (buildcth r)
-            | NONE => ASSUME t
-    in
-      PROVE_HYP (buildcth l) (UNDISCH th)
-    end handle HOL_ERR _ => let
-      val (bv,_) = dest_forall (concl th)
-    in
-      SPEC bv th
-    end
-
-(* moves a bunch of hypotheses from a theorem into an implication, conjoining
-   them all rather than creating iterated implications *)
-fun DISCHl tms th =
-    let
-      val cjt = list_mk_conj tms
-    in
-      List.foldl (fn (cth, th) => PROVE_HYP cth th) th (CONJUNCTS (ASSUME cjt))
-                 |> DISCH cjt
-    end
-
-fun Uchain th1 hypth =
-    let
-      val fixed_tmvs =
-          FVL [concl th1, concl hypth]
-              (HOLset.union(hyp_frees th1, hyp_frees hypth))
-      val fixed_tyvs =
-          HOLset.foldl (fn (t, A) => HOLset.addList(A, type_vars_in_term t))
-                       (HOLset.union(hyp_tyvars th1, hyp_tyvars hypth))
-                       fixed_tmvs |> HOLset.listItems
-      val fixed_tmvs_l = HOLset.listItems fixed_tmvs
-      val th1' = repeat UDISCH' th1
-      val hypth' = repeat UDISCH' hypth
-      open optmonad
-      fun INSTT (tyi,tmi) th = th |> INST_TYPE tyi |> INST tmi
-      fun elimhyp h =
-          case FullUnify.Env.fromEmpty
-                 (FullUnify.unify fixed_tyvs fixed_tmvs_l (h, concl th1') >>
-                  FullUnify.collapse)
-           of
-              NONE => NONE
-            | SOME sigma =>
-              SOME (PROVE_HYP (INSTT sigma th1') (INSTT sigma hypth'))
-    in
-      case Portable.first_opt (fn _ => elimhyp) (hyp hypth') of
-          NONE => raise mk_HOL_ERR "transferLib" "Uchain" "No unifier found"
-        | SOME newth =>
-          let
-            val dhyps = HOLset.difference(hypset newth, hypset hypth)
-          in
-            newth |> DISCHl (HOLset.listItems dhyps) |> GEN_ALL
-          end
-    end
-
-fun INTRO th = goal_assum (mp_tac o Uchain (GG th))
+fun INTRO th =
+    goal_assum (resolve_then.resolve_then resolve_then.Any mp_tac th)
 
 Definition fsequiv_def:
   fsequiv l1 l2 <=> set l1 = set l2
@@ -225,7 +161,7 @@ QED
 Theorem RDOM_FSET0[simp,transfer_simp]:
   RDOM (FSET AB) = \al. !x. MEM x al ==> RDOM AB x
 Proof
-  simp[pred_setTheory.EXTENSION, IN_DEF, relationTheory.RDOM_DEF, FSET_def] >>
+  simp[psEXTENSION, IN_DEF, relationTheory.RDOM_DEF, FSET_def] >>
   Induct >> simp[] >> simp[IN_DEF, relationTheory.RDOM_DEF] >> metis_tac[]
 QED
 
@@ -275,17 +211,17 @@ Proof
   reverse conj_tac >- simp[] >> irule RSUBSET_I >>
   qexists_tac ‘$= O AB |==> ((FSET0 |==> (=)) O (LIST_REL AB |==> (=)))’ >>
   reverse conj_tac >- (irule FUN_REL_RSUBSET >> simp[FUN_REL_O]) >>
-  irule RSUBSET_I >> goal_assum (mp_tac o Uchain (GG FUN_REL_O)) >>
-  simp[relationTheory.O_DEF] >>
-  goal_assum (mp_tac o Uchain (GG MEM_transfers)) >> simp[] >>
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fIN_def)) >>
-  goal_assum (mp_tac o Uchain (GG funQ)) >>
-  goal_assum (mp_tac o Uchain (GG funQ)) >>
-  goal_assum (mp_tac o Uchain (GG fset0Q)) >>
-  goal_assum (mp_tac o Uchain (GG idQ)) >>
-  goal_assum (mp_tac o Uchain (GG idQ)) >>
+  irule RSUBSET_I >> INTRO FUN_REL_O >>
+  simp[relationTheory.O_DEF] >> INTRO MEM_transfers >> simp[] >>
+  irule HK_thm2 >> INTRO fIN_def >> INTRO funQ >> INTRO funQ >>
+  INTRO fset0Q >> INTRO idQ >> INTRO idQ >>
   simp[FUN_REL_def, fsequiv_def]
+QED
+
+Theorem EXTENSION:
+  !s1 s2. (s1 = s2) <=> !e. fIN e s1 <=> fIN e s2
+Proof
+  xfer_back_tac >> simp[fsequiv_def, psEXTENSION]
 QED
 
 Definition fUNION_def:
@@ -295,10 +231,7 @@ End
 Theorem fUNION_relates[transfer_rule]:
   (FSET0 |==> FSET0 |==> FSET0) APPEND fUNION
 Proof
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fUNION_def)) >>
-  ntac 2 (goal_assum (mp_tac o Uchain (GG funQ))) >>
-  ntac 2 (goal_assum (mp_tac o Uchain (GG fset0Q))) >>
+  map_every INTRO [HK_thm2, fUNION_def, funQ, funQ, fset0Q, fset0Q, fset0Q] >>
   (* respectfulness *)
   simp[FUN_REL_def, fsequiv_def]
 QED
@@ -316,10 +249,14 @@ End
 Theorem fEMPTY_relates[transfer_rule]:
   FSET0 [] fEMPTY
 Proof
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fEMPTY_def)) >>
-  goal_assum (mp_tac o Uchain (GG fset0Q)) >>
+  map_every INTRO [HK_thm2, fEMPTY_def, fset0Q] (* INTRO fsequiv_refl *) >>
   simp[]
+QED
+
+Theorem NOT_IN_EMPTY[simp]:
+  !e. ~fIN e fEMPTY
+Proof
+  xfer_back_tac >> simp[]
 QED
 
 Definition fINSERT_def:
@@ -329,12 +266,14 @@ End
 Theorem fINSERT_relates[transfer_rule]:
   ((=) |==> FSET0 |==> FSET0) CONS fINSERT
 Proof
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fINSERT_def)) >>
-  ntac 2 (goal_assum (mp_tac o Uchain (GG funQ))) >>
-  ntac 2 (goal_assum (mp_tac o Uchain (GG fset0Q))) >>
-  goal_assum (mp_tac o Uchain (GG idQ)) >>
+  map_every INTRO [HK_thm2, fINSERT_def, funQ, funQ, fset0Q, fset0Q, idQ] >>
   simp[FUN_REL_def, fsequiv_def] (* respectfulness *)
+QED
+
+Theorem IN_INSERT[simp]:
+  !e1 e2 s. fIN e1 (fINSERT e2 s) <=> e1 = e2 \/ fIN e1 s
+Proof
+  xfer_back_tac >> simp[]
 QED
 
 Theorem IN_KT[local,simp]: !x. x IN K T
@@ -349,11 +288,11 @@ Proof
   rename [‘e INSERT set L = _ INSERT set _’] >> qexists_tac ‘e’ >>
   qexists_tac ‘FILTER ($~ o (=) e) L’ >>
   simp[MEM_FILTER, LIST_TO_SET_FILTER,
-       pred_setTheory.EXTENSION] >>
+       psEXTENSION] >>
   metis_tac[]
 QED
 
-Theorem fINSERT_duplicates:
+Theorem fINSERT_duplicates[simp]:
   !e s. fINSERT e (fINSERT e s) = fINSERT e s
 Proof
   xfer_back_tac >> simp[fsequiv_def]
@@ -362,7 +301,7 @@ QED
 Theorem fINSERT_commutes:
   !e1 e2 s. fINSERT e1 (fINSERT e2 s) = fINSERT e2 (fINSERT e1 s)
 Proof
-  xfer_back_tac >> simp[fsequiv_def, pred_setTheory.EXTENSION] >> metis_tac[]
+  xfer_back_tac >> simp[fsequiv_def, psEXTENSION] >> metis_tac[]
 QED
 
 Theorem fset_induction:
@@ -372,7 +311,7 @@ Proof
   qx_gen_tac ‘h’ >> rename [‘P []’, ‘P (h::t)’] >>
   reverse (Cases_on ‘MEM h t’) >- simp[] >>
   ‘fsequiv t (h::t)’ suffices_by metis_tac[] >>
-  simp[fsequiv_def, pred_setTheory.EXTENSION] >> metis_tac[]
+  simp[fsequiv_def, psEXTENSION] >> metis_tac[]
 QED
 
 Theorem NOT_EMPTY_INSERT[simp]:
@@ -400,13 +339,34 @@ End
 Theorem fDELETE_relates[transfer_rule]:
   ((=) |==> FSET0 |==> FSET0) (\e. FILTER ($~ o $= e)) fDELETE
 Proof
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fDELETE_def)) >>
-  ntac 2 (goal_assum (mp_tac o Uchain (GG funQ))) >>
-  ntac 2 (goal_assum (mp_tac o Uchain (GG fset0Q))) >>
-  goal_assum (mp_tac o Uchain (GG idQ)) >>
+  map_every INTRO [HK_thm2, fDELETE_def, funQ, funQ, fset0Q, fset0Q, idQ] >>
   (* respectfulness *)
   simp[FUN_REL_def, fsequiv_def, LIST_TO_SET_FILTER]
+QED
+
+Theorem fDELETE_nonelement[simp]:
+  !e s. ~fIN e s ==> fDELETE e s = s
+Proof
+  xfer_back_tac >> simp[fsequiv_def, psEXTENSION, MEM_FILTER] >>
+  metis_tac[]
+QED
+
+Theorem IN_DELETE[simp]:
+  !a b s. fIN a (fDELETE b s) <=> a <> b /\ fIN a s
+Proof
+  xfer_back_tac >> simp[MEM_FILTER] >> metis_tac[]
+QED
+
+Theorem INSERT_DELETE[simp]:
+  !e s. fINSERT e (fDELETE e s) = fINSERT e s
+Proof
+  simp[EXTENSION] >> metis_tac[]
+QED
+
+Theorem DELETE_EMPTY[simp]:
+  !e. fDELETE e fEMPTY = fEMPTY
+Proof
+  simp[EXTENSION]
 QED
 
 Definition fCARD_def:
@@ -416,7 +376,7 @@ End
 Theorem fCARD_relates[transfer_rule]:
   (FSET0 |==> $=) (LENGTH o nub) fCARD
 Proof
-  irule HK_thm2 >> INTRO fCARD_def >> INTRO funQ >> INTRO idQ >> INTRO fset0Q >>
+  map_every INTRO [HK_thm2, fCARD_def, funQ, idQ, fset0Q] >>
   simp[fsequiv_def, FUN_REL_def] >>
   (* respectfulness *)
   Induct>> rw[nub_def]
@@ -427,8 +387,8 @@ Proof
   rw[length_nub_append, nub_def] >>
   qabbrev_tac ‘b' = pfx ++ FILTER (\x. ~MEM x pfx /\ x <> h) sfx’ >>
   ‘set a = set b'’
-    by (simp[Abbr‘b'’, LIST_TO_SET_FILTER, pred_setTheory.EXTENSION]>>
-        fs[pred_setTheory.EXTENSION] >> metis_tac[]) >>
+    by (simp[Abbr‘b'’, LIST_TO_SET_FILTER, psEXTENSION]>>
+        fs[psEXTENSION] >> metis_tac[]) >>
   ‘LENGTH (nub b') = LENGTH (nub a)’ by metis_tac[] >>
   fs[Abbr‘b'’, length_nub_append, rich_listTheory.FILTER_FILTER] >>
   pop_assum mp_tac >> csimp[]
@@ -449,6 +409,12 @@ Proof
   rename [‘~MEM h list’] >>
   ‘FILTER ($~ o $= h) list = list’ suffices_by (simp[] >> simp[EQ_SYM_EQ]) >>
   rw[] >> pop_assum mp_tac >> Induct_on ‘list’ >> simp[]
+QED
+
+Theorem fCARD_EQ0[simp]:
+  !s. fCARD s = 0 <=> s = fEMPTY
+Proof
+  xfer_back_tac >> simp[fsequiv_def]
 QED
 
 Definition fIMAGE_def:
@@ -509,12 +475,7 @@ End
 Theorem fINTER_relates[transfer_rule]:
   (FSET0 |==> FSET0 |==> FSET0) (FILTER o combin$C MEM) fINTER
 Proof
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fINTER_def)) >>
-  rpt (goal_assum (mp_tac o Uchain (GG funQ))) >>
-  rpt (goal_assum (mp_tac o Uchain (GG idQ))) >>
-  rpt (goal_assum (mp_tac o Uchain (GG fset0Q))) >>
-  simp[] >>
+  map_every INTRO [HK_thm2, fINTER_def, funQ, funQ, fset0Q, fset0Q, fset0Q] >>
   simp[FUN_REL_def, fsequiv_def, LIST_TO_SET_FILTER]
 QED
 
@@ -532,12 +493,8 @@ End
 Theorem fDIFF_relates[transfer_rule]:
   (FSET0 |==> FSET0 |==> FSET0) (\l1 l2. FILTER (\x. ~MEM x l2) l1) fDIFF
 Proof
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fDIFF_def)) >>
-  rpt (goal_assum (mp_tac o Uchain (GG funQ))) >>
-  rpt (goal_assum (mp_tac o Uchain (GG idQ))) >>
-  rpt (goal_assum (mp_tac o Uchain (GG fset0Q))) >>
-  simp[] >>
+  map_every INTRO [HK_thm2, fDIFF_def, funQ, funQ] >>
+  rpt (INTRO fset0Q) >>
   simp[FUN_REL_def, fsequiv_def, LIST_TO_SET_FILTER]
 QED
 
@@ -547,23 +504,6 @@ Proof
   xfer_back_tac >> simp[MEM_FILTER, CONJ_COMM]
 QED
 
-Theorem NOT_IN_EMPTY[simp]:
-  !e. ~fIN e fEMPTY
-Proof
-  xfer_back_tac >> simp[]
-QED
-
-Theorem IN_INSERT[simp]:
-  !e1 e2 s. fIN e1 (fINSERT e2 s) <=> e1 = e2 \/ fIN e1 s
-Proof
-  xfer_back_tac >> simp[]
-QED
-
-Theorem EXTENSION:
-  !s1 s2. (s1 = s2) <=> !e. fIN e s1 <=> fIN e s2
-Proof
-  xfer_back_tac >> simp[fsequiv_def, pred_setTheory.EXTENSION]
-QED
 
 Definition fset_REL_def:
   fset_REL AB fs1 fs2 <=> !a b. AB a b ==> (fIN a fs1 <=> fIN b fs2)
@@ -628,13 +568,10 @@ Proof
   >- (simp[relationTheory.RSUBSET, relationTheory.O_DEF, FUN_REL_def] >>
       metis_tac[]) >>
   simp[relationTheory.O_DEF] >>
-  goal_assum (mp_tac o Uchain (GG LIST_TO_SET_transfer)) >>
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG funQ)) >>
-  goal_assum (mp_tac o Uchain (GG fset0Q)) >>
-  goal_assum (mp_tac o Uchain (GG idQ)) >> simp[] >> rw[]
+  map_every INTRO [LIST_TO_SET_transfer, HK_thm2, funQ, fset0Q, idQ] >>
+  rw[]
   >- (simp[Once FUN_EQ_THM, toSet_def] >>
-      simp[pred_setTheory.EXTENSION, fIN_def]) >>
+      simp[psEXTENSION, fIN_def]) >>
   simp[FUN_REL_def, fsequiv_def]
 QED
 
@@ -647,18 +584,14 @@ Proof
   qexists_tac ‘(FSET0 O LIST_REL AB) |==>
                (((=) |==> (=)) O (AB |==> (=)))’ >> reverse conj_tac
   >- simp[relationTheory.O_DEF, relationTheory.RSUBSET] >>
-  irule RSUBSET_I >>
-  goal_assum (mp_tac o Uchain (GG FUN_REL_O)) >>
+  irule RSUBSET_I >> INTRO FUN_REL_O >>
   simp[relationTheory.O_DEF] >>
   qexists_tac ‘set’ >>
   conj_tac
   >- (simp[FUN_REL_def, LIST_REL_EL_EQN] >>
       metis_tac[IN_DEF, MEM_EL, bi_unique_def, left_unique_def,
                 right_unique_def]) >>
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG funQ)) >>
-  goal_assum (mp_tac o Uchain (GG idQ)) >>
-  goal_assum (mp_tac o Uchain (GG fset0Q)) >> conj_tac
+  map_every INTRO [HK_thm2, funQ, idQ, fset0Q] >> conj_tac
   >- simp[toSet_def, FUN_EQ_THM, fIN_def, IN_DEF] >>
   simp[FUN_REL_def, fsequiv_def]
 QED
@@ -714,26 +647,18 @@ Proof
   simp[Once FSET_AB_eqn, SimpL “FUN_REL”, SimpR “$O”] >>
   simp[LIST_REL_O] >>
   simp[Once FSET_AB_eqn, SimpR “FUN_REL”] >>
-  simp[relationTheory.O_ASSOC] >> irule RSUBSET_I >>
-  goal_assum (mp_tac o Uchain (GG FUN_REL_O)) >>
+  simp[relationTheory.O_ASSOC] >> irule RSUBSET_I >> INTRO FUN_REL_O >>
   simp[relationTheory.O_DEF] >>
-  goal_assum (mp_tac o Uchain (GG FLAT_relates)) >>
-  irule HK_thm2 >>
-  goal_assum (mp_tac o Uchain (GG fBIGUNION_def)) >>
-  goal_assum (mp_tac o Uchain (GG funQ)) >>
-  goal_assum (mp_tac o Uchain (GG fset0Q)) >>
-  goal_assum (mp_tac o Uchain (GG Qt_composes)) >>
-  goal_assum (mp_tac o Uchain (GG fset0Q)) >>
-  goal_assum (mp_tac o Uchain (GG listQ)) >>
-  goal_assum (mp_tac o Uchain (GG fset0Q)) >>
+  map_every INTRO [FLAT_relates, HK_thm2, fBIGUNION_def, funQ, fset0Q,
+                   Qt_composes, fset0Q, listQ, fset0Q] >>
   rw[FUN_REL_def, relationTheory.O_DEF, relationTheory.inv_DEF,PULL_EXISTS]>>
   rename [‘fsequiv (FLAT l1) (FLAT l2)’, ‘LIST_REL _ l1 fsl1’,
           ‘LIST_REL _ l2 fsl2’] >>
   ‘fsl1 = MAP fset_ABS l1 /\ fsl2 = MAP fset_ABS l2’
     by metis_tac[LIST_REL_FSET0_Abs] >>
   fs[fsequiv_def, LIST_TO_SET_MAP, LIST_TO_SET_FLAT] >>
-  simp[Once pred_setTheory.EXTENSION, PULL_EXISTS] >>
-  fs[Once pred_setTheory.EXTENSION, EQ_IMP_THM, FORALL_AND_THM, PULL_EXISTS,
+  simp[Once psEXTENSION, PULL_EXISTS] >>
+  fs[Once psEXTENSION, EQ_IMP_THM, FORALL_AND_THM, PULL_EXISTS,
      fsequiv_def] >> metis_tac[]
 QED
 
@@ -753,14 +678,14 @@ Theorem left_unique_rel_set[transfer_safe]:
   left_unique AB ==> left_unique (rel_set AB)
 Proof
   simp[left_unique_def, rel_set_def] >> rw[] >>
-  simp[pred_setTheory.EXTENSION] >> metis_tac[]
+  simp[psEXTENSION] >> metis_tac[]
 QED
 
 Theorem right_unique_rel_set[transfer_safe]:
   right_unique AB ==> right_unique (rel_set AB)
 Proof
   simp[right_unique_def, rel_set_def] >> rw[] >>
-  simp[pred_setTheory.EXTENSION] >> metis_tac[]
+  simp[psEXTENSION] >> metis_tac[]
 QED
 
 Theorem set_BIGUNION:
@@ -790,13 +715,116 @@ QED
 Theorem set_IMAGE:
   !f fs. toSet (fIMAGE f fs) = IMAGE f (toSet fs)
 Proof
-  xfer_back_tac >> simp[LIST_TO_SET_MAP, pred_setTheory.EXTENSION]
+  xfer_back_tac >> simp[LIST_TO_SET_MAP, psEXTENSION]
 QED
 
 Theorem IN_BIGUNION:
   fIN e (fBIGUNION fss) = ?fs. fIN fs fss /\ fIN e fs
 Proof
   simp[fIN_IN, set_BIGUNION, set_IMAGE, PULL_EXISTS] >> metis_tac[]
+QED
+
+Inductive fITSETr:
+  fITSETr f fEMPTY A A /\
+  (!e s A0 A1. fITSETr f s A0 A1 /\ ~fIN e s ==>
+               fITSETr f (fINSERT e s) A0 (f e A1))
+End
+
+val _ = TypeBase.export [
+      TypeBasePure.mk_nondatatype_info
+        (“:'a fset”,
+         {nchotomy = SOME fset_cases,
+          induction = SOME fset_induction,
+          size = NONE,
+          encode=NONE})
+    ]
+
+Theorem fITSETr_total:
+  !s f a0. ?a. fITSETr f s a0 a
+Proof
+  Induct >> metis_tac[fITSETr_rules]
+QED
+
+Theorem DECOMPOSITION:
+  fIN e s <=> ?s0. s = fINSERT e s0 /\ ~fIN e s0
+Proof
+  Induct_on ‘s’ >> simp[] >> rw[] >> eq_tac >> rw[]
+  >- metis_tac[]
+  >- (fs[] >> rename [‘fINSERT e1 (fINSERT e2 ss) = fINSERT e2 _’] >>
+      qexists_tac ‘fINSERT e1 ss’ >> simp[fINSERT_commutes]) >>
+  rename [‘e1 = e2 \/ _’, ‘fINSERT e2 s2 = fINSERT e1 s1’] >>
+  Cases_on ‘e1 = e2’ >> simp[] >>
+  ‘fIN e1 s2’ by (fs[EXTENSION] >> metis_tac[]) >>
+  pop_assum mp_tac >> simp[]
+QED
+
+Theorem fITSETr_functional:
+  (!x y a. f x (f y a) = f y (f x a)) ==>
+  !s a0 a1 a2. fITSETr f s a0 a1 /\ fITSETr f s a0 a2 ==> a1 = a2
+Proof
+  strip_tac >>
+  completeInduct_on ‘fCARD s’ >> fs[PULL_FORALL] >>
+  rpt gen_tac >>
+  Cases_on ‘fCARD s = 0’ >> fs[] >> strip_tac >>
+  ONCE_REWRITE_TAC [fITSETr_cases] >> simp[] >>
+  disch_then $ CONJUNCTS_THEN2
+                (qx_choosel_then [‘e1’, ‘s1’, ‘A1’] strip_assume_tac)
+                (qx_choosel_then [‘e2’, ‘s2’, ‘A2’] strip_assume_tac) >>
+  rw[] >> Cases_on ‘e1 = e2’ >> fs[]
+  >- (‘s1 = s2’ suffices_by metis_tac[DECIDE “x < x + 1”] >>
+      fs[EXTENSION] >> metis_tac[]) >>
+  ‘fIN e1 s2 /\ fIN e2 s1’ by metis_tac[IN_INSERT, EXTENSION] >>
+  ‘?s0. s1 = fINSERT e2 s0 /\ s2 = fINSERT e1 s0 /\ ~fIN e2 s0 /\ ~fIN e1 s0’
+    by (‘?s0. s1 = fINSERT e2 s0 /\ ~fIN e2 s0’ by metis_tac[DECOMPOSITION] >>
+        qexists_tac ‘s0’ >> simp[] >> rw[] >> fs[] >>
+        qpat_x_assum ‘fINSERT _ _ = fINSERT _ _’ mp_tac >>
+        simp[EXTENSION] >> metis_tac[]) >>
+  fs[] >> ‘?a00. fITSETr f s0 a0 a00’ by metis_tac[fITSETr_total] >>
+  ‘fITSETr f (fINSERT e1 s0) a0 (f e1 a00) /\
+   fITSETr f (fINSERT e2 s0) a0 (f e2 a00)’
+    by PROVE_TAC[fITSETr_rules] >>
+  ‘A1 = f e2 a00 /\ A2 = f e1 a00’ suffices_by metis_tac[] >>
+  conj_tac >> first_x_assum irule
+  >- (qexistsl_tac [‘a0’, ‘fINSERT e2 s0’] >> simp[]) >>
+  qexistsl_tac [‘a0’, ‘fINSERT e1 s0’] >> simp[]
+QED
+
+Definition fITSET_def:
+  fITSET f s a0 = @a. fITSETr f s a0 a
+End
+
+Theorem fITSET_EMPTY[simp]:
+  fITSET f fEMPTY a = a
+Proof
+  simp[fITSET_def, Once fITSETr_cases]
+QED
+
+Theorem fITSET_INSERT:
+  (!x y a. f x (f y a) = f y (f x a)) ==>
+  !e s a. fITSET f (fINSERT e s) a = f e (fITSET f (fDELETE e s) a)
+Proof
+  simp[fITSET_def] >> rpt strip_tac >> SELECT_ELIM_TAC >>
+  conj_tac >- metis_tac[fITSETr_total] >> qx_gen_tac ‘a1’ >>
+  SELECT_ELIM_TAC >> conj_tac >- metis_tac[fITSETr_total]>> qx_gen_tac ‘a2’ >>
+  strip_tac >>
+  drule_then (qspec_then ‘e’ mp_tac)(fITSETr_rules |> SPEC_ALL |> CONJUNCT2) >>
+  simp[] >> PROVE_TAC[fITSETr_functional]
+QED
+
+Theorem fITSET_INSERT_tail:
+  (!x y a. f x (f y a) = f y (f x a)) ==>
+  !e s a. fITSET f (fINSERT e s) a = fITSET f (fDELETE e s) (f e a)
+Proof
+  strip_tac >> Induct_on ‘s’ >> rpt strip_tac >- simp[fITSET_INSERT] >>
+  rename [‘fITSET _ (fINSERT e1 (fINSERT e2 _))’] >>
+  Cases_on ‘e1 = e2’ >> simp[]
+  >- (rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >> simp[EXTENSION] >> metis_tac[]) >>
+  ‘fINSERT e1 (fINSERT e2 s) = fINSERT e2 (fINSERT e1 s)’
+    by simp[fINSERT_commutes] >>
+  pop_assum SUBST1_TAC >> simp[Once fITSET_INSERT] >>
+  ‘fDELETE e1 (fINSERT e2 s) = fINSERT e2 (fDELETE e1 s)’
+    by (simp[EXTENSION] >> metis_tac[]) >>
+  pop_assum SUBST1_TAC >> simp[fITSET_INSERT]
 QED
 
 (*
@@ -814,7 +842,7 @@ Proof
   simp[FSET', FUN_EQ_THM, fIN_def, FSET_def, EQ_IMP_THM] >> rw[fset_repabs] >>
   rename [‘fs = fset_ABS l’] >>
   ‘?l'. fs = fset_ABS l'’ by metis_tac[fset_ABS_onto] >>
-  fs[fset_repabs, fsequiv_def, pred_setTheory.EXTENSION] >> metis_tac[]
+  fs[fset_repabs, fsequiv_def, psEXTENSION] >> metis_tac[]
 QED
 
 Definition fSUB_def:

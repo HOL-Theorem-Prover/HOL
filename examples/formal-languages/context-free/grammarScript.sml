@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib
 
-open boolSimps lcsymtacs
+open boolSimps
 
 open listTheory pred_setTheory finite_mapTheory locationTheory
 open relationTheory

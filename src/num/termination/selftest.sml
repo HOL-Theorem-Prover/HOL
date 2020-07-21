@@ -1,7 +1,6 @@
 open HolKernel Parse boolLib
 open testutils TotalDefn
 val _ = Feedback.emit_MESG := false
-val _ = print "\n"
 val _ = tprint "Testing mutually recursive function definition"
 
 val f_def = require (check_result (K true)) Define`
@@ -32,23 +31,27 @@ val desired_ind =
 val _ = if aconv desired_ind (concl (theorem "fact_ind")) then OK()
         else die "FAILED!\n"
 
-val fs_def = DefineSchema`(fs 0 y = z + y) /\ (fs x y = x)`;
-val gs_def = DefineSchema`(gs 0 y = x + y) /\ (gs x y = x)`;
+val _ = tprint "Define schema(1)"
+val _ = require (check_result (K true)) (quietly DefineSchema)
+                `(fs 0 y = z + y) /\ (fs x y = x)`;
+val _ = tprint "Define schema(2)"
+val _ = require (check_result (K true)) (quietly DefineSchema)
+                `(gs 0 y = x + y) /\ (gs x y = x)`;
 
 val _ = tprint "Testing 0-arg recursive function with lambda"
 
-val f1_def = require (check_result (K true)) Define`
+val f1_def = require (check_result (K true)) (quietly Define)`
   f1 = \x. case x of 0 => 0n | SUC n => f1 n
 `
 
 val _ = tprint "Testing 1-arg recursive function with lambda"
 
-val f1_def = require (check_result (K true)) Define`
+val f1_def = require (check_result (K true)) (quietly Define)`
   f2 (y : 'a) = \x. case x of 0 => 0n | SUC n => f2 y n
 `;
 
 val _ = tprint "Testing 2-arg recursive function with lambda"
 
-val f1_def = require (check_result (K true)) Define`
+val f1_def = require (check_result (K true)) (quietly Define)`
   f3 (y : 'a) (z : 'a) = \x. case x of 0 => 0n | SUC n => f3 y z n
 `;

@@ -13,8 +13,6 @@ val _ = new_theory "primes";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* open dependent theories *)
 (* val _ = load "logPowerTheory"; *)

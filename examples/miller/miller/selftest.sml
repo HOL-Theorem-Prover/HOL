@@ -17,6 +17,7 @@ fun mkN n = numSyntax.mk_numeral (Arbnum.fromInt n)
 fun test (N n) = test0 (mkN n)
   | test (T n) = test0 (``2 ** 2 ** ^(mkN n) + 1`` |> EVAL |> concl |> rhs)
 
+open Systeml
 val _ = app (ignore o test)
             [N 91, N 123, T 5,
              T 6, (* takes ~3s on 2014 Macbook Pro *)

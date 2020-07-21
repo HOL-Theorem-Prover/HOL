@@ -170,15 +170,19 @@ val _ = add_rule {fixity = Suffix 2100,
                   term_name = UnicodeChars.sup_2,
                   block_style = (AroundEachPhrase,(PP.CONSISTENT, 0)),
                   paren_style = OnlyIfNecessary,
-                  pp_elements = [TOK UnicodeChars.sup_2]}
-val _ = overload_on (UnicodeChars.sup_2, “\x. x ** 2”)
+                  pp_elements = [TOK UnicodeChars.sup_2]};
+
+val _ = overload_on (UnicodeChars.sup_2, “\x. x ** 2”);
+val _ = TeX_notation {hol = UnicodeChars.sup_2, TeX = ("\\HOLTokenSupTwo{}", 1)};
 
 val _ = add_rule {fixity = Suffix 2100,
                   term_name = UnicodeChars.sup_3,
                   block_style = (AroundEachPhrase,(PP.CONSISTENT, 0)),
                   paren_style = OnlyIfNecessary,
-                  pp_elements = [TOK UnicodeChars.sup_3]}
-val _ = overload_on (UnicodeChars.sup_3, “\x. x ** 3”)
+                  pp_elements = [TOK UnicodeChars.sup_3]};
+
+val _ = overload_on (UnicodeChars.sup_3, “\x. x ** 3”);
+val _ = TeX_notation {hol = UnicodeChars.sup_3, TeX = ("\\HOLTokenSupThree{}", 1)};
 
 val GREATER_DEF = new_definition("GREATER_DEF", “$> m n <=> n < m”)
 val _ = set_fixity ">" (Infix(NONASSOC, 450))
@@ -257,6 +261,7 @@ val num_case_compute = store_thm ("num_case_compute",
   “!n. num_CASE n (f:'a) g = if n=0 then f else g (PRE n)”,
   INDUCT_TAC THEN REWRITE_TAC [num_case_def,NOT_SUC,PRE]);
 
+
 (* --------------------------------------------------------------------- *)
 (* SUC_NOT = |- !n. ~(0 = SUC n)                                         *)
 (* --------------------------------------------------------------------- *)
@@ -313,6 +318,8 @@ val LESS_OR_EQ_ALT = store_thm ("LESS_OR_EQ_ALT",
   REWRITE_TAC [FUN_EQ_THM, LESS_OR_EQ, relationTheory.RTC_CASES_TC, LESS_ALT]
     THEN REPEAT (STRIP_TAC ORELSE EQ_TAC)
     THEN ASM_REWRITE_TAC []) ;
+
+
 
 (* --------------------------------------------------------------------- *)
 (* LESS_ADD proof rewritten: TFM 90.O9.21                               *)
@@ -510,6 +517,15 @@ val SUB_MONO_EQ = store_thm ("SUB_MONO_EQ",
     ONCE_REWRITE_TAC[SUB] THEN
     PURE_ONCE_REWRITE_TAC[LESS_MONO_EQ] THEN
     ASM_REWRITE_TAC[]]);
+
+(* A better case rewrite for numeral arguments *)
+Theorem num_case_NUMERAL_compute[simp]:
+  num_CASE (NUMERAL (BIT1 n)) (z:'a) s = s (NUMERAL(BIT1 n) - 1) /\
+  num_CASE (NUMERAL (BIT2 n)) z s = s (NUMERAL(BIT1 n))
+Proof
+  REWRITE_TAC [num_case_compute, NUMERAL_DEF, BIT1, BIT2, ADD_CLAUSES,
+               NOT_SUC, PRE, ALT_ZERO, SUB_MONO_EQ, SUB_0]
+QED
 
 val SUB_EQ_0 = store_thm ("SUB_EQ_0",
   “!m n. (m - n = 0) = (m <= n)”,
@@ -1261,7 +1277,7 @@ val LESS_MULT2 = store_thm ("LESS_MULT2",
   REPEAT GEN_TAC THEN CONV_TAC CONTRAPOS_CONV THEN
   REWRITE_TAC[NOT_LESS, LESS_EQ_0, DE_MORGAN_THM, MULT_EQ_0]);
 
-Theorem ZERO_LESS_MULT:
+Theorem ZERO_LESS_MULT[simp]:
   !m n. 0 < m * n <=> 0 < m /\ 0 < n
 Proof
   REPEAT GEN_TAC THEN
@@ -3584,17 +3600,21 @@ val MOD_ELIM = Q.store_thm ("MOD_ELIM",
     THEN METIS_TAC [SUB_ADD,GREATER_OR_EQ,GREATER_DEF,LESS_OR_EQ,ADD_MODULUS],
     METIS_TAC [LESS_MOD,NOT_LESS,LESS_OR_EQ,GREATER_OR_EQ, GREATER_DEF]]);
 
-val DOUBLE_LT = store_thm ("DOUBLE_LT",
-   “!p q. 2 * p + 1 < 2 * q <=> 2 * p < 2 * q”,
-   REPEAT GEN_TAC
-   THEN (EQ_TAC THEN1 PROVE_TAC [ADD1, prim_recTheory.SUC_LESS])
-   THEN STRIP_TAC
-   THEN SIMP_TAC boolSimps.bool_ss [GSYM ADD1]
-   THEN MATCH_MP_TAC LESS_NOT_SUC
-   THEN ASM_REWRITE_TAC []
-   THEN PROVE_TAC [EVEN_ODD, EVEN_DOUBLE, ODD_DOUBLE]);
+Theorem DOUBLE_LT[simp]:
+  !p q. 2 * p + 1 < 2 * q <=> p < q
+Proof
+  ‘!p q. 2 * p + 1 < 2 * q <=> 2 * p < 2 * q’
+    suffices_by (STRIP_TAC THEN ASM_REWRITE_TAC[LT_MULT_LCANCEL, TWO, LESS_0])
+  THEN REPEAT GEN_TAC
+  THEN EQ_TAC THEN1 PROVE_TAC [ADD1, prim_recTheory.SUC_LESS]
+  THEN STRIP_TAC
+  THEN SIMP_TAC boolSimps.bool_ss [GSYM ADD1]
+  THEN MATCH_MP_TAC LESS_NOT_SUC
+  THEN ASM_REWRITE_TAC []
+  THEN PROVE_TAC [EVEN_ODD, EVEN_DOUBLE, ODD_DOUBLE]
+QED
 
-Theorem EXP2_LT:
+Theorem EXP2_LT[simp]:
    !m n. n DIV 2 < 2 ** m <=> n < 2 ** SUC m
 Proof
    REPEAT GEN_TAC
@@ -3649,11 +3669,13 @@ val ONE_LT_MULT = Q.store_thm ("ONE_LT_MULT",
            LESS_MONO_EQ,ZERO_LESS_ADD,LESS_0] THEN
    METIS_TAC [ZERO_LESS_MULT]]);
 
-val ONE_LT_EXP = Q.store_thm ("ONE_LT_EXP",
- `!x y. 1 < x ** y <=> 1 < x /\ 0 < y`,
+Theorem ONE_LT_EXP[simp]:
+   !x y. 1 < x ** y <=> 1 < x /\ 0 < y
+Proof
  GEN_TAC THEN INDUCT_TAC THEN
  RW_TAC bool_ss [EXP,ONE_LT_MULT,LESS_REFL,LESS_0,ZERO_LT_EXP] THEN
- METIS_TAC [SUC_LESS, ONE]);
+ METIS_TAC [SUC_LESS, ONE]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Calculating DIV and MOD by repeated subtraction. We define a              *)

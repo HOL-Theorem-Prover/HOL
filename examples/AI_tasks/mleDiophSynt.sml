@@ -67,7 +67,8 @@ fun apply_move_poly move poly =
              then raise ERR "apply_move_poly" "non-increasing"
              else butlast poly @ [last poly @ [c]]
 
-fun apply_move move (poly,graph,n) = (apply_move_poly move poly, graph, n-1)
+fun apply_move (tree,id) move (poly,graph,n) =
+  ((apply_move_poly move poly, graph, n-1), tree)
 
 fun available_movel_poly poly =
   filter (fn x => can (apply_move_poly x) poly) movel
@@ -214,7 +215,8 @@ val rlparam =
    ncore = 30, ntarget = 200, nsim = 32000, decay = 1.0}
 
 val rlobj : (board,move) rlobj =
-  {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer}
+  {rlparam = rlparam, game = game, gameio = gameio, dplayer = dplayer,
+   infobs = fn _ => ()}
 
 val extsearch = mk_extsearch "mleDiophSynt.extsearch" rlobj
 
@@ -222,6 +224,7 @@ val extsearch = mk_extsearch "mleDiophSynt.extsearch" rlobj
    Final test
    ------------------------------------------------------------------------- *)
 
+(*
 val ft_extsearch_uniform =
   ft_mk_extsearch "mleDiophSynt.ft_extsearch_uniform" rlobj
     (uniform_player game)
@@ -251,6 +254,7 @@ val fttnn_extsearch =
 
 val fttnnbs_extsearch =
   fttnnbs_mk_extsearch "mleDiophSynt.fttnnbs_extsearch" rlobj
+*)
 
 (*
 load "aiLib"; open aiLib;
@@ -286,7 +290,8 @@ fun solve_target (unib,tim,tnn) target =
     noise_coeff = 0.25,
     noise_gen = random_real,
     noconfl = false,
-    avoidlose = false
+    avoidlose = false,
+    evalwin = false
     }
   val pretob = (#pretob (#dplayer rlobj));
   fun preplayer target =
@@ -297,7 +302,7 @@ fun solve_target (unib,tim,tnn) target =
     {mctsparam = mctsparam, game = #game rlobj,
      player = if unib then uniform_player (#game rlobj) else preplayer target}
   in
-    fst (mcts mctsobj (starttree_of mctsobj target))
+    (fst o snd) (mcts mctsobj (starttree_of mctsobj target))
   end
 
 fun solve_diophset (unib,tim,tnn) diophset =

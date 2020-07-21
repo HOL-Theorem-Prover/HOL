@@ -53,7 +53,7 @@ fun INEQ_REDUCE_CONV tm =
    else if (is_leq tm) then ((ARGS_CONV NUM_REDUCE_CONV) THENC LE_CONV) tm
    else if (is_less tm) then ((ARGS_CONV NUM_REDUCE_CONV) THENC LT_CONV) tm
    else if (is_geq tm) then ((ARGS_CONV NUM_REDUCE_CONV) THENC GE_CONV) tm
-   else if (is_great tm) then ((ARGS_CONV NUM_REDUCE_CONV) THENC GT_CONV) tm
+   else if (is_greater tm) then ((ARGS_CONV NUM_REDUCE_CONV) THENC GT_CONV) tm
    else ALL_CONV tm;
 
 (*---------------------------------------------------------------------------*)

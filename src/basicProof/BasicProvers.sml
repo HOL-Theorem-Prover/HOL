@@ -156,7 +156,7 @@ val strip_prod =
       SOME{Tyop = "prod", Thy = "pair", Args = [ty1, ty2]} => (ty1, ty2)
     | other => raise ERR "dest_prod" "not a product type"
  in
-    strip_binop (total dest_prod)
+    strip_binop dest_prod
  end
 
 fun mk_prod(ty1,ty2) = mk_thy_type{Thy="pair",Tyop="prod",Args=[ty1,ty2]}
@@ -285,27 +285,35 @@ fun set_names names ty thm0 =
 ;
 
 fun primCases_on names st (g as (_,w)) =
- let val ty = type_of (dest_tmkind st)
- in case TypeBase.fetch ty
-     of SOME facts =>
-        let val thm = TypeBasePure.nchotomy_of facts
+    let
+      val ty = type_of (dest_tmkind st)
+      fun gen() =
+          case TypeBase.fetch ty of
+              SOME facts => [TypeBasePure.nchotomy_of facts]
+            | NONE => let val {Thy,Tyop,...} = dest_thy_type ty
+                      in
+                        raise ERR "primCases_on"
+                              ("No cases theorem found for type: "^
+                               Lib.quote (Thy^"$"^Tyop))
+                      end
+      fun ttac thm =
+          let
             val thm' = set_names names ty thm
-        in case st
-           of Free M =>
-               if (is_var M) then VAR_INTRO_TAC (ISPEC M thm') else
-               if ty=bool then ASM_CASES_TAC M
-               else TERM_INTRO_TAC (ISPEC M thm')
-            | Bound(V,M) => let val (tac,M') = FREEUP V M g
-                            in (tac THEN VAR_INTRO_TAC (ISPEC M' thm')) end
-            | Alien M    => if ty=bool then ASM_CASES_TAC M
-                            else TERM_INTRO_TAC (ISPEC M thm')
-        end
-      | NONE =>
-          let val {Thy,Tyop,...} = dest_thy_type ty
-          in raise ERR "primCases_on"
-                ("No cases theorem found for type: "^Lib.quote (Thy^"$"^Tyop))
+          in
+            case st of
+                Free M =>
+                if is_var M then VAR_INTRO_TAC (ISPEC M thm') else
+                if ty=bool then ASM_CASES_TAC M
+                else TERM_INTRO_TAC (ISPEC M thm')
+              | Bound(V,M) => let val (tac,M') = FREEUP V M g
+                                  in (tac THEN VAR_INTRO_TAC (ISPEC M' thm'))
+                              end
+              | Alien M    => if ty=bool then ASM_CASES_TAC M
+                              else TERM_INTRO_TAC (ISPEC M thm')
           end
- end g;
+    in
+      markerLib.maybe_using gen ttac g
+    end
 
 fun Cases_on qtm g = primCases_on [] (find_subterm qtm g) g
   handle e => raise wrap_exn "BasicProvers" "Cases_on" e;
@@ -387,33 +395,39 @@ fun primInduct st ind_tac (g as (asl,c)) =
 (*---------------------------------------------------------------------------*)
 
 fun induct_on_type st ty g =
-    case TypeBase.fetch ty of
-        SOME facts =>
-        let
-          val is_mutind_thm = is_conj o snd o strip_imp o snd o strip_forall o
-                              concl
-        in
-          case total TypeBasePure.induction_of facts of
-              NONE =>
-                raise ERR "induct_on_type"
-                      (String.concat ["Type :",Hol_pp.type_to_string ty,
-                                      " is registered in the types database, ",
-                                      "but there is no associated induction \
-                                      \theorem"])
-            | SOME thm => (* now select induction tactic *)
-              if null (TypeBasePure.constructors_of facts) then
-                (* not a datatype*)
-                primInduct st (HO_MATCH_MP_TAC thm)
-              else if is_mutind_thm thm then
-                Mutual.MUTUAL_INDUCT_TAC thm
-              else
-                primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC) ORELSE
-                (primInduct st (HO_MATCH_MP_TAC thm) THEN REPEAT CONJ_TAC)
-        end g
-      | NONE =>
-        raise ERR "induct_on_type"
-              (String.concat ["Type: ",Hol_pp.type_to_string ty,
-                              " is not registered in the types database"]);
+    let
+      val is_mutind_thm = is_conj o snd o strip_imp o snd o
+                          strip_forall o concl
+      val facts_opt = TypeBase.fetch ty
+      fun gen() =
+          case facts_opt of
+              SOME facts =>
+              let
+              in
+                case total TypeBasePure.induction_of facts of
+                    NONE =>
+                    raise ERR "induct_on_type"
+                          (String.concat ["Type :",Hol_pp.type_to_string ty,
+                                          " is registered in the types \
+                                          \database, but there is no associated\
+                                          \induction theorem"])
+                  | SOME thm => (* now select induction tactic *) [thm]
+              end
+            | NONE =>
+              raise ERR "induct_on_type"
+                    (String.concat ["Type: ",Hol_pp.type_to_string ty,
+                                    " is not registered in the types database"])
+      fun ttac thm =
+          case Option.map TypeBasePure.constructors_of facts_opt of
+              SOME [] => (* not a datatype*) primInduct st (HO_MATCH_MP_TAC thm)
+            | _ => if is_mutind_thm thm then
+                     Mutual.MUTUAL_INDUCT_TAC thm
+                   else
+                     primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC) ORELSE
+                     (primInduct st (HO_MATCH_MP_TAC thm) THEN REPEAT CONJ_TAC)
+    in
+      maybe_using gen ttac g
+    end
 
 fun checkind th =
     (* if the purported theorem fails to pass muster according to this
@@ -449,7 +463,7 @@ fun Induct_on qtm g =
       case Lib.total dest_thy_const c of
           SOME {Thy,Name,...} =>
           let
-            val indths =
+            fun indths() =
                 Binarymap.find (rule_induction_map(), {Thy=Thy,Name=Name})
                 handle NotFound => []
             fun numSchematics th =
@@ -465,7 +479,7 @@ fun Induct_on qtm g =
                 TRY (checkind th >> isolate_to_front (numSchematics th) pat) >>
                 HO_MATCH_MP_TAC th
           in
-            MAP_FIRST tryind indths ORELSE induct_on_type st ty
+            markerLib.maybe_using indths tryind ORELSE induct_on_type st ty
           end g
         | NONE => induct_on_type st ty g
    end

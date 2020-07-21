@@ -17,11 +17,10 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open numLib unwindLib tautLib Arith prim_recTheory
-combinTheory quotientTheory arithmeticTheory realTheory
-realLib jrhUtils pairTheory seqTheory limTheory transcTheory listTheory mesonLib
-boolTheory topologyTheory pred_setTheory optionTheory numTheory RealArith
-pred_setLib cardinalTheory;
+open numTheory numLib unwindLib tautLib Arith prim_recTheory pairTheory
+     combinTheory quotientTheory arithmeticTheory pred_setTheory realTheory
+     realLib jrhUtils seqTheory limTheory transcTheory listTheory mesonLib
+     topologyTheory optionTheory RealArith pred_setLib cardinalTheory;
 
 open hurdUtils iterateTheory productTheory real_topologyTheory derivativeTheory;
 

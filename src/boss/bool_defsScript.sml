@@ -1,4 +1,4 @@
-open HolKernel boolLib lcsymtacs BasicProvers;
+open HolKernel boolLib BasicProvers
 
 val _ = new_theory "bool_defs";
 

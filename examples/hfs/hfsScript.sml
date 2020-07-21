@@ -34,7 +34,6 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open lcsymtacs
 open pred_setTheory
 
 val _ = new_theory "hfs";

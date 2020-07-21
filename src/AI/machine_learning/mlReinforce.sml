@@ -449,7 +449,7 @@ fun ft_extsearch_fun rlobj player (_:unit) target =
   let
     val mctsobj =
       {mctsparam = ft_mctsparam, game = #game rlobj, player = player}
-    val (tree,_) = mcts mctsobj (starttree_of mctsobj target)
+    val (_,(tree,_)) = mcts mctsobj (starttree_of mctsobj target)
     val b = is_win (#status (dfind [] tree))
     val boardo = if not b then NONE else
       let val nodel = trace_win tree [] in
@@ -485,7 +485,7 @@ fun fttnn_extsearch_fun rlobj tnn target =
     val mctsobj =
       {mctsparam = ft_mctsparam, game = #game rlobj,
        player = preplayer target}
-    val (tree,_) = mcts mctsobj (starttree_of mctsobj target)
+    val (_,(tree,_)) = mcts mctsobj (starttree_of mctsobj target)
     val b = #status (dfind [] tree) = Win
     val boardo = if not b then NONE else
       let val nodel = trace_win tree [] in
@@ -543,7 +543,7 @@ fun fttnnbs_extsearch_fun rlobj tnn target =
         val mctsobj =
           {mctsparam = mk_ft_mctsparam (hd timl), game = #game rlobj,
            player = preplayer target}
-        val (endtree,_) = mcts mctsobj (tree,cache)
+        val (_,(endtree,_)) = mcts mctsobj (tree,cache)
         val cid = select_bigstep endtree
         val status = #status (dfind [] endtree)
       in

@@ -165,7 +165,7 @@ fun is_emptystring tm =
 fun dest_string_lit tm =
     if is_emptystring tm then ""
     else let
-        val (front,e) = Lib.front_last (strip_binop (total dest_string) tm)
+        val (front,e) = Lib.front_last (strip_binop dest_string tm)
       in
         if is_emptystring e then
           String.implode (itlist (cons o fromHOLchar) front [])
@@ -226,7 +226,7 @@ in
 fun relaxed_dest_string_lit tm =
     if is_emptystring tm then ""
     else let
-        val (front,e) = Lib.front_last (strip_binop (total dest_string) tm)
+        val (front,e) = Lib.front_last (strip_binop dest_string tm)
       in
         if is_emptystring e then
           String.implode (itlist (cons o fromHOLchar) front [])

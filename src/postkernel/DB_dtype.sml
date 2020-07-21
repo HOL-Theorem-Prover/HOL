@@ -14,6 +14,7 @@ struct
  datatype selector = SelTM of Term.term | SelNM of string | SelTHY of string
 
  type data = (string * string) * (Thm.thm * class)
+ datatype location = Local of string | Stored of KernelSig.kernelname
 
 
 end

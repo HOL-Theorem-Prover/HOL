@@ -351,11 +351,7 @@ val _ = add_rule {fixity = Suffix 2100,
                   pp_elements = [TOK UnicodeChars.sup_4]};
 
 val _ = overload_on (UnicodeChars.sup_4, ``\x :extreal. x pow 4``);
-
-(* TeX notations (not fully working) *)
-val _ = TeX_notation {hol = UnicodeChars.sup_2, TeX = ("\\ensuremath{^2}", 1)};
-val _ = TeX_notation {hol = UnicodeChars.sup_3, TeX = ("\\ensuremath{^3}", 1)};
-val _ = TeX_notation {hol = UnicodeChars.sup_4, TeX = ("\\ensuremath{^4}", 1)};
+val _ = TeX_notation {hol = UnicodeChars.sup_4, TeX = ("\\HOLTokenSupFour{}", 1)};
 
 (* ********************************************* *)
 (*     Properties of Arithmetic Operations       *)
@@ -1051,6 +1047,14 @@ val lt_sub_imp = store_thm
  >> RW_TAC std_ss [extreal_lt_def, extreal_le_def, extreal_add_def, extreal_sub_def]
  >> METIS_TAC [real_lt, REAL_LT_ADD_SUB]);
 
+Theorem lt_sub_imp' :
+    !x y z. x <> PosInf /\ y <> PosInf /\ y + x < z ==> y < z - x
+Proof
+    rpt Cases
+ >> RW_TAC std_ss [extreal_lt_def, extreal_le_def, extreal_add_def, extreal_sub_def]
+ >> METIS_TAC [real_lt, REAL_LT_ADD_SUB]
+QED
+
 val lt_sub_imp2 = store_thm (* new *)
   ("lt_sub_imp2", ``!x y z. x <> NegInf /\ x <> PosInf /\ y + x < z ==> y < z - x``,
     rpt Cases
@@ -1167,6 +1171,16 @@ val lt_sub = store_thm
                    extreal_sub_def, le_infty]
  >> METIS_TAC [REAL_LE_SUB_RADD]);
 
+Theorem lt_sub' :
+    !x y z. x <> PosInf /\ y <> PosInf /\ z <> NegInf /\ z <> PosInf ==>
+           (y + x < z <=> y < z - x)
+Proof
+    rpt Cases
+ >> RW_TAC std_ss [extreal_lt_def, extreal_le_def, extreal_add_def,
+                   extreal_sub_def, le_infty]
+ >> METIS_TAC [REAL_LE_SUB_RADD]
+QED
+
 val sub_add2 = store_thm
   ("sub_add2", ``!x y. x <> NegInf /\ x <> PosInf ==> (x + (y - x) = y)``,
     rpt Cases
@@ -1203,6 +1217,15 @@ Proof
     rpt Cases
  >> RW_TAC std_ss [extreal_sub_def, num_not_infty, extreal_of_num_def, extreal_11,
                    REAL_SUB_0]
+QED
+
+Theorem sub_eq_0 :
+    !x y. x <> PosInf /\ x <> NegInf /\ (x = y) ==> (x - y = 0)
+Proof
+    RW_TAC std_ss []
+ >> `?a. x = Normal a` by METIS_TAC [extreal_cases]
+ >> ASM_SIMP_TAC std_ss [extreal_of_num_def, extreal_sub_def,
+                         extreal_11, REAL_SUB_REFL]
 QED
 
 Theorem neg_neg[simp] :
@@ -1769,6 +1792,14 @@ Proof
     rpt STRIP_TAC
  >> MP_TAC (REWRITE_RULE [mul_lzero] (Q.SPECL [`0`, `y`, `z`] lt_rdiv))
  >> RW_TAC std_ss []
+QED
+
+Theorem le_div : (* cf. REAL_LE_DIV *)
+    !y z. 0 <= y /\ 0 < z ==> 0 <= y / Normal z
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (GSYM (Q.SPECL [`z`, `0`, `y`] le_rdiv))
+ >> RW_TAC std_ss [mul_lzero]
 QED
 
 val lt_ldiv = store_thm
@@ -5528,18 +5559,13 @@ Proof
  >> Q.EXISTS_TAC `n` >> REWRITE_TAC []
 QED
 
+(* removed ‘!n. 0 <= f n’ from antecedents *)
 Theorem ext_suminf_eq :
-    !f g. (!n. 0 <= f n) /\ (!n. f n = g n) ==> (ext_suminf f = ext_suminf g)
+    !f g. (!n. f n = g n) ==> (ext_suminf f = ext_suminf g)
 Proof
     rpt STRIP_TAC
- >> `!n. 0 <= g n` by PROVE_TAC []
- >> RW_TAC std_ss [ext_suminf_def, GSYM le_antisym] (* 2 subgoals, same tacticals *)
- >> (MATCH_MP_TAC sup_mono \\
-     GEN_TAC >> BETA_TAC >> irule EXTREAL_SUM_IMAGE_MONO \\
-     REWRITE_TAC [IN_COUNT, FINITE_COUNT] \\
-     CONJ_TAC >- PROVE_TAC [le_refl] \\
-     DISJ1_TAC >> NTAC 2 STRIP_TAC \\
-     CONJ_TAC >> MATCH_MP_TAC pos_not_neginf >> art [])
+ >> Suff ‘f = g’ >- rw []
+ >> rw [FUN_EQ_THM]
 QED
 
 Theorem ext_suminf_sub :
@@ -7185,7 +7211,8 @@ val EXTREAL_PROD_IMAGE_DEF = new_definition
 
 val _ = overload_on ("PI", ``EXTREAL_PROD_IMAGE``);
 val _ = Unicode.unicode_version {u = UTF8.chr 0x220F, tmnm = "PI"};
-val _ = TeX_notation {hol = UTF8.chr 0x220F, TeX = ("\\ensuremath{\\prod}", 1)};
+val _ = TeX_notation {hol = UTF8.chr 0x220F, TeX = ("\\HOLTokenPI{}", 1)};
+val _ = TeX_notation {hol = "PI"           , TeX = ("\\HOLTokenPI{}", 1)};
 
 val EXTREAL_PROD_IMAGE_THM = store_thm
   ("EXTREAL_PROD_IMAGE_THM",
@@ -7459,13 +7486,14 @@ val max_fn_seq_mono = store_thm
 val EXTREAL_SUP_FUN_SEQ_MONO_IMAGE = store_thm
   ("EXTREAL_SUP_FUN_SEQ_MONO_IMAGE",
   ``!f (P:extreal->bool) (P':('a->extreal)->bool).
-                (?x. P x) /\ (?z. z <> PosInf /\ !x. P x ==> x <= z) /\ (P = IMAGE f P') /\
-                (!g1 g2. (g1 IN P' /\ g2 IN P' /\ (!x. g1 x <= g2 x))  ==> f g1 <= f g2) /\
-                (!g1 g2. g1 IN P' /\ g2 IN P' ==> (\x. max (g1 x) (g2 x)) IN P')
-          ==> ?g. (!n. g n IN P') /\
-                  (!x n. g n x <= g (SUC n) x) /\
-                  (sup (IMAGE (\n. f (g n)) UNIV) = sup P)``,
-  rpt STRIP_TAC
+       (?x. P x) /\ (?z. z <> PosInf /\ !x. P x ==> x <= z) /\ (P = IMAGE f P') /\
+       (!g1 g2. (g1 IN P' /\ g2 IN P' /\ (!x. g1 x <= g2 x))  ==> f g1 <= f g2) /\
+       (!g1 g2. g1 IN P' /\ g2 IN P' ==> (\x. max (g1 x) (g2 x)) IN P')
+      ==>
+       ?g. (!n. g n IN P') /\
+           (!x n. g n x <= g (SUC n) x) /\
+           (sup (IMAGE (\n. f (g n)) UNIV) = sup P)``,
+    rpt STRIP_TAC
   >> `?g. (!n:num. g n IN P') /\ (sup (IMAGE (\n. f (g n)) UNIV) = sup P)`
       by METIS_TAC [EXTREAL_SUP_FUN_SEQ_IMAGE]
   >> Q.EXISTS_TAC `max_fn_seq g`

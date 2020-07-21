@@ -38,7 +38,7 @@ fun sml_propl_of s =
     end
 
 (* -------------------------------------------------------------------------
-   Traversing the parse tree
+   Parsed tree
    ------------------------------------------------------------------------- *)
 
 fun sml_prop_first p = case p of
@@ -113,12 +113,23 @@ fun dest_next_prop p = case p of
   | _ => raise ERR "dest_first_next" ""
 
 (* -------------------------------------------------------------------------
-   Collecting the nodes into a simplified tree
+   Simplified parsed tree
    ------------------------------------------------------------------------- *)
 
-datatype smlexpr =
-    SmlExpr of string option * (smlexpr list)
+datatype smlexp =
+    SmlExp of string option * (smlexp list)
   | SmlUnit of string option
+
+fun dest_smlexp e = case e of
+    SmlExp (a,b) => (a,b)
+  | _ => raise ERR "dest_smlexp" ""
+
+fun constant_space stac = String.concatWith " " (partial_sml_lexer stac)
+
+fun string_of_smlexp e = case e of
+   SmlExp (SOME s,_) => constant_space s
+ | SmlUnit (SOME s) => constant_space s
+ | _ => raise ERR "string_of_smlexp" ""
 
 fun reprint s =
   let val propll = sml_propl_all_of s in
@@ -130,7 +141,7 @@ fun reprint s =
     else raise ERR "reprint" s
   end
 
-fun extract_subexpr_aux propl =
+fun extract_smlexp_aux propl =
   let val s =
     case List.find is_print_prop propl of
       SOME p => SOME (string_of_pretty ((dest_print_prop p) 80))
@@ -141,109 +152,121 @@ fun extract_subexpr_aux propl =
     case (l1,l2) of
       ([],[]) => [SmlUnit s]
     | ([fprop],[]) =>
-      let val ftreel = extract_subexpr_aux (dest_first_prop fprop) in
-        [SmlExpr (s,ftreel)]
+      let val ftreel = extract_smlexp_aux (dest_first_prop fprop) in
+        [SmlExp (s,ftreel)]
       end
     | ([],[nprop]) =>
-      let val ntreel = extract_subexpr_aux (dest_next_prop nprop) in
+      let val ntreel = extract_smlexp_aux (dest_next_prop nprop) in
         SmlUnit s :: ntreel
       end
     | ([fprop],[nprop]) =>
       let
-        val ftreel = extract_subexpr_aux (dest_first_prop fprop)
-        val ntreel = extract_subexpr_aux (dest_next_prop nprop)
+        val ftreel = extract_smlexp_aux (dest_first_prop fprop)
+        val ntreel = extract_smlexp_aux (dest_next_prop nprop)
       in
-        SmlExpr (s,ftreel) :: ntreel
+        SmlExp (s,ftreel) :: ntreel
       end
-    | _ => raise ERR "extract_subexpr_aux" ""
+    | _ => raise ERR "extract_smlexp_aux" ""
   end
 
-fun extract_subexpr s =
+fun extract_smlexp s =
   let val propll = sml_propl_all_of s in
     if List.length propll = 1
-    then extract_subexpr_aux (hd propll)
-    else raise ERR "extract_subexpr" s
-  end
-
-datatype proptree =
-    PropNode of PolyML.ptProperties list * (proptree list)
-  | PropLeaf of PolyML.ptProperties list
-
-fun extract_proptree_aux propl =
-  let
-    val l1 = List.filter is_first_prop propl
-    val l2 = List.filter is_next_prop propl
-  in
-    case (l1,l2) of
-      ([],[]) => [PropLeaf propl]
-    | ([fprop],[]) =>
-      let val ftreel = extract_proptree_aux (dest_first_prop fprop) in
-        [PropNode (propl,ftreel)]
-      end
-    | ([],[nprop]) =>
-      let val ntreel = extract_proptree_aux (dest_next_prop nprop) in
-        PropLeaf propl :: ntreel
-      end
-    | ([fprop],[nprop]) =>
-      let
-        val ftreel = extract_proptree_aux (dest_first_prop fprop)
-        val ntreel = extract_proptree_aux (dest_next_prop nprop)
-      in
-        PropNode (propl,ftreel) :: ntreel
-      end
-    | _ => raise ERR "extract_proptree_aux" ""
-  end
-
-fun extract_proptree s =
-  let val propll = sml_propl_all_of s in
-    if List.length propll = 1
-    then extract_proptree_aux (hd propll)
-    else raise ERR "extract_proptree" s
+    then extract_smlexp_aux (hd propll)
+    else raise ERR "extract_smlexp" s
   end
 
 (* -------------------------------------------------------------------------
-   Tactic extraction
+   Tactic tree
    ------------------------------------------------------------------------- *)
 
-fun is_infix s = String.isPrefix "sml_infix" (hd (partial_sml_lexer s))
+datatype tacexp =
+    SmlInfix of string * (tacexp * tacexp)
+  | SmlTactical of string
+  | SmlTactic of string
 
-fun is_infix_tree tree = case tree of
-   SmlExpr (s, treel) => is_infix (valOf s)
- | SmlUnit s => is_infix (valOf s)
+fun size_of_tacexp tacexp = case tacexp of
+    SmlInfix (_,(e1,e2)) => size_of_tacexp e1 + size_of_tacexp e2
+  | SmlTactical _ => 0
+  | SmlTactic _ => 1
 
-fun is_infix_treel treel =
-  List.length treel = 3
-  andalso
-  (is_infix_tree (List.nth (treel,1)) handle _ => false)
+fun is_infixr s =
+  let val sl = partial_sml_lexer s in
+    String.isPrefix "sml_infixr" (singleton_of_list sl)
+  end
 
-fun is_recordable1 sno sl treel =
-  mem "smlTag.sml_fst" sl andalso
-  not (is_infix_treel treel) andalso
-  is_tactic sno
+fun is_infixl s =
+  let val sl = partial_sml_lexer s in
+    String.isPrefix "sml_infixl" (singleton_of_list sl)
+  end
 
-fun is_recordable2 sno sl =
-  mem "smlTag.sml_fst" sl andalso is_tactic sno
+fun is_infix s =
+  let val sl = partial_sml_lexer s in
+    String.isPrefix "sml_infix" (singleton_of_list sl)
+  end
 
-fun extract_tacticl_aux tree = case tree of
-    SmlExpr (s, treel) =>
-    if s = NONE then List.concat (map extract_tacticl_aux treel) else
-      let val sno = valOf s
-          val sl = partial_sml_lexer (valOf s)
-      in
-        if is_recordable1 sno sl treel
-        then [sl]
-        else List.concat (map extract_tacticl_aux treel)
-      end
-  | SmlUnit s =>
-    if s = NONE then [] else
-      let val sno = valOf s
-          val sl = partial_sml_lexer sno
-      in
-        if is_recordable2 sno sl then [sl] else []
-      end
+fun dest_infix e = case e of
+    SmlExp (_, el) =>
+    if not (length el = 3 andalso is_infix
+      (string_of_smlexp (List.nth (el,1))))
+    then raise ERR "dest_infix" "unexpected"
+    else triple_of_list el
+   | SmlUnit _ => raise ERR "dest_infix" "unexpected"
 
-fun extract_tacticl s =
-  List.concat (map extract_tacticl_aux (extract_subexpr s))
+fun extract_tacexp_aux smlexp = case smlexp of
+    SmlExp (SOME s, el) =>
+    (
+    if length el = 3 andalso is_infixl (string_of_smlexp (List.nth (el,1)))
+    then
+    let
+      val (a,inf,b) = triple_of_list el
+      val (a0,ainf,a1) = dest_infix (List.nth (el,0))
+      val infs = string_of_smlexp inf
+      val ainfs = string_of_smlexp ainf
+      val a1s = string_of_smlexp a1
+    in
+      SmlInfix (infs,
+        (
+        SmlInfix (ainfs, (extract_tacexp_aux a0, SmlTactical a1s)),
+        extract_tacexp_aux b
+        )
+      )
+    end
+    else if length el = 3 andalso
+      is_infixr (string_of_smlexp (List.nth (el,1)))
+    then
+       let
+         val (a,inf,b) = triple_of_list el
+         val (b0,binf,b1) = dest_infix (List.nth (el,2))
+         val infs = string_of_smlexp inf
+         val binfs = string_of_smlexp binf
+         val b0s = string_of_smlexp b0
+       in
+         SmlInfix (infs,
+           (
+           extract_tacexp_aux a,
+           SmlInfix (binfs, (SmlTactical b0s, extract_tacexp_aux b1))
+           )
+         )
+       end
+    else SmlTactic (constant_space s)
+    )
+  | SmlUnit (SOME s) => SmlTactic (constant_space s)
+  | _ => raise ERR "extract_tacticl_aux" "option"
 
+fun extract_tacexp s =
+  if not (is_tactic s) then raise ERR "extract_tacexp" "not a tactic" else
+  let
+    val e1 = (singleton_of_list o extract_smlexp) s
+    val e2 = (singleton_of_list o snd o dest_smlexp) e1
+  in
+    extract_tacexp_aux e2
+  end
+
+fun string_of_tacexp e = case e of
+    SmlInfix (s,(e1,e2)) =>
+    "( " ^ string_of_tacexp e1 ^ " " ^ s ^ " " ^ string_of_tacexp e2 ^ " )"
+  | SmlTactic s => s
+  | SmlTactical s => s
 
 end (* struct *)

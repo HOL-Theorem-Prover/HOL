@@ -104,13 +104,40 @@ sig
   val HINT_EXISTS_TAC       : tactic
   val part_match_exists_tac : (term -> term) -> term -> tactic
 
-  val drule            : thm_tactic
-  val dxrule           : thm_tactic
-  val drule_then       : thm_tactic -> thm_tactic
-  val dxrule_then      : thm_tactic -> thm_tactic
-  val drule_all        : thm_tactic
-  val dxrule_all       : thm_tactic
-  val drule_all_then   : thm_tactic -> thm_tactic
-  val dxrule_all_then  : thm_tactic -> thm_tactic
+  datatype match_position = datatype thmpos_dtype.match_position
+  val drule                : thm_tactic
+  val dxrule               : thm_tactic
+  val rev_drule            : thm_tactic
+  val rev_dxrule           : thm_tactic
+
+  val drule_at             : match_position -> thm_tactic
+  val dxrule_at            : match_position -> thm_tactic
+  val rev_drule_at         : match_position -> thm_tactic
+  val rev_dxrule_at        : match_position -> thm_tactic
+
+  val drule_then           : thm_tactic -> thm_tactic
+  val dxrule_then          : thm_tactic -> thm_tactic
+  val rev_drule_then       : thm_tactic -> thm_tactic
+  val rev_dxrule_then      : thm_tactic -> thm_tactic
+
+  val drule_at_then        : match_position -> thm_tactic -> thm_tactic
+  val dxrule_at_then       : match_position -> thm_tactic -> thm_tactic
+  val rev_drule_at_then    : match_position -> thm_tactic -> thm_tactic
+  val rev_dxrule_at_then   : match_position -> thm_tactic -> thm_tactic
+
+
+  val drule_all            : thm_tactic
+  val dxrule_all           : thm_tactic
+  val drule_all_then       : thm_tactic -> thm_tactic
+  val dxrule_all_then      : thm_tactic -> thm_tactic
+
+  val rev_drule_all        : thm_tactic
+  val rev_dxrule_all       : thm_tactic
+  val rev_drule_all_then   : thm_tactic -> thm_tactic
+  val rev_dxrule_all_then  : thm_tactic -> thm_tactic
+
+
+  val mp_then      : match_position -> thm_tactic -> thm -> thm -> tactic
+  val resolve_then : match_position -> thm_tactic -> thm -> thm -> tactic
 
 end

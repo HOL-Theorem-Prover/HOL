@@ -62,7 +62,7 @@ local
   val riscv_instr_tm =
      Term.prim_mk_const {Thy = "riscv_prog", Name = "riscv_instr"}
   val strip_concat =
-    HolKernel.strip_binop (Lib.total wordsSyntax.dest_word_concat)
+    HolKernel.strip_binop wordsSyntax.dest_word_concat
   val pc_tm = ``^st.c_PC ^id_tm``
   val pc_var = stateLib.gvar "pc" dword
   fun is_mem_access tm =
@@ -176,7 +176,7 @@ local
        | (NONE, SOME _) => General.LESS
        | (NONE, NONE) => Term.compare (w1, w2)
    val register = #2 o dest_riscv_gpr
-   val address = HolKernel.strip_binop (Lib.total wordsSyntax.dest_word_add) o
+   val address = HolKernel.strip_binop wordsSyntax.dest_word_add o
                  fst o dest_riscv_MEM
 in
    fun psort p =

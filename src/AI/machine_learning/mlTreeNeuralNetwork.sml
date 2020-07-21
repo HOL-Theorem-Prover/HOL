@@ -16,6 +16,20 @@ fun msg param s = if #verbose param then print_endline s else ()
 fun msg_err fs es = (print_endline (fs ^ ": " ^ es); raise ERR fs es)
 
 (* -------------------------------------------------------------------------
+   TNN operators (variable/constant + arity)
+   ------------------------------------------------------------------------- *)
+
+fun operl_of_term tm =
+  let
+    val (oper,argl) = strip_comb tm
+    val arity = length argl
+  in
+    (oper,arity) :: List.concat (map operl_of_term argl)
+  end;
+
+val oper_compare = cpl_compare Term.compare Int.compare;
+
+(* -------------------------------------------------------------------------
    Random TNN
    ------------------------------------------------------------------------- *)
 
@@ -31,9 +45,8 @@ fun oper_nn diml = case diml of
 
 fun random_tnn tnnparam = dnew Term.compare (map_snd oper_nn tnnparam)
 
-fun dim_std (nlayer,dim) oper =
+fun dim_std_arity (nlayer,dim) (oper,a) =
   let
-    val a = arity_of oper
     val dim_alt =
       if is_var oper andalso String.isPrefix "head_" (fst (dest_var oper))
       then 1
@@ -42,6 +55,9 @@ fun dim_std (nlayer,dim) oper =
     (if a = 0 then [0] else List.tabulate (nlayer, fn _ => a * dim)) @
     [dim_alt]
   end
+
+fun dim_std (nlayer,dim) oper =
+  dim_std_arity (nlayer,dim) (oper,arity_of oper)
 
 fun random_tnn_std (nlayer,dim) operl =
   random_tnn (map_assoc (dim_std (nlayer,dim)) operl)

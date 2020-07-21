@@ -13,8 +13,6 @@ val _ = new_theory "corres";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "quotientGroupTheory"; *)
 

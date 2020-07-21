@@ -1610,6 +1610,7 @@ val NUM024_1 = M "NUM024_1" $
    (less(a,a)) /\
    (!A. ~equal(successor(A),n0)) ==> F”;
 
+val _ = hide "flip"
 
 val NUM180_1 = M "NUM180_1" $
 Lib.with_flag(Globals.guessing_tyvars,true)

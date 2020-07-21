@@ -3,7 +3,7 @@
  * use closures rather than substitution in the semantics, and use
  * De Bruijn indices for variables. *)
 
-open HolKernel boolLib bossLib lcsymtacs Parse;
+open HolKernel boolLib bossLib Parse;
 open integerTheory stringTheory alistTheory listTheory pred_setTheory;
 open pairTheory optionTheory finite_mapTheory arithmeticTheory;
 
