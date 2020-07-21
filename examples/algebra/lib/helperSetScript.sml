@@ -1174,16 +1174,17 @@ val MIN_SET_TEST = store_thm(
        and m IN s ==> m <= x         by implication
    Hence x = m.
 *)
-val MAX_SET_TEST_IFF = store_thm(
-  "MAX_SET_TEST_IFF",
-  ``!s. FINITE s /\ s <> {} ==>
-        !x. x IN s ==> ((MAX_SET s = x) <=> (!y. y IN s ==> y <= x))``,
+Theorem MAX_SET_TEST_IFF:
+  !s. FINITE s /\ s <> {} ==>
+      !x. x IN s ==> ((MAX_SET s = x) <=> (!y. y IN s ==> y <= x))
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = MAX_SET s` >>
-  rw[EQ_IMP_THM] >- rw[MAX_SET_DEF] >>
+  rw[EQ_IMP_THM] >- rw[MAX_SET_DEF, Abbr‘m’] >>
   `m IN s /\ x <= m` by rw[MAX_SET_DEF, Abbr`m`] >>
   `m <= x` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: s <> {} ==> !x. x IN s ==> ((MIN_SET s = x) <=> (!y. y IN s ==> x <= y)) *)
 (* Proof:
@@ -1194,15 +1195,15 @@ val MAX_SET_TEST_IFF = store_thm(
        and m IN s ==> x <= m    by implication
    Hence x = m.
 *)
-val MIN_SET_TEST_IFF = store_thm(
-  "MIN_SET_TEST_IFF",
-  ``!s. s <> {} ==> !x. x IN s ==> ((MIN_SET s = x) <=> (!y. y IN s ==> x <= y))``,
+Theorem MIN_SET_TEST_IFF:
+  !s. s <> {} ==> !x. x IN s ==> ((MIN_SET s = x) <=> (!y. y IN s ==> x <= y))
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = MIN_SET s` >>
-  rw[EQ_IMP_THM] >- rw[MIN_SET_LEM] >>
+  rw[EQ_IMP_THM] >- rw[MIN_SET_LEM, Abbr‘m’] >>
   `m IN s /\ m <= x` by rw[MIN_SET_LEM, Abbr`m`] >>
-  `x <= m` by rw[] >>
-  decide_tac);
+  `x <= m` by rw[] >> decide_tac
+QED
 
 (* Theorem: MAX_SET {} = 0 *)
 (* Proof: by MAX_SET_REWRITES *)
