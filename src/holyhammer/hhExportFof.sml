@@ -307,18 +307,6 @@ fun fof_export_chainy dir thyl =
   end
 
 (* -------------------------------------------------------------------------
-   Export standard library
-   ------------------------------------------------------------------------- *)
-
-(*
-load "tttUnfold"; tttUnfold.load_sigobj ();
-val thyl = ancestry (current_theory ());
-load "hhExportFof"; open hhExportFof;
-fof_export_bushy (HOLDIR ^ "/src/holyhammer/fof_bushy") thyl;
-fof_export_chainy (HOLDIR ^ "/src/holyhammer/fof_chainy") thyl;
-*)
-
-(* -------------------------------------------------------------------------
    Interface to holyhammer
    ------------------------------------------------------------------------- *)
 

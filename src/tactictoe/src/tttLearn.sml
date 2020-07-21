@@ -199,6 +199,11 @@ fun inst_stacl (thmidl,g) stacl =
     List.mapPartial (inst_stac (thmls,g)) stacl
   end
 
+fun inst_thmidl thmidl stac =
+  let val thmls = thmls_of_thmidl thmidl in
+    inst_thmlarg thmidl stac
+  end
+
 (* -------------------------------------------------------------------------
    Orthogonalization
    ------------------------------------------------------------------------- *)

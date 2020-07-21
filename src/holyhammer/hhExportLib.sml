@@ -205,17 +205,17 @@ fun name_arityeq (cv,a) =
    Definitions of boolean operators
    ------------------------------------------------------------------------- *)
 
-val logic_l1 = map cid_of [``$/\``,``$\/``,``$~``,``$==>``,
-  ``$= : 'a -> 'a -> bool``]
-val quant_l2 = map cid_of [``$! : ('a -> bool) -> bool``,
-  ``$? : ('a -> bool) -> bool``]
+local open boolSyntax in
+
+val logic_l1 = map cid_of 
+  [conjunction, disjunction, negation, implication, equivalence]
+val quant_l2 = map cid_of [universal, existential]
 
 val boolop_cval =
-  [
-   (``$/\``,2),(``$\/``,2),(``$~``,1),(``$==>``,2),
-   (``$= : 'a -> 'a -> bool``,2),
-   (``$! : ('a -> bool) -> bool``,1),(``$? : ('a -> bool) -> bool``,1)
-  ]
+  [(conjunction,2),(disjunction,2),(negation,1),(implication,2),
+   (equality,2),(universal,1),(existential,1)]
+
+end (* local *)
 
 (* -------------------------------------------------------------------------
    Higher-order theorems in a first-order embedding

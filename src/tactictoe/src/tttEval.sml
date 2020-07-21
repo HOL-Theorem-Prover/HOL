@@ -80,22 +80,39 @@ fun extract_thmpol tree =
   end
 
 
-fun thml_of_sml sthml_of_thmidl
+fun is_metis_stac s = hd (partial_sml_lexer s) = "metisTools.METIS_TAC"
+fun op_subset eqf l1 l2 = null (op_set_diff eqf l1 l2)
 
-fun minimize
-
-fun minimize astac sthml
+fun apply_stac parentd goalrec stac =
   let
-    val x = drop_sig thmlarg_placeholder
-    val astac' = replace_string (thmlarg_placeholder) x astac
-    fun f = thmlstac_of_sml ("fn " ^ x ^ " => (" ^ astac ^ ")")
-    val thml = combine (thml_of_sml sthml, sthml)
-      handle Interrupt => raise Interrupt | _ =>
-        (print_endline "error: minimize: parsing theorems"; [])
-  in
-    minimize f thml
+    val tim = if is_metis_stac stac then 0.1 else 0.04
 
-let val thml =
+
+fun test_astac astac g gl thmidl =
+  let
+    val stac = inst_thmidl astac thmidl
+  in
+    case app_stac (2 * tim) stac g of
+      SOME newgl => op_subset goal_eq newgl gl
+    | NONE => false
+  end
+
+fun mini_thmidl f (pos,neg) thmidl = 
+  case thmidl of 
+    [] => (pos,neg)
+  | a :: m => if f (pos :: m) 
+              then mini_thmidl f (pos, a :: neg) m
+              else mini_thmidl f (a :: pos, neg) m
+
+val posthml = 
+  map (fn x => (nntm_of_thm x, 1.0))
+    (map snd (thml_of_sml (map dbfetch_of_thmid pos))
+val negthml = map (fn x => (nntm_of_thm x, 0.0))
+
+  (map snd (thml_of_sml (map dbfetch_of_thmid pos)))
+
+val ex = basicex_to_tnnex (posthml @ negthml)
+
 
 
 (* results should be (tm,1.0) or (tm,0.0) where tm in the encoding of
@@ -252,7 +269,7 @@ tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
 val _ = ttt_clean_eval ();
-val _ = run_evalscript_thyl "july13" (true,30) (NONE,NONE) thyl;
+val _ = run_evalscript_thyl "july23" (true,30) (NONE,NONE) thyl;
 val tnn_value = train_value 0.95 "value";
 val tnn_policy = train_policy 0.95 "policy";
 val _ = run_evalscript_thyl "june23_tnn" (true,30) (SOME "value", SOME "policy") thyl;

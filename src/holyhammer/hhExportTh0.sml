@@ -663,12 +663,5 @@ fun th0_export_chainy dir thyl =
     app (write_thy_chainy (dir ^ "/problems") thyorder) thyorder
   end
 
-(*
-load "hhExportTh0"; open hhExportTh0;
-load "tttUnfold"; tttUnfold.load_sigobj ();
-val thyl = ancestry (current_theory ());
-th0_export_bushy (HOLDIR ^ "/src/holyhammer/th0_bushy") thyl;
-th0_export_chainy (HOLDIR ^ "/src/holyhammer/th0_chainy") thyl;
-*)
 
 end (* struct *)

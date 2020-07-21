@@ -21,6 +21,7 @@ sig
   val abstract_termarg : string -> (string * string) option
   val inst_termarg : goal -> string -> string
   val abstract_stac : string -> string option
+  val inst_thmidl : string list -> string -> string
   val inst_stac : (string * goal) -> string -> (string * string) option
   val inst_stacl : (string list * goal) -> string list -> (string * string) list
 

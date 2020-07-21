@@ -367,16 +367,5 @@ fun tf1_export_chainy dir thyl =
     app (write_thy_chainy (dir ^ "/problems") thyorder) thyorder
   end
 
-(* -------------------------------------------------------------------------
-   Export standard library
-   ------------------------------------------------------------------------- *)
-
-(*
-load "tttUnfold"; tttUnfold.load_sigobj ();
-val thyl = ancestry (current_theory ());
-load "hhExportTf1"; open hhExportTf1;
-tf1_export_bushy (HOLDIR ^ "/src/holyhammer/tf1_bushy") thyl;
-tf1_export_chainy (HOLDIR ^ "/src/holyhammer/tf1_chainy") thyl;
-*)
 
 end (* struct *)

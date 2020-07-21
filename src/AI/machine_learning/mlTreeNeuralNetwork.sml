@@ -508,6 +508,10 @@ fun nntm_of_goal (asm,w) = flatten_goal
 fun nntm_of_gl gl =
   mk_comb (vhead, (list_mk_binop goal_cat (map nntm_of_goal gl)))
 
+val tphead = mk_var ("head_thmpol", rpt_fun_type 2 alpha);
+
+fun nntm_of_thm thm = mk_comb (tphead, nntm_of_goal (dest_thm thm))
+
 fun mask_unknown (tnn,dim) tm =
   let
     val (oper,argl) = strip_comb tm
@@ -528,6 +532,11 @@ val phead = mk_var ("head_policy", rpt_fun_type 2 alpha)
 
 fun mask_unknown_policy tnn tm =
   let val dim = dimin_nn (dfind phead tnn) in
+    mask_unknown (tnn,dim) tm
+  end
+
+fun mask_unknown_thmpol tnn tm =
+  let val dim = dimin_nn (dfind tphead tnn) in
     mask_unknown (tnn,dim) tm
   end
 
