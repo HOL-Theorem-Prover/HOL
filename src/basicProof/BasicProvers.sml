@@ -1137,29 +1137,20 @@ fun augment_srw_ss ssdl =
 
 fun diminish_srw_ss names =
     if !srw_ss_initialised then
-      let
-        val (frags, rest) = (!srw_ss) |> simpLib.ssfrags_of
-                                      |> List.rev
-                                      |> simpLib.partition_ssfrags names
-        val _ = srw_ss := simpLib.mk_simpset rest
-      in
-        frags
-      end
+      srw_ss := simpLib.remove_ssfrags names (!srw_ss)
     else
       let
         open simpLib
-        fun foldthis (upd, (keep,drop)) =
+        fun foldthis (upd, keep) =
             case upd of
                 ADD_SSFRAG ssf =>
                 (case frag_name ssf of
-                     NONE => (upd::keep,drop)
-                   | SOME n => if mem n names then (keep,ssf::drop)
-                               else (upd::keep,drop))
-              | _ => (upd::keep, drop)
-        val (keep, drop) = foldl foldthis ([], []) (!pending_updates)
-        val _ = pending_updates := keep
+                     NONE => upd::keep
+                   | SOME n => if mem n names then keep else upd::keep)
+              | _ => upd::keep
+        val keep = foldr foldthis [] (!pending_updates)
       in
-        drop
+        pending_updates := keep
       end;
 
 fun temp_delsimps names =

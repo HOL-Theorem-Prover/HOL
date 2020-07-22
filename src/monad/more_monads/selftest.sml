@@ -111,7 +111,7 @@ val _ = if same_const f ``option$OPTION_IGNORE_BIND`` andalso
            hd (tl args) ~~ ``SOME 4``
         then OK() else udie()
 
-val _ = tprint "Testing monadsyntax parse of mlet in option monad"
+val _ = tprint "Testing parse of mlet in option monad"
 val t = ``do mlet x <- y; SOME (x + 1) od``
 val (f, args) = strip_comb t
 val _ = if same_const f boolSyntax.let_tm andalso
@@ -119,6 +119,7 @@ val _ = if same_const f boolSyntax.let_tm andalso
            hd (tl args) ~~ ``y : num``
         then OK() else udie()
 
+val _ = tprint "Testing parse of mlet in option monad (after bind)"
 val t = ``do y <- z; mlet x <- y; SOME (x + 1) od``
 val (f, args) = strip_comb t
 val _ = if same_const f ``option$OPTION_BIND`` andalso
@@ -126,7 +127,7 @@ val _ = if same_const f ``option$OPTION_BIND`` andalso
            hd (tl args) ~~ ``\y. let x = y in SOME (x + 1)``
         then OK() else udie()
 
-val _ = tprint "Testing monadsyntax parse of mlet arrow in option monad"
+val _ = tprint "Testing parse of mlet arrow in option monad"
 val t = ``do x <<- y; SOME (x + 1) od``
 val (f, args) = strip_comb t
 val _ = if same_const f boolSyntax.let_tm andalso
@@ -134,6 +135,7 @@ val _ = if same_const f boolSyntax.let_tm andalso
            hd (tl args) ~~ ``y : num``
         then OK() else udie()
 
+val _ = tprint "Testing parse of mlet arrow in option monad (after bind)"
 val t = ``do y <- z; x <<- y; SOME (x + 1) od``
 val (f, args) = strip_comb t
 val _ = if same_const f ``option$OPTION_BIND`` andalso
