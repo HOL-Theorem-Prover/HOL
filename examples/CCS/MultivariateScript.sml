@@ -370,14 +370,16 @@ Proof
 QED
 
 (* CCS_SUBST_reduce in another form *)
-val lemma1 = Q.prove (
-   `!E E' map. map <> [] /\
-         ~MEM (FST (HD map)) (MAP FST (TL map)) /\
-          ALL_DISTINCT (MAP FST (TL map)) /\
-          EVERY (\e. (FST (HD map)) NOTIN (FV e)) (MAP SND (TL map)) /\
-         (CCS_SUBST (FEMPTY |++ (TL map)) E = E')
-     ==> (CCS_SUBST (FEMPTY |++ map) E = CCS_Subst E' (SND (HD map)) (FST (HD map)))`,
- (* proof *)
+Theorem lemma1[local]:
+   !E E' map.
+      map <> [] /\
+      ~MEM (FST (HD map)) (MAP FST (TL map)) /\
+      ALL_DISTINCT (MAP FST (TL map)) /\
+      EVERY (\e. (FST (HD map)) NOTIN (FV e)) (MAP SND (TL map)) /\
+      CCS_SUBST (FEMPTY |++ (TL map)) E = E'
+   ==>
+      CCS_SUBST (FEMPTY |++ map) E = CCS_Subst E' (SND (HD map)) (FST (HD map))
+Proof
     rpt GEN_TAC
  >> Cases_on `map` >- SRW_TAC [] []
  >> RW_TAC std_ss [HD, TL]
@@ -393,8 +395,9 @@ val lemma1 = Q.prove (
  >> DISCH_THEN (fs o wrap)
  >> MP_TAC (REWRITE_RULE [fromList_def] (Q.SPECL [`q`,`Xs`,`r`,`Ps`] CCS_SUBST_reduce))
  >> RW_TAC std_ss []
- >> POP_ASSUM (MP_TAC o (REWRITE_RULE [ZIP, LIST_TO_SET]) o (Q.SPEC `E`))
- >> rw []);
+ >> first_x_assum (qspec_then ‘E’ (MP_TAC o REWRITE_RULE [ZIP, LIST_TO_SET]))
+ >> rw []
+QED
 
 (* Let map = ZIP(Xs,Ps), to convert CCS_SUBST to a folding of CCS_Subst, each P
    of Ps must contains free variables up to the corresponding X of Xs.

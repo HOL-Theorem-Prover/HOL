@@ -3537,6 +3537,12 @@ val nub_def = Define ‘
    (nub [] = []) /\
    (nub (x::l) = if MEM x l then nub l else x :: nub l)’;
 
+Theorem nub_EQ0[simp]:
+  nub l = [] <=> l = []
+Proof
+  Induct_on ‘l’ >> rw[nub_def] >> strip_tac >> fs[]
+QED
+
 val nub_set = Q.store_thm ("nub_set[simp]",
    ‘!l. set (nub l) = set l’,
    Induct

@@ -623,7 +623,7 @@ fun build_from_history h0 =
       List.foldl foldthis empty_ss (List.rev h0)
     end
 
-fun remove_ssfrags (ss as SS{history,limit,...}) names =
+fun remove_ssfrags names (ss as SS{history,limit,...}) =
     let
       val s = Set.addList (Binaryset.empty String.compare, names)
       val nil_included = Set.member(s, "")

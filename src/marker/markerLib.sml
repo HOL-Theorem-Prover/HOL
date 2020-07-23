@@ -313,6 +313,27 @@ fun ABBRS_THEN thl_tac thl =
 val MK_ABBREVS_OLDSTYLE =
     RULE_ASSUM_TAC (fn th => (th |> DeAbbrev |> SYM) handle HOL_ERR _ => th)
 
+(* ----------------------------------------------------------------------
+    Abbreviation Tidying
+
+    Abbreviations should be of the form
+
+       Abbrev(v = e)
+
+    with v a variable. The tidying process eliminates assumptions that
+    have Abbrev present at the top with an argument that is not of the
+    right shape. As simplification sees abbreviation equations as
+    rewrites of the form e = v (replacing occurrences of e with the
+    abbreviation), the tidying process will flip equations to keep
+    this "orientation".
+   ---------------------------------------------------------------------- *)
+
+fun TIDY_ABBREV_CONV t =
+    if is_malformed_abbrev t then
+      (REWR_CONV markerTheory.Abbrev_def THENC TRY_CONV (REWR_CONV EQ_SYM_EQ)) t
+    else ALL_CONV t
+val TIDY_ABBREV_RULE = CONV_RULE TIDY_ABBREV_CONV
+val TIDY_ABBREVS = RULE_ASSUM_TAC TIDY_ABBREV_RULE
 
 
 (*---------------------------------------------------------------------------*)
