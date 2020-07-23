@@ -112,9 +112,10 @@ DISCH_TAC >> HO_MATCH_MP_TAC walkstar_ind >> SRW_TAC [][] >> Cases_on `t` >| [
   Q.PAT_X_ASSUM `wfs s` ASSUME_TAC >> FULL_SIMP_TAC (srw_ss()) [],
   FULL_SIMP_TAC (srw_ss()) [vars_def]]);
 
-val vwalk_EQ_var_vR = prove(
-  ``wfs s ==> !u v1 v2. (vwalk s u = Var v1) /\ (vR s)^+ v2 u /\
-                        v2 NOTIN FDOM s ==> (v1 = v2)``,
+Triviality vwalk_EQ_var_vR:
+  wfs s ==> !u v1 v2. (vwalk s u = Var v1) /\ (vR s)^+ v2 u /\
+                        v2 NOTIN FDOM s ==> (v1 = v2)
+Proof
   STRIP_TAC >> HO_MATCH_MP_TAC vwalk_ind >> SRW_TAC [][] >>
   IMP_RES_TAC TC_CASES2 >>
   FULL_SIMP_TAC (srw_ss()) [vR_def] >>
@@ -122,11 +123,13 @@ val vwalk_EQ_var_vR = prove(
   Q.PAT_X_ASSUM `vwalk s u = UU` MP_TAC >>
   SRW_TAC [][Once vwalk_def] >>
   Cases_on `x` >> FULL_SIMP_TAC (srw_ss()) [] >>
-  POP_ASSUM MP_TAC >> SRW_TAC [][NOT_FDOM_vwalk]);
+  POP_ASSUM MP_TAC >> SRW_TAC [][NOT_FDOM_vwalk]
+QED
 
-val vwalk_EQ_const_vR = prove(
-  ``!v u. (vR s)^+ v u ==> v NOTIN FDOM s /\ wfs s ==>
-          !c. vwalk s u <> Const c``,
+Triviality vwalk_EQ_const_vR:
+  !v u. (vR s)^+ v u ==> v NOTIN FDOM s /\ wfs s ==>
+        !c. vwalk s u <> Const c
+Proof
   HO_MATCH_MP_TAC TC_INDUCT_RIGHT1 >> SRW_TAC [][] >| [
     FULL_SIMP_TAC (srw_ss()) [vR_def] >>
     Cases_on `FLOOKUP s u` >> FULL_SIMP_TAC (srw_ss()) [] >>
@@ -136,12 +139,14 @@ val vwalk_EQ_const_vR = prove(
     Cases_on `FLOOKUP s u'` >> FULL_SIMP_TAC (srw_ss()) [] >>
     SRW_TAC [][Once vwalk_def] >> Cases_on `x` >>
     FULL_SIMP_TAC (srw_ss()) [] >> SRW_TAC [][NOT_FDOM_vwalk]
-  ]);
+  ]
+QED
 
-val vwalk_EQ_pair_vR = prove(
-  ``!v u. (vR s)^+ v u ==>
-          !t1 t2. v NOTIN FDOM s /\ wfs s /\ (vwalk s u = Pair t1 t2) ==>
-                  ?u. (u IN vars t1 \/ u IN vars t2) /\ (vR s)^* v u``,
+Triviality vwalk_EQ_pair_vR:
+  !v u. (vR s)^+ v u ==>
+        !t1 t2. v NOTIN FDOM s /\ wfs s /\ (vwalk s u = Pair t1 t2) ==>
+                ?u. (u IN vars t1 \/ u IN vars t2) /\ (vR s)^* v u
+Proof
   HO_MATCH_MP_TAC TC_STRONG_INDUCT_RIGHT1 >> SRW_TAC [][] >>
   FULL_SIMP_TAC (srw_ss()) [vR_def] >| [
     Cases_on `FLOOKUP s u` >> FULL_SIMP_TAC (srw_ss()) [] >>
@@ -156,12 +161,13 @@ val vwalk_EQ_pair_vR = prove(
     Q.PAT_X_ASSUM `vwalk s u' = XXX` MP_TAC >>
     SRW_TAC [][Once vwalk_def] >>
     Cases_on `x` >> FULL_SIMP_TAC (srw_ss()) [] >> METIS_TAC [TC_RTC]
-  ]);
+  ]
+QED
 
-val TC_vR_vars_walkstar = store_thm(
-  "TC_vR_vars_walkstar",
-  ``wfs s /\ u IN vars t /\ (vR s)^+ v u /\ v NOTIN FDOM s ==>
-    v IN vars (walk* s t)``,
+Theorem TC_vR_vars_walkstar:
+  wfs s /\ u IN vars t /\ (vR s)^+ v u /\ v NOTIN FDOM s ==>
+  v IN vars (walk* s t)
+Proof
   Q_TAC SUFF_TAC
      `wfs s ==>
      !t v u. (vR s)^+ v u /\ v NOTIN FDOM s /\ u IN vars t ==>
@@ -169,7 +175,7 @@ val TC_vR_vars_walkstar = store_thm(
      THEN1 METIS_TAC [] >>
   STRIP_TAC >> HO_MATCH_MP_TAC walkstar_ind >>
   SRW_TAC [][] >> Cases_on `t` >| [
-    Q.MATCH_ABBREV_TAC `v IN vars (walk* s (Var s'))` >>
+    rename [‘v IN vars (walk* s (Var s'))’] >>
     FULL_SIMP_TAC (srw_ss()) [] >> SRW_TAC [][] >>
     Cases_on `vwalk s s'` >> SRW_TAC [][] >| [
       METIS_TAC [vwalk_EQ_var_vR],
@@ -183,7 +189,8 @@ val TC_vR_vars_walkstar = store_thm(
     ],
     FULL_SIMP_TAC (srw_ss()) [] >> METIS_TAC [],
     FULL_SIMP_TAC (srw_ss()) []
-  ]);
+  ]
+QED
 
 val walkstar_SUBMAP = Q.store_thm(
 "walkstar_SUBMAP",

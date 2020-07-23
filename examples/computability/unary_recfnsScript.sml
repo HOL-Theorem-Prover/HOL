@@ -51,7 +51,7 @@ Proof
   ‘primrec1 (SUC o nfst o nfst)’ by metis_tac[primrec1_rules] >>
   qabbrev_tac ‘ADD = pr1_pr I (SUC o nfst o nsnd)’ >>
   ‘primrec1 ADD’ by metis_tac[primrec1_rules, primrec1_I] >>
-  ‘ADD = (λn. nfst n + nsnd n)’ suffices_by (rw[] >> rw[]) >>
+  ‘ADD = (λn. nfst n + nsnd n)’ suffices_by (rw[] >> fs[]) >>
   simp[FUN_EQ_THM, Abbr‘ADD’] >> gen_tac >>
   ‘∃x y. n = x ⊗ y’ by metis_tac[npair_cases] >> rw[] >> Induct_on ‘x’ >>
   simp[]

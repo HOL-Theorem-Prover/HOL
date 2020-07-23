@@ -20,10 +20,8 @@ fun test (N n) = test0 (mkN n)
 open Systeml
 val _ = app (ignore o test)
             [N 91, N 123, T 5,
-             if POLY_VERSION >= 580 then N 561
-             else T 6, (* takes ~3s on 2014 Macbook Pro *)
-             if POLY_VERSION >= 580 then N 1105
-             else T 7 (* takes ~25s on 2014 Macbook Pro *)
+             T 6, (* takes ~3s on 2014 Macbook Pro *)
+             T 7 (* takes ~25s on 2014 Macbook Pro *)
                (* , T 8 takes 194s on 2014 Macbook Pro *)
             ]
 ;

@@ -261,6 +261,7 @@ val num_case_compute = store_thm ("num_case_compute",
   “!n. num_CASE n (f:'a) g = if n=0 then f else g (PRE n)”,
   INDUCT_TAC THEN REWRITE_TAC [num_case_def,NOT_SUC,PRE]);
 
+
 (* --------------------------------------------------------------------- *)
 (* SUC_NOT = |- !n. ~(0 = SUC n)                                         *)
 (* --------------------------------------------------------------------- *)
@@ -317,6 +318,8 @@ val LESS_OR_EQ_ALT = store_thm ("LESS_OR_EQ_ALT",
   REWRITE_TAC [FUN_EQ_THM, LESS_OR_EQ, relationTheory.RTC_CASES_TC, LESS_ALT]
     THEN REPEAT (STRIP_TAC ORELSE EQ_TAC)
     THEN ASM_REWRITE_TAC []) ;
+
+
 
 (* --------------------------------------------------------------------- *)
 (* LESS_ADD proof rewritten: TFM 90.O9.21                               *)
@@ -514,6 +517,15 @@ val SUB_MONO_EQ = store_thm ("SUB_MONO_EQ",
     ONCE_REWRITE_TAC[SUB] THEN
     PURE_ONCE_REWRITE_TAC[LESS_MONO_EQ] THEN
     ASM_REWRITE_TAC[]]);
+
+(* A better case rewrite for numeral arguments *)
+Theorem num_case_NUMERAL_compute[simp]:
+  num_CASE (NUMERAL (BIT1 n)) (z:'a) s = s (NUMERAL(BIT1 n) - 1) /\
+  num_CASE (NUMERAL (BIT2 n)) z s = s (NUMERAL(BIT1 n))
+Proof
+  REWRITE_TAC [num_case_compute, NUMERAL_DEF, BIT1, BIT2, ADD_CLAUSES,
+               NOT_SUC, PRE, ALT_ZERO, SUB_MONO_EQ, SUB_0]
+QED
 
 val SUB_EQ_0 = store_thm ("SUB_EQ_0",
   “!m n. (m - n = 0) = (m <= n)”,

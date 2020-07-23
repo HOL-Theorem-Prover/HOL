@@ -13,6 +13,7 @@ src/metis
 src/meson/src
 src/IndDef
 src/basicProof
+!src/basicProof/theory_tests
 src/relation
 src/coretypes
 [poly]!!src/meson/test

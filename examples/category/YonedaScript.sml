@@ -138,71 +138,72 @@ val pre_Yfunctor_components = Q.store_thm(
 srw_tac [][pre_Yfunctor_def,morf_def]);
 val _ = export_rewrites["pre_Yfunctor_components"];
 
-val pre_Yfunctor_objf = Q.store_thm(
-"pre_Yfunctor_objf",
-`∀c x. is_category c ∧ x ∈ c.obj
-  ⇒ ((pre_Yfunctor c)@@x = c|_→x|)`,
+Theorem pre_Yfunctor_objf[simp]:
+  ∀c x. is_category c ∧ x ∈ c.obj ⇒ ((pre_Yfunctor c)@@x = c|_→x|)
+Proof
 srw_tac [][objf_def] >>
 SELECT_ELIM_TAC >> srw_tac [][] >- (
   qexists_tac `c|_→x|` >> srw_tac [][] ) >>
 pop_assum mp_tac >>
 srw_tac [][id_in_def] >>
 Q.ISPEC_THEN `[(c°)→ens_cat (homs c)]` match_mp_tac id_inj >>
-srw_tac [][]);
-val _ = export_rewrites["pre_Yfunctor_objf"];
+srw_tac [][]
+QED
 
-val Yfunctor_def = Define`
-  Yfunctor c = mk_functor (pre_Yfunctor c)`;
+Definition Yfunctor_def:
+  Yfunctor c = mk_functor (pre_Yfunctor c)
+End
 
-val is_functor_Yfunctor = Q.store_thm(
-"is_functor_Yfunctor",
-`∀c. is_category c ⇒ is_functor (Yfunctor c)`,
-srw_tac [][Yfunctor_def] >>
-srw_tac [][functor_axioms_def,morf_def]
->- (imp_res_tac maps_to_obj >> fsrw_tac [][morf_def,maps_to_in_def])
->- (imp_res_tac maps_to_obj >> fsrw_tac [][morf_def,maps_to_in_def])
->- fsrw_tac [][maps_to_in_def]
->- (qexists_tac `c|_→x|` >> srw_tac [][]) >>
-qspecl_then [`c`,`f`,`g`,`f.dom`,`g.cod`] mp_tac composable_maps_to >>
-srw_tac [][] >>
-imp_res_tac maps_to_in_def >>
-imp_res_tac YfunctorNT_composable >>
-match_mp_tac nt_eq_thm >> fsrw_tac [][] >>
-conj_tac >- ( fsrw_tac [][nt_comp_def,compose_def,mk_nt_def,restrict_def,YfunctorNT_def,composable_in_def]) >>
-conj_tac >- ( fsrw_tac [][nt_comp_def,compose_def,mk_nt_def,restrict_def,YfunctorNT_def,composable_in_def]) >>
-`f ∈ c.mor ∧ g ∈ c.mor` by (
-  imp_res_tac composable_in_def >> srw_tac [][]) >>
-srw_tac [][] >>
-qmatch_abbrev_tac
-  `h = TypedGraphFun (i,j) k o TypedGraphFun (l,m) n -:ens_cat (homs c)` >>
-`(∀x. x ∈ i ⇒  k x ∈ j) ∧ (∀x. x ∈ l ⇒ n x ∈ m)` by (
+Theorem is_functor_Yfunctor:
+  ∀c. is_category c ⇒ is_functor (Yfunctor c)
+Proof
+  srw_tac [][Yfunctor_def] >>
+  srw_tac [][functor_axioms_def,morf_def]
+  >- (imp_res_tac maps_to_obj >> fsrw_tac [][morf_def,maps_to_in_def])
+  >- (imp_res_tac maps_to_obj >> fsrw_tac [][morf_def,maps_to_in_def])
+  >- fsrw_tac [][maps_to_in_def]
+  >- (qexists_tac ‘c|_→x|’ >> srw_tac [][]) >>
+  qspecl_then [‘c’,‘f’,‘g’,‘f.dom’,‘g.cod’] mp_tac composable_maps_to >>
+  srw_tac [][] >>
+  imp_res_tac maps_to_in_def >>
+  imp_res_tac YfunctorNT_composable >>
+  match_mp_tac nt_eq_thm >> fsrw_tac [][] >>
+  conj_tac >- ( fsrw_tac [][nt_comp_def,compose_def,mk_nt_def,restrict_def,
+                            YfunctorNT_def,composable_in_def]) >>
+  conj_tac >- ( fsrw_tac [][nt_comp_def,compose_def,mk_nt_def,restrict_def,
+                            YfunctorNT_def,composable_in_def]) >>
+  ‘f ∈ c.mor ∧ g ∈ c.mor’ by (
+    imp_res_tac composable_in_def >> srw_tac [][]) >>
+  srw_tac [][] >>
+  qmatch_abbrev_tac
+    ‘h = TypedGraphFun (i,j) k o TypedGraphFun (l,m) n -:ens_cat (homs c)’ >>
+  ‘(∀x. x ∈ i ⇒  k x ∈ j) ∧ (∀x. x ∈ l ⇒ n x ∈ m)’ by (
+    unabbrev_all_tac >>
+    srw_tac [][hom_def] >>
+    match_mp_tac maps_to_comp >>
+    metis_tac [maps_to_in_def,maps_to_def] ) >>
+  imp_res_tac IsTypedFunTypedGraphFun >>
+  imp_res_tac ens_cat_mor >>
+  ntac 2 (pop_assum (qspec_then ‘(homs c)’ mp_tac)) >>
+  ‘m = i’ by (
+    fsrw_tac [][composable_in_def,Abbr‘m’,Abbr‘i’] ) >>
+  ‘l ∈ homs c ∧ i ∈ homs c ∧ j ∈ homs c’ by (
+    unabbrev_all_tac >> srw_tac [][] ) >>
+  ‘(TypedGraphFun (l,m) n) ≈> (TypedGraphFun (i,j) k) -:ens_cat (homs c)’ by (
+    srw_tac [][]) >>
+  simp[Abbr‘h’, TypedGraphFun_def,ComposeTypedFun_def, ComposeFun_def,
+       restrict_def, FUN_EQ_THM] >>
+  ‘g.dom = f.cod’ by (
+    fsrw_tac [][composable_in_def] ) >>
+  rpt BasicProvers.VAR_EQ_TAC >> fs[] >>
   unabbrev_all_tac >>
-  srw_tac [][hom_def] >>
-  match_mp_tac maps_to_comp >>
-  metis_tac [maps_to_in_def,maps_to_def] ) >>
-imp_res_tac IsTypedFunTypedGraphFun >>
-imp_res_tac ens_cat_mor >>
-ntac 2 (pop_assum (qspec_then `(homs c)` mp_tac)) >>
-`m = i` by (
-  fsrw_tac [][composable_in_def,Abbr`m`,Abbr`i`] ) >>
-`l ∈ homs c ∧ i ∈ homs c ∧ j ∈ homs c` by (
-  unabbrev_all_tac >> srw_tac [][] ) >>
-`(TypedGraphFun (l,m) n) ≈> (TypedGraphFun (i,j) k) -:ens_cat (homs c)` by (
-  srw_tac [][]) >>
-srw_tac [][Abbr`h`] >>
-srw_tac [][TypedGraphFun_def,ComposeTypedFun_def] >>
-srw_tac [][ComposeFun_def] >>
-srw_tac [][restrict_def] >>
-srw_tac [][FUN_EQ_THM] >>
-unabbrev_all_tac >>
-srw_tac [][] >>
-`g.dom = f.cod` by (
-  fsrw_tac [][composable_in_def] ) >>
-match_mp_tac comp_assoc >>
-fsrw_tac [][hom_def] >>
-match_mp_tac maps_to_composable >>
-map_every qexists_tac [`x`,`f.dom`,`f.cod`] >>
-srw_tac [][]);
+  srw_tac [][] >>
+  match_mp_tac comp_assoc >>
+  fsrw_tac [][hom_def] >>
+  match_mp_tac maps_to_composable >>
+  map_every qexists_tac [‘x’,‘f.dom’,‘f.cod’] >>
+  srw_tac [][]
+QED
 
 val Yfunctor_dom = Q.store_thm(
 "Yfunctor_dom",

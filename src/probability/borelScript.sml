@@ -4193,13 +4193,13 @@ Proof
      FIRST_X_ASSUM MATCH_MP_TAC \\
      Q.UNABBREV_TAC `h` >> rw [o_DEF])
  (* Part V: h-property of lowerbounds *)
- >> Know `!i j. i < j /\ j < n0 ==>
-                interval_lowerbound (h i) <= interval_lowerbound (h j)`
- >- (rpt STRIP_TAC \\
-     Q.PAT_X_ASSUM `transitive R`
-       (STRIP_ASSUME_TAC o (MATCH_MP SORTED_EL_LESS)) \\
-     POP_ASSUM (MP_TAC o (Q.SPEC `sorted`)) \\
-     Q.UNABBREV_TAC `R` >> RW_TAC std_ss []) >> DISCH_TAC
+ >> ‘!i j. i < j /\ j < n0 ==>
+           interval_lowerbound (h i) <= interval_lowerbound (h j)’
+      by (STRIP_TAC \\
+          Q.PAT_X_ASSUM `transitive R`
+                        (STRIP_ASSUME_TAC o (MATCH_MP SORTED_EL_LESS)) \\
+          pop_assum (qspec_then ‘sorted’ mp_tac) \\
+          simp[])
  (* h-property of upper- and lowerbounds *)
  >> Know `!i j. i < j /\ j < n0 ==>
                 interval_upperbound (h i) <= interval_lowerbound (h j)`
