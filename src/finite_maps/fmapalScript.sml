@@ -850,14 +850,14 @@ val FAPPLY_nt = store_thm ("FAPPLY_nt",
 ``!cmp x. FMAPAL cmp (nt:('a#'b)bt) ' x = FEMPTY ' x``,
 REWRITE_TAC [bt_to_fmap]);
 
-Theorem FAPPLY_node
-  `!cmp x l a:'a b:'b r.
+Theorem FAPPLY_node:
+  !cmp x l a:'a b:'b r.
      FMAPAL cmp (node l (a,b) r) ' x =
      case apto cmp x a of
          LESS => FMAPAL cmp l ' x
        | EQUAL => b
-       | GREATER => FMAPAL cmp r ' x`
-(
+       | GREATER => FMAPAL cmp r ' x
+Proof
   SRW_TAC [] [bt_to_fmap, FUNION_DEF] THENL [
     Q.SUBGOAL_THEN `x IN {y | apto cmp y a = LESS}`
       (fn xin => SRW_TAC [] [MATCH_MP DRESTRICT_IN xin,
@@ -887,7 +887,8 @@ Theorem FAPPLY_node
                      (REWRITE_TAC o ulist o MATCH_MP DRESTRICT_IN) THEN
       CONV_TAC SET_SPEC_CONV THEN ASM_REWRITE_TAC [GSYM toto_antisym]
      ]
-  ]);
+  ]
+QED
 
 (* Following theorems prepare for converting bt's to association lists. *)
 

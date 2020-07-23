@@ -29,7 +29,6 @@ src/ring/src
 src/integer
 src/topology
 !examples/rings
-src/coalgebras
 !src/integer/testing
 src/transfer
 src/update
@@ -38,6 +37,7 @@ src/emit
 !!examples/ARM/v7
 !!src/emit/ML
 src/pred_set/src/more_theories
+src/coalgebras
 !src/emit/theory_tests
 !src/emit/theory_tests1
 !examples/dev

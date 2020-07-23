@@ -334,10 +334,10 @@ Cases_on `x = f k v` THENL [
    )
 ]);
 
-Theorem BAG_IN_BAG_OF_FMAP
-  `!x f b. BAG_IN x (BAG_OF_FMAP f b) <=>
-           ?k. k IN FDOM b /\ (x = f k (b ' k))`
-(
+Theorem BAG_IN_BAG_OF_FMAP:
+  !x f b. BAG_IN x (BAG_OF_FMAP f b) <=>
+           ?k. k IN FDOM b /\ (x = f k (b ' k))
+Proof
   SIMP_TAC std_ss [BAG_OF_FMAP, BAG_IN, BAG_INN] THEN
   `!X. (X >= (1:num)) = ~(X = 0)` by bossLib.DECIDE_TAC THEN
   ONCE_ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
@@ -353,7 +353,7 @@ Theorem BAG_IN_BAG_OF_FMAP
      REWRITE_TAC[FDOM_FINITE]
   ) THEN
   SRW_TAC[][CARD_EQ_0, EXTENSION] THEN METIS_TAC[]
-);
+QED
 
 val FINITE_BAG_OF_FMAP = store_thm ("FINITE_BAG_OF_FMAP",
 ``!f b. FINITE_BAG (BAG_OF_FMAP f b)``,

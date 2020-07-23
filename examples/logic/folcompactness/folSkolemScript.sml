@@ -101,7 +101,6 @@ Proof
                                          p
                           else M.Fun f args ⦈
   |>’ >> simp[] >> rw[]
-  >- simp[combinTheory.APPLY_UPDATE_THM]
   >- rw[combinTheory.APPLY_UPDATE_THM]
   >- (fs[interpretation_def, language_def] >>
       rw[combinTheory.APPLY_UPDATE_THM]

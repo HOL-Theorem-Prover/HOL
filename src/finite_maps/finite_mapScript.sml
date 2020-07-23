@@ -1607,13 +1607,13 @@ SRW_TAC [][Once UNION_COMM] THEN
 SRW_TAC [][Once (GSYM INSERT_SING_UNION)] THEN
 SRW_TAC [][EQ_IMP_THM]);
 
-Theorem FUPDATE_LIST_APPLY_MEM
-  `!kvl f k v n.
+Theorem FUPDATE_LIST_APPLY_MEM:
+  !kvl f k v n.
      n < LENGTH kvl /\ (k = EL n (MAP FST kvl)) /\ (v = EL n (MAP SND kvl)) /\
      (!m. n < m /\ m < LENGTH kvl ==> (EL m (MAP FST kvl) <> k))
     ==>
-     ((f |++ kvl) ' k = v)`
-(
+     ((f |++ kvl) ' k = v)
+Proof
   Induct THEN1 SRW_TAC[][] THEN
   Cases THEN NTAC 3 GEN_TAC THEN
   Cases THEN1 (
@@ -1636,7 +1636,7 @@ Theorem FUPDATE_LIST_APPLY_MEM
   Q.MATCH_RENAME_TAC `EL m (MAP FST kvl) <> _` THEN
   FIRST_X_ASSUM (Q.SPEC_THEN `SUC m` MP_TAC) THEN
   SRW_TAC[][]
-);
+QED
 
 val FOLDL_FUPDATE_LIST = store_thm("FOLDL_FUPDATE_LIST",
   ``!f1 f2 ls a. FOLDL (\fm k. fm |+ (f1 k, f2 k)) a ls =

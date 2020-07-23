@@ -51,7 +51,7 @@ Proof
   ‘primrec1 (SUC o nfst o nfst)’ by metis_tac[primrec1_rules] >>
   qabbrev_tac ‘ADD = pr1_pr I (SUC o nfst o nsnd)’ >>
   ‘primrec1 ADD’ by metis_tac[primrec1_rules, primrec1_I] >>
-  ‘ADD = (λn. nfst n + nsnd n)’ suffices_by (rw[] >> rw[]) >>
+  ‘ADD = (λn. nfst n + nsnd n)’ suffices_by (rw[] >> fs[]) >>
   simp[FUN_EQ_THM, Abbr‘ADD’] >> gen_tac >>
   ‘∃x y. n = x ⊗ y’ by metis_tac[npair_cases] >> rw[] >> Induct_on ‘x’ >>
   simp[]
@@ -330,7 +330,6 @@ Proof
       simp[] >> rw[] >- metis_tac[] >>
       first_x_assum drule >> simp[PULL_EXISTS]) >>
   fs[] >> rename [‘f (A ⊗ B) = SOME 0’] >>
-  Cases_on ‘f (A ⊗ B) = SOME 0’ >> simp[] >>
   qspec_then ‘λn. f (n ⊗ B) = SOME 0’ mp_tac WOP >> simp[] >> impl_tac
   >- metis_tac[] >>
   disch_then (qx_choose_then ‘A0’ strip_assume_tac) >>
@@ -438,9 +437,8 @@ Proof
       >- (simp[whileTheory.OLEAST_EQ_SOME] >> SELECT_ELIM_TAC >>
           conj_tac >- metis_tac[] >>
           rw[] >- metis_tac[] >>
-          first_x_assum (drule_then strip_assume_tac) >> simp[]) >>
+          first_x_assum (drule_then strip_assume_tac) >> fs[]) >>
       rename [‘f (n::unfold a N) = SOME 0’] >>
-      Cases_on ‘f (n::unfold a N) = SOME 0’ >> simp[] >>
       qspec_then ‘λi. f (i::unfold a N) = SOME 0’ mp_tac WOP >>
       impl_tac >- metis_tac[] >> simp[] >>
       disch_then (qx_choose_then ‘n0’ strip_assume_tac) >>

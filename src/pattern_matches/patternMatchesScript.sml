@@ -672,11 +672,11 @@ val PMATCH_ROW_REDUNDANT_0 = store_thm ("PMATCH_ROW_REDUNDANT_0",
   ``PMATCH_ROW_REDUNDANT v (r::rs) 0 <=> (r v = NONE)``,
 SIMP_TAC list_ss [PMATCH_ROW_REDUNDANT_def]);
 
-Theorem PMATCH_ROW_REDUNDANT_SUC
-  `!v r rs i.
+Theorem PMATCH_ROW_REDUNDANT_SUC:
+  !v r rs i.
      PMATCH_ROW_REDUNDANT v (r::rs) (SUC i) <=>
-     (((~(r v = NONE)) /\ i < LENGTH rs) \/ PMATCH_ROW_REDUNDANT v rs i)`
-(
+     (r v <> NONE /\ i < LENGTH rs) \/ PMATCH_ROW_REDUNDANT v rs i
+Proof
   SIMP_TAC (list_ss++boolSimps.EQUIV_EXTRACT_ss) [PMATCH_ROW_REDUNDANT_def] THEN
   REPEAT STRIP_TAC THEN
   EQ_TAC THENL [
@@ -694,7 +694,7 @@ Theorem PMATCH_ROW_REDUNDANT_SUC
       Q.EXISTS_TAC ‘0’ >> SRW_TAC[][]
     ]
   ]
-);
+QED
 
 
 val PMATCH_ROW_REDUNDANT_APPEND_LT = store_thm ("PMATCH_ROW_REDUNDANT_APPEND_LT",

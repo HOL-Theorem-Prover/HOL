@@ -72,10 +72,10 @@ val l2n_lt = Q.store_thm("l2n_lt",
 
 (* ......................................................................... *)
 
-Theorem LENGTH_l2n
-  `!b l. 1 < b /\ EVERY ($> b) l /\ ~(l2n b l = 0) ==>
-         SUC (LOG b (l2n b l)) <= LENGTH l`
-(
+Theorem LENGTH_l2n:
+  !b l. 1 < b /\ EVERY ($> b) l /\ ~(l2n b l = 0) ==>
+        SUC (LOG b (l2n b l)) <= LENGTH l
+Proof
   Induct_on `l` \\ SRW_TAC [ARITH_ss] [l2n_def, GREATER_DEF] \\
   Cases_on ‘h MOD b = 0’ \\ FULL_SIMP_TAC (srw_ss()) []
   >> (REV_FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [MOD_EQ_0_DIVISOR] \\
@@ -89,7 +89,7 @@ Theorem LENGTH_l2n
   ‘(h + b * l2n b l) DIV b = l2n b l’
      by METIS_TAC[DIV_MULT, MULT_COMM, ADD_COMM] \\
   SRW_TAC[][]
-);
+QED
 
 val l2n_DIGIT = Q.store_thm("l2n_DIGIT",
   `!b l x. 1 < b /\ EVERY ($> b) l /\ x < LENGTH l ==>

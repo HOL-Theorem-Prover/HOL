@@ -373,7 +373,7 @@ fun introduce_vars ns t =
           else
             let val newvar =
                     case free_vars a of
-                        [] => mk_var("x", type_of a)
+                        [] => variant avoids (mk_var("x", type_of a))
                       | v::_ => variant avoids
                                         (mk_var(#1 (dest_var v), type_of a))
             in

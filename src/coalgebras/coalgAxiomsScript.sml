@@ -1,7 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open relationTheory pairTheory pred_setTheory combinTheory
-open mp_then
+open cardinalTheory
 
 (* Abstract development of existence of final co-algebras, using new_type,
    new_constant and axioms to emulate a locale. If this can be carried out
@@ -479,11 +479,208 @@ Proof
   DEEP_INTRO_TAC CHOICE_INTRO >> simp[] >> metis_tac[SPOr_REFL, SPOr_lemma]
 QED
 
-(* Theorem Spushout_Fpushout_IMP:
+(* pushouts in Set into universe delta are pushouts into universe epsilon if
+   epsilon is no bigger than delta *)
+Theorem Spushout_transfer:
+  Spushout A B C f g (P,i1,i2) (:'d) /\ INJ h univ(:'e) univ(:'d) ==>
+  Spushout A B C f g (P,i1,i2) (:'e)
+Proof
+  rw[Spushout_def] >>
+  first_x_assum $ qspecl_then [‘IMAGE h Q’, ‘restr (h o j1) B’,
+                               ‘restr (h o j2) C’] mp_tac >>
+  impl_tac
+  >- (fs[shom_def, restr_def, FUN_EQ_THM] >> metis_tac[INJ_IFF, IN_UNIV]) >>
+  simp[EXISTS_UNIQUE_THM] >> rw[]
+  >- (drule_then assume_tac LINV_DEF >> fs[] >>
+      qexists_tac ‘restr (LINV h univ(:'e) o u) P’>>
+      first_x_assum $ qspecl_then [‘ARB’, ‘ARB’] (K ALL_TAC) >>
+      fs[shom_def, FUN_EQ_THM, restr_def] >> rw[] >> metis_tac[]) >>
+  Q.MATCH_RENAME_TAC ‘u1 = u2’ >>
+  first_x_assum $ qspecl_then [‘restr (h o u1) P’, ‘restr (h o u2) P’] mp_tac >>
+  impl_tac
+  >- (fs[shom_def, FUN_EQ_THM, restr_def] >> rw[] >> metis_tac[]) >>
+  rw[FUN_EQ_THM, restr_def] >> metis_tac[shom_def, INJ_IFF, IN_UNIV]
+QED
+
+Theorem shoms_exist:
+  !(A:'a set) (B:'b set). B <> {} ==> ?h. shom h A B
+Proof
+  rw[shom_def] >> qexists_tac ‘restr (K (CHOICE B)) A’ >>
+  rw[restr_def, CHOICE_DEF]
+QED
+
+Theorem unit_pushout:
+  shom f A B /\ shom g A C /\ A <> {} ==>
+  Spushout A B C f g ({()}, restr (K ()) B, restr (K ()) C) (:unit)
+Proof
+  simp[shom_def, Spushout_def, FUN_EQ_THM] >> rw[] >>
+  simp[EXISTS_UNIQUE_DEF, FUN_EQ_THM]>> fs[IN_DEF] >> metis_tac[]
+QED
+
+Theorem Spushout_sym:
+  Spushout A B C f g (P,p1,p2) (:'d) ==>
+  Spushout A C B g f (P,p2,p1) (:'d)
+Proof
+  simp[Spushout_def] >> metis_tac[]
+QED
+
+Theorem shom_into_EMPTY[simp]:
+ shom f A {} <=> A = {} /\ f = K ARB
+Proof
+  csimp[shom_def] >> simp[FUN_EQ_THM, IN_DEF]
+QED
+
+Theorem shom_outof_EMPTY[simp]:
+  shom f {} A <=> f = K ARB
+Proof
+  simp[shom_def, FUN_EQ_THM]
+QED
+
+Theorem restr_EMPTY[simp]:
+  restr f {} = K ARB
+Proof
+  simp[FUN_EQ_THM, restr_def]
+QED
+
+Definition cardgt_def:
+  cardgt (:'a) n <=> FINITE univ(:'a) ==> n < CARD univ(:'a)
+End
+
+Theorem cardgt0[simp]:
+  cardgt (:'a) 0
+Proof
+  simp[cardgt_def] >> CCONTR_TAC >> fs[] >> rfs[]
+QED
+
+Theorem cardgt1_INJ_bool:
+  cardgt (:'a) 1 <=> ?bf. INJ bf {T;F} univ(:'a)
+Proof
+  simp[cardgt_def] >> eq_tac >> strip_tac >> fs[INJ_IFF]
+  >- (‘?x. x IN univ(:'a)’ by simp[] >>
+      ‘?y. y IN univ(:'a) /\ x <> y’
+        by (CCONTR_TAC >> fs[] >>
+            ‘univ(:'a) = {x}’ by simp[EXTENSION] >>
+            pop_assum SUBST_ALL_TAC >>
+            fs[]) >>
+      qexists_tac ‘\b. if b then x else y’ >> rw[]) >>
+  rw[] >> irule arithmeticTheory.LESS_LESS_EQ_TRANS >>
+  qexists_tac ‘CARD {bf T; bf F}’ >> conj_tac >- simp[] >>
+  irule CARD_SUBSET >> simp[]
+QED
+
+Theorem Spushouts_iso:
+  Spushout (A:'a set) (B:'b set) (C:'c set) f g (P : 'd set,i1,i2) (:'e) /\
+  Spushout A B C f g (Q : 'e set,j1,j2) (:'d) /\
+  cardgt (:'d) 1 /\ cardgt (:'e) 1 ==>
+  ?H. BIJ H P Q /\ restr (H o i1) B = j1 /\ restr (H o i2) C = j2
+Proof
+  rw[Spushout_def] >>
+  first_assum $ drule_all >>
+  last_assum $ drule_all >>
+  REWRITE_TAC[EXISTS_UNIQUE_DEF] >> simp[] >>
+  disch_then $ CONJUNCTS_THEN2 (qx_choose_then ‘pq’ strip_assume_tac)
+             strip_assume_tac >>
+  disch_then $ CONJUNCTS_THEN2 (qx_choose_then ‘qp’ strip_assume_tac)
+             strip_assume_tac >>
+  Cases_on ‘P = {}’ >> fs[] >> Cases_on ‘Q = {}’ >> fs[] >>
+  ‘SURJ pq P Q’
+    by (CCONTR_TAC >>
+        ‘?q. q IN Q /\ !p. p IN P ==> pq p <> q’
+          by (fs[SURJ_DEF, shom_def] >> metis_tac[]) >>
+        ‘(!b. b IN B ==> j1 b <> q) /\ (!c. c IN C ==> j2 c <> q)’
+          by (qpat_x_assum ‘_ = j1’ (SUBST_ALL_TAC o SYM) >>
+              qpat_x_assum ‘_ = j2’ (SUBST_ALL_TAC o SYM) >>
+              simp[restr_applies] >> metis_tac[shom_def]) >>
+        ‘qp q IN P’ by metis_tac[shom_def] >>
+        Cases_on ‘?p. p IN P /\ p <> qp q’
+        >- (fs[] >>
+            qabbrev_tac ‘qp' = \q0. if q0 = q then p else qp q0’ >>
+            ‘shom qp' Q P’ by (fs[shom_def, Abbr‘qp'’] >> metis_tac[]) >>
+            ‘restr (qp' o j1) B = i1 /\ restr (qp' o j2) C = i2’
+              by (simp[FUN_EQ_THM, restr_def, Abbr‘qp'’] >>
+                  qpat_x_assum ‘_ = i1’ (SUBST_ALL_TAC o SYM) >>
+                  qpat_x_assum ‘_ = i2’ (SUBST_ALL_TAC o SYM) >>
+                  simp[restr_def]) >>
+            ‘qp' = qp’ by metis_tac[] >>
+            pop_assum mp_tac >>
+            simp_tac (srw_ss()) [Abbr‘qp'’, FUN_EQ_THM] >> metis_tac[]) >>
+        fs[] >>
+        ‘P = {qp q}’ by (simp[EXTENSION] >> metis_tac[]) >>
+        ‘?p. p NOTIN P’
+          by (‘?bf. INJ bf {T;F} univ(:'d)’ by metis_tac[cardgt1_INJ_bool] >>
+              Cases_on ‘bf T = qp q’
+              >- (qexists_tac‘bf F’ >> simp[] >> fs[INJ_IFF] >>
+                  disch_then (assume_tac o SYM) >> fs[] >> rfs[]) >>
+              qexists_tac ‘bf T’ >> simp[]) >>
+        first_x_assum $ qspecl_then [‘{qp q; p}’, ‘i1’, ‘i2’] mp_tac >>
+        impl_tac >- (simp[] >> fs[shom_def]) >>
+        strip_tac >> fs[EXISTS_UNIQUE_DEF] >>
+        ‘?v. shom v Q {qp q; p} /\ restr (v o j1) B = i1 /\
+             restr (v o j2) C = i2 /\ v <> u’ suffices_by metis_tac[] >>
+        qexists_tac
+          ‘\q0. if q0 = q then if u q = p then qp q else p else u q0’ >>
+        simp[FUN_EQ_THM, restr_def] >> rpt strip_tac
+        >- (fs[shom_def, AllCaseEqs()] >> metis_tac[])
+        >- (qpat_x_assum ‘_ = i1’ (SUBST_ALL_TAC o SYM) >> simp[restr_def])
+        >- (qpat_x_assum ‘_ = i2’ (SUBST_ALL_TAC o SYM) >> simp[restr_def])
+        >- (qexists_tac ‘q’ >> rw[] >> fs[])) >>
+  ‘!p. p IN P ==> (?b. b IN B /\ i1 b = p) \/ (?c. c IN C /\ i2 c = p)’
+    by (CCONTR_TAC >> fs[] >>
+        Cases_on ‘?q. q IN Q /\ pq p <> q’ >> fs[]
+        >- (qabbrev_tac ‘v = \p0. if p0 = p then q else pq p0’ >>
+            ‘shom v P Q’ by (fs[shom_def, Abbr‘v’] >> metis_tac[]) >>
+            ‘v <> pq’ by (simp[Abbr‘v’, FUN_EQ_THM] >> metis_tac[]) >>
+            ‘restr (v o i1) B = j1 /\ restr (v o i2) C = j2’
+              suffices_by metis_tac[] >>
+            qpat_x_assum ‘_ = j1’ (SUBST_ALL_TAC o SYM) >>
+            qpat_x_assum ‘_ = j2’ (SUBST_ALL_TAC o SYM) >>
+            simp[FUN_EQ_THM, Abbr‘v’, restr_def] >> metis_tac[]) >>
+        ‘Q = {pq p}’ by (simp[EXTENSION] >> metis_tac[SURJ_DEF]) >>
+        ‘?q. q NOTIN Q’
+          by (‘?bf. INJ bf {T;F} univ(:'e)’ by metis_tac[cardgt1_INJ_bool] >>
+              Cases_on ‘bf T = pq p’
+              >- (qexists_tac‘bf F’ >> simp[] >> fs[INJ_IFF] >>
+                  disch_then (assume_tac o SYM) >> fs[] >> rfs[]) >>
+              qexists_tac ‘bf T’ >> simp[]) >>
+        first_x_assum $ qspecl_then [‘{pq p; q}’, ‘j1’, ‘j2’] mp_tac >>
+        impl_tac >- (simp[] >> fs[shom_def]) >>
+        strip_tac >> fs[EXISTS_UNIQUE_DEF] >>
+        ‘?v. shom v P {pq p; q} /\ restr (v o i1) B = j1 /\
+             restr (v o i2) C = j2 /\ v <> u’ suffices_by metis_tac[] >>
+        qexists_tac
+        ‘\p0. if p0 = p then if u p = q then pq p else q else u p0’ >>
+        simp[FUN_EQ_THM, restr_def] >> rpt strip_tac
+        >- (fs[shom_def, AllCaseEqs()] >> metis_tac[])
+        >- (qpat_x_assum ‘_ = j1’ (SUBST_ALL_TAC o SYM) >> simp[restr_def] >>
+            metis_tac[])
+        >- (qpat_x_assum ‘_ = j2’ (SUBST_ALL_TAC o SYM) >> simp[restr_def] >>
+            metis_tac[])
+        >- (qexists_tac ‘p’ >> rw[] >> fs[])) >>
+  qexists_tac ‘pq’ >> simp[BIJ_DEF] >>
+  simp[INJ_IFF] >> conj_tac >- metis_tac[shom_def] >>
+  ‘!p. p IN P ==> qp (pq p) = p’ suffices_by metis_tac[] >>
+  qx_gen_tac ‘p’ >> strip_tac >> first_x_assum drule >> strip_tac
+  >- (pop_assum (SUBST_ALL_TAC o SYM) >>
+      qpat_x_assum ‘_ = i1’ (fn th => simp[SYM th, SimpRHS]) >>
+      qpat_x_assum ‘_ = j1’ (SUBST_ALL_TAC o SYM)>>
+      simp[restr_applies]) >>
+  pop_assum (SUBST_ALL_TAC o SYM) >>
+  qpat_x_assum ‘_ = i2’ (fn th => simp[SYM th, SimpRHS]) >>
+  qpat_x_assum ‘_ = j2’ (SUBST_ALL_TAC o SYM)>>
+  simp[restr_applies]
+QED
+
+(*
+Theorem Spushout_Fpushout_IMP:
   hom f (A,af) (B,bf) /\ hom g (A,af) (C,cf) /\
   Spushout A B C f g (P,i1,i2) (:'d) ==>
   ?pf. Fpushout (A,af) (B,bf) (C,cf) f g ((P,pf),i1,i2) (:'d)
 Proof
+  rpt strip_tac >>
+  ‘Spushout A B C f g (SPO A B C f g) (:'d)’ by metis_tac[hom_shom,Spushout_quotient] >>
+  fs[SPO_def] >> pop_assum mp_tac >>
+  qmatch_abbrev_tac ‘Spushout _ _ _ _ _ (SPOq, SPOi1, SPOi2) _ ==> _’ >> strip_tac >>
+
   simp[Fpushout_def, Spushout_def] >> rpt strip_tac >>
   ‘shom f A B /\ shom g A C /\ shom i1 B P /\ shom i2 C P’
     by metis_tac[hom_shom] >> simp[] >>

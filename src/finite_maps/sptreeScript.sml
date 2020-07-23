@@ -2156,16 +2156,17 @@ QED
 
 Theorem combine_rle_props:
   !xs. rle_wf xs ==>
-  rle_wf (combine_rle isEmpty xs) /\
-  rle_wf (MAP (\(i,t). (i,spt_right t)) (combine_rle isEmpty xs)) /\
-  rle_wf (MAP (\(i,t). (i,spt_left t)) (combine_rle isEmpty xs))
+       rle_wf (combine_rle isEmpty xs) /\
+       rle_wf (MAP (\ (i,t). (i,spt_right t)) (combine_rle isEmpty xs)) /\
+       rle_wf (MAP (\ (i,t). (i,spt_left t)) (combine_rle isEmpty xs))
 Proof
   ho_match_mp_tac (Q.ISPEC `isEmpty` combine_rle_ind2)
   \\ simp [combine_rle_def, pairTheory.FORALL_PROD]
   \\ rw []
   \\ rfs []
-  \\ rename [`_ t <> LN`]
-  \\ Cases_on `t` \\ fs [spt_left_def, spt_right_def]
+  \\ TRY (rename [`_ t <> LN`] >> Cases_on `t` >>
+          fs[spt_left_def, spt_right_def] >> NO_TAC) >>
+  rename [‘isEmpty t1 ==> t2 <> LN’] >> Cases_on ‘t1 = t2’ >> fs[]
 QED
 
 Triviality less_two_times_lemma:
@@ -2182,11 +2183,11 @@ QED
 
 Theorem MEM_spts_to_alist:
   !n xs i x.
-  rle_wf xs ==>
-  (MEM (i, x) (spts_to_alist n xs) =
-    (?j k. j < LENGTH (expand_rle xs)
-      /\ lookup k (EL j (expand_rle xs)) = SOME x
-      /\ i = n + j + (k * LENGTH (expand_rle xs))))
+    rle_wf xs ==>
+    (MEM (i, x) (spts_to_alist n xs) <=>
+     ?j k. j < LENGTH (expand_rle xs)
+           /\ lookup k (EL j (expand_rle xs)) = SOME x
+           /\ i = n + j + (k * LENGTH (expand_rle xs)))
 Proof
   ho_match_mp_tac spts_to_alist_ind
   \\ rw []
@@ -2198,7 +2199,7 @@ Proof
     \\ fs [expand_rle_def]
     \\ rw []
     \\ rename [`idx < len`]
-    \\ Cases_on `idx < len` \\ simp [rich_listTheory.EL_REPLICATE, lookup_def]
+    \\ strip_tac >> fs[rich_listTheory.EL_REPLICATE, lookup_def]
   )
   \\ simp [Once lookup_SOME_left_right_cases]
   \\ pairarg_tac \\ fs []
@@ -2257,8 +2258,8 @@ QED
 Theorem MEM_toSortedAList:
   MEM (i, x) (toSortedAList spt) = (lookup i spt = SOME x)
 Proof
-  simp [toSortedAList_def, MEM_spts_to_alist, EVAL ``expand_rle [(1, v)]``,
-    Q.prove (`j < 1 <=> j = (0 : num)`, simp [])]
+  simp [toSortedAList_def, MEM_spts_to_alist, EVAL “expand_rle [(1, v)]”,
+        DECIDE “j < 1 <=> j = (0 : num)”]
 QED
 
 Theorem SORTED_toSortedAList:

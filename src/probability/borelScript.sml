@@ -36,6 +36,10 @@ open hurdUtils util_probTheory extrealTheory sigma_algebraTheory
 
 val _ = new_theory "borel";
 
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val real_ss = real_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
+
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) >> ARITH_TAC; (* numLib *)
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
 fun METIS ths tm = prove(tm, METIS_TAC ths);
@@ -4193,13 +4197,13 @@ Proof
      FIRST_X_ASSUM MATCH_MP_TAC \\
      Q.UNABBREV_TAC `h` >> rw [o_DEF])
  (* Part V: h-property of lowerbounds *)
- >> Know `!i j. i < j /\ j < n0 ==>
-                interval_lowerbound (h i) <= interval_lowerbound (h j)`
- >- (rpt STRIP_TAC \\
-     Q.PAT_X_ASSUM `transitive R`
-       (STRIP_ASSUME_TAC o (MATCH_MP SORTED_EL_LESS)) \\
-     POP_ASSUM (MP_TAC o (Q.SPEC `sorted`)) \\
-     Q.UNABBREV_TAC `R` >> RW_TAC std_ss []) >> DISCH_TAC
+ >> ‘!i j. i < j /\ j < n0 ==>
+           interval_lowerbound (h i) <= interval_lowerbound (h j)’
+      by (STRIP_TAC \\
+          Q.PAT_X_ASSUM `transitive R`
+                        (STRIP_ASSUME_TAC o (MATCH_MP SORTED_EL_LESS)) \\
+          pop_assum (qspec_then ‘sorted’ mp_tac) \\
+          simp[])
  (* h-property of upper- and lowerbounds *)
  >> Know `!i j. i < j /\ j < n0 ==>
                 interval_upperbound (h i) <= interval_lowerbound (h j)`

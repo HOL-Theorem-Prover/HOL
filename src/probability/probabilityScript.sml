@@ -53,6 +53,9 @@ val _ = new_theory "probability";
 
   -- A. N. Kolmogorov, "Foundations of the Theory of Probability." [1] *)
 
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val real_ss = real_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 val set_ss = std_ss ++ PRED_SET_ss;
 
 val _ = hide "S";

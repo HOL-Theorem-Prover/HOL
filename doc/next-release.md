@@ -170,6 +170,16 @@ New examples:
 Incompatibilities:
 ------------------
 
+*   The treatment of abbreviations (introduced with `qabbrev_tac` for example), has changed slightly.
+    The system tries harder to prevent abbreviation assumptions from changing in form; they should stay as `Abbrev(v = e)`, with `v` a variable, for longer.
+    Further, the tactic `VAR_EQ_TAC` which eliminates equalities in assumptions and does some other forms of cleanup, and which is called as part of the action of `rw`, `SRW_TAC` and others, now eliminates “malformed” abbreviations.
+    To restore the old behaviours, two steps are required:
+
+           val _ = diminish_srw_ss ["ABBREV"]
+           val _ = set_trace "BasicProvers.var_eq_old" 1
+
+    which invocation can be made at the head of script files.
+
 *   The theorem `rich_listTheory.REVERSE` (alias of `listTheory.REVERSE_SNOC_DEF`)
     has been removed because `REVERSE` is also a tactical (`Tactical.REVERSE`).
 

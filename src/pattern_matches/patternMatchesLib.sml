@@ -191,9 +191,9 @@ val static_ss = simpLib.merge_ss
    custum component as well. *)
 fun rc_ss gl =
     simpLib.remove_ssfrags
+      ["patternMatchesSimp"]
       (srw_ss() ++ simpLib.merge_ss (static_ss :: gl) -*
        ["lift_disj_eq", "lift_imp_disj"])
-      ["patternMatchesSimp"]
 
 (* finally we add a call-back component. This is an
    external conversion that is used at the end if

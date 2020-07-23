@@ -406,9 +406,8 @@ val w2w_i2w = Q.store_thm("w2w_i2w",
        ONCE_REWRITE_RULE [MULT_COMM] arithmeticTheory.MOD_MULT_MOD]
   )
 
-Theorem WORD_LTi
-  `!a b. a < b = w2i a < w2i b`
-(
+Theorem WORD_LTi: !a b. a < b = w2i a < w2i b
+Proof
   reverse (RW_TAC std_ss [WORD_LT, GSYM WORD_LO, INT_LT_CALCULATE,
                           WORD_NEG_EQ_0, w2i_def, w2n_eq_0])
   >- (strip_tac >> fs[]) >>
@@ -418,7 +417,7 @@ Theorem WORD_LTi
   FULL_SIMP_TAC std_ss [] >>
   FULL_SIMP_TAC (std_ss++fcpLib.FCP_ss) [word_0, word_msb_def] >>
   METIS_TAC [DECIDE ``0n < n ==> n - 1 < n``, DIMINDEX_GT_0]
-);
+QED
 
 val WORD_GTi = store_thm("WORD_GTi",
   ``!a b. a > b = w2i a > w2i b``,
@@ -1248,15 +1247,15 @@ val add_max_overflow = Q.prove(
 val srw_add_min_overflow = SIMP_RULE (srw_ss()) [] add_min_overflow
 val srw_add_max_overflow = SIMP_RULE (srw_ss()) [] add_max_overflow
 
-Theorem signed_saturate_add
-  `!a b:'a word.
+Theorem signed_saturate_add:
+  !a b:'a word.
      signed_saturate_add a b =
        let sum = a + b and msba = word_msb a in
          if (msba = word_msb b) /\ (msba <> word_msb sum) then
            if msba then INT_MINw else INT_MAXw
          else
-           sum`
-(
+           sum
+Proof
   ntac 2 strip_tac
   \\ Cases_on_i2w `a : 'a word`
   \\ Cases_on_i2w `b : 'a word`
@@ -1307,7 +1306,7 @@ Theorem signed_saturate_add
     \\ `~(i + i' <= INT_MIN (:'a))` by intLib.ARITH_TAC
     \\ asm_rewrite_tac []
   ]
-);
+QED
 
 (* ------------------------------------------------------------------------- *)
 

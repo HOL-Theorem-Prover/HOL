@@ -2826,7 +2826,7 @@ val delete_non_element = #1 (EQ_IMP_RULE (SPEC_ALL DELETE_NON_ELEMENT));
 
 local
 val tactics =
-   (GEN_TAC >> DISCH_TAC >> rpt GEN_TAC >> DISCH_TAC
+   GEN_TAC >> DISCH_TAC >> rpt GEN_TAC >> DISCH_TAC
  >> completeInduct_on `CARD s`
  >> POP_ASSUM (ASSUME_TAC o (SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]))
  >> GEN_TAC >> SIMP_TAC bool_ss [ITSET_INSERT]
@@ -2849,7 +2849,7 @@ val tactics =
       Q.ABBREV_TAC `u = t DELETE x` \\
      `t = x INSERT u` by SRW_TAC [][INSERT_DELETE, Abbr`u`] \\
      `~(x IN u)` by PROVE_TAC [IN_DELETE] \\
-     `s = x INSERT (y INSERT u)` by SRW_TAC [][INSERT_COMM] \\
+     `s = x INSERT (y INSERT u)` by simp[INSERT_COMM] \\
       POP_ASSUM SUBST_ALL_TAC \\ (* all `s` disappeared *)
       FULL_SIMP_TAC bool_ss [FINITE_INSERT, CARD_INSERT, DELETE_INSERT,IN_INSERT] \\
       (* now we start using properties of extreal *)
@@ -2897,15 +2897,18 @@ val tactics =
       Q.PAT_X_ASSUM `!x' b'. FINITE u /\ X ==> Y` K_TAC \\
       rpt STRIP_TAC >> RES_TAC \\
       ASM_SIMP_TAC std_ss [delete_non_element] \\
-      METIS_TAC [add_assoc, add_comm, add_not_infty] ] ]);
+      METIS_TAC [add_assoc, add_comm, add_not_infty] ] ];
 
-val lem = Q.prove (
-   `!limit. (limit = PosInf) ==>
-        !f s. FINITE s ==>
-              !x b. (!z. z IN (x INSERT s) ==> f z <> limit) /\ b <> limit ==>
-                    (ITSET (\e acc. f e + acc) (x INSERT s) b =
-                     ITSET (\e acc. f e + acc) (s DELETE x) ((\e acc. f e + acc) x b))`,
-    tactics);
+Triviality lem:
+  !limit.
+     limit = PosInf ==>
+     !f s. FINITE s ==>
+           !x b. (!z. z IN (x INSERT s) ==> f z <> limit) /\ b <> limit ==>
+                 ITSET (\e acc. f e + acc) (x INSERT s) b =
+                 ITSET (\e acc. f e + acc) (s DELETE x)
+                       ((\e acc. f e + acc) x b)
+Proof tactics
+QED
 
 val lem' = Q.prove (
    `!limit. (limit = NegInf) ==>

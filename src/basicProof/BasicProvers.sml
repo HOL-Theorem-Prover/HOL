@@ -797,19 +797,28 @@ fun orient th =
          end
  end;
 
-fun VSUBST_TAC tm = UNDISCH_THEN tm (SUBST_ALL_TAC o orient);
+val TIDY_ABBREVS = markerLib.TIDY_ABBREVS
+fun eliminable_eqvar t =
+    if is_bool_atom t then
+      if is_neg t then SOME (dest_neg t) else SOME t
+    else let val (l,r) = dest_eq t
+         in
+           if l ~~ r then NONE
+           else if is_var l then SOME l else SOME r
+         end
+
+fun VSUBST_TAC tm =
+    case eliminable_eqvar tm of
+        NONE => UNDISCH_THEN tm (K ALL_TAC)
+      | SOME v => UNDISCH_THEN tm (SUBST_ALL_TAC o orient)
 
 fun var_eq tm =
-   let val (lhs,rhs) = dest_eq tm
-   in
-       aconv lhs rhs
-     orelse
-       (is_var lhs andalso not (free_in lhs rhs))
-     orelse
-       (is_var rhs andalso not (free_in rhs lhs))
-   end
-   handle HOL_ERR _ => is_bool_atom tm
-
+    let val (lhs,rhs) = dest_eq tm
+    in
+      aconv lhs rhs orelse
+      (is_var lhs andalso not (free_in lhs rhs)) orelse
+      (is_var rhs andalso not (free_in rhs lhs))
+    end handle HOL_ERR _ => is_bool_atom tm
 
 fun grab P f v =
   let fun grb [] = v
@@ -818,8 +827,17 @@ fun grab P f v =
   end;
 
 fun ASSUM_TAC f P = W (fn (asl,_) => grab P f NO_TAC asl)
-
-val VAR_EQ_TAC = ASSUM_TAC VSUBST_TAC var_eq;
+val old_behaviour = ref false
+val tracename = "BasicProvers.var_eq_old"
+val _ = Feedback.register_btrace(tracename, old_behaviour)
+val behaviour_value = get_tracefn tracename
+fun VAR_EQ_TAC (g as (asl,_)) =
+    let
+      val tidy = if behaviour_value() = 1 then ALL_TAC
+                 else TIDY_ABBREVS
+    in
+      (ASSUM_TAC VSUBST_TAC var_eq THEN tidy) g
+    end
 val var_eq_tac = VAR_EQ_TAC
 
 fun ASSUMS_TAC f P = W (fn (asl,_) =>
@@ -877,24 +895,6 @@ in
 end
 
 val IMP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] (SPEC_ALL IMP_CONG)
-
-fun ABBREV_CONV tm = let
-  val t = rand tm
-  val (l,r) = dest_eq t
-in
-  if not (is_var l) orelse is_var r then
-    REWR_CONV markerTheory.Abbrev_def THENC
-    REWR_CONV EQ_SYM_EQ
-  else ALL_CONV
-end tm
-
-val ABBREV_ss =
-    simpLib.SSFRAG {name=SOME"ABBREV",
-                    ac = [], congs = [],
-                      convs = [{conv = K (K ABBREV_CONV),
-                                key = SOME ([], ``marker$Abbrev x``),
-                                trace = 2, name = "ABBREV_CONV"}],
-                      dprocs = [], filter = NONE, rewrs = []}
 
 (*---------------------------------------------------------------------------*)
 (* The staging of first two successive calls to SIMP_CONV ensure that the    *)
@@ -1112,6 +1112,7 @@ val srw_ss_initialised = ref false;
 datatype update = ADD_SSFRAG of simpLib.ssfrag | REMOVE_RWT of string
 val pending_updates = ref (map ADD_SSFRAG [combinSimps.COMBIN_ss,
                                            boolSimps.NORMEQ_ss,
+                                           boolSimps.ABBREV_ss,
                                            boolSimps.LABEL_CONG_ss]);
 
 fun apply_update (ADD_SSFRAG ssf, ss) = ss ++ ssf
@@ -1136,29 +1137,20 @@ fun augment_srw_ss ssdl =
 
 fun diminish_srw_ss names =
     if !srw_ss_initialised then
-      let
-        val (frags, rest) = (!srw_ss) |> simpLib.ssfrags_of
-                                      |> List.rev
-                                      |> simpLib.partition_ssfrags names
-        val _ = srw_ss := simpLib.mk_simpset rest
-      in
-        frags
-      end
+      srw_ss := simpLib.remove_ssfrags names (!srw_ss)
     else
       let
         open simpLib
-        fun foldthis (upd, (keep,drop)) =
+        fun foldthis (upd, keep) =
             case upd of
                 ADD_SSFRAG ssf =>
                 (case frag_name ssf of
-                     NONE => (upd::keep,drop)
-                   | SOME n => if mem n names then (keep,ssf::drop)
-                               else (upd::keep,drop))
-              | _ => (upd::keep, drop)
-        val (keep, drop) = foldl foldthis ([], []) (!pending_updates)
-        val _ = pending_updates := keep
+                     NONE => upd::keep
+                   | SOME n => if mem n names then keep else upd::keep)
+              | _ => upd::keep
+        val keep = foldr foldthis [] (!pending_updates)
       in
-        drop
+        pending_updates := keep
       end;
 
 fun temp_delsimps names =

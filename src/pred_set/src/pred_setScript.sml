@@ -4524,7 +4524,7 @@ val COMMUTING_ITSET_INSERT = Q.store_thm
       Q.ABBREV_TAC `u = t DELETE x` THEN
       `t = x INSERT u` by SRW_TAC [][INSERT_DELETE, Abbr`u`] THEN
       `~(x IN u)` by PROVE_TAC [IN_DELETE] THEN
-      `s = x INSERT (y INSERT u)` by SRW_TAC [][INSERT_COMM] THEN
+      `s = x INSERT (y INSERT u)` by simp[INSERT_COMM] THEN
       POP_ASSUM SUBST_ALL_TAC THEN
       FULL_SIMP_TAC bool_ss [FINITE_INSERT, CARD_INSERT, DELETE_INSERT,
                              IN_INSERT] THEN

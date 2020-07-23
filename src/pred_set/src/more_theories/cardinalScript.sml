@@ -629,7 +629,7 @@ val SET_SQUARED_CARDEQ_SET = store_thm(
   `(M,mf) <> (M UNION E, FF)`
     by (`M <> {}` by metis_tac[FINITE_EMPTY] >>
         simp[] >> simp[EXTENSION] >>
-        fs[DISJOINT_DEF, EXTENSION] >> metis_tac[]) >>
+        fs[DISJOINT_DEF, EXTENSION] >> metis_tac[CARDEQ_0, MEMBER_NOT_EMPTY]) >>
   qsuff_tac `((M,mf), (M UNION E, FF)) IN rr` >- metis_tac[] >>
   simp[Abbr`rr`] >> conj_tac >- simp[Abbr`A`] >>
   simp[Abbr`FF`]);
