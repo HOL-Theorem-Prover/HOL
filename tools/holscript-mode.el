@@ -2,6 +2,13 @@
 
 ;; font-locking and syntax
 
+(defconst holscript-symbolicthen-regexp "\\(?:>>\\|\\\\\\|>-\\|>|\\)")
+(defconst holscript-textthen-regexp "\\(?:\\<\\(THEN\\([1L]?\\)\\)\\>\\)")
+(defconst holscript-thenish-regexp
+  (concat "\\(?:" holscript-symbolicthen-regexp "\\|"
+          holscript-textthen-regexp "\\)"))
+(defconst holscript-doublethen-error-regexp
+  (concat holscript-thenish-regexp "[[:space:]]+" holscript-thenish-regexp))
 
 (defconst holscript-font-lock-keywords
   (list '("^\\(Theorem\\|Triviality\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[ :]"
@@ -11,6 +18,9 @@
           (1 'holscript-definition-syntax) (2 'holscript-thmname-syntax))
         '("^Termination\\>\\|^End\\>" . 'holscript-definition-syntax)
         '("^Datatype\\>" . 'holscript-definition-syntax)
+        (list holscript-doublethen-error-regexp
+              'quote
+              'holscript-syntax-error-face)
         '("^THEN[1L]?\\>" . 'holscript-then-syntax)
         '("[^A-Za-z0-9_']\\(THEN[1L]?\\)\\>" 1 'holscript-then-syntax)
         '("\\S.\\(>[->|]\\|\\\\\\\\\\)\\S." 1 'holscript-then-syntax)
@@ -1114,6 +1124,12 @@ a store_thm equivalent."))
 (defface holscript-smlsyntax
   '((((class color)) :foreground "DarkOliveGreen" :weight bold))
   "The face for highlighting important SML syntax that appears in script files."
+  :group 'holscript-faces)
+
+(defface holscript-syntax-error-face
+  '((((class color)) :foreground "red" :background "yellow"
+     :weight bold :box t))
+  "The face for highlighting guaranteed syntax errors."
   :group 'holscript-faces)
 
 (setq auto-mode-alist (cons '("Script\\.sml" . holscript-mode)
