@@ -130,7 +130,6 @@ val measure_preserving_def = Define
       s IN measurable_sets m2 ==>
            (measure m1 ((PREIMAGE f s) INTER (m_space m1)) = measure m2 s)}`;
 
-
 (* ------------------------------------------------------------------------- *)
 (*  Basic measure theory theorems                                            *)
 (* ------------------------------------------------------------------------- *)
@@ -1669,6 +1668,11 @@ val sigma_finite_def = Define
      (!n. f n SUBSET f (SUC n)) /\
      (BIGUNION (IMAGE f UNIV) = m_space m) /\
      (!n. measure m (f n) < PosInf)`;
+
+(* this definition is sometimes useful for not repeating ‘m’ *)
+Definition sigma_finite_measure_space_def :
+    sigma_finite_measure_space m = (measure_space m /\ sigma_finite m)
+End
 
 (* NOTE: this definition should always be used together with a system of sets,
    e.g. algebra, ring, semiring, ... because by itself `m` is not meaningful. *)
@@ -4784,6 +4788,23 @@ val sets_eq_imp_space_eq = store_thm ("sets_eq_imp_space_eq",
   POP_ASSUM (MP_TAC o REWRITE_RULE [measure_space_def, sigma_algebra_alt_pow]) THEN
   REPEAT STRIP_TAC THEN FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_POW] THEN
   ASM_SET_TAC []);
+
+(* Any sigma-algebra induce a trivial (sigma-finite) measure space with (\s. 0) *)
+Theorem measure_space_trivial :
+    !a. sigma_algebra a ==> sigma_finite_measure_space (space a,subsets a,(\s. 0))
+Proof
+    rpt STRIP_TAC
+ >> simp [sigma_finite_measure_space_def]
+ >> STRONG_CONJ_TAC
+ >- (rw [measure_space_def] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       rw [positive_def],
+       (* goal 2 (of 2) *)
+       rw [countably_additive_def, o_DEF, ext_suminf_0] ])
+ >> DISCH_TAC
+ >> MATCH_MP_TAC FINITE_IMP_SIGMA_FINITE
+ >> rw [extreal_of_num_def, extreal_not_infty]
+QED
 
 val _ = export_theory ();
 
