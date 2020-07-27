@@ -764,7 +764,8 @@ QED
 Theorem n2bl_inj[simp]:
   n2bl x = n2bl y <=> x=y
 Proof
-  eq_tac >> rw[] >> `bl2n (n2bl x) = bl2n (n2bl y)` by metis_tac[] >> metis_tac[bool_num_inv]
+  eq_tac >> rw[] >> `bl2n (n2bl x) = bl2n (n2bl y)` by metis_tac[] >>
+  metis_tac[bool_num_inv]
 QED
 
 
@@ -773,42 +774,46 @@ Theorem core_complexity0_lb_exists:
   ∃x. m <= core_complexity0 x
 Proof
   CCONTR_TAC >> fs[NOT_LESS_EQUAL] >>
-  `∀x. ∃i. on2bl (Phi i 0) = SOME x ∧ ℓ i < m` by metis_tac[core_complexity0_props] >>
+  ‘∀x. ∃i. on2bl (Phi i 0) = SOME x ∧ ℓ i < m’
+    by metis_tac[core_complexity0_props] >>
   fs[SKOLEM_THM] >>
-  `FINITE (count m)` by fs[FINITE_COUNT] >>
-  `INFINITE {f x | x | T}` by
-    (`SURJ (λx. on2bl (Phi (f x) 0)) UNIV {SOME n|T}` by
-       (fs[SURJ_DEF] >> rw[]) >>
-     `IMAGE (λx. on2bl (Phi (f x) 0)) UNIV = {SOME n|T}` by fs[IMAGE_SURJ]>>
+  ‘FINITE (count m)’ by fs[FINITE_COUNT] >>
+  ‘INFINITE {f x | x | T}’ by
+    (‘SURJ (λx. on2bl (Phi (f x) 0)) UNIV {SOME n|T}’
+       by (fs[SURJ_DEF] >> rw[]) >>
+     ‘IMAGE (λx. on2bl (Phi (f x) 0)) UNIV = {SOME n|T}’ by fs[IMAGE_SURJ]>>
      fs[IMAGE_DEF] >>
-     `{SOME n | T} = IMAGE (λx. on2bl (Phi x 0)) {f x | x | T}` by
-       (fs[IMAGE_DEF,EXTENSION] >> rw[] >> eq_tac >> rw[]
-        >- (qexists_tac`f n` >> metis_tac[])
-        >- (qexists_tac`x''` >> metis_tac[]) ) >>
-     `SURJ (λx. on2bl (Phi x 0)) {f x | x | T} {SOME n | T}` by fs[SURJ_IMAGE] >>
-
-     `¬(FINITE {SOME (n:bool list) | T})` by
-       (`INFINITE 𝕌(:bool list option)` by
-          (fs[infinite_num_inj] >> qexists_tac`SOME o n2bl` >> rw[INJ_DEF,n2bl_inj]) >>
-        `{SOME n | T} = 𝕌(:bool list option) DIFF {NONE}` by
-          (rw[EXTENSION] >> eq_tac >> rw[] >> Cases_on`x` >> fs[]) >>
-        `FINITE {NONE}` by fs[FINITE_SING] >>
+     ‘{SOME n | T} = IMAGE (λx. on2bl (Phi x 0)) {f x | x | T}’ by
+       (fs[IMAGE_DEF,EXTENSION] >> rw[] >> eq_tac >> rw[] >> metis_tac[]) >>
+     ‘SURJ (λx. on2bl (Phi x 0)) {f x | x | T} {SOME n | T}’
+       by metis_tac[SURJ_IMAGE] >>
+     ‘¬(FINITE {SOME (n:bool list) | T})’ by
+       (‘INFINITE 𝕌(:bool list option)’ by
+          (fs[infinite_num_inj] >> qexists_tac‘SOME o n2bl’ >>
+           rw[INJ_DEF,n2bl_inj]) >>
+        ‘{SOME n | T} = 𝕌(:bool list option) DIFF {NONE}’ by
+          (rw[EXTENSION] >> eq_tac >> rw[] >> Cases_on‘x’ >> fs[]) >>
+        ‘FINITE {NONE}’ by fs[FINITE_SING] >>
         rw[] >> fs[INFINITE_DIFF_down]) >>
 
-     `∃g. INJ g {SOME n | T} {f x | x | T} ∧ ∀y. y ∈ {SOME n | T} ⇒ (λx. on2bl (Phi x 0)) (g y) = y` by
-       (irule pred_setTheory.SURJ_INJ_INV >> fs[]) >> metis_tac[INFINITE_INJ] ) >>
-  `FINITE {i | ∃x. i = (f x)}` by
-    (`{i | ∃x. i = (f x)} ⊆ count (2**m + 2**m)` suffices_by
-       metis_tac[SUBSET_FINITE_I,FINITE_COUNT] >> simp[SUBSET_DEF] >> rw[] >> fs[] >>
-     `ℓ (f x') < m` by fs[] >>
-     `MEM ((f x') + 1) (log2list (ℓ (f x')))` by metis_tac[ELL_log2list] >>
+     ‘∃g. INJ g {SOME n | T} {f x | x | T} ∧
+          ∀y. y ∈ {SOME n | T} ⇒ (λx. on2bl (Phi x 0)) (g y) = y’ by
+       (irule pred_setTheory.SURJ_INJ_INV >> fs[]) >>
+     metis_tac[INFINITE_INJ] ) >>
+  ‘FINITE {i | ∃x. i = (f x)}’ by
+    (‘{i | ∃x. i = (f x)} ⊆ count (2**m + 2**m)’ suffices_by
+       metis_tac[SUBSET_FINITE_I,FINITE_COUNT] >> simp[SUBSET_DEF] >> rw[] >>
+     fs[] >>
+     ‘ℓ (f x') < m’ by fs[] >>
+     ‘MEM ((f x') + 1) (log2list (ℓ (f x')))’ by metis_tac[ELL_log2list] >>
      fs[log2list_def,MEM_GENLIST] >>
-     `f x' < 2 ** ℓ (f x') + 2 ** ℓ (f x')` by fs[] >>
-     `prim_rec$< (2 ** (ℓ (f x'))+2 ** (ℓ (f x')))  (2 ** m+2 ** m)` by fs[LESS_TRANS] >>
-     `f x' < 2 ** m + 2 ** m` by metis_tac[LESS_TRANS] >> fs[]) >>
-   `SURJ (λx. x)  {i | (∃x. i = (f x))} {f x | x | T}` by
+     ‘f x' < 2 ** ℓ (f x') + 2 ** ℓ (f x')’ by fs[] >>
+     ‘prim_rec$< (2 ** (ℓ (f x'))+2 ** (ℓ (f x')))  (2 ** m+2 ** m)’
+       by fs[LESS_TRANS] >>
+     ‘f x' < 2 ** m + 2 ** m’ by metis_tac[LESS_TRANS] >> fs[]) >>
+  ‘SURJ (λx. x)  {i | (∃x. i = (f x))} {f x | x | T}’ by
     (fs[SURJ_DEF] >> rw[] ) >>
-  `FINITE {f x | x | T}` by metis_tac[FINITE_SURJ]
+  ‘FINITE {f x | x | T}’ by metis_tac[FINITE_SURJ]
 QED
 
 (* up to fixing here *)
@@ -1106,48 +1111,47 @@ Theorem univ_rf_kolmog_lb_exists:
   univ_rf U ==> ∃x. m <= KC U x
 Proof
   CCONTR_TAC >> fs[NOT_LESS_EQUAL] >>
-  `∀x. ∃i. U i = SOME x ∧ LENGTH i < m` by metis_tac[univ_rf_kolmog_props] >>
+  ‘∀x. ∃i. U i = SOME x ∧ LENGTH i < m’ by metis_tac[univ_rf_kolmog_props] >>
   fs[SKOLEM_THM] >>
-  `FINITE (count m)` by fs[FINITE_COUNT] >>
-  `INFINITE {f x | x | T}` by
-    (`SURJ (λx. U (f x)) UNIV {SOME n|T}` by
+  ‘FINITE (count m)’ by fs[FINITE_COUNT] >>
+  ‘INFINITE {f x | x | T}’ by
+    (‘SURJ (λx. U (f x)) UNIV {SOME n|T}’ by
        (fs[SURJ_DEF] >> rw[]) >>
-     `IMAGE (λx. U (f x) ) UNIV = {SOME n|T}` by fs[IMAGE_SURJ]>>
+     ‘IMAGE (λx. U (f x) ) UNIV = {SOME n|T}’ by fs[IMAGE_SURJ]>>
      fs[IMAGE_DEF] >>
-     `{SOME n | T} = IMAGE (λx. U x) {f x | x | T}` by
-       (fs[IMAGE_DEF,EXTENSION] >> rw[] >> eq_tac >> rw[]
-        >- (qexists_tac`f n` >> metis_tac[])
-        >- (qexists_tac`x''` >> metis_tac[]) ) >>
-     `SURJ (λx. U x) {f x | x | T} {SOME n | T}` by fs[SURJ_IMAGE] >>
-     `¬(FINITE {SOME (n:bool list) | T})` by
-       (`INFINITE 𝕌(:bool list option)` by
-          (`∃f. INJ f 𝕌(:num) 𝕌(:bool list option)` suffices_by fs[infinite_num_inj] >>
-           qexists_tac`SOME o n2bl` >> rw[INJ_DEF,n2bl_inj]) >>
-        `{SOME n | T} = 𝕌(:bool list option) DIFF {NONE}` by
-          (rw[EXTENSION] >> eq_tac >> rw[] >> Cases_on`x` >> fs[]) >>
-        `FINITE {NONE}` by fs[FINITE_SING] >>
+     ‘{SOME n | T} = IMAGE (λx. U x) {f x | x | T}’ by
+       (fs[IMAGE_DEF,EXTENSION] >> rw[] >> eq_tac >> rw[] >> metis_tac[]) >>
+     ‘SURJ (λx. U x) {f x | x | T} {SOME n | T}’ by simp[SURJ_IMAGE] >>
+     ‘¬(FINITE {SOME (n:bool list) | T})’ by
+       (‘INFINITE 𝕌(:bool list option)’ by
+          (‘∃f. INJ f 𝕌(:num) 𝕌(:bool list option)’
+             suffices_by fs[infinite_num_inj] >>
+           qexists_tac‘SOME o n2bl’ >> rw[INJ_DEF,n2bl_inj]) >>
+        ‘{SOME n | T} = 𝕌(:bool list option) DIFF {NONE}’ by
+          (rw[EXTENSION] >> eq_tac >> rw[] >> Cases_on‘x’ >> fs[]) >>
+        ‘FINITE {NONE}’ by fs[FINITE_SING] >>
         rw[] >> fs[INFINITE_DIFF_down]) >>
-     `∃g. INJ g {SOME n | T} {f x | x | T} ∧ ∀y. y ∈ {SOME n | T} ⇒ (λx. U x) (g y) = y` by
-       (irule pred_setTheory.SURJ_INJ_INV >> fs[]) >> metis_tac[INFINITE_INJ] ) >>
-  `FINITE {LENGTH i | ∃x. i = (f x)}` by
-    (`{LENGTH i | ∃x. i = (f x)} ⊆ count (2n**m + 2**m)` suffices_by
-       (metis_tac[SUBSET_FINITE_I,FINITE_COUNT]) >> simp[SUBSET_DEF] >> rw[] >> fs[] >>
-     `LENGTH (f x') < m` by fs[] >>
-     `m < 2* 2n** m` suffices_by fs[] >> `m < 2n**m` by simp[X_LT_EXP_X_IFF] >> fs[]) >>
-   `SURJ (λx. x)  { i | (∃x. i = (f x))} {f x | x | T}` by
+     ‘∃g. INJ g {SOME n | T} {f x | x | T} ∧
+          ∀y. y ∈ {SOME n | T} ⇒ (λx. U x) (g y) = y’ by
+       (irule pred_setTheory.SURJ_INJ_INV >> fs[]) >>
+     metis_tac[INFINITE_INJ] ) >>
+  ‘FINITE {LENGTH i | ∃x. i = (f x)}’ by
+    (‘{LENGTH i | ∃x. i = (f x)} ⊆ count (2n**m + 2**m)’ suffices_by
+       (metis_tac[SUBSET_FINITE_I,FINITE_COUNT]) >> simp[SUBSET_DEF] >> rw[] >>
+     fs[] >>
+     ‘LENGTH (f x') < m’ by fs[] >>
+     ‘m < 2* 2n** m’ suffices_by fs[] >> ‘m < 2n**m’ by simp[X_LT_EXP_X_IFF] >>
+     fs[]) >>
+   ‘SURJ (λx. x)  { i | (∃x. i = (f x))} {f x | x | T}’ by
     (fs[SURJ_DEF] >> rw[] ) >>
-  `FINITE {i | (∃x. i = f x)}` by (`FINITE {(i:bool list) | LENGTH i < m}` by
-    fs[finite_bool_list_lt_n] >>
-  `{i | (∃x. i = f x)} ⊆ {i | LENGTH i < m}` by (fs[SUBSET_DEF] >> rw[] >> fs[]) >>
-    metis_tac[SUBSET_FINITE]) >>
+  ‘FINITE {i | (∃x. i = f x)}’ by
+    (‘FINITE {(i:bool list) | LENGTH i < m}’ by
+       fs[finite_bool_list_lt_n] >>
+     ‘{i | (∃x. i = f x)} ⊆ {i | LENGTH i < m}’
+       by (fs[SUBSET_DEF] >> rw[] >> fs[]) >>
+     metis_tac[SUBSET_FINITE]) >>
   metis_tac[FINITE_SURJ]
 QED
-
-
-
-
-
-
 
 Theorem f_n2bl_min_set_f:
   (∃x. (m:num) ≤ f x) ==> m ≤ f ( n2bl ( MIN_SET {bl2n n | m ≤ f n}))
