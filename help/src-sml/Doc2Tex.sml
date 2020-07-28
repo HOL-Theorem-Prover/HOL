@@ -195,7 +195,7 @@ fun do_the_work dir dset outstr = let
   in
     (* wait for the first occurrence of section_char, then print it
        as a LaTeX \section{} and search for the next one. *)
-    if current_char = section_char then
+    if Char.toLower current_char = section_char then
         (out(outstr, "\\section{"
                      ^ String.str (Char.toUpper section_char) ^ "}\n\n");
          current_section := !current_section + 1)

@@ -2872,6 +2872,7 @@ val MEASURABLE_I = store_thm
        >> METIS_TAC [])
    >> RW_TAC std_ss []);
 
+(* Theorem 7.4 [7, p.54] *)
 val MEASURABLE_COMP = store_thm
   ("MEASURABLE_COMP",
    ``!f g a b c.

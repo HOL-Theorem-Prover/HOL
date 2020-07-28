@@ -186,9 +186,6 @@ val _ = overload_on ("*", ``\f m. density_measure m f``);
 val distr_def = Define
    `distr m f = \s. measure m (PREIMAGE f s INTER m_space m)`;
 
-val image_measure_space_def = Define (* was: distr *)
-   `image_measure_space M N f = (m_space N, measurable_sets N, distr M f)`;
-
 (* Radon-Nikodym derivative (RN_deriv)
 
   `RN_deriv v m` (HOL) = `RN_deriv m (m_space m, measurable_sets m, v)` (Isabelle/HOL)
@@ -2488,17 +2485,29 @@ QED
          functions (Theorem 12.1 [1, p.96]) is not formalized yet.
 
    This theorem is also named after Beppo Levi, an Italian mathematician [4].
+
+   Removed unnecessary ‘!x. x IN m_space m ==> 0 <= f x’ (Chun Tian)
  *)
 Theorem lebesgue_monotone_convergence :
     !m f fi. measure_space m /\
         (!i. fi i IN measurable (m_space m, measurable_sets m) Borel) /\
         (!i x. x IN m_space m ==> 0 <= fi i x) /\
-        (!x. x IN m_space m ==> 0 <= f x) /\
         (!x. x IN m_space m ==> mono_increasing (\i. fi i x)) /\
         (!x. x IN m_space m ==> (sup (IMAGE (\i. fi i x) UNIV) = f x)) ==>
         (pos_fn_integral m f = sup (IMAGE (\i. pos_fn_integral m (fi i)) UNIV))
 Proof
-    reverse (RW_TAC std_ss [GSYM le_antisym])
+    rpt STRIP_TAC
+ >> Know ‘!x. x IN m_space m ==> 0 <= f x’
+ >- (rpt STRIP_TAC \\
+     Q.PAT_X_ASSUM ‘!x. x IN m_space m ==> _ = f x’ (MP_TAC o (Q.SPEC ‘x’)) \\
+     RW_TAC std_ss [] \\
+     POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM) \\
+     rw [le_sup'] \\
+     MATCH_MP_TAC le_trans >> Q.EXISTS_TAC ‘fi 0 x’ \\
+     CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC >> art []) \\
+     POP_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC ‘0’ >> REWRITE_TAC [])
+ >> POP_ASSUM MP_TAC
+ >> reverse (RW_TAC std_ss [GSYM le_antisym])
  >- (RW_TAC std_ss [sup_le'] \\
      POP_ASSUM MP_TAC >> RW_TAC std_ss [IN_IMAGE, IN_UNIV] \\
      MATCH_MP_TAC pos_fn_integral_mono \\
@@ -2517,11 +2526,11 @@ Proof
  >> METIS_TAC [lebesgue_monotone_convergence_lemma, le_antisym]
 QED
 
+(* removed unnecessary ‘!x. x IN m_space m ==> 0 <= f x’ (Chun Tian) *)
 Theorem lebesgue_monotone_convergence_subset :
     !m f fi A. measure_space m /\
         (!i. fi i IN measurable (m_space m, measurable_sets m) Borel) /\
         (!i x. x IN m_space m ==> 0 <= fi i x) /\
-        (!x. x IN m_space m ==> 0 <= f x) /\
         (!x. x IN m_space m ==> (sup (IMAGE (\i. fi i x) UNIV) = f x)) /\
         (!x. x IN m_space m ==> mono_increasing (\i. fi i x)) /\
          A IN measurable_sets m ==>
@@ -2537,7 +2546,6 @@ Proof
  >> CONJ_TAC
  >- METIS_TAC [IN_MEASURABLE_BOREL_MUL_INDICATOR, measure_space_def, subsets_def,
                measurable_sets_def]
- >> CONJ_TAC >- RW_TAC std_ss [indicator_fn_def,mul_rone,mul_rzero,le_refl]
  >> CONJ_TAC >- RW_TAC std_ss [indicator_fn_def,mul_rone,mul_rzero,le_refl]
  >> CONJ_TAC
  >- (RW_TAC std_ss [indicator_fn_def, mul_rone, mul_rzero, le_refl, ext_mono_increasing_def] \\
@@ -2952,6 +2960,70 @@ QED
 (*          SEQ Positive Simple Functions and Define Integral                  *)
 (*******************************************************************************)
 
+Theorem lemma_fn_seq_measurable:
+    !m f n. measure_space m /\ (!x. x IN m_space m ==> 0 <= f x) /\
+            f IN measurable (m_space m,measurable_sets m) Borel ==>
+            fn_seq m f n IN measurable (m_space m,measurable_sets m) Borel
+Proof
+    RW_TAC std_ss [fn_seq_def]
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_ADD >> simp []
+ >> qexistsl_tac [‘\x. SIGMA
+                  (\k. &k / 2 pow n *
+                       indicator_fn
+                         {x | x IN m_space m /\ &k / 2 pow n <= f x /\
+                              f x < (&k + 1) / 2 pow n} x) (count (4 ** n))’,
+                  ‘\x. 2 pow n *
+                       indicator_fn {x | x IN m_space m /\ 2 pow n <= f x} x’]
+ >> ‘sigma_algebra (m_space m,measurable_sets m)’ by FULL_SIMP_TAC std_ss [measure_space_def]
+ >> ASM_SIMP_TAC std_ss []
+ >> CONJ_TAC
+ >- (MATCH_MP_TAC (INST_TYPE [“:'b” |-> “:num”] IN_MEASURABLE_BOREL_SUM) \\
+     ASM_SIMP_TAC std_ss [space_def] \\
+     qexistsl_tac [‘\k x. &k / 2 pow n *
+                          indicator_fn {x | x IN m_space m /\ &k / 2 pow n <= f x /\
+                                            f x < (&k + 1) / 2 pow n} x’,
+                   ‘count (4 ** n)’] \\
+     SIMP_TAC std_ss [FINITE_COUNT] \\
+     reverse CONJ_TAC
+     >- (rpt GEN_TAC >> STRIP_TAC \\
+         rename1 ‘&i / 2 pow n * indicator_fn s x’ \\
+        ‘?r. indicator_fn s x = Normal r’ by METIS_TAC [indicator_fn_normal] >> POP_ORW \\
+        ‘!n. 0:real < 2 pow n’ by RW_TAC real_ss [REAL_POW_LT] \\
+        ‘!n. 0:real <> 2 pow n’ by RW_TAC real_ss [REAL_LT_IMP_NE] \\
+        ‘!n k. &k / 2 pow n = Normal (&k / 2 pow n)’
+            by METIS_TAC [extreal_of_num_def, extreal_pow_def, extreal_div_eq] \\
+         rw [extreal_mul_def, extreal_not_infty]) \\
+     rpt STRIP_TAC \\
+     HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR >> rw []
+     >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST >> rw [] \\
+         Q.EXISTS_TAC ‘&i / 2 pow n’ >> rw []) \\
+    ‘{x | x IN m_space m /\ &i / 2 pow n <= f x /\ f x < (&i + 1) / 2 pow n} =
+     {x | &i / 2 pow n <= f x /\ f x < (&i + 1) / 2 pow n} INTER m_space m’
+        by SET_TAC [] >> POP_ORW \\
+     METIS_TAC [IN_MEASURABLE_BOREL_ALL_MEASURE])
+ >> CONJ_TAC
+ >- (HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR >> rw []
+     >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST >> rw [] \\
+         Q.EXISTS_TAC ‘2 pow n’ >> rw []) \\
+    ‘{x | x IN m_space m /\ 2 pow n <= f x} =
+     {x | 2 pow n <= f x} INTER m_space m’ by SET_TAC [] >> POP_ORW \\
+      METIS_TAC [IN_MEASURABLE_BOREL_ALL_MEASURE])
+ >> NTAC 2 STRIP_TAC >> DISJ1_TAC (* easier *)
+ >> CONJ_TAC >> MATCH_MP_TAC pos_not_neginf
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC EXTREAL_SUM_IMAGE_POS >> SIMP_TAC std_ss [FINITE_COUNT] \\
+      Q.X_GEN_TAC ‘i’ >> STRIP_TAC \\
+      MATCH_MP_TAC le_mul >> rw [INDICATOR_FN_POS] \\
+     ‘2 pow n = Normal (2 pow n)’
+        by METIS_TAC [extreal_pow_def, extreal_of_num_def] >> POP_ORW \\
+      MATCH_MP_TAC le_div \\
+      reverse CONJ_TAC >- RW_TAC real_ss [REAL_POW_LT] \\
+      rw [extreal_of_num_def, extreal_le_eq],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC le_mul >> rw [INDICATOR_FN_POS] \\
+      MATCH_MP_TAC pow_pos_le >> REWRITE_TAC [le_02] ]
+QED
+
 Theorem lemma_fn_seq_in_psfis[local] :
     !m f n. (!x. x IN m_space m ==> 0 <= f x) /\ measure_space m /\
             f IN measurable (m_space m,measurable_sets m) Borel ==>
@@ -3003,7 +3075,7 @@ Proof
          `count (4 ** n) DELETE 4 ** n = count (4 ** n)`
              by METIS_TAC [DELETE_NON_ELEMENT,IN_COUNT,LESS_EQ_REFL,NOT_LESS] \\
           RW_TAC std_ss [] \\
-          Q.PAT_X_ASSUM `SIGMA f s = Q` (K ALL_TAC) \\
+          Q.PAT_X_ASSUM `SIGMA _ _ = _` (K ALL_TAC) \\
           FULL_SIMP_TAC std_ss [GSYM IN_COUNT] \\
          `!i. Normal (&i / 2 pow n) = &i / 2 pow n` by METIS_TAC [] \\
           POP_ORW \\
@@ -3140,7 +3212,7 @@ Proof
   >> `count (4 ** n) DELETE 4 ** n = count (4 ** n)`
              by METIS_TAC [DELETE_NON_ELEMENT,IN_COUNT,LESS_EQ_REFL,NOT_LESS]
   >> RW_TAC std_ss []
-  >> Q.PAT_X_ASSUM `SIGMA f s = Q` (K ALL_TAC)
+  >> Q.PAT_X_ASSUM `SIGMA _ _ = _` (K ALL_TAC)
   >> FULL_SIMP_TAC std_ss [GSYM IN_COUNT]
   >> `!i. (\i. Normal (&i / 2 pow n) * measure m {x | x IN m_space m /\ Normal (&i / 2 pow n) <= f x /\ f x < (&i + 1) / 2 pow n}) i <> NegInf`
         by (RW_TAC std_ss []
@@ -4126,6 +4198,321 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
+(* lebesgue_monotone_convergence for decreasing function sequences
+
+   The case for mono-decreasing functions can be derived as an easy corollary,
+   because ‘\i x. f 0 x - f i x’ is mono-increasing, while assuming additionally
+
+   1. !i x. x IN m_space m ==> fi i x < PosInf
+   2. !i. pos_fn_integral m (fi i) <> PosInf
+ *)
+Theorem lebesgue_monotone_convergence_decreasing :
+    !m f fi. measure_space m /\
+        (!i. fi i IN measurable (m_space m, measurable_sets m) Borel) /\
+        (!i x. x IN m_space m ==> 0 <= fi i x /\ fi i x < PosInf) /\
+        (!i. pos_fn_integral m (fi i) <> PosInf) /\
+        (!x. x IN m_space m ==> mono_decreasing (\i. fi i x)) /\
+        (!x. x IN m_space m ==> (inf (IMAGE (\i. fi i x) UNIV) = f x)) ==>
+        (pos_fn_integral m f = inf (IMAGE (\i. pos_fn_integral m (fi i)) UNIV))
+Proof
+    rpt STRIP_TAC
+ >> Know ‘!x. x IN m_space m ==> 0 <= f x’
+ >- (rpt STRIP_TAC \\
+     Q.PAT_X_ASSUM ‘!x. x IN m_space m ==> _ = f x’ (MP_TAC o (Q.SPEC ‘x’)) \\
+     RW_TAC std_ss [] \\
+     POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM) \\
+     rw [le_inf'] >> PROVE_TAC []) >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘gi = \i x. fi 0 x - fi i x’
+ >> Know ‘!i x. x IN m_space m ==> 0 <= gi i x’
+ >- (rw [Abbr ‘gi’] \\
+     Know ‘0 <= fi 0 x - fi i x <=> fi i x <= fi 0 x’
+     >- (MATCH_MP_TAC EQ_SYM \\
+         MATCH_MP_TAC sub_zero_le \\
+         CONJ_TAC >- (MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) \\
+         PROVE_TAC [lt_infty]) >> Rewr' \\
+     fs [ext_mono_decreasing_def]) >> DISCH_TAC
+ >> Know ‘!i x. x IN m_space m ==> gi i x <> PosInf’
+ >- (rw [Abbr ‘gi’] \\
+    ‘fi 0 x <> PosInf /\ fi i x <> PosInf’ by METIS_TAC [lt_infty] \\
+    ‘fi 0 x <> NegInf /\ fi i x <> NegInf’ by METIS_TAC [pos_not_neginf] \\
+    ‘?a. fi 0 x = Normal a’ by METIS_TAC [extreal_cases] \\
+    ‘?b. fi i x = Normal b’ by METIS_TAC [extreal_cases] \\
+     rw [extreal_sub_def, extreal_not_infty]) >> DISCH_TAC
+ >> Know ‘!x. x IN m_space m ==> mono_increasing (\i. gi i x)’
+ >- (rw [Abbr ‘gi’, ext_mono_increasing_def] \\
+     MATCH_MP_TAC le_lsub_imp \\
+     fs [ext_mono_decreasing_def]) >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘g = \x. sup (IMAGE (\i. gi i x) UNIV)’
+ >> Know ‘!x. x IN m_space m ==> 0 <= g x’
+ >- (rw [Abbr ‘g’, le_sup'] \\
+     MATCH_MP_TAC le_trans >> Q.EXISTS_TAC ‘gi 0 x’ \\
+     ASM_SIMP_TAC std_ss [] \\
+     POP_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC ‘0’ >> REWRITE_TAC []) >> DISCH_TAC
+ >> Know ‘!i. gi i IN Borel_measurable (m_space m,measurable_sets m)’
+ >- (rw [Abbr ‘gi’] \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
+     qexistsl_tac [‘fi 0’, ‘fi i’] >> fs [measure_space_def] \\
+     rpt STRIP_TAC >> DISJ1_TAC \\
+     reverse CONJ_TAC >- rw [lt_infty] \\
+     MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) >> DISCH_TAC
+ >> Know ‘!i x. x IN m_space m ==> (fi i x = fi 0 x - gi i x)’
+ >- (rpt STRIP_TAC \\
+     Know ‘fi i x = fi 0 x - gi i x <=> fi i x + gi i x = fi 0 x’
+     >- (MATCH_MP_TAC eq_sub_ladd >> rw [] \\
+         MATCH_MP_TAC pos_not_neginf >> rw []) >> Rewr' \\
+     Know ‘fi i x + gi i x = gi i x + fi i x’
+     >- (MATCH_MP_TAC add_comm >> DISJ2_TAC >> rw [] \\
+         rw [lt_infty]) >> Rewr' \\
+     rw [Abbr ‘gi’] >> MATCH_MP_TAC sub_add \\
+     CONJ_TAC >- (MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) \\
+     rw [lt_infty]) >> DISCH_TAC
+ >> Know ‘!i. pos_fn_integral m (gi i) =
+              pos_fn_integral m (fi 0) - pos_fn_integral m (fi i)’
+ >- (GEN_TAC \\
+     Know ‘pos_fn_integral m (gi i) = pos_fn_integral m (\x. fi 0 x - fi i x)’
+     >- (MATCH_MP_TAC pos_fn_integral_cong >> rw []) >> Rewr' \\
+     MATCH_MP_TAC pos_fn_integral_sub >> art [] \\
+     CONJ_TAC >- METIS_TAC [] \\
+     reverse CONJ_TAC >- METIS_TAC [lt_infty] \\
+     rpt STRIP_TAC >> rfs [ext_mono_decreasing_def]) >> DISCH_TAC
+ >> Know ‘!i. pos_fn_integral m (fi i) <> NegInf’
+ >- (GEN_TAC \\
+     MATCH_MP_TAC pos_not_neginf \\
+     MATCH_MP_TAC pos_fn_integral_pos >> rw []) >> DISCH_TAC
+ >> Know ‘!i. pos_fn_integral m (gi i) <> PosInf’
+ >- (GEN_TAC \\
+     Q.PAT_X_ASSUM ‘!i. pos_fn_integral m (gi i) = _’ (ONCE_REWRITE_TAC o wrap) \\
+    ‘?a. pos_fn_integral m (fi 0) = Normal a’ by METIS_TAC [extreal_cases] \\
+    ‘?b. pos_fn_integral m (fi i) = Normal b’ by METIS_TAC [extreal_cases] \\
+     rw [extreal_sub_def, extreal_not_infty]) >> DISCH_TAC
+ >> Know ‘!i. pos_fn_integral m (gi i) <> NegInf’
+ >- (GEN_TAC \\
+     MATCH_MP_TAC pos_not_neginf \\
+     MATCH_MP_TAC pos_fn_integral_pos >> rw []) >> DISCH_TAC
+ >> Know ‘!i. pos_fn_integral m (fi i) =
+              pos_fn_integral m (fi 0) - pos_fn_integral m (gi i)’
+ >- (GEN_TAC \\
+     Know ‘pos_fn_integral m (fi i) =
+           pos_fn_integral m (fi 0) - pos_fn_integral m (gi i) <=>
+           pos_fn_integral m (fi i) + pos_fn_integral m (gi i) = pos_fn_integral m (fi 0)’
+     >- (MATCH_MP_TAC eq_sub_ladd >> art []) >> Rewr' \\
+     Know ‘pos_fn_integral m (fi i) + pos_fn_integral m (gi i) =
+           pos_fn_integral m (gi i) + pos_fn_integral m (fi i)’
+     >- (MATCH_MP_TAC add_comm >> DISJ2_TAC \\
+         POP_ASSUM (REWRITE_TAC o wrap) >> art []) >> Rewr' >> art [] \\
+     MATCH_MP_TAC sub_add >> art []) >> Rewr'
+ (* stage work *)
+ >> REWRITE_TAC [extreal_inf_def]
+ >> Know ‘IMAGE numeric_negate
+            (IMAGE (\i. pos_fn_integral m (fi 0) - pos_fn_integral m (gi i)) UNIV) =
+          IMAGE (\i. pos_fn_integral m (gi i) - pos_fn_integral m (fi 0)) UNIV’
+ >- (rw [Once EXTENSION, IN_IMAGE, IN_UNIV] \\
+     EQ_TAC >> rpt STRIP_TAC >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       Q.EXISTS_TAC ‘i’ >> rename1 ‘x = -y’ \\
+       Q.PAT_X_ASSUM ‘x = -y’ (ONCE_REWRITE_TAC o wrap) >> POP_ORW \\
+      ‘?a. pos_fn_integral m (fi 0) = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+      ‘?b. pos_fn_integral m (fi i) = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+       rw [extreal_sub_def, extreal_ainv_def, extreal_11] \\
+       REAL_ARITH_TAC,
+       (* goal 2 (of 2) *)
+       Q.EXISTS_TAC ‘pos_fn_integral m (fi 0) -
+                       (pos_fn_integral m (fi 0) - pos_fn_integral m (fi i))’ \\
+       reverse CONJ_TAC >- (Q.EXISTS_TAC ‘i’ >> REWRITE_TAC []) \\
+       POP_ORW \\
+      ‘?a. pos_fn_integral m (fi 0) = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+      ‘?b. pos_fn_integral m (fi i) = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+       rw [extreal_sub_def, extreal_ainv_def, extreal_11] \\
+       REAL_ARITH_TAC ]) >> Rewr'
+ >> Know ‘sup (IMAGE (\i. pos_fn_integral m (gi i) - pos_fn_integral m (fi 0)) UNIV) =
+          sup (IMAGE (\i. pos_fn_integral m (gi i)) UNIV) - pos_fn_integral m (fi 0)’
+ >- (RW_TAC std_ss [sup_eq', IN_IMAGE, IN_UNIV] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       MATCH_MP_TAC le_rsub_imp \\
+       RW_TAC std_ss [le_sup', IN_IMAGE, IN_UNIV] \\
+       POP_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC ‘i’ >> REWRITE_TAC [],
+       (* goal 2 (of 2) *)
+       MATCH_MP_TAC sub_le_imp >> art [] \\
+       RW_TAC std_ss [sup_le', IN_IMAGE, IN_UNIV] \\
+       Know ‘pos_fn_integral m (fi 0) - pos_fn_integral m (fi i) <= y + pos_fn_integral m (fi 0) <=>
+             pos_fn_integral m (fi 0) - pos_fn_integral m (fi i) - pos_fn_integral m (fi 0) <= y’
+       >- (MATCH_MP_TAC EQ_SYM \\
+           MATCH_MP_TAC sub_le_eq >> art []) >> Rewr' \\
+       POP_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC ‘i’ >> REWRITE_TAC [] ]) >> Rewr'
+ >> Know ‘-(sup (IMAGE (\i. pos_fn_integral m (gi i)) UNIV) - pos_fn_integral m (fi 0)) =
+          pos_fn_integral m (fi 0) - sup (IMAGE (\i. pos_fn_integral m (gi i)) UNIV)’
+ >- (MATCH_MP_TAC neg_sub >> DISJ2_TAC >> art []) >> Rewr'
+ (* applying lebesgue_monotone_convergence *)
+ >> Know ‘sup (IMAGE (\i. pos_fn_integral m (gi i)) UNIV) = pos_fn_integral m g’
+ >- (MATCH_MP_TAC EQ_SYM \\
+     MATCH_MP_TAC lebesgue_monotone_convergence >> art [] \\
+     rpt STRIP_TAC >> METIS_TAC []) >> Rewr'
+ >> Know ‘pos_fn_integral m f =
+          pos_fn_integral m (\x. inf (IMAGE (\i. fi i x) UNIV))’
+ >- (MATCH_MP_TAC pos_fn_integral_cong >> rw []) >> Rewr'
+ >> REWRITE_TAC [extreal_inf_def]
+ >> Know ‘pos_fn_integral m (\x. -sup (IMAGE numeric_negate (IMAGE (\i. fi i x) UNIV))) =
+          pos_fn_integral m (\x. -sup (IMAGE (\i. gi i x - fi 0 x) UNIV))’
+ >- (MATCH_MP_TAC pos_fn_integral_cong >> BETA_TAC >> art [] \\
+     CONJ_TAC >- (rpt STRIP_TAC \\
+                 ‘0 = --0’ by PROVE_TAC [neg_neg] >> POP_ORW \\
+                  REWRITE_TAC [le_neg, neg_0] \\
+                  SIMP_TAC std_ss [sup_le', IN_IMAGE, IN_UNIV] \\
+                  rpt STRIP_TAC >> rename1 ‘y = -z’ \\
+                  Q.PAT_X_ASSUM ‘y = -z’ (ONCE_REWRITE_TAC o wrap) \\
+                 ‘0 = --0’ by PROVE_TAC [neg_neg] >> POP_ORW \\
+                  REWRITE_TAC [le_neg, neg_0] \\
+                  POP_ORW >> PROVE_TAC []) \\
+     CONJ_TAC >- (rpt STRIP_TAC \\
+                 ‘0 = --0’ by PROVE_TAC [neg_neg] >> POP_ORW \\
+                  REWRITE_TAC [le_neg, neg_0] \\
+                  SIMP_TAC std_ss [sup_le', IN_IMAGE, IN_UNIV] \\
+                  rpt STRIP_TAC >> POP_ORW \\
+                  Know ‘gi i x - fi 0 x = -(fi 0 x - gi i x)’
+                  >- (MATCH_MP_TAC EQ_SYM \\
+                      MATCH_MP_TAC neg_sub >> DISJ1_TAC \\
+                      reverse CONJ_TAC >- rw [lt_infty] \\
+                      MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) >> Rewr' \\
+                 ‘0 = --0’ by PROVE_TAC [neg_neg] >> POP_ORW \\
+                  REWRITE_TAC [le_neg, neg_0] \\
+                  METIS_TAC []) \\
+     rpt STRIP_TAC \\
+     REWRITE_TAC [eq_neg] \\
+     Suff ‘IMAGE numeric_negate (IMAGE (\i. fi i x) UNIV) =
+           IMAGE (\i. gi i x - fi 0 x) UNIV’ >- Rewr \\
+     SIMP_TAC std_ss [Once EXTENSION, IN_IMAGE, IN_UNIV] \\
+     GEN_TAC >> EQ_TAC >> rpt STRIP_TAC >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       rename1 ‘y = -z’ >> Q.EXISTS_TAC ‘i’ \\
+       Q.PAT_X_ASSUM ‘y = -z’ (ONCE_REWRITE_TAC o wrap) >> POP_ORW \\
+       Know ‘gi i x - fi 0 x = -(fi 0 x - gi i x)’
+       >- (MATCH_MP_TAC EQ_SYM \\
+           MATCH_MP_TAC neg_sub >> DISJ1_TAC \\
+           reverse CONJ_TAC >- rw [lt_infty] \\
+           MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) >> Rewr' \\
+       REWRITE_TAC [eq_neg] \\
+       FIRST_X_ASSUM MATCH_MP_TAC >> art [],
+       (* goal 2 (of 2) *)
+       rename1 ‘y = gi i x - fi 0 x’ \\
+       Q.EXISTS_TAC ‘fi 0 x - gi i x’ >> POP_ORW \\
+       CONJ_TAC >- (MATCH_MP_TAC EQ_SYM \\
+                    MATCH_MP_TAC neg_sub >> DISJ1_TAC \\
+                    reverse CONJ_TAC >- rw [lt_infty] \\
+                    MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) \\
+       Q.EXISTS_TAC ‘i’ >> METIS_TAC [] ]) >> Rewr'
+ >> Know ‘pos_fn_integral m (\x. -sup (IMAGE (\i. gi i x - fi 0 x) UNIV)) =
+          pos_fn_integral m (\x. -(sup (IMAGE (\i. gi i x) UNIV) - fi 0 x))’
+ >- (MATCH_MP_TAC pos_fn_integral_cong >> BETA_TAC >> art [] \\
+     CONJ_TAC >- (rpt STRIP_TAC \\
+                 ‘0 = --0’ by PROVE_TAC [neg_neg] >> POP_ORW \\
+                  REWRITE_TAC [le_neg, neg_0] \\
+                  SIMP_TAC std_ss [sup_le', IN_IMAGE, IN_UNIV] \\
+                  rpt STRIP_TAC >> POP_ORW \\
+                  Know ‘gi i x - fi 0 x = -(fi 0 x - gi i x)’
+                  >- (MATCH_MP_TAC EQ_SYM \\
+                      MATCH_MP_TAC neg_sub >> DISJ1_TAC \\
+                      reverse CONJ_TAC >- rw [lt_infty] \\
+                      MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) >> Rewr' \\
+                 ‘0 = --0’ by PROVE_TAC [neg_neg] >> POP_ORW \\
+                  REWRITE_TAC [le_neg, neg_0] \\
+                  METIS_TAC []) \\
+     CONJ_TAC >- (rpt STRIP_TAC \\
+                 ‘0 = --0’ by PROVE_TAC [neg_neg] >> POP_ORW \\
+                  REWRITE_TAC [le_neg, neg_0] \\
+                  Know ‘sup (IMAGE (\i. gi i x) UNIV) - fi 0 x <= 0 <=>
+                        sup (IMAGE (\i. gi i x) UNIV) <= fi 0 x’
+                  >- (MATCH_MP_TAC EQ_SYM \\
+                      MATCH_MP_TAC sub_le_zero \\
+                      reverse CONJ_TAC >- rw [lt_infty] \\
+                      MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) >> Rewr' \\
+                  SIMP_TAC std_ss [sup_le', IN_IMAGE, IN_UNIV] \\
+                  rpt STRIP_TAC >> POP_ORW \\
+                  Q.UNABBREV_TAC ‘gi’ >> BETA_TAC \\
+                  MATCH_MP_TAC sub_le_imp \\
+                  CONJ_TAC >- (MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) \\
+                  CONJ_TAC >- rw [lt_infty] \\
+                  MATCH_MP_TAC le_addr_imp >> PROVE_TAC []) \\
+     rpt STRIP_TAC \\
+     REWRITE_TAC [eq_neg] \\
+     SIMP_TAC std_ss [sup_eq', IN_IMAGE, IN_UNIV] \\
+     rpt STRIP_TAC >- (POP_ORW >> MATCH_MP_TAC le_rsub_imp \\
+                       SIMP_TAC std_ss [le_sup', IN_IMAGE, IN_UNIV] \\
+                       rpt STRIP_TAC >> POP_ASSUM MATCH_MP_TAC \\
+                       Q.EXISTS_TAC ‘i’ >> REWRITE_TAC []) \\
+     MATCH_MP_TAC sub_le_imp \\
+     CONJ_TAC >- (MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) \\
+     CONJ_TAC >- rw [lt_infty] \\
+     SIMP_TAC std_ss [sup_le', IN_IMAGE, IN_UNIV] \\
+     rpt STRIP_TAC >> rename1 ‘z = gi i x’ \\
+     Know ‘z <= y + fi 0 x <=> z - fi 0 x <= y’
+     >- (MATCH_MP_TAC EQ_SYM \\
+         MATCH_MP_TAC sub_le_eq \\
+         CONJ_TAC >- (MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) \\
+         rw [lt_infty]) >> Rewr' \\
+     POP_ORW >> FIRST_X_ASSUM MATCH_MP_TAC \\
+     Q.EXISTS_TAC ‘i’ >> REWRITE_TAC []) >> Rewr'
+ >> Know ‘pos_fn_integral m (\x. -(sup (IMAGE (\i. gi i x) univ(:num)) - fi 0 x)) =
+          pos_fn_integral m (\x. fi 0 x - sup (IMAGE (\i. gi i x) UNIV))’
+ >- (MATCH_MP_TAC pos_fn_integral_cong >> BETA_TAC >> art [] \\
+     CONJ_TAC >- (rpt STRIP_TAC \\
+                 ‘0 = --0’ by PROVE_TAC [neg_neg] >> POP_ORW \\
+                  REWRITE_TAC [le_neg, neg_0] \\
+                  Know ‘sup (IMAGE (\i. gi i x) UNIV) - fi 0 x <= 0 <=>
+                        sup (IMAGE (\i. gi i x) UNIV) <= fi 0 x’
+                  >- (MATCH_MP_TAC EQ_SYM \\
+                      MATCH_MP_TAC sub_le_zero \\
+                      reverse CONJ_TAC >- rw [lt_infty] \\
+                      MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) >> Rewr' \\
+                  SIMP_TAC std_ss [sup_le', IN_IMAGE, IN_UNIV] \\
+                  rpt STRIP_TAC >> POP_ORW \\
+                  Q.UNABBREV_TAC ‘gi’ >> BETA_TAC \\
+                  MATCH_MP_TAC sub_le_imp \\
+                  CONJ_TAC >- (MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) \\
+                  CONJ_TAC >- rw [lt_infty] \\
+                  MATCH_MP_TAC le_addr_imp >> PROVE_TAC []) \\
+     CONJ_TAC >- (rpt STRIP_TAC \\
+                  MATCH_MP_TAC le_sub_imp2 >> REWRITE_TAC [add_lzero] \\
+                  CONJ_TAC >- (MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) \\
+                  CONJ_TAC >- rw [lt_infty] \\
+                  SIMP_TAC std_ss [sup_le', IN_IMAGE, IN_UNIV] \\
+                  rpt STRIP_TAC >> POP_ORW \\
+                  Q.UNABBREV_TAC ‘gi’ >> BETA_TAC \\
+                  MATCH_MP_TAC sub_le_imp \\
+                  CONJ_TAC >- (MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) \\
+                  CONJ_TAC >- rw [lt_infty] \\
+                  MATCH_MP_TAC le_addr_imp >> PROVE_TAC []) \\
+     rpt STRIP_TAC \\
+     MATCH_MP_TAC neg_sub >> DISJ2_TAC \\
+     CONJ_TAC >- (MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) \\
+     rw [lt_infty]) >> Rewr'
+ (* final stage, applying pos_fn_integral_sub *)
+ >> ‘!x. sup (IMAGE (\i. gi i x) UNIV) = g x’ by METIS_TAC [] >> POP_ORW
+ >> MATCH_MP_TAC pos_fn_integral_sub >> art []
+ >> CONJ_TAC (* g IN Borel_measurable (m_space m,measurable_sets m) *)
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_MONO_SUP \\
+     Q.EXISTS_TAC ‘gi’ >> rfs [measure_space_def, ext_mono_increasing_def])
+ >> STRONG_CONJ_TAC (* !x. x IN m_space m ==> g x <= fi 0 x *)
+ >- (Q.UNABBREV_TAC ‘g’ >> BETA_TAC \\
+     rpt STRIP_TAC \\
+     SIMP_TAC std_ss [sup_le', IN_IMAGE, IN_UNIV] \\
+     rpt STRIP_TAC >> POP_ORW \\
+     Q.UNABBREV_TAC ‘gi’ >> BETA_TAC \\
+     MATCH_MP_TAC sub_le_imp \\
+     CONJ_TAC >- (MATCH_MP_TAC pos_not_neginf >> PROVE_TAC []) \\
+     CONJ_TAC >- rw [lt_infty] \\
+     MATCH_MP_TAC le_addr_imp >> PROVE_TAC []) >> DISCH_TAC
+ >> CONJ_TAC (* !x. x IN m_space m ==> g x <> PosInf *)
+ >- (GEN_TAC >> DISCH_TAC >> REWRITE_TAC [lt_infty] \\
+     MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘fi 0 x’ \\
+     CONJ_TAC >- (FIRST_X_ASSUM MATCH_MP_TAC >> art []) \\
+     PROVE_TAC [])
+ >> REWRITE_TAC [lt_infty]
+ >> MATCH_MP_TAC let_trans
+ >> Q.EXISTS_TAC ‘pos_fn_integral m (fi 0)’
+ >> reverse CONJ_TAC >- rw [GSYM lt_infty]
+ >> MATCH_MP_TAC pos_fn_integral_mono >> art []
+QED
+
 (* added ‘x IN m_space m’ *)
 Theorem pos_fn_integral_sum :
     !m f s. FINITE s /\ measure_space m /\
@@ -4359,14 +4746,6 @@ Proof
      >- FULL_SIMP_TAC std_ss [measure_space_def] \\
      METIS_TAC [lt_infty, lte_trans, num_not_infty])
  >> CONJ_TAC >- RW_TAC std_ss [FINITE_COUNT, EXTREAL_SUM_IMAGE_POS]
- >> CONJ_TAC
- >- (RW_TAC std_ss [FINITE_COUNT, EXTREAL_SUM_IMAGE_POS, le_sup',
-                    IN_IMAGE, IN_UNIV] \\
-     MATCH_MP_TAC le_trans \\
-     Q.EXISTS_TAC `SIGMA (\i. f i x) (count 1)` \\
-     RW_TAC std_ss [FINITE_COUNT, EXTREAL_SUM_IMAGE_POS] \\
-     POP_ASSUM MATCH_MP_TAC \\
-     Q.EXISTS_TAC `1` >> REWRITE_TAC [])
  >> RW_TAC std_ss [ext_mono_increasing_def]
  >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_MONO_SET
  >> RW_TAC std_ss [FINITE_COUNT, SUBSET_DEF, IN_COUNT]
@@ -4572,6 +4951,70 @@ Proof
  >> MATCH_MP_TAC pos_fn_integral_split >> art []
 QED
 
+(* removed ‘!x. x IN m_space m ==> 0 <= f x’, added ‘integrable m f’ *)
+Theorem integral_split' :
+    !m f s. measure_space m /\ integrable m f /\ s IN measurable_sets m ==>
+           (integral m f = integral m (\x. f x * indicator_fn s x) +
+                           integral m (\x. f x * indicator_fn (m_space m DIFF s) x))
+Proof
+    RW_TAC std_ss [integrable_def, integral_def,
+                   fn_plus_mul_indicator, fn_minus_mul_indicator]
+ >> Know ‘pos_fn_integral m (fn_plus f) =
+          pos_fn_integral m (\x. fn_plus f x * indicator_fn s x) +
+          pos_fn_integral m (\x. fn_plus f x * indicator_fn (m_space m DIFF s) x)’
+ >- (MATCH_MP_TAC pos_fn_integral_split >> rw [FN_PLUS_POS] \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_PLUS >> art []) >> Rewr'
+ >> Know ‘pos_fn_integral m (fn_minus f) =
+          pos_fn_integral m (\x. fn_minus f x * indicator_fn s x) +
+          pos_fn_integral m (\x. fn_minus f x * indicator_fn (m_space m DIFF s) x)’
+ >- (MATCH_MP_TAC pos_fn_integral_split >> rw [FN_MINUS_POS] \\
+     MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_MINUS >> art []) >> Rewr'
+ >> Q.ABBREV_TAC ‘A = pos_fn_integral m (\x. fn_plus f x * indicator_fn s x)’
+ >> Q.ABBREV_TAC ‘B = pos_fn_integral m (\x. fn_minus f x * indicator_fn s x)’
+ >> Q.ABBREV_TAC ‘C = pos_fn_integral m (\x. fn_plus f x * indicator_fn (m_space m DIFF s) x)’
+ >> Q.ABBREV_TAC ‘D = pos_fn_integral m (\x. fn_minus f x * indicator_fn (m_space m DIFF s) x)’
+ >> Know ‘A <> PosInf /\ C <> PosInf’
+ >- (fs [Abbr ‘A’, Abbr ‘C’, lt_infty] \\
+     CONJ_TAC \\
+     ( MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘pos_fn_integral m (fn_plus f)’ >> art [] \\
+       MATCH_MP_TAC pos_fn_integral_mono \\
+       rw [] >- (MATCH_MP_TAC le_mul >> rw [FN_PLUS_POS, INDICATOR_FN_POS]) \\
+      ‘fn_plus f x = fn_plus f x * 1’ by PROVE_TAC [mul_rone] \\
+       POP_ASSUM ((GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites) o wrap) \\
+       MATCH_MP_TAC le_lmul_imp >> rw [FN_PLUS_POS, INDICATOR_FN_LE_1] )) >> STRIP_TAC
+ >> Know ‘B <> PosInf /\ D <> PosInf’
+ >- (fs [Abbr ‘B’, Abbr ‘D’, lt_infty] \\
+     CONJ_TAC \\
+     ( MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘pos_fn_integral m (fn_minus f)’ >> art [] \\
+       MATCH_MP_TAC pos_fn_integral_mono \\
+       rw [] >- (MATCH_MP_TAC le_mul >> rw [FN_MINUS_POS, INDICATOR_FN_POS]) \\
+      ‘fn_minus f x = fn_minus f x * 1’ by PROVE_TAC [mul_rone] \\
+       POP_ASSUM ((GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites) o wrap) \\
+       MATCH_MP_TAC le_lmul_imp >> rw [FN_MINUS_POS, INDICATOR_FN_LE_1] )) >> STRIP_TAC
+ >> Know ‘A <> NegInf’
+ >- (MATCH_MP_TAC pos_not_neginf >> Q.UNABBREV_TAC ‘A’ \\
+     MATCH_MP_TAC pos_fn_integral_pos >> rw [] \\
+     MATCH_MP_TAC le_mul >> rw [FN_PLUS_POS, INDICATOR_FN_POS]) >> DISCH_TAC
+ >> Know ‘C <> NegInf’
+ >- (MATCH_MP_TAC pos_not_neginf >> Q.UNABBREV_TAC ‘C’ \\
+     MATCH_MP_TAC pos_fn_integral_pos >> rw [] \\
+     MATCH_MP_TAC le_mul >> rw [FN_PLUS_POS, INDICATOR_FN_POS]) >> DISCH_TAC
+ >> Know ‘B <> NegInf’
+ >- (MATCH_MP_TAC pos_not_neginf >> Q.UNABBREV_TAC ‘B’ \\
+     MATCH_MP_TAC pos_fn_integral_pos >> rw [] \\
+     MATCH_MP_TAC le_mul >> rw [FN_MINUS_POS, INDICATOR_FN_POS]) >> DISCH_TAC
+ >> Know ‘D <> NegInf’
+ >- (MATCH_MP_TAC pos_not_neginf >> Q.UNABBREV_TAC ‘D’ \\
+     MATCH_MP_TAC pos_fn_integral_pos >> rw [] \\
+     MATCH_MP_TAC le_mul >> rw [FN_MINUS_POS, INDICATOR_FN_POS]) >> DISCH_TAC
+ >> ‘?a. A = Normal a’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> ‘?b. B = Normal b’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> ‘?c. C = Normal c’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> ‘?d. D = Normal d’ by METIS_TAC [extreal_cases] >> POP_ORW
+ >> REWRITE_TAC [extreal_add_def, extreal_sub_def, extreal_11]
+ >> REAL_ARITH_TAC
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Properties of integrable functions                                        *)
 (* ------------------------------------------------------------------------- *)
@@ -4704,6 +5147,35 @@ Proof
  >> Suff ‘pos_fn_integral m (fn_minus f) = pos_fn_integral m (\x. 0)’
  >- rw [pos_fn_integral_zero]
  >> MATCH_MP_TAC pos_fn_integral_cong >> rw []
+QED
+
+(* The need of complete measure space comes from IN_MEASURABLE_BOREL_AE_EQ *)
+Theorem integrable_eq_AE :
+    !m f g. complete_measure_space m /\
+            integrable m f /\ (AE x::m. f x = g x) ==> integrable m g
+Proof
+    rw [integrable_def]
+ >| [ (* goal 1 (of 3) *)
+      MATCH_MP_TAC IN_MEASURABLE_BOREL_AE_EQ \\
+      Q.EXISTS_TAC ‘f’ >> art [],
+      (* goal 2 (of 3) *)
+      Suff ‘pos_fn_integral m (fn_plus f) = pos_fn_integral m (fn_plus g)’
+      >- (DISCH_THEN (fs o wrap)) \\
+      MATCH_MP_TAC pos_fn_integral_cong_AE \\
+      fs [complete_measure_space_def, FN_PLUS_POS] \\
+      fs [AE_THM, almost_everywhere_def] \\
+      Q.EXISTS_TAC ‘N’ >> rw [] \\
+     ‘f x = g x’ by PROVE_TAC [] \\
+      RW_TAC std_ss [fn_plus_def],
+      (* goal 3 (of 3) *)
+      Suff ‘pos_fn_integral m (fn_minus f) = pos_fn_integral m (fn_minus g)’
+      >- (DISCH_THEN (fs o wrap)) \\
+      MATCH_MP_TAC pos_fn_integral_cong_AE \\
+      fs [complete_measure_space_def, FN_MINUS_POS] \\
+      fs [AE_THM, almost_everywhere_def] \\
+      Q.EXISTS_TAC ‘N’ >> rw [] \\
+     ‘f x = g x’ by PROVE_TAC [] \\
+      RW_TAC std_ss [fn_minus_def] ]
 QED
 
 (* Corollary 11.6 [1, p.91] (partial)
@@ -5426,8 +5898,8 @@ val integral_indicator = store_thm
  *)
 Theorem integral_add_lemma :
     !m f f1 f2.
-       measure_space m /\
-       integrable m f /\ integrable m f1 /\ integrable m f2 /\
+       measure_space m /\ integrable m f /\
+       integrable m f1 /\ integrable m f2 /\
       (!x. x IN m_space m ==> (f x = f1 x - f2 x)) /\
       (!x. x IN m_space m ==> 0 <= f1 x) /\
       (!x. x IN m_space m ==> 0 <= f2 x) /\
@@ -6595,30 +7067,28 @@ val suminf_measure = prove (
   FULL_SIMP_TAC std_ss [IN_FUNSET, disjoint_family_on, disjoint_family] THEN
   ASM_SET_TAC []);
 
+(* removed ‘image_measure_space’, reduced ‘N’ (measure_space) to ‘B’ (sigma_algebra) *)
 Theorem measure_space_distr :
-    !M N t. measure_space M /\ measure_space N /\
-            t IN measurable (m_space M,measurable_sets M)
-                            (m_space N,measurable_sets N) ==>
-            measure_space (image_measure_space M N t)
+    !M B f. measure_space M /\ sigma_algebra B /\
+            f IN measurable (m_space M,measurable_sets M) B ==>
+            measure_space (space B, subsets B, distr M f)
 Proof
-    RW_TAC std_ss [measure_space_def, image_measure_space_def,
-                   m_space_def, measurable_sets_def]
- >- (FULL_SIMP_TAC std_ss [positive_def, distr_def, measure_def, measurable_sets_def] \\
-     ASM_SIMP_TAC std_ss [INTER_EMPTY, PREIMAGE_EMPTY] THEN
-     FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def])
- >> RULE_ASSUM_TAC (ONCE_REWRITE_RULE [GSYM MEASURE_SPACE_REDUCE])
+    qx_genl_tac [‘M’, ‘B’, ‘t’]
+ >> RW_TAC std_ss [measure_space_def, m_space_def, measurable_sets_def, SPACE]
+ >- (fs [positive_def, distr_def, measure_def, measurable_sets_def] \\
+     rpt STRIP_TAC >> FIRST_X_ASSUM MATCH_MP_TAC \\
+     fs [IN_MEASURABLE, space_def, subsets_def])
  >> FULL_SIMP_TAC std_ss [countably_additive_alt_eq, distr_def]
- >> FULL_SIMP_TAC std_ss [MEASURE_SPACE_REDUCE]
  >> RW_TAC std_ss []
- >> `!i. A i IN measurable_sets N` by ASM_SET_TAC []
- >> Know `IMAGE (\i. PREIMAGE t (A i) INTER m_space M) UNIV SUBSET measurable_sets M`
- >- (FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def, SUBSET_DEF] \\
-     FULL_SIMP_TAC std_ss [IN_IMAGE, IN_UNIV] >> METIS_TAC []) >> DISCH_TAC
- >> Know `BIGUNION {PREIMAGE t (A i) INTER m_space M | i IN UNIV} IN measurable_sets M`
- >- (FULL_SIMP_TAC std_ss [sigma_algebra_alt]) >> DISCH_TAC
- >> Know `disjoint_family (\i. PREIMAGE t (A i) INTER m_space M)`
- >- (FULL_SIMP_TAC std_ss [disjoint_family, disjoint_family_on, IN_UNIV] \\
-     FULL_SIMP_TAC std_ss [PREIMAGE_def] THEN ASM_SET_TAC []) >> DISCH_TAC
+ >> `!i. A i IN subsets B` by ASM_SET_TAC []
+ >> `IMAGE (\i. PREIMAGE t (A i) INTER m_space M) UNIV SUBSET measurable_sets M`
+      by (FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def, SUBSET_DEF] \\
+          FULL_SIMP_TAC std_ss [IN_IMAGE, IN_UNIV] >> METIS_TAC [])
+ >> `BIGUNION {PREIMAGE t (A i) INTER m_space M | i IN UNIV} IN measurable_sets M`
+      by (FULL_SIMP_TAC std_ss [sigma_algebra_alt])
+ >> `disjoint_family (\i. PREIMAGE t (A i) INTER m_space M)`
+      by (FULL_SIMP_TAC std_ss [disjoint_family, disjoint_family_on, IN_UNIV] \\
+          FULL_SIMP_TAC std_ss [PREIMAGE_def] THEN ASM_SET_TAC [])
  >> SIMP_TAC std_ss [PREIMAGE_BIGUNION, o_DEF]
  >> Know `IMAGE (PREIMAGE t) {A i | i IN univ(:num)} =
           IMAGE (\i. PREIMAGE t (A i)) UNIV` >- ASM_SET_TAC []
@@ -6639,7 +7109,7 @@ Proof
  >> Suff `measure M
            (BIGUNION (IMAGE (\i. PREIMAGE t (A i) INTER m_space M) univ(:num))) =
           suminf (\x. measure M ((\x. PREIMAGE t (A x) INTER m_space M) x))`
- >- (SIMP_TAC std_ss [])
+ >- SIMP_TAC std_ss []
  >> MATCH_MP_TAC (GSYM (REWRITE_RULE [GSYM IMAGE_DEF] suminf_measure))
  >> FULL_SIMP_TAC std_ss [measure_space_def]
  >> ONCE_REWRITE_TAC [GSYM MEASURE_SPACE_REDUCE]
@@ -6893,8 +7363,8 @@ Proof
           sup (IMAGE (\i. pos_fn_integral m (fi' i)) univ(:num))`
  >- (MATCH_MP_TAC lebesgue_monotone_convergence >> art [] \\
      Q.UNABBREV_TAC `fi'` >> REV_FULL_SIMP_TAC bool_ss [] \\
-     rpt STRIP_TAC >| (* 3 subgoals *)
-     [ (* goal 1 (of 3) *)
+     rpt STRIP_TAC >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
        MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR \\
        ASM_SIMP_TAC std_ss [subsets_def] \\
        Q.UNABBREV_TAC `fi` >> BETA_TAC \\
@@ -6903,12 +7373,7 @@ Proof
        MATCH_MP_TAC IN_MEASURABLE_BOREL_MIN >> art [] \\
        CONJ_TAC >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS' >> art []) \\
        MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST' >> art [],
-       (* goal 2 (of 3) *)
-       RW_TAC std_ss [le_sup', IN_IMAGE, IN_UNIV] \\
-       MATCH_MP_TAC le_trans \\
-       Q.EXISTS_TAC `fi 0 x * indicator_fn N x` >> art [] \\
-       POP_ASSUM MATCH_MP_TAC >> Q.EXISTS_TAC `0` >> REWRITE_TAC [],
-       (* goal 3 (of 3) *)
+       (* goal 2 (of 2) *)
        RW_TAC std_ss [ext_mono_increasing_suc] \\
        reverse (Cases_on `x IN N`)
        >- (ASM_SIMP_TAC std_ss [indicator_fn_def, mul_rzero, le_refl]) \\
@@ -8303,28 +8768,35 @@ Proof
            METIS_TAC [MEASURE_SPACE_CMUL, REAL_LT_IMP_LE, mul_not_infty, extreal_not_infty])
  >> Q.ABBREV_TAC `g' = (\x. g x + Normal e * indicator_fn (A') x)`
  >> `!A. A IN measurable_sets m ==>
-        (pos_fn_integral m (\x. g' x * indicator_fn A x) =
-         pos_fn_integral m (\x. g x * indicator_fn A x) + Normal e * measure m (A INTER A'))`
-       by (rpt STRIP_TAC
-           >> `measure m (A'' INTER A') = pos_fn_integral m (indicator_fn (A'' INTER A'))`
-                by METIS_TAC [pos_fn_integral_indicator,MEASURE_SPACE_INTER]
-           >> POP_ORW
-           >> `Normal e * pos_fn_integral m (indicator_fn (A'' INTER A')) =
-               pos_fn_integral m (\x. Normal e * indicator_fn (A'' INTER A') x)`
-                by ((MATCH_MP_TAC o GSYM) pos_fn_integral_cmul
-                    >> RW_TAC real_ss [REAL_LT_IMP_LE,indicator_fn_def,le_01,le_refl])
-           >> POP_ORW
-           >> Q.UNABBREV_TAC `g'`
-           >> `(\x. (\x. g x + Normal e * indicator_fn A' x) x * indicator_fn A'' x) =
-               (\x. (\x. g x * indicator_fn A'' x) x + (\x. Normal e * indicator_fn (A'' INTER A') x) x)`
-                by (RW_TAC std_ss [FUN_EQ_THM, indicator_fn_def, IN_INTER] \\
-                    METIS_TAC [mul_rone, mul_rzero, add_rzero, indicator_fn_def, IN_INTER])
-           >> POP_ORW
-           >> MATCH_MP_TAC pos_fn_integral_add
-           >> FULL_SIMP_TAC std_ss []
-           >> CONJ_TAC >- (RW_TAC std_ss [indicator_fn_def,le_01,le_refl,mul_rone,mul_rzero]
-                           >> FULL_SIMP_TAC std_ss [extreal_of_num_def,extreal_le_def,REAL_LT_IMP_LE])
-           >> RW_TAC std_ss []
+         pos_fn_integral m (\x. g' x * indicator_fn A x) =
+         pos_fn_integral m (\x. g x * indicator_fn A x) +
+         Normal e * measure m (A INTER A')`
+   by (rpt STRIP_TAC
+       >> `measure m (A'' INTER A') =
+             pos_fn_integral m (indicator_fn (A'' INTER A'))`
+         by METIS_TAC [pos_fn_integral_indicator,MEASURE_SPACE_INTER]
+       >> POP_ORW
+       >> `Normal e * pos_fn_integral m (indicator_fn (A'' INTER A')) =
+             pos_fn_integral m (\x. Normal e * indicator_fn (A'' INTER A') x)`
+         by ((MATCH_MP_TAC o GSYM) pos_fn_integral_cmul
+             >> RW_TAC real_ss [REAL_LT_IMP_LE,indicator_fn_def,le_01,le_refl])
+       >> POP_ORW
+       >> Q.UNABBREV_TAC `g'`
+       >> `(\x. (\x. g x + Normal e * indicator_fn A' x) x * indicator_fn A'' x)
+              =
+           (\x. (\x. g x * indicator_fn A'' x) x +
+                (\x. Normal e * indicator_fn (A'' INTER A') x) x)`
+         by (RW_TAC std_ss [FUN_EQ_THM, indicator_fn_def, IN_INTER] \\
+             METIS_TAC [mul_rone, mul_rzero, add_rzero, indicator_fn_def,
+                        IN_INTER])
+       >> POP_ORW
+       >> MATCH_MP_TAC pos_fn_integral_add
+       >> FULL_SIMP_TAC std_ss []
+       >> CONJ_TAC
+       >- (RW_TAC std_ss [indicator_fn_def,le_01,le_refl,mul_rone,mul_rzero]
+           >> FULL_SIMP_TAC std_ss [extreal_of_num_def,extreal_le_def,
+                                    REAL_LT_IMP_LE])
+       >> RW_TAC std_ss []
            >- METIS_TAC [IN_MEASURABLE_BOREL_MUL_INDICATOR, measure_space_def,
                          measurable_sets_def, subsets_def]
            >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL

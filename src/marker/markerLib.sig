@@ -44,6 +44,9 @@ sig
   val RM_ABBREV_TAC       : string -> tactic
   val RM_ALL_ABBREVS_TAC  : tactic
   val ABBRS_THEN          : (thm list -> tactic) -> thm list -> tactic
+  val TIDY_ABBREV_CONV    : conv
+  val TIDY_ABBREV_RULE    : thm -> thm
+  val TIDY_ABBREVS        : tactic
   val MK_ABBREVS_OLDSTYLE : tactic
   val Abbr                : term quotation -> thm
   val safe_inst_cmp       : {redex:term,residue:term} Lib.cmp

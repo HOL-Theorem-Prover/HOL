@@ -272,3 +272,26 @@ in
   require_msg (check_result (list_eq goal_eq expected)) goalprint
               (fst o first_fv_term Cases) goal
 end
+
+val _ = let
+  open boolLib
+  val _ = tprint "Trivial resolve_then"
+  val ith = AND_CLAUSES |> SPEC_ALL |> CONJUNCTS |> hd |> GEN “t:bool”
+  val G = ([] : term list, “T /\ p <=> p”)
+  val tac = VALID (goal_assum (resolve_then Any mp_tac ith))
+in
+  require_msg (check_result null) goalprint (fst o tac) G
+end
+
+val _ = let
+  open boolLib
+  val _ = tprint "PAT_ASSUM with type variables"
+  val asl = [“x:'a = y”, “u:'b = v”]
+  val p = mk_var("p", bool)
+  val G = (asl, p)
+  val tac = Tactical.PAT_ASSUM “_ = v:'b” MP_TAC
+  fun verdict [(asl',sg)] = tml_eq asl' asl andalso sg ~~ “(u:'b = v) ==> p”
+    | verdict _ = false
+in
+  require_msg (check_result verdict) goalprint (fst o tac) G
+end

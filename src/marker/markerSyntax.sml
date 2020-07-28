@@ -36,6 +36,17 @@ fun compare_abbrev a1 a2 =
    free_in v1 rhs2
  end;
 
+fun is_malformed_abbrev t =
+    case total dest_comb t of
+        NONE => false
+      | SOME (f,x) =>
+        if same_const f abbrev_tm then
+          case total dest_eq (rand t) of
+              NONE => true
+            | SOME (l,r) => not (is_var l) orelse is_var r
+        else false
+
+
 (*---------------------------------------------------------------------------*)
 (* Abbr `n` is used as an element of a simplification list in order to have  *)
 (* the abbreviation (Abbrev (n = M)) in the hypotheses of the goal be        *)

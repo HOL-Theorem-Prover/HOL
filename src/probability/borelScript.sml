@@ -741,6 +741,28 @@ val FN_MINUS_FMUL = store_thm
  >- REWRITE_TAC [GSYM mul_rneg]
  >> fs [entire, neg_0]);
 
+Theorem fn_plus_mul_indicator :
+    !f s. fn_plus (\x. f x * indicator_fn s x) =
+          (\x. fn_plus f x * indicator_fn s x)
+Proof
+    rpt GEN_TAC
+ >> ONCE_REWRITE_TAC [mul_comm]
+ >> MATCH_MP_TAC (Q.SPECL [‘f’, ‘indicator_fn s’] FN_PLUS_FMUL)
+ >> GEN_TAC
+ >> REWRITE_TAC [INDICATOR_FN_POS]
+QED
+
+Theorem fn_minus_mul_indicator :
+    !f s. fn_minus (\x. f x * indicator_fn s x) =
+          (\x. fn_minus f x * indicator_fn s x)
+Proof
+    rpt GEN_TAC
+ >> ONCE_REWRITE_TAC [mul_comm]
+ >> MATCH_MP_TAC (Q.SPECL [‘f’, ‘indicator_fn s’] FN_MINUS_FMUL)
+ >> GEN_TAC
+ >> REWRITE_TAC [INDICATOR_FN_POS]
+QED
+
 val FN_PLUS_ADD_LE = store_thm
   ("FN_PLUS_ADD_LE",
   ``!f g x. fn_plus (\x. f x + g x) x <= (fn_plus f x) + (fn_plus g x)``,
@@ -815,7 +837,7 @@ Proof
 QED
 
 (* ******************************************* *)
-(*   Non-negative functions                    *)
+(*   Non-negative functions (not very useful)  *)
 (* ******************************************* *)
 
 val nonneg_def = Define
@@ -4193,13 +4215,13 @@ Proof
      FIRST_X_ASSUM MATCH_MP_TAC \\
      Q.UNABBREV_TAC `h` >> rw [o_DEF])
  (* Part V: h-property of lowerbounds *)
- >> Know `!i j. i < j /\ j < n0 ==>
-                interval_lowerbound (h i) <= interval_lowerbound (h j)`
- >- (rpt STRIP_TAC \\
-     Q.PAT_X_ASSUM `transitive R`
-       (STRIP_ASSUME_TAC o (MATCH_MP SORTED_EL_LESS)) \\
-     POP_ASSUM (MP_TAC o (Q.SPEC `sorted`)) \\
-     Q.UNABBREV_TAC `R` >> RW_TAC std_ss []) >> DISCH_TAC
+ >> ‘!i j. i < j /\ j < n0 ==>
+           interval_lowerbound (h i) <= interval_lowerbound (h j)’
+      by (STRIP_TAC \\
+          Q.PAT_X_ASSUM `transitive R`
+                        (STRIP_ASSUME_TAC o (MATCH_MP SORTED_EL_LESS)) \\
+          pop_assum (qspec_then ‘sorted’ mp_tac) \\
+          simp[])
  (* h-property of upper- and lowerbounds *)
  >> Know `!i j. i < j /\ j < n0 ==>
                 interval_upperbound (h i) <= interval_lowerbound (h j)`
@@ -5381,25 +5403,25 @@ val LT = prove ((* HOL Light compatibility *)
 
 val LIMSEQ_indicator_UN = limseq_indicator_BIGUNION;
 
-val sigma_algebra_lebesgue = store_thm ("sigma_algebra_lebesgue",
-  ``sigma_algebra (UNIV, {A | !n. (indicator A) integrable_on (line n)})``,
-  RW_TAC std_ss [sigma_algebra_iff2] THENL
-  [REWRITE_TAC [POW_DEF] THEN SET_TAC [],
-   SIMP_TAC std_ss [GSPECIFICATION] THEN KNOW_TAC ``indicator {} = (\x. 0)`` THENL
-   [SET_TAC [indicator], DISCH_TAC THEN ASM_REWRITE_TAC []] THEN
-   SIMP_TAC std_ss [INTEGRABLE_0],
-   FULL_SIMP_TAC std_ss [GSPECIFICATION] THEN
-   KNOW_TAC ``indicator (univ(:real) DIFF s) = (\x. 1 - indicator s x)`` THENL
-   [SIMP_TAC std_ss [indicator] THEN ABS_TAC THEN
-    SIMP_TAC std_ss [IN_DIFF, IN_UNIV] THEN COND_CASES_TAC THEN
-    FULL_SIMP_TAC real_ss [], DISCH_TAC THEN ASM_REWRITE_TAC []] THEN
-   ONCE_REWRITE_TAC [METIS [] ``(\x. 1 - indicator s x) =
-                   (\x. (\x. 1) x - (\x. indicator s x) x)``] THEN
-   GEN_TAC THEN MATCH_MP_TAC INTEGRABLE_SUB THEN CONJ_TAC THENL
-   [SIMP_TAC std_ss [line, GSYM interval, INTEGRABLE_CONST],
-    METIS_TAC [ETA_AX]],
-   ALL_TAC] THEN
-  FULL_SIMP_TAC std_ss [GSPECIFICATION] THEN
+Theorem sigma_algebra_lebesgue :
+    sigma_algebra (UNIV, {A | !n. (indicator A) integrable_on (line n)})
+Proof
+    RW_TAC std_ss [sigma_algebra_iff2]
+ >- (REWRITE_TAC [POW_DEF] >> SET_TAC [])
+ >- (SIMP_TAC std_ss [GSPECIFICATION] \\
+     Know `indicator {} = (\x. 0)` >- SET_TAC [indicator] \\
+     Rewr' >> SIMP_TAC std_ss [INTEGRABLE_0])
+ >- (FULL_SIMP_TAC std_ss [GSPECIFICATION] \\
+     Know `indicator (univ(:real) DIFF s) = (\x. 1 - indicator s x)`
+     >- (SIMP_TAC std_ss [indicator] >> ABS_TAC \\
+         SIMP_TAC std_ss [IN_DIFF, IN_UNIV] >> COND_CASES_TAC \\
+         FULL_SIMP_TAC real_ss []) >> Rewr' \\
+     ONCE_REWRITE_TAC [METIS [] ``(\x. 1 - indicator s x) =
+                        (\x. (\x. 1) x - (\x. indicator s x) x)``] \\
+     GEN_TAC >> MATCH_MP_TAC INTEGRABLE_SUB >> CONJ_TAC >|
+     [SIMP_TAC std_ss [line, GSYM interval, INTEGRABLE_CONST],
+      METIS_TAC [ETA_AX]])
+ >> FULL_SIMP_TAC std_ss [GSPECIFICATION] THEN
   KNOW_TAC ``!k n. indicator (BIGUNION {(A:num->real->bool) i | i < k})
               integrable_on (line n)`` THENL
   [Induct_on `k` THENL
@@ -5440,7 +5462,8 @@ val sigma_algebra_lebesgue = store_thm ("sigma_algebra_lebesgue",
 [FULL_SIMP_TAC std_ss [],
  SIMP_TAC std_ss [line, GSYM interval, INTEGRABLE_CONST],
  SIMP_TAC std_ss [DROP_INDICATOR_ABS_LE_1],
- METIS_TAC [LIMSEQ_indicator_UN]]);
+ METIS_TAC [LIMSEQ_indicator_UN]]
+QED
 
 Theorem sets_lebesgue :
     measurable_sets lebesgue = {A | !n. (indicator A) integrable_on (line n)}
@@ -5474,9 +5497,6 @@ Proof
   EXISTS_TAC ``0:num`` THEN SIMP_TAC std_ss [extreal_11, line, GSYM interval] THEN
   SIMP_TAC std_ss [REAL_NEG_0, INTEGRAL_REFL]
 QED
-
-val SUP_commute = extrealTheory.sup_comm;
-val suminf_SUP_eq = ext_suminf_sup_eq;
 
 Theorem seq_le_imp_lim_le :
     !x y f. (!n. f n <= x) /\ (f --> y) sequentially ==> y <= x
@@ -5622,7 +5642,7 @@ Proof
  >> SIMP_TAC std_ss [o_DEF, measure_lebesgue]
  >> Know `suminf (\i. sup {(\n i. Normal (integral (line n) (indicator (f i)))) n i | n IN UNIV}) =
           sup {suminf (\i. (\n i. Normal (integral (line n) (indicator (f i)))) n i) | n IN UNIV}`
- >- (MATCH_MP_TAC suminf_SUP_eq \\
+ >- (MATCH_MP_TAC ext_suminf_sup_eq \\
      SIMP_TAC std_ss [extreal_of_num_def] \\
      CONJ_TAC
      >- (SIMP_TAC std_ss [extreal_le_def] >> rpt STRIP_TAC \\
@@ -5734,9 +5754,6 @@ Proof
   METIS_TAC [LIMSEQ_indicator_UN, IMAGE_DEF]
 QED
 
-(* TODO: it remains to prove `complete_measure_space lebesgue`,
-   while (optionally) `lborel` is not complete.
- *)
 val measure_space_lebesgue = store_thm ("measure_space_lebesgue",
   ``measure_space lebesgue``,
   SIMP_TAC std_ss [measure_space_def, positive_lebesgue] THEN
@@ -5804,15 +5821,16 @@ val lebesgueI_negligible = negligible_in_sets_lebesgue;
 Theorem lebesgue_negligible : (* was: lmeasure_eq_0 *)
     !s. negligible s ==> (measure lebesgue s = 0)
 Proof
-  RW_TAC std_ss [measure_lebesgue] THEN
-  KNOW_TAC ``!n. integral (line n) (indicator s) = 0`` THENL
-  [FULL_SIMP_TAC std_ss [integral, negligible, line, GSYM interval] THEN
-   GEN_TAC THEN MATCH_MP_TAC SELECT_UNIQUE THEN GEN_TAC THEN EQ_TAC THENL
-   [ALL_TAC, METIS_TAC []] THEN METIS_TAC [HAS_INTEGRAL_UNIQUE],
-   DISCH_TAC] THEN ASM_REWRITE_TAC [] THEN
-  SIMP_TAC std_ss [GSYM extreal_of_num_def] THEN
-  REWRITE_TAC [SET_RULE ``{0 | n IN UNIV} = {0}``] THEN
-  SIMP_TAC std_ss [sup_sing]
+    RW_TAC std_ss [measure_lebesgue]
+ >> Know `!n. integral (line n) (indicator s) = 0`
+ >- (FULL_SIMP_TAC std_ss [integral, negligible, line, GSYM interval] \\
+     GEN_TAC >> MATCH_MP_TAC SELECT_UNIQUE \\
+     GEN_TAC \\
+     reverse EQ_TAC >- METIS_TAC [] \\
+     METIS_TAC [HAS_INTEGRAL_UNIQUE]) >> Rewr
+ >> SIMP_TAC std_ss [GSYM extreal_of_num_def]
+ >> REWRITE_TAC [SET_RULE ``{0 | n IN UNIV} = {0}``]
+ >> SIMP_TAC std_ss [sup_sing]
 QED
 
 val lmeasure_eq_0 = lebesgue_negligible;
@@ -6181,6 +6199,56 @@ Proof
  >> POP_ORW
  >> RW_TAC std_ss[]
  >> metis_tac [AE_impl]
+QED
+
+(* NOTE: the need of complete measure space seems necessary *)
+Theorem AE_IMP_MEASURABLE_SETS :
+    !m P. complete_measure_space m /\ (AE x::m. P x) ==>
+          {x | x IN m_space m /\ P x} IN measurable_sets m
+Proof
+    RW_TAC std_ss [complete_measure_space_def]
+ >> fs [AE_ALT]
+ >> ‘{x | x IN m_space m /\ P x} = m_space m DIFF {x | x IN m_space m /\ ~P x}’
+      by SET_TAC [] >> POP_ORW
+ >> MATCH_MP_TAC MEASURE_SPACE_COMPL >> art []
+ >> FIRST_X_ASSUM irule
+ >> Q.EXISTS_TAC ‘N’ >> art []
+QED
+
+(* NOTE: the need of complete measure space seems necessary *)
+Theorem IN_MEASURABLE_BOREL_AE_EQ :
+    !m f g. complete_measure_space m /\ (AE x::m. f x = g x) /\
+            f IN measurable (m_space m,measurable_sets m) Borel ==>
+            g IN measurable (m_space m,measurable_sets m) Borel
+Proof
+    rpt STRIP_TAC
+ >> ‘{x | x IN m_space m /\ (f x = g x)} IN measurable_sets m’
+      by METIS_TAC [AE_IMP_MEASURABLE_SETS]
+ >> fs [complete_measure_space_def,
+        AE_ALT, IN_MEASURABLE_BOREL, IN_FUNSET, IN_UNIV]
+ >> ‘N IN measurable_sets m’ by PROVE_TAC [null_set_def]
+ >> GEN_TAC
+ >> ‘{x | g x < Normal c} = {x | g x < Normal c /\ (f x = g x)} UNION
+                            {x | g x < Normal c /\ (f x <> g x)}’
+      by SET_TAC [] >> POP_ORW
+ >> ‘{x | g x < Normal c /\ (f x = g x)} = {x | f x < Normal c /\ (f x = g x)}’
+      by SET_TAC [] >> POP_ORW
+ >> ‘({x | f x < Normal c /\ f x = g x} UNION
+      {x | g x < Normal c /\ f x <> g x}) INTER m_space m =
+     ({x | f x < Normal c /\ f x = g x} INTER m_space m) UNION
+     ({x | g x < Normal c /\ f x <> g x} INTER m_space m)’
+      by SET_TAC [] >> POP_ORW
+ >> MATCH_MP_TAC MEASURE_SPACE_UNION >> art []
+ (* complete_measure_space is used in this branch *)
+ >> reverse CONJ_TAC
+ >- (FIRST_X_ASSUM irule >> Q.EXISTS_TAC ‘N’ >> art [] \\
+     MATCH_MP_TAC SUBSET_TRANS \\
+     Q.EXISTS_TAC ‘{x | x IN m_space m /\ f x <> g x}’ >> art [] \\
+     SET_TAC [])
+ >> ‘{x | f x < Normal c /\ f x = g x} INTER m_space m =
+     ({x | f x < Normal c} INTER m_space m) INTER {x | x IN m_space m /\ (f x = g x)}’
+      by SET_TAC [] >> POP_ORW
+ >> MATCH_MP_TAC MEASURE_SPACE_INTER >> art []
 QED
 
 (* ------------------------------------------------------------------------- *)

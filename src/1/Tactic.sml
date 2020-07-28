@@ -1088,10 +1088,26 @@ val impl_keep_tac =
 
 
 open mp_then
-fun drule ith = first_assum (mp_then (Pos hd) mp_tac ith)
-fun dxrule ith = first_x_assum (mp_then (Pos hd) mp_tac ith)
-fun drule_then k ith = first_assum (mp_then (Pos hd) k ith)
-fun dxrule_then k ith = first_x_assum (mp_then (Pos hd) k ith)
+fun dGEN sel pos k = sel o mp_then pos k
+val drule                  = dGEN first_assum   (Pos hd) mp_tac
+val rev_drule              = dGEN last_assum    (Pos hd) mp_tac
+val dxrule                 = dGEN first_x_assum (Pos hd) mp_tac
+val rev_dxrule             = dGEN last_x_assum  (Pos hd) mp_tac
+
+fun drule_then k           = dGEN first_assum   (Pos hd)    k
+fun dxrule_then k          = dGEN first_x_assum (Pos hd)    k
+fun rev_drule_then k       = dGEN last_assum    (Pos hd)    k
+fun rev_dxrule_then k      = dGEN last_x_assum  (Pos hd)    k
+
+fun drule_at p             = dGEN first_assum       p    mp_tac
+fun dxrule_at p            = dGEN first_x_assum     p    mp_tac
+fun rev_drule_at p         = dGEN last_assum        p    mp_tac
+fun rev_dxrule_at p        = dGEN last_x_assum      p    mp_tac
+
+fun drule_at_then p k      = dGEN first_assum       p       k
+fun dxrule_at_then p k     = dGEN first_x_assum     p       k
+fun rev_drule_at_then p k  = dGEN last_assum        p       k
+fun rev_dxrule_at_then p k = dGEN last_x_assum      p       k
 
 fun isfa_imp th = th |> concl |> strip_forall |> #2 |> is_imp
 fun dall_prim k fa ith0 g =
@@ -1099,10 +1115,15 @@ fun dall_prim k fa ith0 g =
               (k o assert (not o isfa_imp))
               (assert isfa_imp ith0)
               g
-val drule_all = dall_prim mp_tac first_assum
-val dxrule_all = dall_prim mp_tac first_x_assum
-fun drule_all_then k = dall_prim k first_assum
-fun dxrule_all_then k = dall_prim k first_x_assum
+val drule_all             = dall_prim mp_tac first_assum
+val dxrule_all            = dall_prim mp_tac first_x_assum
+fun drule_all_then k      = dall_prim   k    first_assum
+fun dxrule_all_then k     = dall_prim   k    first_x_assum
+
+val rev_drule_all         = dall_prim mp_tac last_assum
+val rev_dxrule_all        = dall_prim mp_tac last_x_assum
+fun rev_drule_all_then k  = dall_prim   k    last_assum
+fun rev_dxrule_all_then k = dall_prim   k    last_x_assum
 
 open resolve_then
 

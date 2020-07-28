@@ -61,12 +61,14 @@ fun UDALL nms0 th0 =
 (* moves a bunch of hypotheses from a theorem into an implication, conjoining
    them all rather than creating iterated implications *)
 fun DISCHl tms th =
-    let
-      val cjt = list_mk_conj tms
-    in
-      List.foldl (fn (cth, th) => PROVE_HYP cth th) th (CONJUNCTS (ASSUME cjt))
-                 |> DISCH cjt
-    end
+    if null tms then th
+    else
+      let
+        val cjt = list_mk_conj tms
+      in
+        th |> rev_itlist PROVE_HYP (CONJUNCTS $ ASSUME $ list_mk_conj tms)
+           |> DISCH cjt
+      end
 
 (* turns G |- p   into G, ~p |- F, where p not negated; and
          G |- ~p  into G,  p |- F
