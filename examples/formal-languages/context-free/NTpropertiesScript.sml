@@ -872,11 +872,45 @@ Theorem followSet_follow:
 Proof
   simp[followSet_alt, PULL_EXISTS] >> metis_tac[followSet_follow0]
 QED
-(* Definition augment_def:
+
+Definition augment_def:
   augment k v fm =
     case FLOOKUP fm k of
       NONE => fm |+ (k,v)
     | SOME v0 => fm |+ (k, v0 ∪ᶠ v)
+End
+Theorem fUNION_COMM[local] = finite_setTheory.fUNION_COMM
+Theorem fUNION_ASSOC[local] = finite_setTheory.fUNION_ASSOC
+
+Theorem augment_collapse[simp]:
+  augment k v1 (augment k v2 fm) = augment k (v1 ∪ᶠ v2) fm
+Proof
+  simp[augment_def, FLOOKUP_DEF] >> rw[] >> fs[] >>
+  simp[AC fUNION_ASSOC fUNION_COMM]
+QED
+
+Theorem augment_update:
+  augment k1 v1 (fm |+ (k2, v2)) =
+  if k1 = k2 then fm |+ (k1, v1 ∪ᶠ v2)
+  else augment k1 v1 fm |+ (k2,v2)
+Proof
+  simp[augment_def, FLOOKUP_UPDATE] >>
+  Cases_on ‘k1 = k2’ >> simp[AC fUNION_ASSOC fUNION_COMM] >>
+  Cases_on ‘FLOOKUP fm k1’ >>
+  simp[AC fUNION_ASSOC fUNION_COMM, FUPDATE_COMMUTES]
+QED
+
+Theorem augment_commutes:
+  ∀fm. augment k1 v1 (augment k2 v2 fm) = augment k2 v2 (augment k1 v1 fm)
+Proof
+  Cases_on ‘k1 = k2’ >> simp[AC fUNION_ASSOC fUNION_COMM] >>
+  Induct >> conj_tac
+  >- csimp[augment_def, FLOOKUP_DEF, FUPDATE_COMMUTES] >>
+  simp[augment_update] >> rw[] >> rw[augment_update] >> metis_tac[]
+QED
+
+Definition augment1_def:
+  augment1 k e fm = augment k {e}ᶠ fm
 End
 
 Definition safelookup_def:
@@ -947,15 +981,119 @@ QED
      N -> sf
    symbol by symbol, augmenting the finite-map of information in A
 *)
-Definition follow_sf_def[simp]:
-  follow_sf g N [] A = A ∧
-  follow_sf g N (TOK _ :: rest) A = follow_sf g N rest A ∧
-  follow_sf g N (NT n :: rest) A =
-    follow_sf g N rest
-              (augment n (fromSet (firstSet g rest) ∪ᶠ
-                          if nullable g rest then safelookup A N else ∅ᶠ)
-                       A)
+Definition follow_p1_def[simp]:
+  follow_p1 g [] A = A ∧
+  follow_p1 g (TOK _ :: rest) A = follow_p1 g rest A ∧
+  follow_p1 g (NT n :: rest) A =
+    follow_p1 g rest
+              (augment n (fromSet (firstSet g rest)) A)
 End
+
+Theorem follow_p1_augment:
+  ∀sf N fs A. follow_p1 g sf (augment N fs A) = augment N fs (follow_p1 g sf A)
+Proof
+  Induct >> simp[] >> Cases >> simp[augment_commutes]
+QED
+
+Theorem follow_p1_commutes:
+  ∀sf1 sf2 A. follow_p1 g sf1 (follow_p1 g sf2 A) =
+              follow_p1 g sf2 (follow_p1 g sf1 A)
+Proof
+  Induct >> simp[] >> Cases >> simp[]
+  >- first_assum ACCEPT_TAC >>
+  simp[follow_p1_augment] >> metis_tac[]
+QED
+
+Definition follow_approx_def:
+  follow_approx g A ⇔ ∀N fs. FLOOKUP A N = SOME fs ⇒ ∀s. s ∈ᶠ fs ⇒ follow g N s
+End
+
+Theorem follow_approx_FEMPTY[simp]:
+  follow_approx g FEMPTY
+Proof
+  simp[follow_approx_def]
+QED
+
+Theorem follow_approx_augment[simp]:
+  follow_approx g (augment N fs A) ⇔
+  follow_approx g A ∧ ∀s. s ∈ᶠ fs ⇒ follow g N s
+Proof
+  simp[augment_def, follow_approx_def, FLOOKUP_DEF] >>
+  Cases_on ‘N ∈ FDOM A’ >> simp[DISJ_IMP_THM, FORALL_AND_THM] >>
+  simp[FAPPLY_FUPDATE_THM] >>
+  asm_simp_tac (srw_ss() ++ boolSimps.COND_elim_ss) [] >> metis_tac[]
+QED
+
+
+Theorem follow_p1_approxes:
+  ∀A. follow_approx g A ∧ N ∈ FDOM g.rules ∧ sf ∈ᶠ g.rules ' N ∧
+      IS_SUFFIX sf sf0 ⇒
+      follow_approx g (follow_p1 g sf0 A)
+Proof
+  Induct_on ‘sf0’ >> simp[] >> Cases >> simp[] >> rw[]
+  >- metis_tac[rich_listTheory.IS_SUFFIX_CONS2_E] >>
+  first_x_assum irule >> simp[] >> conj_tac
+  >- metis_tac[rich_listTheory.IS_SUFFIX_CONS2_E] >>
+  simp[finite_setTheory.IN_fromSet] >>
+  fs[rich_listTheory.IS_SUFFIX_APPEND] >> metis_tac[follow_rules]
+QED
+
+Theorem ITSET_follow_p1_approxes:
+  ∀s0 A. follow_approx g A ∧
+         (∀e. e ∈ᶠ s0 ⇒ ∃N s. N ∈ FDOM g.rules ∧ g.rules ' N = s ∧ e ∈ᶠ s) ⇒
+         follow_approx g (fITSET (follow_p1 g) s0 A)
+Proof
+  Induct >> simp[DISJ_IMP_THM, FORALL_AND_THM] >> rw[] >>
+  simp[finite_setTheory.fITSET_INSERT, follow_p1_commutes] >>
+  irule follow_p1_approxes >> conj_tac
+  >- metis_tac[rich_listTheory.IS_SUFFIX_REFL] >>
+  first_x_assum irule >> simp[]
+QED
+
+Definition follow_phase1_def:
+  follow_phase1 g = ITFMAP (K (fITSET (follow_p1 g))) g.rules
+End
+
+Theorem fITSET_commutes1:
+  (∀e1 e2 A. f e1 (f e2 A) = f e2 (f e1 A)) ⇒
+  ∀s e A. fITSET f s (f e A) = f e (fITSET f s A)
+Proof
+  strip_tac >> Induct >> simp[finite_setTheory.fITSET_INSERT]
+QED
+
+Theorem fITSET_commutes:
+  (∀e1 e2 A. f e1 (f e2 A) = f e2 (f e1 A)) ⇒
+  ∀s1 s2 A. fITSET f s1 (fITSET f s2 A) = fITSET f s2 (fITSET f s1 A)
+Proof
+  strip_tac >> Induct >>
+  simp[finite_setTheory.fITSET_INSERT, fITSET_commutes1] >> metis_tac[]
+QED
+
+Theorem K_fITfollowp1_commutes:
+  ∀(k1:'a) (k2:'a) v1 v2 A.
+    K (fITSET (follow_p1 g)) k1 v1 (K (fITSET (follow_p1 g)) k2 v2 A) =
+    K (fITSET (follow_p1 g)) k2 v2 (K (fITSET (follow_p1 g)) k1 v1 A)
+Proof
+  simp[] >> irule fITSET_commutes >> simp[follow_p1_commutes]
+QED
+
+
+Theorem follow_phase1_approxes:
+  ∀A. follow_approx g A ⇒ follow_approx g (follow_phase1 g A)
+Proof
+  simp[follow_phase1_def] >>
+  ‘∀rm A. follow_approx g A ∧ rm ⊑ g.rules ⇒
+          follow_approx g (ITFMAP (K (fITSET (follow_p1 g))) rm A)’
+    suffices_by metis_tac[SUBMAP_REFL] >>
+  Induct>> rw[] >> fs[SUBMAP_FUPDATE] >> rfs[DOMSUB_NOT_IN_DOM] >>
+  ‘rm ⊑ g.rules’
+    by (pop_assum mp_tac >> csimp[SUBMAP_DEF, DOMSUB_FAPPLY_THM]) >>
+  simp[MATCH_MP (ITFMAP_thm |> CONJUNCT2) K_fITfollowp1_commutes] >>
+  irule ITSET_follow_p1_approxes >> simp[DOMSUB_NOT_IN_DOM] >> metis_tac[]
+QED
+
+(*
+
 
 (* smash together all sets in the range of the finite map *)
 Definition range_max_def:
