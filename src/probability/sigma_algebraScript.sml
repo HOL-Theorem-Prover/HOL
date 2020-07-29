@@ -2330,41 +2330,6 @@ Proof
    EXISTS_TAC ``a:'a->bool`` THEN ASM_SET_TAC []]
 QED
 
-(* ------------------------------------------------------------------------- *)
-(* Binary Unions                                                             *)
-(* ------------------------------------------------------------------------- *)
-
-Definition binary_def :
-    binary a b = (\x:num. if x = 0 then a else b)
-End
-
-Theorem BINARY_RANGE : (* was: range_binary_eq *)
-    !a b. IMAGE (binary a b) UNIV = {a;b}
-Proof
-  RW_TAC std_ss [IMAGE_DEF, binary_def] THEN
-  SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, SET_RULE
-   ``x IN {a;b} <=> (x = a) \/ (x = b)``] THEN
-  GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL
-  [METIS_TAC [], METIS_TAC [IN_UNIV],
-   EXISTS_TAC ``1:num`` THEN ASM_SIMP_TAC arith_ss [IN_UNIV]]
-QED
-
-Theorem UNION_BINARY : (* was: Un_range_binary *)
-    !a b. a UNION b = BIGUNION {binary a b i | i IN UNIV}
-Proof
-  SIMP_TAC arith_ss [GSYM IMAGE_DEF] THEN
-  REWRITE_TAC [METIS [ETA_AX] ``(\i. binary a b i) = binary a b``] THEN
-  SIMP_TAC std_ss [BINARY_RANGE] THEN SET_TAC []
-QED
-
-Theorem INTER_BINARY : (* was: Int_range_binary *)
-    !a b. a INTER b = BIGINTER {binary a b i | i IN UNIV}
-Proof
-  SIMP_TAC arith_ss [GSYM IMAGE_DEF] THEN
-  REWRITE_TAC [METIS [ETA_AX] ``(\i. binary a b i) = binary a b``] THEN
-  SIMP_TAC std_ss [BINARY_RANGE] THEN SET_TAC []
-QED
-
 Theorem sigma_algebra_alt : (* was: sigma_algebra_alt_eq *)
     !sp sts. sigma_algebra (sp,sts) <=>
              algebra (sp,sts) /\
@@ -2874,6 +2839,7 @@ val MEASURABLE_I = store_thm
        >> METIS_TAC [])
    >> RW_TAC std_ss []);
 
+(* Theorem 7.4 [7, p.54] *)
 val MEASURABLE_COMP = store_thm
   ("MEASURABLE_COMP",
    ``!f g a b c.
@@ -2999,6 +2965,52 @@ Proof
        by (RW_TAC std_ss [Once EXTENSION, IN_INTER] >> DECIDE_TAC)
  >> PROVE_TAC [sigma_algebra_def, ALGEBRA_INTER]
 QED
+
+(* ------------------------------------------------------------------------- *)
+(*  sigma-algebra of functions [7, p.55]                                     *)
+(* ------------------------------------------------------------------------- *)
+
+(* The smallest sigma-algebra on `sp` that makes `f` measurable *)
+val sigma_function_def = Define
+   `sigma_function sp A f = (sp,IMAGE (\s. PREIMAGE f s INTER sp) (subsets A))`;
+
+val _ = overload_on ("sigma", ``sigma_function``);
+
+val SIGMA_MEASURABLE = store_thm
+  ("SIGMA_MEASURABLE",
+  ``!sp A f. sigma_algebra A /\ f IN (sp -> space A) ==> f IN measurable (sigma sp A f) A``,
+    RW_TAC std_ss [sigma_function_def, space_def, subsets_def,
+                   IN_FUNSET, IN_MEASURABLE, IN_IMAGE]
+ >- (MATCH_MP_TAC PREIMAGE_SIGMA_ALGEBRA >> art [IN_FUNSET])
+ >> Q.EXISTS_TAC `s` >> art []);
+
+(* Definition 7.5 of [1, p.51], The smallest sigma-algebra on `sp` that makes all `f`
+   simultaneously measurable. *)
+val sigma_functions_def = Define
+   `sigma_functions sp A f J =
+      sigma sp (BIGUNION (IMAGE (\i. IMAGE (\s. PREIMAGE (f i) s INTER sp) (subsets (A i))) J))`;
+
+val _ = overload_on ("sigma", ``sigma_functions``);
+
+(* Lemma 7.5 of [1, p.51] *)
+val SIGMA_SIMULTANEOUSLY_MEASURABLE = store_thm
+  ("SIGMA_SIMULTANEOUSLY_MEASURABLE",
+  ``!sp A f J. (!i. i IN J ==> sigma_algebra (A i)) /\
+               (!i. f i IN (sp -> space (A i))) ==>
+                !i. i IN J ==> f i IN measurable (sigma sp A f J) (A i)``,
+    RW_TAC std_ss [IN_FUNSET, SPACE_SIGMA, sigma_functions_def, IN_MEASURABLE]
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA \\
+     RW_TAC std_ss [subset_class_def, IN_BIGUNION_IMAGE, IN_IMAGE, IN_PREIMAGE, IN_INTER] \\
+     REWRITE_TAC [INTER_SUBSET])
+ >> Know `PREIMAGE (f i) s INTER sp IN
+            (BIGUNION (IMAGE (\i. IMAGE (\s. PREIMAGE (f i) s INTER sp) (subsets (A i))) J))`
+ >- (RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_IMAGE] \\
+     Q.EXISTS_TAC `i` >> art [] \\
+     Q.EXISTS_TAC `s` >> art []) >> DISCH_TAC
+ >> ASSUME_TAC
+      (Q.SPECL [`sp`, `BIGUNION (IMAGE (\i. IMAGE (\s. PREIMAGE (f i) s INTER sp)
+                                                  (subsets (A i))) J)`] SIGMA_SUBSET_SUBSETS)
+ >> PROVE_TAC [SUBSET_DEF]);
 
 val _ = export_theory ();
 

@@ -15,7 +15,7 @@ open metisLib pairTheory combinTheory pred_setTheory pred_setLib jrhUtils
 
 val _ = new_theory "util_prob";
 
-val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
+fun METIS ths tm = prove(tm, METIS_TAC ths);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -976,7 +976,7 @@ Proof
   MP_TAC (ISPEC ``1 / x:real`` SIMP_REAL_ARCH) THEN STRIP_TAC THEN
   Q.EXISTS_TAC `n` THEN FULL_SIMP_TAC real_ss [real_div] THEN
   RULE_ASSUM_TAC (ONCE_REWRITE_RULE [GSYM REAL_LT_INV_EQ]) THEN
-  REWRITE_TAC [ADD1, GSYM add_ints] THEN ASM_REAL_ARITH_TAC
+  REWRITE_TAC [ADD1, GSYM add_ints] THEN REAL_ASM_ARITH_TAC
 QED
 
 Theorem REAL_ARCH_INV' : (* was: ex_inverse_of_nat_less *)
@@ -1252,6 +1252,41 @@ val disjoint_restrict = store_thm (* new *)
  >> MATCH_MP_TAC DISJOINT_RESTRICT_R
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
  >> CCONTR_TAC >> fs []);
+
+(* ------------------------------------------------------------------------- *)
+(* Binary Unions                                                             *)
+(* ------------------------------------------------------------------------- *)
+
+Definition binary_def :
+    binary a b = (\x:num. if x = 0 then a else b)
+End
+
+Theorem BINARY_RANGE : (* was: range_binary_eq *)
+    !a b. IMAGE (binary a b) UNIV = {a;b}
+Proof
+  RW_TAC std_ss [IMAGE_DEF, binary_def] THEN
+  SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, SET_RULE
+   ``x IN {a;b} <=> (x = a) \/ (x = b)``] THEN
+  GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL
+  [METIS_TAC [], METIS_TAC [IN_UNIV],
+   EXISTS_TAC ``1:num`` THEN ASM_SIMP_TAC arith_ss [IN_UNIV]]
+QED
+
+Theorem UNION_BINARY : (* was: Un_range_binary *)
+    !a b. a UNION b = BIGUNION {binary a b i | i IN UNIV}
+Proof
+  SIMP_TAC arith_ss [GSYM IMAGE_DEF] THEN
+  REWRITE_TAC [METIS [ETA_AX] ``(\i. binary a b i) = binary a b``] THEN
+  SIMP_TAC std_ss [BINARY_RANGE] THEN SET_TAC []
+QED
+
+Theorem INTER_BINARY : (* was: Int_range_binary *)
+    !a b. a INTER b = BIGINTER {binary a b i | i IN UNIV}
+Proof
+  SIMP_TAC arith_ss [GSYM IMAGE_DEF] THEN
+  REWRITE_TAC [METIS [ETA_AX] ``(\i. binary a b i) = binary a b``] THEN
+  SIMP_TAC std_ss [BINARY_RANGE] THEN SET_TAC []
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*  Some lemmas needed by CARATHEODORY in measureTheory (author: Chun Tian)  *)
