@@ -489,13 +489,13 @@ val type_sound_t = Q.prove (
          metis_tac [SUBSET_TRANS]) >>
      metis_tac [sem_e_res]));
 
-val type_soundness = Q.store_thm ("type_soundness",
-`!t input. type_t F {} t ⇒ Crash ∉ semantics_with_nd t input`,
+Theorem type_soundness:
+  !t input. type_t F {} t ⇒ Crash ∉ semantics_with_nd t input
+Proof
  rw [IN_DEF, semantics_with_nd_def] >>
- imp_res_tac type_sound_t >>
- fs [] >>
- first_x_assum (qspec_then `init_st c nd input` assume_tac) >>
- fs [] >>
- metis_tac []);
+ drule type_sound_t >> simp[] >>
+ disch_then $ qspec_then `init_st c nd input` strip_assume_tac >>
+ fs [] >> rw[]
+QED
 
 val _ = export_theory ();
