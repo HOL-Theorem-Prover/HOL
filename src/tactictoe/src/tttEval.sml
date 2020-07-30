@@ -83,40 +83,31 @@ fun extract_thmpol tree =
 fun is_metis_stac s = hd (partial_sml_lexer s) = "metisTools.METIS_TAC"
 fun op_subset eqf l1 l2 = null (op_set_diff eqf l1 l2)
 
-fun apply_stac parentd goalrec stac =
-  let
-    val tim = if is_metis_stac stac then 0.1 else 0.04
 
 
 fun test_astac astac g gl thmidl =
   let
-    val stac = inst_thmidl astac thmidl
+    val tim = if is_metis_stac astac then 0.1 else 0.04
+    val istac = snd (inst_thmidl astac thmidl)
   in
-    case app_stac (2 * tim) stac g of
+    case app_stac (2 * tim) istac g of
       SOME newgl => op_subset goal_eq newgl gl
     | NONE => false
   end
 
-fun mini_thmidl f (pos,neg) thmidl = 
+fun minimize f (pos,neg) thmidl = 
   case thmidl of 
     [] => (pos,neg)
   | a :: m => if f (pos :: m) 
-              then mini_thmidl f (pos, a :: neg) m
-              else mini_thmidl f (a :: pos, neg) m
+              then minimize f (pos, a :: neg) m
+              else minimize f (a :: pos, neg) m
 
-val posthml = 
-  map (fn x => (nntm_of_thm x, 1.0))
-    (map snd (thml_of_sml (map dbfetch_of_thmid pos))
+val posthml = map (fn x => (nntm_of_thm x, 1.0))
+  (map snd (thml_of_sml (map dbfetch_of_thmid pos)))
 val negthml = map (fn x => (nntm_of_thm x, 0.0))
-
   (map snd (thml_of_sml (map dbfetch_of_thmid pos)))
 
 val ex = basicex_to_tnnex (posthml @ negthml)
-
-
-
-(* results should be (tm,1.0) or (tm,0.0) where tm in the encoding of
-a theorem *)
 *)
 (* -------------------------------------------------------------------------
    Evaluation function

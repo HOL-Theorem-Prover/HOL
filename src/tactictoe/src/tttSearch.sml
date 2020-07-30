@@ -57,7 +57,7 @@ fun string_of_searchstatus x = case x of
    ------------------------------------------------------------------------- *)
 
 type stac_record =
-  {stac : string, astac : string,
+  {stac : string, thmidl : string list,
    svis : real, ssum : real, stacstatus : stacstatus}
 
 type goal_record =
@@ -141,16 +141,17 @@ fun reorder_stacv g pnn stacv =
    Node creation and backup
    ------------------------------------------------------------------------- *)
 
-fun stac_create (astac,stac) =
-  {stac = stac, astac = astac, svis = 0.0, ssum = 0.0, stacstatus = StacFresh}
+fun stac_create (stac,thmidl) =
+  {stac = stac, thmidl = thmidl,
+   svis = 0.0, ssum = 0.0, stacstatus = StacFresh}
 
-fun goal_create (pred as (tacpred,(vnno,pnno))) g =
+fun goal_create (pred as (tacpred,lookup,(vnno,pnno))) g =
   let
     val stacv1 = Vector.fromList (map stac_create (tacpred g))
-    val stacv2 =
+    val stacv2 = stacv1
       (* if isSome pnno
       then total_time reorder_time (reorder_stacv g (valOf pnno)) stacv1
-      else *) stacv1
+      else *) 
   in
     {
     goal = g, gvis = 0.0, gsum = 0.0,
@@ -164,10 +165,10 @@ fun node_update tree (reward,stacstatus) (id,(gn,stacn)) =
   let
     val {nvis,nsum,goalv,parentd,...} = dfind id tree
     val {goal,gvis,gsum,stacv,siblingd,...} = Vector.sub (goalv,gn)
-    val {stac,astac,svis,ssum,...} = Vector.sub (stacv,stacn)
+    val {stac,thmidl,svis,ssum,...} = Vector.sub (stacv,stacn)
     (* update stacv *)
     val newstacrec =
-      {stac = stac, astac = astac,
+      {stac = stac, thmidl = thmidl,
        svis = svis + 1.0, ssum = ssum + reward, stacstatus = stacstatus}
     val newstacv = Vector.update (stacv,stacn,newstacrec)
     (* update goalv *)
@@ -318,11 +319,16 @@ fun status_of_stac parentd goalrec glo = case glo of
     )
 
 fun is_metis_stac s = hd (partial_sml_lexer s) = "metisTools.METIS_TAC"
+val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
-fun apply_stac parentd goalrec stac =
+fun apply_stac lookup parentd goalrec (stac,thmidl) =
   let
     val tim = if is_metis_stac stac then 0.1 else 0.04
-    val glo = app_stac tim stac (#goal goalrec)
+    val thml = (#1 lookup) thmidl
+    val ttac = (#2 lookup) stac
+    fun f g = SOME (fst (TC_OFF (ttac thml) g))
+    val glo = timeout tim f (#goal goalrec) 
+      handle Interrupt => raise Interrupt | _ => NONE
   in
     status_of_stac parentd goalrec glo
   end
@@ -354,15 +360,15 @@ fun string_of_stacstatus x = case x of
   | _ => raise ERR "string_of_stacstatus" "unexpected"
 
 
-fun apply_stac_pid (tree, pred as (tacpred,(vnno,pnno))) pid =
+fun apply_stac_pid (tree, pred as (tacpred,lookup,(vnno,pnno))) pid =
   let
     val node = dfind pid tree
     val (gn,goalundec) = first_goalundec (#goalv node)
     val (stacn,stacfresh) = valOf (first_stacfresh (#stacv goalundec))
     val pidx = (pid,(gn,stacn))
     val cid = (gn,stacn) :: pid
-    val stacstatus =
-      apply_stac (#parentd node) goalundec (#stac stacfresh)
+    val stacstatus = apply_stac lookup (#parentd node) goalundec 
+      (#stac stacfresh, #thmidl stacfresh)
     val reward = total_time reward_time (reward_of vnno) stacstatus
     fun msg (a,b,c) =
       "node: " ^ string_of_id a ^ "\n" ^
@@ -410,7 +416,8 @@ fun extract_proofl tree id =
         val stacv = #stacv goalrec
         fun teststac (_,x) = is_stacwin (#stacstatus x)
         val (stacn,stacrec) = valOf (Vector.findi teststac stacv)
-        val ptac = Tactic (#stac stacrec, #goal goalrec)
+        val istac = inst_stac_thmidl (#stac stacrec) (#thmidl stacrec)
+        val ptac = Tactic (istac, #goal goalrec)
         val cid = (gn,stacn) :: id
       in
         if dmem cid tree
@@ -441,12 +448,12 @@ fun reconstruct_proofstatus (searchstatus,tree) g =
       Proof sproof
     end
 
-fun search (tacpred,tnno) g =
+fun search (pred as (tacpred,lookup,tnno)) g =
   let
     val _ = (tacpred_time := 0.0; reward_time := 0.0; reorder_time := 0.0)
-    val starttree = starttree_of (tacpred,tnno) g
+    val starttree = starttree_of pred g
     val ((searchstatus,tree),t) = add_time
-      (search_loop (total_time tacpred_time tacpred, tnno)) starttree
+      (search_loop (total_time tacpred_time tacpred, lookup, tnno)) starttree
     val _ = print_endline ("search time: " ^ rts_round 6 t)
   in
     (reconstruct_proofstatus (searchstatus,tree) g, tree)

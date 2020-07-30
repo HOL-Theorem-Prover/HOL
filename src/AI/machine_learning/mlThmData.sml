@@ -33,7 +33,7 @@ fun unsafe_namespace_thms () =
     val l1 = filter (is_thm_value l0) (map fst l0)
   in
     case thml_of_sml l1 of
-      SOME l2 => l2
+      SOME l2 => combine (l1,l2)
     | NONE => List.mapPartial thm_of_sml l1
   end
 

@@ -27,6 +27,8 @@ fun number_snd start l = case l of
   []      => []
 | a :: m  => (a,start) :: number_snd (start + 1) m
 
+fun is_singleton l = case l of [a] => true | _ => false
+
 fun print_endline s = print (s ^ "\n")
 
 fun hash_string_mod modulo s =

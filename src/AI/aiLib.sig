@@ -90,6 +90,7 @@ sig
     ('a, int) Redblackmap.dict -> 'a list -> ('a, int) Redblackmap.dict
 
   (* list *)
+  val is_singleton : 'a list -> bool
   val range : (int * int) * (int -> 'a) -> 'a list
   val one_in_n : int -> int -> 'a list -> 'a list
   val map_snd : ('a -> 'b) -> ('c * 'a) list -> ('c * 'b) list

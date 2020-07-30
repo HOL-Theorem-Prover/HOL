@@ -6,14 +6,16 @@ sig
   (* execution function *)
   val quse_string : string -> bool
 
-  (* global references *)
+  (* globals *)
   val sml_bool_glob     : bool ref
-  val sml_tacticl_glob  : tactic list ref
   val sml_tactic_glob   : tactic ref
+  val sml_ttacl_glob    : (thm list -> tactic) list ref
   val sml_string_glob   : string ref
   val sml_goal_glob     : goal ref
   val sml_thm_glob      : thm ref
   val sml_thml_glob     : thm list ref
+  val thmlarg_placeholder : string
+  val tactictoe_thmlarg : thm list
 
   (* tests *)
   val is_thm_value     :
@@ -29,12 +31,13 @@ sig
 
   (* readers *)
   val thm_of_sml        : string -> (string * thm) option
-  val thml_of_sml       : string list -> (string * thm) list option
+  val thml_of_sml       : string list -> thm list option
   val tactic_of_sml     : real -> string -> tactic
+  val ttacl_of_sml      : real -> string list -> (thm list -> tactic) list option
   val string_of_sml     : string -> string
   val goal_of_sml       : string -> goal
 
-  (* applying a tactic string *)
-  val app_stac   : real -> string -> goal -> goal list option
+  (* applying a tactic string *) 
+  val app_stac : real -> string -> goal -> goal list option
 
 end

@@ -16,11 +16,42 @@ open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "tacticToe"
 
+
 (* -------------------------------------------------------------------------
    Time limit
    ------------------------------------------------------------------------- *)
 
 fun set_timeout r = (ttt_search_time := r)
+val warning = ref true
+fun disable_warnings () = warning := false
+fun enable_warnings () = warning := true
+fun warning_msg s = if !warning then print_endline ("warning: " ^ s) else ()
+
+(* -------------------------------------------------------------------------
+   Preparsing theorems and tactics
+   ------------------------------------------------------------------------- *)
+
+fun thml_of_thmidl thmidl = thml_of_sml (map dbfetch_of_thmid thmidl)
+
+fun parse_thml thmidl = case thml_of_thmidl thmidl of
+    NONE => 
+    if is_singleton thmidl 
+    then (warning_msg (singleton_of_list thmidl ^ "failed to parse"); [])
+    else
+      let val (l1,l2) = part_n (length thmidl div 2) thmidl in
+        (parse_thml l1 @ parse_thml l2)
+      end
+  | SOME rl => combine (thmidl,rl)
+
+fun parse_tacl stacl = case ttacl_of_sml 1.0 stacl of
+    NONE => 
+    if is_singleton stacl 
+    then (warning_msg (singleton_of_list stacl ^ "failed to parse"); [])
+    else
+      let val (l1,l2) = part_n (length stacl div 2) stacl in
+        (parse_tacl l1 @ parse_tacl l2)
+      end
+  | SOME rl => combine (stacl,rl)
 
 (* -------------------------------------------------------------------------
    Preselection of theorems and tactics
@@ -48,27 +79,6 @@ fun select_tacfea tacdata gfea =
   end
 
 (* -------------------------------------------------------------------------
-   Parsing theorems and tactics
-   ------------------------------------------------------------------------- *)
-
-fun parse_thmidl thmidl = 
-  valOf (thml_of_sml (map dbfetch_of_thmid thmidl))
-
-(* 
-load "tacticToe"; open tacticToe;
-val thmidl = ["namespace_tagTheory.TRUTH","boolTheory.TRUTH"];
-val thml = parse_thmidl thmidl;
-*)
-
-(*
-fun parse_stacl stacl =
-  let 
-    val sthmtacl = 
-    val thmtacl = thmtac_of_sml (map fn_of_stacl stacl)
-  in
-*)
-
-(* -------------------------------------------------------------------------
    Main function
    ------------------------------------------------------------------------- *)
 
@@ -77,41 +87,50 @@ fun main_tactictoe (thmdata,tacdata) tnno goal =
     val _ = hidef QUse.use infix_file
     (* preselection *)
     val goalf = fea_of_goal true goal
-    val _ = debug "preselection of theorems"
-    val ((thmsymweight,thmfeadict),t1) =
-      add_time (select_thmfea thmdata) goalf
-    val _ = debug ("preselection of theorems time: " ^ rts_round 6 t1)
-    val _ = debug "preselection of tactics"
-    val ((tacsymweight,tacfea),t2) = add_time (select_tacfea tacdata) goalf
-    val _ = debug ("preselection of tactics time: " ^ rts_round 6 t2)
-    (* caches *)
-    val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
-    val tac_cache = ref (dempty goal_compare)
-    (* predictors *)
-    fun thmpred n g =
-      dfind (g,n) (!thm_cache) handle NotFound =>
-      let val r = thmknn (thmsymweight,thmfeadict) n (fea_of_goal true g) in
-        thm_cache := dadd (g,n) r (!thm_cache); r
-      end
+    val (thmsymweight,thmfea) = select_thmfea thmdata goalf
+    val (tacsymweight,tacfea) = select_tacfea tacdata goalf
+    (* parsing *)
     val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
     val metis_flag = is_tactic metis_stac
+    val thm_parse_dict = dnew String.compare (parse_thml (map fst thmfea))
+    val tac_parse_dict = 
+       dnew String.compare (parse_tacl (
+         (if metis_flag then [metis_stac] else []) @ map fst tacfea))
+    fun lookup_thmidl thmidl = map (fn x => dfind x thm_parse_dict) thmidl 
+    fun lookup_stac stac = dfind stac tac_parse_dict 
+    val lookup = (lookup_thmidl, lookup_stac)
+    (* predictors *)
+    val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
+    val tac_cache = ref (dempty goal_compare)
+    fun thmpred n g =
+      dfind (g,n) (!thm_cache) handle NotFound =>
+      let 
+        val gfea = fea_of_goal true g
+        val thmidl = thmknn (thmsymweight,thmfea) n gfea
+      in
+        thm_cache := dadd (g,n) thmidl (!thm_cache); thmidl
+      end
     fun tacpred g =
       dfind g (!tac_cache) handle NotFound =>
-        let
-          val thmidl = thmpred (!ttt_thmlarg_radius) g
-          val l = fea_of_goal true g
-          val stacl1 = tacknn (tacsymweight,tacfea) (!ttt_presel_radius) l
-          val stacl2 =
-            if metis_flag
-            then mk_sameorder_set String.compare (metis_stac :: stacl1)
-            else stacl1
-          val istacl = inst_stacl (thmidl,g) stacl2
-        in
-          tac_cache := dadd g istacl (!tac_cache); istacl
-        end
-    val _ = debug "search"
+      let
+        val gfea = fea_of_goal true g
+        val stacl1 = tacknn (tacsymweight,tacfea) (!ttt_presel_radius) gfea
+        val stacl2 =
+          if metis_flag
+          then mk_sameorder_set String.compare (metis_stac :: stacl1)
+          else stacl1
+      in
+        tac_cache := dadd g stacl2 (!tac_cache); stacl2
+      end
+    fun tacpred' g = 
+      let 
+        val thmidl = thmpred (!ttt_thmlarg_radius) g 
+        val stacl = tacpred g
+      in
+        map_assoc (fn _ => thmidl) stacl
+      end
   in
-    search (tacpred,tnno) goal
+    search (tacpred',lookup,tnno) goal
   end
 
 (* -------------------------------------------------------------------------

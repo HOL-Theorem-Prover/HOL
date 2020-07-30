@@ -20,9 +20,6 @@ fun debug_err s1 s2 = (debug (s1 ^ " : " ^ s2); raise ERR s1 s2)
    Abstracting theorem list in tactics
    ------------------------------------------------------------------------- *)
 
-val tactictoe_thmlarg = ([] : thm list)
-val thmlarg_placeholder = "tttLearn.tactictoe_thmlarg"
-
 fun is_thmlarg_stac stac =
   mem thmlarg_placeholder (partial_sml_lexer stac)
 
@@ -199,10 +196,8 @@ fun inst_stacl (thmidl,g) stacl =
     List.mapPartial (inst_stac (thmls,g)) stacl
   end
 
-fun inst_thmidl thmidl stac =
-  let val thmls = thmls_of_thmidl thmidl in
-    inst_thmlarg thmidl stac
-  end
+fun inst_stac_thmidl stac thmidl =
+  inst_thmlarg (thmls_of_thmidl thmidl) stac
 
 (* -------------------------------------------------------------------------
    Orthogonalization
