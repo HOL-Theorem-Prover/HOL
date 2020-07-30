@@ -30,7 +30,7 @@ val namespace_tag = "namespace_tag"
 fun unsafe_namespace_thms () =
   let
     val l0 = #allVal (PolyML.globalNameSpace) ()
-    val l1 = filter (is_thm_value l0) (map fst l0)
+    val l1 = filter (fn x => is_thm_value l0 x andalso x <> "it") (map fst l0)
   in
     case thml_of_sml l1 of
       SOME l2 => combine (l1,l2)
@@ -40,7 +40,7 @@ fun unsafe_namespace_thms () =
 fun safe_namespace_thms () =
   let
     val l0 = #allVal (PolyML.globalNameSpace) ()
-    val l1 = (map fst l0)
+    val l1 = filter (fn x => x <> "it") (map fst l0)
   in
     List.mapPartial thm_of_sml l1
   end
