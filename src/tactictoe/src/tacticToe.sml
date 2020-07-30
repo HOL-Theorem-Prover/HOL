@@ -91,7 +91,7 @@ fun main_tactictoe (thmdata,tacdata) tnno goal =
     val (tacsymweight,tacfea) = select_tacfea tacdata goalf
     (* parsing *)
     val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
-    val metis_flag = is_tactic metis_stac
+    val metis_flag = is_tactic "metisTools.METIS_TAC []"
     val thm_parse_dict = dnew String.compare (parse_thml (map fst thmfea))
     val tac_parse_dict = 
        dnew String.compare (parse_tacl (
@@ -102,6 +102,8 @@ fun main_tactictoe (thmdata,tacdata) tnno goal =
     fun lookup_stac stac = dfind stac tac_parse_dict
       handle NotFound => raise ERR "lookup_stac" stac
     val lookup = (lookup_thmidl, lookup_stac)
+    val thmfea_filtered = filter (fn x => dmem (fst x) thm_parse_dict) thmfea 
+    val tacfea_filtered = filter (fn x => dmem (fst x) tac_parse_dict) tacfea  
     (* predictors *)
     val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
     val tac_cache = ref (dempty goal_compare)
@@ -109,7 +111,7 @@ fun main_tactictoe (thmdata,tacdata) tnno goal =
       dfind (g,n) (!thm_cache) handle NotFound =>
       let 
         val gfea = fea_of_goal true g
-        val thmidl = thmknn (thmsymweight,thmfea) n gfea
+        val thmidl = thmknn (thmsymweight,thmfea_filtered) n gfea
       in
         thm_cache := dadd (g,n) thmidl (!thm_cache); thmidl
       end
@@ -117,7 +119,8 @@ fun main_tactictoe (thmdata,tacdata) tnno goal =
       dfind g (!tac_cache) handle NotFound =>
       let
         val gfea = fea_of_goal true g
-        val stacl1 = tacknn (tacsymweight,tacfea) (!ttt_presel_radius) gfea
+        val stacl1 = tacknn (tacsymweight,tacfea_filtered) 
+          (!ttt_presel_radius) gfea
         val stacl2 =
           if metis_flag
           then mk_sameorder_set String.compare (metis_stac :: stacl1)
