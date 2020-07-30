@@ -97,7 +97,10 @@ fun main_tactictoe (thmdata,tacdata) tnno goal =
        dnew String.compare (parse_tacl (
          (if metis_flag then [metis_stac] else []) @ map fst tacfea))
     fun lookup_thmidl thmidl = map (fn x => dfind x thm_parse_dict) thmidl 
-    fun lookup_stac stac = dfind stac tac_parse_dict 
+      handle NotFound => 
+        raise ERR "lookup_thmidl" (String.concatWith " " thmidl)
+    fun lookup_stac stac = dfind stac tac_parse_dict
+      handle NotFound => raise ERR "lookup_stac" stac
     val lookup = (lookup_thmidl, lookup_stac)
     (* predictors *)
     val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
