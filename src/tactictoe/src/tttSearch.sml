@@ -321,15 +321,28 @@ fun status_of_stac parentd goalrec glo = case glo of
 fun is_metis_stac s = hd (partial_sml_lexer s) = "metisTools.METIS_TAC"
 val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
-fun apply_stac lookup parentd goalrec (stac,thmidl) =
+val stac_cache = ref (dempty 
+  (triple_compare String.compare  (list_compare String.compare) goal_compare))
+
+fun clean_stac_cache () =
+  stac_cache := dempty 
+    (triple_compare String.compare (list_compare String.compare) goal_compare)
+
+fun apply_stac_aux lookup (stac,thmidl,goal) = 
+  dfind (stac,thmidl,goal) (!stac_cache) handle NotFound =>
   let
     val tim = if is_metis_stac stac then 0.1 else 0.04
     val thml = (#1 lookup) thmidl
     val ttac = (#2 lookup) stac
     fun f g = SOME (fst (TC_OFF (ttac thml) g))
-    val glo = timeout tim f (#goal goalrec) 
+    val glo = timeout tim f goal
       handle Interrupt => raise Interrupt | _ => NONE
   in
+    stac_cache := dadd (stac,thmidl,goal) glo (!stac_cache); glo
+  end
+
+fun apply_stac lookup parentd goalrec (stac,thmidl) =
+  let val glo = apply_stac_aux lookup (stac,thmidl,(#goal goalrec)) in
     status_of_stac parentd goalrec glo
   end
 
@@ -450,10 +463,12 @@ fun reconstruct_proofstatus (searchstatus,tree) g =
 
 fun search (pred as (tacpred,lookup,tnno)) g =
   let
+    val _ = clean_stac_cache ()
     val _ = (tacpred_time := 0.0; reward_time := 0.0; reorder_time := 0.0)
     val starttree = starttree_of pred g
     val ((searchstatus,tree),t) = add_time
       (search_loop (total_time tacpred_time tacpred, lookup, tnno)) starttree
+    val _ = clean_stac_cache ()
     val _ = print_endline ("search time: " ^ rts_round 6 t)
   in
     (reconstruct_proofstatus (searchstatus,tree) g, tree)
