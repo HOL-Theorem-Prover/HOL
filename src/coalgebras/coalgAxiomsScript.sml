@@ -506,7 +506,7 @@ Proof
   >- (fs[bquot_def] >> rw[] >>
       fs[FUN_EQ_THM, restr_def, FORALL_PROD, EXISTS_UNIQUE_THM] >>
       conj_tac
-      >- (qexists_tac ‘restr (λp. h (CHOICE p)) (partition R A)’ >> conj_tac
+      >- (qexists_tac ‘restr (\p. h (CHOICE p)) (partition R A)’ >> conj_tac
           >- (simp[hom_def, restr_def, mapO', o_ABS_L] >> rw[]
               >- (simp[system_def] >> rw[] >>
                   irule map_preserves_funs >> qexists_tac ‘A’ >>
