@@ -175,6 +175,12 @@ Definition iso_def:
            (!b. b IN B ==> f (g b) = b)
 End
 
+Theorem iso_SYM:
+  iso (A,af) (B,bf) <=> iso (B,bf) (A,af)
+Proof
+  simp[iso_def] >> metis_tac[]
+QED
+
 Theorem INJ_homs_mono:
   hom f (A,af) (B,bf) /\ INJ f A B ==>
   !C cf g h.
@@ -469,6 +475,98 @@ QED
 
 Theorem prop5_8 = bquot_correct
 
+Definition coequalizer_def:
+  coequalizer ((A,af):'a system) ((B,bf):'b system) f1 f2 ((C,cf), g) (:'d) <=>
+  hom f1 (A,af) (B,bf) /\ hom f2 (A,af) (B,bf) /\
+  hom g (B,bf) ((C,cf):'c system) /\ restr (g o f1) A = restr (g o f2) A /\
+  !h D df.
+    hom h (B,bf) ((D,df):'d system) /\ restr (h o f1) A = restr (h o f2) A ==>
+    ?!u. hom u (C,cf) (D,df) /\ h = restr (u o g) B
+End
+
+Theorem coequalizer_thm =
+  coequalizer_def |> SPEC_ALL
+                  |> Q.INST [‘C'’ |-> ‘FST (Cs : 'c system)’,
+                             ‘cf’ |-> ‘SND (Cs : 'c system)’]
+                  |> SIMP_RULE (srw_ss()) []
+
+Theorem bquot_coequalizer:
+  system (A,af) /\ bisim R (A,af) (A,af) /\ R equiv_on A ==>
+  ?Rf.
+    coequalizer (UNCURRY R, Rf)
+                (A,af)
+                (restr FST (UNCURRY R))
+                (restr SND (UNCURRY R))
+                (bquot (A,af) R, eps R A)
+                (:'d)
+Proof
+  Cases_on ‘bquot (A,af) R’ >>
+  simp[coequalizer_def, sbisimulation_projns_homo] >> rw[] >>
+  first_assum IRULE >> rw[]
+  >- (fs[bquot_def] >> rw[] >>
+      fs[FUN_EQ_THM, restr_def, FORALL_PROD, EXISTS_UNIQUE_THM] >>
+      conj_tac
+      >- (qexists_tac ‘restr (λp. h (CHOICE p)) (partition R A)’ >> conj_tac
+          >- (simp[hom_def, restr_def, mapO', o_ABS_L] >> rw[]
+              >- (simp[system_def] >> rw[] >>
+                  irule map_preserves_funs >> qexists_tac ‘A’ >>
+                  simp[eps_partition] >> DEEP_INTRO_TAC CHOICE_INTRO >> rw[]
+                  >- (rename [‘A0 IN partition R A’] >>
+                      ‘A0 <> {}’ suffices_by metis_tac[MEMBER_NOT_EMPTY] >>
+                      metis_tac[EMPTY_NOT_IN_partition]) >>
+                  rename [‘a0 IN A0’, ‘A0 IN partition _ _’] >>
+                  ‘a0 IN A’ suffices_by metis_tac[system_def] >>
+                  metis_tac[partition_SUBSET, SUBSET_DEF])
+              >- fs[hom_def]
+              >- (‘CHOICE ap IN A’ suffices_by metis_tac[hom_def] >>
+                  DEEP_INTRO_TAC CHOICE_INTRO >> rw[]
+                  >- (rename [‘A0 IN partition R A’] >>
+                      ‘A0 <> {}’ suffices_by metis_tac[MEMBER_NOT_EMPTY] >>
+                      metis_tac[EMPTY_NOT_IN_partition]) >>
+                  rename [‘a0 IN A0’, ‘A0 IN partition _ _’] >>
+                  ‘a0 IN A’ suffices_by metis_tac[system_def] >>
+                  metis_tac[partition_SUBSET, SUBSET_DEF]) >>
+              DEEP_INTRO_TAC CHOICE_INTRO >> rw[]
+              >- (rename [‘A0 IN partition R A’] >>
+                  ‘A0 <> {}’ suffices_by metis_tac[MEMBER_NOT_EMPTY] >>
+                  metis_tac[EMPTY_NOT_IN_partition]) >>
+              rename [‘a0 IN A0’, ‘A0 IN partition R A’] >>
+              ‘a0 IN A’ by metis_tac[SUBSET_DEF, partition_SUBSET] >>
+              fs[hom_def] >> irule map_CONG >> qx_gen_tac ‘a1’ >> strip_tac >>
+              ‘a1 IN A’ by metis_tac[system_members] >>
+              simp[eps_partition] >> simp[eps_def] >>
+              DEEP_INTRO_TAC CHOICE_INTRO >> conj_tac
+              >- (simp[] >> metis_tac[equiv_on_def]) >>
+              simp[] >> metis_tac[]) >>
+          reverse (rw[]) >- fs[hom_def] >>
+          simp[eps_partition, restr_def] >> simp[eps_def] >>
+          DEEP_INTRO_TAC CHOICE_INTRO >> conj_tac
+          >- (simp[] >> metis_tac[equiv_on_def]) >>
+          simp[] >> metis_tac[]) >>
+      qx_genl_tac [‘u1’, ‘u2’] >> strip_tac >> qx_gen_tac ‘ap’ >>
+      CCONTR_TAC >> reverse (Cases_on ‘ap IN partition R A’)
+      >- (qpat_x_assum ‘_ <> _’ mp_tac >> fs[hom_def]) >>
+      ‘?a. a IN ap’
+        by metis_tac[MEMBER_NOT_EMPTY, EMPTY_NOT_IN_partition] >>
+      ‘a IN A’ by metis_tac[partition_SUBSET, SUBSET_DEF] >>
+      ‘eps R A a = ap’
+        by (simp[eps_def] >> simp[EXTENSION] >>
+            fs[partition_def] >> rw[] >> fs[] >> fs[equiv_on_def] >>
+            metis_tac[]) >>
+      metis_tac[])
+  >- (simp[Once FUN_EQ_THM, restr_def, FORALL_PROD] >>
+      rw[EXTENSION] >> simp[eps_def] >> rw[]
+      >- (fs[equiv_on_def] >> metis_tac[])
+      >- (fs[hom_def, FORALL_PROD, restr_def] >> metis_tac[])
+      >- (fs[hom_def, FORALL_PROD, restr_def] >> metis_tac[])) >>
+  metis_tac[bquot_correct,sbisimulation_projns_homo]
+QED
+
+
+
+
+
+
 Theorem prop5_9_1:
   hom (restr f A) (A,af) (B,bf) /\ bisim R (A,af) (A,af) ==>
   bisim (RIMAGE f A R) (B,bf) (B,bf)
@@ -671,7 +769,6 @@ Definition bounded_def:
             ?f V:'b set. INJ f (genS (A,af) {a}) V
 End
 
-
 (* Section 7 *)
 (*
 Theorem thm7_1:
@@ -703,19 +800,49 @@ Proof
           fs[hom_def] >> rw[] >> irule map_CONG >> simp[] >> rw[] >>
           metis_tac[system_members, IN_IMAGE])) >>
   conj_asm1_tac
-  >- (‘SURJ f A (IMAGE f A)’ suffices_by metis_tac[SURJ_homs_epi] >>
-     simp[SURJ_DEF]) >>
+  >- (‘SURJ f A (IMAGE f A)’ suffices_by metis_tac[SURJ_homs_epi, epi_def] >>
+      simp[SURJ_DEF]) >>
   conj_asm1_tac >- metis_tac[bquot_correct, prop5_7] >>
   conj_asm1_tac
-  >- (simp[bquot_def] >> irule BIJ_homs_iso >>
-      qexists_tac ‘\b. PREIMAGE f {b} INTER A’ >> conj_tac
-      >- (simp[BIJ_DEF, PULL_EXISTS] >> conj_tac
-          >- (simp[INJ_IFF, PULL_EXISTS] >> rw[partition_def]
-              >- (csimp[PREIMAGE_def, EXTENSION]>> metis_tac[]) >>
-              simp[EXTENSION] >> metis_tac[]) >>
-          simp[SURJ_DEF, PULL_EXISTS] >> rw[partition_def] >>
-          csimp[EXTENSION] >> metis_tac[]) >>
-
+  >- (drule_then strip_assume_tac prop5_7 >>
+      drule_all_then strip_assume_tac
+                     (INST_TYPE [delta |-> beta] bquot_coequalizer) >>
+      drule_then drule (cj 5 (iffLR coequalizer_thm)) >>
+      impl_tac >- simp[FUN_EQ_THM, restr_def, FORALL_PROD] >>
+      simp[EXISTS_UNIQUE_THM] >>
+      disch_then (CONJUNCTS_THEN2 (qx_choose_then ‘u’ strip_assume_tac)
+                  strip_assume_tac) >>
+      ‘?Qt qf. bquot (A,af) (kernel A f) = (Qt,qf)’
+        by metis_tac[pair_CASES] >>
+      ‘SURJ u Qt (IMAGE f A)’
+        by (qabbrev_tac ‘imgfA = IMAGE f A’ >> simp[SURJ_DEF, PULL_EXISTS] >>
+            conj_tac >- fs[hom_def] >>
+            qx_gen_tac ‘b’ >> strip_tac >>
+            ‘?a. a IN A /\ f a = b’ by metis_tac[IN_IMAGE] >>
+            pop_assum (SUBST1_TAC o SYM) >>
+            qpat_x_assum ‘f = restr _ A’
+                         (assume_tac o SIMP_RULE (srw_ss()) [FUN_EQ_THM]) >>
+            simp[] >> simp[restr_def] >> metis_tac[hom_def, FST]) >>
+      ‘INJ u Qt (IMAGE f A)’
+        by (qabbrev_tac ‘imgfA = IMAGE f A’ >> simp[INJ_DEF] >>
+            conj_tac >- fs[hom_def] >> qx_genl_tac [‘ap1’, ‘ap2’]>>
+            rpt strip_tac >> CCONTR_TAC >>
+            fs[bquot_def] >>
+            ‘(?a1. a1 IN ap1) /\ ?a2. a2 IN ap2’
+              by metis_tac[MEMBER_NOT_EMPTY, EMPTY_NOT_IN_partition] >>
+            ‘a1 IN A /\ a2 IN A’ by metis_tac[partition_SUBSET, SUBSET_DEF] >>
+            rw[] >> fs[partition_def] >> rw[] >> fs[] >>
+            ‘a1 <> a2 /\ f a1 <> f a2’ by (rpt strip_tac >> fs[]) >>
+            full_simp_tac (bool_ss ++ boolSimps.CONJ_ss)[] >>
+            qpat_x_assum ‘f = restr _ _ ’
+                         (ASSUME_TAC o SIMP_RULE (srw_ss()) [FUN_EQ_THM]) >>
+            pop_assum (fn th => qspec_then ‘a1’ mp_tac th >>
+                       qspec_then ‘a2’ mp_tac th) >>
+            csimp[restr_def, eps_def] >>
+            fs[AC CONJ_ASSOC CONJ_COMM] >> metis_tac[]) >>
+      simp[] >>
+      irule (iffLR iso_SYM) >> irule BIJ_homs_iso >>
+      fs[] >> qexists_tac ‘u’ >> simp[BIJ_DEF]) >>
 
 *)
 
