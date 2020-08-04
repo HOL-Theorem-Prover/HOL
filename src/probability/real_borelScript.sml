@@ -33,7 +33,7 @@ open hurdUtils util_probTheory sigma_algebraTheory real_topologyTheory;
 
 val _ = new_theory "real_borel";
 
-val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
+val ASM_ARITH_TAC = rpt (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC;
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
 fun METIS ths tm = prove(tm,METIS_TAC ths);
@@ -49,6 +49,7 @@ Definition borel :
     borel = sigma univ(:real) {s | open s}
 End
 
+(* was: borel_measurable [definition] *)
 val _ = overload_on ("borel_measurable", ``\a. measurable a borel``);
 
 val indicator_fn_def = Define

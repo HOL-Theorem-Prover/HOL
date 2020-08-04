@@ -104,4 +104,12 @@ sig
     : {name:string, ABS:string, REP:string, tyax:thm} -> thm
 
   val MK_AC_LCOMM    : thm * thm -> thm * thm * thm
+
+  val underAIs : (thm -> thm) -> thm -> thm
+  val iffLR : thm -> thm
+  val iffRL : thm -> thm
+  val cj    : int -> thm -> thm
+  val pp    : thmpos_dtype.match_position -> thm -> thm
+
+
 end

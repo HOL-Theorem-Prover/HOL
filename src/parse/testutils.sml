@@ -148,7 +148,9 @@ fun timed f check x =
     val res = Res (f x) handle e => Exn e
     val {nongc = {usr,...}, gc = {usr = gc,...}} = Timer.checkCPUTimes cputimer
     val usr_s = "(" ^ Time.toString usr ^"s)      "
-    val gc_s = if Time.toReal gc / Time.toReal usr > 0.20 then
+    val gc_s = if Time.toReal usr > 0.000001 andalso
+                  Time.toReal gc / Time.toReal usr > 0.20
+               then
                  boldred ("[GC = " ^ Time.toString gc ^ "] ")
                else ""
     val _ = tadd (gc_s ^ usr_s)

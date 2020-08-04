@@ -260,6 +260,15 @@ Proof
  >> Q.EXISTS_TAC `E` >> art []
 QED
 
+(* Thus TONELLI and FUBINI theorems are applicable *)
+Theorem PROB_SPACE_SIGMA_FINITE :
+    !p. prob_space p ==> sigma_finite p
+Proof
+    RW_TAC std_ss [prob_space_def]
+ >> MATCH_MP_TAC FINITE_IMP_SIGMA_FINITE
+ >> rw [extreal_of_num_def, extreal_not_infty]
+QED
+
 val PROB_UNDER_UNIV = store_thm
   ("PROB_UNDER_UNIV",
   ``!p s. prob_space p /\ s IN events p ==> (prob p (s INTER p_space p) = prob p s)``,
@@ -1053,8 +1062,8 @@ val distribution_le_1 = store_thm
  >> MATCH_MP_TAC PROB_LE_1
  >> RW_TAC std_ss [IN_POW, INTER_SUBSET]);
 
-(* cf. measure_space_distr *)
-val distribution_prob_space = store_thm
+(* Theorem 3.1.3 [2, p.36], cf. measure_space_distr *)
+val distribution_prob_space = store_thm (* was: prob_space_distr *)
   ("distribution_prob_space",
   ``!p X s. prob_space p /\ random_variable X p s ==>
             prob_space (space s, subsets s, distribution p X)``,
@@ -2642,17 +2651,18 @@ QED
 (******************************************************************************)
 
 (* Probability version of SIGMA_SUBSET_MEASURABLE_SETS *)
-val SIGMA_SUBSET_EVENTS = store_thm
-  ("SIGMA_SUBSET_EVENTS",
-  ``!a p. prob_space p /\ a SUBSET events p ==>
-          subsets (sigma (p_space p) a) SUBSET events p``,
+Theorem SIGMA_SUBSET_EVENTS[local] :
+    !a p. prob_space p /\ a SUBSET events p ==>
+          subsets (sigma (p_space p) a) SUBSET events p
+Proof
     RW_TAC std_ss [prob_space_def, p_space_def, events_def]
- >> MATCH_MP_TAC SIGMA_SUBSET_MEASURABLE_SETS >> art []);
+ >> MATCH_MP_TAC SIGMA_SUBSET_MEASURABLE_SETS >> art []
+QED
 
 (* Lemma 3.5.2 [3, p.37], with simplifications from the Solution Manual of [9]
    (Problem 5.11)
  *)
-Theorem INDEP_FAMILIES_SIGMA_lemma :
+Theorem INDEP_FAMILIES_SIGMA_lemma[local] :
     !p B n (J :'index set).
               prob_space p /\ (IMAGE B (n INSERT J)) SUBSET events p /\
               indep_events p B (n INSERT J) /\ n NOTIN J
@@ -2808,19 +2818,20 @@ Proof
 QED
 
 (* Lemma 3.5.2 [3, p.37], more useful form *)
-val INDEP_FAMILIES_SIGMA_lemma1 = store_thm
-  ("INDEP_FAMILIES_SIGMA_lemma1",
-  ``!p A m (N :'index set) S2.
+Theorem INDEP_FAMILIES_SIGMA_lemma1[local] :
+    !p A m (N :'index set) S2.
          prob_space p /\ IMAGE A (m INSERT N) SUBSET events p /\
          indep_events p A (m INSERT N) /\ m NOTIN N /\
-         S2 IN subsets (sigma (p_space p) (IMAGE A N)) ==> indep p (A m) S2``,
+         S2 IN subsets (sigma (p_space p) (IMAGE A N)) ==> indep p (A m) S2
+Proof
     rpt STRIP_TAC
  >> irule (SIMP_RULE std_ss [indep_families_def, IN_SING]
                             (Q.SPEC `p` INDEP_FAMILIES_SIGMA_lemma)) >> art []
- >> Q.EXISTS_TAC `N` >> art []);
+ >> Q.EXISTS_TAC `N` >> art []
+QED
 
 (* Corollary 3.5.3 of [3, p.37], Part I *)
-Theorem INDEP_FAMILIES_SIGMA_lemma2 :
+Theorem INDEP_FAMILIES_SIGMA_lemma2[local] :
     !p A (M :'index set) N m S1.
        prob_space p /\ (IMAGE A (M UNION N)) SUBSET events p /\
        indep_events p A (M UNION N) /\ DISJOINT M N /\ m IN M /\ N <> {} /\
@@ -3518,7 +3529,7 @@ Proof
      REWRITE_TAC [extreal_sub_def, extreal_mul_def, extreal_not_infty]) >> Rewr'
  (* LHS: applying EXTREAL_SUM_IMAGE_IMAGE *)
  >> Know `A = IMAGE (\x. (x,x)) J`
- >- (Q.UNABBREV_TAC `A` >> RW_TAC std_ss [Once EXTENSION, IN_IMAGE, GSPECIFICATION])
+ >- RW_TAC std_ss [Abbr ‘A’, Once EXTENSION, IN_IMAGE, GSPECIFICATION]
  >> DISCH_TAC
  >> Know `!x. (SIGMA (\(i,j). (\n. X n x - expectation p (X n)) i *
                               (\n. X n x - expectation p (X n)) j) A =
@@ -3569,7 +3580,7 @@ Proof
          GEN_TAC >> DISCH_TAC >> DISJ1_TAC >> BETA_TAC \\
          CONJ_TAC >> MATCH_MP_TAC pos_not_neginf >> REWRITE_TAC [le_pow2]) \\
      CONJ_TAC
-     >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL \\
+     >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_TIMES \\
          qexistsl_tac [`\x. X q x - E1`, `\x. X r x - E2`] \\
          fs [prob_space_def, measure_space_def, space_def, p_space_def, events_def] \\
          CONJ_TAC
@@ -3581,19 +3592,12 @@ Proof
              >- (GEN_TAC >> DISCH_TAC >> DISJ1_TAC \\
                  Q.UNABBREV_TAC `E1` >> METIS_TAC []) \\
              MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST >> Q.EXISTS_TAC `E1` >> fs [space_def]) \\
-         reverse CONJ_TAC
-         >- (`!x. X r x - E2 = X r x - (\x. E2) x` by METIS_TAC [] >> POP_ORW \\
-             MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
-             Q.EXISTS_TAC `X r` >> Q.EXISTS_TAC `\x. E2` \\
-             fs [real_random_variable, space_def, p_space_def, events_def] \\
-             reverse CONJ_TAC >- (Q.UNABBREV_TAC `E2` >> METIS_TAC []) \\
-             MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST >> Q.EXISTS_TAC `E2` >> fs [space_def]) \\
-         GEN_TAC >> DISCH_TAC \\
-        `?a. X q x = Normal a` by PROVE_TAC [extreal_cases] >> POP_ORW \\
-        `?b. X r x = Normal b` by PROVE_TAC [extreal_cases] >> POP_ORW \\
-        `?c. E1 = Normal c` by PROVE_TAC [extreal_cases] >> POP_ORW \\
-        `?d. E2 = Normal d` by PROVE_TAC [extreal_cases] >> POP_ORW \\
-         REWRITE_TAC [extreal_sub_def, extreal_not_infty]) \\
+        `!x. X r x - E2 = X r x - (\x. E2) x` by METIS_TAC [] >> POP_ORW \\
+         MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB \\
+         qexistsl_tac [`X r`, `\x. E2`] \\
+         fs [real_random_variable, space_def, p_space_def, events_def] \\
+         reverse CONJ_TAC >- (Q.UNABBREV_TAC `E2` >> METIS_TAC []) \\
+         MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST >> Q.EXISTS_TAC `E2` >> fs [space_def]) \\
      RW_TAC std_ss [abs_le_half_pow2]) >> DISCH_TAC
  (* LHS: applying integral_add *)
  >> Know `expectation p
@@ -7684,7 +7688,7 @@ Proof
     METIS_TAC [expectation_converge, lt_infty]
 QED
 
-(* this is a probability-specific version of integral_distr *)
+(* Theorem 3.2.2 [2, p.47], probability-specific version of integral_distr *)
 Theorem expectation_distribution :
     !p X f. prob_space p /\ random_variable X p Borel /\ f IN measurable Borel Borel ==>
            (expectation p (f o X) =
@@ -7700,6 +7704,7 @@ Proof
  >> rw [SIGMA_ALGEBRA_BOREL]
 QED
 
+(* r.v.'s having indentical distributions have the same integrability *)
 Theorem identical_distribution_integrable :
     !p X. prob_space p /\ (!n. random_variable (X n) p Borel) /\
           identical_distribution p X Borel UNIV /\ integrable p (X 0) ==>
@@ -7727,6 +7732,7 @@ Proof
  >> METIS_TAC [integral_cong_measure, prob_space_def]
 QED
 
+(* r.v.'s having indentical distributions have the same expectation *)
 Theorem identical_distribution_expectation :
     !p X. prob_space p /\ (!n. random_variable (X n) p Borel) /\
           identical_distribution p X Borel UNIV ==>
@@ -7846,7 +7852,7 @@ Proof
  >> MATCH_MP_TAC PROB_INCREASING >> art []
 QED
 
-Theorem POS_COND_PROB_IMP_POS_PROB :
+Theorem COND_PROB_POS_IMP_PROB_NZ : (* was: POS_COND_PROB_IMP_POS_PROB *)
     !A B p. prob_space p /\ A IN events p /\ B IN events p /\
             0 < cond_prob p A B /\ prob p B <> 0 ==> prob p (A INTER B) <> 0
 Proof
@@ -8325,6 +8331,21 @@ Proof
         by METIS_TAC [REAL_MUL_ASSOC, REAL_MUL_COMM]
  >> RW_TAC std_ss [real_div, REAL_MUL_LINV, REAL_MUL_RID]
 QED
+
+(* tidy up theory exports, learnt from Magnus Myreen *)
+val _ = List.app Theory.delete_binding
+  ["convergence_mode_TY_DEF",
+   "convergence_mode_case_def",
+   "convergence_mode_size_def",
+   "convergence_mode_11",
+   "convergence_mode_Axiom",
+   "convergence_mode_case_cong",
+   "convergence_mode_case_eq",
+   "convergence_mode_distinct",
+   "convergence_mode_induction",
+   "convergence_mode_nchotomy",
+   "datatype_convergence_mode",
+   "converge_def"];
 
 val _ = export_theory ();
 

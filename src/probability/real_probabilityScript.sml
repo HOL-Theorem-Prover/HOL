@@ -1424,10 +1424,10 @@ val COND_PROB_INCREASING = store_thm
  >> METIS_TAC [PROB_POSITIVE, REAL_LT_LE, REAL_INV_POS, PROB_INCREASING,
     EVENTS_INTER, REAL_LE_RMUL]);
 
-val POS_COND_PROB_IMP_POS_PROB = store_thm
-  ("POS_COND_PROB_IMP_POS_PROB",
-  ``!A B p. prob_space p /\ A IN events p /\ B IN events p /\
-          (0 < cond_prob p A B) ==> (prob p (A INTER B) <> 0)``,
+Theorem COND_PROB_POS_IMP_PROB_NZ :
+    !A B p. prob_space p /\ A IN events p /\ B IN events p /\
+          (0 < cond_prob p A B) ==> (prob p (A INTER B) <> 0)
+Proof
     RW_TAC std_ss []
  >> `0 <= prob p B` by RW_TAC std_ss [PROB_POSITIVE]
  >> `prob p B <> 0` by (SPOSE_NOT_THEN STRIP_ASSUME_TAC
@@ -1435,10 +1435,11 @@ val POS_COND_PROB_IMP_POS_PROB = store_thm
          >> METIS_TAC [REAL_LT_IMP_NE])
  >> FULL_SIMP_TAC std_ss [cond_prob_def]
  >> `0 / prob p B = 0` by METIS_TAC [REAL_DIV_LZERO]
- >> METIS_TAC [REAL_LT_IMP_NE]);
+ >> METIS_TAC [REAL_LT_IMP_NE]
+QED
 
 val COND_PROB_BOUNDS = store_thm
-    ("COND_PROB_BOUNDS",
+  ("COND_PROB_BOUNDS",
     ``!p A B. prob_space p /\ A IN events p /\ B IN events p ==>
         0 <= cond_prob p A B /\ cond_prob p A B <= 1``,
      RW_TAC std_ss []

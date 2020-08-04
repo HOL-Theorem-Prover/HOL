@@ -350,6 +350,18 @@ Proof
   xfer_back_tac >> simp[fsequiv_def, pred_setTheory.UNION_ASSOC]
 QED
 
+Theorem fUNION_EMPTY[simp]:
+  !s. fUNION fEMPTY s = s /\ fUNION s fEMPTY = s
+Proof
+  xfer_back_tac >> simp[]
+QED
+
+Theorem fUNION_IDEMPOT[simp]:
+  !s. fUNION s s = s
+Proof
+  xfer_back_tac >> simp[fsequiv_def]
+QED
+
 Definition fDELETE_def:
   fDELETE = (I ---> fset_REP ---> fset_ABS) (\e. FILTER ($~ o $= e))
 End
@@ -487,13 +499,13 @@ QED
 
 Definition fINTER_def:
   fINTER = (fset_REP ---> fset_REP ---> fset_ABS)
-           (FILTER o combin$C MEM)
+           (FILTER o flip (IN) o set)
 End
 val _ = set_mapped_fixity {fixity = Infixl 600, term_name = "fINTER",
                            tok = "∩ᶠ"}                                 (* UOK *)
 
 Theorem fINTER_relates[transfer_rule]:
-  (FSET0 |==> FSET0 |==> FSET0) (FILTER o combin$C MEM) fINTER
+  (FSET0 |==> FSET0 |==> FSET0) (FILTER o flip (IN) o set) fINTER
 Proof
   map_every INTRO [HK_thm2, fINTER_def, funQ, funQ, fset0Q, fset0Q, fset0Q] >>
   simp[FUN_REL_def, fsequiv_def, LIST_TO_SET_FILTER]
@@ -503,6 +515,24 @@ Theorem IN_INTER[simp]:
   !e s1 s2. fIN e (fINTER s1 s2) <=> fIN e s1 /\ fIN e s2
 Proof
   xfer_back_tac >> simp[MEM_FILTER, CONJ_COMM]
+QED
+
+Theorem flip_IN_EMPTY[local]:
+  flip (IN) {} = \x. F
+Proof
+  simp[FUN_EQ_THM]
+QED
+
+Theorem fINTER_EMPTY[simp]:
+  !x. fINTER x fEMPTY = fEMPTY /\ fINTER fEMPTY x = fEMPTY
+Proof
+  xfer_back_tac >> simp[fsequiv_def, flip_IN_EMPTY]
+QED
+
+Theorem fINTER_IDEMPOT[simp]:
+  !x. fINTER x x = x
+Proof
+  xfer_back_tac >> simp[fsequiv_def, psEXTENSION, MEM_FILTER]
 QED
 
 Definition fFILTER_def:
