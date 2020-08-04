@@ -38,10 +38,13 @@ val PRED_SET_ss = pred_setSimps.PRED_SET_ss;
 val FST_COND_RAND = ISPEC `FST` COND_RAND;
 val SND_COND_RAND = ISPEC `SND` COND_RAND;
 
+val bool_ss = bool_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val booli_ss = bool_ss ++ ICLASS_ss ++ rewrites [iseq_distinct];
-val std_ss = std_ss ++ boolSimps.LET_ss;
-val arith_ss = arith_ss ++ boolSimps.LET_ss;
-val stdi_ss = armLib.stdi_ss++rewrites[FST_COND_RAND,SND_COND_RAND];
+val std_ss = std_ss ++ boolSimps.LET_ss -* ["lift_disj_eq", "lift_imp_disj"];
+val arith_ss = arith_ss ++ boolSimps.LET_ss -* ["lift_disj_eq", "lift_imp_disj"];
+val stdi_ss = armLib.stdi_ss++rewrites[FST_COND_RAND,SND_COND_RAND]
+                    -* ["lift_disj_eq", "lift_imp_disj"];
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 val SUC2NUM = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
 
@@ -248,7 +251,7 @@ val MAP_STM_MEMOP = GEN_ALL MAP_STM_MEMOP;
 (* ------------------------------------------------------------------------- *)
 
 val DUR_IC =
- (SIMP_RULE bossLib.bool_ss [GSYM RIGHT_AND_OVER_OR,GSYM LEFT_AND_OVER_OR] o
+ (SIMP_RULE bool_ss [GSYM RIGHT_AND_OVER_OR,GSYM LEFT_AND_OVER_OR] o
   SIMP_RULE (stdi_ss++PBETA_ss++boolSimps.CONJ_ss++boolSimps.DNF_ss)
    [RWA_def,PCCHANGE_def,FST_COND_RAND,SND_COND_RAND]) DUR_IC_def;
 
@@ -654,7 +657,7 @@ val CP_MEMOPS = Count.apply prove(
           IMP_RES_TAC lem3 \\ POP_LASTN_TAC 6
             \\ ASM_SIMP_TAC (std_ss++PRED_SET_ss) [FUNPOW_COMP,CP_NOT2]
             \\ FULL_SIMP_TAC std_ss [IS_BUSY_def,CP_NOT3]
-            \\ ASM_SIMP_TAC (bossLib.std_ss++STATE_INP_ss)
+            \\ ASM_SIMP_TAC (std_ss++STATE_INP_ss)
                  [SNEXT_def,ADVANCE_def,numeral_funpow,ADD_0]
             \\ ASM_SIMP_TAC (stdi_ss++MRC_ss++PBETA_ss)
                  [SND_COND_RAND,FST_COND_RAND,OUT_ARM6_def,IS_MEMOP_def]]]);
@@ -758,7 +761,7 @@ val CP_TC = Count.apply prove(
                 \\ STRIP_TAC \\ IMP_RES_TAC lem3
                 \\ POP_LASTN_TAC 4
                 << (let
-                  val tac = ASM_SIMP_TAC (bossLib.std_ss++STATE_INP_ss)
+                  val tac = ASM_SIMP_TAC (std_ss++STATE_INP_ss)
                          [SNEXT_def,ADVANCE_def,numeral_funpow,ADD_0]
                     \\ ASM_SIMP_TAC (stdi_ss++MCR_ss++MRC_ss++PBETA_ss)
                          [SND_COND_RAND,FST_COND_RAND,IF_NEG,REGVAL_lem]
@@ -870,7 +873,7 @@ val NON_MEMOPS = Count.apply prove(
     \\ ASM_SIMP_TAC stdi_ss [DUR_IC] \\ STRIP_TAC \\ UNABBREV_TAC `d`
     \\ TRY COND_CASES_TAC \\ SIMP_TAC std_ss [SUC2NUM RESET_THM]
     \\ STRIP_TAC \\ IMP_RES_TAC NOT_RESET_EXISTS
-    \\ ASM_SIMP_TAC (bossLib.std_ss++STATE_INP_ss)
+    \\ ASM_SIMP_TAC (std_ss++STATE_INP_ss)
          [OUT_ARM6_def,IS_MEMOP2,IS_MEMOP2_def,LET_FILTER,SNOC,GENLISTn,
           SNEXT_def,ADVANCE_def,PROJ_DATA_def,TL,numeral_funpow]
     \\ REPEAT (PAT_ABBREV_TAC `s = NEXT_ARM6 a b`)
@@ -880,9 +883,9 @@ val NON_MEMOPS = Count.apply prove(
                   DATA_PROC_ss++REG_SHIFT_ss++SWI_EX_ss++UNEXEC_ss++PBETA_ss)
                 [SND_COND_RAND,FST_COND_RAND,REGVAL_lem2,WORD_NEQS]
            \\ TRY ALU_ABBREV_TAC \\ TRY PSR_ABBREV_TAC
-           \\ ASM_SIMP_TAC bossLib.old_arith_ss [markerTheory.Abbrev_def,LEM]
+           \\ ASM_SIMP_TAC old_arith_ss [markerTheory.Abbrev_def,LEM]
            \\ DISCH_THEN SUBST_ALL_TAC
-           \\ SIMP_TAC (bossLib.std_ss++STATE_INP_ss)
+           \\ SIMP_TAC (std_ss++STATE_INP_ss)
                 [OUT_ARM6_def,IS_MEMOP2_def])
     \\ ASM_SIMP_TAC (stdi_ss++UNEXEC_ss++SWI_EX_ss) []
     \\ (CONJ_TAC >> FINISH_OFF
@@ -929,7 +932,7 @@ val NON_MEMOPS_UNEXEC = Count.apply prove(
           INIT_ARM6_def,num2exception_exception2num,COMBINE_def,
           FST_COND_RAND,SND_COND_RAND,STATE_ARM6_COR,FUNPOW]
     \\ STRIP_TAC
-    \\ ASM_SIMP_TAC (bossLib.std_ss++STATE_INP_ss)
+    \\ ASM_SIMP_TAC (std_ss++STATE_INP_ss)
          [OUT_ARM6_def,IS_MEMOP2,IS_MEMOP2_def,LET_FILTER,SNOC,GENLISTn,
           SNEXT_def,ADVANCE_def,numeral_funpow]
     \\ REPEAT (PAT_ABBREV_TAC `s = NEXT_ARM6 a b`)
@@ -938,7 +941,7 @@ val NON_MEMOPS_UNEXEC = Count.apply prove(
          \\ ASM_SIMP_TAC (booli_ss++SWI_EX_ss++UNEXEC_ss++pairSimps.PAIR_ss++
               PBETA_ss) [SND_COND_RAND,FST_COND_RAND,WORD_NEQS]
          \\ TRY ALU_ABBREV_TAC \\ TRY PSR_ABBREV_TAC \\ STRIP_TAC
-         \\ POP_ASSUM (fn th => FULL_SIMP_TAC (bossLib.std_ss++STATE_INP_ss)
+         \\ POP_ASSUM (fn th => FULL_SIMP_TAC (std_ss++STATE_INP_ss)
               [OUT_ARM6_def,IS_MEMOP2_def,
                REWRITE_RULE [markerTheory.Abbrev_def] th]))
     \\ SIMP_TAC (stdi_ss++SWI_EX_ss) []
@@ -993,19 +996,19 @@ val BASIC_MEMOPS = Count.apply prove(
          [OUT_ARM6_def,IS_MEMOP2,IS_MEMOP2_def,LET_FILTER,SNOC,GENLISTn,
           PROJ_DATA_def,MOVE_DOUT_def,SNEXT_def,ADVANCE_def,numeral_funpow]
     \\ REPEAT (PAT_ABBREV_TAC `s = NEXT_ARM6 a b`)
-    \\ FULL_SIMP_TAC bossLib.std_ss []
+    \\ FULL_SIMP_TAC std_ss []
     \\ REPEAT (PAT_X_ASSUM `Abbrev (q = NEXT_ARM6 (ARM6 dp ctrl) input)` MP_TAC
          \\ ASM_SIMP_TAC (booli_ss++pairSimps.PAIR_ss++SWP_ss++LDR_ss++
                 STR_ss++ARITH_ss++UNEXEC_ss++PBETA_ss)
                [SND_COND_RAND,FST_COND_RAND]
          \\ TRY ALU_ABBREV_TAC
-         \\ ASM_SIMP_TAC bossLib.old_arith_ss [markerTheory.Abbrev_def,LEM,LEM2]
+         \\ ASM_SIMP_TAC old_arith_ss [markerTheory.Abbrev_def,LEM,LEM2]
          \\ DISCH_THEN SUBST_ALL_TAC
-         \\ SIMP_TAC (bossLib.std_ss++STATE_INP_ss)
+         \\ SIMP_TAC (std_ss++STATE_INP_ss)
               [OUT_ARM6_def,IS_MEMOP2_def])
     \\ (CONJ_TAC
     << [
-      CONJ_TAC >> (ASM_SIMP_TAC bossLib.std_ss [LEM] \\ FINISH_OFF)
+      CONJ_TAC >> (ASM_SIMP_TAC std_ss [LEM] \\ FINISH_OFF)
         \\ RULE_ASSUM_TAC (SIMP_RULE (stdi_ss++ALU_ss++ALU2_ss) [])
         \\ FULL_SIMP_TAC (stdi_ss++STATE_INP_ss)
              ([IS_SOME_COND,HD,LDR_IMP_BITS,STR_IMP_BITS] @ finish_rws3)
@@ -1057,16 +1060,16 @@ val next_7tuple = (GEN_ALL o ONCE_REWRITE_CONV [form_7tuple]) ``NEXT_ARM6 x i``;
 val LDM_INIT =
   (SIMP_RULE (std_ss++boolSimps.CONJ_ss++ICLASS_ss)
      [NOT_T3,IN_LDM_STM,PENCZ_THM3,MASKN_SUC,MASKN_1,LSL_ZERO] o
-   SIMP_RULE (bossLib.bool_ss++LDM_ss++PBETA_ss)
+   SIMP_RULE (bool_ss++LDM_ss++PBETA_ss)
      [IS_ABORT,SND_COND_RAND,FST_COND_RAND] o
-   SIMP_RULE (bossLib.bool_ss++LDM_ss) [IS_ABORT,SND_COND_RAND,FST_COND_RAND] o
+   SIMP_RULE (bool_ss++LDM_ss) [IS_ABORT,SND_COND_RAND,FST_COND_RAND] o
    CONV_RULE (RAND_CONV (RHS_CONV (LAND_CONV
      (ONCE_REWRITE_CONV [next_7tuple])))) o
    CONV_RULE (RAND_CONV (RHS_CONV (ONCE_REWRITE_CONV [next_7tuple]))) o
    SIMP_RULE stdi_ss [IC_def,ABORTINST_def,NXTIC_def,DECODE_PSR_def] o
    DISCH `(DECODE_INST ireg = ldm) /\ (aregn2 = 2w) /\
           CONDITION_PASSED (NZCV (CPSR_READ psr)) ireg` o
-   SIMP_CONV bossLib.bool_ss [INIT_ARM6_def])
+   SIMP_CONV bool_ss [INIT_ARM6_def])
    ``NEXT_ARM6 (NEXT_ARM6 (INIT_ARM6 (ARM6 (DP reg psr areg din alua alub dout)
        (CTRL pipea pipeaval pipeb pipebval ireg iregval ointstart onewinst
           endinst obaselatch opipebll nxtic nxtis nopc1 oorst resetlatch
@@ -1161,7 +1164,7 @@ val FILTER_LDM_MEMOPS_X = prove(
     \\ IMP_RES_TAC LDM_GENLIST_MEMOP_EQ \\ NTAC 15 (POP_LAST_TAC)
     \\ POP_ASSUM SUBST1_TAC
     \\ MATCH_MP_TAC ((GEN_ALL o BETA_RULE o ISPEC LDM_f) FILTER_MEMOP_NONE)
-    \\ RW_TAC bossLib.std_ss [IS_MEMOP_def]);
+    \\ RW_TAC std_ss [IS_MEMOP_def]);
 
 fun PAT_TAC (asl, w) =
   let val g = (snd o strip_comb o snd o dest_comb o snd o hd o snd o
@@ -1188,7 +1191,7 @@ local
    \\ ASM_SIMP_TAC (booli_ss++pairSimps.PAIR_ss++ss++PBETA_ss)
         [NOT_ABORT,SND_COND_RAND,FST_COND_RAND]
    \\ TRY ALU_ABBREV_TAC \\ STRIP_TAC
-   \\ POP_ASSUM (fn th => FULL_SIMP_TAC (bossLib.std_ss++boolSimps.CONJ_ss)
+   \\ POP_ASSUM (fn th => FULL_SIMP_TAC (std_ss++boolSimps.CONJ_ss)
        [OUT_ARM6_def,IS_MEMOP2_def,REWRITE_RULE [markerTheory.Abbrev_def] th])
 in
   val LDM_TAC = tac LDM_ss
@@ -1254,13 +1257,13 @@ val LDM_MEMOPS = Count.apply prove(
         \\ PAT_X_ASSUM `!y. FILTER f l = l` (K ALL_TAC)
         \\ RES_MP_TAC [] LDM_GENLIST_MEMOP_EQ \\ POP_ASSUM IMP_RES_TAC
         \\ PAT_X_ASSUM `Abbrev (x0 = SINIT INIT_ARM6 x)` MP_TAC
-        \\ ASM_SIMP_TAC (bossLib.std_ss++STATE_INP_ss) [Abbr`x`,SINIT_def,
+        \\ ASM_SIMP_TAC (std_ss++STATE_INP_ss) [Abbr`x`,SINIT_def,
              IC_def,ABORTINST_def,NXTIC_def,DECODE_PSR_def,SNEXT2,ADVANCE_def,
              INIT_ARM6,numeral_funpow]
         \\ POP_LAST_TAC \\ STRIP_TAC
-        \\ SIMP_TAC (bossLib.std_ss++STATE_INP_ss) [Abbr`x0`,OUT_ARM6_def,
+        \\ SIMP_TAC (std_ss++STATE_INP_ss) [Abbr`x0`,OUT_ARM6_def,
              IS_MEMOP2_def,GSYM ADVANCE_COMP]
-        \\ SIMP_TAC bossLib.std_ss [ONCE_REWRITE_RULE [ADD_COMM] FUNPOW_COMP]
+        \\ SIMP_TAC std_ss [ONCE_REWRITE_RULE [ADD_COMM] FUNPOW_COMP]
         \\ REPEAT (PAT_ABBREV_TAC `q = NEXT_ARM6 a b`)
         \\ ABBREV_TAC `sn = FUNPOW (SNEXT NEXT_ARM6) n
               <| state := q'; inp := ADVANCE 2 inp|>`
@@ -1270,19 +1273,19 @@ val LDM_MEMOPS = Count.apply prove(
         \\ PAT_X_ASSUM `Abbrev (sn = FUNPOW fn n state)` MP_TAC
         \\ `0 < SUC n` by DECIDE_TAC \\ IMP_RES_TAC NEXT_CORE_LDM_TN_W1
         \\ POP_ASSUM MP_TAC
-        \\ ASM_SIMP_TAC (bossLib.old_arith_ss++STATE_INP_ss) [GSYM ADVANCE_COMP,
+        \\ ASM_SIMP_TAC (old_arith_ss++STATE_INP_ss) [GSYM ADVANCE_COMP,
              LDM_PENCZ_ZERO,NOT_T3,PROJ_DATA_def,PROJ_ABORT_def,PENCZ_ONE,
              MASKN_1,MASKN_SUC,SPECL [`i`,`1`] IS_ABORT_def,PENCZ_THM3,LSL_ZERO]
         \\ DISCH_THEN (STRIP_ASSUME_TAC o
              (CONV_RULE (TOP_DEPTH_CONV (CHANGED_CONV (SKOLEM_CONV)))))
-        \\ ASM_SIMP_TAC (bossLib.old_arith_ss++STATE_INP_ss)
+        \\ ASM_SIMP_TAC (old_arith_ss++STATE_INP_ss)
              [numeral_funpow,SNEXT2,ADVANCE_def]
         \\ POP_LAST_TAC \\ PAT_TAC
         \\ REPEAT (PAT_ABBREV_TAC `q = NEXT_ARM6 a b`)
         \\ STRIP_TAC \\ UNABBREV_TAC `sn`
-        \\ RULE_ASSUM_TAC (SIMP_RULE (bossLib.old_arith_ss++STATE_INP_ss)
+        \\ RULE_ASSUM_TAC (SIMP_RULE (old_arith_ss++STATE_INP_ss)
              [ADVANCE_def,PROJ_DATA_def])
-        \\ ASM_SIMP_TAC (bossLib.std_ss++STATE_INP_ss)
+        \\ ASM_SIMP_TAC (std_ss++STATE_INP_ss)
              [OUT_ARM6_def,IS_MEMOP2_def]
         << [
           `~IS_RESET inp (SUC n + 1)` by ASM_SIMP_TAC arith_ss []
@@ -1382,7 +1385,7 @@ val LDM = Count.apply prove(
     \\ POP_ASSUM MP_TAC
     \\ REWRITE_TAC [FUNPOW_COMP]
     \\ PAT_X_ASSUM `~FST (DUR_X x0)` MP_TAC
-    \\ ASM_SIMP_TAC (bossLib.std_ss++STATE_INP_ss)
+    \\ ASM_SIMP_TAC (std_ss++STATE_INP_ss)
          [Abbr`x`,Abbr`x0`,ADVANCE_def,SINIT_def,SNEXT,numeral_funpow]
     \\ `~IS_RESET inp 0 /\ ~IS_RESET inp 1` by ASM_SIMP_TAC arith_ss []
     \\ MAP_EVERY IMP_RES_TAC [NOT_RESET_EXISTS2,LDM_INIT]
@@ -1542,7 +1545,7 @@ val STM_INIT =
    DISCH `1 < LENGTH (REGISTER_LIST ((15 >< 0) ireg)) /\
           (DECODE_INST ireg = stm) /\ (aregn2 = 2w) /\
           CONDITION_PASSED (NZCV (CPSR_READ psr)) ireg` o
-   SIMP_CONV bossLib.bool_ss [INIT_ARM6_def])
+   SIMP_CONV bool_ss [INIT_ARM6_def])
    ``NEXT_ARM6 (NEXT_ARM6 (INIT_ARM6 (ARM6 (DP reg psr areg din alua alub dout)
        (CTRL pipea pipeaval pipeb pipebval ireg iregval ointstart onewinst
           endinst obaselatch opipebll nxtic nxtis nopc1 oorst resetlatch
@@ -1642,7 +1645,7 @@ val FILTER_STM_MEMOPS_X = prove(
     \\ IMP_RES_TAC STM_GENLIST_MEMOP_EQ
     \\ POP_ASSUM SUBST1_TAC
     \\ MATCH_MP_TAC ((GEN_ALL o BETA_RULE o ISPEC STM_f) FILTER_MEMOP_NONE)
-    \\ RW_TAC bossLib.std_ss [IS_MEMOP_def]);
+    \\ RW_TAC std_ss [IS_MEMOP_def]);
 
 val FILTER_STM_MEMOPS_X =
   SIMP_RULE (bool_ss++boolSimps.LET_ss) [] FILTER_STM_MEMOPS_X;
@@ -1652,7 +1655,7 @@ val STM_TAC =
    \\ ASM_SIMP_TAC (booli_ss++pairSimps.PAIR_ss++STM_ss++PBETA_ss)
         [SND_COND_RAND,FST_COND_RAND]
    \\ TRY ALU_ABBREV_TAC \\ STRIP_TAC
-   \\ POP_ASSUM (fn th => FULL_SIMP_TAC (bossLib.std_ss++boolSimps.CONJ_ss)
+   \\ POP_ASSUM (fn th => FULL_SIMP_TAC (std_ss++boolSimps.CONJ_ss)
         [OUT_ARM6_def,IS_MEMOP2_def,REWRITE_RULE [markerTheory.Abbrev_def] th]);
 
 val _ = print "*\nVerifying output: stm\n*\n"; (*============================*)
@@ -1731,17 +1734,17 @@ val STM_MEMOPS = Count.apply prove(
                                  else DECODE_MODE ((4 >< 0) (CPSR_READ psr))`
             \\ IMP_RES_TAC STM_GENLIST_MEMOP_EQ
             \\ POP_ASSUM SUBST1_TAC
-            \\ SIMP_TAC (bossLib.old_arith_ss++STATE_INP_ss)
+            \\ SIMP_TAC (old_arith_ss++STATE_INP_ss)
                  [Abbr`x0`,Abbr`x`,SINIT_def,SNEXT,numeral_funpow]
             \\ REPEAT (PAT_ABBREV_TAC `q = NEXT_ARM6 a b`)
-            \\ FULL_SIMP_TAC (bossLib.std_ss++STATE_INP_ss) [INIT_ARM6,IC_def,
+            \\ FULL_SIMP_TAC (std_ss++STATE_INP_ss) [INIT_ARM6,IC_def,
                  ABORTINST_def,NXTIC_def,DECODE_PSR_def]
-            \\ FULL_SIMP_TAC (bossLib.std_ss++STATE_INP_ss)
+            \\ FULL_SIMP_TAC (std_ss++STATE_INP_ss)
                  [ADVANCE_def,OUT_ARM6_def,IS_MEMOP2_def,ABS_ARM6_def]
             \\ `~IS_RESET inp 1` by ASM_SIMP_TAC arith_ss []
             \\ IMP_RES_TAC NOT_RESET_EXISTS2 \\ POP_LAST_TAC
             \\ NTAC 2 STM_TAC
-            \\ ASM_SIMP_TAC (bossLib.old_arith_ss++STATE_INP_ss) [MASK_def,
+            \\ ASM_SIMP_TAC (old_arith_ss++STATE_INP_ss) [MASK_def,
                  STM_PENCZ_ZERO,STM_PENCZ_ONE,LSL_ZERO,MASKN_1,MASKN_2,
                  GSYM ADVANCE_COMP,iseq_distinct]
             \\ UNABBREV_TAC `nbs`
@@ -1755,7 +1758,7 @@ val STM_MEMOPS = Count.apply prove(
                  (CONV_RULE (TOP_DEPTH_CONV (CHANGED_CONV (SKOLEM_CONV)))))
             \\ `SUC n' = SUC (SUC n') - 1` by DECIDE_TAC
             \\ POP_ASSUM SUBST1_TAC
-            \\ ASM_SIMP_TAC (bossLib.std_ss++STATE_INP_ss) [OUT_ARM6_def]
+            \\ ASM_SIMP_TAC (std_ss++STATE_INP_ss) [OUT_ARM6_def]
             \\ POP_LAST_TAC
             \\ `LENGTH (FST (ADDR_MODE4 (ireg %% 24) (ireg %% 23)
                   (REG_READ6 reg nbs ((19 >< 16) ireg)) ((15 >< 0) ireg))) =
@@ -1822,7 +1825,7 @@ val STM = Count.apply prove(
     \\ POP_ASSUM MP_TAC
     \\ ONCE_REWRITE_TAC [ADD_COMM] \\ REWRITE_TAC [FUNPOW_COMP]
     \\ PAT_X_ASSUM `~FST (DUR_X x0)` MP_TAC
-    \\ ASM_SIMP_TAC (bossLib.std_ss++STATE_INP_ss)
+    \\ ASM_SIMP_TAC (std_ss++STATE_INP_ss)
          [Abbr`x`,Abbr`x0`,ADVANCE_def,SINIT_def,SNEXT,numeral_funpow]
     \\ ASM_SIMP_TAC stdi_ss [DUR_X2,DUR_IC_def,INIT_ARM6] \\ POP_LAST_TAC
     \\ STRIP_TAC
@@ -1943,7 +1946,7 @@ val ARM6_OUT_THM = prove(
                          DECODE_PSR_def,MAP,CP_NOT,CP_NOT2],
                   `DECODE_INST ireg = mla_mul`
                     by (Cases_on `DECODE_INST ireg` \\
-                        FULL_SIMP_TAC (bossLib.bool_ss++PRED_SET_ss) [])
+                        FULL_SIMP_TAC (bool_ss++PRED_SET_ss) [])
                     \\ IMP_RES_TAC MEM_MLA_MUL \\ POP_LAST_TAC
                     \\ IMP_RES_TAC lem
                     \\ ASM_SIMP_TAC (stdi_ss++STATE_INP_ss)
