@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib
 
-open listTheory
+open listTheory rich_listTheory
 open grammarTheory
 open pred_setTheory
 open finite_mapTheory
@@ -729,7 +729,7 @@ Proof
   Induct_on ‘RTC’ >> simp[] >> conj_tac
   >- (qx_gen_tac ‘sf0’ >> qexists_tac‘MAP (λsym. Lf (sym, ARB)) sf0’ >>
       simp[MAP_MAP_o, MEM_MAP, combinTheory.o_ABS_R, PULL_EXISTS] >>
-      simp[LIST_EQ_REWRITE, rich_listTheory.LENGTH_FLAT, MAP_MAP_o,
+      simp[LIST_EQ_REWRITE, LENGTH_FLAT, MAP_MAP_o,
            combinTheory.o_ABS_R] >> csimp[] >>
       conj_tac >- (Induct_on ‘sf0’ >> simp[]) >>
       Induct_on ‘sf0’ >>
@@ -875,6 +875,8 @@ QED
 
 Definition augment_def:
   augment k v fm =
+  if v = ∅ᶠ then fm
+  else
     case FLOOKUP fm k of
       NONE => fm |+ (k,v)
     | SOME v0 => fm |+ (k, v0 ∪ᶠ v)
@@ -885,8 +887,8 @@ Theorem fUNION_ASSOC[local] = finite_setTheory.fUNION_ASSOC
 Theorem augment_collapse[simp]:
   augment k v1 (augment k v2 fm) = augment k (v1 ∪ᶠ v2) fm
 Proof
-  simp[augment_def, FLOOKUP_DEF] >> rw[] >> fs[] >>
-  simp[AC fUNION_ASSOC fUNION_COMM]
+  rw[augment_def, FLOOKUP_DEF] >> fs[] >>
+  metis_tac[fUNION_COMM, fUNION_ASSOC]
 QED
 
 Theorem augment_update:
@@ -895,7 +897,7 @@ Theorem augment_update:
   else augment k1 v1 fm |+ (k2,v2)
 Proof
   simp[augment_def, FLOOKUP_UPDATE] >>
-  Cases_on ‘k1 = k2’ >> simp[AC fUNION_ASSOC fUNION_COMM] >>
+  Cases_on ‘k1 = k2’ >> simp[AC fUNION_ASSOC fUNION_COMM] >> rw[] >>
   Cases_on ‘FLOOKUP fm k1’ >>
   simp[AC fUNION_ASSOC fUNION_COMM, FUPDATE_COMMUTES]
 QED
@@ -905,13 +907,10 @@ Theorem augment_commutes:
 Proof
   Cases_on ‘k1 = k2’ >> simp[AC fUNION_ASSOC fUNION_COMM] >>
   Induct >> conj_tac
-  >- csimp[augment_def, FLOOKUP_DEF, FUPDATE_COMMUTES] >>
+  >- (csimp[augment_def, FLOOKUP_DEF, FUPDATE_COMMUTES] >> rw[] >> fs[] >>
+      simp[FUPDATE_COMMUTES]) >>
   simp[augment_update] >> rw[] >> rw[augment_update] >> metis_tac[]
 QED
-
-Definition augment1_def:
-  augment1 k e fm = augment k {e}ᶠ fm
-End
 
 Definition safelookup_def:
   safelookup fm k =
@@ -940,18 +939,6 @@ Theorem fSUBSET_TRANS:
   fSUBSET fs1 fs2 /\ fSUBSET fs2 fs3 ==> fSUBSET fs1 fs3
 Proof
   simp[finite_setTheory.fSUBSET_def] >> metis_tac[]
-QED
-
-Theorem fUNION_EQ_EMPTY[simp]:
-  fUNION fs1 fs2 = fEMPTY <=> fs1 = fEMPTY /\ fs2 = fEMPTY
-Proof
-  simp[finite_setTheory.EXTENSION] >> metis_tac[]
-QED
-
-Theorem fUNION_EMPTY[simp]:
-  fUNION fEMPTY s = s /\ fUNION s fEMPTY = s
-Proof
-  simp[finite_setTheory.EXTENSION]
 QED
 
 Theorem subfmset_map_TRANS:
@@ -1018,12 +1005,10 @@ Theorem follow_approx_augment[simp]:
   follow_approx g (augment N fs A) ⇔
   follow_approx g A ∧ ∀s. s ∈ᶠ fs ⇒ follow g N s
 Proof
-  simp[augment_def, follow_approx_def, FLOOKUP_DEF] >>
-  Cases_on ‘N ∈ FDOM A’ >> simp[DISJ_IMP_THM, FORALL_AND_THM] >>
-  simp[FAPPLY_FUPDATE_THM] >>
+  simp[augment_def, follow_approx_def, FLOOKUP_DEF] >> rw[] >>
+  simp[DISJ_IMP_THM, FORALL_AND_THM, FAPPLY_FUPDATE_THM] >>
   asm_simp_tac (srw_ss() ++ boolSimps.COND_elim_ss) [] >> metis_tac[]
 QED
-
 
 Theorem follow_p1_approxes:
   ∀A. follow_approx g A ∧ N ∈ FDOM g.rules ∧ sf ∈ᶠ g.rules ' N ∧
@@ -1031,11 +1016,11 @@ Theorem follow_p1_approxes:
       follow_approx g (follow_p1 g sf0 A)
 Proof
   Induct_on ‘sf0’ >> simp[] >> Cases >> simp[] >> rw[]
-  >- metis_tac[rich_listTheory.IS_SUFFIX_CONS2_E] >>
+  >- metis_tac[IS_SUFFIX_CONS2_E] >>
   first_x_assum irule >> simp[] >> conj_tac
-  >- metis_tac[rich_listTheory.IS_SUFFIX_CONS2_E] >>
+  >- metis_tac[IS_SUFFIX_CONS2_E] >>
   simp[finite_setTheory.IN_fromSet] >>
-  fs[rich_listTheory.IS_SUFFIX_APPEND] >> metis_tac[follow_rules]
+  fs[IS_SUFFIX_APPEND] >> metis_tac[follow_rules]
 QED
 
 Theorem ITSET_follow_p1_approxes:
@@ -1046,7 +1031,7 @@ Proof
   Induct >> simp[DISJ_IMP_THM, FORALL_AND_THM] >> rw[] >>
   simp[finite_setTheory.fITSET_INSERT, follow_p1_commutes] >>
   irule follow_p1_approxes >> conj_tac
-  >- metis_tac[rich_listTheory.IS_SUFFIX_REFL] >>
+  >- metis_tac[IS_SUFFIX_REFL] >>
   first_x_assum irule >> simp[]
 QED
 
@@ -1091,6 +1076,79 @@ Proof
   simp[MATCH_MP (ITFMAP_thm |> CONJUNCT2) K_fITfollowp1_commutes] >>
   irule ITSET_follow_p1_approxes >> simp[DOMSUB_NOT_IN_DOM] >> metis_tac[]
 QED
+
+Definition follow_p2_sf_def:
+  follow_p2_sf g M [] A = A ∧
+  follow_p2_sf g M (TOK _ :: rest) A = follow_p2_sf g M rest A ∧
+  follow_p2_sf g M (NT N :: rest) A =
+  if nullable g rest then follow_p2_sf g M rest (augment N (safelookup A M) A)
+  else follow_p2_sf g M rest A
+End
+
+Theorem follow_p2_sf_approxes:
+  ∀A. follow_approx g A ∧ M ∈ FDOM g.rules ∧ sf0 ∈ᶠ g.rules ' M ∧
+      IS_SUFFIX sf0 sf ⇒
+      follow_approx g (follow_p2_sf g M sf A)
+Proof
+  Induct_on ‘sf’ >> simp[follow_p2_sf_def] >> rw[] >> Cases_on ‘h’ >>
+  simp[follow_p2_sf_def]
+  >- metis_tac[IS_SUFFIX_CONS2_E] >>
+  reverse (rw[]) >- metis_tac[IS_SUFFIX_CONS2_E] >>
+  first_x_assum irule >> simp[] >> conj_tac >- metis_tac[IS_SUFFIX_CONS2_E] >>
+  fs[follow_approx_def, safelookup_def] >> Cases_on ‘FLOOKUP A M’ >> simp[] >>
+  fs[IS_SUFFIX_APPEND] >> metis_tac[follow_rules]
+QED
+
+Theorem safelookup_augment_thm:
+  safelookup (augment k1 v A) k2 =
+  if k1 = k2 then safelookup A k1 ∪ᶠ v else safelookup A k2
+Proof
+  rw[safelookup_def, augment_def]
+  >- (Cases_on ‘FLOOKUP A k1’ >> simp[FLOOKUP_UPDATE]) >>
+  Cases_on ‘FLOOKUP A k1’ >> simp[FLOOKUP_UPDATE]
+QED
+
+Theorem follow_p2_sf_alt:
+  follow_p2_sf g M (NT N :: rest) A =
+  if N = M ∨ ¬nullable g rest then follow_p2_sf g M rest A
+  else follow_p2_sf g M rest (augment N (safelookup A M) A)
+Proof
+  rw[follow_p2_sf_def] >> fs[] >> AP_TERM_TAC >>
+  rw[augment_def, safelookup_def] >> Cases_on ‘FLOOKUP A M’ >> fs[] >>
+  fs[FLOOKUP_DEF, fmap_EXT, DISJ_IMP_THM, FAPPLY_FUPDATE_THM, ABSORPTION_RWT] >>
+  rw[]
+QED
+
+Theorem safelookup_follow_p2_sf[simp]:
+  ∀A sf. safelookup (follow_p2_sf g M sf A) M = safelookup A M
+Proof
+  Induct_on ‘sf’ >> simp[follow_p2_sf_def] >> Cases >>
+  rw[follow_p2_sf_def, safelookup_augment_thm]
+QED
+
+Theorem augment_follow_p2_sf:
+  ∀A M N.
+    M ≠ N ⇒
+    augment N v (follow_p2_sf g M sf A) = follow_p2_sf g M sf (augment N v A)
+Proof
+  Induct_on ‘sf’ >> simp[follow_p2_sf_def] >> Cases
+  >- simp[follow_p2_sf_def] >>
+  rw[safelookup_augment_thm, follow_p2_sf_alt] >> fs[] >>
+  metis_tac[augment_commutes]
+QED
+
+Theorem follow_p2_sf_commutes:
+  ∀A. follow_p2_sf g M sf1 (follow_p2_sf g M sf2 A) =
+      follow_p2_sf g M sf2 (follow_p2_sf g M sf1 A)
+Proof
+  Induct_on ‘sf1’ >> simp[follow_p2_sf_def] >> Cases
+  >- (simp[follow_p2_sf_def] >> metis_tac[]) >>
+  rw[follow_p2_sf_alt] >- metis_tac[] >- metis_tac[] >> fs[] >>
+  metis_tac[augment_follow_p2_sf]
+QED
+
+
+
 
 (*
 
