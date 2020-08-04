@@ -446,9 +446,6 @@ starts >%s%s<"
           (delete-region (- start 1) (point))))))
 
 
-(defun word-list-to-regexp (words)
-  (mapconcat (lambda (s) (concat "\\<" s "\\>")) words "\\|"))
-
 (setq hol-open-terminator-regexp
       (concat
        (mapconcat (lambda (s) (concat "^" s "\\>"))
@@ -456,9 +453,9 @@ starts >%s%s<"
                     "Triviality" "Datatype" "Type" "Overload")
                   "\\|")
        "\\|"
-       (word-list-to-regexp
-        '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
-          "datatype" "nonfix" "exception" "end" "structure"))))
+       (regexp-opt
+        '("val" "fun" "in" "infix" "infixl" "infixr" "open" "local" "type"
+          "datatype" "nonfix" "exception" "end" "structure") 'symbols)))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
