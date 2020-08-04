@@ -356,6 +356,12 @@ Proof
   xfer_back_tac >> simp[]
 QED
 
+Theorem fUNION_EQ_EMPTY[simp]:
+  !s1 s2. fUNION s1 s2 = fEMPTY <=> s1 = fEMPTY /\ s2 = fEMPTY
+Proof
+  xfer_back_tac >> simp[fsequiv_def]
+QED
+
 Theorem fUNION_IDEMPOT[simp]:
   !s. fUNION s s = s
 Proof
