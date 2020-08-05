@@ -53,7 +53,7 @@ Definition real_set_def :
     real_set s = {real x | x <> PosInf /\ x <> NegInf /\ x IN s}
 End
 
-Theorem real_normal :
+Theorem real_normal[simp] :
     !x. real (Normal x) = x
 Proof
     RW_TAC std_ss [real_def]
@@ -192,6 +192,18 @@ Theorem extreal_11[simp] :
     !a a'. (Normal a = Normal a') <=> (a = a')
 Proof
     RW_TAC std_ss []
+QED
+
+Theorem normal_real_set :
+    !(s :extreal set). s INTER (IMAGE Normal UNIV) = IMAGE Normal (real_set s)
+Proof
+    rw [Once EXTENSION, real_set_def]
+ >> EQ_TAC >> rw []
+ >- (rename1 ‘Normal y IN s’ \\
+     Q.EXISTS_TAC ‘Normal y’ >> rw [real_normal, extreal_not_infty])
+ >> rename1 ‘Normal (real y) IN s’
+ >> Suff ‘Normal (real y) = y’ >- rw []
+ >> MATCH_MP_TAC normal_real >> art []
 QED
 
 (* ********************************************* *)
