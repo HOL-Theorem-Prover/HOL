@@ -24,6 +24,8 @@ open Sanity
 
 val _ = new_theory "vars_as_resource";
 val _ = ParseExtras.temp_loose_equality()
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
 val IS_PERMISSION_STRUCTURE_def = Define `
    IS_PERMISSION_STRUCTURE (f:'a option -> 'a option -> 'a option, total_perm:'a) =
