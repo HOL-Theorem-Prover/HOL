@@ -503,6 +503,12 @@ Proof
   Cases_on ‘bquot (A,af) R’ >>
   simp[coequalizer_def, sbisimulation_projns_homo] >> rw[] >>
   first_assum IRULE >> rw[]
+  >- metis_tac[bquot_correct,sbisimulation_projns_homo]
+  >- (simp[Once FUN_EQ_THM, restr_def, FORALL_PROD] >>
+      rw[EXTENSION] >> simp[eps_def] >> rw[]
+      >- (fs[equiv_on_def] >> metis_tac[])
+      >- (fs[hom_def, FORALL_PROD, restr_def] >> metis_tac[])
+      >- (fs[hom_def, FORALL_PROD, restr_def] >> metis_tac[]))
   >- (fs[bquot_def] >> rw[] >>
       fs[FUN_EQ_THM, restr_def, FORALL_PROD, EXISTS_UNIQUE_THM] >>
       conj_tac
@@ -554,18 +560,7 @@ Proof
             fs[partition_def] >> rw[] >> fs[] >> fs[equiv_on_def] >>
             metis_tac[]) >>
       metis_tac[])
-  >- (simp[Once FUN_EQ_THM, restr_def, FORALL_PROD] >>
-      rw[EXTENSION] >> simp[eps_def] >> rw[]
-      >- (fs[equiv_on_def] >> metis_tac[])
-      >- (fs[hom_def, FORALL_PROD, restr_def] >> metis_tac[])
-      >- (fs[hom_def, FORALL_PROD, restr_def] >> metis_tac[])) >>
-  metis_tac[bquot_correct,sbisimulation_projns_homo]
 QED
-
-
-
-
-
 
 Theorem prop5_9_1:
   hom (restr f A) (A,af) (B,bf) /\ bisim R (A,af) (A,af) ==>
@@ -573,7 +568,7 @@ Theorem prop5_9_1:
 Proof
   simp[RIMAGE_Gr] >> strip_tac >> IRULE bisimulations_compose >>
   IRULE bisimulations_compose >>
-  simp[] >> goal_assum drule >> fs[thm2_5]
+  simp[] >> goal_assum (drule_at (Pos (el 2))) >> fs[thm2_5]
 QED
 
 Theorem prop5_9_2:
