@@ -883,6 +883,9 @@ Definition Borel :
                          S IN {EMPTY; {NegInf}; {PosInf}; {NegInf; PosInf}}})
 End
 
+(* for compatibility and abbreviation purposes *)
+Overload Borel_measurable = “\a. measurable a Borel”;
+
 (* Lemma 8.2 [1, p.61], another equivalent definition of ‘borel’ *)
 Theorem borel_eq_real_set :
     borel = (univ(:real), IMAGE real_set (subsets Borel))
@@ -1018,59 +1021,11 @@ end (* local env for SIGMA_ALGEBRA_BOREL *)
 
    The proof follows Lemma 8.3 [1, p.61]
  *)
-Theorem Borel_def :
-    Borel = sigma univ(:extreal) (IMAGE (\a. {x | x < Normal a}) univ(:real))
-Proof
-    Suff ‘subsets (sigma UNIV (IMAGE (\a. {x | x < Normal a}) UNIV)) = subsets Borel’
- >- METIS_TAC [SPACE, SPACE_BOREL, SPACE_SIGMA]
- >> Q.ABBREV_TAC ‘S = subsets (sigma UNIV (IMAGE (\a. {x | x < Normal a}) UNIV))’
- >> Know ‘sigma_algebra (sigma UNIV (IMAGE (\a. {x | x < Normal a}) UNIV))’
- >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> rw [subset_class_def])
- >> DISCH_TAC
- >> MATCH_MP_TAC SUBSET_ANTISYM
- (* easy part *)
- >> CONJ_TAC
- >- (Q.UNABBREV_TAC ‘S’ \\
-     MATCH_MP_TAC (REWRITE_RULE [SPACE_BOREL]
-                                (Q.ISPECL [‘IMAGE (\a. {x | x < Normal a}) UNIV’, ‘Borel’]
-                                          SIGMA_SUBSET)) \\
-     REWRITE_TAC [SIGMA_ALGEBRA_BOREL] \\
-     rw [SUBSET_DEF, IN_IMAGE, Borel] \\
-     qexistsl_tac [‘{y | y < a}’, ‘{NegInf}’] \\
-     CONJ_TAC
-     >- (rw [Once EXTENSION, IN_IMAGE, IN_UNIV] \\
-         EQ_TAC >> rw [] >| (* 3 subgoals *)
-         [ (* goal 1 (of 3) *)
-           Cases_on ‘x = NegInf’ >- rw [] >> DISJ1_TAC \\
-           Know ‘x <> PosInf’
-           >- (REWRITE_TAC [lt_infty] \\
-               MATCH_MP_TAC lt_trans >> Q.EXISTS_TAC ‘Normal a’ >> art [lt_infty]) \\
-           DISCH_TAC >> ‘?r. x = Normal r’ by METIS_TAC [extreal_cases] \\
-           Q.EXISTS_TAC ‘r’ >> fs [extreal_lt_eq],
-           (* goal 2 (of 3) *)
-           rw [extreal_lt_eq],
-           (* goal 3 (of 3) *)
-           REWRITE_TAC [lt_infty] ]) \\
-     reverse CONJ_TAC >- rw [] \\
-     REWRITE_TAC [borel_measurable_sets_less])
- (* more properties of S *)
- >> Know ‘!a b. a <= b ==> {x | Normal a <= x /\ x < Normal b} IN S’
- >- (rpt STRIP_TAC \\
-    ‘{x | Normal a <= x /\ x < Normal b} =
-     {x | x < Normal b} DIFF {x | x < Normal a}’ by SET_TAC [extreal_lt_def] >> POP_ORW \\
-     Q.UNABBREV_TAC ‘S’ \\
-     MATCH_MP_TAC SIGMA_ALGEBRA_DIFF >> art [] \\
-     CONJ_TAC >| (* 2 subgoals *)
-     [ (* goal 1 (of 2) *)
-       Suff ‘{x | x < Normal b} IN (IMAGE (\a. {x | x < Normal a}) UNIV)’
-       >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
-       rw [IN_IMAGE] >> Q.EXISTS_TAC ‘b’ >> rw [],
-       (* goal 2 (of 2) *)
-       Suff ‘{x | x < Normal a} IN (IMAGE (\a. {x | x < Normal a}) UNIV)’
-       >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
-       rw [IN_IMAGE] >> Q.EXISTS_TAC ‘a’ >> rw [] ]) >> DISCH_TAC
+
+(* shared by Borel_def and Borel_eq_ge *)
+val early_tactics =
  (* preparing for SIGMA_ALGEBRA_RESTRICT *)
- >> Q.ABBREV_TAC ‘R = IMAGE Normal UNIV’ (* the set of all normal extreals *)
+    Q.ABBREV_TAC ‘R = IMAGE Normal UNIV’ (* the set of all normal extreals *)
  >> Know ‘R IN S’
  >- (Know ‘R = BIGUNION (IMAGE (\n. {x | Normal (-&n) <= x /\ x < Normal (&n)}) UNIV)’
      >- (Q.UNABBREV_TAC ‘R’ >> rw [Once EXTENSION, IN_BIGUNION_IMAGE] \\
@@ -1091,15 +1046,38 @@ Proof
            (* goal 2 (of 2) *)
            MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC ‘&m’ >> rw [] ]) >> Rewr' \\
      fs [SIGMA_ALGEBRA_FN, IN_FUNSET, SPACE_SIGMA, Abbr ‘S’])
- >> DISCH_TAC
- (* applying SIGMA_ALGEBRA_RESTRICT *)
- >> Know ‘sigma_algebra (R,IMAGE (\s. s INTER R) S)’
- >- (MATCH_MP_TAC SIGMA_ALGEBRA_RESTRICT >> art [] \\
-     Q.EXISTS_TAC ‘space (sigma UNIV (IMAGE (\a. {x | x < Normal a}) UNIV))’ \\
-     rw [Abbr ‘S’, SPACE])
- >> DISCH_TAC
+ >> DISCH_TAC;
+
+(* shared by Borel_eq_le and Borel_eq_gr *)
+val early_tactics' =
+ (* preparing for SIGMA_ALGEBRA_RESTRICT *)
+    Q.ABBREV_TAC ‘R = IMAGE Normal UNIV’ (* the set of all normal extreals *)
+ >> Know ‘R IN S’
+ >- (Know ‘R = BIGUNION (IMAGE (\n. {x | Normal (-&n) < x /\ x <= Normal (&n)}) UNIV)’
+     >- (Q.UNABBREV_TAC ‘R’ >> rw [Once EXTENSION, IN_BIGUNION_IMAGE] \\
+         reverse EQ_TAC >> rw []
+         >- (Q.EXISTS_TAC ‘real x’ >> ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+             MATCH_MP_TAC normal_real >> REWRITE_TAC [lt_infty] \\
+             CONJ_TAC >| (* 2 subgoals *)
+             [ (* goal 1 (of 2) *)
+               MATCH_MP_TAC lt_trans >> Q.EXISTS_TAC ‘Normal (-&n)’ >> art [lt_infty],
+               (* goal 2 (of 2) *)
+               MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘Normal (&n)’ >> art [lt_infty] ]) \\
+         STRIP_ASSUME_TAC (Q.SPEC ‘x'’ SIMP_REAL_ARCH) \\
+         rename1 ‘y <= &m’ \\
+         STRIP_ASSUME_TAC (Q.SPEC ‘y’ SIMP_REAL_ARCH_NEG) \\
+         Q.EXISTS_TAC ‘MAX (SUC n) m’ >> rw [extreal_lt_eq, extreal_le_eq] >|
+         [ (* goal 1 (of 2) *)
+           MATCH_MP_TAC REAL_LTE_TRANS >> Q.EXISTS_TAC ‘-&n’ >> rw [],
+           (* goal 2 (of 2) *)
+           MATCH_MP_TAC REAL_LE_TRANS >> Q.EXISTS_TAC ‘&m’ >> rw [] ]) >> Rewr' \\
+     fs [SIGMA_ALGEBRA_FN, IN_FUNSET, SPACE_SIGMA, Abbr ‘S’])
+ >> DISCH_TAC;
+
+(* shared by Borel_def and Borel_eq_ge *)
+val middle_tactics =
  (* applying PREIMAGE_SIGMA_ALGEBRA *)
- >> Know ‘sigma_algebra (UNIV, IMAGE (\s. PREIMAGE Normal s INTER UNIV)
+    Know ‘sigma_algebra (UNIV, IMAGE (\s. PREIMAGE Normal s INTER UNIV)
                                      (subsets (R,IMAGE (\s. s INTER R) S)))’
  >- (MATCH_MP_TAC PREIMAGE_SIGMA_ALGEBRA >> rw [IN_FUNSET, Abbr ‘R’])
  >> REWRITE_TAC [INTER_UNIV, subsets_def, IMAGE_IMAGE]
@@ -1164,171 +1142,12 @@ Proof
          MATCH_MP_TAC SIGMA_ALGEBRA_EMPTY >> art []) \\
      rw [NOT_IN_EMPTY, Once EXTENSION])
  >> REWRITE_TAC [GSYM borel_eq_ge_less] (* key step *)
- >> DISCH_TAC
- (* stage work *)
- >> simp [SUBSET_DEF, Borel]
- >> GEN_TAC >> DISCH_THEN (qx_choosel_then [‘B’,‘X’] ASSUME_TAC)
- >> ‘x = IMAGE Normal B UNION X’ by PROVE_TAC [] >> POP_ORW
- >> Know ‘{NegInf} IN S’
- >- (Q.PAT_X_ASSUM ‘x = IMAGE Normal B UNION X /\ _’ K_TAC \\
-     Know ‘{NegInf} = BIGINTER (IMAGE (\n. {x | x < Normal (-&n)}) UNIV)’
-     >- (rw [Once EXTENSION, IN_BIGINTER_IMAGE] \\
-         EQ_TAC >- METIS_TAC [num_not_infty,lt_infty,extreal_ainv_def,extreal_of_num_def] \\
-         RW_TAC std_ss [] \\
-         SPOSE_NOT_THEN ASSUME_TAC \\
-         METIS_TAC [SIMP_EXTREAL_ARCH_NEG, extreal_of_num_def,
-                    extreal_lt_def, extreal_ainv_def, neg_neg, lt_neg]) >> Rewr' \\
-     Q.UNABBREV_TAC ‘S’ \\
-     Q.PAT_X_ASSUM ‘sigma_algebra (sigma UNIV (IMAGE (\a. {x | x < Normal a}) UNIV))’
-        (STRIP_ASSUME_TAC o (MATCH_MP SIGMA_ALGEBRA_FN_BIGINTER)) \\
-     POP_ASSUM MATCH_MP_TAC \\
-     rw [IN_FUNSET] \\
-     Suff ‘{x | x < Normal (-&n)} IN (IMAGE (\a. {x | x < Normal a}) UNIV)’
-     >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
-     rw [] >> Q.EXISTS_TAC ‘-&n’ >> rw [])
- >> DISCH_TAC
- >> Know ‘{PosInf} IN S’
- >- (Q.PAT_X_ASSUM ‘x = IMAGE Normal B UNION X /\ _’ K_TAC \\
-    ‘{PosInf} = (space (sigma UNIV (IMAGE (\a. {x | x < Normal a}) UNIV))) DIFF
-                {x | x <> PosInf}’ by SET_TAC [SPACE_SIGMA] >> POP_ORW \\
-     Know ‘{x | x <> PosInf} = BIGUNION (IMAGE (\n. {x | x < Normal (&n)}) UNIV)’
-     >- (rw [Once EXTENSION, IN_BIGUNION_IMAGE] \\
-         reverse EQ_TAC
-         >- METIS_TAC [num_not_infty, lt_infty, extreal_ainv_def, extreal_of_num_def] \\
-         RW_TAC std_ss [] \\
-        ‘?n. x <= &n’ by METIS_TAC [SIMP_EXTREAL_ARCH] \\
-         Q.EXISTS_TAC ‘SUC n’ \\
-         MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘Normal &n’ \\
-         fs [extreal_of_num_def, extreal_lt_eq, extreal_le_eq]) >> Rewr' \\
-     Q.UNABBREV_TAC ‘S’ \\
-     MATCH_MP_TAC SIGMA_ALGEBRA_COMPL >> art [] \\
-     Q.PAT_X_ASSUM ‘sigma_algebra (sigma UNIV (IMAGE (\a. {x | x < Normal a}) UNIV))’
-        (STRIP_ASSUME_TAC o (REWRITE_RULE [SIGMA_ALGEBRA_FN])) \\
-     POP_ASSUM MATCH_MP_TAC \\
-     rw [IN_FUNSET] \\
-     Suff ‘{x | x < Normal (&n)} IN (IMAGE (\a. {x | x < Normal a}) UNIV)’
-     >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
-     rw [] >> Q.EXISTS_TAC ‘&n’ >> rw [])
- >> DISCH_TAC
- >> Know ‘IMAGE Normal B IN S’
- >- (Suff ‘IMAGE Normal B IN IMAGE (\s. s INTER R) S’
-     >- (Suff ‘IMAGE (\s. s INTER R) S SUBSET S’ >- METIS_TAC [SUBSET_DEF] \\
-         Q.PAT_X_ASSUM ‘x = IMAGE Normal B UNION X /\ _’ K_TAC \\
-         rw [SUBSET_DEF, Abbr ‘S’] \\
-         MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art []) \\
-     Q.PAT_X_ASSUM ‘subsets borel SUBSET IMAGE real_set S’ MP_TAC \\
-     Know ‘B IN subsets borel’ >- rw [] \\
-     Q.PAT_X_ASSUM ‘x = IMAGE Normal B UNION X /\ _’ K_TAC \\
-     rw [SUBSET_DEF, real_set_def] \\
-     POP_ASSUM (MP_TAC o (Q.SPEC ‘B’)) >> RW_TAC std_ss [] \\
-     rename1 ‘s IN S’ >> Q.EXISTS_TAC ‘s’ >> art [] \\
-     rw [Once EXTENSION] \\
-     EQ_TAC >> rw [] >| (* 3 subgoals *)
-     [ (* goal 1 (of 3) *)
-       METIS_TAC [normal_real],
-       (* goal 2 (of 3) *)
-       Q.UNABBREV_TAC ‘R’ >> rw [],
-       (* goal 3 (of 3) *)
-       POP_ASSUM MP_TAC >> rw [Abbr ‘R’] \\
-       rename1 ‘Normal r IN s’ \\
-       Q.EXISTS_TAC ‘Normal r’ >> rw [real_normal, extreal_not_infty] ])
- >> DISCH_TAC
- >> fs [] (* 3 subgoals *)
- >| [ (* goal 1 (of 3) *)
-      Q.UNABBREV_TAC ‘S’ \\
-      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [],
-      (* goal 2 (of 3) *)
-      Q.UNABBREV_TAC ‘S’ \\
-      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [],
-      (* goal 3 (of 3) *)
-      Q.UNABBREV_TAC ‘S’ \\
-      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
-     ‘{NegInf; PosInf} = {NegInf} UNION {PosInf}’ by SET_TAC [] >> POP_ORW \\
-      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] ]
-QED
+ >> DISCH_TAC;
 
-Theorem Borel_eq_le : (* cf. borel_eq_le (borel_def) *)
-    Borel = sigma univ(:extreal) (IMAGE (\a. {x | x <= Normal a}) univ(:real))
-Proof
-    Suff ‘subsets (sigma UNIV (IMAGE (\a. {x | x <= Normal a}) UNIV)) = subsets Borel’
- >- METIS_TAC [SPACE, SPACE_BOREL, SPACE_SIGMA]
- >> Q.ABBREV_TAC ‘S = subsets (sigma UNIV (IMAGE (\a. {x | x <= Normal a}) UNIV))’
- >> Know ‘sigma_algebra (sigma UNIV (IMAGE (\a. {x | x <= Normal a}) UNIV))’
- >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> rw [subset_class_def])
- >> DISCH_TAC
- >> MATCH_MP_TAC SUBSET_ANTISYM
- (* easy part *)
- >> CONJ_TAC
- >- (Q.UNABBREV_TAC ‘S’ \\
-     MATCH_MP_TAC (REWRITE_RULE [SPACE_BOREL]
-                                (Q.ISPECL [‘IMAGE (\a. {x | x <= Normal a}) UNIV’, ‘Borel’]
-                                          SIGMA_SUBSET)) \\
-     REWRITE_TAC [SIGMA_ALGEBRA_BOREL] \\
-     rw [SUBSET_DEF, IN_IMAGE, Borel] \\
-     qexistsl_tac [‘{y | y <= a}’, ‘{NegInf}’] \\
-     CONJ_TAC
-     >- (rw [Once EXTENSION, IN_IMAGE, IN_UNIV] \\
-         EQ_TAC >> rw [] >| (* 3 subgoals *)
-         [ (* goal 1 (of 3) *)
-           Cases_on ‘x = NegInf’ >- rw [] >> DISJ1_TAC \\
-           Know ‘x <> PosInf’
-           >- (REWRITE_TAC [lt_infty] \\
-               MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘Normal a’ >> art [lt_infty]) \\
-           DISCH_TAC >> ‘?r. x = Normal r’ by METIS_TAC [extreal_cases] \\
-           Q.EXISTS_TAC ‘r’ >> fs [extreal_le_eq],
-           (* goal 2 (of 3) *)
-           fs [extreal_le_eq],
-           (* goal 3 (of 3) *)
-           REWRITE_TAC [le_infty] ]) \\
-     reverse CONJ_TAC >- rw [] \\
-     REWRITE_TAC [borel_measurable_sets_le])
- (* more properties of S *)
- >> Know ‘!a b. a <= b ==> {x | Normal a < x /\ x <= Normal b} IN S’
- >- (rpt STRIP_TAC \\
-    ‘{x | Normal a < x /\ x <= Normal b} =
-     {x | x <= Normal b} DIFF {x | x <= Normal a}’ by SET_TAC [extreal_lt_def] >> POP_ORW \\
-     Q.UNABBREV_TAC ‘S’ \\
-     MATCH_MP_TAC SIGMA_ALGEBRA_DIFF >> art [] \\
-     CONJ_TAC >| (* 2 subgoals *)
-     [ (* goal 1 (of 2) *)
-       Suff ‘{x | x <= Normal b} IN (IMAGE (\a. {x | x <= Normal a}) UNIV)’
-       >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
-       rw [IN_IMAGE] >> Q.EXISTS_TAC ‘b’ >> rw [],
-       (* goal 2 (of 2) *)
-       Suff ‘{x | x <= Normal a} IN (IMAGE (\a. {x | x <= Normal a}) UNIV)’
-       >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
-       rw [IN_IMAGE] >> Q.EXISTS_TAC ‘a’ >> rw [] ]) >> DISCH_TAC
- (* preparing for SIGMA_ALGEBRA_RESTRICT *)
- >> Q.ABBREV_TAC ‘R = IMAGE Normal UNIV’ (* the set of all normal extreals *)
- >> Know ‘R IN S’
- >- (Know ‘R = BIGUNION (IMAGE (\n. {x | Normal (-&n) < x /\ x <= Normal (&n)}) UNIV)’
-     >- (Q.UNABBREV_TAC ‘R’ >> rw [Once EXTENSION, IN_BIGUNION_IMAGE] \\
-         reverse EQ_TAC >> rw []
-         >- (Q.EXISTS_TAC ‘real x’ >> ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
-             MATCH_MP_TAC normal_real >> REWRITE_TAC [lt_infty] \\
-             CONJ_TAC >| (* 2 subgoals *)
-             [ (* goal 1 (of 2) *)
-               MATCH_MP_TAC lt_trans >> Q.EXISTS_TAC ‘Normal (-&n)’ >> art [lt_infty],
-               (* goal 2 (of 2) *)
-               MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘Normal (&n)’ >> art [lt_infty] ]) \\
-         STRIP_ASSUME_TAC (Q.SPEC ‘x'’ SIMP_REAL_ARCH) \\
-         rename1 ‘y <= &m’ \\
-         STRIP_ASSUME_TAC (Q.SPEC ‘y’ SIMP_REAL_ARCH_NEG) \\
-         Q.EXISTS_TAC ‘MAX (SUC n) m’ >> rw [extreal_lt_eq, extreal_le_eq] >|
-         [ (* goal 1 (of 2) *)
-           MATCH_MP_TAC REAL_LTE_TRANS >> Q.EXISTS_TAC ‘-&n’ >> rw [],
-           (* goal 2 (of 2) *)
-           MATCH_MP_TAC REAL_LE_TRANS >> Q.EXISTS_TAC ‘&m’ >> rw [] ]) >> Rewr' \\
-     fs [SIGMA_ALGEBRA_FN, IN_FUNSET, SPACE_SIGMA, Abbr ‘S’])
- >> DISCH_TAC
- (* applying SIGMA_ALGEBRA_RESTRICT *)
- >> Know ‘sigma_algebra (R,IMAGE (\s. s INTER R) S)’
- >- (MATCH_MP_TAC SIGMA_ALGEBRA_RESTRICT >> art [] \\
-     Q.EXISTS_TAC ‘space (sigma UNIV (IMAGE (\a. {x | x <= Normal a}) UNIV))’ \\
-     rw [Abbr ‘S’, SPACE])
- >> DISCH_TAC
+(* shared by Borel_eq_le and Borel_eq_gr *)
+val middle_tactics' =
  (* applying PREIMAGE_SIGMA_ALGEBRA *)
- >> Know ‘sigma_algebra (UNIV, IMAGE (\s. PREIMAGE Normal s INTER UNIV)
+    Know ‘sigma_algebra (UNIV, IMAGE (\s. PREIMAGE Normal s INTER UNIV)
                                      (subsets (R,IMAGE (\s. s INTER R) S)))’
  >- (MATCH_MP_TAC PREIMAGE_SIGMA_ALGEBRA >> rw [IN_FUNSET, Abbr ‘R’])
  >> REWRITE_TAC [INTER_UNIV, subsets_def, IMAGE_IMAGE]
@@ -1394,7 +1213,319 @@ Proof
          MATCH_MP_TAC SIGMA_ALGEBRA_EMPTY >> art []) \\
      rw [NOT_IN_EMPTY, Once EXTENSION])
  >> REWRITE_TAC [GSYM borel_eq_gr_le] (* key step *)
+ >> DISCH_TAC;
+
+val final_tactics = (* shared by all four Borel_eq theorems *)
+    Know ‘IMAGE Normal B IN S’
+ >- (Suff ‘IMAGE Normal B IN IMAGE (\s. s INTER R) S’
+     >- (Suff ‘IMAGE (\s. s INTER R) S SUBSET S’ >- METIS_TAC [SUBSET_DEF] \\
+         Q.PAT_X_ASSUM ‘x = IMAGE Normal B UNION X /\ _’ K_TAC \\
+         rw [SUBSET_DEF, Abbr ‘S’] \\
+         MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art []) \\
+     Q.PAT_X_ASSUM ‘subsets borel SUBSET IMAGE real_set S’ MP_TAC \\
+     Know ‘B IN subsets borel’ >- rw [] \\
+     Q.PAT_X_ASSUM ‘x = IMAGE Normal B UNION X /\ _’ K_TAC \\
+     rw [SUBSET_DEF, real_set_def] \\
+     POP_ASSUM (MP_TAC o (Q.SPEC ‘B’)) >> RW_TAC std_ss [] \\
+     rename1 ‘s IN S’ >> Q.EXISTS_TAC ‘s’ >> art [] \\
+     rw [Once EXTENSION] \\
+     EQ_TAC >> rw [] >| (* 3 subgoals *)
+     [ (* goal 1 (of 3) *)
+       METIS_TAC [normal_real],
+       (* goal 2 (of 3) *)
+       Q.UNABBREV_TAC ‘R’ >> rw [],
+       (* goal 3 (of 3) *)
+       POP_ASSUM MP_TAC >> rw [Abbr ‘R’] \\
+       rename1 ‘Normal r IN s’ \\
+       Q.EXISTS_TAC ‘Normal r’ >> rw [real_normal, extreal_not_infty] ])
  >> DISCH_TAC
+ >> fs [] (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      Q.UNABBREV_TAC ‘S’ \\
+      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [],
+      (* goal 2 (of 3) *)
+      Q.UNABBREV_TAC ‘S’ \\
+      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [],
+      (* goal 3 (of 3) *)
+      Q.UNABBREV_TAC ‘S’ \\
+      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
+     ‘{NegInf; PosInf} = {NegInf} UNION {PosInf}’ by SET_TAC [] >> POP_ORW \\
+      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] ];
+
+Theorem Borel_def :
+    Borel = sigma univ(:extreal) (IMAGE (\a. {x | x < Normal a}) univ(:real))
+Proof
+    Suff ‘subsets (sigma UNIV (IMAGE (\a. {x | x < Normal a}) UNIV)) = subsets Borel’
+ >- METIS_TAC [SPACE, SPACE_BOREL, SPACE_SIGMA]
+ >> Q.ABBREV_TAC ‘S = subsets (sigma UNIV (IMAGE (\a. {x | x < Normal a}) UNIV))’
+ >> Know ‘sigma_algebra (sigma UNIV (IMAGE (\a. {x | x < Normal a}) UNIV))’
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> rw [subset_class_def])
+ >> DISCH_TAC
+ >> MATCH_MP_TAC SUBSET_ANTISYM
+ (* easy part *)
+ >> CONJ_TAC
+ >- (Q.UNABBREV_TAC ‘S’ \\
+     MATCH_MP_TAC (REWRITE_RULE [SPACE_BOREL]
+                                (Q.ISPECL [‘IMAGE (\a. {x | x < Normal a}) UNIV’, ‘Borel’]
+                                          SIGMA_SUBSET)) \\
+     REWRITE_TAC [SIGMA_ALGEBRA_BOREL] \\
+     rw [SUBSET_DEF, IN_IMAGE, Borel] \\
+     qexistsl_tac [‘{y | y < a}’, ‘{NegInf}’] \\
+     CONJ_TAC
+     >- (rw [Once EXTENSION, IN_IMAGE, IN_UNIV] \\
+         EQ_TAC >> rw [] >| (* 3 subgoals *)
+         [ (* goal 1 (of 3) *)
+           Cases_on ‘x = NegInf’ >- rw [] >> DISJ1_TAC \\
+           Know ‘x <> PosInf’
+           >- (REWRITE_TAC [lt_infty] \\
+               MATCH_MP_TAC lt_trans >> Q.EXISTS_TAC ‘Normal a’ >> art [lt_infty]) \\
+           DISCH_TAC >> ‘?r. x = Normal r’ by METIS_TAC [extreal_cases] \\
+           Q.EXISTS_TAC ‘r’ >> fs [extreal_lt_eq],
+           (* goal 2 (of 3) *)
+           rw [extreal_lt_eq],
+           (* goal 3 (of 3) *)
+           REWRITE_TAC [lt_infty] ]) \\
+     reverse CONJ_TAC >- rw [] \\
+     REWRITE_TAC [borel_measurable_sets_less])
+ (* more properties of S *)
+ >> Know ‘!a b. a <= b ==> {x | Normal a <= x /\ x < Normal b} IN S’
+ >- (rpt STRIP_TAC \\
+    ‘{x | Normal a <= x /\ x < Normal b} =
+     {x | x < Normal b} DIFF {x | x < Normal a}’ by SET_TAC [extreal_lt_def] >> POP_ORW \\
+     Q.UNABBREV_TAC ‘S’ \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_DIFF >> art [] \\
+     CONJ_TAC >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       Suff ‘{x | x < Normal b} IN (IMAGE (\a. {x | x < Normal a}) UNIV)’
+       >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
+       rw [IN_IMAGE] >> Q.EXISTS_TAC ‘b’ >> rw [],
+       (* goal 2 (of 2) *)
+       Suff ‘{x | x < Normal a} IN (IMAGE (\a. {x | x < Normal a}) UNIV)’
+       >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
+       rw [IN_IMAGE] >> Q.EXISTS_TAC ‘a’ >> rw [] ]) >> DISCH_TAC
+ >> early_tactics
+ (* applying SIGMA_ALGEBRA_RESTRICT *)
+ >> Know ‘sigma_algebra (R,IMAGE (\s. s INTER R) S)’
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_RESTRICT >> art [] \\
+     Q.EXISTS_TAC ‘space (sigma UNIV (IMAGE (\a. {x | x < Normal a}) UNIV))’ \\
+     rw [Abbr ‘S’, SPACE])
+ >> DISCH_TAC
+ >> middle_tactics
+ (* stage work *)
+ >> simp [SUBSET_DEF, Borel]
+ >> GEN_TAC >> DISCH_THEN (qx_choosel_then [‘B’,‘X’] ASSUME_TAC)
+ >> ‘x = IMAGE Normal B UNION X’ by PROVE_TAC [] >> POP_ORW
+ >> Know ‘{NegInf} IN S’
+ >- (Q.PAT_X_ASSUM ‘x = IMAGE Normal B UNION X /\ _’ K_TAC \\
+     Know ‘{NegInf} = BIGINTER (IMAGE (\n. {x | x < Normal (-&n)}) UNIV)’
+     >- (rw [Once EXTENSION, IN_BIGINTER_IMAGE] \\
+         EQ_TAC >- METIS_TAC [num_not_infty,lt_infty,extreal_ainv_def,extreal_of_num_def] \\
+         RW_TAC std_ss [] \\
+         SPOSE_NOT_THEN ASSUME_TAC \\
+         METIS_TAC [SIMP_EXTREAL_ARCH_NEG, extreal_of_num_def,
+                    extreal_lt_def, extreal_ainv_def, neg_neg, lt_neg]) >> Rewr' \\
+     Q.UNABBREV_TAC ‘S’ \\
+     Q.PAT_X_ASSUM ‘sigma_algebra (sigma UNIV (IMAGE (\a. {x | x < Normal a}) UNIV))’
+        (STRIP_ASSUME_TAC o (MATCH_MP SIGMA_ALGEBRA_FN_BIGINTER)) \\
+     POP_ASSUM MATCH_MP_TAC \\
+     rw [IN_FUNSET] \\
+     Suff ‘{x | x < Normal (-&n)} IN (IMAGE (\a. {x | x < Normal a}) UNIV)’
+     >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
+     rw [] >> Q.EXISTS_TAC ‘-&n’ >> rw [])
+ >> DISCH_TAC
+ >> Know ‘{PosInf} IN S’
+ >- (Q.PAT_X_ASSUM ‘x = IMAGE Normal B UNION X /\ _’ K_TAC \\
+    ‘{PosInf} = (space (sigma UNIV (IMAGE (\a. {x | x < Normal a}) UNIV))) DIFF
+                {x | x <> PosInf}’ by SET_TAC [SPACE_SIGMA] >> POP_ORW \\
+     Know ‘{x | x <> PosInf} = BIGUNION (IMAGE (\n. {x | x < Normal (&n)}) UNIV)’
+     >- (rw [Once EXTENSION, IN_BIGUNION_IMAGE] \\
+         reverse EQ_TAC
+         >- METIS_TAC [num_not_infty, lt_infty, extreal_ainv_def, extreal_of_num_def] \\
+         RW_TAC std_ss [] \\
+        ‘?n. x <= &n’ by METIS_TAC [SIMP_EXTREAL_ARCH] \\
+         Q.EXISTS_TAC ‘SUC n’ \\
+         MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘Normal &n’ \\
+         fs [extreal_of_num_def, extreal_lt_eq, extreal_le_eq]) >> Rewr' \\
+     Q.UNABBREV_TAC ‘S’ \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_COMPL >> art [] \\
+     Q.PAT_X_ASSUM ‘sigma_algebra (sigma UNIV (IMAGE (\a. {x | x < Normal a}) UNIV))’
+        (STRIP_ASSUME_TAC o (REWRITE_RULE [SIGMA_ALGEBRA_FN])) \\
+     POP_ASSUM MATCH_MP_TAC \\
+     rw [IN_FUNSET] \\
+     Suff ‘{x | x < Normal (&n)} IN (IMAGE (\a. {x | x < Normal a}) UNIV)’
+     >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
+     rw [] >> Q.EXISTS_TAC ‘&n’ >> rw [])
+ >> DISCH_TAC
+ >> final_tactics
+QED
+
+Theorem Borel_eq_ge :
+    Borel = sigma univ(:extreal) (IMAGE (\a. {x | Normal a <= x}) univ(:real))
+Proof
+    Suff ‘subsets (sigma UNIV (IMAGE (\a. {x | Normal a <= x}) UNIV)) = subsets Borel’
+ >- METIS_TAC [SPACE, SPACE_BOREL, SPACE_SIGMA]
+ >> Q.ABBREV_TAC ‘S = subsets (sigma UNIV (IMAGE (\a. {x | Normal a <= x}) UNIV))’
+ >> Know ‘sigma_algebra (sigma UNIV (IMAGE (\a. {x | Normal a <= x}) UNIV))’
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> rw [subset_class_def])
+ >> DISCH_TAC
+ >> MATCH_MP_TAC SUBSET_ANTISYM
+ (* easy part *)
+ >> CONJ_TAC
+ >- (Q.UNABBREV_TAC ‘S’ \\
+     MATCH_MP_TAC (REWRITE_RULE [SPACE_BOREL]
+                                (Q.ISPECL [‘IMAGE (\a. {x | Normal a <= x}) UNIV’, ‘Borel’]
+                                          SIGMA_SUBSET)) \\
+     REWRITE_TAC [SIGMA_ALGEBRA_BOREL] \\
+     rw [SUBSET_DEF, IN_IMAGE, Borel] \\
+     qexistsl_tac [‘{y | a <= y}’, ‘{PosInf}’] >> simp [] \\
+     CONJ_TAC
+     >- (rw [Once EXTENSION, IN_IMAGE, IN_UNIV] \\
+         EQ_TAC >> rw [] >| (* 3 subgoals *)
+         [ (* goal 1 (of 3) *)
+           Cases_on ‘x = PosInf’ >- rw [] >> DISJ1_TAC \\
+           Know ‘x <> NegInf’
+           >- (REWRITE_TAC [lt_infty] \\
+               MATCH_MP_TAC lte_trans >> Q.EXISTS_TAC ‘Normal a’ >> art [lt_infty]) \\
+           DISCH_TAC >> ‘?r. x = Normal r’ by METIS_TAC [extreal_cases] \\
+           Q.EXISTS_TAC ‘r’ >> fs [extreal_le_eq],
+           (* goal 2 (of 3) *)
+           rw [extreal_le_eq],
+           (* goal 3 (of 3) *)
+           REWRITE_TAC [le_infty] ]) \\
+     REWRITE_TAC [borel_measurable_sets_ge])
+ (* more properties of S *)
+ >> Know ‘!a b. a <= b ==> {x | Normal a <= x /\ x < Normal b} IN S’
+ >- (rpt STRIP_TAC \\
+    ‘{x | Normal a <= x /\ x < Normal b} =
+     {x | Normal a <= x} DIFF {x | Normal b <= x}’ by SET_TAC [extreal_lt_def] >> POP_ORW \\
+     Q.UNABBREV_TAC ‘S’ \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_DIFF >> art [] \\
+     CONJ_TAC >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       Suff ‘{x | Normal a <= x} IN (IMAGE (\a. {x | Normal a <= x}) UNIV)’
+       >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
+       rw [IN_IMAGE] >> Q.EXISTS_TAC ‘a’ >> rw [],
+       (* goal 2 (of 2) *)
+       Suff ‘{x | Normal b <= x} IN (IMAGE (\a. {x | Normal a <= x}) UNIV)’
+       >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
+       rw [IN_IMAGE] >> Q.EXISTS_TAC ‘b’ >> rw [] ]) >> DISCH_TAC
+ >> early_tactics
+ (* applying SIGMA_ALGEBRA_RESTRICT *)
+ >> Know ‘sigma_algebra (R,IMAGE (\s. s INTER R) S)’
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_RESTRICT >> art [] \\
+     Q.EXISTS_TAC ‘space (sigma UNIV (IMAGE (\a. {x | Normal a <= x}) UNIV))’ \\
+     rw [Abbr ‘S’, SPACE])
+ >> DISCH_TAC
+ >> middle_tactics
+ (* stage work *)
+ >> simp [SUBSET_DEF, Borel]
+ >> GEN_TAC >> DISCH_THEN (qx_choosel_then [‘B’,‘X’] ASSUME_TAC)
+ >> ‘x = IMAGE Normal B UNION X’ by PROVE_TAC [] >> POP_ORW
+ >> Know ‘{PosInf} IN S’
+ >- (Q.PAT_X_ASSUM ‘x = IMAGE Normal B UNION X /\ _’ K_TAC \\
+     Know ‘{PosInf} = BIGINTER (IMAGE (\n. {x | Normal (&n) <= x}) UNIV)’
+     >- (rw [Once EXTENSION, IN_BIGINTER_IMAGE] \\
+         EQ_TAC >- rw [le_infty] \\
+         RW_TAC std_ss [] \\
+         SPOSE_NOT_THEN ASSUME_TAC \\
+        ‘?n. x <= &n’ by METIS_TAC [SIMP_EXTREAL_ARCH] \\
+         fs [extreal_of_num_def] \\
+         Q.PAT_X_ASSUM ‘!n. Normal (&n) <= x’ (STRIP_ASSUME_TAC o (Q.SPEC ‘SUC n’)) \\
+        ‘Normal (&SUC n) <= Normal (&n)’ by PROVE_TAC [le_trans] \\
+         fs [extreal_le_eq]) >> Rewr' \\
+     Q.UNABBREV_TAC ‘S’ \\
+     Q.PAT_X_ASSUM ‘sigma_algebra (sigma UNIV (IMAGE (\a. {x | Normal a <= x}) UNIV))’
+        (STRIP_ASSUME_TAC o (MATCH_MP SIGMA_ALGEBRA_FN_BIGINTER)) \\
+     POP_ASSUM MATCH_MP_TAC \\
+     rw [IN_FUNSET] \\
+     Suff ‘{x | Normal (&n) <= x} IN (IMAGE (\a. {x | Normal a <= x}) UNIV)’
+     >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
+     rw [] >> Q.EXISTS_TAC ‘&n’ >> rw [])
+ >> DISCH_TAC
+ >> Know ‘{NegInf} IN S’
+ >- (Q.PAT_X_ASSUM ‘x = IMAGE Normal B UNION X /\ _’ K_TAC \\
+    ‘{NegInf} = (space (sigma UNIV (IMAGE (\a. {x | Normal a <= x}) UNIV))) DIFF
+                {x | x <> NegInf}’ by SET_TAC [SPACE_SIGMA] >> POP_ORW \\
+     Know ‘{x | x <> NegInf} = BIGUNION (IMAGE (\n. {x | Normal (-&n) <= x}) UNIV)’
+     >- (rw [Once EXTENSION, IN_BIGUNION_IMAGE] \\
+         reverse EQ_TAC
+         >- (rw [lt_infty] \\
+             MATCH_MP_TAC lte_trans >> Q.EXISTS_TAC ‘Normal (-&n)’ >> rw [lt_infty]) \\
+         RW_TAC std_ss [] \\
+        ‘?n. -&n <= x’ by METIS_TAC [SIMP_EXTREAL_ARCH_NEG] \\
+         Q.EXISTS_TAC ‘n’ >> fs [extreal_of_num_def, extreal_ainv_def]) >> Rewr' \\
+     Q.UNABBREV_TAC ‘S’ \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_COMPL >> art [] \\
+     Q.PAT_X_ASSUM ‘sigma_algebra (sigma UNIV (IMAGE (\a. {x | Normal a <= x}) UNIV))’
+        (STRIP_ASSUME_TAC o (REWRITE_RULE [SIGMA_ALGEBRA_FN])) \\
+     POP_ASSUM MATCH_MP_TAC \\
+     rw [IN_FUNSET] \\
+     Suff ‘{x | Normal (-&n) <= x} IN (IMAGE (\a. {x | Normal a <= x}) UNIV)’
+     >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
+     rw [] >> Q.EXISTS_TAC ‘-&n’ >> rw [])
+ >> DISCH_TAC
+ >> final_tactics
+QED
+
+Theorem Borel_eq_le : (* cf. borel_eq_le (borel_def) *)
+    Borel = sigma univ(:extreal) (IMAGE (\a. {x | x <= Normal a}) univ(:real))
+Proof
+    Suff ‘subsets (sigma UNIV (IMAGE (\a. {x | x <= Normal a}) UNIV)) = subsets Borel’
+ >- METIS_TAC [SPACE, SPACE_BOREL, SPACE_SIGMA]
+ >> Q.ABBREV_TAC ‘S = subsets (sigma UNIV (IMAGE (\a. {x | x <= Normal a}) UNIV))’
+ >> Know ‘sigma_algebra (sigma UNIV (IMAGE (\a. {x | x <= Normal a}) UNIV))’
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> rw [subset_class_def])
+ >> DISCH_TAC
+ >> MATCH_MP_TAC SUBSET_ANTISYM
+ (* easy part *)
+ >> CONJ_TAC
+ >- (Q.UNABBREV_TAC ‘S’ \\
+     MATCH_MP_TAC (REWRITE_RULE [SPACE_BOREL]
+                                (Q.ISPECL [‘IMAGE (\a. {x | x <= Normal a}) UNIV’, ‘Borel’]
+                                          SIGMA_SUBSET)) \\
+     REWRITE_TAC [SIGMA_ALGEBRA_BOREL] \\
+     rw [SUBSET_DEF, IN_IMAGE, Borel] \\
+     qexistsl_tac [‘{y | y <= a}’, ‘{NegInf}’] \\
+     CONJ_TAC
+     >- (rw [Once EXTENSION, IN_IMAGE, IN_UNIV] \\
+         EQ_TAC >> rw [] >| (* 3 subgoals *)
+         [ (* goal 1 (of 3) *)
+           Cases_on ‘x = NegInf’ >- rw [] >> DISJ1_TAC \\
+           Know ‘x <> PosInf’
+           >- (REWRITE_TAC [lt_infty] \\
+               MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘Normal a’ >> art [lt_infty]) \\
+           DISCH_TAC >> ‘?r. x = Normal r’ by METIS_TAC [extreal_cases] \\
+           Q.EXISTS_TAC ‘r’ >> fs [extreal_le_eq],
+           (* goal 2 (of 3) *)
+           fs [extreal_le_eq],
+           (* goal 3 (of 3) *)
+           REWRITE_TAC [le_infty] ]) \\
+     reverse CONJ_TAC >- rw [] \\
+     REWRITE_TAC [borel_measurable_sets_le])
+ (* more properties of S *)
+ >> Know ‘!a b. a <= b ==> {x | Normal a < x /\ x <= Normal b} IN S’
+ >- (rpt STRIP_TAC \\
+    ‘{x | Normal a < x /\ x <= Normal b} =
+     {x | x <= Normal b} DIFF {x | x <= Normal a}’ by SET_TAC [extreal_lt_def] >> POP_ORW \\
+     Q.UNABBREV_TAC ‘S’ \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_DIFF >> art [] \\
+     CONJ_TAC >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       Suff ‘{x | x <= Normal b} IN (IMAGE (\a. {x | x <= Normal a}) UNIV)’
+       >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
+       rw [IN_IMAGE] >> Q.EXISTS_TAC ‘b’ >> rw [],
+       (* goal 2 (of 2) *)
+       Suff ‘{x | x <= Normal a} IN (IMAGE (\a. {x | x <= Normal a}) UNIV)’
+       >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
+       rw [IN_IMAGE] >> Q.EXISTS_TAC ‘a’ >> rw [] ]) >> DISCH_TAC
+ >> early_tactics'
+ (* applying SIGMA_ALGEBRA_RESTRICT *)
+ >> Know ‘sigma_algebra (R,IMAGE (\s. s INTER R) S)’
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_RESTRICT >> art [] \\
+     Q.EXISTS_TAC ‘space (sigma UNIV (IMAGE (\a. {x | x <= Normal a}) UNIV))’ \\
+     rw [Abbr ‘S’, SPACE])
+ >> DISCH_TAC
+ >> middle_tactics'
  (* stage work *)
  >> simp [SUBSET_DEF, Borel]
  >> GEN_TAC >> DISCH_THEN (qx_choosel_then [‘B’,‘X’] ASSUME_TAC)
@@ -1442,45 +1573,119 @@ Proof
      >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
      rw [] >> Q.EXISTS_TAC ‘&n’ >> rw [])
  >> DISCH_TAC
- >> Know ‘IMAGE Normal B IN S’
- >- (Suff ‘IMAGE Normal B IN IMAGE (\s. s INTER R) S’
-     >- (Suff ‘IMAGE (\s. s INTER R) S SUBSET S’ >- METIS_TAC [SUBSET_DEF] \\
-         Q.PAT_X_ASSUM ‘x = IMAGE Normal B UNION X /\ _’ K_TAC \\
-         rw [SUBSET_DEF, Abbr ‘S’] \\
-         MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art []) \\
-     Q.PAT_X_ASSUM ‘subsets borel SUBSET IMAGE real_set S’ MP_TAC \\
-     Know ‘B IN subsets borel’ >- rw [] \\
-     Q.PAT_X_ASSUM ‘x = IMAGE Normal B UNION X /\ _’ K_TAC \\
-     rw [SUBSET_DEF, real_set_def] \\
-     POP_ASSUM (MP_TAC o (Q.SPEC ‘B’)) >> RW_TAC std_ss [] \\
-     rename1 ‘s IN S’ >> Q.EXISTS_TAC ‘s’ >> art [] \\
-     rw [Once EXTENSION] \\
-     EQ_TAC >> rw [] >| (* 3 subgoals *)
-     [ (* goal 1 (of 3) *)
-       METIS_TAC [normal_real],
-       (* goal 2 (of 3) *)
-       Q.UNABBREV_TAC ‘R’ >> rw [],
-       (* goal 3 (of 3) *)
-       POP_ASSUM MP_TAC >> rw [Abbr ‘R’] \\
-       rename1 ‘Normal r IN s’ \\
-       Q.EXISTS_TAC ‘Normal r’ >> rw [real_normal, extreal_not_infty] ])
- >> DISCH_TAC
- >> fs [] (* 3 subgoals *)
- >| [ (* goal 1 (of 3) *)
-      Q.UNABBREV_TAC ‘S’ \\
-      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [],
-      (* goal 2 (of 3) *)
-      Q.UNABBREV_TAC ‘S’ \\
-      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [],
-      (* goal 3 (of 3) *)
-      Q.UNABBREV_TAC ‘S’ \\
-      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
-     ‘{NegInf; PosInf} = {NegInf} UNION {PosInf}’ by SET_TAC [] >> POP_ORW \\
-      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] ]
+ >> final_tactics
 QED
 
-(* for compatibility and abbreviation purposes *)
-val _ = overload_on ("Borel_measurable", ``\a. measurable a Borel``);
+Theorem Borel_eq_gr : (* cf. borel_eq_gr *)
+    Borel = sigma univ(:extreal) (IMAGE (\a. {x | Normal a < x}) univ(:real))
+Proof
+    Suff ‘subsets (sigma UNIV (IMAGE (\a. {x | Normal a < x}) UNIV)) = subsets Borel’
+ >- METIS_TAC [SPACE, SPACE_BOREL, SPACE_SIGMA]
+ >> Q.ABBREV_TAC ‘S = subsets (sigma UNIV (IMAGE (\a. {x | Normal a < x}) UNIV))’
+ >> Know ‘sigma_algebra (sigma UNIV (IMAGE (\a. {x | Normal a < x}) UNIV))’
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> rw [subset_class_def])
+ >> DISCH_TAC
+ >> MATCH_MP_TAC SUBSET_ANTISYM
+ (* easy part *)
+ >> CONJ_TAC
+ >- (Q.UNABBREV_TAC ‘S’ \\
+     MATCH_MP_TAC (REWRITE_RULE [SPACE_BOREL]
+                                (Q.ISPECL [‘IMAGE (\a. {x | Normal a < x}) UNIV’, ‘Borel’]
+                                          SIGMA_SUBSET)) \\
+     REWRITE_TAC [SIGMA_ALGEBRA_BOREL] \\
+     rw [SUBSET_DEF, IN_IMAGE, Borel] \\
+     qexistsl_tac [‘{y | a < y}’, ‘{PosInf}’] \\
+     CONJ_TAC
+     >- (rw [Once EXTENSION, IN_IMAGE, IN_UNIV] \\
+         EQ_TAC >> rw [] >| (* 3 subgoals *)
+         [ (* goal 1 (of 3) *)
+           Cases_on ‘x = PosInf’ >- rw [] >> DISJ1_TAC \\
+           Know ‘x <> NegInf’
+           >- (REWRITE_TAC [lt_infty] \\
+               MATCH_MP_TAC lt_trans >> Q.EXISTS_TAC ‘Normal a’ >> art [lt_infty]) \\
+           DISCH_TAC >> ‘?r. x = Normal r’ by METIS_TAC [extreal_cases] \\
+           Q.EXISTS_TAC ‘r’ >> fs [extreal_lt_eq],
+           (* goal 2 (of 3) *)
+           fs [extreal_lt_eq],
+           (* goal 3 (of 3) *)
+           REWRITE_TAC [lt_infty] ]) \\
+     reverse CONJ_TAC >- rw [] \\
+     REWRITE_TAC [borel_measurable_sets_gr])
+ (* more properties of S *)
+ >> Know ‘!a b. a <= b ==> {x | Normal a < x /\ x <= Normal b} IN S’
+ >- (rpt STRIP_TAC \\
+    ‘{x | Normal a < x /\ x <= Normal b} =
+     {x | Normal a < x} DIFF {x | Normal b < x}’ by SET_TAC [extreal_lt_def] >> POP_ORW \\
+     Q.UNABBREV_TAC ‘S’ \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_DIFF >> art [] \\
+     CONJ_TAC >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       Suff ‘{x | Normal a < x} IN (IMAGE (\a. {x | Normal a < x}) UNIV)’
+       >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
+       rw [IN_IMAGE] >> Q.EXISTS_TAC ‘a’ >> rw [],
+       (* goal 2 (of 2) *)
+       Suff ‘{x | Normal b < x} IN (IMAGE (\a. {x | Normal a < x}) UNIV)’
+       >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
+       rw [IN_IMAGE] >> Q.EXISTS_TAC ‘b’ >> rw [] ]) >> DISCH_TAC
+ >> early_tactics'
+ (* applying SIGMA_ALGEBRA_RESTRICT *)
+ >> Know ‘sigma_algebra (R,IMAGE (\s. s INTER R) S)’
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_RESTRICT >> art [] \\
+     Q.EXISTS_TAC ‘space (sigma UNIV (IMAGE (\a. {x | Normal a < x}) UNIV))’ \\
+     rw [Abbr ‘S’, SPACE])
+ >> DISCH_TAC
+ >> middle_tactics'
+ (* stage work *)
+ >> simp [SUBSET_DEF, Borel]
+ >> GEN_TAC >> DISCH_THEN (qx_choosel_then [‘B’,‘X’] ASSUME_TAC)
+ >> ‘x = IMAGE Normal B UNION X’ by PROVE_TAC [] >> POP_ORW
+ >> Know ‘{PosInf} IN S’
+ >- (Q.PAT_X_ASSUM ‘x = IMAGE Normal B UNION X /\ _’ K_TAC \\
+     Know ‘{PosInf} = BIGINTER (IMAGE (\n. {x | Normal (&n) < x}) UNIV)’
+     >- (rw [Once EXTENSION, IN_BIGINTER_IMAGE] \\
+         EQ_TAC >- rw [lt_infty] \\
+         RW_TAC std_ss [] \\
+         SPOSE_NOT_THEN ASSUME_TAC \\
+        ‘?n. x <= &n’ by METIS_TAC [SIMP_EXTREAL_ARCH] \\
+         fs [extreal_of_num_def] \\
+         Q.PAT_X_ASSUM ‘!n. Normal (&n) < x’ (STRIP_ASSUME_TAC o (Q.SPEC ‘n’)) \\
+        ‘x < x’ by PROVE_TAC [let_trans] \\
+         PROVE_TAC [lt_refl]) >> Rewr' \\
+     Q.UNABBREV_TAC ‘S’ \\
+     Q.PAT_X_ASSUM ‘sigma_algebra (sigma UNIV (IMAGE (\a. {x | Normal a < x}) UNIV))’
+        (STRIP_ASSUME_TAC o (MATCH_MP SIGMA_ALGEBRA_FN_BIGINTER)) \\
+     POP_ASSUM MATCH_MP_TAC \\
+     rw [IN_FUNSET] \\
+     Suff ‘{x | Normal (&n) < x} IN (IMAGE (\a. {x | Normal a < x}) UNIV)’
+     >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
+     rw [] >> Q.EXISTS_TAC ‘&n’ >> rw [])
+ >> DISCH_TAC
+ >> Know ‘{NegInf} IN S’
+ >- (Q.PAT_X_ASSUM ‘x = IMAGE Normal B UNION X /\ _’ K_TAC \\
+    ‘{NegInf} = (space (sigma UNIV (IMAGE (\a. {x | Normal a < x}) UNIV))) DIFF
+                {x | x <> NegInf}’ by SET_TAC [SPACE_SIGMA] >> POP_ORW \\
+     Know ‘{x | x <> NegInf} = BIGUNION (IMAGE (\n. {x | Normal (-&n) < x}) UNIV)’
+     >- (rw [Once EXTENSION, IN_BIGUNION_IMAGE] \\
+         reverse EQ_TAC
+         >- (rw [lt_infty] \\
+             MATCH_MP_TAC lt_trans >> Q.EXISTS_TAC ‘Normal (-&n)’ >> rw [lt_infty]) \\
+         RW_TAC std_ss [] \\
+        ‘?n. -&n <= x’ by METIS_TAC [SIMP_EXTREAL_ARCH_NEG] \\
+         Q.EXISTS_TAC ‘SUC n’ >> fs [extreal_of_num_def, extreal_ainv_def] \\
+         MATCH_MP_TAC lte_trans >> Q.EXISTS_TAC ‘Normal (-&n)’ \\
+         rw [extreal_lt_eq]) >> Rewr' \\
+     Q.UNABBREV_TAC ‘S’ \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_COMPL >> art [] \\
+     Q.PAT_X_ASSUM ‘sigma_algebra (sigma UNIV (IMAGE (\a. {x | Normal a < x}) UNIV))’
+        (STRIP_ASSUME_TAC o (REWRITE_RULE [SIGMA_ALGEBRA_FN])) \\
+     POP_ASSUM MATCH_MP_TAC \\
+     rw [IN_FUNSET] \\
+     Suff ‘{x | Normal (-&n) < x} IN (IMAGE (\a. {x | Normal a < x}) UNIV)’
+     >- METIS_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF] \\
+     rw [] >> Q.EXISTS_TAC ‘-&n’ >> rw [])
+ >> DISCH_TAC
+ >> final_tactics
+QED
 
 val MEASURABLE_BOREL = store_thm
   ("MEASURABLE_BOREL",
