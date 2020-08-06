@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* FILE          : tttSearch.sml                                             *)
-(* DESCRIPTION   : Search algorithm for TacticToe.                           *)
+(* DESCRIPTION   : Proof search algorithm for TacticToe.                     *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
 (* DATE          : 2017                                                      *)
 (* ========================================================================= *)
@@ -18,34 +18,23 @@ val ERR = mk_HOL_ERR "tttSearch"
 val tacpred_time = ref 0.0
 val reward_time = ref 0.0
 val reorder_time = ref 0.0
+val dict_time = ref 0.0
 
 (* -------------------------------------------------------------------------
-   Types
+   Status
    ------------------------------------------------------------------------- *)
 
-type id = (int * int) list (* reverse of natural order *)
-
-fun string_of_id id =
-  let
-    fun f (gn,sn) = "g" ^ its gn ^ "t" ^ its sn
-    val sl = map f (rev id)
-  in
-    String.concatWith " " sl
-  end
-
-val id_compare = list_compare (cpl_compare Int.compare Int.compare)
-
-datatype stacstatus =
-  StacProved |
-  StacSaturated |
-  StacUndecided of goal list |
-  StacFail | StacLoop | StacPara |
-  StacFresh
-
-datatype goalstatus = GoalProved | GoalSaturated | GoalUndecided
-datatype nodestatus = NodeProved | NodeSaturated | NodeUndecided
+datatype sstatus = StacProved | StacSaturated | StacUndecided | StacFresh
+datatype gstatus = GoalProved | GoalSaturated | GoalUndecided
+datatype nstatus = NodeProved | NodeSaturated | NodeUndecided
 datatype searchstatus = SearchProved | SearchSaturated | SearchTimeout
 datatype proofstatus = Proof of string | ProofSaturated | ProofTimeout
+
+fun string_of_sstatus x = case x of
+    StacProved => "SearchProved"
+  | StacSaturated => "SearchSaturated"
+  | StacUndecided => "SearchTimeOut"
+  | StacFresh => "StacFresh"
 
 fun string_of_searchstatus x = case x of
     SearchProved => "SearchProved"
@@ -56,70 +45,147 @@ fun string_of_searchstatus x = case x of
    Search tree
    ------------------------------------------------------------------------- *)
 
-type stac_record =
-  {stac : string, thmidl : string list,
-   svis : real, ssum : real, stacstatus : stacstatus}
+type id = (int * int * int list) list (* reverse of natural order *)
+val id_compare = list_compare 
+  (triple_compare Int.compare Int.compare (list_compare Int.compare))
+fun string_of_id id =
+  let
+    fun f (gn,sn,anl) = "g" ^ its gn ^ "t" ^ its sn ^ "a" ^ 
+      (String.concatWith "_" (rev (map its anl)))
+    val sl = map f (rev id)
+  in
+    String.concatWith " " sl
+  end   
 
+datatype token = Stac of string | Sterm of string | Sthml of string list
+fun string_of_token token = case token of
+    Stac s => "tac: " ^ s
+  | Sterm s => "term: " ^ s
+  | Sthml sl => "thml: " ^ String.concatWith " " sl
+fun compare_token (t1,t2) = 
+  String.compare (string_of_token t1, string_of_token t2)
+
+datatype aty = Tthml of int | Tterm of int
+fun pred_aty aty = case aty of 
+    Tthml _ => (fn g => [])
+  | Tterm _ => (fn g => [])
+
+type stac_record =
+  {token : token, atyl : aty list,
+   svis : real, ssum : real, sstatus : sstatus}
+
+type argtree = (int list, stac_record) Redblackmap.dict
 type goal_record =
-  {
-  goal : goal, gvis : real, gsum  : real, goalstatus : goalstatus,
-  stacv : stac_record vector,
-  siblingd : (goal list, unit) Redblackmap.dict
-  }
+  {goal : goal, gvis : real, gsum  : real, gstatus : gstatus,
+   stacv : argtree vector,
+   siblingd : (goal list, unit) Redblackmap.dict}
 
 type node =
-  {
-  nvis : real, nsum : real, nodestatus : nodestatus,
-  goalv : goal_record vector,
-  parentd : (goal, unit) Redblackmap.dict
-  }
-
+  {nvis : real, nsum : real, nstatus : nstatus,
+   goalv : goal_record vector,
+   parentd : (goal, unit) Redblackmap.dict}
 type tree = (id,node) Redblackmap.dict
 
 (* -------------------------------------------------------------------------
-   Backing up status
+   First part: Node selection
    ------------------------------------------------------------------------- *)
 
-fun is_staclose x = case x of
-    StacSaturated => true
-  | StacFail => true
-  | StacLoop => true
-  | StacPara => true
-  | _ => false
-fun is_stacwin x = case x of StacProved => true | _ => false
-fun is_stacundec x = case x of StacUndecided _ => true | _ => false
-fun dest_stacundec x = case x of
-    StacUndecided gl => gl
-  | _ => raise ERR "dest_stacundec" ""
-fun is_goalwin x = (x = GoalProved)
-fun is_goallose x = (x = GoalSaturated)
-
-fun backstatus_stacv stacv =
-  let val v = Vector.map #stacstatus stacv in
-    if Vector.exists is_stacwin v then GoalProved
-    else if Vector.all is_staclose v then GoalSaturated
-    else GoalUndecided
+fun puct gvis ((sum,vis),polv) =
+  let
+    val exploitation = sum / (vis + 1.0)
+    val exploration  = (polv * Math.sqrt gvis) / (vis + 1.0)
+  in
+    exploitation + (!ttt_explo_coeff) * exploration
   end
 
-fun backstatus_goalv goalv =
-  let val v = Vector.map #goalstatus goalv in
-    if Vector.all is_goalwin v then NodeProved
-    else if Vector.exists is_goallose v then NodeSaturated
-    else NodeUndecided
+fun expo_polv_aux ci (c:real) l = case l of
+    [] => []
+  | a :: m => (a,c) :: expo_polv_aux ci (ci * c) m
+fun expo_polv ci l = expo_polv_aux ci ci l
+
+fun before_stacfresh accessf acc i =
+  if not (can accessf i) then rev acc else 
+  let
+    val stacrec = accessf i
+    val sstatus = #sstatus stacrec
+  in
+    case sstatus of
+      StacFresh => rev ((i,stacrec) :: acc) 
+    | StacUndecided => before_stacfresh accessf ((i,stacrec) :: acc) (i+1)
+    | _ => before_stacfresh accessf acc (i+1)
   end
 
-fun backstatus_node node = case #nodestatus node of
-    NodeUndecided => StacUndecided
-      (vector_to_list (Vector.map #goal (#goalv node)))
-  | NodeProved => StacProved
-  | NodeSaturated => StacSaturated
+fun select_stacrecl stacrecl pvis = 
+  let
+    fun add_puct ((sn,{ssum,svis,...}),polv) =
+      (sn, puct pvis ((ssum,svis),polv))
+    val l0 = expo_polv (!ttt_policy_coeff) stacrecl
+    val _ = if null l0 then raise ERR "select_stacrecl" "unexpected" else ()
+    val l1 = map add_puct l0
+    val l2 = dict_sort compare_rmax l1
+  in
+    fst (hd l2) 
+  end
 
+fun select_accessf accessf pvis =
+  let val stacrecl = before_stacfresh accessf [] 0 in
+    select_stacrecl stacrecl pvis
+  end
 
 (* -------------------------------------------------------------------------
-   Policy re-ordering using policy network
+   Select leaf in argument tree
    ------------------------------------------------------------------------- *)
 
-(*
+fun access_child argtree anl i = dfind (i :: anl) argtree 
+
+fun select_arg argtree anl =
+  let 
+    val pnode = dfind anl argtree
+    val pvis = #svis pnode
+  in
+    if #sstatus pnode = StacFresh then NONE else 
+    SOME (select_accessf (access_child argtree anl) pvis)
+  end
+
+fun select_argl argtree anl =
+  if null (#atyl (dfind anl argtree)) then anl else 
+  case select_arg argtree anl of
+    NONE => anl
+  | SOME an => select_argl argtree (an :: anl)
+
+(* -------------------------------------------------------------------------
+   Select leaf in proof tree
+   ------------------------------------------------------------------------- *)
+
+fun first_goalundec goalv =
+  let
+    fun test (_,x) = (#gstatus x = GoalUndecided)
+    val goalvo = Vector.findi test goalv
+  in
+    if isSome goalvo 
+    then valOf goalvo 
+    else raise ERR "first_goalundec" "no undecided goals"
+  end
+
+fun select_node tree pid =
+  let
+    val {goalv,...} = dfind pid tree
+    val (gn,{goal,gvis,stacv,...}) = first_goalundec goalv
+    fun access_toprec i = dfind [] (Vector.sub (stacv,i))
+    val sn = select_accessf access_toprec gvis
+    val argtree = Vector.sub (stacv,sn)
+    val anl = select_argl argtree []
+  in
+    if #sstatus (dfind anl argtree) = StacFresh
+    then ((pid,(gn,sn,anl)),(goal,argtree))
+    else select_node tree ((gn,sn,anl) :: pid)  
+  end
+
+(* -------------------------------------------------------------------------
+   Second part: Node expansion
+   ------------------------------------------------------------------------- *)
+
+(*  Policy re-ordering using policy network
 fun reorder_stacl g pnn stacl =
   let
     fun f x = mask_unknown_policy pnn (nntm_of_gstactm (g,x))
@@ -138,57 +204,247 @@ fun reorder_stacv g pnn stacv =
 *)
 
 (* -------------------------------------------------------------------------
-   Node creation and backup
+   Expand argument tree and select first prediction 
    ------------------------------------------------------------------------- *)
 
-fun stac_create (stac,thmidl) =
-  {stac = stac, thmidl = thmidl,
-   svis = 0.0, ssum = 0.0, stacstatus = StacFresh}
+fun arg_create atyl arg =
+  {token = arg, atyl = atyl, 
+   svis = 0.0, ssum = 0.0, sstatus = StacFresh}
 
-fun goal_create (pred as (tacpred,lookup,(vnno,pnno))) g =
+fun expand_argtree goal (argtree,anl) =
+  let val atyl = #atyl (dfind anl argtree) in 
+    if null atyl then (argtree,anl,StacFresh) else
+    let val argl1 = pred_aty (hd atyl) goal in
+      if null argl1 then (argtree,anl,StacSaturated) else
+      let 
+        val argl2 = map (arg_create (tl atyl)) argl1 
+        fun f i x = (i :: anl,x)
+        val newargtree = daddl (mapi f argl2) argtree
+      in
+        expand_argtree goal (newargtree, 0 :: anl)
+      end   
+    end    
+  end
+
+(* -------------------------------------------------------------------------
+   Application of a tactic
+   ------------------------------------------------------------------------- *)
+
+fun status_of_stac parentd goalrec glo = case glo of
+    NONE => StacSaturated
+  | SOME [] => StacProved 
+  | SOME gl =>
+   (if op_mem goal_eq (#goal goalrec) gl orelse
+      exists (fn x => dmem x parentd) gl orelse
+      dmem gl (#siblingd goalrec) then StacSaturated
+    else StacUndecided)
+
+fun is_metis_stac token = case token of
+    Stac s => hd (partial_sml_lexer s) = "metisTools.METIS_TAC"
+  | _ => false
+
+val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
+
+val stac_cache = ref (dempty (list_compare compare_token))
+fun clean_stac_cache () = stac_cache := dempty (list_compare compare_token)
+    
+
+fun apply_tac (tokenl,tac) goal = 
+  dfind tokenl (!stac_cache) handle NotFound =>
   let
-    val stacv1 = Vector.fromList (map stac_create (tacpred g))
+    val tim = if is_metis_stac (hd tokenl) then 0.1 else 0.04
+    fun f g = SOME (fst (TC_OFF tac g))
+    val glo = timeout tim f goal
+      handle Interrupt => raise Interrupt | _ => NONE
+  in
+    stac_cache := dadd tokenl glo (!stac_cache); glo
+  end
+
+fun reward_of vnno (sstatus,glo) = case sstatus of
+    StacSaturated => 0.0
+  | StacProved => 1.0
+  | StacUndecided =>
+    (
+    if isSome vnno then
+      let
+        val vnn = valOf vnno
+        val nntm = mask_unknown_value vnn (nntm_of_gl (valOf glo))
+      in
+        infer_tnn_basic vnn nntm
+      end
+    else 1.0
+    )
+  | StacFresh => raise ERR "reward_of" "unexpected"
+
+fun collect_tokenl acc (argtree,anl) = 
+  let val token = #token (dfind anl argtree) in
+    if null anl 
+    then token :: acc 
+    else collect_tokenl (token :: acc) (argtree, tl anl) 
+  end
+
+fun apply_stac (tree, pred as (tacpred,lookup,(vnno,pnno))) 
+  (pid,(gn,sn,anl)) =
+  let
+    val node = dfind pid tree
+    val parentd = #parentd node
+    val goalrec = Vector.sub (#goalv node, gn)
+    val siblingd = #siblingd goalrec
+    val argtree = Vector.sub (#stacv goalrec,sn)
+    val tokenl = collect_tokenl [] (argtree,anl) 
+    val taco = (* timeout 0.1 build_tac tokenl *) NONE
+    val glo = 
+      if isSome taco
+      then apply_tac (tokenl,valOf taco) (#goal goalrec)
+      else NONE
+    val sstatus = status_of_stac parentd goalrec glo
+    val glo' = if sstatus = StacUndecided then glo else NONE
+    val reward = total_time reward_time (reward_of vnno) (sstatus,glo')  
+  in
+    (glo',sstatus,reward)
+  end
+    
+(* -------------------------------------------------------------------------
+   Create a new node (if tactic application was successful)
+   ------------------------------------------------------------------------- *)
+
+fun stac_create (stac,atyl) =
+  let val stacrec = 
+    {token = Stac stac, atyl = atyl, 
+     svis = 0.0, ssum = 0.0, sstatus = StacFresh}
+  in
+    dnew (list_compare Int.compare) [([],stacrec)]
+  end
+
+fun goal_create (pred as (tacpred,lookup,(vnno,pnno))) goal =
+  let
+    val stacv1 = Vector.fromList (map stac_create (tacpred goal))
     val stacv2 = stacv1
-      (* if isSome pnno
-      then total_time reorder_time (reorder_stacv g (valOf pnno)) stacv1
-      else *) 
+    (* if isSome pnno
+       then total_time reorder_time (reorder_stacv goal (valOf pnno)) stacv1
+       else *) 
   in
     {
-    goal = g, gvis = 0.0, gsum = 0.0,
-    goalstatus = backstatus_stacv stacv2,
+    goal = goal, 
+    gvis = 0.0, gsum = 0.0,
+    gstatus = GoalUndecided,
     stacv = stacv2,
     siblingd = dempty (list_compare goal_compare)
     }
   end
 
-fun node_update tree (reward,stacstatus) (id,(gn,stacn)) =
+fun string_of_goall gl = String.concatWith "," (map string_of_goal gl)
+fun debug_node gl = (debugf "goals: " string_of_goall gl; debug ("\n"))
+
+fun node_create (tree,pred) (reward,gl) (pid,(gn,sn,anl)) =
+  let
+    val node = dfind pid tree
+    val pgoalv = #goalv node
+    val pgoalrec = Vector.sub (pgoalv,gn)
+    val pgoal = #goal pgoalrec
+    val cgoalv = Vector.fromList (map (goal_create pred) gl)
+    val cid = (gn,sn,anl) :: pid
+    val node =
+      {
+      nvis = 1.0, nsum = reward, nstatus = NodeUndecided,
+      goalv = cgoalv,
+      parentd = dadd pgoal () (#parentd node)
+      }
+    val newtree = dadd cid node tree
+  in
+    debug_node gl;
+    newtree
+  end
+
+(* -------------------------------------------------------------------------
+   Third part: Node backup
+   ------------------------------------------------------------------------- *)
+
+fun is_stacwin x = (x = StacProved)
+fun is_staclose x = (x = StacSaturated)
+fun is_goalwin x = (x = GoalProved)
+fun is_goallose x = (x = GoalSaturated)
+
+fun backstatus_arg sstatusl =
+  if exists is_stacwin sstatusl then StacProved
+  else if all is_staclose sstatusl then StacSaturated
+  else StacUndecided
+
+fun backstatus_stacv stacv =
+  let val v = Vector.map (fn x => #sstatus (dfind [] x)) stacv in
+    if Vector.exists is_stacwin v then GoalProved
+    else if Vector.all is_staclose v then GoalSaturated
+    else GoalUndecided
+  end
+
+fun backstatus_goalv goalv =
+  let val v = Vector.map #gstatus goalv in
+    if Vector.all is_goalwin v then NodeProved
+    else if Vector.exists is_goallose v then NodeSaturated
+    else NodeUndecided
+  end
+
+fun backstatus_node node = case #nstatus node of
+    NodeUndecided => StacUndecided
+  | NodeProved => StacProved
+  | NodeSaturated => StacSaturated
+
+(* -------------------------------------------------------------------------
+   Backup argument tree
+   ------------------------------------------------------------------------- *)
+
+fun children_statusl argtree anl acc i =
+  if dmem (i :: anl) argtree
+  then children_statusl argtree anl
+    (#sstatus (dfind (i :: anl) argtree) :: acc) (i+1)
+  else rev acc
+
+fun backup_argtree (argtree,anl) (sstatus,reward) =
+  let 
+    val {token,atyl,svis,ssum,...} = dfind anl argtree 
+    val newargnode = 
+      {token = token, atyl = atyl, 
+       svis = svis + 1.0, ssum = ssum + reward, sstatus = sstatus}
+    val newargtree = dadd anl newargnode argtree
+  in
+    if null anl then newargtree else  
+    let
+      val cstatusl = children_statusl newargtree (tl anl) [] 0
+      val pstatus = backstatus_arg cstatusl
+    in
+      backup_argtree (newargtree, tl anl) (pstatus,reward)
+    end
+  end
+
+(* -------------------------------------------------------------------------
+   Backup proof tree
+   ------------------------------------------------------------------------- *)
+
+fun node_update tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl)) =
   let
     val {nvis,nsum,goalv,parentd,...} = dfind id tree
     val {goal,gvis,gsum,stacv,siblingd,...} = Vector.sub (goalv,gn)
-    val {stac,thmidl,svis,ssum,...} = Vector.sub (stacv,stacn)
+    val argtree = Vector.sub (stacv,sn)
+    (* update argtree *)
+    val argtree1 = if isSome argtreeo then (valOf argtreeo) else argtree
+    val argtree2 = backup_argtree (argtree1,anl) (sstatus,reward)  
     (* update stacv *)
-    val newstacrec =
-      {stac = stac, thmidl = thmidl,
-       svis = svis + 1.0, ssum = ssum + reward, stacstatus = stacstatus}
-    val newstacv = Vector.update (stacv,stacn,newstacrec)
+    val newstacv = Vector.update (stacv,sn,argtree2)
     (* update goalv *)
     val newgoalrec =
       {
       goal = goal,
-      gvis = gvis + 1.0, gsum = gsum + reward,
-      goalstatus = backstatus_stacv newstacv,
+      gvis = gvis + 1.0, gsum = gsum + reward, 
+      gstatus = backstatus_stacv newstacv,
       stacv = newstacv,
-      siblingd =
-        if is_stacundec stacstatus (* in theory only needed in leafs *)
-        then dadd (dest_stacundec stacstatus) () siblingd
-        else siblingd
+      siblingd = if isSome glo then dadd (valOf glo) () siblingd else siblingd
       }
     val newgoalv = Vector.update (goalv,gn,newgoalrec)
     (* update node *)
     val newnode =
       {
       nvis = nvis + 1.0, nsum = nsum + reward,
-      nodestatus = backstatus_goalv newgoalv,
+      nstatus = backstatus_goalv newgoalv,
       goalv = newgoalv,
       parentd = parentd
       }
@@ -196,202 +452,13 @@ fun node_update tree (reward,stacstatus) (id,(gn,stacn)) =
     (dadd id newnode tree, backstatus_node newnode)
   end
 
-fun node_backup (tree:tree) (reward,stacstatus) (id,(gn,stacn)) =
-  let val (newtree,newstacstatus) =
-    node_update tree (reward,stacstatus) (id,(gn,stacn))
+fun node_backup tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl)) =
+  let val (newtree,newsstatus) =
+    node_update tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl))
   in
-    if null id then newtree else
-      node_backup newtree (reward,newstacstatus) (tl id, hd id)
-  end
-
-fun string_of_goall gl = String.concatWith "," (map string_of_goal gl)
-
-fun node_create_backup (tree,pred) (reward,gl) (pid,(gn,stacn)) =
-  let
-    val node = dfind pid tree
-    val pgoalv = #goalv node
-    val pgoalrec = Vector.sub (pgoalv,gn)
-    val pstacrec = Vector.sub (#stacv pgoalrec,stacn)
-    val pgoal = #goal pgoalrec
-    val pstac = #stac pstacrec
-    val cgoalv = Vector.fromList (map (goal_create pred) gl)
-    val cid = (gn,stacn) :: pid
-    val node =
-      {
-      nvis = 1.0, nsum = reward,
-      nodestatus = backstatus_goalv cgoalv,
-      goalv = cgoalv,
-      parentd = dadd pgoal () (#parentd node)
-      }
-    val newtree = dadd cid node tree
-  in
-    debugf "node: " string_of_id cid;
-    debugf "goal: " string_of_goal pgoal;
-    debug ("tactic: " ^ pstac);
-    debugf "goals: " string_of_goall gl;
-    debug ("\n");
-    node_backup newtree (reward, backstatus_node node) (pid,(gn,stacn))
-  end
-
-fun starttree_of pred goal =
-  let
-    val goalv = Vector.fromList [goal_create pred goal]
-    val root =
-      {
-      nvis = 1.0,
-      nsum = 0.0,
-      nodestatus = backstatus_goalv goalv,
-      goalv = goalv,
-      parentd = dempty goal_compare
-      }
-  in
-    debugf "root: " string_of_goal goal;
-    dadd [] root (dempty id_compare)
-  end
-
-(* ----------------------------------------------------------------------
-   Searching for a node to explore
-   ---------------------------------------------------------------------- *)
-
-fun puct gvis ((sum,vis),polv) =
-  let
-    val exploitation = sum / (vis + 1.0)
-    val exploration  = (polv * Math.sqrt gvis) / (vis + 1.0)
-  in
-    exploitation + (!ttt_explo_coeff) * exploration
-  end
-
-fun expo_polv_aux ci (c:real) l = case l of
-    [] => []
-  | a :: m => (a,c) :: expo_polv_aux ci (ci * c) m
-fun expo_polv ci l = expo_polv_aux ci ci l
-
-fun first_goalundec goalv =
-  let
-    fun test (_,x) = (#goalstatus x = GoalUndecided)
-    val goalvo = Vector.findi test goalv
-  in
-    if isSome goalvo then valOf goalvo else raise ERR "first_goalundec" "sat"
-  end
-
-fun first_stacfresh stacv =
-  let
-    fun test (_,x) = case #stacstatus x of StacFresh => true | _ => false
-    val stacvo = Vector.findi test stacv
-  in
-    stacvo
-  end
-
-fun mcts_select tree pid =
-  let
-    val {goalv,...} = dfind pid tree
-    val (gn,{goal,gvis,stacv,...}) = first_goalundec goalv
-    val stacundecl = filter (is_stacundec o #stacstatus o snd)
-      (number_fst 0 (vector_to_list stacv))
-    fun add_puct ((stacn,{ssum,svis,...}),polv) =
-      (stacn, puct gvis ((ssum,svis),polv))
-    val fresho = first_stacfresh stacv
-    val l0 = stacundecl @ (if isSome fresho then [valOf fresho] else [])
-    val _ = if null l0 then raise ERR "mcts_select" "sat" else ()
-    val l1 = map add_puct (expo_polv (!ttt_policy_coeff) l0)
-    val l2 = dict_sort compare_rmax l1
-    val (stacbestn,_) = hd l2
-  in
-    if isSome fresho andalso stacbestn = fst (valOf fresho)
-    then pid
-    else mcts_select tree ((gn,stacbestn) :: pid)
-  end
-
-(* -------------------------------------------------------------------------
-   Application of a string tactic
-   ------------------------------------------------------------------------- *)
-
-fun status_of_stac parentd goalrec glo = case glo of
-    NONE => StacFail
-  | SOME gl =>
-    (
-    if null gl then StacProved else
-    if op_mem goal_eq (#goal goalrec) gl orelse
-       exists (fn x => dmem x parentd) gl
-       then StacLoop
-    else if dmem gl (#siblingd goalrec) then StacPara
-    else StacUndecided gl
-    )
-
-fun is_metis_stac s = hd (partial_sml_lexer s) = "metisTools.METIS_TAC"
-val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
-
-val stac_cache = ref (dempty 
-  (triple_compare String.compare  (list_compare String.compare) goal_compare))
-
-fun clean_stac_cache () =
-  stac_cache := dempty 
-    (triple_compare String.compare (list_compare String.compare) goal_compare)
-
-fun apply_stac_aux lookup (stac,thmidl,goal) = 
-  dfind (stac,thmidl,goal) (!stac_cache) handle NotFound =>
-  let
-    val tim = if is_metis_stac stac then 0.1 else 0.04
-    val thml = (#1 lookup) thmidl
-    val ttac = (#2 lookup) stac
-    fun f g = SOME (fst (TC_OFF (ttac thml) g))
-    val glo = timeout tim f goal
-      handle Interrupt => raise Interrupt | _ => NONE
-  in
-    stac_cache := dadd (stac,thmidl,goal) glo (!stac_cache); glo
-  end
-
-fun apply_stac lookup parentd goalrec (stac,thmidl) =
-  let val glo = apply_stac_aux lookup (stac,thmidl,(#goal goalrec)) in
-    status_of_stac parentd goalrec glo
-  end
-
-fun reward_of vnno stacstatus = case stacstatus of
-    StacFail => 0.0
-  | StacLoop => 0.0
-  | StacPara => 0.0
-  | StacProved => 1.0
-  | StacUndecided gl =>
-    (
-    if isSome vnno then
-      let
-        val vnn = valOf vnno
-        val nntm = mask_unknown_value vnn (nntm_of_gl gl)
-      in
-        infer_tnn_basic vnn nntm
-      end
-    else 1.0
-    )
-  | _ => raise ERR "reward_of" "unexpected"
-
-fun string_of_stacstatus x = case x of
-    StacFail => "StacFail"
-  | StacLoop => "StacLoop"
-  | StacPara => "StacPara"
-  | StacProved => "StacProved"
-  | StacUndecided gl => "StacUndecided"
-  | _ => raise ERR "string_of_stacstatus" "unexpected"
-
-
-fun apply_stac_pid (tree, pred as (tacpred,lookup,(vnno,pnno))) pid =
-  let
-    val node = dfind pid tree
-    val (gn,goalundec) = first_goalundec (#goalv node)
-    val (stacn,stacfresh) = valOf (first_stacfresh (#stacv goalundec))
-    val pidx = (pid,(gn,stacn))
-    val cid = (gn,stacn) :: pid
-    val stacstatus = apply_stac lookup (#parentd node) goalundec 
-      (#stac stacfresh, #thmidl stacfresh)
-    val reward = total_time reward_time (reward_of vnno) stacstatus
-    fun msg (a,b,c) =
-      "node: " ^ string_of_id a ^ "\n" ^
-      "tactic: " ^ #stac b ^ "\n" ^
-      "status: " ^ string_of_stacstatus c ^ "\n"
-  in
-    case stacstatus of
-      StacUndecided gl => node_create_backup (tree,pred) (reward,gl) pidx
-    | _ => (debugf "" msg (cid,stacfresh,stacstatus);
-            node_backup tree (reward,stacstatus) pidx)
+    if null id 
+    then newtree 
+    else node_backup newtree (NONE,NONE) (newsstatus,reward) (tl id, hd id)
   end
 
 (* -------------------------------------------------------------------------
@@ -404,34 +471,64 @@ fun search_loop pred starttree =
     fun loop pred tree =
       if Timer.checkRealTimer timer > Time.fromReal (!ttt_search_time)
         then (SearchTimeout,tree)
-      else if #nodestatus (dfind [] tree) = NodeSaturated
+      else if #nstatus (dfind [] tree) = NodeSaturated
         then (SearchSaturated,tree)
-      else if #nodestatus (dfind [] tree) = NodeProved
+      else if #nstatus (dfind [] tree) = NodeProved
         then (SearchProved,tree)
       else
         let
-          val pid = mcts_select tree []
-          val newtree = apply_stac_pid (tree,pred) pid
+          val ((pid,(gn,sn,anl)),(goal,argtree)) = 
+            select_node tree []
+          val (newargtree,newanl,argstatus) =
+            expand_argtree goal (argtree,anl)
+          val pidx = (pid,(gn,sn,newanl))
+          val (glo,sstatus,reward) = 
+            if argstatus = StacFresh 
+            then apply_stac (tree,pred) pidx
+            else (NONE, StacUndecided, reward_of NONE (StacUndecided,NONE))
+          val exptree = 
+            if sstatus = StacUndecided 
+            then node_create (tree,pred) (reward,valOf glo) pidx
+            else tree
+          val backuptree = 
+            node_backup exptree (SOME newargtree, glo) (sstatus,reward) pidx
         in
-          loop pred newtree
+          loop pred backuptree
         end
   in
     loop pred starttree
   end
 
+(* todo: update with new mechanism *)
+fun proofpath_argtree argtree anl =
+  let 
+    val node = dfind anl argtree
+    val atyl = #atyl node
+    fun f i = 
+      if not (dmem (i :: anl) argtree) 
+        then raise ERR "proofpath_argtree" "unexpected"
+      else if is_stacwin (#sstatus (dfind (i :: anl) argtree))
+        then i
+      else f (i + 1)
+  in 
+    if null atyl then anl else proofpath_argtree argtree (f 0 :: anl)
+  end
+
+
 fun extract_proofl tree id =
   let
     val node = dfind id tree
-    val _ = if #nodestatus node = NodeProved then ()
-      else raise ERR "extract_proof" (string_of_id id)
     fun f (gn,goalrec) =
       let
         val stacv = #stacv goalrec
-        fun teststac (_,x) = is_stacwin (#stacstatus x)
-        val (stacn,stacrec) = valOf (Vector.findi teststac stacv)
-        val istac = inst_stac_thmidl (#stac stacrec) (#thmidl stacrec)
+        fun test (_,x) = is_stacwin (#sstatus (dfind [] x))
+        val (sn,argtree) = valOf (Vector.findi test stacv)
+           handle Option => raise ERR "extract_proof" "unexpected"
+        val anl = proofpath_argtree argtree []
+        val tokenl = collect_tokenl [] (argtree,anl)
+        val istac = "NO_TAC"  (* build_stac tokenl *)
         val ptac = Tactic (istac, #goal goalrec)
-        val cid = (gn,stacn) :: id
+        val cid = (gn,sn,anl) :: id
       in
         if dmem cid tree
         then Thenl (ptac, extract_proofl tree cid)
@@ -460,6 +557,18 @@ fun reconstruct_proofstatus (searchstatus,tree) g =
     in
       Proof sproof
     end
+
+fun starttree_of pred goal =
+  let
+    val goalv = Vector.fromList [goal_create pred goal]
+    val root = 
+     {nvis = 1.0, nsum = 0.0, nstatus = backstatus_goalv goalv,
+      goalv = goalv,
+      parentd = dempty goal_compare}
+  in
+    debugf "root: " string_of_goal goal;
+    dadd [] root (dempty id_compare)
+  end
 
 fun search (pred as (tacpred,lookup,tnno)) g =
   let

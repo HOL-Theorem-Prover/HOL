@@ -1,11 +1,11 @@
 (* ========================================================================= *)
-(* FILE          : tttLearn.sml                                              *)
-(* DESCRIPTION   : Re-addressing tactic ownership of goals during recording  *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
-(* DATE          : 2017                                                      *)
+(* FILE          : tttToken.sml                                              *)
+(* DESCRIPTION   : Combining, parsing and predicting tactic tokens           *)
+(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
+(* DATE          : 2020                                                      *)
 (* ========================================================================= *)
 
-structure tttLearn :> tttLearn =
+structure tttToken :> tttToken =
 struct
 
 open HolKernel Abbrev boolLib aiLib

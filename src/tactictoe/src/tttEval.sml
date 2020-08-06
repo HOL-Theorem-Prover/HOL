@@ -127,7 +127,6 @@ fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
     val thmid = current_theory () ^ "_" ^ its (!savestate_level - 1)
     val b = !hide_flag
     val _ = hide_flag := false
-
     val _ = mkDir_err tnnex_dir
     val value_dir = tnnex_dir ^ "/value"
     val policy_dir = tnnex_dir ^ "/policy"
@@ -149,6 +148,7 @@ fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
   in
     print_status status;
     print_time ("ttt_eval",t);
+    print_endline ("nodes: " ^ its (dlength tree)); 
     print_time ("tnn value",!reward_time);
     print_time ("tnn policy",!reorder_time);
     print_time ("tactic pred",!tacpred_time);
@@ -260,7 +260,7 @@ tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
 val _ = ttt_clean_eval ();
-val _ = run_evalscript_thyl "july30-e2" (true,30) (NONE,NONE) thyl;
+val _ = run_evalscript_thyl "august2" (true,30) (NONE,NONE) thyl;
 
 val tnn_value = train_value 0.95 "value";
 val tnn_policy = train_policy 0.95 "policy";
