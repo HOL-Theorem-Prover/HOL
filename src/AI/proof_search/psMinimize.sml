@@ -114,14 +114,8 @@ fun safe_prettify_proof proof = case proof of
     Tactic (s,_) => "(" ^ s ^ ")"
   | Then (p1,p2) => safe_prettify_proof p1 ^ " THEN " ^ safe_prettify_proof p2
   | Thenl (p,pl) =>
-    let
-      val sl = map safe_prettify_proof pl
-      val set = mk_fast_set String.compare sl
-    in
-      if length set = 1
-      then safe_prettify_proof p ^ " THEN " ^ "(" ^ hd set ^ ")"
-      else safe_prettify_proof p ^ " THENL " ^
-        "[" ^ String.concatWith ", " sl ^ "]"
+    let val sl = map safe_prettify_proof pl in
+      safe_prettify_proof p ^ " THENL " ^ "[" ^ String.concatWith ", " sl ^ "]"
     end
 
 (*---------------------------------------------------------------------------

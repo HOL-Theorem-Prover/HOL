@@ -85,10 +85,12 @@ fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
   let
     val _ = hidef QUse.use infix_file
     (* preselection *)
+    val _ = print_endline "preselection"
     val goalf = fea_of_goal true goal
     val (thmsymweight,thmfea) = select_thmfea thmdata goalf
     val (tacsymweight,tacfea) = select_tacfea tacdata goalf
     (* parsing *)
+    val _ = print_endline "parsing"
     val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
     val metis_flag = is_tactic "metisTools.METIS_TAC []"
     val thm_parse_dict = dnew String.compare (preparse_thmidl (map fst thmfea))
@@ -107,8 +109,8 @@ fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
        parse_thmidl = parse_thmidl,
        parse_sterm = fn x => [QUOTE x]}
     (* predictors *)
-    val atyd = dnew String.compare 
-      (map (fn (k,_) => (k, extract_atyl k)) tacfea)
+    val stacl_filtered = metis_stac :: (map fst tacfea_filtered)
+    val atyd = dnew String.compare (map_assoc extract_atyl stacl_filtered)
     val thm_cache = ref (dempty goal_compare)
     val tac_cache = ref (dempty goal_compare)
     fun predthml g =
@@ -139,6 +141,7 @@ fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
         tac_cache := dadd g stacl3 (!tac_cache); stacl3
       end
     (* parameter record *)
+    val _ = print_endline "search"
     val searchobj = 
       {predtac = predtac, predarg = predarg,
        parsetoken = parsetoken,

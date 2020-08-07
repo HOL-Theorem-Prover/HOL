@@ -51,7 +51,7 @@ val id_compare = list_compare
 fun string_of_id id =
   let
     fun f (gn,sn,anl) = "g" ^ its gn ^ "t" ^ its sn ^ "a" ^ 
-      (String.concatWith "_" (rev (map its anl)))
+      (String.concatWith "|" (rev (map its anl)))
     val sl = map f (rev id)
   in
     String.concatWith " " sl
@@ -228,7 +228,9 @@ fun status_of_stac parentd goalrec glo = case glo of
   | SOME gl =>
    (if op_mem goal_eq (#goal goalrec) gl orelse
       exists (fn x => dmem x parentd) gl orelse
-      dmem gl (#siblingd goalrec) then StacSaturated
+      dmem gl (#siblingd goalrec) orelse
+      exists (fn x => term_eq (snd x) F) gl
+    then StacSaturated
     else StacUndecided)
 
 fun is_metis_stac token = case token of
@@ -237,15 +239,20 @@ fun is_metis_stac token = case token of
 
 val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
-val stac_cache = ref (dempty (list_compare compare_token))
-fun clean_stac_cache () = stac_cache := dempty (list_compare compare_token)
+val stac_cache = ref (
+  dempty (cpl_compare goal_compare (list_compare compare_token)))
+fun clean_stac_cache () = stac_cache := 
+  dempty (cpl_compare goal_compare (list_compare compare_token))
+
+fun get_stac tokenl = case hd tokenl of Stac s => s | _ => "none"
 
 fun apply_tac parsetoken tokenl goal = 
-  dfind tokenl (!stac_cache) handle NotFound =>
+  dfind (goal,tokenl) (!stac_cache) handle NotFound =>
   let
     val tim = if is_metis_stac (hd tokenl) 
               then !ttt_metis_time 
               else !ttt_tactic_time
+    val _ = debugf "stac: " get_stac tokenl
     fun f g = 
       let val tac = build_tac parsetoken tokenl in
         SOME (fst (TC_OFF tac g))
@@ -253,7 +260,7 @@ fun apply_tac parsetoken tokenl goal =
     val glo = timeout tim f goal
       handle Interrupt => raise Interrupt | _ => NONE
   in
-    stac_cache := dadd tokenl glo (!stac_cache); glo
+    stac_cache := dadd (goal,tokenl) glo (!stac_cache); glo
   end
 
 fun reward_of vnno (sstatus,glo) = case sstatus of
@@ -279,13 +286,13 @@ fun collect_tokenl acc (argtree,anl) =
     else collect_tokenl (token :: acc) (argtree, tl anl) 
   end
 
-fun apply_stac (tree,searchobj) (pid,(gn,sn,anl)) =
+fun apply_stac (tree,searchobj) argtree (pid,(gn,sn,anl)) =
   let
+    val _ = debugf "id: " string_of_id ((gn,sn,anl) :: pid)
     val node = dfind pid tree
     val parentd = #parentd node
     val goalrec = Vector.sub (#goalv node, gn)
     val siblingd = #siblingd goalrec
-    val argtree = Vector.sub (#stacv goalrec,sn)
     val tokenl = collect_tokenl [] (argtree,anl)
     val glo = apply_tac (#parsetoken searchobj) tokenl (#goal goalrec)
     val sstatus = status_of_stac parentd goalrec glo
@@ -464,19 +471,24 @@ fun search_loop startsearchobj starttree =
         then (SearchProved,tree)
       else
         let
+          val _ = debug "selection"
           val ((pid,(gn,sn,anl)),(goal,argtree)) = 
             select_node tree []
+          val _ = debug "argument expansion"
           val (newargtree,newanl,argstatus) =
             expand_argtree searchobj goal (argtree,anl)
           val pidx = (pid,(gn,sn,newanl))
+          val _ = debug "application"
           val (glo,sstatus,reward) = 
             if argstatus = StacFresh 
-            then apply_stac (tree,searchobj) pidx
+            then apply_stac (tree,searchobj) newargtree pidx
             else (NONE, StacUndecided, reward_of NONE (StacUndecided,NONE))
+          val _ = debug "node expansion"
           val exptree = 
             if sstatus = StacUndecided 
             then node_create (tree,searchobj) (reward,valOf glo) pidx
             else tree
+          val _ = debug "backup"
           val backuptree = 
             node_backup exptree (SOME newargtree, glo) (sstatus,reward) pidx
         in
@@ -517,6 +529,8 @@ fun extract_proofl tree id =
         val tokenl = collect_tokenl [] (argtree,anl)
         val istac = build_stac tokenl
         val ptac = Tactic (istac, #goal goalrec)
+        val _ = debugf "goal: " string_of_goal (#goal goalrec)
+        val _ = debug ("stac: " ^ istac);
         val cid = (gn,sn,anl) :: id
       in
         if dmem cid tree
@@ -555,7 +569,7 @@ fun starttree_of searchobj goal =
   let
     val goalv = Vector.fromList [goal_create searchobj goal]
     val root = 
-     {nvis = 1.0, nsum = 0.0, nstatus = backstatus_goalv goalv,
+     {nvis = 1.0, nsum = 0.0, nstatus = NodeUndecided,
       goalv = goalv,
       parentd = dempty goal_compare}
   in
