@@ -1569,6 +1569,13 @@ Definition word_from_bytes_def:
     ((w2w b3) << 24) || ((w2w b2) << 16) || ((w2w b1) << 8) || w2w b0
 End
 
+Triviality SET_LEMMA:
+  { f b | b | (b = a) ∨ (b = a + 1w) ∨ (b = a + 2w) ∨ (b = a + 3w)} =
+  { f a ; f (a+1w) ; f (a+2w) ; f (a+3w) }
+Proof
+  fs [EXTENSION] \\ metis_tac []
+QED
+
 Theorem RISCV_CODE_READ:
   (!mem dmem.
     SPEC RISCV_MODEL
@@ -1579,11 +1586,52 @@ Theorem RISCV_CODE_READ:
        riscv_REG r (sw2sw (mem (a + 3w) @@ mem (a + 2w) @@ mem (a + 1w) @@ mem a)) *
        riscv_MEMORY dmem mem)) ==>
   SPEC RISCV_MODEL
-    (f * cond (p ∧ aligned 2 a ∧ a <> pc))
+    (f * cond (p ∧ aligned 2 a ∧ LENGTH inst ≤ 4 ∧
+               ALL_DISTINCT [a;a+1w;a+2w;a+3w;pc;pc+1w;pc+2w;pc+3w]))
     {(pc,inst); (a,[h0; h1; h2; h3])}
     (f' * riscv_REG r (sw2sw (word_from_bytes h3 h2 h1 h0 : word32)))
 Proof
-  cheat
+  fs [riscv_progTheory.RISCV_MODEL_def]
+  \\ once_rewrite_tac [GSYM SPEC_CODE] \\ fs []
+  \\ fs [GSYM riscv_progTheory.RISCV_MODEL_def]
+  \\ simp [STAR_ASSOC,SPEC_MOVE_COND]
+  \\ simp [GSYM STAR_ASSOC,SPEC_MOVE_COND]
+  \\ once_rewrite_tac [STAR_COMM]
+  \\ rw [] \\ fs []
+  \\ first_x_assum (qspecl_then [‘λb. if b = a+0w then h0 else
+                                      if b = a+1w then h1 else
+                                      if b = a+2w then h2 else h3’,
+                                 ‘{a+0w; a+1w; a+2w; a+3w}’] mp_tac)
+  \\ fs [GSYM STAR_ASSOC]
+  \\ qmatch_goalsub_abbrev_tac ‘SPEC RISCV_MODEL (_ * mm) EMPTY _ ⇒ _’
+  \\ qpat_abbrev_tac ‘ww = ((h3 @@ h2 @@ h1 @@ h0))’
+  \\ ‘ww = word_from_bytes h3 h2 h1 h0’ by
+    (unabbrev_all_tac \\ fs [word_from_bytes_def] \\ blastLib.BBLAST_TAC)
+  \\ unabbrev_all_tac \\ fs []
+  \\ qmatch_goalsub_abbrev_tac ‘SPEC RISCV_MODEL (_ * mm) EMPTY _ ⇒ _’
+  \\ qsuff_tac ‘mm = CODE_POOL riscv_instr {(pc,inst); (a,[h0; h1; h2; h3])}’
+  THEN1 fs []
+  \\ unabbrev_all_tac \\ fs []
+  \\ fs [CODE_POOL_def]
+  \\ fs [riscv_MEMORY_def,SET_LEMMA,riscv_MEM8_def]
+  \\ once_rewrite_tac [INSERT_UNION] \\ fs []
+  \\ once_rewrite_tac [INSERT_UNION] \\ fs []
+  \\ once_rewrite_tac [INSERT_UNION] \\ fs []
+  \\ fs [riscv_instr_def,riscv_mem_def]
+  \\ fs [GSYM riscv_instr_def,GSYM riscv_mem_def]
+  \\ qmatch_goalsub_abbrev_tac ‘tt UNION vv’
+  \\ qsuff_tac ‘DISJOINT vv tt’
+  THEN1
+   (simp [STAR_def,SPLIT_def,Once FUN_EQ_THM]
+    \\ rw [] \\ eq_tac \\ rw [] \\ metis_tac [UNION_COMM])
+  \\ qunabbrev_tac ‘vv’ \\ fs [DISJOINT_INSERT]
+  \\ unabbrev_all_tac
+  \\ Cases_on ‘inst’ THEN1 fs [riscv_instr_def,riscv_mem_def]
+  \\ Cases_on ‘t’ THEN1 fs [riscv_instr_def,riscv_mem_def]
+  \\ Cases_on ‘t'’ THEN1 fs [riscv_instr_def,riscv_mem_def]
+  \\ Cases_on ‘t’ THEN1 fs [riscv_instr_def,riscv_mem_def]
+  \\ Cases_on ‘t'’ THEN1 fs [riscv_instr_def,riscv_mem_def]
+  \\ fs [ADD1]
 QED
 
 val word32_def = Define `

@@ -410,6 +410,7 @@ fun riscv_get_spec_for_switch inst_positions (pos,switch_code) = let
                    (RATOR_CONV o RAND_CONV) r_conv THENC
                    (RATOR_CONV o RATOR_CONV o RAND_CONV o RAND_CONV) r_conv)
     val thC = thB |> SIMP_RULE (srw_ss()) [word_from_bytes_def,
+                       listTheory.ALL_DISTINCT,listTheory.LENGTH,ADD1,
                        alignmentTheory.aligned_def,alignmentTheory.align_def]
                   |> DISCH_ALL |> REWRITE_RULE [SPEC_MOVE_COND,AND_IMP_INTRO]
     val new_pc =
