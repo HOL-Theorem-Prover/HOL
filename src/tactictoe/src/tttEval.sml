@@ -28,7 +28,7 @@ fun extract_value tree =
     val nodel = map snd (dlist tree)
     fun get_valuetm node =
       (nntm_of_gl o vector_to_list o Vector.map #goal o #goalv) node
-    fun is_win node = case #nodestatus node of NodeProved => 1.0 | _ => 0.0
+    fun is_win node = case #nstatus node of NodeProved => 1.0 | _ => 0.0
   in
     basicex_to_tnnex (map (fn x => (get_valuetm x, is_win x)) nodel)
   end
@@ -151,7 +151,7 @@ fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
     print_endline ("nodes: " ^ its (dlength tree)); 
     print_time ("tnn value",!reward_time);
     print_time ("tnn policy",!reorder_time);
-    print_time ("tactic pred",!tacpred_time);
+    print_time ("tactic pred",!predtac_time);
     hide_flag := b
   end
 

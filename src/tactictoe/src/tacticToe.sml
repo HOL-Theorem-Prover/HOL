@@ -12,10 +12,9 @@ open HolKernel Abbrev boolLib aiLib
   smlLexer smlParser smlExecute smlRedirect smlInfix
   mlFeature mlThmData mlTacticData mlNearestNeighbor mlTreeNeuralNetwork
   psMinimize
-  tttSetup tttLearn tttSearch
+  tttSetup tttToken tttLearn tttSearch
 
 val ERR = mk_HOL_ERR "tacticToe"
-
 
 (* -------------------------------------------------------------------------
    Time limit
@@ -33,23 +32,23 @@ fun warning_msg s = if !warning then print_endline ("warning: " ^ s) else ()
 
 fun thml_of_thmidl thmidl = thml_of_sml (map dbfetch_of_thmid thmidl)
 
-fun parse_thml thmidl = case thml_of_thmidl thmidl of
+fun preparse_thmidl thmidl = case thml_of_thmidl thmidl of
     NONE => 
     if is_singleton thmidl 
     then (warning_msg (singleton_of_list thmidl ^ "failed to parse"); [])
     else
       let val (l1,l2) = part_n (length thmidl div 2) thmidl in
-        (parse_thml l1 @ parse_thml l2)
+        (preparse_thmidl l1 @ preparse_thmidl l2)
       end
   | SOME rl => combine (thmidl,rl)
 
-fun parse_tacl stacl = case ttacl_of_sml 1.0 stacl of
+fun preparse_stac stacl = case pretacl_of_sml 1.0 stacl of
     NONE => 
     if is_singleton stacl 
     then (warning_msg (singleton_of_list stacl ^ "failed to parse"); [])
     else
       let val (l1,l2) = part_n (length stacl div 2) stacl in
-        (parse_tacl l1 @ parse_tacl l2)
+        (preparse_stac l1 @ preparse_stac l2)
       end
   | SOME rl => combine (stacl,rl)
 
@@ -82,7 +81,7 @@ fun select_tacfea tacdata gfea =
    Main function
    ------------------------------------------------------------------------- *)
 
-fun main_tactictoe (thmdata,tacdata) tnno goal =
+fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
   let
     val _ = hidef QUse.use infix_file
     (* preselection *)
@@ -92,30 +91,40 @@ fun main_tactictoe (thmdata,tacdata) tnno goal =
     (* parsing *)
     val metis_stac = "metisTools.METIS_TAC " ^ thmlarg_placeholder
     val metis_flag = is_tactic "metisTools.METIS_TAC []"
-    val thm_parse_dict = dnew String.compare (parse_thml (map fst thmfea))
+    val thm_parse_dict = dnew String.compare (preparse_thmidl (map fst thmfea))
     val tac_parse_dict = 
-       dnew String.compare (parse_tacl (
+       dnew String.compare (preparse_stac (
          (if metis_flag then [metis_stac] else []) @ map fst tacfea))
-    fun lookup_thmidl thmidl = map (fn x => dfind x thm_parse_dict) thmidl 
+    fun parse_thmidl thmidl = map (fn x => dfind x thm_parse_dict) thmidl 
       handle NotFound => 
-        raise ERR "lookup_thmidl" (String.concatWith " " thmidl)
-    fun lookup_stac stac = dfind stac tac_parse_dict
-      handle NotFound => raise ERR "lookup_stac" stac
-    val lookup = (lookup_thmidl, lookup_stac)
+        raise ERR "parse_thmidl" (String.concatWith " " thmidl)
+    fun parse_stac stac = dfind stac tac_parse_dict
+      handle NotFound => raise ERR "parse_stac" stac
     val thmfea_filtered = filter (fn x => dmem (fst x) thm_parse_dict) thmfea 
     val tacfea_filtered = filter (fn x => dmem (fst x) tac_parse_dict) tacfea  
+    val parsetoken = 
+      {parse_stac = parse_stac,
+       parse_thmidl = parse_thmidl,
+       parse_sterm = fn x => [QUOTE x]}
     (* predictors *)
-    val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
+    val atyd = dnew String.compare 
+      (map (fn (k,_) => (k, extract_atyl k)) tacfea)
+    val thm_cache = ref (dempty goal_compare)
     val tac_cache = ref (dempty goal_compare)
-    fun thmpred n g =
-      dfind (g,n) (!thm_cache) handle NotFound =>
+    fun predthml g =
+      dfind g (!thm_cache) handle NotFound =>
       let 
         val gfea = fea_of_goal true g
-        val thmidl = thmknn (thmsymweight,thmfea_filtered) n gfea
+        val thmidl = thmknn (thmsymweight,thmfea_filtered) 
+          (!ttt_thmlarg_radius) gfea
       in
-        thm_cache := dadd (g,n) thmidl (!thm_cache); thmidl
+        thm_cache := dadd g thmidl (!thm_cache); thmidl
       end
-    fun tacpred g =
+    fun predarg aty g = 
+      if aty = Athml 
+      then [Sthml (predthml g)] 
+      else raise ERR "predarg" "no predictor for this argument type"
+    fun predtac g =
       dfind g (!tac_cache) handle NotFound =>
       let
         val gfea = fea_of_goal true g
@@ -125,18 +134,17 @@ fun main_tactictoe (thmdata,tacdata) tnno goal =
           if metis_flag
           then mk_sameorder_set String.compare (metis_stac :: stacl1)
           else stacl1
+        val stacl3 = map_assoc (fn x => dfind x atyd) stacl2
       in
-        tac_cache := dadd g stacl2 (!tac_cache); stacl2
+        tac_cache := dadd g stacl3 (!tac_cache); stacl3
       end
-    fun tacpred' g = 
-      let 
-        val thmidl = thmpred (!ttt_thmlarg_radius) g 
-        val stacl = tacpred g
-      in
-        map_assoc (fn _ => thmidl) stacl
-      end
+    (* parameter record *)
+    val searchobj = 
+      {predtac = predtac, predarg = predarg,
+       parsetoken = parsetoken,
+       vnno = vnno, pnno = pnno}
   in
-    search (tacpred',lookup,tnno) goal
+    search searchobj goal
   end
 
 (* -------------------------------------------------------------------------

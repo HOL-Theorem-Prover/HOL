@@ -18,16 +18,10 @@ val ERR = mk_HOL_ERR "smlExec"
 
 val sml_bool_glob = ref false
 val sml_tactic_glob = ref (FAIL_TAC "smlExecute")
-val sml_tacticl_glob = ref []
-val sml_ttacl_glob = ref []
 val sml_string_glob = ref ""
 val sml_goal_glob = ref ([],F)
-val sml_term_glob = ref T
-val sml_termlist_glob = ref [T]
 val sml_thm_glob = ref TRUTH
 val sml_thml_glob = ref []
-val thmlarg_placeholder = "tactictoe_thmlarg"
-val tactictoe_thmlarg = []
 
 (* -------------------------------------------------------------------------
    Execute strings as sml code
@@ -127,19 +121,6 @@ fun tactic_of_sml tim s =
     val b = quse_string program
   in
     if b then !sml_tactic_glob else raise ERR "tactic_of_sml" s
-  end
-
-fun mk_ttac s = "fn " ^ thmlarg_placeholder ^ " => " ^ mk_valid s
-
-fun ttacl_of_sml tim sl =
-  let
-    val ttacl = "[ " ^ String.concatWith " , " (map mk_ttac sl) ^ " ]"
-    val program =
-      "let fun f () = smlExecute.sml_ttacl_glob := " ^ ttacl ^ " in " ^
-      "smlTimeout.timeout " ^ rts tim ^ " f () end"
-    val b = quse_string program
-  in
-    if b then SOME (!sml_ttacl_glob) else NONE
   end
 
 (* -------------------------------------------------------------------------

@@ -1014,6 +1014,9 @@ fun split_sl_aux s pl sl = case sl of
 
 fun split_sl s sl = split_sl_aux s [] sl
 
+fun subst_sl (s1,s2) sl = 
+  let fun f x = if x = s1 then s2 else x in map f sl end
+
 fun rpt_split_sl s sl =
   let val (a,b) = split_sl s sl handle _ => (sl,[])
   in

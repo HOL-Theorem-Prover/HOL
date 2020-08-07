@@ -182,6 +182,7 @@ sig
   val tl_string : string -> string
   val unquote_string : string -> string
   val drop_sig : string -> string
+  val subst_sl : (string * string) -> string list -> string list
   val split_sl : ''a -> ''a list -> ''a list * ''a list
   val rpt_split_sl : ''a -> ''a list -> ''a list list
   val split_level : string -> string list -> (string list * string list)

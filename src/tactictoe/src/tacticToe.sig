@@ -5,10 +5,8 @@ sig
 
   type tnn = mlTreeNeuralNetwork.tnn
 
-  val parse_thml : string list -> (string * thm) list
-  val parse_tacl : string list -> (string * (thm list -> tactic)) list
-
-  val main_tactictoe : mlThmData.thmdata * mlTacticData.tacdata ->
+  val main_tactictoe : 
+    mlThmData.thmdata * mlTacticData.tacdata ->
     tnn option * tnn option ->
     goal -> tttSearch.proofstatus * tttSearch.tree
 

@@ -12,10 +12,10 @@ open HolKernel Abbrev boolLib aiLib
   smlTimeout smlLexer smlExecute
   mlFeature mlThmData mlTacticData mlNearestNeighbor mlTreeNeuralNetwork
   psMinimize
-  tttSetup tttLearn
+  tttSetup tttToken tttLearn 
 
 val ERR = mk_HOL_ERR "tttSearch"
-val tacpred_time = ref 0.0
+val predtac_time = ref 0.0
 val reward_time = ref 0.0
 val reorder_time = ref 0.0
 val dict_time = ref 0.0
@@ -57,19 +57,6 @@ fun string_of_id id =
     String.concatWith " " sl
   end   
 
-datatype token = Stac of string | Sterm of string | Sthml of string list
-fun string_of_token token = case token of
-    Stac s => "tac: " ^ s
-  | Sterm s => "term: " ^ s
-  | Sthml sl => "thml: " ^ String.concatWith " " sl
-fun compare_token (t1,t2) = 
-  String.compare (string_of_token t1, string_of_token t2)
-
-datatype aty = Tthml of int | Tterm of int
-fun pred_aty aty = case aty of 
-    Tthml _ => (fn g => [])
-  | Tterm _ => (fn g => [])
-
 type stac_record =
   {token : token, atyl : aty list,
    svis : real, ssum : real, sstatus : sstatus}
@@ -85,6 +72,12 @@ type node =
    goalv : goal_record vector,
    parentd : (goal, unit) Redblackmap.dict}
 type tree = (id,node) Redblackmap.dict
+
+type searchobj = 
+  {predtac : goal -> (string * aty list) list,
+   predarg : aty -> goal -> token list,
+   parsetoken : parsetoken,
+   vnno: tnn option, pnno: tnn option}
 
 (* -------------------------------------------------------------------------
    First part: Node selection
@@ -208,20 +201,19 @@ fun reorder_stacv g pnn stacv =
    ------------------------------------------------------------------------- *)
 
 fun arg_create atyl arg =
-  {token = arg, atyl = atyl, 
-   svis = 0.0, ssum = 0.0, sstatus = StacFresh}
+  {token = arg, atyl = atyl, svis = 0.0, ssum = 0.0, sstatus = StacFresh}
 
-fun expand_argtree goal (argtree,anl) =
+fun expand_argtree searchobj goal (argtree,anl) =
   let val atyl = #atyl (dfind anl argtree) in 
     if null atyl then (argtree,anl,StacFresh) else
-    let val argl1 = pred_aty (hd atyl) goal in
+    let val argl1 = #predarg searchobj (hd atyl) goal in
       if null argl1 then (argtree,anl,StacSaturated) else
       let 
         val argl2 = map (arg_create (tl atyl)) argl1 
-        fun f i x = (i :: anl,x)
+        fun f i x = (i :: anl, x)
         val newargtree = daddl (mapi f argl2) argtree
       in
-        expand_argtree goal (newargtree, 0 :: anl)
+        expand_argtree searchobj goal (newargtree, 0 :: anl)
       end   
     end    
   end
@@ -247,13 +239,17 @@ val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
 val stac_cache = ref (dempty (list_compare compare_token))
 fun clean_stac_cache () = stac_cache := dempty (list_compare compare_token)
-    
 
-fun apply_tac (tokenl,tac) goal = 
+fun apply_tac parsetoken tokenl goal = 
   dfind tokenl (!stac_cache) handle NotFound =>
   let
-    val tim = if is_metis_stac (hd tokenl) then 0.1 else 0.04
-    fun f g = SOME (fst (TC_OFF tac g))
+    val tim = if is_metis_stac (hd tokenl) 
+              then !ttt_metis_time 
+              else !ttt_tactic_time
+    fun f g = 
+      let val tac = build_tac parsetoken tokenl in
+        SOME (fst (TC_OFF tac g))
+      end
     val glo = timeout tim f goal
       handle Interrupt => raise Interrupt | _ => NONE
   in
@@ -283,23 +279,19 @@ fun collect_tokenl acc (argtree,anl) =
     else collect_tokenl (token :: acc) (argtree, tl anl) 
   end
 
-fun apply_stac (tree, pred as (tacpred,lookup,(vnno,pnno))) 
-  (pid,(gn,sn,anl)) =
+fun apply_stac (tree,searchobj) (pid,(gn,sn,anl)) =
   let
     val node = dfind pid tree
     val parentd = #parentd node
     val goalrec = Vector.sub (#goalv node, gn)
     val siblingd = #siblingd goalrec
     val argtree = Vector.sub (#stacv goalrec,sn)
-    val tokenl = collect_tokenl [] (argtree,anl) 
-    val taco = (* timeout 0.1 build_tac tokenl *) NONE
-    val glo = 
-      if isSome taco
-      then apply_tac (tokenl,valOf taco) (#goal goalrec)
-      else NONE
+    val tokenl = collect_tokenl [] (argtree,anl)
+    val glo = apply_tac (#parsetoken searchobj) tokenl (#goal goalrec)
     val sstatus = status_of_stac parentd goalrec glo
     val glo' = if sstatus = StacUndecided then glo else NONE
-    val reward = total_time reward_time (reward_of vnno) (sstatus,glo')  
+    val reward = total_time reward_time 
+      (reward_of (#vnno searchobj)) (sstatus,glo')  
   in
     (glo',sstatus,reward)
   end
@@ -308,27 +300,22 @@ fun apply_stac (tree, pred as (tacpred,lookup,(vnno,pnno)))
    Create a new node (if tactic application was successful)
    ------------------------------------------------------------------------- *)
 
-fun stac_create (stac,atyl) =
-  let val stacrec = 
-    {token = Stac stac, atyl = atyl, 
-     svis = 0.0, ssum = 0.0, sstatus = StacFresh}
+fun argtree_create (stac,atyl) =
+  let val stacrec = {token = Stac stac, atyl = atyl, 
+    svis = 0.0, ssum = 0.0, sstatus = StacFresh}
   in
     dnew (list_compare Int.compare) [([],stacrec)]
   end
 
-fun goal_create (pred as (tacpred,lookup,(vnno,pnno))) goal =
-  let
-    val stacv1 = Vector.fromList (map stac_create (tacpred goal))
-    val stacv2 = stacv1
-    (* if isSome pnno
-       then total_time reorder_time (reorder_stacv goal (valOf pnno)) stacv1
-       else *) 
+fun goal_create searchobj goal =
+  let val stacv = Vector.fromList 
+    (map argtree_create (#predtac searchobj goal))
+    (* total_time reorder_time (reorder_stacv goal (valOf pnno)) stacv *) 
   in
     {
     goal = goal, 
-    gvis = 0.0, gsum = 0.0,
-    gstatus = GoalUndecided,
-    stacv = stacv2,
+    gvis = 0.0, gsum = 0.0, gstatus = GoalUndecided,
+    stacv = stacv,
     siblingd = dempty (list_compare goal_compare)
     }
   end
@@ -336,13 +323,13 @@ fun goal_create (pred as (tacpred,lookup,(vnno,pnno))) goal =
 fun string_of_goall gl = String.concatWith "," (map string_of_goal gl)
 fun debug_node gl = (debugf "goals: " string_of_goall gl; debug ("\n"))
 
-fun node_create (tree,pred) (reward,gl) (pid,(gn,sn,anl)) =
+fun node_create (tree,searchobj) (reward,gl) (pid,(gn,sn,anl)) =
   let
     val node = dfind pid tree
     val pgoalv = #goalv node
     val pgoalrec = Vector.sub (pgoalv,gn)
     val pgoal = #goal pgoalrec
-    val cgoalv = Vector.fromList (map (goal_create pred) gl)
+    val cgoalv = Vector.fromList (map (goal_create searchobj) gl)
     val cid = (gn,sn,anl) :: pid
     val node =
       {
@@ -462,13 +449,13 @@ fun node_backup tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl)) =
   end
 
 (* -------------------------------------------------------------------------
-   Main search function
+   Search loop: selection, expansion and backup
    ------------------------------------------------------------------------- *)
 
-fun search_loop pred starttree =
+fun search_loop startsearchobj starttree =
   let
     val timer = Timer.startRealTimer ()
-    fun loop pred tree =
+    fun loop searchobj tree =
       if Timer.checkRealTimer timer > Time.fromReal (!ttt_search_time)
         then (SearchTimeout,tree)
       else if #nstatus (dfind [] tree) = NodeSaturated
@@ -480,26 +467,29 @@ fun search_loop pred starttree =
           val ((pid,(gn,sn,anl)),(goal,argtree)) = 
             select_node tree []
           val (newargtree,newanl,argstatus) =
-            expand_argtree goal (argtree,anl)
+            expand_argtree searchobj goal (argtree,anl)
           val pidx = (pid,(gn,sn,newanl))
           val (glo,sstatus,reward) = 
             if argstatus = StacFresh 
-            then apply_stac (tree,pred) pidx
+            then apply_stac (tree,searchobj) pidx
             else (NONE, StacUndecided, reward_of NONE (StacUndecided,NONE))
           val exptree = 
             if sstatus = StacUndecided 
-            then node_create (tree,pred) (reward,valOf glo) pidx
+            then node_create (tree,searchobj) (reward,valOf glo) pidx
             else tree
           val backuptree = 
             node_backup exptree (SOME newargtree, glo) (sstatus,reward) pidx
         in
-          loop pred backuptree
+          loop searchobj backuptree
         end
   in
-    loop pred starttree
+    loop startsearchobj starttree
   end
 
-(* todo: update with new mechanism *)
+(* -------------------------------------------------------------------------
+   Proof reconstruction
+   ------------------------------------------------------------------------- *)
+
 fun proofpath_argtree argtree anl =
   let 
     val node = dfind anl argtree
@@ -514,7 +504,6 @@ fun proofpath_argtree argtree anl =
     if null atyl then anl else proofpath_argtree argtree (f 0 :: anl)
   end
 
-
 fun extract_proofl tree id =
   let
     val node = dfind id tree
@@ -526,7 +515,7 @@ fun extract_proofl tree id =
            handle Option => raise ERR "extract_proof" "unexpected"
         val anl = proofpath_argtree argtree []
         val tokenl = collect_tokenl [] (argtree,anl)
-        val istac = "NO_TAC"  (* build_stac tokenl *)
+        val istac = build_stac tokenl
         val ptac = Tactic (istac, #goal goalrec)
         val cid = (gn,sn,anl) :: id
       in
@@ -558,9 +547,13 @@ fun reconstruct_proofstatus (searchstatus,tree) g =
       Proof sproof
     end
 
-fun starttree_of pred goal =
+(* -------------------------------------------------------------------------
+   Proof search top-level function
+   ------------------------------------------------------------------------- *)
+
+fun starttree_of searchobj goal =
   let
-    val goalv = Vector.fromList [goal_create pred goal]
+    val goalv = Vector.fromList [goal_create searchobj goal]
     val root = 
      {nvis = 1.0, nsum = 0.0, nstatus = backstatus_goalv goalv,
       goalv = goalv,
@@ -570,13 +563,19 @@ fun starttree_of pred goal =
     dadd [] root (dempty id_compare)
   end
 
-fun search (pred as (tacpred,lookup,tnno)) g =
+fun time_searchobj predtac_time {predtac,predarg,parsetoken,vnno,pnno} =
+  {
+  predtac = total_time predtac_time predtac,
+  predarg = predarg, parsetoken = parsetoken, vnno = vnno, pnno = pnno
+  }
+
+fun search searchobj g =
   let
     val _ = clean_stac_cache ()
-    val _ = (tacpred_time := 0.0; reward_time := 0.0; reorder_time := 0.0)
-    val starttree = starttree_of pred g
+    val _ = (predtac_time := 0.0; reward_time := 0.0; reorder_time := 0.0)
+    val starttree = starttree_of searchobj g
     val ((searchstatus,tree),t) = add_time
-      (search_loop (total_time tacpred_time tacpred, lookup, tnno)) starttree
+      (search_loop (time_searchobj predtac_time searchobj)) starttree
     val _ = clean_stac_cache ()
     val _ = print_endline ("search time: " ^ rts_round 6 t)
   in
