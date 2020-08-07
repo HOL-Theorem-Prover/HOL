@@ -286,11 +286,13 @@ fun remove_arm_CONFIGURE th =
     in th end
   else th
 
+datatype ('a,'b) sum = INL of 'a | INR of 'b;
+
 (*
 val (pos,switch_code) = !switch_input
 *)
 
-fun get_spec_for_switch (pos,switch_code) = let
+fun arm_get_spec_for_switch (pos,switch_code) = let
   val _ = (switch_input := (pos,switch_code))
   fun remove_colon_prefix s = last (String.tokens (fn x => x = #":") s)
   val raw_code = map remove_colon_prefix switch_code
@@ -360,7 +362,90 @@ fun get_spec_for_switch (pos,switch_code) = let
   val (_,_,c,_) = dest_spec (concl th)
   val th2a = MP (MATCH_MP SPEC_SUBSET_CODE th2a |> SPEC c
                  |> CONV_RULE (BINOP1_CONV (EVAL))) TRUTH
-  in (th1,th,th2a,th3, (length code_list)) end
+  in INR (th1,th,th2a,th3, (length code_list)) end
+
+fun riscv_get_spec_for_switch inst_positions (pos,switch_code) = let
+  val _ = (switch_input := (pos,switch_code))
+  fun remove_colon_prefix s = last (String.tokens (fn x => x = #":") s)
+  val raw_code = map remove_colon_prefix switch_code
+  val (_,_,_,pc) = get_tools()
+  val ((th1,_,_),_) = spec_rule (el 1 raw_code)
+  val ((th2,_,_),_) = spec_rule (el 2 raw_code)
+  val ((th3,_,_),_) = spec_rule (el 3 raw_code)
+  val ((th4,_,_),_) = spec_rule (el 4 raw_code)
+  val ((th5,_,_),_) = spec_rule (el 5 raw_code)
+  val ((th6,_,_),_) = spec_rule (el 6 raw_code)
+  val ((th7,_,_),_) = spec_rule (el 7 raw_code)
+  val dmem = th5 |> concl |> free_vars |> first (fn v => fst (dest_var v) = "dmem")
+  val mmem = th5 |> concl |> free_vars |> first (fn v => fst (dest_var v) = "mem")
+  val pat = “riscv_REG _ _”
+  val x = find_term (fn tm => can (match_term pat) tm andalso
+      mem "mem" (map (fst o dest_var) (free_vars tm))) (concl th5)
+  val th5'' = th5
+    |> CONV_RULE (PRE_CONV (helperLib.MOVE_OUT_CONV “riscv_MEMORY dmem”))
+    |> SIMP_RULE (std_ss++sep_cond_ss) []
+    |> CONV_RULE (POST_CONV (helperLib.MOVE_OUT_CONV (rator x)))
+    |> CONV_RULE (POST_CONV (helperLib.MOVE_OUT_CONV “riscv_MEMORY dmem”))
+  val th5' = MATCH_MP RISCV_CODE_READ (GENL [mmem,dmem] th5'')
+  val th = SPEC_COMPOSE_RULE [th1,th2,th3,th4,th5',th6,th7]
+  val pc_var = th1 |> concl |> rator |> rand |> free_vars |> hd
+  fun inst_to k = let
+    val p = wordsSyntax.mk_n2w(numSyntax.term_of_int pos,“:64”)
+    val th' = INST [pc_var|->p] th
+    val v = th' |> concl |> rator |> rand |> free_vars
+                |> first (fn v => type_of v = type_of pc_var)
+    val x = find_term (fn tm => pairSyntax.is_pair tm
+         andalso not (null (free_vars tm))) (concl th' |> rator |> rand)
+    val vv = wordsSyntax.mk_n2w(numSyntax.term_of_int k,“:64”)
+    val y = subst [v|->vv] x |> EVAL |> concl |> rand
+    val l = y |> rator |> rand |> rand |> numSyntax.int_of_term
+    val (h3,h2,h1,h0) = read_rodata_word32_at l
+    val bytes = listSyntax.mk_list([h0,h1,h2,h3],type_of h0)
+    val r_conv = REWRITE_CONV [ASSUME (mk_eq(v,vv))]
+    val thB = INST ((pc_var|->p) :: fst (match_term (y |> rand) bytes)) th
+              |> SIMP_RULE (std_ss++sep_cond_ss) []
+              |> CONV_RULE (RAND_CONV r_conv THENC
+                   (RATOR_CONV o RAND_CONV) r_conv THENC
+                   (RATOR_CONV o RATOR_CONV o RAND_CONV o RAND_CONV) r_conv)
+    val thC = thB |> SIMP_RULE (srw_ss()) [word_from_bytes_def,
+                       alignmentTheory.aligned_def,alignmentTheory.align_def]
+                  |> DISCH_ALL |> REWRITE_RULE [SPEC_MOVE_COND,AND_IMP_INTRO]
+    val new_pc =
+      find_term (fn tm => is_comb tm andalso aconv (rator tm) pc)
+          (concl thC |> rand |> rand) |> rand
+    val new_pos =
+      EVAL (subst [pc_var|->p] new_pc) |> concl |> rand |> rand |> numSyntax.int_of_term
+    val _ = mem new_pos inst_positions orelse failwith "not within code of function"
+    in thC end
+  fun all_insts k =
+    case total inst_to k of
+      NONE => []
+    | SOME th => th :: all_insts (k+1)
+  val xs = all_insts 0
+  fun combine (x,th) = MATCH_MP SWITCH_COMBINE (CONJ x th)
+  val th = foldr combine (last xs) (butlast xs)
+  val xx = th |> concl |> dest_imp |> fst
+  val yy = wordsSyntax.mk_word_lo(free_vars xx |> hd,
+             wordsSyntax.mk_n2w(numSyntax.term_of_int (length xs),“:64”))
+  val lemma = blastLib.BBLAST_PROVE (mk_eq(xx,yy))
+  val th = th |> REWRITE_RULE [GSYM SPEC_MOVE_COND,lemma]
+  val (_,_,c,_) = dest_spec (concl th)
+  fun term_all_distinct [] = []
+    | term_all_distinct (x::xs) =
+        x :: term_all_distinct (filter (fn d => not (aconv d x)) xs)
+  val code_list = find_terms pairSyntax.is_pair c |> term_all_distinct
+  val code_set = code_list |> pred_setSyntax.mk_set
+  val th = MATCH_MP SPEC_SUBSET_CODE th |> SPEC code_set
+     |> CONV_RULE (BINOP1_CONV (REWRITE_CONV [UNION_SUBSET,
+          INSERT_SUBSET,EMPTY_SUBSET,IN_INSERT]))
+  val th = MATCH_MP th TRUTH
+  in INL (th,20,7) end
+
+fun get_spec_for_switch inst_positions (pos,switch_code) =
+  case !arch_name of
+    ARM => arm_get_spec_for_switch (pos,switch_code)
+  | RISCV => riscv_get_spec_for_switch inst_positions (pos,switch_code)
+  | _ => failwith "No switch handling for current arch."
 
 fun inst_pc_var tools thms = let
   fun triple_apply f (y,(th1,x1:int,x2:int option),NONE) = (y,(f y th1,x1,x2),NONE)
@@ -439,6 +524,7 @@ fun wrap_get_spec f asm = f asm
 
 fun derive_individual_specs code = let
   val tools = get_tools()
+  val inst_positions = map (fn x => #1 x) code
   fun mk_new_var prefix v = let
     val (n,ty) = dest_var v
     in mk_var (prefix ^ "@" ^ n, ty) end
@@ -522,18 +608,27 @@ fun derive_individual_specs code = let
                 String.isPrefix "switch:" ((fn (_,x,_) => x) (hd code)) then let
           val switch_code = instruction :: map (fn (_,x,_) => x) code
           val _ = write_line "Switch found."
-          val (th1,th2,th2a,th3,l) = get_spec_for_switch (pos,switch_code)
-          val code = drop (l-1) code
-          val th2 = th2 |> RW [SPEC_MOVE_COND]
+          in case get_spec_for_switch inst_positions (pos,switch_code) of
+               INR (th1,th2,th2a,th3,l) => let
+                 val code = drop (l-1) code
+                 val th2 = th2 |> RW [SPEC_MOVE_COND]
                         |> SIMP_RULE std_ss [] |> UNDISCH_ALL
-          fun g pos = clean_spec_thm o
+                 fun g pos = clean_spec_thm o
                       remove_arm_CONFIGURE o
                       inst_pc_rel_const o
                       inst_pc pos o RW [precond_def]
-          in (pos,(g pos th1,4,SOME 4),NONE) ::
-             (pos+4,(g (pos+4) th2,4,NONE),SOME (g (pos+4) th2a,4,SOME 4)) ::
-             (pos+8,(g (pos+8) th3,4*l-8,SOME 4),NONE) ::
-               get_specs code end
+                 in (pos,(g pos th1,4,SOME 4),NONE) ::
+                    (pos+4,(g (pos+4) th2,4,NONE),SOME (g (pos+4) th2a,4,SOME 4)) ::
+                    (pos+8,(g (pos+8) th3,4*l-8,SOME 4),NONE) ::
+                       get_specs code end
+             | INL (th,k0,l) => let
+                 val code = drop (l-1) code
+                 fun g pos = clean_spec_thm o
+                      remove_arm_CONFIGURE o
+                      inst_pc_rel_const o
+                      inst_pc pos o RW [precond_def]
+                 in (pos,(g pos th,k0,NONE),NONE) :: get_specs code end
+          end
         else if String.isPrefix "dmb" asm then raise NoInstructionSpec
         else let
           val g = clean_spec_thm o
@@ -774,20 +869,6 @@ fun derive_specs_for sec_name = let
   val _ = read_files base_name []
   val _ = open_current "test"
   val sec_name = "g"
-
-val l3_arm_tools = arm_decompLib.l3_arm_tools
-val (arm_spec,_,_,_) = l3_arm_tools
-val instruction = "e200300f"
-val th = arm_spec instruction
-
-  val (f,_,_,_) = l3_arm_tools
-
-  ``increment``
-
-
-   [(0, "e200300f", "and\tr3, r0, #15"),
-    (4, "e0830180", "add\tr0, r3, r0, lsl #3"),
-    (8, "e12fff1e", "bx\tlr")]:
 
 *)
 

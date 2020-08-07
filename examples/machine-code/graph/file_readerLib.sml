@@ -16,6 +16,7 @@ val complete_sections = ref ([]:(string * (* sec_name *)
                                  string * (* location as hex string *)
                                  (int * string * string) list * (* body *)
                                  string list) list); (* dependencies *)
+val rodata_filename = ref "";
 
 (* refs end *)
 
@@ -114,6 +115,32 @@ fun format_line sec_name = let
     handle Subscript => (fail())
   in format_line_aux end
 
+fun read_rodata_word16_at l = let
+  val f = TextIO.openIn (!rodata_filename)
+  val target_k = Arbnum.fromInt l
+  val cs = explode "\n\t :"
+  fun loop f =
+    case TextIO.inputLine f of
+      NONE => failwith "location not found"
+    | SOME line => let
+        val xs = String.tokens (fn c => mem c cs) line
+        val k = Arbnum.mod(Arbnum.fromHexString (el 1 xs),Arbnum.fromInt 4294967296)
+        val _ = (k = target_k) orelse fail()
+        val i0 = Arbnum.mod(Arbnum.fromHexString (el 2 xs),Arbnum.fromInt 256)
+        val i1 = Arbnum.div(Arbnum.fromHexString (el 2 xs),Arbnum.fromInt 256)
+        in (wordsSyntax.mk_n2w(numSyntax.mk_numeral i1,“:8”),
+            wordsSyntax.mk_n2w(numSyntax.mk_numeral i0,“:8”)) end
+        handle HOL_ERR _ => loop f
+             | Fail _ => loop f
+  val (h1,h0) = loop f
+  val _ = TextIO.closeIn f
+  in (h1,h0) end
+
+fun read_rodata_word32_at l = let
+  val (h1,h0) = read_rodata_word16_at l
+  val (h3,h2) = read_rodata_word16_at (l+2)
+  in (h3,h2,h1,h0) end
+
 fun read_complete_sections filename filename_sigs ignore = let
   (* helper functions *)
   fun try_map f [] = []
@@ -149,9 +176,27 @@ fun read_complete_sections filename filename_sigs ignore = let
     (sec_name,lookup (hd (String.tokens (fn x => x = #".") sec_name)) ss_alist,location,body)
   val all_sections = try_map combine_ss all_sections
   (* process section bodies *)
+  fun is_riscv_switch ((_,_,x1)::(_,_,x2)::(_,_,x3)::(_,_,x4)::
+                       (_,_,x5)::(_,_,x6)::(_,_,x7)::rest) =
+        String.isPrefix "slli" x1 andalso
+        String.isPrefix "auipc" x2 andalso
+        String.isPrefix "addi" x3 andalso
+        String.isPrefix "add" x4 andalso
+        String.isPrefix "lw" x5 andalso
+        String.isPrefix "add" x6 andalso
+        String.isPrefix "jr" x7
+    | is_riscv_switch _ = false
+  fun add_switch_mark [] = []
+    | add_switch_mark ((x,y,z)::rest) = (x,"switch:"^y,z)::rest
+  fun mark_riscv_switch [] = []
+    | mark_riscv_switch (x::xs) =
+      (if is_riscv_switch (x::xs)
+       then x :: add_switch_mark (mark_riscv_switch xs)
+       else x :: mark_riscv_switch xs)
   fun process_body (sec_name,io,location,body) =
     (remove_dot sec_name,io,location,
-        if mem sec_name ignore then [] else try_map (format_line sec_name) body)
+        if mem sec_name ignore then [] else
+          mark_riscv_switch (try_map (format_line sec_name) body))
   val all_sections = map process_body all_sections
   (* location function *)
   fun update x y f a = if x = a then y else f a
@@ -225,6 +270,7 @@ fun read_files base_name ignore = let
   fun get_filename suffix = base_name ^ suffix;
   val filename = get_filename ".elf.txt";
   val filename_sigs = get_filename ".sigs";
+  val _ = (rodata_filename := get_filename ".elf.rodata");
   (* read sections *)
   val () = read_complete_sections filename filename_sigs ignore
   (* print stats *)

@@ -1564,6 +1564,28 @@ val IMP_EVERY_func_ok = store_thm("IMP_EVERY_func_ok",
 
 val _ = wordsLib.guess_lengths ()
 
+Definition word_from_bytes_def:
+  word_from_bytes (b3:word8) (b2:word8) (b1:word8) (b0:word8) =
+    ((w2w b3) << 24) || ((w2w b2) << 16) || ((w2w b1) << 8) || w2w b0
+End
+
+Theorem RISCV_CODE_READ:
+  (!mem dmem.
+    SPEC RISCV_MODEL
+      (f * riscv_MEMORY dmem mem *
+       cond (aligned 2 a ∧ a ∈ dmem ∧ a + 1w ∈ dmem ∧ a + 3w ∈ dmem ∧
+             a + 2w ∈ dmem)) {(pc,[i0; i1])}
+      (f' *
+       riscv_REG r (sw2sw (mem (a + 3w) @@ mem (a + 2w) @@ mem (a + 1w) @@ mem a)) *
+       riscv_MEMORY dmem mem)) ==>
+  SPEC RISCV_MODEL
+    (f * cond (aligned 2 a ∧ a <> pc))
+    {(pc,[i0; i1]); (a,[h0; h1; h2; h3])}
+    (f' * riscv_REG r (sw2sw (word_from_bytes h3 h2 h1 h0 : word32)))
+Proof
+  cheat
+QED
+
 val word32_def = Define `
   (word32 (b1:word8) (b2:word8) (b3:word8) (b4:word8)) :word32 =
     b1 @@ b2 @@ b3 @@ b4`;
