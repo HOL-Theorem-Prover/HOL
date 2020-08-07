@@ -1573,14 +1573,14 @@ Theorem RISCV_CODE_READ:
   (!mem dmem.
     SPEC RISCV_MODEL
       (f * riscv_MEMORY dmem mem *
-       cond (aligned 2 a ∧ a ∈ dmem ∧ a + 1w ∈ dmem ∧ a + 3w ∈ dmem ∧
-             a + 2w ∈ dmem)) {(pc,[i0; i1])}
+       cond (p ∧ a ∈ dmem ∧ a + 1w ∈ dmem ∧ a + 3w ∈ dmem ∧
+             a + 2w ∈ dmem)) {(pc,inst)}
       (f' *
        riscv_REG r (sw2sw (mem (a + 3w) @@ mem (a + 2w) @@ mem (a + 1w) @@ mem a)) *
        riscv_MEMORY dmem mem)) ==>
   SPEC RISCV_MODEL
-    (f * cond (aligned 2 a ∧ a <> pc))
-    {(pc,[i0; i1]); (a,[h0; h1; h2; h3])}
+    (f * cond (p ∧ aligned 2 a ∧ a <> pc))
+    {(pc,inst); (a,[h0; h1; h2; h3])}
     (f' * riscv_REG r (sw2sw (word_from_bytes h3 h2 h1 h0 : word32)))
 Proof
   cheat

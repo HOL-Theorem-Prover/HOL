@@ -386,7 +386,9 @@ fun riscv_get_spec_for_switch inst_positions (pos,switch_code) = let
     |> SIMP_RULE (std_ss++sep_cond_ss) []
     |> CONV_RULE (POST_CONV (helperLib.MOVE_OUT_CONV (rator x)))
     |> CONV_RULE (POST_CONV (helperLib.MOVE_OUT_CONV “riscv_MEMORY dmem”))
-  val th5' = MATCH_MP RISCV_CODE_READ (GENL [mmem,dmem] th5'')
+    |> PURE_REWRITE_RULE [CONJ_ASSOC]
+  val th5' = MATCH_MP (PURE_REWRITE_RULE [CONJ_ASSOC] RISCV_CODE_READ)
+               (GENL [mmem,dmem] th5'') |> PURE_REWRITE_RULE [GSYM CONJ_ASSOC]
   val th = SPEC_COMPOSE_RULE [th1,th2,th3,th4,th5',th6,th7]
   val pc_var = th1 |> concl |> rator |> rand |> free_vars |> hd
   fun inst_to k = let
