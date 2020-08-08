@@ -82,6 +82,27 @@ fun is_string s = quse_string ("val _ : String.string = (" ^ s ^ ")")
 fun is_simpset s = quse_string ("val _ : simpLib.simpset = (" ^ s ^ ")")
 fun is_thml s = quse_string ("val _ : Thm.thm List.list = (" ^ s ^ ")")
 
+fun is_stype s =
+  let
+    fun not_in cl c = not (mem c cl)
+    fun test c = not_in [#"\t",#"\n",#" ",#"\""] c
+  in
+    List.find test (explode (rm_comment (rm_squote s))) = SOME #":"
+  end
+
+fun is_pointer_eq s1 s2 =
+  let
+    val b = quse_string
+      ("val _ = smlExecute.sml_bool_glob := PolyML.pointerEq (" ^
+         s1 ^ "," ^ s2 ^ ")")
+  in
+    b andalso (!sml_bool_glob)
+  end
+
+(* -------------------------------------------------------------------------
+   Readers
+   ------------------------------------------------------------------------- *)
+
 fun thm_of_sml s =
   if is_thm s then
     let val b = quse_string ("smlExecute.sml_thm_glob := " ^ s) in
@@ -97,19 +118,6 @@ fun thml_of_sml sl =
     if b then SOME (!sml_thml_glob) else NONE
   end
 
-fun is_pointer_eq s1 s2 =
-  let
-    val b = quse_string
-      ("val _ = smlExecute.sml_bool_glob := PolyML.pointerEq (" ^
-         s1 ^ "," ^ s2 ^ ")")
-  in
-    b andalso (!sml_bool_glob)
-  end
-
-(* -------------------------------------------------------------------------
-   Read tactics
-   ------------------------------------------------------------------------- *)
-
 fun mk_valid s = "Tactical.VALID (" ^ s ^ ")"
 
 fun tactic_of_sml tim s =
@@ -123,28 +131,12 @@ fun tactic_of_sml tim s =
     if b then !sml_tactic_glob else raise ERR "tactic_of_sml" s
   end
 
-(* -------------------------------------------------------------------------
-   Read string
-   ------------------------------------------------------------------------- *)
-
 fun string_of_sml s =
   let
     val b = quse_string ("val _ = smlExecute.sml_string_glob := (" ^ s ^ " )")
   in
     if b then !sml_string_glob else raise ERR "string_of_sml" s
   end
-
-fun is_stype s =
-  let
-    fun not_in cl c = not (mem c cl)
-    fun test c = not_in [#"\t",#"\n",#" ",#"\""] c
-  in
-    List.find test (explode (rm_comment (rm_squote s))) = SOME #":"
-  end
-
-(* ------------------------------------------------------------------------
-   Read goal
-   ------------------------------------------------------------------------ *)
 
 fun goal_of_sml s =
   let

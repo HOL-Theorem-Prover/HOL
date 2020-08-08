@@ -227,9 +227,10 @@ fun status_of_stac parentd goalrec glo = case glo of
   | SOME [] => StacProved 
   | SOME gl =>
    (if op_mem goal_eq (#goal goalrec) gl orelse
-      exists (fn x => dmem x parentd) gl orelse
-      dmem gl (#siblingd goalrec) orelse
-      exists (fn x => term_eq (snd x) F) gl
+       exists (fn x => dmem x parentd) gl orelse
+       dmem gl (#siblingd goalrec) orelse
+       tmem (snd (#goal goalrec)) (map snd gl) orelse (* new *)
+       exists (fn x => term_eq (snd x) F) gl (* new *)
     then StacSaturated
     else StacUndecided)
 
