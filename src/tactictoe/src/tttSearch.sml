@@ -181,14 +181,19 @@ fun select_argl argtree anl =
    Select leaf in proof tree
    ------------------------------------------------------------------------- *)
 
+fun string_of_goalv gv = 
+  let val gl = vector_to_list (Vector.map #goal gv)
+    string_of_goall gl
+  end
+
 fun first_goalundec goalv =
   let
     fun test (_,x) = (#gstatus x = GoalUndecided)
-    val goalvo = Vector.findi test goalv
+    val go = Vector.findi test goalv
   in
-    if isSome goalvo 
-    then valOf goalvo 
-    else raise ERR "first_goalundec" "no undecided goals"
+    if isSome go then valOf go else 
+     raise ERR "first_goalundec" 
+       ("no undecided goals : " ^ string_of_goalv goalv)
   end
 
 fun select_node tree pid =
@@ -565,7 +570,7 @@ fun starttree_of searchobj goal =
   let
     val goalv = Vector.fromList [goal_create searchobj goal]
     val root = 
-     {nvis = 1.0, nsum = 0.0, nstatus = NodeUndecided,
+     {nvis = 1.0, nsum = 0.0, nstatus = backup_goalv goalv,
       goalv = goalv,
       parentd = dempty goal_compare}
   in

@@ -260,7 +260,7 @@ tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
 val _ = ttt_clean_eval ();
-val _ = run_evalscript_thyl "august7" (true,30) (NONE,NONE) thyl;
+val _ = run_evalscript_thyl "august8" (true,30) (NONE,NONE) thyl;
 
 val tnn_value = train_value 0.95 "value";
 val tnn_policy = train_policy 0.95 "policy";
