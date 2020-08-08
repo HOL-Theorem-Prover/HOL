@@ -182,8 +182,8 @@ fun select_argl argtree anl =
    ------------------------------------------------------------------------- *)
 
 fun string_of_goalv gv = 
-  let val gl = vector_to_list (Vector.map #goal gv)
-    string_of_goall gl
+  let val gl = vector_to_list (Vector.map #goal gv) in
+    String.concatWith "," (map string_of_goal gl)
   end
 
 fun first_goalundec goalv =
@@ -570,7 +570,7 @@ fun starttree_of searchobj goal =
   let
     val goalv = Vector.fromList [goal_create searchobj goal]
     val root = 
-     {nvis = 1.0, nsum = 0.0, nstatus = backup_goalv goalv,
+     {nvis = 1.0, nsum = 0.0, nstatus = backstatus_goalv goalv,
       goalv = goalv,
       parentd = dempty goal_compare}
   in
