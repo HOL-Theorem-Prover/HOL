@@ -41,6 +41,35 @@ fun string_of_searchstatus x = case x of
   | SearchSaturated => "SearchSaturated"
   | SearchTimeout => "SearchTimeOut"
 
+fun is_stacwin x = (x = StacProved)
+fun is_staclose x = (x = StacSaturated)
+fun is_goalwin x = (x = GoalProved)
+fun is_goallose x = (x = GoalSaturated)
+
+fun backstatus_arg sstatusl =
+  if exists is_stacwin sstatusl then StacProved
+  else if all is_staclose sstatusl then StacSaturated
+  else StacUndecided
+
+fun backstatus_stacv stacv =
+  let val v = Vector.map (fn x => #sstatus (dfind [] x)) stacv in
+    if Vector.exists is_stacwin v then GoalProved
+    else if Vector.all is_staclose v then GoalSaturated
+    else GoalUndecided
+  end
+
+fun backstatus_goalv goalv =
+  let val v = Vector.map #gstatus goalv in
+    if Vector.all is_goalwin v then NodeProved
+    else if Vector.exists is_goallose v then NodeSaturated
+    else NodeUndecided
+  end
+
+fun backstatus_node node = case #nstatus node of
+    NodeUndecided => StacUndecided
+  | NodeProved => StacProved
+  | NodeSaturated => StacSaturated
+
 (* -------------------------------------------------------------------------
    Search tree
    ------------------------------------------------------------------------- *)
@@ -139,6 +168,8 @@ fun select_arg argtree anl =
     if #sstatus pnode = StacFresh then NONE else 
     SOME (select_accessf (access_child argtree anl) pvis)
   end
+  handle HOL_ERR _ => 
+    raise ERR "select_arg" (String.concatWith "|" (map its (rev anl)))
 
 fun select_argl argtree anl =
   if null (#atyl (dfind anl argtree)) then anl else 
@@ -165,7 +196,8 @@ fun select_node tree pid =
     val {goalv,...} = dfind pid tree
     val (gn,{goal,gvis,stacv,...}) = first_goalundec goalv
     fun access_toprec i = dfind [] (Vector.sub (stacv,i))
-    val sn = select_accessf access_toprec gvis
+    val sn = select_accessf access_toprec gvis handle HOL_ERR _ => 
+      raise ERR "select_node" (string_of_id pid ^ " " ^ its gn) 
     val argtree = Vector.sub (stacv,sn)
     val anl = select_argl argtree []
   in
@@ -322,7 +354,7 @@ fun goal_create searchobj goal =
   in
     {
     goal = goal, 
-    gvis = 0.0, gsum = 0.0, gstatus = GoalUndecided,
+    gvis = 0.0, gsum = 0.0, gstatus = backstatus_stacv stacv ,
     stacv = stacv,
     siblingd = dempty (list_compare goal_compare)
     }
@@ -341,7 +373,7 @@ fun node_create (tree,searchobj) (reward,gl) (pid,(gn,sn,anl)) =
     val cid = (gn,sn,anl) :: pid
     val node =
       {
-      nvis = 1.0, nsum = reward, nstatus = NodeUndecided,
+      nvis = 1.0, nsum = reward, nstatus = backstatus_goalv cgoalv,
       goalv = cgoalv,
       parentd = dadd pgoal () (#parentd node)
       }
@@ -353,39 +385,6 @@ fun node_create (tree,searchobj) (reward,gl) (pid,(gn,sn,anl)) =
 
 (* -------------------------------------------------------------------------
    Third part: Node backup
-   ------------------------------------------------------------------------- *)
-
-fun is_stacwin x = (x = StacProved)
-fun is_staclose x = (x = StacSaturated)
-fun is_goalwin x = (x = GoalProved)
-fun is_goallose x = (x = GoalSaturated)
-
-fun backstatus_arg sstatusl =
-  if exists is_stacwin sstatusl then StacProved
-  else if all is_staclose sstatusl then StacSaturated
-  else StacUndecided
-
-fun backstatus_stacv stacv =
-  let val v = Vector.map (fn x => #sstatus (dfind [] x)) stacv in
-    if Vector.exists is_stacwin v then GoalProved
-    else if Vector.all is_staclose v then GoalSaturated
-    else GoalUndecided
-  end
-
-fun backstatus_goalv goalv =
-  let val v = Vector.map #gstatus goalv in
-    if Vector.all is_goalwin v then NodeProved
-    else if Vector.exists is_goallose v then NodeSaturated
-    else NodeUndecided
-  end
-
-fun backstatus_node node = case #nstatus node of
-    NodeUndecided => StacUndecided
-  | NodeProved => StacProved
-  | NodeSaturated => StacSaturated
-
-(* -------------------------------------------------------------------------
-   Backup argument tree
    ------------------------------------------------------------------------- *)
 
 fun children_statusl argtree anl acc i =
@@ -410,10 +409,6 @@ fun backup_argtree (argtree,anl) (sstatus,reward) =
       backup_argtree (newargtree, tl anl) (pstatus,reward)
     end
   end
-
-(* -------------------------------------------------------------------------
-   Backup proof tree
-   ------------------------------------------------------------------------- *)
 
 fun node_update tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl)) =
   let
