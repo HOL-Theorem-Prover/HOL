@@ -290,7 +290,6 @@ fun apply_tac parsetoken tokenl goal =
     val tim = if is_metis_stac (hd tokenl) 
               then !ttt_metis_time 
               else !ttt_tactic_time
-    val _ = debugf "stac: " get_stac tokenl
     fun f g = 
       let val tac = build_tac parsetoken tokenl in
         SOME (fst (TC_OFF tac g))
@@ -326,12 +325,12 @@ fun collect_tokenl acc (argtree,anl) =
 
 fun apply_stac (tree,searchobj) argtree (pid,(gn,sn,anl)) =
   let
-    val _ = debugf "id: " string_of_id ((gn,sn,anl) :: pid)
     val node = dfind pid tree
     val parentd = #parentd node
     val goalrec = Vector.sub (#goalv node, gn)
     val siblingd = #siblingd goalrec
     val tokenl = collect_tokenl [] (argtree,anl)
+    val _ = debugf "stac: " get_stac tokenl
     val glo = apply_tac (#parsetoken searchobj) tokenl (#goal goalrec)
     val sstatus = status_of_stac parentd goalrec glo
     val glo' = if sstatus = StacUndecided then glo else NONE
@@ -479,11 +478,12 @@ fun search_loop startsearchobj starttree =
           val (newargtree,newanl,argstatus) =
             expand_argtree searchobj goal (argtree,anl)
           val pidx = (pid,(gn,sn,newanl))
-          val _ = debug "application"
+          val _ = debugf "application: " string_of_id ((gn,sn,newanl) :: pid)
           val (glo,sstatus,reward) = 
             if argstatus = StacFresh 
             then apply_stac (tree,searchobj) newargtree pidx
-            else (NONE, StacUndecided, reward_of NONE (StacUndecided,NONE))
+            else (debug "no argument predicted"; 
+                  (NONE, StacSaturated, reward_of NONE (StacSaturated,NONE)))
           val _ = debug "node expansion"
           val exptree = 
             if sstatus = StacUndecided 

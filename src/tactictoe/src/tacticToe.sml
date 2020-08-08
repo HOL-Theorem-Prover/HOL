@@ -277,5 +277,29 @@ fun ttt goal = (tactictoe_aux goal) goal
 fun tactictoe term =
   let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux goal) end
 
+(* -------------------------------------------------------------------------
+   Interface (mini)
+   ------------------------------------------------------------------------- *)
+
+fun tactictoe_mini_aux goal =
+  if not (has_boolty_goal goal)
+  then raise ERR "tactictoe" "type bool expected"
+  else
+  let
+    val cthyl = current_theory () :: ancestry (current_theory ())
+    val thmdata = hidef create_thmdata ()
+    val (proofstatus,_) = hidef (main_tactictoe_mini thmdata (NONE,NONE)) goal
+    val (staco,tac) = read_status proofstatus
+  in
+    tac
+  end
+
+fun ttt_mini goal = (tactictoe_mini_aux goal) goal
+
+fun tactictoe_mini term =
+  let val goal = ([],term) in TAC_PROOF (goal, tactictoe_mini_aux goal) end
+
+
+
 
 end (* struct *)

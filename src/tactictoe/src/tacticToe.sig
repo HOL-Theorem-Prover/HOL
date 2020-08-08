@@ -22,4 +22,7 @@ sig
   val ttt : tactic
   val tactictoe : term -> thm
 
+  val ttt_mini : tactic
+  val tactictoe_mini : term -> thm
+
 end
