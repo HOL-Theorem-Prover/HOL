@@ -21,10 +21,6 @@ val ERR = mk_HOL_ERR "tacticToe"
    ------------------------------------------------------------------------- *)
 
 fun set_timeout r = (ttt_search_time := r)
-val warning = ref true
-fun disable_warnings () = warning := false
-fun enable_warnings () = warning := true
-fun warning_msg s = if !warning then print_endline ("warning: " ^ s) else ()
 
 (* -------------------------------------------------------------------------
    Preparsing theorems and tactics
@@ -35,7 +31,7 @@ fun thml_of_thmidl thmidl = thml_of_sml (map dbfetch_of_thmid thmidl)
 fun preparse_thmidl thmidl = case thml_of_thmidl thmidl of
     NONE => 
     if is_singleton thmidl 
-    then (warning_msg (singleton_of_list thmidl ^ "failed to parse"); [])
+    then (print_endline ("Could not parse: " ^ singleton_of_list thmidl); [])
     else
       let val (l1,l2) = part_n (length thmidl div 2) thmidl in
         (preparse_thmidl l1 @ preparse_thmidl l2)
@@ -45,7 +41,7 @@ fun preparse_thmidl thmidl = case thml_of_thmidl thmidl of
 fun preparse_stacl stacl = case pretacl_of_sml 1.0 stacl of
     NONE => 
     if is_singleton stacl 
-    then (warning_msg (singleton_of_list stacl ^ "failed to parse"); [])
+    then (print_endline ("Could not parse: " ^ singleton_of_list stacl); [])
     else
       let val (l1,l2) = part_n (length stacl div 2) stacl in
         (preparse_stacl l1 @ preparse_stacl l2)
@@ -178,7 +174,7 @@ fun main_tactictoe_mini thmdata (vnno,pnno) goal =
     val narg_explo = 8
     val mem = !ttt_policy_coeff 
     val _ = ttt_policy_coeff := 0.9999
-    (* trying to load required modules (do it in main_tactictoe too?) *)
+    (* trying to load required modules *)
     val _ = map (can load) ["metisTools","BasicProvers","simpLib","Rewrite"]
     (* preselection *)
     val _ = print_endline "preselection"
@@ -278,7 +274,7 @@ fun tactictoe term =
   let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux goal) end
 
 (* -------------------------------------------------------------------------
-   Interface (mini)
+   Interface (without recorded tactic data)
    ------------------------------------------------------------------------- *)
 
 fun tactictoe_mini_aux goal =
@@ -298,8 +294,6 @@ fun ttt_mini goal = (tactictoe_mini_aux goal) goal
 
 fun tactictoe_mini term =
   let val goal = ([],term) in TAC_PROOF (goal, tactictoe_mini_aux goal) end
-
-
 
 
 end (* struct *)

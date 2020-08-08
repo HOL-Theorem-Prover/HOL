@@ -15,8 +15,6 @@ sig
     goal -> tttSearch.proofstatus * tttSearch.tree
 
   val clean_ttt_tacdata_cache : unit -> unit
-  val disable_warnings : unit -> unit
-  val enable_warnings : unit -> unit
   val set_timeout : real -> unit
 
   val ttt : tactic
