@@ -35,11 +35,6 @@ sig
   val string_of_token : token -> string
   val compare_token : token * token -> order
 
-  type predarg =
-    {pred_thml : goal -> (string list) list, 
-     pred_term : goal -> string list}
-  val pred_arg : predarg -> aty -> goal -> token list
-
   val tactictoe_thmlarg : thm list 
   val tactictoe_termarg : term quotation
   

@@ -71,14 +71,6 @@ fun extract_atyl stac =
   (if is_thmlstac stac then [Athml] else []) @
   (if is_termstac stac then [Aterm] else [])  
 
-type predarg = 
-  {pred_thml : goal -> (string list) list, 
-   pred_term : goal -> string list}
-
-fun pred_arg ({pred_thml,pred_term}: predarg) aty goal = case aty of
-    Aterm => map Sthml (pred_thml goal)
-  | Athml => map Sterm (pred_term goal)
-
 (* -------------------------------------------------------------------------
    Abstraction/instantiation of list of theorems in tactic strings
    ------------------------------------------------------------------------- *)

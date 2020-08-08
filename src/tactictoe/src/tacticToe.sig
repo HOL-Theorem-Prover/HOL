@@ -9,6 +9,10 @@ sig
     mlThmData.thmdata * mlTacticData.tacdata ->
     tnn option * tnn option ->
     goal -> tttSearch.proofstatus * tttSearch.tree
+  val main_tactictoe_mini : 
+    mlThmData.thmdata ->
+    tnn option * tnn option ->
+    goal -> tttSearch.proofstatus * tttSearch.tree
 
   val clean_ttt_tacdata_cache : unit -> unit
   val disable_warnings : unit -> unit

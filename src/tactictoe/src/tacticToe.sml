@@ -42,13 +42,13 @@ fun preparse_thmidl thmidl = case thml_of_thmidl thmidl of
       end
   | SOME rl => combine (thmidl,rl)
 
-fun preparse_stac stacl = case pretacl_of_sml 1.0 stacl of
+fun preparse_stacl stacl = case pretacl_of_sml 1.0 stacl of
     NONE => 
     if is_singleton stacl 
     then (warning_msg (singleton_of_list stacl ^ "failed to parse"); [])
     else
       let val (l1,l2) = part_n (length stacl div 2) stacl in
-        (preparse_stac l1 @ preparse_stac l2)
+        (preparse_stacl l1 @ preparse_stacl l2)
       end
   | SOME rl => combine (stacl,rl)
 
@@ -78,11 +78,21 @@ fun select_tacfea tacdata gfea =
   end
 
 (* -------------------------------------------------------------------------
+   Variable enumerator (to be moved elsewhere)
+   ------------------------------------------------------------------------- *)
+
+fun unterm_var v =   
+  let val (vs,ty) = dest_var v in vs ^ " " ^ type_to_string ty end 
+
+fun pred_qvar goal = map unterm_var (find_terms is_var (snd goal))
+
+(* -------------------------------------------------------------------------
    Main function
    ------------------------------------------------------------------------- *)
 
 fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
   let
+    val narg_explo = 1
     val _ = hidef QUse.use infix_file
     (* preselection *)
     val _ = print_endline "preselection"
@@ -95,7 +105,7 @@ fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
     val metis_flag = is_tactic "metisTools.METIS_TAC []"
     val thm_parse_dict = dnew String.compare (preparse_thmidl (map fst thmfea))
     val tac_parse_dict = 
-       dnew String.compare (preparse_stac (
+       dnew String.compare (preparse_stacl (
          (if metis_flag then [metis_stac] else []) @ map fst tacfea))
     fun parse_thmidl thmidl = map (fn x => dfind x thm_parse_dict) thmidl 
       handle NotFound => 
@@ -118,14 +128,13 @@ fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
       let 
         val gfea = fea_of_goal true g
         val thmidl = thmknn (thmsymweight,thmfea_filtered) 
-          (!ttt_thmlarg_radius) gfea
+          (narg_explo * (!ttt_thmlarg_radius)) gfea
       in
         thm_cache := dadd g thmidl (!thm_cache); thmidl
       end
-    fun predarg aty g = 
-      if aty = Athml 
-      then [Sthml (predthml g)] 
-      else raise ERR "predarg" "no predictor for this argument type"
+    fun predarg aty g = case aty of
+        Athml => map Sthml (mk_batch_full (!ttt_thmlarg_radius) (predthml g)) 
+      | Aterm => map Sterm (first_n narg_explo (pred_qvar g))
     fun predtac g =
       dfind g (!tac_cache) handle NotFound =>
       let
@@ -140,7 +149,7 @@ fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
       in
         tac_cache := dadd g stacl3 (!tac_cache); stacl3
       end
-    (* parameter record *)
+    (* search parameters *)
     val _ = print_endline "search"
     val searchobj = 
       {predtac = predtac, predarg = predarg,
@@ -148,6 +157,75 @@ fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
        vnno = vnno, pnno = pnno}
   in
     search searchobj goal
+  end
+
+(* -------------------------------------------------------------------------
+   Alternative main function (without recorded data)
+   ------------------------------------------------------------------------- *)
+
+val ministacl = 
+  [   
+  "metisTools.METIS_TAC " ^ thmlarg_placeholder,
+  "BasicProvers.Induct_on " ^ termarg_placeholder,
+  "simpLib.FULL_SIMP_TAC ( BasicProvers.srw_ss ( ) ) " ^ thmlarg_placeholder, 
+  "simpLib.SIMP_TAC ( BasicProvers.srw_ss ( ) ) " ^ thmlarg_placeholder,
+  "Rewrite.ASM_REWRITE_TAC " ^ thmlarg_placeholder,
+  "Rewrite.REWRITE_TAC " ^ thmlarg_placeholder
+  ]
+
+fun main_tactictoe_mini thmdata (vnno,pnno) goal =
+  let
+    val narg_explo = 8
+    val mem = !ttt_policy_coeff 
+    val _ = ttt_policy_coeff := 0.9999
+    (* trying to load required modules (do it in main_tactictoe too?) *)
+    val _ = map (can load) ["metisTools","BasicProvers","simpLib","Rewrite"]
+    (* preselection *)
+    val _ = print_endline "preselection"
+    val goalf = fea_of_goal true goal
+    val (thmsymweight,thmfea) = select_thmfea thmdata goalf
+    (* parsing *)
+    val _ = print_endline "parsing"
+    val thm_parse_dict = dnew String.compare (preparse_thmidl (map fst thmfea))
+    val tac_parse_dict = dnew String.compare (preparse_stacl ministacl)
+    fun parse_thmidl thmidl = map (fn x => dfind x thm_parse_dict) thmidl 
+      handle NotFound => 
+        raise ERR "parse_thmidl" (String.concatWith " " thmidl)
+    fun parse_stac stac = dfind stac tac_parse_dict
+      handle NotFound => raise ERR "parse_stac" stac 
+    val parsetoken = 
+      {parse_stac = parse_stac,
+       parse_thmidl = parse_thmidl,
+       parse_sterm = fn x => [QUOTE x]}
+    val thmfea_filtered = filter (fn x => dmem (fst x) thm_parse_dict) thmfea 
+    val stacl_filtered = dkeys tac_parse_dict
+    (* predictors *)
+    val atyd = dnew String.compare (map_assoc extract_atyl stacl_filtered)
+    val thm_cache = ref (dempty goal_compare)
+    val tac_cache = ref (dempty goal_compare)
+    fun predthml g =
+      dfind g (!thm_cache) handle NotFound =>
+      let 
+        val gfea = fea_of_goal true g
+        val thmidl = thmknn (thmsymweight,thmfea_filtered) 
+          (narg_explo * (!ttt_thmlarg_radius)) gfea
+      in
+        thm_cache := dadd g thmidl (!thm_cache); thmidl
+      end
+    fun predarg aty g = case aty of
+        Athml => map Sthml (mk_batch_full (!ttt_thmlarg_radius) (predthml g)) 
+      | Aterm => map Sterm (first_n narg_explo (pred_qvar g))
+    fun predtac g = map_assoc (fn x => dfind x atyd) stacl_filtered
+    (* search parameters *)
+    val _ = print_endline "search"
+    val searchobj = 
+      {predtac = predtac, predarg = predarg,
+       parsetoken = parsetoken,
+       vnno = vnno, pnno = pnno}
+    val r = search searchobj goal
+    val _ = ttt_policy_coeff := mem
+  in
+    r    
   end
 
 (* -------------------------------------------------------------------------

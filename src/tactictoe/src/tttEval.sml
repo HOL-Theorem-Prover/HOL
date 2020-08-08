@@ -135,7 +135,8 @@ fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
     val ((status,tree),t) = add_time
-      (main_tactictoe (thmdata,tacdata) (vnno,pnno)) goal
+      (main_tactictoe_mini thmdata (vnno,pnno)) goal
+      (* (main_tactictoe (thmdata,tacdata) (vnno,pnno)) goal *)
     val _ = if not (isSome vnno) andalso not (isSome pnno) then
       (case status of Proof _ =>
         (
@@ -260,7 +261,7 @@ tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
 val _ = ttt_clean_eval ();
-val _ = run_evalscript_thyl "august8" (true,30) (NONE,NONE) thyl;
+val _ = run_evalscript_thyl "august8-mini" (true,30) (NONE,NONE) thyl;
 
 val tnn_value = train_value 0.95 "value";
 val tnn_policy = train_policy 0.95 "policy";
