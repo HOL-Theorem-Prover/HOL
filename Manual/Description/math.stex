@@ -429,14 +429,35 @@ especially the Heine-Borel Theorem. See Section~\ref{sec:topology}.)
 \end{alltt}
 \end{hol}
 \end{enumerate}
-Let \holtxt{lambda = measure lborel}, the measure of the following
-typical Borel sets are proven:
+Let \holtxt{lambda = measure lborel} be an abbreviation, the measure of the following
+typical Borel sets are proved as theorems:
 \begin{hol}
 \begin{alltt}
 ##thm lambda_prop
 ##thm lambda_sing
 ##thm lambda_open_interval
 ##thm lambda_closed_interval
+\end{alltt}
+\end{hol}
+
+Furthermore, the extreal-based Borel measurable space (\holtxt{ext_lborel}) is defined by:
+\begin{hol}
+\begin{alltt}
+##thm ext_lborel_def
+
+>>__ load "extrealTheory";
+>>__ open extrealTheory;
+##thm real_set_def
+\end{alltt}
+\end{hol}
+where \holtxt{real_set} (\theory{extreal} theory) converts a set of extreals to the corresponding set of reals,
+filtering out $\pm\infty$.
+It can be proven that \holtxt{ext_lborel} is indeed a $\sigma$-finite measure space:
+\begin{hol}
+\begin{alltt}
+##thm MEASURE_SPACE_LBOREL
+
+##thm SIGMA_FINITE_LBOREL
 \end{alltt}
 \end{hol}
 
@@ -461,7 +482,9 @@ space. The Lebesgue measure of closed intervals is also proven
 \begin{hol}
 \begin{alltt}
 ##thm sigma_algebra_lebesgue
+
 ##thm measure_space_lebesgue
+
 ##thm lebesgue_closed_interval
 \end{alltt}
 \end{hol}
@@ -616,7 +639,7 @@ integration on null sets are very useful (Theorem 11.2 of~\cite[p.~89-90]{Schill
 \end{alltt}
 \end{hol}
 
-\paragraph{Radon-Nikod\'{y}m Theorem}
+\paragraph{Radon-Nikod\'{y}m theorem}
 
 So far there is no concept ``derivative''
 being discussed. In Lebesgue integration, \emph{Radon-Nikod\'{y}m (RN) Theorem}
@@ -669,7 +692,7 @@ Aaron R.~Coble~\cite{coble-thesis} (2010),
 Osman Hasan~\cite{hasan-thesis} (2008),
 Tarek Mhamdi~\cite{mhamdi-thesis} (2012) and
 Muhammad Qasim~\cite{qasim-thesis} (2016). % this last one is not fully ported yet
-In \HOL{}, the \theoryimp{probability} theory is based on
+In \HOL{}, the \theoryimp{probability} theory depends on
 \theoryimp{pred_set}, \theoryimp{measure}, \theoryimp{borel} and \theoryimp{lebesgue}
 theories, etc.
 

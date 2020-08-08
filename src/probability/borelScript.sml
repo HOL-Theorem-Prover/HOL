@@ -6167,6 +6167,161 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
+(*  Extreal-based Borel measure space                                        *)
+(* ------------------------------------------------------------------------- *)
+
+Definition ext_lborel_def :
+    ext_lborel = (space Borel, subsets Borel, lambda o real_set)
+End
+
+local
+   val shared_tactics =
+     [ (* goal 1 (of 4) *)
+       Suff ‘real_set (IMAGE Normal B) = B’ >- rw [] \\
+       rw [Once EXTENSION, real_set_def] \\
+       EQ_TAC >> rw [] >- art [real_normal] \\
+       Q.EXISTS_TAC ‘Normal x’ >> rw [extreal_not_infty],
+       (* goal 2 (of 4) *)
+       Suff ‘real_set (IMAGE Normal B UNION {NegInf}) = B’ >- rw [] \\
+       rw [Once EXTENSION, real_set_def] \\
+       EQ_TAC >> rw [] >- art [real_normal] \\
+       Q.EXISTS_TAC ‘Normal x’ >> rw [extreal_not_infty],
+       (* goal 3 (of 4) *)
+       Suff ‘real_set (IMAGE Normal B UNION {PosInf}) = B’ >- rw [] \\
+       rw [Once EXTENSION, real_set_def] \\
+       EQ_TAC >> rw [] >- art [real_normal] \\
+       Q.EXISTS_TAC ‘Normal x’ >> rw [extreal_not_infty],
+       (* goal 4 (of 4) *)
+       Suff ‘real_set (IMAGE Normal B UNION {NegInf; PosInf}) = B’ >- rw [] \\
+       rw [Once EXTENSION, real_set_def] \\
+       EQ_TAC >> rw [] >- art [real_normal] \\
+       Q.EXISTS_TAC ‘Normal x’ >> rw [extreal_not_infty] ];
+in
+Theorem MEASURE_SPACE_LBOREL :
+    measure_space ext_lborel
+Proof
+    rw [ext_lborel_def, measure_space_def, SIGMA_ALGEBRA_BOREL]
+ (* positive *)
+ >- (rw [positive_def] >- rw [real_set_def, lambda_empty] \\
+     STRIP_ASSUME_TAC
+       (REWRITE_RULE [positive_def] (MATCH_MP MEASURE_SPACE_POSITIVE
+                                              measure_space_lborel)) \\
+     POP_ASSUM MATCH_MP_TAC \\
+     POP_ASSUM K_TAC \\
+     fs [Borel, sets_lborel] >| shared_tactics)
+ (* countably_additive *)
+ >> rw [countably_additive_def, SPACE_BOREL, IN_FUNSET, IN_UNIV]
+ >> Q.ABBREV_TAC ‘rf = real_set o f’
+ >> Know ‘!n. rf n IN subsets borel’
+ >- (GEN_TAC \\
+     Q.PAT_X_ASSUM ‘BIGUNION (IMAGE f UNIV) IN subsets Borel’ K_TAC \\
+     Q.PAT_X_ASSUM ‘!i j. i <> j ==> DISJOINT (f i) (f j)’ K_TAC \\
+     fs [Abbr ‘rf’, Borel] \\
+     POP_ASSUM (STRIP_ASSUME_TAC o (Q.SPEC ‘n’)) >> fs [] >| shared_tactics)
+ >> DISCH_TAC
+ >> Know ‘real_set (BIGUNION (IMAGE f UNIV)) = BIGUNION (IMAGE rf UNIV)’
+ >- (rw [Once EXTENSION, real_set_def, Abbr ‘rf’] \\
+     EQ_TAC >> rw []
+     >- (rename1 ‘y IN f n’ \\
+         Q.EXISTS_TAC ‘(real_set o f) n’ \\
+         rw [real_set_def] >- (Q.EXISTS_TAC ‘y’ >> rw []) \\
+         Q.EXISTS_TAC ‘n’ >> rw []) \\
+     fs [GSPECIFICATION] >> rename1 ‘y IN f n’ \\
+     Q.EXISTS_TAC ‘y’ >> rw [] \\
+     Q.EXISTS_TAC ‘f n’ >> rw [] \\
+     Q.EXISTS_TAC ‘n’ >> rw []) >> Rewr'
+ >> MATCH_MP_TAC EQ_SYM
+ >> MATCH_MP_TAC (Q.ISPEC ‘lborel’ COUNTABLY_ADDITIVE)
+ >> simp [IN_FUNSET, IN_UNIV, sets_lborel]
+ >> CONJ_TAC >- METIS_TAC [measure_space_def, measure_space_lborel]
+ (* DISJOINT (rf i) (rf j) *)
+ >> CONJ_TAC
+ >- (qx_genl_tac [‘m’, ‘n’] >> DISCH_TAC \\
+     fs [DISJOINT_ALT, Abbr ‘rf’] \\
+     rw [real_set_def] >> rename1 ‘y IN f m’ \\
+     STRONG_DISJ_TAC >> rename1 ‘real y = real z’ \\
+     Cases_on ‘z = PosInf’ >- rw [] >> DISJ2_TAC \\
+     Cases_on ‘z = NegInf’ >- rw [] >> DISJ2_TAC \\
+    ‘?a. y = Normal a’ by METIS_TAC [extreal_cases] \\
+    ‘?b. z = Normal b’ by METIS_TAC [extreal_cases] \\
+     fs [real_normal] \\
+     FIRST_X_ASSUM irule >> Q.EXISTS_TAC ‘m’ >> rw [])
+ (* BIGUNION IN subsets borel *)
+ >> STRIP_ASSUME_TAC (REWRITE_RULE [SIGMA_ALGEBRA_FN] sigma_algebra_borel)
+ >> POP_ASSUM MATCH_MP_TAC
+ >> rw [IN_FUNSET]
+QED
+end (* local *)
+
+Theorem SIGMA_FINITE_LBOREL :
+    sigma_finite ext_lborel
+Proof
+    RW_TAC std_ss [MATCH_MP SIGMA_FINITE_ALT2 MEASURE_SPACE_LBOREL]
+ >> Q.EXISTS_TAC `{NegInf; PosInf} INSERT {IMAGE Normal (line n) | n IN UNIV}`
+ >> rpt CONJ_TAC (* 4 subgoals *)
+ >- (REWRITE_TAC [countable_INSERT] \\
+     Know ‘{IMAGE Normal (line n) | n IN UNIV} = IMAGE (IMAGE Normal) {line n | n IN UNIV}’
+     >- (rw [Once EXTENSION] >> EQ_TAC >> rw []
+         >- (Q.EXISTS_TAC ‘line n’ >> REWRITE_TAC [] \\
+             Q.EXISTS_TAC ‘n’ >> REWRITE_TAC []) \\
+         Q.EXISTS_TAC ‘n’ >> REWRITE_TAC []) >> Rewr' \\
+     MATCH_MP_TAC image_countable \\
+    ‘{line n | n IN UNIV} = IMAGE line UNIV’ by SET_TAC [] >> POP_ORW \\
+     MATCH_MP_TAC image_countable \\
+     SIMP_TAC std_ss [COUNTABLE_NUM])
+ (* SUBSET *)
+ >- (SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION, measurable_sets_def,
+                      ext_lborel_def, IN_UNIV, line] \\
+     rw [IN_INSERT]
+     >- (rw [Borel] >> qexistsl_tac [‘{}’, ‘{NegInf; PosInf}’] >> rw [] \\
+         MATCH_MP_TAC SIGMA_ALGEBRA_EMPTY >> REWRITE_TAC [sigma_algebra_borel]) \\
+     Know ‘IMAGE Normal {x | -&n <= x /\ x <= &n} = {x | Normal (-&n) <= x /\ x <= Normal (&n)}’
+     >- (rw [Once EXTENSION] >> EQ_TAC >> rw [] >> rw [extreal_le_eq] \\
+         Q.EXISTS_TAC ‘real x’ \\
+         STRONG_CONJ_TAC
+         >- (MATCH_MP_TAC EQ_SYM >> MATCH_MP_TAC normal_real \\
+             CONJ_TAC >> REWRITE_TAC [lt_infty] >| (* 2 subgoals *)
+             [ (* goal 1 (of 2) *)
+               MATCH_MP_TAC lte_trans >> Q.EXISTS_TAC ‘Normal (-&n)’ >> art [lt_infty],
+               (* goal 2 (of 2) *)
+               MATCH_MP_TAC let_trans >> Q.EXISTS_TAC ‘Normal (&n)’ >> art [lt_infty] ]) \\
+         DISCH_THEN (ASSUME_TAC o (ONCE_REWRITE_RULE [EQ_SYM_EQ])) \\
+         ASM_SIMP_TAC std_ss [GSYM extreal_le_eq]) >> Rewr' \\
+     REWRITE_TAC [BOREL_MEASURABLE_SETS_CC])
+ (* BIGUNION *)
+ >- (SIMP_TAC std_ss [Once EXTENSION, m_space_def, ext_lborel_def, IN_UNIV] \\
+     SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION, IN_INSERT, SPACE_BOREL, IN_UNIV] \\
+     GEN_TAC >> ASSUME_TAC REAL_IN_LINE \\
+     Cases_on ‘x = PosInf’
+     >- (Q.EXISTS_TAC ‘{NegInf; PosInf}’ >> rw []) \\
+     Cases_on ‘x = NegInf’
+     >- (Q.EXISTS_TAC ‘{NegInf; PosInf}’ >> rw []) \\
+    ‘?r. x = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+     Q.PAT_X_ASSUM ‘!x. ?n. x IN line n’ (STRIP_ASSUME_TAC o Q.SPEC `r`) \\
+     Q.EXISTS_TAC ‘IMAGE Normal (line n)’ \\
+     CONJ_TAC >- (rw [IN_IMAGE]) \\
+     DISJ2_TAC >> Q.EXISTS_TAC ‘n’ >> REWRITE_TAC [])
+ >> rw [GSPECIFICATION, IN_UNIV, line, ext_lborel_def]
+ >- (Know ‘real_set {NegInf; PosInf} = {}’
+     >- (rw [Once EXTENSION, NOT_IN_EMPTY, real_set_def] >> PROVE_TAC []) >> Rewr' \\
+     REWRITE_TAC [lambda_empty, extreal_of_num_def, extreal_not_infty])
+ >> Know ‘real_set (IMAGE Normal {x | -&n <= x /\ x <= &n}) = {x | -&n <= x /\ x <= &n}’
+ >- (rw [Once EXTENSION, real_set_def] \\
+     EQ_TAC >> rw [] >| (* 3 subgoals *)
+     [ (* goal 1 (of 3) *)
+       rename1 ‘y <= &n’ >> art [real_normal],
+       (* goal 2 (of 3) *)
+       rename1 ‘-&n <= y’ >> art [real_normal],
+       (* goal 3 (of 3) *)
+       Q.EXISTS_TAC ‘Normal x’ >> rw [extreal_not_infty, real_normal] ])
+ >> Rewr'
+ >> `-&n <= (&n) :real` by RW_TAC real_ss []
+ >> POP_ASSUM (MP_TAC o (SIMP_RULE list_ss [CLOSED_interval]) o
+               (MATCH_MP lambda_closed_interval)) >> Rewr'
+ >> REWRITE_TAC [extreal_not_infty]
+QED
+
+(* ------------------------------------------------------------------------- *)
 (*  Lebesgue sigma-algebra with the household Lebesgue measure (lebesgue)    *)
 (* ------------------------------------------------------------------------- *)
 
