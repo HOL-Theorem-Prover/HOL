@@ -376,7 +376,7 @@ fun compare_stats expl exp =
 
 (*
 load "tttEval"; open tttEval;
-compare_stats ["june15"] "june15_tnn";
+compare_stats ["august8-2"] "august8-mini";
 *)
 
 (* ------------------------------------------------------------------------

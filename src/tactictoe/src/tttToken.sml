@@ -136,7 +136,7 @@ fun abstract_term_loop termref l = case l of
       then
         (
         termref := SOME b;
-        "[" :: a :: "(" :: termarg_placeholder :: ")" :: "]" ::  m
+        termarg_placeholder :: m
         )
       else hd l :: abstract_term_loop termref (tl l)
   | a :: m => a :: abstract_term_loop termref m
@@ -155,28 +155,22 @@ fun abstract_term stac =
   handle Interrupt => raise Interrupt | _ =>
     (debug ("error: abstract_term: " ^ stac); NONE)
 
-fun inst_term_loop sterm l = case l of
-    [] => []
-  | "[" :: a :: "(" :: term_placeholder :: ")" :: "]" ::  m =>
-    "[" :: a :: mlquote sterm :: "]" :: m
-  | a :: m => a :: inst_term_loop sterm m
-
 fun inst_term sterm stac =
-  let val sl = partial_sml_lexer stac in
-    if mem termarg_placeholder sl
-    then String.concatWith " " (inst_term_loop sterm sl)
-    else stac
+  let 
+    val estac1 = partial_sml_lexer stac
+    val qterm = "[ HOLPP.QUOTE " ^ mlquote sterm ^ " ]"
+    val estac2 = subst_sl (termarg_placeholder,qterm) estac1
+  in
+    String.concatWith " " estac2
   end
   handle Interrupt => raise Interrupt | _ => debug_err "inst_term" stac
 
 (*
-load "tttUnfold"; open tttUnfold;
-load "tttLearn"; open tttLearn;
+load "tttToken"; open tttToken;
 val stac = "EXISTS_TAC ``1:num``";
 val stac' = QFRead.fromString false stac;
 val (astac,sterm) = valOf (abstract_term stac');
-val (asl,w) :goal = ([],``?x.x>0``);
-val sl = ["0","3","2","1"];
+val istac = inst_term "2:num" astac;
 *)
 
 (* -------------------------------------------------------------------------
