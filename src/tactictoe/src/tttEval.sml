@@ -188,7 +188,6 @@ fun write_evalscript (vnno,pnno) file =
      sreflect_real "tttSetup.ttt_search_time" ttt_search_time,
      sreflect_real "tttSetup.ttt_policy_coeff" ttt_policy_coeff,
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
-     sreflect_flag "tttSetup.thml_explo_flag" thml_explo_flag,
      sreflect_flag "aiLib.debug_flag" debug_flag,
      "tttEval.ttt_eval " ^
      "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^
@@ -260,11 +259,11 @@ tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
 val _ = ttt_clean_eval ();
-val _ = run_evalscript_thyl "august8-mini" (true,30) (NONE,NONE) thyl;
+val _ = run_evalscript_thyl "august9" (true,30) (NONE,NONE) thyl;
 
 val tnn_value = train_value 0.95 "value";
 val tnn_policy = train_policy 0.95 "policy";
-val _ = run_evalscript_thyl "june23_tnn" (true,30) (SOME "value", SOME "policy") thyl;
+val _ = run_evalscript_thyl "august9_vnn" (true,30) (SOME "value",NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
@@ -387,7 +386,8 @@ fun operl_of_tnnex exl =
 
 fun train_dir pct name =
   let
-    val filel = listDir (tactictoe_dir ^ "/tnnex/" ^ name)
+    val tnnex_dir = tactictoe_dir ^ "/tnnex/" ^ name
+    val filel = map (fn x => tnnex_dir ^ "/" ^ x) (listDir tnnex_dir)
     val exl = List.concat (map read_tnnex filel)
     val (train,test) = part_pct pct (shuffle exl)
     val operl = operl_of_tnnex exl

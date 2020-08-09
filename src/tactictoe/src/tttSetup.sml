@@ -51,7 +51,6 @@ val ttt_search_time  = ref 10.0
 val ttt_policy_coeff = ref 0.5
 val ttt_explo_coeff = ref 2.0
 val ttt_ex_flag = ref false
-val thml_explo_flag = ref false
 
 
 end (* struct *)
