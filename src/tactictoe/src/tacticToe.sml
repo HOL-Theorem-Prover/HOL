@@ -274,7 +274,7 @@ fun tactictoe term =
   let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux goal) end
 
 (* -------------------------------------------------------------------------
-   Interface (without recorded tactic data)
+   Interface (without recorded data)
    ------------------------------------------------------------------------- *)
 
 fun tactictoe_mini_aux goal =
