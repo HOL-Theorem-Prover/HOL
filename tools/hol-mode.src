@@ -452,7 +452,7 @@ starts >%s%s<"
                   '("Theorem" "Definition" "Inductive" "CoInductive"
                     "Triviality" "Datatype" "Type" "Overload")
                   "\\|")
-       "\\|"
+       "\\|;\\|"
        (regexp-opt
         '("val" "fun" "in" "infix" "infixl" "infixr" "open" "local" "type"
           "datatype" "nonfix" "exception" "end" "structure") 'symbols)))
