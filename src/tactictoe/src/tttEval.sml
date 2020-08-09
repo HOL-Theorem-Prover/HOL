@@ -135,8 +135,7 @@ fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
     val ((status,tree),t) = add_time
-      (main_tactictoe_mini thmdata (vnno,pnno)) goal
-      (* (main_tactictoe (thmdata,tacdata) (vnno,pnno)) goal *)
+      (main_tactictoe (thmdata,tacdata) (vnno,pnno)) goal
     val _ = if not (isSome vnno) andalso not (isSome pnno) then
       (case status of Proof _ =>
         (
