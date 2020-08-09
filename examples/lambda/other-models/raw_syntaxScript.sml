@@ -129,14 +129,14 @@ val SING_INTER = prove(
     (Y INTER {x} = if x IN Y then {x} else {})``,
   SRW_TAC [][EXTENSION] THEN PROVE_TAC []);
 
-val renaming_sanity3 = store_thm(
-  "renaming_sanity3",
-  ``!e e' x. ~(x IN fv e') /\ (capt x e INTER fv e' = {}) ==>
-             ~(x IN fv (subst e' x e))``,
-  Induct THEN
-  SRW_TAC [][capt_def, fv_def, subst_def,
-             RIGHT_INTER_OVER_UNION, SING_INTER] THEN
-  FULL_SIMP_TAC (srw_ss()) []);
+Theorem renaming_sanity3:
+  !e e' x. ~(x IN fv e') /\ (capt x e INTER fv e' = {}) ==>
+           ~(x IN fv (subst e' x e))
+Proof
+  Induct >>
+  rw[capt_def, fv_def, subst_def, RIGHT_INTER_OVER_UNION, SING_INTER] >>
+  fs[] >> rfs[]
+QED
 
 val renaming_sanity4 = store_thm(
   "renaming_sanity4",
