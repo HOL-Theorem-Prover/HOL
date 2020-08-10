@@ -211,8 +211,8 @@ val _ = app (fn (w,s) => Portable.with_flag(testutils.linewidth,w) tpp s)
                   \  v /\\ y"),
              (80, "f\n\
                   \  (let\n\
-                  \     x = long expression ;\n\
-                  \     y = long expression ;\n\
+                  \     x = long expression;\n\
+                  \     y = long expression;\n\
                   \     z = long expression\n\
                   \   in\n\
                   \     x /\\ y /\\ z)"),
