@@ -777,56 +777,10 @@ val every_case_tac = EVERY_CASE_TAC
  * is a variable.                                                            *
  *---------------------------------------------------------------------------*)
 
-fun is_bool_atom tm =
-  is_var tm andalso (type_of tm = bool)
-  orelse is_neg tm andalso is_var (dest_neg tm);
 
+val var_eq = Tactic.eliminable
+fun ASSUM_TAC f P = first_x_assum (f o assert (P o concl))
 
-fun orient th =
- let val c = concl th
- in if is_bool_atom c
-    then (if is_neg c then EQF_INTRO th else EQT_INTRO th)
-    else let val (lhs,rhs) = dest_eq c
-         in if is_var lhs
-            then if is_var rhs
-                 then case Term.compare (lhs, rhs)
-                       of LESS  => SYM th
-                        | other => th
-                 else th
-            else SYM th
-         end
- end;
-
-val TIDY_ABBREVS = markerLib.TIDY_ABBREVS
-fun eliminable_eqvar t =
-    if is_bool_atom t then
-      if is_neg t then SOME (dest_neg t) else SOME t
-    else let val (l,r) = dest_eq t
-         in
-           if l ~~ r then NONE
-           else if is_var l then SOME l else SOME r
-         end
-
-fun VSUBST_TAC tm =
-    case eliminable_eqvar tm of
-        NONE => UNDISCH_THEN tm (K ALL_TAC)
-      | SOME v => UNDISCH_THEN tm (SUBST_ALL_TAC o orient)
-
-fun var_eq tm =
-    let val (lhs,rhs) = dest_eq tm
-    in
-      aconv lhs rhs orelse
-      (is_var lhs andalso not (free_in lhs rhs)) orelse
-      (is_var rhs andalso not (free_in rhs lhs))
-    end handle HOL_ERR _ => is_bool_atom tm
-
-fun grab P f v =
-  let fun grb [] = v
-        | grb (h::t) = if P h then f h else grb t
-  in grb
-  end;
-
-fun ASSUM_TAC f P = W (fn (asl,_) => grab P f NO_TAC asl)
 val old_behaviour = ref false
 val tracename = "BasicProvers.var_eq_old"
 val _ = Feedback.register_btrace(tracename, old_behaviour)
@@ -834,7 +788,7 @@ val behaviour_value = get_tracefn tracename
 fun VAR_EQ_TAC (g as (asl,_)) =
     let
       val tidy = if behaviour_value() = 1 then ALL_TAC
-                 else TIDY_ABBREVS
+                 else markerLib.TIDY_ABBREVS
     in
       (ASSUM_TAC VSUBST_TAC var_eq THEN tidy) g
     end
@@ -843,12 +797,11 @@ val var_eq_tac = VAR_EQ_TAC
 fun ASSUMS_TAC f P = W (fn (asl,_) =>
   case filter P asl
    of []     => NO_TAC
-    | assums => MAP_EVERY f (List.rev assums));
+    | assums => MAP_EVERY (fn t => UNDISCH_THEN t f) (List.rev assums))
 
 fun CONCL_TAC f P = W (fn (_,c) => if P c then f else NO_TAC);
 
-fun LIFT_SIMP ss tm =
-  UNDISCH_THEN tm (STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []);
+fun LIFT_SIMP ss = STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []
 
 local
   fun DTHEN ttac = fn (asl,w) =>
@@ -1046,12 +999,9 @@ fun splittable w =
  Lib.can (find_term (fn tm => (is_cond tm orelse TypeBase.is_case tm)
                               andalso free_in tm w)) w;
 
-fun LIFT_SPLIT_SIMP ss simp tm =
-   UNDISCH_THEN tm
-     (fn th => MP_TAC (simpLib.SIMP_RULE ss [] th)
-                 THEN CASE_TAC
-                 THEN simp
-                 THEN REPEAT BOSS_STRIP_TAC);
+fun LIFT_SPLIT_SIMP ss simp th =
+    MP_TAC (simpLib.SIMP_RULE ss [] th) THEN CASE_TAC THEN simp THEN
+    REPEAT BOSS_STRIP_TAC
 
 fun SPLIT_SIMP simp = TRY (IF_CASES_TAC ORELSE CASE_TAC) THEN simp ;
 

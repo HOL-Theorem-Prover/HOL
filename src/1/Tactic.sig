@@ -97,6 +97,10 @@ sig
   val SUFF_TAC              : term -> tactic
   val suff_tac              : term -> tactic
 
+
+  val eliminable            : term -> bool
+  val VSUBST_TAC            : thm -> tactic
+
   val DEEP_INTROk_TAC       : thm -> tactic -> tactic
   val DEEP_INTRO_TAC        : thm -> tactic
 

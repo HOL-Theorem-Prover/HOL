@@ -184,6 +184,9 @@ val is_literal_case = can dest_literal_case
 val is_arb          = same_const arb
 val is_the_value    = same_const the_value
 val is_IN           = can dest_IN
+fun is_bool_atom tm =
+  is_var tm andalso (type_of tm = bool)
+  orelse is_neg tm andalso is_var (dest_neg tm);
 
 (*---------------------------------------------------------------------------*
  * Construction and destruction functions that deal with SML lists           *

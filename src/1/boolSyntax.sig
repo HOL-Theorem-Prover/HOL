@@ -115,6 +115,7 @@ sig
   val is_res_select          : term -> bool
   val is_res_abstract        : term -> bool
   val is_IN                  : term -> bool
+  val is_bool_atom           : term -> bool
 
   (* Construction of a term from a list of terms *)
 
