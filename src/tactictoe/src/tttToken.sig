@@ -14,7 +14,10 @@ sig
     | TermTac of term quotation -> tactic
   datatype aty = Aterm | Athml
   datatype token = Stac of string | Sterm of string | Sthml of string list
-  
+  val dest_stac : token -> string
+  val dest_sterm : token -> string
+  val dest_sthml : token -> string list  
+
   val termarg_placeholder : string
   val thmlarg_placeholder : string
   val extract_atyl : string -> aty list

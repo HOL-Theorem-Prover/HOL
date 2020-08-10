@@ -104,7 +104,7 @@ type tree = (id,node) Redblackmap.dict
 
 type searchobj = 
   {predtac : goal -> (string * aty list) list,
-   predarg : aty -> goal -> token list,
+   predarg : string -> aty -> goal -> token list,
    parsetoken : parsetoken,
    vnno: tnn option, pnno: tnn option}
 
@@ -204,10 +204,12 @@ fun select_node tree pid =
     val sn = select_accessf access_toprec gvis handle HOL_ERR _ => 
       raise ERR "select_node" (string_of_id pid ^ " " ^ its gn) 
     val argtree = Vector.sub (stacv,sn)
+    val stac = dest_stac (#token (dfind [] argtree))
     val anl = select_argl argtree []
+    
   in
     if #sstatus (dfind anl argtree) = StacFresh
-    then ((pid,(gn,sn,anl)),(goal,argtree))
+    then ((pid,(gn,sn,anl)),(goal,stac,argtree))
     else select_node tree ((gn,sn,anl) :: pid)  
   end
 
@@ -240,17 +242,17 @@ fun reorder_stacv g pnn stacv =
 fun arg_create atyl arg =
   {token = arg, atyl = atyl, svis = 0.0, ssum = 0.0, sstatus = StacFresh}
 
-fun expand_argtree searchobj goal (argtree,anl) =
+fun expand_argtree searchobj (goal,stac) (argtree,anl) =
   let val atyl = #atyl (dfind anl argtree) in 
     if null atyl then (argtree,anl,StacFresh) else
-    let val argl1 = #predarg searchobj (hd atyl) goal in
+    let val argl1 = #predarg searchobj stac (hd atyl) goal in
       if null argl1 then (argtree,anl,StacSaturated) else
       let 
         val argl2 = map (arg_create (tl atyl)) argl1 
         fun f i x = (i :: anl, x)
         val newargtree = daddl (mapi f argl2) argtree
       in
-        expand_argtree searchobj goal (newargtree, 0 :: anl)
+        expand_argtree searchobj (goal,stac) (newargtree, 0 :: anl)
       end   
     end    
   end
@@ -271,7 +273,7 @@ fun status_of_stac parentd goalrec glo = case glo of
     else StacUndecided)
 
 fun is_metis_stac token = case token of
-    Stac s => hd (partial_sml_lexer s) = "metisTools.METIS_TAC"
+    Stac s => s = "metisTools.METIS_TAC " ^ thmlarg_placeholder
   | _ => false
 
 val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
@@ -280,8 +282,6 @@ val stac_cache = ref (
   dempty (cpl_compare goal_compare (list_compare compare_token)))
 fun clean_stac_cache () = stac_cache := 
   dempty (cpl_compare goal_compare (list_compare compare_token))
-
-fun get_stac tokenl = case hd tokenl of Stac s => s | _ => "none"
 
 fun apply_tac parsetoken tokenl goal = 
   dfind (goal,tokenl) (!stac_cache) handle NotFound =>
@@ -329,7 +329,7 @@ fun apply_stac (tree,searchobj) argtree (pid,(gn,sn,anl)) =
     val goalrec = Vector.sub (#goalv node, gn)
     val siblingd = #siblingd goalrec
     val tokenl = collect_tokenl [] (argtree,anl)
-    val _ = debugf "stac: " get_stac tokenl
+    val _ = debugf "stac: " (dest_stac o hd) tokenl
     val glo = apply_tac (#parsetoken searchobj) tokenl (#goal goalrec)
     val sstatus = status_of_stac parentd goalrec glo
     val glo' = if sstatus = StacUndecided then glo else NONE
@@ -471,11 +471,11 @@ fun search_loop startsearchobj starttree =
       else
         let
           val _ = debug "selection"
-          val ((pid,(gn,sn,anl)),(goal,argtree)) = 
+          val ((pid,(gn,sn,anl)),(goal,stac,argtree)) = 
             select_node tree []
           val _ = debug "argument expansion"
           val (newargtree,newanl,argstatus) =
-            expand_argtree searchobj goal (argtree,anl)
+            expand_argtree searchobj (goal,stac) (argtree,anl)
           val pidx = (pid,(gn,sn,newanl))
           val _ = debugf "application: " string_of_id ((gn,sn,newanl) :: pid)
           val (glo,sstatus,reward) = 

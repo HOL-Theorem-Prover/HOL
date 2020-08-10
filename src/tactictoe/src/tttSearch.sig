@@ -31,7 +31,7 @@ sig
 
   type searchobj = 
     {predtac : goal -> (string * tttToken.aty list) list,
-     predarg : tttToken.aty -> goal -> tttToken.token list,
+     predarg : string -> tttToken.aty -> goal -> tttToken.token list,
      parsetoken : tttToken.parsetoken,
      vnno: tnn option,
      pnno: tnn option}

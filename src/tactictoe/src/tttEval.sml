@@ -255,7 +255,6 @@ ttt_clean_record (); ttt_record ();
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
-tttSetup.thml_explo_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
 val _ = ttt_clean_eval ();
@@ -263,7 +262,7 @@ val _ = run_evalscript_thyl "august9" (true,30) (NONE,NONE) thyl;
 
 val tnn_value = train_value 0.95 "value";
 val tnn_policy = train_policy 0.95 "policy";
-val _ = run_evalscript_thyl "august9_vnn" (true,30) (SOME "value",NONE) thyl;
+val _ = run_evalscript_thyl "august9_vnn-3" (true,30) (SOME "value",NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
@@ -410,6 +409,5 @@ fun train_dir pct name =
 fun train_value pct file = train_dir pct "value"
 fun train_policy pct file = train_dir pct "policy"
 fun train_thmpol pct file = train_dir pct "thmpol"
-
 
 end (* struct *)

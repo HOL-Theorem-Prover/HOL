@@ -128,8 +128,11 @@ fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
       in
         thm_cache := dadd g thmidl (!thm_cache); thmidl
       end
-    fun predarg aty g = case aty of
-        Athml => map Sthml (mk_batch_full (!ttt_thmlarg_radius) (predthml g)) 
+    fun predarg stac aty g = case aty of
+        Athml => 
+          if stac = metis_stac  
+          then map Sthml (mk_batch_full (!ttt_thmlarg_radius) (predthml g))
+          else map Sthml (mk_batch_full 1 (predthml g))
       | Aterm => map Sterm (first_n narg_explo (pred_qvar g))
     fun predtac g =
       dfind g (!tac_cache) handle NotFound =>
@@ -208,7 +211,7 @@ fun main_tactictoe_mini thmdata (vnno,pnno) goal =
       in
         thm_cache := dadd g thmidl (!thm_cache); thmidl
       end
-    fun predarg aty g = case aty of
+    fun predarg _ aty g = case aty of
         Athml => map Sthml (mk_batch_full (!ttt_thmlarg_radius) (predthml g)) 
       | Aterm => map Sterm (first_n narg_explo (pred_qvar g))
     fun predtac g = map_assoc (fn x => dfind x atyd) stacl_filtered

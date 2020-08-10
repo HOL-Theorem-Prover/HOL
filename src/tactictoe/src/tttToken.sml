@@ -38,6 +38,13 @@ fun dest_termtac pretac = case pretac of
 
 datatype token = Stac of string | Sterm of string | Sthml of string list
 
+fun dest_stac token = 
+  case token of Stac s => s | _ => raise ERR "dest_stac" ""
+fun dest_sterm token = 
+  case token of Sterm s => s | _ => raise ERR "dest_sterm" ""
+fun dest_sthml token = 
+  case token of Sthml sl => sl | _ => raise ERR "dest_sthml" ""
+
 type parsetoken = 
   {parse_stac : string -> pretac ,
    parse_thmidl : string list -> thm list, 
