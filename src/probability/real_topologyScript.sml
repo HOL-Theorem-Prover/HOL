@@ -14111,10 +14111,6 @@ val INTERVAL_OPEN_SUBSET_CLOSED = store_thm ("INTERVAL_OPEN_SUBSET_CLOSED",
  ``!a b. interval(a,b) SUBSET interval[a,b]``,
   REWRITE_TAC[SUBSET_DEF, IN_INTERVAL] THEN MESON_TAC[REAL_LT_IMP_LE]);
 
-val REAL_LT_MIN = store_thm ("REAL_LT_MIN",
- ``!x y z:real. z < min x y <=> z < x /\ z < y``,
-  METIS_TAC [min_def, REAL_LTE_TRANS, REAL_LT_TRANS, REAL_NOT_LE]);
-
 val OPEN_INTERVAL_LEMMA = store_thm ("OPEN_INTERVAL_LEMMA",
  ``!a b x. a < x /\ x < b
            ==> ?d. (0:real) < d /\ !x'. abs(x' - x) < d ==> a < x' /\ x' < b``,

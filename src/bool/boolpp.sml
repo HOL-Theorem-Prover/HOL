@@ -199,7 +199,7 @@ fun letprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
             and some are indented two, and some are in column 0
          *)
          pr_list pr_letandseq
-                 (add_string " " >> add_string ";" >> add_break (1, 2))
+                 (add_string ";" >> add_break (1, 2))
                  andbindings >>
          add_break(1,0) >> add_string "in" >> add_break(1,2) >>
          block PP.INCONSISTENT 0 (syspr (RealTop, RealTop, RealTop) body)

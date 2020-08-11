@@ -202,12 +202,14 @@ Incompatibilities:
 *   The definition `SORTED_DEF` is now an automatic rewrite, meaning that terms of the form `SORTED R (h1::h2::t)` will now rewrite to `R h1 h2 /\ SORTED (h2::t)` (in addition to the existing automatic rewrites for `SORTED R []` and `SORTED R [x]`).
     To restore the old behaviour it is necessary to exclude `SORTED_DEF` (use `temp_delsimps`), and reinstate `SORTED_NIL` and `SORTED_SING` (use `augment_srw_ss [rewrites [thmnames]]`).
 
-
 * The syntax for *greater than* in `intSyntax` and `realSyntax` is consistently
   named as in `numSyntax`: The functions `great_tm`,`dest_great` and `mk_great`
   become `greater_tm`, `dest_greater` and `mk_greater`, respectively.
   Additionally, `int_arithTheory.add_to_great` is renamed to
   `int_arithTheory.add_to_greater`.
+
+*   Two theorems about `list$nub` (removes duplicates in a list), have been made automatic: `listTheory.nub_NIL` (`⊢ nub [] = []`) and `listTheory.all_distinct_nub` (`⊢ ∀l. ALL_DISTINCT (nub l)`).
+    Calls to `temp_delsimps` can be used to remove these as necessary.
 
 * * * * *
 

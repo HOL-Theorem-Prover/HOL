@@ -22,6 +22,7 @@
               'quote
               'holscript-smlsyntax)
         '("\\<cheat\\>" . 'holscript-cheat-face)
+        '(holscript-find-syntax-error 0 'holscript-syntax-error-face prepend)
         '(hol-find-quoted-material 0 'holscript-quoted-material prepend)))
 
 (defconst holscript-font-lock-defaults '(holscript-font-lock-keywords))
@@ -314,6 +315,67 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
              (skip-syntax-backward " "))
            (skip-syntax-forward " ")
            (setq n (- n 1))))))
+
+(defconst holscript-symbolicthen-regexp "\\(?:>>\\|\\\\\\\\\\|>-\\|>|\\)")
+(defconst holscript-textthen-regexp "\\(?:\\<\\(THEN\\([1L]?\\)\\)\\>\\)")
+(defconst holscript-thenish-regexp
+  (concat "\\(?:" holscript-symbolicthen-regexp "\\|"
+          holscript-textthen-regexp "\\)"))
+(defconst holscript-doublethen-error-regexp
+  (concat holscript-thenish-regexp "[[:space:]]+" holscript-thenish-regexp))
+(defun holscript-syntax-convert (n) (if (and n (equal (car n) 9)) '(1) n))
+(defun holscript-bad-error-delims (p1 p2)
+  (let ((s0 (holscript-syntax-convert (syntax-after (1- p1))))
+        (s1 (holscript-syntax-convert (syntax-after p1)))
+        (s2 (holscript-syntax-convert (syntax-after (1- p2))))
+        (s3 (holscript-syntax-convert (syntax-after p2))))
+    (or (equal s0 s1) (equal s2 s3))))
+
+(defconst holscript-quoteddeclaration-begin
+  (concat
+   "^\\(Theorem\\|Triviality\\|Definition\\|Inductive\\|CoInductive\\)"
+   "[[:space:]]+\\([A-Za-z0-9'_]+\\)[[:space:]]*" ; name
+   "\\(\\[[A-Za-z0-9'_,]+\\]\\)?[[:space:]]*:"; optional annotations
+   )
+  "Regular expression marking the beginning of the special syntax that marks
+a store_thm equivalent.")
+
+(defconst holscript-quoteddeclaration-end
+  (regexp-opt (list "End" "Proof" "Termination")))
+
+(defconst holscript-quotedmaterial-delimiter-fullregexp
+  (concat holscript-quoteddeclaration-begin "\\|"
+          holscript-quoteddeclaration-end "\\|[“”‘’]"))
+
+(defun holscript-in-quotedmaterialp (p)
+  (save-match-data
+    (save-mark-and-excursion
+      (goto-char p)
+      (let ((beginmatch
+             (re-search-backward
+              holscript-quotedmaterial-delimiter-fullregexp nil t))
+            (ppss (syntax-ppss)))
+        (while (and beginmatch (or (nth 3 ppss) (nth 4 ppss)))
+          (setq beginmatch (re-search-backward
+                         holscript-quotedmaterial-delimiter-fullregexp nil t))
+          (setq ppss (syntax-ppss)))
+        (and beginmatch
+             (or (looking-at holscript-quoteddeclaration-begin)
+                 (looking-at "[“‘]")))))))
+
+(defun holscript-find-syntax-error (limit)
+  (let ((beginmatch
+         (re-search-forward holscript-doublethen-error-regexp limit t))
+        (ppss (syntax-ppss)))
+    (while (and beginmatch
+                (or (nth 3 ppss) (nth 4 ppss)
+                    (holscript-bad-error-delims (match-beginning 0)
+                                                (match-end 0))
+                    (holscript-in-quotedmaterialp (point))))
+      (setq beginmatch
+            (re-search-forward holscript-doublethen-error-regexp limit t))
+      (setq ppss (syntax-ppss)))
+    (if (not beginmatch) nil t)))
 
 ;;templates
 (defun hol-extract-script-name (arg)
@@ -738,17 +800,6 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
       (assoc "==>" "⇒") (assoc "\\/" "∨") (assoc "/\\" "∧")
       (assoc "=" "<" "≤" "<=") (assoc ":=") (assoc "+") (assoc "*")))))
 
-(defconst holscript-quoteddeclaration-begin
-  (concat
-   "^\\(Theorem\\|Triviality\\|Definition\\|Inductive\\|CoInductive\\)"
-   "[[:space:]]+\\([A-Za-z0-9'_]+\\)[[:space:]]*" ; name
-   "\\(\\[[A-Za-z0-9'_,]+\\]\\)?[[:space:]]*:"; optional annotations)
-  "Regular expression marking the beginning of the special syntax that marks
-a store_thm equivalent."))
-
-(defconst holscript-quoteddeclaration-end
-  (regexp-opt (list "End" "Proof" "Termination")))
-
 (defvar holscript-quotedmaterial-delimiter-regexp
   (regexp-opt (list "“" "”" "‘" "’" holscript-quoteddeclaration-begin)))
 
@@ -1114,6 +1165,12 @@ a store_thm equivalent."))
 (defface holscript-smlsyntax
   '((((class color)) :foreground "DarkOliveGreen" :weight bold))
   "The face for highlighting important SML syntax that appears in script files."
+  :group 'holscript-faces)
+
+(defface holscript-syntax-error-face
+  '((((class color)) :foreground "red" :background "yellow"
+     :weight bold :box t))
+  "The face for highlighting guaranteed syntax errors."
   :group 'holscript-faces)
 
 (setq auto-mode-alist (cons '("Script\\.sml" . holscript-mode)

@@ -129,7 +129,7 @@ val _ = TeX_notation {hol = UChar.exists ^ "!", TeX = ("\\HOLTokenUnique{}",2)}
 
 val LET_DEF =
  Definition.new_definition
-   ("LET_DEF",        “LET = \(f:'a->'b) x. f x”);
+   ("LET_DEF",        “LET = λ(f:'a->'b) x. f x”);
 
 val COND_DEF =
  Definition.new_definition
@@ -240,7 +240,7 @@ val arb = new_constant("ARB",alpha);  (* Doesn't have to be defined at all. *)
 
 val literal_case_DEF =
  Definition.new_definition
-   ("literal_case_DEF",  “literal_case = \(f:'a->'b) x. f x”);
+   ("literal_case_DEF",  “literal_case = λ(f:'a->'b) x. f x”);
 
 val _ = overload_on ("case", “bool$literal_case”);
 
@@ -288,7 +288,7 @@ val _ = associate_restriction ("@",  "RES_SELECT")
 val BOUNDED_DEF =
   Definition.new_definition
     ("BOUNDED_DEF",
-     “BOUNDED = \(v:bool). T”);
+     “BOUNDED = λ(v:bool). T”);
 
 (*---------------------------------------------------------------------------*)
 (* Support for detecting datatypes in theory files                           *)
@@ -4202,7 +4202,7 @@ end
 
 (* define case operator *)
 val itself_case_thm = let
-  val witness = “\(i:'a itself) (b:'b). b”
+  val witness = “λ(i:'a itself) (b:'b). b”
   val witness_applied1 = BETA_CONV (mk_comb(witness, “(:'a)”))
   val witness_applied2 = RIGHT_BETA (AP_THM witness_applied1 “b:'b”)
 in
