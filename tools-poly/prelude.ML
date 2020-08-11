@@ -5,7 +5,6 @@ val () = PolyML.print_depth 0;
 open HolKernel Parse boolLib proofManagerLib
 
 (* Install pretty-printers *)
-
 val _ = let
   fun pp2polypp (ppfn: 'b -> HOLPP.pretty) =
     let
@@ -77,6 +76,8 @@ val _ = let
       Inttab.pp (fn a => printArgTypes(a,d-1)) t
   fun pp_knametab d printArgTypes (t : 'a KNametab.table) =
       KNametab.pp (fn a => printArgTypes(a,d-1)) t
+  fun pp_termtab d printArgTypes (t : 'a Termtab.table) =
+      Termtab.pp (fn a => printArgTypes(a,d-1)) t
   fun pp_seq _ _ (s:'a seq.seq) = HOLPP.add_string "<seq>"
   fun pp_typebase _ _ (tb:TypeBasePure.typeBase) = HOLPP.add_string "<typeBase>"
   fun pp_sexp _ _ (s : HOLsexp.t) = HOLsexp.printer s
@@ -91,6 +92,7 @@ in
   PolyML.addPrettyPrinter pp_frag;
   PolyML.addPrettyPrinter pp_inttab;
   PolyML.addPrettyPrinter pp_knametab;
+  PolyML.addPrettyPrinter pp_termtab;
   PolyML.addPrettyPrinter pp_seq;
   PolyML.addPrettyPrinter pp_sexp;
   PolyML.addPrettyPrinter pp_symtab;

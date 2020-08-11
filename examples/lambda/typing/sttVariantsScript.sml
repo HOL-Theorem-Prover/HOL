@@ -116,51 +116,51 @@ val hastype2_swap = store_thm(
     METIS_TAC [pmact_inverse]
   ]);
 
-val hastype2_bvc_ind = store_thm(
-  "hastype2_bvc_ind",
-  ``!P fv.
-      (!x. FINITE (fv x)) /\
-      (!G s A x.
-         valid_ctxt G /\ MEM (s,A) G ==> P G (VAR s) A x)
-         /\
-      (!G m n A B x.
-          (!y. P G m (A --> B) y) /\
-          (!y. P G n A y) ==>
-             P G (m @@ n) B x) /\
-
-      (!G m u A B x.
-          (!v y. ~(v IN ctxtFV G) ==> P ((v,A)::G) ([VAR v/u] m) B y) /\
-          ~(u IN ctxtFV G) /\ ~(u IN fv x)
-        ==>
+Theorem hastype2_bvc_ind:
+  ∀P fv.
+      (∀x. FINITE (fv x))
+         ∧
+      (∀G s A x. valid_ctxt G /\ MEM (s,A) G ==> P G (VAR s) A x)
+         ∧
+      (∀G m n A B x.
+         (∀y. P G m (A --> B) y) ∧ (∀y. P G n A y) ⇒ P G (m @@ n) B x)
+         ∧
+      (∀G m u A B x.
+          (∀v y. v ∉ ctxtFV G ⇒ P ((v,A)::G) ([VAR v/u] m) B y) ∧
+          u ∉ ctxtFV G ∧ u ∉ fv x
+        ⇒
           P G (LAM u m) (A --> B) x)
-    ==>
-      !G m ty. G ||- m -: ty ==> !x. P G m ty x``,
+    ⇒
+      ∀G m ty. G ||- m -: ty ⇒ ∀x. P G m ty x
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
-  Q_TAC SUFF_TAC `!G m ty. G ||- m -: ty ==>
-                           !pi x. P (ctxtswap pi G) (tpm pi m) ty x`
-        THEN1 METIS_TAC [pmact_nil] THEN
+  ‘∀G m ty. G ||- m -: ty ==>
+            ∀pi x. P (ctxtswap pi G) (tpm pi m) ty x’
+    suffices_by METIS_TAC [pmact_nil] THEN
   HO_MATCH_MP_TAC hastype2_ind THEN
   SRW_TAC [][] THEN1 METIS_TAC [] THEN
-  Q.MATCH_ABBREV_TAC `P GG (LAM vv MM) (A --> B) xx` THEN
-  Q_TAC (NEW_TAC "z") `{vv} UNION FV MM UNION ctxtFV GG UNION fv xx` THEN
-  `LAM vv MM = LAM z (tpm [(z,vv)] MM)`
-     by SRW_TAC [][tpm_ALPHA] THEN
+  Q.MATCH_ABBREV_TAC ‘P GG (LAM vv MM) (A --> B) xx’ THEN
+  Q_TAC (NEW_TAC "z") ‘{vv} UNION FV MM UNION ctxtFV GG UNION fv xx’ THEN
+  ‘LAM vv MM = LAM z (tpm [(z,vv)] MM)’
+    by SRW_TAC [][tpm_ALPHA] THEN
   SRW_TAC [][] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
   SRW_TAC [][] THEN
   FULL_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [tpm_subst] THEN
-  FIRST_X_ASSUM (Q.SPECL_THEN [`lswapstr (REVERSE ((z,vv)::pi)) v`,
-                               `(z,vv)::pi`, `y`]
+  FIRST_X_ASSUM (Q.SPECL_THEN [‘lswapstr (REVERSE ((z,vv)::pi)) v’,
+                               ‘(z,vv)::pi’, ‘y’]
                  MP_TAC) THEN
   ASM_SIMP_TAC (srw_ss()) [pmact_decompose] THEN
-  `~(vv IN ctxtFV GG)` by SRW_TAC [][Abbr`vv`, Abbr`GG`] THEN
-  `ctxtswap ((z,vv)::pi) G = ctxtswap [(z,vv)] GG`
-     by SRW_TAC [][Abbr`GG`, GSYM pmact_decompose] THEN
-  ` _ = GG` by SRW_TAC [][ctxtswap_fresh] THEN
-  `tpm ((z,vv)::pi) m = tpm [(z,vv)] MM`
-     by SRW_TAC [][Abbr`MM`, GSYM pmact_decompose] THEN
+  ‘vv ∉ ctxtFV GG’ by SRW_TAC [][Abbr‘vv’, Abbr‘GG’] THEN
+  ‘ctxtswap ((z,vv)::pi) G = ctxtswap [(z,vv)] GG’
+    by SRW_TAC [][Abbr‘GG’, GSYM pmact_decompose] THEN
+  ‘ _ = GG’ by SRW_TAC [][ctxtswap_fresh] THEN
+  ‘tpm ((z,vv)::pi) m = tpm [(z,vv)] MM’
+    by SRW_TAC [][Abbr‘MM’, GSYM pmact_decompose] THEN
+  markerLib.RM_ABBREV_TAC "GG" THEN
   SRW_TAC [][] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
-  FULL_SIMP_TAC (srw_ss()) [pmact_decompose]);
+  FULL_SIMP_TAC (srw_ss()) [pmact_decompose]
+QED
 
 val hastype2_bvc_ind0 = save_thm(
   "hastype2_bvc_ind0",

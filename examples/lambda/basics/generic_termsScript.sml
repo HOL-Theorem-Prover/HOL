@@ -8,8 +8,6 @@ open BasicProvers
 open quotientLib
 open boolSimps
 
-open lcsymtacs
-
 fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before export_rewrites [s])
 fun Save_Thm(s, th) = (save_thm(s, th) before export_rewrites [s])
 

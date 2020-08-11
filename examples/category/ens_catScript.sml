@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib boolSimps bossLib SatisfySimps categoryTheory functorTheory pred_setTheory limitTheory lcsymtacs;
+open HolKernel Parse boolLib boolSimps bossLib SatisfySimps categoryTheory functorTheory pred_setTheory limitTheory;
 
 val _ = new_theory "ens_cat";
 val _ = ParseExtras.temp_loose_equality()
@@ -190,42 +190,44 @@ srw_tac [][is_terminal_def,EQ_IMP_THM,EXISTS_UNIQUE_THM] >- (
   srw_tac [][] ) >>
 srw_tac [][TypedFun_ext]);
 
-val ens_cat_terminal_objects = Q.store_thm(
-"ens_cat_terminal_objects",
-`∀U t. (∃s. s ∈ U ∧ s ≠ ∅) ⇒
-  (is_terminal (ens_cat U) t = ∃x. (t = {x}) ∧ t ∈ U)`,
-srw_tac [][is_terminal_def,EQ_IMP_THM,EXISTS_UNIQUE_THM] >>
-srw_tac [][] >- (
-  srw_tac [][EXTENSION] >>
-  Cases_on `t = {}` >- (
-    first_x_assum (qspec_then `s` mp_tac) >>
-    srw_tac [][] >>
-    disj1_tac >>
-    srw_tac [][] >>
-    Cases_on `f.dom = s` >> srw_tac [][] >>
-    Cases_on `f.cod = ∅` >> srw_tac [][] >>
-    srw_tac [][IsTypedFun_def,HasFunType_def,MEMBER_NOT_EMPTY] ) >>
-  qexists_tac `CHOICE t` >>
-  srw_tac [][EQ_IMP_THM,CHOICE_DEF] >>
-  first_x_assum (qspec_then `t` mp_tac) >>
-  srw_tac [][] >>
-  qmatch_assum_rename_tac `x ∈ f.cod` >>
-  first_x_assum (qspecl_then [`TypedGraphFun (f.dom,f.cod) (K x)`,`TypedGraphFun (f.dom,f.cod) (K (CHOICE f.cod))`] mp_tac) >>
-  srw_tac [][CHOICE_DEF] >>
-  fsrw_tac [][morphism_component_equality,restrict_def] >>
-  qmatch_assum_abbrev_tac `ff = gg` >>
-  `ff x = gg x` by srw_tac [][] >>
-  pop_assum mp_tac >>
-  unabbrev_all_tac >>
-  qpat_x_assum `x ∈ f.cod` mp_tac >>
-  simp_tac std_ss [] )
->- (
-  qmatch_assum_rename_tac `y ∈ U` >>
-  qexists_tac `TypedGraphFun (y,{x}) (K x)` >>
-  srw_tac [][] ) >>
-srw_tac [][TypedFun_ext] >>
-rpt (qpat_x_assum `IsTypedFun X` mp_tac) >>
-fsrw_tac [][IsTypedFun_def,HasFunType_def]);
+Theorem ens_cat_terminal_objects:
+  ∀U t. (∃s. s ∈ U ∧ s ≠ ∅) ⇒
+  (is_terminal (ens_cat U) t = ∃x. (t = {x}) ∧ t ∈ U)
+Proof
+  srw_tac [][is_terminal_def,EQ_IMP_THM,EXISTS_UNIQUE_THM] >>
+  srw_tac [][]
+  >- (srw_tac [][EXTENSION] >>
+      Cases_on ‘t = {}’
+      >- (first_x_assum (qspec_then ‘s’ mp_tac) >>
+          srw_tac [][] >>
+          disj1_tac >>
+          srw_tac [][] >>
+          Cases_on ‘f.dom = s’ >> srw_tac [][] >>
+          Cases_on ‘f.cod = ∅’ >> srw_tac [][] >>
+          srw_tac [][IsTypedFun_def,HasFunType_def,MEMBER_NOT_EMPTY] ) >>
+      qexists_tac ‘CHOICE t’ >>
+      srw_tac [][EQ_IMP_THM,CHOICE_DEF] >>
+      first_x_assum (qspec_then ‘t’ mp_tac) >>
+      srw_tac [][] >>
+      qmatch_assum_rename_tac ‘x ∈ f.cod’ >>
+      first_x_assum
+      (qspecl_then [‘TypedGraphFun (f.dom,f.cod) (K x)’,
+                    ‘TypedGraphFun (f.dom,f.cod) (K (CHOICE f.cod))’] mp_tac) >>
+      srw_tac [][CHOICE_DEF] >>
+      fsrw_tac [][morphism_component_equality,restrict_def] >>
+      qmatch_assum_abbrev_tac ‘ff = gg’ >>
+      ‘ff x = gg x’ by simp[] >>
+      pop_assum mp_tac >>
+      unabbrev_all_tac >>
+      qpat_x_assum ‘x ∈ f.cod’ mp_tac >>
+      simp_tac std_ss [] )
+  >- (qmatch_assum_rename_tac ‘y ∈ U’ >>
+      qexists_tac ‘TypedGraphFun (y,{x}) (K x)’ >>
+      srw_tac [][] ) >>
+  srw_tac [][TypedFun_ext] >>
+  rpt (qpat_x_assum ‘IsTypedFun X’ mp_tac) >>
+  fsrw_tac [][IsTypedFun_def,HasFunType_def]
+QED
 
 (*
 val ens_cat_has_binary_products = Q.store_thm(

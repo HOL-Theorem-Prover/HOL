@@ -4,6 +4,9 @@ open sptreeTheory ltlTheory generalHelpersTheory concrGBArepTheory concrRepTheor
 
 val _ = new_theory "concrwaa2gba"
 
+val _ = set_trace "BasicProvers.var_eq_old" 1
+val _ = temp_delsimps ["all_distinct_nub", "nub_NIL"]
+
 val _ = Cond_rewr.stack_limit := 2
 
 val _ = monadsyntax.temp_add_monadsyntax();
@@ -36,6 +39,7 @@ val GET_ACC_SET_LEMM = store_thm
    >> fs[MEM_EQUAL_SET] >> rw[]
   );
 
+val _ = diminish_srw_ss ["ABBREV"]
 val valid_acc_def = Define`
   valid_acc aP g_AA acc =
     ((!f f_trns. MEM (f,f_trns) acc ==>

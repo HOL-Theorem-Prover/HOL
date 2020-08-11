@@ -1,7 +1,7 @@
 (* A general theory of functional-big-step equivalence with small-step for
  * deterministic languages *)
 
-open HolKernel boolLib bossLib lcsymtacs Parse;
+open HolKernel boolLib bossLib Parse;
 open integerTheory stringTheory alistTheory listTheory pred_setTheory relationTheory;
 open pairTheory optionTheory finite_mapTheory arithmeticTheory;
 open simple_traceTheory;

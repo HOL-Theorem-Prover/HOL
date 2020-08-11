@@ -7,7 +7,6 @@ val _ = new_theory "path_aux";
 
 open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
 open listTheory llistTheory pathTheory;
-open lcsymtacs;
 open intLib;
 
 val ect = BasicProvers.EVERY_CASE_TAC;

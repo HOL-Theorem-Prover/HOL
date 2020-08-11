@@ -13,8 +13,6 @@ val _ = new_theory "helperFunction";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -2451,7 +2449,7 @@ val prime_coprime_all_lt = store_thm(
   `n <> 0 /\ m <> 0` by decide_tac >>
   `d divides n /\ d divides m` by rw[GCD_IS_GREATEST_COMMON_DIVISOR, Abbr`d`] >>
   `d = n` by metis_tac[prime_def] >>
-  `n <= m` by rw[DIVIDES_LE] >>
+  `n <= m` by fs[DIVIDES_LE] >>
   decide_tac);
 
 (* Theorem: prime n /\ m < n ==> (!j. 0 < j /\ j <= m ==> coprime n j) *)

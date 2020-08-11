@@ -9,6 +9,9 @@ open pairTheory;
 
 infix \\
 val op \\ = op THEN;
+val _ = temp_delsimps ["NORMEQ_CONV"]
+val _ = diminish_srw_ss ["ABBREV"]
+val _ = set_trace "BasicProvers.var_eq_old" 1
 
 
 val rw = ref (tl [TRUTH]);

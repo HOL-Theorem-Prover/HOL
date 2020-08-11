@@ -4,7 +4,6 @@ open boolSimps
 
 open nomsetTheory
 open pred_setTheory
-open lcsymtacs
 open binderLib
 open nomdatatype
 val _ = new_theory "term";

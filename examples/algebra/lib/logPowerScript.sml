@@ -13,8 +13,6 @@ val _ = new_theory "logPower";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -1460,23 +1458,27 @@ val LOG2_BY_HALF = store_thm(
           = SUC m                         by SUC_ONE_ADD
        Thus RHS = LOG2 n - SUC m = 0 = LHS.
 *)
-val LOG2_DIV_EXP = store_thm(
-  "LOG2_DIV_EXP",
-  ``!n m. 2 ** m < n ==> (LOG2 (n DIV 2 ** m) = (LOG2 n) - m)``,
-  Induct_on `m` >-
-  rw[] >>
+
+Theorem LOG2_DIV_EXP:
+  !n m. 2 ** m < n ==> LOG2 (n DIV 2 ** m) = LOG2 n - m
+Proof
+  Induct_on ‘m’ >- rw[] >>
   rpt strip_tac >>
-  `1 < 2 ** SUC m` by rw[ONE_LT_EXP] >>
-  `1 < n` by decide_tac >>
+  ‘1 < 2 ** SUC m’ by rw[ONE_LT_EXP] >>
+  ‘1 < n’ by decide_tac >>
   fs[EXP] >>
-  `2 ** m <= HALF n` by metis_tac[DIV_LE_MONOTONE, HALF_TWICE, LESS_IMP_LESS_OR_EQ, DECIDE``0 < 2``] >>
-  `LOG2 (n DIV (TWICE (2 ** m))) = LOG2 ((HALF n) DIV 2 ** m)` by rw[DIV_DIV_DIV_MULT] >>
-  fs[LESS_OR_EQ] >-
-  rw[LOG2_HALF] >>
-  `LOG2 n = 1 + LOG2 (HALF n)`  by rw[LOG_DIV] >>
-  `_ = 1 + m` by metis_tac[LOG2_2_EXP] >>
-  `_ = SUC m` by rw[] >>
-  rw[]);
+  ‘2 ** m <= HALF n’
+    by metis_tac[DIV_LE_MONOTONE, HALF_TWICE, LESS_IMP_LESS_OR_EQ,
+                 DECIDE “0 < 2”] >>
+  ‘LOG2 (n DIV (TWICE (2 ** m))) = LOG2 ((HALF n) DIV 2 ** m)’
+    by rw[DIV_DIV_DIV_MULT] >>
+  fs[LESS_OR_EQ] >- rw[LOG2_HALF] >>
+  ‘LOG2 n = 1 + LOG2 (HALF n)’  by rw[LOG_DIV] >>
+  ‘_ = 1 + m’ by metis_tac[LOG2_2_EXP] >>
+  ‘_ = SUC m’ by rw[] >>
+  ‘0 < HALF n’ suffices_by rw[] >>
+  metis_tac[DECIDE “0 < 2”, ZERO_LT_EXP]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* LOG2 Computation                                                          *)
@@ -1870,9 +1872,11 @@ val perfect_power_test = store_thm(
    Thus y = 0, but y <> 0 by x < y,
    leading to a contradiction.
 *)
-val perfect_power_suc = store_thm(
-  "perfect_power_suc",
-  ``!m n. 1 < m /\ perfect_power n m /\ perfect_power (SUC n) m ==> (m = 2) /\ (n = 1)``,
+
+Theorem perfect_power_suc:
+  !m n. 1 < m /\ perfect_power n m /\ perfect_power (SUC n) m ==>
+        m = 2 /\ n = 1
+Proof
   ntac 3 strip_tac >>
   `?x. n = m ** x` by fs[perfect_power_def] >>
   `?y. SUC n = m ** y` by fs[GSYM perfect_power_def] >>
@@ -1887,16 +1891,17 @@ val perfect_power_suc = store_thm(
   `0 < z /\ (v = z + 1)` by fs[Abbr`z`] >>
   `n * v = n * z + n * 1` by rw[] >>
   `n * z = 1` by decide_tac >>
-  `(n = 1) /\ (z = 1)` by metis_tac[MULT_EQ_1] >>
+  `n = 1 /\ z = 1` by metis_tac[MULT_EQ_1] >>
   `v = 2` by decide_tac >>
   simp[] >>
   spose_not_then strip_assume_tac >>
   `2 < m` by decide_tac >>
-  `2 ** y < m ** y` by fs[EXP_EXP_LT_MONO] >>
+  `2 ** y < m ** y` by simp[EXP_EXP_LT_MONO] >>
   `m ** y = 2` by decide_tac >>
   `2 ** y < 2 ** 1` by metis_tac[EXP_1] >>
   `y < 1` by fs[EXP_BASE_LT_MONO] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < m /\ 1 < n /\ perfect_power n m ==> ~perfect_power (SUC n) m *)
 (* Proof:
@@ -1943,32 +1948,35 @@ val perfect_power_not_suc = store_thm(
               This contradicts b ** SUC x <= b * n
       With ~perfect_power (SUC n) b, hence true.
 *)
-val LOG_SUC = store_thm(
-  "LOG_SUC",
-  ``!b n. 1 < b /\ 0 < n ==>
-    (LOG b (SUC n) = LOG b n + if perfect_power (SUC n) b then 1 else 0)``,
+
+Theorem LOG_SUC:
+  !b n. 1 < b /\ 0 < n ==>
+    (LOG b (SUC n) = LOG b n + if perfect_power (SUC n) b then 1 else 0)
+Proof
   rpt strip_tac >>
-  qabbrev_tac `x = LOG b n` >>
-  qabbrev_tac `y = LOG b (SUC n)` >>
-  `0 < SUC n` by decide_tac >>
-  `SUC n <= b ** SUC x /\ b ** SUC x <= b * n` by metis_tac[LOG_TEST] >>
-  `SUC (SUC n) <= b ** SUC y /\ b ** SUC y <= b * SUC n` by metis_tac[LOG_TEST] >>
-  `(SUC n = b ** SUC x) \/ (SUC n < b ** SUC x)` by decide_tac >| [
-    `perfect_power (SUC n) b` by metis_tac[perfect_power_def] >>
-    `y = SUC x` by rw[LOG_EXACT_EXP, Abbr`y`] >>
+  qabbrev_tac ‘x = LOG b n’ >>
+  qabbrev_tac ‘y = LOG b (SUC n)’ >>
+  ‘0 < SUC n’ by decide_tac >>
+  ‘SUC n <= b ** SUC x /\ b ** SUC x <= b * n’ by metis_tac[LOG_TEST] >>
+  ‘SUC (SUC n) <= b ** SUC y /\ b ** SUC y <= b * SUC n’
+    by metis_tac[LOG_TEST] >>
+  ‘(SUC n = b ** SUC x) \/ (SUC n < b ** SUC x)’ by decide_tac >| [
+    ‘perfect_power (SUC n) b’ by metis_tac[perfect_power_def] >>
+    ‘y = SUC x’ by rw[LOG_EXACT_EXP, Abbr‘y’] >>
     simp[],
-    `SUC (SUC n) <= b ** SUC x` by decide_tac >>
-    `b * n < b * SUC n` by rw[] >>
-    `b ** SUC x <= b * SUC n` by decide_tac >>
-    `y = x` by metis_tac[LOG_TEST] >>
-    `~perfect_power (SUC n) b` by
-  (spose_not_then strip_assume_tac >>
-    `?e. SUC n = b ** e` by fs[perfect_power_def] >>
-    `y = e` by rw[LOG_EXACT_EXP, Abbr`y`] >>
-    `b * n < b ** SUC x` by metis_tac[EXP] >>
-    decide_tac) >>
+    ‘SUC (SUC n) <= b ** SUC x’ by decide_tac >>
+    ‘b * n < b * SUC n’ by rw[] >>
+    ‘b ** SUC x <= b * SUC n’ by decide_tac >>
+    ‘y = x’ by metis_tac[LOG_TEST] >>
+    ‘~perfect_power (SUC n) b’
+      by (spose_not_then strip_assume_tac >>
+          `?e. SUC n = b ** e` by fs[perfect_power_def] >>
+          `y = e` by (simp[Abbr`y`] >> fs[] >> rfs[LOG_EXACT_EXP]) >>
+          `b * n < b ** SUC x` by metis_tac[EXP] >>
+          decide_tac) >>
     simp[]
-  ]);
+  ]
+QED
 
 (*
 LOG_SUC;

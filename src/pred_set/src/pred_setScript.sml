@@ -464,12 +464,15 @@ val EQ_SUBSET_SUBSET = store_thm (* from util_prob *)
    ``!(s :'a -> bool) t. (s = t) ==> s SUBSET t /\ t SUBSET s``,
    RW_TAC std_ss [SUBSET_DEF, EXTENSION]);
 
-val SUBSET_SUBSET_EQ = store_thm (* from topology, was: SUBSET_ANTISYM_EQ *)
-  ("SUBSET_SUBSET_EQ",
-   “!(s:'a set) t. (s SUBSET t) /\ (t SUBSET s) <=> (s = t)”,
+Theorem SUBSET_ANTISYM_EQ : (* from HOL Light *)
+    !(s:'a set) t. (s SUBSET t) /\ (t SUBSET s) <=> (s = t)
+Proof
    REPEAT GEN_TAC THEN EQ_TAC THENL
   [REWRITE_TAC [SUBSET_ANTISYM],
-   REWRITE_TAC [EQ_SUBSET_SUBSET]]);
+   REWRITE_TAC [EQ_SUBSET_SUBSET]]
+QED
+
+Theorem SET_EQ_SUBSET = GSYM SUBSET_ANTISYM_EQ;
 
 val SUBSET_ADD = store_thm (* from util_prob *)
   ("SUBSET_ADD",
@@ -1394,6 +1397,13 @@ val CHOICE_EXISTS =
 val CHOICE_DEF = new_specification("CHOICE_DEF",["CHOICE"],CHOICE_EXISTS);
 val _ = ot0 "CHOICE" "choice"
 
+Theorem CHOICE_INTRO:
+  (?x. x IN s) /\ (!x. x IN s ==> P x) ==> P (CHOICE s)
+Proof
+  rpt strip_tac >> first_x_assum irule >>
+  METIS_TAC[CHOICE_DEF, MEMBER_NOT_EMPTY]
+QED
+
 (* ===================================================================== *)
 (* The REST of a set after removing a chosen element.                    *)
 (* ===================================================================== *)
@@ -1732,14 +1742,12 @@ val IMAGE_IMAGE = store_thm
    RW_TAC std_ss [EXTENSION, IN_IMAGE, o_THM]
    >> PROVE_TAC []);
 
-(* from probability/iterateTheory *)
-val FORALL_IN_IMAGE = store_thm
+val FORALL_IN_IMAGE = store_thm (* from iterateTheory *)
   ("FORALL_IN_IMAGE",
   ``!P f s. (!y. y IN IMAGE f s ==> P y) <=> (!x. x IN s ==> P(f x))``,
     REWRITE_TAC [IN_IMAGE] THEN PROVE_TAC []);
 
-(* from probability/rich_topologyTheory *)
-val EXISTS_IN_IMAGE = store_thm
+val EXISTS_IN_IMAGE = store_thm (* from real_topologyTheory *)
   ("EXISTS_IN_IMAGE",
   ``!P f s. (?y. y IN IMAGE f s /\ P y) <=> ?x. x IN s /\ P(f x)``,
     REWRITE_TAC [IN_IMAGE] THEN PROVE_TAC []);
@@ -1748,6 +1756,16 @@ val IMAGE_SING = store_thm (* from measureTheory *)
   ("IMAGE_SING", ``!f x. IMAGE f {x} = {f x}``,
     RW_TAC std_ss [EXTENSION,IN_SING,IN_IMAGE] >> METIS_TAC []);
 val _ = export_rewrites ["IMAGE_SING"];
+
+Theorem SUBSET_IMAGE : (* from topologyTheory *)
+    !f:'a->'b s t. s SUBSET (IMAGE f t) <=> ?u. u SUBSET t /\ (s = IMAGE f u)
+Proof
+  REPEAT GEN_TAC THEN EQ_TAC THENL [ALL_TAC, MESON_TAC[IMAGE_SUBSET]] THEN
+  DISCH_TAC THEN EXISTS_TAC ``{x | x IN t /\ (f:'a->'b) x IN s}`` THEN
+  POP_ASSUM MP_TAC THEN
+  SIMP_TAC std_ss [EXTENSION, SUBSET_DEF, IN_IMAGE, GSPECIFICATION] THEN
+  MESON_TAC[]
+QED
 
 (* ===================================================================== *)
 (* Injective functions on a set.                                         *)
@@ -4333,6 +4351,42 @@ val INJ_INR = store_thm(
   ``(!x. x IN s ==> INR x IN t) ==> INJ INR s t``,
   SIMP_TAC (srw_ss()) [INJ_DEF])
 
+val disjUNION_def = new_definition(
+  "disjUNION_def",
+  “disjUNION A B = {INL a | a IN A} UNION {INR b | b IN B}”);
+
+val _ = set_mapped_fixity {fixity = Infixl 500,
+                           term_name = "disjUNION",
+                           tok = "<+>"}
+val _ = set_mapped_fixity {fixity = Infixl 500,
+                           term_name = "disjUNION",
+                           tok = UTF8.chr 0x2294}
+
+Theorem disjUNION_UNIV:
+  univ(:'a + 'b) = UNIV <+> UNIV
+Proof
+  simp[EXTENSION, disjUNION_def] >> METIS_TAC[sumTheory.sum_CASES]
+QED
+
+Theorem IN_disjUNION[simp]:
+  (INL a IN A <+> B <=> a IN A) /\ (INR b IN A <+> B <=> b IN B)
+Proof
+  simp[disjUNION_def]
+QED
+
+Theorem CARD_disjUNION[simp]:
+  FINITE (s:'a set) /\ FINITE (t:'b set) ==>
+  CARD (s <+> t) = CARD s + CARD t
+Proof
+  simp[disjUNION_def] >> strip_tac >>
+  Q.MATCH_ABBREV_TAC ‘CARD (X UNION Y) = _’ >>
+  ‘X = IMAGE INL s /\ Y = IMAGE INR t’ by simp[Abbr‘X’, Abbr‘Y’, EXTENSION] >>
+  simp[CARD_UNION_EQN, CARD_INJ_IMAGE] >>
+  ‘X INTER Y = {}’ suffices_by simp[Abbr‘X’, Abbr‘Y’] >>
+  simp[EXTENSION, sumTheory.FORALL_SUM]
+QED
+
+
 (* ====================================================================== *)
 (* Set complements.                                                       *)
 (* ====================================================================== *)
@@ -4471,7 +4525,7 @@ val COMMUTING_ITSET_INSERT = Q.store_thm
       Q.ABBREV_TAC `u = t DELETE x` THEN
       `t = x INSERT u` by SRW_TAC [][INSERT_DELETE, Abbr`u`] THEN
       `~(x IN u)` by PROVE_TAC [IN_DELETE] THEN
-      `s = x INSERT (y INSERT u)` by SRW_TAC [][INSERT_COMM] THEN
+      `s = x INSERT (y INSERT u)` by simp[INSERT_COMM] THEN
       POP_ASSUM SUBST_ALL_TAC THEN
       FULL_SIMP_TAC bool_ss [FINITE_INSERT, CARD_INSERT, DELETE_INSERT,
                              IN_INSERT] THEN
@@ -5486,13 +5540,6 @@ val KoenigsLemma_WF = store_thm(
              prim_recTheory.wellfounded_def,
              relationTheory.inv_DEF] THEN
   METIS_TAC [KoenigsLemma]);
-
-
-Theorem SET_EQ_SUBSET:
-  !s1 s2. (s1 = s2) <=> s1 SUBSET s2 /\ s2 SUBSET s1
-Proof
- REPEAT (GEN_TAC ORELSE EQ_TAC) THEN RW_TAC set_ss [SUBSET_DEF,SUBSET_ANTISYM]
-QED
 
 Theorem PSUBSET_EQN:
   !s1 s2. s1 PSUBSET s2 <=> s1 SUBSET s2 /\ ~(s2 SUBSET s1)

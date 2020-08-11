@@ -16,7 +16,6 @@ open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
 open llistTheory integerTheory;
 open lprefix_lubTheory;
 open for_ndTheory;
-open lcsymtacs;
 
 val ect = BasicProvers.EVERY_CASE_TAC;
 

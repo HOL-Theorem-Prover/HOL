@@ -63,6 +63,7 @@ fun mktheta (com,argl,argr) =
         ("\226\135\146", math "Rightarrow"),
         ("\226\135\148", math "Leftrightarrow"),
         ("\226\136\128", math "forall"),
+        ("\226\136\131", math "exists"),
         ("\226\136\167", math "land" ),
         ("\226\136\168", math "lor"),
         ("\226\138\162", math "vdash"),
@@ -98,6 +99,7 @@ val lastminute_fixes =
     String.translate (fn #"#" => "\\#"
                        | #"&" => "\\&"
                        | #"_" => "\\_"
+                       | #"$" => "\\$"
                        | c => str c)
 
 fun print_markup(m, ostr) =
@@ -193,7 +195,7 @@ fun do_the_work dir dset outstr = let
   in
     (* wait for the first occurrence of section_char, then print it
        as a LaTeX \section{} and search for the next one. *)
-    if current_char = section_char then
+    if Char.toLower current_char = section_char then
         (out(outstr, "\\section{"
                      ^ String.str (Char.toUpper section_char) ^ "}\n\n");
          current_section := !current_section + 1)

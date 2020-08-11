@@ -4065,7 +4065,7 @@ local
     reg'PSR
     |> SPEC_ALL
     |> utilsLib.rhsc
-    |> HolKernel.strip_binop (Lib.total wordsSyntax.dest_word_concat)
+    |> HolKernel.strip_binop wordsSyntax.dest_word_concat
   fun mk_v n a = Term.mk_var ("v" ^ Int.toString n, Term.type_of a)
   val tm =
     List.foldr

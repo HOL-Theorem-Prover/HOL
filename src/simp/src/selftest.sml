@@ -254,22 +254,24 @@ end (* local fun testb ... *);
 
 val _ = let
   open simpLib boolSimps
-  fun del s = bool_ss -* ("bool_case_thm" :: s)
+  fun del ss s = ss -* ("bool_case_thm" :: s)
   val T_t = “if T then (p:'b) else q”
   val F_t = “if F then (p:'b) else q”
   val beta_t = “(\x:'b. f T x : bool) z”
   val unwind_t = “?x:'a. p x /\ (x = y) /\ q x y”
-  fun mkC sl = QCONV (SIMP_CONV (del sl) [])
+  val unwind_beta_t = “?x:'a. p x /\ (\y. y /\ z) q /\ (x = a) /\ r x z”
+  fun mkC ss sl = QCONV (SIMP_CONV (del ss sl) [])
   fun mktag s = "rewrite deletion: " ^ s
   fun mkex_tag s = "deletion via Excl: " ^ s
-  fun mktest (t,dels) = mkC dels t
+  fun mktest ss (t,dels) = mkC ss dels t
   fun mkexcltest (dels, t) =
       QCONV (SIMP_CONV bool_ss (map Excl ("bool_case_thm" :: dels))) t
-  fun test (s,l,t1,t2) =
+  fun test0 (s,l,ss,t1,t2) =
       (tprint s;
        require_msg (check_result (aconv t2 o rhs o concl))
                    (term_to_string o concl)
-                   mktest (t1,l))
+                   (mktest ss) (t1,l))
+  fun test (s,l,t1,t2) = test0(s,l,bool_ss,t1,t2)
   fun excltest (s,l,t1,t2) =
       (tprint s;
        require_msg (check_result (aconv t2 o rhs o concl))
@@ -279,7 +281,7 @@ val _ = let
       (tprint ("Fragment removal: "^s);
        require_msg (check_result (aconv t2 o rhs o concl))
                    (term_to_string o concl)
-                   (QCONV (SIMP_CONV (remove_ssfrags ss rms) [])) t1)
+                   (QCONV (SIMP_CONV (remove_ssfrags rms ss) [])) t1)
 in
   List.app (ignore o test) [
     (mktag "bool_ss -* COND_CLAUSES (1)", ["COND_CLAUSES"], T_t, T_t),
@@ -290,6 +292,10 @@ in
     (mktag "bool_ss -* UNWIND_EXISTS_CONV", ["UNWIND_EXISTS_CONV"],
      unwind_t, unwind_t)
   ];
+  List.app (ignore o test0) [
+    (mktag "rmfrags [\"UNWIND\"] bool_ss -* BETA_CONV", ["BETA_CONV"],
+     remove_ssfrags ["UNWIND"] bool_ss, unwind_beta_t, unwind_beta_t)
+  ];
   List.app (ignore o excltest) [
     (mkex_tag "bool_ss & \"COND_CLAUSES.1\"", ["COND_CLAUSES.1"],
      T_t, T_t),
@@ -297,10 +303,19 @@ in
   ];
   List.app (ignore o rmsfs) [
     ("UNWIND", bool_ss, ["UNWIND"], unwind_t, unwind_t),
-    ("UNWIND on (beta_ss -* [\"BETA_CONV\"])", bool_ss -* ["BETA_CONV"],
-     ["UNWIND"], beta_t, beta_t)
+    ("UNWIND on (bool_ss -* [\"BETA_CONV\"]) 1", bool_ss -* ["BETA_CONV"],
+     ["UNWIND"], beta_t, beta_t),
+    ("UNWIND on (bool_ss -* [\"BETA_CONV\"]) 2", bool_ss -* ["BETA_CONV"],
+     ["UNWIND"], unwind_beta_t, unwind_beta_t)
   ]
 end;
+
+fun printgoal (asms,w) =
+    "([" ^ String.concatWith "," (map term_to_string asms) ^ ", " ^
+    term_to_string w ^ ")"
+fun printgoals (sgs, _) =
+    "[" ^ String.concatWith ",\n" (map printgoal sgs) ^ "]"
+
 
 (* flavours of Req* *)
 val _ = let
@@ -319,11 +334,6 @@ val _ = let
                                          Exn.Res (sgs,_) =>
                                            list_eq goal_eq [(asms, t)] sgs
                                        | _ => false)
-        fun printgoal (asms,w) =
-            "([" ^ String.concatWith "," (map term_to_string asms) ^ ", " ^
-            term_to_string w ^ ")"
-        fun printgoals (sgs, _) =
-            "[" ^ String.concatWith ",\n" (map printgoal sgs) ^ "]"
 
       in
         require_msg testresult printgoals (VALID (ASM_SIMP_TAC pure_ss thl))
@@ -350,5 +360,23 @@ List.app (ignore o req_test) [
 
 ]
 end;
+
+
+val _ = let
+  fun testresult outgs res =
+      case res of
+          Exn.Res (sgs, _) => list_eq goal_eq outgs sgs
+        | _ => false
+  fun test (msg, tac, ing, outgs) =
+      (tprint msg;
+       require_msg (testresult outgs)  printgoals (VALID tac) ing)
+in
+  List.app (ignore o test) [
+    ("Abbrev var not rewritten",
+     rev_full_simp_tac (bool_ss ++ ABBREV_ss) [],
+     ([“Abbrev (v <=> q /\ r)”, “v = F”], “P (v:bool):bool”),
+     [([“Abbrev (v <=> q /\ r)”, “~v”], “P F:bool”)])
+  ]
+end
 
 val _ = Process.exit Process.success

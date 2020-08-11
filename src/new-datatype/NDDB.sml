@@ -1,7 +1,7 @@
 structure NDDB :> NDDB =
 struct
 
-open lcsymtacs NDSupportTheory
+open NDSupportTheory
 
 val C_DEF = combinTheory.C_DEF;
 val o_DEF = combinTheory.o_DEF;

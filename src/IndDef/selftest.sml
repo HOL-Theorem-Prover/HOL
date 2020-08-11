@@ -112,7 +112,7 @@ val _ = diemode := Remember failcount
 local
   fun itf n pat t =
       let
-        val (sgs, _) = isolate_to_front n pat ([], t)
+        val (sgs, _) = VALID (isolate_to_front n pat) ([], t)
       in
         case sgs of
             [([], t')] => t'
@@ -159,6 +159,15 @@ val _ = List.app itf_test [
    “∀Comm B. EVAL (WHILE B Comm) s0 s1 ==> csize Comm = ZERO”,
    “∀Comm' s0 s1.
       EVAL Comm' s0 s1 ⇒ ∀Comm B. WHILE B Comm = Comm' ⇒ csize Comm = ZERO”),
+  ("rmequality1-const/spec1", 0, “EVAL c s0 s1”,
+   “EVAL c ARB s ⇒ P c s”,
+   “∀c s0 s1. EVAL c s0 s1 ⇒ (ARB = s0) ⇒ P c s1”),
+  ("rmequality1-const/spec1x", 0, “EVAL c s0 s1”,
+   “EVAL c ARB x ⇒ P c x”,
+   “∀c s0 s1. EVAL c s0 s1 ⇒ (ARB = s0) ⇒ P c s1”),
+  ("rmequality1-const/spec2", 0, “EVAL c s0 s1”,
+   “EVAL c I s ⇒ P s”,
+   “∀c s0 s1. EVAL c s0 s1 ⇒ (I = s0) ⇒ P s1”),
   ("rmeq1+move/some-univ", 0, “EVAL c s0 s1”,
    “∀b comm. csize comm = n ∧ EVAL (WHILE b comm) t0 t1 ⇒ P t1”,
    “∀comm' t0 t1. EVAL comm' t0 t1 ⇒
@@ -172,9 +181,19 @@ val _ = List.app itf_test [
    “∀comm' t0' t1. EVAL comm' t0' t1 ⇒
                    ∀t0 b comm. WHILE b comm = comm' ∧ f t0 = t0' ⇒
                                ∀n. csize comm = n ⇒ P t1”),
+  ("rmeq1+bareneg/spec", 0, “EVAL c s0 s1”,
+   “~EVAL Skip x y”, “∀c x y. EVAL c x y ==> Skip = c ==> F”),
+  ("rmeq1+neg/spec", 0, “EVAL c s0 s1”,
+   “P x ==> ~EVAL Skip x y”, “∀c x y. EVAL c x y ==> Skip = c ==> ~P x”),
   ("conc-schematic", 1, “EVAL c s0 s1”,
    “∀t0 t1. EVAL (WHILE b comm) t0 t1 ⇒ P t0 t1”,
-   “∀t0 t1. EVAL (WHILE b comm) t0 t1 ⇒ P t0 t1”)
+   “∀t0 t1. EVAL (WHILE b comm) t0 t1 ⇒ P t0 t1”),
+  ("rmequality-const/schematic-var/spec", 1, “EVAL c s0 s1”,
+   “EVAL c ARB x ==> P x”,
+   “∀t0 t1. EVAL c t0 t1 ⇒ (ARB = t0) ⇒ P t1”),
+  ("rmequality-const/schematic-structured/spec", 1, “EVAL c s0 s1”,
+   “EVAL (Assign V E) ARB x ==> P x”,
+   “∀t0 t1. EVAL (Assign V E) t0 t1 ⇒ (ARB = t0) ⇒ P t1”)
 ]
 end
 

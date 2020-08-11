@@ -1161,7 +1161,7 @@ in
       | Lt   => pick (SOME wordsSyntax.mk_word_lt, NONE,
                       SOME numSyntax.mk_less, SOME intSyntax.mk_less)
       | Gt   => pick (SOME wordsSyntax.mk_word_gt, NONE,
-                      SOME numSyntax.mk_greater, SOME intSyntax.mk_great)
+                      SOME numSyntax.mk_greater, SOME intSyntax.mk_greater)
       | Le   => pick (SOME wordsSyntax.mk_word_le, NONE,
                       SOME numSyntax.mk_leq, SOME intSyntax.mk_leq)
       | Ge   => pick (SOME wordsSyntax.mk_word_ge, NONE,

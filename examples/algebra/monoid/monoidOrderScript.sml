@@ -35,8 +35,6 @@ val _ = new_theory "monoidOrder";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;

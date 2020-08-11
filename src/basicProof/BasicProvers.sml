@@ -156,7 +156,7 @@ val strip_prod =
       SOME{Tyop = "prod", Thy = "pair", Args = [ty1, ty2]} => (ty1, ty2)
     | other => raise ERR "dest_prod" "not a product type"
  in
-    strip_binop (total dest_prod)
+    strip_binop dest_prod
  end
 
 fun mk_prod(ty1,ty2) = mk_thy_type{Thy="pair",Tyop="prod",Args=[ty1,ty2]}
@@ -285,27 +285,35 @@ fun set_names names ty thm0 =
 ;
 
 fun primCases_on names st (g as (_,w)) =
- let val ty = type_of (dest_tmkind st)
- in case TypeBase.fetch ty
-     of SOME facts =>
-        let val thm = TypeBasePure.nchotomy_of facts
+    let
+      val ty = type_of (dest_tmkind st)
+      fun gen() =
+          case TypeBase.fetch ty of
+              SOME facts => [TypeBasePure.nchotomy_of facts]
+            | NONE => let val {Thy,Tyop,...} = dest_thy_type ty
+                      in
+                        raise ERR "primCases_on"
+                              ("No cases theorem found for type: "^
+                               Lib.quote (Thy^"$"^Tyop))
+                      end
+      fun ttac thm =
+          let
             val thm' = set_names names ty thm
-        in case st
-           of Free M =>
-               if (is_var M) then VAR_INTRO_TAC (ISPEC M thm') else
-               if ty=bool then ASM_CASES_TAC M
-               else TERM_INTRO_TAC (ISPEC M thm')
-            | Bound(V,M) => let val (tac,M') = FREEUP V M g
-                            in (tac THEN VAR_INTRO_TAC (ISPEC M' thm')) end
-            | Alien M    => if ty=bool then ASM_CASES_TAC M
-                            else TERM_INTRO_TAC (ISPEC M thm')
-        end
-      | NONE =>
-          let val {Thy,Tyop,...} = dest_thy_type ty
-          in raise ERR "primCases_on"
-                ("No cases theorem found for type: "^Lib.quote (Thy^"$"^Tyop))
+          in
+            case st of
+                Free M =>
+                if is_var M then VAR_INTRO_TAC (ISPEC M thm') else
+                if ty=bool then ASM_CASES_TAC M
+                else TERM_INTRO_TAC (ISPEC M thm')
+              | Bound(V,M) => let val (tac,M') = FREEUP V M g
+                                  in (tac THEN VAR_INTRO_TAC (ISPEC M' thm'))
+                              end
+              | Alien M    => if ty=bool then ASM_CASES_TAC M
+                              else TERM_INTRO_TAC (ISPEC M thm')
           end
- end g;
+    in
+      markerLib.maybe_using gen ttac g
+    end
 
 fun Cases_on qtm g = primCases_on [] (find_subterm qtm g) g
   handle e => raise wrap_exn "BasicProvers" "Cases_on" e;
@@ -387,33 +395,39 @@ fun primInduct st ind_tac (g as (asl,c)) =
 (*---------------------------------------------------------------------------*)
 
 fun induct_on_type st ty g =
-    case TypeBase.fetch ty of
-        SOME facts =>
-        let
-          val is_mutind_thm = is_conj o snd o strip_imp o snd o strip_forall o
-                              concl
-        in
-          case total TypeBasePure.induction_of facts of
-              NONE =>
-                raise ERR "induct_on_type"
-                      (String.concat ["Type :",Hol_pp.type_to_string ty,
-                                      " is registered in the types database, ",
-                                      "but there is no associated induction \
-                                      \theorem"])
-            | SOME thm => (* now select induction tactic *)
-              if null (TypeBasePure.constructors_of facts) then
-                (* not a datatype*)
-                primInduct st (HO_MATCH_MP_TAC thm)
-              else if is_mutind_thm thm then
-                Mutual.MUTUAL_INDUCT_TAC thm
-              else
-                primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC) ORELSE
-                (primInduct st (HO_MATCH_MP_TAC thm) THEN REPEAT CONJ_TAC)
-        end g
-      | NONE =>
-        raise ERR "induct_on_type"
-              (String.concat ["Type: ",Hol_pp.type_to_string ty,
-                              " is not registered in the types database"]);
+    let
+      val is_mutind_thm = is_conj o snd o strip_imp o snd o
+                          strip_forall o concl
+      val facts_opt = TypeBase.fetch ty
+      fun gen() =
+          case facts_opt of
+              SOME facts =>
+              let
+              in
+                case total TypeBasePure.induction_of facts of
+                    NONE =>
+                    raise ERR "induct_on_type"
+                          (String.concat ["Type :",Hol_pp.type_to_string ty,
+                                          " is registered in the types \
+                                          \database, but there is no associated\
+                                          \induction theorem"])
+                  | SOME thm => (* now select induction tactic *) [thm]
+              end
+            | NONE =>
+              raise ERR "induct_on_type"
+                    (String.concat ["Type: ",Hol_pp.type_to_string ty,
+                                    " is not registered in the types database"])
+      fun ttac thm =
+          case Option.map TypeBasePure.constructors_of facts_opt of
+              SOME [] => (* not a datatype*) primInduct st (HO_MATCH_MP_TAC thm)
+            | _ => if is_mutind_thm thm then
+                     Mutual.MUTUAL_INDUCT_TAC thm
+                   else
+                     primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC) ORELSE
+                     (primInduct st (HO_MATCH_MP_TAC thm) THEN REPEAT CONJ_TAC)
+    in
+      maybe_using gen ttac g
+    end
 
 fun checkind th =
     (* if the purported theorem fails to pass muster according to this
@@ -449,7 +463,7 @@ fun Induct_on qtm g =
       case Lib.total dest_thy_const c of
           SOME {Thy,Name,...} =>
           let
-            val indths =
+            fun indths() =
                 Binarymap.find (rule_induction_map(), {Thy=Thy,Name=Name})
                 handle NotFound => []
             fun numSchematics th =
@@ -465,7 +479,7 @@ fun Induct_on qtm g =
                 TRY (checkind th >> isolate_to_front (numSchematics th) pat) >>
                 HO_MATCH_MP_TAC th
           in
-            MAP_FIRST tryind indths ORELSE induct_on_type st ty
+            markerLib.maybe_using indths tryind ORELSE induct_on_type st ty
           end g
         | NONE => induct_on_type st ty g
    end
@@ -763,60 +777,31 @@ val every_case_tac = EVERY_CASE_TAC
  * is a variable.                                                            *
  *---------------------------------------------------------------------------*)
 
-fun is_bool_atom tm =
-  is_var tm andalso (type_of tm = bool)
-  orelse is_neg tm andalso is_var (dest_neg tm);
 
+val var_eq = Tactic.eliminable
+fun ASSUM_TAC f P = first_x_assum (f o assert (P o concl))
 
-fun orient th =
- let val c = concl th
- in if is_bool_atom c
-    then (if is_neg c then EQF_INTRO th else EQT_INTRO th)
-    else let val (lhs,rhs) = dest_eq c
-         in if is_var lhs
-            then if is_var rhs
-                 then case Term.compare (lhs, rhs)
-                       of LESS  => SYM th
-                        | other => th
-                 else th
-            else SYM th
-         end
- end;
-
-fun VSUBST_TAC tm = UNDISCH_THEN tm (SUBST_ALL_TAC o orient);
-
-fun var_eq tm =
-   let val (lhs,rhs) = dest_eq tm
-   in
-       aconv lhs rhs
-     orelse
-       (is_var lhs andalso not (free_in lhs rhs))
-     orelse
-       (is_var rhs andalso not (free_in rhs lhs))
-   end
-   handle HOL_ERR _ => is_bool_atom tm
-
-
-fun grab P f v =
-  let fun grb [] = v
-        | grb (h::t) = if P h then f h else grb t
-  in grb
-  end;
-
-fun ASSUM_TAC f P = W (fn (asl,_) => grab P f NO_TAC asl)
-
-val VAR_EQ_TAC = ASSUM_TAC VSUBST_TAC var_eq;
+val old_behaviour = ref false
+val tracename = "BasicProvers.var_eq_old"
+val _ = Feedback.register_btrace(tracename, old_behaviour)
+val behaviour_value = get_tracefn tracename
+fun VAR_EQ_TAC (g as (asl,_)) =
+    let
+      val tidy = if behaviour_value() = 1 then ALL_TAC
+                 else markerLib.TIDY_ABBREVS
+    in
+      (ASSUM_TAC VSUBST_TAC var_eq THEN tidy) g
+    end
 val var_eq_tac = VAR_EQ_TAC
 
 fun ASSUMS_TAC f P = W (fn (asl,_) =>
   case filter P asl
    of []     => NO_TAC
-    | assums => MAP_EVERY f (List.rev assums));
+    | assums => MAP_EVERY (fn t => UNDISCH_THEN t f) (List.rev assums))
 
 fun CONCL_TAC f P = W (fn (_,c) => if P c then f else NO_TAC);
 
-fun LIFT_SIMP ss tm =
-  UNDISCH_THEN tm (STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []);
+fun LIFT_SIMP ss = STRIP_ASSUME_TAC o simpLib.SIMP_RULE ss []
 
 local
   fun DTHEN ttac = fn (asl,w) =>
@@ -863,24 +848,6 @@ in
 end
 
 val IMP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] (SPEC_ALL IMP_CONG)
-
-fun ABBREV_CONV tm = let
-  val t = rand tm
-  val (l,r) = dest_eq t
-in
-  if not (is_var l) orelse is_var r then
-    REWR_CONV markerTheory.Abbrev_def THENC
-    REWR_CONV EQ_SYM_EQ
-  else ALL_CONV
-end tm
-
-val ABBREV_ss =
-    simpLib.SSFRAG {name=SOME"ABBREV",
-                    ac = [], congs = [],
-                      convs = [{conv = K (K ABBREV_CONV),
-                                key = SOME ([], ``marker$Abbrev x``),
-                                trace = 2, name = "ABBREV_CONV"}],
-                      dprocs = [], filter = NONE, rewrs = []}
 
 (*---------------------------------------------------------------------------*)
 (* The staging of first two successive calls to SIMP_CONV ensure that the    *)
@@ -1032,12 +999,9 @@ fun splittable w =
  Lib.can (find_term (fn tm => (is_cond tm orelse TypeBase.is_case tm)
                               andalso free_in tm w)) w;
 
-fun LIFT_SPLIT_SIMP ss simp tm =
-   UNDISCH_THEN tm
-     (fn th => MP_TAC (simpLib.SIMP_RULE ss [] th)
-                 THEN CASE_TAC
-                 THEN simp
-                 THEN REPEAT BOSS_STRIP_TAC);
+fun LIFT_SPLIT_SIMP ss simp th =
+    MP_TAC (simpLib.SIMP_RULE ss [] th) THEN CASE_TAC THEN simp THEN
+    REPEAT BOSS_STRIP_TAC
 
 fun SPLIT_SIMP simp = TRY (IF_CASES_TAC ORELSE CASE_TAC) THEN simp ;
 
@@ -1098,6 +1062,7 @@ val srw_ss_initialised = ref false;
 datatype update = ADD_SSFRAG of simpLib.ssfrag | REMOVE_RWT of string
 val pending_updates = ref (map ADD_SSFRAG [combinSimps.COMBIN_ss,
                                            boolSimps.NORMEQ_ss,
+                                           boolSimps.ABBREV_ss,
                                            boolSimps.LABEL_CONG_ss]);
 
 fun apply_update (ADD_SSFRAG ssf, ss) = ss ++ ssf
@@ -1122,29 +1087,20 @@ fun augment_srw_ss ssdl =
 
 fun diminish_srw_ss names =
     if !srw_ss_initialised then
-      let
-        val (frags, rest) = (!srw_ss) |> simpLib.ssfrags_of
-                                      |> List.rev
-                                      |> simpLib.partition_ssfrags names
-        val _ = srw_ss := simpLib.mk_simpset rest
-      in
-        frags
-      end
+      srw_ss := simpLib.remove_ssfrags names (!srw_ss)
     else
       let
         open simpLib
-        fun foldthis (upd, (keep,drop)) =
+        fun foldthis (upd, keep) =
             case upd of
                 ADD_SSFRAG ssf =>
                 (case frag_name ssf of
-                     NONE => (upd::keep,drop)
-                   | SOME n => if mem n names then (keep,ssf::drop)
-                               else (upd::keep,drop))
-              | _ => (upd::keep, drop)
-        val (keep, drop) = foldl foldthis ([], []) (!pending_updates)
-        val _ = pending_updates := keep
+                     NONE => upd::keep
+                   | SOME n => if mem n names then keep else upd::keep)
+              | _ => upd::keep
+        val keep = foldr foldthis [] (!pending_updates)
       in
-        drop
+        pending_updates := keep
       end;
 
 fun temp_delsimps names =

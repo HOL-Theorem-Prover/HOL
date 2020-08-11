@@ -1,5 +1,4 @@
 open HolKernel Parse boolLib bossLib
-open lcsymtacs
 open boolSimps
 
 open set_relationTheory pred_setTheory cardinalTheory
@@ -413,9 +412,10 @@ val ord_induction = save_thm(
             |> REWRITE_RULE []
             |> CONV_RULE (RAND_CONV (RENAME_VARS_CONV ["a"])))
 
-val sup_thm = store_thm(
-  "sup_thm",
-  ``(s: 'a ordinal set) <<= univ(:'a inf) ==> !a. a < sup s <=> ?b. b IN s /\ a < b``,
+Theorem sup_thm:
+  (s: 'a ordinal set) <<= univ(:'a inf) ==>
+  !a. a < sup s <=> ?b. b IN s /\ a < b
+Proof
   strip_tac >>
   qabbrev_tac `apreds = BIGUNION (IMAGE preds s)` >>
   `apreds <<= univ(:'a inf)`
@@ -431,6 +431,7 @@ val sup_thm = store_thm(
     by (asm_simp_tac bool_ss [sup_def] >>
         DEEP_INTRO_TAC oleast_intro >> conj_tac
         >- (fs[EXTENSION] >> metis_tac[]) >>
+        Q.RM_ABBREV_TAC ‘apreds’ >>
         simp[] >> qx_gen_tac `a'` >> strip_tac >>
         qsuff_tac `a' <= a /\ a <= a'` >- metis_tac [ordlt_trichotomy] >>
         rpt strip_tac >| [
@@ -440,7 +441,8 @@ val sup_thm = store_thm(
   simp[] >>
   qx_gen_tac `b` >> rpt strip_tac >>
   `b < a <=> b IN apreds` by metis_tac [IN_preds] >>
-  simp[Abbr`apreds`] >> metis_tac [IN_preds]);
+  simp[Abbr`apreds`] >> metis_tac [IN_preds]
+QED
 
 val suple_thm = store_thm(
   "suple_thm",

@@ -335,8 +335,8 @@ val _ = app tpp ["(if P then q else r) s",
                  "let x = (let y = T in y /\\ F) in x \\/ z",
                  "(let x = T in \\y. x /\\ y) p",
                  "let x = p and y = x in x /\\ y",
-                 "let x = T ; y = F in x /\\ y",
-                 "let x = T ; y = F and z = T in x /\\ y \\/ z",
+                 "let x = T; y = F in x /\\ y",
+                 "let x = T; y = F and z = T in x /\\ y \\/ z",
                  "f ($/\\ p)",
                  "(((p /\\ q) /\\ r) /\\ s) /\\ t",
                  "!x. P (x /\\ y)",
@@ -482,7 +482,7 @@ val condprinter_tests =
        testf = K "Large then-branch",
        output = "if really quite a long guard when looked at closely then\n\
                 \  (let\n\
-                \     quite_a_long_variable_name = (another_long_name \\/ x) ;\
+                \     quite_a_long_variable_name = (another_long_name \\/ x);\
               \\n     another_longish_name = (y \\/ z)\n\
                 \   in\n\
                 \     f x)\n\

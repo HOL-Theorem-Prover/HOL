@@ -44,6 +44,8 @@ sig
 
   val measureInduct_on  : term quotation -> tactic
   val completeInduct_on : term quotation -> tactic
+  val using             : tactic * thm -> tactic (* infix *)
+  val usingA            : tactic -> thm -> tactic (* curry of above *)
 
   val pairarg_tac       : tactic
   val split_pair_case_tac : tactic
@@ -84,9 +86,10 @@ sig
   val type_rws        : hol_type -> thm list
   val rewrites        : thm list -> ssfrag
   val augment_srw_ss  : ssfrag list -> unit
-  val diminish_srw_ss : string list -> ssfrag list
+  val diminish_srw_ss : string list -> unit
   val export_rewrites : string list -> unit
   val delsimps        : string list -> unit
+  val temp_delsimps   : string list -> unit
   val limit           : int -> simpset -> simpset
 
   (* use these in simplifier's argument list *)

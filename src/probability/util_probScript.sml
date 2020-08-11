@@ -11,11 +11,11 @@ open HolKernel Parse boolLib bossLib;
 
 open metisLib pairTheory combinTheory pred_setTheory pred_setLib jrhUtils
      arithmeticTheory realTheory realLib transcTheory seqTheory numLib
-     real_sigmaTheory numpairTheory hurdUtils RealArith;
+     real_sigmaTheory numpairTheory hurdUtils RealArith fcpTheory fcpLib;
 
 val _ = new_theory "util_prob";
 
-val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC; (* RealArith *)
+fun METIS ths tm = prove(tm, METIS_TAC ths);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -32,36 +32,349 @@ val _ = Unicode.unicode_version {u = UTF8.chr 0x2192, tmnm = "->"};
 (* LONG RIGHTWARDS ARROW *)
 val _ = Unicode.unicode_version {u = UTF8.chr 0x27F6, tmnm = "-->"};
 
-val pair_def = Define
-   `pair (X :'a -> bool) (Y :'b -> bool) = \(x, y). x IN X /\ y IN Y`;
+val _ = TeX_notation {hol = "->",            TeX = ("\\HOLTokenMap{}", 1)};
+val _ = TeX_notation {hol = UTF8.chr 0x2192, TeX = ("\\HOLTokenMap{}", 1)};
+val _ = TeX_notation {hol = "-->",           TeX = ("\\HOLTokenLongmap{}", 1)};
+val _ = TeX_notation {hol = UTF8.chr 0x27F6, TeX = ("\\HOLTokenLongmap{}", 1)};
 
-val IN_PAIR = store_thm
-  ("IN_PAIR", ``!(x : 'a # 'b) X Y. x IN pair X Y <=> FST x IN X /\ SND x IN Y``,
-    Cases >> RW_TAC std_ss [pair_def, SPECIFICATION]);
+Theorem PAIRED_BETA_THM :
+    !f z. UNCURRY f z = f (FST z) (SND z)
+Proof
+    STRIP_TAC >> Cases >> RW_TAC std_ss []
+QED
 
-val PAIR_UNIV = store_thm
-  ("PAIR_UNIV", ``pair UNIV UNIV = (UNIV :'a # 'b -> bool)``,
-    RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_PAIR, IN_UNIV]);
-
-val PAIRED_BETA_THM = store_thm
-  ("PAIRED_BETA_THM", ``!f z. UNCURRY f z = f (FST z) (SND z)``,
-    STRIP_TAC >> Cases >> RW_TAC std_ss []);
+Theorem IN_o :
+    !x f s. x IN (s o f) <=> f x IN s
+Proof
+    RW_TAC std_ss [SPECIFICATION, o_THM]
+QED
 
 val prod_sets_def = Define `
     prod_sets a b = {s CROSS t | s IN a /\ t IN b}`;
 
-val IN_o = store_thm
-  ("IN_o", ``!x f s. x IN (s o f) <=> f x IN s``,
-    RW_TAC std_ss [SPECIFICATION, o_THM]);
+Theorem IN_PROD_SETS[simp] :
+    !s a b. s IN prod_sets a b <=> ?t u. (s = t CROSS u) /\ t IN a /\ u IN b
+Proof
+    RW_TAC std_ss [prod_sets_def, GSPECIFICATION, UNCURRY]
+ >> EQ_TAC >- PROVE_TAC []
+ >> RW_TAC std_ss []
+ >> Q.EXISTS_TAC `(t,u)`
+ >> RW_TAC std_ss []
+QED
 
-val IN_PROD_SETS = store_thm
-  ("IN_PROD_SETS",
-   ``!s a b. s IN prod_sets a b <=> ?t u. (s = t CROSS u) /\ t IN a /\ u IN b``,
-   RW_TAC std_ss [prod_sets_def, GSPECIFICATION, UNCURRY]
-   >> EQ_TAC >- PROVE_TAC []
-   >> RW_TAC std_ss []
-   >> Q.EXISTS_TAC `(t, u)`
-   >> RW_TAC std_ss []);
+(* ‘FCP_CONCAT s t’ is in place of ‘(a,b)’ (pair), thus ’fcp_pair a b’ is ‘a CROSS b’ *)
+val fcp_cross_def = Define (* cf. CROSS_DEF *)
+   ‘fcp_cross A B = {FCP_CONCAT a b | a IN A /\ b IN B}’;
+
+Theorem IN_FCP_CROSS : (* cf. IN_CROSS *)
+    !s a b. s IN fcp_cross a b <=> ?t u. (s = FCP_CONCAT t u) /\ t IN a /\ u IN b
+Proof
+    RW_TAC std_ss [fcp_cross_def, GSPECIFICATION, UNCURRY]
+ >> EQ_TAC >- PROVE_TAC []
+ >> RW_TAC std_ss []
+ >> Q.EXISTS_TAC `(t,u)`
+ >> RW_TAC std_ss []
+QED
+
+(* high dimensional space are made by lower dimensional spaces *)
+Theorem fcp_cross_UNIV :
+    FINITE univ(:'b) /\ FINITE univ(:'c) ==>
+    fcp_cross univ(:'a['b]) univ(:'a['c]) = univ(:'a['b + 'c])
+Proof
+    rw [Once EXTENSION, IN_UNIV, GSPECIFICATION, IN_FCP_CROSS]
+ >> Q.EXISTS_TAC ‘FCP i. x ' (i + dimindex(:'c))’
+ >> Q.EXISTS_TAC ‘FCP i. x ' i’
+ >> rw [FCP_CONCAT_def, CART_EQ, index_sum, FCP_BETA]
+QED
+
+val fcp_prod_def = Define (* cf. prod_sets_def *)
+   ‘fcp_prod a b = {fcp_cross s t | s IN a /\ t IN b}’;
+
+Theorem IN_FCP_PROD :
+    !s A B. s IN fcp_prod A B <=> ?a b. (s = fcp_cross a b) /\ a IN A /\ b IN B
+Proof
+    RW_TAC std_ss [fcp_prod_def, GSPECIFICATION, UNCURRY]
+ >> EQ_TAC >- PROVE_TAC []
+ >> RW_TAC std_ss []
+ >> Q.EXISTS_TAC `(a,b)`
+ >> RW_TAC std_ss []
+QED
+
+Theorem FCP_BIGUNION_CROSS :
+    !f s t. fcp_cross (BIGUNION (IMAGE f s)) t = BIGUNION (IMAGE (\n. fcp_cross (f n) t) s)
+Proof
+    rw [Once EXTENSION, IN_BIGUNION_IMAGE, IN_FCP_CROSS]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (rename1 ‘z IN s’ >> Q.EXISTS_TAC ‘z’ >> art [] \\
+     rename1 ‘x = FCP_CONCAT c u’ \\
+     qexistsl_tac [‘c’,‘u’] >> art [])
+ >> rename1 ‘x = FCP_CONCAT c u’
+ >> qexistsl_tac [‘c’,‘u’] >> art []
+ >> Q.EXISTS_TAC ‘n’ >> art []
+QED
+
+Theorem FCP_CROSS_BIGUNION :
+    !f s t. fcp_cross t (BIGUNION (IMAGE f s)) = BIGUNION (IMAGE (\n. fcp_cross t (f n)) s)
+Proof
+    rw [Once EXTENSION, IN_BIGUNION_IMAGE, IN_FCP_CROSS]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (rename1 ‘z IN s’ >> Q.EXISTS_TAC ‘z’ >> art [] \\
+     rename1 ‘x = FCP_CONCAT c u’ \\
+     qexistsl_tac [‘c’,‘u’] >> art [])
+ >> rename1 ‘x = FCP_CONCAT c u’
+ >> qexistsl_tac [‘c’,‘u’] >> art []
+ >> Q.EXISTS_TAC ‘n’ >> art []
+QED
+
+Theorem FCP_CROSS_DIFF :
+    !(X :'a['b] set) s (t :'a['c] set).
+        FINITE univ(:'b) /\ FINITE univ(:'c) ==>
+        fcp_cross (X DIFF s) t = (fcp_cross X t) DIFF (fcp_cross s t)
+Proof
+    rw [Once EXTENSION, IN_FCP_CROSS, IN_DIFF]
+ >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      rename1 ‘c IN X’ >> qexistsl_tac [‘c’,‘u’] >> art [],
+      (* goal 2 (of 3) *)
+      rename1 ‘c IN X’ \\
+      rename1 ‘x <> FCP_CONCAT c' u' \/ c' NOTIN s \/ u' NOTIN t’ \\
+      STRONG_DISJ_TAC >> DISJ1_TAC \\
+      CCONTR_TAC >> fs [] \\
+      Q.PAT_X_ASSUM ‘x = FCP_CONCAT c' u'’ K_TAC \\
+      Suff ‘c = c'’ >- METIS_TAC [] \\
+      PROVE_TAC [FCP_CONCAT_11],
+      (* goal 3 (of 3) *)
+      rename1 ‘x = FCP_CONCAT c u’ \\
+      qexistsl_tac [‘c’,‘u’] >> art [] >> PROVE_TAC [] ]
+QED
+
+Theorem FCP_CROSS_DIFF' :
+    !(s :'a['b] set) (X :'a['c] set) t.
+        FINITE univ(:'b) /\ FINITE univ(:'c) ==>
+        fcp_cross s (X DIFF t) = (fcp_cross s X) DIFF (fcp_cross s t)
+Proof
+    rw [Once EXTENSION, IN_FCP_CROSS, IN_DIFF]
+ >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      rename1 ‘c IN s’ >> qexistsl_tac [‘c’,‘u’] >> art [],
+      (* goal 2 (of 3) *)
+      rename1 ‘c IN s’ \\
+      rename1 ‘x <> FCP_CONCAT c' u' \/ c' NOTIN s \/ u' NOTIN t’ \\
+      STRONG_DISJ_TAC >> DISJ2_TAC \\
+      CCONTR_TAC >> fs [] \\
+      Q.PAT_X_ASSUM ‘x = FCP_CONCAT c' u'’ K_TAC \\
+      Suff ‘u = u'’ >- METIS_TAC [] \\
+      PROVE_TAC [FCP_CONCAT_11],
+      (* goal 3 (of 3) *)
+      rename1 ‘x = FCP_CONCAT c u’ \\
+      qexistsl_tac [‘c’,‘u’] >> art [] >> PROVE_TAC [] ]
+QED
+
+Theorem FCP_SUBSET_CROSS :
+    !(a :'a['b] set) b (c :'a['c] set) d.
+        a SUBSET b /\ c SUBSET d ==> (fcp_cross a c) SUBSET (fcp_cross b d)
+Proof
+    rpt STRIP_TAC
+ >> rw [SUBSET_DEF, IN_FCP_CROSS]
+ >> qexistsl_tac [‘t’, ‘u’] >> art []
+ >> PROVE_TAC [SUBSET_DEF]
+QED
+
+Theorem FCP_INTER_CROSS :
+    !(a :'a['b] set) (b :'a['c] set) c d.
+        FINITE univ(:'b) /\ FINITE univ(:'c) ==>
+       (fcp_cross a b) INTER (fcp_cross c d) = fcp_cross (a INTER c) (b INTER d)
+Proof
+    rw [Once EXTENSION, IN_INTER, IN_FCP_CROSS]
+ >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      fs [] >> qexistsl_tac [‘t’, ‘u’] >> art [] \\
+      PROVE_TAC [FCP_CONCAT_11],
+      (* goal 2 (of 3) *)
+      qexistsl_tac [‘t’, ‘u’] >> art [],
+      (* goal 3 (of 3) *)
+      qexistsl_tac [‘t’, ‘u’] >> art [] ]
+QED
+
+(* see also LISP ... *)
+val pair_operation_def = Define
+   ‘pair_operation (cons :'a -> 'b -> 'c) car cdr =
+      ((!a b. (car (cons a b) = a) /\ (cdr (cons a b) = b)) /\
+       (!a b c d. (cons a b = cons c d) <=> (a = c) /\ (b = d)))’;
+
+(* two sample pair operations: comma (pairTheory) and FCP_CONCAT (fcpTheory) *)
+Theorem pair_operation_pair :
+    pair_operation (pair$, :'a -> 'b -> 'a # 'b)
+                   (FST :'a # 'b -> 'a) (SND :'a # 'b -> 'b)
+Proof
+    rw [pair_operation_def]
+QED
+
+Theorem pair_operation_FCP_CONCAT :
+    FINITE univ(:'b) /\ FINITE univ(:'c) ==>
+    pair_operation (FCP_CONCAT :'a['b] -> 'a['c] -> 'a['b + 'c])
+                   (FCP_FST :'a['b + 'c] -> 'a['b])
+                   (FCP_SND :'a['b + 'c] -> 'a['c])
+Proof
+    DISCH_TAC
+ >> ASM_SIMP_TAC std_ss [pair_operation_def]
+ >> reverse CONJ_TAC >- METIS_TAC [FCP_CONCAT_11]
+ >> rpt GEN_TAC
+ >> PROVE_TAC [FCP_CONCAT_THM]
+QED
+
+val general_cross_def = Define
+   ‘general_cross (cons :'a -> 'b -> 'c) A B = {cons a b | a IN A /\ b IN B}’;
+
+Theorem IN_general_cross :
+    !cons s A B. s IN (general_cross cons A B) <=>
+                 ?a b. s = cons a b /\ a IN A /\ b IN B
+Proof
+    RW_TAC std_ss [general_cross_def, GSPECIFICATION]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (Cases_on ‘x’ >> fs [] >> qexistsl_tac [‘q’,‘r’] >> art [])
+ >> Q.EXISTS_TAC ‘(a,b)’ >> rw []
+QED
+
+(* alternative definition of pred_set$CROSS *)
+Theorem CROSS_ALT :
+    !A B. A CROSS B = general_cross pair$, A B
+Proof
+    RW_TAC std_ss [Once EXTENSION, IN_CROSS, IN_general_cross]
+ >> EQ_TAC >> rw [] >> fs []
+ >> qexistsl_tac [‘FST x’,‘SND x’] >> rw [PAIR]
+QED
+
+(* alternative definition of fcp_cross *)
+Theorem fcp_cross_alt :
+    !A B. fcp_cross A B = general_cross FCP_CONCAT A B
+Proof
+    RW_TAC std_ss [Once EXTENSION, IN_FCP_CROSS, IN_general_cross]
+QED
+
+val general_prod_def = Define
+   ‘general_prod (cons :'a -> 'b -> 'c) A B =
+      {general_cross cons a b | a IN A /\ b IN B}’;
+
+Theorem IN_general_prod :
+    !(cons :'a -> 'b -> 'c) s A B.
+        s IN general_prod cons A B <=> ?a b. (s = general_cross cons a b) /\ a IN A /\ b IN B
+Proof
+    RW_TAC std_ss [general_prod_def, GSPECIFICATION, UNCURRY]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (qexistsl_tac [‘FST x’, ‘SND x’] >> art [])
+ >> Q.EXISTS_TAC `(a,b)`
+ >> RW_TAC std_ss []
+QED
+
+(* alternative definition of prod_sets *)
+Theorem prod_sets_alt :
+    !A B. prod_sets A B = general_prod pair$, A B
+Proof
+    RW_TAC std_ss [Once EXTENSION, IN_PROD_SETS, IN_general_prod, GSYM CROSS_ALT]
+QED
+
+(* alternative definition of fcp_prod *)
+Theorem fcp_prod_alt :
+    !A B. fcp_prod A B = general_prod FCP_CONCAT A B
+Proof
+    RW_TAC std_ss [Once EXTENSION, IN_FCP_PROD, IN_general_prod, GSYM fcp_cross_alt]
+QED
+
+Theorem general_BIGUNION_CROSS :
+    !(cons :'a -> 'b -> 'c) f (s :'index set) t.
+       (general_cross cons (BIGUNION (IMAGE f s)) t =
+        BIGUNION (IMAGE (\n. general_cross cons (f n) t) s))
+Proof
+    rw [Once EXTENSION, IN_BIGUNION_IMAGE, IN_general_cross]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (rename1 ‘z IN s’ >> Q.EXISTS_TAC ‘z’ >> art [] \\
+     qexistsl_tac [‘a’,‘b’] >> art [])
+ >> qexistsl_tac [‘a’,‘b’] >> art []
+ >> Q.EXISTS_TAC ‘n’ >> art []
+QED
+
+Theorem general_CROSS_BIGUNION :
+    !(cons :'a -> 'b -> 'c) f (s :'index set) t.
+       (general_cross cons t (BIGUNION (IMAGE f s)) =
+        BIGUNION (IMAGE (\n. general_cross cons t (f n)) s))
+Proof
+    rw [Once EXTENSION, IN_BIGUNION_IMAGE, IN_general_cross]
+ >> EQ_TAC >> rpt STRIP_TAC
+ >- (rename1 ‘z IN s’ >> Q.EXISTS_TAC ‘z’ >> art [] \\
+     qexistsl_tac [‘a’,‘b’] >> art [])
+ >> qexistsl_tac [‘a’,‘b’] >> art []
+ >> Q.EXISTS_TAC ‘n’ >> art []
+QED
+
+Theorem general_CROSS_DIFF :
+    !(cons :'a -> 'b -> 'c) car cdr (X :'a set) s (t :'b set).
+        pair_operation cons car cdr ==>
+       (general_cross cons (X DIFF s) t =
+        (general_cross cons X t) DIFF (general_cross cons s t))
+Proof
+    rw [Once EXTENSION, IN_general_cross, IN_DIFF]
+ >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      qexistsl_tac [‘a’,‘b’] >> art [],
+      (* goal 2 (of 3) *)
+      STRONG_DISJ_TAC >> DISJ1_TAC \\
+      CCONTR_TAC >> fs [] \\
+      Q.PAT_X_ASSUM ‘x = cons a' b'’ K_TAC \\
+      Suff ‘a = a'’ >- METIS_TAC [] \\
+      METIS_TAC [pair_operation_def],
+      (* goal 3 (of 3) *)
+      qexistsl_tac [‘a’,‘b’] >> art [] >> PROVE_TAC [] ]
+QED
+
+Theorem general_CROSS_DIFF' :
+    !(cons :'a -> 'b -> 'c) car cdr (s :'a set) (X :'b set) t.
+        pair_operation cons car cdr ==>
+       (general_cross cons s (X DIFF t) =
+        (general_cross cons s X) DIFF (general_cross cons s t))
+Proof
+    rw [Once EXTENSION, IN_general_cross, IN_DIFF]
+ >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      qexistsl_tac [‘a’,‘b’] >> art [],
+      (* goal 2 (of 3) *)
+      STRONG_DISJ_TAC >> DISJ2_TAC \\
+      CCONTR_TAC >> fs [] \\
+      Q.PAT_X_ASSUM ‘x = cons a' b'’ K_TAC \\
+      Suff ‘b = b'’ >- METIS_TAC [] \\
+      METIS_TAC [pair_operation_def],
+      (* goal 3 (of 3) *)
+      qexistsl_tac [‘a’,‘b’] >> art [] >> PROVE_TAC [] ]
+QED
+
+Theorem general_SUBSET_CROSS :
+    !(cons :'a -> 'b -> 'c) (a :'a set) b (c :'b set) d.
+        a SUBSET b /\ c SUBSET d ==>
+        (general_cross cons a c) SUBSET (general_cross cons b d)
+Proof
+    rpt STRIP_TAC
+ >> rw [SUBSET_DEF, IN_general_cross]
+ >> qexistsl_tac [‘a'’, ‘b'’] >> art []
+ >> PROVE_TAC [SUBSET_DEF]
+QED
+
+Theorem general_INTER_CROSS :
+    !(cons :'a -> 'b -> 'c) car cdr (a :'a set) (b :'b set) c d.
+        pair_operation cons car cdr ==>
+       ((general_cross cons a b) INTER (general_cross cons c d) =
+        general_cross cons (a INTER c) (b INTER d))
+Proof
+    rw [Once EXTENSION, IN_INTER, IN_general_cross]
+ >> EQ_TAC >> rpt STRIP_TAC (* 3 subgoals *)
+ >| [ (* goal 1 (of 3) *)
+      fs [] >> rename1 ‘x = cons s t’ \\
+      qexistsl_tac [‘s’, ‘t’] >> art [] \\
+      METIS_TAC [pair_operation_def],
+      (* goal 2 (of 3) *)
+      qexistsl_tac [‘a'’, ‘b'’] >> art [],
+      (* goal 3 (of 3) *)
+      qexistsl_tac [‘a'’, ‘b'’] >> art [] ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* ----- Defining real-valued power, log, and log base 2 functions --------- *)
@@ -663,7 +976,7 @@ Proof
   MP_TAC (ISPEC ``1 / x:real`` SIMP_REAL_ARCH) THEN STRIP_TAC THEN
   Q.EXISTS_TAC `n` THEN FULL_SIMP_TAC real_ss [real_div] THEN
   RULE_ASSUM_TAC (ONCE_REWRITE_RULE [GSYM REAL_LT_INV_EQ]) THEN
-  REWRITE_TAC [ADD1, GSYM add_ints] THEN ASM_REAL_ARITH_TAC
+  REWRITE_TAC [ADD1, GSYM add_ints] THEN REAL_ASM_ARITH_TAC
 QED
 
 Theorem REAL_ARCH_INV' : (* was: ex_inverse_of_nat_less *)
@@ -806,6 +1119,20 @@ Theorem DISJOINT_RESTRICT_R :
 Proof SET_TAC []
 QED
 
+Theorem DISJOINT_CROSS_L :
+    !s t c. DISJOINT s t ==> DISJOINT (s CROSS c) (t CROSS c)
+Proof
+    RW_TAC std_ss [DISJOINT_ALT, CROSS_DEF, Once EXTENSION, IN_INTER,
+                   NOT_IN_EMPTY, GSPECIFICATION]
+QED
+
+Theorem DISJOINT_CROSS_R :
+    !s t c. DISJOINT s t ==> DISJOINT (c CROSS s) (c CROSS t)
+Proof
+    RW_TAC std_ss [DISJOINT_ALT, CROSS_DEF, Once EXTENSION, IN_INTER,
+                   NOT_IN_EMPTY, GSPECIFICATION]
+QED
+
 Theorem SUBSET_RESTRICT_L :
   !r s t. s SUBSET t ==> (s INTER r) SUBSET (t INTER r)
 Proof SET_TAC []
@@ -925,6 +1252,41 @@ val disjoint_restrict = store_thm (* new *)
  >> MATCH_MP_TAC DISJOINT_RESTRICT_R
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
  >> CCONTR_TAC >> fs []);
+
+(* ------------------------------------------------------------------------- *)
+(* Binary Unions                                                             *)
+(* ------------------------------------------------------------------------- *)
+
+Definition binary_def :
+    binary a b = (\x:num. if x = 0 then a else b)
+End
+
+Theorem BINARY_RANGE : (* was: range_binary_eq *)
+    !a b. IMAGE (binary a b) UNIV = {a;b}
+Proof
+  RW_TAC std_ss [IMAGE_DEF, binary_def] THEN
+  SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, SET_RULE
+   ``x IN {a;b} <=> (x = a) \/ (x = b)``] THEN
+  GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL
+  [METIS_TAC [], METIS_TAC [IN_UNIV],
+   EXISTS_TAC ``1:num`` THEN ASM_SIMP_TAC arith_ss [IN_UNIV]]
+QED
+
+Theorem UNION_BINARY : (* was: Un_range_binary *)
+    !a b. a UNION b = BIGUNION {binary a b i | i IN UNIV}
+Proof
+  SIMP_TAC arith_ss [GSYM IMAGE_DEF] THEN
+  REWRITE_TAC [METIS [ETA_AX] ``(\i. binary a b i) = binary a b``] THEN
+  SIMP_TAC std_ss [BINARY_RANGE] THEN SET_TAC []
+QED
+
+Theorem INTER_BINARY : (* was: Int_range_binary *)
+    !a b. a INTER b = BIGINTER {binary a b i | i IN UNIV}
+Proof
+  SIMP_TAC arith_ss [GSYM IMAGE_DEF] THEN
+  REWRITE_TAC [METIS [ETA_AX] ``(\i. binary a b i) = binary a b``] THEN
+  SIMP_TAC std_ss [BINARY_RANGE] THEN SET_TAC []
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*  Some lemmas needed by CARATHEODORY in measureTheory (author: Chun Tian)  *)

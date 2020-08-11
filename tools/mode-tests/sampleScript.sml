@@ -32,13 +32,171 @@ End
 
 Theorem baz:
   x ∧ let
-    a = b;
-    c = d;
-  in
-    x ⇒ a ∧
-        c
+        a = b;
+        c = d;
+      in
+        x ⇒ a ∧
+            c
 Proof
   some_tactic
 QED
+
+Theorem ifindent1:
+  p = if x = 3 then
+        10
+      else
+        14
+Proof
+  another_tactic ‘quotation arg’
+QED
+
+Theorem ifindent2:
+  p = if x = 3 then
+        10
+      else if x = 10 then
+        14
+      else 16
+Proof
+  another_tactic ‘quotation arg’
+QED
+
+Theorem caseindent1:
+  p ⇒ case x of
+      | y =>
+          z + y + long expression
+      | a => something
+Proof
+  tactic
+QED
+
+Theorem caseindent2:
+  p ⇒ case x of
+        y =>
+          z + y + long expression
+      | a => something
+      | b => last thing ∧
+             something
+Proof
+  tactic
+QED
+
+Theorem doindent1:
+  do
+    x <- e1;
+    y <- e2;
+  od
+Proof
+  foo
+QED
+
+Theorem first_suffices_by_indent:
+  some_asm ∧ p ⇒
+  some_goal
+Proof
+  ‘a long ∧ statement of a ∧ simple subgoal’
+    suffices_by atactic >>
+  finishing_tactic
+QED
+
+Theorem first_by_indent:
+  some_goal
+Proof
+  ‘some other goal’
+    by atactic >>
+  finishing_tactic
+QED
+
+Theorem later_suffices_by_by_indent:
+  some_goal
+Proof
+  tac1 >>
+  ‘goal’
+    suffices_by foo >>
+  ‘goal2’ suffices_by
+    bar >>
+  ‘goal3’
+    by foo >>
+  ‘goal4’ by
+    foo >>
+  finisher
+  >> ‘goal4’
+    by foobar >>
+  ‘goal5’
+    by (‘subgoal1’
+          suffices_by tac >>
+        ‘subgoal2’
+          by another_tac) >>
+  finisher
+QED
+
+Theorem alpha_qfier_and_blashthen:
+  (LEAST n. p ∧ q n ⇒
+            r n)
+  =
+  10
+Proof
+  tac \\
+  tac2
+QED
+
+(* escaped_alpha_qfier *)
+val t =  “P $some ∧ x < y ∧
+          Q”;
+
+(* escaped symbol qfier *)
+val t = “P $@ ∧
+         q”
+
+Theorem eval_op_later:
+  eval_op f vs s = (res,t) ⇒ s ≤ t
+Proof
+  fs [eval_op_def, AllCaseEqs(),fail_def,return_def] \\ rw[]
+  \\ fs[later_refl] \\ fs{later_def]
+  \\ Cases_on ‘s.input’ \\ fs[forward_def,greater_def]
+QED
+
+Theorem ceqnat_behaviour[betasimp]:
+  ceqnat @@ church n @@ church m -n->* cB (n = m)
+Proof
+  SIMP_TAC (bsrw_ss()) [ceqnat_def] THEN
+  Q.ID_SPEC_TAC ‘m’ THEN Induct_on ‘n’ THEN1
+   SIMP_TAC (bsrw_ss()) [] THEN
+  ASM_SIMP_TAC (bsrw_ss()) [] THEN
+  Cases_on ‘m’ THEN SRW_TAC [][]
+QED
+
+Theorem testTHENL:
+  foo
+Proof
+  tact1 THENL [
+    tac1 >-
+     foo,
+    tac2
+  ] >>
+  foo
+QED
+
+Theorem morelet_indent:
+  let x = 2 in p x ∧ y
+Proof
+  tac
+QED
+
+Theorem eliot_let_indent:
+  foo x =
+  let
+    a = b
+  in
+    z
+Proof
+  tac
+QED
+
+Definition foo:
+  foo x =
+  case x of
+    NONE => 3
+  | SOME z => 4
+End
 
 val _ = export_theory()

@@ -16,10 +16,13 @@
         '("\\S.\\(>[->|]\\|\\\\\\\\\\)\\S." 1 'holscript-then-syntax)
         "^Type\\>"
         "^Overload\\>"
-        (list (regexp-opt '("let" "local" "in" "end" "fun" "val" "open") 'words)
+        (list (regexp-opt
+               '("let" "local" "in" "end" "fun" "val" "open")
+               'symbols)
               'quote
               'holscript-smlsyntax)
         '("\\<cheat\\>" . 'holscript-cheat-face)
+        '(holscript-find-syntax-error 0 'holscript-syntax-error-face prepend)
         '(hol-find-quoted-material 0 'holscript-quoted-material prepend)))
 
 (defconst holscript-font-lock-defaults '(holscript-font-lock-keywords))
@@ -39,9 +42,9 @@
     ;; confused by script files that contain escaped quotation
     ;; characters. This despite the fact that it does cause pain in
     ;; terms such as \(x,y). x + y
-    (mapc (lambda (c) (modify-syntax-entry c "w" st)) "_'")
-    ;(mapc (lambda (c) (modify-syntax-entry c "." st)) ",;")
-    (mapc (lambda (c) (modify-syntax-entry c "."  st)) ".%&$+-/:<=>?@`^|!~#,;")
+    (mapc (lambda (c) (modify-syntax-entry c "w" st)) "'")
+    (mapc (lambda (c) (modify-syntax-entry c "_" st)) "$_")
+    (mapc (lambda (c) (modify-syntax-entry c "."  st)) ".%&+-/:<=>?@`^|!~#,;")
     st)
   "The syntax table used in `holscript-mode'.")
 
@@ -312,6 +315,67 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
              (skip-syntax-backward " "))
            (skip-syntax-forward " ")
            (setq n (- n 1))))))
+
+(defconst holscript-symbolicthen-regexp "\\(?:>>\\|\\\\\\\\\\|>-\\|>|\\)")
+(defconst holscript-textthen-regexp "\\(?:\\<\\(THEN\\([1L]?\\)\\)\\>\\)")
+(defconst holscript-thenish-regexp
+  (concat "\\(?:" holscript-symbolicthen-regexp "\\|"
+          holscript-textthen-regexp "\\)"))
+(defconst holscript-doublethen-error-regexp
+  (concat holscript-thenish-regexp "[[:space:]]+" holscript-thenish-regexp))
+(defun holscript-syntax-convert (n) (if (and n (equal (car n) 9)) '(1) n))
+(defun holscript-bad-error-delims (p1 p2)
+  (let ((s0 (holscript-syntax-convert (syntax-after (1- p1))))
+        (s1 (holscript-syntax-convert (syntax-after p1)))
+        (s2 (holscript-syntax-convert (syntax-after (1- p2))))
+        (s3 (holscript-syntax-convert (syntax-after p2))))
+    (or (equal s0 s1) (equal s2 s3))))
+
+(defconst holscript-quoteddeclaration-begin
+  (concat
+   "^\\(Theorem\\|Triviality\\|Definition\\|Inductive\\|CoInductive\\)"
+   "[[:space:]]+\\([A-Za-z0-9'_]+\\)[[:space:]]*" ; name
+   "\\(\\[[A-Za-z0-9'_,]+\\]\\)?[[:space:]]*:"; optional annotations
+   )
+  "Regular expression marking the beginning of the special syntax that marks
+a store_thm equivalent.")
+
+(defconst holscript-quoteddeclaration-end
+  (regexp-opt (list "End" "Proof" "Termination")))
+
+(defconst holscript-quotedmaterial-delimiter-fullregexp
+  (concat holscript-quoteddeclaration-begin "\\|"
+          holscript-quoteddeclaration-end "\\|[“”‘’]"))
+
+(defun holscript-in-quotedmaterialp (p)
+  (save-match-data
+    (save-mark-and-excursion
+      (goto-char p)
+      (let ((beginmatch
+             (re-search-backward
+              holscript-quotedmaterial-delimiter-fullregexp nil t))
+            (ppss (syntax-ppss)))
+        (while (and beginmatch (or (nth 3 ppss) (nth 4 ppss)))
+          (setq beginmatch (re-search-backward
+                         holscript-quotedmaterial-delimiter-fullregexp nil t))
+          (setq ppss (syntax-ppss)))
+        (and beginmatch
+             (or (looking-at holscript-quoteddeclaration-begin)
+                 (looking-at "[“‘]")))))))
+
+(defun holscript-find-syntax-error (limit)
+  (let ((beginmatch
+         (re-search-forward holscript-doublethen-error-regexp limit t))
+        (ppss (syntax-ppss)))
+    (while (and beginmatch
+                (or (nth 3 ppss) (nth 4 ppss)
+                    (holscript-bad-error-delims (match-beginning 0)
+                                                (match-end 0))
+                    (holscript-in-quotedmaterialp (point))))
+      (setq beginmatch
+            (re-search-forward holscript-doublethen-error-regexp limit t))
+      (setq ppss (syntax-ppss)))
+    (if (not beginmatch) nil t)))
 
 ;;templates
 (defun hol-extract-script-name (arg)
@@ -702,6 +766,11 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
         (quotedmaterial "+" quotedmaterial)
         (quotedmaterial "*" quotedmaterial)
         (quotedmaterial ":=" quotedmaterial)
+        (quotedmaterial "<-" quotedmaterial)
+        (quotedmaterial "|" quotedmaterial)
+        (quotedmaterial "=>" quotedmaterial)
+        ("case" quotedmaterial "of" quotedmaterial)
+        ("do" quotedmaterial "od")
         ("if" quotedmaterial "then" quotedmaterial "else" quotedmaterial)
         ("let" quotedmaterial "in" quotedmaterial)
         ("<|" recd-fields "|>"))
@@ -720,23 +789,16 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
               ("[" tactics "]"))
       (tactics (tactic) (tactics "," tactics)))
     '((assoc ",")) '((assoc ";"))
-    '((assoc ">>" "\\\\" ">-"  ">|" "THEN" "THEN1" "THENL")
+    '((assoc "^Proof")
+      (left ">>" "\\\\" ">-"  ">|" "THEN" "THEN1" "THENL")
       (assoc "by" "suffices_by"))
-    '((assoc "ENDQ." "QFIER." "in" "else")
-      (assoc "<=>" "⇔")
+    '((assoc "ENDQ." "QFIER." "in" "of")
+      (assoc "|")
+      (assoc "=>")
+      (assoc "else")
+      (assoc "<=>" "⇔" "<-")
       (assoc "==>" "⇒") (assoc "\\/" "∨") (assoc "/\\" "∧")
       (assoc "=" "<" "≤" "<=") (assoc ":=") (assoc "+") (assoc "*")))))
-
-(defconst holscript-quoteddeclaration-begin
-  (concat
-   "^\\(Theorem\\|Triviality\\|Definition\\|Inductive\\|CoInductive\\)"
-   "[[:space:]]+\\([A-Za-z0-9'_]+\\)[[:space:]]*" ; name
-   "\\(\\[[A-Za-z0-9'_,]+\\]\\)?[[:space:]]*:"; optional annotations)
-  "Regular expression marking the beginning of the special syntax that marks
-a store_thm equivalent."))
-
-(defconst holscript-quoteddeclaration-end
-  (regexp-opt (list "End" "Proof" "Termination")))
 
 (defvar holscript-quotedmaterial-delimiter-regexp
   (regexp-opt (list "“" "”" "‘" "’" holscript-quoteddeclaration-begin)))
@@ -744,13 +806,15 @@ a store_thm equivalent."))
 (defvar holscript-boolean-quantifiers '("?" "!" "?!" "∀" "∃" "∃!"))
 
 (defvar holscript-quantifier-regexp
-  (regexp-opt (append holscript-boolean-quantifiers '("λ" "\\<some\\>" "\\<LEAST\\>" "\\_<@\\_>")))
+  (concat (regexp-opt holscript-boolean-quantifiers) "\\|"
+          (regexp-opt '("some" "LEAST") 'symbols) "\\|\\_<[@λ]\\_>")
   "List of strings that can begin \"quantifier blocks\".")
 
 
 (defun holscript-can-find-earlier-quantifier (pp)
   (let* ((pstk (nth 9 pp))
-         (limit (car (last pstk))))
+         (limit (car (last pstk)))
+         (case-fold-search nil))
     (save-mark-and-excursion
       (catch 'found-one
         (while (re-search-backward
@@ -781,8 +845,32 @@ a store_thm equivalent."))
   (regexp-opt '("open" "val" "datatype" "local" "fun" "infix" "infixl" "infixr"
                 "structure" "signature" "functor") 'words))
 
+(defun holscript-simple-token-forward ()
+  (let* ((p (point))
+         (sc (syntax-class (syntax-after p))))
+    (cond
+     ((or (equal 1 sc) (equal 9 sc)); punctuation
+      (skip-syntax-forward ".\\")
+      (buffer-substring-no-properties p (point)))
+     ((equal 2 sc) ; word
+      (skip-syntax-forward "w")
+      (buffer-substring-no-properties p (point))))))
+
+(defun holscript-simple-token-backward ()
+  (let* ((p (point))
+         (sc (syntax-class (syntax-after (1- p)))))
+    (cond
+     ((or (equal 1 sc) (equal 9 sc)); punctuation
+      (skip-syntax-backward ".\\")
+      (buffer-substring-no-properties (point) p))
+     ((equal 2 sc) ; word
+      (skip-syntax-backward "w")
+      (buffer-substring-no-properties (point) p)))))
+
+
 (defun holscript-smie-forward-token ()
-  (let ((p0 (point)))
+  (let ((p0 (point))
+        (case-fold-search nil))
     (forward-comment (point-max))
     (if (and (not (= p0 (point)))
              (or (looking-at
@@ -807,6 +895,7 @@ a store_thm equivalent."))
           (match-string-no-properties 0))
          ((looking-at "\\\\/") (goto-char (match-end 0)) "\\/")
          ((looking-at "/\\\\") (goto-char (match-end 0)) "/\\")
+         ((looking-at "\\\\\\\\") (goto-char (match-end 0)) "\\\\")
          ((looking-at "\\.")
           (if (or (nth 3 pp) (nth 4 pp))
               (progn (forward-char 1) ".")
@@ -820,103 +909,164 @@ a store_thm equivalent."))
           (buffer-substring-no-properties
            (point)
            (progn (skip-syntax-forward ".") (point))))
-         (t (buffer-substring-no-properties
-             (point)
-             (progn (skip-syntax-forward "w_") (point)))))))))
+         ((looking-at "\\$")
+          (let ((p (point)))
+            (if (> (skip-chars-forward "$") 1)
+                (buffer-substring-no-properties p (point))
+              (let ((simple-tok (holscript-simple-token-forward)))
+                (if (null simple-tok)
+                    "$"
+                  (if (= 1  ; punctuation, so don't look for more
+                         (syntax-class
+                          (aref (syntax-table) (aref simple-tok 0))))
+                      (buffer-substring-no-properties p (point))
+                    (if (looking-at "\\$")
+                        (progn (forward-char 1)
+                               (holscript-simple-token-forward)))
+                    (buffer-substring-no-properties p (point))))))))
+         (t (let ((p (point)))
+              (skip-syntax-forward "w_")
+              (if (looking-at "\\$")
+                  (progn (forward-char 1)
+                         (holscript-simple-token-forward)))
+              (buffer-substring-no-properties p (point)))))))))
 
 (defun holscript-smie-backward-token ()
-  (if (or (and (looking-at
-                (concat holscript-column0-declbegin-keyword "[[:space:]]"))
-               (save-excursion (skip-chars-backward " \t") (bolp)))
-          (looking-at (concat "^" holscript-sml-declaration-keyword)))
-      (if (= (point) (point-min)) ""
-        (skip-syntax-backward " ")
-        ";")
-    (let ((cp (point)))
-      (forward-comment (- (point)))
-      (skip-syntax-backward " ")
-      (while (not (equal cp (point)))
-        (setq cp (point))
+  (let ((case-fold-search nil))
+    (if (or (and (looking-at
+                  (concat holscript-column0-declbegin-keyword "[[:space:]]"))
+                 (save-excursion (skip-chars-backward " \t") (bolp)))
+            (looking-at (concat "^" holscript-sml-declaration-keyword)))
+        (if (= (point) (point-min)) ""
+          (skip-syntax-backward " ")
+          ";")
+      (let ((cp (point)))
         (forward-comment (- (point)))
-        (skip-syntax-backward " ")))
-    (cond
-     (; am I just after a keyword?
-      (and (looking-back holscript-column0-keywords-regexp (- (point) 15) t)
-           (let ((syn (syntax-after (point))))
-             (or (null syn) (= 0 (car syn)))) ; next char is whitespace
-           (save-excursion
-             (goto-char (match-beginning 0))
-             (skip-chars-backward " \t")
-             (bolp)))
-      (goto-char (match-beginning 0))
-      (let ((ms (match-string-no-properties 0)))
-        (if (or (string=  ms "Theorem") (string= ms "Triviality"))
-            (let ((eolpoint (save-excursion (end-of-line) (point))))
-              (save-excursion
-                (if (re-search-forward ":" eolpoint t) (concat "^" ms)
-                  (concat "^" ms "="))))
-          (concat "^" ms))))
-     (; am I just after a quotation mark
-      (looking-back holscript-quotedmaterial-delimiter-regexp (- (point) 1) t)
-      (goto-char (match-beginning 0))
-      (match-string-no-properties 0))
-     (; am I just after a quantifier
-      (looking-back holscript-quantifier-regexp (- (point) 3) t)
-      (goto-char (match-beginning 0))
-      "QFIER.")
-     (; am I sitting on a full-stop that might end a quantifier block
-      (let ((c (char-before))) (and c (char-equal c ?.)))
-      (forward-char -1)
-      (let* ((pp (syntax-ppss)))
-        (if (or (nth 3 pp) (nth 4 pp)) "."
-          (if (holscript-can-find-earlier-quantifier pp) "ENDQ." "."))))
-     ((looking-back "\\\\/" (- (point) 3))
-      (goto-char (match-beginning 0)) "\\/")
-     ((looking-back "/\\\\" (- (point) 3))
-      (goto-char (match-beginning 0)) "/\\")
-     (; am I sitting after "punctuation"
-      (equal 1 (syntax-class (syntax-after (1- (point)))))
-      (buffer-substring-no-properties
-       (point)
-       (progn (skip-syntax-backward ".") (point))))
-     (t (buffer-substring-no-properties
+        (skip-syntax-backward " ")
+        (while (not (equal cp (point)))
+          (setq cp (point))
+          (forward-comment (- (point)))
+          (skip-syntax-backward " ")))
+      (cond
+       (; am I just after a keyword?
+        (and (looking-back holscript-column0-keywords-regexp (- (point) 15) t)
+             (let ((syn (syntax-after (point))))
+               (or (null syn) (= 0 (car syn)))) ; next char is whitespace
+             (save-excursion
+               (goto-char (match-beginning 0))
+               (skip-chars-backward " \t")
+               (bolp)))
+        (goto-char (match-beginning 0))
+        (let ((ms (match-string-no-properties 0)))
+          (if (or (string=  ms "Theorem") (string= ms "Triviality"))
+              (let ((eolpoint (save-excursion (end-of-line) (point))))
+                (save-excursion
+                  (if (re-search-forward ":" eolpoint t) (concat "^" ms)
+                    (concat "^" ms "="))))
+            (concat "^" ms))))
+       (; am I just after a quotation mark
+        (looking-back holscript-quotedmaterial-delimiter-regexp (- (point) 1) t)
+        (goto-char (match-beginning 0))
+        (match-string-no-properties 0))
+       (; am I just after a quantifier
+        (looking-back holscript-quantifier-regexp (- (point) 10) t)
+        (goto-char (match-beginning 0))
+        (let ((c (char-before)))
+          (if (and c (char-equal c ?$))
+              (progn (backward-char) (concat "$" (match-string-no-properties 0)))
+            "QFIER.")))
+       (; am I sitting on a full-stop that might end a quantifier block
+        (let ((c (char-before))) (and c (char-equal c ?.)))
+        (forward-char -1)
+        (let* ((pp (syntax-ppss)))
+          (if (or (nth 3 pp) (nth 4 pp)) "."
+            (if (holscript-can-find-earlier-quantifier pp) "ENDQ." "."))))
+       ((looking-back "\\\\/" (- (point) 3))
+        (goto-char (match-beginning 0)) "\\/")
+       ((looking-back "/\\\\" (- (point) 3))
+        (goto-char (match-beginning 0)) "/\\")
+       ((looking-back "\\\\\\\\" (- (point) 3))
+        (goto-char (match-beginning 0)) "\\\\")
+       (; am I sitting after "punctuation"
+        (equal 1 (syntax-class (syntax-after (1- (point)))))
+        (buffer-substring-no-properties
          (point)
-         (progn (skip-syntax-backward "w_")
-                (point)))))))
+         (progn (skip-syntax-backward ".") (point))))
+       (t (buffer-substring-no-properties
+           (point)
+           (progn (skip-syntax-backward "w_")
+                  (point))))))))
 
 (defvar holscript-indent-level 0 "Default indentation level")
+(defcustom holscript-debugging-messages-p nil
+  "Whether or not to emit debugging messages"
+  :type 'boolean)
+(defun holscript-message (s &rest rest)
+  (if holscript-debugging-messages-p (apply 'message s rest)))
 (defun holscript-smie-rules (kind token)
-  (message "in smie rules, looking at (%s,>%s<)" kind token)
+  (holscript-message "in smie rules, %d looking at (%s,>%s<)"
+                     (point) kind token)
   (pcase (cons kind token)
-    (`(:elem  . basic) (progn (message "In elem rule")
-                              holscript-indent-level))
-    (`(:list-intro . ":") (message "In list-intro :") holscript-indent-level)
+    (`(:elem  . basic) (holscript-message "In elem rule") 0)
+    (`(:list-intro . ":")
+     (holscript-message "In list-intro :")
+     holscript-indent-level)
     (`(:list-intro . "‘") 1)
     (`(:list-intro . "“") 1)
     (`(:list-intro . "")
-     (message "In (:list-intro \"\"))") holscript-indent-level)
+     (holscript-message "In (:list-intro \"\"))") holscript-indent-level)
     (`(:after . ":") 2)
-    (`(:before . "^Definition") 0)
-    (`(:before . "^Theorem") 0)
-    (`(:before . "^Theorem=") 0)
-    (`(:before . "^Inductive") 0)
-    (`(:before . "^CoInductive") 0)
+    (`(:before . "^CoInductive") '(column . 0))
+    (`(:before . "^Definition") '(column . 0))
+    (`(:before . "^Inductive") '(column . 0))
+    (`(:before . "^Proof") '(column . 0))
+    (`(:before . "^QED") '(column . 0))
+    (`(:before . "^Termination") '(column . 0))
+    (`(:before . "^Theorem") '(column . 0))
+    (`(:before . "^Theorem=") '(column . 0))
+    (`(:after . "^Proof") 2)
+    (`(:after . "^Termination") 2)
     (`(:before . "val") 0)
     (`(:before . "fun") 0)
     (`(:before . "open") 0)
     (`(:before . "ENDQ.") 0)
     (`(:after . "ENDQ.") 2)
     (`(:after . ";") 0)
-    (`(:after . "let") 2)
+    (`(:before . "let") (if (smie-rule-bolp) nil 0))
+    (`(:after . "let")
+     (if (smie-rule-hanging-p)
+         (progn (holscript-message "let-hanging")
+                (cons 'column (+ (current-column) 2)))
+       (holscript-message "Not let-hanging") 2))
     (`(:after . "in") 2)
+    (`(:before . "in")
+     (if (smie-rule-parent-p "let")
+         (progn (holscript-message "in: let a parent")
+                (save-excursion
+                  (backward-up-list)
+                  (cons 'column (current-column))))
+       (smie-rule-parent)))
+    (`(:after . "then") 2)
+    (`(:after . "else") 2)
+    (`(:after . "of") (if (smie-rule-next-p "|") 0 2))
+    (`(:before . "|") (if (smie-rule-parent-p "of") 0))
+    (`(:before ."if")
+     (and (not (smie-rule-bolp))
+          (smie-rule-prev-p "else")
+          (smie-rule-parent)))
     (`(:before . ":") holscript-indent-level)
-    (`(:before . "by") 2)
-    (`(:before . "==>") 2)
-    (`(:before . "⇒") 2)
-    (`(:before . "suffices_by") 2)
-    (`(:after . "^Proof") 2)
-    (`(:before . "^Proof") 0)
-    (`(:after . "^Termination") 2)
+    (`(:after . "=>") 2)
+    (`(:after . "do") 2)
+    ; (`(:before . "==>") 2)
+    ; (`(:before . "⇒") 2)
+    (`(:before . ,(or `"[" `"(" `"{"))
+     (if (smie-rule-hanging-p) (smie-rule-parent 2)))
+    (`(:before . "by")  (cond ((smie-rule-parent-p "^Proof") 4)
+                              ((smie-rule-parent-p "(" "[") 3)
+                              (t 2)))
+    (`(:before . "suffices_by") (cond ((smie-rule-parent-p "^Proof") 4)
+                                      ((smie-rule-parent-p "(" "[") 3)
+                                      (t 2)))
     (`(:close-all . _) t)
     (`(:after . "[") 2)
     (`(:after . "<|") 2)
@@ -1015,6 +1165,12 @@ a store_thm equivalent."))
 (defface holscript-smlsyntax
   '((((class color)) :foreground "DarkOliveGreen" :weight bold))
   "The face for highlighting important SML syntax that appears in script files."
+  :group 'holscript-faces)
+
+(defface holscript-syntax-error-face
+  '((((class color)) :foreground "red" :background "yellow"
+     :weight bold :box t))
+  "The face for highlighting guaranteed syntax errors."
   :group 'holscript-faces)
 
 (setq auto-mode-alist (cons '("Script\\.sml" . holscript-mode)

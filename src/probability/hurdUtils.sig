@@ -354,7 +354,7 @@ sig
   val Cond : tactic
   val Rewr  : tactic
   val Rewr' : tactic
-  val art : thm list -> tactic
+  val art : thm list -> tactic (* ASM_REWRITE_TAC *)
 
   (* Simple CNF conversion *)
   val CNF_CONV : conv

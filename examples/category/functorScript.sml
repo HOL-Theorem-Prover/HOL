@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib pred_setTheory categoryTheory lcsymtacs;
+open HolKernel Parse boolLib bossLib pred_setTheory categoryTheory;
 
 val _ = new_theory "functor";
 val _ = ParseExtras.temp_loose_equality()

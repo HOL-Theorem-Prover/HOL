@@ -83,7 +83,7 @@ Definition mergesortN_def:
             (mergesortN R (DIV2 n) l)
             (mergesortN R (n - len1) (DROP len1 l)))
 Termination
-  WF_REL_TAC `measure (\(R,n,l). n)` >>
+  WF_REL_TAC `measure (λ(R,n,l). n)` >>
   srw_tac[][DIV2_def, X_LT_DIV]
   >- (match_mp_tac DIV_LESS >>
       decide_tac) >>
@@ -150,7 +150,7 @@ Definition mergesortN_tail_def:
                        (mergesortN_tail neg R (n - len1) (DROP len1 l))
                        [])
 Termination
-  WF_REL_TAC `measure (\(neg,R,n,l). n)` >>
+  WF_REL_TAC `measure (λ(neg,R,n,l). n)` >>
   srw_tac[][DIV2_def] >>
   srw_tac[][DIV2_def, X_LT_DIV]
   >- (match_mp_tac DIV_LESS >> decide_tac) >>
@@ -438,7 +438,7 @@ val merge_tail_correct2 = Q.store_thm ("merge_tail_correct2",
  srw_tac[][merge_tail_def, merge_def, REV_REVERSE_LEM, merge_empty] >>
  fs [] >>
  `SORTED R (REVERSE l1) /\ SORTED R (REVERSE l2)`
-        by metis_tac [SORTED_APPEND_IFF] >>
+        by metis_tac [SORTED_APPEND_GEN] >>
  fs []
  >- (match_mp_tac (GSYM merge_last_lem1) >>
      srw_tac[][] >>
@@ -495,7 +495,7 @@ val mergesortN'_def = tDefine "mergesortN'" `
 (mergesortN' R n l =
   let len1 = DIV2 n in
     merge R (mergesortN' R (DIV2 n) l) (mergesortN' R (n - len1) (DROP len1 l)))`
- (WF_REL_TAC `measure (\(R,n,l). n)` >>
+ (WF_REL_TAC `measure (λ(R,n,l). n)` >>
   srw_tac[][DIV2_def] >>
   COOPER_TAC);
 
@@ -506,7 +506,7 @@ val mergesortN''_def = tDefine "mergesortN''" `
 (mergesortN'' R n l =
   let len1 = DIV2 n in
     merge R (mergesortN'' R (DIV2 n) l) (mergesortN'' R (n - len1) (DROP len1 l)))`
- (WF_REL_TAC `measure (\(R,n,l). n)` >>
+ (WF_REL_TAC `measure (λ(R,n,l). n)` >>
   srw_tac[][DIV2_def] >>
   COOPER_TAC);
 

@@ -15,6 +15,7 @@ struct
 open Feedback Lib HolKernel boolTheory;
 
 val ERR = mk_HOL_ERR "boolSyntax"
+type goal     = term list * term
 
 (*---------------------------------------------------------------------------
        Basic constants
@@ -183,6 +184,9 @@ val is_literal_case = can dest_literal_case
 val is_arb          = same_const arb
 val is_the_value    = same_const the_value
 val is_IN           = can dest_IN
+fun is_bool_atom tm =
+  is_var tm andalso (type_of tm = bool)
+  orelse is_neg tm andalso is_var (dest_neg tm);
 
 (*---------------------------------------------------------------------------*
  * Construction and destruction functions that deal with SML lists           *
@@ -204,8 +208,8 @@ val strip_comb     = HolKernel.strip_comb
 val strip_abs      = HolKernel.strip_abs
 val strip_forall   = HolKernel.strip_binder (SOME universal)
 val strip_exists   = HolKernel.strip_binder (SOME existential)
-val strip_conj     = strip_binop (total dest_conj)
-val strip_disj     = strip_binop (total dest_disj)
+val strip_conj     = strip_binop dest_conj
+val strip_disj     = strip_binop dest_disj
 
 fun dest_strip_comb t =
    let
@@ -572,5 +576,31 @@ in
 
 
 end
+
+(* ----------------------------------------------------------------------
+    Utility functions to help with the fact that terms are not an
+    equality type
+   ---------------------------------------------------------------------- *)
+
+local
+open Portable
+val aconv = Term.aconv
+in
+
+fun Teq tm = Term.same_const T tm
+fun Feq tm = Term.same_const F tm
+val tml_eq = list_eq aconv
+val tmp_eq = pair_eq aconv aconv
+val goal_eq = pair_eq tml_eq aconv
+val goals_eq = list_eq goal_eq
+val tmem = Lib.op_mem Term.aconv
+fun memt tlist t = Lib.op_mem Term.aconv t tlist
+val tunion = Lib.op_union Term.aconv
+fun tassoc t l = Lib.op_assoc Term.aconv t l
+
+fun tmx_eq (tm1,x1) (tm2,x2) = x1 = x2 andalso Term.aconv tm1 tm2
+fun xtm_eq (x1,tm1) (x2,tm2) = x1 = x2 andalso Term.aconv tm1 tm2
+end
+
 
 end

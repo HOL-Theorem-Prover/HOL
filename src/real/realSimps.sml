@@ -420,7 +420,7 @@ fun non_presburger_subterms tm =
    (if (is_conj tm) orelse (is_disj tm) orelse (is_imp tm) orelse
        (is_eq tm) orelse
        (is_less tm) orelse (is_leq tm) orelse
-       (is_great tm) orelse (is_geq tm) orelse
+       (is_greater tm) orelse (is_geq tm) orelse
        (is_plus tm) orelse (is_minus tm) orelse
        (is_linear_mult tm handle _ => false)
     then tunion (non_presburger_subterms (arg1 tm))
@@ -587,7 +587,7 @@ val ARITH_REDUCER = let
     CTXT (addthese @ get_ctxt ctxt)
   end
 in
-  REDUCER {name = SOME"ARITH_REDUCER",
+  REDUCER {name = SOME"REAL_ARITH_DP",
            addcontext = add_ctxt,
            apply = fn args => CACHED_ARITH (get_ctxt (#context args)),
            initial = CTXT []}
@@ -632,7 +632,8 @@ val Flor = OR_CLAUSES |> SPEC_ALL |> CONJUNCTS |> el 3
 val realreduce_cs = real_compset()
 fun REPORT_ALL_CONV t =
     (print ("\nGiving up on " ^ term_to_string t ^ "\n"); ALL_CONV t)
-val REAL_REDUCE = computeLib.CBV_CONV realreduce_cs
+val REAL_REDUCE =
+    PURE_REWRITE_CONV [REAL_INV_1OVER] THENC computeLib.CBV_CONV realreduce_cs
 val NUM_REDUCE = reduceLib.REDUCE_CONV
 
 fun is_literalish t =
@@ -1003,7 +1004,7 @@ fun mulrelnorm0 R Rthms solver0 stk t =
               val rd = denom (r_t, er)
               val mt = Arbint.*(ld,rd) |> term_of_int
               val sidecond1 = mk_less(zero_tm, mt) |> REAL_REDUCE
-              val sidecond2 = mk_neg(mk_eq(mt,zero_tm)) |> REAL_REDUCE
+              val sidecond2 = mk_eq(mt,zero_tm) |> REAL_REDUCE
               val th = hd Rthms |> #1 |> SPEC mt
                                 |> REWRITE_RULE [sidecond1,sidecond2]
                                 |> GSYM
@@ -1096,7 +1097,8 @@ fun mulrelnorm0 R Rthms solver0 stk t =
     end
 
 fun mulrelnorm R Rthms solver stk =
-    BINOP_CONV REALMULCANON THENC mulrelnorm0 R Rthms solver stk
+    BINOP_CONV REALMULCANON THENC mulrelnorm0 R Rthms solver stk THENC
+    TRY_CONV (BINOP_CONV REALMULCANON)
 (*
 
 val lenorm = mulrelnorm “$<= : real -> real -> bool”

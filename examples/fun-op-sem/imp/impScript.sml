@@ -1,7 +1,6 @@
 
 open HolKernel Parse boolLib bossLib;
 open stringLib integerTheory;
-open lcsymtacs;
 val ect = BasicProvers.EVERY_CASE_TAC;
 
 val _ = new_theory "imp";

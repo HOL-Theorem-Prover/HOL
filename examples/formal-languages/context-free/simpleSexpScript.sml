@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib;
 local open stringLib in end
 
 open grammarLib
-open monadsyntax lcsymtacs pegTheory
+open monadsyntax pegTheory
 
 val _ = new_theory "simpleSexp";
 

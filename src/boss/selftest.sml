@@ -212,8 +212,8 @@ val _ = shouldfail {
       checkexn = (fn UNCHANGED => true | _ => false),
       printarg = fn _ => "simp Excl on arith d.p. leaves input unchanged",
       printresult = thm_to_string,
-      testfn = SIMP_CONV (srw_ss() ++ ARITH_ss) [Excl "ARITH_REDUCER"]
-    } “0 < x ==> 0 < 2 * x”
+      testfn = SIMP_CONV (srw_ss() ++ ARITH_ss) [Excl "NUM_ARITH_DP"]
+    } “4 < x ==> 2 < x”
 end
 
 val _ = tprint "find num->num includes SUC"
@@ -306,5 +306,22 @@ in
   require_msg (check_result (list_eq goal_eq expected))
               (HOLPP.pp_to_string 75 pp)
               (fst o tmCases_on (mk_var("l", alpha)) ["", "e es"])
+              g
+end
+
+val _ = let
+  val _ = tprint "resolve_then/IRULE hyp order preserved"
+  val th1 = rich_listTheory.is_prefix_el
+  val g = ([], “?m n. EL m (l1:'a list) = EL n l2 /\ m <= n /\ EVEN n”)
+  val expected =
+      [([] : term list,
+        “?n. (l1:'a list) <<= l2 /\ n < LENGTH l1 /\ n < LENGTH l2 /\ n <= n /\
+             EVEN n”)]
+  val pp = HOLPP.block HOLPP.CONSISTENT 0 o
+           HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
+in
+  require_msg (check_result (list_eq goal_eq expected))
+              (HOLPP.pp_to_string 75 pp)
+              (fst o (goal_assum o resolve_then Any mp_tac) th1)
               g
 end

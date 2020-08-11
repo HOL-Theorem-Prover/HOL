@@ -4,7 +4,7 @@ local open stringTheory in end;
 
 open pred_setTheory
 
-open basic_swapTheory NEWLib lcsymtacs
+open basic_swapTheory NEWLib
 
 val _ = new_theory "nomset";
 

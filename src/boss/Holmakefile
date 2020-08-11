@@ -17,7 +17,7 @@ $(TARGET): $(DEPS)
 
 endif
 
-UOFILES = bossLib.uo lcsymtacs.uo selftest.uo
+UOFILES = bossLib.uo selftest.uo
 
 all: selftest.exe $(UOFILES)
 .PHONY: all

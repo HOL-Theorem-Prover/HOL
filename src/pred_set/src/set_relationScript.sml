@@ -1724,131 +1724,135 @@ val get_min_def = Define `
       else
         NONE`;
 
-val nth_min_def = Define `
+Definition nth_min_def:
   (nth_min r' (s, r) 0 = get_min r' (s, r)) /\
   (nth_min r' (s, r) (SUC n) =
     let min = get_min r' (s, r) in
       if min = NONE then
         NONE
       else
-        nth_min r' (s DELETE (THE min), r) n)`;
+        nth_min r' (s DELETE (THE min), r) n)
+End
 
-val nth_min_surj_lem1 = Q.prove (
-`!r' s' x s r.
-  linear_order r' s /\
-  finite_prefixes r' s /\
-  partial_order r s /\
-  x IN minimal_elements s' r /\
-  s' SUBSET s
-  ==>
-  ?m. nth_min r' (s', r) m = SOME x`,
-NTAC 5 STRIP_TAC THEN
+
+Triviality nth_min_surj_lem1:
+  !r' s' x s r.
+    linear_order r' s /\
+    finite_prefixes r' s /\
+    partial_order r s /\
+    x IN minimal_elements s' r /\
+    s' SUBSET s
+   ==>
+    ?m. nth_min r' (s', r) m = SOME x
+Proof
+rpt gen_tac THEN
 Induct_on `CARD {x' | x' IN s' /\ (x', x) IN r'}` THEN
 SRW_TAC [] [] THEN
 `FINITE {x' | x' IN s' /\ (x', x) IN r'}`
         by (FULL_SIMP_TAC (srw_ss()) [finite_prefixes_def, minimal_elements_def,
                                       SUBSET_DEF, GSPEC_AND] THEN
-            METIS_TAC [INTER_COMM, INTER_FINITE]) THENL
-[Q.EXISTS_TAC `0` THEN
-     SRW_TAC [] [nth_min_def, get_min_def] THEN
-     `{x' | x' IN s' /\ (x', x) IN r'} = {}` by METIS_TAC [CARD_EQ_0] THEN
-     FULL_SIMP_TAC (srw_ss()) [] THEN
-     `mins = {x}` suffices_by SRW_TAC [] [] THEN
-     FULL_SIMP_TAC (srw_ss()) [minimal_elements_def] THEN
-     Q.UNABBREV_TAC `mins` THEN
-     FULL_SIMP_TAC (srw_ss()) [EXTENSION, linear_order_def, SUBSET_DEF] THEN
-     METIS_TAC [],
- Q.PAT_ASSUM `!s' x r'. P s' x r'`
-             (STRIP_ASSUME_TAC o
-              Q.SPECL [`s' DELETE THE (get_min r' (s', r))`, `x`, `r'`]) THEN
-     `SING (minimal_elements (minimal_elements s' r) r')`
-             by (MATCH_MP_TAC finite_prefix_linear_order_has_unique_minimal THEN
-                 Q.EXISTS_TAC `s` THEN
-                 SRW_TAC [] [SUBSET_DEF, minimal_elements_def] THEN
-                 FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF]) THEN
-     FULL_SIMP_TAC (srw_ss()) [get_min_def, LET_THM] THEN
-     FULL_SIMP_TAC (srw_ss()) [SING_DEF] THEN
-     FULL_SIMP_TAC (srw_ss()) [] THEN
-     Cases_on `x = x'` THENL
-     [Q.EXISTS_TAC `0` THEN
-          SRW_TAC [] [nth_min_def, get_min_def] THEN
-          UNABBREV_ALL_TAC THEN
-          SRW_TAC [] [],
-      `x IN s' /\ x' IN s'`
-              by (FULL_SIMP_TAC (srw_ss()) [minimal_elements_def,
-                                            EXTENSION] THEN
-                    METIS_TAC []) THEN
-          `v = CARD ({x' | x' IN s' /\ (x',x) IN r'} DELETE x')`
-                  by (SRW_TAC [] [] THEN1
-                      DECIDE_TAC THEN
-                      FULL_SIMP_TAC (srw_ss()) [minimal_elements_def, EXTENSION,
-                                                linear_order_def,
-                                                SUBSET_DEF] THEN
-                      METIS_TAC []) THEN
-          `{x' | x' IN s' /\ (x',x) IN r'} DELETE x' =
-           {x'' | (x'' IN s' /\ x'' <> x') /\ (x'',x) IN r'}`
-                  by (FULL_SIMP_TAC (srw_ss()) [EXTENSION, linear_order_def,
-                                                domain_def, SUBSET_DEF] THEN
-                      METIS_TAC []) THEN
-          FULL_SIMP_TAC (srw_ss()) [] THEN
-          `?m. nth_min r' (s' DELETE x', r) m = SOME x`
-                  by (Q.PAT_ASSUM `P ==> ?m. Q m` MATCH_MP_TAC THEN
-                      FULL_SIMP_TAC (srw_ss()) [minimal_elements_def,
-                                                rrestrict_def,
-                                                SUBSET_DEF]) THEN
-          Q.EXISTS_TAC `SUC m` THEN
-          SRW_TAC [] [nth_min_def] THEN
-          Q.UNABBREV_TAC `min` THEN
-          SRW_TAC [] [] THEN
-          Cases_on `get_min r' (s', r)` THEN
-          FULL_SIMP_TAC (srw_ss()) [get_min_def, LET_THM, SING_DEF] THEN
-          METIS_TAC [NOT_SOME_NONE, CHOICE_SING, SOME_11]]]);
+            METIS_TAC [INTER_COMM, INTER_FINITE])
+THENL [
+  Q.EXISTS_TAC `0` THEN
+  SRW_TAC [] [nth_min_def, get_min_def] THEN
+  `{x' | x' IN s' /\ (x', x) IN r'} = {}` by METIS_TAC [CARD_EQ_0] THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  `mins = {x}` suffices_by SRW_TAC [] [] THEN
+  FULL_SIMP_TAC (srw_ss()) [minimal_elements_def] THEN
+  Q.UNABBREV_TAC `mins` THEN
+  FULL_SIMP_TAC (srw_ss()) [EXTENSION, linear_order_def, SUBSET_DEF] THEN
+  METIS_TAC [],
 
-val nth_min_surj_lem2 = Q.prove (
-`!r' s r m m' x x'.
-  (nth_min r' (s, r) m = SOME x) /\
-  (nth_min r' (s DIFF {x | ?n. n <= m /\ (nth_min r' (s,r) n = SOME x)}, r) m'
-   =
-   SOME x')
+  first_x_assum (Q.SPECL_THEN [‘s' DELETE THE (get_min r' (s',r))’, ‘x’, ‘r'’]
+                             strip_assume_tac) >>
+  `SING (minimal_elements (minimal_elements s' r) r')`
+    by (MATCH_MP_TAC finite_prefix_linear_order_has_unique_minimal THEN
+        Q.EXISTS_TAC `s` THEN
+        SRW_TAC [] [SUBSET_DEF, minimal_elements_def] THEN
+        FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF]) THEN
+  FULL_SIMP_TAC (srw_ss()) [get_min_def, LET_THM] THEN
+  FULL_SIMP_TAC (srw_ss()) [SING_DEF] THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  Q.RENAME_TAC [‘minimal_elements (minimal_elements _ _) _ = {X}’] >>
+  Cases_on `x = X` THENL [
+    Q.EXISTS_TAC `0` THEN
+    SRW_TAC [] [nth_min_def, get_min_def, LET_THM],
+    `x IN s' /\ X IN s'`
+      by (FULL_SIMP_TAC (srw_ss()) [minimal_elements_def, EXTENSION] THEN
+          METIS_TAC []) THEN
+    `v = CARD ({x' | x' IN s' /\ (x',x) IN r'} DELETE X)`
+      by (SRW_TAC [] [] THEN1 DECIDE_TAC THEN
+          FULL_SIMP_TAC (srw_ss()) [minimal_elements_def, EXTENSION,
+                                    linear_order_def,
+                                    SUBSET_DEF] THEN
+          METIS_TAC []) THEN
+    `{x' | x' IN s' /\ (x',x) IN r'} DELETE X =
+     {x'' | (x'' IN s' /\ x'' <> X) /\ (x'',x) IN r'}`
+      by (FULL_SIMP_TAC (srw_ss()) [EXTENSION, linear_order_def,
+                                    domain_def, SUBSET_DEF] THEN
+          METIS_TAC []) THEN
+    FULL_SIMP_TAC (srw_ss()) [] THEN
+    `?m. nth_min r' (s' DELETE X, r) m = SOME x`
+      by (Q.PAT_ASSUM `P ==> ?m. Q m` MATCH_MP_TAC THEN
+          FULL_SIMP_TAC (srw_ss()) [minimal_elements_def,
+                                    rrestrict_def,
+                                    SUBSET_DEF]) THEN
+    Q.EXISTS_TAC `SUC m` THEN
+    SRW_TAC [] [nth_min_def] THEN
+    Q.UNABBREV_TAC `min` THEN
+    SRW_TAC [] [] THEN
+    Cases_on `get_min r' (s', r)` THEN
+    FULL_SIMP_TAC (srw_ss()) [get_min_def, LET_THM, SING_DEF] THEN
+    METIS_TAC [NOT_SOME_NONE, CHOICE_SING, SOME_11]
+  ]
+]
+QED
+
+Triviality nth_min_surj_lem2:
+  !r' s r m m' x x'.
+    nth_min r' (s, r) m = SOME x /\
+    nth_min r' (s DIFF {x | ?n. n <= m /\ (nth_min r' (s,r) n = SOME x)}, r) m'
+       =
+    SOME x'
   ==>
-  (nth_min r' (s, r) (SUC (m + m')) = SOME x')`,
+    (nth_min r' (s, r) (SUC (m + m')) = SOME x')
+Proof
 Induct_on `m` THEN
-SRW_TAC [] [nth_min_def] THEN
-UNABBREV_ALL_TAC THEN
+SRW_TAC [] [nth_min_def, LET_THM] THEN
 SRW_TAC [] [DELETE_DEF] THEN
 FULL_SIMP_TAC (srw_ss()) [LET_THM] THEN
-Cases_on `get_min r' (s, r)` THEN
+REV_FULL_SIMP_TAC (srw_ss()) [] THEN
+Q.RENAME_TAC [‘get_min R (s,r) <> NONE’,
+              ‘nth_min R (s DELETE _, _) m1 = SOME x1’,
+              ‘nth_min R _ (SUC m1 + m2) = SOME x2’] >>
+Cases_on `get_min R (s, r)` THEN
 FULL_SIMP_TAC (srw_ss()) [DELETE_DEF] THEN
 SRW_TAC [] [arithmeticTheory.ADD] THEN
-Q.PAT_ASSUM `!r' s r m' x x'. P r' s r m' x x'` MATCH_MP_TAC THEN
+first_assum irule THEN
 SRW_TAC [] [] THEN
-`s DIFF {x''} DIFF
-        {x | ?n. n <= m /\ (nth_min r' (s DIFF {x''}, r) n = SOME x)} =
- s DIFF {x | ?n.  n <= SUC m /\ (nth_min r' (s,r) n = SOME x)}`
-        by (SRW_TAC [] [EXTENSION] THEN
-            EQ_TAC THEN
-            SRW_TAC [] [] THENL
-            [Cases_on `n` THEN
-                 SRW_TAC [] [nth_min_def] THEN
-                 UNABBREV_ALL_TAC THEN
-                 SRW_TAC [] [DELETE_DEF] THEN
-                 POP_ASSUM (MP_TAC o Q.SPEC `n'`) THEN
-                 SRW_TAC [] [] THENL
-                 [DISJ1_TAC THEN
-                      DECIDE_TAC,
-                  METIS_TAC []],
-             CCONTR_TAC THEN
-                 SRW_TAC [] [] THEN
-                 POP_ASSUM (MP_TAC o Q.SPEC `0`) THEN
-                 SRW_TAC [] [nth_min_def],
-             POP_ASSUM (MP_TAC o Q.SPEC `SUC n`) THEN
-                 SRW_TAC [] [] THENL
-                 [DISJ1_TAC THEN
-                      DECIDE_TAC,
-                  FULL_SIMP_TAC (srw_ss()) [nth_min_def, LET_THM] THEN
-                  POP_ASSUM MP_TAC THEN
-                  SRW_TAC [] [DELETE_DEF]]]) THEN
-SRW_TAC [] []);
+Q.RENAME_TAC [‘get_min R _ = SOME x0’, ‘s DIFF {x0} DIFF _’] >>
+‘s DIFF {x0} DIFF
+        {x | ?n. n <= m1 /\ (nth_min R (s DIFF {x0}, r) n = SOME x)} =
+ s DIFF {x | ?n.  n <= SUC m1 /\ (nth_min R (s,r) n = SOME x)}’
+  by (SRW_TAC [] [EXTENSION] THEN EQ_TAC THEN SRW_TAC [] [] THENL [
+        Cases_on `n` THEN SRW_TAC [] [nth_min_def, LET_THM] THEN
+        SRW_TAC [] [DELETE_DEF] THEN
+        Q.RENAME_TAC [‘SUC m1 <= N \/ nth_min _ _ N <> _’] >>
+        first_x_assum (Q.SPEC_THEN ‘N’ mp_tac) >>
+        SRW_TAC [] [] THENL [
+          DISJ1_TAC THEN DECIDE_TAC,
+          ASM_REWRITE_TAC[]
+        ],
+        DISCH_THEN SUBST_ALL_TAC >> POP_ASSUM (Q.SPEC_THEN ‘0’ MP_TAC) THEN
+        SRW_TAC [] [nth_min_def],
+        Q.RENAME_TAC [‘~(N <= m1) \/ nth_min _ _ N <> SOME _’] >>
+        POP_ASSUM (Q.SPEC_THEN ‘SUC N’ MP_TAC) >>
+        SRW_TAC [] [] >- (DISJ1_TAC THEN DECIDE_TAC) >>
+        pop_assum mp_tac >>
+        ASM_SIMP_TAC (srw_ss()) [nth_min_def, LET_THM, DELETE_DEF]
+      ]) THEN
+SRW_TAC [] []
+QED
 
 
 val nth_min_surj_lem3 = Q.prove (

@@ -446,19 +446,16 @@ starts >%s%s<"
           (delete-region (- start 1) (point))))))
 
 
-(defun word-list-to-regexp (words)
-  (mapconcat (lambda (s) (concat "\\<" s "\\>")) words "\\|"))
-
 (setq hol-open-terminator-regexp
       (concat
        (mapconcat (lambda (s) (concat "^" s "\\>"))
                   '("Theorem" "Definition" "Inductive" "CoInductive"
                     "Triviality" "Datatype" "Type" "Overload")
                   "\\|")
-       "\\|"
-       (word-list-to-regexp
-        '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
-          "datatype" "nonfix" "exception" "end" "structure"))))
+       "\\|;\\|"
+       (regexp-opt
+        '("val" "fun" "in" "infix" "infixl" "infixr" "open" "local" "type"
+          "datatype" "nonfix" "exception" "end" "structure") 'symbols)))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
@@ -483,7 +480,7 @@ starts >%s%s<"
                          hol-quoted-theorem-proof-re-begin "\\|"
                          hol-quoted-definition-re-begin "\\|"
                          "\\(" sml-struct-id-regexp "\\)\\.\\w+" "\\|"
-                         "\\<open\\>")))
+                         "\\_<open\\_>")))
             (while (re-search-forward regexp (point-max) t)
               (let ((pp (syntax-ppss))
                     (ms (match-string-no-properties 0)))
@@ -505,7 +502,7 @@ starts >%s%s<"
                           (error "Unbalanced “ in region")))
                      ((and (or (string-prefix-p "Theorem" ms)
                                (string-prefix-p "Triviality" ms))
-                           (char= (char-before) ?:))
+                           (char-equal (char-before) ?:))
                       (if (not (re-search-forward "^Proof" nil t))
                           (error "Unbalanced `Theorem/Triviality' in region")))
                      ((and (string-prefix-p "Definition" ms)

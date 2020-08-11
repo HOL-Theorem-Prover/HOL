@@ -313,6 +313,27 @@ fun ABBRS_THEN thl_tac thl =
 val MK_ABBREVS_OLDSTYLE =
     RULE_ASSUM_TAC (fn th => (th |> DeAbbrev |> SYM) handle HOL_ERR _ => th)
 
+(* ----------------------------------------------------------------------
+    Abbreviation Tidying
+
+    Abbreviations should be of the form
+
+       Abbrev(v = e)
+
+    with v a variable. The tidying process eliminates assumptions that
+    have Abbrev present at the top with an argument that is not of the
+    right shape. As simplification sees abbreviation equations as
+    rewrites of the form e = v (replacing occurrences of e with the
+    abbreviation), the tidying process will flip equations to keep
+    this "orientation".
+   ---------------------------------------------------------------------- *)
+
+fun TIDY_ABBREV_CONV t =
+    if is_malformed_abbrev t then
+      (REWR_CONV markerTheory.Abbrev_def THENC TRY_CONV (REWR_CONV EQ_SYM_EQ)) t
+    else ALL_CONV t
+val TIDY_ABBREV_RULE = CONV_RULE TIDY_ABBREV_CONV
+val TIDY_ABBREVS = RULE_ASSUM_TAC TIDY_ABBREV_RULE
 
 
 (*---------------------------------------------------------------------------*)
@@ -392,5 +413,53 @@ in
 end
 
 fun LABEL_RESOLVE th (asl, w) = hd (LLABEL_RESOLVE [th] asl)
+
+(* ----------------------------------------------------------------------
+    using : tactic * thm -> tactic
+
+    using th tac stashes theorem th in the goal so that tactic tac can
+    use it if desired. If the tactic terminates, the stashed theorem
+    is removed.
+
+    Stashing is done by adding an assumption encoding the name of the
+    theorem to the assumption list. This will cause mess-ups if you
+    attempt something like
+
+       pop_assum foo using bar
+
+    so, don't do that.
+
+    This can be nested, with multiple theorems stashed at once; the
+    cleanup looks for the exact using theorem that it stashed when it
+    removes it and does so with UNDISCH_THEN. So, if there are
+    multiples of the same name, the most recent will be taken.
+
+   ---------------------------------------------------------------------- *)
+
+fun tac using th =
+    let
+      val uth = MK_USING th
+    in
+      ASSUME_TAC uth >>
+      tac >>
+      UNDISCH_THEN (concl uth) (K ALL_TAC)
+    end
+
+fun usingA tac th = tac using th
+
+fun loc2thm loc =
+    case loc of
+        DB.Local s => (valOf (DB.local_thm s)
+                       handle Option => raise ERR "loc2thm" "No such theorem")
+      | DB.Stored {Name,Thy} =>
+        DB.fetch Thy Name
+        handle HOL_ERR _ => raise ERR "loc2thm" "No such theorem"
+
+
+fun maybe_using gen ttac (g as (asl,w)) =
+    case asl of
+        h::_ => if is_using h then ttac (DEST_USING (ASSUME h)) g
+                else MAP_FIRST ttac (gen()) g
+      | _ => MAP_FIRST ttac (gen()) g
 
 end

@@ -13,8 +13,6 @@ val _ = new_theory "helperSet";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -1176,16 +1174,17 @@ val MIN_SET_TEST = store_thm(
        and m IN s ==> m <= x         by implication
    Hence x = m.
 *)
-val MAX_SET_TEST_IFF = store_thm(
-  "MAX_SET_TEST_IFF",
-  ``!s. FINITE s /\ s <> {} ==> !x. x IN s ==> ((MAX_SET s = x) <=> (!y. y IN s ==> y <= x))``,
+Theorem MAX_SET_TEST_IFF:
+  !s. FINITE s /\ s <> {} ==>
+      !x. x IN s ==> ((MAX_SET s = x) <=> (!y. y IN s ==> y <= x))
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = MAX_SET s` >>
-  rw[EQ_IMP_THM] >-
-  rw[MAX_SET_DEF, Abbr`m`] >>
+  rw[EQ_IMP_THM] >- rw[MAX_SET_DEF, Abbr‘m’] >>
   `m IN s /\ x <= m` by rw[MAX_SET_DEF, Abbr`m`] >>
   `m <= x` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: s <> {} ==> !x. x IN s ==> ((MIN_SET s = x) <=> (!y. y IN s ==> x <= y)) *)
 (* Proof:
@@ -1196,16 +1195,15 @@ val MAX_SET_TEST_IFF = store_thm(
        and m IN s ==> x <= m    by implication
    Hence x = m.
 *)
-val MIN_SET_TEST_IFF = store_thm(
-  "MIN_SET_TEST_IFF",
-  ``!s. s <> {} ==> !x. x IN s ==> ((MIN_SET s = x) <=> (!y. y IN s ==> x <= y))``,
+Theorem MIN_SET_TEST_IFF:
+  !s. s <> {} ==> !x. x IN s ==> ((MIN_SET s = x) <=> (!y. y IN s ==> x <= y))
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = MIN_SET s` >>
-  rw[EQ_IMP_THM] >-
-  rw[MIN_SET_LEM, Abbr`m`] >>
+  rw[EQ_IMP_THM] >- rw[MIN_SET_LEM, Abbr‘m’] >>
   `m IN s /\ m <= x` by rw[MIN_SET_LEM, Abbr`m`] >>
-  `x <= m` by rw[] >>
-  decide_tac);
+  `x <= m` by rw[] >> decide_tac
+QED
 
 (* Theorem: MAX_SET {} = 0 *)
 (* Proof: by MAX_SET_REWRITES *)
@@ -1703,20 +1701,23 @@ val finite_partition_property = store_thm(
    (3) u UNION v = s       by IN_UNION
    (4) DISJOINT u v, true  by IN_DISJOINT, MEMBER_NOT_EMPTY
 *)
-val finite_partition_by_predicate = store_thm(
-  "finite_partition_by_predicate",
-  ``!s. FINITE s ==> !P. let u = {x | x IN s /\ P x} in let v = {x | x IN s /\ ~P x} in
-       FINITE u /\ FINITE v /\ s =|= u # v``,
+Theorem finite_partition_by_predicate:
+  !s. FINITE s ==>
+      !P. let u = {x | x IN s /\ P x} ;
+              v = {x | x IN s /\ ~P x}
+          in
+              FINITE u /\ FINITE v /\ s =|= u # v
+Proof
   rw_tac std_ss[] >| [
     `u SUBSET s` by rw[SUBSET_DEF, Abbr`u`] >>
     metis_tac[SUBSET_FINITE],
     `v SUBSET s` by rw[SUBSET_DEF, Abbr`v`] >>
     metis_tac[SUBSET_FINITE],
-    fs[EXTENSION] >>
+    simp[EXTENSION, Abbr‘u’, Abbr‘v’] >>
     metis_tac[],
-    fs[EXTENSION] >>
-    metis_tac[IN_DISJOINT, MEMBER_NOT_EMPTY]
-  ]);
+    simp[Abbr‘u’, Abbr‘v’, DISJOINT_DEF, EXTENSION] >> metis_tac[]
+  ]
+QED
 
 (* Theorem: u SUBSET s ==> let v = s DIFF u in s =|= u # v *)
 (* Proof:
@@ -2131,10 +2132,10 @@ val closure_comm_assoc_fun_def = Define`
            = ITSET f u (f y (f x b))            by y NOTIN u
        Applying the commute_associativity of f, LHS = RHS.
 *)
-val SUBSET_COMMUTING_ITSET_INSERT = store_thm(
-  "SUBSET_COMMUTING_ITSET_INSERT",
-  ``!f s t. FINITE s /\ s SUBSET t /\ closure_comm_assoc_fun f t ==>
-   !(x b)::t. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b)``,
+Theorem SUBSET_COMMUTING_ITSET_INSERT:
+  !f s t. FINITE s /\ s SUBSET t /\ closure_comm_assoc_fun f t ==>
+          !(x b)::t. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b)
+Proof
   completeInduct_on `CARD s` >>
   rule_assum_tac(SIMP_RULE bool_ss[GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]) >>
   rw[RES_FORALL_THM] >>
@@ -2151,14 +2152,13 @@ val SUBSET_COMMUTING_ITSET_INSERT = store_thm(
     `CARD z < CARD s` by decide_tac >>
     `z = s DELETE y` by metis_tac[DELETE_INSERT] >>
     `z SUBSET t` by metis_tac[DELETE_SUBSET, SUBSET_TRANS] >>
-    Cases_on `x = y` >-
-    metis_tac[] >>
+    Cases_on `x = y` >- metis_tac[] >>
     `x IN z` by metis_tac[IN_INSERT] >>
     qabbrev_tac `u = z DELETE x` >>
     `z = x INSERT u` by rw[INSERT_DELETE, Abbr`u`] >>
     `x NOTIN u` by metis_tac[IN_DELETE] >>
     qabbrev_tac `v = y INSERT u` >>
-    `s = x INSERT v` by rw[INSERT_COMM, Abbr `v`] >>
+    `s = x INSERT v` by simp[INSERT_COMM, Abbr `v`] >>
     `x NOTIN v` by rw[Abbr `v`] >>
     `FINITE v` by metis_tac[FINITE_INSERT] >>
     `CARD s = SUC (CARD v)` by metis_tac[CARD_INSERT] >>
@@ -2170,8 +2170,7 @@ val SUBSET_COMMUTING_ITSET_INSERT = store_thm(
     metis_tac[],
     `x INSERT s <> {}` by rw[] >>
     `y INSERT z = x INSERT s` by rw[CHOICE_INSERT_REST, Abbr`y`, Abbr`z`] >>
-    Cases_on `x = y` >-
-    metis_tac[DELETE_INSERT, ITSET_PROPERTY] >>
+    Cases_on `x = y` >- metis_tac[DELETE_INSERT, ITSET_PROPERTY] >>
     `x IN z /\ y IN s` by metis_tac[IN_INSERT] >>
     qabbrev_tac `u = s DELETE y` >>
     `s = y INSERT u` by rw[INSERT_DELETE, Abbr`u`] >>
@@ -2191,7 +2190,8 @@ val SUBSET_COMMUTING_ITSET_INSERT = store_thm(
     `_ = ITSET f u (f y (f x b))` by rw[] >>
     `f x (f y b) = f y (f x b)` by prove_tac[closure_comm_assoc_fun_def] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* This is a generalisation of COMMUTING_ITSET_INSERT, removing the requirement of commuting everywhere. *)
 

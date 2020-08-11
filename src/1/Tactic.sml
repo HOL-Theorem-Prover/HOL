@@ -958,6 +958,46 @@ val suff_tac = SUFF_TAC
 
 fun KNOW_TAC tm = REVERSE (SUFF_TAC tm)
 
+(* ----------------------------------------------------------------------
+    Eliminate an equation on a variable (as well as t = t instances)
+   ---------------------------------------------------------------------- *)
+
+fun eliminable tm =
+    let val (lhs,rhs) = dest_eq tm
+    in
+      aconv lhs rhs orelse
+      (is_var lhs andalso not (free_in lhs rhs)) orelse
+      (is_var rhs andalso not (free_in rhs lhs))
+    end handle HOL_ERR _ => is_bool_atom tm
+
+fun orient th =
+ let
+   val c = concl th
+ in
+   if is_bool_atom c then
+     if is_neg c then EQF_INTRO th else EQT_INTRO th
+   else
+     let
+       val (lhs,rhs) = dest_eq c
+     in
+       if is_var lhs then
+         if is_var rhs then
+           case Term.compare (lhs, rhs) of LESS  => SYM th | other => th
+         else th
+       else SYM th
+     end
+ end;
+
+fun eliminable_eqvar t =
+    is_bool_atom t orelse (let val (l,r) = dest_eq t in l !~ r end)
+
+fun VSUBST_TAC thm =
+    if eliminable_eqvar (concl thm) then
+      SUBST_ALL_TAC (orient thm)
+    else (* do nothing as it's of form t = t *)
+      ALL_TAC
+
+
 (*----------------------------------------------------------------------*
  *  DEEP_INTROk_TAC : thm -> tactic -> tactic                           *
  *----------------------------------------------------------------------*)
@@ -1088,10 +1128,26 @@ val impl_keep_tac =
 
 
 open mp_then
-fun drule ith = first_assum (mp_then (Pos hd) mp_tac ith)
-fun dxrule ith = first_x_assum (mp_then (Pos hd) mp_tac ith)
-fun drule_then k ith = first_assum (mp_then (Pos hd) k ith)
-fun dxrule_then k ith = first_x_assum (mp_then (Pos hd) k ith)
+fun dGEN sel pos k = sel o mp_then pos k
+val drule                  = dGEN first_assum   (Pos hd) mp_tac
+val rev_drule              = dGEN last_assum    (Pos hd) mp_tac
+val dxrule                 = dGEN first_x_assum (Pos hd) mp_tac
+val rev_dxrule             = dGEN last_x_assum  (Pos hd) mp_tac
+
+fun drule_then k           = dGEN first_assum   (Pos hd)    k
+fun dxrule_then k          = dGEN first_x_assum (Pos hd)    k
+fun rev_drule_then k       = dGEN last_assum    (Pos hd)    k
+fun rev_dxrule_then k      = dGEN last_x_assum  (Pos hd)    k
+
+fun drule_at p             = dGEN first_assum       p    mp_tac
+fun dxrule_at p            = dGEN first_x_assum     p    mp_tac
+fun rev_drule_at p         = dGEN last_assum        p    mp_tac
+fun rev_dxrule_at p        = dGEN last_x_assum      p    mp_tac
+
+fun drule_at_then p k      = dGEN first_assum       p       k
+fun dxrule_at_then p k     = dGEN first_x_assum     p       k
+fun rev_drule_at_then p k  = dGEN last_assum        p       k
+fun rev_dxrule_at_then p k = dGEN last_x_assum      p       k
 
 fun isfa_imp th = th |> concl |> strip_forall |> #2 |> is_imp
 fun dall_prim k fa ith0 g =
@@ -1099,9 +1155,16 @@ fun dall_prim k fa ith0 g =
               (k o assert (not o isfa_imp))
               (assert isfa_imp ith0)
               g
-val drule_all = dall_prim mp_tac first_assum
-val dxrule_all = dall_prim mp_tac first_x_assum
-fun drule_all_then k = dall_prim k first_assum
-fun dxrule_all_then k = dall_prim k first_x_assum
+val drule_all             = dall_prim mp_tac first_assum
+val dxrule_all            = dall_prim mp_tac first_x_assum
+fun drule_all_then k      = dall_prim   k    first_assum
+fun dxrule_all_then k     = dall_prim   k    first_x_assum
 
-end (* Tactic *)
+val rev_drule_all         = dall_prim mp_tac last_assum
+val rev_dxrule_all        = dall_prim mp_tac last_x_assum
+fun rev_drule_all_then k  = dall_prim   k    last_assum
+fun rev_dxrule_all_then k = dall_prim   k    last_x_assum
+
+open resolve_then
+
+end (* structure Tactic *)

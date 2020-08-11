@@ -101,20 +101,12 @@ end
 local
   exception InternalDie of string
   fun idie s = raise InternalDie s
-  fun test_conv (conv: conv) tm =
+  fun test_conv nm (conv: conv) tm =
     let
       val (t, expected) = boolSyntax.dest_eq tm
-      val s = fst (boolSyntax.dest_strip_comb t)
-      val s = case String.tokens (Lib.equal #"$") s of
-                 [_, s] => s
-               | _ => idie "FAILED\n  Couldn't get name."
-      val _ = tprint s
-      val th = conv t handle _ => idie "FAILED - exception raised"
-      val r = rhs (concl th) handle HOL_ERR _ => idie "FAILED - no RHS"
     in
-      if aconv r expected then OK()
-      else die ("FAILED\n  Got ``" ^ term_to_string r ^ "``")
-    end handle InternalDie s => die s
+      testutils.convtest (nm ^ ": " ^ term_to_string tm, conv, t, expected)
+    end
   fun getlocpragma s =
       let
         open Substring
@@ -134,11 +126,20 @@ local
          if CharVector.all Char.isSpace s then (r+1, ts)
          else (r+1, Parse.Term [QUOTE (mkpragma(r,1) ^ s)] :: ts)
    in
-     #2 (List.foldl foldthis (r,[]) lines)
+     #2 (List.foldl foldthis (r,[]) lines) |> List.rev
    end
 in
-  fun qtest_conv conv q = List.app (test_conv conv) (quote_to_term_list q)
+  fun qtest_conv nm conv q = List.app (test_conv nm conv) (quote_to_term_list q)
 end
+
+val c = SIMP_CONV (srw_ss() ++ wordsLib.WORD_CANCEL_ss) []
+val _ = qtest_conv "simp+WORD_CANCEL" c
+  ‘(x + y + f z:'a word = a + b + y) <=> (x + f z = a + b)
+   (x + -1w * y = e) <=> (e + y = x)
+   (a + b + c + d:'a word = x + b + y + d + e) <=> (e + x + y = a + c)
+   ((rm:word32) << 2 = 4294967288w) <=> (rm << 2 + 8w = 0w)
+   (a + 4w:word32 = b + -2w) <=> (a + 6w = b)
+  ’
 
 val blast_true = test blastLib.BBLAST_PROVE
 val blast_fail = test_fail "BBLAST_PROVE" blastLib.BBLAST_PROVE
@@ -540,9 +541,7 @@ val _ = srw_true
 val _ = srw_true
   ``15w && a || (a ?? -1w) = word_T: word4``
 
-val () = print "\nWORD_GROUND_CONV tests\n\n"
-
-val () = qtest_conv wordsLib.WORD_GROUND_CONV
+val () = qtest_conv "WORD_GROUND_CONV" wordsLib.WORD_GROUND_CONV
  `BIT_SET 2 5 = {2; 4}
   add_with_carry (12w:word8, 11w, T) = (24w,F,F)
   bit_count (0b101101w: word8) = 4
@@ -641,8 +640,12 @@ val () = qtest_conv wordsLib.WORD_GROUND_CONV
   word_xor 3w 5w : word8 = 6w
   `
 
+
+
 val elapsed = Timer.checkRealTimer tt
 
 val _ = print ("\nTotal time: " ^ Lib.time_to_string elapsed ^ "\n");
+
+
 
 val _ = OS.Process.exit OS.Process.success

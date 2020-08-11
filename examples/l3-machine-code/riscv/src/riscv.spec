@@ -4953,7 +4953,7 @@ instruction DecodeRVC(h::half) =
      case '011 i9`1 00010 i4`1 i6`1 imi`2 i5`1 01' => ArithI( ADDI( 2, 2, i9 ^ 3 : imi : i6 : i5 : i4 : '0000'))
 
      case '011 0     rd 00000 01' => UnknownInstruction
-     case '011 i17`1 rd imi`5 01' => ArithI(LUI(rd, i17 ^ 3 : imi : '000000000000'))
+     case '011 i17`1 rd imi`5 01' => ArithI(LUI(rd, i17 ^ 15 : imi))
 
      case '100 i5`1 00 r imi`5 01' => Shift(SRLI('01' : r, '01' : r, i5 : imi))
      case '100 i5`1 01 r imi`5 01' => Shift(SRAI('01' : r, '01' : r, i5 : imi))

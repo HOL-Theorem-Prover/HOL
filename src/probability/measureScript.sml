@@ -54,6 +54,8 @@ val _ = hide "measure"; (* prim_recTheory *)
 val measure_def = Define
    `measure         (sp :'a set, sts :('a set) set, mu :('a set) -> extreal) = mu`;
 
+val _ = export_rewrites ["m_space_def", "measurable_sets_def", "measure_def"];
+
 (* NOTE: `{} IN measurable_sets m` is not assumed, instead it must be provided by
    definition of the system of sets. *)
 val positive_def = Define
@@ -127,7 +129,6 @@ val measure_preserving_def = Define
      !s.
       s IN measurable_sets m2 ==>
            (measure m1 ((PREIMAGE f s) INTER (m_space m1)) = measure m2 s)}`;
-
 
 (* ------------------------------------------------------------------------- *)
 (*  Basic measure theory theorems                                            *)
@@ -677,6 +678,29 @@ val MEASURE_SPACE_POSITIVE = store_thm
   ("MEASURE_SPACE_POSITIVE",``!m. measure_space m ==> positive m``,
    PROVE_TAC [measure_space_def]);
 
+Theorem measure_space_eq :
+    !m1 m2. measure_space m1 /\
+           (m_space m2 = m_space m1) /\
+           (measurable_sets m2 = measurable_sets m1) /\
+           (!s. s IN measurable_sets m2 ==> (measure m2 s = measure m1 s)) ==>
+            measure_space m2
+Proof
+    rpt STRIP_TAC
+ >> RW_TAC std_ss [measure_space_def]
+ >| [ (* goal 1 (of 3) *)
+      fs [measure_space_def],
+      (* goal 2 (of 3) *)
+      IMP_RES_TAC MEASURE_SPACE_POSITIVE \\
+      rw [positive_def]
+      >- (‘{} IN measurable_sets m1’ by
+            fs [measure_space_def, sigma_algebra_def, algebra_def] \\
+          fs [positive_def]) \\
+      fs [positive_def],
+      (* goal 3 (of 3) *)
+      rw [countably_additive_def, IN_FUNSET, IN_UNIV, o_DEF] \\
+      fs [measure_space_def, countably_additive_def, IN_FUNSET, IN_UNIV, o_DEF] ]
+QED
+
 val MEASURE_SPACE_INTER = store_thm
   ("MEASURE_SPACE_INTER",
   ``!m s t. (measure_space m) /\ (s IN measurable_sets m) /\ (t IN measurable_sets m) ==>
@@ -697,6 +721,25 @@ val MEASURE_SPACE_DIFF = store_thm
             (s DIFF t IN measurable_sets m)``,
    METIS_TAC [measure_space_def,sigma_algebra_def,subsets_def,
               (REWRITE_RULE [subsets_def] (Q.SPEC `(m_space m,measurable_sets m)` ALGEBRA_DIFF))]);
+
+Theorem MEASURE_SPACE_SPACE :
+    !m. measure_space m ==> m_space m IN measurable_sets m
+Proof
+    RW_TAC std_ss [measure_space_def, sigma_algebra_def, subsets_def]
+ >> MATCH_MP_TAC
+      (REWRITE_RULE [space_def, subsets_def]
+                    (Q.SPEC `(m_space m,measurable_sets m)` ALGEBRA_SPACE))
+ >> ASM_REWRITE_TAC []
+QED
+
+Theorem MEASURE_SPACE_COMPL :
+    !m s. measure_space m /\ s IN measurable_sets m ==>
+          (m_space m) DIFF s IN measurable_sets m
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC MEASURE_SPACE_DIFF >> art []
+ >> MATCH_MP_TAC MEASURE_SPACE_SPACE >> art []
+QED
 
 val MEASURE_SPACE_BIGUNION = store_thm
   ("MEASURE_SPACE_BIGUNION",
@@ -856,10 +899,11 @@ val MEASURE_SPACE_FINITE_MEASURE = store_thm
    METIS_TAC [MEASURE_SPACE_INCREASING,INCREASING,MEASURE_SPACE_MSPACE_MEASURABLE,
               lt_infty,let_trans,MEASURE_SPACE_SUBSET_MSPACE]);
 
-val MEASURE_SPACE_REDUCE = store_thm
-  ("MEASURE_SPACE_REDUCE", ``!m. (m_space m, measurable_sets m, measure m) = m``,
-    Cases >> Q.SPEC_TAC (`r`, `r`)
- >> Cases >> RW_TAC std_ss [m_space_def, measurable_sets_def, measure_def]);
+Theorem MEASURE_SPACE_REDUCE[simp] :
+    !m. (m_space m, measurable_sets m, measure m) = m
+Proof
+    GEN_TAC >> Cases_on ‘m’ >> Cases_on ‘r’ >> rw []
+QED
 
 val MONOTONE_CONVERGENCE = store_thm
   ("MONOTONE_CONVERGENCE",
@@ -1625,6 +1669,11 @@ val sigma_finite_def = Define
      (BIGUNION (IMAGE f UNIV) = m_space m) /\
      (!n. measure m (f n) < PosInf)`;
 
+(* this definition is sometimes useful for not repeating ‘m’ *)
+Definition sigma_finite_measure_space_def :
+    sigma_finite_measure_space m = (measure_space m /\ sigma_finite m)
+End
+
 (* NOTE: this definition should always be used together with a system of sets,
    e.g. algebra, ring, semiring, ... because by itself `m` is not meaningful. *)
 val premeasure_def = Define `
@@ -1913,10 +1962,10 @@ val UNIQUENESS_OF_MEASURE = store_thm
  >- (Q.PAT_ASSUM `dynkin sp sts = sigma sp sts` (ONCE_REWRITE_TAC o wrap o SYM) \\
      GEN_TAC >> `sts SUBSET subsets (D j)` by PROVE_TAC [] \\
      POP_ASSUM (MP_TAC o (MATCH_MP (Q.SPECL [`sp`, `sts`, `subsets (D j)`] DYNKIN_MONOTONE))) \\
-     METIS_TAC [(Q.SPEC `D j` DYNKIN_OF_DYNKIN_SYSTEM)])
+     METIS_TAC [(Q.SPEC `D j` DYNKIN_STABLE)])
  >> DISCH_TAC
  >> Know `!j. A = subsets (D j)`
- >- (GEN_TAC >> REWRITE_TAC [GSYM SUBSET_SUBSET_EQ] \\
+ >- (GEN_TAC >> REWRITE_TAC [SET_EQ_SUBSET] \\
      CONJ_TAC >- PROVE_TAC [] \\
      REWRITE_TAC [SUBSET_DEF] \\
      Q.UNABBREV_TAC `D` >> BETA_TAC \\
@@ -2143,10 +2192,10 @@ val UNIQUENESS_OF_MEASURE_FINITE = store_thm
  >- (Q.PAT_ASSUM `dynkin sp sts = sigma sp sts` (ONCE_REWRITE_TAC o wrap o SYM) \\
      Q.PAT_ASSUM `sts SUBSET subsets D`
         (MP_TAC o (MATCH_MP (Q.SPECL [`sp`, `sts`, `subsets D`] DYNKIN_MONOTONE))) \\
-     METIS_TAC [Q.SPEC `D` DYNKIN_OF_DYNKIN_SYSTEM])
+     METIS_TAC [Q.SPEC `D` DYNKIN_STABLE])
  >> DISCH_TAC
  >> Know `A = subsets D`
- >- (REWRITE_TAC [GSYM SUBSET_SUBSET_EQ] \\
+ >- (REWRITE_TAC [SET_EQ_SUBSET] \\
      CONJ_TAC >- PROVE_TAC [] \\
      REWRITE_TAC [SUBSET_DEF] \\
      Q.UNABBREV_TAC `D` >> BETA_TAC \\
@@ -2237,10 +2286,9 @@ val SEMIRING_PREMEASURE_FINITE_ADDITIVE = store_thm
  >> MATCH_MP_TAC COUNTABLY_ADDITIVE_FINITE_ADDITIVE
  >> PROVE_TAC [SEMIRING_EMPTY, subsets_def, premeasure_def]);
 
-(* This non-trivial result is needed by CARATHEODORY_SEMIRING *)
-val SEMIRING_PREMEASURE_INCREASING = store_thm (* cf. ADDITIVE_INCREASING *)
-  ("SEMIRING_PREMEASURE_INCREASING",
-  ``!m. semiring (m_space m, measurable_sets m) /\ premeasure m ==> increasing m``,
+Theorem SEMIRING_PREMEASURE_INCREASING :
+    !m. semiring (m_space m, measurable_sets m) /\ premeasure m ==> increasing m
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC SEMIRING_PREMEASURE_FINITE_ADDITIVE
  >> fs [increasing_def, positive_def, premeasure_def]
@@ -2256,10 +2304,7 @@ val SEMIRING_PREMEASURE_INCREASING = store_thm (* cf. ADDITIVE_INCREASING *)
      ONCE_REWRITE_TAC [INSERT_SING_UNION] \\
      MATCH_MP_TAC disjoint_union >> art [disjoint_sing, BIGUNION_SING] \\
      PROVE_TAC [DISJOINT_DEF])
- >> STRIP_TAC
- >> STRIP_ASSUME_TAC (MATCH_MP finite_disjoint_decomposition
-                               (CONJ (ASSUME ``FINITE (s INSERT (c :'a set set))``)
-                                     (ASSUME ``disjoint (s INSERT (c :'a set set))``)))
+ >> DISCH_THEN (STRIP_ASSUME_TAC o (MATCH_MP finite_disjoint_decomposition))
  >> ASM_REWRITE_TAC []
  >> Know `measure m (BIGUNION (IMAGE f (count n))) = SIGMA (measure m o f) (count n)`
  >- (fs [finite_additive_def] \\
@@ -2291,7 +2336,8 @@ val SEMIRING_PREMEASURE_INCREASING = store_thm (* cf. ADDITIVE_INCREASING *)
  >> MATCH_MP_TAC le_addr_imp
  >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_POS
  >> RW_TAC std_ss [FINITE_DELETE, IN_DELETE]
- >> PROVE_TAC [SUBSET_DEF]);
+ >> PROVE_TAC [SUBSET_DEF]
+QED
 
 val RING_PREMEASURE_INCREASING = store_thm (* cf. ADDITIVE_INCREASING *)
   ("RING_PREMEASURE_INCREASING",
@@ -2714,10 +2760,10 @@ val MEASURE_SPACE_COUNTABLY_SUBADDITIVE = store_thm
  >> ASM_REWRITE_TAC [premeasure_def]
  >> MATCH_MP_TAC ALGEBRA_IMP_RING >> art []);
 
-val RING_ADDITIVE_INCREASING = store_thm (* cf. ADDITIVE_INCREASING *)
-  ("RING_ADDITIVE_INCREASING",
-  ``!m. ring (m_space m, measurable_sets m) /\ positive m /\ additive m ==>
-        increasing m``,
+Theorem RING_ADDITIVE_INCREASING :
+    !m. ring (m_space m, measurable_sets m) /\ positive m /\ additive m ==>
+        increasing m
+Proof
     RW_TAC std_ss [increasing_def, positive_def]
  >> Suff
       `?u. u IN measurable_sets m /\ (measure m t = measure m s + measure m u)`
@@ -2726,8 +2772,8 @@ val RING_ADDITIVE_INCREASING = store_thm (* cf. ADDITIVE_INCREASING *)
  >> STRONG_CONJ_TAC >- PROVE_TAC [RING_DIFF, subsets_def]
  >> RW_TAC std_ss []
  >> MATCH_MP_TAC ADDITIVE
- >> RW_TAC std_ss [DISJOINT_DEF,IN_DIFF,IN_UNION,EXTENSION,IN_INTER,NOT_IN_EMPTY]
- >> PROVE_TAC [SUBSET_DEF]);
+ >> ASM_SET_TAC []
+QED
 
 Theorem RING_ADDITIVE_EVERYTHING :
     !m. ring (m_space m, measurable_sets m) /\ positive m /\ additive m ==>
@@ -2989,7 +3035,7 @@ Proof
     `ff IN (univ(:num) -> sts)` by PROVE_TAC [IN_FUNSET, IN_UNIV] \\
      Know `BIGUNION (IMAGE (\n. BIGUNION (IMAGE (g n) univ(:num))) univ(:num)) =
            BIGUNION (IMAGE ff (univ(:num)))`
-     >- (RW_TAC std_ss [GSYM SUBSET_SUBSET_EQ, SUBSET_DEF, IN_BIGUNION_IMAGE, IN_UNIV] >|
+     >- (RW_TAC std_ss [SET_EQ_SUBSET, SUBSET_DEF, IN_BIGUNION_IMAGE, IN_UNIV] >|
          [ (* goal 1 (of 2) *)
            Q.EXISTS_TAC `npair n x'` \\ (* numpairTheory is used here! *)
            Q.UNABBREV_TAC `ff` >> BETA_TAC >> PROVE_TAC [nfst_npair, nsnd_npair],
@@ -4270,8 +4316,6 @@ Proof
            PROVE_TAC [subset_class_def] ]) \\
      Know `suminf (mu o f) = suminf (m o f)`
      >- (MATCH_MP_TAC ext_suminf_eq >> SIMP_TAC std_ss [o_DEF] \\
-         CONJ_TAC >- (GEN_TAC \\
-                      PROVE_TAC [positive_def, measure_def, measurable_sets_def]) \\
          GEN_TAC >> METIS_TAC []) >> Rewr' \\
      REWRITE_TAC [BIGUNION_OVER_INTER_L, BIGUNION_OVER_DIFF] \\
   (* m (BIGUNION (IMAGE (\i. f i INTER s) univ(:num))) + ... <= suminf (m o f) *)
@@ -4343,7 +4387,7 @@ Proof
  >> reverse CONJ_TAC
  >- (`(subsets (sigma sp sts)) SUBSET (subsets (sigma sp A'))`
         by PROVE_TAC [SIGMA_MONOTONE] \\
-     `sigma sp A' = (sp,A')` by PROVE_TAC [SIGMA_OF_SIGMA_ALGEBRA_LEMMA] \\
+     `sigma sp A' = (sp,A')` by PROVE_TAC [SIGMA_STABLE_LEMMA] \\
      `sigma_algebra (sigma sp sts)`
         by PROVE_TAC [SIGMA_ALGEBRA_SIGMA, semiring_def, space_def, subsets_def] \\
      `(subsets (sigma sp sts)) SUBSET A'` by PROVE_TAC [subsets_def] \\
@@ -4392,8 +4436,9 @@ QED
 val null_set_def = Define
    `null_set m s <=> s IN measurable_sets m /\ (measure m s = 0)`;
 
-(* MATHEMATICAL SCRIPT CAPITAL N *)
+(* MATHEMATICAL SCRIPT CAPITAL N, not very meaningful
 val _ = Unicode.unicode_version {u = UTF8.chr 0x1D4A9, tmnm = "null_set"};
+ *)
 
 (* a measure space m which is not yet complete can be completed *)
 val complete_of_def = Define
@@ -4646,8 +4691,8 @@ Proof
       FULL_SIMP_TAC std_ss [measure_space_def, sigma_algebra_alt, algebra_alt],
       (* goal 2 (of 3) *)
       ASM_SIMP_TAC std_ss [BIGUNION_disjointed],
-      (* gpa; 3 (of 3) *)
-      METIS_TAC [disjoint_family_disjoint, ETA_AX] ]
+      (* goal 3 (of 3) *)
+      METIS_TAC [disjoint_family_disjoint, ETA_THM] ]
 QED
 
 Theorem MEASURABLE_IF : (* was: measurable_If *)
@@ -4744,6 +4789,23 @@ val sets_eq_imp_space_eq = store_thm ("sets_eq_imp_space_eq",
   REPEAT STRIP_TAC THEN FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_POW] THEN
   ASM_SET_TAC []);
 
+(* Any sigma-algebra induce a trivial (sigma-finite) measure space with (\s. 0) *)
+Theorem measure_space_trivial :
+    !a. sigma_algebra a ==> sigma_finite_measure_space (space a,subsets a,(\s. 0))
+Proof
+    rpt STRIP_TAC
+ >> simp [sigma_finite_measure_space_def]
+ >> STRONG_CONJ_TAC
+ >- (rw [measure_space_def] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       rw [positive_def],
+       (* goal 2 (of 2) *)
+       rw [countably_additive_def, o_DEF, ext_suminf_0] ])
+ >> DISCH_TAC
+ >> MATCH_MP_TAC FINITE_IMP_SIGMA_FINITE
+ >> rw [extreal_of_num_def, extreal_not_infty]
+QED
+
 val _ = export_theory ();
 
 (* References:
@@ -4754,7 +4816,6 @@ val _ = export_theory ();
       for Probabilistic Analysis in HOL. ACM Trans. Embedded Comput. Syst. 12, 1--23 (2013).
   [4] Hurd, J.: Formal verification of probabilistic algorithms. University of Cambridge (2001).
   [5] Chung, K.L.: A Course in Probability Theory, Third Edition. Academic Press (2001).
-  [6] Munroe, Marshall Evans: Introduction to measure and integration. Reading, Mass.: Addison-Wesley (1953).
   [7] Coble, A.R.: Anonymity, information, and machine-assisted proof. University of Cambridge (2010).
   [9] Wikipedia: https://en.wikipedia.org/wiki/Constantin_Carath%C3%A9odory
  *)

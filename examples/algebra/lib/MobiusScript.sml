@@ -13,8 +13,6 @@ val _ = new_theory "Mobius";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -723,21 +721,21 @@ val less_divisors_min = store_thm(
      Hence n DIV b <= n DIV 2          by DIV_LE_MONOTONE_REVERSE
        or        m <= n DIV 2          by m = MAX_SET t = n DIV b
 *)
-val less_divisors_max = store_thm(
-  "less_divisors_max",
-  ``!n. MAX_SET (less_divisors n) <= n DIV 2``,
+
+Theorem less_divisors_max:
+  !n. MAX_SET (less_divisors n) <= n DIV 2
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = less_divisors n` >>
   qabbrev_tac `m = MAX_SET s` >>
-  Cases_on `s = {}` >-
-  rw[MAX_SET_EMPTY, Abbr`m`] >>
+  Cases_on `s = {}` >- rw[MAX_SET_EMPTY, Abbr`m`] >>
   `n <> 0 /\ n <> 1` by metis_tac[less_divisors_0, less_divisors_1] >>
   `1 < n` by decide_tac >>
   `1 IN s` by rw[less_divisors_has_one, Abbr`s`] >>
   qabbrev_tac `t = proper_divisors n` >>
   `t = s DELETE 1`  by rw[proper_divisors_by_less_divisors, Abbr`t`, Abbr`s`] >>
   Cases_on `t = {}` >| [
-    `s = {1}` by rw[] >>
+    `s = {1}` by rfs[] >>
     `m = 1` by rw[MAX_SET_SING, Abbr`m`] >>
     `(2 <= n) /\ (0 < 2) /\ (0 < n) /\ (n DIV n = 1)` by rw[] >>
     metis_tac[DIV_LE_MONOTONE_REVERSE],
@@ -751,7 +749,8 @@ val less_divisors_max = store_thm(
     `2 <= b /\ (0 < b) /\ (0 < 2)` by decide_tac >>
     `n DIV b <= n DIV 2` by rw[DIV_LE_MONOTONE_REVERSE] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: (less_divisors n) SUBSET (natural (n DIV 2)) *)
 (* Proof:
@@ -1025,33 +1024,39 @@ SUM_IMAGE_MONO_LESS_EQ;
            p ** n - 2 * p ** m + 2 * p ** m < n * f n + 2 * p ** m
              or         p ** n - 2 * p ** m < n * f n        by LESS_MONO_ADD_EQ, no condition
 *)
-val sigma_eq_perfect_power_bounds_1 = store_thm(
-  "sigma_eq_perfect_power_bounds_1",
-  ``!p. 1 < p ==> !f. (!n. 0 < n ==> (p ** n = SIGMA (\d. d * f d) (divisors n))) ==>
-   (!n. 0 < n ==> n * (f n) <= p ** n) /\ (!n. 0 < n ==> p ** n - 2 * p ** (n DIV 2) < n * (f n))``,
+Theorem sigma_eq_perfect_power_bounds_1:
+  !p.
+    1 < p ==>
+    !f. (!n. 0 < n ==> (p ** n = SIGMA (\d. d * f d) (divisors n))) ==>
+        (!n. 0 < n ==> n * (f n) <= p ** n) /\
+        (!n. 0 < n ==> p ** n - 2 * p ** (n DIV 2) < n * (f n))
+Proof
   ntac 4 strip_tac >>
-  `!n. 0 < n ==> (divisors n DIFF {n}) SUBSET (natural (n DIV 2)) /\
-      ((p ** n = SIGMA (\d. d * f d) (divisors n)) ==>
-       (p ** n = n * f n + SIGMA (\d. d * f d) (divisors n DIFF {n})))` by
-  (ntac 2 strip_tac >>
-  qabbrev_tac `s = divisors n` >>
-  qabbrev_tac `a = {n}` >>
-  qabbrev_tac `b = s DIFF a` >>
-  qabbrev_tac `m = n DIV 2` >>
-  `b = less_divisors n` by rw[EXTENSION, Abbr`b`, Abbr`a`, Abbr`s`] >>
-  `b SUBSET (natural m)` by rw[less_divisors_subset_natural, Abbr`m`] >>
-  strip_tac >- rw[] >>
-  `a SUBSET s` by rw[divisors_has_last, SUBSET_DEF, Abbr`s`, Abbr`a`] >>
-  `b SUBSET s` by rw[Abbr`b`] >>
-  `s = b UNION a` by rw[UNION_DIFF, Abbr`b`] >>
-  (`DISJOINT b a` by (rw[DISJOINT_DEF, Abbr`b`, EXTENSION] >> metis_tac[])) >>
-  `FINITE s` by rw[divisors_finite, Abbr`s`] >>
-  `FINITE a /\ FINITE b` by metis_tac[SUBSET_FINITE] >>
-  strip_tac >>
-  `_ = SIGMA (\d. d * f d) (b UNION a)` by metis_tac[Abbr`s`] >>
-  `_ = SIGMA (\d. d * f d) b + SIGMA (\d. d * f d) a` by rw[SUM_IMAGE_DISJOINT] >>
-  `_ = SIGMA (\d. d * f d) b + n * f n` by rw[SUM_IMAGE_SING, Abbr`a`] >>
-  rw[]) >>
+  ‘∀n. 0 < n ==>
+       (divisors n DIFF {n}) SUBSET (natural (n DIV 2)) /\
+       (p ** n = SIGMA (\d. d * f d) (divisors n) ==>
+        p ** n = n * f n + SIGMA (\d. d * f d) (divisors n DIFF {n}))’
+    by (ntac 2 strip_tac >>
+        qabbrev_tac `s = divisors n` >>
+        qabbrev_tac `a = {n}` >>
+        qabbrev_tac `b = s DIFF a` >>
+        qabbrev_tac `m = n DIV 2` >>
+        `b = less_divisors n` by rw[EXTENSION, Abbr`b`, Abbr`a`, Abbr`s`] >>
+        `b SUBSET (natural m)` by metis_tac[less_divisors_subset_natural] >>
+        strip_tac >- rw[] >>
+        `a SUBSET s` by rw[divisors_has_last, SUBSET_DEF, Abbr`s`, Abbr`a`] >>
+        `b SUBSET s` by rw[Abbr`b`] >>
+        `s = b UNION a` by rw[UNION_DIFF, Abbr`b`] >>
+        `DISJOINT b a`
+          by (rw[DISJOINT_DEF, Abbr`b`, EXTENSION] >> metis_tac[]) >>
+        `FINITE s` by rw[divisors_finite, Abbr`s`] >>
+        `FINITE a /\ FINITE b` by metis_tac[SUBSET_FINITE] >>
+        strip_tac >>
+        `_ = SIGMA (\d. d * f d) (b UNION a)` by metis_tac[Abbr`s`] >>
+        `_ = SIGMA (\d. d * f d) b + SIGMA (\d. d * f d) a`
+          by rw[SUM_IMAGE_DISJOINT] >>
+        `_ = SIGMA (\d. d * f d) b + n * f n` by rw[SUM_IMAGE_SING, Abbr`a`] >>
+        rw[]) >>
   conj_asm1_tac >| [
     rpt strip_tac >>
     `p ** n = n * f n + SIGMA (\d. d * f d) (divisors n DIFF {n})` by rw[] >>
@@ -1061,19 +1066,27 @@ val sigma_eq_perfect_power_bounds_1 = store_thm(
     qabbrev_tac `a = {n}` >>
     qabbrev_tac `b = s DIFF a` >>
     qabbrev_tac `m = n DIV 2` >>
-    `b SUBSET (natural m) /\ (p ** n = n * f n + SIGMA (\d. d * f d) b)` by rw[Abbr`s`, Abbr`a`, Abbr`b`, Abbr`m`] >>
+    `b SUBSET (natural m) /\ (p ** n = n * f n + SIGMA (\d. d * f d) b)`
+      by rw[Abbr`s`, Abbr`a`, Abbr`b`, Abbr`m`] >>
     `FINITE (natural m)` by rw[natural_finite] >>
-    `SIGMA (\d. d * f d) b <= SIGMA (\d. d * f d) (natural m)` by rw[SUM_IMAGE_SUBSET_LE] >>
+    `SIGMA (\d. d * f d) b <= SIGMA (\d. d * f d) (natural m)`
+      by rw[SUM_IMAGE_SUBSET_LE] >>
     `!d. d IN (natural m) ==> 0 < d` by rw[natural_element] >>
-    `SIGMA (\d. d * f d) (natural m) <= SIGMA (\d. p ** d) (natural m)` by rw[SUM_IMAGE_MONO_LESS_EQ] >>
+    `SIGMA (\d. d * f d) (natural m) <= SIGMA (\d. p ** d) (natural m)`
+      by rw[SUM_IMAGE_MONO_LESS_EQ] >>
     `0 < p /\ (p - 1) <> 0` by decide_tac >>
-    `(p - 1) * SIGMA (\d. p ** d) (natural m) = p * (p ** m - 1)` by rw[sigma_geometric_natural_eqn] >>
-    `p * (p ** m - 1) < (p - 1) * (2 * p ** m)` by rw[perfect_power_special_inequality] >>
-    `SIGMA (\d. d * f d) b < 2 * p ** m` by metis_tac[LE_MULT_LCANCEL, LESS_EQ_TRANS, LESS_EQ_LESS_TRANS, LT_MULT_LCANCEL] >>
+    `(p - 1) * SIGMA (\d. p ** d) (natural m) = p * (p ** m - 1)`
+      by rw[sigma_geometric_natural_eqn] >>
+    `p * (p ** m - 1) < (p - 1) * (2 * p ** m)`
+      by rw[perfect_power_special_inequality] >>
+    `SIGMA (\d. d * f d) b < 2 * p ** m`
+      by metis_tac[LE_MULT_LCANCEL, LESS_EQ_TRANS, LESS_EQ_LESS_TRANS,
+                   LT_MULT_LCANCEL] >>
     `p ** n < n * f n + 2 * p ** m` by decide_tac >>
     `2 * p ** m <= p ** n` by rw[perfect_power_half_inequality_1, Abbr`m`] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < p ==> !f. (!n. 0 < n ==> (p ** n = SIGMA (\d. d * f d) (divisors n))) ==>
             (!n. 0 < n ==> n * (f n) <= p ** n) /\

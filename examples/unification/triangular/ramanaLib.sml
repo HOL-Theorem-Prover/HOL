@@ -1,7 +1,7 @@
 structure ramanaLib =
 struct
 
-open HolKernel boolLib bossLib Parse lcsymtacs pairLib
+open HolKernel boolLib bossLib Parse pairLib
 
 val ERR = mk_HOL_ERR "ramanaLib"
 

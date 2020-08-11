@@ -13,8 +13,6 @@ val _ = new_theory "Gauss";
 (* ------------------------------------------------------------------------- *)
 
 
-(* val _ = load "lcsymtacs"; *)
-open lcsymtacs;
 
 (* val _ = load "jcLib"; *)
 open jcLib;
@@ -1919,23 +1917,25 @@ val sum_over_natural_by_preimage_divisors = store_thm(
    or f x + SIGMA f t = g x + SIGMA g t   by SUM_IMAGE_INSERT
    or             f x = g x               by SIGMA f t = SIGMA g t
 *)
-val sum_image_divisors_cong = store_thm(
-  "sum_image_divisors_cong",
-  ``!f g. (f 1 = g 1) /\ (!n. SIGMA f (divisors n) = SIGMA g (divisors n)) ==> (f = g)``,
+Theorem sum_image_divisors_cong:
+  !f g. f 1 = g 1 /\ (!n. SIGMA f (divisors n) = SIGMA g (divisors n)) ==>
+        f = g
+Proof
   rw[FUN_EQ_THM] >>
   completeInduct_on `x` >>
   qabbrev_tac `s = divisors x` >>
   qabbrev_tac `t = s DELETE x` >>
   `x IN s` by rw[divisors_has_last, Abbr`s`] >>
   `(s = x INSERT t) /\ x NOTIN t` by rw[Abbr`t`] >>
-  `SIGMA f t = SIGMA g t` by
-  ((irule SUM_IMAGE_CONG >> simp[]) >>
-  rw[divisors_element, Abbr`t`, Abbr`s`]) >>
+  `SIGMA f t = SIGMA g t`
+    by (irule SUM_IMAGE_CONG >> simp[] >>
+        rw[divisors_element, Abbr`t`, Abbr`s`]) >>
   `FINITE t` by rw[divisors_finite, Abbr`t`, Abbr`s`] >>
-  `SIGMA f s = f x + SIGMA f t` by rw[SUM_IMAGE_INSERT] >>
-  `SIGMA g s = g x + SIGMA g t` by rw[SUM_IMAGE_INSERT] >>
+  `SIGMA f s = f x + SIGMA f t` by simp[SUM_IMAGE_INSERT] >>
+  `SIGMA g s = g x + SIGMA g t` by simp[SUM_IMAGE_INSERT] >>
   `SIGMA f s = SIGMA g s` by metis_tac[] >>
-  decide_tac);
+  decide_tac
+QED
 (* But this is not very useful! *)
 
 (* ------------------------------------------------------------------------- *)
