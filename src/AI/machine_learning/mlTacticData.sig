@@ -3,42 +3,42 @@ sig
 
   include Abbrev
 
-  (* term data (can be useful for other purposes) *)
+  (* term data (can be useful for other purpose) *)
   val export_terml : string -> term list -> unit
   val import_terml : string -> term list
   val export_goal : string -> goal -> unit
   val import_goal : string -> goal
 
   (* tactic data *)
-  type lbl = (string * real * goal * goal list)
-  type fea = int list
+  type stac = string
+  type call =
+    {
+    stac : stac, ortho : stac, time : real,
+    ig : goal, ogl : goal list,
+    loc : (string * int) * string,
+    fea : mlFeature.fea
+    }
+  val call_compare : call * call -> order
+
   type tacdata =
     {
-    tacfea : (lbl,fea) Redblackmap.dict,
-    tacfea_cthy : (lbl,fea) Redblackmap.dict,
-    taccov : (string, int) Redblackmap.dict,
-    tacdep : (goal, lbl list) Redblackmap.dict
+    calls : call list,
+    calls_cthy : call list,
+    taccov : (stac, int) Redblackmap.dict,
+    calldep : (goal, call list) Redblackmap.dict,
+    symfreq : (int, int) Redblackmap.dict
     }
   val empty_tacdata : tacdata
-
-  val export_tacfea : string -> (lbl,fea) Redblackmap.dict -> unit
-  val import_tacfea : string -> (lbl,fea) Redblackmap.dict
+  val export_calls : string -> call list -> unit
+  val import_calls : string -> call list
   val import_tacdata : string list -> tacdata
+  val export_tacdata : string -> tacdata -> unit
 
   (* tactictoe database *)
   val ttt_tacdata_dir : string
   val exists_tacdata_thy : string -> bool
-  val ttt_create_tacdata : unit -> tacdata
-  val ttt_update_tacdata : (lbl * tacdata) -> tacdata
+  val create_tacdata : unit -> tacdata
+  val ttt_update_tacdata : (call * tacdata) -> tacdata
   val ttt_export_tacdata : string -> tacdata -> unit
-
-  type ex = (goal * string * (goal * goal list) * goal list) * bool
-  val exl_glob : ex list ref
-  val ttt_export_exl_human : string -> ex list -> unit
-  val ttt_export_exl : string -> ex list -> unit
-  val ttt_import_exl : string -> ex list
-  val ttt_export_tptpexl : string -> ex list -> unit
-
-  val prepare_exl : ex list -> (term * real list) list list
 
 end

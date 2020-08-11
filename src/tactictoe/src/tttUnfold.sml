@@ -137,7 +137,7 @@ fun replace_code2 st = case st of
                        )
   | _               => raise ERR "replace_code2" ""
 
-(* forget "op" in a body that does not contains definitions *)
+(* forget "op" in a body that does not contain definitions *)
 fun replace_program f g p = case p of
     [] => []
   | Code ("op",Protect) :: Code (_,SReplace sl) :: m =>
@@ -181,7 +181,8 @@ val basis = String.tokens Char.isSpace
 "Size trunc ignore Empty Span :: Chr length LESS round vector EQUAL app " ^
 "~ Subscript NONE ceil getOpt str substring use o explode foldr foldl ^ " ^
 "exnMessage Option SOME tl Overflow null @ > = < ref Fail div nil before " ^
-"real print ord / - rev + * implode map ! size isSome Div mod GREATER Match " ^
+"real print ord / - rev + * implode map ! size isSome Div mod GREATER " ^
+"Match " ^
 "false abs <> exnName Domain Bind true >= valOf <= not := hd chr concat floor"
 );
 
@@ -281,8 +282,8 @@ fun extract_infix inf_constr l =
 (* ------------------------------------------------------------------------
    Watching and replacing some special values:
    functions calling save_thm
-   functions making a definitions
-   functions with side effects (export_rewrites) which can be unfolded.
+   functions making definitions
+   functions affecting the proof state (i.e. export_rewrites)
    ----------------------------------------------------------------------- *)
 
 val store_thm_list =
@@ -571,6 +572,7 @@ fun ppstring_stac qtac =
    Final modifications of the scripts
    ------------------------------------------------------------------------ *)
 
+(* todo: remove this flag at a minor computation cost *)
 val is_thm_flag = ref false
 
 fun modified_program (h,d) p =
@@ -589,8 +591,10 @@ fun modified_program (h,d) p =
       val body' = modified_program ((s <> "val") orelse h, d+1) body
       val semicolon =
         if d = 0 andalso !is_thm_flag then
-       ["; val _ = tttRecord.thmdata_glob := mlThmData.create_thmdata () ;",
-        " val _ = tttRecord.ttt_save_state () ;"]
+       ["; val _ = tttRecord.ttt_before_save_state ()",
+        "; val _ = aiLib.total_time tttRecord.ttt_save_state_time" ^
+        " tttRecord.ttt_save_state ()",
+        "; val _ = tttRecord.ttt_after_save_state ();"]
         else []
     in
       semicolon @ [s] @ head' @ [sep] @ body' @ continue m
@@ -919,14 +923,14 @@ fun output_header oc cthy =
   (* debugging *)
   reflect_flag oc "aiLib.debug_flag" debug_flag;
   (* recording *)
-  reflect_flag oc "tttSetup.ttt_recprove_flag" ttt_recprove_flag;
-  reflect_flag oc "tttSetup.ttt_reclet_flag" ttt_reclet_flag;
+  reflect_flag oc "tttSetup.record_prove_flag" record_prove_flag;
+  reflect_flag oc "tttSetup.record_let_flag" record_let_flag;
   reflect_flag oc "tttSetup.ttt_ex_flag" ttt_ex_flag;
-  reflect_flag oc "tttSetup.ttt_savestate_flag" ttt_savestate_flag;
-  (* evaluation *)
-  reflect_flag oc "mlThmData.thmlintac_flag" mlThmData.thmlintac_flag;
-  osn oc "val _ = smlExecute.exec_sml";
-  (* global references *)
+  reflect_flag oc "tttSetup.record_savestate_flag" record_savestate_flag;
+  reflect_flag oc "tttSetup.learn_abstract_term" learn_abstract_term;
+  reflect_time oc "tttSetup.record_tactic_time" record_tactic_time;
+  reflect_time oc "tttSetup.record_proof_time" record_proof_time;
+  (* search *)
   reflect_time oc "tttSetup.ttt_search_time" ttt_search_time;
   reflect_time oc "tttSetup.ttt_tactic_time" ttt_tactic_time;
   (* hook *)
@@ -962,17 +966,6 @@ fun end_unfold_thy () =
     f "Replace id" replace_id_time
   end
 
-fun unquoteString thy file =
-  let
-    val dir = tactictoe_dir ^ "/code"
-    val _ = mkDir_err dir
-    val fout = dir ^ "/unquote_" ^ thy
-    val cmd = HOLDIR ^ "/bin/unquote" ^ " -i " ^ file ^ " " ^ fout
-  in
-    ignore (OS.Process.system cmd);
-    String.concatWith " " (readl fout)
-  end
-
 fun rm_spaces s =
   let fun f c = if mem c [#"\n",#"\t",#"\r"] then #" " else c in
     implode (map f (explode s))
@@ -980,9 +973,9 @@ fun rm_spaces s =
 
 fun sketch_wrap thy file =
   let
-    val s1 = unquoteString thy file
-    val s3 = rm_spaces (rm_comment s1)
-    val sl = partial_sml_lexer s3
+    val s1 = QFRead.inputFile file
+    val s2 = rm_spaces (rm_comment s1)
+    val sl = partial_sml_lexer s2
     val _ = write_sl (tactictoe_dir ^ "/code/before_sketch_" ^ thy) sl
   in
     sketch sl
@@ -1108,17 +1101,6 @@ fun ttt_record_thy thy =
     restore_scripts scriptorg
   end
 
-
-
-fun ttt_record () =
-  let
-    val thyl1 = ttt_ancestry (current_theory ())
-    val thyl2 = filter (not o exists_tacdata_ancestry) thyl1
-    val ((),t) = add_time (app ttt_record_thy) thyl2
-  in
-    print_endline ("ttt_record time: " ^ rts_round 4 t)
-  end
-
 fun ttt_clean_record () =
   (
   clean_rec_dir (HOLDIR ^ "/src/AI/sml_inspection/open");
@@ -1128,105 +1110,13 @@ fun ttt_clean_record () =
   clean_dir (tactictoe_dir ^ "/info")
   )
 
-(* ------------------------------------------------------------------------
-   Theories of the standard library
-   ------------------------------------------------------------------------ *)
-
-fun sigobj_theories () =
+fun ttt_record () =
   let
-    val ttt_code_dir = tactictoe_dir ^ "/code"
-    val _    = mkDir_err ttt_code_dir
-    val file = ttt_code_dir ^ "/theory_list"
-    val sigdir = HOLDIR ^ "/sigobj"
-    val cmd0 = "cd " ^ sigdir
-    val cmd1 = "readlink -f $(find -regex \".*[^/]Theory.sig\") > " ^ file
+    val thyl1 = ttt_ancestry (current_theory ())
+    val thyl2 = filter (not o exists_tacdata_ancestry) thyl1
+    val ((),t) = add_time (app ttt_record_thy) thyl2
   in
-    ignore (OS.Process.system (cmd0 ^ "; " ^ cmd1 ^ "; "));
-    readl file
+    print_endline ("ttt_record time: " ^ rts_round 4 t)
   end
-
-fun load_sigobj () =
-  let
-    fun barefile file = OS.Path.base (OS.Path.file file)
-    val l0 = sigobj_theories ()
-    val l1 = map barefile l0
-  in
-    app load l1
-  end
-
-(* ------------------------------------------------------------------------
-   Evaluation: requires recorded savestates.
-   The recorded savestates can be produced by setting ttt_savestate_flag
-   before calling ttt_clean_record () and ttt_record ().
-   Warning: requires ~100 GB of hard disk space. Possibly avoid using MLTON?
-   ------------------------------------------------------------------------ *)
-
-fun write_evalscript prefix file =
-  let
-    val file1 = mlquote (file ^ "_savestate")
-    val file2 = mlquote (file ^ "_goal")
-    val sl =
-    ["PolyML.SaveState.loadState " ^ file1 ^ ";",
-     "val tactictoe_goal = mlTacticData.import_goal " ^ file2 ^ ";",
-     "load " ^ mlquote "tacticToe" ^ ";",
-     "val _ = tttSetup.ttt_search_time := " ^ rts (!ttt_search_time) ^ ";",
-     "val _ = aiLib.debug_flag := " ^ bts (!debug_flag) ^ ";",
-     "val _ = smlExecute.execprefix_glob := " ^ mlquote prefix ^ ";",
-     "tacticToe.ttt_eval " ^
-     "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^
-     "tactictoe_goal;"]
-  in
-    writel (file ^ "_eval.sml") sl
-  end
-
-fun bare file = OS.Path.base (OS.Path.file file)
-
-fun run_evalscript dir file =
-  (
-  write_evalscript (bare file) file;
-  run_buildheap_nodep dir (file ^ "_eval.sml")
-  )
-
-fun run_evalscript_thyl expname b ncore thyl =
-  let
-    val dir = ttt_eval_dir ^ "/" ^ expname ^ (if b then "" else "_tenth")
-    val _ = (mkDir_err ttt_eval_dir; mkDir_err dir)
-    val thyl' = filter (fn x => not (mem x ["min","bool"])) thyl
-    val pbl = map (fn x => tactictoe_dir ^ "/savestate/" ^ x ^ "_pbl") thyl'
-    fun f x = (readl x handle _ => (print_endline x; []))
-    val filel1 = List.concat (map f pbl)
-    val filel2 = if b then filel1 else one_in_n 10 0 filel1
-    val _ = print_endline ("evaluation: " ^ its (length filel2) ^ " problems")
-    val (_,t) = add_time (parapp_queue ncore (run_evalscript dir)) filel2
-  in
-    print_endline ("evaluation time: " ^ rts_round 6 t)
-  end
-
-(* One example
-load "tttUnfold"; open tttUnfold;
-tttSetup.ttt_search_time := 5.0;
-run_evalscript (tttSetup.tactictoe_dir ^ "/savestate/arithmetic170");
-*)
-
-(* One theory
-load "tttUnfold"; open tttUnfold;
-tttSetup.ttt_savestate_flag := true;
-aiLib.debug_flag := true;
-ttt_clean_record (); ttt_record_thy "relation";
-tttSetup.ttt_search_time := 5.0;
-run_evalscript_thyl "test2" false 3 ["relation"];
-*)
-
-(* Core theories
-load "tttUnfold"; open tttUnfold;
-tttSetup.ttt_savestate_flag := true;
-aiLib.debug_flag := true;
-ttt_clean_record (); ttt_record ();
-tttSetup.ttt_search_time := 5.0;
-aiLib.debug_flag := false;
-val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-val _ = run_evalscript_thyl "may14" true 30 thyl;
-*)
-
 
 end (* struct *)

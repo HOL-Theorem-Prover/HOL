@@ -205,17 +205,17 @@ fun name_arityeq (cv,a) =
    Definitions of boolean operators
    ------------------------------------------------------------------------- *)
 
-val logic_l1 = map cid_of [``$/\``,``$\/``,``$~``,``$==>``,
-  ``$= : 'a -> 'a -> bool``]
-val quant_l2 = map cid_of [``$! : ('a -> bool) -> bool``,
-  ``$? : ('a -> bool) -> bool``]
+local open boolSyntax in
+
+val logic_l1 = map cid_of
+  [conjunction, disjunction, negation, implication, equality]
+val quant_l2 = map cid_of [universal, existential]
 
 val boolop_cval =
-  [
-   (``$/\``,2),(``$\/``,2),(``$~``,1),(``$==>``,2),
-   (``$= : 'a -> 'a -> bool``,2),
-   (``$! : ('a -> bool) -> bool``,1),(``$? : ('a -> bool) -> bool``,1)
-  ]
+  [(conjunction,2),(disjunction,2),(negation,1),(implication,2),
+   (equality,2),(universal,1),(existential,1)]
+
+end (* local *)
 
 (* -------------------------------------------------------------------------
    Higher-order theorems in a first-order embedding
@@ -224,8 +224,7 @@ val boolop_cval =
 fun mk_combin_thm thmname fvname =
   let
     val thm = DB.fetch "combin" thmname
-    val (tm0,defl) = translate_thm thm
-    val _ = if null defl then () else raise ERR "mk_combin_thm" ""
+    val tm0 = translate_thm thm
     val oper = (fst o strip_comb o lhs o snd o strip_forall) tm0
     val lhs_combin_conv = STRIP_QUANT_CONV (LHS_CONV APP_CONV_STRIPCOMB)
     val tm1 = (rhs o concl o lhs_combin_conv) tm0
@@ -323,8 +322,15 @@ fun older_than th1 (name,th2) =
   depnumber_of_thm th2 < depnumber_of_thm th1
 
 fun add_ancestry thy = thy :: ancestry thy
+
+(* avoid basis_emit as it contains inconsistent theorems *)
 fun sorted_ancestry thyl =
-  sort_thyl (mk_string_set (List.concat (map add_ancestry thyl)))
+  let
+    fun test x = x <> "basis_emit" andalso not (mem "basis_emit" (ancestry x))
+    val l = sort_thyl (mk_string_set (List.concat (map add_ancestry thyl)))
+  in
+    filter test l
+  end
 
 fun depo_of_thm thm =
   let
@@ -363,13 +369,13 @@ fun chainy_dep thyorder thy namethml =
     val thyl = before_elem thy thyorder
     fun f (name,thm) =
       let
-        val namethml1 = filter (older_than thm) namethml
+        val namethml1 = filter (older_than thm) (DB.thms thy)
         val thmidl2 = map (fn (name,_) => (thy,name)) namethml1
       in
         ((thy,name), (thyl,thmidl2))
       end
   in
-    map f namethml
+    map f (DB.theorems thy)
   end
 
 end (* struct *)

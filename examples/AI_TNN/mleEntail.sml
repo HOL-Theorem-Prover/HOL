@@ -89,7 +89,7 @@ fun import_entaildata maxvar basename =
    Tree neural network
    ------------------------------------------------------------------------- *)
 
-val tnnparam = map_assoc (dim_std (2,12)) operl @ [(head_entail,[12,12,1])]
+val tnndim = map_assoc (dim_std (2,12)) operl @ [(head_entail,[12,12,1])]
 
 val schedule =
   [{ncore = 4, verbose = true, learning_rate = 0.02,
@@ -108,7 +108,7 @@ val schedule =
 fun train_fixed () =
   let
     val trainex = import_entaildata 10 "train.txt"
-    val tnn = train_tnn schedule (random_tnn tnnparam) (trainex,[])
+    val tnn = train_tnn schedule (random_tnn tnndim) (trainex,[])
   in
     mkDir_err entaildir;
     write_tnn (entaildir ^ "/tnn") tnn; tnn
