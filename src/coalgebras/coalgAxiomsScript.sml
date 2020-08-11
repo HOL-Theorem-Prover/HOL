@@ -746,6 +746,10 @@ Proof
   simp[restr_def] >> metis_tac[]
 QED
 
+Theorem subsystem_INTER2 =
+  subsystem_INTER |> Q.INST [‘VS’ |-> ‘{V1;V2}’]
+                  |> SIMP_RULE (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM]
+
 Definition genS_def:
   genS As X = BIGINTER { V | subsystem V As /\ X SUBSET V }
 End
@@ -765,7 +769,20 @@ Definition bounded_def:
 End
 
 (* Section 7 *)
-(*
+Theorem iso_inj_hom:
+  iso (A,af) (B,bf) /\ hom h (A,af) (C,cf) /\ INJ h A C ==>
+  ?j. hom j (B,bf) (C,cf) /\ INJ j B C
+Proof
+  rw[iso_def] >>
+  rename [‘hom f (A,af) (B,bf)’, ‘hom invf (B,bf) (A,af)’, ‘INJ h A C’] >>
+  qexists_tac ‘restr (h o invf) B’ >> fs[hom_def, mapO', restr_applies] >>
+  rpt conj_tac
+  >- (rpt strip_tac >> irule map_CONG >>
+      metis_tac[system_members, restr_applies])
+  >- simp[restr_def] >>
+  fs[INJ_IFF, restr_def] >> metis_tac[]
+QED
+
 Theorem thm7_1:
   hom f (A,af) (B,bf) ==>
   hom f (A,af) (IMAGE f A,restr bf (IMAGE f A)) /\
@@ -838,11 +855,54 @@ Proof
       simp[] >>
       irule (iffLR iso_SYM) >> irule BIJ_homs_iso >>
       fs[] >> qexists_tac ‘u’ >> simp[BIJ_DEF]) >>
+  Cases_on ‘bquot (A,af) (kernel A f)’ >> simp[] >>
+  drule_then (drule_then irule) iso_inj_hom >>
+  simp[INJ_IFF, restr_applies, PULL_EXISTS] >> fs[hom_def]
+QED
+
+Theorem thm7_2:
+  hom f (A,af) (B,bf) /\ bisim R (A,af) (A,af) /\ R RSUBSET kernel A f /\
+  R equiv_on A ==>
+  ?!fbar.
+    hom fbar (bquot (A,af) R) (B,bf) /\ f = restr (fbar o eps R A) A
+Proof
+  strip_tac >>
+  ‘system (A,af)’ by fs[hom_def] >>
+  drule_all_then (qx_choose_then ‘Rf’ strip_assume_tac)
+                 (INST_TYPE [delta |-> beta] bquot_coequalizer) >>
+  fs[coequalizer_thm] >> first_x_assum irule >> simp[] >>
+  fs[restr_def, FUN_EQ_THM, RSUBSET, FORALL_PROD] >> metis_tac[]
+QED
+
+        (*
+Theorem thm7_3:
+  system (A,af) /\ subsystem B (A,af) /\ bisim R (A,af) (A,af) /\
+  R equiv_on A /\
+  Abbrev(TR = { a | a IN A /\ ?b. b IN B /\ R a b })
+  ==>
+  subsystem TR (A,af) /\
+  let Q = CURRY (UNCURRY R INTER (B CROSS B))
+  in
+    bisim Q (B,restr af B) (B,restr af B) /\ Q equiv_on B /\
+    iso (bquot (B,restr af B) Q) (bquot (TR,restr af TR) R)
+Proof
+  SRW_TAC[][]
+  >- (‘TR = IMAGE (restr FST (UNCURRY R))
+                  (PREIMAGE (restr SND (UNCURRY R)) B INTER UNCURRY R)’
+        by (simp[EXTENSION, Abbr‘TR’, EXISTS_PROD, restr_def] >> csimp[] >>
+            metis_tac[bisim_def]) >>
+      simp[] >> irule thm6_3_1 >> fs[sbisimulation_projns_homo] >>
+      first_assum (goal_assum o resolve_then Any mp_tac) >>
+      irule thm6_3_2 >> metis_tac[])
+  >- (fs[sbisimulation_projns_homo] >>
+      simp[GSYM sbisimulation_projns_homo] >>
+      ‘Q = RINV_IMAGE (λx.x) B R’
+        by (simp[FUN_EQ_THM, RINV_IMAGE_def, Abbr‘Q’] >> metis_tac[]) >>
+      simp[] >> irule prop5_9_2 >> simp[sbisimulation_projns_homo] >>
+      fs[subsystem_ALT] >> metis_tac[])
+  >- (fs[equiv_on_def, Abbr‘Q’, subsystem_def] >> metis_tac[SUBSET_DEF]) >>
 
 *)
-
-
-
 
 Theorem bisimilar_equivalence:
   bisimilar equiv_on system
