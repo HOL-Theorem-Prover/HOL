@@ -42,6 +42,10 @@ New features:
 
     Thanks to Magnus Myreen for the feature suggestion.
 
+* A weaker version of TacticToe relying on a few selected tactics
+  that does not require any recording is available under the names
+  `tactictoe_mini` and `ttt_mini`.
+
 Bugs fixed:
 -----------
 
@@ -57,6 +61,14 @@ Bugs fixed:
     There is a major backwards-incompatibility: the above changes may
     lead to more complicated proofs when using extreals, while better 
     alignments with textbook proofs are achieved, on the other hand.
+
+*   Fix soundess bug in the HolyHammer translations to first-order.
+    Lambda-lifting definitions were stated as local hypothesis but
+    were printed in the TPTP format as a global definition.
+    In a few cases, the global definition captures some type variables
+    causing a soundess issue. Now, local hypothesis are printed
+    locally under the quantification of type variables in the translated
+    formula.
 
 New theories:
 -------------
@@ -132,6 +144,13 @@ New examples:
     The AKS main theorems and proofs have been cleaned up in `AKScleanTheory`.
     For details, please refer to his [PhD thesis](http://hdl.handle.net/1885/177195).
 
+* The code for training tree neural networks using `mlTreeNeuralNetwork` on
+  datasets of arithmetical and propositional formulas is
+  located in __AI_TNN__.
+
+* A demonstration of the reinforcement learning algorithm `mlReinforce`
+  on the tasks of synthesizing combinators and Diophantine equations
+  can be found in __AI_tasks__.
 
 Incompatibilities:
 ------------------
