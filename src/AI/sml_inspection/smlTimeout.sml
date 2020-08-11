@@ -19,7 +19,7 @@ fun capture f x = Res (f x) handle e => Exn e
 fun release (Res y) = y
   | release (Exn x) = raise x
 
-val attrib = [Thread.InterruptState Thread.InterruptAsynch, 
+val attrib = [Thread.InterruptState Thread.InterruptAsynch,
   Thread.EnableBroadcastInterrupt true]
 
 fun timeLimit t f x =

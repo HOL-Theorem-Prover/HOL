@@ -5,11 +5,11 @@ sig
 
   type tnn = mlTreeNeuralNetwork.tnn
 
-  val main_tactictoe : 
+  val main_tactictoe :
     mlThmData.thmdata * mlTacticData.tacdata ->
     tnn option * tnn option ->
     goal -> tttSearch.proofstatus * tttSearch.tree
-  val main_tactictoe_mini : 
+  val main_tactictoe_mini :
     mlThmData.thmdata ->
     tnn option * tnn option ->
     goal -> tttSearch.proofstatus * tttSearch.tree

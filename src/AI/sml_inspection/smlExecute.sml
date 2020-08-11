@@ -37,7 +37,7 @@ fun quse_string s =
     TextIO.closeIn stream;
     true
     )
-    handle Interrupt => (TextIO.closeIn stream; raise Interrupt) 
+    handle Interrupt => (TextIO.closeIn stream; raise Interrupt)
         | _ => (TextIO.closeIn stream; false)
   end
 

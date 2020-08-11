@@ -33,7 +33,7 @@ sig
   val string_of_sml     : string -> string
   val goal_of_sml       : string -> goal
 
-  (* applying a tactic string *) 
+  (* applying a tactic string *)
   val app_stac : real -> string -> goal -> goal list option
 
 end

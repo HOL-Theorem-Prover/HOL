@@ -29,13 +29,13 @@ sig
     parentd : (goal, unit) Redblackmap.dict}
   type tree = (id, node) Redblackmap.dict
 
-  type searchobj = 
+  type searchobj =
     {predtac : goal -> (string * tttToken.aty list) list,
      predarg : string -> tttToken.aty -> goal -> tttToken.token list,
      parsetoken : tttToken.parsetoken,
      vnno: tnn option,
      pnno: tnn option}
 
-  val search : searchobj -> goal -> proofstatus * tree     
+  val search : searchobj -> goal -> proofstatus * tree
 
 end

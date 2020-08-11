@@ -22,7 +22,7 @@ include Abbrev
   (* input term modifications *)
   val mk_embedding_var : (real vector * hol_type) -> term
   val precomp_embed : tnn -> term -> term
-  
+
   (* input terms for tactictoe *)
   val nntm_of_gl : goal list -> term
   val mask_unknown : tnn * int -> term -> term

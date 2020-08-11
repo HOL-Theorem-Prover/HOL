@@ -12,7 +12,7 @@ open HolKernel Abbrev boolLib aiLib
   smlTimeout smlLexer smlExecute
   mlFeature mlThmData mlTacticData mlNearestNeighbor mlTreeNeuralNetwork
   psMinimize
-  tttSetup tttToken tttLearn 
+  tttSetup tttToken tttLearn
 
 val ERR = mk_HOL_ERR "tttSearch"
 val predtac_time = ref 0.0
@@ -75,16 +75,16 @@ fun backstatus_node node = case #nstatus node of
    ------------------------------------------------------------------------- *)
 
 type id = (int * int * int list) list (* reverse of natural order *)
-val id_compare = list_compare 
+val id_compare = list_compare
   (triple_compare Int.compare Int.compare (list_compare Int.compare))
 fun string_of_id id =
   let
-    fun f (gn,sn,anl) = "g" ^ its gn ^ "t" ^ its sn ^ "a" ^ 
+    fun f (gn,sn,anl) = "g" ^ its gn ^ "t" ^ its sn ^ "a" ^
       (String.concatWith "|" (rev (map its anl)))
     val sl = map f (rev id)
   in
     String.concatWith " " sl
-  end   
+  end
 
 type stac_record =
   {token : token, atyl : aty list,
@@ -102,7 +102,7 @@ type node =
    parentd : (goal, unit) Redblackmap.dict}
 type tree = (id,node) Redblackmap.dict
 
-type searchobj = 
+type searchobj =
   {predtac : goal -> (string * aty list) list,
    predarg : string -> aty -> goal -> token list,
    parsetoken : parsetoken,
@@ -126,18 +126,18 @@ fun expo_polv_aux ci (c:real) l = case l of
 fun expo_polv ci l = expo_polv_aux ci ci l
 
 fun before_stacfresh accessf acc i =
-  if not (can accessf i) then rev acc else 
+  if not (can accessf i) then rev acc else
   let
     val stacrec = accessf i
     val sstatus = #sstatus stacrec
   in
     case sstatus of
-      StacFresh => rev ((i,stacrec) :: acc) 
+      StacFresh => rev ((i,stacrec) :: acc)
     | StacUndecided => before_stacfresh accessf ((i,stacrec) :: acc) (i+1)
     | _ => before_stacfresh accessf acc (i+1)
   end
 
-fun select_stacrecl stacrecl pvis = 
+fun select_stacrecl stacrecl pvis =
   let
     fun add_puct ((sn,{ssum,svis,...}),polv) =
       (sn, puct pvis ((ssum,svis),polv))
@@ -146,7 +146,7 @@ fun select_stacrecl stacrecl pvis =
     val l1 = map add_puct l0
     val l2 = dict_sort compare_rmax l1
   in
-    fst (hd l2) 
+    fst (hd l2)
   end
 
 fun select_accessf accessf pvis =
@@ -158,21 +158,21 @@ fun select_accessf accessf pvis =
    Select leaf in argument tree
    ------------------------------------------------------------------------- *)
 
-fun access_child argtree anl i = dfind (i :: anl) argtree 
+fun access_child argtree anl i = dfind (i :: anl) argtree
 
 fun select_arg argtree anl =
-  let 
+  let
     val pnode = dfind anl argtree
     val pvis = #svis pnode
   in
-    if #sstatus pnode = StacFresh then NONE else 
+    if #sstatus pnode = StacFresh then NONE else
     SOME (select_accessf (access_child argtree anl) pvis)
   end
-  handle HOL_ERR _ => 
+  handle HOL_ERR _ =>
     raise ERR "select_arg" (String.concatWith "|" (map its (rev anl)))
 
 fun select_argl argtree anl =
-  if null (#atyl (dfind anl argtree)) then anl else 
+  if null (#atyl (dfind anl argtree)) then anl else
   case select_arg argtree anl of
     NONE => anl
   | SOME an => select_argl argtree (an :: anl)
@@ -181,7 +181,7 @@ fun select_argl argtree anl =
    Select leaf in proof tree
    ------------------------------------------------------------------------- *)
 
-fun string_of_goalv gv = 
+fun string_of_goalv gv =
   let val gl = vector_to_list (Vector.map #goal gv) in
     String.concatWith "," (map string_of_goal gl)
   end
@@ -191,8 +191,8 @@ fun first_goalundec goalv =
     fun test (_,x) = (#gstatus x = GoalUndecided)
     val go = Vector.findi test goalv
   in
-    if isSome go then valOf go else 
-     raise ERR "first_goalundec" 
+    if isSome go then valOf go else
+     raise ERR "first_goalundec"
        ("no undecided goals : " ^ string_of_goalv goalv)
   end
 
@@ -201,16 +201,16 @@ fun select_node tree pid =
     val {goalv,...} = dfind pid tree
     val (gn,{goal,gvis,stacv,...}) = first_goalundec goalv
     fun access_toprec i = dfind [] (Vector.sub (stacv,i))
-    val sn = select_accessf access_toprec gvis handle HOL_ERR _ => 
-      raise ERR "select_node" (string_of_id pid ^ " " ^ its gn) 
+    val sn = select_accessf access_toprec gvis handle HOL_ERR _ =>
+      raise ERR "select_node" (string_of_id pid ^ " " ^ its gn)
     val argtree = Vector.sub (stacv,sn)
     val stac = dest_stac (#token (dfind [] argtree))
     val anl = select_argl argtree []
-    
+
   in
     if #sstatus (dfind anl argtree) = StacFresh
     then ((pid,(gn,sn,anl)),(goal,stac,argtree))
-    else select_node tree ((gn,sn,anl) :: pid)  
+    else select_node tree ((gn,sn,anl) :: pid)
   end
 
 (* -------------------------------------------------------------------------
@@ -236,25 +236,25 @@ fun reorder_stacv g pnn stacv =
 *)
 
 (* -------------------------------------------------------------------------
-   Expand argument tree and select first prediction 
+   Expand argument tree and select first prediction
    ------------------------------------------------------------------------- *)
 
 fun arg_create atyl arg =
   {token = arg, atyl = atyl, svis = 0.0, ssum = 0.0, sstatus = StacFresh}
 
 fun expand_argtree searchobj (goal,stac) (argtree,anl) =
-  let val atyl = #atyl (dfind anl argtree) in 
+  let val atyl = #atyl (dfind anl argtree) in
     if null atyl then (argtree,anl,StacFresh) else
     let val argl1 = #predarg searchobj stac (hd atyl) goal in
       if null argl1 then (argtree,anl,StacSaturated) else
-      let 
-        val argl2 = map (arg_create (tl atyl)) argl1 
+      let
+        val argl2 = map (arg_create (tl atyl)) argl1
         fun f i x = (i :: anl, x)
         val newargtree = daddl (mapi f argl2) argtree
       in
         expand_argtree searchobj (goal,stac) (newargtree, 0 :: anl)
-      end   
-    end    
+      end
+    end
   end
 
 (* -------------------------------------------------------------------------
@@ -263,7 +263,7 @@ fun expand_argtree searchobj (goal,stac) (argtree,anl) =
 
 fun status_of_stac parentd goalrec glo = case glo of
     NONE => StacSaturated
-  | SOME [] => StacProved 
+  | SOME [] => StacProved
   | SOME gl =>
    (if op_mem goal_eq (#goal goalrec) gl orelse
        exists (fn x => dmem x parentd) gl orelse
@@ -280,16 +280,16 @@ val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
 val stac_cache = ref (
   dempty (cpl_compare goal_compare (list_compare compare_token)))
-fun clean_stac_cache () = stac_cache := 
+fun clean_stac_cache () = stac_cache :=
   dempty (cpl_compare goal_compare (list_compare compare_token))
 
-fun apply_tac parsetoken tokenl goal = 
+fun apply_tac parsetoken tokenl goal =
   dfind (goal,tokenl) (!stac_cache) handle NotFound =>
   let
-    val tim = if is_metis_stac (hd tokenl) 
-              then !ttt_metis_time 
+    val tim = if is_metis_stac (hd tokenl)
+              then !ttt_metis_time
               else !ttt_tactic_time
-    fun f g = 
+    fun f g =
       let val tac = build_tac parsetoken tokenl in
         SOME (fst (TC_OFF tac g))
       end
@@ -315,11 +315,11 @@ fun reward_of vnno (sstatus,glo) = case sstatus of
     )
   | StacFresh => raise ERR "reward_of" "unexpected"
 
-fun collect_tokenl acc (argtree,anl) = 
+fun collect_tokenl acc (argtree,anl) =
   let val token = #token (dfind anl argtree) in
-    if null anl 
-    then token :: acc 
-    else collect_tokenl (token :: acc) (argtree, tl anl) 
+    if null anl
+    then token :: acc
+    else collect_tokenl (token :: acc) (argtree, tl anl)
   end
 
 fun apply_stac (tree,searchobj) argtree (pid,(gn,sn,anl)) =
@@ -333,30 +333,30 @@ fun apply_stac (tree,searchobj) argtree (pid,(gn,sn,anl)) =
     val glo = apply_tac (#parsetoken searchobj) tokenl (#goal goalrec)
     val sstatus = status_of_stac parentd goalrec glo
     val glo' = if sstatus = StacUndecided then glo else NONE
-    val reward = total_time reward_time 
-      (reward_of (#vnno searchobj)) (sstatus,glo')  
+    val reward = total_time reward_time
+      (reward_of (#vnno searchobj)) (sstatus,glo')
   in
     (glo',sstatus,reward)
   end
-    
+
 (* -------------------------------------------------------------------------
    Create a new node (if tactic application was successful)
    ------------------------------------------------------------------------- *)
 
 fun argtree_create (stac,atyl) =
-  let val stacrec = {token = Stac stac, atyl = atyl, 
+  let val stacrec = {token = Stac stac, atyl = atyl,
     svis = 0.0, ssum = 0.0, sstatus = StacFresh}
   in
     dnew (list_compare Int.compare) [([],stacrec)]
   end
 
 fun goal_create searchobj goal =
-  let val stacv = Vector.fromList 
+  let val stacv = Vector.fromList
     (map argtree_create (#predtac searchobj goal))
-    (* total_time reorder_time (reorder_stacv goal (valOf pnno)) stacv *) 
+    (* total_time reorder_time (reorder_stacv goal (valOf pnno)) stacv *)
   in
     {
-    goal = goal, 
+    goal = goal,
     gvis = 0.0, gsum = 0.0, gstatus = backstatus_stacv stacv ,
     stacv = stacv,
     siblingd = dempty (list_compare goal_compare)
@@ -397,14 +397,14 @@ fun children_statusl argtree anl acc i =
   else rev acc
 
 fun backup_argtree (argtree,anl) (sstatus,reward) =
-  let 
-    val {token,atyl,svis,ssum,...} = dfind anl argtree 
-    val newargnode = 
-      {token = token, atyl = atyl, 
+  let
+    val {token,atyl,svis,ssum,...} = dfind anl argtree
+    val newargnode =
+      {token = token, atyl = atyl,
        svis = svis + 1.0, ssum = ssum + reward, sstatus = sstatus}
     val newargtree = dadd anl newargnode argtree
   in
-    if null anl then newargtree else  
+    if null anl then newargtree else
     let
       val cstatusl = children_statusl newargtree (tl anl) [] 0
       val pstatus = backstatus_arg cstatusl
@@ -420,14 +420,14 @@ fun node_update tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl)) =
     val argtree = Vector.sub (stacv,sn)
     (* update argtree *)
     val argtree1 = if isSome argtreeo then (valOf argtreeo) else argtree
-    val argtree2 = backup_argtree (argtree1,anl) (sstatus,reward)  
+    val argtree2 = backup_argtree (argtree1,anl) (sstatus,reward)
     (* update stacv *)
     val newstacv = Vector.update (stacv,sn,argtree2)
     (* update goalv *)
     val newgoalrec =
       {
       goal = goal,
-      gvis = gvis + 1.0, gsum = gsum + reward, 
+      gvis = gvis + 1.0, gsum = gsum + reward,
       gstatus = backstatus_stacv newstacv,
       stacv = newstacv,
       siblingd = if isSome glo then dadd (valOf glo) () siblingd else siblingd
@@ -449,8 +449,8 @@ fun node_backup tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl)) =
   let val (newtree,newsstatus) =
     node_update tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl))
   in
-    if null id 
-    then newtree 
+    if null id
+    then newtree
     else node_backup newtree (NONE,NONE) (newsstatus,reward) (tl id, hd id)
   end
 
@@ -471,25 +471,25 @@ fun search_loop startsearchobj starttree =
       else
         let
           val _ = debug "selection"
-          val ((pid,(gn,sn,anl)),(goal,stac,argtree)) = 
+          val ((pid,(gn,sn,anl)),(goal,stac,argtree)) =
             select_node tree []
           val _ = debug "argument expansion"
           val (newargtree,newanl,argstatus) =
             expand_argtree searchobj (goal,stac) (argtree,anl)
           val pidx = (pid,(gn,sn,newanl))
           val _ = debugf "application: " string_of_id ((gn,sn,newanl) :: pid)
-          val (glo,sstatus,reward) = 
-            if argstatus = StacFresh 
+          val (glo,sstatus,reward) =
+            if argstatus = StacFresh
             then apply_stac (tree,searchobj) newargtree pidx
-            else (debug "no argument predicted"; 
+            else (debug "no argument predicted";
                   (NONE, StacSaturated, reward_of NONE (StacSaturated,NONE)))
           val _ = debug "node expansion"
-          val exptree = 
-            if sstatus = StacUndecided 
+          val exptree =
+            if sstatus = StacUndecided
             then node_create (tree,searchobj) (reward,valOf glo) pidx
             else tree
           val _ = debug "backup"
-          val backuptree = 
+          val backuptree =
             node_backup exptree (SOME newargtree, glo) (sstatus,reward) pidx
         in
           loop searchobj backuptree
@@ -503,16 +503,16 @@ fun search_loop startsearchobj starttree =
    ------------------------------------------------------------------------- *)
 
 fun proofpath_argtree argtree anl =
-  let 
+  let
     val node = dfind anl argtree
     val atyl = #atyl node
-    fun f i = 
-      if not (dmem (i :: anl) argtree) 
+    fun f i =
+      if not (dmem (i :: anl) argtree)
         then raise ERR "proofpath_argtree" "unexpected"
       else if is_stacwin (#sstatus (dfind (i :: anl) argtree))
         then i
       else f (i + 1)
-  in 
+  in
     if null atyl then anl else proofpath_argtree argtree (f 0 :: anl)
   end
 
@@ -568,7 +568,7 @@ fun reconstruct_proofstatus (searchstatus,tree) g =
 fun starttree_of searchobj goal =
   let
     val goalv = Vector.fromList [goal_create searchobj goal]
-    val root = 
+    val root =
      {nvis = 1.0, nsum = 0.0, nstatus = backstatus_goalv goalv,
       goalv = goalv,
       parentd = dempty goal_compare}

@@ -33,6 +33,8 @@ fun extract_value tree =
     basicex_to_tnnex (map (fn x => (get_valuetm x, is_win x)) nodel)
   end
 
+(* could be dependent on tttTrain tttReinforce *)
+
 (*
 (* -------------------------------------------------------------------------
    Policy examples
@@ -95,10 +97,10 @@ fun test_astac astac g gl thmidl =
     | NONE => false
   end
 
-fun minimize f (pos,neg) thmidl = 
-  case thmidl of 
+fun minimize f (pos,neg) thmidl =
+  case thmidl of
     [] => (pos,neg)
-  | a :: m => if f (pos :: m) 
+  | a :: m => if f (pos :: m)
               then minimize f (pos, a :: neg) m
               else minimize f (a :: pos, neg) m
 
@@ -148,7 +150,7 @@ fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
   in
     print_status status;
     print_time ("ttt_eval",t);
-    print_endline ("nodes: " ^ its (dlength tree)); 
+    print_endline ("nodes: " ^ its (dlength tree));
     print_time ("tnn value",!reward_time);
     print_time ("tnn policy",!reorder_time);
     print_time ("tactic pred",!predtac_time);
@@ -250,19 +252,19 @@ load "tttUnfold"; open tttUnfold;
 tttSetup.record_savestate_flag := true;
 tttSetup.learn_abstract_term := false;
 aiLib.debug_flag := false;
-ttt_clean_record (); ttt_record ();
+ttt_clean_record ();
+ttt_record ();
 
 load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
-val _ = ttt_clean_eval ();
-val _ = run_evalscript_thyl "august9" (true,30) (NONE,NONE) thyl;
+ttt_clean_eval ();
+val _ = run_evalscript_thyl "august10" (true,30) (NONE,NONE) thyl;
 
 val tnn_value = train_value 0.95 "value";
-val tnn_policy = train_policy 0.95 "policy";
-val _ = run_evalscript_thyl "august9_vnn-3" (true,30) (SOME "value",NONE) thyl;
+val _ = run_evalscript_thyl "august10-vnn" (true,30) (SOME "value",NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------
@@ -373,11 +375,11 @@ fun compare_stats expl exp =
 
 (*
 load "tttEval"; open tttEval;
-compare_stats ["august8-2"] "august8-mini";
+compare_stats ["august9"] "august10";
 *)
 
 (* ------------------------------------------------------------------------
-   Training
+   Training (maybe copy the training)
    ------------------------------------------------------------------------ *)
 
 fun operl_of_tnnex exl =

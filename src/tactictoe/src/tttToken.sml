@@ -20,16 +20,16 @@ fun debug_err s1 s2 = (debug (s1 ^ " : " ^ s2); raise ERR s1 s2)
    Union types for different type of tactics
    ------------------------------------------------------------------------- *)
 
-datatype pretac = 
-    NoargTac of tactic  
+datatype pretac =
+    NoargTac of tactic
   | ThmlTac of thm list -> tactic
   | TermTac of term quotation -> tactic
 
-fun dest_noargtac pretac = case pretac of 
+fun dest_noargtac pretac = case pretac of
   NoargTac x => x | _ => raise ERR "dest_noargtac" ""
-fun dest_thmltac pretac = case pretac of 
+fun dest_thmltac pretac = case pretac of
   ThmlTac x => x | _ => raise ERR "dest_thmltac" ""
-fun dest_termtac pretac = case pretac of 
+fun dest_termtac pretac = case pretac of
   TermTac x => x | _ => raise ERR "dest_termtac" ""
 
 (* -------------------------------------------------------------------------
@@ -38,16 +38,16 @@ fun dest_termtac pretac = case pretac of
 
 datatype token = Stac of string | Sterm of string | Sthml of string list
 
-fun dest_stac token = 
+fun dest_stac token =
   case token of Stac s => s | _ => raise ERR "dest_stac" ""
-fun dest_sterm token = 
+fun dest_sterm token =
   case token of Sterm s => s | _ => raise ERR "dest_sterm" ""
-fun dest_sthml token = 
+fun dest_sthml token =
   case token of Sthml sl => sl | _ => raise ERR "dest_sthml" ""
 
-type parsetoken = 
+type parsetoken =
   {parse_stac : string -> pretac ,
-   parse_thmidl : string list -> thm list, 
+   parse_thmidl : string list -> thm list,
    parse_sterm : string -> term quotation}
 
 fun string_of_token token = case token of
@@ -55,7 +55,7 @@ fun string_of_token token = case token of
   | Sterm s => "term: " ^ s
   | Sthml sl => "thml: " ^ String.concatWith " " sl
 
-fun compare_token (t1,t2) = 
+fun compare_token (t1,t2) =
   String.compare (string_of_token t1, string_of_token t2)
 
 (* -------------------------------------------------------------------------
@@ -67,16 +67,16 @@ datatype aty = Aterm | Athml
 val termarg_placeholder = "tactictoe_termarg"
 val thmlarg_placeholder = "tactictoe_thmlarg"
 val tactictoe_thmlarg : thm list = []
-val tactictoe_termarg : term quotation = [QUOTE "tactictoe_termag:'a"] 
+val tactictoe_termarg : term quotation = [QUOTE "tactictoe_termag:'a"]
 
 fun is_termstac stac =
   mem termarg_placeholder (partial_sml_lexer stac)
 fun is_thmlstac stac =
   mem thmlarg_placeholder (partial_sml_lexer stac)
 
-fun extract_atyl stac = 
+fun extract_atyl stac =
   (if is_thmlstac stac then [Athml] else []) @
-  (if is_termstac stac then [Aterm] else [])  
+  (if is_termstac stac then [Aterm] else [])
 
 (* -------------------------------------------------------------------------
    Abstraction/instantiation of list of theorems in tactic strings
@@ -119,7 +119,7 @@ fun sthml_of_thmidl thmidl =
   "[ " ^ String.concatWith " , " (map dbfetch_of_thmid thmidl) ^ " ]"
 
 fun inst_thml thmidl stac =
-  let 
+  let
     val sthml = sthml_of_thmidl thmidl
     val estac1 = partial_sml_lexer stac
     val estac2 = subst_sl (thmlarg_placeholder,sthml) estac1
@@ -163,7 +163,7 @@ fun abstract_term stac =
     (debug ("error: abstract_term: " ^ stac); NONE)
 
 fun inst_term sterm stac =
-  let 
+  let
     val estac1 = partial_sml_lexer stac
     val qterm = "[ HOLPP.QUOTE " ^ mlquote sterm ^ " ]"
     val estac2 = subst_sl (termarg_placeholder,qterm) estac1
@@ -211,27 +211,27 @@ fun pred_ssubterm (asl,w) stm =
 
 fun build_tac {parse_stac,parse_thmidl,parse_sterm} tokenl = case tokenl of
     [Stac stac] => dest_noargtac (parse_stac stac)
-  | [Stac stac, Sthml thmidl] => 
-     let 
-       val thmltac = dest_thmltac (parse_stac stac) 
+  | [Stac stac, Sthml thmidl] =>
+     let
+       val thmltac = dest_thmltac (parse_stac stac)
        val thml = parse_thmidl thmidl
      in
        thmltac thml
      end
-  | [Stac stac, Sterm sterm] => 
-    let 
+  | [Stac stac, Sterm sterm] =>
+    let
       val termtac = dest_termtac (parse_stac stac)
       val term = parse_sterm sterm
     in
       termtac term
     end
-  | _ => raise ERR "build_tac" "not supported"  
+  | _ => raise ERR "build_tac" "not supported"
 
 fun build_stac tokenl = case tokenl of
     [Stac stac] => stac
   | [Stac stac, Sthml thmidl] => inst_thml thmidl stac
   | [Stac stac, Sterm sterm] => inst_term sterm stac
-  | _ => raise ERR "build_stac" "not supported"  
+  | _ => raise ERR "build_stac" "not supported"
 
 (* -------------------------------------------------------------------------
    Parsing a list of tactics (of different types)
@@ -247,8 +247,8 @@ fun mk_pretac stac = case extract_atyl stac of
     "fn " ^ thmlarg_placeholder ^ " => " ^ mk_valid stac ^ ")"
   | [Aterm] => "tttToken.TermTac ( " ^
     "fn " ^ termarg_placeholder ^ " => " ^ mk_valid stac ^ ")"
-  | _ => raise ERR "mk_pretac" "not supported"  
-    
+  | _ => raise ERR "mk_pretac" "not supported"
+
 fun pretacl_of_sml tim stacl =
   let
     val ttacl = "[ " ^ String.concatWith " , " (map mk_pretac stacl) ^ " ]"
