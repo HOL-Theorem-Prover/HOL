@@ -74,8 +74,8 @@ fun read_sections filename = let
   in split_by_sections ys end
 
 (* function that cleans names *)
-val remove_dot =
-  String.translate (fn c => if mem c [#".",#" "] then "_" else implode [c])
+val remove_whitespace =
+  String.translate (fn c => if mem c [#" ",#"\t"] then "_" else implode [c])
 
 fun format_line sec_name = let
   fun find_first i c s = if String.sub(s,i) = c then i else find_first (i+1) c s
@@ -106,7 +106,7 @@ fun format_line sec_name = let
     val s2 = if String.isPrefix ".word" s3 then "const:" ^ s2 else s2
     val s2 = if String.isPrefix "ldrls\tpc," s3 then "switch:" ^ s2 else s2
     val s2 = ((if is_subroutine_call s3
-               then "call:" ^ remove_dot
+               then "call:" ^ remove_whitespace
                  (el 2 (String.tokens (fn x => mem x [#"<",#">"]) s3)) ^ ":" ^ s2
                else s2)
               handle HOL_ERR _ => s2)
@@ -195,7 +195,7 @@ fun read_complete_sections filename filename_sigs ignore = let
        then x :: add_switch_mark (mark_riscv_switch xs)
        else x :: mark_riscv_switch xs)
   fun process_body (sec_name,io,location,body) =
-    (remove_dot sec_name,io,location,
+    (remove_whitespace sec_name,io,location,
         if mem sec_name ignore then [] else
           mark_riscv_switch (try_map (format_line sec_name) body))
   val all_sections = map process_body all_sections

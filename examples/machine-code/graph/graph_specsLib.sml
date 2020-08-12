@@ -518,7 +518,7 @@ fun derive_insts_for sec_name = let
   val all_ok_chars = explode
    ("abcdefghijklmonpqrstuvwxyz" ^
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ^
-    "0123456789_")
+    "0123456789_.")
   fun remove_SKIP_TAG th = let
     val code = th |> concl |> rator |> rator |> rand |> rand
     val pos = th |> concl |> rand |> rator |> rator |> rand |> rand
