@@ -256,12 +256,12 @@ ttt_clean_record ();
 ttt_record ();
 
 load "tttEval"; open tttEval;
-tttSetup.ttt_search_time := 30.0;
+tttSetup.ttt_search_time := 300.0;
 aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
 ttt_clean_eval ();
-val _ = run_evalscript_thyl "august10" (true,30) (NONE,NONE) thyl;
+val _ = run_evalscript_thyl "august11-300" (true,30) (NONE,NONE) thyl;
 
 val tnn_value = train_value 0.95 "value";
 val _ = run_evalscript_thyl "august10-vnn" (true,30) (SOME "value",NONE) thyl;
@@ -336,14 +336,11 @@ fun cumul_graph timelimit exp =
 
 (*
 load "tttEval"; open tttEval;
-val expl = ["june4-e1","june4-e2","june2-e1","june2-e3","june2-e4"];
-app (cumul_graph 30.0) expl;
+val expl = ["august11-300","august10"];
+app (cumul_graph 300.0) expl;
 (* quit *)
-gnuplot -p -e "plot 'eval/graph/june4-e1_graph' using 1:2 with lines,\
-                    'eval/graph/june4-e2_graph' using 1:2 with lines,\
-                    'eval/graph/june2-e1_graph' using 1:2 with lines,\
-                    'eval/graph/june2-e3_graph' using 1:2 with lines,\
-                    'eval/graph/june2-e4_graph' using 1:2 with lines"
+gnuplot -p -e "plot 'eval/graph/august10_graph' using 1:2 with lines,\
+                    'eval/graph/august11-300_graph' using 1:2 with lines"
 *)
 
 fun compare_stats expl exp =

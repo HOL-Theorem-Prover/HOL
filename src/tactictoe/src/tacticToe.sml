@@ -90,6 +90,8 @@ fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
   let
     val narg_explo = 1
     val _ = hidef QUse.use infix_file
+    (* trying to load basic modules *)
+    val _ = map (can load) ["metisTools","BasicProvers","simpLib","Rewrite"]
     (* preselection *)
     val _ = print_endline "preselection"
     val goalf = fea_of_goal true goal
