@@ -83,6 +83,7 @@ fun format_line sec_name = let
     (String.substring(s,0,find_first 0 c s),
      String.extract(s,find_first 0 c s+1,NONE))
   fun is_subroutine_call s3 =
+    if String.isPrefix "jal" s3 then true else
     not (String.isPrefix "addi" s3) andalso
     not (String.isPrefix "sd" s3) andalso
     not (String.isPrefix "sw" s3) andalso
