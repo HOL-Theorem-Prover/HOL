@@ -21,8 +21,6 @@ src/HolSmt
 !!examples/computability/lambda
 !!examples/computability/register
 !!examples/computability/turing
-!!examples/computability/kolmog
-!!examples/computability/recdegrees
 !!examples/balanced_bst
 !!examples/formal-languages/regular
 src/Boolify/src
@@ -36,3 +34,5 @@ src/temporal/src
 !!examples/temporal_deep
 [mosml]!!examples/temporal_deep/src/model_check
 [poly]!!examples/temporal_deep/src/examples
+!!examples/computability/kolmog
+!!examples/computability/recdegrees
