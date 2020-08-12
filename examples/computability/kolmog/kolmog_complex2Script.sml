@@ -16,7 +16,7 @@ Theorem univ_rf_no_pf:
   univ_rf U ==> ¬prefix_free {x | ∃y. U x = SOME y}
 Proof
   rw[prefix_free_def] >> fs[univ_rf_def,kolmog_complexity_def] >>
-  `∀y. {p | U p = SOME y} ≠ ∅` by 
+  `∀y. {p | U p = SOME y} ≠ ∅` by
     (`univ_rf U` by fs[univ_rf_def] >> fs[univ_rf_nonempty]) >>
   fs[] >> qexists_tac`[T]` >> qexists_tac`[T;T]` >>rw[]
 QED
@@ -25,24 +25,24 @@ QED
 
 (*
 Theorem comp_univ_comp_npkolmog:
-  univ_rf U ∧ (computable (λx. THE (kolmog_complexity x U) ) ) ==> computable np_kolmog 
+  univ_rf U ∧ (computable (λx. THE (kolmog_complexity x U) ) ) ==> computable np_kolmog
 Proof
   rw[] >> fs[computable_def,np_kolmog_def,univ_rf_def,computable_def] >>
-  fs[kolmog_complexity_def] >> 
-  `∀n. {y | Phi (nfst (bl2n y)) (nsnd (bl2n y)) = SOME n} <> ∅` by 
-        fs[EXTENSION,Phi_bl2nx_npair] >> simp[] >> 
-  `∀x. {p | U p = SOME x} <> ∅` by 
+  fs[kolmog_complexity_def] >>
+  `∀n. {y | Phi (nfst (bl2n y)) (nsnd (bl2n y)) = SOME n} <> ∅` by
+        fs[EXTENSION,Phi_bl2nx_npair] >> simp[] >>
+  `∀x. {p | U p = SOME x} <> ∅` by
     (rw[] >> `univ_rf U` by simp[univ_rf_def] >> drule univ_rf_nonempty >> fs[]) >>
-  fs[] >> 
+  fs[] >>
   qexists_tac`numdB (fromTerm (LAM "n" ) )`
 
   `∃g. ∀x. Phi i x = U (g ++ n2bl x)` by fs[] >>
   `∀x. SOME (THE (kolmog_complexity x U)) = U (g ++ n2bl x)` by fs[] >>
-  fs[kolmog_complexity_def] >> `univ_rf U` by fs[univ_rf_def] >> 
-  Cases_on`∀x. {p | U p = SOME x} <> ∅` 
-  >- (`SOME (MIN_SET {LENGTH p | U p = SOME x}) = U (g ++ n2bl x)` by fs[] >> 
-       >> qexists_tac`i` >> rw[]) 
-  >- metis_tac[univ_rf_nonempty] 
+  fs[kolmog_complexity_def] >> `univ_rf U` by fs[univ_rf_def] >>
+  Cases_on`∀x. {p | U p = SOME x} <> ∅`
+  >- (`SOME (MIN_SET {LENGTH p | U p = SOME x}) = U (g ++ n2bl x)` by fs[] >>
+       >> qexists_tac`i` >> rw[])
+  >- metis_tac[univ_rf_nonempty]
 QED
 
 Theorem univ_comp_kol_incomp:
@@ -61,18 +61,18 @@ QED
 Theorem incomp_all_kolmog:
   univ_rf U ==> ¬(computable (λx. THE (kolmog_complexity x U) ) )
 Proof
-  rw[] >> strip_tac >> 
+  rw[] >> strip_tac >>
 QED
 
 *)
 
 
-(* not sure if needed anymore 
+(* not sure if needed anymore
 Theorem dBnum_fromTerm_church:
   dBnum (fromTerm (church y)) = 35
 Proof
-  Induct_on`y` >> 
-  fs[churchnumTheory.church_def] >> 
+  Induct_on`y` >>
+  fs[churchnumTheory.church_def] >>
   fs[churchDBTheory.fromTerm_funpow_app] >>
   fs[pure_dBTheory.dLAM_def] >>
   fs[enumerationsTheory.dBnum_def] >>
@@ -82,17 +82,17 @@ QED
 Theorem prime_tm_npair:
   prime_tm x y = npair x y
 Proof
-  simp[prime_tm_def] >> 
+  simp[prime_tm_def] >>
   simp[enumerationsTheory.dBnum_def,pure_dBTheory.fromTerm_thm] >>
-  simp[churchnumTheory.church_def] >> 
-  simp[churchDBTheory.fromTerm_funpow_app] >> 
+  simp[churchnumTheory.church_def] >>
+  simp[churchDBTheory.fromTerm_funpow_app] >>
   pure_dBTheory.fromTerm_thm,pure_dBTheory.fromTerm_eqn
 QED
 
 
 
 Theorem kolmog_fn_ub:
-  computable f ==> ∃c. ∀m. 
+  computable f ==> ∃c. ∀m.
   plain_kolmog (f m) <= 2 * ((plain_kolmog m) + THE (kolmog_fn2 f)) + c
 Proof
   rw[] >> qexists_tac`10` >> rw[] >>
@@ -101,9 +101,9 @@ Proof
   `Phi (recfn_index2 f) m = SOME (f m)` by fs[] >>
   `Phi (prime_tm (THE (kolmog_fn2 f)) m) 0 = SOME (f m)` by fs[kolmog_fn2_def,prime_tm_corr] >>
   `plain_kolmog (f m) ≤ ℓ (prime_tm (THE (kolmog_fn2 f)) m)` by fs[plain_kolmog_smallest] >>
-  `ℓ (prime_tm (THE (kolmog_fn2 f)) m) <= 2 * (THE (kolmog_fn2 f) + plain_kolmog m) + 10` 
-    suffices_by fs[] >> 
-  
+  `ℓ (prime_tm (THE (kolmog_fn2 f)) m) <= 2 * (THE (kolmog_fn2 f) + plain_kolmog m) + 10`
+    suffices_by fs[] >>
+
 QED
 
 Theorem kol_fkmin_lb:
@@ -115,10 +115,10 @@ QED
 Theorem kolmog_length_ub:
   ∃c. ∀m. plain_kolmog m <= (ℓ m) + c
 Proof
-  `∃i0. ∀x. Phi i0 x = SOME x` by stuff >> 
-  `∀m. plain_kolmog m <= ℓ (prime_tm i0 m)` 
+  `∃i0. ∀x. Phi i0 x = SOME x` by stuff >>
+  `∀m. plain_kolmog m <= ℓ (prime_tm i0 m)`
     by (rw[] >> `Phi (prime_tm i0 m) 0 = SOME m` by fs[prime_tm_corr] >> fs[plain_kolmog_smallest]) >>
-  `∃k. ∀m. ℓ (prime_tm i0 m) <= LENGTH ((n2bl m) ++ (n2bl i0)) +k` 
+  `∃k. ∀m. ℓ (prime_tm i0 m) <= LENGTH ((n2bl m) ++ (n2bl i0)) +k`
     by (simp[prime_tm_def,pure_dBTheory.fromTerm_def,enumerationsTheory.dBnum_def] >> ) >>
   `∀m. LENGTH ((n2bl m) ++ (n2bl i0)) +k  <= (ℓ m) + ((ℓ i0) + k)` by (rw[]>>fs[LENGTH_APPEND]) >>
   qexists_tac`ℓ i0 + k` >> strip_tac >> metis_tac[LESS_EQ_TRANS]
@@ -131,7 +131,7 @@ Proof
 QED
 
 Theorem kol_fkmin_ub:
-  computable plain_kolmog ==> ∃c. ∀m. (plain_kolmog m) + THE (kolmog_fn (λx. (SOME o fkmin) (HD x) )) <= 2*(LENGTH (n2bl m)) + c 
+  computable plain_kolmog ==> ∃c. ∀m. (plain_kolmog m) + THE (kolmog_fn (λx. (SOME o fkmin) (HD x) )) <= 2*(LENGTH (n2bl m)) + c
 Proof
   cheat
 QED
@@ -139,14 +139,14 @@ QED
 Theorem compkol_lb:
   computable plain_kolmog ==> ∃c. ∀m. m <=  2*(LENGTH (n2bl m)) + c
 Proof
-  rw[] >> `∃c. ∀m. m <= (plain_kolmog m) + THE (kolmog_fn (λx. (SOME o fkmin) (HD x) )) + c ` by 
+  rw[] >> `∃c. ∀m. m <= (plain_kolmog m) + THE (kolmog_fn (λx. (SOME o fkmin) (HD x) )) + c ` by
             metis_tac[kfkmin_lb,kol_fkmin_lb,LESS_EQ_TRANS] >>
-  `∃c. ∀m. (plain_kolmog m) + THE (kolmog_fn (λx. (SOME o fkmin) (HD x) )) <= 2*(LENGTH (n2bl m)) + c ` by metis_tac[kol_fkmin_ub] >> qexists_tac`c+c'` >> 
+  `∃c. ∀m. (plain_kolmog m) + THE (kolmog_fn (λx. (SOME o fkmin) (HD x) )) <= 2*(LENGTH (n2bl m)) + c ` by metis_tac[kol_fkmin_ub] >> qexists_tac`c+c'` >>
   `∀m. plain_kolmog m + THE (kolmog_fn (λx. (SOME ∘ fkmin) (HD x)))+c ≤
          2 * ℓ m + c'+c` by fs[] >>
   rw[] >> `plain_kolmog m + THE (kolmog_fn (λx. (SOME ∘ fkmin) (HD x))) + c ≤
-             2 * ℓ m + c' + c` by fs[] >> 
-  `m ≤ plain_kolmog m + THE (kolmog_fn (λx. (SOME ∘ fkmin) (HD x))) + c` by fs[] >> 
+             2 * ℓ m + c' + c` by fs[] >>
+  `m ≤ plain_kolmog m + THE (kolmog_fn (λx. (SOME ∘ fkmin) (HD x))) + c` by fs[] >>
   fs[LESS_EQ_TRANS]
 QED
 
@@ -309,7 +309,7 @@ Proof
 QED
 
 Theorem prime_tm_mk_comp_initial_state_NONE:
-  comp_count (mk_initial_state (prime_tm M x) 0) = NONE <=> 
+  comp_count (mk_initial_state (prime_tm M x) 0) = NONE <=>
   comp_count (mk_initial_state M x) = NONE
 Proof
   eq_tac >> rw[]
@@ -322,29 +322,29 @@ Proof
 QED
 
 Theorem prime_tm_mk_comp_initial_state_SOME:
-  (∃t1. comp_count (mk_initial_state (prime_tm M x) 0) = SOME t1) <=> 
+  (∃t1. comp_count (mk_initial_state (prime_tm M x) 0) = SOME t1) <=>
   (∃t2. comp_count (mk_initial_state M x) = SOME t2)
 Proof
   eq_tac >> rw[]
-  >- (`terminated (steps t1 (mk_initial_state (prime_tm M x) 0)) ∧ 
-       Phi (prime_tm M x) 0 = SOME (cs_to_num (steps t1 (mk_initial_state (prime_tm M x) 0)))` by 
+  >- (`terminated (steps t1 (mk_initial_state (prime_tm M x) 0)) ∧
+       Phi (prime_tm M x) 0 = SOME (cs_to_num (steps t1 (mk_initial_state (prime_tm M x) 0)))` by
         metis_tac[correctness_on_termination] >>
-      `Phi M x = SOME (cs_to_num (steps t1 (mk_initial_state (prime_tm M x) 0)))` by 
-        fs[prime_tm_corr] >> 
+      `Phi M x = SOME (cs_to_num (steps t1 (mk_initial_state (prime_tm M x) 0)))` by
+        fs[prime_tm_corr] >>
       fs[correctness_on_nontermination_contrapos])
-  >- (`terminated (steps t2 (mk_initial_state M x)) ∧ 
-       Phi M x = SOME (cs_to_num (steps t2 (mk_initial_state M x)))` by 
+  >- (`terminated (steps t2 (mk_initial_state M x)) ∧
+       Phi M x = SOME (cs_to_num (steps t2 (mk_initial_state M x)))` by
          metis_tac[correctness_on_termination] >>
-      `Phi (prime_tm M x) 0 = SOME (cs_to_num (steps t2 (mk_initial_state M x)))` by 
-        fs[prime_tm_corr] >> 
-      fs[correctness_on_nontermination_contrapos])  
+      `Phi (prime_tm M x) 0 = SOME (cs_to_num (steps t2 (mk_initial_state M x)))` by
+        fs[prime_tm_corr] >>
+      fs[correctness_on_nontermination_contrapos])
 QED
 
 Theorem prime_tm_termination:
   (∃t1. terminated (steps t1 (mk_initial_state (prime_tm M x) 0))) <=>
   (∃t2. terminated (steps t2 (mk_initial_state M x)))
 Proof
-  `(∃t1. comp_count (mk_initial_state (prime_tm M x) 0) = SOME t1) <=> 
+  `(∃t1. comp_count (mk_initial_state (prime_tm M x) 0) = SOME t1) <=>
   (∃t2. comp_count (mk_initial_state M x) = SOME t2)` by fs[prime_tm_mk_comp_initial_state_SOME] >>
   fs[comp_count_def,OLEAST_def]
 QED
@@ -365,27 +365,27 @@ Proof
 QED
 
 Theorem ELL_terminated_FINITE:
-  FINITE {m | (∃t. terminated (steps t (mk_initial_state m 0)) ∧ 
+  FINITE {m | (∃t. terminated (steps t (mk_initial_state m 0)) ∧
                   ¬terminated (steps (t − 1) (mk_initial_state m 0))) ∧ ℓ m = k}
 Proof
   fs[finite_and,ELL_FINITE]
 QED
 
 Theorem non_terminated_down:
-  (¬terminated (steps t (mk_initial_state m x))) ==> 
+  (¬terminated (steps t (mk_initial_state m x))) ==>
   (∀a. a<=t ==>  (¬terminated (steps a (mk_initial_state m x))))
 Proof
   rw[] >> strip_tac >> metis_tac[terminated_le]
 QED
 
 Theorem comp_count_terminated:
-  (terminated (steps x (mk_initial_state m y)) ∧ 
-  ¬terminated (steps (x − 1) (mk_initial_state m y))) ==> 
+  (terminated (steps x (mk_initial_state m y)) ∧
+  ¬terminated (steps (x − 1) (mk_initial_state m y))) ==>
   THE (comp_count (mk_initial_state m y)) = x
 Proof
   rw[] >> `Phi m y = SOME (cs_to_num (steps x (mk_initial_state m y)))` by fs[terminated_imp]>>
-  fs[Phi_steps] >> Cases_on`comp_count (mk_initial_state m y)` >> fs[] >> 
-  `(∀a. a<=x-1 ==> (¬terminated (steps a (mk_initial_state m y))))` by 
+  fs[Phi_steps] >> Cases_on`comp_count (mk_initial_state m y)` >> fs[] >>
+  `(∀a. a<=x-1 ==> (¬terminated (steps a (mk_initial_state m y))))` by
     metis_tac[non_terminated_down] >>  fs[comp_count_def,OLEAST_def] >> rw[]>>
   numLib.LEAST_ELIM_TAC >> rw[] >- metis_tac[] >>
   `(∀a. a<x ==> (¬terminated (steps a (mk_initial_state m y))))` by fs[] >>
@@ -393,16 +393,16 @@ Proof
 QED
 
 Theorem ELL_SURJ_terminate:
-  SURJ (λm. THE (comp_count (mk_initial_state m 0))) 
-  {m | (∃t. terminated (steps t (mk_initial_state m 0)) ∧ 
-                  ¬terminated (steps (t − 1) (mk_initial_state m 0))) ∧ ℓ m = k}  
+  SURJ (λm. THE (comp_count (mk_initial_state m 0)))
+  {m | (∃t. terminated (steps t (mk_initial_state m 0)) ∧
+                  ¬terminated (steps (t − 1) (mk_initial_state m 0))) ∧ ℓ m = k}
   {t |(∃m.  terminated (steps t (mk_initial_state m 0)) ∧
            ¬terminated (steps (t − 1) (mk_initial_state m 0)) ∧
            ℓ m = k)}
 Proof
   fs[SURJ_DEF] >> rw[] >> qexists_tac`m`
   >- (metis_tac[comp_count_terminated])
-  >- (rw[] >- (qexists_tac`x` >> fs[comp_count_terminated]) 
+  >- (rw[] >- (qexists_tac`x` >> fs[comp_count_terminated])
       >- (fs[comp_count_terminated] ) )
 QED
 
@@ -411,11 +411,11 @@ Theorem terminated_imp2:
      terminated (steps t (mk_initial_state M x))) ⇒
      Phi M x = SOME (cs_to_num (steps t (mk_initial_state M x)))
 Proof
-  rw[] >> Cases_on`t=0` 
+  rw[] >> Cases_on`t=0`
   >- ( fs[Phi_steps] >> `comp_count (mk_initial_state M x) = SOME t`
       suffices_by fs[] >>
       fs[comp_count_def] >> fs[OLEAST_EQ_SOME] >> rw[] >> strip_tac  ) >>
-  `¬terminated (steps (t − 1) (mk_initial_state M x))` by 
+  `¬terminated (steps (t − 1) (mk_initial_state M x))` by
     (strip_tac >> fs[] >> `t<=t-1` by fs[] >> fs[PRE_SUB1])  >>
   fs[terminated_imp]
 QED
@@ -428,30 +428,30 @@ Proof
   rw[] >> Cases_on`t=0`
   >- (`Phi m y = SOME (cs_to_num (steps t (mk_initial_state m y)))` by fs[terminated_imp2]>>
       `comp_count (mk_initial_state m y) = SOME t` suffices_by fs[] >>
-      fs[comp_count_def] >> fs[OLEAST_EQ_SOME] >> rw[] >> strip_tac  ) >> 
-  `¬terminated (steps (t − 1) (mk_initial_state m y))` by 
+      fs[comp_count_def] >> fs[OLEAST_EQ_SOME] >> rw[] >> strip_tac  ) >>
+  `¬terminated (steps (t − 1) (mk_initial_state m y))` by
     (strip_tac >> fs[] >> `t<=t-1` by fs[] >> fs[])  >> fs[comp_count_terminated]
 QED
 
 
 Theorem ELL_terminated_FINITE2:
-  FINITE {m | (∃t. terminated (steps t (mk_initial_state m 0)) ∧ 
-               (∀t'. terminated (steps t' (mk_initial_state m 0)) ⇒ t ≤ t') ) ∧ ℓ m = k} 
+  FINITE {m | (∃t. terminated (steps t (mk_initial_state m 0)) ∧
+               (∀t'. terminated (steps t' (mk_initial_state m 0)) ⇒ t ≤ t') ) ∧ ℓ m = k}
 Proof
   fs[finite_and,ELL_FINITE]
 QED
 
 Theorem ELL_SURJ_terminate2:
-  SURJ (λm. THE (comp_count (mk_initial_state m 0))) 
-  {m | (∃t. terminated (steps t (mk_initial_state m 0)) ∧ 
-                 (∀t'. terminated (steps t' (mk_initial_state m 0)) ⇒ t ≤ t') ) ∧ ℓ m = k}  
+  SURJ (λm. THE (comp_count (mk_initial_state m 0)))
+  {m | (∃t. terminated (steps t (mk_initial_state m 0)) ∧
+                 (∀t'. terminated (steps t' (mk_initial_state m 0)) ⇒ t ≤ t') ) ∧ ℓ m = k}
   {t |(∃m. terminated (steps t (mk_initial_state m 0)) ∧
            (∀t'. terminated (steps t' (mk_initial_state m 0)) ⇒ t ≤ t') ∧
            ℓ m = k)}
 Proof
   fs[SURJ_DEF] >> rw[] >> qexists_tac`m`
   >- (metis_tac[comp_count_terminated2])
-  >- (rw[] >- (qexists_tac`x` >> fs[comp_count_terminated2]) 
+  >- (rw[] >- (qexists_tac`x` >> fs[comp_count_terminated2])
       >- (fs[comp_count_terminated2] ) )
 QED
 
@@ -461,23 +461,23 @@ Theorem terminated_tmax:
   terminated (steps (tmax (ℓ (prime_tm M x))) (mk_initial_state (prime_tm M x) 0))
 Proof
   rw[] >> Cases_on`terminated (steps 0 (mk_initial_state (prime_tm M x) 0))`
-  >- (Cases_on`0<tmax (ℓ (prime_tm M x))` >>fs[]>> metis_tac[terminated_ge]) >> 
+  >- (Cases_on`0<tmax (ℓ (prime_tm M x))` >>fs[]>> metis_tac[terminated_ge]) >>
   `∃tl. tl < t ∧ ¬terminated (steps tl (mk_initial_state (prime_tm M x) 0)) ∧
-        terminated (steps (tl + 1) (mk_initial_state (prime_tm M x) 0))` by 
-    fs[terminated_down] >> 
+        terminated (steps (tl + 1) (mk_initial_state (prime_tm M x) 0))` by
+    fs[terminated_down] >>
   rw[tmax_def]>> qabbrev_tac`s = {t |
             (∃m.
                  terminated (steps t (mk_initial_state m 0)) ∧
                  (∀t'. terminated (steps t' (mk_initial_state m 0)) ⇒ t ≤ t') ∧
                  ℓ m = ℓ (prime_tm M x))}` >>
-  `s <> {}` by 
+  `s <> {}` by
     (fs[Abbr`s`,EXTENSION] >> qexists_tac`tl+1` >> qexists_tac`prime_tm M x` >> rw[] >>
-     `∀a. a ≤ tl ⇒ ¬terminated (steps a (mk_initial_state (prime_tm M x) 0))` by 
+     `∀a. a ≤ tl ⇒ ¬terminated (steps a (mk_initial_state (prime_tm M x) 0))` by
        metis_tac[non_terminated_down] >> Cases_on`tl + 1 ≤ t'` >> rw[] ) >>
-  `(tl+1) ∈ s` by (fs[Abbr`s`,IN_DEF] >> qexists_tac`prime_tm M x` >> rw[] >> 
+  `(tl+1) ∈ s` by (fs[Abbr`s`,IN_DEF] >> qexists_tac`prime_tm M x` >> rw[] >>
                    Cases_on`tl + 1 ≤ t'` >> fs[] >> `t'<=tl` by fs[]>> metis_tac[non_terminated_down])>>
-  `FINITE s` by (fs[Abbr`s`] >> 
-                 metis_tac[ELL_SURJ_terminate2,FINITE_SURJ,ELL_terminated_FINITE2]) >> 
+  `FINITE s` by (fs[Abbr`s`] >>
+                 metis_tac[ELL_SURJ_terminate2,FINITE_SURJ,ELL_terminated_FINITE2]) >>
   `tl+1<=MAX_SET s` by metis_tac[in_max_set] >>metis_tac[terminated_le]
 QED
 
@@ -492,17 +492,17 @@ Theorem part4:
 Proof
   rw[] >> eq_tac >> rw[HALT_def]
   >- (metis_tac[prime_tm_termination])
-  >- (`terminated (steps (tmax (ℓ (prime_tm M x))) (mk_initial_state (prime_tm M x) 0))` 
+  >- (`terminated (steps (tmax (ℓ (prime_tm M x))) (mk_initial_state (prime_tm M x) 0))`
         suffices_by (metis_tac[terminated_ge]) >>
-      `∃t1. terminated (steps t1 (mk_initial_state (prime_tm M x) 0))` by 
-        metis_tac[prime_tm_termination] >> 
+      `∃t1. terminated (steps t1 (mk_initial_state (prime_tm M x) 0))` by
+        metis_tac[prime_tm_termination] >>
       metis_tac[terminated_tmax])
 QED
 
 (*
 
 Theorem Phi_halt:
-  Phi (THE (Phi i x)) y = Phi i y ==> 
+  Phi (THE (Phi i x)) y = Phi i y ==>
 Proof
 
 QED
@@ -513,23 +513,23 @@ Proof
   strip_tac >> fs[computable_def] >>
   `Phi i 0 = SOME (plain_kolmog 0)` by fs[] >>
   `Phi i' 0 = SOME (arg_plain_kolmog 0)`by fs[] >>
-  `Phi (arg_plain_kolmog ((plain_kolmog 0))) 0 = SOME (plain_kolmog 0)` by fs[] >> 
-  `Phi (arg_plain_kolmog (plain_kolmog 0)) 0  = Phi i 0` by fs[] >> 
-  
+  `Phi (arg_plain_kolmog ((plain_kolmog 0))) 0 = SOME (plain_kolmog 0)` by fs[] >>
+  `Phi (arg_plain_kolmog (plain_kolmog 0)) 0  = Phi i 0` by fs[] >>
+
   `Phi (arg_plain_kolmog (arg_plain_kolmog 0)) 0 = SOME (arg_plain_kolmog 0)` by fs[]>>
   `Phi (arg_plain_kolmog (arg_plain_kolmog 0)) 0 = Phi i' 0` by fs[] >>
 
   `Phi i' (arg_plain_kolmog 0) = SOME (arg_plain_kolmog (arg_plain_kolmog 0))` by fs[] >>
 
   `Phi (THE (Phi i' (arg_plain_kolmog 0))) 0 = Phi i' 0` by metis_tac[optionTheory.THE_DEF]>>
-  
+
   pop_assum (K ALL_TAC) >> simp[plain_kolmog_def,kolmog_complexity_def]
 QED
 
 
 
 val newymt_def = Define`newymt e n yi Mi ti ⇔
-         plain_kolmog yi <= 2 * n ∧ 
+         plain_kolmog yi <= 2 * n ∧
          terminated (steps ti (mk_initial_state Mi 0)) ∧
          cs_to_num (steps ti (mk_initial_state Mi 0)) = yi ∧
          (∀t'. terminated (steps t' (mk_initial_state Mi 0)) ⇒ ti ≤ t') ∧
@@ -547,7 +547,7 @@ Theorem plain_kolmog_ub:
         (steps (THE (comp_count (mk_initial_state m 0)))
            (mk_initial_state m 0))) <= ℓ m
 Proof
-  rw[] >> fs[plain_kolmog_def,kolmog_complexity_def] >> rw[Phi_bl2nx_0] 
+  rw[] >> fs[plain_kolmog_def,kolmog_complexity_def] >> rw[Phi_bl2nx_0]
   >- (`∃x. Phi (bl2n x) 0 = SOME (cs_to_num
           (steps t
              (mk_initial_state m 0)))` by fs[Phi_bl2nx_0] >> fs[EXTENSION] >> metis_tac[])>>
@@ -555,48 +555,48 @@ Proof
            (steps t
               (mk_initial_state m 0)))}` >> `s<> {}` by fs[Abbr`s`,EXTENSION,Phi_bl2nx_0]>>
   `∀x. x ∈ s ⇒ MIN_SET s ≤ x` by fs[MIN_SET_LEM] >>
-  `ℓ m ∈ s` suffices_by fs[] >> 
+  `ℓ m ∈ s` suffices_by fs[] >>
   `(n2bl m) ∈ {y | Phi (bl2n y) 0 =SOME
             (cs_to_num
                (steps t
-                  (mk_initial_state m 0)))}` by 
-         fs[IN_DEF,Phi_steps] >>  
-       `LENGTH (n2bl m) ∈ s` by (fs[Abbr`s`,IMAGE_IN] >> qexists_tac`n2bl m` >> fs[]) 
+                  (mk_initial_state m 0)))}` by
+         fs[IN_DEF,Phi_steps] >>
+       `LENGTH (n2bl m) ∈ s` by (fs[Abbr`s`,IMAGE_IN] >> qexists_tac`n2bl m` >> fs[])
 QED
 
 
 
 Theorem newymt_SURJ:
-  SURJ 
+  SURJ
   (λm. (cs_to_num (steps (THE (comp_count (mk_initial_state m 0))) (mk_initial_state m 0)),
         m,
-        THE (comp_count (mk_initial_state m 0)) ) ) 
-  {m | (∃t. terminated (steps t (mk_initial_state m 0)) ∧ 
-           (∀t'. terminated (steps t' (mk_initial_state m 0)) ⇒ t ≤ t')) ∧ ℓ m <= 2 * n}   
+        THE (comp_count (mk_initial_state m 0)) ) )
+  {m | (∃t. terminated (steps t (mk_initial_state m 0)) ∧
+           (∀t'. terminated (steps t' (mk_initial_state m 0)) ⇒ t ≤ t')) ∧ ℓ m <= 2 * n}
   (newymt_set n)
 Proof
   fs[SURJ_DEF] >> rw[]
-  >- (fs[IN_DEF,newymt_set_def,newymt_def] >> 
+  >- (fs[IN_DEF,newymt_set_def,newymt_def] >>
       qexists_tac`(cs_to_num (steps (THE (comp_count (mk_initial_state m 0)))
                                     (mk_initial_state m 0)),
                    m,
                    THE (comp_count (mk_initial_state m 0)))` >> simp[] >>rw[]
       >- (`THE (comp_count (mk_initial_state m 0))=t` by fs[comp_count_terminated2] >>
-          `plain_kolmog (cs_to_num (steps (THE (comp_count (mk_initial_state m 0))) 
-            (mk_initial_state m 0))) <= ℓ m` suffices_by (fs[]) >> 
-          irule plain_kolmog_ub >> irule correctness_on_nontermination_contrapos >> 
-          qexists_tac`cs_to_num (steps t (mk_initial_state m 0))` >> fs[terminated_imp2] ) 
+          `plain_kolmog (cs_to_num (steps (THE (comp_count (mk_initial_state m 0)))
+            (mk_initial_state m 0))) <= ℓ m` suffices_by (fs[]) >>
+          irule plain_kolmog_ub >> irule correctness_on_nontermination_contrapos >>
+          qexists_tac`cs_to_num (steps t (mk_initial_state m 0))` >> fs[terminated_imp2] )
       >- (simp[comp_count_def,OLEAST_def] >> rw[] >> fs[] >> numLib.LEAST_ELIM_TAC >>
-          rw[] >> qexists_tac`t` >> fs[] ) 
-      >- (`THE (comp_count (mk_initial_state m 0))=t` by fs[comp_count_terminated2] >> 
+          rw[] >> qexists_tac`t` >> fs[] )
+      >- (`THE (comp_count (mk_initial_state m 0))=t` by fs[comp_count_terminated2] >>
           `t<= t'` suffices_by fs[] >>  fs[] ) ) >>
   qexists_tac`FST (SND x)` >> rw[]
-  >- (qexists_tac`SND (SND x)` >> rw[] >> fs[newymt_set_def,newymt_def] >> 
+  >- (qexists_tac`SND (SND x)` >> rw[] >> fs[newymt_set_def,newymt_def] >>
       `FST (SND x) = Mi` by fs[] >> fs[] )
-  >- (fs[newymt_set_def,newymt_def] >> 
-      `THE (comp_count (mk_initial_state Mi 0))=t` by fs[comp_count_terminated2] >> 
+  >- (fs[newymt_set_def,newymt_def] >>
+      `THE (comp_count (mk_initial_state Mi 0))=t` by fs[comp_count_terminated2] >>
           irule plain_kolmog_ub       fs[plain_kolmog_ub])
-  >- (fs[newymt_set_def,newymt_def] >> rw[comp_count_terminated2] >> 
+  >- (fs[newymt_set_def,newymt_def] >> rw[comp_count_terminated2] >>
       `THE (comp_count (mk_initial_state Mi 0)) = t` by fs[comp_count_terminated2] >> fs[])
 QED
 
@@ -610,29 +610,29 @@ Theorem newpart3plus:
   tmax (ℓ (prime_tm M x) ) <= newbig_T (prime_tm M x)
 Proof
   rw[] >> fs[tmax_def,newbig_T_def] >> irule SUBSET_MAX_SET >>
-  rw[] >- metis_tac[ELL_SURJ_terminate,FINITE_SURJ,ELL_terminated_FINITE] 
+  rw[] >- metis_tac[ELL_SURJ_terminate,FINITE_SURJ,ELL_terminated_FINITE]
   >- metis_tac[FINITE_newymt_set,IMAGE_FINITE] >> fs[SUBSET_DEF] >> rw[] >>
-  simp[newymt_set_def,newymt_def] >> 
-  qexists_tac`(m,x')` >> rw[] >> 
+  simp[newymt_set_def,newymt_def] >>
+  qexists_tac`(m,x')` >> rw[] >>
   qexists_tac`(cs_to_num (steps x' (mk_initial_state m 0)),m,x')` >> rw[]
   >- (fs[plain_kolmog_def,kolmog_complexity_def] >>
-      `{y | Phi (bl2n y) 0 = SOME (cs_to_num (steps x' (mk_initial_state m 0)))} <> ∅` by 
-        fs[EXTENSION,Phi_bl2nx_0] >> fs[] >> 
+      `{y | Phi (bl2n y) 0 = SOME (cs_to_num (steps x' (mk_initial_state m 0)))} <> ∅` by
+        fs[EXTENSION,Phi_bl2nx_0] >> fs[] >>
        `x' = THE (comp_count (mk_initial_state m 0)) ` by metis_tac[comp_count_terminated]>>
-       `Phi m 0 = SOME (cs_to_num (steps x' (mk_initial_state m 0)))` by 
+       `Phi m 0 = SOME (cs_to_num (steps x' (mk_initial_state m 0)))` by
          (fs[Phi_steps] >> Cases_on`comp_count (mk_initial_state m 0)` >> fs[comp_count_def])>>
-       `ℓ m <= 2 * prime_tm M x` by 
+       `ℓ m <= 2 * prime_tm M x` by
          (`ℓ m <= (prime_tm M x)` by fs[ELL_LE] >> `prime_tm M x <= 2 * (prime_tm M x)` by fs[]>>
-          fs[]) >> 
+          fs[]) >>
        qabbrev_tac`s={LENGTH y |
-       Phi (bl2n y) 0 = SOME (cs_to_num (steps x' (mk_initial_state m 0)))}` >> 
-       `MIN_SET s <= ℓ m` suffices_by fs[] >> 
-       `s<>{}` by fs[Abbr`s`,EXTENSION,Phi_bl2nx_0] >> 
+       Phi (bl2n y) 0 = SOME (cs_to_num (steps x' (mk_initial_state m 0)))}` >>
+       `MIN_SET s <= ℓ m` suffices_by fs[] >>
+       `s<>{}` by fs[Abbr`s`,EXTENSION,Phi_bl2nx_0] >>
        `∀x. x ∈ s ⇒ MIN_SET s ≤ x` by fs[MIN_SET_LEM] >> `ℓ m∈s` suffices_by fs[] >>
-       `(n2bl m) ∈ {y | Phi (bl2n y) 0 = SOME (cs_to_num (steps x' (mk_initial_state m 0)))}` by 
-         fs[IN_DEF] >>  
+       `(n2bl m) ∈ {y | Phi (bl2n y) 0 = SOME (cs_to_num (steps x' (mk_initial_state m 0)))}` by
+         fs[IN_DEF] >>
        `LENGTH (n2bl m) ∈ s` by (fs[Abbr`s`,IMAGE_IN] >> qexists_tac`n2bl m` >> fs[])    )
-  >- (`∀a. a ≤ (x'-1) ⇒ ¬terminated (steps a (mk_initial_state m 0))` by 
+  >- (`∀a. a ≤ (x'-1) ⇒ ¬terminated (steps a (mk_initial_state m 0))` by
         metis_tac[non_terminated_down] >> Cases_on`x'<=t'` >> fs[])
 QED
 
@@ -675,7 +675,7 @@ Proof
 QED
 
 Theorem Z_lam_machine_size:
-  
+
 Proof
 
 QED
@@ -684,14 +684,14 @@ Theorem oldpart3plus:
   tmax (ℓ (prime_tm M x) ) <= big_T (ℓ (prime_tm M x))
 Proof
   rw[] >> fs[tmax_def,big_T_def] >> irule in_max_set >>
-  rw[] 
+  rw[]
   >- metis_tac[FINITE_yMt_set,IMAGE_FINITE] >> fs[IN_DEF] >> rw[] >>
-  simp[yMt_set_def,yMt_pred_def] >> 
+  simp[yMt_set_def,yMt_pred_def] >>
   qexists_tac`(m1,t1)` >> rw[] >- () >> qexists_tac`(y1,m1,t1)` >> rw[] >>qexists_tac`(y1,m1,t1)` >> rw[] >>
 
 
   qexists_tac`(arg_plain_kolmog (bl2n (GENLIST (λn. T) (2*prime_tm M x)) ),
-               THE (comp_count (mk_initial_state (arg_plain_kolmog (bl2n (GENLIST (λn. T) (2*prime_tm M x)) )) 0)))` >> rw[] >- (rw[]) >> 
+               THE (comp_count (mk_initial_state (arg_plain_kolmog (bl2n (GENLIST (λn. T) (2*prime_tm M x)) )) 0)))` >> rw[] >- (rw[]) >>
   qexists_tac`(bl2n (GENLIST (λn. T) (2*prime_tm M x)),arg_plain_kolmog (bl2n (GENLIST (λn. T) (2*prime_tm M x)) ),
                THE (comp_count (mk_initial_state (arg_plain_kolmog (bl2n (GENLIST (λn. T) (2*prime_tm M x)) )) 0)))` >> rw[] >> qexists_tac`(bl2n (GENLIST (λn. T) (2*prime_tm M x)),arg_plain_kolmog (bl2n (GENLIST (λn. T) (2*prime_tm M x)) ),
                THE (comp_count (mk_initial_state (arg_plain_kolmog (bl2n (GENLIST (λn. T) (2*prime_tm M x)) )) 0)))` >> rw[]
@@ -703,23 +703,23 @@ Proof
 
 
   >- (fs[plain_kolmog_def,kolmog_complexity_def] >>
-      `{y | Phi (bl2n y) 0 = SOME (cs_to_num (steps x' (mk_initial_state m 0)))} <> ∅` by 
-        fs[EXTENSION,Phi_bl2nx_0] >> fs[] >> 
+      `{y | Phi (bl2n y) 0 = SOME (cs_to_num (steps x' (mk_initial_state m 0)))} <> ∅` by
+        fs[EXTENSION,Phi_bl2nx_0] >> fs[] >>
        `x' = THE (comp_count (mk_initial_state m 0)) ` by metis_tac[comp_count_terminated]>>
-       `Phi m 0 = SOME (cs_to_num (steps x' (mk_initial_state m 0)))` by 
+       `Phi m 0 = SOME (cs_to_num (steps x' (mk_initial_state m 0)))` by
          (fs[Phi_steps] >> Cases_on`comp_count (mk_initial_state m 0)` >> fs[comp_count_def])>>
-       `ℓ m <= 2 * prime_tm M x` by 
+       `ℓ m <= 2 * prime_tm M x` by
          (`ℓ m <= (prime_tm M x)` by fs[ELL_LE] >> `prime_tm M x <= 2 * (prime_tm M x)` by fs[]>>
-          fs[]) >> 
+          fs[]) >>
        qabbrev_tac`s={LENGTH y |
-       Phi (bl2n y) 0 = SOME (cs_to_num (steps x' (mk_initial_state m 0)))}` >> 
-       `MIN_SET s <= ℓ m` suffices_by fs[] >> 
-       `s<>{}` by fs[Abbr`s`,EXTENSION,Phi_bl2nx_0] >> 
+       Phi (bl2n y) 0 = SOME (cs_to_num (steps x' (mk_initial_state m 0)))}` >>
+       `MIN_SET s <= ℓ m` suffices_by fs[] >>
+       `s<>{}` by fs[Abbr`s`,EXTENSION,Phi_bl2nx_0] >>
        `∀x. x ∈ s ⇒ MIN_SET s ≤ x` by fs[MIN_SET_LEM] >> `ℓ m∈s` suffices_by fs[] >>
-       `(n2bl m) ∈ {y | Phi (bl2n y) 0 = SOME (cs_to_num (steps x' (mk_initial_state m 0)))}` by 
-         fs[IN_DEF] >>  
+       `(n2bl m) ∈ {y | Phi (bl2n y) 0 = SOME (cs_to_num (steps x' (mk_initial_state m 0)))}` by
+         fs[IN_DEF] >>
        `LENGTH (n2bl m) ∈ s` by (fs[Abbr`s`,IMAGE_IN] >> qexists_tac`n2bl m` >> fs[])    )
-  >- (`∀a. a ≤ (x'-1) ⇒ ¬terminated (steps a (mk_initial_state m 0))` by 
+  >- (`∀a. a ≤ (x'-1) ⇒ ¬terminated (steps a (mk_initial_state m 0))` by
         metis_tac[non_terminated_down] >> Cases_on`x'<=t'` >> fs[])
 QED
 
@@ -731,19 +731,19 @@ Theorem part3:
   computable plain_kolmog ∧ ((Z_lam (prime_tm M x) (ℓ (prime_tm M x)) (0:num)) = SOME y)  ==>
   tmax (ℓ (prime_tm M x) ) < big_T (prime_tm M x)
 Proof
-  rw[] >> 
-  `∃z. Phi z = Z_lam (prime_tm M x) (ℓ (prime_tm M x)) ∧ ℓ z < 2 * (ℓ (prime_tm M x))` by 
-    fs[Z_lam_computable_size] >> 
-  Cases_on`tmax (ℓ (prime_tm M x)) < big_T (prime_tm M x)` >> fs[] >> 
-  `plain_kolmog y = (2*(ℓ (prime_tm M x)))` by metis_tac[Z_lam_output_size] >> 
-  fs[plain_kolmog_def,kolmog_complexity_def] >> 
-  `{y' | Phi (bl2n y') 0 = SOME y} <> ∅` by fs[EXTENSION,Phi_bl2nx_0] >> 
-  fs[] >> 
+  rw[] >>
+  `∃z. Phi z = Z_lam (prime_tm M x) (ℓ (prime_tm M x)) ∧ ℓ z < 2 * (ℓ (prime_tm M x))` by
+    fs[Z_lam_computable_size] >>
+  Cases_on`tmax (ℓ (prime_tm M x)) < big_T (prime_tm M x)` >> fs[] >>
+  `plain_kolmog y = (2*(ℓ (prime_tm M x)))` by metis_tac[Z_lam_output_size] >>
+  fs[plain_kolmog_def,kolmog_complexity_def] >>
+  `{y' | Phi (bl2n y') 0 = SOME y} <> ∅` by fs[EXTENSION,Phi_bl2nx_0] >>
+  fs[] >>
   `ℓ z < MIN_SET {LENGTH y' | Phi (bl2n y') 0 = SOME y}` by fs[] >>
   qabbrev_tac`s={LENGTH y' | Phi (bl2n y') 0 = SOME y}` >>
-  `s<>{}` by fs[Abbr`s`,EXTENSION,Phi_bl2nx_0] >> 
+  `s<>{}` by fs[Abbr`s`,EXTENSION,Phi_bl2nx_0] >>
   `MIN_SET s ∈ s ∧ ∀x. x ∈ s ⇒ MIN_SET s ≤ x` by fs[MIN_SET_LEM] >>
-  `(n2bl z) ∈ {y' | Phi (bl2n y') 0 = SOME y}` by fs[IN_DEF] >>  
+  `(n2bl z) ∈ {y' | Phi (bl2n y') 0 = SOME y}` by fs[IN_DEF] >>
   `LENGTH (n2bl z) ∈ s` by (fs[Abbr`s`,IMAGE_IN] >> qexists_tac`n2bl z` >> fs[])>>
   `MIN_SET s <= ℓ z` by fs[] >> fs[]
 QED

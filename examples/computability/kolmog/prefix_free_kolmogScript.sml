@@ -2,7 +2,7 @@ open HolKernel Parse boolLib bossLib;
 open kolmogorov_complexityTheory
 open pred_setTheory
 open kraft_ineqTheory
-open invarianceResultsTheory 
+open invarianceResultsTheory
 open boolListsTheory
 open kolmog_incomputableTheory
 open recursivefnsTheory
@@ -22,7 +22,7 @@ Proof
   fs[prefix_machine_def,univ_rf_def] >> rw[] >>
   Cases_on‘∃f. ∀g. ∃x. on2bl (Phi f x) ≠ U (g ++ n2bl x)’ >> rw[] >> fs[] >>
   Cases_on‘∃x. x ∈ P ⇎ ∃y. U x = SOME y’ >> rw[] >> fs[] >>
-  fs[prefix_free_def] >> 
+  fs[prefix_free_def] >>
   ‘∃g. ∀x. on2bl (Phi nblfst_i x) = U (g++ n2bl x)’ by fs[] >>
   qexists_tac‘g++n2bl 2’ >> qexists_tac‘g++n2bl 6’ >> rw[]
   >- (qexists_tac‘n2bl (nblfst 2)’ >>
@@ -46,7 +46,7 @@ Theorem bar_bar_pf:
 Proof
   rw[GSYM bar2_def]
 QED
-        
+
 
 Theorem univ_pf_rf_prefix_machine:
   univ_pf_rf U ==> prefix_machine U
@@ -93,7 +93,7 @@ Theorem MIN_SET_lmult:
   s<> {} ∧ k<>0 ==> (k:num) * MIN_SET {b | b ∈ s} = MIN_SET { k*b | b ∈ s}
 Proof
   rw[] >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[] >>
-  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[] 
+  DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
   >- (fs[EXTENSION] >> metis_tac[]) >>
   ‘b*k <= x*k’ by fs[] >> ‘x <= b’ by fs[] >>
   ‘x*k <= b*k’ by fs[] >> ‘k * x <= b*k’ by metis_tac[arithmeticTheory.MULT_COMM] >>
@@ -102,7 +102,7 @@ Proof
 QED
 
 Theorem invariance_theorem_pf:
-  ∀U T. univ_pf_rf U ==> ∃C. ∀x. (core_complexity U x) <= 
+  ∀U T. univ_pf_rf U ==> ∃C. ∀x. (core_complexity U x) <=
                                  (core_complexity (λy. on2bl (recPhi [T;bl2n y])) x) +
                                  (core_complexity (λy. on2bl (recPhi [T;bl2n y])) x) + (C U T)
 Proof
@@ -131,7 +131,7 @@ Proof
        2*MIN_SET {(a + b) | (∃y. b = LENGTH y ∧ U (bar g ++ bar y) = SOME x)}+2`
          suffices_by fs[]>>
        DEEP_INTRO_TAC MIN_SET_ELIM >> rw[] >>
-      DEEP_INTRO_TAC MIN_SET_ELIM >> rw[] 
+      DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
        >- (fs[EXTENSION] >> qexists_tac`T_x`>>fs[]) >>
        fs[Abbr`a`] >>
        ‘LENGTH x'⁴' ≤ LENGTH (bar g ++ bar y)’ by metis_tac[] >>
@@ -212,7 +212,7 @@ Proof
   >- (first_x_assum (qspec_then ‘(y,i,x)’ mp_tac) >> rw[]))
   >- (rw[] >> DEEP_INTRO_TAC optionTheory.some_intro >> rw[])
 QED
-    
+
 val univ_mach_fn_def =  new_specification ("univ_mach_fn_def",["univ_mach_fn"],univ_mach_exists )
 
 
@@ -224,7 +224,7 @@ val univ_mach_fn_def =  new_specification ("univ_mach_fn_def",["univ_mach_fn"],u
 
 
 (* OLD STUFF *)
-        
+
 val PUTM_def = Define`PUTM x = if bar2ed x then recPhi [bl2n (FST (unbar2 0 x));bl2n (SND (unbar2 0 x))] else NONE`
 
 
@@ -430,7 +430,7 @@ QED
 Theorem hutm_clean_invariance_theorem:
   ∀V. (i ∈ indexes_of V ) ==> ∃C. ∀x. (kolmog_complexity x HUTM) <= (kolmog_complexity x V) + (C HUTM i)
 Proof
-  rw[clean_invariance_theorem,HUTM_univ] 
+  rw[clean_invariance_theorem,HUTM_univ]
 QED
 
 

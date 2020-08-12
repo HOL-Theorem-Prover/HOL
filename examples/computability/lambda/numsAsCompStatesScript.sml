@@ -211,20 +211,20 @@ QED
 
 
 Theorem non_terminated_down:
-  (¬terminated (steps t (mk_initial_state m x))) ==> 
+  (¬terminated (steps t (mk_initial_state m x))) ==>
   (∀a. a<=t ==>  (¬terminated (steps a (mk_initial_state m x))))
 Proof
   rw[] >> strip_tac >> metis_tac[terminated_le]
 QED
 
 Theorem comp_count_terminated:
-  (terminated (steps x (mk_initial_state m y)) ∧ 
-  ¬terminated (steps (x − 1) (mk_initial_state m y))) ==> 
+  (terminated (steps x (mk_initial_state m y)) ∧
+  ¬terminated (steps (x − 1) (mk_initial_state m y))) ==>
   THE (comp_count (mk_initial_state m y)) = x
 Proof
   rw[] >> `Phi m y = SOME (cs_to_num (steps x (mk_initial_state m y)))` by fs[terminated_imp]>>
-  fs[Phi_steps] >> Cases_on`comp_count (mk_initial_state m y)` >> fs[] >> 
-  `(∀a. a<=x-1 ==> (¬terminated (steps a (mk_initial_state m y))))` by 
+  fs[Phi_steps] >> Cases_on`comp_count (mk_initial_state m y)` >> fs[] >>
+  `(∀a. a<=x-1 ==> (¬terminated (steps a (mk_initial_state m y))))` by
     metis_tac[non_terminated_down] >>  fs[comp_count_def,whileTheory.OLEAST_def] >> rw[]>>
   numLib.LEAST_ELIM_TAC >> rw[] >- metis_tac[] >>
   `(∀a. a<x ==> (¬terminated (steps a (mk_initial_state m y))))` by fs[] >>
@@ -232,16 +232,16 @@ Proof
 QED
 
 Theorem ELL_SURJ_terminate:
-  SURJ (λm. THE (comp_count (mk_initial_state m 0))) 
-  {m | (∃t. terminated (steps t (mk_initial_state m 0)) ∧ 
-                  ¬terminated (steps (t − 1) (mk_initial_state m 0))) ∧ ℓ m = k}  
+  SURJ (λm. THE (comp_count (mk_initial_state m 0)))
+  {m | (∃t. terminated (steps t (mk_initial_state m 0)) ∧
+                  ¬terminated (steps (t − 1) (mk_initial_state m 0))) ∧ ℓ m = k}
   {t |(∃m.  terminated (steps t (mk_initial_state m 0)) ∧
            ¬terminated (steps (t − 1) (mk_initial_state m 0)) ∧
            ℓ m = k)}
 Proof
   fs[pred_setTheory.SURJ_DEF] >> rw[] >> qexists_tac`m`
   >- (metis_tac[comp_count_terminated])
-  >- (rw[] >- (qexists_tac`x` >> fs[comp_count_terminated]) 
+  >- (rw[] >- (qexists_tac`x` >> fs[comp_count_terminated])
       >- (fs[comp_count_terminated] ) )
 QED
 
@@ -250,11 +250,11 @@ Theorem terminated_imp2:
      terminated (steps t (mk_initial_state M x))) ⇒
      Phi M x = SOME (cs_to_num (steps t (mk_initial_state M x)))
 Proof
-  rw[] >> Cases_on`t=0` 
+  rw[] >> Cases_on`t=0`
   >- ( fs[Phi_steps] >> `comp_count (mk_initial_state M x) = SOME t`
       suffices_by fs[] >>
       fs[comp_count_def] >> fs[whileTheory.OLEAST_EQ_SOME] >> rw[] >> strip_tac  ) >>
-  `¬terminated (steps (t − 1) (mk_initial_state M x))` by 
+  `¬terminated (steps (t − 1) (mk_initial_state M x))` by
     (strip_tac >> fs[] >> `t<=t-1` by fs[] >> fs[PRE_SUB1])  >>
   fs[terminated_imp]
 QED
@@ -267,8 +267,8 @@ Proof
   rw[] >> Cases_on`t=0`
   >- (`Phi m y = SOME (cs_to_num (steps t (mk_initial_state m y)))` by fs[terminated_imp2]>>
       `comp_count (mk_initial_state m y) = SOME t` suffices_by fs[] >>
-      fs[comp_count_def] >> fs[whileTheory.OLEAST_EQ_SOME] >> rw[] >> strip_tac  ) >> 
-  `¬terminated (steps (t − 1) (mk_initial_state m y))` by 
+      fs[comp_count_def] >> fs[whileTheory.OLEAST_EQ_SOME] >> rw[] >> strip_tac  ) >>
+  `¬terminated (steps (t − 1) (mk_initial_state m y))` by
     (strip_tac >> fs[] >> `t<=t-1` by fs[] >> fs[])  >> fs[comp_count_terminated]
 QED
 

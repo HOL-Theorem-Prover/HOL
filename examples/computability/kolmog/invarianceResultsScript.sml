@@ -11,7 +11,7 @@ val _ = new_theory "invarianceResults";
 
 
 Theorem invariance_theorem:
-  ∀U T. univ_rf U ==> ∃C. ∀x. (core_complexity U x) <= 
+  ∀U T. univ_rf U ==> ∃C. ∀x. (core_complexity U x) <=
                               (core_complexity (λy. on2bl (recPhi [T;bl2n y])) x) + (C U T)
 Proof
   rw[univ_rf_def,core_complexity_def] >>  fs[univ_rf_def] >>
@@ -101,7 +101,7 @@ Proof
   ‘(LENGTH g1 + LENGTH g2) <= LENGTH (g1++x) - LENGTH (g2++x)’ by
     (‘p1 + (LENGTH g1 + LENGTH g2) <= LENGTH (g1++x)’ by fs[] >>
      ‘(p1 + (LENGTH g1 + LENGTH g2)) - p1 <= LENGTH (g1++x) - LENGTH (g2 ++ x)’ by )
- 
+
 QED
 *)
 
