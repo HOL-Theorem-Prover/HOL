@@ -13,44 +13,46 @@ val _ = new_theory "kolmog_incomputable"
 (*  Proving kolmog is not computable  *)
 
 (* longest it takes machines of size n to terminate *)
-val tmax_def = Define`
-  tmax n = MAX_SET {t | ∃m. terminated (steps t (mk_initial_state m 0)) ∧
-                            (∀t'. terminated (steps t' (mk_initial_state m 0)) ⇒ t ≤ t') ∧
-                            ( ℓ  m = n) }
-`;
+Definition tmax_def:
+  tmax n =
+  MAX_SET {t |
+           ∃m. terminated (steps t (mk_initial_state m 0)) ∧
+               (∀t'. terminated (steps t' (mk_initial_state m 0)) ⇒ t ≤ t') ∧
+               ℓ m = n }
+End
 
 (* the machine of size n, that takes that longest time to terminate,
    the "busy beaver" if you will
 *)
-val BB_def = Define`
+Definition BB_def:
   BB n = @m. terminated (steps (tmax n) (mk_initial_state m 0)) ∧ (ℓ m = n)
-`;
+End
 
-val HALT_def = Define`
+Definition HALT_def:
   HALT = {(M,x)| ∃t. terminated (steps t (mk_initial_state M x)) }
-`;
+End
 
-val _ = overload_on ("N2T",``λt. toTerm (numdB t)``)
+Overload N2T = “λt. toTerm (numdB t)”
 
 (* a machine M' encoding one computation, that being M applied to x. *)
-val prime_tm_def = Define`
+Definition prime_tm_def:
   prime_tm M x = dBnum (fromTerm (K @@ (N2T M @@ church x)))
-`;
+End
 
 Theorem prime_tm_corr:
-  Phi (prime_tm M x) 0 = Phi M x
+  Phi (prime_tm M x) y = Phi M x
 Proof
   simp[prime_tm_def,Phi_def,K_lemma]
 QED
 
 (** up to here **)
 
-val OGENLIST_def = Define`
+val OGENLIST_def = Define‘
   OGENLIST f 0 = [] ∧
   OGENLIST f (SUC n) = OGENLIST f n ++ (case f n of NONE => [] | SOME r => [r])
-`;
+’;
 
-val Z_lam_def = Define‘
+Definition Z_lam_def:
   Z_lam M n =
    λx. case comp_count (mk_initial_state M 0) of
            NONE => NONE
@@ -64,63 +66,15 @@ val Z_lam_def = Define‘
                            (4**n DIV 2)
            in
              SOME (LEAST x. ¬MEM x results ∧ ℓ x = 2*n)
-’;
-
-(* cap3 f (x,y,z) = (x,y,f z) *)
-val cap3_def = Define`cap3 = LAM "f" (
-  LAM "p" (
-    cpair @@ (cfst @@ VAR "p")
-          @@ (cpair @@ (cfst @@ (csnd @@ VAR "p"))
-                    @@ (VAR "f" @@ (csnd @@ (csnd @@ VAR "p"))))
-  )
-)`;
-
-val cap3_eqn = brackabs.brackabs_equiv [] cap3_def
-
-Theorem cap3_behaviour:
-  cap3 @@ f @@ (cvpr x (cvpr y z)) == cvpr x (cvpr y (f @@ z))
-Proof
-  simp_tac (bsrw_ss()) [cap3_eqn, churchpairTheory.cpair_behaviour]
-QED
-
-Theorem FV_cap3[simp]: FV cap3 = {}
-Proof simp[EXTENSION,cap3_def]
-QED
-
-val dt0_def = Define`dt0 = LAM "p" (LAM "ms" (LAM "i"
- (cfilter
-   @@ (B @@ VAR "p" @@ (B @@ csnd @@ csnd ) )
-   @@ (cmap @@ (cap3 @@ cforce_num)
-            @@ (cfilter
-                  @@ (B @@ cbnf @@ (B @@ csnd @@ csnd) ))
-                  @@ (cmap
-                      @@ (LAM "pair" (
-                             (LAM "m" (LAM "j" (
-                                cpair @@ VAR "m"
-                                      @@ (cpair
-                                           @@ VAR "j"
-                                           @@ (csteps
-                                                @@ VAR "i"
-                                                @@ (cdAPP @@ VAR "m"
-                                                          @@ VAR "j"))))))
-                               @@ (cfst @@ VAR"pair") @@ (csnd @@ VAR "pair")))
-                                        @@ (VAR "ms") )  )
- ) ) )`;
-
-(*val dt_def = Define`dt = LAM "p" (LAM "ms"
- (cfindleast @@ (LAM "n" (dt0 @@ VAR "p" @@ VAR "ms" @@ VAR"n" @@ cB T @@ (K @@ (K @@ cB F)) ) )
-             @@ (LAM "n" (chd @@ (dt0 @@ VAR "p" @@ VAR "ms" @@ VAR"n")) ) ))`
-
-val size_dovetail_def = Define`size_dovetail0 P ms i = let results = map (λ(m,j). steps i (mk_initial_state m j) ms ); term_results = filter terminsted results;`
+End
 
 (* Make fn which takes n and gives list of nats st log 2 nats = n *)
-*)
 
-val log2list_def = Define`log2list n = GENLIST (λx. x+2**n) (2**n) `
+val log2list_def = Define‘log2list n = GENLIST (λx. x+2**n) (2**n) ’
 
-val clog2list_def = Define`clog2list =
+val clog2list_def = Define‘clog2list =
   LAM "n" (ctabulate @@ (cexp @@ church 2 @@ VAR "n")
-                     @@ (cplus @@ (cexp @@ church 2 @@ VAR "n")))`
+                     @@ (cplus @@ (cexp @@ church 2 @@ VAR "n")))’
 
 Theorem FV_clog2list[simp]:
   FV clog2list = {}
@@ -140,9 +94,9 @@ Proof
   simp_tac(bsrw_ss())[churchnumTheory.cplus_behaviour,ADD_COMM]
 QED
 
-val computable_def = Define`
+val computable_def = Define‘
   computable (f:num->num) <=> ∃i. ∀n. Phi i n = SOME (f n)
-`;
+’;
 
 
 (*
@@ -152,17 +106,17 @@ val narg_kolmog_def = Define`narg_kolmog x = bl2n (arg_kolmog x)`;
 
 
 
-val core_complexity0_def = Define`
+val core_complexity0_def = Define‘
   core_complexity0 x = THE (core_complexity (λy. on2bl (Phi (bl2n y) 0)) x)
-`;
+’;
 
 Theorem core_complexity0_exists:
   ∀x. ∃y. core_complexity (λy. on2bl (Phi (bl2n y) 0)) x = SOME y
 Proof
   rw[core_complexity_def,EXTENSION] >> simp[Phi_def] >>
-  qexists_tac`n2bl (dBnum (fromTerm (K @@ church (bl2n x))))` >> simp[on2bl_def] >>
-  qexists_tac`bl2n x` >> rw[num_bool_inv] >>
-  qexists_tac`church (bl2n x)` >>
+  qexists_tac‘n2bl (dBnum (fromTerm (K @@ church (bl2n x))))’ >> simp[on2bl_def] >>
+  qexists_tac‘bl2n x’ >> rw[num_bool_inv] >>
+  qexists_tac‘church (bl2n x)’ >>
   simp[K_lemma,normal_orderTheory.bnf_bnf_of]
 QED
 
@@ -174,8 +128,8 @@ Theorem Phi_x_0:
   ∀y. ∃x. Phi x 0 = SOME y
 Proof
   rw[] >> simp[Phi_def] >>
-  qexists_tac` (dBnum (fromTerm (K @@ church y)))` >> simp[bool_num_inv] >>
-  qexists_tac`church y` >>
+  qexists_tac‘ (dBnum (fromTerm (K @@ church y)))’ >> simp[bool_num_inv] >>
+  qexists_tac‘church y’ >>
   simp[K_lemma,normal_orderTheory.bnf_bnf_of]
 QED
 
@@ -183,8 +137,8 @@ Theorem Phi_bl2nx_0:
   ∀y. ∃x. Phi (bl2n x) 0 = SOME y
 Proof
   rw[] >> simp[Phi_def] >>
-  qexists_tac`n2bl (dBnum (fromTerm (K @@ church y)))` >> simp[bool_num_inv] >>
-  qexists_tac`church y` >>
+  qexists_tac‘n2bl (dBnum (fromTerm (K @@ church y)))’ >> simp[bool_num_inv] >>
+  qexists_tac‘church y’ >>
   simp[K_lemma,normal_orderTheory.bnf_bnf_of]
 QED
 
@@ -194,11 +148,11 @@ Theorem core_complexity0_thm:
   core_complexity0 x = (MIN_SET {LENGTH p |  on2bl (Phi (bl2n p) 0) = SOME x})
 Proof
   fs[core_complexity0_def,core_complexity_def] >>
-  Cases_on`{y | on2bl (Phi (bl2n y) 0) = SOME x} = ∅` >>
-  fs[] >> `∃y. on2bl (Phi (bl2n y) 0) = SOME x` by
-    (fs[on2bl_def] >> `∃k. Phi (bl2n k) 0 = SOME (bl2n x)` by fs[Phi_bl2nx_0] >>
-     qexists_tac`k` >> qexists_tac`bl2n x` >> rw[bool_num_inv]) >>
-  `y∈{y | on2bl (Phi (bl2n y) 0) = SOME x}` by fs[] >> metis_tac[MEMBER_NOT_EMPTY]
+  Cases_on‘{y | on2bl (Phi (bl2n y) 0) = SOME x} = ∅’ >>
+  fs[] >> ‘∃y. on2bl (Phi (bl2n y) 0) = SOME x’ by
+    (fs[on2bl_def] >> ‘∃k. Phi (bl2n k) 0 = SOME (bl2n x)’ by fs[Phi_bl2nx_0] >>
+     qexists_tac‘k’ >> qexists_tac‘bl2n x’ >> rw[bool_num_inv]) >>
+  ‘y∈{y | on2bl (Phi (bl2n y) 0) = SOME x}’ by fs[] >> metis_tac[MEMBER_NOT_EMPTY]
 QED
 
 (*
@@ -345,8 +299,8 @@ QED
 Theorem oPhi_bl2nx_0:
   ∃p. on2bl (Phi (bl2n p) 0) = SOME y
 Proof
-  fs[on2bl_def] >> `∃p. Phi (bl2n p) 0 = SOME (bl2n y)` by fs[Phi_bl2nx_0] >>
-  qexists_tac`p` >> qexists_tac`bl2n y` >> rw[]
+  fs[on2bl_def] >> ‘∃p. Phi (bl2n p) 0 = SOME (bl2n y)’ by fs[Phi_bl2nx_0] >>
+  qexists_tac‘p’ >> qexists_tac‘bl2n y’ >> rw[]
 QED
 
 Theorem MIN_SET_L_o_PHI_NON_EMPTY:
@@ -433,13 +387,13 @@ QED
 Theorem ELL_LE[simp]:
   ℓ k <= k
 Proof
-  completeInduct_on`k` >> qspec_then ‘k’ mp_tac num_to_bool_list_def >> rw[]
-  >- (`(k-2) DIV 2 < k` by fs[BIT2_smaller] >>
-      `ℓ ((k-2) DIV 2) ≤ ((k-2) DIV 2)` by fs[] >>
-      `ℓ ((k − 2) DIV 2) < k` by fs[] >> fs[])
-  >- (`(k-1) DIV 2 < k` by fs[BIT1_smaller] >>
-      `ℓ ((k-1) DIV 2) ≤ ((k-1) DIV 2)` by fs[] >>
-      `ℓ ((k − 1) DIV 2) < k` by fs[] >> fs[] )
+  completeInduct_on‘k’ >> qspec_then ‘k’ mp_tac num_to_bool_list_def >> rw[]
+  >- (‘(k-2) DIV 2 < k’ by fs[BIT2_smaller] >>
+      ‘ℓ ((k-2) DIV 2) ≤ ((k-2) DIV 2)’ by fs[] >>
+      ‘ℓ ((k − 2) DIV 2) < k’ by fs[] >> fs[])
+  >- (‘(k-1) DIV 2 < k’ by fs[BIT1_smaller] >>
+      ‘ℓ ((k-1) DIV 2) ≤ ((k-1) DIV 2)’ by fs[] >>
+      ‘ℓ ((k − 1) DIV 2) < k’ by fs[] >> fs[] )
 QED
 
 Theorem ELL_LT[simp]:
@@ -732,13 +686,13 @@ val yMt_pred_def = Define‘
 
 (* might not need above here *)
 
-val fkmin_def = Define`fkmin m = MIN_SET {bl2n n | m<= core_complexity0 n}`
+val fkmin_def = Define‘fkmin m = MIN_SET {bl2n n | m<= core_complexity0 n}’
 
 Theorem f_min_set_f:
   (∃x. m<= f x) ==> (m:num) <= f (MIN_SET {n | m<= f n})
 Proof
-  rw[] >> `{n | m ≤ f n} <> {}` by (fs[EXTENSION] >> metis_tac[]) >>
-  `MIN_SET {n | m ≤ f n} ∈ {n | m ≤ f n}` by fs[MIN_SET_LEM] >> fs[]
+  rw[] >> ‘{n | m ≤ f n} <> {}’ by (fs[EXTENSION] >> metis_tac[]) >>
+  ‘MIN_SET {n | m ≤ f n} ∈ {n | m ≤ f n}’ by fs[MIN_SET_LEM] >> fs[]
 QED
 
 Theorem contrapos_FINITE_DIFF_down:
@@ -764,7 +718,7 @@ QED
 Theorem n2bl_inj[simp]:
   n2bl x = n2bl y <=> x=y
 Proof
-  eq_tac >> rw[] >> `bl2n (n2bl x) = bl2n (n2bl y)` by metis_tac[] >>
+  eq_tac >> rw[] >> ‘bl2n (n2bl x) = bl2n (n2bl y)’ by metis_tac[] >>
   metis_tac[bool_num_inv]
 QED
 
@@ -841,11 +795,11 @@ Theorem computable_imp_min_thm:
   ∀f. computable f ⇒ ∃i. (∀n. Phi i n = SOME (f n)) ∧ (∀j. (∀n. Phi j n = SOME (f n)) ==> i<=j)
 Proof
   rw[] >>
-  qexists_tac`MIN_SET {i | (∀n. Phi i n = SOME (f n))}`>>
-  `{i | (∀n. Phi i n = SOME (f n))} <> {}`
+  qexists_tac‘MIN_SET {i | (∀n. Phi i n = SOME (f n))}’>>
+  ‘{i | (∀n. Phi i n = SOME (f n))} <> {}’
     by (fs[EXTENSION,computable_imp_thm]) >>
   rw[]
-  >- (`MIN_SET {i | (∀n. Phi i n = SOME (f n))} ∈ {i | (∀n. Phi i n = SOME (f n))}`
+  >- (‘MIN_SET {i | (∀n. Phi i n = SOME (f n))} ∈ {i | (∀n. Phi i n = SOME (f n))}’
         by fs[MIN_SET_LEM] >> fs[IN_DEF])
   >- (fs[MIN_SET_LEM])
 QED
@@ -853,14 +807,14 @@ QED
 
 val recfn_index2_def =
 new_specification("recfn_index2_def", ["recfn_index2"],
-		  computable_imp_min_thm
-		      |> SIMP_RULE (srw_ss()) [LEFT_FORALL_IMP_THM]
-		      |> SIMP_RULE (srw_ss()) [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM])
+                  computable_imp_min_thm
+                      |> SIMP_RULE (srw_ss()) [LEFT_FORALL_IMP_THM]
+                      |> SIMP_RULE (srw_ss()) [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM])
 
 
-val kolmog_fn2_def = Define`kolmog_fn2 f = if computable f
+val kolmog_fn2_def = Define‘kolmog_fn2 f = if computable f
                                              then SOME (recfn_index2 f)
-                                           else NONE`
+                                           else NONE’
 
 
 
@@ -875,22 +829,22 @@ Theorem MEM_log2list_ineq:
    MEM x (log2list i) ⇔ 0 < x ∧ (2 ** i)  <= x ∧ x < (2 ** (i+1))
 Proof
   eq_tac >> fs[log2list_def,MEM_GENLIST ] >> rw[]
-  >- (`x'+2**i < 2** i + 2**i` by fs[] >> `(2n**i:num) + 2**i = 2*2**i` by fs[GSYM TIMES2] >>
-      `2n**i + 2**i = 2 ** SUC i` by fs[EXP] >> fs[ADD1])
-  >- (qexists_tac`x-2n**i` >> fs[] >> `2n*2**i = 2 ** SUC i` by fs[EXP] >> fs[ADD1])
+  >- (‘x'+2**i < 2** i + 2**i’ by fs[] >> ‘(2n**i:num) + 2**i = 2*2**i’ by fs[GSYM TIMES2] >>
+      ‘2n**i + 2**i = 2 ** SUC i’ by fs[EXP] >> fs[ADD1])
+  >- (qexists_tac‘x-2n**i’ >> fs[] >> ‘2n*2**i = 2 ** SUC i’ by fs[EXP] >> fs[ADD1])
 QED
 
 Theorem exp_ELL1:
   2n ** ℓ x <= x+1
 Proof
-  `MEM (x+1) (log2list (ℓ x))` by metis_tac[ELL_log2list] >>
+  ‘MEM (x+1) (log2list (ℓ x))’ by metis_tac[ELL_log2list] >>
   fs[MEM_GENLIST,log2list_def]
 QED
 
 Theorem exp_ELL2:
   x+1 < 2n ** ((ℓ x)+1 )
 Proof
-  `MEM (x+1) (log2list (ℓ x))` by metis_tac[ELL_log2list] >>
+  ‘MEM (x+1) (log2list (ℓ x))’ by metis_tac[ELL_log2list] >>
   fs[MEM_log2list_ineq]
 QED
 
@@ -898,8 +852,8 @@ QED
 Theorem pair_arithineq1:
   (x<>0 ∧ y<>0) ==> x*y + x + y + 1 < 2*(x*y) + 4n
 Proof
-  rw[] >> ONCE_REWRITE_TAC[TIMES2] >> `x+y+1 < x*y+4` suffices_by fs[] >>
-  Induct_on`x` >> fs[ADD1]
+  rw[] >> ONCE_REWRITE_TAC[TIMES2] >> ‘x+y+1 < x*y+4’ suffices_by fs[] >>
+  Induct_on‘x’ >> fs[ADD1]
 QED
 
 
@@ -907,7 +861,7 @@ QED
 Theorem ELL_REC_EQ:
   ℓ (2*x+2) = 1+ ℓ x ∧ ℓ (2*x+1) = 1+ ℓ x
 Proof
-  completeInduct_on`x` >> fs[] >> rw[] >>
+  completeInduct_on‘x’ >> fs[] >> rw[] >>
   simp[Once num_to_bool_list_def,SimpLHS,EVEN_ADD,EVEN_MULT]
 QED
 
@@ -927,33 +881,33 @@ QED
 Theorem ell_mult1:
   ℓ(x*y) <= (ℓ x) + (ℓ y) +1
 Proof
-  CCONTR_TAC >> ` (ℓ x) + (ℓ y) +1 < ℓ(x*y)` by fs[] >>
-  `2n ** ℓ x <= x+1 ∧ 2 ** ℓ y <= y+1 ∧ 2n ** ℓ (x*y) <= (x*y)+1` by fs[exp_ELL1] >>
-  `x + 1 < 2n ** (ℓ x + 1) ∧ y + 1 < 2n ** (ℓ y + 1) ∧ (x*y) + 1 < 2n ** (ℓ (x*y) + 1)` by fs[exp_ELL2] >>
-  `ℓ x + ℓ y + 2 <= ℓ (x * y)` by fs[] >>
-  `2n ** (ℓ x + ℓ y) <= (x+1) * (y+1) ∧ (x + 1) * (y + 1) < 2n ** (ℓ x + ℓ y + 2)` by
+  CCONTR_TAC >> ‘ (ℓ x) + (ℓ y) +1 < ℓ(x*y)’ by fs[] >>
+  ‘2n ** ℓ x <= x+1 ∧ 2 ** ℓ y <= y+1 ∧ 2n ** ℓ (x*y) <= (x*y)+1’ by fs[exp_ELL1] >>
+  ‘x + 1 < 2n ** (ℓ x + 1) ∧ y + 1 < 2n ** (ℓ y + 1) ∧ (x*y) + 1 < 2n ** (ℓ (x*y) + 1)’ by fs[exp_ELL2] >>
+  ‘ℓ x + ℓ y + 2 <= ℓ (x * y)’ by fs[] >>
+  ‘2n ** (ℓ x + ℓ y) <= (x+1) * (y+1) ∧ (x + 1) * (y + 1) < 2n ** (ℓ x + ℓ y + 2)’ by
   (fs[LESS_MONO_MULT2,EXP_ADD] >>
-   `(x + 1 ) * (y + 1) < (2 * 2n ** ℓ x) * (y+1)` by fs[LT_MULT_LCANCEL] >>
-   `0<(2 * 2n ** ℓ x)` by fs[] >>
-   `(2 * 2n ** ℓ x) * (y+1) < (2 * 2 ** ℓ x ) *  (2 * 2 ** ℓ y)` by rw[LT_MULT_LCANCEL] >>
-   `(x + 1) * (y + 1) < 2 * 2n ** ℓ x * (2 * 2 ** ℓ y)` by rw[] >> rw[]) >>
-  `x*y+1 <= (x+1)*(y+1)` by fs[] >>
-  `(x + 1) * (y + 1) < 2n ** (ℓ (x*y) )` by
-    (`2 ** (ℓ x + ℓ y + 2) <= 2n ** (ℓ (x*y))` by fs[] >> rw[]) >> fs[]
+   ‘(x + 1 ) * (y + 1) < (2 * 2n ** ℓ x) * (y+1)’ by fs[LT_MULT_LCANCEL] >>
+   ‘0<(2 * 2n ** ℓ x)’ by fs[] >>
+   ‘(2 * 2n ** ℓ x) * (y+1) < (2 * 2 ** ℓ x ) *  (2 * 2 ** ℓ y)’ by rw[LT_MULT_LCANCEL] >>
+   ‘(x + 1) * (y + 1) < 2 * 2n ** ℓ x * (2 * 2 ** ℓ y)’ by rw[] >> rw[]) >>
+  ‘x*y+1 <= (x+1)*(y+1)’ by fs[] >>
+  ‘(x + 1) * (y + 1) < 2n ** (ℓ (x*y) )’ by
+    (‘2 ** (ℓ x + ℓ y + 2) <= 2n ** (ℓ (x*y))’ by fs[] >> rw[]) >> fs[]
 QED
 
 Theorem ell_mult_corr:
   ∀n. ∃k. ∀x. ℓ(n*x) <= ℓ(x)+k
 Proof
-  rw[] >> qexists_tac`ℓ n + 1` >> rw[] >> metis_tac[ell_mult1,ADD_ASSOC]
+  rw[] >> qexists_tac‘ℓ n + 1’ >> rw[] >> metis_tac[ell_mult1,ADD_ASSOC]
 QED
 
 Theorem ell_SUC_corr:
    ∀x. ℓ(x+1) <= ℓ(x)+2
 Proof
-  rw[] >> Cases_on`x=0` >> fs[] >- EVAL_TAC >> `x+1<=2*x` by (Induct_on`x` >> fs[]) >>
-  `ℓ (x+1) <= ℓ (2*x)` by fs[ELL_MONOTONE] >> `ℓ (2*x) <= ℓ x + 2` suffices_by fs[] >>
-  `ℓ (2*x) <= ℓ 2 + ℓ x + 1 ` by fs[ell_mult1] >> fs[] >> `ℓ 2 + 1 = 2` by EVAL_TAC >>
+  rw[] >> Cases_on‘x=0’ >> fs[] >- EVAL_TAC >> ‘x+1<=2*x’ by (Induct_on‘x’ >> fs[]) >>
+  ‘ℓ (x+1) <= ℓ (2*x)’ by fs[ELL_MONOTONE] >> ‘ℓ (2*x) <= ℓ x + 2’ suffices_by fs[] >>
+  ‘ℓ (2*x) <= ℓ 2 + ℓ x + 1 ’ by fs[ell_mult1] >> fs[] >> ‘ℓ 2 + 1 = 2’ by EVAL_TAC >>
   metis_tac[]
 QED
 
@@ -966,17 +920,17 @@ QED
 Theorem sum_lt_mult:
   (x <> 0 ∧ y <> 0 ∧ x <> 1 ∧ y <> 1) ==> (x:num)+y<=x*y
 Proof
-  rw[] >> Induct_on`x` >> fs[] >> rw[MULT_SUC] >> `SUC x <= y * x` suffices_by fs[] >>
+  rw[] >> Induct_on‘x’ >> fs[] >> rw[MULT_SUC] >> ‘SUC x <= y * x’ suffices_by fs[] >>
   irule MULT_INCREASES >> rw[]
 QED
 
 Theorem ell_add_corr:
   ∀n. ∃k. ∀x. ℓ(x+n) <= ℓ(x)+k
 Proof
-  rw[] >> qexists_tac`ℓ (n) + 1` >> rw[] >> Cases_on`n=0` >> Cases_on`x=0` >> fs[] >>
-  Cases_on`n=1` >> Cases_on`x=1` >> fs[ell_SUC_corr] >- EVAL_TAC >>
-  `n+x<=n*x` by fs[sum_lt_mult] >> `ℓ (n + x) <= ℓ (n*x)` by fs[ELL_MONOTONE] >>
-  `ℓ (n * x) <= ℓ n + (ℓ x + 1)` suffices_by fs[] >>
+  rw[] >> qexists_tac‘ℓ (n) + 1’ >> rw[] >> Cases_on‘n=0’ >> Cases_on‘x=0’ >> fs[] >>
+  Cases_on‘n=1’ >> Cases_on‘x=1’ >> fs[ell_SUC_corr] >- EVAL_TAC >>
+  ‘n+x<=n*x’ by fs[sum_lt_mult] >> ‘ℓ (n + x) <= ℓ (n*x)’ by fs[ELL_MONOTONE] >>
+  ‘ℓ (n * x) <= ℓ n + (ℓ x + 1)’ suffices_by fs[] >>
   metis_tac[ell_mult1,ADD_ASSOC]
 QED
 
@@ -984,35 +938,35 @@ QED
 Theorem ell_sum_corr:
   ℓ (x + y) ≤ ℓ x + ℓ y + 1
 Proof
-  Cases_on`x=0` >> Cases_on`y=0` >> Cases_on`x=1` >> Cases_on`y=1` >> fs[ell_SUC_corr]
-  >- EVAL_TAC >> `x+y<= x*y` by fs[sum_lt_mult] >>
-  `ℓ (x + y) <= ℓ (x * y)` by fs[ELL_MONOTONE] >>
-  `ℓ (x * y) <= ℓ x + (ℓ y + 1)` suffices_by fs[] >>
+  Cases_on‘x=0’ >> Cases_on‘y=0’ >> Cases_on‘x=1’ >> Cases_on‘y=1’ >> fs[ell_SUC_corr]
+  >- EVAL_TAC >> ‘x+y<= x*y’ by fs[sum_lt_mult] >>
+  ‘ℓ (x + y) <= ℓ (x * y)’ by fs[ELL_MONOTONE] >>
+  ‘ℓ (x * y) <= ℓ x + (ℓ y + 1)’ suffices_by fs[] >>
   metis_tac[ell_mult1,ADD_ASSOC]
 QED
 
 Theorem ell_npair:
   ∃k. ∀x y. ℓ (x ⊗ y) <= 2*(ℓ x + ℓ y) + k
 Proof
-  `∃k. ∀z. ℓ(z+1) <= ℓ(z)+k` by fs[ell_add_corr] >>
-  qexists_tac`2*k+3` >> rw[] >> fs[numpairTheory.npair_def,numpairTheory.tri_formula] >>
-  `y + (x + y) * (x + (y + 1)) DIV 2 <= (x+y+1)*(x+y+1)` by
-    (`(x + y) * (x + (y + 1)) DIV 2 <= (x + y) * (x + (y + 1))` by fs[DIV_LESS_EQ] >>
-     `y + (x + y) * (x + (y + 1)) ≤ (x + y + 1) * (x + y + 1)` suffices_by fs[] >>
-     `∃d. y + (x + y) * (x + (y + 1)) + d = (x + y + 1) * (x + y + 1)` suffices_by fs[] >>
-     qexists_tac`x+1` >>
+  ‘∃k. ∀z. ℓ(z+1) <= ℓ(z)+k’ by fs[ell_add_corr] >>
+  qexists_tac‘2*k+3’ >> rw[] >> fs[numpairTheory.npair_def,numpairTheory.tri_formula] >>
+  ‘y + (x + y) * (x + (y + 1)) DIV 2 <= (x+y+1)*(x+y+1)’ by
+    (‘(x + y) * (x + (y + 1)) DIV 2 <= (x + y) * (x + (y + 1))’ by fs[DIV_LESS_EQ] >>
+     ‘y + (x + y) * (x + (y + 1)) ≤ (x + y + 1) * (x + y + 1)’ suffices_by fs[] >>
+     ‘∃d. y + (x + y) * (x + (y + 1)) + d = (x + y + 1) * (x + y + 1)’ suffices_by fs[] >>
+     qexists_tac‘x+1’ >>
      ONCE_REWRITE_TAC[LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB] >>
      ONCE_REWRITE_TAC[LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB] >>
      ONCE_REWRITE_TAC[LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB] >>
      ONCE_REWRITE_TAC[LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB] >> fs[]) >>
-  `ℓ (y + (x + y) * (x + (y + 1)) DIV 2) <= ℓ ((x + y + 1) * (x + y + 1))` by fs[ELL_MONOTONE]>>
-  `ℓ ((x + y + 1) * (x + y + 1)) <= 2 * k + (2 * (ℓ x + ℓ y) + 3)` suffices_by fs[] >>
-  `ℓ ((x + y + 1) * (x + y + 1)) <= ℓ (x + y + 1) + ℓ (x + y + 1) +1` by fs[ell_mult1]>>
-  `ℓ (x + y + 1) + ℓ (x + y + 1) + 1 <= 2 * k + (2 * (ℓ x + ℓ y) + 3)` suffices_by fs[] >>
-  `ℓ (x+y+1) <= k + ℓ (x+y)` by fs[] >>
-  `(ℓ (x + y) + k) + (ℓ (x + y) + k) + 1 <= 2 * k + (2 * (ℓ x + ℓ y) + 3)` suffices_by fs[] >>
-  fs[] >> `2 * ℓ (x + y) ≤ 2 * ( ℓ x + ℓ y ) + 2` suffices_by fs[] >>
-  `ℓ (x + y) ≤ (ℓ x + ℓ y) + 1` suffices_by fs[] >> metis_tac[ell_sum_corr]
+  ‘ℓ (y + (x + y) * (x + (y + 1)) DIV 2) <= ℓ ((x + y + 1) * (x + y + 1))’ by fs[ELL_MONOTONE]>>
+  ‘ℓ ((x + y + 1) * (x + y + 1)) <= 2 * k + (2 * (ℓ x + ℓ y) + 3)’ suffices_by fs[] >>
+  ‘ℓ ((x + y + 1) * (x + y + 1)) <= ℓ (x + y + 1) + ℓ (x + y + 1) +1’ by fs[ell_mult1]>>
+  ‘ℓ (x + y + 1) + ℓ (x + y + 1) + 1 <= 2 * k + (2 * (ℓ x + ℓ y) + 3)’ suffices_by fs[] >>
+  ‘ℓ (x+y+1) <= k + ℓ (x+y)’ by fs[] >>
+  ‘(ℓ (x + y) + k) + (ℓ (x + y) + k) + 1 <= 2 * k + (2 * (ℓ x + ℓ y) + 3)’ suffices_by fs[] >>
+  fs[] >> ‘2 * ℓ (x + y) ≤ 2 * ( ℓ x + ℓ y ) + 2’ suffices_by fs[] >>
+  ‘ℓ (x + y) ≤ (ℓ x + ℓ y) + 1’ suffices_by fs[] >> metis_tac[ell_sum_corr]
 QED
 
 
@@ -1021,9 +975,9 @@ Theorem Phi_bl2nx_npair:
   ∀y. ∃x. Phi (nfst (bl2n x)) (nsnd (bl2n x)) = SOME y
 Proof
   rw[] >> simp[Phi_def] >>
-  qexists_tac`n2bl (npair (dBnum (fromTerm (K @@ church y))) (dBnum (fromTerm (K @@ church y))))` >>
+  qexists_tac‘n2bl (npair (dBnum (fromTerm (K @@ church y))) (dBnum (fromTerm (K @@ church y))))’ >>
   simp[bool_num_inv] >>
-  qexists_tac`church y` >>
+  qexists_tac‘church y’ >>
   simp[K_lemma,normal_orderTheory.bnf_bnf_of]
 QED
 
@@ -1038,7 +992,7 @@ Theorem univ_rf_smallest:
   univ_rf U ∧ U k = SOME y ⇒ KC U y ≤ LENGTH k
 Proof
   rw[univ_rf_def] >> simp[KC_def,core_complexity_def] >>
-  `{p | U p = SOME y} <> ∅` by (fs[EXTENSION] >> metis_tac[]) >>
+  ‘{p | U p = SOME y} <> ∅’ by (fs[EXTENSION] >> metis_tac[]) >>
   simp[] >> DEEP_INTRO_TAC MIN_SET_ELIM >> rw[]
   >- (simp[EXTENSION] >> metis_tac[]) >>
   fs[PULL_EXISTS]
@@ -1051,36 +1005,36 @@ Theorem univ_rf_kolmog_fn_ub:
     KC U (n2bl (f m)) <=  ℓ (m)  + c
 Proof
   rw[] >>
-   `(∀n. Phi (recfn_index2 f) n = SOME (f n)) ∧
-    ∀j. (∀n. Phi j n = SOME (f n)) ⇒ recfn_index2 f ≤ j` by fs[recfn_index2_def]>>
-  `∀m. Phi (recfn_index2 f) (m) = SOME (f m)` by fs[] >>
-  `∃g. ∀m. on2bl (Phi (recfn_index2 f) m) = (U (g ++ n2bl m))` by
-    (fs[univ_rf_def] >> `∃g. ∀x. on2bl (Phi (recfn_index2 f) x) = (U (g ++ n2bl x))` by fs[])>>
-  qexists_tac`LENGTH g` >> rw[] >>
-  `U (g ++ n2bl m) = SOME (n2bl (f m))` by
-    (`on2bl (Phi (recfn_index2 f) m) = U (g++ n2bl m)` by fs[] >>
-     `Phi (recfn_index2 f) m = SOME (f m)` by fs[] >>
+   ‘(∀n. Phi (recfn_index2 f) n = SOME (f n)) ∧
+    ∀j. (∀n. Phi j n = SOME (f n)) ⇒ recfn_index2 f ≤ j’ by fs[recfn_index2_def]>>
+  ‘∀m. Phi (recfn_index2 f) (m) = SOME (f m)’ by fs[] >>
+  ‘∃g. ∀m. on2bl (Phi (recfn_index2 f) m) = (U (g ++ n2bl m))’ by
+    (fs[univ_rf_def] >> ‘∃g. ∀x. on2bl (Phi (recfn_index2 f) x) = (U (g ++ n2bl x))’ by fs[])>>
+  qexists_tac‘LENGTH g’ >> rw[] >>
+  ‘U (g ++ n2bl m) = SOME (n2bl (f m))’ by
+    (‘on2bl (Phi (recfn_index2 f) m) = U (g++ n2bl m)’ by fs[] >>
+     ‘Phi (recfn_index2 f) m = SOME (f m)’ by fs[] >>
      fs[on2bl_def] >> fs[optionTheory.OPTION_MAP_DEF]) >>
-  `KC U (n2bl (f m)) ≤ LENGTH (g ++ n2bl m)` by fs[univ_rf_smallest] >> fs[]
+  ‘KC U (n2bl (f m)) ≤ LENGTH (g ++ n2bl m)’ by fs[univ_rf_smallest] >> fs[]
 QED
 
 Theorem computable_id:
   computable (λx. x)
 Proof
-  fs[computable_def,Phi_def] >> qexists_tac`dBnum (fromTerm (I))` >>
-  rw[] >> qexists_tac`(church x)` >> rw[churchnumTheory.force_num_church] >>
-  `I @@ church x == church x` by fs[chap2Theory.lameq_I] >>
-  `bnf (church x)` by fs[churchnumTheory.bnf_church] >>
+  fs[computable_def,Phi_def] >> qexists_tac‘dBnum (fromTerm (I))’ >>
+  rw[] >> qexists_tac‘(church x)’ >> rw[churchnumTheory.force_num_church] >>
+  ‘I @@ church x == church x’ by fs[chap2Theory.lameq_I] >>
+  ‘bnf (church x)’ by fs[churchnumTheory.bnf_church] >>
   fs[normal_orderTheory.lameq_bnf_of_SOME_I]
 QED
 
 
 Theorem univ_rf_kolmog_ub:
-  univ_rf U ==> ∃c. ∀m. KC U (n2bl m) <= (ℓ (m) ) + c
+  univ_rf U ==> ∃c. ∀m. KC U (n2bl m) ≤ ℓ m + c
 Proof
-  rw[] >> `computable (λx. x)` by fs[computable_id] >>
-  qabbrev_tac`f = (λx. (x:num))` >>
-  `∃c. ∀m. KC U (n2bl (f m)) <=  ℓ (m)  + c` by
+  rw[] >> ‘computable (λx. x)’ by fs[computable_id] >>
+  qabbrev_tac‘f = (λx. (x:num))’ >>
+  ‘∃c. ∀m. KC U (n2bl (f m)) <=  ℓ (m)  + c’ by
     metis_tac[univ_rf_kolmog_fn_ub]  >>metis_tac[ADD_COMM]
 QED
 
@@ -1090,19 +1044,12 @@ Definition UKCfkmin_def:
   UKCfkmin (U:bool list->bool list option) m = MIN_SET {bl2n n | m <= KC U n}
 End
 
-Theorem MIN_SET_L_PHI_NPAIR_NON_EMPTY:
-  {LENGTH p | Phi (nfst (bl2n p)) (nsnd (bl2n p)) = SOME y} <> {}
-Proof
-  fs[EXTENSION,Phi_bl2nx_npair]
-QED
-
-
 Theorem univ_rf_kolmog_props:
   univ_rf U ==> ∀y. ∃z. KC U y = LENGTH z ∧ U z = SOME y
 Proof
   rw[] >> fs[KC_def,core_complexity_def,univ_rf_nonempty] >>
   DEEP_INTRO_TAC MIN_SET_ELIM >>
-  rw[] >> `{p | U p = SOME y} ≠ ∅` by fs[univ_rf_nonempty] >>
+  rw[] >> ‘{p | U p = SOME y} ≠ ∅’ by fs[univ_rf_nonempty] >>
   fs[EXTENSION] >> metis_tac[]
 QED
 
@@ -1156,10 +1103,10 @@ QED
 Theorem f_n2bl_min_set_f:
   (∃x. (m:num) ≤ f x) ==> m ≤ f ( n2bl ( MIN_SET {bl2n n | m ≤ f n}))
 Proof
-  rw[] >> `{bl2n n | m ≤ f n} <> {}` by (fs[EXTENSION] >> metis_tac[]) >>
-  `n2bl (MIN_SET {bl2n n | m ≤ f n}) ∈ {n | m ≤ f n}` by
-    (`MIN_SET {bl2n n | m ≤ f n} ∈ {bl2n n | m ≤ f n}` by fs[MIN_SET_LEM] >>
-     `n2bl (MIN_SET {bl2n n | m ≤ f n}) ∈ IMAGE n2bl {bl2n n | m ≤ f n}` by fs[] >> fs[IMAGE_DEF]) >> fs[]
+  rw[] >> ‘{bl2n n | m ≤ f n} <> {}’ by (fs[EXTENSION] >> metis_tac[]) >>
+  ‘n2bl (MIN_SET {bl2n n | m ≤ f n}) ∈ {n | m ≤ f n}’ by
+    (‘MIN_SET {bl2n n | m ≤ f n} ∈ {bl2n n | m ≤ f n}’ by fs[MIN_SET_LEM] >>
+     ‘n2bl (MIN_SET {bl2n n | m ≤ f n}) ∈ IMAGE n2bl {bl2n n | m ≤ f n}’ by fs[] >> fs[IMAGE_DEF]) >> fs[]
 QED
 
 
@@ -1167,18 +1114,18 @@ QED
 Theorem UKCfkmin_def_lb:
   univ_rf U ==> ∀m. m <= KC U (n2bl (UKCfkmin U m))
 Proof
-  rw[UKCfkmin_def] >> `(∃x. m ≤ KC U x)` by  fs[univ_rf_kolmog_lb_exists] >>
-  `m ≤ (λx. KC U x) (n2bl (MIN_SET {bl2n n | m ≤ (λx. KC U x) n}))` suffices_by fs[] >>
+  rw[UKCfkmin_def] >> ‘(∃x. m ≤ KC U x)’ by  fs[univ_rf_kolmog_lb_exists] >>
+  ‘m ≤ (λx. KC U x) (n2bl (MIN_SET {bl2n n | m ≤ (λx. KC U x) n}))’ suffices_by fs[] >>
   irule f_n2bl_min_set_f >> metis_tac[]
 QED
 
-val unbounded_def = Define`unbounded f = (∀m. ∃x. (m:num) <= f (x:num))`
+val unbounded_def = Define‘unbounded f = (∀m. ∃x. (m:num) <= f (x:num))’
 
-val t = brackabs.brackabs_equiv[](ASSUME``LAM "x" (cfindleast
+val t = brackabs.brackabs_equiv[](ASSUME“LAM "x" (cfindleast
              @@ (LAM "n" (cnot @@ (cless
                               @@ (UM @@ (cnpair @@ (church i) @@ VAR "n") )
                               @@ (VAR "x") ) ) )
-             @@ I ) == ZZ``) |> concl |> lhand
+             @@ I ) == ZZ”) |> concl |> lhand
 
 
 
@@ -1188,14 +1135,14 @@ Theorem computable_arg_min_set:
 Proof
   rw[computable_def,unbounded_def] >>
   qexists_tac
-  `dBnum (fromTerm ^t )` >>
-  simp[Phi_def] >> asm_simp_tac (bsrw_ss()) [] >> qx_gen_tac`x` >>
-  Q.HO_MATCH_ABBREV_TAC`∃z. bnf_of (cfindleast @@ P @@ I) = _ z ∧ _ z` >>
-  `∀n. P @@ church n == cB (x <= f n)` by
-    (asm_simp_tac (bsrw_ss()) [Abbr`P`] >> rw[] >>
-     last_x_assum (qspec_then `n` assume_tac) >>
+  ‘dBnum (fromTerm ^t )’ >>
+  simp[Phi_def] >> asm_simp_tac (bsrw_ss()) [] >> qx_gen_tac‘x’ >>
+  Q.HO_MATCH_ABBREV_TAC‘∃z. bnf_of (cfindleast @@ P @@ I) = _ z ∧ _ z’ >>
+  ‘∀n. P @@ church n == cB (x <= f n)’ by
+    (asm_simp_tac (bsrw_ss()) [Abbr‘P’] >> rw[] >>
+     last_x_assum (qspec_then ‘n’ assume_tac) >>
      drule recfunsTheory.PhiSOME_UM_I >> asm_simp_tac (bsrw_ss()) [] >> fs[]) >>
-  `(∀n. ∃b. P @@ church n == cB b) ∧ ∃n. P @@ church n == cB T` by
+  ‘(∀n. ∃b. P @@ church n == cB b) ∧ ∃n. P @@ church n == cB T’ by
     (asm_simp_tac (bsrw_ss()) [] >> rw[]) >>
   drule_all_then assume_tac (GEN_ALL churchnumTheory.cfindleast_termI) >>
   asm_simp_tac (bsrw_ss()) [] >> fs[normal_orderTheory.bnf_bnf_of,MIN_SET_DEF] >>
@@ -1208,14 +1155,14 @@ QED
 Theorem computable_UKCfkmin:
   univ_rf U ∧ computable (λx. KC U (n2bl x)) ==> computable (UKCfkmin U)
 Proof
-  rw[] >> `unbounded (λx. KC U (n2bl x))` by
-    (rw[unbounded_def] >> `∃y. m <= KC U y` by fs[univ_rf_kolmog_lb_exists] >>
-     qexists_tac`bl2n y` >> fs[]) >>
+  rw[] >> ‘unbounded (λx. KC U (n2bl x))’ by
+    (rw[unbounded_def] >> ‘∃y. m <= KC U y’ by fs[univ_rf_kolmog_lb_exists] >>
+     qexists_tac‘bl2n y’ >> fs[]) >>
   simp[computable_def,UKCfkmin_def] >>
-  `∃i. ∀n. Phi i n = SOME (MIN_SET { n' | n ≤ (λx. KC U (n2bl x)) n'})` suffices_by
-    (rw[] >> qexists_tac`i` >> rw[] >>
-     `{n' | n ≤ KC U (n2bl n')} = {bl2n n' | n ≤ KC U n'}` suffices_by fs[] >> fs[EXTENSION] >>
-     rw[] >> eq_tac >- (rw[] >> qexists_tac`n2bl x` >> fs[]) >- (rw[] >> fs[])  ) >>
+  ‘∃i. ∀n. Phi i n = SOME (MIN_SET { n' | n ≤ (λx. KC U (n2bl x)) n'})’ suffices_by
+    (rw[] >> qexists_tac‘i’ >> rw[] >>
+     ‘{n' | n ≤ KC U (n2bl n')} = {bl2n n' | n ≤ KC U n'}’ suffices_by fs[] >> fs[EXTENSION] >>
+     rw[] >> eq_tac >- (rw[] >> qexists_tac‘n2bl x’ >> fs[]) >- (rw[] >> fs[])  ) >>
   fs[computable_arg_min_set]
 QED
 
@@ -1227,9 +1174,9 @@ Theorem UKCkol_fkmin_lb:
   univ_rf U ∧ computable (λx. KC U (n2bl x)) ==>
   ∃c. ∀m. (λx. KC U (n2bl x)) (UKCfkmin U m) <= (ℓ m)+ c
 Proof
-  rw[] >> `computable (UKCfkmin U)` by fs[computable_UKCfkmin] >>
-  `∃c. ∀m. (λx. KC U (n2bl x)) (UKCfkmin U m) ≤ (ℓ m) + c` by
-    metis_tac[univ_rf_kolmog_fn_ub] >> qexists_tac`c` >> rw[] >> fs[]
+  rw[] >> ‘computable (UKCfkmin U)’ by fs[computable_UKCfkmin] >>
+  ‘∃c. ∀m. (λx. KC U (n2bl x)) (UKCfkmin U m) ≤ (ℓ m) + c’ by
+    metis_tac[univ_rf_kolmog_fn_ub] >> qexists_tac‘c’ >> rw[] >> fs[]
 QED
 
 
@@ -1237,32 +1184,32 @@ QED
 Theorem UKCcompkol_lb:
   univ_rf U ∧ computable (λx. KC U (n2bl x)) ==> ∃c. ∀m. m <=  2*(ℓ m) + c
 Proof
-  rw[] >> `∃c. ∀m. (λx. KC U (n2bl x)) (UKCfkmin U m) <= (ℓ m) + c` by fs[UKCkol_fkmin_lb]>>
-  `∀m. m <= (λx. KC U (n2bl x)) (UKCfkmin U m)` by fs[UKCfkmin_def_lb]  >> qexists_tac`c` >> rw[] >>
-  `m ≤ (λx. KC U (n2bl x)) (UKCfkmin U m)` by fs[] >> `(λx. KC U (n2bl x)) (UKCfkmin U m) ≤ c + ℓ m` by fs[] >>fs[]
+  rw[] >> ‘∃c. ∀m. (λx. KC U (n2bl x)) (UKCfkmin U m) <= (ℓ m) + c’ by fs[UKCkol_fkmin_lb]>>
+  ‘∀m. m <= (λx. KC U (n2bl x)) (UKCfkmin U m)’ by fs[UKCfkmin_def_lb]  >> qexists_tac‘c’ >> rw[] >>
+  ‘m ≤ (λx. KC U (n2bl x)) (UKCfkmin U m)’ by fs[] >> ‘(λx. KC U (n2bl x)) (UKCfkmin U m) ≤ c + ℓ m’ by fs[] >>fs[]
 QED
 
 Theorem exists_log_lb:
   ∃m. ¬(m<= 2*(ℓ m) + c)
 Proof
   CCONTR_TAC >> fs[] >>
-  Cases_on`1<c`
-  >- (`ℓ c < c` by fs[ELL_LT] >> `11*c <= c + 2 * ℓ (11*c)` by fs[] >>
-      `ℓ (11*c) <= ℓ 11 + ℓ c + 1` by fs[ell_mult1] >>
-      `11*c<= c+ 2* (ℓ 11 + ℓ c + 1)` by fs[] >>
-      `5*c <= (ℓ 11 + ℓ c + 1)` by fs[] >>
-      `ℓ 11 = 3` by EVAL_TAC >> fs[] >> `ℓ c + 4 < c + 4` by fs[ELL_LT] >>
-      `5*c < c+4` by metis_tac[LESS_EQ_LESS_TRANS] >> `c+4 < 4*c + c` by fs[] >> fs[])
-  >- (`c<=1` by fs[] >> `c=0 ∨ c=1` by fs[] >> fs[]
-      >- (`100 <= 2 * ℓ 100` by fs[] >> pop_assum mp_tac >> EVAL_TAC)
-      >- (`100 <= 2 * ℓ 100 + 1` by fs[] >> pop_assum mp_tac >> EVAL_TAC)  )
+  Cases_on‘1<c’
+  >- (‘ℓ c < c’ by fs[ELL_LT] >> ‘11*c <= c + 2 * ℓ (11*c)’ by fs[] >>
+      ‘ℓ (11*c) <= ℓ 11 + ℓ c + 1’ by fs[ell_mult1] >>
+      ‘11*c<= c+ 2* (ℓ 11 + ℓ c + 1)’ by fs[] >>
+      ‘5*c <= (ℓ 11 + ℓ c + 1)’ by fs[] >>
+      ‘ℓ 11 = 3’ by EVAL_TAC >> fs[] >> ‘ℓ c + 4 < c + 4’ by fs[ELL_LT] >>
+      ‘5*c < c+4’ by metis_tac[LESS_EQ_LESS_TRANS] >> ‘c+4 < 4*c + c’ by fs[] >> fs[])
+  >- (‘c<=1’ by fs[] >> ‘c=0 ∨ c=1’ by fs[] >> fs[]
+      >- (‘100 <= 2 * ℓ 100’ by fs[] >> pop_assum mp_tac >> EVAL_TAC)
+      >- (‘100 <= 2 * ℓ 100 + 1’ by fs[] >> pop_assum mp_tac >> EVAL_TAC)  )
 QED
 
 Theorem part_hutter_UKC:
   univ_rf U ∧ computable (λx. KC U (n2bl x)) ==> F
 Proof
-  strip_tac >> `∃c. ∀m. m <=  2*(ℓ m) + c` by metis_tac[UKCcompkol_lb] >>
-  `∃m. ¬(m<= 2*(ℓ m) + c)` by fs[exists_log_lb] >> metis_tac[]
+  strip_tac >> ‘∃c. ∀m. m <=  2*(ℓ m) + c’ by metis_tac[UKCcompkol_lb] >>
+  ‘∃m. ¬(m<= 2*(ℓ m) + c)’ by fs[exists_log_lb] >> metis_tac[]
 QED
 
 Theorem UKC_incomp:

@@ -7,7 +7,6 @@ open listTheory;
 open arithmeticTheory;
 open numpairTheory;
 open pred_setTheory;
-open measureTheory;
 open recfunsTheory;
 open extNatTheory;
 open prtermTheory;
