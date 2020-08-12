@@ -7,8 +7,6 @@ open listTheory
 open arithmeticTheory
 open numpairTheory
 open pred_setTheory
-open turing_machineTheory
-open turing_machine_primeqTheory
 
 val _ = new_theory "register_machine";
 

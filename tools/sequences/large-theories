@@ -21,6 +21,8 @@ src/HolSmt
 !!examples/computability/lambda
 !!examples/computability/register
 !!examples/computability/turing
+!!examples/computability/kolmog
+!!examples/computability/recdegrees
 !!examples/balanced_bst
 !!examples/formal-languages/regular
 src/Boolify/src
