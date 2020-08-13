@@ -724,66 +724,6 @@ QED
 
 
 
-Theorem core_complexity0_lb_exists:
-  ∃x. m <= core_complexity0 x
-Proof
-  CCONTR_TAC >> fs[NOT_LESS_EQUAL] >>
-  ‘∀x. ∃i. on2bl (Phi i 0) = SOME x ∧ ℓ i < m’
-    by metis_tac[core_complexity0_props] >>
-  fs[SKOLEM_THM] >>
-  ‘FINITE (count m)’ by fs[FINITE_COUNT] >>
-  ‘INFINITE {f x | x | T}’ by
-    (‘SURJ (λx. on2bl (Phi (f x) 0)) UNIV {SOME n|T}’
-       by (fs[SURJ_DEF] >> rw[]) >>
-     ‘IMAGE (λx. on2bl (Phi (f x) 0)) UNIV = {SOME n|T}’ by fs[IMAGE_SURJ]>>
-     fs[IMAGE_DEF] >>
-     ‘{SOME n | T} = IMAGE (λx. on2bl (Phi x 0)) {f x | x | T}’ by
-       (fs[IMAGE_DEF,EXTENSION] >> rw[] >> eq_tac >> rw[] >> metis_tac[]) >>
-     ‘SURJ (λx. on2bl (Phi x 0)) {f x | x | T} {SOME n | T}’
-       by metis_tac[SURJ_IMAGE] >>
-     ‘¬(FINITE {SOME (n:bool list) | T})’ by
-       (‘INFINITE 𝕌(:bool list option)’ by
-          (fs[infinite_num_inj] >> qexists_tac‘SOME o n2bl’ >>
-           rw[INJ_DEF,n2bl_inj]) >>
-        ‘{SOME n | T} = 𝕌(:bool list option) DIFF {NONE}’ by
-          (rw[EXTENSION] >> eq_tac >> rw[] >> Cases_on‘x’ >> fs[]) >>
-        ‘FINITE {NONE}’ by fs[FINITE_SING] >>
-        rw[] >> fs[INFINITE_DIFF_down]) >>
-
-     ‘∃g. INJ g {SOME n | T} {f x | x | T} ∧
-          ∀y. y ∈ {SOME n | T} ⇒ (λx. on2bl (Phi x 0)) (g y) = y’ by
-       (irule pred_setTheory.SURJ_INJ_INV >> fs[]) >>
-     metis_tac[INFINITE_INJ] ) >>
-  ‘FINITE {i | ∃x. i = (f x)}’ by
-    (‘{i | ∃x. i = (f x)} ⊆ count (2**m + 2**m)’ suffices_by
-       metis_tac[SUBSET_FINITE_I,FINITE_COUNT] >> simp[SUBSET_DEF] >> rw[] >>
-     fs[] >>
-     ‘ℓ (f x') < m’ by fs[] >>
-     ‘MEM ((f x') + 1) (log2list (ℓ (f x')))’ by metis_tac[ELL_log2list] >>
-     fs[log2list_def,MEM_GENLIST] >>
-     ‘f x' < 2 ** ℓ (f x') + 2 ** ℓ (f x')’ by fs[] >>
-     ‘prim_rec$< (2 ** (ℓ (f x'))+2 ** (ℓ (f x')))  (2 ** m+2 ** m)’
-       by fs[LESS_TRANS] >>
-     ‘f x' < 2 ** m + 2 ** m’ by metis_tac[LESS_TRANS] >> fs[]) >>
-  ‘SURJ (λx. x)  {i | (∃x. i = (f x))} {f x | x | T}’ by
-    (fs[SURJ_DEF] >> rw[] ) >>
-  ‘FINITE {f x | x | T}’ by metis_tac[FINITE_SURJ]
-QED
-
-(* up to fixing here *)
-
-(* not sure if needed to fix?
-Theorem kfkmin_lb:
-  ∀m. m <= core_complexity0 (n2bl (fkmin m))
-Proof
-  rw[] >> `∃x. m <= core_complexity0 x` by fs[core_complexity0_lb_exists] >>
-
-  rw[fkmin_def,core_complexity0_def] >>
-  {}
-  irule f_min_set_f >>
-QED
-*)
-
 
 Theorem computable_imp_thm:
   ∀f. computable f ==> ∃i. ∀n. Phi i n = SOME (f n)
