@@ -34,16 +34,7 @@ Definition len_fun_def:
     EXTREAL_SUM_IMAGE (\s. Normal (2 rpow (- &(LENGTH s)))) strs
 End
 
-Theorem extreal_sum_image_finite_corr:
-  !P. FINITE P ==>
-      !f x. (!y. (y IN P) ==> (f y = x)) ==> (SIGMA f P = &CARD P * x)
-Proof
-  rw[] >> Cases_on‘P = {}’ >> simp[]
-  >- rw[extrealTheory.EXTREAL_SUM_IMAGE_THM, extrealTheory.mul_lzero] >>
-  ‘∃m. m ∈ P’ by metis_tac[MEMBER_NOT_EMPTY] >> ‘x = f m’ by fs[] >> rw[] >>
-  irule extrealTheory.EXTREAL_SUM_IMAGE_FINITE_SAME >> rw[] >>
-  CCONTR_TAC >> fs[] >> fs[]
-QED
+Theorem extreal_sum_image_finite_corr = extrealTheory.EXTREAL_SUM_IMAGE_FINITE_CONST;
 
 Theorem bool_list_card[simp]:
   CARD {s | LENGTH (s:bool list) = n} = 2**n
