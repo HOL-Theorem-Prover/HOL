@@ -149,25 +149,29 @@ Theorem terminated_imp:
     ==>
   Phi M x = SOME (cs_to_num (steps t (mk_initial_state M x)))
 Proof
-  rw[] >> fs[Phi_steps] >> `comp_count (mk_initial_state M x) = SOME t`
+  rw[] >> fs[Phi_steps] >> ‘comp_count (mk_initial_state M x) = SOME t’
     suffices_by fs[] >>
   fs[comp_count_def] >> fs[whileTheory.OLEAST_EQ_SOME] >> rw[] >> strip_tac >>
-  `∃c.0<c ∧ n+c = t` by (qexists_tac`t-n` >> fs[]) >> rw[] >>
+  rename [‘n < t’] >>
+  ‘∃c.0<c ∧ n+c = t’ by (qexists_tac‘t-n’ >> fs[]) >> rw[] >>
   ‘steps (n + c) (mk_initial_state M x) =
    steps (n + c - 1) (mk_initial_state M x)’
   by (
-   `step1 (steps n (mk_initial_state M x)) = (steps n (mk_initial_state M x))`
+   ‘step1 (steps n (mk_initial_state M x)) = (steps n (mk_initial_state M x))’
      by fs[terminated_step_in_place] >> fs[steps_def] >>
-   `FUNPOW step1 (c + n) (mk_initial_state M x) =
-      FUNPOW step1 ((c-1) + n) (mk_initial_state M x)`
+   ‘FUNPOW step1 (c + n) (mk_initial_state M x) =
+      FUNPOW step1 ((c-1) + n) (mk_initial_state M x)’
    suffices_by fs[] >>fs[FUNPOW_ADD] >>
    fs[FUNPOW_id]
   ) >> metis_tac[]
 QED
 
 Theorem terminated_down:
-  (¬(terminated (steps 0 (mk_initial_state M x)) ) ∧ terminated (steps t (mk_initial_state M x)))
-    ==> ∃tl. tl<t ∧ ¬terminated (steps tl (mk_initial_state M x)) ∧  terminated (steps (tl+1) (mk_initial_state M x))
+  ¬terminated (steps 0 (mk_initial_state M x)) ∧
+  terminated (steps t (mk_initial_state M x)) ==>
+  ∃tl.
+    tl<t ∧ ¬terminated (steps tl (mk_initial_state M x)) ∧
+    terminated (steps (tl+1) (mk_initial_state M x))
 Proof
   rw[] >> Induct_on`t` >> fs[] >>
   rw[] >> Cases_on` terminated (steps t (mk_initial_state M x))` >>  fs[]
@@ -176,15 +180,17 @@ Proof
 QED
 
 Theorem terminated_impdown:
-  (¬(terminated (steps 0 (mk_initial_state M x)) ) ∧ terminated (steps t (mk_initial_state M x)))
-    ==> ∃tl. Phi M x = SOME (cs_to_num (steps tl (mk_initial_state M x) ))
+  ¬terminated (steps 0 (mk_initial_state M x)) ∧
+  terminated (steps t (mk_initial_state M x)) ==>
+  ∃tl. Phi M x = SOME (cs_to_num (steps tl (mk_initial_state M x) ))
 Proof
-  rw[] >> `∃tll. tll<t ∧ ¬terminated (steps tll (mk_initial_state M x)) ∧
-                 terminated (steps (tll+1) (mk_initial_state M x))` by
-            metis_tac[terminated_down] >> qabbrev_tac`tk = tll+1` >>
-  `tk-1 = tll` by fs[Abbr`tk`] >> rw[] >>
-  `Phi M x = SOME (cs_to_num (steps (tk) (mk_initial_state M x) ))` by
-    metis_tac[terminated_imp]>> qexists_tac`tk` >> fs[]
+  rw[] >>
+  ‘∃tll. tll<t ∧ ¬terminated (steps tll (mk_initial_state M x)) ∧
+         terminated (steps (tll+1) (mk_initial_state M x))’ by
+    metis_tac[terminated_down] >> qabbrev_tac‘tk = tll+1’ >>
+  ‘tk-1 = tll’ by fs[Abbr‘tk’] >> rw[] >>
+  ‘Phi M x = SOME (cs_to_num (steps (tk) (mk_initial_state M x) ))’ by
+    metis_tac[terminated_imp]>> qexists_tac‘tk’ >> fs[]
 QED
 
 Theorem correctness_on_nontermination_contrapos:
