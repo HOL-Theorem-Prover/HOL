@@ -187,6 +187,14 @@ sig
    val NO_STRIP_FULL_SIMP_TAC     : simpset -> thm list -> tactic
    val NO_STRIP_REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
 
+   type simptac_config = {strip : bool, elimvars : bool, droptrues : bool}
+   val psr : simptac_config -> simpset -> tactic
+     (* Pop, Simp, Rotate to back *)
+   val allasms : simptac_config -> simpset -> tactic
+     (* do the above to all the assumptions in turn *)
+   val global_simp_tac : simptac_config -> simpset -> thm list -> tactic
+     (* do allasms until quiescence, then simp in the goal as well *)
+
    (* ---------------------------------------------------------------------
     * SIMP_RULE : simpset -> tactic
     * ASM_SIMP_RULE : simpset -> tactic
