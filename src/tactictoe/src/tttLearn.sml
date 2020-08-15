@@ -20,16 +20,16 @@ val ERR = mk_HOL_ERR "tttLearn"
    ------------------------------------------------------------------------- *)
 
 fun abstract_stac stac =
-  let val a1 = abstract_thml stac in
-    if not (!learn_abstract_term) then Option.map fst a1 else
-      let
-        val a2 = abstract_term (if isSome a1 then fst (valOf a1) else stac)
-      in
-        if isSome a1 orelse isSome a2
-        then Option.map fst a2
-        else NONE
-      end
-  end
+  (
+  if is_thmlstac stac orelse is_termstac stac then NONE else
+  case abstract_thml stac of
+    SOME (thmlstac,_) => SOME thmlstac
+  | NONE => 
+    (if not (!learn_abstract_term) then NONE else
+    case abstract_term stac of
+      SOME (termstac,_) => SOME termstac
+    | NONE => NONE)
+  )
   handle Interrupt => raise Interrupt | _ =>
     (debug ("error: abstract_stac: " ^ stac); NONE)
 
@@ -53,6 +53,12 @@ fun pred_stac (tacsymweight,tacfea) ostac fea =
 fun pred_thmid thmdata fea =
   thmknn thmdata (!ttt_thmlarg_radius) fea
 
+fun unterm_var v =
+  let val (vs,ty) = dest_var v in vs ^ " " ^ type_to_string ty end
+
+fun pred_svar n goal = 
+  first_n n (map unterm_var (find_terms is_var (snd goal)))
+
 fun order_stac tacdata ostac stacl =
    let
      fun covscore x = dfind x (#taccov tacdata) handle NotFound => 0
@@ -62,6 +68,18 @@ fun order_stac tacdata ostac stacl =
    in
      dict_sort covcmp stacl'
    end
+
+(* -------------------------------------------------------------------------
+   Instantiations (* todo: speedup by preparsing tokenl *)
+   ------------------------------------------------------------------------- *)
+
+fun inst_arg (thmidl,sterml) stac =
+  if is_thmlstac stac then 
+    (stac, inst_thml thmidl stac) ::
+    map (fn x => (stac, inst_thml [x] stac)) thmidl
+  else if is_termstac stac then  
+    map (fn x => (stac, inst_term x stac)) sterml
+  else [(stac,stac)]
 
 (* -------------------------------------------------------------------------
    Testing if a predicted tactic as a "better effect" than the original
@@ -95,10 +113,11 @@ fun orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))
     val stacl2 = order_stac tacdata stac stacl1
     val _ = debug "abstract tactics"
     val stacl3 = concat_absstacl fea stac stacl2
-    val _ = debug "predict theorems"
+    val _ = debug "predict arguments"
     val thmidl = total_time ortho_predthm_time (pred_thmid thmdata) fea
+    val sterml = pred_svar 8 ig
     val _ = debug "instantiate arguments"
-    val stacl4 = map_assoc (inst_thml thmidl) stacl3
+    val stacl4 = List.concat (map (inst_arg (thmidl,sterml)) stacl3)
     val _ = debug "test tactics"
     val (neworthoo,t) = add_time (findSome (test_stac ig ogl)) stacl4
     val _ = debug ("test time: " ^ rts t)

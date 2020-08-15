@@ -256,12 +256,12 @@ ttt_clean_record ();
 ttt_record ();
 
 load "tttEval"; open tttEval;
-tttSetup.ttt_search_time := 300.0;
+tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
 ttt_clean_eval ();
-val _ = run_evalscript_thyl "august11-300" (true,30) (NONE,NONE) thyl;
+val _ = run_evalscript_thyl "august12" (true,30) (NONE,NONE) thyl;
 
 val tnn_value = train_value 0.95 "value";
 val _ = run_evalscript_thyl "august10-vnn" (true,30) (SOME "value",NONE) thyl;

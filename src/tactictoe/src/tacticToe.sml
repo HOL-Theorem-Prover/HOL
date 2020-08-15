@@ -74,15 +74,6 @@ fun select_tacfea tacdata gfea =
   end
 
 (* -------------------------------------------------------------------------
-   Variable enumerator (to be moved elsewhere)
-   ------------------------------------------------------------------------- *)
-
-fun unterm_var v =
-  let val (vs,ty) = dest_var v in vs ^ " " ^ type_to_string ty end
-
-fun pred_qvar goal = map unterm_var (find_terms is_var (snd goal))
-
-(* -------------------------------------------------------------------------
    Main function
    ------------------------------------------------------------------------- *)
 
@@ -133,10 +124,13 @@ fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
       end
     fun predarg stac aty g = case aty of
         Athml =>
+        let val thml = predthml g in
           if stac = metis_stac
-          then map Sthml (mk_batch_full (!ttt_thmlarg_radius) (predthml g))
-          else map Sthml (mk_batch_full 1 (predthml g))
-      | Aterm => map Sterm (first_n narg_explo (pred_qvar g))
+          then map Sthml (mk_batch_full (!ttt_thmlarg_radius) thml)
+          else map Sthml (mk_batch_full (!ttt_thmlarg_radius) thml) @
+               map Sthml (mk_batch_full 1 thml)
+        end
+      | Aterm => map Sterm (pred_svar 8 g)
     fun predtac g =
       dfind g (!tac_cache) handle NotFound =>
       let
@@ -217,7 +211,7 @@ fun main_tactictoe_mini thmdata (vnno,pnno) goal =
       end
     fun predarg _ aty g = case aty of
         Athml => map Sthml (mk_batch_full (!ttt_thmlarg_radius) (predthml g))
-      | Aterm => map Sterm (first_n narg_explo (pred_qvar g))
+      | Aterm => map Sterm (pred_svar narg_explo g)
     fun predtac g = map_assoc (fn x => dfind x atyd) stacl_filtered
     (* search parameters *)
     val _ = print_endline "search"
