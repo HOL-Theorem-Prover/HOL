@@ -803,12 +803,16 @@ a store_thm equivalent.")
 (defvar holscript-quotedmaterial-delimiter-regexp
   (regexp-opt (list "“" "”" "‘" "’" holscript-quoteddeclaration-begin)))
 
-(defvar holscript-boolean-quantifiers '("?" "!" "?!" "∀" "∃" "∃!"))
+(defvar holscript-boolean-quantifiers '("∀" "∃" "∃!"))
 
 (defvar holscript-quantifier-regexp
   (concat (regexp-opt holscript-boolean-quantifiers) "\\|"
-          (regexp-opt '("some" "LEAST") 'symbols) "\\|\\_<[@λ]\\_>")
+          (regexp-opt '("some" "LEAST") 'symbols))
   "List of strings that can begin \"quantifier blocks\".")
+
+(defvar holscript-lambda-regexp "[λ\\!?@]\\|?!"
+  "Regular expression for quantifiers that are (treated as) single punctuation
+class characters.")
 
 
 (defun holscript-can-find-earlier-quantifier (pp)
@@ -821,14 +825,16 @@ a store_thm equivalent.")
                 (concat "\\(" holscript-quoteddeclaration-begin "\\)" "\\|"
                         "\\(" holscript-quoteddeclaration-end "\\)" "\\|"
                         holscript-quotedmaterial-delimiter-regexp "\\|"
-                        holscript-quantifier-regexp "\\|\\.")
+                        holscript-quantifier-regexp "\\|"
+                        holscript-lambda-regexp "\\|\\.")
                 limit
                 t)
           (let ((pp1 (syntax-ppss)))
             (if (or (nth 3 pp1) (nth 4 pp1))
                 (goto-char (nth 8 pp1))
               (if (equal (car (last (nth 9 pp1))) limit)
-                  (if (looking-at holscript-quantifier-regexp)
+                  (if (or (looking-at holscript-quantifier-regexp)
+                          (looking-at holscript-lambda-regexp))
                       (throw 'found-one (point))
                     (throw 'found-one nil))))))))))
 
@@ -905,6 +911,12 @@ a store_thm equivalent.")
               (forward-char 1) tok)))
          ((looking-at holscript-quantifier-regexp)
           (goto-char (match-end 0)) "QFIER.")
+         ((looking-at (concat "\\(?:" holscript-lambda-regexp "\\)\\S."))
+          (if (equal 1 (syntax-class (syntax-after (1- (point)))))
+              (buffer-substring-no-properties
+               (point)
+               (progn (skip-syntax-forward ".") (point)))
+            (forward-char 1) "QFIER."))
          ((equal 1 (syntax-class (syntax-after (point))))
           (buffer-substring-no-properties
            (point)
@@ -975,6 +987,15 @@ a store_thm equivalent.")
           (if (and c (char-equal c ?$))
               (progn (backward-char) (concat "$" (match-string-no-properties 0)))
             "QFIER.")))
+       ((looking-back "\\\\\\\\" (- (point) 3))
+        (goto-char (match-beginning 0)) "\\\\")
+       (; am I just after either a backslash or Greek lambda?
+        (looking-back (concat "[^$[:punct:]]" holscript-lambda-regexp))
+        (if (equal 1 (syntax-class (syntax-after (point))))
+            (buffer-substring-no-properties
+             (point)
+             (progn (skip-syntax-backward ".") (point)))
+          (backward-char) "QFIER."))
        (; am I sitting on a full-stop that might end a quantifier block
         (let ((c (char-before))) (and c (char-equal c ?.)))
         (forward-char -1)
@@ -985,8 +1006,6 @@ a store_thm equivalent.")
         (goto-char (match-beginning 0)) "\\/")
        ((looking-back "/\\\\" (- (point) 3))
         (goto-char (match-beginning 0)) "/\\")
-       ((looking-back "\\\\\\\\" (- (point) 3))
-        (goto-char (match-beginning 0)) "\\\\")
        (; am I sitting after "punctuation"
         (equal 1 (syntax-class (syntax-after (1- (point)))))
         (buffer-substring-no-properties
