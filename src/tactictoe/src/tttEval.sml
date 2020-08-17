@@ -261,7 +261,7 @@ aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
 ttt_clean_eval ();
-val _ = run_evalscript_thyl "august15-var" (true,30) (NONE,NONE) thyl;
+val _ = run_evalscript_thyl "august17-abs" (true,30) (NONE,NONE) thyl;
 
 val tnn_value = train_value 0.95 "value";
 val _ = run_evalscript_thyl "august10-vnn" (true,30) (SOME "value",NONE) thyl;

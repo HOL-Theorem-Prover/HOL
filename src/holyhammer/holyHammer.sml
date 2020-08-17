@@ -180,6 +180,10 @@ fun hh_pb wanted_atpl premises goal =
 fun main_hh thmdata goal =
   let
     val atpl = filter exists_atp (!all_atps)
+    val _ = 
+      if null atpl 
+      then raise ERR "main_hh" "no ATP binary: see src/holyhammer/README"
+      else ()
     val n = list_imax (map npremises_of atpl)
     val premises = thmknn_wdep thmdata n (fea_of_goal true goal)
   in
