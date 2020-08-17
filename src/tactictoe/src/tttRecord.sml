@@ -190,14 +190,16 @@ fun end_record_proof name g =
     val feal1 = List.concat (map #fea l1)
     val feal2 = mk_fast_set Int.compare feal1
     val (thmdata,tacdata) = (!thmdata_glob, !tacdata_glob)
+    (*
     val tacfea = total_time tacfea_time
       (map (fn x => (#ortho x,#fea x))) (#calls tacdata)
     val tacsymweight =
       total_time learn_tfidf_time
         (learn_tfidf_symfreq (length tacfea) feal2) (#symfreq tacdata)
-    val l2 =
+    *)
+    val l2 = (* orthogonalize *)
       if !record_ortho_flag
-      then map (orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))) l1
+      then map (abstract_only thmdata) l1
       else l1
     val newtacdata = foldl ttt_update_tacdata tacdata l2
   in

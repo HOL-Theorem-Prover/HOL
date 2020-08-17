@@ -17,4 +17,6 @@ sig
     (symweight * (string * mlFeature.fea) list)) ->
     call -> call
 
+  val abstract_only : thmdata -> call -> call
+
 end

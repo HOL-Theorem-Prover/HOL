@@ -127,8 +127,7 @@ fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
         let val thml = predthml g in
           if stac = metis_stac
           then map Sthml (mk_batch_full (!ttt_thmlarg_radius) thml)
-          else map Sthml (mk_batch_full (!ttt_thmlarg_radius) thml) @
-               map Sthml (mk_batch_full 1 thml)
+          else map Sthml (mk_batch_full 1 thml)
         end
       | Aterm => map Sterm (pred_svar 8 g)
     fun predtac g =

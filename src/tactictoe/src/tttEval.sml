@@ -250,7 +250,7 @@ run_evalscript_thyl "test_arithmetic-e1" false 1 ["arithmetic"];
 (* Core theories
 load "tttUnfold"; open tttUnfold;
 tttSetup.record_savestate_flag := true;
-tttSetup.learn_abstract_term := false;
+tttSetup.learn_abstract_term := true;
 aiLib.debug_flag := false;
 ttt_clean_record ();
 ttt_record ();
@@ -261,7 +261,7 @@ aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
 ttt_clean_eval ();
-val _ = run_evalscript_thyl "august12" (true,30) (NONE,NONE) thyl;
+val _ = run_evalscript_thyl "august15-var" (true,30) (NONE,NONE) thyl;
 
 val tnn_value = train_value 0.95 "value";
 val _ = run_evalscript_thyl "august10-vnn" (true,30) (SOME "value",NONE) thyl;

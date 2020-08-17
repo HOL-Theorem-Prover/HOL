@@ -56,8 +56,23 @@ fun pred_thmid thmdata fea =
 fun unterm_var v =
   let val (vs,ty) = dest_var v in vs ^ " " ^ type_to_string ty end
 
+fun respace s = String.concatWith " " (partial_sml_lexer s)
+
+fun unterm_var_alt v =
+  let val (vs,ty) = dest_var v in 
+    [vs, respace (vs ^ " " ^ type_to_string ty)] 
+  end
+
 fun pred_svar n goal = 
   first_n n (map unterm_var (find_terms is_var (snd goal)))
+
+fun pred_svar_alt n goal = 
+  let 
+    val vl1 = find_terms is_var (snd goal)
+    val vl2 = List.concat (map unterm_var_alt vl1)
+  in
+    first_n (2 * n) vl2 
+  end
 
 fun order_stac tacdata ostac stacl =
    let
@@ -86,13 +101,15 @@ fun inst_arg (thmidl,sterml) stac =
    ------------------------------------------------------------------------- *)
 
 fun op_subset eqf l1 l2 = null (op_set_diff eqf l1 l2)
+val goal_subset = op_subset goal_eq
+
 fun test_stac g gl (stac, istac) =
   let
     val _ = debug "test_stac"
     val glo = app_stac (!learn_tactic_time) istac g
   in
     case glo of NONE => NONE | SOME newgl =>
-      (if op_subset goal_eq newgl gl then SOME stac else NONE)
+      (if goal_subset newgl gl then SOME stac else NONE)
   end
 
 (* -------------------------------------------------------------------------
@@ -129,5 +146,48 @@ fun orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))
   end
   handle Interrupt => raise Interrupt | _ =>
     (debug "error: orthogonalize"; call)
+
+fun abstract_only_thml thmdata fea (thmlstac,sll) =
+  let 
+    val thmidl = total_time ortho_predthm_time (pred_thmid thmdata) fea
+    val sthmli = List.concat sll
+    val sthmlp = map dbfetch_of_thmid thmidl
+    val (thmli,thmlp) = part_n (length sthmli) 
+      (valOf (thml_of_sml (sthmli @ sthmlp))) 
+      handle Interrupt => raise Interrupt | _ =>
+      (debug "error: thml_of_sml"; raise ERR "" "break")
+  in
+    if goal_subset (map dest_thm thmli) (map dest_thm thmlp)
+    then SOME thmlstac
+    else NONE
+  end
+    
+fun abstract_only_term ig (termstac,sterm) =
+  let 
+    val sterm1 = respace sterm
+    val sterml2 = pred_svar_alt 8 ig
+  in
+    if mem sterm1 sterml2 then SOME termstac else NONE
+  end
+
+fun abstract_only thmdata
+  (call as {stac,ortho,time,ig,ogl,loc,fea}) =
+  let val neworthoo = 
+    case abstract_thml stac of
+      SOME x => abstract_only_thml thmdata fea x 
+    | NONE => 
+    (if not (!learn_abstract_term) then NONE else
+    case abstract_term stac of
+      SOME x => abstract_only_term ig x
+    | NONE => NONE)
+  in
+    case neworthoo of NONE => call | SOME newortho =>
+    {stac = stac, ortho = newortho, time = time,
+     ig = ig, ogl = ogl, loc = loc, fea = fea}
+  end
+  handle Interrupt => raise Interrupt | _ =>
+    (debug "error: abstract_only"; call)
+
+
 
 end (* struct *)
