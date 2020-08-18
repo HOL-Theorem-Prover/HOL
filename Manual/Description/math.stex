@@ -370,11 +370,28 @@ Thus in \HOL{} there are actually two different types of Borel-measurable
 functions, real-valued or extreal-valued, each with a large set of
 theorems for proving the Borel-measurabilities,
 in \theoryimp{real_borel} and \theoryimp{borel} theories,
-respectively. Furthermore, if a real-valued function is Borel-measurable,
-so is its extreal-valued version:
+respectively. For instance, the addition or subtraction of
+two real-valued (or extreal-valued) Borel-measurable functions $f$ and $g$
+is still Borel-measurable:
+\begin{hol}
+\begin{alltt}
+##thm in_borel_measurable_add
+
+##thm IN_MEASURABLE_BOREL_ADD'
+
+##thm in_borel_measurable_sub
+
+##thm IN_MEASURABLE_BOREL_SUB'
+\end{alltt}
+\end{hol}
+
+Furthermore, if a real-valued function is Borel-measurable,
+so is its extreal-valued version. The converse also holds.
 \begin{hol}
 \begin{alltt}
 ##thm IN_MEASURABLE_BOREL_IMP_BOREL
+
+##thm IN_MEASURABLE_BOREL_IMP_BOREL'
 \end{alltt}
 \end{hol}
 
