@@ -12,6 +12,7 @@ open pfreefnsTheory
 
 val _ = new_theory "kolmog_inequalities"
 val _ = intLib.deprecate_int()
+val _ = augment_srw_ss [rewrites [churchDBTheory.DISJ_IMP_EQ]]
 
 (* UCKC is conditional kolmogorov complexity, UKCB is kolmogorov complexity typed the right way *)
 (* rename pair to bl pair etc *)

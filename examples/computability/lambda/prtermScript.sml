@@ -12,6 +12,8 @@ fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
 val _ = new_theory "prterm"
 
+val _ = augment_srw_ss [rewrites [DISJ_IMP_EQ]]
+
 val prtermrec_def = tDefine "prtermrec" `
   prtermrec v c a list =
     case list of

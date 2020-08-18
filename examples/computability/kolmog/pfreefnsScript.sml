@@ -51,7 +51,7 @@ End
 Theorem FV_calc_fn_alist[simp]:
   FV calc_fn_alist = ∅
 Proof
-  simp[EXTENSION, calc_fn_alist_def]
+  simp[EXTENSION, calc_fn_alist_def, DISJ_IMP_EQ]
 QED
 
 Theorem calc_fn_alist_eqn = brackabs.brackabs_equiv [] calc_fn_alist_def;
@@ -221,7 +221,7 @@ End
 Theorem FV_ctl0[simp]:
   FV ctl0 = ∅
 Proof
-  simp[ctl0_def, EXTENSION]
+  simp[ctl0_def, EXTENSION, DISJ_IMP_EQ]
 QED
 
 Triviality ctl0_eqn = brackabs.brackabs_equiv [] ctl0_def
@@ -330,7 +330,7 @@ End
 Theorem FV_cn2bl0[simp]:
   FV cn2bl0 = ∅
 Proof
-  simp[EXTENSION, cn2bl0_def]
+  simp[EXTENSION, cn2bl0_def, DISJ_IMP_EQ]
 QED
 
 Triviality cn2bl0_eqn = brackabs.brackabs_equiv [] cn2bl0_def
@@ -376,7 +376,7 @@ End
 Theorem FV_cbeq[simp]:
   FV cbeq = ∅
 Proof
-  simp[cbeq_def, EXTENSION]
+  simp[cbeq_def, EXTENSION, DISJ_IMP_EQ]
 QED
 
 Triviality cbeq_eqn = brackabs.brackabs_equiv [] cbeq_def
@@ -406,7 +406,7 @@ End
 Theorem FV_cblprefix[simp]:
   FV cblprefix = ∅
 Proof
-  simp[cblprefix_def, EXTENSION]
+  simp[cblprefix_def, EXTENSION, DISJ_IMP_EQ]
 QED
 
 Triviality cblprefix_eqn = brackabs.brackabs_equiv [] cblprefix_def
@@ -440,7 +440,7 @@ End
 Theorem FV_cevery[simp]:
   FV cevery = ∅
 Proof
-  simp[cevery_def, EXTENSION]
+  simp[cevery_def, EXTENSION, DISJ_IMP_EQ]
 QED
 
 Triviality cevery_eqn = brackabs.brackabs_equiv [] cevery_def
@@ -501,7 +501,7 @@ End
 Theorem FV_cpfree_check[simp]:
   FV cpfree_check = ∅
 Proof
-  simp[cpfree_check_def, EXTENSION]
+  simp[cpfree_check_def, EXTENSION, DISJ_IMP_EQ]
 QED
 
 val cpfree_check_eqn = brackabs.brackabs_equiv [] cpfree_check_def
@@ -534,7 +534,7 @@ End
 Theorem FV_cpfree_list[simp]:
   FV cpfree_list = ∅
 Proof
-  simp[cpfree_list_def, EXTENSION]
+  simp[cpfree_list_def, EXTENSION, DISJ_IMP_EQ]
 QED
 
 val cpfree_list_eqn = brackabs.brackabs_equiv [] cpfree_list_def
@@ -601,7 +601,7 @@ End
 Theorem FV_pfsearch[simp]:
   FV pfsearch = ∅
 Proof
-  simp[pfsearch_def, EXTENSION]
+  simp[pfsearch_def, EXTENSION, DISJ_IMP_EQ]
 QED
 
 val pfsearch_eqn = brackabs.brackabs_equiv [] pfsearch_def
@@ -673,7 +673,7 @@ End
 Theorem FV_Upf[simp]:
   FV Upf = ∅
 Proof
-  simp[Upf_def, EXTENSION]
+  simp[Upf_def, EXTENSION, DISJ_IMP_EQ]
 QED
 
 val Upf_eqn = brackabs.brackabs_equiv [] Upf_def
@@ -814,7 +814,7 @@ End
 Theorem FV_limitMS[simp]:
   FV limitMS = ∅
 Proof
-  simp[limitMS_def, EXTENSION]
+  simp[limitMS_def, EXTENSION, DISJ_IMP_EQ]
 QED
 
 val limitMS_eqn = brackabs.brackabs_equiv [] limitMS_def
@@ -837,7 +837,8 @@ Proof
 QED
 
 Theorem limitMS_termination_behaviour_I:
-  (∃t. steps s (toTerm (numdB M) @@ church i) = t ∧ bnf t ∧ force_num t = n ∧ i < s)
+  (∃t. steps s (toTerm (numdB M) @@ church i) = t ∧ bnf t ∧ force_num t = n ∧
+       i < s)
  ⇒
   limitMS @@ church M @@ church s @@ church i == church n
 Proof
@@ -861,7 +862,8 @@ QED
 
 Theorem limitMS_thm:
   limitMS @@ church M @@ church s @@ church i ==
-  if i < s ∧ bnf (steps s (toTerm (numdB M) @@ church i)) then UM @@ church (M ⊗ i)
+  if i < s ∧ bnf (steps s (toTerm (numdB M) @@ church i)) then
+    UM @@ church (M ⊗ i)
   else Ω
 Proof
   simp_tac (bsrw_ss()) [limitMS_eqn] >> Cases_on ‘i < s’ >>

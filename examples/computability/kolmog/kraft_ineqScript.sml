@@ -248,7 +248,8 @@ Proof
   rw[EQ_IMP_THM]
   >- (rename[‘interval_bl i = interval_bl j’] >>
       ‘~(i ≺ j) /\ ~(j ≺ i)/\ i<>j’ by metis_tac[prefix_free_def] >>
-      fs[interval_bl_def,disjoint_interval_def,DISJOINT_DEF,EXTENSION] >>
+      fs[interval_bl_def,disjoint_interval_def,DISJOINT_DEF,EXTENSION,
+         churchDBTheory.DISJ_IMP_EQ] >>
       rw[GSYM DISJ_ASSOC] >> rw[DECIDE“~p\/q <=> p==>q”] >> strip_tac >>
       ‘LENGTH i <> LENGTH j’
         by (strip_tac >> fs[] >> qabbrev_tac‘M = 2 rpow -&LENGTH j’ >>
@@ -265,7 +266,11 @@ Proof
       >- (‘LENGTH j < LENGTH i’ by simp[] >> metis_tac[]) >>
       qabbrev_tac‘D=LENGTH j − LENGTH i’ >> qabbrev_tac‘ii= TBL2N i’ >>
       qabbrev_tac‘jj= TBL2N j’ >>
-      fs[powr_negexp,RealArith.REAL_ARITH “(x:real) * y + y = (x + 1) * y”] >>
+      ‘i ≺ j’suffices_by simp[] >>
+      irule disjoint_pf_lem1 >>
+      full_simp_tac (srw_ss() ++ realSimps.REAL_ARITH_ss)
+                    [powr_negexp,
+                     RealArith.REAL_ARITH “(x:real) * y + y = (x + 1) * y”] >>
       ‘&ii * 2 pow LENGTH j ≤ x * 2 pow LENGTH i * 2 pow LENGTH j’ by simp[] >>
       ‘x * 2 pow LENGTH i * 2 pow LENGTH j < &(jj + 1) * 2 pow LENGTH i’
         by simp[] >>
@@ -282,9 +287,9 @@ Proof
       dxrule_then (qspec_then ‘inv (2 pow LENGTH i)’ mp_tac) REAL_LT_RMUL_IMP >>
       impl_tac >- simp[REAL_POW_POS] >>
       REWRITE_TAC [GSYM REAL_MUL_ASSOC, REAL_INV_nonzerop, GSYM REAL_POW_INV] >>
-      ASM_SIMP_TAC bool_ss [pow_inv_mul_invlt] >> simp[] >> strip_tac >>
-      fs[REAL_OF_NUM_POW] >> metis_tac[disjoint_pf_lem1])
-  >- (fs[prefix_free_def,PULL_EXISTS] >>rw[] >>
+      ASM_SIMP_TAC bool_ss [pow_inv_mul_invlt] >> simp[] >>
+      simp[REAL_OF_NUM_POW])
+  >- (fs[prefix_free_def,PULL_EXISTS] >> rw[] >>
       strip_tac >>
       ‘interval_bl a <> interval_bl b’ by
         (fs[interval_bl_def] >> rw[] >>
@@ -296,7 +301,8 @@ Proof
          ‘2 rpow -&LENGTH b < 2 rpow -&LENGTH a’ by fs[RPOW_LT]>>
          fs[REAL_LT_IMP_NE])>>
       first_x_assum drule_all >>
-      fs[interval_bl_def,disjoint_interval_def] >> rw[DISJOINT_DEF,EXTENSION] >>
+      fs[interval_bl_def,disjoint_interval_def,
+         churchDBTheory.DISJ_IMP_EQ] >> rw[DISJOINT_DEF,EXTENSION] >>
       qexists_tac‘&TBL2N b * 2 rpow -&LENGTH b’ >> rw[]
       >- (fs[powr_negexp, prefix_append,TBL2N_append, REAL_OF_NUM_POW,
              RIGHT_ADD_DISTRIB] >>
@@ -418,7 +424,8 @@ Theorem maxr_set_thm[simp]:
   (FINITE s /\ s<> {} ==> maxr_set (e INSERT s) = max e (maxr_set s))
 Proof
   rw[] >- (qspec_then ‘{e}’ mp_tac maxr_set_def >> simp[]) >>
-  qspec_then ‘e INSERT s’ mp_tac maxr_set_def  >> simp[] >> strip_tac >>
+  qspec_then ‘e INSERT s’ mp_tac maxr_set_def  >>
+  simp[churchDBTheory.DISJ_IMP_EQ] >> strip_tac >>
   qabbrev_tac‘m = maxr_set (e INSERT s)’ >> qspec_then‘s’ mp_tac maxr_set_def >>
   simp[] >>
   qabbrev_tac‘m0 = maxr_set s’ >> rw[] >> rw[max_def]
@@ -434,7 +441,8 @@ Theorem minr_set_thm[simp]:
   (FINITE s /\ s<> {} ==> minr_set (e INSERT s) = min e (minr_set s))
 Proof
   rw[] >- (qspec_then ‘{e}’ mp_tac minr_set_def >> simp[]) >>
-  qspec_then ‘e INSERT s’ mp_tac minr_set_def  >> simp[] >> strip_tac >>
+  qspec_then ‘e INSERT s’ mp_tac minr_set_def  >>
+  simp[churchDBTheory.DISJ_IMP_EQ] >> strip_tac >>
   qabbrev_tac‘m = minr_set (e INSERT s)’ >> qspec_then‘s’ mp_tac minr_set_def >>
   simp[] >>
   qabbrev_tac‘m0 = minr_set s’ >> rw[] >> rw[min_def]
@@ -504,20 +512,11 @@ Theorem exten_insert_thm:
   exten (e INSERT s) =  (min (FST e) ## max (FST e + SND e)) (exten s)
 Proof
   simp[exten_def,maxr_set_thm,minr_set_thm] >> rw[]
-  >- (‘{FST k | k <> e ==> k IN s} = {FST k | k = e \/ k IN s}’
-        by fs[EXTENSION] >>
-      ‘{FST k | k = e \/ k IN s} = {FST k | k = e} UNION {FST k | k IN s}’
-        by fs[] >> rw[] >>
-      ‘FINITE {FST e}’ by fs[] >> ‘{FST e} <> {}’ by fs[] >>
+  >- (‘FINITE {FST e}’ by fs[] >> ‘{FST e} <> {}’ by fs[] >>
       ‘FINITE {FST k | k IN s}’ by metis_tac[IMAGE_FINITE,IMAGE_DEF] >>
       ‘{FST k | k IN s} <> {}’ by metis_tac[IMAGE_EQ_EMPTY,IMAGE_DEF]>>
       rw[minr_set_union])
-  >- (‘{FST k + SND k | k <> e ==> k IN s} = {FST k + SND k | k = e \/ k IN s}’
-        by fs[EXTENSION] >>
-      ‘{FST k + SND k | k = e ∨ k ∈ s} =
-       {FST k + SND k | k = e} ∪ {FST k + SND k | k IN s}’ by fs[] >>
-      rw[] >>
-      ‘FINITE {FST e  + SND k}’ by fs[] >> ‘{FST e  + SND k} <> {}’ by fs[] >>
+  >- (‘FINITE {FST e  + SND k}’ by fs[] >> ‘{FST e  + SND k} <> {}’ by fs[] >>
       ‘FINITE {FST k + SND k | k IN s}’ by metis_tac[IMAGE_FINITE,IMAGE_DEF] >>
       ‘{FST k + SND k | k IN s} <> {}’ by metis_tac[IMAGE_EQ_EMPTY,IMAGE_DEF]>>
       rw[maxr_set_union] )
@@ -563,7 +562,8 @@ Theorem BETTER_RPOW_UNIQ_EXP[simp]:
 Proof
   rw[] >> eq_tac >> simp[] >> rw[] >>
   pop_assum (mp_tac o AP_TERM “transc$ln”) >> fsr[LN_RPOW] >>
-  disch_then irule >> ‘ln 1 < ln a’ by fsr[LN_MONO_LT] >> fsr[LN_1]
+  strip_tac >>
+  ‘ln 1 < ln a’ by fsr[LN_MONO_LT] >> fsr[LN_1]
 QED
 
 Theorem interval_bl_11[simp]:
@@ -649,7 +649,8 @@ Proof
       first_x_assum(qspecl_then[‘e1’,‘e2’,‘i’,‘j’] MP_TAC) >> simp[] >> impl_tac
       >- (rpt strip_tac >> rw[] >> rw[Abbr‘s0’] >> fs[]) >> strip_tac
       >- (rw[] >> ‘0<j’ suffices_by fsr[] >> metis_tac[]) >> rw[] >>
-      ‘i IN Ls’ by (simp[Abbr‘Ls’,pairTheory.EXISTS_PROD] >>metis_tac[])>>
+      ‘i IN Ls’
+        by (simp[Abbr‘Ls’,pairTheory.EXISTS_PROD, Abbr‘Ls0’] >> metis_tac[])>>
       ‘e1<=i’ by simp[]>>
       ‘0<j’ suffices_by fsr[] >> metis_tac[]  )
 QED
@@ -789,17 +790,39 @@ Proof
   metis_tac[disjoint_prefix_free,lemma1]
 QED
 
+(* ignore desire for length of 0, allowing for an encoding of desire to have
+   a finite code (make f have infinite tail of zeroes)
+ *)
+Definition seq_size_def[simp]:
+  seq_size f 0 = 0r ∧
+  seq_size f (SUC n) = if f n = 0 then seq_size f n
+                       else 2 rpow -(&f n) + seq_size f n
+End
 
-(*  TO DO AT SOME POINT
+Theorem seq_size_positive[simp]:
+  ∀n. 0 ≤ seq_size f n
+Proof
+  Induct >> rw[] >> irule REAL_LE_ADD >> simp[REAL_LE_LT, RPOW_POS_LT]
+QED
 
-val numl_size_def = Define`numl_size L = FOLDR (\n A. A+(2 rpow -&n)) 0 L`
+Theorem seq_size_EQ0[simp]:
+  seq_size f n = 0 ⇔ ∀m. m < n ⇒ f m = 0
+Proof
+  Induct_on‘n’ >>
+  simp[DECIDE “x < SUC y ⇔ x < y ∨ x = y”, DISJ_IMP_THM, FORALL_AND_THM] >>
+  rw[] >>
+  irule (RealArith.REAL_ARITH “0r < x ∧ 0 ≤ y ==> x + y ≠ 0”) >>
+  simp[powr_negexp, REAL_POW_POS]
+QED
 
-val kraft_conv_cw_def = Define`kraft_conv_cw C i =  `
-
-val kraft_ineq_conv = Q.store_thm("kraft_ineq_conv",
-`!L. numl_size L <= 1 ==>
-(?P b. prefix_free P /\ BIJ b (count (LENGTH L) ) P  /\  !i. i < LENGTH L ==> LENGTH (b i) = EL i L)`,
-rw[] >> `?CLIST. CLIST = SET_TO_LIST L` by fs[SET_TO_LIST_THM] >> qexists_tac`` )
+(*
+Theorem kraft_ineq2:
+  ∀f. (∀n. seq_size f n ≤ 1) ⇒
+      ∃P b.
+        prefix_free P ∧
+        BIJ b (count (LENGTH L) ) P  /\
+        !i. i < LENGTH L ==> LENGTH (b i) = EL i L)
+Proof
 
 *)
 

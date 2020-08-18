@@ -829,7 +829,7 @@ End
 Theorem FV_lam_nblft:
   FV lam_nblft = {}
 Proof
-  simp[lam_nblft_def,EXTENSION]
+  simp[lam_nblft_def,EXTENSION] >> metis_tac[]
 QED
 
 Theorem lam_nblft_equiv = brackabs.brackabs_equiv [] lam_nblft_def
@@ -1178,7 +1178,7 @@ QED
 Theorem MEM_Tpow[simp]:
   MEM b (Tpow n) ⇔ 0 < n ∧ b
 Proof
-  Induct_on ‘n’ >> simp[tpow_suc]
+  Induct_on ‘n’ >> simp[tpow_suc, EQ_IMP_THM, DISJ_IMP_THM]
 QED
 
 Theorem checkpair_loops[simp]:

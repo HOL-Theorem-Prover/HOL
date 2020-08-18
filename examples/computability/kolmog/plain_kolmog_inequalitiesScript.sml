@@ -178,7 +178,7 @@ End
 Theorem FV_comp_machine_t[simp]:
   FV comp_machine_t = ∅
 Proof
-  simp[comp_machine_t_def, EXTENSION]
+  simp[comp_machine_t_def, EXTENSION, DISJ_IMP_EQ]
 QED
 
 Triviality comp_machine_equiv = brackabs.brackabs_equiv [] comp_machine_t_def
