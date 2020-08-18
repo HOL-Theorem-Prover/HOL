@@ -11,7 +11,7 @@ The theory \theoryimp{real_topology} provides some deeper analytical
 properties for real numbers and real sets (one-dimensional Euclidean space).
 It was ported from HOL Light by Muhammad Qasim and Osman Hasan et al.
 In particular, \theoryimp{real_topology} contains more general and
-advanced concepts and theorems then those provided by \theoryimp{lim}
+advanced concepts and theorems than those provided by \theoryimp{lim}
 and \theoryimp{seq} (Section~\ref{reals}).
 
 % Below is a list of major features found in \theoryimp{real_topology}:
