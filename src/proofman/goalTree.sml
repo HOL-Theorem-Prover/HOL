@@ -109,7 +109,7 @@ fun pp_gtree gt =
                block CONSISTENT 0 (
                  pr_list (fn s => add_string ">- (" >> add_break(1,0) >> pp s) (add_string")" >> add_break(1,0)) tlist
                )
-  >> add_string ")"
+             >> add_string ")"
              )
  in pp gt
  end;
