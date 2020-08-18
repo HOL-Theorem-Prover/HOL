@@ -100,17 +100,16 @@ fun pp_gtree gt =
        | pp (vGoal g) = pp_goal g
        | pp (vThen(vt1,vt2)) =
              block CONSISTENT 1 (
-               pp vt1 >> add_string " THEN" >> add_break (1,0) >>
+               pp vt1 >> add_string " \\\\" >> add_break (1,0) >>
                pp vt2
              )
        | pp (vThenl(vt,tlist)) =
              block CONSISTENT 1 (
-               pp vt >> add_string " THENL" >> add_break (1,0) >>
-               add_string "[" >>
+               pp vt >> add_break (1,0) >>
                block CONSISTENT 0 (
-                 pr_list pp (add_string"," >> add_break(1,0)) tlist
-               ) >>
-               add_string "]"
+                 pr_list (fn s => add_string ">- (" >> add_break(1,0) >> pp s) (add_string")" >> add_break(1,0)) tlist
+               )
+  >> add_string ")"
              )
  in pp gt
  end;
