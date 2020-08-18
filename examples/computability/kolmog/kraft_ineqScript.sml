@@ -83,12 +83,14 @@ Theorem rev_tpow[simp]: REVERSE (Tpow n) = Tpow n
 Proof simp[Tpow_def,REVERSE_GENLIST,combinTheory.K_DEF]
 QED
 
+(* binary numbers in little-endian format *)
 Definition tbl2n_def[simp]:
   tbl2n [] = 0n /\
   tbl2n (T::t) = 2*tbl2n t + 1 /\
   tbl2n (F::t) = 2*tbl2n t
 End
 
+(* binary numbers in big-endian format *)
 Overload TBL2N = “\l. tbl2n (REVERSE l)”
 
 Definition inv_tbl2n_def:
@@ -122,7 +124,7 @@ Proof
 QED
 
 Definition interval_bl_def:
-  interval_bl l = (&(TBL2N l) *(2 rpow -&LENGTH l),(2 rpow -&LENGTH l))
+  interval_bl l = (&(TBL2N l) * (2 rpow -&LENGTH l), 2 rpow -&LENGTH l)
 End
 
 Definition disjoint_interval_def:
@@ -130,12 +132,12 @@ Definition disjoint_interval_def:
   DISJOINT {r|m<=r /\ r<m+i} {r|n<=r /\ r<n+j}
 End
 
-Theorem tbl2n_exp2: tbl2n i * 2 ** n = tbl2n ((Fpow n)++i)
+Theorem tbl2n_exp2: tbl2n i * 2 ** n = tbl2n (Fpow n ++ i)
 Proof
   rw[Fpow_def] >> Induct_on‘n’ >> simp[tbl2n_def,EXP,GENLIST_CONS]
 QED
 
-Theorem TBL2N_exp2: TBL2N i * 2 ** n = TBL2N (i++(Fpow n))
+Theorem TBL2N_exp2: TBL2N i * 2 ** n = TBL2N (i ++ Fpow n)
 Proof
   simp[REVERSE_APPEND] >> rw[Fpow_def] >> Induct_on‘n’ >>
   simp[tbl2n_def,EXP,GENLIST_CONS]
@@ -169,9 +171,14 @@ Proof
   rw[] >> simp[EXP]
 QED
 
-Theorem tbl2n_append_full: !y. tbl2n (x++y) = tbl2n x + 2**(LENGTH x) * tbl2n y
+Theorem tbl2n_append: !y. tbl2n (x++y) = tbl2n x + 2**(LENGTH x) * tbl2n y
 Proof
   Induct_on‘x’ >> simp[] >> Cases_on‘h’ >> simp[EXP]
+QED
+
+Theorem TBL2N_append:
+  TBL2N (p++s) = 2**LENGTH s * (TBL2N p) +TBL2N s
+Proof simp[REVERSE_APPEND,tbl2n_append]
 QED
 
 Theorem tbl2n_ub[simp]: tbl2n l < 2**(LENGTH l)
@@ -197,10 +204,10 @@ Theorem TBL2N_lem1:
 Proof
   Induct_on‘D’ >- simp[Fpow_def] >> rw[EXP] >> Cases_on‘d<2**D’ >> fs[]
   >- (res_tac >> qexists_tac‘F::l’ >> simp[] >> fs[REVERSE_APPEND] >>
-      simp[tbl2n_append_full])
+      simp[tbl2n_append])
   >- (qabbrev_tac‘d0=d-2**D’ >> ‘d0 < 2**D’ by simp[Abbr‘d0’] >> res_tac >>
       qexists_tac‘T::l’ >>
-      simp[] >>fs[REVERSE_APPEND] >> simp[tbl2n_append_full] >> simp[Abbr‘d0’] )
+      simp[] >>fs[REVERSE_APPEND] >> simp[tbl2n_append] >> simp[Abbr‘d0’] )
 QED
 
 Theorem disjoint_pf_lem1:
@@ -223,17 +230,6 @@ Proof
   ‘LENGTH (i++l) = LENGTH j’ by simp[Abbr‘D’] >>
   ‘i++l = j’ by metis_tac[TBL2N_inj_len] >> ‘0<LENGTH l’ by simp[Abbr‘D’] >>
   metis_tac[prefix_lem1]
-QED
-
-Theorem tbl2n_append:
-  tbl2n (p++s) = 2**LENGTH p * (tbl2n s) +tbl2n p
-Proof
-  Induct_on‘p’ >> simp[] >> Cases_on‘h’ >> rw[GSYM ADD1,EXP,LEFT_ADD_DISTRIB]
-QED
-
-Theorem TBL2N_append:
-  TBL2N (p++s) = 2**LENGTH s * (TBL2N p) +TBL2N s
-Proof simp[REVERSE_APPEND,tbl2n_append]
 QED
 
 Theorem powr_negexp:
@@ -493,34 +489,39 @@ Induct_on‘FINITE’ >> strip_tac
     >- (fs[min_def,minr_set_thm,INSERT_UNION_EQ]) )
 QED
 
-val gspec_eq = Q.store_thm("gspec_eq[simp]",
-‘GSPEC (\x. (f x,x=k)) = {f k}’,
-simp[EXTENSION])
+Theorem gspec_eq[simp]: GSPEC (\x. (f x,x=k)) = {f k}
+Proof simp[EXTENSION]
+QED
 
-val gspec_in = Q.store_thm("gspec_in[simp]",
-‘GSPEC (\x. (f x,x IN k)) = {f x|x IN k}’,
-simp[EXTENSION])
+Theorem gspec_f_or[simp]:
+  !P Q. {f x | P x \/ Q x} = {f x | P x} UNION {f x | Q x}
+Proof
+  rw[IN_UNION,EXTENSION] >> metis_tac[GSPECIFICATION_applied]
+QED
 
-val gspec_f_or = Q.store_thm("gspec_f_or[simp]",
-‘!P Q. {f x | P x \/ Q x} = {f x | P x} UNION {f x | Q x}’,
-rw[IN_UNION,EXTENSION] >> metis_tac[GSPECIFICATION_applied])
-
-val exten_insert_thm = Q.store_thm("exten_insert_thm",
-‘(s <> EMPTY /\ FINITE s) ==> exten (e INSERT s) =  (min (FST e) ## max (FST e + SND e)) (exten s)’,
-simp[exten_def,maxr_set_thm,minr_set_thm] >> rw[]
->- (‘{FST k | k <> e ==> k IN s} = {FST k | k = e \/ k IN s}’ by fs[EXTENSION] >>
-    ‘{FST k | k = e \/ k IN s} = {FST k | k = e} UNION {FST k | k IN s}’ by fs[] >> rw[] >>
-    ‘FINITE {FST e}’ by fs[] >> ‘{FST e} <> {}’ by fs[] >>
-    ‘FINITE {FST k | k IN s}’ by metis_tac[IMAGE_FINITE,IMAGE_DEF] >>
-    ‘{FST k | k IN s} <> {}’ by metis_tac[IMAGE_EQ_EMPTY,IMAGE_DEF]>>
-    rw[minr_set_union])
->- (‘{FST k + SND k | k <> e ==> k IN s} = {FST k + SND k | k = e \/ k IN s}’ by fs[EXTENSION] >>
-    ‘{FST k + SND k | k = e \/ k IN s} = {FST k + SND k | k = e} UNION {FST k + SND k | k IN s}’ by fs[] >>
-    rw[] >>
-    ‘FINITE {FST e  + SND k}’ by fs[] >> ‘{FST e  + SND k} <> {}’ by fs[] >>
-    ‘FINITE {FST k + SND k | k IN s}’ by metis_tac[IMAGE_FINITE,IMAGE_DEF] >>
-    ‘{FST k + SND k | k IN s} <> {}’ by metis_tac[IMAGE_EQ_EMPTY,IMAGE_DEF]>>
-    rw[maxr_set_union] ));
+Theorem exten_insert_thm:
+  s ≠ ∅ /\ FINITE s ==>
+  exten (e INSERT s) =  (min (FST e) ## max (FST e + SND e)) (exten s)
+Proof
+  simp[exten_def,maxr_set_thm,minr_set_thm] >> rw[]
+  >- (‘{FST k | k <> e ==> k IN s} = {FST k | k = e \/ k IN s}’
+        by fs[EXTENSION] >>
+      ‘{FST k | k = e \/ k IN s} = {FST k | k = e} UNION {FST k | k IN s}’
+        by fs[] >> rw[] >>
+      ‘FINITE {FST e}’ by fs[] >> ‘{FST e} <> {}’ by fs[] >>
+      ‘FINITE {FST k | k IN s}’ by metis_tac[IMAGE_FINITE,IMAGE_DEF] >>
+      ‘{FST k | k IN s} <> {}’ by metis_tac[IMAGE_EQ_EMPTY,IMAGE_DEF]>>
+      rw[minr_set_union])
+  >- (‘{FST k + SND k | k <> e ==> k IN s} = {FST k + SND k | k = e \/ k IN s}’
+        by fs[EXTENSION] >>
+      ‘{FST k + SND k | k = e ∨ k ∈ s} =
+       {FST k + SND k | k = e} ∪ {FST k + SND k | k IN s}’ by fs[] >>
+      rw[] >>
+      ‘FINITE {FST e  + SND k}’ by fs[] >> ‘{FST e  + SND k} <> {}’ by fs[] >>
+      ‘FINITE {FST k + SND k | k IN s}’ by metis_tac[IMAGE_FINITE,IMAGE_DEF] >>
+      ‘{FST k + SND k | k IN s} <> {}’ by metis_tac[IMAGE_EQ_EMPTY,IMAGE_DEF]>>
+      rw[maxr_set_union] )
+QED
 
 Theorem TBL2N_ub2:
   &TBL2N x * 2 rpow -&LENGTH x +  2 rpow -&LENGTH x <= 1
@@ -653,15 +654,21 @@ Proof
       ‘0<j’ suffices_by fsr[] >> metis_tac[]  )
 QED
 
-val exten_member = Q.store_thm("exten_member",
-‘FINITE s /\ s <> {} /\ exten (s) = (sn,sx) ==>
- (?sn' sx' dx. (sn,sn') IN s /\ (sx',dx) IN s /\ sx'+dx=sx)’,
-simp[exten_def] >> rw[] >> ‘{FST k|k IN s} = IMAGE FST s’ by simp[EXTENSION] >>
-‘FINITE {FST k|k IN s} /\ {FST k | k IN s} <> {}’ by simp[] >> drule_all minr_set_def >>rw[] >>
-qexists_tac‘SND k’ >> simp[] >>
-‘{FST k + SND k|k IN s} = IMAGE (\k. FST k+ SND k) s’ by simp[EXTENSION] >>
-‘FINITE {FST k + SND k|k IN s} /\ {FST k + SND k | k IN s} <> {}’ by simp[] >> drule_all maxr_set_def >>
-rw[] >> rename[‘maxr_set _ = FST kk + SND kk’] >> map_every qexists_tac [‘FST kk’,‘SND kk’] >> simp[]);
+Theorem exten_member:
+  FINITE s /\ s <> {} /\ exten (s) = (sn,sx) ==>
+  ∃sn' sx' dx. (sn,sn') IN s /\ (sx',dx) IN s /\ sx'+dx=sx
+Proof
+  simp[exten_def] >> rw[] >>
+  ‘{FST k|k IN s} = IMAGE FST s’ by simp[EXTENSION] >>
+  ‘FINITE {FST k|k IN s} /\ {FST k | k IN s} <> {}’ by simp[] >>
+  drule_all minr_set_def >>rw[] >>
+  qexists_tac‘SND k’ >> simp[] >>
+  ‘{FST k + SND k|k IN s} = IMAGE (\k. FST k+ SND k) s’ by simp[EXTENSION] >>
+  ‘FINITE {FST k + SND k|k IN s} /\ {FST k + SND k | k IN s} <> {}’ by simp[] >>
+  drule_all maxr_set_def >>
+  rw[] >> rename[‘maxr_set _ = FST kk + SND kk’] >>
+  map_every qexists_tac [‘FST kk’,‘SND kk’] >> simp[]
+QED
 
 Overload bpos = “λl. &TBL2N l * 2 rpow -&LENGTH l”
 
@@ -686,8 +693,9 @@ Proof
 QED
 
 Theorem lemma13:
-  !P. FINITE P ==> (P <> {}) ==>
-      (!x y. x IN P /\ y IN P /\ x <> y ==>
+  ∀P. FINITE P ⇒
+      P ≠ ∅ ∧
+      (!x y. x ∈ P ∧ y ∈ P ∧ x ≠ y ==>
              disjoint_interval (interval_bl x) (interval_bl y)) ==>
       SIGMA (\s. 2 rpow -&LENGTH s) P + FST (exten (IMAGE interval_bl P) )
        <= SND (exten (IMAGE interval_bl P))
@@ -703,13 +711,13 @@ Proof
   >- (rw[Abbr‘P0’] >> metis_tac[]) >> ‘P = l INSERT P0’ by fs[Abbr‘P0’] >>
   ‘P0 DELETE l = P0’ by fs[Abbr‘P0’,ELT_IN_DELETE,DELETE_NON_ELEMENT] >>
   fsr[REAL_SUM_IMAGE_THM,Abbr‘s’,exten_insert_thm] >>
-  ‘?en ex. exten (IMAGE interval_bl P0) = (en,ex)’
+  ‘∃en ex. exten (IMAGE interval_bl P0) = (en,ex)’
     by metis_tac[pairTheory.pair_CASES] >> simp[]>>
-  ‘?l0 d. interval_bl l = (l0,d)’ by metis_tac[pairTheory.pair_CASES] >> fs[] >>
+  ‘∃l0 d. interval_bl l = (l0,d)’ by metis_tac[pairTheory.pair_CASES] >> fs[] >>
   ‘2 rpow -&LENGTH l = d’ by fsr[interval_bl_def] >> fs[] >>
   ‘max (l0 + d) ex = d + max l0 (ex-d)’ by (fsr[max_def] >> rw[] >> fsr[]) >>
   fsr[GSYM REAL_ADD_ASSOC]>>
-  ‘?en'. (en,en') IN IMAGE interval_bl P0’
+  ‘∃en'. (en,en') ∈ IMAGE interval_bl P0’
     by metis_tac[exten_member,IMAGE_FINITE,IMAGE_EQ_EMPTY]>> fs[]>>
   rename[‘(en,en') = interval_bl EN’] >>
   ‘l0+d<=en’
@@ -719,11 +727,11 @@ Proof
         drule disjoint_interval_thm >>
         qpat_x_assum‘_ = interval_bl _’ (assume_tac o SYM)>>
         simp[] >> strip_tac >>
-        ‘&TBL2N l * d <= bpos EN’ by simp[] >> fs[interval_bl_def] >>rw[] >>
+        ‘&TBL2N l * d ≤ bpos EN’ by simp[] >> fs[interval_bl_def] >>rw[] >>
         ‘0<2 rpow -&LENGTH EN’ suffices_by fsr[] >> fs[RPOW_POS_LT]) >>
   ‘0 < d’ by (rw[] >> fsr[RPOW_POS_LT]) >>
-  ‘l0 <= en’ by fsr[] >> simp[min_def] >>
-  ‘en<=ex’ by metis_tac[exten_low_high] >>
+  ‘l0 ≤ en’ by fsr[] >> simp[min_def] >>
+  ‘en ≤ ex’ by metis_tac[exten_low_high] >>
   fsr[max_def]
 QED
 
@@ -775,7 +783,7 @@ Proof
     fs[Abbr‘f’,lemma13] >> fsr[]
 QED
 
-Theorem kraft_ineq1: !P. prefix_free P ==> (!n. bls_size P n <= 1)
+Theorem kraft_ineq1: ∀P. prefix_free P ==> (∀n. bls_size P n ≤ 1)
 Proof
 (* Could change to `?y0. y0<=1 /\ bls_size P --> y0` *)
   metis_tac[disjoint_prefix_free,lemma1]
