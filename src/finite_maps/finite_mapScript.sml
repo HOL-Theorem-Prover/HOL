@@ -2943,6 +2943,43 @@ Proof
    fs[]
 QED
 
+(* ----------------------------------------------------------------------
+    fixpoint calculations over finite maps
+   ---------------------------------------------------------------------- *)
+
+Inductive fmlfpR:
+  (!A0 A1 fm.
+    A0 = A1 ==> fmlfpR f A0 fm FEMPTY A1 A0) /\
+  (!A0 A1 A2 fm.
+    fmlfpR f A1 fm fm A1 A2 /\ A0 <> A1 ==>
+    fmlfpR f A0 fm FEMPTY A1 A2) /\
+  (!A0 A1 A2 fm0 fm k v.
+    fmlfpR f A0 fm0 (fm \\ k) (f k v A1) A2 ==>
+    fmlfpR f A0 fm0 (fm |+ (k,v)) A1 A2)
+End
+
+(* the above is super generic "recursion" over finite maps.
+   Proving termination super-generically involves lots of worry about partial
+   orders and well-foundedness. However, we can instantiate 'a to 'a set and
+   use SUBSET as our partial order, and guarantee termination with by requiring
+   the existence of a finite fix-point that is a superset of A.
+   Then, if A SUBSET f k v A, you'll always get to a fix-point eventually.
+   (There might be an intervening fix-point that you get to first.)
+ *)
+
+(*
+Theorem fmlpR_total:
+  FINITE P /\
+  (!k v A. FLOOKUP fm0 k = SOME v /\ A SUBSET P ==> A SUBSET f k v A) /\
+  (!k v. FLOOKUP fm0 k = SOME v /\ A SUBSET P ==> f k v A SUBSET P) /\
+  A0 SUBSET A1 /\ A1 SUBSET P /\ fm0 SUBMAP fm
+  ==>
+  ?A2. fmlfpR f A0 fm0 fm A1 A2 /\ A2 SUBSET P /\
+       (!k v. FLOOKUP fm0 k = SOME v ==> f k v A2 = A2)
+Proof
+QED
+*)
+
 (*---------------------------------------------------------------------------*)
 (* Add fmap type to the TypeBase. Notice that we treat keys as being of size *)
 (* zero, and make sure to add one to the size of each mapped value. This     *)
