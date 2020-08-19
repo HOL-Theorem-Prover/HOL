@@ -642,6 +642,7 @@ for every $x$ excluding a null set:
 \begin{hol}
 \begin{alltt}
 ##thm AE_THM
+
 ##thm almost_everywhere_def
 \end{alltt}
 \end{hol}
@@ -652,6 +653,7 @@ integration on null sets are very useful (Theorem 11.2 of~\cite[p.~89-90]{Schill
 \begin{hol}
 \begin{alltt}
 ##thm integral_abs_eq_0
+
 ##thm integral_null_set
 \end{alltt}
 \end{hol}
@@ -697,6 +699,129 @@ overloaded on division in \HOL{}):
 The overloading of \holtxt{*} (\holtxt{density_measure}) and
 \holtxt{/} (\holtxt{RN_deriv}) with the particular argument order is to
 syntactically have \holtxt{f * m / m = v / m = f}.
+
+\paragraph{Product measures and Fubini's theorem}
+
+\HOL{} provides some basic supports for (binary) products of measure spaces
+(in \theoryimp{martingale} theory).
+
+Let $(X,\mathcal{A},\mu)$ and $(Y,\mathcal{B},\nu)$ be two $\sigma$-finite measure spaces,
+sometimes we want to define a measure $\rho$ on rectangles of the form $A\times B$
+such that $\rho(A\times B) = \mu(A)\nu(B)$ for $A\in\mathcal{A}$ and $B\in\mathcal{B}$.
+The first problem which we encounter is that the family $\mathcal{A}\times\mathcal{B}$,
+denoted by \holtxt{prod_sets A B} (in \theoryimp{util_prob} theory):
+\begin{hol}
+\begin{alltt}
+>>__ open util_probTheory;
+##thm prod_sets_def
+\end{alltt}
+\end{hol}
+is, in general, no $\sigma$-algebra---it contains only `rectangles'.
+
+\begin{definition}
+  Let $(X,\mathcal{A})$ and $(Y,\mathcal{B})$ be two measurable spaces, then the $\sigma$-algebra
+  $\mathcal{A}\otimes\mathcal{B} := \sigma(\mathcal{A}\times\mathcal{B})$ is called a
+  \emph{product $\sigma$-algebra}, and $(X\times Y,\mathcal{A}\otimes\mathcal{B})$ is the
+  \emph{product of measurable spaces}: ($\times$ is overloaded for $\otimes$ in \HOL{}.)
+\begin{hol}
+\begin{alltt}
+##thm prod_sigma_def
+\end{alltt}
+\end{hol}
+\end{definition}
+
+The following lemma is quite useful since it allows us to reduce considerations
+for $\mathcal{A}\otimes\mathcal{B}$ to generators $\mathcal{F}$ and $\mathcal{G}$ of
+$\mathcal{A}$ and $\mathcal{B}$:
+\begin{hol}
+\begin{alltt}
+##thm PROD_SIGMA_OF_GENERATOR
+\end{alltt}
+\end{hol}
+
+The uniqueness and existence of product measures are guaranteed by the following theorems:
+\begin{hol}
+\begin{alltt}
+##thm EXISTENCE_OF_PROD_MEASURE
+
+##thm UNIQUENESS_OF_PROD_MEASURE
+\end{alltt}
+\end{hol}
+
+\begin{definition}
+  Let $(X,\mathcal{A})$ and $(Y,\mathcal{B})$ be two measurable spaces, the unique measure $\rho$
+  constructed in \texttt{EXISTENCE_OF_PROD_MEASURE} is called the
+  \emph{product} of the measures $\mu$ and $\nu$, denoted by $\mu\times\nu$.
+  $(X\times Y, \mathcal{A}\otimes\mathcal{B}, \mu\times\nu)$ is called the
+  \emph{product measure space}:
+\begin{hol}
+\begin{alltt}
+##thm prod_measure_def
+\end{alltt}
+\end{hol}
+\end{definition}
+
+As an application, the two-dimensional (real-valued) Borel measure space (\holtxt{lborel_2d})
+is constructed by the following definition and theorem:
+\begin{hol}
+\begin{alltt}
+##thm lborel_2d_def
+
+##thm lborel_2d_prod_measure
+\end{alltt}
+\end{hol}
+
+The next step is to see how we can integrate w.r.t. $\mu\times\nu$. The following
+two results are often stated together as the \emph{Fubini} or \emph{Fubini-Tonelli theorem}.
+Following~\cite{Schilling:2017},
+we prefer to distinguish between them since the first result, \texttt{TONELLI},
+says that we can \emph{always swap iterated integrals of positive functions}
+(even if we get $+\infty$), whereas \texttt{FUBINI} applies to more general functions but requires
+the (iterated) integrals to be finite:
+\begin{hol}
+\begin{alltt}
+##thm TONELLI
+
+##thm FUBINI
+\end{alltt}
+\end{hol}
+
+\HOL{} also supports other types of ``products''. In general, any three LISP-like pair operators
+can be used for building product measures:
+\begin{hol}
+\begin{alltt}
+##thm pair_operation_def
+
+##thm pair_operation_pair
+\end{alltt}
+\end{hol}
+
+Besides \theoryimp{pairTheory}, one can also use
+\holtxt{FCP_CONCAT}, \holtxt{FCP_FST} and \holtxt{FCP_SND} (\theoryimp{fcpTheory}):
+\begin{hol}
+\begin{alltt}    
+##thm pair_operation_FCP_CONCAT
+\end{alltt}
+\end{hol}
+
+The general version of product space is defined on any pair operation:
+\begin{hol}
+\begin{alltt}    
+##thm general_cross_def
+##thm general_prod_def
+\end{alltt}
+\end{hol}
+
+In fact, all the theorems about product measures, up to the uniqueness and existence of product measures
+(i.e.~except for \texttt{TONELLI} and \texttt{FUBINI}),
+are first proven on general pair operations
+(and then specialized on \theoryimp{pairTheory} and \theoryimp{fcpTheory}).
+For instance, the following theorem is the general version of \texttt{EXISTENCE_OF_PROD_MEASURE}:
+\begin{hol}
+\begin{alltt}    
+##thm existence_of_prod_measure_general
+\end{alltt}
+\end{hol}
 
 \subsection{Probability Theory}
 \label{sec:prob}
