@@ -5995,6 +5995,53 @@ Proof
  >> METIS_TAC [eq_add_sub_switch]
 QED
 
+(* an improved version without the following antecedents: (used by FUBINI)
+
+   !x. x IN m_space m ==> f1 x <> PosInf \/ f2 x <> PosInf
+ *)
+Theorem integral_add_lemma' :
+    !m f f1 f2.
+       measure_space m /\ integrable m f /\
+       integrable m f1 /\ integrable m f2 /\
+      (!x. x IN m_space m ==> (f x = f1 x - f2 x)) /\
+      (!x. x IN m_space m ==> 0 <= f1 x) /\
+      (!x. x IN m_space m ==> 0 <= f2 x) ==>
+      (integral m f = pos_fn_integral m f1 - pos_fn_integral m f2)
+Proof
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘N1 = {x | x IN m_space m /\ f1 x = PosInf}’
+ >> Q.ABBREV_TAC ‘N2 = {x | x IN m_space m /\ f2 x = PosInf}’
+ >> ‘null_set m N1 /\ null_set m N2’ by METIS_TAC [integrable_infty_null]
+ >> Q.ABBREV_TAC ‘g1 = \x. if f1 x = PosInf then 0 else f1 x’
+ >> Q.ABBREV_TAC ‘g2 = \x. if f2 x = PosInf then 0 else f2 x’
+ >> Know ‘integrable m g1 /\ pos_fn_integral m f1 = pos_fn_integral m g1’
+ >- (Q.UNABBREV_TAC ‘g1’ \\
+     MATCH_MP_TAC integrable_not_infty_alt2 >> rw [])
+ >> STRIP_TAC >> POP_ORW
+ >> Know ‘integrable m g2 /\ pos_fn_integral m f2 = pos_fn_integral m g2’
+ >- (Q.UNABBREV_TAC ‘g2’ \\
+     MATCH_MP_TAC integrable_not_infty_alt2 >> rw [])
+ >> STRIP_TAC >> POP_ORW
+ (* applying integral_add_lemma *)
+ >> Q.ABBREV_TAC ‘g = \x. g1 x - g2 x’
+ >> Know ‘integral m f = integral m g’
+ >- (MATCH_MP_TAC integral_cong_AE >> art [] \\
+     rw [AE_THM, almost_everywhere_def] \\
+     Q.EXISTS_TAC ‘N1 UNION N2’ \\
+     CONJ_TAC >- METIS_TAC [NULL_SET_UNION, IN_APP] \\
+     rw [Abbr ‘N1’, Abbr ‘N2’, Abbr ‘g’, Abbr ‘g1’, Abbr ‘g2’])
+ >> Rewr'
+ >> MATCH_MP_TAC integral_add_lemma >> simp []
+ (* easy goals first *)
+ >> reverse CONJ_TAC
+ >- (rw [Abbr ‘g1’, Abbr ‘g2’])
+ (* integrable m g *)
+ >> Q.UNABBREV_TAC ‘g’
+ >> MATCH_MP_TAC integrable_sub
+ >> rw [Abbr ‘g1’, Abbr ‘g2’]
+ >> MATCH_MP_TAC pos_not_neginf >> simp []
+QED
+
 (* enhanced with more general antecedents, old:
 
            (!x. x IN m_space m ==> (f x <> NegInf /\ g x <> NegInf))
