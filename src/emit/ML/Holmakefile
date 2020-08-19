@@ -1,9 +1,7 @@
 OPTIONS = NO_OVERLAY
 EXTRA_CLEANS = selftest.exe selftest.sml \
-               $(wildcard *ML.sig) $(wildcard *ML.sml) \
-               PrettyImpl.sml HOLPP.sig HOLPP.sml
+               $(wildcard *ML.sig) $(wildcard *ML.sml)
 INCLUDES = ..
-UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml)) PrettyImpl.uo HOLPP.uo PP.uo
 
 # testing SELFTESTLEVEL like this only works in Poly/ML for the moment.
 # when/if github issue 100 (http://github.com/mn200/HOL/issues/100) is
@@ -25,13 +23,4 @@ endif
 endif
 endif
 
-all: $(UOFILES)
-
-PrettyImpl.sml: $(dprot $(HOLDIR)/src/portableML/$(ML_SYSNAME)/PrettyImpl.sml)
-	$(CP) $< $@
-
-HOLPP.sig: $(dprot $(HOLDIR)/src/portableML/HOLPP.sig)
-	$(CP) $< $@
-
-HOLPP.sml: $(dprot $(HOLDIR)/src/portableML/HOLPP.sml)
-	$(CP) $< $@
+all: $(DEFAULT_TARGETS)
