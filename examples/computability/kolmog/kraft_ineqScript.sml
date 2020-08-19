@@ -790,13 +790,9 @@ Proof
   metis_tac[disjoint_prefix_free,lemma1]
 QED
 
-(* ignore desire for length of 0, allowing for an encoding of desire to have
-   a finite code (make f have infinite tail of zeroes)
- *)
 Definition seq_size_def[simp]:
   seq_size f 0 = 0r ∧
-  seq_size f (SUC n) = if f n = 0 then seq_size f n
-                       else 2 rpow -(&f n) + seq_size f n
+  seq_size f (SUC n) = 2 rpow -(&f n) + seq_size f n
 End
 
 Theorem seq_size_positive[simp]:
@@ -806,7 +802,7 @@ Proof
 QED
 
 Theorem seq_size_EQ0[simp]:
-  seq_size f n = 0 ⇔ ∀m. m < n ⇒ f m = 0
+  seq_size f n = 0 ⇔ n = 0
 Proof
   Induct_on‘n’ >>
   simp[DECIDE “x < SUC y ⇔ x < y ∨ x = y”, DISJ_IMP_THM, FORALL_AND_THM] >>
@@ -816,16 +812,23 @@ Proof
 QED
 
 (*
-Theorem kraft_ineq2:
+Theorem kraft_infinite_ineq2:
   ∀f. (∀n. seq_size f n ≤ 1) ⇒
       ∃P b.
-        prefix_free P ∧
-        BIJ b (count (LENGTH L) ) P  /\
-        !i. i < LENGTH L ==> LENGTH (b i) = EL i L)
+        prefix_free P ∧ BIJ b 𝕌(:num) P  ∧ ∀i. LENGTH (b i) = f i
 Proof
+  cheat
+QED
 
+Theorem kraft_finite_ineq2:
+  FOLDR (λn A. A + 2 rpow -&n) 0r ns ≤ 1 ⇒
+  ∃P b.
+     prefix_free P ∧ BIJ b (count (LENGTH ns)) P ∧
+     ∀i. i < LENGTH ns ⇒ LENGTH (b i) = EL i ns
+Proof
+  cheat
+QED
 *)
-
 
 
 
