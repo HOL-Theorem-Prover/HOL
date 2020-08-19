@@ -3,6 +3,7 @@ open HolKernel boolLib bossLib Parse
 open prnlistTheory numpairTheory pure_dBTheory
 open enumerationsTheory primrecfnsTheory
 open rich_listTheory arithmeticTheory
+open pred_setTheory
 
 open reductionEval churchnumTheory churchboolTheory normal_orderTheory
      dnoreductTheory stepsTheory recursivefnsTheory recfunsTheory
@@ -770,7 +771,7 @@ val pr_nsub_def = Define`
 
 val SUBSET_FINITE_I =
     SIMP_RULE (srw_ss() ++ boolSimps.DNF_ss) [AND_IMP_INTRO]
-              pred_setTheory.SUBSET_FINITE
+              SUBSET_FINITE
 
 val _ = temp_add_rule {fixity = Closefix,
                   term_name = "lterange",
@@ -784,29 +785,29 @@ val _ = overload_on ("lterange", ``λm n. { i | m < i ∧ i ≤ n}``)
 val tri_sub = prove(
   ``tri n - tri m = SUM_SET { m <.. n }``,
   Induct_on `n` THEN SRW_TAC [][] THEN
-  SRW_TAC [boolSimps.CONJ_ss][pred_setTheory.SUM_SET_THM] THEN
+  SRW_TAC [boolSimps.CONJ_ss][SUM_SET_THM] THEN
   SRW_TAC [][tri_def] THEN
   Cases_on `m ≤ n` THENL [
     `{ m <.. SUC n} = (SUC n) INSERT { m <.. n}`
-       by SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION] THEN
+       by SRW_TAC [ARITH_ss][EXTENSION] THEN
     POP_ASSUM SUBST1_TAC THEN
     `FINITE { m <.. n}`
        by (MATCH_MP_TAC SUBSET_FINITE_I THEN Q.EXISTS_TAC `count (n + 1)` THEN
-           SRW_TAC [ARITH_ss][pred_setTheory.SUBSET_DEF,
-                              pred_setTheory.FINITE_COUNT,
-                              pred_setTheory.IN_COUNT]) THEN
-    SRW_TAC [][pred_setTheory.SUM_SET_THM] THEN
+           SRW_TAC [ARITH_ss][SUBSET_DEF,
+                              FINITE_COUNT,
+                              IN_COUNT]) THEN
+    SRW_TAC [][SUM_SET_THM] THEN
     `SUC n ∉ {m <.. n}` by SRW_TAC [][] THEN
-    FULL_SIMP_TAC (srw_ss()) [pred_setTheory.DELETE_NON_ELEMENT] THEN
+    FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN
     `tri m ≤ tri n` by SRW_TAC [ARITH_ss][] THEN
     DECIDE_TAC,
 
     `{ m <.. SUC n} = {}`
-       by SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION] THEN
+       by SRW_TAC [ARITH_ss][EXTENSION] THEN
     `SUC n ≤ m` by DECIDE_TAC THEN
     `tri (SUC n) ≤ tri m` by SRW_TAC [][] THEN
     POP_ASSUM MP_TAC THEN REWRITE_TAC [tri_def] THEN
-    SRW_TAC [ARITH_ss][pred_setTheory.SUM_SET_THM]
+    SRW_TAC [ARITH_ss][SUM_SET_THM]
   ]);
 
 val npair_subx = prove(
@@ -825,8 +826,8 @@ val npair_suby = prove(
     DECIDE_TAC,
     `¬(tri (x + y₂) ≤ tri (x + y₁))` by SRW_TAC [][] THEN
     `{ x + y₂ <.. x + y₁ } = {}` by
-       SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION] THEN
-    SRW_TAC [ARITH_ss][pred_setTheory.SUM_SET_THM]
+       SRW_TAC [ARITH_ss][EXTENSION] THEN
+    SRW_TAC [ARITH_ss][SUM_SET_THM]
   ]);
 
 val npair_sub = prove(
@@ -842,33 +843,33 @@ val FINITE_rangelte = prove(
   ``FINITE { x <.. y }``,
   MATCH_MP_TAC SUBSET_FINITE_I THEN Q.EXISTS_TAC `count (y + 1)` THEN
   SRW_TAC [ARITH_ss]
-          [pred_setTheory.FINITE_COUNT, pred_setTheory.SUBSET_DEF,
-           pred_setTheory.IN_COUNT]);
+          [FINITE_COUNT, SUBSET_DEF,
+           IN_COUNT]);
 
 val SUM_SET_range_removetop = prove(
   ``lo < hi ⇒ (SUM_SET { lo <.. hi } = hi + SUM_SET { lo <.. (hi − 1)})``,
   STRIP_TAC THEN
   `({ lo <.. hi } = hi INSERT { lo <.. hi − 1 }) ∧ hi ∉ { lo <.. hi − 1 }`
-     by SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION] THEN
-  SRW_TAC [][pred_setTheory.SUM_SET_THM, FINITE_rangelte] THEN
-  FULL_SIMP_TAC (srw_ss()) [pred_setTheory.DELETE_NON_ELEMENT]);
+     by SRW_TAC [ARITH_ss][EXTENSION] THEN
+  SRW_TAC [][SUM_SET_THM, FINITE_rangelte] THEN
+  FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT]);
 
 val CARD_rangelte = prove(
   ``CARD { x <.. y } = y − x``,
   Induct_on `y` THEN1 SRW_TAC [ARITH_ss, boolSimps.CONJ_ss][] THEN
   Cases_on `x < SUC y` THENL [
     `{x <.. SUC y} = SUC y INSERT {x <.. y}`
-       by SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION] THEN
-    `SUC y ∉ {x <.. y}` by SRW_TAC [][pred_setTheory.EXTENSION] THEN
+       by SRW_TAC [ARITH_ss][EXTENSION] THEN
+    `SUC y ∉ {x <.. y}` by SRW_TAC [][EXTENSION] THEN
     SRW_TAC [ARITH_ss][FINITE_rangelte],
 
-    `{x <.. SUC y} = {}` by SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION] THEN
+    `{x <.. SUC y} = {}` by SRW_TAC [ARITH_ss][EXTENSION] THEN
     SRW_TAC [ARITH_ss][]
   ]);
 
 val rangelte_empty = prove(
   ``hi ≤ lo ⇒ ({ lo <.. hi } = {})``,
-  SRW_TAC [ARITH_ss][pred_setTheory.EXTENSION]);
+  SRW_TAC [ARITH_ss][EXTENSION]);
 
 val rangelte0 = prove(
   ``{ lo <.. 0 } = {}``,
@@ -878,7 +879,7 @@ val SUM_SET_extract = prove(
   ``SUM_SET { x + y <.. x + z } = (z - y) * x + SUM_SET {y <.. z}``,
   Induct_on `z` THEN1 SRW_TAC [][rangelte_empty] THEN
   Cases_on `SUC z ≤ y` THEN1
-    SRW_TAC [ARITH_ss][rangelte_empty, pred_setTheory.SUM_SET_THM] THEN
+    SRW_TAC [ARITH_ss][rangelte_empty, SUM_SET_THM] THEN
   `y < SUC z ∧ x + y < x + SUC z` by DECIDE_TAC THEN
   SRW_TAC [(* put ARITH_ss here for BAD PERF *)]
           [SUM_SET_range_removetop,
@@ -889,7 +890,7 @@ val SUM_SET_extract = prove(
 val SUM_SET_0arg1 = prove(
   ``SUM_SET { 0 <.. n } = tri n``,
   Induct_on `n` THEN
-  SRW_TAC [][tri_def, pred_setTheory.SUM_SET_THM,
+  SRW_TAC [][tri_def, SUM_SET_THM,
              rangelte_empty, SUM_SET_range_removetop]);
 
 
@@ -1492,7 +1493,7 @@ val cnlist_of_def = Define`
 val FV_cnlist_of = Store_thm(
   "FV_cnlist_of",
   ``FV cnlist_of = {}``,
-  SRW_TAC [][cnlist_of_def, pred_setTheory.EXTENSION] THEN METIS_TAC []);
+  SRW_TAC [][cnlist_of_def, EXTENSION] THEN METIS_TAC []);
 
 val cnlist_of_equiv = brackabs.brackabs_equiv [] cnlist_of_def
 
@@ -1528,7 +1529,7 @@ val crecCn_def = Define`
 val FV_crecCn = Store_thm(
   "FV_crecCn",
   ``FV crecCn = {}``,
-  SRW_TAC [][crecCn_def, pred_setTheory.EXTENSION]);
+  SRW_TAC [][crecCn_def, EXTENSION]);
 
 val crecCn_equiv = brackabs.brackabs_equiv [] crecCn_def
 
@@ -1614,7 +1615,7 @@ val cntl_def = Define`
   cntl = LAM "ns" (cnsnd @@ (cminus @@ VAR "ns" @@ church 1))
 `;
 val FV_cntl = Store_thm("FV_cntl", ``FV cntl = {}``,
-                        SRW_TAC [][pred_setTheory.EXTENSION, cntl_def]);
+                        SRW_TAC [][EXTENSION, cntl_def]);
 val cntl_behaviour = store_thm(
   "cntl_behaviour",
   ``cntl @@ church n == church (ntl n)``,
@@ -1624,7 +1625,7 @@ val cnhd_def = Define`
   cnhd = LAM "ns" (cnfst @@ (cminus @@ VAR "ns" @@ church 1))
 `;
 val FV_cnhd = Store_thm("FV_cnhd", ``FV cnhd = {}``,
-                        SRW_TAC [][pred_setTheory.EXTENSION, cnhd_def]);
+                        SRW_TAC [][EXTENSION, cnhd_def]);
 val cnhd_behaviour = store_thm(
   "cnhd_behaviour",
   ``cnhd @@ church n == church (nhd n)``,
@@ -1637,7 +1638,7 @@ val cncons_equiv = brackabs.brackabs_equiv [] cncons_def
 val FV_cncons = Store_thm(
   "FV_cncons",
   ``FV cncons = {}``,
-  SRW_TAC [][pred_setTheory.EXTENSION, cncons_def]);
+  SRW_TAC [][EXTENSION, cncons_def]);
 
 val cncons_behaviour = store_thm(
   "cncons_behaviour",
@@ -1699,7 +1700,7 @@ val PrSstep_eval = brackabs.brackabs_equiv [] PrSstep_def
 val FV_PrSstep = Store_thm(
   "FV_PrSstep",
   ``FV PrSstep = {}``,
-  SRW_TAC [][PrSstep_def, pred_setTheory.EXTENSION]);
+  SRW_TAC [][PrSstep_def, EXTENSION]);
 
 val crecPr_def = Define`
   crecPr =
@@ -1724,7 +1725,7 @@ val crecPr_def = Define`
 val FV_crecPr = Store_thm(
   "FV_crecPr",
   ``FV crecPr = {}``,
-  SRW_TAC [][pred_setTheory.EXTENSION, crecPr_def] );
+  SRW_TAC [][EXTENSION, crecPr_def] );
 val crecPr_equiv = brackabs.brackabs_equiv [] crecPr_def
 
 val BIforcenum = bstore_thm(
@@ -1831,7 +1832,7 @@ val cminimise_def = Define`
 
 Theorem FV_cminimise[simp]:
   FV cminimise = {}
-Proof SRW_TAC [][cminimise_def, pred_setTheory.EXTENSION]
+Proof SRW_TAC [][cminimise_def, EXTENSION]
 QED
 
 val cminimise_equiv = brackabs.brackabs_equiv [] cminimise_def
