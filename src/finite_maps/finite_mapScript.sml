@@ -33,8 +33,6 @@ local open pred_setLib listTheory rich_listTheory in end
 
 val _ = new_theory "finite_map";
 
-val _ = ParseExtras.temp_tight_equality()
-
 (*---------------------------------------------------------------------------*)
 (* Special notation. fmap application is set at the same level as function   *)
 (* application, meaning that                                                 *)
