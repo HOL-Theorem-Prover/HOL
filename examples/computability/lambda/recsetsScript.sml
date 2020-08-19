@@ -289,19 +289,16 @@ Proof
     SIMP_TAC (bsrw_ss()) [bnf_bnf_of, ceqnat_behaviour,
                           cB_behaviour],
 
-    IMP_RES_TAC bnf_of_SOME THEN
-    IMP_RES_THEN MP_TAC
-                 (REWRITE_RULE [GSYM AND_IMP_INTRO] cbnf_ofk_works2) THEN
+    drule_then strip_assume_tac bnf_of_SOME THEN
+    drule_all cbnf_ofk_works2 THEN
     ASM_SIMP_TAC (bsrw_ss()) [] THEN
     FIRST_X_ASSUM (Q.SPEC_THEN ‘e’ (Q.X_CHOOSE_THEN ‘zz’ MP_TAC)) THEN
     Cases_on ‘e ∈ s’ THEN SRW_TAC [][] THEN
-    SIMP_TAC (bsrw_ss()) [cforce_num_behaviour, ceqnat_behaviour,
-                          cB_behaviour, DISJ_IMP_EQ] THEN
-    STRIP_TAC THEN FULL_SIMP_TAC (bsrw_ss()) [] THEN
+    ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour, DISJ_IMP_EQ] THEN
     STRIP_TAC THEN
     ‘Ω -β->* z’ by METIS_TAC [chap3Theory.betastar_lameq_bnf] THEN
     ‘z = Ω’ by METIS_TAC [chap3Theory.Omega_starloops] THEN
-    METIS_TAC [chap2Theory.bnf_Omega]
+    fs[]
   ]
 QED
 
