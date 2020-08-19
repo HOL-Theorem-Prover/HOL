@@ -8,19 +8,19 @@ open rich_listTheory;
 
 val _ = new_theory "pegexec"
 
-val _ = Hol_datatype`
+Datatype:
   kont =
-    ksym of ('atok,'bnt,'cvalue) pegsym => kont => kont
-  | appf1 of ('cvalue -> 'cvalue) => kont
-  | appf2 of ('cvalue -> 'cvalue -> 'cvalue) => kont
-  | returnTo of ('atok # locs) list => 'cvalue option list => kont
-  | poplist of ('cvalue list -> 'cvalue) => kont
-  | listsym of ('atok,'bnt,'cvalue) pegsym =>
-               ('cvalue list -> 'cvalue) =>
-               kont
+    ksym (('atok,'bnt,'cvalue,'err) pegsym) kont kont
+  | appf1 ('cvalue -> 'cvalue) kont
+  | appf2 ('cvalue -> 'cvalue -> 'cvalue) kont
+  | returnTo (('atok # locs) list) ('cvalue option list) kont
+  | poplist ('cvalue list -> 'cvalue) kont
+  | listsym (('atok,'bnt,'cvalue,'err) pegsym)
+            ('cvalue list -> 'cvalue)
+            kont
   | done
-  | failed
-`
+  | failed locs 'err
+End
 
 val poplist_aux_def = Define`
   poplist_aux acc (SOME h::t) = poplist_aux (h::acc) t ∧
@@ -34,18 +34,18 @@ val poplistval_def = Define`
                      SOME(f values) :: rest
 `;
 
-val _ = Hol_datatype `
-  evalcase = EV of ('atok,'bnt,'cvalue) pegsym =>
-                   ('atok # locs) list => 'cvalue option list =>
-                   ('atok,'bnt,'cvalue) kont =>
-                   ('atok,'bnt,'cvalue) kont
-           | AP of ('atok,'bnt,'cvalue) kont =>
-                   ('atok # locs) list => 'cvalue option list
-           | Result of (('atok # locs) list # 'cvalue) option
+Datatype:
+  evalcase = EV (('atok,'bnt,'cvalue,'err) pegsym)
+                (('atok # locs) list) ('cvalue option list)
+                (('atok,'bnt,'cvalue,'err) kont)
+                (('atok,'bnt,'cvalue,'err) kont)
+           | AP (('atok,'bnt,'cvalue,'err) kont)
+                (('atok # locs) list) ('cvalue option list)
+           | Result ((('atok # locs) list, 'cvalue, 'err) pegresult)
            | Looped
-`;
+End
 
-val coreloop_def = zDefine`
+Definition coreloop_def[nocompute]:
   coreloop G =
    OWHILE (λs. case s of Result _ => F
                        | _ => T)
@@ -64,7 +64,7 @@ val coreloop_def = zDefine`
                    if n ∈ FDOM G.rules then
                      EV (G.rules ' n) i r (appf1 tf3 k) fk
                    else
-                     Result NONE
+                     Looped
                  | EV (seq e1 e2 f) i r k fk =>
                      EV e1 i r
                         (ksym e2 (appf2 f k) (returnTo i r fk))
@@ -77,11 +77,11 @@ val coreloop_def = zDefine`
                      EV e i (NONE::r) (listsym e lf k) (poplist lf k)
                  | EV (not e v) i r k fk =>
                      EV e i r (returnTo i r fk) (returnTo i (SOME v::r) k)
-                 | AP done i r => Result(case r of
-                                             [] => NONE
-                                           | NONE::t => NONE
-                                           | SOME rv::t => SOME(i, rv))
-                 | AP failed i r => Result NONE
+                 | EV (error err) i r k fk => AP fk i r
+                 | AP done i [] => Looped
+                 | AP done i (NONE :: t) => Looped
+                 | AP done i (SOME rv :: _) => Result (Success i rv)
+                 | AP (failed l e) i r => Result (Failure l e)
                  | AP (ksym e k fk) i r => EV e i r k fk
                  | AP (appf1 f1 k) i (SOME v :: r) => AP k i (SOME (f1 v) :: r)
                  | AP (appf1 _ _) _ _ => Looped
@@ -94,26 +94,33 @@ val coreloop_def = zDefine`
                  | AP (poplist f k) i r => AP k i (poplistval f r)
                  | Result r => Result r
                  | Looped => Looped)
-`;
+End
 
-
-val peg_exec_def = zDefine`
-  peg_exec (G:('atok,'bnt,'cvalue)peg) e i r k fk =
+Definition peg_exec_def[nocompute]:
+  peg_exec (G:('atok,'bnt,'cvalue,'err)peg) e i r k fk =
     case coreloop G (EV e i r k fk) of
         SOME r => r
       | NONE => Looped
-`
+End
 
-val applykont_def = zDefine`
+Definition applykont_def[nocompute]:
   applykont G k i r = case coreloop G (AP k i r) of
                           SOME r => r
                         | NONE => Looped
-`
+End
 
-val coreloop_result = store_thm(
-  "coreloop_result",
-  ``coreloop G (Result x) = SOME (Result x)``,
-  simp[coreloop_def, Once whileTheory.OWHILE_THM]);
+Theorem coreloop_result[simp]:
+  coreloop G (Result x) = SOME (Result x)
+Proof
+  simp[coreloop_def, Once whileTheory.OWHILE_THM]
+QED
+
+Theorem coreloop_Looped[simp]:
+  coreloop G Looped = NONE
+Proof
+  simp[coreloop_def, whileTheory.OWHILE_EQ_NONE] >> Induct >>
+  simp[arithmeticTheory.FUNPOW]
+QED
 
 fun inst_thm def (qs,ths) =
     def |> SIMP_RULE (srw_ss()) [Once whileTheory.OWHILE_THM, coreloop_def]
@@ -133,56 +140,60 @@ val option_case_COND = prove(
 
 val better_peg_execs =
     map peg_exec_thm [([`e` |-> `empty v`], []),
-                  ([`e` |-> `tok P f`, `i` |-> `[]`], []),
-                  ([`e` |-> `tok P f`, `i` |-> `x::xs`],
-                   [Once COND_RAND, option_case_COND]),
-                  ([`e` |-> `any f`, `i` |-> `[]`], []),
-                  ([`e` |-> `any f`, `i` |-> `x::xs`], []),
-                  ([`e` |-> `seq e1 e2 sf`], []),
-                  ([`e` |-> `choice e1 e2 cf`], []),
-                  ([`e` |-> `not e v`], []),
-                  ([`e` |-> `rpt e lf`], [])]
+                      ([`e` |-> `tok P f`, `i` |-> `[]`], []),
+                      ([`e` |-> `tok P f`, `i` |-> `x::xs`],
+                       [Once COND_RAND, option_case_COND]),
+                      ([`e` |-> `any f`, `i` |-> `[]`], []),
+                      ([`e` |-> `any f`, `i` |-> `x::xs`], []),
+                      ([`e` |-> `seq e1 e2 sf`], []),
+                      ([`e` |-> `choice e1 e2 cf`], []),
+                      ([`e` |-> `not e v`], []),
+                      ([`e` |-> `rpt e lf`], []),
+                      ([‘e’ |-> ‘error err’], [])]
 
 val better_apply =
-    map (inst_thm applykont_def)
+    map (SIMP_RULE (srw_ss()) [] o inst_thm applykont_def)
         [([`k` |-> `ksym e k fk`], []),
          ([`k` |-> `appf1 f k`, `r` |-> `SOME v::r`], []),
          ([`k` |-> `appf2 f k`, `r` |-> `SOME v1::SOME v2::r`], []),
          ([`k` |-> `returnTo i' r' k`], []),
-         ([`k` |-> `done`], []),
-         ([`k` |-> `failed`], []),
+         ([`k` |-> `done`, ‘r’ |-> ‘[]’], []),
+         ([`k` |-> `done`, ‘r’ |-> ‘NONE::rs’], []),
+         ([`k` |-> `done`, ‘r’ |-> ‘SOME rv::rs’], []),
+         ([`k` |-> `failed l e`], []),
          ([`k` |-> `poplist f k`], []),
          ([`k` |-> `listsym e f k`], [])]
 
-val peg_nt_thm = save_thm(
-  "peg_nt_thm",
-  peg_exec_thm ([`e` |-> `nt n nfn`], [Once COND_RAND, option_case_COND]))
+Theorem peg_nt_thm =
+  peg_exec_thm ([`e` |-> `nt n nfn`], [Once COND_RAND, option_case_COND])
 
-val peg_exec_thm = save_thm("peg_exec_thm", LIST_CONJ better_peg_execs);
+Theorem peg_exec_thm = LIST_CONJ better_peg_execs
 
-val applykont_thm = save_thm("applykont_thm", LIST_CONJ better_apply);
+Theorem applykont_thm = LIST_CONJ better_apply
 
 val _ = computeLib.add_persistent_funs ["peg_exec_thm", "applykont_thm"]
 
 val _ = app (fn s => ignore (remove_ovl_mapping s {Thy = "pegexec", Name = s}))
             ["AP", "EV"]
 
-val exec_correct0 = prove(
-  ``(∀i e r. peg_eval G (i,e) r ⇒
-             (∀j v k fk stk.
-                r = SOME(j,v) ⇒
-                peg_exec G e i stk k fk = applykont G k j (SOME v :: stk)) ∧
-             (∀k fk stk.
-                r = NONE ⇒ peg_exec G e i stk k fk = applykont G fk i stk)) ∧
-    (∀i e j vlist.
-      peg_eval_list G (i,e) (j,vlist) ⇒
-      ∀f k stk vs.
-          peg_exec G e i (MAP SOME vs ++ (NONE::stk))
-                     (listsym e f k)
-                     (poplist f k) =
-          applykont G k j (SOME (f (REVERSE vs ++ vlist)) :: stk))``,
+Theorem exec_correct0[local]:
+  (∀i e r. peg_eval G (i,e) r ⇒
+           (∀j v k fk stk.
+              r = Success j v ⇒
+              peg_exec G e i stk k fk = applykont G k j (SOME v :: stk)) ∧
+           (∀k fk stk l err.
+              r = Failure l err ⇒
+              peg_exec G e i stk k fk = applykont G fk i stk)) ∧
+  (∀i e j vlist.
+     peg_eval_list G (i,e) (j,vlist) ⇒
+     ∀f k stk vs.
+       peg_exec G e i (MAP SOME vs ++ (NONE::stk))
+                (listsym e f k)
+                (poplist f k) =
+       applykont G k j (SOME (f (REVERSE vs ++ vlist)) :: stk))
+Proof
   ho_match_mp_tac peg_eval_strongind' >>
-  simp[peg_exec_thm, peg_nt_thm, applykont_thm] >>
+  simp[peg_exec_thm, peg_nt_thm, applykont_thm, FORALL_result, AllCaseEqs()] >>
   rpt conj_tac
   >- ((* rpt - no elements succeed *)
       map_every qx_gen_tac [`e`, `f`, `i`, `j`, `vlist`] >> strip_tac >>
@@ -204,32 +215,33 @@ val exec_correct0 = prove(
       map_every qx_gen_tac [`f`, `k`, `stk`, `vs'`] >>
       first_x_assum (qspecl_then [`f`, `k`, `stk`, `v::vs'`] mp_tac) >>
       simp[] >>
-      simp_tac bool_ss [GSYM listTheory.APPEND_ASSOC, listTheory.APPEND]))
+      simp_tac bool_ss [GSYM listTheory.APPEND_ASSOC, listTheory.APPEND])
+QED
 
-val exec_correct = save_thm(
-  "exec_correct",
-  exec_correct0 |> SIMP_RULE (srw_ss() ++ DNF_ss) [])
+Theorem exec_correct =
+  exec_correct0 |> SIMP_RULE (srw_ss() ++ DNF_ss) []
 
-val pegexec_succeeds = save_thm(
-  "pegexec_succeeds",
-  exec_correct |> CONJUNCTS |> hd |> SPEC_ALL
-               |> Q.INST [`k` |-> `done`, `fk` |-> `failed`, `stk` |-> `[]`]
-               |> SIMP_RULE (srw_ss()) [applykont_thm])
+Theorem pegexec_succeeds =
+  exec_correct
+    |> CONJUNCTS |> hd |> SPEC_ALL
+    |> Q.INST [`k` |-> `done`, `fk` |-> `failed l err`, `stk` |-> `[]`]
+    |> SIMP_RULE (srw_ss()) [applykont_thm]
 
-val pegexec_fails = save_thm(
-  "pegexec_fails",
+Theorem pegexec_fails =
   exec_correct |> CONJUNCTS |> tl |> hd |> SPEC_ALL
-               |> Q.INST [`k` |-> `done`, `fk` |-> `failed`, `stk` |-> `[]`]
-               |> SIMP_RULE (srw_ss()) [applykont_thm])
+               |> Q.INST [`k` |-> `done`, `fk` |-> `failed l err`,
+                          `stk` |-> `[]`]
+               |> SIMP_RULE (srw_ss()) [applykont_thm]
 
 val pair_CASES = pairTheory.pair_CASES
 val option_CASES = optionTheory.option_nchotomy
 val list_CASES = listTheory.list_CASES
 
-val pegexec = store_thm(
-  "pegexec",
-  ``peg_eval G (s,e) r ⇒ peg_exec G e s [] done failed = Result r``,
-  metis_tac [option_CASES, pair_CASES, pegexec_fails, pegexec_succeeds]);
+Theorem pegexec:
+  peg_eval G (s,e) r ⇒ peg_exec G e s [] done (failed l err) = Result r
+Proof
+  metis_tac [option_CASES, pair_CASES, pegexec_fails, pegexec_succeeds]
+QED
 
 val peg_eval_executed = store_thm(
   "peg_eval_executed",
@@ -301,4 +313,3 @@ val coreloop_total = save_thm(
 
 
 val _ = export_theory()
-
