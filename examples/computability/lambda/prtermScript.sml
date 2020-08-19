@@ -1445,6 +1445,10 @@ val cnel_def = Define`
                                                    @@ church 1)))))))
 `;
 
+Theorem FV_cnel[simp]: FV cnel = {}
+Proof simp[EXTENSION,cnel_def,DISJ_IMP_EQ]
+QED
+
 val cnel_equiv = brackabs.brackabs_equiv [] cnel_def
 
 val cnel_behaviour = store_thm(

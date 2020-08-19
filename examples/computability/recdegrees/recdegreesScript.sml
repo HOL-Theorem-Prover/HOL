@@ -125,11 +125,13 @@ Theorem minimise_useful:
                             ∀i. i<n ==> ∃m. f (i::l) = SOME m ∧ 0 < m
 Proof
   fs[minimise_thm] >> DEEP_INTRO_TAC optionTheory.some_intro >> rw[EQ_IMP_THM]
-  >- simp[] >- metis_tac[] >> rename[`n1=n2`] >>
-  ‘¬(n1<n2) ∧ ¬(n2<n1)’ suffices_by simp[] >>
-  rpt strip_tac  >> metis_tac[prim_recTheory.LESS_REFL,optionTheory.SOME_11]
+  >- simp[]
+  >- metis_tac[]
+  >- (rename[`n1=n2`] >>
+      ‘¬(n1<n2) ∧ ¬(n2<n1)’ suffices_by simp[] >>
+      rpt strip_tac >> metis_tac[prim_recTheory.LESS_REFL,optionTheory.SOME_11])
+  >- metis_tac[]
 QED
-
 
 Definition step_n_def:
   step_n N =
@@ -143,10 +145,6 @@ Definition step_n_def:
        @@ church 1
        @@ church 0 )
 End
-
-Theorem FV_cnel[simp]: FV cnel = {}
-Proof simp[EXTENSION,cnel_def]
-QED
 
 val step_n_eqn = brackabs.brackabs_equiv [] (SPEC_ALL step_n_def)
 
@@ -163,7 +161,6 @@ QED
 Theorem FV_steps_n[simp]: FV (step_n N) = {}
 Proof simp[EXTENSION,step_n_def]
 QED
-
 
 Theorem cB_true_K:
   cB T = K
@@ -243,7 +240,7 @@ Proof
       first_x_assum $ qspec_then ‘[e]’ mp_tac >> simp[] >> strip_tac >>
       simp[minimise_useful] >>
       ‘∀x. IS_SOME (Phi Ri x)’
-        by (rw[] >> Cases_on‘Phi Ri x = SOME 0’ >> fs[]) >>
+        by metis_tac[optionTheory.IS_SOME_DEF] >>
       ‘∀x y. M [x;y] = SOME (1 - THE (Phi Ri (y *, x)))’
         by (rw[Abbr‘M’, recCnminimise_r_npair_corr2] >> fs[]) >>
       eq_tac >> rw[]
@@ -300,7 +297,7 @@ End
 Theorem FV_co_re_machine[simp]:
   FV (co_re_machine n) = {}
 Proof
-  simp[co_re_machine,EXTENSION] >> rw[EQ_IMP_THM]
+  simp[co_re_machine,EXTENSION,DISJ_IMP_EQ] >> rw[EQ_IMP_THM]
 QED
 
 val co_re_machine_eqn = brackabs.brackabs_equiv [] (SPEC_ALL co_re_machine)
@@ -336,7 +333,8 @@ Proof
           ‘(cfindleast @@ P @@ I) == z’ by fs[normal_orderTheory.nstar_lameq] >>
           drule_all churchnumTheory.cfindleast_bnfE >> rw[] >>
           qexists_tac‘m’ >> qpat_x_assum ‘_ @@ _ == cB T’ mp_tac >>
-          asm_simp_tac (bsrw_ss()) [] >> simp[Phi_def] >> rw[] >> fs[]))
+          asm_simp_tac (bsrw_ss()) [] >> simp[Phi_def] >> rw[] >> fs[] >>
+          metis_tac[DECIDE“0 ≠ 1”]))
   >- (qexists_tac‘dBnum (fromTerm (B @@ (cminus @@ church 1) @@ step_n N))’ >>
       simp[Phi_def] >>
       simp_tac (bsrw_ss()) [step_n_behaviour,churchnumTheory.cminus_behaviour]>>
@@ -346,7 +344,6 @@ Proof
       simp[Phi_def] >> simp_tac (srw_ss()++boolSimps.COND_elim_ss) [] >>
       simp[stepsTheory.bnf_steps] )
 QED
-
 Definition rec_delta:
   rec_delta n = rec_sigma n ∩ rec_pi n
 End
