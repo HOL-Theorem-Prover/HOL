@@ -13,61 +13,76 @@ open HolKernel boolLib aiLib smlLexer smlExecute
 val ERR = mk_HOL_ERR "smlExtract"
 
 (* -------------------------------------------------------------------------
-   Calling the compiler
+   Property tests
    ------------------------------------------------------------------------- *)
 
-fun sml_propl_of s =
-  let
-    val stream = TextIO.openString s
-    val resultTrees : PolyML.parseTree list ref = ref []
-    fun compilerResultFun (parsetree, codeOpt) =
-      let
-        val _ =
-        case parsetree of
-          SOME pt => resultTrees := !resultTrees @ [pt]
-        | NONE => ()
-      in
-        fn () => raise ERR "sml_propl_of" "NONE"
-      end
-    val _ = PolyML.compiler (fn () =>
-          TextIO.input1 stream,
-         [PolyML.Compiler.CPCompilerResultFun compilerResultFun,
-          PolyML.Compiler.CPNameSpace PolyML.globalNameSpace])
-    in
-      snd (hd (!resultTrees)) handle _ => raise ERR "sml_propl_of" s
-    end
+fun is_print p = case p of PolyML.PTprint _ => true | _ => false
+fun is_type p = case p of PolyML.PTtype _ => true | _ => false
+fun is_firstchild p = case p of PolyML.PTfirstChild _ => true | _ => false
+fun is_nextsibling p = case p of PolyML.PTnextSibling _ => true | _ => false
 
 (* -------------------------------------------------------------------------
-   Parsed tree
+   Property destructors
    ------------------------------------------------------------------------- *)
 
-fun sml_prop_first p = case p of
-    PolyML.PTfirstChild f  => SOME (snd (f ()))
-  | _               => NONE
+fun dest_firstchild p = case p of
+    PolyML.PTfirstChild f  => snd (f ())
+  | _               => raise ERR "dest_firstchild" ""
 
-fun declaration_path s =
-  let
-    val x = hd (sml_propl_of s)
-    val l = valOf (sml_prop_first x)
-    fun f y = case y of PolyML.PTdeclaredAt y => y
-                      | _ => raise ERR "sml_path_of" ""
-    val decll = mapfilter f l
-    val path = #file (hd decll)
-  in
-    path
-  end
+fun dest_print p = case p of
+    PolyML.PTprint f  => f
+  | _               => raise ERR "dest_print" ""
 
-fun string_of_pretty p =
-  let
+fun dest_type p = case p of
+   PolyML.PTtype ty => ty
+  | _ => raise ERR "dest_type" ""
+
+fun dest_firstchild p = case p of
+    PolyML.PTfirstChild g => snd (g ())
+  | _ => raise ERR "dest_firstchild" ""
+
+fun dest_nextsibling p = case p of
+    PolyML.PTnextSibling g => snd (g ())
+  | _ => raise ERR "dest_nextsibling" ""
+
+(* -------------------------------------------------------------------------
+   Printing functions
+   ------------------------------------------------------------------------- *)
+
+fun respace s = String.concatWith " " (partial_sml_lexer s)
+
+fun string_of_pretty pretty =
+   let
     val acc = ref []
     fun f s = acc := s :: !acc
   in
-    PolyML.prettyPrint (f,80) p;
-    String.concatWith " " (rev (!acc))
+    PolyML.prettyPrint (f,80) pretty;
+    respace (String.concatWith " " (rev (!acc)))
   end
 
+fun string_of_print p = string_of_pretty ((dest_print p) 80)
 
-fun sml_propl_all_of s =
+fun string_of_type ty =
+  let
+    val pretty = PolyML.NameSpace.Values.printType
+      (ty, 80, SOME PolyML.globalNameSpace)
+  in
+    respace (string_of_pretty pretty)
+  end
+
+fun string_of_propl pl = case List.find is_print pl of
+    SOME p => SOME (string_of_print p)
+  | NONE   => NONE
+
+fun stype_of_propl pl = case List.find is_type pl of
+    SOME (PolyML.PTtype ty) => SOME (string_of_type ty)
+  | _ => NONE
+
+(* -------------------------------------------------------------------------
+   Calling the PolyML compiler
+   ------------------------------------------------------------------------- *)
+
+fun parse s =
   let
     val stream = TextIO.openString s
     val resultTrees : PolyML.parseTree list ref = ref []
@@ -78,117 +93,78 @@ fun sml_propl_all_of s =
           SOME pt => resultTrees := !resultTrees @ [pt]
         | NONE => ()
       in
-        fn () => raise Fail "not implemented"
+        fn () => raise ERR "parse" ""
       end
     val _ = PolyML.compiler (fn () =>
           TextIO.input1 stream,
          [PolyML.Compiler.CPCompilerResultFun compilerResultFun,
           PolyML.Compiler.CPNameSpace PolyML.globalNameSpace])
     in
-      map snd (!resultTrees)
+      dest_firstchild
+        (singleton_of_list (snd (singleton_of_list (!resultTrees))))
     end
 
-fun is_print_prop prop = case prop of
-   PolyML.PTprint _ => true
-  | _ => false
-
-fun dest_print_prop prop = case prop of
-   PolyML.PTprint g => g
-  | _ => raise ERR "dest_print" ""
-
-fun is_first_prop prop = case prop of
-   PolyML.PTfirstChild _ => true
-  | _ => false
-
-fun is_next_prop prop = case prop of
-   PolyML.PTnextSibling _ => true
-  | _ => false
-
-fun dest_first_prop p = case p of
-    PolyML.PTfirstChild g => snd (g ())
-  | _ => raise ERR "dest_first_next" ""
-
-fun dest_next_prop p = case p of
-    PolyML.PTnextSibling g => snd (g ())
-  | _ => raise ERR "dest_first_next" ""
-
 (* -------------------------------------------------------------------------
-   Simplified parsed tree
+   Simplified parsed tree with type information
    ------------------------------------------------------------------------- *)
 
 datatype smlexp =
-    SmlExp of string option * (smlexp list)
-  | SmlUnit of string option
+    SmlExp of (string option * string option) * smlexp list
+  | SmlUnit of (string option * string option)
 
 fun dest_smlexp e = case e of
-    SmlExp (a,b) => (a,b)
+    SmlExp x => x
   | _ => raise ERR "dest_smlexp" ""
 
-fun constant_space stac = String.concatWith " " (partial_sml_lexer stac)
-
 fun string_of_smlexp e = case e of
-   SmlExp (SOME s,_) => constant_space s
- | SmlUnit (SOME s) => constant_space s
+   SmlExp ((SOME s,_),_) => s
+ | SmlUnit (SOME s,_) => s
  | _ => raise ERR "string_of_smlexp" ""
 
-fun reprint s =
-  let val propll = sml_propl_all_of s in
-    if List.length propll = 1 then
-      case List.find is_print_prop
-        (dest_first_prop (valOf (List.find is_first_prop (hd propll)))) of
-      SOME p => SOME (string_of_pretty ((dest_print_prop p) 80))
-    | NONE   => NONE
-    else raise ERR "reprint" s
-  end
-
 fun extract_smlexp_aux propl =
-  let val s =
-    case List.find is_print_prop propl of
-      SOME p => SOME (string_of_pretty ((dest_print_prop p) 80))
-    | NONE   => NONE
-    val l1 = List.filter is_first_prop propl
-    val l2 = List.filter is_next_prop propl
+  let
+    val s = string_of_propl propl
+    val sty = stype_of_propl propl
+    val l1 = List.filter is_firstchild propl
+    val l2 = List.filter is_nextsibling propl
   in
     case (l1,l2) of
-      ([],[]) => [SmlUnit s]
+      ([],[]) => [SmlUnit (s,sty)]
     | ([fprop],[]) =>
-      let val ftreel = extract_smlexp_aux (dest_first_prop fprop) in
-        [SmlExp (s,ftreel)]
+      let val ftreel = extract_smlexp_aux (dest_firstchild fprop) in
+        [SmlExp ((s,sty),ftreel)]
       end
     | ([],[nprop]) =>
-      let val ntreel = extract_smlexp_aux (dest_next_prop nprop) in
-        SmlUnit s :: ntreel
+      let val ntreel = extract_smlexp_aux (dest_nextsibling nprop) in
+        SmlUnit (s,sty) :: ntreel
       end
     | ([fprop],[nprop]) =>
       let
-        val ftreel = extract_smlexp_aux (dest_first_prop fprop)
-        val ntreel = extract_smlexp_aux (dest_next_prop nprop)
+        val ftreel = extract_smlexp_aux (dest_firstchild fprop)
+        val ntreel = extract_smlexp_aux (dest_nextsibling nprop)
       in
-        SmlExp (s,ftreel) :: ntreel
+        SmlExp ((s,sty),ftreel) :: ntreel
       end
     | _ => raise ERR "extract_smlexp_aux" ""
   end
 
-fun extract_smlexp s =
-  let val propll = sml_propl_all_of s in
-    if List.length propll = 1
-    then extract_smlexp_aux (hd propll)
-    else raise ERR "extract_smlexp" s
-  end
+fun extract_smlexp s = singleton_of_list (extract_smlexp_aux (parse s))
 
 (* -------------------------------------------------------------------------
-   Tactic tree
+   Proof tree separated into tactic units
    ------------------------------------------------------------------------- *)
 
-datatype tacexp =
-    SmlInfix of string * (tacexp * tacexp)
-  | SmlTactical of string
-  | SmlTactic of string
+datatype proofexp =
+    ProofInfix of string * (proofexp * proofexp)
+  | ProofTactical of string
+  | ProofTactic of string
+  | ProofOther of string
 
-fun size_of_tacexp tacexp = case tacexp of
-    SmlInfix (_,(e1,e2)) => size_of_tacexp e1 + size_of_tacexp e2
-  | SmlTactical _ => 0
-  | SmlTactic _ => 1
+fun size_of_proofexp proofexp = case proofexp of
+    ProofInfix (_,(e1,e2)) => size_of_proofexp e1 + size_of_proofexp e2
+  | ProofTactical _ => 0
+  | ProofTactic _ => 1
+  | ProofOther _ => 0
 
 fun is_infixr s =
   let val sl = partial_sml_lexer s in
@@ -206,67 +182,92 @@ fun is_infix s =
   end
 
 fun dest_infix e = case e of
-    SmlExp (_, el) =>
-    if not (length el = 3 andalso is_infix
-      (string_of_smlexp (List.nth (el,1))))
+    SmlExp (_,[a,b,c]) =>
+    if not (is_infix (string_of_smlexp b))
     then raise ERR "dest_infix" "unexpected"
-    else triple_of_list el
-   | SmlUnit _ => raise ERR "dest_infix" "unexpected"
+    else (a,b,c)
+   | _ => raise ERR "dest_infix" "unexpected"
 
-fun extract_tacexp_aux smlexp = case smlexp of
-    SmlExp (SOME s, el) =>
-    (
-    if length el = 3 andalso is_infixl (string_of_smlexp (List.nth (el,1)))
-    then
+fun extract_proofexp smlexp = case smlexp of
+    SmlExp ((SOME s,_),[a,inf,b]) =>
+    if is_infixl (string_of_smlexp inf) then
     let
-      val (a,inf,b) = triple_of_list el
-      val (a0,ainf,a1) = dest_infix (List.nth (el,0))
+      val (a0,ainf,a1) = dest_infix a
       val infs = string_of_smlexp inf
       val ainfs = string_of_smlexp ainf
       val a1s = string_of_smlexp a1
     in
-      SmlInfix (infs,
+      ProofInfix (infs,
         (
-        SmlInfix (ainfs, (extract_tacexp_aux a0, SmlTactical a1s)),
-        extract_tacexp_aux b
+        ProofInfix (ainfs, (extract_proofexp a0, ProofTactical a1s)),
+        extract_proofexp b
         )
       )
     end
-    else if length el = 3 andalso
-      is_infixr (string_of_smlexp (List.nth (el,1)))
-    then
+    else if is_infixr (string_of_smlexp inf) then
        let
-         val (a,inf,b) = triple_of_list el
-         val (b0,binf,b1) = dest_infix (List.nth (el,2))
+         val (b0,binf,b1) = dest_infix b
          val infs = string_of_smlexp inf
          val binfs = string_of_smlexp binf
          val b0s = string_of_smlexp b0
        in
-         SmlInfix (infs,
+         ProofInfix (infs,
            (
-           extract_tacexp_aux a,
-           SmlInfix (binfs, (SmlTactical b0s, extract_tacexp_aux b1))
+           extract_proofexp a,
+           ProofInfix (binfs, (ProofTactical b0s, extract_proofexp b1))
            )
          )
        end
-    else SmlTactic (constant_space s)
-    )
-  | SmlUnit (SOME s) => SmlTactic (constant_space s)
+    else (if is_tactic s then ProofTactic s else ProofOther s)
+  | SmlExp ((SOME s,_),_) =>
+    if is_tactic s then ProofTactic s else ProofOther s
+  | SmlUnit (SOME s,_) =>
+    if is_tactic s then ProofTactic s else ProofOther s
   | _ => raise ERR "extract_tacticl_aux" "option"
 
-fun extract_tacexp s =
-  if not (is_tactic s) then raise ERR "extract_tacexp" "not a tactic" else
+fun safe_par s =
+  if mem #" " (explode s)
+  then String.concatWith " " ["(",s,")"]
+  else s
+
+fun string_of_proofexp e = case e of
+    ProofInfix (s,(e1,e2)) => String.concatWith " "
+      ["(",string_of_proofexp e1,s,string_of_proofexp e2,")"]
+  | ProofTactic s => safe_par s
+  | ProofOther s => safe_par s
+  | ProofTactical s => safe_par s
+
+(* -------------------------------------------------------------------------
+   Tactic sketch. Break a sml expression into applications.
+   ------------------------------------------------------------------------- *)
+
+fun drop_all_sig stac =
+  String.concatWith " " (map drop_sig (partial_sml_lexer stac));
+
+datatype applyexp =
+    ApplyExp of applyexp * applyexp
+  | ApplyUnit of (string * string option)
+
+fun is_app s (s1,s2) =
   let
-    val e1 = (singleton_of_list o extract_smlexp) s
-    val e2 = (singleton_of_list o snd o dest_smlexp) e1
+    val s1par = "( " ^ s1 ^ " )"
+    val s2par = "( " ^ s2 ^ " )"
+    val s1parpar = "( " ^ s1par ^ " )"
+    val s2parpar = "( " ^ s2par ^ " )"
+
+    val l = cartesian_product [s1,s1par,s1parpar] [s2,s2par,s2parpar]
+    fun f (a,b) = a ^ " " ^ b
   in
-    extract_tacexp_aux e2
+    mem s (map f l)
   end
 
-fun string_of_tacexp e = case e of
-    SmlInfix (s,(e1,e2)) =>
-    "( " ^ string_of_tacexp e1 ^ " " ^ s ^ " " ^ string_of_tacexp e2 ^ " )"
-  | SmlTactic s => s
-  | SmlTactical s => s
+fun extract_applyexp smlexp = case smlexp of
+    SmlExp ((SOME a, SOME b),[e1,e2]) =>
+      if is_app a (string_of_smlexp e1, string_of_smlexp e2)
+      then ApplyExp (extract_applyexp e1, extract_applyexp e2)
+      else ApplyUnit (a, SOME (drop_all_sig b))
+  | SmlExp ((SOME a, b), _) => ApplyUnit (a, Option.map drop_all_sig b)
+  | SmlUnit (SOME a, b) => ApplyUnit (a, Option.map drop_all_sig b)
+  | _ => raise ERR "extract_applyexp" ""
 
 end (* struct *)

@@ -3,14 +3,26 @@ sig
 
   include Abbrev
 
-  val fea_of_term : term -> string list
-  val fea_of_goal : goal -> string list
+  type fea = int list
+  type symfreq = (int, int) Redblackmap.dict
+  type symweight = (int, real) Redblackmap.dict
 
-  val feahash_of_term : term -> int list
-  val feahash_of_term_mod : int -> term -> int list
-  val feahash_of_goal : goal -> int list
+  (* set flag to false for constant features and to true for subterms features *)
+  val sfea_of_term : bool -> term -> string list
+  val sfea_of_goal : bool -> goal -> string list
+
+  val fea_of_term : bool -> term -> fea
+  val fea_of_term_mod : int -> bool -> term -> fea
+  val fea_of_goal : bool -> goal -> fea
+
+  val clean_goalsubfea_cache : unit -> unit
+  val clean_goalcfea_cache : unit -> unit
+  val fea_of_goal_cached : bool -> goal -> fea
 
   (* tfidf *)
-  val learn_tfidf : ('a * int list) list -> (int, real) Redblackmap.dict
+  val learn_tfidf : ('a * fea) list -> symweight
+  val learn_tfidf_symfreq :int -> int list -> symfreq -> symweight
+  val learn_tfidf_symfreq_nofilter : int -> symfreq -> symweight
+
 
 end

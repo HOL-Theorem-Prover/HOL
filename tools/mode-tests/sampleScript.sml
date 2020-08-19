@@ -151,7 +151,7 @@ Theorem eval_op_later:
   eval_op f vs s = (res,t) ⇒ s ≤ t
 Proof
   fs [eval_op_def, AllCaseEqs(),fail_def,return_def] \\ rw[]
-  \\ fs[later_refl] \\ fs{later_def]
+  \\ fs[later_refl] \\ fs[later_def]
   \\ Cases_on ‘s.input’ \\ fs[forward_def,greater_def]
 QED
 
@@ -198,5 +198,26 @@ Definition foo:
     NONE => 3
   | SOME z => 4
 End
+
+Theorem term_quantifiers:
+  Q1 (\x. big long
+              expression x) /\
+  Q2 (\ x. big long
+               expression x) /\
+  P1 (λy. big longer
+              expression y) /\
+  P2 (λ y. big longer
+               expression y) /\
+  p (@n. something long
+                   on n) /\
+  p (@ n. something long
+                    on n) /\
+  R (LEAST n. yea another long
+                  expression on n) /\
+  R' (some(m,n). yea another long
+                     expression on mn)
+Proof
+  tact1 >> tac2
+QED
 
 val _ = export_theory()

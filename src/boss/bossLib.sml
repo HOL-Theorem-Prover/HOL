@@ -206,7 +206,13 @@ val rw = srw_tac let_arith_list
 val fs = fsrw_tac let_arith_list
 val rfs = rfsrw_tac let_arith_list
 
-(* Witout loss of generality tactics *)
+fun cfg ev s = global_simp_tac {elimvars = ev, strip = s, droptrues = true}
+val gns = stateful (cfg false false) let_arith_list
+val gs = stateful (cfg false true) let_arith_list
+val gnvs = stateful (cfg true false) let_arith_list
+val gvs = stateful (cfg true true) let_arith_list
+
+(* Without loss of generality tactics *)
 val wlog_tac = wlog_tac
 val wlog_then = wlog_then
 

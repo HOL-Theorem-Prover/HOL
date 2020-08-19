@@ -958,6 +958,46 @@ val suff_tac = SUFF_TAC
 
 fun KNOW_TAC tm = REVERSE (SUFF_TAC tm)
 
+(* ----------------------------------------------------------------------
+    Eliminate an equation on a variable (as well as t = t instances)
+   ---------------------------------------------------------------------- *)
+
+fun eliminable tm =
+    let val (lhs,rhs) = dest_eq tm
+    in
+      aconv lhs rhs orelse
+      (is_var lhs andalso not (free_in lhs rhs)) orelse
+      (is_var rhs andalso not (free_in rhs lhs))
+    end handle HOL_ERR _ => is_bool_atom tm
+
+fun orient th =
+ let
+   val c = concl th
+ in
+   if is_bool_atom c then
+     if is_neg c then EQF_INTRO th else EQT_INTRO th
+   else
+     let
+       val (lhs,rhs) = dest_eq c
+     in
+       if is_var lhs then
+         if is_var rhs then
+           case Term.compare (lhs, rhs) of LESS  => SYM th | other => th
+         else th
+       else SYM th
+     end
+ end;
+
+fun eliminable_eqvar t =
+    is_bool_atom t orelse (let val (l,r) = dest_eq t in l !~ r end)
+
+fun VSUBST_TAC thm =
+    if eliminable_eqvar (concl thm) then
+      SUBST_ALL_TAC (orient thm)
+    else (* do nothing as it's of form t = t *)
+      ALL_TAC
+
+
 (*----------------------------------------------------------------------*
  *  DEEP_INTROk_TAC : thm -> tactic -> tactic                           *
  *----------------------------------------------------------------------*)

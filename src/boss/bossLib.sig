@@ -166,6 +166,10 @@ sig
   val rw : thm list -> tactic
   val fs : thm list -> tactic
   val rfs : thm list -> tactic
+  val gs : thm list -> tactic
+  val gvs : thm list -> tactic
+  val gns : thm list -> tactic
+  val gnvs : thm list -> tactic
 
   (* without loss of generality (from wlogLib) *)
   val wlog_then : term quotation ->

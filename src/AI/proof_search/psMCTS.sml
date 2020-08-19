@@ -141,9 +141,6 @@ fun gamma_of alpha = dfind alpha gammadict
 fun gamma_density alpha x =
   (Math.pow (x, alpha - 1.0) * Math.exp (~ x)) / gamma_of alpha
 
-fun interval (step:real) (a,b) =
-  if a + (step / 2.0) > b then [b] else a :: interval step (a + step,b)
-
 fun gamma_distrib alpha =
   map_assoc (gamma_density alpha) (interval 0.01 (0.01,10.0));
 

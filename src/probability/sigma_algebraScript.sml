@@ -2330,6 +2330,46 @@ Proof
    EXISTS_TAC ``a:'a->bool`` THEN ASM_SET_TAC []]
 QED
 
+Theorem SIGMA_ALGEBRA_RESTRICT :
+    !sp sts a. sigma_algebra (sp,sts) /\ a IN sts ==>
+               sigma_algebra (a,IMAGE (\s. s INTER a) sts)
+Proof
+    rpt STRIP_TAC
+ >> rw [SIGMA_ALGEBRA_ALT, algebra_def, subset_class_def, IN_FUNSET]
+ >| [ (* goal 1 (of 5) *)
+      REWRITE_TAC [INTER_SUBSET],
+      (* goal 2 (of 5) *)
+      Q.EXISTS_TAC ‘{}’ >> REWRITE_TAC [INTER_EMPTY] \\
+      MATCH_MP_TAC (REWRITE_RULE [subsets_def]
+                                 (Q.SPEC ‘(sp,sts)’ SIGMA_ALGEBRA_EMPTY)) >> art [],
+      (* goal 3 (of 5) *)
+      Q.EXISTS_TAC ‘sp DIFF s'’ \\
+      CONJ_TAC
+      >- (fs [SIGMA_ALGEBRA_ALT, algebra_def, subset_class_def] \\
+          ASM_SET_TAC []) \\
+      MATCH_MP_TAC (REWRITE_RULE [space_def, subsets_def]
+                                 (Q.SPEC ‘(sp,sts)’ SIGMA_ALGEBRA_COMPL)) >> art [],
+      (* goal 4 (of 5) *)
+      Q.EXISTS_TAC ‘s' UNION s''’ \\
+      CONJ_TAC >- SET_TAC [] \\
+      MATCH_MP_TAC (REWRITE_RULE [subsets_def]
+                                 (Q.SPEC ‘(sp,sts)’ SIGMA_ALGEBRA_UNION)) >> art [],
+      (* goal 5 (of 5) *)
+      fs [SKOLEM_THM] \\
+      Q.EXISTS_TAC ‘BIGUNION (IMAGE f' UNIV)’ \\
+      CONJ_TAC >- ASM_SET_TAC [] \\
+      fs [SIGMA_ALGEBRA_FN, IN_FUNSET] ]
+QED
+
+Theorem SIGMA_ALGEBRA_RESTRICT_SUBSET :
+    !sp sts a. sigma_algebra (sp,sts) /\ a IN sts ==>
+              (IMAGE (\s. s INTER a) sts) SUBSET sts
+Proof
+    rw [SUBSET_DEF]
+ >> MATCH_MP_TAC (REWRITE_RULE [subsets_def]
+                               (Q.SPEC ‘(sp,sts)’ SIGMA_ALGEBRA_INTER)) >> art []
+QED
+
 Theorem sigma_algebra_alt : (* was: sigma_algebra_alt_eq *)
     !sp sts. sigma_algebra (sp,sts) <=>
              algebra (sp,sts) /\

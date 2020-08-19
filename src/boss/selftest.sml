@@ -281,17 +281,22 @@ val _ = tprint "TFL nested recursion + Unicode parameter name"
 val _ = require_msg (check_result check_defs) prdefpair test quotation
 end
 
+val goalpp =
+    HOLPP.pp_to_string 75 (
+      HOLPP.block HOLPP.CONSISTENT 0 o
+      HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
+    )
+fun testtac tac = #1 o VALID tac
+
 val _ = let
   val _ = tprint "tmCases_on (.doc file example)"
   val g = ([], “MAP (f:num -> num) l = []”)
   val expected = [([] : term list, “MAP (f:num -> num) [] = []”),
                   ([] : term list , “MAP (f:num -> num) (e::es) = []”)]
-  val pp = HOLPP.block HOLPP.CONSISTENT 0 o
-           HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
 in
   require_msg (check_result (list_eq goal_eq expected))
-              (HOLPP.pp_to_string 75 pp)
-              (fst o tmCases_on (mk_var("l", alpha)) ["", "e es"])
+              goalpp
+              (testtac (tmCases_on (mk_var("l", alpha)) ["", "e es"]))
               g
 end
 
@@ -300,11 +305,50 @@ val _ = let
   val g = ([], “!l. MAP (f:num -> num) l = []”)
   val expected = [([] : term list, “MAP (f:num -> num) [] = []”),
                   ([] : term list , “MAP (f:num -> num) (e::es) = []”)]
-  val pp = HOLPP.block HOLPP.CONSISTENT 0 o
-           HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
 in
   require_msg (check_result (list_eq goal_eq expected))
-              (HOLPP.pp_to_string 75 pp)
-              (fst o tmCases_on (mk_var("l", alpha)) ["", "e es"])
+              goalpp
+              (testtac (tmCases_on (mk_var("l", alpha)) ["", "e es"]))
               g
 end
+
+val _ = let
+  val _ = tprint "resolve_then/IRULE hyp order preserved"
+  val th1 = rich_listTheory.is_prefix_el
+  val g = ([], “?m n. EL m (l1:'a list) = EL n l2 /\ m <= n /\ EVEN n”)
+  val expected =
+      [([] : term list,
+        “?n. (l1:'a list) <<= l2 /\ n < LENGTH l1 /\ n < LENGTH l2 /\ n <= n /\
+             EVEN n”)]
+in
+  require_msg (check_result (list_eq goal_eq expected))
+              goalpp
+              (testtac ((goal_assum o resolve_then Any mp_tac) th1))
+              g
+end
+
+val gstest_goal =
+    ([``x <= b``, ``b - x = b - y``, ``y <= b``], ``x * y < 10``);
+val _ =
+    shouldfail {
+      checkexn = check_HOL_ERRexn (fn(_,s2,_) => s2 = "CHANGED_TAC"),
+      printarg = fn _ => "fs with ordering failure",
+      printresult = goalpp,
+      testfn = testtac (CHANGED_TAC (fs [arithmeticTheory.SUB_CANCEL]))
+    } gstest_goal
+
+val _ = tprint "gs with ordering works"
+val _ = require_msg
+          (check_result
+             (goals_eq [([“y <= b”, “x:num = y”], “y ** 2 < 10”)]))
+          goalpp
+          (testtac (gs[arithmeticTheory.SUB_CANCEL]))
+          gstest_goal
+
+val _ = tprint "gvs with ordering works"
+val _ = require_msg
+          (check_result
+             (goals_eq [([“x <= b”], “x ** 2 < 10”)]))
+          goalpp
+          (testtac (gvs[arithmeticTheory.SUB_CANCEL]))
+          gstest_goal

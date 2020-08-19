@@ -384,7 +384,7 @@ val path_Axiom = store_thm(
                    | (y, SOME (l, v)) => pcons y l (g v)``,
   GEN_TAC THEN
   STRIP_ASSUME_TAC
-    (Q.ISPEC `\(x:'a,ks:'c option).
+    (Q.ISPEC `λ(x:'a,ks:'c option).
                   case ks of
                     NONE => NONE
                   | SOME k => (case f x : 'b # ('c # 'a) option of
@@ -1375,7 +1375,7 @@ val unfold_def =
   Define `unfold proj f s =
             toPath
               (proj s,
-               LUNFOLD (\s. OPTION_MAP (\(next_s,lbl).
+               LUNFOLD (\s. OPTION_MAP (λ(next_s,lbl).
                                            (next_s,(lbl,proj next_s)))
                                        (f s))
                        s)`;
@@ -1408,8 +1408,8 @@ val labels_unfold = Q.store_thm
  `!proj f s. labels (unfold proj f s) = LUNFOLD f s`,
  SRW_TAC [] [labels_LMAP, unfold_def, path_rep_bijections_thm, LMAP_LUNFOLD,
              optionTheory.OPTION_MAP_COMPOSE, combinTheory.o_DEF] THEN
- `!s. (OPTION_MAP (\x. (\(x,y). (x,FST y))
-                         ((\(next_s,lbl). (next_s,lbl,proj next_s)) x))
+ `!s. (OPTION_MAP (\x. (λ(x,y). (x,FST y))
+                         ((λ(next_s,lbl). (next_s,lbl,proj next_s)) x))
                   (f s) =
        f s)`
          by (Cases_on `f s` THEN
@@ -1481,8 +1481,8 @@ val trace_machine_thm = Q.store_thm
     ==>
     ?p. (tr = labels p) /\ okpath (trace_machine P) p /\ (first p = [])`,
  SRW_TAC [] [] THEN
- Q.EXISTS_TAC `unfold (\(s,tr). s)
-                      (\(s,tr).
+ Q.EXISTS_TAC `unfold (λ(s,tr). s)
+                      (λ(s,tr).
                          (if tr = [||] then
                             NONE
                           else
@@ -1491,7 +1491,7 @@ val trace_machine_thm = Q.store_thm
                       ([],tr)` THEN
  SRW_TAC [] [labels_unfold] THENL
  [MATCH_MP_TAC (GSYM LUNFOLD_EQ) THEN
-      Q.EXISTS_TAC `\(s,tr) tr'. (tr = tr')` THEN
+      Q.EXISTS_TAC `λ(s,tr) tr'. (tr = tr')` THEN
       SRW_TAC [] [] THEN
       Cases_on `s` THEN
       FULL_SIMP_TAC (srw_ss()) [] THEN
@@ -1499,7 +1499,7 @@ val trace_machine_thm = Q.store_thm
       `(ll = [||]) \/ ?h t. ll = h:::t` by METIS_TAC [llist_CASES] THEN
       SRW_TAC [] [],
   MATCH_MP_TAC okpath_unfold THEN
-      Q.EXISTS_TAC `\(s,tr). (!n l. (LTAKE n (LAPPEND (fromList s) tr) = SOME l)
+      Q.EXISTS_TAC `λ(s,tr). (!n l. (LTAKE n (LAPPEND (fromList s) tr) = SOME l)
                                     ==>
                                     P l)` THEN
       SRW_TAC [] [] THEN1
@@ -1676,8 +1676,8 @@ val build_pcomp_trace = Q.store_thm
    ?p. okpath (parallel_comp m1 m2) p /\ (labels p = labels p1) /\
        (first p = (first p1, first p2))`,
  SRW_TAC [] [] THEN
- Q.EXISTS_TAC `unfold (\(p1,p2). (first p1, first p2))
-                 (\(p1,p2).
+ Q.EXISTS_TAC `unfold (λ(p1,p2). (first p1, first p2))
+                 (λ(p1,p2).
                      if is_stopped p1 \/ is_stopped p2 then
                        NONE
                      else
@@ -1685,7 +1685,7 @@ val build_pcomp_trace = Q.store_thm
                  (p1,p2)` THEN
  SRW_TAC [] [labels_unfold] THENL
  [HO_MATCH_MP_TAC okpath_unfold THEN
-      Q.EXISTS_TAC `\(p1,p2). okpath m1 p1 /\ okpath m2 p2 /\
+      Q.EXISTS_TAC `λ(p1,p2). okpath m1 p1 /\ okpath m2 p2 /\
                               (labels p1 = labels p2)` THEN
       SRW_TAC [] [] THEN
       Cases_on `s` THEN
@@ -1696,7 +1696,7 @@ val build_pcomp_trace = Q.store_thm
       FULL_SIMP_TAC (srw_ss()) [] THEN
       SRW_TAC [] [parallel_comp_def],
   MATCH_MP_TAC LUNFOLD_EQ THEN
-      Q.EXISTS_TAC `\(p1,p2) tr. (labels p1 = tr) /\
+      Q.EXISTS_TAC `λ(p1,p2) tr. (labels p1 = tr) /\
                                  (labels p1 = labels p2)` THEN
       SRW_TAC [] [] THEN
       Cases_on `s` THEN
@@ -1778,8 +1778,8 @@ SRW_TAC [] [] THEN
 `?next_t. !s1 l s2 t1. R s1 t1 /\ M1 s1 l s2 ==>
      R s2 (next_t s1 l s2 t1) /\ M2 t1 l (next_t s1 l s2 t1)` by
             METIS_TAC [SKOLEM_THM] THEN
-Q.EXISTS_TAC `unfold (\(p,t). t)
-                     (\(p,t). if is_stopped p then
+Q.EXISTS_TAC `unfold (λ(p,t). t)
+                     (λ(p,t). if is_stopped p then
                                 NONE
                               else
                                 SOME ((tail p,
@@ -1790,7 +1790,7 @@ Q.EXISTS_TAC `unfold (\(p,t). t)
                      (p,t_init)` THEN
 SRW_TAC [] [] THENL
 [HO_MATCH_MP_TAC okpath_unfold THEN
-     Q.EXISTS_TAC `\(p',t_init'). okpath M1 p' /\ R (first p') t_init'` THEN
+     Q.EXISTS_TAC `λ(p',t_init'). okpath M1 p' /\ R (first p') t_init'` THEN
      SRW_TAC [] [] THEN
      FULL_SIMP_TAC (srw_ss()) [] THEN
      Cases_on `s` THEN
@@ -1801,7 +1801,7 @@ SRW_TAC [] [] THENL
      SRW_TAC [] [],
  SRW_TAC [] [labels_unfold] THEN
      MATCH_MP_TAC (GSYM LUNFOLD_EQ) THEN
-     Q.EXISTS_TAC `\(p,i) tr'. (labels p = tr')` THEN
+     Q.EXISTS_TAC `λ(p,i) tr'. (labels p = tr')` THEN
      SRW_TAC [] [] THEN
      Cases_on `s` THEN
      FULL_SIMP_TAC (srw_ss()) [] THEN

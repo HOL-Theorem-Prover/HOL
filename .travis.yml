@@ -1,6 +1,6 @@
 language: c
 before_script: developers/install-poly.sh
-script: eval `opam config env` && $SML < tools/smart-configure.sml && bin/build $BUILDOPTS --nograph
+script: $SML < tools/smart-configure.sml && bin/build $BUILDOPTS --nograph
 notifications:
   email:
     on_success: always

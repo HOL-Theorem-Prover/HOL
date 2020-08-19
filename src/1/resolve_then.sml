@@ -108,21 +108,24 @@ fun resolve_then mpos ttac th1 th2 (g as (asl,w)) =
       val badnames = HOLset.foldl(fn (v,A) =>HOLset.add(A,#1 (dest_var v)))
                                  (HOLset.empty String.compare)
                                  fixed_tms
-      val (th1_ud, _, nms1) =
+      val (th1_ud, cs1, nms1) =
           UDALL (HOLset.listItems badnames) th1
-      val (th2_ud, cs, _) = UDALL nms1 th2
+      val (th2_ud, cs2, _) = UDALL nms1 th2
       val (th2_ud, con) =
           case mpos of
               Concl => liftconcl th2_ud
             | _ => (th2_ud, T)
       fun INSTT (tyi,tmi) th = th |> INST_TYPE tyi |> INST tmi
+      fun instt (tyi,tmi) t = t |> Term.inst tyi |> Term.subst tmi
       open optmonad
-      fun postprocess th =
-          let val dhyps =
-                  HOLset.foldr (fn (h,A) => if HOLset.member(hyps,h) then A
-                                            else h::A)
-                               []
-                               (hypset th)
+      fun postprocess sigma th =
+          let
+            val thhyps = hypset th
+            val dhyps0 = map (instt sigma) (cs1 @ cs2) |> op_mk_set aconv
+            val dhyps =
+                List.filter (fn t => not (HOLset.member(hyps,t)) andalso
+                                     HOLset.member(thhyps, t))
+                            dhyps0
           in
             DISCHl dhyps th |> GEN_ALL
           end
@@ -135,11 +138,11 @@ fun resolve_then mpos ttac th1 th2 (g as (asl,w)) =
             | SOME sigma =>
               let val kth =
                       PROVE_HYP (INSTT sigma th1_ud) (INSTT sigma th2_ud) |>
-                      postprocess
+                      postprocess sigma
               in
                 ttac kth g handle HOL_ERR _ => k()
               end
-      val max = length cs
+      val max = length cs2
       val fail = mk_HOL_ERR "resolve_then" "resolve_then" "No unifier"
     in
       case mpos of
@@ -147,11 +150,11 @@ fun resolve_then mpos ttac th1 th2 (g as (asl,w)) =
           let
             fun doit n =
                 if n > max then raise fail
-                else try (el n cs) (fn _ => doit (n + 1))
+                else try (el n cs2) (fn _ => doit (n + 1))
           in
             doit 1
           end
-        | Pos f => try (f cs) (fn _ => raise fail)
+        | Pos f => try (f cs2) (fn _ => raise fail)
         | Pat q =>
           let
             open TermParse
@@ -165,8 +168,8 @@ fun resolve_then mpos ttac th1 th2 (g as (asl,w)) =
                   case seq.cases ps of
                       NONE => doit pats (n + 1)
                     | SOME (pat, rest) =>
-                      if can (match_subterm pat) (el n cs) then
-                        try (el n cs) (fn _ => doit rest n)
+                      if can (match_subterm pat) (el n cs2) then
+                        try (el n cs2) (fn _ => doit rest n)
                       else doit rest n
           in
             doit pats 1

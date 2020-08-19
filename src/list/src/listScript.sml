@@ -3530,9 +3530,12 @@ val LLEX_EL_THM = store_thm("LLEX_EL_THM",
 
 (* nub *)
 
-val nub_def = Define ‘
+Definition nub_def:
    (nub [] = []) /\
-   (nub (x::l) = if MEM x l then nub l else x :: nub l)’;
+   (nub (x::l) = if MEM x l then nub l else x :: nub l)
+End
+
+Theorem nub_NIL[simp] = cj 1 nub_def
 
 Theorem nub_EQ0[simp]:
   nub l = [] <=> l = []
@@ -3540,17 +3543,15 @@ Proof
   Induct_on ‘l’ >> rw[nub_def] >> strip_tac >> fs[]
 QED
 
-val nub_set = Q.store_thm ("nub_set[simp]",
-   ‘!l. set (nub l) = set l’,
-   Induct
-   >> rw [nub_def, EXTENSION]
-   >> metis_tac []);
+Theorem nub_set[simp]:
+  !l. set (nub l) = set l
+Proof Induct >> rw [nub_def, EXTENSION] >> metis_tac []
+QED
 
-val all_distinct_nub = Q.store_thm ("all_distinct_nub",
-   ‘!l. ALL_DISTINCT (nub l)’,
-   Induct
-   >> rw [nub_def]
-   >> metis_tac [nub_set]);
+Theorem all_distinct_nub[simp]: !l. ALL_DISTINCT (nub l)
+Proof
+  Induct >> rw [nub_def] >> metis_tac [nub_set]
+QED
 
 val filter_helper = Q.prove (
    ‘!x l1 l2.

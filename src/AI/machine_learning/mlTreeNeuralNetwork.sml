@@ -9,15 +9,17 @@ structure mlTreeNeuralNetwork :> mlTreeNeuralNetwork =
 struct
 
 open HolKernel boolLib Abbrev aiLib mlMatrix mlNeuralNetwork smlParallel
-smlParallel mlTacticData
+smlParallel smlParser mlTacticData
 
 val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
 fun msg param s = if #verbose param then print_endline s else ()
 fun msg_err fs es = (print_endline (fs ^ ": " ^ es); raise ERR fs es)
 
 (* -------------------------------------------------------------------------
-   TNN operators (variable/constant + arity)
+   Tools for computing the dimensions of neural network operators
    ------------------------------------------------------------------------- *)
+
+type tnndim = (term * int list) list
 
 fun operl_of_term tm =
   let
@@ -25,25 +27,9 @@ fun operl_of_term tm =
     val arity = length argl
   in
     (oper,arity) :: List.concat (map operl_of_term argl)
-  end;
+  end
 
 val oper_compare = cpl_compare Term.compare Int.compare;
-
-(* -------------------------------------------------------------------------
-   Random TNN
-   ------------------------------------------------------------------------- *)
-
-type tnnparam = (term * int list) list
-type tnn = (term,nn) Redblackmap.dict
-
-fun oper_nn diml = case diml of
-    [] => raise ERR "oper_nn" ""
-  | a :: m =>
-    if a = 0
-    then random_nn (idactiv,didactiv) [0,last m]
-    else random_nn (tanh,dtanh) diml
-
-fun random_tnn tnnparam = dnew Term.compare (map_snd oper_nn tnnparam)
 
 fun dim_std_arity (nlayer,dim) (oper,a) =
   let
@@ -59,6 +45,21 @@ fun dim_std_arity (nlayer,dim) (oper,a) =
 fun dim_std (nlayer,dim) oper =
   dim_std_arity (nlayer,dim) (oper,arity_of oper)
 
+(* -------------------------------------------------------------------------
+   Random TNN
+   ------------------------------------------------------------------------- *)
+
+type tnn = (term,nn) Redblackmap.dict
+
+fun oper_nn diml = case diml of
+    [] => raise ERR "oper_nn" ""
+  | a :: m =>
+    if a = 0
+    then random_nn (idactiv,didactiv) [0,last m]
+    else random_nn (tanh,dtanh) diml
+
+fun random_tnn tnndim = dnew Term.compare (map_snd oper_nn tnndim)
+
 fun random_tnn_std (nlayer,dim) operl =
   random_tnn (map_assoc (dim_std (nlayer,dim)) operl)
 
@@ -66,38 +67,25 @@ fun random_tnn_std (nlayer,dim) operl =
    TNN I/O
    ------------------------------------------------------------------------- *)
 
-fun write_tnn file tnn =
-  let val (l1,l2) = split (dlist tnn) in
-    export_terml (file ^ "_oper") l1;
-    writel (file ^ "_nn")
-      [String.concatWith "\n\nnnstop\n\n" (map string_of_nn l2)]
-  end
+local open SharingTables HOLsexp in
+fun enc_opernn enc_tm = pair_encode (enc_tm, enc_nn)
+fun enc_tnn enc_tm = list_encode (enc_opernn enc_tm)
+fun dec_opernn dec_tm = pair_decode (dec_tm, dec_nn)
+fun dec_tnn dec_tm = list_decode (dec_opernn dec_tm)
+end
 
-fun read_tnn file =
-  let
-    val l1 = import_terml (file ^ "_oper")
-    val l2 = map read_nn_sl (rpt_split_sl "nnstop" (readl (file ^ "_nn")))
-  in
-    dnew Term.compare (combine (l1,l2))
-  end
+fun write_tnn file tnn = write_tmdata (enc_tnn, map fst) file (dlist tnn)
+fun read_tnn file = dnew Term.compare (read_tmdata dec_tnn file)
 
-fun write_tnnparam file tnnparam =
-  let
-    fun ilts x = String.concatWith " " (map its x)
-    val (l1,l2) = split tnnparam
-  in
-    export_terml (file ^ "_oper") l1;
-    writel (file ^ "_diml") (map ilts l2)
-  end
+local open SharingTables HOLsexp in
+fun enc_tnndime enc_tm = pair_encode (enc_tm, list_encode Integer)
+fun enc_tnndim enc_tm = list_encode (enc_tnndime enc_tm)
+fun dec_tnndime dec_tm = pair_decode (dec_tm, list_decode int_decode)
+fun dec_tnndim dec_tm = list_decode (dec_tnndime dec_tm)
+end
 
-fun read_tnnparam file =
-  let
-    val l1 = import_terml (file ^ "_oper")
-    fun stil s = map string_to_int (String.tokens Char.isSpace s)
-    val l2 = map stil (readl (file ^ "_diml"))
-  in
-    combine (l1,l2)
-  end
+fun write_tnndim file tnndim = write_tmdata (enc_tnndim, map fst) file tnndim
+fun read_tnndim file = read_tmdata dec_tnndim file
 
 (* -------------------------------------------------------------------------
    TNN Examples: I/O
@@ -106,22 +94,22 @@ fun read_tnnparam file =
 type tnnex = ((term * real list) list) list
 type tnnbatch = (term list * (term * mlMatrix.vect) list) list
 
-fun write_tnnex file ex =
-  let val (tml,rll) = split (List.concat ex) in
-    writel (file ^ "_group") (map (its o length) ex);
-    export_terml (file ^ "_term") tml;
-    writel (file ^ "_reall") (map reall_to_string rll)
-  end
+fun basicex_to_tnnex ex = map (fn (tm,r) => [(tm,[r])]) ex
 
+local open SharingTables HOLsexp in
+val enc_real = String o Real.toString
+val dec_real = Option.mapPartial Real.fromString o string_decode
+fun enc_sample enc_tm = pair_encode (enc_tm, list_encode enc_real)
+fun dec_sample dec_tm = pair_decode (dec_tm, list_decode dec_real)
+fun enc_tnnex enc_tm = list_encode (list_encode (enc_sample enc_tm))
+fun dec_tnnex dec_tm = list_decode (list_decode (dec_sample dec_tm))
+fun tml_of_tnnex l = map fst (List.concat l)
+end
+
+fun write_tnnex file ex =
+  write_tmdata (enc_tnnex, tml_of_tnnex) file ex
 fun read_tnnex file =
-  let
-    val tml = import_terml (file ^ "_term")
-    val rll = map string_to_reall (readl (file ^ "_reall"))
-    val ex = combine (tml,rll)
-    val groupl = map string_to_int (readl (file ^ "_group"))
-  in
-    part_group groupl ex
-  end
+  read_tmdata dec_tnnex file
 
 (* -------------------------------------------------------------------------
    TNN Examples: ordering subterms and scaling output values
@@ -214,21 +202,19 @@ fun bp_tnn_aux doutnvdict fpdict bpdict revtml = case revtml of
       val (oper,argl) = strip_comb tm
       val diml = map (dimout_tm fpdict) argl
       val doutnvl = dfind tm doutnvdict
+      val doutnvsum = add_vectl doutnvl
       fun f doutnv =
         let
           val fpdatal = dfind tm fpdict
           val bpdatal = bp_nn_doutnv fpdatal doutnv
-          val dinv    = vector_to_list (#dinv (hd bpdatal))
+          val dinv = vector_to_list (#dinv (hd bpdatal))
           val dinvl = map Vector.fromList (part_group diml dinv)
         in
           (map #dw bpdatal, combine (argl,dinvl))
         end
-      val rl            = map f doutnvl
-      val operdwll      = map fst rl
-      val operdwl       = sum_dwll operdwll
-      val tmdinvl       = List.concat (map snd rl)
+      val (operdwl,tmdinvl) = f (add_vectl doutnvl)
       val newdoutnvdict = dappendl tmdinvl doutnvdict
-      val newbpdict     = dappend (oper,operdwl) bpdict
+      val newbpdict = dappend (oper,operdwl) bpdict
     in
       bp_tnn_aux newdoutnvdict fpdict newbpdict m
     end
@@ -258,6 +244,9 @@ fun infer_tnn tnn tml =
   in
     map_assoc f tml
   end
+
+fun infer_tnn_basic tnn tm =
+  singleton_of_list (snd (singleton_of_list (infer_tnn tnn [tm])))
 
 fun precomp_embed tnn tm =
   let
@@ -361,30 +350,32 @@ fun train_tnn_schedule schedule tnn (train,test) =
 
 fun stats_head (oper,rll) =
   let
-    val s1 = "\n  length: " ^ its (length rll)
+    val s0 = "  objective: " ^ tts oper
+    val s1 = "length: " ^ its (length rll)
     val rll' = list_combine rll
-    val s2 = "\n  means: " ^
+    val s2 = "means: " ^
       String.concatWith " " (map (pretty_real o average_real) rll')
-    val s3 = "\n  standard deviations: " ^
+    val s3 = "standard deviations: " ^
       String.concatWith " " (map (pretty_real o standard_deviation) rll')
   in
-    tts oper ^ s1 ^ s2 ^ s3
+    String.concatWith "\n  " [s0,s1,s2,s3]
   end
 
 fun stats_tnnex ex =
   if null ex then " empty" else
   let
-    fun oper_of tm = fst (strip_comb tm)
-    val d = dregroup Term.compare (map_fst oper_of (List.concat ex))
+    fun head_of tm = fst (strip_comb tm)
+    val d = dregroup Term.compare (map_fst head_of (List.concat ex))
   in
-    "total length: " ^ its (length ex) ^ "\n\n" ^
-    String.concatWith "\n\n" (map stats_head (dlist d))
+    its (length ex) ^ " examples\n" ^
+    String.concatWith "\n" (map stats_head (dlist d))
   end
 
 fun train_tnn schedule randtnn (trainex,testex) =
   let
-    val _ = print_endline ("training set statistics:\n" ^ stats_tnnex trainex)
-    val _ = print_endline ("testing set statistics:\n" ^ stats_tnnex testex)
+    val _ = print_endline ("\ntraining set: " ^ stats_tnnex trainex)
+    val _ = print_endline ("testing set: " ^ stats_tnnex testex)
+    val _ = print_endline ""
     val (tnn,t) = add_time (train_tnn_schedule schedule randtnn)
       (prepare_tnnex trainex, prepare_tnnex testex)
   in
@@ -420,9 +411,9 @@ fun tnn_accuracy tnn set =
    Object for training different TNN in parallel
    ------------------------------------------------------------------------- *)
 
-fun train_tnn_fun () (ex,schedule,tnnparam) =
+fun train_tnn_fun () (ex,schedule,tnndim) =
   let
-    val randtnn = random_tnn tnnparam
+    val randtnn = random_tnn tnndim
     val (tnn,t) = add_time (train_tnn schedule randtnn) (ex,[])
   in
     print_endline ("Training time : " ^ rts t); tnn
@@ -431,19 +422,19 @@ fun train_tnn_fun () (ex,schedule,tnnparam) =
 fun write_noparam file (_:unit) = ()
 fun read_noparam file = ()
 
-fun write_tnnarg file (ex,schedule,tnnparam) =
+fun write_tnnarg file (ex,schedule,tnndim) =
   (
   write_tnnex (file ^ "_tnnex") ex;
   write_schedule (file ^ "_schedule") schedule;
-  write_tnnparam (file ^ "_tnnparam") tnnparam
+  write_tnndim (file ^ "_tnndim") tnndim
   )
 fun read_tnnarg file =
   let
     val ex = read_tnnex (file ^ "_tnnex")
     val schedule = read_schedule (file ^ "_schedule")
-    val tnnparam = read_tnnparam (file ^ "_tnnparam")
+    val tnndim = read_tnndim (file ^ "_tnndim")
   in
-    (ex,schedule,tnnparam)
+    (ex,schedule,tnndim)
   end
 
 val traintnn_extspec =
@@ -461,59 +452,113 @@ val traintnn_extspec =
   }
 
 (* -------------------------------------------------------------------------
-   AutoML: automatic tuning of hyperparameters (in development)
+   Converting a list of goals into an essentially first-order term which can
+   be used as input to a tree neural network.
    ------------------------------------------------------------------------- *)
 
-fun neighb_bsize bsize =
-  [8,16,32,64]
+val asm_cat = mk_var ("asm_cat", rpt_fun_type 3 alpha)
+val hyp_cat = mk_var ("hyp_cat", rpt_fun_type 3 alpha)
+val goal_cat = mk_var ("goal_cat", rpt_fun_type 3 alpha)
 
-fun neighb_lrate lrate =
-  [
-  let val r = lrate * 1.1 in if r > 10.0 then 10.0 else r end,
-  let val r = lrate / 1.1 in if r < 0.0001 then 0.0001 else r end,
-  lrate
-  ]
+fun flatten_goal (asm,w) =
+  if null asm
+  then w
+  else (list_mk_comb (hyp_cat,[list_mk_binop asm_cat asm,w])
+       handle HOL_ERR _ => raise ERR "flatten_goal" (string_of_goal (asm,w)))
 
-fun lookahead_one tnn prebatch (lrate,bsize)  =
+fun lambda_term fullty (v,bod) =
   let
-    val trainparam =
-      {ncore = 1, verbose = true,
-       learning_rate = lrate, batch_size = bsize, nepoch = 1}
-    fun loop (loctnn,loss) n =
-      if n <= 0 then (loctnn,loss) else
-      let
-        val batchl = mk_batch bsize (shuffle prebatch)
-        val (newtnn,newloss) = train_tnn_epoch_nopar trainparam [] tnn batchl
-      in
-        loop (newtnn,newloss) (n-1)
-      end
+    val ty1 = type_of v
+    val ty2 = type_of bod
+    val ty3 = mk_type ("fun",[ty1, mk_type ("fun", [ty2,fullty])])
   in
-    loop (tnn,0.0) 1
+    list_mk_comb (mk_var ("lambda",ty3), [v,bod])
+  end
+  handle HOL_ERR _ => raise ERR "lambda_term" (term_to_string bod)
+
+fun add_lambda tm = case dest_term tm of
+    COMB(Rator,Rand) => mk_comb (add_lambda Rator, add_lambda Rand)
+  | LAMB(Var,Bod) => lambda_term (type_of tm) (Var, add_lambda Bod)
+  | _ => tm
+
+fun add_arity tm =
+  let
+    val (oper,argl) = strip_comb tm
+    val a = length argl
+    val newname =
+      if is_var oper then
+        let val prefix = if null argl then "V" else "v" in
+          escape (prefix ^ fst (dest_var oper) ^ "." ^ its a)
+        end
+      else
+        let val {Thy,Name,Ty} = dest_thy_const oper in
+          escape ("c" ^ Thy ^ "." ^ Name ^ "." ^ its a)
+        end
+    val newoper = mk_var (newname, rpt_fun_type (a+1) alpha)
+  in
+    list_mk_comb (newoper, map add_arity argl)
+  end
+  handle HOL_ERR _ => raise ERR "add_arity" (term_to_string tm)
+
+val vhead = mk_var ("head_value", rpt_fun_type 2 alpha);
+
+fun nntm_of_goal (asm,w) = flatten_goal
+  (map (add_arity o add_lambda) asm, add_arity (add_lambda w))
+
+fun nntm_of_gl gl =
+  mk_comb (vhead, (list_mk_binop goal_cat (map nntm_of_goal gl)))
+
+val tphead = mk_var ("head_thmpol", rpt_fun_type 2 alpha);
+
+fun nntm_of_thm thm = mk_comb (tphead, nntm_of_goal (dest_thm thm))
+
+fun mask_unknown (tnn,dim) tm =
+  let
+    val (oper,argl) = strip_comb tm
+  in
+    if dmem oper tnn
+    then (list_mk_comb (oper, map (mask_unknown (tnn,dim)) argl)
+          handle HOL_ERR _ => raise ERR "mask_unknown" (term_to_string tm))
+    else mk_embedding_var (Vector.fromList
+      (List.tabulate (dim,fn _ => 0.0)), alpha)
   end
 
-fun lookahead_all prebatch (tnn,(lrate,bsize)) =
-  let
-    val paraml = cartesian_product [lrate] (neighb_bsize bsize)
-    val rl = map_assoc (lookahead_one tnn prebatch) paraml
-    fun cmp ((_,(_,a)),(_,(_,b))) = Real.compare (a,b)
-    val ((newlrate,newbsize),(newtnn,loss)) = hd (dict_sort cmp rl)
-    val _ = print_endline (pretty_real loss ^ ": " ^
-      pretty_real newlrate ^ "," ^ its newbsize)
-  in
-    (newtnn,(newlrate,newbsize))
+fun mask_unknown_value tnn tm =
+  let val dim = dimin_nn (dfind vhead tnn) in
+    mask_unknown (tnn,dim) tm
   end
 
-fun train_tnn_automl {ncore,verbose,learning_rate,batch_size,nepoch}
-  randtnn trainex =
-  let
-    val _ = print_endline ("training set statistics:\n" ^ stats_tnnex trainex)
-    val prebatch = prepare_tnnex trainex
-    val start = (randtnn,(learning_rate,batch_size))
-    val ((tnn,_),t) =
-      add_time (funpow nepoch (lookahead_all prebatch)) start
-  in
-    print_endline ("Tree neural network training time: " ^ rts t); tnn
+val phead = mk_var ("head_policy", rpt_fun_type 2 alpha)
+
+fun mask_unknown_policy tnn tm =
+  let val dim = dimin_nn (dfind phead tnn) in
+    mask_unknown (tnn,dim) tm
   end
+
+fun mask_unknown_thmpol tnn tm =
+  let val dim = dimin_nn (dfind tphead tnn) in
+    mask_unknown (tnn,dim) tm
+  end
+
+(* -------------------------------------------------------------------------
+   Transform a tactic to a neural network term.
+   ------------------------------------------------------------------------- *)
+
+val apply_cat = mk_var ("apply_cat", rpt_fun_type 3 alpha);
+val gstactm_cat = mk_var ("gstactm_cat", rpt_fun_type 3 alpha);
+
+fun nntm_of_applyexp e = case e of
+    ApplyExp (e1,e2) =>
+      mk_binop apply_cat (nntm_of_applyexp e1, nntm_of_applyexp e2)
+  | ApplyUnit (s,_) =>
+    (
+    if mem #" " (explode s)
+    then mk_var (escape ("sml." ^ its (hash_string s)), alpha)
+    else mk_var (escape ("sml." ^ s), alpha)
+    )
+
+fun nntm_of_gstactm (g,stactm) =
+  mk_comb (phead, mk_binop gstactm_cat (nntm_of_goal g, stactm))
 
 (* -------------------------------------------------------------------------
    Toy example: learning to guess if a term contains the variable "x"
@@ -526,7 +571,7 @@ load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 
 (* terms *)
 val vx = mk_var ("x",alpha);
-val vy = mk_var ("y",alpha);load "aiLib"; open aiLib;
+val vy = mk_var ("y",alpha);
 val vz = mk_var ("z",alpha);
 val vf = ``f:'a->'a->'a``;
 val vg = ``g:'a -> 'a``;
@@ -561,15 +606,8 @@ val trainparam =
 val schedule = [trainparam];
 val tnn = train_tnn schedule randtnn (trainex,testex);
 
-(* training automl *)
-val trainparam =
-  {ncore = 1, verbose = true,
-   learning_rate = 0.02, batch_size = 16, nepoch = 20};
-val tnn = train_tnn_automl trainparam randtnn trainex;
-
 (* testing *)
 val acc = tnn_accuracy tnn testex;
-
 *)
 
 end (* struct *)

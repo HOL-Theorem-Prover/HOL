@@ -412,6 +412,26 @@ in
   map ASSUME other_asms @ wanted_lab_assums @ realths
 end
 
+fun matching_asm th t =
+    let
+      val labname = dest_label_ref th
+    in
+      #1 (dest_label t) = labname
+    end handle HOL_ERR _ => false
+
+fun has_label_from lrefs t =
+    List.exists (C matching_asm t) lrefs
+
+fun LLABEL_RES_THEN thltac thl (g as (asl,w)) =
+    let
+      val (labelrefs, realths) = List.partition is_label_ref thl
+      val (wanted_labelled_asms, rest) =
+           List.partition (has_label_from labelrefs) asl
+    in
+      thltac (map (DEST_LABEL o ASSUME) wanted_labelled_asms @ realths) g
+    end
+
+
 fun LABEL_RESOLVE th (asl, w) = hd (LLABEL_RESOLVE [th] asl)
 
 (* ----------------------------------------------------------------------
