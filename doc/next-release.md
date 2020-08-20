@@ -42,6 +42,12 @@ New features:
 
     Thanks to Magnus Myreen for the feature suggestion.
 
+*   The `Holmake` tool will now build multiple targets across multiple directories in parallel.
+    Previously, directories will attacked one at a time, and parallelisation only happened within those directories.
+    Now everything is done at once.
+    The existing `-r` option takes on a new meaning as part of this change: it now causes `Holmake` to build all targets in all directories accessible through `INCLUDES` directives.
+    Without `-r`, `Holmake` will build just those dependencies necessary for the current set of targets (likely files/theories in the current directory).
+
 *   It is now possible to write `let`-expressions more smoothly inside monadic `do`-`od` blocks.
     Rather than have to write something like
 
