@@ -158,4 +158,12 @@ val add_Case = store_thm (
   ``!X. P <=> (Case X ==> P)``,
   REWRITE_TAC [Case_def]);
 
+val elim_Case = store_thm (
+  "elim_Case",
+  ``(Case X /\ Y) = Y /\
+    (Y /\ Case X) = Y /\
+    (Case X ==> Y) = Y``,
+  REWRITE_TAC [Case_def]
+  );
+
 val _ = export_theory();
