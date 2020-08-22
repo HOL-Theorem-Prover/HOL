@@ -143,5 +143,19 @@ val usingThm_def = new_definition("usingThm_def", “usingThm (b:bool) = b”);
 val _ = remove_ovl_mapping  "using" {Name = "using", Thy = "marker"}
 val _ = remove_ovl_mapping  "usingThm" {Name = "usingThm", Thy = "marker"}
 
+(*---------------------------------------------------------------------------*)
+(* Case                                                                      *)
+(*                                                                           *)
+(* For marking the current case in case divisions and inductive proofs       *)
+(*---------------------------------------------------------------------------*)
+
+val Case_def = new_definition(
+  "Case_def",
+  ``Case X = T``);
+
+val add_Case = store_thm (
+  "add_Case",
+  ``!X. P <=> (Case X ==> P)``,
+  REWRITE_TAC [Case_def]);
 
 val _ = export_theory();
