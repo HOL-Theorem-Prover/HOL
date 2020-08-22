@@ -177,6 +177,39 @@ val UNABBREV_ALL_TAC = markerLib.UNABBREV_ALL_TAC
 val REABBREV_TAC = markerLib.REABBREV_TAC
 val WITHOUT_ABBREVS = markerLib.WITHOUT_ABBREVS
 
+local
+fun add_Case_conv x = REWR_CONV (ISPEC x markerTheory.add_Case)
+in
+
+(*---------------------------------------------------------------------------*)
+(* Adjust an induction theorem, adding a Case marker to help identify        *)
+(* each generated subgoal. Try for example:                                  *)
+(*   name_ind_cases [] listTheory.list_induction;                            *)
+(* A list of additional naming elements can be provided to disambiguate      *)
+(* cases of simultaneous induction theorems.                                 *)
+(*---------------------------------------------------------------------------*)
+fun name_ind_cases nm_tms thm = let
+    val (vs, _) = strip_forall (concl thm)
+    val spec_thm = SPECL vs thm
+    fun concl_conv tm = if is_imp tm
+      then RAND_CONV concl_conv tm
+      else if is_forall tm
+      then STRIP_QUANT_CONV concl_conv tm
+      else if is_conj tm
+      then EVERY_CONJ_CONV concl_conv tm
+      else let
+        val (f, xs) = strip_comb tm
+        val n = index (term_eq f) vs
+          handle HOL_ERR _ => raise ERR "name_ind_cases" "unexpected concl head"
+        val nm = if n < length nm_tms then [List.nth (nm_tms, n)] else []
+        val vs = nm @ filter (not o is_var) xs
+      in add_Case_conv (pairSyntax.list_mk_pair vs) tm end
+  in CONV_RULE (RATOR_CONV (RAND_CONV concl_conv)) spec_thm
+    |> GENL vs
+  end
+
+end
+
 (* ----------------------------------------------------------------------
     convenient simplification aliases
    ---------------------------------------------------------------------- *)
