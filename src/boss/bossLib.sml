@@ -179,6 +179,9 @@ val WITHOUT_ABBREVS = markerLib.WITHOUT_ABBREVS
 
 local
 fun add_Case_conv x = REWR_CONV (ISPEC x markerTheory.add_Case)
+
+fun mk_tuple [] = oneSyntax.one_tm
+  | mk_tuple xs = pairSyntax.list_mk_pair vs
 in
 
 (*---------------------------------------------------------------------------*)
@@ -203,7 +206,7 @@ fun name_ind_cases nm_tms thm = let
           handle HOL_ERR _ => raise ERR "name_ind_cases" "unexpected concl head"
         val nm = if n < length nm_tms then [List.nth (nm_tms, n)] else []
         val vs = nm @ filter (not o is_var) xs
-      in add_Case_conv (pairSyntax.list_mk_pair vs) tm end
+      in add_Case_conv (mk_tuple vs) tm end
   in CONV_RULE (RATOR_CONV (RAND_CONV concl_conv)) spec_thm
     |> GENL vs
   end
