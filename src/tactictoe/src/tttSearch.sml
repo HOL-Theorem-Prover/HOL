@@ -65,6 +65,16 @@ fun backstatus_goalv goalv =
     else NodeUndecided
   end
 
+fun backreward_goalv (gn,reward) goalv =
+  let fun f (i,r) = if gn = i then reward else #gsum r / #gvis r in
+    Vector.foldl (op *) 1.0 (Vector.mapi f goalv)
+  end
+
+fun backreward_allgoalv goalv =
+  let fun f r = #gsum r / #gvis r in
+    Vector.foldl (op *) 1.0 (Vector.map f goalv)
+  end
+
 fun backstatus_node node = case #nstatus node of
     NodeUndecided => StacUndecided
   | NodeProved => StacProved
@@ -186,27 +196,29 @@ fun string_of_goalv gv =
     String.concatWith "," (map string_of_goal gl)
   end
 
-fun first_goalundec goalv =
+fun select_goalundec goalv =
   let
+    val goall = number_fst 0 (vector_to_list goalv)
     fun test (_,x) = (#gstatus x = GoalUndecided)
-    val go = Vector.findi test goalv
+    val gl = filter test goall
+    fun f (_,x) = #gvis x (* uniform *)
   in
-    if isSome go then valOf go else
-     raise ERR "first_goalundec"
-       ("no undecided goals : " ^ string_of_goalv goalv)
+    if null gl then
+      raise ERR "select_goalundec"
+        ("no undecided goals : " ^ string_of_goalv goalv)
+    else fst (hd (dict_sort compare_rmin (map_assoc f gl)))
   end
 
 fun select_node tree pid =
   let
     val {goalv,...} = dfind pid tree
-    val (gn,{goal,gvis,stacv,...}) = first_goalundec goalv
+    val (gn,{goal,gvis,stacv,...}) = select_goalundec goalv
     fun access_toprec i = dfind [] (Vector.sub (stacv,i))
     val sn = select_accessf access_toprec gvis handle HOL_ERR _ =>
       raise ERR "select_node" (string_of_id pid ^ " " ^ its gn)
     val argtree = Vector.sub (stacv,sn)
     val stac = dest_stac (#token (dfind [] argtree))
     val anl = select_argl argtree []
-
   in
     if #sstatus (dfind anl argtree) = StacFresh
     then ((pid,(gn,sn,anl)),(goal,stac,argtree))
@@ -304,6 +316,7 @@ fun reward_of vnno (sstatus,glo) = case sstatus of
   | StacProved => 1.0
   | StacUndecided =>
     (
+    (* to be changed to the product of the value *)
     if isSome vnno then
       let
         val vnn = valOf vnno
@@ -311,7 +324,7 @@ fun reward_of vnno (sstatus,glo) = case sstatus of
       in
         infer_tnn_basic vnn nntm
       end
-    else 1.0
+    else 1.0 (* now ignored *)
     )
   | StacFresh => raise ERR "reward_of" "unexpected"
 
@@ -357,7 +370,7 @@ fun goal_create searchobj goal =
   in
     {
     goal = goal,
-    gvis = 0.0, gsum = 0.0, gstatus = backstatus_stacv stacv ,
+    gvis = 1.0, gsum = 0.9 (* or tnn *), gstatus = backstatus_stacv stacv ,
     stacv = stacv,
     siblingd = dempty (list_compare goal_compare)
     }
@@ -366,17 +379,16 @@ fun goal_create searchobj goal =
 fun string_of_goall gl = String.concatWith "," (map string_of_goal gl)
 fun debug_node gl = (debugf "goals: " string_of_goall gl; debug ("\n"))
 
-fun node_create (tree,searchobj) (reward,gl) (pid,(gn,sn,anl)) =
+fun node_create (tree,searchobj) gl (pid,(gn,sn,anl)) =
   let
     val node = dfind pid tree
-    val pgoalv = #goalv node
-    val pgoalrec = Vector.sub (pgoalv,gn)
-    val pgoal = #goal pgoalrec
+    val pgoal = #goal (Vector.sub (#goalv node,gn))
     val cgoalv = Vector.fromList (map (goal_create searchobj) gl)
     val cid = (gn,sn,anl) :: pid
     val node =
       {
-      nvis = 1.0, nsum = reward, nstatus = backstatus_goalv cgoalv,
+      nvis = 1.0, nsum = backreward_allgoalv cgoalv, 
+      nstatus = backstatus_goalv cgoalv,
       goalv = cgoalv,
       parentd = dadd pgoal () (#parentd node)
       }
@@ -436,7 +448,7 @@ fun node_update tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl)) =
     (* update node *)
     val newnode =
       {
-      nvis = nvis + 1.0, nsum = nsum + reward,
+      nvis = nvis + 1.0, nsum = nsum + backreward_goalv (gn,reward) newgoalv,
       nstatus = backstatus_goalv newgoalv,
       goalv = newgoalv,
       parentd = parentd
@@ -486,7 +498,7 @@ fun search_loop startsearchobj starttree =
           val _ = debug "node expansion"
           val exptree =
             if sstatus = StacUndecided
-            then node_create (tree,searchobj) (reward,valOf glo) pidx
+            then node_create (tree,searchobj) (valOf glo) pidx
             else tree
           val _ = debug "backup"
           val backuptree =

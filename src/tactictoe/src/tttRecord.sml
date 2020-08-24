@@ -190,16 +190,14 @@ fun end_record_proof name g =
     val feal1 = List.concat (map #fea l1)
     val feal2 = mk_fast_set Int.compare feal1
     val (thmdata,tacdata) = (!thmdata_glob, !tacdata_glob)
-    (*
     val tacfea = total_time tacfea_time
       (map (fn x => (#ortho x,#fea x))) (#calls tacdata)
     val tacsymweight =
       total_time learn_tfidf_time
         (learn_tfidf_symfreq (length tacfea) feal2) (#symfreq tacdata)
-    *)
     val l2 = (* orthogonalize *)
       if !record_ortho_flag
-      then map (abstract_only thmdata) l1
+      then map (orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))) l1
       else l1
     val newtacdata = foldl ttt_update_tacdata tacdata l2
   in
@@ -207,15 +205,17 @@ fun end_record_proof name g =
     tacdata_glob := newtacdata
   end
 
+val savestate_dir = tactictoe_dir ^ "/savestate"
+
 fun ttt_before_save_state () =
-  thmdata_glob := total_time create_thmdata_time create_thmdata ()
+  let val _ = mkDir_err savestate_dir in
+    thmdata_glob := total_time create_thmdata_time create_thmdata ()
+  end
 
 fun ttt_save_state () =
   (
   if !record_savestate_flag then
   let
-    val savestate_dir = tactictoe_dir ^ "/savestate"
-    val _ = mkDir_err savestate_dir
     val prefix = savestate_dir ^ "/" ^ current_theory () ^ "_" ^
       its (!savestate_level)
     val savestate_file = prefix ^ "_savestate"
@@ -223,8 +223,8 @@ fun ttt_save_state () =
   in
     if !savestate_level = 0
     then PolyML.SaveState.saveState savestate_file
-    else PolyML.SaveState.saveChild (savestate_file,
-                 ((!savestate_level) div 50) + 1)
+    else PolyML.SaveState.saveChild (savestate_file, 
+      (!savestate_level div 50) + 1)
   end
   else ()
   )

@@ -90,8 +90,7 @@ fun order_stac tacdata ostac stacl =
 
 fun inst_arg (thmidl,sterml) stac =
   if is_thmlstac stac then 
-    (stac, inst_thml thmidl stac) ::
-    map (fn x => (stac, inst_thml [x] stac)) thmidl
+    [(stac, inst_thml thmidl stac)]
   else if is_termstac stac then  
     map (fn x => (stac, inst_term x stac)) sterml
   else [(stac,stac)]
