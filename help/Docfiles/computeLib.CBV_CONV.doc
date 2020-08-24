@@ -25,6 +25,13 @@ extended by side-effect. The function {new_compset} will create
 a new set containing reflexivity ({REFL_CLAUSE}), plus the supplied rewrites.
 Theorems can be added to an existing compset with the function {add_thms}.
 
+{add_thms} scans the supplied theorems using {BODY_CONJUNCTS}. Let {thm} be one
+such element. {thm} is of the form {P1 => P2 => ... => t} for possibly-zero
+implications, then proccess {t}. If {t} is an equation, add it as a reduction
+rule. If {t} is of the form {~t'}, then add the rule {t <=> F}, otherwise add
+the rule {t <=> T}. If there is at least one implication then also add {P1 => P2
+=> ... => t <=> T}.
+
 It is also possible to add conversions to a simplification set with
 {add_conv}. The only restriction is that a constant ({c}) and an arity
 ({n}) must be provided. The conversion will be called only on terms in
