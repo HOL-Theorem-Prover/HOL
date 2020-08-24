@@ -3878,7 +3878,8 @@ val spsr_write_by_instr =
 (* ------------------------------------------------------------------------ *)
 
 val eval_ss =
-  std_ss++boolSimps.CONJ_ss++pred_setSimps.PRED_SET_ss++listSimps.LIST_ss;
+  std_ss++boolSimps.CONJ_ss++pred_setSimps.PRED_SET_ss++listSimps.LIST_ss -*
+  ["lift_disj_eq", "lift_imp_disj"]
 
 val instruction_rule = SIMP_RULE eval_ss
   [(GEN_ALL o SIMP_RULE std_ss [] o Q.ISPEC `\x. a NOTIN x`) COND_RAND,

@@ -15,6 +15,7 @@ val _ = temp_overload_on ("return", ``constT``);
 val _ = diminish_srw_ss ["one"]
 val _ = augment_srw_ss [rewrites [oneTheory.FORALL_ONE]]
 val _ = BasicProvers.temp_delsimps ["UPDATE_EQ", "UPDATE_APPLY_ID_RWT"]
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 val _ = goalStack.chatting := !Globals.interactive
 
