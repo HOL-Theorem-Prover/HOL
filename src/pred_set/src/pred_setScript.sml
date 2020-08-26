@@ -5318,6 +5318,19 @@ val FINITE_POW = Q.store_thm
   [METIS_TAC [POW_EQNS,FINITE_EMPTY,FINITE_INSERT],
    RW_TAC set_ss [POW_EQNS,LET_THM,FINITE_UNION,IMAGE_FINITE]]);
 
+Theorem FINITE_POW_EQN[simp]:
+  FINITE (POW s) <=> FINITE s
+Proof
+  ‘FINITE (POW s) ==> FINITE s’ suffices_by METIS_TAC[FINITE_POW] >>
+  CONV_TAC CONTRAPOS_CONV >> strip_tac >>
+  ‘?t. INFINITE t /\ t SUBSET POW s’ suffices_by METIS_TAC[SUBSET_FINITE] >>
+  Q.EXISTS_TAC ‘IMAGE (\e. {e}) s’ >> reverse conj_tac
+  >- simp[SUBSET_DEF, PULL_EXISTS, IN_POW] >>
+  ‘!x y. (\e. {e}) x = (\e. {e}) y <=> x = y’
+    suffices_by (strip_tac >> drule INJECTIVE_IMAGE_FINITE >> simp[]) >>
+  simp[]
+QED
+
 val lem = Q.prove
 (`!n. 2 * 2**n = 2**n + 2**n`,
  RW_TAC arith_ss [EXP]);
