@@ -412,33 +412,64 @@ val SUBSET_THM = store_thm (* from util_prob *)
 val SUBSET_applied = save_thm
   ("SUBSET_applied", SIMP_RULE bool_ss [IN_DEF] SUBSET_DEF);
 
-val SUBSET_TRANS = store_thm
-    ("SUBSET_TRANS",
-     (“!(s:'a set) t u. s SUBSET t /\ t SUBSET u ==> s SUBSET u”),
-     REWRITE_TAC [SUBSET_DEF] THEN
-     REPEAT STRIP_TAC THEN
-     REPEAT (FIRST_ASSUM MATCH_MP_TAC) THEN
-     FIRST_ASSUM ACCEPT_TAC);
+Theorem SUBSET_TRANS:
+  !(s:'a set) t u. s SUBSET t /\ t SUBSET u ==> s SUBSET u
+Proof
+  REWRITE_TAC [SUBSET_DEF] THEN
+  REPEAT STRIP_TAC THEN
+  REPEAT (FIRST_ASSUM MATCH_MP_TAC) THEN
+  FIRST_ASSUM ACCEPT_TAC
+QED
 
-val SUBSET_REFL = store_thm
-    ("SUBSET_REFL",
-     (“!(s:'a set). s SUBSET s”),
-     REWRITE_TAC[SUBSET_DEF]);
+Theorem SUBSET_transitive[simp]:
+  transitive (SUBSET)
+Proof
+  METIS_TAC[relationTheory.transitive_def, SUBSET_TRANS]
+QED
 
-val SUBSET_ANTISYM = store_thm
-    ("SUBSET_ANTISYM",
-     (“!(s:'a set) t. (s SUBSET t) /\ (t SUBSET s) ==> (s = t)”),
-     REWRITE_TAC [SUBSET_DEF, EXTENSION] THEN
-     REPEAT STRIP_TAC THEN
-     EQ_TAC THEN
-     FIRST_ASSUM MATCH_ACCEPT_TAC);
+Theorem SUBSET_REFL[simp]:
+  !(s:'a set). s SUBSET s
+Proof REWRITE_TAC[SUBSET_DEF]
+QED
 
-val EMPTY_SUBSET =
-    store_thm
-    ("EMPTY_SUBSET",
-     (“!s:'a set. EMPTY SUBSET s”),
-     REWRITE_TAC [SUBSET_DEF,NOT_IN_EMPTY]);
-val _ = export_rewrites ["EMPTY_SUBSET"]
+Theorem SUBSET_reflexive[simp]:
+  reflexive (SUBSET)
+Proof SRW_TAC[][relationTheory.reflexive_def]
+QED
+
+(* would prefer to avoid the _THM suffix but the names without are already
+   claimed by relationTheory for thms of the form R x y ==> OP R x y *)
+Theorem RC_SUBSET_THM[simp]:
+  RC(SUBSET) = (SUBSET)
+Proof
+  simp[relationTheory.reflexive_RC_identity]
+QED
+
+Theorem TC_SUBSET_THM[simp]:
+  TC(SUBSET) = (SUBSET)
+Proof
+  SRW_TAC[][relationTheory.transitive_TC_identity]
+QED
+
+Theorem RTC_SUBSET_THM[simp]:
+  RTC (SUBSET) = (SUBSET)
+Proof
+  simp[GSYM relationTheory.TC_RC_EQNS]
+QED
+
+Theorem SUBSET_ANTISYM:
+  !(s:'a set) t. (s SUBSET t) /\ (t SUBSET s) ==> (s = t)
+Proof
+  REWRITE_TAC [SUBSET_DEF, EXTENSION] THEN
+  REPEAT STRIP_TAC THEN
+  EQ_TAC THEN
+  FIRST_ASSUM MATCH_ACCEPT_TAC
+QED
+
+Theorem EMPTY_SUBSET[simp]:
+  !s:'a set. EMPTY SUBSET s
+Proof REWRITE_TAC [SUBSET_DEF,NOT_IN_EMPTY]
+QED
 
 Theorem SUBSET_EMPTY[simp]:
    !s:'a set. s SUBSET EMPTY <=> (s = EMPTY)
@@ -515,35 +546,61 @@ val _ = TeX_notation {hol = "PSUBSET", TeX = ("\\HOLTokenPSubset", 1)}
 val _ = TeX_notation {hol = UTF8.chr 0x2282, TeX = ("\\HOLTokenPSubset", 1)}
 val _ = ot0 "PSUBSET" "properSubset"
 
-val PSUBSET_TRANS = store_thm ("PSUBSET_TRANS",
-   (“!s:'a set. !t u. (s PSUBSET t /\ t PSUBSET u) ==> (s PSUBSET u)”),
-     PURE_ONCE_REWRITE_TAC [PSUBSET_DEF] THEN
-     REPEAT GEN_TAC THEN STRIP_TAC THEN CONJ_TAC THENL
-     [IMP_RES_TAC SUBSET_TRANS,
-      DISCH_THEN SUBST_ALL_TAC THEN
-      IMP_RES_TAC SUBSET_ANTISYM THEN
-      RES_TAC]);
+Theorem PSUBSET_TRANS:
+  !s:'a set. !t u. (s PSUBSET t /\ t PSUBSET u) ==> (s PSUBSET u)
+Proof
+  PURE_ONCE_REWRITE_TAC [PSUBSET_DEF] THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN CONJ_TAC THENL [
+    IMP_RES_TAC SUBSET_TRANS,
+    DISCH_THEN SUBST_ALL_TAC THEN
+    IMP_RES_TAC SUBSET_ANTISYM THEN
+    RES_TAC
+  ]
+QED
 
-val PSUBSET_IRREFL =
-    store_thm
-    ("PSUBSET_IRREFL",
-     (“!s:'a set. ~(s PSUBSET s)”),
-     REWRITE_TAC [PSUBSET_DEF,SUBSET_REFL]);
+Theorem transitive_PSUBSET[simp]:
+  transitive (PSUBSET)
+Proof
+  METIS_TAC[relationTheory.transitive_def, PSUBSET_TRANS]
+QED
 
-val NOT_PSUBSET_EMPTY =
-    store_thm
-    ("NOT_PSUBSET_EMPTY",
-     (“!s:'a set. ~(s PSUBSET EMPTY)”),
-     REWRITE_TAC [PSUBSET_DEF,SUBSET_EMPTY,NOT_AND]);
+Theorem PSUBSET_IRREFL[simp]:
+  !s:'a set. ~(s PSUBSET s)
+Proof
+  REWRITE_TAC [PSUBSET_DEF,SUBSET_REFL]
+QED
 
-val NOT_UNIV_PSUBSET =
-    store_thm
-    ("NOT_UNIV_PSUBSET",
-     (“!s:'a set. ~(UNIV PSUBSET s)”),
-     REWRITE_TAC [PSUBSET_DEF,UNIV_SUBSET,DE_MORGAN_THM] THEN
-     GEN_TAC THEN CONV_TAC (RAND_CONV SYM_CONV) THEN
-     PURE_ONCE_REWRITE_TAC [DISJ_SYM] THEN
-     MATCH_ACCEPT_TAC EXCLUDED_MIDDLE);
+Theorem RC_PSUBSET[simp]:
+  RC (PSUBSET) = (SUBSET)
+Proof
+  simp[PSUBSET_DEF, Ntimes FUN_EQ_THM 2, relationTheory.RC_DEF, EQ_IMP_THM,
+       DISJ_IMP_THM]
+QED
+
+Theorem TC_PSUBSET[simp]:
+  TC (PSUBSET) = (PSUBSET)
+Proof
+  simp[relationTheory.transitive_TC_identity]
+QED
+
+Theorem RTC_PSUBSET[simp]:
+  RTC (PSUBSET) = (SUBSET)
+Proof
+  simp[GSYM relationTheory.TC_RC_EQNS]
+QED
+
+Theorem NOT_PSUBSET_EMPTY[simp]:
+  !s:'a set. ~(s PSUBSET EMPTY)
+Proof
+  REWRITE_TAC [PSUBSET_DEF,SUBSET_EMPTY,NOT_AND]
+QED
+
+Theorem NOT_UNIV_PSUBSET[simp]:
+  !s:'a set. ~(UNIV PSUBSET s)
+Proof
+  REWRITE_TAC [PSUBSET_DEF,UNIV_SUBSET,DE_MORGAN_THM] THEN
+  METIS_TAC[]
+QED
 
 val PSUBSET_UNIV =
     store_thm
@@ -6409,12 +6466,10 @@ val _ = export_rewrites
      (* "INTER" theorems *)
      "INTER_FINITE", "INTER_IDEMPOT",
      "INTER_SUBSET", "INTER_UNIV", "SUBSET_INTER",
-     (* "PSUBSET" *)
-     "PSUBSET_IRREFL",
      (* "REST" *)
      "REST_PSUBSET", "REST_SUBSET", "FINITE_REST",
      (* "SUBSET" *)
-     "SUBSET_INSERT", "SUBSET_REFL",
+     "SUBSET_INSERT",
      (* "UNION" *)
      "UNION_IDEMPOT", "UNION_SUBSET",
      "SUBSET_UNION"
