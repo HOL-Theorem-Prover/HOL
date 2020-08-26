@@ -12,7 +12,7 @@ open HolKernel Abbrev boolLib aiLib
   smlTimeout smlLexer smlExecute
   mlFeature mlThmData mlTacticData mlNearestNeighbor mlTreeNeuralNetwork
   psMinimize
-  tttSetup tttToken tttLearn
+  tttSetup tttToken tttLearn tttTrain
 
 val ERR = mk_HOL_ERR "tttSearch"
 val predtac_time = ref 0.0
@@ -159,6 +159,7 @@ fun select_stacrecl stacrecl pvis =
     fst (hd l2)
   end
 
+(* hack /should be replaced by a nicer way to accessing children *)
 fun select_accessf accessf pvis =
   let val stacrecl = before_stacfresh accessf [] 0 in
     select_stacrecl stacrecl pvis
@@ -314,18 +315,7 @@ fun apply_tac parsetoken tokenl goal =
 fun reward_of vnno (sstatus,glo) = case sstatus of
     StacSaturated => 0.0
   | StacProved => 1.0
-  | StacUndecided =>
-    (
-    (* to be changed to the product of the value *)
-    if isSome vnno then
-      let
-        val vnn = valOf vnno
-        val nntm = mask_unknown_value vnn (nntm_of_gl (valOf glo))
-      in
-        infer_tnn_basic vnn nntm
-      end
-    else 1.0 (* now ignored *)
-    )
+  | StacUndecided => 1.0 (* now ignored *)
   | StacFresh => raise ERR "reward_of" "unexpected"
 
 fun collect_tokenl acc (argtree,anl) =
@@ -370,7 +360,7 @@ fun goal_create searchobj goal =
   in
     {
     goal = goal,
-    gvis = 1.0, gsum = 0.9 (* or tnn *), gstatus = backstatus_stacv stacv ,
+    gvis = 1.0, gsum = 0.0 (* or tnn *), gstatus = backstatus_stacv stacv ,
     stacv = stacv,
     siblingd = dempty (list_compare goal_compare)
     }
@@ -473,8 +463,10 @@ fun node_backup tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl)) =
 fun search_loop startsearchobj starttree =
   let
     val timer = Timer.startRealTimer ()
-    fun loop searchobj tree =
-      if Timer.checkRealTimer timer > Time.fromReal (!ttt_search_time)
+    fun loop n searchobj tree =
+      if n <= 0 (* todo parametrized *)
+        then (SearchTimeout,tree) 
+      else if Timer.checkRealTimer timer > Time.fromReal (!ttt_search_time)
         then (SearchTimeout,tree)
       else if #nstatus (dfind [] tree) = NodeSaturated
         then (SearchSaturated,tree)
@@ -504,10 +496,10 @@ fun search_loop startsearchobj starttree =
           val backuptree =
             node_backup exptree (SOME newargtree, glo) (sstatus,reward) pidx
         in
-          loop searchobj backuptree
+          loop (n-1) searchobj backuptree
         end
   in
-    loop startsearchobj starttree
+    loop 1600 startsearchobj starttree
   end
 
 (* -------------------------------------------------------------------------

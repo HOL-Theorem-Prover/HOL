@@ -16,101 +16,7 @@ open HolKernel Abbrev boolLib aiLib
 val ERR = mk_HOL_ERR "tttEval"
 
 type pvfiles = string option * string option
-val tnnex_dir = tactictoe_dir ^ "/tnnex"
-val tnn_dir = tactictoe_dir ^ "/tnn"
 
-(* -------------------------------------------------------------------------
-   Value examples
-   ------------------------------------------------------------------------- *)
-
-fun extract_value tree =
-  let
-    val nodel = map snd (dlist tree)
-    fun get_valuetm node =
-      (nntm_of_gl o vector_to_list o Vector.map #goal o #goalv) node
-    fun is_win node = case #nstatus node of NodeProved => 1.0 | _ => 0.0
-  in
-    basicex_to_tnnex (map (fn x => (get_valuetm x, is_win x)) nodel)
-  end
-
-(* could be dependent on tttTrain tttReinforce *)
-
-(*
-(* -------------------------------------------------------------------------
-   Policy examples
-   ------------------------------------------------------------------------- *)
-
-fun btr b = if b then 1.0 else 0.0
-
-fun extract_policy tree =
-  let
-    val nodel = map snd (dlist tree)
-    val goalrecl1 = List.concat (map (vector_to_list o #goalv) nodel)
-    val goalrecl2 = filter (fn x => #goalstatus x = GoalProved) goalrecl1
-    fun f x = distrib [(#goal x, number_snd 0 (vector_to_list (#stacv x)))]
-    val stacrecl = List.concat (map f goalrecl2)
-    fun is_win x = case #stacstatus x of StacProved => true | _ => false
-    fun not_fresh x = case #stacstatus x of StacFresh => false | _ => true
-    fun g (goal,(stacv,stacn)) =
-      if is_win stacv orelse (stacn < 10 andalso not_fresh stacv)
-      then SOME (nntm_of_gstactm (goal, #stactm stacv), btr (is_win stacv))
-      else NONE
-  in
-    List.mapPartial g stacrecl
-  end
-
-(* -------------------------------------------------------------------------
-   Policy examples
-   ------------------------------------------------------------------------- *)
-
-fun extract_thmpol tree =
-  let
-    val nodel = map snd (dlist tree)
-    val goalrecl1 = List.concat (map (vector_to_list o #goalv) nodel)
-    val goalrecl2 = filter (fn x => #goalstatus x = GoalProved) goalrecl1
-    fun f x = distrib [(#goal x, number_snd 0 (vector_to_list (#stacv x)))]
-    val stacrecl = List.concat (map f goalrecl2)
-    fun is_win x = case #stacstatus x of StacProved => true | _ => false
-    fun not_fresh x = case #stacstatus x of StacFresh => false | _ => true
-    fun g (goal,(stacv,stacn)) =
-      if is_win stacv andalso is_thmlarg_stac (#astac stacv)
-      then SOME (nntm_of_gstactm (goal, #stactm stacv), btr (is_win stacv))
-      else NONE
-    val thml =
-  in
-    List.mapPartial g stacrecl
-  end
-
-
-fun is_metis_stac s = hd (partial_sml_lexer s) = "metisTools.METIS_TAC"
-fun op_subset eqf l1 l2 = null (op_set_diff eqf l1 l2)
-
-
-
-fun test_astac astac g gl thmidl =
-  let
-    val tim = if is_metis_stac astac then 0.1 else 0.04
-    val istac = snd (inst_thmidl astac thmidl)
-  in
-    case app_stac (2 * tim) istac g of
-      SOME newgl => op_subset goal_eq newgl gl
-    | NONE => false
-  end
-
-fun minimize f (pos,neg) thmidl =
-  case thmidl of
-    [] => (pos,neg)
-  | a :: m => if f (pos :: m)
-              then minimize f (pos, a :: neg) m
-              else minimize f (a :: pos, neg) m
-
-val posthml = map (fn x => (nntm_of_thm x, 1.0))
-  (map snd (thml_of_sml (map dbfetch_of_thmid pos)))
-val negthml = map (fn x => (nntm_of_thm x, 0.0))
-  (map snd (thml_of_sml (map dbfetch_of_thmid pos)))
-
-val ex = basicex_to_tnnex (posthml @ negthml)
-*)
 (* -------------------------------------------------------------------------
    Evaluation function
    ------------------------------------------------------------------------- *)
@@ -138,15 +44,6 @@ fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
     val ((status,tree),t) = add_time
       (main_tactictoe (thmdata,tacdata) (vnno,pnno)) goal
-    val _ = if not (isSome vnno) andalso not (isSome pnno) then
-      (case status of Proof _ =>
-        (
-        write_tnnex (value_dir ^ "/" ^ thmid) (extract_value tree)
-       (* write_tnnex (policy_dir ^ "/" ^ thmid) (extract_policy tree);
-        write_tnnex (thmpol_dir ^ "/" ^ thmid) (extract_thmpol tree) *)
-        )
-      | _ => ())
-      else ()
   in
     print_status status;
     print_time ("ttt_eval",t);
@@ -251,7 +148,7 @@ run_evalscript_thyl "test_arithmetic-e1" false 1 ["arithmetic"];
 (* Core theories
 load "tttUnfold"; open tttUnfold;
 tttSetup.record_savestate_flag := true;
-tttSetup.learn_abstract_term := true;
+tttSetup.learn_abstract_term := false;
 aiLib.debug_flag := false;
 ttt_clean_record ();
 ttt_record ();
@@ -262,7 +159,7 @@ aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
 
 ttt_clean_eval ();
-val _ = run_evalscript_thyl "august17-abs" (true,30) (NONE,NONE) thyl;
+val _ = run_evalscript_thyl "august24-2" (true,30) (NONE,NONE) thyl;
 
 val tnn_value = train_value 0.95 "value";
 val _ = run_evalscript_thyl "august10-vnn" (true,30) (SOME "value",NONE) thyl;
@@ -376,38 +273,6 @@ load "tttEval"; open tttEval;
 compare_stats ["august9"] "august10";
 *)
 
-(* ------------------------------------------------------------------------
-   Training (maybe copy the training)
-   ------------------------------------------------------------------------ *)
 
-fun operl_of_tnnex exl =
-  List.concat (map operl_of_term (map fst (List.concat exl)))
-
-fun train_dir pct name =
-  let
-    val tnnex_dir = tactictoe_dir ^ "/tnnex/" ^ name
-    val filel = map (fn x => tnnex_dir ^ "/" ^ x) (listDir tnnex_dir)
-    val exl = List.concat (map read_tnnex filel)
-    val (train,test) = part_pct pct (shuffle exl)
-    val operl = operl_of_tnnex exl
-    val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl
-    val randtnn = random_tnn operdiml
-    val schedule =
-      [{ncore = 4, verbose = true,
-       learning_rate = 0.02, batch_size = 16, nepoch = 100}];
-    val tnn = train_tnn schedule randtnn (train,test)
-    val acctrain = tnn_accuracy tnn train
-    val acctest = tnn_accuracy tnn test
-  in
-    print_endline ("train accuracy: " ^ rts_round 6 acctrain ^
-      ", test accuracy: " ^ rts_round 6 acctest);
-    mkDir_err tnn_dir;
-    write_tnn (tnn_dir ^ "/" ^ name) tnn;
-    tnn
-  end
-
-fun train_value pct file = train_dir pct "value"
-fun train_policy pct file = train_dir pct "policy"
-fun train_thmpol pct file = train_dir pct "thmpol"
 
 end (* struct *)

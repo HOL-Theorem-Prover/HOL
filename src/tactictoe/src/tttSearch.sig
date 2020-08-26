@@ -15,6 +15,7 @@ sig
   datatype proofstatus =  Proof of string | ProofSaturated | ProofTimeout
 
   type id = (int * int * int list) list
+  val id_compare : id * id -> order
   type stac_record =
    {token : tttToken.token, atyl : tttToken.aty list,
     svis : real, ssum : real, sstatus : sstatus}
@@ -28,6 +29,10 @@ sig
     goalv : goal_record vector,
     parentd : (goal, unit) Redblackmap.dict}
   type tree = (id, node) Redblackmap.dict
+
+  val backstatus_arg : sstatus list -> sstatus
+  val backstatus_stacv : argtree vector -> gstatus
+  val backstatus_goalv : goal_record vector -> nstatus
 
   type searchobj =
     {predtac : goal -> (string * tttToken.aty list) list,

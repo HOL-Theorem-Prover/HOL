@@ -77,7 +77,7 @@ fun select_tacfea tacdata gfea =
    Main function
    ------------------------------------------------------------------------- *)
 
-fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
+fun build_searchobj (thmdata,tacdata) (vnno,pnno) goal =
   let
     val narg_explo = 1
     val _ = hidef QUse.use infix_file
@@ -141,12 +141,16 @@ fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
       in
         tac_cache := dadd g stacl3 (!tac_cache); stacl3
       end
-    (* search parameters *)
+  in
+    {predtac = predtac, predarg = predarg,
+     parsetoken = parsetoken,
+     vnno = vnno, pnno = pnno}
+  end
+
+fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
+  let 
+    val searchobj = build_searchobj (thmdata,tacdata) (vnno,pnno) goal 
     val _ = print_endline "search"
-    val searchobj =
-      {predtac = predtac, predarg = predarg,
-       parsetoken = parsetoken,
-       vnno = vnno, pnno = pnno}
   in
     search searchobj goal
   end

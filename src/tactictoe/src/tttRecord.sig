@@ -3,7 +3,7 @@ sig
 
 include Abbrev
 
-  (* These function are printed out by tttUnfold and used in a modified
+  (* These functions are printed out by tttUnfold.sml and used in a modified
      fooScript.sml *)
 
   (* Databases of tactics and theorems *)

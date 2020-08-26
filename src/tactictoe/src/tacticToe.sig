@@ -9,6 +9,11 @@ sig
     mlThmData.thmdata * mlTacticData.tacdata ->
     tnn option * tnn option ->
     goal -> tttSearch.proofstatus * tttSearch.tree
+  
+  val build_searchobj : mlThmData.thmdata * mlTacticData.tacdata ->
+    tnn option * tnn option ->
+    goal -> tttSearch.searchobj
+
   val main_tactictoe_mini :
     mlThmData.thmdata ->
     tnn option * tnn option ->
