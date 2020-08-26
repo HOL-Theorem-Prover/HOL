@@ -4,108 +4,110 @@ open pegexecTheory
 
 val _ = new_theory "pegSample"
 
-val _ = Hol_datatype`tok = Plus | Times | Number of num | LParen | RParen`
+Datatype:
+  tok = Plus | Times | Number num | LParen | RParen
+End
 
 local open stringTheory in end
 
-val _ = Hol_datatype `
-  expr = XN of num
-       | XPlus of expr => expr
-       | XTimes of expr => expr
-       | XList of expr list`;
+Datatype:
+  expr = XN num
+       | XPlus expr expr
+       | XTimes expr expr
+       | XList (expr list)
+End
 
-val ty = ty_antiq ``:(tok, string, expr) pegsym``
-val lift_number_def = Define`
+Type ty = “:(tok, string, expr, string) pegsym”
+Definition lift_number_def:
   lift_number (Number n,l) = XN n
-`;
+End
 
-val nrule = ``tok (λt. case t of Number n => T | _ => F) lift_number : ^ty``
+val nrule = “tok (λt. case t of Number n => T | _ => F) lift_number : ty”
 val paren_rule =
-  ``seq (tok ((=) LParen) (K (XN 0)))
+  “seq (tok ((=) LParen) (K (XN 0)))
         (seq (nt (INL "expr") I) (tok ((=) RParen) (K (XN 0))) K)
-        (K I) : ^ty``
+        (K I) : ty”
 
 val termpair =
-  ``(INL "term" : string inf,
-     choice ^nrule ^paren_rule (\s. case s of INL e => e | INR e => e))``
+  “(INL "term" : string inf,
+     choice ^nrule ^paren_rule (\s. case s of INL e => e | INR e => e))”
 
-val leftassoc_def = Define`
+Definition leftassoc_def:
   leftassoc f (XList []) b = b ∧
   leftassoc f (XList (h::t)) b = FOLDL f h (t ++ [b])
-`;
+End
 
-val factorpair = ``(INL "factor" : string inf,
+val factorpair = “(INL "factor" : string inf,
                     seq (rpt (seq (nt (INL "term") I)
                                   (tok ((=) Times) (K ARB))
                                   K)
                              XList)
                         (nt (INL "term") I)
-                        (leftassoc XTimes) : ^ty)``
+                        (leftassoc XTimes) : ty)”
 
-val exprpair = ``(INL "expr" : string inf,
+val exprpair = “(INL "expr" : string inf,
                   seq (rpt (seq (nt (INL "factor") I)
                                 (tok ((=) Plus) (K ARB))
                                 K)
                            XList)
                       (nt (INL "factor") I)
-                      (leftassoc XPlus): ^ty)``
+                      (leftassoc XPlus): ty)”
 
-val rules = ``FEMPTY |+ ^exprpair |+ ^factorpair |+ ^termpair``
+val rules = “FEMPTY |+ ^exprpair |+ ^factorpair |+ ^termpair”
 
-val G = ``<| start := nt (INL "expr") I; rules := ^rules |>``
+Definition samplePEG_def[nocompute]:
+ samplePEG = <| start := nt (INL "expr") I; rules := ^rules;
+                anyEOF := "Unexpected EOF (any)";
+                tokFALSE := "Failed to see expected token";
+                tokEOF := "Failed to see expected token because of EOF";
+                notFAIL := "Failed to fail in a not rule";
+             |>
+End
 
-val testexp = ``[Number 3; Plus; Number 4; Times; Number 5]``
+val testexp = “[Number 3; Plus; Number 4; Times; Number 5]”
 
 val _ = let
   open computeLib
 in
-  set_skip the_compset ``evalcase_CASE`` (SOME 1);
-  set_skip the_compset ``option_CASE`` (SOME 1);
-  set_skip the_compset ``COND`` (SOME 1)
+  set_skip the_compset “evalcase_CASE” (SOME 1);
+  set_skip the_compset “option_CASE” (SOME 1);
+  set_skip the_compset “COND” (SOME 1)
 end
 
-(* with eval_def directly: 1.155s;
-   with "optimised" tail-recursive form: 0.213s *)
-val result1 = save_thm(
-  "result1",
-  time EVAL ``peg_exec ^G (nt (INL "expr") I)
-                      (map_loc [Number 1; Plus; Number 2; Times; Number 4] 0) []
-                      done failed``)
+Theorem pegexec_nt0 =
+  peg_nt_thm |> Q.GENL [‘G’, ‘n’] |> Q.ISPEC ‘samplePEG’
 
-(* As of 5a18cdc17ff, takes 1.983s (ugh) *)
-val result2 = save_thm(
-  "result2",
-  time EVAL ``peg_exec ^G (nt (INL "expr") I)
+Theorem FDOM_samplePEGrules =
+  SIMP_CONV (srw_ss()) [samplePEG_def] “FDOM samplePEG.rules”
+
+fun mk_rule_applied q =
+  finite_mapSyntax.mk_fapply(
+    “samplePEG.rules”,
+    typed_parse_in_context “:string +num” [] q
+  ) |> SIMP_CONV (srw_ss()) [samplePEG_def, finite_mapTheory.FAPPLY_FUPDATE_THM]
+
+val nts = [‘INL "expr"’, ‘INL "factor"’, ‘INL "term"’]
+Theorem sample_rules = LIST_CONJ (map mk_rule_applied nts)
+
+fun mk_nt q =
+  pegexec_nt0
+   |> Q.SPEC q
+   |> SIMP_RULE (srw_ss()) [FDOM_samplePEGrules, sample_rules]
+
+Theorem sample_nts[compute] = LIST_CONJ (map mk_nt nts)
+
+(* with "optimised" tail-recursive form: 0.005s *)
+Theorem result1 =
+  time EVAL “peg_exec samplePEG (nt (INL "expr") I)
+                      (map_loc [Number 1; Plus; Number 2; Times; Number 4] 0)
+                      [] []
+                      done failed”
+
+(* As of 879f4f4, takes 0.026s *)
+Theorem result2 =
+  time EVAL “peg_exec samplePEG (nt (INL "expr") I)
                       (map_loc [Number 1; Plus; Number 2; Times; Number 4;
                        Times; LParen; Number 3; Plus; Number 1; RParen] 0)
-                      [] done failed``)
-
-val G_def = zDefine`G = <| start := nt (INL "expr") I; rules := ^rules |>`
-
-val Grules = store_thm(
-  "Grules",
-  ``G.rules ' (INL "expr") = ^(#2 (pairSyntax.dest_pair exprpair)) ∧
-    G.rules ' (INL "factor") = ^(#2 (pairSyntax.dest_pair factorpair)) ∧
-    G.rules ' (INL "term") = ^(#2 (pairSyntax.dest_pair termpair)) ∧
-    INL "expr" ∈ FDOM G.rules ∧
-    INL "term" ∈ FDOM G.rules ∧
-    INL "factor" ∈ FDOM G.rules``,
-  simp[G_def, finite_mapTheory.FAPPLY_FUPDATE_THM]);
-val _ = computeLib.add_persistent_funs ["Grules"]
-
-(* on a machine running PolyML 5.4.1, and where result2 takes 0.084s,
-   the following takes 0.028s
-
-   One further optimisation would be partially evaluate the actual
-   nt values against exec theorem and put the result into the compset
-*)
-val result2' = save_thm(
-  "result2'",
-  time EVAL ``peg_exec G (nt (INL "expr") I)
-                      (map_loc [Number 1; Plus; Number 2; Times; Number 4;
-                       Times; LParen; Number 3; Plus; Number 1; RParen] 0)
-                      [] done failed``)
-
+                      [] [] done failed”
 
 val _ = export_theory()
-
