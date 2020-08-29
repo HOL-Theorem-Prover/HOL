@@ -84,6 +84,8 @@ ht          Select a quotation, including the ` delimiters.
             Also works for Unicode single quotes (‘ and ’).
 hT          Select a term: same as above, but with `` delimiters.
             (Or Unicode “ and ”.)
+ha          Select the previous (or if within current) Theorem or
+            Trivialty statement.
 
 hh          A normal h (usually means move cursor left).
             This one works in both normal and visual modes.
