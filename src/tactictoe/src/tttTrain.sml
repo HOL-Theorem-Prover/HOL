@@ -157,12 +157,9 @@ fun nntm_of_statearg ((g,stac),arg) =
    Training
    ------------------------------------------------------------------------ *)
 
-fun train_from_exdir pct exdir =
+fun train_fixed pct exl =
   let
-    val tnnex_dir = tttSetup.tactictoe_dir ^ "/tnnex/" ^ exdir
     val tnn_dir = tttSetup.tactictoe_dir ^ "/tnn"
-    val filel = map (fn x => tnnex_dir ^ "/" ^ x) (listDir tnnex_dir)
-    val exl = List.concat (map read_tnnex filel)
     val (train,test) = part_pct pct (shuffle exl)
     fun operl_of_tnnex exl =
       List.concat (map operl_of_term (map fst (List.concat exl)))
@@ -178,8 +175,6 @@ fun train_from_exdir pct exdir =
   in
     print_endline ("train accuracy: " ^ rts_round 6 acctrain ^
       ", test accuracy: " ^ rts_round 6 acctest);
-    mkDir_err tnn_dir;
-    write_tnn (tnn_dir ^ "/" ^ exdir) tnn;
     tnn
   end
 

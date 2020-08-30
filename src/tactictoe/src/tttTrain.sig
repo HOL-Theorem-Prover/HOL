@@ -12,6 +12,6 @@ sig
   val nntm_of_stateval : goal -> term
   val nntm_of_statepol : goal * string -> term
   val nntm_of_statearg : (goal * string) * token -> term
-  val train_from_exdir : real -> string -> tnn
+  val train_fixed : real -> (term * real list) list list -> tnn
 
 end

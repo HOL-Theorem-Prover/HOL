@@ -29,7 +29,7 @@ datatype bstatus = BigStepsProved | BigStepsSaturated | BigStepsTimeout
 fun string_of_bstatus x = case x of
     BigStepsProved => "BigStepsProved"
   | BigStepsSaturated => "BigStepsSaturated"
-  | BigStepsTimeout => "BigStepsTimeOut"
+  | BigStepsTimeout => "BigStepsTimeout"
 
 (* -------------------------------------------------------------------------
    Extracting examples

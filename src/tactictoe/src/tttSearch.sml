@@ -33,13 +33,13 @@ datatype proofstatus = Proof of string | ProofSaturated | ProofTimeout
 fun string_of_sstatus x = case x of
     StacProved => "StacProved"
   | StacSaturated => "StacSaturated"
-  | StacUndecided => "StacTimeOut"
+  | StacUndecided => "StacUndecided"
   | StacFresh => "StacFresh"
 
 fun string_of_searchstatus x = case x of
     SearchProved => "SearchProved"
   | SearchSaturated => "SearchSaturated"
-  | SearchTimeout => "SearchTimeOut"
+  | SearchTimeout => "SearchTimeout"
 
 fun is_stacwin x = (x = StacProved)
 fun is_staclose x = (x = StacSaturated)

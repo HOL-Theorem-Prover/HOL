@@ -119,7 +119,7 @@ fun run_evalscript_thyl smlfun expname (b,ncore) tnno thyl =
   end
 
 (* ------------------------------------------------------------------------
-   Evaluation example runs
+   Evaluation runs
    ------------------------------------------------------------------------ *)
 
 (* One example
@@ -159,13 +159,34 @@ val smlfun = "tttEval.ttt_eval"
 val _ = run_evalscript_thyl smlfun "august30" (true,30) (NONE,NONE) thyl;
 
 (* bigsteps eval *)
-val expname = "august30-2";
+val expname = "august30-3";
 val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
 val ngen = 0;
 val smlfun = "tttBigSteps.run_bigsteps_eval (" ^ 
   mlquote expdir ^ "," ^ aiLib.its ngen ^ ")";
 val _ = run_evalscript_thyl smlfun expname (true,30) (NONE,NONE) thyl;
 *)
+
+(* ------------------------------------------------------------------------
+   Reading examples
+   ------------------------------------------------------------------------ *)
+
+(*
+open mlTreeNeuralNetwork aiLib;
+
+val expname = "august30-3";
+val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
+val ngen = 0;
+val gendir = expdir ^ "/" ^ aiLib.its ngen;
+val valdir = gendir ^ "/val";
+val filel = listDir valdir;
+val filel2 = map (fn x => valdir ^ "/" ^ x) filel;
+val (exl,t) = add_time (map read_tnnex) filel2;
+val exl2 = List.concat exl;
+
+
+*)
+
 
 (* ------------------------------------------------------------------------
    Statistics
