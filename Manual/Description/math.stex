@@ -397,9 +397,9 @@ Furthermore, if a real-valued function is Borel-measurable,
 so is its extreal-valued version. The converse also holds.
 \begin{hol}
 \begin{alltt}
-##thm IN_MEASURABLE_BOREL_IMP_BOREL
-
 ##thm IN_MEASURABLE_BOREL_IMP_BOREL'
+
+##thm in_borel_measurable_from_Borel
 \end{alltt}
 \end{hol}
 
