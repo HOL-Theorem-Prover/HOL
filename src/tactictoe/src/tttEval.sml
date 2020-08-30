@@ -15,7 +15,7 @@ open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "tttEval"
 
-type pvfiles = string option * string option
+type nnfiles = string option * string option * string option
 
 (* -------------------------------------------------------------------------
    Evaluation function
@@ -28,14 +28,14 @@ fun print_status r = case r of
 
 fun print_time (name,t) = print_endline (name ^ " time: " ^ rts_round 6 t)
 
-fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
+fun ttt_eval (thmdata,tacdata) nnol goal =
   let
     val mem = !hide_flag
     val _ = hide_flag := false 
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
     val ((status,tree),t) = add_time
-      (main_tactictoe (thmdata,tacdata) (vnno,pnno)) goal
+      (main_tactictoe (thmdata,tacdata) nnol) goal
       handle Interrupt => raise Interrupt 
         | e => (print_endline "Error"; raise e)
   in
@@ -59,32 +59,30 @@ fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
 
 fun sreflect_real s r = ("val _ = " ^ s ^ " := " ^ rts (!r) ^ ";")
 fun sreflect_flag s flag = ("val _ = " ^ s ^ " := " ^ bts (!flag) ^ ";")
+fun assign_tnn s fileo =
+  if isSome fileo
+  then "val " ^ s ^ " = SOME ( mlTreeNeuralNetwork.read_tnn " ^
+       mlquote (valOf fileo) ^ " );"
+  else "val " ^ s ^ " = NONE : mlTreeNeuralNetwork.tnn option ;"
 
-fun write_evalscript smlfun (vnno,pnno) file =
+fun write_evalscript smlfun (vnno,pnno,anno) file =
   let
     val file1 = mlquote (file ^ "_savestate")
     val file2 = mlquote (file ^ "_goal")
-    val filevo = NONE
-    val filepo = NONE
     val sl =
     ["PolyML.SaveState.loadState " ^ file1 ^ ";",
      "val tactictoe_goal = mlTacticData.import_goal " ^ file2 ^ ";",
      "load " ^ mlquote "tttEval" ^ ";",
-     if isSome filevo
-     then "val tactictoe_vnno = SOME (mlTreeNeuralNetwork.read_tnn " ^
-       mlquote (valOf filevo) ^ ");"
-     else "val tactictoe_vnno = NONE : mlTreeNeuralNetwork.tnn option ;",
-     if isSome filepo
-     then "val tactictoe_pnno = SOME (mlTreeNeuralNetwork.read_tnn " ^
-       mlquote (valOf filepo) ^ ");"
-     else "val tactictoe_pnno = NONE : mlTreeNeuralNetwork.tnn option ;",
+     assign_tnn "tactictoe_vo" vnno,
+     assign_tnn "tactictoe_po" pnno,
+     assign_tnn "tactictoe_ao" anno,
      sreflect_real "tttSetup.ttt_search_time" ttt_search_time,
      sreflect_real "tttSetup.ttt_policy_coeff" ttt_policy_coeff,
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
      sreflect_flag "aiLib.debug_flag" debug_flag,
      smlfun  ^ " " ^
      "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^
-     "(tactictoe_vnno, tactictoe_pnno) " ^
+     "(tactictoe_vo, tactictoe_po, tactictoe_ao) " ^
      "tactictoe_goal;"]
   in
     writel (file ^ "_eval.sml") sl
@@ -92,13 +90,13 @@ fun write_evalscript smlfun (vnno,pnno) file =
 
 fun bare file = OS.Path.base (OS.Path.file file)
 
-fun run_evalscript smlfun dir tnno file =
+fun run_evalscript smlfun dir nnol file =
   (
-  write_evalscript smlfun tnno file;
+  write_evalscript smlfun nnol file;
   run_buildheap_nodep dir (file ^ "_eval.sml")
   )
 
-fun run_evalscript_thyl smlfun expname (b,ncore) tnno thyl =
+fun run_evalscript_thyl smlfun expname (b,ncore) nnol thyl =
   let
     val savestatedir = tactictoe_dir ^ "/savestate"
     val expdir = ttt_eval_dir ^ "/" ^ expname
@@ -113,7 +111,7 @@ fun run_evalscript_thyl smlfun expname (b,ncore) tnno thyl =
     val filel2 = if b then filel1 else one_in_n 10 0 filel1
     val _ = print_endline ("evaluation: " ^ its (length filel2) ^ " problems")
     val (_,t) = add_time
-      (parapp_queue ncore (run_evalscript smlfun outdir tnno)) filel2
+      (parapp_queue ncore (run_evalscript smlfun outdir nnol)) filel2
   in
     print_endline ("evaluation time: " ^ rts_round 6 t)
   end
@@ -165,6 +163,17 @@ val ngen = 0;
 val smlfun = "tttBigSteps.run_bigsteps_eval (" ^ 
   mlquote expdir ^ "," ^ aiLib.its ngen ^ ")";
 val _ = run_evalscript_thyl smlfun expname (true,30) (NONE,NONE) thyl;
+
+(* second generation *)
+val expname = "august30-3";
+val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
+val ngen = 1;
+val smlfun = "tttBigSteps.run_bigsteps_eval (" ^ 
+  mlquote expdir ^ "," ^ aiLib.its ngen ^ ")";
+val (vnno,pnno,anno) = 
+  (expdir ^ "/0/tnnval", expdir ^ "/0/tnnpol", expdir ^ "/0/tnnarg");
+val _ = run_evalscript_thyl smlfun expname (true,30) (vnno,pnno,anno) thyl;
+
 *)
 
 (* ------------------------------------------------------------------------
@@ -172,36 +181,38 @@ val _ = run_evalscript_thyl smlfun expname (true,30) (NONE,NONE) thyl;
    ------------------------------------------------------------------------ *)
 
 (*
-open mlTreeNeuralNetwork aiLib;
+load "tttEval";
+open mlTreeNeuralNetwork aiLib tttTrain tttEval;
 
 val expname = "august30-3";
 val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
 val ngen = 0;
 val gendir = expdir ^ "/" ^ aiLib.its ngen;
+
 val valdir = gendir ^ "/val";
 val filel = listDir valdir;
 val filel2 = map (fn x => valdir ^ "/" ^ x) filel;
 val (exl,t) = add_time (map read_tnnex) filel2;
 val exl2 = List.concat exl;
+val tnnval = train_fixed 0.95 exl2;
+write_tnn (gendir ^ "/tnnval") tnnval;
 
+val poldir = gendir ^ "/pol";
+val filel = map (fn x => valdir ^ "/" ^ x) (listDir poldir);
+val exl = List.concat (map read_tnnex filel);
+val tnnpol = train_fixed 0.95 exl;
+write_tnn (gendir ^ "/tnnpol") tnnpol;
 
+val argdir = gendir ^ "/arg";
+val filel = map (fn x => valdir ^ "/" ^ x) (listDir argdir);
+val exl = List.concat (map read_tnnex filel);
+val tnnarg = train_fixed 0.95 exl;
+write_tnn (gendir ^ "/tnnarg") tnnarg;
 *)
-
 
 (* ------------------------------------------------------------------------
    Statistics
    ------------------------------------------------------------------------ *)
-
-fun listDir dirName =
-  let
-    val dir = OS.FileSys.openDir dirName
-    fun read files = case OS.FileSys.readDir dir of
-        NONE => rev files
-      | SOME file => read (file :: files)
-    val r = read []
-  in
-    OS.FileSys.closeDir dir; r
-  end
 
 fun is_proof x = (case x of Proof _ => true | _ => false)
 

@@ -260,7 +260,7 @@ fun run_bigsteps searchobj g =
     r
   end
 
-fun run_bigsteps_eval (expdir,ngen) (thmdata,tacdata) (vnno,pnno) g =
+fun run_bigsteps_eval (expdir,ngen) (thmdata,tacdata) (vnno,pnno,anno) g =
   let
     val mem = !hide_flag
     val _ = hide_flag := false 
@@ -273,7 +273,7 @@ fun run_bigsteps_eval (expdir,ngen) (thmdata,tacdata) (vnno,pnno) g =
     val errdir = gendir ^ "/err"
     val _ = app mkDir_err [expdir,gendir,valdir,poldir,argdir,resdir,errdir];
     val _ = print_endline "searchobj"
-    val searchobj = build_searchobj (thmdata,tacdata) (NONE,NONE) g
+    val searchobj = build_searchobj (thmdata,tacdata) (vnno,pnno,anno) g
       handle Interrupt => raise Interrupt 
         | e => (append_endline (errdir ^ "/" ^ pb) "searchobj"; raise e)
     val _ = print_endline "run_bigsteps"

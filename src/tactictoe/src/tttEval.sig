@@ -4,16 +4,16 @@ sig
   include Abbrev
 
   type tnn = mlTreeNeuralNetwork.tnn
-  type pvfiles = string option * string option
+  type nnfiles = string option * string option * string option
 
-  val ttt_eval : (mlThmData.thmdata * mlTacticData.tacdata) ->
-    tnn option * tnn option ->
+  val ttt_eval : mlThmData.thmdata * mlTacticData.tacdata ->
+    tnn option * tnn option * tnn option ->
     goal -> unit
 
-  val write_evalscript : string -> pvfiles -> string -> unit
-  val run_evalscript : string -> string -> pvfiles -> string -> unit
+  val write_evalscript : string -> nnfiles -> string -> unit
+  val run_evalscript : string -> string -> nnfiles -> string -> unit
   val run_evalscript_thyl : string -> string -> bool * int -> 
-    pvfiles -> string list -> unit
+    nnfiles -> string list -> unit
 
   (* statistics *)
   val cumul_graph : real -> string -> unit

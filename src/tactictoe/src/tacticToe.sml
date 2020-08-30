@@ -77,7 +77,7 @@ fun select_tacfea tacdata gfea =
    Main function
    ------------------------------------------------------------------------- *)
 
-fun build_searchobj (thmdata,tacdata) (vnno,pnno) goal =
+fun build_searchobj (thmdata,tacdata) (vnno,pnno,anno) goal =
   let
     val narg_explo = 1
     val _ = hidef QUse.use infix_file
@@ -144,12 +144,12 @@ fun build_searchobj (thmdata,tacdata) (vnno,pnno) goal =
   in
     {predtac = predtac, predarg = predarg,
      parsetoken = parsetoken,
-     vnno = vnno, pnno = pnno}
+     vnno = vnno, pnno = pnno, anno = anno}
   end
 
-fun main_tactictoe (thmdata,tacdata) (vnno,pnno) goal =
+fun main_tactictoe (thmdata,tacdata) nnol goal =
   let 
-    val searchobj = build_searchobj (thmdata,tacdata) (vnno,pnno) goal 
+    val searchobj = build_searchobj (thmdata,tacdata) nnol goal 
     val _ = print_endline "search"
   in
     search searchobj goal
@@ -169,7 +169,7 @@ val ministacl =
   "Rewrite.REWRITE_TAC " ^ thmlarg_placeholder
   ]
 
-fun main_tactictoe_mini thmdata (vnno,pnno) goal =
+fun main_tactictoe_mini thmdata (vnno,pnno,anno) goal =
   let
     val narg_explo = 8
     val mem = !ttt_policy_coeff
@@ -218,7 +218,7 @@ fun main_tactictoe_mini thmdata (vnno,pnno) goal =
     val searchobj =
       {predtac = predtac, predarg = predarg,
        parsetoken = parsetoken,
-       vnno = vnno, pnno = pnno}
+       vnno = vnno, pnno = pnno, anno = anno}
     val r = search searchobj goal
     val _ = ttt_policy_coeff := mem
   in
@@ -263,7 +263,7 @@ fun tactictoe_aux goal =
         tacdata_aux
       end
     val (proofstatus,_) = hidef
-      (main_tactictoe (thmdata,tacdata) (NONE,NONE)) goal
+      (main_tactictoe (thmdata,tacdata) (NONE,NONE,NONE)) goal
     val (staco,tac) = read_status proofstatus
   in
     tac
@@ -285,7 +285,8 @@ fun tactictoe_mini_aux goal =
   let
     val cthyl = current_theory () :: ancestry (current_theory ())
     val thmdata = hidef create_thmdata ()
-    val (proofstatus,_) = hidef (main_tactictoe_mini thmdata (NONE,NONE)) goal
+    val (proofstatus,_) = hidef 
+      (main_tactictoe_mini thmdata (NONE,NONE,NONE)) goal
     val (staco,tac) = read_status proofstatus
   in
     tac

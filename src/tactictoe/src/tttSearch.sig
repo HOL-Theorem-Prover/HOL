@@ -40,8 +40,7 @@ sig
     {predtac : goal -> (string * tttToken.aty list) list,
      predarg : string -> tttToken.aty -> goal -> tttToken.token list,
      parsetoken : tttToken.parsetoken,
-     vnno: tnn option,
-     pnno: tnn option}
+     vnno: tnn option, pnno: tnn option, anno: tnn option}
 
   val starttree_of_goal : searchobj -> goal -> tree
   val starttree_of_gstacarg : searchobj -> 

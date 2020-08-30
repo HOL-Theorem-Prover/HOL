@@ -81,6 +81,65 @@ fun backstatus_node node = case #nstatus node of
   | NodeSaturated => StacSaturated
 
 (* -------------------------------------------------------------------------
+   Re-evaluation of nearest neighbor choices
+   by tree neural networks
+   ------------------------------------------------------------------------- *)
+
+(* value *)
+fun reward_of_sstatus sstatus = case sstatus of
+    StacSaturated => 0.0
+  | StacProved => 1.0
+  | _ => raise ERR "reward_of_sstatus" "unexpected"
+
+fun eval_goal vnn g =
+  let
+    val tm1 = nntm_of_stateval g
+    val tm2 = mask_unknown_val vnn tm1
+  in
+    infer_tnn_basic vnn tm2 
+  end
+
+fun reward_of_goal vnno g = 
+  if not (isSome vnno) then 1.0 else eval_goal (valOf vnno) g
+
+(* policy *)
+fun eval_stac pnn g stac = 
+  let 
+    val tm1 = nntm_of_statepol (g,stac)
+    val tm2 = mask_unknown_pol pnn tm1
+  in
+    infer_tnn_basic pnn tm2
+  end
+
+fun reorder_stacl g pnn stacl =
+  let 
+    val (stacl1,stacl2) = part_n 20 stacl
+    fun f x = eval_stac pnn g (fst x)
+    val stacl1e = map_assoc f stacl1 
+    val stacl1o = map fst (dict_sort compare_rmax stacl1e)
+  in
+    stacl1o @ stacl2
+  end
+
+fun reorder_pol g pnno stacl =
+  if not (isSome pnno) then stacl else reorder_stacl g (valOf pnno) stacl
+  
+(* argument *)
+fun eval_arg ann g stac arg =
+  let 
+    val tm1 = nntm_of_statearg ((g,stac),arg)
+    val tm2 = mask_unknown_arg ann tm1
+  in
+    infer_tnn_basic ann tm2
+  end
+
+fun reorder_arg anno g stac argl =
+  if not (isSome anno) then argl else
+  let val l = map_assoc (eval_arg (valOf anno) g stac) argl in
+    map fst (dict_sort compare_rmax l)
+  end 
+
+(* -------------------------------------------------------------------------
    Search tree
    ------------------------------------------------------------------------- *)
 
@@ -116,7 +175,7 @@ type searchobj =
   {predtac : goal -> (string * aty list) list,
    predarg : string -> aty -> goal -> token list,
    parsetoken : parsetoken,
-   vnno: tnn option, pnno: tnn option}
+   vnno: tnn option, pnno: tnn option, anno: tnn option}
 
 (* -------------------------------------------------------------------------
    First part: Node selection
@@ -230,24 +289,6 @@ fun select_node tree pid =
    Second part: Node expansion
    ------------------------------------------------------------------------- *)
 
-(*  Policy re-ordering using policy network
-fun reorder_stacl g pnn stacl =
-  let
-    fun f x = mask_unknown_policy pnn (nntm_of_gstactm (g,x))
-    val l = map_assoc (infer_tnn_basic pnn o f o #stactm) stacl
-  in
-    map fst (dict_sort compare_rmax l)
-  end
-
-fun reorder_stacv g pnn stacv =
-  let
-    val stacl = vector_to_list stacv
-    val (stacl1,stacl2) = part_n 20 stacl
-  in
-    Vector.fromList (reorder_stacl g pnn stacl1 @ stacl2)
-  end
-*)
-
 (* -------------------------------------------------------------------------
    Expand argument tree and select first prediction
    ------------------------------------------------------------------------- *)
@@ -261,7 +302,8 @@ fun expand_argtree searchobj (goal,stac) (argtree,anl) =
     let val argl1 = #predarg searchobj stac (hd atyl) goal in
       if null argl1 then (argtree,anl,StacSaturated) else
       let
-        val argl2 = map (arg_create (tl atyl)) argl1
+        val argl2p = reorder_arg (#anno searchobj) goal stac argl1
+        val argl2 = map (arg_create (tl atyl)) argl2p
         fun f i x = (i :: anl, x)
         val newargtree = daddl (mapi f argl2) argtree
       in
@@ -312,12 +354,6 @@ fun apply_tac parsetoken tokenl goal =
     stac_cache := dadd (goal,tokenl) glo (!stac_cache); glo
   end
 
-fun reward_of vnno (sstatus,glo) = case sstatus of
-    StacSaturated => 0.0
-  | StacProved => 1.0
-  | StacUndecided => 1.0 (* now ignored *)
-  | StacFresh => raise ERR "reward_of" "unexpected"
-
 fun collect_tokenl acc (argtree,anl) =
   let val token = #token (dfind anl argtree) in
     if null anl
@@ -336,10 +372,8 @@ fun apply_stac (tree,searchobj) argtree (pid,(gn,sn,anl)) =
     val glo = apply_tac (#parsetoken searchobj) tokenl (#goal goalrec)
     val sstatus = status_of_stac parentd goalrec glo
     val glo' = if sstatus = StacUndecided then glo else NONE
-    val reward = total_time reward_time
-      (reward_of (#vnno searchobj)) (sstatus,glo')
   in
-    (glo',sstatus,reward)
+    (glo',sstatus)
   end
 
 (* -------------------------------------------------------------------------
@@ -354,13 +388,15 @@ fun argtree_create (stac,atyl) =
   end
 
 fun goal_create searchobj goal =
-  let val stacv = Vector.fromList
-    (map argtree_create (#predtac searchobj goal))
-    (* total_time reorder_time (reorder_stacv goal (valOf pnno)) stacv *)
+  let
+    val stacl1 = #predtac searchobj goal
+    val stacl2 = reorder_pol goal (#pnno searchobj) stacl1
+    val stacv = Vector.fromList (map argtree_create stacl2)
   in
     {
     goal = goal,
-    gvis = 1.0, gsum = 0.0 (* or tnn *), gstatus = backstatus_stacv stacv ,
+    gvis = 1.0, gsum = reward_of_goal (#vnno searchobj) goal, 
+    gstatus = backstatus_stacv stacv,
     stacv = stacv,
     siblingd = dempty (list_compare goal_compare)
     }
@@ -385,7 +421,7 @@ fun node_create (tree,searchobj) gl (pid,(gn,sn,anl)) =
     val newtree = dadd cid node tree
   in
     debug_node gl;
-    newtree
+    (newtree, #nsum node)
   end
 
 (* -------------------------------------------------------------------------
@@ -484,16 +520,15 @@ fun search_loop startsearchobj nlimito starttree =
             expand_argtree searchobj (goal,stac) (argtree,anl)
           val pidx = (pid,(gn,sn,newanl))
           val _ = debugf "application: " string_of_id ((gn,sn,newanl) :: pid)
-          val (glo,sstatus,reward) =
+          val (glo,sstatus) =
             if argstatus = StacFresh
             then apply_stac (tree,searchobj) newargtree pidx
-            else (debug "no argument predicted";
-                  (NONE, StacSaturated, reward_of NONE (StacSaturated,NONE)))
+            else (debug "no argument predicted"; (NONE, StacSaturated))
           val _ = debug "node expansion"
-          val exptree =
+          val (exptree,reward) =
             if sstatus = StacUndecided
             then node_create (tree,searchobj) (valOf glo) pidx
-            else tree
+            else (tree, reward_of_sstatus sstatus)
           val _ = debug "backup"
           val backuptree =
             node_backup exptree (SOME newargtree, glo) (sstatus,reward) pidx
@@ -623,19 +658,13 @@ fun starttree_of_gstacarg searchobj (goal,stac,tokenl) =
    Proof search top-level function
    ------------------------------------------------------------------------- *)
 
-fun time_searchobj predtac_time {predtac,predarg,parsetoken,vnno,pnno} =
-  {
-  predtac = total_time predtac_time predtac,
-  predarg = predarg, parsetoken = parsetoken, vnno = vnno, pnno = pnno
-  }
-
 fun search searchobj g =
   let
     val _ = clean_stac_cache ()
     val _ = (predtac_time := 0.0; reward_time := 0.0; reorder_time := 0.0)
     val starttree = starttree_of_goal searchobj g
     val ((searchstatus,tree),t) = add_time
-      (search_loop (time_searchobj predtac_time searchobj) NONE) starttree
+      (search_loop searchobj NONE) starttree
     val _ = clean_stac_cache ()
     val _ = print_endline ("search time: " ^ rts_round 6 t)
   in
