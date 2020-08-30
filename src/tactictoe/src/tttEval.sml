@@ -30,6 +30,8 @@ fun print_time (name,t) = print_endline (name ^ " time: " ^ rts_round 6 t)
 
 fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
   let
+    val mem = !hide_flag
+    val _ = hide_flag := false 
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
     val ((status,tree),t) = add_time
@@ -42,7 +44,8 @@ fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
     print_endline ("nodes: " ^ its (dlength tree));
     print_time ("tnn value",!reward_time);
     print_time ("tnn policy",!reorder_time);
-    print_time ("tactic pred",!predtac_time)
+    print_time ("tactic pred",!predtac_time);
+    hide_flag := mem
   end
 
 (* ------------------------------------------------------------------------
@@ -156,7 +159,7 @@ val smlfun = "tttEval.ttt_eval"
 val _ = run_evalscript_thyl smlfun "august30" (true,30) (NONE,NONE) thyl;
 
 (* bigsteps eval *)
-val expname = "august30";
+val expname = "august30-2";
 val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
 val ngen = 0;
 val smlfun = "tttBigSteps.run_bigsteps_eval (" ^ 

@@ -262,6 +262,8 @@ fun run_bigsteps searchobj g =
 
 fun run_bigsteps_eval (expdir,ngen) (thmdata,tacdata) (vnno,pnno) g =
   let
+    val mem = !hide_flag
+    val _ = hide_flag := false 
     val pb = current_theory () ^ "_" ^ its (!savestate_level)
     val gendir = expdir ^ "/" ^ its ngen
     val valdir = gendir ^ "/val"
@@ -273,16 +275,17 @@ fun run_bigsteps_eval (expdir,ngen) (thmdata,tacdata) (vnno,pnno) g =
     val _ = print_endline "searchobj"
     val searchobj = build_searchobj (thmdata,tacdata) (NONE,NONE) g
       handle Interrupt => raise Interrupt 
-        | e => (writel (errdir ^ "/" ^ pb) ["searchobj"]; raise e)
+        | e => (append_endline (errdir ^ "/" ^ pb) "searchobj"; raise e)
     val _ = print_endline "run_bigsteps"
     val (bstatus,(exv,exp,exa)) = run_bigsteps searchobj g
       handle Interrupt => raise Interrupt 
-        | e => (writel (errdir ^ "/" ^ pb) ["run_bigsteps"]; raise e)
+        | e => (append_endline (errdir ^ "/" ^ pb) "run_bigsteps"; raise e)
   in
     write_tnnex (valdir ^ "/" ^ pb) (basicex_to_tnnex exv);
     write_tnnex (poldir ^ "/" ^ pb) (basicex_to_tnnex exp);
     write_tnnex (argdir ^ "/" ^ pb) (basicex_to_tnnex exa);
-    writel (resdir ^ "/" ^ pb) [string_of_bstatus bstatus]
+    writel (resdir ^ "/" ^ pb) [string_of_bstatus bstatus];
+    hide_flag := mem
   end
   
   
