@@ -1580,6 +1580,107 @@ Proof
       REWRITE_TAC [real_sub] ]
 QED
 
+Theorem in_borel_measurable_sqr :
+    !a f g. sigma_algebra a /\ f IN measurable a borel /\
+            (!x. x IN space a ==> (g x = (f x) pow 2)) ==> g IN measurable a borel
+Proof
+    rpt STRIP_TAC
+ >> Know `!c. {x | f x <= c} INTER space a IN subsets a`
+ >- (GEN_TAC >> fs [in_borel_measurable_le, IN_FUNSET, IN_UNIV] \\
+    ‘{x | f x <= c} INTER space a = {x | x IN space a /\ f x <= c}’ by SET_TAC [] \\
+     POP_ORW >> art [])
+ >> DISCH_TAC
+ >> Know `!c. {x | c <= f x} INTER space a IN subsets a`
+ >- (GEN_TAC >> fs [in_borel_measurable_ge, IN_FUNSET, IN_UNIV] \\
+    ‘{x | c <= f x} INTER space a = {x | x IN space a /\ c <= f x}’ by SET_TAC [] \\
+     POP_ORW >> art [])
+ >> DISCH_TAC
+ >> simp [IN_FUNSET, in_borel_measurable_le]
+ >> Q.X_GEN_TAC ‘c’
+ >> ‘{w | w IN space a /\ g w <= c} = {x | g x <= c} INTER space a’ by SET_TAC []
+ >> POP_ORW
+ >> Cases_on `c < 0`
+ >- (Know `{x | g x <= c} INTER space a = {}`
+     >- (rw [Once EXTENSION, NOT_IN_EMPTY, GSYM real_lt] \\
+         ONCE_REWRITE_TAC [DISJ_COMM] >> STRONG_DISJ_TAC \\
+         MATCH_MP_TAC REAL_LTE_TRANS >> Q.EXISTS_TAC ‘0’ >> art [] \\
+         METIS_TAC [REAL_LE_POW2]) >> Rewr' \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_EMPTY >> art [])
+ >> FULL_SIMP_TAC real_ss [real_lt]
+ >> Suff `{x | g x <= c} INTER space a =
+            ({x | f x <= sqrt c} INTER space a) INTER
+            ({x | - (sqrt c) <= f x} INTER space a)`
+ >- (Rewr' >> MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [])
+ >> rw [Once EXTENSION]
+ >> EQ_TAC
+ >- (RW_TAC real_ss []
+     >- (Cases_on `f x < 0` >- METIS_TAC [REAL_LTE_TRANS, REAL_LT_IMP_LE, SQRT_POS_LE] \\
+         FULL_SIMP_TAC real_ss [real_lt] \\
+         Know ‘sqrt (g x) <= sqrt c’
+         >- (MATCH_MP_TAC SQRT_MONO_LE >> art [] \\
+             METIS_TAC [REAL_LE_POW2]) >> DISCH_TAC \\
+         Suff ‘sqrt (g x) = f x’ >- PROVE_TAC [] \\
+         MATCH_MP_TAC SQRT_POS_UNIQ >> METIS_TAC [REAL_LE_POW2]) \\
+     SPOSE_NOT_THEN ASSUME_TAC \\
+     FULL_SIMP_TAC real_ss [GSYM real_lt] \\
+    `sqrt c < -(f x)` by METIS_TAC [REAL_LT_NEG, REAL_NEG_NEG] \\
+     Know `(sqrt c) pow 2 < (- (f x)) pow 2`
+     >- (MATCH_MP_TAC REAL_POW_LT2 >> rw [SQRT_POS_LE]) >> DISCH_TAC \\
+    `(sqrt c) pow 2 = c` by METIS_TAC [SQRT_POW2] \\
+    `(-1) pow 2 = (1 :real)` by METIS_TAC [POW_MINUS1, MULT_RIGHT_1] \\
+    `(- (f x)) pow 2 = (f x) pow 2`
+       by RW_TAC std_ss [Once REAL_NEG_MINUS1, POW_MUL, REAL_MUL_LID] \\
+     METIS_TAC [real_lt])
+ >> RW_TAC std_ss []
+ >> Cases_on `0 <= f x` >- METIS_TAC [POW_LE, SQRT_POW2]
+ >> FULL_SIMP_TAC real_ss [GSYM real_lt]
+ >> `- (f x) <= sqrt c` by METIS_TAC [REAL_LE_NEG, REAL_NEG_NEG]
+ >> `(- (f x)) pow 2 <= (sqrt c) pow 2`
+      by METIS_TAC [POW_LE, SQRT_POS_LE, REAL_LT_NEG, REAL_NEG_NEG, REAL_NEG_0, REAL_LT_IMP_LE]
+ >> `(sqrt c) pow 2 = c` by METIS_TAC [SQRT_POW2]
+ >> `(-1) pow 2 = (1 :real)` by METIS_TAC [POW_MINUS1, MULT_RIGHT_1]
+ >> `(- (f x)) pow 2 = (f x) pow 2`
+       by RW_TAC std_ss [Once REAL_NEG_MINUS1, POW_MUL, REAL_MUL_LID]
+ >> METIS_TAC []
+QED
+
+Theorem in_borel_measurable_mul :
+    !a f g h. sigma_algebra a /\ f IN measurable a borel /\ g IN measurable a borel /\
+             (!x. x IN space a ==> (h x = f x * g x)) ==> h IN measurable a borel
+Proof
+    RW_TAC std_ss []
+ >> Know `!x. x IN space a ==>
+             (f x * g x = 1 / 2 * ((f x + g x) pow 2 - f x pow 2 - g x pow 2))`
+ >- (rpt STRIP_TAC \\
+     (MP_TAC o Q.SPECL [`f x`, `g x`]) ADD_POW_2 >> Rewr' \\
+     simp [] >> REAL_ARITH_TAC)
+ >> DISCH_TAC
+ >> MATCH_MP_TAC in_borel_measurable_cmul
+ >> Q.EXISTS_TAC `(\x. (f x + g x) pow 2 - f x pow 2 - g x pow 2)`
+ >> Q.EXISTS_TAC `1 / 2`
+ >> RW_TAC real_ss []
+ >> MATCH_MP_TAC in_borel_measurable_sub
+ >> Q.EXISTS_TAC `(\x. (f x + g x) pow 2 - f x pow 2)`
+ >> Q.EXISTS_TAC `(\x. g x pow 2)`
+ >> RW_TAC std_ss []
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC in_borel_measurable_sub \\
+      Q.EXISTS_TAC `(\x. (f x + g x) pow 2)` \\
+      Q.EXISTS_TAC `(\x. f x pow 2)` \\
+      RW_TAC std_ss [] >| (* 2 subgoals *)
+      [ (* goal 1.1 (of 2) *)
+        MATCH_MP_TAC in_borel_measurable_sqr \\
+        Q.EXISTS_TAC `(\x. f x + g x)` \\
+        RW_TAC std_ss [] \\
+        MATCH_MP_TAC in_borel_measurable_add \\
+        qexistsl_tac [`f`, `g`] \\
+        RW_TAC std_ss [],
+        (* goal 1.2 (of 2) *)
+        MATCH_MP_TAC in_borel_measurable_sqr >> METIS_TAC [] ],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC in_borel_measurable_sqr >> METIS_TAC [] ]
+QED
+
 (************************************************************)
 (*  right-open (left-closed) intervals [a, b) in R          *)
 (************************************************************)
