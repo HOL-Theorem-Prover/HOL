@@ -3955,6 +3955,377 @@ Proof
       METIS_TAC [le_antisym, extreal_lt_def] ]
 QED
 
+(* The reverse version of IN_MEASURABLE_BOREL_IMP_BOREL *)
+Theorem in_borel_measurable_from_Borel :
+    !a f. f IN measurable a Borel ==> (real o f) IN measurable a borel
+Proof
+    rpt GEN_TAC >> DISCH_TAC
+ >> simp [IN_MEASURABLE, sigma_algebra_borel, IN_FUNSET, space_borel]
+ (* sigma_algebra a *)
+ >> STRONG_CONJ_TAC
+ >- (fs [IN_MEASURABLE, SIGMA_ALGEBRA_BOREL, SPACE_BOREL])
+ >> DISCH_TAC
+ >> Q.X_GEN_TAC ‘B’ >> STRIP_TAC
+ >> rw [PREIMAGE_def]
+ >> Know ‘{x | real (f x) IN B} INTER space a =
+          if 0 IN B then
+            ({x | f x IN (IMAGE Normal B)} INTER space a) UNION
+            ({x | f x = PosInf} INTER space a) UNION
+            ({x | f x = NegInf} INTER space a)
+          else
+            ({x | f x IN (IMAGE Normal B)} INTER space a)’
+ >- (Cases_on ‘0 IN B’ >> rw [Once EXTENSION] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       EQ_TAC >> rw [] >> rw [real_def] \\
+       Cases_on ‘f x’ >> fs [real_normal],
+       (* goal 2 (of 2) *)
+       EQ_TAC >> rw [] >> rw [real_def] \\
+       Q.EXISTS_TAC ‘real (f x)’ >> art [] \\
+       ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
+       MATCH_MP_TAC normal_real \\
+       CONJ_TAC >> CCONTR_TAC >> fs [real_def] ])
+ >> Rewr'
+ >> Cases_on ‘0 IN B’ >> ASM_SIMP_TAC std_ss []
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
+      reverse CONJ_TAC >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_NEGINF >> art []) \\
+      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
+      reverse CONJ_TAC >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_POSINF >> art []) \\
+      REWRITE_TAC [GSYM PREIMAGE_def] \\
+      FULL_SIMP_TAC std_ss [Borel, IN_MEASURABLE, SPACE_BOREL, IN_FUNSET,
+                            SIGMA_ALGEBRA_BOREL, IN_UNIV, subsets_def, GSPECIFICATION] \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
+      qexistsl_tac [‘B’, ‘{}’] >> rw [],
+      (* goal 2 (of 2) *)
+      REWRITE_TAC [GSYM PREIMAGE_def] \\
+      FULL_SIMP_TAC std_ss [Borel, IN_MEASURABLE, SPACE_BOREL, IN_FUNSET,
+                            SIGMA_ALGEBRA_BOREL, IN_UNIV, subsets_def, GSPECIFICATION] \\
+      FIRST_X_ASSUM MATCH_MP_TAC \\
+      qexistsl_tac [‘B’, ‘{}’] >> rw [] ]
+QED
+
+(* |- !s t u. (t UNION u) INTER s = t INTER s UNION u INTER s *)
+val UNION_OVER_INTER' = ONCE_REWRITE_RULE [INTER_COMM] UNION_OVER_INTER;
+
+Theorem IN_MEASURABLE_BOREL_TIMES' : (* new proof by Chun Tian *)
+    !a f g h. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel /\
+             (!x. x IN space a ==> (h x = f x * g x)) ==> h IN measurable a Borel
+Proof
+    rpt STRIP_TAC
+ >> rw [IN_MEASURABLE, SIGMA_ALGEBRA_BOREL, IN_FUNSET, SPACE_BOREL]
+ >> Suff ‘(!B. B IN subsets borel ==> PREIMAGE h (IMAGE Normal B) INTER space a IN subsets a) /\
+           PREIMAGE h {PosInf} INTER space a IN subsets a /\
+           PREIMAGE h {NegInf} INTER space a IN subsets a’
+ >- (STRIP_TAC \\
+     Know ‘PREIMAGE h {NegInf; PosInf} INTER space a IN subsets a’
+     >- (‘{NegInf; PosInf} = {NegInf} UNION {PosInf}’ by SET_TAC [] >> POP_ORW \\
+         rw [PREIMAGE_UNION, UNION_OVER_INTER'] \\
+         MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art []) \\
+     DISCH_TAC \\
+     fs [Borel, PREIMAGE_UNION, UNION_OVER_INTER'] (* 3 subgoals, same tactics *) \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ (* PREIMAGE h (IMAGE Normal B) INTER space a IN subsets a *)
+ >> CONJ_TAC
+ >- (rpt STRIP_TAC \\
+     Q.PAT_X_ASSUM ‘s IN subsets Borel’ K_TAC (* useless *) \\
+     rw [PREIMAGE_def] \\
+     Know ‘{x | ?x'. h x = Normal x' /\ x' IN B} INTER space a =
+           {x | ?r. f x * g x = Normal r /\ r IN B} INTER space a’
+     >- (rw [Once EXTENSION] >> EQ_TAC >> rw [] \\
+         rename1 ‘b IN B’ >> Q.EXISTS_TAC ‘b’ >> art [] \\
+         PROVE_TAC []) >> Rewr' \\
+     Q.PAT_X_ASSUM ‘!x. x IN space a ==> _’ K_TAC \\
+     Q.ABBREV_TAC ‘rf = real o f’ \\
+     Q.ABBREV_TAC ‘rg = real o g’ \\
+     Know ‘{x | ?r. f x * g x = Normal r /\ r IN B} INTER space a =
+           if 0 IN B then
+             ({x | f x <> PosInf /\ f x <> NegInf /\ g x <> PosInf /\ g x <> NegInf /\
+                   ?r. rf x * rg x = r /\ r IN B} INTER space a) UNION
+             ({x | f x = 0} INTER space a) UNION
+             ({x | g x = 0} INTER space a)
+           else
+             ({x | f x <> PosInf /\ f x <> NegInf /\ g x <> PosInf /\ g x <> NegInf /\
+                   ?r. rf x * rg x = r /\ r IN B} INTER space a)’
+     >- (reverse (Cases_on ‘0 IN B’) >> rw [Once EXTENSION]
+         >- (EQ_TAC >> rpt STRIP_TAC >> rw [] >| (* 6 subgoals *)
+             [ (* goal 1 (of 6) *)
+               Cases_on ‘g x’ >> FULL_SIMP_TAC std_ss [extreal_mul_def, extreal_not_infty] \\
+               rename1 ‘g x = Normal z’ \\
+               Cases_on ‘z = 0’ >> FULL_SIMP_TAC std_ss [extreal_11] \\
+               Cases_on ‘0 < z’ >> FULL_SIMP_TAC std_ss [extreal_not_infty],
+               (* goal 2 (of 6) *)
+               Cases_on ‘g x’ >> FULL_SIMP_TAC std_ss [extreal_mul_def, extreal_not_infty] \\
+               rename1 ‘g x = Normal z’ \\
+               Cases_on ‘z = 0’ >> FULL_SIMP_TAC std_ss [extreal_11] \\
+               Cases_on ‘0 < z’ >> FULL_SIMP_TAC std_ss [extreal_not_infty],
+               (* goal 3 (of 6) *)
+               Cases_on ‘f x’ >> FULL_SIMP_TAC std_ss [extreal_mul_def, extreal_not_infty] \\
+               rename1 ‘f x = Normal z’ \\
+               Cases_on ‘z = 0’ >> FULL_SIMP_TAC std_ss [extreal_11] \\
+               Cases_on ‘0 < z’ >> FULL_SIMP_TAC std_ss [extreal_not_infty],
+               (* goal 4 (of 6) *)
+               Cases_on ‘f x’ >> FULL_SIMP_TAC std_ss [extreal_mul_def, extreal_not_infty] \\
+               rename1 ‘f x = Normal z’ \\
+               Cases_on ‘z = 0’ >> FULL_SIMP_TAC std_ss [extreal_11] \\
+               Cases_on ‘0 < z’ >> FULL_SIMP_TAC std_ss [extreal_not_infty],
+               (* goal 5 (of 6) *)
+              ‘r <> 0’ by METIS_TAC [] \\
+               Know ‘f x <> PosInf’
+               >- (CCONTR_TAC >> FULL_SIMP_TAC std_ss [] \\
+                   Cases_on ‘g x’ >> FULL_SIMP_TAC std_ss [extreal_mul_def, extreal_not_infty] \\
+                   rename1 ‘g x = Normal z’ \\
+                   Cases_on ‘z = 0’ >> FULL_SIMP_TAC std_ss [extreal_11] \\
+                   Cases_on ‘0 < z’ >> FULL_SIMP_TAC std_ss [extreal_not_infty]) \\
+               Know ‘f x <> NegInf’
+               >- (CCONTR_TAC >> FULL_SIMP_TAC std_ss [] \\
+                   Cases_on ‘g x’ >> FULL_SIMP_TAC std_ss [extreal_mul_def, extreal_not_infty] \\
+                   rename1 ‘g x = Normal z’ \\
+                   Cases_on ‘z = 0’ >> FULL_SIMP_TAC std_ss [extreal_11] \\
+                   Cases_on ‘0 < z’ >> FULL_SIMP_TAC std_ss [extreal_not_infty]) \\
+               Know ‘g x <> PosInf’
+               >- (CCONTR_TAC >> FULL_SIMP_TAC std_ss [] \\
+                   Cases_on ‘f x’ >> FULL_SIMP_TAC std_ss [extreal_mul_def, extreal_not_infty] \\
+                   rename1 ‘f x = Normal z’ \\
+                   Cases_on ‘z = 0’ >> FULL_SIMP_TAC std_ss [extreal_11] \\
+                   Cases_on ‘0 < z’ >> FULL_SIMP_TAC std_ss [extreal_not_infty]) \\
+               Know ‘g x <> NegInf’
+               >- (CCONTR_TAC >> FULL_SIMP_TAC std_ss [] \\
+                   Cases_on ‘f x’ >> FULL_SIMP_TAC std_ss [extreal_mul_def, extreal_not_infty] \\
+                   rename1 ‘f x = Normal z’ \\
+                   Cases_on ‘z = 0’ >> FULL_SIMP_TAC std_ss [extreal_11] \\
+                   Cases_on ‘0 < z’ >> FULL_SIMP_TAC std_ss [extreal_not_infty]) \\
+               rpt STRIP_TAC \\
+              ‘?s. f x = Normal s’ by METIS_TAC [extreal_cases] \\
+              ‘?t. g x = Normal t’ by METIS_TAC [extreal_cases] \\
+              ‘rf x = s’ by rw [Abbr ‘rf’, o_DEF] \\
+              ‘rg x = t’ by rw [Abbr ‘rg’, o_DEF] \\
+               fs [extreal_mul_def],
+               (* goal 6 (of 6) *)
+              ‘?s. f x = Normal s’ by METIS_TAC [extreal_cases] \\
+              ‘?t. g x = Normal t’ by METIS_TAC [extreal_cases] \\
+              ‘rf x = s’ by rw [Abbr ‘rf’, o_DEF] \\
+              ‘rg x = t’ by rw [Abbr ‘rg’, o_DEF] \\
+               fs [extreal_mul_def] ]) \\
+         reverse EQ_TAC >> rpt STRIP_TAC >> rw []
+         >- (‘?s. f x = Normal s’ by METIS_TAC [extreal_cases] \\
+             ‘?t. g x = Normal t’ by METIS_TAC [extreal_cases] \\
+             ‘rf x = s’ by rw [Abbr ‘rf’, o_DEF] \\
+             ‘rg x = t’ by rw [Abbr ‘rg’, o_DEF] \\
+             rw [extreal_mul_def]) \\
+         Cases_on ‘f x = 0’ >- METIS_TAC [] \\
+         Cases_on ‘g x = 0’ >- METIS_TAC [] \\
+         NTAC 2 DISJ1_TAC \\
+         Cases_on ‘f x = PosInf’
+         >- (Cases_on ‘g x’ \\
+             fs [extreal_mul_def, extreal_not_infty, extreal_of_num_def, extreal_11] \\
+             rename1 ‘g x = Normal z’ \\
+             Cases_on ‘0 < z’ >> FULL_SIMP_TAC std_ss [extreal_not_infty]) \\
+         Cases_on ‘f x = NegInf’
+         >- (Cases_on ‘g x’ \\
+             fs [extreal_mul_def, extreal_not_infty, extreal_of_num_def, extreal_11] \\
+             rename1 ‘g x = Normal z’ \\
+             Cases_on ‘0 < z’ >> FULL_SIMP_TAC std_ss [extreal_not_infty]) \\
+         Cases_on ‘g x = PosInf’
+         >- (Cases_on ‘f x’ \\
+             fs [extreal_mul_def, extreal_not_infty, extreal_of_num_def, extreal_11] \\
+             rename1 ‘f x = Normal z’ \\
+             Cases_on ‘0 < z’ >> FULL_SIMP_TAC std_ss [extreal_not_infty]) \\
+         Cases_on ‘g x = NegInf’
+         >- (Cases_on ‘f x’ \\
+             fs [extreal_mul_def, extreal_not_infty, extreal_of_num_def, extreal_11] \\
+             rename1 ‘f x = Normal z’ \\
+             Cases_on ‘0 < z’ >> FULL_SIMP_TAC std_ss [extreal_not_infty]) \\
+         rw [] \\
+        ‘?s. f x = Normal s’ by METIS_TAC [extreal_cases] \\
+        ‘?t. g x = Normal t’ by METIS_TAC [extreal_cases] \\
+        ‘rf x = s’ by rw [Abbr ‘rf’, o_DEF] \\
+        ‘rg x = t’ by rw [Abbr ‘rg’, o_DEF] \\
+         fs [extreal_mul_def]) >> Rewr' \\
+     Cases_on ‘0 IN B’ >> rw [] >| (* 2 subgoals *)
+     [ (* goal 1 (of 2) *)
+       MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
+       reverse CONJ_TAC >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_ALT8 >> art []) \\
+       MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
+       reverse CONJ_TAC >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_ALT8 >> art []),
+       (* goal 2 (of 2) *)
+       ALL_TAC ] \\
+     (* 2 subgoals, same tactics below *)
+     (‘{x | f x <> PosInf /\ f x <> NegInf /\ g x <> PosInf /\ g x <> NegInf /\
+            rf x * rg x IN B} INTER space a =
+         ({x | rf x * rg x IN B} INTER space a) INTER
+         ({x | f x <> PosInf} INTER space a) INTER
+         ({x | f x <> NegInf} INTER space a) INTER
+         ({x | g x <> PosInf} INTER space a) INTER
+         ({x | g x <> NegInf} INTER space a)’ by SET_TAC [] >> POP_ORW \\
+       MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [] \\
+       reverse CONJ_TAC >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_NOT_NEGINF >> art []) \\
+       MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [] \\
+       reverse CONJ_TAC >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_NOT_POSINF >> art []) \\
+       MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [] \\
+       reverse CONJ_TAC >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_NOT_NEGINF >> art []) \\
+       MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [] \\
+       reverse CONJ_TAC >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_NOT_POSINF >> art []) \\
+       Q.ABBREV_TAC ‘h = \x. rf x * rg x’ \\
+       Know ‘{x | rf x * rg x IN B} = PREIMAGE h B’
+       >- rw [PREIMAGE_def, Abbr ‘h’] >> Rewr' \\
+       Suff ‘h IN measurable a borel’ >- rw [IN_MEASURABLE] \\
+       MATCH_MP_TAC in_borel_measurable_mul \\
+       qexistsl_tac [‘rf’, ‘rg’] >> simp [] \\
+       CONJ_TAC >| (* 2 subgoals *)
+       [ (* goal 1.1 (of 2) *)
+         Q.UNABBREV_TAC ‘rf’ \\
+         MATCH_MP_TAC in_borel_measurable_from_Borel >> art [],
+         (* goal 9.2 (of 2) *)
+         Q.UNABBREV_TAC ‘rg’ \\
+         MATCH_MP_TAC in_borel_measurable_from_Borel >> art [] ]))
+ (* PREIMAGE h {PosInf} INTER space a IN subsets a *)
+ >> CONJ_TAC
+ >- (rw [PREIMAGE_def] \\
+     Know ‘{x | h x = PosInf} INTER space a = {x | f x * g x = PosInf} INTER space a’
+     >- (rw [Once EXTENSION] >> EQ_TAC >> rw [] \\
+         PROVE_TAC []) >> Rewr' \\
+     Q.PAT_X_ASSUM ‘!x. x IN space a ==> _’ K_TAC \\
+     Know ‘{x | f x * g x = PosInf} INTER space a =
+            ({x | f x = PosInf /\ 0 < g x} INTER space a) UNION
+            ({x | 0 < f x /\ g x = PosInf} INTER space a) UNION
+            ({x | f x = NegInf /\ g x < 0} INTER space a) UNION
+            ({x | f x < 0 /\ g x = NegInf} INTER space a)’
+     >- (rw [Once EXTENSION] \\
+         EQ_TAC >> rpt STRIP_TAC >> rw [] >| (* 5 subgoals *)
+         [ (* goal 1 (of 5) *)
+           Cases_on ‘f x’ >> Cases_on ‘g x’ \\
+           fs [extreal_mul_def, extreal_of_num_def, lt_infty, extreal_lt_eq] >| (* 4 subgoals *)
+           [ (* goal 1.1 (of 4) *)
+             Cases_on ‘r = 0’ >> FULL_SIMP_TAC std_ss [extreal_not_infty] \\
+             Cases_on ‘0 < r’ >> fs [] \\
+             POP_ASSUM (MP_TAC o (REWRITE_RULE [real_lt])) \\
+             METIS_TAC [REAL_LE_LT],
+             (* goal 1.2 (of 4) *)
+             Cases_on ‘r = 0’ >> FULL_SIMP_TAC std_ss [extreal_not_infty] \\
+             Cases_on ‘0 < r’ >> fs [],
+             (* goal 1.3 (of 4) *)
+             Cases_on ‘r = 0’ >> FULL_SIMP_TAC std_ss [extreal_not_infty] \\
+             Cases_on ‘0 < r’ >> fs [] \\
+             POP_ASSUM (MP_TAC o (REWRITE_RULE [real_lt])) \\
+             METIS_TAC [REAL_LE_LT],
+             (* goal 1.4 (of 4) *)
+             Cases_on ‘r = 0’ >> FULL_SIMP_TAC std_ss [extreal_not_infty] \\
+             Cases_on ‘0 < r’ >> fs [] ],
+           (* goal 2 (of 5) *)
+           Cases_on ‘g x’ >> fs [extreal_mul_def, extreal_of_num_def, lt_infty, extreal_lt_eq] \\
+           METIS_TAC [REAL_LT_IMP_NE],
+           (* goal 3 (of 5) *)
+           Cases_on ‘f x’ >> fs [extreal_mul_def, extreal_of_num_def, lt_infty, extreal_lt_eq] \\
+           METIS_TAC [REAL_LT_IMP_NE],
+           (* goal 4 (of 5) *)
+           Cases_on ‘g x’ >> fs [extreal_mul_def, extreal_of_num_def, lt_infty, extreal_lt_eq] \\
+          ‘r <> 0’ by METIS_TAC [REAL_LT_IMP_NE] >> rw [] \\
+           METIS_TAC [REAL_LT_ANTISYM],
+           (* goal 5 (of 5) *)
+           Cases_on ‘f x’ >> fs [extreal_mul_def, extreal_of_num_def, lt_infty, extreal_lt_eq] \\
+          ‘r <> 0’ by METIS_TAC [REAL_LT_IMP_NE] >> rw [] \\
+           METIS_TAC [REAL_LT_ANTISYM] ]) >> Rewr' \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
+     reverse CONJ_TAC
+     >- (‘{x | f x < 0 /\ g x = NegInf} INTER space a =
+          ({x | f x < 0} INTER space a) INTER ({x | g x = NegInf} INTER space a)’
+            by SET_TAC [] >> POP_ORW \\
+         MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [] \\
+         METIS_TAC [IN_MEASURABLE_BOREL_ALL]) \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
+     reverse CONJ_TAC
+     >- (‘{x | f x = NegInf /\ g x < 0} INTER space a =
+          ({x | f x = NegInf} INTER space a) INTER ({x | g x < 0} INTER space a)’
+            by SET_TAC [] >> POP_ORW \\
+         MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [] \\
+         METIS_TAC [IN_MEASURABLE_BOREL_ALL]) \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
+     CONJ_TAC
+     >- (‘{x | f x = PosInf /\ 0 < g x} INTER space a =
+          ({x | f x = PosInf} INTER space a) INTER ({x | 0 < g x} INTER space a)’
+            by SET_TAC [] >> POP_ORW \\
+         MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [] \\
+         METIS_TAC [IN_MEASURABLE_BOREL_ALL]) \\
+    ‘{x | 0 < f x /\ g x = PosInf} INTER space a =
+      ({x | 0 < f x} INTER space a) INTER ({x | g x = PosInf} INTER space a)’
+         by SET_TAC [] >> POP_ORW \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [] \\
+     METIS_TAC [IN_MEASURABLE_BOREL_ALL])
+ (* PREIMAGE h {NegInf} INTER space a IN subsets a *)
+ >> (rw [PREIMAGE_def] \\
+     Know ‘{x | h x = NegInf} INTER space a = {x | f x * g x = NegInf} INTER space a’
+     >- (rw [Once EXTENSION] >> EQ_TAC >> rw [] \\
+         PROVE_TAC []) >> Rewr' \\
+     Q.PAT_X_ASSUM ‘!x. x IN space a ==> _’ K_TAC \\
+     Know ‘{x | f x * g x = NegInf} INTER space a =
+            ({x | f x = PosInf /\ g x < 0} INTER space a) UNION
+            ({x | f x < 0 /\ g x = PosInf} INTER space a) UNION
+            ({x | f x = NegInf /\ 0 < g x} INTER space a) UNION
+            ({x | 0 < f x /\ g x = NegInf} INTER space a)’
+     >- (rw [Once EXTENSION] \\
+         EQ_TAC >> rpt STRIP_TAC >> rw [] >| (* 5 subgoals *)
+         [ (* goal 1 (of 5) *)
+           Cases_on ‘f x’ >> Cases_on ‘g x’ \\
+           fs [extreal_mul_def, extreal_of_num_def, lt_infty, extreal_lt_eq] >| (* 4 subgoals *)
+           [ (* goal 1.1 (of 4) *)
+             Cases_on ‘r = 0’ >> FULL_SIMP_TAC std_ss [extreal_not_infty] \\
+             Cases_on ‘0 < r’ >> fs [],
+             (* goal 1.2 (of 4) *)
+             Cases_on ‘r = 0’ >> FULL_SIMP_TAC std_ss [extreal_not_infty] \\
+             Cases_on ‘0 < r’ >> fs [] \\
+             POP_ASSUM (MP_TAC o (REWRITE_RULE [real_lt])) \\
+             METIS_TAC [REAL_LE_LT],
+             (* goal 1.3 (of 4) *)
+             Cases_on ‘r = 0’ >> FULL_SIMP_TAC std_ss [extreal_not_infty] \\
+             Cases_on ‘0 < r’ >> fs [],
+             (* goal 1.4 (of 4) *)
+             Cases_on ‘r = 0’ >> FULL_SIMP_TAC std_ss [extreal_not_infty] \\
+             Cases_on ‘0 < r’ >> fs [] \\
+             POP_ASSUM (MP_TAC o (REWRITE_RULE [real_lt])) \\
+             METIS_TAC [REAL_LE_LT] ],
+           (* goal 2 (of 5) *)
+           Cases_on ‘g x’ >> fs [extreal_mul_def, extreal_of_num_def, lt_infty, extreal_lt_eq] \\
+          ‘r <> 0’ by METIS_TAC [REAL_LT_IMP_NE] >> rw [] \\
+           METIS_TAC [REAL_LT_ANTISYM],
+           (* goal 3 (of 5) *)
+           Cases_on ‘f x’ >> fs [extreal_mul_def, extreal_of_num_def, lt_infty, extreal_lt_eq] \\
+          ‘r <> 0’ by METIS_TAC [REAL_LT_IMP_NE] >> rw [] \\
+           METIS_TAC [REAL_LT_ANTISYM],
+           (* goal 4 (of 5) *)
+           Cases_on ‘g x’ >> fs [extreal_mul_def, extreal_of_num_def, lt_infty, extreal_lt_eq] \\
+           METIS_TAC [REAL_LT_IMP_NE],
+           (* goal 5 (of 5) *)
+           Cases_on ‘f x’ >> fs [extreal_mul_def, extreal_of_num_def, lt_infty, extreal_lt_eq] \\
+           METIS_TAC [REAL_LT_IMP_NE] ]) >> Rewr' \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
+     reverse CONJ_TAC
+     >- (‘{x | 0 < f x /\ g x = NegInf} INTER space a =
+          ({x | 0 < f x} INTER space a) INTER ({x | g x = NegInf} INTER space a)’
+            by SET_TAC [] >> POP_ORW \\
+         MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [] \\
+         METIS_TAC [IN_MEASURABLE_BOREL_ALL]) \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
+     reverse CONJ_TAC
+     >- (‘{x | f x = NegInf /\ 0 < g x} INTER space a =
+          ({x | f x = NegInf} INTER space a) INTER ({x | 0 < g x} INTER space a)’
+            by SET_TAC [] >> POP_ORW \\
+         MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [] \\
+         METIS_TAC [IN_MEASURABLE_BOREL_ALL]) \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
+     CONJ_TAC
+     >- (‘{x | f x = PosInf /\ g x < 0} INTER space a =
+          ({x | f x = PosInf} INTER space a) INTER ({x | g x < 0} INTER space a)’
+            by SET_TAC [] >> POP_ORW \\
+         MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [] \\
+         METIS_TAC [IN_MEASURABLE_BOREL_ALL]) \\
+    ‘{x | f x < 0 /\ g x = PosInf} INTER space a =
+      ({x | f x < 0} INTER space a) INTER ({x | g x = PosInf} INTER space a)’
+         by SET_TAC [] >> POP_ORW \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [] \\
+     METIS_TAC [IN_MEASURABLE_BOREL_ALL])
+QED
+
 Theorem IN_MEASURABLE_BOREL_TIMES :
   !m f g h.
      measure_space m /\
@@ -3963,540 +4334,10 @@ Theorem IN_MEASURABLE_BOREL_TIMES :
      (!x. x IN m_space m ==> (h x = f x * g x)) ==>
      h IN measurable (m_space m, measurable_sets m) Borel
 Proof
-  RW_TAC std_ss [] THEN
-  Q_TAC SUFF_TAC `(\x. f x * g x) IN measurable (m_space m,measurable_sets m) Borel` THENL
-  [RW_TAC std_ss [IN_MEASURABLE, space_def] THENL
-   [EVAL_TAC THEN SRW_TAC[][IN_DEF,IN_FUNSET], ALL_TAC] THEN
-   FIRST_X_ASSUM (MP_TAC o Q.SPEC `s`) THEN ASM_REWRITE_TAC [] THEN
-   SIMP_TAC std_ss [INTER_DEF] THEN
-   Q_TAC SUFF_TAC `{x | x IN PREIMAGE (\x. f x * g x) s /\ x IN m_space m} =
-                   {x | x IN PREIMAGE h s /\ x IN m_space m}` THENL
-   [METIS_TAC [], ALL_TAC] THEN
-   SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_PREIMAGE] THEN
-   ASM_SET_TAC [], ALL_TAC] THEN
-
-  Q_TAC SUFF_TAC `(\x. PosInf) IN measurable (m_space m,measurable_sets m) Borel /\
-                  (\x. NegInf) IN measurable (m_space m,measurable_sets m) Borel` THENL
-  [STRIP_TAC,
-   CONJ_TAC THEN MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST THEN
-   METIS_TAC [measure_space_def]] THEN
-
-  ONCE_REWRITE_TAC [METIS [SPACE, m_space_def, measurable_sets_def]
-    ``Borel = (m_space (space Borel, subsets Borel, (\x. 0)),
-       measurable_sets (space Borel, subsets Borel, (\x. 0)))``] THEN
-  Q_TAC SUFF_TAC `(\x. f x * g x) =
-                  (\x. if {x | ((f x = PosInf) \/ (f x = NegInf))} x
-                       then (\x. if f x = PosInf then PosInf * g x
-                                                 else NegInf * g x) x
-                       else (\x. Normal (real (f x)) * g x) x)` THENL
-  [DISC_RW_KILL,
-   SIMP_TAC std_ss [FUN_EQ_THM] THEN GEN_TAC THEN COND_CASES_TAC THENL
-   [POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION]) THEN
-    SIMP_TAC std_ss [GSPECIFICATION] THEN METIS_TAC [],
-    ALL_TAC] THEN
-   POP_ASSUM MP_TAC THEN
-   GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM SPECIFICATION] THEN
-   SIMP_TAC std_ss [GSPECIFICATION] THEN METIS_TAC [normal_real]] THEN
-
-  MATCH_MP_TAC MEASURABLE_IF THEN
-  RW_TAC std_ss [m_space_def, measurable_sets_def, SPACE] THENL
-  [ALL_TAC, ALL_TAC,
-   Q_TAC SUFF_TAC
-   `{x | x IN m_space m /\ {x | (f x = PosInf) \/ (f x = NegInf)} x} =
-    PREIMAGE f {x | (x = PosInf) \/ (x = NegInf)} INTER m_space m` THENL
-   [DISC_RW_KILL,
-    SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER, IN_PREIMAGE] THEN
-    GEN_TAC THEN GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM SPECIFICATION] THEN
-    SET_TAC []] THEN
-   FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-   FIRST_X_ASSUM MATCH_MP_TAC THEN
-   ONCE_REWRITE_TAC [SET_RULE ``{x | (x = PosInf) \/ (x = NegInf)} =
-                                {PosInf} UNION {NegInf}``] THEN
-   MATCH_MP_TAC ALGEBRA_UNION THEN
-   METIS_TAC [measure_space_def, sigma_algebra_def,
-              BOREL_MEASURABLE_INFINITY]] THENL
-  [ALL_TAC,
-   ONCE_REWRITE_TAC [METIS [SPACE, m_space_def, measurable_sets_def]
-    ``Borel = (m_space (space Borel, subsets Borel, (\x. 0)),
-       measurable_sets (space Borel, subsets Borel, (\x. 0)))``] THEN
-   Q_TAC SUFF_TAC `(\x. Normal (real (f x)) * g x) =
-           (\x. if {x | ((g x = PosInf) \/ (g x = NegInf))} x
-                then (\x. if g x = PosInf then Normal (real (f x)) * PosInf
-                                          else Normal (real (f x)) * NegInf) x
-                else (\x. Normal (real (f x)) * Normal (real (g x))) x)` THENL
-   [DISC_RW_KILL,
-    SIMP_TAC std_ss [FUN_EQ_THM] THEN GEN_TAC THEN COND_CASES_TAC THENL
-    [POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION]) THEN
-     SIMP_TAC std_ss [GSPECIFICATION] THEN METIS_TAC [],
-     ALL_TAC] THEN
-    POP_ASSUM MP_TAC THEN
-    GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM SPECIFICATION] THEN
-    SIMP_TAC std_ss [GSPECIFICATION] THEN METIS_TAC [normal_real]] THEN
-   MATCH_MP_TAC MEASURABLE_IF THEN
-   RW_TAC std_ss [m_space_def, measurable_sets_def, SPACE] THENL
-   [ALL_TAC,
-    `(\x. 0) IN measurable (m_space m,measurable_sets m) Borel` by
-     (MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST THEN
-      METIS_TAC [measure_space_def]) THEN
-    MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL THEN
-    Q.EXISTS_TAC `(\x. Normal (real (f x)))` THEN
-    Q.EXISTS_TAC `(\x. Normal (real (g x)))` THEN
-    FULL_SIMP_TAC std_ss [measure_space_def, extreal_not_infty] THEN
-    ONCE_REWRITE_TAC [METIS [SPACE, m_space_def, measurable_sets_def]
-    ``Borel = (m_space (space Borel, subsets Borel, (\x. 0)),
-       measurable_sets (space Borel, subsets Borel, (\x. 0)))``] THEN
-    CONJ_TAC THENL
-    [Q_TAC SUFF_TAC `(\x. Normal (real (f x))) =
-      (\x. if {x | (f x = PosInf) \/ (f x = NegInf)} x then (\x. 0) x else f x)` THENL
-     [DISC_RW_KILL,
-      ABS_TAC THEN COND_CASES_TAC THENL
-      [POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION]) THEN
-       SIMP_TAC std_ss [GSPECIFICATION] THEN METIS_TAC [real_def, extreal_of_num_def],
-       ALL_TAC] THEN
-      POP_ASSUM MP_TAC THEN
-      GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM SPECIFICATION] THEN
-      SIMP_TAC std_ss [GSPECIFICATION] THEN METIS_TAC [normal_real]] THEN
-     MATCH_MP_TAC MEASURABLE_IF THEN
-     RW_TAC std_ss [m_space_def, measurable_sets_def, SPACE] THENL
-     [ALL_TAC, METIS_TAC [measure_space_def]] THEN
-     Q_TAC SUFF_TAC `{x | x IN m_space m /\
-                     {x | (f x = PosInf) \/ (f x = NegInf)} x} =
-          PREIMAGE f {x | (x = PosInf) \/ (x = NegInf)} INTER m_space m` THENL
-     [DISC_RW_KILL,
-      SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER, IN_PREIMAGE] THEN
-      GEN_TAC THEN GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM SPECIFICATION] THEN
-      SET_TAC []] THEN
-     FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-     FIRST_X_ASSUM MATCH_MP_TAC THEN
-     ONCE_REWRITE_TAC [SET_RULE
-     ``{x | (x = PosInf) \/ (x = NegInf)} = {PosInf} UNION {NegInf}``] THEN
-     MATCH_MP_TAC ALGEBRA_UNION THEN
-     METIS_TAC [measure_space_def, sigma_algebra_def, BOREL_MEASURABLE_INFINITY],
-     ALL_TAC] THEN
-    Q_TAC SUFF_TAC `(\x. Normal (real (g x))) =
-      (\x. if {x | (g x = PosInf) \/ (g x = NegInf)} x then (\x. 0) x else g x)` THENL
-     [DISC_RW_KILL,
-      ABS_TAC THEN COND_CASES_TAC THENL
-      [POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION]) THEN
-       SIMP_TAC std_ss [GSPECIFICATION] THEN
-       METIS_TAC [real_def, extreal_of_num_def],
-       ALL_TAC] THEN
-      POP_ASSUM MP_TAC THEN
-      GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM SPECIFICATION] THEN
-      SIMP_TAC std_ss [GSPECIFICATION] THEN METIS_TAC [normal_real]] THEN
-     MATCH_MP_TAC MEASURABLE_IF THEN
-     RW_TAC std_ss [m_space_def, measurable_sets_def, SPACE] THENL
-     [ALL_TAC, METIS_TAC [measure_space_def]] THEN
-     Q_TAC SUFF_TAC `{x | x IN m_space m /\
-                     {x | (g x = PosInf) \/ (g x = NegInf)} x} =
-          PREIMAGE g {x | (x = PosInf) \/ (x = NegInf)} INTER m_space m` THENL
-     [DISC_RW_KILL,
-      SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER, IN_PREIMAGE] THEN
-      GEN_TAC THEN GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM SPECIFICATION] THEN
-      SET_TAC []] THEN
-     FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-     FIRST_X_ASSUM MATCH_MP_TAC THEN
-     ONCE_REWRITE_TAC [SET_RULE
-     ``{x | (x = PosInf) \/ (x = NegInf)} = {PosInf} UNION {NegInf}``] THEN
-     MATCH_MP_TAC ALGEBRA_UNION THEN
-     METIS_TAC [measure_space_def, sigma_algebra_def, BOREL_MEASURABLE_INFINITY],
-
-     Q_TAC SUFF_TAC `{x | x IN m_space m /\ {x | (g x = PosInf) \/ (g x = NegInf)} x} =
-                  PREIMAGE g {x | (x = PosInf) \/ (x = NegInf)} INTER m_space m` THENL
-     [DISC_RW_KILL,
-      SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER, IN_PREIMAGE] THEN
-      GEN_TAC THEN GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM SPECIFICATION] THEN
-      SET_TAC []] THEN
-     FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-     FIRST_X_ASSUM MATCH_MP_TAC THEN
-     ONCE_REWRITE_TAC [SET_RULE ``{x | (x = PosInf) \/ (x = NegInf)} = {PosInf} UNION {NegInf}``] THEN
-     MATCH_MP_TAC ALGEBRA_UNION THEN
-     METIS_TAC [measure_space_def, sigma_algebra_def, BOREL_MEASURABLE_INFINITY]] THEN
-
-    ONCE_REWRITE_TAC [METIS [SPACE, m_space_def, measurable_sets_def]
-     ``Borel = (m_space (space Borel, subsets Borel, (\x. 0)),
-       measurable_sets (space Borel, subsets Borel, (\x. 0)))``] THEN
-    Q_TAC SUFF_TAC `(\x. if g x = PosInf then Normal (real (f x)) * PosInf
-                         else Normal (real (f x)) * NegInf) =
-                    (\x. if (\x. g x = PosInf) x then (\x. Normal (real (f x)) * PosInf) x
-                         else (\x. Normal (real (f x)) * NegInf) x)` THENL
-    [DISC_RW_KILL, SIMP_TAC std_ss []] THEN
-    `(\x. 0) IN measurable (m_space m,measurable_sets m) Borel` by
-     (MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST THEN
-      METIS_TAC [measure_space_def]) THEN
-    MATCH_MP_TAC MEASURABLE_IF THEN RW_TAC std_ss [] THENL
-
-    [SIMP_TAC std_ss [extreal_mul_def] THEN
-     Q_TAC SUFF_TAC `(\x. if real (f x) = 0 then Normal 0
-                         else if 0 < real (f x) then PosInf
-                         else NegInf) =
-                    (\x. if (\x. real (f x) = 0) x then (\x. Normal 0) x
-                         else (\x. if 0 < real (f x) then PosInf
-                         else NegInf) x)` THENL
-     [DISC_RW_KILL, SIMP_TAC std_ss []] THEN MATCH_MP_TAC MEASURABLE_IF THEN
-     RW_TAC std_ss [] THENL
-     [ASM_SIMP_TAC std_ss [m_space_def, measurable_sets_def, SPACE, GSYM extreal_of_num_def],
-      ALL_TAC,
-      SIMP_TAC std_ss [GSYM extreal_11, GSYM extreal_of_num_def] THEN
-      Q_TAC SUFF_TAC `{x | x IN m_space m /\ (Normal (real (f x)) = 0)} =
-                      PREIMAGE f {x | (x = 0) \/ (x = PosInf) \/ (x = NegInf)} INTER m_space m` THENL
-      [DISC_RW_KILL,
-       SIMP_TAC std_ss [PREIMAGE_def] THEN
-       SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] THEN
-       GEN_TAC THEN EQ_TAC THEN RW_TAC std_ss [real_def, extreal_of_num_def, real_normal] THEN
-       FULL_SIMP_TAC std_ss [GSYM extreal_of_num_def] THEN
-       TRY (METIS_TAC [extreal_of_num_def, extreal_11, normal_real])] THEN
-      FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-      FIRST_X_ASSUM MATCH_MP_TAC THEN
-      ONCE_REWRITE_TAC [SET_RULE ``{x | (x = 0) \/ (x = PosInf) \/ (x = NegInf)} =
-                                   {0} UNION ({PosInf} UNION {NegInf})``] THEN
-      MATCH_MP_TAC ALGEBRA_UNION THEN
-      `algebra Borel` by METIS_TAC [sigma_algebra_def, SIGMA_ALGEBRA_BOREL] THEN
-      ASM_SIMP_TAC std_ss [BOREL_MEASURABLE_SETS_SING, extreal_of_num_def] THEN
-      MATCH_MP_TAC ALGEBRA_UNION THEN ASM_SIMP_TAC std_ss [BOREL_MEASURABLE_INFINITY]] THEN
-     SIMP_TAC std_ss [GSYM extreal_11, GSYM extreal_of_num_def] THEN
-
-     Q_TAC SUFF_TAC `(\x. if 0 < real (f x) then PosInf else NegInf) =
-                (\x. if (\x. 0 < real (f x)) x then (\x. PosInf) x else (\x. NegInf) x)` THENL
-     [DISC_RW_KILL, SIMP_TAC std_ss []] THEN
-     MATCH_MP_TAC MEASURABLE_IF THEN RW_TAC std_ss [] THENL
-     [ASM_SIMP_TAC std_ss [m_space_def, measurable_sets_def, SPACE],
-      ASM_SIMP_TAC std_ss [m_space_def, measurable_sets_def, SPACE],
-      ALL_TAC] THEN
-     SIMP_TAC std_ss [GSYM extreal_lt_eq, GSYM extreal_of_num_def] THEN
-     Q_TAC SUFF_TAC `{x | x IN m_space m /\ 0 < Normal (real (f x))} =
-                      PREIMAGE f {x | 0 < x /\ (x <> PosInf) /\ (x <> NegInf)} INTER m_space m` THENL
-     [DISC_RW_KILL,
-      SIMP_TAC std_ss [PREIMAGE_def] THEN
-      SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] THEN
-      GEN_TAC THEN EQ_TAC THEN RW_TAC std_ss [real_def, extreal_of_num_def, real_normal] THEN
-      FULL_SIMP_TAC std_ss [GSYM extreal_of_num_def, lt_refl] THEN
-      TRY (METIS_TAC [extreal_of_num_def, extreal_11, normal_real, extreal_lt_eq])] THEN
-
-     FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-     FIRST_X_ASSUM MATCH_MP_TAC THEN
-     ONCE_REWRITE_TAC [SET_RULE ``{x | 0 < x /\ x <> PosInf /\ x <> NegInf} =
-                                  {x | 0 < x} INTER ((UNIV DIFF {PosInf}) INTER (UNIV DIFF {NegInf}))``] THEN
-     MATCH_MP_TAC ALGEBRA_INTER THEN
-     `algebra Borel` by METIS_TAC [sigma_algebra_def, SIGMA_ALGEBRA_BOREL] THEN
-     ASM_SIMP_TAC std_ss [BOREL_MEASURABLE_SETS_OR, extreal_of_num_def] THEN
-     MATCH_MP_TAC ALGEBRA_INTER THEN ASM_SIMP_TAC std_ss [GSYM SPACE_BOREL] THEN
-     CONJ_TAC THEN (MATCH_MP_TAC ALGEBRA_DIFF THEN
-      ASM_SIMP_TAC std_ss [BOREL_MEASURABLE_INFINITY, ALGEBRA_SPACE]),
-
-     ALL_TAC,
-     Q_TAC SUFF_TAC `{x | x IN m_space m /\ (g x = PosInf)} =
-                    PREIMAGE g {x | x = PosInf} INTER m_space m` THENL
-     [DISC_RW_KILL,
-      SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER, IN_PREIMAGE] THEN
-      GEN_TAC THEN GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM SPECIFICATION] THEN
-      SET_TAC []] THEN
-     FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-     FIRST_X_ASSUM MATCH_MP_TAC THEN
-     ONCE_REWRITE_TAC [SET_RULE ``{x | x = PosInf} = {PosInf}``] THEN
-     SIMP_TAC std_ss [BOREL_MEASURABLE_INFINITY]] THEN
-
-    SIMP_TAC std_ss [extreal_mul_def] THEN
-     Q_TAC SUFF_TAC `(\x. if real (f x) = 0 then Normal 0
-                         else if 0 < real (f x) then NegInf
-                         else PosInf) =
-                    (\x. if (\x. real (f x) = 0) x then (\x. Normal 0) x
-                         else (\x. if 0 < real (f x) then NegInf
-                         else PosInf) x)` THENL
-     [DISC_RW_KILL, SIMP_TAC std_ss []] THEN MATCH_MP_TAC MEASURABLE_IF THEN
-     RW_TAC std_ss [] THENL
-     [ASM_SIMP_TAC std_ss [m_space_def, measurable_sets_def, SPACE, GSYM extreal_of_num_def],
-      ALL_TAC,
-      SIMP_TAC std_ss [GSYM extreal_11, GSYM extreal_of_num_def] THEN
-      Q_TAC SUFF_TAC `{x | x IN m_space m /\ (Normal (real (f x)) = 0)} =
-                      PREIMAGE f {x | (x = 0) \/ (x = PosInf) \/ (x = NegInf)} INTER m_space m` THENL
-      [DISC_RW_KILL,
-       SIMP_TAC std_ss [PREIMAGE_def] THEN
-       SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] THEN
-       GEN_TAC THEN EQ_TAC THEN RW_TAC std_ss [real_def, extreal_of_num_def, real_normal] THEN
-       FULL_SIMP_TAC std_ss [GSYM extreal_of_num_def] THEN
-       TRY (METIS_TAC [extreal_of_num_def, extreal_11, normal_real])] THEN
-      FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-      FIRST_X_ASSUM MATCH_MP_TAC THEN
-      ONCE_REWRITE_TAC [SET_RULE ``{x | (x = 0) \/ (x = PosInf) \/ (x = NegInf)} =
-                                   {0} UNION ({PosInf} UNION {NegInf})``] THEN
-      MATCH_MP_TAC ALGEBRA_UNION THEN
-      `algebra Borel` by METIS_TAC [sigma_algebra_def, SIGMA_ALGEBRA_BOREL] THEN
-      ASM_SIMP_TAC std_ss [BOREL_MEASURABLE_SETS_SING, extreal_of_num_def] THEN
-      MATCH_MP_TAC ALGEBRA_UNION THEN ASM_SIMP_TAC std_ss [BOREL_MEASURABLE_INFINITY]] THEN
-     SIMP_TAC std_ss [GSYM extreal_11, GSYM extreal_of_num_def] THEN
-
-     Q_TAC SUFF_TAC `(\x. if 0 < real (f x) then NegInf else PosInf) =
-                (\x. if (\x. 0 < real (f x)) x then (\x. NegInf) x else (\x. PosInf) x)` THENL
-     [DISC_RW_KILL, SIMP_TAC std_ss []] THEN
-     MATCH_MP_TAC MEASURABLE_IF THEN RW_TAC std_ss [] THENL
-     [ASM_SIMP_TAC std_ss [m_space_def, measurable_sets_def, SPACE],
-      ASM_SIMP_TAC std_ss [m_space_def, measurable_sets_def, SPACE],
-      ALL_TAC] THEN
-     SIMP_TAC std_ss [GSYM extreal_lt_eq, GSYM extreal_of_num_def] THEN
-     Q_TAC SUFF_TAC `{x | x IN m_space m /\ 0 < Normal (real (f x))} =
-                      PREIMAGE f {x | 0 < x /\ (x <> PosInf) /\ (x <> NegInf)} INTER m_space m` THENL
-     [DISC_RW_KILL,
-      SIMP_TAC std_ss [PREIMAGE_def] THEN
-      SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] THEN
-      GEN_TAC THEN EQ_TAC THEN RW_TAC std_ss [real_def, extreal_of_num_def, real_normal] THEN
-      FULL_SIMP_TAC std_ss [GSYM extreal_of_num_def, lt_refl] THEN
-      TRY (METIS_TAC [extreal_of_num_def, extreal_11, normal_real, extreal_lt_eq])] THEN
-
-     FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-     FIRST_X_ASSUM MATCH_MP_TAC THEN
-     ONCE_REWRITE_TAC [SET_RULE
-     ``{x | 0 < x /\ x <> PosInf /\ x <> NegInf} =
-       {x | 0 < x} INTER ((UNIV DIFF {PosInf}) INTER (UNIV DIFF {NegInf}))``] THEN
-     MATCH_MP_TAC ALGEBRA_INTER THEN
-     `algebra Borel` by METIS_TAC [sigma_algebra_def, SIGMA_ALGEBRA_BOREL] THEN
-     ASM_SIMP_TAC std_ss [BOREL_MEASURABLE_SETS_OR, extreal_of_num_def] THEN
-     MATCH_MP_TAC ALGEBRA_INTER THEN ASM_SIMP_TAC std_ss [GSYM SPACE_BOREL] THEN
-     CONJ_TAC THEN (MATCH_MP_TAC ALGEBRA_DIFF THEN
-      ASM_SIMP_TAC std_ss [BOREL_MEASURABLE_INFINITY, ALGEBRA_SPACE])] THEN
-
-  ONCE_REWRITE_TAC [METIS [SPACE, m_space_def, measurable_sets_def]
-    ``Borel = (m_space (space Borel, subsets Borel, (\x. 0)),
-       measurable_sets (space Borel, subsets Borel, (\x. 0)))``] THEN
-  Q_TAC SUFF_TAC `(\x. if (\x. f x = PosInf) x then (\x. PosInf * g x) x else (\x. NegInf * g x) x) IN
-                    measurable (m_space m,measurable_sets m)
-                               (m_space (space Borel,subsets Borel,(\x. 0)),
-                                measurable_sets (space Borel,subsets Borel,(\x. 0)))` THENL
-  [SIMP_TAC std_ss [], ALL_TAC] THEN
-  MATCH_MP_TAC MEASURABLE_IF THEN RW_TAC std_ss [] THENL
-  [Q_TAC SUFF_TAC `(\x. PosInf * g x) =
-                   (\x. if {x | ((g x = PosInf) \/ (g x = NegInf))} x
-                        then (\x. if g x = PosInf then PosInf else NegInf) x
-                        else (\x. PosInf * Normal (real (g x))) x)` THENL
-   [DISC_RW_KILL,
-    ABS_TAC THEN COND_CASES_TAC THENL
-    [POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION]) THEN
-     SIMP_TAC std_ss [GSPECIFICATION] THEN METIS_TAC [extreal_mul_def],
-     ALL_TAC] THEN
-    POP_ASSUM MP_TAC THEN GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM SPECIFICATION] THEN
-    SIMP_TAC std_ss [GSPECIFICATION] THEN
-    METIS_TAC [normal_real]] THEN
-   MATCH_MP_TAC MEASURABLE_IF THEN RW_TAC std_ss [] THENL
-   [Q_TAC SUFF_TAC `(\x. if g x = PosInf then PosInf else NegInf) =
-               (\x. if (\x. g x = PosInf) x then (\x. PosInf) x else (\x. NegInf) x)` THENL
-    [DISC_RW_KILL, SIMP_TAC std_ss []] THEN
-    MATCH_MP_TAC MEASURABLE_IF THEN RW_TAC std_ss [] THENL
-    [ASM_SIMP_TAC std_ss [m_space_def, measurable_sets_def, SPACE],
-     ASM_SIMP_TAC std_ss [m_space_def, measurable_sets_def, SPACE],
-     ALL_TAC] THEN
-    Q_TAC SUFF_TAC `{x | x IN m_space m /\ (g x = PosInf)} =
-                    PREIMAGE g {x | x = PosInf} INTER m_space m` THENL
-    [DISC_RW_KILL,
-     SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER, IN_PREIMAGE] THEN
-     GEN_TAC THEN GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM SPECIFICATION] THEN
-     SET_TAC []] THEN
-    FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    ONCE_REWRITE_TAC [SET_RULE ``{x | x = PosInf} = {PosInf}``] THEN
-    SIMP_TAC std_ss [BOREL_MEASURABLE_INFINITY],
-    ALL_TAC,
-    Q_TAC SUFF_TAC `{x | x IN m_space m /\ {x | (g x = PosInf) \/ (g x = NegInf)} x} =
-                   PREIMAGE g {x | (x = PosInf) \/ (x = NegInf)} INTER m_space m` THENL
-    [DISC_RW_KILL,
-     SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER, IN_PREIMAGE] THEN
-     GEN_TAC THEN GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM SPECIFICATION] THEN
-     SET_TAC []] THEN
-    FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    ONCE_REWRITE_TAC [SET_RULE
-    ``{x | (x = PosInf) \/ (x = NegInf)} = {PosInf} UNION {NegInf}``] THEN
-    MATCH_MP_TAC ALGEBRA_UNION THEN
-    METIS_TAC [measure_space_def, sigma_algebra_def, BOREL_MEASURABLE_INFINITY]] THEN
-
-   `(\x. 0) IN measurable (m_space m,measurable_sets m) Borel` by
-     (MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST THEN
-      METIS_TAC [measure_space_def]) THEN
-   SIMP_TAC std_ss [extreal_mul_def] THEN
-   Q_TAC SUFF_TAC `(\x. if real (g x) = 0 then Normal 0
-                        else if 0 < real (g x) then PosInf
-                        else NegInf) =
-                   (\x. if (\x. real (g x) = 0) x then (\x. Normal 0) x
-                        else (\x. if 0 < real (g x) then PosInf
-                        else NegInf) x)` THENL
-   [DISC_RW_KILL, SIMP_TAC std_ss []] THEN MATCH_MP_TAC MEASURABLE_IF THEN
-   RW_TAC std_ss [] THENL
-   [ASM_SIMP_TAC std_ss [m_space_def, measurable_sets_def, SPACE, GSYM extreal_of_num_def],
-    ALL_TAC,
-    SIMP_TAC std_ss [GSYM extreal_11, GSYM extreal_of_num_def] THEN
-    Q_TAC SUFF_TAC `{x | x IN m_space m /\ (Normal (real (g x)) = 0)} =
-                    PREIMAGE g {x | (x = 0) \/ (x = PosInf) \/ (x = NegInf)} INTER m_space m` THENL
-    [DISC_RW_KILL,
-     SIMP_TAC std_ss [PREIMAGE_def] THEN
-     SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] THEN
-     GEN_TAC THEN EQ_TAC THEN RW_TAC std_ss [real_def, extreal_of_num_def, real_normal] THEN
-     FULL_SIMP_TAC std_ss [GSYM extreal_of_num_def] THEN
-     TRY (METIS_TAC [extreal_of_num_def, extreal_11, normal_real])] THEN
-    FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    ONCE_REWRITE_TAC [SET_RULE ``{x | (x = 0) \/ (x = PosInf) \/ (x = NegInf)} =
-                                 {0} UNION ({PosInf} UNION {NegInf})``] THEN
-    MATCH_MP_TAC ALGEBRA_UNION THEN
-    `algebra Borel` by METIS_TAC [sigma_algebra_def, SIGMA_ALGEBRA_BOREL] THEN
-    ASM_SIMP_TAC std_ss [BOREL_MEASURABLE_SETS_SING, extreal_of_num_def] THEN
-    MATCH_MP_TAC ALGEBRA_UNION THEN ASM_SIMP_TAC std_ss [BOREL_MEASURABLE_INFINITY]] THEN
-
-   Q_TAC SUFF_TAC `(\x. if 0 < real (g x) then PosInf else NegInf) =
-              (\x. if (\x. 0 < real (g x)) x then (\x. PosInf) x else (\x. NegInf) x)` THENL
-   [DISC_RW_KILL, SIMP_TAC std_ss []] THEN
-   MATCH_MP_TAC MEASURABLE_IF THEN RW_TAC std_ss [] THENL
-   [ASM_SIMP_TAC std_ss [m_space_def, measurable_sets_def, SPACE],
-    ASM_SIMP_TAC std_ss [m_space_def, measurable_sets_def, SPACE],
-    ALL_TAC] THEN
-   SIMP_TAC std_ss [GSYM extreal_lt_eq, GSYM extreal_of_num_def] THEN
-   Q_TAC SUFF_TAC `{x | x IN m_space m /\ 0 < Normal (real (g x))} =
-                    PREIMAGE g {x | 0 < x /\ (x <> PosInf) /\ (x <> NegInf)} INTER m_space m` THENL
-   [DISC_RW_KILL,
-    SIMP_TAC std_ss [PREIMAGE_def] THEN
-    SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] THEN
-    GEN_TAC THEN EQ_TAC THEN RW_TAC std_ss [real_def, extreal_of_num_def, real_normal] THEN
-    FULL_SIMP_TAC std_ss [GSYM extreal_of_num_def, lt_refl] THEN
-    TRY (METIS_TAC [extreal_of_num_def, extreal_11, normal_real, extreal_lt_eq])] THEN
-
-   FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-   FIRST_X_ASSUM MATCH_MP_TAC THEN
-   ONCE_REWRITE_TAC [SET_RULE
-   ``{x | 0 < x /\ x <> PosInf /\ x <> NegInf} =
-     {x | 0 < x} INTER ((UNIV DIFF {PosInf}) INTER (UNIV DIFF {NegInf}))``] THEN
-   MATCH_MP_TAC ALGEBRA_INTER THEN
-   `algebra Borel` by METIS_TAC [sigma_algebra_def, SIGMA_ALGEBRA_BOREL] THEN
-   ASM_SIMP_TAC std_ss [BOREL_MEASURABLE_SETS_OR, extreal_of_num_def] THEN
-   MATCH_MP_TAC ALGEBRA_INTER THEN ASM_SIMP_TAC std_ss [GSYM SPACE_BOREL] THEN
-   CONJ_TAC THEN (MATCH_MP_TAC ALGEBRA_DIFF THEN
-    ASM_SIMP_TAC std_ss [BOREL_MEASURABLE_INFINITY, ALGEBRA_SPACE]),
-   ALL_TAC,
-   Q_TAC SUFF_TAC `{x | x IN m_space m /\ (f x = PosInf)} =
-                    PREIMAGE f {x | x = PosInf} INTER m_space m` THENL
-   [DISC_RW_KILL,
-    SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER, IN_PREIMAGE] THEN
-    GEN_TAC THEN GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM SPECIFICATION] THEN
-    SET_TAC []] THEN
-   FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-   FIRST_X_ASSUM MATCH_MP_TAC THEN
-   ONCE_REWRITE_TAC [SET_RULE ``{x | x = PosInf} = {PosInf}``] THEN
-   SIMP_TAC std_ss [BOREL_MEASURABLE_INFINITY]] THEN
-
-  Q_TAC SUFF_TAC `(\x. NegInf * g x) =
-                  (\x. if {x | ((g x = PosInf) \/ (g x = NegInf))} x
-                       then (\x. if g x = PosInf then NegInf else PosInf) x
-                       else (\x. NegInf * Normal (real (g x))) x)` THENL
-   [DISC_RW_KILL,
-    ABS_TAC THEN COND_CASES_TAC THENL
-    [POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [GSYM SPECIFICATION]) THEN
-     SIMP_TAC std_ss [GSPECIFICATION] THEN METIS_TAC [extreal_mul_def],
-     ALL_TAC] THEN
-    POP_ASSUM MP_TAC THEN GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM SPECIFICATION] THEN
-    SIMP_TAC std_ss [GSPECIFICATION] THEN
-    METIS_TAC [normal_real]] THEN
-   MATCH_MP_TAC MEASURABLE_IF THEN RW_TAC std_ss [] THENL
-   [Q_TAC SUFF_TAC `(\x. if g x = PosInf then NegInf else PosInf) =
-               (\x. if (\x. g x = PosInf) x then (\x. NegInf) x else (\x. PosInf) x)` THENL
-    [DISC_RW_KILL, SIMP_TAC std_ss []] THEN
-    MATCH_MP_TAC MEASURABLE_IF THEN RW_TAC std_ss [] THENL
-    [ASM_SIMP_TAC std_ss [m_space_def, measurable_sets_def, SPACE],
-     ASM_SIMP_TAC std_ss [m_space_def, measurable_sets_def, SPACE],
-     ALL_TAC] THEN
-    Q_TAC SUFF_TAC `{x | x IN m_space m /\ (g x = PosInf)} =
-                    PREIMAGE g {x | x = PosInf} INTER m_space m` THENL
-    [DISC_RW_KILL,
-     SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER, IN_PREIMAGE] THEN
-     GEN_TAC THEN GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM SPECIFICATION] THEN
-     SET_TAC []] THEN
-    FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    ONCE_REWRITE_TAC [SET_RULE ``{x | x = PosInf} = {PosInf}``] THEN
-    SIMP_TAC std_ss [BOREL_MEASURABLE_INFINITY],
-    ALL_TAC,
-    Q_TAC SUFF_TAC `{x | x IN m_space m /\ {x | (g x = PosInf) \/ (g x = NegInf)} x} =
-                   PREIMAGE g {x | (x = PosInf) \/ (x = NegInf)} INTER m_space m` THENL
-    [DISC_RW_KILL,
-     SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER, IN_PREIMAGE] THEN
-     GEN_TAC THEN GEN_REWR_TAC (LAND_CONV o RAND_CONV) [GSYM SPECIFICATION] THEN
-     SET_TAC []] THEN
-    FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    ONCE_REWRITE_TAC [SET_RULE
-    ``{x | (x = PosInf) \/ (x = NegInf)} = {PosInf} UNION {NegInf}``] THEN
-    MATCH_MP_TAC ALGEBRA_UNION THEN
-    METIS_TAC [measure_space_def, sigma_algebra_def, BOREL_MEASURABLE_INFINITY]] THEN
-
-    `(\x. 0) IN measurable (m_space m,measurable_sets m) Borel` by
-     (MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST THEN
-      METIS_TAC [measure_space_def]) THEN
-   SIMP_TAC std_ss [extreal_mul_def] THEN
-   Q_TAC SUFF_TAC `(\x. if real (g x) = 0 then Normal 0
-                        else if 0 < real (g x) then NegInf
-                        else PosInf) =
-                   (\x. if (\x. real (g x) = 0) x then (\x. Normal 0) x
-                        else (\x. if 0 < real (g x) then NegInf
-                        else PosInf) x)` THENL
-   [DISC_RW_KILL, SIMP_TAC std_ss []] THEN MATCH_MP_TAC MEASURABLE_IF THEN
-   RW_TAC std_ss [] THENL
-   [ASM_SIMP_TAC std_ss [m_space_def, measurable_sets_def, SPACE, GSYM extreal_of_num_def],
-    ALL_TAC,
-    SIMP_TAC std_ss [GSYM extreal_11, GSYM extreal_of_num_def] THEN
-    Q_TAC SUFF_TAC `{x | x IN m_space m /\ (Normal (real (g x)) = 0)} =
-                    PREIMAGE g {x | (x = 0) \/ (x = PosInf) \/ (x = NegInf)} INTER m_space m` THENL
-    [DISC_RW_KILL,
-     SIMP_TAC std_ss [PREIMAGE_def] THEN
-     SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] THEN
-     GEN_TAC THEN EQ_TAC THEN RW_TAC std_ss [real_def, extreal_of_num_def, real_normal] THEN
-     FULL_SIMP_TAC std_ss [GSYM extreal_of_num_def] THEN
-     TRY (METIS_TAC [extreal_of_num_def, extreal_11, normal_real])] THEN
-    FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    ONCE_REWRITE_TAC [SET_RULE ``{x | (x = 0) \/ (x = PosInf) \/ (x = NegInf)} =
-                                 {0} UNION ({PosInf} UNION {NegInf})``] THEN
-    MATCH_MP_TAC ALGEBRA_UNION THEN
-    `algebra Borel` by METIS_TAC [sigma_algebra_def, SIGMA_ALGEBRA_BOREL] THEN
-    ASM_SIMP_TAC std_ss [BOREL_MEASURABLE_SETS_SING, extreal_of_num_def] THEN
-    MATCH_MP_TAC ALGEBRA_UNION THEN ASM_SIMP_TAC std_ss [BOREL_MEASURABLE_INFINITY]] THEN
-
-   Q_TAC SUFF_TAC `(\x. if 0 < real (g x) then NegInf else PosInf) =
-              (\x. if (\x. 0 < real (g x)) x then (\x. NegInf) x else (\x. PosInf) x)` THENL
-   [DISC_RW_KILL, SIMP_TAC std_ss []] THEN
-   MATCH_MP_TAC MEASURABLE_IF THEN RW_TAC std_ss [] THENL
-   [ASM_SIMP_TAC std_ss [m_space_def, measurable_sets_def, SPACE],
-    ASM_SIMP_TAC std_ss [m_space_def, measurable_sets_def, SPACE],
-    ALL_TAC] THEN
-   SIMP_TAC std_ss [GSYM extreal_lt_eq, GSYM extreal_of_num_def] THEN
-   Q_TAC SUFF_TAC `{x | x IN m_space m /\ 0 < Normal (real (g x))} =
-                    PREIMAGE g {x | 0 < x /\ (x <> PosInf) /\ (x <> NegInf)}
-                    INTER m_space m` THENL
-   [DISC_RW_KILL,
-    SIMP_TAC std_ss [PREIMAGE_def] THEN
-    SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] THEN
-    GEN_TAC THEN EQ_TAC THEN
-    RW_TAC std_ss [real_def, extreal_of_num_def, real_normal] THEN
-    FULL_SIMP_TAC std_ss [GSYM extreal_of_num_def, lt_refl] THEN
-    TRY (METIS_TAC [extreal_of_num_def, extreal_11, normal_real, extreal_lt_eq])]
-   THEN FULL_SIMP_TAC std_ss [IN_MEASURABLE, space_def, subsets_def] THEN
-   FIRST_X_ASSUM MATCH_MP_TAC THEN
-   ONCE_REWRITE_TAC [SET_RULE
-    ``{x | 0 < x /\ x <> PosInf /\ x <> NegInf} =
-      {x | 0 < x} INTER ((UNIV DIFF {PosInf}) INTER (UNIV DIFF {NegInf}))``] THEN
-   MATCH_MP_TAC ALGEBRA_INTER THEN
-   `algebra Borel` by METIS_TAC [sigma_algebra_def, SIGMA_ALGEBRA_BOREL] THEN
-   ASM_SIMP_TAC std_ss [BOREL_MEASURABLE_SETS_OR, extreal_of_num_def] THEN
-   MATCH_MP_TAC ALGEBRA_INTER THEN ASM_SIMP_TAC std_ss [GSYM SPACE_BOREL] THEN
-   CONJ_TAC THEN (MATCH_MP_TAC ALGEBRA_DIFF THEN
-    ASM_SIMP_TAC std_ss [BOREL_MEASURABLE_INFINITY, ALGEBRA_SPACE])
-QED
-
-Theorem IN_MEASURABLE_BOREL_TIMES' :
-    !a f g h. sigma_algebra a /\ f IN measurable a Borel /\ g IN measurable a Borel /\
-             (!x. x IN space a ==> (h x = f x * g x)) ==> h IN measurable a Borel
-Proof
     rpt STRIP_TAC
- >> MP_TAC (Q.SPECL [‘(space a,subsets a,(\s. 0))’, ‘f’, ‘g’, ‘h’]
-                    IN_MEASURABLE_BOREL_TIMES)
- >> Know ‘sigma_finite_measure_space (space a,subsets a,(\s. 0))’
- >- (MATCH_MP_TAC measure_space_trivial >> art [])
- >> rw [sigma_finite_measure_space_def]
+ >> MP_TAC (Q.SPECL [‘(m_space m,measurable_sets m)’, ‘f’, ‘g’, ‘h’]
+                    IN_MEASURABLE_BOREL_TIMES')
+ >> fs [measure_space_def]
 QED
 
 Theorem IN_MEASURABLE_BOREL_IMP_BOREL : (* was: borel_IMP_Borel *)
@@ -4605,7 +4446,7 @@ Proof
  >> FULL_SIMP_TAC std_ss [space_def, subsets_def]
 QED
 
-Theorem in_measurable_borel_imp : (* was: borel_measurableI *)
+Theorem in_borel_measurable_imp : (* was: borel_measurableI *)
     !m f. measure_space m /\
          (!s. open s ==> (PREIMAGE f s) INTER m_space m IN measurable_sets m) ==>
           f IN measurable (m_space m, measurable_sets m) borel
@@ -4617,7 +4458,7 @@ Proof
  >> ASM_SET_TAC []
 QED
 
-Theorem in_measurable_borel_continuous_on : (* was: borel_measurable_continuous_on1 *)
+Theorem in_borel_measurable_continuous_on : (* was: borel_measurable_continuous_on1 *)
     !f. f continuous_on UNIV ==> f IN measurable borel borel
 Proof
     rpt STRIP_TAC
@@ -4625,7 +4466,7 @@ Proof
  >> Suff `f IN measurable (m_space M, measurable_sets M) borel`
  >- (SIMP_TAC std_ss [Abbr ‘M’, m_space_def, measurable_sets_def] \\
      SIMP_TAC std_ss [SPACE])
- >> MATCH_MP_TAC in_measurable_borel_imp
+ >> MATCH_MP_TAC in_borel_measurable_imp
  >> reverse CONJ_TAC
  >- (RW_TAC std_ss [] \\
      Know `open {x | x IN UNIV /\ f x IN s}`
@@ -7655,58 +7496,6 @@ val limsup_suminf_indicator_space = store_thm
 (*   (Author: Chun Tian)                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-(* The reverse version of IN_MEASURABLE_BOREL_IMP_BOREL *)
-Theorem IN_MEASURABLE_BOREL_IMP_BOREL' :
-    !a f. f IN measurable a Borel ==> (real o f) IN measurable a borel
-Proof
-    rpt GEN_TAC >> DISCH_TAC
- >> simp [IN_MEASURABLE, sigma_algebra_borel, IN_FUNSET, space_borel]
- (* sigma_algebra a *)
- >> STRONG_CONJ_TAC
- >- (fs [IN_MEASURABLE, SIGMA_ALGEBRA_BOREL, SPACE_BOREL])
- >> DISCH_TAC
- >> Q.X_GEN_TAC ‘B’ >> STRIP_TAC
- >> rw [PREIMAGE_def]
- >> Know ‘{x | real (f x) IN B} INTER space a =
-          if 0 IN B then
-            ({x | f x IN (IMAGE Normal B)} INTER space a) UNION
-            ({x | f x = PosInf} INTER space a) UNION
-            ({x | f x = NegInf} INTER space a)
-          else
-            ({x | f x IN (IMAGE Normal B)} INTER space a)’
- >- (Cases_on ‘0 IN B’ >> rw [Once EXTENSION] >| (* 2 subgoals *)
-     [ (* goal 1 (of 2) *)
-       EQ_TAC >> rw [] >> rw [real_def] \\
-       Cases_on ‘f x’ >> fs [real_normal],
-       (* goal 2 (of 2) *)
-       EQ_TAC >> rw [] >> rw [real_def] \\
-       Q.EXISTS_TAC ‘real (f x)’ >> art [] \\
-       ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
-       MATCH_MP_TAC normal_real \\
-       CONJ_TAC >> CCONTR_TAC >> fs [real_def] ])
- >> Rewr'
- >> Cases_on ‘0 IN B’ >> ASM_SIMP_TAC std_ss []
- >| [ (* goal 1 (of 2) *)
-      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
-      reverse CONJ_TAC >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_NEGINF >> art []) \\
-      MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
-      reverse CONJ_TAC >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_POSINF >> art []) \\
-      REWRITE_TAC [GSYM PREIMAGE_def] \\
-      FULL_SIMP_TAC std_ss [Borel, IN_MEASURABLE, SPACE_BOREL, IN_FUNSET,
-                            SIGMA_ALGEBRA_BOREL, IN_UNIV, subsets_def, GSPECIFICATION] \\
-      FIRST_X_ASSUM MATCH_MP_TAC \\
-      qexistsl_tac [‘B’, ‘{}’] >> rw [],
-      (* goal 2 (of 2) *)
-      REWRITE_TAC [GSYM PREIMAGE_def] \\
-      FULL_SIMP_TAC std_ss [Borel, IN_MEASURABLE, SPACE_BOREL, IN_FUNSET,
-                            SIGMA_ALGEBRA_BOREL, IN_UNIV, subsets_def, GSPECIFICATION] \\
-      FIRST_X_ASSUM MATCH_MP_TAC \\
-      qexistsl_tac [‘B’, ‘{}’] >> rw [] ]
-QED
-
-(* |- !s t u. (t UNION u) INTER s = t INTER s UNION u INTER s *)
-val UNION_OVER_INTER' = ONCE_REWRITE_RULE [INTER_COMM] UNION_OVER_INTER;
-
 val IN_MEASURABLE_BOREL_ADD_tactics_1 =
     Know ‘{x | ?r. f x + g x = Normal r /\ r IN B} INTER space a =
           {x | f x <> PosInf /\ f x <> NegInf /\ g x <> PosInf /\ g x <> NegInf /\
@@ -7756,10 +7545,10 @@ val IN_MEASURABLE_BOREL_ADD_tactics_1 =
  >> CONJ_TAC (* 2 subgoals *)
  >| [ (* goal 1.1 (of 2) *)
       Q.UNABBREV_TAC ‘rf’ \\
-      MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art [],
+      MATCH_MP_TAC in_borel_measurable_from_Borel >> art [],
       (* goal 1.2 (of 2) *)
       Q.UNABBREV_TAC ‘rg’ \\
-      MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art [] ];
+      MATCH_MP_TAC in_borel_measurable_from_Borel >> art [] ];
 
 val IN_MEASURABLE_BOREL_ADD_tactics_3 =
     rename1 ‘NegInf + PosInf = Normal z’
@@ -7852,10 +7641,10 @@ val IN_MEASURABLE_BOREL_ADD_tactics_3 =
      CONJ_TAC >| (* 2 subgoals *)
      [ (* goal 2.1 (of 2) *)
        Q.UNABBREV_TAC ‘rf’ \\
-       MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art [],
+       MATCH_MP_TAC in_borel_measurable_from_Borel >> art [],
        (* goal 2.2 (of 2) *)
        Q.UNABBREV_TAC ‘rg’ \\
-       MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art [] ])
+       MATCH_MP_TAC in_borel_measurable_from_Borel >> art [] ])
  >> DISCH_TAC
  >> Cases_on ‘z IN B’ >> fs []
  >> MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art []
@@ -7958,10 +7747,10 @@ val IN_MEASURABLE_BOREL_ADD_tactics_7 =
      CONJ_TAC >| (* 2 subgoals *)
      [ (* goal 2.1 (of 2) *)
        Q.UNABBREV_TAC ‘rf’ \\
-       MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art [],
+       MATCH_MP_TAC in_borel_measurable_from_Borel >> art [],
        (* goal 2.2 (of 2) *)
        Q.UNABBREV_TAC ‘rg’ \\
-       MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art [] ])
+       MATCH_MP_TAC in_borel_measurable_from_Borel >> art [] ])
  >> DISCH_TAC
  >> Cases_on ‘z IN B’ >> fs []
  >> MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art []
@@ -8538,10 +8327,10 @@ Proof
            CONJ_TAC >| (* 2 subgoals *)
            [ (* goal 9.1 (of 2) *)
              Q.UNABBREV_TAC ‘rf’ \\
-             MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art [],
+             MATCH_MP_TAC in_borel_measurable_from_Borel >> art [],
              (* goal 9.2 (of 2) *)
              Q.UNABBREV_TAC ‘rg’ \\
-             MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art [] ]) \\
+             MATCH_MP_TAC in_borel_measurable_from_Borel >> art [] ]) \\
        DISCH_TAC \\
        Cases_on ‘z1 IN B’ >> Cases_on ‘z2 IN B’ >> fs [] >| (* 3 subgoals *)
        [ (* goal 9.1 (of 3) *)
@@ -8716,10 +8505,10 @@ val IN_MEASURABLE_BOREL_SUB_tactics_1 =
  >> CONJ_TAC (* 2 subgoals *)
  >| [ (* goal 1.1 (of 2) *)
       Q.UNABBREV_TAC ‘rf’ \\
-      MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art [],
+      MATCH_MP_TAC in_borel_measurable_from_Borel >> art [],
       (* goal 1.2 (of 2) *)
       Q.UNABBREV_TAC ‘rg’ \\
-      MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art [] ];
+      MATCH_MP_TAC in_borel_measurable_from_Borel >> art [] ];
 
 val IN_MEASURABLE_BOREL_SUB_tactics_3 =
     rename1 ‘NegInf - NegInf = Normal z’
@@ -8812,10 +8601,10 @@ val IN_MEASURABLE_BOREL_SUB_tactics_3 =
      CONJ_TAC >| (* 2 subgoals *)
      [ (* goal 2.1 (of 2) *)
        Q.UNABBREV_TAC ‘rf’ \\
-       MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art [],
+       MATCH_MP_TAC in_borel_measurable_from_Borel >> art [],
        (* goal 2.2 (of 2) *)
        Q.UNABBREV_TAC ‘rg’ \\
-       MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art [] ])
+       MATCH_MP_TAC in_borel_measurable_from_Borel >> art [] ])
  >> DISCH_TAC
  >> Cases_on ‘z IN B’ >> fs []
  >> MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art []
@@ -8918,10 +8707,10 @@ val IN_MEASURABLE_BOREL_SUB_tactics_7 =
      CONJ_TAC >| (* 2 subgoals *)
      [ (* goal 2.1 (of 2) *)
        Q.UNABBREV_TAC ‘rf’ \\
-       MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art [],
+       MATCH_MP_TAC in_borel_measurable_from_Borel >> art [],
        (* goal 2.2 (of 2) *)
        Q.UNABBREV_TAC ‘rg’ \\
-       MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art [] ])
+       MATCH_MP_TAC in_borel_measurable_from_Borel >> art [] ])
  >> DISCH_TAC
  >> Cases_on ‘z IN B’ >> fs []
  >> MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art []
@@ -9497,10 +9286,10 @@ Proof
            CONJ_TAC >| (* 2 subgoals *)
            [ (* goal 9.1 (of 2) *)
              Q.UNABBREV_TAC ‘rf’ \\
-             MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art [],
+             MATCH_MP_TAC in_borel_measurable_from_Borel >> art [],
              (* goal 9.2 (of 2) *)
              Q.UNABBREV_TAC ‘rg’ \\
-             MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> art [] ]) >> DISCH_TAC \\
+             MATCH_MP_TAC in_borel_measurable_from_Borel >> art [] ]) >> DISCH_TAC \\
        Cases_on ‘z1 IN B’ >> Cases_on ‘z2 IN B’ >> fs [] >| (* 3 subgoals *)
        [ (* goal 9.1 (of 3) *)
          MATCH_MP_TAC SIGMA_ALGEBRA_UNION >> art [] \\
