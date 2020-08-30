@@ -31,9 +31,9 @@ datatype searchstatus = SearchProved | SearchSaturated | SearchTimeout
 datatype proofstatus = Proof of string | ProofSaturated | ProofTimeout
 
 fun string_of_sstatus x = case x of
-    StacProved => "SearchProved"
-  | StacSaturated => "SearchSaturated"
-  | StacUndecided => "SearchTimeOut"
+    StacProved => "StacProved"
+  | StacSaturated => "StacSaturated"
+  | StacUndecided => "StacTimeOut"
   | StacFresh => "StacFresh"
 
 fun string_of_searchstatus x = case x of
@@ -460,13 +460,15 @@ fun node_backup tree (argtreeo,glo) (sstatus,reward) (id,(gn,sn,anl)) =
    Search loop: selection, expansion and backup
    ------------------------------------------------------------------------- *)
 
-fun search_loop startsearchobj starttree =
+fun search_loop startsearchobj nlimito starttree =
   let
+    val nlimitb = isSome nlimito
     val timer = Timer.startRealTimer ()
     fun loop n searchobj tree =
-      if n <= 0 (* todo parametrized *)
+      if isSome nlimito andalso n >= valOf nlimito
         then (SearchTimeout,tree) 
-      else if Timer.checkRealTimer timer > Time.fromReal (!ttt_search_time)
+      else if not (isSome nlimito) andalso
+        Timer.checkRealTimer timer > Time.fromReal (!ttt_search_time)
         then (SearchTimeout,tree)
       else if #nstatus (dfind [] tree) = NodeSaturated
         then (SearchSaturated,tree)
@@ -496,10 +498,10 @@ fun search_loop startsearchobj starttree =
           val backuptree =
             node_backup exptree (SOME newargtree, glo) (sstatus,reward) pidx
         in
-          loop (n-1) searchobj backuptree
+          loop (n+1) searchobj backuptree
         end
   in
-    loop 1600 startsearchobj starttree
+    loop 0 startsearchobj starttree
   end
 
 (* -------------------------------------------------------------------------
@@ -566,10 +568,10 @@ fun reconstruct_proofstatus (searchstatus,tree) g =
     end
 
 (* -------------------------------------------------------------------------
-   Proof search top-level function
+   Initializing the search tree
    ------------------------------------------------------------------------- *)
 
-fun starttree_of searchobj goal =
+fun starttree_of_goal searchobj goal =
   let
     val goalv = Vector.fromList [goal_create searchobj goal]
     val root =
@@ -581,6 +583,46 @@ fun starttree_of searchobj goal =
     dadd [] root (dempty id_compare)
   end
 
+fun goal_create_stacv searchobj (goal,stacv) =
+  {
+  goal = goal,
+  gvis = 1.0, gsum = 0.0, 
+  gstatus = backstatus_stacv stacv ,
+  stacv = stacv,
+  siblingd = dempty (list_compare goal_compare)
+  }
+
+fun argtree_add_tokenl (tree,id) (tokenl,atyl) =
+  if null tokenl then tree else
+  let val node = 
+    {token = hd tokenl, 
+     atyl = atyl, svis = 0.0, ssum = 0.0, sstatus = StacFresh}
+  in
+    argtree_add_tokenl (dadd (0 :: id) node tree, 0 :: id) 
+    (tl tokenl, tl atyl)
+  end
+
+fun starttree_of_gstacarg searchobj (goal,stac,tokenl) =
+  let
+    val atyl = extract_atyl stac
+    val argtree1 = argtree_create (stac,atyl)
+    val argtree2 = argtree_add_tokenl (argtree1,[]) (tokenl,atyl)
+    val stacv = Vector.fromList [argtree2]
+    val goalv = Vector.fromList [goal_create_stacv searchobj (goal,stacv)]
+    val root =
+      {nvis = 1.0, nsum = 0.0, 
+       nstatus = backstatus_goalv goalv,
+       goalv = goalv,
+       parentd = dempty goal_compare}
+  in
+    debugf "root: " string_of_goal goal;
+    dadd [] root (dempty id_compare)
+  end
+
+(* -------------------------------------------------------------------------
+   Proof search top-level function
+   ------------------------------------------------------------------------- *)
+
 fun time_searchobj predtac_time {predtac,predarg,parsetoken,vnno,pnno} =
   {
   predtac = total_time predtac_time predtac,
@@ -591,13 +633,14 @@ fun search searchobj g =
   let
     val _ = clean_stac_cache ()
     val _ = (predtac_time := 0.0; reward_time := 0.0; reorder_time := 0.0)
-    val starttree = starttree_of searchobj g
+    val starttree = starttree_of_goal searchobj g
     val ((searchstatus,tree),t) = add_time
-      (search_loop (time_searchobj predtac_time searchobj)) starttree
+      (search_loop (time_searchobj predtac_time searchobj) NONE) starttree
     val _ = clean_stac_cache ()
     val _ = print_endline ("search time: " ^ rts_round 6 t)
   in
     (reconstruct_proofstatus (searchstatus,tree) g, tree)
   end
+
 
 end (* struct *)

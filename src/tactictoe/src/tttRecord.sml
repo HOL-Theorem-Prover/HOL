@@ -195,7 +195,7 @@ fun end_record_proof name g =
     val tacsymweight =
       total_time learn_tfidf_time
         (learn_tfidf_symfreq (length tacfea) feal2) (#symfreq tacdata)
-    val l2 = (* orthogonalize *)
+    val l2 =
       if !record_ortho_flag
       then map (orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))) l1
       else l1

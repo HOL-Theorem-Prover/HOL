@@ -14,6 +14,8 @@ sig
   datatype searchstatus = SearchProved | SearchSaturated | SearchTimeout
   datatype proofstatus =  Proof of string | ProofSaturated | ProofTimeout
 
+  val string_of_sstatus : sstatus -> string
+
   type id = (int * int * int list) list
   val id_compare : id * id -> order
   type stac_record =
@@ -41,6 +43,11 @@ sig
      vnno: tnn option,
      pnno: tnn option}
 
-  val search : searchobj -> goal -> proofstatus * tree
+  val starttree_of_goal : searchobj -> goal -> tree
+  val starttree_of_gstacarg : searchobj -> 
+    goal * string * tttToken.token list -> tree
 
+  val search_loop : searchobj -> int option -> tree -> searchstatus * tree
+  val search : searchobj -> goal -> proofstatus * tree
+  
 end

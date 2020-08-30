@@ -11,7 +11,7 @@ struct
 open HolKernel Abbrev boolLib aiLib
   smlRedirect smlParallel smlOpen smlParser
   mlTacticData mlTreeNeuralNetwork
-  tttSetup tttSearch tttRecord tacticToe
+  tttSetup tttSearch tttRecord tacticToe tttBigSteps
 
 val ERR = mk_HOL_ERR "tttEval"
 
@@ -28,30 +28,21 @@ fun print_status r = case r of
 
 fun print_time (name,t) = print_endline (name ^ " time: " ^ rts_round 6 t)
 
-fun ttt_clean_eval () = clean_rec_dir (tactictoe_dir ^ "/tnnex")
-
 fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
   let
-    val thmid = current_theory () ^ "_" ^ its (!savestate_level - 1)
-    val b = !hide_flag
-    val _ = hide_flag := false
-    val _ = mkDir_err tnnex_dir
-    val value_dir = tnnex_dir ^ "/value"
-    val policy_dir = tnnex_dir ^ "/policy"
-    val thmpol_dir = tnnex_dir ^ "/thmpol"
-    val _ = app mkDir_err [value_dir,policy_dir,thmpol_dir];
     val _ = print_endline ("ttt_eval: " ^ string_of_goal goal)
     val _ = print_endline ("ttt timeout: " ^ rts (!ttt_search_time))
     val ((status,tree),t) = add_time
       (main_tactictoe (thmdata,tacdata) (vnno,pnno)) goal
+      handle Interrupt => raise Interrupt 
+        | e => (print_endline "Error"; raise e)
   in
     print_status status;
     print_time ("ttt_eval",t);
     print_endline ("nodes: " ^ its (dlength tree));
     print_time ("tnn value",!reward_time);
     print_time ("tnn policy",!reorder_time);
-    print_time ("tactic pred",!predtac_time);
-    hide_flag := b
+    print_time ("tactic pred",!predtac_time)
   end
 
 (* ------------------------------------------------------------------------
@@ -66,12 +57,12 @@ fun ttt_eval (thmdata,tacdata) (vnno,pnno) goal =
 fun sreflect_real s r = ("val _ = " ^ s ^ " := " ^ rts (!r) ^ ";")
 fun sreflect_flag s flag = ("val _ = " ^ s ^ " := " ^ bts (!flag) ^ ";")
 
-fun write_evalscript (vnno,pnno) file =
+fun write_evalscript smlfun (vnno,pnno) file =
   let
     val file1 = mlquote (file ^ "_savestate")
     val file2 = mlquote (file ^ "_goal")
-    val filevo = Option.map (fn x => tnn_dir ^ "/" ^ x) vnno
-    val filepo = Option.map (fn x => tnn_dir ^ "/" ^ x) pnno
+    val filevo = NONE
+    val filepo = NONE
     val sl =
     ["PolyML.SaveState.loadState " ^ file1 ^ ";",
      "val tactictoe_goal = mlTacticData.import_goal " ^ file2 ^ ";",
@@ -88,7 +79,7 @@ fun write_evalscript (vnno,pnno) file =
      sreflect_real "tttSetup.ttt_policy_coeff" ttt_policy_coeff,
      sreflect_real "tttSetup.ttt_explo_coeff" ttt_explo_coeff,
      sreflect_flag "aiLib.debug_flag" debug_flag,
-     "tttEval.ttt_eval " ^
+     smlfun  ^ " " ^
      "(!tttRecord.thmdata_glob, !tttRecord.tacdata_glob) " ^
      "(tactictoe_vnno, tactictoe_pnno) " ^
      "tactictoe_goal;"]
@@ -98,26 +89,28 @@ fun write_evalscript (vnno,pnno) file =
 
 fun bare file = OS.Path.base (OS.Path.file file)
 
-fun run_evalscript dir tnno file =
+fun run_evalscript smlfun dir tnno file =
   (
-  write_evalscript tnno file;
+  write_evalscript smlfun tnno file;
   run_buildheap_nodep dir (file ^ "_eval.sml")
   )
 
-fun run_evalscript_thyl expname (b,ncore) tnno thyl =
+fun run_evalscript_thyl smlfun expname (b,ncore) tnno thyl =
   let
-    val dir = ttt_eval_dir ^ "/" ^ expname ^
-      (if b then "" else "_tenth")
-    val _ = (mkDir_err ttt_eval_dir; mkDir_err dir)
+    val savestatedir = tactictoe_dir ^ "/savestate"
+    val expdir = ttt_eval_dir ^ "/" ^ expname
+    val outdir = expdir ^ "/out"
+    val _ = app mkDir_err [ttt_eval_dir, expdir, outdir]
     val thyl' = filter (fn x => not (mem x ["min","bool"])) thyl
-    val pbl = map (fn x => tactictoe_dir ^ "/savestate/" ^ x ^ "_pbl") thyl'
-    fun f x = (readl x handle Interrupt => raise Interrupt
-      | _ => (print_endline x; []))
+    val pbl = map (fn x => savestatedir ^ "/" ^ x ^ "_pbl") thyl'
+    fun f x = readl x handle 
+        Interrupt => raise Interrupt
+      | _         => (print_endline x; [])
     val filel1 = List.concat (map f pbl)
     val filel2 = if b then filel1 else one_in_n 10 0 filel1
     val _ = print_endline ("evaluation: " ^ its (length filel2) ^ " problems")
     val (_,t) = add_time
-      (parapp_queue ncore (run_evalscript dir tnno)) filel2
+      (parapp_queue ncore (run_evalscript smlfun outdir tnno)) filel2
   in
     print_endline ("evaluation time: " ^ rts_round 6 t)
   end
@@ -157,12 +150,16 @@ load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
+val smlfun = "tttEval.ttt_eval"
+val _ = run_evalscript_thyl smlfun "august30" (true,30) (NONE,NONE) thyl;
 
-ttt_clean_eval ();
-val _ = run_evalscript_thyl "august24-2" (true,30) (NONE,NONE) thyl;
+val expname = "august30";
+val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
+val ngen = 0;
+val smlfun = "tttBigSteps.run_bigsteps_eval (" ^ 
+  mlquote expdir ^ "," ^ aiLib.its ngen ^ ")";
+val _ = run_evalscript_thyl smlfun expname (true,30) (NONE,NONE) thyl;
 
-val tnn_value = train_value 0.95 "value";
-val _ = run_evalscript_thyl "august10-vnn" (true,30) (SOME "value",NONE) thyl;
 *)
 
 (* ------------------------------------------------------------------------

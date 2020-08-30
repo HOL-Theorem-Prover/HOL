@@ -878,7 +878,6 @@ fun readl path =
     (TextIO.closeIn file; l3)
   end
 
-
 fun readl_empty path =
   let
     val file = TextIO.openIn path
