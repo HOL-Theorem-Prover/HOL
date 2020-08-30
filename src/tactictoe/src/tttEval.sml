@@ -170,10 +170,9 @@ val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
 val ngen = 1;
 val smlfun = "tttBigSteps.run_bigsteps_eval (" ^ 
   mlquote expdir ^ "," ^ aiLib.its ngen ^ ")";
-val (vnno,pnno,anno) = 
-  (expdir ^ "/0/tnnval", expdir ^ "/0/tnnpol", expdir ^ "/0/tnnarg");
+fun prefix s = SOME (expdir ^ "/0/tnn" ^ s)
+val (vnno,pnno,anno) = triple_of_list (map prefix ["val","pol","arg"]);
 val _ = run_evalscript_thyl smlfun expname (true,30) (vnno,pnno,anno) thyl;
-
 *)
 
 (* ------------------------------------------------------------------------
@@ -189,24 +188,24 @@ val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
 val ngen = 0;
 val gendir = expdir ^ "/" ^ aiLib.its ngen;
 
+fun read_ex dir = 
+  let val filel = map (fn x => dir ^ "/" ^ x) (listDir dir) in
+    List.concat (map read_tnnex filel)
+  end;
+
 val valdir = gendir ^ "/val";
-val filel = listDir valdir;
-val filel2 = map (fn x => valdir ^ "/" ^ x) filel;
-val (exl,t) = add_time (map read_tnnex) filel2;
-val exl2 = List.concat exl;
-val tnnval = train_fixed 0.95 exl2;
+val exval = read_ex valdir; length exval;
+val tnnval = train_fixed 0.95 exl;
 write_tnn (gendir ^ "/tnnval") tnnval;
 
 val poldir = gendir ^ "/pol";
-val filel = map (fn x => valdir ^ "/" ^ x) (listDir poldir);
-val exl = List.concat (map read_tnnex filel);
-val tnnpol = train_fixed 0.95 exl;
+val expol = read_ex poldir; length expol;
+val tnnpol = train_fixed 0.95 expol;
 write_tnn (gendir ^ "/tnnpol") tnnpol;
 
 val argdir = gendir ^ "/arg";
-val filel = map (fn x => valdir ^ "/" ^ x) (listDir argdir);
-val exl = List.concat (map read_tnnex filel);
-val tnnarg = train_fixed 0.95 exl;
+val exarg = read_ex argdir; length exarg;
+val tnnarg = train_fixed 0.95 exarg;
 write_tnn (gendir ^ "/tnnarg") tnnarg;
 *)
 

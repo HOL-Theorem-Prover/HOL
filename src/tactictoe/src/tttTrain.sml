@@ -159,7 +159,6 @@ fun nntm_of_statearg ((g,stac),arg) =
 
 fun train_fixed pct exl =
   let
-    val tnn_dir = tttSetup.tactictoe_dir ^ "/tnn"
     val (train,test) = part_pct pct (shuffle exl)
     fun operl_of_tnnex exl =
       List.concat (map operl_of_term (map fst (List.concat exl)))

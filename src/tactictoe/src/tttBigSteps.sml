@@ -37,13 +37,18 @@ fun string_of_bstatus x = case x of
 
 fun example_val goalrec =
   if #gvis goalrec < 0.5 
-  then []
+    then []
+  else if #gstatus goalrec = GoalProved 
+    then [(nntm_of_stateval (#goal goalrec), 1.0)]
+  else if #gstatus goalrec = GoalSaturated
+    then [(nntm_of_stateval (#goal goalrec), 0.0)]
   else [(nntm_of_stateval (#goal goalrec), #gsum goalrec / #gvis goalrec)]
 
 fun example_pol goal argl1 =
   let 
-    val argl2 = map_assoc 
-      (fn x => if #sstatus x = StacSaturated then 0.0 else #svis x) argl1
+    fun test x = #sstatus x <> StacSaturated
+    val argl2p = filter test argl1
+    val argl2 = first_n 8 (map_assoc #svis argl2p)
     val tot = sum_real (map snd argl2) 
   in
     if tot <= 0.5 orelse length argl2 <= 1 then [] else
@@ -62,10 +67,9 @@ fun example_pol goal argl1 =
 
 fun example_arg (goal,stac) argl1 =
   let 
-    val argl2 = map_assoc 
-      (fn x => if #sstatus x = StacSaturated 
-               then 0.0 
-               else #svis x) argl1
+    fun test x = #sstatus x <> StacSaturated
+    val argl2p = filter test argl1
+    val argl2 = first_n 8 (map_assoc #svis argl2p)
     val tot = sum_real (map snd argl2) 
   in
     if tot <= 0.5 orelse length argl2 <= 1 then [] else
@@ -220,11 +224,15 @@ fun loop_stac searchobj g =
   let
     val _ = print_endline ("Goal: " ^ string_of_goal g)
     val starttree = hidef (starttree_of_goal searchobj) g
-    val (_,tree) = hidef (search_loop searchobj (SOME 1600)) starttree
-    val sn = best_stac tree
-    val _ = print_endline ("best tac: " ^ its sn)
-  in      
-    loop_arg searchobj tree (sn,[])
+  in
+    if #nstatus (dfind [] starttree) = NodeSaturated then NONE else
+    let
+      val (_,tree) = hidef (search_loop searchobj (SOME 1600)) starttree
+      val sn = best_stac tree
+      val _ = print_endline ("best tac: " ^ its sn)
+    in      
+      loop_arg searchobj tree (sn,[])
+    end
   end
 
 fun string_of_gl gl = String.concatWith "\n" (map string_of_goal gl) 

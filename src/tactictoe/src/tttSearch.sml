@@ -135,8 +135,11 @@ fun eval_arg ann g stac arg =
 
 fun reorder_arg anno g stac argl =
   if not (isSome anno) then argl else
-  let val l = map_assoc (eval_arg (valOf anno) g stac) argl in
-    map fst (dict_sort compare_rmax l)
+  let 
+    fun f x = eval_arg (valOf anno) g stac x
+    val argle = map_assoc f argl
+  in
+    map fst (dict_sort compare_rmax argle)
   end 
 
 (* -------------------------------------------------------------------------
