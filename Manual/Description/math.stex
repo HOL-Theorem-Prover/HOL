@@ -385,6 +385,14 @@ is still Borel-measurable:
 \end{alltt}
 \end{hol}
 
+\begin{hol}
+\begin{alltt}
+##thm in_borel_measurable_mul
+
+##thm IN_MEASURABLE_BOREL_TIMES'
+\end{alltt}
+\end{hol}
+
 Furthermore, if a real-valued function is Borel-measurable,
 so is its extreal-valued version. The converse also holds.
 \begin{hol}
@@ -799,14 +807,14 @@ can be used for building product measures:
 Besides \theoryimp{pairTheory}, one can also use
 \holtxt{FCP_CONCAT}, \holtxt{FCP_FST} and \holtxt{FCP_SND} (\theoryimp{fcpTheory}):
 \begin{hol}
-\begin{alltt}    
+\begin{alltt}
 ##thm pair_operation_FCP_CONCAT
 \end{alltt}
 \end{hol}
 
 The general version of product space is defined on any pair operation:
 \begin{hol}
-\begin{alltt}    
+\begin{alltt}
 ##thm general_cross_def
 ##thm general_prod_def
 \end{alltt}
@@ -818,7 +826,7 @@ are first proven on general pair operations
 (and then specialized on \theoryimp{pairTheory} and \theoryimp{fcpTheory}).
 For instance, the following theorem is the general version of \texttt{EXISTENCE_OF_PROD_MEASURE}:
 \begin{hol}
-\begin{alltt}    
+\begin{alltt}
 ##thm existence_of_prod_measure_general
 \end{alltt}
 \end{hol}
