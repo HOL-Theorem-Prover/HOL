@@ -251,6 +251,7 @@ fun loop_node searchobj n gl =
 
 fun run_bigsteps searchobj g = 
   let 
+    val _ = print_endline "init bigsteps"
     val _ = (exval := []; expol := []; exarg := [])
     val bstatus = loop_node searchobj 0 [g]
     val r = (bstatus,(!exval,!expol,!exarg))
@@ -269,13 +270,14 @@ fun run_bigsteps_eval (expdir,ngen) (thmdata,tacdata) (vnno,pnno) g =
     val resdir = gendir ^ "/res"
     val errdir = gendir ^ "/err"
     val _ = app mkDir_err [expdir,gendir,valdir,poldir,argdir,resdir,errdir];
+    val _ = print_endline "searchobj"
     val searchobj = build_searchobj (thmdata,tacdata) (NONE,NONE) g
       handle Interrupt => raise Interrupt 
         | e => (writel (errdir ^ "/" ^ pb) ["searchobj"]; raise e)
+    val _ = print_endline "run_bigsteps"
     val (bstatus,(exv,exp,exa)) = run_bigsteps searchobj g
       handle Interrupt => raise Interrupt 
-        | e => (writel (errdir ^ "/" ^ pb) ["searchobj"]; raise e)
-
+        | e => (writel (errdir ^ "/" ^ pb) ["run_bigsteps"]; raise e)
   in
     write_tnnex (valdir ^ "/" ^ pb) (basicex_to_tnnex exv);
     write_tnnex (poldir ^ "/" ^ pb) (basicex_to_tnnex exp);

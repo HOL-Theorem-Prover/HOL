@@ -150,16 +150,18 @@ load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
+
+(* simple eval *)
 val smlfun = "tttEval.ttt_eval"
 val _ = run_evalscript_thyl smlfun "august30" (true,30) (NONE,NONE) thyl;
 
+(* bigsteps eval *)
 val expname = "august30";
 val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
 val ngen = 0;
 val smlfun = "tttBigSteps.run_bigsteps_eval (" ^ 
   mlquote expdir ^ "," ^ aiLib.its ngen ^ ")";
 val _ = run_evalscript_thyl smlfun expname (true,30) (NONE,NONE) thyl;
-
 *)
 
 (* ------------------------------------------------------------------------
