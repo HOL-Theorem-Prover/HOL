@@ -21,7 +21,7 @@ val _ = let
                  test_term)
       end
 in
-  require_msgk (check_result (K true)) (fn _ => "")
+  require_msgk (check_result (K true)) (fn _ => HOLPP.add_string "")
                (QCONV (SIMP_CONV bool_ss [AC CONJ_ASSOC CONJ_COMM]))
                kont
                test_term

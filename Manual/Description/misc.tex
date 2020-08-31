@@ -274,17 +274,17 @@ This flow is demonstrated in the Euclid example of \TUTORIAL.
 
 Alternatively, and probably with the help of one of the editor modes,\footnote{There are editor modes for \texttt{emacs} and \texttt{vim}.} one can develop a theory with a script file that is always separately compilable.
 
-\subsection{What \holmake{} doesn't do}
+\subsection{\holmake{} Limitations}
 
-\holmake{} only works properly on the current directory.
-\holmake{} will rebuild files in the current directory if something it depends on from another directory is fresher than it is, but it will not do any analysis on files in other directories.
+Without information to the contrary, \holmake{} assumes that all files of interest are in the current directory or in \HOL{}'s master \texttt{sigobj} directory.
+Using a \texttt{Holmakefile} (see Section~\ref{sec:using-Holmakefiles}), it is possible to mention files in other directories, both as dependencies and as explicit targets with rules on how those targets should be built.
+However, it is probably impossible (or at least, painfully difficult) to describe how theories are built from script files using the \texttt{Holmakefile} language.
+Nor will \holmake{} perform its automatic dependency analysis on such ``remote'' files.
 
 \index{Holmake@\holmake!recursive invocation}%
-However, one can indicate that there is a dependency on other directories by using the \texttt{-I} flag, or the \texttt{INCLUDES} variable in a \texttt{Holmakefile}.
-Such a specification will cause \holmake{} to look in the specified directories for other theory files that the current directory may depend on.
-Moreover, by default \holmake{} will recursively call itself on all those ``include'' directories before doing anything in the current directory.
-In this way, one can get a staged application of \holmake{} across multiple directories.\footnote{See \emph{Recursive Make Considered
-    Harmful} by Peter Miller for why this is not ideal.}
+The right approach when a development spans multiple directories is to indicate that there is a dependency on other directories by using the \texttt{-I} flag, or (better) the \texttt{INCLUDES} variable in a \texttt{Holmakefile}.
+\holmake{} requires that, just as files must have an acyclic dependency graph, the directories containing those files must have a compatible, and acyclic, \texttt{INCLUDES} graph.
+With \texttt{INCLUDES} information to hand, \holmake{} will process the entire \texttt{INCLUDES} graph, looking throughout the graph for theory files that the current directory may depend on, and rebuilding those remote targets as necessary.
 
 \subsection{\holmake{}'s command-line arguments}
 \index{Holmake@\holmake!command-line arguments}
@@ -358,6 +358,8 @@ with the following command-line options:
 \item[\texttt{--no\_prereqs}]%
 \index{Holmake@\holmake!recursive invocation}%
 Do not recursively attempt to build ``include'' directories before working in the current directory.
+If a target in the current directory depends on something in another directory that does not exist, \holmake{} will fail to build it.
+If the remote target exists, but is stale, it will be used in its stale state, come what may.
 \item[\texttt{--no\_sigobj}]
   Do not link against \HOL{} system's directory of \HOL{} system files.
   Use of this option goes some way towards turning \holmake{} into a general \ML{} \textsf{make} system.
@@ -376,7 +378,10 @@ Do not recursively attempt to build ``include'' directories before working in th
   be affected.
 \item[\texttt{-r}]%
 \index{Holmake@\holmake!recursive invocation}%
-Forces \holmake{} to behave recursively, overriding the \texttt{--no\_prereqs} option, and also causing \holmake{} to clean recursively in the ``includes'' directories (which is not done otherwise).
+Forces \holmake{} to behave more recursively than it would otherwise.
+This overrides the \texttt{--no\_prereqs} option.
+When performing a ``clean'' action (prompted by \texttt{clean}, \texttt{cleanAll} or \texttt{cleanDeps} arguments), this cleaning is done recursively through all ``includes'' directories (which is not done otherwise).
+When building normally, all targets in ``includes'' directories are built; normally only dependencies of targets in the current directory are built.
 \item[{\tt --rebuild\_deps}] Forces \holmake{} to always
   rebuild the dependency information for files it examines, whether or
   not it thinks it needs to.  This option is implemented by having

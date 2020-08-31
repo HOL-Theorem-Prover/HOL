@@ -1,37 +1,37 @@
-iab /\ ∧
+iab <buffer> /\ ∧
 "dig AN
-iab \/ ∨
+iab <buffer> \/ ∨
 "dig OR
-iab ~ ¬
+iab <buffer> ~ ¬
 "dig NO
 "dig -,
-iab ==> ⇒
+iab <buffer> ==> ⇒
 "dig =>
-iab <= ≤
+iab <buffer> <= ≤
 "dig =<
-iab >= ≥
+iab <buffer> >= ≥
 "dig >=
-iab <=> ⇔
+iab <buffer> <=> ⇔
 "dig ==
-iab <> ≠
+iab <buffer> <> ≠
 "dig !=
-iab ! ∀
+iab <buffer> ! ∀
 "dig FA
-iab ? ∃
+iab <buffer> ? ∃
 "dig TE
-iab \ λ
+iab <buffer> \ λ
 "dig l*
-iab IN ∈
+iab <buffer> IN ∈
 "dig (- ∈
-iab NOTIN ∉
+iab <buffer> NOTIN ∉
 dig (+ 8713
-iab INTER ∩
+iab <buffer> INTER ∩
 "dig (U
-iab UNION ∪
+iab <buffer> UNION ∪
 "dig U)
-iab SUBSET ⊆
+iab <buffer> SUBSET ⊆
 "dig (_
-iab PSUBSET ⊂
+iab <buffer> PSUBSET ⊂
 "dig (C
 set iskeyword+=>,/,\
 fu! HOLUnab ()

@@ -28,7 +28,7 @@
 
 open HolKernel Parse boolLib IndDefLib numLib pred_setTheory
      sumTheory pairTheory BasicProvers bossLib metisLib simpLib;
-
+open relationTheory
 local open pred_setLib listTheory rich_listTheory in end
 
 val _ = new_theory "finite_map";
@@ -579,10 +579,10 @@ val _ = TeX_notation {hol = "SUBMAP", TeX = ("\\HOLTokenSubmap{}", 1)}
 val _ = TeX_notation {hol = UTF8.chr 0x2291, TeX = ("\\HOLTokenSubmap{}", 1)}
 
 
-val SUBMAP_FEMPTY = Q.store_thm
-("SUBMAP_FEMPTY",
- `!(f : ('a,'b) fmap). FEMPTY SUBMAP f`,
- SRW_TAC [][SUBMAP_DEF, FDOM_FEMPTY]);
+Theorem SUBMAP_FEMPTY[simp]:
+  !(f : ('a,'b) fmap). FEMPTY SUBMAP f
+Proof SRW_TAC [][SUBMAP_DEF, FDOM_FEMPTY]
+QED
 
 val SUBMAP_REFL = Q.store_thm
 ("SUBMAP_REFL",
@@ -1520,10 +1520,10 @@ val IN_DOMSUB_NOT_EQUAL = Q.prove
 (`!f:'a |->'b. !x1 x2. x2 IN FDOM (f \\ x1) ==> ~(x2 = x1)`,
  RW_TAC std_ss [FDOM_DOMSUB,IN_DELETE]);
 
-val SUBMAP_DOMSUB = store_thm(
-  "SUBMAP_DOMSUB",
-  ``(f \\ k) SUBMAP f``,
-  SRW_TAC [][fmap_domsub]);
+Theorem SUBMAP_DOMSUB[simp]:
+  (f \\ k) SUBMAP f
+Proof SRW_TAC [][fmap_domsub]
+QED
 
 val FMERGE_DOMSUB = store_thm(
 "FMERGE_DOMSUB",
@@ -2948,37 +2948,315 @@ QED
    ---------------------------------------------------------------------- *)
 
 Inductive fmlfpR:
-  (!A0 A1 fm.
-    A0 = A1 ==> fmlfpR f A0 fm FEMPTY A1 A0) /\
-  (!A0 A1 A2 fm.
-    fmlfpR f A1 fm fm A1 A2 /\ A0 <> A1 ==>
-    fmlfpR f A0 fm FEMPTY A1 A2) /\
-  (!A0 A1 A2 fm0 fm k v.
-    fmlfpR f A0 fm0 (fm \\ k) (f k v A1) A2 ==>
-    fmlfpR f A0 fm0 (fm |+ (k,v)) A1 A2)
+  (!A0 A1.
+    A0 = A1 ==> fmlfpR f fm0 A0 FEMPTY A1 A0) /\
+  (!A0 A1 A2.
+    fmlfpR f fm0 A1 fm0 A1 A2 /\ A0 <> A1 ==>
+    fmlfpR f fm0 A0 FEMPTY A1 A2) /\
+  (!A0 A1 A2 fm k v.
+    fmlfpR f fm0 A0 (fm \\ k) (f k v A1) A2 ==>
+    fmlfpR f fm0 A0 (fm |+ (k,v)) A1 A2)
 End
 
 (* the above is super generic "recursion" over finite maps.
    Proving termination super-generically involves lots of worry about partial
-   orders and well-foundedness. However, we can instantiate 'a to 'a set and
-   use SUBSET as our partial order, and guarantee termination with by requiring
-   the existence of a finite fix-point that is a superset of A.
-   Then, if A SUBSET f k v A, you'll always get to a fix-point eventually.
-   (There might be an intervening fix-point that you get to first.)
+   orders and well-foundedness.
  *)
 
-(*
-Theorem fmlpR_total:
-  FINITE P /\
-  (!k v A. FLOOKUP fm0 k = SOME v /\ A SUBSET P ==> A SUBSET f k v A) /\
-  (!k v. FLOOKUP fm0 k = SOME v /\ A SUBSET P ==> f k v A SUBSET P) /\
-  A0 SUBSET A1 /\ A1 SUBSET P /\ fm0 SUBMAP fm
-  ==>
-  ?A2. fmlfpR f A0 fm0 fm A1 A2 /\ A2 SUBSET P /\
-       (!k v. FLOOKUP fm0 k = SOME v ==> f k v A2 = A2)
+Definition lbound_def:
+  lbound l R x y <=> RTC R l x /\ RTC R l y /\ R x y
+End
+
+Theorem WF_lbound_inv_SUBSET:
+  FINITE s ==> WF (lbound s (inv (PSUBSET)))
 Proof
+  simp[WF_DEF, lbound_def,
+       inv_MOVES_OUT] >> strip_tac >>
+  qx_gen_tac ‘B’ >> strip_tac >>
+  qabbrev_tac ‘B' = { s0 | s0 IN B /\ s0 SUBSET s}’ >>
+  Cases_on ‘B' = {}’
+  >- (qexists_tac ‘w’ >>
+      ‘~(w SUBSET s)’ suffices_by simp[] >> strip_tac >>
+      ‘w IN B'’ by (simp[Abbr‘B'’] >> simp[IN_DEF]) >> gs[]) >>
+  ‘FINITE B'’
+    by (irule SUBSET_FINITE >> qexists_tac ‘POW s’ >> simp[Abbr‘B'’] >>
+        simp[SUBSET_DEF, IN_POW]) >>
+  ‘?e. is_measure_maximal CARD B' e’ by simp[FINITE_is_measure_maximal] >>
+  gs[is_measure_maximal_def] >> qexists_tac ‘e’ >> rpt strip_tac
+  >- (gs[Abbr‘B'’] >> gs[IN_DEF]) >>
+  rename [‘c PSUBSET b’, ‘b SUBSET s’] >>
+  ‘FINITE b’ by metis_tac[SUBSET_FINITE] >>
+  ‘CARD c < CARD b’ by metis_tac[CARD_PSUBSET] >>
+  pop_assum mp_tac >> simp[arithmeticTheory.NOT_LESS] >> first_x_assum irule >>
+  simp[Abbr‘B'’] >> simp[IN_DEF]
 QED
-*)
+
+Theorem FLOOKUP_FOLDR_UPDATE:
+  ALL_DISTINCT (MAP FST kvl) /\ DISJOINT (set (MAP FST kvl)) (FDOM fm) ==>
+  (FLOOKUP (FOLDR (flip $|+) fm kvl) k = SOME v <=>
+   MEM (k,v) kvl \/ FLOOKUP fm k = SOME v)
+Proof
+  Induct_on ‘kvl’ >>
+  simp[FORALL_PROD, FLOOKUP_UPDATE, AllCaseEqs(), listTheory.MEM_MAP] >>
+  qx_genl_tac [‘kk’, ‘vv’] >> strip_tac >> gvs[] >>
+  Cases_on ‘MEM (k,v) kvl’ >> simp[] >- metis_tac[] >>
+  Cases_on ‘FLOOKUP fm k = SOME v’ >> simp[]
+  >- (gvs[FLOOKUP_DEF] >> metis_tac[]) >>
+  metis_tac[]
+QED
+
+Theorem RC_XX[simp,local]:
+  RC R x x
+Proof
+  simp[RC_DEF]
+QED
+
+Theorem fmlfpR_lastpass:
+  (!k v. FLOOKUP fm k = SOME v ==> f k v A = A)
+  ==>
+  (fmlfpR f fm A fm A B <=> A = B)
+Proof
+  strip_tac >> eq_tac
+  >- (‘!fm0 B A0 A1. fmlfpR f fm A0 fm0 A1 B ==>
+                     A1 = A /\ A0 = A /\ fm0 SUBMAP fm ==> A = B’
+        suffices_by metis_tac[SUBMAP_REFL] >>
+      Induct_on ‘fmlfpR’ >> simp[] >> rw[] >>
+      gs[SUBMAP_FUPDATE] >>
+      ‘FLOOKUP fm k = SOME v’ by simp[FLOOKUP_DEF] >>
+      first_x_assum irule >> simp[] >>
+      fs[GSYM SUBMAP_DOMSUB_gen]) >>
+  rw[] >>
+  ‘!gm. gm SUBMAP fm ==> fmlfpR f fm A gm A A’
+    suffices_by metis_tac[SUBMAP_REFL]>>
+  ho_match_mp_tac fmap_INDUCT >> rw[] >> simp[fmlfpR_rules] >>
+  irule (cj 3 fmlfpR_rules) >>
+  rename [‘gm \\ k’, ‘f k v A’] >>
+  fs[SUBMAP_FUPDATE, GSYM SUBMAP_DOMSUB_gen] >>
+  ‘gm \\ k = gm’ by simp[DOMSUB_NOT_IN_DOM] >>
+  ‘f k v A = A’ suffices_by metis_tac[] >>
+  first_x_assum irule >> simp[FLOOKUP_DEF]
+QED
+
+Theorem FOLDR_FUPDATE_DOMSUB[local]:
+  ALL_DISTINCT (MAP FST kvl) /\ DISJOINT (set (MAP FST kvl)) (FDOM fm) /\
+  k IN FDOM fm ==>
+  FOLDR (flip $|+) (fm \\ k) kvl |+ (k, fm ' k) =
+  FOLDR (flip $|+) fm kvl
+Proof
+  Induct_on ‘kvl’ >> simp[FUPDATE_ELIM, listTheory.MEM_MAP, FORALL_PROD] >>
+  metis_tac[FUPDATE_COMMUTES]
+QED
+
+val mkAbbr = CONV_RULE (REWR_CONV (GSYM markerTheory.Abbrev_def))
+
+Definition fp_soluble_def:
+  fp_soluble R P fm f <=>
+  transitive R /\ WF (lbound P (inv R)) /\
+  (!k v A. FLOOKUP fm k = SOME v /\ RC R A P ==>
+           RC R A (f k v A) /\ RC R (f k v A) P) /\
+  (* (!k v. FLOOKUP fm k = SOME v ==> f k v P = P) /\ *)
+  !A. R A P ==> ?k v. FLOOKUP fm k = SOME v /\ f k v A <> A
+End
+
+Theorem fp_soluble_FOLDR1:
+  fp_soluble R P fm0 f /\
+  fm0 = FOLDR (flip $|+) fm kvl /\
+  DISJOINT (set (MAP FST kvl)) (FDOM fm) /\
+  ALL_DISTINCT (MAP FST kvl) ==>
+  (!s A. IS_SUFFIX kvl s /\ RC R A P ==>
+         RC R A (FOLDR (UNCURRY f) A s) /\
+         RC R (FOLDR (UNCURRY f) A s) P) /\
+  !s A k v. IS_SUFFIX kvl s /\ RC R A P /\ MEM (k,v) s /\
+            f k v A <> A ==>
+            FOLDR (UNCURRY f) A s <> A
+Proof
+  simp[fp_soluble_def] >> strip_tac >>
+  conj_asm1_tac
+  >- (Induct >> simp[FORALL_PROD] >>
+      qx_genl_tac [‘k’, ‘v’, ‘A’] >> strip_tac >>
+      ‘transitive (RC R)’ by metis_tac[transitive_RC] >>
+      drule_then assume_tac rich_listTheory.IS_SUFFIX_CONS2_E >>
+      first_x_assum $ drule_all_then strip_assume_tac >>
+      fs[transitive_def] >> conj_tac >> first_x_assum irule
+      >- (first_assum (goal_assum o resolve_then Any mp_tac) >>
+          first_x_assum (irule o cj 1) >> simp[FLOOKUP_FOLDR_UPDATE] >>
+          fs[rich_listTheory.IS_SUFFIX_APPEND] >> gvs[]) >>
+      goal_assum (resolve_then (Pos last) mp_tac RC_XX) >>
+      first_x_assum (irule o cj 2) >> simp[FLOOKUP_FOLDR_UPDATE] >>
+      gvs[rich_listTheory.IS_SUFFIX_APPEND]) >>
+  Induct >> simp[FORALL_PROD] >> rpt strip_tac
+  >- (qpat_x_assum ‘k = _’ (SUBST_ALL_TAC o SYM) >>
+      qpat_x_assum ‘v = _’ (SUBST_ALL_TAC o SYM) >>
+      qabbrev_tac ‘AA = FOLDR (UNCURRY f) A s’ >>
+      ‘AA <> A’ by metis_tac[] >>
+      drule_then assume_tac rich_listTheory.IS_SUFFIX_CONS2_E >>
+      ‘RC R A AA /\ RC R AA P’ by metis_tac[] >>
+      ‘R A AA’ by metis_tac[RC_DEF] >>
+      ‘MEM (k,v) kvl’ by gvs[rich_listTheory.IS_SUFFIX_APPEND] >>
+      ‘RC R AA (f k v AA)’ by metis_tac[FLOOKUP_FOLDR_UPDATE] >>
+      ‘R A A’ by metis_tac[transitive_def, RC_DEF] >>
+      ‘lbound P (inv R) A A’
+        by (simp[lbound_def, inv_MOVES_OUT] >> rpt strip_tac >>
+            metis_tac[RC_DEF, RTC_SUBSET, RTC_RULES]) >>
+      metis_tac[WF_NOT_REFL]) >>
+  qabbrev_tac ‘AA = FOLDR (UNCURRY f) A s’ >>
+  drule_then assume_tac rich_listTheory.IS_SUFFIX_CONS2_E >>
+  first_x_assum (drule_then $ drule_then $ drule_then $
+                 drule_then assume_tac) >> rfs[] >>
+  rename [‘IS_SUFFIX _ ((kk,vv)::sfx)’] >>
+  ‘MEM (kk,vv) kvl’ by gvs[rich_listTheory.IS_SUFFIX_APPEND] >>
+  ‘FLOOKUP fm0 kk = SOME vv’ by metis_tac[FLOOKUP_FOLDR_UPDATE] >>
+  ‘RC R A AA /\ RC R AA (f kk vv AA)’ by metis_tac[] >>
+  ‘R A A’ by metis_tac[RC_DEF, transitive_def] >>
+  ‘lbound P (inv R) A A’
+    by (simp[lbound_def, inv_MOVES_OUT] >> rpt strip_tac >>
+        metis_tac[RC_DEF, RTC_SUBSET, RTC_RULES]) >>
+  metis_tac[WF_NOT_REFL]
+QED
+
+Theorem FOLDR_FUPDATE_DOMSUB'[local]:
+  ALL_DISTINCT (MAP FST kvl) /\ DISJOINT (set (MAP FST kvl)) (FDOM fm) /\
+  ~MEM k (MAP FST kvl) ==>
+  FOLDR (flip $|+) (fm \\ k) kvl |+ (k,v) =
+  FOLDR (flip $|+) (fm |+ (k,v)) kvl
+Proof
+  Induct_on ‘kvl’ >> simp[FORALL_PROD, listTheory.MEM_MAP] >> rpt strip_tac >>
+  gvs[listTheory.MEM_MAP, FORALL_PROD] >>
+  metis_tac[FUPDATE_COMMUTES]
+QED
+
+Theorem fmlfpR_total_lemma:
+  fp_soluble R P fm0 f
+ ==>
+  RC R A0 A1 /\ RC R A1 P /\ (fm : 'b |-> 'c) SUBMAP fm0 /\
+  A1 = FOLDR (UNCURRY f) A0 kvl /\
+  DISJOINT (set (MAP FST kvl)) (FDOM fm) /\
+  ALL_DISTINCT (MAP FST kvl) /\
+  fm0 = FOLDR (flip $|+) fm kvl
+==>
+  (fmlfpR f fm0 A0 fm A1 A2 <=> A2 = P)
+Proof
+  strip_tac >> REWRITE_TAC[EQ_IMP_THM, IMP_CONJ_THM] >> conj_tac
+  >- (map_every qid_spec_tac [‘A0’, ‘A1’, ‘A2’, ‘fm’, ‘kvl’] >>
+      Induct_on ‘fmlfpR’ >>
+      rpt strip_tac
+      >- (qpat_x_assum ‘A0 = A1’ SUBST_ALL_TAC >>
+          qpat_x_assum ‘RC R A1 P’ mp_tac >>
+          simp[RC_DEF, DISJ_IMP_THM] >> strip_tac >>
+          drule_all_then strip_assume_tac fp_soluble_FOLDR1 >>
+          ‘?k v. FLOOKUP fm0 k = SOME v /\ f k v A1 <> A1’
+            by metis_tac[fp_soluble_def] >>
+          pop_assum (first_x_assum o resolve_then (Pos last) mp_tac) >>
+          rw[] >> rfs[FLOOKUP_FOLDR_UPDATE] >>
+          metis_tac[rich_listTheory.IS_SUFFIX_REFL, RC_DEF])
+      >- (first_x_assum $ qspec_then ‘[]’ mp_tac >> simp[]) >>
+      first_x_assum irule >> rpt conj_tac
+      >- (qexists_tac ‘(k,v)::kvl’ >> simp[] >> gs[] >>
+          simp[FOLDR_FUPDATE_DOMSUB'] >>
+          gvs[DISJOINT_DEF, EXTENSION, listTheory.MEM_MAP, FORALL_PROD] >>
+          metis_tac[])
+      >- gs[SUBMAP_FUPDATE, GSYM SUBMAP_DOMSUB_gen]
+      >- (qpat_x_assum ‘fm0 = _’ (assume_tac o mkAbbr) >>
+          qpat_x_assum ‘A1 = _’ (assume_tac o mkAbbr) >>
+          gs[SUBMAP_FUPDATE, GSYM SUBMAP_DOMSUB_gen] >>
+          ‘FLOOKUP fm0 k = SOME v’ by simp[FLOOKUP_DEF] >>
+          metis_tac[transitive_def, transitive_RC, fp_soluble_def]) >>
+      qpat_x_assum ‘fm0 = _’ (assume_tac o mkAbbr) >>
+      qpat_x_assum ‘A1 = _’ (assume_tac o mkAbbr) >>
+      gs[SUBMAP_FUPDATE, GSYM SUBMAP_DOMSUB_gen] >>
+      ‘FLOOKUP fm0 k = SOME v’ by simp[FLOOKUP_DEF] >>
+      metis_tac[transitive_def, transitive_RC, fp_soluble_def]) >>
+  Cases_on ‘A2 = P’ >> ASM_REWRITE_TAC [] >> pop_assum (K ALL_TAC) >>
+  map_every qid_spec_tac [‘A0’, ‘kvl’] >>
+  ‘WF (lbound P (inv R) LEX measure (FCARD : ('b |-> 'c) -> num))’
+    by gs[WF_LEX, fp_soluble_def] >>
+  ‘?p. p = (A1,fm)’ by simp[] >> pop_assum mp_tac >>
+  map_every qid_spec_tac [‘A1’, ‘fm’, ‘p’] >>
+  drule WF_INDUCTION_THM >>
+  simp[SimpL “$==>”, lbound_def, inv_MOVES_OUT, GSYM PULL_FORALL] >>
+  disch_then ho_match_mp_tac >> simp[FORALL_PROD] >>
+  qx_genl_tac [‘A1’, ‘fm’] >> strip_tac >>
+  qx_genl_tac [‘kvl’, ‘A0’] >> strip_tac >>
+  Cases_on ‘fm = FEMPTY’
+  >- (pop_assum SUBST_ALL_TAC >> Cases_on ‘A0 = A1’
+      >- (pop_assum SUBST_ALL_TAC >> simp[Once fmlfpR_cases] >>
+          qpat_x_assum ‘A1 = FOLDR _ A1 kvl’ (assume_tac o SYM) >>
+          qpat_x_assum ‘fm0 = FOLDR _ _ _’ (assume_tac o SYM) >>
+          gs[] >>
+          qpat_x_assum ‘RC R A1 P’ mp_tac >>
+          simp[RC_DEF, DISJ_IMP_THM] >> strip_tac >>
+          first_x_assum $ qspecl_then [‘ARB’, ‘ARB’] $ K ALL_TAC >>
+          ‘?k v. FLOOKUP fm0 k = SOME v /\ f k v A1 <> A1’
+            by metis_tac[fp_soluble_def] >>
+          drule_then (qspecl_then [‘kvl’, ‘FEMPTY’] mp_tac)
+                     fp_soluble_FOLDR1 >> simp[] >> strip_tac >>
+          pop_assum (drule_at_then (Pos last) $ qspec_then ‘kvl’ mp_tac) >>
+          simp[RC_DEF] >> gvs[FLOOKUP_FOLDR_UPDATE]) >>
+      qpat_x_assum ‘A1 = FOLDR _ A0 kvl’ (assume_tac o SYM) >>
+      qpat_x_assum ‘fm0 = FOLDR _ _ _’ (assume_tac o SYM) >> simp[] >> gs[] >>
+      irule (cj 2 fmlfpR_rules) >> simp[] >>
+      Cases_on ‘!k v. FLOOKUP fm0 k = SOME v ==> f k v A1 = A1’
+      >- (simp[fmlfpR_lastpass] >>
+          qpat_x_assum ‘RC R A1 P’ mp_tac >> simp[RC_DEF, DISJ_IMP_THM] >>
+          metis_tac[fp_soluble_def]) >>
+      gs[] >>
+      ‘(fm0 \\ k) |+ (k,v) = fm0’
+        by (simp[FUPDATE_PURGE'] >> gs[FLOOKUP_DEF, FUPDATE_ELIM]) >>
+      ‘fmlfpR f fm0 A1 fm0 A1 = fmlfpR f fm0 A1 ((fm0\\k)|+(k,v)) A1’
+        by simp[] >>
+      pop_assum SUBST1_TAC >>
+      goal_assum (resolve_then (Pos hd) mp_tac (cj 3 fmlfpR_rules)) >>
+      simp[] >> first_x_assum $ qspecl_then [‘f k v A1’, ‘fm0 \\ k’] mp_tac >>
+      impl_tac
+      >- (simp[LEX_DEF, lbound_def, inv_MOVES_OUT] >> rpt conj_tac
+          >- (‘RC R (f k v A1) P’ by metis_tac[fp_soluble_def] >>
+              gvs[RC_DEF])
+          >- gvs[RC_DEF] >>
+          ‘RC R A1 (f k v A1)’ by metis_tac[fp_soluble_def] >> gvs[RC_DEF]) >>
+      disch_then $ qspecl_then [‘[(k,v)]’, ‘A1’] mp_tac >>
+      simp[] >> gs[fp_soluble_def]) >>
+  qpat_x_assum ‘A1 = _’ (assume_tac o mkAbbr) >>
+  qpat_x_assum ‘fm0 = _’ (assume_tac o mkAbbr) >>
+  simp[] >>
+  ‘?k. k IN FDOM fm’ by metis_tac[FDOM_F_FEMPTY1] >>
+  ‘fm = fm \\ k |+ (k, fm ' k)’ by simp[FUPDATE_PURGE', FUPDATE_ELIM] >>
+  pop_assum SUBST1_TAC >>
+  irule (cj 3 fmlfpR_rules) >>
+  simp[] >>
+  first_x_assum $ qspecl_then [‘f k (fm ' k) A1’, ‘fm \\ k’] mp_tac >>
+  impl_tac
+  >- (simp[LEX_DEF, lbound_def, inv_MOVES_OUT] >>
+      simp[FCARD_DEF] >>
+      ‘0 < CARD (FDOM fm)’
+        by (‘fm = fm \\ k |+ (k, fm ' k)’
+              by simp[FUPDATE_PURGE', FUPDATE_ELIM] >>
+            pop_assum SUBST1_TAC >> REWRITE_TAC [FDOM_FUPDATE] >>
+            simp[]) >> simp[] >>
+      ‘FLOOKUP fm0 k = SOME (fm ' k)’ by metis_tac[SUBMAP_DEF, FLOOKUP_DEF] >>
+      ‘RC R A1 (f k (fm ' k) A1)’ by metis_tac[fp_soluble_def] >>
+      pop_assum mp_tac >> simp[RC_DEF, DISJ_IMP_THM] >>
+      gs[fp_soluble_def] >> metis_tac[RC_DEF, RTC_RULES, RTC_SUBSET]) >>
+  qabbrev_tac ‘v = fm ' k’ >>
+  disch_then $ qspecl_then [‘(k,v)::kvl’, ‘A0’] mp_tac >> simp[] >>
+  ‘FOLDR (flip $|+) (fm \\ k) kvl |+ (k,v) = fm0’
+    by (simp[Abbr‘fm0’] >> simp[FOLDR_FUPDATE_DOMSUB, Abbr‘v’]) >>
+  simp[] >> disch_then irule >>
+  simp[listTheory.MEM_MAP, FORALL_PROD] >>
+  gs[DISJOINT_DEF, EXTENSION, listTheory.MEM_MAP, FORALL_PROD] >> rpt conj_tac
+  >- metis_tac[]
+  >- metis_tac[]
+  >- metis_tac[SUBMAP_TRANS, SUBMAP_DOMSUB]
+  >- (‘FLOOKUP fm0 k = SOME v’ by metis_tac[SUBMAP_DEF, FLOOKUP_DEF] >>
+      gs[fp_soluble_def] >>
+      metis_tac[transitive_def, RC_DEF, RTC_RULES, transitive_RC])
+  >- (‘FLOOKUP fm0 k = SOME v’ by metis_tac[SUBMAP_DEF, FLOOKUP_DEF] >>
+      gs[fp_soluble_def] >>
+      metis_tac[transitive_def, RC_DEF, RTC_RULES, transitive_RC])
+QED
+
+Theorem fmlfpR_total =
+  fmlfpR_total_lemma |> Q.INST[‘kvl’ |-> ‘[]’] |> GEN_ALL
+                     |> SIMP_RULE(srw_ss()) []
 
 (*---------------------------------------------------------------------------*)
 (* Add fmap type to the TypeBase. Notice that we treat keys as being of size *)

@@ -2170,16 +2170,15 @@ val pow_neg_odd = store_thm
                    REAL_LE_01, POW_NEG_ODD, GSYM real_lt]);
 
 (* antecedents added due to new definition of `extreal_add` *)
-val add_pow2 = store_thm
-  ("add_pow2",
-  ``!x y. x <> NegInf /\ x <> PosInf /\ y <> NegInf /\ y <> PosInf ==>
-          ((x + y) pow 2 = x pow 2 + y pow 2 + 2 * x * y)``,
+Theorem add_pow2 :
+    !x y. x <> NegInf /\ x <> PosInf /\ y <> NegInf /\ y <> PosInf ==>
+          ((x + y) pow 2 = x pow 2 + y pow 2 + 2 * x * y)
+Proof
     NTAC 2 Cases
  >> RW_TAC real_ss [extreal_pow_def, extreal_mul_def, extreal_add_def,
                     extreal_of_num_def, pow_2]
- >> RW_TAC real_ss [REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB, REAL_ADD_ASSOC, POW_2,
-                    GSYM REAL_DOUBLE]
- >> REAL_ARITH_TAC);
+ >> REWRITE_TAC [GSYM POW_2, ADD_POW_2]
+QED
 
 val REAL_MUL_POS_LT = prove ((* from intergrationTheory *)
  ``!x y:real. &0 < x * y <=> &0 < x /\ &0 < y \/ x < &0 /\ y < &0``,

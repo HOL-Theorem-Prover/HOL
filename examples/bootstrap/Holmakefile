@@ -1,1 +1,8 @@
 INCLUDES = $(HOLDIR)/examples/fun-op-sem/lprefix_lub
+
+all: $(DEFAULT_TARGETS) compiler_asm.s compiler_prog.txt
+.PHONY: all
+
+compiler_asm.s compiler_prog.txt: *compiler_evalScript.sml
+
+EXTRA_CLEANS = compiler_asm.s compiler_prog.txt

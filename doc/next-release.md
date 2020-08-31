@@ -42,6 +42,12 @@ New features:
 
     Thanks to Magnus Myreen for the feature suggestion.
 
+*   The `Holmake` tool will now build multiple targets across multiple directories in parallel.
+    Previously, directories will attacked one at a time, and parallelisation only happened within those directories.
+    Now everything is done at once.
+    The existing `-r` option takes on a new meaning as part of this change: it now causes `Holmake` to build all targets in all directories accessible through `INCLUDES` directives.
+    Without `-r`, `Holmake` will build just those dependencies necessary for the current set of targets (likely files/theories in the current directory).
+
 *   It is now possible to write `let`-expressions more smoothly inside monadic `do`-`od` blocks.
     Rather than have to write something like
 
@@ -120,9 +126,11 @@ New theories:
 
     Notable theorems include: Caratheory's Extension Theorem (for semiring),
     the construction of 1-dimensional Borel and Lebesgue measure spaces,
-    Radon-Nikodym theorem, Bayes' Rule (Conditional Probability),
+    Radon-Nikodym theorem, Tonelli and Fubini's theorems (product measures),
+    Bayes' Rule (Conditional Probability),
     Kolmogorov 0-1 Law, Borel-Cantelli Lemma, Markov/Chebyshev's inequalities,
-    convergence concepts of random sequences and the Law(s) of Large Numbers.
+    convergence concepts of random sequences, and simple versions of
+    the Law(s) of Large Numbers.
 
     There is a major backwards-incompatibility: old proof scripts based on
     real-valued measure and probability theories should now open the following

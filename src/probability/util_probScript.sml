@@ -986,6 +986,14 @@ Proof
   METIS_TAC []
 QED
 
+Theorem ADD_POW_2 :
+    !x y :real. (x + y) pow 2 = x pow 2 + y pow 2 + 2 * x * y
+Proof
+    RW_TAC real_ss [REAL_ADD_LDISTRIB, REAL_ADD_RDISTRIB, REAL_ADD_ASSOC, POW_2,
+                    GSYM REAL_DOUBLE]
+ >> REAL_ARITH_TAC
+QED
+
 Theorem HARMONIC_SERIES_POW_2 :
     summable (\n. inv (&(SUC n) pow 2))
 Proof

@@ -262,6 +262,45 @@ end
 
 val _ = let
   open boolLib
+  val longty = “:('a -> 'b) -> ('c itself -> 'a -> bool) -> 'a -> bool”
+  val f = mk_var("f", longty)
+  val P = mk_var("P", longty --> bool)
+  val _ = new_constant("I", “:'a -> 'a”)
+  val Itm = mk_const("I", longty --> longty)
+  val _ = new_constant ("EMPTY", “:'a -> bool”)
+  val _ = new_constant ("INSERT", “:'a -> ('a -> bool) -> 'a -> bool”)
+  val _ = add_listform {leftdelim = [TOK "{"], rightdelim = [TOK "}"],
+                        separator = [TOK ";", BreakSpace(1,0)],
+                        cons = "INSERT", nilstr = "EMPTY",
+                        block_info = (PP.INCONSISTENT, 1)};
+  fun test (wdth, s, t) =
+      with_flag(linewidth,wdth)
+               (trace ("types", 1) tpp_expected)
+               {input = trace ("types", 1) term_to_string t,
+                output = s,
+                testf = fn s =>
+                           "Width=" ^ Int.toString wdth ^
+                           " type-annotation of “" ^ s ^ "”"}
+in
+  List.app test [
+    (75,
+     "(P :(('a -> 'b) -> ('c itself -> 'a -> bool) -> 'a -> bool) -> bool)\n\
+     \  (f :('a -> 'b) -> ('c itself -> 'a -> bool) -> 'a -> bool)",
+     mk_comb(P,f)),
+    (75, "I (f :('a -> 'b) -> ('c itself -> 'a -> bool) -> 'a -> bool)",
+     mk_comb(Itm,f)),
+    (55, "I\n\
+         \  (f :('a -> 'b) ->\n\
+         \      ('c itself -> 'a -> bool) -> 'a -> bool)",
+     mk_comb(Itm,f)),
+    (55, "({} :(('a -> 'b) ->\n\
+         \      ('c itself -> 'a -> bool) -> 'a -> bool) -> bool)",
+     mk_const("EMPTY", longty --> bool))
+  ]
+end
+
+val _ = let
+  open boolLib
   val _= tprint "term_tactic.first_fv_term"
   fun G t = ([] : term list, t)
   val f = mk_var("f", bool --> alpha)
