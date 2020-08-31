@@ -53,11 +53,11 @@ fun example_pol goal argl1 =
   in
     if tot <= 0.5 orelse length argl2 <= 1 then [] else
     let
-      fun f b = b / tot
+      fun f (x,b) = if #sstatus x = StacProved then (x,1.0) else (x,b / tot)
       val rl = first_n 3 (map snd (dict_sort compare_rmax argl2))
       val _ = print_endline ("tot: " ^ rts tot ^ ", " ^
         String.concatWith " " (map rts rl))
-      val argl3 = map_snd f argl2
+      val argl3 = map f argl2
       val argl4 = map_fst 
         (fn x => hidef nntm_of_statepol (goal,dest_stac (#token x))) argl3 
     in
@@ -74,11 +74,11 @@ fun example_arg (goal,stac) argl1 =
   in
     if tot <= 0.5 orelse length argl2 <= 1 then [] else
     let
-      fun f b = b / tot 
+      fun f (x,b) = if #sstatus x = StacProved then (x,1.0) else (x,b / tot) 
       val rl = first_n 3 (map snd (dict_sort compare_rmax argl2))
       val _ = print_endline ("tot: " ^ rts tot ^ ", " ^ 
         String.concatWith " " (map rts rl))
-      val argl3 = map_snd f argl2
+      val argl3 = map f argl2
       val argl4 = map_fst 
         (fn x => hidef nntm_of_statearg ((goal,stac), #token x)) argl3 
      in

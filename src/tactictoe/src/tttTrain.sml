@@ -163,17 +163,13 @@ fun train_fixed pct exl =
     fun operl_of_tnnex exl =
       List.concat (map operl_of_term (map fst (List.concat exl)))
     val operl = operl_of_tnnex exl
-    val operdiml = map (fn x => (fst x, dim_std_arity (1,16) x)) operl
+    val operdiml = map (fn x => (fst x, dim_std_arity (1,8) x)) operl
     val randtnn = random_tnn operdiml
     val schedule =
       [{ncore = 4, verbose = true,
-       learning_rate = 0.02, batch_size = 16, nepoch = 100}];
+       learning_rate = 0.02, batch_size = 8, nepoch = 50}];
     val tnn = train_tnn schedule randtnn (train,test)
-    val acctrain = tnn_accuracy tnn train
-    val acctest = tnn_accuracy tnn test
   in
-    print_endline ("train accuracy: " ^ rts_round 6 acctrain ^
-      ", test accuracy: " ^ rts_round 6 acctest);
     tnn
   end
 

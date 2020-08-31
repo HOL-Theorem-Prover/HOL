@@ -151,62 +151,52 @@ load "tttEval"; open tttEval;
 tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
 val thyl = aiLib.sort_thyl (ancestry (current_theory ()));
-
-(* simple eval *)
 val smlfun = "tttEval.ttt_eval"
 val _ = run_evalscript_thyl smlfun "august30" (true,30) (NONE,NONE) thyl;
-
-(* bigsteps eval *)
-val expname = "august30-3";
-val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
-val ngen = 0;
-val smlfun = "tttBigSteps.run_bigsteps_eval (" ^ 
-  mlquote expdir ^ "," ^ aiLib.its ngen ^ ")";
-val _ = run_evalscript_thyl smlfun expname (true,30) (NONE,NONE) thyl;
-
-(* second generation *)
-val expname = "august30-3";
-val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
-val ngen = 1;
-val smlfun = "tttBigSteps.run_bigsteps_eval (" ^ 
-  mlquote expdir ^ "," ^ aiLib.its ngen ^ ")";
-fun prefix s = SOME (expdir ^ "/0/tnn" ^ s)
-val (vnno,pnno,anno) = triple_of_list (map prefix ["val","pol","arg"]);
-val _ = run_evalscript_thyl smlfun expname (true,30) (vnno,pnno,anno) thyl;
 *)
 
 (* ------------------------------------------------------------------------
-   Reading examples
+   Bigsteps / learning / bigsteps
    ------------------------------------------------------------------------ *)
 
 (*
-load "tttEval";
+load "tttEval"; open tttEval;
 open mlTreeNeuralNetwork aiLib tttTrain tttEval;
 
-val expname = "august30-3";
+tttSetup.ttt_search_time := 30.0;
+aiLib.debug_flag := false;
+val thyl = sort_thyl (ancestry (current_theory ()));
+
+val expname = "august31";
 val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
-val ngen = 0;
-val gendir = expdir ^ "/" ^ aiLib.its ngen;
+val gendir = expdir ^ "/" ^ aiLib.its 0;
+val valdir = gendir ^ "/val";
+val poldir = gendir ^ "/pol";
+val argdir = gendir ^ "/arg";
+fun prefix s = SOME (gendir ^ "/tnn" ^ s);
+val (vnno,pnno,anno) = triple_of_list (map prefix ["val","pol","arg"]);
 
 fun read_ex dir = 
   let val filel = map (fn x => dir ^ "/" ^ x) (listDir dir) in
     List.concat (map read_tnnex filel)
   end;
 
-val valdir = gendir ^ "/val";
-val exval = read_ex valdir; length exval;
-val tnnval = train_fixed 0.95 exl;
-write_tnn (gendir ^ "/tnnval") tnnval;
+val smlfun0 = "tttBigSteps.run_bigsteps_eval (" ^ 
+  mlquote expdir ^ "," ^ its 0 ^ ")";
+val smlfun1 = "tttBigSteps.run_bigsteps_eval (" ^ 
+  mlquote expdir ^ "," ^ its 1 ^ ")";
 
-val poldir = gendir ^ "/pol";
-val expol = read_ex poldir; length expol;
-val tnnpol = train_fixed 0.95 expol;
-write_tnn (gendir ^ "/tnnpol") tnnpol;
+fun train_dir dir name = 
+  let val tnn = train_fixed 1.0 (first_n 1000 (read_ex dir)) in
+    write_tnn (gendir ^ "/" ^ name) tnn
+  end;
 
-val argdir = gendir ^ "/arg";
-val exarg = read_ex argdir; length exarg;
-val tnnarg = train_fixed 0.95 exarg;
-write_tnn (gendir ^ "/tnnarg") tnnarg;
+val _ = run_evalscript_thyl smlfun0 expname (true,30) (NONE,NONE,NONE) thyl;
+val _ = train_dir valdir "tnnval";
+val _ = train_dir poldir "tnnpol";
+val _ = train_dir argdir "tnnarg";
+val _ = run_evalscript_thyl smlfun1 expname (true,30) (vnno,pnno,anno) thyl;
+
 *)
 
 (* ------------------------------------------------------------------------
