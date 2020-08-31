@@ -167,7 +167,7 @@ tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
 val thyl = sort_thyl (ancestry (current_theory ()));
 
-val expname = "august31";
+val expname = "september1";
 val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
 val gendir = expdir ^ "/" ^ aiLib.its 0;
 val valdir = gendir ^ "/val";
@@ -184,13 +184,13 @@ fun read_ex dir =
 val smlfun0 = "tttBigSteps.run_bigsteps_eval (" ^ 
   mlquote expdir ^ "," ^ its 0 ^ ")";
 val smlfun1 = "tttBigSteps.run_bigsteps_eval (" ^ 
-  mlquote expdir ^ "," ^ its 11 ^ ")";
+  mlquote expdir ^ "," ^ its 1 ^ ")";
 
-fun train_dir dir name = 
+fun train_dir limit dir name = 
   let 
     val ex1 = read_ex dir
     val _ = print_endline (its (length ex1))
-    val ex2 = filter (fn x => term_size (fst (hd x)) < 200) ex1
+    val ex2 = filter (fn x => term_size (fst (hd x)) < limit) ex1
     val _ = print_endline (its (length ex2))
     val tnn = train_fixed 0.95 ex2
   in
@@ -198,9 +198,9 @@ fun train_dir dir name =
   end;
 
 val _ = run_evalscript_thyl smlfun0 expname (true,30) (NONE,NONE,NONE) thyl;
-val _ = train_dir valdir "tnnval";
-val _ = train_dir poldir "tnnpol";
-val _ = train_dir argdir "tnnarg";
+val _ = train_dir 40 valdir "tnnval";
+val _ = train_dir 60 poldir "tnnpol";
+val _ = train_dir 100 argdir "tnnarg";
 val _ = run_evalscript_thyl smlfun1 expname (true,30) (vnno,pnno,anno) thyl;
 
 *)
