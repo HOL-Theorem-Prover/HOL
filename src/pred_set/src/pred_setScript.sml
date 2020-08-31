@@ -967,7 +967,7 @@ SRW_TAC[][EXTENSION] THEN METIS_TAC[])
 
 Theorem UNION_DIFF_EQ[simp]:
   (!s t. ((s:'a -> bool) UNION (t DIFF s)) = (s UNION t))
-  /\ !s t. ((t DIFF s) UNION (s:'a -> bool)) = (s UNION t)
+  /\ !s t. ((t DIFF s) UNION (s:'a -> bool)) = (t UNION s)
 Proof
   rw[EXTENSION,EQ_IMP_THM,DIFF_DEF]
   >> fs[]
