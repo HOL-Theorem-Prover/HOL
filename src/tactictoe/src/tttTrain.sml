@@ -146,7 +146,7 @@ fun thm_of_thmid s =
   handle Option => raise ERR "thm_of_thmid" ""
 
 fun nntm_of_arg arg = case arg of
-    Sthml [s] => mk_comb (ahead, nntm_of_goal (dest_thm (thm_of_thmid s))) 
+    Sthml [s] => nntm_of_goal (dest_thm (thm_of_thmid s))
   | _ => raise ERR "nntm_of_arg" "not supported" 
  
 fun nntm_of_statearg ((g,stac),arg) =

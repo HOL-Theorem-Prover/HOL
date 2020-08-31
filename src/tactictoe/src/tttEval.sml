@@ -184,10 +184,16 @@ fun read_ex dir =
 val smlfun0 = "tttBigSteps.run_bigsteps_eval (" ^ 
   mlquote expdir ^ "," ^ its 0 ^ ")";
 val smlfun1 = "tttBigSteps.run_bigsteps_eval (" ^ 
-  mlquote expdir ^ "," ^ its 1 ^ ")";
+  mlquote expdir ^ "," ^ its 11 ^ ")";
 
 fun train_dir dir name = 
-  let val tnn = train_fixed 1.0 (first_n 1000 (read_ex dir)) in
+  let 
+    val ex1 = read_ex dir
+    val _ = print_endline (its (length ex1))
+    val ex2 = filter (fn x => term_size (fst (hd x)) < 200) ex1
+    val _ = print_endline (its (length ex2))
+    val tnn = train_fixed 0.95 ex2
+  in
     write_tnn (gendir ^ "/" ^ name) tnn
   end;
 
