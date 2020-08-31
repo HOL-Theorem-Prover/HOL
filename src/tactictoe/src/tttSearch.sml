@@ -305,7 +305,8 @@ fun expand_argtree searchobj (goal,stac) (argtree,anl) =
     let val argl1 = #predarg searchobj stac (hd atyl) goal in
       if null argl1 then (argtree,anl,StacSaturated) else
       let
-        val argl2p = reorder_arg (#anno searchobj) goal stac argl1
+        val argl2p = if length argl1 <= 1 then argl1
+          else reorder_arg (#anno searchobj) goal stac argl1
         val argl2 = map (arg_create (tl atyl)) argl2p
         fun f i x = (i :: anl, x)
         val newargtree = daddl (mapi f argl2) argtree

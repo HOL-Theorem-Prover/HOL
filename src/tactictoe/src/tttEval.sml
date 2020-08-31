@@ -167,7 +167,7 @@ tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
 val thyl = sort_thyl (ancestry (current_theory ()));
 
-val expname = "september1";
+val expname = "september1-2";
 val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
 val gendir = expdir ^ "/" ^ aiLib.its 0;
 val valdir = gendir ^ "/val";

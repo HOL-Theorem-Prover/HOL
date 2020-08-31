@@ -79,8 +79,8 @@ fun example_arg (goal,stac) argl1 =
       val _ = print_endline ("tot: " ^ rts tot ^ ", " ^ 
         String.concatWith " " (map rts rl))
       val argl3 = map f argl2
-      val argl4 = map_fst 
-        (fn x => hidef nntm_of_statearg ((goal,stac), #token x)) argl3 
+      fun fnn (x,r) = (hidef nntm_of_statearg ((goal,stac),#token x), r)
+      val argl4 = map fnn argl3
      in
        argl4
      end
