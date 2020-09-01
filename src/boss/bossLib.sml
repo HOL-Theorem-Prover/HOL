@@ -181,7 +181,7 @@ local
 fun add_Case_conv x = REWR_CONV (ISPEC x markerTheory.add_Case)
 
 fun mk_tuple [] = oneSyntax.one_tm
-  | mk_tuple xs = pairSyntax.list_mk_pair vs
+  | mk_tuple xs = pairSyntax.list_mk_pair xs
 in
 
 (*---------------------------------------------------------------------------*)
@@ -202,9 +202,9 @@ fun name_ind_cases nm_tms thm = let
       then EVERY_CONJ_CONV concl_conv tm
       else let
         val (f, xs) = strip_comb tm
-        val n = index (term_eq f) vs
-          handle HOL_ERR _ => raise ERR "name_ind_cases" "unexpected concl head"
-        val nm = if n < length nm_tms then [List.nth (nm_tms, n)] else []
+        val nm = case total (index (term_eq f)) vs of
+            NONE => []
+          | SOME n => if n < length nm_tms then [List.nth (nm_tms, n)] else []
         val vs = nm @ filter (not o is_var) xs
       in add_Case_conv (mk_tuple vs) tm end
   in CONV_RULE (RATOR_CONV (RAND_CONV concl_conv)) spec_thm
