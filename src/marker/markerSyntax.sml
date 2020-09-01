@@ -10,6 +10,7 @@ val AC_tm       = prim_mk_const{Name="AC",       Thy="marker"};
 val Cong_tm     = prim_mk_const{Name="Cong",     Thy="marker"};
 val abbrev_tm   = prim_mk_const{Name="Abbrev",   Thy="marker"};
 val label_tm    = prim_mk_const{Name=":-",       Thy="marker"};
+val Case_tm     = prim_mk_const{Name="Case",     Thy="marker"};
 
 (*---------------------------------------------------------------------------*)
 (* Abbrev (n = M) can appear as a hypothesis in a goal.                      *)
@@ -172,5 +173,13 @@ fun DEST_USING th =
         EQ_MP (SPEC x usingThm_def) th
       else raise ERR "DEST_USING" "Not a using theorem"
     end
+
+fun dest_Case t = if is_comb t then let
+    val (f, x) = dest_comb t
+  in if same_const Case_tm f
+    then x
+    else raise ERR "dest_Case" "not case tm"
+  end
+  else raise ERR "dest_Case" "not comb"
 
 end (* struct *)
