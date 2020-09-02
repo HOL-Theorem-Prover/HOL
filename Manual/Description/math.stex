@@ -710,7 +710,7 @@ syntactically have \holtxt{f * m / m = v / m = f}.
 
 \paragraph{Product measures and Fubini's theorem}
 
-\HOL{} provides some basic supports for (binary) products of measure spaces
+\HOL{} provides some basic support for (binary) products of measure spaces
 (in \theoryimp{martingale} theory).
 
 Let $(X,\mathcal{A},\mu)$ and $(Y,\mathcal{B},\nu)$ be two $\sigma$-finite measure spaces,
