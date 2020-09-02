@@ -19,6 +19,9 @@ open pred_setTheory combinTheory finite_mapTheory stringTheory;
 infix \\
 val op \\ = op THEN;
 
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val bool_ss = bool_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 (* PART 1: SYNTAX
 
