@@ -102,8 +102,8 @@ val _ = add_rule { fixity = Suffix 2100,
                    paren_style = OnlyIfNecessary,
                    pp_elements = [TOK "^*"],
                    term_name = "RTC" }
-val _ = Unicode.unicode_version {u = UTF8.chr 0x20F0, tmnm = "RTC"}
-val _ = TeX_notation {hol = UTF8.chr 0x20F0, TeX = ("\\HOLTokenSupStar{}", 1)}
+val _ = Unicode.unicode_version {u = UTF8.chr 0xA673, tmnm = "RTC"}
+val _ = TeX_notation {hol = UTF8.chr 0xA673, TeX = ("\\HOLTokenSupStar{}", 1)}
 val _ = TeX_notation {hol = "^*", TeX = ("\\HOLTokenSupStar{}", 1)}
 
 val RC_DEF = new_definition(
