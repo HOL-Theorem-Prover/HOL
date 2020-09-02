@@ -1804,7 +1804,7 @@ val SPLIT_UNION = store_thm(
 val SPLIT_EQ = store_thm(
   "SPLIT_EQ",
   ``!s u v. s =|= u # v <=> u SUBSET s /\ (v = s DIFF u)``,
-  rw[EQ_IMP_THM] >-
+  rw[EQ_IMP_THM,Excl"UNION_DIFF_EQ"] >-
   rw[DIFF_SAME_UNION, GSYM DISJOINT_DIFF_IFF, DISJOINT_SYM] >-
   rw[UNION_DIFF] >>
   rw[DISJOINT_DIFF]);
