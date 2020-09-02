@@ -26,10 +26,9 @@ Theorem step_consts:
   ∀w x. read_mem w t0 = SOME x ⇒ read_mem w t1 = SOME x
 Proof
   fs [step_cases] \\ rw [] \\ fs []
-  \\ EVAL_TAC \\ fs []
-  \\ fs [write_mem_def,AllCaseEqs(),read_mem_def] \\ rw []
-  \\ fs [APPLY_UPDATE_THM]
-  \\ rw [] \\ fs []
+  \\ EVAL_TAC
+  \\ gvs[APPLY_UPDATE_THM,write_mem_def,AllCaseEqs(),read_mem_def]
+  \\ metis_tac[optionTheory.NOT_NONE_SOME, optionTheory.SOME_11]
 QED
 
 Theorem steps_consts:
@@ -41,9 +40,9 @@ Theorem steps_consts:
       t1.instructions = t0.instructions ∧
       ∀w x. read_mem w t0 = SOME x ⇒ read_mem w t1 = SOME x
 Proof
-  ho_match_mp_tac steps_strongind \\ rw []
-  \\ imp_res_tac step_consts \\ fs [] \\ rw [] \\ fs []
-  \\ pop_assum mp_tac \\ fs [step_cases] \\ rw [] \\ fs []
+  Induct_on ‘steps’ \\ rw [] \\ gvs[]
+  \\ imp_res_tac step_consts \\ gvs[]
+  \\ gs[Once step_cases]
 QED
 
 Theorem steps_inst:
@@ -119,18 +118,18 @@ Proof
 QED
 
 Theorem steps_imp_RTC_step:
-  ∀s t. steps s t ⇒ step⃰ (FST s) (FST t)
+  ∀s t. steps s t ⇒ step꙳ (FST s) (FST t)
 Proof
-  ho_match_mp_tac steps_ind \\ fs []
+  Induct_on ‘steps’ \\ fs []
   \\ metis_tac [RTC_TRANSITIVE,transitive_def]
 QED
 
 Theorem step_determ:
   step x y ∧ step x z ==> y = z
 Proof
-  once_rewrite_tac [step_cases] \\ rw [] \\ fs [] \\ rw [] \\ fs []
-  \\ ntac 2 (fs [take_branch_cases] \\ fs [] \\ rw [] \\ fs [])
-  \\ rfs [APPEND_11_LENGTH]
+  once_rewrite_tac [step_cases] \\ rw [] \\ gvs[]
+  \\ ntac 2 (fs [take_branch_cases] \\ gvs [])
+  \\ gvs [APPEND_11_LENGTH]
 QED
 
 Theorem not_step_Halt[simp]:
@@ -141,24 +140,17 @@ QED
 
 Theorem RTC_step_determ:
   ∀x e1 o1 e2 o2.
-    step⃰ x (Halt e1 o1) ∧ step⃰ x (Halt e2 o2) ⇒ e2 = e1 ∧ o2 = o1
+    step꙳ x (Halt e1 o1) ∧ step꙳ x (Halt e2 o2) ⇒ e2 = e1 ∧ o2 = o1
 Proof
-  qsuff_tac ‘∀x y. step⃰ x y ⇒
-    ∀e1 o1 e2 o2.
-       y = (Halt e1 o1) ∧ step⃰ x (Halt e2 o2) ⇒ e2 = e1 ∧ o2 = o1’
-  THEN1 metis_tac []
-  \\ ho_match_mp_tac RTC_INDUCT
-  \\ rpt strip_tac \\ rpt var_eq_tac \\ fs []
-  \\ pop_assum mp_tac
-  \\ once_rewrite_tac [RTC_CASES1] \\ fs []
-  \\ rw [] \\ fs [] \\ imp_res_tac step_determ \\ rw [] \\ res_tac
+  Induct_on ‘RTC’ \\ simp[]
+  \\ metis_tac[step_determ, RTC_CASES1, not_step_Halt,
+               TypeBase.one_one_of “:s_or_h”]
 QED
 
 Theorem steps_IMP_NRC_step:
   ∀s k res r. steps (s,k) (res,r) ⇒ ∃k. NRC step k s res
 Proof
-  ho_match_mp_tac (steps_ind |> SIMP_RULE std_ss [FORALL_PROD]
-    |> Q.SPEC ‘λ(x,y) (t,r). P x y t r’ |> SIMP_RULE std_ss [] |> GEN_ALL) \\ rw []
+  Induct_on ‘steps’ \\ rw[]
   THEN1 (qexists_tac ‘0’ \\ fs [])
   THEN1 (qexists_tac ‘SUC 0’ \\ fs [])
   THEN1 (qexists_tac ‘SUC 0’ \\ fs [])
@@ -173,9 +165,10 @@ Proof
 QED
 
 Triviality steps_NRC:
-  ∀x y. steps x y ⇒ ∃k. NRC step ((SND x - SND y) + k) (FST x) (FST y) ∧ SND y ≤ SND x
+  ∀s1 n1 s2 n2.
+    steps (s1,n1) (s2,n2) ⇒ ∃k. NRC step (n1 - n2 + k) s1 s2 ∧ n2 ≤ n1
 Proof
-  ho_match_mp_tac steps_ind \\ rw [] \\ fs []
+  Induct_on ‘steps’ \\ rw [] \\ gvs []
   THEN1 (qexists_tac ‘0’ \\ fs [])
   THEN1 (qexists_tac ‘SUC 0’ \\ fs [])
   THEN1 (qexists_tac ‘0’ \\ fs [])
@@ -187,8 +180,9 @@ QED
 Theorem step_mono:
   step (State t1) (State t2) ⇒ t1.output ≼ t2.output
 Proof
-  rw [step_cases] \\ fs [write_reg_def,inc_def,set_pc_def,set_stack_def,write_mem_def,
-    AllCaseEqs(),unset_reg_def,put_char_def] \\ rw [] \\ fs []
+  rw [step_cases] \\
+  gvs [write_reg_def,inc_def,set_pc_def,set_stack_def,write_mem_def,
+       AllCaseEqs(),unset_reg_def,put_char_def]
 QED
 
 Theorem NRC_step_mono:
@@ -212,7 +206,7 @@ Proof
 QED
 
 Theorem lprefix_chain_step:
-  lprefix_chain {fromList t'.output | step⃰ (State t) (State t')}
+  lprefix_chain {fromList t'.output | step꙳ (State t) (State t')}
 Proof
   fs [lprefix_lubTheory.lprefix_chain_def] \\ rw []
   \\ fs [llistTheory.LPREFIX_fromList,llistTheory.from_toList]

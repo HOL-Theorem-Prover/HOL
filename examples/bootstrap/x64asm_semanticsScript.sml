@@ -231,7 +231,7 @@ val _ = set_fixity "asm_terminates" (Infixl 480);
 Definition asm_terminates_def:
   (input, asm) asm_terminates output =
     ∃t. init_state_ok t input asm ∧
-        step⃰ (State t) (Halt 0w output)  (* reflexive transitive closure of step *)
+        step꙳ (State t) (Halt 0w output)  (* reflexive transitive closure of step *)
 End
 
 Overload asm_terminates =
@@ -245,7 +245,7 @@ Definition asm_diverges_def:
       (* repeated application of step never halts or gets stuck: *)
       (∀k. ∃t'. NRC step k (State t) (State t')) ∧
       (* the output is the least upper bound of all reachable output *)
-      output = build_lprefix_lub { fromList t'.output | step⃰ (State t) (State t') }
+      output = build_lprefix_lub { fromList t'.output | step꙳ (State t) (State t') }
 End
 
 val _ = export_theory();
