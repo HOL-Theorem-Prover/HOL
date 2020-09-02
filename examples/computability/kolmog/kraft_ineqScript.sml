@@ -811,6 +811,256 @@ Proof
   simp[powr_negexp, REAL_POW_POS]
 QED
 
+Theorem INFINITE_ALLCARD_SUBSETS:
+  INFINITE s ⇒ ∀n. ∃s0. FINITE s0 ∧ CARD s0 = n ∧ s0 ⊆ s
+Proof
+  strip_tac >> Induct >- (qexists_tac ‘∅’ >> simp[]) >>
+  gs[] >>
+  ‘∃e. e ∈ s ∧ e ∉ s0’ by metis_tac[IN_INFINITE_NOT_FINITE] >>
+  qexists_tac ‘e INSERT s0’ >> simp[]
+QED
+
+Theorem seq_size_REAL_SUM_IMAGE:
+  seq_size f n = REAL_SUM_IMAGE (λi. 2 rpow -&(f i)) (count n)
+Proof
+  Induct_on ‘n’ >> simp[REAL_SUM_IMAGE_THM, COUNT_SUC]
+QED
+
+Theorem seq_size_indices:
+  (∀m. seq_size f m ≤ 1) ⇒
+  ∀n. FINITE {i | f i = n}  ∧ CARD {i | f i = n} < 2 ** n
+Proof
+  strip_tac >> gen_tac >>
+  ‘∀s0. FINITE s0 ∧ s0 ⊆ { i | f i = n} ⇒ CARD s0 < 2 ** n’
+    by (rw[] >> CCONTR_TAC >> gs[NOT_LESS] >>
+        qabbrev_tac ‘mx = MAX_SET s0’ >>
+        ‘s0 ≠ ∅’ by (strip_tac >> gs[Abbr‘mx’]) >>
+        ‘mx ∈ s0 ∧ ∀j. j ∈ s0 ⇒ j ≤ mx’ by metis_tac[MAX_SET_DEF] >>
+        ‘1 < seq_size f (mx + 2)’ suffices_by metis_tac[REAL_NOT_LE] >>
+        simp[seq_size_REAL_SUM_IMAGE] >>
+        ‘s0 ⊆ count (mx + 2)’
+          by (rw[count_def, SUBSET_DEF] >> first_x_assum drule >> simp[]) >>
+        ‘count (mx + 2) = s0 ∪ (count (mx + 2) DIFF s0)’
+          by simp[UNION_DIFF] >> pop_assum SUBST1_TAC >>
+        ‘DISJOINT s0 (count (mx + 2) DIFF s0)’
+          by (simp[DISJOINT_DEF, EXTENSION] >> metis_tac[]) >>
+        simp[REAL_SUM_IMAGE_DISJOINT_UNION] >>
+        ‘REAL_SUM_IMAGE (λi. 2 rpow -&f i) s0 = &CARD s0 * 2 rpow (- &n)’
+          by (irule REAL_SUM_IMAGE_FINITE_CONST2 >> gs[SUBSET_DEF]) >>
+        ‘∃d. CARD s0 = 2 ** n + d’ by metis_tac[LESS_EQ_EXISTS] >>
+        simp[REAL_LT_ADDR, powr_negexp, GSYM REAL_ADD, Excl "REAL_ADD",
+             REAL_LDISTRIB] >> simp[REAL_OF_NUM_POW] >> fsr[] >>
+        qmatch_abbrev_tac ‘1r < AA + 1 + BB’ >>
+        ‘0 ≤ AA ∧ 0 < BB’ suffices_by RealArith.REAL_ARITH_TAC >>
+        simp[Abbr‘AA’, Abbr‘BB’] >>
+        ‘count (mx + 2) DIFF s0 = (mx + 1) INSERT (count (mx + 1) DIFF s0)’
+          by (simp[EXTENSION] >> qx_gen_tac ‘i’ >> Cases_on ‘i ∈ s0’ >> simp[]>>
+              first_x_assum drule >> simp[]) >>
+        simp[REAL_SUM_IMAGE_THM] >>
+        qmatch_abbrev_tac ‘0r < AA + BB’ >>
+        ‘0 < AA ∧ 0 ≤ BB’ suffices_by RealArith.REAL_ARITH_TAC >>
+        simp[Abbr‘AA’, Abbr‘BB’] >> fsr[powr_negexp, REAL_OF_NUM_POW] >>
+        irule REAL_SUM_IMAGE_POS >> fsr[]) >>
+  csimp[] >> CCONTR_TAC >>
+  drule_then (qspec_then ‘2 ** n’ strip_assume_tac)
+             INFINITE_ALLCARD_SUBSETS >>
+  metis_tac[prim_recTheory.LESS_REFL]
+QED
+
+Definition wfpfun_def:
+  wfpfun f = { pf | prefix_free { w | ∃i:num. pf i = SOME w } ∧
+                    (∀i p. pf i = SOME p ⇒
+                           LENGTH p = f i ∧
+                           ∀m j. m < LENGTH p ∧ f j = m ⇒ ∃q. pf j = SOME q) ∧
+                    (∀i j. pf i = NONE ∧ j < i ∧ f j = f i ⇒ pf j = NONE)
+             }
+End
+
+Theorem wfpfun_nonempty:
+  wfpfun f ≠ ∅
+Proof
+  simp[wfpfun_def, EXTENSION] >> qexists_tac ‘K NONE’ >> simp[]
+QED
+
+Definition pfunle_def:
+  pfunle f = { (pf1, pf2) | pf1 ∈ wfpfun f ∧ pf2 ∈ wfpfun f ∧
+                            (∀i. pf1 i ≠ NONE ⇒ pf2 i = pf1 i) }
+End
+
+Theorem range_pfunle:
+  range (pfunle f) = wfpfun f
+Proof
+  simp[set_relationTheory.range_def, EXTENSION, pfunle_def, EQ_IMP_THM,
+       PULL_EXISTS] >> metis_tac[]
+QED
+
+Theorem domain_pfunle:
+  domain (pfunle f) = wfpfun f
+Proof
+  simp[set_relationTheory.domain_def, EXTENSION, pfunle_def, EQ_IMP_THM,
+       PULL_EXISTS] >> metis_tac[]
+QED
+
+Theorem partial_order_pfunle:
+  partial_order (pfunle f) (wfpfun f)
+Proof
+  simp[set_relationTheory.partial_order_def, domain_pfunle, range_pfunle,
+       set_relationTheory.transitive_def, set_relationTheory.reflexive_def,
+       set_relationTheory.antisym_def] >>
+  simp[pfunle_def, PULL_EXISTS] >> rw[] >>
+  simp[FUN_EQ_THM] >> qx_gen_tac ‘i’ >> Cases_on ‘x i’ >> gs[] >>
+  Cases_on ‘y i’ >> gs[]
+QED
+
+Theorem pfunle_chain_bounds:
+  ∀t. chain t (pfunle f) ⇒ upper_bounds t (pfunle f) ≠ ∅
+Proof
+  simp[EXTENSION, set_relationTheory.upper_bounds_def, range_pfunle,
+       set_relationTheory.chain_def] >> rw[] >>
+  ‘∀pf. pf ∈ t ⇒ pf ∈ wfpfun f’
+    by (gen_tac >> strip_tac >>
+        first_x_assum $ qspecl_then [‘pf’, ‘pf’] mp_tac >> simp[] >>
+        simp[pfunle_def]) >>
+  qexists_tac ‘λi. case some pf. pf ∈ t ∧ pf i ≠ NONE of
+                    NONE => NONE
+                  | SOME pf => pf i’ >>
+  conj_asm1_tac
+  >- (simp[wfpfun_def, AllCaseEqs(), PULL_EXISTS] >> rpt conj_tac
+      >- (simp[prefix_free_def, PULL_EXISTS] >>
+          qx_genl_tac [‘w1’, ‘w2’, ‘i’, ‘pf1’, ‘j’, ‘pf2’] >>
+          DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+          DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+          rw[] >> gs[] >>
+          Cases_on ‘(pf1,pf2) ∈ pfunle f’
+          >- (‘pf2 ∈ wfpfun f’ by metis_tac[] >>
+              pop_assum mp_tac >> simp_tac (srw_ss()) [wfpfun_def] >>
+              simp[prefix_free_def] >>
+              ‘pf2 i = SOME w1 ∧ pf2 j = SOME w2’ suffices_by metis_tac[] >>
+              pop_assum mp_tac >>
+              simp_tac (srw_ss()) [pfunle_def] >> simp[]) >>
+          first_x_assum $ qspecl_then [‘pf1’, ‘pf2’] mp_tac >> simp[] >>
+          simp[pfunle_def] >> first_x_assum $ qspec_then ‘pf1’ mp_tac >>
+          simp[wfpfun_def, prefix_free_def] >> rw[] >> first_x_assum irule >>
+          metis_tac[optionTheory.NOT_NONE_SOME])
+      >- (rpt gen_tac >> DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+          rw[]
+          >- (first_x_assum $ qspec_then ‘pf’ mp_tac >> simp[wfpfun_def]) >>
+          DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >> rw[]
+          >- (rename [‘pf' ∈ t’, ‘pf' j ≠ NONE’, ‘pf' j = SOME _’,
+                      ‘f j < LENGTH p’] >>
+              Cases_on ‘pf' j’ >> gs[]) >>
+          qexists_tac ‘pf’ >> simp[] >>
+          first_x_assum $ qspec_then ‘pf’ mp_tac >> simp[wfpfun_def] >>
+          metis_tac[optionTheory.NOT_NONE_SOME]) >>
+      qx_genl_tac [‘i’, ‘j’] >>
+      DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+      DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >> qx_gen_tac ‘pf’ >>
+      Cases_on ‘pf ∈ t’ >> simp[] >> Cases_on ‘pf j’ >> simp[] >>
+      Cases_on ‘f i = f j’ >> simp[] >> strip_tac >>
+      first_x_assum drule >> simp[wfpfun_def] >> rpt strip_tac >>
+      first_x_assum (drule_at (Pos (el 2))) >> simp[] >> metis_tac[]) >>
+  qx_gen_tac ‘pp’ >> Cases_on ‘pp ∈ t’ >> simp[] >>
+  simp[pfunle_def] >> qx_gen_tac ‘i’ >> Cases_on ‘pp i’ >>
+  simp[AllCaseEqs()] >> DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+  conj_tac
+  >- (qx_gen_tac ‘pf’ >> Cases_on ‘pf i’ >> simp[] >> strip_tac >>
+      first_x_assum $ qspecl_then [‘pp’, ‘pf’] mp_tac >> simp[] >>
+      rw[pfunle_def] >>
+      metis_tac[optionTheory.NOT_NONE_SOME, optionTheory.SOME_11]) >>
+  qexists_tac ‘pp’ >> simp[]
+QED
+
+Theorem partial_wfpfun_FINITE:
+  (∀n. seq_size f n ≤ 1) ∧ pf ∈ wfpfun f ∧ pf i = NONE ⇒
+  FINITE { j | pf j ≠ NONE }
+Proof
+  simp[wfpfun_def] >> strip_tac >>
+  qabbrev_tac ‘mxlen = f i’ >>
+  ‘∀j p. pf j = SOME p ⇒ LENGTH p ≤ mxlen’
+    by (CCONTR_TAC >> gs[NOT_LESS_EQUAL] >>
+        ‘∃q. pf i = SOME q’ by metis_tac[] >> fs[]) >>
+  CCONTR_TAC >>
+  ‘∃len. INFINITE {i | f i = len}’ suffices_by metis_tac[seq_size_indices] >>
+  CCONTR_TAC >> gs[] >>
+  ‘{ j | pf j ≠ NONE } ⊆
+   BIGUNION (IMAGE (λn. { i | f i = n }) (count (mxlen + 1)))’
+    by (simp[SUBSET_DEF, PULL_EXISTS] >> qx_gen_tac ‘k’ >> Cases_on ‘pf k’ >>
+        simp[GSYM LE_LT1] >> metis_tac[]) >>
+  qpat_x_assum ‘INFINITE _’ mp_tac >> simp[] >>
+  irule SUBSET_FINITE >>
+  pop_assum (goal_assum o resolve_then (Pos last) mp_tac) >>
+  simp[PULL_EXISTS]
+QED
+
+Definition TN2BL_def:
+  TN2BL n = MAP ((=) 1) $ REVERSE $ num_to_bin_list n
+End
+
+Definition padL_def:
+  padL n bl = Fpow (n - LENGTH bl) ++ bl
+End
+
+Theorem TBL2N_padL[simp]:
+  TBL2N (padL n bl) = TBL2N bl
+Proof
+  simp[padL_def]
+QED
+
+Theorem TBL2N_TN2BL[simp]:
+  TBL2N (TN2BL n) = n
+Proof
+  simp[TN2BL_def, numposrepTheory.num_to_bin_list_def] >>
+  completeInduct_on ‘n’ >> simp[Once numposrepTheory.n2l_def] >> rw[]
+  >- (Cases_on ‘n = 1’ >> simp[]) >>
+  simp[TBL2N_append] >> Cases_on ‘n MOD 2 = 1’ >> simp[]
+  >- metis_tac[DIVISION, DECIDE “0n < 2”, MULT_COMM] >>
+  simp[bitTheory.DIV_MULT_THM2] >> ‘n MOD 2 = 0’ suffices_by simp[] >>
+  ‘n MOD 2 < 2’ by simp[] >> simp[]
+QED
+
+Definition genpf_def[simp]:
+  genpf [] = (0n,1n,K NONE) ∧
+  genpf ((width,i:num)::rest) =
+  let
+    (n,ld,A) = genpf rest;
+    code_n = n * 2 ** (width - ld);
+    code = padL width (TN2BL code_n);
+  in
+    (n * 2 ** (width - ld) + 1, width, A⦇i ↦ SOME code⦈)
+End
+
+(*Theorem kraft_finite_indexset:
+  ALL_DISTINCT (MAP SND ixs) ∧
+  FOLDR (λ(wdth,_) A. A + 2 rpow -&wdth) 0r ixs < 1 ∧
+  SORTED (inv ((<) LEX (<))) ixs ⇒
+  let (n,ld,A) = genpf ixs
+  in
+    (ld = if ixs = [] then 1n else FST (HD ixs)) ∧ n < 2 ** ld ∧
+    (∀wdth i. MEM (wdth,i) ixs ⇒ ∃w. A i = SOME w ∧ LENGTH w = wdth) ∧
+    FOLDR (λ(wdth,_) A. A + 2 rpow -&wdth) 0r ixs = &n / 2 pow &ld
+Proof
+  Induct_on ‘ixs’ >> simp[pairTheory.FORALL_PROD, MEM_MAP, PULL_EXISTS] >>
+  qx_genl_tac [‘w1’, ‘i1’] >> strip_tac >>
+  drule_then assume_tac sortingTheory.SORTED_TL >> gs[] >>
+  tmCases_on “genpf ixs” ["n ld A"] >> gs[] >>
+  simp[powr_negexp, real_div, REAL_LDISTRIB] >>
+  gs[powr_negexp] >>
+  qabbrev_tac ‘p = if ixs = [] then 1 else FST (HD ixs)’ >>
+  qabbrev_tac ‘fsum = FOLDR (λ(wdth,_) A:real. A + inv (2 pow wdth)) 0 ixs’
+
+rw[]
+
+conj_
+
+tac
+  >- (
+  >- (rw[]
+      >- (simp[combinTheory.APPLY_UPDATE_THM] >>
+          ‘ld ≤ w2’
+          by (Cases_on ‘t’ >> gs[] >> rename
+
+*)
+
 (*
 Theorem kraft_infinite_ineq2:
   ∀f. (∀n. seq_size f n ≤ 1) ⇒
