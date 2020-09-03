@@ -220,4 +220,17 @@ Proof
   tact1 >> tac2
 QED
 
+Theorem EXISTS_i2mw[local]:
+  !x. mw_ok (SND x) /\ ~(x = (T,[])) ==> ?y. x = i2mw y
+Proof
+  Cases \\ SIMP_TAC std_ss [Excl "lift_disj_eq"] \\ REPEAT STRIP_TAC
+  \\ IMP_RES_TAC mw_ok_IMP_EXISTS_n2mw THEN1
+   (Q.EXISTS_TAC ‘(& n)’ \\ ASM_SIMP_TAC std_ss [i2mw_def,n2mw_11]
+    \\ REPEAT (POP_ASSUM (K ALL_TAC)) \\ intLib.COOPER_TAC)
+  \\ ‘~(n = 0)’ by METIS_TAC [n2mw_def]
+  \\ Q.EXISTS_TAC ‘if q then -(& n) else (& n)’ \\ POP_ASSUM MP_TAC
+  \\ Cases_on ‘q’ \\ FULL_SIMP_TAC std_ss [i2mw_def,n2mw_11]
+  \\ REPEAT (POP_ASSUM (K ALL_TAC)) \\ intLib.COOPER_TAC
+QED
+
 val _ = export_theory()
