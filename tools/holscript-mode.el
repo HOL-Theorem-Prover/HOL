@@ -1004,7 +1004,8 @@ class characters.")
        ((looking-back "\\\\\\\\" (- (point) 3))
         (goto-char (match-beginning 0)) "\\\\")
        (; am I just after either a backslash or Greek lambda?
-        (looking-back (concat "[^$[:punct:]]" holscript-lambda-regexp))
+        (looking-back (concat "[^$[:punct:]]" holscript-lambda-regexp)
+                      (- (point) 3) nil)
         (if (equal 1 (syntax-class (syntax-after (point))))
             (buffer-substring-no-properties
              (point)
