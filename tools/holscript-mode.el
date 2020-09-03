@@ -23,7 +23,9 @@
               'holscript-smlsyntax)
         '("\\<cheat\\>" . 'holscript-cheat-face)
         '(holscript-find-syntax-error 0 'holscript-syntax-error-face prepend)
-        '(hol-find-quoted-material 0 'holscript-quoted-material prepend)))
+        '(hol-find-quoted-material 0 'holscript-quoted-material prepend)
+        '("^\\[[[:space:]]*~?\\([A-Za-z0-9'_]+\\)[[:space:]]*:\\]" 0
+          'holscript-definition-label-face prepend)))
 
 (defconst holscript-font-lock-defaults '(holscript-font-lock-keywords))
 
@@ -1203,6 +1205,14 @@ class characters.")
   '((((class color)) :foreground "red" :background "yellow"
      :weight bold :box t))
   "The face for highlighting guaranteed syntax errors."
+  :group 'holscript-faces)
+
+(defface holscript-definition-label-face
+  '((((class color))
+     :foreground "PaleVioletRed4"
+     :box (:line-width 1 :color "PaleVioletRed4" :style released-button)
+     :slant normal :weight light))
+  "The face for highlighting definition labels in HOL material."
   :group 'holscript-faces)
 
 (setq auto-mode-alist (cons '("Script\\.sml" . holscript-mode)
