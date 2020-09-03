@@ -626,7 +626,9 @@ HOLconjunction = "/\092" | "\226\136\167";
     (* TextIO.output(TextIO.stdErr,
       "Saw label with pd = " ^ Int.toString (!pardepth) ^ ", cc = " ^
       Int.toString (!conjcount) ^ "\n"); *)
-    process_defnlabel labelidxs (!conjcount + 1) yytext; ECHO yyarg "\n")
+    process_defnlabel labelidxs (!conjcount + 1) yytext;
+    qnewline yyarg (yypos, yytext)
+   )
   )
 );
 <defnquote>"(*" => (
