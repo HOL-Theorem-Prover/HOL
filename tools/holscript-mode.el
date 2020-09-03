@@ -10,7 +10,7 @@
         '("^\\(Definition\\|\\(?:Co\\)?Inductive\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[ :]"
           (1 'holscript-definition-syntax) (2 'holscript-thmname-syntax))
         '("^Termination\\>\\|^End\\>" . 'holscript-definition-syntax)
-        '("^Datatype\\>" . 'holscript-definition-syntax)
+        '("^\\(Datatype\\)[[:space:]]*:" (1 'holscript-definition-syntax))
         '("^THEN[1L]?\\>" . 'holscript-then-syntax)
         '("[^A-Za-z0-9_']\\(THEN[1L]?\\)\\>" 1 'holscript-then-syntax)
         '("\\S.\\(>[->|]\\|\\\\\\\\\\)\\S." 1 'holscript-then-syntax)
@@ -740,7 +740,7 @@ a store_thm equivalent.")
             ("^CoInductive" id-quoted "^End")
             ("^Overload" id)
             ("^Type" id)
-            ("^Datatype" quotedmaterial "^End")
+            ("^Datatype:" quotedmaterial "^End")
             ("val" id)
             ("fun" id)
             ("open" id)
@@ -884,13 +884,14 @@ class characters.")
     (forward-comment (point-max))
     (if (and (not (= p0 (point)))
              (or (looking-at
-                  (concat holscript-column0-declbegin-keyword "[[:space:]]"))
+                  (concat holscript-column0-declbegin-keyword
+                          "\\([[:space:]]\\|[[:space:]]*:\\)"))
                  (looking-at (concat "^" holscript-sml-declaration-keyword))))
         ";"
       (let ((pp (syntax-ppss)))
         (cond
          ((and (looking-at (concat "\\(" holscript-column0-keywords-regexp
-                                   "\\)" "[[:space:]]"))
+                                   "\\)" "\\([[:space:]]\\|[[:space:]]*:\\)"))
                (save-excursion (skip-chars-backward " \t") (bolp)))
           (goto-char (match-end 1))
           (let ((ms (match-string-no-properties 1)))
@@ -899,7 +900,9 @@ class characters.")
                   (save-excursion
                     (if (re-search-forward ":" eolpoint t) (concat "^" ms)
                       (concat "^" ms "="))))
-              (concat "^" ms))))
+              (if (and (string= ms "Datatype") (looking-at "[[:space:]]*:"))
+                  (progn (goto-char (match-end 0)) (concat "^" ms ":"))
+                (concat "^" ms)))))
          ((looking-at holscript-quotedmaterial-delimiter-regexp)
           (goto-char (match-end 0))
           (match-string-no-properties 0))
@@ -950,7 +953,8 @@ class characters.")
 (defun holscript-smie-backward-token ()
   (let ((case-fold-search nil))
     (if (or (and (looking-at
-                  (concat holscript-column0-declbegin-keyword "[[:space:]]"))
+                  (concat holscript-column0-declbegin-keyword
+                          "\\([[:space:]]\\|[[:space:]]*:\\)"))
                  (save-excursion (skip-chars-backward " \t") (bolp)))
             (looking-at (concat "^" holscript-sml-declaration-keyword)))
         (if (= (point) (point-min)) ""
@@ -965,9 +969,12 @@ class characters.")
           (skip-syntax-backward " ")))
       (cond
        (; am I just after a keyword?
-        (and (looking-back holscript-column0-keywords-regexp (- (point) 15) t)
+        (and (or
+              (looking-back holscript-column0-keywords-regexp (- (point) 15) t)
+              (looking-back "^\\(Datatype\\)[[:space:]]*:" (- (point) 20) t))
              (let ((syn (syntax-after (point))))
-               (or (null syn) (= 0 (car syn)))) ; next char is whitespace
+               ; next char is whitespace or colon
+               (or (null syn) (= 0 (car syn)) (char-equal (char-after) ?:)))
              (save-excursion
                (goto-char (match-beginning 0))
                (skip-chars-backward " \t")
@@ -979,7 +986,8 @@ class characters.")
                 (save-excursion
                   (if (re-search-forward ":" eolpoint t) (concat "^" ms)
                     (concat "^" ms "="))))
-            (concat "^" ms))))
+            (if (looking-at "Datatype[[:space:]]*:") "^Datatype:"
+              (concat "^" ms)))))
        (; am I just after a quotation mark
         (looking-back holscript-quotedmaterial-delimiter-regexp (- (point) 1) t)
         (goto-char (match-beginning 0))
@@ -1049,6 +1057,7 @@ class characters.")
     (`(:before . "^Theorem=") '(column . 0))
     (`(:after . "^Proof") 2)
     (`(:after . "^Termination") 2)
+    (`(:after . "^Datatype:") 2)
     (`(:before . "val") 0)
     (`(:before . "fun") 0)
     (`(:before . "open") 0)

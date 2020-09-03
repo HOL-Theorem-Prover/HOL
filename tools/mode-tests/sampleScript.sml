@@ -233,4 +233,10 @@ Proof
   \\ REPEAT (POP_ASSUM (K ALL_TAC)) \\ intLib.COOPER_TAC
 QED
 
+Datatype:
+  foo = C1 num | C2
+End
+
+Theorem foo = blah
+
 val _ = export_theory()

@@ -90,13 +90,17 @@
       t)))
 
 
-(defun holscript-sexp-forward-test ()
+(defun holscript-sexp-movement-test ()
   (should (save-excursion
             (and
              (move-check '(1 12 41 42 64 84 121 139
                              176 218 382 499)
                          'forward-sexp)
-             (move-check '(2205 2486) 'forward-sexp)))))
-(ert-deftest holscript-sexp-forward1 ()
-  "sexp-forward moves correctly"
-  (holscript-fixture-both "sampleScript.sml" 'holscript-sexp-forward-test))
+             (move-check '(2205 2486) 'forward-sexp)
+             (move-check '(3872 3905) 'forward-sexp)
+             (move-check '(3507 3310) 'backward-up-list)
+             (move-check '(3907 3872 3310 2801) 'backward-sexp)))))
+
+(ert-deftest holscript-sexp-movement ()
+  "sexp-moves are made correctly"
+  (holscript-fixture-both "sampleScript.sml" 'holscript-sexp-movement-test))
