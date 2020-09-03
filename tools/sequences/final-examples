@@ -3,6 +3,7 @@
 !examples/formal-languages
 !examples/formal-languages/context-free
 !examples/formal-languages/regular/regular-play
+!examples/Hoare-for-divergence
 !examples/MLsyntax
 !examples/set-theory/zfset
 !examples/set-theory/vbg
