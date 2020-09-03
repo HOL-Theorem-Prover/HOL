@@ -523,7 +523,7 @@ Theorem scmap_EQ_SOME:
   ∀l r. scmap f l = SOME r ⇔
         LENGTH l = LENGTH r ∧ ∀i. i < LENGTH l ⇒ f (EL i l) = SOME (EL i r)
 Proof
-  Induct >> simp[AllCaseEqs(), PULL_EXISTS] >- metis_tac[] >>
+  Induct >> simp[AllCaseEqs(), PULL_EXISTS] >>
   rw[] >> Cases_on ‘f h’ >> simp[]
   >- (disj2_tac >> qexists_tac‘0’ >> simp[]) >>
   Cases_on ‘r’ >> simp[] >> simp[Once FORALL_NUM, SimpRHS] >> simp[] >>
