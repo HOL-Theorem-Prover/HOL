@@ -99,7 +99,8 @@
              (move-check '(2205 2486) 'forward-sexp)
              (move-check '(3872 3905) 'forward-sexp)
              (move-check '(3507 3310) 'backward-up-list)
-             (move-check '(3907 3872 3310 2801) 'backward-sexp)))))
+             (move-check '(3907 3872 3310 2801) 'backward-sexp)
+             (move-check '(3943 3959 3999 4046) 'forward-sexp)))))
 
 (ert-deftest holscript-sexp-movement ()
   "sexp-moves are made correctly"

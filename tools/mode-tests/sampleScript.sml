@@ -239,4 +239,14 @@ End
 
 Theorem foo = blah
 
+Inductive foob:
+[~rule1:] foob 0 ∧
+[~suc:]
+  (∀n. foob n ⇒ foob (SUC n)) ∧
+[last:]
+  (l. foob (HD l) ==> foob (LAST l))
+End
+
+
+
 val _ = export_theory()

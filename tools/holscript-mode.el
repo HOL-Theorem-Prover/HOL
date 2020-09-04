@@ -771,6 +771,7 @@ a store_thm equivalent.")
         (quotedmaterial "<-" quotedmaterial)
         (quotedmaterial "|" quotedmaterial)
         (quotedmaterial "=>" quotedmaterial)
+        ("[defnlabel]" quotedmaterial)
         ("case" quotedmaterial "of" quotedmaterial)
         ("do" quotedmaterial "od")
         ("if" quotedmaterial "then" quotedmaterial "else" quotedmaterial)
@@ -800,6 +801,7 @@ a store_thm equivalent.")
       (assoc "else")
       (assoc "<=>" "⇔" "<-")
       (assoc "==>" "⇒") (assoc "\\/" "∨") (assoc "/\\" "∧")
+      (assoc "[defnlabel]")
       (assoc "=" "<" "≤" "<=") (assoc ":=") (assoc "+") (assoc "*")))))
 
 (defvar holscript-quotedmaterial-delimiter-regexp
@@ -815,6 +817,13 @@ a store_thm equivalent.")
 (defvar holscript-lambda-regexp "[λ\\!?@]\\|?!"
   "Regular expression for quantifiers that are (treated as) single punctuation
 class characters.")
+
+(defvar holscript-definitionlabel-re
+  "\\[~?[A-Za-z0-9_']+[[:space:]]*:[[:space:]]*\\]"
+  "Regular expression for case-labels occurring within HOL definitions,
+ignoring fact that it should really only occur at the beginning of the line.")
+
+
 
 
 (defun holscript-can-find-earlier-quantifier (pp)
@@ -879,7 +888,6 @@ class characters.")
       (skip-syntax-backward "w")
       (buffer-substring-no-properties (point) p)))))
 
-
 (defun holscript-smie-forward-token ()
   (let ((p0 (point))
         (case-fold-search nil))
@@ -908,6 +916,10 @@ class characters.")
          ((looking-at holscript-quotedmaterial-delimiter-regexp)
           (goto-char (match-end 0))
           (match-string-no-properties 0))
+         ((and (looking-at holscript-definitionlabel-re)
+               (save-excursion (skip-chars-backward " \t") (bolp)))
+          (goto-char (match-end 0))
+          "[defnlabel]")
          ((looking-at "\\\\/") (goto-char (match-end 0)) "\\/")
          ((looking-at "/\\\\") (goto-char (match-end 0)) "/\\")
          ((looking-at "\\\\\\\\") (goto-char (match-end 0)) "\\\\")
@@ -994,6 +1006,20 @@ class characters.")
         (looking-back holscript-quotedmaterial-delimiter-regexp (- (point) 1) t)
         (goto-char (match-beginning 0))
         (match-string-no-properties 0))
+       (; am I after a definition-label
+        (and (equal (char-before) ?\])
+             (let ((p (point)))
+               (forward-char -1)
+               (skip-chars-backward " \t")
+               (if (equal (char-before) ?:)
+                   (progn (forward-char -1)
+                          (skip-chars-backward " \t")
+                          (skip-chars-backward "A-Za-z0-9_'")
+                          (if (equal (char-before) ?~) (forward-char -1))
+                          (skip-chars-backward " \t")
+                          (equal (char-before) ?\[))
+                 (goto-char p) nil)))
+        (forward-char -1) "[defnlabel]")
        (; am I just after a quantifier
         (looking-back holscript-quantifier-regexp (- (point) 10) t)
         (goto-char (match-beginning 0))
@@ -1058,6 +1084,8 @@ class characters.")
     (`(:before . "^Termination") '(column . 0))
     (`(:before . "^Theorem") '(column . 0))
     (`(:before . "^Theorem=") '(column . 0))
+    (`(:before . "[defnlabel]") '(column . 0))
+    (`(:after . "[defnlabel]") 2)
     (`(:after . "^Proof") 2)
     (`(:after . "^Termination") 2)
     (`(:after . "^Datatype:") 2)
