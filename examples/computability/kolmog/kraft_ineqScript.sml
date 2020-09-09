@@ -289,8 +289,7 @@ Proof
       REWRITE_TAC [GSYM REAL_MUL_ASSOC, REAL_INV_nonzerop, GSYM REAL_POW_INV] >>
       ASM_SIMP_TAC bool_ss [pow_inv_mul_invlt] >> simp[] >>
       simp[REAL_OF_NUM_POW])
-  >- (fs[prefix_free_def,PULL_EXISTS] >> rw[] >>
-      strip_tac >>
+  >- (fs[prefix_free_def,PULL_EXISTS] >> rw[] >> strip_tac >>
       ‘interval_bl a <> interval_bl b’ by
         (fs[interval_bl_def] >> rw[] >>
          ‘LENGTH a < LENGTH b’ by simp[prefix_length_lt]>>
@@ -309,7 +308,7 @@ Proof
           REWRITE_TAC [GSYM MULT_ASSOC, arithmeticTheory.EXP_ADD] >> simp[])
       >- (fs[powr_negexp, prefix_append,TBL2N_append] >>
           simp[POW_ADD, REAL_LDISTRIB] >> simp[REAL_OF_NUM_POW])
-      >- (simp[powr_negexp, REAL_LDISTRIB]))
+      >- (simp[powr_negexp,REAL_POW_POS]))
 QED
 
 Theorem size_of_interval_bl:
@@ -1017,6 +1016,363 @@ Proof
   simp[bitTheory.DIV_MULT_THM2] >> ‘n MOD 2 = 0’ suffices_by simp[] >>
   ‘n MOD 2 < 2’ by simp[] >> simp[]
 QED
+
+Datatype:
+  codetree = Empty | Item 'a | LNode codetree | FullNode codetree codetree
+End
+
+Definition ctree_domain_def[simp]:
+  ctree_domain Empty = ∅ ∧
+  ctree_domain (Item x) = {[]} ∧
+  ctree_domain (LNode ct) = { F :: x | x ∈ ctree_domain ct } ∧
+  ctree_domain (FullNode ctl ctr) =
+   { F :: x | x ∈ ctree_domain ctl } ∪
+   { T :: y | y ∈ ctree_domain ctr }
+End
+
+Definition empty_free_def[simp]:
+  empty_free Empty = F ∧
+  empty_free (Item _) = T ∧
+  empty_free (LNode ct) = empty_free ct ∧
+  empty_free (FullNode ctl ctr) = (empty_free ctl ∧ empty_free ctr)
+End
+
+Definition wftree_def:
+  wftree ct ⇔ ct = Empty ∨ empty_free ct
+End
+
+Theorem empty_free_nonempty_domain:
+  empty_free ct ⇒ ctree_domain ct ≠ ∅
+Proof
+  simp[EXTENSION] >> Induct_on ‘ct’ >> simp[EXISTS_OR_THM]
+QED
+
+Definition used_space_def[simp]:
+  used_space b e Empty = ∅ ∧
+  used_space b e (Item _) = { x | b ≤ x ∧ x < b + inv (2r pow e) } ∧
+  used_space b e (LNode ct) = used_space b (e + 1) ct ∧
+  used_space b e (FullNode ctl ctr) =
+    used_space b (e + 1) ctl ∪ used_space (b + inv (2 pow (e+1))) (e + 1) ctr
+End
+
+Theorem used_space_safe:
+  used_space b e ct ⊆ { x | b ≤ x ∧ x < b + inv (2 pow e) }
+Proof
+  simp[SUBSET_DEF] >>
+  map_every qid_spec_tac [‘b’, ‘e’] >> Induct_on ‘ct’ >> simp[]
+  >- (rpt strip_tac >> first_x_assum drule >> simp[] >> strip_tac >>
+      irule REAL_LT_TRANS >> first_assum (irule_at (Pos hd)) >>
+      simp[] >> irule REAL_POW_MONO_LT >> simp[]) >>
+  rpt strip_tac >> first_x_assum drule >> simp[]
+  >- (strip_tac >> irule REAL_LT_TRANS >> first_assum (irule_at (Pos hd)) >>
+      simp[] >> irule REAL_POW_MONO_LT >> simp[])
+  >- (strip_tac >> irule REAL_LE_TRANS >> first_assum (irule_at Any) >>
+      simp[REAL_LE_ADDR]) >>
+  strip_tac >>
+  ‘inv (2r pow (e + 1)) + inv (2 pow (e + 1)) = inv (2 pow e)’
+    suffices_by metis_tac[REAL_ADD_ASSOC] >>
+  simp[REAL_DOUBLE, REAL_POW_ADD]
+QED
+
+Definition free_size_def[simp]:
+  free_size e Empty = 2r pow e ∧
+  free_size e (Item x) = 0 ∧
+  free_size e (LNode ct) = free_size (e + 1) ct + 2 pow (e + 1) ∧
+  free_size e (FullNode ctl ctr) = free_size (e + 1) ctl + free_size (e + 1) ctr
+End
+
+Definition full_def[simp]:
+  full Empty = F ∧
+  full (Item x) = T ∧
+  full (LNode _) = F ∧
+  full (FullNode ctl ctr) = (full ctl ∧ full ctr)
+End
+
+Theorem full_free_size:
+  full ct ⇒ ∀e. free_size e ct = 0
+Proof
+  Induct_on ‘ct’ >> simp[]
+QED
+
+Theorem full_used_space:
+  ∀ct b e. full ct ⇒ used_space b e ct = { x | b ≤ x ∧ x < b + inv (2 pow e) }
+Proof
+  Induct >> simp[] >> rpt strip_tac >>
+  rpt (first_x_assum $ drule_then assume_tac) >>
+  ‘∀r:real. r + inv (2 pow (e + 1)) + inv (2 pow (e + 1)) = r + inv (2 pow e)’
+    by (‘inv (2r pow (e + 1)) + inv (2 pow (e + 1)) = inv (2 pow e)’
+          suffices_by metis_tac[REAL_ADD_ASSOC] >>
+        simp[REAL_DOUBLE, REAL_POW_ADD]) >>
+  simp[EXTENSION] >> rw[EQ_IMP_THM] >> fsr[]
+  >- (irule REAL_LT_TRANS >> first_assum (irule_at Any) >>
+      simp[REAL_POW_MONO_LT]) >>
+  irule REAL_LE_TRANS >> first_assum (irule_at Any) >> simp[REAL_LE_ADDR]
+QED
+
+Definition omax_def[simp]:
+  omax NONE NONE = NONE ∧
+  omax (SOME i) NONE = SOME i ∧
+  omax NONE (SOME j) = SOME j ∧
+  omax (SOME i) (SOME j) = SOME (MAX i j)
+End
+
+Theorem omax_EQ_NONE[simp]:
+  omax o1 o2 = NONE ⇔ o1 = NONE ∧ o2 = NONE
+Proof
+  map_every Cases_on [‘o1’, ‘o2’] >> simp[]
+QED
+
+Theorem omax_NONE[simp]:
+  omax NONE x = x ∧ omax x NONE = x
+Proof
+  Cases_on ‘x’>> simp[]
+QED
+
+Definition omin_def[simp]:
+  omin NONE NONE = NONE ∧
+  omin NONE (SOME j) = SOME j ∧
+  omin (SOME i) NONE = SOME i ∧
+  omin (SOME i) (SOME j) = SOME (MIN i j)
+End
+
+Theorem omin_EQ_NONE[simp]:
+  omin o1 o2 = NONE ⇔ o1 = NONE ∧ o2 = NONE
+Proof
+  map_every Cases_on [‘o1’, ‘o2’] >> simp[]
+QED
+
+Theorem omin_NONE[simp]:
+  omin NONE x = x ∧ omin x NONE = x
+Proof
+  Cases_on ‘x’ >> simp[]
+QED
+
+Definition finest_gap_def[simp]:
+  finest_gap Empty = SOME 0n ∧
+  finest_gap (Item _) = NONE ∧
+  finest_gap (LNode ct) = omax (SOME 1) (OPTION_MAP SUC (finest_gap ct)) ∧
+  finest_gap (FullNode ctl ctr) =
+    OPTION_MAP SUC (omax (finest_gap ctl) (finest_gap ctr))
+End
+
+Definition open_paths_def[simp]:
+  open_paths Empty = {[]} ∧
+  open_paths (Item _) = ∅ ∧
+  open_paths (LNode ct) = [T] INSERT IMAGE (CONS F) (open_paths ct) ∧
+  open_paths (FullNode ctl ctr) =
+    IMAGE (CONS F) (open_paths ctl) ∪ IMAGE (CONS T) (open_paths ctr)
+End
+
+Theorem FINITE_open_paths[simp]:
+  FINITE (open_paths ct)
+Proof
+  Induct_on ‘ct’ >> simp[]
+QED
+
+Theorem MAX_SET_IMAGE_MONO:
+  (∀x y. x ≤ y ⇒ f x ≤ f y) ∧ FINITE s ∧ s ≠ ∅ ⇒
+  MAX_SET (IMAGE f s) = f (MAX_SET s)
+Proof
+  Cases_on ‘∀x y. x ≤ y ⇒ f x ≤ f y’ >> simp[] >>
+  Induct_on ‘FINITE’ >> simp[MAX_SET_THM] >> rw[] >>
+  Cases_on ‘s = ∅’ >> gvs[] >> simp[MAX_DEF] >>
+  Cases_on ‘e < MAX_SET s’ >> simp[AllCaseEqs()]
+  >- (csimp[] >> metis_tac[DECIDE “x:num ≤ y ⇔ x < y ∨ x = y”]) >>
+  gvs[DECIDE “~(x:num < y) ⇔ y ≤ x”]
+QED
+
+Theorem MIN_SET_IMAGE_MONO:
+  (∀x y. x ≤ y ⇒ f x ≤ f y) ∧ FINITE s ∧ s ≠ ∅ ⇒
+  MIN_SET (IMAGE f s) = f (MIN_SET s)
+Proof
+  Cases_on ‘∀x y. x ≤ y ⇒ f x ≤ f y’ >> simp[] >>
+  Induct_on ‘FINITE’ >> rw[] >> Cases_on ‘s = ∅’ >> gvs[MIN_SET_THM] >>
+  ‘∃d s0. s = d INSERT s0 ∧ d ∉ s0’by metis_tac[SET_CASES] >>
+  gvs[MIN_SET_THM] >> simp[MIN_DEF] >>
+  Cases_on ‘e < MIN_SET (d INSERT s0)’ >> simp[AllCaseEqs()]
+  >- (csimp[] >> metis_tac[DECIDE “x:num ≤ y ⇔ x < y ∨ x = y”]) >>
+  gvs[DECIDE “~(x:num < y) ⇔ y ≤ x”]
+QED
+
+Theorem full_open_paths_EMPTY:
+  full ct ⇔ open_paths ct = ∅
+Proof
+  Induct_on ‘ct’ >> simp[]
+QED
+
+Theorem finest_gap_open_paths:
+  finest_gap ct = if full ct then NONE
+                  else SOME (MAX_SET (IMAGE LENGTH (open_paths ct)))
+Proof
+  ‘∀x:bool. LENGTH o CONS x = SUC o LENGTH’ by simp[FUN_EQ_THM] >>
+  Induct_on ‘ct’ >> simp[full_open_paths_EMPTY]
+  >- (rw[IMAGE_IMAGE, MAX_SET_THM] >> simp[GSYM IMAGE_IMAGE] >>
+      simp[MAX_SET_IMAGE_MONO] ) >>
+  rename [‘open_paths ctl = ∅ ∧ open_paths ctr = ∅’] >>
+  map_every Cases_on [‘open_paths ctl = ∅’, ‘open_paths ctr = ∅’] >>
+  simp[IMAGE_IMAGE] >>
+  simp[GSYM IMAGE_IMAGE, MAX_SET_IMAGE_MONO, MAX_SET_UNION] >>
+  simp[MAX_DEF]
+QED
+
+Definition largest_gap_def[nocompute]:
+  largest_gap ct = if full ct then NONE
+                   else SOME (MIN_SET (IMAGE LENGTH (open_paths ct)))
+End
+
+Theorem finest_gap_EQ_NONE:
+  ∀ct. finest_gap ct = NONE ⇔ full ct
+Proof
+  Induct_on ‘ct’ >> simp[]
+QED
+
+Definition packed_def[simp]:
+  packed Empty = T ∧
+  packed (Item i) = T ∧
+  packed (LNode ct) = packed ct ∧
+  packed (FullNode ctl ctr) =
+    (packed ctl ∧ packed ctr ∧
+     case finest_gap ctl of
+       NONE => T
+     | SOME i => (case finest_gap ctr of NONE => T | SOME j => j < i))
+End
+
+Theorem full_packed:
+  full ct ⇒ packed ct
+Proof
+  Induct_on ‘ct’ >> simp[] >> strip_tac >>
+  ‘finest_gap ct = NONE’by simp[finest_gap_EQ_NONE] >> simp[]
+QED
+
+Definition first_tree_def[simp]:
+  first_tree 0 i = Item i ∧
+  first_tree (SUC n) i = LNode (first_tree n i)
+End
+
+Theorem packed_first_tree[simp]:
+  packed (first_tree n v)
+Proof
+  Induct_on ‘n’ >> simp[]
+QED
+
+Theorem finest_gap_first_tree:
+  finest_gap (first_tree k v) = if k = 0 then NONE else SOME k
+Proof
+  Induct_on ‘k’ >> simp[] >> rw[] >> simp[MAX_DEF]
+QED
+
+Definition insert_def[simp]:
+  insert klen v Empty = SOME (first_tree klen v) ∧
+  insert klen v (Item _) = NONE ∧
+  (insert klen v (LNode ct) =
+    if klen = 0 then NONE
+    else
+      case largest_gap ct of
+      | NONE => SOME (FullNode ct (first_tree (klen - 1) v))
+      | SOME j => if klen ≤ j then SOME (FullNode ct (first_tree (klen - 1) v))
+                  else OPTION_MAP LNode (insert (klen - 1) v ct)) ∧
+  insert klen v (FullNode ctl ctr) =
+    if klen = 0 then NONE
+    else
+      case largest_gap ctl of
+        NONE => OPTION_MAP (FullNode ctl) (insert (klen - 1) v ctr)
+      | SOME i => if klen ≤ i then
+                    OPTION_MAP (FullNode ctl) (insert (klen - 1) v ctr)
+                  else
+                    OPTION_MAP (λl. FullNode l ctr) (insert (klen - 1) v ctl)
+End
+
+Theorem MIN_SET_0[simp]:
+  MIN_SET (0 INSERT s) = 0
+Proof
+  DEEP_INTRO_TAC MIN_SET_ELIM >> simp[DISJ_IMP_THM, FORALL_AND_THM]
+QED
+
+Theorem largest_gap_thm[simp,compute]:
+  largest_gap Empty = SOME 0 ∧
+  largest_gap (Item v) = NONE ∧
+  largest_gap (LNode ct) = SOME 1 ∧
+  largest_gap (FullNode ctl ctr) =
+    OPTION_MAP SUC (omin (largest_gap ctl) (largest_gap ctr))
+Proof
+  ‘∀x:bool. LENGTH o CONS x = SUC o LENGTH’ by simp[FUN_EQ_THM] >>
+  simp[largest_gap_def, MIN_SET_THM] >> rw[] >> fs[]
+  >- (simp[IMAGE_IMAGE] >>
+      ‘∀s:bool list set. 1 INSERT IMAGE (SUC o LENGTH) s =
+                         IMAGE (SUC o LENGTH) ([] INSERT s)’
+        by dsimp[EXTENSION] >>
+      simp[Excl "IMAGE_INSERT", GSYM IMAGE_IMAGE] >>
+      simp[MIN_SET_IMAGE_MONO])
+  >- (gvs[full_open_paths_EMPTY] >>
+      simp[IMAGE_IMAGE] >> simp[GSYM IMAGE_IMAGE, MIN_SET_IMAGE_MONO])
+  >- (gvs[full_open_paths_EMPTY] >>
+      simp[IMAGE_IMAGE] >> simp[GSYM IMAGE_IMAGE, MIN_SET_IMAGE_MONO]) >>
+  gvs[full_open_paths_EMPTY, MIN_SET_UNION, IMAGE_IMAGE] >>
+  simp[GSYM IMAGE_IMAGE, MIN_SET_IMAGE_MONO] >> simp[MIN_DEF]
+QED
+
+Theorem insert_fails:
+  ∀ct klen v.
+    insert klen v ct = NONE ⇔ full ct ∨ ∃g. largest_gap ct = SOME g ∧ klen < g
+Proof
+  Induct >> simp[AllCaseEqs()]
+  >- (rpt gen_tac >> rename [‘largest_gap ct’] >> Cases_on ‘largest_gap ct’ >>
+      simp[] >> rw[] >> strip_tac >>
+      gvs[full_open_paths_EMPTY, largest_gap_def]) >>
+  simp[PULL_EXISTS] >>
+  rename [‘omin (largest_gap ctl) (largest_gap ctr)’] >>
+  Cases_on ‘largest_gap ctl’ >> simp[]
+  >- (‘full ctl’ by gvs[full_open_paths_EMPTY, largest_gap_def] >>
+      rpt gen_tac >> Cases_on ‘insert (klen - 1) v ctr’ >> simp[]
+      >- (pop_assum mp_tac >> simp[DISJ_IMP_THM, PULL_EXISTS]) >>
+      first_x_assum $ qspecl_then [‘(klen - 1)’, ‘v’] mp_tac >> simp[] >>
+      strip_tac >> Cases_on ‘largest_gap ctr’ >> gvs[] >>
+      gvs[largest_gap_def, full_open_paths_EMPTY]) >>
+  rpt gen_tac >> rename [‘largest_gap ctl = SOME gl’] >>
+  Cases_on ‘klen ≤ gl’ >> simp[]
+  >- (Cases_on ‘insert (klen - 1) v ctr’ >> simp[]
+      >- (pop_assum mp_tac >> simp[DISJ_IMP_THM, PULL_EXISTS] >> rw[]
+          >- (Cases_on ‘largest_gap ctr’ >> simp[MIN_DEF] >>
+              gvs[full_open_paths_EMPTY, largest_gap_def]) >>
+          simp[MIN_DEF]) >>
+      first_x_assum $ qspecl_then [‘klen - 1’, ‘v’] mp_tac>> simp[] >>
+      rpt strip_tac >>
+      Cases_on ‘largest_gap ctr’ >>
+      gvs[full_open_paths_EMPTY, largest_gap_def] >>
+      gvs[MIN_DEF]) >>
+  ‘¬full ctl’ by gvs[full_open_paths_EMPTY, largest_gap_def] >> simp[] >>
+  Cases_on ‘largest_gap ctr’ >> simp[] >> simp[MIN_DEF]
+QED
+
+Theorem largest_gt_finest:
+  ¬full ct ⇒ ∃g f. largest_gap ct = SOME g ∧ finest_gap ct = SOME f ∧ g ≤ f
+Proof
+  Induct_on ‘ct’ >> simp[]
+  >- (rename [‘full ct’] >> Cases_on ‘full ct’ >> gvs[] >>
+      ‘finest_gap ct = NONE’ suffices_by simp[] >>
+      simp[finest_gap_EQ_NONE]) >>
+  strip_tac >> gvs[] >>
+  rename [‘¬full ctt ⇒ _’] >> Cases_on ‘full ctt’ >> gvs[] >>
+  ‘largest_gap ctt = NONE ∧ finest_gap ctt = NONE’ suffices_by simp[] >>
+  gvs[largest_gap_def, full_open_paths_EMPTY, finest_gap_open_paths]
+QED
+
+(*Theorem insert_preserves_packed:
+  ∀ct0 ct klen v.
+    packed ct0 ∧ insert klen v ct0 = SOME ct ⇒
+    packed ct ∧
+    ∃g0. finest_gap ct0 = SOME g0 ∧
+         (finest_gap ct = SOME g ⇒ g0 ≤ g)
+Proof
+  Induct >> dsimp[AllCaseEqs(), iffRL finest_gap_EQ_NONE] >> rw[]
+  >- (simp[finest_gap_first_tree] >> rw[])
+  >- metis_tac[]
+  >- (gvs[finest_gap_first_tree] >> Cases_on ‘klen = 1’ >> gvs[])
+  >- (rename [‘OPTION_MAP SUC (finest_gap tt)’] >>
+      Cases_on ‘finest_gap tt’ >> gvs[])
+  >- (first_x_assum $ drule_all_then strip_assume_tac >> gvs[]
+*)
+
 
 Definition genpf_def[simp]:
   genpf [] = (0n,1n,K NONE) ∧
