@@ -24,7 +24,7 @@
         '("\\<cheat\\>" . 'holscript-cheat-face)
         '(holscript-find-syntax-error 0 'holscript-syntax-error-face prepend)
         '(hol-find-quoted-material 0 'holscript-quoted-material prepend)
-        '("^\\[[[:space:]]*~?\\([A-Za-z0-9'_]+\\)[[:space:]]*:\\]" 0
+        '("^\\[[[:space:]]*~?\\([A-Za-z0-9'_]+\\)\\(\\[[A-Za-z0-9'_,]+\\]\\)?[[:space:]]*:\\]" 0
           'holscript-definition-label-face prepend)))
 
 (defconst holscript-font-lock-defaults '(holscript-font-lock-keywords))
