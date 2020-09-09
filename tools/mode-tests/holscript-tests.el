@@ -105,3 +105,15 @@
 (ert-deftest holscript-sexp-movement ()
   "sexp-moves are made correctly"
   (holscript-fixture-both "sampleScript.sml" 'holscript-sexp-movement-test))
+
+(defconst point4359-expected
+  " (*#loc 261 10 *)\ninv (2r pow (e + 1)) < inv (2r pow e)")
+(defun holscript-tap-test ()
+  (should (save-excursion
+            (and
+             (progn (goto-char 4359)
+                    (equal (hol-term-at-point) point4359-expected))))))
+
+(ert-deftest holscript-term-at-point ()
+  "hol-term-at-point correct"
+  (holscript-fixture-both "sampleScript.sml" 'holscript-tap-test))

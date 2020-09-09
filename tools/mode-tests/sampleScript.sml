@@ -247,6 +247,25 @@ Inductive foob:
   (l. foob (HD l) ==> foob (LAST l))
 End
 
+(* issue tested here is that |>, should be seen as two tokens, not one *)
+Theorem foo:
+  P (s with <| fld1 := foo.other_fld |>,
+     second_component)  ∧
+  Q (s with fld1 := foo_bar,
+     second_component) ∧
+  R (s with <| fld := foo_bar |>,
+     fld)
+Proof
+  tactic
+QED
+
+val q = ‘inv (2r pow (e + 1)) < inv (2r pow e)’
+
+(* Theorem broken:
+  foo
+Proof
+  tac
+QED *)
 
 
 val _ = export_theory()
