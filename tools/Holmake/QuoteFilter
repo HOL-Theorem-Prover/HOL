@@ -215,7 +215,8 @@ fun eof (QFS {mltype_stack,...}) =
 letter = [A-Za-z];
 digit = [0-9];
 symbol = [-!%&$+/:<=>?@~|#*\\^];
-alphaMLid = {letter} ({letter} | {digit} | _ | "'")*;
+alphaMLid_tailchar = ({letter} | {digit} | _ | "'");
+alphaMLid = {letter} {alphaMLid_tailchar}*;
 alphaMLid_list = {alphaMLid} (","{alphaMLid})*;
 quotedsymbolid = "\"" [^\034]+ "\"";
 defn_attribute = {alphaMLid} ("=" {alphaMLid})?;
@@ -230,7 +231,8 @@ fullquoteend = "``" | "\226\128\157";
 quotebegin = "`" | "\226\128\152";
 quoteend = "`" | "\226\128\153";
 Theorempfx = ("Theorem"|"Triviality"){ws}+{alphaMLid}("["{alphaMLid_list}"]")?;
-DefinitionLabel = "["{ws}*~?{alphaMLid}("["{alphaMLid_list}"]")?{ws}*":"{ws}*"]";
+DefinitionLabelID = {letter}{alphaMLid_tailchar}* | "~"{alphaMLid_tailchar}+;
+DefinitionLabel = "["{ws}*{DefinitionLabelID}("["{alphaMLid_list}"]")?{ws}*":"{ws}*"]";
 Definitionpfx =
   "Definition"{ws}+{alphaMLid}("["{defn_attribute_list}"]")?{ws}*":";
 declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"exception"|"open"|";"|"infix"[lr]?|"local";
@@ -662,9 +664,10 @@ HOLconjunction = "/\092" | "\226\136\167";
      YYBEGIN INITIAL;
      nextline yyarg (yypos + size yytext);
      if quotefix then yytext
-     else ECHO yyarg ("\"\n] NONE; " ^ magic_bind yyarg ^
-                      String.concat (List.map (extra_binds (!stem))
-                                              (!labelidxs)))
+     else (ECHO yyarg ("\"\n] NONE; " ^ magic_bind yyarg ^
+                       String.concat (List.map (extra_binds (!stem))
+                                               (!labelidxs))) before
+           labelidxs := [])
     )
   )
 );
