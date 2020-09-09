@@ -552,11 +552,6 @@ a store_thm equivalent.")
   (nil "≠" "<>")
   (nil "∃" "?")
   (nil "∀" "!")
-  (nil "λ" "\\\\")
-  (nil "“" "``")
-  (nil "”" "``")
-  (nil "‘" "`")
-  (nil "’" "`")
   (t "∈" "IN")
   (t "∉" "NOTIN")
   (nil "α" "'a")
@@ -820,7 +815,7 @@ a store_thm equivalent.")
 class characters.")
 
 (defvar holscript-definitionlabel-re
-  "\\[~?[A-Za-z0-9_']+[[:space:]]*:[[:space:]]*\\]"
+  "\\[~?[A-Za-z0-9_']+\\(\\[[A-Za-z0-9_',]+\\]\\)?[[:space:]]*:[[:space:]]*\\]"
   "Regular expression for case-labels occurring within HOL definitions,
 ignoring fact that it should really only occur at the beginning of the line.")
 
