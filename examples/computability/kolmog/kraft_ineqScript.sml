@@ -11,10 +11,8 @@ open recfunsTheory;
 open extNatTheory;
 open prtermTheory;
 open pred_setTheory;
-open extrealTheory;
 open realTheory;
 open real_sigmaTheory;
-open lebesgueTheory;
 open transcTheory;
 open boolListsTheory;
 
@@ -46,32 +44,6 @@ Proof
   qmatch_abbrev_tac‘(x:num)-y=x’ >>
   ‘y=0’ suffices_by simp[] >> simp[Abbr‘y’,EXTENSION] >>Cases>>simp[]>>
   metis_tac[]
-QED
-
-Theorem len_fun_eq1:
-  SIGMA (\s. Normal (2 rpow -&LENGTH s)) {s | (LENGTH (s:bool list) = n)} = 1
-Proof
-  irule EQ_TRANS >>
-  qexists_tac‘&CARD {s | LENGTH (s:bool list) = n} * Normal(2 rpow (-&n))’ >>
-  conj_tac
-  >- (irule extreal_sum_image_finite_corr >> rw[])
-  >- (simp[extreal_of_num_def,extreal_mul_def,GSYM realTheory.REAL_OF_NUM_POW,
-           GEN_RPOW, GSYM RPOW_ADD,RPOW_0 ] )
-QED
-
-Theorem len_fun_le1:
-  len_fun A n <= 1
-Proof
-  rw[len_fun_def] >>
-  ‘{s | LENGTH s = n /\ s IN A} SUBSET {s|LENGTH s = n}’ by simp[SUBSET_DEF] >>
-  ‘FINITE {s | LENGTH s = n /\ s IN A}’
-    by metis_tac[SUBSET_FINITE_I,finite_bool_list_n] >>
-  ASSUME_TAC len_fun_eq1 >> pop_assum(SUBST1_TAC o SYM)>>
-  irule EXTREAL_SUM_IMAGE_MONO_SET >>
-  simp[finite_bool_list_n] >> rw[extreal_of_num_def,extreal_le_def] >>
-  ‘0r < 2 ’suffices_by(strip_tac >> drule RPOW_POS_LT >>
-                       simp[realTheory.REAL_LE_LT]) >>
-  simp[]
 QED
 
 (* Traditional bool list to num *)
