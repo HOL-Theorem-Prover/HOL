@@ -267,5 +267,14 @@ Proof
   tac
 QED *)
 
+Inductive foob2:
+[~rule1:] foob2 0 ∧
+[suc[simp,compute]:]
+  (∀n. foob n ⇒ foob (SUC n)) ∧
+[last:]
+  (l. foob (HD l) ==> foob (LAST l))
+End
+
+
 
 val _ = export_theory()

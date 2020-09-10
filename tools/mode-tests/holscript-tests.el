@@ -91,16 +91,19 @@
 
 
 (defun holscript-sexp-movement-test ()
-  (should (save-excursion
-            (and
-             (move-check '(1 12 41 42 64 84 121 139
+  (save-excursion
+    (and
+     (should (move-check '(1 12 41 42 64 84 121 139
                              176 218 382 499)
-                         'forward-sexp)
-             (move-check '(2205 2486) 'forward-sexp)
-             (move-check '(3872 3905) 'forward-sexp)
-             (move-check '(3507 3310) 'backward-up-list)
-             (move-check '(3907 3872 3310 2801) 'backward-sexp)
-             (move-check '(3943 3959 3999 4046) 'forward-sexp)))))
+                         'forward-sexp))
+     (should (move-check '(2205 2486) 'forward-sexp))
+     (should (move-check '(3872 3905) 'forward-sexp))
+     (should (move-check '(3507 3310) 'backward-up-list))
+     (should (move-check '(3907 3872 3310 2801) 'backward-sexp))
+     (should (move-check '(4435 4452 4505 4552) 'forward-sexp))
+     (should (move-check '(4455 4505) 'forward-sexp))
+     (should (move-check '(4508 4455 4435) 'backward-sexp))
+     (should (move-check '(3943 3959 3999 4046) 'forward-sexp)))))
 
 (ert-deftest holscript-sexp-movement ()
   "sexp-moves are made correctly"
