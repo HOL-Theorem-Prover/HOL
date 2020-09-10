@@ -935,9 +935,22 @@ ignoring fact that it should really only occur at the beginning of the line.")
                (progn (skip-syntax-forward ".") (point)))
             (forward-char 1) "QFIER."))
          ((equal 1 (syntax-class (syntax-after (point))))
-          (buffer-substring-no-properties
-           (point)
-           (progn (skip-syntax-forward ".") (point))))
+          ;; looking at "punctuation", meaning that it's what HOL could consider
+          ;; "symbolic"
+          (let* ((symstr (buffer-substring-no-properties
+                         (point)
+                         (progn (skip-syntax-forward ".") (point))))
+                 (ldel1 (cl-search "<|" symstr))
+                 (rdel1 (cl-search "|>" symstr))
+                 (del1 (or (and ldel1 rdel1 (min ldel1 rdel1)) ldel1 rdel1)))
+            (if del1
+                (if (= del1 0)
+                    (progn
+                      (forward-char (- 2 (length symstr)))
+                      (substring symstr 0 2))
+                  (forward-char (- del1 (length symstr)))
+                  (substring symstr 0 del1))
+              symstr)))
          ((looking-at "\\$")
           (let ((p (point)))
             (if (> (skip-chars-forward "$") 1)
@@ -1056,9 +1069,21 @@ ignoring fact that it should really only occur at the beginning of the line.")
         (goto-char (match-beginning 0)) "/\\")
        (; am I sitting after "punctuation"
         (equal 1 (syntax-class (syntax-after (1- (point)))))
-        (buffer-substring-no-properties
-         (point)
-         (progn (skip-syntax-backward ".") (point))))
+        (let* ((symstr (buffer-substring-no-properties
+                        (point)
+                        (progn (skip-syntax-backward ".") (point))))
+               (ldel (and (string-match ".*\\(<|\\)" symstr)
+                          (match-end 1)))
+               (rdel (and (string-match ".*\\(|>\\)" symstr)
+                          (match-end 1)))
+               (del (or (and ldel rdel (max ldel rdel)) ldel rdel))
+               (sz (length symstr)))
+          (if del
+              (if (= del sz) (progn (forward-char (- sz 2))
+                                    (substring symstr -2 nil))
+                (forward-char del)
+                (substring symstr del nil))
+            symstr)))
        (t (buffer-substring-no-properties
            (point)
            (progn (skip-syntax-backward "w_")

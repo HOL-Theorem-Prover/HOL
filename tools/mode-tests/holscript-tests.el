@@ -17,8 +17,8 @@
   (holscript-fixture-in file 1 body))
 
 
-(defun holscript-unchanged-at1 ()
-  ; (message "Testing unchanged at %d" (line-number-at-pos))
+(defun holscript-unchanged-at1 (p)
+  ;; (message "Testing unchanged at %d" (line-number-at-pos))
   (indent-for-tab-command)
   (not (buffer-modified-p)))
 
@@ -34,12 +34,12 @@
 (defun holscript-eachline-unchanged ()
   (save-excursion
     (goto-char (point-min))
-    (while (and (holscript-unchanged-at1) (= 0 (forward-line))))
-    (should (= (point) (point-max)))))
+    (while (and (should (holscript-unchanged-at1 (point)))
+                (equal 0 (forward-line))))))
 
 (ert-deftest holscript-indent1 ()
   "Tests every line in sampleScript is already indented correctly"
-  (holscript-fixture-both "sampleScript.sml" 'holscript-eachline-unchanged))
+  (holscript-fixture-both "indentScript.sml" 'holscript-eachline-unchanged))
 
 (defun holscript-indent2-test ()
   (goto-char 86)
@@ -50,7 +50,7 @@
 
 (ert-deftest holscript-indent2 ()
   "Tests Theorem: syntax after Theorem="
-  (holscript-fixture-both "sampleScript.sml" 'holscript-indent2-test))
+  (holscript-fixture-both "indentScript.sml" 'holscript-indent2-test))
 
 (defun holscript-indent3-test ()
   (goto-char 111)
@@ -62,7 +62,7 @@
   (should (looking-at "  simp\\[]")))
 (ert-deftest holscript-indent3 ()
   "Tactic indents 2 when moved under proof keyword (_)"
-  (holscript-fixture-both "sampleScript.sml" 'holscript-indent3-test))
+  (holscript-fixture-both "indentScript.sml" 'holscript-indent3-test))
 
 
 (defun holscript-indent4-test ()
