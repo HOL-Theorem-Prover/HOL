@@ -16,23 +16,9 @@ open real_sigmaTheory;
 open transcTheory;
 open boolListsTheory;
 
-local open util_probTheory in end
-
 val _ = new_theory "kraft_ineq";
 
 val _ = intLib.deprecate_int()
-
-
-
-
-Definition len_fun_def:
-  len_fun (A:bool list set) n =
-  let strs = {s | (LENGTH s = n) /\ s IN A}
-  in
-    EXTREAL_SUM_IMAGE (\s. Normal (2 rpow (- &(LENGTH s)))) strs
-End
-
-Theorem extreal_sum_image_finite_corr = extrealTheory.EXTREAL_SUM_IMAGE_FINITE_CONST;
 
 Theorem bool_list_card[simp]:
   CARD {s | LENGTH (s:bool list) = n} = 2**n
@@ -205,7 +191,7 @@ Proof
 QED
 
 Theorem powr_negexp:
-  0 < a ⇒ (a:real) powr -&x = inv (a pow x)
+  0 < a ⇒ (a:real) rpow -&x = inv (a pow x)
 Proof
   ‘-&x = 0r - &x’ by simp[] >> pop_assum SUBST1_TAC >>
   simp[RPOW_SUB, RPOW_0, GSYM REAL_INV_1OVER, GSYM GEN_RPOW]
@@ -281,11 +267,6 @@ Proof
       >- (fs[powr_negexp, prefix_append,TBL2N_append] >>
           simp[POW_ADD, REAL_LDISTRIB] >> simp[REAL_OF_NUM_POW])
       >- (simp[powr_negexp,REAL_POW_POS]))
-QED
-
-Theorem size_of_interval_bl:
-  Normal (SND (interval_bl y))  = Normal (2 rpow -&LENGTH y)
-Proof rw[interval_bl_def]
 QED
 
 Theorem TBL2N_append_sing_ub:
@@ -1201,25 +1182,44 @@ QED
 Definition packed_def[simp]:
   packed Empty = T ∧
   packed (Item i) = T ∧
-  packed (LNode ct) = packed ct ∧
+  packed (LNode ct) = (packed ct ∧ empty_free ct) ∧
   packed (FullNode ctl ctr) =
-    (packed ctl ∧ packed ctr ∧
+    (packed ctl ∧ packed ctr ∧ empty_free ctl ∧ empty_free ctr ∧
      case finest_gap ctl of
        NONE => T
      | SOME i => (case finest_gap ctr of NONE => T | SOME j => j < i))
 End
 
+Theorem packed_emptyfree:
+  packed ct ⇒ ct = Empty ∨ empty_free ct
+Proof
+  Induct_on ‘ct’ >> simp[]
+QED
+
 Theorem full_packed:
   full ct ⇒ packed ct
 Proof
-  Induct_on ‘ct’ >> simp[] >> strip_tac >>
+  Induct_on ‘ct’ >> simp[] >> strip_tac >> gvs[] >>
+  rpt (dxrule_then strip_assume_tac packed_emptyfree) >> gvs[] >>
   ‘finest_gap ct = NONE’by simp[finest_gap_EQ_NONE] >> simp[]
+QED
+
+Theorem packed_wftree:
+  ∀ct. packed ct ⇒ wftree ct
+Proof
+  simp[wftree_def, packed_emptyfree]
 QED
 
 Definition first_tree_def[simp]:
   first_tree 0 i = Item i ∧
   first_tree (SUC n) i = LNode (first_tree n i)
 End
+
+Theorem empty_free_first_tree[simp]:
+  empty_free (first_tree n v)
+Proof
+  Induct_on ‘n’ >> simp[]
+QED
 
 Theorem packed_first_tree[simp]:
   packed (first_tree n v)
@@ -1241,7 +1241,8 @@ Definition insert_def[simp]:
     else
       case largest_gap ct of
       | NONE => SOME (FullNode ct (first_tree (klen - 1) v))
-      | SOME j => if klen ≤ j then SOME (FullNode ct (first_tree (klen - 1) v))
+      | SOME j => if klen ≤ j then
+                    SOME (FullNode ct (first_tree (klen - 1) v))
                   else OPTION_MAP LNode (insert (klen - 1) v ct)) ∧
   insert klen v (FullNode ctl ctr) =
     if klen = 0 then NONE
@@ -1289,7 +1290,7 @@ Theorem insert_fails:
 Proof
   Induct >> simp[AllCaseEqs()]
   >- (rpt gen_tac >> rename [‘largest_gap ct’] >> Cases_on ‘largest_gap ct’ >>
-      simp[] >> rw[] >> strip_tac >>
+      simp[] >> rw[] >>
       gvs[full_open_paths_EMPTY, largest_gap_def]) >>
   simp[PULL_EXISTS] >>
   rename [‘omin (largest_gap ctl) (largest_gap ctr)’] >>
@@ -1316,6 +1317,17 @@ Proof
   Cases_on ‘largest_gap ctr’ >> simp[] >> simp[MIN_DEF]
 QED
 
+Theorem insert_succeeds_gap_E:
+  insert kl v ct0 = SOME ct ⇒
+  ∃lg. largest_gap ct0 = SOME lg ∧ lg ≤ kl
+Proof
+  strip_tac >> CCONTR_TAC >> gvs[] >>
+  ‘insert kl v ct0 ≠ NONE’ by (strip_tac >> gvs[]) >>
+  pop_assum mp_tac >> simp_tac bool_ss [insert_fails] >>
+  Cases_on ‘largest_gap ct0’  >- gvs[largest_gap_def] >>
+  gvs[]
+QED
+
 Theorem largest_gt_finest:
   ¬full ct ⇒ ∃g f. largest_gap ct = SOME g ∧ finest_gap ct = SOME f ∧ g ≤ f
 Proof
@@ -1329,22 +1341,91 @@ Proof
   gvs[largest_gap_def, full_open_paths_EMPTY, finest_gap_open_paths]
 QED
 
-(*Theorem insert_preserves_packed:
+Theorem largest_gt_finest_E:
+  largest_gap ct = SOME lg ⇒ ∃fg. finest_gap ct = SOME fg ∧ lg ≤ fg
+Proof
+  strip_tac >>
+  ‘¬full ct’ by (strip_tac >> gvs[largest_gap_def, full_open_paths_EMPTY]) >>
+  drule largest_gt_finest >> simp[PULL_EXISTS]
+QED
+
+Theorem full_first_tree[simp]:
+  full(first_tree k v) ⇔ k = 0
+Proof
+  Induct_on ‘k’ >> simp[]
+QED
+
+Theorem insert_becomes_full:
+  ∀ct0 ct kl v.
+    insert kl v ct0 = SOME ct ∧ full ct ⇒
+    finest_gap ct0 = SOME kl ∧ largest_gap ct0 = SOME kl ∧
+    ∃p. open_paths ct0 = {p} ∧ LENGTH p = kl
+Proof
+  Induct >> simp[] >> rw[] >> gvs[AllCaseEqs()]
+  >- (‘finest_gap ct0 = NONE’ by simp[finest_gap_EQ_NONE] >> simp[])
+  >- (gvs[largest_gap_def, full_open_paths_EMPTY])
+  >- gvs[full_open_paths_EMPTY]
+  >- gvs[full_open_paths_EMPTY]
+  >- (rename [‘full ct0’, ‘finest_gap ct0’] >>
+      ‘finest_gap ct0 = NONE’ by simp[finest_gap_EQ_NONE] >> simp[] >>
+      first_x_assum $ drule_all_then strip_assume_tac >> simp[])
+  >- (rename [‘full ct0’, ‘finest_gap ct0’] >>
+      ‘finest_gap ct0 = NONE’ by simp[finest_gap_EQ_NONE] >> simp[] >>
+      first_x_assum $ drule_all_then strip_assume_tac >> simp[])
+  >- (first_x_assum $ drule_all_then strip_assume_tac >>
+      rename [‘full ctt’, ‘finest_gap ctt’] >>
+      ‘finest_gap ctt = NONE’ by simp[finest_gap_EQ_NONE] >> simp[])
+  >- (first_x_assum $ drule_all_then strip_assume_tac >> simp[])
+  >- (rename [‘largest_gap ctt = SOME _’, ‘full ctt’] >>
+      gvs[largest_gap_def, full_open_paths_EMPTY])
+  >- (rename [‘omin _ (largest_gap ctt)’, ‘full ctt’] >>
+      ‘largest_gap ctt = NONE’ by gvs[full_open_paths_EMPTY, largest_gap_def] >>
+      first_x_assum $ drule_all_then strip_assume_tac >> simp[])
+  >- (rename [‘full ctt’, ‘open_paths ctt’] >>
+      ‘open_paths ctt = ∅’ by gvs[full_open_paths_EMPTY] >> simp[] >>
+      first_x_assum $ drule_all_then strip_assume_tac >> simp[])
+  >- (rename [‘full ctt’, ‘open_paths ctt’] >>
+      ‘open_paths ctt = ∅’ by gvs[full_open_paths_EMPTY] >> simp[] >>
+      first_x_assum $ drule_all_then strip_assume_tac >> simp[])
+  >- (rename [‘full ctt’, ‘open_paths ctt’] >>
+      ‘open_paths ctt = ∅’ by gvs[full_open_paths_EMPTY] >> simp[] >>
+      first_x_assum $ drule_all_then strip_assume_tac >> simp[])
+QED
+
+Theorem insert_preserves_empty_free:
+  ∀ct0 ct klen v. insert klen v ct0 = SOME ct ∧ empty_free ct0 ⇒ empty_free ct
+Proof
+  Induct >> dsimp[AllCaseEqs()] >> metis_tac[]
+QED
+(*
+Theorem insert_preserves_packed:
   ∀ct0 ct klen v.
     packed ct0 ∧ insert klen v ct0 = SOME ct ⇒
     packed ct ∧
-    ∃g0. finest_gap ct0 = SOME g0 ∧
-         (finest_gap ct = SOME g ⇒ g0 ≤ g)
+    ∃lg0 fg0. largest_gap ct0 = SOME lg0 ∧ finest_gap ct0 = SOME fg0 ∧
+              (∀lg. largest_gap ct = SOME lg ⇒ lg0 ≤ lg) ∧
+              ∀fg. finest_gap ct = SOME fg ⇒ fg ≤ klen ∨ fg ≤ fg0
 Proof
-  Induct >> dsimp[AllCaseEqs(), iffRL finest_gap_EQ_NONE] >> rw[]
-  >- (simp[finest_gap_first_tree] >> rw[])
-  >- metis_tac[]
-  >- (gvs[finest_gap_first_tree] >> Cases_on ‘klen = 1’ >> gvs[])
-  >- (rename [‘OPTION_MAP SUC (finest_gap tt)’] >>
-      Cases_on ‘finest_gap tt’ >> gvs[])
-  >- (first_x_assum $ drule_all_then strip_assume_tac >> gvs[]
+  Induct >> simp[AllCaseEqs()] >> rw[] >> simp[] >> gvs[]
+  >- (‘finest_gap ct0 = NONE’ by gvs[finest_gap_open_paths, largest_gap_def] >>
+      simp[])
+  >- (simp[finest_gap_first_tree] >>
+      drule_then strip_assume_tac largest_gt_finest_E >>
+      simp[] >> Cases_on ‘klen ≤ 1’ >> simp[])
+  >- metis_tac[insert_preserves_empty_free]
+  >- (rename [‘largest_gap ct0 = NONE’] >>
+      ‘finest_gap ct0 = NONE’ suffices_by
+        (simp[] >> metis_tac[insert_preserves_empty_free]) >>
+      gvs[finest_gap_open_paths, largest_gap_def])
+  >- (simp[PULL_EXISTS] >> metis_tac[])
+  >- (rename [‘largest_gap ctt = SOME _’] >>
+      Cases_on ‘finest_gap ctt’>> simp[]
+      >- metis_tac[insert_preserves_empty_free] >>
+      gvs[] >> first_x_assum $ drule_all_then strip_assume_tac >>
+      rename [‘insert _ _ ct00 = SOME ct01’] >> simp[] >>
+      ‘empty_free ct01’ by metis_tac[insert_preserves_empty_free] >> simp[] >>
+      drule_then strip_assume_tac insert_succeeds_gap_E >> gvs[]
 *)
-
 
 Definition genpf_def[simp]:
   genpf [] = (0n,1n,K NONE) ∧
