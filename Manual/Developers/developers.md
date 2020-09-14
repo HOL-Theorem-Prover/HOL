@@ -256,7 +256,8 @@ Unless otherwise noted, they are built by the configuration process.
 :   A theorem.
 
 `x_`
-:   Optional prefix to indicate a variant that takes a term or quotation. E.g.: The tactical `X_GEN_TAC` compared to `GEN_TAC`.
+:   * Optional prefix to indicate a variant that takes a term or quotation. E.g.: The tactical `X_GEN_TAC` compared to `GEN_TAC`.
+:   * In a tactical that takes a theorem-tactic and applies it to assumptions, indicates a variant that removes the assumption which was acted on.
 
 <!--  LocalWords:  executables mosmlc sml categorise
  -->
