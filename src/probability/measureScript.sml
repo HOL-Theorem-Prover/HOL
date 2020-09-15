@@ -2295,7 +2295,7 @@ Proof
  >> rpt STRIP_TAC
  >> `t = s UNION (t DIFF s)` by PROVE_TAC [UNION_DIFF] >> POP_ORW
  >> `DISJOINT s (t DIFF s)` by SET_TAC [DISJOINT_DEF]
- >> fs [semiring_def, space_def, subsets_def]
+ >> fs [semiring_def, space_def, subsets_def,Excl"UNION_DIFF_EQ"]
  >> `?c. c SUBSET measurable_sets m /\ FINITE c /\ disjoint c /\ (t DIFF s = BIGUNION c)`
         by PROVE_TAC [] >> art []
  >> REWRITE_TAC [GSYM BIGUNION_INSERT]

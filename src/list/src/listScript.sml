@@ -679,6 +679,12 @@ val MEM_MAP = store_thm(
        MEM x (MAP f l) = ?y. (x = f y) /\ MEM y l”,
   LIST_INDUCT_TAC THEN SRW_TAC [] [MAP] THEN PROVE_TAC[]);
 
+Theorem MEM_MAP_f:
+  !f l a. MEM a l ==> MEM (f a) (MAP f l)
+Proof
+  PROVE_TAC[MEM_MAP]
+QED
+
 val LENGTH_NIL = store_thm("LENGTH_NIL[simp]",
  “!l:'a list. (LENGTH l = 0) = (l = [])”,
       LIST_INDUCT_TAC THEN

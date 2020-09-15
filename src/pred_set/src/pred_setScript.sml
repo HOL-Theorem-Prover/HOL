@@ -965,6 +965,14 @@ val DIFF_UNION = store_thm(
 ``!x y z. x DIFF (y UNION z) = x DIFF y DIFF z``,
 SRW_TAC[][EXTENSION] THEN METIS_TAC[])
 
+Theorem UNION_DIFF_EQ[simp]:
+  (!s t. ((s:'a -> bool) UNION (t DIFF s)) = (s UNION t))
+  /\ !s t. ((t DIFF s) UNION (s:'a -> bool)) = (t UNION s)
+Proof
+  rw[EXTENSION,EQ_IMP_THM,DIFF_DEF]
+  >> fs[]
+QED
+
 val DIFF_COMM = store_thm(
 "DIFF_COMM",
 ``!x y z. x DIFF y DIFF z = x DIFF z DIFF y``,

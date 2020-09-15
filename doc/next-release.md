@@ -226,6 +226,18 @@ New examples:
     `mlReinforce` on the tasks of synthesizing combinators and
     Diophantine equations can be found in __AI_tasks__.
 
+*   __bootstrap__: a minimalistic verified bootstrapped compiler.
+    By bootstrapped, we mean that the compiler is applied to itself
+    inside the logic. We evaluate (using EVAL) this self-application
+    to arrive at an x86-64 assembly implementation of the compiler
+    function.
+
+*   __Hoare-for-divergence__: a Hoare logic for proving properties
+    of (the output behaviour of) diverging programs. This Hoare
+    logic has been proved sound and complete. The same directory also
+    includes soundness and completeness proofs for a standard
+    total-correctness Hoare logic.
+
 Incompatibilities:
 ------------------
 
