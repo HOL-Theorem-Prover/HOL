@@ -106,8 +106,15 @@ Proof
 QED
 
 
-val Fpow_def = Define`Fpow n = GENLIST (K F) n`
+Definition Fpow_def: Fpow n = GENLIST (K F) n
+End
 
+Theorem Fpow0_thm[simp]:
+  Fpow 0 = [] ∧
+  Fpow (SUC n) = F :: Fpow n
+Proof
+  simp[Fpow_def, GENLIST_CONS]
+QED
 
 
 val prefix_refl = Q.store_thm("prefix_refl[simp]",
