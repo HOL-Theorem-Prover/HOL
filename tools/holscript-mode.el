@@ -1169,6 +1169,7 @@ ignoring fact that it should really only occur at the beginning of the line.")
     (`(:after . "‘") 1)
     (`(:after . "“") 1)
     (`(:after . "THEN1") 1)
+    (`(:after . "⇔") 2)
 ))
 
 ;;; returns true and moves forward a sexp if this is possible, returns nil
