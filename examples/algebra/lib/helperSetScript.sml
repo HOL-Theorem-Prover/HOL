@@ -13,7 +13,6 @@ val _ = new_theory "helperSet";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -70,6 +69,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    SING_TEST           |- !s. SING s <=> s <> {} /\ !x y. x IN s /\ y IN s ==> (x = y)
    SING_INTER          |- !s x. {x} INTER s = if x IN s then {x} else {}
    IN_SING_OR_EMPTY    |- !b x y. x IN (if b then {y} else {}) ==> (x = y)
+   SING_CARD_1         |- !s. SING s ==> (CARD s = 1)
    CARD_EQ_1           |- !s. FINITE s ==> ((CARD s = 1) <=> SING s)
    INSERT_DELETE_COMM  |- !s x y. x <> y ==> ((x INSERT s) DELETE y = x INSERT s DELETE y)
    SUBSET_INTER_SUBSET |- !s t u. s SUBSET u ==> s INTER t SUBSET u
@@ -79,6 +79,8 @@ open gcdTheory; (* for P_EUCLIDES *)
    SUBSET_INSERT_SUBSET|- !s t. s SUBSET t ==> !x. x INSERT s SUBSET x INSERT t
    INSERT_SUBSET_SUBSET|- !s t x. x NOTIN s /\ x INSERT s SUBSET t ==> s SUBSET t DELETE x
    DIFF_DELETE         |- !s t x. s DIFF t DELETE x = s DIFF (x INSERT t)
+   SUBSET_DIFF_CARD    |- !a b. FINITE a /\ b SUBSET a ==>
+                                (CARD (a DIFF b) = CARD a - CARD b)
 
    Image and Bijection:
    INJ_CONG            |- !f g s t. (!x. x IN s ==> (f x = g x)) ==> (INJ f s t <=> INJ g s t)
@@ -100,6 +102,10 @@ open gcdTheory; (* for P_EUCLIDES *)
    INJ_I_IMAGE         |- !s f. INJ I (IMAGE f s) univ(:'b)
    BIJ_ALT             |- !f s t. BIJ f s t <=>
                           (!x. x IN s ==> f x IN t) /\ !y. y IN t ==> ?!x. x IN s /\ (f x = y)
+   BIJ_IS_INJ          |- !f s t. BIJ f s t ==>
+                          !x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)
+   INJ_EQ_11           |- !f s x y. INJ f s s /\ x IN s /\ y IN s ==>
+                                    ((f x = f y) <=> (x = y))
    BIJ_I_SAME          |- !s. BIJ I s s
  # IMAGE_I             |- !s. IMAGE I s = s
    IMAGE_K             |- !s. s <> {} ==> !e. IMAGE (K e) s = {e}
@@ -129,6 +135,20 @@ open gcdTheory; (* for P_EUCLIDES *)
    count_by_countFrom     |- !n. count n = countFrom 0 n
    count_SUC_by_countFrom |- !n. count (SUC n) = 0 INSERT countFrom 1 n
 
+   CARD_UNION_3_EQN    |- !a b c. FINITE a /\ FINITE b /\ FINITE c ==>
+                                  (CARD (a UNION b UNION c) =
+                                   CARD a + CARD b + CARD c + CARD (a INTER b INTER c) -
+                                   CARD (a INTER b) - CARD (b INTER c) - CARD (a INTER c))
+   CARD_UNION_3_DISJOINT
+                       |- !a b c. FINITE a /\ FINITE b /\ FINITE c /\
+                                  DISJOINT a b /\ DISJOINT b c /\ DISJOINT a c ==>
+                                  (CARD (a UNION b UNION c) = CARD a + CARD b + CARD c)
+   partition_three_special_card
+                       |- !s a b c. FINITE s /\ (s = a UNION b UNION c) /\
+                                    (a INTER b = {}) /\ (b INTER c = {}) /\
+                                    (a INTER c = {}) /\ (CARD a = CARD c) ==>
+                                    (CARD s = 2 * CARD a + CARD b)
+
    Maximum and Minimum of a Set:
    MAX_SET_LESS        |- !s n. FINITE s /\ MAX_SET s < n ==> !x. x IN s ==> x < n
    MAX_SET_TEST        |- !s. FINITE s /\ s <> {} ==>
@@ -157,7 +177,7 @@ open gcdTheory; (* for P_EUCLIDES *)
 
    Finite and Cardinality Theorems:
    INJ_CARD_IMAGE_EQN  |- !f s. INJ f s univ(:'b) /\ FINITE s ==> (CARD (IMAGE f s) = CARD s)
-   FINITE_INJ_AS_SURJ  |- !s t. INJ f s t /\ FINITE s /\ FINITE t /\ (CARD s = CARD t) ==> SURJ f s t
+   FINITE_INJ_AS_SURJ  |- !f s t. INJ f s t /\ FINITE s /\ FINITE t /\ (CARD s = CARD t) ==> SURJ f s t
    FINITE_COUNT_IMAGE  |- !P n. FINITE {P x | x < n}
    FINITE_BIJ_PROPERTY |- !f s t. FINITE s /\ BIJ f s t ==> FINITE t /\ (CARD s = CARD t)
    FINITE_CARD_IMAGE   |- !s f. (!x y. (f x = f y) <=> (x = y)) /\ FINITE s ==> (CARD (IMAGE f s) = CARD s)
@@ -183,6 +203,9 @@ open gcdTheory; (* for P_EUCLIDES *)
    SPLIT_SYM         |- !s u v. s =|= u # v <=> s =|= v # u
    SPLIT_SYM_IMP     |- !s u v. s =|= u # v ==> s =|= v # u
    SPLIT_SING        |- !s v x. s =|= {x} # v <=> x IN s /\ v = s DELETE x
+   SPLIT_SUBSETS     |- !s u v. s =|= u # v ==> u SUBSET s /\ v SUBSET s
+   SPLIT_FINITE      |- !s u v. FINITE s /\ s =|= u # v ==> FINITE u /\ FINITE v
+   SPLIT_CARD        |- !s u v. FINITE s /\ s =|= u # v ==> (CARD s = CARD u + CARD v)
    SPLIT_EQ_DIFF     |- !s u v. s =|= u # v <=> (u = s DIFF v) /\ (v = s DIFF u)
    SPLIT_BY_SUBSET   |- !s u. u SUBSET s ==> (let v = s DIFF u in s =|= u # v)
    SUBSET_DIFF_DIFF  |- !s t. s SUBSET t ==> (t DIFF (t DIFF s) = s)
@@ -272,15 +295,20 @@ open gcdTheory; (* for P_EUCLIDES *)
 
    Partition and Equivalent Class:
    equiv_class_element    |- !R s x y. y IN equiv_class R s x <=> y IN s /\ R x y
+   equiv_class_eq         |- !R s x y. R equiv_on s /\ x IN s /\ y IN s ==>
+                                       ((equiv_class R s x = equiv_class R s y) <=> R x y)
    equiv_on_subset        |- !R s t. R equiv_on s /\ t SUBSET s ==> R equiv_on t
    partition_on_empty     |- !R. partition R {} = {}
+   partition_element      |- !R s t. t IN partition R s <=> ?x. x IN s /\ (t = equiv_class R s x)
    partition_elements     |- !R s. partition R s = IMAGE (\x. equiv_class R s x) s
+   partition_as_image     |- !R s. partition R s = IMAGE (\x. equiv_class R s x) s
    partition_cong         |- !R1 R2 s1 s2. (R1 = R2) /\ (s1 = s2) ==> (partition R1 s1 = partition R2 s2)
    equal_partition_CARD   |- !R s n. FINITE s /\ R equiv_on s /\
                              (!e. e IN partition R s ==> (CARD e = n)) ==> (CARD s = n * CARD (partition R s))
    factor_partition_CARD  |- !R s n. FINITE s /\ R equiv_on s /\
                              (!e. e IN partition R s ==> n divides CARD e) ==> n divides CARD s
 
+   pair_disjoint_subset        |- !s t. t SUBSET s /\ PAIR_DISJOINT s ==> PAIR_DISJOINT t
    disjoint_bigunion_add_fun   |- !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==>
                                   !f. SET_ADDITIVE f ==> (f (BIGUNION P) = SIGMA f P)
    set_additive_card           |- SET_ADDITIVE CARD
@@ -554,6 +582,21 @@ val SING_INTER = store_thm(
   rw[EXTENSION] >>
   metis_tac[]);
 
+(* Theorem: SING s ==> (CARD s = 1) *)
+(* Proof:
+   Note s = {x} for some x   by SING_DEF
+     so CARD s = 1           by CARD_SING
+*)
+val SING_CARD_1 = store_thm(
+  "SING_CARD_1",
+  ``!s. SING s ==> (CARD s = 1)``,
+  metis_tac[SING_DEF, CARD_SING]);
+
+(* Note: SING s <=> (CARD s = 1) cannot be proved.
+Only SING_IFF_CARD1  |- !s. SING s <=> (CARD s = 1) /\ FINITE s
+That is: FINITE s /\ (CARD s = 1) ==> SING s
+*)
+
 (* Theorem: FINITE s ==> ((CARD s = 1) <=> SING s) *)
 (* Proof:
    If part: CARD s = 1 ==> SING s
@@ -673,6 +716,19 @@ val DIFF_DELETE = store_thm(
   "DIFF_DELETE",
   ``!s t x. (s DIFF t) DELETE x = s DIFF (x INSERT t)``,
   (rw[EXTENSION] >> metis_tac[]));
+
+(* Theorem: FINITE a /\ b SUBSET a ==> (CARD (a DIFF b) = CARD a - CARD b) *)
+(* Proof:
+   Note FINITE b                   by SUBSET_FINITE
+     so a INTER b = b              by SUBSET_INTER2
+        CARD (a DIFF b)
+      = CARD a - CARD (a INTER b)  by CARD_DIFF
+      = CARD a - CARD b            by above
+*)
+val SUBSET_DIFF_CARD = store_thm(
+  "SUBSET_DIFF_CARD",
+  ``!a b. FINITE a /\ b SUBSET a ==> (CARD (a DIFF b) = CARD a - CARD b)``,
+  metis_tac[CARD_DIFF, SUBSET_FINITE, SUBSET_INTER2]);
 
 (* ------------------------------------------------------------------------- *)
 (* Image and Bijection                                                       *)
@@ -837,9 +893,10 @@ val INJ_I = store_thm(
 
 (* Theorem: INJ I (IMAGE f s) univ(:'b) *)
 (* Proof:
-  Since !x. x IN (IMAGE f s) ==> x IN univ(:'b)                                   by IN_UNIV
-    and !x y. x IN (IMAGE f s) /\ y IN (IMAGE f s) ==> (I x = I y) ==> (x = y)    by I_THM
-  Hence INJ I (IMAGE f s) univ(:'b)                                               by INJ_DEF
+  Since !x. x IN (IMAGE f s) ==> x IN univ(:'b)          by IN_UNIV
+    and !x y. x IN (IMAGE f s) /\ y IN (IMAGE f s) ==>
+              (I x = I y) ==> (x = y)                    by I_THM
+  Hence INJ I (IMAGE f s) univ(:'b)                      by INJ_DEF
 *)
 val INJ_I_IMAGE = store_thm(
   "INJ_I_IMAGE",
@@ -860,6 +917,21 @@ val BIJ_ALT = store_thm(
   "BIJ_ALT",
   ``!f s t. BIJ f s t <=> (!x. x IN s ==> f x IN t) /\ (!y. y IN t ==> ?!x. x IN s /\ (f x = y))``,
   rw_tac std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, EQ_IMP_THM] >> metis_tac[]);
+
+(* Theorem: BIJ f s t ==> !x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y) *)
+(* Proof: by BIJ_DEF, INJ_DEF *)
+val BIJ_IS_INJ = store_thm(
+  "BIJ_IS_INJ",
+  ``!f s t. BIJ f s t ==> !x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)``,
+  rw[BIJ_DEF, INJ_DEF]);
+
+(* Theorem: INJ f s s /\ x IN s /\ y IN s ==> ((f x = f y) <=> (x = y)) *)
+(* Proof: by INJ_DEF *)
+val INJ_EQ_11 = store_thm(
+  "INJ_EQ_11",
+  ``!f s x y. INJ f s s /\ x IN s /\ y IN s ==> ((f x = f y) <=> (x = y))``,
+  metis_tac[INJ_DEF]);
+
 
 (* Theorem: BIJ I s s *)
 (* Proof: by definitions. *)
@@ -1118,6 +1190,115 @@ val count_SUC_by_countFrom = store_thm(
   `SUC = $+ 1` by rw[FUN_EQ_THM] >>
   rw[COUNT_SUC_BY_SUC]);
 
+(* Inclusion-Exclusion for two sets:
+
+CARD_UNION
+|- !s. FINITE s ==> !t. FINITE t ==>
+       (CARD (s UNION t) + CARD (s INTER t) = CARD s + CARD t)
+CARD_UNION_EQN
+|- !s t. FINITE s /\ FINITE t ==>
+         (CARD (s UNION t) = CARD s + CARD t - CARD (s INTER t))
+CARD_UNION_DISJOINT
+|- !s t. FINITE s /\ FINITE t /\ DISJOINT s t ==>
+         (CARD (s UNION t) = CARD s + CARD t)
+*)
+
+(* Inclusion-Exclusion for three sets. *)
+
+(* Theorem: FINITE a /\ FINITE b /\ FINITE c ==>
+            (CARD (a UNION b UNION c) =
+             CARD a + CARD b + CARD c + CARD (a INTER b INTER c) -
+             CARD (a INTER b) - CARD (b INTER c) - CARD (a INTER c)) *)
+(* Proof:
+   Note FINITE (a UNION b)                            by FINITE_UNION
+    and FINITE (a INTER c)                            by FINITE_INTER
+    and FINITE (b INTER c)                            by FINITE_INTER
+   Also (a INTER c) INTER (b INTER c)
+       = a INTER b INTER c                            by EXTENSION
+    and CARD (a INTER b) <= CARD a                    by CARD_INTER_LESS_EQ
+    and CARD (a INTER b INTER c) <= CARD (b INTER c)  by CARD_INTER_LESS_EQ, INTER_COMM
+
+        CARD (a UNION b UNION c)
+      = CARD (a UNION b) + CARD c - CARD ((a UNION b) INTER c)
+                                                      by CARD_UNION_EQN
+      = (CARD a + CARD b - CARD (a INTER b)) +
+         CARD c - CARD ((a UNION b) INTER c)          by CARD_UNION_EQN
+      = (CARD a + CARD b - CARD (a INTER b)) +
+         CARD c - CARD ((a INTER c) UNION (b INTER c))
+                                                      by UNION_OVER_INTER
+      = (CARD a + CARD b - CARD (a INTER b)) + CARD c -
+        (CARD (a INTER c) + CARD (b INTER c) - CARD ((a INTER c) INTER (b INTER c)))
+                                                      by CARD_UNION_EQN
+      = CARD a + CARD b + CARD c - CARD (a INTER b) -
+        (CARD (a INTER c) + CARD (b INTER c) - CARD (a INTER b INTER c))
+                                                      by CARD (a INTER b) <= CARD a
+      = CARD a + CARD b + CARD c - CARD (a INTER b) -
+        (CARD (b INTER c) + CARD (a INTER c) - CARD (a INTER b INTER c))
+                                                      by ADD_COMM
+      = CARD a + CARD b + CARD c - CARD (a INTER b)
+        + CARD (a INTER b INTER c) - CARD (b INTER c) - CARD (a INTER c)
+                                                      by CARD (a INTER b INTER c) <= CARD (b INTER c)
+      = CARD a + CARD b + CARD c + CARD (a INTER b INTER c)
+        - CARD (a INTER b) - CARD (b INTER c) - CARD (a INTER c)
+                                                      by arithmetic
+*)
+val CARD_UNION_3_EQN = store_thm(
+  "CARD_UNION_3_EQN",
+  ``!a b c. FINITE a /\ FINITE b /\ FINITE c ==>
+          (CARD (a UNION b UNION c) =
+           CARD a + CARD b + CARD c + CARD (a INTER b INTER c) -
+           CARD (a INTER b) - CARD (b INTER c) - CARD (a INTER c))``,
+  rpt strip_tac >>
+  `FINITE (a UNION b) /\ FINITE (a INTER c) /\ FINITE (b INTER c)` by rw[] >>
+  (`(a INTER c) INTER (b INTER c) = a INTER b INTER c` by (rw[EXTENSION] >> metis_tac[])) >>
+  `CARD (a INTER b) <= CARD a` by rw[CARD_INTER_LESS_EQ] >>
+  `CARD (a INTER b INTER c) <= CARD (b INTER c)` by metis_tac[INTER_COMM, CARD_INTER_LESS_EQ] >>
+  `CARD (a UNION b UNION c)
+      = CARD (a UNION b) + CARD c - CARD ((a UNION b) INTER c)` by rw[CARD_UNION_EQN] >>
+  `_ = (CARD a + CARD b - CARD (a INTER b)) +
+         CARD c - CARD ((a UNION b) INTER c)` by rw[CARD_UNION_EQN] >>
+  `_ = (CARD a + CARD b - CARD (a INTER b)) +
+         CARD c - CARD ((a INTER c) UNION (b INTER c))` by fs[UNION_OVER_INTER, INTER_COMM] >>
+  `_ = (CARD a + CARD b - CARD (a INTER b)) + CARD c -
+        (CARD (a INTER c) + CARD (b INTER c) - CARD (a INTER b INTER c))` by metis_tac[CARD_UNION_EQN] >>
+  decide_tac);
+
+(* Theorem: FINITE a /\ FINITE b /\ FINITE c /\
+            DISJOINT a b /\ DISJOINT b c /\ DISJOINT a c ==>
+            (CARD (a UNION b UNION c) = CARD a + CARD b + CARD c) *)
+(* Proof: by DISJOINT_DEF, CARD_UNION_3_EQN *)
+val CARD_UNION_3_DISJOINT = store_thm(
+  "CARD_UNION_3_DISJOINT",
+  ``!a b c. FINITE a /\ FINITE b /\ FINITE c /\
+           DISJOINT a b /\ DISJOINT b c /\ DISJOINT a c ==>
+           (CARD (a UNION b UNION c) = CARD a + CARD b + CARD c)``,
+  rw[DISJOINT_DEF] >>
+  rw[CARD_UNION_3_EQN]);
+
+(* Theorem: FINITE s /\ (s = a UNION b UNION c) /\
+            (a INTER b = EMPTY) /\ (b INTER c = EMPTY) /\ (a INTER c = EMPTY) /\
+            (CARD a = CARD c) ==> (CARD s = 2 * CARD a + CARD b) *)
+(* Proof:
+   Note FINITE a /\ FINITE b /\ FINITE c        by FINITE_UNION
+    and a INTER b INTER c = EMPTY               by INTER_EMPTY
+        CARD s
+      = CARD (a UNION b UNION c)                by s = a UNION b UNION c
+      = CARD a + CARD b + CARD c + CARD (a INTER b INTER c)
+        - CARD (a INTER b) - CARD (b INTER c) - CARD (a INTER c)
+                                                by CARD_UNION_3_EQN
+      = CARD a + CARD b + CARD c                by CARD_EMPTY
+      = CARD a + CARD b + CARD a                by CARD c = CARD a
+      = 2 * CARD a + CARD b                     by arithmetic
+*)
+val partition_three_special_card = store_thm(
+  "partition_three_special_card",
+  ``!s a b c. FINITE s /\ (s = a UNION b UNION c) /\
+             (a INTER b = EMPTY) /\ (b INTER c = EMPTY) /\ (a INTER c = EMPTY) /\
+             (CARD a = CARD c) ==> (CARD s = 2 * CARD a + CARD b)``,
+  rpt strip_tac >>
+  `FINITE a /\ FINITE b /\ FINITE c` by metis_tac[FINITE_UNION] >>
+  rw[CARD_UNION_3_EQN]);
+
 (* ------------------------------------------------------------------------- *)
 (* Maximum and Minimum of a Set                                              *)
 (* ------------------------------------------------------------------------- *)
@@ -1174,17 +1355,16 @@ val MIN_SET_TEST = store_thm(
        and m IN s ==> m <= x         by implication
    Hence x = m.
 *)
-Theorem MAX_SET_TEST_IFF:
-  !s. FINITE s /\ s <> {} ==>
-      !x. x IN s ==> ((MAX_SET s = x) <=> (!y. y IN s ==> y <= x))
-Proof
+val MAX_SET_TEST_IFF = store_thm(
+  "MAX_SET_TEST_IFF",
+  ``!s. FINITE s /\ s <> {} ==> !x. x IN s ==> ((MAX_SET s = x) <=> (!y. y IN s ==> y <= x))``,
   rpt strip_tac >>
   qabbrev_tac `m = MAX_SET s` >>
-  rw[EQ_IMP_THM] >- rw[MAX_SET_DEF, Abbr‘m’] >>
+  rw[EQ_IMP_THM] >-
+  rw[MAX_SET_DEF, Abbr`m`] >>
   `m IN s /\ x <= m` by rw[MAX_SET_DEF, Abbr`m`] >>
   `m <= x` by rw[] >>
-  decide_tac
-QED
+  decide_tac);
 
 (* Theorem: s <> {} ==> !x. x IN s ==> ((MIN_SET s = x) <=> (!y. y IN s ==> x <= y)) *)
 (* Proof:
@@ -1195,15 +1375,16 @@ QED
        and m IN s ==> x <= m    by implication
    Hence x = m.
 *)
-Theorem MIN_SET_TEST_IFF:
-  !s. s <> {} ==> !x. x IN s ==> ((MIN_SET s = x) <=> (!y. y IN s ==> x <= y))
-Proof
+val MIN_SET_TEST_IFF = store_thm(
+  "MIN_SET_TEST_IFF",
+  ``!s. s <> {} ==> !x. x IN s ==> ((MIN_SET s = x) <=> (!y. y IN s ==> x <= y))``,
   rpt strip_tac >>
   qabbrev_tac `m = MIN_SET s` >>
-  rw[EQ_IMP_THM] >- rw[MIN_SET_LEM, Abbr‘m’] >>
+  rw[EQ_IMP_THM] >-
+  rw[MIN_SET_LEM, Abbr`m`] >>
   `m IN s /\ m <= x` by rw[MIN_SET_LEM, Abbr`m`] >>
-  `x <= m` by rw[] >> decide_tac
-QED
+  `x <= m` by rw[] >>
+  decide_tac);
 
 (* Theorem: MAX_SET {} = 0 *)
 (* Proof: by MAX_SET_REWRITES *)
@@ -1503,7 +1684,7 @@ val INJ_CARD_IMAGE_EQN = store_thm(
 *)
 val FINITE_INJ_AS_SURJ = store_thm(
   "FINITE_INJ_AS_SURJ",
-  ``!s t. INJ f s t /\ FINITE s /\ FINITE t /\ (CARD s = CARD t) ==> SURJ f s t``,
+  ``!f s t. INJ f s t /\ FINITE s /\ FINITE t /\ (CARD s = CARD t) ==> SURJ f s t``,
   rw[INJ_DEF] >>
   `(IMAGE f s) SUBSET t` by rw[GSYM IMAGE_SUBSET_TARGET] >>
   `FINITE (IMAGE f s)` by rw[IMAGE_FINITE] >>
@@ -1701,23 +1882,20 @@ val finite_partition_property = store_thm(
    (3) u UNION v = s       by IN_UNION
    (4) DISJOINT u v, true  by IN_DISJOINT, MEMBER_NOT_EMPTY
 *)
-Theorem finite_partition_by_predicate:
-  !s. FINITE s ==>
-      !P. let u = {x | x IN s /\ P x} ;
-              v = {x | x IN s /\ ~P x}
-          in
-              FINITE u /\ FINITE v /\ s =|= u # v
-Proof
+val finite_partition_by_predicate = store_thm(
+  "finite_partition_by_predicate",
+  ``!s. FINITE s ==> !P. let u = {x | x IN s /\ P x} in let v = {x | x IN s /\ ~P x} in
+       FINITE u /\ FINITE v /\ s =|= u # v``,
   rw_tac std_ss[] >| [
     `u SUBSET s` by rw[SUBSET_DEF, Abbr`u`] >>
     metis_tac[SUBSET_FINITE],
     `v SUBSET s` by rw[SUBSET_DEF, Abbr`v`] >>
     metis_tac[SUBSET_FINITE],
-    simp[EXTENSION, Abbr‘u’, Abbr‘v’] >>
+    fs[EXTENSION, Abbr`u`, Abbr`v`] >>
     metis_tac[],
-    simp[Abbr‘u’, Abbr‘v’, DISJOINT_DEF, EXTENSION] >> metis_tac[]
-  ]
-QED
+    fs[EXTENSION, DISJOINT_DEF, Abbr`u`, Abbr`v`] >>
+    metis_tac[]
+  ]);
 
 (* Theorem: u SUBSET s ==> let v = s DIFF u in s =|= u # v *)
 (* Proof:
@@ -1804,10 +1982,8 @@ val SPLIT_UNION = store_thm(
 val SPLIT_EQ = store_thm(
   "SPLIT_EQ",
   ``!s u v. s =|= u # v <=> u SUBSET s /\ (v = s DIFF u)``,
-  rw[EQ_IMP_THM,Excl"UNION_DIFF_EQ"] >-
-  rw[DIFF_SAME_UNION, GSYM DISJOINT_DIFF_IFF, DISJOINT_SYM] >-
-  rw[UNION_DIFF] >>
-  rw[DISJOINT_DIFF]);
+  rw[DISJOINT_DEF, SUBSET_DEF, EXTENSION] >>
+  metis_tac[]);
 
 (* Theorem: (s =|= u # v) = (s =|= v # u) *)
 (* Proof:
@@ -1840,6 +2016,32 @@ val SPLIT_SING = store_thm(
   "SPLIT_SING",
   ``!s v x. s =|= {x} # v <=> (x IN s /\ (v = s DELETE x))``,
   rw[SPLIT_EQ, SUBSET_DEF, DELETE_DEF]);
+
+(* Theorem: s =|= u # v ==> u SUBSET s /\ v SUBSET s *)
+(* Proof: by SUBSET_UNION *)
+val SPLIT_SUBSETS = store_thm(
+  "SPLIT_SUBSETS",
+  ``!s u v. s =|= u # v ==> u SUBSET s /\ v SUBSET s``,
+  rw[]);
+
+(* Theorem: FINITE s /\ s =|= u # v ==> FINITE u /\ FINITE v *)
+(* Proof: by SPLIT_SUBSETS, SUBSET_FINITE *)
+val SPLIT_FINITE = store_thm(
+  "SPLIT_FINITE",
+  ``!s u v. FINITE s /\ s =|= u # v ==> FINITE u /\ FINITE v``,
+  simp[SPLIT_SUBSETS, SUBSET_FINITE]);
+
+(* Theorem: FINITE s /\ s =|= u # v ==> (CARD s = CARD u + CARD v) *)
+(* Proof:
+   Note FINITE u /\ FINITE v    by SPLIT_FINITE
+     CARD s
+   = CARD (u UNION v)           by notation
+   = CARD u + CARD v            by CARD_UNION_DISJOINT
+*)
+val SPLIT_CARD = store_thm(
+  "SPLIT_CARD",
+  ``!s u v. FINITE s /\ s =|= u # v ==> (CARD s = CARD u + CARD v)``,
+  metis_tac[CARD_UNION_DISJOINT, SPLIT_FINITE]);
 
 (* Theorem: s =|= u # v <=> (u = s DIFF v) /\ (v = s DIFF u) *)
 (* Proof:
@@ -2132,10 +2334,10 @@ val closure_comm_assoc_fun_def = Define`
            = ITSET f u (f y (f x b))            by y NOTIN u
        Applying the commute_associativity of f, LHS = RHS.
 *)
-Theorem SUBSET_COMMUTING_ITSET_INSERT:
-  !f s t. FINITE s /\ s SUBSET t /\ closure_comm_assoc_fun f t ==>
-          !(x b)::t. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b)
-Proof
+val SUBSET_COMMUTING_ITSET_INSERT = store_thm(
+  "SUBSET_COMMUTING_ITSET_INSERT",
+  ``!f s t. FINITE s /\ s SUBSET t /\ closure_comm_assoc_fun f t ==>
+   !(x b)::t. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b)``,
   completeInduct_on `CARD s` >>
   rule_assum_tac(SIMP_RULE bool_ss[GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]) >>
   rw[RES_FORALL_THM] >>
@@ -2152,13 +2354,14 @@ Proof
     `CARD z < CARD s` by decide_tac >>
     `z = s DELETE y` by metis_tac[DELETE_INSERT] >>
     `z SUBSET t` by metis_tac[DELETE_SUBSET, SUBSET_TRANS] >>
-    Cases_on `x = y` >- metis_tac[] >>
+    Cases_on `x = y` >-
+    metis_tac[] >>
     `x IN z` by metis_tac[IN_INSERT] >>
     qabbrev_tac `u = z DELETE x` >>
     `z = x INSERT u` by rw[INSERT_DELETE, Abbr`u`] >>
     `x NOTIN u` by metis_tac[IN_DELETE] >>
     qabbrev_tac `v = y INSERT u` >>
-    `s = x INSERT v` by simp[INSERT_COMM, Abbr `v`] >>
+    `s = x INSERT v` by rw[INSERT_COMM, Abbr `v`] >>
     `x NOTIN v` by rw[Abbr `v`] >>
     `FINITE v` by metis_tac[FINITE_INSERT] >>
     `CARD s = SUC (CARD v)` by metis_tac[CARD_INSERT] >>
@@ -2170,7 +2373,8 @@ Proof
     metis_tac[],
     `x INSERT s <> {}` by rw[] >>
     `y INSERT z = x INSERT s` by rw[CHOICE_INSERT_REST, Abbr`y`, Abbr`z`] >>
-    Cases_on `x = y` >- metis_tac[DELETE_INSERT, ITSET_PROPERTY] >>
+    Cases_on `x = y` >-
+    metis_tac[DELETE_INSERT, ITSET_PROPERTY] >>
     `x IN z /\ y IN s` by metis_tac[IN_INSERT] >>
     qabbrev_tac `u = s DELETE y` >>
     `s = y INSERT u` by rw[INSERT_DELETE, Abbr`u`] >>
@@ -2190,8 +2394,7 @@ Proof
     `_ = ITSET f u (f y (f x b))` by rw[] >>
     `f x (f y b) = f y (f x b)` by prove_tac[closure_comm_assoc_fun_def] >>
     metis_tac[]
-  ]
-QED
+  ]);
 
 (* This is a generalisation of COMMUTING_ITSET_INSERT, removing the requirement of commuting everywhere. *)
 
@@ -3208,6 +3411,16 @@ val equiv_class_element = store_thm(
   ``!R s x y. y IN equiv_class R s x <=> y IN s /\ R x y``,
   rw[]);
 
+(* Theorem: R equiv_on s /\ x IN s /\ y IN s ==>
+            ((equiv_class R s x = equiv_class R s y) <=> R x y) *)
+(* Proof: by equiv_on_def, EXTENSION. *)
+val equiv_class_eq = store_thm(
+  "equiv_class_eq",
+  ``!R s x y. R equiv_on s /\ x IN s /\ y IN s ==>
+             ((equiv_class R s x = equiv_class R s y) <=> R x y)``,
+  rw[equiv_on_def, EXTENSION] >>
+  metis_tac[]);
+
 (* Theorem: R equiv_on s /\ t SUBSET s ==> R equiv_on t *)
 (* Proof: by equiv_on_def, SUBSET_DEF *)
 val equiv_on_subset = store_thm(
@@ -3228,6 +3441,13 @@ val partition_on_empty = store_thm(
 val it = |- !R s. partition R s = {t | ?x. x IN s /\ (t = equiv_class R s x)}: thm
 *)
 
+(* Theorem: t IN partition R s <=> ?x. x IN s /\ (t = equiv_class R s x) *)
+(* Proof: by partition_def *)
+val partition_element = store_thm(
+  "partition_element",
+  ``!R s t. t IN partition R s <=> ?x. x IN s /\ (t = equiv_class R s x)``,
+  rw[partition_def]);
+
 (* Theorem: partition R s = IMAGE (equiv_class R s) s *)
 (* Proof:
      partition R s
@@ -3240,6 +3460,11 @@ val partition_elements = store_thm(
   ``!R s. partition R s = IMAGE (equiv_class R s) s``,
   rw[partition_def, EXTENSION] >>
   metis_tac[]);
+
+(* Theorem alias *)
+val partition_as_image = save_thm("partition_as_image", partition_elements);
+(* val partition_as_image =
+   |- !R s. partition R s = IMAGE (\x. equiv_class R s x) s: thm *)
 
 (* Theorem: (R1 = R2) /\ (s1 = s2) ==> (partition R1 s1 = partition R2 s2) *)
 (* Proof: by identity *)
@@ -3306,6 +3531,13 @@ val it = |- R equiv_on s ==> PAIR_DISJOINT (partition R s): thm
 (* Overload an additive set function *)
 val _ = overload_on("SET_ADDITIVE",
    ``\f. (f {} = 0) /\ (!s t. FINITE s /\ FINITE t ==> (f (s UNION t) + f (s INTER t) = f s + f t))``);
+
+(* Theorem: t SUBSET s /\ PAIR_DISJOINT s ==> PAIR_DISJOINT t *)
+(* Proof: by SUBSET_DEF *)
+val pair_disjoint_subset = store_thm(
+  "pair_disjoint_subset",
+  ``!s t. t SUBSET s /\ PAIR_DISJOINT s ==> PAIR_DISJOINT t``,
+  rw[SUBSET_DEF]);
 
 (* Theorem: FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==>
             !f. SET_ADDITIVE f ==> (f (BIGUNION P) = SIGMA f P) *)

@@ -13,7 +13,6 @@ val _ = new_theory "Gauss";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -79,6 +78,7 @@ open dividesTheory gcdTheory;
 
    GCD Equivalence Class:
    gcd_matches_def       |- !n d. gcd_matches n d = {j | j IN natural n /\ (gcd j n = d)}
+!  gcd_matches_alt       |- !n d. gcd_matches n d = natural n INTER {j | gcd j n = d}
    gcd_matches_element   |- !n d j. j IN gcd_matches n d <=> 0 < j /\ j <= n /\ (gcd j n = d)
    gcd_matches_subset    |- !n d. gcd_matches n d SUBSET natural n
    gcd_matches_finite    |- !n d. FINITE (gcd_matches n d)
@@ -111,6 +111,10 @@ open dividesTheory gcdTheory;
    divisors_has_one        |- !n. 0 < n ==> 1 IN divisors n
    divisors_has_last       |- !n. n IN divisors n
    divisors_not_empty      |- !n. divisors n <> {}
+!  divisors_eqn            |- !n. divisors n =
+                                  if n = 0 then {0}
+                                  else IMAGE (\j. if j + 1 divides n then j + 1 else 1) (count n)
+   divisors_cofactor       |- !n d. 0 < n /\ d IN divisors n ==> n DIV d IN divisors n
    divisors_delete_last    |- !n. 0 < n ==> (divisors n DELETE n = {m | m < n /\ m divides n})
    divisors_nonzero        |- !n. 0 < n ==> !d. d IN divisors n ==> 0 < d
    divisors_has_cofactor   |- !n. 0 < n ==> !d. d IN divisors n ==> n DIV d IN divisors n
@@ -485,10 +489,14 @@ val coprimes_prime = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of coprimes by a divisor of n *)
-val coprimes_by_def = zDefine `
+val coprimes_by_def = Define `
     coprimes_by n d = if (0 < n /\ d divides n) then coprimes (n DIV d) else {}
 `;
-(* use zDefine as this is not computationally effective. *)
+
+(*
+EVAL ``coprimes_by 10 2``; = {4; 3; 2; 1}
+EVAL ``coprimes_by 10 5``; = {1}
+*)
 
 (* Theorem: j IN (coprimes_by n d) <=> (0 < n /\ d divides n /\ j IN coprimes (n DIV d)) *)
 (* Proof: by coprimes_by_def, MEMBER_NOT_EMPTY *)
@@ -593,6 +601,18 @@ val gcd_matches_def = zDefine `
     gcd_matches n d = {j| j IN (natural n) /\ (gcd j n = d)}
 `;
 (* use zDefine as this is not computationally effective. *)
+
+(* Theorem: j IN gcd_matches n d <=> 0 < j /\ j <= n /\ (gcd j n = d) *)
+(* Proof: by gcd_matches_def *)
+val gcd_matches_alt = store_thm(
+  "gcd_matches_alt[compute]",
+  ``!n d. gcd_matches n d = (natural n) INTER {j | gcd j n = d}``,
+  simp[gcd_matches_def, EXTENSION]);
+
+(*
+EVAL ``gcd_matches 10 2``; = {8; 6; 4; 2}
+EVAL ``gcd_matches 10 5``; = {5}
+*)
 
 (* Theorem: j IN gcd_matches n d <=> 0 < j /\ j <= n /\ (gcd j n = d) *)
 (* Proof: by gcd_matches_def *)
@@ -951,6 +971,68 @@ val divisors_not_empty = store_thm(
   "divisors_not_empty",
   ``!n. divisors n <> {}``,
   metis_tac[divisors_has_last, MEMBER_NOT_EMPTY]);
+
+(* Idea: a method to evaluate divisors. *)
+
+(* Theorem: divisors n =
+            if n = 0 then {0}
+            else IMAGE (\j. if (j + 1) divides n then j + 1 else 1) (count n) *)
+(* Proof:
+   If n = 0,
+        divisors 0
+      = {d | d <= 0 /\ d divides 0}    by divisors_def
+      = {0}                            by d <= 0, and ALL_DIVIDES_0
+   If n <> 0,
+        divisors n
+      = {d | d <= n /\ d divides n}    by divisors_def
+      = {d | d <> 0 /\ d <= n /\ d divides n}
+                                       by ZERO_DIVIDES
+      = {k + 1 | (k + 1) <= n /\ (k + 1) divides n}
+                                       by num_CASES, d <> 0
+      = {k + 1 | k < n /\ (k + 1) divides n}
+                                       by arithmetic
+      = IMAGE (\j. if (j + 1) divides n then j + 1 else 1) {k | k < n}
+                                       by IMAGE_DEF
+      = IMAGE (\j. if (j + 1) divides n then j + 1 else 1) (count n)
+                                       by count_def
+*)
+val divisors_eqn = store_thm(
+  "divisors_eqn[compute]",
+  ``!n. divisors n =
+       if n = 0 then {0}
+       else IMAGE (\j. if (j + 1) divides n then j + 1 else 1) (count n)``,
+  (rw[divisors_def, EXTENSION, EQ_IMP_THM] >> rw[]) >>
+  `x <> 0` by metis_tac[ZERO_DIVIDES] >>
+  `?k. x = SUC k` by metis_tac[num_CASES] >>
+  qexists_tac `k` >>
+  fs[ADD1]);
+
+(*
+> EVAL ``divisors 3``; = {3; 1}: thm
+> EVAL ``divisors 4``; = {4; 2; 1}: thm
+> EVAL ``divisors 5``; = {5; 1}: thm
+> EVAL ``divisors 6``; = {6; 3; 2; 1}: thm
+> EVAL ``divisors 7``; = {7; 1}: thm
+> EVAL ``divisors 8``; = {8; 4; 2; 1}: thm
+> EVAL ``divisors 9``; = {9; 3; 1}: thm
+*)
+
+(* Idea: when factor divides, its cofactor also divides. *)
+
+(* Theorem: 0 < n /\ d IN divisors n ==> (n DIV d) IN divisors n *)
+(* Proof:
+   Note d <= n /\ d divides n       by divisors_def
+     so 0 < d                       by ZERO_DIVIDES
+    and n DIV d <= n                by DIV_LESS_EQ, 0 < d
+    and n DIV d divides n           by DIVIDES_COFACTOR, 0 < d
+*)
+val divisors_cofactor = store_thm(
+  "divisors_cofactor",
+  ``!n d. 0 < n /\ d IN divisors n ==> (n DIV d) IN divisors n``,
+  simp [divisors_def] >>
+  ntac 3 strip_tac >>
+  `0 < d` by metis_tac[ZERO_DIVIDES, NOT_ZERO] >>
+  rw[DIV_LESS_EQ, DIVIDES_COFACTOR]);
 
 (* Theorem: 0 < n ==> ((divisors n) DELETE n = {m | m < n /\ m divides n}) *)
 (* Proof:
@@ -1917,25 +1999,23 @@ val sum_over_natural_by_preimage_divisors = store_thm(
    or f x + SIGMA f t = g x + SIGMA g t   by SUM_IMAGE_INSERT
    or             f x = g x               by SIGMA f t = SIGMA g t
 *)
-Theorem sum_image_divisors_cong:
-  !f g. f 1 = g 1 /\ (!n. SIGMA f (divisors n) = SIGMA g (divisors n)) ==>
-        f = g
-Proof
+val sum_image_divisors_cong = store_thm(
+  "sum_image_divisors_cong",
+  ``!f g. (f 1 = g 1) /\ (!n. SIGMA f (divisors n) = SIGMA g (divisors n)) ==> (f = g)``,
   rw[FUN_EQ_THM] >>
   completeInduct_on `x` >>
   qabbrev_tac `s = divisors x` >>
   qabbrev_tac `t = s DELETE x` >>
   `x IN s` by rw[divisors_has_last, Abbr`s`] >>
   `(s = x INSERT t) /\ x NOTIN t` by rw[Abbr`t`] >>
-  `SIGMA f t = SIGMA g t`
-    by (irule SUM_IMAGE_CONG >> simp[] >>
-        rw[divisors_element, Abbr`t`, Abbr`s`]) >>
+  `SIGMA f t = SIGMA g t` by
+  ((irule SUM_IMAGE_CONG >> simp[]) >>
+  rw[divisors_element, Abbr`t`, Abbr`s`]) >>
   `FINITE t` by rw[divisors_finite, Abbr`t`, Abbr`s`] >>
-  `SIGMA f s = f x + SIGMA f t` by simp[SUM_IMAGE_INSERT] >>
-  `SIGMA g s = g x + SIGMA g t` by simp[SUM_IMAGE_INSERT] >>
+  `SIGMA f s = f x + SIGMA f t` by rw[SUM_IMAGE_INSERT] >>
+  `SIGMA g s = g x + SIGMA g t` by rw[SUM_IMAGE_INSERT] >>
   `SIGMA f s = SIGMA g s` by metis_tac[] >>
-  decide_tac
-QED
+  decide_tac);
 (* But this is not very useful! *)
 
 (* ------------------------------------------------------------------------- *)

@@ -13,7 +13,6 @@ val _ = new_theory "helperList";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -37,6 +36,7 @@ open rich_listTheory; (* for EVERY_REVERSE *)
 (* HelperList Documentation                                                  *)
 (* ------------------------------------------------------------------------- *)
 (* Overloading:
+   m downto n        = REVERSE [m .. n]
    turn_exp l n      = FUNPOW turn n l
    POSITIVE l        = !x. MEM x l ==> 0 < x
    EVERY_POSITIVE l  = EVERY (\k. 0 < k) l
@@ -72,14 +72,18 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    FRONT_EL         |- !l n. l <> [] /\ n < LENGTH (FRONT l) ==> (EL n (FRONT l) = EL n l)
    FRONT_EQ_NIL     |- !l. LENGTH l = 1 ==> FRONT l = []
    FRONT_NON_NIL    |- !l. 1 < LENGTH l ==> FRONT l <> []
-   REVERSE_SING     |- !x. REVERSE [x] = [x]
-
    HEAD_MEM         |- !ls. ls <> [] ==> MEM (HD ls) ls
    LAST_MEM         |- !ls. ls <> [] ==> MEM (LAST ls) ls
    DROP_1           |- !h t. DROP 1 (h::t) = t
    FRONT_SING       |- !x. FRONT [x] = []
    TAIL_BY_DROP     |- !ls. ls <> [] ==> TL ls = DROP 1 ls
    FRONT_BY_TAKE    |- !ls. ls <> [] ==> FRONT ls = TAKE (LENGTH ls - 1) ls
+
+   List Reversal:
+   REVERSE_SING      |- !x. REVERSE [x] = [x]
+   REVERSE_HD        |- !ls. ls <> [] ==> (HD (REVERSE ls) = LAST ls)
+   REVERSE_TL        |- !ls. ls <> [] ==> (TL (REVERSE ls) = REVERSE (FRONT ls))
+
 
    Extra List Theorems:
    EVERY_ELEMENT_PROPERTY  |- !p R. EVERY (\c. c IN R) p ==> !k. k < LENGTH p ==> EL k p IN R
@@ -109,6 +113,7 @@ open rich_listTheory; (* for EVERY_REVERSE *)
 
    DROP and TAKE:
    DROP_LENGTH_NIL       |- !l. DROP (LENGTH l) l = []
+   DROP_NON_NIL          |- !n l. n < LENGTH l ==> DROP n l <> []
    HD_DROP               |- !ls n. n < LENGTH ls ==> HD (DROP n ls) = EL n ls
    TAKE_1_APPEND         |- !x y. x <> [] ==> (TAKE 1 (x ++ y) = TAKE 1 x)
    DROP_1_APPEND         |- !x y. x <> [] ==> (DROP 1 (x ++ y) = DROP 1 x ++ y)
@@ -142,6 +147,8 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    turn_length      |- !l. LENGTH (turn l) = LENGTH l
    turn_eq_nil      |- !p. (turn p = []) <=> (p = [])
    head_turn        |- !ls. ls <> [] ==> HD (turn ls) = LAST ls
+   tail_turn        |- !ls. ls <> [] ==> (TL (turn ls) = FRONT ls)
+   turn_snoc        |- !ls x. turn (SNOC x ls) = x::ls
    turn_exp_0       |- !l. turn_exp l 0 = l
    turn_exp_1       |- !l. turn_exp l 1 = turn l
    turn_exp_2       |- !l. turn_exp l 2 = turn (turn l)
@@ -293,6 +300,8 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    listRangeINC_EVERY_EXISTS |- !P m n. EVERY P [m .. n] <=> ~EXISTS ($~ o P) [m .. n]
    listRangeINC_EXISTS_EVERY |- !P m n. EXISTS P [m .. n] <=> ~EVERY ($~ o P) [m .. n]
    listRangeINC_SNOC         |- !m n. m <= n + 1 ==> ([m .. n + 1] = SNOC (n + 1) [m .. n])
+   listRangeINC_FRONT        |- !m n. m <= n + 1 ==> (FRONT [m .. n + 1] = [m .. n])
+   listRangeINC_LAST         |- !m n. m <= n ==> (LAST [m .. n] = n)
    listRangeINC_REVERSE      |- !m n. REVERSE [m .. n] = MAP (\x. n - x + m) [m .. n]
    listRangeINC_REVERSE_MAP  |- !f m n. REVERSE (MAP f [m .. n]) = MAP (f o (\x. n - x + m)) [m .. n]
    listRangeINC_MAP_SUC      |- !f m n. MAP f [m + 1 .. n + 1] = MAP (f o SUC) [m .. n]
@@ -312,6 +321,8 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    listRangeLHI_EL           |- !m n i. m + i < n ==> EL i [m ..< n] = m + i
    listRangeLHI_EVERY        |- !P m n. EVERY P [m ..< n] <=> !x. m <= x /\ x < n ==> P x
    listRangeLHI_SNOC         |- !m n. m <= n ==> [m ..< n + 1] = SNOC n [m ..< n]
+   listRangeLHI_FRONT        |- !m n. m <= n ==> (FRONT [m ..< n + 1] = [m ..< n])
+   listRangeLHI_LAST         |- !m n. m <= n ==> (LAST [m ..< n + 1] = n)
    listRangeLHI_REVERSE      |- !m n. REVERSE [m ..< n] = MAP (\x. n - 1 - x + m) [m ..< n]
    listRangeLHI_REVERSE_MAP  |- !f m n. REVERSE (MAP f [m ..< n]) = MAP (f o (\x. n - 1 - x + m)) [m ..< n]
    listRangeLHI_MAP_SUC      |- !f m n. MAP f [m + 1 ..< n + 1] = MAP (f o SUC) [m ..< n]
@@ -656,17 +667,6 @@ val FRONT_NON_NIL = store_thm(
   `FRONT l = h::FRONT (k::t)` by fs[FRONT_CONS] >>
   fs[]);
 
-(* Theorem: REVERSE [x] = [x] *)
-(* Proof:
-      REVERSE [x]
-    = [] ++ [x]       by REVERSE_DEF
-    = [x]             by APPEND
-*)
-val REVERSE_SING = store_thm(
-  "REVERSE_SING",
-  ``!x. REVERSE [x] = [x]``,
-  rw[]);
-
 (* Theorem: ls <> [] ==> MEM (HD ls) ls *)
 (* Proof:
    Note ls = h::t      by list_CASES
@@ -760,6 +760,49 @@ val FRONT_BY_TAKE = store_thm(
   rw[] >>
   `LENGTH ls <> 0` by rw[] >>
   rw[FRONT_DEF]);
+
+(* ------------------------------------------------------------------------- *)
+(* List Reversal.                                                            *)
+(* ------------------------------------------------------------------------- *)
+
+(* Overload for REVERSE [m .. n] *)
+val _ = overload_on ("downto", ``\n m. REVERSE [m .. n]``);
+val _ = set_fixity "downto" (Infix(NONASSOC, 450)); (* same as relation *)
+
+(* Theorem: REVERSE [x] = [x] *)
+(* Proof:
+      REVERSE [x]
+    = [] ++ [x]       by REVERSE_DEF
+    = [x]             by APPEND
+*)
+val REVERSE_SING = store_thm(
+  "REVERSE_SING",
+  ``!x. REVERSE [x] = [x]``,
+  rw[]);
+
+(* Theorem: ls <> [] ==> (HD (REVERSE ls) = LAST ls) *)
+(* Proof:
+      HD (REVERSE ls)
+    = HD (REVERSE (SNOC (LAST ls) (FRONT ls)))   by SNOC_LAST_FRONT
+    = HD (LAST ls :: (REVERSE (FRONT ls))        by REVERSE_SNOC
+    = LAST ls                                    by HD
+*)
+val REVERSE_HD = store_thm(
+  "REVERSE_HD",
+  ``!ls. ls <> [] ==> (HD (REVERSE ls) = LAST ls)``,
+  metis_tac[SNOC_LAST_FRONT, REVERSE_SNOC, HD]);
+
+(* Theorem: ls <> [] ==> (TL (REVERSE ls) = REVERSE (FRONT ls)) *)
+(* Proof:
+      TL (REVERSE ls)
+    = TL (REVERSE (SNOC (LAST ls) (FRONT ls)))   by SNOC_LAST_FRONT
+    = TL (LAST ls :: (REVERSE (FRONT ls))        by REVERSE_SNOC
+    = REVERSE (FRONT ls)                         by TL
+*)
+val REVERSE_TL = store_thm(
+  "REVERSE_TL",
+  ``!ls. ls <> [] ==> (TL (REVERSE ls) = REVERSE (FRONT ls))``,
+  metis_tac[SNOC_LAST_FRONT, REVERSE_SNOC, TL]);
 
 (* ------------------------------------------------------------------------- *)
 (* Extra List Theorems                                                       *)
@@ -1143,6 +1186,15 @@ val DROP_LENGTH_NIL = store_thm(
         DROP n (h::l) = DROP (n-1) l by DROP_def
                       <> []          by induction hypothesis, n-1 < LENGTH l
 *)
+(* Proof:
+   Note !ls n. (DROP n ls = []) <=> n >= LENGTH ls    by DROP_nil
+     so n < LENGTH ls ==> DROP n ls <> []             by NOT_LESS_EQUAL
+*)
+val DROP_NON_NIL = store_thm(
+  "DROP_NON_NIL",
+  ``!n l. n < LENGTH l ==> DROP n l <> []``,
+  (Induct_on `l` >> rw[DROP_def]));
+
 (* Theorem: n < LENGTH ls ==> (HD (DROP n ls) = EL n ls) *)
 (* Proof:
      HD (DROP n ls)
@@ -1544,7 +1596,7 @@ val rotate_full = store_thm(
 (* Theorem: n < LENGTH l ==> rotate (SUC n) l = rotate 1 (rotate n l) *)
 (* Proof:
    Since n < LENGTH l, l <> [] by LENGTH_NIL.
-   Thus  DROP n l <> []  by DROP_EQ_NIL  (need n < LENGTH l)
+   Thus  DROP n l <> []  by DROP_NON_NIL  (need n < LENGTH l)
    Expand by rotate_def, this is to show:
    DROP (SUC n) l ++ TAKE (SUC n) l = DROP 1 (DROP n l ++ TAKE n l) ++ TAKE 1 (DROP n l ++ TAKE n l)
    LHS = DROP (SUC n) l ++ TAKE (SUC n) l
@@ -1560,7 +1612,7 @@ val rotate_suc = store_thm(
   rpt strip_tac >>
   `LENGTH l <> 0` by decide_tac >>
   `l <> []` by metis_tac[LENGTH_NIL] >>
-  `DROP n l <> []` by simp[DROP_EQ_NIL] >>
+  `DROP n l <> []` by metis_tac[DROP_NON_NIL] >>
   rw[rotate_def, DROP_1_APPEND, TAKE_1_APPEND, DROP_SUC, TAKE_SUC]);
 
 (* Theorem: Rotate keeps LENGTH (of necklace): LENGTH (rotate n l) = LENGTH l *)
@@ -1722,6 +1774,30 @@ val head_turn = store_thm(
   "head_turn",
   ``!ls. ls <> [] ==> (HD (turn ls) = LAST ls)``,
   rw[turn_def]);
+
+(* Theorem: ls <> [] ==> (TL (turn ls) = FRONT ls) *)
+(* Proof:
+     TL (turn ls)
+   = TL (LAST ls :: FRONT ls)    by turn_def, ls <> []
+   = FRONT ls                    by TL
+*)
+val tail_turn = store_thm(
+  "tail_turn",
+  ``!ls. ls <> [] ==> (TL (turn ls) = FRONT ls)``,
+  rw[turn_def]);
+
+(* Theorem: turn (SNOC x ls) = x :: ls *)
+(* Proof:
+   Note (SNOC x ls) <> []                     by NOT_SNOC_NIL
+     turn (SNOC x ls)
+   = LAST (SNOC x ls) :: FRONT (SNOC x ls)    by turn_def
+   = x :: FRONT (SNOC x ls)                   by LAST_SNOC
+   = x :: ls                                  by FRONT_SNOC
+*)
+val turn_snoc = store_thm(
+  "turn_snoc",
+  ``!ls x. turn (SNOC x ls) = x :: ls``,
+  metis_tac[NOT_SNOC_NIL, turn_def, LAST_SNOC, FRONT_SNOC]);
 
 (* Overload repeated turns *)
 val _ = overload_on("turn_exp", ``\l n. FUNPOW turn n l``);
@@ -2014,9 +2090,8 @@ val GENLIST_1 = store_thm(
   rw[]);
 
 (* Theorem alias *)
-Theorem GENLIST_EQ =
-   listTheory.GENLIST_CONG |> GEN ``n:num`` |> GEN ``f2:num -> 'a``
-                           |> GEN ``f1:num -> 'a``;
+val GENLIST_EQ = save_thm("GENLIST_EQ",
+   GENLIST_CONG |> GEN ``n:num`` |> GEN ``f2:num -> 'a`` |> GEN ``f1:num -> 'a``);
 (*
 val GENLIST_EQ = |- !f1 f2 n. (!m. m < n ==> f1 m = f2 m) ==> GENLIST f1 n = GENLIST f2 n: thm
 *)
@@ -3919,6 +3994,48 @@ val listRangeINC_SNOC = store_thm(
   `(n + 2 - m = 1 + (n + 1 - m)) /\ (n + 1 - m + m = n + 1)` by decide_tac >>
   rw_tac std_ss[GENLIST_APPEND, GENLIST_1]);
 
+(* Theorem: m <= n + 1 ==> (FRONT [m .. (n + 1)] = [m .. n]) *)
+(* Proof:
+     FRONT [m .. (n + 1)]
+   = FRONT (SNOC (n + 1) [m .. n]))    by listRangeINC_SNOC
+   = [m .. n]                          by FRONT_SNOC
+*)
+val listRangeINC_FRONT = store_thm(
+  "listRangeINC_FRONT",
+  ``!m n. m <= n + 1 ==> (FRONT [m .. (n + 1)] = [m .. n])``,
+  simp[listRangeINC_SNOC, FRONT_SNOC]);
+
+(* Theorem: m <= n ==> (LAST [m .. n] = n) *)
+(* Proof:
+   Let ls = [m .. n]
+   Note ls <> []                   by listRangeINC_NIL
+     so LAST ls
+      = EL (PRE (LENGTH ls)) ls    by LAST_EL
+      = EL (PRE (n + 1 - m)) ls    by listRangeINC_LEN
+      = EL (n - m) ls              by arithmetic
+      = n                          by listRangeINC_EL
+   Or
+      LAST [m .. n]
+    = LAST (GENLIST (\i. m + i) (n + 1 - m))    by listRangeINC_def
+    = LAST (GENLIST (\i. m + i) (SUC (n - m))   by arithmetic, m <= n
+    = (\i. m + i) (n - m)                       by GENLIST_LAST
+    = m + (n - m)                               by function application
+    = n                                         by m <= n
+   Or
+    If n = 0, then m <= 0 means m = 0.
+      LAST [0 .. 0] = LAST [0] = 0 = n    by LAST_DEF
+    Otherwise n = SUC k.
+      LAST [m .. n]
+    = LAST (SNOC n [m .. k])              by listRangeINC_SNOC, ADD1
+    = n                                   by LAST_SNOC
+*)
+val listRangeINC_LAST = store_thm(
+  "listRangeINC_LAST",
+  ``!m n. m <= n ==> (LAST [m .. n] = n)``,
+  rw[listRangeINC_def] >>
+  `n + 1 - m = SUC (n - m)` by decide_tac >>
+  rw[GENLIST_LAST]);
+
 (* Theorem: REVERSE [m .. n] = MAP (\x. n - x + m) [m .. n] *)
 (* Proof:
      REVERSE [m .. n]
@@ -4221,6 +4338,28 @@ val listRangeLHI_SNOC = store_thm(
     `_ = SNOC n [m ..< n]` by rw[GSYM listRangeLHI_to_listRangeINC] >>
     rw[]
   ]);
+
+(* Theorem: m <= n ==> (FRONT [m .. < n + 1] = [m .. <n]) *)
+(* Proof:
+     FRONT [m ..< n + 1]
+   = FRONT (SNOC n [m ..< n]))    by listRangeLHI_SNOC
+   = [m ..< n]                    by FRONT_SNOC
+*)
+val listRangeLHI_FRONT = store_thm(
+  "listRangeLHI_FRONT",
+  ``!m n. m <= n ==> (FRONT [m ..< n + 1] = [m ..< n])``,
+  simp[listRangeLHI_SNOC, FRONT_SNOC]);
+
+(* Theorem: m <= n ==> (LAST [m ..< n + 1] = n) *)
+(* Proof:
+      LAST [m ..< n + 1]
+    = LAST (SNOC n [m ..< n])      by listRangeLHI_SNOC
+    = n                            by LAST_SNOC
+*)
+val listRangeLHI_LAST = store_thm(
+  "listRangeLHI_LAST",
+  ``!m n. m <= n ==> (LAST [m ..< n + 1] = n)``,
+  simp[listRangeLHI_SNOC, LAST_SNOC]);
 
 (* Theorem: REVERSE [m ..< n] = MAP (\x. n - 1 - x + m) [m ..< n] *)
 (* Proof:
@@ -6541,16 +6680,15 @@ val DILATE_0_LENGTH_UPPER = store_thm(
            = EL (k - m) (DILATE e 0 n l)             by EL_APPEND, n <= k
            = e                                       by induction hypothesis, (k - m) MOD n <> 0
 *)
-Theorem DILATE_0_EL:
-  !l e n k.
-     k < LENGTH (DILATE e 0 n l) ==>
-     EL k (DILATE e 0 n l) = if k MOD (SUC n) = 0 then EL (k DIV (SUC n)) l
-                             else e
-Proof
+val DILATE_0_EL = store_thm(
+  "DILATE_0_EL",
+  ``!l e n k. k < LENGTH (DILATE e 0 n l) ==>
+     (EL k (DILATE e 0 n l) = if k MOD (SUC n) = 0 then EL (k DIV (SUC n)) l else e)``,
   ntac 3 strip_tac >>
   `0 < SUC n` by decide_tac >>
   qabbrev_tac `m = SUC n` >>
-  Induct_on `l` >- rw[] >>
+  Induct_on `l` >-
+  rw[] >>
   rpt strip_tac >>
   `LENGTH (DILATE e 0 n [h]) = 1` by rw[DILATE_SING] >>
   `LENGTH (DILATE e 0 n (h::l)) = SUC (m * LENGTH l)` by rw[DILATE_0_LENGTH, Abbr`m`] >>
@@ -6575,25 +6713,21 @@ Proof
         rw[]
       ],
       `m <= k` by decide_tac >>
-      `EL k (t ++ DILATE e 0 n l) = EL (k - m) (DILATE e 0 n l)`
-        by simp[EL_APPEND] >>
-      `k - m < LENGTH (DILATE e 0 n l)`
-        by (trace ("BasicProvers.var_eq_old", 1)(rw[DILATE_0_LENGTH])) >>
-      `(k - m) MOD m = k MOD m` by simp[SUB_MOD] >>
-      `(k - m) DIV m = k DIV m - 1` by simp[SUB_DIV] >>
+      `EL k (t ++ DILATE e 0 n l) = EL (k - m) (DILATE e 0 n l)` by rw[EL_APPEND] >>
+      `k - m < LENGTH (DILATE e 0 n l)` by rw[DILATE_0_LENGTH] >>
+      `(k - m) MOD m = k MOD m` by rw[SUB_MOD] >>
+      `(k - m) DIV m = k DIV m - 1` by rw[SUB_DIV] >>
       Cases_on `k MOD m = 0` >| [
         `0 < k DIV m` by rw[DIVIDES_MOD_0, DIV_POS] >>
         `EL (k - m) (DILATE e 0 n l) = EL (k DIV m - 1) l` by rw[] >>
         `_ = EL (PRE (k DIV m)) l` by rw[PRE_SUB1] >>
         `_ = EL (k DIV m) (h::l)` by rw[EL_CONS] >>
         rw[],
-        `EL (k - m) (DILATE e 0 n l)  = e`
-          by trace ("BasicProvers.var_eq_old", 1)(rw[]) >>
+        `EL (k - m) (DILATE e 0 n l)  = e` by rw[] >>
         rw[]
       ]
     ]
-  ]
-QED
+  ]);
 
 (* This is a milestone theorem. *)
 
@@ -6671,8 +6805,7 @@ val DILATE_0_LAST = store_thm(
   `k = m * PRE (LENGTH l)` by rw[DILATE_0_LENGTH, Abbr`k`, Abbr`m`] >>
   `k MOD m = 0` by metis_tac[MOD_EQ_0, MULT_COMM] >>
   `k DIV m = PRE (LENGTH l)` by metis_tac[MULT_DIV, MULT_COMM] >>
-  `k < LENGTH (DILATE e 0 n l)` by simp[Abbr`k`] >>
-  Q.RM_ABBREV_TAC ‘k’ >>
+  `k < LENGTH (DILATE e 0 n l)` by rw[Abbr`k`] >>
   rw[DILATE_0_EL]);
 
 (* ------------------------------------------------------------------------- *)

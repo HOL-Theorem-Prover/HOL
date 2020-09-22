@@ -13,7 +13,6 @@ val _ = new_theory "helperNum";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -68,6 +67,8 @@ open gcdTheory; (* for P_EUCLIDES *)
    SQ_EQ_1           |- !n. (SQ n = 1) <=> (n = 1)
    MULT3_EQ_0        |- !x y z. (x * y * z = 0) <=> ((x = 0) \/ (y = 0) \/ (z = 0))
    MULT3_EQ_1        |- !x y z. (x * y * z = 1) <=> ((x = 1) /\ (y = 1) /\ (z = 1))
+   SQ_0              |- 0 ** 2 = 0
+   EXP_2_EQ_0        |- !n. (n ** 2 = 0) <=> (n = 0)
 
    Maximum and minimum:
    MAX_ALT           |- !m n. MAX m n = if m <= n then n else m
@@ -128,6 +129,9 @@ open gcdTheory; (* for P_EUCLIDES *)
    EVEN_0            |- EVEN 0
    ODD_1             |- ODD 1
    EVEN_2            |- EVEN 2
+   EVEN_SQ           |- !n. EVEN (n ** 2) <=> EVEN n
+   ODD_SQ            |- !n. ODD (n ** 2) <=> ODD n
+   EQ_PARITY         |- !a b. EVEN (2 * a + b) <=> EVEN b
    ODD_MOD2          |- !x. ODD x <=> (x MOD 2 = 1)
    EVEN_ODD_SUC      |- !n. (EVEN n <=> ODD (SUC n)) /\ (ODD n <=> EVEN (SUC n))
    EVEN_ODD_PRE      |- !n. 0 < n ==> (EVEN n <=> ODD (PRE n)) /\ (ODD n <=> EVEN (PRE n))
@@ -210,6 +214,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    DIVIDES_MOD_0     |- !n. 0 < n ==> !m. n divides m <=> (m MOD n = 0)
    EVEN_ALT          |- !n. EVEN n <=> 2 divides n
    ODD_ALT           |- !n. ODD n <=> ~(2 divides n)
+   NOT_PRIME_4       |- ~prime 4
 
    DIV_MULT_LE       |- !n. 0 < n ==> !q. q DIV n * n <= q
    DIV_MULT_EQ       |- !n. 0 < n ==> !q. n divides q <=> (q DIV n * n = q)
@@ -255,6 +260,9 @@ open gcdTheory; (* for P_EUCLIDES *)
    power_divides_iff        |- !p. 1 < p ==> !m n. p ** m divides p ** n <=> m <= n
    prime_power_divides_iff  |- !p. prime p ==> !m n. p ** m divides p ** n <=> m <= n
    divides_self_power       |- !n p. 0 < n /\ 1 < p ==> p divides p ** n
+   divides_eq_thm      |- !a b. a divides b /\ 0 < b /\ b < 2 * a ==> (b = a)
+   euclid_prime        |- !p a b. prime p /\ p divides a * b ==> p divides a \/ p divides b
+   euclid_coprime      |- !a b c. (gcd a b = 1) /\ b divides a * c ==> b divides c
 
    Modulo Theorems:
    MOD_EQN             |- !n. 0 < n ==> !a b. (a MOD n = b) <=> ?c. (a = c * n + b) /\ b < n
@@ -289,6 +297,13 @@ open gcdTheory; (* for P_EUCLIDES *)
                              ?m. (p ** m) divides n /\ ~(p divides (n DIV p ** m))
 
    Useful Theorems:
+   binomial_add         |- !a b. (a + b) ** 2 = a ** 2 + b ** 2 + 2 * a * b
+   binomial_sub         |- !a b. b <= a ==> ((a - b) ** 2 = a ** 2 + b ** 2 - 2 * a * b)
+   binomial_means       |- !a b. 2 * a * b <= a ** 2 + b ** 2
+   binomial_sub_add     |- !a b. b <= a ==> ((a - b) ** 2 + 4 * a * b = (a + b) ** 2)
+   difference_of_squares|- !a b. a ** 2 - b ** 2 = (a - b) * (a + b)
+   difference_of_squares_alt
+                        |- !a b. a * a - b * b = (a - b) * (a + b)
    binomial_2           |- !m n. (m + n) ** 2 = m ** 2 + n ** 2 + TWICE m * n
    SUC_SQ               |- !n. SUC n ** 2 = SUC (n ** 2) + TWICE n
    SQ_LE                |- !m n. m <= n ==> SQ m <= SQ n
@@ -548,6 +563,20 @@ val MULT3_EQ_1 = store_thm(
   "MULT3_EQ_1",
   ``!x y z. (x * y * z = 1) <=> ((x = 1) /\ (y = 1) /\ (z = 1))``,
   metis_tac[MULT_EQ_1]);
+
+(* Theorem: 0 ** 2 = 0 *)
+(* Proof: by ZERO_EXP *)
+val SQ_0 = store_thm(
+  "SQ_0",
+  ``0 ** 2 = 0``,
+  simp[]);
+
+(* Theorem: (n ** 2 = 0) <=> (n = 0) *)
+(* Proof: by EXP_2, MULT_EQ_0 *)
+val EXP_2_EQ_0 = store_thm(
+  "EXP_2_EQ_0",
+  ``!n. (n ** 2 = 0) <=> (n = 0)``,
+  simp[]);
 
 (* ------------------------------------------------------------------------- *)
 (* Maximum and minimum                                                       *)
@@ -1119,6 +1148,33 @@ val EVEN_2 = store_thm(
   "EVEN_2",
   ``EVEN 2``,
   EVAL_TAC);
+
+(*
+EVEN_ADD  |- !m n. EVEN (m + n) <=> (EVEN m <=> EVEN n)
+ODD_ADD   |- !m n. ODD (m + n) <=> (ODD m <=/=> ODD n)
+EVEN_MULT |- !m n. EVEN (m * n) <=> EVEN m \/ EVEN n
+ODD_MULT  |- !m n. ODD (m * n) <=> ODD m /\ ODD n
+*)
+
+(* Derive theorems. *)
+val EVEN_SQ = save_thm("EVEN_SQ",
+    EVEN_MULT |> SPEC ``n:num`` |> SPEC ``n:num`` |> SIMP_RULE arith_ss[] |> GEN_ALL);
+(* val EVEN_SQ = |- !n. EVEN (n ** 2) <=> EVEN n: thm *)
+val ODD_SQ = save_thm("ODD_SQ",
+    ODD_MULT |> SPEC ``n:num`` |> SPEC ``n:num`` |> SIMP_RULE arith_ss[] |> GEN_ALL);
+(* val ODD_SQ = |- !n. ODD (n ** 2) <=> ODD n: thm *)
+
+(* Theorem: EVEN (2 * a + b) <=> EVEN b *)
+(* Proof:
+       EVEN (2 * a + b)
+   <=> EVEN (2 * a) /\ EVEN b      by EVEN_ADD
+   <=>            T /\ EVEN b      by EVEN_DOUBLE
+   <=> EVEN b
+*)
+val EQ_PARITY = store_thm(
+  "EQ_PARITY",
+  ``!a b. EVEN (2 * a + b) <=> EVEN b``,
+  rw[EVEN_ADD, EVEN_DOUBLE]);
 
 (* Theorem: ODD x <=> (x MOD 2 = 1) *)
 (* Proof:
@@ -1810,15 +1866,15 @@ val EXP_MOD_EQN = store_thm(
 
 (* Pretty version of EXP_MOD_EQN, same pattern as EXP_EQN_ALT. *)
 
-(* Theorem: 1 < m ==> b ** n MOD m =
+(* Theorem: 1 < m ==> (b ** n MOD m =
            if n = 0 then 1 else
-           ((if EVEN n then 1 else b) * ((SQ b ** HALF n) MOD m)) MOD m *)
+           ((if EVEN n then 1 else b) * ((SQ b ** HALF n) MOD m)) MOD m) *)
 (* Proof: by EXP_MOD_EQN *)
 val EXP_MOD_ALT = store_thm(
   "EXP_MOD_ALT",
-  ``!b n m. 1 < m ==> b ** n MOD m =
+  ``!b n m. 1 < m ==> ((b ** n) MOD m =
            if n = 0 then 1 else
-           ((if EVEN n then 1 else b) * ((SQ b ** HALF n) MOD m)) MOD m``,
+           ((if EVEN n then 1 else b) * ((SQ b ** HALF n) MOD m)) MOD m)``,
   rpt strip_tac >>
   imp_res_tac EXP_MOD_EQN >>
   last_x_assum (qspecl_then [`n`, `b`] strip_assume_tac) >>
@@ -2157,6 +2213,20 @@ val ODD_ALT = store_thm(
   "ODD_ALT",
   ``!n. ODD n = ~(2 divides n)``,
   metis_tac[EVEN_ODD, EVEN_ALT]);
+
+(* Theorem: ~prime 4 *)
+(* Proof:
+   Note 4 = 2 * 2     by arithmetic
+     so 2 divides 4   by divides_def
+   thus ~prime 4      by primes_def
+*)
+val NOT_PRIME_4 = store_thm(
+  "NOT_PRIME_4",
+  ``~prime 4``,
+  rpt strip_tac >>
+  `4 = 2 * 2` by decide_tac >>
+  `4 <> 2 /\ 4 <> 1 /\ 2 <> 1` by decide_tac >>
+  metis_tac[prime_def, divides_def]);
 
 (* Theorem: 0 < n ==> !q. (q DIV n) * n <= q *)
 (* Proof:
@@ -2797,6 +2867,32 @@ val divides_self_power = store_thm(
   ``!n p. 0 < n /\ 1 < p ==> p divides p ** n``,
   metis_tac[power_divides_iff, EXP_1, DECIDE``0 < n <=> 1 <= n``]);
 
+(* Theorem: a divides b /\ 0 < b /\ b < 2 * a ==> (b = a) *)
+(* Proof:
+   Note ?k. b = k * a       by divides_def
+    and 0 < k               by MULT_EQ_0, 0 < b
+    and k < 2               by LT_MULT_RCANCEL, k * a < 2 * a
+   Thus k = 1               by 0 < k < 2
+     or b = k * a = a       by arithmetic
+*)
+val divides_eq_thm = store_thm(
+  "divides_eq_thm",
+  ``!a b. a divides b /\ 0 < b /\ b < 2 * a ==> (b = a)``,
+  rpt strip_tac >>
+  `?k. b = k * a` by rw[GSYM divides_def] >>
+  `0 < k` by metis_tac[MULT_EQ_0, NOT_ZERO] >>
+  `k < 2` by metis_tac[LT_MULT_RCANCEL] >>
+  `k = 1` by decide_tac >>
+  simp[]);
+
+(* Theorem alias *)
+val euclid_prime = save_thm("euclid_prime", P_EUCLIDES);
+(* |- !p a b. prime p /\ p divides a * b ==> p divides a \/ p divides b *)
+
+(* Theorem alias *)
+val euclid_coprime = save_thm("euclid_coprime", L_EUCLIDES);
+(* |- !a b c. (gcd a b = 1) /\ b divides a * c ==> b divides c *)
+
 (* ------------------------------------------------------------------------- *)
 (* Modulo Theorems                                                           *)
 (* ------------------------------------------------------------------------- *)
@@ -3269,6 +3365,147 @@ val FACTOR_OUT_POWER = store_thm(
 (* Useful Theorems.                                                          *)
 (* ------------------------------------------------------------------------- *)
 
+(* binomial_add: same as SUM_SQUARED *)
+
+(* Theorem: (a + b) ** 2 = a ** 2 + b ** 2 + 2 * a * b *)
+(* Proof:
+     (a + b) ** 2
+   = (a + b) * (a + b)                  by EXP_2
+   = a * (a + b) + b * (a + b)          by RIGHT_ADD_DISTRIB
+   = (a * a + a * b) + (b * a + b * b)  by LEFT_ADD_DISTRIB
+   = a * a + b * b + 2 * a * b          by arithmetic
+   = a ** 2 + b ** 2 + 2 * a * b        by EXP_2
+*)
+val binomial_add = store_thm(
+  "binomial_add",
+  ``!a b. (a + b) ** 2 = a ** 2 + b ** 2 + 2 * a * b``,
+  rpt strip_tac >>
+  `(a + b) ** 2 = (a + b) * (a + b)` by simp[] >>
+  `_ = a * a + b * b + 2 * a * b` by decide_tac >>
+  simp[]);
+
+(* Theorem: b <= a ==> ((a - b) ** 2 = a ** 2 + b ** 2 - 2 * a * b) *)
+(* Proof:
+   If b = 0,
+      RHS = a ** 2 + 0 ** 2 - 2 * a * 0
+          = a ** 2 + 0 - 0
+          = a ** 2
+          = (a - 0) ** 2
+          = LHS
+   If b <> 0,
+      Then b * b <= a * b       by LE_MULT_RCANCEL, b <> 0
+       and b * b <= 2 * a * b
+
+      LHS = (a - b) ** 2
+          = (a - b) * (a - b)                   by EXP_2
+          = a * (a - b) - b * (a - b)           by RIGHT_SUB_DISTRIB
+          = (a * a - a * b) - (b * a - b * b)   by LEFT_SUB_DISTRIB
+          = a * a - (a * b + (a * b - b * b))   by SUB_PLUS
+          = a * a - (a * b + a * b - b * b)     by LESS_EQ_ADD_SUB, b * b <= a * b
+          = a * a - (2 * a * b - b * b)
+          = a * a + b * b - 2 * a * b           by SUB_SUB, b * b <= 2 * a * b
+          = a ** 2 + b ** 2 - 2 * a * b         by EXP_2
+          = RHS
+*)
+val binomial_sub = store_thm(
+  "binomial_sub",
+  ``!a b. b <= a ==> ((a - b) ** 2 = a ** 2 + b ** 2 - 2 * a * b)``,
+  rpt strip_tac >>
+  Cases_on `b = 0` >-
+  simp[] >>
+  `b * b <= a * b` by rw[] >>
+  `b * b <= 2 * a * b` by decide_tac >>
+  `(a - b) ** 2 = (a - b) * (a - b)` by simp[] >>
+  `_ = a * a + b * b - 2 * a * b` by decide_tac >>
+  rw[]);
+
+(* Theorem: 2 * a * b <= a ** 2 + b ** 2 *)
+(* Proof:
+   If a = b,
+      LHS = 2 * a * a
+          = a * a + a * a
+          = a ** 2 + a ** 2        by EXP_2
+          = RHS
+   If a < b, then 0 < b - a.
+      Thus 0 < (b - a) * (b - a)   by MULT_EQ_0
+        or 0 < (b - a) ** 2        by EXP_2
+        so 0 < b ** 2 + a ** 2 - 2 * b * a   by binomial_sub, a <= b
+       ==> 2 * a * b < a ** 2 + b ** 2       due to 0 <, not 0 <=.
+   If b < a, then 0 < a - b.
+      Thus 0 < (a - b) * (a - b)   by MULT_EQ_0
+        or 0 < (a - b) ** 2        by EXP_2
+        so 0 < a ** 2 + b ** 2 - 2 * a * b   by binomial_sub, b <= a
+       ==> 2 * a * b < a ** 2 + b ** 2       due to 0 <, not 0 <=.
+*)
+val binomial_means = store_thm(
+  "binomial_means",
+  ``!a b. 2 * a * b <= a ** 2 + b ** 2``,
+  rpt strip_tac >>
+  Cases_on `a = b` >-
+  simp[] >>
+  Cases_on `a < b` >| [
+    `b - a <> 0` by decide_tac >>
+    `(b - a) * (b - a) <> 0` by metis_tac[MULT_EQ_0] >>
+    `(b - a) * (b - a) = (b - a) ** 2` by simp[] >>
+    `_ = b ** 2 + a ** 2 - 2 * b * a` by rw[binomial_sub] >>
+    decide_tac,
+    `a - b <> 0` by decide_tac >>
+    `(a - b) * (a - b) <> 0` by metis_tac[MULT_EQ_0] >>
+    `(a - b) * (a - b) = (a - b) ** 2` by simp[] >>
+    `_ = a ** 2 + b ** 2 - 2 * a * b` by rw[binomial_sub] >>
+    decide_tac
+  ]);
+
+(* Theorem: b <= a ==> ((a - b) ** 2 + 4 * a * b = (a + b) ** 2) *)
+(* Proof:
+   Note: 2 * a * b <= a ** 2 + b ** 2          by binomial_means, as [1]
+     (a - b) ** 2 + 4 * a * b
+   = a ** 2 + b ** 2 - 2 * a * b + 4 * a * b   by binomial_sub, b <= a
+   = a ** 2 + b ** 2 + 4 * a * b - 2 * a * b   by SUB_ADD, [1]
+   = a ** 2 + b ** 2 + 2 * a * b
+   = (a + b) ** 2                              by binomial_add
+*)
+val binomial_sub_add = store_thm(
+  "binomial_sub_add",
+  ``!a b. b <= a ==> ((a - b) ** 2 + 4 * a * b = (a + b) ** 2)``,
+  rpt strip_tac >>
+  `2 * a * b <= a ** 2 + b ** 2` by rw[binomial_means] >>
+  `(a - b) ** 2 + 4 * a * b = a ** 2 + b ** 2 - 2 * a * b + 4 * a * b` by rw[binomial_sub] >>
+  `_ = a ** 2 + b ** 2 + 4 * a * b - 2 * a * b` by decide_tac >>
+  `_ = a ** 2 + b ** 2 + 2 * a * b` by decide_tac >>
+  `_ = (a + b) ** 2` by rw[binomial_add] >>
+  decide_tac);
+
+(* Theorem: a ** 2 - b ** 2 = (a - b) * (a + b) *)
+(* Proof:
+     a ** 2 - b ** 2
+   = a * a - b * b                     by EXP_2
+   = a * a + a * b - a * b - b * b     by ADD_SUB
+   = a * a + a * b - (b * a + b * b)   by SUB_PLUS
+   = a * (a + b) - b * (a + b)         by LEFT_ADD_DISTRIB
+   = (a - b) * (a + b)                 by RIGHT_SUB_DISTRIB
+*)
+val difference_of_squares = store_thm(
+  "difference_of_squares",
+  ``!a b. a ** 2 - b ** 2 = (a - b) * (a + b)``,
+  rpt strip_tac >>
+  `a ** 2 - b ** 2 = a * a - b * b` by simp[] >>
+  `_ = a * a + a * b - a * b - b * b` by decide_tac >>
+  decide_tac);
+
+(* Theorem: a * a - b * b = (a - b) * (a + b) *)
+(* Proof:
+     a * a - b * b
+   = a ** 2 - b ** 2       by EXP_2
+   = (a + b) * (a - b)     by difference_of_squares
+*)
+val difference_of_squares_alt = store_thm(
+  "difference_of_squares_alt",
+  ``!a b. a * a - b * b = (a - b) * (a + b)``,
+  rw[difference_of_squares]);
+
+(* binomial_2: same as binomial_add, or SUM_SQUARED *)
+
 (* Theorem: (m + n) ** 2 = m ** 2 + n ** 2 + 2 * m * n *)
 (* Proof:
      (m + n) ** 2
@@ -3523,10 +3760,9 @@ val prime_divides_self_power = store_thm(
         But p ** d <> 1                     by EXP_EQ_1, 0 < d
        This contradicts p ** d = 1.
 *)
-Theorem power_eq_prime_power:
-  !p. prime p ==>
-      !b n m. 0 < m /\ (b ** n = p ** m) ==> ?k. (b = p ** k) /\ (k * n = m)
-Proof
+val power_eq_prime_power = store_thm(
+  "power_eq_prime_power",
+  ``!p. prime p ==> !b n m. 0 < m /\ (b ** n = p ** m) ==> ?k. (b = p ** k) /\ (k * n = m)``,
   rpt strip_tac >>
   `1 < p` by rw[ONE_LT_PRIME] >>
   `m <> 0 /\ 0 < p /\ p <> 0 /\ p <> 1` by decide_tac >>
@@ -3546,10 +3782,10 @@ Proof
   `q ** n * p ** (u * n) = p ** m` by metis_tac[EXP_BASE_MULT, EXP_EXP_MULT] >>
   qabbrev_tac `v = u * n` >>
   Cases_on `v = m` >| [
-    `p ** m = 1 * p ** m` by simp[] >>
+    `p ** m = 1 * p ** m` by rw[] >>
     `q ** n = 1` by metis_tac[EQ_MULT_RCANCEL] >>
     `q = 1` by metis_tac[EXP_EQ_1] >>
-    `b = p ** u` by simp[] >>
+    `b = p ** u` by rw[] >>
     metis_tac[],
     Cases_on `v < m` >| [
       `?d. d = m - v` by rw[] >>
@@ -3569,8 +3805,7 @@ Proof
       `(q ** n = 1) /\ (p ** d = 1)` by metis_tac[MULT_EQ_1] >>
       metis_tac[EXP_EQ_1]
     ]
-  ]
-QED
+  ]);
 
 (* Theorem: 1 < n ==> !m. (n ** m = n) <=> (m = 1) *)
 (* Proof:

@@ -13,7 +13,6 @@ val _ = new_theory "helperFunction";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -75,6 +74,7 @@ open dividesTheory gcdTheory;
    FUNPOW_K            |- !n x c. FUNPOW (K c) n x = if n = 0 then x else c
    FUNPOW_MULTIPLE     |- !f k e. 0 < k /\ (FUNPOW f k e = e) ==> !n. FUNPOW f (n * k) e = e
    FUNPOW_MOD          |- !f k e. 0 < k /\ (FUNPOW f k e = e) ==> !n. FUNPOW f n e = FUNPOW f (n MOD k) e
+   FUNPOW_COMM         |- !f m n x. FUNPOW f m (FUNPOW f n x) = FUNPOW f n (FUNPOW f m x)
    FUNPOW_LE_RISING    |- !f m n. RISING f /\ m <= n ==> !x. FUNPOW f m x <= FUNPOW f n x
    FUNPOW_LE_FALLING   |- !f m n. FALLING f /\ m <= n ==> !x. FUNPOW f n x <= FUNPOW f m x
    FUNPOW_LE_MONO      |- !f g. (!x. f x <= g x) /\ MONO g ==> !n x. FUNPOW f n x <= FUNPOW g n x
@@ -90,6 +90,7 @@ open dividesTheory gcdTheory;
    FUNPOW_PAIR         |- !f g n x y. FUNPOW (\(x,y). (f x,g y)) n (x,y) = (FUNPOW f n x,FUNPOW g n y)
    FUNPOW_TRIPLE       |- !f g h n x y z. FUNPOW (\(x,y,z). (f x,g y,h z)) n (x,y,z) =
                                           (FUNPOW f n x,FUNPOW g n y,FUNPOW h n z)
+   FUNPOW_closure      |- !f s x n. f PERMUTES s /\ x IN s ==> FUNPOW f n x IN s
 
    Factorial:
    FACT_0              |- FACT 0 = 1
@@ -512,6 +513,13 @@ val FUNPOW_MOD = store_thm(
   `n = (n MOD k) + (n DIV k) * k` by metis_tac[DIVISION, ADD_COMM] >>
   metis_tac[FUNPOW_ADD, FUNPOW_MULTIPLE]);
 
+(* Theorem: FUNPOW f m (FUNPOW f n x) = FUNPOW f n (FUNPOW f m x) *)
+(* Proof: by FUNPOW_ADD, ADD_COMM *)
+val FUNPOW_COMM = store_thm(
+  "FUNPOW_COMM",
+  ``!f m n x. FUNPOW f m (FUNPOW f n x) = FUNPOW f n (FUNPOW f m x)``,
+  metis_tac[FUNPOW_ADD, ADD_COMM]);
+
 (* Overload a RISING function *)
 val _ = overload_on ("RISING", ``\f. !x:num. x <= f x``);
 
@@ -914,6 +922,26 @@ val FUNPOW_TRIPLE = store_thm(
   rpt strip_tac >>
   Induct_on `n` >>
   rw[FUNPOW_SUC]);
+
+(* Theorem: f PERMUTES s /\ x IN s ==> FUNPOW f n x IN s *)
+(* Proof:
+   By induction on n.
+   Base: FUNPOW f 0 x IN s
+         Since FUNPOW f 0 x = x       by FUNPOW_0
+         This is trivially true.
+   Step: FUNPOW f n x IN s ==> FUNPOW f (SUC n) x IN s
+           FUNPOW f (SUC n) x
+         = f (FUNPOW f n x)           by FUNPOW_SUC
+         But FUNPOW f n x IN s        by induction hypothesis
+          so f (FUNPOW f n x) IN s    by BIJ_ELEMENT, f PERMUTES s
+*)
+val FUNPOW_closure = store_thm(
+  "FUNPOW_closure",
+  ``!f s x n. f PERMUTES s /\ x IN s ==> FUNPOW f n x IN s``,
+  rpt strip_tac >>
+  Induct_on `n` >-
+  rw[] >>
+  metis_tac[FUNPOW_SUC, BIJ_ELEMENT]);
 
 (* ------------------------------------------------------------------------- *)
 (* Integer Functions.                                                        *)
@@ -2449,7 +2477,7 @@ val prime_coprime_all_lt = store_thm(
   `n <> 0 /\ m <> 0` by decide_tac >>
   `d divides n /\ d divides m` by rw[GCD_IS_GREATEST_COMMON_DIVISOR, Abbr`d`] >>
   `d = n` by metis_tac[prime_def] >>
-  `n <= m` by fs[DIVIDES_LE] >>
+  `n <= m` by rw[DIVIDES_LE] >>
   decide_tac);
 
 (* Theorem: prime n /\ m < n ==> (!j. 0 < j /\ j <= m ==> coprime n j) *)
