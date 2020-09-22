@@ -1,0 +1,907 @@
+(* ------------------------------------------------------------------------- *)
+(* Iteration Period Computation                                              *)
+(* ------------------------------------------------------------------------- *)
+
+(*===========================================================================*)
+
+(* add all dependent libraries for script *)
+open HolKernel boolLib bossLib Parse;
+
+(* declare new theory at start *)
+val _ = new_theory "iterateCompute";
+
+(* ------------------------------------------------------------------------- *)
+
+
+(* open dependent theories *)
+val _ = load("iterateTheory");
+open helperFunctionTheory;
+open helperSetTheory;
+open helperNumTheory;
+
+(* arithmeticTheory -- load by default *)
+open arithmeticTheory pred_setTheory;
+open dividesTheory; (* for divides_def *)
+
+open iterateTheory;
+open listTheory;
+open listRangeTheory;
+open helperListTheory; (* for listRangeINC_SNOC *)
+
+(* val _ = load "helperTheory"; *)
+open helperTheory; (* for WHILE_RULE_PRE_POST *)
+open whileTheory; (* for WHILE definition *)
+
+
+(* ------------------------------------------------------------------------- *)
+(* Iteration Period Computation Documentation                                *)
+(* ------------------------------------------------------------------------- *)
+(* Overloading:
+!  iterate x f j  = FUNPOW f j x
+*)
+(*
+
+   Helper Theorems:
+
+   FUNPOW with incremental cons:
+   FUNPOW_cons_head    |- !f n ls. HD (FUNPOW (\ls. f (HD ls)::ls) n ls) = FUNPOW f n (HD ls)
+   FUNPOW_cons_eq_map_0|- !f u n. FUNPOW (\ls. f (HD ls)::ls) n [u] =
+                                  MAP (\j. FUNPOW f j u) (REVERSE [0 .. n])
+   FUNPOW_cons_eq_map_1|- !f u n. 0 < n ==>
+                                 (FUNPOW (\ls. f (HD ls)::ls) (n - 1) [f u] =
+                                  MAP (\j. FUNPOW f j u) (REVERSE [1 .. n]))
+
+   Iterative Search, by recursion with cutoff:
+   iterate_search_def  |- !x j g f c b. iterate_search f g x c b j =
+                                        if c <= j then b
+                                        else if g x then x
+                                        else iterate_search f g (f x) c b (j + 1)
+   iterate_search_over |- !f g x c b j. c <= j ==> (iterate_search f g x c b j = b)
+   iterate_search_exit |- !f g x c b j. j < c /\ g x ==> (iterate_search f g x c b j = x)
+   iterate_search_next |- !f g x c b j. j < c /\ ~g x ==>
+                          (iterate_search f g x c b j = iterate_search f g (f x) c b (j + 1))
+   iterate_search_run  |- !f g x c b j k. 0 < k /\ j + k <= c /\
+                          (!i. i < k ==> ~g (FUNPOW f i x)) ==>
+                          (iterate_search f g x c b j =
+                           iterate_search f g (FUNPOW f k x) c b (j + k))
+   iterate_search_done |- !f g x c b j n. 0 < n /\ j + n < c /\
+                          (!i. i < n ==> ~g (FUNPOW f i x)) /\
+                          g (FUNPOW f n x) ==> (iterate_search f g x c b j = FUNPOW f n x)
+   iterate_search_thm  |- !f g x c b n. n < c /\ (!i. i < n ==> ~g (FUNPOW f i x)) /\
+                          g (FUNPOW f n x) ==> (iterate_search f g x c b 0 = FUNPOW f n x)
+
+   Iterative Loop, using WHILE construct:
+   iterate_trace_def   |- !a b c. iterate_trace a b c = MAP (\j. iterate a b j) [0 .. c]
+   iterate_trace_length|- !a b c. LENGTH (iterate_trace a b c) = 1 + c
+   iterate_trace_non_nil
+                       |- !a b c. iterate_trace a b c <> []
+   iterate_trace_sing  |- !a b. iterate_trace a b 0 = [a]
+   iterate_trace_head  |- !a b c. HD (iterate_trace a b c) = a
+   iterate_trace_last  |- !a b c. LAST (iterate_trace a b c) = iterate a b c
+   iterate_trace_element
+                       |- !a b c j. j <= c ==> (EL j (iterate_trace a b c) = iterate a b j)
+   iterate_trace_element_idx
+                       |- !a b c ls j. (ls = iterate_trace a b c) /\ ALL_DISTINCT ls /\
+                               j <= c ==> (findi (iterate a b j) ls = j)
+   iterate_trace_member|- !a b c ls x. (ls = iterate_trace a b c) /\ x <> iterate a b c /\
+                               MEM x ls ==> MEM (b x) ls
+   iterate_trace_member_iff
+                       |- !a b c ls x. (ls = iterate_trace a b c) ==>
+                              (MEM x ls <=> ?j. j <= c /\ (x = iterate a b j))
+   iterate_trace_index |- !a b c ls x. (ls = iterate_trace a b c) /\ x <> iterate a b c /\
+                              MEM x ls /\ ALL_DISTINCT ls ==>
+                              (findi (b x) ls = 1 + findi x ls)
+   iterate_trace_all_distinct
+                       |- !s a b c p. FINITE s /\ b PERMUTES s /\ a IN s /\
+                              (p = iterate_period b a) /\ c < p ==>
+                              ALL_DISTINCT (iterate_trace a b c)
+   iterate_while_hoare |- !s a b c p g n. FINITE s /\ b PERMUTES s /\ a IN s /\
+                              (p = iterate_period b a) /\ n < c /\ c < p /\
+                              ~g (iterate a b n) /\ (!j. j < n ==> g (iterate a b j)) ==>
+                              HOARE_SPEC {a} (WHILE g b) {iterate a b n}
+   iterate_while_thm_1 |- !s a b c p g n. FINITE s /\ b PERMUTES s /\ a IN s /\
+                              (p = iterate_period b a) /\ n < c /\ c < p /\
+                              ~g (iterate a b n) /\ (!j. j < n ==> g (iterate a b j)) ==>
+                              (WHILE g b a = iterate a b n)
+   iterate_while_hoare_0
+                       |- !a b g. ~g a ==> HOARE_SPEC {a} (WHILE g b) {a}
+   iterate_while_thm_0 |- !a b g. ~g a ==> (WHILE g b a = a)
+
+   Direct from WHILE definition:
+   iterate_while_eqn   |- !g b x k. (!j. j < k ==> g (FUNPOW b j x)) ==>
+                                    (WHILE g b x =
+                                     if g (FUNPOW b k x) then WHILE g b (FUNPOW b (k + 1) x)
+                                     else FUNPOW b k x)
+   iterate_while_thm   |- !g b x k. (!j. j < k ==> g (FUNPOW b j x)) /\ ~g (FUNPOW b k x) ==>
+                                    (WHILE g b x = FUNPOW b k x)
+*)
+
+(* ------------------------------------------------------------------------- *)
+(* Helper Theorems                                                           *)
+(* ------------------------------------------------------------------------- *)
+
+(* ------------------------------------------------------------------------- *)
+(* FUNPOW with incremental cons.                                             *)
+(* ------------------------------------------------------------------------- *)
+
+(* Idea: when applying incremental cons (f head) to a list for n times,
+         head of the result is f^n (head of list). *)
+
+(* Theorem: HD (FUNPOW (\ls. f (HD ls)::ls) n ls) = FUNPOW f n (HD ls) *)
+(* Proof:
+   Let h = (\ls. f (HD ls)::ls).
+   By induction on n.
+   Base: !ls. HD (FUNPOW h 0 ls) = FUNPOW f 0 (HD ls)
+           HD (FUNPOW h 0 ls)
+         = HD ls                by FUNPOW_0
+         = FUNPOW f 0 (HD ls)   by FUNPOW_0
+   Step: !ls. HD (FUNPOW h n ls) = FUNPOW f n (HD ls) ==>
+         !ls. HD (FUNPOW h (SUC n) ls) = FUNPOW f (SUC n) (HD ls)
+           HD (FUNPOW h (SUC n) ls)
+         = HD (FUNPOW h n (h ls))    by FUNPOW
+         = FUNPOW f n (HD (h ls))    by induction hypothesis
+         = FUNPOW f n (f (HD ls))    by definition of h
+         = FUNPOW f (SUC n) (HD ls)  by FUNPOW
+*)
+val FUNPOW_cons_head = store_thm(
+  "FUNPOW_cons_head",
+  ``!f n ls. HD (FUNPOW (\ls. f (HD ls)::ls) n ls) = FUNPOW f n (HD ls)``,
+  strip_tac >>
+  qabbrev_tac `h = \ls. f (HD ls)::ls` >>
+  Induct >-
+  simp[] >>
+  rw[FUNPOW, Abbr`h`]);
+
+(* Idea: when applying incremental cons (f head) to a singleton [u] for n times,
+         the result is the list [f^n(u), .... f(u), u]. *)
+
+(* Theorem: FUNPOW (\ls. f (HD ls)::ls) n [u] =
+            MAP (\j. FUNPOW f j u) (REVERSE [0 .. n]) *)
+(* Proof:
+   Let g = (\ls. f (HD ls)::ls),
+       h = (\j. FUNPOW f j u).
+   By induction on n.
+   Base: FUNPOW g 0 [u] = MAP h (REVERSE [0 .. 0])
+           FUNPOW g 0 [u]
+         = [u]                       by FUNPOW_0
+         = [FUNPOW f 0 u]            by FUNPOW_0
+         = MAP h [0]                 by MAP
+         = MAP h (REVERSE [0 .. 0])  by REVERSE
+   Step: FUNPOW g n [u] = MAP h (REVERSE [0 .. n]) ==>
+         FUNPOW g (SUC n) [u] = MAP h (REVERSE [0 .. SUC n])
+           FUNPOW g (SUC n) [u]
+         = g (FUNPOW g n [u])             by FUNPOW_SUC
+         = g (MAP h (REVERSE [0 .. n]))   by induction hypothesis
+         = f (HD (MAP h (REVERSE [0 .. n]))) ::
+             MAP h (REVERSE [0 .. n])     by definition of g
+         Now f (HD (MAP h (REVERSE [0 .. n])))
+           = f (HD (MAP h (MAP (\x. n - x) [0 .. n])))    by listRangeINC_REVERSE
+           = f (HD (MAP h o (\x. n - x) [0 .. n]))        by MAP_COMPOSE
+           = f ((h o (\x. n - x)) 0)                      by MAP
+           = f (h n)
+           = f (FUNPOW f n u)             by definition of h
+           = FUNPOW (n + 1) u             by FUNPOW_SUC
+           = h (n + 1)                    by definition of h
+          so h (n + 1) :: MAP h (REVERSE [0 .. n])
+           = MAP h ((n + 1) :: REVERSE [0 .. n])     by MAP
+           = MAP h (REVERSE (SNOC (n+1) [0 .. n]))   by REVERSE_SNOC
+           = MAP h (REVERSE [0 .. SUC n])            by listRangeINC_SNOC
+*)
+val FUNPOW_cons_eq_map_0 = store_thm(
+  "FUNPOW_cons_eq_map_0",
+  ``!f u n. FUNPOW (\ls. f (HD ls)::ls) n [u] =
+           MAP (\j. FUNPOW f j u) (REVERSE [0 .. n])``,
+  ntac 2 strip_tac >>
+  Induct >>
+  rw[] >>
+  qabbrev_tac `g = \ls. f (HD ls)::ls` >>
+  qabbrev_tac `h = \j. FUNPOW f j u` >>
+  rw[] >>
+  `f (HD (MAP h (REVERSE [0 .. n]))) = h (n + 1)` by
+  (`[0 .. n] = 0 :: [1 .. n]` by rw[listRangeINC_CONS] >>
+  fs[listRangeINC_REVERSE, MAP_COMPOSE, GSYM FUNPOW_SUC, ADD1, Abbr`h`]) >>
+  `FUNPOW g (SUC n) [u] = g (FUNPOW g n [u])` by rw[FUNPOW_SUC] >>
+  `_ = g (MAP h (REVERSE [0 .. n]))` by fs[] >>
+  `_ = h (n + 1) :: MAP h (REVERSE [0 .. n])` by rw[Abbr`g`] >>
+  `_ = MAP h ((n + 1) :: REVERSE [0 .. n])` by rw[] >>
+  `_ = MAP h (REVERSE (SNOC (n+1) [0 .. n]))` by rw[REVERSE_SNOC] >>
+  rw[listRangeINC_SNOC, ADD1]);
+
+(* Idea: when applying incremental cons (f head) to a singleton [f(u)] for (n-1) times,
+         the result is the list [f^n(u), .... f(u)]. *)
+
+(* Theorem: 0 < n ==> (FUNPOW (\ls. f (HD ls)::ls) (n - 1) [f u] =
+            MAP (\j. FUNPOW f j u) (REVERSE [1 .. n])) *)
+(* Proof:
+   Let g = (\ls. f (HD ls)::ls),
+       h = (\j. FUNPOW f j u).
+   By induction on n.
+   Base: FUNPOW g 0 [f u] = MAP h (REVERSE [1 .. 1])
+           FUNPOW g 0 [f u]
+         = [f u]                     by FUNPOW_0
+         = [FUNPOW f 1 u]            by FUNPOW_1
+         = MAP h [1]                 by MAP
+         = MAP h (REVERSE [1 .. 1])  by REVERSE
+   Step: 0 < n ==> FUNPOW g (n-1) [f u] = MAP h (REVERSE [1 .. n]) ==>
+         FUNPOW g n [f u] = MAP h (REVERSE [1 .. SUC n])
+         The case n = 0 is the base case. For n <> 0,
+           FUNPOW g n [f u]
+         = g (FUNPOW g (n-1) [f u])       by FUNPOW_SUC
+         = g (MAP h (REVERSE [1 .. n]))   by induction hypothesis
+         = f (HD (MAP h (REVERSE [1 .. n]))) ::
+             MAP h (REVERSE [1 .. n])     by definition of g
+         Now f (HD (MAP h (REVERSE [1 .. n])))
+           = f (HD (MAP h (MAP (\x. n + 1 - x) [1 .. n])))  by listRangeINC_REVERSE
+           = f (HD (MAP h o (\x. n + 1 - x) [1 .. n]))      by MAP_COMPOSE
+           = f ((h o (\x. n + 1 - x)) 1)                    by MAP
+           = f (h n)
+           = f (FUNPOW f n u)             by definition of h
+           = FUNPOW (n + 1) u             by FUNPOW_SUC
+           = h (n + 1)                    by definition of h
+          so h (n + 1) :: MAP h (REVERSE [1 .. n])
+           = MAP h ((n + 1) :: REVERSE [1 .. n])     by MAP
+           = MAP h (REVERSE (SNOC (n+1) [1 .. n]))   by REVERSE_SNOC
+           = MAP h (REVERSE [1 .. SUC n])            by listRangeINC_SNOC
+*)
+val FUNPOW_cons_eq_map_1 = store_thm(
+  "FUNPOW_cons_eq_map_1",
+  ``!f u n. 0 < n ==> (FUNPOW (\ls. f (HD ls)::ls) (n - 1) [f u] =
+           MAP (\j. FUNPOW f j u) (REVERSE [1 .. n]))``,
+  ntac 2 strip_tac >>
+  Induct >>
+  simp[] >>
+  rw[] >>
+  qabbrev_tac `g = \ls. f (HD ls)::ls` >>
+  qabbrev_tac `h = \j. FUNPOW f j u` >>
+  Cases_on `n = 0` >-
+  rw[Abbr`g`, Abbr`h`] >>
+  `f (HD (MAP h (REVERSE [1 .. n]))) = h (n + 1)` by
+  (`[1 .. n] = 1 :: [2 .. n]` by rw[listRangeINC_CONS] >>
+  fs[listRangeINC_REVERSE, MAP_COMPOSE, GSYM FUNPOW_SUC, ADD1, Abbr`h`]) >>
+  `n = SUC (n-1)` by decide_tac >>
+  `FUNPOW g n [f u] = g (FUNPOW g (n - 1) [f u])` by metis_tac[FUNPOW_SUC] >>
+  `_ = g (MAP h (REVERSE [1 .. n]))` by fs[] >>
+  `_ = h (n + 1) :: MAP h (REVERSE [1 .. n])` by rw[Abbr`g`] >>
+  `_ = MAP h ((n + 1) :: REVERSE [1 .. n])` by rw[] >>
+  `_ = MAP h (REVERSE (SNOC (n+1) [1 .. n]))` by rw[REVERSE_SNOC] >>
+  rw[listRangeINC_SNOC, ADD1]);
+
+(* ------------------------------------------------------------------------- *)
+(* Iterative Search, by recursion with cutoff.                               *)
+(* ------------------------------------------------------------------------- *)
+
+(* Idea: recursion with cutoff c, starting count j. *)
+
+(* The starting point is x:'a, iterating over function f:'a -> 'a,
+   that is, f x <- x, until guard g:'a -> bool checks (g x) is true. *)
+val iterate_search_def = tDefine "iterate_search" `
+  iterate_search f g x c b j =
+  if (c <= j) then b else if (g x) then x
+  else iterate_search f g (f x) c b (j + 1)
+`(WF_REL_TAC `measure (\(f,g,x,c,b,j). c - j)`);
+(* Note: the bad b can be just x, as it is relevant only for the cutoff. *)
+
+(* Idea: iteration goes on only for j < c; if not, game over. *)
+
+(* Theorem: c <= j ==> (iterate_search f g x c b j = b) *)
+(* Proof: by iterate_search_def *)
+val iterate_search_over = store_thm(
+  "iterate_search_over",
+  ``!f g x c b j. c <= j ==> (iterate_search f g x c b j = b)``,
+  simp[Once iterate_search_def]);
+
+(* Idea: iteration goes on for j < c, but exits when (g x). *)
+
+(* Theorem: j < c /\ g x ==> (iterate_search f g x c b j = x) *)
+(* Proof: by iterate_search_def *)
+val iterate_search_exit = store_thm(
+  "iterate_search_exit",
+  ``!f g x c b j. j < c /\ g x ==> (iterate_search f g x c b j = x)``,
+  simp[Once iterate_search_def]);
+
+(* Idea: iteration goes on for one step when j < c and ~(g x). *)
+
+(* Theorem: j < c /\ ~g x ==>
+            (iterate_search f g x c b j = iterate_search f g (f x) c b (j + 1)) *)
+(* Proof: by iterate_search_def *)
+val iterate_search_next = store_thm(
+  "iterate_search_next",
+  ``!f g x c b j. j < c /\ ~g x ==>
+                 (iterate_search f g x c b j = iterate_search f g (f x) c b (j + 1))``,
+  simp[Once iterate_search_def]);
+
+
+(* Idea: iteration goes on for k more steps.
+         Extend iterate_search_next by induction, with 0 < k. *)
+
+(* Theorem: 0 < k /\ j + k <= c /\ (!i. i < k ==> ~g (FUNPOW f i x)) ==>
+     (iterate_search f g x c b j = iterate_search f g (FUNPOW f k x) c b (j + k)) *)
+(* Proof:
+   By induction on k, starting from k = 1.
+   Base: j + 1 <= c /\ (!i. i < 1 ==> ~g (FUNPOW f i x)) ==>
+         (iterate_search f g x c b j = iterate_search f g (FUNPOW f 1 x) c b (j + 1))
+     This simplifies, by FUNPOW_0, FUNPOW_1, to:
+     j < c /\ ~g x ==> iterate_search f g x c b j = iterate_search f g (f x) c b (j + 1)
+     which is true by iterate_search_next.
+   Step: !k. 0 < k /\ j + (k + 1) <= c /\
+          (!i. i < k ==> ~g (FUNPOW f i (f x))) ==>
+          (iterate_search f g (f x) c b (j + 1) =
+           iterate_search f g (FUNPOW f k (f x)) c b (j + (k + 1))) ==>
+          0 < k /\ j + k <= c /\ (!i. i < k ==> ~g (FUNPOW f i x)) ==>
+          iterate_search f g x c b j = iterate_search f g (FUNPOW f k x) c b (j + k)
+     The case k = 1  has been covered.
+     For k <> 1, 1 < k, so k = k - 1 + 1       by arithmetic
+     Putting !k for the specific (k-1),
+     Thus 0 < k - 1, j + (k-1 +1) <= c, and note
+             !i. i < k ==> ~g (FUNPOW f i x)   by given
+         <=> !i. i - 1 < k - 1 ==> ~g (FUNPOW f (i - 1 + 1) x)
+         <=> !j. j < k - 1 ==> ~g (FUNPOW f (j + 1) x)
+         <=> !j. j < k - 1 ==> ~g (FUNPOW f j (f x))    by FUNPOW
+     Thus the induction assumption conditions are all satisfied,
+          iterate_search f g x c b j
+        = iterate_search f g (FUNPOW f (k - 1) (f x)) c b (j + k)
+                                                        by induction hypothesis
+        = iterate_search f g (FUNPOW f k x) c b (j + k) by FUNPOW, ADD1
+ *)
+val iterate_search_run = store_thm(
+  "iterate_search_run",
+  ``!f g x c b j k. 0 < k /\ j + k <= c /\ (!i. i < k ==> ~g (FUNPOW f i x)) ==>
+     (iterate_search f g x c b j = iterate_search f g (FUNPOW f k x) c b (j + k))``,
+  ho_match_mp_tac (theorem "iterate_search_ind") >>
+  rw[] >>
+  `~(c <= j)` by decide_tac >>
+  `~g x` by metis_tac[FUNPOW_0] >>
+  fs[] >>
+  `iterate_search f g x c b j = iterate_search f g (f x) c b (j + 1)` by fs[iterate_search_next] >>
+  (Cases_on `k = 1` >> simp[]) >>
+  `0 < k - 1` by decide_tac >>
+  last_x_assum (qspecl_then [`k-1`] strip_assume_tac) >>
+  rfs[] >>
+  `!i. i < k - 1 ==> ~g (FUNPOW f i (f x))` by
+  (rpt strip_tac >>
+  `~g (FUNPOW f (i + 1) x)` by fs[] >>
+  metis_tac[FUNPOW, ADD1]) >>
+  `k - 1 + 1 = k` by decide_tac >>
+  metis_tac[FUNPOW, ADD1]);
+
+(* Idea: iteration when k more steps becomes n, when now g (FUNPOW f n x). *)
+
+(* Theorem: 0 < n /\ j + n < c /\
+            (!i. i < n ==> ~g (FUNPOW f i x)) /\ g (FUNPOW f n x) ==>
+            (iterate_search f g x c b j = FUNPOW f n x) *)
+(* Proof:
+     iterate_search f g x c b j
+   = iterate_search f g (FUNPOW f n x) c b (j + n)   by iterate_search_run, j + n <= c
+   = FUNPOW f n x                                    by iterate_search_exit, j + n < c
+*)
+val iterate_search_done = store_thm(
+  "iterate_search_done",
+  ``!f g x c b j n. 0 < n /\ j + n < c /\
+     (!i. i < n ==> ~g (FUNPOW f i x)) /\ g (FUNPOW f n x) ==>
+     (iterate_search f g x c b j = FUNPOW f n x)``,
+  metis_tac[iterate_search_run, iterate_search_exit, LESS_IMP_LESS_OR_EQ]);
+
+(* Idea: the same result, but start with j = 0, and remove 0 < n. *)
+
+(* Theorem: n < c /\ (!i. i < n ==> ~g (FUNPOW f i x)) /\
+            g (FUNPOW f n x) ==> (iterate_search f g x c b 0 = FUNPOW f n x) *)
+(* Proof:
+   If n = 0, true     by iterate_search_exit
+   If n <> 0, true    by iterate_search_done
+*)
+val iterate_search_thm = store_thm(
+  "iterate_search_thm",
+  ``!f g x c b n. n < c /\ (!i. i < n ==> ~g (FUNPOW f i x)) /\
+      g (FUNPOW f n x) ==> (iterate_search f g x c b 0 = FUNPOW f n x)``,
+  rpt strip_tac >>
+  Cases_on `n = 0` >-
+  fs[iterate_search_exit] >>
+  simp[iterate_search_done]);
+
+(* ------------------------------------------------------------------------- *)
+(* Iterative Loop, using WHILE construct.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+(* Define the iterate WHILE loop:
+   with a guard g and a body b, both functions of x, of type alpha. *)
+(* no need to define!
+val iterate_while_def = Define`
+    iterate_while (g:'a -> bool) (b:'a -> 'a) = WHILE g b
+`;
+*)
+
+(* Overload FUNPOW f j x with index j as the last parameter. *)
+val _ = temp_overload_on ("iterate", ``\x f j. FUNPOW f j x``);
+(* FUNPOW f j x is pretty-printed as: f^{j}(x). *)
+(* iterate x f j is pretty-printed as: (x)f^{j}. *)
+
+(* for temporary overloading, otherwise all FUNPOW becomes iterate! *)
+
+(* Define the trace of the iterate WHILE, starting with a, up to a cutoff c. *)
+val iterate_trace_def = Define`
+    iterate_trace (a:'a) (b:'a -> 'a) (c:num) = MAP (iterate a b) [0 .. c]
+`;
+
+(* Properties of iteration trace *)
+
+(* Theorem: LENGTH (iterate_trace a b c) = 1 + c *)
+(* Proof:
+     LENGTH (iterate_trace a b c)
+   = LENGTH (MAP (iterate a b) [0 .. c])   by iterate_trace_def
+   = LENGTH [0 .. c]                       by LENGTH_MAP
+   = 1 + c                                 by listRangeINC_LEN
+*)
+val iterate_trace_length = store_thm(
+  "iterate_trace_length",
+  ``!a b c. LENGTH (iterate_trace a b c) = 1 + c``,
+  simp[iterate_trace_def, listRangeINC_LEN]);
+
+(* Theorem: iterate_trace a b c <> [] *)
+(* Proof:
+   Let ls = iterate a b c.
+   Note LENGTH ls = 1 + c        by iterate_trace_length
+                  <> 0           by arithmetic
+     so ls <> []                 by LENGTH_NIL
+*)
+val iterate_trace_non_nil = store_thm(
+  "iterate_trace_non_nil",
+  ``!a b c. iterate_trace a b c <> []``,
+  metis_tac[iterate_trace_length, LENGTH_NIL, DECIDE``1 + n <> 0``]);
+
+(* Theorem: iterate_trace a b 0 = [a] *)
+(* Proof:
+     iterate_trace a b 0
+   = MAP (iterate a b) [0 .. 0]  by iterate_trace_def
+   = MAP (iterate a b) [0]       by listRangeINC_SING
+   = [(iterate a b) 0]           by MAP_SING
+   = [a]                         by FUNPOW_0
+*)
+val iterate_trace_sing = store_thm(
+  "iterate_trace_sing",
+  ``!a b. iterate_trace a b 0 = [a]``,
+  rpt strip_tac >>
+  qabbrev_tac `f = iterate a b` >>
+  `iterate_trace a b 0 = MAP f [0 .. 0]` by rw[iterate_trace_def, Abbr`f`] >>
+  `_ = MAP f [0]` by rw[listRangeINC_SING] >>
+  `_ = [f 0]` by rw[MAP_SING] >>
+  simp[Abbr`f`]);
+
+(* Theorem: HD (iterate_trace a b c) = a *)
+(* Proof:
+     HD (iterate_trace a b c)
+   = HD (MAP (iterate a b) [0 .. c])          by iterate_trace_def
+   = HD (MAP (iterate a b) (0::[1 .. c]))     by listRangeINC_CONS
+   = HD ((iterate a b) 0 :: MAP (iterate a b) [1 .. c])
+                                              by MAP
+   = (iterate a b) 0                          by HD
+   = a                                        by FUNPOW_0
+*)
+val iterate_trace_head = store_thm(
+  "iterate_trace_head",
+  ``!a b c. HD (iterate_trace a b c) = a``,
+  rpt strip_tac >>
+  qabbrev_tac `f = iterate a b` >>
+  `HD (iterate_trace a b c) = HD (MAP f [0 .. c])` by rw[iterate_trace_def, Abbr`f`] >>
+  `_ = HD (MAP f (0::[1 .. c]))` by rw[listRangeINC_CONS] >>
+  `_ = HD (f 0 :: MAP f [1 .. c])` by rw[] >>
+  simp[Abbr`f`]);
+
+(* Theorem: LAST (iterate_trace a b c) = iterate a b c *)
+(* Proof:
+   If c = 0,
+     LAST (iterate_trace a b 0)
+   = LAST [a]                        by iterate_trace_sing
+   = a                               by LAST_CONS
+   = iterate a b 0                   by FUNPOW_0
+
+   If c <> 0,
+     LAST (iterate_trace a b c)
+   = LAST (MAP (iterate a b) [0 .. c])               by iterate_trace_def
+   = LAST (MAP (iterate a b) (SNOC c [0 .. (c-1)]))  by listRangeINC_SNOC
+   = LAST (SNOC ((iterate a b) c) (MAP (iterate a b) [0 .. (c-1)]))
+                                                     by MAP_SNOC
+   = (iterate a b) c                                 by LAST_SNOC
+   = iterate a b c                                   by function application
+*)
+val iterate_trace_last = store_thm(
+  "iterate_trace_last",
+  ``!a b c. LAST (iterate_trace a b c) = iterate a b c``,
+  rpt strip_tac >>
+  qabbrev_tac `f = iterate a b` >>
+  Cases_on `c = 0` >-
+  rw[iterate_trace_sing, Abbr`f`] >>
+  `(c = c - 1 + 1) /\ (0 <= c)` by decide_tac >>
+  `LAST (iterate_trace a b c) = LAST (MAP f [0 .. c])` by rw[iterate_trace_def, Abbr`f`] >>
+  `_ = LAST (MAP f (SNOC c [0 .. (c-1)]))` by metis_tac[listRangeINC_SNOC] >>
+  `_ = LAST (SNOC (f c) (MAP f [0 .. (c-1)]))` by rw[MAP_SNOC] >>
+  `_ = f c` by rw[LAST_SNOC] >>
+  simp[Abbr`f`]);
+
+(* Theorem: j <= c ==> (EL j (iterate_trace a b c) = iterate a b j) *)
+(* Proof:
+   Note j <= c means j < c + 1.
+     EL j (iterate_trace a b c)
+   = EL j (MAP (iterate a b) [0 .. c])   by iterate_trace_def
+   = (iterate a b) (EL j [0 .. c])       by EL_MAP, listRangeINC_LEN
+   = (iterate a b) (0 + j)               by listRangeINC_EL
+   = iterate a b j
+*)
+val iterate_trace_element = store_thm(
+  "iterate_trace_element",
+  ``!a b c j. j <= c ==> (EL j (iterate_trace a b c) = iterate a b j)``,
+  rpt strip_tac >>
+  qabbrev_tac `f = iterate a b` >>
+  `EL j (iterate_trace a b c) = EL j (MAP f [0 .. c])` by rw[iterate_trace_def, Abbr`f`] >>
+  `_ = f (EL j [0 .. c])` by rw[EL_MAP, listRangeINC_LEN] >>
+  `_ = f j` by rw[listRangeINC_EL] >>
+  simp[Abbr`f`]);
+
+(* Theorem: (ls = iterate_trace a b c) /\ ALL_DISTINCT ls /\
+            j <= c ==> (findi (iterate a b j) ls = j) *)
+(* Proof:
+   Note LENGTH ls = 1 + c          by iterate_trace_length
+        findi (iterate a b j) ls
+      = findi (EL j ls)            by iterate_trace_element
+      = j                          by findi_EL, ALL_DISTINCT ls
+*)
+val iterate_trace_element_idx = store_thm(
+  "iterate_trace_element_idx",
+  ``!a b c ls j. (ls = iterate_trace a b c) /\ ALL_DISTINCT ls /\
+                j <= c ==> (findi (iterate a b j) ls = j)``,
+  rpt strip_tac >>
+  `LENGTH ls = 1 + c` by rw[iterate_trace_length] >>
+  `iterate a b j = EL j ls` by rw[iterate_trace_element] >>
+  rw[indexedListsTheory.findi_EL]);
+
+(* Theorem: (ls = iterate_trace a b c) /\ x <> iterate a b c /\
+            MEM x ls ==> MEM (b x) ls *)
+(* Proof:
+       MEM x ls
+   <=> ?j. j < LENGTH ls /\ (x = EL j ls)    by MEM_EL
+   <=> ?j. j < 1 + c /\ (x = EL j ls)        by iterate_trace_length
+   <=> ?j. j < 1 + c /\ (x = iterate a b j)  by iterate_trace_element
+   ==> j <> c since x <> LAST ls,            by iterate_trace_last
+   ==> j < c, so j + 1 < 1 + c               by arithmetic
+   ==> b x = iterate a b (j + 1)             by FUNPOW_SUC
+   ==> b x = EL (j + 1) ls                   by iterate_trace_element
+   ==> MEM (b x) ls                          by MEM_EL
+*)
+val iterate_trace_member = store_thm(
+  "iterate_trace_member",
+  ``!a b c ls x. (ls = iterate_trace a b c) /\ x <> iterate a b c /\
+                MEM x ls ==> MEM (b x) ls``,
+  rpt strip_tac >>
+  qabbrev_tac `f = iterate a b` >>
+  rfs[MEM_EL, iterate_trace_length, iterate_trace_element] >>
+  `PRE (1 + c) = c` by decide_tac >>
+  `ls <> []` by fs[iterate_trace_non_nil] >>
+  `iterate a b c = LAST ls` by fs[iterate_trace_last] >>
+  `_ = EL c ls` by metis_tac[LAST_EL, iterate_trace_length] >>
+  `n <> c` by metis_tac[] >>
+  `n + 1 < c + 1` by decide_tac >>
+  qexists_tac `n + 1` >>
+  simp[] >>
+  `b (f n) = b (iterate a b n)` by fs[Abbr`f`] >>
+  `_ = iterate a b (SUC n)` by fs[GSYM FUNPOW_SUC] >>
+  `_ = EL (SUC n) ls` by rw[iterate_trace_element] >>
+  simp[ADD1]);
+
+(* Theorem: (ls = iterate_trace a b c) ==>
+            (MEM x ls <=> ?j. j <= c /\ (x = iterate a b j)) *)
+(* Proof:
+       MEM x ls
+   <=> ?j. j < LENGTH ls /\ (x = EL j ls)    by MEM_EL
+   <=> ?j. j < 1 + c /\ (x = EL j ls)        by iterate_trace_length
+   <=> ?j. j < 1 + c /\ (x = iterate a b j)  by iterate_trace_element
+*)
+val iterate_trace_member_iff = store_thm(
+  "iterate_trace_member_iff",
+  ``!a b c ls x. (ls = iterate_trace a b c) ==>
+                (MEM x ls <=> ?j. j <= c /\ (x = iterate a b j))``,
+  rw[MEM_EL, iterate_trace_length] >>
+  `!n c. n < c + 1 <=> n <= c` by decide_tac >>
+  metis_tac[iterate_trace_element]);
+
+(* Theorem: (ls = iterate_trace a b c) /\ x <> iterate a b c /\
+            MEM x ls /\ ALL_DISTINCT ls ==> (findi (b x) ls = 1 + findi x ls) *)
+(* Proof:
+       MEM x ls
+   <=> ?j. j < LENGTH ls /\ (x = EL j ls)    by MEM_EL
+   <=> ?j. j < 1 + c /\ (x = EL j ls)        by iterate_trace_length
+   Thus findi x ls = j                       by findi_EL
+   Also j <> c since x <> LAST ls            by iterate_trace_last
+    ==> j < c, so j + 1 < 1 + c              by arithmetic
+        b x
+      = iterate a b (j + 1)                  by FUNPOW_SUC
+      = EL (j + 1) ls                        by iterate_trace_element
+   Thus findi (b x) ls = 1 + j               by findi_EL, iterate_trace_length
+                       = 1 + findi x ls      by above
+indexedListsTheory.findi_EL
+|- !l n. n < LENGTH l /\ ALL_DISTINCT l ==> (findi (EL n l) l = n)
+*)
+val iterate_trace_index = store_thm(
+  "iterate_trace_index",
+  ``!a b c ls x. (ls = iterate_trace a b c) /\ x <> iterate a b c /\
+                MEM x ls /\ ALL_DISTINCT ls ==> (findi (b x) ls = 1 + findi x ls)``,
+  rpt strip_tac >>
+  qabbrev_tac `f = iterate a b` >>
+  rfs[MEM_EL, iterate_trace_length, iterate_trace_element] >>
+  `f n = x` by fs[iterate_trace_element, Abbr`f`] >>
+  `PRE (1 + c) = c` by decide_tac >>
+  `ls <> []` by fs[iterate_trace_non_nil] >>
+  `iterate a b c = LAST ls` by fs[iterate_trace_last] >>
+  `_ = EL c ls` by metis_tac[LAST_EL, iterate_trace_length] >>
+  `n <> c` by metis_tac[] >>
+  `n + 1 < c + 1` by decide_tac >>
+  `b (f n) = b (iterate a b n)` by fs[Abbr`f`] >>
+  `_ = iterate a b (SUC n)` by fs[GSYM FUNPOW_SUC] >>
+  `_ = EL (n + 1) ls` by rw[iterate_trace_element, ADD1] >>
+  fs[iterate_trace_length, indexedListsTheory.findi_EL]);
+
+(* Theorem: FINITE s /\ b PERMUTES s /\ a IN s /\
+            (p = iterate_period b a) /\ c < p ==>
+            ALL_DISTINCT (iterate_trace a b c) *)
+(* Proof:
+   Let ls = iterate_trace a b c.
+   By EL_ALL_DISTINCT_EL_EQ, this is to show:
+      n1 < LENGTH ls /\ n2 < LENGTH ls ==> (EL n1 ls = EL n2 ls) <=> (n1 = n2)
+   The only-if part is trivial, so just do the if-part.
+
+   Note LENGTH ls = 1 + c            by iterate_trace_length
+    and c < p implies 1 + c <= p     by arithmetic
+    ==> n1 < p and n2 < p            by n1, n2 < LENGTH ls
+    Now EL n1 ls = iterate a b n1    by iterate_trace_element
+    and EL n2 ls = iterate a b n2    by iterate_trace_element
+    ==> n1 MOD p = n2 MOD p          by iterate_period_mod_eq
+     or       n1 = n2                by LESS_MOD
+*)
+val iterate_trace_all_distinct = store_thm(
+  "iterate_trace_all_distinct",
+  ``!s a b c p. FINITE s /\ b PERMUTES s /\ a IN s /\
+               (p = iterate_period b a) /\ c < p ==>
+               ALL_DISTINCT (iterate_trace a b c)``,
+  rewrite_tac[EL_ALL_DISTINCT_EL_EQ] >>
+  rpt strip_tac >>
+  qabbrev_tac `ls = iterate_trace a b c` >>
+  `LENGTH ls = 1 + c` by fs[iterate_trace_length, Abbr`ls`] >>
+  `n1 < p /\ n2 < p` by decide_tac >>
+  `EL n1 ls = iterate a b n1` by fs[iterate_trace_element, Abbr`ls`] >>
+  `EL n2 ls = iterate a b n2` by fs[iterate_trace_element, Abbr`ls`] >>
+  metis_tac[iterate_period_mod_eq, LESS_MOD]);
+
+(* Theorem: FINITE s /\ b PERMUTES s /\ a IN s /\
+            (p = iterate_period b a) /\ c < p /\ n < c /\
+            ~g (iterate a b n) /\ (!j. j < n ==> g (iterate a b j)) ==>
+            HOARE_SPEC {a} (WHILE g b) {iterate a b n} *)
+(* Proof:
+   Note 0 < p                      by iterate_period_pos
+   Let ls = iterate_trace a b c.
+   then LENGTH ls = 1 + c          by iterate_trace_length
+    and ALL_DISTINCT ls            by iterate_trace_all_distinct
+
+   By WHILE_RULE_PRE_POST,
+   with Invariant x = MEM x ls /\ findi x ls <= n,
+        Measure x = 1 + c - findi x ls.
+        Guard x = g x, Cmd x = b x,
+        Precond x = x IN {a}, Postcond x = x IN {iterate a b n}.
+   this is to show:
+   (1) MEM a ls           for (!x. Precond x ==> Invariant x)
+       Note a = HD ls          by iterate_trace_head
+        and ls <> []           by iterate_trace_non_nil
+         so MEM a ls           by HEAD_MEM
+   (2) findi a ls <= n    for (!x. Precond x ==> Invariant x)
+       Note a = iterate a b 0  by FUNPOW_0
+         so findi a ls = 0     by iterate_trace_element_idx
+       and surely, 0 <= n      by arithmetic
+   (3) MEM x ls /\ findi x ls <= n /\ g x ==>
+       c + 1 < findi (b x) ls + (c + 1 - findi x ls)
+       for (!x. Invariant x /\ Guard x ==> Measure (Cmd x) < Measure x)
+       Let y = iterate a b c, which is LAST ls   by iterate_trace_last
+       Then findi y ls = c     by iterate_trace_element_idx
+        ==> x <> y             by c <= n and n < c are incompatible
+       Thus findi (b x) ls
+          = 1 + findi x ls     by iterate_trace_index, MEM x ls
+       the inequality is true  by arithmetic
+   (4) MEM x ls /\ findi x ls <= n /\ ~g x ==> x = iterate a b n
+       for (!x. Invariant x /\ ~Guard x ==> Postcond x)
+       Note ?j. j <= c /\ (x = iterate a b j)   by iterate_trace_member_iff, MEM x ls
+         so findi x ls = j                      by iterate_trace_element_idx
+       Thus ~(j < n)                            by ~g x, x = iterate a b j
+         so j = n                               by j <= n, ~(j < n)
+        and x = iterate a b j = iterate a b n.
+   (5) HOARE_SPEC (\x. (MEM x ls /\ findi x ls <= n) /\ g x) b
+                  (\x. MEM x ls /\ findi x ls <= n)
+       for HOARE_SPEC (\x. Invariant x /\ Guard x) Cmd Invariant
+       By HOARE_SPEC_DEF, this is to show:
+       MEM x ls /\ findi x ls <= n /\ g x ==> MEM (b x) ls /\ findi (b x) ls <= n
+
+       Let y = iterate a b c, which is LAST ls   by iterate_trace_last
+       Then findi y ls = c     by iterate_trace_element_idx
+        ==> x <> y             by c <= n and n < c are incompatible
+       Thus MEM (b x) ls       by iterate_trace_member, MEM x ls, x <> y
+       Also findi (b x) ls
+          = 1 + findi x ls     by iterate_trace_index, MEM x ls
+       Note ?j. j <= c /\ (x = iterate a b j)   by iterate_trace_member_iff, MEM x ls
+         so findi x ls = j                      by iterate_trace_element_idx
+        But j <> n                              by ~g (iterate a b n)
+         so j < n                               by j <= n, j <> n
+       Thus findi (b x) ls <= n                 by arithmetic
+*)
+val iterate_while_hoare = store_thm(
+  "iterate_while_hoare",
+  ``!s a b c p g n. FINITE s /\ b PERMUTES s /\ a IN s /\
+         (p = iterate_period b a) /\ n < c /\ c < p /\
+         (* guard g is true before n, but false for n, to exit. *)
+         ~g (iterate a b n) /\ (!j. j < n ==> g (iterate a b j)) ==>
+         HOARE_SPEC {a} (WHILE g b) {iterate a b n}``,
+  rpt strip_tac >>
+  `0 < p` by metis_tac[iterate_period_pos] >>
+  qabbrev_tac `ls = iterate_trace a b c` >>
+  `LENGTH ls = 1 + c` by rw[iterate_trace_length, Abbr`ls`] >>
+  `ALL_DISTINCT ls` by metis_tac[iterate_trace_all_distinct] >>
+  irule WHILE_RULE_PRE_POST >>
+  qexists_tac `\x. MEM x ls /\ findi x ls <= n` >>
+  qexists_tac `\x. 1 + c - findi x ls` >>
+  rw[] >| [
+    `a = HD ls` by rw[iterate_trace_head, Abbr`ls`] >>
+    metis_tac[HEAD_MEM, iterate_trace_non_nil],
+    `a = iterate a b 0` by simp[] >>
+    `findi a ls = 0` by metis_tac[iterate_trace_element_idx, DECIDE``0 <= c``] >>
+    decide_tac,
+    qabbrev_tac `p = iterate_period b a` >>
+    qabbrev_tac `y = iterate a b c` >>
+    `findi y ls = c` by metis_tac[iterate_trace_element_idx, DECIDE``c <= c``] >>
+    `x <> y` by metis_tac[NOT_LESS] >>
+    `findi (b x) ls = 1 + findi x ls` by metis_tac[iterate_trace_index] >>
+    decide_tac,
+    qabbrev_tac `p = iterate_period b a` >>
+    `?j. j <= c /\ (x = iterate a b j)` by metis_tac[iterate_trace_member_iff] >>
+    `findi x ls = j` by metis_tac[iterate_trace_element_idx] >>
+    `~(j < n)` by metis_tac[] >>
+    `j = n` by decide_tac >>
+    fs[],
+    qabbrev_tac `p = iterate_period b a` >>
+    qabbrev_tac `y = iterate a b c` >>
+    `findi y ls = c` by metis_tac[iterate_trace_element_idx, DECIDE``c <= c``] >>
+    simp[whileTheory.HOARE_SPEC_DEF] >>
+    rpt strip_tac >| [
+      `x <> y` by metis_tac[NOT_LESS] >>
+      metis_tac[iterate_trace_member],
+      `x <> y` by metis_tac[NOT_LESS] >>
+      `findi (b x) ls = 1 + findi x ls` by metis_tac[iterate_trace_index] >>
+      `?j. j <= c /\ (x = iterate a b j)` by metis_tac[iterate_trace_member_iff] >>
+      `findi x ls = j` by metis_tac[iterate_trace_element_idx] >>
+      `j <> n` by metis_tac[] >>
+      `j < n` by decide_tac >>
+      decide_tac
+    ]
+  ]);
+
+(* Theorem: FINITE s /\ b PERMUTES s /\ a IN s /\
+            (p = iterate_period b a) /\ n < c /\ c < p /\
+            ~g (iterate a b n) /\ (!j. j < n ==> g (iterate a b j)) ==>
+            (WHILE g b a = iterate a b n) *)
+(* Proof:
+   Note HOARE_SPEC {a} (WHILE g b)
+                   {iterate a b n}       by iterate_while_hoare
+    Now a IN {a}                         by IN_SING
+     so {a} a                            by set as function
+    ==> {iterate a b n} ((WHILE g b) a)  by HOARE_SPEC_DEF
+     or WHILE g b a IN {iterate a b n}   by set as function
+   Thus WHILE g b a = iterate a b n      by IN_SING
+> whileTheory.HOARE_SPEC_DEF;
+val it = |- !P C Q. HOARE_SPEC P C Q <=> !s. P s ==> Q (C s): thm
+Put C = (WHILE g b)
+*)
+val iterate_while_thm_1 = store_thm(
+  "iterate_while_thm_1",
+  ``!s a b c p g n. FINITE s /\ b PERMUTES s /\ a IN s /\
+        (p = iterate_period b a) /\ n < c /\ c < p /\
+        ~g (iterate a b n) /\ (!j. j < n ==> g (iterate a b j)) ==>
+        (WHILE g b a = iterate a b n)``,
+  rpt strip_tac >>
+  `HOARE_SPEC {a} (WHILE g b) {iterate a b n}` by metis_tac[iterate_while_hoare] >>
+  fs[whileTheory.HOARE_SPEC_DEF]);
+
+(* This is another milestone. Now depreciated, see iterate_while_thm below. *)
+
+(* Theorem: ~g a ==> HOARE_SPEC {a} (WHILE g b) {a} *)
+(* Proof:
+   By WHILE_RULE_PRE_POST,
+   set Invariant as (\x. x = a),
+   and Measure as any, e.g. (\x. 1).
+   This is to show:
+   (1) ~g a /\ g a ==> F, which is trivial.
+   (2) ~g a ==> HOARE_SPEC (\x. (x = a) /\ g x) b (\x. x = a)
+       This is also trival      by HOARE_SPEC_DEF
+*)
+val iterate_while_hoare_0 = store_thm(
+  "iterate_while_hoare_0",
+  ``!a b g. ~g a ==> HOARE_SPEC {a} (WHILE g b) {a}``,
+  rpt strip_tac >>
+  irule WHILE_RULE_PRE_POST >>
+  qexists_tac `\x. x = a` >>
+  qexists_tac `\x. 1` >>
+  rw[] >-
+  metis_tac[] >>
+  rw[whileTheory.HOARE_SPEC_DEF]);
+
+(* Theorem: ~g a ==> (WHILE g b a = a) *)
+(* Proof:
+   Note HOARE_SPEC {a} (WHILE g b) {a}   by iterate_while_hoare_0
+   Thus WHILE g b a = a                  by HOARE_SPEC_DEF
+*)
+val iterate_while_thm_0 = store_thm(
+  "iterate_while_thm_0",
+  ``!a b g. ~g a ==> (WHILE g b a = a)``,
+  rpt strip_tac >>
+  `HOARE_SPEC {a} (WHILE g b) {a}` by rw[iterate_while_hoare_0] >>
+  fs[whileTheory.HOARE_SPEC_DEF]);
+
+(* ------------------------------------------------------------------------- *)
+(* Direct from WHILE definition.                                             *)
+(* ------------------------------------------------------------------------- *)
+
+(* from whileTheory:
+
+WHILE
+|- !P g x. WHILE P g x = if P x then WHILE P g (g x) else x
+WHILE |> ISPEC ``g:'a -> bool`` |> ISPEC ``b:'a -> 'a``;
+val it = |- !x. WHILE g b x = if g x then WHILE g b (b x) else x: thm
+WHILE |> ISPEC ``g:'a -> bool`` |> ISPEC ``b:'a -> 'a`` |> ISPEC ``FUNPOW b n x``;
+|- WHILE g b (FUNPOW b n x) =
+      if g (FUNPOW b n x) then WHILE g b (b (FUNPOW b n x)) else FUNPOW b n x: thm
+*)
+
+
+(* Theorem: (!j. j < k ==> g (FUNPOW b j x)) ==>
+            (WHILE g b x =
+                if g (FUNPOW b k x) then WHILE g b (FUNPOW b (k + 1) x) else FUNPOW b k x) *)
+(* Proof:
+   Note FUNPOW b (k + 1) x to b (FUNPOW b k x)                 by FUNPOW_SUC, ADD1
+   By induction on k.
+   Base: WHILE g b x =
+         if g (FUNPOW b 0 x) then WHILE g b (b (FUNPOW b 0 x)) else FUNPOW b 0 x
+         which simplifies to show:
+         WHILE g b x = if g x then WHILE g b (b x) else x      by FUNPOW_0
+         This is true                                          by WHILE
+   Step: (!j. j < k ==> g (FUNPOW b j x)) ==>
+         (WHILE g b x = if g (FUNPOW b k x) then WHILE g b (b (FUNPOW b k x)) else FUNPOW b k x)
+     ==> (!j. j < SUC k ==> g (FUNPOW b j x)) ==>
+         (WHILE g b x = if g (FUNPOW b (SUC k) x) then WHILE g b (b (FUNPOW b (SUC k) x)) else FUNPOW b (SUC k) x)
+         Note !j. j < SUC k ==> g (FUNPOW b j x) means
+              !j. j < k ==> g (FUNPOW b j x) and g (FUNPOW b k x)
+           WHILE g b x
+         = WHILE g b (b (FUNPOW b k x))           by induction hypothesis
+         = WHILE g b (FUNPOW (SUC b) k x)         by FUNPOW_SUC
+         = if g (FUNPOW b (SUC k) x) then WHILE g b (b (FUNPOW b (SUC k x)) else FUNPOW b (SUC k) x
+                                                  by WHILE
+*)
+val iterate_while_eqn = store_thm(
+  "iterate_while_eqn",
+  ``!g b x k. (!j. j < k ==> g (FUNPOW b j x)) ==>
+        (WHILE g b x =
+           if g (FUNPOW b k x) then WHILE g b (FUNPOW b (k + 1) x) else FUNPOW b k x)``,
+  simp[FUNPOW_SUC, GSYM ADD1] >>
+  ntac 3 strip_tac >>
+  Induct >-
+  rw[Once WHILE] >>
+  rw[Once WHILE, FUNPOW_SUC]);
+
+(* Theorem: (!j. j < k ==> g (FUNPOW b j x)) /\ ~g (FUNPOW b k x) ==>
+            (WHILE g b x = FUNPOW b k x) *)
+(* Proof: by iterate_while_eqn. *)
+val iterate_while_thm = store_thm(
+  "iterate_while_thm",
+  ``!g b x k. (!j. j < k ==> g (FUNPOW b j x)) /\ ~g (FUNPOW b k x) ==>
+        (WHILE g b x = FUNPOW b k x)``,
+  metis_tac[iterate_while_eqn]);
+
+
+
+(* ------------------------------------------------------------------------- *)
+
+(* export theory at end *)
+val _ = export_theory();
+
+(*===========================================================================*)
