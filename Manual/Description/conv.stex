@@ -57,7 +57,7 @@ The notion of conversions is inherited from Cambridge
 \LCF;\index{LCF@\LCF!Cambridge} the underlying principles are
 described in \cite{lcp-rewrite,new-LCF-man}.
 
-Conversions such as \ml{BETA\_CONV} %
+Conversions such as \ml{BETA\_CONV}
 \index{beta-conversion, in HOL logic@beta-conversion, in \HOL{} logic!not expressible as a theorem}%
 \index{theorems, in HOL logic@theorems, in \HOL{} logic!rules inexpressible as}%
 \index{conversions!as families of equations}%
