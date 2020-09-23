@@ -742,25 +742,26 @@ Proof
   metis_tac[disjoint_prefix_free,lemma1]
 QED
 
-Definition seq_size_def[simp]:
+Definition seq_size_def:
   seq_size f 0 = 0r ∧
-  seq_size f (SUC n) = 2 rpow -(&f n) + seq_size f n
+  seq_size f (SUC n) = inv (2 pow (f n)) + seq_size f n
 End
 
 Theorem seq_size_positive[simp]:
   ∀n. 0 ≤ seq_size f n
 Proof
-  Induct >> rw[] >> irule REAL_LE_ADD >> simp[REAL_LE_LT, RPOW_POS_LT]
+  Induct >> rw[seq_size_def] >> irule REAL_LE_ADD >>
+  simp[REAL_LE_LT]
 QED
 
 Theorem seq_size_EQ0[simp]:
   seq_size f n = 0 ⇔ n = 0
 Proof
   Induct_on‘n’ >>
-  simp[DECIDE “x < SUC y ⇔ x < y ∨ x = y”, DISJ_IMP_THM, FORALL_AND_THM] >>
-  rw[] >>
+  simp[DECIDE “x < SUC y ⇔ x < y ∨ x = y”, DISJ_IMP_THM, FORALL_AND_THM,
+       seq_size_def] >>
   irule (RealArith.REAL_ARITH “0r < x ∧ 0 ≤ y ==> x + y ≠ 0”) >>
-  simp[powr_negexp, REAL_POW_POS]
+  simp[REAL_POW_POS]
 QED
 
 Theorem INFINITE_ALLCARD_SUBSETS:
@@ -773,9 +774,9 @@ Proof
 QED
 
 Theorem seq_size_REAL_SUM_IMAGE:
-  seq_size f n = REAL_SUM_IMAGE (λi. 2 rpow -&(f i)) (count n)
+  seq_size f n = REAL_SUM_IMAGE (λi. inv (2 pow (f i))) (count n)
 Proof
-  Induct_on ‘n’ >> simp[REAL_SUM_IMAGE_THM, COUNT_SUC]
+  Induct_on ‘n’ >> simp[REAL_SUM_IMAGE_THM, COUNT_SUC, seq_size_def]
 QED
 
 Theorem seq_size_indices:
@@ -797,7 +798,7 @@ Proof
         ‘DISJOINT s0 (count (mx + 2) DIFF s0)’
           by (simp[DISJOINT_DEF, EXTENSION] >> metis_tac[]) >>
         simp[REAL_SUM_IMAGE_DISJOINT_UNION] >>
-        ‘REAL_SUM_IMAGE (λi. 2 rpow -&f i) s0 = &CARD s0 * 2 rpow (- &n)’
+        ‘REAL_SUM_IMAGE (λi. inv (2 pow f i)) s0 = &CARD s0 * inv (2 pow n)’
           by (irule REAL_SUM_IMAGE_FINITE_CONST2 >> gs[SUBSET_DEF]) >>
         ‘∃d. CARD s0 = 2 ** n + d’ by metis_tac[LESS_EQ_EXISTS] >>
         simp[REAL_LT_ADDR, powr_negexp, GSYM REAL_ADD, Excl "REAL_ADD",
@@ -1809,7 +1810,6 @@ Proof
   simp[GSYM pow_inv_mul_invlt, pow, REAL_POW_ADD]
 QED
 
-(*
 Theorem free_space_guarantees_insert:
   ∀ct n v. packed ct0 ∧ 2 rpow -&n ≤ free_space ct0 ⇒
            ∃ct. insert n v ct0 = SOME ct ∧
@@ -1853,75 +1853,165 @@ Proof
       >- gvs[largest_gap_def, full_open_paths_EMPTY, free_space_open_paths,
              REAL_SUM_IMAGE_THM] >>
       rename [‘largest_gap ctr = SOME rg’, ‘free_space ctr ≠ 0’] >>
-      drule_all_then strip_assume_tac packed_largest_gap_ubounds_free_space >>
-      CCONTR_TAC >> gvs[NOT_LESS] >>
-      largest_gap_lbounds_free_space
+      CCONTR_TAC >> gvs[NOT_LESS_EQUAL, DECIDE “x + 1n ≤ y ⇔ x < y”] >>
+      map_every (C qpat_x_assum (K ALL_TAC)) [‘free_space ctr ≠ 0’, ‘∀n v. _’] >>
+      wlog_tac ‘lg < rg’ [‘ctl’, ‘ctr’, ‘lg’, ‘rg’]
+      >- (Cases_on ‘lg = rg’
+          >- (rpt (dxrule_all largest_gap_exists_as_path) >>
+              qpat_x_assum ‘packed (FullNode _ _)’ mp_tac >> simp[packed_def] >>
+              rpt strip_tac >>
+              rename [‘p1 ∈ open_paths ctl’, ‘free_space ctl + free_space ctr’,
+                      ‘p2 ∈ open_paths ctr’] >>
+              first_x_assum $ qspecl_then [‘F::p1’, ‘T::p2’] mp_tac >> simp[] >>
+              metis_tac[]) >>
+          ‘rg < lg’ by simp[] >>
+          first_x_assum $ qspecl_then [‘ctr’, ‘ctl’, ‘rg’, ‘lg’] mp_tac >>
+          simp[packed_FullNode_flips, REAL_ADD_COMM] >>
+          drule_all packed_largest_gap_ubounds_free_space >>
+          simp[]) >>
+      ‘largest_gap (FullNode ctl ctr) = SOME (lg + 1)’ by simp[MIN_DEF] >>
+      drule_at (Pos (el 2)) packed_largest_gap_ubounds_free_space >> simp[] >>
+      REWRITE_TAC[real_div] >> simp[REAL_POW_ADD] >> strip_tac >>
+      qabbrev_tac ‘FS = free_space ctl + free_space ctr’ >> gvs[] >>
+      ‘inv (2 pow m) ≤ FS ∧ FS < 2 * inv (2 pow lg)’ by simp[] >>
+      ‘inv (2 pow m) < 2 * inv (2 pow lg)’ by metis_tac[REAL_LET_TRANS] >>
+      pop_assum mp_tac >> simp[REAL_NOT_LT] >> simp[GSYM pow] >>
+      simp[REAL_OF_NUM_POW]) >>
+  gvs[NOT_LESS_EQUAL] >> irule REAL_LE_TRANS >>
+  drule_then (irule_at Any) largest_gap_lbounds_free_space >>
+  irule REAL_LE_LMUL_IMP >> simp[free_space_bounds, REAL_OF_NUM_POW]
+QED
 
-      Cases_on ‘n’ >> gvs[pow, REAL_LDISTRIB]
-*)
-Definition genpf_def[simp]:
-  genpf [] = (0n,1n,K NONE) ∧
-  genpf ((width,i:num)::rest) =
-  let
-    (n,ld,A) = genpf rest;
-    code_n = n * 2 ** (width - ld);
-    code = padL width (TN2BL code_n);
-  in
-    (n * 2 ** (width - ld) + 1, width, A⦇i ↦ SOME code⦈)
+Definition buildL_def[simp]:
+  buildL i [] = SOME Empty ∧
+  buildL i (w::ws) =
+  case buildL (i + 1n) ws of
+    NONE => NONE
+  | SOME ct => insert w i ct
 End
 
-(*Theorem kraft_finite_indexset:
-  ALL_DISTINCT (MAP SND ixs) ∧
-  FOLDR (λ(wdth,_) A. A + 2 rpow -&wdth) 0r ixs < 1 ∧
-  SORTED (inv ((<) LEX (<))) ixs ⇒
-  let (n,ld,A) = genpf ixs
-  in
-    (ld = if ixs = [] then 1n else FST (HD ixs)) ∧ n < 2 ** ld ∧
-    (∀wdth i. MEM (wdth,i) ixs ⇒ ∃w. A i = SOME w ∧ LENGTH w = wdth) ∧
-    FOLDR (λ(wdth,_) A. A + 2 rpow -&wdth) 0r ixs = &n / 2 pow &ld
+Theorem seq_sizeL:
+  seq_size f 0 = 0 ∧
+  seq_size f (SUC n) = inv (2 pow f 0) + seq_size (f o SUC) n
 Proof
-  Induct_on ‘ixs’ >> simp[pairTheory.FORALL_PROD, MEM_MAP, PULL_EXISTS] >>
-  qx_genl_tac [‘w1’, ‘i1’] >> strip_tac >>
-  drule_then assume_tac sortingTheory.SORTED_TL >> gs[] >>
-  tmCases_on “genpf ixs” ["n ld A"] >> gs[] >>
-  simp[powr_negexp, real_div, REAL_LDISTRIB] >>
-  gs[powr_negexp] >>
-  qabbrev_tac ‘p = if ixs = [] then 1 else FST (HD ixs)’ >>
-  qabbrev_tac ‘fsum = FOLDR (λ(wdth,_) A:real. A + inv (2 pow wdth)) 0 ixs’
+  simp[seq_size_def] >> Induct_on ‘n’ >> simp[seq_size_def] >> fsr[]
+QED
 
-rw[]
-
-conj_
-
-tac
-  >- (
-  >- (rw[]
-      >- (simp[combinTheory.APPLY_UPDATE_THM] >>
-          ‘ld ≤ w2’
-          by (Cases_on ‘t’ >> gs[] >> rename
-
-*)
-
-(*
-Theorem kraft_infinite_ineq2:
-  ∀f. (∀n. seq_size f n ≤ 1) ⇒
-      ∃P b.
-        prefix_free P ∧ BIJ b 𝕌(:num) P  ∧ ∀i. LENGTH (b i) = f i
+Theorem buildL_succeeds:
+  seq_size (flip EL ns) (LENGTH ns) ≤ 1 ⇒
+  ∀n. ∃ct. buildL n ns = SOME ct ∧
+           free_space ct = 1 - seq_size (flip EL ns) (LENGTH ns) ∧
+           Lbiased ct
 Proof
-  cheat
+  Induct_on ‘ns’ >> simp[] >> rw[] >>
+  gvs[seq_sizeL, combinTheory.o_DEF, combinTheory.C_DEF] >>
+  ‘seq_size (λx. EL x ns) (LENGTH ns) ≤ 1’
+    by (irule REAL_LE_TRANS >> first_assum $ irule_at Any >>
+        simp[]) >>
+  gvs[] >> first_x_assum $ qspec_then ‘n + 1’ strip_assume_tac >> simp[] >>
+  qpat_x_assum ‘free_space _ = _’ (assume_tac o SYM) >>
+  ‘inv (2 pow h) ≤ free_space ct’
+    by (pop_assum (SUBST1_TAC o SYM) >> ASM_REWRITE_TAC[REAL_LE_SUB_LADD]) >>
+  ‘packed ct’ by metis_tac[Lbiased_packed] >>
+  drule free_space_guarantees_insert >> gvs[powr_negexp] >> disch_then drule >>
+  disch_then $ qspec_then ‘n’ strip_assume_tac >> simp[] >> fsr[] >>
+  metis_tac[insert_preserves_Lbiased]
+QED
+
+Theorem ctree_domain_first_tree[simp]:
+  ctree_domain (first_tree n v) = {Fpow n}
+Proof
+  Induct_on ‘n’ >> simp[]
+QED
+
+Theorem codetree_to_fmap_first_tree[simp]:
+  codetree_to_fmap (first_tree n v) = FEMPTY |+ (Fpow n, v)
+Proof
+  Induct_on ‘n’ >> simp[fmap_EXT, FUN_FMAP_DEF]
+QED
+
+Theorem insert_extends_domain:
+  ∀ct0 w v ct.
+    insert w v ct0 = SOME ct ⇒
+    (∃p. ctree_domain ct = p INSERT ctree_domain ct0 ∧ p ∉ ctree_domain ct0 ∧
+         LENGTH p = w ∧
+         codetree_to_fmap ct ' p = v) ∧
+    ∀q. q ∈ ctree_domain ct0 ⇒ codetree_to_fmap ct ' q = codetree_to_fmap ct0 ' q
+Proof
+  Induct >>
+  simp[AllCaseEqs(), DISJ_IMP_THM, FORALL_AND_THM, PULL_EXISTS, FUN_FMAP_DEF] >>
+  rw[] >> simp[] >>
+  first_x_assum $ drule_then $
+    CONJUNCTS_THEN2 (qx_choose_then ‘p’ strip_assume_tac) strip_assume_tac
+  >- (qexists_tac ‘T::p’ >> simp[FUN_FMAP_DEF] >> simp[EXTENSION] >>
+      metis_tac[])
+  >- (qexists_tac ‘T::p’ >> simp[FUN_FMAP_DEF] >> simp[EXTENSION] >>
+      metis_tac[]) >>
+  qexists_tac ‘F::p’ >> simp[FUN_FMAP_DEF] >> simp[EXTENSION] >>
+  metis_tac[]
+QED
+
+Theorem buildL_bijection_props:
+  ∀ws n ct.
+    buildL n ws = SOME ct ⇒
+    (∀p. p ∈ ctree_domain ct ⇒
+         ∃i. i < LENGTH ws ∧ EL i ws = LENGTH p ∧
+             codetree_to_fmap ct ' p = n + i) ∧
+    ∀i. i < LENGTH ws ⇒
+        ∃!p. p ∈ ctree_domain ct ∧ codetree_to_fmap ct ' p = n + i
+Proof
+  Induct_on ‘ws’ >> simp[AllCaseEqs(), PULL_EXISTS] >> rpt gen_tac >> strip_tac>>
+  drule_then (CONJUNCTS_THEN2 (qx_choose_then ‘hp’ strip_assume_tac)
+              strip_assume_tac) insert_extends_domain >>
+  dsimp[DISJ_IMP_THM, FORALL_AND_THM, indexedListsTheory.LT_SUC] >> conj_tac
+  >- (first_x_assum $ drule_all_then strip_assume_tac >>
+      rpt strip_tac >> first_x_assum drule >> simp[ADD1] >>
+      metis_tac[ADD_ASSOC, ADD_COMM]) >> conj_tac
+  >- (simp[EXISTS_UNIQUE_THM] >> simp[EXISTS_OR_THM] >>
+      dsimp[DISJ_IMP_THM, FORALL_AND_THM] >> csimp[] >>
+      first_x_assum $ drule_then (assume_tac o CONJUNCT1) >> rpt strip_tac >>
+      first_x_assum drule >> simp[]) >>
+  csimp[] >> first_x_assum drule >> simp[ADD1]>>
+  rpt strip_tac >> first_x_assum drule >> simp[]
+QED
+
+Theorem buildL_bijection:
+  buildL 0 ws = SOME ct ⇒
+  BIJ (FAPPLY (codetree_to_fmap ct)) (ctree_domain ct) (count (LENGTH ws))
+Proof
+  csimp[BIJ_DEF, INJ_IFF, SURJ_DEF] >> strip_tac >>
+  drule_then strip_assume_tac buildL_bijection_props >> rw[] >> gvs[]
+  >- metis_tac[] >>
+  PROVE_TAC[]
+QED
+
+Theorem seq_size_GENLIST:
+  ∀f. seq_size f n = FOLDR (λn A. A + inv (2 pow n)) 0r (GENLIST f n)
+Proof
+  Induct_on ‘n’ >> simp[seq_sizeL, GENLIST_CONS] >> fsr[]
 QED
 
 Theorem kraft_finite_ineq2:
-  FOLDR (λn A. A + 2 rpow -&n) 0r ns ≤ 1 ⇒
-  ∃P b.
+  FOLDR (λn A. A + inv (2 pow n)) 0r ns ≤ 1 ⇒
+  ∃(P : bool list set) b.
      prefix_free P ∧ BIJ b (count (LENGTH ns)) P ∧
      ∀i. i < LENGTH ns ⇒ LENGTH (b i) = EL i ns
 Proof
-  cheat
+  strip_tac >>
+  ‘GENLIST (flip EL ns) (LENGTH ns) = ns’
+    by simp[LIST_EQ, EL_GENLIST] >>
+  ‘seq_size (flip EL ns) (LENGTH ns) ≤ 1’ by simp[seq_size_GENLIST] >>
+  drule_then (qspec_then ‘0’ $ qx_choose_then ‘ct’ strip_assume_tac)
+             buildL_succeeds >>
+  drule_then assume_tac buildL_bijection>>
+  drule_then assume_tac BIJ_LINV_BIJ >>
+  first_assum $ irule_at Any >> simp[] >>
+  qx_gen_tac ‘i’ >> strip_tac >>
+  rev_drule_then strip_assume_tac (cj 1 $ iffLR BIJ_DEF) >>
+  dxrule_then strip_assume_tac LINV_DEF >>
+  drule_then strip_assume_tac buildL_bijection_props >>
+  pop_assum drule >> simp[EXISTS_UNIQUE_THM] >> strip_tac >> rw[] >>
+  gs[]
 QED
-*)
-
-
-
 
 val _ = export_theory();
