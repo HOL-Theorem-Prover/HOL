@@ -1991,6 +1991,11 @@ Proof
   Induct_on ‘n’ >> simp[seq_sizeL, GENLIST_CONS] >> fsr[]
 QED
 
+Definition REAL_SUM_def:
+  REAL_SUM [] = 0r ∧
+  REAL_SUM (r::rs) = r + REAL_SUM rs
+End
+
 Theorem kraft_finite_ineq2:
   FOLDR (λn A. A + inv (2 pow n)) 0r ns ≤ 1 ⇒
   ∃(P : bool list set) b.
@@ -2013,5 +2018,14 @@ Proof
   pop_assum drule >> simp[EXISTS_UNIQUE_THM] >> strip_tac >> rw[] >>
   gs[]
 QED
+
+Theorem REAL_SUM_FOLDR:
+  FOLDR (λn A. A + f n) 0r ns = REAL_SUM (MAP f ns)
+Proof
+  Induct_on ‘ns’ >> simp[REAL_SUM_def, REAL_ADD_COMM]
+QED
+
+Theorem kraft_finite_converse =
+  kraft_finite_ineq2 |> SIMP_RULE (srw_ss()) [REAL_SUM_FOLDR, GSYM powr_negexp]
 
 val _ = export_theory();
