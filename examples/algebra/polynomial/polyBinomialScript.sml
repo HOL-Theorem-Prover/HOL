@@ -13,7 +13,6 @@ val _ = new_theory "polyBinomial";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -1428,7 +1427,7 @@ val poly_coeff_X_add_c_exp_n = store_thm(
           = (##0 :: PAD_LEFT #0 n [#1]) ' 0    by poly_X_exp_n_add_c_alt
           = #0                                 by poly_coeff_0_cons
        If k <> 0, then 0 < k.
-            (X ** n + ### 0) ' k = #0          by poly_coeff_X_exp_n_add_c_alt
+            (X ** n + ### 0) ' k = #0          by poly_coeff_X_exp_n_add_c
        If c <> #0,
        Note factor c
           = X - c * |1|            by poly_factor_alt
@@ -1465,7 +1464,7 @@ val poly_coeff_factor_exp = store_thm(
     `_ = X ** n + (poly_num r 0)` by rw[] >>
     Cases_on `k = 0` >-
     rw[poly_X_exp_n_add_c_alt, poly_coeff_0_cons] >>
-    metis_tac[poly_coeff_X_exp_n_add_c_alt, NOT_ZERO_LT_ZERO],
+    metis_tac[poly_coeff_X_exp_n_add_c, NOT_ZERO],
     `factor c = X - c * |1|` by rw[poly_factor_alt] >>
     `_ = X + (- c * |1|)` by rw[poly_sub_def] >>
     `_ = X + ([- c])` by rw[poly_cmult_one] >>
@@ -2877,10 +2876,10 @@ val poly_sum_gen_eq_zero = store_thm(
     `f k IN R` by metis_tac[ring_fun_def] >>
     `deg (f k * p ** k) = deg (p ** k)` by rw[GSYM poly_field_deg_cmult] >>
     `_ = k * deg p` by rw[poly_field_deg_exp] >>
-    metis_tac[MULT_EQ_0, NOT_ZERO_LT_ZERO]) >>
+    metis_tac[MULT_EQ_0, NOT_ZERO]) >>
     `!k. 0 < k /\ k < n ==> (f k * p ** k = |0|)` by rw[] >>
     spose_not_then strip_assume_tac >>
-    `j = 0` by metis_tac[NOT_ZERO_LT_ZERO] >>
+    `j = 0` by metis_tac[NOT_ZERO] >>
     `n <> 0` by decide_tac >>
     `?m. n = SUC m` by metis_tac[num_CASES] >>
     qabbrev_tac `g = \j. f j * p ** j` >>
@@ -3324,7 +3323,7 @@ val poly_dilate_deg_lower = store_thm(
   Cases_on `p = |0|` >-
   rw[] >>
   `p <> [] /\ DILATE #0 0 n p <> []` by metis_tac[DILATE_0_EQ_NIL, poly_zero] >>
-  `0 < LENGTH (DILATE #0 0 n p)` by metis_tac[LENGTH_NIL, NOT_ZERO_LT_ZERO] >>
+  `0 < LENGTH (DILATE #0 0 n p)` by metis_tac[LENGTH_NIL, NOT_ZERO] >>
   rw[DILATE_0_LENGTH_LOWER, INV_PRE_LESS_EQ, poly_deg_def]);
 
 (* Theorem: 0 < n ==> !p. deg (pdilate n p) <= SUC n * deg p *)

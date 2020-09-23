@@ -13,7 +13,6 @@ val _ = new_theory "polyRoot";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -99,6 +98,9 @@ open integralDomainTheory; (* for poly_roots_mult_id *)
    poly_factor_in_image_X_add_c |- !r. Ring r /\ #1 <> #0 ==>
                                    !s. FINITE s /\ MAX_SET s < char r ==>
                                    !x. x IN s <=> x < char r /\ factor (-##x) IN IMAGE (\c. X + |c|) s
+   poly_factor_in_image_X_sub_c |- !r. Ring r /\ #1 <> #0 ==>
+                                   !s. FINITE s /\ MAX_SET s < char r ==>
+                                   !x. x IN s <=> x < char r /\ factor (##x) IN IMAGE (\c. X - |c|) s
    field_orders_factor_image_member
                               |- !r. Field r ==> !p n. p IN IMAGE factor (orders f* n) ==>
                                      poly p /\ (deg p = 1) /\ (lead p = #1) /\ monic p
@@ -535,6 +537,33 @@ val poly_factor_in_image_X_add_c = store_thm(
   rpt strip_tac >>
   `!c. c IN s ==> c < char r` by metis_tac[MEMBER_NOT_EMPTY, MAX_SET_DEF, LESS_EQ_LESS_TRANS] >>
   rw[poly_factor_def, poly_X_add_c_list, EQ_IMP_THM] >-
+  metis_tac[poly_one] >>
+  metis_tac[ring_num_eq]);
+
+(* Theorem: Ring r /\ #1 <> #0 ==>
+            !s. FINITE s /\ MAX_SET s < char r ==>
+            !x. x IN s <=> (x < char r /\ factor (##x) IN (IMAGE (\c:num. X - |c|) s)) *)
+(* Proof:
+   Note: x IN s ==> x < char r
+       Since x IN s ==> s <> {}     by MEMBER_NOT_EMPTY
+          so x <= MAX_SET s         by MAX_SET_DEF
+       hence x < char r             by LESS_EQ_LESS_TRANS
+   Note: X - |c| = [- ##c; #1]      by poly_X_sub_c_list
+   By poly_factor_def and IN_IMAGE, this is to show:
+   (1) x IN s ==> ?c. ((##x = ##c) /\ (|1| = [#1])) /\ c IN s
+       Let c = x, then trivially true, with |1| = [#1]  by poly_one.
+   (2) c IN s /\ ##x = ##c ==> x IN s
+       Since ##x = ##c ==> x = c    by ring_num_eq
+       This is trivially true.
+*)
+val poly_factor_in_image_X_sub_c = store_thm(
+  "poly_factor_in_image_X_sub_c",
+  ``!r:'a ring. Ring r /\ #1 <> #0 ==>
+   !s. FINITE s /\ MAX_SET s < char r ==>
+   !x. x IN s <=> (x < char r /\ factor (##x) IN (IMAGE (\c:num. X - |c|) s))``,
+  rpt strip_tac >>
+  `!c. c IN s ==> c < char r` by metis_tac[MEMBER_NOT_EMPTY, MAX_SET_DEF, LESS_EQ_LESS_TRANS] >>
+  rw[poly_factor_def, poly_X_sub_c_list, EQ_IMP_THM] >-
   metis_tac[poly_one] >>
   metis_tac[ring_num_eq]);
 
