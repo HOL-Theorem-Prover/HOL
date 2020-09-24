@@ -1,7 +1,7 @@
 structure equations =
 struct
 
-local open HolKernel boolSyntax Drule compute_rules clauses
+local open HolKernel compute_rules clauses
 in
 
 (*---------------------------------------------------------------------------
@@ -59,23 +59,15 @@ and match_solve bds (Pvar var)           arg = match_var bds var arg
   | match_solve _ _ _ = raise No_match
 ;
 
-(*
-   `try_rwn ty_inst args rewrites --> {Rule: rule, Inst: inst}`
+(*---------------------------------------------------------------------------
+ * Try a sequence of rewrite rules. No attempt to factorize patterns!
+ *---------------------------------------------------------------------------*)
 
-   Try a sequence of rewrite rules. No attempt to factorize patterns!
-
-   - `ty_inst`: Type instantiation.
-   - `args`: Arguments to which the constant is applied.
-   - `rewrites`: Information about rewrite equations of the applied constant.
-   - `rule`: The chosen rewritting rule.
-   - `inst`: Instantiation of the variables in the rewriting rule to make the
-     arguments of the LHS match `args`.
-*)
 fun try_rwn ibds lt =
  let fun try_rec [] = raise No_match
        | try_rec ((rw as RW{lhs,npv,...})::rwn) =
           (let val env = Array.array(npv,NONE)
-           in {Rule=rw, Inst=match_list(env,ibds) lhs lt}
+           in {Rule=rw, Inst=match_list (env,ibds) lhs lt}
            end handle No_match => try_rec rwn)
  in try_rec end
 ;
@@ -106,27 +98,20 @@ fun mk_clos(env,t) =
  * It is probably this code that can be improved the most
  *---------------------------------------------------------------------------*)
 
-fun inst_one_var (SOME(tm,v),(thm,lv)) = (Specialize tm thm, v :: lv)
-  | inst_one_var (NONE,_) = raise DEAD_CODE "inst_rw"
-
-(* Instantiate an equational rewrite. *)
-fun inst_rw ({Rule=RW{thm,rhs=rule_rhs,ants,...}, Inst=(bds,tysub)},
-             monitoring_p) =
-  let
-    val ty_inst_rw_thm = INST_TYPE tysub thm
-    val (spec_thm, env) = Array.foldl inst_one_var (ty_inst_rw_thm, []) bds
-    val cl = mk_clos (env, inst_type_dterm (tysub, rule_rhs))
-    val (ants_hol4, eq_t) = strip_imp_only (concl spec_thm)
-    val new_rhs = rhs eq_t
-    fun inst_ant ant = mk_clos (env, inst_type_dterm (tysub, ant))
-    val ants_cl = List.map inst_ant ants
+local fun inst_one_var (SOME(tm,v),(thm,lv)) = (Specialize tm thm, v :: lv)
+        | inst_one_var (NONE,_) = raise DEAD_CODE "inst_rw"
+in
+fun inst_rw (th,monitoring,{Rule=RW{thm,rhs,...}, Inst=(bds,tysub)}) =
+  let val tirhs = inst_type_dterm (tysub,rhs)
+      val tithm = INST_TYPE tysub thm
+      val (spec_thm,venv) = Array.foldl inst_one_var (tithm,[]) bds
   in
-    if monitoring_p then
+    if monitoring then
       !Feedback.MESG_outstream (Parse.term_to_string (concl spec_thm) ^ "\n")
-    else
-      ();
-    (spec_thm, new_rhs, cl, zip ants_hol4 ants_cl)
+    else ();
+    (trans_thm th spec_thm, mk_clos(venv,tirhs))
   end
+end;
 
 val monitoring = ref NONE : (term -> bool) option ref;
 val stoppers = ref NONE : (term -> bool) option ref;
@@ -135,54 +120,27 @@ val stoppers = ref NONE : (term -> bool) option ref;
  * Reducing a constant
  *---------------------------------------------------------------------------*)
 
-(*
-   `reduce_cst (thm, cl) --> (reduced_p, t', cl', ants, mk_thm)`
-
-   Reduce an application of a constant in the compset. `thm` must be of the form
-   `|- lhs = rhs`. `cl` is information about `rhs`. If `cl` is an application of
-   a constant for which there is an usable rule in its compset then reduce it
-   using that equation. `t'` is the HOL term after reducing the application in
-   `rhs`. `cl'` is information about `t'`. `ants` is a list of the antecedents
-   to be reduced to `T` where each element is of the form `(t'', cl'')`. If
-   `reduced_p` is true then `mk_thm` takes a list of theorems of the form
-   `ant <=> T’ where `ant` is the correponding term of `ants` and returns
-   `lhs = t'`.
-*)
 fun reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip}) =
-    (let
-       val _ = (case !stoppers of
-                  NONE => ()
-                | SOME p => if p Head then raise No_match else ())
-       val (_,tytheta) = match_term Hcst Head
-                         handle HOL_ERR _ => raise No_match
-       val rule_inst = try_rwn tytheta Args rls
-       val monitoring_p =
-         case !monitoring of
-           NONE => false
-         | SOME f => f Head
-       val (spec_thm, new_rhs, cl, ants) = inst_rw (rule_inst, monitoring_p)
-       fun mk_thm thml =
-         TRANS th
-               (List.foldl (fn (ant_eq_t, thm) =>
-                              MP spec_thm (EQT_ELIM ant_eq_t))
-                           spec_thm
-                           thml)
-     in
-       (true, new_rhs, cl, ants, mk_thm)
-     end
-     handle No_match
-     => reduce_cst (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
+      (let val _ = (case !stoppers
+                     of NONE => ()
+                      | SOME p => if p Head then raise No_match else ())
+           val (_,tytheta) = match_term Hcst Head
+                                 handle HOL_ERR _ => raise No_match
+               val rule_inst = try_rwn tytheta Args rls
+               val mon = case !monitoring
+                          of NONE => false
+                           | SOME f => f Head
+               val insted = inst_rw(th,mon,rule_inst)
+           in (true, insted)
+           end handle No_match
+           => reduce_cst (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
   | reduce_cst (th,{Head, Args, Rws=Try{Hcst,Rws=Conv fconv,Tail},Skip}) =
-    (let
-       val (thm, cl) = fconv (rhs (concl th))
-       val mk_thm = K (TRANS th thm)
-     in
-       (true, rhs (concl thm), cl, [], mk_thm)
-     end
-     handle HOL_ERR _
-     => reduce_cst (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
-  | reduce_cst (th,cst) =
-    (false, rhs (concl th), CST cst, [], K th)
+      (let val (thm, ft) = fconv (rhs_concl th) in
+       (true, (trans_thm th thm, ft))
+       end handle HOL_ERR _
+       => reduce_cst (th,{Head=Head,Args=Args,Rws=Tail,Skip=Skip}))
+  | reduce_cst (th,cst) = (false,(th,CST cst))
+;
 
 end;
 
