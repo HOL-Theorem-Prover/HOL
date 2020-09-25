@@ -329,6 +329,15 @@ fun enter_thm compset thm0 = let
       | NONE => ()
     end
 in
+  (*
+     First try to add an useful rewrite. After stripping antencedents:
+
+     * An equation is added as a rewrite as-is. Exception: Some trivially
+       looping cases are detected with `unsuitable` and ignored.
+     * A negation `~P` is added as a rewrite of `P` to `F`.
+     * Any other proposition `P` is added as a rewrite `P` to `T`, except in the
+       case that `P` is `T`.
+  *)
   if is_eq conseq then
     if unsuitable conseq then
       ()
@@ -336,8 +345,13 @@ in
       add thm0
   else if is_neg conseq then
     add (CONV_RULE (funpow (length ants) RAND_CONV eqf_intro_conv) thm0)
+  else if conseq ~~ T then
+    (* Do not add a rewrite `T <=> T` which causes a loop when reducing. *)
+    ()
   else
     add (CONV_RULE (funpow (length ants) RAND_CONV eqt_intro_conv) thm0);
+  (* If `thm0` is an implication then add a rewrite of the implication itself to
+  `T`. *)
   if not (List.null ants) then
     add (EQT_INTRO thm0)
   else
