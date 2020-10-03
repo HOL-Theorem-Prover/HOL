@@ -214,7 +214,6 @@ open gcdTheory; (* for P_EUCLIDES *)
    DIVIDES_MOD_0     |- !n. 0 < n ==> !m. n divides m <=> (m MOD n = 0)
    EVEN_ALT          |- !n. EVEN n <=> 2 divides n
    ODD_ALT           |- !n. ODD n <=> ~(2 divides n)
-   NOT_PRIME_4       |- ~prime 4
 
    DIV_MULT_LE       |- !n. 0 < n ==> !q. q DIV n * n <= q
    DIV_MULT_EQ       |- !n. 0 < n ==> !q. n divides q <=> (q DIV n * n = q)
@@ -287,6 +286,9 @@ open gcdTheory; (* for P_EUCLIDES *)
    EUCLID_LEMMA        |- !p x y. prime p ==> (((x * y) MOD p = 0) <=> (x MOD p = 0) \/ (y MOD p = 0))
    MOD_MULT_LCANCEL    |- !p x y z. prime p ==>
                                ((x * y) MOD p = (x * z) MOD p) /\ x MOD p <> 0 ==> (y MOD p = z MOD p)
+   MOD_MULT_RCANCEL    |- !p x y z. prime p ==>
+                              ((y * x) MOD p = (z * x) MOD p) /\ x MOD p <> 0 ==>
+                               (y MOD p = z MOD p)
    MOD_MULT_INV_EXISTS |- !p x. prime p /\ 0 < x /\ x < p ==> ?y. 0 < y /\ y < p /\ ((y * x) MOD p = 1)
    MOD_MULT_INV_DEF    |- !p x. prime p /\ 0 < x /\ x < p ==>
                            0 < MOD_MULT_INV p x /\ MOD_MULT_INV p x < p /\ ((MOD_MULT_INV p x * x) MOD p = 1)
@@ -310,6 +312,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    EVEN_PRIME           |- !n. EVEN n /\ prime n ==> (n = 2)
    ODD_PRIME            |- !n. prime n /\ n <> 2 ==> ODD n
    TWO_LE_PRIME         |- !p. prime p ==> 2 <= p
+   NOT_PRIME_4          |- ~prime 4
    prime_divides_prime  |- !n m. prime n /\ prime m ==> (n divides m <=> (n = m))
    ALL_PRIME_FACTORS_MOD_EQ_1  |- !m n. 0 < m /\ 1 < n /\
                                    (!p. prime p /\ p divides m ==> (p MOD n = 1)) ==> (m MOD n = 1)
@@ -2214,20 +2217,6 @@ val ODD_ALT = store_thm(
   ``!n. ODD n = ~(2 divides n)``,
   metis_tac[EVEN_ODD, EVEN_ALT]);
 
-(* Theorem: ~prime 4 *)
-(* Proof:
-   Note 4 = 2 * 2     by arithmetic
-     so 2 divides 4   by divides_def
-   thus ~prime 4      by primes_def
-*)
-val NOT_PRIME_4 = store_thm(
-  "NOT_PRIME_4",
-  ``~prime 4``,
-  rpt strip_tac >>
-  `4 = 2 * 2` by decide_tac >>
-  `4 <> 2 /\ 4 <> 1 /\ 2 <> 1` by decide_tac >>
-  metis_tac[prime_def, divides_def]);
-
 (* Theorem: 0 < n ==> !q. (q DIV n) * n <= q *)
 (* Proof:
    Since q = (q DIV n) * n + q MOD n  by DIVISION
@@ -3234,7 +3223,18 @@ val MOD_MULT_LCANCEL = store_thm(
   ] >>
   metis_tac[MOD_MULT_LCANCEL1]);
 
-(* Theorem: For prime p, 0 < x < p ==> ?y. 0 < y /\ y < p /\ y*x MOD p = 1 *)
+(* Theorem: prime p ==>
+            ((y * x) MOD p = (z * x) MOD p) /\ x MOD p <> 0 ==>
+             (y MOD p = z MOD p) *)
+(* Proof: by MOD_MULT_LCANCEL, MULT_COMM *)
+val MOD_MULT_RCANCEL = store_thm(
+  "MOD_MULT_RCANCEL",
+  ``!p x y z. prime p ==>
+             ((y * x) MOD p = (z * x) MOD p) /\ x MOD p <> 0 ==>
+             (y MOD p = z MOD p)``,
+  metis_tac[MOD_MULT_LCANCEL, MULT_COMM]);
+
+(* Theorem: For prime p, 0 < x < p ==> ?y. 0 < y /\ y < p /\ (y*x) MOD p = 1 *)
 (* Proof:
        0 < x < p
    ==> ~ divides p x                    by NOT_LT_DIVIDES
@@ -3569,6 +3569,20 @@ val TWO_LE_PRIME = store_thm(
   "TWO_LE_PRIME",
   ``!p. prime p ==> 2 <= p``,
   metis_tac[ONE_LT_PRIME, DECIDE``1 < n <=> 2 <= n``]);
+
+(* Theorem: ~prime 4 *)
+(* Proof:
+   Note 4 = 2 * 2     by arithmetic
+     so 2 divides 4   by divides_def
+   thus ~prime 4      by primes_def
+*)
+val NOT_PRIME_4 = store_thm(
+  "NOT_PRIME_4",
+  ``~prime 4``,
+  rpt strip_tac >>
+  `4 = 2 * 2` by decide_tac >>
+  `4 <> 2 /\ 4 <> 1 /\ 2 <> 1` by decide_tac >>
+  metis_tac[prime_def, divides_def]);
 
 (* Theorem: prime n /\ prime m ==> (n divides m <=> (n = m)) *)
 (* Proof:

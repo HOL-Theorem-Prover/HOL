@@ -25,7 +25,6 @@ val _ = new_theory "groupInstances";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -48,7 +47,7 @@ open helperNumTheory helperSetTheory helperFunctionTheory;
 open pred_setTheory arithmeticTheory dividesTheory gcdTheory;
 
 (* val _ = load "GaussTheory"; *)
-open EulerTheory GaussTheory;
+open EulerTheory GaussTheory; (* for residue *)
 
 
 (* ------------------------------------------------------------------------- *)
@@ -73,6 +72,7 @@ open EulerTheory GaussTheory;
    Zadd_property |- !n. (!x. x IN (Z n).carrier <=> x < n) /\ ((Z n).id = 0) /\
                       (!x y. (Z n).op x y = (x + y) MOD n) /\
                       FINITE (Z n).carrier /\ (CARD (Z n).carrier = n)
+   Zadd_id       |- !n. (Z n).id = 0
    Zadd_finite   |- !n. FINITE (Z n).carrier
    Zadd_card     |- !n. CARD (Z n).carrier = n
    Zadd_group    |- !n. 0 < n ==> Group (Z n)
@@ -89,6 +89,7 @@ open EulerTheory GaussTheory;
    Zstar_property  |- !p. ((Z* p).carrier = residue p) /\ ((Z* p).id = 1) /\
                           (!x y. (Z* p).op x y = (x * y) MOD p) /\
                           FINITE (Z* p).carrier /\ (0 < p ==> (CARD (Z* p).carrier = p - 1))
+   Zstar_id        |- !p. (Z* p).id = 1
    Zstar_finite    |- !p. FINITE (Z* p).carrier
    Zstar_card      |- !p. 0 < p ==> (CARD (Z* p).carrier = p - 1)
    Zstar_group     |- !p. prime p ==> Group (Z* p)
@@ -114,6 +115,7 @@ open EulerTheory GaussTheory;
    Estar_property  |- !n. ((Estar n).carrier = Euler n) /\ ((Estar n).id = 1) /\
                           (!x y. (Estar n).op x y = (x * y) MOD n) /\
                           FINITE (Estar n).carrier /\ (CARD (Estar n).carrier = totient n)
+   Estar_id        |- !n. (Estar n).id = 1
    Estar_finite    |- !n. FINITE (Estar n).carrier
    Estar_card      |- !n. CARD (Estar n).carrier = totient n
    Estar_card_alt  |- !n. 1 < n ==> (CARD (Estar n).carrier = phi n)
@@ -137,6 +139,7 @@ open EulerTheory GaussTheory;
 
    The Trivial Group:
    trivial_group_def |- !e. trivial_group e = <|carrier := {e}; id := e; op := (\x y. e)|>
+   trivial_group_id  |- !e. (trivial_group e).id = e
    trivial_group     |- !e. FiniteAbelianGroup (trivial_group e)
 
    The Function Cyclic Group:
@@ -149,6 +152,7 @@ open EulerTheory GaussTheory;
          ((fn_cyclic_group e f).carrier = {FUNPOW f k e | k < n}) /\
          ((fn_cyclic_group e f).id = e) /\
          !i j. (fn_cyclic_group e f).op (FUNPOW f i e) (FUNPOW f j e) = FUNPOW f ((i + j) MOD n) e
+   fn_cyclic_group_id                   |- !e f. (fn_cyclic_group e f).id = e
    fn_cyclic_group_group                |- !e f. (?n. n <> 0 /\ (FUNPOW f n e = e)) ==> Group (fn_cyclic_group e f)
    fn_cyclic_group_finite_abelian_group |- !e f. (?n. n <> 0 /\ (FUNPOW f n e = e)) ==> FiniteAbelianGroup (fn_cyclic_group e f)
    fn_cyclic_group_finite_group         |- !e f. (?n. n <> 0 /\ (FUNPOW f n e = e)) ==> FiniteGroup (fn_cyclic_group e f)
@@ -160,6 +164,7 @@ open EulerTheory GaussTheory;
                            ((add_mod n).id = 0) /\
                            (!x y. (add_mod n).op x y = (x + y) MOD n) /\
                            FINITE (add_mod n).carrier /\ (CARD (add_mod n).carrier = n)
+   add_mod_id       |- !n. (add_mod n).id = 0
    add_mod_finite   |- !n. FINITE (add_mod n).carrier
    add_mod_card     |- !n. CARD (add_mod n).carrier = n
    add_mod_group    |- !n. 0 < n ==> Group (add_mod n)
@@ -181,6 +186,7 @@ open EulerTheory GaussTheory;
                                 ((mult_mod p).id = 1) /\
                                 (!x y. (mult_mod p).op x y = (x * y) MOD p) /\
                                 FINITE (mult_mod p).carrier /\ (0 < p ==> (CARD (mult_mod p).carrier = p - 1))
+   mult_mod_id      |- !p. (mult_mod p).id = 1
    mult_mod_finite  |- !p. FINITE (mult_mod p).carrier
    mult_mod_card    |- !p. 0 < p ==> (CARD (mult_mod p).carrier = p - 1)
    mult_mod_group   |- !p. prime p ==> Group (mult_mod p)
@@ -260,6 +266,13 @@ val Zadd_property = store_thm(
        FINITE (Z n).carrier /\
        (CARD (Z n).carrier = n)``,
   rw_tac std_ss[Zadd_def, IN_COUNT, FINITE_COUNT, CARD_COUNT]);
+
+(* Theorem: (Z n).id = 0 *)
+(* Proof: by Zadd_def. *)
+val Zadd_id = store_thm(
+  "Zadd_id",
+  ``!n. (Z n).id = 0``,
+  simp[Zadd_def]);
 
 (* Theorem: FINITE (Z n).carrier *)
 (* Proof: by Zadd_property *)
@@ -440,6 +453,13 @@ val Zstar_property = store_thm(
        FINITE (Z* p).carrier /\
        (0 < p ==> (CARD (Z* p).carrier = p - 1))``,
   rw[Zstar_def, residue_finite, residue_card]);
+
+(* Theorem: (Z* p).id = 1 *)
+(* Proof: by Zstar_def. *)
+val Zstar_id = store_thm(
+  "Zstar_id",
+  ``!p. (Z* p).id = 1``,
+  simp[Zstar_def]);
 
 (* Theorem: FINITE (Z* p).carrier *)
 (* Proof: by Zstar_property *)
@@ -646,6 +666,13 @@ val Estar_property = store_thm(
   rw_tac std_ss[Euler_def] >>
   `{i | 0 < i /\ i < n /\ coprime n i} SUBSET count n` by rw[SUBSET_DEF] >>
   metis_tac[FINITE_COUNT, SUBSET_FINITE]);
+
+(* Theorem: (Estar n).id = 1 *)
+(* Proof: by Estar_def. *)
+val Estar_id = store_thm(
+  "Estar_id",
+  ``!n. (Estar n).id = 1``,
+  simp[Estar_def]);
 
 (* Theorem: FINITE (Estar n).carrier *)
 (* Proof: by Estar_property *)
@@ -917,6 +944,13 @@ val trivial_group_def = zDefine`
 > val it = ``:'a group`` : hol_type
 *)
 
+(* Theorem: (trivial_group e).id = e *)
+(* Proof: by trivial_group_def. *)
+val trivial_group_id = store_thm(
+  "trivial_group_id",
+  ``!e. (trivial_group e).id = e``,
+  simp[trivial_group_def]);
+
 (* Theorem: {#e} is indeed a group *)
 (* Proof: check by definition. *)
 val trivial_group = store_thm(
@@ -1026,6 +1060,13 @@ val fn_cyclic_group_alt = store_thm(
     rw[] >>
     metis_tac[FUNPOW_MOD]
   ]);
+
+(* Theorem: (fn_cyclic_group e f).id = e *)
+(* Proof: by fn_cyclic_group_def. *)
+val fn_cyclic_group_id = store_thm(
+  "fn_cyclic_group_id",
+  ``!e f. (fn_cyclic_group e f).id = e``,
+  simp[fn_cyclic_group_def]);
 
 (* Theorem: Group (fn_cyclic_group e f) *)
 (* Proof:
@@ -1197,6 +1238,13 @@ val add_mod_property = store_thm(
        FINITE (add_mod n).carrier /\
        (CARD (add_mod n).carrier = n)``,
   rw_tac std_ss[add_mod_def, GSYM count_def, FINITE_COUNT, CARD_COUNT, IN_COUNT]);
+
+(* Theorem: (add_mod n).id = 0 *)
+(* Proof: by add_mod_def. *)
+val add_mod_id = store_thm(
+  "add_mod_id",
+  ``!n. (add_mod n).id = 0``,
+  simp[add_mod_def]);
 
 (* Theorem: FINITE (add_mod n).carrier *)
 (* Proof: by add_mod_property *)
@@ -1387,6 +1435,13 @@ val mult_mod_property = store_thm(
   rw_tac std_ss[mult_mod_def, GSPECIFICATION, NOT_ZERO_LT_ZERO] >-
   metis_tac[residue_def, residue_finite] >>
   metis_tac[residue_def, residue_card]);
+
+(* Theorem: (mult_mod p).id = 1 *)
+(* Proof: by mult_mod_def. *)
+val mult_mod_id = store_thm(
+  "mult_mod_id",
+  ``!p. (mult_mod p).id = 1``,
+  simp[mult_mod_def]);
 
 (* Theorem: FINITE (mult_mod p).carrier *)
 (* Proof: by mult_mod_property *)

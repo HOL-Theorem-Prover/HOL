@@ -225,6 +225,9 @@ Rework
                                    (orbit $o g A x) (CosetPartition g (StabilizerGroup $o g x))
    orbit_stabilizer_thm|- ! $o g A x. FiniteGroup g /\ (g act A) $o /\ x IN A /\ FINITE A ==>
                               (CARD G = CARD (orbit $o g A x) * CARD (stabilizer $o g x))
+   orbit_card_divides_target_card
+                       |- ! $o g A x. FiniteGroup g /\ (g act A) $o /\ x IN A /\ FINITE A ==>
+                               CARD (orbit $o g A x) divides CARD G
 
    Fixed Points of action:
    fixed_points_def    |- ! $o g A. fixed_points $o g A = {x | x IN A /\ !a. a IN G ==> (a o x = x)}
@@ -294,6 +297,10 @@ Rework
                        |- ! $o g A. Group g /\ (g act A) $o /\ FINITE A ==>
                                    (CARD A = CARD (fixed_points $o g A) +
                                              SIGMA CARD (multi_orbits $o g A))
+   target_card_and_fixed_points_congruence
+                       |- ! $o g A n. Group g /\ (g act A) $o /\ FINITE A /\ 0 < n /\
+                                     (!e. e IN multi_orbits $o g A ==> (CARD e = n)) ==>
+                                     (CARD A MOD n = CARD (fixed_points $o g A) MOD n)
 
 *)
 
@@ -1388,6 +1395,20 @@ val orbit_stabilizer_thm = store_thm(
 
 (* This is a milestone result. *)
 
+(* Theorem: FiniteGroup g /\ (g act A) $o /\ x IN A /\ FINITE A ==>
+            CARD (orbit $o g A x) divides CARD G *)
+(* Proof:
+   Let b = orbit $o g A x,
+       c = stabilizer $o g x.
+   Note CARD G = CARD b * CARD c      by orbit_stabilizer_thm
+   Thus (CARD b) divides (CARD G)     by divides_def
+*)
+val orbit_card_divides_target_card = store_thm(
+  "orbit_card_divides_target_card",
+  ``! $o (g:'a group) A x. FiniteGroup g /\ (g act A) $o /\ x IN A /\ FINITE A ==>
+               CARD (orbit $o g A x) divides CARD G``,
+  prove_tac[orbit_stabilizer_thm, divides_def, MULT_COMM]);
+
 (* ------------------------------------------------------------------------- *)
 (* Fixed Points of action.                                                   *)
 (* ------------------------------------------------------------------------- *)
@@ -1791,6 +1812,31 @@ val target_card_by_fixed_points = store_thm(
   ``!$o g A. Group g /\ (g act A) $o /\ FINITE A ==>
       (CARD A = CARD (fixed_points $o g A) + SIGMA CARD (multi_orbits $o g A))``,
   metis_tac[target_card_by_orbit_types, sing_orbits_card_eqn]);
+
+(* Theorem:  Group g /\ (g act A) $o /\ FINITE A /\ 0 < n /\
+             (!e. e IN multi_orbits $o g A ==> (CARD e = n)) ==>
+             (CARD A MOD n = CARD (fixed_points $o g A) MOD n) *)
+(* Proof:
+   Let b = fixed_points $o g A,
+       c = multi_orbits $o g A.
+   Note FINITE c                         by multi_orbits_finite
+       (CARD A) MOD n
+     = (CARD b + SIGMA CARD c) MOD n     by target_card_by_fixed_points
+     = (CARD b + n * CARD c) MOD n       by SIGMA_CARD_CONSTANT, FINITE c
+     = (CARD c * n + CARD b) MOD n       by ADD_COMM, MULT_COMM
+     = (CARD b) MOD n                    by MOD_TIMES
+*)
+val target_card_and_fixed_points_congruence = store_thm(
+  "target_card_and_fixed_points_congruence",
+  ``! $o (g:'a group) A n. Group g /\ (g act A) $o /\ FINITE A /\ 0 < n /\
+               (!e. e IN multi_orbits $o g A ==> (CARD e = n)) ==>
+               (CARD A MOD n = CARD (fixed_points $o g A) MOD n)``,
+  rpt strip_tac >>
+  imp_res_tac target_card_by_fixed_points >>
+  `_ = CARD (fixed_points o' g A) + n * CARD (multi_orbits o' g A)` by rw[multi_orbits_finite, SIGMA_CARD_CONSTANT] >>
+  fs[]);
+
+(* This is a very useful theorem! *)
 
 (* ------------------------------------------------------------------------- *)
 

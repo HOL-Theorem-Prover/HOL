@@ -244,6 +244,9 @@ open dividesTheory gcdTheory;
    coprime_power_and_power_predecessor   |- !b m n. 0 < b /\ 0 < m ==> coprime (b ** n) (b ** m - 1)
    coprime_power_and_power_successor     |- !b m n. 0 < b /\ 0 < m ==> coprime (b ** n) (b ** m + 1)
 
+   Useful Theorems:
+   PRIME_EXP_FACTOR    |- !p q n. prime p /\ q divides p ** n ==> (q = 1) \/ p divides q
+   FACT_MOD_PRIME      |- !p n. prime p /\ n < p ==> FACT n MOD p <> 0:
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -3492,6 +3495,65 @@ val coprime_power_and_power_successor = store_thm(
   `coprime z (z + 1)` by rw[coprime_SUC] >>
   `coprime (z ** (n DIV m)) (z + 1)` by rw[coprime_exp] >>
   metis_tac[GCD_SYM, GCD_CANCEL_MULT, MOD_LESS]);
+
+(* ------------------------------------------------------------------------- *)
+(* Useful Theorems                                                           *)
+(* ------------------------------------------------------------------------- *)
+
+(* Theorem: prime p /\ q divides (p ** n) ==> (q = 1) \/ (p divides q) *)
+(* Proof:
+   By contradiction, suppose q <> 1 /\ ~(p divides q).
+   Note ?j. j <= n /\ (q = p ** j)     by prime_power_divisor
+    and 0 < j                          by EXP_0, q <> 1
+   then p divides q                    by prime_divides_self_power, 0 < j
+   This contradicts ~(p divides q).
+*)
+val PRIME_EXP_FACTOR = store_thm(
+  "PRIME_EXP_FACTOR",
+  ``!p q n. prime p /\ q divides (p ** n) ==> (q = 1) \/ (p divides q)``,
+  spose_not_then strip_assume_tac >>
+  `?j. j <= n /\ (q = p ** j)` by rw[prime_power_divisor] >>
+  `0 < j` by fs[] >>
+  metis_tac[prime_divides_self_power]);
+
+(* Idea: For prime p, FACT (p-1) MOD p <> 0 *)
+
+(* Theorem: prime p /\ n < p ==> FACT n MOD p <> 0 *)
+(* Proof:
+   Note 1 < p                  by ONE_LT_PRIME
+   By induction on n.
+   Base: 0 < p ==> (FACT 0 MOD p = 0) ==> F
+      Note FACT 0 = 1          by FACT_0
+       and 1 MOD p = 1         by LESS_MOD, 1 < p
+       and 1 = 0 is F.
+   Step: n < p ==> (FACT n MOD p = 0) ==> F ==>
+         SUC n < p ==> (FACT (SUC n) MOD p = 0) ==> F
+      If n = 0, SUC 0 = 1      by ONE
+         Note FACT 1 = 1       by FACT_1
+          and 1 MOD p = 1      by LESS_MOD, 1 < p
+          and 1 = 0 is F.
+      If n <> 0, 0 < n.
+             (FACT (SUC n)) MOD p = 0
+         <=> (SUC n * FACT n) MOD p = 0      by FACT
+         Note (SUC n) MOD p <> 0             by MOD_LESS, SUC n < p
+          and (FACT n) MOD p <> 0            by induction hypothesis
+           so (SUC n * FACT n) MOD p <> 0    by EUCLID_LEMMA
+         This is a contradiction.
+*)
+val FACT_MOD_PRIME = store_thm(
+  "FACT_MOD_PRIME",
+  ``!p n. prime p /\ n < p ==> FACT n MOD p <> 0``,
+  rpt strip_tac >>
+  `1 < p` by rw[ONE_LT_PRIME] >>
+  Induct_on `n` >-
+  simp[FACT_0] >>
+  Cases_on `n = 0` >-
+  simp[FACT_1] >>
+  rw[FACT] >>
+  `n < p` by decide_tac >>
+  `(SUC n) MOD p <> 0` by fs[] >>
+  metis_tac[EUCLID_LEMMA]);
+
 
 (* ------------------------------------------------------------------------- *)
 

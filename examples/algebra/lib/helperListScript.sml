@@ -78,6 +78,9 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    FRONT_SING       |- !x. FRONT [x] = []
    TAIL_BY_DROP     |- !ls. ls <> [] ==> TL ls = DROP 1 ls
    FRONT_BY_TAKE    |- !ls. ls <> [] ==> FRONT ls = TAKE (LENGTH ls - 1) ls
+   HD_APPEND        |- !h t ls. HD (h::t ++ ls) = h
+   EL_TAIL          |- !h t n. 0 <> n ==> (EL (n - 1) t = EL n (h::t))
+   MONOLIST_SET_SING|- !c ls. ls <> [] /\ EVERY ($= c) ls ==> SING (set ls)
 
    List Reversal:
    REVERSE_SING      |- !x. REVERSE [x] = [x]
@@ -177,6 +180,10 @@ open rich_listTheory; (* for EVERY_REVERSE *)
    GENLIST_K_RANGE     |- !f e n. (!k. 0 < k /\ k <= n ==> (f k = e)) ==> (GENLIST (f o SUC) n = GENLIST (K e) n)
    GENLIST_K_APPEND    |- !a b c. GENLIST (K c) a ++ GENLIST (K c) b = GENLIST (K c) (a + b)
    GENLIST_K_APPEND_K  |- !c n. GENLIST (K c) n ++ [c] = [c] ++ GENLIST (K c) n
+   GENLIST_K_MEM       |- !x c n. 0 < n ==> (MEM x (GENLIST (K c) n) <=> (x = c))
+   GENLIST_K_SET       |- !c n. 0 < n ==> (set (GENLIST (K c) n) = {c})
+   LIST_TO_SET_SING_IFF|- !ls. ls <> [] ==>
+                               (SING (set ls) <=> ?c. ls = GENLIST (K c) (LENGTH ls))
 
    SUM Theorems:
    SUM_NIL                |- SUM [] = 0
@@ -760,6 +767,41 @@ val FRONT_BY_TAKE = store_thm(
   rw[] >>
   `LENGTH ls <> 0` by rw[] >>
   rw[FRONT_DEF]);
+
+(* Theorem: HD (h::t ++ ls) = h *)
+(* Proof:
+     HD (h::t ++ ls)
+   = HD (h::(t ++ ls))     by APPEND
+   = h                     by HD
+*)
+val HD_APPEND = store_thm(
+  "HD_APPEND",
+  ``!h t ls. HD (h::t ++ ls) = h``,
+  simp[]);
+
+(* Theorem: 0 <> n ==> (EL (n-1) t = EL n (h::t)) *)
+(* Proof:
+   Note n = SUC k for some k         by num_CASES
+     so EL k t = EL (SUC k) (h::t)   by EL_restricted
+*)
+val EL_TAIL = store_thm(
+  "EL_TAIL",
+  ``!h t n. 0 <> n ==> (EL (n-1) t = EL n (h::t))``,
+  rpt strip_tac >>
+  `n = SUC (n - 1)` by decide_tac >>
+  metis_tac[EL_restricted]);
+
+(* Idea: If all elements are the same, the set is SING. *)
+
+(* Theorem: ls <> [] /\ EVERY ($= c) ls ==> SING (set ls) *)
+(* Proof:
+   Note set ls = {c}      by LIST_TO_SET_EQ_SING
+   thus SING (set ls)     by SING_DEF
+*)
+val MONOLIST_SET_SING = store_thm(
+  "MONOLIST_SET_SING",
+  ``!c ls. ls <> [] /\ EVERY ($= c) ls ==> SING (set ls)``,
+  metis_tac[LIST_TO_SET_EQ_SING, SING_DEF]);
 
 (* ------------------------------------------------------------------------- *)
 (* List Reversal.                                                            *)
@@ -2258,6 +2300,101 @@ val GENLIST_K_APPEND_K = store_thm(
   "GENLIST_K_APPEND_K",
   ``!c n. GENLIST (K c) n ++ [c] = [c] ++ GENLIST (K c) n``,
   metis_tac[GENLIST_K_APPEND, GENLIST_1, ADD_COMM, combinTheory.K_THM]);
+
+(* Theorem: 0 < n ==> (MEM x (GENLIST (K c) n) <=> (x = c)) *)
+(* Proof:
+       MEM x (GENLIST (K c) n
+   <=> ?m. m < n /\ (x = (K c) m)      by MEM_GENLIST
+   <=> ?m. m < n /\ (x = c)            by K_THM
+   <=> (x = c)                         by taking m = 0, 0 < n
+*)
+val GENLIST_K_MEM = store_thm(
+  "GENLIST_K_MEM",
+  ``!x c n. 0 < n ==> (MEM x (GENLIST (K c) n) <=> (x = c))``,
+  metis_tac[MEM_GENLIST, combinTheory.K_THM]);
+
+(* Theorem: 0 < n ==> (set (GENLIST (K c) n) = {c}) *)
+(* Proof:
+   By induction on n.
+   Base: 0 < 0 ==> (set (GENLIST (K c) 0) = {c})
+      Since 0 < 0 = F, hence true.
+   Step: 0 < n ==> (set (GENLIST (K c) n) = {c}) ==>
+         0 < SUC n ==> (set (GENLIST (K c) (SUC n)) = {c})
+      If n = 0,
+        set (GENLIST (K c) (SUC 0)
+      = set (GENLIST (K c) 1          by ONE
+      = set [(K c) 0]                 by GENLIST_1
+      = set [c]                       by K_THM
+      = {c}                           by LIST_TO_SET
+      If n <> 0, 0 < n.
+        set (GENLIST (K c) (SUC n)
+      = set (SNOC ((K c) n) (GENLIST (K c) n))     by GENLIST
+      = set (SNOC c (GENLIST (K c) n)              by K_THM
+      = c INSERT set (GENLIST (K c) n)             by LIST_TO_SET_SNOC
+      = c INSERT {c}                               by induction hypothesis
+      = {c}                                        by IN_INSERT
+ *)
+val GENLIST_K_SET = store_thm(
+  "GENLIST_K_SET",
+  ``!c n. 0 < n ==> (set (GENLIST (K c) n) = {c})``,
+  rpt strip_tac >>
+  Induct_on `n` >-
+  simp[] >>
+  (Cases_on `n = 0` >> simp[]) >>
+  `0 < n` by decide_tac >>
+  simp[GENLIST, LIST_TO_SET_SNOC]);
+
+(* Theorem: ls <> [] ==> (SING (set ls) <=> ?c. ls = GENLIST (K c) (LENGTH ls)) *)
+(* Proof:
+   By induction on ls.
+   Base: [] <> [] ==> (SING (set []) <=> ?c. [] = GENLIST (K c) (LENGTH []))
+     Since [] <> [] = F, hence true.
+   Step: ls <> [] ==> (SING (set ls) <=> ?c. ls = GENLIST (K c) (LENGTH ls)) ==>
+         !h. h::ls <> [] ==>
+             (SING (set (h::ls)) <=> ?c. h::ls = GENLIST (K c) (LENGTH (h::ls)))
+     Note h::ls <> [] = T.
+     If part: SING (set (h::ls)) ==> ?c. h::ls = GENLIST (K c) (LENGTH (h::ls))
+        Note SING (set (h::ls)) means
+             set ls = {h}                by LIST_TO_SET_DEF, IN_SING
+         Let n = LENGTH ls, 0 < n        by LENGTH_NON_NIL
+        Note ls <> []                    by LIST_TO_SET, IN_SING, MEMBER_NOT_EMPTY
+         and SING (set ls)               by SING_DEF
+         ==> ?c. ls = GENLIST (K c) n    by induction hypothesis
+          so set ls = {c}                by GENLIST_K_SET, 0 < n
+         ==> h = c                       by IN_SING
+           GENLIST (K c) (LENGTH (h::ls)
+         = (K c) h :: ls                 by GENLIST_K_CONS
+         = c :: ls                       by K_THM
+         = h::ls                         by h = c
+     Only-if part: ?c. h::ls = GENLIST (K c) (LENGTH (h::ls)) ==> SING (set (h::ls))
+           set (h::ls)
+         = set (GENLIST (K c) (LENGTH (h::ls)))        by given
+         = set ((K c) h :: GENLIST (K c) (LENGTH ls))  by GENLIST_K_CONS
+         = set (c :: GENLIST (K c) (LENGTH ls))        by K_THM
+         = c INSERT set (GENLIST (K c) (LENGTH ls))    by LIST_TO_SET
+         = c INSERT {c}                                by GENLIST_K_SET
+         = {c}                                         by IN_INSERT
+         Hence SING (set (h::ls))                      by SING_DEF
+*)
+val LIST_TO_SET_SING_IFF = store_thm(
+  "LIST_TO_SET_SING_IFF",
+  ``!ls. ls <> [] ==> (SING (set ls) <=> ?c. ls = GENLIST (K c) (LENGTH ls))``,
+  Induct >-
+  simp[] >>
+  (rw[EQ_IMP_THM] >> simp[]) >| [
+    qexists_tac `h` >>
+    qabbrev_tac `n = LENGTH ls` >>
+    `ls <> []` by metis_tac[LIST_TO_SET, IN_SING, MEMBER_NOT_EMPTY] >>
+    `SING (set ls)` by fs[SING_DEF] >>
+    fs[] >>
+    `0 < n` by metis_tac[LENGTH_NON_NIL] >>
+    `h = c` by metis_tac[GENLIST_K_SET, IN_SING] >>
+    simp[GENLIST_K_CONS],
+    spose_not_then strip_assume_tac >>
+    fs[GENLIST_K_CONS] >>
+    `0 < LENGTH ls` by metis_tac[LENGTH_NON_NIL] >>
+    metis_tac[GENLIST_K_SET]
+  ]);
 
 (* ------------------------------------------------------------------------- *)
 (* SUM Theorems                                                              *)

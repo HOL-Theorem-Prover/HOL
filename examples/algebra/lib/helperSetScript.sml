@@ -74,13 +74,13 @@ open gcdTheory; (* for P_EUCLIDES *)
    INSERT_DELETE_COMM  |- !s x y. x <> y ==> ((x INSERT s) DELETE y = x INSERT s DELETE y)
    SUBSET_INTER_SUBSET |- !s t u. s SUBSET u ==> s INTER t SUBSET u
    DIFF_DIFF_EQ_INTER  |- !s t. s DIFF (s DIFF t) = s INTER t
-   DIFF_DIFF_SUBSET    |- !s t. s SUBSET t ==> (t DIFF (t DIFF s) = s)
    SET_EQ_BY_DIFF      |- !s t. (s = t) <=> s SUBSET t /\ (t DIFF s = {})
    SUBSET_INSERT_SUBSET|- !s t. s SUBSET t ==> !x. x INSERT s SUBSET x INSERT t
    INSERT_SUBSET_SUBSET|- !s t x. x NOTIN s /\ x INSERT s SUBSET t ==> s SUBSET t DELETE x
    DIFF_DELETE         |- !s t x. s DIFF t DELETE x = s DIFF (x INSERT t)
    SUBSET_DIFF_CARD    |- !a b. FINITE a /\ b SUBSET a ==>
                                 (CARD (a DIFF b) = CARD a - CARD b)
+   SUBSET_SING_IFF     |- !s x. s SUBSET {x} <=> (s = {}) \/ (s = {x})
 
    Image and Bijection:
    INJ_CONG            |- !f g s t. (!x. x IN s ==> (f x = g x)) ==> (INJ f s t <=> INJ g s t)
@@ -208,7 +208,7 @@ open gcdTheory; (* for P_EUCLIDES *)
    SPLIT_CARD        |- !s u v. FINITE s /\ s =|= u # v ==> (CARD s = CARD u + CARD v)
    SPLIT_EQ_DIFF     |- !s u v. s =|= u # v <=> (u = s DIFF v) /\ (v = s DIFF u)
    SPLIT_BY_SUBSET   |- !s u. u SUBSET s ==> (let v = s DIFF u in s =|= u # v)
-   SUBSET_DIFF_DIFF  |- !s t. s SUBSET t ==> (t DIFF (t DIFF s) = s)
+   SUBSET_DIFF_DIFF  |- !s t. t SUBSET s ==> (s DIFF (s DIFF t) = t)
    SUBSET_DIFF_EQ    |- !s1 s2 t. s1 SUBSET t /\ s2 SUBSET t /\ (t DIFF s1 = t DIFF s2) ==> (s1 = s2)
 
    Bijective Inverses:
@@ -671,18 +671,6 @@ val DIFF_DIFF_EQ_INTER = store_thm(
   rw[EXTENSION] >>
   metis_tac[]);
 
-(* Theorem: s SUBSET t ==> (t DIFF (t DIFF s) = s) *)
-(* Proof:
-     t DIFF (t DIFF s)
-   = t INTER s            by DIFF_DIFF_EQ_INTER
-   = s INTER t            by INTER_COMM
-   = s                    by SUBSET_INTER_ABSORPTION
-*)
-val DIFF_DIFF_SUBSET = store_thm(
-  "DIFF_DIFF_SUBSET",
-  ``!s t. s SUBSET t ==> (t DIFF (t DIFF s) = s)``,
-  rw_tac std_ss[DIFF_DIFF_EQ_INTER, INTER_COMM, SUBSET_INTER_ABSORPTION]);
-
 (* Theorem: (s = t) <=> (s SUBSET t /\ (t DIFF s = {})) *)
 (* Proof:
        s = t
@@ -729,6 +717,21 @@ val SUBSET_DIFF_CARD = store_thm(
   "SUBSET_DIFF_CARD",
   ``!a b. FINITE a /\ b SUBSET a ==> (CARD (a DIFF b) = CARD a - CARD b)``,
   metis_tac[CARD_DIFF, SUBSET_FINITE, SUBSET_INTER2]);
+
+(* Theorem: s SUBSET {x} <=> ((s = {}) \/ (s = {x})) *)
+(* Proof:
+   Note !y. y IN s ==> y = x      by SUBSET_DEF, IN_SING
+   If s = {}, then trivially true.
+   If s <> {},
+     then ?y. y IN s              by MEMBER_NOT_EMPTY, s <> {}
+       so y = x                   by above
+      ==> s = {x}                 by EXTENSION
+*)
+val SUBSET_SING_IFF = store_thm(
+  "SUBSET_SING_IFF",
+  ``!s x. s SUBSET {x} <=> ((s = {}) \/ (s = {x}))``,
+  rw[SUBSET_DEF, EXTENSION] >>
+  metis_tac[]);
 
 (* ------------------------------------------------------------------------- *)
 (* Image and Bijection                                                       *)
@@ -2074,7 +2077,7 @@ val SPLIT_BY_SUBSET = save_thm("SPLIT_BY_SUBSET", partition_by_subset);
 
 (* Theorem alias *)
 val SUBSET_DIFF_DIFF = save_thm("SUBSET_DIFF_DIFF", DIFF_DIFF_SUBSET);
-(* val SUBSET_DIFF_DIFF = |- !s t. s SUBSET t ==> t DIFF (t DIFF s) = s: thm *)
+(* val SUBSET_DIFF_DIFF = |- !s t. t SUBSET s ==> (s DIFF (s DIFF t) = t) *)
 
 (* Theorem: s1 SUBSET t /\ s2 SUBSET t /\ (t DIFF s1 = t DIFF s2) ==> (s1 = s2) *)
 (* Proof:
