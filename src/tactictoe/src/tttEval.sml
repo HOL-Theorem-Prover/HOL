@@ -184,7 +184,7 @@ fun read_ex dir =
 val smlfun0 = "tttBigSteps.run_bigsteps_eval (" ^ 
   mlquote expdir ^ "," ^ its 0 ^ ")";
 val smlfun1 = "tttBigSteps.run_bigsteps_eval (" ^ 
-  mlquote expdir ^ "," ^ its 1 ^ ")";
+  mlquote expdir ^ "," ^ its 11 ^ ")";
 
 fun train_dir limit dir name = 
   let 
