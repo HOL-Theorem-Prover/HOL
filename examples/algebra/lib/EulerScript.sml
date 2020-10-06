@@ -13,7 +13,6 @@ val _ = new_theory "Euler";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -39,20 +38,26 @@ open arithmeticTheory dividesTheory gcdTheory;
 *)
 (* Definitions and Theorems (# are exported, ! in computeLib):
 
-   Count-based Sets:
+   Residues:
    residue_def       |- !n. residue n = {i | 0 < i /\ i < n}
    residue_element   |- !n j. j IN residue n ==> 0 < j /\ j < n
-   residue_1_empty   |- residue 1 = {}
+   residue_0         |- residue 0 = {}
+   residue_1         |- residue 1 = {}
    residue_nonempty  |- !n. 1 < n ==> residue n <> {}
+   residue_no_zero   |- !n. 0 NOTIN residue n
+   residue_no_self   |- !n. n NOTIN residue n
 !  residue_thm       |- !n. residue n = count n DIFF {0}
    residue_insert    |- !n. 0 < n ==> (residue (SUC n) = n INSERT residue n)
    residue_delete    |- !n. 0 < n ==> (residue n DELETE n = residue n)
+   residue_suc       |- !n. 0 < n ==> (residue (SUC n) = n INSERT residue n)
    residue_count     |- !n. 0 < n ==> (count n = 0 INSERT residue n)
    residue_finite    |- !n. FINITE (residue n)
    residue_card      |- !n. 0 < n ==> (CARD (residue n) = n - 1)
    residue_prime_neq |- !p a n. prime p /\ a IN residue p /\ n <= p ==>
                         !x. x IN residue n ==> (a * n) MOD p <> (a * x) MOD p
+   prod_set_residue  |- !n. PROD_SET (residue n) = FACT (n - 1)
 
+   Naturals:
    natural_element  |- !n j. j IN natural n <=> 0 < j /\ j <= n
    natural_property |- !n. natural n = {j | 0 < j /\ j <= n}
    natural_finite   |- !n. FINITE (natural n)
@@ -71,6 +76,7 @@ open arithmeticTheory dividesTheory gcdTheory;
                              |- !n a b. 0 < n /\ a divides n /\ b IN natural n /\ a divides b ==>
                                         b DIV a IN natural (n DIV a)
 
+   Uptos:
    upto_finite      |- !n. FINITE (upto n)
    upto_card        |- !n. CARD (upto n) = SUC n
    upto_has_last    |- !n. n IN upto n
@@ -113,7 +119,10 @@ open arithmeticTheory dividesTheory gcdTheory;
 (* Count-based Sets                                                          *)
 (* ------------------------------------------------------------------------- *)
 
-(* Residue -- close-relative of COUNT *)
+(* ------------------------------------------------------------------------- *)
+(* Residues -- close-relative of COUNT                                       *)
+(* ------------------------------------------------------------------------- *)
+
 (* Define the set of residues = nonzero remainders *)
 val residue_def = zDefine `residue n = { i | (0 < i) /\ (i < n) }`;
 (* use zDefine as this is not computationally effective. *)
@@ -125,12 +134,19 @@ val residue_element = store_thm(
   ``!n j. j IN residue n ==> 0 < j /\ j < n``,
   rw[residue_def]);
 
+(* Theorem: residue 0 = EMPTY *)
+(* Proof: by residue_def *)
+val residue_0 = store_thm(
+  "residue_0",
+  ``residue 0 = {}``,
+  simp[residue_def]);
+
 (* Theorem: residue 1 = EMPTY *)
 (* Proof: by definition. *)
-val residue_1_empty = store_thm(
-  "residue_1_empty",
+val residue_1 = store_thm(
+  "residue_1",
   ``residue 1 = {}``,
-  srw_tac[ARITH_ss][residue_def, EXTENSION]);
+  simp[residue_def]);
 
 (* Theorem: 1 < n ==> residue n <> {} *)
 (* Proof:
@@ -142,6 +158,20 @@ val residue_nonempty = store_thm(
   ``!n. 1 < n ==> residue n <> {}``,
   rw[residue_def, EXTENSION] >>
   metis_tac[DECIDE``1 <> 0``]);
+
+(* Theorem: 0 NOTIN residue n *)
+(* Proof: by residue_def *)
+val residue_no_zero = store_thm(
+  "residue_no_zero",
+  ``!n. 0 NOTIN residue n``,
+  simp[residue_def]);
+
+(* Theorem: n NOTIN residue n *)
+(* Proof: by residue_def *)
+val residue_no_self = store_thm(
+  "residue_no_self",
+  ``!n. n NOTIN residue n``,
+  simp[residue_def]);
 
 (* Theorem: residue n = (count n) DIFF {0} *)
 (* Proof:
@@ -182,6 +212,10 @@ val residue_delete = store_thm(
   rpt strip_tac >>
   `n NOTIN (residue n)` by rw[residue_def] >>
   metis_tac[DELETE_NON_ELEMENT]);
+
+(* Theorem alias: rename *)
+val residue_suc = save_thm("residue_suc", residue_insert);
+(* val residue_suc = |- !n. 0 < n ==> (residue (SUC n) = n INSERT residue n): thm *)
 
 (* Theorem: count n = 0 INSERT (residue n) *)
 (* Proof: by definition. *)
@@ -237,6 +271,56 @@ val residue_prime_neq = store_thm(
   `n < p` by decide_tac >>
   `(n MOD p = n) /\ (x MOD p = x)` by rw_tac arith_ss[] >>
   decide_tac);
+
+(* Idea: the product of residues is a factorial. *)
+
+(* Theorem: PROD_SET (residue n) = FACT (n - 1) *)
+(* Proof:
+   By induction on n.
+   Base: PROD_SET (residue 0) = FACT (0 - 1)
+        PROD_SET (residue 0)
+      = PROD_SET {}           by residue_0
+      = 1                     by PROD_SET_EMPTY
+      = FACT 0                by FACT_0
+      = FACT (0 - 1)          by arithmetic
+   Step: PROD_SET (residue n) = FACT (n - 1) ==>
+         PROD_SET (residue (SUC n)) = FACT (SUC n - 1)
+      If n = 0,
+        PROD_SET (residue (SUC 0))
+      = PROD_SET (residue 1)  by ONE
+      = PROD_SET {}           by residue_1
+      = 1                     by PROD_SET_EMPTY
+      = FACT 0                by FACT_0
+
+      If n <> 0, then 0 < n.
+      Note FINITE (residue n)                by residue_finite
+        PROD_SET (residue (SUC n))
+      = PROD_SET (n INSERT residue n)        by residue_insert
+      = n * PROD_SET ((residue n) DELETE n)  by PROD_SET_THM
+      = n * PROD_SET (residue n)             by residue_delete
+      = n * FACT (n - 1)                     by induction hypothesis
+      = FACT (SUC (n - 1))                   by FACT
+      = FACT (SUC n - 1)                     by arithmetic
+*)
+val prod_set_residue = store_thm(
+  "prod_set_residue",
+  ``!n. PROD_SET (residue n) = FACT (n - 1)``,
+  Induct >-
+  simp[residue_0, PROD_SET_EMPTY, FACT_0] >>
+  Cases_on `n = 0` >-
+  simp[residue_1, PROD_SET_EMPTY, FACT_0] >>
+  `FINITE (residue n)` by rw[residue_finite] >>
+  `n = SUC (n - 1)` by decide_tac >>
+  `SUC (n - 1) = SUC n - 1` by decide_tac >>
+  `PROD_SET (residue (SUC n)) = PROD_SET (n INSERT residue n)` by rw[residue_insert] >>
+  `_ = n * PROD_SET ((residue n) DELETE n)` by rw[PROD_SET_THM] >>
+  `_ = n * PROD_SET (residue n)` by rw[residue_delete] >>
+  `_ = n * FACT (n - 1)` by rw[] >>
+  metis_tac[FACT]);
+
+(* ------------------------------------------------------------------------- *)
+(* Naturals -- counting from 1 rather than 0, and inclusive.                 *)
+(* ------------------------------------------------------------------------- *)
 
 (* Overload the set of natural numbers (like count) *)
 val _ = overload_on("natural", ``\n. IMAGE SUC (count n)``);
@@ -434,6 +518,10 @@ val natural_cofactor_natural_reduced = store_thm(
   `c divides b` by metis_tac[divides_def, MULT_COMM] >>
   `0 < c` by metis_tac[ZERO_DIVIDES, NOT_ZERO] >>
   metis_tac[LE_MULT_RCANCEL]);
+
+(* ------------------------------------------------------------------------- *)
+(* Uptos -- counting from 0 and inclusive.                                   *)
+(* ------------------------------------------------------------------------- *)
 
 (* Overload on another count-related set *)
 val _ = overload_on("upto", ``\n. count (SUC n)``);
@@ -822,7 +910,7 @@ val sigma_geometric_natural = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Note:
-   count n = {i | i < m}                  defined in pred_set
+   count m = {i | i < m}                  defined in pred_set
    residue m = {i | 0 < i /\ i < m}       defined in Euler
    The difference i = 0 gives n ** 0 = 1, which does not make a difference for PROD_SET.
 *)
