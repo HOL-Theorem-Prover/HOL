@@ -13,7 +13,6 @@ val _ = new_theory "computeParam";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -1148,8 +1147,7 @@ val residue_common_multiple_has_sub = store_thm(
   "residue_common_multiple_has_sub",
   ``!n a b. b < a /\ a IN residue_common_multiple n /\ b IN residue_common_multiple n ==>
            (a - b) IN residue_common_multiple n``,
-  rw[residue_common_multiple_def] >>
-  rw[DIVIDES_SUB]);
+  rw[residue_common_multiple_def, DIVIDES_SUB]);
 
 (* Theorem: m IN residue_common_multiple n <=> 0 < m /\ !j. 1 < j /\ j < n ==> j divides m *)
 (* Proof:
@@ -1166,9 +1164,7 @@ val residue_common_multiple_element_1 = store_thm(
   ``!n m. 1 < n ==> (m IN residue_common_multiple n <=> 0 < m /\ !j. 1 < j /\ j < n ==> j divides m)``,
   rw[residue_common_multiple_def, residue_def] >>
   rw[EQ_IMP_THM] >>
-  Cases_on `j = 1` >-
-  rw[] >>
-  rw[]);
+  Cases_on `j = 1` >> rw[]);
 
 (* ------------------------------------------------------------------------- *)
 (* Least Common Multiple of Residue n                                        *)
