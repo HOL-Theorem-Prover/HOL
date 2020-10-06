@@ -13,7 +13,6 @@ val _ = new_theory "binomial";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -60,6 +59,7 @@ C:\jc\www\ml\hol\info\Hol\examples\miller\RSA\binomialScript.sml
    binomial_formula    |- !n k. binomial (n + k) k * (FACT n * FACT k) = FACT (n + k)
    binomial_formula2   |- !n k. k <= n ==> (FACT n = binomial n k * (FACT (n - k) * FACT k))
    binomial_formula3   |- !n k. k <= n ==> (binomial n k = FACT n DIV (FACT k * FACT (n - k)))
+   binomial_fact       |- !n k. k <= n ==> (binomial n k = FACT n DIV (FACT k * FACT (n - k)))
    binomial_n_k        |- !n k. k <= n ==> (binomial n k = FACT n DIV FACT k DIV FACT (n - k)
    binomial_n_1        |- !n. binomial n 1 = n
    binomial_sym        |- !n k. k <= n ==> (binomial n k = binomial n (n - k))
@@ -295,6 +295,10 @@ val binomial_formula3 = store_thm(
   "binomial_formula3",
   ``!n k. k <= n ==> (binomial n k = (FACT n) DIV ((FACT k) * (FACT (n - k))))``,
   metis_tac[binomial_formula2, MULT_COMM, MULT_DIV, MULT_EQ_0, FACT_LESS, NOT_ZERO_LT_ZERO]);
+
+(* Theorem alias. *)
+val binomial_fact = save_thm("binomial_fact", binomial_formula3);
+(* val binomial_fact = |- !n k. k <= n ==> (binomial n k = FACT n DIV (FACT k * FACT (n - k))): thm *)
 
 (* Theorem: k <= n ==> binomial n k = (FACT n) DIV (FACT k) DIV (FACT (n - k)) *)
 (* Proof:

@@ -13,7 +13,6 @@ val _ = new_theory "triangle";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -2208,12 +2207,11 @@ val leibniz_horizontal_divisor = store_thm(
    <=> !k. k <= n ==> 0 < leibniz n k        by leibniz_horizontal_el
    <=> T                                     by leibniz_pos
 *)
-val leibniz_horizontal_pos = store_thm(
-  "leibniz_horizontal_pos",
-  ``!n. EVERY_POSITIVE (leibniz_horizontal n)``,
-  rw[EVERY_EL] >>
-  `0 < binomial n n'` by rw[binomial_pos] >>
-  decide_tac);
+Theorem leibniz_horizontal_pos:
+  !n. EVERY_POSITIVE (leibniz_horizontal n)
+Proof
+  simp[EVERY_EL, binomial_pos]
+QED
 
 (* Theorem: POSITIVE (leibniz_horizontal n) *)
 (* Proof: by leibniz_horizontal_pos, EVERY_MEM *)
