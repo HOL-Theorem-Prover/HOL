@@ -22,7 +22,6 @@ val _ = new_theory "subgroup";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -129,17 +128,22 @@ open helperSetTheory;
    subgroup_coset_nonempty  |- !h g. h <= g ==> !x. x IN G ==> x IN x * H
    subgroup_coset_eq        |- !g h. h <= g ==> !x y. x IN G /\ y IN G ==> ((x * H = y * H) <=> |/ y * x IN H)
    subgroup_to_coset_bij    |- !g h. h <= g ==> !a. a IN G ==> BIJ (\x. a * x) H (a * H)
-   CARD_subgroup_coset      |- !g h. h <= g /\ FINITE H ==> !a. a IN G ==> (CARD (a * H) = CARD H)
+   subgroup_coset_card      |- !g h. h <= g /\ FINITE H ==> !a. a IN G ==> (CARD (a * H) = CARD H)
 
-   Langrange's Theorem by Subgroups and Cosets:
+   Lagrange's Theorem by Subgroups and Cosets:
    inCoset_def               |- !g h a b. inCoset g h a b <=> b IN a * H
+   inCoset_refl              |- !g h. h <= g ==> !a. a IN G ==> inCoset g h a a
+   inCoset_sym               |- !g h. h <= g ==> !a b. a IN G /\ b IN G /\
+                                      inCoset g h a b ==> inCoset g h b a
+   inCoset_trans             |- !g h. h <= g ==> !a b c. a IN G /\ b IN G /\ c IN G /\
+                                      inCoset g h a b /\ inCoset g h b c ==> inCoset g h a c
    inCoset_equiv_on_carrier  |- !g h. h <= g ==> inCoset g h equiv_on G
    CosetPartition_def        |- !g h. CosetPartition g h = partition (inCoset g h) G
-   CARD_carrier_by_coset_partition  |- !g h.  h <= g /\ FINITE G ==> (CARD G = SIGMA CARD (CosetPartition g h))
+   carrier_card_by_coset_partition  |- !g h.  h <= g /\ FINITE G ==> (CARD G = SIGMA CARD (CosetPartition g h))
    coset_partition_element   |- !g h. h <= g ==> (!e. e IN CosetPartition g h <=> ?a. a IN G /\ (e = a * H))
-   CARD_coset_partition_element |- !g h. h <= g /\ FINITE G ==> !e. e IN CosetPartition g h ==> (CARD e = CARD H)
+   coset_partition_element_card |- !g h. h <= g /\ FINITE G ==> !e. e IN CosetPartition g h ==> (CARD e = CARD H)
    Lagrange_identity         |- !g h. h <= g /\ FINITE G ==> (CARD G = CARD H * CARD (CosetPartition g h))
-   CARD_coset_partition      |- !g h. h <= g /\ FINITE G ==> (CARD (CosetPartition g h) = CARD G DIV CARD H)
+   coset_partition_card      |- !g h. h <= g /\ FINITE G ==> (CARD (CosetPartition g h) = CARD G DIV CARD H)
    Lagrange_thm              |- !g h. h <= g /\ FINITE G ==> (CARD H) divides (CARD G)
 
    Alternate proof without using inCoset:
@@ -147,10 +151,10 @@ open helperSetTheory;
    subgroup_coset_trans      |- !g h. h <= g ==> !a b c. a IN G /\ b IN G /\ c IN G /\
                                                     b IN a * H /\ c IN b * H ==> c IN a * H
    subgroup_incoset_equiv  |- !g h. h <= g ==> left_coset g H equiv_on G
-   CARD_carrier_by_subgroup_coset_partition |- !g h. h <= g /\ FINITE G ==> (CARD G = SIGMA CARD (partition (left_coset g H) G))
+   carrier_card_by_subgroup_coset_partition |- !g h. h <= g /\ FINITE G ==> (CARD G = SIGMA CARD (partition (left_coset g H) G))
    subgroup_coset_partition_element |- !g h. h <= g ==> (!e. e IN partition (left_coset g H) G <=> ?a. a IN G /\ (e = a * H))
-   CARD_subgroup_coset_partition_element |- !g h. h <= g /\ FINITE G ==> !e. e IN partition (left_coset g H) G ==> (CARD e = CARD H)
-   Lagrange_identity2      |- !g h. h <= g /\ FINITE G ==> (CARD G = CARD H * CARD (partition (left_coset g H) G))
+   subgroup_coset_card_partition_element |- !g h. h <= g /\ FINITE G ==> !e. e IN partition (left_coset g H) G ==> (CARD e = CARD H)
+   Lagrange_identity_alt   |- !g h. h <= g /\ FINITE G ==> (CARD G = CARD H * CARD (partition (left_coset g H) G))
 
    Useful Coset theorems:
    subgroup_coset_in_partition     |- !g h. h <= g ==>
@@ -716,8 +720,7 @@ val subgroup_coset_relate = prove(
    (2) |/ y * x IN H /\ z IN H ==> ?z'. (y * z = x * z') /\ z' IN H
        Solving, z' = |/x * (y * z) = ( |/x * y) * z, and |/( |/y * x) = |/x * y IN H.
 *)
-val subgroup_coset_eq1 = store_thm(
-  "subgroup_coset_eq1",
+val subgroup_coset_eq1 = prove(
   ``!(g:'a group) h. h <= g ==> !x y. x IN G /\ y IN G /\ ( |/y * x) IN H ==> (x * H = y * H)``,
   rpt strip_tac >>
   `Group h /\ Group g /\ !x y. x IN H /\ y IN H ==> (h.op x y = x * y)` by metis_tac[Subgroup_def] >>
@@ -777,8 +780,8 @@ val subgroup_to_coset_bij = store_thm(
    Due to BIJ (\x. a*x) H (a * H), and sets are FINITE.
 *)
 (* Note: An infinite group can have a finite subgroup, e.g. the units of complex multiplication. *)
-val CARD_subgroup_coset = store_thm(
-  "CARD_subgroup_coset",
+val subgroup_coset_card = store_thm(
+  "subgroup_coset_card",
   ``!(g:'a group) h. h <= g /\ FINITE H  ==> !a. a IN G ==> (CARD (a * H) = CARD H)``,
   rpt strip_tac >>
   `BIJ (\x. a * x) H (a * H)` by rw_tac std_ss[subgroup_to_coset_bij] >>
@@ -786,10 +789,10 @@ val CARD_subgroup_coset = store_thm(
   metis_tac[FINITE_BIJ_CARD_EQ]);
 
 (* ------------------------------------------------------------------------- *)
-(* Langrange's Theorem by Subgroups and Cosets                               *)
+(* Lagrange's Theorem by Subgroups and Cosets                                *)
 (* ------------------------------------------------------------------------- *)
 
-(* From CARD_subgroup_coset:
+(* From subgroup_coset_card:
    `!g h a. Group g /\ h <= g /\ a IN G /\ FINITE H ==> (CARD (a * H) = CARD (H))`
 
    This can be used directly to prove Lagrange's Theorem for subgroup.
@@ -817,7 +820,8 @@ val inCoset_def = Define `
 (* Proof:
    Follows from subgroup_coset_nonempty.
 *)
-val inCoset_refl = prove(
+val inCoset_refl = store_thm(
+  "inCoset_refl",
   ``!(g:'a group) h. h <= g ==> !a. a IN G ==> inCoset g h a a``,
   rw_tac std_ss[inCoset_def, subgroup_coset_nonempty]);
 
@@ -860,7 +864,8 @@ val inCoset_sym = store_thm(
    Since y * z in H          by group_op_element
    Hence  c IN (a * H), the result follows from element_coset_property.
 *)
-val inCoset_trans = prove(
+val inCoset_trans = store_thm(
+  "inCoset_trans",
   ``!(g:'a group) h. h <= g ==> !a b c. a IN G /\ b IN G /\ c IN G /\ inCoset g h a b /\ inCoset g h b c ==> inCoset g h a c``,
   rw_tac std_ss[inCoset_def] >>
   `Group h /\ Group g /\ !x. x IN H ==> x IN G` by metis_tac[Subgroup_def, subgroup_element] >>
@@ -890,8 +895,8 @@ val CosetPartition_def = Define `
    Apply partition_CARD
     |- !R s. R equiv_on s /\ FINITE s ==> (CARD s = SIGMA CARD (partition R s))
 *)
-val CARD_carrier_by_coset_partition = store_thm(
-  "CARD_carrier_by_coset_partition",
+val carrier_card_by_coset_partition = store_thm(
+  "carrier_card_by_coset_partition",
   ``!(g:'a group) h. h <= g /\ FINITE G ==> (CARD G = SIGMA CARD (CosetPartition g h))``,
   rw_tac std_ss[CosetPartition_def, inCoset_equiv_on_carrier, partition_CARD]);
 
@@ -914,22 +919,22 @@ val coset_partition_element = store_thm(
 
 (* Theorem: For FINITE group, CARD element in CosetPartiton = CARD subgroup. *)
 (* Proof:
-   By coset_partition_element and CARD_subgroup_coset
+   By coset_partition_element and subgroup_coset_card
 *)
-val CARD_coset_partition_element = store_thm(
-  "CARD_coset_partition_element",
+val coset_partition_element_card = store_thm(
+  "coset_partition_element_card",
   ``!(g:'a group) h. h <= g /\ FINITE G ==> !e. e IN CosetPartition g h ==> (CARD e = CARD H)``,
-  metis_tac[coset_partition_element, CARD_subgroup_coset, Subgroup_def, SUBSET_FINITE]);
+  metis_tac[coset_partition_element, subgroup_coset_card, Subgroup_def, SUBSET_FINITE]);
 
 (* Theorem: (Lagrange Identity)
             For FINITE Group g and subgroup h,
             (size of group) = (size of subgroup) * (size of coset partition). *)
 (* Proof:
    Since
-   !e. e IN CosetPartition g h ==> (CARD e = CARD H)  by CARD_coset_partition_element
+   !e. e IN CosetPartition g h ==> (CARD e = CARD H)  by coset_partition_element_card
 
    CARD G
-   = SIGMA CARD (CosetPartition g h)     by CARD_carrier_by_coset_partition
+   = SIGMA CARD (CosetPartition g h)     by carrier_card_by_coset_partition
    = CARD H * CARD (CosetPartition g h)  by SIGMA_CARD_CONSTANT
 *)
 val Lagrange_identity = store_thm(
@@ -937,15 +942,15 @@ val Lagrange_identity = store_thm(
   ``!(g:'a group) h. h <= g /\ FINITE G ==> (CARD G = CARD H * CARD (CosetPartition g h))``,
   rpt strip_tac >>
   `FINITE (CosetPartition g h)` by metis_tac[CosetPartition_def, inCoset_equiv_on_carrier, FINITE_partition] >>
-  metis_tac[CARD_carrier_by_coset_partition, SIGMA_CARD_CONSTANT, CARD_coset_partition_element]);
+  metis_tac[carrier_card_by_coset_partition, SIGMA_CARD_CONSTANT, coset_partition_element_card]);
 
 (* Theorem: (Coset Partition size)
             For FINITE Group g, size of coset partition = (size of group) div (size of subgroup). *)
 (* Proof:
    By Lagrange_identity and MULT_DIV.
 *)
-val CARD_coset_partition = store_thm(
-  "CARD_coset_partition",
+val coset_partition_card = store_thm(
+  "coset_partition_card",
   ``!(g:'a group) h. h <= g /\ FINITE G ==> (CARD (CosetPartition g h) = CARD G DIV CARD H)``,
   rpt strip_tac >>
   `Group h /\ FINITE H` by metis_tac[Subgroup_def, SUBSET_FINITE] >>
@@ -1035,8 +1040,8 @@ val subgroup_incoset_equiv = store_thm(
    Apply partition_CARD
     |- !R s. R equiv_on s /\ FINITE s ==> (CARD s = SIGMA CARD (partition R s))
 *)
-val CARD_carrier_by_subgroup_coset_partition = store_thm(
-  "CARD_carrier_by_subgroup_coset_partition",
+val carrier_card_by_subgroup_coset_partition = store_thm(
+  "carrier_card_by_subgroup_coset_partition",
   ``!(g:'a group) h. h <= g /\ FINITE G ==> (CARD G = SIGMA CARD (partition (left_coset g H) G))``,
   rw_tac std_ss[subgroup_incoset_equiv, partition_CARD]);
 
@@ -1061,31 +1066,31 @@ val subgroup_coset_partition_element = store_thm(
 
 (* Theorem: For FINITE group, CARD element in subgroup coset partiton = CARD subgroup. *)
 (* Proof:
-   By subgroup_coset_partition_element and CARD_subgroup_coset
+   By subgroup_coset_partition_element and subgroup_coset_card
 *)
-val CARD_subgroup_coset_partition_element = store_thm(
-  "CARD_subgroup_coset_partition_element",
+val subgroup_coset_card_partition_element = store_thm(
+  "subgroup_coset_card_partition_element",
   ``!(g:'a group) h. h <= g /\ FINITE G ==> !e. e IN (partition (left_coset g H) G) ==> (CARD e = CARD H)``,
   rpt strip_tac >>
   `?a. a IN G /\ (e = a * H)` by rw_tac std_ss[GSYM subgroup_coset_partition_element] >>
   `FINITE H` by metis_tac[Subgroup_def, SUBSET_FINITE] >>
-  metis_tac[CARD_subgroup_coset]);
+  metis_tac[subgroup_coset_card]);
 
 (* Theorem: (Lagrange Identity)
             For FINITE Group g and subgroup h,
             (size of group) = (size of subgroup) * (size of coset partition). *)
 (* Proof:
    Since
-   !e. e IN coset partition g h ==> (CARD e = CARD H)  by CARD_subgroup_coset_partition_element
+   !e. e IN coset partition g h ==> (CARD e = CARD H)  by subgroup_coset_card_partition_element
 
    CARD G
-   = SIGMA CARD (CosetPartition g h)   by CARD_carrier_by_subgroup_coset_partition
+   = SIGMA CARD (CosetPartition g h)   by carrier_card_by_subgroup_coset_partition
    = CARD H * CARD (CosetPartition g h)  by SIGMA_CARD_CONSTANT
 *)
-val Lagrange_identity2 = store_thm(
-  "Lagrange_identity2",
+val Lagrange_identity_alt = store_thm(
+  "Lagrange_identity_alt",
   ``!(g:'a group) h. h <= g /\ FINITE G ==> (CARD G = CARD H * CARD (partition (left_coset g H) G))``,
-  metis_tac[CARD_carrier_by_subgroup_coset_partition, CARD_subgroup_coset_partition_element,
+  metis_tac[carrier_card_by_subgroup_coset_partition, subgroup_coset_card_partition_element,
              SIGMA_CARD_CONSTANT, FINITE_partition]);
 
 (* ------------------------------------------------------------------------- *)
