@@ -13,7 +13,6 @@ val _ = new_theory "polyEval";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -85,12 +84,17 @@ open dividesTheory gcdTheory;
    poly_peval_exp       |- !r. Ring r ==> !p x. poly p /\ poly x ==> !n. peval (p ** n) x = peval p x ** n
    poly_peval_ring_sum  |- !r. Ring r ==> !p. poly p ==> (peval |c| p = |c|)
    poly_peval_X_add_c   |- !r. Ring r ==> !p. poly p ==> (peval (X + |c|) p = p + |c|)
+   poly_peval_X_sub_c   |- !r. Ring r ==> !p. poly p ==> (peval (X - |c|) p = p - |c|)
    poly_peval_X_exp     |- !r. Ring r /\ #1 <> #0 ==> !p. poly p ==> !n. peval (X ** n) p = p ** n
-   poly_peval_X_exp_n_sub_c    |- !r. Ring r /\ #1 <> #0 ==>
+   poly_peval_X_exp_n_add_c    |- !r. Ring r ==>
+                                  !p. poly p ==> !n c. peval (X ** n + |c|) p = p ** n + |c|
+   poly_peval_X_exp_n_sub_c    |- !r. Ring r ==>
                                   !p. poly p ==> !n c. peval (X ** n - |c|) p = p ** n - |c|
    poly_peval_by_X             |- !r p. Ring r /\ poly p ==> (peval p X = p)
    poly_peval_X_add_c_by_zero  |- !r. Ring r ==> !c. peval (X + |c|) |0| = |c|
+   poly_peval_X_sub_c_by_zero  |- !r. Ring r ==> !c. peval (X - |c|) |0| = -|c|
    poly_peval_X_add_c_by_one   |- !r. Ring r ==> !c. peval (X + |c|) |1| = |1| + |c|
+   poly_peval_X_sub_c_by_one   |- !r. Ring r ==> !c. peval (X - |c|) |1| = |1| - |c|
    poly_peval_factor           |- !r. Ring r ==> !c p. c IN R /\ poly p ==>
                                       (peval (factor c) p = if c = #0 then p else p - [c])
    poly_peval_factor_alt       |- !r. Ring r /\ #1 <> #0 ==>
@@ -688,6 +692,17 @@ val poly_peval_X_add_c = store_thm(
   ``!r:'a ring. Ring r ==> !p. poly p ==> (peval (X + |c|) p = p + |c|)``,
   rw[poly_sum_num_poly, poly_peval_add, poly_peval_X, poly_peval_ring_sum]);
 
+(* Theorem: poly p ==> peval (X - |c|) p = p - |c| *)
+(* Proof:
+     peval (X - |c|) p
+   = (peval X p) - (peval |c| p)   by poly_peval_sub
+   = p - |c|                       by poly_peval_X, poly_peval_ring_sum
+*)
+val poly_peval_X_sub_c = store_thm(
+  "poly_peval_X_sub_c",
+  ``!r:'a ring. Ring r ==> !p. poly p ==> (peval (X - |c|) p = p - |c|)``,
+  rw[poly_sum_num_poly, poly_peval_sub, poly_peval_X, poly_peval_ring_sum]);
+
 (* Theorem: poly p ==> !n. peval (X ** n) p = p ** n *)
 (* Proof: by induction on n.
    Base case: peval (X ** 0) p = p ** 0
@@ -716,6 +731,18 @@ val poly_peval_X_exp = store_thm(
   `_ = p * p ** n` by rw[poly_peval_X] >>
   `_ = p ** SUC n` by rw[poly_exp_SUC] >>
   rw[]);
+
+(* Theorem: peval (X ** n + |c|) p = p ** n + |c| *)
+(* Proof:
+     peval (X ** n + |c|) p
+   = peval (X ** n) p + peval |c| p     by poly_peval_add
+   = p ** n + peval |c| p               by poly_peval_X_exp
+   = p ** n + |c|                       by poly_peval_ring_sum
+*)
+val poly_peval_X_exp_n_add_c = store_thm(
+  "poly_peval_X_exp_n_add_c",
+  ``!r:'a ring. Ring r ==> !p. poly p ==> !n c:num. peval (X ** n + |c|) p = p ** n + |c|``,
+  rw[poly_peval_add, poly_peval_X_exp, poly_peval_ring_sum]);
 
 (* Theorem: peval (X ** n - |c|) p = p ** n - |c| *)
 (* Proof:
@@ -779,24 +806,36 @@ val poly_peval_X_add_c_by_zero = store_thm(
   ``!r:'a ring. Ring r ==> !c:num. peval (X + |c|) |0| = |c|``,
   rw[poly_peval_X_add_c]);
 
+(* Theorem: peval (X - |c|) |0| = - |c| *)
+(* Proof:
+     peval (X - |c|) |0|
+   = |0| - |c|             by poly_peval_X_sub_c
+   = |c|                   by poly_sub_lzero
+*)
+val poly_peval_X_sub_c_by_zero = store_thm(
+  "poly_peval_X_sub_c_by_zero",
+  ``!r:'a ring. Ring r ==> !c:num. peval (X - |c|) |0| = - |c|``,
+  rw[poly_peval_X_sub_c]);
+
 (* Theorem: peval (X + |c|) |1| = |1| + |c| *)
 (* Proof:
    If #1 = #0,
       Then |1| = |0|                           by poly_one_eq_poly_zero
       Note poly (X + |c|)                      by poly_X, poly_sum_num_poly
-       and poly ( |1| + |c|)                    by poly_one_poly, poly_sum_num_poly
+       and poly ( |1| + |c|)                   by poly_one_poly, poly_sum_num_poly
         so X + |c| = |0| and |1| + |c| = |0|   by poly_one_eq_zero
       Thus peval |0| = |0|                     by poly_peval_zero
    If #1 <> #0,
      peval (X + |c|) |1|
-   = peval ([##c; #1]) |1|                     by poly_X_add_c_list
-   = ##c * |1| + (peval [#1] |1|) * |1|        by poly_peval_cons
-   = ##c * |1| + peval [#1] |1|                by poly_mult_rone
-   = ##c * |1| + [#1]                          by poly_peval_const
-   = ##c * |1| + |1|                           by poly_one, #1 <> #0
-   = (if ##c = #0 then |0| else [##c]) + |1|   by poly_cmult_one
-   = |c| + |1|                                 by poly_one_sum_n_eq
-   = |1| + |c|                                 by poly_add_comm
+   = peval ([- ##c; #1]) |1|                     by poly_X_sub_c_list
+   = - ##c * |1| + (peval [#1] |1|) * |1|        by poly_peval_cons
+   = - ##c * |1| + peval [#1] |1|                by poly_mult_rone
+   = - ##c * |1| + [#1]                          by poly_peval_const
+   = - ##c * |1| + |1|                           by poly_one, #1 <> #0
+   = (if - ##c = #0 then |0| else [- ##c]) + |1| by poly_cmult_one
+   = - |c| + |1|                                 by poly_one_sum_n_eq
+   = |1| + -|c|                                  by poly_add_comm
+   = |1| - |c|
 *)
 val poly_peval_X_add_c_by_one = store_thm(
   "poly_peval_X_add_c_by_one",
@@ -812,6 +851,43 @@ val poly_peval_X_add_c_by_one = store_thm(
     `_ = ##c * |1| + [#1]` by rw[poly_peval_const] >>
     `_ = ##c * |1| + |1|` by rw[poly_one] >>
     `_ = |c| + |1|` by rw[poly_cmult_one, poly_one_sum_n_eq] >>
+    rw[poly_add_comm]
+  ]);
+
+(* Theorem: peval (X - |c|) |1| = |1| - |c| *)
+(* Proof:
+   If #1 = #0,
+      Then |1| = |0|                           by poly_one_eq_poly_zero
+      Note poly (X - |c|)                      by poly_X, poly_sum_num_poly
+       and poly ( |1| - |c|)                   by poly_one_poly, poly_sum_num_poly
+        so X - |c| = |0| and |1| - |c| = |0|   by poly_one_eq_zero
+      Thus peval |0| = |0|                     by poly_peval_zero
+   If #1 <> #0,
+     peval (X - |c|) |1|
+   = peval ([- ##c; #1]) |1|                   by poly_X_sub_c_list
+   = - ##c * |1| + (peval [#1] |1|) * |1|      by poly_peval_cons
+   = - ##c * |1| + peval [#1] |1|              by poly_mult_rone
+   = - ##c * |1| + [#1]                        by poly_peval_const
+   = - ##c * |1| + |1|                         by poly_one, #1 <> #0
+   = (if - ##c = #0 then |0| else [- ##c]) + |1|   by poly_cmult_one
+   = -|c| + |1|                                by poly_one_sum_n_eq
+   = |1| + -|c|                                by poly_add_comm
+   = |1| - |c|                                 by poly_sub_def
+*)
+val poly_peval_X_sub_c_by_one = store_thm(
+  "poly_peval_X_sub_c_by_one",
+  ``!r:'a ring. Ring r ==> !c:num. peval (X - |c|) |1| = |1| - |c|``,
+  rpt strip_tac >>
+  Cases_on `#1 = #0` >| [
+    `!p. poly p ==> (p = |0|)` by metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero] >>
+    `poly (X - |c|) /\ poly ( |1| - |c|)` by rw[] >>
+    metis_tac[poly_peval_zero],
+    `peval (X - |c|) |1| = peval ([- ##c; #1]) |1|` by rw[poly_X_sub_c_list] >>
+    `_ = - ##c * |1| + (peval [#1] |1|) * |1|` by rw[poly_peval_cons] >>
+    `_ = - ##c * |1| + peval [#1] |1|` by rw[] >>
+    `_ = - ##c * |1| + [#1]` by rw[poly_peval_const] >>
+    `_ = - ##c * |1| + |1|` by rw[poly_one] >>
+    `_ = -|c| + |1|` by rw[poly_cmult_one, poly_one_sum_n_eq] >>
     rw[poly_add_comm]
   ]);
 

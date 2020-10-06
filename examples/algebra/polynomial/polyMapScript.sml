@@ -13,7 +13,6 @@ val _ = new_theory "polyMap";
 (* ------------------------------------------------------------------------- *)
 
 
-
 (* val _ = load "jcLib"; *)
 open jcLib;
 
@@ -197,13 +196,24 @@ open dividesTheory gcdTheory;
    ring_homo_monic_exp_monic |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !p. monic p ==> !n. monic_ (MAP f (p ** n))
    ring_homo_monic_poly_exp  |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !p. monic p ==> !n. MAP f (p ** n) = p_ **_ n
    ring_homo_poly_sum_num_poly |- !r r_ f. (r ~r~ r_) f ==> !c. 0 < c /\ c < char r_ ==> poly_ (MAP f |c|)
+
    ring_homo_X_add_c_monic   |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !c. monic_ (MAP f (X + |c|))
    ring_homo_X_add_c_poly    |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !c. poly_ (MAP f (X + |c|))
    ring_homo_poly_X_add_c    |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !c. MAP f (X + |c|) = (MAP f X) +_ (MAP f |c|)
+   ring_homo_X_exp_n_add_c_monic
+                             |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !n. 0 < n ==> !c. monic_ (MAP f (X ** n + |c|))
+   ring_homo_X_exp_n_add_c_poly
+                             |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !n. 0 < n ==> !c. poly_ (MAP f (X ** n + |c|))
+   ring_homo_poly_X_exp_n_add_c
+                             |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !n c. 0 < n ==> (MAP f (X ** n + |c|) = MAP f X **_ n +_ MAP f |c|)
+   ring_homo_X_sub_c_monic   |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !c. monic_ (MAP f (X - |c|))
+   ring_homo_X_sub_c_poly    |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !c. poly_ (MAP f (X - |c|))
+   ring_homo_poly_X_sub_c    |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !c. 0 < c /\ c < char r_ ==> (MAP f (X - |c|) = MAP f X -_ MAP f |c|)
    ring_homo_X_exp_n_sub_c_monic   |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !n. 0 < n ==> !c. monic_ (MAP f (X ** n - |c|))
    ring_homo_X_exp_n_sub_c_poly    |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !n. 0 < n ==> !c. poly_ (MAP f (X ** n - |c|))
    ring_homo_poly_X_exp_n_sub_c    |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !n. 0 < n ==>
                                       !c. 0 < c /\ c < char r_ ==> (MAP f (X ** n - |c|) = MAP f X **_ n -_ MAP f |c|)
+
    ring_homo_unity_poly  |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !n. poly_ (MAP f (unity n))
    ring_homo_poly_unity  |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !n. MAP f (unity n) = MAP f X **_ n -_ MAP f |1|
    ring_homo_peval_chop  |- !r r_ f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !p q. poly p /\ poly q ==>
@@ -1871,6 +1881,91 @@ val ring_homo_poly_X_add_c = store_thm(
   `poly_ (MAP f (X + |c|))` by rw[ring_homo_X_add_c_poly] >>
   metis_tac[poly_chop_poly, ring_homo_poly_add_chop]);
 
+(* Theorem: 0 < n ==> !c. monic_ (MAP f (X ** n + |c|)) *)
+(* Proof:
+   Note monic (X ** n + |c|)            by poly_monic_X_exp_n_add_c, 0 < n.
+   Thus monic_ (MAP f (X ** n - |c|))   by ring_homo_monic_monic
+*)
+val ring_homo_X_exp_n_add_c_monic = store_thm(
+  "ring_homo_X_exp_n_add_c_monic",
+  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !n. 0 < n ==> !c:num. monic_ (MAP f (X ** n + |c|))``,
+  metis_tac[poly_monic_X_exp_n_add_c, ring_homo_monic_monic]);
+
+(* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==>
+            !n c. 0 < n ==> poly_ (MAP f (X ** n + |c|)) *)
+(* Proof:
+   Since 0 < n,
+         monic_ (MAP f (X ** n + |c|))   by ring_homo_X_exp_n_add_c_monic
+   Hence poly_ (MAP f (X ** n + |c|))    by poly_monic_poly
+*)
+val ring_homo_X_exp_n_add_c_poly = store_thm(
+  "ring_homo_X_exp_n_add_c_poly",
+  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !n. 0 < n ==> !c:num. poly_ (MAP f (X ** n + |c|))``,
+  rw[ring_homo_X_exp_n_add_c_monic]);
+
+(* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==>
+            !c n. 0 < n ==> (MAP f (X ** n + |c|) = MAP f X **_ n +_ MAP f |c|) *)
+(* Proof:
+   Since poly_ (MAP f (X ** n + |c|))     by ring_homo_X_exp_n_add_c_poly, 0 < n
+     and monic X                          by poly_monic_X
+     MAP f (X ** n + |c|)
+   = chop_ (MAP f (X ** n + |c|))         by poly_chop_poly
+   = (MAP f (X ** n)) +_ (MAP f |c|)      by ring_homo_poly_add_chop
+   = (MAP f X) **_ n +_ (MAP f |c|)       by ring_homo_monic_poly_exp
+*)
+val ring_homo_poly_X_exp_n_add_c = store_thm(
+  "ring_homo_poly_X_exp_n_add_c",
+  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !n c:num. 0 < n ==> (MAP f (X ** n + |c|) = MAP f X **_ n +_ MAP f |c|)``,
+  rpt strip_tac >>
+  `monic X` by rw[] >>
+  `poly_ (MAP f (X ** n + |c|))` by rw[ring_homo_X_exp_n_add_c_poly] >>
+  `MAP f (X ** n + |c|) = chop_ (MAP f (X ** n + |c|))` by rw[poly_chop_poly] >>
+  `_ = (MAP f (X ** n)) +_ (MAP f |c|)` by rw[ring_homo_poly_add_chop] >>
+  metis_tac[ring_homo_monic_poly_exp]);
+
+(* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==> !c. monic_ (MAP f (X - |c|)) *)
+(* Proof:
+   Note monic (X - |c|)            by poly_monic_X_sub_c
+   Thus monic_ (MAP f (X + |c|))   by ring_homo_monic_monic
+*)
+val ring_homo_X_sub_c_monic = store_thm(
+  "ring_homo_X_sub_c_monic",
+  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !c:num. monic_ (MAP f (X - |c|))``,
+  metis_tac[poly_monic_X_sub_c, ring_homo_monic_monic]);
+
+(* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==> !c. poly_ (MAP f (X - |c|)) *)
+(* Proof:
+   Since monic_ (MAP f (X - |c|))    by ring_homo_X_sub_c_monic
+     ==> poly_ (MAP (X - |c|))       by poly_monic_poly
+*)
+val ring_homo_X_sub_c_poly = store_thm(
+  "ring_homo_X_sub_c_poly",
+  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !c:num. poly_ (MAP f (X - |c|))``,
+  rw[ring_homo_X_sub_c_monic]);
+
+(* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==>
+            !c. 0 < c /\ c < char r_ ==> (MAP f (X - |c|) = (MAP f X) -_ (MAP f |c|)) *)
+(* Proof:
+   Since poly_ (MAP f (X - |c|))     by ring_homo_X_sub_c_poly
+     and poly_ (MAP f |c|)           by ring_homo_poly_sum_num_poly
+     MAP f (X - |c|)
+   = chop_ (MAP f (X - |c|))         by poly_chop_poly
+   = (MAP f X) -_ chop_ (MAP f |c|)  by ring_homo_poly_sub_chop
+   = (MAP f X) -_ (MAP f |c|)        by poly_chop_poly
+*)
+val ring_homo_poly_X_sub_c = store_thm(
+  "ring_homo_poly_X_sub_c",
+  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !c:num. 0 < c /\ c < char r_ ==> (MAP f (X - |c|) = (MAP f X) -_ (MAP f |c|))``,
+  rpt strip_tac >>
+  `poly X /\ poly |c|` by rw[] >>
+  `poly_ (MAP f (X - |c|))` by rw[ring_homo_X_sub_c_poly] >>
+  `poly_ (MAP f |c|)` by rw[ring_homo_poly_sum_num_poly] >>
+  metis_tac[poly_chop_poly, ring_homo_poly_sub_chop]);
+
 (* Theorem: 0 < n ==> !c. monic_ (MAP f (X ** n - |c|)) *)
 (* Proof:
    Note monic (X ** n - |c|)            by poly_monic_X_exp_n_sub_c, 0 < n.
@@ -1909,7 +2004,7 @@ val ring_homo_X_exp_n_sub_c_poly = store_thm(
       so chop_ (MAP f (X ** n - |c|)) = MAP f (X ** n - |c|)  by poly_chop_poly
     With poly |c|                             by poly_sum_num_poly
      and poly (X ** n)                        by poly_X, poly_exp_poly
-    Henc result is true                       by ring_homo_poly_sub_chop
+    Hence result is true                      by ring_homo_poly_sub_chop
 *)
 val ring_homo_poly_X_exp_n_sub_c = store_thm(
   "ring_homo_poly_X_exp_n_sub_c",
