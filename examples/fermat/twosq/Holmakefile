@@ -1,0 +1,8 @@
+# choose to take HOL examples or work/hol
+LOC_PREFIX = ../../../../HOL/examples
+# LOC_PREFIX = ../../../hol
+
+PRE_INCLUDES = $(LOC_PREFIX)/algebra/ring
+
+ALGEBRA_INCLUDES = lib monoid group field polynomial finitefield
+INCLUDES = $(patsubst %,$(LOC_PREFIX)/algebra/%,$(ALGEBRA_INCLUDES))
