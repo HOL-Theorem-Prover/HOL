@@ -54,14 +54,12 @@ fun pred_thmid thmdata fea =
   thmknn thmdata (!ttt_thmlarg_radius) fea
 
 fun unterm_var v =
-  let val (vs,ty) = dest_var v in vs ^ " " ^ type_to_string ty end
+  let val (vs,ty) = dest_var v in vs end
 
 fun respace s = String.concatWith " " (partial_sml_lexer s)
 
 fun unterm_var_alt v =
-  let val (vs,ty) = dest_var v in 
-    [vs, respace (vs ^ " " ^ type_to_string ty)] 
-  end
+  let val (vs,ty) = dest_var v in [vs, respace vs] end
 
 fun pred_svar n goal = 
   first_n n (map unterm_var (find_terms is_var (snd goal)))

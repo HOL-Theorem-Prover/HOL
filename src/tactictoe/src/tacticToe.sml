@@ -11,8 +11,7 @@ struct
 open HolKernel Abbrev boolLib aiLib
   smlLexer smlParser smlExecute smlRedirect smlInfix
   mlFeature mlThmData mlTacticData mlNearestNeighbor mlTreeNeuralNetwork
-  psMinimize
-  tttSetup tttToken tttLearn tttSearch
+  psMinimize tttSetup tttToken tttLearn tttSearch
 
 val ERR = mk_HOL_ERR "tacticToe"
 
@@ -160,6 +159,7 @@ fun main_tactictoe (thmdata,tacdata) nnol goal =
    ------------------------------------------------------------------------- *)
 
 val ministacl =
+  ref 
   [
   "metisTools.METIS_TAC " ^ thmlarg_placeholder,
   "BasicProvers.Induct_on " ^ termarg_placeholder,
@@ -184,7 +184,7 @@ fun main_tactictoe_mini thmdata (vnno,pnno,anno) goal =
     (* parsing *)
     val _ = print_endline "parsing"
     val thm_parse_dict = dnew String.compare (preparse_thmidl (map fst thmfea))
-    val tac_parse_dict = dnew String.compare (preparse_stacl ministacl)
+    val tac_parse_dict = dnew String.compare (preparse_stacl (!ministacl))
     fun parse_thmidl thmidl = map (fn x => dfind x thm_parse_dict) thmidl
       handle NotFound =>
         raise ERR "parse_thmidl" (String.concatWith " " thmidl)

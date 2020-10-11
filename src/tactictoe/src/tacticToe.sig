@@ -25,6 +25,7 @@ sig
   val ttt : tactic
   val tactictoe : term -> thm
 
+  val ministacl : string list ref
   val ttt_mini : tactic
   val tactictoe_mini : term -> thm
 
