@@ -105,7 +105,7 @@ fun reward_of_goal vnno g =
 (* policy *)
 fun eval_stac pnn g stac = 
   let 
-    val tm1 = nntm_of_statepol (g,stac) (* slow because of parsing *)
+    val tm1 = nntm_of_statepol (g,stac)
     val tm2 = mask_unknown_pol pnn tm1
   in
     infer_tnn_basic pnn tm2
@@ -127,7 +127,7 @@ fun reorder_pol g pnno stacl =
 (* argument *)
 fun eval_arg ann g stac arg =
   let 
-    val tm1 = nntm_of_statearg ((g,stac),arg) (* slow because of parsing *)
+    val tm1 = nntm_of_statearg ((g,stac),arg)
     val tm2 = mask_unknown_arg ann tm1
   in
     infer_tnn_basic ann tm2

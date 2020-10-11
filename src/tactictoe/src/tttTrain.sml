@@ -119,14 +119,18 @@ fun nntm_of_applyexp e = case e of
     else mk_var (escape ("sml." ^ s), alpha)
     )
 
+val stacnntmd = ref (dempty String.compare)
+
 fun nntm_of_stac stac = 
+  dfind stac (!stacnntmd) handle NotFound =>
   let 
     fun f x = if mem x [termarg_placeholder,thmlarg_placeholder]
               then "tttToken." ^ x
               else x 
     val newstac = String.concatWith " " (map f (partial_sml_lexer stac))
+    val r = nntm_of_applyexp (extract_applyexp (extract_smlexp newstac))
   in 
-    nntm_of_applyexp (extract_applyexp (extract_smlexp newstac))
+    stacnntmd := dadd stac r (!stacnntmd); r
   end
 
 fun nntm_of_gstac (g,stac) =
