@@ -160,6 +160,14 @@ val _ = run_evalscript_thyl smlfun "august30" (true,30) (NONE,NONE) thyl;
    ------------------------------------------------------------------------ *)
 
 (*
+load "tttUnfold"; open tttUnfold;
+tttSetup.record_savestate_flag := true;
+tttSetup.learn_abstract_term := false;
+aiLib.debug_flag := false;
+ttt_clean_record ();
+ttt_record ();
+
+
 load "tttEval"; open tttEval;
 open mlTreeNeuralNetwork aiLib tttTrain tttEval;
 
@@ -167,7 +175,7 @@ tttSetup.ttt_search_time := 30.0;
 aiLib.debug_flag := false;
 val thyl = sort_thyl (ancestry (current_theory ()));
 
-val expname = "september1-2";
+val expname = "october11";
 val expdir = tttSetup.ttt_eval_dir ^ "/" ^ expname;
 val gendir = expdir ^ "/" ^ aiLib.its 0;
 val valdir = gendir ^ "/val";
@@ -184,7 +192,7 @@ fun read_ex dir =
 val smlfun0 = "tttBigSteps.run_bigsteps_eval (" ^ 
   mlquote expdir ^ "," ^ its 0 ^ ")";
 val smlfun1 = "tttBigSteps.run_bigsteps_eval (" ^ 
-  mlquote expdir ^ "," ^ its 11 ^ ")";
+  mlquote expdir ^ "," ^ its 1 ^ ")";
 
 fun train_dir limit dir name = 
   let 
