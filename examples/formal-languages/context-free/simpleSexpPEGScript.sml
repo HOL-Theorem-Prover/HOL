@@ -23,6 +23,11 @@ Definition replace_nil_def:
   (replace_nil x y = x)
 End
 
+Definition sumID_def[simp]:
+  sumID (INL x) = x ∧
+  sumID (INR y) = y
+End
+
 (* have to use these versions of choicel and pegf below because the
    versions from pegTheory use ARB in their definitions.
    Logically, the ARBs are harmless, but they completely mess with the
@@ -30,7 +35,7 @@ End
 *)
 Definition choicel_def:
   choicel [] = not (empty arb_sexp) arb_sexp ∧
-  choicel (h::t) = choice h (choicel t) (λs. case s of INL x => x | INR y => y)
+  choicel (h::t) = choice h (choicel t) sumID
 End
 
 Definition pegf_def:
@@ -81,7 +86,9 @@ Definition sexpPEG_def[nocompute]:
              choicel [
                  pnt sxnt_sexpnum ;
                  tokeq #"(" ~> pnt sxnt_sexpseq ;
-                 tokeq #"\"" ~> pnt sxnt_strcontents <~ tokeq #"\"" ;
+                 tokeq #"\"" ~>
+                     pnt sxnt_strcontents
+                  <~ choice (tokeq #"\"") (error "Expected \"") sumID;
                  pegf (tokeq #"'" ~> grabWS (pnt sxnt_sexp0))
                       (λs. ⟪ SX_SYM "quote"; s⟫) ;
                  pnt sxnt_sexpsym
