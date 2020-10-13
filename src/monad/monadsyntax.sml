@@ -69,10 +69,11 @@ fun load_from_disk {thyname, data} =
         | _ => raise ERR "load_from_disk" "keyval pair data looks bad"
   in
     case data of
-        List keyvals =>
+        SOME (List keyvals) =>
           monadDB := List.foldl (fn ((k,v), acc) => Binarymap.insert(acc,k,v))
                                 (!monadDB)
                                 (map dest_keyval keyvals)
+      | NONE => ()
       | _ => raise ERR "load_from_disk" "data looks bad"
   end
 

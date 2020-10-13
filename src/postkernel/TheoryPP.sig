@@ -33,6 +33,7 @@ sig
       definitions : (string * thm) list,
       theorems    : (string * thm) list,
       struct_ps   : (unit -> PP.pretty) option list,
+      struct_pcps : (unit -> PP.pretty) list,
       mldeps      : string list,
       thydata     : string list * Term.term list *
                     (string,shared_writemaps -> HOLsexp.t)Binarymap.dict}
@@ -47,6 +48,7 @@ sig
       definitions : (string * thm) list,
       theorems    : (string * thm) list,
       struct_ps   : (unit -> PP.pretty) option list,
+      struct_pcps : (unit -> PP.pretty) list,
       mldeps      : string list,
       thydata     : string list * Term.term list *
                     (string,shared_writemaps -> HOLsexp.t)Binarymap.dict}
