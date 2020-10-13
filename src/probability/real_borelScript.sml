@@ -330,7 +330,7 @@ Definition real_rat_set_def :
 End
 
 val _ = overload_on ("q_set", ``real_rat_set``);
-val q_set_def = save_thm ("Q_set_def", real_rat_set_def);
+Theorem q_set_def = real_rat_set_def;
 
 val QSET_COUNTABLE = store_thm ("QSET_COUNTABLE",
   ``countable q_set``,
@@ -998,6 +998,61 @@ val borel_eq_atLeastAtMost = borel_eq_ge_le;
 (* this is the original definition *)
 val borel_def = save_thm ("borel_def", borel_eq_le);
 
+Theorem borel_eq_gr_le :
+    borel = sigma UNIV (IMAGE (\(a,b). {x | a < x /\ x <= b}) UNIV)
+Proof
+    ONCE_REWRITE_TAC [METIS [] ``{x | a < x /\ x <= b} =
+                                 (\a b. {x:real | a < x /\ x <= b}) a b``]
+ >> Suff `(borel = sigma univ(:real) (IMAGE (\a. {x | x <= a}) univ(:real))) /\
+          (!i. (\a. {x | x <= a}) i IN
+               subsets (sigma univ(:real)
+                             (IMAGE (\(i,j). (\a b. {x | a < x /\ x <= b}) i j)
+                                    univ(:real # real)))) /\
+           !i j. (\a b. {x | a < x /\ x <= b}) i j IN subsets borel`
+ >- (DISCH_THEN (MP_TAC o MATCH_MP borel_eq_sigmaI5) >> SIMP_TAC std_ss [])
+ >> SIMP_TAC std_ss [borel_eq_le]
+ >> Know `!a. {x | x <= a} =
+              BIGUNION {{x:real | -&n < x /\ x <= a} | n IN UNIV}`
+ >- (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION, IN_UNIV] \\
+     reverse EQ_TAC
+     >- (STRIP_TAC >> POP_ASSUM (MP_TAC o SPEC ``x:real``) \\
+         ASM_REWRITE_TAC [] >> REAL_ARITH_TAC) \\
+     DISCH_TAC \\
+     MP_TAC (ISPEC ``x:real`` SIMP_REAL_ARCH_NEG) >> STRIP_TAC \\
+     Q.EXISTS_TAC `{x | -&SUC n < x /\ x <= a}` \\
+     ASM_SIMP_TAC std_ss [GSPECIFICATION] \\
+     CONJ_TAC >- (MATCH_MP_TAC REAL_LTE_TRANS \\
+                  Q.EXISTS_TAC ‘-&n’ >> rw []) \\
+     Q.EXISTS_TAC ‘SUC n’ >> rw [])
+ >> DISCH_TAC
+ >> CONJ_TAC
+ >- (RW_TAC std_ss [subsets_def, sigma_def, IN_BIGINTER,
+                    GSPECIFICATION, SUBSET_DEF] \\
+     ONCE_REWRITE_TAC [METIS [] ``{x | -&n < x /\ x <= i} =
+                                  (\n. {x:real | -&n < x /\ x <= i}) n``] \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_COUNTABLE_UN >> EXISTS_TAC ``univ(:real)`` \\
+     ASM_SIMP_TAC std_ss [COUNTABLE_NUM] \\
+     RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_UNIV] >> FIRST_X_ASSUM MATCH_MP_TAC \\
+     SET_TAC [])
+ (* below are new steps by Chun Tian *)
+ >> rpt GEN_TAC
+ >> Know ‘{x | i < x /\ x <= j} = {x | x <= j} DIFF {x | x <= i}’
+ >- (rw [Once EXTENSION] >> METIS_TAC [real_lt]) >> Rewr'
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_DIFF
+ >> STRONG_CONJ_TAC
+ >- (MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> rw [subset_class_def])
+ >> DISCH_TAC
+ >> CONJ_TAC
+ >| [ (* goal 1 (of 2) *)
+      Suff ‘{x | x <= j} IN (IMAGE (\a. {x | x <= a}) univ(:real))’
+      >- METIS_TAC [SUBSET_DEF, SIGMA_SUBSET_SUBSETS] \\
+      rw [] >> Q.EXISTS_TAC ‘j’ >> REWRITE_TAC [],
+      (* goal 2 (of 2) *)
+      Suff ‘{x | x <= i} IN (IMAGE (\a. {x | x <= a}) univ(:real))’
+      >- METIS_TAC [SUBSET_DEF, SIGMA_SUBSET_SUBSETS] \\
+      rw [] >> Q.EXISTS_TAC ‘i’ >> REWRITE_TAC [] ]
+QED
+
 val in_borel_measurable = store_thm
   ("in_borel_measurable",
    ``!f s. f IN borel_measurable s <=>
@@ -1427,6 +1482,203 @@ Proof
                   borel_measurable_sets_ge_le,
                   borel_measurable_sets_sing,
                   borel_measurable_sets_not_sing]
+QED
+
+(* borel_measurable_plus_borel_measurable *)
+Theorem in_borel_measurable_add :
+    !a f g h. sigma_algebra a /\ f IN measurable a borel /\ g IN measurable a borel /\
+             (!x. x IN space a ==> (h x = f x + g x)) ==> h IN measurable a borel
+Proof
+    rpt STRIP_TAC
+ >> RW_TAC std_ss [in_borel_measurable_less, IN_FUNSET, IN_UNIV]
+ >> Know `!c. {w | w IN space a /\ h w < c} =
+              BIGUNION (IMAGE (\r. {x | x IN space a /\ f x < r /\ r < c - g x}) q_set)`
+ >- (RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION_IMAGE, IN_UNIV, IN_INTER] \\
+     EQ_TAC >- (RW_TAC std_ss [] \\
+                MATCH_MP_TAC Q_DENSE_IN_REAL \\
+                METIS_TAC [REAL_LT_SUB_LADD]) \\
+     RW_TAC std_ss [] >- art [] \\
+    ‘h x = f x + g x’ by PROVE_TAC [] >> POP_ORW \\
+    ‘f x < c - g x’ by PROVE_TAC [REAL_LT_TRANS] \\
+     METIS_TAC [REAL_LT_SUB_LADD])
+ >> DISCH_TAC
+ >> FULL_SIMP_TAC std_ss []
+ >> MATCH_MP_TAC BIGUNION_IMAGE_QSET
+ >> RW_TAC std_ss [IN_FUNSET]
+ >> rename1 ‘{x | x IN space a /\ f x < r /\ r < c - g x} IN subsets a’
+ >> `{x | x IN space a /\ f x < r /\ r < c - g x} =
+     {x | x IN space a /\ f x < r} INTER {x | x IN space a /\ r < c - g x}`
+      by SET_TAC [] >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art []
+ >> CONJ_TAC
+ >- (MP_TAC (REWRITE_RULE [IN_FUNSET, IN_UNIV]
+                          (Q.SPECL [‘f’, ‘a’] in_borel_measurable_less)) \\
+     RW_TAC std_ss [])
+ >> Know `!x. x IN space a ==> (r < c - g x <=> g x < c - r)`
+ >- (rpt STRIP_TAC \\
+     METIS_TAC [REAL_LT_SUB_LADD, REAL_ADD_COMM])
+ >> DISCH_TAC
+ >> `{x | x IN space a /\ r < c - g x} = {x | x IN space a /\ g x < c - r}` by ASM_SET_TAC []
+ >> POP_ORW
+ >> MP_TAC (REWRITE_RULE [IN_FUNSET, IN_UNIV]
+                         (Q.SPECL [‘g’, ‘a’] in_borel_measurable_less))
+ >> RW_TAC std_ss []
+QED
+
+Theorem in_borel_measurable_const :
+    !a k f. sigma_algebra a /\ (!x. x IN space a ==> (f x = k)) ==> f IN measurable a borel
+Proof
+    RW_TAC std_ss [in_borel_measurable_less, IN_FUNSET, IN_UNIV]
+ >> rename1 ‘{w | w IN space a /\ f w < c} IN subsets a’
+ >> Cases_on `c <= k`
+ >- (`{x | x IN space a /\ f x < c} = {}` by ASM_SET_TAC [real_lt] >> POP_ORW \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_EMPTY >> art [])
+ >> `{x | x IN space a /\ f x < c} = space a` by ASM_SET_TAC [real_lt]
+ >> POP_ORW
+ >> MATCH_MP_TAC SIGMA_ALGEBRA_SPACE >> art []
+QED
+
+Theorem in_borel_measurable_cmul :
+    !a f g z. sigma_algebra a /\ f IN measurable a borel /\
+             (!x. x IN space a ==> (g x = z * f x)) ==> g IN measurable a borel
+Proof
+    RW_TAC std_ss []
+ >> Cases_on `z = 0`
+ >- METIS_TAC [in_borel_measurable_const, REAL_MUL_LZERO]
+ >> Cases_on `0 < z`
+ >- (RW_TAC real_ss [in_borel_measurable_less, IN_FUNSET, IN_UNIV] \\
+     Know `!c. {x | x IN space a /\ g x < c} = {x | x IN space a /\ f x < c / z}`
+     >- (rw [Once EXTENSION] \\
+         METIS_TAC [REAL_LT_RDIV_EQ, REAL_MUL_COMM]) >> Rewr' \\
+     MP_TAC (REWRITE_RULE [IN_FUNSET, IN_UNIV]
+                          (Q.SPECL [‘f’, ‘a’] in_borel_measurable_less)) \\
+     RW_TAC std_ss [])
+ >> `z < 0` by METIS_TAC [REAL_LT_LE, GSYM real_lte]
+ >> RW_TAC real_ss [in_borel_measurable_less, IN_FUNSET, IN_UNIV]
+ >> Know `!c. {x | x IN space a /\ g x < c} = {x | x IN space a /\ c / z < f x}`
+ >- (rw [Once EXTENSION] \\
+     METIS_TAC [REAL_LT_RDIV_EQ_NEG, REAL_MUL_COMM]) >> Rewr'
+ >> MP_TAC (REWRITE_RULE [IN_FUNSET, IN_UNIV]
+                         (Q.SPECL [‘f’, ‘a’] in_borel_measurable_gr))
+ >> RW_TAC std_ss []
+QED
+
+(* cf. borel_measurable_sub_borel_measurable (real_measureTheory) *)
+Theorem in_borel_measurable_sub :
+    !a f g h. sigma_algebra a /\ f IN measurable a borel /\ g IN measurable a borel /\
+             (!x. x IN space a ==> (h x = f x - g x)) ==> h IN measurable a borel
+Proof
+    RW_TAC std_ss []
+ >> MATCH_MP_TAC in_borel_measurable_add
+ >> qexistsl_tac [`f`, `\x. - g x`]
+ >> RW_TAC std_ss []
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC in_borel_measurable_cmul \\
+      qexistsl_tac [‘g’, ‘-1’] \\
+      RW_TAC real_ss [],
+      (* goal 2 (of 2) *)
+      REWRITE_TAC [real_sub] ]
+QED
+
+Theorem in_borel_measurable_sqr :
+    !a f g. sigma_algebra a /\ f IN measurable a borel /\
+            (!x. x IN space a ==> (g x = (f x) pow 2)) ==> g IN measurable a borel
+Proof
+    rpt STRIP_TAC
+ >> Know `!c. {x | f x <= c} INTER space a IN subsets a`
+ >- (GEN_TAC >> fs [in_borel_measurable_le, IN_FUNSET, IN_UNIV] \\
+    ‘{x | f x <= c} INTER space a = {x | x IN space a /\ f x <= c}’ by SET_TAC [] \\
+     POP_ORW >> art [])
+ >> DISCH_TAC
+ >> Know `!c. {x | c <= f x} INTER space a IN subsets a`
+ >- (GEN_TAC >> fs [in_borel_measurable_ge, IN_FUNSET, IN_UNIV] \\
+    ‘{x | c <= f x} INTER space a = {x | x IN space a /\ c <= f x}’ by SET_TAC [] \\
+     POP_ORW >> art [])
+ >> DISCH_TAC
+ >> simp [IN_FUNSET, in_borel_measurable_le]
+ >> Q.X_GEN_TAC ‘c’
+ >> ‘{w | w IN space a /\ g w <= c} = {x | g x <= c} INTER space a’ by SET_TAC []
+ >> POP_ORW
+ >> Cases_on `c < 0`
+ >- (Know `{x | g x <= c} INTER space a = {}`
+     >- (rw [Once EXTENSION, NOT_IN_EMPTY, GSYM real_lt] \\
+         ONCE_REWRITE_TAC [DISJ_COMM] >> STRONG_DISJ_TAC \\
+         MATCH_MP_TAC REAL_LTE_TRANS >> Q.EXISTS_TAC ‘0’ >> art [] \\
+         METIS_TAC [REAL_LE_POW2]) >> Rewr' \\
+     MATCH_MP_TAC SIGMA_ALGEBRA_EMPTY >> art [])
+ >> FULL_SIMP_TAC real_ss [real_lt]
+ >> Suff `{x | g x <= c} INTER space a =
+            ({x | f x <= sqrt c} INTER space a) INTER
+            ({x | - (sqrt c) <= f x} INTER space a)`
+ >- (Rewr' >> MATCH_MP_TAC SIGMA_ALGEBRA_INTER >> art [])
+ >> rw [Once EXTENSION]
+ >> EQ_TAC
+ >- (RW_TAC real_ss []
+     >- (Cases_on `f x < 0` >- METIS_TAC [REAL_LTE_TRANS, REAL_LT_IMP_LE, SQRT_POS_LE] \\
+         FULL_SIMP_TAC real_ss [real_lt] \\
+         Know ‘sqrt (g x) <= sqrt c’
+         >- (MATCH_MP_TAC SQRT_MONO_LE >> art [] \\
+             METIS_TAC [REAL_LE_POW2]) >> DISCH_TAC \\
+         Suff ‘sqrt (g x) = f x’ >- PROVE_TAC [] \\
+         MATCH_MP_TAC SQRT_POS_UNIQ >> METIS_TAC [REAL_LE_POW2]) \\
+     SPOSE_NOT_THEN ASSUME_TAC \\
+     FULL_SIMP_TAC real_ss [GSYM real_lt] \\
+    `sqrt c < -(f x)` by METIS_TAC [REAL_LT_NEG, REAL_NEG_NEG] \\
+     Know `(sqrt c) pow 2 < (- (f x)) pow 2`
+     >- (MATCH_MP_TAC REAL_POW_LT2 >> rw [SQRT_POS_LE]) >> DISCH_TAC \\
+    `(sqrt c) pow 2 = c` by METIS_TAC [SQRT_POW2] \\
+    `(-1) pow 2 = (1 :real)` by METIS_TAC [POW_MINUS1, MULT_RIGHT_1] \\
+    `(- (f x)) pow 2 = (f x) pow 2`
+       by RW_TAC std_ss [Once REAL_NEG_MINUS1, POW_MUL, REAL_MUL_LID] \\
+     METIS_TAC [real_lt])
+ >> RW_TAC std_ss []
+ >> Cases_on `0 <= f x` >- METIS_TAC [POW_LE, SQRT_POW2]
+ >> FULL_SIMP_TAC real_ss [GSYM real_lt]
+ >> `- (f x) <= sqrt c` by METIS_TAC [REAL_LE_NEG, REAL_NEG_NEG]
+ >> `(- (f x)) pow 2 <= (sqrt c) pow 2`
+      by METIS_TAC [POW_LE, SQRT_POS_LE, REAL_LT_NEG, REAL_NEG_NEG, REAL_NEG_0, REAL_LT_IMP_LE]
+ >> `(sqrt c) pow 2 = c` by METIS_TAC [SQRT_POW2]
+ >> `(-1) pow 2 = (1 :real)` by METIS_TAC [POW_MINUS1, MULT_RIGHT_1]
+ >> `(- (f x)) pow 2 = (f x) pow 2`
+       by RW_TAC std_ss [Once REAL_NEG_MINUS1, POW_MUL, REAL_MUL_LID]
+ >> METIS_TAC []
+QED
+
+Theorem in_borel_measurable_mul :
+    !a f g h. sigma_algebra a /\ f IN measurable a borel /\ g IN measurable a borel /\
+             (!x. x IN space a ==> (h x = f x * g x)) ==> h IN measurable a borel
+Proof
+    RW_TAC std_ss []
+ >> Know `!x. x IN space a ==>
+             (f x * g x = 1 / 2 * ((f x + g x) pow 2 - f x pow 2 - g x pow 2))`
+ >- (rpt STRIP_TAC \\
+     (MP_TAC o Q.SPECL [`f x`, `g x`]) ADD_POW_2 >> Rewr' \\
+     simp [] >> REAL_ARITH_TAC)
+ >> DISCH_TAC
+ >> MATCH_MP_TAC in_borel_measurable_cmul
+ >> Q.EXISTS_TAC `(\x. (f x + g x) pow 2 - f x pow 2 - g x pow 2)`
+ >> Q.EXISTS_TAC `1 / 2`
+ >> RW_TAC real_ss []
+ >> MATCH_MP_TAC in_borel_measurable_sub
+ >> Q.EXISTS_TAC `(\x. (f x + g x) pow 2 - f x pow 2)`
+ >> Q.EXISTS_TAC `(\x. g x pow 2)`
+ >> RW_TAC std_ss []
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC in_borel_measurable_sub \\
+      Q.EXISTS_TAC `(\x. (f x + g x) pow 2)` \\
+      Q.EXISTS_TAC `(\x. f x pow 2)` \\
+      RW_TAC std_ss [] >| (* 2 subgoals *)
+      [ (* goal 1.1 (of 2) *)
+        MATCH_MP_TAC in_borel_measurable_sqr \\
+        Q.EXISTS_TAC `(\x. f x + g x)` \\
+        RW_TAC std_ss [] \\
+        MATCH_MP_TAC in_borel_measurable_add \\
+        qexistsl_tac [`f`, `g`] \\
+        RW_TAC std_ss [],
+        (* goal 1.2 (of 2) *)
+        MATCH_MP_TAC in_borel_measurable_sqr >> METIS_TAC [] ],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC in_borel_measurable_sqr >> METIS_TAC [] ]
 QED
 
 (************************************************************)

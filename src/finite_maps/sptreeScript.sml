@@ -1938,6 +1938,55 @@ Proof
   metis_tac[]
 QED
 
+Triviality delete_mk_BN:
+  (delete 0 (mk_BN t1 t2) = mk_BN t1 t2) /\
+  (k <> 0 ==> delete k (mk_BN t1 t2) = delete k (BN t1 t2))
+Proof
+  Cases_on `t1` \\ Cases_on `t2` \\ fs [mk_BN_def]
+  \\ fs [delete_def,mk_BN_def]
+QED
+
+Triviality delete_mk_BS:
+  (delete 0 (mk_BS t1 s t2) = mk_BN t1 t2) /\
+  (k <> 0 ==> delete k (mk_BS t1 s t2) = delete k (BS t1 s t2))
+Proof
+  Cases_on `t1` \\ Cases_on `t2` \\ fs [mk_BS_def]
+  \\ fs [delete_def,mk_BS_def,mk_BN_def]
+QED
+
+Triviality DIV_2_lemma:
+  n DIV 2 = m DIV 2 /\ EVEN m = EVEN n ==> m = n
+Proof
+  rw []
+  \\ `0 < 2n` by fs [] \\ drule DIVISION
+  \\ fs [EVEN_MOD2]
+  \\ disch_then (fn th => once_rewrite_tac [th]) \\ fs []
+  \\ Cases_on `m MOD 2 = 0` \\ fs []
+  \\ `n MOD 2 < 2` by fs [MOD_LESS]
+  \\ `m MOD 2 < 2` by fs [MOD_LESS]
+  \\ decide_tac
+QED
+
+Theorem delete_delete:
+  !f n k.
+    delete n (delete k f) =
+    if n = k then delete n f else delete k (delete n f)
+Proof
+  Induct \\ fs [delete_def]
+  \\ rw [] \\ fs [delete_def]
+  \\ simp [delete_mk_BN,delete_mk_BS]
+  \\ rpt (qpat_x_assum `!x. _` (mp_tac o GSYM)) \\ rw [] \\ fs [delete_def]
+  \\ rpt (qpat_x_assum `!x. _` (fn th => simp [Once (GSYM th)])) \\ rw []
+  \\ rpt (rename [`kk <> 0`] \\ Cases_on `kk` \\ fs [])
+  \\ drule DIV_2_lemma \\ fs [EVEN]
+QED
+
+Theorem size_zero_empty:
+  !x. size x = 0 <=> domain x = EMPTY
+Proof
+  Induct \\ fs [size_def]
+QED
+
 Theorem list_size_APPEND:
   list_size f (xs ++ ys) = list_size f xs + list_size f ys
 Proof

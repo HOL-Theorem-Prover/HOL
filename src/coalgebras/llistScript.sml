@@ -3310,6 +3310,37 @@ Proof
   simp[LPREFIX_fromList,LFINITE_toList_SOME,LPREFIX_fromList,toList]
 QED
 
+Theorem LPREFIX_NTH:
+  LPREFIX l1 l2 <=>
+    !i v. LNTH i l1 = SOME v ==> LNTH i l2 = SOME v
+Proof
+  qspec_then `l1` strip_assume_tac fromList_fromSeq
+  \\ qspec_then `l2` strip_assume_tac fromList_fromSeq
+  \\ rw [LPREFIX_def,from_toList]
+  \\ fs [toList,FUN_EQ_THM]
+  \\ fs [LNTH_fromList]
+  THEN1
+   (qid_spec_tac `l'` \\ qid_spec_tac `l` \\ Induct \\ fs []
+    \\ Cases_on `l'` \\ fs [] THEN1 (qexists_tac `0` \\ fs [])
+    \\ rw [] \\ eq_tac \\ rw []
+    \\ TRY (Cases_on `i` \\ fs [] \\ NO_TAC)
+    THEN1 (first_x_assum (qspec_then `0` mp_tac) \\ fs [])
+    \\ first_x_assum (qspec_then `SUC i` mp_tac) \\ fs [])
+  THEN1
+   (qid_spec_tac `l`
+    \\ ho_match_mp_tac rich_listTheory.SNOC_INDUCT
+    \\ fs [GSYM ADD1,rich_listTheory.GENLIST] \\ rw []
+    \\ eq_tac \\ rw []
+    THEN1
+     (Cases_on `i = LENGTH l` \\ fs []
+      \\ fs [rich_listTheory.SNOC_APPEND,
+             rich_listTheory.EL_LENGTH_APPEND,rich_listTheory.EL_APPEND1])
+    \\ fs [rich_listTheory.SNOC_APPEND,
+           rich_listTheory.EL_LENGTH_APPEND,rich_listTheory.EL_APPEND1])
+  THEN1 (qexists_tac `LENGTH l` \\ fs [])
+  \\ eq_tac \\ rw []
+QED
+
 (* ----------------------------------------------------------------------
     Lazy list bisimulation up-to context, = and transitivity
    ---------------------------------------------------------------------- *)

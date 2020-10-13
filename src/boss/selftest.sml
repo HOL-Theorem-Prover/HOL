@@ -281,17 +281,22 @@ val _ = tprint "TFL nested recursion + Unicode parameter name"
 val _ = require_msg (check_result check_defs) prdefpair test quotation
 end
 
+val goalpp =
+    HOLPP.pp_to_string 75 (
+      HOLPP.block HOLPP.CONSISTENT 0 o
+      HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
+    )
+fun testtac tac = #1 o VALID tac
+
 val _ = let
   val _ = tprint "tmCases_on (.doc file example)"
   val g = ([], “MAP (f:num -> num) l = []”)
   val expected = [([] : term list, “MAP (f:num -> num) [] = []”),
                   ([] : term list , “MAP (f:num -> num) (e::es) = []”)]
-  val pp = HOLPP.block HOLPP.CONSISTENT 0 o
-           HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
 in
   require_msg (check_result (list_eq goal_eq expected))
-              (HOLPP.pp_to_string 75 pp)
-              (fst o tmCases_on (mk_var("l", alpha)) ["", "e es"])
+              goalpp
+              (testtac (tmCases_on (mk_var("l", alpha)) ["", "e es"]))
               g
 end
 
@@ -300,12 +305,10 @@ val _ = let
   val g = ([], “!l. MAP (f:num -> num) l = []”)
   val expected = [([] : term list, “MAP (f:num -> num) [] = []”),
                   ([] : term list , “MAP (f:num -> num) (e::es) = []”)]
-  val pp = HOLPP.block HOLPP.CONSISTENT 0 o
-           HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
 in
   require_msg (check_result (list_eq goal_eq expected))
-              (HOLPP.pp_to_string 75 pp)
-              (fst o tmCases_on (mk_var("l", alpha)) ["", "e es"])
+              goalpp
+              (testtac (tmCases_on (mk_var("l", alpha)) ["", "e es"]))
               g
 end
 
@@ -317,11 +320,94 @@ val _ = let
       [([] : term list,
         “?n. (l1:'a list) <<= l2 /\ n < LENGTH l1 /\ n < LENGTH l2 /\ n <= n /\
              EVEN n”)]
-  val pp = HOLPP.block HOLPP.CONSISTENT 0 o
-           HOLPP.pr_list goalStack.pp_goal [HOLPP.NL, HOLPP.NL]
 in
   require_msg (check_result (list_eq goal_eq expected))
-              (HOLPP.pp_to_string 75 pp)
-              (fst o (goal_assum o resolve_then Any mp_tac) th1)
+              goalpp
+              (testtac ((goal_assum o resolve_then Any mp_tac) th1))
               g
 end
+
+val gstest_goal =
+    ([``x <= b``, ``b - x = b - y``, ``y <= b``], ``x * y < 10``);
+val _ =
+    shouldfail {
+      checkexn = check_HOL_ERRexn (fn(_,s2,_) => s2 = "CHANGED_TAC"),
+      printarg = fn _ => "fs with ordering failure",
+      printresult = goalpp,
+      testfn = testtac (CHANGED_TAC (fs [arithmeticTheory.SUB_CANCEL]))
+    } gstest_goal
+
+val _ = tprint "gs with ordering works"
+val _ = require_msg
+          (check_result
+             (goals_eq [([“y <= b”, “x:num = y”], “y ** 2 < 10”)]))
+          goalpp
+          (testtac (gs[arithmeticTheory.SUB_CANCEL]))
+          gstest_goal
+
+val _ = tprint "gvs with ordering works"
+val _ = require_msg
+          (check_result
+             (goals_eq [([“x <= b”], “x ** 2 < 10”)]))
+          goalpp
+          (testtac (gvs[arithmeticTheory.SUB_CANCEL]))
+          gstest_goal
+
+fun test_tac_Case nm ok_case_arg tq tac = let
+  val t = Parse.typed_parse_in_context bool [] tq
+  val _ = tprint (nm^" on `"^term_to_string t^"`")
+  val (goals, _) = tac ([], t)
+  fun ok_case t = ok_case_arg (markerSyntax.dest_Case t)
+    handle HOL_ERR _ => false
+  fun has_ok_Case (asms, _) = Lib.exists ok_case asms
+  val missing = filter (not o has_ok_Case) goals
+in
+  if null missing
+  then OK ()
+  else die (int_to_string (length missing) ^ " goals missing Case.\nFAILED!\n")
+end handle HOL_ERR _ => die "FAILED (tactic failed)!\n"
+
+val _ = test_tac_Case "list ind" (K true)
+  `!xs. NULL xs`
+  (recInduct
+      (name_ind_cases [] listTheory.list_induction)
+    \\ rpt strip_tac)
+
+val _ = test_tac_Case "OLEAST deep intro" (K true)
+  `THE (OLEAST n. n > SUC 3) < 8`
+  (DEEP_INTRO_TAC
+      (name_ind_cases [] whileTheory.OLEAST_INTRO)
+    \\ rpt strip_tac)
+
+val (is_rev_rules, is_rev_ind, is_rev_cases) = Hol_reln`
+  (is_rev [] []) /\
+  (!x xs ys. is_rev xs ys ==> is_rev (CONS x xs) (SNOC x ys))`;
+
+val _ = test_tac_Case "is_rev rule ind" (K true)
+  `!xs ys. is_rev xs ys ==> !zs. is_rev ys zs ==> zs = xs`
+  (ho_match_mp_tac
+      (name_ind_cases [] is_rev_ind)
+    \\ rpt strip_tac)
+
+val f_def = Define`
+  f [] = [] /\
+  f (x :: xs) = x :: f2 xs /\
+  f2 [] = [] /\
+  f2 (x :: xs) = x :: f xs`;
+val f_ind = theorem "f_ind";
+
+val diff_names_test = let
+    val thm = name_ind_cases [F,T] f_ind
+    val cases = find_terms (can markerSyntax.dest_Case) (concl thm)
+    val ok = length (op_mk_set term_eq cases) = length cases
+  in
+    if ok then OK () else die "diff_names_test: duplicates"
+  end handle HOL_ERR _ => die "diff_names_test: exception"
+
+val _ = test_tac_Case "is_rev rule ind"
+  (can (find_term (fn t => same_const T t orelse same_const F t)))
+  `(!xs : 'a list. f xs = xs) /\ (!xs : 'a list. f2 xs = xs)`
+  (ho_match_mp_tac
+      (name_ind_cases [F, T] f_ind)
+    \\ rpt strip_tac)
+

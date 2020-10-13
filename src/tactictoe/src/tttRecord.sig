@@ -26,6 +26,10 @@ include Abbrev
   val end_record_thy : string -> unit
 
   (* Save state *)
+  val savestate_level : int ref
+  val ttt_save_state_time : real ref
+  val ttt_before_save_state : unit -> unit
   val ttt_save_state : unit -> unit
+  val ttt_after_save_state : unit -> unit
 
 end

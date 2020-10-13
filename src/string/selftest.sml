@@ -162,7 +162,7 @@ fun test2 (Exn.Exn _) = raise Fail "impossible"
       } ‘boring3 4 "foo"’
   )
 val _ = require_msgk (check_result (fn _ => true))
-                     (fn _ => "()")
+                     (fn _ => HOLPP.add_string "()")
                      temp_remove_strliteral_form test2
                      {tmnm = "strinj3"}
 val _ = tpp "\"a string\""

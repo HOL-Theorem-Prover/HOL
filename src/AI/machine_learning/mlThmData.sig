@@ -3,15 +3,9 @@ sig
 
   include Abbrev
 
-  type thmdata = (int, real) Redblackmap.dict *
-    (string, int list) Redblackmap.dict
-
+  type thmid = string
+  type thmdata = (int, real) Redblackmap.dict * (thmid * mlFeature.fea) list
   val empty_thmdata : thmdata
-
-  (* additional set of dependencies retrieved from tactic calls *)
-  val thmlintac_tag : string
-  val thmlintac_cthy : (string * int list) list ref
-  val thmlintac_flag : bool ref
 
   (* theorems from the global namespace *)
   val namespace_tag : string
@@ -24,10 +18,12 @@ sig
   val mk_metis_call : string list -> string
 
   (* data for the nearest neighbor predictor *)
+  val create_thmdata_time : real ref
+  val add_cthy_time : real ref
+  val add_namespace_time : real ref
+  val thmdata_tfidf_time : real ref
   val create_thmdata : unit -> thmdata
-
-  (* caching features of goals for faster creation of thmdata *)
-  val clean_goalfea_cache : unit -> unit
+  val clean_create_thmdata_cache : unit -> unit
 
   (* dependencies of a top-level theorem *)
   val depnumber_of_thm : thm -> int

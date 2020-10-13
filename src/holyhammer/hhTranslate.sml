@@ -11,19 +11,7 @@ struct
 open HolKernel boolLib aiLib
 
 val ERR = mk_HOL_ERR "hhTranslate"
-
-(* -------------------------------------------------------------------------
-   Numbering terms and variables
-   ------------------------------------------------------------------------- *)
-
-val tmn_glob = ref 0 (* number terms for parallel use *)
 val translate_cache_glob = ref (dempty Term.compare)
-
-fun incr_genvar iref =
-  let val (a,b) = !iref in iref := (a, b+1) end
-
-fun string_of_genvar iref =
-  let val (a,b) = !iref in int_to_string a ^ "_" ^ int_to_string b end
 
 (* -------------------------------------------------------------------------
    Eliminating some lambdas without lambda-lifting
@@ -51,8 +39,8 @@ fun prep_rw tm = rand (only_concl (QCONV PREP_CONV tm))
 
 (* lifting *)
 fun genvar_lifting iref ty =
-  let val r = mk_var ("f" ^ string_of_genvar iref, ty) in
-    incr_genvar iref; r
+  let val r = mk_var ("F" ^ its (!iref), ty) in
+    incr iref; r
   end
 
 (* arity *)
@@ -137,7 +125,7 @@ fun LIFT_CONV iref tm =
     fun test x = must_pred x orelse is_abs x
     val subtm = find_term test tm
       handle Interrupt => raise Interrupt
-           | _ => raise ERR "LIFT_CONV" ""
+      | _ => raise ERR "LIFT_CONV" ""
     val fvl = filter is_tptp_bv (free_vars_lr subtm)
     val v = genvar_lifting iref (type_of (list_mk_abs (fvl,subtm)))
     val rep = list_mk_comb (v,fvl)
@@ -206,8 +194,8 @@ val APP_CONV_BV_REC = TRY_CONV (TOP_SWEEP_CONV APP_CONV_BV) THENC REFL
 
 (* -------------------------------------------------------------------------
    Optional (included by default):
-   Avoiding polymorphic higher-oder to exceeds max arity
-   (e.g. I_2 I_1 1 => app (I_1 (I_0), 1)
+   Prevents polymorphic higher-order constants from exceeding max arity
+   (e.g. "I_2 I_1 1 => app (I_1 I_0) 1" )
    ------------------------------------------------------------------------- *)
 
 fun strip_funty_aux ty =
@@ -253,21 +241,22 @@ fun prepare_tm tm =
 fun rw_conv conv tm = (rhs o concl o conv) tm
 fun sym_def tm = rw_conv (STRIP_QUANT_CONV SYM_CONV) tm
 
-fun translate_nocache (tmn,tm) =
+fun translate_nocache tm =
   let
-    val iref = ref (tmn,0)
+    val iref = ref 0
     val tm1  = prepare_tm tm
     val tml1 = map (rand o concl) (RPT_LIFT_CONV iref tm1)
     val tml2 = map (rw_conv APP_CONV_BV_REC) tml1
     val tml3 = map (rw_conv APP_CONV_MAX_REC) tml2
+    val tm2 = list_mk_imp (map sym_def (rev (tl tml3)), hd tml3)
+    val fvl = filter is_tptp_bv (free_vars_lr tm2)
   in
-    (hd tml3, map sym_def (rev (tl tml3)))
+    list_mk_forall (fvl,tm2)
   end
 
 fun translate tm =
   dfind tm (!translate_cache_glob) handle NotFound =>
-  let val x = translate_nocache ((!tmn_glob),tm) in
-    incr tmn_glob;
+  let val x = translate_nocache tm in
     translate_cache_glob := dadd tm x (!translate_cache_glob); x
   end
 
@@ -276,8 +265,6 @@ fun translate_thm thm =
 
 (* -------------------------------------------------------------------------
    Arity equations for constants and free variables.
-   Naming is important here as we do not want free variables to have the same
-   name across statements unless their definition are alpha equivalent.
    ------------------------------------------------------------------------- *)
 
 fun mk_arity_eq (f,n) =

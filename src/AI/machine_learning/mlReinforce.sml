@@ -33,7 +33,7 @@ type splayer =
   {unib : bool, tnn : tnn, noiseb : bool, nsim : int}
 type 'a dplayer =
   {pretob : ('a * tnn) option -> 'a -> term list,
-   schedule : schedule, tnnparam : tnnparam}
+   schedule : schedule, tnndim : tnndim}
 type 'a es = (splayer, 'a, bool * 'a rlex) smlParallel.extspec
 type rlparam =
   {expname : string, exwindow : int, ncore : int,
@@ -227,14 +227,14 @@ fun mk_extsearch self (rlobj as {rlparam,gameio,...}) =
 
 fun rl_train ngen rlobj rlex =
   let
-    val {pretob,schedule,tnnparam} = #dplayer rlobj
+    val {pretob,schedule,tnndim} = #dplayer rlobj
     fun tob board = pretob NONE board
     fun f (a,b) = combine (tob a,[[hd b],tl b])
     val tnnex = map f rlex
     val uex = mk_fast_set (list_compare Term.compare) (map (tob o fst) rlex)
     val _ = log rlobj ("Training examples: " ^ its (length rlex))
     val _ = log rlobj ("Training unique  : " ^ its (length uex))
-    val randtnn = random_tnn tnnparam
+    val randtnn = random_tnn tnndim
     val (tnn,t) = add_time (train_tnn schedule randtnn) (tnnex,[])
   in
     log rlobj ("Training time: " ^ rts t);
@@ -341,7 +341,7 @@ fun rl_explore_targetd unib (rlobj,es) (tnn,targetd) =
 fun rl_explore_init ngen (rlobj,es) targetd =
   let
     val _ = log rlobj "Exploration: initialization"
-    val dummy = random_tnn (#tnnparam (#dplayer rlobj))
+    val dummy = random_tnn (#tnndim (#dplayer rlobj))
     val rlparam = #rlparam rlobj
     val targetl = select_from_targetd rlobj (#ntarget rlparam) targetd
     val (rlex,resultl) =

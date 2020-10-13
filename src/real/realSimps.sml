@@ -916,7 +916,7 @@ fun base_solver asms stk t =
     let
       val _ = print ("Solving "^term_to_string t)
     in
-      case Exn.capture (EQT_ELIM o QCONV (SIMP_CONV (srw_ss()) asms)) t of
+      case Exn.capture (EQT_ELIM o QCONV (SIMP_CONV (srw_ss() ++ numSimps.ARITH_ss) asms)) t of
           Exn.Res th => (print " - OK\n"; th)
         | Exn.Exn e => (print " - FAILED\n"; raise e)
     end
@@ -962,7 +962,7 @@ fun mulrelnorm0 R Rthms solver0 stk t =
           in
             case total dest_imp (concl th) of
                 NONE => SYM th
-              | SOME (h,c) => MATCH_MP th (solver(t::stk) h) |> SYM
+              | SOME (h,c) => MP th (solver(t::stk) h) |> SYM
           end
       fun mkmove_thms xyz = FIRST_CONV (map (mkmove_th xyz) Rthms)
 

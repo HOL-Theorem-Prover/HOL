@@ -895,6 +895,20 @@ val WOP = store_thm ("WOP",
     POP_ASSUM (MATCH_MP_TAC o SPECL [“SUC n”,“n:num”]) THEN
     MATCH_ACCEPT_TAC LESS_SUC_REFL);
 
+(* anything can be well-ordered if mapped into the natural numbers;
+   take the contrapositive to make all constants positive *)
+Theorem WOP_measure:
+  !P m. (?a:'a. P a) ==> ?b. P b /\ !c. P c ==> m b <= m c
+Proof
+  rpt strip_tac >>
+  Q.SPEC_THEN ‘m’ assume_tac prim_recTheory.WF_measure >>
+  dxrule_then (Q.SPEC_THEN ‘P’ mp_tac) (iffLR relationTheory.WF_DEF) >>
+  simp_tac bool_ss [PULL_EXISTS] >>
+  disch_then dxrule >>
+  REWRITE_TAC [prim_recTheory.measure_thm] >>
+  METIS_TAC [NOT_LESS]
+QED
+
 val COMPLETE_INDUCTION = store_thm ("COMPLETE_INDUCTION",
   “!P. (!n. (!m. m < n ==> P m) ==> P n) ==> !n. P n”,
   let val wopeta = CONV_RULE(ONCE_DEPTH_CONV ETA_CONV) WOP

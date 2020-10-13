@@ -3,26 +3,24 @@ sig
 
   include Abbrev
 
+  type tnn = mlTreeNeuralNetwork.tnn
+
+  val main_tactictoe :
+    mlThmData.thmdata * mlTacticData.tacdata ->
+    tnn option * tnn option ->
+    goal -> tttSearch.proofstatus * tttSearch.tree
+  val main_tactictoe_mini :
+    mlThmData.thmdata ->
+    tnn option * tnn option ->
+    goal -> tttSearch.proofstatus * tttSearch.tree
+
+  val clean_ttt_tacdata_cache : unit -> unit
   val set_timeout : real -> unit
+
   val ttt : tactic
   val tactictoe : term -> thm
 
-  (* recorded data from ancestries of the current theory *)
-  val clean_ttt_tacdata_cache : unit -> unit
-
-  (* evaluation *)
-  type lbl = (string * real * goal * goal list)
-  type fea = int list
-  type thmdata =
-    (int, real) Redblackmap.dict *
-    (string, int list) Redblackmap.dict
-  type tacdata =
-    {
-    tacfea : (lbl,fea) Redblackmap.dict,
-    tacfea_cthy : (lbl,fea) Redblackmap.dict,
-    taccov : (string, int) Redblackmap.dict,
-    tacdep : (goal, lbl list) Redblackmap.dict
-    }
-  val ttt_eval : thmdata * tacdata -> goal -> unit
+  val ttt_mini : tactic
+  val tactictoe_mini : term -> thm
 
 end

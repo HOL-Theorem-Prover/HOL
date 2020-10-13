@@ -143,10 +143,10 @@ fun th1_logicdef oc (thy,name) =
 fun th1_quantdef oc (thy,name) =
   let
     val thm = assoc name [("!", FORALL_THM),("?", EXISTS_THM)]
-    val tm = th1_translate_thm thm
+    val statement = th1_translate_thm thm
   in
     os oc (thfpar ^ escape ("quantdef." ^ name) ^ ",axiom,");
-    th1_formula oc tm; osn oc ")."
+    th1_formula oc statement; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
@@ -171,10 +171,10 @@ fun th1_cvdef oc c =
 fun th1_thmdef role oc (thy,name) =
   let
     val thm = DB.fetch thy name
-    val tm = th1_translate_thm thm
+    val statement = th1_translate_thm thm
   in
     os oc (thfpar ^ (name_thm (thy,name)) ^ "," ^ role ^ ",");
-    th1_formula oc tm; osn oc ")."
+    th1_formula oc statement; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
@@ -281,18 +281,5 @@ fun th1_export_chainy dir thyl =
     app (write_thy_chainy (dir ^ "/problems") thyorder) thyorder
   end
 
-(* -------------------------------------------------------------------------
-   Export standard library
-   ------------------------------------------------------------------------- *)
-
-(*
-load "hhExportTh1"; open hhExportTh1;
-load "tttUnfold"; tttUnfold.load_sigobj ();
-val thyl = ancestry (current_theory ());
-val bushydir = HOLDIR ^ "/src/holyhammer/th1_bushy";
-th1_export_bushy bushydir thyl;
-val chainydir = HOLDIR ^ "/src/holyhammer/th1_chainy";
-th1_export_chainy chainydir thyl;
-*)
 
 end (* struct *)

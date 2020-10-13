@@ -202,10 +202,10 @@ fun tf0_logicdef oc (thy,name) =
 fun tf0_quantdef oc (thy,name) =
   let
     val thm = assoc name [("!", FORALL_THM),("?", EXISTS_THM)]
-    val (tm,_) = translate_thm thm
+    val statement = translate_thm thm
   in
     os oc (tffpar ^ escape ("reserved.quant." ^ name) ^ ",axiom,");
-    tf0_formula oc tm; osn oc ")."
+    tf0_formula oc statement; osn oc ")."
   end
 
 
@@ -319,18 +319,11 @@ fun tf0def_obj_mono oc (tm,a) =
 (* Theorems *)
 fun tf0def_thm role oc (thy,name) =
   let
-    val thm = DB.fetch thy name
-    val (cj,defl) = translate_thm thm
+    val statement = translate_thm (DB.fetch thy name)
     val tf0name = name_thm (thy,name)
-    fun f i def =
-      (
-      os oc (tffpar ^ name_def i tf0name ^ ",axiom,");
-      tf0_formula oc def; osn oc ")."
-      )
   in
-    ignore (mapi f defl);
     os oc (tffpar ^ tf0name ^ "," ^ role ^ ",");
-    tf0_formula oc cj; osn oc ")."
+    tf0_formula oc statement; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
@@ -379,11 +372,10 @@ fun tf0def_thm_boolext oc =
 
 fun tf0def_thm_caster oc (name,thm) =
   let
-    val (cj,defl) = translate_thm thm
-    val _ = if null defl then () else raise ERR "tf0def_thm_caster" ""
+    val statement = translate_thm thm
     val tf0name = escape ("reserved.ho." ^ name)
   in
-    os oc (tffpar ^ tf0name ^ ",axiom,"); tf0_formula oc cj; osn oc ")."
+    os oc (tffpar ^ tf0name ^ ",axiom,"); tf0_formula oc statement; osn oc ")."
   end
 
 fun tf0def_thm_combin oc (name,tm) =
@@ -403,7 +395,7 @@ fun tf0def_thm_extra oc =
 
 (* polymorphic *)
 val app_p_cval =
-  let val tml = map (fst o translate_thm o snd) (app_axioml @ p_axioml) in
+  let val tml = map (translate_thm o snd) (app_axioml @ p_axioml) in
     mk_fast_set tma_compare (List.concat (map collect_arity_noapp tml))
   end
 
@@ -450,8 +442,8 @@ fun has_tyarg (cv,_) =
 (* atom *)
 fun collect_atoml thmidl =
   let fun f x =
-    let val (formula,defl) = translate_thm (uncurry DB.fetch x) in
-      mk_term_set (List.concat (map atoms (formula :: defl)))
+    let val statement = translate_thm (uncurry DB.fetch x) in
+      mk_term_set (atoms statement)
     end
   in
     mk_term_set (List.concat (map f thmidl))
@@ -620,18 +612,5 @@ fun tf0_export_chainy dir thyl =
     app (write_thy_chainy (dir ^ "/problems") thyorder) thyorder
   end
 
-(* -------------------------------------------------------------------------
-   Export standard library
-   ------------------------------------------------------------------------- *)
-
-(*
-load "hhExportTf0"; open hhExportTf0;
-load "tttUnfold"; tttUnfold.load_sigobj ();
-val thyl = ancestry (current_theory ());
-val bushydir = HOLDIR ^ "/src/holyhammer/tf0_bushy";
-tf0_export_bushy bushydir thyl;
-val chainydir = HOLDIR ^ "/src/holyhammer/tf0_chainy";
-tf0_export_chainy chainydir thyl;
-*)
 
 end (* struct *)

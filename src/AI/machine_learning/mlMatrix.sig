@@ -12,6 +12,7 @@ sig
   val mult_rvect     : vect -> vect -> vect
   val scalar_product : vect -> vect -> real
   val scalar_mult    : real -> vect -> vect
+  val add_vectl      : vect list -> vect
   (* matrix *)
   val mat_mult     : mat -> vect -> vect
   val mat_smult    : real -> mat -> mat
@@ -27,8 +28,9 @@ sig
   (* input/output *)
   val string_of_vect : vect -> string
   val string_of_mat : mat -> string
-  val read_mat_sl: string list -> mat
-  val read_mat : string -> mat
-  val read_diml : string -> (int * int) list
+  val enc_vect : vect -> HOLsexp.t
+  val dec_vect : HOLsexp.t -> vect option
+  val enc_mat : mat -> HOLsexp.t
+  val dec_mat : HOLsexp.t -> mat option
 
 end

@@ -127,7 +127,7 @@ fun export_arithfea dataname =
   let
     val tml' = map fst (List.concat (map import_arithdata ["test","train"]))
     fun all_features x =
-      let val l = List.concat (map (feahash_of_term_mod 1299827) x) in
+      let val l = List.concat (map (fea_of_term_mod 1299827 true) x) in
         dnew Int.compare (number_snd 0 (mk_fast_set Int.compare l))
       end
     val tml = import_arithdata dataname
@@ -135,7 +135,7 @@ fun export_arithfea dataname =
     fun f (tm,i) =
       let
         val il1 = dict_sort Int.compare
-          (map (fn x => dfind x d) (feahash_of_term_mod 1299827 tm))
+          (map (fn x => dfind x d) (fea_of_term_mod 1299827 true tm))
         val il2 = map (fn x => (its x ^ ":1")) il1
       in
         ("+" ^ its (i mod 16) ^ " " ^ String.concatWith " " il2)

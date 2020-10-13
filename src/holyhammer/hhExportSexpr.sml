@@ -8,7 +8,7 @@
 structure hhExportSexpr :> hhExportSexpr =
 struct
 
-open HolKernel boolLib aiLib mlThmData hhTranslate holyHammer
+open HolKernel boolLib aiLib mlThmData hhTranslate holyHammer hhExportLib
 
 val ERR = mk_HOL_ERR "hhExportSexpr"
 
@@ -185,7 +185,7 @@ fun sexpr_constdef oc thy (name,ty) =
 
 fun sexpr_thmdef oc thy ((name,thm),role) =
   let val tm = prep_tm (concl (DISCH_ALL thm)) in
-    osn oc ("# " ^ thy ^ "." ^ name ^ ": " ^ rm_endline (term_to_string tm));
+    osn oc ("; " ^ thy ^ "." ^ name ^ ": " ^ rm_endline (term_to_string tm));
     os oc "("; os oc role; os oc " ";
     os oc (sexprb_thm (thy,name)); os oc " ";
     sexpr_tyquant_term oc tm; os oc ")\n"
@@ -248,10 +248,6 @@ fun write_thy (f_tydef,f_constdef,f_thmdef,fb_thm) export_dir thy =
    Export functions
    ------------------------------------------------------------------------- *)
 
-fun add_ancestry thy = thy :: ancestry thy
-fun sorted_ancestry thyl =
-  sort_thyl (mk_string_set (List.concat (map add_ancestry thyl)))
-
 fun sexpr_export thyl =
   let
     val file = sexpr_dir ^ "/theory_order.info"
@@ -265,9 +261,8 @@ fun sexpr_export thyl =
 
 (*
 load "hhExportSexpr"; open hhExportSexpr;
-load "tttUnfold"; open tttUnfold;
-load_sigobj ();
-val thyl = ancestry "scratch";
+load "tttUnfold"; tttUnfold.load_sigobj ();
+val thyl = ancestry (current_theory ());
 sexport_export thyl;
 *)
 

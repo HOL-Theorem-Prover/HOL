@@ -23,7 +23,8 @@ fun parse_n_eval s expected =
         | kont _ = raise Fail "Can't happen"
       val _ = tprint ("Parse \"" ^ s ^ "\"")
     in
-      require_msgk is_result (K "") (fn s => Parse.Term [QUOTE s]) kont s
+      require_msgk is_result (K (HOLPP.add_string ""))
+                   (fn s => Parse.Term [QUOTE s]) kont s
     end
 
 val _ = parse_n_eval "~2w : word4" “13w : word4”
