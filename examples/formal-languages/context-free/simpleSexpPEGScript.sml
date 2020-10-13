@@ -90,8 +90,9 @@ Definition sexpPEG_def[nocompute]:
              choicel [
                  pegf (grabWS (tokeq #")")) (K (SX_SYM "nil"));
                  seq (grabWS (pnt sxnt_sexp0))
-                     (seq (rpt (grabWS (pnt sxnt_sexp0))
-                           (FOLDR SX_CONS (SX_SYM "nil")))
+                     (seq
+                      (rpt (grabWS (pnt sxnt_sexp0))
+                       (FOLDR SX_CONS (SX_SYM "nil")))
                       (choicel [
                           pegf (grabWS (tokeq #")")) (K (SX_SYM "nil"));
                           grabWS (tokeq #".") ~>
@@ -124,7 +125,8 @@ Definition sexpPEG_def[nocompute]:
                  tokeq #"\\" ~> pnt sxnt_escapedstrchar ;
                  pnt sxnt_normstrchar
                ]);
-            (mkNT sxnt_escapedstrchar, choicel [tokeq #"\\"; tokeq #"\""]);
+            (mkNT sxnt_escapedstrchar,
+             choicel [tokeq #"\\"; tokeq #"\""; error "Illegal string-escape"]);
             (mkNT sxnt_normstrchar,
              tok (λc. isPrint c ∧ c ≠ #"\"" ∧ c ≠ #"\\") (λ(c,l). SX_SYM [c]))
            ]

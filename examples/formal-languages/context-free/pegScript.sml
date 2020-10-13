@@ -236,6 +236,12 @@ Inductive peg0:
   (∀e. pegfail G (error e))
 End
 
+Theorem peg0_error[simp]:
+  ¬peg0 G (error e)
+Proof
+  simp[Once peg0_cases]
+QED
+
 Theorem peg_eval_suffix':
   peg_eval G (s0,e) (Success s c) ⇒
   s0 = s ∨ IS_SUFFIX s0 s ∧ LENGTH s < LENGTH s0
@@ -307,9 +313,13 @@ Theorem lemma4_1a = lemma4_1a0 |> SIMP_RULE (srw_ss() ++ DNF_ss) [AND_IMP_INTRO]
 
 Inductive wfpeg:
   (∀n f. n ∈ FDOM G.rules ∧ wfpeg G (G.rules ' n) ⇒ wfpeg G (nt n f)) ∧
+[~_empty[simp]:]
   (∀c. wfpeg G (empty c)) ∧
+[~_any[simp]:]
   (∀f. wfpeg G (any f)) ∧
+[~tok[simp]:]
   (∀t f. wfpeg G (tok t f)) ∧
+[~_error[simp]:]
   (∀e. wfpeg G (error e)) ∧
   (∀e c. wfpeg G e ⇒ wfpeg G (not e c)) ∧
   (∀e1 e2 f. wfpeg G e1 ∧ (peg0 G e1 ⇒ wfpeg G e2) ⇒

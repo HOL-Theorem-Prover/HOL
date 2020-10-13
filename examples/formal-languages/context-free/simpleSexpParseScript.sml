@@ -110,32 +110,38 @@ val num_to_dec_string_eq_cons = Q.store_thm("num_to_dec_string_eq_cons",
   \\ fs[listTheory.LIST_EQ_REWRITE,listTheory.EL_MAP,listTheory.EVERY_MEM,listTheory.MEM_EL,PULL_EXISTS]
   \\ rw[] \\ res_tac \\ simp[UNHEX_HEX]);
 
-val peg_eval_list_tok_nil = Q.store_thm("peg_eval_list_tok_nil",
-  `∀ls. (ls = [] ∨ ¬ P(FST(HD ls))) ⇒
-   peg_eval_list G (ls, tok P a) (ls,[])`,
+Theorem peg_eval_list_tok_nil:
+  ∀ls. (ls = [] ∨ ¬ P(FST(HD ls))) ⇒
+       peg_eval_list G (ls, tok P a) (ls,[])
+Proof
   rw[Once peg_eval_list,peg_eval_tok_NONE,listTheory.EVERY_MEM]
+  >- simp[Once peg_eval_cases]
   \\ Cases_on`ls` \\ fs[]
-  \\ Cases_on`h` \\ fs[]);
+  >- simp[Once peg_eval_cases]
+  \\ Cases_on`h` \\ fs[] \\ simp[Once peg_eval_cases]
+QED
 
-val peg_eval_list_tok_imp_every = Q.store_thm("peg_eval_list_tok_imp_every",
-  `∀ls r z. peg_eval_list G (ls, tok P a) (r,z) ⇒
-   ∃l. ls = l ++ r ∧ EVERY (P o FST) l ∧ (¬NULL r ⇒ ¬P (FST(HD r)))`,
+Theorem peg_eval_list_tok_imp_every:
+  ∀ls r z.
+    peg_eval_list G (ls, tok P a) (r,z) ⇒
+    ∃l. ls = l ++ r ∧ EVERY (P o FST) l ∧ (¬NULL r ⇒ ¬P (FST(HD r)))
+Proof
   Induct \\ rw[Once peg_eval_list,listTheory.NULL_EQ,peg_eval_tok_SOME]
-  \\ fs[peg_eval_tok_NONE]
-  \\ res_tac
-  \\ rpt var_eq_tac
-  \\ qexists_tac`h::l`
-  \\ rw[] \\ fs[listTheory.NULL_EQ]);
+  >- (rename [‘isFailure fr’] >> Cases_on ‘fr’ >> gs[peg_eval_tok_NONE])
+  \\ first_x_assum $ drule_then strip_assume_tac
+  \\ gvs[listTheory.NULL_EQ]
+QED
 
-val peg_eval_list_tok_every_imp = Q.store_thm("peg_eval_list_tok_every_imp",
-  `∀ls x rst. EVERY (P o FST) ls ∧ ¬ (P o FST) x ⇒
-   peg_eval_list G (ls ++ [x] ++ rst, tok P a) ([x] ++ rst, MAP a ls)`,
+Theorem peg_eval_list_tok_every_imp:
+  ∀ls x rst. EVERY (P o FST) ls ∧ ¬ (P o FST) x ⇒
+             peg_eval_list G (ls ++ [x] ++ rst, tok P a) ([x] ++ rst, MAP a ls)
+Proof
   Induct \\ simp[] \\ simp[Once peg_eval_list]
-  \\ simp[peg_eval_tok_NONE]
+  >- simp[EXISTS_result, peg_eval_tok_NONE]
   \\ rw[]
-  \\ Cases_on `x`
-  \\ TRY(Cases_on `h`\\ fs[])
-  \\ fs[peg_eval_tok_SOME]);
+  \\ simp[peg_eval_tok_SOME]
+  \\ gvs[]
+QED
 
 val FOLDR_STRCAT_destSXSYM = Q.prove(
   `∀ls. FOLDR (λs a. STRCAT (destSXSYM s) a) "" (MAP (λc. SX_SYM (STRING c "")) ls) = ls`,
@@ -255,48 +261,137 @@ val print_sexp_def = tDefine"print_sexp"`
    \\ fs[quantHeuristicsTheory.LIST_LENGTH_2] \\ rw[] \\ fs[]
    \\ res_tac \\ simp[]);
 
-val peg_eval_list_valid_symchars = Q.prove(
-  `∀cs. EVERY valid_symchar (MAP FST cs) ⇒
-        peg_eval_list sexpPEG (cs,tok valid_symchar (λ(c,l). SX_SYM [c]))
-                                  ([],MAP (λc. SX_SYM [c]) (MAP FST cs))`,
+Theorem peg_eval_list_valid_symchars[local]:
+  ∀cs. EVERY valid_symchar (MAP FST cs) ⇒
+       peg_eval_list sexpPEG (cs,tok valid_symchar (λ(c,l). SX_SYM [c]))
+                     ([],MAP (λc. SX_SYM [c]) (MAP FST cs))
+Proof
   Induct >> simp[Once peg_eval_cases] >> simp[Once peg_eval_cases] >>
-  strip_tac >> Cases_on `h` >> simp[])
+  strip_tac >> Cases_on `h` >> simp[]
+QED
 
-val peg_eval_valid_symchars = Q.prove(
-  `∀cs. EVERY valid_symchar (MAP FST cs) ⇒
+Theorem peg_eval_valid_symchars[local]:
+  ∀cs. EVERY valid_symchar (MAP FST cs) ⇒
        peg_eval sexpPEG
-                    (cs,rpt (tok valid_symchar (λ(c,l). SX_SYM (STRING c "")))
-                            (SX_SYM o FOLDR (λs a. STRCAT (destSXSYM s) a) []))
-                    (SOME ([],SX_SYM (MAP FST cs)))`,
+                (cs,rpt (tok valid_symchar (λ(c,l). SX_SYM (STRING c "")))
+                        (SX_SYM o FOLDR (λs a. STRCAT (destSXSYM s) a) []))
+                (Success [] (SX_SYM (MAP FST cs)))
+Proof
   rw[Once peg_eval_cases] >>
-  imp_res_tac peg_eval_list_valid_symchars >>
-  metis_tac[FOLDR_STRCAT_destSXSYM]);
+  drule peg_eval_list_valid_symchars >>
+  metis_tac[FOLDR_STRCAT_destSXSYM]
+QED
 
-val peg_eval_valid_symbol = Q.prove(
-  `∀s. valid_symbol (MAP FST s) ⇒
-       peg_eval sexpPEG (s,sexpPEG.start) (SOME ([],SX_SYM (MAP FST s)))`,
-  Cases_on`s`>>
-  simp[pnt_def, peg_eval_NT_SOME, FDOM_sexpPEG, sexpPEG_applied,
-       ignoreL_def, ignoreR_def, peg_eval_seq_SOME, peg_eval_rpt] >>
-  dsimp[] >> strip_tac >>
-  Cases_on`h` >> fs[] >>
+Theorem isFailure_eqn:
+  isFailure r ⇔ ∃x y. r = Failure x y
+Proof
+  Cases_on ‘r’ >> simp[]
+QED
+
+Theorem isSuccess_eqn:
+  isSuccess r ⇔ ∃x y. r = Success x y
+Proof
+  Cases_on ‘r’ >> simp[]
+QED
+
+Theorem sexpnum_never_symbol:
+  ¬peg_eval sexpPEG (i0, nt (mkNT sxnt_sexpnum) I) (Success i (SX_SYM s))
+Proof
+  simp[Once peg_eval_cases, FDOM_sexpPEG, sexpPEG_applied, peg_eval_seq_SOME] >>
+  rpt gen_tac >> rename [‘destSXCONS sxp’] >>
+  Cases_on ‘sxp’ >> simp[destSXCONS_def]
+QED
+
+Theorem sexpdigit_nondigit_fails:
+  ¬isDigit q ⇒
+  (peg_eval sexpPEG ((q,r) :: rest, nt (mkNT sxnt_digit) I) res ⇔
+     res = Failure r sexpPEG.tokFALSE)
+Proof
+  simp[Once peg_eval_cases, FDOM_sexpPEG, sexpPEG_applied, peg_eval_tok_SOME,
+       peg_eval_tok_NONE, sloc_def]
+QED
+
+Theorem sexpnum_nondigit_fails:
+  ¬isDigit q ⇒
+  (peg_eval sexpPEG ((q,r) :: rest, nt (mkNT sxnt_sexpnum) I) res ⇔
+     res = Failure r sexpPEG.tokFALSE)
+Proof
+  simp[Once peg_eval_cases, FDOM_sexpPEG, sexpPEG_applied,
+       peg_eval_seq_SOME, sexpdigit_nondigit_fails, pnt_def] >>
+  simp[peg_eval_seq_NONE, sexpdigit_nondigit_fails]
+QED
+
+Theorem seqtokP:
+  peg_eval sexpPEG ((c,r) :: rest, seq (tok P f) p (λa b. b)) res ⇔
+    if P c then peg_eval sexpPEG (rest,p) res
+    else res = Failure r sexpPEG.tokFALSE
+Proof
+  simp[Once peg_eval_cases, SimpLHS] >>
+  Cases_on ‘res’ >> simp[peg_eval_tok_NONE, peg_eval_tok_SOME, sloc_def] >>
+  metis_tac[]
+QED
+
+Theorem seqtokeq:
+  peg_eval sexpPEG ((c1,r) :: rest, seq (tokeq c2) p (λa b. b)) res ⇔
+    if c1 = c2 then peg_eval sexpPEG (rest,p) res
+    else res = Failure r sexpPEG.tokFALSE
+Proof
+  simp[seqtokP, tokeq_def] >> metis_tac[]
+QED
+
+Theorem seq_isSuccess_csimp:
+  isSuccess r ⇒
+  (peg_eval g (i0, seq p1 p2 f) r ⇔
+     ∃i1 v1 i2 v2. peg_eval g (i0, p1) (Success i1 v1) ∧
+                   peg_eval g (i1, p2) (Success i2 v2) ∧
+                   r = Success i2 (f v1 v2))
+Proof
+  simp[Once peg_eval_cases, SimpLHS] >> Cases_on ‘r’ >> simp[] >> metis_tac[]
+QED
+
+Theorem seq_isFailure_csimp:
+  isFailure r ⇒
+  (peg_eval g (i0, seq p1 p2 f) r ⇔
+     ∃r1. peg_eval g (i0, p1) r1 ∧
+          (r1 = r ∨ ∃v1 i1. r1 = Success i1 v1 ∧ peg_eval g (i1, p2) r))
+Proof
+  simp[Once peg_eval_cases, SimpLHS] >> Cases_on ‘r’ >> dsimp[] >> metis_tac[]
+QED
+
+Theorem peg_eval_valid_symbol[local]:
+  ∀s. valid_symbol (MAP FST s) ⇒
+      peg_eval sexpPEG (s,sexpPEG.start) (Success [] (SX_SYM (MAP FST s)))
+Proof
+  Cases_on`s` >> simp[pnt_def] >>
+  rename [‘isGraph (FST h)’] >>
+  Cases_on‘h’ >> gvs[] >> rename [‘isGraph q’] >> strip_tac >>
+  simp[peg_eval_NT_SOME, FDOM_sexpPEG, sexpPEG_applied, ignoreR_def,
+       peg_eval_seq_SOME, peg_eval_rpt, PULL_EXISTS] >>
+  qexists_tac ‘[]’ >>
+  simp[Once peg_eval_list, EXISTS_result, peg_eval_tok_SOME,
+       peg_eval_tok_NONE] >>
+  simp[pnt_def, peg_eval_NT_SOME, FDOM_sexpPEG, sexpPEG_applied, ignoreL_def,
+       peg_eval_seq_SOME, peg_eval_rpt, PULL_EXISTS] >>
   `¬isSpace q` by (strip_tac >> Cases_on `q` >> fs[stringTheory.isGraph_def]) >>
-  simp[Once peg_eval_list, SimpL ``$/\``] >>
-  simp[peg_eval_tok_SOME, peg_eval_tok_NONE] >>
-  simp[peg_eval_choicel_CONS, peg_eval_NT_SOME, FDOM_sexpPEG, sexpPEG_applied,
-       peg_eval_seq_SOME, peg_eval_tok_SOME, peg_eval_tok_NONE, tokeq_def,
-       peg_eval_seq_NONE, pegf_def, pnt_def, destSXSYM_def] >> dsimp[] >>
-  simp[Once peg_eval_cases, SimpL ``$/\``] >>
+  simp[Once peg_eval_list, peg_eval_tok_SOME] >>
+  simp[EXISTS_result, peg_eval_tok_NONE] >>
+  simp[Once peg_eval_choicel_CONS, sexpnum_nondigit_fails] >>
+  simp[AllCaseEqs(), rmax_EQ_Success] >> csimp[] >>
+  simp[Once peg_eval_choicel_CONS, seqtokeq] >> csimp[] >>
+  simp[AllCaseEqs(), rmax_EQ_Success] >> csimp[] >>
+  simp[Once peg_eval_choicel_CONS, ignoreR_def, peg_eval_seq_SOME,
+       tokeq_def, peg_eval_tok_SOME] >>
+  csimp[seq_isFailure_csimp, seqtokP, AllCaseEqs(), rmax_EQ_Success] >>
+  simp[Once peg_eval_choicel_CONS, pegf_def, peg_eval_seq_SOME] >>
+  csimp[seq_isFailure_csimp, seqtokP, AllCaseEqs(), rmax_EQ_Success] >>
+  simp[Once peg_eval_choicel_CONS] >>
+  simp[EXISTS_result, AllCaseEqs()] >>
+  simp[peg_eval_NT_SOME] >>
   dsimp[FDOM_sexpPEG, sexpPEG_applied, peg_eval_seq_NONE, pnt_def,
-        peg_eval_rpt] >>
-  simp[Once peg_eval_cases, SimpL ``$/\``] >>
-  dsimp[FDOM_sexpPEG, sexpPEG_applied, peg_eval_seq_NONE, pnt_def,
-        peg_eval_rpt, peg_eval_tok_NONE] >>
-  IMP_RES_THEN mp_tac peg_eval_valid_symchars >>
-  dsimp[peg_eval_rpt] >> qx_gen_tac `l` >> strip_tac >>
-  map_every qexists_tac[`[]`,`[]`,`l`] >>
-  simp[destSXSYM_def] >> rw[] >>
-  rw[Once peg_eval_cases] >> simp[peg_eval_tok_NONE]);
+        peg_eval_rpt, peg_eval_seq_SOME, peg_eval_tok_SOME,
+        destSXSYM_def] >>
+  drule peg_eval_valid_symchars >> simp[peg_eval_rpt]
+QED
 
 val valid_symbol_no_spaces = Q.store_thm("valid_symbol_no_spaces",
   `∀s. valid_symbol s ⇒ EVERY ($~ o isSpace) s`,
@@ -319,20 +414,20 @@ val peg_eval_list_num_to_dec_string_no_spaces = Q.prove(
   \\ first_x_assum(qspec_then`h`mp_tac)
   \\ simp[]);
 
-val peg_eval_list_digits = Q.store_thm("peg_eval_list_digits",
-  `∀s. EVERY isDigit (MAP FST s) ∧ (rst ≠ [] ⇒ ¬ isDigit (FST (HD rst))) ⇒
-   peg_eval_list sexpPEG (s ++ rst,nt(mkNT sxnt_digit) I) (rst,MAP (SX_NUM o
-   combin$C $- 48 o ORD) (MAP FST s))`,
+Theorem peg_eval_list_digits:
+  ∀s. EVERY isDigit (MAP FST s) ∧ (rst ≠ [] ⇒ ¬ isDigit (FST (HD rst))) ⇒
+      peg_eval_list sexpPEG (s ++ rst,nt(mkNT sxnt_digit) I)
+                    (rst,MAP (SX_NUM o combin$C $- 48 o ORD) (MAP FST s))
+Proof
   Induct \\ simp[Once peg_eval_list]
-  >- (
-    simp[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied]
-    \\ simp[peg_eval_tok_NONE]
-    \\ Cases_on`rst` \\ fs[]
-    \\ Cases_on`h` \\ fs[] )
-  \\ rw[] \\ fs[]
-  \\ Cases_on`h` \\ fs[]
-  \\ simp[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied]
-  \\ simp[peg_eval_tok_SOME]);
+  >- (Cases_on ‘rst’ >> simp[]
+      >- simp[Once peg_eval_cases, FDOM_sexpPEG,sexpPEG_applied,
+              peg_eval_tok_SOME, peg_eval_tok_NONE] >>
+      Cases_on ‘h’ >> simp[sexpdigit_nondigit_fails]) >>
+  simp[pairTheory.FORALL_PROD] >> rw[] >>
+  simp[peg_eval_NT_SOME] >>
+  simp[FDOM_sexpPEG, sexpPEG_applied, peg_eval_tok_SOME]
+QED
 
 val peg_eval_list_chars = Q.store_thm("peg_eval_list_chars",
   `∀loc l1 l2. EVERY isPrint l1 ⇒
