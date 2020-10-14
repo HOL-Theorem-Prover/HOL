@@ -82,52 +82,36 @@ fun tacknn (symweight,tacfea) n fea =
   knn_sortu String.compare n (symweight,tacfea) fea
 
 fun callknn (symweight,callfea) n fea =
-  knn_sortu call_compare n (symweight,callfea) fea
+  knn_sortu (snd_compare call_compare) n (symweight,callfea) fea
 
 (* ----------------------------------------------------------------------
    Adding tactic dependencies
    --------------------------------------------------------------------- *)
 
-fun dep_call_g rl loopd calldep g =
-  if dmem g loopd then () else
+fun dep_call_g rl lookup loopd gn =
+  if HOLset.member (loopd,gn) orelse not (can lookup gn) then () else
   let
-    val newloopd = dadd g () loopd
-    val calls = dfind g calldep handle _ => []
-    val _ = rl := calls @ (!rl)
-    val newgl = mk_fast_set goal_compare (List.concat (map #ogl calls))
+    val newloopd = HOLset.add (loopd,gn)
+    val (loc,call) = lookup gn
+    val _ = rl := (loc,call) :: (!rl)
+    val gnl = #ogl call
   in
-    app (dep_call_g rl newloopd calldep) newgl
+    app (dep_call_g rl lookup newloopd) gnl
   end
 
-fun dep_call calldep call =
+fun dep_call calld ((thy,thmn,gn),{stac,ogl,fea}) =
   let
     val rl = ref []
-    val gl = #ogl call
-    val loopd = dempty goal_compare
+    fun lookup x = ((thy,thmn,x), dfind (thy,thmn,x) calld)
+    val loopd = HOLset.fromList Int.compare [gn]
   in
-    app (dep_call_g rl loopd calldep) gl;
-    (rev (!rl))
+    app (dep_call_g rl lookup loopd) ogl; (rev (!rl))
   end
 
-(* 
-1) select the proof location
-2) select the goals in the dependencies 
-*)
-fun mk_dloc l = dregroup loc_compare (map (fn x => (#loc x,x)) l)
-
-fun dep_call dloc call =
+fun add_calldep calld n calls =
   let
-    val loc = #loc call
-    val gnl = HOLset.fromList Int.compare (#gnl call)
-    val calll = dfind loc dloc handle NotFound => []
-  in
-    filter (fn x => HOLSet.member (#gn x) gnl)
-  end
-
-fun add_calldep dloc n calls =
-  let
-    val l1 = List.concat (map (fn x => x :: dep_call calldep x) calls)
-    val l2 = mk_sameorder_set call_compare l1
+    val l1 = List.concat (map (fn x => x :: dep_call calld x) calls)
+    val l2 = mk_sameorder_set (snd_compare call_compare) l1
   in
     first_n n l2
   end

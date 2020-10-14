@@ -62,12 +62,14 @@ fun select_thmfea (symweight,thmfea) gfea =
 
 fun select_tacfea tacdata gfea =
   let
-    val calls = #calls tacdata
-    val callfea = map_assoc #fea calls
-    val symweight = learn_tfidf callfea
+    val calld = #calld tacdata
+    val calls = dlist calld
+    val callfea = map_assoc (#fea o snd) calls
+    val symweight = learn_tfidf_symfreq_nofilter (dlength calld) 
+      (#symfreq tacdata)
     val sel1 = callknn (symweight,callfea) (!ttt_presel_radius) gfea
-    val sel2 = add_calldep (#calldep tacdata) (!ttt_presel_radius) sel1
-    val tacfea = map (fn x => (#ortho x, #fea x)) sel2
+    val sel2 = add_calldep calld (!ttt_presel_radius) sel1
+    val tacfea = map (fn (_,x) => (#stac x, #fea x)) sel2
   in
     (symweight,tacfea)
   end

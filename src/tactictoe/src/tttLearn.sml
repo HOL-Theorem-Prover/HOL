@@ -118,7 +118,7 @@ val ortho_predthm_time = ref 0.0
 val ortho_teststac_time = ref 0.0
 
 fun orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))
-  (call as {stac,loc,fea}) =
+  ((g,gl), icall as (loc,{stac,ogl,fea})) =
   let
     val _ = debug "predict tactics"
     val stacl1 = total_time ortho_predstac_time
@@ -129,61 +129,19 @@ fun orthogonalize (thmdata,tacdata,(tacsymweight,tacfea))
     val stacl3 = concat_absstacl fea stac stacl2
     val _ = debug "predict arguments"
     val thmidl = total_time ortho_predthm_time (pred_thmid thmdata) fea
-    val sterml = pred_svar 8 ig
+    val sterml = []
     val _ = debug "instantiate arguments"
     val stacl4 = List.concat (map (inst_arg (thmidl,sterml)) stacl3)
     val _ = debug "test tactics"
-    val (neworthoo,t) = add_time (findSome (test_stac ig ogl)) stacl4
+    val (newstaco,t) = add_time (findSome (test_stac g gl)) stacl4
     val _ = debug ("test time: " ^ rts t)
     val _ = ortho_teststac_time := !ortho_teststac_time + t
   in
-    case neworthoo of NONE => call | SOME newortho =>
-      {stac = newortho, loc = loc, fea = fea}
+    case newstaco of NONE => icall | 
+      SOME newstac => (loc, {stac = newstac, ogl = ogl, fea = fea})
   end
   handle Interrupt => raise Interrupt | _ =>
-    (debug "error: orthogonalize"; call)
-
-fun abstract_only_thml thmdata fea (thmlstac,sll) =
-  let 
-    val thmidl = total_time ortho_predthm_time (pred_thmid thmdata) fea
-    val sthmli = List.concat sll
-    val sthmlp = map dbfetch_of_thmid thmidl
-    val (thmli,thmlp) = part_n (length sthmli) 
-      (valOf (thml_of_sml (sthmli @ sthmlp))) 
-      handle Interrupt => raise Interrupt | _ =>
-      (debug "error: thml_of_sml"; raise ERR "" "break")
-  in
-    if goal_subset (map dest_thm thmli) (map dest_thm thmlp)
-    then SOME thmlstac
-    else NONE
-  end
-    
-fun abstract_only_term ig (termstac,sterm) =
-  let 
-    val sterm1 = respace sterm
-    val sterml2 = pred_svar_alt 8 ig
-  in
-    if mem sterm1 sterml2 then SOME termstac else NONE
-  end
-
-fun abstract_only thmdata
-  (call as {stac,ortho,time,ig,ogl,loc,fea}) =
-  let val neworthoo = 
-    case abstract_thml stac of
-      SOME x => abstract_only_thml thmdata fea x 
-    | NONE => 
-    (if not (!learn_abstract_term) then NONE else
-    case abstract_term stac of
-      SOME x => abstract_only_term ig x
-    | NONE => NONE)
-  in
-    case neworthoo of NONE => call | SOME newortho =>
-    {stac = stac, ortho = newortho, time = time,
-     ig = ig, ogl = ogl, loc = loc, fea = fea}
-  end
-  handle Interrupt => raise Interrupt | _ =>
-    (debug "error: abstract_only"; call)
-
+    (debug "error: orthogonalize"; icall)
 
 
 end (* struct *)

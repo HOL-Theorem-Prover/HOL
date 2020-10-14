@@ -15,6 +15,8 @@ val ERR = mk_HOL_ERR "psMinimize"
 
 val mini_proof_time = ref 20.0
 val mini_tactic_time = ref 0.2
+val sthen = ">>"
+val sthenl = ">|"
 
 (* -------------------------------------------------------------------------
    Tests
@@ -97,8 +99,9 @@ fun unsafe_prettify_proof proof =
         val set = mk_fast_set String.compare sl
       in
         if length set = 1
-        then loop p ^ " THEN\n  " ^ hd set
-        else loop p ^ " THENL\n  [" ^ String.concatWith ",\n  " sl ^ "]"
+        then loop p ^ " " ^ sthen ^ " " ^ hd set
+        else loop p ^ " " ^ sthenl ^ " " ^ 
+             "[" ^ String.concatWith ",  " sl ^ "]"
       end
     val body = loop proof
     val decll = mk_fast_set (list_compare String.compare) (!decll_ref)
@@ -106,16 +109,17 @@ fun unsafe_prettify_proof proof =
   in
     if null decls
     then body
-    else "let\n  " ^
-         String.concatWith "\n  " decls ^ "\nin\n  " ^ body ^ "\nend"
+    else "let " ^ String.concatWith "  " decls ^ "in " ^ body ^ "end"
   end
 
 fun safe_prettify_proof proof = case proof of
     Tactic (s,_) => "(" ^ s ^ ")"
-  | Then (p1,p2) => safe_prettify_proof p1 ^ " THEN " ^ safe_prettify_proof p2
+  | Then (p1,p2) => safe_prettify_proof p1 ^ " " ^ 
+    sthen ^ " " ^ safe_prettify_proof p2
   | Thenl (p,pl) =>
     let val sl = map safe_prettify_proof pl in
-      safe_prettify_proof p ^ " THENL " ^ "[" ^ String.concatWith ", " sl ^ "]"
+      safe_prettify_proof p ^ " " ^ sthenl ^ " " ^  
+      "[" ^ String.concatWith ", " sl ^ "]"
     end
 
 (*---------------------------------------------------------------------------

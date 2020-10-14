@@ -17,23 +17,24 @@ val ERR = mk_HOL_ERR "mlTacticData"
    ------------------------------------------------------------------------- *)
 
 type stac = string
+type loc = string * int * int
+type call = {stac : stac, ogl : int list, fea : fea}
 
-type call = {stac : stac, ogl: int list, loc: string * int * int, fea : fea}
-
+val loc_compare = triple_compare String.compare Int.compare Int.compare
 fun call_compare (c1,c2) =
   cpl_compare String.compare fea_compare
     ((#stac c1,#fea c1),(#stac c2,#fea c2))
 
 type tacdata =
   {
-  calls : call list,
-  taccov : (stac, int) Redblackmap.dict,
-  symfreq : (int, int) Redblackmap.dict
+  calld : (string * int * int, call) Redblackmap.dict,
+  taccov : (stac,int) Redblackmap.dict,
+  symfreq : (int,int) Redblackmap.dict
   }
 
 val empty_tacdata : tacdata =
   {
-  calls = [],
+  calld = dempty loc_compare,
   taccov = dempty String.compare,
   symfreq = dempty Int.compare
   }
@@ -47,26 +48,23 @@ fun loc_to_string (s,i1,i2) =
 
 fun ilts il = String.concatWith " " (map its il)
 
-fun call_to_string {stac,ogl,loc,fea} =
-  [stac, ilts ogl, loc_to_string loc, ilts fea]
+fun call_to_string (loc,{stac,ogl,fea}) =
+  [loc_to_string loc, stac, ilts ogl, ilts fea]
 
-fun export_calls file calls =
+fun export_calls file calls1 =
   let
-    val _ = debug ("export_calls: " ^ its (length calls) ^ " calls")
-    val calls1 = calls
     fun is_local stac = mem "tttRecord.local_tag" (partial_sml_lexer stac)
     fun test call = not (is_local (#stac call))
-    val calls2 = filter test calls1
-    val calls3 = mk_sameorder_set call_compare (rev calls2)
-    val _ = debug ("export_calls: " ^ its (length calls3) ^ " filtered calls")
+    val calls2 = filter (test o snd) calls1
+    val _ = debug ("export_calls: " ^ its (length calls2) ^ " filtered calls")
   in
-    writel file (List.concat (map call_to_string calls3))
+    writel file (List.concat (map call_to_string calls2))
   end
 
 fun export_tacdata thy file tacdata =
   let 
     fun test (x,_,_) = (x = thy)
-    val calls = filter (test o #loc) (#calls tacdata)
+    val calls = filter (test o fst) (dlist (#calld tacdata))
   in
     print_endline ("Exporting tactic data to: " ^ file);
     export_calls file calls
@@ -84,12 +82,8 @@ fun loc_from_string s =
 fun string_to_il s = map string_to_int (String.tokens Char.isSpace s)
 
 fun call_from_string (s1,s2,s3,s4) =
-  {
-  stac = s1,
-  ogl = string_to_il s2,
-  loc = loc_from_string s3,
-  fea = string_to_il s4
-  }
+  (loc_from_string s1,
+   {stac = s2, ogl = string_to_il s3, fea = string_to_il s4})
 
 fun import_calls file =
   let val l = mk_batch_full 4 (readl file) in
@@ -97,14 +91,14 @@ fun import_calls file =
   end
 
 fun init_taccov calls =
-  count_dict (dempty String.compare) (map #stac calls)
+  count_dict (dempty String.compare) (map (#stac o snd) calls)
 
 fun init_symfreq calls =
-  count_dict (dempty Int.compare) (List.concat (map #fea calls))
+  count_dict (dempty Int.compare) (List.concat (map (#fea o snd) calls))
 
 fun init_tacdata calls =
   {
-  calls = calls,
+  calld = dnew loc_compare calls,
   taccov = init_taccov calls,
   symfreq = init_symfreq calls
   }
@@ -121,13 +115,11 @@ fun import_tacdata filel =
 val ttt_tacdata_dir = HOLDIR ^ "/src/tactictoe/ttt_tacdata"
 
 fun exists_tacdata_thy thy =
-  let val file = ttt_tacdata_dir ^ "/" ^ thy in
-    exists_file file andalso (not o null o readl) file
-  end
+  exists_file (ttt_tacdata_dir ^ "/" ^ thy)
 
 fun create_tacdata () =
   let
-    fun test file = exists_file file andalso (not o null o readl) file
+    fun test file = exists_file file
     val thyl = ancestry (current_theory ())
     fun f x = ttt_tacdata_dir ^ "/" ^ x
     val filel = filter test (map f thyl)
@@ -140,15 +132,15 @@ fun create_tacdata () =
       print_endline "Run tttUnfold.ttt_record ()"
       )
     val tacdata = import_tacdata filel
+    val calln = dlength (#calld tacdata)
   in
-    print_endline ("Loading " ^ its (length (#calls tacdata)) ^
-      " tactic calls");
+    print_endline ("Loading " ^ its calln ^ " tactic calls");
     tacdata
   end
 
-fun ttt_update_tacdata (call,{calls,taccov,symfreq}) =
+fun ttt_update_tacdata ((loc,call),{calld,taccov,symfreq}) =
   {
-  calls = call :: calls,
+  calld = dadd loc call calld,
   taccov = count_dict taccov [#stac call],
   symfreq = count_dict symfreq (#fea call)
   }

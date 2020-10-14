@@ -4,6 +4,7 @@ sig
   include Abbrev
 
   type thmdata = mlThmData.thmdata
+  type loc = mlTacticData.loc
   type call = mlTacticData.call
   type tacdata = mlTacticData.tacdata
   type symweight = mlFeature.symweight
@@ -15,8 +16,6 @@ sig
   val ortho_teststac_time : real ref
   val orthogonalize : (thmdata * tacdata *
     (symweight * (string * mlFeature.fea) list)) ->
-    call -> call
-
-  val abstract_only : thmdata -> call -> call
+    ((goal * goal list) * (loc * call)) -> (loc * call)
 
 end
