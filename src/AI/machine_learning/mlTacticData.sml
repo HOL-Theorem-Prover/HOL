@@ -86,7 +86,7 @@ fun call_from_string (s1,s2,s3,s4) =
    {stac = s2, ogl = string_to_il s3, fea = string_to_il s4})
 
 fun import_calls file =
-  let val l = mk_batch_full 4 (readl file) in
+  let val l = mk_batch_full 4 (readl_empty file) in
     map (call_from_string o quadruple_of_list) l
   end
 
