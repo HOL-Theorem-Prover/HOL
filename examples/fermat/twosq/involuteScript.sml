@@ -42,11 +42,14 @@ open arithmeticTheory pred_setTheory;
    involute_inj          |- !f s. f involute s ==> INJ f s s
    involute_surj         |- !f s. f involute s ==> SURJ f s s
    involute_bij          |- !f s. f involute s ==> f PERMUTES s
+   involute_permutes     |- !f s. f involute X ==> f PERMUTES s
    involute_LINV         |- !f s. f involute s ==> LINV f s involute s
-   involute_FUNPOW       |- !f A x n. f involute A /\ x IN A ==>
+   involute_FUNPOW       |- !f s x n. f involute s /\ x IN s ==>
                                       FUNPOW f n x = if EVEN n then x else f x
-   involute_FUNPOW_LINV  |- !f A x n. f involute A /\ x IN A ==>
-                                      FUNPOW (LINV f A) n x = FUNPOW f n x
+   involute_FUNPOW_LINV  |- !f s x n. f involute s /\ x IN s ==>
+                                      FUNPOW (LINV f s) n x = FUNPOW f n x
+   involute_alt          |- !f s. f involute s <=>
+                                  f endo s /\ !x. x IN s ==> FUNPOW f 2 x = x
 
 *)
 
@@ -116,6 +119,10 @@ Proof
   rw[BIJ_DEF, involute_inj, involute_surj]
 QED
 
+(* Theorem alias *)
+val involute_permutes = save_thm("involute_permutes", involute_bij);
+(* val involute_permutes = |- !f s. f involute s ==> f PERMUTES s: thm *)
+
 (* Theorem: f involute s ==> (LINV f s) involute s *)
 (* Proof:
        f involute s
@@ -136,7 +143,7 @@ Proof
   metis_tac[BIJ_LINV_THM]
 QED
 
-(* Theorem: f involute A /\ x IN A ==>
+(* Theorem: f involute s /\ x IN s ==>
             FUNPOW f n x = if EVEN n then x else f x *)
 (* Proof:
    Note FUNPOW f 2 x
@@ -154,7 +161,7 @@ QED
       = f x                        by above
 *)
 Theorem involute_FUNPOW:
-  !f A x n. f involute A /\ x IN A ==>
+  !f s x n. f involute s /\ x IN s ==>
             FUNPOW f n x = if EVEN n then x else f x
 Proof
   rpt strip_tac >>
@@ -165,39 +172,56 @@ Proof
   metis_tac[EVEN_ODD, ODD_EXISTS, FUNPOW_SUC]
 QED
 
-(* Theorem: f involute A /\ x IN A ==>
-            FUNPOW (LINV f A) n x = FUNPOW f n x *)
+(* Theorem: f involute s /\ x IN s ==>
+            FUNPOW (LINV f s) n x = FUNPOW f n x *)
 (* Proof:
    By induction on n.
-   Base: FUNPOW (LINV f A) 0 x = FUNPOW f 0 x, true by FUNPOW_0
-   Step: FUNPOW (LINV f A) n x = FUNPOW f n x ==>
-         FUNPOW (LINV f A) (SUC n) x = FUNPOW f (SUC n) x
-         Note f PERMUTES A                           by involute_bij
-          and FUNPOW f n x IN A                      by FUNPOW_closure
-         also FUNPOW f (SUC n) x IN A                by FUNPOW_closure
-           FUNPOW (LINV f A) (SUC n) x
-         = LINV f A (FUNPOW (LINV f A) n x)          by FUNPOW_SUC
-         = LINV f A (FUNPOW f n x)                   by induction hypothesis
-         = LINV f A (LINV f A (f (FUNPOW f n x)))    by BIJ_LINV_THM,
-         = LINV f A (LINV f A (FUNPOW f (SUC n) x))  by FUNPOW_SUC
+   Base: FUNPOW (LINV f s) 0 x = FUNPOW f 0 x, true by FUNPOW_0
+   Step: FUNPOW (LINV f s) n x = FUNPOW f n x ==>
+         FUNPOW (LINV f s) (SUC n) x = FUNPOW f (SUC n) x
+         Note f PERMUTES s                           by involute_bij
+          and FUNPOW f n x IN s                      by FUNPOW_closure
+         also FUNPOW f (SUC n) x IN s                by FUNPOW_closure
+           FUNPOW (LINV f s) (SUC n) x
+         = LINV f s (FUNPOW (LINV f s) n x)          by FUNPOW_SUC
+         = LINV f s (FUNPOW f n x)                   by induction hypothesis
+         = LINV f s (LINV f s (f (FUNPOW f n x)))    by BIJ_LINV_THM,
+         = LINV f s (LINV f s (FUNPOW f (SUC n) x))  by FUNPOW_SUC
          = FUNPOW f (SUC n) x                        by involute_LINV
 *)
 Theorem involute_FUNPOW_LINV:
-  !f A x n. f involute A /\ x IN A ==>
-            FUNPOW (LINV f A) n x = FUNPOW f n x
+  !f s x n. f involute s /\ x IN s ==>
+            FUNPOW (LINV f s) n x = FUNPOW f n x
 Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
-  `f PERMUTES A` by rw[involute_bij] >>
-  `FUNPOW f n x IN A /\ FUNPOW f (SUC n) x IN A` by rw[FUNPOW_closure] >>
-  `FUNPOW (LINV f A) (SUC n) x = LINV f A (FUNPOW (LINV f A) n x)` by rw[FUNPOW_SUC] >>
-  `_ = LINV f A (FUNPOW f n x)` by rw[] >>
-  `_ = LINV f A (LINV f A (f (FUNPOW f n x)))` by metis_tac[BIJ_LINV_THM] >>
-  `_ = LINV f A (LINV f A (FUNPOW f (SUC n) x))` by rw[FUNPOW_SUC] >>
+  `f PERMUTES s` by rw[involute_bij] >>
+  `FUNPOW f n x IN s /\ FUNPOW f (SUC n) x IN s` by rw[FUNPOW_closure] >>
+  `FUNPOW (LINV f s) (SUC n) x = LINV f s (FUNPOW (LINV f s) n x)` by rw[FUNPOW_SUC] >>
+  `_ = LINV f s (FUNPOW f n x)` by rw[] >>
+  `_ = LINV f s (LINV f s (f (FUNPOW f n x)))` by metis_tac[BIJ_LINV_THM] >>
+  `_ = LINV f s (LINV f s (FUNPOW f (SUC n) x))` by rw[FUNPOW_SUC] >>
   `_ = FUNPOW f (SUC n) x` by metis_tac[involute_LINV] >>
   simp[]
 QED
+
+(* Theorem: f involute s <=> f endo s /\ !x. x IN s ==> FUNPOW f 2 x = x *)
+(* Proof:
+       f involute s
+   <=> !x. x IN s ==> f x IN s /\ f (f x) = x        by notation
+   <=> !x. x IN s ==> f x IN s /\ FUNPOW 2 x = x     by FUNPOW_2
+   <=> !x. x IN s ==> f x IN s /\ !x. x IN s ==> FUNPOW 2 x = x
+   <=> f endo s /\  !x. x IN s ==> FUNPOW 2 x = x    by notation
+*)
+Theorem involute_alt:
+  !f s. f involute s <=> f endo s /\ !x. x IN s ==> FUNPOW f 2 x = x
+Proof
+  simp[FUNPOW_2] >>
+  metis_tac[]
+QED
+
+
 
 (* ------------------------------------------------------------------------- *)
 

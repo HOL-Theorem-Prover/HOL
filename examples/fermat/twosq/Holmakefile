@@ -1,6 +1,5 @@
-# choose to take HOL examples or work/hol
+# prefix to HOL examples
 LOC_PREFIX = ../../../../HOL/examples
-# LOC_PREFIX = ../../../hol
 
 PRE_INCLUDES = $(LOC_PREFIX)/algebra/ring
 

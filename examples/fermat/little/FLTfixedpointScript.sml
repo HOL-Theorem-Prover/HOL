@@ -60,39 +60,41 @@ open groupActionTheory;
    Zadd_finite_group   |- !n. 0 < n ==> FiniteGroup (Zadd n)
 
    From groupAction:
-   fixed_points_def        |- !f g A. fixed_points f g A =
-                                        {a | a IN A /\ !x. x IN G ==> f x a = a}
-   fixed_points_element    |- !f g A x. a IN fixed_points f g A <=>
-                                          a IN A /\ !x. x IN G ==> f x a = a
-   fixed_points_orbit_sing |- !f g A x. Group g /\ (g act A) f ==>
-                                         (x IN fixed_points f g A <=>
-                                          x IN A /\ orbit f g x = {x})
-   orbit_sing_fixed_points |- !f g A x. (g act A) f /\ x IN A /\
-                                          orbit f g x = {x} ==> x IN fixed_points f g A
+   fixed_points_def        |- !f g X. fixed_points f g X =
+                                      {x | x IN X /\ !a. a IN G ==> f a x = x}
+   fixed_points_element    |- !f g X x. x IN fixed_points f g X <=>
+                                        x IN X /\ !a. a IN G ==> f a x = x
+   fixed_points_orbit_sing |- !f g X. Group g /\ (g act X) f ==>
+                              !x. x IN fixed_points f g X <=>
+                                  x IN X /\ orbit f g x = {x}
+   orbit_sing_fixed_points |- !f g X. (g act X) f ==>
+                              !x. x IN X /\ orbit f g x = {x} ==>
+                                  x IN fixed_points f g X
    fixed_points_orbit_iff_sing
-                           |- !f g A x. Group g /\ (g act A) f /\ x IN A ==>
-                                         (x IN fixed_points f g A <=> SING (orbit f g x))
-   sing_orbits_def     |- !f g A. sing_orbits f g A = {e | e IN orbits f g A /\ SING e}
-   multi_orbits_def    |- !f g A. multi_orbits f g A = {e | e IN orbits f g A /\ ~SING e}
+                           |- !f g X. Group g /\ (g act X) f ==>
+                              !x. x IN X ==>
+                                 (x IN fixed_points f g X <=> SING (orbit f g x))
+   sing_orbits_def     |- !f g X. sing_orbits f g X = {e | e IN orbits f g X /\ SING e}
+   multi_orbits_def    |- !f g X. multi_orbits f g X = {e | e IN orbits f g X /\ ~SING e}
    sing_orbits_to_fixed_points_inj
-                       |- !f g A. Group g /\ (g act A) f ==>
-                                    INJ CHOICE (sing_orbits f g A) (fixed_points f g A)
+                       |- !f g X. Group g /\ (g act X) f ==>
+                                  INJ CHOICE (sing_orbits f g X) (fixed_points f g X)
    sing_orbits_to_fixed_points_surj
-                       |- !f g A. Group g /\ (g act A) f ==>
-                                    SURJ CHOICE (sing_orbits f g A) (fixed_points f g A)
+                       |- !f g X. Group g /\ (g act X) f ==>
+                                  SURJ CHOICE (sing_orbits f g X) (fixed_points f g X)
    sing_orbits_to_fixed_points_bij
-                       |- !f g A. Group g /\ (g act A) f ==>
-                                    BIJ CHOICE (sing_orbits f g A) (fixed_points f g A)
-   sing_orbits_card_eqn|- !f g A. Group g /\ (g act A) f /\ FINITE A ==>
-                                   (CARD (sing_orbits f g A) = CARD (fixed_points f g A))
+                       |- !f g X. Group g /\ (g act X) f ==>
+                                  BIJ CHOICE (sing_orbits f g X) (fixed_points f g X)
+   sing_orbits_card_eqn|- !f g X. Group g /\ (g act X) f /\ FINITE X ==>
+                                  CARD (sing_orbits f g X) = CARD (fixed_points f g X)
    target_card_by_fixed_points
-                       |- !f g A. Group g /\ (g act A) f /\ FINITE A ==>
-                                   (CARD A = CARD (fixed_points f g A) +
-                                             SIGMA CARD (multi_orbits f g A))
+                       |- !f g X. Group g /\ (g act X) f /\ FINITE X ==>
+                                  CARD X = CARD (fixed_points f g X) +
+                                           SIGMA CARD (multi_orbits f g X)
    target_card_and_fixed_points_congruence
-                       |- ! $o g A n. Group g /\ (g act A) f /\ FINITE A /\ 0 < n /\
-                                     (!e. e IN multi_orbits f g A ==> (CARD e = n)) ==>
-                                     (CARD A MOD n = CARD (fixed_points f g A) MOD n)
+                       |- !f g X n. Group g /\ (g act X) f /\ FINITE X /\ 0 < n /\
+                                    (!e. e IN multi_orbits f g X ==> CARD e = n) ==>
+                                    CARD X MOD n = CARD (fixed_points f g X) MOD n
 
    From FLTnecklace:
    monocoloured_cycle_1      |- !n a ls. ls IN monocoloured n a ==> cycle 1 ls = ls
@@ -106,11 +108,11 @@ open groupActionTheory;
 
    Orbits when action group is (Zadd p), for prime p:
    multi_orbit_card_prime
-                       |- !p f A e. prime p /\ (Zadd p act A) f /\ FINITE A /\
-                                    e IN multi_orbits f (Zadd p) A ==> CARD e = p
+                       |- !p f X e. prime p /\ (Zadd p act X) f /\ FINITE X /\
+                                    e IN multi_orbits f (Zadd p) X ==> CARD e = p
    fixedpoint_prime_congruence
-                       |- !p f A. prime p /\ (Zadd p act A) f /\ FINITE A ==>
-                                 CARD A MOD p = CARD (fixed_points f (Zadd p) A) MOD p
+                       |- !p f X. prime p /\ (Zadd p act X) f /\ FINITE X ==>
+                                  CARD X MOD p = CARD (fixed_points f (Zadd p) X) MOD p
    cycle_fixed_points  |- !n a. fixed_points cycle (Zadd n) (necklace n a) =
                                 {ls | ls IN necklace n a /\ cycle 1 ls = ls}
    cycle_fixed_points_monocoloured
@@ -146,49 +148,50 @@ val Zadd_finite_group = groupInstancesTheory.Zadd_finite_group;
 (* ------------------------------------------------------------------------- *)
 
 val fixed_points_def = groupActionTheory.fixed_points_def;
-(* |- !f g A. fixed_points f g A = {a | a IN A /\ !x. x IN G ==> f x a = a} *)
+(* |- !f g X. fixed_points f g X = {x | x IN X /\ !a. a IN G ==> f a x = x} *)
 
 val fixed_points_element = groupActionTheory.fixed_points_element;
-(* |- !f g A a. a IN fixed_points f g A <=> a IN A /\ !x. x IN G ==> f x a = a *)
+(* |- !f g X x. x IN fixed_points f g X <=> x IN X /\ !a. a IN G ==> f a x = x *)
 
 val fixed_points_orbit_sing = groupActionTheory.fixed_points_orbit_sing;
-(* |- !f g A. Group g /\ (g act A) f ==>
-          !a. a IN fixed_points f g A <=> a IN A /\ orbit f g a = {a} *)
+(* |- !f g X. Group g /\ (g act X) f ==>
+              !x. x IN fixed_points f g X <=> x IN X /\ orbit f g x = {x} *)
 
 val orbit_sing_fixed_points = groupActionTheory.orbit_sing_fixed_points;
-(* |- !f g A. (g act A) f ==>
-          !a. a IN A /\ orbit f g a = {a} ==> a IN fixed_points f g A *)
+(* |- !f g X. (g act X) f ==>
+              !x. x IN X /\ orbit f g x = {x} ==> x IN fixed_points f g X *)
 
 val fixed_points_orbit_iff_sing = groupActionTheory.fixed_points_orbit_iff_sing;
-(* |- !f g A. Group g /\ (g act A) f ==>
-          !a. a IN A ==> (a IN fixed_points f g A <=> SING (orbit f g a)) *)
+(* |- !f g X. Group g /\ (g act X) f ==>
+              !x. x IN X ==> (x IN fixed_points f g X <=> SING (orbit f g x)) *)
 
 val sing_orbits_def = groupActionTheory.sing_orbits_def;
-(* |- !f g A. sing_orbits f g A = {e | e IN orbits f g A /\ SING e} *)
+(* |- !f g X. sing_orbits f g X = {e | e IN orbits f g X /\ SING e} *)
 
 val multi_orbits_def = groupActionTheory.multi_orbits_def;
-(* |- !f g A. multi_orbits f g A = {e | e IN orbits f g A /\ ~SING e} *)
+(* |- !f g X. multi_orbits f g X = {e | e IN orbits f g X /\ ~SING e} *)
 
 val sing_orbits_to_fixed_points_inj = groupActionTheory.sing_orbits_to_fixed_points_inj;
-(* |- !f g A. Group g /\ (g act A) f ==> INJ CHOICE (sing_orbits f g A) (fixed_points f g A) *)
+(* |- !f g X. Group g /\ (g act X) f ==> INJ CHOICE (sing_orbits f g X) (fixed_points f g X) *)
 
 val sing_orbits_to_fixed_points_surj = groupActionTheory.sing_orbits_to_fixed_points_surj;
-(* |- !f g A. Group g /\ (g act A) f ==> SURJ CHOICE (sing_orbits f g A) (fixed_points f g A) *)
+(* |- !f g X. Group g /\ (g act X) f ==> SURJ CHOICE (sing_orbits f g X) (fixed_points f g X) *)
 
 val sing_orbits_to_fixed_points_bij = groupActionTheory.sing_orbits_to_fixed_points_bij;
-(* |- !f g A. Group g /\ (g act A) f ==> BIJ CHOICE (sing_orbits f g A) (fixed_points f g A) *)
+(* |- !f g X. Group g /\ (g act X) f ==> BIJ CHOICE (sing_orbits f g X) (fixed_points f g X): *)
 
 val sing_orbits_card_eqn = groupActionTheory.sing_orbits_card_eqn;
-(* |- !f g A. Group g /\ (g act A) f /\ FINITE A ==> (CARD (sing_orbits f g A) = CARD (fixed_points f g A)) *)
+(* |- !f g X. Group g /\ (g act X) f /\ FINITE X ==>
+              CARD (sing_orbits f g X) = CARD (fixed_points f g X) *)
 
 val target_card_by_fixed_points = groupActionTheory.target_card_by_fixed_points;
-(* |- !f g A. Group g /\ (g act A) f /\ FINITE A ==>
-                CARD A = CARD (fixed_points f g A) + SIGMA CARD (multi_orbits f g A) *)
+(* |- !f g X. Group g /\ (g act X) f /\ FINITE X ==>
+              CARD X = CARD (fixed_points f g X) + SIGMA CARD (multi_orbits f g X) *)
 
 val target_card_and_fixed_points_congruence = groupActionTheory.target_card_and_fixed_points_congruence;
-(* |- ! $o g A n. Group g /\ (g act A) f /\ FINITE A /\ 0 < n /\
-                 (!e. e IN multi_orbits f g A ==> CARD e = n) ==>
-                 CARD A MOD n = CARD (fixed_points f g A) MOD n *)
+(* |- !f g X n. Group g /\ (g act X) f /\ FINITE X /\ 0 < n /\
+                (!e. e IN multi_orbits f g X ==> CARD e = n) ==>
+                CARD X MOD n = CARD (fixed_points f g X) MOD n *)
 
 (* ------------------------------------------------------------------------- *)
 (* From FLTnecklace.                                                           *)
@@ -220,22 +223,22 @@ val cycle_action_on_necklace = FLTactionTheory.cycle_action_on_necklace;
 (* Orbits when action group is (Zadd p), for prime p.                        *)
 (* ------------------------------------------------------------------------- *)
 
-(* Theorem: prime p /\ (Zadd p act A) f /\ FINITE A /\
-             e IN (multi_orbits f (Zadd p) A) ==> CARD e = p *)
+(* Theorem: prime p /\ (Zadd p act X) f /\ FINITE X /\
+            e IN (multi_orbits f (Zadd p) X) ==> CARD e = p *)
 (* Proof:
    Note 0 < p                        by PRIME_POS
      so FiniteGroup (Zadd p)         by Zadd_finite_group, 0 < p
     and CARD (Zadd p).carrier = p    by Zadd_card
    Also FINITE e                     by orbits_element_finite
      so CARD e <> 1                  by SING_IFF_CARD1, FINITE e
-   Thus ?x. x IN A /\
+   Thus ?x. x IN X /\
         e = orbit f (Zadd p) x       by orbits_element
     ==> CARD e divides p             by orbit_card_divides_target_card
    Hence CARD e = p                  by prime_def, CARD e <> 1
 *)
 Theorem multi_orbit_card_prime:
-  !p f A e. prime p /\ (Zadd p act A) f /\ FINITE A /\
-            e IN (multi_orbits f (Zadd p) A) ==> CARD e = p
+  !p f X e. prime p /\ (Zadd p act X) f /\ FINITE X /\
+            e IN (multi_orbits f (Zadd p) X) ==> CARD e = p
 Proof
   rw[multi_orbits_def] >>
   `0 < p` by rw[PRIME_POS] >>
@@ -250,30 +253,30 @@ QED
 (* Idea: (Fermat's Little Theorem by Group action)
          for prime p, a ** p = a (mod p). *)
 
-(* Theorem: prime p /\ (Zadd p act A) f /\ FINITE A ==>
-           CARD A MOD p = CARD (fixed_points f (Zadd p) A) MOD p *)
+(* Theorem: prime p /\ (Zadd p act X) f /\ FINITE A ==>
+            CARD X MOD p = CARD (fixed_points f (Zadd p) X) MOD p *)
 (* Proof:
-   Let b = multi_orbits f (Zadd p) A,
-       s = fixed_points f (Zadd p) A.
+   Let b = multi_orbits f (Zadd p) X,
+       s = fixed_points f (Zadd p) X.
    Note 0 < p                            by PRIME_POS
    Then Group (Zadd p)                   by Zadd_group, 0 < p
     and !e. e IN b ==> CARD e = p        by multi_orbit_card_prime
    Thus CARD A MOD p = CARD s MOD p      by target_card_and_fixed_points_congruence
 
 > target_card_and_fixed_points_congruence |> ISPEC ``cycle`` |> ISPEC ``Zadd p``;
-|- !A n. Group (Zadd p) /\ (Zadd p act A) cycle /\ FINITE A /\ 0 < n /\
-         (!e. e IN multi_orbits cycle (Zadd p) A ==> CARD e = n) ==>
-         CARD A MOD n = CARD (fixed_points cycle (Zadd p) A) MOD n: thm
+|- !X n. Group (Zadd p) /\ (Zadd p act X) cycle /\ FINITE X /\ 0 < n /\
+          (!e. e IN multi_orbits cycle (Zadd p) X ==> CARD e = n) ==>
+          CARD X MOD n = CARD (fixed_points cycle (Zadd p) X) MOD n: thm
 *)
 Theorem fixedpoint_prime_congruence:
-  !p f A. prime p /\ (Zadd p act A) f /\ FINITE A ==>
-          CARD A MOD p = CARD (fixed_points f (Zadd p) A) MOD p
+  !p f X. prime p /\ (Zadd p act X) f /\ FINITE X ==>
+          CARD X MOD p = CARD (fixed_points f (Zadd p) X) MOD p
 Proof
   rpt strip_tac >>
   qabbrev_tac `g = Zadd p` >>
   `0 < p` by rw[PRIME_POS] >>
   `Group g` by rw[Zadd_group, Abbr`g`] >>
-  `!e. e IN (multi_orbits f g A) ==> CARD e = p` by metis_tac[multi_orbit_card_prime] >>
+  `!e. e IN (multi_orbits f g X) ==> CARD e = p` by metis_tac[multi_orbit_card_prime] >>
   imp_res_tac target_card_and_fixed_points_congruence
 QED
 
@@ -339,13 +342,13 @@ QED
 
 (* Theorem: prime p ==> a ** p MOD p = a MOD p *)
 (* Proof:
-   Let A = necklace p a,
-       b = multi_orbits cycle (Zadd p) A,
-       c = fixed_points cycle (Zadd p) A.
-   Note FINITE A                         by necklace_finite
+   Let X = necklace p a,
+       b = multi_orbits cycle (Zadd p) X,
+       c = fixed_points cycle (Zadd p) X.
+   Note FINITE X                         by necklace_finite
     and 0 < p                            by PRIME_POS
      so Group (Zadd p)                   by Zadd_group, 0 < p
-    and (Zadd p act A) cycle             by cycle_action_on_necklace, 0 < p
+    and (Zadd p act X) cycle             by cycle_action_on_necklace, 0 < p
    Also !e. e IN b ==> CARD e = p        by multi_orbit_card_prime
         (a ** p) MOD p
       = (CARD A) MOD p                   by necklace_card
@@ -354,26 +357,27 @@ QED
       = a MOD p                          by monocoloured_card
 
 multi_orbit_card_prime |> ISPEC ``p:num`` |> ISPEC ``cycle``;
-|- !A e. prime p /\ (Zadd p act A) cycle /\ FINITE A /\
-         e IN multi_orbits cycle (Zadd p) A ==> CARD e = p
+|- !X e. prime p /\ (Zadd p act X) cycle /\ FINITE X /\
+         e IN multi_orbits cycle (Zadd p) X ==>
+         CARD e = p
 
 target_card_and_fixed_points_congruence |> ISPEC ``cycle`` |> ISPEC ``Zadd p``;
-|- !A n. Group (Zadd p) /\ (Zadd p act A) cycle /\ FINITE A /\ 0 < n /\
-         (!e. e IN multi_orbits cycle (Zadd p) A ==> CARD e = n) ==>
-         CARD A MOD n = CARD (fixed_points cycle (Zadd p) A) MOD n
+|- !X n. Group (Zadd p) /\ (Zadd p act X) cycle /\ FINITE X /\ 0 < n /\
+         (!e. e IN multi_orbits cycle (Zadd p) X ==> CARD e = n) ==>
+         CARD X MOD n = CARD (fixed_points cycle (Zadd p) X) MOD n
 *)
 Theorem fermat_little_thm:
   !p a. prime p ==> a ** p MOD p = a MOD p
 Proof
   rpt strip_tac >>
   `0 < p` by rw[PRIME_POS] >>
-  qabbrev_tac `A = necklace p a` >>
-  `FINITE A` by rw[necklace_finite, Abbr`A`] >>
+  qabbrev_tac `X = necklace p a` >>
+  `FINITE X` by rw[necklace_finite, Abbr`X`] >>
   `Group (Zadd p)` by rw[Zadd_group] >>
-  `(Zadd p act A) cycle` by rw[cycle_action_on_necklace, Abbr`A`] >>
-  `!e. e IN multi_orbits cycle (Zadd p) A ==> CARD e = p` by metis_tac[multi_orbit_card_prime] >>
-  `CARD A = a ** p` by rw[necklace_card, Abbr`A`] >>
-  `CARD (fixed_points cycle (Zadd p) A) = CARD (monocoloured p a)` by rw[cycle_fixed_points_monocoloured, Abbr`A`] >>
+  `(Zadd p act X) cycle` by rw[cycle_action_on_necklace, Abbr`X`] >>
+  `!e. e IN multi_orbits cycle (Zadd p) X ==> CARD e = p` by metis_tac[multi_orbit_card_prime] >>
+  `CARD X = a ** p` by rw[necklace_card, Abbr`X`] >>
+  `CARD (fixed_points cycle (Zadd p) X) = CARD (monocoloured p a)` by rw[cycle_fixed_points_monocoloured, Abbr`X`] >>
   `_ = a` by rw[monocoloured_card] >>
   metis_tac[target_card_and_fixed_points_congruence]
 QED
@@ -382,12 +386,12 @@ QED
 
 (* Theorem: prime p ==> a ** p MOD p = a MOD p *)
 (* Proof:
-   Let A = necklace p a,
-       b = multi_orbits cycle (Zadd p) A,
-       c = fixed_points cycle (Zadd p) A.
-   Note FINITE A                         by necklace_finite
+   Let X = necklace p a,
+       b = multi_orbits cycle (Zadd p) X,
+       c = fixed_points cycle (Zadd p) X.
+   Note FINITE X                         by necklace_finite
     and 0 < p                            by PRIME_POS
-     so (Zadd p act A) cycle             by cycle_action_on_necklace, 0 < p
+     so (Zadd p act X) cycle             by cycle_action_on_necklace, 0 < p
 
         (a ** p) MOD p
       = (CARD A) MOD p                   by necklace_card
@@ -396,19 +400,19 @@ QED
       = a MOD p                          by monocoloured_card
 
 fixedpoint_prime_congruence |> ISPEC ``p:num`` |> ISPEC ``cycle``;
-|- !A. prime p /\ (Zadd p act A) cycle /\ FINITE A ==>
-          CARD A MOD p = CARD (fixed_points cycle (Zadd p) A) MOD p
+|- !X. prime p /\ (Zadd p act X) cycle /\ FINITE X ==>
+       CARD X MOD p = CARD (fixed_points cycle (Zadd p) X) MOD p
 *)
 Theorem fermat_little_thm:
   !p a. prime p ==> a ** p MOD p = a MOD p
 Proof
   rpt strip_tac >>
   `0 < p` by rw[PRIME_POS] >>
-  qabbrev_tac `A = necklace p a` >>
-  `FINITE A` by rw[necklace_finite, Abbr`A`] >>
-  `(Zadd p act A) cycle` by rw[cycle_action_on_necklace, Abbr`A`] >>
-  `CARD A = a ** p` by rw[necklace_card, Abbr`A`] >>
-  `CARD (fixed_points cycle (Zadd p) A) = CARD (monocoloured p a)` by rw[cycle_fixed_points_monocoloured, Abbr`A`] >>
+  qabbrev_tac `X = necklace p a` >>
+  `FINITE X` by rw[necklace_finite, Abbr`X`] >>
+  `(Zadd p act X) cycle` by rw[cycle_action_on_necklace, Abbr`X`] >>
+  `CARD X = a ** p` by rw[necklace_card, Abbr`X`] >>
+  `CARD (fixed_points cycle (Zadd p) X) = CARD (monocoloured p a)` by rw[cycle_fixed_points_monocoloured, Abbr`X`] >>
   `_ = a` by rw[monocoloured_card] >>
   metis_tac[fixedpoint_prime_congruence]
 QED

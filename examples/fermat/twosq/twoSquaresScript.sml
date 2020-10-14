@@ -134,10 +134,11 @@ open groupInstancesTheory;
 
    Relation to Fixes and Pairs:
    involute_fixed_points_eq_fixes
-                   |- !f A. f involute A ==> (fixed_points (FUNPOW f) Z2 A = fixes f A)
+                   |- !f X. f involute X ==>
+                            fixed_points (FUNPOW f) Z2 X = fixes f X
    involute_multi_orbits_union_eq_pairs
-                   |- !f A. f involute A ==>
-                           (BIGUNION (multi_orbits (FUNPOW f) Z2 A) = pairs f A)
+                   |- !f X. f involute X ==>
+                            BIGUNION (multi_orbits (FUNPOW f) Z2 X) = pairs f X
 
    Fermat's Two-Squares Theorem (Existence):
    zagier_fixed_points_sing
@@ -1076,49 +1077,47 @@ QED
 (* Relation to Fixes and Pairs.                                              *)
 (* ------------------------------------------------------------------------- *)
 
-(* Theorem: f involute A ==> fixed_points (FUNPOW f) Z2 A = fixes f A *)
+(* Theorem: f involute X ==> fixed_points (FUNPOW f) Z2 X = fixes f X *)
 (* Proof:
    By fixed_points_def, fixes_def, EXTENSION, this is to show:
-   (1) !n. n < 2 ==> (FUNPOW f n x = x) ==> f x = x
+   (1) !a. a < 2 ==> (FUNPOW f a x = x) ==> f x = x
        Note f x = FUNPOW f 1 x = x          by FUNPOW_1, 1 < 2
-   (2) f x = x ==> !n. n < 2 ==> FUNPOW f n x = x
-       When n = 0, FUNPOW f 0 x = x         by FUNPOW_0
-       When n = 1, FUNPOW f 1 x = f x = x   by FUNPOW_1, f x = x
+   (2) f x = x ==> !a. a < 2 ==> FUNPOW f a x = x
+       When a = 0, FUNPOW f 0 x = x         by FUNPOW_0
+       When a = 1, FUNPOW f 1 x = f x = x   by FUNPOW_1, f x = x
 *)
 Theorem involute_fixed_points_eq_fixes:
-  !f A. f involute A ==> fixed_points (FUNPOW f) Z2 A = fixes f A
+  !f X. f involute X ==> fixed_points (FUNPOW f) Z2 X = fixes f X
 Proof
-  rw[fixed_points_def, fixes_def, EXTENSION] >>
-  rw[EQ_IMP_THM] >-
+  rw[fixed_points_def, fixes_def, EXTENSION, EQ_IMP_THM] >-
   metis_tac[FUNPOW_1, DECIDE``1 < 2``] >>
-  (`x' = 0 \/ x' = 1` by decide_tac >> simp[])
+  (`a = 0 \/ a = 1` by decide_tac >> simp[])
 QED
 
-(* Theorem: f involute A ==> BIGUNION (multi_orbits (FUNPOW f) Z2 A) = pairs f A *)
+(* Theorem: f involute X ==> BIGUNION (multi_orbits (FUNPOW f) Z2 X) = pairs f X *)
 (* Proof:
    By multi_orbits_def, pairs_def, BIGUNION, EXTENSION, this is to show:
-   (1) x IN e /\ e IN orbits (FUNPOW f) Z2 A /\ ~SING e ==> x IN A /\ f x <> x
-       Note x IN A                           by involute_orbits_element_element
+   (1) x IN e /\ e IN orbits (FUNPOW f) Z2 X /\ ~SING e ==> x IN X /\ f x <> x
+       Note x IN X                           by involute_orbits_element_element
         and e = orbit (FUNPOW f) Z2 x        by involute_orbits_element_is_orbit
        By contradiction, suppose f x = x,
        Then e = {x}                          by involute_orbit_fixed
        with contradicts ~SING e              by SING
-   (2) x IN A /\ f x <> x ==> ?e. x IN e /\ e IN orbits (FUNPOW f) Z2 A /\ ~SING e
+   (2) x IN X /\ f x <> x ==> ?e. x IN e /\ e IN orbits (FUNPOW f) Z2 X /\ ~SING e
        Let e = {x; f x}.
        Then x IN e, and ~SING e              by f x <> x
-       The goal is to show: {x; f x} IN orbits (FUNPOW f) Z2 A
+       The goal is to show: {x; f x} IN orbits (FUNPOW f) Z2 X
 
        Note {x; f x}
           = orbit (FUNPOW f) Z2 x            by involute_orbit_not_fixed
-       which is IN orbits (FUNPOW f) Z2 A    by funpow_orbit_in_orbits
+       which is IN orbits (FUNPOW f) Z2 X    by funpow_orbit_in_orbits
 *)
 Theorem involute_multi_orbits_union_eq_pairs:
-  !f A. f involute A ==> BIGUNION (multi_orbits (FUNPOW f) Z2 A) = pairs f A
+  !f X. f involute X ==> BIGUNION (multi_orbits (FUNPOW f) Z2 X) = pairs f X
 Proof
-  rw[multi_orbits_def, pairs_def, EXTENSION] >>
-  rw[EQ_IMP_THM] >-
+  rw[multi_orbits_def, pairs_def, EXTENSION, EQ_IMP_THM] >-
   metis_tac[involute_orbits_element_element] >-
- (`x IN A` by metis_tac[involute_orbits_element_element] >>
+ (`x IN X` by metis_tac[involute_orbits_element_element] >>
   `s = orbit (FUNPOW f) Z2 x` by metis_tac[involute_orbits_element_is_orbit] >>
   metis_tac[involute_orbit_fixed, SING]) >>
   qexists_tac `{x; f x}` >>
@@ -1150,9 +1149,9 @@ QED
         ==> (x,y,z) = (1,1,p DIV 4)   by windmill_trivial_prime
    (2) p MOD 4 = 1 ==> p = windmill 1 1 (p DIV 4)
        This is true                   by windmill_trivial_prime
-   (3) n < 2 ==> FUNPOW zagier p (1,1,p DIV 4) = (1,1,p DIV 4)
-       When n = 0, true               by FUNPOW_0
-       When n = 1, true               by FUNPOW_1, zagier_fix
+   (3) a < 2 ==> FUNPOW zagier p (1,1,p DIV 4) = (1,1,p DIV 4)
+       When a = 0, true               by FUNPOW_0
+       When a = 1, true               by FUNPOW_1, zagier_fix
 *)
 Theorem zagier_fixed_points_sing:
   !p. prime p /\ p MOD 4 = 1 ==>
@@ -1167,7 +1166,7 @@ Proof
     `x' = y` by metis_tac[zagier_fix, mills_element, mills_triple_nonzero] >>
     metis_tac[windmill_trivial_prime],
     metis_tac[windmill_trivial_prime],
-    (`x' = 0 \/ x' = 1` by decide_tac >> fs[zagier_fix])
+    (`a = 0 \/ a = 1` by decide_tac >> fs[zagier_fix])
   ]
 QED
 
@@ -1176,15 +1175,15 @@ QED
 (* Theorem: prime p /\ p MOD 4 = 1 ==>
             fixed_points (FUNPOW zagier) Z2 (mills p) = {(1,1,p DIV 4)} *)
 (* Proof:
-   Let A = mills p, a = fixed_points (FUNPOW zagier) Z2 A.
+   Let X = mills p, a = fixed_points (FUNPOW zagier) Z2 X.
    The goal is: a = {(1,1,p DIV 4)}.
 
    Note ~square p                   by prime_non_square
-     so zagier involute A           by zagier_involute_mills
+     so zagier involute X           by zagier_involute_mills
 
    By EXTENSION, this is to show:
-   (1) t IN A ==> t = (1,1,p DIV 4)
-       Note t IN A                  by involute_fixed_points_element_element
+   (1) t IN X ==> t = (1,1,p DIV 4)
+       Note t IN X                  by involute_fixed_points_element_element
         and zagier t = t            by involute_fixed_points
         Now ?x y z. t = (x, y, z)   by triple_parts
         and x <> 0                  by mills_triple_nonzero, ~square p
@@ -1192,46 +1191,46 @@ QED
        Note p = windmill x y z      by mills_element
         ==> (x,y,z) = (1,1,p DIV 4) by windmill_trivial_prime
 
-   (2) (1,1,p DIV 4) IN A
-       Note (1,1,p DIV 4) IN A      by mills_element_trivial
+   (2) (1,1,p DIV 4) IN a
+       Note (1,1,p DIV 4) IN X      by mills_element_trivial
         and zagier (1,1,p DIV 4)
           = zagier (1,1,p DIV 4)    by zagier_1_1_z
-         so (1,1,p DIV 4) IN A      by involute_fixed_points_iff
+         so (1,1,p DIV 4) IN a      by involute_fixed_points_iff
 *)
 Theorem zagier_fixed_points_sing:
   !p. prime p /\ p MOD 4 = 1 ==>
       fixed_points (FUNPOW zagier) Z2 (mills p) = {(1,1,p DIV 4)}
 Proof
   rpt strip_tac >>
-  qabbrev_tac `A = mills p` >>
-  qabbrev_tac `a = fixed_points (FUNPOW zagier) Z2 A` >>
+  qabbrev_tac `X = mills p` >>
+  qabbrev_tac `a = fixed_points (FUNPOW zagier) Z2 X` >>
   `~square p` by metis_tac[prime_non_square] >>
   `p MOD 4 <> 0` by decide_tac >>
-  `zagier involute A` by  metis_tac[zagier_involute_mills] >>
+  `zagier involute X` by  metis_tac[zagier_involute_mills] >>
   rw[EXTENSION, EQ_IMP_THM] >| [
-    `x IN A` by metis_tac[involute_fixed_points_element_element] >>
+    `x IN X` by metis_tac[involute_fixed_points_element_element] >>
     `zagier x = x` by metis_tac[involute_fixed_points] >>
     `?x1 y z. x = (x1, y, z)` by rw[triple_parts] >>
     `x1 <> 0` by metis_tac[mills_triple_nonzero] >>
     `x1 = y` by fs[zagier_fix] >>
     metis_tac[windmill_trivial_prime, mills_element],
-    `(1,1,p DIV 4) IN A` by rw[mills_element_trivial, Abbr`A`] >>
+    `(1,1,p DIV 4) IN X` by rw[mills_element_trivial, Abbr`X`] >>
     metis_tac[zagier_1_1_z, involute_fixed_points_iff]
   ]
 QED
 
-(* Theorem: prime p /\ (p MOD 4 = 1) ==> ?u v. p = u ** 2 + v ** 2 *)
+(* Theorem: prime p /\ p MOD 4 = 1 ==> ?u v. p = u ** 2 + v ** 2 *)
 (* Proof:
-   Let A = mills p, the solutions (x,y,z) of p = x ** 2 + 4 * y * z.
+   Let X = mills p, the solutions (x,y,z) of p = x ** 2 + 4 * y * z.
    Note ~square p                      by prime_non_square
-     so FINITE A                       by mills_non_square_finite
-    Now !x y z. (x,y,z) IN A ==>
+     so FINITE X                       by mills_non_square_finite
+    Now !x y z. (x,y,z) IN X ==>
         x <> 0 /\ y <> 0 /\ z <> 0     by mills_triple_nonzero
-    and zagier involute A              by zagier_involute_mills
-    and flip involute A                by flip_involute_mills
+    and zagier involute X              by zagier_involute_mills
+    and flip involute X                by flip_involute_mills
 
-   Let a = fixed_points (FUNPOW zagier) Z2 A,
-       b = fixed_points (FUNPOW flip) Z2 A.
+   Let a = fixed_points (FUNPOW zagier) Z2 X,
+       b = fixed_points (FUNPOW flip) Z2 X.
    Then ODD (CARD a) <=> ODD (CARD b)  by involute_two_fixed_points_both_odd
 
    The punch line:
@@ -1244,31 +1243,31 @@ QED
    thus ?x y z. (x,y,z) IN b           by MEMBER_NOT_EMPTY, triple_parts
      so flip (x, y, z) = (x, y, z)     by involute_fixed_points
     ==> y = z                          by flip_fix
-   Note (x,y,z) IN A                   by fixed_points_element
+   Note (x,y,z) IN X                   by fixed_points_element
    Put u = x, v = 2 * y.
    Then p = u ** 2 + v ** 2            by mills_element, windmill_by_squares
 *)
 Theorem fermat_two_squares_exists_alt:
-  !p. prime p /\ (p MOD 4 = 1) ==> ?u v. p = u ** 2 + v ** 2
+  !p. prime p /\ p MOD 4 = 1 ==> ?u v. p = u ** 2 + v ** 2
 Proof
   rpt strip_tac >>
-  qabbrev_tac `A = mills p` >>
+  qabbrev_tac `X = mills p` >>
   `~square p` by metis_tac[prime_non_square] >>
-  `FINITE A` by fs[mills_non_square_finite, Abbr`A`] >>
-  `zagier involute A` by metis_tac[zagier_involute_mills, DECIDE``1 <> 0``] >>
-  `flip involute A` by metis_tac[flip_involute_mills] >>
-  qabbrev_tac `a = fixed_points (FUNPOW zagier) Z2 A` >>
-  qabbrev_tac `b = fixed_points (FUNPOW flip) Z2 A` >>
+  `FINITE X` by fs[mills_non_square_finite, Abbr`X`] >>
+  `zagier involute X` by metis_tac[zagier_involute_mills, DECIDE``1 <> 0``] >>
+  `flip involute X` by metis_tac[flip_involute_mills] >>
+  qabbrev_tac `a = fixed_points (FUNPOW zagier) Z2 X` >>
+  qabbrev_tac `b = fixed_points (FUNPOW flip) Z2 X` >>
   `ODD (CARD a) <=> ODD (CARD b)` by rw[involute_two_fixed_points_both_odd, Abbr`a`, Abbr`b`] >>
   qabbrev_tac `k = p DIV 4` >>
-  `a = {(1,1,k)}` by rw[zagier_fixed_points_sing, Abbr`a`, Abbr`A`, Abbr`k`] >>
+  `a = {(1,1,k)}` by rw[zagier_fixed_points_sing, Abbr`a`, Abbr`X`, Abbr`k`] >>
   `CARD a = 1` by rw[] >>
   `CARD b <> 0` by metis_tac[ODD_1, EVEN_0, ODD_EVEN] >>
   `b <> EMPTY` by metis_tac[CARD_EMPTY] >>
   `?x y z. (x,y,z) IN b` by metis_tac[MEMBER_NOT_EMPTY, triple_parts] >>
   `flip (x, y, z) = (x, y, z)` by metis_tac[involute_fixed_points] >>
   `y = z` by fs[flip_fix] >>
-  `(x,y,z) IN A` by fs[fixed_points_element, Abbr`b`] >>
+  `(x,y,z) IN X` by fs[fixed_points_element, Abbr`b`] >>
   metis_tac[mills_element, windmill_by_squares]
 QED
 
