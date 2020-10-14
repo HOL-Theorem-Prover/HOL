@@ -53,19 +53,22 @@ fun elim_infix sl = case sl of
   | a :: m => a :: elim_infix m
 
 (* -------------------------------------------------------------------------
-   Removing structure prefixes
+   Removing structure prefixes. Also prefers lower case if available.
    ------------------------------------------------------------------------- *)
 
 fun drop_struct long =
   let
     val l = String.tokens (fn x => x = #".") long
     val short = last l
+    val lower = String.translate (Char.toString o Char.toLower) short
   in
-    if length l = 1 orelse
-       not (is_local_value short) orelse
-       not (is_pointer_eq long short)
-    then long
-    else short
+    if is_local_value lower andalso
+       is_pointer_eq long lower
+      then lower
+    else if is_local_value short andalso
+       is_pointer_eq long short
+      then short
+    else long
   end
 
 fun elim_struct sl = map drop_struct sl
